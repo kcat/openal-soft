@@ -26,16 +26,6 @@
 #include "al/eax/utils.h"
 
 
-using EaxContextSharedDirtyFlagsValue = std::uint_least8_t;
-
-struct EaxContextSharedDirtyFlags
-{
-    using EaxIsBitFieldStruct = bool;
-
-    EaxContextSharedDirtyFlagsValue primary_fx_slot_id : 1;
-}; // EaxContextSharedDirtyFlags
-
-
 using ContextDirtyFlagsValue = std::uint_least8_t;
 
 struct ContextDirtyFlags
@@ -224,6 +214,7 @@ public:
 
     void eax_uninitialize() noexcept;
 
+    int eax_get_version() const noexcept { return eax_version_; }
 
     ALenum eax_eax_set(
         const GUID* property_set_id,
@@ -248,8 +239,6 @@ public:
     void eax_set_last_error() noexcept;
 
 
-    EaxFxSlotIndex eax_get_previous_primary_fx_slot_index() const noexcept
-    { return eax_previous_primary_fx_slot_index_; }
     EaxFxSlotIndex eax_get_primary_fx_slot_index() const noexcept
     { return eax_primary_fx_slot_index_; }
 
@@ -275,12 +264,10 @@ private:
     long eax_last_error_{};
     unsigned long eax_speaker_config_{};
 
-    EaxFxSlotIndex eax_previous_primary_fx_slot_index_{};
     EaxFxSlotIndex eax_primary_fx_slot_index_{};
     EaxFxSlots eax_fx_slots_{};
 
-    EaxContextSharedDirtyFlags eax_context_shared_dirty_flags_{};
-
+    int eax_version_{};
     Eax eax_{};
     Eax eax_d_{};
     EAXSESSIONPROPERTIES eax_session_{};

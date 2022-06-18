@@ -2,6 +2,7 @@
 #define EAX_EAX_CALL_INCLUDED
 
 #include "AL/al.h"
+#include "alnumeric.h"
 #include "alspan.h"
 #include "api.h"
 #include "fx_slot_index.h"
@@ -48,16 +49,20 @@ public:
         return *static_cast<TValue*>(property_buffer_);
     }
 
-    template<typename TException, typename TValue>
+    template<typename TValue>
+    al::span<TValue> get_values(size_t max_count) const
+    {
+        if (max_count == 0 || property_size_ < static_cast<ALuint>(sizeof(TValue)))
+            fail_too_small();
+
+        const auto count = minz(property_size_ / sizeof(TValue), max_count);
+        return al::span<TValue>{static_cast<TValue*>(property_buffer_), count};
+    }
+
+    template<typename TValue>
     al::span<TValue> get_values() const
     {
-        if (property_size_ < static_cast<ALuint>(sizeof(TValue)))
-        {
-            fail_too_small();
-        }
-
-        const auto count = property_size_ / sizeof(TValue);
-        return al::span<TValue>{static_cast<TValue*>(property_buffer_), count};
+        return get_values<TValue>(~size_t{});
     }
 
     template<typename TException, typename TValue>

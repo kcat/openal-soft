@@ -337,6 +337,7 @@ ALenum ALCcontext::eax_eax_set(
         property_source_id,
         property_value,
         property_value_size);
+    eax_version_ = call.get_version();
     eax_initialize(call);
     eax_unlock_legacy_fx_slots(call);
 
@@ -380,6 +381,7 @@ ALenum ALCcontext::eax_eax_get(
         property_source_id,
         property_value,
         property_value_size);
+    eax_version_ = call.get_version();
     eax_initialize(call);
     eax_unlock_legacy_fx_slots(call);
 
@@ -407,7 +409,7 @@ ALenum ALCcontext::eax_eax_get(
 
 void ALCcontext::eax_update_filters()
 {
-    ForEachSource(this, std::mem_fn(&ALsource::eax_update_filters));
+    ForEachSource(this, [](ALsource& source){ source.eax_commit(); });
 }
 
 void ALCcontext::eax_commit_and_update_sources()
@@ -627,15 +629,11 @@ void ALCcontext::eax_dispatch_fx_slot(const EaxCall& call)
 void ALCcontext::eax_dispatch_source(const EaxCall& call)
 {
     const auto source_id = call.get_property_al_name();
-
     std::lock_guard<std::mutex> source_lock{mSourceLock};
-
     const auto source = ALsource::eax_lookup_source(*this, source_id);
 
-    if (!source)
-    {
+    if (source == nullptr)
         eax_fail("Source not found.");
-    }
 
     source->eax_dispatch(call);
 }
@@ -749,7 +747,6 @@ void ALCcontext::eax_get(const EaxCall& call)
 
 void ALCcontext::eax_set_primary_fx_slot_id()
 {
-    eax_previous_primary_fx_slot_index_ = eax_primary_fx_slot_index_;
     eax_primary_fx_slot_index_ = eax_.context.guidPrimaryFXSlotID;
 }
 
@@ -786,7 +783,6 @@ void ALCcontext::eax_set_context()
 void ALCcontext::eax_initialize_fx_slots(const EaxCall& call)
 {
     eax_fx_slots_.initialize(call, *this);
-    eax_previous_primary_fx_slot_index_ = eax_.context.guidPrimaryFXSlotID;
     eax_primary_fx_slot_index_ = eax_.context.guidPrimaryFXSlotID;
 }
 
@@ -802,7 +798,7 @@ void ALCcontext::eax_update_sources()
 {
     std::unique_lock<std::mutex> source_lock{mSourceLock};
     auto update_source = [this](ALsource &source)
-    { source.eax_update(eax_context_shared_dirty_flags_); };
+    { source.eax_commit(); };
     ForEachSource(this, update_source);
 }
 
@@ -1130,7 +1126,6 @@ void ALCcontext::eax_apply_deferred()
 
     if (eax_context_dirty_flags_.guidPrimaryFXSlotID)
     {
-        eax_context_shared_dirty_flags_.primary_fx_slot_id = true;
         eax_set_primary_fx_slot_id();
     }
 
@@ -1154,12 +1149,11 @@ void ALCcontext::eax_apply_deferred()
         eax_set_macro_fx_factor();
     }
 
-    if (eax_context_shared_dirty_flags_ != EaxContextSharedDirtyFlags{})
+    if (eax_context_dirty_flags_.guidPrimaryFXSlotID)
     {
         eax_update_sources();
     }
 
-    eax_context_shared_dirty_flags_ = EaxContextSharedDirtyFlags{};
     eax_context_dirty_flags_ = ContextDirtyFlags{};
 }
 

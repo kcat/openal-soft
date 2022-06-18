@@ -797,7 +797,7 @@ void ALCcontext::eax_initialize_sources()
 void ALCcontext::eax_update_sources()
 {
     std::unique_lock<std::mutex> source_lock{mSourceLock};
-    auto update_source = [this](ALsource &source)
+    auto update_source = [](ALsource &source)
     { source.eax_commit(); };
     ForEachSource(this, update_source);
 }

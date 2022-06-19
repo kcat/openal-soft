@@ -4475,13 +4475,14 @@ void ALsource::eax_set(const EaxCall& call)
     const auto eax_version = call.get_version();
     switch(eax_version)
     {
-        case 1: eax1_set(call, eax1_.d); eax1_.changed = true; break;
-        case 2: eax2_set(call, eax2_.d); eax2_.changed = true; break;
-        case 3: eax3_set(call, eax3_.d); eax3_.changed = true; break;
-        case 4: eax4_set(call, eax4_.d); eax4_.changed = true; break;
-        case 5: eax5_set(call, eax5_.d); eax5_.changed = true; break;
-        default: eax_fail_unknown_property_id();
+    case 1: eax1_set(call, eax1_.d); break;
+    case 2: eax2_set(call, eax2_.d); break;
+    case 3: eax3_set(call, eax3_.d); break;
+    case 4: eax4_set(call, eax4_.d); break;
+    case 5: eax5_set(call, eax5_.d); break;
+    default: eax_fail_unknown_property_id();
     }
+    eax_changed_ = true;
     eax_version_ = eax_version;
 }
 
@@ -4894,54 +4895,37 @@ void ALsource::eax_commit(EaxCommitType commit_type)
     const auto primary_fx_slot_id = eax_al_context_->eax_get_primary_fx_slot_index();
     const auto is_primary_fx_slot_id_changed = (eax_primary_fx_slot_id_ != primary_fx_slot_id);
 
-    const auto is_forced = is_primary_fx_slot_id_changed || commit_type == EaxCommitType::forced;
+    if(commit_type != EaxCommitType::forced && !is_primary_fx_slot_id_changed && !eax_changed_)
+        return;
 
     eax_primary_fx_slot_id_ = primary_fx_slot_id;
+    eax_changed_ = false;
 
     switch(eax_version_)
     {
-        case 1:
-            if(!is_forced && !eax1_.changed)
-                return;
-            eax1_.changed = false;
-            eax1_.i = eax1_.d;
-            eax1_translate(eax1_.i, eax_);
-            break;
+    case 1:
+        eax1_.i = eax1_.d;
+        eax1_translate(eax1_.i, eax_);
+        break;
+    case 2:
+        eax2_.i = eax2_.d;
+        eax2_translate(eax2_.i, eax_);
+        break;
+    case 3:
+        eax3_.i = eax3_.d;
+        eax3_translate(eax3_.i, eax_);
+        break;
+    case 4:
+        eax4_.i = eax4_.d;
+        eax4_translate(eax4_.i, eax_);
+        break;
+    case 5:
+        eax5_.i = eax5_.d;
+        eax_ = eax5_.d;
+        break;
 
-        case 2:
-            if(!is_forced && !eax2_.changed)
-                return;
-            eax2_.changed = false;
-            eax2_.i = eax2_.d;
-            eax2_translate(eax2_.i, eax_);
-            break;
-
-        case 3:
-            if(!is_forced && !eax3_.changed)
-                return;
-            eax3_.changed = false;
-            eax3_.i = eax3_.d;
-            eax3_translate(eax3_.i, eax_);
-            break;
-
-        case 4:
-            if(!is_forced && !eax4_.changed)
-                return;
-            eax4_.changed = false;
-            eax4_.i = eax4_.d;
-            eax4_translate(eax4_.i, eax_);
-            break;
-
-        case 5:
-            if(!is_forced && !eax5_.changed)
-                return;
-            eax5_.changed = false;
-            eax5_.i = eax5_.d;
-            eax_ = eax5_.d;
-            break;
-
-        default:
-            eax_fail_unknown_version();
+    default:
+        eax_fail_unknown_version();
     }
 
     eax_set_efx_outer_gain_hf();

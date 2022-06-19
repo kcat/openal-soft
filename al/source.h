@@ -200,7 +200,6 @@ private:
     using Eax1Props = EAXBUFFER_REVERBPROPERTIES;
 
     struct Eax1State {
-        bool changed{false};
         Eax1Props i; // Immediate.
         Eax1Props d; // Deferred.
     };
@@ -208,7 +207,6 @@ private:
     using Eax2Props = EAX20BUFFERPROPERTIES;
 
     struct Eax2State {
-        bool changed{false};
         Eax2Props i; // Immediate.
         Eax2Props d; // Deferred.
     };
@@ -216,7 +214,6 @@ private:
     using Eax3Props = EAX30SOURCEPROPERTIES;
 
     struct Eax3State {
-        bool changed{false};
         Eax3Props i; // Immediate.
         Eax3Props d; // Deferred.
     };
@@ -233,7 +230,6 @@ private:
     };
 
     struct Eax4State {
-        bool changed{false};
         Eax4Props i; // Immediate.
         Eax4Props d; // Deferred.
     };
@@ -251,7 +247,6 @@ private:
     };
 
     struct Eax5State {
-        bool changed{false};
         Eax5Props i; // Immediate.
         Eax5Props d; // Deferred.
     };
@@ -260,6 +255,7 @@ private:
     EaxFxSlotIndex eax_primary_fx_slot_id_{};
     EaxActiveFxSlots eax_active_fx_slots_{};
     int eax_version_{};
+    bool eax_changed_{};
     Eax1State eax1_{};
     Eax2State eax2_{};
     Eax3State eax3_{};

@@ -6,6 +6,8 @@
 #include <string>
 #include <type_traits>
 
+using EaxDirtyFlags = unsigned int;
+
 struct EaxAlLowPassParam {
     float gain;
     float gain_hf;

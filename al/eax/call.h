@@ -32,6 +32,7 @@ public:
         ALuint property_size);
 
     bool is_get() const noexcept { return type_ == EaxCallType::get; }
+    bool is_deferred() const noexcept { return is_deferred_; }
     int get_version() const noexcept { return version_; }
     EaxCallPropertySetId get_property_set_id() const noexcept { return property_set_id_; }
     ALuint get_property_id() const noexcept { return property_id_; }
@@ -76,6 +77,7 @@ private:
     int version_;
     EaxFxSlotIndex fx_slot_index_;
     EaxCallPropertySetId property_set_id_;
+    bool is_deferred_;
 
     ALuint property_id_;
     ALuint property_source_id_;

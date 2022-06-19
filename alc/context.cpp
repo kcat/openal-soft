@@ -339,7 +339,6 @@ ALenum ALCcontext::eax_eax_set(
         property_value_size);
     eax_version_ = call.get_version();
     eax_initialize(call);
-    eax_unlock_legacy_fx_slots(call);
 
     switch (call.get_property_set_id())
     {
@@ -383,7 +382,6 @@ ALenum ALCcontext::eax_eax_get(
         property_value_size);
     eax_version_ = call.get_version();
     eax_initialize(call);
-    eax_unlock_legacy_fx_slots(call);
 
     switch (call.get_property_set_id())
     {
@@ -603,15 +601,6 @@ void ALCcontext::eax_set_defaults() noexcept
     eax_d_ = eax_;
 }
 
-void ALCcontext::eax_unlock_legacy_fx_slots(const EaxCall& call) noexcept
-{
-    if (call.get_version() != 5 || eax_are_legacy_fx_slots_unlocked_)
-        return;
-
-    eax_are_legacy_fx_slots_unlocked_ = true;
-    eax_fx_slots_.unlock_legacy();
-}
-
 void ALCcontext::eax_dispatch_fx_slot(const EaxCall& call)
 {
     const auto fx_slot_index = call.get_fx_slot_index();
@@ -619,10 +608,15 @@ void ALCcontext::eax_dispatch_fx_slot(const EaxCall& call)
         eax_fail("Invalid fx slot index.");
 
     auto& fx_slot = eax_get_fx_slot(*fx_slot_index);
-    if(fx_slot.eax_dispatch(call))
+    fx_slot.eax_dispatch(call);
+
+    if(!call.is_deferred())
     {
-        std::lock_guard<std::mutex> source_lock{mSourceLock};
-        eax_update_filters();
+        if(fx_slot.eax_commit())
+        {
+            std::lock_guard<std::mutex> source_lock{mSourceLock};
+            eax_update_filters();
+        }
     }
 }
 

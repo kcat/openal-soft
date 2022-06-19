@@ -102,7 +102,7 @@ public:
 
 class EaxPitchShifterEffect final : public EaxEffect4<EaxPitchShifterEffectException, EAXPITCHSHIFTERPROPERTIES> {
 public:
-    EaxPitchShifterEffect(const EaxCall& call);
+    EaxPitchShifterEffect(int eax_version);
 
 private:
     struct CoarseTuneValidator {
@@ -146,8 +146,8 @@ private:
     bool commit_props(const Props& old_i) override;
 }; // EaxPitchShifterEffect
 
-EaxPitchShifterEffect::EaxPitchShifterEffect(const EaxCall& call)
-    : EaxEffect4{AL_EFFECT_PITCH_SHIFTER, call}
+EaxPitchShifterEffect::EaxPitchShifterEffect(int eax_version)
+    : EaxEffect4{AL_EFFECT_PITCH_SHIFTER, eax_version}
 {}
 
 void EaxPitchShifterEffect::set_defaults(Props& props)
@@ -223,9 +223,9 @@ bool EaxPitchShifterEffect::commit_props(const Props& props)
 
 } // namespace
 
-EaxEffectUPtr eax_create_eax_pitch_shifter_effect(const EaxCall& call)
+EaxEffectUPtr eax_create_eax_pitch_shifter_effect(int eax_version)
 {
-    return eax_create_eax4_effect<EaxPitchShifterEffect>(call);
+    return eax_create_eax4_effect<EaxPitchShifterEffect>(eax_version);
 }
 
 #endif // ALSOFT_EAX

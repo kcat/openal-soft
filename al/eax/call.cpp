@@ -23,6 +23,7 @@ EaxCall::EaxCall(
     ALvoid* property_buffer,
     ALuint property_size)
     : type_{type}, version_{0}, property_set_id_{EaxCallPropertySetId::none}
+    , is_deferred_{(property_id & deferred_flag) != 0}
     , property_id_{property_id & ~deferred_flag}, property_source_id_{property_source_id}
     , property_buffer_{property_buffer}, property_size_{property_size}
 {

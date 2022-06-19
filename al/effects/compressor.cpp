@@ -91,7 +91,7 @@ public:
 class EaxCompressorEffect final : public EaxEffect4<EaxCompressorEffectException, EAXAGCCOMPRESSORPROPERTIES>
 {
 public:
-    EaxCompressorEffect(const EaxCall& call);
+    EaxCompressorEffect(int eax_version);
 
 private:
     struct OnOffValidator {
@@ -122,8 +122,8 @@ private:
     bool commit_props(const Props& props) override;
 }; // EaxCompressorEffect
 
-EaxCompressorEffect::EaxCompressorEffect(const EaxCall& call)
-    : EaxEffect4{AL_EFFECT_COMPRESSOR, call}
+EaxCompressorEffect::EaxCompressorEffect(int eax_version)
+    : EaxEffect4{AL_EFFECT_COMPRESSOR, eax_version}
 {}
 
 void EaxCompressorEffect::set_defaults(Props& props)
@@ -182,9 +182,9 @@ bool EaxCompressorEffect::commit_props(const Props& props)
 
 } // namespace
 
-EaxEffectUPtr eax_create_eax_compressor_effect(const EaxCall& call)
+EaxEffectUPtr eax_create_eax_compressor_effect(int eax_version)
 {
-    return eax_create_eax4_effect<EaxCompressorEffect>(call);
+    return eax_create_eax4_effect<EaxCompressorEffect>(eax_version);
 }
 
 #endif // ALSOFT_EAX

@@ -433,8 +433,8 @@ public:
     using typename Base::State;
     using Base::defer;
 
-    EaxChorusFlangerEffect(const EaxCall& call)
-        : Base{Traits::efx_effect(), call}
+    EaxChorusFlangerEffect(int eax_version)
+        : Base{Traits::efx_effect(), eax_version}
     {}
 
 private:
@@ -712,23 +712,23 @@ private:
 }; // EaxChorusFlangerEffect
 
 template<typename TTraits>
-EaxEffectUPtr eax_create_eax_chorus_flanger_effect(const EaxCall& call)
+EaxEffectUPtr eax_create_eax_chorus_flanger_effect(int eax_version)
 {
-    return eax_create_eax4_effect<EaxChorusFlangerEffect<TTraits>>(call);
+    return eax_create_eax4_effect<EaxChorusFlangerEffect<TTraits>>(eax_version);
 }
 
 } // namespace
 
 // ==========================================================================
 
-EaxEffectUPtr eax_create_eax_chorus_effect(const EaxCall& call)
+EaxEffectUPtr eax_create_eax_chorus_effect(int eax_version)
 {
-    return eax_create_eax_chorus_flanger_effect<EaxChorusTraits>(call);
+    return eax_create_eax_chorus_flanger_effect<EaxChorusTraits>(eax_version);
 }
 
-EaxEffectUPtr eax_create_eax_flanger_effect(const EaxCall& call)
+EaxEffectUPtr eax_create_eax_flanger_effect(int eax_version)
 {
-    return eax_create_eax_chorus_flanger_effect<EaxFlangerTraits>(call);
+    return eax_create_eax_chorus_flanger_effect<EaxFlangerTraits>(eax_version);
 }
 
 #endif // ALSOFT_EAX

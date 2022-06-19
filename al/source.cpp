@@ -4475,14 +4475,13 @@ void ALsource::eax_set(const EaxCall& call)
     const auto eax_version = call.get_version();
     switch(eax_version)
     {
-        case 1: eax1_set(call, eax1_.d); break;
+        case 1: eax1_set(call, eax1_.d); eax1_.changed = true; break;
         case 2: eax2_set(call, eax2_.d); eax2_.changed = true; break;
         case 3: eax3_set(call, eax3_.d); eax3_.changed = true; break;
         case 4: eax4_set(call, eax4_.d); eax4_.changed = true; break;
         case 5: eax5_set(call, eax5_.d); eax5_.changed = true; break;
         default: eax_fail_unknown_property_id();
     }
-    eax_is_version_changed_ |= (eax_version_ == eax_version);
     eax_version_ = eax_version;
 }
 
@@ -4895,18 +4894,16 @@ void ALsource::eax_commit(EaxCommitType commit_type)
     const auto primary_fx_slot_id = eax_al_context_->eax_get_primary_fx_slot_index();
     const auto is_primary_fx_slot_id_changed = (eax_primary_fx_slot_id_ != primary_fx_slot_id);
 
-    const auto is_forced = (
-        eax_is_version_changed_ ||
-        is_primary_fx_slot_id_changed ||
-        commit_type == EaxCommitType::forced);
+    const auto is_forced = is_primary_fx_slot_id_changed || commit_type == EaxCommitType::forced;
 
-    eax_is_version_changed_ = false;
     eax_primary_fx_slot_id_ = primary_fx_slot_id;
 
-    switch (eax_version_) {
+    switch(eax_version_)
+    {
         case 1:
-            if(!is_forced && eax1_.i == eax1_.d)
+            if(!is_forced && !eax1_.changed)
                 return;
+            eax1_.changed = false;
             eax1_.i = eax1_.d;
             eax1_translate(eax1_.i, eax_);
             break;

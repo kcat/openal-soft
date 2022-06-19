@@ -200,6 +200,7 @@ private:
     using Eax1Props = EAXBUFFER_REVERBPROPERTIES;
 
     struct Eax1State {
+        bool changed{false};
         Eax1Props i; // Immediate.
         Eax1Props d; // Deferred.
     };
@@ -258,7 +259,6 @@ private:
     ALCcontext* eax_al_context_{};
     EaxFxSlotIndex eax_primary_fx_slot_id_{};
     EaxActiveFxSlots eax_active_fx_slots_{};
-    bool eax_is_version_changed_{};
     int eax_version_{};
     Eax1State eax1_{};
     Eax2State eax2_{};

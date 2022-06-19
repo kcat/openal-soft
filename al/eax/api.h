@@ -65,9 +65,6 @@ struct EAXBUFFER_REVERBPROPERTIES {
     float fMix;
 };
 
-inline bool operator==(const EAXBUFFER_REVERBPROPERTIES& lhs, const EAXBUFFER_REVERBPROPERTIES& rhs) noexcept
-{ return lhs.fMix == rhs.fMix; }
-
 constexpr auto EAX_BUFFER_MINREVERBMIX = 0.0F;
 constexpr auto EAX_BUFFER_MAXREVERBMIX = 1.0F;
 constexpr auto EAX_REVERBMIX_USEDISTANCE = -1.0F;

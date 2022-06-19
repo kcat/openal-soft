@@ -1544,19 +1544,15 @@ void EaxReverbEffect::get3(const EaxCall& call, const Props3& props)
 
 void EaxReverbEffect::get(const EaxCall& call)
 {
-    const auto version = call.get_version();
-
-    switch (version)
+    switch(call.get_version())
     {
-        case 1: get1(call, state1_.i); break;
-        case 2: get2(call, state2_.i); break;
-        case 3: get3(call, state3_.i); break;
-        case 4: get3(call, state4_.i); break;
-        case 5: get3(call, state5_.i); break;
-        default: fail_unknown_version();
+    case 1: get1(call, state1_.i); break;
+    case 2: get2(call, state2_.i); break;
+    case 3: get3(call, state3_.i); break;
+    case 4: get3(call, state4_.i); break;
+    case 5: get3(call, state5_.i); break;
+    default: fail_unknown_version();
     }
-
-    version_ = version;
 }
 
 /*[[nodiscard]]*/ bool EaxReverbEffect::commit()

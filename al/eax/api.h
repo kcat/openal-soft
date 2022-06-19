@@ -21,8 +21,7 @@
 
 #ifndef GUID_DEFINED
 #define GUID_DEFINED
-typedef struct _GUID
-{
+typedef struct _GUID {
     std::uint32_t Data1;
     std::uint16_t Data2;
     std::uint16_t Data3;
@@ -30,21 +29,16 @@ typedef struct _GUID
 } GUID;
 
 inline bool operator==(const GUID& lhs, const GUID& rhs) noexcept
-{
-    return std::memcmp(&lhs, &rhs, sizeof(GUID)) == 0;
-}
+{ return std::memcmp(&lhs, &rhs, sizeof(GUID)) == 0; }
 
 inline bool operator!=(const GUID& lhs, const GUID& rhs) noexcept
-{
-    return !(lhs == rhs);
-}
+{ return !(lhs == rhs); }
 #endif // GUID_DEFINED
 
 
 extern const GUID DSPROPSETID_EAX_ReverbProperties;
 
-enum DSPROPERTY_EAX_REVERBPROPERTY : unsigned int
-{
+enum DSPROPERTY_EAX_REVERBPROPERTY : unsigned int {
     DSPROPERTY_EAX_ALL,
     DSPROPERTY_EAX_ENVIRONMENT,
     DSPROPERTY_EAX_VOLUME,
@@ -52,36 +46,27 @@ enum DSPROPERTY_EAX_REVERBPROPERTY : unsigned int
     DSPROPERTY_EAX_DAMPING,
 }; // DSPROPERTY_EAX_REVERBPROPERTY
 
-struct EAX_REVERBPROPERTIES
-{
+struct EAX_REVERBPROPERTIES {
     unsigned long environment;
     float fVolume;
     float fDecayTime_sec;
     float fDamping;
 }; // EAX_REVERBPROPERTIES
 
-inline bool operator==(const EAX_REVERBPROPERTIES& lhs, const EAX_REVERBPROPERTIES& rhs) noexcept
-{
-    return std::memcmp(&lhs, &rhs, sizeof(EAX_REVERBPROPERTIES)) == 0;
-}
 
 extern const GUID DSPROPSETID_EAXBUFFER_ReverbProperties;
 
-enum DSPROPERTY_EAXBUFFER_REVERBPROPERTY : unsigned int
-{
+enum DSPROPERTY_EAXBUFFER_REVERBPROPERTY : unsigned int {
     DSPROPERTY_EAXBUFFER_ALL,
     DSPROPERTY_EAXBUFFER_REVERBMIX,
 }; // DSPROPERTY_EAXBUFFER_REVERBPROPERTY
 
-struct EAXBUFFER_REVERBPROPERTIES
-{
+struct EAXBUFFER_REVERBPROPERTIES {
     float fMix;
 };
 
 inline bool operator==(const EAXBUFFER_REVERBPROPERTIES& lhs, const EAXBUFFER_REVERBPROPERTIES& rhs) noexcept
-{
-    return lhs.fMix == rhs.fMix;
-}
+{ return lhs.fMix == rhs.fMix; }
 
 constexpr auto EAX_BUFFER_MINREVERBMIX = 0.0F;
 constexpr auto EAX_BUFFER_MAXREVERBMIX = 1.0F;
@@ -90,9 +75,7 @@ constexpr auto EAX_REVERBMIX_USEDISTANCE = -1.0F;
 
 extern const GUID DSPROPSETID_EAX20_ListenerProperties;
 
-enum DSPROPERTY_EAX20_LISTENERPROPERTY :
-    unsigned int
-{
+enum DSPROPERTY_EAX20_LISTENERPROPERTY : unsigned int {
     DSPROPERTY_EAX20LISTENER_NONE,
     DSPROPERTY_EAX20LISTENER_ALLPARAMETERS,
     DSPROPERTY_EAX20LISTENER_ROOM,
@@ -111,8 +94,7 @@ enum DSPROPERTY_EAX20_LISTENERPROPERTY :
     DSPROPERTY_EAX20LISTENER_FLAGS
 }; // DSPROPERTY_EAX20_LISTENERPROPERTY
 
-struct EAX20LISTENERPROPERTIES
-{
+struct EAX20LISTENERPROPERTIES {
     long lRoom; // room effect level at low frequencies
     long lRoomHF; // room effect high-frequency level re. low frequency level
     float flRoomRolloffFactor; // like DS3D flRolloffFactor but for room effect
@@ -129,13 +111,7 @@ struct EAX20LISTENERPROPERTIES
     unsigned long dwFlags; // modifies the behavior of properties
 }; // EAX20LISTENERPROPERTIES
 
-inline bool operator==(const EAX20LISTENERPROPERTIES& lhs, const EAX20LISTENERPROPERTIES& rhs) noexcept
-{
-    return std::memcmp(&lhs, &rhs, sizeof(EAX20LISTENERPROPERTIES)) == 0;
-}
-
-enum : unsigned long
-{
+enum : unsigned long {
     EAX2_ENVIRONMENT_GENERIC,
     EAX2_ENVIRONMENT_PADDEDCELL,
     EAX2_ENVIRONMENT_ROOM,
@@ -234,12 +210,10 @@ constexpr auto EAX2LISTENER_DEFAULTFLAGS =
     EAX2LISTENERFLAGS_REVERBDELAYSCALE |
     EAX2LISTENERFLAGS_DECAYHFLIMIT;
 
+
 extern const GUID DSPROPSETID_EAX20_BufferProperties;
 
-
-enum DSPROPERTY_EAX20_BUFFERPROPERTY :
-    unsigned int
-{
+enum DSPROPERTY_EAX20_BUFFERPROPERTY : unsigned int {
     DSPROPERTY_EAX20BUFFER_NONE,
     DSPROPERTY_EAX20BUFFER_ALLPARAMETERS,
     DSPROPERTY_EAX20BUFFER_DIRECT,
@@ -257,9 +231,7 @@ enum DSPROPERTY_EAX20_BUFFERPROPERTY :
     DSPROPERTY_EAX20BUFFER_FLAGS
 }; // DSPROPERTY_EAX20_BUFFERPROPERTY
 
-
-struct EAX20BUFFERPROPERTIES
-{
+struct EAX20BUFFERPROPERTIES {
     long lDirect; // direct path level
     long lDirectHF; // direct path level at high frequencies
     long lRoom; // room effect level
@@ -274,11 +246,6 @@ struct EAX20BUFFERPROPERTIES
     float flAirAbsorptionFactor; // multiplies DSPROPERTY_EAXLISTENER_AIRABSORPTIONHF
     unsigned long dwFlags; // modifies the behavior of properties
 }; // EAX20BUFFERPROPERTIES
-
-inline bool operator==(const EAX20BUFFERPROPERTIES& lhs, const EAX20BUFFERPROPERTIES& rhs) noexcept
-{
-    return std::memcmp(&lhs, &rhs, sizeof(EAX20BUFFERPROPERTIES)) == 0;
-}
 
 extern const GUID DSPROPSETID_EAX30_ListenerProperties;
 
@@ -305,8 +272,7 @@ extern const GUID EAX_NULL_GUID;
 extern const GUID EAX_PrimaryFXSlotID;
 
 
-struct EAXVECTOR
-{
+struct EAXVECTOR {
     float x;
     float y;
     float z;
@@ -324,8 +290,7 @@ extern const GUID EAXPROPERTYID_EAX40_Context;
 extern const GUID EAXPROPERTYID_EAX50_Context;
 
 // EAX50
-enum :
-    unsigned long
+enum : unsigned long
 {
     HEADPHONES = 0,
     SPEAKERS_2,
@@ -336,9 +301,7 @@ enum :
 };
 
 // EAX50
-enum :
-    unsigned long
-{
+enum : unsigned long {
     EAX_40 = 5, // EAX 4.0
     EAX_50 = 6, // EAX 5.0
 };
@@ -352,15 +315,12 @@ constexpr auto EAXCONTEXT_MAXMAXACTIVESENDS = 4UL;
 constexpr auto EAXCONTEXT_DEFAULTMAXACTIVESENDS = 2UL;
 
 // EAX50
-struct EAXSESSIONPROPERTIES
-{
+struct EAXSESSIONPROPERTIES {
     unsigned long ulEAXVersion;
     unsigned long ulMaxActiveSends;
 }; // EAXSESSIONPROPERTIES
 
-enum EAXCONTEXT_PROPERTY :
-    unsigned int
-{
+enum EAXCONTEXT_PROPERTY : unsigned int {
     EAXCONTEXT_NONE = 0,
     EAXCONTEXT_ALLPARAMETERS,
     EAXCONTEXT_PRIMARYFXSLOTID,
@@ -375,28 +335,16 @@ enum EAXCONTEXT_PROPERTY :
     EAXCONTEXT_MACROFXFACTOR,
 }; // EAXCONTEXT_PROPERTY
 
-struct EAX40CONTEXTPROPERTIES
-{
+struct EAX40CONTEXTPROPERTIES {
     GUID guidPrimaryFXSlotID;
     float flDistanceFactor;
     float flAirAbsorptionHF;
     float flHFReference;
 }; // EAX40CONTEXTPROPERTIES
 
-struct EAX50CONTEXTPROPERTIES :
-    public EAX40CONTEXTPROPERTIES
-{
+struct EAX50CONTEXTPROPERTIES : public EAX40CONTEXTPROPERTIES {
     float flMacroFXFactor;
-}; // EAX40CONTEXTPROPERTIES
-
-
-bool operator==(
-    const EAX40CONTEXTPROPERTIES& lhs,
-    const EAX40CONTEXTPROPERTIES& rhs) noexcept;
-
-bool operator==(
-    const EAX50CONTEXTPROPERTIES& lhs,
-    const EAX50CONTEXTPROPERTIES& rhs) noexcept;
+}; // EAX50CONTEXTPROPERTIES
 
 
 constexpr auto EAXCONTEXT_MINDISTANCEFACTOR = FLT_MIN;
@@ -417,26 +365,17 @@ constexpr auto EAXCONTEXT_DEFAULTMACROFXFACTOR = 0.0F;
 
 
 extern const GUID EAXPROPERTYID_EAX40_FXSlot0;
-
 extern const GUID EAXPROPERTYID_EAX50_FXSlot0;
-
 extern const GUID EAXPROPERTYID_EAX40_FXSlot1;
-
 extern const GUID EAXPROPERTYID_EAX50_FXSlot1;
-
 extern const GUID EAXPROPERTYID_EAX40_FXSlot2;
-
 extern const GUID EAXPROPERTYID_EAX50_FXSlot2;
-
 extern const GUID EAXPROPERTYID_EAX40_FXSlot3;
-
 extern const GUID EAXPROPERTYID_EAX50_FXSlot3;
 
 extern const GUID EAXCONTEXT_DEFAULTPRIMARYFXSLOTID;
 
-enum EAXFXSLOT_PROPERTY :
-    unsigned int
-{
+enum EAXFXSLOT_PROPERTY : unsigned int {
     EAXFXSLOT_PARAMETER = 0,
 
     EAXFXSLOT_NONE = 0x10000,
@@ -466,9 +405,7 @@ constexpr auto EAXFXSLOT_DEFAULTVOLUME = 0L;
 constexpr auto EAXFXSLOT_MINLOCK = 0L;
 constexpr auto EAXFXSLOT_MAXLOCK = 1L;
 
-enum :
-    long
-{
+enum : long {
     EAXFXSLOT_UNLOCKED = 0,
     EAXFXSLOT_LOCKED = 1
 };
@@ -487,39 +424,24 @@ constexpr auto EAX50FXSLOT_DEFAULTFLAGS =
     EAXFXSLOTFLAGS_ENVIRONMENT |
     EAXFXSLOTFLAGS_UPMIX; // ignored for reverb;
 
-struct EAX40FXSLOTPROPERTIES
-{
+struct EAX40FXSLOTPROPERTIES {
     GUID guidLoadEffect;
     long lVolume;
     long lLock;
     unsigned long ulFlags;
 }; // EAX40FXSLOTPROPERTIES
 
-struct EAX50FXSLOTPROPERTIES :
-    public EAX40FXSLOTPROPERTIES
-{
+struct EAX50FXSLOTPROPERTIES : public EAX40FXSLOTPROPERTIES {
     long lOcclusion;
     float flOcclusionLFRatio;
 }; // EAX50FXSLOTPROPERTIES
 
-bool operator==(
-    const EAX40FXSLOTPROPERTIES& lhs,
-    const EAX40FXSLOTPROPERTIES& rhs) noexcept;
-
-bool operator==(
-    const EAX50FXSLOTPROPERTIES& lhs,
-    const EAX50FXSLOTPROPERTIES& rhs) noexcept;
-
 extern const GUID EAXPROPERTYID_EAX40_Source;
-
 extern const GUID EAXPROPERTYID_EAX50_Source;
 
 // Source object properties
-enum EAXSOURCE_PROPERTY :
-    unsigned int
-{
+enum EAXSOURCE_PROPERTY : unsigned int {
     // EAX30
-
     EAXSOURCE_NONE,
     EAXSOURCE_ALLPARAMETERS,
     EAXSOURCE_OBSTRUCTIONPARAMETERS,
@@ -545,7 +467,6 @@ enum EAXSOURCE_PROPERTY :
     EAXSOURCE_FLAGS,
 
     // EAX40
-
     EAXSOURCE_SENDPARAMETERS,
     EAXSOURCE_ALLSENDPARAMETERS,
     EAXSOURCE_OCCLUSIONSENDPARAMETERS,
@@ -553,7 +474,6 @@ enum EAXSOURCE_PROPERTY :
     EAXSOURCE_ACTIVEFXSLOTID,
 
     // EAX50
-
     EAXSOURCE_MACROFXFACTOR,
     EAXSOURCE_SPEAKERLEVELS,
     EAXSOURCE_ALL2DPARAMETERS,
@@ -565,9 +485,7 @@ constexpr auto EAXSOURCEFLAGS_ROOMAUTO = 0x00000002UL; // relates to EAXSOURCE_R
 constexpr auto EAXSOURCEFLAGS_ROOMHFAUTO = 0x00000004UL; // relates to EAXSOURCE_ROOMHF
 // EAX50
 constexpr auto EAXSOURCEFLAGS_3DELEVATIONFILTER = 0x00000008UL;
-// EAX50
 constexpr auto EAXSOURCEFLAGS_UPMIX = 0x00000010UL;
-// EAX50
 constexpr auto EAXSOURCEFLAGS_APPLYSPEAKERLEVELS = 0x00000020UL;
 
 constexpr auto EAX20SOURCEFLAGS_RESERVED = 0xFFFFFFF8UL; // reserved future use
@@ -656,8 +574,6 @@ constexpr auto EAXSOURCE_MINMACROFXFACTOR = 0.0F;
 constexpr auto EAXSOURCE_MAXMACROFXFACTOR = 1.0F;
 constexpr auto EAXSOURCE_DEFAULTMACROFXFACTOR = 1.0F;
 
-// EAX50
-
 constexpr auto EAXSOURCE_MINSPEAKERLEVEL = -10'000L;
 constexpr auto EAXSOURCE_MAXSPEAKERLEVEL = 0L;
 constexpr auto EAXSOURCE_DEFAULTSPEAKERLEVEL = -10'000L;
@@ -667,9 +583,7 @@ constexpr auto EAXSOURCE_DEFAULTFLAGS =
     EAXSOURCEFLAGS_ROOMAUTO |
     EAXSOURCEFLAGS_ROOMHFAUTO;
 
-enum :
-    long
-{
+enum : long {
     EAXSPEAKER_FRONT_LEFT = 1,
     EAXSPEAKER_FRONT_CENTER = 2,
     EAXSPEAKER_FRONT_RIGHT = 3,
@@ -689,8 +603,7 @@ constexpr auto EAX50SOURCE_DEFAULTFLAGS =
     EAXSOURCEFLAGS_ROOMHFAUTO |
     EAXSOURCEFLAGS_UPMIX;
 
-struct EAX30SOURCEPROPERTIES
-{
+struct EAX30SOURCEPROPERTIES {
     long lDirect; // direct path level (at low and mid frequencies)
     long lDirectHF; // relative direct path level at high frequencies
     long lRoom; // room effect level (at low and mid frequencies)
@@ -711,23 +624,11 @@ struct EAX30SOURCEPROPERTIES
     unsigned long ulFlags; // modifies the behavior of properties
 }; // EAX30SOURCEPROPERTIES
 
-inline bool operator==(const EAX30SOURCEPROPERTIES& lhs, const EAX30SOURCEPROPERTIES& rhs) noexcept
-{
-    return std::memcmp(&lhs, &rhs, sizeof(EAX30SOURCEPROPERTIES)) == 0;
-}
-
-struct EAX50SOURCEPROPERTIES : public EAX30SOURCEPROPERTIES
-{
+struct EAX50SOURCEPROPERTIES : public EAX30SOURCEPROPERTIES {
     float flMacroFXFactor;
 }; // EAX50SOURCEPROPERTIES
 
-inline bool operator==(const EAX50SOURCEPROPERTIES& lhs, const EAX50SOURCEPROPERTIES& rhs) noexcept
-{
-    return std::memcmp(&lhs, &rhs, sizeof(EAX50SOURCEPROPERTIES)) == 0;
-}
-
-struct EAXSOURCEALLSENDPROPERTIES
-{
+struct EAXSOURCEALLSENDPROPERTIES {
     GUID guidReceivingFXSlotID;
     long lSend; // send level (at low and mid frequencies)
     long lSendHF; // relative send level at high frequencies
@@ -739,8 +640,7 @@ struct EAXSOURCEALLSENDPROPERTIES
     float flExclusionLFRatio;
 }; // EAXSOURCEALLSENDPROPERTIES
 
-struct EAXSOURCE2DPROPERTIES
-{
+struct EAXSOURCE2DPROPERTIES {
     long lDirect; // direct path level (at low and mid frequencies)
     long lDirectHF; // relative direct path level at high frequencies
     long lRoom; // room effect level (at low and mid frequencies)
@@ -748,40 +648,27 @@ struct EAXSOURCE2DPROPERTIES
     unsigned long ulFlags; // modifies the behavior of properties
 }; // EAXSOURCE2DPROPERTIES
 
-struct EAXSPEAKERLEVELPROPERTIES
-{
+struct EAXSPEAKERLEVELPROPERTIES {
     long lSpeakerID;
     long lLevel;
 }; // EAXSPEAKERLEVELPROPERTIES
 
-struct EAX40ACTIVEFXSLOTS
-{
+struct EAX40ACTIVEFXSLOTS {
     GUID guidActiveFXSlots[EAX40_MAX_ACTIVE_FXSLOTS];
 }; // EAX40ACTIVEFXSLOTS
 
-struct EAX50ACTIVEFXSLOTS
-{
+struct EAX50ACTIVEFXSLOTS {
     GUID guidActiveFXSlots[EAX50_MAX_ACTIVE_FXSLOTS];
 }; // EAX50ACTIVEFXSLOTS
 
-bool operator==(
-    const EAX50ACTIVEFXSLOTS& lhs,
-    const EAX50ACTIVEFXSLOTS& rhs) noexcept;
-
-bool operator!=(
-    const EAX50ACTIVEFXSLOTS& lhs,
-    const EAX50ACTIVEFXSLOTS& rhs) noexcept;
-
 // Use this structure for EAXSOURCE_OBSTRUCTIONPARAMETERS property.
-struct EAXOBSTRUCTIONPROPERTIES
-{
+struct EAXOBSTRUCTIONPROPERTIES {
     long lObstruction;
     float flObstructionLFRatio;
 }; // EAXOBSTRUCTIONPROPERTIES
 
 // Use this structure for EAXSOURCE_OCCLUSIONPARAMETERS property.
-struct EAXOCCLUSIONPROPERTIES
-{
+struct EAXOCCLUSIONPROPERTIES {
     long lOcclusion;
     float flOcclusionLFRatio;
     float flOcclusionRoomRatio;
@@ -789,23 +676,20 @@ struct EAXOCCLUSIONPROPERTIES
 }; // EAXOCCLUSIONPROPERTIES
 
 // Use this structure for EAXSOURCE_EXCLUSIONPARAMETERS property.
-struct EAXEXCLUSIONPROPERTIES
-{
+struct EAXEXCLUSIONPROPERTIES {
     long lExclusion;
     float flExclusionLFRatio;
 }; // EAXEXCLUSIONPROPERTIES
 
 // Use this structure for EAXSOURCE_SENDPARAMETERS properties.
-struct EAXSOURCESENDPROPERTIES
-{
+struct EAXSOURCESENDPROPERTIES {
     GUID guidReceivingFXSlotID;
     long lSend;
     long lSendHF;
 }; // EAXSOURCESENDPROPERTIES
 
 // Use this structure for EAXSOURCE_OCCLUSIONSENDPARAMETERS 
-struct EAXSOURCEOCCLUSIONSENDPROPERTIES
-{
+struct EAXSOURCEOCCLUSIONSENDPROPERTIES {
     GUID guidReceivingFXSlotID;
     long lOcclusion;
     float flOcclusionLFRatio;
@@ -814,8 +698,7 @@ struct EAXSOURCEOCCLUSIONSENDPROPERTIES
 }; // EAXSOURCEOCCLUSIONSENDPROPERTIES
 
 // Use this structure for EAXSOURCE_EXCLUSIONSENDPARAMETERS
-struct EAXSOURCEEXCLUSIONSENDPROPERTIES
-{
+struct EAXSOURCEEXCLUSIONSENDPROPERTIES {
     GUID guidReceivingFXSlotID;
     long lExclusion;
     float flExclusionLFRatio;
@@ -833,9 +716,7 @@ extern const EAX50ACTIVEFXSLOTS EAX50SOURCE_2DDEFAULTACTIVEFXSLOTID;
 extern const GUID EAX_REVERB_EFFECT;
 
 // Reverb effect properties
-enum EAXREVERB_PROPERTY :
-    unsigned int
-{
+enum EAXREVERB_PROPERTY : unsigned int {
     EAXREVERB_NONE,
     EAXREVERB_ALLPARAMETERS,
     EAXREVERB_ENVIRONMENT,
@@ -865,9 +746,7 @@ enum EAXREVERB_PROPERTY :
 }; // EAXREVERB_PROPERTY
 
 // used by EAXREVERB_ENVIRONMENT
-enum :
-    unsigned long
-{
+enum : unsigned long {
     EAX_ENVIRONMENT_GENERIC,
     EAX_ENVIRONMENT_PADDEDCELL,
     EAX_ENVIRONMENT_ROOM,
@@ -933,8 +812,7 @@ constexpr auto EAXREVERBFLAGS_DECAYHFLIMIT = 0x00000020UL;
 constexpr auto EAXREVERBFLAGS_RESERVED = 0xFFFFFF00UL; // reserved future use
 
 
-struct EAXREVERBPROPERTIES
-{
+struct EAXREVERBPROPERTIES {
     unsigned long ulEnvironment; // sets all reverb properties
     float flEnvironmentSize; // environment size in meters
     float flEnvironmentDiffusion; // environment diffusion
@@ -960,14 +838,6 @@ struct EAXREVERBPROPERTIES
     float flRoomRolloffFactor; // like DS3D flRolloffFactor but for room effect
     unsigned long ulFlags; // modifies the behavior of properties
 }; // EAXREVERBPROPERTIES
-
-bool operator==(
-    const EAXREVERBPROPERTIES& lhs,
-    const EAXREVERBPROPERTIES& rhs) noexcept;
-
-bool operator!=(
-    const EAXREVERBPROPERTIES& lhs,
-    const EAXREVERBPROPERTIES& rhs) noexcept;
 
 
 constexpr auto EAXREVERB_MINENVIRONMENT = static_cast<unsigned long>(EAX_ENVIRONMENT_GENERIC);
@@ -1088,16 +958,13 @@ extern const EaxReverbPresets EAXREVERB_PRESETS;
 
 extern const GUID EAX_AGCCOMPRESSOR_EFFECT;
 
-enum EAXAGCCOMPRESSOR_PROPERTY :
-    unsigned int
-{
+enum EAXAGCCOMPRESSOR_PROPERTY : unsigned int {
     EAXAGCCOMPRESSOR_NONE,
     EAXAGCCOMPRESSOR_ALLPARAMETERS,
     EAXAGCCOMPRESSOR_ONOFF,
 }; // EAXAGCCOMPRESSOR_PROPERTY
 
-struct EAXAGCCOMPRESSORPROPERTIES
-{
+struct EAXAGCCOMPRESSORPROPERTIES {
     unsigned long ulOnOff; // Switch Compressor on or off
 }; // EAXAGCCOMPRESSORPROPERTIES
 
@@ -1111,9 +978,7 @@ constexpr auto EAXAGCCOMPRESSOR_DEFAULTONOFF = EAXAGCCOMPRESSOR_MAXONOFF;
 
 extern const GUID EAX_AUTOWAH_EFFECT;
 
-enum EAXAUTOWAH_PROPERTY :
-    unsigned int
-{
+enum EAXAUTOWAH_PROPERTY : unsigned int {
     EAXAUTOWAH_NONE,
     EAXAUTOWAH_ALLPARAMETERS,
     EAXAUTOWAH_ATTACKTIME,
@@ -1122,8 +987,7 @@ enum EAXAUTOWAH_PROPERTY :
     EAXAUTOWAH_PEAKLEVEL,
 }; // EAXAUTOWAH_PROPERTY
 
-struct EAXAUTOWAHPROPERTIES
-{
+struct EAXAUTOWAHPROPERTIES {
     float flAttackTime; // Attack time (seconds)
     float flReleaseTime; // Release time (seconds)
     long lResonance; // Resonance (mB)
@@ -1152,10 +1016,7 @@ constexpr auto EAXAUTOWAH_DEFAULTPEAKLEVEL = 2100L;
 
 extern const GUID EAX_CHORUS_EFFECT;
 
-
-enum EAXCHORUS_PROPERTY :
-    unsigned int
-{
+enum EAXCHORUS_PROPERTY : unsigned int {
     EAXCHORUS_NONE,
     EAXCHORUS_ALLPARAMETERS,
     EAXCHORUS_WAVEFORM,
@@ -1166,15 +1027,12 @@ enum EAXCHORUS_PROPERTY :
     EAXCHORUS_DELAY,
 }; // EAXCHORUS_PROPERTY
 
-enum :
-    unsigned long
-{
+enum : unsigned long {
     EAX_CHORUS_SINUSOID,
     EAX_CHORUS_TRIANGLE,
 };
 
-struct EAXCHORUSPROPERTIES
-{
+struct EAXCHORUSPROPERTIES {
     unsigned long ulWaveform; // Waveform selector - see enum above
     long lPhase; // Phase (Degrees)
     float flRate; // Rate (Hz)
@@ -1213,9 +1071,7 @@ constexpr auto EAXCHORUS_DEFAULTDELAY = 0.016F;
 
 extern const GUID EAX_DISTORTION_EFFECT;
 
-enum EAXDISTORTION_PROPERTY :
-    unsigned int
-{
+enum EAXDISTORTION_PROPERTY : unsigned int {
     EAXDISTORTION_NONE,
     EAXDISTORTION_ALLPARAMETERS,
     EAXDISTORTION_EDGE,
@@ -1225,9 +1081,7 @@ enum EAXDISTORTION_PROPERTY :
     EAXDISTORTION_EQBANDWIDTH,
 }; // EAXDISTORTION_PROPERTY
 
-
-struct EAXDISTORTIONPROPERTIES
-{
+struct EAXDISTORTIONPROPERTIES {
     float flEdge; // Controls the shape of the distortion (0 to 1)
     long lGain; // Controls the post distortion gain (mB)
     float flLowPassCutOff; // Controls the cut-off of the filter pre-distortion (Hz)
@@ -1261,10 +1115,7 @@ constexpr auto EAXDISTORTION_DEFAULTEQBANDWIDTH = 3600.0F;
 
 extern const GUID EAX_ECHO_EFFECT;
 
-
-enum EAXECHO_PROPERTY :
-    unsigned int
-{
+enum EAXECHO_PROPERTY : unsigned int {
     EAXECHO_NONE,
     EAXECHO_ALLPARAMETERS,
     EAXECHO_DELAY,
@@ -1274,9 +1125,7 @@ enum EAXECHO_PROPERTY :
     EAXECHO_SPREAD,
 }; // EAXECHO_PROPERTY
 
-
-struct EAXECHOPROPERTIES
-{
+struct EAXECHOPROPERTIES {
     float flDelay; // Controls the initial delay time (seconds)
     float flLRDelay; // Controls the delay time between the first and second taps (seconds)
     float flDamping; // Controls a low-pass filter that dampens the echoes (0 to 1)
@@ -1310,10 +1159,7 @@ constexpr auto EAXECHO_DEFAULTSPREAD = -1.0F;
 
 extern const GUID EAX_EQUALIZER_EFFECT;
 
-
-enum EAXEQUALIZER_PROPERTY :
-    unsigned int
-{
+enum EAXEQUALIZER_PROPERTY : unsigned int {
     EAXEQUALIZER_NONE,
     EAXEQUALIZER_ALLPARAMETERS,
     EAXEQUALIZER_LOWGAIN,
@@ -1328,9 +1174,7 @@ enum EAXEQUALIZER_PROPERTY :
     EAXEQUALIZER_HIGHCUTOFF,
 }; // EAXEQUALIZER_PROPERTY
 
-
-struct EAXEQUALIZERPROPERTIES
-{
+struct EAXEQUALIZERPROPERTIES {
     long lLowGain; // (mB)
     float flLowCutOff; // (Hz)
     long lMid1Gain; // (mB)
@@ -1389,9 +1233,7 @@ constexpr auto EAXEQUALIZER_DEFAULTHIGHCUTOFF = 6000.0F;
 
 extern const GUID EAX_FLANGER_EFFECT;
 
-enum EAXFLANGER_PROPERTY :
-    unsigned int
-{
+enum EAXFLANGER_PROPERTY : unsigned int {
     EAXFLANGER_NONE,
     EAXFLANGER_ALLPARAMETERS,
     EAXFLANGER_WAVEFORM,
@@ -1402,15 +1244,12 @@ enum EAXFLANGER_PROPERTY :
     EAXFLANGER_DELAY,
 }; // EAXFLANGER_PROPERTY
 
-enum :
-    unsigned long
-{
+enum : unsigned long {
     EAX_FLANGER_SINUSOID,
     EAX_FLANGER_TRIANGLE,
 };
 
-struct EAXFLANGERPROPERTIES
-{
+struct EAXFLANGERPROPERTIES {
     unsigned long ulWaveform; // Waveform selector - see enum above
     long lPhase; // Phase (Degrees)
     float flRate; // Rate (Hz)
@@ -1449,9 +1288,7 @@ constexpr auto EAXFLANGER_DEFAULTDELAY = 0.002F;
 
 extern const GUID EAX_FREQUENCYSHIFTER_EFFECT;
 
-enum EAXFREQUENCYSHIFTER_PROPERTY :
-    unsigned int
-{
+enum EAXFREQUENCYSHIFTER_PROPERTY : unsigned int {
     EAXFREQUENCYSHIFTER_NONE,
     EAXFREQUENCYSHIFTER_ALLPARAMETERS,
     EAXFREQUENCYSHIFTER_FREQUENCY,
@@ -1459,16 +1296,13 @@ enum EAXFREQUENCYSHIFTER_PROPERTY :
     EAXFREQUENCYSHIFTER_RIGHTDIRECTION,
 }; // EAXFREQUENCYSHIFTER_PROPERTY
 
-enum :
-    unsigned long
-{
+enum : unsigned long {
     EAX_FREQUENCYSHIFTER_DOWN,
     EAX_FREQUENCYSHIFTER_UP,
     EAX_FREQUENCYSHIFTER_OFF
 };
 
-struct EAXFREQUENCYSHIFTERPROPERTIES
-{
+struct EAXFREQUENCYSHIFTERPROPERTIES {
     float flFrequency; // (Hz)
     unsigned long ulLeftDirection; // see enum above
     unsigned long ulRightDirection; // see enum above
@@ -1492,9 +1326,7 @@ constexpr auto EAXFREQUENCYSHIFTER_DEFAULTRIGHTDIRECTION = EAXFREQUENCYSHIFTER_M
 
 extern const GUID EAX_VOCALMORPHER_EFFECT;
 
-enum EAXVOCALMORPHER_PROPERTY :
-    unsigned int
-{
+enum EAXVOCALMORPHER_PROPERTY : unsigned int {
     EAXVOCALMORPHER_NONE,
     EAXVOCALMORPHER_ALLPARAMETERS,
     EAXVOCALMORPHER_PHONEMEA,
@@ -1505,9 +1337,7 @@ enum EAXVOCALMORPHER_PROPERTY :
     EAXVOCALMORPHER_RATE,
 }; // EAXVOCALMORPHER_PROPERTY
 
-enum :
-    unsigned long
-{
+enum : unsigned long {
     A,
     E,
     I,
@@ -1540,17 +1370,14 @@ enum :
     Z,
 };
 
-enum :
-    unsigned long
-{
+enum : unsigned long {
     EAX_VOCALMORPHER_SINUSOID,
     EAX_VOCALMORPHER_TRIANGLE,
     EAX_VOCALMORPHER_SAWTOOTH
 };
 
 // Use this structure for EAXVOCALMORPHER_ALLPARAMETERS
-struct EAXVOCALMORPHERPROPERTIES
-{
+struct EAXVOCALMORPHERPROPERTIES {
     unsigned long ulPhonemeA; // see enum above
     long lPhonemeACoarseTuning; // (semitones)
     unsigned long ulPhonemeB; // see enum above
@@ -1589,17 +1416,14 @@ constexpr auto EAXVOCALMORPHER_DEFAULTRATE = 1.41F;
 
 extern const GUID EAX_PITCHSHIFTER_EFFECT;
 
-enum EAXPITCHSHIFTER_PROPERTY :
-    unsigned int
-{
+enum EAXPITCHSHIFTER_PROPERTY : unsigned int {
     EAXPITCHSHIFTER_NONE,
     EAXPITCHSHIFTER_ALLPARAMETERS,
     EAXPITCHSHIFTER_COARSETUNE,
     EAXPITCHSHIFTER_FINETUNE,
 }; // EAXPITCHSHIFTER_PROPERTY
 
-struct EAXPITCHSHIFTERPROPERTIES
-{
+struct EAXPITCHSHIFTERPROPERTIES {
     long lCoarseTune; // Amount of pitch shift (semitones)
     long lFineTune; // Amount of pitch shift (cents)
 }; // EAXPITCHSHIFTERPROPERTIES
@@ -1618,9 +1442,7 @@ constexpr auto EAXPITCHSHIFTER_DEFAULTFINETUNE = 0L;
 
 extern const GUID EAX_RINGMODULATOR_EFFECT;
 
-enum EAXRINGMODULATOR_PROPERTY :
-    unsigned int
-{
+enum EAXRINGMODULATOR_PROPERTY : unsigned int {
     EAXRINGMODULATOR_NONE,
     EAXRINGMODULATOR_ALLPARAMETERS,
     EAXRINGMODULATOR_FREQUENCY,
@@ -1628,17 +1450,14 @@ enum EAXRINGMODULATOR_PROPERTY :
     EAXRINGMODULATOR_WAVEFORM,
 }; // EAXRINGMODULATOR_PROPERTY
 
-enum :
-    unsigned long
-{
+enum : unsigned long {
     EAX_RINGMODULATOR_SINUSOID,
     EAX_RINGMODULATOR_SAWTOOTH,
     EAX_RINGMODULATOR_SQUARE,
 };
 
 // Use this structure for EAXRINGMODULATOR_ALLPARAMETERS
-struct EAXRINGMODULATORPROPERTIES
-{
+struct EAXRINGMODULATORPROPERTIES {
     float flFrequency; // Frequency of modulation (Hz)
     float flHighPassCutOff; // Cut-off frequency of high-pass filter (Hz)
     unsigned long ulWaveform; // Waveform selector - see enum above
@@ -1671,6 +1490,5 @@ using LPEAXGET = ALenum(AL_APIENTRY*)(
     ALuint property_source_id,
     ALvoid* property_buffer,
     ALuint property_size);
-
 
 #endif // !EAX_API_INCLUDED

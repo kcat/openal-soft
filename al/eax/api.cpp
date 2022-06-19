@@ -269,73 +269,13 @@ const GUID EAX_RINGMODULATOR_EFFECT =
 };
 
 
-bool operator==(
-    const EAX40CONTEXTPROPERTIES& lhs,
-    const EAX40CONTEXTPROPERTIES& rhs) noexcept
-{
-    return
-        lhs.guidPrimaryFXSlotID == rhs.guidPrimaryFXSlotID &&
-        lhs.flDistanceFactor == rhs.flDistanceFactor &&
-        lhs.flAirAbsorptionHF == rhs.flAirAbsorptionHF &&
-        lhs.flHFReference == rhs.flHFReference;
-}
-
-bool operator==(
-    const EAX50CONTEXTPROPERTIES& lhs,
-    const EAX50CONTEXTPROPERTIES& rhs) noexcept
-{
-    return
-        static_cast<const EAX40CONTEXTPROPERTIES&>(lhs) == static_cast<const EAX40CONTEXTPROPERTIES&>(rhs) &&
-        lhs.flMacroFXFactor == rhs.flMacroFXFactor;
-}
-
-
 const GUID EAXCONTEXT_DEFAULTPRIMARYFXSLOTID = EAXPROPERTYID_EAX40_FXSlot0;
-
-bool operator==(
-    const EAX40FXSLOTPROPERTIES& lhs,
-    const EAX40FXSLOTPROPERTIES& rhs) noexcept
-{
-    return
-        lhs.guidLoadEffect == rhs.guidLoadEffect &&
-        lhs.lVolume == rhs.lVolume &&
-        lhs.lLock == rhs.lLock &&
-        lhs.ulFlags == rhs.ulFlags;
-}
-
-bool operator==(
-    const EAX50FXSLOTPROPERTIES& lhs,
-    const EAX50FXSLOTPROPERTIES& rhs) noexcept
-{
-    return
-        static_cast<const EAX40FXSLOTPROPERTIES&>(lhs) == static_cast<const EAX40FXSLOTPROPERTIES&>(rhs) &&
-        lhs.lOcclusion == rhs.lOcclusion &&
-        lhs.flOcclusionLFRatio == rhs.flOcclusionLFRatio;
-}
 
 const EAX40ACTIVEFXSLOTS EAX40SOURCE_DEFAULTACTIVEFXSLOTID = EAX40ACTIVEFXSLOTS
 {{
     EAX_NULL_GUID,
     EAXPROPERTYID_EAX40_FXSlot0,
 }};
-
-bool operator==(
-    const EAX50ACTIVEFXSLOTS& lhs,
-    const EAX50ACTIVEFXSLOTS& rhs) noexcept
-{
-    return std::equal(
-        std::cbegin(lhs.guidActiveFXSlots),
-        std::cend(lhs.guidActiveFXSlots),
-        std::begin(rhs.guidActiveFXSlots));
-}
-
-bool operator!=(
-    const EAX50ACTIVEFXSLOTS& lhs,
-    const EAX50ACTIVEFXSLOTS& rhs) noexcept
-{
-    return !(lhs == rhs);
-}
-
 
 const EAX50ACTIVEFXSLOTS EAX50SOURCE_3DDEFAULTACTIVEFXSLOTID = EAX50ACTIVEFXSLOTS
 {{
@@ -353,44 +293,6 @@ const EAX50ACTIVEFXSLOTS EAX50SOURCE_2DDEFAULTACTIVEFXSLOTID = EAX50ACTIVEFXSLOT
     EAX_NULL_GUID,
     EAX_NULL_GUID,
 }};
-
-bool operator==(
-    const EAXREVERBPROPERTIES& lhs,
-    const EAXREVERBPROPERTIES& rhs) noexcept
-{
-    return
-        lhs.ulEnvironment == rhs.ulEnvironment &&
-        lhs.flEnvironmentSize == rhs.flEnvironmentSize &&
-        lhs.flEnvironmentDiffusion == rhs.flEnvironmentDiffusion &&
-        lhs.lRoom == rhs.lRoom &&
-        lhs.lRoomHF == rhs.lRoomHF &&
-        lhs.lRoomLF == rhs.lRoomLF &&
-        lhs.flDecayTime == rhs.flDecayTime &&
-        lhs.flDecayHFRatio == rhs.flDecayHFRatio &&
-        lhs.flDecayLFRatio == rhs.flDecayLFRatio &&
-        lhs.lReflections == rhs.lReflections &&
-        lhs.flReflectionsDelay == rhs.flReflectionsDelay &&
-        lhs.vReflectionsPan == rhs.vReflectionsPan &&
-        lhs.lReverb == rhs.lReverb &&
-        lhs.flReverbDelay == rhs.flReverbDelay &&
-        lhs.vReverbPan == rhs.vReverbPan &&
-        lhs.flEchoTime == rhs.flEchoTime &&
-        lhs.flEchoDepth == rhs.flEchoDepth &&
-        lhs.flModulationTime == rhs.flModulationTime &&
-        lhs.flModulationDepth == rhs.flModulationDepth &&
-        lhs.flAirAbsorptionHF == rhs.flAirAbsorptionHF &&
-        lhs.flHFReference == rhs.flHFReference &&
-        lhs.flLFReference == rhs.flLFReference &&
-        lhs.flRoomRolloffFactor == rhs.flRoomRolloffFactor &&
-        lhs.ulFlags == rhs.ulFlags;
-}
-
-bool operator!=(
-    const EAXREVERBPROPERTIES& lhs,
-    const EAXREVERBPROPERTIES& rhs) noexcept
-{
-    return !(lhs == rhs);
-}
 
 
 // EAX1 =====================================================================

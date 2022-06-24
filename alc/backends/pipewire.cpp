@@ -119,6 +119,11 @@ _Pragma("GCC diagnostic pop")
 
 namespace {
 
+/* Added in 0.3.33, but we currently only require 0.3.23. */
+#ifndef PW_KEY_NODE_RATE
+#define PW_KEY_NODE_RATE "node.rate"
+#endif
+
 using std::chrono::seconds;
 using std::chrono::nanoseconds;
 using uint = unsigned int;

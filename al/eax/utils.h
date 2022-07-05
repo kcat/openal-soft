@@ -11,7 +11,7 @@ struct EaxAlLowPassParam {
     float gain_hf;
 };
 
-void eax_log_exception(const char* message = nullptr) noexcept;
+void eax_log_exception(const char *message) noexcept;
 
 template<typename TException, typename TValue>
 void eax_validate_range(

@@ -28,8 +28,7 @@
 
 using ContextDirtyFlagsValue = std::uint_least8_t;
 
-struct ContextDirtyFlags
-{
+struct ContextDirtyFlags {
     using EaxIsBitFieldStruct = bool;
 
     ContextDirtyFlagsValue guidPrimaryFXSlotID : 1;
@@ -38,13 +37,6 @@ struct ContextDirtyFlags
     ContextDirtyFlagsValue flHFReference : 1;
     ContextDirtyFlagsValue flMacroFXFactor : 1;
 }; // ContextDirtyFlags
-
-
-struct EaxAlIsExtensionPresentResult
-{
-    ALboolean is_present;
-    bool is_return;
-}; // EaxAlIsExtensionPresentResult
 #endif // ALSOFT_EAX
 
 struct ALeffect;

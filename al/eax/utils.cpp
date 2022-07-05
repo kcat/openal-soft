@@ -8,8 +8,7 @@
 #include "core/logging.h"
 
 
-void eax_log_exception(
-    const char* message) noexcept
+void eax_log_exception(const char *message) noexcept
 {
     const auto exception_ptr = std::current_exception();
     assert(exception_ptr);

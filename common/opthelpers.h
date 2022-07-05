@@ -3,7 +3,7 @@
 
 #include <cstdint>
 #include <utility>
-
+#include <memory>
 
 #ifdef __has_builtin
 #define HAS_BUILTIN __has_builtin

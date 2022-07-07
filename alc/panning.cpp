@@ -611,10 +611,16 @@ void InitPanning(ALCdevice *device, const bool hqdec=false, const bool stablize=
                 { return BFChannelConfig{1.0f/n3dscale[acn], acn}; });
             AllocChannels(device, count, 0);
 
-            float nfc_delay{device->configValue<float>("decoder", "nfc-ref-delay").value_or(0.0f)};
-            if(nfc_delay > 0.0f)
-                InitNearFieldCtrl(device, nfc_delay * SpeedOfSoundMetersPerSec, device->mAmbiOrder,
-                    true);
+            float avg_dist{};
+            if(auto distopt = device->configValue<float>("decoder", "speaker-dist"))
+                avg_dist = *distopt;
+            else if(auto delayopt = device->configValue<float>("decoder", "nfc-ref-delay"))
+            {
+                WARN("nfc-ref-delay is deprecated, use speaker-dist instead\n");
+                avg_dist = *delayopt * SpeedOfSoundMetersPerSec;
+            }
+
+            InitNearFieldCtrl(device, avg_dist, device->mAmbiOrder, true);
             return;
         }
     }
@@ -1016,11 +1022,13 @@ void aluInitRenderer(ALCdevice *device, int hrtf_id, al::optional<StereoEncoding
                     spkr_count += 1.0f;
                 }
             }
+
+            const float avg_dist{(accum_dist > 0.0f && spkr_count > 0) ? accum_dist/spkr_count :
+                device->configValue<float>("decoder", "speaker-dist").value_or(1.0f)};
+            InitNearFieldCtrl(device, avg_dist, decoder.mOrder, decoder.mIs3D);
+
             if(spkr_count > 0)
-            {
-                InitNearFieldCtrl(device, accum_dist / spkr_count, decoder.mOrder, decoder.mIs3D);
                 InitDistanceComp(device, decoder.mChannels, speakerdists);
-            }
         }
         if(auto *ambidec{device->AmbiDecoder.get()})
         {

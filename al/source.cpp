@@ -4858,28 +4858,36 @@ void ALsource::eax_set_al_source_send(ALeffectslot *slot, size_t sendidx, const 
 
 void ALsource::eax_commit_active_fx_slots()
 {
-    // Mark all slots as non-active.
+    // Clear all slots to an inactive state.
     eax_active_fx_slots_.fill(false);
 
-    // Mark primary FX slot as active.
-    if (eax_primary_fx_slot_id_.has_value())
-        eax_active_fx_slots_[*eax_primary_fx_slot_id_] = true;
-
-    // Mark the other FX slots as active.
-    for (const auto& slot_id : eax_.active_fx_slots.guidActiveFXSlots) {
-        if (slot_id == EAXPROPERTYID_EAX50_FXSlot0)
+    // Mark the set slots as active.
+    for(const auto& slot_id : eax_.active_fx_slots.guidActiveFXSlots)
+    {
+        if(slot_id == EAX_NULL_GUID)
+        {
+        }
+        else if(slot_id == EAX_PrimaryFXSlotID)
+        {
+            // Mark primary FX slot as active.
+            if(eax_primary_fx_slot_id_.has_value())
+                eax_active_fx_slots_[*eax_primary_fx_slot_id_] = true;
+        }
+        else if(slot_id == EAXPROPERTYID_EAX50_FXSlot0)
             eax_active_fx_slots_[0] = true;
-        else if (slot_id == EAXPROPERTYID_EAX50_FXSlot1)
+        else if(slot_id == EAXPROPERTYID_EAX50_FXSlot1)
             eax_active_fx_slots_[1] = true;
-        else if (slot_id == EAXPROPERTYID_EAX50_FXSlot2)
+        else if(slot_id == EAXPROPERTYID_EAX50_FXSlot2)
             eax_active_fx_slots_[2] = true;
-        else if (slot_id == EAXPROPERTYID_EAX50_FXSlot3)
+        else if(slot_id == EAXPROPERTYID_EAX50_FXSlot3)
             eax_active_fx_slots_[3] = true;
     }
 
-    // Deactivate EFX auxiliary effect slots.
-    for (auto i = size_t{}; i < EAX_MAX_FXSLOTS; ++i) {
-        if (!eax_active_fx_slots_[i])
+    // Deactivate EFX auxiliary effect slots for inactive slots. Active slots
+    // will be updated with the room filters.
+    for(auto i = size_t{}; i < EAX_MAX_FXSLOTS; ++i)
+    {
+        if(!eax_active_fx_slots_[i])
             eax_set_al_source_send(nullptr, i, EaxAlLowPassParam{1.0f, 1.0f});
     }
 }

@@ -195,6 +195,7 @@ void UhjStereoDecoder::decode(const al::span<float*> samples, const size_t sampl
         {
             for(size_t i{0};i < samplesToDo+sFilterDelay;++i)
                 mD[i] = (left[i] - right[i]) * wcurrent;
+            mCurrentWidth = wcurrent;
         }
         else
         {

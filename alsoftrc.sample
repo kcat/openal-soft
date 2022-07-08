@@ -602,6 +602,14 @@
 ##
 [game_compat]
 
+## nfc-scale: (global)
+#  A meters-per-unit distance scale applied to NFC filters. If a game doesn't
+#  use real-world meters for in-game units, the filters may create a too-near
+#  or too-distant effect. For instance, if the game uses 1 foot per unit, a
+#  value of 0.3048 will correctly adjust the filters. Or if the game uses 1
+#  kilometer per unit, a value of 1000 will correctly adjust the filters.
+#nfc-scale = 1
+
 ## reverse-x: (global)
 #  Reverses the local X (left-right) position of 3D sound sources.
 #reverse-x = false

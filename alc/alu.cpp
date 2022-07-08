@@ -135,6 +135,9 @@ float XScale{1.0f};
 float YScale{1.0f};
 float ZScale{1.0f};
 
+/* Source distance scale for NFC filters. */
+float NfcScale{1.0f};
+
 
 struct ChanMap {
     Channel channel;
@@ -241,12 +244,14 @@ inline ResamplerFunc SelectResampler(Resampler resampler, uint increment)
 
 } // namespace
 
-void aluInit(CompatFlagBitset flags)
+void aluInit(CompatFlagBitset flags, const float nfcscale)
 {
     MixDirectHrtf = SelectHrtfMixer();
     XScale = flags.test(CompatFlags::ReverseX) ? -1.0f : 1.0f;
     YScale = flags.test(CompatFlags::ReverseY) ? -1.0f : 1.0f;
     ZScale = flags.test(CompatFlags::ReverseZ) ? -1.0f : 1.0f;
+
+    NfcScale = clampf(nfcscale, 0.0001f, 10000.0f);
 }
 
 
@@ -787,7 +792,7 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
                 /* Clamp the distance for really close sources, to prevent
                  * excessive bass.
                  */
-                const float mdist{maxf(Distance, Device->AvgSpeakerDist/4.0f)};
+                const float mdist{maxf(Distance*NfcScale, Device->AvgSpeakerDist/4.0f)};
                 const float w0{SpeedOfSoundMetersPerSec / (mdist * Frequency)};
 
                 /* Only need to adjust the first channel of a B-Format source. */
@@ -963,7 +968,7 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
             /* Get the HRIR coefficients and delays just once, for the given
              * source direction.
              */
-            GetHrtfCoeffs(Device->mHrtf.get(), ev, az, Distance, Spread,
+            GetHrtfCoeffs(Device->mHrtf.get(), ev, az, Distance*NfcScale, Spread,
                 voice->mChans[0].mDryParams.Hrtf.Target.Coeffs,
                 voice->mChans[0].mDryParams.Hrtf.Target.Delay);
             voice->mChans[0].mDryParams.Hrtf.Target.Gain = DryGain.Base;
@@ -1041,7 +1046,7 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
                 /* Clamp the distance for really close sources, to prevent
                  * excessive bass.
                  */
-                const float mdist{maxf(Distance, Device->AvgSpeakerDist/4.0f)};
+                const float mdist{maxf(Distance*NfcScale, Device->AvgSpeakerDist/4.0f)};
                 const float w0{SpeedOfSoundMetersPerSec / (mdist * Frequency)};
 
                 /* Adjust NFC filters. */
@@ -1513,8 +1518,7 @@ void CalcAttnSourceParams(Voice *voice, const VoiceProps *props, const ContextBa
         spread = std::asin(props->Radius/Distance) * 2.0f;
 
     CalcPanningAndFilters(voice, ToSource[0]*XScale, ToSource[1]*YScale, ToSource[2]*ZScale,
-        Distance*context->mParams.MetersPerUnit, spread, DryGain, WetGain, SendSlots, props,
-        context->mParams, Device);
+        Distance, spread, DryGain, WetGain, SendSlots, props, context->mParams, Device);
 }
 
 void CalcSourceParams(Voice *voice, ContextBase *context, bool force)

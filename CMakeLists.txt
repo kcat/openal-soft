@@ -472,7 +472,7 @@ if(CMAKE_SIZEOF_VOID_P MATCHES "4" AND HAVE_SSE2)
             # assumes the stack is suitably aligned. Older Linux code or other
             # OSs don't guarantee this on 32-bit, so externally-callable
             # functions need to ensure an aligned stack.
-            set(EXPORT_DECL "${EXPORT_DECL} __attribute__((force_align_arg_pointer))")
+            set(EXPORT_DECL "${EXPORT_DECL}__attribute__((force_align_arg_pointer))")
         endif()
     endif()
 endif()

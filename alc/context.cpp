@@ -359,8 +359,7 @@ ALenum ALCcontext::eax_eax_set(
             eax_fail("Unsupported property set id.");
     }
 
-    static constexpr auto deferred_flag = 0x80000000u;
-    if(!(property_id&deferred_flag) && !mDeferUpdates)
+    if(!call.is_deferred() && !mDeferUpdates)
         applyAllUpdates();
 
     return AL_NO_ERROR;
@@ -499,6 +498,9 @@ void ALCcontext::eax_initialize(const EaxCall& call)
     eax_initialize_sources();
 
     eax_is_initialized_ = true;
+
+    if(!mDeferUpdates)
+        applyAllUpdates();
 }
 
 bool ALCcontext::eax_has_no_default_effect_slot() const noexcept
@@ -608,15 +610,10 @@ void ALCcontext::eax_dispatch_fx_slot(const EaxCall& call)
         eax_fail("Invalid fx slot index.");
 
     auto& fx_slot = eax_get_fx_slot(*fx_slot_index);
-    fx_slot.eax_dispatch(call);
-
-    if(!call.is_deferred())
+    if(fx_slot.eax_dispatch(call))
     {
-        if(fx_slot.eax_commit())
-        {
-            std::lock_guard<std::mutex> source_lock{mSourceLock};
-            eax_update_filters();
-        }
+        std::lock_guard<std::mutex> source_lock{mSourceLock};
+        eax_update_filters();
     }
 }
 

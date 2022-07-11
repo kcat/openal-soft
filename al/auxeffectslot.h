@@ -89,11 +89,11 @@ public:
 
     const EAX50FXSLOTPROPERTIES& eax_get_eax_fx_slot() const noexcept;
 
-    void eax_dispatch(const EaxCall& call)
-    { call.is_get() ? eax_get(call) : eax_set(call); }
-
     // Returns `true` if all sources should be updated, or `false` otherwise.
-    bool eax_commit();
+    bool eax_dispatch(const EaxCall& call)
+    { return call.is_get() ? eax_get(call) : eax_set(call); }
+
+    void eax_commit();
 
 private:
     static constexpr auto eax_load_effect_dirty_bit = EaxDirtyFlags{1} << 0;
@@ -240,7 +240,6 @@ private:
 
     ALCcontext* eax_al_context_{};
     EaxFxSlotIndexValue eax_fx_slot_index_{};
-    bool eax_efx_changed{}; // EFX dirty flag.
     int eax_version_{}; // Current EAX version.
     EaxEffectUPtr eax_effect_{};
     Eax5State eax123_{}; // EAX1/EAX2/EAX3 state.
@@ -297,7 +296,8 @@ private:
     void eax4_fx_slot_get(const EaxCall& call, const Eax4Props& props) const;
     void eax5_fx_slot_get(const EaxCall& call, const Eax5Props& props) const;
     void eax_fx_slot_get(const EaxCall& call) const;
-    void eax_get(const EaxCall& call);
+    // Returns `true` if all sources should be updated, or `false` otherwise.
+    bool eax_get(const EaxCall& call);
 
     void eax_fx_slot_load_effect();
     void eax_fx_slot_set_volume();
@@ -307,10 +307,14 @@ private:
     void eax4_fx_slot_set_all(const EaxCall& call);
     void eax5_fx_slot_set_all(const EaxCall& call);
 
-    void eax4_fx_slot_set(const EaxCall& call);
-    void eax5_fx_slot_set(const EaxCall& call);
-    void eax_fx_slot_set(const EaxCall& call);
-    void eax_set(const EaxCall& call);
+    // Returns `true` if all sources should be updated, or `false` otherwise.
+    bool eax4_fx_slot_set(const EaxCall& call);
+    // Returns `true` if all sources should be updated, or `false` otherwise.
+    bool eax5_fx_slot_set(const EaxCall& call);
+    // Returns `true` if all sources should be updated, or `false` otherwise.
+    bool eax_fx_slot_set(const EaxCall& call);
+    // Returns `true` if all sources should be updated, or `false` otherwise.
+    bool eax_set(const EaxCall& call);
 
     template<
         EaxDirtyFlags TDirtyBit,
@@ -320,7 +324,7 @@ private:
     void eax_fx_slot_commit_property(
         TState& state,
         EaxDirtyFlags& dst_df,
-        TMemberResult TProps::*member)
+        TMemberResult TProps::*member) noexcept
     {
         auto& src_i = state.i;
         auto& src_df = state.df;
@@ -332,8 +336,8 @@ private:
         }
     }
 
-    EaxDirtyFlags eax4_fx_slot_commit();
-    EaxDirtyFlags eax5_fx_slot_commit(Eax5State& state);
+    void eax4_fx_slot_commit(EaxDirtyFlags& dst_df);
+    void eax5_fx_slot_commit(Eax5State& state, EaxDirtyFlags& dst_df);
 
     void eax_dispatch_effect(const EaxCall& call);
 
@@ -345,8 +349,6 @@ private:
 
     // `alAuxiliaryEffectSlotf(effect_slot, AL_EFFECTSLOT_GAIN, gain)`
     void eax_set_efx_slot_gain(ALfloat gain);
-
-    void eax_efx_commit();
 
 public:
     class EaxDeleter {

@@ -339,7 +339,6 @@ ALenum ALCcontext::eax_eax_set(
         property_value_size);
     eax_version_ = call.get_version();
     eax_initialize(call);
-    eax_unlock_legacy_fx_slots(call);
 
     switch (call.get_property_set_id())
     {
@@ -360,8 +359,7 @@ ALenum ALCcontext::eax_eax_set(
             eax_fail("Unsupported property set id.");
     }
 
-    static constexpr auto deferred_flag = 0x80000000u;
-    if(!(property_id&deferred_flag) && !mDeferUpdates)
+    if(!call.is_deferred() && !mDeferUpdates)
         applyAllUpdates();
 
     return AL_NO_ERROR;
@@ -383,7 +381,6 @@ ALenum ALCcontext::eax_eax_get(
         property_value_size);
     eax_version_ = call.get_version();
     eax_initialize(call);
-    eax_unlock_legacy_fx_slots(call);
 
     switch (call.get_property_set_id())
     {
@@ -501,6 +498,9 @@ void ALCcontext::eax_initialize(const EaxCall& call)
     eax_initialize_sources();
 
     eax_is_initialized_ = true;
+
+    if(!mDeferUpdates)
+        applyAllUpdates();
 }
 
 bool ALCcontext::eax_has_no_default_effect_slot() const noexcept
@@ -601,15 +601,6 @@ void ALCcontext::eax_set_defaults() noexcept
     eax_set_context_defaults();
 
     eax_d_ = eax_;
-}
-
-void ALCcontext::eax_unlock_legacy_fx_slots(const EaxCall& call) noexcept
-{
-    if (call.get_version() != 5 || eax_are_legacy_fx_slots_unlocked_)
-        return;
-
-    eax_are_legacy_fx_slots_unlocked_ = true;
-    eax_fx_slots_.unlock_legacy();
 }
 
 void ALCcontext::eax_dispatch_fx_slot(const EaxCall& call)

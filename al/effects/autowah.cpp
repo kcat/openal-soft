@@ -127,7 +127,7 @@ public:
 
 class EaxAutoWahEffect final : public EaxEffect4<EaxAutoWahEffectException, EAXAUTOWAHPROPERTIES> {
 public:
-    EaxAutoWahEffect(const EaxCall& call);
+    EaxAutoWahEffect(int eax_version);
 
 private:
     struct AttackTimeValidator {
@@ -197,8 +197,8 @@ private:
     bool commit_props(const Props& props) override;
 }; // EaxAutoWahEffect
 
-EaxAutoWahEffect::EaxAutoWahEffect(const EaxCall& call)
-    : EaxEffect4{AL_EFFECT_AUTOWAH, call}
+EaxAutoWahEffect::EaxAutoWahEffect(int eax_version)
+    : EaxEffect4{AL_EFFECT_AUTOWAH, eax_version}
 {}
 
 void EaxAutoWahEffect::set_defaults(Props& props)
@@ -310,9 +310,9 @@ bool EaxAutoWahEffect::commit_props(const Props& props)
 
 } // namespace
 
-EaxEffectUPtr eax_create_eax_auto_wah_effect(const EaxCall& call)
+EaxEffectUPtr eax_create_eax_auto_wah_effect(int eax_version)
 {
-    return eax_create_eax4_effect<EaxAutoWahEffect>(call);
+    return eax_create_eax4_effect<EaxAutoWahEffect>(eax_version);
 }
 
 #endif // ALSOFT_EAX

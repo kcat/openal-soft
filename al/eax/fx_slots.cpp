@@ -57,12 +57,6 @@ ALeffectslot& EaxFxSlots::get(EaxFxSlotIndex index)
     return *fx_slots_[index.value()];
 }
 
-void EaxFxSlots::unlock_legacy() noexcept
-{
-    fx_slots_[0]->eax_unlock_legacy();
-    fx_slots_[1]->eax_unlock_legacy();
-}
-
 [[noreturn]]
 void EaxFxSlots::fail(
     const char* message)

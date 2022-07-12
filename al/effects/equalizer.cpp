@@ -188,7 +188,7 @@ public:
 class EaxEqualizerEffect final : public EaxEffect4<EaxEqualizerEffectException, EAXEQUALIZERPROPERTIES>
 {
 public:
-    EaxEqualizerEffect(const EaxCall& call);
+    EaxEqualizerEffect(int eax_version);
 
 private:
     struct LowGainValidator {
@@ -336,8 +336,8 @@ private:
     bool commit_props(const Props& props) override;
 }; // EaxEqualizerEffect
 
-EaxEqualizerEffect::EaxEqualizerEffect(const EaxCall& call)
-    : EaxEffect4{AL_EFFECT_EQUALIZER, call}
+EaxEqualizerEffect::EaxEqualizerEffect(int eax_version)
+    : EaxEffect4{AL_EFFECT_EQUALIZER, eax_version}
 {}
 
 void EaxEqualizerEffect::set_defaults(Props& props)
@@ -557,9 +557,9 @@ bool EaxEqualizerEffect::commit_props(const Props& props)
 
 } // namespace
 
-EaxEffectUPtr eax_create_eax_equalizer_effect(const EaxCall& call)
+EaxEffectUPtr eax_create_eax_equalizer_effect(int eax_version)
 {
-    return eax_create_eax4_effect<EaxEqualizerEffect>(call);
+    return eax_create_eax4_effect<EaxEqualizerEffect>(eax_version);
 }
 
 #endif // ALSOFT_EAX

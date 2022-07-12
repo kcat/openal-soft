@@ -35,8 +35,8 @@ template<typename TException, typename TProps>
 class EaxEffect4 : public EaxEffect
 {
 public:
-    EaxEffect4(ALenum type, const EaxCall& call)
-        : EaxEffect{type}, version_{clamp(call.get_version(), 4, 5)}
+    EaxEffect4(ALenum type, int eax_version)
+        : EaxEffect{type}, version_{clamp(eax_version, 4, 5)}
     {}
 
     void initialize()
@@ -70,10 +70,10 @@ protected:
         Props d; // Deferred.
     }; // State
 
-    int version_;
-    Props props_;
-    State state4_;
-    State state5_;
+    int version_{};
+    Props props_{};
+    State state4_{};
+    State state5_{};
 
     template<typename TValidator, typename TProperty>
     static void defer(const EaxCall& call, TProperty& property)
@@ -149,25 +149,25 @@ using EaxEffectUPtr = std::unique_ptr<EaxEffect>;
 
 // Creates EAX4+ effect.
 template<typename TEffect>
-EaxEffectUPtr eax_create_eax4_effect(const EaxCall& call)
+EaxEffectUPtr eax_create_eax4_effect(int eax_version)
 {
-    auto effect = std::make_unique<TEffect>(call);
+    auto effect = std::make_unique<TEffect>(eax_version);
     effect->initialize();
     return effect;
 }
 
 EaxEffectUPtr eax_create_eax_null_effect();
-EaxEffectUPtr eax_create_eax_chorus_effect(const EaxCall& call);
-EaxEffectUPtr eax_create_eax_distortion_effect(const EaxCall& call);
-EaxEffectUPtr eax_create_eax_echo_effect(const EaxCall& call);
-EaxEffectUPtr eax_create_eax_flanger_effect(const EaxCall& call);
-EaxEffectUPtr eax_create_eax_frequency_shifter_effect(const EaxCall& call);
-EaxEffectUPtr eax_create_eax_vocal_morpher_effect(const EaxCall& call);
-EaxEffectUPtr eax_create_eax_pitch_shifter_effect(const EaxCall& call);
-EaxEffectUPtr eax_create_eax_ring_modulator_effect(const EaxCall& call);
-EaxEffectUPtr eax_create_eax_auto_wah_effect(const EaxCall& call);
-EaxEffectUPtr eax_create_eax_compressor_effect(const EaxCall& call);
-EaxEffectUPtr eax_create_eax_equalizer_effect(const EaxCall& call);
-EaxEffectUPtr eax_create_eax_reverb_effect(const EaxCall& call);
+EaxEffectUPtr eax_create_eax_chorus_effect(int eax_version);
+EaxEffectUPtr eax_create_eax_distortion_effect(int eax_version);
+EaxEffectUPtr eax_create_eax_echo_effect(int eax_version);
+EaxEffectUPtr eax_create_eax_flanger_effect(int eax_version);
+EaxEffectUPtr eax_create_eax_frequency_shifter_effect(int eax_version);
+EaxEffectUPtr eax_create_eax_vocal_morpher_effect(int eax_version);
+EaxEffectUPtr eax_create_eax_pitch_shifter_effect(int eax_version);
+EaxEffectUPtr eax_create_eax_ring_modulator_effect(int eax_version);
+EaxEffectUPtr eax_create_eax_auto_wah_effect(int eax_version);
+EaxEffectUPtr eax_create_eax_compressor_effect(int eax_version);
+EaxEffectUPtr eax_create_eax_equalizer_effect(int eax_version);
+EaxEffectUPtr eax_create_eax_reverb_effect(int eax_version);
 
 #endif // !EAX_EFFECT_INCLUDED

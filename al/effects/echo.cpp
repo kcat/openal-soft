@@ -130,7 +130,7 @@ public:
 class EaxEchoEffect final : public EaxEffect4<EaxEchoEffectException, EAXECHOPROPERTIES>
 {
 public:
-    EaxEchoEffect(const EaxCall& call);
+    EaxEchoEffect(int eax_version);
 
 private:
     struct DelayValidator {
@@ -213,8 +213,8 @@ private:
     bool commit_props(const Props& props) override;
 }; // EaxEchoEffect
 
-EaxEchoEffect::EaxEchoEffect(const EaxCall& call)
-    : EaxEffect4{AL_EFFECT_ECHO, call}
+EaxEchoEffect::EaxEchoEffect(int eax_version)
+    : EaxEffect4{AL_EFFECT_ECHO, eax_version}
 {}
 
 void EaxEchoEffect::set_defaults(Props& props)
@@ -344,9 +344,9 @@ bool EaxEchoEffect::commit_props(const Props& props)
 
 } // namespace
 
-EaxEffectUPtr eax_create_eax_echo_effect(const EaxCall& call)
+EaxEffectUPtr eax_create_eax_echo_effect(int eax_version)
 {
-    return eax_create_eax4_effect<EaxEchoEffect>(call);
+    return eax_create_eax4_effect<EaxEchoEffect>(eax_version);
 }
 
 #endif // ALSOFT_EAX

@@ -50,11 +50,6 @@
 #include "effect.h"
 #include "opthelpers.h"
 
-#ifdef ALSOFT_EAX
-#include "eax/exception.h"
-#include "eax/utils.h"
-#endif // ALSOFT_EAX
-
 namespace {
 
 struct FactoryItem {
@@ -1057,667 +1052,500 @@ EffectSlotSubList::~EffectSlotSubList()
 }
 
 #ifdef ALSOFT_EAX
-namespace {
-
-class EaxFxSlotException :
-    public EaxException
-{
-public:
-	explicit EaxFxSlotException(
-		const char* message)
-		:
-		EaxException{"EAX_FX_SLOT", message}
-	{
-	}
-}; // EaxFxSlotException
-
-
-} // namespace
-
-
 void ALeffectslot::eax_initialize(
     const EaxCall& call,
     ALCcontext& al_context,
     EaxFxSlotIndexValue index)
 {
-    eax_al_context_ = &al_context;
-
-    if (index >= EAX_MAX_FXSLOTS)
-    {
+    if(index >= EAX_MAX_FXSLOTS)
         eax_fail("Index out of range.");
-    }
 
+    mPropsDirty = true;
+    eax_al_context_ = &al_context;
     eax_fx_slot_index_ = index;
-
-    eax_initialize_eax();
-    eax_initialize_lock();
-    eax_initialize_effects(call);
+    eax_version_ = call.get_version();
+    eax_fx_slot_set_defaults();
 }
 
 const EAX50FXSLOTPROPERTIES& ALeffectslot::eax_get_eax_fx_slot() const noexcept
 {
-    return eax_eax_fx_slot_;
+    return eax_;
 }
 
-void ALeffectslot::eax_ensure_is_unlocked() const
+void ALeffectslot::eax_commit()
 {
-    if (eax_is_locked_)
-        eax_fail("Locked.");
-}
+    auto df = EaxDirtyFlags{};
 
-void ALeffectslot::eax_validate_fx_slot_effect(const GUID& eax_effect_id)
-{
-    eax_ensure_is_unlocked();
-
-    if (eax_effect_id != EAX_NULL_GUID &&
-        eax_effect_id != EAX_REVERB_EFFECT &&
-        eax_effect_id != EAX_AGCCOMPRESSOR_EFFECT &&
-        eax_effect_id != EAX_AUTOWAH_EFFECT &&
-        eax_effect_id != EAX_CHORUS_EFFECT &&
-        eax_effect_id != EAX_DISTORTION_EFFECT &&
-        eax_effect_id != EAX_ECHO_EFFECT &&
-        eax_effect_id != EAX_EQUALIZER_EFFECT &&
-        eax_effect_id != EAX_FLANGER_EFFECT &&
-        eax_effect_id != EAX_FREQUENCYSHIFTER_EFFECT &&
-        eax_effect_id != EAX_VOCALMORPHER_EFFECT &&
-        eax_effect_id != EAX_PITCHSHIFTER_EFFECT &&
-        eax_effect_id != EAX_RINGMODULATOR_EFFECT)
+    switch(eax_version_)
     {
-        eax_fail("Unsupported EAX effect GUID.");
+    case 1:
+    case 2:
+    case 3:
+        eax5_fx_slot_commit(eax123_, df);
+        break;
+    case 4:
+        eax4_fx_slot_commit(df);
+        break;
+    case 5:
+        eax5_fx_slot_commit(eax5_, df);
+        break;
+    default:
+        eax_fail_unknown_version();
     }
-}
 
-void ALeffectslot::eax_validate_fx_slot_volume(long eax_volume)
-{
-    eax_validate_range<EaxFxSlotException>(
-        "Volume",
-        eax_volume,
-        EAXFXSLOT_MINVOLUME,
-        EAXFXSLOT_MAXVOLUME);
-}
+    if(df == EaxDirtyFlags{}) {
+        if(eax_effect_ != nullptr && eax_effect_->commit())
+            eax_set_efx_slot_effect(*eax_effect_);
 
-void ALeffectslot::eax_validate_fx_slot_lock(long eax_lock)
-{
-    eax_ensure_is_unlocked();
-
-    eax_validate_range<EaxFxSlotException>(
-        "Lock",
-        eax_lock,
-        EAXFXSLOT_MINLOCK,
-        EAXFXSLOT_MAXLOCK);
-}
-
-void ALeffectslot::eax_validate_fx_slot_flags(const EaxCall& call, unsigned long eax_flags)
-{
-    eax_validate_range<EaxFxSlotException>(
-        "Flags",
-        eax_flags,
-        0UL,
-        ~(call.get_version() == 4 ? EAX40FXSLOTFLAGS_RESERVED : EAX50FXSLOTFLAGS_RESERVED));
-}
-
-void ALeffectslot::eax_validate_fx_slot_occlusion(long eax_occlusion)
-{
-    eax_validate_range<EaxFxSlotException>(
-        "Occlusion",
-        eax_occlusion,
-        EAXFXSLOT_MINOCCLUSION,
-        EAXFXSLOT_MAXOCCLUSION);
-}
-
-void ALeffectslot::eax_validate_fx_slot_occlusion_lf_ratio(float eax_occlusion_lf_ratio)
-{
-    eax_validate_range<EaxFxSlotException>(
-        "Occlusion LF Ratio",
-        eax_occlusion_lf_ratio,
-        EAXFXSLOT_MINOCCLUSIONLFRATIO,
-        EAXFXSLOT_MAXOCCLUSIONLFRATIO);
-}
-
-void ALeffectslot::eax_validate_fx_slot_all(const EaxCall& call, const EAX40FXSLOTPROPERTIES& fx_slot)
-{
-    eax_validate_fx_slot_effect(fx_slot.guidLoadEffect);
-    eax_validate_fx_slot_volume(fx_slot.lVolume);
-    eax_validate_fx_slot_lock(fx_slot.lLock);
-    eax_validate_fx_slot_flags(call, fx_slot.ulFlags);
-}
-
-void ALeffectslot::eax_validate_fx_slot_all(const EaxCall& call, const EAX50FXSLOTPROPERTIES& fx_slot)
-{
-    eax_validate_fx_slot_all(call, static_cast<const EAX40FXSLOTPROPERTIES&>(fx_slot));
-    eax_validate_fx_slot_occlusion(fx_slot.lOcclusion);
-    eax_validate_fx_slot_occlusion_lf_ratio(fx_slot.flOcclusionLFRatio);
-}
-
-void ALeffectslot::eax_set_fx_slot_effect(const EaxCall& call, const GUID& eax_effect_id)
-{
-    if (eax_eax_fx_slot_.guidLoadEffect == eax_effect_id)
-    {
         return;
     }
 
-    eax_eax_fx_slot_.guidLoadEffect = eax_effect_id;
-
-    eax_set_fx_slot_effect(call);
-}
-
-void ALeffectslot::eax_set_fx_slot_volume(
-    long eax_volume)
-{
-    if (eax_eax_fx_slot_.lVolume == eax_volume)
-    {
-        return;
+    if((df & eax_load_effect_dirty_bit) != EaxDirtyFlags{})
+        eax_fx_slot_load_effect();
+    else {
+        if(eax_effect_ != nullptr && eax_effect_->commit())
+            eax_set_efx_slot_effect(*eax_effect_);
     }
 
-    eax_eax_fx_slot_.lVolume = eax_volume;
+    if((df & eax_volume_dirty_bit) != EaxDirtyFlags{})
+        eax_fx_slot_set_volume();
 
-    eax_set_fx_slot_volume();
+    if((df & eax_flags_dirty_bit) != EaxDirtyFlags{})
+        eax_fx_slot_set_flags();
 }
 
-void ALeffectslot::eax_set_fx_slot_lock(
-    long eax_lock)
+[[noreturn]] void ALeffectslot::eax_fail(const char* message)
 {
-    if (eax_eax_fx_slot_.lLock == eax_lock)
+    throw Exception{message};
+}
+
+[[noreturn]] void ALeffectslot::eax_fail_unknown_effect_id()
+{
+    eax_fail("Unknown effect ID.");
+}
+
+[[noreturn]] void ALeffectslot::eax_fail_unknown_property_id()
+{
+    eax_fail("Unknown property ID.");
+}
+
+[[noreturn]] void ALeffectslot::eax_fail_unknown_version()
+{
+    eax_fail("Unknown version.");
+}
+
+void ALeffectslot::eax4_fx_slot_ensure_unlocked() const
+{
+    if(eax4_fx_slot_is_legacy())
+        eax_fail("Locked legacy slot.");
+}
+
+ALenum ALeffectslot::eax_get_efx_effect_type(const GUID& guid)
+{
+    if(guid == EAX_NULL_GUID)
+        return AL_EFFECT_NULL;
+    if(guid == EAX_AUTOWAH_EFFECT)
+        return AL_EFFECT_AUTOWAH;
+    if(guid == EAX_CHORUS_EFFECT)
+        return AL_EFFECT_CHORUS;
+    if(guid == EAX_AGCCOMPRESSOR_EFFECT)
+        return AL_EFFECT_COMPRESSOR;
+    if(guid == EAX_DISTORTION_EFFECT)
+        return AL_EFFECT_DISTORTION;
+    if(guid == EAX_REVERB_EFFECT)
+        return AL_EFFECT_EAXREVERB;
+    if(guid == EAX_ECHO_EFFECT)
+        return AL_EFFECT_ECHO;
+    if(guid == EAX_EQUALIZER_EFFECT)
+        return AL_EFFECT_EQUALIZER;
+    if(guid == EAX_FLANGER_EFFECT)
+        return AL_EFFECT_FLANGER;
+    if(guid == EAX_FREQUENCYSHIFTER_EFFECT)
+        return AL_EFFECT_FREQUENCY_SHIFTER;
+    if(guid == EAX_PITCHSHIFTER_EFFECT)
+        return AL_EFFECT_PITCH_SHIFTER;
+    if(guid == EAX_RINGMODULATOR_EFFECT)
+        return AL_EFFECT_RING_MODULATOR;
+    if(guid == EAX_VOCALMORPHER_EFFECT)
+        return AL_EFFECT_VOCAL_MORPHER;
+
+    eax_fail_unknown_effect_id();
+}
+
+const GUID& ALeffectslot::eax_get_eax_default_effect_guid() const noexcept
+{
+    switch(eax_fx_slot_index_)
     {
-        return;
-    }
-
-    eax_eax_fx_slot_.lLock = eax_lock;
-}
-
-void ALeffectslot::eax_set_fx_slot_flags(
-    unsigned long eax_flags)
-{
-    if (eax_eax_fx_slot_.ulFlags == eax_flags)
-    {
-        return;
-    }
-
-    eax_eax_fx_slot_.ulFlags = eax_flags;
-
-    eax_set_fx_slot_flags();
-}
-
-// [[nodiscard]]
-bool ALeffectslot::eax_set_fx_slot_occlusion(
-    long eax_occlusion)
-{
-    if (eax_eax_fx_slot_.lOcclusion == eax_occlusion)
-    {
-        return false;
-    }
-
-    eax_eax_fx_slot_.lOcclusion = eax_occlusion;
-
-    return true;
-}
-
-// [[nodiscard]]
-bool ALeffectslot::eax_set_fx_slot_occlusion_lf_ratio(
-    float eax_occlusion_lf_ratio)
-{
-    if (eax_eax_fx_slot_.flOcclusionLFRatio == eax_occlusion_lf_ratio)
-    {
-        return false;
-    }
-
-    eax_eax_fx_slot_.flOcclusionLFRatio = eax_occlusion_lf_ratio;
-
-    return true;
-}
-
-void ALeffectslot::eax_set_fx_slot_all(const EaxCall& call, const EAX40FXSLOTPROPERTIES& eax_fx_slot)
-{
-    eax_set_fx_slot_effect(call, eax_fx_slot.guidLoadEffect);
-    eax_set_fx_slot_volume(eax_fx_slot.lVolume);
-    eax_set_fx_slot_lock(eax_fx_slot.lLock);
-    eax_set_fx_slot_flags(eax_fx_slot.ulFlags);
-}
-
-// [[nodiscard]]
-bool ALeffectslot::eax_set_fx_slot_all(const EaxCall& call, const EAX50FXSLOTPROPERTIES& eax_fx_slot)
-{
-    eax_set_fx_slot_all(call, static_cast<const EAX40FXSLOTPROPERTIES&>(eax_fx_slot));
-
-    const auto is_occlusion_modified = eax_set_fx_slot_occlusion(eax_fx_slot.lOcclusion);
-    const auto is_occlusion_lf_ratio_modified = eax_set_fx_slot_occlusion_lf_ratio(eax_fx_slot.flOcclusionLFRatio);
-
-    return is_occlusion_modified || is_occlusion_lf_ratio_modified;
-}
-
-void ALeffectslot::eax_unlock_legacy() noexcept
-{
-    assert(eax_fx_slot_index_ < 2);
-    eax_is_locked_ = false;
-    eax_eax_fx_slot_.lLock = EAXFXSLOT_UNLOCKED;
-}
-
-[[noreturn]]
-void ALeffectslot::eax_fail(
-    const char* message)
-{
-    throw EaxFxSlotException{message};
-}
-
-GUID ALeffectslot::eax_get_eax_default_effect_guid() const noexcept
-{
-    switch (eax_fx_slot_index_)
-    {
-        case 0: return EAX_REVERB_EFFECT;
-        case 1: return EAX_CHORUS_EFFECT;
-        default: return EAX_NULL_GUID;
+    case 0: return EAX_REVERB_EFFECT;
+    case 1: return EAX_CHORUS_EFFECT;
+    default: return EAX_NULL_GUID;
     }
 }
 
 long ALeffectslot::eax_get_eax_default_lock() const noexcept
 {
-    return eax_fx_slot_index_ < 2 ? EAXFXSLOT_LOCKED : EAXFXSLOT_UNLOCKED;
+    return eax4_fx_slot_is_legacy() ? EAXFXSLOT_LOCKED : EAXFXSLOT_UNLOCKED;
 }
 
-void ALeffectslot::eax_set_eax_fx_slot_defaults()
+void ALeffectslot::eax4_fx_slot_set_defaults(Eax4Props& props)
 {
-    eax_eax_fx_slot_.guidLoadEffect = eax_get_eax_default_effect_guid();
-    eax_eax_fx_slot_.lVolume = EAXFXSLOT_DEFAULTVOLUME;
-    eax_eax_fx_slot_.lLock = eax_get_eax_default_lock();
-    eax_eax_fx_slot_.ulFlags = EAX40FXSLOT_DEFAULTFLAGS;
-    eax_eax_fx_slot_.lOcclusion = EAXFXSLOT_DEFAULTOCCLUSION;
-    eax_eax_fx_slot_.flOcclusionLFRatio = EAXFXSLOT_DEFAULTOCCLUSIONLFRATIO;
+    props.guidLoadEffect = eax_get_eax_default_effect_guid();
+    props.lVolume = EAXFXSLOT_DEFAULTVOLUME;
+    props.lLock = eax_get_eax_default_lock();
+    props.ulFlags = EAX40FXSLOT_DEFAULTFLAGS;
 }
 
-void ALeffectslot::eax_initialize_eax()
+void ALeffectslot::eax4_fx_slot_set_defaults()
 {
-    eax_set_eax_fx_slot_defaults();
+    eax4_fx_slot_set_defaults(eax4_.i);
+    eax4_.df = ~EaxDirtyFlags{};
 }
 
-void ALeffectslot::eax_initialize_lock()
+void ALeffectslot::eax5_fx_slot_set_defaults(Eax5Props& props)
 {
-    eax_is_locked_ = (eax_fx_slot_index_ < 2);
+    eax4_fx_slot_set_defaults(static_cast<Eax4Props&>(props));
+    props.lOcclusion = EAXFXSLOT_DEFAULTOCCLUSION;
+    props.flOcclusionLFRatio = EAXFXSLOT_DEFAULTOCCLUSIONLFRATIO;
 }
 
-void ALeffectslot::eax_initialize_effects(const EaxCall& call)
+void ALeffectslot::eax5_fx_slot_set_defaults()
 {
-    eax_set_fx_slot_effect(call);
+    eax5_fx_slot_set_defaults(eax5_.i);
+    eax5_.df = ~EaxDirtyFlags{};
 }
 
-void ALeffectslot::eax_get_fx_slot_all(const EaxCall& call) const
+void ALeffectslot::eax_fx_slot_set_defaults()
 {
-    switch (call.get_version())
+    eax4_fx_slot_set_defaults();
+    eax5_fx_slot_set_defaults();
+    eax123_ = eax5_;
+    eax_ = eax5_.i;
+}
+
+void ALeffectslot::eax4_fx_slot_get(const EaxCall& call, const Eax4Props& props) const
+{
+    switch(call.get_property_id())
     {
-        case 4:
-            call.set_value<EaxFxSlotException, EAX40FXSLOTPROPERTIES>(eax_eax_fx_slot_);
-            break;
-
-        case 5:
-            call.set_value<EaxFxSlotException, EAX50FXSLOTPROPERTIES>(eax_eax_fx_slot_);
-            break;
-
-        default:
-            eax_fail("Unsupported EAX version.");
+    case EAXFXSLOT_ALLPARAMETERS:
+        call.set_value<Exception>(props);
+        break;
+    case EAXFXSLOT_LOADEFFECT:
+        call.set_value<Exception>(props.guidLoadEffect);
+        break;
+    case EAXFXSLOT_VOLUME:
+        call.set_value<Exception>(props.lVolume);
+        break;
+    case EAXFXSLOT_LOCK:
+        call.set_value<Exception>(props.lLock);
+        break;
+    case EAXFXSLOT_FLAGS:
+        call.set_value<Exception>(props.ulFlags);
+        break;
+    default:
+        eax_fail_unknown_property_id();
     }
 }
 
-void ALeffectslot::eax_get_fx_slot(const EaxCall& call) const
+void ALeffectslot::eax5_fx_slot_get(const EaxCall& call, const Eax5Props& props) const
 {
-    switch (call.get_property_id())
+    switch(call.get_property_id())
     {
-        case EAXFXSLOT_ALLPARAMETERS:
-            eax_get_fx_slot_all(call);
-            break;
-
-        case EAXFXSLOT_LOADEFFECT:
-            call.set_value<EaxFxSlotException>(eax_eax_fx_slot_.guidLoadEffect);
-            break;
-
-        case EAXFXSLOT_VOLUME:
-            call.set_value<EaxFxSlotException>(eax_eax_fx_slot_.lVolume);
-            break;
-
-        case EAXFXSLOT_LOCK:
-            call.set_value<EaxFxSlotException>(eax_eax_fx_slot_.lLock);
-            break;
-
-        case EAXFXSLOT_FLAGS:
-            call.set_value<EaxFxSlotException>(eax_eax_fx_slot_.ulFlags);
-            break;
-
-        case EAXFXSLOT_OCCLUSION:
-            call.set_value<EaxFxSlotException>(eax_eax_fx_slot_.lOcclusion);
-            break;
-
-        case EAXFXSLOT_OCCLUSIONLFRATIO:
-            call.set_value<EaxFxSlotException>(eax_eax_fx_slot_.flOcclusionLFRatio);
-            break;
-
-        default:
-            eax_fail("Unsupported FX slot property id.");
+    case EAXFXSLOT_ALLPARAMETERS:
+        call.set_value<Exception>(props);
+        break;
+    case EAXFXSLOT_LOADEFFECT:
+        call.set_value<Exception>(props.guidLoadEffect);
+        break;
+    case EAXFXSLOT_VOLUME:
+        call.set_value<Exception>(props.lVolume);
+        break;
+    case EAXFXSLOT_LOCK:
+        call.set_value<Exception>(props.lLock);
+        break;
+    case EAXFXSLOT_FLAGS:
+        call.set_value<Exception>(props.ulFlags);
+        break;
+    case EAXFXSLOT_OCCLUSION:
+        call.set_value<Exception>(props.lOcclusion);
+        break;
+    case EAXFXSLOT_OCCLUSIONLFRATIO:
+        call.set_value<Exception>(props.flOcclusionLFRatio);
+        break;
+    default:
+        eax_fail_unknown_property_id();
     }
 }
 
-// [[nodiscard]]
+void ALeffectslot::eax_fx_slot_get(const EaxCall& call) const
+{
+    switch(call.get_version())
+    {
+    case 4: eax4_fx_slot_get(call, eax4_.i); break;
+    case 5: eax4_fx_slot_get(call, eax5_.i); break;
+    default: eax_fail_unknown_version();
+    }
+}
+
 bool ALeffectslot::eax_get(const EaxCall& call)
-{
-    switch (call.get_property_set_id())
-    {
-        case EaxCallPropertySetId::fx_slot:
-            eax_get_fx_slot(call);
-            break;
-
-        case EaxCallPropertySetId::fx_slot_effect:
-            eax_dispatch_effect(call);
-            break;
-
-        default:
-            eax_fail("Unsupported property id.");
-    }
-
-    return false;
-}
-
-void ALeffectslot::eax_set_fx_slot_effect(const EaxCall& call, ALenum al_effect_type)
-{
-    if(!IsValidEffectType(al_effect_type))
-        eax_fail("Unsupported effect.");
-
-    eax_effect_ = nullptr;
-    eax_effect_ = eax_create_eax_effect(al_effect_type, call);
-
-    eax_set_effect_slot_effect(*eax_effect_);
-}
-
-void ALeffectslot::eax_set_fx_slot_effect(const EaxCall& call)
-{
-    auto al_effect_type = ALenum{};
-
-    if (false)
-    {
-    }
-    else if (eax_eax_fx_slot_.guidLoadEffect == EAX_NULL_GUID)
-    {
-        al_effect_type = AL_EFFECT_NULL;
-    }
-    else if (eax_eax_fx_slot_.guidLoadEffect == EAX_AUTOWAH_EFFECT)
-    {
-        al_effect_type = AL_EFFECT_AUTOWAH;
-    }
-    else if (eax_eax_fx_slot_.guidLoadEffect == EAX_CHORUS_EFFECT)
-    {
-        al_effect_type = AL_EFFECT_CHORUS;
-    }
-    else if (eax_eax_fx_slot_.guidLoadEffect == EAX_AGCCOMPRESSOR_EFFECT)
-    {
-        al_effect_type = AL_EFFECT_COMPRESSOR;
-    }
-    else if (eax_eax_fx_slot_.guidLoadEffect == EAX_DISTORTION_EFFECT)
-    {
-        al_effect_type = AL_EFFECT_DISTORTION;
-    }
-    else if (eax_eax_fx_slot_.guidLoadEffect == EAX_REVERB_EFFECT)
-    {
-        al_effect_type = AL_EFFECT_EAXREVERB;
-    }
-    else if (eax_eax_fx_slot_.guidLoadEffect == EAX_ECHO_EFFECT)
-    {
-        al_effect_type = AL_EFFECT_ECHO;
-    }
-    else if (eax_eax_fx_slot_.guidLoadEffect == EAX_EQUALIZER_EFFECT)
-    {
-        al_effect_type = AL_EFFECT_EQUALIZER;
-    }
-    else if (eax_eax_fx_slot_.guidLoadEffect == EAX_FLANGER_EFFECT)
-    {
-        al_effect_type = AL_EFFECT_FLANGER;
-    }
-    else if (eax_eax_fx_slot_.guidLoadEffect == EAX_FREQUENCYSHIFTER_EFFECT)
-    {
-        al_effect_type = AL_EFFECT_FREQUENCY_SHIFTER;
-    }
-    else if (eax_eax_fx_slot_.guidLoadEffect == EAX_PITCHSHIFTER_EFFECT)
-    {
-        al_effect_type = AL_EFFECT_PITCH_SHIFTER;
-    }
-    else if (eax_eax_fx_slot_.guidLoadEffect == EAX_RINGMODULATOR_EFFECT)
-    {
-        al_effect_type = AL_EFFECT_RING_MODULATOR;
-    }
-    else if (eax_eax_fx_slot_.guidLoadEffect == EAX_VOCALMORPHER_EFFECT)
-    {
-        al_effect_type = AL_EFFECT_VOCAL_MORPHER;
-    }
-    else
-    {
-        eax_fail("Unsupported effect.");
-    }
-
-    eax_set_fx_slot_effect(call, al_effect_type);
-}
-
-void ALeffectslot::eax_set_efx_effect_slot_gain()
-{
-    const auto gain = level_mb_to_gain(
-        static_cast<float>(clamp(
-            eax_eax_fx_slot_.lVolume,
-            EAXFXSLOT_MINVOLUME,
-            EAXFXSLOT_MAXVOLUME)));
-
-    eax_set_effect_slot_gain(gain);
-}
-
-void ALeffectslot::eax_set_fx_slot_volume()
-{
-    eax_set_efx_effect_slot_gain();
-}
-
-void ALeffectslot::eax_set_effect_slot_send_auto()
-{
-    eax_set_effect_slot_send_auto((eax_eax_fx_slot_.ulFlags & EAXFXSLOTFLAGS_ENVIRONMENT) != 0);
-}
-
-void ALeffectslot::eax_set_fx_slot_flags()
-{
-    eax_set_effect_slot_send_auto();
-}
-
-void ALeffectslot::eax_defer_fx_slot_effect(const EaxCall& call)
-{
-    const auto& eax_effect_id =
-        call.get_value<EaxFxSlotException, const decltype(EAX40FXSLOTPROPERTIES::guidLoadEffect)>();
-
-    eax_validate_fx_slot_effect(eax_effect_id);
-    eax_set_fx_slot_effect(call, eax_effect_id);
-}
-
-void ALeffectslot::eax_defer_fx_slot_volume(const EaxCall& call)
-{
-    const auto& eax_volume =
-        call.get_value<EaxFxSlotException, const decltype(EAX40FXSLOTPROPERTIES::lVolume)>();
-
-    eax_validate_fx_slot_volume(eax_volume);
-    eax_set_fx_slot_volume(eax_volume);
-}
-
-void ALeffectslot::eax_defer_fx_slot_lock(const EaxCall& call)
-{
-    const auto& eax_lock =
-        call.get_value<EaxFxSlotException, const decltype(EAX40FXSLOTPROPERTIES::lLock)>();
-
-    eax_validate_fx_slot_lock(eax_lock);
-    eax_set_fx_slot_lock(eax_lock);
-}
-
-void ALeffectslot::eax_defer_fx_slot_flags(const EaxCall& call)
-{
-    const auto& eax_flags =
-        call.get_value<EaxFxSlotException, const decltype(EAX40FXSLOTPROPERTIES::ulFlags)>();
-
-    eax_validate_fx_slot_flags(call, eax_flags);
-    eax_set_fx_slot_flags(eax_flags);
-}
-
-// [[nodiscard]]
-bool ALeffectslot::eax_defer_fx_slot_occlusion(const EaxCall& call)
-{
-    const auto& eax_occlusion =
-        call.get_value<EaxFxSlotException, const decltype(EAX50FXSLOTPROPERTIES::lOcclusion)>();
-
-    eax_validate_fx_slot_occlusion(eax_occlusion);
-
-    return eax_set_fx_slot_occlusion(eax_occlusion);
-}
-
-// [[nodiscard]]
-bool ALeffectslot::eax_defer_fx_slot_occlusion_lf_ratio(const EaxCall& call)
-{
-    const auto& eax_occlusion_lf_ratio =
-        call.get_value<EaxFxSlotException, const decltype(EAX50FXSLOTPROPERTIES::flOcclusionLFRatio)>();
-
-    eax_validate_fx_slot_occlusion_lf_ratio(eax_occlusion_lf_ratio);
-
-    return eax_set_fx_slot_occlusion_lf_ratio(eax_occlusion_lf_ratio);
-}
-
-// [[nodiscard]]
-bool ALeffectslot::eax_defer_fx_slot_all(const EaxCall& call)
-{
-    switch (call.get_version())
-    {
-        case 4:
-            {
-                const auto& eax_all =
-                    call.get_value<EaxFxSlotException, const EAX40FXSLOTPROPERTIES>();
-
-                eax_validate_fx_slot_all(call, eax_all);
-                eax_set_fx_slot_all(call, eax_all);
-
-                return false;
-            }
-
-        case 5:
-            {
-                const auto& eax_all =
-                    call.get_value<EaxFxSlotException, const EAX50FXSLOTPROPERTIES>();
-
-                eax_validate_fx_slot_all(call, eax_all);
-                return eax_set_fx_slot_all(call, eax_all);
-            }
-
-        default:
-            eax_fail("Unsupported EAX version.");
-    }
-}
-
-bool ALeffectslot::eax_set_fx_slot(const EaxCall& call)
-{
-    switch (call.get_property_id())
-    {
-        case EAXFXSLOT_NONE:
-            return false;
-
-        case EAXFXSLOT_ALLPARAMETERS:
-            return eax_defer_fx_slot_all(call);
-
-        case EAXFXSLOT_LOADEFFECT:
-            eax_defer_fx_slot_effect(call);
-            return false;
-
-        case EAXFXSLOT_VOLUME:
-            eax_defer_fx_slot_volume(call);
-            return false;
-
-        case EAXFXSLOT_LOCK:
-            eax_defer_fx_slot_lock(call);
-            return false;
-
-        case EAXFXSLOT_FLAGS:
-            eax_defer_fx_slot_flags(call);
-            return false;
-
-        case EAXFXSLOT_OCCLUSION:
-            return eax_defer_fx_slot_occlusion(call);
-
-        case EAXFXSLOT_OCCLUSIONLFRATIO:
-            return eax_defer_fx_slot_occlusion_lf_ratio(call);
-
-
-        default:
-            eax_fail("Unsupported FX slot property id.");
-    }
-}
-
-// [[nodiscard]]
-bool ALeffectslot::eax_set(const EaxCall& call)
 {
     switch(call.get_property_set_id())
     {
-        case EaxCallPropertySetId::fx_slot:
-            return eax_set_fx_slot(call);
-
-        case EaxCallPropertySetId::fx_slot_effect:
-            eax_dispatch_effect(call);
-            break;
-
-        default:
-            eax_fail("Unsupported property id.");
+    case EaxCallPropertySetId::fx_slot:
+        eax_fx_slot_get(call);
+        break;
+    case EaxCallPropertySetId::fx_slot_effect:
+        eax_dispatch_effect(call);
+        break;
+    default:
+        eax_fail_unknown_property_id();
     }
 
     return false;
 }
 
-void ALeffectslot::eax_dispatch_effect(const EaxCall& call)
-{ if(eax_effect_) eax_effect_->dispatch(call); }
-
-void ALeffectslot::eax_apply_deferred()
+void ALeffectslot::eax_fx_slot_load_effect()
 {
-    /* The other FXSlot properties (volume, effect, etc) aren't deferred? */
+    eax_effect_ = nullptr;
+    const auto efx_effect_type = eax_get_efx_effect_type(eax_.guidLoadEffect);
 
-    auto is_changed = false;
-    if(eax_effect_)
-        is_changed = eax_effect_->commit();
-    if(is_changed)
-        eax_set_effect_slot_effect(*eax_effect_);
+    if(!IsValidEffectType(efx_effect_type))
+        eax_fail("Invalid effect type.");
+
+    eax_effect_ = eax_create_eax_effect(efx_effect_type, eax_version_);
+    eax_set_efx_slot_effect(*eax_effect_);
 }
 
+void ALeffectslot::eax_fx_slot_set_volume()
+{
+    const auto volume = clamp(eax_.lVolume, EAXFXSLOT_MINVOLUME, EAXFXSLOT_MAXVOLUME);
+    const auto gain = level_mb_to_gain(static_cast<float>(volume));
+    eax_set_efx_slot_gain(gain);
+}
 
-void ALeffectslot::eax_set_effect_slot_effect(EaxEffect &effect)
+void ALeffectslot::eax_fx_slot_set_environment_flag()
+{
+    eax_set_efx_slot_send_auto((eax_.ulFlags & EAXFXSLOTFLAGS_ENVIRONMENT) != 0u);
+}
+
+void ALeffectslot::eax_fx_slot_set_flags()
+{
+    eax_fx_slot_set_environment_flag();
+}
+
+void ALeffectslot::eax4_fx_slot_set_all(const EaxCall& call)
+{
+    eax4_fx_slot_ensure_unlocked();
+    const auto& src = call.get_value<Exception, const EAX40FXSLOTPROPERTIES>();
+    Eax4AllValidator{}(src);
+    auto& dst = eax4_.i;
+    auto& df = eax4_.df;
+    df |= eax_load_effect_dirty_bit; // Always reset the effect.
+    df |= (dst.lVolume != src.lVolume ? eax_volume_dirty_bit : EaxDirtyFlags{});
+    df |= (dst.lLock != src.lLock ? eax_lock_dirty_bit : EaxDirtyFlags{});
+    df |= (dst.ulFlags != src.ulFlags ? eax_flags_dirty_bit : EaxDirtyFlags{});
+    dst = src;
+}
+
+void ALeffectslot::eax5_fx_slot_set_all(const EaxCall& call)
+{
+    const auto& src = call.get_value<Exception, const EAX50FXSLOTPROPERTIES>();
+    Eax5AllValidator{}(src);
+    auto& dst = eax5_.i;
+    auto& df = eax5_.df;
+    df |= eax_load_effect_dirty_bit; // Always reset the effect.
+    df |= (dst.lVolume != src.lVolume ? eax_volume_dirty_bit : EaxDirtyFlags{});
+    df |= (dst.lLock != src.lLock ? eax_lock_dirty_bit : EaxDirtyFlags{});
+    df |= (dst.ulFlags != src.ulFlags ? eax_flags_dirty_bit : EaxDirtyFlags{});
+    df |= (dst.lOcclusion != src.lOcclusion ? eax_flags_dirty_bit : EaxDirtyFlags{});
+    df |= (dst.flOcclusionLFRatio != src.flOcclusionLFRatio ? eax_flags_dirty_bit : EaxDirtyFlags{});
+    dst = src;
+}
+
+// Returns `true` if all sources should be updated, or `false` otherwise.
+bool ALeffectslot::eax4_fx_slot_set(const EaxCall& call)
+{
+    auto& df = eax4_.df;
+    auto& dst = eax4_.i;
+
+    switch(call.get_property_id())
+    {
+    case EAXFXSLOT_NONE:
+        break;
+    case EAXFXSLOT_ALLPARAMETERS:
+        eax4_fx_slot_set_all(call);
+        break;
+    case EAXFXSLOT_LOADEFFECT:
+        eax4_fx_slot_ensure_unlocked();
+        eax_fx_slot_set_dirty<Eax4GuidLoadEffectValidator, eax_load_effect_dirty_bit>(call, dst.guidLoadEffect, df);
+        break;
+    case EAXFXSLOT_VOLUME:
+        eax_fx_slot_set<Eax4VolumeValidator, eax_volume_dirty_bit>(call, dst.lVolume, df);
+        break;
+    case EAXFXSLOT_LOCK:
+        eax4_fx_slot_ensure_unlocked();
+        eax_fx_slot_set<Eax4LockValidator, eax_lock_dirty_bit>(call, dst.lLock, df);
+        break;
+    case EAXFXSLOT_FLAGS:
+        eax_fx_slot_set<Eax4FlagsValidator, eax_flags_dirty_bit>(call, dst.ulFlags, df);
+        break;
+    default:
+        eax_fail_unknown_property_id();
+    }
+
+    return (df & (eax_occlusion_dirty_bit | eax_occlusion_lf_ratio_dirty_bit)) != EaxDirtyFlags{};
+}
+
+// Returns `true` if all sources should be updated, or `false` otherwise.
+bool ALeffectslot::eax5_fx_slot_set(const EaxCall& call)
+{
+    auto& df = eax5_.df;
+    auto& dst = eax5_.i;
+
+    switch(call.get_property_id())
+    {
+    case EAXFXSLOT_NONE:
+        break;
+    case EAXFXSLOT_ALLPARAMETERS:
+        eax5_fx_slot_set_all(call);
+        break;
+    case EAXFXSLOT_LOADEFFECT:
+        eax_fx_slot_set_dirty<Eax4GuidLoadEffectValidator, eax_load_effect_dirty_bit>(call, dst.guidLoadEffect, df);
+        break;
+    case EAXFXSLOT_VOLUME:
+        eax_fx_slot_set<Eax4VolumeValidator, eax_volume_dirty_bit>(call, dst.lVolume, df);
+        break;
+    case EAXFXSLOT_LOCK:
+        eax_fx_slot_set<Eax4LockValidator, eax_lock_dirty_bit>(call, dst.lLock, df);
+        break;
+    case EAXFXSLOT_FLAGS:
+        eax_fx_slot_set<Eax4FlagsValidator, eax_flags_dirty_bit>(call, dst.ulFlags, df);
+        break;
+    case EAXFXSLOT_OCCLUSION:
+        eax_fx_slot_set<Eax5OcclusionValidator, eax_occlusion_dirty_bit>(call, dst.lOcclusion, df);
+        break;
+    case EAXFXSLOT_OCCLUSIONLFRATIO:
+        eax_fx_slot_set<Eax5OcclusionLfRatioValidator, eax_occlusion_lf_ratio_dirty_bit>(call, dst.flOcclusionLFRatio, df);
+        break;
+    default:
+        eax_fail_unknown_property_id();
+    }
+
+    return (df & (eax_occlusion_dirty_bit | eax_occlusion_lf_ratio_dirty_bit)) != EaxDirtyFlags{};
+}
+
+// Returns `true` if all sources should be updated, or `false` otherwise.
+bool ALeffectslot::eax_fx_slot_set(const EaxCall& call)
+{
+    switch (call.get_version())
+    {
+    case 4: return eax4_fx_slot_set(call);
+    case 5: return eax5_fx_slot_set(call);
+    default: eax_fail_unknown_version();
+    }
+}
+
+// Returns `true` if all sources should be updated, or `false` otherwise.
+bool ALeffectslot::eax_set(const EaxCall& call)
+{
+    const auto version = call.get_version();
+
+    if(eax_version_ != version) {
+        constexpr auto all_bits = ~EaxDirtyFlags{};
+        eax123_.df = all_bits;
+        eax4_.df = all_bits;
+        eax5_.df = all_bits;
+    }
+
+    eax_version_ = version;
+
+    switch(call.get_property_set_id())
+    {
+    case EaxCallPropertySetId::fx_slot: return eax_fx_slot_set(call);
+    case EaxCallPropertySetId::fx_slot_effect: eax_dispatch_effect(call); return false;
+    default: eax_fail_unknown_property_id();
+    }
+}
+
+void ALeffectslot::eax4_fx_slot_commit(EaxDirtyFlags& dst_df)
+{
+    if(eax4_.df == EaxDirtyFlags{})
+        return;
+
+    eax_fx_slot_commit_property<eax_load_effect_dirty_bit>(eax4_, dst_df, &EAX40FXSLOTPROPERTIES::guidLoadEffect);
+    eax_fx_slot_commit_property<eax_volume_dirty_bit>(eax4_, dst_df, &EAX40FXSLOTPROPERTIES::lVolume);
+    eax_fx_slot_commit_property<eax_lock_dirty_bit>(eax4_, dst_df, &EAX40FXSLOTPROPERTIES::lLock);
+    eax_fx_slot_commit_property<eax_flags_dirty_bit>(eax4_, dst_df, &EAX40FXSLOTPROPERTIES::ulFlags);
+
+    auto& dst_i = eax_;
+
+    if(dst_i.lOcclusion != EAXFXSLOT_DEFAULTOCCLUSION) {
+        dst_df |= eax_occlusion_dirty_bit;
+        dst_i.lOcclusion = EAXFXSLOT_DEFAULTOCCLUSION;
+    }
+
+    if(dst_i.flOcclusionLFRatio != EAXFXSLOT_DEFAULTOCCLUSIONLFRATIO) {
+        dst_df |= eax_occlusion_lf_ratio_dirty_bit;
+        dst_i.flOcclusionLFRatio = EAXFXSLOT_DEFAULTOCCLUSIONLFRATIO;
+    }
+
+    eax4_.df = EaxDirtyFlags{};
+}
+
+void ALeffectslot::eax5_fx_slot_commit(Eax5State& state, EaxDirtyFlags& dst_df)
+{
+    if(state.df == EaxDirtyFlags{})
+        return;
+
+    eax_fx_slot_commit_property<eax_load_effect_dirty_bit>(state, dst_df, &EAX50FXSLOTPROPERTIES::guidLoadEffect);
+    eax_fx_slot_commit_property<eax_volume_dirty_bit>(state, dst_df, &EAX50FXSLOTPROPERTIES::lVolume);
+    eax_fx_slot_commit_property<eax_lock_dirty_bit>(state, dst_df, &EAX50FXSLOTPROPERTIES::lLock);
+    eax_fx_slot_commit_property<eax_flags_dirty_bit>(state, dst_df, &EAX50FXSLOTPROPERTIES::ulFlags);
+    eax_fx_slot_commit_property<eax_occlusion_dirty_bit>(state, dst_df, &EAX50FXSLOTPROPERTIES::lOcclusion);
+    eax_fx_slot_commit_property<eax_occlusion_lf_ratio_dirty_bit>(state, dst_df, &EAX50FXSLOTPROPERTIES::flOcclusionLFRatio);
+    state.df = EaxDirtyFlags{};
+}
+
+void ALeffectslot::eax_dispatch_effect(const EaxCall& call)
+{
+    if(eax_effect_ != nullptr)
+        eax_effect_->dispatch(call);
+}
+
+void ALeffectslot::eax_set_efx_slot_effect(EaxEffect &effect)
 {
 #define EAX_PREFIX "[EAX_SET_EFFECT_SLOT_EFFECT] "
 
     const auto error = initEffect(effect.al_effect_type_, effect.al_effect_props_, eax_al_context_);
-    if (error != AL_NO_ERROR)
-    {
+
+    if(error != AL_NO_ERROR) {
         ERR(EAX_PREFIX "%s\n", "Failed to initialize an effect.");
         return;
     }
 
-    if (mState == SlotState::Initial)
-    {
+    if(mState == SlotState::Initial) {
         mPropsDirty = false;
         updateProps(eax_al_context_);
-
         auto effect_slot_ptr = this;
-
         AddActiveEffectSlots({&effect_slot_ptr, 1}, eax_al_context_);
         mState = SlotState::Playing;
-
         return;
     }
 
-    UpdateProps(this, eax_al_context_);
+    mPropsDirty = true;
 
 #undef EAX_PREFIX
 }
 
-void ALeffectslot::eax_set_effect_slot_send_auto(
-    bool is_send_auto)
+void ALeffectslot::eax_set_efx_slot_send_auto(bool is_send_auto)
 {
     if(AuxSendAuto == is_send_auto)
         return;
 
     AuxSendAuto = is_send_auto;
-    UpdateProps(this, eax_al_context_);
+    mPropsDirty = true;
 }
 
-void ALeffectslot::eax_set_effect_slot_gain(
-    ALfloat gain)
+void ALeffectslot::eax_set_efx_slot_gain(ALfloat gain)
 {
 #define EAX_PREFIX "[EAX_SET_EFFECT_SLOT_GAIN] "
 
@@ -1727,11 +1555,10 @@ void ALeffectslot::eax_set_effect_slot_gain(
         ERR(EAX_PREFIX "Gain out of range (%f)\n", gain);
 
     Gain = clampf(gain, 0.0f, 1.0f);
-    UpdateProps(this, eax_al_context_);
+    mPropsDirty = true;
 
 #undef EAX_PREFIX
 }
-
 
 void ALeffectslot::EaxDeleter::operator()(ALeffectslot* effect_slot)
 {
@@ -1739,31 +1566,26 @@ void ALeffectslot::EaxDeleter::operator()(ALeffectslot* effect_slot)
     eax_delete_al_effect_slot(*effect_slot->eax_al_context_, *effect_slot);
 }
 
-
-EaxAlEffectSlotUPtr eax_create_al_effect_slot(
-    ALCcontext& context)
+EaxAlEffectSlotUPtr eax_create_al_effect_slot(ALCcontext& context)
 {
 #define EAX_PREFIX "[EAX_MAKE_EFFECT_SLOT] "
 
     std::unique_lock<std::mutex> effect_slot_lock{context.mEffectSlotLock};
-
     auto& device = *context.mALDevice;
 
-    if (context.mNumEffectSlots == device.AuxiliaryEffectSlotMax)
-    {
+    if(context.mNumEffectSlots == device.AuxiliaryEffectSlotMax) {
         ERR(EAX_PREFIX "%s\n", "Out of memory.");
         return nullptr;
     }
 
-    if (!EnsureEffectSlots(&context, 1))
-    {
+    if(!EnsureEffectSlots(&context, 1)) {
         ERR(EAX_PREFIX "%s\n", "Failed to ensure.");
         return nullptr;
     }
 
     auto effect_slot = EaxAlEffectSlotUPtr{AllocEffectSlot(&context)};
-    if (!effect_slot)
-    {
+
+    if(effect_slot == nullptr) {
         ERR(EAX_PREFIX "%s\n", "Failed to allocate.");
         return nullptr;
     }
@@ -1773,22 +1595,18 @@ EaxAlEffectSlotUPtr eax_create_al_effect_slot(
 #undef EAX_PREFIX
 }
 
-void eax_delete_al_effect_slot(
-    ALCcontext& context,
-    ALeffectslot& effect_slot)
+void eax_delete_al_effect_slot(ALCcontext& context, ALeffectslot& effect_slot)
 {
 #define EAX_PREFIX "[EAX_DELETE_EFFECT_SLOT] "
 
     std::lock_guard<std::mutex> effect_slot_lock{context.mEffectSlotLock};
 
-    if (ReadRef(effect_slot.ref) != 0)
-    {
+    if(ReadRef(effect_slot.ref) != 0) {
         ERR(EAX_PREFIX "Deleting in-use effect slot %u.\n", effect_slot.id);
         return;
     }
 
     auto effect_slot_ptr = &effect_slot;
-
     RemoveActiveEffectSlots({&effect_slot_ptr, 1}, &context);
     FreeEffectSlot(&context, &effect_slot);
 

@@ -256,7 +256,7 @@ private:
     // sets a dirty flag only if the new value differs form the old one,
     // and assigns the new value.
     template<typename TValidator, EaxDirtyFlags TDirtyBit, typename TProperties>
-    void eax_fx_slot_set(const EaxCall& call, TProperties& dst, EaxDirtyFlags& dirty_flags)
+    static void eax_fx_slot_set(const EaxCall& call, TProperties& dst, EaxDirtyFlags& dirty_flags)
     {
         const auto& src = call.get_value<Exception, const TProperties>();
         TValidator{}(src);

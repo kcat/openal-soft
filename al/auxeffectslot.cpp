@@ -1198,7 +1198,6 @@ void ALeffectslot::eax4_fx_slot_set_defaults(Eax4Props& props)
 void ALeffectslot::eax4_fx_slot_set_defaults()
 {
     eax4_fx_slot_set_defaults(eax4_.i);
-    eax4_.df = ~EaxDirtyFlags{};
 }
 
 void ALeffectslot::eax5_fx_slot_set_defaults(Eax5Props& props)
@@ -1211,7 +1210,6 @@ void ALeffectslot::eax5_fx_slot_set_defaults(Eax5Props& props)
 void ALeffectslot::eax5_fx_slot_set_defaults()
 {
     eax5_fx_slot_set_defaults(eax5_.i);
-    eax5_.df = ~EaxDirtyFlags{};
 }
 
 void ALeffectslot::eax_fx_slot_set_defaults()
@@ -1220,6 +1218,7 @@ void ALeffectslot::eax_fx_slot_set_defaults()
     eax5_fx_slot_set_defaults();
     eax123_ = eax5_;
     eax_ = eax5_.i;
+    eax_df_ = ~EaxDirtyFlags{};
 }
 
 void ALeffectslot::eax4_fx_slot_get(const EaxCall& call, const Eax4Props& props) const
@@ -1338,11 +1337,10 @@ void ALeffectslot::eax4_fx_slot_set_all(const EaxCall& call)
     const auto& src = call.get_value<Exception, const EAX40FXSLOTPROPERTIES>();
     Eax4AllValidator{}(src);
     auto& dst = eax4_.i;
-    auto& df = eax4_.df;
-    df |= eax_load_effect_dirty_bit; // Always reset the effect.
-    df |= (dst.lVolume != src.lVolume ? eax_volume_dirty_bit : EaxDirtyFlags{});
-    df |= (dst.lLock != src.lLock ? eax_lock_dirty_bit : EaxDirtyFlags{});
-    df |= (dst.ulFlags != src.ulFlags ? eax_flags_dirty_bit : EaxDirtyFlags{});
+    eax_df_ |= eax_load_effect_dirty_bit; // Always reset the effect.
+    eax_df_ |= (dst.lVolume != src.lVolume ? eax_volume_dirty_bit : EaxDirtyFlags{});
+    eax_df_ |= (dst.lLock != src.lLock ? eax_lock_dirty_bit : EaxDirtyFlags{});
+    eax_df_ |= (dst.ulFlags != src.ulFlags ? eax_flags_dirty_bit : EaxDirtyFlags{});
     dst = src;
 }
 
@@ -1351,20 +1349,18 @@ void ALeffectslot::eax5_fx_slot_set_all(const EaxCall& call)
     const auto& src = call.get_value<Exception, const EAX50FXSLOTPROPERTIES>();
     Eax5AllValidator{}(src);
     auto& dst = eax5_.i;
-    auto& df = eax5_.df;
-    df |= eax_load_effect_dirty_bit; // Always reset the effect.
-    df |= (dst.lVolume != src.lVolume ? eax_volume_dirty_bit : EaxDirtyFlags{});
-    df |= (dst.lLock != src.lLock ? eax_lock_dirty_bit : EaxDirtyFlags{});
-    df |= (dst.ulFlags != src.ulFlags ? eax_flags_dirty_bit : EaxDirtyFlags{});
-    df |= (dst.lOcclusion != src.lOcclusion ? eax_flags_dirty_bit : EaxDirtyFlags{});
-    df |= (dst.flOcclusionLFRatio != src.flOcclusionLFRatio ? eax_flags_dirty_bit : EaxDirtyFlags{});
+    eax_df_ |= eax_load_effect_dirty_bit; // Always reset the effect.
+    eax_df_ |= (dst.lVolume != src.lVolume ? eax_volume_dirty_bit : EaxDirtyFlags{});
+    eax_df_ |= (dst.lLock != src.lLock ? eax_lock_dirty_bit : EaxDirtyFlags{});
+    eax_df_ |= (dst.ulFlags != src.ulFlags ? eax_flags_dirty_bit : EaxDirtyFlags{});
+    eax_df_ |= (dst.lOcclusion != src.lOcclusion ? eax_flags_dirty_bit : EaxDirtyFlags{});
+    eax_df_ |= (dst.flOcclusionLFRatio != src.flOcclusionLFRatio ? eax_flags_dirty_bit : EaxDirtyFlags{});
     dst = src;
 }
 
 // Returns `true` if all sources should be updated, or `false` otherwise.
 bool ALeffectslot::eax4_fx_slot_set(const EaxCall& call)
 {
-    auto& df = eax4_.df;
     auto& dst = eax4_.i;
 
     switch(call.get_property_id())
@@ -1376,29 +1372,28 @@ bool ALeffectslot::eax4_fx_slot_set(const EaxCall& call)
         break;
     case EAXFXSLOT_LOADEFFECT:
         eax4_fx_slot_ensure_unlocked();
-        eax_fx_slot_set_dirty<Eax4GuidLoadEffectValidator, eax_load_effect_dirty_bit>(call, dst.guidLoadEffect, df);
+        eax_fx_slot_set_dirty<Eax4GuidLoadEffectValidator, eax_load_effect_dirty_bit>(call, dst.guidLoadEffect, eax_df_);
         break;
     case EAXFXSLOT_VOLUME:
-        eax_fx_slot_set<Eax4VolumeValidator, eax_volume_dirty_bit>(call, dst.lVolume, df);
+        eax_fx_slot_set<Eax4VolumeValidator, eax_volume_dirty_bit>(call, dst.lVolume, eax_df_);
         break;
     case EAXFXSLOT_LOCK:
         eax4_fx_slot_ensure_unlocked();
-        eax_fx_slot_set<Eax4LockValidator, eax_lock_dirty_bit>(call, dst.lLock, df);
+        eax_fx_slot_set<Eax4LockValidator, eax_lock_dirty_bit>(call, dst.lLock, eax_df_);
         break;
     case EAXFXSLOT_FLAGS:
-        eax_fx_slot_set<Eax4FlagsValidator, eax_flags_dirty_bit>(call, dst.ulFlags, df);
+        eax_fx_slot_set<Eax4FlagsValidator, eax_flags_dirty_bit>(call, dst.ulFlags, eax_df_);
         break;
     default:
         eax_fail_unknown_property_id();
     }
 
-    return (df & (eax_occlusion_dirty_bit | eax_occlusion_lf_ratio_dirty_bit)) != EaxDirtyFlags{};
+    return (eax_df_ & (eax_occlusion_dirty_bit | eax_occlusion_lf_ratio_dirty_bit)) != EaxDirtyFlags{};
 }
 
 // Returns `true` if all sources should be updated, or `false` otherwise.
 bool ALeffectslot::eax5_fx_slot_set(const EaxCall& call)
 {
-    auto& df = eax5_.df;
     auto& dst = eax5_.i;
 
     switch(call.get_property_id())
@@ -1409,28 +1404,28 @@ bool ALeffectslot::eax5_fx_slot_set(const EaxCall& call)
         eax5_fx_slot_set_all(call);
         break;
     case EAXFXSLOT_LOADEFFECT:
-        eax_fx_slot_set_dirty<Eax4GuidLoadEffectValidator, eax_load_effect_dirty_bit>(call, dst.guidLoadEffect, df);
+        eax_fx_slot_set_dirty<Eax4GuidLoadEffectValidator, eax_load_effect_dirty_bit>(call, dst.guidLoadEffect, eax_df_);
         break;
     case EAXFXSLOT_VOLUME:
-        eax_fx_slot_set<Eax4VolumeValidator, eax_volume_dirty_bit>(call, dst.lVolume, df);
+        eax_fx_slot_set<Eax4VolumeValidator, eax_volume_dirty_bit>(call, dst.lVolume, eax_df_);
         break;
     case EAXFXSLOT_LOCK:
-        eax_fx_slot_set<Eax4LockValidator, eax_lock_dirty_bit>(call, dst.lLock, df);
+        eax_fx_slot_set<Eax4LockValidator, eax_lock_dirty_bit>(call, dst.lLock, eax_df_);
         break;
     case EAXFXSLOT_FLAGS:
-        eax_fx_slot_set<Eax4FlagsValidator, eax_flags_dirty_bit>(call, dst.ulFlags, df);
+        eax_fx_slot_set<Eax4FlagsValidator, eax_flags_dirty_bit>(call, dst.ulFlags, eax_df_);
         break;
     case EAXFXSLOT_OCCLUSION:
-        eax_fx_slot_set<Eax5OcclusionValidator, eax_occlusion_dirty_bit>(call, dst.lOcclusion, df);
+        eax_fx_slot_set<Eax5OcclusionValidator, eax_occlusion_dirty_bit>(call, dst.lOcclusion, eax_df_);
         break;
     case EAXFXSLOT_OCCLUSIONLFRATIO:
-        eax_fx_slot_set<Eax5OcclusionLfRatioValidator, eax_occlusion_lf_ratio_dirty_bit>(call, dst.flOcclusionLFRatio, df);
+        eax_fx_slot_set<Eax5OcclusionLfRatioValidator, eax_occlusion_lf_ratio_dirty_bit>(call, dst.flOcclusionLFRatio, eax_df_);
         break;
     default:
         eax_fail_unknown_property_id();
     }
 
-    return (df & (eax_occlusion_dirty_bit | eax_occlusion_lf_ratio_dirty_bit)) != EaxDirtyFlags{};
+    return (eax_df_ & (eax_occlusion_dirty_bit | eax_occlusion_lf_ratio_dirty_bit)) != EaxDirtyFlags{};
 }
 
 // Returns `true` if all sources should be updated, or `false` otherwise.
@@ -1449,13 +1444,8 @@ bool ALeffectslot::eax_set(const EaxCall& call)
 {
     const auto version = call.get_version();
 
-    if(eax_version_ != version) {
-        constexpr auto all_bits = ~EaxDirtyFlags{};
-        eax123_.df = all_bits;
-        eax4_.df = all_bits;
-        eax5_.df = all_bits;
-    }
-
+    if(eax_version_ != version)
+        eax_df_ = ~EaxDirtyFlags{};
     eax_version_ = version;
 
     switch(call.get_property_set_id())
@@ -1468,7 +1458,7 @@ bool ALeffectslot::eax_set(const EaxCall& call)
 
 void ALeffectslot::eax4_fx_slot_commit(EaxDirtyFlags& dst_df)
 {
-    if(eax4_.df == EaxDirtyFlags{})
+    if(eax_df_ == EaxDirtyFlags{})
         return;
 
     eax_fx_slot_commit_property<eax_load_effect_dirty_bit>(eax4_, dst_df, &EAX40FXSLOTPROPERTIES::guidLoadEffect);
@@ -1488,12 +1478,12 @@ void ALeffectslot::eax4_fx_slot_commit(EaxDirtyFlags& dst_df)
         dst_i.flOcclusionLFRatio = EAXFXSLOT_DEFAULTOCCLUSIONLFRATIO;
     }
 
-    eax4_.df = EaxDirtyFlags{};
+    eax_df_ = EaxDirtyFlags{};
 }
 
 void ALeffectslot::eax5_fx_slot_commit(Eax5State& state, EaxDirtyFlags& dst_df)
 {
-    if(state.df == EaxDirtyFlags{})
+    if(eax_df_ == EaxDirtyFlags{})
         return;
 
     eax_fx_slot_commit_property<eax_load_effect_dirty_bit>(state, dst_df, &EAX50FXSLOTPROPERTIES::guidLoadEffect);
@@ -1502,7 +1492,7 @@ void ALeffectslot::eax5_fx_slot_commit(Eax5State& state, EaxDirtyFlags& dst_df)
     eax_fx_slot_commit_property<eax_flags_dirty_bit>(state, dst_df, &EAX50FXSLOTPROPERTIES::ulFlags);
     eax_fx_slot_commit_property<eax_occlusion_dirty_bit>(state, dst_df, &EAX50FXSLOTPROPERTIES::lOcclusion);
     eax_fx_slot_commit_property<eax_occlusion_lf_ratio_dirty_bit>(state, dst_df, &EAX50FXSLOTPROPERTIES::flOcclusionLFRatio);
-    state.df = EaxDirtyFlags{};
+    eax_df_ = EaxDirtyFlags{};
 }
 
 void ALeffectslot::eax_dispatch_effect(const EaxCall& call)

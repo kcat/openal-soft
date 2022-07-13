@@ -319,15 +319,12 @@ ALenum ALCcontext::eax_eax_set(
         property_source_id,
         property_value,
         property_value_size);
+
     const auto eax_version = call.get_version();
-
-    if(eax_version != eax_version_) {
-        eax123_.df = ~EaxDirtyFlags();
-        eax4_.df = ~EaxDirtyFlags();
-        eax5_.df = ~EaxDirtyFlags();
-    }
-
+    if(eax_version != eax_version_)
+        eax_df_ = ~EaxDirtyFlags();
     eax_version_ = eax_version;
+
     eax_initialize(call);
 
     switch(call.get_property_set_id())
@@ -587,7 +584,6 @@ void ALCcontext::eax4_context_set_defaults(Eax4State& state) noexcept
 {
     eax4_context_set_defaults(state.i);
     state.d = state.i;
-    state.df = ~EaxDirtyFlags{};
 }
 
 void ALCcontext::eax5_context_set_defaults(Eax5Props& props) noexcept
@@ -603,7 +599,6 @@ void ALCcontext::eax5_context_set_defaults(Eax5State& state) noexcept
 {
     eax5_context_set_defaults(state.i);
     state.d = state.i;
-    state.df = ~EaxDirtyFlags{};
 }
 
 void ALCcontext::eax_context_set_defaults() noexcept
@@ -612,6 +607,7 @@ void ALCcontext::eax_context_set_defaults() noexcept
     eax4_context_set_defaults(eax4_);
     eax5_context_set_defaults(eax5_);
     eax_ = eax5_.i;
+    eax_df_ = ~EaxDirtyFlags{};
 }
 
 void ALCcontext::eax_set_defaults() noexcept
@@ -813,16 +809,16 @@ void ALCcontext::eax4_defer_all(const EaxCall& call, Eax4State& state)
     dst_d = src;
 
     if(dst_i.guidPrimaryFXSlotID != dst_d.guidPrimaryFXSlotID)
-        state.df |= eax_primary_fx_slot_id_dirty_bit;
+        eax_df_ |= eax_primary_fx_slot_id_dirty_bit;
 
     if(dst_i.flDistanceFactor != dst_d.flDistanceFactor)
-        state.df |= eax_distance_factor_dirty_bit;
+        eax_df_ |= eax_distance_factor_dirty_bit;
 
     if(dst_i.flAirAbsorptionHF != dst_d.flAirAbsorptionHF)
-        state.df |= eax_air_absorption_hf_dirty_bit;
+        eax_df_ |= eax_air_absorption_hf_dirty_bit;
 
     if(dst_i.flHFReference != dst_d.flHFReference)
-        state.df |= eax_hf_reference_dirty_bit;
+        eax_df_ |= eax_hf_reference_dirty_bit;
 }
 
 void ALCcontext::eax4_defer(const EaxCall& call, Eax4State& state)
@@ -863,19 +859,19 @@ void ALCcontext::eax5_defer_all(const EaxCall& call, Eax5State& state)
     dst_d = src;
 
     if(dst_i.guidPrimaryFXSlotID != dst_d.guidPrimaryFXSlotID)
-        state.df |= eax_primary_fx_slot_id_dirty_bit;
+        eax_df_ |= eax_primary_fx_slot_id_dirty_bit;
 
     if(dst_i.flDistanceFactor != dst_d.flDistanceFactor)
-        state.df |= eax_distance_factor_dirty_bit;
+        eax_df_ |= eax_distance_factor_dirty_bit;
 
     if(dst_i.flAirAbsorptionHF != dst_d.flAirAbsorptionHF)
-        state.df |= eax_air_absorption_hf_dirty_bit;
+        eax_df_ |= eax_air_absorption_hf_dirty_bit;
 
     if(dst_i.flHFReference != dst_d.flHFReference)
-        state.df |= eax_hf_reference_dirty_bit;
+        eax_df_ |= eax_hf_reference_dirty_bit;
 
     if(dst_i.flMacroFXFactor != dst_d.flMacroFXFactor)
-        state.df |= eax_macro_fx_factor_dirty_bit;
+        eax_df_ |= eax_macro_fx_factor_dirty_bit;
 }
 
 void ALCcontext::eax5_defer(const EaxCall& call, Eax5State& state)
@@ -923,7 +919,7 @@ void ALCcontext::eax_set(const EaxCall& call)
 
 void ALCcontext::eax4_context_commit(Eax4State& state, EaxDirtyFlags& dst_df)
 {
-    if(state.df == EaxDirtyFlags{})
+    if(eax_df_ == EaxDirtyFlags{})
         return;
 
     eax_context_commit_property<eax_primary_fx_slot_id_dirty_bit>(
@@ -935,12 +931,12 @@ void ALCcontext::eax4_context_commit(Eax4State& state, EaxDirtyFlags& dst_df)
     eax_context_commit_property<eax_hf_reference_dirty_bit>(
         state, dst_df, &EAX40CONTEXTPROPERTIES::flHFReference);
 
-    state.df = EaxDirtyFlags{};
+    eax_df_ = EaxDirtyFlags{};
 }
 
 void ALCcontext::eax5_context_commit(Eax5State& state, EaxDirtyFlags& dst_df)
 {
-    if(state.df == EaxDirtyFlags{})
+    if(eax_df_ == EaxDirtyFlags{})
         return;
 
     eax_context_commit_property<eax_primary_fx_slot_id_dirty_bit>(
@@ -954,7 +950,7 @@ void ALCcontext::eax5_context_commit(Eax5State& state, EaxDirtyFlags& dst_df)
     eax_context_commit_property<eax_macro_fx_factor_dirty_bit>(
         state, dst_df, &EAX50CONTEXTPROPERTIES::flMacroFXFactor);
 
-    state.df = EaxDirtyFlags{};
+    eax_df_ = EaxDirtyFlags{};
 }
 
 void ALCcontext::eax_context_commit()

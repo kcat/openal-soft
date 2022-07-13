@@ -234,7 +234,6 @@ private:
     struct Eax4State {
         Eax4Props i; // Immediate.
         Eax4Props d; // Deferred.
-        EaxDirtyFlags df; // Dirty flags.
     };
 
     using Eax5Props = EAX50CONTEXTPROPERTIES;
@@ -242,7 +241,6 @@ private:
     struct Eax5State {
         Eax5Props i; // Immediate.
         Eax5Props d; // Deferred.
-        EaxDirtyFlags df; // Dirty flags.
     };
 
     class ContextException : public EaxException
@@ -397,6 +395,7 @@ private:
     EaxFxSlots eax_fx_slots_{};
 
     int eax_version_{}; // Current EAX version.
+    EaxDirtyFlags eax_df_{}; // Dirty flags for the current EAX version.
     Eax5State eax123_{}; // EAX1/EAX2/EAX3 state.
     Eax4State eax4_{}; // EAX4 state.
     Eax5State eax5_{}; // EAX5 state.
@@ -432,10 +431,7 @@ private:
         typename TMemberResult,
         typename TProps,
         typename TState>
-    static void eax_defer(
-        const EaxCall& call,
-        TState& state,
-        TMemberResult TProps::*member) noexcept
+    void eax_defer(const EaxCall& call, TState& state, TMemberResult TProps::*member) noexcept
     {
         const auto& src = call.get_value<ContextException, const TMemberResult>();
         TValidator{}(src);
@@ -444,7 +440,7 @@ private:
         dst_d = src;
 
         if(dst_i != dst_d)
-            state.df |= TDirtyBit;
+            eax_df_ |= TDirtyBit;
     }
 
     template<
@@ -452,18 +448,13 @@ private:
         typename TMemberResult,
         typename TProps,
         typename TState>
-    void eax_context_commit_property(
-        TState& state,
-        EaxDirtyFlags& dst_df,
+    void eax_context_commit_property(TState& state, EaxDirtyFlags& dst_df,
         TMemberResult TProps::*member) noexcept
     {
-        auto& src_i = state.i;
-        auto& src_df = state.df;
-        auto& dst_i = eax_;
-
-        if ((src_df & TDirtyBit) != EaxDirtyFlags{}) {
+        if((eax_df_ & TDirtyBit) != EaxDirtyFlags{})
+        {
             dst_df |= TDirtyBit;
-            dst_i.*member = src_i.*member;
+            eax_.*member = state.i.*member;
         }
     }
 

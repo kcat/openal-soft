@@ -109,14 +109,12 @@ private:
 
     struct Eax4State {
         Eax4Props i; // Immediate.
-        EaxDirtyFlags df; // Dirty flags.
     };
 
     using Eax5Props = EAX50FXSLOTPROPERTIES;
 
     struct Eax5State {
         Eax5Props i; // Immediate.
-        EaxDirtyFlags df; // Dirty flags.
     };
 
     struct EaxRangeValidator {
@@ -241,6 +239,7 @@ private:
     ALCcontext* eax_al_context_{};
     EaxFxSlotIndexValue eax_fx_slot_index_{};
     int eax_version_{}; // Current EAX version.
+    EaxDirtyFlags eax_df_{}; // Dirty flags for the current EAX version.
     EaxEffectUPtr eax_effect_{};
     Eax5State eax123_{}; // EAX1/EAX2/EAX3 state.
     Eax4State eax4_{}; // EAX4 state.
@@ -270,7 +269,8 @@ private:
     // sets a dirty flag without comparing the values,
     // and assigns the new value.
     template<typename TValidator, EaxDirtyFlags TDirtyBit, typename TProperties>
-    void eax_fx_slot_set_dirty(const EaxCall& call, TProperties& dst, EaxDirtyFlags& dirty_flags)
+    static void eax_fx_slot_set_dirty(const EaxCall& call, TProperties& dst,
+        EaxDirtyFlags& dirty_flags)
     {
         const auto& src = call.get_value<Exception, const TProperties>();
         TValidator{}(src);
@@ -321,16 +321,14 @@ private:
         typename TMemberResult,
         typename TProps,
         typename TState>
-    void eax_fx_slot_commit_property(
-        TState& state,
-        EaxDirtyFlags& dst_df,
+    void eax_fx_slot_commit_property(TState& state, EaxDirtyFlags& dst_df,
         TMemberResult TProps::*member) noexcept
     {
         auto& src_i = state.i;
-        auto& src_df = state.df;
         auto& dst_i = eax_;
 
-        if ((src_df & TDirtyBit) != EaxDirtyFlags{}) {
+        if((eax_df_ & TDirtyBit) != EaxDirtyFlags{})
+        {
             dst_df |= TDirtyBit;
             dst_i.*member = src_i.*member;
         }

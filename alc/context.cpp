@@ -254,7 +254,8 @@ void ALCcontext::applyAllUpdates()
     }
 
 #ifdef ALSOFT_EAX
-    eax_commit();
+    if(eax_is_initialized_)
+        eax_commit();
 #endif
     if(std::exchange(mPropsDirty, false))
         UpdateContextProps(this);

@@ -450,7 +450,9 @@ private:
         if((eax_df_ & TDirtyBit) != EaxDirtyFlags{})
         {
             dst_df |= TDirtyBit;
-            eax_.*member = state.i.*member;
+            const auto& src_d = state.d.*member;
+            state.i.*member = src_d;
+            eax_.*member = src_d;
         }
     }
 

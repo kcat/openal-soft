@@ -204,7 +204,6 @@ public:
         ALvoid* property_value,
         ALuint property_value_size);
 
-    void eax_update_filters();
     void eax_commit_and_update_sources();
     void eax_set_last_error() noexcept;
 

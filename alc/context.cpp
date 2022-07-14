@@ -384,11 +384,6 @@ ALenum ALCcontext::eax_eax_get(
     return AL_NO_ERROR;
 }
 
-void ALCcontext::eax_update_filters()
-{
-    ForEachSource(this, [](ALsource& source){ source.eax_commit(); });
-}
-
 void ALCcontext::eax_commit_and_update_sources()
 {
     std::unique_lock<std::mutex> source_lock{mSourceLock};
@@ -626,7 +621,7 @@ void ALCcontext::eax_dispatch_fx_slot(const EaxCall& call)
     if(fx_slot.eax_dispatch(call))
     {
         std::lock_guard<std::mutex> source_lock{mSourceLock};
-        eax_update_filters();
+        ForEachSource(this, [](ALsource& source){ source.eax_mark_as_changed(); });
     }
 }
 

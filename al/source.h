@@ -163,6 +163,7 @@ public:
     void eax_dispatch(const EaxCall& call);
     void eax_commit() { eax_commit(EaxCommitType::normal); }
     void eax_commit_and_update();
+    void eax_mark_as_changed() { eax_changed_ = true; }
     bool eax_is_initialized() const noexcept { return eax_al_context_ != nullptr; }
 
     static ALsource* eax_lookup_source(ALCcontext& al_context, ALuint source_id) noexcept;

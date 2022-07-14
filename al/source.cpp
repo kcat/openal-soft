@@ -4049,6 +4049,7 @@ EaxAlLowPassParam ALsource::eax_create_room_filter_param(
     const auto& fx_slot_eax = fx_slot.eax_get_eax_fx_slot();
 
     const auto gain_mb =
+        (static_cast<float>(fx_slot_eax.lOcclusion) * fx_slot_eax.flOcclusionLFRatio) +
         static_cast<float>(eax_.source.lRoom + send.lSend) +
         eax_calculate_dst_occlusion_mb(
             eax_.source.lOcclusion,
@@ -4062,8 +4063,9 @@ EaxAlLowPassParam ALsource::eax_create_room_filter_param(
         (static_cast<float>(send.lExclusion) * send.flExclusionLFRatio);
 
     const auto gain_hf_mb =
+        static_cast<float>(fx_slot_eax.lOcclusion) +
         static_cast<float>(eax_.source.lRoomHF + send.lSendHF) +
-        (static_cast<float>(fx_slot_eax.lOcclusion + eax_.source.lOcclusion) * eax_.source.flOcclusionRoomRatio) +
+        (static_cast<float>(eax_.source.lOcclusion) * eax_.source.flOcclusionRoomRatio) +
         (static_cast<float>(send.lOcclusion) * send.flOcclusionRoomRatio) +
         static_cast<float>(eax_.source.lExclusion + send.lExclusion);
 

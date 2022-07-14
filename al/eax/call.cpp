@@ -151,7 +151,28 @@ EaxCall::EaxCall(
         fail("EAX version out of range.");
     }
 
-    if(!(property_id&deferred_flag))
+    switch(property_id)
+    {
+    case EAXCONTEXT_LASTERROR:
+    case EAXCONTEXT_SPEAKERCONFIG:
+    case EAXCONTEXT_EAXSESSION:
+    case EAXFXSLOT_NONE:
+    case EAXFXSLOT_ALLPARAMETERS:
+    case EAXFXSLOT_LOADEFFECT:
+    case EAXFXSLOT_VOLUME:
+    case EAXFXSLOT_LOCK:
+    case EAXFXSLOT_FLAGS:
+    case EAXFXSLOT_OCCLUSION:
+    case EAXFXSLOT_OCCLUSIONLFRATIO:
+        // EAX allow to set "defer" flag on immediate-only properties.
+        // If we don't clear our flag then "applyAllUpdates" in EAX context won't be called.
+        is_deferred_ = false;
+        break;
+    default:
+        break;
+    }
+
+    if(!is_deferred_)
     {
         if(property_set_id_ != EaxCallPropertySetId::fx_slot && property_id_ != 0)
         {

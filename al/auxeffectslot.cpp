@@ -1275,7 +1275,7 @@ void ALeffectslot::eax_fx_slot_get(const EaxCall& call) const
     switch(call.get_version())
     {
     case 4: eax4_fx_slot_get(call, eax4_.i); break;
-    case 5: eax4_fx_slot_get(call, eax5_.i); break;
+    case 5: eax5_fx_slot_get(call, eax5_.i); break;
     default: eax_fail_unknown_version();
     }
 }

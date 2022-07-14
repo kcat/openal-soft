@@ -4488,6 +4488,15 @@ void ALsource::eax_set(const EaxCall& call)
     eax_version_ = eax_version;
 }
 
+void ALsource::eax_get_active_fx_slot_id(const EaxCall& call, const GUID* ids, int max_count)
+{
+    assert(ids != nullptr);
+    assert(max_count == EAX40_MAX_ACTIVE_FXSLOTS || max_count == EAX50_MAX_ACTIVE_FXSLOTS);
+    const auto dst_ids = call.get_values<GUID>(max_count);
+    const auto count = dst_ids.size();
+    std::uninitialized_copy_n(ids, count, dst_ids.begin());
+}
+
 void ALsource::eax1_get(const EaxCall& call, const Eax1Props& props)
 {
     switch (call.get_property_id()) {
@@ -4733,7 +4742,7 @@ void ALsource::eax4_get(const EaxCall& call, const Eax4Props& props)
             break;
 
         case EAXSOURCE_ACTIVEFXSLOTID:
-            call.set_value<Exception>(props.active_fx_slots);
+            eax_get_active_fx_slot_id(call, props.active_fx_slots.guidActiveFXSlots, EAX40_MAX_ACTIVE_FXSLOTS);
             break;
 
         default:
@@ -4805,7 +4814,7 @@ void ALsource::eax5_get(const EaxCall& call, const Eax5Props& props)
             break;
 
         case EAXSOURCE_ACTIVEFXSLOTID:
-            call.set_value<Exception>(props.active_fx_slots);
+            eax_get_active_fx_slot_id(call, props.active_fx_slots.guidActiveFXSlots, EAX50_MAX_ACTIVE_FXSLOTS);
             break;
 
         case EAXSOURCE_MACROFXFACTOR:

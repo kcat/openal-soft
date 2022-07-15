@@ -2226,7 +2226,7 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
 
         if(ALeffectslot *slot{context->mDefaultSlot.get()})
         {
-            aluInitEffectPanning(&slot->mSlot, context);
+            aluInitEffectPanning(slot->mSlot, context);
 
             EffectState *state{slot->Effect.State.get()};
             state->mOutTarget = device->Dry.Buffer;
@@ -2245,7 +2245,7 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
                 ALeffectslot *slot{sublist.EffectSlots + idx};
                 usemask &= ~(1_u64 << idx);
 
-                aluInitEffectPanning(&slot->mSlot, context);
+                aluInitEffectPanning(slot->mSlot, context);
 
                 EffectState *state{slot->Effect.State.get()};
                 state->mOutTarget = device->Dry.Buffer;

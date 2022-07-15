@@ -160,7 +160,7 @@ void UpdateSourceProps(const ALsource *source, Voice *voice, ALCcontext *context
     auto copy_send = [](const ALsource::SendData &srcsend) noexcept -> VoiceProps::SendData
     {
         VoiceProps::SendData ret{};
-        ret.Slot = srcsend.Slot ? &srcsend.Slot->mSlot : nullptr;
+        ret.Slot = srcsend.Slot ? srcsend.Slot->mSlot : nullptr;
         ret.Gain = srcsend.Gain;
         ret.GainHF = srcsend.GainHF;
         ret.HFReference = srcsend.HFReference;
@@ -170,7 +170,7 @@ void UpdateSourceProps(const ALsource *source, Voice *voice, ALCcontext *context
     };
     std::transform(source->Send.cbegin(), source->Send.cend(), props->Send, copy_send);
     if(!props->Send[0].Slot && context->mDefaultSlot)
-        props->Send[0].Slot = &context->mDefaultSlot->mSlot;
+        props->Send[0].Slot = context->mDefaultSlot->mSlot;
 
     /* Set the new container for updating internal parameters. */
     props = voice->mUpdate.exchange(props, std::memory_order_acq_rel);

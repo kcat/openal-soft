@@ -63,7 +63,7 @@ struct ALeffectslot {
 
     RefCount ref{0u};
 
-    EffectSlot mSlot;
+    EffectSlot *mSlot{nullptr};
 
     /* Self ID */
     ALuint id{};

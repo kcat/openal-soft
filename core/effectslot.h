@@ -82,7 +82,7 @@ struct EffectSlot {
 
     static EffectSlotArray *CreatePtrArray(size_t count) noexcept;
 
-    DISABLE_ALLOC()
+    DEF_NEWDEL(EffectSlot)
 };
 
 #endif /* CORE_EFFECTSLOT_H */

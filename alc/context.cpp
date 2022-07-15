@@ -143,7 +143,7 @@ void ALCcontext::init()
     if(sDefaultEffect.type != AL_EFFECT_NULL && mDevice->Type == DeviceType::Playback)
     {
         mDefaultSlot = std::make_unique<ALeffectslot>();
-        aluInitEffectPanning(&mDefaultSlot->mSlot, this);
+        aluInitEffectPanning(mDefaultSlot->mSlot, this);
     }
 
     EffectSlotArray *auxslots;
@@ -152,7 +152,7 @@ void ALCcontext::init()
     else
     {
         auxslots = EffectSlot::CreatePtrArray(1);
-        (*auxslots)[0] = &mDefaultSlot->mSlot;
+        (*auxslots)[0] = mDefaultSlot->mSlot;
         mDefaultSlot->mState = SlotState::Playing;
     }
     mActiveAuxSlots.store(auxslots, std::memory_order_relaxed);

@@ -324,8 +324,7 @@ ALenum ALCcontext::eax_eax_set(
     if(eax_version != eax_version_)
         eax_df_ = ~EaxDirtyFlags();
     eax_version_ = eax_version;
-
-    eax_initialize(call);
+    eax_initialize();
 
     switch(call.get_property_set_id())
     {
@@ -364,7 +363,7 @@ ALenum ALCcontext::eax_eax_get(
         property_value,
         property_value_size);
     eax_version_ = call.get_version();
-    eax_initialize(call);
+    eax_initialize();
 
     switch(call.get_property_set_id())
     {
@@ -466,7 +465,7 @@ void ALCcontext::eax_initialize_extensions()
     mExtensionList = eax_extension_list_.c_str();
 }
 
-void ALCcontext::eax_initialize(const EaxCall& call)
+void ALCcontext::eax_initialize()
 {
     if(eax_is_initialized_)
         return;
@@ -483,7 +482,7 @@ void ALCcontext::eax_initialize(const EaxCall& call)
     eax_set_defaults();
     eax_context_commit_air_absorbtion_hf();
     eax_update_speaker_configuration();
-    eax_initialize_fx_slots(call);
+    eax_initialize_fx_slots();
     eax_initialize_sources();
 
     eax_is_initialized_ = true;
@@ -761,9 +760,9 @@ void ALCcontext::eax_context_commit_macro_fx_factor()
     // TODO
 }
 
-void ALCcontext::eax_initialize_fx_slots(const EaxCall& call)
+void ALCcontext::eax_initialize_fx_slots()
 {
-    eax_fx_slots_.initialize(call, *this);
+    eax_fx_slots_.initialize(*this);
     eax_primary_fx_slot_index_ = eax_.guidPrimaryFXSlotID;
 }
 

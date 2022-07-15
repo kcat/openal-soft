@@ -456,7 +456,7 @@ private:
     }
 
     void eax_initialize_extensions();
-    void eax_initialize(const EaxCall& call);
+    void eax_initialize();
 
     bool eax_has_no_default_effect_slot() const noexcept;
     void eax_ensure_no_default_effect_slot() const;
@@ -492,7 +492,7 @@ private:
     void eax_context_commit_hf_reference();
     void eax_context_commit_macro_fx_factor();
 
-    void eax_initialize_fx_slots(const EaxCall& call);
+    void eax_initialize_fx_slots();
 
     void eax_update_sources();
 

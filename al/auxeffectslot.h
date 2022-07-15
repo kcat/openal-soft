@@ -82,12 +82,10 @@ struct ALeffectslot {
 
 #ifdef ALSOFT_EAX
 public:
-    void eax_initialize(
-        const EaxCall& call,
-        ALCcontext& al_context,
-        EaxFxSlotIndexValue index);
+    void eax_initialize(ALCcontext& al_context, EaxFxSlotIndexValue index);
 
-    const EAX50FXSLOTPROPERTIES& eax_get_eax_fx_slot() const noexcept;
+    const EAX50FXSLOTPROPERTIES& eax_get_eax_fx_slot() const noexcept
+    { return eax_; }
 
     // Returns `true` if all sources should be updated, or `false` otherwise.
     bool eax_dispatch(const EaxCall& call)

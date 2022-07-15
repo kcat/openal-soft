@@ -1055,10 +1055,7 @@ EffectSlotSubList::~EffectSlotSubList()
 }
 
 #ifdef ALSOFT_EAX
-void ALeffectslot::eax_initialize(
-    const EaxCall& call,
-    ALCcontext& al_context,
-    EaxFxSlotIndexValue index)
+void ALeffectslot::eax_initialize(ALCcontext& al_context, EaxFxSlotIndexValue index)
 {
     if(index >= EAX_MAX_FXSLOTS)
         eax_fail("Index out of range.");
@@ -1066,13 +1063,8 @@ void ALeffectslot::eax_initialize(
     mPropsDirty = true;
     eax_al_context_ = &al_context;
     eax_fx_slot_index_ = index;
-    eax_version_ = call.get_version();
+    eax_version_ = eax_al_context_->eax_get_version();
     eax_fx_slot_set_defaults();
-}
-
-const EAX50FXSLOTPROPERTIES& ALeffectslot::eax_get_eax_fx_slot() const noexcept
-{
-    return eax_;
 }
 
 void ALeffectslot::eax_commit()

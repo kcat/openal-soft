@@ -14,9 +14,7 @@
 class EaxFxSlots
 {
 public:
-    void initialize(
-        const EaxCall& call,
-        ALCcontext& al_context);
+    void initialize(ALCcontext& al_context);
 
     void uninitialize() noexcept;
 
@@ -44,9 +42,7 @@ private:
     static void fail(
         const char* message);
 
-    void initialize_fx_slots(
-        const EaxCall& call,
-        ALCcontext& al_context);
+    void initialize_fx_slots(ALCcontext& al_context);
 }; // EaxFxSlots
 
 

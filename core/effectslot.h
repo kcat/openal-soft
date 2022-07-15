@@ -78,9 +78,8 @@ struct EffectSlot {
     float AirAbsorptionGainHF{1.0f};
 
     /* Mixing buffer used by the Wet mix. */
-    WetBuffer *mWetBuffer{nullptr};
+    al::vector<FloatBufferLine,16> mWetBuffer;
 
-    ~EffectSlot();
 
     static EffectSlotArray *CreatePtrArray(size_t count) noexcept;
 

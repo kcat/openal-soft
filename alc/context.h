@@ -68,9 +68,6 @@ struct EffectSlotSubList {
 struct ALCcontext : public al::intrusive_ref<ALCcontext>, ContextBase {
     const al::intrusive_ptr<ALCdevice> mALDevice;
 
-    /* Wet buffers used by effect slots. */
-    al::vector<WetBufferPtr> mWetBuffers;
-
 
     bool mPropsDirty{true};
     bool mDeferUpdates{false};

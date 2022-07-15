@@ -1129,49 +1129,12 @@ void aluInitEffectPanning(EffectSlot *slot, ALCcontext *context)
     DeviceBase *device{context->mDevice};
     const size_t count{AmbiChannelsFromOrder(device->mAmbiOrder)};
 
-    auto wetbuffer_iter = context->mWetBuffers.end();
-    if(slot->mWetBuffer)
-    {
-        /* If the effect slot already has a wet buffer attached, allocate a new
-         * one in its place.
-         */
-        wetbuffer_iter = context->mWetBuffers.begin();
-        for(;wetbuffer_iter != context->mWetBuffers.end();++wetbuffer_iter)
-        {
-            if(wetbuffer_iter->get() == slot->mWetBuffer)
-            {
-                slot->mWetBuffer = nullptr;
-                slot->Wet.Buffer = {};
-
-                *wetbuffer_iter = WetBufferPtr{new(FamCount(count)) WetBuffer{count}};
-
-                break;
-            }
-        }
-    }
-    if(wetbuffer_iter == context->mWetBuffers.end())
-    {
-        /* Otherwise, search for an unused wet buffer. */
-        wetbuffer_iter = context->mWetBuffers.begin();
-        for(;wetbuffer_iter != context->mWetBuffers.end();++wetbuffer_iter)
-        {
-            if(!(*wetbuffer_iter)->mInUse)
-                break;
-        }
-        if(wetbuffer_iter == context->mWetBuffers.end())
-        {
-            /* Otherwise, allocate a new one to use. */
-            context->mWetBuffers.emplace_back(WetBufferPtr{new(FamCount(count)) WetBuffer{count}});
-            wetbuffer_iter = context->mWetBuffers.end()-1;
-        }
-    }
-    WetBuffer *wetbuffer{slot->mWetBuffer = wetbuffer_iter->get()};
-    wetbuffer->mInUse = true;
+    slot->mWetBuffer.resize(count);
 
     auto acnmap_begin = AmbiIndex::FromACN().begin();
     auto iter = std::transform(acnmap_begin, acnmap_begin + count, slot->Wet.AmbiMap.begin(),
         [](const uint8_t &acn) noexcept -> BFChannelConfig
         { return BFChannelConfig{1.0f, acn}; });
     std::fill(iter, slot->Wet.AmbiMap.end(), BFChannelConfig{});
-    slot->Wet.Buffer = wetbuffer->mBuffer;
+    slot->Wet.Buffer = slot->mWetBuffer;
 }

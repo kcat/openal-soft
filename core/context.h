@@ -40,17 +40,6 @@ enum class DistanceModel : unsigned char {
 };
 
 
-struct WetBuffer {
-    bool mInUse;
-    al::FlexArray<FloatBufferLine, 16> mBuffer;
-
-    WetBuffer(size_t count) : mBuffer{count} { }
-
-    DEF_FAM_NEWDEL(WetBuffer, mBuffer)
-};
-using WetBufferPtr = std::unique_ptr<WetBuffer>;
-
-
 struct ContextProps {
     std::array<float,3> Position;
     std::array<float,3> Velocity;

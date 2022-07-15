@@ -128,9 +128,6 @@ ALCcontext::~ALCcontext()
     eax_uninitialize();
 #endif // ALSOFT_EAX
 
-    /* Delete the ALeffectslots, so the EffectSlots can be deleted before the
-     * WetBuffers are deleted.
-     */
     mDefaultSlot = nullptr;
     count = std::accumulate(mEffectSlotList.cbegin(), mEffectSlotList.cend(), size_t{0u},
         [](size_t cur, const EffectSlotSubList &sublist) noexcept -> size_t
@@ -139,8 +136,6 @@ ALCcontext::~ALCcontext()
         WARN("%zu AuxiliaryEffectSlot%s not deleted\n", count, (count==1)?"":"s");
     mEffectSlotList.clear();
     mNumEffectSlots = 0;
-
-    mEffectSlotClusters.clear();
 }
 
 void ALCcontext::init()

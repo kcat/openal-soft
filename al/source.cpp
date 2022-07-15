@@ -4047,10 +4047,11 @@ EaxAlLowPassParam ALsource::eax_create_room_filter_param(
     const EAXSOURCEALLSENDPROPERTIES& send) const noexcept
 {
     const auto& fx_slot_eax = fx_slot.eax_get_eax_fx_slot();
+    const auto is_environmental_fx = ((fx_slot_eax.ulFlags & EAXFXSLOTFLAGS_ENVIRONMENT) != 0);
 
     const auto gain_mb =
         (static_cast<float>(fx_slot_eax.lOcclusion) * fx_slot_eax.flOcclusionLFRatio) +
-        static_cast<float>(eax_.source.lRoom + send.lSend) +
+        static_cast<float>((is_environmental_fx ? eax_.source.lRoom : 0) + send.lSend) +
         eax_calculate_dst_occlusion_mb(
             eax_.source.lOcclusion,
             eax_.source.flOcclusionRoomRatio,
@@ -4064,7 +4065,7 @@ EaxAlLowPassParam ALsource::eax_create_room_filter_param(
 
     const auto gain_hf_mb =
         static_cast<float>(fx_slot_eax.lOcclusion) +
-        static_cast<float>(eax_.source.lRoomHF + send.lSendHF) +
+        static_cast<float>((is_environmental_fx ? eax_.source.lRoomHF : 0) + send.lSendHF) +
         (static_cast<float>(eax_.source.lOcclusion) * eax_.source.flOcclusionRoomRatio) +
         (static_cast<float>(send.lOcclusion) * send.flOcclusionRoomRatio) +
         static_cast<float>(eax_.source.lExclusion + send.lExclusion);

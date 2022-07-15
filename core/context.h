@@ -163,6 +163,13 @@ struct ContextBase {
     al::vector<VoicePropsCluster> mVoicePropClusters;
 
 
+    static constexpr size_t EffectSlotClusterSize{4};
+    EffectSlot *getEffectSlot();
+
+    using EffectSlotCluster = std::unique_ptr<EffectSlot[]>;
+    al::vector<EffectSlotCluster> mEffectSlotClusters;
+
+
     ContextBase(DeviceBase *device);
     ContextBase(const ContextBase&) = delete;
     ContextBase& operator=(const ContextBase&) = delete;

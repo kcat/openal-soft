@@ -51,6 +51,8 @@ struct EffectSlotProps {
 
 
 struct EffectSlot {
+    bool InUse{false};
+
     std::atomic<EffectSlotProps*> Update{nullptr};
 
     /* Wet buffer configuration is ACN channel order with N3D scaling.

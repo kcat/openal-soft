@@ -136,3 +136,24 @@ void ContextBase::allocVoices(size_t addcount)
         delete oldvoices;
     }
 }
+
+
+EffectSlot *ContextBase::getEffectSlot()
+{
+    for(auto& cluster : mEffectSlotClusters)
+    {
+        for(size_t i{0};i < EffectSlotClusterSize;++i)
+        {
+            if(!cluster[i].InUse)
+                return &cluster[i];
+        }
+    }
+
+    if(1 >= std::numeric_limits<int>::max()/EffectSlotClusterSize - mEffectSlotClusters.size())
+        throw std::runtime_error{"Allocating too many effect slots"};
+    const size_t totalcount{(mEffectSlotClusters.size()+1) * EffectSlotClusterSize};
+    TRACE("Increasing allocated effect slots to %zu\n", totalcount);
+
+    mEffectSlotClusters.emplace_back(std::make_unique<EffectSlot[]>(EffectSlotClusterSize));
+    return getEffectSlot();
+}

@@ -2224,6 +2224,20 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
             context->mWetBuffers.end(), buffer_not_in_use);
         context->mWetBuffers.erase(wetbuffer_iter, context->mWetBuffers.end());
 
+        /* Clear out unused effect slot clusters. */
+        auto slot_cluster_not_in_use = [](ContextBase::EffectSlotCluster &cluster)
+        {
+            for(size_t i{0};i < ContextBase::EffectSlotClusterSize;++i)
+            {
+                if(cluster[i].InUse)
+                    return false;
+            }
+            return true;
+        };
+        auto slotcluster_iter = std::remove_if(context->mEffectSlotClusters.begin(),
+            context->mEffectSlotClusters.end(), slot_cluster_not_in_use);
+        context->mEffectSlotClusters.erase(slotcluster_iter, context->mEffectSlotClusters.end());
+
         if(ALeffectslot *slot{context->mDefaultSlot.get()})
         {
             aluInitEffectPanning(slot->mSlot, context);

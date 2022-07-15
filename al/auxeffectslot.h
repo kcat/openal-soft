@@ -68,7 +68,7 @@ struct ALeffectslot {
     /* Self ID */
     ALuint id{};
 
-    ALeffectslot();
+    ALeffectslot(ALCcontext *context);
     ALeffectslot(const ALeffectslot&) = delete;
     ALeffectslot& operator=(const ALeffectslot&) = delete;
     ~ALeffectslot();

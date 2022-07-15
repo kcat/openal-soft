@@ -278,7 +278,7 @@ ALeffectslot *AllocEffectSlot(ALCcontext *context)
     auto slidx = static_cast<ALuint>(al::countr_zero(sublist->FreeMask));
     ASSUME(slidx < 64);
 
-    ALeffectslot *slot{al::construct_at(sublist->EffectSlots + slidx)};
+    ALeffectslot *slot{al::construct_at(sublist->EffectSlots + slidx, context)};
     aluInitEffectPanning(slot->mSlot, context);
 
     /* Add 1 to avoid source ID 0. */
@@ -907,7 +907,7 @@ START_API_FUNC
 END_API_FUNC
 
 
-ALeffectslot::ALeffectslot()
+ALeffectslot::ALeffectslot(ALCcontext *context)
 {
     EffectStateFactory *factory{getFactoryByType(EffectSlotType::None)};
     if(!factory) throw std::runtime_error{"Failed to get null effect factory"};
@@ -915,7 +915,7 @@ ALeffectslot::ALeffectslot()
     al::intrusive_ptr<EffectState> state{factory->create()};
     Effect.State = state;
 
-    mSlot = new EffectSlot{};
+    mSlot = context->getEffectSlot();
     mSlot->mEffectState = state.release();
 }
 
@@ -938,7 +938,7 @@ ALeffectslot::~ALeffectslot()
 
     if(mSlot->mEffectState)
         mSlot->mEffectState->release();
-    delete mSlot;
+    mSlot->InUse = false;
 }
 
 ALenum ALeffectslot::initEffect(ALenum effectType, const EffectProps &effectProps,

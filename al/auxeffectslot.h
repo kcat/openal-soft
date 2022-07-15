@@ -285,10 +285,11 @@ private:
     const GUID& eax_get_eax_default_effect_guid() const noexcept;
     long eax_get_eax_default_lock() const noexcept;
 
-    void eax4_fx_slot_set_defaults(Eax4Props& props);
-    void eax4_fx_slot_set_defaults();
-    void eax5_fx_slot_set_defaults(Eax5Props& props);
-    void eax5_fx_slot_set_defaults();
+    void eax4_fx_slot_set_defaults(Eax4Props& props) noexcept;
+    void eax5_fx_slot_set_defaults(Eax5Props& props) noexcept;
+    void eax4_fx_slot_set_current_defaults(const Eax4Props& props) noexcept;
+    void eax5_fx_slot_set_current_defaults(const Eax5Props& props) noexcept;
+    void eax_fx_slot_set_current_defaults();
     void eax_fx_slot_set_defaults();
 
     void eax4_fx_slot_get(const EaxCall& call, const Eax4Props& props) const;

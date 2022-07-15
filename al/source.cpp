@@ -4016,27 +4016,44 @@ EaxAlLowPassParam ALsource::eax_create_direct_filter_param() const noexcept
             eax_.source.flOcclusionDirectRatio,
             eax_.source.flOcclusionLFRatio);
 
+    const auto has_source_occlusion = (eax_.source.lOcclusion != 0);
+
     auto gain_hf_mb =
         static_cast<float>(eax_.source.lDirectHF) +
-        static_cast<float>(eax_.source.lObstruction) +
-        (static_cast<float>(eax_.source.lOcclusion) * eax_.source.flOcclusionDirectRatio);
+        static_cast<float>(eax_.source.lObstruction);
 
     for (auto i = std::size_t{}; i < EAX_MAX_FXSLOTS; ++i)
     {
         if(!eax_active_fx_slots_[i])
             continue;
 
+        if(has_source_occlusion) {
+            const auto& fx_slot = eax_al_context_->eax_get_fx_slot(i);
+            const auto& fx_slot_eax = fx_slot.eax_get_eax_fx_slot();
+            const auto is_environmental_fx = ((fx_slot_eax.ulFlags & EAXFXSLOTFLAGS_ENVIRONMENT) != 0);
+            const auto is_primary = (eax_primary_fx_slot_id_.value_or(-1) == fx_slot.eax_get_index());
+            const auto is_listener_environment = (is_environmental_fx && is_primary);
+
+            if(is_listener_environment) {
+                gain_mb += eax_calculate_dst_occlusion_mb(
+                    eax_.source.lOcclusion,
+                    eax_.source.flOcclusionDirectRatio,
+                    eax_.source.flOcclusionLFRatio);
+
+                gain_hf_mb += static_cast<float>(eax_.source.lOcclusion) * eax_.source.flOcclusionDirectRatio;
+            }
+        }
+
         const auto& send = eax_.sends[i];
 
-        if(send.lOcclusion == 0)
-            continue;
+        if(send.lOcclusion != 0) {
+            gain_mb += eax_calculate_dst_occlusion_mb(
+                send.lOcclusion,
+                send.flOcclusionDirectRatio,
+                send.flOcclusionLFRatio);
 
-        gain_mb += eax_calculate_dst_occlusion_mb(
-            send.lOcclusion,
-            send.flOcclusionDirectRatio,
-            send.flOcclusionLFRatio);
-
-        gain_hf_mb += static_cast<float>(send.lOcclusion) * send.flOcclusionDirectRatio;
+            gain_hf_mb += static_cast<float>(send.lOcclusion) * send.flOcclusionDirectRatio;
+        }
     }
 
     const auto al_low_pass_param = EaxAlLowPassParam{
@@ -4052,27 +4069,37 @@ EaxAlLowPassParam ALsource::eax_create_room_filter_param(
 {
     const auto& fx_slot_eax = fx_slot.eax_get_eax_fx_slot();
     const auto is_environmental_fx = ((fx_slot_eax.ulFlags & EAXFXSLOTFLAGS_ENVIRONMENT) != 0);
+    const auto is_primary = (eax_primary_fx_slot_id_.value_or(-1) == fx_slot.eax_get_index());
+    const auto is_listener_environment = (is_environmental_fx && is_primary);
 
     const auto gain_mb =
         (static_cast<float>(fx_slot_eax.lOcclusion) * fx_slot_eax.flOcclusionLFRatio) +
         static_cast<float>((is_environmental_fx ? eax_.source.lRoom : 0) + send.lSend) +
-        eax_calculate_dst_occlusion_mb(
-            eax_.source.lOcclusion,
-            eax_.source.flOcclusionRoomRatio,
-            eax_.source.flOcclusionLFRatio) +
+        (is_listener_environment ?
+            eax_calculate_dst_occlusion_mb(
+                eax_.source.lOcclusion,
+                eax_.source.flOcclusionRoomRatio,
+                eax_.source.flOcclusionLFRatio) :
+            0.0f) +
         eax_calculate_dst_occlusion_mb(
             send.lOcclusion,
             send.flOcclusionRoomRatio,
             send.flOcclusionLFRatio) +
-        (static_cast<float>(eax_.source.lExclusion) * eax_.source.flExclusionLFRatio) +
+        (is_listener_environment ?
+            (static_cast<float>(eax_.source.lExclusion) * eax_.source.flExclusionLFRatio) :
+            0.0f) +
         (static_cast<float>(send.lExclusion) * send.flExclusionLFRatio);
 
     const auto gain_hf_mb =
         static_cast<float>(fx_slot_eax.lOcclusion) +
         static_cast<float>((is_environmental_fx ? eax_.source.lRoomHF : 0) + send.lSendHF) +
-        (static_cast<float>(eax_.source.lOcclusion) * eax_.source.flOcclusionRoomRatio) +
+        (is_listener_environment ?
+            ((static_cast<float>(eax_.source.lOcclusion) * eax_.source.flOcclusionRoomRatio)) :
+            0.0f) +
         (static_cast<float>(send.lOcclusion) * send.flOcclusionRoomRatio) +
-        static_cast<float>(eax_.source.lExclusion + send.lExclusion);
+        (is_listener_environment ?
+            static_cast<float>(eax_.source.lExclusion + send.lExclusion) :
+            0.0f);
 
     const auto al_low_pass_param = EaxAlLowPassParam{
         level_mb_to_gain(gain_mb),

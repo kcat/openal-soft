@@ -1379,6 +1379,19 @@ void ALeffectslot::eax5_fx_slot_set_all(const EaxCall& call)
     dst = src;
 }
 
+bool ALeffectslot::eax_fx_slot_should_update_sources() const noexcept
+{
+    const auto dirty_bits =
+        eax_occlusion_dirty_bit |
+        eax_occlusion_lf_ratio_dirty_bit |
+        eax_flags_dirty_bit;
+
+    if((eax_df_ & dirty_bits) != EaxDirtyFlags{})
+        return true;
+
+    return false;
+}
+
 // Returns `true` if all sources should be updated, or `false` otherwise.
 bool ALeffectslot::eax4_fx_slot_set(const EaxCall& call)
 {
@@ -1409,7 +1422,7 @@ bool ALeffectslot::eax4_fx_slot_set(const EaxCall& call)
         eax_fail_unknown_property_id();
     }
 
-    return (eax_df_ & (eax_occlusion_dirty_bit | eax_occlusion_lf_ratio_dirty_bit)) != EaxDirtyFlags{};
+    return eax_fx_slot_should_update_sources();
 }
 
 // Returns `true` if all sources should be updated, or `false` otherwise.
@@ -1446,7 +1459,7 @@ bool ALeffectslot::eax5_fx_slot_set(const EaxCall& call)
         eax_fail_unknown_property_id();
     }
 
-    return (eax_df_ & (eax_occlusion_dirty_bit | eax_occlusion_lf_ratio_dirty_bit)) != EaxDirtyFlags{};
+    return eax_fx_slot_should_update_sources();
 }
 
 // Returns `true` if all sources should be updated, or `false` otherwise.

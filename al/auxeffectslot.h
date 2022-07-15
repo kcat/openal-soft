@@ -84,6 +84,7 @@ struct ALeffectslot {
 public:
     void eax_initialize(ALCcontext& al_context, EaxFxSlotIndexValue index);
 
+    EaxFxSlotIndexValue eax_get_index() const noexcept { return eax_fx_slot_index_; }
     const EAX50FXSLOTPROPERTIES& eax_get_eax_fx_slot() const noexcept
     { return eax_; }
 
@@ -305,6 +306,8 @@ private:
 
     void eax4_fx_slot_set_all(const EaxCall& call);
     void eax5_fx_slot_set_all(const EaxCall& call);
+
+    bool eax_fx_slot_should_update_sources() const noexcept;
 
     // Returns `true` if all sources should be updated, or `false` otherwise.
     bool eax4_fx_slot_set(const EaxCall& call);

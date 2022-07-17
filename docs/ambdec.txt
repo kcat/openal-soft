@@ -157,9 +157,8 @@ CE = Front center
 CB = Back center
 
 Additionally, configuration files for surround51 will acknowledge back speakers
-for side channels, and surround51rear will acknowledge side speakers for back
-channels, to avoid issues with a configuration expecting 5.1 to use the side
-channels when the device is configured for back, or vice-versa.
+for side channels, to avoid issues with a configuration expecting 5.1 to use
+the side channels when the device is configured for back, or vice-versa.
 
 Furthermore, OpenAL Soft does not require a speaker definition for each output
 channel the configuration is used with. So for example a 5.1 configuration may

@@ -4520,7 +4520,7 @@ void ALsource::eax_set(const EaxCall& call)
     eax_version_ = eax_version;
 }
 
-void ALsource::eax_get_active_fx_slot_id(const EaxCall& call, const GUID* ids, int max_count)
+void ALsource::eax_get_active_fx_slot_id(const EaxCall& call, const GUID* ids, size_t max_count)
 {
     assert(ids != nullptr);
     assert(max_count == EAX40_MAX_ACTIVE_FXSLOTS || max_count == EAX50_MAX_ACTIVE_FXSLOTS);

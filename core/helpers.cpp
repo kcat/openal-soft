@@ -497,8 +497,8 @@ bool SetRTPriorityRTKit(int prio)
         if(getrlimit(RLIMIT_RTTIME, &rlim) != 0)
             return errno;
 
-        TRACE("RTTime max: %llu (hard: %llu, soft: %llu)\n", umaxtime, ulonglong{rlim.rlim_max},
-            ulonglong{rlim.rlim_cur});
+        TRACE("RTTime max: %llu (hard: %llu, soft: %llu)\n", umaxtime, static_cast<ulonglong>(rlim.rlim_max),
+            static_cast<ulonglong>(rlim.rlim_cur));
         if(rlim.rlim_max > umaxtime)
         {
             rlim.rlim_max = static_cast<rlim_t>(umaxtime);

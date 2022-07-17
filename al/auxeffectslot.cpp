@@ -1182,7 +1182,7 @@ long ALeffectslot::eax_get_eax_default_lock() const noexcept
     return eax4_fx_slot_is_legacy() ? EAXFXSLOT_LOCKED : EAXFXSLOT_UNLOCKED;
 }
 
-void ALeffectslot::eax4_fx_slot_set_defaults(Eax4Props& props)
+void ALeffectslot::eax4_fx_slot_set_defaults(Eax4Props& props) noexcept
 {
     props.guidLoadEffect = eax_get_eax_default_effect_guid();
     props.lVolume = EAXFXSLOT_DEFAULTVOLUME;
@@ -1190,30 +1190,56 @@ void ALeffectslot::eax4_fx_slot_set_defaults(Eax4Props& props)
     props.ulFlags = EAX40FXSLOT_DEFAULTFLAGS;
 }
 
-void ALeffectslot::eax4_fx_slot_set_defaults()
+void ALeffectslot::eax5_fx_slot_set_defaults(Eax5Props& props) noexcept
 {
-    eax4_fx_slot_set_defaults(eax4_.i);
-}
-
-void ALeffectslot::eax5_fx_slot_set_defaults(Eax5Props& props)
-{
-    eax4_fx_slot_set_defaults(static_cast<Eax4Props&>(props));
+    props.guidLoadEffect = eax_get_eax_default_effect_guid();
+    props.lVolume = EAXFXSLOT_DEFAULTVOLUME;
+    props.lLock = EAXFXSLOT_UNLOCKED;
+    props.ulFlags = EAX50FXSLOT_DEFAULTFLAGS;
     props.lOcclusion = EAXFXSLOT_DEFAULTOCCLUSION;
     props.flOcclusionLFRatio = EAXFXSLOT_DEFAULTOCCLUSIONLFRATIO;
 }
 
-void ALeffectslot::eax5_fx_slot_set_defaults()
+void ALeffectslot::eax4_fx_slot_set_current_defaults(const Eax4Props& props) noexcept
 {
-    eax5_fx_slot_set_defaults(eax5_.i);
+    static_cast<Eax4Props&>(eax_) = props;
+    eax_.lOcclusion = EAXFXSLOT_DEFAULTOCCLUSION;
+    eax_.flOcclusionLFRatio = EAXFXSLOT_DEFAULTOCCLUSIONLFRATIO;
+}
+
+void ALeffectslot::eax5_fx_slot_set_current_defaults(const Eax5Props& props) noexcept
+{
+    eax_ = props;
+}
+
+void ALeffectslot::eax_fx_slot_set_current_defaults()
+{
+    switch(eax_version_)
+    {
+    case 1:
+    case 2:
+    case 3:
+        eax5_fx_slot_set_current_defaults(eax123_.i);
+        break;
+    case 4:
+        eax4_fx_slot_set_current_defaults(eax4_.i);
+        break;
+    case 5:
+        eax5_fx_slot_set_current_defaults(eax5_.i);
+        break;
+    default:
+        eax_fail_unknown_version();
+    }
+
+    eax_df_ = ~EaxDirtyFlags{};
 }
 
 void ALeffectslot::eax_fx_slot_set_defaults()
 {
-    eax4_fx_slot_set_defaults();
-    eax5_fx_slot_set_defaults();
-    eax123_ = eax5_;
-    eax_ = eax5_.i;
-    eax_df_ = ~EaxDirtyFlags{};
+    eax5_fx_slot_set_defaults(eax123_.i);
+    eax4_fx_slot_set_defaults(eax4_.i);
+    eax5_fx_slot_set_defaults(eax5_.i);
+    eax_fx_slot_set_current_defaults();
 }
 
 void ALeffectslot::eax4_fx_slot_get(const EaxCall& call, const Eax4Props& props) const
@@ -1275,7 +1301,7 @@ void ALeffectslot::eax_fx_slot_get(const EaxCall& call) const
     switch(call.get_version())
     {
     case 4: eax4_fx_slot_get(call, eax4_.i); break;
-    case 5: eax4_fx_slot_get(call, eax5_.i); break;
+    case 5: eax5_fx_slot_get(call, eax5_.i); break;
     default: eax_fail_unknown_version();
     }
 }
@@ -1353,6 +1379,19 @@ void ALeffectslot::eax5_fx_slot_set_all(const EaxCall& call)
     dst = src;
 }
 
+bool ALeffectslot::eax_fx_slot_should_update_sources() const noexcept
+{
+    const auto dirty_bits =
+        eax_occlusion_dirty_bit |
+        eax_occlusion_lf_ratio_dirty_bit |
+        eax_flags_dirty_bit;
+
+    if((eax_df_ & dirty_bits) != EaxDirtyFlags{})
+        return true;
+
+    return false;
+}
+
 // Returns `true` if all sources should be updated, or `false` otherwise.
 bool ALeffectslot::eax4_fx_slot_set(const EaxCall& call)
 {
@@ -1383,7 +1422,7 @@ bool ALeffectslot::eax4_fx_slot_set(const EaxCall& call)
         eax_fail_unknown_property_id();
     }
 
-    return (eax_df_ & (eax_occlusion_dirty_bit | eax_occlusion_lf_ratio_dirty_bit)) != EaxDirtyFlags{};
+    return eax_fx_slot_should_update_sources();
 }
 
 // Returns `true` if all sources should be updated, or `false` otherwise.
@@ -1408,7 +1447,7 @@ bool ALeffectslot::eax5_fx_slot_set(const EaxCall& call)
         eax_fx_slot_set<Eax4LockValidator, eax_lock_dirty_bit>(call, dst.lLock, eax_df_);
         break;
     case EAXFXSLOT_FLAGS:
-        eax_fx_slot_set<Eax4FlagsValidator, eax_flags_dirty_bit>(call, dst.ulFlags, eax_df_);
+        eax_fx_slot_set<Eax5FlagsValidator, eax_flags_dirty_bit>(call, dst.ulFlags, eax_df_);
         break;
     case EAXFXSLOT_OCCLUSION:
         eax_fx_slot_set<Eax5OcclusionValidator, eax_occlusion_dirty_bit>(call, dst.lOcclusion, eax_df_);
@@ -1420,7 +1459,7 @@ bool ALeffectslot::eax5_fx_slot_set(const EaxCall& call)
         eax_fail_unknown_property_id();
     }
 
-    return (eax_df_ & (eax_occlusion_dirty_bit | eax_occlusion_lf_ratio_dirty_bit)) != EaxDirtyFlags{};
+    return eax_fx_slot_should_update_sources();
 }
 
 // Returns `true` if all sources should be updated, or `false` otherwise.

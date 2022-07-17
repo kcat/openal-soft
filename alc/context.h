@@ -204,7 +204,6 @@ public:
         ALvoid* property_value,
         ALuint property_value_size);
 
-    void eax_update_filters();
     void eax_commit_and_update_sources();
     void eax_set_last_error() noexcept;
 
@@ -451,7 +450,9 @@ private:
         if((eax_df_ & TDirtyBit) != EaxDirtyFlags{})
         {
             dst_df |= TDirtyBit;
-            eax_.*member = state.i.*member;
+            const auto& src_d = state.d.*member;
+            state.i.*member = src_d;
+            eax_.*member = src_d;
         }
     }
 
@@ -473,8 +474,11 @@ private:
     static void eax4_context_set_defaults(Eax4State& state) noexcept;
     static void eax5_context_set_defaults(Eax5Props& props) noexcept;
     static void eax5_context_set_defaults(Eax5State& state) noexcept;
-    void eax_context_set_defaults() noexcept;
-    void eax_set_defaults() noexcept;
+    void eax4_context_set_current_defaults(const Eax4Props& props) noexcept;
+    void eax5_context_set_current_defaults(const Eax5Props& props) noexcept;
+    void eax_context_set_current_defaults();
+    void eax_context_set_defaults();
+    void eax_set_defaults();
 
     void eax_initialize_sources();
 

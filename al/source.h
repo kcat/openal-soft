@@ -163,6 +163,7 @@ public:
     void eax_dispatch(const EaxCall& call);
     void eax_commit() { eax_commit(EaxCommitType::normal); }
     void eax_commit_and_update();
+    void eax_mark_as_changed() { eax_changed_ = true; }
     bool eax_is_initialized() const noexcept { return eax_al_context_ != nullptr; }
 
     static ALsource* eax_lookup_source(ALCcontext& al_context, ALuint source_id) noexcept;
@@ -901,6 +902,7 @@ private:
         }
     }
 
+    void eax_get_active_fx_slot_id(const EaxCall& call, const GUID* ids, int max_count);
     void eax1_get(const EaxCall& call, const Eax1Props& props);
     void eax2_get(const EaxCall& call, const Eax2Props& props);
     void eax3_get_obstruction(const EaxCall& call, const Eax3Props& props);

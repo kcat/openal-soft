@@ -28,11 +28,14 @@ typedef struct _GUID {
     std::uint8_t Data4[8];
 } GUID;
 
+#ifndef _SYS_GUID_OPERATOR_EQ_
+#define _SYS_GUID_OPERATOR_EQ_
 inline bool operator==(const GUID& lhs, const GUID& rhs) noexcept
 { return std::memcmp(&lhs, &rhs, sizeof(GUID)) == 0; }
 
 inline bool operator!=(const GUID& lhs, const GUID& rhs) noexcept
 { return !(lhs == rhs); }
+#endif  // _SYS_GUID_OPERATOR_EQ_
 #endif // GUID_DEFINED
 
 

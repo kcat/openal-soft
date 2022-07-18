@@ -3996,9 +3996,6 @@ float ALsource::eax_calculate_dst_occlusion_mb(
     float path_ratio,
     float lf_ratio) noexcept
 {
-    if(src_occlusion_mb == 0)
-        return 0.0f;
-
     const auto ratio_1 = path_ratio + lf_ratio - 1.0F;
     const auto ratio_2 = path_ratio * lf_ratio;
     const auto ratio = (ratio_2 > ratio_1) ? ratio_2 : ratio_1;

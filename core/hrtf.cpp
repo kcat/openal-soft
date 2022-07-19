@@ -42,7 +42,11 @@ namespace {
 struct HrtfEntry {
     std::string mDispName;
     std::string mFilename;
+
+    /* GCC warns when it tries to inline this. */
+    ~HrtfEntry();
 };
+HrtfEntry::~HrtfEntry() = default;
 
 struct LoadedHrtf {
     std::string mFilename;

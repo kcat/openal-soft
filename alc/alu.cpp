@@ -1381,15 +1381,10 @@ void CalcAttnSourceParams(Voice *voice, const VoiceProps *props, const ContextBa
     if(likely(Distance > props->RefDistance))
     {
         const float distance_base{(Distance-props->RefDistance) * props->RolloffFactor};
-        const float absorption{distance_base * context->mParams.MetersPerUnit *
-            props->AirAbsorptionFactor};
-        if(absorption > std::numeric_limits<float>::epsilon())
-        {
-            const float hfattn{std::pow(context->mParams.AirAbsorptionGainHF, absorption)};
-            DryGain.HF *= hfattn;
-            for(uint i{0u};i < NumSends;++i)
-                WetGain[i].HF *= hfattn;
-        }
+        const float distance_meters{distance_base * context->mParams.MetersPerUnit};
+        const float dryabsorb{distance_meters * props->AirAbsorptionFactor};
+        if(dryabsorb > std::numeric_limits<float>::epsilon())
+            DryGain.HF *= std::pow(context->mParams.AirAbsorptionGainHF, dryabsorb);
 
         /* If the source's Auxiliary Send Filter Gain Auto is off, no extra
          * adjustment is applied to the send gains.
@@ -1411,6 +1406,9 @@ void CalcAttnSourceParams(Voice *voice, const VoiceProps *props, const ContextBa
              */
             WetGain[i].Base *= calc_attenuation(Distance, props->RefDistance,
                 SendSlots[i]->RoomRolloff);
+
+            if(distance_meters > std::numeric_limits<float>::epsilon())
+                WetGain[i].HF *= std::pow(SendSlots[i]->AirAbsorptionGainHF, distance_meters);
 
             /* If this effect slot's Auxiliary Send Auto is off, don't apply
              * the automatic initial reverb decay (should the reverb's room

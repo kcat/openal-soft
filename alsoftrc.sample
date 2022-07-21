@@ -75,7 +75,7 @@
 
 ## frequency:
 #  Sets the output frequency. If left unspecified it will try to detect a
-#  default from the system, otherwise it will default to 44100.
+#  default from the system, otherwise it will default to 48000.
 #frequency =
 
 ## period_size:

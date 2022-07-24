@@ -34,7 +34,8 @@
 
 void althrd_setname(const char *name)
 {
-#if defined(_MSC_VER)
+#if defined(_MSC_VER) && !defined(_M_ARM)
+
 #define MS_VC_EXCEPTION 0x406D1388
 #pragma pack(push,8)
     struct {
@@ -55,7 +56,9 @@ void althrd_setname(const char *name)
     __except(EXCEPTION_CONTINUE_EXECUTION) {
     }
 #undef MS_VC_EXCEPTION
+
 #else
+
     (void)name;
 #endif
 }

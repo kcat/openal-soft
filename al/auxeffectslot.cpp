@@ -916,6 +916,7 @@ ALeffectslot::ALeffectslot(ALCcontext *context)
     Effect.State = state;
 
     mSlot = context->getEffectSlot();
+    mSlot->InUse = true;
     mSlot->mEffectState = state.release();
 }
 

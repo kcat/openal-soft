@@ -95,7 +95,7 @@ struct EqualizerState final : public EffectState {
         float TargetGains[MAX_OUTPUT_CHANNELS]{};
     } mChans[MaxAmbiChannels];
 
-    FloatBufferLine mSampleBuffer{};
+    alignas(16) FloatBufferLine mSampleBuffer{};
 
 
     void deviceUpdate(const DeviceBase *device, const Buffer &buffer) override;

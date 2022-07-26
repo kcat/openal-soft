@@ -53,7 +53,7 @@ struct DistortionState final : public EffectState {
     float mAttenuation{};
     float mEdgeCoeff{};
 
-    float mBuffer[2][BufferLineSize]{};
+    alignas(16) float mBuffer[2][BufferLineSize]{};
 
 
     void deviceUpdate(const DeviceBase *device, const Buffer &buffer) override;

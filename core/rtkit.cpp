@@ -41,6 +41,9 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/syscall.h>
+#ifdef __FreeBSD__
+#include <sys/thr.h>
+#endif
 
 
 namespace dbus {

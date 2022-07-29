@@ -281,7 +281,7 @@ ALeffectslot *AllocEffectSlot(ALCcontext *context)
     ALeffectslot *slot{al::construct_at(sublist->EffectSlots + slidx, context)};
     aluInitEffectPanning(slot->mSlot, context);
 
-    /* Add 1 to avoid source ID 0. */
+    /* Add 1 to avoid ID 0. */
     slot->id = ((lidx<<6) | slidx) + 1;
 
     context->mNumEffectSlots += 1;
@@ -326,7 +326,7 @@ START_API_FUNC
         context->setError(AL_INVALID_VALUE, "Generating %d effect slots", n);
     if UNLIKELY(n <= 0) return;
 
-    std::unique_lock<std::mutex> slotlock{context->mEffectSlotLock};
+    std::lock_guard<std::mutex> _{context->mEffectSlotLock};
     ALCdevice *device{context->mALDevice.get()};
     if(static_cast<ALuint>(n) > device->AuxiliaryEffectSlotMax-context->mNumEffectSlots)
     {
@@ -344,7 +344,6 @@ START_API_FUNC
     if(n == 1)
     {
         ALeffectslot *slot{AllocEffectSlot(context.get())};
-        if(!slot) return;
         effectslots[0] = slot->id;
     }
     else
@@ -354,12 +353,6 @@ START_API_FUNC
         ids.reserve(static_cast<ALuint>(count));
         do {
             ALeffectslot *slot{AllocEffectSlot(context.get())};
-            if(!slot)
-            {
-                slotlock.unlock();
-                alDeleteAuxiliaryEffectSlots(static_cast<ALsizei>(ids.size()), ids.data());
-                return;
-            }
             ids.emplace_back(slot->id);
         } while(--count);
         std::copy(ids.cbegin(), ids.cend(), effectslots);
@@ -1606,14 +1599,7 @@ EaxAlEffectSlotUPtr eax_create_al_effect_slot(ALCcontext& context)
         return nullptr;
     }
 
-    auto effect_slot = EaxAlEffectSlotUPtr{AllocEffectSlot(&context)};
-
-    if(effect_slot == nullptr) {
-        ERR(EAX_PREFIX "%s\n", "Failed to allocate.");
-        return nullptr;
-    }
-
-    return effect_slot;
+    return EaxAlEffectSlotUPtr{AllocEffectSlot(&context)};
 
 #undef EAX_PREFIX
 }

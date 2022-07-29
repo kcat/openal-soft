@@ -917,7 +917,7 @@ ALeffectslot::ALeffectslot(ALCcontext *context)
 
     mSlot = context->getEffectSlot();
     mSlot->InUse = true;
-    mSlot->mEffectState = state.release();
+    mSlot->mEffectState = std::move(state);
 }
 
 ALeffectslot::~ALeffectslot()
@@ -929,16 +929,14 @@ ALeffectslot::~ALeffectslot()
         DecrementRef(Buffer->ref);
     Buffer = nullptr;
 
-    EffectSlotProps *props{mSlot->Update.exchange(nullptr)};
-    if(props)
+    if(EffectSlotProps *props{mSlot->Update.exchange(nullptr)})
     {
         TRACE("Freed unapplied AuxiliaryEffectSlot update %p\n",
             decltype(std::declval<void*>()){props});
         delete props;
     }
 
-    if(mSlot->mEffectState)
-        mSlot->mEffectState->release();
+    mSlot->mEffectState = nullptr;
     mSlot->InUse = false;
 }
 

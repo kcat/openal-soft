@@ -444,8 +444,8 @@ bool CalcEffectSlotParams(EffectSlot *slot, EffectSlot **sorted_slots, ContextBa
     }
 
     EffectState *state{props->State.release()};
-    EffectState *oldstate{slot->mEffectState};
-    slot->mEffectState = state;
+    EffectState *oldstate{slot->mEffectState.release()};
+    slot->mEffectState.reset(state);
 
     /* Only release the old state if it won't get deleted, since we can't be
      * deleting/freeing anything in the mixer.
@@ -1775,7 +1775,7 @@ void ProcessContexts(DeviceBase *device, const uint SamplesToDo)
 
             for(const EffectSlot *slot : sorted_slots)
             {
-                EffectState *state{slot->mEffectState};
+                EffectState *state{slot->mEffectState.get()};
                 state->process(SamplesToDo, slot->Wet.Buffer, state->mOutTarget);
             }
         }

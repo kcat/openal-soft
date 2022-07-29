@@ -68,7 +68,7 @@ struct EffectSlot {
 
     EffectSlotType EffectType{EffectSlotType::None};
     EffectProps mEffectProps{};
-    EffectState *mEffectState{nullptr};
+    al::intrusive_ptr<EffectState> mEffectState;
 
     float RoomRolloff{0.0f}; /* Added to the source's room rolloff, not multiplied. */
     float DecayTime{0.0f};

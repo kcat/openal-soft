@@ -220,7 +220,7 @@ struct DecoderConfig<DualBand, 0> {
         return *this;
     }
 
-    explicit operator bool() const noexcept { return mOrder != 0; }
+    explicit operator bool() const noexcept { return !mChannels.empty(); }
 };
 using DecoderView = DecoderConfig<DualBand, 0>;
 

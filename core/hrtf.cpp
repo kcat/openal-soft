@@ -301,15 +301,8 @@ void DirectHrtfState::build(const HrtfStore *Hrtf, const uint irSize,
             ir1offset + ((az1.idx+1) % Hrtf->elev[elev1_idx].azCount)
         };
 
-        const std::array<double,4> blend{{
-            (1.0-elev0.blend) * (1.0-az0.blend),
-            (1.0-elev0.blend) * (    az0.blend),
-            (    elev0.blend) * (1.0-az1.blend),
-            (    elev0.blend) * (    az1.blend)
-        }};
-
         /* The largest blend factor serves as the closest HRIR. */
-        const size_t irOffset{idx[std::max_element(blend.begin(), blend.end()) - blend.begin()]};
+        const size_t irOffset{idx[(elev0.blend >= 0.5f)*2 + (az1.blend >= 0.5f)]};
         ImpulseResponse res{Hrtf->coeffs[irOffset],
             Hrtf->delays[irOffset][0], Hrtf->delays[irOffset][1]};
 

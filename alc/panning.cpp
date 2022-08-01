@@ -629,7 +629,7 @@ void InitPanning(ALCdevice *device, const bool hqdec=false, const bool stablize=
     al::vector<ChannelDec> chancoeffs, chancoeffslf;
     for(size_t i{0u};i < decoder.mChannels.size();++i)
     {
-        const uint idx{GetChannelIdxByName(device->RealOut, decoder.mChannels[i])};
+        const uint idx{device->channelIdxByName(decoder.mChannels[i])};
         if(idx == INVALID_CHANNEL_INDEX)
         {
             ERR("Failed to find %s channel in device\n",

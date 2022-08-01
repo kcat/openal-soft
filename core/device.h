@@ -285,6 +285,13 @@ struct DeviceBase {
 #endif
     void handleDisconnect(const char *msg, ...);
 
+    /**
+     * Returns the index for the given channel name (e.g. FrontCenter), or
+     * INVALID_CHANNEL_INDEX if it doesn't exist.
+     */
+    uint channelIdxByName(Channel chan) const noexcept
+    { return RealOut.ChannelIndex[chan]; }
+
     DISABLE_ALLOC()
 
 private:
@@ -298,13 +305,6 @@ private:
 
 #define RECORD_THREAD_NAME "alsoft-record"
 
-
-/**
- * Returns the index for the given channel name (e.g. FrontCenter), or
- * INVALID_CHANNEL_INDEX if it doesn't exist.
- */
-inline uint GetChannelIdxByName(const RealMixParams &real, Channel chan) noexcept
-{ return real.ChannelIndex[chan]; }
 #define INVALID_CHANNEL_INDEX ~0u
 
 #endif /* CORE_DEVICE_H */

@@ -916,7 +916,7 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
 
         for(size_t c{0};c < num_channels;c++)
         {
-            uint idx{GetChannelIdxByName(Device->RealOut, chans[c].channel)};
+            uint idx{Device->channelIdxByName(chans[c].channel)};
             if(idx != INVALID_CHANNEL_INDEX)
                 voice->mChans[c].mDryParams.Gains.Target[idx] = DryGain.Base;
             else if(DirectChannels == DirectMode::RemixMismatch)
@@ -929,7 +929,7 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
                 {
                     for(const auto &target : remap->targets)
                     {
-                        idx = GetChannelIdxByName(Device->RealOut, target.channel);
+                        idx = Device->channelIdxByName(target.channel);
                         if(idx != INVALID_CHANNEL_INDEX)
                             voice->mChans[c].mDryParams.Gains.Target[idx] = DryGain.Base *
                                 target.mix;
@@ -1076,7 +1076,7 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
                 {
                     if(Device->Dry.Buffer.data() == Device->RealOut.Buffer.data())
                     {
-                        const uint idx{GetChannelIdxByName(Device->RealOut, chans[c].channel)};
+                        const uint idx{Device->channelIdxByName(chans[c].channel)};
                         if(idx != INVALID_CHANNEL_INDEX)
                             voice->mChans[c].mDryParams.Gains.Target[idx] = DryGain.Base;
                     }
@@ -1114,7 +1114,7 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
                 {
                     if(Device->Dry.Buffer.data() == Device->RealOut.Buffer.data())
                     {
-                        const uint idx{GetChannelIdxByName(Device->RealOut, chans[c].channel)};
+                        const uint idx{Device->channelIdxByName(chans[c].channel)};
                         if(idx != INVALID_CHANNEL_INDEX)
                             voice->mChans[c].mDryParams.Gains.Target[idx] = DryGain.Base;
                     }

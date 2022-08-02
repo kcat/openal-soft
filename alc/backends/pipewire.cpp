@@ -789,6 +789,7 @@ constexpr char MonitorPrefix[]{"Monitor of "};
 constexpr auto MonitorPrefixLen = al::size(MonitorPrefix) - 1;
 constexpr char AudioSinkClass[]{"Audio/Sink"};
 constexpr char AudioSourceClass[]{"Audio/Source"};
+constexpr char AudioSourceVirtualClass[]{"Audio/Source/Virtual"};
 constexpr char AudioDuplexClass[]{"Audio/Duplex"};
 constexpr char StreamClass[]{"Stream/"};
 
@@ -853,7 +854,10 @@ void NodeProxy::infoCallback(const pw_node_info *info)
         NodeType ntype{};
         if(al::strcasecmp(media_class, AudioSinkClass) == 0)
             ntype = NodeType::Sink;
-        else if(al::strcasecmp(media_class, AudioSourceClass) == 0)
+        else if(
+            al::strcasecmp(media_class, AudioSourceClass) == 0
+            || al::strcasecmp(media_class, AudioSourceVirtualClass) == 0
+        )
             ntype = NodeType::Source;
         else if(al::strcasecmp(media_class, AudioDuplexClass) == 0)
             ntype = NodeType::Duplex;
@@ -1094,6 +1098,7 @@ void EventManager::addCallback(uint32_t id, uint32_t, const char *type, uint32_t
         /* Specifically, audio sinks and sources (and duplexes). */
         const bool isGood{al::strcasecmp(media_class, AudioSinkClass) == 0
             || al::strcasecmp(media_class, AudioSourceClass) == 0
+            || al::strcasecmp(media_class, AudioSourceVirtualClass) == 0
             || al::strcasecmp(media_class, AudioDuplexClass) == 0};
         if(!isGood)
         {

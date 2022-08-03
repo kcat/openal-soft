@@ -962,35 +962,54 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
 
         if(Distance > std::numeric_limits<float>::epsilon())
         {
-            const float ev{std::asin(clampf(ypos, -1.0f, 1.0f))};
-            const float az{std::atan2(xpos, -zpos)};
+            const float src_ev{std::asin(clampf(ypos, -1.0f, 1.0f))};
+            const float src_az{std::atan2(xpos, -zpos)};
 
-            /* Get the HRIR coefficients and delays just once, for the given
-             * source direction.
-             */
-            GetHrtfCoeffs(Device->mHrtf.get(), ev, az, Distance*NfcScale, Spread,
-                voice->mChans[0].mDryParams.Hrtf.Target.Coeffs,
-                voice->mChans[0].mDryParams.Hrtf.Target.Delay);
-            voice->mChans[0].mDryParams.Hrtf.Target.Gain = DryGain.Base;
-
-            /* Remaining channels use the same results as the first. */
-            for(size_t c{1};c < num_channels;c++)
+            if(voice->mFmtChannels == FmtMono)
             {
+                GetHrtfCoeffs(Device->mHrtf.get(), src_ev, src_az, Distance*NfcScale, Spread,
+                    voice->mChans[0].mDryParams.Hrtf.Target.Coeffs,
+                    voice->mChans[0].mDryParams.Hrtf.Target.Delay);
+                voice->mChans[0].mDryParams.Hrtf.Target.Gain = DryGain.Base;
+
+                const auto coeffs = CalcAngleCoeffs(src_az, src_ev, Spread);
+                for(uint i{0};i < NumSends;i++)
+                {
+                    if(const EffectSlot *Slot{SendSlots[i]})
+                        ComputePanGains(&Slot->Wet, coeffs.data(), WetGain[i].Base,
+                            voice->mChans[0].mWetParams[i].Gains.Target);
+                }
+            }
+            else for(size_t c{0};c < num_channels;c++)
+            {
+                using namespace al::numbers;
+
                 /* Skip LFE */
                 if(chans[c].channel == LFE) continue;
-                voice->mChans[c].mDryParams.Hrtf.Target = voice->mChans[0].mDryParams.Hrtf.Target;
-            }
 
-            /* Calculate the directional coefficients once, which apply to all
-             * input channels of the source sends.
-             */
-            const auto coeffs = CalcDirectionCoeffs({xpos, ypos, zpos}, Spread);
+                /* Warp the channel position toward the source position as the
+                 * source spread decreases. With no spread, all channels are at
+                 * the source position, at full spread (pi*2), each channel is
+                 * left unchanged.
+                 */
+                const float ev{lerpf(src_ev, chans[c].elevation, inv_pi_v<float>/2.0f * Spread)};
 
-            for(size_t c{0};c < num_channels;c++)
-            {
-                /* Skip LFE */
-                if(chans[c].channel == LFE)
-                    continue;
+                float az{chans[c].angle - src_az};
+                if(az < -pi_v<float>) az += pi_v<float>*2.0f;
+                else if(az > pi_v<float>) az -= pi_v<float>*2.0f;
+
+                az *= inv_pi_v<float>/2.0f * Spread;
+
+                az += src_az;
+                if(az < -pi_v<float>) az += pi_v<float>*2.0f;
+                else if(az > pi_v<float>) az -= pi_v<float>*2.0f;
+
+                GetHrtfCoeffs(Device->mHrtf.get(), ev, az, Distance*NfcScale, 0.0f,
+                    voice->mChans[c].mDryParams.Hrtf.Target.Coeffs,
+                    voice->mChans[c].mDryParams.Hrtf.Target.Delay);
+                voice->mChans[c].mDryParams.Hrtf.Target.Gain = DryGain.Base;
+
+                const auto coeffs = CalcAngleCoeffs(az, ev, 0.0f);
                 for(uint i{0};i < NumSends;i++)
                 {
                     if(const EffectSlot *Slot{SendSlots[i]})
@@ -1001,6 +1020,12 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
         }
         else
         {
+            /* With no distance, spread is only meaningful for mono sources
+             * where it can be 0 or full (non-mono sources are always full
+             * spread here).
+             */
+            const float spread{Spread * (voice->mFmtChannels == FmtMono)};
+
             /* Local sources on HRTF play with each channel panned to its
              * relative location around the listener, providing "virtual
              * speaker" responses.
@@ -1015,7 +1040,7 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
                  * position.
                  */
                 GetHrtfCoeffs(Device->mHrtf.get(), chans[c].elevation, chans[c].angle,
-                    std::numeric_limits<float>::infinity(), Spread,
+                    std::numeric_limits<float>::infinity(), spread,
                     voice->mChans[c].mDryParams.Hrtf.Target.Coeffs,
                     voice->mChans[c].mDryParams.Hrtf.Target.Delay);
                 voice->mChans[c].mDryParams.Hrtf.Target.Gain = DryGain.Base;
@@ -1056,40 +1081,78 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
                 voice->mFlags.set(VoiceHasNfc);
             }
 
-            /* Calculate the directional coefficients once, which apply to all
-             * input channels.
-             */
-            auto calc_coeffs = [xpos,ypos,zpos,Spread](RenderMode mode)
+            if(voice->mFmtChannels == FmtMono)
             {
-                if(mode != RenderMode::Pairwise)
-                    return CalcDirectionCoeffs({xpos, ypos, zpos}, Spread);
-                const float ev{std::asin(clampf(ypos, -1.0f, 1.0f))};
-                const float az{std::atan2(xpos, -zpos)};
-                return CalcAngleCoeffs(ScaleAzimuthFront(az, 1.5f), ev, Spread);
-            };
-            const auto coeffs = calc_coeffs(Device->mRenderMode);
-
-            for(size_t c{0};c < num_channels;c++)
-            {
-                /* Special-case LFE */
-                if(chans[c].channel == LFE)
+                auto calc_coeffs = [xpos,ypos,zpos,Spread](RenderMode mode)
                 {
-                    if(Device->Dry.Buffer.data() == Device->RealOut.Buffer.data())
-                    {
-                        const uint idx{Device->channelIdxByName(chans[c].channel)};
-                        if(idx != INVALID_CHANNEL_INDEX)
-                            voice->mChans[c].mDryParams.Gains.Target[idx] = DryGain.Base;
-                    }
-                    continue;
-                }
+                    if(mode != RenderMode::Pairwise)
+                        return CalcDirectionCoeffs({xpos, ypos, zpos}, Spread);
+                    const float ev{std::asin(clampf(ypos, -1.0f, 1.0f))};
+                    const float az{std::atan2(xpos, -zpos)};
+                    return CalcAngleCoeffs(ScaleAzimuthFront(az, 1.5f), ev, Spread);
+                };
+                const auto coeffs = calc_coeffs(Device->mRenderMode);
 
                 ComputePanGains(&Device->Dry, coeffs.data(), DryGain.Base,
-                    voice->mChans[c].mDryParams.Gains.Target);
+                    voice->mChans[0].mDryParams.Gains.Target);
                 for(uint i{0};i < NumSends;i++)
                 {
                     if(const EffectSlot *Slot{SendSlots[i]})
                         ComputePanGains(&Slot->Wet, coeffs.data(), WetGain[i].Base,
-                            voice->mChans[c].mWetParams[i].Gains.Target);
+                            voice->mChans[0].mWetParams[i].Gains.Target);
+                }
+            }
+            else
+            {
+                using namespace al::numbers;
+
+                const float src_ev{std::asin(clampf(ypos, -1.0f, 1.0f))};
+                const float src_az{std::atan2(xpos, -zpos)};
+
+                for(size_t c{0};c < num_channels;c++)
+                {
+                    /* Special-case LFE */
+                    if(chans[c].channel == LFE)
+                    {
+                        if(Device->Dry.Buffer.data() == Device->RealOut.Buffer.data())
+                        {
+                            const uint idx{Device->channelIdxByName(chans[c].channel)};
+                            if(idx != INVALID_CHANNEL_INDEX)
+                                voice->mChans[c].mDryParams.Gains.Target[idx] = DryGain.Base;
+                        }
+                        continue;
+                    }
+
+                    /* Warp the channel position toward the source position as
+                     * the spread decreases. With no spread, all channels are
+                     * at the source position, at full spread (pi*2), each
+                     * channel position is left unchanged.
+                     */
+                    const float ev{lerpf(src_ev, chans[c].elevation,
+                        inv_pi_v<float>/2.0f * Spread)};
+
+                    float az{chans[c].angle - src_az};
+                    if(az < -pi_v<float>) az += pi_v<float>*2.0f;
+                    else if(az > pi_v<float>) az -= pi_v<float>*2.0f;
+
+                    az *= inv_pi_v<float>/2.0f * Spread;
+
+                    az += src_az;
+                    if(az < -pi_v<float>) az += pi_v<float>*2.0f;
+                    else if(az > pi_v<float>) az -= pi_v<float>*2.0f;
+
+                    if(Device->mRenderMode == RenderMode::Pairwise)
+                        az = ScaleAzimuthFront(az, 3.0f);
+                    const auto coeffs = CalcAngleCoeffs(az, ev, 0.0f);
+
+                    ComputePanGains(&Device->Dry, coeffs.data(), DryGain.Base,
+                        voice->mChans[c].mDryParams.Gains.Target);
+                    for(uint i{0};i < NumSends;i++)
+                    {
+                        if(const EffectSlot *Slot{SendSlots[i]})
+                            ComputePanGains(&Slot->Wet, coeffs.data(), WetGain[i].Base,
+                                voice->mChans[c].mWetParams[i].Gains.Target);
+                    }
                 }
             }
         }
@@ -1107,6 +1170,11 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
                 voice->mFlags.set(VoiceHasNfc);
             }
 
+            /* With no distance, spread is only meaningful for mono sources
+             * where it can be 0 or full (non-mono sources are always full
+             * spread here).
+             */
+            const float spread{Spread * (voice->mFmtChannels == FmtMono)};
             for(size_t c{0};c < num_channels;c++)
             {
                 /* Special-case LFE */
@@ -1123,7 +1191,7 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
 
                 const auto coeffs = CalcAngleCoeffs((Device->mRenderMode == RenderMode::Pairwise)
                     ? ScaleAzimuthFront(chans[c].angle, 3.0f) : chans[c].angle,
-                    chans[c].elevation, Spread);
+                    chans[c].elevation, spread);
 
                 ComputePanGains(&Device->Dry, coeffs.data(), DryGain.Base,
                     voice->mChans[c].mDryParams.Gains.Target);

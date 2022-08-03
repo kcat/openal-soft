@@ -330,8 +330,6 @@ void DeviceBase::ProcessBs2b(const size_t SamplesToDo)
 
 namespace {
 
-using AmbiRotateMatrix = std::array<std::array<float,MaxAmbiChannels>,MaxAmbiChannels>;
-
 /* This RNG method was created based on the math found in opusdec. It's quick,
  * and starting with a seed value of 22222, is suitable for generating
  * whitenoise.
@@ -673,7 +671,7 @@ struct GainTriplet { float Base, HF, LF; };
 void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, const float zpos,
     const float Distance, const float Spread, const GainTriplet &DryGain,
     const al::span<const GainTriplet,MAX_SENDS> WetGain, EffectSlot *(&SendSlots)[MAX_SENDS],
-    const VoiceProps *props, const ContextParams &Context, const DeviceBase *Device)
+    const VoiceProps *props, const ContextParams &Context, DeviceBase *Device)
 {
     static constexpr ChanMap MonoMap[1]{
         { FrontCenter, 0.0f, 0.0f }
@@ -866,7 +864,9 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
              * order elements, then construct the rotation for the higher
              * orders.
              */
-            AmbiRotateMatrix shrot{};
+            AmbiRotateMatrix &shrot = Device->mAmbiRotateMatrix;
+            shrot.fill({});
+
             shrot[0][0] = 1.0f;
             shrot[1][1] =  U[0]; shrot[1][2] = -V[0]; shrot[1][3] = -N[0];
             shrot[2][1] = -U[1]; shrot[2][2] =  V[1]; shrot[2][3] =  N[1];
@@ -1246,7 +1246,7 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
 
 void CalcNonAttnSourceParams(Voice *voice, const VoiceProps *props, const ContextBase *context)
 {
-    const DeviceBase *Device{context->mDevice};
+    DeviceBase *Device{context->mDevice};
     EffectSlot *SendSlots[MAX_SENDS];
 
     voice->mDirect.Buffer = Device->Dry.Buffer;
@@ -1292,7 +1292,7 @@ void CalcNonAttnSourceParams(Voice *voice, const VoiceProps *props, const Contex
 
 void CalcAttnSourceParams(Voice *voice, const VoiceProps *props, const ContextBase *context)
 {
-    const DeviceBase *Device{context->mDevice};
+    DeviceBase *Device{context->mDevice};
     const uint NumSends{Device->NumAuxSends};
 
     /* Set mixing buffers and get send parameters. */

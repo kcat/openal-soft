@@ -100,7 +100,6 @@ struct BFChannelConfig {
     uint Index;
 };
 
-
 struct MixParams {
     /* Coefficient channel mapping for mixing to the buffer. */
     std::array<BFChannelConfig,MAX_OUTPUT_CHANNELS> AmbiMap{};
@@ -114,6 +113,8 @@ struct RealMixParams {
 
     al::span<FloatBufferLine> Buffer;
 };
+
+using AmbiRotateMatrix = std::array<std::array<float,MaxAmbiChannels>,MaxAmbiChannels>;
 
 enum {
     // Frequency was requested by the app or config file
@@ -181,6 +182,8 @@ struct DeviceBase {
     uint SamplesDone{0u};
     std::chrono::nanoseconds ClockBase{0};
     std::chrono::nanoseconds FixedLatency{0};
+
+    AmbiRotateMatrix mAmbiRotateMatrix{};
 
     /* Temp storage used for mixer processing. */
     static constexpr size_t MixerLineSize{BufferLineSize + MaxResamplerPadding +

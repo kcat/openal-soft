@@ -51,7 +51,7 @@ enum class DirectMode : unsigned char {
 /* Maximum number of extra source samples that may need to be loaded, for
  * resampling or conversion purposes.
  */
-constexpr uint MaxPostVoiceLoad{MaxResamplerEdge + UhjDecoder::sFilterDelay};
+constexpr uint MaxPostVoiceLoad{MaxResamplerEdge + DecoderBase::sMaxDelay};
 
 
 enum {

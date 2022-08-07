@@ -187,7 +187,7 @@ struct DeviceBase {
 
     /* Temp storage used for mixer processing. */
     static constexpr size_t MixerLineSize{BufferLineSize + MaxResamplerPadding +
-        UhjDecoder::sFilterDelay};
+        DecoderBase::sMaxDelay};
     static constexpr size_t MixerChannelsMax{16};
     using MixerBufferLine = std::array<float,MixerLineSize>;
     alignas(16) std::array<MixerBufferLine,MixerChannelsMax> mSampleData;
@@ -220,7 +220,7 @@ struct DeviceBase {
     uint mIrSize{0};
 
     /* Ambisonic-to-UHJ encoder */
-    std::unique_ptr<UhjEncoder> mUhjEncoder;
+    std::unique_ptr<UhjEncoderBase> mUhjEncoder;
 
     /* Ambisonic decoder for speakers */
     std::unique_ptr<BFormatDec> AmbiDecoder;

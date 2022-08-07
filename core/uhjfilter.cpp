@@ -14,7 +14,15 @@
 
 namespace {
 
-const PhaseShifterT<UhjFilterBase::sFilterDelay*2> PShift{};
+const PhaseShifterT<UhjLengthLq> PShiftLq{};
+const PhaseShifterT<UhjLengthHq> PShiftHq{};
+
+template<size_t N>
+struct GetPhaseShifter;
+template<>
+struct GetPhaseShifter<UhjLengthLq> { static auto& Get() noexcept { return PShiftLq; } };
+template<>
+struct GetPhaseShifter<UhjLengthHq> { static auto& Get() noexcept { return PShiftHq; } };
 
 } // namespace
 
@@ -36,9 +44,12 @@ const PhaseShifterT<UhjFilterBase::sFilterDelay*2> PShift{};
  * impulse with the desired shift.
  */
 
-void UhjEncoder::encode(float *LeftOut, float *RightOut,
+template<size_t N>
+void UhjEncoder<N>::encode(float *LeftOut, float *RightOut,
     const al::span<const float*const,3> InSamples, const size_t SamplesToDo)
 {
+    const auto &PShift = GetPhaseShifter<N>::Get();
+
     ASSUME(SamplesToDo > 0);
 
     float *RESTRICT left{al::assume_aligned<16>(LeftOut)};
@@ -101,9 +112,14 @@ void UhjEncoder::encode(float *LeftOut, float *RightOut,
  * where j is a +90 degree phase shift. 3-channel UHJ excludes Q, while 2-
  * channel excludes Q and T.
  */
-void UhjDecoder::decode(const al::span<float*> samples, const size_t samplesToDo,
+template<size_t N>
+void UhjDecoder<N>::decode(const al::span<float*> samples, const size_t samplesToDo,
     const size_t forwardSamples)
 {
+    static_assert(sFilterDelay <= sMaxDelay, "Filter delay is too large");
+
+    const auto &PShift = GetPhaseShifter<N>::Get();
+
     ASSUME(samplesToDo > 0);
 
     {
@@ -174,9 +190,14 @@ void UhjDecoder::decode(const al::span<float*> samples, const size_t samplesToDo
  * where j is a +90 degree phase shift. w is a variable control for the
  * resulting stereo width, with the range 0 <= w <= 0.7.
  */
-void UhjStereoDecoder::decode(const al::span<float*> samples, const size_t samplesToDo,
+template<size_t N>
+void UhjStereoDecoder<N>::decode(const al::span<float*> samples, const size_t samplesToDo,
     const size_t forwardSamples)
 {
+    static_assert(sFilterDelay <= sMaxDelay, "Filter delay is too large");
+
+    const auto &PShift = GetPhaseShifter<N>::Get();
+
     ASSUME(samplesToDo > 0);
 
     {
@@ -240,3 +261,11 @@ void UhjStereoDecoder::decode(const al::span<float*> samples, const size_t sampl
     for(size_t i{0};i < samplesToDo;++i)
         youtput[i] = 1.6822415f*mD[i] - 0.2156194f*youtput[i];
 }
+
+template struct UhjEncoder<UhjLengthLq>;
+template struct UhjDecoder<UhjLengthLq>;
+template struct UhjStereoDecoder<UhjLengthLq>;
+
+template struct UhjEncoder<UhjLengthHq>;
+template struct UhjDecoder<UhjLengthHq>;
+template struct UhjStereoDecoder<UhjLengthHq>;

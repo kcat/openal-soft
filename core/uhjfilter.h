@@ -13,6 +13,8 @@ static constexpr size_t UhjLengthLq{256};
 static constexpr size_t UhjLengthHq{512};
 static constexpr size_t UhjLengthStd{UhjLengthLq};
 
+extern size_t UhjQuality;
+
 
 struct UhjEncoderBase {
     virtual ~UhjEncoderBase() = default;

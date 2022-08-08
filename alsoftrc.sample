@@ -349,6 +349,18 @@
 #surround3d71 =
 
 ##
+## UHJ stuff
+##
+[uhj]
+
+## filter-type: (global)
+#  Specifies the all-pass filter type for UHJ encoding, decoding, and Super
+#  Stereo processing. The default is 'fir256', which utilizes a 256-point FIR
+#  filter. 'fir512' is a 512-point FIR filter, providing higher quality at the
+#  cost of higher CPU use.
+#filter-type = fir256
+
+##
 ## Reverb effect stuff (includes EAX reverb)
 ##
 [reverb]

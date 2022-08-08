@@ -854,13 +854,29 @@ void Voice::prepare(DeviceBase *device)
 
     if(mFmtChannels == FmtSuperStereo)
     {
-        mDecoder = std::make_unique<UhjStereoDecoder<UhjLengthStd>>();
-        mDecoderPadding = UhjStereoDecoder<UhjLengthStd>::sFilterDelay;
+        if(UhjQuality >= UhjLengthHq)
+        {
+            mDecoder = std::make_unique<UhjStereoDecoder<UhjLengthHq>>();
+            mDecoderPadding = UhjStereoDecoder<UhjLengthHq>::sFilterDelay;
+        }
+        else
+        {
+            mDecoder = std::make_unique<UhjStereoDecoder<UhjLengthLq>>();
+            mDecoderPadding = UhjStereoDecoder<UhjLengthLq>::sFilterDelay;
+        }
     }
     else if(IsUHJ(mFmtChannels))
     {
-        mDecoder = std::make_unique<UhjDecoder<UhjLengthStd>>();
-        mDecoderPadding = UhjDecoder<UhjLengthStd>::sFilterDelay;
+        if(UhjQuality >= UhjLengthHq)
+        {
+            mDecoder = std::make_unique<UhjDecoder<UhjLengthHq>>();
+            mDecoderPadding = UhjDecoder<UhjLengthHq>::sFilterDelay;
+        }
+        else
+        {
+            mDecoder = std::make_unique<UhjDecoder<UhjLengthLq>>();
+            mDecoderPadding = UhjDecoder<UhjLengthLq>::sFilterDelay;
+        }
     }
     else
     {

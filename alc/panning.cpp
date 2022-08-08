@@ -1093,7 +1093,10 @@ void aluInitRenderer(ALCdevice *device, int hrtf_id, al::optional<StereoEncoding
 
     if(stereomode.value_or(StereoEncoding::Default) == StereoEncoding::Uhj)
     {
-        device->mUhjEncoder = std::make_unique<UhjEncoder<UhjLengthStd>>();
+        if(UhjQuality >= UhjLengthHq)
+            device->mUhjEncoder = std::make_unique<UhjEncoder<UhjLengthHq>>();
+        else
+            device->mUhjEncoder = std::make_unique<UhjEncoder<UhjLengthLq>>();
         TRACE("UHJ enabled\n");
         InitUhjPanning(device);
         device->PostProcess = &ALCdevice::ProcessUhj;

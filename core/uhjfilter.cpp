@@ -12,6 +12,9 @@
 #include "phase_shifter.h"
 
 
+size_t UhjQuality{UhjLengthStd};
+
+
 namespace {
 
 const PhaseShifterT<UhjLengthLq> PShiftLq{};

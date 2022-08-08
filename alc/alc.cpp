@@ -1124,24 +1124,36 @@ void alc_initconfig(void)
     if(auto limopt = ConfigValueBool(nullptr, nullptr, "rt-time-limit"))
         AllowRTTimeLimit = *limopt;
 
-    CompatFlagBitset compatflags{};
-    auto checkflag = [](const char *envname, const char *optname) -> bool
     {
-        if(auto optval = al::getenv(envname))
+        CompatFlagBitset compatflags{};
+        auto checkflag = [](const char *envname, const char *optname) -> bool
         {
-            if(al::strcasecmp(optval->c_str(), "true") == 0
-                || strtol(optval->c_str(), nullptr, 0) == 1)
-                return true;
-            return false;
-        }
-        return GetConfigValueBool(nullptr, "game_compat", optname, false);
-    };
-    compatflags.set(CompatFlags::ReverseX, checkflag("__ALSOFT_REVERSE_X", "reverse-x"));
-    compatflags.set(CompatFlags::ReverseY, checkflag("__ALSOFT_REVERSE_Y", "reverse-y"));
-    compatflags.set(CompatFlags::ReverseZ, checkflag("__ALSOFT_REVERSE_Z", "reverse-z"));
+            if(auto optval = al::getenv(envname))
+            {
+                if(al::strcasecmp(optval->c_str(), "true") == 0
+                    || strtol(optval->c_str(), nullptr, 0) == 1)
+                    return true;
+                return false;
+            }
+            return GetConfigValueBool(nullptr, "game_compat", optname, false);
+        };
+        compatflags.set(CompatFlags::ReverseX, checkflag("__ALSOFT_REVERSE_X", "reverse-x"));
+        compatflags.set(CompatFlags::ReverseY, checkflag("__ALSOFT_REVERSE_Y", "reverse-y"));
+        compatflags.set(CompatFlags::ReverseZ, checkflag("__ALSOFT_REVERSE_Z", "reverse-z"));
 
-    aluInit(compatflags, ConfigValueFloat(nullptr, "game_compat", "nfc-scale").value_or(1.0f));
+        aluInit(compatflags, ConfigValueFloat(nullptr, "game_compat", "nfc-scale").value_or(1.0f));
+    }
     Voice::InitMixer(ConfigValueStr(nullptr, nullptr, "resampler"));
+
+    if(auto uhjfiltopt = ConfigValueStr(nullptr, "uhj", "filter-type"))
+    {
+        if(al::strcasecmp(uhjfiltopt->c_str(), "fir256") == 0)
+            UhjQuality = UhjLengthLq;
+        else if(al::strcasecmp(uhjfiltopt->c_str(), "fir512") == 0)
+            UhjQuality = UhjLengthHq;
+        else
+            WARN("Unsupported uhj/filter-type: %s\n", uhjfiltopt->c_str());
+    }
 
     auto traperr = al::getenv("ALSOFT_TRAP_ERROR");
     if(traperr && (al::strcasecmp(traperr->c_str(), "true") == 0

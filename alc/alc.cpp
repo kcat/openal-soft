@@ -1145,14 +1145,14 @@ void alc_initconfig(void)
     }
     Voice::InitMixer(ConfigValueStr(nullptr, nullptr, "resampler"));
 
-    if(auto uhjfiltopt = ConfigValueStr(nullptr, "uhj", "filter-type"))
+    if(auto uhjfiltopt = ConfigValueStr(nullptr, "uhj", "filter"))
     {
         if(al::strcasecmp(uhjfiltopt->c_str(), "fir256") == 0)
             UhjQuality = UhjLengthLq;
         else if(al::strcasecmp(uhjfiltopt->c_str(), "fir512") == 0)
             UhjQuality = UhjLengthHq;
         else
-            WARN("Unsupported uhj/filter-type: %s\n", uhjfiltopt->c_str());
+            WARN("Unsupported uhj/filter: %s\n", uhjfiltopt->c_str());
     }
 
     auto traperr = al::getenv("ALSOFT_TRAP_ERROR");

@@ -70,8 +70,6 @@ struct DecoderBase {
      * calls to decode, with valid values being between 0...0.7.
      */
     float mWidthControl{0.593f};
-
-    float mCurrentWidth{-1.0f};
 };
 
 template<size_t N>
@@ -108,6 +106,8 @@ struct UhjDecoder final : public DecoderBase {
 template<size_t N>
 struct UhjStereoDecoder final : public DecoderBase {
     static constexpr size_t sFilterDelay{N/2};
+
+    float mCurrentWidth{-1.0f};
 
     alignas(16) std::array<float,BufferLineSize+MaxResamplerEdge+sFilterDelay> mS{};
     alignas(16) std::array<float,BufferLineSize+MaxResamplerEdge+sFilterDelay> mD{};

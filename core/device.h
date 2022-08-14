@@ -102,7 +102,7 @@ struct BFChannelConfig {
 
 struct MixParams {
     /* Coefficient channel mapping for mixing to the buffer. */
-    std::array<BFChannelConfig,MAX_OUTPUT_CHANNELS> AmbiMap{};
+    std::array<BFChannelConfig,MaxAmbiChannels> AmbiMap{};
 
     al::span<FloatBufferLine> Buffer;
 };

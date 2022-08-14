@@ -331,7 +331,8 @@ DecoderView MakeDecoderView(ALCdevice *device, const AmbDecConf *conf,
 {
     DecoderView ret{};
 
-    decoder.mOrder = (conf->ChanMask > Ambi2OrderMask) ? uint8_t{3} :
+    decoder.mOrder = (conf->ChanMask > Ambi3OrderMask) ? uint8_t{4} :
+        (conf->ChanMask > Ambi2OrderMask) ? uint8_t{3} :
         (conf->ChanMask > Ambi1OrderMask) ? uint8_t{2} : uint8_t{1};
     decoder.mIs3D = (conf->ChanMask&AmbiPeriphonicMask) != 0;
 
@@ -704,6 +705,7 @@ void InitPanning(ALCdevice *device, const bool hqdec=false, const bool stablize=
 
     TRACE("Enabling %s-band %s-order%s ambisonic decoder\n",
         !dual_band ? "single" : "dual",
+        (decoder.mOrder > 3) ? "fourth" :
         (decoder.mOrder > 2) ? "third" :
         (decoder.mOrder > 1) ? "second" : "first",
         decoder.mIs3D ? " periphonic" : "");

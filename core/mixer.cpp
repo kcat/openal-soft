@@ -114,7 +114,7 @@ std::array<float,MaxAmbiChannels> CalcAmbiCoeffs(const float y, const float z, c
 }
 
 void ComputePanGains(const MixParams *mix, const float*RESTRICT coeffs, const float ingain,
-    const al::span<float,MAX_OUTPUT_CHANNELS> gains)
+    const al::span<float,MaxAmbiChannels> gains)
 {
     auto ambimap = mix->AmbiMap.cbegin();
 

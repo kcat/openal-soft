@@ -85,8 +85,8 @@ struct SendParams {
     BiquadFilter HighPass;
 
     struct {
-        std::array<float,MAX_OUTPUT_CHANNELS> Current;
-        std::array<float,MAX_OUTPUT_CHANNELS> Target;
+        std::array<float,MaxAmbiChannels> Current;
+        std::array<float,MaxAmbiChannels> Target;
     } Gains;
 };
 

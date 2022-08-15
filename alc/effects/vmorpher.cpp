@@ -147,8 +147,8 @@ struct VmorpherState final : public EffectState {
         FormantFilter Formants[NUM_FILTERS][NUM_FORMANTS];
 
         /* Effect gains for each channel */
-        float CurrentGains[MAX_OUTPUT_CHANNELS]{};
-        float TargetGains[MAX_OUTPUT_CHANNELS]{};
+        float CurrentGains[MaxAmbiChannels]{};
+        float TargetGains[MaxAmbiChannels]{};
     } mChans[MaxAmbiChannels];
 
     void (*mGetSamples)(float*RESTRICT, uint, const uint, size_t){};

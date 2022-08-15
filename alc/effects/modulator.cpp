@@ -86,8 +86,8 @@ struct ModulatorState final : public EffectState {
     struct {
         BiquadFilter Filter;
 
-        float CurrentGains[MAX_OUTPUT_CHANNELS]{};
-        float TargetGains[MAX_OUTPUT_CHANNELS]{};
+        float CurrentGains[MaxAmbiChannels]{};
+        float TargetGains[MaxAmbiChannels]{};
     } mChans[MaxAmbiChannels];
 
 

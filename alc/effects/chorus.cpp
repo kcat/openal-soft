@@ -61,8 +61,8 @@ struct ChorusState final : public EffectState {
 
     /* Gains for left and right sides */
     struct {
-        float Current[MAX_OUTPUT_CHANNELS]{};
-        float Target[MAX_OUTPUT_CHANNELS]{};
+        float Current[MaxAmbiChannels]{};
+        float Target[MaxAmbiChannels]{};
     } mGains[2];
 
     /* effect parameters */

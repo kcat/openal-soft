@@ -43,6 +43,10 @@ namespace {
 using uint = unsigned int;
 
 struct DedicatedState final : public EffectState {
+    /* The "dedicated" effect can output to the real output, so should have
+     * gains for all possible output channels and not just the main ambisonic
+     * buffer.
+     */
     float mCurrentGains[MAX_OUTPUT_CHANNELS];
     float mTargetGains[MAX_OUTPUT_CHANNELS];
 

@@ -89,8 +89,8 @@ struct FshifterState final : public EffectState {
 
     /* Effect gains for each output channel */
     struct {
-        float Current[MAX_OUTPUT_CHANNELS]{};
-        float Target[MAX_OUTPUT_CHANNELS]{};
+        float Current[MaxAmbiChannels]{};
+        float Target[MaxAmbiChannels]{};
     } mGains[2];
 
 

@@ -64,7 +64,7 @@ namespace {
 
 struct CompressorState final : public EffectState {
     /* Effect gains for each channel */
-    float mGain[MaxAmbiChannels][MAX_OUTPUT_CHANNELS]{};
+    float mGain[MaxAmbiChannels][MaxAmbiChannels]{};
 
     /* Effect parameters */
     bool mEnabled{true};

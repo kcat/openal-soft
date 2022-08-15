@@ -78,7 +78,7 @@ inline std::array<float,MaxAmbiChannels> CalcAngleCoeffs(const float azimuth,
  * scale and orient the sound samples.
  */
 void ComputePanGains(const MixParams *mix, const float*RESTRICT coeffs, const float ingain,
-    const al::span<float,MAX_OUTPUT_CHANNELS> gains);
+    const al::span<float,MaxAmbiChannels> gains);
 
 
 /** Helper to set an identity/pass-through panning for ambisonic mixing (3D input). */

@@ -340,8 +340,8 @@ struct EarlyReflections {
     float Coeff[NUM_LINES][2]{};
 
     /* The gain for each output channel based on 3D panning. */
-    float CurrentGain[NUM_LINES][MAX_OUTPUT_CHANNELS]{};
-    float PanGain[NUM_LINES][MAX_OUTPUT_CHANNELS]{};
+    float CurrentGain[NUM_LINES][MaxAmbiChannels]{};
+    float PanGain[NUM_LINES][MaxAmbiChannels]{};
 
     void updateLines(const float density_mult, const float diffusion, const float decayTime,
         const float frequency);
@@ -384,8 +384,8 @@ struct LateReverb {
     VecAllpass VecAp;
 
     /* The gain for each output channel based on 3D panning. */
-    float CurrentGain[NUM_LINES][MAX_OUTPUT_CHANNELS]{};
-    float PanGain[NUM_LINES][MAX_OUTPUT_CHANNELS]{};
+    float CurrentGain[NUM_LINES][MaxAmbiChannels]{};
+    float PanGain[NUM_LINES][MaxAmbiChannels]{};
 
     void updateLines(const float density_mult, const float diffusion, const float lfDecayTime,
         const float mfDecayTime, const float hfDecayTime, const float lf0norm,

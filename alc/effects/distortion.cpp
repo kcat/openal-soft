@@ -45,7 +45,7 @@ namespace {
 
 struct DistortionState final : public EffectState {
     /* Effect gains for each channel */
-    float mGain[MAX_OUTPUT_CHANNELS]{};
+    float mGain[MaxAmbiChannels]{};
 
     /* Effect parameters */
     BiquadFilter mLowpass;

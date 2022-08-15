@@ -99,8 +99,8 @@ struct PshifterState final : public EffectState {
     alignas(16) FloatBufferLine mBufferOut;
 
     /* Effect gains for each output channel */
-    float mCurrentGains[MAX_OUTPUT_CHANNELS];
-    float mTargetGains[MAX_OUTPUT_CHANNELS];
+    float mCurrentGains[MaxAmbiChannels];
+    float mTargetGains[MaxAmbiChannels];
 
 
     void deviceUpdate(const DeviceBase *device, const Buffer &buffer) override;

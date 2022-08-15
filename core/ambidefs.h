@@ -113,6 +113,10 @@ struct AmbiScale {
     /* Retrieves per-order HF scaling factors for "upsampling" ambisonic data. */
     static std::array<float,MaxAmbiOrder+1> GetHFOrderScales(const uint in_order,
         const uint out_order) noexcept;
+
+    static const std::array<std::array<float,MaxAmbiChannels>,4> FirstOrderUp;
+    static const std::array<std::array<float,MaxAmbiChannels>,9> SecondOrderUp;
+    static const std::array<std::array<float,MaxAmbiChannels>,16> ThirdOrderUp;
 };
 
 struct AmbiIndex {

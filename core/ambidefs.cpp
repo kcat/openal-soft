@@ -11,6 +11,8 @@
 
 namespace {
 
+using AmbiChannelFloatArray = std::array<float,MaxAmbiChannels>;
+
 constexpr std::array<float,MaxAmbiOrder+1> Ambi3DDecoderHFScale10{{
     2.000000000e+00f, 1.154700538e+00f
 }};
@@ -35,7 +37,7 @@ constexpr auto CalcAmbiCoeffs(const float y, const float z, const float x)
 {
     const float xx{x*x}, yy{y*y}, zz{z*z}, xy{x*y}, yz{y*z}, xz{x*z};
 
-    return std::array<float,MaxAmbiChannels>{{
+    return AmbiChannelFloatArray{{
         /* Zeroth-order */
         1.0f, /* ACN 0 = 1 */
         /* First-order */
@@ -81,7 +83,7 @@ constexpr std::array<std::array<float,4>,8> FirstOrderDecoder{{
     {{ 1.250000000e-01f, -1.250000000e-01f, -1.250000000e-01f, -1.250000000e-01f, }},
 }};
 
-constexpr std::array<std::array<float,MaxAmbiChannels>,8> FirstOrderEncoder{{
+constexpr std::array<AmbiChannelFloatArray,8> FirstOrderEncoder{{
     CalcAmbiCoeffs( 0.57735026919f,  0.57735026919f,  0.57735026919f),
     CalcAmbiCoeffs( 0.57735026919f,  0.57735026919f, -0.57735026919f),
     CalcAmbiCoeffs(-0.57735026919f,  0.57735026919f,  0.57735026919f),
@@ -102,7 +104,7 @@ static_assert(FirstOrderDecoder.size() == FirstOrderEncoder.size(), "First-order
  */
 auto CalcFirstOrderUp()
 {
-    std::array<std::array<float,MaxAmbiChannels>,4> res{};
+    std::array<AmbiChannelFloatArray,4> res{};
 
     for(size_t i{0};i < FirstOrderDecoder[0].size();++i)
     {
@@ -136,7 +138,7 @@ constexpr std::array<std::array<float,9>,14> SecondOrderDecoder{{
     {{ 7.142857143e-02f, -7.142857143e-02f, -7.142857143e-02f, -7.142857143e-02f,  9.682458366e-02f,  9.682458366e-02f,  0.000000000e+00f,  9.682458366e-02f,  0.000000000e+00f, }},
 }};
 
-constexpr std::array<std::array<float,MaxAmbiChannels>,14> SecondOrderEncoder{{
+constexpr std::array<AmbiChannelFloatArray,14> SecondOrderEncoder{{
     CalcAmbiCoeffs( 0.00000000000f,  0.00000000000f,  1.00000000000f),
     CalcAmbiCoeffs( 0.00000000000f,  0.00000000000f, -1.00000000000f),
     CalcAmbiCoeffs( 1.00000000000f,  0.00000000000f,  0.00000000000f),
@@ -160,7 +162,7 @@ static_assert(SecondOrderDecoder.size() == SecondOrderEncoder.size(), "Second-or
  */
 auto CalcSecondOrderUp()
 {
-    std::array<std::array<float,MaxAmbiChannels>,9> res{};
+    std::array<AmbiChannelFloatArray,9> res{};
 
     for(size_t i{0};i < SecondOrderDecoder[0].size();++i)
     {
@@ -179,7 +181,7 @@ auto CalcSecondOrderUp()
 /* TODO: When fourth-order is properly supported, fill this out. */
 auto CalcThirdOrderUp()
 {
-    std::array<std::array<float,MaxAmbiChannels>,16> res{};
+    std::array<AmbiChannelFloatArray,16> res{};
 
     for(size_t i{0};i < res.size();++i)
         res[i][i] = 1.0f;
@@ -189,9 +191,9 @@ auto CalcThirdOrderUp()
 
 } // namespace
 
-const auto AmbiScale::FirstOrderUp{CalcFirstOrderUp()};
-const auto AmbiScale::SecondOrderUp{CalcSecondOrderUp()};
-const auto AmbiScale::ThirdOrderUp{CalcThirdOrderUp()};
+const std::array<AmbiChannelFloatArray,4> AmbiScale::FirstOrderUp{CalcFirstOrderUp()};
+const std::array<AmbiChannelFloatArray,9> AmbiScale::SecondOrderUp{CalcSecondOrderUp()};
+const std::array<AmbiChannelFloatArray,16> AmbiScale::ThirdOrderUp{CalcThirdOrderUp()};
 
 
 auto AmbiScale::GetHFOrderScales(const uint in_order, const uint out_order) noexcept

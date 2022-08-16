@@ -562,7 +562,7 @@ CoreAudioCapture::~CoreAudioCapture()
 
 
 OSStatus CoreAudioCapture::RecordProc(AudioUnitRenderActionFlags*,
-    const AudioTimeStamp *inTimeStamp, UInt32, UInt32 inNumberFrames,
+    const AudioTimeStamp *inTimeStamp, UInt32 inBusNumber, UInt32 inNumberFrames,
     AudioBufferList*) noexcept
 {
     AudioUnitRenderActionFlags flags = 0;
@@ -595,7 +595,7 @@ OSStatus CoreAudioCapture::RecordProc(AudioUnitRenderActionFlags*,
         audiobuf.list.mBuffers[1].mData = rec_vec.second.buf;
         audiobuf.list.mBuffers[1].mDataByteSize = remaining * mFormat.mBytesPerFrame;
     }
-    OSStatus err{AudioUnitRender(mAudioUnit, &flags, inTimeStamp, audiobuf.list.mNumberBuffers,
+    OSStatus err{AudioUnitRender(mAudioUnit, &flags, inTimeStamp, inBusNumber,
         inNumberFrames, &audiobuf.list)};
     if(err != noErr)
     {

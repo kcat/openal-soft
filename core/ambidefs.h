@@ -111,8 +111,16 @@ struct AmbiScale {
     }
 
     /* Retrieves per-order HF scaling factors for "upsampling" ambisonic data. */
-    static std::array<float,MaxAmbiOrder+1> GetHFOrderScales(const uint in_order,
-        const uint out_order) noexcept;
+    static std::array<float,MaxAmbiOrder+1> GetHFOrderScales(const uint order) noexcept
+    {
+        if(order >= 3) return DecoderHFScale3O;
+        if(order == 2) return DecoderHFScale2O;
+        return DecoderHFScale10;
+    }
+
+    static const std::array<float,MaxAmbiOrder+1> DecoderHFScale10;
+    static const std::array<float,MaxAmbiOrder+1> DecoderHFScale2O;
+    static const std::array<float,MaxAmbiOrder+1> DecoderHFScale3O;
 
     static const std::array<std::array<float,MaxAmbiChannels>,4> FirstOrderUp;
     static const std::array<std::array<float,MaxAmbiChannels>,9> SecondOrderUp;

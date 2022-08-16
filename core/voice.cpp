@@ -899,7 +899,7 @@ void Voice::prepare(DeviceBase *device)
     {
         const uint8_t *OrderFromChan{Is2DAmbisonic(mFmtChannels) ?
             AmbiIndex::OrderFrom2DChannel().data() : AmbiIndex::OrderFromChannel().data()};
-        const auto scales = AmbiScale::GetHFOrderScales(mAmbiOrder, device->mAmbiOrder);
+        const auto scales = AmbiScale::GetHFOrderScales(mAmbiOrder);
 
         const BandSplitter splitter{device->mXOverFreq / static_cast<float>(device->Frequency)};
         for(auto &chandata : mChans)

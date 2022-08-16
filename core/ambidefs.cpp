@@ -13,25 +13,6 @@ namespace {
 
 using AmbiChannelFloatArray = std::array<float,MaxAmbiChannels>;
 
-constexpr std::array<float,MaxAmbiOrder+1> Ambi3DDecoderHFScale10{{
-    2.000000000e+00f, 1.154700538e+00f
-}};
-constexpr std::array<float,MaxAmbiOrder+1> Ambi3DDecoderHFScale2O{{
-    1.972026594e+00f, 1.527525232e+00f, 7.888106377e-01f
-}};
-/* TODO: Set properly when making the third-order upsampler decoder. */
-constexpr std::array<float,MaxAmbiOrder+1> Ambi3DDecoderHFScale3O{{
-    1.000000000e+00f, 1.000000000e+00f, 1.000000000e+00f, 1.000000000e+00f
-}};
-
-inline auto& GetDecoderHFScales(uint order) noexcept
-{
-    if(order >= 3) return Ambi3DDecoderHFScale3O;
-    if(order == 2) return Ambi3DDecoderHFScale2O;
-    return Ambi3DDecoderHFScale10;
-}
-
-
 /* Copied from mixer.cpp. */
 constexpr auto CalcAmbiCoeffs(const float y, const float z, const float x)
 {
@@ -195,11 +176,13 @@ const std::array<AmbiChannelFloatArray,4> AmbiScale::FirstOrderUp{CalcFirstOrder
 const std::array<AmbiChannelFloatArray,9> AmbiScale::SecondOrderUp{CalcSecondOrderUp()};
 const std::array<AmbiChannelFloatArray,16> AmbiScale::ThirdOrderUp{CalcThirdOrderUp()};
 
-
-auto AmbiScale::GetHFOrderScales(const uint in_order, const uint out_order) noexcept
-    -> std::array<float,MaxAmbiOrder+1>
-{
-    if(unlikely(in_order >= out_order))
-        return {1.0f, 1.0f, 1.0f, 1.0f};
-    return GetDecoderHFScales(in_order);
-}
+const std::array<float,MaxAmbiOrder+1> AmbiScale::DecoderHFScale10{{
+    2.000000000e+00f, 1.154700538e+00f
+}};
+const std::array<float,MaxAmbiOrder+1> AmbiScale::DecoderHFScale2O{{
+    1.972026594e+00f, 1.527525232e+00f, 7.888106377e-01f
+}};
+/* TODO: Set properly when making the third-order upsampler decoder. */
+const std::array<float,MaxAmbiOrder+1> AmbiScale::DecoderHFScale3O{{
+    1.000000000e+00f, 1.000000000e+00f, 1.000000000e+00f, 1.000000000e+00f
+}};

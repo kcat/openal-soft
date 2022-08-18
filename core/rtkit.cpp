@@ -40,8 +40,9 @@
 #include <string.h>
 #include <unistd.h>
 #include <sys/types.h>
+#ifdef __linux__
 #include <sys/syscall.h>
-#ifdef __FreeBSD__
+#elif defined(__FreeBSD__)
 #include <sys/thr.h>
 #endif
 

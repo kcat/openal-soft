@@ -585,7 +585,7 @@ OSStatus CoreAudioCapture::RecordProc(AudioUnitRenderActionFlags *ioActionFlags,
         return err;
     }
 
-    mRing->write(mCaptureData.data(), inNumberFrames * mFrameSize);
+    mRing->write(mCaptureData.data(), inNumberFrames);
     return noErr;
 }
 

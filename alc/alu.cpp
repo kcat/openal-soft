@@ -1147,7 +1147,7 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
                 voice->mChans[c].mDryParams.Hrtf.Target.Gain = DryGain.Base;
 
                 /* Normal panning for auxiliary sends. */
-                const auto coeffs = CalcAngleCoeffs(chans[c].angle, chans[c].elevation, Spread);
+                const auto coeffs = CalcAngleCoeffs(chans[c].angle, chans[c].elevation, spread);
 
                 for(uint i{0};i < NumSends;i++)
                 {

@@ -140,7 +140,7 @@ void PshifterState::update(const ContextBase*, const EffectSlot *slot,
     mPitchShiftI = fastf2u(pitch*MixerFracOne);
     mPitchShift  = mPitchShiftI * double{1.0/MixerFracOne};
 
-    const auto coeffs = CalcDirectionCoeffs({0.0f, 0.0f, -1.0f}, 0.0f);
+    static constexpr auto coeffs = CalcDirectionCoeffs({0.0f, 0.0f, -1.0f});
 
     mOutTarget = target.Main->Buffer;
     ComputePanGains(target.Main, coeffs.data(), slot->Gain, mTargetGains);

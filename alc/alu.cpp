@@ -906,7 +906,7 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
         auto calc_coeffs = [xpos,ypos,zpos](RenderMode mode)
         {
             if(mode != RenderMode::Pairwise)
-                return CalcDirectionCoeffs({xpos, ypos, zpos}, 0.0f);
+                return CalcDirectionCoeffs({xpos, ypos, zpos});
 
             /* Clamp Y, in case rounding errors caused it to end up outside
              * of -1...+1.

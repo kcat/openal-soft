@@ -95,7 +95,7 @@ void DistortionState::update(const ContextBase *context, const EffectSlot *slot,
     bandwidth = props->Distortion.EQBandwidth / (cutoff * 0.67f);
     mBandpass.setParamsFromBandwidth(BiquadType::BandPass, cutoff/frequency/4.0f, 1.0f, bandwidth);
 
-    const auto coeffs = CalcDirectionCoeffs({0.0f, 0.0f, -1.0f}, 0.0f);
+    static constexpr auto coeffs = CalcDirectionCoeffs({0.0f, 0.0f, -1.0f});
 
     mOutTarget = target.Main->Buffer;
     ComputePanGains(target.Main, coeffs.data(), slot->Gain*props->Distortion.Gain, mGain);

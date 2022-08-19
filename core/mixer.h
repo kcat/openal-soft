@@ -52,6 +52,18 @@ inline std::array<float,MaxAmbiChannels> CalcDirectionCoeffs(const float (&dir)[
 }
 
 /**
+ * CalcDirectionCoeffs
+ *
+ * Calculates ambisonic coefficients based on an OpenAL direction vector. The
+ * vector must be normalized (unit length).
+ */
+constexpr std::array<float,MaxAmbiChannels> CalcDirectionCoeffs(const float (&dir)[3])
+{
+    /* Convert from OpenAL coords to Ambisonics. */
+    return CalcAmbiCoeffs(-dir[0], dir[1], -dir[2]);
+}
+
+/**
  * CalcAngleCoeffs
  *
  * Calculates ambisonic coefficients based on azimuth and elevation. The

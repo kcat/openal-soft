@@ -1044,6 +1044,10 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
          */
         for(size_t c{0};c < num_channels;c++)
         {
+            /* Skip LFE */
+            if(chans[c].channel == LFE)
+                continue;
+
             const auto coeffs = CalcAngleCoeffs(chans[c].angle, chans[c].elevation, 0.0f);
 
             for(uint i{0};i < NumSends;i++)

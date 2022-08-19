@@ -19,39 +19,7 @@ MixerFunc MixSamples{Mix_<CTag>};
 std::array<float,MaxAmbiChannels> CalcAmbiCoeffs(const float y, const float z, const float x,
     const float spread)
 {
-    std::array<float,MaxAmbiChannels> coeffs;
-
-    /* Zeroth-order */
-    coeffs[0]  = 1.0f; /* ACN 0 = 1 */
-    /* First-order */
-    coeffs[1]  = al::numbers::sqrt3_v<float> * y; /* ACN 1 = sqrt(3) * Y */
-    coeffs[2]  = al::numbers::sqrt3_v<float> * z; /* ACN 2 = sqrt(3) * Z */
-    coeffs[3]  = al::numbers::sqrt3_v<float> * x; /* ACN 3 = sqrt(3) * X */
-    /* Second-order */
-    const float xx{x*x}, yy{y*y}, zz{z*z}, xy{x*y}, yz{y*z}, xz{x*z};
-    coeffs[4]  = 3.872983346f * xy;               /* ACN 4 = sqrt(15) * X * Y */
-    coeffs[5]  = 3.872983346f * yz;               /* ACN 5 = sqrt(15) * Y * Z */
-    coeffs[6]  = 1.118033989f * (3.0f*zz - 1.0f); /* ACN 6 = sqrt(5)/2 * (3*Z*Z - 1) */
-    coeffs[7]  = 3.872983346f * xz;               /* ACN 7 = sqrt(15) * X * Z */
-    coeffs[8]  = 1.936491673f * (xx - yy);        /* ACN 8 = sqrt(15)/2 * (X*X - Y*Y) */
-    /* Third-order */
-    coeffs[9]  =  2.091650066f * (y*(3.0f*xx - yy));   /* ACN  9 = sqrt(35/8) * Y * (3*X*X - Y*Y) */
-    coeffs[10] = 10.246950766f * (z*xy);               /* ACN 10 = sqrt(105) * Z * X * Y */
-    coeffs[11] =  1.620185175f * (y*(5.0f*zz - 1.0f)); /* ACN 11 = sqrt(21/8) * Y * (5*Z*Z - 1) */
-    coeffs[12] =  1.322875656f * (z*(5.0f*zz - 3.0f)); /* ACN 12 = sqrt(7)/2 * Z * (5*Z*Z - 3) */
-    coeffs[13] =  1.620185175f * (x*(5.0f*zz - 1.0f)); /* ACN 13 = sqrt(21/8) * X * (5*Z*Z - 1) */
-    coeffs[14] =  5.123475383f * (z*(xx - yy));        /* ACN 14 = sqrt(105)/2 * Z * (X*X - Y*Y) */
-    coeffs[15] =  2.091650066f * (x*(xx - 3.0f*yy));   /* ACN 15 = sqrt(35/8) * X * (X*X - 3*Y*Y) */
-    /* Fourth-order */
-    /* ACN 16 = sqrt(35)*3/2 * X * Y * (X*X - Y*Y) */
-    /* ACN 17 = sqrt(35/2)*3/2 * (3*X*X - Y*Y) * Y * Z */
-    /* ACN 18 = sqrt(5)*3/2 * X * Y * (7*Z*Z - 1) */
-    /* ACN 19 = sqrt(5/2)*3/2 * Y * Z * (7*Z*Z - 3)  */
-    /* ACN 20 = 3/8 * (35*Z*Z*Z*Z - 30*Z*Z + 3) */
-    /* ACN 21 = sqrt(5/2)*3/2 * X * Z * (7*Z*Z - 3) */
-    /* ACN 22 = sqrt(5)*3/4 * (X*X - Y*Y) * (7*Z*Z - 1) */
-    /* ACN 23 = sqrt(35/2)*3/2 * (X*X - 3*Y*Y) * X * Z */
-    /* ACN 24 = sqrt(35)*3/8 * (X*X*X*X - 6*X*X*Y*Y + Y*Y*Y*Y) */
+    std::array<float,MaxAmbiChannels> coeffs{CalcAmbiCoeffs(y, z, x)};
 
     if(spread > 0.0f)
     {

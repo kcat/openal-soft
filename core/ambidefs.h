@@ -5,6 +5,9 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "alnumbers.h"
+
+
 using uint = unsigned int;
 
 /* The maximum number of Ambisonics channels. For a given order (o), the size
@@ -195,5 +198,57 @@ struct AmbiIndex {
         return ret;
     }
 };
+
+
+/**
+ * Calculates ambisonic encoder coefficients using the X, Y, and Z direction
+ * components, which must represent a normalized (unit length) vector.
+ *
+ * NOTE: The components use ambisonic coordinates. As a result:
+ *
+ * Ambisonic Y = OpenAL -X
+ * Ambisonic Z = OpenAL Y
+ * Ambisonic X = OpenAL -Z
+ *
+ * The components are ordered such that OpenAL's X, Y, and Z are the first,
+ * second, and third parameters respectively -- simply negate X and Z.
+ */
+constexpr auto CalcAmbiCoeffs(const float y, const float z, const float x)
+{
+    const float xx{x*x}, yy{y*y}, zz{z*z}, xy{x*y}, yz{y*z}, xz{x*z};
+
+    return std::array<float,MaxAmbiChannels>{{
+        /* Zeroth-order */
+        1.0f, /* ACN 0 = 1 */
+        /* First-order */
+        al::numbers::sqrt3_v<float> * y, /* ACN 1 = sqrt(3) * Y */
+        al::numbers::sqrt3_v<float> * z, /* ACN 2 = sqrt(3) * Z */
+        al::numbers::sqrt3_v<float> * x, /* ACN 3 = sqrt(3) * X */
+        /* Second-order */
+        3.872983346e+00f * xy,               /* ACN 4 = sqrt(15) * X * Y */
+        3.872983346e+00f * yz,               /* ACN 5 = sqrt(15) * Y * Z */
+        1.118033989e+00f * (3.0f*zz - 1.0f), /* ACN 6 = sqrt(5)/2 * (3*Z*Z - 1) */
+        3.872983346e+00f * xz,               /* ACN 7 = sqrt(15) * X * Z */
+        1.936491673e+00f * (xx - yy),        /* ACN 8 = sqrt(15)/2 * (X*X - Y*Y) */
+        /* Third-order */
+        2.091650066e+00f * (y*(3.0f*xx - yy)),   /* ACN  9 = sqrt(35/8) * Y * (3*X*X - Y*Y) */
+        1.024695076e+01f * (z*xy),               /* ACN 10 = sqrt(105) * Z * X * Y */
+        1.620185175e+00f * (y*(5.0f*zz - 1.0f)), /* ACN 11 = sqrt(21/8) * Y * (5*Z*Z - 1) */
+        1.322875656e+00f * (z*(5.0f*zz - 3.0f)), /* ACN 12 = sqrt(7)/2 * Z * (5*Z*Z - 3) */
+        1.620185175e+00f * (x*(5.0f*zz - 1.0f)), /* ACN 13 = sqrt(21/8) * X * (5*Z*Z - 1) */
+        5.123475383e+00f * (z*(xx - yy)),        /* ACN 14 = sqrt(105)/2 * Z * (X*X - Y*Y) */
+        2.091650066e+00f * (x*(xx - 3.0f*yy)),   /* ACN 15 = sqrt(35/8) * X * (X*X - 3*Y*Y) */
+        /* Fourth-order */
+        /* ACN 16 = sqrt(35)*3/2 * X * Y * (X*X - Y*Y) */
+        /* ACN 17 = sqrt(35/2)*3/2 * (3*X*X - Y*Y) * Y * Z */
+        /* ACN 18 = sqrt(5)*3/2 * X * Y * (7*Z*Z - 1) */
+        /* ACN 19 = sqrt(5/2)*3/2 * Y * Z * (7*Z*Z - 3)  */
+        /* ACN 20 = 3/8 * (35*Z*Z*Z*Z - 30*Z*Z + 3) */
+        /* ACN 21 = sqrt(5/2)*3/2 * X * Z * (7*Z*Z - 3) */
+        /* ACN 22 = sqrt(5)*3/4 * (X*X - Y*Y) * (7*Z*Z - 1) */
+        /* ACN 23 = sqrt(35/2)*3/2 * (X*X - 3*Y*Y) * X * Z */
+        /* ACN 24 = sqrt(35)*3/8 * (X*X*X*X - 6*X*X*Y*Y + Y*Y*Y*Y) */
+    }};
+}
 
 #endif /* CORE_AMBIDEFS_H */

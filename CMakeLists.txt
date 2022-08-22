@@ -1086,19 +1086,22 @@ if(COREAUDIO_FRAMEWORK AND AUDIOUNIT_INCLUDE_DIR)
         set(HAVE_COREAUDIO 1)
         set(ALC_OBJS  ${ALC_OBJS} alc/backends/coreaudio.cpp alc/backends/coreaudio.h)
         set(BACKENDS  "${BACKENDS} CoreAudio,")
+
+        set(EXTRA_LIBS -Wl,-framework,CoreAudio ${EXTRA_LIBS})
         if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
             find_library(COREFOUNDATION_FRAMEWORK NAMES CoreFoundation)
-            set(EXTRA_LIBS ${COREAUDIO_FRAMEWORK} ${COREFOUNDATION_FRAMEWORK} ${EXTRA_LIBS})
+            if(COREFOUNDATION_FRAMEWORK)
+                set(EXTRA_LIBS -Wl,-framework,CoreFoundation ${EXTRA_LIBS})
+            endif()
         else()
-            set(EXTRA_LIBS ${COREAUDIO_FRAMEWORK} /System/Library/Frameworks/AudioUnit.framework
-                /System/Library/Frameworks/ApplicationServices.framework ${EXTRA_LIBS})
+            set(EXTRA_LIBS -Wl,-framework,AudioUnit,-framework,ApplicationServices ${EXTRA_LIBS})
         endif()
 
         # Some versions of OSX may need the AudioToolbox framework. Add it if
         # it's found.
         find_library(AUDIOTOOLBOX_LIBRARY NAMES AudioToolbox)
         if(AUDIOTOOLBOX_LIBRARY)
-            set(EXTRA_LIBS ${AUDIOTOOLBOX_LIBRARY} ${EXTRA_LIBS})
+            set(EXTRA_LIBS -Wl,-framework,AudioToolbox ${EXTRA_LIBS})
         endif()
 
         set(INC_PATHS ${INC_PATHS} ${AUDIOUNIT_INCLUDE_DIR})

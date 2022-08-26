@@ -118,10 +118,10 @@ struct AmbiScale {
     {
         if(order >= 3) return is3D ? DecoderHFScale3O : DecoderHFScale3O2D;
         if(order == 2) return is3D ? DecoderHFScale2O : DecoderHFScale2O2D;
-        return is3D ? DecoderHFScale10 : DecoderHFScale1O2D;
+        return is3D ? DecoderHFScale1O : DecoderHFScale1O2D;
     }
 
-    static const std::array<float,MaxAmbiOrder+1> DecoderHFScale10;
+    static const std::array<float,MaxAmbiOrder+1> DecoderHFScale1O;
     static const std::array<float,MaxAmbiOrder+1> DecoderHFScale1O2D;
     static const std::array<float,MaxAmbiOrder+1> DecoderHFScale2O;
     static const std::array<float,MaxAmbiOrder+1> DecoderHFScale2O2D;

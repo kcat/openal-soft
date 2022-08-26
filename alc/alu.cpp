@@ -341,95 +341,34 @@ inline uint dither_rng(uint *seed) noexcept
 }
 
 
-/* Ambisonic upsampler functions. These are effectively matrix multiply
- * operations. They take the 'coeffs' as the input matrix, and combine it with
- * an "upsampler" matrix, resulting in a coefficient matrix that behaves as if
- * the initial coefficients were applied to the B-Format input, which was then
- * decoded to a speaker array at its input order, and finally encoded back into
- * the higher order mix.
+/* Ambisonic upsampler function. It's effectively a matrix multiply. It takes
+ * an 'upsampler' and 'rotator' as the input matrices, resulting in a matrix
+ * that behaves as if the B-Format input was first decoded to a speaker array
+ * at its input order, encoded back into the higher order mix, then finally
+ * rotated.
  */
-void UpsampleFirstOrder(const al::span<std::array<float,MaxAmbiChannels>,MaxAmbiChannels> coeffs)
+template<size_t N>
+void UpsampleBFormatTransform(size_t coeffs_order,
+    const std::array<std::array<float,MaxAmbiChannels>,N> &matrix1,
+    const al::span<std::array<float,MaxAmbiChannels>,MaxAmbiChannels> coeffs)
 {
-    auto transpose = [coeffs]() noexcept
+    auto copy_coeffs = [coeffs]() noexcept
     {
-        std::array<std::array<float,4>,4> res{};
-        for(size_t i{0};i < 4;++i)
-        {
-            for(size_t j{0};j < 4;++j)
-                res[i][j] = coeffs[j][i];
-        }
+        std::array<std::array<float,MaxAmbiChannels>,MaxAmbiChannels> res{};
+        for(size_t i{0};i < MaxAmbiChannels;++i)
+            res[i] = coeffs[i];
         return res;
     };
-    const auto input = transpose();
+    const auto matrix2 = copy_coeffs();
 
-    static_assert(input[0].size() == AmbiScale::FirstOrderUp.size(),
-        "Mismatched first-order input and upsampler size");
-
-    for(size_t i{0};i < input.size();++i)
+    const size_t num_chans{AmbiChannelsFromOrder(coeffs_order)};
+    for(size_t i{0};i < matrix1.size();++i)
     {
-        for(size_t j{0};j < AmbiScale::FirstOrderUp[0].size();++j)
+        for(size_t j{0};j < num_chans;++j)
         {
             double sum{0.0};
-            for(size_t k{0};k < input[0].size();++k)
-                sum += double{input[i][k]} * AmbiScale::FirstOrderUp[k][j];
-            coeffs[j][i] = static_cast<float>(sum);
-        }
-    }
-}
-
-void UpsampleSecondOrder(const al::span<std::array<float,MaxAmbiChannels>,MaxAmbiChannels> coeffs)
-{
-    auto transpose = [coeffs]() noexcept
-    {
-        std::array<std::array<float,9>,9> res{};
-        for(size_t i{0};i < 9;++i)
-        {
-            for(size_t j{0};j < 9;++j)
-                res[i][j] = coeffs[j][i];
-        }
-        return res;
-    };
-    const auto input = transpose();
-
-    static_assert(input[0].size() == AmbiScale::SecondOrderUp.size(),
-        "Mismatched second-order input and upsampler size");
-
-    for(size_t i{0};i < input.size();++i)
-    {
-        for(size_t j{0};j < AmbiScale::SecondOrderUp[0].size();++j)
-        {
-            double sum{0.0};
-            for(size_t k{0};k < input[0].size();++k)
-                sum += double{input[i][k]} * AmbiScale::SecondOrderUp[k][j];
-            coeffs[j][i] = static_cast<float>(sum);
-        }
-    }
-}
-
-void UpsampleThirdOrder(const al::span<std::array<float,MaxAmbiChannels>,MaxAmbiChannels> coeffs)
-{
-    auto transpose = [coeffs]() noexcept
-    {
-        std::array<std::array<float,16>,16> res{};
-        for(size_t i{0};i < 16;++i)
-        {
-            for(size_t j{0};j < 16;++j)
-                res[i][j] = coeffs[j][i];
-        }
-        return res;
-    };
-    const auto input = transpose();
-
-    static_assert(input[0].size() == AmbiScale::ThirdOrderUp.size(),
-        "Mismatched third-order input and upsampler size");
-
-    for(size_t i{0};i < input.size();++i)
-    {
-        for(size_t j{0};j < AmbiScale::ThirdOrderUp[0].size();++j)
-        {
-            double sum{0.0};
-            for(size_t k{0};k < input[0].size();++k)
-                sum += double{input[i][k]} * AmbiScale::ThirdOrderUp[k][j];
+            for(size_t k{0};k < num_chans;++k)
+                sum += double{matrix1[i][k]} * matrix2[j][k];
             coeffs[j][i] = static_cast<float>(sum);
         }
     }
@@ -966,16 +905,16 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
             shrot[1][1] =  U[0]; shrot[1][2] = -V[0]; shrot[1][3] = -N[0];
             shrot[2][1] = -U[1]; shrot[2][2] =  V[1]; shrot[2][3] =  N[1];
             shrot[3][1] =  U[2]; shrot[3][2] = -V[2]; shrot[3][3] = -N[2];
-            AmbiRotator(shrot, static_cast<int>(minu(voice->mAmbiOrder, Device->mAmbiOrder)));
+            AmbiRotator(shrot, static_cast<int>(Device->mAmbiOrder));
             /* If the device is higher order than the voice, "upsample" the matrix */
             if(Device->mAmbiOrder > voice->mAmbiOrder)
             {
                 if(voice->mAmbiOrder == 1)
-                    UpsampleFirstOrder(shrot);
+                    UpsampleBFormatTransform(Device->mAmbiOrder, AmbiScale::FirstOrderUp, shrot);
                 else if(voice->mAmbiOrder == 2)
-                    UpsampleSecondOrder(shrot);
+                    UpsampleBFormatTransform(Device->mAmbiOrder, AmbiScale::SecondOrderUp, shrot);
                 else if(voice->mAmbiOrder == 3)
-                    UpsampleThirdOrder(shrot);
+                    UpsampleBFormatTransform(Device->mAmbiOrder, AmbiScale::ThirdOrderUp, shrot);
             }
 
             /* Convert the rotation matrix for input ordering and scaling, and

@@ -573,7 +573,7 @@ struct RotatorCoeffs {
     };
     std::array<CoeffValues,CalcRotatorSize<MaxAmbiOrder>()> mCoeffs{};
 
-    constexpr RotatorCoeffs()
+    RotatorCoeffs()
     {
         auto coeffs = mCoeffs.begin();
 

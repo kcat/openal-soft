@@ -559,49 +559,48 @@ inline float WrapRadians(float r)
  * precomputed since they're constant. The second-order coefficients are
  * followed by the third-order coefficients, etc.
  */
+template<size_t L>
+constexpr size_t CalcRotatorSize()
+{ return (L*2 + 1)*(L*2 + 1) + CalcRotatorSize<L-1>(); }
+
+template<> constexpr size_t CalcRotatorSize<0>() = delete;
+template<> constexpr size_t CalcRotatorSize<1>() = delete;
+template<> constexpr size_t CalcRotatorSize<2>() { return 5*5; }
+
 struct RotatorCoeffs {
-    float u, v, w;
+    struct CoeffValues {
+        float u, v, w;
+    };
+    std::array<CoeffValues,CalcRotatorSize<MaxAmbiOrder>()> mCoeffs{};
 
-    template<size_t N0, size_t N1>
-    static std::array<RotatorCoeffs,N0+N1> ConcatArrays(const std::array<RotatorCoeffs,N0> &lhs,
-        const std::array<RotatorCoeffs,N1> &rhs)
+    constexpr RotatorCoeffs()
     {
-        std::array<RotatorCoeffs,N0+N1> ret;
-        auto iter = std::copy(lhs.cbegin(), lhs.cend(), ret.begin());
-        std::copy(rhs.cbegin(), rhs.cend(), iter);
-        return ret;
-    }
+        auto coeffs = mCoeffs.begin();
 
-    template<int l, int num_elems=l*2+1>
-    static std::array<RotatorCoeffs,num_elems*num_elems> GenCoeffs()
-    {
-        std::array<RotatorCoeffs,num_elems*num_elems> ret{};
-        auto coeffs = ret.begin();
-
-        for(int m{-l};m <= l;++m)
+        for(int l=2;l <= MaxAmbiOrder;++l)
         {
-            for(int n{-l};n <= l;++n)
+            for(int m{-l};m <= l;++m)
             {
-                // compute u,v,w terms of Eq.8.1 (Table I)
-                const bool d{m == 0}; // the delta function d_m0
-                const float denom{static_cast<float>((std::abs(n) == l) ?
-                    (2*l) * (2*l - 1) : (l*l - n*n))};
+                for(int n{-l};n <= l;++n)
+                {
+                    // compute u,v,w terms of Eq.8.1 (Table I)
+                    const bool d{m == 0}; // the delta function d_m0
+                    const float denom{static_cast<float>((std::abs(n) == l) ?
+                        (2*l) * (2*l - 1) : (l*l - n*n))};
 
-                const int abs_m{std::abs(m)};
-                coeffs->u = std::sqrt(static_cast<float>(l*l - m*m)/denom);
-                coeffs->v = std::sqrt(static_cast<float>(l+abs_m-1) * static_cast<float>(l+abs_m) /
-                    denom) * (1.0f+d) * (1.0f - 2.0f*d) * 0.5f;
-                coeffs->w = std::sqrt(static_cast<float>(l-abs_m-1) * static_cast<float>(l-abs_m) /
-                    denom) * (1.0f-d) * -0.5f;
-                ++coeffs;
+                    const int abs_m{std::abs(m)};
+                    coeffs->u = std::sqrt(static_cast<float>(l*l - m*m)/denom);
+                    coeffs->v = std::sqrt(static_cast<float>(l+abs_m-1) *
+                        static_cast<float>(l+abs_m) / denom) * (1.0f+d) * (1.0f - 2.0f*d) * 0.5f;
+                    coeffs->w = std::sqrt(static_cast<float>(l-abs_m-1) *
+                        static_cast<float>(l-abs_m) / denom) * (1.0f-d) * -0.5f;
+                    ++coeffs;
+                }
             }
         }
-
-        return ret;
     }
 };
-const auto RotatorCoeffArray = RotatorCoeffs::ConcatArrays(RotatorCoeffs::GenCoeffs<2>(),
-    RotatorCoeffs::GenCoeffs<3>());
+const RotatorCoeffs RotatorCoeffArray{};
 
 /**
  * Given the matrix, pre-filled with the (zeroth- and) first-order rotation
@@ -665,7 +664,7 @@ void AmbiRotator(AmbiRotateMatrix &matrix, const int order)
     };
 
     // compute rotation matrix of each subsequent band recursively
-    auto coeffs = RotatorCoeffArray.cbegin();
+    auto coeffs = RotatorCoeffArray.mCoeffs.cbegin();
     size_t band_idx{4}, last_band{1};
     for(int l{2};l <= order;++l)
     {

@@ -347,9 +347,8 @@ inline uint dither_rng(uint *seed) noexcept
  * at its input order, encoded back into the higher order mix, then finally
  * rotated.
  */
-template<size_t N>
 void UpsampleBFormatTransform(size_t coeffs_order,
-    const std::array<std::array<float,MaxAmbiChannels>,N> &matrix1,
+    const al::span<const std::array<float,MaxAmbiChannels>> matrix1,
     const al::span<std::array<float,MaxAmbiChannels>,MaxAmbiChannels> coeffs)
 {
     auto copy_coeffs = [coeffs]() noexcept
@@ -906,15 +905,36 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
             shrot[2][1] = -U[1]; shrot[2][2] =  V[1]; shrot[2][3] =  N[1];
             shrot[3][1] =  U[2]; shrot[3][2] = -V[2]; shrot[3][3] = -N[2];
             AmbiRotator(shrot, static_cast<int>(Device->mAmbiOrder));
-            /* If the device is higher order than the voice, "upsample" the matrix */
-            if(Device->mAmbiOrder > voice->mAmbiOrder)
+            /* If the device is higher order than the voice, "upsample" the
+             * matrix.
+             *
+             * NOTE: Starting with second-order, a 2D upsample needs to be
+             * applied with a 2D source and 3D output, even when they're the
+             * same order. This is because higher orders have a height offset
+             * on various channels (i.e. when elevation=0, those height-related
+             * channels should be non-0).
+             */
+            if(Device->mAmbiOrder > voice->mAmbiOrder
+                || (Device->mAmbiOrder >= 2 && Is2DAmbisonic(voice->mFmtChannels)))
             {
                 if(voice->mAmbiOrder == 1)
-                    UpsampleBFormatTransform(Device->mAmbiOrder, AmbiScale::FirstOrderUp, shrot);
+                {
+                    auto&& upsampler = Is2DAmbisonic(voice->mFmtChannels) ?
+                        AmbiScale::FirstOrder2DUp : AmbiScale::FirstOrderUp;
+                    UpsampleBFormatTransform(Device->mAmbiOrder, upsampler, shrot);
+                }
                 else if(voice->mAmbiOrder == 2)
-                    UpsampleBFormatTransform(Device->mAmbiOrder, AmbiScale::SecondOrderUp, shrot);
+                {
+                    auto&& upsampler = Is2DAmbisonic(voice->mFmtChannels) ?
+                        AmbiScale::SecondOrder2DUp : AmbiScale::SecondOrderUp;
+                    UpsampleBFormatTransform(Device->mAmbiOrder, upsampler, shrot);
+                }
                 else if(voice->mAmbiOrder == 3)
-                    UpsampleBFormatTransform(Device->mAmbiOrder, AmbiScale::ThirdOrderUp, shrot);
+                {
+                    auto&& upsampler = Is2DAmbisonic(voice->mFmtChannels) ?
+                        AmbiScale::ThirdOrder2DUp : AmbiScale::ThirdOrderUp;
+                    UpsampleBFormatTransform(Device->mAmbiOrder, upsampler, shrot);
+                }
             }
 
             /* Convert the rotation matrix for input ordering and scaling, and

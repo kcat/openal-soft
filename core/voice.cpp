@@ -899,7 +899,7 @@ void Voice::prepare(DeviceBase *device)
     {
         const uint8_t *OrderFromChan{Is2DAmbisonic(mFmtChannels) ?
             AmbiIndex::OrderFrom2DChannel().data() : AmbiIndex::OrderFromChannel().data()};
-        const auto scales = AmbiScale::GetHFOrderScales(mAmbiOrder);
+        const auto scales = AmbiScale::GetHFOrderScales(mAmbiOrder, !Is2DAmbisonic(mFmtChannels));
 
         const BandSplitter splitter{device->mXOverFreq / static_cast<float>(device->Frequency)};
         for(auto &chandata : mChans)
@@ -915,17 +915,19 @@ void Voice::prepare(DeviceBase *device)
          * use different shelf filters after mixing it and with any old speaker
          * setup the user has. To make this work, we apply the expected shelf
          * filters for decoding UHJ2 to quad (only needs LF scaling), and act
-         * as if those 4 quad channels are encoded right back onto first-order
-         * B-Format, which then upsamples to higher order as normal (only needs
-         * HF scaling).
+         * as if those 4 quad channels are encoded right back onto higher-order
+         * B-Format.
          *
          * This isn't perfect, but without an entirely separate and limited
          * UHJ2 path, it's better than nothing.
          */
         if(mFmtChannels == FmtUHJ2)
         {
+            mChans[0].mAmbiHFScale = 1.0f;
             mChans[0].mAmbiLFScale = UhjDecoder<UhjLengthStd>::sWLFScale;
+            mChans[1].mAmbiHFScale = 1.0f;
             mChans[1].mAmbiLFScale = UhjDecoder<UhjLengthStd>::sXYLFScale;
+            mChans[2].mAmbiHFScale = 1.0f;
             mChans[2].mAmbiLFScale = UhjDecoder<UhjLengthStd>::sXYLFScale;
         }
         mFlags.set(VoiceIsAmbisonic);

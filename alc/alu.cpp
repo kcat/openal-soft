@@ -859,22 +859,27 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
              */
             return CalcAngleCoeffs(ScaleAzimuthFront(az, 1.5f), ev, 0.0f);
         };
-        auto coeffs = calc_coeffs(Device->mRenderMode);
-        std::transform(coeffs.begin()+1, coeffs.end(), coeffs.begin()+1,
-            std::bind(std::multiplies<float>{}, _1, 1.0f-coverage));
-
-        /* NOTE: W needs to be scaled according to channel scaling. */
         auto&& scales = GetAmbiScales(voice->mAmbiScaling);
-        ComputePanGains(&Device->Dry, coeffs.data(), DryGain.Base*scales[0],
-            voice->mChans[0].mDryParams.Gains.Target);
-        for(uint i{0};i < NumSends;i++)
-        {
-            if(const EffectSlot *Slot{SendSlots[i]})
-                ComputePanGains(&Slot->Wet, coeffs.data(), WetGain[i].Base*scales[0],
-                    voice->mChans[0].mWetParams[i].Gains.Target);
-        }
+        auto coeffs = calc_coeffs(Device->mRenderMode);
+        /* Scale the panned W signal based on the coverage (full coverage means
+         * no panned signal). Scale the panned W signal according to channel
+         * scaling.
+         */
+        std::transform(coeffs.begin(), coeffs.end(), coeffs.begin(),
+            std::bind(std::multiplies<float>{}, _1, (1.0f-coverage)*scales[0]));
 
-        if(coverage > 0.0f)
+        if(!(coverage > 0.0f))
+        {
+            ComputePanGains(&Device->Dry, coeffs.data(), DryGain.Base,
+                voice->mChans[0].mDryParams.Gains.Target);
+            for(uint i{0};i < NumSends;i++)
+            {
+                if(const EffectSlot *Slot{SendSlots[i]})
+                    ComputePanGains(&Slot->Wet, coeffs.data(), WetGain[i].Base*scales[0],
+                        voice->mChans[0].mWetParams[i].Gains.Target);
+            }
+        }
+        else
         {
             /* Local B-Format sources have their XYZ channels rotated according
              * to the orientation.
@@ -945,15 +950,18 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
                 GetAmbiLayout(voice->mAmbiLayout).data()};
 
             static const uint8_t OrderOffset[MaxAmbiOrder+1]{0, 1, 4, 9,};
-            for(size_t c{1};c < num_channels;c++)
+            for(size_t c{0};c < num_channels;c++)
             {
                 const size_t acn{index_map[c]};
                 const size_t order{AmbiIndex::OrderFromChannel()[acn]};
                 const float scale{scales[acn] * coverage};
 
-                coeffs = std::array<float,MaxAmbiChannels>{};
+                /* For channel 0, combine the B-Format signal (scaled according
+                 * to the coverage amount) with the directional pan. For all
+                 * other channels, use just the (scaled) B-Format signal.
+                 */
                 for(size_t x{OrderOffset[order]};x < MaxAmbiChannels;++x)
-                    coeffs[x] = shrot[x][acn] * scale;
+                    coeffs[x] += shrot[x][acn] * scale;
 
                 ComputePanGains(&Device->Dry, coeffs.data(), DryGain.Base,
                     voice->mChans[c].mDryParams.Gains.Target);
@@ -964,6 +972,8 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
                         ComputePanGains(&Slot->Wet, coeffs.data(), WetGain[i].Base,
                             voice->mChans[c].mWetParams[i].Gains.Target);
                 }
+
+                coeffs = std::array<float,MaxAmbiChannels>{};
             }
         }
     }

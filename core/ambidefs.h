@@ -134,6 +134,7 @@ struct AmbiScale {
     static const std::array<std::array<float,MaxAmbiChannels>,9> SecondOrder2DUp;
     static const std::array<std::array<float,MaxAmbiChannels>,16> ThirdOrderUp;
     static const std::array<std::array<float,MaxAmbiChannels>,16> ThirdOrder2DUp;
+    static const std::array<std::array<float,MaxAmbiChannels>,25> FourthOrder2DUp;
 };
 
 struct AmbiIndex {
@@ -248,7 +249,7 @@ constexpr auto CalcAmbiCoeffs(const float y, const float z, const float x)
         /* ACN 16 = sqrt(35)*3/2 * X * Y * (X*X - Y*Y) */
         /* ACN 17 = sqrt(35/2)*3/2 * (3*X*X - Y*Y) * Y * Z */
         /* ACN 18 = sqrt(5)*3/2 * X * Y * (7*Z*Z - 1) */
-        /* ACN 19 = sqrt(5/2)*3/2 * Y * Z * (7*Z*Z - 3)  */
+        /* ACN 19 = sqrt(5/2)*3/2 * Y * Z * (7*Z*Z - 3) */
         /* ACN 20 = 3/8 * (35*Z*Z*Z*Z - 30*Z*Z + 3) */
         /* ACN 21 = sqrt(5/2)*3/2 * X * Z * (7*Z*Z - 3) */
         /* ACN 22 = sqrt(5)*3/4 * (X*X - Y*Y) * (7*Z*Z - 1) */

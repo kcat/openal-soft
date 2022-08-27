@@ -310,6 +310,56 @@ auto CalcThirdOrder2DUp()
     return res;
 }
 
+
+constexpr std::array<std::array<float,25>,10> FourthOrder2DDecoder{{
+    {{ 1.000000000e-01f,  3.568220898e-02f, 0.0f,  1.098185471e-01f,  6.070619982e-02f, 0.0f, 0.0f, 0.0f,  8.355491589e-02f,  7.735682057e-02f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  5.620301997e-02f,  8.573754253e-02f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  2.785781628e-02f, }},
+    {{ 1.000000000e-01f,  9.341723590e-02f, 0.0f,  6.787159473e-02f,  9.822469464e-02f, 0.0f, 0.0f, 0.0f, -3.191513794e-02f,  2.954767620e-02f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -9.093839659e-02f, -5.298871540e-02f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -7.293270986e-02f, }},
+    {{ 1.000000000e-01f,  1.154700538e-01f, 0.0f,  0.000000000e+00f,  0.000000000e+00f, 0.0f, 0.0f, 0.0f, -1.032795559e-01f, -9.561828875e-02f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.000000000e+00f,  0.000000000e+00f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  9.014978717e-02f, }},
+    {{ 1.000000000e-01f,  9.341723590e-02f, 0.0f, -6.787159473e-02f, -9.822469464e-02f, 0.0f, 0.0f, 0.0f, -3.191513794e-02f,  2.954767620e-02f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  9.093839659e-02f,  5.298871540e-02f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -7.293270986e-02f, }},
+    {{ 1.000000000e-01f,  3.568220898e-02f, 0.0f, -1.098185471e-01f, -6.070619982e-02f, 0.0f, 0.0f, 0.0f,  8.355491589e-02f,  7.735682057e-02f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -5.620301997e-02f, -8.573754253e-02f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  2.785781628e-02f, }},
+    {{ 1.000000000e-01f, -3.568220898e-02f, 0.0f, -1.098185471e-01f,  6.070619982e-02f, 0.0f, 0.0f, 0.0f,  8.355491589e-02f, -7.735682057e-02f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -5.620301997e-02f,  8.573754253e-02f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  2.785781628e-02f, }},
+    {{ 1.000000000e-01f, -9.341723590e-02f, 0.0f, -6.787159473e-02f,  9.822469464e-02f, 0.0f, 0.0f, 0.0f, -3.191513794e-02f, -2.954767620e-02f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  9.093839659e-02f, -5.298871540e-02f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -7.293270986e-02f, }},
+    {{ 1.000000000e-01f, -1.154700538e-01f, 0.0f,  0.000000000e+00f,  0.000000000e+00f, 0.0f, 0.0f, 0.0f, -1.032795559e-01f,  9.561828875e-02f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.000000000e+00f,  0.000000000e+00f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  9.014978717e-02f, }},
+    {{ 1.000000000e-01f, -9.341723590e-02f, 0.0f,  6.787159473e-02f, -9.822469464e-02f, 0.0f, 0.0f, 0.0f, -3.191513794e-02f, -2.954767620e-02f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -9.093839659e-02f,  5.298871540e-02f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -7.293270986e-02f, }},
+    {{ 1.000000000e-01f, -3.568220898e-02f, 0.0f,  1.098185471e-01f, -6.070619982e-02f, 0.0f, 0.0f, 0.0f,  8.355491589e-02f, -7.735682057e-02f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  5.620301997e-02f, -8.573754253e-02f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  2.785781628e-02f, }},
+}};
+constexpr std::array<AmbiChannelFloatArray,10> FourthOrder2DEncoder{{
+    CalcAmbiCoeffs( 3.090169944e-01f,  0.000000000e+00f,  9.510565163e-01f),
+    CalcAmbiCoeffs( 8.090169944e-01f,  0.000000000e+00f,  5.877852523e-01f),
+    CalcAmbiCoeffs( 1.000000000e+00f,  0.000000000e+00f,  0.000000000e+00f),
+    CalcAmbiCoeffs( 8.090169944e-01f,  0.000000000e+00f, -5.877852523e-01f),
+    CalcAmbiCoeffs( 3.090169944e-01f,  0.000000000e+00f, -9.510565163e-01f),
+    CalcAmbiCoeffs(-3.090169944e-01f,  0.000000000e+00f, -9.510565163e-01f),
+    CalcAmbiCoeffs(-8.090169944e-01f,  0.000000000e+00f, -5.877852523e-01f),
+    CalcAmbiCoeffs(-1.000000000e+00f,  0.000000000e+00f,  0.000000000e+00f),
+    CalcAmbiCoeffs(-8.090169944e-01f,  0.000000000e+00f,  5.877852523e-01f),
+    CalcAmbiCoeffs(-3.090169944e-01f,  0.000000000e+00f,  9.510565163e-01f),
+}};
+static_assert(FourthOrder2DDecoder.size() == FourthOrder2DEncoder.size(), "Fourth-order 2D mismatch");
+
+/* This calculates a 2D fourth-order "upsampler" matrix. There is no 3D fourth-
+ * order upsampler since fourth-order is the max order we'll be supporting for
+ * the foreseeable future. This is only necessary for mixing horizontal-only
+ * fourth-order content to 3D.
+ */
+auto CalcFourthOrder2DUp()
+{
+    std::array<AmbiChannelFloatArray,25> res{};
+
+    for(size_t i{0};i < FourthOrder2DDecoder[0].size();++i)
+    {
+        for(size_t j{0};j < FourthOrder2DEncoder[0].size();++j)
+        {
+            double sum{0.0};
+            for(size_t k{0};k < FourthOrder2DDecoder.size();++k)
+                sum += double{FourthOrder2DDecoder[k][i]} * FourthOrder2DEncoder[k][j];
+            res[i][j] = static_cast<float>(sum);
+        }
+    }
+
+    return res;
+}
+
 } // namespace
 
 const std::array<AmbiChannelFloatArray,4> AmbiScale::FirstOrderUp{CalcFirstOrderUp()};
@@ -318,6 +368,7 @@ const std::array<AmbiChannelFloatArray,9> AmbiScale::SecondOrderUp{CalcSecondOrd
 const std::array<AmbiChannelFloatArray,9> AmbiScale::SecondOrder2DUp{CalcSecondOrder2DUp()};
 const std::array<AmbiChannelFloatArray,16> AmbiScale::ThirdOrderUp{CalcThirdOrderUp()};
 const std::array<AmbiChannelFloatArray,16> AmbiScale::ThirdOrder2DUp{CalcThirdOrder2DUp()};
+const std::array<AmbiChannelFloatArray,25> AmbiScale::FourthOrder2DUp{CalcFourthOrder2DUp()};
 
 const std::array<float,MaxAmbiOrder+1> AmbiScale::DecoderHFScale1O{{
     2.000000000e+00f, 1.154700538e+00f

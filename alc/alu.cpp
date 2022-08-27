@@ -939,6 +939,9 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
                         AmbiScale::ThirdOrder2DUp : AmbiScale::ThirdOrderUp;
                     UpsampleBFormatTransform(Device->mAmbiOrder, upsampler, shrot);
                 }
+                else if(voice->mAmbiOrder == 4)
+                    UpsampleBFormatTransform(Device->mAmbiOrder, AmbiScale::FourthOrder2DUp,
+                        shrot);
             }
 
             /* Convert the rotation matrix for input ordering and scaling, and

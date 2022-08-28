@@ -1367,7 +1367,7 @@ else()
         # Sets framework name to soft_oal to avoid ambiguity with the system OpenAL.framework
         set(LIBNAME "soft_oal")
         if(GIT_FOUND)
-            EXECUTE_PROCESS(COMMAND ${GIT_EXECUTABLE} rev-list --count head
+            EXECUTE_PROCESS(COMMAND ${GIT_EXECUTABLE} rev-list --count HEAD
                 TIMEOUT 5
                 OUTPUT_VARIABLE BUNDLE_VERSION
                 OUTPUT_STRIP_TRAILING_WHITESPACE)
@@ -1388,7 +1388,7 @@ else()
             FRAMEWORK_VERSION C
             MACOSX_FRAMEWORK_NAME "${IMPL_TARGET}"
             MACOSX_FRAMEWORK_IDENTIFIER "org.openal-soft.openal"
-            MACOSX_FRAMEWORK_SHORT_VERSION_STRING ${LIB_VERSION}
+            MACOSX_FRAMEWORK_SHORT_VERSION_STRING "${LIB_VERSION}"
             MACOSX_FRAMEWORK_BUNDLE_VERSION ${BUNDLE_VERSION}
             XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY ""
             XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED "NO"

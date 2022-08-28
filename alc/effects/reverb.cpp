@@ -104,21 +104,21 @@ alignas(16) constexpr float B2A[NUM_LINES][NUM_LINES]{
 };
 
 /* Converts A-Format to B-Format for early reflections. */
-alignas(16) constexpr float EarlyA2B[NUM_LINES][NUM_LINES]{
-    { 0.5f,  0.5f,  0.5f,  0.5f },
-    { 0.5f, -0.5f,  0.5f, -0.5f },
-    { 0.5f, -0.5f, -0.5f,  0.5f },
-    { 0.5f,  0.5f, -0.5f, -0.5f }
-};
+alignas(16) constexpr std::array<std::array<float,NUM_LINES>,NUM_LINES> EarlyA2B{{
+    {{ 0.5f,  0.5f,  0.5f,  0.5f }},
+    {{ 0.5f, -0.5f,  0.5f, -0.5f }},
+    {{ 0.5f, -0.5f, -0.5f,  0.5f }},
+    {{ 0.5f,  0.5f, -0.5f, -0.5f }}
+}};
 
 /* Converts A-Format to B-Format for late reverb. */
 constexpr auto InvSqrt2 = static_cast<float>(1.0/al::numbers::sqrt2);
-alignas(16) constexpr float LateA2B[NUM_LINES][NUM_LINES]{
-    { 0.5f,  0.5f,  0.5f,  0.5f },
-    { InvSqrt2, -InvSqrt2,  0.0f,  0.0f },
-    { 0.0f,  0.0f,  InvSqrt2, -InvSqrt2 },
-    { 0.5f,  0.5f, -0.5f, -0.5f }
-};
+alignas(16) constexpr std::array<std::array<float,NUM_LINES>,NUM_LINES> LateA2B{{
+    {{ 0.5f,  0.5f,  0.5f,  0.5f }},
+    {{ InvSqrt2, -InvSqrt2,  0.0f,  0.0f }},
+    {{ 0.0f,  0.0f,  InvSqrt2, -InvSqrt2 }},
+    {{ 0.5f,  0.5f, -0.5f, -0.5f }}
+}};
 
 /* The all-pass and delay lines have a variable length dependent on the
  * effect's density parameter, which helps alter the perceived environment
@@ -460,7 +460,7 @@ struct ReverbState final : public EffectState {
     std::array<std::array<BandSplitter,NUM_LINES>,2> mAmbiSplitter;
 
 
-    static void DoMixRow(const al::span<float> OutBuffer, const al::span<const float> Gains,
+    static void DoMixRow(const al::span<float> OutBuffer, const al::span<const float,4> Gains,
         const float *InSamples, const size_t InStride)
     {
         std::fill(OutBuffer.begin(), OutBuffer.end(), 0.0f);
@@ -486,17 +486,18 @@ struct ReverbState final : public EffectState {
     {
         ASSUME(todo > 0);
 
-        /* Convert back to B-Format, and mix the results to output. */
-        const al::span<float> tmpspan{al::assume_aligned<16>(mTempLine.data()), todo};
+        /* When not upsampling, the panning gains convert to B-Format and pan
+         * at the same time.
+         */
         for(size_t c{0u};c < NUM_LINES;c++)
         {
-            DoMixRow(tmpspan, EarlyA2B[c], mEarlySamples[0].data(), mEarlySamples[0].size());
+            const al::span<float> tmpspan{mEarlySamples[c].data(), todo};
             MixSamples(tmpspan, samplesOut, mEarly.CurrentGain[c], mEarly.PanGain[c], counter,
                 offset);
         }
         for(size_t c{0u};c < NUM_LINES;c++)
         {
-            DoMixRow(tmpspan, LateA2B[c], mLateSamples[0].data(), mLateSamples[0].size());
+            const al::span<float> tmpspan{mLateSamples[c].data(), todo};
             MixSamples(tmpspan, samplesOut, mLate.CurrentGain[c], mLate.PanGain[c], counter,
                 offset);
         }
@@ -507,6 +508,10 @@ struct ReverbState final : public EffectState {
     {
         ASSUME(todo > 0);
 
+        /* When upsampling, the B-Format conversion needs to be done separately
+         * so the proper HF scaling can be applied to each B-Format channel.
+         * The panning gains then pan and upsample the B-Format channels.
+         */
         const al::span<float> tmpspan{al::assume_aligned<16>(mTempLine.data()), todo};
         for(size_t c{0u};c < NUM_LINES;c++)
         {
@@ -949,7 +954,7 @@ void ReverbState::updateDelayLine(const float earlyDelay, const float lateDelay,
  * focal strength. This function results in a B-Format transformation matrix
  * that spatially focuses the signal in the desired direction.
  */
-alu::Matrix GetTransformFromVector(const float *vec)
+std::array<std::array<float,4>,4> GetTransformFromVector(const float *vec)
 {
     /* Normalize the panning vector according to the N3D scale, which has an
      * extra sqrt(3) term on the directional components. Converting from OpenAL
@@ -978,12 +983,12 @@ alu::Matrix GetTransformFromVector(const float *vec)
         norm[2] = vec[2] * al::numbers::sqrt3_v<float>;
     }
 
-    return alu::Matrix{
-        1.0f,   0.0f,    0.0f,   0.0f,
-        norm[0], 1.0f-mag, 0.0f, 0.0f,
-        norm[1], 0.0f, 1.0f-mag, 0.0f,
-        norm[2], 0.0f, 0.0f, 1.0f-mag
-    };
+    return std::array<std::array<float,4>,4>{{
+        {{1.0f,   0.0f,    0.0f,   0.0f}},
+        {{norm[0], 1.0f-mag, 0.0f, 0.0f}},
+        {{norm[1], 0.0f, 1.0f-mag, 0.0f}},
+        {{norm[2], 0.0f, 0.0f, 1.0f-mag}}
+    }};
 }
 
 /* Update the early and late 3D panning gains. */
@@ -993,21 +998,75 @@ void ReverbState::update3DPanning(const float *ReflectionsPan, const float *Late
     /* Create matrices that transform a B-Format signal according to the
      * panning vectors.
      */
-    const alu::Matrix earlymat{GetTransformFromVector(ReflectionsPan)};
-    const alu::Matrix latemat{GetTransformFromVector(LateReverbPan)};
+    const std::array<std::array<float,4>,4> earlymat{GetTransformFromVector(ReflectionsPan)};
+    const std::array<std::array<float,4>,4> latemat{GetTransformFromVector(LateReverbPan)};
 
-    mOutTarget = target.Main->Buffer;
-    for(size_t i{0u};i < NUM_LINES;i++)
+    if(mUpmixOutput)
     {
-        const float coeffs[MaxAmbiChannels]{earlymat[0][i], earlymat[1][i], earlymat[2][i],
-            earlymat[3][i]};
-        ComputePanGains(target.Main, coeffs, earlyGain, mEarly.PanGain[i]);
+        /* When upsampling, combine the early and late transforms with the
+         * first-order upsample matrix. This results in panning gains that
+         * apply the panning transform to first-order B-Format, which is then
+         * upsampled.
+         */
+        auto mult_matrix = [](const al::span<const std::array<float,4>,4> mtx1)
+        {
+            auto&& mtx2 = AmbiScale::FirstOrderUp;
+            std::array<std::array<float,MaxAmbiChannels>,NUM_LINES> res{};
+
+            for(size_t i{0};i < mtx1[0].size();++i)
+            {
+                for(size_t j{0};j < mtx2[0].size();++j)
+                {
+                    double sum{0.0};
+                    for(size_t k{0};k < mtx1.size();++k)
+                        sum += double{mtx1[k][i]} * mtx2[k][j];
+                    res[i][j] = static_cast<float>(sum);
+                }
+            }
+
+            return res;
+        };
+        auto earlycoeffs = mult_matrix(earlymat);
+        auto latecoeffs = mult_matrix(latemat);
+
+        mOutTarget = target.Main->Buffer;
+        for(size_t i{0u};i < NUM_LINES;i++)
+            ComputePanGains(target.Main, earlycoeffs[i].data(), earlyGain, mEarly.PanGain[i]);
+        for(size_t i{0u};i < NUM_LINES;i++)
+            ComputePanGains(target.Main, latecoeffs[i].data(), lateGain, mLate.PanGain[i]);
     }
-    for(size_t i{0u};i < NUM_LINES;i++)
+    else
     {
-        const float coeffs[MaxAmbiChannels]{latemat[0][i], latemat[1][i], latemat[2][i],
-            latemat[3][i]};
-        ComputePanGains(target.Main, coeffs, lateGain, mLate.PanGain[i]);
+        /* When not upsampling, combine the early and late A-to-B-Format
+         * conversions with their respective transform. This results panning
+         * gains that convert A-Format to B-Format, which is then panned.
+         */
+        auto mult_matrix = [](const al::span<const std::array<float,NUM_LINES>,4> mtx1,
+            const al::span<const std::array<float,4>,4> mtx2)
+        {
+            std::array<std::array<float,MaxAmbiChannels>,NUM_LINES> res{};
+
+            for(size_t i{0};i < mtx1[0].size();++i)
+            {
+                for(size_t j{0};j < mtx2.size();++j)
+                {
+                    double sum{0.0};
+                    for(size_t k{0};k < mtx1.size();++k)
+                        sum += double{mtx1[k][i]} * mtx2[j][k];
+                    res[i][j] = static_cast<float>(sum);
+                }
+            }
+
+            return res;
+        };
+        auto earlycoeffs = mult_matrix(EarlyA2B, earlymat);
+        auto latecoeffs = mult_matrix(LateA2B, latemat);
+
+        mOutTarget = target.Main->Buffer;
+        for(size_t i{0u};i < NUM_LINES;i++)
+            ComputePanGains(target.Main, earlycoeffs[i].data(), earlyGain, mEarly.PanGain[i]);
+        for(size_t i{0u};i < NUM_LINES;i++)
+            ComputePanGains(target.Main, latecoeffs[i].data(), lateGain, mLate.PanGain[i]);
     }
 }
 

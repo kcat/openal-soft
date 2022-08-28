@@ -69,7 +69,7 @@ struct InputRemixMap {
     struct TargetMix { Channel channel; float mix; };
 
     Channel channel;
-    std::array<TargetMix,2> targets;
+    al::span<const TargetMix> targets;
 };
 
 

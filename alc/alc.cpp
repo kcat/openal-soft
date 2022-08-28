@@ -1513,12 +1513,12 @@ ALCenum EnumFromDevAmbi(DevAmbiScaling scaling)
  * PulseAudio's.
  */
 const std::array<InputRemixMap,6> StereoDownmix{{
-    { FrontCenter, {{{FrontLeft, 0.5f},      {FrontRight, 0.5f}}} },
-    { SideLeft,    {{{FrontLeft, 1.0f/9.0f}, {FrontRight, 0.0f}}} },
-    { SideRight,   {{{FrontLeft, 0.0f},      {FrontRight, 1.0f/9.0f}}} },
-    { BackLeft,    {{{FrontLeft, 1.0f/9.0f}, {FrontRight, 0.0f}}} },
-    { BackRight,   {{{FrontLeft, 0.0f},      {FrontRight, 1.0f/9.0f}}} },
-    { BackCenter,  {{{FrontLeft, 0.5f/9.0f}, {FrontRight, 0.5f/9.0f}}} },
+    { FrontCenter, {{{FrontLeft,  0.5f},      {FrontRight, 0.5f}}} },
+    { SideLeft,    {{{FrontLeft,  1.0f/9.0f}}} },
+    { SideRight,   {{{FrontRight, 1.0f/9.0f}}} },
+    { BackLeft,    {{{FrontLeft,  1.0f/9.0f}}} },
+    { BackRight,   {{{FrontRight, 1.0f/9.0f}}} },
+    { BackCenter,  {{{FrontLeft,  0.5f/9.0f}, {FrontRight, 0.5f/9.0f}}} },
 }};
 const std::array<InputRemixMap,4> QuadDownmix{{
     { FrontCenter, {{{FrontLeft,  0.5f}, {FrontRight, 0.5f}}} },
@@ -1527,9 +1527,9 @@ const std::array<InputRemixMap,4> QuadDownmix{{
     { BackCenter,  {{{BackLeft,   0.5f}, {BackRight,  0.5f}}} },
 }};
 const std::array<InputRemixMap,3> X51Downmix{{
-    { BackLeft,   {{{SideLeft, 1.0f}, {SideRight, 0.0f}}} },
-    { BackRight,  {{{SideLeft, 0.0f}, {SideRight, 1.0f}}} },
-    { BackCenter, {{{SideLeft, 0.5f}, {SideRight, 0.5f}}} },
+    { BackLeft,   {{{SideLeft,  1.0f}}} },
+    { BackRight,  {{{SideRight, 1.0f}}} },
+    { BackCenter, {{{SideLeft,  0.5f}, {SideRight, 0.5f}}} },
 }};
 const std::array<InputRemixMap,2> X61Downmix{{
     { BackLeft,  {{{BackCenter, 0.5f}, {SideLeft,  0.5f}}} },

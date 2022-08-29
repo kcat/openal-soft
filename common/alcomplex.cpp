@@ -7,6 +7,7 @@
 #include <cassert>
 #include <cmath>
 #include <cstddef>
+#include <functional>
 #include <utility>
 
 #include "albit.h"
@@ -148,6 +149,8 @@ void complex_fft(const al::span<std::complex<double>> buffer, const double sign)
 
 void complex_hilbert(const al::span<std::complex<double>> buffer)
 {
+    using namespace std::placeholders;
+
     inverse_fft(buffer);
 
     const double inverse_size = 1.0/static_cast<double>(buffer.size());
@@ -156,8 +159,7 @@ void complex_hilbert(const al::span<std::complex<double>> buffer)
 
     *bufiter *= inverse_size; ++bufiter;
     bufiter = std::transform(bufiter, halfiter, bufiter,
-        [inverse_size](const std::complex<double> &c) -> std::complex<double>
-        { return c * (2.0*inverse_size); });
+        std::bind(std::multiplies<>{}, _1, 2.0*inverse_size));
     *bufiter *= inverse_size; ++bufiter;
 
     std::fill(bufiter, buffer.end(), std::complex<double>{});

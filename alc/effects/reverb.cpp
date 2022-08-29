@@ -1369,18 +1369,31 @@ void ReverbState::earlyUnfaded(size_t offset, const size_t samplesToDo)
         /* First, load decorrelated samples from the main delay line as the
          * primary reflections.
          */
+        const float fadeStep{1.0f / static_cast<float>(todo)};
         for(size_t j{0u};j < NUM_LINES;j++)
         {
-            size_t early_delay_tap{offset - mEarlyDelayTap[j][0]};
+            size_t early_delay_tap0{offset - mEarlyDelayTap[j][0]};
+            size_t early_delay_tap1{offset - mEarlyDelayTap[j][1]};
             const float coeff{mEarlyDelayCoeff[j][0]};
+            const float coeffStep{early_delay_tap0 != early_delay_tap1 ? coeff*fadeStep : 0.0f};
+            float fadeCount{0.0f};
+
             for(size_t i{0u};i < todo;)
             {
-                early_delay_tap &= in_delay.Mask;
-                size_t td{minz(in_delay.Mask+1 - early_delay_tap, todo - i)};
+                early_delay_tap0 &= in_delay.Mask;
+                early_delay_tap1 &= in_delay.Mask;
+                const size_t max_tap{maxz(early_delay_tap0, early_delay_tap1)};
+                size_t td{minz(in_delay.Mask+1 - max_tap, todo-i)};
                 do {
-                    mTempSamples[j][i++] = in_delay.Line[early_delay_tap++][j] * coeff;
+                    const float fade0{coeff - coeffStep*fadeCount};
+                    const float fade1{coeffStep*fadeCount};
+                    fadeCount += 1.0f;
+                    mTempSamples[j][i++] = in_delay.Line[early_delay_tap0++][j]*fade0 +
+                        in_delay.Line[early_delay_tap1++][j]*fade1;
                 } while(--td);
             }
+
+            mEarlyDelayTap[j][0] = mEarlyDelayTap[j][1];
         }
 
         /* Apply a vector all-pass, to help color the initial reflections based
@@ -1567,17 +1580,23 @@ void ReverbState::lateUnfaded(size_t offset, const size_t samplesToDo)
         /* Next, load decorrelated samples from the main and feedback delay
          * lines. Filter the signal to apply its frequency-dependent decay.
          */
+        const float fadeStep{1.0f / static_cast<float>(todo)};
         for(size_t j{0u};j < NUM_LINES;j++)
         {
-            size_t late_delay_tap{offset - mLateDelayTap[j][0]};
+            size_t late_delay_tap0{offset - mLateDelayTap[j][0]};
+            size_t late_delay_tap1{offset - mLateDelayTap[j][1]};
             size_t late_feedb_tap{offset - mLate.Offset[j][0]};
             const float midGain{mLate.T60[j].MidGain[0]};
             const float densityGain{mLate.DensityGain[0] * midGain};
+            const float densityStep{late_delay_tap0 != late_delay_tap1 ?
+                densityGain*fadeStep : 0.0f};
+            float fadeCount{0.0f};
 
             for(size_t i{0u};i < todo;)
             {
-                late_delay_tap &= in_delay.Mask;
-                size_t td{minz(todo - i, in_delay.Mask+1 - late_delay_tap)};
+                late_delay_tap0 &= in_delay.Mask;
+                late_delay_tap1 &= in_delay.Mask;
+                size_t td{minz(todo-i, in_delay.Mask+1 - maxz(late_delay_tap0, late_delay_tap1))};
                 do {
                     /* Calculate the read offset and fraction between it and
                      * the next sample.
@@ -1595,11 +1614,17 @@ void ReverbState::lateUnfaded(size_t offset, const size_t samplesToDo)
                      * samples that were acquired above, and combined with the
                      * main delay tap.
                      */
+                    const float fade0{densityGain - densityStep*fadeCount};
+                    const float fade1{densityStep*fadeCount};
+                    fadeCount += 1.0f;
                     mTempSamples[j][i] = lerpf(out0, out1, frac)*midGain +
-                        in_delay.Line[late_delay_tap++][j]*densityGain;
+                        in_delay.Line[late_delay_tap0++][j]*fade0 +
+                        in_delay.Line[late_delay_tap1++][j]*fade1;
                     ++i;
                 } while(--td);
             }
+            mLateDelayTap[j][0] = mLateDelayTap[j][1];
+
             mLate.T60[j].process({mTempSamples[j].data(), todo});
         }
 

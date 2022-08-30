@@ -894,18 +894,6 @@ void LateReverb::updateLines(const float density_mult, const float diffusion,
         length = LATE_LINE_LENGTHS[i] * density_mult;
         Offset[i][1] = float2uint(length*frequency + 0.5f);
 
-        if(i == 0)
-        {
-            /* Limit the modulation depth to avoid underflowing the read offset. */
-            if(Offset[0][1] <= MAX_UPDATE_SAMPLES)
-                Mod.Depth[1] = 0.0f;
-            else
-            {
-                const auto maxdepth = static_cast<float>(Offset[0][1] - MAX_UPDATE_SAMPLES);
-                if(Mod.Depth[1] > maxdepth) Mod.Depth[1] = maxdepth;
-            }
-        }
-
         /* Approximate the absorption that the vector all-pass would exhibit
          * given the current diffusion so we don't have to process a full T60
          * filter for each of its four lines. Also include the average
@@ -1073,30 +1061,6 @@ void ReverbState::update(const ContextBase *Context, const EffectSlot *Slot,
     const DeviceBase *Device{Context->mDevice};
     const auto frequency = static_cast<float>(Device->Frequency);
 
-    /* Calculate the master filters */
-    float hf0norm{minf(props->Reverb.HFReference/frequency, 0.49f)};
-    mFilter[0].Lp.setParamsFromSlope(BiquadType::HighShelf, hf0norm, props->Reverb.GainHF, 1.0f);
-    float lf0norm{minf(props->Reverb.LFReference/frequency, 0.49f)};
-    mFilter[0].Hp.setParamsFromSlope(BiquadType::LowShelf, lf0norm, props->Reverb.GainLF, 1.0f);
-    for(size_t i{1u};i < NUM_LINES;i++)
-    {
-        mFilter[i].Lp.copyParamsFrom(mFilter[0].Lp);
-        mFilter[i].Hp.copyParamsFrom(mFilter[0].Hp);
-    }
-
-    /* The density-based room size (delay length) multiplier. */
-    const float density_mult{CalcDelayLengthMult(props->Reverb.Density)};
-
-    /* Update the main effect delay and associated taps. */
-    updateDelayLine(props->Reverb.ReflectionsDelay, props->Reverb.LateReverbDelay,
-        density_mult, props->Reverb.DecayTime, frequency);
-
-    /* Update the early lines. */
-    mEarly.updateLines(density_mult, props->Reverb.Diffusion, props->Reverb.DecayTime, frequency);
-
-    /* Get the mixing matrix coefficients. */
-    CalcMatrixCoeffs(props->Reverb.Diffusion, &mMixX, &mMixY);
-
     /* If the HF limit parameter is flagged, calculate an appropriate limit
      * based on the air absorption parameter.
      */
@@ -1110,19 +1074,6 @@ void ReverbState::update(const ContextBase *Context, const EffectSlot *Slot,
     const float lfDecayTime{clampf(props->Reverb.DecayTime*props->Reverb.DecayLFRatio,
         MinDecayTime, MaxDecayTime)};
     const float hfDecayTime{clampf(props->Reverb.DecayTime*hfRatio, MinDecayTime, MaxDecayTime)};
-
-    /* Update the modulator rate and depth. */
-    mLate.Mod.updateModulator(props->Reverb.ModulationTime, props->Reverb.ModulationDepth,
-        frequency);
-
-    /* Update the late lines. */
-    mLate.updateLines(density_mult, props->Reverb.Diffusion, lfDecayTime,
-        props->Reverb.DecayTime, hfDecayTime, lf0norm, hf0norm, frequency);
-
-    /* Update early and late 3D panning. */
-    const float gain{props->Reverb.Gain * Slot->Gain * ReverbBoost};
-    update3DPanning(props->Reverb.ReflectionsPan, props->Reverb.LateReverbPan,
-        props->Reverb.ReflectionsGain*gain, props->Reverb.LateReverbGain*gain, target);
 
     /* Determine if delay-line cross-fading is required. Density is essentially
      * a master control for the feedback delays, so changes the offsets of many
@@ -1155,6 +1106,54 @@ void ReverbState::update(const ContextBase *Context, const EffectSlot *Slot,
         mParams.ModulationDepth = props->Reverb.ModulationDepth;
         mParams.HFReference = props->Reverb.HFReference;
         mParams.LFReference = props->Reverb.LFReference;
+    }
+
+    /* Calculate the master filters */
+    float hf0norm{minf(props->Reverb.HFReference/frequency, 0.49f)};
+    mFilter[0].Lp.setParamsFromSlope(BiquadType::HighShelf, hf0norm, props->Reverb.GainHF, 1.0f);
+    float lf0norm{minf(props->Reverb.LFReference/frequency, 0.49f)};
+    mFilter[0].Hp.setParamsFromSlope(BiquadType::LowShelf, lf0norm, props->Reverb.GainLF, 1.0f);
+    for(size_t i{1u};i < NUM_LINES;i++)
+    {
+        mFilter[i].Lp.copyParamsFrom(mFilter[0].Lp);
+        mFilter[i].Hp.copyParamsFrom(mFilter[0].Hp);
+    }
+
+    /* Update early and late 3D panning. */
+    const float gain{props->Reverb.Gain * Slot->Gain * ReverbBoost};
+    update3DPanning(props->Reverb.ReflectionsPan, props->Reverb.LateReverbPan,
+        props->Reverb.ReflectionsGain*gain, props->Reverb.LateReverbGain*gain, target);
+
+    if(!mDoFading)
+    {
+        /* The density-based room size (delay length) multiplier. */
+        const float density_mult{CalcDelayLengthMult(mParams.Density)};
+
+        /* Update the main effect delay and associated taps. */
+        updateDelayLine(props->Reverb.ReflectionsDelay, props->Reverb.LateReverbDelay,
+            density_mult, mParams.DecayTime, frequency);
+    }
+    else
+    {
+        const float density_mult{CalcDelayLengthMult(props->Reverb.Density)};
+
+        updateDelayLine(props->Reverb.ReflectionsDelay, props->Reverb.LateReverbDelay,
+            density_mult, props->Reverb.DecayTime, frequency);
+
+        /* Update the early lines. */
+        mEarly.updateLines(density_mult, props->Reverb.Diffusion, props->Reverb.DecayTime,
+            frequency);
+
+        /* Get the mixing matrix coefficients. */
+        CalcMatrixCoeffs(props->Reverb.Diffusion, &mMixX, &mMixY);
+
+        /* Update the modulator rate and depth. */
+        mLate.Mod.updateModulator(props->Reverb.ModulationTime, props->Reverb.ModulationDepth,
+            frequency);
+
+        /* Update the late lines. */
+        mLate.updateLines(density_mult, props->Reverb.Diffusion, lfDecayTime,
+            props->Reverb.DecayTime, hfDecayTime, lf0norm, hf0norm, frequency);
     }
 }
 

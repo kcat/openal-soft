@@ -370,22 +370,3 @@ const std::array<AmbiChannelFloatArray,9> AmbiScale::SecondOrder2DUp{CalcSecondO
 const std::array<AmbiChannelFloatArray,16> AmbiScale::ThirdOrderUp{CalcThirdOrderUp()};
 const std::array<AmbiChannelFloatArray,16> AmbiScale::ThirdOrder2DUp{CalcThirdOrder2DUp()};
 const std::array<AmbiChannelFloatArray,25> AmbiScale::FourthOrder2DUp{CalcFourthOrder2DUp()};
-
-const std::array<float,MaxAmbiOrder+1> AmbiScale::DecoderHFScale1O{{
-    2.000000000e+00f, 1.154700538e+00f
-}};
-const std::array<float,MaxAmbiOrder+1> AmbiScale::DecoderHFScale1O2D{{
-    1.414213562e+00f, 1.000000000e+00f
-}};
-const std::array<float,MaxAmbiOrder+1> AmbiScale::DecoderHFScale2O{{
-    1.972026594e+00f, 1.527525232e+00f, 7.888106377e-01f
-}};
-const std::array<float,MaxAmbiOrder+1> AmbiScale::DecoderHFScale2O2D{{
-    1.414213562e+00f, 1.224744871e+00f, 7.071067812e-01f
-}};
-const std::array<float,MaxAmbiOrder+1> AmbiScale::DecoderHFScale3O{{
-    1.865086714e+00f, 1.606093894e+00f, 1.142055301e+00f, 5.683795528e-01f
-}};
-const std::array<float,MaxAmbiOrder+1> AmbiScale::DecoderHFScale3O2D{{
-    1.414213562e+00f, 1.306562965e+00f, 1.000000000e+00f, 5.411961001e-01f
-}};

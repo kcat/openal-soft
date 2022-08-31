@@ -194,8 +194,6 @@ struct ConvolutionState final : public EffectState {
 
     struct ChannelData {
         alignas(16) FloatBufferLine mBuffer{};
-        float mHfScale{};
-        BandSplitter mFilter{};
         float Current[MAX_OUTPUT_CHANNELS]{};
         float Target[MAX_OUTPUT_CHANNELS]{};
     };
@@ -235,7 +233,6 @@ void ConvolutionState::UpsampleMix(const al::span<FloatBufferLine> samplesOut,
     for(auto &chan : *mChans)
     {
         const al::span<float> src{chan.mBuffer.data(), samplesToDo};
-        chan.mFilter.processHfScale(src, chan.mHfScale);
         MixSamples(src, samplesOut, chan.Current, chan.Target, samplesToDo, 0);
     }
 }
@@ -279,10 +276,6 @@ void ConvolutionState::deviceUpdate(const DeviceBase *device, const Buffer &buff
     const auto resampledCount = static_cast<uint>(
         (uint64_t{buffer.storage->mSampleLen}*device->Frequency+(buffer.storage->mSampleRate-1)) /
         buffer.storage->mSampleRate);
-
-    const BandSplitter splitter{device->mXOverFreq / static_cast<float>(device->Frequency)};
-    for(auto &e : *mChans)
-        e.mFilter = splitter;
 
     mFilter.resize(numChannels, {});
     mOutput.resize(numChannels, {});
@@ -418,13 +411,7 @@ void ConvolutionState::update(const ContextBase *context, const EffectSlot *slot
     {
         DeviceBase *device{context->mDevice};
         if(device->mAmbiOrder > mAmbiOrder)
-        {
             mMix = &ConvolutionState::UpsampleMix;
-            const auto scales = AmbiScale::GetHFOrderScales(mAmbiOrder, true);
-            (*mChans)[0].mHfScale = scales[0];
-            for(size_t i{1};i < mChans->size();++i)
-                (*mChans)[i].mHfScale = scales[1];
-        }
         mOutTarget = target.Main->Buffer;
 
         auto&& scales = GetAmbiScales(mAmbiScaling);

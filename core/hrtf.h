@@ -71,7 +71,7 @@ struct DirectHrtfState {
      * high-frequency gains for the decoder. The calculated impulse responses
      * are ordered and scaled according to the matrix input.
      */
-    void build(const HrtfStore *Hrtf, const uint irSize,
+    void build(const HrtfStore *Hrtf, const uint irSize, const bool perHrirMin,
         const al::span<const AngularPoint> AmbiPoints, const float (*AmbiMatrix)[MaxAmbiChannels],
         const float XOverFreq, const al::span<const float,MaxAmbiOrder+1> AmbiOrderHFGain);
 

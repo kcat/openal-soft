@@ -719,10 +719,13 @@ void InitHrtfPanning(ALCdevice *device)
     constexpr float Deg_90{Deg180 / 2.0f /* 90 degrees*/};
     constexpr float Deg_45{Deg_90 / 2.0f /* 45 degrees*/};
     constexpr float Deg135{Deg_45 * 3.0f /*135 degrees*/};
+    constexpr float Deg_21{3.648638281e-01f /* 20~ 21 degrees*/};
+    constexpr float Deg_32{5.535743589e-01f /* 31~ 32 degrees*/};
     constexpr float Deg_35{6.154797087e-01f /* 35~ 36 degrees*/};
+    constexpr float Deg_58{1.017221968e+00f /* 58~ 59 degrees*/};
     constexpr float Deg_69{1.205932499e+00f /* 69~ 70 degrees*/};
     constexpr float Deg111{1.935660155e+00f /*110~111 degrees*/};
-    constexpr float Deg_21{3.648638281e-01f /* 20~ 21 degrees*/};
+    constexpr float Deg122{2.124370686e+00f /*121~122 degrees*/};
     static const AngularPoint AmbiPoints1O[]{
         { EvRadians{ Deg_35}, AzRadians{-Deg_45} },
         { EvRadians{ Deg_35}, AzRadians{-Deg135} },
@@ -733,20 +736,18 @@ void InitHrtfPanning(ALCdevice *device)
         { EvRadians{-Deg_35}, AzRadians{ Deg_45} },
         { EvRadians{-Deg_35}, AzRadians{ Deg135} },
     }, AmbiPoints2O[]{
-        { EvRadians{   0.0f}, AzRadians{   0.0f} },
-        { EvRadians{   0.0f}, AzRadians{ Deg180} },
-        { EvRadians{   0.0f}, AzRadians{-Deg_90} },
-        { EvRadians{   0.0f}, AzRadians{ Deg_90} },
-        { EvRadians{ Deg_90}, AzRadians{   0.0f} },
-        { EvRadians{-Deg_90}, AzRadians{   0.0f} },
-        { EvRadians{ Deg_35}, AzRadians{-Deg_45} },
-        { EvRadians{ Deg_35}, AzRadians{-Deg135} },
-        { EvRadians{ Deg_35}, AzRadians{ Deg_45} },
-        { EvRadians{ Deg_35}, AzRadians{ Deg135} },
-        { EvRadians{-Deg_35}, AzRadians{-Deg_45} },
-        { EvRadians{-Deg_35}, AzRadians{-Deg135} },
-        { EvRadians{-Deg_35}, AzRadians{ Deg_45} },
-        { EvRadians{-Deg_35}, AzRadians{ Deg135} },
+        { EvRadians{-Deg_32}, AzRadians{   0.0f} },
+        { EvRadians{   0.0f}, AzRadians{ Deg_58} },
+        { EvRadians{ Deg_58}, AzRadians{ Deg_90} },
+        { EvRadians{ Deg_32}, AzRadians{   0.0f} },
+        { EvRadians{   0.0f}, AzRadians{ Deg122} },
+        { EvRadians{-Deg_58}, AzRadians{-Deg_90} },
+        { EvRadians{-Deg_32}, AzRadians{ Deg180} },
+        { EvRadians{   0.0f}, AzRadians{-Deg122} },
+        { EvRadians{ Deg_58}, AzRadians{-Deg_90} },
+        { EvRadians{ Deg_32}, AzRadians{ Deg180} },
+        { EvRadians{   0.0f}, AzRadians{-Deg_58} },
+        { EvRadians{-Deg_58}, AzRadians{ Deg_90} },
     }, AmbiPoints3O[]{
         { EvRadians{ Deg_69}, AzRadians{-Deg_90} },
         { EvRadians{ Deg_69}, AzRadians{ Deg_90} },
@@ -779,20 +780,18 @@ void InitHrtfPanning(ALCdevice *device)
         { 1.250000000e-01f, -1.250000000e-01f, -1.250000000e-01f,  1.250000000e-01f },
         { 1.250000000e-01f, -1.250000000e-01f, -1.250000000e-01f, -1.250000000e-01f },
     }, AmbiMatrix2O[][MaxAmbiChannels]{
-        { 7.142857143e-02f,  0.000000000e+00f,  0.000000000e+00f,  1.237179148e-01f,  0.000000000e+00f,  0.000000000e+00f, -7.453559925e-02f,  0.000000000e+00f,  1.290994449e-01f, },
-        { 7.142857143e-02f,  0.000000000e+00f,  0.000000000e+00f, -1.237179148e-01f,  0.000000000e+00f,  0.000000000e+00f, -7.453559925e-02f,  0.000000000e+00f,  1.290994449e-01f, },
-        { 7.142857143e-02f,  1.237179148e-01f,  0.000000000e+00f,  0.000000000e+00f,  0.000000000e+00f,  0.000000000e+00f, -7.453559925e-02f,  0.000000000e+00f, -1.290994449e-01f, },
-        { 7.142857143e-02f, -1.237179148e-01f,  0.000000000e+00f,  0.000000000e+00f,  0.000000000e+00f,  0.000000000e+00f, -7.453559925e-02f,  0.000000000e+00f, -1.290994449e-01f, },
-        { 7.142857143e-02f,  0.000000000e+00f,  1.237179148e-01f,  0.000000000e+00f,  0.000000000e+00f,  0.000000000e+00f,  1.490711985e-01f,  0.000000000e+00f,  0.000000000e+00f, },
-        { 7.142857143e-02f,  0.000000000e+00f, -1.237179148e-01f,  0.000000000e+00f,  0.000000000e+00f,  0.000000000e+00f,  1.490711985e-01f,  0.000000000e+00f,  0.000000000e+00f, },
-        { 7.142857143e-02f,  7.142857143e-02f,  7.142857143e-02f,  7.142857143e-02f,  9.682458366e-02f,  9.682458366e-02f,  0.000000000e+00f,  9.682458366e-02f,  0.000000000e+00f, },
-        { 7.142857143e-02f,  7.142857143e-02f,  7.142857143e-02f, -7.142857143e-02f, -9.682458366e-02f,  9.682458366e-02f,  0.000000000e+00f, -9.682458366e-02f,  0.000000000e+00f, },
-        { 7.142857143e-02f, -7.142857143e-02f,  7.142857143e-02f,  7.142857143e-02f, -9.682458366e-02f, -9.682458366e-02f,  0.000000000e+00f,  9.682458366e-02f,  0.000000000e+00f, },
-        { 7.142857143e-02f, -7.142857143e-02f,  7.142857143e-02f, -7.142857143e-02f,  9.682458366e-02f, -9.682458366e-02f,  0.000000000e+00f, -9.682458366e-02f,  0.000000000e+00f, },
-        { 7.142857143e-02f,  7.142857143e-02f, -7.142857143e-02f,  7.142857143e-02f,  9.682458366e-02f, -9.682458366e-02f,  0.000000000e+00f, -9.682458366e-02f,  0.000000000e+00f, },
-        { 7.142857143e-02f,  7.142857143e-02f, -7.142857143e-02f, -7.142857143e-02f, -9.682458366e-02f, -9.682458366e-02f,  0.000000000e+00f,  9.682458366e-02f,  0.000000000e+00f, },
-        { 7.142857143e-02f, -7.142857143e-02f, -7.142857143e-02f,  7.142857143e-02f, -9.682458366e-02f,  9.682458366e-02f,  0.000000000e+00f, -9.682458366e-02f,  0.000000000e+00f, },
-        { 7.142857143e-02f, -7.142857143e-02f, -7.142857143e-02f, -7.142857143e-02f,  9.682458366e-02f,  9.682458366e-02f,  0.000000000e+00f,  9.682458366e-02f,  0.000000000e+00f, },
+        { 8.333333333e-02f,  0.000000000e+00f, -7.588274978e-02f,  1.227808683e-01f,  0.000000000e+00f,  0.000000000e+00f, -1.591525047e-02f, -1.443375673e-01f,  1.167715449e-01f, },
+        { 8.333333333e-02f, -1.227808683e-01f,  0.000000000e+00f,  7.588274978e-02f, -1.443375673e-01f,  0.000000000e+00f, -9.316949906e-02f,  0.000000000e+00f, -7.216878365e-02f, },
+        { 8.333333333e-02f, -7.588274978e-02f,  1.227808683e-01f,  0.000000000e+00f,  0.000000000e+00f, -1.443375673e-01f,  1.090847495e-01f,  0.000000000e+00f, -4.460276122e-02f, },
+        { 8.333333333e-02f,  0.000000000e+00f,  7.588274978e-02f,  1.227808683e-01f,  0.000000000e+00f,  0.000000000e+00f, -1.591525047e-02f,  1.443375673e-01f,  1.167715449e-01f, },
+        { 8.333333333e-02f, -1.227808683e-01f,  0.000000000e+00f, -7.588274978e-02f,  1.443375673e-01f,  0.000000000e+00f, -9.316949906e-02f,  0.000000000e+00f, -7.216878365e-02f, },
+        { 8.333333333e-02f,  7.588274978e-02f, -1.227808683e-01f,  0.000000000e+00f,  0.000000000e+00f, -1.443375673e-01f,  1.090847495e-01f,  0.000000000e+00f, -4.460276122e-02f, },
+        { 8.333333333e-02f,  0.000000000e+00f, -7.588274978e-02f, -1.227808683e-01f,  0.000000000e+00f,  0.000000000e+00f, -1.591525047e-02f,  1.443375673e-01f,  1.167715449e-01f, },
+        { 8.333333333e-02f,  1.227808683e-01f,  0.000000000e+00f, -7.588274978e-02f, -1.443375673e-01f,  0.000000000e+00f, -9.316949906e-02f,  0.000000000e+00f, -7.216878365e-02f, },
+        { 8.333333333e-02f,  7.588274978e-02f,  1.227808683e-01f,  0.000000000e+00f,  0.000000000e+00f,  1.443375673e-01f,  1.090847495e-01f,  0.000000000e+00f, -4.460276122e-02f, },
+        { 8.333333333e-02f,  0.000000000e+00f,  7.588274978e-02f, -1.227808683e-01f,  0.000000000e+00f,  0.000000000e+00f, -1.591525047e-02f, -1.443375673e-01f,  1.167715449e-01f, },
+        { 8.333333333e-02f,  1.227808683e-01f,  0.000000000e+00f,  7.588274978e-02f,  1.443375673e-01f,  0.000000000e+00f, -9.316949906e-02f,  0.000000000e+00f, -7.216878365e-02f, },
+        { 8.333333333e-02f, -7.588274978e-02f, -1.227808683e-01f,  0.000000000e+00f,  0.000000000e+00f,  1.443375673e-01f,  1.090847495e-01f,  0.000000000e+00f, -4.460276122e-02f, },
     }, AmbiMatrix3O[][MaxAmbiChannels]{
         { 5.000000000e-02f,  3.090169944e-02f,  8.090169944e-02f,  0.000000000e+00f,  0.000000000e+00f,  6.454972244e-02f,  9.045084972e-02f,  0.000000000e+00f, -1.232790000e-02f, -1.256118221e-01f,  0.000000000e+00f,  1.126112056e-01f,  7.944389175e-02f,  0.000000000e+00f,  2.421151497e-02f,  0.000000000e+00f, },
         { 5.000000000e-02f, -3.090169944e-02f,  8.090169944e-02f,  0.000000000e+00f,  0.000000000e+00f, -6.454972244e-02f,  9.045084972e-02f,  0.000000000e+00f, -1.232790000e-02f,  1.256118221e-01f,  0.000000000e+00f, -1.126112056e-01f,  7.944389175e-02f,  0.000000000e+00f,  2.421151497e-02f,  0.000000000e+00f, },
@@ -818,8 +817,8 @@ void InitHrtfPanning(ALCdevice *device)
     static const float AmbiOrderHFGain1O[MaxAmbiOrder+1]{
         /*ENRGY*/ 2.000000000e+00f, 1.154700538e+00f
     }, AmbiOrderHFGain2O[MaxAmbiOrder+1]{
-        /*ENRGY 1.972026594e+00f, 1.527525232e+00f, 7.888106377e-01f*/
-        /*AMP*/ 1.000000000e+00f, 7.745966692e-01f, 4.000000000e-01f
+        /*ENRGY*/ 1.825741858e+00f, 1.414213562e+00f, 7.302967433e-01f
+        /*AMP   1.000000000e+00f, 7.745966692e-01f, 4.000000000e-01f*/
         /*RMS   9.128709292e-01f, 7.071067812e-01f, 3.651483717e-01f*/
     }, AmbiOrderHFGain3O[MaxAmbiOrder+1]{
         /*ENRGY 1.865086714e+00f, 1.606093894e+00f, 1.142055301e+00f, 5.683795528e-01f*/
@@ -889,11 +888,13 @@ void InitHrtfPanning(ALCdevice *device)
         (device->mRenderMode == RenderMode::Hrtf) ? "+ Full " : "",
         device->mHrtfName.c_str());
 
+    bool perHrirMin{false};
     al::span<const AngularPoint> AmbiPoints{AmbiPoints1O};
     const float (*AmbiMatrix)[MaxAmbiChannels]{AmbiMatrix1O};
     al::span<const float,MaxAmbiOrder+1> AmbiOrderHFGain{AmbiOrderHFGain1O};
     if(ambi_order >= 3)
     {
+        perHrirMin = true;
         AmbiPoints = AmbiPoints3O;
         AmbiMatrix = AmbiMatrix3O;
         AmbiOrderHFGain = AmbiOrderHFGain3O;
@@ -915,7 +916,7 @@ void InitHrtfPanning(ALCdevice *device)
 
     HrtfStore *Hrtf{device->mHrtf.get()};
     auto hrtfstate = DirectHrtfState::Create(count);
-    hrtfstate->build(Hrtf, device->mIrSize, AmbiPoints, AmbiMatrix, device->mXOverFreq,
+    hrtfstate->build(Hrtf, device->mIrSize, perHrirMin, AmbiPoints, AmbiMatrix, device->mXOverFreq,
         AmbiOrderHFGain);
     device->mHrtfState = std::move(hrtfstate);
 

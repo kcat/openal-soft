@@ -262,7 +262,7 @@ void GetHrtfCoeffs(const HrtfStore *Hrtf, float elevation, float azimuth, float 
 std::unique_ptr<DirectHrtfState> DirectHrtfState::Create(size_t num_chans)
 { return std::unique_ptr<DirectHrtfState>{new(FamCount(num_chans)) DirectHrtfState{num_chans}}; }
 
-void DirectHrtfState::build(const HrtfStore *Hrtf, const uint irSize,
+void DirectHrtfState::build(const HrtfStore *Hrtf, const uint irSize, const bool perHrirMin,
     const al::span<const AngularPoint> AmbiPoints, const float (*AmbiMatrix)[MaxAmbiChannels],
     const float XOverFreq, const al::span<const float,MaxAmbiOrder+1> AmbiOrderHFGain)
 {
@@ -318,13 +318,12 @@ void DirectHrtfState::build(const HrtfStore *Hrtf, const uint irSize,
     TRACE("Min delay: %.2f, max delay: %.2f, FIR length: %u\n",
         min_delay/double{HrirDelayFracOne}, max_delay/double{HrirDelayFracOne}, irSize);
 
-    const bool per_hrir_min{mChannels.size() > AmbiChannelsFromOrder(1)};
     auto tmpres = al::vector<std::array<double2,HrirLength>>(mChannels.size());
     max_delay = 0;
     for(size_t c{0u};c < AmbiPoints.size();++c)
     {
         const ConstHrirSpan hrir{impres[c].hrir};
-        const uint base_delay{per_hrir_min ? minu(impres[c].ldelay, impres[c].rdelay) : min_delay};
+        const uint base_delay{perHrirMin ? minu(impres[c].ldelay, impres[c].rdelay) : min_delay};
         const uint ldelay{hrir_delay_round(impres[c].ldelay - base_delay)};
         const uint rdelay{hrir_delay_round(impres[c].rdelay - base_delay)};
         max_delay = maxu(max_delay, maxu(impres[c].ldelay, impres[c].rdelay) - base_delay);

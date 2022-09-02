@@ -374,7 +374,7 @@ const std::array<float,MaxAmbiOrder+1> AmbiScale::DecoderHFScale1O2D{{
     1.414213562e+00f, 1.000000000e+00f
 }};
 const std::array<float,MaxAmbiOrder+1> AmbiScale::DecoderHFScale2O{{
-    1.972026594e+00f, 1.527525232e+00f, 7.888106377e-01f
+    1.825741858e+00f, 1.414213562e+00f, 7.302967433e-01f
 }};
 const std::array<float,MaxAmbiOrder+1> AmbiScale::DecoderHFScale2O2D{{
     1.414213562e+00f, 1.224744871e+00f, 7.071067812e-01f

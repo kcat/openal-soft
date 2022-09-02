@@ -453,6 +453,8 @@ struct ReverbState final : public EffectState {
 
 
     bool mUpmixOutput{false};
+    std::array<float,MaxAmbiOrder+1> mOrderScales{};
+    std::array<std::array<BandSplitter,NUM_LINES>,2> mAmbiSplitter;
 
 
     static void DoMixRow(const al::span<float> OutBuffer, const al::span<const float,4> Gains,
@@ -499,19 +501,30 @@ struct ReverbState final : public EffectState {
     {
         ASSUME(todo > 0);
 
-        /* TODO: If HF scaling isn't needed for upsampling, the A-to-B-Format
-         * matrix can be included with the panning gains like non-upsampled
-         * output.
+        /* When upsampling, the B-Format conversion needs to be done separately
+         * so the proper HF scaling can be applied to each B-Format channel.
+         * The panning gains then pan and upsample the B-Format channels.
          */
         const al::span<float> tmpspan{al::assume_aligned<16>(mTempLine.data()), todo};
         for(size_t c{0u};c < NUM_LINES;c++)
         {
             DoMixRow(tmpspan, EarlyA2B[c], mEarlySamples[0].data(), mEarlySamples[0].size());
+
+            /* Apply scaling to the B-Format's HF response to "upsample" it to
+             * higher-order output.
+             */
+            const float hfscale{(c==0) ? mOrderScales[0] : mOrderScales[1]};
+            mAmbiSplitter[0][c].processHfScale(tmpspan, hfscale);
+
             MixSamples(tmpspan, samplesOut, mEarly.CurrentGain[c], mEarly.PanGain[c], todo, 0);
         }
         for(size_t c{0u};c < NUM_LINES;c++)
         {
             DoMixRow(tmpspan, LateA2B[c], mLateSamples[0].data(), mLateSamples[0].size());
+
+            const float hfscale{(c==0) ? mOrderScales[0] : mOrderScales[1]};
+            mAmbiSplitter[1][c].processHfScale(tmpspan, hfscale);
+
             MixSamples(tmpspan, samplesOut, mLate.CurrentGain[c], mLate.PanGain[c], todo, 0);
         }
     }
@@ -670,7 +683,19 @@ void ReverbState::deviceUpdate(const DeviceBase *device, const Buffer&)
     mDoFading = true;
     mOffset = 0;
 
-    mUpmixOutput = (device->mAmbiOrder > 1);
+    if(device->mAmbiOrder > 1)
+    {
+        mUpmixOutput = true;
+        mOrderScales = AmbiScale::GetHFOrderScales(1, true);
+    }
+    else
+    {
+        mUpmixOutput = false;
+        mOrderScales.fill(1.0f);
+    }
+    mAmbiSplitter[0][0].init(device->mXOverFreq / frequency);
+    std::fill(mAmbiSplitter[0].begin()+1, mAmbiSplitter[0].end(), mAmbiSplitter[0][0]);
+    std::fill(mAmbiSplitter[1].begin(), mAmbiSplitter[1].end(), mAmbiSplitter[0][0]);
 }
 
 /**************************************

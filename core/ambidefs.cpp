@@ -29,6 +29,18 @@ constexpr std::array<std::array<float,MaxAmbiOrder+1>,MaxAmbiOrder+1> HFScales{{
     /* 1.947005434e+00f, 1.764337084e+00f, 1.424707344e+00f, 9.755104127e-01f, 4.784482742e-01f */
 }};
 
+/* Same as above, but using a 10-point horizontal-only speaker array. Should
+ * only be used when the device is mixing in 2D B-Format for horizontal-only
+ * output.
+ */
+constexpr std::array<std::array<float,MaxAmbiOrder+1>,MaxAmbiOrder+1> HFScales2D{{
+    {{ 2.236067977e+00f, 1.581138830e+00f, 9.128709292e-01f, 6.050756345e-01f }},
+    {{ 2.236067977e+00f, 1.581138830e+00f, 9.128709292e-01f, 6.050756345e-01f }},
+    {{ 1.825741858e+00f, 1.581138830e+00f, 9.128709292e-01f, 6.050756345e-01f }},
+    {{ 1.581138830e+00f, 1.460781803e+00f, 1.118033989e+00f, 6.050756345e-01f }},
+    /* 1.414213562e+00f, 1.344997024e+00f, 1.144122806e+00f, 8.312538756e-01f, 4.370160244e-01f */
+}};
+
 
 constexpr std::array<std::array<float,4>,8> FirstOrderDecoder{{
     {{ 1.250000000e-01f,  1.250000000e-01f,  1.250000000e-01f,  1.250000000e-01f, }},
@@ -385,12 +397,20 @@ const std::array<AmbiChannelFloatArray,25> AmbiScale::FourthOrder2DUp{CalcFourth
 
 
 std::array<float,MaxAmbiOrder+1> AmbiScale::GetHFOrderScales(const uint src_order,
-    const uint dev_order) noexcept
+    const uint dev_order, const bool horizontalOnly) noexcept
 {
     std::array<float,MaxAmbiOrder+1> res{};
 
-    for(size_t i{0};i < MaxAmbiOrder+1;++i)
-        res[i] = HFScales[src_order][i] / HFScales[dev_order][i];
+    if(!horizontalOnly)
+    {
+        for(size_t i{0};i < MaxAmbiOrder+1;++i)
+            res[i] = HFScales[src_order][i] / HFScales[dev_order][i];
+    }
+    else
+    {
+        for(size_t i{0};i < MaxAmbiOrder+1;++i)
+            res[i] = HFScales2D[src_order][i] / HFScales2D[dev_order][i];
+    }
 
     return res;
 }

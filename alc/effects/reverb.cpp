@@ -686,7 +686,7 @@ void ReverbState::deviceUpdate(const DeviceBase *device, const Buffer&)
     if(device->mAmbiOrder > 1)
     {
         mUpmixOutput = true;
-        mOrderScales = AmbiScale::GetHFOrderScales(1, device->mAmbiOrder);
+        mOrderScales = AmbiScale::GetHFOrderScales(1, device->mAmbiOrder, false);
     }
     else
     {

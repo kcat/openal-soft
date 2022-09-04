@@ -14,6 +14,22 @@ constexpr auto inv_sqrt2f = static_cast<float>(1.0/al::numbers::sqrt2);
 constexpr auto inv_sqrt3f = static_cast<float>(1.0/al::numbers::sqrt3);
 
 
+/* These HF gains are derived from the same 32-point speaker array. The scale
+ * factor between orders represents the same scale factors for any (regular)
+ * speaker array decoder. e.g. Given a first-order source and second-order
+ * output, applying an HF scale of HFScales[1][0] / HFScales[2][0] to channel 0
+ * will result in that channel being subsequently decoded for second-order as
+ * if it was a first-order decoder for that same speaker array.
+ */
+constexpr std::array<std::array<float,MaxAmbiOrder+1>,MaxAmbiOrder+1> HFScales{{
+    {{ 4.000000000e+00f, 2.309401077e+00f, 1.192569588e+00f, 7.189495850e-01f }},
+    {{ 4.000000000e+00f, 2.309401077e+00f, 1.192569588e+00f, 7.189495850e-01f }},
+    {{ 2.981423970e+00f, 2.309401077e+00f, 1.192569588e+00f, 7.189495850e-01f }},
+    {{ 2.359168820e+00f, 2.031565936e+00f, 1.444598386e+00f, 7.189495850e-01f }},
+    /* 1.947005434e+00f, 1.764337084e+00f, 1.424707344e+00f, 9.755104127e-01f, 4.784482742e-01f */
+}};
+
+
 constexpr std::array<std::array<float,4>,8> FirstOrderDecoder{{
     {{ 1.250000000e-01f,  1.250000000e-01f,  1.250000000e-01f,  1.250000000e-01f, }},
     {{ 1.250000000e-01f,  1.250000000e-01f,  1.250000000e-01f, -1.250000000e-01f, }},
@@ -367,21 +383,14 @@ const std::array<AmbiChannelFloatArray,16> AmbiScale::ThirdOrderUp{CalcThirdOrde
 const std::array<AmbiChannelFloatArray,16> AmbiScale::ThirdOrder2DUp{CalcThirdOrder2DUp()};
 const std::array<AmbiChannelFloatArray,25> AmbiScale::FourthOrder2DUp{CalcFourthOrder2DUp()};
 
-const std::array<float,MaxAmbiOrder+1> AmbiScale::DecoderHFScale1O{{
-    2.000000000e+00f, 1.154700538e+00f
-}};
-const std::array<float,MaxAmbiOrder+1> AmbiScale::DecoderHFScale1O2D{{
-    1.414213562e+00f, 1.000000000e+00f
-}};
-const std::array<float,MaxAmbiOrder+1> AmbiScale::DecoderHFScale2O{{
-    1.825741858e+00f, 1.414213562e+00f, 7.302967433e-01f
-}};
-const std::array<float,MaxAmbiOrder+1> AmbiScale::DecoderHFScale2O2D{{
-    1.414213562e+00f, 1.224744871e+00f, 7.071067812e-01f
-}};
-const std::array<float,MaxAmbiOrder+1> AmbiScale::DecoderHFScale3O{{
-    1.865086714e+00f, 1.606093894e+00f, 1.142055301e+00f, 5.683795528e-01f
-}};
-const std::array<float,MaxAmbiOrder+1> AmbiScale::DecoderHFScale3O2D{{
-    1.414213562e+00f, 1.306562965e+00f, 1.000000000e+00f, 5.411961001e-01f
-}};
+
+std::array<float,MaxAmbiOrder+1> AmbiScale::GetHFOrderScales(const uint src_order,
+    const uint dev_order) noexcept
+{
+    std::array<float,MaxAmbiOrder+1> res{};
+
+    for(size_t i{0};i < MaxAmbiOrder+1;++i)
+        res[i] = HFScales[src_order][i] / HFScales[dev_order][i];
+
+    return res;
+}

@@ -153,6 +153,8 @@ struct DeviceBase {
     DevFmtType FmtType{};
     uint mAmbiOrder{0};
     float mXOverFreq{400.0f};
+    /* If the main device mix is horizontal/2D only. */
+    bool m2DMixing{false};
     /* For DevFmtAmbi* output only, specifies the channel order and
      * normalization.
      */

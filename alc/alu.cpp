@@ -919,7 +919,8 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
              * channels should be non-0).
              */
             if(Device->mAmbiOrder > voice->mAmbiOrder
-                || (Device->mAmbiOrder >= 2 && Is2DAmbisonic(voice->mFmtChannels)))
+                || (Device->mAmbiOrder >= 2 && !Device->m2DMixing
+                    && Is2DAmbisonic(voice->mFmtChannels)))
             {
                 if(voice->mAmbiOrder == 1)
                 {
@@ -940,8 +941,10 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
                     UpsampleBFormatTransform(Device->mAmbiOrder, upsampler, shrot);
                 }
                 else if(voice->mAmbiOrder == 4)
-                    UpsampleBFormatTransform(Device->mAmbiOrder, AmbiScale::FourthOrder2DUp,
-                        shrot);
+                {
+                    auto&& upsampler = AmbiScale::FourthOrder2DUp;
+                    UpsampleBFormatTransform(Device->mAmbiOrder, upsampler, shrot);
+                }
             }
 
             /* Convert the rotation matrix for input ordering and scaling, and

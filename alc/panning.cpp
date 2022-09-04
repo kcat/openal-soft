@@ -611,6 +611,7 @@ void InitPanning(ALCdevice *device, const bool hqdec=false, const bool stablize=
                 [&n3dscale](const uint8_t &acn) noexcept -> BFChannelConfig
                 { return BFChannelConfig{1.0f/n3dscale[acn], acn}; });
             AllocChannels(device, count, 0);
+            device->m2DMixing = false;
 
             float avg_dist{};
             if(auto distopt = device->configValue<float>("decoder", "speaker-dist"))
@@ -667,6 +668,7 @@ void InitPanning(ALCdevice *device, const bool hqdec=false, const bool stablize=
 
     /* For non-DevFmtAmbi3D, set the ambisonic order. */
     device->mAmbiOrder = decoder.mOrder;
+    device->m2DMixing = !decoder.mIs3D;
 
     const size_t ambicount{decoder.mIs3D ? AmbiChannelsFromOrder(decoder.mOrder) :
         Ambi2DChannelsFromOrder(decoder.mOrder)};
@@ -906,6 +908,7 @@ void InitHrtfPanning(ALCdevice *device)
         AmbiOrderHFGain = AmbiOrderHFGain2O;
     }
     device->mAmbiOrder = ambi_order;
+    device->m2DMixing = false;
 
     const size_t count{AmbiChannelsFromOrder(ambi_order)};
     std::transform(AmbiIndex::FromACN().begin(), AmbiIndex::FromACN().begin()+count,
@@ -929,8 +932,9 @@ void InitUhjPanning(ALCdevice *device)
     constexpr size_t count{Ambi2DChannelsFromOrder(1)};
 
     device->mAmbiOrder = 1;
+    device->m2DMixing = true;
 
-    auto acnmap_begin = AmbiIndex::FromFuMa().begin();
+    auto acnmap_begin = AmbiIndex::FromFuMa2D().begin();
     std::transform(acnmap_begin, acnmap_begin + count, std::begin(device->Dry.AmbiMap),
         [](const uint8_t &acn) noexcept -> BFChannelConfig
         { return BFChannelConfig{1.0f/AmbiScale::FromUHJ()[acn], acn}; });
@@ -949,6 +953,7 @@ void aluInitRenderer(ALCdevice *device, int hrtf_id, al::optional<StereoEncoding
     device->mIrSize = 0;
     device->mHrtfName.clear();
     device->mXOverFreq = 400.0f;
+    device->m2DMixing = false;
     device->mRenderMode = RenderMode::Normal;
 
     if(device->FmtChans != DevFmtStereo)

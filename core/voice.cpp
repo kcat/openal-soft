@@ -899,7 +899,8 @@ void Voice::prepare(DeviceBase *device)
     {
         const uint8_t *OrderFromChan{Is2DAmbisonic(mFmtChannels) ?
             AmbiIndex::OrderFrom2DChannel().data() : AmbiIndex::OrderFromChannel().data()};
-        const auto scales = AmbiScale::GetHFOrderScales(mAmbiOrder, device->mAmbiOrder, false);
+        const auto scales = AmbiScale::GetHFOrderScales(mAmbiOrder, device->mAmbiOrder,
+            device->m2DMixing);
 
         const BandSplitter splitter{device->mXOverFreq / static_cast<float>(device->Frequency)};
         for(auto &chandata : mChans)
@@ -912,7 +913,7 @@ void Voice::prepare(DeviceBase *device)
             std::fill_n(chandata.mWetParams.begin(), device->NumAuxSends, SendParams{});
         }
         /* 2-channel UHJ needs different shelf filters. However, we can't just
-         * use different shelf filters after mixing it and with any old speaker
+         * use different shelf filters after mixing it, given any old speaker
          * setup the user has. To make this work, we apply the expected shelf
          * filters for decoding UHJ2 to quad (only needs LF scaling), and act
          * as if those 4 quad channels are encoded right back onto higher-order

@@ -420,7 +420,8 @@ void ConvolutionState::update(const ContextBase *context, const EffectSlot *slot
         if(device->mAmbiOrder > mAmbiOrder)
         {
             mMix = &ConvolutionState::UpsampleMix;
-            const auto scales = AmbiScale::GetHFOrderScales(mAmbiOrder, device->mAmbiOrder, false);
+            const auto scales = AmbiScale::GetHFOrderScales(mAmbiOrder, device->mAmbiOrder,
+                device->m2DMixing);
             (*mChans)[0].mHfScale = scales[0];
             for(size_t i{1};i < mChans->size();++i)
                 (*mChans)[i].mHfScale = scales[1];

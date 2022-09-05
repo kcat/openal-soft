@@ -1088,7 +1088,7 @@ if(COREAUDIO_FRAMEWORK AND AUDIOUNIT_INCLUDE_DIR)
         set(BACKENDS  "${BACKENDS} CoreAudio,")
 
         set(EXTRA_LIBS -Wl,-framework,CoreAudio ${EXTRA_LIBS})
-        if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
+        if(CMAKE_SYSTEM_NAME MATCHES "^(iOS|tvOS)$")
             find_library(COREFOUNDATION_FRAMEWORK NAMES CoreFoundation)
             if(COREFOUNDATION_FRAMEWORK)
                 set(EXTRA_LIBS -Wl,-framework,CoreFoundation ${EXTRA_LIBS})

@@ -11,14 +11,11 @@
 #include <string>
 
 #include "alfstream.h"
+#include "alspan.h"
 #include "core/logging.h"
 
 
 namespace {
-
-template<typename T, std::size_t N>
-constexpr inline std::size_t size(const T(&)[N]) noexcept
-{ return N; }
 
 int readline(std::istream &f, std::string &output)
 {
@@ -65,11 +62,11 @@ bool is_at_end(const std::string &buffer, std::size_t endpos)
 }
 
 
-al::optional<std::string> load_ambdec_speakers(AmbDecConf::SpeakerConf *spkrs,
-    const std::size_t num_speakers, std::istream &f, std::string &buffer)
+al::optional<std::string> load_ambdec_speakers(const al::span<AmbDecConf::SpeakerConf> spkrs,
+    std::istream &f, std::string &buffer)
 {
     size_t cur_speaker{0};
-    while(cur_speaker < num_speakers)
+    while(cur_speaker < spkrs.size())
     {
         std::istringstream istr{buffer};
 
@@ -110,7 +107,7 @@ al::optional<std::string> load_ambdec_speakers(AmbDecConf::SpeakerConf *spkrs,
     return al::nullopt;
 }
 
-al::optional<std::string> load_ambdec_matrix(float (&gains)[MaxAmbiOrder+1],
+al::optional<std::string> load_ambdec_matrix(const al::span<float,MaxAmbiOrder+1> gains,
     AmbDecConf::CoeffArray *matrix, const std::size_t maxrow, std::istream &f, std::string &buffer)
 {
     bool gotgains{false};
@@ -138,10 +135,10 @@ al::optional<std::string> load_ambdec_matrix(float (&gains)[MaxAmbiOrder+1],
                 if(!istr.eof() && !std::isspace(istr.peek()))
                     return al::make_optional("Extra junk on gain "+std::to_string(curgain+1)+": "+
                         buffer.substr(static_cast<std::size_t>(istr.tellg())));
-                if(curgain < size(gains))
+                if(curgain < gains.size())
                     gains[curgain++] = value;
             }
-            std::fill(std::begin(gains)+curgain, std::end(gains), 0.0f);
+            std::fill(gains.begin()+curgain, gains.end(), 0.0f);
             gotgains = true;
         }
         else if(cmd == "add_row")
@@ -223,6 +220,8 @@ al::optional<std::string> AmbDecConf::load(const char *fname) noexcept
 
             if(!ChanMask)
                 return al::make_optional("Invalid chan_mask: "+std::to_string(ChanMask));
+            if(ChanMask > Ambi3OrderMask && CoeffScale == AmbDecScale::FuMa)
+                return al::make_optional<std::string>("FuMa not compatible with over third-order");
         }
         else if(command == "/dec/freq_bands")
         {
@@ -259,6 +258,9 @@ al::optional<std::string> AmbDecConf::load(const char *fname) noexcept
             else if(scale == "fuma") CoeffScale = AmbDecScale::FuMa;
             else
                 return al::make_optional("Unexpected coeff_scale: "+scale);
+
+            if(ChanMask > Ambi3OrderMask && CoeffScale == AmbDecScale::FuMa)
+                return al::make_optional<std::string>("FuMa not compatible with over third-order");
         }
         else if(command == "/opt/xover_freq")
         {
@@ -274,8 +276,8 @@ al::optional<std::string> AmbDecConf::load(const char *fname) noexcept
                 return al::make_optional("Extra junk after xover_ratio: " +
                     buffer.substr(static_cast<std::size_t>(istr.tellg())));
         }
-        else if(command == "/opt/input_scale" || command == "/opt/nfeff_comp" ||
-                command == "/opt/delay_comp" || command == "/opt/level_comp")
+        else if(command == "/opt/input_scale" || command == "/opt/nfeff_comp"
+            || command == "/opt/delay_comp" || command == "/opt/level_comp")
         {
             /* Unused */
             read_word(istr);
@@ -290,7 +292,7 @@ al::optional<std::string> AmbDecConf::load(const char *fname) noexcept
                 return al::make_optional("Extra junk on line: " + buffer.substr(endpos));
             buffer.clear();
 
-            if(auto err = load_ambdec_speakers(Speakers.get(), NumSpeakers, f, buffer))
+            if(auto err = load_ambdec_speakers({Speakers.get(), NumSpeakers}, f, buffer))
                 return err;
             speakers_loaded = true;
 

@@ -220,8 +220,6 @@ al::optional<std::string> AmbDecConf::load(const char *fname) noexcept
 
             if(!ChanMask)
                 return al::make_optional("Invalid chan_mask: "+std::to_string(ChanMask));
-            if(ChanMask > Ambi3OrderMask && CoeffScale == AmbDecScale::FuMa)
-                return al::make_optional<std::string>("FuMa not compatible with over third-order");
         }
         else if(command == "/dec/freq_bands")
         {
@@ -252,15 +250,15 @@ al::optional<std::string> AmbDecConf::load(const char *fname) noexcept
         }
         else if(command == "/dec/coeff_scale")
         {
+            if(CoeffScale != AmbDecScale::Unset)
+                return al::make_optional<std::string>("Duplicate coeff_scale");
+
             std::string scale = read_word(istr);
             if(scale == "n3d") CoeffScale = AmbDecScale::N3D;
             else if(scale == "sn3d") CoeffScale = AmbDecScale::SN3D;
             else if(scale == "fuma") CoeffScale = AmbDecScale::FuMa;
             else
                 return al::make_optional("Unexpected coeff_scale: "+scale);
-
-            if(ChanMask > Ambi3OrderMask && CoeffScale == AmbDecScale::FuMa)
-                return al::make_optional<std::string>("FuMa not compatible with over third-order");
         }
         else if(command == "/opt/xover_freq")
         {
@@ -362,8 +360,15 @@ al::optional<std::string> AmbDecConf::load(const char *fname) noexcept
             if(!is_at_end(buffer, endpos))
                 return al::make_optional("Extra junk on end: " + buffer.substr(endpos));
 
+            if(ChanMask == 0)
+                return al::make_optional<std::string>("No channel mask defined");
             if(!speakers_loaded || !matrix_loaded || (FreqBands == 2 && !lfmatrix_loaded))
                 return al::make_optional<std::string>("No decoder defined");
+            if(CoeffScale == AmbDecScale::Unset)
+                return al::make_optional<std::string>("No coefficient scaling defined");
+
+            if(ChanMask > Ambi3OrderMask && CoeffScale == AmbDecScale::FuMa)
+                return al::make_optional<std::string>("FuMa not compatible with over third-order");
 
             return al::nullopt;
         }

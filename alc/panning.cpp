@@ -338,6 +338,7 @@ DecoderView MakeDecoderView(ALCdevice *device, const AmbDecConf *conf,
 
     switch(conf->CoeffScale)
     {
+    case AmbDecScale::Unset: ASSUME(0); break;
     case AmbDecScale::N3D: decoder.mScaling = DevAmbiScaling::N3D; break;
     case AmbDecScale::SN3D: decoder.mScaling = DevAmbiScaling::SN3D; break;
     case AmbDecScale::FuMa: decoder.mScaling = DevAmbiScaling::FuMa; break;

@@ -153,16 +153,15 @@ al::optional<std::string> AmbDecConf::load(const char *fname) noexcept
                 AmbDecConf::CoeffArray &mtxrow = matrix[pos++];
                 mtxrow.fill(0.0f);
 
-                std::size_t curidx{0u};
                 float value{};
                 while(mask)
                 {
-                    auto idx = al::countr_zero(mask);
+                    auto idx = static_cast<unsigned>(al::countr_zero(mask));
                     mask &= ~(1u << idx);
 
                     istr >> value;
-                    if(curidx < mtxrow.size())
-                        mtxrow[curidx++] = value;
+                    if(idx < mtxrow.size())
+                        mtxrow[idx] = value;
                 }
             }
             else

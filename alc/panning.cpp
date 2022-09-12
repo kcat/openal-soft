@@ -351,44 +351,10 @@ DecoderView MakeDecoderView(ALCdevice *device, const AmbDecConf *conf,
         std::min(al::size(conf->LFOrderGain), al::size(decoder.mOrderGainLF)),
         std::begin(decoder.mOrderGainLF));
 
-    std::array<uint8_t,MaxAmbiChannels> idx_map{};
-    if(decoder.mIs3D)
-    {
-        uint flags{conf->ChanMask};
-        auto elem = idx_map.begin();
-        while(flags)
-        {
-            int acn{al::countr_zero(flags)};
-            flags &= ~(1u<<acn);
-
-            *elem = static_cast<uint8_t>(acn);
-            ++elem;
-        }
-    }
-    else
-    {
-        uint flags{conf->ChanMask};
-        auto elem = idx_map.begin();
-        while(flags)
-        {
-            int acn{al::countr_zero(flags)};
-            flags &= ~(1u<<acn);
-
-            switch(acn)
-            {
-            case 0: *elem = 0; break;
-            case 1: *elem = 1; break;
-            case 3: *elem = 2; break;
-            case 4: *elem = 3; break;
-            case 8: *elem = 4; break;
-            case 9: *elem = 5; break;
-            case 15: *elem = 6; break;
-            default: return ret;
-            }
-            ++elem;
-        }
-    }
-    const auto num_coeffs = static_cast<uint>(al::popcount(conf->ChanMask));
+    const auto num_coeffs = decoder.mIs3D ? AmbiChannelsFromOrder(decoder.mOrder)
+        : Ambi2DChannelsFromOrder(decoder.mOrder);
+    const auto idx_map = decoder.mIs3D ? AmbiIndex::FromACN().data()
+        : AmbiIndex::FromACN2D().data();
     const auto hfmatrix = conf->HFMatrix;
     const auto lfmatrix = conf->LFMatrix;
 
@@ -445,16 +411,16 @@ DecoderView MakeDecoderView(ALCdevice *device, const AmbDecConf *conf,
         }
 
         decoder.mChannels[chan_count] = ch;
-        for(size_t src{0};src < num_coeffs;++src)
+        for(size_t dst{0};dst < num_coeffs;++dst)
         {
-            const size_t dst{idx_map[src]};
+            const size_t src{idx_map[dst]};
             decoder.mCoeffs[chan_count][dst] = hfmatrix[chan_count][src];
         }
         if(conf->FreqBands > 1)
         {
-            for(size_t src{0};src < num_coeffs;++src)
+            for(size_t dst{0};dst < num_coeffs;++dst)
             {
-                const size_t dst{idx_map[src]};
+                const size_t src{idx_map[dst]};
                 decoder.mCoeffsLF[chan_count][dst] = lfmatrix[chan_count][src];
             }
         }
@@ -628,6 +594,8 @@ void InitPanning(ALCdevice *device, const bool hqdec=false, const bool stablize=
         }
     }
 
+    const size_t ambicount{decoder.mIs3D ? AmbiChannelsFromOrder(decoder.mOrder) :
+        Ambi2DChannelsFromOrder(decoder.mOrder)};
     const bool dual_band{hqdec && !decoder.mCoeffsLF.empty()};
     al::vector<ChannelDec> chancoeffs, chancoeffslf;
     for(size_t i{0u};i < decoder.mChannels.size();++i)
@@ -640,39 +608,29 @@ void InitPanning(ALCdevice *device, const bool hqdec=false, const bool stablize=
             continue;
         }
 
+        auto ordermap = decoder.mIs3D ? AmbiIndex::OrderFromChannel().data()
+            : AmbiIndex::OrderFrom2DChannel().data();
+
         chancoeffs.resize(maxz(chancoeffs.size(), idx+1u), ChannelDec{});
-        al::span<float,MaxAmbiChannels> coeffs{chancoeffs[idx]};
-        size_t ambichan{0};
-        for(uint o{0};o < decoder.mOrder+1u;++o)
-        {
-            const float order_gain{decoder.mOrderGain[o]};
-            const size_t order_max{decoder.mIs3D ? AmbiChannelsFromOrder(o) :
-                Ambi2DChannelsFromOrder(o)};
-            for(;ambichan < order_max;++ambichan)
-                coeffs[ambichan] = decoder.mCoeffs[i][ambichan] * order_gain;
-        }
+        al::span<const float,MaxAmbiChannels> src{decoder.mCoeffs[i]};
+        al::span<float,MaxAmbiChannels> dst{chancoeffs[idx]};
+        for(size_t ambichan{0};ambichan < ambicount;++ambichan)
+            dst[ambichan] = src[ambichan] * decoder.mOrderGain[ordermap[ambichan]];
+
         if(!dual_band)
             continue;
 
         chancoeffslf.resize(maxz(chancoeffslf.size(), idx+1u), ChannelDec{});
-        coeffs = chancoeffslf[idx];
-        ambichan = 0;
-        for(uint o{0};o < decoder.mOrder+1u;++o)
-        {
-            const float order_gain{decoder.mOrderGainLF[o]};
-            const size_t order_max{decoder.mIs3D ? AmbiChannelsFromOrder(o) :
-                Ambi2DChannelsFromOrder(o)};
-            for(;ambichan < order_max;++ambichan)
-                coeffs[ambichan] = decoder.mCoeffsLF[i][ambichan] * order_gain;
-        }
+        src = decoder.mCoeffsLF[i];
+        dst = chancoeffslf[idx];
+        for(size_t ambichan{0};ambichan < ambicount;++ambichan)
+            dst[ambichan] = src[ambichan] * decoder.mOrderGainLF[ordermap[ambichan]];
     }
 
     /* For non-DevFmtAmbi3D, set the ambisonic order. */
     device->mAmbiOrder = decoder.mOrder;
     device->m2DMixing = !decoder.mIs3D;
 
-    const size_t ambicount{decoder.mIs3D ? AmbiChannelsFromOrder(decoder.mOrder) :
-        Ambi2DChannelsFromOrder(decoder.mOrder)};
     const al::span<const uint8_t> acnmap{decoder.mIs3D ? AmbiIndex::FromACN().data() :
         AmbiIndex::FromACN2D().data(), ambicount};
     auto&& coeffscale = GetAmbiScales(decoder.mScaling);

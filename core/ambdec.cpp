@@ -15,7 +15,7 @@
 #include "albit.h"
 #include "alfstream.h"
 #include "alspan.h"
-#include "core/logging.h"
+#include "opthelpers.h"
 
 
 namespace {

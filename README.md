@@ -31,6 +31,19 @@ were detected (if your target system uses them). For Windows, make sure
 DirectSound was detected.
 
 
+Building openal-soft - Using vcpkg
+----------------------------------
+
+You can download and install openal-soft using the [vcpkg](https://github.com/Microsoft/vcpkg) dependency manager:
+
+    git clone https://github.com/Microsoft/vcpkg.git
+    cd vcpkg
+    ./bootstrap-vcpkg.sh
+    ./vcpkg integrate install
+    ./vcpkg install openal-soft
+
+The openal-soft port in vcpkg is kept up to date by Microsoft team members and community contributors. If the version is out of date, please [create an issue or pull request](https://github.com/Microsoft/vcpkg) on the vcpkg repository.
+
 Utilities
 ---------
 The source package comes with an informational utility, openal-info, and is

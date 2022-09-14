@@ -64,7 +64,7 @@ al::optional<std::string> make_error(size_t linenum, const char *fmt, ...)
     if(unlikely(msglen >= 0 && static_cast<size_t>(msglen) >= str.size()-plen))
     {
         str.resize(static_cast<size_t>(msglen) + plen + 1u);
-        std::vsnprintf(&str[plen], str.size()-plen, fmt, args);
+        std::vsnprintf(&str[plen], str.size()-plen, fmt, args2);
     }
     va_end(args2);
     va_end(args);

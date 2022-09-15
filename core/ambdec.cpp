@@ -173,6 +173,8 @@ al::optional<std::string> AmbDecConf::load(const char *fname) noexcept
             while(istr.good() && std::isspace(istr.peek()))
                 istr.ignore();
             std::getline(istr, Description);
+            while(!Description.empty() && std::isspace(Description.back()))
+                Description.pop_back();
         }
         else if(command == "/version")
         {

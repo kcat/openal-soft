@@ -978,7 +978,7 @@ void aluInitRenderer(ALCdevice *device, int hrtf_id, al::optional<StereoEncoding
             && device->getConfigValueBool(nullptr, "front-stablizer", 0) != 0};
         const bool hqdec{device->getConfigValueBool("decoder", "hq-mode", 1) != 0};
         InitPanning(device, hqdec, stablize, decoder);
-        if(decoder.mOrder > 0)
+        if(decoder)
         {
             float accum_dist{0.0f}, spkr_count{0.0f};
             for(auto dist : speakerdists)

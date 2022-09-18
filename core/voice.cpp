@@ -245,7 +245,7 @@ void LoadSamples(const al::span<float*> dstSamples, const size_t dstOffset, cons
 #undef HANDLE_FMT
 }
 
-void LoadBufferStatic(VoiceBufferItem *buffer, VoiceBufferItem *bufferLoopItem,
+void LoadBufferStatic(VoiceBufferItem *buffer, VoiceBufferItem *&bufferLoopItem,
     const size_t dataPosInt, const FmtType sampleType, const FmtChannels sampleChannels,
     const size_t srcStep, const size_t samplesToLoad, const al::span<float*> voiceSamples)
 {
@@ -256,6 +256,8 @@ void LoadBufferStatic(VoiceBufferItem *buffer, VoiceBufferItem *bufferLoopItem,
     /* If current pos is beyond the loop range, do not loop */
     if(!bufferLoopItem || dataPosInt >= loopEnd)
     {
+        bufferLoopItem = nullptr;
+
         /* Load what's left to play from the buffer */
         const size_t remaining{minz(samplesToLoad, buffer->mSampleLen-dataPosInt)};
         LoadSamples(voiceSamples, 0, buffer->mSamples, dataPosInt, sampleType, sampleChannels,
@@ -645,7 +647,6 @@ void Voice::mix(const State vstate, ContextBase *Context, const uint SamplesToDo
                 prevSamples = mPrevSamples.data();
                 for(auto *chanbuffer : MixingSamples)
                 {
-                    /* Store the last source samples used for next time. */
                     std::copy_n(chanbuffer-MaxResamplerEdge+srcOffset, prevSamples->size(),
                         prevSamples->data());
                     ++prevSamples;

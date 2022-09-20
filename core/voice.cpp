@@ -249,9 +249,8 @@ void LoadBufferStatic(VoiceBufferItem *buffer, VoiceBufferItem *&bufferLoopItem,
     const size_t dataPosInt, const FmtType sampleType, const FmtChannels sampleChannels,
     const size_t srcStep, const size_t samplesToLoad, const al::span<float*> voiceSamples)
 {
-    const uint loopStart{buffer->mLoopStart};
-    const uint loopEnd{buffer->mLoopEnd};
-    ASSUME(loopEnd > loopStart);
+    const size_t loopStart{buffer->mLoopStart};
+    const size_t loopEnd{buffer->mLoopEnd};
 
     /* If current pos is beyond the loop range, do not loop */
     if(!bufferLoopItem || dataPosInt >= loopEnd)
@@ -274,13 +273,15 @@ void LoadBufferStatic(VoiceBufferItem *buffer, VoiceBufferItem *&bufferLoopItem,
     }
     else
     {
+        ASSUME(loopEnd > loopStart);
+
         /* Load what's left of this loop iteration */
         const size_t remaining{minz(samplesToLoad, loopEnd-dataPosInt)};
         LoadSamples(voiceSamples, 0, buffer->mSamples, dataPosInt, sampleType, sampleChannels,
             srcStep, remaining);
 
         /* Load repeats of the loop to fill the buffer. */
-        const auto loopSize = static_cast<size_t>(loopEnd - loopStart);
+        const size_t loopSize{loopEnd - loopStart};
         size_t samplesLoaded{remaining};
         while(const size_t toFill{minz(samplesToLoad - samplesLoaded, loopSize)})
         {
@@ -304,8 +305,8 @@ void LoadBufferCallback(VoiceBufferItem *buffer, const size_t numCallbackSamples
     {
         for(auto *chanbuffer : voiceSamples)
         {
-            auto srcsamples = chanbuffer + remaining - 1;
-            std::fill_n(srcsamples + 1, toFill, *srcsamples);
+            auto srcsamples = chanbuffer + remaining;
+            std::fill_n(srcsamples, toFill, *(srcsamples-1));
         }
     }
 }
@@ -340,12 +341,10 @@ void LoadBufferQueue(VoiceBufferItem *buffer, VoiceBufferItem *bufferLoopItem,
     }
     if(const size_t toFill{samplesToLoad - samplesLoaded})
     {
-        size_t chanidx{0};
         for(auto *chanbuffer : voiceSamples)
         {
-            auto srcsamples = chanbuffer + samplesLoaded - 1;
-            std::fill_n(srcsamples + 1, toFill, *srcsamples);
-            ++chanidx;
+            auto srcsamples = chanbuffer + samplesLoaded;
+            std::fill_n(srcsamples, toFill, *(srcsamples-1));
         }
     }
 }

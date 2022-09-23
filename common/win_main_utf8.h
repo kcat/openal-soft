@@ -47,7 +47,7 @@ static FILE *my_fopen(const char *fname, const char *mode)
     auto strbuf = std::make_unique<wchar_t[]>(static_cast<size_t>(namelen+modelen));
     wname = strbuf.get();
 #else
-    wname = (wchar_t*)calloc(sizeof(wchar_t), (size_t)(namelen+modelen));
+    wname = (wchar_t*)calloc(sizeof(wchar_t), (size_t)namelen + modelen);
 #endif
     wmode = wname + namelen;
     MultiByteToWideChar(CP_UTF8, 0, fname, -1, wname, namelen);

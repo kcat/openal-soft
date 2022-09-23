@@ -28,17 +28,13 @@
 #include <atomic>
 #include <bitset>
 #include <chrono>
-#include <condition_variable>
 #include <cstring>
-#include <functional>
 #include <limits>
 #include <mutex>
-#include <new>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string>
 #include <sys/types.h>
-#include <thread>
 #include <utility>
 
 #include "albyte.h"
@@ -49,7 +45,6 @@
 #include "alspan.h"
 #include "core/devformat.h"
 #include "core/device.h"
-#include "core/helpers.h"
 #include "core/logging.h"
 #include "dynload.h"
 #include "opthelpers.h"
@@ -280,8 +275,6 @@ al::vector<DevMap> CaptureDevices;
 
 /* Global flags and properties */
 pa_context_flags_t pulse_ctx_flags;
-
-struct MainloopUniqueLock;
 
 class PulseMainloop {
     pa_threaded_mainloop *mLoop{};

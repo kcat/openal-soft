@@ -34,7 +34,6 @@
 #include <limits>
 #include <mutex>
 #include <new>
-#include <poll.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string>

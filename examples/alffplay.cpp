@@ -1099,7 +1099,7 @@ int AudioState::handler()
                 mFormat = AL_FORMAT_MONO16;
             }
         }
-        else if(mCodecCtx->ch_layout.order == AV_CHANNEL_ORDER_NATIVE
+        else if(mCodecCtx->ch_layout.order == AV_CHANNEL_ORDER_AMBISONIC
             && alIsExtensionPresent("AL_EXT_BFORMAT"))
         {
             auto order = static_cast<int>(std::sqrt(mCodecCtx->ch_layout.nb_channels)) - 1;

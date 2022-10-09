@@ -151,6 +151,9 @@
 #ifdef HAVE_SDL2
 #include "backends/sdl2.h"
 #endif
+#ifdef HAVE_SCEAUDIO
+#include "backends/sceaudio.h"
+#endif
 #ifdef HAVE_WAVE
 #include "backends/wave.h"
 #endif
@@ -249,6 +252,9 @@ BackendInfo BackendList[] = {
 #endif
 #ifdef HAVE_SDL2
     { "sdl2", SDL2BackendFactory::getFactory },
+#endif
+#ifdef HAVE_SCEAUDIO
+    { "sceaudio", SDL2BackendFactory::getFactory },
 #endif
 
     { "null", NullBackendFactory::getFactory },

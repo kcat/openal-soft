@@ -175,7 +175,7 @@ DelayType PrepareDelay(MYSOFA_HRTF *sofaHrtf)
         }
         else
             fprintf(stderr, "Unexpected delay attribute: %s = %s\n", delay_attrs->name,
-                delay_attrs->value);
+                delay_attrs->value ? delay_attrs->value : "<null>");
         delay_attrs = delay_attrs->next;
     }
     if(!delay_dim)
@@ -210,7 +210,7 @@ bool CheckIrData(MYSOFA_HRTF *sofaHrtf)
         }
         else
             fprintf(stderr, "Unexpected IR attribute: %s = %s\n", ir_attrs->name,
-                ir_attrs->value);
+                ir_attrs->value ? ir_attrs->value : "<null>");
         ir_attrs = ir_attrs->next;
     }
     if(!ir_dim)

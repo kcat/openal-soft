@@ -16,7 +16,7 @@ using uint = unsigned int;
 using float2 = std::array<float,2>;
 
 
-constexpr int MixerFracBits{12};
+constexpr int MixerFracBits{16};
 constexpr int MixerFracOne{1 << MixerFracBits};
 constexpr int MixerFracMask{MixerFracOne - 1};
 

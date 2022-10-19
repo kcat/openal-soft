@@ -172,17 +172,33 @@ void ChorusState::getTriangleDelays(uint (*delays)[MAX_UPDATE_SAMPLES], const si
     ASSUME(lfo_range > 0);
     ASSUME(todo > 0);
 
-    uint offset{mLfoOffset};
-    auto gen_lfo = [&offset,lfo_range,lfo_scale,depth,delay]() -> uint
+    auto gen_lfo = [lfo_scale,depth,delay](const uint offset) -> uint
     {
-        offset = (offset+1)%lfo_range;
         const float offset_norm{static_cast<float>(offset) * lfo_scale};
         return static_cast<uint>(fastf2i((1.0f-std::abs(2.0f-offset_norm)) * depth) + delay);
     };
-    std::generate_n(delays[0], todo, gen_lfo);
+
+    uint offset{mLfoOffset};
+    for(size_t i{0};i < todo;)
+    {
+        size_t rem{minz(todo-i, lfo_range-offset)};
+        do {
+            delays[0][i++] = gen_lfo(offset++);
+        } while(--rem);
+        if(offset == lfo_range)
+            offset = 0;
+    }
 
     offset = (mLfoOffset+mLfoDisp) % lfo_range;
-    std::generate_n(delays[1], todo, gen_lfo);
+    for(size_t i{0};i < todo;)
+    {
+        size_t rem{minz(todo-i, lfo_range-offset)};
+        do {
+            delays[1][i++] = gen_lfo(offset++);
+        } while(--rem);
+        if(offset == lfo_range)
+            offset = 0;
+    }
 
     mLfoOffset = static_cast<uint>(mLfoOffset+todo) % lfo_range;
 }
@@ -197,17 +213,33 @@ void ChorusState::getSinusoidDelays(uint (*delays)[MAX_UPDATE_SAMPLES], const si
     ASSUME(lfo_range > 0);
     ASSUME(todo > 0);
 
-    uint offset{mLfoOffset};
-    auto gen_lfo = [&offset,lfo_range,lfo_scale,depth,delay]() -> uint
+    auto gen_lfo = [lfo_scale,depth,delay](const uint offset) -> uint
     {
-        offset = (offset+1)%lfo_range;
         const float offset_norm{static_cast<float>(offset) * lfo_scale};
         return static_cast<uint>(fastf2i(std::sin(offset_norm)*depth) + delay);
     };
-    std::generate_n(delays[0], todo, gen_lfo);
+
+    uint offset{mLfoOffset};
+    for(size_t i{0};i < todo;)
+    {
+        size_t rem{minz(todo-i, lfo_range-offset)};
+        do {
+            delays[0][i++] = gen_lfo(offset++);
+        } while(--rem);
+        if(offset == lfo_range)
+            offset = 0;
+    }
 
     offset = (mLfoOffset+mLfoDisp) % lfo_range;
-    std::generate_n(delays[1], todo, gen_lfo);
+    for(size_t i{0};i < todo;)
+    {
+        size_t rem{minz(todo-i, lfo_range-offset)};
+        do {
+            delays[1][i++] = gen_lfo(offset++);
+        } while(--rem);
+        if(offset == lfo_range)
+            offset = 0;
+    }
 
     mLfoOffset = static_cast<uint>(mLfoOffset+todo) % lfo_range;
 }

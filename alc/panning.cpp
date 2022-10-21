@@ -1060,7 +1060,7 @@ void aluInitRenderer(ALCdevice *device, int hrtf_id, al::optional<StereoEncoding
 
     if(stereomode.value_or(StereoEncoding::Default) == StereoEncoding::Uhj)
     {
-        if(UhjQuality >= UhjLengthHq)
+        if(UhjQuality != UhjQualityType::FIR256)
             device->mUhjEncoder = std::make_unique<UhjEncoder<UhjLengthHq>>();
         else
             device->mUhjEncoder = std::make_unique<UhjEncoder<UhjLengthLq>>();

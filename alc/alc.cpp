@@ -1148,9 +1148,11 @@ void alc_initconfig(void)
     if(auto uhjfiltopt = ConfigValueStr(nullptr, "uhj", "filter"))
     {
         if(al::strcasecmp(uhjfiltopt->c_str(), "fir256") == 0)
-            UhjQuality = UhjLengthLq;
+            UhjQuality = UhjQualityType::FIR256;
         else if(al::strcasecmp(uhjfiltopt->c_str(), "fir512") == 0)
-            UhjQuality = UhjLengthHq;
+            UhjQuality = UhjQualityType::FIR512;
+        else if(al::strcasecmp(uhjfiltopt->c_str(), "iir") == 0)
+            UhjQuality = UhjQualityType::IIR;
         else
             WARN("Unsupported uhj/filter: %s\n", uhjfiltopt->c_str());
     }

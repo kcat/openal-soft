@@ -852,36 +852,43 @@ void Voice::prepare(DeviceBase *device)
     mPrevSamples.reserve(maxu(2, num_channels));
     mPrevSamples.resize(num_channels);
 
+    mDecoder = nullptr;
+    mDecoderPadding = 0;
     if(mFmtChannels == FmtSuperStereo)
     {
-        if(UhjQuality >= UhjLengthHq)
+        switch(UhjQuality)
         {
-            mDecoder = std::make_unique<UhjStereoDecoder<UhjLengthHq>>();
-            mDecoderPadding = UhjStereoDecoder<UhjLengthHq>::sFilterDelay;
-        }
-        else
-        {
+        case UhjQualityType::IIR:
+            mDecoder = std::make_unique<UhjStereoDecoderIIR>();
+            mDecoderPadding = UhjStereoDecoderIIR::sFilterDelay;
+            break;
+        case UhjQualityType::FIR256:
             mDecoder = std::make_unique<UhjStereoDecoder<UhjLengthLq>>();
             mDecoderPadding = UhjStereoDecoder<UhjLengthLq>::sFilterDelay;
+            break;
+        case UhjQualityType::FIR512:
+            mDecoder = std::make_unique<UhjStereoDecoder<UhjLengthHq>>();
+            mDecoderPadding = UhjStereoDecoder<UhjLengthHq>::sFilterDelay;
+            break;
         }
     }
     else if(IsUHJ(mFmtChannels))
     {
-        if(UhjQuality >= UhjLengthHq)
+        switch(UhjQuality)
         {
-            mDecoder = std::make_unique<UhjDecoder<UhjLengthHq>>();
-            mDecoderPadding = UhjDecoder<UhjLengthHq>::sFilterDelay;
-        }
-        else
-        {
+        case UhjQualityType::IIR:
+            mDecoder = std::make_unique<UhjDecoderIIR>();
+            mDecoderPadding = UhjDecoderIIR::sFilterDelay;
+            break;
+        case UhjQualityType::FIR256:
             mDecoder = std::make_unique<UhjDecoder<UhjLengthLq>>();
             mDecoderPadding = UhjDecoder<UhjLengthLq>::sFilterDelay;
+            break;
+        case UhjQualityType::FIR512:
+            mDecoder = std::make_unique<UhjDecoder<UhjLengthHq>>();
+            mDecoderPadding = UhjDecoder<UhjLengthHq>::sFilterDelay;
+            break;
         }
-    }
-    else
-    {
-        mDecoder = nullptr;
-        mDecoderPadding = 0;
     }
 
     /* Clear the stepping value explicitly so the mixer knows not to mix this
@@ -925,11 +932,11 @@ void Voice::prepare(DeviceBase *device)
         if(mFmtChannels == FmtUHJ2)
         {
             mChans[0].mAmbiHFScale = 1.0f;
-            mChans[0].mAmbiLFScale = UhjDecoder<UhjLengthStd>::sWLFScale;
+            mChans[0].mAmbiLFScale = DecoderBase::sWLFScale;
             mChans[1].mAmbiHFScale = 1.0f;
-            mChans[1].mAmbiLFScale = UhjDecoder<UhjLengthStd>::sXYLFScale;
+            mChans[1].mAmbiLFScale = DecoderBase::sXYLFScale;
             mChans[2].mAmbiHFScale = 1.0f;
-            mChans[2].mAmbiLFScale = UhjDecoder<UhjLengthStd>::sXYLFScale;
+            mChans[2].mAmbiLFScale = DecoderBase::sXYLFScale;
         }
         mFlags.set(VoiceIsAmbisonic);
     }
@@ -949,9 +956,9 @@ void Voice::prepare(DeviceBase *device)
             chandata.mDryParams.NFCtrlFilter = device->mNFCtrlFilter;
             std::fill_n(chandata.mWetParams.begin(), device->NumAuxSends, SendParams{});
         }
-        mChans[0].mAmbiLFScale = UhjDecoder<UhjLengthStd>::sWLFScale;
-        mChans[1].mAmbiLFScale = UhjDecoder<UhjLengthStd>::sXYLFScale;
-        mChans[2].mAmbiLFScale = UhjDecoder<UhjLengthStd>::sXYLFScale;
+        mChans[0].mAmbiLFScale = DecoderBase::sWLFScale;
+        mChans[1].mAmbiLFScale = DecoderBase::sXYLFScale;
+        mChans[2].mAmbiLFScale = DecoderBase::sXYLFScale;
         mFlags.set(VoiceIsAmbisonic);
     }
     else

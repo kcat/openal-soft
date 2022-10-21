@@ -11,9 +11,21 @@
 
 static constexpr size_t UhjLengthLq{256};
 static constexpr size_t UhjLengthHq{512};
-static constexpr size_t UhjLengthStd{UhjLengthLq};
 
-extern size_t UhjQuality;
+enum class UhjQualityType : uint8_t {
+    IIR = 0,
+    FIR256,
+    FIR512,
+    Default = FIR256
+};
+
+extern UhjQualityType UhjQuality;
+
+
+struct UhjAllPassState {
+    /* Last two delayed components for direct form II. */
+    float z[2];
+};
 
 
 struct UhjEncoderBase {
@@ -56,9 +68,38 @@ struct UhjEncoder final : public UhjEncoderBase {
     DEF_NEWDEL(UhjEncoder)
 };
 
+struct UhjEncoderIIR final : public UhjEncoderBase {
+    static constexpr size_t sFilterDelay{256};
+
+    /* Delays and processing storage for the unfiltered signal. */
+    alignas(16) std::array<float,BufferLineSize+sFilterDelay> mS{};
+    alignas(16) std::array<float,BufferLineSize+sFilterDelay> mD{};
+
+    alignas(16) std::array<float,BufferLineSize+sFilterDelay> mWXTemp{};
+    alignas(16) std::array<float,BufferLineSize+sFilterDelay> mRevTemp{};
+
+    UhjAllPassState mFilterWX[4];
+
+    size_t getDelay() noexcept override { return sFilterDelay; }
+
+    /**
+     * Encodes a 2-channel UHJ (stereo-compatible) signal from a B-Format input
+     * signal. The input must use FuMa channel ordering and UHJ scaling (FuMa
+     * with an additional +3dB boost).
+     */
+    void encode(float *LeftOut, float *RightOut, const al::span<const float*const,3> InSamples,
+        const size_t SamplesToDo) override;
+
+    DEF_NEWDEL(UhjEncoderIIR)
+};
+
 
 struct DecoderBase {
     static constexpr size_t sMaxDelay{256};
+
+    /* For 2-channel UHJ, shelf filters should use these LF responses. */
+    static constexpr float sWLFScale{0.661f};
+    static constexpr float sXYLFScale{1.293f};
 
     virtual ~DecoderBase() = default;
 
@@ -74,11 +115,8 @@ struct DecoderBase {
 
 template<size_t N>
 struct UhjDecoder final : public DecoderBase {
+    /* This isn't a true delay, just the number of extra input samples needed. */
     static constexpr size_t sFilterDelay{N/2};
-
-    /* For 2-channel UHJ, shelf filters should use these LF responses. */
-    static constexpr float sWLFScale{0.661f};
-    static constexpr float sXYLFScale{1.293f};
 
     alignas(16) std::array<float,BufferLineSize+MaxResamplerEdge+sFilterDelay> mS{};
     alignas(16) std::array<float,BufferLineSize+MaxResamplerEdge+sFilterDelay> mD{};
@@ -101,6 +139,25 @@ struct UhjDecoder final : public DecoderBase {
         const size_t forwardSamples) override;
 
     DEF_NEWDEL(UhjDecoder)
+};
+
+struct UhjDecoderIIR final : public DecoderBase {
+    static constexpr size_t sFilterDelay{256};
+
+    alignas(16) std::array<float,BufferLineSize+MaxResamplerEdge+sFilterDelay> mS{};
+    alignas(16) std::array<float,BufferLineSize+MaxResamplerEdge+sFilterDelay> mD{};
+    alignas(16) std::array<float,BufferLineSize+MaxResamplerEdge+sFilterDelay> mT{};
+
+    alignas(16) std::array<float,BufferLineSize+MaxResamplerEdge + sFilterDelay> mTemp{};
+    alignas(16) std::array<float,BufferLineSize+MaxResamplerEdge + sFilterDelay> mRevTemp{};
+
+    UhjAllPassState mFilterDT[4];
+    UhjAllPassState mFilterS[4];
+
+    void decode(const al::span<float*> samples, const size_t samplesToDo,
+        const size_t forwardSamples) override;
+
+    DEF_NEWDEL(UhjDecoderIIR)
 };
 
 template<size_t N>
@@ -127,6 +184,25 @@ struct UhjStereoDecoder final : public DecoderBase {
         const size_t forwardSamples) override;
 
     DEF_NEWDEL(UhjStereoDecoder)
+};
+
+struct UhjStereoDecoderIIR final : public DecoderBase {
+    static constexpr size_t sFilterDelay{256};
+
+    float mCurrentWidth{-1.0f};
+
+    alignas(16) std::array<float,BufferLineSize+MaxResamplerEdge+sFilterDelay> mS{};
+    alignas(16) std::array<float,BufferLineSize+MaxResamplerEdge+sFilterDelay> mD{};
+
+    alignas(16) std::array<float,BufferLineSize+MaxResamplerEdge + sFilterDelay> mRevTemp{};
+
+    UhjAllPassState mFilterD[4];
+    UhjAllPassState mFilterS[4];
+
+    void decode(const al::span<float*> samples, const size_t samplesToDo,
+        const size_t forwardSamples) override;
+
+    DEF_NEWDEL(UhjStereoDecoderIIR)
 };
 
 #endif /* CORE_UHJFILTER_H */

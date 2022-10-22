@@ -12,7 +12,8 @@
 #include "phase_shifter.h"
 
 
-UhjQualityType UhjQuality{UhjQualityType::Default};
+UhjQualityType UhjDecodeQuality{UhjQualityType::Default};
+UhjQualityType UhjEncodeQuality{UhjQualityType::Default};
 
 
 namespace {

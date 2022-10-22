@@ -856,7 +856,7 @@ void Voice::prepare(DeviceBase *device)
     mDecoderPadding = 0;
     if(mFmtChannels == FmtSuperStereo)
     {
-        switch(UhjQuality)
+        switch(UhjDecodeQuality)
         {
         case UhjQualityType::IIR:
             mDecoder = std::make_unique<UhjStereoDecoderIIR>();
@@ -874,7 +874,7 @@ void Voice::prepare(DeviceBase *device)
     }
     else if(IsUHJ(mFmtChannels))
     {
-        switch(UhjQuality)
+        switch(UhjDecodeQuality)
         {
         case UhjQualityType::IIR:
             mDecoder = std::make_unique<UhjDecoderIIR>();

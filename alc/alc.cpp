@@ -1145,16 +1145,27 @@ void alc_initconfig(void)
     }
     Voice::InitMixer(ConfigValueStr(nullptr, nullptr, "resampler"));
 
-    if(auto uhjfiltopt = ConfigValueStr(nullptr, "uhj", "filter"))
+    if(auto uhjfiltopt = ConfigValueStr(nullptr, "uhj", "decode-filter"))
     {
         if(al::strcasecmp(uhjfiltopt->c_str(), "fir256") == 0)
-            UhjQuality = UhjQualityType::FIR256;
+            UhjDecodeQuality = UhjQualityType::FIR256;
         else if(al::strcasecmp(uhjfiltopt->c_str(), "fir512") == 0)
-            UhjQuality = UhjQualityType::FIR512;
+            UhjDecodeQuality = UhjQualityType::FIR512;
         else if(al::strcasecmp(uhjfiltopt->c_str(), "iir") == 0)
-            UhjQuality = UhjQualityType::IIR;
+            UhjDecodeQuality = UhjQualityType::IIR;
         else
-            WARN("Unsupported uhj/filter: %s\n", uhjfiltopt->c_str());
+            WARN("Unsupported uhj/decode-filter: %s\n", uhjfiltopt->c_str());
+    }
+    if(auto uhjfiltopt = ConfigValueStr(nullptr, "uhj", "encode-filter"))
+    {
+        if(al::strcasecmp(uhjfiltopt->c_str(), "fir256") == 0)
+            UhjEncodeQuality = UhjQualityType::FIR256;
+        else if(al::strcasecmp(uhjfiltopt->c_str(), "fir512") == 0)
+            UhjEncodeQuality = UhjQualityType::FIR512;
+        else if(al::strcasecmp(uhjfiltopt->c_str(), "iir") == 0)
+            UhjEncodeQuality = UhjQualityType::IIR;
+        else
+            WARN("Unsupported uhj/encode-filter: %s\n", uhjfiltopt->c_str());
     }
 
     auto traperr = al::getenv("ALSOFT_TRAP_ERROR");

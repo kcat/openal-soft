@@ -19,7 +19,8 @@ enum class UhjQualityType : uint8_t {
     Default = FIR256
 };
 
-extern UhjQualityType UhjQuality;
+extern UhjQualityType UhjDecodeQuality;
+extern UhjQualityType UhjEncodeQuality;
 
 
 struct UhjAllPassState {

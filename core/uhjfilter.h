@@ -47,14 +47,21 @@ template<size_t N>
 struct UhjEncoder final : public UhjEncoderBase {
     static constexpr size_t sFilterDelay{N/2};
 
-    /* Delays and processing storage for the unfiltered signal. */
-    alignas(16) std::array<float,BufferLineSize+sFilterDelay> mS{};
-    alignas(16) std::array<float,BufferLineSize+sFilterDelay> mD{};
+    /* Delays and processing storage for the input signal. */
+    alignas(16) std::array<float,BufferLineSize+sFilterDelay> mW{};
+    alignas(16) std::array<float,BufferLineSize+sFilterDelay> mX{};
+    alignas(16) std::array<float,BufferLineSize+sFilterDelay> mY{};
 
-    /* History for the FIR filter. */
-    alignas(16) std::array<float,sFilterDelay*2 - 1> mWXHistory{};
+    alignas(16) std::array<float,BufferLineSize> mS{};
+    alignas(16) std::array<float,BufferLineSize> mD{};
 
-    alignas(16) std::array<float,BufferLineSize + sFilterDelay*2> mTemp{};
+    /* History and temp storage for the FIR filter. New samples should be
+     * written to index sFilterDelay*2 - 1.
+     */
+    static constexpr size_t sWXInOffset{sFilterDelay*2 - 1};
+    alignas(16) std::array<float,BufferLineSize + sFilterDelay*2> mWX{};
+
+    alignas(16) std::array<std::array<float,sFilterDelay>,2> mDirectDelay{};
 
     size_t getDelay() noexcept override { return sFilterDelay; }
 
@@ -72,14 +79,20 @@ struct UhjEncoder final : public UhjEncoderBase {
 struct UhjEncoderIIR final : public UhjEncoderBase {
     static constexpr size_t sFilterDelay{256};
 
-    /* Delays and processing storage for the unfiltered signal. */
-    alignas(16) std::array<float,BufferLineSize+sFilterDelay> mS{};
-    alignas(16) std::array<float,BufferLineSize+sFilterDelay> mD{};
+    /* Delays and processing storage for the input signal. */
+    alignas(16) std::array<float,BufferLineSize+sFilterDelay> mW{};
+    alignas(16) std::array<float,BufferLineSize+sFilterDelay> mX{};
+    alignas(16) std::array<float,BufferLineSize+sFilterDelay> mY{};
 
-    alignas(16) std::array<float,BufferLineSize+sFilterDelay> mWXTemp{};
+    alignas(16) std::array<float,BufferLineSize> mS{};
+    alignas(16) std::array<float,BufferLineSize> mD{};
+
+    alignas(16) std::array<float,BufferLineSize+sFilterDelay> mWX{};
     alignas(16) std::array<float,BufferLineSize+sFilterDelay> mRevTemp{};
 
     UhjAllPassState mFilterWX[4];
+
+    alignas(16) std::array<std::array<float,sFilterDelay>,2> mDirectDelay{};
 
     size_t getDelay() noexcept override { return sFilterDelay; }
 

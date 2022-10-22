@@ -65,10 +65,14 @@ struct UhjEncoder {
     constexpr static size_t sFilterDelay{1024};
 
     /* Delays and processing storage for the unfiltered signal. */
-    alignas(16) std::array<float,BufferLineSize+sFilterDelay> mS{};
-    alignas(16) std::array<float,BufferLineSize+sFilterDelay> mD{};
-    alignas(16) std::array<float,BufferLineSize+sFilterDelay> mT{};
-    alignas(16) std::array<float,BufferLineSize+sFilterDelay> mQ{};
+    alignas(16) std::array<float,BufferLineSize+sFilterDelay> mW{};
+    alignas(16) std::array<float,BufferLineSize+sFilterDelay> mX{};
+    alignas(16) std::array<float,BufferLineSize+sFilterDelay> mY{};
+    alignas(16) std::array<float,BufferLineSize+sFilterDelay> mZ{};
+
+    alignas(16) std::array<float,BufferLineSize> mS{};
+    alignas(16) std::array<float,BufferLineSize> mD{};
+    alignas(16) std::array<float,BufferLineSize> mT{};
 
     /* History for the FIR filter. */
     alignas(16) std::array<float,sFilterDelay*2 - 1> mWXHistory1{};
@@ -106,26 +110,27 @@ void UhjEncoder::encode(const al::span<FloatBufferLine> OutSamples,
     const float *RESTRICT yinput{al::assume_aligned<16>(InSamples[2].data())};
     const float *RESTRICT zinput{al::assume_aligned<16>(InSamples[3].data())};
 
-    /* Combine the previously delayed S/D signal with the input. */
+    /* Combine the previously delayed input signal with the new input. */
+    std::copy_n(winput, SamplesToDo, mW.begin()+sFilterDelay);
+    std::copy_n(xinput, SamplesToDo, mX.begin()+sFilterDelay);
+    std::copy_n(yinput, SamplesToDo, mY.begin()+sFilterDelay);
+    std::copy_n(zinput, SamplesToDo, mZ.begin()+sFilterDelay);
 
     /* S = 0.9396926*W + 0.1855740*X */
-    auto miditer = mS.begin() + sFilterDelay;
-    std::transform(winput, winput+SamplesToDo, xinput, miditer,
-        [](const float w, const float x) noexcept -> float
-        { return 0.9396926f*w + 0.1855740f*x; });
+    for(size_t i{0};i < SamplesToDo;++i)
+        mS[i] = 0.9396926f*mW[i] + 0.1855740f*mX[i];
 
-    /* D = 0.6554516*Y */
-    auto sideiter = mD.begin() + sFilterDelay;
-    std::transform(yinput, yinput+SamplesToDo, sideiter,
-        [](const float y) noexcept -> float { return 0.6554516f*y; });
-
-    /* D += j(-0.3420201*W + 0.5098604*X) */
+    /* Precompute j(-0.3420201*W + 0.5098604*X) and store in mD. */
     auto tmpiter = std::copy(mWXHistory1.cbegin(), mWXHistory1.cend(), mTemp.begin());
     std::transform(winput, winput+SamplesToDo, xinput, tmpiter,
         [](const float w, const float x) noexcept -> float
         { return -0.3420201f*w + 0.5098604f*x; });
     std::copy_n(mTemp.cbegin()+SamplesToDo, mWXHistory1.size(), mWXHistory1.begin());
-    PShift.processAccum({mD.data(), SamplesToDo}, mTemp.data());
+    PShift.process({mD.data(), SamplesToDo}, mTemp.data());
+
+    /* D = 0.6554516*Y + j(-0.3420201*W + 0.5098604*X) */
+    for(size_t i{0};i < SamplesToDo;++i)
+        mD[i] = 0.6554516f*mY[i] + mD[i];
 
     /* Left = (S + D)/2.0 */
     float *RESTRICT left{al::assume_aligned<16>(OutSamples[0].data())};
@@ -138,40 +143,32 @@ void UhjEncoder::encode(const al::span<FloatBufferLine> OutSamples,
 
     if(OutSamples.size() > 2)
     {
-        /* T = -0.7071068*Y */
-        sideiter = mT.begin() + sFilterDelay;
-        std::transform(yinput, yinput+SamplesToDo, sideiter,
-            [](const float y) noexcept -> float { return -0.7071068f*y; });
-
-        /* T += j(-0.1432*W + 0.6512*X) */
+        /* Precompute j(-0.1432*W + 0.6512*X) and store in mT. */
         tmpiter = std::copy(mWXHistory2.cbegin(), mWXHistory2.cend(), mTemp.begin());
         std::transform(winput, winput+SamplesToDo, xinput, tmpiter,
             [](const float w, const float x) noexcept -> float
             { return -0.1432f*w + 0.6512f*x; });
         std::copy_n(mTemp.cbegin()+SamplesToDo, mWXHistory2.size(), mWXHistory2.begin());
-        PShift.processAccum({mT.data(), SamplesToDo}, mTemp.data());
+        PShift.process({mT.data(), SamplesToDo}, mTemp.data());
 
+        /* T = j(-0.1432*W + 0.6512*X) - 0.7071068*Y */
         float *RESTRICT t{al::assume_aligned<16>(OutSamples[2].data())};
         for(size_t i{0};i < SamplesToDo;i++)
-            t[i] = mT[i];
+            t[i] = mT[i] - 0.7071068f*mY[i];
     }
     if(OutSamples.size() > 3)
     {
         /* Q = 0.9772*Z */
-        sideiter = mQ.begin() + sFilterDelay;
-        std::transform(zinput, zinput+SamplesToDo, sideiter,
-            [](const float z) noexcept -> float { return 0.9772f*z; });
-
         float *RESTRICT q{al::assume_aligned<16>(OutSamples[3].data())};
         for(size_t i{0};i < SamplesToDo;i++)
-            q[i] = mQ[i];
+            q[i] = 0.9772f*mZ[i];
     }
 
     /* Copy the future samples to the front for next time. */
-    std::copy(mS.cbegin()+SamplesToDo, mS.cbegin()+SamplesToDo+sFilterDelay, mS.begin());
-    std::copy(mD.cbegin()+SamplesToDo, mD.cbegin()+SamplesToDo+sFilterDelay, mD.begin());
-    std::copy(mT.cbegin()+SamplesToDo, mT.cbegin()+SamplesToDo+sFilterDelay, mT.begin());
-    std::copy(mQ.cbegin()+SamplesToDo, mQ.cbegin()+SamplesToDo+sFilterDelay, mQ.begin());
+    std::copy(mW.cbegin()+SamplesToDo, mW.cbegin()+SamplesToDo+sFilterDelay, mW.begin());
+    std::copy(mX.cbegin()+SamplesToDo, mX.cbegin()+SamplesToDo+sFilterDelay, mX.begin());
+    std::copy(mY.cbegin()+SamplesToDo, mY.cbegin()+SamplesToDo+sFilterDelay, mY.begin());
+    std::copy(mZ.cbegin()+SamplesToDo, mZ.cbegin()+SamplesToDo+sFilterDelay, mZ.begin());
 }
 
 

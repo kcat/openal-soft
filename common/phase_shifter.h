@@ -69,7 +69,6 @@ struct PhaseShifterT {
     }
 
     void process(al::span<float> dst, const float *RESTRICT src) const;
-    void processAccum(al::span<float> dst, const float *RESTRICT src) const;
 
 private:
 #if defined(HAVE_NEON)
@@ -207,105 +206,6 @@ inline void PhaseShifterT<S>::process(al::span<float> dst, const float *RESTRICT
             ret += src[j*2] * mCoeffs[j];
 
         output = ret;
-        ++src;
-    }
-#endif
-}
-
-template<size_t S>
-inline void PhaseShifterT<S>::processAccum(al::span<float> dst, const float *RESTRICT src) const
-{
-#ifdef HAVE_SSE_INTRINSICS
-    if(size_t todo{dst.size()>>1})
-    {
-        auto *out = reinterpret_cast<__m64*>(dst.data());
-        do {
-            __m128 r04{_mm_setzero_ps()};
-            __m128 r14{_mm_setzero_ps()};
-            for(size_t j{0};j < mCoeffs.size();j+=4)
-            {
-                const __m128 coeffs{_mm_load_ps(&mCoeffs[j])};
-                const __m128 s0{_mm_loadu_ps(&src[j*2])};
-                const __m128 s1{_mm_loadu_ps(&src[j*2 + 4])};
-
-                __m128 s{_mm_shuffle_ps(s0, s1, _MM_SHUFFLE(2, 0, 2, 0))};
-                r04 = _mm_add_ps(r04, _mm_mul_ps(s, coeffs));
-
-                s = _mm_shuffle_ps(s0, s1, _MM_SHUFFLE(3, 1, 3, 1));
-                r14 = _mm_add_ps(r14, _mm_mul_ps(s, coeffs));
-            }
-            src += 2;
-
-            __m128 r4{_mm_add_ps(_mm_unpackhi_ps(r04, r14), _mm_unpacklo_ps(r04, r14))};
-            r4 = _mm_add_ps(r4, _mm_movehl_ps(r4, r4));
-
-            _mm_storel_pi(out, _mm_add_ps(_mm_loadl_pi(_mm_undefined_ps(), out), r4));
-            ++out;
-        } while(--todo);
-    }
-    if((dst.size()&1))
-    {
-        __m128 r4{_mm_setzero_ps()};
-        for(size_t j{0};j < mCoeffs.size();j+=4)
-        {
-            const __m128 coeffs{_mm_load_ps(&mCoeffs[j])};
-            const __m128 s{_mm_setr_ps(src[j*2], src[j*2 + 2], src[j*2 + 4], src[j*2 + 6])};
-            r4 = _mm_add_ps(r4, _mm_mul_ps(s, coeffs));
-        }
-        r4 = _mm_add_ps(r4, _mm_shuffle_ps(r4, r4, _MM_SHUFFLE(0, 1, 2, 3)));
-        r4 = _mm_add_ps(r4, _mm_movehl_ps(r4, r4));
-
-        dst.back() += _mm_cvtss_f32(r4);
-    }
-
-#elif defined(HAVE_NEON)
-
-    size_t pos{0};
-    if(size_t todo{dst.size()>>1})
-    {
-        do {
-            float32x4_t r04{vdupq_n_f32(0.0f)};
-            float32x4_t r14{vdupq_n_f32(0.0f)};
-            for(size_t j{0};j < mCoeffs.size();j+=4)
-            {
-                const float32x4_t coeffs{vld1q_f32(&mCoeffs[j])};
-                const float32x4_t s0{vld1q_f32(&src[j*2])};
-                const float32x4_t s1{vld1q_f32(&src[j*2 + 4])};
-
-                r04 = vmlaq_f32(r04, shuffle_2020(s0, s1), coeffs);
-                r14 = vmlaq_f32(r14, shuffle_3131(s0, s1), coeffs);
-            }
-            src += 2;
-
-            float32x4_t r4{vaddq_f32(unpackhi(r04, r14), unpacklo(r04, r14))};
-            float32x2_t r2{vadd_f32(vget_low_f32(r4), vget_high_f32(r4))};
-
-            vst1_f32(&dst[pos], vadd_f32(vld1_f32(&dst[pos]), r2));
-            pos += 2;
-        } while(--todo);
-    }
-    if((dst.size()&1))
-    {
-        float32x4_t r4{vdupq_n_f32(0.0f)};
-        for(size_t j{0};j < mCoeffs.size();j+=4)
-        {
-            const float32x4_t coeffs{vld1q_f32(&mCoeffs[j])};
-            const float32x4_t s{load4(src[j*2], src[j*2 + 2], src[j*2 + 4], src[j*2 + 6])};
-            r4 = vmlaq_f32(r4, s, coeffs);
-        }
-        r4 = vaddq_f32(r4, vrev64q_f32(r4));
-        dst[pos] += vget_lane_f32(vadd_f32(vget_low_f32(r4), vget_high_f32(r4)), 0);
-    }
-
-#else
-
-    for(float &output : dst)
-    {
-        float ret{0.0f};
-        for(size_t j{0};j < mCoeffs.size();++j)
-            ret += src[j*2] * mCoeffs[j];
-
-        output += ret;
         ++src;
     }
 #endif

@@ -9,8 +9,8 @@
 #include "resampler_limits.h"
 
 
-static constexpr size_t UhjLengthLq{256};
-static constexpr size_t UhjLengthHq{512};
+static constexpr size_t UhjLength256{256};
+static constexpr size_t UhjLength512{512};
 
 enum class UhjQualityType : uint8_t {
     IIR = 0,

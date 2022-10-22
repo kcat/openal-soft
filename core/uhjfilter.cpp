@@ -18,15 +18,15 @@ UhjQualityType UhjEncodeQuality{UhjQualityType::Default};
 
 namespace {
 
-const PhaseShifterT<UhjLengthLq> PShiftLq{};
-const PhaseShifterT<UhjLengthHq> PShiftHq{};
+const PhaseShifterT<UhjLength256> PShiftLq{};
+const PhaseShifterT<UhjLength512> PShiftHq{};
 
 template<size_t N>
 struct GetPhaseShifter;
 template<>
-struct GetPhaseShifter<UhjLengthLq> { static auto& Get() noexcept { return PShiftLq; } };
+struct GetPhaseShifter<UhjLength256> { static auto& Get() noexcept { return PShiftLq; } };
 template<>
-struct GetPhaseShifter<UhjLengthHq> { static auto& Get() noexcept { return PShiftHq; } };
+struct GetPhaseShifter<UhjLength512> { static auto& Get() noexcept { return PShiftHq; } };
 
 
 constexpr float square(float x) noexcept
@@ -537,10 +537,10 @@ void UhjStereoDecoderIIR::decode(const al::span<float*> samples, const size_t sa
 }
 
 
-template struct UhjEncoder<UhjLengthLq>;
-template struct UhjDecoder<UhjLengthLq>;
-template struct UhjStereoDecoder<UhjLengthLq>;
+template struct UhjEncoder<UhjLength256>;
+template struct UhjDecoder<UhjLength256>;
+template struct UhjStereoDecoder<UhjLength256>;
 
-template struct UhjEncoder<UhjLengthHq>;
-template struct UhjDecoder<UhjLengthHq>;
-template struct UhjStereoDecoder<UhjLengthHq>;
+template struct UhjEncoder<UhjLength512>;
+template struct UhjDecoder<UhjLength512>;
+template struct UhjStereoDecoder<UhjLength512>;

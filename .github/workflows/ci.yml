@@ -77,7 +77,7 @@ jobs:
 
     - name: Upload Archive
       # Upload package as an artifact of this workflow.
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3.1.1
       if: ${{ matrix.config.os == 'windows-latest' }}
       with:
         name: soft_oal-${{matrix.config.name}}

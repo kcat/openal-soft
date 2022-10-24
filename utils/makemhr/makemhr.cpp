@@ -1150,35 +1150,28 @@ static void NormalizeHrirs(HrirDataT *hData)
 
     /* Find the maximum amplitude and RMS out of all the IRs. */
     struct LevelPair { double amp, rms; };
-    auto proc0_field = [channels,irSize](const LevelPair levels0, const HrirFdT &field) -> LevelPair
+    auto mesasure_channel = [irSize](const LevelPair levels, const double *ir)
     {
-        auto proc_elev = [channels,irSize](const LevelPair levels1, const HrirEvT &elev) -> LevelPair
-        {
-            auto proc_azi = [channels,irSize](const LevelPair levels2, const HrirAzT &azi) -> LevelPair
+        /* Calculate the peak amplitude and RMS of this IR. */
+        auto current = std::accumulate(ir, ir+irSize, LevelPair{0.0, 0.0},
+            [](const LevelPair cur, const double impulse)
             {
-                auto proc_channel = [irSize](const LevelPair levels3, const double *ir) -> LevelPair
-                {
-                    /* Calculate the peak amplitude and RMS of this IR. */
-                    auto current = std::accumulate(ir, ir+irSize, LevelPair{0.0, 0.0},
-                        [](const LevelPair cur, const double impulse) -> LevelPair
-                        {
-                            return {std::max(std::abs(impulse), cur.amp),
-                                cur.rms + impulse*impulse};
-                        });
-                    current.rms = std::sqrt(current.rms / irSize);
+                return LevelPair{std::max(std::abs(impulse), cur.amp), cur.rms + impulse*impulse};
+            });
+        current.rms = std::sqrt(current.rms / irSize);
 
-                    /* Accumulate levels by taking the maximum amplitude and RMS. */
-                    return LevelPair{std::max(current.amp, levels3.amp),
-                        std::max(current.rms, levels3.rms)};
-                };
-                return std::accumulate(azi.mIrs, azi.mIrs+channels, levels2, proc_channel);
-            };
-            return std::accumulate(elev.mAzs, elev.mAzs+elev.mAzCount, levels1, proc_azi);
-        };
-        return std::accumulate(field.mEvs, field.mEvs+field.mEvCount, levels0, proc_elev);
+        /* Accumulate levels by taking the maximum amplitude and RMS. */
+        return LevelPair{std::max(current.amp, levels.amp), std::max(current.rms, levels.rms)};
     };
+    auto measure_azi = [channels,mesasure_channel](const LevelPair levels, const HrirAzT &azi)
+    { return std::accumulate(azi.mIrs, azi.mIrs+channels, levels, mesasure_channel); };
+    auto measure_elev = [measure_azi](const LevelPair levels, const HrirEvT &elev)
+    { return std::accumulate(elev.mAzs, elev.mAzs+elev.mAzCount, levels, measure_azi); };
+    auto measure_field = [measure_elev](const LevelPair levels, const HrirFdT &field)
+    { return std::accumulate(field.mEvs, field.mEvs+field.mEvCount, levels, measure_elev); };
+
     const auto maxlev = std::accumulate(hData->mFds.begin(), hData->mFds.begin()+hData->mFdCount,
-        LevelPair{0.0, 0.0}, proc0_field);
+        LevelPair{0.0, 0.0}, measure_field);
 
     /* Normalize using the maximum RMS of the HRIRs. The RMS measure for the
      * non-filtered signal is of an impulse with equal length (to the filter):
@@ -1195,23 +1188,15 @@ static void NormalizeHrirs(HrirDataT *hData)
     factor = std::min(factor, 0.99/maxlev.amp);
 
     /* Now scale all IRs by the given factor. */
-    auto proc1_field = [channels,irSize,factor](HrirFdT &field) -> void
-    {
-        auto proc_elev = [channels,irSize,factor](HrirEvT &elev) -> void
-        {
-            auto proc_azi = [channels,irSize,factor](HrirAzT &azi) -> void
-            {
-                auto proc_channel = [irSize,factor](double *ir) -> void
-                {
-                    std::transform(ir, ir+irSize, ir,
-                        std::bind(std::multiplies<double>{}, _1, factor));
-                };
-                std::for_each(azi.mIrs, azi.mIrs+channels, proc_channel);
-            };
-            std::for_each(elev.mAzs, elev.mAzs+elev.mAzCount, proc_azi);
-        };
-        std::for_each(field.mEvs, field.mEvs+field.mEvCount, proc_elev);
-    };
+    auto proc_channel = [irSize,factor](double *ir)
+    { std::transform(ir, ir+irSize, ir, std::bind(std::multiplies<double>{}, _1, factor)); };
+    auto proc_azi = [channels,proc_channel](HrirAzT &azi)
+    { std::for_each(azi.mIrs, azi.mIrs+channels, proc_channel); };
+    auto proc_elev = [proc_azi](HrirEvT &elev)
+    { std::for_each(elev.mAzs, elev.mAzs+elev.mAzCount, proc_azi); };
+    auto proc1_field = [proc_elev](HrirFdT &field)
+    { std::for_each(field.mEvs, field.mEvs+field.mEvCount, proc_elev); };
+
     std::for_each(hData->mFds.begin(), hData->mFds.begin()+hData->mFdCount, proc1_field);
 }
 

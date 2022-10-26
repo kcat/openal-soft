@@ -210,6 +210,9 @@ void UhjEncoderIIR::encode(float *LeftOut, float *RightOut,
     /* Precompute j(-0.3420201*W + 0.5098604*X) and store in mD. */
     std::transform(winput, winput+SamplesToDo, mX.cbegin(), mWX.begin()+sFilterDelay,
         [](const float w, const float x) noexcept { return -0.3420201f*w + 0.5098604f*x; });
+    /* Shift the input ahead by one sample, so that the output is delayed by
+     * one sample in the reverse.
+     */
     allpass1_process_rev({mWX.data()+1, SamplesToDo+sFilterDelay-1}, mRevTemp.data());
     allpass2_process(mFilterWX, {mRevTemp.data(), SamplesToDo}, SamplesToDo, mD.data());
 

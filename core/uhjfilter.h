@@ -16,7 +16,7 @@ enum class UhjQualityType : uint8_t {
     IIR = 0,
     FIR256,
     FIR512,
-    Default = FIR256
+    Default = IIR
 };
 
 extern UhjQualityType UhjDecodeQuality;

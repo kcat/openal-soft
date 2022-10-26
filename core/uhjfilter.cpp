@@ -216,9 +216,9 @@ void UhjEncoderIIR::encode(float *LeftOut, float *RightOut,
     allpass1_process_rev({mWX.data()+1, SamplesToDo+sFilterDelay-1}, mRevTemp.data());
     allpass2_process(mFilterWX, {mRevTemp.data(), SamplesToDo}, SamplesToDo, mD.data());
 
-    /* D = 0.6554516*Y + j(-0.3420201*W + 0.5098604*X) */
+    /* D = j(-0.3420201*W + 0.5098604*X) + 0.6554516*Y */
     for(size_t i{0};i < SamplesToDo;++i)
-        mD[i] = 0.6554516f*mY[i] + mD[i];
+        mD[i] = mD[i] + 0.6554516f*mY[i];
 
     /* Copy the future samples to the front for next time. */
     std::copy(mW.cbegin()+SamplesToDo, mW.cbegin()+SamplesToDo+sFilterDelay, mW.begin());

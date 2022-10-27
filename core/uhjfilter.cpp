@@ -40,7 +40,7 @@ constexpr std::array<float,4> Filter1Coeff{{
     square(0.6923878f), square(0.9360654322959f), square(0.9882295226860f),
     square(0.9987488452737f)
 }};
-/* Filter coefficients for the shifted all-pass IIR, which applies a frequency-
+/* Filter coefficients for the offset all-pass IIR, which applies a frequency-
  * dependent phase-shift of N+90 degrees.
  */
 constexpr std::array<float,4> Filter2Coeff{{
@@ -48,9 +48,9 @@ constexpr std::array<float,4> Filter2Coeff{{
     square(0.9952884791278f)
 }};
 
-/* This applies the base all-pass filter in reverse, resulting in a phase-shift
- * of -N degrees. Extra samples are provided at the back of the input to reduce
- * the amount of error at the back of the output.
+/* This applies the base all-pass filter in reverse. No state is kept between
+ * calls since the samples aren't processed in a linear fashion, the state from
+ * a previous call wouldn't be valid.
  */
 void allpass1_process_rev(const al::span<const float> src, float *RESTRICT dst)
 {
@@ -71,8 +71,14 @@ void allpass1_process_rev(const al::span<const float> src, float *RESTRICT dst)
         proc_sample);
 }
 
-/* This applies the shifted all-pass filter to the output of the base filter,
- * resulting in a phase shift of -N + N + 90 degrees, or just 90 degrees.
+/* This applies the offset all-pass filter. 'forwardSamples' is the number of
+ * samples to process and keep the state of, while the remaining samples are
+ * processed but the state is discarded. This essentially "rewinds" the filter
+ * since the decoder will re-process some of the previous samples (as the
+ * decoding is done prior to resampling, which need future samples that are
+ * re-read on the following update, or because the source is being paused,
+ * which fades out from the current position and will replay the same samples
+ * when resumed).
  */
 void allpass2_process(const al::span<UhjAllPassState,4> state, const al::span<const float> src,
     const size_t forwardSamples, float *RESTRICT dst)
@@ -190,6 +196,22 @@ void UhjEncoder<N>::encode(float *LeftOut, float *RightOut,
         right[i] += (mS[i] - mD[i]) * 0.5f;
 }
 
+/* This encoding implementation uses a dual IIR filter to produce the desired
+ * phase shift, preserving the phase of the non-filtered signal.
+ *
+ * The first filter applies a frequency-dependent phase shift of N degrees.
+ * Applied in reverse over the input signal results in a phase shift of -N
+ * degrees. Extra samples are utilized at the back of the input to reduce the
+ * amount of error at the back of the output (resulting in a small bit of
+ * latency).
+ *
+ * The second filter applies a phase shift like first, but with a +90 degree
+ * offset in each frequency band.
+ *
+ * Applying the first filter backward, followed by the second filter forward,
+ * results in a total phase shift of -N + N + 90 degrees, i.e. a frequency-
+ * independent phase shift of 90 degrees.
+ */
 void UhjEncoderIIR::encode(float *LeftOut, float *RightOut,
     const al::span<const float *const, 3> InSamples, const size_t SamplesToDo)
 {
@@ -208,7 +230,7 @@ void UhjEncoderIIR::encode(float *LeftOut, float *RightOut,
         mS[i] = 0.9396926f*mW[i] + 0.1855740f*mX[i];
 
     /* Precompute j(-0.3420201*W + 0.5098604*X) and store in mD. */
-    std::transform(winput, winput+SamplesToDo, mX.cbegin(), mWX.begin()+sFilterDelay,
+    std::transform(winput, winput+SamplesToDo, xinput, mWX.begin()+sFilterDelay,
         [](const float w, const float x) noexcept { return -0.3420201f*w + 0.5098604f*x; });
     /* Shift the input ahead by one sample, so that the output is delayed by
      * one sample in the reverse.

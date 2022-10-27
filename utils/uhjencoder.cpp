@@ -128,9 +128,9 @@ void UhjEncoder::encode(const al::span<FloatBufferLine> OutSamples,
     std::copy_n(mTemp.cbegin()+SamplesToDo, mWXHistory1.size(), mWXHistory1.begin());
     PShift.process({mD.data(), SamplesToDo}, mTemp.data());
 
-    /* D = 0.6554516*Y + j(-0.3420201*W + 0.5098604*X) */
+    /* D = j(-0.3420201*W + 0.5098604*X) + 0.6554516*Y */
     for(size_t i{0};i < SamplesToDo;++i)
-        mD[i] = 0.6554516f*mY[i] + mD[i];
+        mD[i] = mD[i] + 0.6554516f*mY[i];
 
     /* Left = (S + D)/2.0 */
     float *RESTRICT left{al::assume_aligned<16>(OutSamples[0].data())};

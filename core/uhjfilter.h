@@ -23,9 +23,15 @@ extern UhjQualityType UhjDecodeQuality;
 extern UhjQualityType UhjEncodeQuality;
 
 
-struct UhjAllPassState {
-    /* Last two delayed components for direct form II. */
-    float z[2];
+struct UhjAllPassFilter {
+    struct AllPassState {
+        /* Last two delayed components for direct form II. */
+        float z[2];
+    };
+    std::array<AllPassState,4> state;
+
+    void process(const al::span<const float,4> coeffs, const al::span<const float> src,
+        const size_t forwardSamples, float *RESTRICT dst);
 };
 
 
@@ -77,22 +83,21 @@ struct UhjEncoder final : public UhjEncoderBase {
 };
 
 struct UhjEncoderIIR final : public UhjEncoderBase {
-    static constexpr size_t sFilterDelay{256};
+    static constexpr size_t sFilterDelay{1};
 
-    /* Delays and processing storage for the input signal. */
-    alignas(16) std::array<float,BufferLineSize+sFilterDelay> mW{};
-    alignas(16) std::array<float,BufferLineSize+sFilterDelay> mX{};
-    alignas(16) std::array<float,BufferLineSize+sFilterDelay> mY{};
-
-    alignas(16) std::array<float,BufferLineSize> mS{};
-    alignas(16) std::array<float,BufferLineSize> mD{};
-
+    /* Processing storage for the input signal. */
+    alignas(16) std::array<float,BufferLineSize+1> mS{};
+    alignas(16) std::array<float,BufferLineSize+1> mD{};
     alignas(16) std::array<float,BufferLineSize+sFilterDelay> mWX{};
-    alignas(16) std::array<float,BufferLineSize+sFilterDelay> mRevTemp{};
+    alignas(16) std::array<float,BufferLineSize+sFilterDelay> mTemp{};
+    float mDelayWX{}, mDelayY{};
 
-    UhjAllPassState mFilterWX[4];
+    UhjAllPassFilter mFilter1WX;
+    UhjAllPassFilter mFilter2WX;
+    UhjAllPassFilter mFilter1Y;
 
-    alignas(16) std::array<std::array<float,sFilterDelay>,2> mDirectDelay{};
+    std::array<UhjAllPassFilter,2> mFilter1Direct;
+    std::array<float,2> mDirectDelay{};
 
     size_t getDelay() noexcept override { return sFilterDelay; }
 
@@ -156,17 +161,23 @@ struct UhjDecoder final : public DecoderBase {
 };
 
 struct UhjDecoderIIR final : public DecoderBase {
-    static constexpr size_t sFilterDelay{256};
+    /* FIXME: These IIR decoder filters actually have a 1-sample delay on the
+     * non-filtered components, which is not reflected in the source latency
+     * value. sFilterDelay is 0, however, because it doesn't need any extra
+     * input samples as long as 'forwardSamples' is less than 'samplesToDo'.
+     */
+    static constexpr size_t sFilterDelay{0};
 
-    alignas(16) std::array<float,BufferLineSize+MaxResamplerEdge+sFilterDelay> mS{};
-    alignas(16) std::array<float,BufferLineSize+MaxResamplerEdge+sFilterDelay> mD{};
-    alignas(16) std::array<float,BufferLineSize+MaxResamplerEdge+sFilterDelay> mT{};
+    alignas(16) std::array<float,BufferLineSize+MaxResamplerEdge> mS{};
+    alignas(16) std::array<float,BufferLineSize+MaxResamplerEdge> mD{};
+    alignas(16) std::array<float,BufferLineSize+MaxResamplerEdge> mTemp{};
+    float mDelayS{}, mDelayDT{}, mDelayQ{};
 
-    alignas(16) std::array<float,BufferLineSize+MaxResamplerEdge + sFilterDelay> mTemp{};
-    alignas(16) std::array<float,BufferLineSize+MaxResamplerEdge + sFilterDelay> mRevTemp{};
-
-    UhjAllPassState mFilterDT[4];
-    UhjAllPassState mFilterS[4];
+    UhjAllPassFilter mFilter1S;
+    UhjAllPassFilter mFilter2DT;
+    UhjAllPassFilter mFilter1DT;
+    UhjAllPassFilter mFilter2S;
+    UhjAllPassFilter mFilter1Q;
 
     void decode(const al::span<float*> samples, const size_t samplesToDo,
         const size_t forwardSamples) override;
@@ -201,17 +212,19 @@ struct UhjStereoDecoder final : public DecoderBase {
 };
 
 struct UhjStereoDecoderIIR final : public DecoderBase {
-    static constexpr size_t sFilterDelay{256};
+    static constexpr size_t sFilterDelay{0};
 
     float mCurrentWidth{-1.0f};
 
-    alignas(16) std::array<float,BufferLineSize+MaxResamplerEdge+sFilterDelay> mS{};
-    alignas(16) std::array<float,BufferLineSize+MaxResamplerEdge+sFilterDelay> mD{};
+    alignas(16) std::array<float,BufferLineSize+MaxResamplerEdge> mS{};
+    alignas(16) std::array<float,BufferLineSize+MaxResamplerEdge> mD{};
+    alignas(16) std::array<float,BufferLineSize+MaxResamplerEdge> mTemp{};
+    float mDelayS{}, mDelayD{};
 
-    alignas(16) std::array<float,BufferLineSize+MaxResamplerEdge + sFilterDelay> mRevTemp{};
-
-    UhjAllPassState mFilterD[4];
-    UhjAllPassState mFilterS[4];
+    UhjAllPassFilter mFilter1S;
+    UhjAllPassFilter mFilter2D;
+    UhjAllPassFilter mFilter1D;
+    UhjAllPassFilter mFilter2S;
 
     void decode(const al::span<float*> samples, const size_t samplesToDo,
         const size_t forwardSamples) override;

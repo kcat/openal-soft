@@ -48,51 +48,21 @@ constexpr std::array<float,4> Filter2Coeff{{
     square(0.9952884791278f)
 }};
 
-/* This applies the base all-pass filter in reverse. No state is kept between
- * calls since the samples aren't processed in a linear fashion, the state from
- * a previous call wouldn't be valid.
- */
-void allpass1_process_rev(const al::span<const float> src, float *RESTRICT dst)
-{
-    float z[4][2]{};
+} // namespace
 
-    auto proc_sample = [&z](float x) noexcept -> float
-    {
-        for(size_t i{0};i < 4;++i)
-        {
-            const float y{x*Filter1Coeff[i] + z[i][0]};
-            z[i][0] = z[i][1];
-            z[i][1] = y*Filter1Coeff[i] - x;
-            x = y;
-        }
-        return x;
-    };
-    std::transform(src.rbegin(), src.rend(), std::make_reverse_iterator(dst+src.size()),
-        proc_sample);
-}
-
-/* This applies the offset all-pass filter. 'forwardSamples' is the number of
- * samples to process and keep the state of, while the remaining samples are
- * processed but the state is discarded. This essentially "rewinds" the filter
- * since the decoder will re-process some of the previous samples (as the
- * decoding is done prior to resampling, which need future samples that are
- * re-read on the following update, or because the source is being paused,
- * which fades out from the current position and will replay the same samples
- * when resumed).
- */
-void allpass2_process(const al::span<UhjAllPassState,4> state, const al::span<const float> src,
-    const size_t forwardSamples, float *RESTRICT dst)
+void UhjAllPassFilter::process(const al::span<const float,4> coeffs,
+    const al::span<const float> src, const size_t forwardSamples, float *RESTRICT dst)
 {
     float z[4][2]{{state[0].z[0], state[0].z[1]}, {state[1].z[0], state[1].z[1]},
         {state[2].z[0], state[2].z[1]}, {state[3].z[0], state[3].z[1]}};
 
-    auto proc_sample = [&z](float x) noexcept -> float
+    auto proc_sample = [&z,coeffs](float x) noexcept -> float
     {
         for(size_t i{0};i < 4;++i)
         {
-            const float y{x*Filter2Coeff[i] + z[i][0]};
+            const float y{x*coeffs[i] + z[i][0]};
             z[i][0] = z[i][1];
-            z[i][1] = y*Filter2Coeff[i] - x;
+            z[i][1] = y*coeffs[i] - x;
             x = y;
         }
         return x;
@@ -106,8 +76,6 @@ void allpass2_process(const al::span<UhjAllPassState,4> state, const al::span<co
 
     std::transform(src.begin()+forwardSamples, src.end(), dstiter, proc_sample);
 }
-
-} // namespace
 
 
 /* Encoding UHJ from B-Format is done as:
@@ -196,21 +164,20 @@ void UhjEncoder<N>::encode(float *LeftOut, float *RightOut,
         right[i] += (mS[i] - mD[i]) * 0.5f;
 }
 
-/* This encoding implementation uses a dual IIR filter to produce the desired
- * phase shift, preserving the phase of the non-filtered signal.
+/* This encoding implementation uses two sets of four chained IIR filters to
+ * produce the desired relative phase shift. The first filter chain produces a
+ * phase shift of varying degrees over a wide range of frequencies, while the
+ * second filter chain produces a phase shift 90 degrees ahead of the first
+ * over the same range. Further details are described here:
  *
- * The first filter applies a frequency-dependent phase shift of N degrees.
- * Applied in reverse over the input signal results in a phase shift of -N
- * degrees. Extra samples are utilized at the back of the input to reduce the
- * amount of error at the back of the output (resulting in a small bit of
- * latency).
+ * https://web.archive.org/web/20060708031958/http://www.biochem.oulu.fi/~oniemita/dsp/hilbert/
  *
- * The second filter applies a phase shift like first, but with a +90 degree
- * offset in each frequency band.
- *
- * Applying the first filter backward, followed by the second filter forward,
- * results in a total phase shift of -N + N + 90 degrees, i.e. a frequency-
- * independent phase shift of 90 degrees.
+ * 2-channel UHJ output requires the use of three filter chains. The S channel
+ * output uses a Filter1 chain on the W and X channel mix, while the D channel
+ * output uses a Filter1 chain on the Y channel plus a Filter2 chain on the W
+ * and X channel mix. This results in the W and X input mix on the D channel
+ * output having the required +90 degree phase shift relative to the other
+ * inputs.
  */
 void UhjEncoderIIR::encode(float *LeftOut, float *RightOut,
     const al::span<const float *const, 3> InSamples, const size_t SamplesToDo)
@@ -221,64 +188,43 @@ void UhjEncoderIIR::encode(float *LeftOut, float *RightOut,
     const float *RESTRICT xinput{al::assume_aligned<16>(InSamples[1])};
     const float *RESTRICT yinput{al::assume_aligned<16>(InSamples[2])};
 
-    std::copy_n(winput, SamplesToDo, mW.begin()+sFilterDelay);
-    std::copy_n(xinput, SamplesToDo, mX.begin()+sFilterDelay);
-    std::copy_n(yinput, SamplesToDo, mY.begin()+sFilterDelay);
-
     /* S = 0.9396926*W + 0.1855740*X */
-    for(size_t i{0};i < SamplesToDo;++i)
-        mS[i] = 0.9396926f*mW[i] + 0.1855740f*mX[i];
+    std::transform(winput, winput+SamplesToDo, xinput, mTemp.begin(),
+        [](const float w, const float x) noexcept { return 0.9396926f*w + 0.1855740f*x; });
+    mFilter1WX.process(Filter1Coeff, {mTemp.data(), SamplesToDo}, SamplesToDo, mS.data()+1);
+    mS[0] = mDelayWX; mDelayWX = mS[SamplesToDo];
 
-    /* Precompute j(-0.3420201*W + 0.5098604*X) and store in mD. */
-    std::transform(winput, winput+SamplesToDo, xinput, mWX.begin()+sFilterDelay,
+    /* Precompute j(-0.3420201*W + 0.5098604*X) and store in mWX. */
+    std::transform(winput, winput+SamplesToDo, xinput, mTemp.begin(),
         [](const float w, const float x) noexcept { return -0.3420201f*w + 0.5098604f*x; });
-    /* Shift the input ahead by one sample, so that the output is delayed by
-     * one sample in the reverse.
-     */
-    allpass1_process_rev({mWX.data()+1, SamplesToDo+sFilterDelay-1}, mRevTemp.data());
-    allpass2_process(mFilterWX, {mRevTemp.data(), SamplesToDo}, SamplesToDo, mD.data());
+    mFilter2WX.process(Filter2Coeff, {mTemp.data(), SamplesToDo}, SamplesToDo, mWX.data());
+
+    /* Apply filter1 to Y and store in mD. */
+    mFilter1Y.process(Filter1Coeff, {yinput, SamplesToDo}, SamplesToDo, mD.data()+1);
+    mD[0] = mDelayY; mDelayY = mD[SamplesToDo];
 
     /* D = j(-0.3420201*W + 0.5098604*X) + 0.6554516*Y */
     for(size_t i{0};i < SamplesToDo;++i)
-        mD[i] = mD[i] + 0.6554516f*mY[i];
+        mD[i] = mWX[i] + 0.6554516f*mD[i];
 
-    /* Copy the future samples to the front for next time. */
-    std::copy(mW.cbegin()+SamplesToDo, mW.cbegin()+SamplesToDo+sFilterDelay, mW.begin());
-    std::copy(mX.cbegin()+SamplesToDo, mX.cbegin()+SamplesToDo+sFilterDelay, mX.begin());
-    std::copy(mY.cbegin()+SamplesToDo, mY.cbegin()+SamplesToDo+sFilterDelay, mY.begin());
-    std::copy(mWX.cbegin()+SamplesToDo, mWX.cbegin()+SamplesToDo+sFilterDelay, mWX.begin());
-
-    /* Apply a delay to the existing output to align with the input delay. */
-    auto *delayBuffer = mDirectDelay.data();
-    for(float *buffer : {LeftOut, RightOut})
-    {
-        float *RESTRICT distbuf{al::assume_aligned<16>(delayBuffer->data())};
-        ++delayBuffer;
-
-        float *inout{al::assume_aligned<16>(buffer)};
-        auto inout_end = inout + SamplesToDo;
-        if(likely(SamplesToDo >= sFilterDelay))
-        {
-            auto delay_end = std::rotate(inout, inout_end - sFilterDelay, inout_end);
-            std::swap_ranges(inout, delay_end, distbuf);
-        }
-        else
-        {
-            auto delay_start = std::swap_ranges(inout, inout_end, distbuf);
-            std::rotate(distbuf, delay_start, distbuf + sFilterDelay);
-        }
-    }
-
-    /* Combine the direct signal with the produced output. */
+    /* Apply the base filter to the existing output to align with the processed
+     * signal.
+     */
+    mFilter1Direct[0].process(Filter1Coeff, {LeftOut, SamplesToDo}, SamplesToDo, mTemp.data()+1);
+    mTemp[0] = mDirectDelay[0]; mDirectDelay[0] = mTemp[SamplesToDo];
 
     /* Left = (S + D)/2.0 */
     float *RESTRICT left{al::assume_aligned<16>(LeftOut)};
     for(size_t i{0};i < SamplesToDo;i++)
-        left[i] += (mS[i] + mD[i]) * 0.5f;
+        left[i] = (mS[i] + mD[i])*0.5f + mTemp[i];
+
+    mFilter1Direct[1].process(Filter1Coeff, {RightOut, SamplesToDo}, SamplesToDo, mTemp.data()+1);
+    mTemp[0] = mDirectDelay[1]; mDirectDelay[1] = mTemp[SamplesToDo];
+
     /* Right = (S - D)/2.0 */
     float *RESTRICT right{al::assume_aligned<16>(RightOut)};
     for(size_t i{0};i < SamplesToDo;i++)
-        right[i] += (mS[i] - mD[i]) * 0.5f;
+        right[i] = (mS[i] - mD[i])*0.5f + mTemp[i];
 }
 
 
@@ -370,19 +316,14 @@ void UhjDecoderIIR::decode(const al::span<float*> samples, const size_t samplesT
     {
         const float *RESTRICT left{al::assume_aligned<16>(samples[0])};
         const float *RESTRICT right{al::assume_aligned<16>(samples[1])};
-        const float *RESTRICT t{al::assume_aligned<16>(samples[2])};
 
         /* S = Left + Right */
-        for(size_t i{0};i < samplesToDo+sFilterDelay;++i)
+        for(size_t i{0};i < samplesToDo;++i)
             mS[i] = left[i] + right[i];
 
         /* D = Left - Right */
-        for(size_t i{0};i < samplesToDo+sFilterDelay;++i)
+        for(size_t i{0};i < samplesToDo;++i)
             mD[i] = left[i] - right[i];
-
-        /* T */
-        for(size_t i{0};i < samplesToDo+sFilterDelay;++i)
-            mT[i] = t[i];
     }
 
     float *RESTRICT woutput{al::assume_aligned<16>(samples[0])};
@@ -390,32 +331,47 @@ void UhjDecoderIIR::decode(const al::span<float*> samples, const size_t samplesT
     float *RESTRICT youtput{al::assume_aligned<16>(samples[2])};
 
     /* Precompute j(0.828331*D + 0.767820*T) and store in xoutput. */
-    std::transform(mD.cbegin(), mD.cbegin()+samplesToDo+sFilterDelay, mT.cbegin(), mTemp.begin(),
+    std::transform(mD.cbegin(), mD.cbegin()+samplesToDo, youtput, mTemp.begin(),
         [](const float d, const float t) noexcept { return 0.828331f*d + 0.767820f*t; });
-    allpass1_process_rev({mTemp.data()+1, samplesToDo+sFilterDelay-1}, mRevTemp.data());
-    allpass2_process(mFilterDT, {mRevTemp.data(), samplesToDo}, forwardSamples, xoutput);
+    mFilter2DT.process(Filter2Coeff, {mTemp.data(), samplesToDo}, forwardSamples, xoutput);
+
+    /* Apply filter1 to S and store in mTemp. */
+    mFilter1S.process(Filter1Coeff, {mS.data(), samplesToDo-1}, forwardSamples, mTemp.data()+1);
+    mTemp[0] = mDelayS; mDelayS = mTemp[forwardSamples];
 
     /* W = 0.981532*S + 0.197484*j(0.828331*D + 0.767820*T) */
     for(size_t i{0};i < samplesToDo;++i)
-        woutput[i] = 0.981532f*mS[i] + 0.197484f*xoutput[i];
+        woutput[i] = 0.981532f*mTemp[i] + 0.197484f*xoutput[i];
     /* X = 0.418496*S - j(0.828331*D + 0.767820*T) */
     for(size_t i{0};i < samplesToDo;++i)
-        xoutput[i] = 0.418496f*mS[i] - xoutput[i];
+        xoutput[i] = 0.418496f*mTemp[i] - xoutput[i];
 
-    /* Precompute j*S and store in youtput. */
-    allpass1_process_rev({mS.data()+1, samplesToDo+sFilterDelay-1}, mRevTemp.data());
-    allpass2_process(mFilterS, {mRevTemp.data(), samplesToDo}, forwardSamples, youtput);
+
+    /* Apply filter1 to (0.795968*D - 0.676392*T) and store in youtput. */
+    std::transform(mD.cbegin(), mD.cbegin()+samplesToDo, youtput, mTemp.begin(),
+        [](const float d, const float t) noexcept { return 0.795968f*d - 0.676392f*t; });
+    mFilter1DT.process(Filter1Coeff, {mTemp.data(), samplesToDo-1}, forwardSamples, youtput+1);
+    youtput[0] = mDelayDT; mDelayDT = youtput[forwardSamples];
+
+    /* Precompute j*S and store in mTemp. */
+    mFilter2S.process(Filter2Coeff, {mS.data(), samplesToDo}, forwardSamples, mTemp.data());
 
     /* Y = 0.795968*D - 0.676392*T + j(0.186633*S) */
     for(size_t i{0};i < samplesToDo;++i)
-        youtput[i] = 0.795968f*mD[i] - 0.676392f*mT[i] + 0.186633f*youtput[i];
+        youtput[i] = youtput[i] + 0.186633f*mTemp[i];
+
 
     if(samples.size() > 3)
     {
         float *RESTRICT zoutput{al::assume_aligned<16>(samples[3])};
+
+        /* Apply filter1 to Q and store in mTemp. */
+        mFilter1Q.process(Filter1Coeff, {zoutput, samplesToDo-1}, forwardSamples, mTemp.data()+1);
+        mTemp[0] = mDelayQ; mDelayQ = mTemp[forwardSamples];
+
         /* Z = 1.023332*Q */
         for(size_t i{0};i < samplesToDo;++i)
-            zoutput[i] = 1.023332f*zoutput[i];
+            zoutput[i] = 1.023332f*mTemp[i];
     }
 }
 
@@ -515,7 +471,7 @@ void UhjStereoDecoderIIR::decode(const al::span<float*> samples, const size_t sa
         const float *RESTRICT left{al::assume_aligned<16>(samples[0])};
         const float *RESTRICT right{al::assume_aligned<16>(samples[1])};
 
-        for(size_t i{0};i < samplesToDo+sFilterDelay;++i)
+        for(size_t i{0};i < samplesToDo;++i)
             mS[i] = left[i] + right[i];
 
         /* Pre-apply the width factor to the difference signal D. Smoothly
@@ -525,7 +481,7 @@ void UhjStereoDecoderIIR::decode(const al::span<float*> samples, const size_t sa
         const float wcurrent{unlikely(mCurrentWidth < 0.0f) ? wtarget : mCurrentWidth};
         if(likely(wtarget == wcurrent) || unlikely(forwardSamples == 0))
         {
-            for(size_t i{0};i < samplesToDo+sFilterDelay;++i)
+            for(size_t i{0};i < samplesToDo;++i)
                 mD[i] = (left[i] - right[i]) * wcurrent;
             mCurrentWidth = wcurrent;
         }
@@ -539,7 +495,7 @@ void UhjStereoDecoderIIR::decode(const al::span<float*> samples, const size_t sa
                 mD[i] = (left[i] - right[i]) * (wcurrent + wstep*fi);
                 fi += 1.0f;
             }
-            for(;i < samplesToDo+sFilterDelay;++i)
+            for(;i < samplesToDo;++i)
                 mD[i] = (left[i] - right[i]) * wtarget;
             mCurrentWidth = wtarget;
         }
@@ -549,24 +505,30 @@ void UhjStereoDecoderIIR::decode(const al::span<float*> samples, const size_t sa
     float *RESTRICT xoutput{al::assume_aligned<16>(samples[1])};
     float *RESTRICT youtput{al::assume_aligned<16>(samples[2])};
 
+    /* Apply filter1 to S and store in mTemp. */
+    mFilter1S.process(Filter1Coeff, {mS.data(), samplesToDo-1}, forwardSamples, mTemp.data()+1);
+    mTemp[0] = mDelayS; mDelayS = mTemp[forwardSamples];
+
     /* Precompute j*D and store in xoutput. */
-    allpass1_process_rev({mD.data()+1, samplesToDo+sFilterDelay-1}, mRevTemp.data());
-    allpass2_process(mFilterD, {mRevTemp.data(), samplesToDo}, forwardSamples, xoutput);
+    mFilter2D.process(Filter2Coeff, {mD.data(), samplesToDo}, forwardSamples, xoutput);
 
     /* W = 0.6098637*S - 0.6896511*j*w*D */
     for(size_t i{0};i < samplesToDo;++i)
-        woutput[i] = 0.6098637f*mS[i] - 0.6896511f*xoutput[i];
+        woutput[i] = 0.6098637f*mTemp[i] - 0.6896511f*xoutput[i];
     /* X = 0.8624776*S + 0.7626955*j*w*D */
     for(size_t i{0};i < samplesToDo;++i)
-        xoutput[i] = 0.8624776f*mS[i] + 0.7626955f*xoutput[i];
+        xoutput[i] = 0.8624776f*mTemp[i] + 0.7626955f*xoutput[i];
 
     /* Precompute j*S and store in youtput. */
-    allpass1_process_rev({mS.data()+1, samplesToDo+sFilterDelay-1}, mRevTemp.data());
-    allpass2_process(mFilterS, {mRevTemp.data(), samplesToDo}, forwardSamples, xoutput);
+    mFilter2S.process(Filter2Coeff, {mS.data(), samplesToDo}, forwardSamples, youtput);
+
+    /* Apply filter1 to D and store in mTemp. */
+    mFilter1D.process(Filter1Coeff, {mD.data(), samplesToDo-1}, forwardSamples, mTemp.data()+1);
+    mTemp[0] = mDelayD; mDelayD = mTemp[forwardSamples];
 
     /* Y = 1.6822415*w*D - 0.2156194*j*S */
     for(size_t i{0};i < samplesToDo;++i)
-        youtput[i] = 1.6822415f*mD[i] - 0.2156194f*youtput[i];
+        youtput[i] = 1.6822415f*mTemp[i] - 0.2156194f*youtput[i];
 }
 
 

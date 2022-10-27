@@ -356,18 +356,18 @@
 ## decode-filter: (global)
 #  Specifies the all-pass filter type for UHJ decoding and Super Stereo
 #  processing. Valid values are:
-#  iir - utilizes dual IIR filters, providing a wide pass-band with low CPU
-#        use, but may exhibit some low-level distortion.
 #  fir256 - utilizes a 256-point FIR filter, providing more stable results but
 #           exhibiting attenuation in the lower and higher frequency bands.
 #  fir512 - utilizes a 512-point FIR filter, providing a wider pass-band than
 #           fir256, at the cost of more CPU use.
-#decode-filter = iir
+#  iir - utilizes dual IIR filters, providing a wide pass-band with low CPU
+#        use, but may exhibit some low-level distortion.
+#decode-filter = fir256
 
 ## encode-filter: (global)
 #  Specifies the all-pass filter type for UHJ output encoding. Valid values are
 #  the same as for decode-filter.
-#encode-filter = iir
+#encode-filter = fir256
 
 ##
 ## Reverb effect stuff (includes EAX reverb)

@@ -860,15 +860,15 @@ void Voice::prepare(DeviceBase *device)
         {
         case UhjQualityType::IIR:
             mDecoder = std::make_unique<UhjStereoDecoderIIR>();
-            mDecoderPadding = UhjStereoDecoderIIR::sFilterDelay;
+            mDecoderPadding = UhjStereoDecoderIIR::sInputPadding;
             break;
         case UhjQualityType::FIR256:
             mDecoder = std::make_unique<UhjStereoDecoder<UhjLength256>>();
-            mDecoderPadding = UhjStereoDecoder<UhjLength256>::sFilterDelay;
+            mDecoderPadding = UhjStereoDecoder<UhjLength256>::sInputPadding;
             break;
         case UhjQualityType::FIR512:
             mDecoder = std::make_unique<UhjStereoDecoder<UhjLength512>>();
-            mDecoderPadding = UhjStereoDecoder<UhjLength512>::sFilterDelay;
+            mDecoderPadding = UhjStereoDecoder<UhjLength512>::sInputPadding;
             break;
         }
     }
@@ -878,15 +878,15 @@ void Voice::prepare(DeviceBase *device)
         {
         case UhjQualityType::IIR:
             mDecoder = std::make_unique<UhjDecoderIIR>();
-            mDecoderPadding = UhjDecoderIIR::sFilterDelay;
+            mDecoderPadding = UhjDecoderIIR::sInputPadding;
             break;
         case UhjQualityType::FIR256:
             mDecoder = std::make_unique<UhjDecoder<UhjLength256>>();
-            mDecoderPadding = UhjDecoder<UhjLength256>::sFilterDelay;
+            mDecoderPadding = UhjDecoder<UhjLength256>::sInputPadding;
             break;
         case UhjQualityType::FIR512:
             mDecoder = std::make_unique<UhjDecoder<UhjLength512>>();
-            mDecoderPadding = UhjDecoder<UhjLength512>::sFilterDelay;
+            mDecoderPadding = UhjDecoder<UhjLength512>::sInputPadding;
             break;
         }
     }

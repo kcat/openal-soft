@@ -189,7 +189,7 @@ struct DeviceBase {
 
     /* Temp storage used for mixer processing. */
     static constexpr size_t MixerLineSize{BufferLineSize + MaxResamplerPadding +
-        DecoderBase::sMaxDelay};
+        DecoderBase::sMaxPadding};
     static constexpr size_t MixerChannelsMax{16};
     using MixerBufferLine = std::array<float,MixerLineSize>;
     alignas(16) std::array<MixerBufferLine,MixerChannelsMax> mSampleData;

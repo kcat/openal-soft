@@ -114,7 +114,7 @@ struct UhjEncoderIIR final : public UhjEncoderBase {
 
 
 struct DecoderBase {
-    static constexpr size_t sMaxDelay{256};
+    static constexpr size_t sMaxPadding{256};
 
     /* For 2-channel UHJ, shelf filters should use these LF responses. */
     static constexpr float sWLFScale{0.661f};
@@ -134,17 +134,17 @@ struct DecoderBase {
 
 template<size_t N>
 struct UhjDecoder final : public DecoderBase {
-    /* This isn't a true delay, just the number of extra input samples needed. */
-    static constexpr size_t sFilterDelay{N/2};
+    /* The number of extra sample frames needed for input. */
+    static constexpr size_t sInputPadding{N/2};
 
-    alignas(16) std::array<float,BufferLineSize+MaxResamplerEdge+sFilterDelay> mS{};
-    alignas(16) std::array<float,BufferLineSize+MaxResamplerEdge+sFilterDelay> mD{};
-    alignas(16) std::array<float,BufferLineSize+MaxResamplerEdge+sFilterDelay> mT{};
+    alignas(16) std::array<float,BufferLineSize+MaxResamplerEdge+sInputPadding> mS{};
+    alignas(16) std::array<float,BufferLineSize+MaxResamplerEdge+sInputPadding> mD{};
+    alignas(16) std::array<float,BufferLineSize+MaxResamplerEdge+sInputPadding> mT{};
 
-    alignas(16) std::array<float,sFilterDelay-1> mDTHistory{};
-    alignas(16) std::array<float,sFilterDelay-1> mSHistory{};
+    alignas(16) std::array<float,sInputPadding-1> mDTHistory{};
+    alignas(16) std::array<float,sInputPadding-1> mSHistory{};
 
-    alignas(16) std::array<float,BufferLineSize+MaxResamplerEdge + sFilterDelay*2> mTemp{};
+    alignas(16) std::array<float,BufferLineSize+MaxResamplerEdge + sInputPadding*2> mTemp{};
 
     /**
      * Decodes a 3- or 4-channel UHJ signal into a B-Format signal with FuMa
@@ -163,10 +163,10 @@ struct UhjDecoder final : public DecoderBase {
 struct UhjDecoderIIR final : public DecoderBase {
     /* FIXME: These IIR decoder filters actually have a 1-sample delay on the
      * non-filtered components, which is not reflected in the source latency
-     * value. sFilterDelay is 0, however, because it doesn't need any extra
+     * value. sInputPadding is 0, however, because it doesn't need any extra
      * input samples as long as 'forwardSamples' is less than 'samplesToDo'.
      */
-    static constexpr size_t sFilterDelay{0};
+    static constexpr size_t sInputPadding{0};
 
     alignas(16) std::array<float,BufferLineSize+MaxResamplerEdge> mS{};
     alignas(16) std::array<float,BufferLineSize+MaxResamplerEdge> mD{};
@@ -187,17 +187,17 @@ struct UhjDecoderIIR final : public DecoderBase {
 
 template<size_t N>
 struct UhjStereoDecoder final : public DecoderBase {
-    static constexpr size_t sFilterDelay{N/2};
+    static constexpr size_t sInputPadding{N/2};
 
     float mCurrentWidth{-1.0f};
 
-    alignas(16) std::array<float,BufferLineSize+MaxResamplerEdge+sFilterDelay> mS{};
-    alignas(16) std::array<float,BufferLineSize+MaxResamplerEdge+sFilterDelay> mD{};
+    alignas(16) std::array<float,BufferLineSize+MaxResamplerEdge+sInputPadding> mS{};
+    alignas(16) std::array<float,BufferLineSize+MaxResamplerEdge+sInputPadding> mD{};
 
-    alignas(16) std::array<float,sFilterDelay-1> mDTHistory{};
-    alignas(16) std::array<float,sFilterDelay-1> mSHistory{};
+    alignas(16) std::array<float,sInputPadding-1> mDTHistory{};
+    alignas(16) std::array<float,sInputPadding-1> mSHistory{};
 
-    alignas(16) std::array<float,BufferLineSize+MaxResamplerEdge + sFilterDelay*2> mTemp{};
+    alignas(16) std::array<float,BufferLineSize+MaxResamplerEdge + sInputPadding*2> mTemp{};
 
     /**
      * Applies Super Stereo processing on a stereo signal to create a B-Format
@@ -212,7 +212,7 @@ struct UhjStereoDecoder final : public DecoderBase {
 };
 
 struct UhjStereoDecoderIIR final : public DecoderBase {
-    static constexpr size_t sFilterDelay{0};
+    static constexpr size_t sInputPadding{0};
 
     float mCurrentWidth{-1.0f};
 

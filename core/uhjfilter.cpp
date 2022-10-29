@@ -245,7 +245,7 @@ template<size_t N>
 void UhjDecoder<N>::decode(const al::span<float*> samples, const size_t samplesToDo,
     const size_t forwardSamples)
 {
-    static_assert(sFilterDelay <= sMaxDelay, "Filter delay is too large");
+    static_assert(sInputPadding <= sMaxPadding, "Filter padding is too large");
 
     const auto &PShift = GetPhaseShifter<N>::Get();
 
@@ -257,15 +257,15 @@ void UhjDecoder<N>::decode(const al::span<float*> samples, const size_t samplesT
         const float *RESTRICT t{al::assume_aligned<16>(samples[2])};
 
         /* S = Left + Right */
-        for(size_t i{0};i < samplesToDo+sFilterDelay;++i)
+        for(size_t i{0};i < samplesToDo+sInputPadding;++i)
             mS[i] = left[i] + right[i];
 
         /* D = Left - Right */
-        for(size_t i{0};i < samplesToDo+sFilterDelay;++i)
+        for(size_t i{0};i < samplesToDo+sInputPadding;++i)
             mD[i] = left[i] - right[i];
 
         /* T */
-        for(size_t i{0};i < samplesToDo+sFilterDelay;++i)
+        for(size_t i{0};i < samplesToDo+sInputPadding;++i)
             mT[i] = t[i];
     }
 
@@ -275,7 +275,7 @@ void UhjDecoder<N>::decode(const al::span<float*> samples, const size_t samplesT
 
     /* Precompute j(0.828331*D + 0.767820*T) and store in xoutput. */
     auto tmpiter = std::copy(mDTHistory.cbegin(), mDTHistory.cend(), mTemp.begin());
-    std::transform(mD.cbegin(), mD.cbegin()+samplesToDo+sFilterDelay, mT.cbegin(), tmpiter,
+    std::transform(mD.cbegin(), mD.cbegin()+samplesToDo+sInputPadding, mT.cbegin(), tmpiter,
         [](const float d, const float t) noexcept { return 0.828331f*d + 0.767820f*t; });
     std::copy_n(mTemp.cbegin()+forwardSamples, mDTHistory.size(), mDTHistory.begin());
     PShift.process({xoutput, samplesToDo}, mTemp.data());
@@ -289,7 +289,7 @@ void UhjDecoder<N>::decode(const al::span<float*> samples, const size_t samplesT
 
     /* Precompute j*S and store in youtput. */
     tmpiter = std::copy(mSHistory.cbegin(), mSHistory.cend(), mTemp.begin());
-    std::copy_n(mS.cbegin(), samplesToDo+sFilterDelay, tmpiter);
+    std::copy_n(mS.cbegin(), samplesToDo+sInputPadding, tmpiter);
     std::copy_n(mTemp.cbegin()+forwardSamples, mSHistory.size(), mSHistory.begin());
     PShift.process({youtput, samplesToDo}, mTemp.data());
 
@@ -309,7 +309,7 @@ void UhjDecoder<N>::decode(const al::span<float*> samples, const size_t samplesT
 void UhjDecoderIIR::decode(const al::span<float*> samples, const size_t samplesToDo,
     const size_t forwardSamples)
 {
-    static_assert(sFilterDelay <= sMaxDelay, "Filter delay is too large");
+    static_assert(sInputPadding <= sMaxPadding, "Filter padding is too large");
 
     ASSUME(samplesToDo > 0);
 
@@ -392,7 +392,7 @@ template<size_t N>
 void UhjStereoDecoder<N>::decode(const al::span<float*> samples, const size_t samplesToDo,
     const size_t forwardSamples)
 {
-    static_assert(sFilterDelay <= sMaxDelay, "Filter delay is too large");
+    static_assert(sInputPadding <= sMaxPadding, "Filter padding is too large");
 
     const auto &PShift = GetPhaseShifter<N>::Get();
 
@@ -402,7 +402,7 @@ void UhjStereoDecoder<N>::decode(const al::span<float*> samples, const size_t sa
         const float *RESTRICT left{al::assume_aligned<16>(samples[0])};
         const float *RESTRICT right{al::assume_aligned<16>(samples[1])};
 
-        for(size_t i{0};i < samplesToDo+sFilterDelay;++i)
+        for(size_t i{0};i < samplesToDo+sInputPadding;++i)
             mS[i] = left[i] + right[i];
 
         /* Pre-apply the width factor to the difference signal D. Smoothly
@@ -412,7 +412,7 @@ void UhjStereoDecoder<N>::decode(const al::span<float*> samples, const size_t sa
         const float wcurrent{unlikely(mCurrentWidth < 0.0f) ? wtarget : mCurrentWidth};
         if(likely(wtarget == wcurrent) || unlikely(forwardSamples == 0))
         {
-            for(size_t i{0};i < samplesToDo+sFilterDelay;++i)
+            for(size_t i{0};i < samplesToDo+sInputPadding;++i)
                 mD[i] = (left[i] - right[i]) * wcurrent;
             mCurrentWidth = wcurrent;
         }
@@ -426,7 +426,7 @@ void UhjStereoDecoder<N>::decode(const al::span<float*> samples, const size_t sa
                 mD[i] = (left[i] - right[i]) * (wcurrent + wstep*fi);
                 fi += 1.0f;
             }
-            for(;i < samplesToDo+sFilterDelay;++i)
+            for(;i < samplesToDo+sInputPadding;++i)
                 mD[i] = (left[i] - right[i]) * wtarget;
             mCurrentWidth = wtarget;
         }
@@ -438,7 +438,7 @@ void UhjStereoDecoder<N>::decode(const al::span<float*> samples, const size_t sa
 
     /* Precompute j*D and store in xoutput. */
     auto tmpiter = std::copy(mDTHistory.cbegin(), mDTHistory.cend(), mTemp.begin());
-    std::copy_n(mD.cbegin(), samplesToDo+sFilterDelay, tmpiter);
+    std::copy_n(mD.cbegin(), samplesToDo+sInputPadding, tmpiter);
     std::copy_n(mTemp.cbegin()+forwardSamples, mDTHistory.size(), mDTHistory.begin());
     PShift.process({xoutput, samplesToDo}, mTemp.data());
 
@@ -451,7 +451,7 @@ void UhjStereoDecoder<N>::decode(const al::span<float*> samples, const size_t sa
 
     /* Precompute j*S and store in youtput. */
     tmpiter = std::copy(mSHistory.cbegin(), mSHistory.cend(), mTemp.begin());
-    std::copy_n(mS.cbegin(), samplesToDo+sFilterDelay, tmpiter);
+    std::copy_n(mS.cbegin(), samplesToDo+sInputPadding, tmpiter);
     std::copy_n(mTemp.cbegin()+forwardSamples, mSHistory.size(), mSHistory.begin());
     PShift.process({youtput, samplesToDo}, mTemp.data());
 
@@ -463,7 +463,7 @@ void UhjStereoDecoder<N>::decode(const al::span<float*> samples, const size_t sa
 void UhjStereoDecoderIIR::decode(const al::span<float*> samples, const size_t samplesToDo,
     const size_t forwardSamples)
 {
-    static_assert(sFilterDelay <= sMaxDelay, "Filter delay is too large");
+    static_assert(sInputPadding <= sMaxPadding, "Filter padding is too large");
 
     ASSUME(samplesToDo > 0);
 

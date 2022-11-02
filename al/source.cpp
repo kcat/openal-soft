@@ -454,8 +454,6 @@ al::optional<VoicePos> GetSampleOffset(al::deque<ALbufferQueueItem> &BufferList,
             dbloff -= 1.0;
             dblfrac += 1.0;
         }
-        dbloff = clampd(dbloff, double{std::numeric_limits<int64_t>::min()},
-            double{std::numeric_limits<int64_t>::max()});
         offset = static_cast<int64_t>(dbloff);
         frac = static_cast<uint>(mind(dblfrac*MixerFracOne, MixerFracOne-1.0));
         break;
@@ -467,8 +465,6 @@ al::optional<VoicePos> GetSampleOffset(al::deque<ALbufferQueueItem> &BufferList,
             dbloff -= 1.0;
             dblfrac += 1.0;
         }
-        dbloff = clampd(dbloff, double{std::numeric_limits<int64_t>::min()},
-            double{std::numeric_limits<int64_t>::max()});
         offset = static_cast<int64_t>(dbloff);
         frac = static_cast<uint>(mind(dblfrac*MixerFracOne, MixerFracOne-1.0));
         break;
@@ -489,8 +485,6 @@ al::optional<VoicePos> GetSampleOffset(al::deque<ALbufferQueueItem> &BufferList,
         }
         else
             Offset = std::floor(Offset / BufferFmt->channelsFromFmt());
-        Offset = clampd(Offset, double{std::numeric_limits<int64_t>::min()},
-            double{std::numeric_limits<int64_t>::max()});
         offset = static_cast<int64_t>(Offset);
         frac = 0;
         break;

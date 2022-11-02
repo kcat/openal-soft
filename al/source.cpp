@@ -193,9 +193,9 @@ int64_t GetSourceSampleOffset(ALsource *Source, ALCcontext *context, nanoseconds
 {
     ALCdevice *device{context->mALDevice.get()};
     const VoiceBufferItem *Current{};
-    uint64_t readPos{};
-    ALuint refcount;
-    Voice *voice;
+    int64_t readPos{};
+    uint refcount{};
+    Voice *voice{};
 
     do {
         refcount = device->waitForMix();
@@ -205,9 +205,8 @@ int64_t GetSourceSampleOffset(ALsource *Source, ALCcontext *context, nanoseconds
         {
             Current = voice->mCurrentBuffer.load(std::memory_order_relaxed);
 
-            readPos  = uint64_t{voice->mPosition.load(std::memory_order_relaxed)} << 32;
-            readPos |= uint64_t{voice->mPositionFrac.load(std::memory_order_relaxed)} <<
-                       (32-MixerFracBits);
+            readPos  = int64_t{voice->mPosition.load(std::memory_order_relaxed)} << MixerFracBits;
+            readPos += voice->mPositionFrac.load(std::memory_order_relaxed);
         }
         std::atomic_thread_fence(std::memory_order_acquire);
     } while(refcount != device->MixCount.load(std::memory_order_relaxed));
@@ -218,9 +217,11 @@ int64_t GetSourceSampleOffset(ALsource *Source, ALCcontext *context, nanoseconds
     for(auto &item : Source->mQueue)
     {
         if(&item == Current) break;
-        readPos += uint64_t{item.mSampleLen} << 32;
+        readPos += int64_t{item.mSampleLen} << MixerFracBits;
     }
-    return static_cast<int64_t>(minu64(readPos, 0x7fffffffffffffff_u64));
+    if(readPos > std::numeric_limits<int64_t>::max() >> (32-MixerFracBits))
+        return std::numeric_limits<int64_t>::max();
+    return readPos << (32-MixerFracBits);
 }
 
 /* GetSourceSecOffset
@@ -232,9 +233,9 @@ double GetSourceSecOffset(ALsource *Source, ALCcontext *context, nanoseconds *cl
 {
     ALCdevice *device{context->mALDevice.get()};
     const VoiceBufferItem *Current{};
-    uint64_t readPos{};
-    ALuint refcount;
-    Voice *voice;
+    int64_t readPos{};
+    uint refcount{};
+    Voice *voice{};
 
     do {
         refcount = device->waitForMix();
@@ -244,8 +245,8 @@ double GetSourceSecOffset(ALsource *Source, ALCcontext *context, nanoseconds *cl
         {
             Current = voice->mCurrentBuffer.load(std::memory_order_relaxed);
 
-            readPos  = uint64_t{voice->mPosition.load(std::memory_order_relaxed)} << MixerFracBits;
-            readPos |= voice->mPositionFrac.load(std::memory_order_relaxed);
+            readPos  = int64_t{voice->mPosition.load(std::memory_order_relaxed)} << MixerFracBits;
+            readPos += voice->mPositionFrac.load(std::memory_order_relaxed);
         }
         std::atomic_thread_fence(std::memory_order_acquire);
     } while(refcount != device->MixCount.load(std::memory_order_relaxed));
@@ -258,7 +259,7 @@ double GetSourceSecOffset(ALsource *Source, ALCcontext *context, nanoseconds *cl
     while(BufferList != Source->mQueue.cend() && std::addressof(*BufferList) != Current)
     {
         if(!BufferFmt) BufferFmt = BufferList->mBuffer;
-        readPos += uint64_t{BufferList->mSampleLen} << MixerFracBits;
+        readPos += int64_t{BufferList->mSampleLen} << MixerFracBits;
         ++BufferList;
     }
     while(BufferList != Source->mQueue.cend() && !BufferFmt)
@@ -281,9 +282,9 @@ double GetSourceOffset(ALsource *Source, ALenum name, ALCcontext *context)
 {
     ALCdevice *device{context->mALDevice.get()};
     const VoiceBufferItem *Current{};
-    ALuint readPos{};
-    ALuint readPosFrac{};
-    ALuint refcount;
+    int64_t readPos{};
+    uint readPosFrac{};
+    uint refcount;
     Voice *voice;
 
     do {
@@ -321,11 +322,12 @@ double GetSourceOffset(ALsource *Source, ALenum name, ALCcontext *context)
     switch(name)
     {
     case AL_SEC_OFFSET:
-        offset = (readPos + readPosFrac/double{MixerFracOne}) / BufferFmt->mSampleRate;
+        offset  = static_cast<double>(readPos) + readPosFrac/double{MixerFracOne};
+        offset /= BufferFmt->mSampleRate;
         break;
 
     case AL_SAMPLE_OFFSET:
-        offset = readPos + readPosFrac/double{MixerFracOne};
+        offset = static_cast<double>(readPos) + readPosFrac/double{MixerFracOne};
         break;
 
     case AL_BYTE_OFFSET:
@@ -410,7 +412,8 @@ double GetSourceLength(const ALsource *source, ALenum name)
 
 
 struct VoicePos {
-    ALuint pos, frac;
+    int pos;
+    uint frac;
     ALbufferQueueItem *bufferitem;
 };
 
@@ -435,45 +438,73 @@ al::optional<VoicePos> GetSampleOffset(al::deque<ALbufferQueueItem> &BufferList,
         return al::nullopt;
 
     /* Get sample frame offset */
-    ALuint offset{0u}, frac{0u};
+    int64_t offset{};
+    uint frac{};
     double dbloff, dblfrac;
     switch(OffsetType)
     {
     case AL_SEC_OFFSET:
         dblfrac = std::modf(Offset*BufferFmt->mSampleRate, &dbloff);
-        offset = static_cast<ALuint>(mind(dbloff, std::numeric_limits<ALuint>::max()));
-        frac = static_cast<ALuint>(mind(dblfrac*MixerFracOne, MixerFracOne-1.0));
+        if(dblfrac < 0.0)
+        {
+            /* If there's a negative fraction, reduce the offset to "floor" it,
+             * and convert the fraction to a percentage to the next value (e.g.
+             * -2.75 -> -3 + 0.25).
+             */
+            dbloff -= 1.0;
+            dblfrac += 1.0;
+        }
+        dbloff = clampd(dbloff, double{std::numeric_limits<int64_t>::min()},
+            double{std::numeric_limits<int64_t>::max()});
+        offset = static_cast<int64_t>(dbloff);
+        frac = static_cast<uint>(mind(dblfrac*MixerFracOne, MixerFracOne-1.0));
         break;
 
     case AL_SAMPLE_OFFSET:
         dblfrac = std::modf(Offset, &dbloff);
-        offset = static_cast<ALuint>(mind(dbloff, std::numeric_limits<ALuint>::max()));
-        frac = static_cast<ALuint>(mind(dblfrac*MixerFracOne, MixerFracOne-1.0));
+        if(dblfrac < 0.0)
+        {
+            dbloff -= 1.0;
+            dblfrac += 1.0;
+        }
+        dbloff = clampd(dbloff, double{std::numeric_limits<int64_t>::min()},
+            double{std::numeric_limits<int64_t>::max()});
+        offset = static_cast<int64_t>(dbloff);
+        frac = static_cast<uint>(mind(dblfrac*MixerFracOne, MixerFracOne-1.0));
         break;
 
     case AL_BYTE_OFFSET:
         /* Determine the ByteOffset (and ensure it is block aligned) */
-        offset = static_cast<ALuint>(Offset);
         if(BufferFmt->OriginalType == UserFmtIMA4)
         {
             const ALuint align{(BufferFmt->OriginalAlign-1)/2 + 4};
-            offset /= align * BufferFmt->channelsFromFmt();
-            offset *= BufferFmt->OriginalAlign;
+            Offset = std::floor(Offset / align / BufferFmt->channelsFromFmt());
+            Offset *= BufferFmt->OriginalAlign;
         }
         else if(BufferFmt->OriginalType == UserFmtMSADPCM)
         {
             const ALuint align{(BufferFmt->OriginalAlign-2)/2 + 7};
-            offset /= align * BufferFmt->channelsFromFmt();
-            offset *= BufferFmt->OriginalAlign;
+            Offset = std::floor(Offset / align / BufferFmt->channelsFromFmt());
+            Offset *= BufferFmt->OriginalAlign;
         }
         else
-            offset /= BufferFmt->frameSizeFromFmt();
+            Offset = std::floor(Offset / BufferFmt->channelsFromFmt());
+        Offset = clampd(Offset, double{std::numeric_limits<int64_t>::min()},
+            double{std::numeric_limits<int64_t>::max()});
+        offset = static_cast<int64_t>(Offset);
         frac = 0;
         break;
     }
 
     /* Find the bufferlist item this offset belongs to. */
-    ALuint totalBufferLen{0u};
+    if(offset < 0)
+    {
+        if(offset < std::numeric_limits<int>::min())
+            return al::nullopt;
+        return VoicePos{static_cast<int>(offset), frac, &BufferList.front()};
+    }
+
+    int64_t totalBufferLen{0};
     for(auto &item : BufferList)
     {
         if(totalBufferLen > offset)
@@ -481,7 +512,7 @@ al::optional<VoicePos> GetSampleOffset(al::deque<ALbufferQueueItem> &BufferList,
         if(item.mSampleLen > offset-totalBufferLen)
         {
             /* Offset is in this buffer */
-            return VoicePos{offset-totalBufferLen, frac, &item};
+            return VoicePos{static_cast<int>(offset-totalBufferLen), frac, &item};
         }
         totalBufferLen += item.mSampleLen;
     }
@@ -1283,7 +1314,7 @@ void SetSourcefv(ALsource *Source, ALCcontext *Context, SourceProp prop,
     case AL_SAMPLE_OFFSET:
     case AL_BYTE_OFFSET:
         CHECKSIZE(values, 1);
-        CHECKVAL(values[0] >= 0.0f);
+        CHECKVAL(std::isfinite(values[0]));
 
         if(Voice *voice{GetSourceVoice(Source, Context)})
         {
@@ -1503,7 +1534,6 @@ void SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop,
     case AL_SAMPLE_OFFSET:
     case AL_BYTE_OFFSET:
         CHECKSIZE(values, 1);
-        CHECKVAL(values[0] >= 0);
 
         if(Voice *voice{GetSourceVoice(Source, Context)})
         {
@@ -3171,7 +3201,7 @@ START_API_FUNC
         }
         ASSUME(voice != nullptr);
 
-        voice->mPosition.store(0u, std::memory_order_relaxed);
+        voice->mPosition.store(0, std::memory_order_relaxed);
         voice->mPositionFrac.store(0, std::memory_order_relaxed);
         voice->mCurrentBuffer.store(&source->mQueue.front(), std::memory_order_relaxed);
         voice->mFlags.reset();

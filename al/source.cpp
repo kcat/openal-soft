@@ -644,6 +644,7 @@ bool SetVoiceOffset(Voice *oldvoice, const VoicePos &vpos, ALsource *source, ALC
     newvoice->mPosition.store(vpos.pos, std::memory_order_relaxed);
     newvoice->mPositionFrac.store(vpos.frac, std::memory_order_relaxed);
     newvoice->mCurrentBuffer.store(vpos.bufferitem, std::memory_order_relaxed);
+    newvoice->mStartTime = oldvoice->mStartTime;
     newvoice->mFlags.reset();
     if(vpos.pos > 0 || vpos.frac > 0 || vpos.bufferitem != &source->mQueue.front())
         newvoice->mFlags.set(VoiceIsFading);
@@ -3198,6 +3199,7 @@ START_API_FUNC
         voice->mPosition.store(0, std::memory_order_relaxed);
         voice->mPositionFrac.store(0, std::memory_order_relaxed);
         voice->mCurrentBuffer.store(&source->mQueue.front(), std::memory_order_relaxed);
+        voice->mStartTime = std::chrono::nanoseconds::min();
         voice->mFlags.reset();
         /* A source that's not playing or paused has any offset applied when it
          * starts playing.

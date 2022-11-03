@@ -4,6 +4,7 @@
 #include <array>
 #include <atomic>
 #include <bitset>
+#include <chrono>
 #include <memory>
 #include <stddef.h>
 #include <string>
@@ -209,6 +210,8 @@ struct Voice {
      */
     std::atomic<VoiceBufferItem*> mLoopBuffer;
 
+    std::chrono::nanoseconds mStartTime{};
+
     /* Properties for the attached buffer(s). */
     FmtChannels mFmtChannels;
     FmtType mFmtType;
@@ -262,7 +265,8 @@ struct Voice {
     Voice(const Voice&) = delete;
     Voice& operator=(const Voice&) = delete;
 
-    void mix(const State vstate, ContextBase *Context, const uint SamplesToDo);
+    void mix(const State vstate, ContextBase *Context, const std::chrono::nanoseconds deviceTime,
+        const uint SamplesToDo);
 
     void prepare(DeviceBase *device);
 

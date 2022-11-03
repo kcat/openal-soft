@@ -60,6 +60,7 @@ Resampler ResamplerDefault{Resampler::Linear};
 namespace {
 
 using uint = unsigned int;
+using namespace std::chrono;
 
 using HrtfMixerFunc = void(*)(const float *InSamples, float2 *AccumSamples, const uint IrSize,
     const MixHrtfFilter *hrtfparams, const size_t BufferSize);
@@ -456,11 +457,15 @@ void DoNfcMix(const al::span<const float> samples, FloatBufferLine *OutBuffer, D
 
 } // namespace
 
-void Voice::mix(const State vstate, ContextBase *Context, const uint SamplesToDo)
+void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds deviceTime,
+    const uint SamplesToDo)
 {
     static constexpr std::array<float,MAX_OUTPUT_CHANNELS> SilentTarget{};
 
     ASSUME(SamplesToDo > 0);
+
+    DeviceBase *Device{Context->mDevice};
+    const uint NumSends{Device->NumAuxSends};
 
     /* Get voice info */
     int DataPosInt{mPosition.load(std::memory_order_relaxed)};
@@ -478,13 +483,37 @@ void Voice::mix(const State vstate, ContextBase *Context, const uint SamplesToDo
         return;
     }
 
-    DeviceBase *Device{Context->mDevice};
-    const uint NumSends{Device->NumAuxSends};
-
-    ResamplerFunc Resample{(increment == MixerFracOne && DataPosFrac == 0) ?
-                           Resample_<CopyTag,CTag> : mResampler};
-
     uint Counter{mFlags.test(VoiceIsFading) ? SamplesToDo : 0};
+    uint OutPos{0u};
+
+    /* Check if we're doing a delayed start, and we start in this update. */
+    if(mStartTime > deviceTime)
+    {
+        /* If the start time is too far ahead, don't bother. */
+        auto diff = mStartTime - deviceTime;
+        if(diff >= seconds{1})
+            return;
+
+        /* Get the number of samples ahead of the current time that output
+         * should start at. Skip this update if it's beyond the output sample
+         * count.
+         */
+        seconds::rep sampleOffset{duration_cast<seconds>(diff * Device->Frequency).count()};
+        if(sampleOffset >= SamplesToDo)
+            return;
+
+        /* Round the start position down to a multiple of 4, which some mixers
+         * want. This makes the start time accurate to 4 samples. This could be
+         * made sample-accurate by forcing non-SIMD functions on the first run.
+         *
+         * Also ensure any fading completes within this update (though don't go
+         * less than 64 samples, or the fade could be too fast).
+         */
+        OutPos = static_cast<uint>(sampleOffset) & ~3u;
+        if(Counter > 0)
+            Counter = maxu(Counter-OutPos, 64);
+    }
+
     if(!Counter)
     {
         /* No fading, just overwrite the old/current params. */
@@ -517,9 +546,10 @@ void Voice::mix(const State vstate, ContextBase *Context, const uint SamplesToDo
     std::transform(Device->mSampleData.end() - mChans.size(), Device->mSampleData.end(),
         MixingSamples.begin(), offset_bufferline);
 
+    const ResamplerFunc Resample{(increment == MixerFracOne && DataPosFrac == 0) ?
+        Resample_<CopyTag,CTag> : mResampler};
     const uint PostPadding{MaxResamplerEdge + mDecoderPadding};
     uint buffers_done{0u};
-    uint OutPos{0u};
     do {
         /* Figure out how many buffer samples will be needed */
         uint DstBufferSize{SamplesToDo - OutPos};

@@ -452,6 +452,9 @@ const struct {
     DECL(alAuxiliaryEffectSlotPlayvSOFT),
     DECL(alAuxiliaryEffectSlotStopSOFT),
     DECL(alAuxiliaryEffectSlotStopvSOFT),
+
+    DECL(alSourcePlayAtTimeSOFT),
+    DECL(alSourcePlayAtTimevSOFT),
 #ifdef ALSOFT_EAX
 }, eaxFunctions[] = {
     DECL(EAXGet),

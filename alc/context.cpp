@@ -78,6 +78,7 @@ constexpr ALchar alExtList[] =
     "AL_SOFT_source_length "
     "AL_SOFT_source_resampler "
     "AL_SOFT_source_spatialize "
+    "AL_SOFTX_source_start_delay "
     "AL_SOFT_UHJ";
 
 } // namespace

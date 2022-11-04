@@ -84,8 +84,10 @@ auto ALCdevice::getOutputMode1() const noexcept -> OutputMode1
     case DevFmtX51: return OutputMode1::X51;
     case DevFmtX61: return OutputMode1::X61;
     case DevFmtX71: return OutputMode1::X71;
+    case DevFmtX714:
     case DevFmtX3D71:
-    case DevFmtAmbi3D: break;
+    case DevFmtAmbi3D:
+        break;
     }
     return OutputMode1::Any;
 }

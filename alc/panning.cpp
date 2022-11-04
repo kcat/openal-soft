@@ -376,6 +376,10 @@ DecoderView MakeDecoderView(ALCdevice *device, const AmbDecConf *conf,
          * RB = Back right
          * CE = Front center
          * CB = Back center
+         * LFT = Top front left
+         * RFT = Top front right
+         * LBT = Top back left
+         * RBT = Top back right
          *
          * Additionally, surround51 will acknowledge back speakers for side
          * channels, to avoid issues with an ambdec expecting 5.1 to use the
@@ -398,6 +402,14 @@ DecoderView MakeDecoderView(ALCdevice *device, const AmbDecConf *conf,
             ch = (device->FmtChans == DevFmtX51) ? SideRight : BackRight;
         else if(speaker.Name == "CB")
             ch = BackCenter;
+        else if(speaker.Name == "LFT")
+            ch = TopFrontLeft;
+        else if(speaker.Name == "RFT")
+            ch = TopFrontRight;
+        else if(speaker.Name == "LBT")
+            ch = TopBackLeft;
+        else if(speaker.Name == "RBT")
+            ch = TopBackRight;
         else
         {
             int idx{};
@@ -554,6 +566,23 @@ constexpr DecoderConfig<DualBand, 6> X3D71Config{
         {{1.666666667e-01f,  0.000000000e+00f, -2.356640879e-01f,  1.667265410e-01f}},
     }}
 };
+constexpr DecoderConfig<SingleBand, 10> X714Config{
+    1, true, {{FrontLeft, FrontRight, SideLeft, SideRight, BackLeft, BackRight, TopFrontLeft, TopFrontRight, TopBackLeft, TopBackRight }},
+    DevAmbiScaling::N3D,
+    {{1.00000000e+0f, 1.00000000e+0f, 1.00000000e+0f}},
+    {{
+        {{1.27149251e-01f,  7.63047539e-02f, -3.64373750e-02f,  1.59700680e-01f}},
+        {{1.07005418e-01f, -7.67638760e-02f, -4.92129762e-02f,  1.29012797e-01f}},
+        {{1.26400196e-01f,  1.77494694e-01f, -3.71203389e-02f,  0.00000000e+00f}},
+        {{1.26396516e-01f, -1.77488059e-01f, -3.71297878e-02f,  0.00000000e+00f}},
+        {{1.06996956e-01f,  7.67615256e-02f, -4.92166307e-02f, -1.29001640e-01f}},
+        {{1.27145671e-01f, -7.63003471e-02f, -3.64353304e-02f, -1.59697510e-01f}},
+        {{8.80919747e-02f,  7.48940670e-02f,  9.08786244e-02f,  6.22527183e-02f}},
+        {{1.57880745e-01f, -7.28755272e-02f,  1.82364187e-01f,  8.74240284e-02f}},
+        {{1.57892225e-01f,  7.28944768e-02f,  1.82363474e-01f, -8.74301086e-02f}},
+        {{8.80892603e-02f, -7.48948724e-02f,  9.08779842e-02f, -6.22480443e-02f}},
+    }}
+};
 
 void InitPanning(ALCdevice *device, const bool hqdec=false, const bool stablize=false,
     DecoderView decoder={})
@@ -568,6 +597,7 @@ void InitPanning(ALCdevice *device, const bool hqdec=false, const bool stablize=
         case DevFmtX51: decoder = X51Config; break;
         case DevFmtX61: decoder = X61Config; break;
         case DevFmtX71: decoder = X71Config; break;
+        case DevFmtX714: decoder = X714Config; break;
         case DevFmtX3D71: decoder = X3D71Config; break;
         case DevFmtAmbi3D:
             auto&& acnmap = GetAmbiLayout(device->mAmbiLayout);
@@ -929,6 +959,7 @@ void aluInitRenderer(ALCdevice *device, int hrtf_id, al::optional<StereoEncoding
         case DevFmtX51: layout = "surround51"; break;
         case DevFmtX61: layout = "surround61"; break;
         case DevFmtX71: layout = "surround71"; break;
+        case DevFmtX714: layout = "surround714"; break;
         case DevFmtX3D71: layout = "surround3d71"; break;
         /* Mono, Stereo, and Ambisonics output don't use custom decoders. */
         case DevFmtMono:

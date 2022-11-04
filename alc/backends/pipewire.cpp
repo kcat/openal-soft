@@ -644,6 +644,10 @@ const spa_audio_channel MonoMap[]{
 }, X71Map[]{
     SPA_AUDIO_CHANNEL_FL, SPA_AUDIO_CHANNEL_FR, SPA_AUDIO_CHANNEL_FC, SPA_AUDIO_CHANNEL_LFE,
     SPA_AUDIO_CHANNEL_RL, SPA_AUDIO_CHANNEL_RR, SPA_AUDIO_CHANNEL_SL, SPA_AUDIO_CHANNEL_SR
+}, X714Map[]{
+    SPA_AUDIO_CHANNEL_FL, SPA_AUDIO_CHANNEL_FR, SPA_AUDIO_CHANNEL_FC, SPA_AUDIO_CHANNEL_LFE,
+    SPA_AUDIO_CHANNEL_RL, SPA_AUDIO_CHANNEL_RR, SPA_AUDIO_CHANNEL_SL, SPA_AUDIO_CHANNEL_SR,
+    SPA_AUDIO_CHANNEL_TFL, SPA_AUDIO_CHANNEL_TFR, SPA_AUDIO_CHANNEL_TRL, SPA_AUDIO_CHANNEL_TRR
 };
 
 /**
@@ -747,7 +751,9 @@ void DeviceNode::parsePositions(const spa_pod *value) noexcept
 
     mIs51Rear = false;
 
-    if(MatchChannelMap(chanmap, X71Map))
+    if(MatchChannelMap(chanmap, X714Map))
+        mChannels = DevFmtX714;
+    else if(MatchChannelMap(chanmap, X71Map))
         mChannels = DevFmtX71;
     else if(MatchChannelMap(chanmap, X61Map))
         mChannels = DevFmtX61;
@@ -1232,6 +1238,7 @@ spa_audio_info_raw make_spa_info(DeviceBase *device, bool is51rear, use_f32p_e u
         break;
     case DevFmtX61: map = X61Map; break;
     case DevFmtX71: map = X71Map; break;
+    case DevFmtX714: map = X714Map; break;
     case DevFmtX3D71: map = X71Map; break;
     case DevFmtAmbi3D:
         info.flags |= SPA_AUDIO_FLAG_UNPOSITIONED;

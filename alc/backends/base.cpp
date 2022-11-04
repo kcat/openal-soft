@@ -98,6 +98,20 @@ void BackendBase::setDefaultWFXChannelOrder()
         mDevice->RealOut.ChannelIndex[SideLeft]    = 6;
         mDevice->RealOut.ChannelIndex[SideRight]   = 7;
         break;
+    case DevFmtX714:
+        mDevice->RealOut.ChannelIndex[FrontLeft]     = 0;
+        mDevice->RealOut.ChannelIndex[FrontRight]    = 1;
+        mDevice->RealOut.ChannelIndex[FrontCenter]   = 2;
+        mDevice->RealOut.ChannelIndex[LFE]           = 3;
+        mDevice->RealOut.ChannelIndex[BackLeft]      = 4;
+        mDevice->RealOut.ChannelIndex[BackRight]     = 5;
+        mDevice->RealOut.ChannelIndex[SideLeft]      = 6;
+        mDevice->RealOut.ChannelIndex[SideRight]     = 7;
+        mDevice->RealOut.ChannelIndex[TopFrontLeft]  = 8;
+        mDevice->RealOut.ChannelIndex[TopFrontRight] = 9;
+        mDevice->RealOut.ChannelIndex[TopBackLeft]   = 10;
+        mDevice->RealOut.ChannelIndex[TopBackRight]  = 11;
+        break;
     case DevFmtX3D71:
         mDevice->RealOut.ChannelIndex[FrontLeft]   = 0;
         mDevice->RealOut.ChannelIndex[FrontRight]  = 1;
@@ -137,6 +151,20 @@ void BackendBase::setDefaultChannelOrder()
         mDevice->RealOut.ChannelIndex[SideLeft]    = 6;
         mDevice->RealOut.ChannelIndex[SideRight]   = 7;
         return;
+    case DevFmtX714:
+        mDevice->RealOut.ChannelIndex[FrontLeft]     = 0;
+        mDevice->RealOut.ChannelIndex[FrontRight]    = 1;
+        mDevice->RealOut.ChannelIndex[BackLeft]      = 2;
+        mDevice->RealOut.ChannelIndex[BackRight]     = 3;
+        mDevice->RealOut.ChannelIndex[FrontCenter]   = 4;
+        mDevice->RealOut.ChannelIndex[LFE]           = 5;
+        mDevice->RealOut.ChannelIndex[SideLeft]      = 6;
+        mDevice->RealOut.ChannelIndex[SideRight]     = 7;
+        mDevice->RealOut.ChannelIndex[TopFrontLeft]  = 8;
+        mDevice->RealOut.ChannelIndex[TopFrontRight] = 9;
+        mDevice->RealOut.ChannelIndex[TopBackLeft]   = 10;
+        mDevice->RealOut.ChannelIndex[TopBackRight]  = 11;
+        break;
     case DevFmtX3D71:
         mDevice->RealOut.ChannelIndex[FrontLeft]   = 0;
         mDevice->RealOut.ChannelIndex[FrontRight]  = 1;

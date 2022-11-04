@@ -1482,6 +1482,7 @@ ALCenum EnumFromDevFmt(DevFmtChannels channels)
     case DevFmtX71: return ALC_7POINT1_SOFT;
     case DevFmtAmbi3D: return ALC_BFORMAT3D_SOFT;
     /* FIXME: Shouldn't happen. */
+    case DevFmtX714:
     case DevFmtX3D71: break;
     }
     throw std::runtime_error{"Invalid DevFmtChannels: "+std::to_string(int(channels))};
@@ -1953,6 +1954,7 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
                 { "surround51", DevFmtX51,    0 },
                 { "surround61", DevFmtX61,    0 },
                 { "surround71", DevFmtX71,    0 },
+                { "surround714", DevFmtX714,  0 },
                 { "surround3d71", DevFmtX3D71, 0 },
                 { "surround51rear", DevFmtX51, 0 },
                 { "ambi1", DevFmtAmbi3D, 1 },
@@ -2133,6 +2135,7 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
     case DevFmtX51: device->RealOut.RemixMap = X51Downmix; break;
     case DevFmtX61: device->RealOut.RemixMap = X61Downmix; break;
     case DevFmtX71: device->RealOut.RemixMap = X71Downmix; break;
+    case DevFmtX714: device->RealOut.RemixMap = X71Downmix; break;
     case DevFmtX3D71: device->RealOut.RemixMap = X51Downmix; break;
     case DevFmtAmbi3D: break;
     }

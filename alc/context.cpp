@@ -535,6 +535,10 @@ unsigned long ALCcontext::eax_detect_speaker_configuration() const
     case DevFmtX51: return SPEAKERS_5;
     case DevFmtX61: return SPEAKERS_6;
     case DevFmtX71: return SPEAKERS_7;
+    /* 7.1.4 is compatible with 7.1. This could instead be HEADPHONES to
+     * suggest with-height surround sound (like HRTF).
+     */
+    case DevFmtX714: return SPEAKERS_7;
     /* 3D7.1 is only compatible with 5.1. This could instead be HEADPHONES to
      * suggest full-sphere surround sound (like HRTF).
      */

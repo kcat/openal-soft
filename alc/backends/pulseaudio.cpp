@@ -234,6 +234,15 @@ constexpr pa_channel_map MonoChanMap{
         PA_CHANNEL_POSITION_REAR_LEFT, PA_CHANNEL_POSITION_REAR_RIGHT,
         PA_CHANNEL_POSITION_SIDE_LEFT, PA_CHANNEL_POSITION_SIDE_RIGHT
     }
+}, X714ChanMap{
+    12, {
+        PA_CHANNEL_POSITION_FRONT_LEFT, PA_CHANNEL_POSITION_FRONT_RIGHT,
+        PA_CHANNEL_POSITION_FRONT_CENTER, PA_CHANNEL_POSITION_LFE,
+        PA_CHANNEL_POSITION_REAR_LEFT, PA_CHANNEL_POSITION_REAR_RIGHT,
+        PA_CHANNEL_POSITION_SIDE_LEFT, PA_CHANNEL_POSITION_SIDE_RIGHT,
+        PA_CHANNEL_POSITION_TOP_FRONT_LEFT, PA_CHANNEL_POSITION_TOP_FRONT_RIGHT,
+        PA_CHANNEL_POSITION_TOP_REAR_LEFT, PA_CHANNEL_POSITION_TOP_REAR_RIGHT
+    }
 };
 
 
@@ -704,7 +713,8 @@ void PulsePlayback::sinkInfoCallback(pa_context*, const pa_sink_info *info, int 
         pa_channel_map map;
         bool is_51rear;
     };
-    static constexpr std::array<ChannelMap,7> chanmaps{{
+    static constexpr std::array<ChannelMap,8> chanmaps{{
+        { DevFmtX714, X714ChanMap, false },
         { DevFmtX71, X71ChanMap, false },
         { DevFmtX61, X61ChanMap, false },
         { DevFmtX51, X51ChanMap, false },
@@ -894,6 +904,9 @@ bool PulsePlayback::reset()
     case DevFmtX71:
     case DevFmtX3D71:
         chanmap = X71ChanMap;
+        break;
+    case DevFmtX714:
+        chanmap = X714ChanMap;
         break;
     }
     setDefaultWFXChannelOrder();
@@ -1178,6 +1191,9 @@ void PulseCapture::open(const char *name)
         break;
     case DevFmtX71:
         chanmap = X71ChanMap;
+        break;
+    case DevFmtX714:
+        chanmap = X714ChanMap;
         break;
     case DevFmtX3D71:
     case DevFmtAmbi3D:

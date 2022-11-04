@@ -102,6 +102,7 @@ inline constexpr ReferenceTime operator "" _reftime(unsigned long long int n) no
 #define X5DOT1REAR (SPEAKER_FRONT_LEFT|SPEAKER_FRONT_RIGHT|SPEAKER_FRONT_CENTER|SPEAKER_LOW_FREQUENCY|SPEAKER_BACK_LEFT|SPEAKER_BACK_RIGHT)
 #define X6DOT1 (SPEAKER_FRONT_LEFT|SPEAKER_FRONT_RIGHT|SPEAKER_FRONT_CENTER|SPEAKER_LOW_FREQUENCY|SPEAKER_BACK_CENTER|SPEAKER_SIDE_LEFT|SPEAKER_SIDE_RIGHT)
 #define X7DOT1 (SPEAKER_FRONT_LEFT|SPEAKER_FRONT_RIGHT|SPEAKER_FRONT_CENTER|SPEAKER_LOW_FREQUENCY|SPEAKER_BACK_LEFT|SPEAKER_BACK_RIGHT|SPEAKER_SIDE_LEFT|SPEAKER_SIDE_RIGHT)
+#define X7DOT1DOT4 (SPEAKER_FRONT_LEFT|SPEAKER_FRONT_RIGHT|SPEAKER_FRONT_CENTER|SPEAKER_LOW_FREQUENCY|SPEAKER_BACK_LEFT|SPEAKER_BACK_RIGHT|SPEAKER_SIDE_LEFT|SPEAKER_SIDE_RIGHT|SPEAKER_TOP_FRONT_LEFT|SPEAKER_TOP_FRONT_RIGHT|SPEAKER_TOP_BACK_LEFT|SPEAKER_TOP_BACK_RIGHT)
 
 constexpr inline DWORD MaskFromTopBits(DWORD b) noexcept
 {
@@ -119,6 +120,7 @@ constexpr DWORD X51Mask{MaskFromTopBits(X5DOT1)};
 constexpr DWORD X51RearMask{MaskFromTopBits(X5DOT1REAR)};
 constexpr DWORD X61Mask{MaskFromTopBits(X6DOT1)};
 constexpr DWORD X71Mask{MaskFromTopBits(X7DOT1)};
+constexpr DWORD X714Mask{MaskFromTopBits(X7DOT1DOT4)};
 
 constexpr char DevNameHead[] = "OpenAL Soft on ";
 constexpr size_t DevNameHeadLen{al::size(DevNameHead) - 1};
@@ -888,7 +890,9 @@ HRESULT WasapiPlayback::resetProxy()
          */
         const uint32_t chancount{OutputType.Format.nChannels};
         const DWORD chanmask{OutputType.dwChannelMask};
-        if(chancount >= 8 && (chanmask&X71Mask) == X7DOT1)
+        if(chancount >= 12 && (chanmask&X714Mask) == X7DOT1DOT4)
+            mDevice->FmtChans = DevFmtX71;
+        else if(chancount >= 8 && (chanmask&X71Mask) == X7DOT1)
             mDevice->FmtChans = DevFmtX71;
         else if(chancount >= 7 && (chanmask&X61Mask) == X6DOT1)
             mDevice->FmtChans = DevFmtX61;
@@ -945,6 +949,10 @@ HRESULT WasapiPlayback::resetProxy()
     case DevFmtX3D71:
         OutputType.Format.nChannels = 8;
         OutputType.dwChannelMask = X7DOT1;
+        break;
+    case DevFmtX714:
+        OutputType.Format.nChannels = 12;
+        OutputType.dwChannelMask = X7DOT1DOT4;
         break;
     }
     switch(mDevice->FmtType)
@@ -1045,13 +1053,17 @@ HRESULT WasapiPlayback::resetProxy()
             case DevFmtX3D71:
                 chansok = (chancount >= 8 && ((chanmask&X71Mask) == X7DOT1 || !chanmask));
                 break;
+            case DevFmtX714:
+                chansok = (chancount >= 12 && ((chanmask&X714Mask) == X7DOT1DOT4 || !chanmask));
             case DevFmtAmbi3D:
                 break;
             }
         }
         if(!chansok)
         {
-            if(chancount >= 8 && (chanmask&X71Mask) == X7DOT1)
+            if(chancount >= 12 && (chanmask&X714Mask) == X7DOT1DOT4)
+                mDevice->FmtChans = DevFmtX714;
+            else if(chancount >= 8 && (chanmask&X71Mask) == X7DOT1)
                 mDevice->FmtChans = DevFmtX71;
             else if(chancount >= 7 && (chanmask&X61Mask) == X6DOT1)
                 mDevice->FmtChans = DevFmtX61;
@@ -1518,6 +1530,10 @@ HRESULT WasapiCapture::resetProxy()
         InputType.Format.nChannels = 8;
         InputType.dwChannelMask = X7DOT1;
         break;
+    case DevFmtX714:
+        InputType.Format.nChannels = 12;
+        InputType.dwChannelMask = X7DOT1DOT4;
+        break;
 
     case DevFmtX3D71:
     case DevFmtAmbi3D:
@@ -1606,6 +1622,8 @@ HRESULT WasapiCapture::resetProxy()
             case DevFmtX71:
             case DevFmtX3D71:
                 return (chancount == 8 && (chanmask == 0 || (chanmask&X71Mask) == X7DOT1));
+            case DevFmtX714:
+                return (chancount == 12 && (chanmask == 0 || (chanmask&X714Mask) == X7DOT1DOT4));
             case DevFmtAmbi3D:
                 return (chanmask == 0 && chancount == device->channelsFromFmt());
             }

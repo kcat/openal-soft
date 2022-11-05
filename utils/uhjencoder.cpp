@@ -288,9 +288,6 @@ int main(int argc, char **argv)
 
         /* Work out the channel map, preferably using the actual channel map
          * from the file/format, but falling back to assuming WFX order.
-         *
-         * TODO: Map indices when the channel order differs from the virtual
-         * speaker position maps.
          */
         al::span<const SpeakerPos> spkrs;
         auto chanmap = std::vector<int>(static_cast<uint>(ininfo.channels), SF_CHANNEL_MAP_INVALID);
@@ -324,8 +321,14 @@ int main(int argc, char **argv)
 
             auto match_chanmap = [](const al::span<int> a, const al::span<const int> b) -> bool
             {
-                return a.size() == b.size()
-                    && std::mismatch(a.begin(), a.end(), b.begin(), b.end()).first == a.end();
+                if(a.size() != b.size())
+                    return false;
+                for(const int id : a)
+                {
+                    if(std::find(b.begin(), b.end(), id) != b.end())
+                        return false;
+                }
+                return true;
             };
             if(match_chanmap(chanmap, stereomap))
                 spkrs = StereoMap;
@@ -364,16 +367,32 @@ int main(int argc, char **argv)
         {
             fprintf(stderr, " ... assuming WFX order stereo\n");
             spkrs = StereoMap;
+            chanmap[0] = SF_CHANNEL_MAP_FRONT_LEFT;
+            chanmap[1] = SF_CHANNEL_MAP_FRONT_RIGHT;
         }
         else if(ininfo.channels == 6)
         {
             fprintf(stderr, " ... assuming WFX order 5.1\n");
             spkrs = X51Map;
+            chanmap[0] = SF_CHANNEL_MAP_FRONT_LEFT;
+            chanmap[1] = SF_CHANNEL_MAP_FRONT_RIGHT;
+            chanmap[2] = SF_CHANNEL_MAP_FRONT_CENTER;
+            chanmap[3] = SF_CHANNEL_MAP_LFE;
+            chanmap[4] = SF_CHANNEL_MAP_SIDE_LEFT;
+            chanmap[5] = SF_CHANNEL_MAP_SIDE_RIGHT;
         }
         else if(ininfo.channels == 8)
         {
             fprintf(stderr, " ... assuming WFX order 7.1\n");
             spkrs = X71Map;
+            chanmap[0] = SF_CHANNEL_MAP_FRONT_LEFT;
+            chanmap[1] = SF_CHANNEL_MAP_FRONT_RIGHT;
+            chanmap[2] = SF_CHANNEL_MAP_FRONT_CENTER;
+            chanmap[3] = SF_CHANNEL_MAP_LFE;
+            chanmap[4] = SF_CHANNEL_MAP_REAR_LEFT;
+            chanmap[5] = SF_CHANNEL_MAP_REAR_RIGHT;
+            chanmap[6] = SF_CHANNEL_MAP_SIDE_LEFT;
+            chanmap[7] = SF_CHANNEL_MAP_SIDE_RIGHT;
         }
         else
         {
@@ -431,7 +450,7 @@ int main(int argc, char **argv)
                 /* B-Format is already in the correct order. It just needs a
                  * +3dB boost.
                  */
-                constexpr float scale{al::numbers::sqrt2_v<float>};
+                static constexpr float scale{al::numbers::sqrt2_v<float>};
                 const size_t chans{std::min<size_t>(static_cast<uint>(ininfo.channels), 4u)};
                 for(size_t c{0};c < chans;++c)
                 {
@@ -440,12 +459,20 @@ int main(int argc, char **argv)
                     ++inmem;
                 }
             }
-            else for(auto&& spkr : spkrs)
+            else for(const int chanid : chanmap)
             {
                 /* Skip LFE. Or mix directly into W? Or W+X? */
-                if(spkr.mChannelID == SF_CHANNEL_MAP_LFE)
+                if(chanid == SF_CHANNEL_MAP_LFE)
                 {
                     ++inmem;
+                    continue;
+                }
+
+                const auto spkr = std::find_if(spkrs.cbegin(), spkrs.cend(),
+                    [chanid](const SpeakerPos &pos){return pos.mChannelID == chanid;});
+                if(spkr == spkrs.cend())
+                {
+                    fprintf(stderr, " ... failed to find channel ID %d\n", chanid);
                     continue;
                 }
 
@@ -453,11 +480,11 @@ int main(int argc, char **argv)
                     srcmem[i] = inmem[i * static_cast<uint>(ininfo.channels)];
                 ++inmem;
 
-                constexpr auto Deg2Rad = al::numbers::pi / 180.0;
+                static constexpr auto Deg2Rad = al::numbers::pi / 180.0;
                 const auto coeffs = GenCoeffs(
-                    std::cos(spkr.mAzimuth*Deg2Rad) * std::cos(spkr.mElevation*Deg2Rad),
-                    std::sin(spkr.mAzimuth*Deg2Rad) * std::cos(spkr.mElevation*Deg2Rad),
-                    std::sin(spkr.mElevation*Deg2Rad));
+                    std::cos(spkr->mAzimuth*Deg2Rad) * std::cos(spkr->mElevation*Deg2Rad),
+                    std::sin(spkr->mAzimuth*Deg2Rad) * std::cos(spkr->mElevation*Deg2Rad),
+                    std::sin(spkr->mElevation*Deg2Rad));
                 for(size_t c{0};c < 4;++c)
                 {
                     for(size_t i{0};i < got;++i)

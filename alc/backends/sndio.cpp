@@ -22,13 +22,13 @@
 
 #include "sndio.h"
 
+#include <functional>
+#include <inttypes.h>
 #include <poll.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
 #include <thread>
-#include <functional>
 
 #include "alnumeric.h"
 #include "core/device.h"
@@ -98,9 +98,9 @@ int SndioPlayback::mixerProc()
         while(!buffer.empty() && !mKillNow.load(std::memory_order_acquire))
         {
             size_t wrote{sio_write(mSndHandle, buffer.data(), buffer.size())};
-            if(wrote == 0)
+            if(wrote > buffer.size() || wrote == 0)
             {
-                ERR("sio_write failed\n");
+                ERR("sio_write failed: 0x%" PRIx64 "\n", wrote);
                 mDevice->handleDisconnect("Failed to write playback samples");
                 break;
             }
@@ -353,7 +353,14 @@ int SndioCapture::recordProc()
         while(!buffer.empty())
         {
             size_t got{sio_read(mSndHandle, buffer.data(), buffer.size())};
-            if(got == 0) break;
+            if(got == 0)
+                break;
+            if(got > buffer.size())
+            {
+                ERR("sio_read failed: 0x%" PRIx64 "\n", got);
+                mDevice->handleDisconnect("sio_read failed: 0x%" PRIx64, got);
+                break;
+            }
 
             mRing->writeAdvance(got / frameSize);
             buffer = buffer.subspan(got);

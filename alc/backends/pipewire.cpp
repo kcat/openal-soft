@@ -32,6 +32,7 @@
 #include <memory>
 #include <mutex>
 #include <stdint.h>
+#include <thread>
 #include <type_traits>
 #include <utility>
 
@@ -125,6 +126,7 @@ namespace {
 #endif
 
 using std::chrono::seconds;
+using std::chrono::milliseconds;
 using std::chrono::nanoseconds;
 using uint = unsigned int;
 
@@ -1544,7 +1546,7 @@ bool PipeWirePlayback::reset()
     static constexpr pw_stream_events streamEvents{CreateEvents()};
     pw_stream_add_listener(mStream.get(), &mStreamListener, &streamEvents, this);
 
-    constexpr pw_stream_flags Flags{PW_STREAM_FLAG_AUTOCONNECT | PW_STREAM_FLAG_INACTIVE
+    static constexpr pw_stream_flags Flags{PW_STREAM_FLAG_AUTOCONNECT | PW_STREAM_FLAG_INACTIVE
         | PW_STREAM_FLAG_MAP_BUFFERS | PW_STREAM_FLAG_RT_PROCESS};
     if(int res{pw_stream_connect(mStream.get(), PW_DIRECTION_OUTPUT, mTargetId, Flags, &params, 1)})
         throw al::backend_exception{al::backend_error::DeviceError,
@@ -1595,10 +1597,49 @@ void PipeWirePlayback::start()
         return state == PW_STREAM_STATE_STREAMING;
     });
 
-    if(mRateMatch && mRateMatch->size)
+    /* HACK: Try to work out the update size and total buffering size. There's
+     * no simple query for this, so we have to work it out from the stream time
+     * info. The stream time info may also not be available right away, so we
+     * have to wait until it is (up to about 2 seconds).
+     */
+    int wait_count{100};
+    pw_stream_state state{PW_STREAM_STATE_STREAMING};
+    while(state == PW_STREAM_STATE_STREAMING && mRateMatch)
     {
-        mDevice->UpdateSize = mRateMatch->size;
-        mDevice->BufferSize = mDevice->UpdateSize * 2;
+        pw_time ptime{};
+        if(int res{pw_stream_get_time_n(mStream.get(), &ptime, sizeof(ptime))})
+        {
+            ERR("Failed to get PipeWire stream time (res: %d)\n", res);
+            break;
+        }
+
+        /* The time info will be valid when there's a valid rate. Assume
+         * ptime.avail_buffers+ptime.queued_buffers is the target buffer queue
+         * size.
+         */
+        if(ptime.rate.denom > 0 && (ptime.avail_buffers || ptime.queued_buffers))
+        {
+            /* The rate match size is the update size for each buffer. */
+            uint updatesize{mRateMatch ? mRateMatch->size : 0u};
+            if(!updatesize) updatesize = mDevice->UpdateSize;
+            const uint totalbuffers{ptime.avail_buffers + ptime.queued_buffers};
+
+            /* Ensure the delay is in sample frames. */
+            const uint64_t delay{static_cast<uint64_t>(ptime.delay) * mDevice->Frequency *
+                ptime.rate.num / ptime.rate.denom};
+
+            mDevice->UpdateSize = updatesize;
+            mDevice->BufferSize = static_cast<uint>(ptime.buffered + delay +
+                totalbuffers*updatesize);
+            break;
+        }
+        if(!--wait_count)
+            break;
+
+        plock.unlock();
+        std::this_thread::sleep_for(milliseconds{20});
+        plock.lock();
+        state = pw_stream_get_state(mStream.get(), nullptr);
     }
 }
 

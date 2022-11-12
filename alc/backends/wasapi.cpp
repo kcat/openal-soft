@@ -424,7 +424,6 @@ void TraceFormat(const char *msg, const WAVEFORMATEX *format)
 
 enum class MsgType {
     OpenDevice,
-    ReopenDevice,
     ResetDevice,
     StartDevice,
     StopDevice,
@@ -438,7 +437,6 @@ enum class MsgType {
 
 constexpr char MessageStr[static_cast<size_t>(MsgType::Count)][20]{
     "Open Device",
-    "Reopen Device",
     "Reset Device",
     "Start Device",
     "Stop Device",
@@ -467,9 +465,12 @@ struct WasapiProxy {
 
         explicit operator bool() const noexcept { return mType != MsgType::QuitThread; }
     };
+    static std::thread sThread;
     static std::deque<Msg> mMsgQueue;
     static std::mutex mMsgQueueLock;
     static std::condition_variable mMsgQueueCond;
+    static std::mutex sThreadLock;
+    static size_t sInitCount;
 
     std::future<HRESULT> pushMessage(MsgType type, const char *param=nullptr)
     {
@@ -505,42 +506,60 @@ struct WasapiProxy {
     }
 
     static int messageHandler(std::promise<HRESULT> *promise);
+
+    static HRESULT InitThread()
+    {
+        std::lock_guard<std::mutex> _{sThreadLock};
+        HRESULT res{S_OK};
+        if(!sThread.joinable())
+        {
+            std::promise<HRESULT> promise;
+            auto future = promise.get_future();
+
+            sThread = std::thread{&WasapiProxy::messageHandler, &promise};
+            res = future.get();
+            if(FAILED(res))
+            {
+                sThread.join();
+                return res;
+            }
+        }
+        ++sInitCount;
+        return res;
+    }
+
+    static void DeinitThread()
+    {
+        std::lock_guard<std::mutex> _{sThreadLock};
+        if(!--sInitCount && sThread.joinable())
+        {
+            pushMessageStatic(MsgType::QuitThread);
+            sThread.join();
+        }
+    }
 };
+std::thread WasapiProxy::sThread;
 std::deque<WasapiProxy::Msg> WasapiProxy::mMsgQueue;
 std::mutex WasapiProxy::mMsgQueueLock;
 std::condition_variable WasapiProxy::mMsgQueueCond;
+std::mutex WasapiProxy::sThreadLock;
+size_t WasapiProxy::sInitCount{0};
 
 int WasapiProxy::messageHandler(std::promise<HRESULT> *promise)
 {
     TRACE("Starting message thread\n");
 
-    HRESULT cohr{CoInitializeEx(nullptr, COINIT_MULTITHREADED)};
-    if(FAILED(cohr))
-    {
-        WARN("Failed to initialize COM: 0x%08lx\n", cohr);
-        promise->set_value(cohr);
-        return 0;
-    }
-
-    void *ptr{};
-    HRESULT hr{CoCreateInstance(CLSID_MMDeviceEnumerator, nullptr, CLSCTX_INPROC_SERVER,
-        IID_IMMDeviceEnumerator, &ptr)};
+    HRESULT hr{CoInitializeEx(nullptr, COINIT_MULTITHREADED)};
     if(FAILED(hr))
     {
-        WARN("Failed to create IMMDeviceEnumerator instance: 0x%08lx\n", hr);
+        WARN("Failed to initialize COM: 0x%08lx\n", hr);
         promise->set_value(hr);
-        CoUninitialize();
         return 0;
     }
-    static_cast<IMMDeviceEnumerator*>(ptr)->Release();
-    CoUninitialize();
-
-    TRACE("Message thread initialization complete\n");
     promise->set_value(S_OK);
     promise = nullptr;
 
     TRACE("Starting message loop\n");
-    uint deviceCount{0};
     while(Msg msg{popMessage()})
     {
         TRACE("Got message \"%s\" (0x%04x, this=%p, param=%p)\n",
@@ -550,21 +569,6 @@ int WasapiProxy::messageHandler(std::promise<HRESULT> *promise)
         switch(msg.mType)
         {
         case MsgType::OpenDevice:
-            hr = cohr = S_OK;
-            if(++deviceCount == 1)
-                hr = cohr = CoInitializeEx(nullptr, COINIT_MULTITHREADED);
-            if(SUCCEEDED(hr))
-                hr = msg.mProxy->openProxy(msg.mParam);
-            msg.mPromise.set_value(hr);
-
-            if(FAILED(hr))
-            {
-                if(--deviceCount == 0 && SUCCEEDED(cohr))
-                    CoUninitialize();
-            }
-            continue;
-
-        case MsgType::ReopenDevice:
             hr = msg.mProxy->openProxy(msg.mParam);
             msg.mPromise.set_value(hr);
             continue;
@@ -587,35 +591,28 @@ int WasapiProxy::messageHandler(std::promise<HRESULT> *promise)
         case MsgType::CloseDevice:
             msg.mProxy->closeProxy();
             msg.mPromise.set_value(S_OK);
-
-            if(--deviceCount == 0)
-                CoUninitialize();
             continue;
 
         case MsgType::EnumeratePlayback:
         case MsgType::EnumerateCapture:
-            hr = cohr = S_OK;
-            if(++deviceCount == 1)
-                hr = cohr = CoInitializeEx(nullptr, COINIT_MULTITHREADED);
-            if(SUCCEEDED(hr))
+            {
+                void *ptr{};
                 hr = CoCreateInstance(CLSID_MMDeviceEnumerator, nullptr, CLSCTX_INPROC_SERVER,
                     IID_IMMDeviceEnumerator, &ptr);
-            if(FAILED(hr))
-                msg.mPromise.set_value(hr);
-            else
-            {
-                ComPtr<IMMDeviceEnumerator> enumerator{static_cast<IMMDeviceEnumerator*>(ptr)};
+                if(FAILED(hr))
+                    msg.mPromise.set_value(hr);
+                else
+                {
+                    ComPtr<IMMDeviceEnumerator> devenum{static_cast<IMMDeviceEnumerator*>(ptr)};
 
-                if(msg.mType == MsgType::EnumeratePlayback)
-                    probe_devices(enumerator.get(), eRender, PlaybackDevices);
-                else if(msg.mType == MsgType::EnumerateCapture)
-                    probe_devices(enumerator.get(), eCapture, CaptureDevices);
-                msg.mPromise.set_value(S_OK);
+                    if(msg.mType == MsgType::EnumeratePlayback)
+                        probe_devices(devenum.get(), eRender, PlaybackDevices);
+                    else if(msg.mType == MsgType::EnumerateCapture)
+                        probe_devices(devenum.get(), eCapture, CaptureDevices);
+                    msg.mPromise.set_value(S_OK);
+                }
+                continue;
             }
-
-            if(--deviceCount == 0 && SUCCEEDED(cohr))
-                CoUninitialize();
-            continue;
 
         case MsgType::QuitThread:
             break;
@@ -624,6 +621,7 @@ int WasapiProxy::messageHandler(std::promise<HRESULT> *promise)
         msg.mPromise.set_value(E_FAIL);
     }
     TRACE("Message loop finished\n");
+    CoUninitialize();
 
     return 0;
 }
@@ -668,7 +666,10 @@ struct WasapiPlayback final : public BackendBase, WasapiProxy {
 WasapiPlayback::~WasapiPlayback()
 {
     if(SUCCEEDED(mOpenStatus))
+    {
         pushMessage(MsgType::CloseDevice).wait();
+        DeinitThread();
+    }
     mOpenStatus = E_FAIL;
 
     if(mNotifyEvent != nullptr)
@@ -740,44 +741,44 @@ FORCE_ALIGN int WasapiPlayback::mixerProc()
 
 void WasapiPlayback::open(const char *name)
 {
-    HRESULT hr{S_OK};
+    if(SUCCEEDED(mOpenStatus))
+        throw al::backend_exception{al::backend_error::DeviceError,
+            "Unexpected duplicate open call"};
 
-    if(!mNotifyEvent)
+    mNotifyEvent = CreateEventW(nullptr, FALSE, FALSE, nullptr);
+    if(mNotifyEvent == nullptr)
     {
-        mNotifyEvent = CreateEventW(nullptr, FALSE, FALSE, nullptr);
-        if(mNotifyEvent == nullptr)
-        {
-            ERR("Failed to create notify events: %lu\n", GetLastError());
-            hr = E_FAIL;
-        }
+        ERR("Failed to create notify events: %lu\n", GetLastError());
+        throw al::backend_exception{al::backend_error::DeviceError,
+            "Failed to create notify events"};
     }
 
-    if(SUCCEEDED(hr))
-    {
-        if(name)
-        {
-            if(PlaybackDevices.empty())
-                pushMessage(MsgType::EnumeratePlayback);
-            if(std::strncmp(name, DevNameHead, DevNameHeadLen) == 0)
-            {
-                name += DevNameHeadLen;
-                if(*name == '\0')
-                    name = nullptr;
-            }
-        }
-
-        if(SUCCEEDED(mOpenStatus))
-            hr = pushMessage(MsgType::ReopenDevice, name).get();
-        else
-        {
-            hr = pushMessage(MsgType::OpenDevice, name).get();
-            mOpenStatus = hr;
-        }
-    }
-
+    HRESULT hr{InitThread()};
     if(FAILED(hr))
+    {
+        throw al::backend_exception{al::backend_error::DeviceError,
+            "Failed to init COM thread: 0x%08lx", hr};
+    }
+
+    if(name)
+    {
+        if(PlaybackDevices.empty())
+            pushMessage(MsgType::EnumeratePlayback);
+        if(std::strncmp(name, DevNameHead, DevNameHeadLen) == 0)
+        {
+            name += DevNameHeadLen;
+            if(*name == '\0')
+                name = nullptr;
+        }
+    }
+
+    mOpenStatus = pushMessage(MsgType::OpenDevice, name).get();
+    if(FAILED(mOpenStatus))
+    {
+        DeinitThread();
         throw al::backend_exception{al::backend_error::DeviceError, "Device init failed: 0x%08lx",
             hr};
+    }
 }
 
 HRESULT WasapiPlayback::openProxy(const char *name)
@@ -1824,11 +1825,31 @@ bool WasapiBackendFactory::init()
 
     if(FAILED(InitResult)) try
     {
-        std::promise<HRESULT> promise;
-        auto future = promise.get_future();
+        auto res = std::async(std::launch::async, []() -> HRESULT
+        {
+            HRESULT hr{CoInitializeEx(nullptr, COINIT_MULTITHREADED)};
+            if(FAILED(hr))
+            {
+                WARN("Failed to initialize COM: 0x%08lx\n", hr);
+                return hr;
+            }
 
-        std::thread{&WasapiProxy::messageHandler, &promise}.detach();
-        InitResult = future.get();
+            void *ptr{};
+            hr = CoCreateInstance(CLSID_MMDeviceEnumerator, nullptr, CLSCTX_INPROC_SERVER,
+                IID_IMMDeviceEnumerator, &ptr);
+            if(FAILED(hr))
+            {
+                WARN("Failed to create IMMDeviceEnumerator instance: 0x%08lx\n", hr);
+                CoUninitialize();
+                return hr;
+            }
+            static_cast<IMMDeviceEnumerator*>(ptr)->Release();
+            CoUninitialize();
+
+            return S_OK;
+        });
+
+        InitResult = res.get();
     }
     catch(...) {
     }
@@ -1841,7 +1862,17 @@ bool WasapiBackendFactory::querySupport(BackendType type)
 
 std::string WasapiBackendFactory::probe(BackendType type)
 {
+    struct ProxyControl {
+        HRESULT mResult{};
+        ProxyControl() { mResult = WasapiProxy::InitThread(); }
+        ~ProxyControl() { if(SUCCEEDED(mResult)) WasapiProxy::DeinitThread(); }
+    };
+    ProxyControl proxy;
+
     std::string outnames;
+    if(FAILED(proxy.mResult))
+        return outnames;
+
     switch(type)
     {
     case BackendType::Playback:

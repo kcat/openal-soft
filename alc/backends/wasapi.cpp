@@ -86,6 +86,7 @@ DEFINE_PROPERTYKEY(PKEY_AudioEndpoint_GUID, 0x1da5d803, 0xd492, 0x4edd, 0x8c, 0x
 
 namespace {
 
+using std::chrono::nanoseconds;
 using std::chrono::milliseconds;
 using std::chrono::seconds;
 
@@ -652,7 +653,12 @@ struct WasapiPlayback final : public BackendBase, WasapiProxy {
     ComPtr<IAudioRenderClient> mRender{nullptr};
     HANDLE mNotifyEvent{nullptr};
 
-    UINT32 mFrameStep{0u};
+    UINT32 mOrigBufferSize{}, mOrigUpdateSize{};
+    std::unique_ptr<char[]> mResampleBuffer{};
+    uint mBufferFilled{0};
+    SampleConverterPtr mResampler;
+
+    WAVEFORMATEXTENSIBLE mFormat{};
     std::atomic<UINT32> mPadding{0u};
 
     std::mutex mMutex;
@@ -691,8 +697,9 @@ FORCE_ALIGN int WasapiPlayback::mixerProc()
     SetRTPriority();
     althrd_setname(MIXER_THREAD_NAME);
 
-    const uint update_size{mDevice->UpdateSize};
-    const UINT32 buffer_len{mDevice->BufferSize};
+    const uint frame_size{mDevice->frameSizeFromFmt()};
+    const uint update_size{mOrigUpdateSize};
+    const UINT32 buffer_len{mOrigBufferSize};
     while(!mKillNow.load(std::memory_order_relaxed))
     {
         UINT32 written;
@@ -718,9 +725,37 @@ FORCE_ALIGN int WasapiPlayback::mixerProc()
         hr = mRender->GetBuffer(len, &buffer);
         if(SUCCEEDED(hr))
         {
+            if(mResampler)
             {
                 std::lock_guard<std::mutex> _{mMutex};
-                mDevice->renderSamples(buffer, len, mFrameStep);
+                for(UINT32 done{0};done < len;)
+                {
+                    if(mBufferFilled == 0)
+                    {
+                        mDevice->renderSamples(mResampleBuffer.get(), mDevice->UpdateSize,
+                            mFormat.Format.nChannels);
+                        mBufferFilled = mDevice->UpdateSize;
+                    }
+
+                    const void *src{mResampleBuffer.get()};
+                    uint srclen{mBufferFilled};
+                    uint got{mResampler->convert(&src, &srclen, buffer, len-done)};
+                    buffer += got*frame_size;
+                    done += got;
+
+                    mPadding.store(written + done, std::memory_order_relaxed);
+                    if(srclen)
+                    {
+                        const char *bsrc{static_cast<const char*>(src)};
+                        std::copy(bsrc, bsrc + srclen*frame_size, mResampleBuffer.get());
+                    }
+                    mBufferFilled = srclen;
+                }
+            }
+            else
+            {
+                std::lock_guard<std::mutex> _{mMutex};
+                mDevice->renderSamples(buffer, len, mFormat.Format.nChannels);
                 mPadding.store(written + len, std::memory_order_relaxed);
             }
             hr = mRender->ReleaseBuffer(len, 0);
@@ -1019,7 +1054,8 @@ HRESULT WasapiPlayback::resetProxy()
         CoTaskMemFree(wfx);
         wfx = nullptr;
 
-        mDevice->Frequency = OutputType.Format.nSamplesPerSec;
+        mDevice->Frequency = minu(mDevice->Frequency, mFormat.Format.nSamplesPerSec);
+
         const uint32_t chancount{OutputType.Format.nChannels};
         const DWORD chanmask{OutputType.dwChannelMask};
         /* Don't update the channel format if the requested format fits what's
@@ -1117,7 +1153,7 @@ HRESULT WasapiPlayback::resetProxy()
         }
         OutputType.Samples.wValidBitsPerSample = OutputType.Format.wBitsPerSample;
     }
-    mFrameStep = OutputType.Format.nChannels;
+    mFormat = OutputType;
 
     const EndpointFormFactor formfactor{get_device_formfactor(mMMDev.get())};
     mDevice->Flags.set(DirectEar, (formfactor == Headphones || formfactor == Headset));
@@ -1146,8 +1182,31 @@ HRESULT WasapiPlayback::resetProxy()
     /* Find the nearest multiple of the period size to the update size */
     if(min_per < per_time)
         min_per *= maxi64((per_time + min_per/2) / min_per, 1);
-    mDevice->UpdateSize = minu(RefTime2Samples(min_per, mDevice->Frequency), buffer_len/2);
-    mDevice->BufferSize = buffer_len;
+
+    mOrigBufferSize = buffer_len;
+    mOrigUpdateSize = minu(RefTime2Samples(min_per, mFormat.Format.nSamplesPerSec), buffer_len/2);
+
+    mDevice->BufferSize = static_cast<uint>(uint64_t{buffer_len} * mDevice->Frequency /
+        mFormat.Format.nSamplesPerSec);
+    mDevice->UpdateSize = minu(RefTime2Samples(min_per, mDevice->Frequency),
+        mDevice->BufferSize/2);
+
+    mResampler = nullptr;
+    mResampleBuffer = nullptr;
+    mBufferFilled = 0;
+    if(mDevice->Frequency != mFormat.Format.nSamplesPerSec)
+    {
+        mResampler = CreateSampleConverter(mDevice->FmtType, mDevice->FmtType,
+            mFormat.Format.nChannels, mDevice->Frequency, mFormat.Format.nSamplesPerSec,
+            Resampler::FastBSinc24);
+        mResampleBuffer = std::make_unique<char[]>(size_t{mDevice->UpdateSize} *
+            mDevice->frameSizeFromFmt());
+
+        TRACE("Created converter for %s/%s format, dst: %luhz (%u), src: %uhz (%u)\n",
+            DevFmtChannelsString(mDevice->FmtChans), DevFmtTypeString(mDevice->FmtType),
+            mFormat.Format.nSamplesPerSec, mOrigUpdateSize, mDevice->Frequency,
+            mDevice->UpdateSize);
+    }
 
     hr = mClient->SetEventHandle(mNotifyEvent);
     if(FAILED(hr))
@@ -1224,8 +1283,14 @@ ClockLatency WasapiPlayback::getClockLatency()
 
     std::lock_guard<std::mutex> _{mMutex};
     ret.ClockTime = GetDeviceClockTime(mDevice);
-    ret.Latency  = std::chrono::seconds{mPadding.load(std::memory_order_relaxed)};
-    ret.Latency /= mDevice->Frequency;
+    ret.Latency  = seconds{mPadding.load(std::memory_order_relaxed)};
+    ret.Latency /= mFormat.Format.nSamplesPerSec;
+    if(mResampler)
+    {
+        auto extra = mResampler->currentInputDelay();
+        ret.Latency += std::chrono::duration_cast<nanoseconds>(extra) / mDevice->Frequency;
+        ret.Latency += nanoseconds{seconds{mBufferFilled}} / mDevice->Frequency;
+    }
 
     return ret;
 }

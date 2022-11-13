@@ -698,7 +698,7 @@ FORCE_ALIGN int WasapiPlayback::mixerProc()
     SetRTPriority();
     althrd_setname(MIXER_THREAD_NAME);
 
-    const uint frame_size{mDevice->frameSizeFromFmt()};
+    const uint frame_size{mFormat.Format.nChannels * mFormat.Format.wBitsPerSample / 8u};
     const uint update_size{mOrigUpdateSize};
     const UINT32 buffer_len{mOrigBufferSize};
     while(!mKillNow.load(std::memory_order_relaxed))
@@ -1204,7 +1204,7 @@ HRESULT WasapiPlayback::resetProxy()
             mFormat.Format.nChannels, mDevice->Frequency, mFormat.Format.nSamplesPerSec,
             Resampler::FastBSinc24);
         mResampleBuffer = std::make_unique<char[]>(size_t{mDevice->UpdateSize} *
-            mDevice->frameSizeFromFmt());
+            mFormat.Format.nChannels * mFormat.Format.wBitsPerSample / 8);
 
         TRACE("Created converter for %s/%s format, dst: %luhz (%u), src: %uhz (%u)\n",
             DevFmtChannelsString(mDevice->FmtChans), DevFmtTypeString(mDevice->FmtType),

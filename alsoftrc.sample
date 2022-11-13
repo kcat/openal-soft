@@ -567,6 +567,14 @@
 ##
 [wasapi]
 
+## allow-resampler:
+#  Specifies whether to allow an extra resampler pass on the output. Enabling
+#  this will allow the playback device to be set to a different sample rate
+#  than the actual output can accept, causing the backend to apply its own
+#  resampling pass after OpenAL Soft mixes the sources and processes effects
+#  for output.
+#allow-resampler = true
+
 ##
 ## DirectSound backend stuff
 ##

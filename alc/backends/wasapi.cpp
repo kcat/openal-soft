@@ -57,6 +57,7 @@
 #include <vector>
 
 #include "albit.h"
+#include "alc/alconfig.h"
 #include "alnumeric.h"
 #include "comptr.h"
 #include "core/converter.h"
@@ -1054,7 +1055,10 @@ HRESULT WasapiPlayback::resetProxy()
         CoTaskMemFree(wfx);
         wfx = nullptr;
 
-        mDevice->Frequency = minu(mDevice->Frequency, mFormat.Format.nSamplesPerSec);
+        if(!GetConfigValueBool(mDevice->DeviceName.c_str(), "wasapi", "allow-resampler", true))
+            mDevice->Frequency = mFormat.Format.nSamplesPerSec;
+        else
+            mDevice->Frequency = minu(mDevice->Frequency, mFormat.Format.nSamplesPerSec);
 
         const uint32_t chancount{OutputType.Format.nChannels};
         const DWORD chanmask{OutputType.dwChannelMask};

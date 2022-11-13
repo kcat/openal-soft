@@ -167,8 +167,13 @@ SampleConverterPtr CreateSampleConverter(DevFmtType srcType, DevFmtType dstType,
     converter->mSrcTypeSize = BytesFromDevFmt(srcType);
     converter->mDstTypeSize = BytesFromDevFmt(dstType);
 
-    converter->mSrcPrepCount = 0;
+    converter->mSrcPrepCount = MaxResamplerEdge;
     converter->mFracOffset = 0;
+    for(auto &chan : converter->mChan)
+    {
+        const al::span<float> buffer{chan.PrevSamples};
+        std::fill(buffer.begin(), buffer.end(), 0.0f);
+    }
 
     /* Have to set the mixer FPU mode since that's what the resampler code expects. */
     FPUCtl mixer_mode{};

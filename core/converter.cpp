@@ -156,7 +156,7 @@ void Multi2Mono(uint chanmask, const size_t step, const float scale, float *REST
 
 } // namespace
 
-SampleConverterPtr CreateSampleConverter(DevFmtType srcType, DevFmtType dstType, size_t numchans,
+SampleConverterPtr SampleConverter::Create(DevFmtType srcType, DevFmtType dstType, size_t numchans,
     uint srcRate, uint dstRate, Resampler resampler)
 {
     if(numchans < 1 || srcRate < 1 || dstRate < 1)

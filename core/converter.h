@@ -45,13 +45,12 @@ struct SampleConverter {
         return SampleOffset{(prep<<MixerFracBits) + mFracOffset};
     }
 
+    static std::unique_ptr<SampleConverter> Create(DevFmtType srcType, DevFmtType dstType,
+        size_t numchans, uint srcRate, uint dstRate, Resampler resampler);
+
     DEF_FAM_NEWDEL(SampleConverter, mChan)
 };
 using SampleConverterPtr = std::unique_ptr<SampleConverter>;
-
-SampleConverterPtr CreateSampleConverter(DevFmtType srcType, DevFmtType dstType, size_t numchans,
-    uint srcRate, uint dstRate, Resampler resampler);
-
 
 struct ChannelConverter {
     DevFmtType mSrcType{};

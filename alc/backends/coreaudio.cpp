@@ -805,7 +805,7 @@ void CoreAudioCapture::open(const char *name)
 
     /* Set up sample converter if needed */
     if(outputFormat.mSampleRate != mDevice->Frequency)
-        mConverter = CreateSampleConverter(mDevice->FmtType, mDevice->FmtType,
+        mConverter = SampleConverter::Create(mDevice->FmtType, mDevice->FmtType,
             mFormat.mChannelsPerFrame, static_cast<uint>(hardwareFormat.mSampleRate),
             mDevice->Frequency, Resampler::FastBSinc24);
 

@@ -41,7 +41,7 @@ struct SampleConverter {
     using SampleOffset = std::chrono::duration<int64_t, std::ratio<1,MixerFracOne>>;
     SampleOffset currentInputDelay() const noexcept
     {
-        const int64_t prep{mSrcPrepCount - MaxResamplerEdge};
+        const int64_t prep{int64_t{mSrcPrepCount} - MaxResamplerEdge};
         return SampleOffset{(prep<<MixerFracBits) + mFracOffset};
     }
 

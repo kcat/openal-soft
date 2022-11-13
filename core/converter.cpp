@@ -4,6 +4,7 @@
 #include "converter.h"
 
 #include <algorithm>
+#include <cassert>
 #include <cmath>
 #include <cstdint>
 #include <iterator>
@@ -261,6 +262,9 @@ uint SampleConverter::convert(const void **src, uint *srcframes, void *dst, uint
         const uint DataPosEnd{DstSize*increment + DataPosFrac};
         const uint SrcDataEnd{DataPosEnd>>MixerFracBits};
 
+        assert(prepcount+readable >= SrcDataEnd);
+        const uint nextprep{minu(prepcount + readable - SrcDataEnd, MaxResamplerPadding)};
+
         for(size_t chan{0u};chan < mChan.size();chan++)
         {
             const al::byte *SrcSamples{SamplesIn + mSrcTypeSize*chan};
@@ -275,17 +279,9 @@ uint SampleConverter::convert(const void **src, uint *srcframes, void *dst, uint
             /* Store as many prep samples for next time as possible, given the
              * number of output samples being generated.
              */
-            if(SrcDataEnd >= prepcount+readable)
-                std::fill(std::begin(mChan[chan].PrevSamples),
-                    std::end(mChan[chan].PrevSamples), 0.0f);
-            else
-            {
-                const size_t len{minz(al::size(mChan[chan].PrevSamples),
-                    prepcount+readable-SrcDataEnd)};
-                std::copy_n(SrcData+SrcDataEnd, len, mChan[chan].PrevSamples);
-                std::fill(std::begin(mChan[chan].PrevSamples)+len,
-                    std::end(mChan[chan].PrevSamples), 0.0f);
-            }
+            std::copy_n(SrcData+SrcDataEnd, nextprep, mChan[chan].PrevSamples);
+            std::fill(std::begin(mChan[chan].PrevSamples)+nextprep,
+                std::end(mChan[chan].PrevSamples), 0.0f);
 
             /* Now resample, and store the result in the output buffer. */
             const float *ResampledData{mResample(&mState, SrcData+(MaxResamplerPadding>>1),
@@ -297,7 +293,7 @@ uint SampleConverter::convert(const void **src, uint *srcframes, void *dst, uint
         /* Update the number of prep samples still available, as well as the
          * fractional offset.
          */
-        mSrcPrepCount = minu(prepcount + readable - SrcDataEnd, MaxResamplerPadding);
+        mSrcPrepCount = nextprep;
         mFracOffset = DataPosEnd & MixerFracMask;
 
         /* Update the src and dst pointers in case there's still more to do. */

@@ -18,7 +18,7 @@ struct SampleConverter {
     uint mSrcTypeSize{};
     uint mDstTypeSize{};
 
-    int mSrcPrepCount{};
+    uint mSrcPrepCount{};
 
     uint mFracOffset{};
     uint mIncrement{};

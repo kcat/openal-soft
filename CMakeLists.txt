@@ -880,7 +880,7 @@ set(ALC_OBJS  ${ALC_OBJS}
 
 # Check ALSA backend
 option(ALSOFT_REQUIRE_ALSA "Require ALSA backend" OFF)
-find_package(ALSA)
+find_package(ALSA MODULE)
 if(ALSA_FOUND)
     option(ALSOFT_BACKEND_ALSA "Enable ALSA backend" ON)
     if(ALSOFT_BACKEND_ALSA)
@@ -897,7 +897,7 @@ endif()
 
 # Check OSS backend
 option(ALSOFT_REQUIRE_OSS "Require OSS backend" OFF)
-find_package(OSS)
+find_package(OSS MODULE)
 if(OSS_FOUND)
     option(ALSOFT_BACKEND_OSS "Enable OSS backend" ON)
     if(ALSOFT_BACKEND_OSS)
@@ -935,7 +935,7 @@ endif()
 
 # Check Solaris backend
 option(ALSOFT_REQUIRE_SOLARIS "Require Solaris backend" OFF)
-find_package(AudioIO)
+find_package(AudioIO MODULE)
 if(AUDIOIO_FOUND)
     option(ALSOFT_BACKEND_SOLARIS "Enable Solaris backend" ON)
     if(ALSOFT_BACKEND_SOLARIS)
@@ -951,7 +951,7 @@ endif()
 
 # Check SndIO backend
 option(ALSOFT_REQUIRE_SNDIO "Require SndIO backend" OFF)
-find_package(SoundIO)
+find_package(SoundIO MODULE)
 if(SOUNDIO_FOUND)
     option(ALSOFT_BACKEND_SNDIO "Enable SndIO backend" ON)
     if(ALSOFT_BACKEND_SNDIO)
@@ -1027,7 +1027,7 @@ endif()
 
 # Check PortAudio backend
 option(ALSOFT_REQUIRE_PORTAUDIO "Require PortAudio backend" OFF)
-find_package(PortAudio)
+find_package(PortAudio MODULE)
 if(PORTAUDIO_FOUND)
     option(ALSOFT_BACKEND_PORTAUDIO "Enable PortAudio backend" ON)
     if(ALSOFT_BACKEND_PORTAUDIO)
@@ -1044,7 +1044,7 @@ endif()
 
 # Check PulseAudio backend
 option(ALSOFT_REQUIRE_PULSEAUDIO "Require PulseAudio backend" OFF)
-find_package(PulseAudio)
+find_package(PulseAudio MODULE)
 if(PULSEAUDIO_FOUND)
     option(ALSOFT_BACKEND_PULSEAUDIO "Enable PulseAudio backend" ON)
     if(ALSOFT_BACKEND_PULSEAUDIO)
@@ -1061,7 +1061,7 @@ endif()
 
 # Check JACK backend
 option(ALSOFT_REQUIRE_JACK "Require JACK backend" OFF)
-find_package(JACK)
+find_package(JACK MODULE)
 if(JACK_FOUND)
     option(ALSOFT_BACKEND_JACK "Enable JACK backend" ON)
     if(ALSOFT_BACKEND_JACK)
@@ -1113,7 +1113,7 @@ endif()
 
 # Check for OpenSL (Android) backend
 option(ALSOFT_REQUIRE_OPENSL "Require OpenSL backend" OFF)
-find_package(OpenSL)
+find_package(OpenSL MODULE)
 if(OPENSL_FOUND)
     option(ALSOFT_BACKEND_OPENSL "Enable OpenSL backend" ON)
     if(ALSOFT_BACKEND_OPENSL)
@@ -1171,7 +1171,7 @@ endif()
 
 # Check for SDL2 backend
 option(ALSOFT_REQUIRE_SDL2 "Require SDL2 backend" OFF)
-find_package(SDL2)
+find_package(SDL2 MODULE)
 if(SDL2_FOUND)
     # Off by default, since it adds a runtime dependency
     option(ALSOFT_BACKEND_SDL2 "Enable SDL2 backend" OFF)
@@ -1239,7 +1239,7 @@ endif()
 
 
 if(ALSOFT_UTILS)
-    find_package(MySOFA)
+    find_package(MySOFA MODULE)
     if(NOT ALSOFT_NO_CONFIG_UTIL)
         find_package(Qt5Widgets QUIET)
         if(NOT Qt5Widgets_FOUND)
@@ -1248,10 +1248,10 @@ if(ALSOFT_UTILS)
     endif()
 endif()
 if(ALSOFT_UTILS OR ALSOFT_EXAMPLES)
-    find_package(SndFile)
-    find_package(SDL2)
+    find_package(SndFile MODULE)
+    find_package(SDL2 MODULE)
     if(SDL2_FOUND)
-        find_package(FFmpeg COMPONENTS AVFORMAT AVCODEC AVUTIL SWSCALE SWRESAMPLE)
+        find_package(FFmpeg MODULE COMPONENTS AVFORMAT AVCODEC AVUTIL SWSCALE SWRESAMPLE)
     endif()
 endif()
 

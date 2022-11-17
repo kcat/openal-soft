@@ -25,7 +25,7 @@ jobs:
       run: echo "CommitHash=$(git rev-parse --short=7 HEAD)" >> $env:GITHUB_ENV
 
     - name: Clone libmysofa
-      run: git clone https://github.com/hoene/libmysofa.git libmysofa
+      run: git clone --depth 1 --branch v1.3.1 https://github.com/hoene/libmysofa.git libmysofa
 
     - name: Add MSBuild to PATH
       uses: microsoft/setup-msbuild@v1.1.3

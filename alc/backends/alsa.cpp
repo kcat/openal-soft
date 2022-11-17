@@ -623,7 +623,7 @@ int AlsaPlayback::mixerNoMMapProc()
 
 void AlsaPlayback::open(const char *name)
 {
-    const char *driver{"default"};
+    std::string driver{"default"};
     if(name)
     {
         if(PlaybackDevices.empty())
@@ -634,21 +634,21 @@ void AlsaPlayback::open(const char *name)
         if(iter == PlaybackDevices.cend())
             throw al::backend_exception{al::backend_error::NoDevice,
                 "Device name \"%s\" not found", name};
-        driver = iter->device_name.c_str();
+        driver = iter->device_name;
     }
     else
     {
         name = alsaDevice;
         if(auto driveropt = ConfigValueStr(nullptr, "alsa", "device"))
-            driver = driveropt->c_str();
+            driver = std::move(driveropt).value();
     }
-    TRACE("Opening device \"%s\"\n", driver);
+    TRACE("Opening device \"%s\"\n", driver.c_str());
 
     snd_pcm_t *pcmHandle{};
-    int err{snd_pcm_open(&pcmHandle, driver, SND_PCM_STREAM_PLAYBACK, SND_PCM_NONBLOCK)};
+    int err{snd_pcm_open(&pcmHandle, driver.c_str(), SND_PCM_STREAM_PLAYBACK, SND_PCM_NONBLOCK)};
     if(err < 0)
         throw al::backend_exception{al::backend_error::NoDevice,
-            "Could not open ALSA device \"%s\"", driver};
+            "Could not open ALSA device \"%s\"", driver.c_str()};
     if(mPcmHandle)
         snd_pcm_close(mPcmHandle);
     mPcmHandle = pcmHandle;
@@ -895,7 +895,7 @@ AlsaCapture::~AlsaCapture()
 
 void AlsaCapture::open(const char *name)
 {
-    const char *driver{"default"};
+    std::string driver{"default"};
     if(name)
     {
         if(CaptureDevices.empty())
@@ -906,20 +906,20 @@ void AlsaCapture::open(const char *name)
         if(iter == CaptureDevices.cend())
             throw al::backend_exception{al::backend_error::NoDevice,
                 "Device name \"%s\" not found", name};
-        driver = iter->device_name.c_str();
+        driver = iter->device_name;
     }
     else
     {
         name = alsaDevice;
         if(auto driveropt = ConfigValueStr(nullptr, "alsa", "capture"))
-            driver = driveropt->c_str();
+            driver = std::move(driveropt).value();
     }
 
-    TRACE("Opening device \"%s\"\n", driver);
-    int err{snd_pcm_open(&mPcmHandle, driver, SND_PCM_STREAM_CAPTURE, SND_PCM_NONBLOCK)};
+    TRACE("Opening device \"%s\"\n", driver.c_str());
+    int err{snd_pcm_open(&mPcmHandle, driver.c_str(), SND_PCM_STREAM_CAPTURE, SND_PCM_NONBLOCK)};
     if(err < 0)
         throw al::backend_exception{al::backend_error::NoDevice,
-            "Could not open ALSA device \"%s\"", driver};
+            "Could not open ALSA device \"%s\"", driver.c_str()};
 
     /* Free alsa's global config tree. Otherwise valgrind reports a ton of leaks. */
     snd_config_update_free_global();

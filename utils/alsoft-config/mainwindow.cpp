@@ -404,7 +404,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->decoderDistCompCheckBox, &QCheckBox::stateChanged, this, &MainWindow::enableApplyButton);
     connect(ui->decoderNFEffectsCheckBox, &QCheckBox::stateChanged, this, &MainWindow::enableApplyButton);
     auto qdsb_vcd = static_cast<void(QDoubleSpinBox::*)(double)>(&QDoubleSpinBox::valueChanged);
-    connect(ui->decoderNFRefDelaySpinBox, qdsb_vcd, this, &MainWindow::enableApplyButton);
+    connect(ui->decoderSpeakerDistSpinBox, qdsb_vcd, this, &MainWindow::enableApplyButton);
     connect(ui->decoderQuadLineEdit, &QLineEdit::textChanged, this, &MainWindow::enableApplyButton);
     connect(ui->decoderQuadButton, &QPushButton::clicked, this, &MainWindow::selectQuadDecoderFile);
     connect(ui->decoder51LineEdit, &QLineEdit::textChanged, this, &MainWindow::enableApplyButton);
@@ -762,13 +762,14 @@ void MainWindow::loadConfig(const QString &fname)
     ui->decoderHQModeCheckBox->setChecked(getCheckState(settings.value("decoder/hq-mode")));
     ui->decoderDistCompCheckBox->setCheckState(getCheckState(settings.value("decoder/distance-comp")));
     ui->decoderNFEffectsCheckBox->setCheckState(getCheckState(settings.value("decoder/nfc")));
-    double refdelay{settings.value("decoder/nfc-ref-delay", 0.0).toDouble()};
-    ui->decoderNFRefDelaySpinBox->setValue(refdelay);
+    double speakerdist{settings.value("decoder/speaker-dist", 1.0).toDouble()};
+    ui->decoderSpeakerDistSpinBox->setValue(speakerdist);
 
     ui->decoderQuadLineEdit->setText(settings.value("decoder/quad").toString());
     ui->decoder51LineEdit->setText(settings.value("decoder/surround51").toString());
     ui->decoder61LineEdit->setText(settings.value("decoder/surround61").toString());
     ui->decoder71LineEdit->setText(settings.value("decoder/surround71").toString());
+    ui->decoder3D71LineEdit->setText(settings.value("decoder/surround3d71").toString());
 
     QStringList disabledCpuExts{settings.value("disable-cpu-exts").toStringList()};
     if(disabledCpuExts.size() == 1)
@@ -1028,15 +1029,16 @@ void MainWindow::saveConfig(const QString &fname) const
     settings.setValue("decoder/hq-mode", getCheckValue(ui->decoderHQModeCheckBox));
     settings.setValue("decoder/distance-comp", getCheckValue(ui->decoderDistCompCheckBox));
     settings.setValue("decoder/nfc", getCheckValue(ui->decoderNFEffectsCheckBox));
-    double refdelay = ui->decoderNFRefDelaySpinBox->value();
-    settings.setValue("decoder/nfc-ref-delay",
-        (refdelay > 0.0) ? QString::number(refdelay) : QString{}
+    double speakerdist{ui->decoderSpeakerDistSpinBox->value()};
+    settings.setValue("decoder/speaker-dist",
+        (speakerdist != 1.0) ? QString::number(speakerdist) : QString{}
     );
 
     settings.setValue("decoder/quad", ui->decoderQuadLineEdit->text());
     settings.setValue("decoder/surround51", ui->decoder51LineEdit->text());
     settings.setValue("decoder/surround61", ui->decoder61LineEdit->text());
     settings.setValue("decoder/surround71", ui->decoder71LineEdit->text());
+    settings.setValue("decoder/surround3d71", ui->decoder3D71LineEdit->text());
 
     QStringList strlist;
     if(!ui->enableSSECheckBox->isChecked())
@@ -1150,13 +1152,16 @@ void MainWindow::saveConfig(const QString &fname) const
         (!ui->enableEaxCheck->isEnabled() || ui->enableEaxCheck->isChecked())
         ? QString{/*"true"*/} : QString{"false"});
 
+    settings.setValue("pipewire/assume-audio", ui->pwireAssumeAudioCheckBox->isChecked()
+        ? QString{"true"} : QString{/*"false"*/});
+
+    settings.setValue("wasapi/allow-resampler", ui->wasapiResamplerCheckBox->isChecked()
+        ? QString{/*"true"*/} : QString{"false"});
+
     settings.setValue("pulse/spawn-server", getCheckValue(ui->pulseAutospawnCheckBox));
     settings.setValue("pulse/allow-moves", getCheckValue(ui->pulseAllowMovesCheckBox));
     settings.setValue("pulse/fix-rate", getCheckValue(ui->pulseFixRateCheckBox));
     settings.setValue("pulse/adjust-latency", getCheckValue(ui->pulseAdjLatencyCheckBox));
-
-    settings.setValue("pipewire/assume-audio", ui->pwireAssumeAudioCheckBox->isChecked()
-        ? QString{"true"} : QString{/*"false"*/});
 
     settings.setValue("jack/spawn-server", getCheckValue(ui->jackAutospawnCheckBox));
     settings.setValue("jack/connect-ports", getCheckValue(ui->jackConnectPortsCheckBox));

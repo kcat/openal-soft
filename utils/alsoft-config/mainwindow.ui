@@ -906,59 +906,62 @@ are set in the decoder configuration file.</string>
      <widget class="QWidget" name="widget_3" native="true">
       <property name="geometry">
        <rect>
-        <x>-10</x>
+        <x>30</x>
         <y>110</y>
-        <width>281</width>
+        <width>471</width>
         <height>21</height>
        </rect>
       </property>
       <property name="toolTip">
-       <string>The reference delay value for ambisonic output. When
-Channels is set to one of the Ambisonic formats, this
-option enables NFC-HOA output with the specified
-Reference Delay parameter. The specified value can then
-be shared with an appropriate NFC-HOA decoder to
-reproduce correct near-field effects. Keep in mind that
-despite being designed for higher-order ambisonics, this
-applies to first-order output all the same. When left unset,
-normal output is created with no near-field simulation.</string>
+       <string>Specifies the speaker distance in meters, used by the near-field control
+filters with surround sound output. For ambisonic output modes, this value
+is the basis for the NFC-HOA Reference Delay parameter (calculated as
+delay_seconds = speaker_dist/343.3). This value is not used when a decoder
+configuration is set for the output mode (since they specify the per-speaker
+distances, overriding this setting), or when the NFC filters are off.</string>
       </property>
       <widget class="QLabel" name="label_27">
        <property name="geometry">
         <rect>
-         <x>20</x>
+         <x>45</x>
          <y>0</y>
-         <width>171</width>
+         <width>111</width>
          <height>21</height>
         </rect>
        </property>
        <property name="text">
-        <string>Near-Field Reference Delay:</string>
+        <string>Speaker Distance:</string>
        </property>
        <property name="alignment">
         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
        </property>
       </widget>
-      <widget class="QDoubleSpinBox" name="decoderNFRefDelaySpinBox">
+      <widget class="QDoubleSpinBox" name="decoderSpeakerDistSpinBox">
        <property name="geometry">
         <rect>
-         <x>200</x>
+         <x>165</x>
          <y>0</y>
-         <width>81</width>
+         <width>101</width>
          <height>21</height>
         </rect>
        </property>
        <property name="suffix">
-        <string>sec</string>
+        <string> meters</string>
        </property>
        <property name="decimals">
-        <number>4</number>
+        <number>2</number>
+       </property>
+       <property name="minimum">
+        <double>0.100000000000000</double>
        </property>
        <property name="maximum">
-        <double>1000.000000000000000</double>
+        <double>10.000000000000000</double>
        </property>
        <property name="singleStep">
         <double>0.010000000000000</double>
+       </property>
+       <property name="value">
+        <double>1.000000000000000</double>
        </property>
       </widget>
      </widget>
@@ -1259,12 +1262,17 @@ application or system to determine if it should be used.</string>
       </item>
       <item>
        <property name="text">
-        <string>PulseAudio</string>
+        <string>PipeWire</string>
        </property>
       </item>
       <item>
        <property name="text">
-        <string>PipeWire</string>
+        <string>WASAPI</string>
+       </property>
+      </item>
+      <item>
+       <property name="text">
+        <string>PulseAudio</string>
        </property>
       </item>
       <item>
@@ -1382,7 +1390,52 @@ duplicated names are ignored.</string>
         </property>
        </widget>
       </widget>
+      <widget class="QWidget" name="page_1">
+       <widget class="QCheckBox" name="pwireAssumeAudioCheckBox">
+        <property name="geometry">
+         <rect>
+          <x>20</x>
+          <y>10</y>
+          <width>161</width>
+          <height>21</height>
+         </rect>
+        </property>
+        <property name="toolTip">
+         <string>Assumes PipeWire has support for audio, allowing
+the backend to initialize even when no audio devices
+are reported.</string>
+        </property>
+        <property name="text">
+         <string>Assume audio support</string>
+        </property>
+       </widget>
+      </widget>
       <widget class="QWidget" name="page_2">
+       <widget class="QCheckBox" name="wasapiResamplerCheckBox">
+        <property name="geometry">
+         <rect>
+          <x>20</x>
+          <y>10</y>
+          <width>191</width>
+          <height>21</height>
+         </rect>
+        </property>
+        <property name="toolTip">
+         <string>Specifies whether to allow an extra resampler pass on the output. Enabling
+this will allow the playback device to be set to a different sample rate
+than the actual output can accept, causing the backend to apply its own
+resampling pass after OpenAL Soft mixes the sources and processes effects
+for output.</string>
+        </property>
+        <property name="text">
+         <string>Allow Resampler</string>
+        </property>
+        <property name="checked">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </widget>
+      <widget class="QWidget" name="page_8">
        <widget class="QCheckBox" name="pulseAutospawnCheckBox">
         <property name="geometry">
          <rect>
@@ -1466,26 +1519,6 @@ drop-outs.</string>
         </property>
         <property name="tristate">
          <bool>true</bool>
-        </property>
-       </widget>
-      </widget>
-      <widget class="QWidget" name="page_8">
-       <widget class="QCheckBox" name="pwireAssumeAudioCheckBox">
-        <property name="geometry">
-         <rect>
-          <x>20</x>
-          <y>10</y>
-          <width>161</width>
-          <height>21</height>
-         </rect>
-        </property>
-        <property name="toolTip">
-         <string>Assumes PipeWire has support for audio, allowing
-the backend to initialize even when no audio devices
-are reported.</string>
-        </property>
-        <property name="text">
-         <string>Assume audio support</string>
         </property>
        </widget>
       </widget>

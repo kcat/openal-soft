@@ -1180,7 +1180,6 @@ if(SDL2_FOUND)
         set(ALC_OBJS  ${ALC_OBJS} alc/backends/sdl2.cpp alc/backends/sdl2.h)
         set(BACKENDS  "${BACKENDS} SDL2,")
         set(EXTRA_LIBS ${EXTRA_LIBS} SDL2::SDL2)
-        set(INC_PATHS ${INC_PATHS} ${SDL2_INCLUDE_DIR})
     endif()
 else()
     message(STATUS "Could NOT find SDL2")
@@ -1676,7 +1675,6 @@ if(ALSOFT_EXAMPLES)
 
     if(SDL2_FOUND)
         add_executable(alloopback examples/alloopback.c)
-        target_include_directories(alloopback PRIVATE ${SDL2_INCLUDE_DIR})
         target_link_libraries(alloopback
             PRIVATE ${LINKER_FLAGS} SDL2::SDL2 SDL2::SDL2main ex-common ${MATH_LIB})
 

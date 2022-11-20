@@ -813,7 +813,7 @@ void WasapiPlayback::open(const char *name)
     {
         DeinitThread();
         throw al::backend_exception{al::backend_error::DeviceError, "Device init failed: 0x%08lx",
-            hr};
+            mOpenStatus};
     }
 }
 
@@ -1338,7 +1338,10 @@ struct WasapiCapture final : public BackendBase, WasapiProxy {
 WasapiCapture::~WasapiCapture()
 {
     if(SUCCEEDED(mOpenStatus))
+    {
         pushMessage(MsgType::CloseDevice).wait();
+        DeinitThread();
+    }
     mOpenStatus = E_FAIL;
 
     if(mNotifyEvent != nullptr)
@@ -1441,35 +1444,44 @@ FORCE_ALIGN int WasapiCapture::recordProc()
 
 void WasapiCapture::open(const char *name)
 {
-    HRESULT hr{S_OK};
+    if(SUCCEEDED(mOpenStatus))
+        throw al::backend_exception{al::backend_error::DeviceError,
+            "Unexpected duplicate open call"};
 
     mNotifyEvent = CreateEventW(nullptr, FALSE, FALSE, nullptr);
     if(mNotifyEvent == nullptr)
     {
-        ERR("Failed to create notify event: %lu\n", GetLastError());
-        hr = E_FAIL;
+        ERR("Failed to create notify events: %lu\n", GetLastError());
+        throw al::backend_exception{al::backend_error::DeviceError,
+            "Failed to create notify events"};
     }
 
-    if(SUCCEEDED(hr))
-    {
-        if(name)
-        {
-            if(CaptureDevices.empty())
-                pushMessage(MsgType::EnumerateCapture);
-            if(std::strncmp(name, DevNameHead, DevNameHeadLen) == 0)
-            {
-                name += DevNameHeadLen;
-                if(*name == '\0')
-                    name = nullptr;
-            }
-        }
-        hr = pushMessage(MsgType::OpenDevice, name).get();
-    }
-    mOpenStatus = hr;
-
+    HRESULT hr{InitThread()};
     if(FAILED(hr))
+    {
+        throw al::backend_exception{al::backend_error::DeviceError,
+            "Failed to init COM thread: 0x%08lx", hr};
+    }
+
+    if(name)
+    {
+        if(CaptureDevices.empty())
+            pushMessage(MsgType::EnumerateCapture);
+        if(std::strncmp(name, DevNameHead, DevNameHeadLen) == 0)
+        {
+            name += DevNameHeadLen;
+            if(*name == '\0')
+                name = nullptr;
+        }
+    }
+
+    mOpenStatus = pushMessage(MsgType::OpenDevice, name).get();
+    if(FAILED(mOpenStatus))
+    {
+        DeinitThread();
         throw al::backend_exception{al::backend_error::DeviceError, "Device init failed: 0x%08lx",
-            hr};
+            mOpenStatus};
+    }
 
     hr = pushMessage(MsgType::ResetDevice).get();
     if(FAILED(hr))

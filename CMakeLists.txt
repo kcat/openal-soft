@@ -1676,7 +1676,7 @@ if(ALSOFT_EXAMPLES)
     if(SDL2_FOUND)
         add_executable(alloopback examples/alloopback.c)
         target_link_libraries(alloopback
-            PRIVATE ${LINKER_FLAGS} SDL2::SDL2 SDL2::SDL2main ex-common ${MATH_LIB})
+            PRIVATE ${LINKER_FLAGS} SDL2::SDL2 ex-common ${MATH_LIB})
 
         if(ALSOFT_INSTALL_EXAMPLES)
             set(EXTRA_INSTALLS ${EXTRA_INSTALLS} alloopback)
@@ -1712,7 +1712,7 @@ if(ALSOFT_EXAMPLES)
             add_executable(alffplay examples/alffplay.cpp)
             target_include_directories(alffplay PRIVATE ${FFMPEG_INCLUDE_DIRS})
             target_link_libraries(alffplay
-                PRIVATE ${LINKER_FLAGS} SDL2::SDL2 SDL2::SDL2main ${FFMPEG_LIBRARIES} ex-common)
+                PRIVATE ${LINKER_FLAGS} SDL2::SDL2 ${FFMPEG_LIBRARIES} ex-common)
 
             if(ALSOFT_INSTALL_EXAMPLES)
                 set(EXTRA_INSTALLS ${EXTRA_INSTALLS} alffplay)

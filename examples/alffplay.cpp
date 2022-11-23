@@ -57,6 +57,7 @@ constexpr auto AVErrorEOF = AVERROR_EOF;
 struct SwsContext;
 }
 
+#define SDL_MAIN_HANDLED
 #include "SDL.h"
 #ifdef __GNUC__
 _Pragma("GCC diagnostic pop")
@@ -1899,6 +1900,8 @@ std::ostream &operator<<(std::ostream &os, const PrettyTime &rhs)
 
 int main(int argc, char *argv[])
 {
+    SDL_SetMainReady();
+
     std::unique_ptr<MovieState> movState;
 
     if(argc < 2)

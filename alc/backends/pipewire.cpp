@@ -1487,10 +1487,11 @@ bool PipeWirePlayback::reset()
             {
                 /* Scale the update size if the sample rate changes. */
                 const double scale{static_cast<double>(match->mSampleRate) / mDevice->Frequency};
+                const double numbufs{static_cast<double>(mDevice->BufferSize)/mDevice->UpdateSize};
                 mDevice->Frequency = match->mSampleRate;
                 mDevice->UpdateSize = static_cast<uint>(clampd(mDevice->UpdateSize*scale + 0.5,
                     64.0, 8192.0));
-                mDevice->BufferSize = mDevice->UpdateSize * 2;
+                mDevice->BufferSize = static_cast<uint>(numbufs*mDevice->UpdateSize + 0.5);
             }
             if(!mDevice->Flags.test(ChannelsRequest) && match->mChannels != InvalidChannelConfig)
                 mDevice->FmtChans = match->mChannels;
@@ -1563,10 +1564,12 @@ bool PipeWirePlayback::reset()
         return state == PW_STREAM_STATE_PAUSED;
     });
 
-    /* TODO: Update mDevice->BufferSize with the total known buffering delay
-     * from the head of this playback stream to the tail of the device output.
+    /* TODO: Update mDevice->UpdateSize with the stream's quantum, and
+     * mDevice->BufferSize with the total known buffering delay from the head
+     * of this playback stream to the tail of the device output.
+     *
+     * This info is apparently not available until after the stream starts.
      */
-    mDevice->BufferSize = mDevice->UpdateSize * 2;
     plock.unlock();
 
     mNumChannels = mDevice->channelsFromFmt();
@@ -1598,9 +1601,10 @@ void PipeWirePlayback::start()
     });
 
     /* HACK: Try to work out the update size and total buffering size. There's
-     * no simple query for this, so we have to work it out from the stream time
-     * info. The stream time info may also not be available right away, so we
-     * have to wait until it is (up to about 2 seconds).
+     * no actual query for this, so we have to work it out from the stream time
+     * info, and assume it stays accurate with future updates. The stream time
+     * info may also not be available right away, so we have to wait until it
+     * is (up to about 2 seconds).
      */
     int wait_count{100};
     pw_stream_state state{PW_STREAM_STATE_STREAMING};

@@ -91,7 +91,9 @@ constexpr std::array<al::span<const ushort2>,11> gBitReverses{{
 
 } // namespace
 
-void complex_fft(const al::span<std::complex<double>> buffer, const double sign)
+template<typename Real>
+std::enable_if_t<std::is_floating_point<Real>::value>
+complex_fft(const al::span<std::complex<Real>> buffer, const Real sign)
 {
     const size_t fftsize{buffer.size()};
     /* Get the number of bits used for indexing. Simplifies bit-reversal and
@@ -118,21 +120,21 @@ void complex_fft(const al::span<std::complex<double>> buffer, const double sign)
         std::swap(buffer[rev.first], buffer[rev.second]);
 
     /* Iterative form of Danielson-Lanczos lemma */
-    const double pi{al::numbers::pi * sign};
+    const Real pi{al::numbers::pi_v<Real> * sign};
     size_t step2{1u};
     for(size_t i{0};i < log2_size;++i)
     {
-        const double arg{pi / static_cast<double>(step2)};
+        const Real arg{pi / static_cast<Real>(step2)};
 
         /* TODO: Would std::polar(1.0, arg) be any better? */
-        const std::complex<double> w{std::cos(arg), std::sin(arg)};
-        std::complex<double> u{1.0, 0.0};
+        const std::complex<Real> w{std::cos(arg), std::sin(arg)};
+        std::complex<Real> u{1.0, 0.0};
         const size_t step{step2 << 1};
         for(size_t j{0};j < step2;j++)
         {
             for(size_t k{j};k < fftsize;k+=step)
             {
-                std::complex<double> temp{buffer[k+step2] * u};
+                std::complex<Real> temp{buffer[k+step2] * u};
                 buffer[k+step2] = buffer[k] - temp;
                 buffer[k] += temp;
             }
@@ -163,3 +165,7 @@ void complex_hilbert(const al::span<std::complex<double>> buffer)
 
     forward_fft(buffer);
 }
+
+
+template void complex_fft<>(const al::span<std::complex<float>> buffer, const float sign);
+template void complex_fft<>(const al::span<std::complex<double>> buffer, const double sign);

@@ -124,7 +124,7 @@ constexpr float Deg2Rad(float x) noexcept
 { return static_cast<float>(al::numbers::pi / 180.0 * x); }
 
 
-using complex_d = std::complex<double>;
+using complex_f = std::complex<float>;
 
 constexpr size_t ConvolveUpdateSize{256};
 constexpr size_t ConvolveUpdateSamples{ConvolveUpdateSize / 2};
@@ -187,7 +187,7 @@ struct ConvolutionState final : public EffectState {
     al::vector<std::array<float,ConvolveUpdateSamples>,16> mFilter;
     al::vector<std::array<float,ConvolveUpdateSamples*2>,16> mOutput;
 
-    alignas(16) std::array<complex_d,ConvolveUpdateSize> mFftBuffer{};
+    alignas(16) std::array<complex_f,ConvolveUpdateSize> mFftBuffer{};
 
     size_t mCurrentSegment{0};
     size_t mNumConvolveSegs{0};
@@ -201,7 +201,7 @@ struct ConvolutionState final : public EffectState {
     };
     using ChannelDataArray = al::FlexArray<ChannelData>;
     std::unique_ptr<ChannelDataArray> mChans;
-    std::unique_ptr<complex_d[]> mComplexData;
+    std::unique_ptr<complex_f[]> mComplexData;
 
 
     ConvolutionState() = default;
@@ -249,7 +249,7 @@ void ConvolutionState::deviceUpdate(const DeviceBase *device, const Buffer &buff
     mInput.fill(0.0f);
     decltype(mFilter){}.swap(mFilter);
     decltype(mOutput){}.swap(mOutput);
-    mFftBuffer.fill(complex_d{});
+    mFftBuffer.fill(complex_f{});
 
     mCurrentSegment = 0;
     mNumConvolveSegs = 0;
@@ -296,8 +296,8 @@ void ConvolutionState::deviceUpdate(const DeviceBase *device, const Buffer &buff
     mNumConvolveSegs = maxz(mNumConvolveSegs, 2) - 1;
 
     const size_t complex_length{mNumConvolveSegs * m * (numChannels+1)};
-    mComplexData = std::make_unique<complex_d[]>(complex_length);
-    std::fill_n(mComplexData.get(), complex_length, complex_d{});
+    mComplexData = std::make_unique<complex_f[]>(complex_length);
+    std::fill_n(mComplexData.get(), complex_length, complex_f{});
 
     mChannels = buffer.storage->mChannels;
     mAmbiLayout = buffer.storage->mAmbiLayout;
@@ -305,7 +305,7 @@ void ConvolutionState::deviceUpdate(const DeviceBase *device, const Buffer &buff
     mAmbiOrder = minu(buffer.storage->mAmbiOrder, MaxConvolveAmbiOrder);
 
     auto srcsamples = std::make_unique<double[]>(maxz(buffer.storage->mSampleLen, resampledCount));
-    complex_d *filteriter = mComplexData.get() + mNumConvolveSegs*m;
+    complex_f *filteriter = mComplexData.get() + mNumConvolveSegs*m;
     for(size_t c{0};c < numChannels;++c)
     {
         /* Load the samples from the buffer, and resample to match the device. */
@@ -322,17 +322,18 @@ void ConvolutionState::deviceUpdate(const DeviceBase *device, const Buffer &buff
         std::transform(srcsamples.get(), srcsamples.get()+first_size, mFilter[c].rbegin(),
             [](const double d) noexcept -> float { return static_cast<float>(d); });
 
+        auto fftbuffer = std::vector<std::complex<double>>(ConvolveUpdateSize);
         size_t done{first_size};
         for(size_t s{0};s < mNumConvolveSegs;++s)
         {
             const size_t todo{minz(resampledCount-done, ConvolveUpdateSamples)};
 
-            auto iter = std::copy_n(&srcsamples[done], todo, mFftBuffer.begin());
+            auto iter = std::copy_n(&srcsamples[done], todo, fftbuffer.begin());
             done += todo;
-            std::fill(iter, mFftBuffer.end(), complex_d{});
+            std::fill(iter, fftbuffer.end(), std::complex<double>{});
 
-            forward_fft(mFftBuffer);
-            filteriter = std::copy_n(mFftBuffer.cbegin(), m, filteriter);
+            forward_fft<double>(fftbuffer);
+            filteriter = std::copy_n(fftbuffer.cbegin(), m, filteriter);
         }
     }
 }
@@ -537,20 +538,20 @@ void ConvolutionState::process(const size_t samplesToDo,
          * frequency bins to the FFT history.
          */
         auto fftiter = std::copy_n(mInput.cbegin(), ConvolveUpdateSamples, mFftBuffer.begin());
-        std::fill(fftiter, mFftBuffer.end(), complex_d{});
-        forward_fft(mFftBuffer);
+        std::fill(fftiter, mFftBuffer.end(), complex_f{});
+        forward_fft<float>(mFftBuffer);
 
         std::copy_n(mFftBuffer.cbegin(), m, &mComplexData[curseg*m]);
 
-        const complex_d *RESTRICT filter{mComplexData.get() + mNumConvolveSegs*m};
+        const complex_f *RESTRICT filter{mComplexData.get() + mNumConvolveSegs*m};
         for(size_t c{0};c < chans.size();++c)
         {
-            std::fill_n(mFftBuffer.begin(), m, complex_d{});
+            std::fill_n(mFftBuffer.begin(), m, complex_f{});
 
             /* Convolve each input segment with its IR filter counterpart
              * (aligned in time).
              */
-            const complex_d *RESTRICT input{&mComplexData[curseg*m]};
+            const complex_f *RESTRICT input{&mComplexData[curseg*m]};
             for(size_t s{curseg};s < mNumConvolveSegs;++s)
             {
                 for(size_t i{0};i < m;++i,++input,++filter)
@@ -574,19 +575,17 @@ void ConvolutionState::process(const size_t samplesToDo,
              * second-half samples (and this output's second half is
              * subsequently saved for next time).
              */
-            inverse_fft(mFftBuffer);
+            inverse_fft<float>(mFftBuffer);
 
             /* The iFFT'd response is scaled up by the number of bins, so apply
              * the inverse to normalize the output.
              */
             for(size_t i{0};i < ConvolveUpdateSamples;++i)
                 mOutput[c][i] =
-                    static_cast<float>(mFftBuffer[i].real() * (1.0/double{ConvolveUpdateSize})) +
-                    mOutput[c][ConvolveUpdateSamples+i];
+                    (mFftBuffer[i].real()+mOutput[c][ConvolveUpdateSamples+i]) *
+                    (1.0f/float{ConvolveUpdateSize});
             for(size_t i{0};i < ConvolveUpdateSamples;++i)
-                mOutput[c][ConvolveUpdateSamples+i] =
-                    static_cast<float>(mFftBuffer[ConvolveUpdateSamples+i].real() *
-                        (1.0/double{ConvolveUpdateSize}));
+                mOutput[c][ConvolveUpdateSamples+i] = mFftBuffer[ConvolveUpdateSamples+i].real();
         }
 
         /* Shift the input history. */

@@ -88,6 +88,7 @@
 #include "../getopt.h"
 #endif
 
+#include "alcomplex.h"
 #include "alfstream.h"
 #include "alspan.h"
 #include "alstring.h"
@@ -222,94 +223,14 @@ static void TpdfDither(double *RESTRICT out, const double *RESTRICT in, const do
     }
 }
 
-/* Fast Fourier transform routines. The number of points must be a power of
- * two.
- */
-
-// Performs bit-reversal ordering.
-static void FftArrange(const uint n, complex_d *inout)
-{
-    // Handle in-place arrangement.
-    uint rk{0u};
-    for(uint k{0u};k < n;k++)
-    {
-        if(rk > k)
-            std::swap(inout[rk], inout[k]);
-
-        uint m{n};
-        while(rk&(m >>= 1))
-            rk &= ~m;
-        rk |= m;
-    }
-}
-
-// Performs the summation.
-static void FftSummation(const uint n, const double s, complex_d *cplx)
-{
-    double pi;
-    uint m, m2;
-    uint i, k, mk;
-
-    pi = s * M_PI;
-    for(m = 1, m2 = 2;m < n; m <<= 1, m2 <<= 1)
-    {
-        // v = Complex (-2.0 * sin (0.5 * pi / m) * sin (0.5 * pi / m), -sin (pi / m))
-        double sm = std::sin(0.5 * pi / m);
-        auto v = complex_d{-2.0*sm*sm, -std::sin(pi / m)};
-        auto w = complex_d{1.0, 0.0};
-        for(i = 0;i < m;i++)
-        {
-            for(k = i;k < n;k += m2)
-            {
-                mk = k + m;
-                auto t = w * cplx[mk];
-                cplx[mk] = cplx[k] - t;
-                cplx[k] = cplx[k] + t;
-            }
-            w += v*w;
-        }
-    }
-}
-
-// Performs a forward FFT.
-void FftForward(const uint n, complex_d *inout)
-{
-    FftArrange(n, inout);
-    FftSummation(n, 1.0, inout);
-}
-
-// Performs an inverse FFT.
-void FftInverse(const uint n, complex_d *inout)
-{
-    FftArrange(n, inout);
-    FftSummation(n, -1.0, inout);
-    double f{1.0 / n};
-    for(uint i{0};i < n;i++)
-        inout[i] *= f;
-}
 
 /* Calculate the complex helical sequence (or discrete-time analytical signal)
  * of the given input using the Hilbert transform. Given the natural logarithm
  * of a signal's magnitude response, the imaginary components can be used as
  * the angles for minimum-phase reconstruction.
  */
-static void Hilbert(const uint n, complex_d *inout)
-{
-    uint i;
-
-    // Handle in-place operation.
-    for(i = 0;i < n;i++)
-        inout[i].imag(0.0);
-
-    FftInverse(n, inout);
-    for(i = 1;i < (n+1)/2;i++)
-        inout[i] *= 2.0;
-    /* Increment i if n is even. */
-    i += (n&1)^1;
-    for(;i < n;i++)
-        inout[i] = complex_d{0.0, 0.0};
-    FftForward(n, inout);
-}
+inline static void Hilbert(const uint n, complex_d *inout)
+{ complex_hilbert({inout, n}); }
 
 /* Calculate the magnitude response of the given input.  This is used in
  * place of phase decomposition, since the phase residuals are discarded for

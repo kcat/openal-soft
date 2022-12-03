@@ -1617,6 +1617,7 @@ void PipeWirePlayback::start()
             break;
         }
 
+#if PW_CHECK_VERSION(0,3,50)
         /* The time info will be valid when there's a valid rate. Assume
          * ptime.avail_buffers+ptime.queued_buffers is the target buffer queue
          * size.
@@ -1637,6 +1638,24 @@ void PipeWirePlayback::start()
                 totalbuffers*updatesize);
             break;
         }
+#else
+        /* Prior to 0.3.50, we can only measure the delay with the update size,
+         * assuming one buffer and no resample buffering.
+         */
+        if(ptime.rate.denom > 0)
+        {
+            uint updatesize{mRateMatch ? mRateMatch->size : 0u};
+            if(!updatesize) updatesize = mDevice->UpdateSize;
+
+            /* Ensure the delay is in sample frames. */
+            const uint64_t delay{static_cast<uint64_t>(ptime.delay) * mDevice->Frequency *
+                ptime.rate.num / ptime.rate.denom};
+
+            mDevice->UpdateSize = updatesize;
+            mDevice->BufferSize = static_cast<uint>(delay + updatesize);
+            break;
+        }
+#endif
         if(!--wait_count)
             break;
 

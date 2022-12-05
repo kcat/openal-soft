@@ -405,7 +405,7 @@ std::unique_ptr<HrtfStore> CreateHrtfStore(uint rate, ushort irSize,
         auto delays_ = reinterpret_cast<ubyte2*>(base + offset);
         offset += sizeof(delays_[0])*irCount;
 
-        if(unlikely(offset != total))
+        if(offset != total)
             throw std::runtime_error{"HrtfStore allocation size mismatch"};
 
         /* Copy input data to storage. */

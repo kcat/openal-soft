@@ -26,7 +26,7 @@ void al_print(LogLevel level, FILE *logfile, const char *fmt, ...)
     va_start(args, fmt);
     va_copy(args2, args);
     const int msglen{std::vsnprintf(str, sizeof(stcmsg), fmt, args)};
-    if(unlikely(msglen >= 0 && static_cast<size_t>(msglen) >= sizeof(stcmsg)))
+    if(msglen >= 0 && static_cast<size_t>(msglen) >= sizeof(stcmsg)) [[alunlikely]]
     {
         dynmsg.resize(static_cast<size_t>(msglen) + 1u);
         str = dynmsg.data();
@@ -66,7 +66,7 @@ void al_print(LogLevel level, FILE *logfile, const char *fmt, ...)
     va_start(args, fmt);
     va_copy(args2, args);
     const int msglen{std::vsnprintf(str, sizeof(stcmsg), fmt, args)};
-    if(unlikely(msglen >= 0 && static_cast<size_t>(msglen) >= sizeof(stcmsg)))
+    if(msglen >= 0 && static_cast<size_t>(msglen) >= sizeof(stcmsg)) [[alunlikely]]
     {
         dynmsg.resize(static_cast<size_t>(msglen) + 1u);
         str = dynmsg.data();

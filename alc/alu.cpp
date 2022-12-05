@@ -1526,7 +1526,7 @@ void CalcAttnSourceParams(Voice *voice, const VoiceProps *props, const ContextBa
     }
 
     /* Distance-based air absorption and initial send decay. */
-    if(likely(Distance > props->RefDistance))
+    if(Distance > props->RefDistance) [[allikely]]
     {
         const float distance_base{(Distance-props->RefDistance) * props->RolloffFactor};
         const float distance_meters{distance_base * context->mParams.MetersPerUnit};

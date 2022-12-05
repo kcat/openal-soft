@@ -37,9 +37,9 @@ AL_API ALboolean AL_APIENTRY alIsExtensionPresent(const ALchar *extName)
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
-    if(unlikely(!context)) return AL_FALSE;
+    if(!context) [[alunlikely]] return AL_FALSE;
 
-    if(!extName)
+    if(!extName) [[alunlikely]]
         SETERR_RETURN(context, AL_INVALID_VALUE, AL_FALSE, "NULL pointer");
 
     size_t len{strlen(extName)};

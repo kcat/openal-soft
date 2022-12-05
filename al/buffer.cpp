@@ -1766,7 +1766,7 @@ START_API_FUNC
             continue;
 
         const auto al_buffer = LookupBuffer(device, buffer);
-        if (!al_buffer)
+        if(!al_buffer) [[alunlikely]]
         {
             ERR(EAX_PREFIX "Invalid buffer ID %u.\n", buffer);
             return ALC_FALSE;
@@ -1782,7 +1782,7 @@ START_API_FUNC
              * buffer ID is specified multiple times in the provided list, it
              * counts each instance as more memory that needs to fit in X-RAM.
              */
-            if(unlikely(std::numeric_limits<size_t>::max()-al_buffer->OriginalSize < total_needed))
+            if(std::numeric_limits<size_t>::max()-al_buffer->OriginalSize < total_needed) [[alunlikely]]
             {
                 context->setError(AL_OUT_OF_MEMORY, EAX_PREFIX "Buffer size overflow (%u + %zu)\n",
                     al_buffer->OriginalSize, total_needed);

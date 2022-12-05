@@ -140,7 +140,7 @@ void UhjEncoder<N>::encode(float *LeftOut, float *RightOut,
 
         float *inout{al::assume_aligned<16>(buffer)};
         auto inout_end = inout + SamplesToDo;
-        if(likely(SamplesToDo >= sFilterDelay))
+        if(SamplesToDo >= sFilterDelay) [[allikely]]
         {
             auto delay_end = std::rotate(inout, inout_end - sFilterDelay, inout_end);
             std::swap_ranges(inout, delay_end, distbuf);
@@ -409,8 +409,8 @@ void UhjStereoDecoder<N>::decode(const al::span<float*> samples, const size_t sa
          * interpolate when it changes.
          */
         const float wtarget{mWidthControl};
-        const float wcurrent{unlikely(mCurrentWidth < 0.0f) ? wtarget : mCurrentWidth};
-        if(likely(wtarget == wcurrent) || unlikely(forwardSamples == 0))
+        const float wcurrent{(mCurrentWidth < 0.0f) ? wtarget : mCurrentWidth};
+        if(wtarget == wcurrent || forwardSamples == 0)
         {
             for(size_t i{0};i < samplesToDo+sInputPadding;++i)
                 mD[i] = (left[i] - right[i]) * wcurrent;
@@ -478,8 +478,8 @@ void UhjStereoDecoderIIR::decode(const al::span<float*> samples, const size_t sa
          * interpolate when it changes.
          */
         const float wtarget{mWidthControl};
-        const float wcurrent{unlikely(mCurrentWidth < 0.0f) ? wtarget : mCurrentWidth};
-        if(likely(wtarget == wcurrent) || unlikely(forwardSamples == 0))
+        const float wcurrent{(mCurrentWidth < 0.0f) ? wtarget : mCurrentWidth};
+        if(wtarget == wcurrent || forwardSamples == 0)
         {
             for(size_t i{0};i < samplesToDo;++i)
                 mD[i] = (left[i] - right[i]) * wcurrent;

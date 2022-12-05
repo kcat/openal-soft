@@ -110,8 +110,8 @@ void UpdateSourceProps(const ALsource *source, Voice *voice, ALCcontext *context
     VoicePropsItem *next;
     do {
         next = props->next.load(std::memory_order_relaxed);
-    } while(unlikely(context->mFreeVoiceProps.compare_exchange_weak(props, next,
-        std::memory_order_acq_rel, std::memory_order_acquire) == false));
+    } while(context->mFreeVoiceProps.compare_exchange_weak(props, next,
+        std::memory_order_acq_rel, std::memory_order_acquire) == false);
 
     props->Pitch = source->Pitch;
     props->Gain = source->Gain;
@@ -611,7 +611,7 @@ bool SetVoiceOffset(Voice *oldvoice, const VoicePos &vpos, ALsource *source, ALC
         }
         ++vidx;
     }
-    if(unlikely(!newvoice))
+    if(!newvoice) [[alunlikely]]
     {
         auto &allvoices = *context->mVoices.load(std::memory_order_relaxed);
         if(allvoices.size() == voicelist.size())
@@ -2440,7 +2440,7 @@ void StartSources(ALCcontext *context, const al::span<ALsource*> srchandles,
     /* If the device is disconnected, and voices stop on disconnect, go right
      * to stopped.
      */
-    if(unlikely(!device->Connected.load(std::memory_order_acquire)))
+    if(!device->Connected.load(std::memory_order_acquire)) [[alunlikely]]
     {
         if(context->mStopVoicesOnDisconnect.load(std::memory_order_acquire))
         {
@@ -2466,7 +2466,7 @@ void StartSources(ALCcontext *context, const al::span<ALsource*> srchandles,
         if(free_voices == srchandles.size())
             break;
     }
-    if(unlikely(srchandles.size() != free_voices))
+    if(srchandles.size() != free_voices) [[alunlikely]]
     {
         const size_t inc_amount{srchandles.size() - free_voices};
         auto &allvoices = *context->mVoices.load(std::memory_order_relaxed);
@@ -2495,7 +2495,7 @@ void StartSources(ALCcontext *context, const al::span<ALsource*> srchandles,
         }
 
         /* If there's nothing to play, go right to stopped. */
-        if(unlikely(BufferList == source->mQueue.end()))
+        if(BufferList == source->mQueue.end()) [[alunlikely]]
         {
             /* NOTE: A source without any playable buffers should not have a
              * Voice since it shouldn't be in a playing or paused state. So
@@ -2600,7 +2600,7 @@ void StartSources(ALCcontext *context, const al::span<ALsource*> srchandles,
         cur->mSourceID = source->id;
         cur->mState = VChangeState::Play;
     }
-    if(likely(tail))
+    if(tail) [[allikely]]
         SendVoiceChanges(context, tail);
 }
 
@@ -3220,9 +3220,9 @@ void AL_APIENTRY alSourcePlayAtTimeSOFT(ALuint source, ALint64SOFT start_time)
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
-    if UNLIKELY(!context) return;
+    if(!context) [[alunlikely]] return;
 
-    if(unlikely(start_time < 0))
+    if(start_time < 0) [[alunlikely]]
         SETERR_RETURN(context, AL_INVALID_VALUE,, "Invalid time point %" PRId64, start_time);
 
     std::lock_guard<std::mutex> _{context->mSourceLock};
@@ -3238,16 +3238,16 @@ AL_API void AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
-    if UNLIKELY(!context) return;
+    if(!context) [[alunlikely]] return;
 
-    if UNLIKELY(n < 0)
+    if(n < 0) [[alunlikely]]
         context->setError(AL_INVALID_VALUE, "Playing %d sources", n);
-    if UNLIKELY(n <= 0) return;
+    if(n <= 0) [[alunlikely]] return;
 
     al::vector<ALsource*> extra_sources;
     std::array<ALsource*,8> source_storage;
     al::span<ALsource*> srchandles;
-    if LIKELY(static_cast<ALuint>(n) <= source_storage.size())
+    if(static_cast<ALuint>(n) <= source_storage.size()) [[allikely]]
         srchandles = {source_storage.data(), static_cast<ALuint>(n)};
     else
     {
@@ -3259,7 +3259,7 @@ START_API_FUNC
     for(auto &srchdl : srchandles)
     {
         srchdl = LookupSource(context.get(), *sources);
-        if(!srchdl)
+        if(!srchdl) [[alunlikely]]
             SETERR_RETURN(context, AL_INVALID_NAME,, "Invalid source ID %u", *sources);
         ++sources;
     }
@@ -3272,13 +3272,13 @@ void AL_APIENTRY alSourcePlayAtTimevSOFT(ALsizei n, const ALuint *sources, ALint
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
-    if UNLIKELY(!context) return;
+    if(!context) [[alunlikely]] return;
 
-    if UNLIKELY(n < 0)
+    if(n < 0) [[alunlikely]]
         context->setError(AL_INVALID_VALUE, "Playing %d sources", n);
-    if UNLIKELY(n <= 0) return;
+    if(n <= 0) [[alunlikely]] return;
 
-    if(unlikely(start_time < 0))
+    if(start_time < 0) [[alunlikely]]
         SETERR_RETURN(context, AL_INVALID_VALUE,, "Invalid time point %" PRId64, start_time);
 
     al::vector<ALsource*> extra_sources;

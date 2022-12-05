@@ -79,7 +79,7 @@ semaphore::~semaphore()
 
 void semaphore::post()
 {
-    if UNLIKELY(!ReleaseSemaphore(static_cast<HANDLE>(mSem), 1, nullptr))
+    if(!ReleaseSemaphore(static_cast<HANDLE>(mSem), 1, nullptr))
         throw std::system_error(std::make_error_code(std::errc::value_too_large));
 }
 

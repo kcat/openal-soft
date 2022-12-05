@@ -115,7 +115,7 @@ void BFormatDec::processStablize(const al::span<FloatBufferLine> OutBuffer,
 
         auto &DelayBuf = mStablizer->DelayBuf[i];
         auto buffer_end = OutBuffer[i].begin() + SamplesToDo;
-        if LIKELY(SamplesToDo >= FrontStablizer::DelayLength)
+        if(SamplesToDo >= FrontStablizer::DelayLength) [[allikely]]
         {
             auto delay_end = std::rotate(OutBuffer[i].begin(),
                 buffer_end - FrontStablizer::DelayLength, buffer_end);

@@ -161,11 +161,11 @@ inline int float2int(float f) noexcept
     shift = ((conv.i>>23)&0xff) - (127+23);
 
     /* Over/underflow */
-    if UNLIKELY(shift >= 31 || shift < -23)
+    if(shift >= 31 || shift < -23) [[alunlikely]]
         return 0;
 
     mant = (conv.i&0x7fffff) | 0x800000;
-    if LIKELY(shift < 0)
+    if(shift < 0) [[allikely]]
         return (mant >> -shift) * sign;
     return (mant << shift) * sign;
 
@@ -198,11 +198,11 @@ inline int double2int(double d) noexcept
     shift = ((conv.i64 >> 52) & 0x7ff) - (1023 + 52);
 
     /* Over/underflow */
-    if UNLIKELY(shift >= 63 || shift < -52)
+    if(shift >= 63 || shift < -52) [[alunlikely]]
         return 0;
 
     mant = (conv.i64 & 0xfffffffffffff_i64) | 0x10000000000000_i64;
-    if LIKELY(shift < 0)
+    if(shift < 0) [[allikely]]
         return (int)(mant >> -shift) * sign;
     return (int)(mant << shift) * sign;
 
@@ -251,7 +251,7 @@ inline float fast_roundf(float f) noexcept
     sign = (conv.i>>31)&0x01;
     expo = (conv.i>>23)&0xff;
 
-    if UNLIKELY(expo >= 150/*+23*/)
+    if(expo >= 150/*+23*/) [[alunlikely]]
     {
         /* An exponent (base-2) of 23 or higher is incapable of sub-integral
          * precision, so it's already an integral value. We don't need to worry

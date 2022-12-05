@@ -411,14 +411,14 @@ bool EnsureBuffers(ALCdevice *device, size_t needed)
 
     while(needed > count)
     {
-        if UNLIKELY(device->BufferList.size() >= 1<<25)
+        if(device->BufferList.size() >= 1<<25) [[alunlikely]]
             return false;
 
         device->BufferList.emplace_back();
         auto sublist = device->BufferList.end() - 1;
         sublist->FreeMask = ~0_u64;
         sublist->Buffers = static_cast<ALbuffer*>(al_calloc(alignof(ALbuffer), sizeof(ALbuffer)*64));
-        if UNLIKELY(!sublist->Buffers)
+        if(!sublist->Buffers) [[alunlikely]]
         {
             device->BufferList.pop_back();
             return false;
@@ -467,10 +467,10 @@ inline ALbuffer *LookupBuffer(ALCdevice *device, ALuint id)
     const size_t lidx{(id-1) >> 6};
     const ALuint slidx{(id-1) & 0x3f};
 
-    if UNLIKELY(lidx >= device->BufferList.size())
+    if(lidx >= device->BufferList.size()) [[alunlikely]]
         return nullptr;
     BufferSubList &sublist = device->BufferList[lidx];
-    if UNLIKELY(sublist.FreeMask & (1_u64 << slidx))
+    if(sublist.FreeMask & (1_u64 << slidx)) [[alunlikely]]
         return nullptr;
     return sublist.Buffers + slidx;
 }
@@ -531,13 +531,13 @@ void LoadData(ALCcontext *context, ALbuffer *ALBuf, ALsizei freq, ALuint size,
     UserFmtChannels SrcChannels, UserFmtType SrcType, const al::byte *SrcData,
     ALbitfieldSOFT access)
 {
-    if UNLIKELY(ReadRef(ALBuf->ref) != 0 || ALBuf->MappedAccess != 0)
+    if(ReadRef(ALBuf->ref) != 0 || ALBuf->MappedAccess != 0) [[alunlikely]]
         SETERR_RETURN(context, AL_INVALID_OPERATION,, "Modifying storage for in-use buffer %u",
                       ALBuf->id);
 
     /* Currently no channel configurations need to be converted. */
     auto DstChannels = FmtFromUserFmt(SrcChannels);
-    if UNLIKELY(!DstChannels)
+    if(!DstChannels) [[alunlikely]]
         SETERR_RETURN(context, AL_INVALID_ENUM, , "Invalid format");
 
     /* IMA4 and MSADPCM convert to 16-bit short.
@@ -548,18 +548,18 @@ void LoadData(ALCcontext *context, ALbuffer *ALBuf, ALsizei freq, ALuint size,
      */
     if((access&MAP_READ_WRITE_FLAGS))
     {
-        if UNLIKELY(SrcType == UserFmtIMA4 || SrcType == UserFmtMSADPCM)
+        if(SrcType == UserFmtIMA4 || SrcType == UserFmtMSADPCM) [[alunlikely]]
             SETERR_RETURN(context, AL_INVALID_VALUE,, "%s samples cannot be mapped",
                 NameFromUserFmtType(SrcType));
     }
     auto DstType = (SrcType == UserFmtIMA4 || SrcType == UserFmtMSADPCM)
         ? al::make_optional(FmtShort) : FmtFromUserFmt(SrcType);
-    if UNLIKELY(!DstType)
+    if(!DstType) [[alunlikely]]
         SETERR_RETURN(context, AL_INVALID_ENUM, , "Invalid format");
 
     const ALuint unpackalign{ALBuf->UnpackAlign};
     const ALuint align{SanitizeAlignment(SrcType, unpackalign)};
-    if UNLIKELY(align < 1)
+    if(align < 1) [[alunlikely]]
         SETERR_RETURN(context, AL_INVALID_VALUE,, "Invalid unpack alignment %u for %s samples",
             unpackalign, NameFromUserFmtType(SrcType));
 
@@ -569,9 +569,9 @@ void LoadData(ALCcontext *context, ALbuffer *ALBuf, ALsizei freq, ALuint size,
     if((access&AL_PRESERVE_DATA_BIT_SOFT))
     {
         /* Can only preserve data with the same format and alignment. */
-        if UNLIKELY(ALBuf->mChannels != *DstChannels || ALBuf->OriginalType != SrcType)
+        if(ALBuf->mChannels != *DstChannels || ALBuf->OriginalType != SrcType) [[alunlikely]]
             SETERR_RETURN(context, AL_INVALID_VALUE,, "Preserving data of mismatched format");
-        if UNLIKELY(ALBuf->OriginalAlign != align)
+        if(ALBuf->OriginalAlign != align) [[alunlikely]]
             SETERR_RETURN(context, AL_INVALID_VALUE,, "Preserving data of mismatched alignment");
         if(ALBuf->mAmbiOrder != ambiorder)
             SETERR_RETURN(context, AL_INVALID_VALUE,, "Preserving data of mismatched order");
@@ -584,12 +584,12 @@ void LoadData(ALCcontext *context, ALbuffer *ALBuf, ALsizei freq, ALuint size,
         ((SrcType == UserFmtIMA4) ? (align-1)/2 + 4 :
         (SrcType == UserFmtMSADPCM) ? (align-2)/2 + 7 :
         (align * BytesFromUserFmt(SrcType)))};
-    if UNLIKELY((size%SrcByteAlign) != 0)
+    if((size%SrcByteAlign) != 0) [[alunlikely]]
         SETERR_RETURN(context, AL_INVALID_VALUE,,
             "Data size %d is not a multiple of frame size %d (%d unpack alignment)",
             size, SrcByteAlign, align);
 
-    if UNLIKELY(size/SrcByteAlign > std::numeric_limits<ALsizei>::max()/align)
+    if(size/SrcByteAlign > std::numeric_limits<ALsizei>::max()/align) [[alunlikely]]
         SETERR_RETURN(context, AL_OUT_OF_MEMORY,,
             "Buffer size overflow, %d blocks x %d samples per block", size/SrcByteAlign, align);
     const ALuint frames{size / SrcByteAlign * align};
@@ -599,7 +599,7 @@ void LoadData(ALCcontext *context, ALbuffer *ALBuf, ALsizei freq, ALuint size,
      */
     ALuint NumChannels{ChannelsFromFmt(*DstChannels, ambiorder)};
     ALuint FrameSize{NumChannels * BytesFromFmt(*DstType)};
-    if UNLIKELY(frames > std::numeric_limits<size_t>::max()/FrameSize)
+    if(frames > std::numeric_limits<size_t>::max()/FrameSize) [[alunlikely]]
         SETERR_RETURN(context, AL_OUT_OF_MEMORY,,
             "Buffer size overflow, %d frames x %d bytes per frame", frames, FrameSize);
     size_t newsize{static_cast<size_t>(frames) * FrameSize};
@@ -686,18 +686,18 @@ void PrepareCallback(ALCcontext *context, ALbuffer *ALBuf, ALsizei freq,
     UserFmtChannels SrcChannels, UserFmtType SrcType, ALBUFFERCALLBACKTYPESOFT callback,
     void *userptr)
 {
-    if UNLIKELY(ReadRef(ALBuf->ref) != 0 || ALBuf->MappedAccess != 0)
+    if(ReadRef(ALBuf->ref) != 0 || ALBuf->MappedAccess != 0) [[alunlikely]]
         SETERR_RETURN(context, AL_INVALID_OPERATION,, "Modifying callback for in-use buffer %u",
             ALBuf->id);
 
     /* Currently no channel configurations need to be converted. */
     auto DstChannels = FmtFromUserFmt(SrcChannels);
-    if UNLIKELY(!DstChannels)
+    if(!DstChannels) [[alunlikely]]
         SETERR_RETURN(context, AL_INVALID_ENUM,, "Invalid format");
 
     /* IMA4 and MSADPCM convert to 16-bit short. Not supported with callbacks. */
     auto DstType = FmtFromUserFmt(SrcType);
-    if UNLIKELY(!DstType)
+    if(!DstType) [[alunlikely]]
         SETERR_RETURN(context, AL_INVALID_ENUM,, "Unsupported callback format");
 
     const ALuint ambiorder{IsBFormat(*DstChannels) ? ALBuf->UnpackAmbiOrder :
@@ -823,11 +823,11 @@ AL_API void AL_APIENTRY alGenBuffers(ALsizei n, ALuint *buffers)
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
-    if UNLIKELY(!context) return;
+    if(!context) [[alunlikely]] return;
 
-    if UNLIKELY(n < 0)
+    if(n < 0) [[alunlikely]]
         context->setError(AL_INVALID_VALUE, "Generating %d buffers", n);
-    if UNLIKELY(n <= 0) return;
+    if(n <= 0) [[alunlikely]] return;
 
     ALCdevice *device{context->mALDevice.get()};
     std::lock_guard<std::mutex> _{device->BufferLock};
@@ -837,7 +837,7 @@ START_API_FUNC
         return;
     }
 
-    if LIKELY(n == 1)
+    if(n == 1) [[allikely]]
     {
         /* Special handling for the easy and normal case. */
         ALbuffer *buffer{AllocBuffer(device)};
@@ -863,11 +863,11 @@ AL_API void AL_APIENTRY alDeleteBuffers(ALsizei n, const ALuint *buffers)
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
-    if UNLIKELY(!context) return;
+    if(!context) [[alunlikely]] return;
 
-    if UNLIKELY(n < 0)
+    if(n < 0) [[alunlikely]]
         context->setError(AL_INVALID_VALUE, "Deleting %d buffers", n);
-    if UNLIKELY(n <= 0) return;
+    if(n <= 0) [[alunlikely]] return;
 
     ALCdevice *device{context->mALDevice.get()};
     std::lock_guard<std::mutex> _{device->BufferLock};
@@ -877,12 +877,12 @@ START_API_FUNC
     {
         if(!bid) return true;
         ALbuffer *ALBuf{LookupBuffer(device, bid)};
-        if UNLIKELY(!ALBuf)
+        if(!ALBuf) [[alunlikely]]
         {
             context->setError(AL_INVALID_NAME, "Invalid buffer ID %u", bid);
             return false;
         }
-        if UNLIKELY(ReadRef(ALBuf->ref) != 0)
+        if(ReadRef(ALBuf->ref) != 0) [[alunlikely]]
         {
             context->setError(AL_INVALID_OPERATION, "Deleting in-use buffer %u", bid);
             return false;
@@ -891,7 +891,7 @@ START_API_FUNC
     };
     const ALuint *buffers_end = buffers + n;
     auto invbuf = std::find_if_not(buffers, buffers_end, validate_buffer);
-    if UNLIKELY(invbuf != buffers_end) return;
+    if(invbuf != buffers_end) [[alunlikely]] return;
 
     /* All good. Delete non-0 buffer IDs. */
     auto delete_buffer = [device](const ALuint bid) -> void
@@ -907,7 +907,7 @@ AL_API ALboolean AL_APIENTRY alIsBuffer(ALuint buffer)
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
-    if LIKELY(context)
+    if(context) [[allikely]]
     {
         ALCdevice *device{context->mALDevice.get()};
         std::lock_guard<std::mutex> _{device->BufferLock};
@@ -928,28 +928,28 @@ AL_API void AL_APIENTRY alBufferStorageSOFT(ALuint buffer, ALenum format, const 
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
-    if UNLIKELY(!context) return;
+    if(!context) [[alunlikely]] return;
 
     ALCdevice *device{context->mALDevice.get()};
     std::lock_guard<std::mutex> _{device->BufferLock};
 
     ALbuffer *albuf = LookupBuffer(device, buffer);
-    if UNLIKELY(!albuf)
+    if(!albuf) [[alunlikely]]
         context->setError(AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
-    else if UNLIKELY(size < 0)
+    else if(size < 0) [[alunlikely]]
         context->setError(AL_INVALID_VALUE, "Negative storage size %d", size);
-    else if UNLIKELY(freq < 1)
+    else if(freq < 1) [[alunlikely]]
         context->setError(AL_INVALID_VALUE, "Invalid sample rate %d", freq);
-    else if UNLIKELY((flags&INVALID_STORAGE_MASK) != 0)
+    else if((flags&INVALID_STORAGE_MASK) != 0) [[alunlikely]]
         context->setError(AL_INVALID_VALUE, "Invalid storage flags 0x%x",
             flags&INVALID_STORAGE_MASK);
-    else if UNLIKELY((flags&AL_MAP_PERSISTENT_BIT_SOFT) && !(flags&MAP_READ_WRITE_FLAGS))
+    else if((flags&AL_MAP_PERSISTENT_BIT_SOFT) && !(flags&MAP_READ_WRITE_FLAGS)) [[alunlikely]]
         context->setError(AL_INVALID_VALUE,
             "Declaring persistently mapped storage without read or write access");
     else
     {
         auto usrfmt = DecomposeUserFormat(format);
-        if UNLIKELY(!usrfmt)
+        if(!usrfmt) [[alunlikely]]
             context->setError(AL_INVALID_ENUM, "Invalid format 0x%04x", format);
         else
         {
@@ -964,39 +964,40 @@ AL_API void* AL_APIENTRY alMapBufferSOFT(ALuint buffer, ALsizei offset, ALsizei 
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
-    if UNLIKELY(!context) return nullptr;
+    if(!context) [[alunlikely]] return nullptr;
 
     ALCdevice *device{context->mALDevice.get()};
     std::lock_guard<std::mutex> _{device->BufferLock};
 
     ALbuffer *albuf = LookupBuffer(device, buffer);
-    if UNLIKELY(!albuf)
+    if(!albuf) [[alunlikely]]
         context->setError(AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
-    else if UNLIKELY((access&INVALID_MAP_FLAGS) != 0)
+    else if((access&INVALID_MAP_FLAGS) != 0) [[alunlikely]]
         context->setError(AL_INVALID_VALUE, "Invalid map flags 0x%x", access&INVALID_MAP_FLAGS);
-    else if UNLIKELY(!(access&MAP_READ_WRITE_FLAGS))
+    else if(!(access&MAP_READ_WRITE_FLAGS)) [[alunlikely]]
         context->setError(AL_INVALID_VALUE, "Mapping buffer %u without read or write access",
             buffer);
     else
     {
         ALbitfieldSOFT unavailable = (albuf->Access^access) & access;
-        if UNLIKELY(ReadRef(albuf->ref) != 0 && !(access&AL_MAP_PERSISTENT_BIT_SOFT))
+        if(ReadRef(albuf->ref) != 0 && !(access&AL_MAP_PERSISTENT_BIT_SOFT)) [[alunlikely]]
             context->setError(AL_INVALID_OPERATION,
                 "Mapping in-use buffer %u without persistent mapping", buffer);
-        else if UNLIKELY(albuf->MappedAccess != 0)
+        else if(albuf->MappedAccess != 0) [[alunlikely]]
             context->setError(AL_INVALID_OPERATION, "Mapping already-mapped buffer %u", buffer);
-        else if UNLIKELY((unavailable&AL_MAP_READ_BIT_SOFT))
+        else if((unavailable&AL_MAP_READ_BIT_SOFT)) [[alunlikely]]
             context->setError(AL_INVALID_VALUE,
                 "Mapping buffer %u for reading without read access", buffer);
-        else if UNLIKELY((unavailable&AL_MAP_WRITE_BIT_SOFT))
+        else if((unavailable&AL_MAP_WRITE_BIT_SOFT)) [[alunlikely]]
             context->setError(AL_INVALID_VALUE,
                 "Mapping buffer %u for writing without write access", buffer);
-        else if UNLIKELY((unavailable&AL_MAP_PERSISTENT_BIT_SOFT))
+        else if((unavailable&AL_MAP_PERSISTENT_BIT_SOFT)) [[alunlikely]]
             context->setError(AL_INVALID_VALUE,
                 "Mapping buffer %u persistently without persistent access", buffer);
-        else if UNLIKELY(offset < 0 || length <= 0
+        else if(offset < 0 || length <= 0
             || static_cast<ALuint>(offset) >= albuf->OriginalSize
             || static_cast<ALuint>(length) > albuf->OriginalSize - static_cast<ALuint>(offset))
+            [[alunlikely]]
             context->setError(AL_INVALID_VALUE, "Mapping invalid range %d+%d for buffer %u",
                 offset, length, buffer);
         else
@@ -1017,15 +1018,15 @@ AL_API void AL_APIENTRY alUnmapBufferSOFT(ALuint buffer)
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
-    if UNLIKELY(!context) return;
+    if(!context) [[alunlikely]] return;
 
     ALCdevice *device{context->mALDevice.get()};
     std::lock_guard<std::mutex> _{device->BufferLock};
 
     ALbuffer *albuf = LookupBuffer(device, buffer);
-    if UNLIKELY(!albuf)
+    if(!albuf) [[alunlikely]]
         context->setError(AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
-    else if UNLIKELY(albuf->MappedAccess == 0)
+    else if(albuf->MappedAccess == 0) [[alunlikely]]
         context->setError(AL_INVALID_OPERATION, "Unmapping unmapped buffer %u", buffer);
     else
     {
@@ -1040,20 +1041,20 @@ AL_API void AL_APIENTRY alFlushMappedBufferSOFT(ALuint buffer, ALsizei offset, A
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
-    if UNLIKELY(!context) return;
+    if(!context) [[alunlikely]] return;
 
     ALCdevice *device{context->mALDevice.get()};
     std::lock_guard<std::mutex> _{device->BufferLock};
 
     ALbuffer *albuf = LookupBuffer(device, buffer);
-    if UNLIKELY(!albuf)
+    if(!albuf) [[alunlikely]]
         context->setError(AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
-    else if UNLIKELY(!(albuf->MappedAccess&AL_MAP_WRITE_BIT_SOFT))
+    else if(!(albuf->MappedAccess&AL_MAP_WRITE_BIT_SOFT)) [[alunlikely]]
         context->setError(AL_INVALID_OPERATION, "Flushing buffer %u while not mapped for writing",
             buffer);
-    else if UNLIKELY(offset < albuf->MappedOffset || length <= 0
+    else if(offset < albuf->MappedOffset || length <= 0
         || offset >= albuf->MappedOffset+albuf->MappedSize
-        || length > albuf->MappedOffset+albuf->MappedSize-offset)
+        || length > albuf->MappedOffset+albuf->MappedSize-offset) [[alunlikely]]
         context->setError(AL_INVALID_VALUE, "Flushing invalid range %d+%d on buffer %u", offset,
             length, buffer);
     else
@@ -1072,20 +1073,20 @@ AL_API void AL_APIENTRY alBufferSubDataSOFT(ALuint buffer, ALenum format, const 
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
-    if UNLIKELY(!context) return;
+    if(!context) [[alunlikely]] return;
 
     ALCdevice *device{context->mALDevice.get()};
     std::lock_guard<std::mutex> _{device->BufferLock};
 
     ALbuffer *albuf = LookupBuffer(device, buffer);
-    if UNLIKELY(!albuf)
+    if(!albuf) [[alunlikely]]
     {
         context->setError(AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
         return;
     }
 
     auto usrfmt = DecomposeUserFormat(format);
-    if UNLIKELY(!usrfmt)
+    if(!usrfmt) [[alunlikely]]
     {
         context->setError(AL_INVALID_ENUM, "Invalid format 0x%04x", format);
         return;
@@ -1093,18 +1094,18 @@ START_API_FUNC
 
     ALuint unpack_align{albuf->UnpackAlign};
     ALuint align{SanitizeAlignment(usrfmt->type, unpack_align)};
-    if UNLIKELY(align < 1)
+    if(align < 1) [[alunlikely]]
         context->setError(AL_INVALID_VALUE, "Invalid unpack alignment %u", unpack_align);
-    else if UNLIKELY(long{usrfmt->channels} != long{albuf->mChannels}
-        || usrfmt->type != albuf->OriginalType)
+    else if(long{usrfmt->channels} != long{albuf->mChannels}
+        || usrfmt->type != albuf->OriginalType) [[alunlikely]]
         context->setError(AL_INVALID_ENUM, "Unpacking data with mismatched format");
-    else if UNLIKELY(align != albuf->OriginalAlign)
+    else if(align != albuf->OriginalAlign) [[alunlikely]]
         context->setError(AL_INVALID_VALUE,
             "Unpacking data with alignment %u does not match original alignment %u", align,
             albuf->OriginalAlign);
-    else if UNLIKELY(albuf->isBFormat() && albuf->UnpackAmbiOrder != albuf->mAmbiOrder)
+    else if(albuf->isBFormat() && albuf->UnpackAmbiOrder != albuf->mAmbiOrder) [[alunlikely]]
         context->setError(AL_INVALID_VALUE, "Unpacking data with mismatched ambisonic order");
-    else if UNLIKELY(albuf->MappedAccess != 0)
+    else if(albuf->MappedAccess != 0) [[alunlikely]]
         context->setError(AL_INVALID_OPERATION, "Unpacking data into mapped buffer %u", buffer);
     else
     {
@@ -1116,15 +1117,16 @@ START_API_FUNC
             (align * frame_size)
         };
 
-        if UNLIKELY(offset < 0 || length < 0 || static_cast<ALuint>(offset) > albuf->OriginalSize
+        if(offset < 0 || length < 0 || static_cast<ALuint>(offset) > albuf->OriginalSize
             || static_cast<ALuint>(length) > albuf->OriginalSize-static_cast<ALuint>(offset))
+            [[alunlikely]]
             context->setError(AL_INVALID_VALUE, "Invalid data sub-range %d+%d on buffer %u",
                 offset, length, buffer);
-        else if UNLIKELY((static_cast<ALuint>(offset)%byte_align) != 0)
+        else if((static_cast<ALuint>(offset)%byte_align) != 0) [[alunlikely]]
             context->setError(AL_INVALID_VALUE,
                 "Sub-range offset %d is not a multiple of frame size %d (%d unpack alignment)",
                 offset, byte_align, align);
-        else if UNLIKELY((static_cast<ALuint>(length)%byte_align) != 0)
+        else if((static_cast<ALuint>(length)%byte_align) != 0) [[alunlikely]]
             context->setError(AL_INVALID_VALUE,
                 "Sub-range length %d is not a multiple of frame size %d (%d unpack alignment)",
                 length, byte_align, align);
@@ -1158,7 +1160,7 @@ AL_API void AL_APIENTRY alBufferSamplesSOFT(ALuint /*buffer*/, ALuint /*samplera
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
-    if UNLIKELY(!context) return;
+    if(!context) [[alunlikely]] return;
 
     context->setError(AL_INVALID_OPERATION, "alBufferSamplesSOFT not supported");
 }
@@ -1169,7 +1171,7 @@ AL_API void AL_APIENTRY alBufferSubSamplesSOFT(ALuint /*buffer*/, ALsizei /*offs
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
-    if UNLIKELY(!context) return;
+    if(!context) [[alunlikely]] return;
 
     context->setError(AL_INVALID_OPERATION, "alBufferSubSamplesSOFT not supported");
 }
@@ -1180,7 +1182,7 @@ AL_API void AL_APIENTRY alGetBufferSamplesSOFT(ALuint /*buffer*/, ALsizei /*offs
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
-    if UNLIKELY(!context) return;
+    if(!context) [[alunlikely]] return;
 
     context->setError(AL_INVALID_OPERATION, "alGetBufferSamplesSOFT not supported");
 }
@@ -1190,7 +1192,7 @@ AL_API ALboolean AL_APIENTRY alIsBufferFormatSupportedSOFT(ALenum /*format*/)
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
-    if UNLIKELY(!context) return AL_FALSE;
+    if(!context) [[alunlikely]] return AL_FALSE;
 
     context->setError(AL_INVALID_OPERATION, "alIsBufferFormatSupportedSOFT not supported");
     return AL_FALSE;
@@ -1202,12 +1204,12 @@ AL_API void AL_APIENTRY alBufferf(ALuint buffer, ALenum param, ALfloat /*value*/
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
-    if UNLIKELY(!context) return;
+    if(!context) [[alunlikely]] return;
 
     ALCdevice *device{context->mALDevice.get()};
     std::lock_guard<std::mutex> _{device->BufferLock};
 
-    if UNLIKELY(LookupBuffer(device, buffer) == nullptr)
+    if(LookupBuffer(device, buffer) == nullptr) [[alunlikely]]
         context->setError(AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
     else switch(param)
     {
@@ -1222,12 +1224,12 @@ AL_API void AL_APIENTRY alBuffer3f(ALuint buffer, ALenum param,
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
-    if UNLIKELY(!context) return;
+    if(!context) [[alunlikely]] return;
 
     ALCdevice *device{context->mALDevice.get()};
     std::lock_guard<std::mutex> _{device->BufferLock};
 
-    if UNLIKELY(LookupBuffer(device, buffer) == nullptr)
+    if(LookupBuffer(device, buffer) == nullptr) [[alunlikely]]
         context->setError(AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
     else switch(param)
     {
@@ -1241,14 +1243,14 @@ AL_API void AL_APIENTRY alBufferfv(ALuint buffer, ALenum param, const ALfloat *v
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
-    if UNLIKELY(!context) return;
+    if(!context) [[alunlikely]] return;
 
     ALCdevice *device{context->mALDevice.get()};
     std::lock_guard<std::mutex> _{device->BufferLock};
 
-    if UNLIKELY(LookupBuffer(device, buffer) == nullptr)
+    if(LookupBuffer(device, buffer) == nullptr) [[alunlikely]]
         context->setError(AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
-    else if UNLIKELY(!values)
+    else if(!values) [[alunlikely]]
         context->setError(AL_INVALID_VALUE, "NULL pointer");
     else switch(param)
     {
@@ -1263,52 +1265,53 @@ AL_API void AL_APIENTRY alBufferi(ALuint buffer, ALenum param, ALint value)
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
-    if UNLIKELY(!context) return;
+    if(!context) [[alunlikely]] return;
 
     ALCdevice *device{context->mALDevice.get()};
     std::lock_guard<std::mutex> _{device->BufferLock};
 
     ALbuffer *albuf = LookupBuffer(device, buffer);
-    if UNLIKELY(!albuf)
+    if(!albuf) [[alunlikely]]
         context->setError(AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
     else switch(param)
     {
     case AL_UNPACK_BLOCK_ALIGNMENT_SOFT:
-        if UNLIKELY(value < 0)
+        if(value < 0) [[alunlikely]]
             context->setError(AL_INVALID_VALUE, "Invalid unpack block alignment %d", value);
         else
             albuf->UnpackAlign = static_cast<ALuint>(value);
         break;
 
     case AL_PACK_BLOCK_ALIGNMENT_SOFT:
-        if UNLIKELY(value < 0)
+        if(value < 0) [[alunlikely]]
             context->setError(AL_INVALID_VALUE, "Invalid pack block alignment %d", value);
         else
             albuf->PackAlign = static_cast<ALuint>(value);
         break;
 
     case AL_AMBISONIC_LAYOUT_SOFT:
-        if UNLIKELY(ReadRef(albuf->ref) != 0)
+        if(ReadRef(albuf->ref) != 0) [[alunlikely]]
             context->setError(AL_INVALID_OPERATION, "Modifying in-use buffer %u's ambisonic layout",
                 buffer);
-        else if UNLIKELY(value != AL_FUMA_SOFT && value != AL_ACN_SOFT)
+        else if(value != AL_FUMA_SOFT && value != AL_ACN_SOFT) [[alunlikely]]
             context->setError(AL_INVALID_VALUE, "Invalid unpack ambisonic layout %04x", value);
         else
             albuf->mAmbiLayout = AmbiLayoutFromEnum(value).value();
         break;
 
     case AL_AMBISONIC_SCALING_SOFT:
-        if UNLIKELY(ReadRef(albuf->ref) != 0)
+        if(ReadRef(albuf->ref) != 0) [[alunlikely]]
             context->setError(AL_INVALID_OPERATION, "Modifying in-use buffer %u's ambisonic scaling",
                 buffer);
-        else if UNLIKELY(value != AL_FUMA_SOFT && value != AL_SN3D_SOFT && value != AL_N3D_SOFT)
+        else if(value != AL_FUMA_SOFT && value != AL_SN3D_SOFT && value != AL_N3D_SOFT)
+            [[alunlikely]]
             context->setError(AL_INVALID_VALUE, "Invalid unpack ambisonic scaling %04x", value);
         else
             albuf->mAmbiScaling = AmbiScalingFromEnum(value).value();
         break;
 
     case AL_UNPACK_AMBISONIC_ORDER_SOFT:
-        if UNLIKELY(value < 1 || value > 14)
+        if(value < 1 || value > 14) [[alunlikely]]
             context->setError(AL_INVALID_VALUE, "Invalid unpack ambisonic order %d", value);
         else
             albuf->UnpackAmbiOrder = static_cast<ALuint>(value);
@@ -1325,12 +1328,12 @@ AL_API void AL_APIENTRY alBuffer3i(ALuint buffer, ALenum param,
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
-    if UNLIKELY(!context) return;
+    if(!context) [[alunlikely]] return;
 
     ALCdevice *device{context->mALDevice.get()};
     std::lock_guard<std::mutex> _{device->BufferLock};
 
-    if UNLIKELY(LookupBuffer(device, buffer) == nullptr)
+    if(LookupBuffer(device, buffer) == nullptr) [[alunlikely]]
         context->setError(AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
     else switch(param)
     {
@@ -1358,24 +1361,24 @@ START_API_FUNC
     }
 
     ContextRef context{GetContextRef()};
-    if UNLIKELY(!context) return;
+    if(!context) [[alunlikely]] return;
 
     ALCdevice *device{context->mALDevice.get()};
     std::lock_guard<std::mutex> _{device->BufferLock};
 
     ALbuffer *albuf = LookupBuffer(device, buffer);
-    if UNLIKELY(!albuf)
+    if(!albuf) [[alunlikely]]
         context->setError(AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
-    else if UNLIKELY(!values)
+    else if(!values) [[alunlikely]]
         context->setError(AL_INVALID_VALUE, "NULL pointer");
     else switch(param)
     {
     case AL_LOOP_POINTS_SOFT:
-        if UNLIKELY(ReadRef(albuf->ref) != 0)
+        if(ReadRef(albuf->ref) != 0) [[alunlikely]]
             context->setError(AL_INVALID_OPERATION, "Modifying in-use buffer %u's loop points",
                 buffer);
-        else if UNLIKELY(values[0] < 0 || values[0] >= values[1]
-            || static_cast<ALuint>(values[1]) > albuf->mSampleLen)
+        else if(values[0] < 0 || values[0] >= values[1]
+            || static_cast<ALuint>(values[1]) > albuf->mSampleLen) [[alunlikely]]
             context->setError(AL_INVALID_VALUE, "Invalid loop point range %d -> %d on buffer %u",
                 values[0], values[1], buffer);
         else
@@ -1396,15 +1399,15 @@ AL_API void AL_APIENTRY alGetBufferf(ALuint buffer, ALenum param, ALfloat *value
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
-    if UNLIKELY(!context) return;
+    if(!context) [[alunlikely]] return;
 
     ALCdevice *device{context->mALDevice.get()};
     std::lock_guard<std::mutex> _{device->BufferLock};
 
     ALbuffer *albuf = LookupBuffer(device, buffer);
-    if UNLIKELY(!albuf)
+    if(!albuf) [[alunlikely]]
         context->setError(AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
-    else if UNLIKELY(!value)
+    else if(!value) [[alunlikely]]
         context->setError(AL_INVALID_VALUE, "NULL pointer");
     else switch(param)
     {
@@ -1418,14 +1421,14 @@ AL_API void AL_APIENTRY alGetBuffer3f(ALuint buffer, ALenum param, ALfloat *valu
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
-    if UNLIKELY(!context) return;
+    if(!context) [[alunlikely]] return;
 
     ALCdevice *device{context->mALDevice.get()};
     std::lock_guard<std::mutex> _{device->BufferLock};
 
-    if UNLIKELY(LookupBuffer(device, buffer) == nullptr)
+    if(LookupBuffer(device, buffer) == nullptr) [[alunlikely]]
         context->setError(AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
-    else if UNLIKELY(!value1 || !value2 || !value3)
+    else if(!value1 || !value2 || !value3) [[alunlikely]]
         context->setError(AL_INVALID_VALUE, "NULL pointer");
     else switch(param)
     {
@@ -1446,14 +1449,14 @@ START_API_FUNC
     }
 
     ContextRef context{GetContextRef()};
-    if UNLIKELY(!context) return;
+    if(!context) [[alunlikely]] return;
 
     ALCdevice *device{context->mALDevice.get()};
     std::lock_guard<std::mutex> _{device->BufferLock};
 
-    if UNLIKELY(LookupBuffer(device, buffer) == nullptr)
+    if(LookupBuffer(device, buffer) == nullptr) [[alunlikely]]
         context->setError(AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
-    else if UNLIKELY(!values)
+    else if(!values) [[alunlikely]]
         context->setError(AL_INVALID_VALUE, "NULL pointer");
     else switch(param)
     {
@@ -1468,14 +1471,14 @@ AL_API void AL_APIENTRY alGetBufferi(ALuint buffer, ALenum param, ALint *value)
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
-    if UNLIKELY(!context) return;
+    if(!context) [[alunlikely]] return;
 
     ALCdevice *device{context->mALDevice.get()};
     std::lock_guard<std::mutex> _{device->BufferLock};
     ALbuffer *albuf = LookupBuffer(device, buffer);
-    if UNLIKELY(!albuf)
+    if(!albuf) [[alunlikely]]
         context->setError(AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
-    else if UNLIKELY(!value)
+    else if(!value) [[alunlikely]]
         context->setError(AL_INVALID_VALUE, "NULL pointer");
     else switch(param)
     {
@@ -1525,13 +1528,13 @@ AL_API void AL_APIENTRY alGetBuffer3i(ALuint buffer, ALenum param, ALint *value1
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
-    if UNLIKELY(!context) return;
+    if(!context) [[alunlikely]] return;
 
     ALCdevice *device{context->mALDevice.get()};
     std::lock_guard<std::mutex> _{device->BufferLock};
-    if UNLIKELY(LookupBuffer(device, buffer) == nullptr)
+    if(LookupBuffer(device, buffer) == nullptr) [[alunlikely]]
         context->setError(AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
-    else if UNLIKELY(!value1 || !value2 || !value3)
+    else if(!value1 || !value2 || !value3) [[alunlikely]]
         context->setError(AL_INVALID_VALUE, "NULL pointer");
     else switch(param)
     {
@@ -1563,14 +1566,14 @@ START_API_FUNC
     }
 
     ContextRef context{GetContextRef()};
-    if UNLIKELY(!context) return;
+    if(!context) [[alunlikely]] return;
 
     ALCdevice *device{context->mALDevice.get()};
     std::lock_guard<std::mutex> _{device->BufferLock};
     ALbuffer *albuf = LookupBuffer(device, buffer);
-    if UNLIKELY(!albuf)
+    if(!albuf) [[alunlikely]]
         context->setError(AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
-    else if UNLIKELY(!values)
+    else if(!values) [[alunlikely]]
         context->setError(AL_INVALID_VALUE, "NULL pointer");
     else switch(param)
     {
@@ -1591,22 +1594,22 @@ AL_API void AL_APIENTRY alBufferCallbackSOFT(ALuint buffer, ALenum format, ALsiz
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
-    if UNLIKELY(!context) return;
+    if(!context) [[alunlikely]] return;
 
     ALCdevice *device{context->mALDevice.get()};
     std::lock_guard<std::mutex> _{device->BufferLock};
 
     ALbuffer *albuf = LookupBuffer(device, buffer);
-    if UNLIKELY(!albuf)
+    if(!albuf) [[alunlikely]]
         context->setError(AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
-    else if UNLIKELY(freq < 1)
+    else if(freq < 1) [[alunlikely]]
         context->setError(AL_INVALID_VALUE, "Invalid sample rate %d", freq);
-    else if UNLIKELY(callback == nullptr)
+    else if(callback == nullptr) [[alunlikely]]
         context->setError(AL_INVALID_VALUE, "NULL callback");
     else
     {
         auto usrfmt = DecomposeUserFormat(format);
-        if UNLIKELY(!usrfmt)
+        if(!usrfmt) [[alunlikely]]
             context->setError(AL_INVALID_ENUM, "Invalid format 0x%04x", format);
         else
             PrepareCallback(context.get(), albuf, freq, usrfmt->channels, usrfmt->type, callback,
@@ -1619,14 +1622,14 @@ AL_API void AL_APIENTRY alGetBufferPtrSOFT(ALuint buffer, ALenum param, ALvoid *
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
-    if UNLIKELY(!context) return;
+    if(!context) [[alunlikely]] return;
 
     ALCdevice *device{context->mALDevice.get()};
     std::lock_guard<std::mutex> _{device->BufferLock};
     ALbuffer *albuf = LookupBuffer(device, buffer);
-    if UNLIKELY(!albuf)
+    if(!albuf) [[alunlikely]]
         context->setError(AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
-    else if UNLIKELY(!value)
+    else if(!value) [[alunlikely]]
         context->setError(AL_INVALID_VALUE, "NULL pointer");
     else switch(param)
     {
@@ -1647,13 +1650,13 @@ AL_API void AL_APIENTRY alGetBuffer3PtrSOFT(ALuint buffer, ALenum param, ALvoid 
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
-    if UNLIKELY(!context) return;
+    if(!context) [[alunlikely]] return;
 
     ALCdevice *device{context->mALDevice.get()};
     std::lock_guard<std::mutex> _{device->BufferLock};
-    if UNLIKELY(LookupBuffer(device, buffer) == nullptr)
+    if(LookupBuffer(device, buffer) == nullptr) [[alunlikely]]
         context->setError(AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
-    else if UNLIKELY(!value1 || !value2 || !value3)
+    else if(!value1 || !value2 || !value3) [[alunlikely]]
         context->setError(AL_INVALID_VALUE, "NULL pointer");
     else switch(param)
     {
@@ -1675,13 +1678,13 @@ START_API_FUNC
     }
 
     ContextRef context{GetContextRef()};
-    if UNLIKELY(!context) return;
+    if(!context) [[alunlikely]] return;
 
     ALCdevice *device{context->mALDevice.get()};
     std::lock_guard<std::mutex> _{device->BufferLock};
-    if UNLIKELY(LookupBuffer(device, buffer) == nullptr)
+    if(LookupBuffer(device, buffer) == nullptr) [[alunlikely]]
         context->setError(AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
-    else if UNLIKELY(!values)
+    else if(!values) [[alunlikely]]
         context->setError(AL_INVALID_VALUE, "NULL pointer");
     else switch(param)
     {

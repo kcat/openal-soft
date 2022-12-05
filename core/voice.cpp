@@ -473,7 +473,7 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
     VoiceBufferItem *BufferListItem{mCurrentBuffer.load(std::memory_order_relaxed)};
     VoiceBufferItem *BufferLoopItem{mLoopBuffer.load(std::memory_order_relaxed)};
     const uint increment{mStep};
-    if UNLIKELY(increment < 1)
+    if(increment < 1) [[alunlikely]]
     {
         /* If the voice is supposed to be stopping but can't be mixed, just
          * stop it before bailing.
@@ -536,7 +536,7 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
             }
         }
     }
-    else if UNLIKELY(!BufferListItem)
+    else if(!BufferListItem) [[alunlikely]]
         Counter = std::min(Counter, 64u);
 
     std::array<float*,DeviceBase::MixerChannelsMax> SamplePointers;

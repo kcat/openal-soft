@@ -1056,9 +1056,9 @@ HRESULT WasapiPlayback::resetProxy()
         wfx = nullptr;
 
         if(!GetConfigValueBool(mDevice->DeviceName.c_str(), "wasapi", "allow-resampler", true))
-            mDevice->Frequency = mFormat.Format.nSamplesPerSec;
+            mDevice->Frequency = OutputType.Format.nSamplesPerSec;
         else
-            mDevice->Frequency = minu(mDevice->Frequency, mFormat.Format.nSamplesPerSec);
+            mDevice->Frequency = minu(mDevice->Frequency, OutputType.Format.nSamplesPerSec);
 
         const uint32_t chancount{OutputType.Format.nChannels};
         const DWORD chanmask{OutputType.dwChannelMask};

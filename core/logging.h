@@ -19,17 +19,17 @@ extern FILE *gLogFile;
 
 #if !defined(_WIN32) && !defined(__ANDROID__)
 #define TRACE(...) do {                                                       \
-    if(gLogLevel >= LogLevel::Trace) [[alunlikely]]                           \
+    if(gLogLevel >= LogLevel::Trace) [[unlikely]]                             \
         fprintf(gLogFile, "[ALSOFT] (II) " __VA_ARGS__);                      \
 } while(0)
 
 #define WARN(...) do {                                                        \
-    if(gLogLevel >= LogLevel::Warning) [[alunlikely]]                         \
+    if(gLogLevel >= LogLevel::Warning) [[unlikely]]                           \
         fprintf(gLogFile, "[ALSOFT] (WW) " __VA_ARGS__);                      \
 } while(0)
 
 #define ERR(...) do {                                                         \
-    if(gLogLevel >= LogLevel::Error) [[alunlikely]]                           \
+    if(gLogLevel >= LogLevel::Error) [[unlikely]]                             \
         fprintf(gLogFile, "[ALSOFT] (EE) " __VA_ARGS__);                      \
 } while(0)
 

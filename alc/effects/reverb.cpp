@@ -1752,7 +1752,7 @@ void ReverbState::process(const size_t samplesToDo, const al::span<const FloatBu
     }
 
     /* Process reverb for these samples. */
-    if(!mDoFading) [[allikely]]
+    if(!mDoFading) [[likely]]
     {
         /* Generate non-faded early reflections and late reverb. */
         earlyUnfaded(offset, samplesToDo);

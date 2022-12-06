@@ -166,14 +166,14 @@ bool EnsureEffects(ALCdevice *device, size_t needed)
 
     while(needed > count)
     {
-        if(device->EffectList.size() >= 1<<25) [[alunlikely]]
+        if(device->EffectList.size() >= 1<<25) [[unlikely]]
             return false;
 
         device->EffectList.emplace_back();
         auto sublist = device->EffectList.end() - 1;
         sublist->FreeMask = ~0_u64;
         sublist->Effects = static_cast<ALeffect*>(al_calloc(alignof(ALeffect), sizeof(ALeffect)*64));
-        if(!sublist->Effects) [[alunlikely]]
+        if(!sublist->Effects) [[unlikely]]
         {
             device->EffectList.pop_back();
             return false;
@@ -219,10 +219,10 @@ inline ALeffect *LookupEffect(ALCdevice *device, ALuint id)
     const size_t lidx{(id-1) >> 6};
     const ALuint slidx{(id-1) & 0x3f};
 
-    if(lidx >= device->EffectList.size()) [[alunlikely]]
+    if(lidx >= device->EffectList.size()) [[unlikely]]
         return nullptr;
     EffectSubList &sublist = device->EffectList[lidx];
-    if(sublist.FreeMask & (1_u64 << slidx)) [[alunlikely]]
+    if(sublist.FreeMask & (1_u64 << slidx)) [[unlikely]]
         return nullptr;
     return sublist.Effects + slidx;
 }
@@ -233,11 +233,11 @@ AL_API void AL_APIENTRY alGenEffects(ALsizei n, ALuint *effects)
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
-    if(!context) [[alunlikely]] return;
+    if(!context) [[unlikely]] return;
 
-    if(n < 0) [[alunlikely]]
+    if(n < 0) [[unlikely]]
         context->setError(AL_INVALID_VALUE, "Generating %d effects", n);
-    if(n <= 0) [[alunlikely]] return;
+    if(n <= 0) [[unlikely]] return;
 
     ALCdevice *device{context->mALDevice.get()};
     std::lock_guard<std::mutex> _{device->EffectLock};
@@ -247,7 +247,7 @@ START_API_FUNC
         return;
     }
 
-    if(n == 1) [[allikely]]
+    if(n == 1) [[likely]]
     {
         /* Special handling for the easy and normal case. */
         ALeffect *effect{AllocEffect(device)};
@@ -273,11 +273,11 @@ AL_API void AL_APIENTRY alDeleteEffects(ALsizei n, const ALuint *effects)
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
-    if(!context) [[alunlikely]] return;
+    if(!context) [[unlikely]] return;
 
-    if(n < 0) [[alunlikely]]
+    if(n < 0) [[unlikely]]
         context->setError(AL_INVALID_VALUE, "Deleting %d effects", n);
-    if(n <= 0) [[alunlikely]] return;
+    if(n <= 0) [[unlikely]] return;
 
     ALCdevice *device{context->mALDevice.get()};
     std::lock_guard<std::mutex> _{device->EffectLock};
@@ -288,7 +288,7 @@ START_API_FUNC
 
     const ALuint *effects_end = effects + n;
     auto inveffect = std::find_if_not(effects, effects_end, validate_effect);
-    if(inveffect != effects_end) [[alunlikely]]
+    if(inveffect != effects_end) [[unlikely]]
     {
         context->setError(AL_INVALID_NAME, "Invalid effect ID %u", *inveffect);
         return;
@@ -308,7 +308,7 @@ AL_API ALboolean AL_APIENTRY alIsEffect(ALuint effect)
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
-    if(context) [[allikely]]
+    if(context) [[likely]]
     {
         ALCdevice *device{context->mALDevice.get()};
         std::lock_guard<std::mutex> _{device->EffectLock};
@@ -323,13 +323,13 @@ AL_API void AL_APIENTRY alEffecti(ALuint effect, ALenum param, ALint value)
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
-    if(!context) [[alunlikely]] return;
+    if(!context) [[unlikely]] return;
 
     ALCdevice *device{context->mALDevice.get()};
     std::lock_guard<std::mutex> _{device->EffectLock};
 
     ALeffect *aleffect{LookupEffect(device, effect)};
-    if(!aleffect) [[alunlikely]]
+    if(!aleffect) [[unlikely]]
         context->setError(AL_INVALID_NAME, "Invalid effect ID %u", effect);
     else if(param == AL_EFFECT_TYPE)
     {
@@ -373,13 +373,13 @@ START_API_FUNC
     }
 
     ContextRef context{GetContextRef()};
-    if(!context) [[alunlikely]] return;
+    if(!context) [[unlikely]] return;
 
     ALCdevice *device{context->mALDevice.get()};
     std::lock_guard<std::mutex> _{device->EffectLock};
 
     ALeffect *aleffect{LookupEffect(device, effect)};
-    if(!aleffect) [[alunlikely]]
+    if(!aleffect) [[unlikely]]
         context->setError(AL_INVALID_NAME, "Invalid effect ID %u", effect);
     else try
     {
@@ -396,13 +396,13 @@ AL_API void AL_APIENTRY alEffectf(ALuint effect, ALenum param, ALfloat value)
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
-    if(!context) [[alunlikely]] return;
+    if(!context) [[unlikely]] return;
 
     ALCdevice *device{context->mALDevice.get()};
     std::lock_guard<std::mutex> _{device->EffectLock};
 
     ALeffect *aleffect{LookupEffect(device, effect)};
-    if(!aleffect) [[alunlikely]]
+    if(!aleffect) [[unlikely]]
         context->setError(AL_INVALID_NAME, "Invalid effect ID %u", effect);
     else try
     {
@@ -419,13 +419,13 @@ AL_API void AL_APIENTRY alEffectfv(ALuint effect, ALenum param, const ALfloat *v
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
-    if(!context) [[alunlikely]] return;
+    if(!context) [[unlikely]] return;
 
     ALCdevice *device{context->mALDevice.get()};
     std::lock_guard<std::mutex> _{device->EffectLock};
 
     ALeffect *aleffect{LookupEffect(device, effect)};
-    if(!aleffect) [[alunlikely]]
+    if(!aleffect) [[unlikely]]
         context->setError(AL_INVALID_NAME, "Invalid effect ID %u", effect);
     else try
     {
@@ -442,13 +442,13 @@ AL_API void AL_APIENTRY alGetEffecti(ALuint effect, ALenum param, ALint *value)
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
-    if(!context) [[alunlikely]] return;
+    if(!context) [[unlikely]] return;
 
     ALCdevice *device{context->mALDevice.get()};
     std::lock_guard<std::mutex> _{device->EffectLock};
 
     const ALeffect *aleffect{LookupEffect(device, effect)};
-    if(!aleffect) [[alunlikely]]
+    if(!aleffect) [[unlikely]]
         context->setError(AL_INVALID_NAME, "Invalid effect ID %u", effect);
     else if(param == AL_EFFECT_TYPE)
         *value = aleffect->type;
@@ -474,13 +474,13 @@ START_API_FUNC
     }
 
     ContextRef context{GetContextRef()};
-    if(!context) [[alunlikely]] return;
+    if(!context) [[unlikely]] return;
 
     ALCdevice *device{context->mALDevice.get()};
     std::lock_guard<std::mutex> _{device->EffectLock};
 
     const ALeffect *aleffect{LookupEffect(device, effect)};
-    if(!aleffect) [[alunlikely]]
+    if(!aleffect) [[unlikely]]
         context->setError(AL_INVALID_NAME, "Invalid effect ID %u", effect);
     else try
     {
@@ -497,13 +497,13 @@ AL_API void AL_APIENTRY alGetEffectf(ALuint effect, ALenum param, ALfloat *value
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
-    if(!context) [[alunlikely]] return;
+    if(!context) [[unlikely]] return;
 
     ALCdevice *device{context->mALDevice.get()};
     std::lock_guard<std::mutex> _{device->EffectLock};
 
     const ALeffect *aleffect{LookupEffect(device, effect)};
-    if(!aleffect) [[alunlikely]]
+    if(!aleffect) [[unlikely]]
         context->setError(AL_INVALID_NAME, "Invalid effect ID %u", effect);
     else try
     {
@@ -520,13 +520,13 @@ AL_API void AL_APIENTRY alGetEffectfv(ALuint effect, ALenum param, ALfloat *valu
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
-    if(!context) [[alunlikely]] return;
+    if(!context) [[unlikely]] return;
 
     ALCdevice *device{context->mALDevice.get()};
     std::lock_guard<std::mutex> _{device->EffectLock};
 
     const ALeffect *aleffect{LookupEffect(device, effect)};
-    if(!aleffect) [[alunlikely]]
+    if(!aleffect) [[unlikely]]
         context->setError(AL_INVALID_NAME, "Invalid effect ID %u", effect);
     else try
     {

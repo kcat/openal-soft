@@ -487,7 +487,7 @@ bool CalcEffectSlotParams(EffectSlot *slot, EffectSlot **sorted_slots, ContextBa
         /* Otherwise, if it would be deleted send it off with a release event. */
         RingBuffer *ring{context->mAsyncEvents.get()};
         auto evt_vec = ring->getWriteVector();
-        if(evt_vec.first.len > 0) [[allikely]]
+        if(evt_vec.first.len > 0) [[likely]]
         {
             AsyncEvent *evt{al::construct_at(reinterpret_cast<AsyncEvent*>(evt_vec.first.buf),
                 AsyncEvent::ReleaseEffectState)};
@@ -1526,7 +1526,7 @@ void CalcAttnSourceParams(Voice *voice, const VoiceProps *props, const ContextBa
     }
 
     /* Distance-based air absorption and initial send decay. */
-    if(Distance > props->RefDistance) [[allikely]]
+    if(Distance > props->RefDistance) [[likely]]
     {
         const float distance_base{(Distance-props->RefDistance) * props->RolloffFactor};
         const float distance_meters{distance_base * context->mParams.MetersPerUnit};
@@ -1821,7 +1821,7 @@ void ProcessParamUpdates(ContextBase *ctx, const EffectSlotArray &slots,
     ProcessVoiceChanges(ctx);
 
     IncrementRef(ctx->mUpdateCount);
-    if(!ctx->mHoldUpdates.load(std::memory_order_acquire)) [[allikely]]
+    if(!ctx->mHoldUpdates.load(std::memory_order_acquire)) [[likely]]
     {
         bool force{CalcContextParams(ctx)};
         auto sorted_slots = const_cast<EffectSlot**>(slots.data() + slots.size());
@@ -1913,7 +1913,7 @@ void ProcessContexts(DeviceBase *device, const uint SamplesToDo)
                          * left that don't target any sorted slots, they can't
                          * contribute to the output, so leave them.
                          */
-                        if(next_target == split_point) [[alunlikely]]
+                        if(next_target == split_point) [[unlikely]]
                             break;
 
                         --next_target;
@@ -1956,7 +1956,7 @@ void ApplyDistanceComp(const al::span<FloatBufferLine> Samples, const size_t Sam
 
         float *inout{al::assume_aligned<16>(chanbuffer.data())};
         auto inout_end = inout + SamplesToDo;
-        if(SamplesToDo >= base) [[allikely]]
+        if(SamplesToDo >= base) [[likely]]
         {
             auto delay_end = std::rotate(inout, inout_end - base, inout_end);
             std::swap_ranges(inout, delay_end, distbuf);
@@ -2131,7 +2131,7 @@ void DeviceBase::renderSamples(void *outBuffer, const uint numSamples, const siz
     {
         const uint samplesToDo{renderSamples(todo)};
 
-        if(outBuffer) [[allikely]]
+        if(outBuffer) [[likely]]
         {
             /* Finally, interleave and convert samples, writing to the device's
              * output buffer.

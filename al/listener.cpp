@@ -81,7 +81,7 @@ AL_API void AL_APIENTRY alListenerf(ALenum param, ALfloat value)
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
-    if(!context) [[alunlikely]] return;
+    if(!context) [[unlikely]] return;
 
     ALlistener &listener = context->mListener;
     std::lock_guard<std::mutex> _{context->mPropLock};
@@ -111,7 +111,7 @@ AL_API void AL_APIENTRY alListener3f(ALenum param, ALfloat value1, ALfloat value
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
-    if(!context) [[alunlikely]] return;
+    if(!context) [[unlikely]] return;
 
     ALlistener &listener = context->mListener;
     std::lock_guard<std::mutex> _{context->mPropLock};
@@ -161,7 +161,7 @@ START_API_FUNC
     }
 
     ContextRef context{GetContextRef()};
-    if(!context) [[alunlikely]] return;
+    if(!context) [[unlikely]] return;
 
     ALlistener &listener = context->mListener;
     std::lock_guard<std::mutex> _{context->mPropLock};
@@ -193,7 +193,7 @@ AL_API void AL_APIENTRY alListeneri(ALenum param, ALint /*value*/)
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
-    if(!context) [[alunlikely]] return;
+    if(!context) [[unlikely]] return;
 
     std::lock_guard<std::mutex> _{context->mPropLock};
     switch(param)
@@ -216,7 +216,7 @@ START_API_FUNC
     }
 
     ContextRef context{GetContextRef()};
-    if(!context) [[alunlikely]] return;
+    if(!context) [[unlikely]] return;
 
     std::lock_guard<std::mutex> _{context->mPropLock};
     switch(param)
@@ -253,7 +253,7 @@ START_API_FUNC
     }
 
     ContextRef context{GetContextRef()};
-    if(!context) [[alunlikely]] return;
+    if(!context) [[unlikely]] return;
 
     std::lock_guard<std::mutex> _{context->mPropLock};
     if(!values)
@@ -271,7 +271,7 @@ AL_API void AL_APIENTRY alGetListenerf(ALenum param, ALfloat *value)
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
-    if(!context) [[alunlikely]] return;
+    if(!context) [[unlikely]] return;
 
     ALlistener &listener = context->mListener;
     std::lock_guard<std::mutex> _{context->mPropLock};
@@ -297,7 +297,7 @@ AL_API void AL_APIENTRY alGetListener3f(ALenum param, ALfloat *value1, ALfloat *
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
-    if(!context) [[alunlikely]] return;
+    if(!context) [[unlikely]] return;
 
     ALlistener &listener = context->mListener;
     std::lock_guard<std::mutex> _{context->mPropLock};
@@ -340,7 +340,7 @@ START_API_FUNC
     }
 
     ContextRef context{GetContextRef()};
-    if(!context) [[alunlikely]] return;
+    if(!context) [[unlikely]] return;
 
     ALlistener &listener = context->mListener;
     std::lock_guard<std::mutex> _{context->mPropLock};
@@ -369,7 +369,7 @@ AL_API void AL_APIENTRY alGetListeneri(ALenum param, ALint *value)
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
-    if(!context) [[alunlikely]] return;
+    if(!context) [[unlikely]] return;
 
     std::lock_guard<std::mutex> _{context->mPropLock};
     if(!value)
@@ -386,7 +386,7 @@ AL_API void AL_APIENTRY alGetListener3i(ALenum param, ALint *value1, ALint *valu
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
-    if(!context) [[alunlikely]] return;
+    if(!context) [[unlikely]] return;
 
     ALlistener &listener = context->mListener;
     std::lock_guard<std::mutex> _{context->mPropLock};
@@ -424,7 +424,7 @@ START_API_FUNC
     }
 
     ContextRef context{GetContextRef()};
-    if(!context) [[alunlikely]] return;
+    if(!context) [[unlikely]] return;
 
     ALlistener &listener = context->mListener;
     std::lock_guard<std::mutex> _{context->mPropLock};

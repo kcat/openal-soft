@@ -551,7 +551,7 @@ void InitVoice(Voice *voice, ALsource *source, ALbufferQueueItem *BufferList, AL
 VoiceChange *GetVoiceChanger(ALCcontext *ctx)
 {
     VoiceChange *vchg{ctx->mVoiceChangeTail};
-    if(vchg == ctx->mCurrentVoiceChange.load(std::memory_order_acquire)) [[alunlikely]]
+    if(vchg == ctx->mCurrentVoiceChange.load(std::memory_order_acquire)) [[unlikely]]
     {
         ctx->allocVoiceChanges();
         vchg = ctx->mVoiceChangeTail;
@@ -573,7 +573,7 @@ void SendVoiceChanges(ALCcontext *ctx, VoiceChange *tail)
 
     const bool connected{device->Connected.load(std::memory_order_acquire)};
     device->waitForMix();
-    if(!connected) [[alunlikely]]
+    if(!connected) [[unlikely]]
     {
         if(ctx->mStopVoicesOnDisconnect.load(std::memory_order_acquire))
         {
@@ -611,7 +611,7 @@ bool SetVoiceOffset(Voice *oldvoice, const VoicePos &vpos, ALsource *source, ALC
         }
         ++vidx;
     }
-    if(!newvoice) [[alunlikely]]
+    if(!newvoice) [[unlikely]]
     {
         auto &allvoices = *context->mVoices.load(std::memory_order_relaxed);
         if(allvoices.size() == voicelist.size())
@@ -667,7 +667,7 @@ bool SetVoiceOffset(Voice *oldvoice, const VoicePos &vpos, ALsource *source, ALC
     /* If the old voice still has a sourceID, it's still active and the change-
      * over will work on the next update.
      */
-    if(oldvoice->mSourceID.load(std::memory_order_acquire) != 0u) [[allikely]]
+    if(oldvoice->mSourceID.load(std::memory_order_acquire) != 0u) [[likely]]
         return true;
 
     /* Otherwise, if the new voice's state is not pending, the change-over
@@ -720,14 +720,14 @@ bool EnsureSources(ALCcontext *context, size_t needed)
 
     while(needed > count)
     {
-        if(context->mSourceList.size() >= 1<<25) [[alunlikely]]
+        if(context->mSourceList.size() >= 1<<25) [[unlikely]]
             return false;
 
         context->mSourceList.emplace_back();
         auto sublist = context->mSourceList.end() - 1;
         sublist->FreeMask = ~0_u64;
         sublist->Sources = static_cast<ALsource*>(al_calloc(alignof(ALsource), sizeof(ALsource)*64));
-        if(!sublist->Sources) [[alunlikely]]
+        if(!sublist->Sources) [[unlikely]]
         {
             context->mSourceList.pop_back();
             return false;
@@ -787,10 +787,10 @@ inline ALsource *LookupSource(ALCcontext *context, ALuint id) noexcept
     const size_t lidx{(id-1) >> 6};
     const ALuint slidx{(id-1) & 0x3f};
 
-    if(lidx >= context->mSourceList.size()) [[alunlikely]]
+    if(lidx >= context->mSourceList.size()) [[unlikely]]
         return nullptr;
     SourceSubList &sublist{context->mSourceList[lidx]};
-    if(sublist.FreeMask & (1_u64 << slidx)) [[alunlikely]]
+    if(sublist.FreeMask & (1_u64 << slidx)) [[unlikely]]
         return nullptr;
     return sublist.Sources + slidx;
 }
@@ -800,10 +800,10 @@ inline ALbuffer *LookupBuffer(ALCdevice *device, ALuint id) noexcept
     const size_t lidx{(id-1) >> 6};
     const ALuint slidx{(id-1) & 0x3f};
 
-    if(lidx >= device->BufferList.size()) [[alunlikely]]
+    if(lidx >= device->BufferList.size()) [[unlikely]]
         return nullptr;
     BufferSubList &sublist = device->BufferList[lidx];
-    if(sublist.FreeMask & (1_u64 << slidx)) [[alunlikely]]
+    if(sublist.FreeMask & (1_u64 << slidx)) [[unlikely]]
         return nullptr;
     return sublist.Buffers + slidx;
 }
@@ -813,10 +813,10 @@ inline ALfilter *LookupFilter(ALCdevice *device, ALuint id) noexcept
     const size_t lidx{(id-1) >> 6};
     const ALuint slidx{(id-1) & 0x3f};
 
-    if(lidx >= device->FilterList.size()) [[alunlikely]]
+    if(lidx >= device->FilterList.size()) [[unlikely]]
         return nullptr;
     FilterSubList &sublist = device->FilterList[lidx];
-    if(sublist.FreeMask & (1_u64 << slidx)) [[alunlikely]]
+    if(sublist.FreeMask & (1_u64 << slidx)) [[unlikely]]
         return nullptr;
     return sublist.Filters + slidx;
 }
@@ -826,10 +826,10 @@ inline ALeffectslot *LookupEffectSlot(ALCcontext *context, ALuint id) noexcept
     const size_t lidx{(id-1) >> 6};
     const ALuint slidx{(id-1) & 0x3f};
 
-    if(lidx >= context->mEffectSlotList.size()) [[alunlikely]]
+    if(lidx >= context->mEffectSlotList.size()) [[unlikely]]
         return nullptr;
     EffectSlotSubList &sublist{context->mEffectSlotList[lidx]};
-    if(sublist.FreeMask & (1_u64 << slidx)) [[alunlikely]]
+    if(sublist.FreeMask & (1_u64 << slidx)) [[unlikely]]
         return nullptr;
     return sublist.EffectSlots + slidx;
 }
@@ -1147,14 +1147,14 @@ void SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const a
 void SetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp prop, const al::span<const int64_t> values);
 
 #define CHECKSIZE(v, s) do { \
-    if((v).size() == (s) || (v).size() == MaxValues) [[allikely]] break;      \
+    if((v).size() == (s) || (v).size() == MaxValues) [[likely]] break;        \
     Context->setError(AL_INVALID_ENUM,                                        \
         "Property 0x%04x expects %d value(s), got %zu", prop, (s),            \
         (v).size());                                                          \
     return;                                                                   \
 } while(0)
 #define CHECKVAL(x) do {                                                      \
-    if(x) [[allikely]] break;                                                 \
+    if(x) [[likely]] break;                                                   \
     Context->setError(AL_INVALID_VALUE, "Value out of range");                \
     return;                                                                   \
 } while(0)
@@ -1880,7 +1880,7 @@ void SetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp prop,
 #undef CHECKSIZE
 
 #define CHECKSIZE(v, s) do { \
-    if((v).size() == (s) || (v).size() == MaxValues) [[allikely]] break;      \
+    if((v).size() == (s) || (v).size() == MaxValues) [[likely]] break;        \
     Context->setError(AL_INVALID_ENUM,                                        \
         "Property 0x%04x expects %d value(s), got %zu", prop, (s),            \
         (v).size());                                                          \
@@ -2440,7 +2440,7 @@ void StartSources(ALCcontext *context, const al::span<ALsource*> srchandles,
     /* If the device is disconnected, and voices stop on disconnect, go right
      * to stopped.
      */
-    if(!device->Connected.load(std::memory_order_acquire)) [[alunlikely]]
+    if(!device->Connected.load(std::memory_order_acquire)) [[unlikely]]
     {
         if(context->mStopVoicesOnDisconnect.load(std::memory_order_acquire))
         {
@@ -2466,7 +2466,7 @@ void StartSources(ALCcontext *context, const al::span<ALsource*> srchandles,
         if(free_voices == srchandles.size())
             break;
     }
-    if(srchandles.size() != free_voices) [[alunlikely]]
+    if(srchandles.size() != free_voices) [[unlikely]]
     {
         const size_t inc_amount{srchandles.size() - free_voices};
         auto &allvoices = *context->mVoices.load(std::memory_order_relaxed);
@@ -2495,7 +2495,7 @@ void StartSources(ALCcontext *context, const al::span<ALsource*> srchandles,
         }
 
         /* If there's nothing to play, go right to stopped. */
-        if(BufferList == source->mQueue.end()) [[alunlikely]]
+        if(BufferList == source->mQueue.end()) [[unlikely]]
         {
             /* NOTE: A source without any playable buffers should not have a
              * Voice since it shouldn't be in a playing or paused state. So
@@ -2600,7 +2600,7 @@ void StartSources(ALCcontext *context, const al::span<ALsource*> srchandles,
         cur->mSourceID = source->id;
         cur->mState = VChangeState::Play;
     }
-    if(tail) [[allikely]]
+    if(tail) [[likely]]
         SendVoiceChanges(context, tail);
 }
 
@@ -2610,11 +2610,11 @@ AL_API void AL_APIENTRY alGenSources(ALsizei n, ALuint *sources)
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
-    if(!context) [[alunlikely]] return;
+    if(!context) [[unlikely]] return;
 
-    if(n < 0) [[alunlikely]]
+    if(n < 0) [[unlikely]]
         context->setError(AL_INVALID_VALUE, "Generating %d sources", n);
-    if(n <= 0) [[alunlikely]] return;
+    if(n <= 0) [[unlikely]] return;
 
 #ifdef ALSOFT_EAX
     const bool has_eax{context->has_eax()};
@@ -2679,9 +2679,9 @@ AL_API void AL_APIENTRY alDeleteSources(ALsizei n, const ALuint *sources)
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
-    if(!context) [[alunlikely]] return;
+    if(!context) [[unlikely]] return;
 
-    if(n < 0) [[alunlikely]]
+    if(n < 0) [[unlikely]]
         SETERR_RETURN(context, AL_INVALID_VALUE,, "Deleting %d sources", n);
 
     std::lock_guard<std::mutex> _{context->mSourceLock};
@@ -2692,7 +2692,7 @@ START_API_FUNC
 
     const ALuint *sources_end = sources + n;
     auto invsrc = std::find_if_not(sources, sources_end, validate_source);
-    if(invsrc != sources_end) [[alunlikely]]
+    if(invsrc != sources_end) [[unlikely]]
     {
         context->setError(AL_INVALID_NAME, "Invalid source ID %u", *invsrc);
         return;
@@ -2712,7 +2712,7 @@ AL_API ALboolean AL_APIENTRY alIsSource(ALuint source)
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
-    if(context) [[allikely]]
+    if(context) [[likely]]
     {
         std::lock_guard<std::mutex> _{context->mSourceLock};
         if(LookupSource(context.get(), source) != nullptr)
@@ -2727,12 +2727,12 @@ AL_API void AL_APIENTRY alSourcef(ALuint source, ALenum param, ALfloat value)
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
-    if(!context) [[alunlikely]] return;
+    if(!context) [[unlikely]] return;
 
     std::lock_guard<std::mutex> _{context->mPropLock};
     std::lock_guard<std::mutex> __{context->mSourceLock};
     ALsource *Source = LookupSource(context.get(), source);
-    if(!Source) [[alunlikely]]
+    if(!Source) [[unlikely]]
         context->setError(AL_INVALID_NAME, "Invalid source ID %u", source);
     else
         SetSourcefv(Source, context.get(), static_cast<SourceProp>(param), {&value, 1u});
@@ -2743,12 +2743,12 @@ AL_API void AL_APIENTRY alSource3f(ALuint source, ALenum param, ALfloat value1, 
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
-    if(!context) [[alunlikely]] return;
+    if(!context) [[unlikely]] return;
 
     std::lock_guard<std::mutex> _{context->mPropLock};
     std::lock_guard<std::mutex> __{context->mSourceLock};
     ALsource *Source = LookupSource(context.get(), source);
-    if(!Source) [[alunlikely]]
+    if(!Source) [[unlikely]]
         context->setError(AL_INVALID_NAME, "Invalid source ID %u", source);
     else
     {
@@ -2762,14 +2762,14 @@ AL_API void AL_APIENTRY alSourcefv(ALuint source, ALenum param, const ALfloat *v
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
-    if(!context) [[alunlikely]] return;
+    if(!context) [[unlikely]] return;
 
     std::lock_guard<std::mutex> _{context->mPropLock};
     std::lock_guard<std::mutex> __{context->mSourceLock};
     ALsource *Source = LookupSource(context.get(), source);
-    if(!Source) [[alunlikely]]
+    if(!Source) [[unlikely]]
         context->setError(AL_INVALID_NAME, "Invalid source ID %u", source);
-    else if(!values) [[alunlikely]]
+    else if(!values) [[unlikely]]
         context->setError(AL_INVALID_VALUE, "NULL pointer");
     else
         SetSourcefv(Source, context.get(), static_cast<SourceProp>(param), {values, MaxValues});
@@ -2781,12 +2781,12 @@ AL_API void AL_APIENTRY alSourcedSOFT(ALuint source, ALenum param, ALdouble valu
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
-    if(!context) [[alunlikely]] return;
+    if(!context) [[unlikely]] return;
 
     std::lock_guard<std::mutex> _{context->mPropLock};
     std::lock_guard<std::mutex> __{context->mSourceLock};
     ALsource *Source = LookupSource(context.get(), source);
-    if(!Source) [[alunlikely]]
+    if(!Source) [[unlikely]]
         context->setError(AL_INVALID_NAME, "Invalid source ID %u", source);
     else
     {
@@ -2800,12 +2800,12 @@ AL_API void AL_APIENTRY alSource3dSOFT(ALuint source, ALenum param, ALdouble val
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
-    if(!context) [[alunlikely]] return;
+    if(!context) [[unlikely]] return;
 
     std::lock_guard<std::mutex> _{context->mPropLock};
     std::lock_guard<std::mutex> __{context->mSourceLock};
     ALsource *Source = LookupSource(context.get(), source);
-    if(!Source) [[alunlikely]]
+    if(!Source) [[unlikely]]
         context->setError(AL_INVALID_NAME, "Invalid source ID %u", source);
     else
     {
@@ -2820,14 +2820,14 @@ AL_API void AL_APIENTRY alSourcedvSOFT(ALuint source, ALenum param, const ALdoub
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
-    if(!context) [[alunlikely]] return;
+    if(!context) [[unlikely]] return;
 
     std::lock_guard<std::mutex> _{context->mPropLock};
     std::lock_guard<std::mutex> __{context->mSourceLock};
     ALsource *Source = LookupSource(context.get(), source);
-    if(!Source) [[alunlikely]]
+    if(!Source) [[unlikely]]
         context->setError(AL_INVALID_NAME, "Invalid source ID %u", source);
-    else if(!values) [[alunlikely]]
+    else if(!values) [[unlikely]]
         context->setError(AL_INVALID_VALUE, "NULL pointer");
     else
     {
@@ -2845,12 +2845,12 @@ AL_API void AL_APIENTRY alSourcei(ALuint source, ALenum param, ALint value)
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
-    if(!context) [[alunlikely]] return;
+    if(!context) [[unlikely]] return;
 
     std::lock_guard<std::mutex> _{context->mPropLock};
     std::lock_guard<std::mutex> __{context->mSourceLock};
     ALsource *Source = LookupSource(context.get(), source);
-    if(!Source) [[alunlikely]]
+    if(!Source) [[unlikely]]
         context->setError(AL_INVALID_NAME, "Invalid source ID %u", source);
     else
         SetSourceiv(Source, context.get(), static_cast<SourceProp>(param), {&value, 1u});
@@ -2861,12 +2861,12 @@ AL_API void AL_APIENTRY alSource3i(ALuint source, ALenum param, ALint value1, AL
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
-    if(!context) [[alunlikely]] return;
+    if(!context) [[unlikely]] return;
 
     std::lock_guard<std::mutex> _{context->mPropLock};
     std::lock_guard<std::mutex> __{context->mSourceLock};
     ALsource *Source = LookupSource(context.get(), source);
-    if(!Source) [[alunlikely]]
+    if(!Source) [[unlikely]]
         context->setError(AL_INVALID_NAME, "Invalid source ID %u", source);
     else
     {
@@ -2880,14 +2880,14 @@ AL_API void AL_APIENTRY alSourceiv(ALuint source, ALenum param, const ALint *val
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
-    if(!context) [[alunlikely]] return;
+    if(!context) [[unlikely]] return;
 
     std::lock_guard<std::mutex> _{context->mPropLock};
     std::lock_guard<std::mutex> __{context->mSourceLock};
     ALsource *Source = LookupSource(context.get(), source);
-    if(!Source) [[alunlikely]]
+    if(!Source) [[unlikely]]
         context->setError(AL_INVALID_NAME, "Invalid source ID %u", source);
-    else if(!values) [[alunlikely]]
+    else if(!values) [[unlikely]]
         context->setError(AL_INVALID_VALUE, "NULL pointer");
     else
         SetSourceiv(Source, context.get(), static_cast<SourceProp>(param), {values, MaxValues});
@@ -2899,12 +2899,12 @@ AL_API void AL_APIENTRY alSourcei64SOFT(ALuint source, ALenum param, ALint64SOFT
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
-    if(!context) [[alunlikely]] return;
+    if(!context) [[unlikely]] return;
 
     std::lock_guard<std::mutex> _{context->mPropLock};
     std::lock_guard<std::mutex> __{context->mSourceLock};
     ALsource *Source{LookupSource(context.get(), source)};
-    if(!Source) [[alunlikely]]
+    if(!Source) [[unlikely]]
         context->setError(AL_INVALID_NAME, "Invalid source ID %u", source);
     else
         SetSourcei64v(Source, context.get(), static_cast<SourceProp>(param), {&value, 1u});
@@ -2915,12 +2915,12 @@ AL_API void AL_APIENTRY alSource3i64SOFT(ALuint source, ALenum param, ALint64SOF
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
-    if(!context) [[alunlikely]] return;
+    if(!context) [[unlikely]] return;
 
     std::lock_guard<std::mutex> _{context->mPropLock};
     std::lock_guard<std::mutex> __{context->mSourceLock};
     ALsource *Source{LookupSource(context.get(), source)};
-    if(!Source) [[alunlikely]]
+    if(!Source) [[unlikely]]
         context->setError(AL_INVALID_NAME, "Invalid source ID %u", source);
     else
     {
@@ -2934,14 +2934,14 @@ AL_API void AL_APIENTRY alSourcei64vSOFT(ALuint source, ALenum param, const ALin
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
-    if(!context) [[alunlikely]] return;
+    if(!context) [[unlikely]] return;
 
     std::lock_guard<std::mutex> _{context->mPropLock};
     std::lock_guard<std::mutex> __{context->mSourceLock};
     ALsource *Source{LookupSource(context.get(), source)};
-    if(!Source) [[alunlikely]]
+    if(!Source) [[unlikely]]
         context->setError(AL_INVALID_NAME, "Invalid source ID %u", source);
-    else if(!values) [[alunlikely]]
+    else if(!values) [[unlikely]]
         context->setError(AL_INVALID_VALUE, "NULL pointer");
     else
         SetSourcei64v(Source, context.get(), static_cast<SourceProp>(param), {values, MaxValues});
@@ -2953,13 +2953,13 @@ AL_API void AL_APIENTRY alGetSourcef(ALuint source, ALenum param, ALfloat *value
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
-    if(!context) [[alunlikely]] return;
+    if(!context) [[unlikely]] return;
 
     std::lock_guard<std::mutex> _{context->mSourceLock};
     ALsource *Source{LookupSource(context.get(), source)};
-    if(!Source) [[alunlikely]]
+    if(!Source) [[unlikely]]
         context->setError(AL_INVALID_NAME, "Invalid source ID %u", source);
-    else if(!value) [[alunlikely]]
+    else if(!value) [[unlikely]]
         context->setError(AL_INVALID_VALUE, "NULL pointer");
     else
     {
@@ -2974,13 +2974,13 @@ AL_API void AL_APIENTRY alGetSource3f(ALuint source, ALenum param, ALfloat *valu
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
-    if(!context) [[alunlikely]] return;
+    if(!context) [[unlikely]] return;
 
     std::lock_guard<std::mutex> _{context->mSourceLock};
     ALsource *Source{LookupSource(context.get(), source)};
-    if(!Source) [[alunlikely]]
+    if(!Source) [[unlikely]]
         context->setError(AL_INVALID_NAME, "Invalid source ID %u", source);
-    else if(!(value1 && value2 && value3)) [[alunlikely]]
+    else if(!(value1 && value2 && value3)) [[unlikely]]
         context->setError(AL_INVALID_VALUE, "NULL pointer");
     else
     {
@@ -2999,13 +2999,13 @@ AL_API void AL_APIENTRY alGetSourcefv(ALuint source, ALenum param, ALfloat *valu
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
-    if(!context) [[alunlikely]] return;
+    if(!context) [[unlikely]] return;
 
     std::lock_guard<std::mutex> _{context->mSourceLock};
     ALsource *Source{LookupSource(context.get(), source)};
-    if(!Source) [[alunlikely]]
+    if(!Source) [[unlikely]]
         context->setError(AL_INVALID_NAME, "Invalid source ID %u", source);
-    else if(!values) [[alunlikely]]
+    else if(!values) [[unlikely]]
         context->setError(AL_INVALID_VALUE, "NULL pointer");
     else
     {
@@ -3025,13 +3025,13 @@ AL_API void AL_APIENTRY alGetSourcedSOFT(ALuint source, ALenum param, ALdouble *
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
-    if(!context) [[alunlikely]] return;
+    if(!context) [[unlikely]] return;
 
     std::lock_guard<std::mutex> _{context->mSourceLock};
     ALsource *Source{LookupSource(context.get(), source)};
-    if(!Source) [[alunlikely]]
+    if(!Source) [[unlikely]]
         context->setError(AL_INVALID_NAME, "Invalid source ID %u", source);
-    else if(!value) [[alunlikely]]
+    else if(!value) [[unlikely]]
         context->setError(AL_INVALID_VALUE, "NULL pointer");
     else
         GetSourcedv(Source, context.get(), static_cast<SourceProp>(param), {value, 1u});
@@ -3042,13 +3042,13 @@ AL_API void AL_APIENTRY alGetSource3dSOFT(ALuint source, ALenum param, ALdouble 
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
-    if(!context) [[alunlikely]] return;
+    if(!context) [[unlikely]] return;
 
     std::lock_guard<std::mutex> _{context->mSourceLock};
     ALsource *Source{LookupSource(context.get(), source)};
-    if(!Source) [[alunlikely]]
+    if(!Source) [[unlikely]]
         context->setError(AL_INVALID_NAME, "Invalid source ID %u", source);
-    else if(!(value1 && value2 && value3)) [[alunlikely]]
+    else if(!(value1 && value2 && value3)) [[unlikely]]
         context->setError(AL_INVALID_VALUE, "NULL pointer");
     else
     {
@@ -3067,13 +3067,13 @@ AL_API void AL_APIENTRY alGetSourcedvSOFT(ALuint source, ALenum param, ALdouble 
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
-    if(!context) [[alunlikely]] return;
+    if(!context) [[unlikely]] return;
 
     std::lock_guard<std::mutex> _{context->mSourceLock};
     ALsource *Source{LookupSource(context.get(), source)};
-    if(!Source) [[alunlikely]]
+    if(!Source) [[unlikely]]
         context->setError(AL_INVALID_NAME, "Invalid source ID %u", source);
-    else if(!values) [[alunlikely]]
+    else if(!values) [[unlikely]]
         context->setError(AL_INVALID_VALUE, "NULL pointer");
     else
         GetSourcedv(Source, context.get(), static_cast<SourceProp>(param), {values, MaxValues});
@@ -3085,13 +3085,13 @@ AL_API void AL_APIENTRY alGetSourcei(ALuint source, ALenum param, ALint *value)
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
-    if(!context) [[alunlikely]] return;
+    if(!context) [[unlikely]] return;
 
     std::lock_guard<std::mutex> _{context->mSourceLock};
     ALsource *Source{LookupSource(context.get(), source)};
-    if(!Source) [[alunlikely]]
+    if(!Source) [[unlikely]]
         context->setError(AL_INVALID_NAME, "Invalid source ID %u", source);
-    else if(!value) [[alunlikely]]
+    else if(!value) [[unlikely]]
         context->setError(AL_INVALID_VALUE, "NULL pointer");
     else
         GetSourceiv(Source, context.get(), static_cast<SourceProp>(param), {value, 1u});
@@ -3102,13 +3102,13 @@ AL_API void AL_APIENTRY alGetSource3i(ALuint source, ALenum param, ALint *value1
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
-    if(!context) [[alunlikely]] return;
+    if(!context) [[unlikely]] return;
 
     std::lock_guard<std::mutex> _{context->mSourceLock};
     ALsource *Source{LookupSource(context.get(), source)};
-    if(!Source) [[alunlikely]]
+    if(!Source) [[unlikely]]
         context->setError(AL_INVALID_NAME, "Invalid source ID %u", source);
-    else if(!(value1 && value2 && value3)) [[alunlikely]]
+    else if(!(value1 && value2 && value3)) [[unlikely]]
         context->setError(AL_INVALID_VALUE, "NULL pointer");
     else
     {
@@ -3127,13 +3127,13 @@ AL_API void AL_APIENTRY alGetSourceiv(ALuint source, ALenum param, ALint *values
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
-    if(!context) [[alunlikely]] return;
+    if(!context) [[unlikely]] return;
 
     std::lock_guard<std::mutex> _{context->mSourceLock};
     ALsource *Source{LookupSource(context.get(), source)};
-    if(!Source) [[alunlikely]]
+    if(!Source) [[unlikely]]
         context->setError(AL_INVALID_NAME, "Invalid source ID %u", source);
-    else if(!values) [[alunlikely]]
+    else if(!values) [[unlikely]]
         context->setError(AL_INVALID_VALUE, "NULL pointer");
     else
         GetSourceiv(Source, context.get(), static_cast<SourceProp>(param), {values, MaxValues});
@@ -3145,13 +3145,13 @@ AL_API void AL_APIENTRY alGetSourcei64SOFT(ALuint source, ALenum param, ALint64S
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
-    if(!context) [[alunlikely]] return;
+    if(!context) [[unlikely]] return;
 
     std::lock_guard<std::mutex> _{context->mSourceLock};
     ALsource *Source{LookupSource(context.get(), source)};
-    if(!Source) [[alunlikely]]
+    if(!Source) [[unlikely]]
         context->setError(AL_INVALID_NAME, "Invalid source ID %u", source);
-    else if(!value) [[alunlikely]]
+    else if(!value) [[unlikely]]
         context->setError(AL_INVALID_VALUE, "NULL pointer");
     else
         GetSourcei64v(Source, context.get(), static_cast<SourceProp>(param), {value, 1u});
@@ -3162,13 +3162,13 @@ AL_API void AL_APIENTRY alGetSource3i64SOFT(ALuint source, ALenum param, ALint64
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
-    if(!context) [[alunlikely]] return;
+    if(!context) [[unlikely]] return;
 
     std::lock_guard<std::mutex> _{context->mSourceLock};
     ALsource *Source{LookupSource(context.get(), source)};
-    if(!Source) [[alunlikely]]
+    if(!Source) [[unlikely]]
         context->setError(AL_INVALID_NAME, "Invalid source ID %u", source);
-    else if(!(value1 && value2 && value3)) [[alunlikely]]
+    else if(!(value1 && value2 && value3)) [[unlikely]]
         context->setError(AL_INVALID_VALUE, "NULL pointer");
     else
     {
@@ -3187,13 +3187,13 @@ AL_API void AL_APIENTRY alGetSourcei64vSOFT(ALuint source, ALenum param, ALint64
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
-    if(!context) [[alunlikely]] return;
+    if(!context) [[unlikely]] return;
 
     std::lock_guard<std::mutex> _{context->mSourceLock};
     ALsource *Source{LookupSource(context.get(), source)};
-    if(!Source) [[alunlikely]]
+    if(!Source) [[unlikely]]
         context->setError(AL_INVALID_NAME, "Invalid source ID %u", source);
-    else if(!values) [[alunlikely]]
+    else if(!values) [[unlikely]]
         context->setError(AL_INVALID_VALUE, "NULL pointer");
     else
         GetSourcei64v(Source, context.get(), static_cast<SourceProp>(param), {values, MaxValues});
@@ -3205,7 +3205,7 @@ AL_API void AL_APIENTRY alSourcePlay(ALuint source)
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
-    if(!context) [[alunlikely]] return;
+    if(!context) [[unlikely]] return;
 
     std::lock_guard<std::mutex> _{context->mSourceLock};
     ALsource *srchandle{LookupSource(context.get(), source)};
@@ -3220,9 +3220,9 @@ void AL_APIENTRY alSourcePlayAtTimeSOFT(ALuint source, ALint64SOFT start_time)
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
-    if(!context) [[alunlikely]] return;
+    if(!context) [[unlikely]] return;
 
-    if(start_time < 0) [[alunlikely]]
+    if(start_time < 0) [[unlikely]]
         SETERR_RETURN(context, AL_INVALID_VALUE,, "Invalid time point %" PRId64, start_time);
 
     std::lock_guard<std::mutex> _{context->mSourceLock};
@@ -3238,16 +3238,16 @@ AL_API void AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
-    if(!context) [[alunlikely]] return;
+    if(!context) [[unlikely]] return;
 
-    if(n < 0) [[alunlikely]]
+    if(n < 0) [[unlikely]]
         context->setError(AL_INVALID_VALUE, "Playing %d sources", n);
-    if(n <= 0) [[alunlikely]] return;
+    if(n <= 0) [[unlikely]] return;
 
     al::vector<ALsource*> extra_sources;
     std::array<ALsource*,8> source_storage;
     al::span<ALsource*> srchandles;
-    if(static_cast<ALuint>(n) <= source_storage.size()) [[allikely]]
+    if(static_cast<ALuint>(n) <= source_storage.size()) [[likely]]
         srchandles = {source_storage.data(), static_cast<ALuint>(n)};
     else
     {
@@ -3259,7 +3259,7 @@ START_API_FUNC
     for(auto &srchdl : srchandles)
     {
         srchdl = LookupSource(context.get(), *sources);
-        if(!srchdl) [[alunlikely]]
+        if(!srchdl) [[unlikely]]
             SETERR_RETURN(context, AL_INVALID_NAME,, "Invalid source ID %u", *sources);
         ++sources;
     }
@@ -3272,19 +3272,19 @@ void AL_APIENTRY alSourcePlayAtTimevSOFT(ALsizei n, const ALuint *sources, ALint
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
-    if(!context) [[alunlikely]] return;
+    if(!context) [[unlikely]] return;
 
-    if(n < 0) [[alunlikely]]
+    if(n < 0) [[unlikely]]
         context->setError(AL_INVALID_VALUE, "Playing %d sources", n);
-    if(n <= 0) [[alunlikely]] return;
+    if(n <= 0) [[unlikely]] return;
 
-    if(start_time < 0) [[alunlikely]]
+    if(start_time < 0) [[unlikely]]
         SETERR_RETURN(context, AL_INVALID_VALUE,, "Invalid time point %" PRId64, start_time);
 
     al::vector<ALsource*> extra_sources;
     std::array<ALsource*,8> source_storage;
     al::span<ALsource*> srchandles;
-    if(static_cast<ALuint>(n) <= source_storage.size()) [[allikely]]
+    if(static_cast<ALuint>(n) <= source_storage.size()) [[likely]]
         srchandles = {source_storage.data(), static_cast<ALuint>(n)};
     else
     {
@@ -3315,16 +3315,16 @@ AL_API void AL_APIENTRY alSourcePausev(ALsizei n, const ALuint *sources)
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
-    if(!context) [[alunlikely]] return;
+    if(!context) [[unlikely]] return;
 
-    if(n < 0) [[alunlikely]]
+    if(n < 0) [[unlikely]]
         context->setError(AL_INVALID_VALUE, "Pausing %d sources", n);
-    if(n <= 0) [[alunlikely]] return;
+    if(n <= 0) [[unlikely]] return;
 
     al::vector<ALsource*> extra_sources;
     std::array<ALsource*,8> source_storage;
     al::span<ALsource*> srchandles;
-    if(static_cast<ALuint>(n) <= source_storage.size()) [[allikely]]
+    if(static_cast<ALuint>(n) <= source_storage.size()) [[likely]]
         srchandles = {source_storage.data(), static_cast<ALuint>(n)};
     else
     {
@@ -3363,7 +3363,7 @@ START_API_FUNC
             cur->mState = VChangeState::Pause;
         }
     }
-    if(tail) [[allikely]]
+    if(tail) [[likely]]
     {
         SendVoiceChanges(context.get(), tail);
         /* Second, now that the voice changes have been sent, because it's
@@ -3391,16 +3391,16 @@ AL_API void AL_APIENTRY alSourceStopv(ALsizei n, const ALuint *sources)
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
-    if(!context) [[alunlikely]] return;
+    if(!context) [[unlikely]] return;
 
-    if(n < 0) [[alunlikely]]
+    if(n < 0) [[unlikely]]
         context->setError(AL_INVALID_VALUE, "Stopping %d sources", n);
-    if(n <= 0) [[alunlikely]] return;
+    if(n <= 0) [[unlikely]] return;
 
     al::vector<ALsource*> extra_sources;
     std::array<ALsource*,8> source_storage;
     al::span<ALsource*> srchandles;
-    if(static_cast<ALuint>(n) <= source_storage.size()) [[allikely]]
+    if(static_cast<ALuint>(n) <= source_storage.size()) [[likely]]
         srchandles = {source_storage.data(), static_cast<ALuint>(n)};
     else
     {
@@ -3439,7 +3439,7 @@ START_API_FUNC
         source->OffsetType = AL_NONE;
         source->VoiceIdx = INVALID_VOICE_IDX;
     }
-    if(tail) [[allikely]]
+    if(tail) [[likely]]
         SendVoiceChanges(context.get(), tail);
 }
 END_API_FUNC
@@ -3454,16 +3454,16 @@ AL_API void AL_APIENTRY alSourceRewindv(ALsizei n, const ALuint *sources)
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
-    if(!context) [[alunlikely]] return;
+    if(!context) [[unlikely]] return;
 
-    if(n < 0) [[alunlikely]]
+    if(n < 0) [[unlikely]]
         context->setError(AL_INVALID_VALUE, "Rewinding %d sources", n);
-    if(n <= 0) [[alunlikely]] return;
+    if(n <= 0) [[unlikely]] return;
 
     al::vector<ALsource*> extra_sources;
     std::array<ALsource*,8> source_storage;
     al::span<ALsource*> srchandles;
-    if(static_cast<ALuint>(n) <= source_storage.size()) [[allikely]]
+    if(static_cast<ALuint>(n) <= source_storage.size()) [[likely]]
         srchandles = {source_storage.data(), static_cast<ALuint>(n)};
     else
     {
@@ -3504,7 +3504,7 @@ START_API_FUNC
         source->OffsetType = AL_NONE;
         source->VoiceIdx = INVALID_VOICE_IDX;
     }
-    if(tail) [[allikely]]
+    if(tail) [[likely]]
         SendVoiceChanges(context.get(), tail);
 }
 END_API_FUNC
@@ -3514,19 +3514,19 @@ AL_API void AL_APIENTRY alSourceQueueBuffers(ALuint src, ALsizei nb, const ALuin
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
-    if(!context) [[alunlikely]] return;
+    if(!context) [[unlikely]] return;
 
-    if(nb < 0) [[alunlikely]]
+    if(nb < 0) [[unlikely]]
         context->setError(AL_INVALID_VALUE, "Queueing %d buffers", nb);
-    if(nb <= 0) [[alunlikely]] return;
+    if(nb <= 0) [[unlikely]] return;
 
     std::lock_guard<std::mutex> _{context->mSourceLock};
     ALsource *source{LookupSource(context.get(),src)};
-    if(!source) [[alunlikely]]
+    if(!source) [[unlikely]]
         SETERR_RETURN(context, AL_INVALID_NAME,, "Invalid source ID %u", src);
 
     /* Can't queue on a Static Source */
-    if(source->SourceType == AL_STATIC) [[alunlikely]]
+    if(source->SourceType == AL_STATIC) [[unlikely]]
         SETERR_RETURN(context, AL_INVALID_OPERATION,, "Queueing onto static source %u", src);
 
     /* Check for a valid Buffer, for its frequency and format */
@@ -3593,7 +3593,7 @@ START_API_FUNC
             fmt_mismatch |= BufferFmt->mAmbiOrder != buffer->mAmbiOrder;
             fmt_mismatch |= BufferFmt->OriginalType != buffer->OriginalType;
         }
-        if(fmt_mismatch) [[alunlikely]]
+        if(fmt_mismatch) [[unlikely]]
         {
             context->setError(AL_INVALID_OPERATION, "Queueing buffer with mismatched format");
 
@@ -3629,26 +3629,26 @@ AL_API void AL_APIENTRY alSourceUnqueueBuffers(ALuint src, ALsizei nb, ALuint *b
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
-    if(!context) [[alunlikely]] return;
+    if(!context) [[unlikely]] return;
 
-    if(nb < 0) [[alunlikely]]
+    if(nb < 0) [[unlikely]]
         context->setError(AL_INVALID_VALUE, "Unqueueing %d buffers", nb);
-    if(nb <= 0) [[alunlikely]] return;
+    if(nb <= 0) [[unlikely]] return;
 
     std::lock_guard<std::mutex> _{context->mSourceLock};
     ALsource *source{LookupSource(context.get(),src)};
-    if(!source) [[alunlikely]]
+    if(!source) [[unlikely]]
         SETERR_RETURN(context, AL_INVALID_NAME,, "Invalid source ID %u", src);
 
-    if(source->SourceType != AL_STREAMING) [[alunlikely]]
+    if(source->SourceType != AL_STREAMING) [[unlikely]]
         SETERR_RETURN(context, AL_INVALID_VALUE,, "Unqueueing from a non-streaming source %u",
             src);
-    if(source->Looping) [[alunlikely]]
+    if(source->Looping) [[unlikely]]
         SETERR_RETURN(context, AL_INVALID_VALUE,, "Unqueueing from looping source %u", src);
 
     /* Make sure enough buffers have been processed to unqueue. */
     uint processed{0u};
-    if(source->state != AL_INITIAL) [[allikely]]
+    if(source->state != AL_INITIAL) [[likely]]
     {
         VoiceBufferItem *Current{nullptr};
         if(Voice *voice{GetSourceVoice(source, context.get())})
@@ -3660,7 +3660,7 @@ START_API_FUNC
             ++processed;
         }
     }
-    if(processed < static_cast<ALuint>(nb)) [[alunlikely]]
+    if(processed < static_cast<ALuint>(nb)) [[unlikely]]
         SETERR_RETURN(context, AL_INVALID_VALUE,, "Unqueueing %d buffer%s (only %u processed)",
             nb, (nb==1)?"":"s", processed);
 
@@ -3683,7 +3683,7 @@ AL_API void AL_APIENTRY alSourceQueueBufferLayersSOFT(ALuint, ALsizei, const ALu
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
-    if(!context) [[alunlikely]] return;
+    if(!context) [[unlikely]] return;
 
     context->setError(AL_INVALID_OPERATION, "alSourceQueueBufferLayersSOFT not supported");
 }

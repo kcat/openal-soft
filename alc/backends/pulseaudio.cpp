@@ -688,7 +688,7 @@ void PulsePlayback::streamWriteCallback(pa_stream *stream, size_t nbytes) noexce
         pa_free_cb_t free_func{nullptr};
         auto buflen = static_cast<size_t>(-1);
         void *buf{};
-        if(pa_stream_begin_write(stream, &buf, &buflen) || !buf) [[alunlikely]]
+        if(pa_stream_begin_write(stream, &buf, &buflen) || !buf) [[unlikely]]
         {
             buflen = nbytes;
             buf = pa_xmalloc(buflen);
@@ -701,7 +701,7 @@ void PulsePlayback::streamWriteCallback(pa_stream *stream, size_t nbytes) noexce
         mDevice->renderSamples(buf, static_cast<uint>(buflen/mFrameSize), mSpec.channels);
 
         int ret{pa_stream_write(stream, buf, buflen, free_func, 0, PA_SEEK_RELATIVE)};
-        if(ret != PA_OK) [[alunlikely]]
+        if(ret != PA_OK) [[unlikely]]
             ERR("Failed to write to stream: %d, %s\n", ret, pa_strerror(ret));
     } while(nbytes > 0);
 }
@@ -1046,7 +1046,7 @@ ClockLatency PulsePlayback::getClockLatency()
         err = pa_stream_get_latency(mStream, &latency, &neg);
     }
 
-    if(err != 0) [[alunlikely]]
+    if(err != 0) [[unlikely]]
     {
         /* If err = -PA_ERR_NODATA, it means we were called too soon after
          * starting the stream and no timing info has been received from the
@@ -1057,7 +1057,7 @@ ClockLatency PulsePlayback::getClockLatency()
         latency = mDevice->BufferSize - mDevice->UpdateSize;
         neg = 0;
     }
-    else if(neg) [[alunlikely]]
+    else if(neg) [[unlikely]]
         latency = 0;
     ret.Latency = std::chrono::microseconds{latency};
 
@@ -1284,7 +1284,7 @@ void PulseCapture::captureSamples(al::byte *buffer, uint samples)
         if(!mCapBuffer.empty())
         {
             const size_t rem{minz(dstbuf.size(), mCapBuffer.size())};
-            if(mCapLen < 0) [[alunlikely]]
+            if(mCapLen < 0) [[unlikely]]
                 std::fill_n(dstbuf.begin(), rem, mSilentVal);
             else
                 std::copy_n(mCapBuffer.begin(), rem, dstbuf.begin());
@@ -1294,7 +1294,7 @@ void PulseCapture::captureSamples(al::byte *buffer, uint samples)
             continue;
         }
 
-        if(!mDevice->Connected.load(std::memory_order_acquire)) [[alunlikely]]
+        if(!mDevice->Connected.load(std::memory_order_acquire)) [[unlikely]]
             break;
 
         MainloopUniqueLock plock{mMainloop};
@@ -1305,14 +1305,14 @@ void PulseCapture::captureSamples(al::byte *buffer, uint samples)
             mCapLen = 0;
         }
         const pa_stream_state_t state{pa_stream_get_state(mStream)};
-        if(!PA_STREAM_IS_GOOD(state)) [[alunlikely]]
+        if(!PA_STREAM_IS_GOOD(state)) [[unlikely]]
         {
             mDevice->handleDisconnect("Bad capture state: %u", state);
             break;
         }
         const void *capbuf;
         size_t caplen;
-        if(pa_stream_peek(mStream, &capbuf, &caplen) < 0) [[alunlikely]]
+        if(pa_stream_peek(mStream, &capbuf, &caplen) < 0) [[unlikely]]
         {
             mDevice->handleDisconnect("Failed retrieving capture samples: %s",
                 pa_strerror(pa_context_errno(mContext)));
@@ -1321,7 +1321,7 @@ void PulseCapture::captureSamples(al::byte *buffer, uint samples)
         plock.unlock();
 
         if(caplen == 0) break;
-        if(!capbuf) [[alunlikely]]
+        if(!capbuf) [[unlikely]]
             mCapLen = -static_cast<ssize_t>(caplen);
         else
             mCapLen = static_cast<ssize_t>(caplen);
@@ -1339,7 +1339,7 @@ uint PulseCapture::availableSamples()
     {
         MainloopUniqueLock plock{mMainloop};
         size_t got{pa_stream_readable_size(mStream)};
-        if(static_cast<ssize_t>(got) < 0) [[alunlikely]]
+        if(static_cast<ssize_t>(got) < 0) [[unlikely]]
         {
             const char *err{pa_strerror(static_cast<int>(got))};
             ERR("pa_stream_readable_size() failed: %s\n", err);
@@ -1370,13 +1370,13 @@ ClockLatency PulseCapture::getClockLatency()
         err = pa_stream_get_latency(mStream, &latency, &neg);
     }
 
-    if(err != 0) [[alunlikely]]
+    if(err != 0) [[unlikely]]
     {
         ERR("Failed to get stream latency: 0x%x\n", err);
         latency = 0;
         neg = 0;
     }
-    else if(neg) [[alunlikely]]
+    else if(neg) [[unlikely]]
         latency = 0;
     ret.Latency = std::chrono::microseconds{latency};
 

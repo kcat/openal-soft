@@ -44,7 +44,7 @@ public:
     }
     ComPtr& operator=(ComPtr&& rhs)
     {
-        if(&rhs != this) [[allikely]]
+        if(&rhs != this) [[likely]]
         {
             if(mPtr) mPtr->Release();
             mPtr = std::exchange(rhs.mPtr, nullptr);

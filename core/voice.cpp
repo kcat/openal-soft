@@ -366,7 +366,7 @@ void DoHrtfMix(const float *samples, const uint DstBufferSize, DirectParams &par
         std::begin(HrtfSamples));
     std::copy_n(samples, DstBufferSize, src_iter);
     /* Copy the last used samples back into the history buffer for later. */
-    if(IsPlaying) [[allikely]]
+    if(IsPlaying) [[likely]]
         std::copy_n(std::begin(HrtfSamples) + DstBufferSize, parms.Hrtf.History.size(),
             parms.Hrtf.History.begin());
 
@@ -473,7 +473,7 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
     VoiceBufferItem *BufferListItem{mCurrentBuffer.load(std::memory_order_relaxed)};
     VoiceBufferItem *BufferLoopItem{mLoopBuffer.load(std::memory_order_relaxed)};
     const uint increment{mStep};
-    if(increment < 1) [[alunlikely]]
+    if(increment < 1) [[unlikely]]
     {
         /* If the voice is supposed to be stopping but can't be mixed, just
          * stop it before bailing.
@@ -536,7 +536,7 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
             }
         }
     }
-    else if(!BufferListItem) [[alunlikely]]
+    else if(!BufferListItem) [[unlikely]]
         Counter = std::min(Counter, 64u);
 
     std::array<float*,DeviceBase::MixerChannelsMax> SamplePointers;
@@ -596,7 +596,7 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
                     /* If the voice is stopping, only one mixing iteration will
                      * be done, so ensure it fades out completely this mix.
                      */
-                    if(vstate == Stopping) [[alunlikely]]
+                    if(vstate == Stopping) [[unlikely]]
                         Counter = std::min(Counter, DstBufferSize);
                 }
                 ASSUME(DstBufferSize > 0);
@@ -604,7 +604,7 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
         }
 
         float **voiceSamples{};
-        if(!BufferListItem) [[alunlikely]]
+        if(!BufferListItem) [[unlikely]]
         {
             const size_t srcOffset{(increment*DstBufferSize + DataPosFrac)>>MixerFracBits};
             auto prevSamples = mPrevSamples.data();
@@ -639,7 +639,7 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
             }
 
             size_t samplesLoaded{0};
-            if(DataPosInt < 0) [[alunlikely]]
+            if(DataPosInt < 0) [[unlikely]]
             {
                 if(static_cast<uint>(-DataPosInt) >= SrcBufferSize)
                     goto skip_mix;
@@ -688,7 +688,7 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
             }
 
             /* Store the last source samples used for next time. */
-            if(vstate == Playing) [[allikely]]
+            if(vstate == Playing) [[likely]]
             {
                 prevSamples = mPrevSamples.data();
                 for(auto *chanbuffer : MixingSamples)
@@ -755,7 +755,7 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
         }
     skip_mix:
         /* If the voice is stopping, we're now done. */
-        if(vstate == Stopping) [[alunlikely]]
+        if(vstate == Stopping) [[unlikely]]
             break;
 
         /* Update positions */
@@ -770,7 +770,7 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
         /* Do nothing extra when there's no buffers, or if the voice position
          * is still negative.
          */
-        if(!BufferListItem || DataPosInt < 0) [[alunlikely]]
+        if(!BufferListItem || DataPosInt < 0) [[unlikely]]
             continue;
 
         if(mFlags.test(VoiceIsStatic))
@@ -834,7 +834,7 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
     mFlags.set(VoiceIsFading);
 
     /* Don't update positions and buffers if we were stopping. */
-    if(vstate == Stopping) [[alunlikely]]
+    if(vstate == Stopping) [[unlikely]]
     {
         mPlayState.store(Stopped, std::memory_order_release);
         return;
@@ -888,7 +888,7 @@ void Voice::prepare(DeviceBase *device)
      */
     uint num_channels{(mFmtChannels == FmtUHJ2 || mFmtChannels == FmtSuperStereo) ? 3 :
         ChannelsFromFmt(mFmtChannels, minu(mAmbiOrder, device->mAmbiOrder))};
-    if(num_channels > device->mSampleData.size()) [[alunlikely]]
+    if(num_channels > device->mSampleData.size()) [[unlikely]]
     {
         ERR("Unexpected channel count: %u (limit: %zu, %d:%d)\n", num_channels,
             device->mSampleData.size(), mFmtChannels, mAmbiOrder);

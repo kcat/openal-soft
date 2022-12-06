@@ -140,7 +140,7 @@ void UhjEncoder<N>::encode(float *LeftOut, float *RightOut,
 
         float *inout{al::assume_aligned<16>(buffer)};
         auto inout_end = inout + SamplesToDo;
-        if(SamplesToDo >= sFilterDelay) [[allikely]]
+        if(SamplesToDo >= sFilterDelay) [[likely]]
         {
             auto delay_end = std::rotate(inout, inout_end - sFilterDelay, inout_end);
             std::swap_ranges(inout, delay_end, distbuf);

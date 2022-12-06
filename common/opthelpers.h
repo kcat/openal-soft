@@ -19,14 +19,6 @@
 #define force_inline inline
 #endif
 
-#if __has_attribute(likely)
-#define allikely likely
-#define alunlikely unlikely
-#else
-#define allikely
-#define alunlikely
-#endif
-
 /* Unlike the likely attribute, ASSUME requires the condition to be true or
  * else it invokes undefined behavior. It's essentially an assert without
  * actually checking the condition at run-time, allowing for stronger

@@ -147,9 +147,9 @@ const char *res_str(SLresult result) noexcept
     return "Unknown error code";
 }
 
-#define PRINTERR(x, s) do {                                                      \
-    if((x) != SL_RESULT_SUCCESS) [[alunlikely]]                                  \
-        ERR("%s: %s\n", (s), res_str((x)));                                      \
+#define PRINTERR(x, s) do {                                                   \
+    if((x) != SL_RESULT_SUCCESS) [[unlikely]]                                 \
+        ERR("%s: %s\n", (s), res_str((x)));                                   \
 } while(0)
 
 
@@ -916,12 +916,12 @@ void OpenSLCapture::captureSamples(al::byte *buffer, uint samples)
     }
 
     SLAndroidSimpleBufferQueueItf bufferQueue{};
-    if(mDevice->Connected.load(std::memory_order_acquire)) [[allikely]]
+    if(mDevice->Connected.load(std::memory_order_acquire)) [[likely]]
     {
         const SLresult result{VCALL(mRecordObj,GetInterface)(SL_IID_ANDROIDSIMPLEBUFFERQUEUE,
             &bufferQueue)};
         PRINTERR(result, "recordObj->GetInterface");
-        if(SL_RESULT_SUCCESS != result) [[alunlikely]]
+        if(SL_RESULT_SUCCESS != result) [[unlikely]]
         {
             mDevice->handleDisconnect("Failed to get capture buffer queue: 0x%08x", result);
             bufferQueue = nullptr;
@@ -942,7 +942,7 @@ void OpenSLCapture::captureSamples(al::byte *buffer, uint samples)
 
     SLresult result{SL_RESULT_SUCCESS};
     auto wdata = mRing->getWriteVector();
-    if(adv_count > wdata.second.len) [[allikely]]
+    if(adv_count > wdata.second.len) [[likely]]
     {
         auto len1 = std::min(wdata.first.len, adv_count-wdata.second.len);
         auto buf1 = wdata.first.buf + chunk_size*(wdata.first.len-len1);

@@ -487,7 +487,7 @@ bool CalcEffectSlotParams(EffectSlot *slot, EffectSlot **sorted_slots, ContextBa
         /* Otherwise, if it would be deleted send it off with a release event. */
         RingBuffer *ring{context->mAsyncEvents.get()};
         auto evt_vec = ring->getWriteVector();
-        if LIKELY(evt_vec.first.len > 0)
+        if(evt_vec.first.len > 0) [[allikely]]
         {
             AsyncEvent *evt{al::construct_at(reinterpret_cast<AsyncEvent*>(evt_vec.first.buf),
                 AsyncEvent::ReleaseEffectState)};
@@ -1821,7 +1821,7 @@ void ProcessParamUpdates(ContextBase *ctx, const EffectSlotArray &slots,
     ProcessVoiceChanges(ctx);
 
     IncrementRef(ctx->mUpdateCount);
-    if LIKELY(!ctx->mHoldUpdates.load(std::memory_order_acquire))
+    if(!ctx->mHoldUpdates.load(std::memory_order_acquire)) [[allikely]]
     {
         bool force{CalcContextParams(ctx)};
         auto sorted_slots = const_cast<EffectSlot**>(slots.data() + slots.size());
@@ -1913,7 +1913,7 @@ void ProcessContexts(DeviceBase *device, const uint SamplesToDo)
                          * left that don't target any sorted slots, they can't
                          * contribute to the output, so leave them.
                          */
-                        if UNLIKELY(next_target == split_point)
+                        if(next_target == split_point) [[alunlikely]]
                             break;
 
                         --next_target;
@@ -1956,7 +1956,7 @@ void ApplyDistanceComp(const al::span<FloatBufferLine> Samples, const size_t Sam
 
         float *inout{al::assume_aligned<16>(chanbuffer.data())};
         auto inout_end = inout + SamplesToDo;
-        if LIKELY(SamplesToDo >= base)
+        if(SamplesToDo >= base) [[allikely]]
         {
             auto delay_end = std::rotate(inout, inout_end - base, inout_end);
             std::swap_ranges(inout, delay_end, distbuf);
@@ -2131,7 +2131,7 @@ void DeviceBase::renderSamples(void *outBuffer, const uint numSamples, const siz
     {
         const uint samplesToDo{renderSamples(todo)};
 
-        if LIKELY(outBuffer)
+        if(outBuffer) [[allikely]]
         {
             /* Finally, interleave and convert samples, writing to the device's
              * output buffer.

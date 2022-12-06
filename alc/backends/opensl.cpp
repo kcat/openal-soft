@@ -148,7 +148,7 @@ const char *res_str(SLresult result) noexcept
 }
 
 #define PRINTERR(x, s) do {                                                      \
-    if UNLIKELY((x) != SL_RESULT_SUCCESS)                                        \
+    if((x) != SL_RESULT_SUCCESS) [[alunlikely]]                                  \
         ERR("%s: %s\n", (s), res_str((x)));                                      \
 } while(0)
 

@@ -2414,7 +2414,7 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
 bool ResetDeviceParams(ALCdevice *device, const int *attrList)
 {
     /* If the device was disconnected, reset it since we're opened anew. */
-    if UNLIKELY(!device->Connected.load(std::memory_order_relaxed))
+    if(!device->Connected.load(std::memory_order_relaxed)) [[alunlikely]]
     {
         /* Make sure disconnection is finished before continuing on. */
         device->waitForMix();
@@ -2446,7 +2446,7 @@ bool ResetDeviceParams(ALCdevice *device, const int *attrList)
     }
 
     ALCenum err{UpdateDeviceParams(device, attrList)};
-    if LIKELY(err == ALC_NO_ERROR) return ALC_TRUE;
+    if(err == ALC_NO_ERROR) [[allikely]] return ALC_TRUE;
 
     alcSetError(device, err);
     return ALC_FALSE;

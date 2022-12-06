@@ -27,12 +27,10 @@
 #define alunlikely
 #endif
 
-#define LIKELY(x) (x) [[allikely]]
-#define UNLIKELY(x) (x) [[alunlikely]]
-
-/* Unlike LIKELY, ASSUME requires the condition to be true or else it invokes
- * undefined behavior. It's essentially an assert without actually checking the
- * condition at run-time, allowing for stronger optimizations than LIKELY.
+/* Unlike the likely attribute, ASSUME requires the condition to be true or
+ * else it invokes undefined behavior. It's essentially an assert without
+ * actually checking the condition at run-time, allowing for stronger
+ * optimizations than the likely attribute.
  */
 #if HAS_BUILTIN(__builtin_assume)
 #define ASSUME __builtin_assume

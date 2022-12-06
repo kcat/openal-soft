@@ -258,6 +258,11 @@ else()
         -Wpedantic
         $<$<COMPILE_LANGUAGE:CXX>:-Wold-style-cast -Wnon-virtual-dtor -Woverloaded-virtual>)
 
+    check_cxx_compiler_flag(-Wno-c++20-attribute-extensions HAVE_WNO_CXX20_ATTR_EXT)
+    if(HAVE_WNO_CXX20_ATTR_EXT)
+        set(C_FLAGS ${C_FLAGS} $<$<COMPILE_LANGUAGE:CXX>:-Wno-c++20-attribute-extensions>)
+    endif()
+
     if(ALSOFT_WERROR)
         set(C_FLAGS ${C_FLAGS} -Werror)
     endif()

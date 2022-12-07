@@ -1517,7 +1517,13 @@ bool PipeWirePlayback::reset()
         throw al::backend_exception{al::backend_error::DeviceError,
             "Failed to set PipeWire audio format parameters"};
 
-    pw_properties *props{pw_properties_new(
+    /* TODO: Which properties are actually needed here? Any others that could
+     * be useful?
+     */
+    auto&& binary = GetProcBinary();
+    const char *appname{binary.fname.length() ? binary.fname.c_str() : "OpenAL Soft"};
+    pw_properties *props{pw_properties_new(PW_KEY_NODE_NAME, appname,
+        PW_KEY_NODE_DESCRIPTION, appname,
         PW_KEY_MEDIA_TYPE, "Audio",
         PW_KEY_MEDIA_CATEGORY, "Playback",
         PW_KEY_MEDIA_ROLE, "Game",
@@ -1527,13 +1533,6 @@ bool PipeWirePlayback::reset()
         throw al::backend_exception{al::backend_error::DeviceError,
             "Failed to create PipeWire stream properties (errno: %d)", errno};
 
-    auto&& binary = GetProcBinary();
-    const char *appname{binary.fname.length() ? binary.fname.c_str() : "OpenAL Soft"};
-    /* TODO: Which properties are actually needed here? Any others that could
-     * be useful?
-     */
-    pw_properties_set(props, PW_KEY_NODE_NAME, appname);
-    pw_properties_set(props, PW_KEY_NODE_DESCRIPTION, appname);
     pw_properties_setf(props, PW_KEY_NODE_LATENCY, "%u/%u", mDevice->UpdateSize,
         mDevice->Frequency);
     pw_properties_setf(props, PW_KEY_NODE_RATE, "1/%u", mDevice->Frequency);
@@ -1945,7 +1944,11 @@ void PipeWireCapture::open(const char *name)
         throw al::backend_exception{al::backend_error::DeviceError,
             "Failed to set PipeWire audio format parameters"};
 
+    auto&& binary = GetProcBinary();
+    const char *appname{binary.fname.length() ? binary.fname.c_str() : "OpenAL Soft"};
     pw_properties *props{pw_properties_new(
+        PW_KEY_NODE_NAME, appname,
+        PW_KEY_NODE_DESCRIPTION, appname,
         PW_KEY_MEDIA_TYPE, "Audio",
         PW_KEY_MEDIA_CATEGORY, "Capture",
         PW_KEY_MEDIA_ROLE, "Game",
@@ -1955,10 +1958,6 @@ void PipeWireCapture::open(const char *name)
         throw al::backend_exception{al::backend_error::DeviceError,
             "Failed to create PipeWire stream properties (errno: %d)", errno};
 
-    auto&& binary = GetProcBinary();
-    const char *appname{binary.fname.length() ? binary.fname.c_str() : "OpenAL Soft"};
-    pw_properties_set(props, PW_KEY_NODE_NAME, appname);
-    pw_properties_set(props, PW_KEY_NODE_DESCRIPTION, appname);
     /* We don't actually care what the latency/update size is, as long as it's
      * reasonable. Unfortunately, when unspecified PipeWire seems to default to
      * around 40ms, which isn't great. So request 20ms instead.

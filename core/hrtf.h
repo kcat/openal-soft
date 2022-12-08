@@ -42,7 +42,7 @@ struct HrtfStore {
     const ubyte2 *delays;
 
     void add_ref();
-    void release();
+    void dec_ref();
 
     DEF_PLACE_NEWDEL()
 };

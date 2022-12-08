@@ -198,12 +198,12 @@ bool ALCcontext::deinit()
     {
         WARN("%p released while current on thread\n", voidp{this});
         sThreadContext.set(nullptr);
-        release();
+        dec_ref();
     }
 
     ALCcontext *origctx{this};
     if(sGlobalContext.compare_exchange_strong(origctx, nullptr))
-        release();
+        dec_ref();
 
     bool ret{};
     /* First make sure this context exists in the device's list. */

@@ -59,7 +59,7 @@ static int EventThread(ALCcontext *context)
 
             if(evt.EnumType == AsyncEvent::ReleaseEffectState)
             {
-                evt.u.mEffectState->release();
+                al::intrusive_ptr<EffectState>{evt.u.mEffectState};
                 continue;
             }
 

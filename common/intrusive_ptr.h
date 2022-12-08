@@ -15,7 +15,7 @@ class intrusive_ref {
 
 public:
     unsigned int add_ref() noexcept { return IncrementRef(mRef); }
-    unsigned int release() noexcept
+    unsigned int dec_ref() noexcept
     {
         auto ref = DecrementRef(mRef);
         if(ref == 0) [[unlikely]]
@@ -58,14 +58,14 @@ public:
     { rhs.mPtr = nullptr; }
     intrusive_ptr(std::nullptr_t) noexcept { }
     explicit intrusive_ptr(T *ptr) noexcept : mPtr{ptr} { }
-    ~intrusive_ptr() { if(mPtr) mPtr->release(); }
+    ~intrusive_ptr() { if(mPtr) mPtr->dec_ref(); }
 
     intrusive_ptr& operator=(const intrusive_ptr &rhs) noexcept
     {
-        static_assert(noexcept(std::declval<T*>()->release()), "release must be noexcept");
+        static_assert(noexcept(std::declval<T*>()->dec_ref()), "dec_ref must be noexcept");
 
         if(rhs.mPtr) rhs.mPtr->add_ref();
-        if(mPtr) mPtr->release();
+        if(mPtr) mPtr->dec_ref();
         mPtr = rhs.mPtr;
         return *this;
     }
@@ -73,7 +73,7 @@ public:
     {
         if(&rhs != this) [[likely]]
         {
-            if(mPtr) mPtr->release();
+            if(mPtr) mPtr->dec_ref();
             mPtr = std::exchange(rhs.mPtr, nullptr);
         }
         return *this;
@@ -88,7 +88,7 @@ public:
     void reset(T *ptr=nullptr) noexcept
     {
         if(mPtr)
-            mPtr->release();
+            mPtr->dec_ref();
         mPtr = ptr;
     }
 

@@ -1433,7 +1433,7 @@ void HrtfStore::add_ref()
     TRACE("HrtfStore %p increasing refcount to %u\n", decltype(std::declval<void*>()){this}, ref);
 }
 
-void HrtfStore::release()
+void HrtfStore::dec_ref()
 {
     auto ref = DecrementRef(mRef);
     TRACE("HrtfStore %p decreasing refcount to %u\n", decltype(std::declval<void*>()){this}, ref);

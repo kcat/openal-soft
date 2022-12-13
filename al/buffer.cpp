@@ -1096,7 +1096,7 @@ START_API_FUNC
     ALuint align{SanitizeAlignment(usrfmt->type, unpack_align)};
     if(align < 1) [[unlikely]]
         context->setError(AL_INVALID_VALUE, "Invalid unpack alignment %u", unpack_align);
-    else if(long{usrfmt->channels} != long{albuf->mChannels}
+    else if(al::to_underlying(usrfmt->channels) != al::to_underlying(albuf->mChannels)
         || usrfmt->type != albuf->OriginalType) [[unlikely]]
         context->setError(AL_INVALID_ENUM, "Unpacking data with mismatched format");
     else if(align != albuf->OriginalAlign) [[unlikely]]
@@ -1145,7 +1145,7 @@ START_API_FUNC
                     static_cast<const al::byte*>(data), num_chans, samplen, align);
             else
             {
-                assert(long{usrfmt->type} == long{albuf->mType});
+                assert(al::to_underlying(usrfmt->type) == al::to_underlying(albuf->mType));
                 memcpy(dst, data, size_t{samplen} * frame_size);
             }
         }

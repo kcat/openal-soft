@@ -1714,7 +1714,7 @@ void SendSourceStateEvent(ContextBase *context, uint id, VChangeState state)
         break;
     /* Shouldn't happen. */
     case VChangeState::Restart:
-        ASSUME(0);
+        al::unreachable();
     }
 
     ring->writeAdvance(1);

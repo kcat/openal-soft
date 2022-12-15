@@ -332,7 +332,7 @@ void ConvolutionState::deviceUpdate(const DeviceBase *device, const Buffer &buff
             done += todo;
             std::fill(iter, fftbuffer.end(), std::complex<double>{});
 
-            forward_fft<double>(fftbuffer);
+            forward_fft(al::as_span(fftbuffer));
             filteriter = std::copy_n(fftbuffer.cbegin(), m, filteriter);
         }
     }
@@ -539,7 +539,7 @@ void ConvolutionState::process(const size_t samplesToDo,
          */
         auto fftiter = std::copy_n(mInput.cbegin(), ConvolveUpdateSamples, mFftBuffer.begin());
         std::fill(fftiter, mFftBuffer.end(), complex_f{});
-        forward_fft<float>(mFftBuffer);
+        forward_fft(al::as_span(mFftBuffer));
 
         std::copy_n(mFftBuffer.cbegin(), m, &mComplexData[curseg*m]);
 
@@ -575,7 +575,7 @@ void ConvolutionState::process(const size_t samplesToDo,
              * second-half samples (and this output's second half is
              * subsequently saved for next time).
              */
-            inverse_fft<float>(mFftBuffer);
+            inverse_fft(al::as_span(mFftBuffer));
 
             /* The iFFT'd response is scaled up by the number of bins, so apply
              * the inverse to normalize the output.

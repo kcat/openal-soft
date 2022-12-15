@@ -93,7 +93,7 @@ constexpr std::array<al::span<const ushort2>,11> gBitReverses{{
 
 template<typename Real>
 std::enable_if_t<std::is_floating_point<Real>::value>
-complex_fft(const al::span<std::complex<Real>> buffer, const Real sign)
+complex_fft(const al::span<std::complex<Real>> buffer, const al::type_identity_t<Real> sign)
 {
     const size_t fftsize{buffer.size()};
     /* Get the number of bits used for indexing. Simplifies bit-reversal and

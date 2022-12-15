@@ -106,6 +106,18 @@ template<typename T, std::size_t N, typename U, std::size_t M>
 constexpr bool operator!=(const allocator<T,N>&, const allocator<U,M>&) noexcept { return false; }
 
 
+template<typename T>
+constexpr T *to_address(T *p) noexcept
+{
+    static_assert(!std::is_function<T>::value, "Can't be a function type");
+    return p;
+}
+
+template<typename T>
+constexpr auto to_address(const T& p) noexcept
+{ return to_address(p.operator->()); }
+
+
 template<typename T, typename ...Args>
 constexpr T* construct_at(T *ptr, Args&& ...args)
     noexcept(std::is_nothrow_constructible<T, Args...>::value)

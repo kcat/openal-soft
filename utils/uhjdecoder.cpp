@@ -128,7 +128,7 @@ struct UhjDecoder {
 
     void decode(const float *RESTRICT InSamples, const size_t InChannels,
         const al::span<FloatBufferLine> OutSamples, const size_t SamplesToDo);
-    void decode2(const float *RESTRICT InSamples, const al::span<FloatBufferLine,3> OutSamples,
+    void decode2(const float *RESTRICT InSamples, const al::span<FloatBufferLine> OutSamples,
         const size_t SamplesToDo);
 
     DEF_NEWDEL(UhjDecoder)
@@ -305,7 +305,7 @@ void UhjDecoder::decode(const float *RESTRICT InSamples, const size_t InChannels
  * halving here is merely a -6dB reduction in output, but it's still incorrect.
  */
 void UhjDecoder::decode2(const float *RESTRICT InSamples,
-    const al::span<FloatBufferLine,3> OutSamples, const size_t SamplesToDo)
+    const al::span<FloatBufferLine> OutSamples, const size_t SamplesToDo)
 {
     ASSUME(SamplesToDo > 0);
 

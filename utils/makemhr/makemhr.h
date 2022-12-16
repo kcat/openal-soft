@@ -105,6 +105,9 @@ struct HrirDataT {
     std::vector<HrirAzT> mAzsBase;
 
     std::vector<HrirFdT> mFds;
+
+    /* GCC warns when it tries to inline this. */
+    ~HrirDataT();
 };
 
 

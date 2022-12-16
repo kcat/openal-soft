@@ -241,6 +241,11 @@ SwParamsPtr CreateSwParams()
 struct DevMap {
     std::string name;
     std::string device_name;
+
+    template<typename T, typename U>
+    DevMap(T&& name_, U&& devname)
+        : name{std::forward<T>(name_)}, device_name{std::forward<U>(devname)}
+    { }
 };
 
 al::vector<DevMap> PlaybackDevices;
@@ -264,7 +269,7 @@ al::vector<DevMap> probe_devices(snd_pcm_stream_t stream)
 
     auto defname = ConfigValueStr(nullptr, "alsa",
         (stream == SND_PCM_STREAM_PLAYBACK) ? "device" : "capture");
-    devlist.emplace_back(DevMap{alsaDevice, defname ? defname->c_str() : "default"});
+    devlist.emplace_back(alsaDevice, defname ? defname->c_str() : "default");
 
     if(auto customdevs = ConfigValueStr(nullptr, "alsa",
         (stream == SND_PCM_STREAM_PLAYBACK) ? "custom-devices" : "custom-captures"))
@@ -283,8 +288,8 @@ al::vector<DevMap> probe_devices(snd_pcm_stream_t stream)
             }
             else
             {
-                devlist.emplace_back(DevMap{customdevs->substr(curpos, seppos-curpos),
-                    customdevs->substr(seppos+1, nextpos-seppos-1)});
+                devlist.emplace_back(customdevs->substr(curpos, seppos-curpos),
+                    customdevs->substr(seppos+1, nextpos-seppos-1));
                 const auto &entry = devlist.back();
                 TRACE("Got device \"%s\", \"%s\"\n", entry.name.c_str(), entry.device_name.c_str());
             }
@@ -367,7 +372,7 @@ al::vector<DevMap> probe_devices(snd_pcm_stream_t stream)
             device += ",DEV=";
             device += std::to_string(dev);
             
-            devlist.emplace_back(DevMap{std::move(name), std::move(device)});
+            devlist.emplace_back(std::move(name), std::move(device));
             const auto &entry = devlist.back();
             TRACE("Got device \"%s\", \"%s\"\n", entry.name.c_str(), entry.device_name.c_str());
         }

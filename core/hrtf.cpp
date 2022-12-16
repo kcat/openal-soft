@@ -51,6 +51,11 @@ HrtfEntry::~HrtfEntry() = default;
 struct LoadedHrtf {
     std::string mFilename;
     std::unique_ptr<HrtfStore> mEntry;
+
+    template<typename T, typename U>
+    LoadedHrtf(T&& name, U&& entry)
+        : mFilename{std::forward<T>(name)}, mEntry{std::forward<U>(entry)}
+    { }
 };
 
 /* Data set limits must be the same as or more flexible than those defined in
@@ -1421,7 +1426,7 @@ HrtfStorePtr GetLoadedHrtf(const std::string &name, const uint devrate)
 
     TRACE("Loaded HRTF %s for sample rate %uhz, %u-sample filter\n", name.c_str(),
         hrtf->sampleRate, hrtf->irSize);
-    handle = LoadedHrtfs.emplace(handle, LoadedHrtf{fname, std::move(hrtf)});
+    handle = LoadedHrtfs.emplace(handle, fname, std::move(hrtf));
 
     return HrtfStorePtr{handle->mEntry.get()};
 }

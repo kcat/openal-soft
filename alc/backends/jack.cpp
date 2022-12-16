@@ -160,6 +160,11 @@ using JackPortsPtr = std::unique_ptr<const char*[],JackDeleter>;
 struct DeviceEntry {
     std::string mName;
     std::string mPattern;
+
+    template<typename T, typename U>
+    DeviceEntry(T&& name, U&& pattern)
+        : mName{std::forward<T>(name)}, mPattern{std::forward<U>(pattern)}
+    { }
 };
 
 al::vector<DeviceEntry> PlaybackList;
@@ -187,7 +192,7 @@ void EnumerateDevices(jack_client_t *client, al::vector<DeviceEntry> &list)
                 continue;
 
             std::string name{portdev.data(), portdev.size()};
-            list.emplace_back(DeviceEntry{name, name+":"});
+            list.emplace_back(name, name+":");
             const auto &entry = list.back();
             TRACE("Got device: %s = %s\n", entry.mName.c_str(), entry.mPattern.c_str());
         }
@@ -197,7 +202,7 @@ void EnumerateDevices(jack_client_t *client, al::vector<DeviceEntry> &list)
         if(ports[0] && list.empty())
         {
             WARN("No device names found in available ports, adding a generic name.\n");
-            list.emplace_back(DeviceEntry{"JACK", ""});
+            list.emplace_back("JACK", "");
         }
     }
 
@@ -238,8 +243,8 @@ void EnumerateDevices(jack_client_t *client, al::vector<DeviceEntry> &list)
             else
             {
                 /* Otherwise, add a new device entry. */
-                list.emplace_back(DeviceEntry{std::string{name.data(), name.size()},
-                    std::string{pattern.data(), pattern.size()}});
+                list.emplace_back(std::string{name.data(), name.size()},
+                    std::string{pattern.data(), pattern.size()});
                 const auto &entry = list.back();
                 TRACE("Got custom device: %s = %s\n", entry.mName.c_str(), entry.mPattern.c_str());
             }

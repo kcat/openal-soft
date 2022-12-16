@@ -109,6 +109,8 @@ using namespace std::placeholders;
 #endif
 
 
+HrirDataT::~HrirDataT() = default;
+
 // Head model used for calculating the impulse delays.
 enum HeadModelT {
     HM_NONE,

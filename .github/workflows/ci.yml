@@ -75,10 +75,20 @@ jobs:
       run: |
         cmake --build build --config ${{matrix.config.build_type}}
 
+    - name: Create Archive
+      if: ${{ matrix.config.os == 'windows-latest' }}
+      shell: bash
+      run: |
+        cd build
+        mkdir archive
+        mkdir archive/router
+        cp ${{github.workspace}}/build/${{matrix.config.build_type}}/soft_oal.dll archive
+        cp ${{github.workspace}}/build/${{matrix.config.build_type}}/OpenAL32.dll archive/router
+
     - name: Upload Archive
       # Upload package as an artifact of this workflow.
       uses: actions/upload-artifact@v3.1.1
       if: ${{ matrix.config.os == 'windows-latest' }}
       with:
         name: soft_oal-${{matrix.config.name}}
-        path: ${{github.workspace}}/build/${{matrix.config.build_type}}/soft_oal.dll
+        path: build/archive

@@ -86,6 +86,7 @@ effect_exception::effect_exception(ALenum code, const char *msg, ...) : mErrorCo
     setMessage(msg, args);
     va_end(args);
 }
+effect_exception::~effect_exception() = default;
 
 namespace {
 

@@ -11,9 +11,6 @@
 
 namespace al {
 
-/* Defined here to avoid inlining it. */
-base_exception::~base_exception() = default;
-
 void base_exception::setMessage(const char* msg, std::va_list args)
 {
     std::va_list args2;

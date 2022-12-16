@@ -6,19 +6,12 @@
 #include <string>
 
 
-class EaxException :
-    public std::runtime_error
-{
+class EaxException : public std::runtime_error {
+    static std::string make_message(const char *context, const char *message);
+
 public:
-    EaxException(
-        const char* context,
-        const char* message);
-
-
-private:
-    static std::string make_message(
-        const char* context,
-        const char* message);
+    EaxException(const char *context, const char *message);
+    ~EaxException() override;
 }; // EaxException
 
 

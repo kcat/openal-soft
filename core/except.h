@@ -14,7 +14,7 @@ class base_exception : public std::exception {
 
 protected:
     base_exception() = default;
-    virtual ~base_exception();
+    virtual ~base_exception() = default;
 
     void setMessage(const char *msg, std::va_list args);
 

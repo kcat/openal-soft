@@ -57,15 +57,20 @@ public:
 #else
     [[gnu::format(printf, 3, 4)]]
 #endif
-    filter_exception(ALenum code, const char *msg, ...) : mErrorCode{code}
-    {
-        std::va_list args;
-        va_start(args, msg);
-        setMessage(msg, args);
-        va_end(args);
-    }
+    filter_exception(ALenum code, const char *msg, ...);
+    ~filter_exception() override;
+
     ALenum errorCode() const noexcept { return mErrorCode; }
 };
+
+filter_exception::filter_exception(ALenum code, const char* msg, ...) : mErrorCode{code}
+{
+    std::va_list args;
+    va_start(args, msg);
+    setMessage(msg, args);
+    va_end(args);
+}
+filter_exception::~filter_exception() = default;
 
 
 #define DEFINE_ALFILTER_VTABLE(T)                                  \

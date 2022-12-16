@@ -21,6 +21,20 @@
 #include "core/devformat.h"
 
 
+namespace al {
+
+backend_exception::backend_exception(backend_error code, const char *msg, ...) : mErrorCode{code}
+{
+    std::va_list args;
+    va_start(args, msg);
+    setMessage(msg, args);
+    va_end(args);
+}
+backend_exception::~backend_exception() = default;
+
+} // namespace al
+
+
 bool BackendBase::reset()
 { throw al::backend_exception{al::backend_error::DeviceError, "Invalid BackendBase call"}; }
 

@@ -22,6 +22,7 @@ public:
     [[gnu::format(printf, 3, 4)]]
 #endif
     effect_exception(ALenum code, const char *msg, ...);
+    ~effect_exception() override;
 
     ALenum errorCode() const noexcept { return mErrorCode; }
 };

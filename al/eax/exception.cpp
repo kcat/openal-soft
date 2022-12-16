@@ -6,17 +6,14 @@
 #include <string>
 
 
-EaxException::EaxException(
-    const char* context,
-    const char* message)
-    :
-    std::runtime_error{make_message(context, message)}
+EaxException::EaxException(const char *context, const char *message)
+    : std::runtime_error{make_message(context, message)}
 {
 }
+EaxException::~EaxException() = default;
 
-std::string EaxException::make_message(
-    const char* context,
-    const char* message)
+
+std::string EaxException::make_message(const char *context, const char *message)
 {
     const auto context_size = (context ? std::string::traits_type::length(context) : 0);
     const auto has_contex = (context_size > 0);

@@ -84,8 +84,8 @@ jobs:
         cd build
         mkdir archive
         mkdir archive/router
-        cp ${{github.workspace}}/build/${{matrix.config.build_type}}/soft_oal.dll archive
-        cp ${{github.workspace}}/build/${{matrix.config.build_type}}/OpenAL32.dll archive/router
+        cp ${{matrix.config.build_type}}/soft_oal.dll archive
+        cp ${{matrix.config.build_type}}/OpenAL32.dll archive/router
 
     - name: Upload Archive
       # Upload package as an artifact of this workflow.

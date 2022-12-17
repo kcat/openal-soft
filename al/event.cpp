@@ -63,13 +63,12 @@ static int EventThread(ALCcontext *context)
                 continue;
             }
 
-            uint enabledevts{context->mEnabledEvts.load(std::memory_order_acquire)};
-            if(!context->mEventCb) continue;
+            auto enabledevts = context->mEnabledEvts.load(std::memory_order_acquire);
+            if(!context->mEventCb || !enabledevts.test(evt.EnumType))
+                continue;
 
             if(evt.EnumType == AsyncEvent::SourceStateChange)
             {
-                if(!(enabledevts&AsyncEvent::SourceStateChange))
-                    continue;
                 ALuint state{};
                 std::string msg{"Source ID " + std::to_string(evt.u.srcstate.id)};
                 msg += " state has changed to ";
@@ -97,8 +96,6 @@ static int EventThread(ALCcontext *context)
             }
             else if(evt.EnumType == AsyncEvent::BufferCompleted)
             {
-                if(!(enabledevts&AsyncEvent::BufferCompleted))
-                    continue;
                 std::string msg{std::to_string(evt.u.bufcomp.count)};
                 if(evt.u.bufcomp.count == 1) msg += " buffer completed";
                 else msg += " buffers completed";
@@ -108,8 +105,6 @@ static int EventThread(ALCcontext *context)
             }
             else if(evt.EnumType == AsyncEvent::Disconnected)
             {
-                if(!(enabledevts&AsyncEvent::Disconnected))
-                    continue;
                 context->mEventCb(AL_EVENT_TYPE_DISCONNECTED_SOFT, 0, 0,
                     static_cast<ALsizei>(strlen(evt.u.disconnect.msg)), evt.u.disconnect.msg,
                     context->mEventParam);
@@ -161,17 +156,17 @@ START_API_FUNC
     if(count <= 0) return;
     if(!types) SETERR_RETURN(context, AL_INVALID_VALUE,, "NULL pointer");
 
-    uint flags{0};
+    ContextBase::AsyncEventBitset flags{};
     const ALenum *types_end = types+count;
     auto bad_type = std::find_if_not(types, types_end,
         [&flags](ALenum type) noexcept -> bool
         {
             if(type == AL_EVENT_TYPE_BUFFER_COMPLETED_SOFT)
-                flags |= AsyncEvent::BufferCompleted;
+                flags.set(AsyncEvent::BufferCompleted);
             else if(type == AL_EVENT_TYPE_SOURCE_STATE_CHANGED_SOFT)
-                flags |= AsyncEvent::SourceStateChange;
+                flags.set(AsyncEvent::SourceStateChange);
             else if(type == AL_EVENT_TYPE_DISCONNECTED_SOFT)
-                flags |= AsyncEvent::Disconnected;
+                flags.set(AsyncEvent::Disconnected);
             else
                 return false;
             return true;
@@ -182,7 +177,7 @@ START_API_FUNC
 
     if(enable)
     {
-        uint enabledevts{context->mEnabledEvts.load(std::memory_order_relaxed)};
+        auto enabledevts = context->mEnabledEvts.load(std::memory_order_relaxed);
         while(context->mEnabledEvts.compare_exchange_weak(enabledevts, enabledevts|flags,
             std::memory_order_acq_rel, std::memory_order_acquire) == 0)
         {
@@ -193,7 +188,7 @@ START_API_FUNC
     }
     else
     {
-        uint enabledevts{context->mEnabledEvts.load(std::memory_order_relaxed)};
+        auto enabledevts = context->mEnabledEvts.load(std::memory_order_relaxed);
         while(context->mEnabledEvts.compare_exchange_weak(enabledevts, enabledevts&~flags,
             std::memory_order_acq_rel, std::memory_order_acquire) == 0)
         {

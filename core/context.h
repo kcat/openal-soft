@@ -3,12 +3,14 @@
 
 #include <array>
 #include <atomic>
+#include <bitset>
 #include <cstddef>
 #include <memory>
 #include <thread>
 
 #include "almalloc.h"
 #include "alspan.h"
+#include "async_event.h"
 #include "atomic.h"
 #include "bufferline.h"
 #include "threads.h"
@@ -135,7 +137,8 @@ struct ContextBase {
     std::thread mEventThread;
     al::semaphore mEventSem;
     std::unique_ptr<RingBuffer> mAsyncEvents;
-    std::atomic<uint> mEnabledEvts{0u};
+    using AsyncEventBitset = std::bitset<AsyncEvent::UserEventCount>;
+    std::atomic<AsyncEventBitset> mEnabledEvts{0u};
 
     /* Asynchronous voice change actions are processed as a linked list of
      * VoiceChange objects by the mixer, which is atomically appended to.

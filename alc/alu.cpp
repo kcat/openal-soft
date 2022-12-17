@@ -1726,7 +1726,7 @@ void ProcessVoiceChanges(ContextBase *ctx)
     VoiceChange *next{cur->mNext.load(std::memory_order_acquire)};
     if(!next) return;
 
-    const uint enabledevt{ctx->mEnabledEvts.load(std::memory_order_acquire)};
+    const auto enabledevt = ctx->mEnabledEvts.load(std::memory_order_acquire);
     do {
         cur = next;
 
@@ -1807,7 +1807,7 @@ void ProcessVoiceChanges(ContextBase *ctx)
             }
             oldvoice->mPendingChange.store(false, std::memory_order_release);
         }
-        if(sendevt && (enabledevt&AsyncEvent::SourceStateChange))
+        if(sendevt && enabledevt.test(AsyncEvent::SourceStateChange))
             SendSourceStateEvent(ctx, cur->mSourceID, cur->mState);
 
         next = cur->mNext.load(std::memory_order_acquire);
@@ -2172,8 +2172,7 @@ void DeviceBase::handleDisconnect(const char *msg, ...)
 
         for(ContextBase *ctx : *mContexts.load())
         {
-            const uint enabledevt{ctx->mEnabledEvts.load(std::memory_order_acquire)};
-            if((enabledevt&AsyncEvent::Disconnected))
+            if(ctx->mEnabledEvts.load(std::memory_order_acquire).test(AsyncEvent::Disconnected))
             {
                 RingBuffer *ring{ctx->mAsyncEvents.get()};
                 auto evt_data = ring->getWriteVector().first;

@@ -1,6 +1,7 @@
 
 #include "config.h"
 
+#include <cassert>
 #include <memory>
 
 #include "async_event.h"
@@ -13,8 +14,12 @@
 #include "voice_change.h"
 
 
+#ifdef __cpp_lib_atomic_is_always_lock_free
+static_assert(std::atomic<ContextBase::AsyncEventBitset>::is_always_lock_free, "atomic<bitset> isn't lock-free");
+#endif
+
 ContextBase::ContextBase(DeviceBase *device) : mDevice{device}
-{ }
+{ assert(mEnabledEvts.is_lock_free()); }
 
 ContextBase::~ContextBase()
 {

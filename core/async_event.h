@@ -10,16 +10,17 @@ using uint = unsigned int;
 
 struct AsyncEvent {
     enum : uint {
-        /* End event thread processing. */
-        KillThread = 0,
-
         /* User event types. */
-        SourceStateChange = 1<<0,
-        BufferCompleted   = 1<<1,
-        Disconnected      = 1<<2,
+        SourceStateChange,
+        BufferCompleted,
+        Disconnected,
+        UserEventCount,
 
-        /* Internal events. */
-        ReleaseEffectState = 65536,
+        /* Internal events, always processed. */
+        ReleaseEffectState = 128,
+
+        /* End event thread processing. */
+        KillThread,
     };
 
     enum class SrcState {
@@ -29,7 +30,7 @@ struct AsyncEvent {
         Pause
     };
 
-    uint EnumType{0u};
+    const uint EnumType;
     union {
         char dummy;
         struct {
@@ -46,7 +47,6 @@ struct AsyncEvent {
         EffectState *mEffectState;
     } u{};
 
-    AsyncEvent() noexcept = default;
     constexpr AsyncEvent(uint type) noexcept : EnumType{type} { }
 
     DISABLE_ALLOC()

@@ -849,8 +849,8 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
     std::atomic_thread_fence(std::memory_order_release);
 
     /* Send any events now, after the position/buffer info was updated. */
-    const uint enabledevt{Context->mEnabledEvts.load(std::memory_order_acquire)};
-    if(buffers_done > 0 && (enabledevt&AsyncEvent::BufferCompleted))
+    const auto enabledevt = Context->mEnabledEvts.load(std::memory_order_acquire);
+    if(buffers_done > 0 && enabledevt.test(AsyncEvent::BufferCompleted))
     {
         RingBuffer *ring{Context->mAsyncEvents.get()};
         auto evt_vec = ring->getWriteVector();
@@ -870,7 +870,7 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
          * ensures any residual noise fades to 0 amplitude.
          */
         mPlayState.store(Stopping, std::memory_order_release);
-        if((enabledevt&AsyncEvent::SourceStateChange))
+        if(enabledevt.test(AsyncEvent::SourceStateChange))
             SendSourceStoppedEvent(Context, SourceID);
     }
 }

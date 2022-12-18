@@ -56,7 +56,14 @@ struct LoadedHrtf {
     LoadedHrtf(T&& name, U&& entry)
         : mFilename{std::forward<T>(name)}, mEntry{std::forward<U>(entry)}
     { }
+    LoadedHrtf(LoadedHrtf&&) = default;
+    /* GCC warns when it tries to inline this. */
+    ~LoadedHrtf();
+
+    LoadedHrtf& operator=(LoadedHrtf&&) = default;
 };
+LoadedHrtf::~LoadedHrtf() = default;
+
 
 /* Data set limits must be the same as or more flexible than those defined in
  * the makemhr utility.

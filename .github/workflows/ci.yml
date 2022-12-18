@@ -21,6 +21,16 @@ jobs:
             build_type: "Release"
           }
         - {
+            name: "Win32",
+            os: windows-latest,
+            cmake_opts: "-A Win32 \
+              -DALSOFT_BUILD_ROUTER=ON \
+              -DALSOFT_REQUIRE_WINMM=ON \
+              -DALSOFT_REQUIRE_DSOUND=ON \
+              -DALSOFT_REQUIRE_WASAPI=ON",
+            build_type: "Debug"
+          }
+        - {
             name: "Win64",
             os: windows-latest,
             cmake_opts: "-A x64 \
@@ -29,6 +39,16 @@ jobs:
               -DALSOFT_REQUIRE_DSOUND=ON \
               -DALSOFT_REQUIRE_WASAPI=ON",
             build_type: "Release"
+          }
+        - {
+            name: "Win64",
+            os: windows-latest,
+            cmake_opts: "-A x64 \
+              -DALSOFT_BUILD_ROUTER=ON \
+              -DALSOFT_REQUIRE_WINMM=ON \
+              -DALSOFT_REQUIRE_DSOUND=ON \
+              -DALSOFT_REQUIRE_WASAPI=ON",
+            build_type: "Debug"
           }
         - {
             name: "macOS",
@@ -92,5 +112,5 @@ jobs:
       uses: actions/upload-artifact@v3.1.1
       if: ${{ matrix.config.os == 'windows-latest' }}
       with:
-        name: soft_oal-${{matrix.config.name}}
+        name: soft_oal-${{matrix.config.build_type}}-${{matrix.config.name}}
         path: build/archive

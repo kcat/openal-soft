@@ -321,6 +321,8 @@ struct T60Filter {
     /* Applies the two T60 damping filter sections. */
     void process(const al::span<float> samples)
     { DualBiquad{HFFilter, LFFilter}.process(samples, samples.data()); }
+
+    void clear() noexcept { HFFilter.clear(); LFFilter.clear(); }
 };
 
 struct EarlyReflections {
@@ -386,6 +388,12 @@ struct LateReverb {
     void updateLines(const float density_mult, const float diffusion, const float lfDecayTime,
         const float mfDecayTime, const float hfDecayTime, const float lf0norm,
         const float hf0norm, const float frequency);
+
+    void clear()
+    {
+        for(auto &filter : T60)
+            filter.clear();
+    }
 };
 
 struct ReverbPipeline {
@@ -430,6 +438,21 @@ struct ReverbPipeline {
     void processLate(size_t offset, const size_t samplesToDo,
         const al::span<ReverbUpdateLine,NUM_LINES> tempSamples,
         const al::span<FloatBufferLine,NUM_LINES> outSamples);
+
+    void clear()
+    {
+        for(auto &filter : mFilter)
+        {
+            filter.Lp.clear();
+            filter.Hp.clear();
+        }
+        mLate.clear();
+        for(auto &filters : mAmbiSplitter)
+        {
+            for(auto &filter : filters)
+                filter.clear();
+        }
+    }
 };
 
 struct ReverbState final : public EffectState {
@@ -639,9 +662,9 @@ void ReverbState::allocLines(const float frequency)
             0);
 
         /* The late delay lines are calculated from the largest maximum density
-        * line length, and the maximum modulation delay. An additional sample is
-        * added to keep it stable when there is no modulation.
-        */
+         * line length, and the maximum modulation delay. An additional sample
+         * is added to keep it stable when there is no modulation.
+         */
         length = LATE_LINE_LENGTHS.back()*multiplier + max_mod_delay;
         totalSamples += pipeline.mLate.Delay.calcLineLength(length, totalSamples, frequency, 1);
     }
@@ -1654,23 +1677,37 @@ void ReverbState::process(const size_t samplesToDo, const al::span<const FloatBu
     {
         if(mPipelineState == Cleanup)
         {
-            /* TODO: Clear feedback buffers and filter history. */
+            size_t numSamples{mSampleBuffer.size()/2};
+            size_t pipelineOffset{numSamples * (mCurrentPipeline^1)};
+            std::fill_n(mSampleBuffer.data()+pipelineOffset, numSamples,
+                decltype(mSampleBuffer)::value_type{});
+
+            oldpipeline.clear();
             mPipelineState = Normal;
         }
         else
         {
-            /* Process the old reverb for these samples. */
-            oldpipeline.processEarly(offset, samplesToDo, mTempSamples, mEarlySamples);
-            oldpipeline.processLate(offset, samplesToDo, mTempSamples, mLateSamples);
-            mixOut(oldpipeline, samplesOut, samplesToDo);
-
+            /* If this is the final mix for this old pipeline, set the target
+             * gains to 0 to ensure a complete fade out, and set the state to
+             * Cleanup so the next invocation cleans up the delay buffers and
+             * filters.
+             */
             if(samplesToDo >= oldpipeline.mFadeSampleCount)
             {
+                for(auto &gains : oldpipeline.mEarly.PanGain)
+                    std::fill(std::begin(gains), std::end(gains), 0.0f);
+                for(auto &gains : oldpipeline.mLate.PanGain)
+                    std::fill(std::begin(gains), std::end(gains), 0.0f);
                 oldpipeline.mFadeSampleCount = 0;
                 mPipelineState = Cleanup;
             }
             else
                 oldpipeline.mFadeSampleCount -= samplesToDo;
+
+            /* Process the old reverb for these samples. */
+            oldpipeline.processEarly(offset, samplesToDo, mTempSamples, mEarlySamples);
+            oldpipeline.processLate(offset, samplesToDo, mTempSamples, mLateSamples);
+            mixOut(oldpipeline, samplesOut, samplesToDo);
         }
     }
 

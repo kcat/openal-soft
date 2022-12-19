@@ -1129,10 +1129,7 @@ void ReverbState::update(const ContextBase *Context, const EffectSlot *Slot,
         MinDecayTime, MaxDecayTime)};
     const float hfDecayTime{clampf(props->Reverb.DecayTime*hfRatio, MinDecayTime, MaxDecayTime)};
 
-    /* Determine if a full update is required. Density is essentially a master
-     * control for the feedback delays, so changes the offsets of many delay
-     * lines.
-     */
+    /* Determine if a full update is required. */
     const bool fullUpdate{mPipelineState == DeviceClear ||
         /* Density is essentially a master control for the feedback delays, so
          * changes the offsets of many delay lines.

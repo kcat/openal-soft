@@ -424,7 +424,7 @@ struct ReverbPipeline {
 
     std::array<std::array<BandSplitter,NUM_LINES>,2> mAmbiSplitter;
 
-    uint mFadeSampleCount{1};
+    size_t mFadeSampleCount{1};
 
     void updateDelayLine(const float earlyDelay, const float lateDelay, const float density_mult,
         const float decayTime, const float frequency);
@@ -1219,7 +1219,7 @@ void ReverbState::update(const ContextBase *Context, const EffectSlot *Slot,
             props->Reverb.DecayTime, hfDecayTime, lf0norm, hf0norm, frequency);
 
         const float decayCount{minf(props->Reverb.DecayTime*frequency, 1'000'000.0f)};
-        pipeline.mFadeSampleCount = static_cast<uint>(decayCount);
+        pipeline.mFadeSampleCount = static_cast<size_t>(decayCount);
     }
 }
 

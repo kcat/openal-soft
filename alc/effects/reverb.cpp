@@ -1173,6 +1173,17 @@ void ReverbState::update(const ContextBase *Context, const EffectSlot *Slot,
 
     if(!fullUpdate)
     {
+        /* Calculate the master filters */
+        float hf0norm{minf(mParams.HFReference/frequency, 0.49f)};
+        pipeline.mFilter[0].Lp.setParamsFromSlope(BiquadType::HighShelf, hf0norm, props->Reverb.GainHF, 1.0f);
+        float lf0norm{minf(mParams.LFReference/frequency, 0.49f)};
+        pipeline.mFilter[0].Hp.setParamsFromSlope(BiquadType::LowShelf, lf0norm, props->Reverb.GainLF, 1.0f);
+        for(size_t i{1u};i < NUM_LINES;i++)
+        {
+            pipeline.mFilter[i].Lp.copyParamsFrom(pipeline.mFilter[0].Lp);
+            pipeline.mFilter[i].Hp.copyParamsFrom(pipeline.mFilter[0].Hp);
+        }
+
         /* The density-based room size (delay length) multiplier. */
         const float density_mult{CalcDelayLengthMult(mParams.Density)};
 
@@ -1182,7 +1193,6 @@ void ReverbState::update(const ContextBase *Context, const EffectSlot *Slot,
     }
     else
     {
-        /* Calculate the master filters */
         float hf0norm{minf(props->Reverb.HFReference/frequency, 0.49f)};
         pipeline.mFilter[0].Lp.setParamsFromSlope(BiquadType::HighShelf, hf0norm, props->Reverb.GainHF, 1.0f);
         float lf0norm{minf(props->Reverb.LFReference/frequency, 0.49f)};

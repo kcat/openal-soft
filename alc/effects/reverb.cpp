@@ -542,8 +542,8 @@ struct ReverbState final : public EffectState {
                 if(!(std::fabs(gain) > GainSilenceThreshold))
                     continue;
 
-                auto mix_sample = [gain](const float sample, const float input) noexcept -> float
-                { return sample + input*gain; };
+                auto mix_sample = [gain](const float sample, const float in) noexcept -> float
+                { return sample + in*gain; };
                 std::transform(OutBuffer.begin(), OutBuffer.end(), input, OutBuffer.begin(),
                     mix_sample);
             }
@@ -1576,11 +1576,10 @@ void ReverbState::process(const size_t samplesToDo, const al::span<const FloatBu
                 const float gain{B2A[c][i]};
                 const float *RESTRICT input{al::assume_aligned<16>(samplesIn[i].data())};
 
-                for(float &sample : tmpspan)
-                {
-                    sample += *input * gain;
-                    ++input;
-                }
+                auto mix_sample = [gain](const float sample, const float in) noexcept -> float
+                { return sample + in*gain; };
+                std::transform(tmpspan.begin(), tmpspan.end(), input, tmpspan.begin(),
+                    mix_sample);
             }
 
             /* Band-pass the incoming samples and feed the initial delay line. */
@@ -1618,17 +1617,16 @@ void ReverbState::process(const size_t samplesToDo, const al::span<const FloatBu
                 const float gain{B2A[c][i]};
                 const float *RESTRICT input{al::assume_aligned<16>(samplesIn[i].data())};
 
-                for(float &sample : tmpspan)
-                {
-                    sample += *input * gain;
-                    ++input;
-                }
+                auto mix_sample = [gain](const float sample, const float in) noexcept -> float
+                { return sample + in*gain; };
+                std::transform(tmpspan.begin(), tmpspan.end(), input, tmpspan.begin(),
+                    mix_sample);
             }
             float stepCount{0.0f};
-            for(size_t i{0};i < samplesToDo;++i)
+            for(float &sample : tmpspan)
             {
                 stepCount += 1.0f;
-                tmpspan[i] *= stepCount*fadeStep;
+                sample *= stepCount*fadeStep;
             }
 
             auto&& filter = DualBiquad{pipeline.mFilter[c].Lp, pipeline.mFilter[c].Hp};
@@ -1643,17 +1641,16 @@ void ReverbState::process(const size_t samplesToDo, const al::span<const FloatBu
                 const float gain{B2A[c][i]};
                 const float *RESTRICT input{al::assume_aligned<16>(samplesIn[i].data())};
 
-                for(float &sample : tmpspan)
-                {
-                    sample += *input * gain;
-                    ++input;
-                }
+                auto mix_sample = [gain](const float sample, const float in) noexcept -> float
+                { return sample + in*gain; };
+                std::transform(tmpspan.begin(), tmpspan.end(), input, tmpspan.begin(),
+                    mix_sample);
             }
             float stepCount{0.0f};
-            for(size_t i{0};i < samplesToDo;++i)
+            for(float &sample : tmpspan)
             {
                 stepCount += 1.0f;
-                tmpspan[i] *= 1.0f - stepCount*fadeStep;
+                sample *= 1.0f - stepCount*fadeStep;
             }
 
             auto&& filter = DualBiquad{oldpipeline.mFilter[c].Lp, oldpipeline.mFilter[c].Hp};

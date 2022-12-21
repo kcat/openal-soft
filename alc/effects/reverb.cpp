@@ -1171,19 +1171,19 @@ void ReverbState::update(const ContextBase *Context, const EffectSlot *Slot,
         props->Reverb.ReflectionsGain*gain, props->Reverb.LateReverbGain*gain, mUpmixOutput,
         target.Main);
 
+    /* Calculate the master filters */
+    float hf0norm{minf(props->Reverb.HFReference/frequency, 0.49f)};
+    pipeline.mFilter[0].Lp.setParamsFromSlope(BiquadType::HighShelf, hf0norm, props->Reverb.GainHF, 1.0f);
+    float lf0norm{minf(props->Reverb.LFReference/frequency, 0.49f)};
+    pipeline.mFilter[0].Hp.setParamsFromSlope(BiquadType::LowShelf, lf0norm, props->Reverb.GainLF, 1.0f);
+    for(size_t i{1u};i < NUM_LINES;i++)
+    {
+        pipeline.mFilter[i].Lp.copyParamsFrom(pipeline.mFilter[0].Lp);
+        pipeline.mFilter[i].Hp.copyParamsFrom(pipeline.mFilter[0].Hp);
+    }
+
     if(!fullUpdate)
     {
-        /* Calculate the master filters */
-        float hf0norm{minf(mParams.HFReference/frequency, 0.49f)};
-        pipeline.mFilter[0].Lp.setParamsFromSlope(BiquadType::HighShelf, hf0norm, props->Reverb.GainHF, 1.0f);
-        float lf0norm{minf(mParams.LFReference/frequency, 0.49f)};
-        pipeline.mFilter[0].Hp.setParamsFromSlope(BiquadType::LowShelf, lf0norm, props->Reverb.GainLF, 1.0f);
-        for(size_t i{1u};i < NUM_LINES;i++)
-        {
-            pipeline.mFilter[i].Lp.copyParamsFrom(pipeline.mFilter[0].Lp);
-            pipeline.mFilter[i].Hp.copyParamsFrom(pipeline.mFilter[0].Hp);
-        }
-
         /* The density-based room size (delay length) multiplier. */
         const float density_mult{CalcDelayLengthMult(mParams.Density)};
 
@@ -1193,16 +1193,6 @@ void ReverbState::update(const ContextBase *Context, const EffectSlot *Slot,
     }
     else
     {
-        float hf0norm{minf(props->Reverb.HFReference/frequency, 0.49f)};
-        pipeline.mFilter[0].Lp.setParamsFromSlope(BiquadType::HighShelf, hf0norm, props->Reverb.GainHF, 1.0f);
-        float lf0norm{minf(props->Reverb.LFReference/frequency, 0.49f)};
-        pipeline.mFilter[0].Hp.setParamsFromSlope(BiquadType::LowShelf, lf0norm, props->Reverb.GainLF, 1.0f);
-        for(size_t i{1u};i < NUM_LINES;i++)
-        {
-            pipeline.mFilter[i].Lp.copyParamsFrom(pipeline.mFilter[0].Lp);
-            pipeline.mFilter[i].Hp.copyParamsFrom(pipeline.mFilter[0].Hp);
-        }
-
         const float density_mult{CalcDelayLengthMult(props->Reverb.Density)};
 
         pipeline.updateDelayLine(props->Reverb.ReflectionsDelay, props->Reverb.LateReverbDelay,
@@ -1222,10 +1212,11 @@ void ReverbState::update(const ContextBase *Context, const EffectSlot *Slot,
         /* Update the late lines. */
         pipeline.mLate.updateLines(density_mult, props->Reverb.Diffusion, lfDecayTime,
             props->Reverb.DecayTime, hfDecayTime, lf0norm, hf0norm, frequency);
-
-        const float decayCount{minf(props->Reverb.DecayTime*frequency, 1'000'000.0f)};
-        pipeline.mFadeSampleCount = static_cast<size_t>(decayCount);
     }
+
+    const float decaySamples{(props->Reverb.ReflectionsDelay + props->Reverb.LateReverbDelay
+        + props->Reverb.DecayTime) * frequency};
+    pipeline.mFadeSampleCount = static_cast<size_t>(minf(decaySamples, 1'000'000.0f));
 }
 
 

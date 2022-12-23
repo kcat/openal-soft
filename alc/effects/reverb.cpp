@@ -1182,22 +1182,15 @@ void ReverbState::update(const ContextBase *Context, const EffectSlot *Slot,
         pipeline.mFilter[i].Hp.copyParamsFrom(pipeline.mFilter[0].Hp);
     }
 
-    if(!fullUpdate)
+    /* The density-based room size (delay length) multiplier. */
+    const float density_mult{CalcDelayLengthMult(props->Reverb.Density)};
+
+    /* Update the main effect delay and associated taps. */
+    pipeline.updateDelayLine(props->Reverb.ReflectionsDelay, props->Reverb.LateReverbDelay,
+        density_mult, props->Reverb.DecayTime, frequency);
+
+    if(fullUpdate)
     {
-        /* The density-based room size (delay length) multiplier. */
-        const float density_mult{CalcDelayLengthMult(mParams.Density)};
-
-        /* Update the main effect delay and associated taps. */
-        pipeline.updateDelayLine(props->Reverb.ReflectionsDelay, props->Reverb.LateReverbDelay,
-            density_mult, mParams.DecayTime, frequency);
-    }
-    else
-    {
-        const float density_mult{CalcDelayLengthMult(props->Reverb.Density)};
-
-        pipeline.updateDelayLine(props->Reverb.ReflectionsDelay, props->Reverb.LateReverbDelay,
-            density_mult, props->Reverb.DecayTime, frequency);
-
         /* Update the early lines. */
         pipeline.mEarly.updateLines(density_mult, props->Reverb.Diffusion, props->Reverb.DecayTime,
             frequency);

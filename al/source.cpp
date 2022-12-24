@@ -1238,7 +1238,7 @@ try {
     case AL_SEC_OFFSET_LATENCY_SOFT:
     case AL_SEC_OFFSET_CLOCK_SOFT:
         /* Query only */
-        SETERR_RETURN(Context, AL_INVALID_OPERATION,,
+        return Context->setError(AL_INVALID_OPERATION,
             "Setting read-only source property 0x%04x", prop);
 
     case AL_PITCH:
@@ -1348,7 +1348,7 @@ try {
         if(Voice *voice{GetSourceVoice(Source, Context)})
         {
             auto vpos = GetSampleOffset(Source->mQueue, prop, values[0]);
-            if(!vpos) SETERR_RETURN(Context, AL_INVALID_VALUE,, "Invalid offset");
+            if(!vpos) return Context->setError(AL_INVALID_VALUE, "Invalid offset");
 
             if(SetVoiceOffset(voice, *vpos, Source, Context, Context->mALDevice.get()))
                 return;
@@ -1480,7 +1480,7 @@ try {
     case AL_BYTE_LENGTH_SOFT:
     case AL_SAMPLE_LENGTH_SOFT:
         /* Query only */
-        SETERR_RETURN(Context, AL_INVALID_OPERATION,,
+        return Context->setError(AL_INVALID_OPERATION,
             "Setting read-only source property 0x%04x", prop);
 
     case AL_SOURCE_RELATIVE:
@@ -1514,7 +1514,7 @@ try {
         {
             const ALenum state{GetSourceState(Source, GetSourceVoice(Source, Context))};
             if(state == AL_PLAYING || state == AL_PAUSED)
-                SETERR_RETURN(Context, AL_INVALID_OPERATION,,
+                return Context->setError(AL_INVALID_OPERATION,
                     "Setting buffer on playing or paused source %u", Source->id);
         }
         if(values[0])
@@ -1522,13 +1522,13 @@ try {
             std::lock_guard<std::mutex> _{device->BufferLock};
             ALbuffer *buffer{LookupBuffer(device, static_cast<ALuint>(values[0]))};
             if(!buffer)
-                SETERR_RETURN(Context, AL_INVALID_VALUE,, "Invalid buffer ID %u",
+                return Context->setError(AL_INVALID_VALUE, "Invalid buffer ID %u",
                     static_cast<ALuint>(values[0]));
             if(buffer->MappedAccess && !(buffer->MappedAccess&AL_MAP_PERSISTENT_BIT_SOFT))
-                SETERR_RETURN(Context, AL_INVALID_OPERATION,,
+                return Context->setError(AL_INVALID_OPERATION,
                     "Setting non-persistently mapped buffer %u", buffer->id);
             if(buffer->mCallback && ReadRef(buffer->ref) != 0)
-                SETERR_RETURN(Context, AL_INVALID_OPERATION,,
+                return Context->setError(AL_INVALID_OPERATION,
                     "Setting already-set callback buffer %u", buffer->id);
 
             /* Add the selected buffer to a one-item queue */
@@ -1571,7 +1571,7 @@ try {
         if(Voice *voice{GetSourceVoice(Source, Context)})
         {
             auto vpos = GetSampleOffset(Source->mQueue, prop, values[0]);
-            if(!vpos) SETERR_RETURN(Context, AL_INVALID_VALUE,, "Invalid source offset");
+            if(!vpos) return Context->setError(AL_INVALID_VALUE, "Invalid source offset");
 
             if(SetVoiceOffset(voice, *vpos, Source, Context, device))
                 return;
@@ -1587,7 +1587,7 @@ try {
             std::lock_guard<std::mutex> _{device->FilterLock};
             ALfilter *filter{LookupFilter(device, static_cast<ALuint>(values[0]))};
             if(!filter)
-                SETERR_RETURN(Context, AL_INVALID_VALUE,, "Invalid filter ID %u",
+                return Context->setError(AL_INVALID_VALUE, "Invalid filter ID %u",
                     static_cast<ALuint>(values[0]));
             Source->Direct.Gain = filter->Gain;
             Source->Direct.GainHF = filter->GainHF;
@@ -1672,7 +1672,7 @@ try {
         {
             const ALenum state{GetSourceState(Source, GetSourceVoice(Source, Context))};
             if(state == AL_PLAYING || state == AL_PAUSED)
-                SETERR_RETURN(Context, AL_INVALID_OPERATION,,
+                return Context->setError(AL_INVALID_OPERATION,
                     "Modifying stereo mode on playing or paused source %u", Source->id);
         }
         if(auto mode = StereoModeFromEnum(values[0]))
@@ -1688,16 +1688,16 @@ try {
         CheckSize(3);
         slotlock = std::unique_lock<std::mutex>{Context->mEffectSlotLock};
         if(values[0] && (slot=LookupEffectSlot(Context, static_cast<ALuint>(values[0]))) == nullptr)
-            SETERR_RETURN(Context, AL_INVALID_VALUE,, "Invalid effect ID %u", values[0]);
+            return Context->setError(AL_INVALID_VALUE, "Invalid effect ID %u", values[0]);
         if(static_cast<ALuint>(values[1]) >= device->NumAuxSends)
-            SETERR_RETURN(Context, AL_INVALID_VALUE,, "Invalid send %u", values[1]);
+            return Context->setError(AL_INVALID_VALUE, "Invalid send %u", values[1]);
 
         if(values[2])
         {
             std::lock_guard<std::mutex> _{device->FilterLock};
             ALfilter *filter{LookupFilter(device, static_cast<ALuint>(values[2]))};
             if(!filter)
-                SETERR_RETURN(Context, AL_INVALID_VALUE,, "Invalid filter ID %u", values[2]);
+                return Context->setError(AL_INVALID_VALUE, "Invalid filter ID %u", values[2]);
 
             auto &send = Source->Send[static_cast<ALuint>(values[1])];
             send.Gain = filter->Gain;
@@ -1820,7 +1820,7 @@ try {
     case AL_SAMPLE_OFFSET_LATENCY_SOFT:
     case AL_SAMPLE_OFFSET_CLOCK_SOFT:
         /* Query only */
-        SETERR_RETURN(Context, AL_INVALID_OPERATION,,
+        return Context->setError(AL_INVALID_OPERATION,
             "Setting read-only source property 0x%04x", prop);
 
     /* 1x int */
@@ -2741,7 +2741,8 @@ START_API_FUNC
     if(!context) [[unlikely]] return;
 
     if(n < 0) [[unlikely]]
-        SETERR_RETURN(context, AL_INVALID_VALUE,, "Deleting %d sources", n);
+        context->setError(AL_INVALID_VALUE, "Deleting %d sources", n);
+    if(n <= 0) [[unlikely]] return;
 
     std::lock_guard<std::mutex> _{context->mSourceLock};
 
@@ -2752,10 +2753,7 @@ START_API_FUNC
     const ALuint *sources_end = sources + n;
     auto invsrc = std::find_if_not(sources, sources_end, validate_source);
     if(invsrc != sources_end) [[unlikely]]
-    {
-        context->setError(AL_INVALID_NAME, "Invalid source ID %u", *invsrc);
-        return;
-    }
+        return context->setError(AL_INVALID_NAME, "Invalid source ID %u", *invsrc);
 
     /* All good. Delete source IDs. */
     auto delete_source = [&context](const ALuint sid) -> void
@@ -3269,7 +3267,7 @@ START_API_FUNC
     std::lock_guard<std::mutex> _{context->mSourceLock};
     ALsource *srchandle{LookupSource(context.get(), source)};
     if(!srchandle)
-        SETERR_RETURN(context, AL_INVALID_NAME,, "Invalid source ID %u", source);
+        return context->setError(AL_INVALID_NAME, "Invalid source ID %u", source);
 
     StartSources(context.get(), {&srchandle, 1});
 }
@@ -3282,12 +3280,12 @@ START_API_FUNC
     if(!context) [[unlikely]] return;
 
     if(start_time < 0) [[unlikely]]
-        SETERR_RETURN(context, AL_INVALID_VALUE,, "Invalid time point %" PRId64, start_time);
+        return context->setError(AL_INVALID_VALUE, "Invalid time point %" PRId64, start_time);
 
     std::lock_guard<std::mutex> _{context->mSourceLock};
     ALsource *srchandle{LookupSource(context.get(), source)};
     if(!srchandle)
-        SETERR_RETURN(context, AL_INVALID_NAME,, "Invalid source ID %u", source);
+        return context->setError(AL_INVALID_NAME, "Invalid source ID %u", source);
 
     StartSources(context.get(), {&srchandle, 1}, nanoseconds{start_time});
 }
@@ -3319,7 +3317,7 @@ START_API_FUNC
     {
         srchdl = LookupSource(context.get(), *sources);
         if(!srchdl) [[unlikely]]
-            SETERR_RETURN(context, AL_INVALID_NAME,, "Invalid source ID %u", *sources);
+            return context->setError(AL_INVALID_NAME, "Invalid source ID %u", *sources);
         ++sources;
     }
 
@@ -3338,7 +3336,7 @@ START_API_FUNC
     if(n <= 0) [[unlikely]] return;
 
     if(start_time < 0) [[unlikely]]
-        SETERR_RETURN(context, AL_INVALID_VALUE,, "Invalid time point %" PRId64, start_time);
+        return context->setError(AL_INVALID_VALUE, "Invalid time point %" PRId64, start_time);
 
     al::vector<ALsource*> extra_sources;
     std::array<ALsource*,8> source_storage;
@@ -3356,7 +3354,7 @@ START_API_FUNC
     {
         srchdl = LookupSource(context.get(), *sources);
         if(!srchdl)
-            SETERR_RETURN(context, AL_INVALID_NAME,, "Invalid source ID %u", *sources);
+            return context->setError(AL_INVALID_NAME, "Invalid source ID %u", *sources);
         ++sources;
     }
 
@@ -3396,7 +3394,7 @@ START_API_FUNC
     {
         srchdl = LookupSource(context.get(), *sources);
         if(!srchdl)
-            SETERR_RETURN(context, AL_INVALID_NAME,, "Invalid source ID %u", *sources);
+            return context->setError(AL_INVALID_NAME, "Invalid source ID %u", *sources);
         ++sources;
     }
 
@@ -3472,7 +3470,7 @@ START_API_FUNC
     {
         srchdl = LookupSource(context.get(), *sources);
         if(!srchdl)
-            SETERR_RETURN(context, AL_INVALID_NAME,, "Invalid source ID %u", *sources);
+            return context->setError(AL_INVALID_NAME, "Invalid source ID %u", *sources);
         ++sources;
     }
 
@@ -3535,7 +3533,7 @@ START_API_FUNC
     {
         srchdl = LookupSource(context.get(), *sources);
         if(!srchdl)
-            SETERR_RETURN(context, AL_INVALID_NAME,, "Invalid source ID %u", *sources);
+            return context->setError(AL_INVALID_NAME, "Invalid source ID %u", *sources);
         ++sources;
     }
 
@@ -3582,11 +3580,11 @@ START_API_FUNC
     std::lock_guard<std::mutex> _{context->mSourceLock};
     ALsource *source{LookupSource(context.get(),src)};
     if(!source) [[unlikely]]
-        SETERR_RETURN(context, AL_INVALID_NAME,, "Invalid source ID %u", src);
+        return context->setError(AL_INVALID_NAME, "Invalid source ID %u", src);
 
     /* Can't queue on a Static Source */
     if(source->SourceType == AL_STATIC) [[unlikely]]
-        SETERR_RETURN(context, AL_INVALID_OPERATION,, "Queueing onto static source %u", src);
+        return context->setError(AL_INVALID_OPERATION, "Queueing onto static source %u", src);
 
     /* Check for a valid Buffer, for its frequency and format */
     ALCdevice *device{context->mALDevice.get()};
@@ -3697,13 +3695,13 @@ START_API_FUNC
     std::lock_guard<std::mutex> _{context->mSourceLock};
     ALsource *source{LookupSource(context.get(),src)};
     if(!source) [[unlikely]]
-        SETERR_RETURN(context, AL_INVALID_NAME,, "Invalid source ID %u", src);
+        return context->setError(AL_INVALID_NAME, "Invalid source ID %u", src);
 
     if(source->SourceType != AL_STREAMING) [[unlikely]]
-        SETERR_RETURN(context, AL_INVALID_VALUE,, "Unqueueing from a non-streaming source %u",
+        return context->setError(AL_INVALID_VALUE, "Unqueueing from a non-streaming source %u",
             src);
     if(source->Looping) [[unlikely]]
-        SETERR_RETURN(context, AL_INVALID_VALUE,, "Unqueueing from looping source %u", src);
+        return context->setError(AL_INVALID_VALUE, "Unqueueing from looping source %u", src);
 
     /* Make sure enough buffers have been processed to unqueue. */
     uint processed{0u};
@@ -3720,7 +3718,7 @@ START_API_FUNC
         }
     }
     if(processed < static_cast<ALuint>(nb)) [[unlikely]]
-        SETERR_RETURN(context, AL_INVALID_VALUE,, "Unqueueing %d buffer%s (only %u processed)",
+        return context->setError(AL_INVALID_VALUE, "Unqueueing %d buffer%s (only %u processed)",
             nb, (nb==1)?"":"s", processed);
 
     do {

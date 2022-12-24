@@ -89,14 +89,14 @@ START_API_FUNC
     {
     case AL_GAIN:
         if(!(value >= 0.0f && std::isfinite(value)))
-            SETERR_RETURN(context, AL_INVALID_VALUE,, "Listener gain out of range");
+            return context->setError(AL_INVALID_VALUE, "Listener gain out of range");
         listener.Gain = value;
         UpdateProps(context.get());
         break;
 
     case AL_METERS_PER_UNIT:
         if(!(value >= AL_MIN_METERS_PER_UNIT && value <= AL_MAX_METERS_PER_UNIT))
-            SETERR_RETURN(context, AL_INVALID_VALUE,, "Listener meters per unit out of range");
+            return context->setError(AL_INVALID_VALUE, "Listener meters per unit out of range");
         listener.mMetersPerUnit = value;
         UpdateProps(context.get());
         break;
@@ -119,7 +119,7 @@ START_API_FUNC
     {
     case AL_POSITION:
         if(!(std::isfinite(value1) && std::isfinite(value2) && std::isfinite(value3)))
-            SETERR_RETURN(context, AL_INVALID_VALUE,, "Listener position out of range");
+            return context->setError(AL_INVALID_VALUE, "Listener position out of range");
         listener.Position[0] = value1;
         listener.Position[1] = value2;
         listener.Position[2] = value3;
@@ -128,7 +128,7 @@ START_API_FUNC
 
     case AL_VELOCITY:
         if(!(std::isfinite(value1) && std::isfinite(value2) && std::isfinite(value3)))
-            SETERR_RETURN(context, AL_INVALID_VALUE,, "Listener velocity out of range");
+            return context->setError(AL_INVALID_VALUE, "Listener velocity out of range");
         listener.Velocity[0] = value1;
         listener.Velocity[1] = value2;
         listener.Velocity[2] = value3;
@@ -163,15 +163,17 @@ START_API_FUNC
     ContextRef context{GetContextRef()};
     if(!context) [[unlikely]] return;
 
+    if(!values) [[unlikely]]
+        return context->setError(AL_INVALID_VALUE, "NULL pointer");
+
     ALlistener &listener = context->mListener;
     std::lock_guard<std::mutex> _{context->mPropLock};
-    if(!values) SETERR_RETURN(context, AL_INVALID_VALUE,, "NULL pointer");
     switch(param)
     {
     case AL_ORIENTATION:
         if(!(std::isfinite(values[0]) && std::isfinite(values[1]) && std::isfinite(values[2]) &&
              std::isfinite(values[3]) && std::isfinite(values[4]) && std::isfinite(values[5])))
-            SETERR_RETURN(context, AL_INVALID_VALUE,, "Listener orientation out of range");
+            return context->setError(AL_INVALID_VALUE, "Listener orientation out of range");
         /* AT then UP */
         listener.OrientAt[0] = values[0];
         listener.OrientAt[1] = values[1];
@@ -211,7 +213,8 @@ START_API_FUNC
     {
     case AL_POSITION:
     case AL_VELOCITY:
-        alListener3f(param, static_cast<ALfloat>(value1), static_cast<ALfloat>(value2), static_cast<ALfloat>(value3));
+        alListener3f(param, static_cast<ALfloat>(value1), static_cast<ALfloat>(value2),
+            static_cast<ALfloat>(value3));
         return;
     }
 
@@ -237,7 +240,8 @@ START_API_FUNC
         {
         case AL_POSITION:
         case AL_VELOCITY:
-            alListener3f(param, static_cast<ALfloat>(values[0]), static_cast<ALfloat>(values[1]), static_cast<ALfloat>(values[2]));
+            alListener3f(param, static_cast<ALfloat>(values[0]), static_cast<ALfloat>(values[1]),
+                static_cast<ALfloat>(values[2]));
             return;
 
         case AL_ORIENTATION:
@@ -256,7 +260,7 @@ START_API_FUNC
     if(!context) [[unlikely]] return;
 
     std::lock_guard<std::mutex> _{context->mPropLock};
-    if(!values)
+    if(!values) [[unlikely]]
         context->setError(AL_INVALID_VALUE, "NULL pointer");
     else switch(param)
     {

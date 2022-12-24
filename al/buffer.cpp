@@ -532,13 +532,13 @@ void LoadData(ALCcontext *context, ALbuffer *ALBuf, ALsizei freq, ALuint size,
     ALbitfieldSOFT access)
 {
     if(ReadRef(ALBuf->ref) != 0 || ALBuf->MappedAccess != 0) [[unlikely]]
-        SETERR_RETURN(context, AL_INVALID_OPERATION,, "Modifying storage for in-use buffer %u",
-                      ALBuf->id);
+        return context->setError(AL_INVALID_OPERATION, "Modifying storage for in-use buffer %u",
+            ALBuf->id);
 
     /* Currently no channel configurations need to be converted. */
     auto DstChannels = FmtFromUserFmt(SrcChannels);
     if(!DstChannels) [[unlikely]]
-        SETERR_RETURN(context, AL_INVALID_ENUM, , "Invalid format");
+        return context->setError(AL_INVALID_ENUM, "Invalid format");
 
     /* IMA4 and MSADPCM convert to 16-bit short.
      *
@@ -549,18 +549,18 @@ void LoadData(ALCcontext *context, ALbuffer *ALBuf, ALsizei freq, ALuint size,
     if((access&MAP_READ_WRITE_FLAGS))
     {
         if(SrcType == UserFmtIMA4 || SrcType == UserFmtMSADPCM) [[unlikely]]
-            SETERR_RETURN(context, AL_INVALID_VALUE,, "%s samples cannot be mapped",
+            return context->setError(AL_INVALID_VALUE, "%s samples cannot be mapped",
                 NameFromUserFmtType(SrcType));
     }
     auto DstType = (SrcType == UserFmtIMA4 || SrcType == UserFmtMSADPCM)
         ? al::make_optional(FmtShort) : FmtFromUserFmt(SrcType);
     if(!DstType) [[unlikely]]
-        SETERR_RETURN(context, AL_INVALID_ENUM, , "Invalid format");
+        return context->setError(AL_INVALID_ENUM, "Invalid format");
 
     const ALuint unpackalign{ALBuf->UnpackAlign};
     const ALuint align{SanitizeAlignment(SrcType, unpackalign)};
     if(align < 1) [[unlikely]]
-        SETERR_RETURN(context, AL_INVALID_VALUE,, "Invalid unpack alignment %u for %s samples",
+        return context->setError(AL_INVALID_VALUE, "Invalid unpack alignment %u for %s samples",
             unpackalign, NameFromUserFmtType(SrcType));
 
     const ALuint ambiorder{IsBFormat(*DstChannels) ? ALBuf->UnpackAmbiOrder :
@@ -570,11 +570,11 @@ void LoadData(ALCcontext *context, ALbuffer *ALBuf, ALsizei freq, ALuint size,
     {
         /* Can only preserve data with the same format and alignment. */
         if(ALBuf->mChannels != *DstChannels || ALBuf->OriginalType != SrcType) [[unlikely]]
-            SETERR_RETURN(context, AL_INVALID_VALUE,, "Preserving data of mismatched format");
+            return context->setError(AL_INVALID_VALUE, "Preserving data of mismatched format");
         if(ALBuf->OriginalAlign != align) [[unlikely]]
-            SETERR_RETURN(context, AL_INVALID_VALUE,, "Preserving data of mismatched alignment");
-        if(ALBuf->mAmbiOrder != ambiorder)
-            SETERR_RETURN(context, AL_INVALID_VALUE,, "Preserving data of mismatched order");
+            return context->setError(AL_INVALID_VALUE, "Preserving data of mismatched alignment");
+        if(ALBuf->mAmbiOrder != ambiorder) [[unlikely]]
+            return context->setError(AL_INVALID_VALUE, "Preserving data of mismatched order");
     }
 
     /* Convert the input/source size in bytes to sample frames using the unpack
@@ -585,12 +585,12 @@ void LoadData(ALCcontext *context, ALbuffer *ALBuf, ALsizei freq, ALuint size,
         (SrcType == UserFmtMSADPCM) ? (align-2)/2 + 7 :
         (align * BytesFromUserFmt(SrcType)))};
     if((size%SrcByteAlign) != 0) [[unlikely]]
-        SETERR_RETURN(context, AL_INVALID_VALUE,,
+        return context->setError(AL_INVALID_VALUE,
             "Data size %d is not a multiple of frame size %d (%d unpack alignment)",
             size, SrcByteAlign, align);
 
     if(size/SrcByteAlign > std::numeric_limits<ALsizei>::max()/align) [[unlikely]]
-        SETERR_RETURN(context, AL_OUT_OF_MEMORY,,
+        return context->setError(AL_OUT_OF_MEMORY,
             "Buffer size overflow, %d blocks x %d samples per block", size/SrcByteAlign, align);
     const ALuint frames{size / SrcByteAlign * align};
 
@@ -600,7 +600,7 @@ void LoadData(ALCcontext *context, ALbuffer *ALBuf, ALsizei freq, ALuint size,
     ALuint NumChannels{ChannelsFromFmt(*DstChannels, ambiorder)};
     ALuint FrameSize{NumChannels * BytesFromFmt(*DstType)};
     if(frames > std::numeric_limits<size_t>::max()/FrameSize) [[unlikely]]
-        SETERR_RETURN(context, AL_OUT_OF_MEMORY,,
+        return context->setError(AL_OUT_OF_MEMORY,
             "Buffer size overflow, %d frames x %d bytes per frame", frames, FrameSize);
     size_t newsize{static_cast<size_t>(frames) * FrameSize};
 
@@ -609,7 +609,7 @@ void LoadData(ALCcontext *context, ALbuffer *ALBuf, ALsizei freq, ALuint size,
     {
         ALCdevice &device = *context->mALDevice;
         if(!eax_x_ram_check_availability(device, *ALBuf, size))
-            SETERR_RETURN(context, AL_OUT_OF_MEMORY,,
+            return context->setError(AL_OUT_OF_MEMORY,
                 "Out of X-RAM memory (avail: %u, needed: %u)", device.eax_x_ram_free_size, size);
     }
 #endif
@@ -687,18 +687,18 @@ void PrepareCallback(ALCcontext *context, ALbuffer *ALBuf, ALsizei freq,
     void *userptr)
 {
     if(ReadRef(ALBuf->ref) != 0 || ALBuf->MappedAccess != 0) [[unlikely]]
-        SETERR_RETURN(context, AL_INVALID_OPERATION,, "Modifying callback for in-use buffer %u",
+        return context->setError(AL_INVALID_OPERATION, "Modifying callback for in-use buffer %u",
             ALBuf->id);
 
     /* Currently no channel configurations need to be converted. */
     auto DstChannels = FmtFromUserFmt(SrcChannels);
     if(!DstChannels) [[unlikely]]
-        SETERR_RETURN(context, AL_INVALID_ENUM,, "Invalid format");
+        return context->setError(AL_INVALID_ENUM, "Invalid format");
 
     /* IMA4 and MSADPCM convert to 16-bit short. Not supported with callbacks. */
     auto DstType = FmtFromUserFmt(SrcType);
     if(!DstType) [[unlikely]]
-        SETERR_RETURN(context, AL_INVALID_ENUM,, "Unsupported callback format");
+        return context->setError(AL_INVALID_ENUM, "Unsupported callback format");
 
     const ALuint ambiorder{IsBFormat(*DstChannels) ? ALBuf->UnpackAmbiOrder :
         (IsUHJ(*DstChannels) ? 1 : 0)};

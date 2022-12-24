@@ -514,12 +514,6 @@ private:
 #endif // ALSOFT_EAX
 };
 
-#define SETERR_RETURN(ctx, err, retval, ...) do {                             \
-    (ctx)->setError((err), __VA_ARGS__);                                      \
-    return retval;                                                            \
-} while(0)
-
-
 using ContextRef = al::intrusive_ptr<ALCcontext>;
 
 ContextRef GetContextRef(void);

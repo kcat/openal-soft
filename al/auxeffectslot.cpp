@@ -558,7 +558,7 @@ START_API_FUNC
     std::lock_guard<std::mutex> __{context->mEffectSlotLock};
     ALeffectslot *slot = LookupEffectSlot(context.get(), effectslot);
     if(!slot) [[unlikely]]
-        SETERR_RETURN(context, AL_INVALID_NAME,, "Invalid effect slot ID %u", effectslot);
+        return context->setError(AL_INVALID_NAME, "Invalid effect slot ID %u", effectslot);
 
     ALeffectslot *target{};
     ALCdevice *device{};
@@ -576,7 +576,7 @@ START_API_FUNC
             else
             {
                 if(value != 0)
-                    SETERR_RETURN(context, AL_INVALID_VALUE,, "Invalid effect ID %u", value);
+                    return context->setError(AL_INVALID_VALUE, "Invalid effect ID %u", value);
                 err = slot->initEffect(AL_EFFECT_NULL, EffectProps{}, context.get());
             }
         }
@@ -598,7 +598,7 @@ START_API_FUNC
 
     case AL_EFFECTSLOT_AUXILIARY_SEND_AUTO:
         if(!(value == AL_TRUE || value == AL_FALSE))
-            SETERR_RETURN(context, AL_INVALID_VALUE,,
+            return context->setError(AL_INVALID_VALUE,
                 "Effect slot auxiliary send auto out of range");
         if(slot->AuxSendAuto == !!value) [[unlikely]]
             return;
@@ -608,7 +608,7 @@ START_API_FUNC
     case AL_EFFECTSLOT_TARGET_SOFT:
         target = LookupEffectSlot(context.get(), static_cast<ALuint>(value));
         if(value && !target)
-            SETERR_RETURN(context, AL_INVALID_VALUE,, "Invalid effect slot target ID");
+            return context->setError(AL_INVALID_VALUE, "Invalid effect slot target ID");
         if(slot->Target == target) [[unlikely]]
             return;
         if(target)
@@ -617,7 +617,7 @@ START_API_FUNC
             while(checker && checker != slot)
                 checker = checker->Target;
             if(checker)
-                SETERR_RETURN(context, AL_INVALID_OPERATION,,
+                return context->setError(AL_INVALID_OPERATION,
                     "Setting target of effect slot ID %u to %u creates circular chain", slot->id,
                     target->id);
         }
@@ -642,7 +642,7 @@ START_API_FUNC
         device = context->mALDevice.get();
 
         if(slot->mState == SlotState::Playing)
-            SETERR_RETURN(context, AL_INVALID_OPERATION,,
+            return context->setError(AL_INVALID_OPERATION,
                 "Setting buffer on playing effect slot %u", slot->id);
 
         if(ALbuffer *buffer{slot->Buffer})
@@ -659,9 +659,9 @@ START_API_FUNC
             if(value)
             {
                 buffer = LookupBuffer(device, static_cast<ALuint>(value));
-                if(!buffer) SETERR_RETURN(context, AL_INVALID_VALUE,, "Invalid buffer ID");
+                if(!buffer) return context->setError(AL_INVALID_VALUE, "Invalid buffer ID");
                 if(buffer->mCallback)
-                    SETERR_RETURN(context, AL_INVALID_OPERATION,,
+                    return context->setError(AL_INVALID_OPERATION,
                         "Callback buffer not valid for effects");
 
                 IncrementRef(buffer->ref);
@@ -678,10 +678,10 @@ START_API_FUNC
         break;
 
     case AL_EFFECTSLOT_STATE_SOFT:
-        SETERR_RETURN(context, AL_INVALID_OPERATION,, "AL_EFFECTSLOT_STATE_SOFT is read-only");
+        return context->setError(AL_INVALID_OPERATION, "AL_EFFECTSLOT_STATE_SOFT is read-only");
 
     default:
-        SETERR_RETURN(context, AL_INVALID_ENUM,, "Invalid effect slot integer property 0x%04x",
+        return context->setError(AL_INVALID_ENUM, "Invalid effect slot integer property 0x%04x",
             param);
     }
     UpdateProps(slot, context.get());
@@ -708,12 +708,12 @@ START_API_FUNC
     std::lock_guard<std::mutex> _{context->mEffectSlotLock};
     ALeffectslot *slot = LookupEffectSlot(context.get(), effectslot);
     if(!slot) [[unlikely]]
-        SETERR_RETURN(context, AL_INVALID_NAME,, "Invalid effect slot ID %u", effectslot);
+        return context->setError(AL_INVALID_NAME, "Invalid effect slot ID %u", effectslot);
 
     switch(param)
     {
     default:
-        SETERR_RETURN(context, AL_INVALID_ENUM,,
+        return context->setError(AL_INVALID_ENUM,
             "Invalid effect slot integer-vector property 0x%04x", param);
     }
 }
@@ -729,20 +729,20 @@ START_API_FUNC
     std::lock_guard<std::mutex> __{context->mEffectSlotLock};
     ALeffectslot *slot = LookupEffectSlot(context.get(), effectslot);
     if(!slot) [[unlikely]]
-        SETERR_RETURN(context, AL_INVALID_NAME,, "Invalid effect slot ID %u", effectslot);
+        return context->setError(AL_INVALID_NAME, "Invalid effect slot ID %u", effectslot);
 
     switch(param)
     {
     case AL_EFFECTSLOT_GAIN:
         if(!(value >= 0.0f && value <= 1.0f))
-            SETERR_RETURN(context, AL_INVALID_VALUE,, "Effect slot gain out of range");
+            return context->setError(AL_INVALID_VALUE, "Effect slot gain out of range");
         if(slot->Gain == value) [[unlikely]]
             return;
         slot->Gain = value;
         break;
 
     default:
-        SETERR_RETURN(context, AL_INVALID_ENUM,, "Invalid effect slot float property 0x%04x",
+        return context->setError(AL_INVALID_ENUM, "Invalid effect slot float property 0x%04x",
             param);
     }
     UpdateProps(slot, context.get());
@@ -765,12 +765,12 @@ START_API_FUNC
     std::lock_guard<std::mutex> _{context->mEffectSlotLock};
     ALeffectslot *slot = LookupEffectSlot(context.get(), effectslot);
     if(!slot) [[unlikely]]
-        SETERR_RETURN(context, AL_INVALID_NAME,, "Invalid effect slot ID %u", effectslot);
+        return context->setError(AL_INVALID_NAME, "Invalid effect slot ID %u", effectslot);
 
     switch(param)
     {
     default:
-        SETERR_RETURN(context, AL_INVALID_ENUM,,
+        return context->setError(AL_INVALID_ENUM,
             "Invalid effect slot float-vector property 0x%04x", param);
     }
 }
@@ -786,7 +786,7 @@ START_API_FUNC
     std::lock_guard<std::mutex> _{context->mEffectSlotLock};
     ALeffectslot *slot = LookupEffectSlot(context.get(), effectslot);
     if(!slot) [[unlikely]]
-        SETERR_RETURN(context, AL_INVALID_NAME,, "Invalid effect slot ID %u", effectslot);
+        return context->setError(AL_INVALID_NAME, "Invalid effect slot ID %u", effectslot);
 
     switch(param)
     {
@@ -838,7 +838,7 @@ START_API_FUNC
     std::lock_guard<std::mutex> _{context->mEffectSlotLock};
     ALeffectslot *slot = LookupEffectSlot(context.get(), effectslot);
     if(!slot) [[unlikely]]
-        SETERR_RETURN(context, AL_INVALID_NAME,, "Invalid effect slot ID %u", effectslot);
+        return context->setError(AL_INVALID_NAME, "Invalid effect slot ID %u", effectslot);
 
     switch(param)
     {
@@ -858,7 +858,7 @@ START_API_FUNC
     std::lock_guard<std::mutex> _{context->mEffectSlotLock};
     ALeffectslot *slot = LookupEffectSlot(context.get(), effectslot);
     if(!slot) [[unlikely]]
-        SETERR_RETURN(context, AL_INVALID_NAME,, "Invalid effect slot ID %u", effectslot);
+        return context->setError(AL_INVALID_NAME, "Invalid effect slot ID %u", effectslot);
 
     switch(param)
     {
@@ -888,7 +888,7 @@ START_API_FUNC
     std::lock_guard<std::mutex> _{context->mEffectSlotLock};
     ALeffectslot *slot = LookupEffectSlot(context.get(), effectslot);
     if(!slot) [[unlikely]]
-        SETERR_RETURN(context, AL_INVALID_NAME,, "Invalid effect slot ID %u", effectslot);
+        return context->setError(AL_INVALID_NAME, "Invalid effect slot ID %u", effectslot);
 
     switch(param)
     {

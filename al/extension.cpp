@@ -40,7 +40,10 @@ START_API_FUNC
     if(!context) [[unlikely]] return AL_FALSE;
 
     if(!extName) [[unlikely]]
-        SETERR_RETURN(context, AL_INVALID_VALUE, AL_FALSE, "NULL pointer");
+    {
+        context->setError(AL_INVALID_VALUE, "NULL pointer");
+        return AL_FALSE;
+    }
 
     size_t len{strlen(extName)};
     const char *ptr{context->mExtensionList};

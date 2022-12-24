@@ -154,7 +154,7 @@ START_API_FUNC
 
     if(count < 0) context->setError(AL_INVALID_VALUE, "Controlling %d events", count);
     if(count <= 0) return;
-    if(!types) SETERR_RETURN(context, AL_INVALID_VALUE,, "NULL pointer");
+    if(!types) return context->setError(AL_INVALID_VALUE, "NULL pointer");
 
     ContextBase::AsyncEventBitset flags{};
     const ALenum *types_end = types+count;
@@ -173,7 +173,7 @@ START_API_FUNC
         }
     );
     if(bad_type != types_end)
-        SETERR_RETURN(context, AL_INVALID_ENUM,, "Invalid event type 0x%04x", *bad_type);
+        return context->setError(AL_INVALID_ENUM, "Invalid event type 0x%04x", *bad_type);
 
     if(enable)
     {

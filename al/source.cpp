@@ -2546,12 +2546,9 @@ void StartSources(ALCcontext *const context, const al::span<ALsource*> srchandle
         /* Check that there is a queue containing at least one valid, non zero
          * length buffer.
          */
-        auto BufferList = source->mQueue.begin();
-        for(;BufferList != source->mQueue.end();++BufferList)
-        {
-            if(BufferList->mSampleLen != 0 || BufferList->mCallback)
-                break;
-        }
+        auto find_buffer = [](ALbufferQueueItem &entry) noexcept
+        { return entry.mSampleLen != 0 || entry.mCallback != nullptr; };
+        auto BufferList = std::find_if(source->mQueue.begin(), source->mQueue.end(), find_buffer);
 
         /* If there's nothing to play, go right to stopped. */
         if(BufferList == source->mQueue.end()) [[unlikely]]

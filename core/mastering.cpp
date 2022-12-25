@@ -66,7 +66,7 @@ float UpdateSlidingHold(SlidingHold *Hold, const uint i, const float in)
                     goto found_place;
             } while(lowerIndex--);
             lowerIndex = mask;
-        } while(1);
+        } while(true);
     found_place:
 
         lowerIndex = (lowerIndex + 1) & mask;

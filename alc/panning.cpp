@@ -232,7 +232,7 @@ void InitNearFieldCtrl(ALCdevice *device, float ctrl_dist, uint order, bool is3d
     static const uint chans_per_order3d[MaxAmbiOrder+1]{ 1, 3, 5, 7 };
 
     /* NFC is only used when AvgSpeakerDist is greater than 0. */
-    if(!device->getConfigValueBool("decoder", "nfc", 0) || !(ctrl_dist > 0.0f))
+    if(!device->getConfigValueBool("decoder", "nfc", false) || !(ctrl_dist > 0.0f))
         return;
 
     device->AvgSpeakerDist = clampf(ctrl_dist, 0.1f, 10.0f);
@@ -252,7 +252,7 @@ void InitDistanceComp(ALCdevice *device, const al::span<const Channel> channels,
 {
     const float maxdist{std::accumulate(std::begin(dists), std::end(dists), 0.0f, maxf)};
 
-    if(!device->getConfigValueBool("decoder", "distance-comp", 1) || !(maxdist > 0.0f))
+    if(!device->getConfigValueBool("decoder", "distance-comp", true) || !(maxdist > 0.0f))
         return;
 
     const auto distSampleScale = static_cast<float>(device->Frequency) / SpeedOfSoundMetersPerSec;
@@ -339,7 +339,7 @@ DecoderView MakeDecoderView(ALCdevice *device, const AmbDecConf *conf,
 
     switch(conf->CoeffScale)
     {
-    case AmbDecScale::Unset: ASSUME(0); break;
+    case AmbDecScale::Unset: ASSUME(false); break;
     case AmbDecScale::N3D: decoder.mScaling = DevAmbiScaling::N3D; break;
     case AmbDecScale::SN3D: decoder.mScaling = DevAmbiScaling::SN3D; break;
     case AmbDecScale::FuMa: decoder.mScaling = DevAmbiScaling::FuMa; break;
@@ -1007,8 +1007,8 @@ void aluInitRenderer(ALCdevice *device, int hrtf_id, al::optional<StereoEncoding
         const bool stablize{device->RealOut.ChannelIndex[FrontCenter] != INVALID_CHANNEL_INDEX
             && device->RealOut.ChannelIndex[FrontLeft] != INVALID_CHANNEL_INDEX
             && device->RealOut.ChannelIndex[FrontRight] != INVALID_CHANNEL_INDEX
-            && device->getConfigValueBool(nullptr, "front-stablizer", 0) != 0};
-        const bool hqdec{device->getConfigValueBool("decoder", "hq-mode", 1) != 0};
+            && device->getConfigValueBool(nullptr, "front-stablizer", false) != 0};
+        const bool hqdec{device->getConfigValueBool("decoder", "hq-mode", true) != 0};
         InitPanning(device, hqdec, stablize, decoder);
         if(decoder)
         {

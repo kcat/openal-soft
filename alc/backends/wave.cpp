@@ -234,7 +234,7 @@ bool WaveBackend::reset()
     fseek(mFile, 0, SEEK_SET);
     clearerr(mFile);
 
-    if(GetConfigValueBool(nullptr, "wave", "bformat", 0))
+    if(GetConfigValueBool(nullptr, "wave", "bformat", false))
     {
         mDevice->FmtChans = DevFmtAmbi3D;
         mDevice->mAmbiOrder = 1;

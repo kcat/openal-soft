@@ -1142,9 +1142,9 @@ constexpr ALuint DoubleValsByProp(ALenum prop)
 }
 
 
-void SetSourcefv(ALsource *Source, ALCcontext *Context, SourceProp prop, const al::span<const float> values);
-void SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const al::span<const int> values);
-void SetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp prop, const al::span<const int64_t> values);
+void SetSourcefv(ALsource *const Source, ALCcontext *const Context, const SourceProp prop, const al::span<const float> values);
+void SetSourceiv(ALsource *const Source, ALCcontext *const Context, const SourceProp prop, const al::span<const int> values);
+void SetSourcei64v(ALsource *const Source, ALCcontext *const Context, const SourceProp prop, const al::span<const int64_t> values);
 
 struct check_exception : std::exception {
 };
@@ -1204,7 +1204,7 @@ inline void CommitAndUpdateSourceProps(ALsource *source, ALCcontext *context)
  * context error and throwing a check_value_exception if it failed.
  */
 template<typename T, size_t N>
-auto GetCheckers(ALCcontext *Context, const SourceProp prop, const al::span<T,N> values)
+auto GetCheckers(ALCcontext *const Context, const SourceProp prop, const al::span<T,N> values)
 {
     return std::make_pair(
         [=](size_t expect) -> void
@@ -1223,7 +1223,7 @@ auto GetCheckers(ALCcontext *Context, const SourceProp prop, const al::span<T,N>
     );
 }
 
-void SetSourcefv(ALsource *Source, ALCcontext *Context, SourceProp prop,
+void SetSourcefv(ALsource *const Source, ALCcontext *const Context, const SourceProp prop,
     const al::span<const float> values)
 try {
     /* Structured bindings would be nice (C++17). */
@@ -1459,7 +1459,7 @@ try {
 catch(check_exception&) {
 }
 
-void SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop,
+void SetSourceiv(ALsource *const Source, ALCcontext *const Context, const SourceProp prop,
     const al::span<const int> values)
 try {
     auto Checkers = GetCheckers(Context, prop, values);
@@ -1800,7 +1800,7 @@ try {
 catch(check_exception&) {
 }
 
-void SetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp prop,
+void SetSourcei64v(ALsource *const Source, ALCcontext *const Context, const SourceProp prop,
     const al::span<const int64_t> values)
 try {
     auto Checkers = GetCheckers(Context, prop, values);
@@ -1920,7 +1920,7 @@ catch(check_exception&) {
 
 
 template<typename T, size_t N>
-auto GetSizeChecker(ALCcontext *Context, const SourceProp prop, const al::span<T,N> values)
+auto GetSizeChecker(ALCcontext *const Context, const SourceProp prop, const al::span<T,N> values)
 {
     return [=](size_t expect) -> void
     {
@@ -1931,11 +1931,11 @@ auto GetSizeChecker(ALCcontext *Context, const SourceProp prop, const al::span<T
     };
 }
 
-bool GetSourcedv(ALsource *Source, ALCcontext *Context, SourceProp prop, const al::span<double> values);
-bool GetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const al::span<int> values);
-bool GetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp prop, const al::span<int64_t> values);
+bool GetSourcedv(ALsource *const Source, ALCcontext *const Context, const SourceProp prop, const al::span<double> values);
+bool GetSourceiv(ALsource *const Source, ALCcontext *const Context, const SourceProp prop, const al::span<int> values);
+bool GetSourcei64v(ALsource *const Source, ALCcontext *const Context, const SourceProp prop, const al::span<int64_t> values);
 
-bool GetSourcedv(ALsource *Source, ALCcontext *Context, SourceProp prop,
+bool GetSourcedv(ALsource *const Source, ALCcontext *const Context, const SourceProp prop,
     const al::span<double> values)
 try {
     auto CheckSize = GetSizeChecker(Context, prop, values);
@@ -2143,7 +2143,7 @@ catch(check_exception&) {
     return false;
 }
 
-bool GetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop,
+bool GetSourceiv(ALsource *const Source, ALCcontext *const Context, const SourceProp prop,
     const al::span<int> values)
 try {
     auto CheckSize = GetSizeChecker(Context, prop, values);
@@ -2337,7 +2337,7 @@ catch(check_exception&) {
     return false;
 }
 
-bool GetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp prop,
+bool GetSourcei64v(ALsource *const Source, ALCcontext *const Context, const SourceProp prop,
     const al::span<int64_t> values)
 try {
     auto CheckSize = GetSizeChecker(Context, prop, values);
@@ -2492,8 +2492,8 @@ catch(check_exception&) {
 }
 
 
-void StartSources(ALCcontext *context, const al::span<ALsource*> srchandles,
-    nanoseconds start_time=nanoseconds::min())
+void StartSources(ALCcontext *const context, const al::span<ALsource*> srchandles,
+    const nanoseconds start_time=nanoseconds::min())
 {
     ALCdevice *device{context->mALDevice.get()};
     /* If the device is disconnected, and voices stop on disconnect, go right

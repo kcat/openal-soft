@@ -414,7 +414,7 @@ int main(int argc, char **argv)
 
         auto encoder = std::make_unique<UhjEncoder>();
         auto splbuf = al::vector<FloatBufferLine, 16>(static_cast<uint>(9+ininfo.channels)+uhjchans);
-        auto ambmem = al::span<FloatBufferLine,4>{&splbuf[0], 4};
+        auto ambmem = al::span<FloatBufferLine,4>{splbuf.data(), 4};
         auto encmem = al::span<FloatBufferLine,4>{&splbuf[4], 4};
         auto srcmem = al::span<float,BufferLineSize>{splbuf[8].data(), BufferLineSize};
         auto outmem = al::span<float>{splbuf[9].data(), BufferLineSize*uhjchans};

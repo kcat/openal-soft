@@ -32,7 +32,7 @@ using reg_type = unsigned int;
 inline std::array<reg_type,4> get_cpuid(unsigned int f)
 {
     std::array<reg_type,4> ret{};
-    __get_cpuid(f, &ret[0], &ret[1], &ret[2], &ret[3]);
+    __get_cpuid(f, ret.data(), &ret[1], &ret[2], &ret[3]);
     return ret;
 }
 #define CAN_GET_CPUID

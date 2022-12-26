@@ -21,7 +21,7 @@ void base_exception::setMessage(const char* msg, std::va_list args)
     if(msglen > 0) [[likely]]
     {
         mMessage.resize(static_cast<size_t>(msglen)+1);
-        std::vsnprintf(&mMessage[0], mMessage.length(), msg, args2);
+        std::vsnprintf(const_cast<char*>(mMessage.data()), mMessage.length(), msg, args2);
         mMessage.pop_back();
     }
     va_end(args2);

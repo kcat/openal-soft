@@ -132,7 +132,7 @@ constexpr char alsaDevice[] = "ALSA Default";
     MAGIC(snd_card_next);                                                     \
     MAGIC(snd_config_update_free_global)
 
-static void *alsa_handle;
+void *alsa_handle;
 #define MAKE_FUNC(f) decltype(f) * p##f
 ALSA_FUNCS(MAKE_FUNC);
 #undef MAKE_FUNC

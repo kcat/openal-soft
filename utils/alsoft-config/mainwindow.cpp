@@ -21,7 +21,7 @@
 
 namespace {
 
-static const struct {
+const struct {
     char backend_name[16];
     char full_string[32];
 } backendList[] = {
@@ -75,7 +75,7 @@ static const struct {
     { "", "" }
 };
 
-static const struct NameValuePair {
+const struct NameValuePair {
     const char name[64];
     const char value[16];
 } speakerModeList[] = {
@@ -146,7 +146,7 @@ static const struct NameValuePair {
     { "", "" }
 };
 
-static QString getDefaultConfigName()
+QString getDefaultConfigName()
 {
 #ifdef Q_OS_WIN32
     static const char fname[] = "alsoft.ini";
@@ -173,7 +173,7 @@ static QString getDefaultConfigName()
     return fname;
 }
 
-static QString getBaseDataPath()
+QString getBaseDataPath()
 {
 #ifdef Q_OS_WIN32
     auto get_appdata_path = []() noexcept -> QString
@@ -196,7 +196,7 @@ static QString getBaseDataPath()
     return base;
 }
 
-static QStringList getAllDataPaths(const QString &append)
+QStringList getAllDataPaths(const QString &append)
 {
     QStringList list;
     list.append(getBaseDataPath());
@@ -227,7 +227,7 @@ static QStringList getAllDataPaths(const QString &append)
 }
 
 template<size_t N>
-static QString getValueFromName(const NameValuePair (&list)[N], const QString &str)
+QString getValueFromName(const NameValuePair (&list)[N], const QString &str)
 {
     for(size_t i = 0;i < N-1;i++)
     {
@@ -238,7 +238,7 @@ static QString getValueFromName(const NameValuePair (&list)[N], const QString &s
 }
 
 template<size_t N>
-static QString getNameFromValue(const NameValuePair (&list)[N], const QString &str)
+QString getNameFromValue(const NameValuePair (&list)[N], const QString &str)
 {
     for(size_t i = 0;i < N-1;i++)
     {

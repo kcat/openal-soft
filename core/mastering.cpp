@@ -121,7 +121,7 @@ void LinkChannels(Compressor *Comp, const uint SamplesToDo, const FloatBufferLin
  * it uses an instantaneous squared peak detector and a squared RMS detector
  * both with 200ms release times.
  */
-static void CrestDetector(Compressor *Comp, const uint SamplesToDo)
+void CrestDetector(Compressor *Comp, const uint SamplesToDo)
 {
     const float a_crest{Comp->mCrestCoeff};
     float y2_peak{Comp->mLastPeakSq};

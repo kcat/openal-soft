@@ -349,7 +349,7 @@ int main(int argc, char **argv)
             else
             {
                 std::string mapstr;
-                if(chanmap.size() > 0)
+                if(!chanmap.empty())
                 {
                     mapstr = std::to_string(chanmap[0]);
                     for(int idx : al::span<int>{chanmap}.subspan<1>())

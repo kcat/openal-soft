@@ -844,7 +844,7 @@ void MainWindow::loadConfig(const QString &fname)
     ui->enabledBackendList->clear();
     ui->disabledBackendList->clear();
     QStringList drivers{settings.value("drivers").toStringList()};
-    if(drivers.size() == 0)
+    if(drivers.empty())
         ui->backendCheckBox->setChecked(true);
     else
     {
@@ -1091,7 +1091,7 @@ void MainWindow::saveConfig(const QString &fname) const
             }
         }
     }
-    if(strlist.size() == 0 && !ui->backendCheckBox->isChecked())
+    if(strlist.empty() && !ui->backendCheckBox->isChecked())
         strlist.append("-all");
     else if(ui->backendCheckBox->isChecked())
         strlist.append(QString{});
@@ -1322,7 +1322,7 @@ void MainWindow::removeHrtfFile()
 
 void MainWindow::updateHrtfRemoveButton()
 {
-    ui->hrtfRemoveButton->setEnabled(ui->hrtfFileList->selectedItems().size() != 0);
+    ui->hrtfRemoveButton->setEnabled(!ui->hrtfFileList->selectedItems().empty());
 }
 
 void MainWindow::showEnabledBackendMenu(QPoint pt)
@@ -1333,7 +1333,7 @@ void MainWindow::showEnabledBackendMenu(QPoint pt)
 
     QMenu ctxmenu;
     QAction *removeAction{ctxmenu.addAction(QIcon::fromTheme("list-remove"), "Remove")};
-    if(ui->enabledBackendList->selectedItems().size() == 0)
+    if(ui->enabledBackendList->selectedItems().empty())
         removeAction->setEnabled(false);
     ctxmenu.addSeparator();
     for(size_t i = 0;backendList[i].backend_name[0];i++)
@@ -1341,8 +1341,8 @@ void MainWindow::showEnabledBackendMenu(QPoint pt)
         QString backend{backendList[i].full_string};
         QAction *action{ctxmenu.addAction(QString("Add ")+backend)};
         actionMap[action] = backend;
-        if(ui->enabledBackendList->findItems(backend, Qt::MatchFixedString).size() != 0 ||
-           ui->disabledBackendList->findItems(backend, Qt::MatchFixedString).size() != 0)
+        if(!ui->enabledBackendList->findItems(backend, Qt::MatchFixedString).empty() ||
+           !ui->disabledBackendList->findItems(backend, Qt::MatchFixedString).empty())
             action->setEnabled(false);
     }
 
@@ -1371,7 +1371,7 @@ void MainWindow::showDisabledBackendMenu(QPoint pt)
 
     QMenu ctxmenu;
     QAction *removeAction{ctxmenu.addAction(QIcon::fromTheme("list-remove"), "Remove")};
-    if(ui->disabledBackendList->selectedItems().size() == 0)
+    if(ui->disabledBackendList->selectedItems().empty())
         removeAction->setEnabled(false);
     ctxmenu.addSeparator();
     for(size_t i = 0;backendList[i].backend_name[0];i++)
@@ -1379,8 +1379,8 @@ void MainWindow::showDisabledBackendMenu(QPoint pt)
         QString backend{backendList[i].full_string};
         QAction *action{ctxmenu.addAction(QString("Add ")+backend)};
         actionMap[action] = backend;
-        if(ui->disabledBackendList->findItems(backend, Qt::MatchFixedString).size() != 0 ||
-           ui->enabledBackendList->findItems(backend, Qt::MatchFixedString).size() != 0)
+        if(!ui->disabledBackendList->findItems(backend, Qt::MatchFixedString).empty() ||
+           !ui->enabledBackendList->findItems(backend, Qt::MatchFixedString).empty())
             action->setEnabled(false);
     }
 

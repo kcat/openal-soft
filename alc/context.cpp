@@ -230,7 +230,7 @@ bool ALCcontext::deinit()
          * given context.
          */
         std::copy_if(oldarray->begin(), oldarray->end(), newarray->begin(),
-            std::bind(std::not_equal_to<>{}, _1, this));
+            [this](auto a){ return a != this; });
 
         /* Store the new context array in the device. Wait for any current mix
          * to finish before deleting the old array.

@@ -168,6 +168,7 @@ typedef void ALCvoid;
 #define ALC_ALL_DEVICES_SPECIFIER                0x1013
 
 
+#ifndef ALC_NO_PROTOTYPES
 /* Context management. */
 
 /** Create and attach a context to the given device. */
@@ -240,6 +241,7 @@ ALC_API void       ALC_APIENTRY alcCaptureStart(ALCdevice *device);
 ALC_API void       ALC_APIENTRY alcCaptureStop(ALCdevice *device);
 /** Reads samples from the device buffer. */
 ALC_API void       ALC_APIENTRY alcCaptureSamples(ALCdevice *device, ALCvoid *buffer, ALCsizei samples);
+#endif /* ALC_NO_PROTOTYPES */
 
 /* Pointer-to-function type, useful for dynamically getting ALC entry points. */
 typedef ALCcontext*    (ALC_APIENTRY *LPALCCREATECONTEXT)(ALCdevice *device, const ALCint *attrlist);

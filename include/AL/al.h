@@ -123,7 +123,7 @@ typedef void ALvoid;
  * Range:   [0.5 - 2.0]
  * Default: 1.0
  *
- * A multiplier for the frequency (sample rate) of the source's buffer.
+ * A multiplier for the sample rate of the source's buffer.
  */
 #define AL_PITCH                                 0x1003
 
@@ -165,10 +165,10 @@ typedef void ALvoid;
 /**
  * Source looping.
  * Type:    ALboolean
- * Range:   [AL_TRUE, AL_FALSE]
+ * Range:   [AL_FALSE, AL_TRUE]
  * Default: AL_FALSE
  *
- * Specifies whether source is looping.
+ * Specifies whether source playback loops.
  */
 #define AL_LOOPING                               0x1007
 
@@ -187,11 +187,8 @@ typedef void ALvoid;
  * Range: [0.0 - ]
  *
  * A value of 1.0 means unattenuated. Each division by 2 equals an attenuation
- * of about -6dB. Each multiplicaton by 2 equals an amplification of about
+ * of about -6dB. Each multiplication by 2 equals an amplification of about
  * +6dB.
- *
- * A value of 0.0 is meaningless with respect to a logarithmic scale; it is
- * silent.
  */
 #define AL_GAIN                                  0x100A
 
@@ -200,8 +197,8 @@ typedef void ALvoid;
  * Type:  ALfloat
  * Range: [0.0 - 1.0]
  *
- * The minimum gain allowed for a source, after distance and cone attenation is
- * applied (if applicable).
+ * The minimum gain allowed for a source, after distance and cone attenuation
+ * is applied (if applicable).
  */
 #define AL_MIN_GAIN                              0x100D
 
@@ -210,8 +207,8 @@ typedef void ALvoid;
  * Type:  ALfloat
  * Range: [0.0 - 1.0]
  *
- * The maximum gain allowed for a source, after distance and cone attenation is
- * applied (if applicable).
+ * The maximum gain allowed for a source, after distance and cone attenuation
+ * is applied (if applicable).
  */
 #define AL_MAX_GAIN                              0x100E
 
@@ -267,7 +264,7 @@ typedef void ALvoid;
  * Range:   [0.0 - ]
  * Default: 1.0
  *
- * The distance in units that no attenuation occurs.
+ * The distance in units that no distance attenuation occurs.
  *
  * At 0.0, no distance attenuation ever occurs on non-linear attenuation models.
  */
@@ -362,7 +359,7 @@ typedef void ALvoid;
 /** No error. */
 #define AL_NO_ERROR                              0
 
-/** Invalid name paramater passed to AL call. */
+/** Invalid name parameter passed to AL call. */
 #define AL_INVALID_NAME                          0xA001
 
 /** Invalid enum parameter passed to AL call. */
@@ -387,7 +384,6 @@ typedef void ALvoid;
 /** Context string: Space-separated extension list. */
 #define AL_EXTENSIONS                            0xB004
 
-
 /**
  * Doppler scale.
  * Type:    ALfloat
@@ -397,7 +393,6 @@ typedef void ALvoid;
  * Scale for source and listener velocities.
  */
 #define AL_DOPPLER_FACTOR                        0xC000
-AL_API void AL_APIENTRY alDopplerFactor(ALfloat value);
 
 /**
  * Doppler velocity (deprecated).
@@ -405,7 +400,6 @@ AL_API void AL_APIENTRY alDopplerFactor(ALfloat value);
  * A multiplier applied to the Speed of Sound.
  */
 #define AL_DOPPLER_VELOCITY                      0xC001
-AL_API void AL_APIENTRY alDopplerVelocity(ALfloat value);
 
 /**
  * Speed of Sound, in units per second.
@@ -414,10 +408,9 @@ AL_API void AL_APIENTRY alDopplerVelocity(ALfloat value);
  * Default: 343.3
  *
  * The speed at which sound waves are assumed to travel, when calculating the
- * doppler effect.
+ * doppler effect from source and listener velocities.
  */
 #define AL_SPEED_OF_SOUND                        0xC003
-AL_API void AL_APIENTRY alSpeedOfSound(ALfloat value);
 
 /**
  * Distance attenuation model.
@@ -438,7 +431,6 @@ AL_API void AL_APIENTRY alSpeedOfSound(ALfloat value);
  * distance calculated is clamped between the reference and max distances.
  */
 #define AL_DISTANCE_MODEL                        0xD000
-AL_API void AL_APIENTRY alDistanceModel(ALenum distanceModel);
 
 /* Distance model values. */
 #define AL_INVERSE_DISTANCE                      0xD001
@@ -448,10 +440,17 @@ AL_API void AL_APIENTRY alDistanceModel(ALenum distanceModel);
 #define AL_EXPONENT_DISTANCE                     0xD005
 #define AL_EXPONENT_DISTANCE_CLAMPED             0xD006
 
+#ifndef AL_NO_PROTOTYPES
 /* Renderer State management. */
 AL_API void AL_APIENTRY alEnable(ALenum capability);
 AL_API void AL_APIENTRY alDisable(ALenum capability);
 AL_API ALboolean AL_APIENTRY alIsEnabled(ALenum capability);
+
+/* State setting. */
+AL_API void AL_APIENTRY alDopplerFactor(ALfloat value);
+AL_API void AL_APIENTRY alDopplerVelocity(ALfloat value);
+AL_API void AL_APIENTRY alSpeedOfSound(ALfloat value);
+AL_API void AL_APIENTRY alDistanceModel(ALenum distanceModel);
 
 /* State retrieval. */
 AL_API const ALchar* AL_APIENTRY alGetString(ALenum param);
@@ -536,7 +535,7 @@ AL_API void AL_APIENTRY alSourcePausev(ALsizei n, const ALuint *sources);
 AL_API void AL_APIENTRY alSourcePlay(ALuint source);
 /** Stop a Source */
 AL_API void AL_APIENTRY alSourceStop(ALuint source);
-/** Rewind a Source (set playback postiton to beginning) */
+/** Rewind a Source (set playback position to beginning) */
 AL_API void AL_APIENTRY alSourceRewind(ALuint source);
 /** Pause a Source */
 AL_API void AL_APIENTRY alSourcePause(ALuint source);
@@ -572,6 +571,7 @@ AL_API void AL_APIENTRY alGetBufferfv(ALuint buffer, ALenum param, ALfloat *valu
 AL_API void AL_APIENTRY alGetBufferi(ALuint buffer, ALenum param, ALint *value);
 AL_API void AL_APIENTRY alGetBuffer3i(ALuint buffer, ALenum param, ALint *value1, ALint *value2, ALint *value3);
 AL_API void AL_APIENTRY alGetBufferiv(ALuint buffer, ALenum param, ALint *values);
+#endif /* AL_NO_PROTOTYPES */
 
 /* Pointer-to-function type, useful for dynamically getting AL entry points. */
 typedef void          (AL_APIENTRY *LPALENABLE)(ALenum capability);

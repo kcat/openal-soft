@@ -183,6 +183,8 @@ static void printHRTFInfo(ALCdevice *device)
 
 static void printModeInfo(ALCdevice *device)
 {
+    ALCint srate = 0;
+
     if(alcIsExtensionPresent(device, "ALC_SOFT_output_mode"))
     {
         const char *modename = "(error)";
@@ -203,10 +205,14 @@ static void printModeInfo(ALCdevice *device)
         case ALC_SURROUND_6_1_SOFT: modename = "6.1 Surround"; break;
         case ALC_SURROUND_7_1_SOFT: modename = "7.1 Surround"; break;
         }
-        printf("Output channel mode: %s\n", modename);
+        printf("Device output mode: %s\n", modename);
     }
     else
         printf("Output mode extension not available\n");
+
+    alcGetIntegerv(device, ALC_FREQUENCY, 1, &srate);
+    if(checkALCErrors(device) == ALC_NO_ERROR)
+        printf("Device sample rate: %dhz\n", srate);
 }
 
 static void printALInfo(void)

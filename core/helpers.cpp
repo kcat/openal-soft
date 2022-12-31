@@ -59,16 +59,15 @@ const PathNamePair &GetProcBinary()
     if(fullpath.back() != 0)
         fullpath.push_back(0);
 
+    std::replace(fullpath.begin(), fullpath.end(), '/', '\\');
     auto sep = std::find(fullpath.rbegin()+1, fullpath.rend(), '\\');
-    sep = std::find(fullpath.rbegin()+1, sep, '/');
     if(sep != fullpath.rend())
     {
         *sep = 0;
-        procbin = al::make_optional<PathNamePair>(wstr_to_utf8(fullpath.data()),
-            wstr_to_utf8(&*sep + 1));
+        procbin.emplace(wstr_to_utf8(fullpath.data()), wstr_to_utf8(al::to_address(sep.base())));
     }
     else
-        procbin = al::make_optional<PathNamePair>(std::string{}, wstr_to_utf8(fullpath.data()));
+        procbin.emplace(std::string{}, wstr_to_utf8(fullpath.data()));
 
     TRACE("Got binary: %s, %s\n", procbin->path.c_str(), procbin->fname.c_str());
     return *procbin;
@@ -285,11 +284,10 @@ const PathNamePair &GetProcBinary()
 
     auto sep = std::find(pathname.crbegin(), pathname.crend(), '/');
     if(sep != pathname.crend())
-        procbin = al::make_optional<PathNamePair>(std::string(pathname.cbegin(), sep.base()-1),
+        procbin.emplace(std::string(pathname.cbegin(), sep.base()-1),
             std::string(sep.base(), pathname.cend()));
     else
-        procbin = al::make_optional<PathNamePair>(std::string{},
-            std::string(pathname.cbegin(), pathname.cend()));
+        procbin.emplace(std::string{}, std::string(pathname.cbegin(), pathname.cend()));
 
     TRACE("Got binary: \"%s\", \"%s\"\n", procbin->path.c_str(), procbin->fname.c_str());
     return *procbin;

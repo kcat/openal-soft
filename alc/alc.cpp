@@ -2492,9 +2492,14 @@ ContextRef GetContextRef(void)
         context->add_ref();
     else
     {
-        std::lock_guard<std::recursive_mutex> _{ListLock};
+        while(ALCcontext::sGlobalContextLock.exchange(true, std::memory_order_acquire)) {
+            /* Wait to make sure another thread isn't trying to change the
+             * current context and bring its refcount to 0.
+             */
+        }
         context = ALCcontext::sGlobalContext.load(std::memory_order_acquire);
-        if(context) context->add_ref();
+        if(context) [[likely]] context->add_ref();
+        ALCcontext::sGlobalContextLock.store(false, std::memory_order_release);
     }
     return ContextRef{context};
 }
@@ -3385,13 +3390,18 @@ START_API_FUNC
     }
     /* Release this reference (if any) to store it in the GlobalContext
      * pointer. Take ownership of the reference (if any) that was previously
-     * stored there.
+     * stored there, and let the reference go.
      */
-    ctx = ContextRef{ALCcontext::sGlobalContext.exchange(ctx.release())};
+    while(ALCcontext::sGlobalContextLock.exchange(true, std::memory_order_acquire)) {
+        /* Wait to make sure another thread isn't getting or trying to change
+         * the current context as its refcount is decremented.
+         */
+    }
+    ContextRef{ALCcontext::sGlobalContext.exchange(ctx.release())};
+    ALCcontext::sGlobalContextLock.store(false, std::memory_order_release);
 
-    /* Reset (decrement) the previous global reference by replacing it with the
-     * thread-local context. Take ownership of the thread-local context
-     * reference (if any), clearing the storage to null.
+    /* Take ownership of the thread-local context reference (if any), clearing
+     * the storage to null.
      */
     ctx = ContextRef{ALCcontext::getThreadContext()};
     if(ctx) ALCcontext::setThreadContext(nullptr);

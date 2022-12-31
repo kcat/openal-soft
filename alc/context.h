@@ -148,6 +148,7 @@ struct ALCcontext : public al::intrusive_ref<ALCcontext>, ContextBase {
     void setError(ALenum errorCode, const char *msg, ...);
 
     /* Process-wide current context */
+    static std::atomic<bool> sGlobalContextLock;
     static std::atomic<ALCcontext*> sGlobalContext;
 
 private:

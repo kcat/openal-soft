@@ -84,6 +84,7 @@ constexpr ALchar alExtList[] =
 } // namespace
 
 
+std::atomic<bool> ALCcontext::sGlobalContextLock{false};
 std::atomic<ALCcontext*> ALCcontext::sGlobalContext{nullptr};
 
 thread_local ALCcontext *ALCcontext::sLocalContext{nullptr};
@@ -203,7 +204,14 @@ bool ALCcontext::deinit()
 
     ALCcontext *origctx{this};
     if(sGlobalContext.compare_exchange_strong(origctx, nullptr))
+    {
+        while(sGlobalContextLock.load()) {
+            /* Wait to make sure another thread didn't get the context and is
+             * trying to increment its refcount.
+             */
+        }
         dec_ref();
+    }
 
     bool ret{};
     /* First make sure this context exists in the device's list. */

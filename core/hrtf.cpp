@@ -180,8 +180,8 @@ struct IdxBlend { uint idx; float blend; };
  */
 IdxBlend CalcEvIndex(uint evcount, float ev)
 {
-    ev = (al::numbers::pi_v<float>*0.5f + ev) * static_cast<float>(evcount-1) /
-        al::numbers::pi_v<float>;
+    ev = (al::numbers::pi_v<float>*0.5f + ev) * static_cast<float>(evcount-1) *
+        al::numbers::inv_pi_v<float>;
     uint idx{float2uint(ev)};
 
     return IdxBlend{minu(idx, evcount-1), ev-static_cast<float>(idx)};
@@ -192,8 +192,8 @@ IdxBlend CalcEvIndex(uint evcount, float ev)
  */
 IdxBlend CalcAzIndex(uint azcount, float az)
 {
-    az = (al::numbers::pi_v<float>*2.0f + az) * static_cast<float>(azcount) /
-        (al::numbers::pi_v<float>*2.0f);
+    az = (al::numbers::pi_v<float>*2.0f + az) * static_cast<float>(azcount) *
+        (al::numbers::inv_pi_v<float>*0.5f);
     uint idx{float2uint(az)};
 
     return IdxBlend{idx%azcount, az-static_cast<float>(idx)};

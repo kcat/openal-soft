@@ -72,7 +72,7 @@ namespace {
  */
 
 
-void LoadSamples(double *RESTRICT dst, const al::byte *src, const size_t srcstep, FmtType srctype,
+void LoadSamples(float *RESTRICT dst, const al::byte *src, const size_t srcstep, FmtType srctype,
     const size_t samples) noexcept
 {
 #define HANDLE_FMT(T)  case T: al::LoadSampleArray<T>(dst, src, srcstep, samples); break
@@ -194,7 +194,7 @@ struct ConvolutionState final : public EffectState {
 
     struct ChannelData {
         alignas(16) FloatBufferLine mBuffer{};
-        float mHfScale{};
+        float mHfScale{}, mLfScale{};
         BandSplitter mFilter{};
         float Current[MAX_OUTPUT_CHANNELS]{};
         float Target[MAX_OUTPUT_CHANNELS]{};
@@ -235,7 +235,7 @@ void ConvolutionState::UpsampleMix(const al::span<FloatBufferLine> samplesOut,
     for(auto &chan : *mChans)
     {
         const al::span<float> src{chan.mBuffer.data(), samplesToDo};
-        chan.mFilter.processHfScale(src, chan.mHfScale);
+        chan.mFilter.processScale(src, chan.mHfScale, chan.mLfScale);
         MixSamples(src, samplesOut, chan.Current, chan.Target, samplesToDo, 0);
     }
 }
@@ -243,6 +243,9 @@ void ConvolutionState::UpsampleMix(const al::span<FloatBufferLine> samplesOut,
 
 void ConvolutionState::deviceUpdate(const DeviceBase *device, const Buffer &buffer)
 {
+    using UhjDecoderType = UhjDecoder<512>;
+    static constexpr auto DecoderPadding = UhjDecoderType::sInputPadding;
+
     constexpr uint MaxConvolveAmbiOrder{1u};
 
     mFifoPos = 0;
@@ -260,17 +263,21 @@ void ConvolutionState::deviceUpdate(const DeviceBase *device, const Buffer &buff
     /* An empty buffer doesn't need a convolution filter. */
     if(!buffer.storage || buffer.storage->mSampleLen < 1) return;
 
+    mChannels = buffer.storage->mChannels;
+    mAmbiLayout = IsUHJ(mChannels) ? AmbiLayout::FuMa : buffer.storage->mAmbiLayout;
+    mAmbiScaling = IsUHJ(mChannels) ? AmbiScaling::UHJ : buffer.storage->mAmbiScaling;
+    mAmbiOrder = minu(buffer.storage->mAmbiOrder, MaxConvolveAmbiOrder);
+
     constexpr size_t m{ConvolveUpdateSize/2 + 1};
-    auto bytesPerSample = BytesFromFmt(buffer.storage->mType);
-    auto realChannels = ChannelsFromFmt(buffer.storage->mChannels, buffer.storage->mAmbiOrder);
-    auto numChannels = ChannelsFromFmt(buffer.storage->mChannels,
-        minu(buffer.storage->mAmbiOrder, MaxConvolveAmbiOrder));
+    const auto bytesPerSample = BytesFromFmt(buffer.storage->mType);
+    const auto realChannels = buffer.storage->channelsFromFmt();
+    const auto numChannels = (mChannels == FmtUHJ2) ? 3u : ChannelsFromFmt(mChannels, mAmbiOrder);
 
     mChans = ChannelDataArray::Create(numChannels);
 
     /* The impulse response needs to have the same sample rate as the input and
      * output. The bsinc24 resampler is decent, but there is high-frequency
-     * attenation that some people may be able to pick up on. Since this is
+     * attenuation that some people may be able to pick up on. Since this is
      * called very infrequently, go ahead and use the polyphase resampler.
      */
     PPhaseResampler resampler;
@@ -299,27 +306,46 @@ void ConvolutionState::deviceUpdate(const DeviceBase *device, const Buffer &buff
     mComplexData = std::make_unique<complex_f[]>(complex_length);
     std::fill_n(mComplexData.get(), complex_length, complex_f{});
 
-    mChannels = buffer.storage->mChannels;
-    mAmbiLayout = buffer.storage->mAmbiLayout;
-    mAmbiScaling = buffer.storage->mAmbiScaling;
-    mAmbiOrder = minu(buffer.storage->mAmbiOrder, MaxConvolveAmbiOrder);
+    /* Load the samples from the buffer. */
+    const size_t srclinelength{RoundUp(buffer.storage->mSampleLen+DecoderPadding, 16)};
+    auto srcsamples = std::make_unique<float[]>(srclinelength * numChannels);
+    std::fill_n(srcsamples.get(), srclinelength * numChannels, 0.0f);
+    for(size_t c{0};c < numChannels && c < realChannels;++c)
+        LoadSamples(srcsamples.get() + srclinelength*c, buffer.samples.data() + bytesPerSample*c,
+            realChannels, buffer.storage->mType, buffer.storage->mSampleLen);
 
-    auto srcsamples = std::make_unique<double[]>(maxz(buffer.storage->mSampleLen, resampledCount));
+    if(IsUHJ(mChannels))
+    {
+        auto decoder = std::make_unique<UhjDecoderType>();
+        std::array<float*,4> samples{};
+        for(size_t c{0};c < numChannels;++c)
+            samples[c] = srcsamples.get() + srclinelength*c;
+        decoder->decode({samples.data(), numChannels}, buffer.storage->mSampleLen,
+            buffer.storage->mSampleLen);
+    }
+
+    auto ressamples = std::make_unique<double[]>(buffer.storage->mSampleLen +
+        (resampler ? resampledCount : 0));
     complex_f *filteriter = mComplexData.get() + mNumConvolveSegs*m;
     for(size_t c{0};c < numChannels;++c)
     {
-        /* Load the samples from the buffer, and resample to match the device. */
-        LoadSamples(srcsamples.get(), buffer.samples.data() + bytesPerSample*c, realChannels,
-            buffer.storage->mType, buffer.storage->mSampleLen);
-        if(device->Frequency != buffer.storage->mSampleRate)
-            resampler.process(buffer.storage->mSampleLen, srcsamples.get(), resampledCount,
-                srcsamples.get());
+        /* Resample to match the device. */
+        if(resampler)
+        {
+            std::copy_n(srcsamples.get() + srclinelength*c, buffer.storage->mSampleLen,
+                ressamples.get() + resampledCount);
+            resampler.process(buffer.storage->mSampleLen, ressamples.get()+resampledCount,
+                resampledCount, ressamples.get());
+        }
+        else
+            std::copy_n(srcsamples.get() + srclinelength*c, buffer.storage->mSampleLen,
+                ressamples.get());
 
         /* Store the first segment's samples in reverse in the time-domain, to
          * apply as a FIR filter.
          */
         const size_t first_size{minz(resampledCount, ConvolveUpdateSamples)};
-        std::transform(srcsamples.get(), srcsamples.get()+first_size, mFilter[c].rbegin(),
+        std::transform(ressamples.get(), ressamples.get()+first_size, mFilter[c].rbegin(),
             [](const double d) noexcept -> float { return static_cast<float>(d); });
 
         auto fftbuffer = std::vector<std::complex<double>>(ConvolveUpdateSize);
@@ -328,7 +354,7 @@ void ConvolutionState::deviceUpdate(const DeviceBase *device, const Buffer &buff
         {
             const size_t todo{minz(resampledCount-done, ConvolveUpdateSamples)};
 
-            auto iter = std::copy_n(&srcsamples[done], todo, fftbuffer.begin());
+            auto iter = std::copy_n(&ressamples[done], todo, fftbuffer.begin());
             done += todo;
             std::fill(iter, fftbuffer.end(), std::complex<double>{});
 
@@ -389,7 +415,7 @@ void ConvolutionState::update(const ContextBase *context, const EffectSlot *slot
         { SideRight,   Deg2Rad(  90.0f), Deg2Rad(0.0f) }
     };
 
-    if(mNumConvolveSegs < 1)
+    if(mNumConvolveSegs < 1) [[unlikely]]
         return;
 
     mMix = &ConvolutionState::NormalMix;
@@ -397,40 +423,36 @@ void ConvolutionState::update(const ContextBase *context, const EffectSlot *slot
     for(auto &chan : *mChans)
         std::fill(std::begin(chan.Target), std::end(chan.Target), 0.0f);
     const float gain{slot->Gain};
-    /* TODO: UHJ should be decoded to B-Format and processed that way, since
-     * there's no telling if it can ever do a direct-out mix (even if the
-     * device is outputing UHJ, the effect slot can feed another effect that's
-     * not UHJ).
-     *
-     * Not that UHJ should really ever be used for convolution, but it's a
-     * valid format regardless.
-     */
-    if((mChannels == FmtUHJ2 || mChannels == FmtUHJ3 || mChannels == FmtUHJ4) && target.RealOut
-        && target.RealOut->ChannelIndex[FrontLeft] != INVALID_CHANNEL_INDEX
-        && target.RealOut->ChannelIndex[FrontRight] != INVALID_CHANNEL_INDEX)
-    {
-        mOutTarget = target.RealOut->Buffer;
-        const uint lidx = target.RealOut->ChannelIndex[FrontLeft];
-        const uint ridx = target.RealOut->ChannelIndex[FrontRight];
-        (*mChans)[0].Target[lidx] = gain;
-        (*mChans)[1].Target[ridx] = gain;
-    }
-    else if(IsBFormat(mChannels))
+    if(IsAmbisonic(mChannels))
     {
         DeviceBase *device{context->mDevice};
-        if(device->mAmbiOrder > mAmbiOrder)
+        if(mChannels == FmtUHJ2 && !device->mUhjEncoder)
+        {
+            mMix = &ConvolutionState::UpsampleMix;
+            (*mChans)[0].mHfScale = 1.0f;
+            (*mChans)[0].mLfScale = DecoderBase::sWLFScale;
+            (*mChans)[1].mHfScale = 1.0f;
+            (*mChans)[1].mLfScale = DecoderBase::sXYLFScale;
+            (*mChans)[2].mHfScale = 1.0f;
+            (*mChans)[2].mLfScale = DecoderBase::sXYLFScale;
+        }
+        else if(device->mAmbiOrder > mAmbiOrder)
         {
             mMix = &ConvolutionState::UpsampleMix;
             const auto scales = AmbiScale::GetHFOrderScales(mAmbiOrder, device->mAmbiOrder,
                 device->m2DMixing);
             (*mChans)[0].mHfScale = scales[0];
+            (*mChans)[0].mLfScale = 1.0f;
             for(size_t i{1};i < mChans->size();++i)
+            {
                 (*mChans)[i].mHfScale = scales[1];
+                (*mChans)[i].mLfScale = 1.0f;
+            }
         }
         mOutTarget = target.Main->Buffer;
 
         auto&& scales = GetAmbiScales(mAmbiScaling);
-        const uint8_t *index_map{(mChannels == FmtBFormat2D) ?
+        const uint8_t *index_map{Is2DAmbisonic(mChannels) ?
             GetAmbi2DLayout(mAmbiLayout).data() :
             GetAmbiLayout(mAmbiLayout).data()};
 
@@ -497,7 +519,7 @@ void ConvolutionState::update(const ContextBase *context, const EffectSlot *slot
 void ConvolutionState::process(const size_t samplesToDo,
     const al::span<const FloatBufferLine> samplesIn, const al::span<FloatBufferLine> samplesOut)
 {
-    if(mNumConvolveSegs < 1)
+    if(mNumConvolveSegs < 1) [[unlikely]]
         return;
 
     constexpr size_t m{ConvolveUpdateSize/2 + 1};

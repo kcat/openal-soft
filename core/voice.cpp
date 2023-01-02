@@ -951,8 +951,7 @@ void Voice::prepare(DeviceBase *device)
          * use different shelf filters after mixing it, given any old speaker
          * setup the user has. To make this work, we apply the expected shelf
          * filters for decoding UHJ2 to quad (only needs LF scaling), and act
-         * as if those 4 quad channels are encoded right back onto higher-order
-         * B-Format.
+         * as if those 4 quad channels are encoded right back into B-Format.
          *
          * This isn't perfect, but without an entirely separate and limited
          * UHJ2 path, it's better than nothing.

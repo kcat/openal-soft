@@ -140,7 +140,7 @@ const EffectPropsItem *getEffectPropsItemByType(ALenum type)
     auto iter = std::find_if(std::begin(EffectPropsList), std::end(EffectPropsList),
         [type](const EffectPropsItem &item) noexcept -> bool
         { return item.Type == type; });
-    return (iter != std::end(EffectPropsList)) ? std::addressof(*iter) : nullptr;
+    return (iter != std::end(EffectPropsList)) ? al::to_address(iter) : nullptr;
 }
 
 void InitEffectParams(ALeffect *effect, ALenum type)

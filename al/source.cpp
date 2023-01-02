@@ -257,7 +257,7 @@ double GetSourceSecOffset(ALsource *Source, ALCcontext *context, nanoseconds *cl
 
     const ALbuffer *BufferFmt{nullptr};
     auto BufferList = Source->mQueue.cbegin();
-    while(BufferList != Source->mQueue.cend() && std::addressof(*BufferList) != Current)
+    while(BufferList != Source->mQueue.cend() && al::to_address(BufferList) != Current)
     {
         if(!BufferFmt) BufferFmt = BufferList->mBuffer;
         readPos += int64_t{BufferList->mSampleLen} << MixerFracBits;
@@ -306,7 +306,7 @@ double GetSourceOffset(ALsource *Source, ALenum name, ALCcontext *context)
 
     const ALbuffer *BufferFmt{nullptr};
     auto BufferList = Source->mQueue.cbegin();
-    while(BufferList != Source->mQueue.cend() && std::addressof(*BufferList) != Current)
+    while(BufferList != Source->mQueue.cend() && al::to_address(BufferList) != Current)
     {
         if(!BufferFmt) BufferFmt = BufferList->mBuffer;
         readPos += BufferList->mSampleLen;
@@ -3674,7 +3674,7 @@ START_API_FUNC
     if(NewListStart != 0)
     {
         auto iter = source->mQueue.begin() + ptrdiff_t(NewListStart);
-        (iter-1)->mNext.store(std::addressof(*iter), std::memory_order_release);
+        (iter-1)->mNext.store(al::to_address(iter), std::memory_order_release);
     }
 }
 END_API_FUNC

@@ -367,7 +367,7 @@ using PwStreamPtr = std::unique_ptr<pw_stream,PwStreamDeleter>;
 
 /* Enums for bitflags... again... *sigh* */
 constexpr pw_stream_flags operator|(pw_stream_flags lhs, pw_stream_flags rhs) noexcept
-{ return static_cast<pw_stream_flags>(lhs | std::underlying_type_t<pw_stream_flags>{rhs}); }
+{ return static_cast<pw_stream_flags>(lhs | al::to_underlying(rhs)); }
 
 class ThreadMainloop {
     pw_thread_loop *mLoop{};
@@ -608,7 +608,7 @@ DeviceNode *DeviceNode::Find(uint32_t id)
     { return n.mId == id; };
 
     auto match = std::find_if(sList.begin(), sList.end(), match_id);
-    if(match != sList.end()) return std::addressof(*match);
+    if(match != sList.end()) return al::to_address(match);
 
     return nullptr;
 }
@@ -862,10 +862,8 @@ void NodeProxy::infoCallback(const pw_node_info *info)
         NodeType ntype{};
         if(al::strcasecmp(media_class, AudioSinkClass) == 0)
             ntype = NodeType::Sink;
-        else if(
-            al::strcasecmp(media_class, AudioSourceClass) == 0
-            || al::strcasecmp(media_class, AudioSourceVirtualClass) == 0
-        )
+        else if(al::strcasecmp(media_class, AudioSourceClass) == 0
+            || al::strcasecmp(media_class, AudioSourceVirtualClass) == 0)
             ntype = NodeType::Source;
         else if(al::strcasecmp(media_class, AudioDuplexClass) == 0)
             ntype = NodeType::Duplex;

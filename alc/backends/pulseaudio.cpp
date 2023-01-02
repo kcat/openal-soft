@@ -247,22 +247,26 @@ constexpr pa_channel_map MonoChanMap{
 
 
 /* *grumble* Don't use enums for bitflags. */
-constexpr inline pa_stream_flags_t operator|(pa_stream_flags_t lhs, pa_stream_flags_t rhs)
-{ return pa_stream_flags_t(int(lhs) | int(rhs)); }
-inline pa_stream_flags_t& operator|=(pa_stream_flags_t &lhs, pa_stream_flags_t rhs)
+constexpr pa_stream_flags_t operator|(pa_stream_flags_t lhs, pa_stream_flags_t rhs)
+{ return pa_stream_flags_t(lhs | al::to_underlying(rhs)); }
+constexpr pa_stream_flags_t& operator|=(pa_stream_flags_t &lhs, pa_stream_flags_t rhs)
 {
     lhs = lhs | rhs;
     return lhs;
 }
-inline pa_stream_flags_t& operator&=(pa_stream_flags_t &lhs, int rhs)
+constexpr pa_stream_flags_t operator~(pa_stream_flags_t flag)
+{ return pa_stream_flags_t(~al::to_underlying(flag)); }
+constexpr pa_stream_flags_t& operator&=(pa_stream_flags_t &lhs, pa_stream_flags_t rhs)
 {
-    lhs = pa_stream_flags_t(int(lhs) & rhs);
+    lhs = pa_stream_flags_t(al::to_underlying(lhs) & rhs);
     return lhs;
 }
 
-inline pa_context_flags_t& operator|=(pa_context_flags_t &lhs, pa_context_flags_t rhs)
+constexpr pa_context_flags_t operator|(pa_context_flags_t lhs, pa_context_flags_t rhs)
+{ return pa_context_flags_t(lhs | al::to_underlying(rhs)); }
+constexpr pa_context_flags_t& operator|=(pa_context_flags_t &lhs, pa_context_flags_t rhs)
 {
-    lhs = pa_context_flags_t(int(lhs) | int(rhs));
+    lhs = lhs | rhs;
     return lhs;
 }
 

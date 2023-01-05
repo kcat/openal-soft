@@ -13,11 +13,17 @@
 
 struct MixParams;
 
-using MixerFunc = void(*)(const al::span<const float> InSamples,
+/* Mixer functions that handle one input and multiple output channels. */
+using MixerOutFunc = void(*)(const al::span<const float> InSamples,
     const al::span<FloatBufferLine> OutBuffer, float *CurrentGains, const float *TargetGains,
     const size_t Counter, const size_t OutPos);
 
-extern MixerFunc MixSamples;
+extern MixerOutFunc MixSamplesOut;
+inline void MixSamples(const al::span<const float> InSamples,
+    const al::span<FloatBufferLine> OutBuffer, float *CurrentGains, const float *TargetGains,
+    const size_t Counter, const size_t OutPos)
+{ MixSamplesOut(InSamples, OutBuffer, CurrentGains, TargetGains, Counter, OutPos); }
+
 
 
 /**

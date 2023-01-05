@@ -71,7 +71,7 @@ using HrtfMixerBlendFunc = void(*)(const float *InSamples, float2 *AccumSamples,
 HrtfMixerFunc MixHrtfSamples{MixHrtf_<CTag>};
 HrtfMixerBlendFunc MixHrtfBlendSamples{MixHrtfBlend_<CTag>};
 
-inline MixerFunc SelectMixer()
+inline MixerOutFunc SelectMixer()
 {
 #ifdef HAVE_NEON
     if((CPUCapFlags&CPU_CAP_NEON))
@@ -152,7 +152,7 @@ void Voice::InitMixer(al::optional<std::string> resampler)
             ResamplerDefault = iter->resampler;
     }
 
-    MixSamples = SelectMixer();
+    MixSamplesOut = SelectMixer();
     MixHrtfBlendSamples = SelectHrtfBlendMixer();
     MixHrtfSamples = SelectHrtfMixer();
 }

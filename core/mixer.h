@@ -92,22 +92,4 @@ inline std::array<float,MaxAmbiChannels> CalcAngleCoeffs(const float azimuth,
 void ComputePanGains(const MixParams *mix, const float*RESTRICT coeffs, const float ingain,
     const al::span<float,MaxAmbiChannels> gains);
 
-
-/** Helper to set an identity/pass-through panning for ambisonic mixing (3D input). */
-template<typename T, typename I, typename F>
-auto SetAmbiPanIdentity(T iter, I count, F func) -> std::enable_if_t<std::is_integral<I>::value>
-{
-    if(count < 1) return;
-
-    std::array<float,MaxAmbiChannels> coeffs{{1.0f}};
-    func(*iter, coeffs);
-    ++iter;
-    for(I i{1};i < count;++i,++iter)
-    {
-        coeffs[i-1] = 0.0f;
-        coeffs[i  ] = 1.0f;
-        func(*iter, coeffs);
-    }
-}
-
 #endif /* CORE_MIXER_H */

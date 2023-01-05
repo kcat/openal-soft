@@ -95,6 +95,8 @@ struct DistanceComp {
 };
 
 
+#define INVALID_CHANNEL_INDEX ~0u
+
 struct BFChannelConfig {
     float Scale;
     uint Index;
@@ -105,6 +107,37 @@ struct MixParams {
     std::array<BFChannelConfig,MaxAmbiChannels> AmbiMap{};
 
     al::span<FloatBufferLine> Buffer;
+
+    /**
+     * Helper to set an identity/pass-through panning for ambisonic mixing. The
+     * source is expected to be a 3D ACN/N3D ambisonic buffer, and for each
+     * channel [0...count), the given functor is called with the source channel
+     * index, destination channel index, and the gain for that channel. If the
+     * destination channel is INVALID_CHANNEL_INDEX, the given source channel
+     * is not used for output.
+     */
+    template<typename F>
+    void setAmbiMixParams(const MixParams &inmix, const float gainbase, F func) const
+    {
+        const size_t numIn{inmix.Buffer.size()};
+        const size_t numOut{Buffer.size()};
+        for(size_t i{0};i < numIn;++i)
+        {
+            auto idx = INVALID_CHANNEL_INDEX;
+            auto gain = 0.0f;
+
+            for(size_t j{0};j < numOut;++j)
+            {
+                if(AmbiMap[j].Index == inmix.AmbiMap[i].Index)
+                {
+                    idx = static_cast<uint>(j);
+                    gain = AmbiMap[j].Scale * gainbase;
+                    break;
+                }
+            }
+            func(i, idx, gain);
+        }
+    }
 };
 
 struct RealMixParams {
@@ -303,13 +336,10 @@ private:
     uint renderSamples(const uint numSamples);
 };
 
-
 /* Must be less than 15 characters (16 including terminating null) for
  * compatibility with pthread_setname_np limitations. */
 #define MIXER_THREAD_NAME "alsoft-mixer"
 
 #define RECORD_THREAD_NAME "alsoft-record"
-
-#define INVALID_CHANNEL_INDEX ~0u
 
 #endif /* CORE_DEVICE_H */

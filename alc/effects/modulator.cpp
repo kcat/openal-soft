@@ -168,8 +168,8 @@ void ModulatorState::process(const size_t samplesToDo, const al::span<const Floa
                 for(size_t i{0u};i < td;i++)
                     temps[i] *= modsamples[i];
 
-                MixSamples({temps, td}, {&samplesOut[outidx], 1}, &chandata->mCurrentGain,
-                    &chandata->mTargetGain, samplesToDo-base, base);
+                MixSamples({temps, td}, samplesOut[outidx].data()+base, chandata->mCurrentGain,
+                    chandata->mTargetGain, samplesToDo-base);
             }
             ++chandata;
         }

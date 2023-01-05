@@ -326,8 +326,8 @@ void VmorpherState::process(const size_t samplesToDo, const al::span<const Float
                 blended[i] = lerpf(mSampleBufferA[i], mSampleBufferB[i], mLfo[i]);
 
             /* Now, mix the processed sound data to the output. */
-            MixSamples({blended, td}, {&samplesOut[outidx], 1}, &chandata->mCurrentGain,
-                &chandata->mTargetGain, samplesToDo-base, base);
+            MixSamples({blended, td}, samplesOut[outidx].data()+base, chandata->mCurrentGain,
+                chandata->mTargetGain, samplesToDo-base);
             ++chandata;
         }
 

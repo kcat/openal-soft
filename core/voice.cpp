@@ -84,6 +84,19 @@ inline MixerOutFunc SelectMixer()
     return Mix_<CTag>;
 }
 
+inline MixerOneFunc SelectMixerOne()
+{
+#ifdef HAVE_NEON
+    if((CPUCapFlags&CPU_CAP_NEON))
+        return Mix_<NEONTag>;
+#endif
+#ifdef HAVE_SSE
+    if((CPUCapFlags&CPU_CAP_SSE))
+        return Mix_<SSETag>;
+#endif
+    return Mix_<CTag>;
+}
+
 inline HrtfMixerFunc SelectHrtfMixer()
 {
 #ifdef HAVE_NEON
@@ -153,6 +166,7 @@ void Voice::InitMixer(al::optional<std::string> resampler)
     }
 
     MixSamplesOut = SelectMixer();
+    MixSamplesOne = SelectMixerOne();
     MixHrtfBlendSamples = SelectHrtfBlendMixer();
     MixHrtfSamples = SelectHrtfMixer();
 }

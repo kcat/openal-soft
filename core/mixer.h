@@ -24,6 +24,14 @@ inline void MixSamples(const al::span<const float> InSamples,
     const size_t Counter, const size_t OutPos)
 { MixSamplesOut(InSamples, OutBuffer, CurrentGains, TargetGains, Counter, OutPos); }
 
+/* Mixer functions that handle one input and one output channel. */
+using MixerOneFunc = void(*)(const al::span<const float> InSamples, float *OutBuffer,
+    float &CurrentGain, const float TargetGain, const size_t Counter);
+
+extern MixerOneFunc MixSamplesOne;
+inline void MixSamples(const al::span<const float> InSamples, float *OutBuffer, float &CurrentGain,
+    const float TargetGain, const size_t Counter)
+{ MixSamplesOne(InSamples, OutBuffer, CurrentGain, TargetGain, Counter); }
 
 
 /**

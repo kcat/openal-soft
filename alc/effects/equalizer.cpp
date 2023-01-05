@@ -182,8 +182,8 @@ void EqualizerState::process(const size_t samplesToDo, const al::span<const Floa
             DualBiquad{chan->mFilter[0], chan->mFilter[1]}.process(inbuf, buffer.begin());
             DualBiquad{chan->mFilter[2], chan->mFilter[3]}.process(buffer, buffer.begin());
 
-            MixSamples(buffer, {&samplesOut[outidx], 1}, &chan->mCurrentGain, &chan->mTargetGain,
-                samplesToDo, 0u);
+            MixSamples(buffer, samplesOut[outidx].data(), chan->mCurrentGain, chan->mTargetGain,
+                samplesToDo);
         }
         ++chan;
     }

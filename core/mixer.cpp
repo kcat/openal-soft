@@ -14,6 +14,7 @@ struct CTag;
 
 
 MixerOutFunc MixSamplesOut{Mix_<CTag>};
+MixerOneFunc MixSamplesOne{Mix_<CTag>};
 
 
 std::array<float,MaxAmbiChannels> CalcAmbiCoeffs(const float y, const float z, const float x,

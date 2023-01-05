@@ -198,3 +198,38 @@ void Mix_<CTag>(const al::span<const float> InSamples, const al::span<FloatBuffe
             dst[pos] += InSamples[pos] * gain;
     }
 }
+
+template<>
+void Mix_<CTag>(const al::span<const float> InSamples, float *OutBuffer, float &CurrentGain,
+    const float TargetGain, const size_t Counter)
+{
+    const float delta{(Counter > 0) ? 1.0f / static_cast<float>(Counter) : 0.0f};
+    const auto min_len = minz(Counter, InSamples.size());
+
+    float *RESTRICT dst{al::assume_aligned<16>(OutBuffer)};
+    float gain{CurrentGain};
+    const float step{(TargetGain-gain) * delta};
+
+    size_t pos{0};
+    if(!(std::abs(step) > std::numeric_limits<float>::epsilon()))
+        gain = TargetGain;
+    else
+    {
+        float step_count{0.0f};
+        for(;pos != min_len;++pos)
+        {
+            dst[pos] += InSamples[pos] * (gain + step*step_count);
+            step_count += 1.0f;
+        }
+        if(pos == Counter)
+            gain = TargetGain;
+        else
+            gain += step*step_count;
+    }
+    CurrentGain = gain;
+
+    if(!(std::abs(gain) > GainSilenceThreshold))
+        return;
+    for(;pos != InSamples.size();++pos)
+        dst[pos] += InSamples[pos] * gain;
+}

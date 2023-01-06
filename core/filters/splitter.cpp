@@ -160,17 +160,18 @@ void BandSplitterR<Real>::processScale(const al::span<Real> samples, const Real 
 }
 
 template<typename Real>
-void BandSplitterR<Real>::applyAllpassRev(const al::span<Real> samples) const
+void BandSplitterR<Real>::processAllPass(const al::span<Real> samples)
 {
     const Real coeff{mCoeff};
-    Real z1{0.0f};
+    Real z1{mApZ1};
     auto proc_sample = [coeff,&z1](const Real in) noexcept -> Real
     {
         const Real out{in*coeff + z1};
         z1 = in - out*coeff;
         return out;
     };
-    std::transform(samples.rbegin(), samples.rend(), samples.rbegin(), proc_sample);
+    std::transform(samples.cbegin(), samples.cend(), samples.begin(), proc_sample);
+    mApZ1 = z1;
 }
 
 

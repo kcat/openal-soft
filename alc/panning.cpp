@@ -116,13 +116,13 @@ inline const char *GetLabelFromChannel(Channel channel)
 std::unique_ptr<FrontStablizer> CreateStablizer(const size_t outchans, const uint srate)
 {
     auto stablizer = FrontStablizer::Create(outchans);
-    for(auto &buf : stablizer->DelayBuf)
-        std::fill(buf.begin(), buf.end(), 0.0f);
 
     /* Initialize band-splitting filter for the mid signal, with a crossover at
      * 5khz (could be higher).
      */
     stablizer->MidFilter.init(5000.0f / static_cast<float>(srate));
+    for(auto &filter : stablizer->ChannelFilters)
+        filter = stablizer->MidFilter;
 
     return stablizer;
 }

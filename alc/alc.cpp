@@ -2152,11 +2152,6 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
     nanoseconds::rep sample_delay{0};
     if(auto *encoder{device->mUhjEncoder.get()})
         sample_delay += encoder->getDelay();
-    if(auto *ambidec = device->AmbiDecoder.get())
-    {
-        if(ambidec->hasStablizer())
-            sample_delay += FrontStablizer::DelayLength;
-    }
 
     if(device->getConfigValueBool(nullptr, "dither", true))
     {

@@ -56,6 +56,78 @@ inline void ApplyCoeffs(float2 *RESTRICT Values, const size_t IrSize, const Cons
     }
 }
 
+inline void MixLine(const al::span<const float> InSamples, float *RESTRICT dst, float &CurrentGain,
+    const float TargetGain, const float delta, const size_t min_len, const size_t aligned_len,
+    size_t Counter)
+{
+    float gain{CurrentGain};
+    const float step{(TargetGain-gain) * delta};
+
+    size_t pos{0};
+    if(!(std::abs(step) > std::numeric_limits<float>::epsilon()))
+        gain = TargetGain;
+    else
+    {
+        float step_count{0.0f};
+        /* Mix with applying gain steps in aligned multiples of 4. */
+        if(size_t todo{min_len >> 2})
+        {
+            const float32x4_t four4{vdupq_n_f32(4.0f)};
+            const float32x4_t step4{vdupq_n_f32(step)};
+            const float32x4_t gain4{vdupq_n_f32(gain)};
+            float32x4_t step_count4{vdupq_n_f32(0.0f)};
+            step_count4 = vsetq_lane_f32(1.0f, step_count4, 1);
+            step_count4 = vsetq_lane_f32(2.0f, step_count4, 2);
+            step_count4 = vsetq_lane_f32(3.0f, step_count4, 3);
+
+            do {
+                const float32x4_t val4 = vld1q_f32(&InSamples[pos]);
+                float32x4_t dry4 = vld1q_f32(&dst[pos]);
+                dry4 = vmlaq_f32(dry4, val4, vmlaq_f32(gain4, step4, step_count4));
+                step_count4 = vaddq_f32(step_count4, four4);
+                vst1q_f32(&dst[pos], dry4);
+                pos += 4;
+            } while(--todo);
+            /* NOTE: step_count4 now represents the next four counts after the
+             * last four mixed samples, so the lowest element represents the
+             * next step count to apply.
+             */
+            step_count = vgetq_lane_f32(step_count4, 0);
+        }
+        /* Mix with applying left over gain steps that aren't aligned multiples of 4. */
+        for(size_t leftover{min_len&3};leftover;++pos,--leftover)
+        {
+            dst[pos] += InSamples[pos] * (gain + step*step_count);
+            step_count += 1.0f;
+        }
+        if(pos == Counter)
+            gain = TargetGain;
+        else
+            gain += step*step_count;
+
+        /* Mix until pos is aligned with 4 or the mix is done. */
+        for(size_t leftover{aligned_len&3};leftover;++pos,--leftover)
+            dst[pos] += InSamples[pos] * gain;
+    }
+    CurrentGain = gain;
+
+    if(!(std::abs(gain) > GainSilenceThreshold))
+        return;
+    if(size_t todo{(InSamples.size()-pos) >> 2})
+    {
+        const float32x4_t gain4 = vdupq_n_f32(gain);
+        do {
+            const float32x4_t val4 = vld1q_f32(&InSamples[pos]);
+            float32x4_t dry4 = vld1q_f32(&dst[pos]);
+            dry4 = vmlaq_f32(dry4, val4, gain4);
+            vst1q_f32(&dst[pos], dry4);
+            pos += 4;
+        } while(--todo);
+    }
+    for(size_t leftover{(InSamples.size()-pos)&3};leftover;++pos,--leftover)
+        dst[pos] += InSamples[pos] * gain;
+}
+
 } // namespace
 
 template<>
@@ -233,77 +305,8 @@ void Mix_<NEONTag>(const al::span<const float> InSamples, const al::span<FloatBu
     const auto aligned_len = minz((min_len+3) & ~size_t{3}, InSamples.size()) - min_len;
 
     for(FloatBufferLine &output : OutBuffer)
-    {
-        float *RESTRICT dst{al::assume_aligned<16>(output.data()+OutPos)};
-        float gain{*CurrentGains};
-        const float step{(*TargetGains-gain) * delta};
-
-        size_t pos{0};
-        if(!(std::abs(step) > std::numeric_limits<float>::epsilon()))
-            gain = *TargetGains;
-        else
-        {
-            float step_count{0.0f};
-            /* Mix with applying gain steps in aligned multiples of 4. */
-            if(size_t todo{min_len >> 2})
-            {
-                const float32x4_t four4{vdupq_n_f32(4.0f)};
-                const float32x4_t step4{vdupq_n_f32(step)};
-                const float32x4_t gain4{vdupq_n_f32(gain)};
-                float32x4_t step_count4{vdupq_n_f32(0.0f)};
-                step_count4 = vsetq_lane_f32(1.0f, step_count4, 1);
-                step_count4 = vsetq_lane_f32(2.0f, step_count4, 2);
-                step_count4 = vsetq_lane_f32(3.0f, step_count4, 3);
-
-                do {
-                    const float32x4_t val4 = vld1q_f32(&InSamples[pos]);
-                    float32x4_t dry4 = vld1q_f32(&dst[pos]);
-                    dry4 = vmlaq_f32(dry4, val4, vmlaq_f32(gain4, step4, step_count4));
-                    step_count4 = vaddq_f32(step_count4, four4);
-                    vst1q_f32(&dst[pos], dry4);
-                    pos += 4;
-                } while(--todo);
-                /* NOTE: step_count4 now represents the next four counts after
-                 * the last four mixed samples, so the lowest element
-                 * represents the next step count to apply.
-                 */
-                step_count = vgetq_lane_f32(step_count4, 0);
-            }
-            /* Mix with applying left over gain steps that aren't aligned multiples of 4. */
-            for(size_t leftover{min_len&3};leftover;++pos,--leftover)
-            {
-                dst[pos] += InSamples[pos] * (gain + step*step_count);
-                step_count += 1.0f;
-            }
-            if(pos == Counter)
-                gain = *TargetGains;
-            else
-                gain += step*step_count;
-
-            /* Mix until pos is aligned with 4 or the mix is done. */
-            for(size_t leftover{aligned_len&3};leftover;++pos,--leftover)
-                dst[pos] += InSamples[pos] * gain;
-        }
-        *CurrentGains = gain;
-        ++CurrentGains;
-        ++TargetGains;
-
-        if(!(std::abs(gain) > GainSilenceThreshold))
-            continue;
-        if(size_t todo{(InSamples.size()-pos) >> 2})
-        {
-            const float32x4_t gain4 = vdupq_n_f32(gain);
-            do {
-                const float32x4_t val4 = vld1q_f32(&InSamples[pos]);
-                float32x4_t dry4 = vld1q_f32(&dst[pos]);
-                dry4 = vmlaq_f32(dry4, val4, gain4);
-                vst1q_f32(&dst[pos], dry4);
-                pos += 4;
-            } while(--todo);
-        }
-        for(size_t leftover{(InSamples.size()-pos)&3};leftover;++pos,--leftover)
-            dst[pos] += InSamples[pos] * gain;
-    }
+        MixLine(InSamples, al::assume_aligned<16>(output.data()+OutPos), *CurrentGains++,
+            *TargetGains++, delta, min_len, aligned_len, Counter);
 }
 
 template<>
@@ -314,71 +317,6 @@ void Mix_<NEONTag>(const al::span<const float> InSamples, float *OutBuffer, floa
     const auto min_len = minz(Counter, InSamples.size());
     const auto aligned_len = minz((min_len+3) & ~size_t{3}, InSamples.size()) - min_len;
 
-    float *RESTRICT dst{al::assume_aligned<16>(OutBuffer)};
-    float gain{CurrentGain};
-    const float step{(TargetGain-gain) * delta};
-
-    size_t pos{0};
-    if(!(std::abs(step) > std::numeric_limits<float>::epsilon()))
-        gain = TargetGain;
-    else
-    {
-        float step_count{0.0f};
-        /* Mix with applying gain steps in aligned multiples of 4. */
-        if(size_t todo{min_len >> 2})
-        {
-            const float32x4_t four4{vdupq_n_f32(4.0f)};
-            const float32x4_t step4{vdupq_n_f32(step)};
-            const float32x4_t gain4{vdupq_n_f32(gain)};
-            float32x4_t step_count4{vdupq_n_f32(0.0f)};
-            step_count4 = vsetq_lane_f32(1.0f, step_count4, 1);
-            step_count4 = vsetq_lane_f32(2.0f, step_count4, 2);
-            step_count4 = vsetq_lane_f32(3.0f, step_count4, 3);
-
-            do {
-                const float32x4_t val4 = vld1q_f32(&InSamples[pos]);
-                float32x4_t dry4 = vld1q_f32(&dst[pos]);
-                dry4 = vmlaq_f32(dry4, val4, vmlaq_f32(gain4, step4, step_count4));
-                step_count4 = vaddq_f32(step_count4, four4);
-                vst1q_f32(&dst[pos], dry4);
-                pos += 4;
-            } while(--todo);
-            /* NOTE: step_count4 now represents the next four counts after the
-             * last four mixed samples, so the lowest element represents the
-             * next step count to apply.
-             */
-            step_count = vgetq_lane_f32(step_count4, 0);
-        }
-        /* Mix with applying left over gain steps that aren't aligned multiples of 4. */
-        for(size_t leftover{min_len&3};leftover;++pos,--leftover)
-        {
-            dst[pos] += InSamples[pos] * (gain + step*step_count);
-            step_count += 1.0f;
-        }
-        if(pos == Counter)
-            gain = TargetGain;
-        else
-            gain += step*step_count;
-
-        /* Mix until pos is aligned with 4 or the mix is done. */
-        for(size_t leftover{aligned_len&3};leftover;++pos,--leftover)
-            dst[pos] += InSamples[pos] * gain;
-    }
-    CurrentGain = gain;
-
-    if(!(std::abs(gain) > GainSilenceThreshold))
-        return;
-    if(size_t todo{(InSamples.size()-pos) >> 2})
-    {
-        const float32x4_t gain4 = vdupq_n_f32(gain);
-        do {
-            const float32x4_t val4 = vld1q_f32(&InSamples[pos]);
-            float32x4_t dry4 = vld1q_f32(&dst[pos]);
-            dry4 = vmlaq_f32(dry4, val4, gain4);
-            vst1q_f32(&dst[pos], dry4);
-            pos += 4;
-        } while(--todo);
-    }
-    for(size_t leftover{(InSamples.size()-pos)&3};leftover;++pos,--leftover)
-        dst[pos] += InSamples[pos] * gain;
+    MixLine(InSamples, al::assume_aligned<16>(OutBuffer), CurrentGain, TargetGain, delta, min_len,
+        aligned_len, Counter);
 }

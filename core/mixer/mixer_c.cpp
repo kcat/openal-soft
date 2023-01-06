@@ -96,6 +96,36 @@ inline void ApplyCoeffs(float2 *RESTRICT Values, const size_t IrSize, const Cons
     }
 }
 
+inline void MixLine(const al::span<const float> InSamples, float *RESTRICT dst, float &CurrentGain,
+    const float TargetGain, const float delta, const size_t min_len, size_t Counter)
+{
+    float gain{CurrentGain};
+    const float step{(TargetGain-gain) * delta};
+
+    size_t pos{0};
+    if(!(std::abs(step) > std::numeric_limits<float>::epsilon()))
+        gain = TargetGain;
+    else
+    {
+        float step_count{0.0f};
+        for(;pos != min_len;++pos)
+        {
+            dst[pos] += InSamples[pos] * (gain + step*step_count);
+            step_count += 1.0f;
+        }
+        if(pos == Counter)
+            gain = TargetGain;
+        else
+            gain += step*step_count;
+    }
+    CurrentGain = gain;
+
+    if(!(std::abs(gain) > GainSilenceThreshold))
+        return;
+    for(;pos != InSamples.size();++pos)
+        dst[pos] += InSamples[pos] * gain;
+}
+
 } // namespace
 
 template<>
@@ -166,37 +196,10 @@ void Mix_<CTag>(const al::span<const float> InSamples, const al::span<FloatBuffe
 {
     const float delta{(Counter > 0) ? 1.0f / static_cast<float>(Counter) : 0.0f};
     const auto min_len = minz(Counter, InSamples.size());
+
     for(FloatBufferLine &output : OutBuffer)
-    {
-        float *RESTRICT dst{al::assume_aligned<16>(output.data()+OutPos)};
-        float gain{*CurrentGains};
-        const float step{(*TargetGains-gain) * delta};
-
-        size_t pos{0};
-        if(!(std::abs(step) > std::numeric_limits<float>::epsilon()))
-            gain = *TargetGains;
-        else
-        {
-            float step_count{0.0f};
-            for(;pos != min_len;++pos)
-            {
-                dst[pos] += InSamples[pos] * (gain + step*step_count);
-                step_count += 1.0f;
-            }
-            if(pos == Counter)
-                gain = *TargetGains;
-            else
-                gain += step*step_count;
-        }
-        *CurrentGains = gain;
-        ++CurrentGains;
-        ++TargetGains;
-
-        if(!(std::abs(gain) > GainSilenceThreshold))
-            continue;
-        for(;pos != InSamples.size();++pos)
-            dst[pos] += InSamples[pos] * gain;
-    }
+        MixLine(InSamples, al::assume_aligned<16>(output.data()+OutPos), *CurrentGains++,
+            *TargetGains++, delta, min_len, Counter);
 }
 
 template<>
@@ -206,30 +209,6 @@ void Mix_<CTag>(const al::span<const float> InSamples, float *OutBuffer, float &
     const float delta{(Counter > 0) ? 1.0f / static_cast<float>(Counter) : 0.0f};
     const auto min_len = minz(Counter, InSamples.size());
 
-    float *RESTRICT dst{al::assume_aligned<16>(OutBuffer)};
-    float gain{CurrentGain};
-    const float step{(TargetGain-gain) * delta};
-
-    size_t pos{0};
-    if(!(std::abs(step) > std::numeric_limits<float>::epsilon()))
-        gain = TargetGain;
-    else
-    {
-        float step_count{0.0f};
-        for(;pos != min_len;++pos)
-        {
-            dst[pos] += InSamples[pos] * (gain + step*step_count);
-            step_count += 1.0f;
-        }
-        if(pos == Counter)
-            gain = TargetGain;
-        else
-            gain += step*step_count;
-    }
-    CurrentGain = gain;
-
-    if(!(std::abs(gain) > GainSilenceThreshold))
-        return;
-    for(;pos != InSamples.size();++pos)
-        dst[pos] += InSamples[pos] * gain;
+    MixLine(InSamples, al::assume_aligned<16>(OutBuffer), CurrentGain,
+        TargetGain, delta, min_len, Counter);
 }

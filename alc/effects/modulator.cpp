@@ -137,10 +137,10 @@ void ModulatorState::update(const ContextBase *context, const EffectSlot *slot,
         mChans[i].mFilter.copyParamsFrom(mChans[0].mFilter);
 
     mOutTarget = target.Main->Buffer;
-    auto set_channel = [this](size_t idx, uint target, float gain)
+    auto set_channel = [this](size_t idx, uint outchan, float outgain)
     {
-        mChans[idx].mTargetChannel = target;
-        mChans[idx].mTargetGain = gain;
+        mChans[idx].mTargetChannel = outchan;
+        mChans[idx].mTargetGain = outgain;
     };
     target.Main->setAmbiMixParams(slot->Wet, slot->Gain, set_channel);
 }

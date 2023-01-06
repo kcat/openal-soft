@@ -134,10 +134,10 @@ void AutowahState::update(const ContextBase *context, const EffectSlot *slot,
     mBandwidthNorm = (MaxFreq-MinFreq) / frequency;
 
     mOutTarget = target.Main->Buffer;
-    auto set_channel = [this](size_t idx, uint target, float gain)
+    auto set_channel = [this](size_t idx, uint outchan, float outgain)
     {
-        mChans[idx].mTargetChannel = target;
-        mChans[idx].mTargetGain = gain;
+        mChans[idx].mTargetChannel = outchan;
+        mChans[idx].mTargetGain = outgain;
     };
     target.Main->setAmbiMixParams(slot->Wet, slot->Gain, set_channel);
 }

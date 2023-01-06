@@ -106,10 +106,10 @@ void CompressorState::update(const ContextBase*, const EffectSlot *slot,
     mEnabled = props->Compressor.OnOff;
 
     mOutTarget = target.Main->Buffer;
-    auto set_channel = [this](size_t idx, uint target, float gain)
+    auto set_channel = [this](size_t idx, uint outchan, float outgain)
     {
-        mChans[idx].mTarget = target;
-        mChans[idx].mGain = gain;
+        mChans[idx].mTarget = outchan;
+        mChans[idx].mGain = outgain;
     };
     target.Main->setAmbiMixParams(slot->Wet, slot->Gain, set_channel);
 }

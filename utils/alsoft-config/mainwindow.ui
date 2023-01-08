@@ -116,9 +116,9 @@ float and converted to the output sample type as needed.</string>
        </rect>
       </property>
       <property name="toolTip">
-       <string>The output channel configuration. Note that not all backends
-can properly detect the channel configuration and may default
-to stereo output.</string>
+       <string>The default output channel configuration. Note that not all
+backends can properly detect the channel configuration and
+may default to stereo output.</string>
       </property>
       <property name="sizeAdjustPolicy">
        <enum>QComboBox::AdjustToContents</enum>
@@ -436,7 +436,7 @@ frames needed for each mixing update.</string>
         </rect>
        </property>
        <property name="toolTip">
-        <string>Pan Pot uses standard amplitude panning (aka
+        <string>Basic uses standard amplitude panning (aka
 pair-wise, stereo pair, etc).
 
 UHJ creates a stereo-compatible two-channel
@@ -444,8 +444,8 @@ UHJ mix, which encodes some surround sound
 information into stereo output that can be
 decoded with a surround sound receiver.
 
-Binaural applies HRTF filters to create a sense
-of 3D space with headphones.</string>
+Binaural applies HRTF filters to create an
+illusion of 3D placement with headphones.</string>
        </property>
       </widget>
       <widget class="QLabel" name="label_19">
@@ -1089,54 +1089,6 @@ listed above.</string>
         </property>
        </widget>
       </widget>
-     </widget>
-     <widget class="QLabel" name="label_16">
-      <property name="geometry">
-       <rect>
-        <x>50</x>
-        <y>60</y>
-        <width>71</width>
-        <height>31</height>
-       </rect>
-      </property>
-      <property name="text">
-       <string>HRTF Mode:</string>
-      </property>
-      <property name="alignment">
-       <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-      </property>
-     </widget>
-     <widget class="QComboBox" name="hrtfStateComboBox">
-      <property name="geometry">
-       <rect>
-        <x>130</x>
-        <y>60</y>
-        <width>161</width>
-        <height>31</height>
-       </rect>
-      </property>
-      <property name="toolTip">
-       <string>Forces HRTF processing on or off, or leaves it to the
-application or system to determine if it should be used.</string>
-      </property>
-      <property name="sizeAdjustPolicy">
-       <enum>QComboBox::AdjustToContentsOnFirstShow</enum>
-      </property>
-      <item>
-       <property name="text">
-        <string>Application preference</string>
-       </property>
-      </item>
-      <item>
-       <property name="text">
-        <string>Force on</string>
-       </property>
-      </item>
-      <item>
-       <property name="text">
-        <string>Force off</string>
-       </property>
-      </item>
      </widget>
      <widget class="QLabel" name="label_12">
       <property name="geometry">

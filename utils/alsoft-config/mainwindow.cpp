@@ -123,7 +123,7 @@ static const struct NameValuePair {
     { "", "" }
 }, stereoEncList[] = {
     { "Default", "" },
-    { "Pan Pot", "panpot" },
+    { "Basic", "panpot" },
     { "UHJ", "uhj" },
     { "Binaural", "hrtf" },
 
@@ -308,7 +308,6 @@ MainWindow::MainWindow(QWidget *parent) :
     for(count = 0;hrtfModeList[count].name[0];count++) {
     }
     ui->hrtfmodeSlider->setRange(0, count-1);
-    ui->hrtfStateComboBox->adjustSize();
 
 #if !defined(HAVE_NEON) && !defined(HAVE_SSE)
     ui->cpuExtDisabledLabel->move(ui->cpuExtDisabledLabel->x(), ui->cpuExtDisabledLabel->y() - 60);
@@ -417,7 +416,6 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->decoder3D71Button, &QPushButton::clicked, this, &MainWindow::select3D71DecoderFile);
 
     connect(ui->preferredHrtfComboBox, qcb_cicint, this, &MainWindow::enableApplyButton);
-    connect(ui->hrtfStateComboBox, qcb_cicint, this, &MainWindow::enableApplyButton);
     connect(ui->hrtfmodeSlider, &QSlider::valueChanged, this, &MainWindow::updateHrtfModeLabel);
 
     connect(ui->hrtfAddButton, &QPushButton::clicked, this, &MainWindow::addHrtfFile);
@@ -815,14 +813,6 @@ void MainWindow::loadConfig(const QString &fname)
     ui->hrtfFileList->addItems(hrtf_paths);
     updateHrtfRemoveButton();
 
-    QString hrtfstate{settings.value("hrtf").toString().toLower()};
-    if(hrtfstate == "true")
-        ui->hrtfStateComboBox->setCurrentIndex(1);
-    else if(hrtfstate == "false")
-        ui->hrtfStateComboBox->setCurrentIndex(2);
-    else
-        ui->hrtfStateComboBox->setCurrentIndex(0);
-
     ui->preferredHrtfComboBox->clear();
     ui->preferredHrtfComboBox->addItem("- Any -");
     if(ui->defaultHrtfPathsCheckBox->isChecked())
@@ -1054,13 +1044,6 @@ void MainWindow::saveConfig(const QString &fname) const
     settings.setValue("disable-cpu-exts", strlist.join(QChar(',')));
 
     settings.setValue("hrtf-mode", hrtfModeList[ui->hrtfmodeSlider->value()].value);
-
-    if(ui->hrtfStateComboBox->currentIndex() == 1)
-        settings.setValue("hrtf", "true");
-    else if(ui->hrtfStateComboBox->currentIndex() == 2)
-        settings.setValue("hrtf", "false");
-    else
-        settings.setValue("hrtf", QString{});
 
     if(ui->preferredHrtfComboBox->currentIndex() == 0)
         settings.setValue("default-hrtf", QString{});

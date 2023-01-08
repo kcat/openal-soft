@@ -53,17 +53,19 @@
 #drivers =
 
 ## channels:
-#  Sets the output channel configuration. If left unspecified, one will try to
-#  be detected from the system, and defaulting to stereo. The available values
-#  are: mono, stereo, quad, surround51, surround61, surround71, surround3d71,
-#  ambi1, ambi2, ambi3. Note that the ambi* configurations provide ambisonic
-#  channels of the given order (using ACN ordering and SN3D normalization by
-#  default), which need to be decoded to play correctly on speakers.
+#  Sets the default output channel configuration. If left unspecified, one will
+#  try to be detected from the system, with a fallback to stereo. The available
+#  values are: mono, stereo, quad, surround51, surround61, surround71,
+#  surround3d71, ambi1, ambi2, ambi3. Note that the ambi* configurations output
+#  ambisonic channels of the given order (using ACN ordering and SN3D
+#  normalization by default), which need to be decoded to play correctly on
+#  speakers.
 #channels =
 
 ## sample-type:
-#  Sets the output sample type. Currently, all mixing is done with 32-bit float
-#  and converted to the output sample type as needed. Available values are:
+#  Sets the default output sample type. Currently, all mixing is done with
+#  32-bit float and converted to the output sample type as needed. Available
+#  values are:
 #  int8    - signed 8-bit int
 #  uint8   - unsigned 8-bit int
 #  int16   - signed 16-bit int
@@ -74,8 +76,8 @@
 #sample-type = float32
 
 ## frequency:
-#  Sets the output frequency. If left unspecified it will try to detect a
-#  default from the system, otherwise it will default to 48000.
+#  Sets the default output frequency. If left unspecified it will try to detect
+#  a default from the system, otherwise it will fallback to 48000.
 #frequency =
 
 ## period_size:
@@ -99,13 +101,16 @@
 #stereo-mode = auto
 
 ## stereo-encoding:
-#  Specifies the encoding method for non-HRTF stereo output. 'panpot' (default)
-#  uses standard amplitude panning (aka pair-wise, stereo pair, etc) between
-#  -30 and +30 degrees, while 'uhj' creates stereo-compatible two-channel UHJ
-#  output, which encodes some surround sound information into stereo output
-#  that can be decoded with a surround sound receiver. If crossfeed filters are
-#  used, UHJ is disabled.
-#stereo-encoding = panpot
+#  Specifies the default encoding method for stereo output. Valid values are:
+#  basic - Standard amplitude panning (aka pair-wise, stereo pair, etc) between
+#          -30 and +30 degrees.
+#  uhj - Creates a stereo-compatible two-channel UHJ mix, which encodes some
+#        surround sound information into stereo output that can be decoded with
+#        a surround sound receiver.
+#  hrtf - Uses filters to provide better spatialization of sounds while using
+#         stereo headphones.
+#  If crossfeed filters are used, basic stereo mixing is used.
+#stereo-encoding = basic
 
 ## ambi-format:
 #  Specifies the channel order and normalization for the "ambi*" set of channel
@@ -114,12 +119,8 @@
 #ambi-format = ambix
 
 ## hrtf:
-#  Controls HRTF processing. These filters provide better spatialization of
-#  sounds while using headphones, but do require a bit more CPU power. While
-#  HRTF is used, the cf_level option is ignored. Setting this to auto (default)
-#  will allow HRTF to be used when headphones are detected or the app requests
-#  it, while setting true or false will forcefully enable or disable HRTF
-#  respectively.
+#  Deprecated. Consider using stereo-encoding instead. Valid values are auto,
+#  off, and on.
 #hrtf = auto
 
 ## hrtf-mode:

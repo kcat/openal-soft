@@ -1779,7 +1779,7 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
         if(auto encopt = device->configValue<std::string>(nullptr, "stereo-encoding"))
         {
             const char *mode{encopt->c_str()};
-            if(al::strcasecmp(mode, "panpot") == 0)
+            if(al::strcasecmp(mode, "basic") == 0 || al::strcasecmp(mode, "panpot") == 0)
                 stereomode = StereoEncoding::Basic;
             else if(al::strcasecmp(mode, "uhj") == 0)
                 stereomode = StereoEncoding::Uhj;

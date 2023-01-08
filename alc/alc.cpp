@@ -1795,7 +1795,7 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
     {
         ALenum outmode{ALC_ANY_SOFT};
         al::optional<bool> opthrtf;
-        uint freqAttr{};
+        int freqAttr{};
 
 #define ATTRIBUTE(a) a: TRACE("%s = %d\n", #a, attrList[attrIdx + 1]);
         size_t attrIdx{0};
@@ -1814,7 +1814,7 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
                 break;
 
             case ATTRIBUTE(ALC_FREQUENCY)
-                freqAttr = static_cast<uint>(attrList[attrIdx + 1]);
+                freqAttr = attrList[attrIdx + 1];
                 break;
 
             case ATTRIBUTE(ALC_AMBISONIC_LAYOUT_SOFT)
@@ -1913,7 +1913,7 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
                     stereomode = StereoEncoding::Hrtf;
             }
 
-            optsrate = freqAttr;
+            optsrate = static_cast<uint>(freqAttr);
         }
         else
         {
@@ -1947,12 +1947,12 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
             if(freqAttr)
             {
                 uint oldrate = optsrate.value_or(DEFAULT_OUTPUT_RATE);
-                freqAttr = clampu(freqAttr, MIN_OUTPUT_RATE, MAX_OUTPUT_RATE);
+                freqAttr = clampi(freqAttr, MIN_OUTPUT_RATE, MAX_OUTPUT_RATE);
 
                 const double scale{static_cast<double>(freqAttr) / oldrate};
                 period_size = static_cast<uint>(period_size*scale + 0.5);
                 buffer_size = static_cast<uint>(buffer_size*scale + 0.5);
-                optsrate = freqAttr;
+                optsrate = static_cast<uint>(freqAttr);
             }
         }
 

@@ -397,6 +397,12 @@
 #  support even when no nodes may be reported at initialization time.
 #assume-audio = false
 
+## rt-mix:
+#  Renders samples directly in the real-time processing callback. This allows
+#  for lower latency and less overall CPU utilization, but can increase the
+#  risk of underruns when increasing the amount of work the mixer needs to do.
+#rt-mix = true
+
 ##
 ## PulseAudio backend stuff
 ##

@@ -369,6 +369,9 @@ using PwStreamPtr = std::unique_ptr<pw_stream,PwStreamDeleter>;
 constexpr pw_stream_flags operator|(pw_stream_flags lhs, pw_stream_flags rhs) noexcept
 { return static_cast<pw_stream_flags>(lhs | al::to_underlying(rhs)); }
 
+constexpr pw_stream_flags& operator|=(pw_stream_flags &lhs, pw_stream_flags rhs) noexcept
+{ lhs = lhs | rhs; return lhs; }
+
 class ThreadMainloop {
     pw_thread_loop *mLoop{};
 
@@ -1544,9 +1547,11 @@ bool PipeWirePlayback::reset()
     static constexpr pw_stream_events streamEvents{CreateEvents()};
     pw_stream_add_listener(mStream.get(), &mStreamListener, &streamEvents, this);
 
-    static constexpr pw_stream_flags Flags{PW_STREAM_FLAG_AUTOCONNECT | PW_STREAM_FLAG_INACTIVE
-        | PW_STREAM_FLAG_MAP_BUFFERS | PW_STREAM_FLAG_RT_PROCESS};
-    if(int res{pw_stream_connect(mStream.get(), PW_DIRECTION_OUTPUT, mTargetId, Flags, &params, 1)})
+    pw_stream_flags flags{PW_STREAM_FLAG_AUTOCONNECT | PW_STREAM_FLAG_INACTIVE
+        | PW_STREAM_FLAG_MAP_BUFFERS};
+    if(GetConfigValueBool(mDevice->DeviceName.c_str(), "pipewire", "rt-mix", true))
+        flags |= PW_STREAM_FLAG_RT_PROCESS;
+    if(int res{pw_stream_connect(mStream.get(), PW_DIRECTION_OUTPUT, mTargetId, flags, &params, 1)})
         throw al::backend_exception{al::backend_error::DeviceError,
             "Error connecting PipeWire stream (res: %d)", res};
 
@@ -1614,16 +1619,14 @@ void PipeWirePlayback::start()
             break;
         }
 
+        /* The rate match size is the update size for each buffer. */
+        const uint updatesize{mRateMatch ? mRateMatch->size : 0u};
 #if PW_CHECK_VERSION(0,3,50)
-        /* The time info will be valid when there's a valid rate. Assume
-         * ptime.avail_buffers+ptime.queued_buffers is the target buffer queue
-         * size.
+        /* Assume ptime.avail_buffers+ptime.queued_buffers is the target buffer
+         * queue size.
          */
-        if(ptime.rate.denom > 0 && (ptime.avail_buffers || ptime.queued_buffers))
+        if(ptime.rate.denom > 0 && (ptime.avail_buffers || ptime.queued_buffers) && updatesize > 0)
         {
-            /* The rate match size is the update size for each buffer. */
-            uint updatesize{mRateMatch ? mRateMatch->size : 0u};
-            if(!updatesize) updatesize = mDevice->UpdateSize;
             const uint totalbuffers{ptime.avail_buffers + ptime.queued_buffers};
 
             /* Ensure the delay is in sample frames. */
@@ -1639,11 +1642,8 @@ void PipeWirePlayback::start()
         /* Prior to 0.3.50, we can only measure the delay with the update size,
          * assuming one buffer and no resample buffering.
          */
-        if(ptime.rate.denom > 0)
+        if(ptime.rate.denom > 0 && updatesize > 0)
         {
-            uint updatesize{mRateMatch ? mRateMatch->size : 0u};
-            if(!updatesize) updatesize = mDevice->UpdateSize;
-
             /* Ensure the delay is in sample frames. */
             const uint64_t delay{static_cast<uint64_t>(ptime.delay) * mDevice->Frequency *
                 ptime.rate.num / ptime.rate.denom};

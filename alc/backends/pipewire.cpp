@@ -1609,9 +1609,7 @@ void PipeWirePlayback::start()
      * is (up to about 2 seconds).
      */
     int wait_count{100};
-    pw_stream_state state{PW_STREAM_STATE_STREAMING};
-    while(state == PW_STREAM_STATE_STREAMING && mRateMatch)
-    {
+    do {
         pw_time ptime{};
         if(int res{pw_stream_get_time_n(mStream.get(), &ptime, sizeof(ptime))})
         {
@@ -1659,8 +1657,7 @@ void PipeWirePlayback::start()
         plock.unlock();
         std::this_thread::sleep_for(milliseconds{20});
         plock.lock();
-        state = pw_stream_get_state(mStream.get(), nullptr);
-    }
+    } while(pw_stream_get_state(mStream.get(), nullptr) == PW_STREAM_STATE_STREAMING);
 }
 
 void PipeWirePlayback::stop()

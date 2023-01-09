@@ -152,7 +152,7 @@ using AmbiRotateMatrix = std::array<std::array<float,MaxAmbiChannels>,MaxAmbiCha
 enum {
     // Frequency was requested by the app or config file
     FrequencyRequest,
-    // Channel configuration was requested by the config file
+    // Channel configuration was requested by the app or config file
     ChannelsRequest,
     // Sample type was requested by the config file
     SampleTypeRequest,

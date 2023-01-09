@@ -51,9 +51,7 @@ class span;
 
 namespace detail_ {
     template<typename... Ts>
-    struct make_void { using type = void; };
-    template<typename... Ts>
-    using void_t = typename make_void<Ts...>::type;
+    using void_t = void;
 
     template<typename T>
     struct is_span_ : std::false_type { };

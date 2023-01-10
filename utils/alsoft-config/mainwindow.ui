@@ -1360,6 +1360,33 @@ are reported.</string>
         <property name="text">
          <string>Assume audio support</string>
         </property>
+        <property name="tristate">
+         <bool>true</bool>
+        </property>
+       </widget>
+       <widget class="QCheckBox" name="pwireRtMixCheckBox">
+        <property name="geometry">
+         <rect>
+          <x>20</x>
+          <y>40</y>
+          <width>161</width>
+          <height>21</height>
+         </rect>
+        </property>
+        <property name="toolTip">
+         <string>Renders samples directly in the real-time
+processing callback. This allows for lower
+latency and less overall CPU utilization, but
+can increase the risk of underruns when
+increasing the amount of processing the
+mixer needs to do.</string>
+        </property>
+        <property name="text">
+         <string>Real-time Mixing</string>
+        </property>
+        <property name="tristate">
+         <bool>true</bool>
+        </property>
        </widget>
       </widget>
       <widget class="QWidget" name="page_2">
@@ -1382,7 +1409,7 @@ for output.</string>
         <property name="text">
          <string>Allow Resampler</string>
         </property>
-        <property name="checked">
+        <property name="tristate">
          <bool>true</bool>
         </property>
        </widget>

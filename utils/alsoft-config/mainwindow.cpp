@@ -463,6 +463,9 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->pulseAdjLatencyCheckBox, &QCheckBox::stateChanged, this, &MainWindow::enableApplyButton);
 
     connect(ui->pwireAssumeAudioCheckBox, &QCheckBox::stateChanged, this, &MainWindow::enableApplyButton);
+    connect(ui->pwireRtMixCheckBox, &QCheckBox::stateChanged, this, &MainWindow::enableApplyButton);
+
+    connect(ui->wasapiResamplerCheckBox, &QCheckBox::stateChanged, this, &MainWindow::enableApplyButton);
 
     connect(ui->jackAutospawnCheckBox, &QCheckBox::stateChanged, this, &MainWindow::enableApplyButton);
     connect(ui->jackConnectPortsCheckBox, &QCheckBox::stateChanged, this, &MainWindow::enableApplyButton);
@@ -931,8 +934,10 @@ void MainWindow::loadConfig(const QString &fname)
     ui->pulseFixRateCheckBox->setCheckState(getCheckState(settings.value("pulse/fix-rate")));
     ui->pulseAdjLatencyCheckBox->setCheckState(getCheckState(settings.value("pulse/adjust-latency")));
 
-    ui->pwireAssumeAudioCheckBox->setCheckState(settings.value("pipewire/assume-audio").toBool()
-        ? Qt::Checked : Qt::Unchecked);
+    ui->pwireAssumeAudioCheckBox->setCheckState(getCheckState(settings.value("pipewire/assume-audio")));
+    ui->pwireRtMixCheckBox->setCheckState(getCheckState(settings.value("pipewire/rt-mix")));
+
+    ui->wasapiResamplerCheckBox->setCheckState(getCheckState(settings.value("wasapi/allow-resampler")));
 
     ui->jackAutospawnCheckBox->setCheckState(getCheckState(settings.value("jack/spawn-server")));
     ui->jackConnectPortsCheckBox->setCheckState(getCheckState(settings.value("jack/connect-ports")));
@@ -1135,11 +1140,10 @@ void MainWindow::saveConfig(const QString &fname) const
         (!ui->enableEaxCheck->isEnabled() || ui->enableEaxCheck->isChecked())
         ? QString{/*"true"*/} : QString{"false"});
 
-    settings.setValue("pipewire/assume-audio", ui->pwireAssumeAudioCheckBox->isChecked()
-        ? QString{"true"} : QString{/*"false"*/});
+    settings.setValue("pipewire/assume-audio", getCheckValue(ui->pwireAssumeAudioCheckBox));
+    settings.setValue("pipewire/rt-mix", getCheckValue(ui->pwireRtMixCheckBox));
 
-    settings.setValue("wasapi/allow-resampler", ui->wasapiResamplerCheckBox->isChecked()
-        ? QString{/*"true"*/} : QString{"false"});
+    settings.setValue("wasapi/allow-resampler", getCheckValue(ui->wasapiResamplerCheckBox));
 
     settings.setValue("pulse/spawn-server", getCheckValue(ui->pulseAutospawnCheckBox));
     settings.setValue("pulse/allow-moves", getCheckValue(ui->pulseAllowMovesCheckBox));

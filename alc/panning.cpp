@@ -913,7 +913,7 @@ void InitHrtfPanning(ALCdevice *device)
         AmbiOrderHFGain);
     device->mHrtfState = std::move(hrtfstate);
 
-    InitNearFieldCtrl(device, Hrtf->mField[0].distance, ambi_order, true);
+    InitNearFieldCtrl(device, Hrtf->mFields[0].distance, ambi_order, true);
 }
 
 void InitUhjPanning(ALCdevice *device)

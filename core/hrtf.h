@@ -20,8 +20,8 @@
 struct HrtfStore {
     RefCount mRef;
 
-    uint mSampleRate;
-    uint mIrSize;
+    uint mSampleRate : 24;
+    uint mIrSize : 8;
 
     struct Field {
         float distance;
@@ -30,8 +30,7 @@ struct HrtfStore {
     /* NOTE: Fields are stored *backwards*. field[0] is the farthest field, and
      * field[fdCount-1] is the nearest.
      */
-    uint mFieldCount;
-    const Field *mField;
+    al::span<const Field> mFields;
 
     struct Elevation {
         ushort azCount;

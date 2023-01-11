@@ -210,7 +210,6 @@ void HrtfStore::getCoeffs(float elevation, float azimuth, float distance, float 
 {
     const float dirfact{1.0f - (al::numbers::inv_pi_v<float>/2.0f * spread)};
 
-    al::span<const Field> fields{mField, mFieldCount-1};
     size_t ebase{0};
     auto match_field = [&ebase,distance](const Field &field) noexcept -> bool
     {
@@ -219,7 +218,7 @@ void HrtfStore::getCoeffs(float elevation, float azimuth, float distance, float 
         ebase += field.evCount;
         return false;
     };
-    auto field = std::find_if(fields.begin(), fields.end(), match_field);
+    auto field = std::find_if(mFields.begin(), mFields.end()-1, match_field);
 
     /* Calculate the elevation indices. */
     const auto elev0 = CalcEvIndex(field->evCount, elevation);
@@ -299,7 +298,7 @@ void DirectHrtfState::build(const HrtfStore *Hrtf, const uint irSize, const bool
     al::vector<ImpulseResponse> impres; impres.reserve(AmbiPoints.size());
     auto calc_res = [Hrtf,&max_delay,&min_delay](const AngularPoint &pt) -> ImpulseResponse
     {
-        auto &field = Hrtf->mField[0];
+        auto &field = Hrtf->mFields[0];
         const auto elev0 = CalcEvIndex(field.evCount, pt.Elev.value);
         const size_t elev1_idx{minu(elev0.idx+1, field.evCount-1)};
         const size_t ir0offset{Hrtf->mElev[elev0.idx].irOffset};
@@ -382,7 +381,7 @@ std::unique_ptr<HrtfStore> CreateHrtfStore(uint rate, ushort irSize,
     const size_t irCount{size_t{elevs.back().azCount} + elevs.back().irOffset};
     size_t total{sizeof(HrtfStore)};
     total  = RoundUp(total, alignof(HrtfStore::Field)); /* Align for field infos */
-    total += sizeof(std::declval<HrtfStore&>().mField[0])*fields.size();
+    total += sizeof(std::declval<HrtfStore&>().mFields[0])*fields.size();
     total  = RoundUp(total, alignof(HrtfStore::Elevation)); /* Align for elevation infos */
     total += sizeof(std::declval<HrtfStore&>().mElev[0])*elevs.size();
     total  = RoundUp(total, 16); /* Align for coefficients using SIMD */
@@ -398,7 +397,6 @@ std::unique_ptr<HrtfStore> CreateHrtfStore(uint rate, ushort irSize,
         InitRef(Hrtf->mRef, 1u);
         Hrtf->mSampleRate = rate;
         Hrtf->mIrSize = irSize;
-        Hrtf->mFieldCount = static_cast<uint>(fields.size());
 
         /* Set up pointers to storage following the main HRTF struct. */
         char *base = reinterpret_cast<char*>(Hrtf.get());
@@ -429,7 +427,7 @@ std::unique_ptr<HrtfStore> CreateHrtfStore(uint rate, ushort irSize,
         std::uninitialized_copy_n(delays, irCount, delays_);
 
         /* Finally, assign the storage pointers. */
-        Hrtf->mField = field_;
+        Hrtf->mFields = al::as_span(field_, fields.size());
         Hrtf->mElev = elev_;
         Hrtf->mCoeffs = coeffs_;
         Hrtf->mDelays = delays_;
@@ -1368,8 +1366,7 @@ HrtfStorePtr GetLoadedHrtf(const std::string &name, const uint devrate)
         TRACE("Resampling HRTF %s (%uhz -> %uhz)\n", name.c_str(), hrtf->mSampleRate, devrate);
 
         /* Calculate the last elevation's index and get the total IR count. */
-        auto fields = al::as_span(hrtf->mField, hrtf->mFieldCount);
-        const size_t lastEv{std::accumulate(fields.begin(), fields.end(), size_t{0},
+        const size_t lastEv{std::accumulate(hrtf->mFields.begin(), hrtf->mFields.end(), size_t{0},
             [](const size_t curval, const HrtfStore::Field &field) noexcept -> size_t
             { return curval + field.evCount; }
         ) - 1};

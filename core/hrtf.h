@@ -20,8 +20,8 @@
 struct HrtfStore {
     RefCount mRef;
 
-    uint sampleRate;
-    uint irSize;
+    uint mSampleRate;
+    uint mIrSize;
 
     struct Field {
         float distance;
@@ -30,16 +30,19 @@ struct HrtfStore {
     /* NOTE: Fields are stored *backwards*. field[0] is the farthest field, and
      * field[fdCount-1] is the nearest.
      */
-    uint fdCount;
-    const Field *field;
+    uint mFieldCount;
+    const Field *mField;
 
     struct Elevation {
         ushort azCount;
         ushort irOffset;
     };
-    Elevation *elev;
-    const HrirArray *coeffs;
-    const ubyte2 *delays;
+    Elevation *mElev;
+    const HrirArray *mCoeffs;
+    const ubyte2 *mDelays;
+
+    void getCoeffs(float elevation, float azimuth, float distance, float spread, HrirArray &coeffs,
+        const al::span<uint,2> delays);
 
     void add_ref();
     void dec_ref();
@@ -83,8 +86,5 @@ struct DirectHrtfState {
 
 al::vector<std::string> EnumerateHrtf(al::optional<std::string> pathopt);
 HrtfStorePtr GetLoadedHrtf(const std::string &name, const uint devrate);
-
-void GetHrtfCoeffs(const HrtfStore *Hrtf, float elevation, float azimuth, float distance,
-    float spread, HrirArray &coeffs, const al::span<uint,2> delays);
 
 #endif /* CORE_HRTF_H */

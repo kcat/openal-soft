@@ -913,7 +913,7 @@ void InitHrtfPanning(ALCdevice *device)
         AmbiOrderHFGain);
     device->mHrtfState = std::move(hrtfstate);
 
-    InitNearFieldCtrl(device, Hrtf->field[0].distance, ambi_order, true);
+    InitNearFieldCtrl(device, Hrtf->mField[0].distance, ambi_order, true);
 }
 
 void InitUhjPanning(ALCdevice *device)
@@ -1075,7 +1075,7 @@ void aluInitRenderer(ALCdevice *device, int hrtf_id, al::optional<StereoEncoding
             old_hrtf = nullptr;
 
             HrtfStore *hrtf{device->mHrtf.get()};
-            device->mIrSize = hrtf->irSize;
+            device->mIrSize = hrtf->mIrSize;
             if(auto hrtfsizeopt = device->configValue<uint>(nullptr, "hrtf-size"))
             {
                 if(*hrtfsizeopt > 0 && *hrtfsizeopt < device->mIrSize)

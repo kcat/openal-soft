@@ -1047,7 +1047,7 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
 
             if(voice->mFmtChannels == FmtMono)
             {
-                GetHrtfCoeffs(Device->mHrtf.get(), src_ev, src_az, Distance*NfcScale, Spread,
+                Device->mHrtf->getCoeffs(src_ev, src_az, Distance*NfcScale, Spread,
                     voice->mChans[0].mDryParams.Hrtf.Target.Coeffs,
                     voice->mChans[0].mDryParams.Hrtf.Target.Delay);
                 voice->mChans[0].mDryParams.Hrtf.Target.Gain = DryGain.Base;
@@ -1084,7 +1084,7 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
                 if(az < -pi_v<float>) az += pi_v<float>*2.0f;
                 else if(az > pi_v<float>) az -= pi_v<float>*2.0f;
 
-                GetHrtfCoeffs(Device->mHrtf.get(), ev, az, Distance*NfcScale, 0.0f,
+                Device->mHrtf->getCoeffs(ev, az, Distance*NfcScale, 0.0f,
                     voice->mChans[c].mDryParams.Hrtf.Target.Coeffs,
                     voice->mChans[c].mDryParams.Hrtf.Target.Delay);
                 voice->mChans[c].mDryParams.Hrtf.Target.Gain = DryGain.Base;
@@ -1119,7 +1119,7 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
                 /* Get the HRIR coefficients and delays for this channel
                  * position.
                  */
-                GetHrtfCoeffs(Device->mHrtf.get(), chans[c].elevation, chans[c].angle,
+                Device->mHrtf->getCoeffs(chans[c].elevation, chans[c].angle,
                     std::numeric_limits<float>::infinity(), spread,
                     voice->mChans[c].mDryParams.Hrtf.Target.Coeffs,
                     voice->mChans[c].mDryParams.Hrtf.Target.Delay);

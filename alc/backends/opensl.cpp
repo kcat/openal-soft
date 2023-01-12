@@ -619,7 +619,7 @@ void OpenSLPlayback::stop()
         } while(SL_RESULT_SUCCESS == result && state.count > 0);
         PRINTERR(result, "bufferQueue->GetState");
 
-        mRing.reset();
+        mRing->reset();
     }
 }
 

@@ -45,6 +45,9 @@ if(COMMAND CMAKE_POLICY)
     if(POLICY CMP0054)
         cmake_policy(SET CMP0054 NEW)
     endif(POLICY CMP0054)
+    if(POLICY CMP0058)
+        cmake_policy(SET CMP0058 NEW)
+    endif(POLICY CMP0058)
     if(POLICY CMP0063)
         cmake_policy(SET CMP0063 NEW)
     endif(POLICY CMP0063)
@@ -1197,13 +1200,19 @@ set(BACKENDS  "${BACKENDS} Null")
 find_package(Git)
 if(ALSOFT_UPDATE_BUILD_VERSION AND GIT_FOUND AND EXISTS "${OpenAL_SOURCE_DIR}/.git")
     # Get the current working branch and its latest abbreviated commit hash
-    add_custom_target(build_version
-        ${CMAKE_COMMAND} -D GIT_EXECUTABLE=${GIT_EXECUTABLE} -D LIB_VERSION=${LIB_VERSION}
+    add_custom_command(OUTPUT "${OpenAL_BINARY_DIR}/version_witness.txt"
+        BYPRODUCTS "${OpenAL_BINARY_DIR}/version.h"
+        COMMAND ${CMAKE_COMMAND} -D GIT_EXECUTABLE=${GIT_EXECUTABLE} -D LIB_VERSION=${LIB_VERSION}
             -D LIB_VERSION_NUM=${LIB_VERSION_NUM} -D SRC=${OpenAL_SOURCE_DIR}/version.h.in
             -D DST=${OpenAL_BINARY_DIR}/version.h -P ${OpenAL_SOURCE_DIR}/version.cmake
+        COMMAND ${CMAKE_COMMAND} -E touch "${OpenAL_BINARY_DIR}/version_witness.txt"
         WORKING_DIRECTORY "${OpenAL_SOURCE_DIR}"
+        MAIN_DEPENDENCY "${OpenAL_SOURCE_DIR}/version.h.in"
+        DEPENDS "${OpenAL_SOURCE_DIR}/.git/index" "${OpenAL_SOURCE_DIR}/version.cmake"
         VERBATIM
     )
+
+    add_custom_target(build_version DEPENDS "${OpenAL_BINARY_DIR}/version_witness.txt")
 else()
     set(GIT_BRANCH "UNKNOWN")
     set(GIT_COMMIT_HASH "unknown")
@@ -1439,6 +1448,11 @@ if(WIN32 AND MINGW AND ALSOFT_BUILD_IMPORT_LIB AND NOT LIBTYPE STREQUAL "STATIC"
         add_custom_command(TARGET OpenAL POST_BUILD
             COMMAND "${SED_EXECUTABLE}" -i -e "s/ @[^ ]*//" OpenAL32.def
             COMMAND "${CMAKE_DLLTOOL}" -d OpenAL32.def -l OpenAL32.lib -D OpenAL32.dll
+            # Technically OpenAL32.def was created by the build, but cmake
+            # doesn't recognize it due to -Wl,--output-def,OpenAL32.def being
+            # manually specified. But declaring the file here allows it to be
+            # properly cleaned, e.g. during make clean.
+            BYPRODUCTS OpenAL32.def OpenAL32.lib
             COMMENT "Stripping ordinals from OpenAL32.def and generating OpenAL32.lib..."
             VERBATIM
         )

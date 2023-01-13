@@ -31,8 +31,8 @@ inline al::optional<ChorusWaveform> WaveformFromEnum(ALenum type)
 {
     switch(type)
     {
-    case AL_CHORUS_WAVEFORM_SINUSOID: return al::make_optional(ChorusWaveform::Sinusoid);
-    case AL_CHORUS_WAVEFORM_TRIANGLE: return al::make_optional(ChorusWaveform::Triangle);
+    case AL_CHORUS_WAVEFORM_SINUSOID: return ChorusWaveform::Sinusoid;
+    case AL_CHORUS_WAVEFORM_TRIANGLE: return ChorusWaveform::Triangle;
     }
     return al::nullopt;
 }

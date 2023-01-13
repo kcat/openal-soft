@@ -51,7 +51,7 @@ const PathNamePair &GetProcBinary()
     if(len == 0)
     {
         ERR("Failed to get process name: error %lu\n", GetLastError());
-        procbin = al::make_optional<PathNamePair>();
+        procbin.emplace();
         return *procbin;
     }
 

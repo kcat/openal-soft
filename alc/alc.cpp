@@ -1428,7 +1428,7 @@ al::optional<DevFmtPair> DecomposeDevFormat(ALenum format)
     for(const auto &item : list)
     {
         if(item.format == format)
-            return al::make_optional(DevFmtPair{item.channels, item.type});
+            return al::make_optional<DevFmtPair>({item.channels, item.type});
     }
 
     return al::nullopt;
@@ -1438,13 +1438,13 @@ al::optional<DevFmtType> DevFmtTypeFromEnum(ALCenum type)
 {
     switch(type)
     {
-    case ALC_BYTE_SOFT: return al::make_optional(DevFmtByte);
-    case ALC_UNSIGNED_BYTE_SOFT: return al::make_optional(DevFmtUByte);
-    case ALC_SHORT_SOFT: return al::make_optional(DevFmtShort);
-    case ALC_UNSIGNED_SHORT_SOFT: return al::make_optional(DevFmtUShort);
-    case ALC_INT_SOFT: return al::make_optional(DevFmtInt);
-    case ALC_UNSIGNED_INT_SOFT: return al::make_optional(DevFmtUInt);
-    case ALC_FLOAT_SOFT: return al::make_optional(DevFmtFloat);
+    case ALC_BYTE_SOFT: return DevFmtByte;
+    case ALC_UNSIGNED_BYTE_SOFT: return DevFmtUByte;
+    case ALC_SHORT_SOFT: return DevFmtShort;
+    case ALC_UNSIGNED_SHORT_SOFT: return DevFmtUShort;
+    case ALC_INT_SOFT: return DevFmtInt;
+    case ALC_UNSIGNED_INT_SOFT: return DevFmtUInt;
+    case ALC_FLOAT_SOFT: return DevFmtFloat;
     }
     WARN("Unsupported format type: 0x%04x\n", type);
     return al::nullopt;
@@ -1468,13 +1468,13 @@ al::optional<DevFmtChannels> DevFmtChannelsFromEnum(ALCenum channels)
 {
     switch(channels)
     {
-    case ALC_MONO_SOFT: return al::make_optional(DevFmtMono);
-    case ALC_STEREO_SOFT: return al::make_optional(DevFmtStereo);
-    case ALC_QUAD_SOFT: return al::make_optional(DevFmtQuad);
-    case ALC_5POINT1_SOFT: return al::make_optional(DevFmtX51);
-    case ALC_6POINT1_SOFT: return al::make_optional(DevFmtX61);
-    case ALC_7POINT1_SOFT: return al::make_optional(DevFmtX71);
-    case ALC_BFORMAT3D_SOFT: return al::make_optional(DevFmtAmbi3D);
+    case ALC_MONO_SOFT: return DevFmtMono;
+    case ALC_STEREO_SOFT: return DevFmtStereo;
+    case ALC_QUAD_SOFT: return DevFmtQuad;
+    case ALC_5POINT1_SOFT: return DevFmtX51;
+    case ALC_6POINT1_SOFT: return DevFmtX61;
+    case ALC_7POINT1_SOFT: return DevFmtX71;
+    case ALC_BFORMAT3D_SOFT: return DevFmtAmbi3D;
     }
     WARN("Unsupported format channels: 0x%04x\n", channels);
     return al::nullopt;
@@ -1501,8 +1501,8 @@ al::optional<DevAmbiLayout> DevAmbiLayoutFromEnum(ALCenum layout)
 {
     switch(layout)
     {
-    case ALC_FUMA_SOFT: return al::make_optional(DevAmbiLayout::FuMa);
-    case ALC_ACN_SOFT: return al::make_optional(DevAmbiLayout::ACN);
+    case ALC_FUMA_SOFT: return DevAmbiLayout::FuMa;
+    case ALC_ACN_SOFT: return DevAmbiLayout::ACN;
     }
     WARN("Unsupported ambisonic layout: 0x%04x\n", layout);
     return al::nullopt;
@@ -1521,9 +1521,9 @@ al::optional<DevAmbiScaling> DevAmbiScalingFromEnum(ALCenum scaling)
 {
     switch(scaling)
     {
-    case ALC_FUMA_SOFT: return al::make_optional(DevAmbiScaling::FuMa);
-    case ALC_SN3D_SOFT: return al::make_optional(DevAmbiScaling::SN3D);
-    case ALC_N3D_SOFT: return al::make_optional(DevAmbiScaling::N3D);
+    case ALC_FUMA_SOFT: return DevAmbiScaling::FuMa;
+    case ALC_SN3D_SOFT: return DevAmbiScaling::SN3D;
+    case ALC_N3D_SOFT: return DevAmbiScaling::N3D;
     }
     WARN("Unsupported ambisonic scaling: 0x%04x\n", scaling);
     return al::nullopt;

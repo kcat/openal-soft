@@ -839,8 +839,8 @@ al::optional<SourceStereo> StereoModeFromEnum(ALenum mode)
 {
     switch(mode)
     {
-    case AL_NORMAL_SOFT: return al::make_optional(SourceStereo::Normal);
-    case AL_SUPER_STEREO_SOFT: return al::make_optional(SourceStereo::Enhanced);
+    case AL_NORMAL_SOFT: return SourceStereo::Normal;
+    case AL_SUPER_STEREO_SOFT: return SourceStereo::Enhanced;
     }
     WARN("Unsupported stereo mode: 0x%04x\n", mode);
     return al::nullopt;
@@ -859,9 +859,9 @@ al::optional<SpatializeMode> SpatializeModeFromEnum(ALenum mode)
 {
     switch(mode)
     {
-    case AL_FALSE: return al::make_optional(SpatializeMode::Off);
-    case AL_TRUE: return al::make_optional(SpatializeMode::On);
-    case AL_AUTO_SOFT: return al::make_optional(SpatializeMode::Auto);
+    case AL_FALSE: return SpatializeMode::Off;
+    case AL_TRUE: return SpatializeMode::On;
+    case AL_AUTO_SOFT: return SpatializeMode::Auto;
     }
     WARN("Unsupported spatialize mode: 0x%04x\n", mode);
     return al::nullopt;
@@ -881,9 +881,9 @@ al::optional<DirectMode> DirectModeFromEnum(ALenum mode)
 {
     switch(mode)
     {
-    case AL_FALSE: return al::make_optional(DirectMode::Off);
-    case AL_DROP_UNMATCHED_SOFT: return al::make_optional(DirectMode::DropMismatch);
-    case AL_REMIX_UNMATCHED_SOFT: return al::make_optional(DirectMode::RemixMismatch);
+    case AL_FALSE: return DirectMode::Off;
+    case AL_DROP_UNMATCHED_SOFT: return DirectMode::DropMismatch;
+    case AL_REMIX_UNMATCHED_SOFT: return DirectMode::RemixMismatch;
     }
     WARN("Unsupported direct mode: 0x%04x\n", mode);
     return al::nullopt;
@@ -903,13 +903,13 @@ al::optional<DistanceModel> DistanceModelFromALenum(ALenum model)
 {
     switch(model)
     {
-    case AL_NONE: return al::make_optional(DistanceModel::Disable);
-    case AL_INVERSE_DISTANCE: return al::make_optional(DistanceModel::Inverse);
-    case AL_INVERSE_DISTANCE_CLAMPED: return al::make_optional(DistanceModel::InverseClamped);
-    case AL_LINEAR_DISTANCE: return al::make_optional(DistanceModel::Linear);
-    case AL_LINEAR_DISTANCE_CLAMPED: return al::make_optional(DistanceModel::LinearClamped);
-    case AL_EXPONENT_DISTANCE: return al::make_optional(DistanceModel::Exponent);
-    case AL_EXPONENT_DISTANCE_CLAMPED: return al::make_optional(DistanceModel::ExponentClamped);
+    case AL_NONE: return DistanceModel::Disable;
+    case AL_INVERSE_DISTANCE: return DistanceModel::Inverse;
+    case AL_INVERSE_DISTANCE_CLAMPED: return DistanceModel::InverseClamped;
+    case AL_LINEAR_DISTANCE: return DistanceModel::Linear;
+    case AL_LINEAR_DISTANCE_CLAMPED: return DistanceModel::LinearClamped;
+    case AL_EXPONENT_DISTANCE: return DistanceModel::Exponent;
+    case AL_EXPONENT_DISTANCE_CLAMPED: return DistanceModel::ExponentClamped;
     }
     return al::nullopt;
 }

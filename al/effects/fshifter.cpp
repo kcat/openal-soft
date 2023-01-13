@@ -24,9 +24,9 @@ al::optional<FShifterDirection> DirectionFromEmum(ALenum value)
 {
     switch(value)
     {
-    case AL_FREQUENCY_SHIFTER_DIRECTION_DOWN: return al::make_optional(FShifterDirection::Down);
-    case AL_FREQUENCY_SHIFTER_DIRECTION_UP: return al::make_optional(FShifterDirection::Up);
-    case AL_FREQUENCY_SHIFTER_DIRECTION_OFF: return al::make_optional(FShifterDirection::Off);
+    case AL_FREQUENCY_SHIFTER_DIRECTION_DOWN: return FShifterDirection::Down;
+    case AL_FREQUENCY_SHIFTER_DIRECTION_UP: return FShifterDirection::Up;
+    case AL_FREQUENCY_SHIFTER_DIRECTION_OFF: return FShifterDirection::Off;
     }
     return al::nullopt;
 }

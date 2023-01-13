@@ -137,5 +137,5 @@ al::optional<CPUInfo> GetCPUInfo()
 #endif
 #endif
 
-    return al::make_optional(ret);
+    return ret;
 }

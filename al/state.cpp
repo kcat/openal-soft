@@ -107,13 +107,13 @@ al::optional<DistanceModel> DistanceModelFromALenum(ALenum model)
 {
     switch(model)
     {
-    case AL_NONE: return al::make_optional(DistanceModel::Disable);
-    case AL_INVERSE_DISTANCE: return al::make_optional(DistanceModel::Inverse);
-    case AL_INVERSE_DISTANCE_CLAMPED: return al::make_optional(DistanceModel::InverseClamped);
-    case AL_LINEAR_DISTANCE: return al::make_optional(DistanceModel::Linear);
-    case AL_LINEAR_DISTANCE_CLAMPED: return al::make_optional(DistanceModel::LinearClamped);
-    case AL_EXPONENT_DISTANCE: return al::make_optional(DistanceModel::Exponent);
-    case AL_EXPONENT_DISTANCE_CLAMPED: return al::make_optional(DistanceModel::ExponentClamped);
+    case AL_NONE: return DistanceModel::Disable;
+    case AL_INVERSE_DISTANCE: return DistanceModel::Inverse;
+    case AL_INVERSE_DISTANCE_CLAMPED: return DistanceModel::InverseClamped;
+    case AL_LINEAR_DISTANCE: return DistanceModel::Linear;
+    case AL_LINEAR_DISTANCE_CLAMPED: return DistanceModel::LinearClamped;
+    case AL_EXPONENT_DISTANCE: return DistanceModel::Exponent;
+    case AL_EXPONENT_DISTANCE_CLAMPED: return DistanceModel::ExponentClamped;
     }
     return al::nullopt;
 }

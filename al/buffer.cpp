@@ -288,8 +288,8 @@ al::optional<AmbiLayout> AmbiLayoutFromEnum(ALenum layout)
 {
     switch(layout)
     {
-    case AL_FUMA_SOFT: return al::make_optional(AmbiLayout::FuMa);
-    case AL_ACN_SOFT: return al::make_optional(AmbiLayout::ACN);
+    case AL_FUMA_SOFT: return AmbiLayout::FuMa;
+    case AL_ACN_SOFT: return AmbiLayout::ACN;
     }
     return al::nullopt;
 }
@@ -307,9 +307,9 @@ al::optional<AmbiScaling> AmbiScalingFromEnum(ALenum scale)
 {
     switch(scale)
     {
-    case AL_FUMA_SOFT: return al::make_optional(AmbiScaling::FuMa);
-    case AL_SN3D_SOFT: return al::make_optional(AmbiScaling::SN3D);
-    case AL_N3D_SOFT: return al::make_optional(AmbiScaling::N3D);
+    case AL_FUMA_SOFT: return AmbiScaling::FuMa;
+    case AL_SN3D_SOFT: return AmbiScaling::SN3D;
+    case AL_N3D_SOFT: return AmbiScaling::N3D;
     }
     return al::nullopt;
 }
@@ -329,18 +329,18 @@ al::optional<FmtChannels> FmtFromUserFmt(UserFmtChannels chans)
 {
     switch(chans)
     {
-    case UserFmtMono: return al::make_optional(FmtMono);
-    case UserFmtStereo: return al::make_optional(FmtStereo);
-    case UserFmtRear: return al::make_optional(FmtRear);
-    case UserFmtQuad: return al::make_optional(FmtQuad);
-    case UserFmtX51: return al::make_optional(FmtX51);
-    case UserFmtX61: return al::make_optional(FmtX61);
-    case UserFmtX71: return al::make_optional(FmtX71);
-    case UserFmtBFormat2D: return al::make_optional(FmtBFormat2D);
-    case UserFmtBFormat3D: return al::make_optional(FmtBFormat3D);
-    case UserFmtUHJ2: return al::make_optional(FmtUHJ2);
-    case UserFmtUHJ3: return al::make_optional(FmtUHJ3);
-    case UserFmtUHJ4: return al::make_optional(FmtUHJ4);
+    case UserFmtMono: return FmtMono;
+    case UserFmtStereo: return FmtStereo;
+    case UserFmtRear: return FmtRear;
+    case UserFmtQuad: return FmtQuad;
+    case UserFmtX51: return FmtX51;
+    case UserFmtX61: return FmtX61;
+    case UserFmtX71: return FmtX71;
+    case UserFmtBFormat2D: return FmtBFormat2D;
+    case UserFmtBFormat3D: return FmtBFormat3D;
+    case UserFmtUHJ2: return FmtUHJ2;
+    case UserFmtUHJ3: return FmtUHJ3;
+    case UserFmtUHJ4: return FmtUHJ4;
     }
     return al::nullopt;
 }
@@ -348,12 +348,12 @@ al::optional<FmtType> FmtFromUserFmt(UserFmtType type)
 {
     switch(type)
     {
-    case UserFmtUByte: return al::make_optional(FmtUByte);
-    case UserFmtShort: return al::make_optional(FmtShort);
-    case UserFmtFloat: return al::make_optional(FmtFloat);
-    case UserFmtDouble: return al::make_optional(FmtDouble);
-    case UserFmtMulaw: return al::make_optional(FmtMulaw);
-    case UserFmtAlaw: return al::make_optional(FmtAlaw);
+    case UserFmtUByte: return FmtUByte;
+    case UserFmtShort: return FmtShort;
+    case UserFmtFloat: return FmtFloat;
+    case UserFmtDouble: return FmtDouble;
+    case UserFmtMulaw: return FmtMulaw;
+    case UserFmtAlaw: return FmtAlaw;
     /* ADPCM not handled here. */
     case UserFmtIMA4: break;
     case UserFmtMSADPCM: break;

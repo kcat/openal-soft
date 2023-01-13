@@ -24,9 +24,9 @@ al::optional<ModulatorWaveform> WaveformFromEmum(ALenum value)
 {
     switch(value)
     {
-    case AL_RING_MODULATOR_SINUSOID: return al::make_optional(ModulatorWaveform::Sinusoid);
-    case AL_RING_MODULATOR_SAWTOOTH: return al::make_optional(ModulatorWaveform::Sawtooth);
-    case AL_RING_MODULATOR_SQUARE: return al::make_optional(ModulatorWaveform::Square);
+    case AL_RING_MODULATOR_SINUSOID: return ModulatorWaveform::Sinusoid;
+    case AL_RING_MODULATOR_SAWTOOTH: return ModulatorWaveform::Sawtooth;
+    case AL_RING_MODULATOR_SQUARE: return ModulatorWaveform::Square;
     }
     return al::nullopt;
 }

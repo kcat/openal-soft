@@ -81,7 +81,7 @@ al::optional<std::string> AmbDecConf::load(const char *fname) noexcept
 {
     al::ifstream f{fname};
     if(!f.is_open())
-        return al::make_optional(std::string("Failed to open file \"")+fname+"\"");
+        return std::string("Failed to open file \"")+fname+"\"";
 
     ReaderScope scope{ReaderScope::Global};
     size_t speaker_pos{0};

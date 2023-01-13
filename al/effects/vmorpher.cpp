@@ -23,7 +23,7 @@ namespace {
 al::optional<VMorpherPhenome> PhenomeFromEnum(ALenum val)
 {
 #define HANDLE_PHENOME(x) case AL_VOCAL_MORPHER_PHONEME_ ## x:                \
-    return al::make_optional(VMorpherPhenome::x)
+    return VMorpherPhenome::x
     switch(val)
     {
     HANDLE_PHENOME(A);
@@ -104,9 +104,9 @@ al::optional<VMorpherWaveform> WaveformFromEmum(ALenum value)
 {
     switch(value)
     {
-    case AL_VOCAL_MORPHER_WAVEFORM_SINUSOID: return al::make_optional(VMorpherWaveform::Sinusoid);
-    case AL_VOCAL_MORPHER_WAVEFORM_TRIANGLE: return al::make_optional(VMorpherWaveform::Triangle);
-    case AL_VOCAL_MORPHER_WAVEFORM_SAWTOOTH: return al::make_optional(VMorpherWaveform::Sawtooth);
+    case AL_VOCAL_MORPHER_WAVEFORM_SINUSOID: return VMorpherWaveform::Sinusoid;
+    case AL_VOCAL_MORPHER_WAVEFORM_TRIANGLE: return VMorpherWaveform::Triangle;
+    case AL_VOCAL_MORPHER_WAVEFORM_SAWTOOTH: return VMorpherWaveform::Sawtooth;
     }
     return al::nullopt;
 }

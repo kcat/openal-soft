@@ -486,36 +486,36 @@ void ReadALConfig()
 al::optional<std::string> ConfigValueStr(const char *devName, const char *blockName, const char *keyName)
 {
     if(const char *val{GetConfigValue(devName, blockName, keyName)})
-        return al::make_optional<std::string>(val);
+        return val;
     return al::nullopt;
 }
 
 al::optional<int> ConfigValueInt(const char *devName, const char *blockName, const char *keyName)
 {
     if(const char *val{GetConfigValue(devName, blockName, keyName)})
-        return al::make_optional(static_cast<int>(std::strtol(val, nullptr, 0)));
+        return static_cast<int>(std::strtol(val, nullptr, 0));
     return al::nullopt;
 }
 
 al::optional<unsigned int> ConfigValueUInt(const char *devName, const char *blockName, const char *keyName)
 {
     if(const char *val{GetConfigValue(devName, blockName, keyName)})
-        return al::make_optional(static_cast<unsigned int>(std::strtoul(val, nullptr, 0)));
+        return static_cast<unsigned int>(std::strtoul(val, nullptr, 0));
     return al::nullopt;
 }
 
 al::optional<float> ConfigValueFloat(const char *devName, const char *blockName, const char *keyName)
 {
     if(const char *val{GetConfigValue(devName, blockName, keyName)})
-        return al::make_optional(std::strtof(val, nullptr));
+        return std::strtof(val, nullptr);
     return al::nullopt;
 }
 
 al::optional<bool> ConfigValueBool(const char *devName, const char *blockName, const char *keyName)
 {
     if(const char *val{GetConfigValue(devName, blockName, keyName)})
-        return al::make_optional(al::strcasecmp(val, "on") == 0 || al::strcasecmp(val, "yes") == 0
-            || al::strcasecmp(val, "true")==0 || atoi(val) != 0);
+        return al::strcasecmp(val, "on") == 0 || al::strcasecmp(val, "yes") == 0
+            || al::strcasecmp(val, "true")==0 || atoi(val) != 0;
     return al::nullopt;
 }
 

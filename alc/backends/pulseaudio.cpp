@@ -836,7 +836,8 @@ void PulsePlayback::open(const char *name)
     pa_stream_set_moved_callback(mStream, &PulsePlayback::streamMovedCallbackC, this);
     mFrameSize = static_cast<uint>(pa_frame_size(pa_stream_get_sample_spec(mStream)));
 
-    mDeviceName = pulse_name ? al::make_optional<std::string>(pulse_name) : al::nullopt;
+    if(pulse_name) mDeviceName.emplace(pulse_name);
+    else mDeviceName.reset();
     if(!dev_name)
     {
         pa_operation *op{pa_context_get_sink_info_by_name(mContext,
@@ -1251,7 +1252,8 @@ void PulseCapture::open(const char *name)
     pa_stream_set_moved_callback(mStream, &PulseCapture::streamMovedCallbackC, this);
     pa_stream_set_state_callback(mStream, &PulseCapture::streamStateCallbackC, this);
 
-    mDeviceName = pulse_name ? al::make_optional<std::string>(pulse_name) : al::nullopt;
+    if(pulse_name) mDeviceName.emplace(pulse_name);
+    else mDeviceName.reset();
     if(mDevice->DeviceName.empty())
     {
         pa_operation *op{pa_context_get_source_info_by_name(mContext,

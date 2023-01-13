@@ -96,8 +96,9 @@ inline void ApplyCoeffs(float2 *RESTRICT Values, const size_t IrSize, const Cons
     }
 }
 
-inline void MixLine(const al::span<const float> InSamples, float *RESTRICT dst, float &CurrentGain,
-    const float TargetGain, const float delta, const size_t min_len, size_t Counter)
+force_inline void MixLine(const al::span<const float> InSamples, float *RESTRICT dst,
+    float &CurrentGain, const float TargetGain, const float delta, const size_t min_len,
+    size_t Counter)
 {
     float gain{CurrentGain};
     const float step{(TargetGain-gain) * delta};

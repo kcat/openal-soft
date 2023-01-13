@@ -12,7 +12,7 @@
 #endif
 
 #ifdef __GNUC__
-#define force_inline [[gnu::always_inline]]
+#define force_inline [[gnu::always_inline]] inline
 #elif defined(_MSC_VER)
 #define force_inline __forceinline
 #else

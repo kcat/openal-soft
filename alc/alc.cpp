@@ -1666,7 +1666,6 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
 
             const double scale{static_cast<double>(*optsrate) / DEFAULT_OUTPUT_RATE};
             period_size = static_cast<uint>(period_size*scale + 0.5);
-            buffer_size = static_cast<uint>(buffer_size*scale + 0.5);
         }
 
         if(auto persizeopt = device->configValue<uint>(nullptr, "period_size"))

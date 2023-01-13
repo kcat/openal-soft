@@ -1044,11 +1044,12 @@ struct PulseCapture final : public BackendBase {
 
     al::optional<std::string> mDeviceName{al::nullopt};
 
+    al::span<const al::byte> mCapBuffer;
+    size_t mHoleLength{0};
+    size_t mPacketLength{0};
+
     uint mLastReadable{0u};
     al::byte mSilentVal{};
-
-    al::span<const al::byte> mCapBuffer;
-    ssize_t mCapLen{0};
 
     pa_buffer_attr mAttr{};
     pa_sample_spec mSpec{};
@@ -1234,17 +1235,24 @@ void PulseCapture::captureSamples(al::byte *buffer, uint samples)
     al::span<al::byte> dstbuf{buffer, samples * pa_frame_size(&mSpec)};
 
     /* Capture is done in fragment-sized chunks, so we loop until we get all
-     * that's available */
+     * that's available.
+     */
     mLastReadable -= static_cast<uint>(dstbuf.size());
     while(!dstbuf.empty())
     {
+        if(mHoleLength > 0) [[unlikely]]
+        {
+            const size_t rem{minz(dstbuf.size(), mHoleLength)};
+            std::fill_n(dstbuf.begin(), rem, mSilentVal);
+            dstbuf = dstbuf.subspan(rem);
+            mHoleLength -= rem;
+
+            continue;
+        }
         if(!mCapBuffer.empty())
         {
             const size_t rem{minz(dstbuf.size(), mCapBuffer.size())};
-            if(mCapLen < 0) [[unlikely]]
-                std::fill_n(dstbuf.begin(), rem, mSilentVal);
-            else
-                std::copy_n(mCapBuffer.begin(), rem, dstbuf.begin());
+            std::copy_n(mCapBuffer.begin(), rem, dstbuf.begin());
             dstbuf = dstbuf.subspan(rem);
             mCapBuffer = mCapBuffer.subspan(rem);
 
@@ -1255,18 +1263,19 @@ void PulseCapture::captureSamples(al::byte *buffer, uint samples)
             break;
 
         MainloopUniqueLock plock{mMainloop};
-        if(mCapLen != 0)
+        if(mPacketLength > 0)
         {
             pa_stream_drop(mStream);
-            mCapBuffer = {};
-            mCapLen = 0;
+            mPacketLength = 0;
         }
+
         const pa_stream_state_t state{pa_stream_get_state(mStream)};
         if(!PA_STREAM_IS_GOOD(state)) [[unlikely]]
         {
             mDevice->handleDisconnect("Bad capture state: %u", state);
             break;
         }
+
         const void *capbuf;
         size_t caplen;
         if(pa_stream_peek(mStream, &capbuf, &caplen) < 0) [[unlikely]]
@@ -1279,10 +1288,10 @@ void PulseCapture::captureSamples(al::byte *buffer, uint samples)
 
         if(caplen == 0) break;
         if(!capbuf) [[unlikely]]
-            mCapLen = -static_cast<ssize_t>(caplen);
+            mHoleLength = caplen;
         else
-            mCapLen = static_cast<ssize_t>(caplen);
-        mCapBuffer = {static_cast<const al::byte*>(capbuf), caplen};
+            mCapBuffer = {static_cast<const al::byte*>(capbuf), caplen};
+        mPacketLength = caplen;
     }
     if(!dstbuf.empty())
         std::fill(dstbuf.begin(), dstbuf.end(), mSilentVal);
@@ -1290,7 +1299,7 @@ void PulseCapture::captureSamples(al::byte *buffer, uint samples)
 
 uint PulseCapture::availableSamples()
 {
-    size_t readable{mCapBuffer.size()};
+    size_t readable{maxz(mCapBuffer.size(), mHoleLength)};
 
     if(mDevice->Connected.load(std::memory_order_acquire))
     {
@@ -1304,11 +1313,17 @@ uint PulseCapture::availableSamples()
         }
         else
         {
-            const auto caplen = static_cast<size_t>(std::abs(mCapLen));
-            if(got > caplen) readable += got - caplen;
+            /* "readable" is the number of bytes from the last packet that have
+             * not yet been read by the caller. So add the stream's readable
+             * size excluding the last packet (the stream size includes the
+             * last packet until it's dropped).
+             */
+            if(got > mPacketLength)
+                readable += got - mPacketLength;
         }
     }
 
+    /* Avoid uint overflow, and avoid decreasing the readable count. */
     readable = std::min<size_t>(readable, std::numeric_limits<uint>::max());
     mLastReadable = std::max(mLastReadable, static_cast<uint>(readable));
     return mLastReadable / static_cast<uint>(pa_frame_size(&mSpec));

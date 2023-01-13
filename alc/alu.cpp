@@ -366,10 +366,10 @@ void UpsampleBFormatTransform(size_t coeffs_order,
     {
         for(size_t j{0};j < num_chans;++j)
         {
-            double sum{0.0};
+            float sum{0.0};
             for(size_t k{0};k < num_chans;++k)
-                sum += double{matrix1[i][k]} * matrix2[j][k];
-            coeffs[j][i] = static_cast<float>(sum);
+                sum += matrix1[i][k] * matrix2[j][k];
+            coeffs[j][i] = sum;
         }
     }
 }

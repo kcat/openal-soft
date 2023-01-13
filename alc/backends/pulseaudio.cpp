@@ -965,27 +965,13 @@ void PulsePlayback::start()
 {
     MainloopUniqueLock plock{mMainloop};
 
-    /* Write some (silent) samples to fill the buffer before we start feeding
-     * it newly mixed samples.
+    /* Write some samples to fill the buffer before we start feeding it newly
+     * mixed samples.
      */
     if(size_t todo{pa_stream_writable_size(mStream)})
     {
         void *buf{pa_xmalloc(todo)};
-        switch(mSpec.format)
-        {
-        case PA_SAMPLE_U8:
-            std::fill_n(static_cast<uint8_t*>(buf), todo, 0x80);
-            break;
-        case PA_SAMPLE_ALAW:
-            std::fill_n(static_cast<uint8_t*>(buf), todo, 0xD5);
-            break;
-        case PA_SAMPLE_ULAW:
-            std::fill_n(static_cast<uint8_t*>(buf), todo, 0x7f);
-            break;
-        default:
-            std::fill_n(static_cast<uint8_t*>(buf), todo, 0x00);
-            break;
-        }
+        mDevice->renderSamples(buf, static_cast<uint>(todo/mFrameSize), mSpec.channels);
         pa_stream_write(mStream, buf, todo, pa_xfree, 0, PA_SEEK_RELATIVE);
     }
 

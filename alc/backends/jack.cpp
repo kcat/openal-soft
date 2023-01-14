@@ -674,7 +674,7 @@ bool JackBackendFactory::init()
     if(!jack_load())
         return false;
 
-    if(!GetConfigValueBool(nullptr, "jack", "spawn-server", 0))
+    if(!GetConfigValueBool(nullptr, "jack", "spawn-server", false))
         ClientOptions = static_cast<jack_options_t>(ClientOptions | JackNoStartServer);
 
     const PathNamePair &binname = GetProcBinary();

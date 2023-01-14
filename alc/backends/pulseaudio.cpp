@@ -1401,7 +1401,7 @@ bool PulseBackendFactory::init()
 #endif /* HAVE_DYNLOAD */
 
     pulse_ctx_flags = PA_CONTEXT_NOFLAGS;
-    if(!GetConfigValueBool(nullptr, "pulse", "spawn-server", 1))
+    if(!GetConfigValueBool(nullptr, "pulse", "spawn-server", false))
         pulse_ctx_flags |= PA_CONTEXT_NOAUTOSPAWN;
 
     try {

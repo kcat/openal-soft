@@ -412,7 +412,7 @@
 #  Attempts to autospawn a PulseAudio server whenever needed (initializing the
 #  backend, enumerating devices, etc). Setting autospawn to false in Pulse's
 #  client.conf will still prevent autospawning even if this is set to true.
-#spawn-server = true
+#spawn-server = false
 
 ## allow-moves: (global)
 #  Allows PulseAudio to move active streams to different devices. Note that the

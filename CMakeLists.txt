@@ -1226,11 +1226,11 @@ option(ALSOFT_EMBED_HRTF_DATA "Embed the HRTF data files (increases library foot
 if(ALSOFT_EMBED_HRTF_DATA)
     macro(make_hrtf_header FILENAME VARNAME)
         set(infile  "${OpenAL_SOURCE_DIR}/hrtf/${FILENAME}")
-        set(outfile  "${OpenAL_BINARY_DIR}/${VARNAME}.h")
+        set(outfile  "${OpenAL_BINARY_DIR}/${VARNAME}.txt")
 
         add_custom_command(OUTPUT "${outfile}"
             COMMAND ${CMAKE_COMMAND} -D "INPUT_FILE=${infile}" -D "OUTPUT_FILE=${outfile}"
-                -D "VARIABLE_NAME=${VARNAME}" -P "${CMAKE_MODULE_PATH}/bin2h.script.cmake"
+                -P "${CMAKE_MODULE_PATH}/bin2h.script.cmake"
             WORKING_DIRECTORY "${OpenAL_SOURCE_DIR}"
             DEPENDS "${infile}" "${CMAKE_MODULE_PATH}/bin2h.script.cmake"
             VERBATIM
@@ -1238,7 +1238,7 @@ if(ALSOFT_EMBED_HRTF_DATA)
         set(ALC_OBJS  ${ALC_OBJS} "${outfile}")
     endmacro()
 
-    make_hrtf_header("Default HRTF.mhr" "hrtf_default")
+    make_hrtf_header("Default HRTF.mhr" "default_hrtf")
 endif()
 
 

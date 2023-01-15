@@ -57,11 +57,11 @@ using complex_d = std::complex<double>;
 #define FIFO_LATENCY (STFT_STEP * (OVERSAMP-1))
 
 /* Define a Hann window, used to filter the STFT input and output. */
-std::array<double,STFT_SIZE> InitHannWindow()
+constexpr std::array<double, STFT_SIZE> InitHannWindow()
 {
-    std::array<double,STFT_SIZE> ret;
+    std::array<double, STFT_SIZE> ret{};
     /* Create lookup table of the Hann window for the desired size, i.e. STFT_SIZE */
-    for(size_t i{0};i < STFT_SIZE>>1;i++)
+    for(size_t i{}; i < STFT_SIZE >> 1; i++)
     {
         constexpr double scale{al::numbers::pi / double{STFT_SIZE}};
         const double val{std::sin(static_cast<double>(i+1) * scale)};
@@ -69,7 +69,7 @@ std::array<double,STFT_SIZE> InitHannWindow()
     }
     return ret;
 }
-alignas(16) const std::array<double,STFT_SIZE> HannWindow = InitHannWindow();
+alignas(16) const auto HannWindow = InitHannWindow();
 
 
 struct FrequencyBin {

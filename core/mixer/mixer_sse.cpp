@@ -40,36 +40,36 @@ inline void ApplyCoeffs(float2 *RESTRICT Values, const size_t IrSize, const Cons
     {
         for(size_t i{0};i < IrSize;i += 2)
         {
-            const __m128 coeffs{_mm_load_ps(&Coeffs[i][0])};
-            __m128 vals{_mm_load_ps(&Values[i][0])};
+            const __m128 coeffs{_mm_load_ps(Coeffs[i].data())};
+            __m128 vals{_mm_load_ps(Values[i].data())};
             vals = MLA4(vals, lrlr, coeffs);
-            _mm_store_ps(&Values[i][0], vals);
+            _mm_store_ps(Values[i].data(), vals);
         }
     }
     else
     {
         __m128 imp0, imp1;
-        __m128 coeffs{_mm_load_ps(&Coeffs[0][0])};
-        __m128 vals{_mm_loadl_pi(_mm_setzero_ps(), reinterpret_cast<__m64*>(&Values[0][0]))};
+        __m128 coeffs{_mm_load_ps(Coeffs[0].data())};
+        __m128 vals{_mm_loadl_pi(_mm_setzero_ps(), reinterpret_cast<__m64*>(Values[0].data()))};
         imp0 = _mm_mul_ps(lrlr, coeffs);
         vals = _mm_add_ps(imp0, vals);
-        _mm_storel_pi(reinterpret_cast<__m64*>(&Values[0][0]), vals);
+        _mm_storel_pi(reinterpret_cast<__m64*>(Values[0].data()), vals);
         size_t td{((IrSize+1)>>1) - 1};
         size_t i{1};
         do {
-            coeffs = _mm_load_ps(&Coeffs[i+1][0]);
-            vals = _mm_load_ps(&Values[i][0]);
+            coeffs = _mm_load_ps(Coeffs[i+1].data());
+            vals = _mm_load_ps(Values[i].data());
             imp1 = _mm_mul_ps(lrlr, coeffs);
             imp0 = _mm_shuffle_ps(imp0, imp1, _MM_SHUFFLE(1, 0, 3, 2));
             vals = _mm_add_ps(imp0, vals);
-            _mm_store_ps(&Values[i][0], vals);
+            _mm_store_ps(Values[i].data(), vals);
             imp0 = imp1;
             i += 2;
         } while(--td);
-        vals = _mm_loadl_pi(vals, reinterpret_cast<__m64*>(&Values[i][0]));
+        vals = _mm_loadl_pi(vals, reinterpret_cast<__m64*>(Values[i].data()));
         imp0 = _mm_movehl_ps(imp0, imp0);
         vals = _mm_add_ps(imp0, vals);
-        _mm_storel_pi(reinterpret_cast<__m64*>(&Values[i][0]), vals);
+        _mm_storel_pi(reinterpret_cast<__m64*>(Values[i].data()), vals);
     }
 }
 

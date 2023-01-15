@@ -158,7 +158,7 @@ void complex_hilbert(const al::span<std::complex<double>> buffer)
 
     *bufiter *= inverse_size; ++bufiter;
     bufiter = std::transform(bufiter, halfiter, bufiter,
-        std::bind(std::multiplies<>{}, _1, 2.0*inverse_size));
+        [inverse_size](auto a){ return a * (2.0 * inverse_size); });
     *bufiter *= inverse_size; ++bufiter;
 
     std::fill(bufiter, buffer.end(), std::complex<double>{});

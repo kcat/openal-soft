@@ -497,7 +497,7 @@ void JackPlayback::open(const char *name)
         mPortPattern = iter->mPattern;
     }
 
-    mRTMixing = GetConfigValueBool(name, "jack", "rt-mix", 1);
+    mRTMixing = GetConfigValueBool(name, "jack", "rt-mix", true);
     jack_set_process_callback(mClient,
         mRTMixing ? &JackPlayback::processRtC : &JackPlayback::processC, this);
 

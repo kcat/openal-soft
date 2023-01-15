@@ -21,7 +21,7 @@
 
 namespace {
 
-static const struct {
+const struct {
     char backend_name[16];
     char full_string[32];
 } backendList[] = {
@@ -75,7 +75,7 @@ static const struct {
     { "", "" }
 };
 
-static const struct NameValuePair {
+const struct NameValuePair {
     const char name[64];
     const char value[16];
 } speakerModeList[] = {
@@ -146,7 +146,7 @@ static const struct NameValuePair {
     { "", "" }
 };
 
-static QString getDefaultConfigName()
+QString getDefaultConfigName()
 {
 #ifdef Q_OS_WIN32
     static const char fname[] = "alsoft.ini";
@@ -173,7 +173,7 @@ static QString getDefaultConfigName()
     return fname;
 }
 
-static QString getBaseDataPath()
+QString getBaseDataPath()
 {
 #ifdef Q_OS_WIN32
     auto get_appdata_path = []() noexcept -> QString
@@ -196,7 +196,7 @@ static QString getBaseDataPath()
     return base;
 }
 
-static QStringList getAllDataPaths(const QString &append)
+QStringList getAllDataPaths(const QString &append)
 {
     QStringList list;
     list.append(getBaseDataPath());
@@ -227,7 +227,7 @@ static QStringList getAllDataPaths(const QString &append)
 }
 
 template<size_t N>
-static QString getValueFromName(const NameValuePair (&list)[N], const QString &str)
+QString getValueFromName(const NameValuePair (&list)[N], const QString &str)
 {
     for(size_t i = 0;i < N-1;i++)
     {
@@ -238,7 +238,7 @@ static QString getValueFromName(const NameValuePair (&list)[N], const QString &s
 }
 
 template<size_t N>
-static QString getNameFromValue(const NameValuePair (&list)[N], const QString &str)
+QString getNameFromValue(const NameValuePair (&list)[N], const QString &str)
 {
     for(size_t i = 0;i < N-1;i++)
     {
@@ -844,7 +844,7 @@ void MainWindow::loadConfig(const QString &fname)
     ui->enabledBackendList->clear();
     ui->disabledBackendList->clear();
     QStringList drivers{settings.value("drivers").toStringList()};
-    if(drivers.size() == 0)
+    if(drivers.empty())
         ui->backendCheckBox->setChecked(true);
     else
     {
@@ -1091,7 +1091,7 @@ void MainWindow::saveConfig(const QString &fname) const
             }
         }
     }
-    if(strlist.size() == 0 && !ui->backendCheckBox->isChecked())
+    if(strlist.empty() && !ui->backendCheckBox->isChecked())
         strlist.append("-all");
     else if(ui->backendCheckBox->isChecked())
         strlist.append(QString{});
@@ -1322,7 +1322,7 @@ void MainWindow::removeHrtfFile()
 
 void MainWindow::updateHrtfRemoveButton()
 {
-    ui->hrtfRemoveButton->setEnabled(ui->hrtfFileList->selectedItems().size() != 0);
+    ui->hrtfRemoveButton->setEnabled(!ui->hrtfFileList->selectedItems().empty());
 }
 
 void MainWindow::showEnabledBackendMenu(QPoint pt)
@@ -1333,7 +1333,7 @@ void MainWindow::showEnabledBackendMenu(QPoint pt)
 
     QMenu ctxmenu;
     QAction *removeAction{ctxmenu.addAction(QIcon::fromTheme("list-remove"), "Remove")};
-    if(ui->enabledBackendList->selectedItems().size() == 0)
+    if(ui->enabledBackendList->selectedItems().empty())
         removeAction->setEnabled(false);
     ctxmenu.addSeparator();
     for(size_t i = 0;backendList[i].backend_name[0];i++)
@@ -1341,8 +1341,8 @@ void MainWindow::showEnabledBackendMenu(QPoint pt)
         QString backend{backendList[i].full_string};
         QAction *action{ctxmenu.addAction(QString("Add ")+backend)};
         actionMap[action] = backend;
-        if(ui->enabledBackendList->findItems(backend, Qt::MatchFixedString).size() != 0 ||
-           ui->disabledBackendList->findItems(backend, Qt::MatchFixedString).size() != 0)
+        if(!ui->enabledBackendList->findItems(backend, Qt::MatchFixedString).empty() ||
+           !ui->disabledBackendList->findItems(backend, Qt::MatchFixedString).empty())
             action->setEnabled(false);
     }
 
@@ -1371,7 +1371,7 @@ void MainWindow::showDisabledBackendMenu(QPoint pt)
 
     QMenu ctxmenu;
     QAction *removeAction{ctxmenu.addAction(QIcon::fromTheme("list-remove"), "Remove")};
-    if(ui->disabledBackendList->selectedItems().size() == 0)
+    if(ui->disabledBackendList->selectedItems().empty())
         removeAction->setEnabled(false);
     ctxmenu.addSeparator();
     for(size_t i = 0;backendList[i].backend_name[0];i++)
@@ -1379,8 +1379,8 @@ void MainWindow::showDisabledBackendMenu(QPoint pt)
         QString backend{backendList[i].full_string};
         QAction *action{ctxmenu.addAction(QString("Add ")+backend)};
         actionMap[action] = backend;
-        if(ui->disabledBackendList->findItems(backend, Qt::MatchFixedString).size() != 0 ||
-           ui->enabledBackendList->findItems(backend, Qt::MatchFixedString).size() != 0)
+        if(!ui->disabledBackendList->findItems(backend, Qt::MatchFixedString).empty() ||
+           !ui->enabledBackendList->findItems(backend, Qt::MatchFixedString).empty())
             action->setEnabled(false);
     }
 

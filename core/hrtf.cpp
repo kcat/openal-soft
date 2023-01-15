@@ -257,7 +257,7 @@ void HrtfStore::getCoeffs(float elevation, float azimuth, float distance, float 
     delays[1] = fastf2u(d * float{1.0f/HrirDelayFracOne});
 
     /* Calculate the blended HRIR coefficients. */
-    float *coeffout{al::assume_aligned<16>(&coeffs[0][0])};
+    float *coeffout{al::assume_aligned<16>(coeffs[0].data())};
     coeffout[0] = PassthruCoeff * (1.0f-dirfact);
     coeffout[1] = PassthruCoeff * (1.0f-dirfact);
     std::fill_n(coeffout+2, size_t{HrirLength-1}*2, 0.0f);

@@ -1621,7 +1621,7 @@ std::unique_ptr<Compressor> CreateDeviceLimiter(const ALCdevice *device, const f
  * to jump forward or back. Must not be called while the device is running/
  * mixing.
  */
-static inline void UpdateClockBase(ALCdevice *device)
+inline void UpdateClockBase(ALCdevice *device)
 {
     IncrementRef(device->MixCount);
     device->ClockBase += nanoseconds{seconds{device->SamplesDone}} / device->Frequency;

@@ -140,7 +140,7 @@ void LoadConfigFromFile(std::istream &f)
 
         if(buffer[0] == '[')
         {
-            char *line{&buffer[0]};
+            auto line = const_cast<char*>(buffer.data());
             char *section = line+1;
             char *endsection;
 

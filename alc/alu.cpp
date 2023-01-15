@@ -866,7 +866,7 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
          * scaling.
          */
         std::transform(coeffs.begin(), coeffs.end(), coeffs.begin(),
-            std::bind(std::multiplies<float>{}, _1, (1.0f-coverage)*scales[0]));
+            [coverage, &scales](auto a){ return a * ((1.0f-coverage)*scales[0]); });
 
         if(!(coverage > 0.0f))
         {
@@ -1966,7 +1966,7 @@ void ApplyDistanceComp(const al::span<FloatBufferLine> Samples, const size_t Sam
             auto delay_start = std::swap_ranges(inout, inout_end, distbuf);
             std::rotate(distbuf, delay_start, distbuf + base);
         }
-        std::transform(inout, inout_end, inout, std::bind(std::multiplies<float>{}, _1, gain));
+        std::transform(inout, inout_end, inout, [gain](auto a){ return a * gain; });
     }
 }
 

@@ -132,7 +132,7 @@ constexpr char alsaDevice[] = "ALSA Default";
     MAGIC(snd_card_next);                                                     \
     MAGIC(snd_config_update_free_global)
 
-static void *alsa_handle;
+void *alsa_handle;
 #define MAKE_FUNC(f) decltype(f) * p##f
 ALSA_FUNCS(MAKE_FUNC);
 #undef MAKE_FUNC
@@ -330,7 +330,7 @@ al::vector<DevMap> probe_devices(snd_pcm_stream_t stream)
             ConfigValueStr(nullptr, "alsa", name.c_str()).value_or(main_prefix)};
 
         int dev{-1};
-        while(1)
+        while(true)
         {
             if(snd_ctl_pcm_next_device(handle, &dev) < 0)
                 ERR("snd_ctl_pcm_next_device failed\n");
@@ -692,7 +692,7 @@ bool AlsaPlayback::reset()
         break;
     }
 
-    bool allowmmap{!!GetConfigValueBool(mDevice->DeviceName.c_str(), "alsa", "mmap", 1)};
+    bool allowmmap{!!GetConfigValueBool(mDevice->DeviceName.c_str(), "alsa", "mmap", true)};
     uint periodLen{static_cast<uint>(mDevice->UpdateSize * 1000000_u64 / mDevice->Frequency)};
     uint bufferLen{static_cast<uint>(mDevice->BufferSize * 1000000_u64 / mDevice->Frequency)};
     uint rate{mDevice->Frequency};
@@ -750,7 +750,7 @@ bool AlsaPlayback::reset()
         else mDevice->FmtChans = DevFmtStereo;
     }
     /* set rate (implicitly constrains period/buffer parameters) */
-    if(!GetConfigValueBool(mDevice->DeviceName.c_str(), "alsa", "allow-resampler", 0)
+    if(!GetConfigValueBool(mDevice->DeviceName.c_str(), "alsa", "allow-resampler", false)
         || !mDevice->Flags.test(FrequencyRequest))
     {
         if(snd_pcm_hw_params_set_rate_resample(mPcmHandle, hp.get(), 0) < 0)

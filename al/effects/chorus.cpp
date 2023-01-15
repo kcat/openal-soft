@@ -149,7 +149,7 @@ void Chorus_getParamf(const EffectProps *props, ALenum param, float *val)
 void Chorus_getParamfv(const EffectProps *props, ALenum param, float *vals)
 { Chorus_getParamf(props, param, vals); }
 
-const EffectProps genDefaultChorusProps() noexcept
+EffectProps genDefaultChorusProps() noexcept
 {
     EffectProps props{};
     props.Chorus.Waveform = *WaveformFromEnum(AL_CHORUS_DEFAULT_WAVEFORM);

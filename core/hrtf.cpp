@@ -373,7 +373,7 @@ void DirectHrtfState::build(const HrtfStore *Hrtf, const uint irSize, const bool
 
 namespace {
 
-std::unique_ptr<HrtfStore> CreateHrtfStore(uint rate, ushort irSize,
+std::unique_ptr<HrtfStore> CreateHrtfStore(uint rate, uint8_t irSize,
     const al::span<const HrtfStore::Field> fields,
     const al::span<const HrtfStore::Elevation> elevs, const HrirArray *coeffs,
     const ubyte2 *delays, const char *filename)
@@ -599,14 +599,14 @@ std::unique_ptr<HrtfStore> LoadHrtf00(std::istream &data, const char *filename)
     MirrorLeftHrirs({elevs.data(), elevs.size()}, coeffs.data(), delays.data());
 
     const HrtfStore::Field field[1]{{0.0f, evCount}};
-    return CreateHrtfStore(rate, irSize, field, {elevs.data(), elevs.size()}, coeffs.data(),
-        delays.data(), filename);
+    return CreateHrtfStore(rate, static_cast<uint8_t>(irSize), field, {elevs.data(), elevs.size()},
+        coeffs.data(), delays.data(), filename);
 }
 
 std::unique_ptr<HrtfStore> LoadHrtf01(std::istream &data, const char *filename)
 {
     uint rate{readle<uint32_t>(data)};
-    ushort irSize{readle<uint8_t>(data)};
+    uint8_t irSize{readle<uint8_t>(data)};
     ubyte evCount{readle<uint8_t>(data)};
     if(!data || data.eof())
     {
@@ -691,7 +691,7 @@ std::unique_ptr<HrtfStore> LoadHrtf02(std::istream &data, const char *filename)
     uint rate{readle<uint32_t>(data)};
     ubyte sampleType{readle<uint8_t>(data)};
     ubyte channelType{readle<uint8_t>(data)};
-    ushort irSize{readle<uint8_t>(data)};
+    uint8_t irSize{readle<uint8_t>(data)};
     ubyte fdCount{readle<uint8_t>(data)};
     if(!data || data.eof())
     {
@@ -957,7 +957,7 @@ std::unique_ptr<HrtfStore> LoadHrtf03(std::istream &data, const char *filename)
 
     uint rate{readle<uint32_t>(data)};
     ubyte channelType{readle<uint8_t>(data)};
-    ushort irSize{readle<uint8_t>(data)};
+    uint8_t irSize{readle<uint8_t>(data)};
     ubyte fdCount{readle<uint8_t>(data)};
     if(!data || data.eof())
     {
@@ -1429,7 +1429,7 @@ HrtfStorePtr GetLoadedHrtf(const std::string &name, const uint devrate)
          * sample rate.
          */
         const float newIrSize{std::round(static_cast<float>(hrtf->mIrSize) * rate_scale)};
-        hrtf->mIrSize = static_cast<uint>(minf(HrirLength, newIrSize));
+        hrtf->mIrSize = static_cast<uint8_t>(minf(HrirLength, newIrSize));
         hrtf->mSampleRate = devrate;
     }
 

@@ -388,12 +388,10 @@ std::unique_ptr<HrtfStore> CreateHrtfStore(uint rate, uint8_t irSize,
     total += sizeof(std::declval<HrtfStore&>().mCoeffs[0])*irCount;
     total += sizeof(std::declval<HrtfStore&>().mDelays[0])*irCount;
 
-    void *ptr{al_calloc(16, total)};
-    std::unique_ptr<HrtfStore> Hrtf{al::construct_at(static_cast<HrtfStore*>(ptr))};
-    if(!Hrtf)
-        ERR("Out of memory allocating storage for %s.\n", filename);
-    else
+    std::unique_ptr<HrtfStore> Hrtf{};
+    if(void *ptr{al_calloc(16, total)})
     {
+        Hrtf.reset(al::construct_at(static_cast<HrtfStore*>(ptr)));
         InitRef(Hrtf->mRef, 1u);
         Hrtf->mSampleRate = rate;
         Hrtf->mIrSize = irSize;
@@ -432,6 +430,8 @@ std::unique_ptr<HrtfStore> CreateHrtfStore(uint rate, uint8_t irSize,
         Hrtf->mCoeffs = coeffs_;
         Hrtf->mDelays = delays_;
     }
+    else
+        ERR("Out of memory allocating storage for %s.\n", filename);
 
     return Hrtf;
 }

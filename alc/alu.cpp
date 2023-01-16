@@ -866,7 +866,7 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
          * scaling.
          */
         std::transform(coeffs.begin(), coeffs.end(), coeffs.begin(),
-            [coverage, &scales](auto a){ return a * ((1.0f-coverage)*scales[0]); });
+            [scale=(1.0f-coverage)*scales[0]](const float c){ return c * scale; });
 
         if(!(coverage > 0.0f))
         {

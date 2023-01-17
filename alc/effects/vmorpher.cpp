@@ -143,7 +143,7 @@ struct FormantFilter
 
 struct VmorpherState final : public EffectState {
     struct {
-        uint mTargetChannel{INVALID_CHANNEL_INDEX};
+        uint mTargetChannel{InvalidChannelIndex};
 
         /* Effect parameters */
         FormantFilter mFormants[NUM_FILTERS][NUM_FORMANTS];
@@ -231,7 +231,7 @@ void VmorpherState::deviceUpdate(const DeviceBase*, const Buffer&)
 {
     for(auto &e : mChans)
     {
-        e.mTargetChannel = INVALID_CHANNEL_INDEX;
+        e.mTargetChannel = InvalidChannelIndex;
         std::for_each(std::begin(e.mFormants[VOWEL_A_INDEX]), std::end(e.mFormants[VOWEL_A_INDEX]),
             std::mem_fn(&FormantFilter::clear));
         std::for_each(std::begin(e.mFormants[VOWEL_B_INDEX]), std::end(e.mFormants[VOWEL_B_INDEX]),
@@ -298,7 +298,7 @@ void VmorpherState::process(const size_t samplesToDo, const al::span<const Float
         for(const auto &input : samplesIn)
         {
             const size_t outidx{chandata->mTargetChannel};
-            if(outidx == INVALID_CHANNEL_INDEX)
+            if(outidx == InvalidChannelIndex)
             {
                 ++chandata;
                 continue;

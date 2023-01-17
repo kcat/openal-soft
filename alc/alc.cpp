@@ -2003,7 +2003,7 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
     device->Dry.Buffer = {};
     std::fill(std::begin(device->NumChannelsPerOrder), std::end(device->NumChannelsPerOrder), 0u);
     device->RealOut.RemixMap = {};
-    device->RealOut.ChannelIndex.fill(INVALID_CHANNEL_INDEX);
+    device->RealOut.ChannelIndex.fill(InvalidChannelIndex);
     device->RealOut.Buffer = {};
     device->MixBuffer.clear();
     device->MixBuffer.shrink_to_fit();

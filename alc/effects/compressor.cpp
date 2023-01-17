@@ -65,7 +65,7 @@ namespace {
 struct CompressorState final : public EffectState {
     /* Effect gains for each channel */
     struct {
-        uint mTarget{INVALID_CHANNEL_INDEX};
+        uint mTarget{InvalidChannelIndex};
         float mGain{1.0f};
     } mChans[MaxAmbiChannels];
 
@@ -168,7 +168,7 @@ void CompressorState::process(const size_t samplesToDo,
         for(const auto &input : samplesIn)
         {
             const size_t outidx{chan->mTarget};
-            if(outidx != INVALID_CHANNEL_INDEX)
+            if(outidx != InvalidChannelIndex)
             {
                 const float *RESTRICT src{input.data() + base};
                 float *RESTRICT dst{samplesOut[outidx].data() + base};

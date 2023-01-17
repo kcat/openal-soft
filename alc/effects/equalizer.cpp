@@ -87,7 +87,7 @@ namespace {
 
 struct EqualizerState final : public EffectState {
     struct {
-        uint mTargetChannel{INVALID_CHANNEL_INDEX};
+        uint mTargetChannel{InvalidChannelIndex};
 
         /* Effect parameters */
         BiquadFilter mFilter[4];
@@ -113,7 +113,7 @@ void EqualizerState::deviceUpdate(const DeviceBase*, const Buffer&)
 {
     for(auto &e : mChans)
     {
-        e.mTargetChannel = INVALID_CHANNEL_INDEX;
+        e.mTargetChannel = InvalidChannelIndex;
         std::for_each(std::begin(e.mFilter), std::end(e.mFilter),
             std::mem_fn(&BiquadFilter::clear));
         e.mCurrentGain = 0.0f;
@@ -176,7 +176,7 @@ void EqualizerState::process(const size_t samplesToDo, const al::span<const Floa
     for(const auto &input : samplesIn)
     {
         const size_t outidx{chan->mTargetChannel};
-        if(outidx != INVALID_CHANNEL_INDEX)
+        if(outidx != InvalidChannelIndex)
         {
             const al::span<const float> inbuf{input.data(), samplesToDo};
             DualBiquad{chan->mFilter[0], chan->mFilter[1]}.process(inbuf, buffer.begin());

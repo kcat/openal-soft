@@ -65,7 +65,7 @@ struct AutowahState final : public EffectState {
     } mEnv[BufferLineSize];
 
     struct {
-        uint mTargetChannel{INVALID_CHANNEL_INDEX};
+        uint mTargetChannel{InvalidChannelIndex};
 
         /* Effect filters' history. */
         struct {
@@ -110,7 +110,7 @@ void AutowahState::deviceUpdate(const DeviceBase*, const Buffer&)
 
     for(auto &chan : mChans)
     {
-        chan.mTargetChannel = INVALID_CHANNEL_INDEX;
+        chan.mTargetChannel = InvalidChannelIndex;
         chan.mFilter.z1 = 0.0f;
         chan.mFilter.z2 = 0.0f;
         chan.mCurrentGain = 0.0f;
@@ -175,7 +175,7 @@ void AutowahState::process(const size_t samplesToDo,
     for(const auto &insamples : samplesIn)
     {
         const size_t outidx{chandata->mTargetChannel};
-        if(outidx == INVALID_CHANNEL_INDEX)
+        if(outidx == InvalidChannelIndex)
         {
             ++chandata;
             continue;

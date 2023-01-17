@@ -84,7 +84,7 @@ struct ModulatorState final : public EffectState {
     uint mStep{1};
 
     struct {
-        uint mTargetChannel{INVALID_CHANNEL_INDEX};
+        uint mTargetChannel{InvalidChannelIndex};
 
         BiquadFilter mFilter;
 
@@ -106,7 +106,7 @@ void ModulatorState::deviceUpdate(const DeviceBase*, const Buffer&)
 {
     for(auto &e : mChans)
     {
-        e.mTargetChannel = INVALID_CHANNEL_INDEX;
+        e.mTargetChannel = InvalidChannelIndex;
         e.mFilter.clear();
         e.mCurrentGain = 0.0f;
     }
@@ -160,7 +160,7 @@ void ModulatorState::process(const size_t samplesToDo, const al::span<const Floa
         for(const auto &input : samplesIn)
         {
             const size_t outidx{chandata->mTargetChannel};
-            if(outidx != INVALID_CHANNEL_INDEX)
+            if(outidx != InvalidChannelIndex)
             {
                 alignas(16) float temps[MAX_UPDATE_SAMPLES];
 

@@ -73,13 +73,13 @@ struct InputRemixMap {
 };
 
 
-/* Maximum delay in samples for speaker distance compensation. */
-#define MAX_DELAY_LENGTH 1024
-
 struct DistanceComp {
+    /* Maximum delay in samples for speaker distance compensation. */
+    static constexpr uint MaxDelay{1024};
+
     struct ChanData {
         float Gain{1.0f};
-        uint Length{0u}; /* Valid range is [0...MAX_DELAY_LENGTH). */
+        uint Length{0u}; /* Valid range is [0...MaxDelay). */
         float *Buffer{nullptr};
     };
 
@@ -95,7 +95,7 @@ struct DistanceComp {
 };
 
 
-#define INVALID_CHANNEL_INDEX ~0u
+constexpr uint InvalidChannelIndex{~0u};
 
 struct BFChannelConfig {
     float Scale;
@@ -123,7 +123,7 @@ struct MixParams {
         const size_t numOut{Buffer.size()};
         for(size_t i{0};i < numIn;++i)
         {
-            auto idx = INVALID_CHANNEL_INDEX;
+            auto idx = InvalidChannelIndex;
             auto gain = 0.0f;
 
             for(size_t j{0};j < numOut;++j)

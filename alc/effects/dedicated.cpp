@@ -74,8 +74,8 @@ void DedicatedState::update(const ContextBase*, const EffectSlot *slot,
 
     if(slot->EffectType == EffectSlotType::DedicatedLFE)
     {
-        const uint idx{target.RealOut ? target.RealOut->ChannelIndex[LFE] : INVALID_CHANNEL_INDEX};
-        if(idx != INVALID_CHANNEL_INDEX)
+        const uint idx{target.RealOut ? target.RealOut->ChannelIndex[LFE] : InvalidChannelIndex};
+        if(idx != InvalidChannelIndex)
         {
             mOutTarget = target.RealOut->Buffer;
             mTargetGains[idx] = Gain;
@@ -86,8 +86,8 @@ void DedicatedState::update(const ContextBase*, const EffectSlot *slot,
         /* Dialog goes to the front-center speaker if it exists, otherwise it
          * plays from the front-center location. */
         const uint idx{target.RealOut ? target.RealOut->ChannelIndex[FrontCenter]
-            : INVALID_CHANNEL_INDEX};
-        if(idx != INVALID_CHANNEL_INDEX)
+            : InvalidChannelIndex};
+        if(idx != InvalidChannelIndex)
         {
             mOutTarget = target.RealOut->Buffer;
             mTargetGains[idx] = Gain;

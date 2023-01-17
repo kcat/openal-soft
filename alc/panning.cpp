@@ -263,7 +263,7 @@ void InitDistanceComp(ALCdevice *device, const al::span<const Channel> channels,
     {
         const Channel ch{channels[chidx]};
         const uint idx{device->RealOut.ChannelIndex[ch]};
-        if(idx == INVALID_CHANNEL_INDEX)
+        if(idx == InvalidChannelIndex)
             continue;
 
         const float distance{dists[chidx]};
@@ -275,11 +275,11 @@ void InitDistanceComp(ALCdevice *device, const al::span<const Channel> channels,
          * will be in steps of about 7 millimeters.
          */
         float delay{std::floor((maxdist - distance)*distSampleScale + 0.5f)};
-        if(delay > float{MAX_DELAY_LENGTH-1})
+        if(delay > float{DistanceComp::MaxDelay-1})
         {
             ERR("Delay for channel %u (%s) exceeds buffer length (%f > %d)\n", idx,
-                GetLabelFromChannel(ch), delay, MAX_DELAY_LENGTH-1);
-            delay = float{MAX_DELAY_LENGTH-1};
+                GetLabelFromChannel(ch), delay, DistanceComp::MaxDelay-1);
+            delay = float{DistanceComp::MaxDelay-1};
         }
 
         ChanDelay.resize(maxz(ChanDelay.size(), idx+1));
@@ -632,7 +632,7 @@ void InitPanning(ALCdevice *device, const bool hqdec=false, const bool stablize=
     for(size_t i{0u};i < decoder.mChannels.size();++i)
     {
         const uint idx{device->channelIdxByName(decoder.mChannels[i])};
-        if(idx == INVALID_CHANNEL_INDEX)
+        if(idx == InvalidChannelIndex)
         {
             ERR("Failed to find %s channel in device\n",
                 GetLabelFromChannel(decoder.mChannels[i]));
@@ -1004,9 +1004,9 @@ void aluInitRenderer(ALCdevice *device, int hrtf_id, al::optional<StereoEncoding
         /* Enable the stablizer only for formats that have front-left, front-
          * right, and front-center outputs.
          */
-        const bool stablize{device->RealOut.ChannelIndex[FrontCenter] != INVALID_CHANNEL_INDEX
-            && device->RealOut.ChannelIndex[FrontLeft] != INVALID_CHANNEL_INDEX
-            && device->RealOut.ChannelIndex[FrontRight] != INVALID_CHANNEL_INDEX
+        const bool stablize{device->RealOut.ChannelIndex[FrontCenter] != InvalidChannelIndex
+            && device->RealOut.ChannelIndex[FrontLeft] != InvalidChannelIndex
+            && device->RealOut.ChannelIndex[FrontRight] != InvalidChannelIndex
             && device->getConfigValueBool(nullptr, "front-stablizer", false) != 0};
         const bool hqdec{device->getConfigValueBool("decoder", "hq-mode", true) != 0};
         InitPanning(device, hqdec, stablize, decoder);

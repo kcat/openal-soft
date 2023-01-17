@@ -21,10 +21,6 @@
 
 void al_print(LogLevel level, FILE *logfile, const char *fmt, ...)
 {
-#if (defined(_WIN32) && defined(NDEBUG)) || !defined(__ANDROID__)
-    if(gLogLevel < level) [[likely]]
-        return;
-#endif
     /* Kind of ugly since string literals are const char arrays with a size
      * that includes the null terminator, which we want to exclude from the
      * span.
@@ -67,7 +63,7 @@ void al_print(LogLevel level, FILE *logfile, const char *fmt, ...)
         fputs(str, logfile);
         fflush(logfile);
     }
-#if defined(_WIN32) && defined(NDEBUG)
+#if defined(_WIN32) && !defined(NDEBUG)
     /* OutputDebugStringW has no 'level' property to distinguish between
      * informational, warning, or error debug messages. So only print them for
      * non-Release builds.

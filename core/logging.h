@@ -23,7 +23,7 @@ extern FILE *gLogFile;
 #endif
 void al_print(LogLevel level, FILE *logfile, const char *fmt, ...);
 
-#if !defined(_WIN32) && !defined(__ANDROID__)
+#if (!defined(_WIN32) || defined(NDEBUG)) && !defined(__ANDROID__)
 #define TRACE(...) do {                                                       \
     if(gLogLevel >= LogLevel::Trace) [[unlikely]]                             \
         al_print(LogLevel::Trace, gLogFile, __VA_ARGS__);                     \

@@ -19,6 +19,7 @@ using float2 = std::array<float,2>;
 constexpr int MixerFracBits{16};
 constexpr int MixerFracOne{1 << MixerFracBits};
 constexpr int MixerFracMask{MixerFracOne - 1};
+constexpr int MixerFracHalf{MixerFracOne >> 1};
 
 constexpr float GainSilenceThreshold{0.00001f}; /* -100dB */
 

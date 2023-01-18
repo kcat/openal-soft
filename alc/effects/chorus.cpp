@@ -248,7 +248,7 @@ void ChorusState::process(const size_t samplesToDo, const al::span<const FloatBu
 {
     const size_t bufmask{mSampleBuffer.size()-1};
     const float feedback{mFeedback};
-    const uint avgdelay{(static_cast<uint>(mDelay) + (MixerFracOne>>1)) >> MixerFracBits};
+    const uint avgdelay{(static_cast<uint>(mDelay) + MixerFracHalf) >> MixerFracBits};
     float *RESTRICT delaybuf{mSampleBuffer.data()};
     uint offset{mOffset};
 

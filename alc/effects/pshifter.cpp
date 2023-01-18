@@ -64,7 +64,7 @@ std::array<double,STFT_SIZE> InitHannWindow()
     for(size_t i{0};i < STFT_SIZE>>1;i++)
     {
         constexpr double scale{al::numbers::pi / double{STFT_SIZE}};
-        const double val{std::sin(static_cast<double>(i+1) * scale)};
+        const double val{std::sin((static_cast<double>(i)+0.5) * scale)};
         ret[i] = ret[STFT_SIZE-1-i] = val * val;
     }
     return ret;
@@ -73,7 +73,7 @@ alignas(16) const std::array<double,STFT_SIZE> HannWindow = InitHannWindow();
 
 
 struct FrequencyBin {
-    double Amplitude;
+    double Magnitude;
     double FreqBin;
 };
 
@@ -191,31 +191,39 @@ void PshifterState::process(const size_t samplesToDo, const al::span<const Float
          */
         for(size_t k{0u};k < STFT_HALF_SIZE+1;k++)
         {
-            const double amplitude{std::abs(mFftBuffer[k])};
+            const double magnitude{std::abs(mFftBuffer[k])};
             const double phase{std::arg(mFftBuffer[k])};
 
-            /* Compute phase difference and subtract expected phase difference */
-            double tmp{(phase - mLastPhase[k]) - static_cast<double>(k)*expected_cycles};
+            /* Compute the phase difference from the last update and subtract
+             * the expected phase difference for this bin.
+             *
+             * When oversampling, the expected offset increments by 1/OVERSAMP
+             * for every frequency bin. So, the offset wraps every 'OVERSAMP'
+             * bin.
+             */
+            const double expected_diff{static_cast<double>(k&(OVERSAMP-1)) * expected_cycles};
+            double tmp{(phase - mLastPhase[k]) - expected_diff};
+            /* Store the actual phase[k] for the next update. */
+            mLastPhase[k] = phase;
 
-            /* Map delta phase into +/- Pi interval */
-            int qpd{double2int(tmp / al::numbers::pi)};
+            /* Wrap the phase delta between -pi and +pi. */
+            int qpd{double2int(tmp * al::numbers::inv_pi)};
             tmp -= al::numbers::pi * (qpd + (qpd%2));
 
-            /* Get deviation from bin frequency from the +/- Pi interval */
-            tmp /= expected_cycles;
+            /* Get deviation from bin frequency, accounting for oversampling. */
+            tmp *= OVERSAMP * al::numbers::inv_pi * 0.5;
 
-            /* Compute the k-th partials' true frequency and store the
-             * amplitude and frequency bin in the analysis buffer.
+            /* Compute the k-th partials' frequency bin target and store the
+             * magnitude and frequency bin in the analysis buffer. We don't
+             * need the "true frequency" since it's a linear relationship with
+             * the bin.
              */
-            mAnalysisBuffer[k].Amplitude = amplitude;
+            mAnalysisBuffer[k].Magnitude = magnitude;
             mAnalysisBuffer[k].FreqBin = static_cast<double>(k) + tmp;
-
-            /* Store the actual phase[k] for the next frame. */
-            mLastPhase[k] = phase;
         }
 
         /* Shift the frequency bins according to the pitch adjustment,
-         * accumulating the amplitudes of overlapping frequency bins.
+         * accumulating the magnitudes of overlapping frequency bins.
          */
         std::fill(mSynthesisBuffer.begin(), mSynthesisBuffer.end(), FrequencyBin{});
         const size_t bin_count{minz(STFT_HALF_SIZE+1,
@@ -223,8 +231,14 @@ void PshifterState::process(const size_t samplesToDo, const al::span<const Float
         for(size_t k{0u};k < bin_count;k++)
         {
             const size_t j{(k*mPitchShiftI + (MixerFracOne>>1)) >> MixerFracBits};
-            mSynthesisBuffer[j].Amplitude += mAnalysisBuffer[k].Amplitude;
-            mSynthesisBuffer[j].FreqBin    = mAnalysisBuffer[k].FreqBin * mPitchShift;
+
+            /* If more than two bins end up together, use the target frequency
+             * bin for the one with the dominant magnitude. There might be a
+             * better way to handle this, but it's better than last-index-wins.
+             */
+            if(mAnalysisBuffer[k].Magnitude > mSynthesisBuffer[j].Magnitude)
+                mSynthesisBuffer[j].FreqBin = mAnalysisBuffer[k].FreqBin * mPitchShift;
+            mSynthesisBuffer[j].Magnitude += mAnalysisBuffer[k].Magnitude;
         }
 
         /* Reconstruct the frequency-domain signal from the adjusted frequency
@@ -232,15 +246,25 @@ void PshifterState::process(const size_t samplesToDo, const al::span<const Float
          */
         for(size_t k{0u};k < STFT_HALF_SIZE+1;k++)
         {
-            /* Calculate actual delta phase and accumulate it to get bin phase */
-            mSumPhase[k] += mSynthesisBuffer[k].FreqBin * expected_cycles;
+            /* Calculate the actual delta phase for this bin's target frequency
+             * bin, and accumulate it to get the actual bin phase.
+             */
+            double tmp{mSumPhase[k] + mSynthesisBuffer[k].FreqBin*expected_cycles};
 
-            mFftBuffer[k] = std::polar(mSynthesisBuffer[k].Amplitude, mSumPhase[k]);
+            /* Wrap between -pi and +pi for the sum. If mSumPhase is left to
+             * grow indefinitely, it will lose precision and produce less exact
+             * phase over time.
+             */
+            int qpd{double2int(tmp * al::numbers::inv_pi)};
+            tmp -= al::numbers::pi * (qpd + (qpd%2));
+            mSumPhase[k] = tmp;
+
+            mFftBuffer[k] = std::polar(mSynthesisBuffer[k].Magnitude, mSumPhase[k]);
         }
         for(size_t k{STFT_HALF_SIZE+1};k < STFT_SIZE;++k)
             mFftBuffer[k] = std::conj(mFftBuffer[STFT_SIZE-k]);
 
-        /* Apply an inverse FFT to get the time-domain siganl, and accumulate
+        /* Apply an inverse FFT to get the time-domain signal, and accumulate
          * for the output with windowing.
          */
         inverse_fft(al::as_span(mFftBuffer));

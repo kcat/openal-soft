@@ -62,7 +62,7 @@ std::array<double,HIL_SIZE> InitHannWindow()
     for(size_t i{0};i < HIL_SIZE>>1;i++)
     {
         constexpr double scale{al::numbers::pi / double{HIL_SIZE}};
-        const double val{std::sin(static_cast<double>(i+1) * scale)};
+        const double val{std::sin((static_cast<double>(i)+0.5) * scale)};
         ret[i] = ret[HIL_SIZE-1-i] = val * val;
     }
     return ret;

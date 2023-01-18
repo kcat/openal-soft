@@ -226,8 +226,9 @@ void PshifterState::process(const size_t samplesToDo, const al::span<const Float
          * accumulating the magnitudes of overlapping frequency bins.
          */
         std::fill(mSynthesisBuffer.begin(), mSynthesisBuffer.end(), FrequencyBin{});
-        const size_t bin_count{minz(STFT_HALF_SIZE+1,
-            (((STFT_HALF_SIZE+1)<<MixerFracBits) - MixerFracHalf - 1)/mPitchShiftI + 1)};
+
+        constexpr size_t bin_limit{((STFT_HALF_SIZE+1)<<MixerFracBits) - MixerFracHalf - 1};
+        const size_t bin_count{minz(STFT_HALF_SIZE+1, bin_limit/mPitchShiftI + 1)};
         for(size_t k{0u};k < bin_count;k++)
         {
             const size_t j{(k*mPitchShiftI + MixerFracHalf) >> MixerFracBits};

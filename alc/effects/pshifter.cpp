@@ -277,7 +277,7 @@ void PshifterState::process(const size_t samplesToDo,
          */
         inverse_fft(al::as_span(mFftBuffer));
 
-        static constexpr double scale{4.0 / OversampleFactor / StftSize};
+        static constexpr double scale{3.0 / OversampleFactor / StftSize};
         for(size_t dst{mPos}, k{0u};dst < StftSize;++dst,++k)
             mOutputAccum[dst] += gWindow.mData[k]*mFftBuffer[k].real() * scale;
         for(size_t dst{0u}, k{StftSize-mPos};dst < mPos;++dst,++k)

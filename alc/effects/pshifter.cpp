@@ -120,13 +120,13 @@ void PshifterState::deviceUpdate(const DeviceBase*, const Buffer&)
     mPitchShiftI = MixerFracOne;
     mPitchShift  = 1.0;
 
-    std::fill(mFIFO.begin(),            mFIFO.end(),            0.0);
-    std::fill(mLastPhase.begin(),       mLastPhase.end(),       0.0);
-    std::fill(mSumPhase.begin(),        mSumPhase.end(),        0.0);
-    std::fill(mOutputAccum.begin(),     mOutputAccum.end(),     0.0);
-    std::fill(mFftBuffer.begin(),       mFftBuffer.end(),       complex_d{});
-    std::fill(mAnalysisBuffer.begin(),  mAnalysisBuffer.end(),  FrequencyBin{});
-    std::fill(mSynthesisBuffer.begin(), mSynthesisBuffer.end(), FrequencyBin{});
+    mFIFO.fill(0.0);
+    mLastPhase.fill(0.0);
+    mSumPhase.fill(0.0);
+    mOutputAccum.fill(0.0);
+    mFftBuffer.fill(complex_d{});
+    mAnalysisBuffer.fill(FrequencyBin{});
+    mSynthesisBuffer.fill(FrequencyBin{});
 
     std::fill(std::begin(mCurrentGains), std::end(mCurrentGains), 0.0f);
     std::fill(std::begin(mTargetGains),  std::end(mTargetGains),  0.0f);
@@ -260,9 +260,10 @@ void PshifterState::process(const size_t samplesToDo,
              * grow indefinitely, it will lose precision and produce less exact
              * phase over time.
              */
-            int qpd{double2int(tmp * al::numbers::inv_pi)};
-            tmp -= al::numbers::pi * (qpd + (qpd%2));
-            mSumPhase[k] = tmp;
+            tmp *= al::numbers::inv_pi;
+            int qpd{double2int(tmp)};
+            tmp -= qpd + (qpd%2);
+            mSumPhase[k] = tmp * al::numbers::pi;
 
             mFftBuffer[k] = std::polar(mSynthesisBuffer[k].Magnitude, mSumPhase[k]);
         }

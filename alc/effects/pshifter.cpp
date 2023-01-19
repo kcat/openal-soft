@@ -57,19 +57,21 @@ static_assert(StftSize%OversampleFactor == 0, "Factor must be a clean divisor of
 constexpr size_t StftStep{StftSize / OversampleFactor};
 
 /* Define a Hann window, used to filter the STFT input and output. */
-std::array<double,StftSize> InitHannWindow()
-{
-    std::array<double,StftSize> ret;
-    /* Create lookup table of the Hann window for the desired size. */
-    for(size_t i{0};i < StftHalfSize;i++)
+struct Windower {
+    alignas(16) std::array<double,StftSize> mData;
+
+    Windower()
     {
-        constexpr double scale{al::numbers::pi / double{StftSize}};
-        const double val{std::sin((static_cast<double>(i)+0.5) * scale)};
-        ret[i] = ret[StftSize-1-i] = val * val;
+        /* Create lookup table of the Hann window for the desired size. */
+        for(size_t i{0};i < StftHalfSize;i++)
+        {
+            constexpr double scale{al::numbers::pi / double{StftSize}};
+            const double val{std::sin((static_cast<double>(i)+0.5) * scale)};
+            mData[i] = mData[StftSize-1-i] = val * val;
+        }
     }
-    return ret;
-}
-alignas(16) const std::array<double,StftSize> HannWindow = InitHannWindow();
+};
+const Windower gWindow{};
 
 
 struct FrequencyBin {
@@ -182,9 +184,9 @@ void PshifterState::process(const size_t samplesToDo,
          * forward FFT to get the frequency-domain signal.
          */
         for(size_t src{mPos}, k{0u};src < StftSize;++src,++k)
-            mFftBuffer[k] = mFIFO[src] * HannWindow[k];
+            mFftBuffer[k] = mFIFO[src] * gWindow.mData[k];
         for(size_t src{0u}, k{StftSize-mPos};src < mPos;++src,++k)
-            mFftBuffer[k] = mFIFO[src] * HannWindow[k];
+            mFftBuffer[k] = mFIFO[src] * gWindow.mData[k];
         forward_fft(al::as_span(mFftBuffer));
 
         /* Analyze the obtained data. Since the real FFT is symmetric, only
@@ -277,9 +279,9 @@ void PshifterState::process(const size_t samplesToDo,
 
         static constexpr double scale{4.0 / OversampleFactor / StftSize};
         for(size_t dst{mPos}, k{0u};dst < StftSize;++dst,++k)
-            mOutputAccum[dst] += HannWindow[k]*mFftBuffer[k].real() * scale;
+            mOutputAccum[dst] += gWindow.mData[k]*mFftBuffer[k].real() * scale;
         for(size_t dst{0u}, k{StftSize-mPos};dst < mPos;++dst,++k)
-            mOutputAccum[dst] += HannWindow[k]*mFftBuffer[k].real() * scale;
+            mOutputAccum[dst] += gWindow.mData[k]*mFftBuffer[k].real() * scale;
 
         /* Copy out the accumulated result, then clear for the next iteration. */
         std::copy_n(mOutputAccum.begin() + mPos, StftStep, mFIFO.begin() + mPos);

@@ -137,7 +137,7 @@ void PshifterState::update(const ContextBase*, const EffectSlot *slot,
 {
     const int tune{props->Pshifter.CoarseTune*100 + props->Pshifter.FineTune};
     const float pitch{std::pow(2.0f, static_cast<float>(tune) / 1200.0f)};
-    mPitchShiftI = fastf2u(pitch*MixerFracOne);
+    mPitchShiftI = clampu(fastf2u(pitch*MixerFracOne), MixerFracHalf, MixerFracOne*2);
     mPitchShift  = mPitchShiftI * double{1.0/MixerFracOne};
 
     static constexpr auto coeffs = CalcDirectionCoeffs({0.0f, 0.0f, -1.0f});

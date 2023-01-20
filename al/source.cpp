@@ -1717,7 +1717,13 @@ try {
             send.LFReference = HIGHPASSFREQREF;
         }
 
-        if(slot != Source->Send[static_cast<ALuint>(values[1])].Slot && IsPlayingOrPaused(Source))
+        /* We must force an update if the current auxiliary slot is valid and
+         * about to be changed on an active source, in case the old slot is
+         * about to be deleted.
+         */
+        if(Source->Send[static_cast<ALuint>(values[1])].Slot
+            && slot != Source->Send[static_cast<ALuint>(values[1])].Slot
+            && IsPlayingOrPaused(Source))
         {
             /* Add refcount on the new slot, and release the previous slot */
             if(slot) IncrementRef(slot->ref);
@@ -1725,9 +1731,6 @@ try {
                 DecrementRef(oldslot->ref);
             Source->Send[static_cast<ALuint>(values[1])].Slot = slot;
 
-            /* We must force an update if the auxiliary slot changed on an
-             * active source, in case the slot is about to be deleted.
-             */
             Voice *voice{GetSourceVoice(Source, Context)};
             if(voice) UpdateSourceProps(Source, voice, Context);
             else Source->mPropsDirty = true;

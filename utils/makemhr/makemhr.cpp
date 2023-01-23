@@ -1175,9 +1175,7 @@ int PrepareHrirData(const uint fdCount, const double (&distances)[MAX_FD_COUNT],
         {
             uint azCount = azCounts[(fi * MAX_EV_COUNT) + ei];
 
-            hData->mFds[fi].mIrCount += azCount;
             hData->mFds[fi].mEvs[ei].mElevation = -M_PI / 2.0 + M_PI * ei / (evCounts[fi] - 1);
-            hData->mFds[fi].mEvs[ei].mIrCount += azCount;
             hData->mFds[fi].mEvs[ei].mAzCount = azCount;
             hData->mFds[fi].mEvs[ei].mAzs = &hData->mAzsBase[azTotal];
             for(ai = 0;ai < azCount;ai++)

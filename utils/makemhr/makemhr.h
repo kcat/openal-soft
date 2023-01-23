@@ -74,14 +74,12 @@ struct HrirAzT {
 
 struct HrirEvT {
     double mElevation{0.0};
-    uint mIrCount{0u};
     uint mAzCount{0u};
     HrirAzT *mAzs{nullptr};
 };
 
 struct HrirFdT {
     double mDistance{0.0};
-    uint mIrCount{0u};
     uint mEvCount{0u};
     uint mEvStart{0u};
     HrirEvT *mEvs{nullptr};

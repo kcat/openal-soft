@@ -363,9 +363,9 @@ static int StoreMhr(const HrirDataT *hData, const char *filename)
         return 0;
     if(!WriteBin4(1, hData->mIrPoints, fp, filename))
         return 0;
-    if(!WriteBin4(1, hData->mFdCount, fp, filename))
+    if(!WriteBin4(1, static_cast<uint>(hData->mFds.size()), fp, filename))
         return 0;
-    for(fi = hData->mFdCount-1;fi < hData->mFdCount;fi--)
+    for(fi = static_cast<uint>(hData->mFds.size()-1);fi < hData->mFds.size();fi--)
     {
         auto fdist = static_cast<uint32_t>(std::round(1000.0 * hData->mFds[fi].mDistance));
         if(!WriteBin4(2, fdist, fp, filename))
@@ -379,7 +379,7 @@ static int StoreMhr(const HrirDataT *hData, const char *filename)
         }
     }
 
-    for(fi = hData->mFdCount-1;fi < hData->mFdCount;fi--)
+    for(fi = static_cast<uint>(hData->mFds.size()-1);fi < hData->mFds.size();fi--)
     {
         constexpr double scale{8388607.0};
         constexpr uint bps{3u};
@@ -403,7 +403,7 @@ static int StoreMhr(const HrirDataT *hData, const char *filename)
             }
         }
     }
-    for(fi = hData->mFdCount-1;fi < hData->mFdCount;fi--)
+    for(fi = static_cast<uint>(hData->mFds.size()-1);fi < hData->mFds.size();fi--)
     {
         /* Delay storage has 2 bits of extra precision. */
         constexpr double DelayPrecScale{4.0};
@@ -442,7 +442,7 @@ static void BalanceFieldMagnitudes(const HrirDataT *hData, const uint channels, 
     uint fi, ei, ai, ti, i;
 
     double maxMag{0.0};
-    for(fi = 0;fi < hData->mFdCount;fi++)
+    for(fi = 0;fi < hData->mFds.size();fi++)
     {
         maxMags[fi] = 0.0;
 
@@ -462,7 +462,7 @@ static void BalanceFieldMagnitudes(const HrirDataT *hData, const uint channels, 
         maxMag = std::max(maxMags[fi], maxMag);
     }
 
-    for(fi = 0;fi < hData->mFdCount;fi++)
+    for(fi = 0;fi < hData->mFds.size();fi++)
     {
         const double magFactor{maxMag / maxMags[fi]};
 
@@ -494,10 +494,10 @@ static void CalculateDfWeights(const HrirDataT *hData, double *weights)
     sum = 0.0;
     // The head radius acts as the limit for the inner radius.
     innerRa = hData->mRadius;
-    for(fi = 0;fi < hData->mFdCount;fi++)
+    for(fi = 0;fi < hData->mFds.size();fi++)
     {
         // Each volume ends half way between progressive field measurements.
-        if((fi + 1) < hData->mFdCount)
+        if((fi + 1) < hData->mFds.size())
             outerRa = 0.5f * (hData->mFds[fi].mDistance + hData->mFds[fi + 1].mDistance);
         // The final volume has its limit extended to some practical value.
         // This is done to emphasize the far-field responses in the average.
@@ -525,7 +525,7 @@ static void CalculateDfWeights(const HrirDataT *hData, double *weights)
         innerRa = outerRa;
     }
 
-    for(fi = 0;fi < hData->mFdCount;fi++)
+    for(fi = 0;fi < hData->mFds.size();fi++)
     {
         // Normalize the weights given the total surface coverage for all
         // fields.
@@ -541,7 +541,7 @@ static void CalculateDfWeights(const HrirDataT *hData, double *weights)
  */
 static void CalculateDiffuseFieldAverage(const HrirDataT *hData, const uint channels, const uint m, const int weighted, const double limit, double *dfa)
 {
-    std::vector<double> weights(hData->mFdCount * MAX_EV_COUNT);
+    std::vector<double> weights(hData->mFds.size() * MAX_EV_COUNT);
     uint count, ti, fi, ei, i, ai;
 
     if(weighted)
@@ -556,14 +556,14 @@ static void CalculateDiffuseFieldAverage(const HrirDataT *hData, const uint chan
         // If coverage weighting is not used, the weights still need to be
         // averaged by the number of existing HRIRs.
         count = hData->mIrCount;
-        for(fi = 0;fi < hData->mFdCount;fi++)
+        for(fi = 0;fi < hData->mFds.size();fi++)
         {
             for(ei = 0;ei < hData->mFds[fi].mEvStart;ei++)
                 count -= hData->mFds[fi].mEvs[ei].mAzCount;
         }
         weight = 1.0 / count;
 
-        for(fi = 0;fi < hData->mFdCount;fi++)
+        for(fi = 0;fi < hData->mFds.size();fi++)
         {
             for(ei = hData->mFds[fi].mEvStart;ei < hData->mFds[fi].mEvCount;ei++)
                 weights[(fi * MAX_EV_COUNT) + ei] = weight;
@@ -573,7 +573,7 @@ static void CalculateDiffuseFieldAverage(const HrirDataT *hData, const uint chan
     {
         for(i = 0;i < m;i++)
             dfa[(ti * m) + i] = 0.0;
-        for(fi = 0;fi < hData->mFdCount;fi++)
+        for(fi = 0;fi < hData->mFds.size();fi++)
         {
             for(ei = hData->mFds[fi].mEvStart;ei < hData->mFds[fi].mEvCount;ei++)
             {
@@ -605,7 +605,7 @@ static void DiffuseFieldEqualize(const uint channels, const uint m, const double
 {
     uint ti, fi, ei, ai, i;
 
-    for(fi = 0;fi < hData->mFdCount;fi++)
+    for(fi = 0;fi < hData->mFds.size();fi++)
     {
         for(ei = hData->mFds[fi].mEvStart;ei < hData->mFds[fi].mEvCount;ei++)
         {
@@ -758,7 +758,7 @@ static void SynthesizeOnsets(HrirDataT *hData)
             }
         }
     };
-    std::for_each(hData->mFds.begin(), hData->mFds.begin()+hData->mFdCount, proc_field);
+    std::for_each(hData->mFds.begin(), hData->mFds.end(), proc_field);
 }
 
 /* Attempt to synthesize any missing HRIRs at the bottom elevations of each
@@ -871,7 +871,7 @@ static void SynthesizeHrirs(HrirDataT *hData)
                 field.mEvs[0].mAzs[0].mIrs[ti][i] *= filter[i];
         }
     };
-    std::for_each(hData->mFds.begin(), hData->mFds.begin()+hData->mFdCount, proc_field);
+    std::for_each(hData->mFds.begin(), hData->mFds.end(), proc_field);
 }
 
 // The following routines assume a full set of HRIRs for all elevations.
@@ -936,7 +936,7 @@ static void ReconstructHrirs(const HrirDataT *hData, const uint numThreads)
     reconstructor.mDone.store(0, std::memory_order_relaxed);
     reconstructor.mFftSize = hData->mFftSize;
     reconstructor.mIrPoints = hData->mIrPoints;
-    for(uint fi{0u};fi < hData->mFdCount;fi++)
+    for(uint fi{0u};fi < hData->mFds.size();fi++)
     {
         const HrirFdT &field = hData->mFds[fi];
         for(uint ei{0};ei < field.mEvCount;ei++)
@@ -1005,7 +1005,7 @@ static void NormalizeHrirs(HrirDataT *hData)
     auto measure_field = [measure_elev](const LevelPair levels, const HrirFdT &field)
     { return std::accumulate(field.mEvs, field.mEvs+field.mEvCount, levels, measure_elev); };
 
-    const auto maxlev = std::accumulate(hData->mFds.begin(), hData->mFds.begin()+hData->mFdCount,
+    const auto maxlev = std::accumulate(hData->mFds.begin(), hData->mFds.end(),
         LevelPair{0.0, 0.0}, measure_field);
 
     /* Normalize using the maximum RMS of the HRIRs. The RMS measure for the
@@ -1032,7 +1032,7 @@ static void NormalizeHrirs(HrirDataT *hData)
     auto proc1_field = [proc_elev](HrirFdT &field)
     { std::for_each(field.mEvs, field.mEvs+field.mEvCount, proc_elev); };
 
-    std::for_each(hData->mFds.begin(), hData->mFds.begin()+hData->mFdCount, proc1_field);
+    std::for_each(hData->mFds.begin(), hData->mFds.end(), proc1_field);
 }
 
 // Calculate the left-ear time delay using a spherical head model.
@@ -1059,7 +1059,7 @@ static void CalculateHrtds(const HeadModelT model, const double radius, HrirData
 
     if(model == HM_SPHERE)
     {
-        for(fi = 0;fi < hData->mFdCount;fi++)
+        for(fi = 0;fi < hData->mFds.size();fi++)
         {
             for(ei = 0;ei < hData->mFds[fi].mEvCount;ei++)
             {
@@ -1077,7 +1077,7 @@ static void CalculateHrtds(const HeadModelT model, const double radius, HrirData
     }
     else if(customRatio != 1.0)
     {
-        for(fi = 0;fi < hData->mFdCount;fi++)
+        for(fi = 0;fi < hData->mFds.size();fi++)
         {
             for(ei = 0;ei < hData->mFds[fi].mEvCount;ei++)
             {
@@ -1094,7 +1094,7 @@ static void CalculateHrtds(const HeadModelT model, const double radius, HrirData
     }
 
     double maxHrtd{0.0};
-    for(fi = 0;fi < hData->mFdCount;fi++)
+    for(fi = 0;fi < hData->mFds.size();fi++)
     {
         double minHrtd{std::numeric_limits<double>::infinity()};
         for(ei = 0;ei < hData->mFds[fi].mEvCount;ei++)
@@ -1126,7 +1126,7 @@ static void CalculateHrtds(const HeadModelT model, const double radius, HrirData
     {
         fprintf(stdout, "  Scaling for max delay of %f samples to %f\n...\n", maxHrtd, MAX_HRTD);
         const double scale{MAX_HRTD / maxHrtd};
-        for(fi = 0;fi < hData->mFdCount;fi++)
+        for(fi = 0;fi < hData->mFds.size();fi++)
         {
             for(ei = 0;ei < hData->mFds[fi].mEvCount;ei++)
             {
@@ -1161,7 +1161,6 @@ int PrepareHrirData(const uint fdCount, const double (&distances)[MAX_FD_COUNT],
     hData->mAzsBase.resize(azTotal);
     hData->mFds.resize(fdCount);
     hData->mIrCount = azTotal;
-    hData->mFdCount = fdCount;
     evTotal = 0;
     azTotal = 0;
     for(fi = 0;fi < fdCount;fi++)
@@ -1253,7 +1252,7 @@ static int ProcessDefinition(const char *inName, const uint outRate, const Chann
         uint m{hData.mFftSize/2u + 1u};
         auto dfa = std::vector<double>(c * m);
 
-        if(hData.mFdCount > 1)
+        if(hData.mFds.size() > 1)
         {
             fprintf(stdout, "Balancing field magnitudes...\n");
             BalanceFieldMagnitudes(&hData, c, m);
@@ -1274,7 +1273,6 @@ static int ProcessDefinition(const char *inName, const uint outRate, const Chann
             fprintf(stdout, "Clearing %zu near field%s...\n", hData.mFds.size()-1,
                 (hData.mFds.size()-1 != 1) ? "s" : "");
             hData.mFds.erase(hData.mFds.cbegin(), hData.mFds.cend()-1);
-            hData.mFdCount = 1;
         }
     }
     fprintf(stdout, "Synthesizing missing elevations...\n");

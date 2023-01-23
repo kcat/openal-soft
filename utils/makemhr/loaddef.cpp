@@ -1463,9 +1463,9 @@ static int ReadIndexTriplet(TokenReaderT *tr, const HrirDataT *hData, uint *fi, 
 {
     int intVal;
 
-    if(hData->mFdCount > 1)
+    if(hData->mFds.size() > 1)
     {
-        if(!TrReadInt(tr, 0, static_cast<int>(hData->mFdCount) - 1, &intVal))
+        if(!TrReadInt(tr, 0, static_cast<int>(hData->mFds.size()-1), &intVal))
             return 0;
         *fi = static_cast<uint>(intVal);
         if(!TrReadOperator(tr, ","))
@@ -1846,12 +1846,12 @@ static int ProcessSources(TokenReaderT *tr, HrirDataT *hData, const uint outRate
                 else
                     aer[0] = std::fmod(360.0f - aer[0], 360.0f);
 
-                for(fi = 0;fi < hData->mFdCount;fi++)
+                for(fi = 0;fi < hData->mFds.size();fi++)
                 {
                     double delta = aer[2] - hData->mFds[fi].mDistance;
                     if(std::abs(delta) < 0.001) break;
                 }
-                if(fi >= hData->mFdCount)
+                if(fi >= hData->mFds.size())
                     continue;
 
                 double ef{(90.0 + aer[1]) / 180.0 * (hData->mFds[fi].mEvCount - 1)};
@@ -1981,7 +1981,7 @@ static int ProcessSources(TokenReaderT *tr, HrirDataT *hData, const uint outRate
         hData->mIrPoints = irPoints;
         resampler.reset();
     }
-    for(fi = 0;fi < hData->mFdCount;fi++)
+    for(fi = 0;fi < hData->mFds.size();fi++)
     {
         for(ei = 0;ei < hData->mFds[fi].mEvCount;ei++)
         {
@@ -2016,7 +2016,7 @@ static int ProcessSources(TokenReaderT *tr, HrirDataT *hData, const uint outRate
     }
     for(uint ti{0};ti < channels;ti++)
     {
-        for(fi = 0;fi < hData->mFdCount;fi++)
+        for(fi = 0;fi < hData->mFds.size();fi++)
         {
             for(ei = 0;ei < hData->mFds[fi].mEvCount;ei++)
             {

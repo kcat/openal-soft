@@ -96,7 +96,6 @@ struct HrirDataT {
     uint mIrSize{0u};
     double mRadius{0.0};
     uint mIrCount{0u};
-    uint mFdCount{0u};
 
     std::vector<double> mHrirsBase;
     std::vector<HrirEvT> mEvsBase;

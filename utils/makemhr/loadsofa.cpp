@@ -474,7 +474,7 @@ bool LoadSofaFile(const char *filename, const uint numThreads, const uint fftSiz
         return false;
     sofaHrtf = nullptr;
 
-    for(uint fi{0u};fi < hData->mFdCount;fi++)
+    for(uint fi{0u};fi < hData->mFds.size();fi++)
     {
         uint ei{0u};
         for(;ei < hData->mFds[fi].mEvCount;ei++)
@@ -512,7 +512,7 @@ bool LoadSofaFile(const char *filename, const uint numThreads, const uint fftSiz
     size_t hrir_total{0};
     const uint channels{(hData->mChannelType == CT_STEREO) ? 2u : 1u};
     double *hrirs = hData->mHrirsBase.data();
-    for(uint fi{0u};fi < hData->mFdCount;fi++)
+    for(uint fi{0u};fi < hData->mFds.size();fi++)
     {
         for(uint ei{0u};ei < hData->mFds[fi].mEvStart;ei++)
         {
@@ -537,7 +537,7 @@ bool LoadSofaFile(const char *filename, const uint numThreads, const uint fftSiz
         PPhaseResampler rs;
         rs.init(hData->mIrRate, OnsetRateMultiple*hData->mIrRate);
 
-        for(uint fi{0u};fi < hData->mFdCount;fi++)
+        for(uint fi{0u};fi < hData->mFds.size();fi++)
         {
             for(uint ei{hData->mFds[fi].mEvStart};ei < hData->mFds[fi].mEvCount;ei++)
             {
@@ -568,7 +568,7 @@ bool LoadSofaFile(const char *filename, const uint numThreads, const uint fftSiz
         return false;
 
     MagCalculator calculator{hData->mFftSize, hData->mIrPoints};
-    for(uint fi{0u};fi < hData->mFdCount;fi++)
+    for(uint fi{0u};fi < hData->mFds.size();fi++)
     {
         for(uint ei{hData->mFds[fi].mEvStart};ei < hData->mFds[fi].mEvCount;ei++)
         {

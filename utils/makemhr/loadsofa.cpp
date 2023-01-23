@@ -86,7 +86,7 @@ static bool PrepareLayout(const uint m, const float *xyzs, HrirDataT *hData)
         ++fi;
     }
     fprintf(stdout, "Using %u of %u IRs.\n", ir_total, m);
-    return PrepareHrirData(fi, distances, evCounts, azCounts.data(), hData) != 0;
+    return PrepareHrirData({distances, fi}, evCounts, azCounts.data(), hData);
 }
 
 

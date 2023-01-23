@@ -108,7 +108,9 @@ struct HrirDataT {
 };
 
 
-int PrepareHrirData(const uint fdCount, const double (&distances)[MAX_FD_COUNT], const uint (&evCounts)[MAX_FD_COUNT], const uint azCounts[MAX_FD_COUNT * MAX_EV_COUNT], HrirDataT *hData);
+bool PrepareHrirData(const al::span<const double> distances,
+    const al::span<const uint,MAX_FD_COUNT> evCounts,
+    const uint azCounts[MAX_FD_COUNT * MAX_EV_COUNT], HrirDataT *hData);
 void MagnitudeResponse(const uint n, const complex_d *in, double *out);
 
 // Performs a forward FFT.

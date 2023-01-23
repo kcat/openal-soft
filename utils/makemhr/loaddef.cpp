@@ -1239,7 +1239,7 @@ static int ProcessMetrics(TokenReaderT *tr, const uint fftSize, const uint trunc
     double distances[MAX_FD_COUNT];
     uint fdCount = 0;
     uint evCounts[MAX_FD_COUNT];
-    std::vector<uint> azCounts(MAX_FD_COUNT * MAX_EV_COUNT);
+    auto azCounts = std::vector<uint>(MAX_FD_COUNT * MAX_EV_COUNT);
 
     TrIndication(tr, &line, &col);
     while(TrIsIdent(tr))
@@ -1450,7 +1450,7 @@ static int ProcessMetrics(TokenReaderT *tr, const uint fftSize, const uint trunc
     }
     if(hData->mChannelType == CT_NONE)
         hData->mChannelType = CT_MONO;
-    if(!PrepareHrirData(fdCount, distances, evCounts, azCounts.data(), hData))
+    if(!PrepareHrirData({distances, fdCount}, evCounts, azCounts.data(), hData))
     {
         fprintf(stderr, "Error:  Out of memory.\n");
         exit(-1);

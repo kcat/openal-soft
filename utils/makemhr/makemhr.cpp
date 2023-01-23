@@ -1142,42 +1142,42 @@ static void CalculateHrtds(const HeadModelT model, const double radius, HrirData
 }
 
 // Allocate and configure dynamic HRIR structures.
-int PrepareHrirData(const uint fdCount, const double (&distances)[MAX_FD_COUNT],
-    const uint (&evCounts)[MAX_FD_COUNT], const uint azCounts[MAX_FD_COUNT * MAX_EV_COUNT],
-    HrirDataT *hData)
+bool PrepareHrirData(const al::span<const double> distances,
+    const al::span<const uint,MAX_FD_COUNT> evCounts,
+    const uint azCounts[MAX_FD_COUNT * MAX_EV_COUNT], HrirDataT *hData)
 {
-    uint evTotal = 0, azTotal = 0, fi, ei, ai;
+    uint evTotal{0}, azTotal{0};
 
-    for(fi = 0;fi < fdCount;fi++)
+    for(size_t fi{0};fi < distances.size();++fi)
     {
         evTotal += evCounts[fi];
-        for(ei = 0;ei < evCounts[fi];ei++)
+        for(size_t ei{0};ei < evCounts[fi];++ei)
             azTotal += azCounts[(fi * MAX_EV_COUNT) + ei];
     }
-    if(!fdCount || !evTotal || !azTotal)
-        return 0;
+    if(!evTotal || !azTotal)
+        return false;
 
     hData->mEvsBase.resize(evTotal);
     hData->mAzsBase.resize(azTotal);
-    hData->mFds.resize(fdCount);
+    hData->mFds.resize(distances.size());
     hData->mIrCount = azTotal;
     evTotal = 0;
     azTotal = 0;
-    for(fi = 0;fi < fdCount;fi++)
+    for(size_t fi{0};fi < distances.size();++fi)
     {
         hData->mFds[fi].mDistance = distances[fi];
         hData->mFds[fi].mEvCount = evCounts[fi];
         hData->mFds[fi].mEvStart = 0;
         hData->mFds[fi].mEvs = &hData->mEvsBase[evTotal];
         evTotal += evCounts[fi];
-        for(ei = 0;ei < evCounts[fi];ei++)
+        for(uint ei{0};ei < evCounts[fi];++ei)
         {
             uint azCount = azCounts[(fi * MAX_EV_COUNT) + ei];
 
             hData->mFds[fi].mEvs[ei].mElevation = -M_PI / 2.0 + M_PI * ei / (evCounts[fi] - 1);
             hData->mFds[fi].mEvs[ei].mAzCount = azCount;
             hData->mFds[fi].mEvs[ei].mAzs = &hData->mAzsBase[azTotal];
-            for(ai = 0;ai < azCount;ai++)
+            for(uint ai{0};ai < azCount;ai++)
             {
                 hData->mFds[fi].mEvs[ei].mAzs[ai].mAzimuth = 2.0 * M_PI * ai / azCount;
                 hData->mFds[fi].mEvs[ei].mAzs[ai].mIndex = azTotal + ai;
@@ -1189,7 +1189,7 @@ int PrepareHrirData(const uint fdCount, const double (&distances)[MAX_FD_COUNT],
             azTotal += azCount;
         }
     }
-    return 1;
+    return true;
 }
 
 

@@ -1239,7 +1239,8 @@ static int ProcessMetrics(TokenReaderT *tr, const uint fftSize, const uint trunc
     double distances[MAX_FD_COUNT];
     uint fdCount = 0;
     uint evCounts[MAX_FD_COUNT];
-    auto azCounts = std::vector<uint>(MAX_FD_COUNT * MAX_EV_COUNT);
+    auto azCounts = std::vector<std::array<uint,MAX_EV_COUNT>>(MAX_FD_COUNT);
+    for(auto &azs : azCounts) azs.fill(0u);
 
     TrIndication(tr, &line, &col);
     while(TrIsIdent(tr))
@@ -1388,7 +1389,7 @@ static int ProcessMetrics(TokenReaderT *tr, const uint fftSize, const uint trunc
             {
                 if(!TrReadInt(tr, MIN_AZ_COUNT, MAX_AZ_COUNT, &intVal))
                     return 0;
-                azCounts[(count * MAX_EV_COUNT) + evCounts[count]++] = static_cast<uint>(intVal);
+                azCounts[count][evCounts[count]++] = static_cast<uint>(intVal);
                 if(TrIsOperator(tr, ","))
                 {
                     if(evCounts[count] >= MAX_EV_COUNT)
@@ -1405,7 +1406,7 @@ static int ProcessMetrics(TokenReaderT *tr, const uint fftSize, const uint trunc
                         TrErrorAt(tr, line, col, "Did not reach the minimum of %d azimuth counts.\n", MIN_EV_COUNT);
                         return 0;
                     }
-                    if(azCounts[count * MAX_EV_COUNT] != 1 || azCounts[(count * MAX_EV_COUNT) + evCounts[count] - 1] != 1)
+                    if(azCounts[count][0] != 1 || azCounts[count][evCounts[count] - 1] != 1)
                     {
                         TrError(tr, "Poles are not singular for field %d.\n", count - 1);
                         return 0;
@@ -1450,7 +1451,8 @@ static int ProcessMetrics(TokenReaderT *tr, const uint fftSize, const uint trunc
     }
     if(hData->mChannelType == CT_NONE)
         hData->mChannelType = CT_MONO;
-    if(!PrepareHrirData({distances, fdCount}, evCounts, azCounts.data(), hData))
+    const auto azs = al::as_span(azCounts).first<MAX_FD_COUNT>();
+    if(!PrepareHrirData({distances, fdCount}, evCounts, azs, hData))
     {
         fprintf(stderr, "Error:  Out of memory.\n");
         exit(-1);

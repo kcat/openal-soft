@@ -1144,7 +1144,7 @@ static void CalculateHrtds(const HeadModelT model, const double radius, HrirData
 // Allocate and configure dynamic HRIR structures.
 bool PrepareHrirData(const al::span<const double> distances,
     const al::span<const uint,MAX_FD_COUNT> evCounts,
-    const uint azCounts[MAX_FD_COUNT * MAX_EV_COUNT], HrirDataT *hData)
+    const al::span<const std::array<uint,MAX_EV_COUNT>,MAX_FD_COUNT> azCounts, HrirDataT *hData)
 {
     uint evTotal{0}, azTotal{0};
 
@@ -1152,7 +1152,7 @@ bool PrepareHrirData(const al::span<const double> distances,
     {
         evTotal += evCounts[fi];
         for(size_t ei{0};ei < evCounts[fi];++ei)
-            azTotal += azCounts[(fi * MAX_EV_COUNT) + ei];
+            azTotal += azCounts[fi][ei];
     }
     if(!evTotal || !azTotal)
         return false;
@@ -1172,7 +1172,7 @@ bool PrepareHrirData(const al::span<const double> distances,
         evTotal += evCounts[fi];
         for(uint ei{0};ei < evCounts[fi];++ei)
         {
-            uint azCount = azCounts[(fi * MAX_EV_COUNT) + ei];
+            uint azCount = azCounts[fi][ei];
 
             hData->mFds[fi].mEvs[ei].mElevation = -M_PI / 2.0 + M_PI * ei / (evCounts[fi] - 1);
             hData->mFds[fi].mEvs[ei].mAzCount = azCount;

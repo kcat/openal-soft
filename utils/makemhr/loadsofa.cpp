@@ -67,7 +67,8 @@ static bool PrepareLayout(const uint m, const float *xyzs, HrirDataT *hData)
 
     double distances[MAX_FD_COUNT]{};
     uint evCounts[MAX_FD_COUNT]{};
-    auto azCounts = std::vector<uint>(MAX_FD_COUNT*MAX_EV_COUNT, 0u);
+    auto azCounts = std::vector<std::array<uint,MAX_EV_COUNT>>(MAX_FD_COUNT);
+    for(auto &azs : azCounts) azs.fill(0u);
 
     uint fi{0u}, ir_total{0u};
     for(const auto &field : fds)
@@ -76,17 +77,18 @@ static bool PrepareLayout(const uint m, const float *xyzs, HrirDataT *hData)
         evCounts[fi] = field.mEvCount;
 
         for(uint ei{0u};ei < field.mEvStart;ei++)
-            azCounts[fi*MAX_EV_COUNT + ei] = field.mAzCounts[field.mEvCount-ei-1];
+            azCounts[fi][ei] = field.mAzCounts[field.mEvCount-ei-1];
         for(uint ei{field.mEvStart};ei < field.mEvCount;ei++)
         {
-            azCounts[fi*MAX_EV_COUNT + ei] = field.mAzCounts[ei];
+            azCounts[fi][ei] = field.mAzCounts[ei];
             ir_total += field.mAzCounts[ei];
         }
 
         ++fi;
     }
     fprintf(stdout, "Using %u of %u IRs.\n", ir_total, m);
-    return PrepareHrirData({distances, fi}, evCounts, azCounts.data(), hData);
+    const auto azs = al::as_span(azCounts).first<MAX_FD_COUNT>();
+    return PrepareHrirData({distances, fi}, evCounts, azs, hData);
 }
 
 

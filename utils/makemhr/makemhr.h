@@ -74,15 +74,13 @@ struct HrirAzT {
 
 struct HrirEvT {
     double mElevation{0.0};
-    uint mAzCount{0u};
-    HrirAzT *mAzs{nullptr};
+    al::span<HrirAzT> mAzs;
 };
 
 struct HrirFdT {
     double mDistance{0.0};
-    uint mEvCount{0u};
     uint mEvStart{0u};
-    HrirEvT *mEvs{nullptr};
+    al::span<HrirEvT> mEvs;
 };
 
 // The HRIR metrics and data set used when loading, processing, and storing

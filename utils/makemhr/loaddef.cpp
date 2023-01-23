@@ -1477,12 +1477,12 @@ static int ReadIndexTriplet(TokenReaderT *tr, const HrirDataT *hData, uint *fi, 
     {
         *fi = 0;
     }
-    if(!TrReadInt(tr, 0, static_cast<int>(hData->mFds[*fi].mEvCount) - 1, &intVal))
+    if(!TrReadInt(tr, 0, static_cast<int>(hData->mFds[*fi].mEvs.size()-1), &intVal))
         return 0;
     *ei = static_cast<uint>(intVal);
     if(!TrReadOperator(tr, ","))
         return 0;
-    if(!TrReadInt(tr, 0, static_cast<int>(hData->mFds[*fi].mEvs[*ei].mAzCount) - 1, &intVal))
+    if(!TrReadInt(tr, 0, static_cast<int>(hData->mFds[*fi].mEvs[*ei].mAzs.size()-1), &intVal))
         return 0;
     *ai = static_cast<uint>(intVal);
     return 1;
@@ -1848,28 +1848,28 @@ static int ProcessSources(TokenReaderT *tr, HrirDataT *hData, const uint outRate
                 else
                     aer[0] = std::fmod(360.0f - aer[0], 360.0f);
 
-                for(fi = 0;fi < hData->mFds.size();fi++)
-                {
-                    double delta = aer[2] - hData->mFds[fi].mDistance;
-                    if(std::abs(delta) < 0.001) break;
-                }
-                if(fi >= hData->mFds.size())
+                auto field = std::find_if(hData->mFds.cbegin(), hData->mFds.cend(),
+                    [&aer](const HrirFdT &fld) -> bool
+                    { return (std::abs(aer[2] - fld.mDistance) < 0.001); });
+                if(field == hData->mFds.cend())
                     continue;
 
-                double ef{(90.0 + aer[1]) / 180.0 * (hData->mFds[fi].mEvCount - 1)};
+                const double evscale{180.0 / static_cast<double>(field->mEvs.size()-1)};
+                double ef{(90.0 + aer[1]) / evscale};
                 ei = static_cast<uint>(std::round(ef));
-                ef = (ef - ei) * 180.0 / (hData->mFds[fi].mEvCount - 1);
+                ef = (ef - ei) * evscale;
                 if(std::abs(ef) >= 0.1)
                     continue;
 
-                double af{aer[0] / 360.0 * hData->mFds[fi].mEvs[ei].mAzCount};
+                const double azscale{360.0 / static_cast<double>(field->mEvs[ei].mAzs.size())};
+                double af{aer[0] / azscale};
                 ai = static_cast<uint>(std::round(af));
-                af = (af - ai) * 360.0 / hData->mFds[fi].mEvs[ei].mAzCount;
-                ai = ai % hData->mFds[fi].mEvs[ei].mAzCount;
+                af = (af - ai) * azscale;
+                ai %= static_cast<uint>(field->mEvs[ei].mAzs.size());
                 if(std::abs(af) >= 0.1)
                     continue;
 
-                HrirAzT *azd = &hData->mFds[fi].mEvs[ei].mAzs[ai];
+                HrirAzT *azd = &field->mEvs[ei].mAzs[ai];
                 if(azd->mIrs[0] != nullptr)
                 {
                     TrErrorAt(tr, line, col, "Redefinition of source [ %d, %d, %d ].\n", fi, ei, ai);
@@ -1985,26 +1985,26 @@ static int ProcessSources(TokenReaderT *tr, HrirDataT *hData, const uint outRate
     }
     for(fi = 0;fi < hData->mFds.size();fi++)
     {
-        for(ei = 0;ei < hData->mFds[fi].mEvCount;ei++)
+        for(ei = 0;ei < hData->mFds[fi].mEvs.size();ei++)
         {
-            for(ai = 0;ai < hData->mFds[fi].mEvs[ei].mAzCount;ai++)
+            for(ai = 0;ai < hData->mFds[fi].mEvs[ei].mAzs.size();ai++)
             {
                 HrirAzT *azd = &hData->mFds[fi].mEvs[ei].mAzs[ai];
                 if(azd->mIrs[0] != nullptr)
                     break;
             }
-            if(ai < hData->mFds[fi].mEvs[ei].mAzCount)
+            if(ai < hData->mFds[fi].mEvs[ei].mAzs.size())
                 break;
         }
-        if(ei >= hData->mFds[fi].mEvCount)
+        if(ei >= hData->mFds[fi].mEvs.size())
         {
             TrError(tr, "Missing source references [ %d, *, * ].\n", fi);
             return 0;
         }
         hData->mFds[fi].mEvStart = ei;
-        for(;ei < hData->mFds[fi].mEvCount;ei++)
+        for(;ei < hData->mFds[fi].mEvs.size();ei++)
         {
-            for(ai = 0;ai < hData->mFds[fi].mEvs[ei].mAzCount;ai++)
+            for(ai = 0;ai < hData->mFds[fi].mEvs[ei].mAzs.size();ai++)
             {
                 HrirAzT *azd = &hData->mFds[fi].mEvs[ei].mAzs[ai];
 
@@ -2020,9 +2020,9 @@ static int ProcessSources(TokenReaderT *tr, HrirDataT *hData, const uint outRate
     {
         for(fi = 0;fi < hData->mFds.size();fi++)
         {
-            for(ei = 0;ei < hData->mFds[fi].mEvCount;ei++)
+            for(ei = 0;ei < hData->mFds[fi].mEvs.size();ei++)
             {
-                for(ai = 0;ai < hData->mFds[fi].mEvs[ei].mAzCount;ai++)
+                for(ai = 0;ai < hData->mFds[fi].mEvs[ei].mAzs.size();ai++)
                 {
                     HrirAzT *azd = &hData->mFds[fi].mEvs[ei].mAzs[ai];
 

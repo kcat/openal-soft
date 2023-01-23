@@ -290,22 +290,21 @@ static bool LoadResponses(MYSOFA_HRTF *sofaHrtf, HrirDataT *hData, const DelayTy
 
             auto field = std::find_if(hData->mFds.cbegin(), hData->mFds.cend(),
                 [&aer](const HrirFdT &fld) -> bool
-                {
-                    double delta = aer[2] - fld.mDistance;
-                    return (std::abs(delta) < 0.001);
-                });
+                { return (std::abs(aer[2] - fld.mDistance) < 0.001); });
             if(field == hData->mFds.cend())
                 continue;
 
-            double ef{(90.0+aer[1]) / 180.0 * (field->mEvCount-1)};
-            auto ei = static_cast<int>(std::round(ef));
-            ef = (ef-ei) * 180.0 / (field->mEvCount-1);
+            const double evscale{180.0 / static_cast<double>(field->mEvs.size()-1)};
+            double ef{(90.0 + aer[1]) / evscale};
+            auto ei = static_cast<uint>(std::round(ef));
+            ef = (ef - ei) * evscale;
             if(std::abs(ef) >= 0.1) continue;
 
-            double af{aer[0] / 360.0 * field->mEvs[ei].mAzCount};
-            auto ai = static_cast<int>(std::round(af));
-            af = (af-ai) * 360.0 / field->mEvs[ei].mAzCount;
-            ai %= field->mEvs[ei].mAzCount;
+            const double azscale{360.0 / static_cast<double>(field->mEvs[ei].mAzs.size())};
+            double af{aer[0] / azscale};
+            auto ai = static_cast<uint>(std::round(af));
+            af = (af-ai) * azscale;
+            ai %= static_cast<uint>(field->mEvs[ei].mAzs.size());
             if(std::abs(af) >= 0.1) continue;
 
             HrirAzT *azd = &field->mEvs[ei].mAzs[ai];
@@ -479,26 +478,26 @@ bool LoadSofaFile(const char *filename, const uint numThreads, const uint fftSiz
     for(uint fi{0u};fi < hData->mFds.size();fi++)
     {
         uint ei{0u};
-        for(;ei < hData->mFds[fi].mEvCount;ei++)
+        for(;ei < hData->mFds[fi].mEvs.size();ei++)
         {
             uint ai{0u};
-            for(;ai < hData->mFds[fi].mEvs[ei].mAzCount;ai++)
+            for(;ai < hData->mFds[fi].mEvs[ei].mAzs.size();ai++)
             {
                 HrirAzT &azd = hData->mFds[fi].mEvs[ei].mAzs[ai];
                 if(azd.mIrs[0] != nullptr) break;
             }
-            if(ai < hData->mFds[fi].mEvs[ei].mAzCount)
+            if(ai < hData->mFds[fi].mEvs[ei].mAzs.size())
                 break;
         }
-        if(ei >= hData->mFds[fi].mEvCount)
+        if(ei >= hData->mFds[fi].mEvs.size())
         {
             fprintf(stderr, "Missing source references [ %d, *, * ].\n", fi);
             return false;
         }
         hData->mFds[fi].mEvStart = ei;
-        for(;ei < hData->mFds[fi].mEvCount;ei++)
+        for(;ei < hData->mFds[fi].mEvs.size();ei++)
         {
-            for(uint ai{0u};ai < hData->mFds[fi].mEvs[ei].mAzCount;ai++)
+            for(uint ai{0u};ai < hData->mFds[fi].mEvs[ei].mAzs.size();ai++)
             {
                 HrirAzT &azd = hData->mFds[fi].mEvs[ei].mAzs[ai];
                 if(azd.mIrs[0] == nullptr)
@@ -518,7 +517,7 @@ bool LoadSofaFile(const char *filename, const uint numThreads, const uint fftSiz
     {
         for(uint ei{0u};ei < hData->mFds[fi].mEvStart;ei++)
         {
-            for(uint ai{0u};ai < hData->mFds[fi].mEvs[ei].mAzCount;ai++)
+            for(uint ai{0u};ai < hData->mFds[fi].mEvs[ei].mAzs.size();ai++)
             {
                 HrirAzT &azd = hData->mFds[fi].mEvs[ei].mAzs[ai];
                 for(uint ti{0u};ti < channels;ti++)
@@ -526,8 +525,8 @@ bool LoadSofaFile(const char *filename, const uint numThreads, const uint fftSiz
             }
         }
 
-        for(uint ei{hData->mFds[fi].mEvStart};ei < hData->mFds[fi].mEvCount;ei++)
-            hrir_total += hData->mFds[fi].mEvs[ei].mAzCount * channels;
+        for(uint ei{hData->mFds[fi].mEvStart};ei < hData->mFds[fi].mEvs.size();ei++)
+            hrir_total += hData->mFds[fi].mEvs[ei].mAzs.size() * channels;
     }
 
     std::atomic<size_t> hrir_done{0};
@@ -539,13 +538,12 @@ bool LoadSofaFile(const char *filename, const uint numThreads, const uint fftSiz
         PPhaseResampler rs;
         rs.init(hData->mIrRate, OnsetRateMultiple*hData->mIrRate);
 
-        for(uint fi{0u};fi < hData->mFds.size();fi++)
+        for(auto &field : hData->mFds)
         {
-            for(uint ei{hData->mFds[fi].mEvStart};ei < hData->mFds[fi].mEvCount;ei++)
+            for(auto &elev : field.mEvs.subspan(field.mEvStart))
             {
-                for(uint ai{0};ai < hData->mFds[fi].mEvs[ei].mAzCount;ai++)
+                for(auto &azd : elev.mAzs)
                 {
-                    HrirAzT &azd = hData->mFds[fi].mEvs[ei].mAzs[ai];
                     for(uint ti{0};ti < channels;ti++)
                     {
                         hrir_done.fetch_add(1u, std::memory_order_acq_rel);
@@ -570,13 +568,12 @@ bool LoadSofaFile(const char *filename, const uint numThreads, const uint fftSiz
         return false;
 
     MagCalculator calculator{hData->mFftSize, hData->mIrPoints};
-    for(uint fi{0u};fi < hData->mFds.size();fi++)
+    for(auto &field : hData->mFds)
     {
-        for(uint ei{hData->mFds[fi].mEvStart};ei < hData->mFds[fi].mEvCount;ei++)
+        for(auto &elev : field.mEvs.subspan(field.mEvStart))
         {
-            for(uint ai{0};ai < hData->mFds[fi].mEvs[ei].mAzCount;ai++)
+            for(auto &azd : elev.mAzs)
             {
-                HrirAzT &azd = hData->mFds[fi].mEvs[ei].mAzs[ai];
                 for(uint ti{0};ti < channels;ti++)
                     calculator.mIrs.push_back(azd.mIrs[ti]);
             }

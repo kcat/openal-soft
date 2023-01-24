@@ -143,7 +143,7 @@ enum HeadModelT {
 #define DEFAULT_EQUALIZE             (1)
 #define DEFAULT_SURFACE              (1)
 #define DEFAULT_LIMIT                (24.0)
-#define DEFAULT_TRUNCSIZE            (32)
+#define DEFAULT_TRUNCSIZE            (64)
 #define DEFAULT_HEAD_MODEL           (HM_DATASET)
 #define DEFAULT_CUSTOM_RADIUS        (0.0)
 

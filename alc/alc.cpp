@@ -1544,31 +1544,68 @@ ALCenum EnumFromDevAmbi(DevAmbiScaling scaling)
  * existing ones. Based on Wine's DSound downmix values, which are based on
  * PulseAudio's.
  */
+constexpr std::array<InputRemixMap::TargetMix,2> FrontStereoSplit{{
+    {FrontLeft, 0.5f}, {FrontRight, 0.5f}
+}};
+constexpr std::array<InputRemixMap::TargetMix,1> FrontLeft9{{
+    {FrontLeft, 1.0f/9.0f}
+}};
+constexpr std::array<InputRemixMap::TargetMix,1> FrontRight9{{
+    {FrontRight, 1.0f/9.0f}
+}};
+constexpr std::array<InputRemixMap::TargetMix,2> BackMonoToFrontSplit{{
+    {FrontLeft, 0.5f/9.0f}, {FrontRight, 0.5f/9.0f}
+}};
+constexpr std::array<InputRemixMap::TargetMix,2> LeftStereoSplit{{
+    {FrontLeft, 0.5f}, {BackLeft, 0.5f}
+}};
+constexpr std::array<InputRemixMap::TargetMix,2> RightStereoSplit{{
+    {FrontRight, 0.5f}, {BackRight, 0.5f}
+}};
+constexpr std::array<InputRemixMap::TargetMix,2> BackStereoSplit{{
+    {BackLeft, 0.5f}, {BackRight, 0.5f}
+}};
+constexpr std::array<InputRemixMap::TargetMix,2> SideStereoSplit{{
+    {SideLeft, 0.5f}, {SideRight, 0.5f}
+}};
+constexpr std::array<InputRemixMap::TargetMix,1> ToSideLeft{{
+    {SideLeft, 1.0f}
+}};
+constexpr std::array<InputRemixMap::TargetMix,1> ToSideRight{{
+    {SideRight, 1.0f}
+}};
+constexpr std::array<InputRemixMap::TargetMix,2> BackLeftSplit{{
+    {SideLeft, 0.5f}, {BackCenter, 0.5f}
+}};
+constexpr std::array<InputRemixMap::TargetMix,2> BackRightSplit{{
+    {SideRight, 0.5f}, {BackCenter, 0.5f}
+}};
+
 const std::array<InputRemixMap,6> StereoDownmix{{
-    { FrontCenter, {{{FrontLeft,  0.5f},      {FrontRight, 0.5f}}} },
-    { SideLeft,    {{{FrontLeft,  1.0f/9.0f}}} },
-    { SideRight,   {{{FrontRight, 1.0f/9.0f}}} },
-    { BackLeft,    {{{FrontLeft,  1.0f/9.0f}}} },
-    { BackRight,   {{{FrontRight, 1.0f/9.0f}}} },
-    { BackCenter,  {{{FrontLeft,  0.5f/9.0f}, {FrontRight, 0.5f/9.0f}}} },
+    { FrontCenter, FrontStereoSplit },
+    { SideLeft,    FrontLeft9 },
+    { SideRight,   FrontRight9 },
+    { BackLeft,    FrontLeft9 },
+    { BackRight,   FrontRight9 },
+    { BackCenter,  BackMonoToFrontSplit },
 }};
 const std::array<InputRemixMap,4> QuadDownmix{{
-    { FrontCenter, {{{FrontLeft,  0.5f}, {FrontRight, 0.5f}}} },
-    { SideLeft,    {{{FrontLeft,  0.5f}, {BackLeft,   0.5f}}} },
-    { SideRight,   {{{FrontRight, 0.5f}, {BackRight,  0.5f}}} },
-    { BackCenter,  {{{BackLeft,   0.5f}, {BackRight,  0.5f}}} },
+    { FrontCenter, FrontStereoSplit },
+    { SideLeft,    LeftStereoSplit },
+    { SideRight,   RightStereoSplit },
+    { BackCenter,  BackStereoSplit },
 }};
 const std::array<InputRemixMap,3> X51Downmix{{
-    { BackLeft,   {{{SideLeft,  1.0f}}} },
-    { BackRight,  {{{SideRight, 1.0f}}} },
-    { BackCenter, {{{SideLeft,  0.5f}, {SideRight, 0.5f}}} },
+    { BackLeft,   ToSideLeft },
+    { BackRight,  ToSideRight },
+    { BackCenter, SideStereoSplit },
 }};
 const std::array<InputRemixMap,2> X61Downmix{{
-    { BackLeft,  {{{BackCenter, 0.5f}, {SideLeft,  0.5f}}} },
-    { BackRight, {{{BackCenter, 0.5f}, {SideRight, 0.5f}}} },
+    { BackLeft,  BackLeftSplit },
+    { BackRight, BackRightSplit },
 }};
 const std::array<InputRemixMap,1> X71Downmix{{
-    { BackCenter, {{{BackLeft, 0.5f}, {BackRight, 0.5f}}} },
+    { BackCenter, BackStereoSplit },
 }};
 
 

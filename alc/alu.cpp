@@ -342,27 +342,30 @@ inline uint dither_rng(uint *seed) noexcept
 }
 
 
-/* Ambisonic upsampler function. It's effectively a matrix multiply with the
- * two matrices having different majors. It takes an 'upsampler' and 'rotator'
- * as the input matrices, resulting in a matrix that behaves as if the B-Format
- * input was first decoded to a speaker array at its input order, encoded back
- * into the higher order mix, then finally rotated. The output takes the same
- * major as matrix1.
+/* Ambisonic upsampler function. It's effectively a matrix multiply. It takes
+ * an 'upsampler' and 'rotator' as the input matrices, and creates a matrix
+ * that behaves as if the B-Format input was first decoded to a speaker array
+ * at its input order, encoded back into the higher order mix, then finally
+ * rotated.
  */
 void UpsampleBFormatTransform(
     const al::span<std::array<float,MaxAmbiChannels>,MaxAmbiChannels> output,
-    const al::span<const std::array<float,MaxAmbiChannels>> matrix1,
-    const al::span<std::array<float,MaxAmbiChannels>,MaxAmbiChannels> matrix2, size_t coeffs_order)
+    const al::span<const std::array<float,MaxAmbiChannels>> upsampler,
+    const al::span<std::array<float,MaxAmbiChannels>,MaxAmbiChannels> rotator, size_t coeffs_order)
 {
     const size_t num_chans{AmbiChannelsFromOrder(coeffs_order)};
-    for(size_t i{0};i < matrix1.size();++i)
+    for(size_t i{0};i < upsampler.size();++i)
+        output[i].fill(0.0f);
+    for(size_t i{0};i < upsampler.size();++i)
     {
-        for(size_t j{0};j < num_chans;++j)
+        for(size_t k{0};k < num_chans;++k)
         {
-            float sum{0.0f};
-            for(size_t k{0};k < num_chans;++k)
-                sum += matrix1[i][k] * matrix2[j][k];
-            output[i][j] = sum;
+            float *RESTRICT out{output[i].data()};
+            /* Write the full number of channels. The compiler will have an
+             * easier time optimizing if it has a fixed length.
+             */
+            for(size_t j{0};j < MaxAmbiChannels;++j)
+                out[j] += upsampler[i][k] * rotator[k][j];
         }
     }
 }
@@ -573,9 +576,9 @@ struct RotatorCoeffs {
 
         for(int l=2;l <= MaxAmbiOrder;++l)
         {
-            for(int m{-l};m <= l;++m)
+            for(int n{-l};n <= l;++n)
             {
-                for(int n{-l};n <= l;++n)
+                for(int m{-l};m <= l;++m)
                 {
                     // compute u,v,w terms of Eq.8.1 (Table I)
                     const bool d{m == 0}; // the delta function d_m0
@@ -609,16 +612,16 @@ void AmbiRotator(AmbiRotateMatrix &matrix, const int order)
     auto P = [](const int i, const int l, const int a, const int n, const size_t last_band,
         const AmbiRotateMatrix &R)
     {
-        const float ri1{ R[static_cast<size_t>(i+2)][ 1+2]};
-        const float rim1{R[static_cast<size_t>(i+2)][-1+2]};
-        const float ri0{ R[static_cast<size_t>(i+2)][ 0+2]};
+        const float ri1{ R[ 1+2][static_cast<size_t>(i+2)]};
+        const float rim1{R[-1+2][static_cast<size_t>(i+2)]};
+        const float ri0{ R[ 0+2][static_cast<size_t>(i+2)]};
 
-        auto vec = R[static_cast<size_t>(a+l-1) + last_band].cbegin() + last_band;
+        const size_t y{last_band + static_cast<size_t>(a+l-1)};
         if(n == -l)
-            return ri1*vec[0] + rim1*vec[static_cast<size_t>(l-1)*2];
+            return ri1*R[last_band][y] + rim1*R[last_band + static_cast<size_t>(l-1)*2][y];
         if(n == l)
-            return ri1*vec[static_cast<size_t>(l-1)*2] - rim1*vec[0];
-        return ri0*vec[static_cast<size_t>(n+l-1)];
+            return ri1*R[last_band + static_cast<size_t>(l-1)*2][y] - rim1*R[last_band][y];
+        return ri0*R[last_band + static_cast<size_t>(n+l-1)][y];
     };
 
     auto U = [P](const int l, const int m, const int n, const size_t last_band,
@@ -663,10 +666,10 @@ void AmbiRotator(AmbiRotateMatrix &matrix, const int order)
     for(int l{2};l <= order;++l)
     {
         size_t y{band_idx};
-        for(int m{-l};m <= l;++m,++y)
+        for(int n{-l};n <= l;++n,++y)
         {
             size_t x{band_idx};
-            for(int n{-l};n <= l;++n,++x)
+            for(int m{-l};m <= l;++m,++x)
             {
                 float r{0.0f};
 
@@ -899,9 +902,9 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
             shrot.fill(AmbiRotateMatrix::value_type{});
 
             shrot[0][0] = 1.0f;
-            shrot[1][1] =  U[0]; shrot[1][2] = -V[0]; shrot[1][3] = -N[0];
-            shrot[2][1] = -U[1]; shrot[2][2] =  V[1]; shrot[2][3] =  N[1];
-            shrot[3][1] =  U[2]; shrot[3][2] = -V[2]; shrot[3][3] = -N[2];
+            shrot[1][1] =  U[0]; shrot[1][2] = -U[1]; shrot[1][3] =  U[2];
+            shrot[2][1] = -V[0]; shrot[2][2] =  V[1]; shrot[2][3] = -V[2];
+            shrot[3][1] = -N[0]; shrot[3][2] =  N[1]; shrot[3][3] = -N[2];
             AmbiRotator(shrot, static_cast<int>(Device->mAmbiOrder));
 
             /* If the device is higher order than the voice, "upsample" the
@@ -945,17 +948,7 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
                     al::unreachable();
             }
             else
-            {
-                /* Transpose the rotation matrix to align the input channels on
-                 * rows.
-                 */
-                for(size_t i{0};i < shrot.size();++i)
-                {
-                    const float *RESTRICT src{shrot[i].data()};
-                    for(size_t j{0};j < shrot[i].size();++j)
-                        mixmatrix[j][i] = src[j];
-                }
-            }
+                mixmatrix = shrot;
 
             /* Convert the rotation matrix for input ordering and scaling, and
              * whether input is 2D or 3D.

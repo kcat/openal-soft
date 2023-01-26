@@ -219,6 +219,7 @@ struct DeviceBase {
     std::chrono::nanoseconds FixedLatency{0};
 
     AmbiRotateMatrix mAmbiRotateMatrix{};
+    AmbiRotateMatrix mAmbiRotateMatrix2{};
 
     /* Temp storage used for mixer processing. */
     static constexpr size_t MixerLineSize{BufferLineSize + MaxResamplerPadding +

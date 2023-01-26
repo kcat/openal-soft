@@ -342,34 +342,27 @@ inline uint dither_rng(uint *seed) noexcept
 }
 
 
-/* Ambisonic upsampler function. It's effectively a matrix multiply. It takes
- * an 'upsampler' and 'rotator' as the input matrices, resulting in a matrix
- * that behaves as if the B-Format input was first decoded to a speaker array
- * at its input order, encoded back into the higher order mix, then finally
- * rotated.
+/* Ambisonic upsampler function. It's effectively a matrix multiply with the
+ * two matrices having different majors. It takes an 'upsampler' and 'rotator'
+ * as the input matrices, resulting in a matrix that behaves as if the B-Format
+ * input was first decoded to a speaker array at its input order, encoded back
+ * into the higher order mix, then finally rotated. The output takes the same
+ * major as matrix1.
  */
-void UpsampleBFormatTransform(size_t coeffs_order,
+void UpsampleBFormatTransform(
+    const al::span<std::array<float,MaxAmbiChannels>,MaxAmbiChannels> output,
     const al::span<const std::array<float,MaxAmbiChannels>> matrix1,
-    const al::span<std::array<float,MaxAmbiChannels>,MaxAmbiChannels> coeffs)
+    const al::span<std::array<float,MaxAmbiChannels>,MaxAmbiChannels> matrix2, size_t coeffs_order)
 {
-    auto copy_coeffs = [coeffs]() noexcept
-    {
-        std::array<std::array<float,MaxAmbiChannels>,MaxAmbiChannels> res{};
-        for(size_t i{0};i < MaxAmbiChannels;++i)
-            res[i] = coeffs[i];
-        return res;
-    };
-    const auto matrix2 = copy_coeffs();
-
     const size_t num_chans{AmbiChannelsFromOrder(coeffs_order)};
     for(size_t i{0};i < matrix1.size();++i)
     {
         for(size_t j{0};j < num_chans;++j)
         {
-            float sum{0.0};
+            float sum{0.0f};
             for(size_t k{0};k < num_chans;++k)
                 sum += matrix1[i][k] * matrix2[j][k];
-            coeffs[j][i] = sum;
+            output[i][j] = sum;
         }
     }
 }
@@ -616,16 +609,16 @@ void AmbiRotator(AmbiRotateMatrix &matrix, const int order)
     auto P = [](const int i, const int l, const int a, const int n, const size_t last_band,
         const AmbiRotateMatrix &R)
     {
-        const float ri1{ R[static_cast<uint>(i+2)][ 1+2]};
-        const float rim1{R[static_cast<uint>(i+2)][-1+2]};
-        const float ri0{ R[static_cast<uint>(i+2)][ 0+2]};
+        const float ri1{ R[static_cast<size_t>(i+2)][ 1+2]};
+        const float rim1{R[static_cast<size_t>(i+2)][-1+2]};
+        const float ri0{ R[static_cast<size_t>(i+2)][ 0+2]};
 
-        auto vec = R[static_cast<uint>(a+l-1) + last_band].cbegin() + last_band;
+        auto vec = R[static_cast<size_t>(a+l-1) + last_band].cbegin() + last_band;
         if(n == -l)
-            return ri1*vec[0] + rim1*vec[static_cast<uint>(l-1)*size_t{2}];
+            return ri1*vec[0] + rim1*vec[static_cast<size_t>(l-1)*2];
         if(n == l)
-            return ri1*vec[static_cast<uint>(l-1)*size_t{2}] - rim1*vec[0];
-        return ri0*vec[static_cast<uint>(n+l-1)];
+            return ri1*vec[static_cast<size_t>(l-1)*2] - rim1*vec[0];
+        return ri0*vec[static_cast<size_t>(n+l-1)];
     };
 
     auto U = [P](const int l, const int m, const int n, const size_t last_band,
@@ -903,13 +896,14 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
              * orders.
              */
             AmbiRotateMatrix &shrot = Device->mAmbiRotateMatrix;
-            shrot.fill({});
+            shrot.fill(AmbiRotateMatrix::value_type{});
 
             shrot[0][0] = 1.0f;
             shrot[1][1] =  U[0]; shrot[1][2] = -V[0]; shrot[1][3] = -N[0];
             shrot[2][1] = -U[1]; shrot[2][2] =  V[1]; shrot[2][3] =  N[1];
             shrot[3][1] =  U[2]; shrot[3][2] = -V[2]; shrot[3][3] = -N[2];
             AmbiRotator(shrot, static_cast<int>(Device->mAmbiOrder));
+
             /* If the device is higher order than the voice, "upsample" the
              * matrix.
              *
@@ -919,6 +913,7 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
              * on various channels (i.e. when elevation=0, those height-related
              * channels should be non-0).
              */
+            AmbiRotateMatrix &mixmatrix = Device->mAmbiRotateMatrix2;
             if(Device->mAmbiOrder > voice->mAmbiOrder
                 || (Device->mAmbiOrder >= 2 && !Device->m2DMixing
                     && Is2DAmbisonic(voice->mFmtChannels)))
@@ -927,24 +922,38 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
                 {
                     auto&& upsampler = Is2DAmbisonic(voice->mFmtChannels) ?
                         AmbiScale::FirstOrder2DUp : AmbiScale::FirstOrderUp;
-                    UpsampleBFormatTransform(Device->mAmbiOrder, upsampler, shrot);
+                    UpsampleBFormatTransform(mixmatrix, upsampler, shrot, Device->mAmbiOrder);
                 }
                 else if(voice->mAmbiOrder == 2)
                 {
                     auto&& upsampler = Is2DAmbisonic(voice->mFmtChannels) ?
                         AmbiScale::SecondOrder2DUp : AmbiScale::SecondOrderUp;
-                    UpsampleBFormatTransform(Device->mAmbiOrder, upsampler, shrot);
+                    UpsampleBFormatTransform(mixmatrix, upsampler, shrot, Device->mAmbiOrder);
                 }
                 else if(voice->mAmbiOrder == 3)
                 {
                     auto&& upsampler = Is2DAmbisonic(voice->mFmtChannels) ?
                         AmbiScale::ThirdOrder2DUp : AmbiScale::ThirdOrderUp;
-                    UpsampleBFormatTransform(Device->mAmbiOrder, upsampler, shrot);
+                    UpsampleBFormatTransform(mixmatrix, upsampler, shrot, Device->mAmbiOrder);
                 }
                 else if(voice->mAmbiOrder == 4)
                 {
                     auto&& upsampler = AmbiScale::FourthOrder2DUp;
-                    UpsampleBFormatTransform(Device->mAmbiOrder, upsampler, shrot);
+                    UpsampleBFormatTransform(mixmatrix, upsampler, shrot, Device->mAmbiOrder);
+                }
+                else
+                    al::unreachable();
+            }
+            else
+            {
+                /* Transpose the rotation matrix to align the input channels on
+                 * rows.
+                 */
+                for(size_t i{0};i < shrot.size();++i)
+                {
+                    const float *RESTRICT src{shrot[i].data()};
+                    for(size_t j{0};j < shrot[i].size();++j)
+                        mixmatrix[j][i] = src[j];
                 }
             }
 
@@ -955,19 +964,17 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
                 GetAmbi2DLayout(voice->mAmbiLayout).data() :
                 GetAmbiLayout(voice->mAmbiLayout).data()};
 
-            static const uint8_t OrderOffset[MaxAmbiOrder+1]{0, 1, 4, 9,};
             for(size_t c{0};c < num_channels;c++)
             {
                 const size_t acn{index_map[c]};
-                const size_t order{AmbiIndex::OrderFromChannel()[acn]};
                 const float scale{scales[acn] * coverage};
 
                 /* For channel 0, combine the B-Format signal (scaled according
                  * to the coverage amount) with the directional pan. For all
                  * other channels, use just the (scaled) B-Format signal.
                  */
-                for(size_t x{OrderOffset[order]};x < MaxAmbiChannels;++x)
-                    coeffs[x] += shrot[x][acn] * scale;
+                for(size_t x{0};x < MaxAmbiChannels;++x)
+                    coeffs[x] += mixmatrix[acn][x] * scale;
 
                 ComputePanGains(&Device->Dry, coeffs.data(), DryGain.Base,
                     voice->mChans[c].mDryParams.Gains.Target);

@@ -71,25 +71,6 @@ constexpr std::array<AmbiChannelFloatArray,8> FirstOrderEncoder{{
 }};
 static_assert(FirstOrderDecoder.size() == FirstOrderEncoder.size(), "First-order mismatch");
 
-auto CalcFirstOrderUp()
-{
-    std::array<AmbiChannelFloatArray,4> res{};
-
-    for(size_t i{0};i < FirstOrderDecoder[0].size();++i)
-    {
-        for(size_t j{0};j < FirstOrderEncoder[0].size();++j)
-        {
-            double sum{0.0};
-            for(size_t k{0};k < FirstOrderDecoder.size();++k)
-                sum += double{FirstOrderDecoder[k][i]} * FirstOrderEncoder[k][j];
-            res[i][j] = static_cast<float>(sum);
-        }
-    }
-
-    return res;
-}
-
-
 /* This calculates a 2D first-order "upsampler" matrix. Same as the first-order
  * matrix, just using a more optimized speaker array for horizontal-only
  * content.
@@ -107,24 +88,6 @@ constexpr std::array<AmbiChannelFloatArray,4> FirstOrder2DEncoder{{
     CalcAmbiCoeffs(-inv_sqrt2f, 0.0f, -inv_sqrt2f),
 }};
 static_assert(FirstOrder2DDecoder.size() == FirstOrder2DEncoder.size(), "First-order 2D mismatch");
-
-auto CalcFirstOrder2DUp()
-{
-    std::array<AmbiChannelFloatArray,4> res{};
-
-    for(size_t i{0};i < FirstOrder2DDecoder[0].size();++i)
-    {
-        for(size_t j{0};j < FirstOrder2DEncoder[0].size();++j)
-        {
-            double sum{0.0};
-            for(size_t k{0};k < FirstOrder2DDecoder.size();++k)
-                sum += double{FirstOrder2DDecoder[k][i]} * FirstOrder2DEncoder[k][j];
-            res[i][j] = static_cast<float>(sum);
-        }
-    }
-
-    return res;
-}
 
 
 /* This calculates a second-order "upsampler" matrix. Same as the first-order
@@ -161,25 +124,6 @@ constexpr std::array<AmbiChannelFloatArray,12> SecondOrderEncoder{{
 }};
 static_assert(SecondOrderDecoder.size() == SecondOrderEncoder.size(), "Second-order mismatch");
 
-auto CalcSecondOrderUp()
-{
-    std::array<AmbiChannelFloatArray,9> res{};
-
-    for(size_t i{0};i < SecondOrderDecoder[0].size();++i)
-    {
-        for(size_t j{0};j < SecondOrderEncoder[0].size();++j)
-        {
-            double sum{0.0};
-            for(size_t k{0};k < SecondOrderDecoder.size();++k)
-                sum += double{SecondOrderDecoder[k][i]} * SecondOrderEncoder[k][j];
-            res[i][j] = static_cast<float>(sum);
-        }
-    }
-
-    return res;
-}
-
-
 /* This calculates a 2D second-order "upsampler" matrix. Same as the second-
  * order matrix, just using a more optimized speaker array for horizontal-only
  * content.
@@ -202,24 +146,6 @@ constexpr std::array<AmbiChannelFloatArray,6> SecondOrder2DEncoder{{
 }};
 static_assert(SecondOrder2DDecoder.size() == SecondOrder2DEncoder.size(),
     "Second-order 2D mismatch");
-
-auto CalcSecondOrder2DUp()
-{
-    std::array<AmbiChannelFloatArray,9> res{};
-
-    for(size_t i{0};i < SecondOrder2DDecoder[0].size();++i)
-    {
-        for(size_t j{0};j < SecondOrder2DEncoder[0].size();++j)
-        {
-            double sum{0.0};
-            for(size_t k{0};k < SecondOrder2DDecoder.size();++k)
-                sum += double{SecondOrder2DDecoder[k][i]} * SecondOrder2DEncoder[k][j];
-            res[i][j] = static_cast<float>(sum);
-        }
-    }
-
-    return res;
-}
 
 
 /* This calculates a third-order "upsampler" matrix. Same as the first-order
@@ -272,25 +198,6 @@ constexpr std::array<AmbiChannelFloatArray,20> ThirdOrderEncoder{{
 }};
 static_assert(ThirdOrderDecoder.size() == ThirdOrderEncoder.size(), "Third-order mismatch");
 
-auto CalcThirdOrderUp()
-{
-    std::array<AmbiChannelFloatArray,16> res{};
-
-    for(size_t i{0};i < ThirdOrderDecoder[0].size();++i)
-    {
-        for(size_t j{0};j < ThirdOrderEncoder[0].size();++j)
-        {
-            double sum{0.0};
-            for(size_t k{0};k < ThirdOrderDecoder.size();++k)
-                sum += double{ThirdOrderDecoder[k][i]} * ThirdOrderEncoder[k][j];
-            res[i][j] = static_cast<float>(sum);
-        }
-    }
-
-    return res;
-}
-
-
 /* This calculates a 2D third-order "upsampler" matrix. Same as the third-order
  * matrix, just using a more optimized speaker array for horizontal-only
  * content.
@@ -316,24 +223,6 @@ constexpr std::array<AmbiChannelFloatArray,8> ThirdOrder2DEncoder{{
     CalcAmbiCoeffs( 0.38268343237f, 0.0f,  0.92387953251f),
 }};
 static_assert(ThirdOrder2DDecoder.size() == ThirdOrder2DEncoder.size(), "Third-order 2D mismatch");
-
-auto CalcThirdOrder2DUp()
-{
-    std::array<AmbiChannelFloatArray,16> res{};
-
-    for(size_t i{0};i < ThirdOrder2DDecoder[0].size();++i)
-    {
-        for(size_t j{0};j < ThirdOrder2DEncoder[0].size();++j)
-        {
-            double sum{0.0};
-            for(size_t k{0};k < ThirdOrder2DDecoder.size();++k)
-                sum += double{ThirdOrder2DDecoder[k][i]} * ThirdOrder2DEncoder[k][j];
-            res[i][j] = static_cast<float>(sum);
-        }
-    }
-
-    return res;
-}
 
 
 /* This calculates a 2D fourth-order "upsampler" matrix. There is no 3D fourth-
@@ -367,17 +256,20 @@ constexpr std::array<AmbiChannelFloatArray,10> FourthOrder2DEncoder{{
 }};
 static_assert(FourthOrder2DDecoder.size() == FourthOrder2DEncoder.size(), "Fourth-order 2D mismatch");
 
-auto CalcFourthOrder2DUp()
-{
-    std::array<AmbiChannelFloatArray,25> res{};
 
-    for(size_t i{0};i < FourthOrder2DDecoder[0].size();++i)
+template<size_t N, size_t M>
+auto CalcAmbiUpsampler(const std::array<std::array<float,N>,M> &decoder,
+    const std::array<AmbiChannelFloatArray,M> &encoder)
+{
+    std::array<AmbiChannelFloatArray,N> res{};
+
+    for(size_t i{0};i < decoder[0].size();++i)
     {
-        for(size_t j{0};j < FourthOrder2DEncoder[0].size();++j)
+        for(size_t j{0};j < encoder[0].size();++j)
         {
             double sum{0.0};
-            for(size_t k{0};k < FourthOrder2DDecoder.size();++k)
-                sum += double{FourthOrder2DDecoder[k][i]} * FourthOrder2DEncoder[k][j];
+            for(size_t k{0};k < decoder.size();++k)
+                sum += double{decoder[k][i]} * encoder[k][j];
             res[i][j] = static_cast<float>(sum);
         }
     }
@@ -387,13 +279,13 @@ auto CalcFourthOrder2DUp()
 
 } // namespace
 
-const std::array<AmbiChannelFloatArray,4> AmbiScale::FirstOrderUp{CalcFirstOrderUp()};
-const std::array<AmbiChannelFloatArray,4> AmbiScale::FirstOrder2DUp{CalcFirstOrder2DUp()};
-const std::array<AmbiChannelFloatArray,9> AmbiScale::SecondOrderUp{CalcSecondOrderUp()};
-const std::array<AmbiChannelFloatArray,9> AmbiScale::SecondOrder2DUp{CalcSecondOrder2DUp()};
-const std::array<AmbiChannelFloatArray,16> AmbiScale::ThirdOrderUp{CalcThirdOrderUp()};
-const std::array<AmbiChannelFloatArray,16> AmbiScale::ThirdOrder2DUp{CalcThirdOrder2DUp()};
-const std::array<AmbiChannelFloatArray,25> AmbiScale::FourthOrder2DUp{CalcFourthOrder2DUp()};
+const std::array<AmbiChannelFloatArray,4> AmbiScale::FirstOrderUp{CalcAmbiUpsampler(FirstOrderDecoder, FirstOrderEncoder)};
+const std::array<AmbiChannelFloatArray,4> AmbiScale::FirstOrder2DUp{CalcAmbiUpsampler(FirstOrder2DDecoder, FirstOrder2DEncoder)};
+const std::array<AmbiChannelFloatArray,9> AmbiScale::SecondOrderUp{CalcAmbiUpsampler(SecondOrderDecoder, SecondOrderEncoder)};
+const std::array<AmbiChannelFloatArray,9> AmbiScale::SecondOrder2DUp{CalcAmbiUpsampler(SecondOrder2DDecoder, SecondOrder2DEncoder)};
+const std::array<AmbiChannelFloatArray,16> AmbiScale::ThirdOrderUp{CalcAmbiUpsampler(ThirdOrderDecoder, ThirdOrderEncoder)};
+const std::array<AmbiChannelFloatArray,16> AmbiScale::ThirdOrder2DUp{CalcAmbiUpsampler(ThirdOrder2DDecoder, ThirdOrder2DEncoder)};
+const std::array<AmbiChannelFloatArray,25> AmbiScale::FourthOrder2DUp{CalcAmbiUpsampler(FourthOrder2DDecoder, FourthOrder2DEncoder)};
 
 
 std::array<float,MaxAmbiOrder+1> AmbiScale::GetHFOrderScales(const uint src_order,

@@ -107,8 +107,8 @@ const struct NameValuePair {
 }, resamplerList[] = {
     { "Point", "point" },
     { "Linear", "linear" },
-    { "Default (Linear)", "" },
     { "Cubic Spline", "cubic" },
+    { "Default (Cubic Spline)", "" },
     { "11th order Sinc (fast)", "fast_bsinc12" },
     { "11th order Sinc", "bsinc12" },
     { "23rd order Sinc (fast)", "fast_bsinc24" },

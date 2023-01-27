@@ -55,7 +55,7 @@ static_assert(!(sizeof(DeviceBase::MixerBufferLine)&15),
     "DeviceBase::MixerBufferLine must be a multiple of 16 bytes");
 static_assert(!(MaxResamplerEdge&3), "MaxResamplerEdge is not a multiple of 4");
 
-Resampler ResamplerDefault{Resampler::Linear};
+Resampler ResamplerDefault{Resampler::Cubic};
 
 namespace {
 

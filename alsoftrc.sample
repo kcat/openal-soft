@@ -188,7 +188,7 @@
 #            between 24 and 48 points, with anti-aliasing)
 #  fast_bsinc24 - same as bsinc24, except without interpolation between down-
 #                 sampling scales
-#resampler = linear
+#resampler = cubic
 
 ## rt-prio: (global)
 #  Sets the real-time priority value for the mixing thread. Not all drivers may

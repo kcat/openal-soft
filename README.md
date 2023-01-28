@@ -1,7 +1,7 @@
 OpenAL soft
 ===========
 
-`master` branch CI status :  [![Build Status](https://travis-ci.org/kcat/openal-soft.svg?branch=master)](https://travis-ci.org/kcat/openal-soft) [![Windows Build Status](https://ci.appveyor.com/api/projects/status/github/kcat/openal-soft?branch=master&svg=true)](https://ci.appveyor.com/api/projects/status/github/kcat/openal-soft?branch=master&svg=true)
+`master` branch CI status : [![GitHub Actions Status](https://github.com/kcat/openal-soft/actions/workflows/ci.yml/badge.svg)](https://github.com/kcat/openal-soft/actions) [![Windows Build Status](https://ci.appveyor.com/api/projects/status/github/kcat/openal-soft?branch=master&svg=true)](https://ci.appveyor.com/api/projects/status/github/kcat/openal-soft?branch=master&svg=true)
 
 OpenAL Soft is an LGPL-licensed, cross-platform, software implementation of the OpenAL 3D audio API. It's forked from the open-sourced Windows version available originally from openal.org's SVN repository (now defunct).
 OpenAL provides capabilities for playing audio in a virtual 3D environment. Distance attenuation, doppler shift, and directional sound emitters are among the features handled by the API. More advanced effects, including air absorption, occlusion, and environmental reverb, are available through the EFX extension. It also facilitates streaming audio, multi-channel buffers, and audio capture.
@@ -17,18 +17,22 @@ directory, and run:
 cmake ..
 ```
 
-Assuming configuration went well, you can then build it, typically using GNU
-Make (KDevelop, MSVC, and others are possible depending on your system setup
-and CMake configuration).
+Alternatively, you can use any available CMake front-end, like cmake-gui,
+ccmake, or your preferred IDE's CMake project parser.
+
+Assuming configuration went well, you can then build it. The command
+`cmake --build .` will instruct CMake to execute the build with the toolchain
+chosen during configuration (often GNU Make or NMake, although others are
+possible).
 
 Please Note: Double check that the appropriate backends were detected. Often,
 complaints of no sound, crashing, and missing devices can be solved by making
 sure the correct backends are being used. CMake's output will identify which
 backends were enabled.
 
-For most systems, you will likely want to make sure ALSA, OSS, and PulseAudio
-were detected (if your target system uses them). For Windows, make sure
-DirectSound was detected.
+For most systems, you will likely want to make sure PipeWire, PulseAudio, and
+ALSA were detected (if your target system uses them). For Windows, make sure
+WASAPI was detected.
 
 
 Building openal-soft - Using vcpkg

@@ -21,7 +21,7 @@ Alternatively, you can use any available CMake front-end, like cmake-gui,
 ccmake, or your preferred IDE's CMake project parser.
 
 Assuming configuration went well, you can then build it. The command
-`cmake --build .` will instruct CMake to execute the build with the toolchain
+`cmake --build .` will instruct CMake to build the project with the toolchain
 chosen during configuration (often GNU Make or NMake, although others are
 possible).
 

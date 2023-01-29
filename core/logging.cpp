@@ -38,8 +38,8 @@ void al_print(LogLevel level, FILE *logfile, const char *fmt, ...)
     std::array<char,256> stcmsg{};
 
     char *str{stcmsg.data()};
-    auto prefend1 = std::copy_n(prefix.begin(), prefix.size(), stcmsg.begin());
-    al::span<char> msg{prefend1, stcmsg.end()};
+    std::copy_n(prefix.begin(), prefix.size(), stcmsg.begin());
+    al::span<char> msg{stcmsg.begin(), prefix.size()};
 
     std::va_list args, args2;
     va_start(args, fmt);
@@ -50,8 +50,8 @@ void al_print(LogLevel level, FILE *logfile, const char *fmt, ...)
         dynmsg.resize(static_cast<size_t>(msglen)+prefix.size() + 1u);
 
         str = dynmsg.data();
-        auto prefend2 = std::copy_n(prefix.begin(), prefix.size(), dynmsg.begin());
-        msg = {prefend2, dynmsg.end()};
+        std::copy_n(prefix.begin(), prefix.size(), dynmsg.begin());
+        msg = {dynmsg.begin(), prefix.size()};
 
         std::vsnprintf(msg.data(), msg.size(), fmt, args2);
     }

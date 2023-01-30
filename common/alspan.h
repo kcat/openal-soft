@@ -108,7 +108,7 @@ public:
     constexpr span() noexcept { }
     template<typename U>
     constexpr explicit span(U iter, index_type) : mData{to_address(iter)} { }
-    template<typename U, typename V, REQUIRES(!std::is_integral<V>::value)>
+    template<typename U, typename V, REQUIRES(!std::is_convertible<V,size_t>::value)>
     constexpr explicit span(U first, V) : mData{to_address(first)} { }
 
     constexpr span(type_identity_t<element_type> (&arr)[E]) noexcept
@@ -223,9 +223,8 @@ public:
     constexpr span(U iter, index_type count)
         : mData{to_address(iter)}, mDataEnd{to_address(iter)+count}
     { }
-    template<typename U, typename V, REQUIRES(!std::is_integral<V>::value)>
-    constexpr span(U first, V last)
-        : mData{to_address(first)}, mDataEnd{to_address(last)}
+    template<typename U, typename V, REQUIRES(!std::is_convertible<V,size_t>::value)>
+    constexpr span(U first, V last) : span{to_address(first), static_cast<size_t>(last-first)}
     { }
 
     template<size_t N>

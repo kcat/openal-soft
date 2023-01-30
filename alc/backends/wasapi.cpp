@@ -1035,7 +1035,7 @@ HRESULT WasapiPlayback::resetProxy()
     hr = mClient->IsFormatSupported(AUDCLNT_SHAREMODE_SHARED, &OutputType.Format, &wfx);
     if(FAILED(hr))
     {
-        ERR("Failed to check format support: 0x%08lx\n", hr);
+        WARN("Failed to check format support: 0x%08lx\n", hr);
         hr = mClient->GetMixFormat(&wfx);
     }
     if(FAILED(hr))
@@ -1657,12 +1657,12 @@ HRESULT WasapiCapture::resetProxy()
     hr = mClient->IsFormatSupported(AUDCLNT_SHAREMODE_SHARED, &InputType.Format, &wfx);
     if(FAILED(hr))
     {
-        WARN("Failed to check format support: 0x%08lx\n", hr);
+        WARN("Failed to check capture format support: 0x%08lx\n", hr);
         hr = mClient->GetMixFormat(&wfx);
     }
     if(FAILED(hr))
     {
-        ERR("Failed to check format support: 0x%08lx\n", hr);
+        ERR("Failed to find a supported capture format: 0x%08lx\n", hr);
         return hr;
     }
 

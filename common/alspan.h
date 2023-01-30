@@ -75,14 +75,15 @@ namespace detail_ {
         = true;
 
     template<typename T, typename U>
-    constexpr bool is_convertible_v = std::is_convertible<T(*)[],U(*)[]>::value;
+    constexpr bool is_array_compatible = std::is_convertible<T(*)[],U(*)[]>::value;
+
+    template<typename C, typename T>
+    constexpr bool is_valid_container = !is_span_v<C> && !is_std_array_v<C>
+        && !std::is_array<C>::value && has_size_and_data<C>
+        && is_array_compatible<std::remove_pointer_t<decltype(al::data(std::declval<C&>()))>,T>;
 } // namespace detail_
 
 #define REQUIRES(...) std::enable_if_t<(__VA_ARGS__),bool> = true
-#define IS_VALID_CONTAINER(C, T)                                              \
-    !detail_::is_span_v<C> && !detail_::is_std_array_v<C> &&                  \
-    !std::is_array<C>::value && detail_::has_size_and_data<C> &&              \
-    detail_::is_convertible_v<std::remove_pointer_t<decltype(al::data(std::declval<C&>()))>,T>
 
 template<typename T, size_t E>
 class span {
@@ -120,16 +121,16 @@ public:
       : span{al::data(arr), al::size(arr)}
     { }
 
-    template<typename U, REQUIRES(IS_VALID_CONTAINER(U, element_type))>
+    template<typename U, REQUIRES(detail_::is_valid_container<U, element_type>)>
     constexpr explicit span(U&& cont) : span{al::data(cont), al::size(cont)} { }
 
     template<typename U, index_type N, REQUIRES(!std::is_same<element_type,U>::value
-        && detail_::is_convertible_v<U,element_type> && N == dynamic_extent)>
+        && detail_::is_array_compatible<U,element_type> && N == dynamic_extent)>
     constexpr explicit span(const span<U,N> &span_) noexcept
         : span{al::data(span_), al::size(span_)}
     { }
     template<typename U, index_type N, REQUIRES(!std::is_same<element_type,U>::value
-        && detail_::is_convertible_v<U,element_type> && N == extent)>
+        && detail_::is_array_compatible<U,element_type> && N == extent)>
     constexpr span(const span<U,N> &span_) noexcept : span{al::data(span_), al::size(span_)} { }
     constexpr span(const span&) noexcept = default;
 
@@ -238,11 +239,11 @@ public:
       : span{al::data(arr), al::size(arr)}
     { }
 
-    template<typename U, REQUIRES(IS_VALID_CONTAINER(U, element_type))>
+    template<typename U, REQUIRES(detail_::is_valid_container<U, element_type>)>
     constexpr span(U&& cont) : span{al::data(cont), al::size(cont)} { }
 
     template<typename U, size_t N, REQUIRES((!std::is_same<element_type,U>::value || extent != N)
-        && detail_::is_convertible_v<U,element_type>)>
+        && detail_::is_array_compatible<U,element_type>)>
     constexpr span(const span<U,N> &span_) noexcept : span{al::data(span_), al::size(span_)} { }
     constexpr span(const span&) noexcept = default;
 
@@ -352,7 +353,6 @@ constexpr auto as_span(U&& cont)
 template<typename T, size_t N>
 constexpr auto as_span(span<T,N> span_) noexcept { return span_; }
 
-#undef IS_VALID_CONTAINER
 #undef REQUIRES
 
 } // namespace al

@@ -113,10 +113,14 @@ namespace detail_ {
     using void_t = void;
 
     template<typename T, typename = void>
-    constexpr bool has_to_address = false;
+    struct has_to_address_ : public std::false_type { };
     template<typename T>
-    constexpr bool has_to_address<T,
-        void_t<decltype(std::pointer_traits<T>::to_address(std::declval<const T&>()))>> = true;
+    struct has_to_address_<T,
+        void_t<decltype(std::pointer_traits<T>::to_address(std::declval<const T&>()))>>
+        : public std::true_type
+    { };
+    template<typename T>
+    constexpr bool has_to_address = has_to_address_<T>::value;
 } // namespace detail_
 
 template<typename T>

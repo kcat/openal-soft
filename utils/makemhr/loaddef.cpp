@@ -1745,12 +1745,11 @@ static void AverageHrirMagnitude(const uint points, const uint n, const double *
 // Process the list of sources in the data set definition.
 static int ProcessSources(TokenReaderT *tr, HrirDataT *hData, const uint outRate)
 {
-    uint channels = (hData->mChannelType == CT_STEREO) ? 2 : 1;
+    const uint channels{(hData->mChannelType == CT_STEREO) ? 2u : 1u};
     hData->mHrirsBase.resize(channels * hData->mIrCount * hData->mIrSize);
     double *hrirs = hData->mHrirsBase.data();
     auto hrir = std::make_unique<double[]>(hData->mIrSize);
     uint line, col, fi, ei, ai;
-    int count;
 
     std::vector<double> onsetSamples(OnsetRateMultiple * hData->mIrPoints);
     PPhaseResampler onsetResampler;
@@ -1766,7 +1765,7 @@ static int ProcessSources(TokenReaderT *tr, HrirDataT *hData, const uint outRate
 
     printf("Loading sources...");
     fflush(stdout);
-    count = 0;
+    int count{0};
     while(TrIsOperator(tr, "["))
     {
         double factor[2]{ 1.0, 1.0 };
@@ -1853,6 +1852,7 @@ static int ProcessSources(TokenReaderT *tr, HrirDataT *hData, const uint outRate
                     { return (std::abs(aer[2] - fld.mDistance) < 0.001); });
                 if(field == hData->mFds.cend())
                     continue;
+                fi = static_cast<uint>(std::distance(hData->mFds.cbegin(), field));
 
                 const double evscale{180.0 / static_cast<double>(field->mEvs.size()-1)};
                 double ef{(90.0 + aer[1]) / evscale};

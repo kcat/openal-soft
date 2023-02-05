@@ -2675,12 +2675,6 @@ START_API_FUNC
         context->setError(AL_INVALID_VALUE, "Generating %d sources", n);
     if(n <= 0) [[unlikely]] return;
 
-#ifdef ALSOFT_EAX
-    const bool has_eax{context->has_eax()};
-    std::unique_lock<std::mutex> proplock{};
-    if(has_eax)
-        proplock = std::unique_lock<std::mutex>{context->mPropLock};
-#endif
     std::unique_lock<std::mutex> srclock{context->mSourceLock};
     ALCdevice *device{context->mALDevice.get()};
     if(static_cast<ALuint>(n) > device->SourcesMax-context->mNumSources)
@@ -2701,18 +2695,11 @@ START_API_FUNC
         sources[0] = source->id;
 
 #ifdef ALSOFT_EAX
-        if(has_eax)
-            source->eax_initialize(context.get());
+        source->eax_initialize(context.get());
 #endif // ALSOFT_EAX
     }
     else
     {
-#ifdef ALSOFT_EAX
-        auto eax_sources = al::vector<ALsource*>{};
-        if(has_eax)
-            eax_sources.reserve(static_cast<ALuint>(n));
-#endif // ALSOFT_EAX
-
         al::vector<ALuint> ids;
         ids.reserve(static_cast<ALuint>(n));
         do {
@@ -2720,16 +2707,10 @@ START_API_FUNC
             ids.emplace_back(source->id);
 
 #ifdef ALSOFT_EAX
-            if(has_eax)
-                eax_sources.emplace_back(source);
+            source->eax_initialize(context.get());
 #endif // ALSOFT_EAX
         } while(--n);
         std::copy(ids.cbegin(), ids.cend(), sources);
-
-#ifdef ALSOFT_EAX
-        for(auto& eax_source : eax_sources)
-            eax_source->eax_initialize(context.get());
-#endif // ALSOFT_EAX
     }
 }
 END_API_FUNC
@@ -3851,10 +3832,8 @@ void ALsource::eax_initialize(ALCcontext *context) noexcept
 {
     assert(context != nullptr);
     eax_al_context_ = context;
-    eax_primary_fx_slot_id_ = eax_al_context_->eax_get_primary_fx_slot_index();
-    eax_version_ = eax_al_context_->eax_get_version();
+    eax_primary_fx_slot_id_ = context->eax_get_primary_fx_slot_index();
     eax_set_defaults();
-    eax_commit(EaxCommitType::forced);
 }
 
 void ALsource::eax_dispatch(const EaxCall& call)
@@ -5094,12 +5073,15 @@ void ALsource::eax_commit_filters()
     eax_update_room_filters();
 }
 
-void ALsource::eax_commit(EaxCommitType commit_type)
+void ALsource::eax_commit()
 {
+    if(!eax_version_)
+        return;
+
     const auto primary_fx_slot_id = eax_al_context_->eax_get_primary_fx_slot_index();
     const auto is_primary_fx_slot_id_changed = (eax_primary_fx_slot_id_ != primary_fx_slot_id);
 
-    if(commit_type != EaxCommitType::forced && !is_primary_fx_slot_id_changed && !eax_changed_)
+    if(!eax_changed_ && !is_primary_fx_slot_id_changed)
         return;
 
     eax_primary_fx_slot_id_ = primary_fx_slot_id;

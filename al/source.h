@@ -161,20 +161,15 @@ struct ALsource {
 public:
     void eax_initialize(ALCcontext *context) noexcept;
     void eax_dispatch(const EaxCall& call);
-    void eax_commit() { eax_commit(EaxCommitType::normal); }
+    void eax_commit();
     void eax_commit_and_update();
     void eax_mark_as_changed() { eax_changed_ = true; }
-    bool eax_is_initialized() const noexcept { return eax_al_context_ != nullptr; }
+    bool eax_is_initialized() const noexcept { return eax_version_ != 0; }
 
     static ALsource* eax_lookup_source(ALCcontext& al_context, ALuint source_id) noexcept;
 
 private:
     using Exception = EaxSourceException;
-
-    enum class EaxCommitType {
-        normal,
-        forced,
-    };
 
     static constexpr auto eax_max_speakers = 9;
 
@@ -1044,7 +1039,6 @@ private:
         const EaxAlLowPassParam &filter);
 
     void eax_commit_active_fx_slots();
-    void eax_commit(EaxCommitType commit_type);
 #endif // ALSOFT_EAX
 };
 

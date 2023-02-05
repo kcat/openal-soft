@@ -487,7 +487,6 @@ void ALCcontext::eax_initialize()
     eax_context_commit_air_absorbtion_hf();
     eax_update_speaker_configuration();
     eax_initialize_fx_slots();
-    eax_initialize_sources();
 
     eax_is_initialized_ = true;
     mPropsDirty = true;
@@ -804,14 +803,6 @@ void ALCcontext::eax_initialize_fx_slots()
 {
     eax_fx_slots_.initialize(*this);
     eax_primary_fx_slot_index_ = eax_.guidPrimaryFXSlotID;
-}
-
-void ALCcontext::eax_initialize_sources()
-{
-    std::unique_lock<std::mutex> source_lock{mSourceLock};
-    auto init_source = [this](ALsource &source) noexcept
-    { source.eax_initialize(this); };
-    ForEachSource(this, init_source);
 }
 
 void ALCcontext::eax_update_sources()

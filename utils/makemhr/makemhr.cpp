@@ -1019,7 +1019,7 @@ static void NormalizeHrirs(HrirDataT *hData)
 
     /* Now scale all IRs by the given factor. */
     auto proc_channel = [irSize,factor](double *ir)
-    { std::transform(ir, ir+irSize, ir, [factor](auto s){ return s * factor; }); };
+    { std::transform(ir, ir+irSize, ir, [factor](double s){ return s * factor; }); };
     auto proc_azi = [channels,proc_channel](HrirAzT &azi)
     { std::for_each(azi.mIrs, azi.mIrs+channels, proc_channel); };
     auto proc_elev = [proc_azi](HrirEvT &elev)

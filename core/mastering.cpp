@@ -87,10 +87,10 @@ void ShiftSlidingHold(SlidingHold *Hold, const uint n)
     if(exp_last-exp_begin < 0)
     {
         std::transform(exp_begin, std::end(Hold->mExpiries), exp_begin,
-            [n](auto a){ return a - n; });
+            [n](uint e){ return e - n; });
         exp_begin = std::begin(Hold->mExpiries);
     }
-    std::transform(exp_begin, exp_last+1, exp_begin, [n](auto a){ return a - n; });
+    std::transform(exp_begin, exp_last+1, exp_begin, [n](uint e){ return e - n; });
 }
 
 
@@ -155,7 +155,7 @@ void PeakDetector(Compressor *Comp, const uint SamplesToDo)
     /* Clamp the minimum amplitude to near-zero and convert to logarithm. */
     auto side_begin = std::begin(Comp->mSideChain) + Comp->mLookAhead;
     std::transform(side_begin, side_begin+SamplesToDo, side_begin,
-        [](auto s) { return std::log(maxf(0.000001f, s)); });
+        [](float s) { return std::log(maxf(0.000001f, s)); });
 }
 
 /* An optional hold can be used to extend the peak detector so it can more
@@ -404,7 +404,7 @@ void Compressor::process(const uint SamplesToDo, FloatBufferLine *OutBuffer)
         {
             float *buffer{al::assume_aligned<16>(input.data())};
             std::transform(buffer, buffer+SamplesToDo, buffer,
-                [preGain](auto a){ return a * preGain; });
+                [preGain](float s) { return s * preGain; });
         };
         std::for_each(OutBuffer, OutBuffer+numChans, apply_gain);
     }
@@ -430,7 +430,7 @@ void Compressor::process(const uint SamplesToDo, FloatBufferLine *OutBuffer)
         float *buffer{al::assume_aligned<16>(input.data())};
         const float *gains{al::assume_aligned<16>(&sideChain[0])};
         std::transform(gains, gains+SamplesToDo, buffer, buffer,
-            [](auto a, auto b){ return a * b; });
+            [](float g, float s) { return g * s; });
     };
     std::for_each(OutBuffer, OutBuffer+numChans, apply_comp);
 

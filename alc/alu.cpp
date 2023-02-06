@@ -1966,7 +1966,7 @@ void ApplyDistanceComp(const al::span<FloatBufferLine> Samples, const size_t Sam
             auto delay_start = std::swap_ranges(inout, inout_end, distbuf);
             std::rotate(distbuf, delay_start, distbuf + base);
         }
-        std::transform(inout, inout_end, inout, [gain](auto a){ return a * gain; });
+        std::transform(inout, inout_end, inout, [gain](float s) { return s * gain; });
     }
 }
 

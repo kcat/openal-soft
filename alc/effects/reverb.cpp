@@ -1090,12 +1090,13 @@ void ReverbPipeline::update3DPanning(const float *ReflectionsPan, const float *L
 
             for(size_t i{0};i < mtx1[0].size();++i)
             {
-                for(size_t j{0};j < mtx2[0].size();++j)
+                float *RESTRICT dst{res[i].data()};
+                for(size_t k{0};k < mtx1.size();++k)
                 {
-                    double sum{0.0};
-                    for(size_t k{0};k < mtx1.size();++k)
-                        sum += double{mtx1[k][i]} * mtx2[k][j];
-                    res[i][j] = static_cast<float>(sum);
+                    const float *RESTRICT src{mtx2[k].data()};
+                    const float a{mtx1[k][i]};
+                    for(size_t j{0};j < mtx2[0].size();++j)
+                        dst[j] += a * src[j];
                 }
             }
 
@@ -1122,12 +1123,12 @@ void ReverbPipeline::update3DPanning(const float *ReflectionsPan, const float *L
 
             for(size_t i{0};i < mtx1[0].size();++i)
             {
-                for(size_t j{0};j < mtx2.size();++j)
+                float *RESTRICT dst{res[i].data()};
+                for(size_t k{0};k < mtx1.size();++k)
                 {
-                    double sum{0.0};
-                    for(size_t k{0};k < mtx1.size();++k)
-                        sum += double{mtx1[k][i]} * mtx2[j][k];
-                    res[i][j] = static_cast<float>(sum);
+                    const float a{mtx1[k][i]};
+                    for(size_t j{0};j < mtx2.size();++j)
+                        dst[j] += a * mtx2[j][k];
                 }
             }
 

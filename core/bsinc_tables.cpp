@@ -291,5 +291,5 @@ constexpr BSincTable GenerateBSincTable(const T &filter)
 
 } // namespace
 
-const BSincTable bsinc12{GenerateBSincTable(bsinc12_filter)};
-const BSincTable bsinc24{GenerateBSincTable(bsinc24_filter)};
+const BSincTable gBSinc12{GenerateBSincTable(bsinc12_filter)};
+const BSincTable gBSinc24{GenerateBSincTable(bsinc24_filter)};

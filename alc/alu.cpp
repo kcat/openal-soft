@@ -277,11 +277,11 @@ ResamplerFunc PrepareResampler(Resampler resampler, uint increment, InterpState 
         break;
     case Resampler::FastBSinc12:
     case Resampler::BSinc12:
-        BsincPrepare(increment, &state->bsinc, &bsinc12);
+        BsincPrepare(increment, &state->bsinc, &gBSinc12);
         break;
     case Resampler::FastBSinc24:
     case Resampler::BSinc24:
-        BsincPrepare(increment, &state->bsinc, &bsinc24);
+        BsincPrepare(increment, &state->bsinc, &gBSinc24);
         break;
     }
     return SelectResampler(resampler, increment);

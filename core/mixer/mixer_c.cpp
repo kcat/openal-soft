@@ -5,7 +5,8 @@
 #include <limits>
 
 #include "alnumeric.h"
-#include "core/bsinc_tables.h"
+#include "core/bsinc_defs.h"
+#include "core/cubic_defs.h"
 #include "defs.h"
 #include "hrtfbase.h"
 
@@ -20,23 +21,39 @@ struct FastBSincTag;
 
 namespace {
 
-constexpr uint FracPhaseBitDiff{MixerFracBits - BSincPhaseBits};
-constexpr uint FracPhaseDiffOne{1 << FracPhaseBitDiff};
+constexpr uint BsincPhaseBitDiff{MixerFracBits - BSincPhaseBits};
+constexpr uint BsincPhaseDiffOne{1 << BsincPhaseBitDiff};
+
+constexpr uint CubicPhaseBitDiff{MixerFracBits - CubicPhaseBits};
+constexpr uint CubicPhaseDiffOne{1 << CubicPhaseBitDiff};
+constexpr uint CubicPhaseDiffMask{CubicPhaseDiffOne - 1u};
 
 inline float do_point(const InterpState&, const float *RESTRICT vals, const uint)
 { return vals[0]; }
 inline float do_lerp(const InterpState&, const float *RESTRICT vals, const uint frac)
 { return lerpf(vals[0], vals[1], static_cast<float>(frac)*(1.0f/MixerFracOne)); }
-inline float do_cubic(const InterpState&, const float *RESTRICT vals, const uint frac)
-{ return cubic(vals[0], vals[1], vals[2], vals[3], static_cast<float>(frac)*(1.0f/MixerFracOne)); }
+inline float do_cubic(const InterpState &istate, const float *RESTRICT vals, const uint frac)
+{
+    /* Calculate the phase index and factor. */
+    const uint pi{frac >> CubicPhaseBitDiff};
+    const float pf{static_cast<float>(frac&CubicPhaseDiffMask) * (1.0f/CubicPhaseDiffOne)};
+
+    const CubicCoefficients *RESTRICT filter = al::assume_aligned<16>(istate.cubic.filter + pi);
+
+    // Apply the phase interpolated filter.
+    return (filter->mCoeffs[0] + pf*filter->mDeltas[0]) * vals[0]
+        + (filter->mCoeffs[1] + pf*filter->mDeltas[1]) * vals[1]
+        + (filter->mCoeffs[2] + pf*filter->mDeltas[2]) * vals[2]
+        + (filter->mCoeffs[3] + pf*filter->mDeltas[3]) * vals[3];
+}
 inline float do_bsinc(const InterpState &istate, const float *RESTRICT vals, const uint frac)
 {
     const size_t m{istate.bsinc.m};
     ASSUME(m > 0);
 
     // Calculate the phase index and factor.
-    const uint pi{frac >> FracPhaseBitDiff};
-    const float pf{static_cast<float>(frac & (FracPhaseDiffOne-1)) * (1.0f/FracPhaseDiffOne)};
+    const uint pi{frac >> BsincPhaseBitDiff};
+    const float pf{static_cast<float>(frac & (BsincPhaseDiffOne-1)) * (1.0f/BsincPhaseDiffOne)};
 
     const float *RESTRICT fil{istate.bsinc.filter + m*pi*2};
     const float *RESTRICT phd{fil + m};
@@ -55,8 +72,8 @@ inline float do_fastbsinc(const InterpState &istate, const float *RESTRICT vals,
     ASSUME(m > 0);
 
     // Calculate the phase index and factor.
-    const uint pi{frac >> FracPhaseBitDiff};
-    const float pf{static_cast<float>(frac & (FracPhaseDiffOne-1)) * (1.0f/FracPhaseDiffOne)};
+    const uint pi{frac >> BsincPhaseBitDiff};
+    const float pf{static_cast<float>(frac & (BsincPhaseDiffOne-1)) * (1.0f/BsincPhaseDiffOne)};
 
     const float *RESTRICT fil{istate.bsinc.filter + m*pi*2};
     const float *RESTRICT phd{fil + m};

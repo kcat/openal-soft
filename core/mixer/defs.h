@@ -8,6 +8,7 @@
 #include "core/bufferline.h"
 #include "core/resampler_limits.h"
 
+struct CubicCoefficients;
 struct HrtfChannelState;
 struct HrtfFilter;
 struct MixHrtfFilter;
@@ -51,7 +52,15 @@ struct BsincState {
     const float *filter;
 };
 
+struct CubicState {
+    /* Filter coefficients, and coefficient deltas. Starting at phase index 0,
+     * each subsequent phase index follows contiguously.
+     */
+    const CubicCoefficients *filter;
+};
+
 union InterpState {
+    CubicState cubic;
     BsincState bsinc;
 };
 

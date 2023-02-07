@@ -55,6 +55,7 @@
 #include "core/buffer_storage.h"
 #include "core/context.h"
 #include "core/cpu_caps.h"
+#include "core/cubic_tables.h"
 #include "core/devformat.h"
 #include "core/device.h"
 #include "core/effects/base.h"
@@ -211,6 +212,14 @@ inline ResamplerFunc SelectResampler(Resampler resampler, uint increment)
 #endif
         return Resample_<LerpTag,CTag>;
     case Resampler::Cubic:
+#ifdef HAVE_NEON
+        if((CPUCapFlags&CPU_CAP_NEON))
+            return Resample_<CubicTag,NEONTag>;
+#endif
+#ifdef HAVE_SSE
+        if((CPUCapFlags&CPU_CAP_SSE))
+            return Resample_<CubicTag,SSETag>;
+#endif
         return Resample_<CubicTag,CTag>;
     case Resampler::BSinc12:
     case Resampler::BSinc24:
@@ -262,7 +271,9 @@ ResamplerFunc PrepareResampler(Resampler resampler, uint increment, InterpState 
     {
     case Resampler::Point:
     case Resampler::Linear:
+        break;
     case Resampler::Cubic:
+        state->cubic.filter = gCubicSpline.Tab;
         break;
     case Resampler::FastBSinc12:
     case Resampler::BSinc12:

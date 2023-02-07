@@ -654,6 +654,9 @@ set(CORE_OBJS
     core/converter.h
     core/cpu_caps.cpp
     core/cpu_caps.h
+    core/cubic_defs.h
+    core/cubic_tables.cpp
+    core/cubic_tables.h
     core/devformat.cpp
     core/devformat.h
     core/device.cpp

@@ -75,14 +75,13 @@ struct CubicFilter {
     constexpr CubicFilter()
     {
         /* This creates a lookup table for a cubic spline filter, with 256
-         * steps between samples.
-         *
-         * TODO: Check if using the table-less cubic() method would be more
-         * efficient.
+         * steps between samples. Only half the coefficients are needed, since
+         * Coeff2 is just Coeff1 in reverse and Coeff3 is just Coeff0 in
+         * reverse.
          */
         for(size_t i{0};i < sTableSteps;++i)
         {
-            double mu{static_cast<double>(i) / double{sTableSteps}};
+            const double mu{static_cast<double>(i) / double{sTableSteps}};
             const double mu2{mu*mu}, mu3{mu2*mu};
             const double a0{-0.5*mu3 +      mu2 + -0.5*mu};
             const double a1{ 1.5*mu3 + -2.5*mu2           + 1.0f};
@@ -96,7 +95,7 @@ struct CubicFilter {
     constexpr float getCoeff2(size_t i) const noexcept { return mFilter[sTableSteps-i]; }
     constexpr float getCoeff3(size_t i) const noexcept { return mFilter[sTableSteps*2-i]; }
 };
-const CubicFilter gCubicTable;
+constexpr CubicFilter gCubicTable;
 
 
 using namespace std::placeholders;

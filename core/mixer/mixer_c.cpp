@@ -21,11 +21,12 @@ struct FastBSincTag;
 
 namespace {
 
-constexpr uint BsincPhaseBitDiff{MixerFracBits - BSincPhaseBits};
-constexpr uint BsincPhaseDiffOne{1 << BsincPhaseBitDiff};
+constexpr uint BsincPhaseDiffBits{MixerFracBits - BSincPhaseBits};
+constexpr uint BsincPhaseDiffOne{1 << BsincPhaseDiffBits};
+constexpr uint BsincPhaseDiffMask{BsincPhaseDiffOne - 1u};
 
-constexpr uint CubicPhaseBitDiff{MixerFracBits - CubicPhaseBits};
-constexpr uint CubicPhaseDiffOne{1 << CubicPhaseBitDiff};
+constexpr uint CubicPhaseDiffBits{MixerFracBits - CubicPhaseBits};
+constexpr uint CubicPhaseDiffOne{1 << CubicPhaseDiffBits};
 constexpr uint CubicPhaseDiffMask{CubicPhaseDiffOne - 1u};
 
 inline float do_point(const InterpState&, const float *RESTRICT vals, const uint)
@@ -35,7 +36,7 @@ inline float do_lerp(const InterpState&, const float *RESTRICT vals, const uint 
 inline float do_cubic(const InterpState &istate, const float *RESTRICT vals, const uint frac)
 {
     /* Calculate the phase index and factor. */
-    const uint pi{frac >> CubicPhaseBitDiff};
+    const uint pi{frac >> CubicPhaseDiffBits};
     const float pf{static_cast<float>(frac&CubicPhaseDiffMask) * (1.0f/CubicPhaseDiffOne)};
 
     const float *RESTRICT fil{al::assume_aligned<16>(istate.cubic.filter[pi].mCoeffs)};
@@ -51,8 +52,8 @@ inline float do_bsinc(const InterpState &istate, const float *RESTRICT vals, con
     ASSUME(m > 0);
 
     /* Calculate the phase index and factor. */
-    const uint pi{frac >> BsincPhaseBitDiff};
-    const float pf{static_cast<float>(frac & (BsincPhaseDiffOne-1)) * (1.0f/BsincPhaseDiffOne)};
+    const uint pi{frac >> BsincPhaseDiffBits};
+    const float pf{static_cast<float>(frac&BsincPhaseDiffMask) * (1.0f/BsincPhaseDiffOne)};
 
     const float *RESTRICT fil{istate.bsinc.filter + m*pi*2};
     const float *RESTRICT phd{fil + m};
@@ -71,8 +72,8 @@ inline float do_fastbsinc(const InterpState &istate, const float *RESTRICT vals,
     ASSUME(m > 0);
 
     /* Calculate the phase index and factor. */
-    const uint pi{frac >> BsincPhaseBitDiff};
-    const float pf{static_cast<float>(frac & (BsincPhaseDiffOne-1)) * (1.0f/BsincPhaseDiffOne)};
+    const uint pi{frac >> BsincPhaseDiffBits};
+    const float pf{static_cast<float>(frac&BsincPhaseDiffMask) * (1.0f/BsincPhaseDiffOne)};
 
     const float *RESTRICT fil{istate.bsinc.filter + m*pi*2};
     const float *RESTRICT phd{fil + m};

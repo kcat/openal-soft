@@ -24,12 +24,12 @@ struct FastBSincTag;
 
 namespace {
 
-constexpr uint BSincPhaseBitDiff{MixerFracBits - BSincPhaseBits};
-constexpr uint BSincPhaseDiffOne{1 << BSincPhaseBitDiff};
+constexpr uint BSincPhaseDiffBits{MixerFracBits - BSincPhaseBits};
+constexpr uint BSincPhaseDiffOne{1 << BSincPhaseDiffBits};
 constexpr uint BSincPhaseDiffMask{BSincPhaseDiffOne - 1u};
 
-constexpr uint CubicPhaseBitDiff{MixerFracBits - CubicPhaseBits};
-constexpr uint CubicPhaseDiffOne{1 << CubicPhaseBitDiff};
+constexpr uint CubicPhaseDiffBits{MixerFracBits - CubicPhaseBits};
+constexpr uint CubicPhaseDiffOne{1 << CubicPhaseDiffBits};
 constexpr uint CubicPhaseDiffMask{CubicPhaseDiffOne - 1u};
 
 inline float32x4_t set_f4(float l0, float l1, float l2, float l3)
@@ -199,7 +199,7 @@ float *Resample_<CubicTag,NEONTag>(const InterpState *state, float *RESTRICT src
     src -= 1;
     for(float &out_sample : dst)
     {
-        const uint pi{frac >> CubicPhaseBitDiff};
+        const uint pi{frac >> CubicPhaseDiffBits};
         const float pf{static_cast<float>(frac&CubicPhaseDiffMask) * (1.0f/CubicPhaseDiffOne)};
         const float32x4_t pf4{vdupq_n_f32(pf)};
 
@@ -234,7 +234,7 @@ float *Resample_<BSincTag,NEONTag>(const InterpState *state, float *RESTRICT src
     for(float &out_sample : dst)
     {
         // Calculate the phase index and factor.
-        const uint pi{frac >> BSincPhaseBitDiff};
+        const uint pi{frac >> BSincPhaseDiffBits};
         const float pf{static_cast<float>(frac&BSincPhaseDiffMask) * (1.0f/BSincPhaseDiffOne)};
 
         // Apply the scale and phase interpolated filter.
@@ -280,7 +280,7 @@ float *Resample_<FastBSincTag,NEONTag>(const InterpState *state, float *RESTRICT
     for(float &out_sample : dst)
     {
         // Calculate the phase index and factor.
-        const uint pi{frac >> BSincPhaseBitDiff};
+        const uint pi{frac >> BSincPhaseDiffBits};
         const float pf{static_cast<float>(frac&BSincPhaseDiffMask) * (1.0f/BSincPhaseDiffOne)};
 
         // Apply the phase interpolated filter.

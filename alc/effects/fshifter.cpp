@@ -163,8 +163,13 @@ void FshifterState::update(const ContextBase *context, const EffectSlot *slot,
         break;
     }
 
-    static constexpr auto lcoeffs = CalcDirectionCoeffs({-1.0f, 0.0f, 0.0f});
-    static constexpr auto rcoeffs = CalcDirectionCoeffs({ 1.0f, 0.0f, 0.0f});
+    static constexpr auto inv_sqrt2 = static_cast<float>(1.0 / al::numbers::sqrt2);
+    static constexpr auto lcoeffs_pw = CalcDirectionCoeffs({-1.0f, 0.0f, 0.0f});
+    static constexpr auto rcoeffs_pw = CalcDirectionCoeffs({ 1.0f, 0.0f, 0.0f});
+    static constexpr auto lcoeffs_nrml = CalcDirectionCoeffs({-inv_sqrt2, 0.0f, inv_sqrt2});
+    static constexpr auto rcoeffs_nrml = CalcDirectionCoeffs({ inv_sqrt2, 0.0f, inv_sqrt2});
+    auto &lcoeffs = (device->mRenderMode != RenderMode::Pairwise) ? lcoeffs_nrml : lcoeffs_pw;
+    auto &rcoeffs = (device->mRenderMode != RenderMode::Pairwise) ? rcoeffs_nrml : rcoeffs_pw;
 
     mOutTarget = target.Main->Buffer;
     ComputePanGains(target.Main, lcoeffs.data(), slot->Gain, mGains[0].Target);

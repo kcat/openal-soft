@@ -48,10 +48,8 @@ namespace {
 
 using uint = unsigned int;
 
-#define MAX_UPDATE_SAMPLES 256
-
 struct ChorusState final : public EffectState {
-    al::vector<float,16> mSampleBuffer;
+    al::vector<float,16> mDelayBuffer;
     uint mOffset{0};
 
     uint mLfoOffset{0};
@@ -59,7 +57,13 @@ struct ChorusState final : public EffectState {
     float mLfoScale{0.0f};
     uint mLfoDisp{0};
 
-    /* Gains for left and right sides */
+    /* Calculated delays to apply to the left and right outputs. */
+    uint mModDelays[2][BufferLineSize];
+
+    /* Temp storage for the modulated left and right outputs. */
+    alignas(16) float mBuffer[2][BufferLineSize];
+
+    /* Gains for left and right outputs. */
     struct {
         float Current[MaxAmbiChannels]{};
         float Target[MaxAmbiChannels]{};
@@ -71,8 +75,8 @@ struct ChorusState final : public EffectState {
     float mDepth{0.0f};
     float mFeedback{0.0f};
 
-    void getTriangleDelays(uint (*delays)[MAX_UPDATE_SAMPLES], const size_t todo);
-    void getSinusoidDelays(uint (*delays)[MAX_UPDATE_SAMPLES], const size_t todo);
+    void calcTriangleDelays(const size_t todo);
+    void calcSinusoidDelays(const size_t todo);
 
     void deviceUpdate(const DeviceBase *device, const Buffer &buffer) override;
     void update(const ContextBase *context, const EffectSlot *slot, const EffectProps *props,
@@ -89,10 +93,10 @@ void ChorusState::deviceUpdate(const DeviceBase *Device, const Buffer&)
 
     const auto frequency = static_cast<float>(Device->Frequency);
     const size_t maxlen{NextPowerOf2(float2uint(max_delay*2.0f*frequency) + 1u)};
-    if(maxlen != mSampleBuffer.size())
-        al::vector<float,16>(maxlen).swap(mSampleBuffer);
+    if(maxlen != mDelayBuffer.size())
+        decltype(mDelayBuffer)(maxlen).swap(mDelayBuffer);
 
-    std::fill(mSampleBuffer.begin(), mSampleBuffer.end(), 0.0f);
+    std::fill(mDelayBuffer.begin(), mDelayBuffer.end(), 0.0f);
     for(auto &e : mGains)
     {
         std::fill(std::begin(e.Current), std::end(e.Current), 0.0f);
@@ -120,8 +124,13 @@ void ChorusState::update(const ContextBase *Context, const EffectSlot *Slot,
     mFeedback = props->Chorus.Feedback;
 
     /* Gains for left and right sides */
-    static constexpr auto lcoeffs = CalcDirectionCoeffs({-1.0f, 0.0f, 0.0f});
-    static constexpr auto rcoeffs = CalcDirectionCoeffs({ 1.0f, 0.0f, 0.0f});
+    static constexpr auto inv_sqrt2 = static_cast<float>(1.0 / al::numbers::sqrt2);
+    static constexpr auto lcoeffs_pw = CalcDirectionCoeffs({-1.0f, 0.0f, 0.0f});
+    static constexpr auto rcoeffs_pw = CalcDirectionCoeffs({ 1.0f, 0.0f, 0.0f});
+    static constexpr auto lcoeffs_nrml = CalcDirectionCoeffs({-inv_sqrt2, 0.0f, inv_sqrt2});
+    static constexpr auto rcoeffs_nrml = CalcDirectionCoeffs({ inv_sqrt2, 0.0f, inv_sqrt2});
+    auto &lcoeffs = (device->mRenderMode != RenderMode::Pairwise) ? lcoeffs_nrml : lcoeffs_pw;
+    auto &rcoeffs = (device->mRenderMode != RenderMode::Pairwise) ? rcoeffs_nrml : rcoeffs_pw;
 
     mOutTarget = target.Main->Buffer;
     ComputePanGains(target.Main, lcoeffs.data(), Slot->Gain, mGains[0].Target);
@@ -162,7 +171,7 @@ void ChorusState::update(const ContextBase *Context, const EffectSlot *Slot,
 }
 
 
-void ChorusState::getTriangleDelays(uint (*delays)[MAX_UPDATE_SAMPLES], const size_t todo)
+void ChorusState::calcTriangleDelays(const size_t todo)
 {
     const uint lfo_range{mLfoRange};
     const float lfo_scale{mLfoScale};
@@ -183,7 +192,7 @@ void ChorusState::getTriangleDelays(uint (*delays)[MAX_UPDATE_SAMPLES], const si
     {
         size_t rem{minz(todo-i, lfo_range-offset)};
         do {
-            delays[0][i++] = gen_lfo(offset++);
+            mModDelays[0][i++] = gen_lfo(offset++);
         } while(--rem);
         if(offset == lfo_range)
             offset = 0;
@@ -194,7 +203,7 @@ void ChorusState::getTriangleDelays(uint (*delays)[MAX_UPDATE_SAMPLES], const si
     {
         size_t rem{minz(todo-i, lfo_range-offset)};
         do {
-            delays[1][i++] = gen_lfo(offset++);
+            mModDelays[1][i++] = gen_lfo(offset++);
         } while(--rem);
         if(offset == lfo_range)
             offset = 0;
@@ -203,7 +212,7 @@ void ChorusState::getTriangleDelays(uint (*delays)[MAX_UPDATE_SAMPLES], const si
     mLfoOffset = static_cast<uint>(mLfoOffset+todo) % lfo_range;
 }
 
-void ChorusState::getSinusoidDelays(uint (*delays)[MAX_UPDATE_SAMPLES], const size_t todo)
+void ChorusState::calcSinusoidDelays(const size_t todo)
 {
     const uint lfo_range{mLfoRange};
     const float lfo_scale{mLfoScale};
@@ -224,7 +233,7 @@ void ChorusState::getSinusoidDelays(uint (*delays)[MAX_UPDATE_SAMPLES], const si
     {
         size_t rem{minz(todo-i, lfo_range-offset)};
         do {
-            delays[0][i++] = gen_lfo(offset++);
+            mModDelays[0][i++] = gen_lfo(offset++);
         } while(--rem);
         if(offset == lfo_range)
             offset = 0;
@@ -235,7 +244,7 @@ void ChorusState::getSinusoidDelays(uint (*delays)[MAX_UPDATE_SAMPLES], const si
     {
         size_t rem{minz(todo-i, lfo_range-offset)};
         do {
-            delays[1][i++] = gen_lfo(offset++);
+            mModDelays[1][i++] = gen_lfo(offset++);
         } while(--rem);
         if(offset == lfo_range)
             offset = 0;
@@ -246,51 +255,47 @@ void ChorusState::getSinusoidDelays(uint (*delays)[MAX_UPDATE_SAMPLES], const si
 
 void ChorusState::process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn, const al::span<FloatBufferLine> samplesOut)
 {
-    const size_t bufmask{mSampleBuffer.size()-1};
+    const size_t bufmask{mDelayBuffer.size()-1};
     const float feedback{mFeedback};
     const uint avgdelay{(static_cast<uint>(mDelay) + MixerFracHalf) >> MixerFracBits};
-    float *RESTRICT delaybuf{mSampleBuffer.data()};
+    float *RESTRICT delaybuf{mDelayBuffer.data()};
     uint offset{mOffset};
 
-    for(size_t base{0u};base < samplesToDo;)
+    if(mWaveform == ChorusWaveform::Sinusoid)
+        calcSinusoidDelays(samplesToDo);
+    else /*if(mWaveform == ChorusWaveform::Triangle)*/
+        calcTriangleDelays(samplesToDo);
+
+    const uint *RESTRICT ldelays{mModDelays[0]};
+    const uint *RESTRICT rdelays{mModDelays[1]};
+    float *RESTRICT lbuffer{al::assume_aligned<16>(mBuffer[0])};
+    float *RESTRICT rbuffer{al::assume_aligned<16>(mBuffer[1])};
+    for(size_t i{0u};i < samplesToDo;++i)
     {
-        const size_t todo{minz(MAX_UPDATE_SAMPLES, samplesToDo-base)};
+        // Feed the buffer's input first (necessary for delays < 1).
+        delaybuf[offset&bufmask] = samplesIn[0][i];
 
-        uint moddelays[2][MAX_UPDATE_SAMPLES];
-        if(mWaveform == ChorusWaveform::Sinusoid)
-            getSinusoidDelays(moddelays, todo);
-        else /*if(mWaveform == ChorusWaveform::Triangle)*/
-            getTriangleDelays(moddelays, todo);
+        // Tap for the left output.
+        uint delay{offset - (ldelays[i]>>MixerFracBits)};
+        float mu{static_cast<float>(ldelays[i]&MixerFracMask) * (1.0f/MixerFracOne)};
+        lbuffer[i] = cubic(delaybuf[(delay+1) & bufmask], delaybuf[(delay  ) & bufmask],
+            delaybuf[(delay-1) & bufmask], delaybuf[(delay-2) & bufmask], mu);
 
-        alignas(16) float temps[2][MAX_UPDATE_SAMPLES];
-        for(size_t i{0u};i < todo;++i)
-        {
-            // Feed the buffer's input first (necessary for delays < 1).
-            delaybuf[offset&bufmask] = samplesIn[0][base+i];
+        // Tap for the right output.
+        delay = offset - (rdelays[i]>>MixerFracBits);
+        mu = static_cast<float>(rdelays[i]&MixerFracMask) * (1.0f/MixerFracOne);
+        rbuffer[i] = cubic(delaybuf[(delay+1) & bufmask], delaybuf[(delay  ) & bufmask],
+            delaybuf[(delay-1) & bufmask], delaybuf[(delay-2) & bufmask], mu);
 
-            // Tap for the left output.
-            uint delay{offset - (moddelays[0][i]>>MixerFracBits)};
-            float mu{static_cast<float>(moddelays[0][i]&MixerFracMask) * (1.0f/MixerFracOne)};
-            temps[0][i] = cubic(delaybuf[(delay+1) & bufmask], delaybuf[(delay  ) & bufmask],
-                delaybuf[(delay-1) & bufmask], delaybuf[(delay-2) & bufmask], mu);
-
-            // Tap for the right output.
-            delay = offset - (moddelays[1][i]>>MixerFracBits);
-            mu = static_cast<float>(moddelays[1][i]&MixerFracMask) * (1.0f/MixerFracOne);
-            temps[1][i] = cubic(delaybuf[(delay+1) & bufmask], delaybuf[(delay  ) & bufmask],
-                delaybuf[(delay-1) & bufmask], delaybuf[(delay-2) & bufmask], mu);
-
-            // Accumulate feedback from the average delay of the taps.
-            delaybuf[offset&bufmask] += delaybuf[(offset-avgdelay) & bufmask] * feedback;
-            ++offset;
-        }
-
-        for(size_t c{0};c < 2;++c)
-            MixSamples({temps[c], todo}, samplesOut, mGains[c].Current, mGains[c].Target,
-                samplesToDo-base, base);
-
-        base += todo;
+        // Accumulate feedback from the average delay of the taps.
+        delaybuf[offset&bufmask] += delaybuf[(offset-avgdelay) & bufmask] * feedback;
+        ++offset;
     }
+
+    MixSamples({lbuffer, samplesToDo}, samplesOut, mGains[0].Current, mGains[0].Target,
+        samplesToDo, 0);
+    MixSamples({rbuffer, samplesToDo}, samplesOut, mGains[1].Current, mGains[1].Target,
+        samplesToDo, 0);
 
     mOffset = offset;
 }

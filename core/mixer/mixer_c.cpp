@@ -38,20 +38,19 @@ inline float do_cubic(const InterpState &istate, const float *RESTRICT vals, con
     const uint pi{frac >> CubicPhaseBitDiff};
     const float pf{static_cast<float>(frac&CubicPhaseDiffMask) * (1.0f/CubicPhaseDiffOne)};
 
-    const CubicCoefficients *RESTRICT filter = al::assume_aligned<16>(istate.cubic.filter + pi);
+    const float *RESTRICT fil{al::assume_aligned<16>(istate.cubic.filter[pi].mCoeffs)};
+    const float *RESTRICT phd{al::assume_aligned<16>(istate.cubic.filter[pi].mDeltas)};
 
-    // Apply the phase interpolated filter.
-    return (filter->mCoeffs[0] + pf*filter->mDeltas[0]) * vals[0]
-        + (filter->mCoeffs[1] + pf*filter->mDeltas[1]) * vals[1]
-        + (filter->mCoeffs[2] + pf*filter->mDeltas[2]) * vals[2]
-        + (filter->mCoeffs[3] + pf*filter->mDeltas[3]) * vals[3];
+    /* Apply the phase interpolated filter. */
+    return (fil[0] + pf*phd[0])*vals[0] + (fil[1] + pf*phd[1])*vals[1]
+        + (fil[2] + pf*phd[2])*vals[2] + (fil[3] + pf*phd[3])*vals[3];
 }
 inline float do_bsinc(const InterpState &istate, const float *RESTRICT vals, const uint frac)
 {
     const size_t m{istate.bsinc.m};
     ASSUME(m > 0);
 
-    // Calculate the phase index and factor.
+    /* Calculate the phase index and factor. */
     const uint pi{frac >> BsincPhaseBitDiff};
     const float pf{static_cast<float>(frac & (BsincPhaseDiffOne-1)) * (1.0f/BsincPhaseDiffOne)};
 
@@ -60,7 +59,7 @@ inline float do_bsinc(const InterpState &istate, const float *RESTRICT vals, con
     const float *RESTRICT scd{fil + BSincPhaseCount*2*m};
     const float *RESTRICT spd{scd + m};
 
-    // Apply the scale and phase interpolated filter.
+    /* Apply the scale and phase interpolated filter. */
     float r{0.0f};
     for(size_t j_f{0};j_f < m;j_f++)
         r += (fil[j_f] + istate.bsinc.sf*scd[j_f] + pf*(phd[j_f] + istate.bsinc.sf*spd[j_f])) * vals[j_f];
@@ -71,14 +70,14 @@ inline float do_fastbsinc(const InterpState &istate, const float *RESTRICT vals,
     const size_t m{istate.bsinc.m};
     ASSUME(m > 0);
 
-    // Calculate the phase index and factor.
+    /* Calculate the phase index and factor. */
     const uint pi{frac >> BsincPhaseBitDiff};
     const float pf{static_cast<float>(frac & (BsincPhaseDiffOne-1)) * (1.0f/BsincPhaseDiffOne)};
 
     const float *RESTRICT fil{istate.bsinc.filter + m*pi*2};
     const float *RESTRICT phd{fil + m};
 
-    // Apply the phase interpolated filter.
+    /* Apply the phase interpolated filter. */
     float r{0.0f};
     for(size_t j_f{0};j_f < m;j_f++)
         r += (fil[j_f] + pf*phd[j_f]) * vals[j_f];

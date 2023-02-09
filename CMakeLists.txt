@@ -1206,7 +1206,18 @@ set(BACKENDS  "${BACKENDS} Null")
 
 
 find_package(Git)
-if(ALSOFT_UPDATE_BUILD_VERSION AND GIT_FOUND AND EXISTS "${OpenAL_SOURCE_DIR}/.git/index")
+if(ALSOFT_UPDATE_BUILD_VERSION AND GIT_FOUND AND EXISTS "${OpenAL_SOURCE_DIR}/.git")
+    set(GIT_DIR "${OpenAL_SOURCE_DIR}/.git")
+
+    # Check if this is a submodule, if it is then find the .git directory
+    if(NOT IS_DIRECTORY "${OpenAL_SOURCE_DIR}/.git")
+        file(READ ${GIT_DIR} submodule)
+        string(REGEX REPLACE "gitdir: (.*)$" "\\1" GIT_DIR_RELATIVE ${submodule})
+        string(STRIP ${GIT_DIR_RELATIVE} GIT_DIR_RELATIVE)
+        get_filename_component(SUBMODULE_DIR ${GIT_DIR} PATH)
+        get_filename_component(GIT_DIR ${SUBMODULE_DIR}/${GIT_DIR_RELATIVE} ABSOLUTE)
+    endif()
+
     # Get the current working branch and its latest abbreviated commit hash
     add_custom_command(OUTPUT "${OpenAL_BINARY_DIR}/version_witness.txt"
         BYPRODUCTS "${OpenAL_BINARY_DIR}/version.h"
@@ -1216,7 +1227,7 @@ if(ALSOFT_UPDATE_BUILD_VERSION AND GIT_FOUND AND EXISTS "${OpenAL_SOURCE_DIR}/.g
         COMMAND ${CMAKE_COMMAND} -E touch "${OpenAL_BINARY_DIR}/version_witness.txt"
         WORKING_DIRECTORY "${OpenAL_SOURCE_DIR}"
         MAIN_DEPENDENCY "${OpenAL_SOURCE_DIR}/version.h.in"
-        DEPENDS "${OpenAL_SOURCE_DIR}/.git/index" "${OpenAL_SOURCE_DIR}/version.cmake"
+        DEPENDS "${GIT_DIR}/index" "${OpenAL_SOURCE_DIR}/version.cmake"
         VERBATIM
     )
 

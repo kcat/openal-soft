@@ -157,6 +157,8 @@ template<>
 float *Resample_<CubicTag,SSETag>(const InterpState *state, float *RESTRICT src, uint frac,
     uint increment, const al::span<float> dst)
 {
+    ASSUME(frac < MixerFracOne);
+
     const CubicCoefficients *RESTRICT filter = al::assume_aligned<16>(state->cubic.filter);
 
     src -= 1;
@@ -193,6 +195,7 @@ float *Resample_<BSincTag,SSETag>(const InterpState *state, float *RESTRICT src,
     const __m128 sf4{_mm_set1_ps(state->bsinc.sf)};
     const size_t m{state->bsinc.m};
     ASSUME(m > 0);
+    ASSUME(frac < MixerFracOne);
 
     src -= state->bsinc.l;
     for(float &out_sample : dst)
@@ -240,6 +243,7 @@ float *Resample_<FastBSincTag,SSETag>(const InterpState *state, float *RESTRICT 
     const float *const filter{state->bsinc.filter};
     const size_t m{state->bsinc.m};
     ASSUME(m > 0);
+    ASSUME(frac < MixerFracOne);
 
     src -= state->bsinc.l;
     for(float &out_sample : dst)

@@ -91,6 +91,7 @@ float *DoResample(const InterpState *state, float *RESTRICT src, uint frac, uint
     const al::span<float> dst)
 {
     const InterpState istate{*state};
+    ASSUME(frac < MixerFracOne);
     for(float &out : dst)
     {
         out = Sampler(istate, src, frac);

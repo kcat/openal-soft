@@ -141,6 +141,8 @@ template<>
 float *Resample_<LerpTag,NEONTag>(const InterpState*, float *RESTRICT src, uint frac,
     uint increment, const al::span<float> dst)
 {
+    ASSUME(frac < MixerFracOne);
+
     const int32x4_t increment4 = vdupq_n_s32(static_cast<int>(increment*4));
     const float32x4_t fracOne4 = vdupq_n_f32(1.0f/MixerFracOne);
     const int32x4_t fracMask4 = vdupq_n_s32(MixerFracMask);
@@ -194,6 +196,8 @@ template<>
 float *Resample_<CubicTag,NEONTag>(const InterpState *state, float *RESTRICT src, uint frac,
     uint increment, const al::span<float> dst)
 {
+    ASSUME(frac < MixerFracOne);
+
     const CubicCoefficients *RESTRICT filter = al::assume_aligned<16>(state->cubic.filter);
 
     src -= 1;
@@ -229,6 +233,7 @@ float *Resample_<BSincTag,NEONTag>(const InterpState *state, float *RESTRICT src
     const float32x4_t sf4{vdupq_n_f32(state->bsinc.sf)};
     const size_t m{state->bsinc.m};
     ASSUME(m > 0);
+    ASSUME(frac < MixerFracOne);
 
     src -= state->bsinc.l;
     for(float &out_sample : dst)
@@ -275,6 +280,7 @@ float *Resample_<FastBSincTag,NEONTag>(const InterpState *state, float *RESTRICT
     const float *const filter{state->bsinc.filter};
     const size_t m{state->bsinc.m};
     ASSUME(m > 0);
+    ASSUME(frac < MixerFracOne);
 
     src -= state->bsinc.l;
     for(float &out_sample : dst)

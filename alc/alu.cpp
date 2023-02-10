@@ -273,7 +273,7 @@ ResamplerFunc PrepareResampler(Resampler resampler, uint increment, InterpState 
     case Resampler::Linear:
         break;
     case Resampler::Cubic:
-        state->cubic.filter = gCubicSpline.Tab;
+        state->cubic.filter = gCubicSpline.Tab.data();
         break;
     case Resampler::FastBSinc12:
     case Resampler::BSinc12:

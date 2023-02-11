@@ -16,7 +16,6 @@
 #include "fpu_ctrl.h"
 
 struct CTag;
-struct CopyTag;
 
 
 namespace {
@@ -182,7 +181,8 @@ SampleConverterPtr SampleConverter::Create(DevFmtType srcType, DevFmtType dstTyp
         mind(srcRate*double{MixerFracOne}/dstRate + 0.5, MaxPitch*MixerFracOne));
     converter->mIncrement = maxu(step, 1);
     if(converter->mIncrement == MixerFracOne)
-        converter->mResample = Resample_<CopyTag,CTag>;
+        converter->mResample = [](const InterpState*, const float *RESTRICT src, uint, const uint,
+            const al::span<float> dst) { std::copy_n(src, dst.size(), dst.begin()); };
     else
         converter->mResample = PrepareResampler(resampler, converter->mIncrement,
             &converter->mState);
@@ -284,10 +284,10 @@ uint SampleConverter::convert(const void **src, uint *srcframes, void *dst, uint
                 std::end(mChan[chan].PrevSamples), 0.0f);
 
             /* Now resample, and store the result in the output buffer. */
-            const float *ResampledData{mResample(&mState, SrcData+(MaxResamplerPadding>>1),
-                DataPosFrac, increment, {DstData, DstSize})};
+            mResample(&mState, SrcData+MaxResamplerEdge, DataPosFrac, increment,
+                {DstData, DstSize});
 
-            StoreSamples(DstSamples, ResampledData, mChan.size(), mDstType, DstSize);
+            StoreSamples(DstSamples, DstData, mChan.size(), mDstType, DstSize);
         }
 
         /* Update the number of prep samples still available, as well as the

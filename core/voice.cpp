@@ -48,7 +48,6 @@ struct SSETag;
 #ifdef HAVE_NEON
 struct NEONTag;
 #endif
-struct CopyTag;
 
 
 static_assert(!(sizeof(DeviceBase::MixerBufferLine)&15),
@@ -187,6 +186,11 @@ void SendSourceStoppedEvent(ContextBase *context, uint id)
 
     ring->writeAdvance(1);
 }
+
+
+void CopyResample(const InterpState*, const float *RESTRICT src, uint, const uint,
+    const al::span<float> dst)
+{ std::copy_n(src, dst.size(), dst.begin()); }
 
 
 const float *DoFilters(BiquadFilter &lpfilter, BiquadFilter &hpfilter, float *dst,
@@ -562,7 +566,7 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
         MixingSamples.begin(), offset_bufferline);
 
     const ResamplerFunc Resample{(increment == MixerFracOne && DataPosFrac == 0) ?
-        Resample_<CopyTag,CTag> : mResampler};
+        CopyResample : mResampler};
     const uint PostPadding{MaxResamplerEdge + mDecoderPadding};
     uint buffers_done{0u};
     do {
@@ -720,8 +724,9 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
         for(auto &chandata : mChans)
         {
             /* Resample, then apply ambisonic upsampling as needed. */
-            float *ResampledData{Resample(&mResampleState, *voiceSamples, DataPosFrac, increment,
-                {Device->ResampledData, DstBufferSize})};
+            float *ResampledData{Device->ResampledData};
+            Resample(&mResampleState, *voiceSamples, DataPosFrac, increment,
+                {ResampledData, DstBufferSize});
             ++voiceSamples;
 
             if(mFlags.test(VoiceIsAmbisonic))

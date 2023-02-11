@@ -154,8 +154,8 @@ force_inline void MixLine(const al::span<const float> InSamples, float *RESTRICT
 } // namespace
 
 template<>
-float *Resample_<CubicTag,SSETag>(const InterpState *state, float *RESTRICT src, uint frac,
-    uint increment, const al::span<float> dst)
+void Resample_<CubicTag,SSETag>(const InterpState *state, const float *RESTRICT src, uint frac,
+    const uint increment, const al::span<float> dst)
 {
     ASSUME(frac < MixerFracOne);
 
@@ -184,12 +184,11 @@ float *Resample_<CubicTag,SSETag>(const InterpState *state, float *RESTRICT src,
         src  += frac>>MixerFracBits;
         frac &= MixerFracMask;
     }
-    return dst.data();
 }
 
 template<>
-float *Resample_<BSincTag,SSETag>(const InterpState *state, float *RESTRICT src, uint frac,
-    uint increment, const al::span<float> dst)
+void Resample_<BSincTag,SSETag>(const InterpState *state, const float *RESTRICT src, uint frac,
+    const uint increment, const al::span<float> dst)
 {
     const float *const filter{state->bsinc.filter};
     const __m128 sf4{_mm_set1_ps(state->bsinc.sf)};
@@ -233,12 +232,11 @@ float *Resample_<BSincTag,SSETag>(const InterpState *state, float *RESTRICT src,
         src  += frac>>MixerFracBits;
         frac &= MixerFracMask;
     }
-    return dst.data();
 }
 
 template<>
-float *Resample_<FastBSincTag,SSETag>(const InterpState *state, float *RESTRICT src, uint frac,
-    uint increment, const al::span<float> dst)
+void Resample_<FastBSincTag,SSETag>(const InterpState *state, const float *RESTRICT src, uint frac,
+    const uint increment, const al::span<float> dst)
 {
     const float *const filter{state->bsinc.filter};
     const size_t m{state->bsinc.m};
@@ -277,7 +275,6 @@ float *Resample_<FastBSincTag,SSETag>(const InterpState *state, float *RESTRICT 
         src  += frac>>MixerFracBits;
         frac &= MixerFracMask;
     }
-    return dst.data();
 }
 
 

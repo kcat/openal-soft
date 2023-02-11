@@ -11,7 +11,6 @@
 #include "hrtfbase.h"
 
 struct CTag;
-struct CopyTag;
 struct PointTag;
 struct LerpTag;
 struct CubicTag;
@@ -87,8 +86,8 @@ inline float do_fastbsinc(const InterpState &istate, const float *RESTRICT vals,
 
 using SamplerT = float(&)(const InterpState&, const float*RESTRICT, const uint);
 template<SamplerT Sampler>
-float *DoResample(const InterpState *state, float *RESTRICT src, uint frac, uint increment,
-    const al::span<float> dst)
+void DoResample(const InterpState *state, const float *RESTRICT src, uint frac,
+    const uint increment, const al::span<float> dst)
 {
     const InterpState istate{*state};
     ASSUME(frac < MixerFracOne);
@@ -100,7 +99,6 @@ float *DoResample(const InterpState *state, float *RESTRICT src, uint frac, uint
         src  += frac>>MixerFracBits;
         frac &= MixerFracMask;
     }
-    return dst.data();
 }
 
 inline void ApplyCoeffs(float2 *RESTRICT Values, const size_t IrSize, const ConstHrirSpan Coeffs,
@@ -148,42 +146,29 @@ force_inline void MixLine(const al::span<const float> InSamples, float *RESTRICT
 } // namespace
 
 template<>
-float *Resample_<CopyTag,CTag>(const InterpState*, float *RESTRICT src, uint, uint,
-    const al::span<float> dst)
-{
-#if defined(HAVE_SSE) || defined(HAVE_NEON)
-    /* Avoid copying the source data if it's aligned like the destination. */
-    if((reinterpret_cast<intptr_t>(src)&15) == (reinterpret_cast<intptr_t>(dst.data())&15))
-        return src;
-#endif
-    std::copy_n(src, dst.size(), dst.begin());
-    return dst.data();
-}
+void Resample_<PointTag,CTag>(const InterpState *state, const float *RESTRICT src, uint frac,
+    const uint increment, const al::span<float> dst)
+{ DoResample<do_point>(state, src, frac, increment, dst); }
 
 template<>
-float *Resample_<PointTag,CTag>(const InterpState *state, float *RESTRICT src, uint frac,
-    uint increment, const al::span<float> dst)
-{ return DoResample<do_point>(state, src, frac, increment, dst); }
+void Resample_<LerpTag,CTag>(const InterpState *state, const float *RESTRICT src, uint frac,
+    const uint increment, const al::span<float> dst)
+{ DoResample<do_lerp>(state, src, frac, increment, dst); }
 
 template<>
-float *Resample_<LerpTag,CTag>(const InterpState *state, float *RESTRICT src, uint frac,
-    uint increment, const al::span<float> dst)
-{ return DoResample<do_lerp>(state, src, frac, increment, dst); }
+void Resample_<CubicTag,CTag>(const InterpState *state, const float *RESTRICT src, uint frac,
+    const uint increment, const al::span<float> dst)
+{ DoResample<do_cubic>(state, src-1, frac, increment, dst); }
 
 template<>
-float *Resample_<CubicTag,CTag>(const InterpState *state, float *RESTRICT src, uint frac,
-    uint increment, const al::span<float> dst)
-{ return DoResample<do_cubic>(state, src-1, frac, increment, dst); }
+void Resample_<BSincTag,CTag>(const InterpState *state, const float *RESTRICT src, uint frac,
+    const uint increment, const al::span<float> dst)
+{ DoResample<do_bsinc>(state, src-state->bsinc.l, frac, increment, dst); }
 
 template<>
-float *Resample_<BSincTag,CTag>(const InterpState *state, float *RESTRICT src, uint frac,
-    uint increment, const al::span<float> dst)
-{ return DoResample<do_bsinc>(state, src-state->bsinc.l, frac, increment, dst); }
-
-template<>
-float *Resample_<FastBSincTag,CTag>(const InterpState *state, float *RESTRICT src, uint frac,
-    uint increment, const al::span<float> dst)
-{ return DoResample<do_fastbsinc>(state, src-state->bsinc.l, frac, increment, dst); }
+void Resample_<FastBSincTag,CTag>(const InterpState *state, const float *RESTRICT src, uint frac,
+    const uint increment, const al::span<float> dst)
+{ DoResample<do_fastbsinc>(state, src-state->bsinc.l, frac, increment, dst); }
 
 
 template<>

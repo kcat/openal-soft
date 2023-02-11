@@ -138,8 +138,8 @@ force_inline void MixLine(const al::span<const float> InSamples, float *RESTRICT
 } // namespace
 
 template<>
-float *Resample_<LerpTag,NEONTag>(const InterpState*, float *RESTRICT src, uint frac,
-    uint increment, const al::span<float> dst)
+void Resample_<LerpTag,NEONTag>(const InterpState*, const float *RESTRICT src, uint frac,
+    const uint increment, const al::span<float> dst)
 {
     ASSUME(frac < MixerFracOne);
 
@@ -189,12 +189,11 @@ float *Resample_<LerpTag,NEONTag>(const InterpState*, float *RESTRICT src, uint 
             frac &= MixerFracMask;
         } while(--todo);
     }
-    return dst.data();
 }
 
 template<>
-float *Resample_<CubicTag,NEONTag>(const InterpState *state, float *RESTRICT src, uint frac,
-    uint increment, const al::span<float> dst)
+void Resample_<CubicTag,NEONTag>(const InterpState *state, const float *RESTRICT src, uint frac,
+    const uint increment, const al::span<float> dst)
 {
     ASSUME(frac < MixerFracOne);
 
@@ -222,12 +221,11 @@ float *Resample_<CubicTag,NEONTag>(const InterpState *state, float *RESTRICT src
         src  += frac>>MixerFracBits;
         frac &= MixerFracMask;
     }
-    return dst.data();
 }
 
 template<>
-float *Resample_<BSincTag,NEONTag>(const InterpState *state, float *RESTRICT src, uint frac,
-    uint increment, const al::span<float> dst)
+void Resample_<BSincTag,NEONTag>(const InterpState *state, const float *RESTRICT src, uint frac,
+    const uint increment, const al::span<float> dst)
 {
     const float *const filter{state->bsinc.filter};
     const float32x4_t sf4{vdupq_n_f32(state->bsinc.sf)};
@@ -270,12 +268,11 @@ float *Resample_<BSincTag,NEONTag>(const InterpState *state, float *RESTRICT src
         src  += frac>>MixerFracBits;
         frac &= MixerFracMask;
     }
-    return dst.data();
 }
 
 template<>
-float *Resample_<FastBSincTag,NEONTag>(const InterpState *state, float *RESTRICT src, uint frac,
-    uint increment, const al::span<float> dst)
+void Resample_<FastBSincTag,NEONTag>(const InterpState *state, const float *RESTRICT src, uint frac,
+    const uint increment, const al::span<float> dst)
 {
     const float *const filter{state->bsinc.filter};
     const size_t m{state->bsinc.m};
@@ -313,7 +310,6 @@ float *Resample_<FastBSincTag,NEONTag>(const InterpState *state, float *RESTRICT
         src  += frac>>MixerFracBits;
         frac &= MixerFracMask;
     }
-    return dst.data();
 }
 
 

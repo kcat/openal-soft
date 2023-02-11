@@ -336,7 +336,7 @@ void UhjDecoderIIR::decode(const al::span<float*> samples, const size_t samplesT
     mFilter2DT.process(Filter2Coeff, {mTemp.data(), samplesToDo}, forwardSamples, xoutput);
 
     /* Apply filter1 to S and store in mTemp. */
-    mFilter1S.process(Filter1Coeff, {mS.data(), samplesToDo-1}, forwardSamples, mTemp.data()+1);
+    mFilter1S.process(Filter1Coeff, {mS.data(), samplesToDo}, forwardSamples, mTemp.data()+1);
     mTemp[0] = mDelayS; mDelayS = mTemp[forwardSamples];
 
     /* W = 0.981532*S + 0.197484*j(0.828331*D + 0.767820*T) */
@@ -347,18 +347,18 @@ void UhjDecoderIIR::decode(const al::span<float*> samples, const size_t samplesT
         xoutput[i] = 0.418496f*mTemp[i] - xoutput[i];
 
 
-    /* Apply filter1 to (0.795968*D - 0.676392*T) and store in youtput. */
-    std::transform(mD.cbegin(), mD.cbegin()+samplesToDo, youtput, mTemp.begin(),
+    /* Apply filter1 to (0.795968*D - 0.676392*T) and store in mTemp. */
+    std::transform(mD.cbegin(), mD.cbegin()+samplesToDo, youtput, youtput,
         [](const float d, const float t) noexcept { return 0.795968f*d - 0.676392f*t; });
-    mFilter1DT.process(Filter1Coeff, {mTemp.data(), samplesToDo-1}, forwardSamples, youtput+1);
-    youtput[0] = mDelayDT; mDelayDT = youtput[forwardSamples];
+    mFilter1DT.process(Filter1Coeff, {youtput, samplesToDo}, forwardSamples, mTemp.data()+1);
+    mTemp[0] = mDelayDT; mDelayDT = mTemp[forwardSamples];
 
-    /* Precompute j*S and store in mTemp. */
-    mFilter2S.process(Filter2Coeff, {mS.data(), samplesToDo}, forwardSamples, mTemp.data());
+    /* Precompute j*S and store in youtput. */
+    mFilter2S.process(Filter2Coeff, {mS.data(), samplesToDo}, forwardSamples, youtput);
 
     /* Y = 0.795968*D - 0.676392*T + j(0.186633*S) */
     for(size_t i{0};i < samplesToDo;++i)
-        youtput[i] = youtput[i] + 0.186633f*mTemp[i];
+        youtput[i] = mTemp[i] + 0.186633f*youtput[i];
 
 
     if(samples.size() > 3)
@@ -506,7 +506,7 @@ void UhjStereoDecoderIIR::decode(const al::span<float*> samples, const size_t sa
     float *RESTRICT youtput{al::assume_aligned<16>(samples[2])};
 
     /* Apply filter1 to S and store in mTemp. */
-    mFilter1S.process(Filter1Coeff, {mS.data(), samplesToDo-1}, forwardSamples, mTemp.data()+1);
+    mFilter1S.process(Filter1Coeff, {mS.data(), samplesToDo}, forwardSamples, mTemp.data()+1);
     mTemp[0] = mDelayS; mDelayS = mTemp[forwardSamples];
 
     /* Precompute j*D and store in xoutput. */
@@ -523,7 +523,7 @@ void UhjStereoDecoderIIR::decode(const al::span<float*> samples, const size_t sa
     mFilter2S.process(Filter2Coeff, {mS.data(), samplesToDo}, forwardSamples, youtput);
 
     /* Apply filter1 to D and store in mTemp. */
-    mFilter1D.process(Filter1Coeff, {mD.data(), samplesToDo-1}, forwardSamples, mTemp.data()+1);
+    mFilter1D.process(Filter1Coeff, {mD.data(), samplesToDo}, forwardSamples, mTemp.data()+1);
     mTemp[0] = mDelayD; mDelayD = mTemp[forwardSamples];
 
     /* Y = 1.6822415*w*D - 0.2156194*j*S */

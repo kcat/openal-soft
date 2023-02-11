@@ -164,13 +164,13 @@ struct UhjDecoderIIR final : public DecoderBase {
     /* FIXME: These IIR decoder filters actually have a 1-sample delay on the
      * non-filtered components, which is not reflected in the source latency
      * value. sInputPadding is 0, however, because it doesn't need any extra
-     * input samples as long as 'forwardSamples' is less than 'samplesToDo'.
+     * input samples.
      */
     static constexpr size_t sInputPadding{0};
 
     alignas(16) std::array<float,BufferLineSize+MaxResamplerEdge> mS{};
     alignas(16) std::array<float,BufferLineSize+MaxResamplerEdge> mD{};
-    alignas(16) std::array<float,BufferLineSize+MaxResamplerEdge> mTemp{};
+    alignas(16) std::array<float,BufferLineSize+MaxResamplerEdge+1> mTemp{};
     float mDelayS{}, mDelayDT{}, mDelayQ{};
 
     UhjAllPassFilter mFilter1S;
@@ -218,7 +218,7 @@ struct UhjStereoDecoderIIR final : public DecoderBase {
 
     alignas(16) std::array<float,BufferLineSize+MaxResamplerEdge> mS{};
     alignas(16) std::array<float,BufferLineSize+MaxResamplerEdge> mD{};
-    alignas(16) std::array<float,BufferLineSize+MaxResamplerEdge> mTemp{};
+    alignas(16) std::array<float,BufferLineSize+MaxResamplerEdge+1> mTemp{};
     float mDelayS{}, mDelayD{};
 
     UhjAllPassFilter mFilter1S;

@@ -260,7 +260,7 @@ void LoadSamples(const al::span<float*> dstSamples, const size_t dstOffset, cons
 #undef HANDLE_FMT
 }
 
-void LoadBufferStatic(VoiceBufferItem *buffer, VoiceBufferItem *&bufferLoopItem,
+void LoadBufferStatic(VoiceBufferItem *buffer, VoiceBufferItem *bufferLoopItem,
     const size_t dataPosInt, const FmtType sampleType, const FmtChannels sampleChannels,
     const size_t srcStep, size_t samplesLoaded, const size_t samplesToLoad,
     const al::span<float*> voiceSamples)
@@ -268,11 +268,8 @@ void LoadBufferStatic(VoiceBufferItem *buffer, VoiceBufferItem *&bufferLoopItem,
     const size_t loopStart{buffer->mLoopStart};
     const size_t loopEnd{buffer->mLoopEnd};
 
-    /* If current pos is beyond the loop range, do not loop */
-    if(!bufferLoopItem || dataPosInt >= loopEnd)
+    if(!bufferLoopItem)
     {
-        bufferLoopItem = nullptr;
-
         /* Load what's left to play from the buffer */
         const size_t remaining{minz(samplesToLoad-samplesLoaded, buffer->mSampleLen-dataPosInt)};
         LoadSamples(voiceSamples, samplesLoaded, buffer->mSamples, dataPosInt, sampleType,
@@ -523,6 +520,15 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
             return;
 
         OutPos = static_cast<uint>(sampleOffset);
+    }
+
+    /* If the static voice's current position is beyond the buffer loop end
+     * position, disable looping.
+     */
+    if(mFlags.test(VoiceIsStatic) && BufferLoopItem)
+    {
+        if(DataPosInt >= 0 && static_cast<uint>(DataPosInt) >= BufferListItem->mLoopEnd)
+            BufferLoopItem = nullptr;
     }
 
     if(!Counter)

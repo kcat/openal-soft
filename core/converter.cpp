@@ -15,8 +15,6 @@
 #include "alnumeric.h"
 #include "fpu_ctrl.h"
 
-struct CTag;
-
 
 namespace {
 

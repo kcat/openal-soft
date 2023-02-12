@@ -6,7 +6,6 @@
 #include "almalloc.h"
 #include "alspan.h"
 #include "bufferline.h"
-#include "resampler_limits.h"
 
 
 static constexpr size_t UhjLength256{256};
@@ -137,14 +136,14 @@ struct UhjDecoder final : public DecoderBase {
     /* The number of extra sample frames needed for input. */
     static constexpr size_t sInputPadding{N/2};
 
-    alignas(16) std::array<float,BufferLineSize+MaxResamplerEdge+sInputPadding> mS{};
-    alignas(16) std::array<float,BufferLineSize+MaxResamplerEdge+sInputPadding> mD{};
-    alignas(16) std::array<float,BufferLineSize+MaxResamplerEdge+sInputPadding> mT{};
+    alignas(16) std::array<float,BufferLineSize+sInputPadding> mS{};
+    alignas(16) std::array<float,BufferLineSize+sInputPadding> mD{};
+    alignas(16) std::array<float,BufferLineSize+sInputPadding> mT{};
 
     alignas(16) std::array<float,sInputPadding-1> mDTHistory{};
     alignas(16) std::array<float,sInputPadding-1> mSHistory{};
 
-    alignas(16) std::array<float,BufferLineSize+MaxResamplerEdge + sInputPadding*2> mTemp{};
+    alignas(16) std::array<float,BufferLineSize + sInputPadding*2> mTemp{};
 
     /**
      * Decodes a 3- or 4-channel UHJ signal into a B-Format signal with FuMa
@@ -168,9 +167,9 @@ struct UhjDecoderIIR final : public DecoderBase {
      */
     static constexpr size_t sInputPadding{0};
 
-    alignas(16) std::array<float,BufferLineSize+MaxResamplerEdge> mS{};
-    alignas(16) std::array<float,BufferLineSize+MaxResamplerEdge> mD{};
-    alignas(16) std::array<float,BufferLineSize+MaxResamplerEdge+1> mTemp{};
+    alignas(16) std::array<float,BufferLineSize> mS{};
+    alignas(16) std::array<float,BufferLineSize> mD{};
+    alignas(16) std::array<float,BufferLineSize+1> mTemp{};
     float mDelayS{}, mDelayDT{}, mDelayQ{};
 
     UhjAllPassFilter mFilter1S;
@@ -191,13 +190,13 @@ struct UhjStereoDecoder final : public DecoderBase {
 
     float mCurrentWidth{-1.0f};
 
-    alignas(16) std::array<float,BufferLineSize+MaxResamplerEdge+sInputPadding> mS{};
-    alignas(16) std::array<float,BufferLineSize+MaxResamplerEdge+sInputPadding> mD{};
+    alignas(16) std::array<float,BufferLineSize+sInputPadding> mS{};
+    alignas(16) std::array<float,BufferLineSize+sInputPadding> mD{};
 
     alignas(16) std::array<float,sInputPadding-1> mDTHistory{};
     alignas(16) std::array<float,sInputPadding-1> mSHistory{};
 
-    alignas(16) std::array<float,BufferLineSize+MaxResamplerEdge + sInputPadding*2> mTemp{};
+    alignas(16) std::array<float,BufferLineSize + sInputPadding*2> mTemp{};
 
     /**
      * Applies Super Stereo processing on a stereo signal to create a B-Format
@@ -216,9 +215,9 @@ struct UhjStereoDecoderIIR final : public DecoderBase {
 
     float mCurrentWidth{-1.0f};
 
-    alignas(16) std::array<float,BufferLineSize+MaxResamplerEdge> mS{};
-    alignas(16) std::array<float,BufferLineSize+MaxResamplerEdge> mD{};
-    alignas(16) std::array<float,BufferLineSize+MaxResamplerEdge+1> mTemp{};
+    alignas(16) std::array<float,BufferLineSize> mS{};
+    alignas(16) std::array<float,BufferLineSize> mD{};
+    alignas(16) std::array<float,BufferLineSize+1> mTemp{};
     float mDelayS{}, mDelayD{};
 
     UhjAllPassFilter mFilter1S;

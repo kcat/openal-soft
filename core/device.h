@@ -222,13 +222,12 @@ struct DeviceBase {
     AmbiRotateMatrix mAmbiRotateMatrix2{};
 
     /* Temp storage used for mixer processing. */
-    static constexpr size_t MixerLineSize{BufferLineSize + MaxResamplerPadding +
-        DecoderBase::sMaxPadding};
+    static constexpr size_t MixerLineSize{BufferLineSize + DecoderBase::sMaxPadding};
     static constexpr size_t MixerChannelsMax{16};
     using MixerBufferLine = std::array<float,MixerLineSize>;
     alignas(16) std::array<MixerBufferLine,MixerChannelsMax> mSampleData;
+    alignas(16) std::array<float,MixerLineSize+MaxResamplerPadding> mResampleData;
 
-    alignas(16) float ResampledData[BufferLineSize];
     alignas(16) float FilteredData[BufferLineSize];
     union {
         alignas(16) float HrtfSourceData[BufferLineSize + HrtfHistoryLength];

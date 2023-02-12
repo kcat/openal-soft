@@ -108,12 +108,6 @@ namespace {
 using uint = unsigned int;
 using namespace std::chrono;
 
-constexpr uint MaxPitch{10};
-
-static_assert((BufferLineSize-1)/MaxPitch > 0, "MaxPitch is too large for BufferLineSize!");
-static_assert((INT_MAX>>MixerFracBits)/MaxPitch > BufferLineSize,
-    "MaxPitch and/or BufferLineSize are too large for MixerFracBits!");
-
 using namespace std::placeholders;
 
 float InitConeScale()

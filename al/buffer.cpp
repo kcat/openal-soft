@@ -703,9 +703,15 @@ void PrepareCallback(ALCcontext *context, ALbuffer *ALBuf, ALsizei freq,
     const ALuint ambiorder{IsBFormat(*DstChannels) ? ALBuf->UnpackAmbiOrder :
         (IsUHJ(*DstChannels) ? 1 : 0)};
 
-    static constexpr uint line_size{BufferLineSize + MaxPostVoiceLoad};
-    al::vector<al::byte,16>(FrameSizeFromFmt(*DstChannels, *DstType, ambiorder) *
-        size_t{line_size}).swap(ALBuf->mData);
+    /* The maximum number of samples a callback buffer may need to store is a
+     * full mixing line * max pitch * channel count, since it may need to hold
+     * a full line's worth of sample frames before downsampling. An additional
+     * MaxResamplerEdge is needed for "future" samples during resampling (the
+     * voice will hold a history for the past samples).
+     */
+    static constexpr uint line_size{DeviceBase::MixerLineSize*MaxPitch + MaxResamplerEdge};
+    decltype(ALBuf->mData)(FrameSizeFromFmt(*DstChannels, *DstType, ambiorder) * size_t{line_size})
+        .swap(ALBuf->mData);
 
 #ifdef ALSOFT_EAX
     eax_x_ram_clear(*context->mALDevice, *ALBuf);

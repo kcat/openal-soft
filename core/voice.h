@@ -49,6 +49,8 @@ enum class DirectMode : unsigned char {
 };
 
 
+constexpr uint MaxPitch{10};
+
 /* Maximum number of extra source samples that may need to be loaded, for
  * resampling or conversion purposes.
  */

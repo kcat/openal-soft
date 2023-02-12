@@ -551,6 +551,9 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
         : MixingSamples.size()};
     for(size_t chan{0};chan < realChannels;++chan)
     {
+        using ResBufType = decltype(DeviceBase::mResampleData);
+        static constexpr uint srcSizeMax{static_cast<uint>(ResBufType{}.size()-MaxResamplerEdge)};
+
         const auto prevSamples = al::as_span(mPrevSamples[chan]);
         const auto resampleBuffer = std::copy(prevSamples.cbegin(), prevSamples.cend(),
             Device->mResampleData.begin()) - MaxResamplerEdge;
@@ -563,9 +566,6 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
          */
         for(uint samplesLoaded{0};samplesLoaded < samplesToLoad;)
         {
-            using ResampleBufferType = decltype(DeviceBase::mResampleData);
-            static constexpr uint srcSizeMax{ResampleBufferType{}.size() - MaxResamplerEdge};
-
             /* Calculate the number of dst samples that can be loaded this
              * iteration, given the available resampler buffer size.
              */

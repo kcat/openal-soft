@@ -884,17 +884,18 @@ void NodeProxy::infoCallback(const pw_node_info *info)
         if(!nodeName || !*nodeName) nodeName = spa_dict_lookup(info->props, PW_KEY_NODE_NICK);
         if(!nodeName || !*nodeName) nodeName = devName;
 
-#ifdef PW_KEY_OBJECT_SERIAL
-        char *serial_end{};
-        const char *serial_str{spa_dict_lookup(info->props, PW_KEY_OBJECT_SERIAL)};
-        uint64_t serial_id{std::strtoull(serial_str, &serial_end, 0)};
-        if(*serial_end != '\0' || errno == ERANGE)
-        {
-            ERR("Unexpected object serial: %s\n", serial_str);
-            serial_id = info->id;
-        }
-#else
         uint64_t serial_id{info->id};
+#ifdef PW_KEY_OBJECT_SERIAL
+        if(const char *serial_str{spa_dict_lookup(info->props, PW_KEY_OBJECT_SERIAL)})
+        {
+            char *serial_end{};
+            serial_id = std::strtoull(serial_str, &serial_end, 0);
+            if(*serial_end != '\0' || errno == ERANGE)
+            {
+                ERR("Unexpected object serial: %s\n", serial_str);
+                serial_id = info->id;
+            }
+        }
 #endif
 
         const char *form_factor{spa_dict_lookup(info->props, PW_KEY_DEVICE_FORM_FACTOR)};

@@ -650,7 +650,7 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
 
                 if(mFlags.test(VoiceIsStatic))
                     LoadBufferStatic(BufferListItem, BufferLoopItem, uintPos, mFmtType, chan,
-                        mFrameStep, srcSampleDelay, srcBufferSize, resampleBuffer);
+                        mFrameStep, srcSampleDelay, srcBufferSize, al::to_address(resampleBuffer));
                 else if(mFlags.test(VoiceIsCallback))
                 {
                     const size_t bufferOffset{uintPos - callbackBase};
@@ -673,14 +673,15 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
                             mNumCallbackSamples = static_cast<uint>(getTotal);
                     }
                     LoadBufferCallback(BufferListItem, bufferOffset, mNumCallbackSamples,
-                        mFmtType, chan, mFrameStep, srcSampleDelay, srcBufferSize, resampleBuffer);
+                        mFmtType, chan, mFrameStep, srcSampleDelay, srcBufferSize,
+                        al::to_address(resampleBuffer));
                 }
                 else
                     LoadBufferQueue(BufferListItem, BufferLoopItem, uintPos, mFmtType, chan,
-                        mFrameStep, srcSampleDelay, srcBufferSize, resampleBuffer);
+                        mFrameStep, srcSampleDelay, srcBufferSize, al::to_address(resampleBuffer));
             }
 
-            Resample(&mResampleState, resampleBuffer, fracPos, increment,
+            Resample(&mResampleState, al::to_address(resampleBuffer), fracPos, increment,
                 {MixingSamples[chan]+samplesLoaded, dstBufferSize});
 
             /* Store the last source samples used for next time. */

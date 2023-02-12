@@ -25,7 +25,7 @@ struct SplineFilterArray {
         /* Fill in the main coefficients. */
         for(size_t pi{0};pi < CubicPhaseCount;++pi)
         {
-            const double mu{pi / double{CubicPhaseCount}};
+            const double mu{static_cast<double>(pi) / CubicPhaseCount};
             const double mu2{mu*mu}, mu3{mu2*mu};
             mTable[pi].mCoeffs[0] = static_cast<float>(-0.5*mu3 +      mu2 + -0.5*mu);
             mTable[pi].mCoeffs[1] = static_cast<float>( 1.5*mu3 + -2.5*mu2           + 1.0);

@@ -30,7 +30,7 @@ struct UhjAllPassFilter {
     std::array<AllPassState,4> state;
 
     void process(const al::span<const float,4> coeffs, const al::span<const float> src,
-        const size_t forwardSamples, float *RESTRICT dst);
+        const bool update, float *RESTRICT dst);
 };
 
 
@@ -122,7 +122,7 @@ struct DecoderBase {
     virtual ~DecoderBase() = default;
 
     virtual void decode(const al::span<float*> samples, const size_t samplesToDo,
-        const size_t forwardSamples) = 0;
+        const bool updateState) = 0;
 
     /**
      * The width factor for Super Stereo processing. Can be changed in between
@@ -154,7 +154,7 @@ struct UhjDecoder final : public DecoderBase {
      * B-Format decoder, as it needs different shelf filters.
      */
     void decode(const al::span<float*> samples, const size_t samplesToDo,
-        const size_t forwardSamples) override;
+        const bool updateState) override;
 
     DEF_NEWDEL(UhjDecoder)
 };
@@ -179,7 +179,7 @@ struct UhjDecoderIIR final : public DecoderBase {
     UhjAllPassFilter mFilter1Q;
 
     void decode(const al::span<float*> samples, const size_t samplesToDo,
-        const size_t forwardSamples) override;
+        const bool updateState) override;
 
     DEF_NEWDEL(UhjDecoderIIR)
 };
@@ -205,7 +205,7 @@ struct UhjStereoDecoder final : public DecoderBase {
      * channels, and the third left empty.
      */
     void decode(const al::span<float*> samples, const size_t samplesToDo,
-        const size_t forwardSamples) override;
+        const bool updateState) override;
 
     DEF_NEWDEL(UhjStereoDecoder)
 };
@@ -226,7 +226,7 @@ struct UhjStereoDecoderIIR final : public DecoderBase {
     UhjAllPassFilter mFilter2S;
 
     void decode(const al::span<float*> samples, const size_t samplesToDo,
-        const size_t forwardSamples) override;
+        const bool updateState) override;
 
     DEF_NEWDEL(UhjStereoDecoderIIR)
 };

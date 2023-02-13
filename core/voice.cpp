@@ -722,7 +722,7 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
         std::fill_n(samples, samplesToLoad, 0.0f);
 
     if(mDecoder)
-        mDecoder->decode(MixingSamples, samplesToMix, (vstate==Playing) ? samplesToMix : 0);
+        mDecoder->decode(MixingSamples, samplesToMix, (vstate==Playing));
 
     if(mFlags.test(VoiceIsAmbisonic))
     {

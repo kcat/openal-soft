@@ -53,29 +53,21 @@ constexpr std::array<float,4> Filter2Coeff{{
 void UhjAllPassFilter::process(const al::span<const float,4> coeffs,
     const al::span<const float> src, const bool updateState, float *RESTRICT dst)
 {
-    float z[4][2]{{state[0].z[0], state[0].z[1]}, {state[1].z[0], state[1].z[1]},
-        {state[2].z[0], state[2].z[1]}, {state[3].z[0], state[3].z[1]}};
+    auto state = mState;
 
-    auto proc_sample = [&z,coeffs](float x) noexcept -> float
+    auto proc_sample = [&state,coeffs](float x) noexcept -> float
     {
         for(size_t i{0};i < 4;++i)
         {
-            const float y{x*coeffs[i] + z[i][0]};
-            z[i][0] = z[i][1];
-            z[i][1] = y*coeffs[i] - x;
+            const float y{x*coeffs[i] + state[i].z[0]};
+            state[i].z[0] = state[i].z[1];
+            state[i].z[1] = y*coeffs[i] - x;
             x = y;
         }
         return x;
     };
     std::transform(src.begin(), src.end(), dst, proc_sample);
-    if(updateState) [[likely]]
-    {
-        for(size_t i{0};i < 4;++i)
-        {
-            state[i].z[0] = z[i][0];
-            state[i].z[1] = z[i][1];
-        }
-    }
+    if(updateState) [[likely]] mState = state;
 }
 
 

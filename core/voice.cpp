@@ -300,7 +300,7 @@ inline void LoadSamples<FmtIMA4>(float *RESTRICT dstSamples, const al::byte *src
 
         if(!skip) [[likely]]
         {
-            dstSamples[++wrote] = static_cast<float>(sample) / 32768.0f;
+            dstSamples[wrote++] = static_cast<float>(sample) / 32768.0f;
             if(wrote == samples) return;
         }
         else
@@ -342,7 +342,7 @@ inline void LoadSamples<FmtIMA4>(float *RESTRICT dstSamples, const al::byte *src
 
             const size_t todo{minz(8-skip, samples-wrote)};
             for(size_t j{0};j < todo;++j)
-                dstSamples[++wrote] = static_cast<float>(tempsamples[j+skip]) / 32768.0f;
+                dstSamples[wrote++] = static_cast<float>(tempsamples[j+skip]) / 32768.0f;
             if(wrote == samples)
                 return;
             skip = 0;

@@ -24,9 +24,9 @@ enum UserFmtType : unsigned char {
     UserFmtMulaw = FmtMulaw,
     UserFmtAlaw = FmtAlaw,
     UserFmtDouble = FmtDouble,
+    UserFmtIMA4 = FmtIMA4,
 
-    UserFmtIMA4 = 128,
-    UserFmtMSADPCM,
+    UserFmtMSADPCM = 128,
 };
 enum UserFmtChannels : unsigned char {
     UserFmtMono = FmtMono,

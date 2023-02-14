@@ -354,8 +354,7 @@ al::optional<FmtType> FmtFromUserFmt(UserFmtType type)
     case UserFmtDouble: return FmtDouble;
     case UserFmtMulaw: return FmtMulaw;
     case UserFmtAlaw: return FmtAlaw;
-    /* ADPCM not handled here. */
-    case UserFmtIMA4: break;
+    case UserFmtIMA4: return FmtIMA4;
     case UserFmtMSADPCM: break;
     }
     return al::nullopt;
@@ -552,8 +551,8 @@ void LoadData(ALCcontext *context, ALbuffer *ALBuf, ALsizei freq, ALuint size,
             return context->setError(AL_INVALID_VALUE, "%s samples cannot be mapped",
                 NameFromUserFmtType(SrcType));
     }
-    auto DstType = (SrcType == UserFmtIMA4 || SrcType == UserFmtMSADPCM)
-        ? al::make_optional(FmtShort) : FmtFromUserFmt(SrcType);
+    const auto DstType = (SrcType == UserFmtMSADPCM) ? al::make_optional(FmtShort)
+        : FmtFromUserFmt(SrcType);
     if(!DstType) [[unlikely]]
         return context->setError(AL_INVALID_ENUM, "Invalid format");
 
@@ -577,32 +576,34 @@ void LoadData(ALCcontext *context, ALbuffer *ALBuf, ALsizei freq, ALuint size,
             return context->setError(AL_INVALID_VALUE, "Preserving data of mismatched order");
     }
 
-    /* Convert the input/source size in bytes to sample frames using the unpack
-     * block alignment.
+    /* Convert the input/source size in bytes to blocks using the unpack block
+     * alignment.
      */
-    const ALuint SrcByteAlign{ChannelsFromUserFmt(SrcChannels, ambiorder) *
+    const ALuint SrcBlockSize{ChannelsFromUserFmt(SrcChannels, ambiorder) *
         ((SrcType == UserFmtIMA4) ? (align-1)/2 + 4 :
         (SrcType == UserFmtMSADPCM) ? (align-2)/2 + 7 :
         (align * BytesFromUserFmt(SrcType)))};
-    if((size%SrcByteAlign) != 0) [[unlikely]]
+    if((size%SrcBlockSize) != 0) [[unlikely]]
         return context->setError(AL_INVALID_VALUE,
             "Data size %d is not a multiple of frame size %d (%d unpack alignment)",
-            size, SrcByteAlign, align);
+            size, SrcBlockSize, align);
+    const ALuint blocks{size / SrcBlockSize};
 
-    if(size/SrcByteAlign > std::numeric_limits<ALsizei>::max()/align) [[unlikely]]
+    if(blocks > std::numeric_limits<ALsizei>::max()/align) [[unlikely]]
         return context->setError(AL_OUT_OF_MEMORY,
-            "Buffer size overflow, %d blocks x %d samples per block", size/SrcByteAlign, align);
-    const ALuint frames{size / SrcByteAlign * align};
+            "Buffer size overflow, %d blocks x %d samples per block", blocks, align);
+    if(blocks > std::numeric_limits<size_t>::max()/SrcBlockSize) [[unlikely]]
+        return context->setError(AL_OUT_OF_MEMORY,
+            "Buffer size overflow, %d frames x %d bytes per frame", blocks, SrcBlockSize);
 
     /* Convert the sample frames to the number of bytes needed for internal
      * storage.
      */
-    ALuint NumChannels{ChannelsFromFmt(*DstChannels, ambiorder)};
-    ALuint FrameSize{NumChannels * BytesFromFmt(*DstType)};
-    if(frames > std::numeric_limits<size_t>::max()/FrameSize) [[unlikely]]
-        return context->setError(AL_OUT_OF_MEMORY,
-            "Buffer size overflow, %d frames x %d bytes per frame", frames, FrameSize);
-    size_t newsize{static_cast<size_t>(frames) * FrameSize};
+    const ALuint NumChannels{ChannelsFromFmt(*DstChannels, ambiorder)};
+    const ALuint DstBlockSize{NumChannels *
+        ((*DstType == FmtIMA4) ? (align-1)/2 + 4 :
+        (align * BytesFromFmt(*DstType)))};
+    const size_t newsize{static_cast<size_t>(blocks) * DstBlockSize};
 
 #ifdef ALSOFT_EAX
     if(ALBuf->eax_x_ram_mode == AL_STORAGE_HARDWARE)
@@ -614,13 +615,12 @@ void LoadData(ALCcontext *context, ALbuffer *ALBuf, ALsizei freq, ALuint size,
     }
 #endif
 
-    /* Round up to the next 16-byte multiple. This could reallocate only when
-     * increasing or the new size is less than half the current, but then the
-     * buffer's AL_SIZE would not be very reliable for accounting buffer memory
-     * usage, and reporting the real size could cause problems for apps that
-     * use AL_SIZE to try to get the buffer's play length.
+    /* This could reallocate only when increasing the size or the new size is
+     * less than half the current, but then the buffer's AL_SIZE would not be
+     * very reliable for accounting buffer memory usage, and reporting the real
+     * size could cause problems for apps that use AL_SIZE to try to get the
+     * buffer's play length.
      */
-    newsize = RoundUp(newsize, 16);
     if(newsize != ALBuf->mData.size())
     {
         auto newdata = al::vector<al::byte,16>(newsize, al::byte{});
@@ -637,10 +637,8 @@ void LoadData(ALCcontext *context, ALbuffer *ALBuf, ALsizei freq, ALuint size,
 
     if(SrcType == UserFmtIMA4)
     {
-        assert(*DstType == FmtShort);
         if(SrcData != nullptr && !ALBuf->mData.empty())
-            Convert_int16_ima4(reinterpret_cast<int16_t*>(ALBuf->mData.data()), SrcData,
-                NumChannels, frames, align);
+            std::copy_n(SrcData, blocks*DstBlockSize, ALBuf->mData.begin());
         ALBuf->mBlockAlign = align;
     }
     else if(SrcType == UserFmtMSADPCM)
@@ -648,14 +646,13 @@ void LoadData(ALCcontext *context, ALbuffer *ALBuf, ALsizei freq, ALuint size,
         assert(*DstType == FmtShort);
         if(SrcData != nullptr && !ALBuf->mData.empty())
             Convert_int16_msadpcm(reinterpret_cast<int16_t*>(ALBuf->mData.data()), SrcData,
-                NumChannels, frames, align);
+                NumChannels, blocks*align, align);
         ALBuf->mBlockAlign = align;
     }
     else
     {
-        assert(DstType.has_value());
         if(SrcData != nullptr && !ALBuf->mData.empty())
-            std::copy_n(SrcData, frames*FrameSize, ALBuf->mData.begin());
+            std::copy_n(SrcData, blocks*DstBlockSize, ALBuf->mData.begin());
         ALBuf->mBlockAlign = 1;
     }
     ALBuf->OriginalSize = size;
@@ -671,7 +668,7 @@ void LoadData(ALCcontext *context, ALbuffer *ALBuf, ALsizei freq, ALuint size,
     ALBuf->mCallback = nullptr;
     ALBuf->mUserData = nullptr;
 
-    ALBuf->mSampleLen = frames;
+    ALBuf->mSampleLen = blocks * align;
     ALBuf->mLoopStart = 0;
     ALBuf->mLoopEnd = ALBuf->mSampleLen;
 
@@ -691,17 +688,24 @@ void PrepareCallback(ALCcontext *context, ALbuffer *ALBuf, ALsizei freq,
             ALBuf->id);
 
     /* Currently no channel configurations need to be converted. */
-    auto DstChannels = FmtFromUserFmt(SrcChannels);
+    const auto DstChannels = FmtFromUserFmt(SrcChannels);
     if(!DstChannels) [[unlikely]]
         return context->setError(AL_INVALID_ENUM, "Invalid format");
 
-    /* IMA4 and MSADPCM convert to 16-bit short. Not supported with callbacks. */
-    auto DstType = FmtFromUserFmt(SrcType);
+    /* Formats that need conversion aren't supported with callbacks. */
+    const auto DstType = FmtFromUserFmt(SrcType);
     if(!DstType) [[unlikely]]
         return context->setError(AL_INVALID_ENUM, "Unsupported callback format");
 
     const ALuint ambiorder{IsBFormat(*DstChannels) ? ALBuf->UnpackAmbiOrder :
         (IsUHJ(*DstChannels) ? 1 : 0)};
+
+    const ALuint unpackalign{ALBuf->UnpackAlign};
+    const ALuint align{SanitizeAlignment(SrcType, unpackalign)};
+    const ALuint BlockSize{ChannelsFromFmt(*DstChannels, ambiorder) *
+        ((SrcType == UserFmtIMA4) ? (align-1)/2 + 4 :
+        (SrcType == UserFmtMSADPCM) ? (align-2)/2 + 7 :
+        (align * BytesFromFmt(*DstType)))};
 
     /* The maximum number of samples a callback buffer may need to store is a
      * full mixing line * max pitch * channel count, since it may need to hold
@@ -709,9 +713,11 @@ void PrepareCallback(ALCcontext *context, ALbuffer *ALBuf, ALsizei freq,
      * MaxResamplerEdge is needed for "future" samples during resampling (the
      * voice will hold a history for the past samples).
      */
-    static constexpr uint line_size{DeviceBase::MixerLineSize*MaxPitch + MaxResamplerEdge};
-    decltype(ALBuf->mData)(FrameSizeFromFmt(*DstChannels, *DstType, ambiorder) * size_t{line_size})
-        .swap(ALBuf->mData);
+    static constexpr size_t line_size{DeviceBase::MixerLineSize*MaxPitch + MaxResamplerEdge};
+    const size_t line_blocks{(line_size + align-1) / align};
+
+    using BufferVectorType = decltype(ALBuf->mData);
+    BufferVectorType(line_blocks*BlockSize).swap(ALBuf->mData);
 
 #ifdef ALSOFT_EAX
     eax_x_ram_clear(*context->mALDevice, *ALBuf);
@@ -1086,75 +1092,66 @@ START_API_FUNC
 
     ALbuffer *albuf = LookupBuffer(device, buffer);
     if(!albuf) [[unlikely]]
-    {
-        context->setError(AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
-        return;
-    }
+        return context->setError(AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
 
     auto usrfmt = DecomposeUserFormat(format);
     if(!usrfmt) [[unlikely]]
-    {
-        context->setError(AL_INVALID_ENUM, "Invalid format 0x%04x", format);
-        return;
-    }
+        return context->setError(AL_INVALID_ENUM, "Invalid format 0x%04x", format);
 
-    ALuint unpack_align{albuf->UnpackAlign};
-    ALuint align{SanitizeAlignment(usrfmt->type, unpack_align)};
+    const ALuint unpack_align{albuf->UnpackAlign};
+    const ALuint align{SanitizeAlignment(usrfmt->type, unpack_align)};
     if(align < 1) [[unlikely]]
-        context->setError(AL_INVALID_VALUE, "Invalid unpack alignment %u", unpack_align);
-    else if(al::to_underlying(usrfmt->channels) != al::to_underlying(albuf->mChannels)
+        return context->setError(AL_INVALID_VALUE, "Invalid unpack alignment %u", unpack_align);
+    if(al::to_underlying(usrfmt->channels) != al::to_underlying(albuf->mChannels)
         || usrfmt->type != albuf->OriginalType) [[unlikely]]
-        context->setError(AL_INVALID_ENUM, "Unpacking data with mismatched format");
-    else if(align != albuf->mBlockAlign) [[unlikely]]
-        context->setError(AL_INVALID_VALUE,
+        return context->setError(AL_INVALID_ENUM, "Unpacking data with mismatched format");
+    if(align != albuf->mBlockAlign) [[unlikely]]
+        return context->setError(AL_INVALID_VALUE,
             "Unpacking data with alignment %u does not match original alignment %u", align,
             albuf->mBlockAlign);
-    else if(albuf->isBFormat() && albuf->UnpackAmbiOrder != albuf->mAmbiOrder) [[unlikely]]
-        context->setError(AL_INVALID_VALUE, "Unpacking data with mismatched ambisonic order");
-    else if(albuf->MappedAccess != 0) [[unlikely]]
-        context->setError(AL_INVALID_OPERATION, "Unpacking data into mapped buffer %u", buffer);
+    if(albuf->isBFormat() && albuf->UnpackAmbiOrder != albuf->mAmbiOrder) [[unlikely]]
+        return context->setError(AL_INVALID_VALUE,
+            "Unpacking data with mismatched ambisonic order");
+    if(albuf->MappedAccess != 0) [[unlikely]]
+        return context->setError(AL_INVALID_OPERATION, "Unpacking data into mapped buffer %u",
+            buffer);
+
+    const ALuint num_chans{albuf->channelsFromFmt()};
+    const ALuint byte_align{
+        (albuf->OriginalType == UserFmtIMA4) ? ((align-1)/2 + 4) * num_chans :
+        (albuf->OriginalType == UserFmtMSADPCM) ? ((align-2)/2 + 7) * num_chans :
+        (align * albuf->bytesFromFmt() * num_chans)};
+
+    if(offset < 0 || length < 0 || static_cast<ALuint>(offset) > albuf->OriginalSize
+        || static_cast<ALuint>(length) > albuf->OriginalSize-static_cast<ALuint>(offset))
+        [[unlikely]]
+        return context->setError(AL_INVALID_VALUE, "Invalid data sub-range %d+%d on buffer %u",
+            offset, length, buffer);
+    if((static_cast<ALuint>(offset)%byte_align) != 0) [[unlikely]]
+        return context->setError(AL_INVALID_VALUE,
+            "Sub-range offset %d is not a multiple of frame size %d (%d unpack alignment)",
+            offset, byte_align, align);
+    if((static_cast<ALuint>(length)%byte_align) != 0) [[unlikely]]
+        return context->setError(AL_INVALID_VALUE,
+            "Sub-range length %d is not a multiple of frame size %d (%d unpack alignment)",
+            length, byte_align, align);
+
+    const size_t samplen{static_cast<ALuint>(length)/byte_align * align};
+    void *dst = albuf->mData.data() + offset;
+    if(usrfmt->type == UserFmtIMA4 && albuf->mType == FmtShort)
+    {
+        Convert_int16_ima4(static_cast<int16_t*>(dst), static_cast<const al::byte*>(data),
+            num_chans, samplen, align);
+    }
+    else if(usrfmt->type == UserFmtMSADPCM && albuf->mType == FmtShort)
+    {
+        Convert_int16_msadpcm(static_cast<int16_t*>(dst),
+            static_cast<const al::byte*>(data), num_chans, samplen, align);
+    }
     else
     {
-        ALuint num_chans{albuf->channelsFromFmt()};
-        ALuint frame_size{num_chans * albuf->bytesFromFmt()};
-        ALuint byte_align{
-            (albuf->OriginalType == UserFmtIMA4) ? ((align-1)/2 + 4) * num_chans :
-            (albuf->OriginalType == UserFmtMSADPCM) ? ((align-2)/2 + 7) * num_chans :
-            (align * frame_size)
-        };
-
-        if(offset < 0 || length < 0 || static_cast<ALuint>(offset) > albuf->OriginalSize
-            || static_cast<ALuint>(length) > albuf->OriginalSize-static_cast<ALuint>(offset))
-            [[unlikely]]
-            context->setError(AL_INVALID_VALUE, "Invalid data sub-range %d+%d on buffer %u",
-                offset, length, buffer);
-        else if((static_cast<ALuint>(offset)%byte_align) != 0) [[unlikely]]
-            context->setError(AL_INVALID_VALUE,
-                "Sub-range offset %d is not a multiple of frame size %d (%d unpack alignment)",
-                offset, byte_align, align);
-        else if((static_cast<ALuint>(length)%byte_align) != 0) [[unlikely]]
-            context->setError(AL_INVALID_VALUE,
-                "Sub-range length %d is not a multiple of frame size %d (%d unpack alignment)",
-                length, byte_align, align);
-        else
-        {
-            /* offset -> byte offset, length -> sample count */
-            size_t byteoff{static_cast<ALuint>(offset)/byte_align * align * frame_size};
-            size_t samplen{static_cast<ALuint>(length)/byte_align * align};
-
-            void *dst = albuf->mData.data() + byteoff;
-            if(usrfmt->type == UserFmtIMA4 && albuf->mType == FmtShort)
-                Convert_int16_ima4(static_cast<int16_t*>(dst), static_cast<const al::byte*>(data),
-                    num_chans, samplen, align);
-            else if(usrfmt->type == UserFmtMSADPCM && albuf->mType == FmtShort)
-                Convert_int16_msadpcm(static_cast<int16_t*>(dst),
-                    static_cast<const al::byte*>(data), num_chans, samplen, align);
-            else
-            {
-                assert(al::to_underlying(usrfmt->type) == al::to_underlying(albuf->mType));
-                memcpy(dst, data, size_t{samplen} * frame_size);
-            }
-        }
+        assert(al::to_underlying(usrfmt->type) == al::to_underlying(albuf->mType));
+        memcpy(dst, data, static_cast<ALuint>(length));
     }
 }
 END_API_FUNC
@@ -1493,7 +1490,7 @@ START_API_FUNC
         break;
 
     case AL_BITS:
-        *value = static_cast<ALint>(albuf->bytesFromFmt() * 8);
+        *value = (albuf->mType == FmtIMA4) ? 4 : static_cast<ALint>(albuf->bytesFromFmt() * 8);
         break;
 
     case AL_CHANNELS:
@@ -1501,7 +1498,8 @@ START_API_FUNC
         break;
 
     case AL_SIZE:
-        *value = static_cast<ALint>(albuf->mSampleLen * albuf->frameSizeFromFmt());
+        *value = static_cast<ALint>(albuf->mSampleLen / albuf->mBlockAlign
+            * albuf->blockSizeFromFmt());
         break;
 
     case AL_UNPACK_BLOCK_ALIGNMENT_SOFT:

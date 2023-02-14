@@ -355,7 +355,7 @@ al::optional<FmtType> FmtFromUserFmt(UserFmtType type)
     case UserFmtMulaw: return FmtMulaw;
     case UserFmtAlaw: return FmtAlaw;
     case UserFmtIMA4: return FmtIMA4;
-    case UserFmtMSADPCM: break;
+    case UserFmtMSADPCM: return FmtMSADPCM;
     }
     return al::nullopt;
 }
@@ -539,20 +539,7 @@ void LoadData(ALCcontext *context, ALbuffer *ALBuf, ALsizei freq, ALuint size,
     if(!DstChannels) [[unlikely]]
         return context->setError(AL_INVALID_ENUM, "Invalid format");
 
-    /* IMA4 and MSADPCM convert to 16-bit short.
-     *
-     * TODO: Currently we can only map samples when they're not converted. To
-     * allow it would need some kind of double-buffering to hold onto a copy of
-     * the original data.
-     */
-    if((access&MAP_READ_WRITE_FLAGS))
-    {
-        if(SrcType == UserFmtIMA4 || SrcType == UserFmtMSADPCM) [[unlikely]]
-            return context->setError(AL_INVALID_VALUE, "%s samples cannot be mapped",
-                NameFromUserFmtType(SrcType));
-    }
-    const auto DstType = (SrcType == UserFmtMSADPCM) ? al::make_optional(FmtShort)
-        : FmtFromUserFmt(SrcType);
+    const auto DstType = FmtFromUserFmt(SrcType);
     if(!DstType) [[unlikely]]
         return context->setError(AL_INVALID_ENUM, "Invalid format");
 
@@ -636,26 +623,10 @@ void LoadData(ALCcontext *context, ALbuffer *ALBuf, ALsizei freq, ALuint size,
     eax_x_ram_clear(*context->mALDevice, *ALBuf);
 #endif
 
-    if(SrcType == UserFmtIMA4)
-    {
-        if(SrcData != nullptr && !ALBuf->mData.empty())
-            std::copy_n(SrcData, blocks*DstBlockSize, ALBuf->mData.begin());
-        ALBuf->mBlockAlign = align;
-    }
-    else if(SrcType == UserFmtMSADPCM)
-    {
-        assert(*DstType == FmtShort);
-        if(SrcData != nullptr && !ALBuf->mData.empty())
-            Convert_int16_msadpcm(reinterpret_cast<int16_t*>(ALBuf->mData.data()), SrcData,
-                NumChannels, blocks*align, align);
-        ALBuf->mBlockAlign = align;
-    }
-    else
-    {
-        if(SrcData != nullptr && !ALBuf->mData.empty())
-            std::copy_n(SrcData, blocks*DstBlockSize, ALBuf->mData.begin());
-        ALBuf->mBlockAlign = 1;
-    }
+    if(SrcData != nullptr && !ALBuf->mData.empty())
+        std::copy_n(SrcData, blocks*DstBlockSize, ALBuf->mData.begin());
+    ALBuf->mBlockAlign = (SrcType == UserFmtIMA4 || SrcType == UserFmtMSADPCM) ? align : 1;
+
     ALBuf->OriginalSize = size;
     ALBuf->OriginalType = SrcType;
 

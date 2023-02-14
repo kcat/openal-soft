@@ -203,6 +203,23 @@ constexpr int IMA4Index_adjust[16] = {
    -1,-1,-1,-1, 2, 4, 6, 8
 };
 
+/* MSADPCM Adaption table */
+constexpr int MSADPCMAdaption[16] = {
+    230, 230, 230, 230, 307, 409, 512, 614,
+    768, 614, 512, 409, 307, 230, 230, 230
+};
+
+/* MSADPCM Adaption Coefficient tables */
+constexpr int MSADPCMAdaptionCoeff[7][2] = {
+    { 256,    0 },
+    { 512, -256 },
+    {   0,    0 },
+    { 192,   64 },
+    { 240,    0 },
+    { 460, -208 },
+    { 392, -232 }
+};
+
 
 void SendSourceStoppedEvent(ContextBase *context, uint id)
 {
@@ -335,6 +352,94 @@ inline void LoadSamples<FmtIMA4>(float *RESTRICT dstSamples, const al::byte *src
     } while(1);
 }
 
+template<>
+inline void LoadSamples<FmtMSADPCM>(float *RESTRICT dstSamples, const al::byte *src,
+    const size_t srcChan, const size_t srcOffset, const size_t srcStep,
+    const size_t samplesPerBlock, const size_t samples) noexcept
+{
+    const size_t blockBytes{((samplesPerBlock-2)/2 + 7)*srcStep};
+
+    src += srcOffset/samplesPerBlock*blockBytes;
+    size_t skip{srcOffset % samplesPerBlock};
+
+    size_t wrote{0};
+    do {
+        const al::byte *input{src};
+        uint8_t blockpred{std::min(input[srcChan], uint8_t{8})};
+        input += srcStep;
+        int delta{input[2*srcChan + 0] | (input[2*srcChan + 1] << 8)};
+        input += srcStep*2;
+
+        int sampleHistory[2]{};
+        sampleHistory[0] = input[2*srcChan + 0] | (input[2*srcChan + 1]<<8);
+        input += srcStep*2;
+        sampleHistory[1] = input[2*srcChan + 0] | (input[2*srcChan + 1]<<8);
+        input += srcStep*2;
+
+        delta = (delta^0x8000) - 32768;
+        sampleHistory[0] = (sampleHistory[0]^0x8000) - 32768;
+        sampleHistory[1] = (sampleHistory[1]^0x8000) - 32768;
+
+        if(skip < 2) [[likely]]
+        {
+            if(!skip) [[likely]]
+            {
+                dstSamples[wrote++] = static_cast<float>(sampleHistory[1]) / 32768.0f;
+                if(wrote == samples) return;
+            }
+            else
+                --skip;
+            dstSamples[wrote++] = static_cast<float>(sampleHistory[0]) / 32768.0f;
+            if(wrote == samples) return;
+        }
+        else
+            skip -= 2;
+
+        int tempsamples[8]{};
+        size_t nibbleOffset{srcChan};
+        for(size_t i{2};i < samplesPerBlock;)
+        {
+            const size_t todo{minz(samplesPerBlock-i, 8)};
+
+            for(size_t j{0};j < todo;++j)
+            {
+                const size_t byteOffset{nibbleOffset>>1};
+                const size_t byteShift{((nibbleOffset&1)^1) * 4};
+                const int nibble{(input[byteOffset]>>byteShift) & 15};
+                nibbleOffset += srcStep;
+
+                int pred{(sampleHistory[0]*MSADPCMAdaptionCoeff[blockpred][0] +
+                    sampleHistory[1]*MSADPCMAdaptionCoeff[blockpred][1]) / 256};
+                pred += ((nibble^0x08) - 0x08) * delta;
+                pred  = clampi(pred, -32768, 32767);
+
+                sampleHistory[1] = sampleHistory[0];
+                sampleHistory[0] = pred;
+                tempsamples[j] = pred;
+
+                delta = (MSADPCMAdaption[nibble] * delta) / 256;
+                delta = maxi(16, delta);
+            }
+
+            if(skip < todo) [[likely]]
+            {
+                const size_t towrite{minz(todo-skip, samples-wrote)};
+                for(size_t j{0};j < towrite;++j)
+                    dstSamples[wrote++] = static_cast<float>(tempsamples[j+skip]) / 32768.0f;
+                if(wrote == samples)
+                    return;
+                skip = 0;
+            }
+            else
+                skip -= todo;
+
+            i += todo;
+        }
+
+        src += blockBytes;
+    } while(true);
+}
+
 void LoadSamples(float *dstSamples, const al::byte *src, const size_t srcChan,
     const size_t srcOffset, const FmtType srcType, const size_t srcStep,
     const size_t samplesPerBlock, const size_t samples) noexcept
@@ -353,6 +458,7 @@ void LoadSamples(float *dstSamples, const al::byte *src, const size_t srcChan,
     HANDLE_FMT(FmtMulaw);
     HANDLE_FMT(FmtAlaw);
     HANDLE_FMT(FmtIMA4);
+    HANDLE_FMT(FmtMSADPCM);
     }
 #undef HANDLE_FMT
 }

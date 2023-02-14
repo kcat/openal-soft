@@ -602,6 +602,7 @@ void LoadData(ALCcontext *context, ALbuffer *ALBuf, ALsizei freq, ALuint size,
     const ALuint NumChannels{ChannelsFromFmt(*DstChannels, ambiorder)};
     const ALuint DstBlockSize{NumChannels *
         ((*DstType == FmtIMA4) ? (align-1)/2 + 4 :
+        (*DstType == FmtMSADPCM) ? (align-2)/2 + 7 :
         (align * BytesFromFmt(*DstType)))};
     const size_t newsize{static_cast<size_t>(blocks) * DstBlockSize};
 
@@ -1490,7 +1491,8 @@ START_API_FUNC
         break;
 
     case AL_BITS:
-        *value = (albuf->mType == FmtIMA4) ? 4 : static_cast<ALint>(albuf->bytesFromFmt() * 8);
+        *value = (albuf->mType == FmtIMA4 || albuf->mType == FmtMSADPCM) ? 4
+            : static_cast<ALint>(albuf->bytesFromFmt() * 8);
         break;
 
     case AL_CHANNELS:

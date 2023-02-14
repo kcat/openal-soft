@@ -19,6 +19,7 @@ enum FmtType : unsigned char {
     FmtMulaw,
     FmtAlaw,
     FmtIMA4,
+    FmtMSADPCM,
 };
 enum FmtChannels : unsigned char {
     FmtMono,
@@ -98,6 +99,7 @@ struct BufferStorage {
     inline uint blockSizeFromFmt() const noexcept
     {
         if(mType == FmtIMA4) return ((mBlockAlign-1)/2 + 4) * channelsFromFmt();
+        if(mType == FmtMSADPCM) return ((mBlockAlign-2)/2 + 7) * channelsFromFmt();
         return frameSizeFromFmt();
     };
 

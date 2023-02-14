@@ -17,6 +17,7 @@ uint BytesFromFmt(FmtType type) noexcept
     case FmtMulaw: return sizeof(uint8_t);
     case FmtAlaw: return sizeof(uint8_t);
     case FmtIMA4: break;
+    case FmtMSADPCM: break;
     }
     return 0;
 }

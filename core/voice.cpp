@@ -364,6 +364,12 @@ inline void LoadSamples<FmtMSADPCM>(float *RESTRICT dstSamples, const al::byte *
 
     size_t wrote{0};
     do {
+        /* Each MS ADPCM block starts with an 8-bit block predictor, used to
+         * dictate how the two sample history values are mixed with the decoded
+         * sample, and an initial signed 16-bit delta value which scales the
+         * nibble sample value. This is followed by the two initial 16-bit
+         * sample history values.
+         */
         const al::byte *input{src};
         uint8_t blockpred{std::min(input[srcChan], uint8_t{8})};
         input += srcStep;
@@ -380,6 +386,9 @@ inline void LoadSamples<FmtMSADPCM>(float *RESTRICT dstSamples, const al::byte *
         sampleHistory[0] = (sampleHistory[0]^0x8000) - 32768;
         sampleHistory[1] = (sampleHistory[1]^0x8000) - 32768;
 
+        /* The second history sample is "older", so it's the first to be
+         * written out.
+         */
         if(skip < 2) [[likely]]
         {
             if(!skip) [[likely]]
@@ -399,6 +408,10 @@ inline void LoadSamples<FmtMSADPCM>(float *RESTRICT dstSamples, const al::byte *
         size_t nibbleOffset{srcChan};
         for(size_t i{2};i < samplesPerBlock;)
         {
+            /* The rest of the block is a series of nibbles, interleaved per-
+             * channel. Here we decode a set of (up to) 8 samples at a time to
+             * write out together.
+             */
             const size_t todo{minz(samplesPerBlock-i, 8)};
 
             for(size_t j{0};j < todo;++j)

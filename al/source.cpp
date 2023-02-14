@@ -334,8 +334,8 @@ double GetSourceOffset(ALsource *Source, ALenum name, ALCcontext *context)
     case AL_BYTE_OFFSET:
         if(BufferFmt->OriginalType == UserFmtIMA4)
         {
-            ALuint FrameBlockSize{BufferFmt->OriginalAlign};
-            ALuint align{(BufferFmt->OriginalAlign-1)/2 + 4};
+            ALuint FrameBlockSize{BufferFmt->mBlockAlign};
+            ALuint align{(BufferFmt->mBlockAlign-1)/2 + 4};
             ALuint BlockSize{align * BufferFmt->channelsFromFmt()};
 
             /* Round down to nearest ADPCM block */
@@ -343,7 +343,7 @@ double GetSourceOffset(ALsource *Source, ALenum name, ALCcontext *context)
         }
         else if(BufferFmt->OriginalType == UserFmtMSADPCM)
         {
-            ALuint FrameBlockSize{BufferFmt->OriginalAlign};
+            ALuint FrameBlockSize{BufferFmt->mBlockAlign};
             ALuint align{(FrameBlockSize-2)/2 + 7};
             ALuint BlockSize{align * BufferFmt->channelsFromFmt()};
 
@@ -390,8 +390,8 @@ double GetSourceLength(const ALsource *source, ALenum name)
     case AL_BYTE_LENGTH_SOFT:
         if(BufferFmt->OriginalType == UserFmtIMA4)
         {
-            ALuint FrameBlockSize{BufferFmt->OriginalAlign};
-            ALuint align{(BufferFmt->OriginalAlign-1)/2 + 4};
+            ALuint FrameBlockSize{BufferFmt->mBlockAlign};
+            ALuint align{(BufferFmt->mBlockAlign-1)/2 + 4};
             ALuint BlockSize{align * BufferFmt->channelsFromFmt()};
 
             /* Round down to nearest ADPCM block */
@@ -399,7 +399,7 @@ double GetSourceLength(const ALsource *source, ALenum name)
         }
         else if(BufferFmt->OriginalType == UserFmtMSADPCM)
         {
-            ALuint FrameBlockSize{BufferFmt->OriginalAlign};
+            ALuint FrameBlockSize{BufferFmt->mBlockAlign};
             ALuint align{(FrameBlockSize-2)/2 + 7};
             ALuint BlockSize{align * BufferFmt->channelsFromFmt()};
 
@@ -474,15 +474,15 @@ al::optional<VoicePos> GetSampleOffset(al::deque<ALbufferQueueItem> &BufferList,
         /* Determine the ByteOffset (and ensure it is block aligned) */
         if(BufferFmt->OriginalType == UserFmtIMA4)
         {
-            const ALuint align{(BufferFmt->OriginalAlign-1)/2 + 4};
+            const ALuint align{(BufferFmt->mBlockAlign-1)/2 + 4};
             Offset = std::floor(Offset / align / BufferFmt->channelsFromFmt());
-            Offset *= BufferFmt->OriginalAlign;
+            Offset *= BufferFmt->mBlockAlign;
         }
         else if(BufferFmt->OriginalType == UserFmtMSADPCM)
         {
-            const ALuint align{(BufferFmt->OriginalAlign-2)/2 + 7};
+            const ALuint align{(BufferFmt->mBlockAlign-2)/2 + 7};
             Offset = std::floor(Offset / align / BufferFmt->channelsFromFmt());
-            Offset *= BufferFmt->OriginalAlign;
+            Offset *= BufferFmt->mBlockAlign;
         }
         else
             Offset = std::floor(Offset / BufferFmt->channelsFromFmt());
@@ -530,14 +530,15 @@ void InitVoice(Voice *voice, ALsource *source, ALbufferQueueItem *BufferList, AL
         FmtSuperStereo : buffer->mChannels;
     voice->mFmtType = buffer->mType;
     voice->mFrameStep = buffer->channelsFromFmt();
-    voice->mFrameSize = buffer->frameSizeFromFmt();
+    voice->mBytesPerBlock = buffer->blockSizeFromFmt();
+    voice->mSamplesPerBlock = buffer->mBlockAlign;
     voice->mAmbiLayout = IsUHJ(voice->mFmtChannels) ? AmbiLayout::FuMa : buffer->mAmbiLayout;
     voice->mAmbiScaling = IsUHJ(voice->mFmtChannels) ? AmbiScaling::UHJ : buffer->mAmbiScaling;
     voice->mAmbiOrder = (voice->mFmtChannels == FmtSuperStereo) ? 1 : buffer->mAmbiOrder;
 
     if(buffer->mCallback) voice->mFlags.set(VoiceIsCallback);
     else if(source->SourceType == AL_STATIC) voice->mFlags.set(VoiceIsStatic);
-    voice->mNumCallbackSamples = 0;
+    voice->mNumCallbackBlocks = 0;
 
     voice->prepare(device);
 
@@ -1536,6 +1537,7 @@ try {
             newlist.emplace_back();
             newlist.back().mCallback = buffer->mCallback;
             newlist.back().mUserData = buffer->mUserData;
+            newlist.back().mBlockAlign = buffer->mBlockAlign;
             newlist.back().mSampleLen = buffer->mSampleLen;
             newlist.back().mLoopStart = buffer->mLoopStart;
             newlist.back().mLoopEnd = buffer->mLoopEnd;
@@ -3604,6 +3606,7 @@ START_API_FUNC
             BufferList = &item;
         }
         if(!buffer) continue;
+        BufferList->mBlockAlign = buffer->mBlockAlign;
         BufferList->mSampleLen = buffer->mSampleLen;
         BufferList->mLoopEnd = buffer->mSampleLen;
         BufferList->mSamples = buffer->mData.data();

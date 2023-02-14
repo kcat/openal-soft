@@ -8,6 +8,7 @@
 #include <type_traits>
 
 #include "almalloc.h"
+#include "altraits.h"
 
 namespace al {
 
@@ -35,13 +36,6 @@ constexpr T* data(T (&arr)[N]) noexcept
 template<typename T>
 constexpr const T* data(std::initializer_list<T> list) noexcept
 { return list.begin(); }
-
-
-template<typename T>
-struct type_identity { using type = T; };
-
-template<typename T>
-using type_identity_t = typename type_identity<T>::type;
 
 
 constexpr size_t dynamic_extent{static_cast<size_t>(-1)};

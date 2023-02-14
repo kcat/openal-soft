@@ -51,7 +51,6 @@ struct ALbuffer : public BufferStorage {
 
     UserFmtType OriginalType{UserFmtShort};
     ALuint OriginalSize{0};
-    ALuint OriginalAlign{0};
 
     ALuint UnpackAlign{0};
     ALuint PackAlign{0};

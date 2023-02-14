@@ -18,6 +18,7 @@ enum FmtType : unsigned char {
     FmtDouble,
     FmtMulaw,
     FmtAlaw,
+    FmtIMA4,
 };
 enum FmtChannels : unsigned char {
     FmtMono,
@@ -83,6 +84,7 @@ struct BufferStorage {
     FmtChannels mChannels{FmtMono};
     FmtType mType{FmtShort};
     uint mSampleLen{0u};
+    uint mBlockAlign{0u};
 
     AmbiLayout mAmbiLayout{AmbiLayout::FuMa};
     AmbiScaling mAmbiScaling{AmbiScaling::FuMa};
@@ -92,6 +94,12 @@ struct BufferStorage {
     inline uint channelsFromFmt() const noexcept
     { return ChannelsFromFmt(mChannels, mAmbiOrder); }
     inline uint frameSizeFromFmt() const noexcept { return channelsFromFmt() * bytesFromFmt(); }
+
+    inline uint blockSizeFromFmt() const noexcept
+    {
+        if(mType == FmtIMA4) return ((mBlockAlign-1)/2 + 4) * channelsFromFmt();
+        return frameSizeFromFmt();
+    };
 
     inline bool isBFormat() const noexcept { return IsBFormat(mChannels); }
 };

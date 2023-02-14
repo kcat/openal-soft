@@ -571,7 +571,7 @@ void LoadData(ALCcontext *context, ALbuffer *ALBuf, ALsizei freq, ALuint size,
         /* Can only preserve data with the same format and alignment. */
         if(ALBuf->mChannels != *DstChannels || ALBuf->OriginalType != SrcType) [[unlikely]]
             return context->setError(AL_INVALID_VALUE, "Preserving data of mismatched format");
-        if(ALBuf->OriginalAlign != align) [[unlikely]]
+        if(ALBuf->mBlockAlign != align) [[unlikely]]
             return context->setError(AL_INVALID_VALUE, "Preserving data of mismatched alignment");
         if(ALBuf->mAmbiOrder != ambiorder) [[unlikely]]
             return context->setError(AL_INVALID_VALUE, "Preserving data of mismatched order");
@@ -641,7 +641,7 @@ void LoadData(ALCcontext *context, ALbuffer *ALBuf, ALsizei freq, ALuint size,
         if(SrcData != nullptr && !ALBuf->mData.empty())
             Convert_int16_ima4(reinterpret_cast<int16_t*>(ALBuf->mData.data()), SrcData,
                 NumChannels, frames, align);
-        ALBuf->OriginalAlign = align;
+        ALBuf->mBlockAlign = align;
     }
     else if(SrcType == UserFmtMSADPCM)
     {
@@ -649,14 +649,14 @@ void LoadData(ALCcontext *context, ALbuffer *ALBuf, ALsizei freq, ALuint size,
         if(SrcData != nullptr && !ALBuf->mData.empty())
             Convert_int16_msadpcm(reinterpret_cast<int16_t*>(ALBuf->mData.data()), SrcData,
                 NumChannels, frames, align);
-        ALBuf->OriginalAlign = align;
+        ALBuf->mBlockAlign = align;
     }
     else
     {
         assert(DstType.has_value());
         if(SrcData != nullptr && !ALBuf->mData.empty())
             std::copy_n(SrcData, frames*FrameSize, ALBuf->mData.begin());
-        ALBuf->OriginalAlign = 1;
+        ALBuf->mBlockAlign = 1;
     }
     ALBuf->OriginalSize = size;
     ALBuf->OriginalType = SrcType;
@@ -722,7 +722,7 @@ void PrepareCallback(ALCcontext *context, ALbuffer *ALBuf, ALsizei freq,
 
     ALBuf->OriginalType = SrcType;
     ALBuf->OriginalSize = 0;
-    ALBuf->OriginalAlign = 1;
+    ALBuf->mBlockAlign = 1;
     ALBuf->Access = 0;
 
     ALBuf->mSampleRate = static_cast<ALuint>(freq);
@@ -1105,10 +1105,10 @@ START_API_FUNC
     else if(al::to_underlying(usrfmt->channels) != al::to_underlying(albuf->mChannels)
         || usrfmt->type != albuf->OriginalType) [[unlikely]]
         context->setError(AL_INVALID_ENUM, "Unpacking data with mismatched format");
-    else if(align != albuf->OriginalAlign) [[unlikely]]
+    else if(align != albuf->mBlockAlign) [[unlikely]]
         context->setError(AL_INVALID_VALUE,
             "Unpacking data with alignment %u does not match original alignment %u", align,
-            albuf->OriginalAlign);
+            albuf->mBlockAlign);
     else if(albuf->isBFormat() && albuf->UnpackAmbiOrder != albuf->mAmbiOrder) [[unlikely]]
         context->setError(AL_INVALID_VALUE, "Unpacking data with mismatched ambisonic order");
     else if(albuf->MappedAccess != 0) [[unlikely]]

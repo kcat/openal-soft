@@ -100,6 +100,7 @@ struct VoiceBufferItem {
     CallbackType mCallback{nullptr};
     void *mUserData{nullptr};
 
+    uint mBlockAlign{0u};
     uint mSampleLen{0u};
     uint mLoopStart{0u};
     uint mLoopEnd{0u};
@@ -219,7 +220,8 @@ struct Voice {
     FmtType mFmtType;
     uint mFrequency;
     uint mFrameStep; /**< In steps of the sample type size. */
-    uint mFrameSize; /**< In bytes. */
+    uint mBytesPerBlock; /**< Or for PCM formats, BytesPerFrame. */
+    uint mSamplesPerBlock; /**< Always 1 for PCM formats. */
     AmbiLayout mAmbiLayout;
     AmbiScaling mAmbiScaling;
     uint mAmbiOrder;
@@ -235,7 +237,7 @@ struct Voice {
     InterpState mResampleState;
 
     std::bitset<VoiceFlagCount> mFlags{};
-    uint mNumCallbackSamples{0};
+    uint mNumCallbackBlocks{0};
 
     struct TargetData {
         int FilterType;

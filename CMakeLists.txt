@@ -612,6 +612,7 @@ set(COMMON_OBJS
     common/alspan.h
     common/alstring.cpp
     common/alstring.h
+    common/altraits.h
     common/atomic.h
     common/comptr.h
     common/dynload.cpp

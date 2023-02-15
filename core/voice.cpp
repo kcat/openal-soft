@@ -266,18 +266,18 @@ const float *DoFilters(BiquadFilter &lpfilter, BiquadFilter &hpfilter, float *ds
 template<FmtType Type>
 inline void LoadSamples(float *RESTRICT dstSamples, const al::byte *src, const size_t srcChan,
     const size_t srcOffset, const size_t srcStep, const size_t /*samplesPerBlock*/,
-    const size_t samples) noexcept
+    const size_t samplesToLoad) noexcept
 {
     constexpr size_t sampleSize{sizeof(typename al::FmtTypeTraits<Type>::Type)};
     auto s = src + (srcOffset*srcStep + srcChan)*sampleSize;
 
-    al::LoadSampleArray<Type>(dstSamples, s, srcStep, samples);
+    al::LoadSampleArray<Type>(dstSamples, s, srcStep, samplesToLoad);
 }
 
 template<>
 inline void LoadSamples<FmtIMA4>(float *RESTRICT dstSamples, const al::byte *src,
     const size_t srcChan, const size_t srcOffset, const size_t srcStep,
-    const size_t samplesPerBlock, const size_t samples) noexcept
+    const size_t samplesPerBlock, const size_t samplesToLoad) noexcept
 {
     const size_t blockBytes{((samplesPerBlock-1)/2 + 4)*srcStep};
 
@@ -301,12 +301,12 @@ inline void LoadSamples<FmtIMA4>(float *RESTRICT dstSamples, const al::byte *src
         if(!skip) [[likely]]
         {
             dstSamples[wrote++] = static_cast<float>(sample) / 32768.0f;
-            if(wrote == samples) return;
+            if(wrote == samplesToLoad) return;
         }
         else
             --skip;
 
-        int tempsamples[8]{};
+        int samples[8]{};
         const al::byte *nibbleData{src + (srcStep+srcChan)*4};
         for(size_t i{1};i < samplesPerBlock;i+=8)
         {
@@ -323,7 +323,7 @@ inline void LoadSamples<FmtIMA4>(float *RESTRICT dstSamples, const al::byte *src
 
                 sample += IMA4Codeword[nibble] * IMAStep_size[index] / 8;
                 sample = clampi(sample, -32768, 32767);
-                tempsamples[j] = sample;
+                samples[j] = sample;
 
                 index += IMA4Index_adjust[nibble];
                 index = clampi(index, 0, al::size(IMAStep_size)-1);
@@ -340,10 +340,10 @@ inline void LoadSamples<FmtIMA4>(float *RESTRICT dstSamples, const al::byte *src
                 continue;
             }
 
-            const size_t todo{minz(8-skip, samples-wrote)};
+            const size_t todo{minz(8-skip, samplesToLoad-wrote)};
             for(size_t j{0};j < todo;++j)
-                dstSamples[wrote++] = static_cast<float>(tempsamples[j+skip]) / 32768.0f;
-            if(wrote == samples)
+                dstSamples[wrote++] = static_cast<float>(samples[j+skip]) / 32768.0f;
+            if(wrote == samplesToLoad)
                 return;
             skip = 0;
         }
@@ -355,7 +355,7 @@ inline void LoadSamples<FmtIMA4>(float *RESTRICT dstSamples, const al::byte *src
 template<>
 inline void LoadSamples<FmtMSADPCM>(float *RESTRICT dstSamples, const al::byte *src,
     const size_t srcChan, const size_t srcOffset, const size_t srcStep,
-    const size_t samplesPerBlock, const size_t samples) noexcept
+    const size_t samplesPerBlock, const size_t samplesToLoad) noexcept
 {
     const size_t blockBytes{((samplesPerBlock-2)/2 + 7)*srcStep};
 
@@ -394,17 +394,17 @@ inline void LoadSamples<FmtMSADPCM>(float *RESTRICT dstSamples, const al::byte *
             if(!skip) [[likely]]
             {
                 dstSamples[wrote++] = static_cast<float>(sampleHistory[1]) / 32768.0f;
-                if(wrote == samples) return;
+                if(wrote == samplesToLoad) return;
             }
             else
                 --skip;
             dstSamples[wrote++] = static_cast<float>(sampleHistory[0]) / 32768.0f;
-            if(wrote == samples) return;
+            if(wrote == samplesToLoad) return;
         }
         else
             skip -= 2;
 
-        int tempsamples[8]{};
+        int samples[8]{};
         size_t nibbleOffset{srcChan};
         for(size_t i{2};i < samplesPerBlock;)
         {
@@ -428,7 +428,7 @@ inline void LoadSamples<FmtMSADPCM>(float *RESTRICT dstSamples, const al::byte *
 
                 sampleHistory[1] = sampleHistory[0];
                 sampleHistory[0] = pred;
-                tempsamples[j] = pred;
+                samples[j] = pred;
 
                 delta = (MSADPCMAdaption[nibble] * delta) / 256;
                 delta = maxi(16, delta);
@@ -436,10 +436,10 @@ inline void LoadSamples<FmtMSADPCM>(float *RESTRICT dstSamples, const al::byte *
 
             if(skip < todo) [[likely]]
             {
-                const size_t towrite{minz(todo-skip, samples-wrote)};
+                const size_t towrite{minz(todo-skip, samplesToLoad-wrote)};
                 for(size_t j{0};j < towrite;++j)
-                    dstSamples[wrote++] = static_cast<float>(tempsamples[j+skip]) / 32768.0f;
-                if(wrote == samples)
+                    dstSamples[wrote++] = static_cast<float>(samples[j+skip]) / 32768.0f;
+                if(wrote == samplesToLoad)
                     return;
                 skip = 0;
             }
@@ -455,11 +455,11 @@ inline void LoadSamples<FmtMSADPCM>(float *RESTRICT dstSamples, const al::byte *
 
 void LoadSamples(float *dstSamples, const al::byte *src, const size_t srcChan,
     const size_t srcOffset, const FmtType srcType, const size_t srcStep,
-    const size_t samplesPerBlock, const size_t samples) noexcept
+    const size_t samplesPerBlock, const size_t samplesToLoad) noexcept
 {
 #define HANDLE_FMT(T) case T:                                                 \
     LoadSamples<T>(dstSamples, src, srcChan, srcOffset, srcStep,              \
-        samplesPerBlock, samples);                                            \
+        samplesPerBlock, samplesToLoad);                                      \
     break
 
     switch(srcType)

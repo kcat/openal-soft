@@ -361,7 +361,7 @@ inline void LoadSamples<FmtIMA4>(float *RESTRICT dstSamples, const al::byte *src
         }
 
         src += blockBytes;
-    } while(1);
+    } while(true);
 }
 
 template<>
@@ -435,7 +435,7 @@ inline void LoadSamples<FmtMSADPCM>(float *RESTRICT dstSamples, const al::byte *
 
         /* The rest of the block is a series of nibbles, interleaved per-
          * channel. Decode the number of samples that we need to skip in the
-         * block.
+         * block (will always be less than the block size).
          */
         const size_t startOffset{skip + 2};
         size_t nibbleOffset{srcChan};
@@ -447,31 +447,21 @@ inline void LoadSamples<FmtMSADPCM>(float *RESTRICT dstSamples, const al::byte *
             nibbleOffset += srcStep;
         }
 
-        int samples[8]{};
-        for(size_t i{startOffset};i < samplesPerBlock;)
+        /* Now decode the rest of the block, until the end of the block or the
+         * dst buffer is full.
+         */
+        const size_t todo{minz(samplesPerBlock-startOffset, samplesToLoad-wrote)};
+        for(size_t j{0};j < todo;++j)
         {
-            /* Here we decode a set of (up to) 8 samples at a time to write out
-             * together. This is more efficient than decoding each sample
-             * individually and checking for the end each time.
-             */
-            const size_t todo{minz(samplesPerBlock-i, 8)};
+            const size_t byteOffset{nibbleOffset>>1};
+            const size_t byteShift{((nibbleOffset&1)^1) * 4};
+            nibbleOffset += srcStep;
 
-            for(size_t j{0};j < todo;++j)
-            {
-                const size_t byteOffset{nibbleOffset>>1};
-                const size_t byteShift{((nibbleOffset&1)^1) * 4};
-                samples[j] = decode_sample((input[byteOffset]>>byteShift) & 15);
-                nibbleOffset += srcStep;
-            }
-
-            const size_t towrite{minz(todo, samplesToLoad-wrote)};
-            for(size_t j{0};j < towrite;++j)
-                dstSamples[wrote++] = static_cast<float>(samples[j]) / 32768.0f;
-            if(wrote == samplesToLoad)
-                return;
-
-            i += todo;
+            const int sample{decode_sample((input[byteOffset]>>byteShift) & 15)};
+            dstSamples[wrote++] = static_cast<float>(sample) / 32768.0f;
         }
+        if(wrote == samplesToLoad)
+            return;
 
         src += blockBytes;
     } while(true);

@@ -318,47 +318,42 @@ inline void LoadSamples<FmtIMA4>(float *RESTRICT dstSamples, const al::byte *src
         };
 
         /* The rest of the block is arranged as a series of nibbles, contained
-         * in 4 *bytes* per channel interleaved. So we can decode a series of 8
-         * samples at once from each of these 4 bytes.
+         * in 4 *bytes* per channel interleaved. So every 8 nibbles we need to
+         * skip 4 bytes per channel to get the next nibbles for this channel.
          *
-         * First, decode the 8 sample sets being skipped entirely (they still
-         * need to be decoded for proper state on the remaining samples).
+         * First, decode the samples that we need to skip in the block (will
+         * always be less than the block size). They need to be decoded despite
+         * being ignored for proper state on the remaining samples.
          */
-        const size_t startOffset{(skip&~size_t{7}) + 1};
         const al::byte *nibbleData{src + (srcStep+srcChan)*4};
-        for(;skip >= 8;skip-=8)
+        size_t nibbleOffset{0};
+        const size_t startOffset{skip + 1};
+        for(;skip;--skip)
         {
-            uint code{uint{nibbleData[0]} | (uint{nibbleData[1]} << 8)
-                | (uint{nibbleData[2]} << 16) | (uint{nibbleData[3]} << 24)};
-            nibbleData += 4*srcStep;
+            const size_t byteShift{(nibbleOffset&1) * 4};
+            const size_t wordOffset{(nibbleOffset>>1) & ~size_t{3}};
+            const size_t byteOffset{wordOffset*srcStep + ((nibbleOffset>>1)&3u)};
+            ++nibbleOffset;
 
-            for(size_t j{0};j < 8;++j)
-            {
-                std::ignore = decode_sample(code & 0xf);
-                code >>= 4;
-            }
+            std::ignore = decode_sample((nibbleData[byteOffset]>>byteShift) & 15u);
         }
 
-        int samples[8]{};
-        for(size_t i{startOffset};i < samplesPerBlock;i+=8)
+        /* Second, decode the rest of the block and write to the output, until
+         * the end of the block or the end of output.
+         */
+        const size_t todo{minz(samplesPerBlock-startOffset, samplesToLoad-wrote)};
+        for(size_t i{0};i < todo;++i)
         {
-            uint code{uint{nibbleData[0]} | (uint{nibbleData[1]} << 8)
-                | (uint{nibbleData[2]} << 16) | (uint{nibbleData[3]} << 24)};
-            nibbleData += 4*srcStep;
+            const size_t byteShift{(nibbleOffset&1) * 4};
+            const size_t wordOffset{(nibbleOffset>>1) & ~size_t{3}};
+            const size_t byteOffset{wordOffset*srcStep + ((nibbleOffset>>1)&3u)};
+            ++nibbleOffset;
 
-            for(size_t j{0};j < 8;++j)
-            {
-                samples[j] = decode_sample(code & 0xf);
-                code >>= 4;
-            }
-
-            const size_t todo{minz(8-skip, samplesToLoad-wrote)};
-            for(size_t j{0};j < todo;++j)
-                dstSamples[wrote++] = static_cast<float>(samples[j+skip]) / 32768.0f;
-            if(wrote == samplesToLoad)
-                return;
-            skip = 0;
+            const int result{decode_sample((nibbleData[byteOffset]>>byteShift) & 15u)};
+            dstSamples[wrote++] = static_cast<float>(result) / 32768.0f;
         }
+        if(wrote == samplesToLoad)
+            return;
 
         src += blockBytes;
     } while(true);
@@ -434,8 +429,7 @@ inline void LoadSamples<FmtMSADPCM>(float *RESTRICT dstSamples, const al::byte *
         };
 
         /* The rest of the block is a series of nibbles, interleaved per-
-         * channel. Decode the number of samples that we need to skip in the
-         * block (will always be less than the block size).
+         * channel. First, skip samples.
          */
         const size_t startOffset{skip + 2};
         size_t nibbleOffset{srcChan};
@@ -443,12 +437,13 @@ inline void LoadSamples<FmtMSADPCM>(float *RESTRICT dstSamples, const al::byte *
         {
             const size_t byteOffset{nibbleOffset>>1};
             const size_t byteShift{((nibbleOffset&1)^1) * 4};
-            std::ignore = decode_sample((input[byteOffset]>>byteShift) & 15);
             nibbleOffset += srcStep;
+
+            std::ignore = decode_sample((input[byteOffset]>>byteShift) & 15);
         }
 
         /* Now decode the rest of the block, until the end of the block or the
-         * dst buffer is full.
+         * dst buffer is filled.
          */
         const size_t todo{minz(samplesPerBlock-startOffset, samplesToLoad-wrote)};
         for(size_t j{0};j < todo;++j)

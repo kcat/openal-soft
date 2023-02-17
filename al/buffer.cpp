@@ -515,9 +515,9 @@ void PrepareCallback(ALCcontext *context, ALbuffer *ALBuf, ALsizei freq,
 
     ALBuf->OriginalType = SrcType;
     ALBuf->OriginalSize = 0;
-    ALBuf->mBlockAlign = 1;
     ALBuf->Access = 0;
 
+    ALBuf->mBlockAlign = (SrcType == UserFmtIMA4 || SrcType == UserFmtMSADPCM) ? align : 1;
     ALBuf->mSampleRate = static_cast<ALuint>(freq);
     ALBuf->mChannels = *DstChannels;
     ALBuf->mType = *DstType;

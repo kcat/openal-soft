@@ -76,8 +76,8 @@ static ALuint LoadSound(const char *filename)
     }
 
     /* Detect a suitable format to load. Formats like Vorbis and Opus use float
-     * natively, so load as float to avoid clipping. Formats larger than 16-bit
-     * can also use float to preserve a bit more precision.
+     * natively, so load as float to avoid clipping when possible. Formats
+     * larger than 16-bit can also use float to preserve a bit more precision.
      */
     switch((sfinfo.format&SF_FORMAT_SUBMASK))
     {
@@ -94,9 +94,9 @@ static ALuint LoadSound(const char *filename)
             sample_format = Float;
         break;
     case SF_FORMAT_IMA_ADPCM:
-        /* ADPCM formats require setting a block alignment, which libsndfile
-         * doesn't explicitly provide and needs to be read from the wave 'fmt '
-         * chunk manually.
+        /* ADPCM formats require setting a block alignment as specified in the
+         * file, which needs to be read from the wave 'fmt ' chunk manually
+         * since libsndfile doesn't provide it in a format-agnostic way.
          */
         if(sfinfo.channels <= 2 && (sfinfo.format&SF_FORMAT_TYPEMASK) == SF_FORMAT_WAV
             && alIsExtensionPresent("AL_EXT_IMA4")
@@ -113,47 +113,47 @@ static ALuint LoadSound(const char *filename)
 
     if(sample_format == IMA4 || sample_format == MSADPCM)
     {
+        /* For ADPCM, lookup the wave file's "fmt " chunk, which is a
+         * WAVEFORMATEX-based structure for the audio format.
+         */
         SF_CHUNK_INFO inf = { "fmt ", 4, 0, NULL };
         SF_CHUNK_ITERATOR *iter = sf_get_chunk_iterator(sndfile, &inf);
-        if(iter)
+
+        /* If there's an issue getting the chunk or block alignment, load as
+         * 16-bit and have libsndfile do the conversion.
+         */
+        if(!iter || sf_get_chunk_size(iter, &inf) != SF_ERR_NO_ERROR)
+            sample_format = Int16;
+        else
         {
-            if(sf_get_chunk_size(iter, &inf) != SF_ERR_NO_ERROR)
-                iter = NULL;
+            ALubyte *fmtbuf = calloc(inf.datalen, 1);
+            inf.data = fmtbuf;
+            if(sf_get_chunk_data(iter, &inf) != SF_ERR_NO_ERROR)
+                sample_format = Int16;
             else
             {
-                ALubyte *fmtbuf = calloc(inf.datalen, 1);
-                inf.data = fmtbuf;
-                if(sf_get_chunk_data(iter, &inf) != SF_ERR_NO_ERROR)
-                    iter = NULL;
+                /* Read the nBlockAlign field, and convert from bytes- to
+                 * samples-per-block (verifying it's valid by converting back
+                 * and comparing to the original value).
+                 */
+                byteblockalign = fmtbuf[12] | (fmtbuf[13]<<8);
+                if(sample_format == IMA4)
+                {
+                    splblockalign = (byteblockalign/sfinfo.channels - 4)/4*8 + 1;
+                    if(splblockalign < 1
+                        || ((splblockalign-1)/2 + 4)*sfinfo.channels != byteblockalign)
+                        sample_format = Int16;
+                }
                 else
                 {
-                    /* Read the nBlockAlign field, and convert from bytes- to
-                     * samples-per-block (verifying it's valid by converting
-                     * back and comparing to the original value).
-                     */
-                    byteblockalign = fmtbuf[12] | (fmtbuf[13]<<8);
-                    if(sample_format == IMA4)
-                    {
-                        splblockalign = (byteblockalign/sfinfo.channels - 4)/4*8 + 1;
-                        if(((splblockalign-1)/2 + 4)*sfinfo.channels != byteblockalign)
-                            iter = NULL;
-                    }
-                    else
-                    {
-                        splblockalign = (byteblockalign/sfinfo.channels - 7)*2 + 2;
-                        if(((splblockalign-2)/2 + 7)*sfinfo.channels != byteblockalign)
-                            iter = NULL;
-                    }
+                    splblockalign = (byteblockalign/sfinfo.channels - 7)*2 + 2;
+                    if(splblockalign < 2
+                        || ((splblockalign-2)/2 + 7)*sfinfo.channels != byteblockalign)
+                        sample_format = Int16;
                 }
-                free(fmtbuf);
             }
+            free(fmtbuf);
         }
-
-        /* If there was an issue getting the block alignment, have libsndfile
-         * do the conversion and load as 16-bit.
-         */
-        if(!iter)
-            sample_format = Int16;
     }
 
     if(sample_format == Int16)
@@ -167,7 +167,7 @@ static ALuint LoadSound(const char *filename)
         byteblockalign = sfinfo.channels * 4;
     }
 
-    /* Get the sound format, and figure out the OpenAL format */
+    /* Figure out the OpenAL format from the file and desired sample type. */
     format = AL_NONE;
     if(sfinfo.channels == 1)
     {

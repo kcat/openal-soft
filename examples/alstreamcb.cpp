@@ -157,35 +157,35 @@ struct StreamPlayer {
         int splblocksize{}, byteblocksize{};
         if(mSampleFormat == SampleType::IMA4 || mSampleFormat == SampleType::MSADPCM)
         {
-            bool allgood{false};
             SF_CHUNK_INFO inf{ "fmt ", 4, 0, NULL };
-            if(SF_CHUNK_ITERATOR *iter = sf_get_chunk_iterator(mSndfile, &inf))
+            SF_CHUNK_ITERATOR *iter = sf_get_chunk_iterator(mSndfile, &inf);
+            if(!iter || sf_get_chunk_size(iter, &inf) != SF_ERR_NO_ERROR)
+                mSampleFormat = SampleType::Int16;
+            else
             {
-                if(sf_get_chunk_size(iter, &inf) == SF_ERR_NO_ERROR)
+                auto fmtbuf = std::make_unique<ALubyte[]>(inf.datalen);
+                inf.data = fmtbuf.get();
+                if(sf_get_chunk_data(iter, &inf) != SF_ERR_NO_ERROR)
+                    mSampleFormat = SampleType::Int16;
+                else
                 {
-                    auto fmtbuf = std::make_unique<unsigned char[]>(inf.datalen);
-                    inf.data = fmtbuf.get();
-                    if(sf_get_chunk_data(iter, &inf) == SF_ERR_NO_ERROR)
+                    byteblocksize = fmtbuf[12] | (fmtbuf[13]<<8u);
+                    if(mSampleFormat == SampleType::IMA4)
                     {
-                        byteblocksize = fmtbuf[12] | (fmtbuf[13]<<8u);
-                        if(mSampleFormat == SampleType::IMA4)
-                        {
-                            splblocksize = (byteblocksize/mSfInfo.channels - 4)/4*8 + 1;
-                            if(((splblocksize-1)/2 + 4)*mSfInfo.channels == byteblocksize)
-                                allgood = true;
-                        }
-                        else
-                        {
-                            splblocksize = (byteblocksize/mSfInfo.channels - 7)*2 + 2;
-                            if(((splblocksize-2)/2 + 7)*mSfInfo.channels == byteblocksize)
-                                allgood = true;
-                        }
+                        splblocksize = (byteblocksize/mSfInfo.channels - 4)/4*8 + 1;
+                        if(splblocksize < 1
+                            || ((splblocksize-1)/2 + 4)*mSfInfo.channels != byteblocksize)
+                            mSampleFormat = SampleType::Int16;
+                    }
+                    else
+                    {
+                        splblocksize = (byteblocksize/mSfInfo.channels - 7)*2 + 2;
+                        if(splblocksize < 2
+                            || ((splblocksize-2)/2 + 7)*mSfInfo.channels != byteblocksize)
+                            mSampleFormat = SampleType::Int16;
                     }
                 }
             }
-
-            if(!allgood)
-                mSampleFormat = SampleType::Int16;
         }
 
         if(mSampleFormat == SampleType::Int16)

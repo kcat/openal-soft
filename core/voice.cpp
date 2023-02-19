@@ -779,12 +779,6 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
             const al::span<float> dst) { std::copy_n(src, dst.size(), dst.begin()); }}
         : mResampler};
 
-    /* For callback buffers, this is the sample offset for the start of the
-     * buffer data. This is needed with compressed formats to track how many
-     * samples into a block we're starting from.
-     */
-    const uint callbackBase{RoundDown(static_cast<uint>(maxi(DataPosInt, 0)), mSamplesPerBlock)};
-
     /* UHJ2 and SuperStereo only have 2 buffer channels, but 3 mixing channels
      * (3rd channel is generated from decoding).
      */
@@ -894,6 +888,7 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
                         mFrameStep, srcSampleDelay, srcBufferSize, al::to_address(resampleBuffer));
                 else if(mFlags.test(VoiceIsCallback))
                 {
+                    const uint callbackBase{mCallbackBlockBase * mSamplesPerBlock};
                     const size_t bufferOffset{uintPos - callbackBase};
                     const size_t needSamples{bufferOffset + srcBufferSize - srcSampleDelay};
                     const size_t needBlocks{(needSamples + mSamplesPerBlock-1) / mSamplesPerBlock};
@@ -1091,8 +1086,8 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
         else if(mFlags.test(VoiceIsCallback))
         {
             /* Handle callback buffer source */
-            const uint samplesDone{static_cast<uint>(DataPosInt) - callbackBase};
-            const uint blocksDone{samplesDone / mSamplesPerBlock};
+            const uint currentBlock{static_cast<uint>(DataPosInt) / mSamplesPerBlock};
+            const uint blocksDone{currentBlock - mCallbackBlockBase};
             if(blocksDone < mNumCallbackBlocks)
             {
                 const size_t byteOffset{blocksDone*mBytesPerBlock};
@@ -1100,11 +1095,13 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
                 al::byte *data{BufferListItem->mSamples};
                 std::copy(data+byteOffset, data+byteEnd, data);
                 mNumCallbackBlocks -= blocksDone;
+                mCallbackBlockBase += blocksDone;
             }
             else
             {
                 BufferListItem = nullptr;
                 mNumCallbackBlocks = 0;
+                mCallbackBlockBase += blocksDone;
             }
         }
         else

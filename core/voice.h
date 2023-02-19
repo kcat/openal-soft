@@ -238,6 +238,7 @@ struct Voice {
 
     std::bitset<VoiceFlagCount> mFlags{};
     uint mNumCallbackBlocks{0};
+    uint mCallbackBlockBase{0};
 
     struct TargetData {
         int FilterType;

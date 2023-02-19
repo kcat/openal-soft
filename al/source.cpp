@@ -649,7 +649,8 @@ bool SetVoiceOffset(Voice *oldvoice, const VoicePos &vpos, ALsource *source, ALC
     newvoice->mCurrentBuffer.store(vpos.bufferitem, std::memory_order_relaxed);
     newvoice->mStartTime = oldvoice->mStartTime;
     newvoice->mFlags.reset();
-    if(vpos.pos > 0 || vpos.frac > 0 || vpos.bufferitem != &source->mQueue.front())
+    if(vpos.pos > 0 || (vpos.pos == 0 && vpos.frac > 0)
+        || vpos.bufferitem != &source->mQueue.front())
         newvoice->mFlags.set(VoiceIsFading);
     InitVoice(newvoice, source, vpos.bufferitem, context, device);
     source->VoiceIdx = vidx;
@@ -2649,7 +2650,8 @@ void StartSources(ALCcontext *const context, const al::span<ALsource*> srchandle
                 voice->mPosition.store(vpos->pos, std::memory_order_relaxed);
                 voice->mPositionFrac.store(vpos->frac, std::memory_order_relaxed);
                 voice->mCurrentBuffer.store(vpos->bufferitem, std::memory_order_relaxed);
-                if(vpos->pos!=0 || vpos->frac!=0 || vpos->bufferitem!=&source->mQueue.front())
+                if(vpos->pos > 0 || (vpos->pos == 0 && vpos->frac > 0)
+                    || vpos->bufferitem != &source->mQueue.front())
                     voice->mFlags.set(VoiceIsFading);
             }
         }

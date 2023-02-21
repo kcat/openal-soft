@@ -579,11 +579,8 @@ START_API_FUNC
 
     if(!values)
         context->setError(AL_INVALID_VALUE, "NULL pointer");
-    else switch(pname)
-    {
-    default:
+    else
         context->setError(AL_INVALID_VALUE, "Invalid boolean-vector property 0x%04x", pname);
-    }
 }
 END_API_FUNC
 
@@ -612,11 +609,8 @@ START_API_FUNC
 
     if(!values)
         context->setError(AL_INVALID_VALUE, "NULL pointer");
-    else switch(pname)
-    {
-    default:
+    else
         context->setError(AL_INVALID_VALUE, "Invalid double-vector property 0x%04x", pname);
-    }
 }
 END_API_FUNC
 
@@ -645,11 +639,8 @@ START_API_FUNC
 
     if(!values)
         context->setError(AL_INVALID_VALUE, "NULL pointer");
-    else switch(pname)
-    {
-    default:
+    else
         context->setError(AL_INVALID_VALUE, "Invalid float-vector property 0x%04x", pname);
-    }
 }
 END_API_FUNC
 
@@ -678,11 +669,8 @@ START_API_FUNC
 
     if(!values)
         context->setError(AL_INVALID_VALUE, "NULL pointer");
-    else switch(pname)
-    {
-    default:
+    else
         context->setError(AL_INVALID_VALUE, "Invalid integer-vector property 0x%04x", pname);
-    }
 }
 END_API_FUNC
 
@@ -711,11 +699,8 @@ START_API_FUNC
 
     if(!values)
         context->setError(AL_INVALID_VALUE, "NULL pointer");
-    else switch(pname)
-    {
-    default:
+    else
         context->setError(AL_INVALID_VALUE, "Invalid integer64-vector property 0x%04x", pname);
-    }
 }
 END_API_FUNC
 
@@ -738,11 +723,8 @@ START_API_FUNC
 
     if(!values)
         context->setError(AL_INVALID_VALUE, "NULL pointer");
-    else switch(pname)
-    {
-    default:
+    else
         context->setError(AL_INVALID_VALUE, "Invalid pointer-vector property 0x%04x", pname);
-    }
 }
 END_API_FUNC
 

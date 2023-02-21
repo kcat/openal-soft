@@ -710,12 +710,8 @@ START_API_FUNC
     if(!slot) [[unlikely]]
         return context->setError(AL_INVALID_NAME, "Invalid effect slot ID %u", effectslot);
 
-    switch(param)
-    {
-    default:
-        return context->setError(AL_INVALID_ENUM,
-            "Invalid effect slot integer-vector property 0x%04x", param);
-    }
+    return context->setError(AL_INVALID_ENUM,
+        "Invalid effect slot integer-vector property 0x%04x", param);
 }
 END_API_FUNC
 
@@ -767,12 +763,8 @@ START_API_FUNC
     if(!slot) [[unlikely]]
         return context->setError(AL_INVALID_NAME, "Invalid effect slot ID %u", effectslot);
 
-    switch(param)
-    {
-    default:
-        return context->setError(AL_INVALID_ENUM,
-            "Invalid effect slot float-vector property 0x%04x", param);
-    }
+    return context->setError(AL_INVALID_ENUM,
+        "Invalid effect slot float-vector property 0x%04x", param);
 }
 END_API_FUNC
 
@@ -840,12 +832,7 @@ START_API_FUNC
     if(!slot) [[unlikely]]
         return context->setError(AL_INVALID_NAME, "Invalid effect slot ID %u", effectslot);
 
-    switch(param)
-    {
-    default:
-        context->setError(AL_INVALID_ENUM, "Invalid effect slot integer-vector property 0x%04x",
-            param);
-    }
+    context->setError(AL_INVALID_ENUM, "Invalid effect slot integer-vector property 0x%04x", param);
 }
 END_API_FUNC
 
@@ -890,12 +877,7 @@ START_API_FUNC
     if(!slot) [[unlikely]]
         return context->setError(AL_INVALID_NAME, "Invalid effect slot ID %u", effectslot);
 
-    switch(param)
-    {
-    default:
-        context->setError(AL_INVALID_ENUM, "Invalid effect slot float-vector property 0x%04x",
-            param);
-    }
+    context->setError(AL_INVALID_ENUM, "Invalid effect slot float-vector property 0x%04x", param);
 }
 END_API_FUNC
 

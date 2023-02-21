@@ -986,11 +986,8 @@ START_API_FUNC
 
     if(LookupBuffer(device, buffer) == nullptr) [[unlikely]]
         context->setError(AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
-    else switch(param)
-    {
-    default:
+    else
         context->setError(AL_INVALID_ENUM, "Invalid buffer float property 0x%04x", param);
-    }
 }
 END_API_FUNC
 
@@ -1006,11 +1003,8 @@ START_API_FUNC
 
     if(LookupBuffer(device, buffer) == nullptr) [[unlikely]]
         context->setError(AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
-    else switch(param)
-    {
-    default:
+    else
         context->setError(AL_INVALID_ENUM, "Invalid buffer 3-float property 0x%04x", param);
-    }
 }
 END_API_FUNC
 
@@ -1027,11 +1021,8 @@ START_API_FUNC
         context->setError(AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
     else if(!values) [[unlikely]]
         context->setError(AL_INVALID_VALUE, "NULL pointer");
-    else switch(param)
-    {
-    default:
+    else
         context->setError(AL_INVALID_ENUM, "Invalid buffer float-vector property 0x%04x", param);
-    }
 }
 END_API_FUNC
 
@@ -1110,11 +1101,8 @@ START_API_FUNC
 
     if(LookupBuffer(device, buffer) == nullptr) [[unlikely]]
         context->setError(AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
-    else switch(param)
-    {
-    default:
+    else
         context->setError(AL_INVALID_ENUM, "Invalid buffer 3-integer property 0x%04x", param);
-    }
 }
 END_API_FUNC
 
@@ -1184,11 +1172,8 @@ START_API_FUNC
         context->setError(AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
     else if(!value) [[unlikely]]
         context->setError(AL_INVALID_VALUE, "NULL pointer");
-    else switch(param)
-    {
-    default:
+    else
         context->setError(AL_INVALID_ENUM, "Invalid buffer float property 0x%04x", param);
-    }
 }
 END_API_FUNC
 
@@ -1205,11 +1190,8 @@ START_API_FUNC
         context->setError(AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
     else if(!value1 || !value2 || !value3) [[unlikely]]
         context->setError(AL_INVALID_VALUE, "NULL pointer");
-    else switch(param)
-    {
-    default:
+    else
         context->setError(AL_INVALID_ENUM, "Invalid buffer 3-float property 0x%04x", param);
-    }
 }
 END_API_FUNC
 
@@ -1233,11 +1215,8 @@ START_API_FUNC
         context->setError(AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
     else if(!values) [[unlikely]]
         context->setError(AL_INVALID_VALUE, "NULL pointer");
-    else switch(param)
-    {
-    default:
+    else
         context->setError(AL_INVALID_ENUM, "Invalid buffer float-vector property 0x%04x", param);
-    }
 }
 END_API_FUNC
 
@@ -1313,11 +1292,8 @@ START_API_FUNC
         context->setError(AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
     else if(!value1 || !value2 || !value3) [[unlikely]]
         context->setError(AL_INVALID_VALUE, "NULL pointer");
-    else switch(param)
-    {
-    default:
+    else
         context->setError(AL_INVALID_ENUM, "Invalid buffer 3-integer property 0x%04x", param);
-    }
 }
 END_API_FUNC
 
@@ -1435,11 +1411,8 @@ START_API_FUNC
         context->setError(AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
     else if(!value1 || !value2 || !value3) [[unlikely]]
         context->setError(AL_INVALID_VALUE, "NULL pointer");
-    else switch(param)
-    {
-    default:
+    else
         context->setError(AL_INVALID_ENUM, "Invalid buffer 3-pointer property 0x%04x", param);
-    }
 }
 END_API_FUNC
 
@@ -1463,11 +1436,8 @@ START_API_FUNC
         context->setError(AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
     else if(!values) [[unlikely]]
         context->setError(AL_INVALID_VALUE, "NULL pointer");
-    else switch(param)
-    {
-    default:
+    else
         context->setError(AL_INVALID_ENUM, "Invalid buffer pointer-vector property 0x%04x", param);
-    }
 }
 END_API_FUNC
 

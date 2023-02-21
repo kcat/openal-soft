@@ -198,11 +198,7 @@ START_API_FUNC
     if(!context) [[unlikely]] return;
 
     std::lock_guard<std::mutex> _{context->mPropLock};
-    switch(param)
-    {
-    default:
-        context->setError(AL_INVALID_ENUM, "Invalid listener integer property");
-    }
+    context->setError(AL_INVALID_ENUM, "Invalid listener integer property");
 }
 END_API_FUNC
 
@@ -222,11 +218,7 @@ START_API_FUNC
     if(!context) [[unlikely]] return;
 
     std::lock_guard<std::mutex> _{context->mPropLock};
-    switch(param)
-    {
-    default:
-        context->setError(AL_INVALID_ENUM, "Invalid listener 3-integer property");
-    }
+    context->setError(AL_INVALID_ENUM, "Invalid listener 3-integer property");
 }
 END_API_FUNC
 
@@ -262,11 +254,8 @@ START_API_FUNC
     std::lock_guard<std::mutex> _{context->mPropLock};
     if(!values) [[unlikely]]
         context->setError(AL_INVALID_VALUE, "NULL pointer");
-    else switch(param)
-    {
-    default:
+    else
         context->setError(AL_INVALID_ENUM, "Invalid listener integer-vector property");
-    }
 }
 END_API_FUNC
 
@@ -378,11 +367,8 @@ START_API_FUNC
     std::lock_guard<std::mutex> _{context->mPropLock};
     if(!value)
         context->setError(AL_INVALID_VALUE, "NULL pointer");
-    else switch(param)
-    {
-    default:
+    else
         context->setError(AL_INVALID_ENUM, "Invalid listener integer property");
-    }
 }
 END_API_FUNC
 

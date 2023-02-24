@@ -378,7 +378,7 @@ inline void LoadSamples<FmtMSADPCM>(float *RESTRICT dstSamples, const al::byte *
          * sample history values.
          */
         const al::byte *input{src};
-        uint8_t blockpred{std::min(input[srcChan], uint8_t{8})};
+        const uint8_t blockpred{std::min(input[srcChan], uint8_t{6})};
         input += srcStep;
         int delta{input[2*srcChan + 0] | (input[2*srcChan + 1] << 8)};
         input += srcStep*2;
@@ -389,6 +389,7 @@ inline void LoadSamples<FmtMSADPCM>(float *RESTRICT dstSamples, const al::byte *
         sampleHistory[1] = input[2*srcChan + 0] | (input[2*srcChan + 1]<<8);
         input += srcStep*2;
 
+        const auto coeffs = al::as_span(MSADPCMAdaptionCoeff[blockpred]);
         delta = (delta^0x8000) - 32768;
         sampleHistory[0] = (sampleHistory[0]^0x8000) - 32768;
         sampleHistory[1] = (sampleHistory[1]^0x8000) - 32768;
@@ -412,10 +413,9 @@ inline void LoadSamples<FmtMSADPCM>(float *RESTRICT dstSamples, const al::byte *
         else
             skip -= 2;
 
-        auto decode_sample = [&sampleHistory,&delta,blockpred](const int nibble)
+        auto decode_sample = [&sampleHistory,&delta,coeffs](const int nibble)
         {
-            int pred{(sampleHistory[0]*MSADPCMAdaptionCoeff[blockpred][0] +
-                sampleHistory[1]*MSADPCMAdaptionCoeff[blockpred][1]) / 256};
+            int pred{(sampleHistory[0]*coeffs[0] + sampleHistory[1]*coeffs[1]) / 256};
             pred += ((nibble^0x08) - 0x08) * delta;
             pred  = clampi(pred, -32768, 32767);
 

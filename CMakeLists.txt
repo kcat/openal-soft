@@ -75,6 +75,13 @@ if(NOT CMAKE_DEBUG_POSTFIX)
         FORCE)
 endif()
 
+set(DEFAULT_TARGET_PROPS
+    # Require C++14.
+    CXX_STANDARD 14
+    CXX_STANDARD_REQUIRED TRUE
+    # Prefer C11, but support C99 and earlier when possible.
+    C_STANDARD 11)
+
 set(CMAKE_MODULE_PATH "${OpenAL_SOURCE_DIR}/cmake")
 
 include(CheckFunctionExists)
@@ -177,13 +184,6 @@ set(LIB_VERSION_NUM ${LIB_MAJOR_VERSION},${LIB_MINOR_VERSION},${LIB_REVISION},0)
 
 set(EXPORT_DECL "")
 
-
-# Require C++14
-set(CMAKE_CXX_STANDARD 14)
-set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
-
-# Prefer C11, but support C99 and C90 too.
-set(CMAKE_C_STANDARD 11)
 
 if(NOT WIN32)
     # Check if _POSIX_C_SOURCE and _XOPEN_SOURCE needs to be set for POSIX functions
@@ -1323,7 +1323,7 @@ add_library(common STATIC EXCLUDE_FROM_ALL ${COMMON_OBJS})
 target_include_directories(common PRIVATE ${OpenAL_BINARY_DIR} ${OpenAL_SOURCE_DIR}/include)
 target_compile_definitions(common PRIVATE ${CPP_DEFS})
 target_compile_options(common PRIVATE ${C_FLAGS})
-set_target_properties(common PROPERTIES POSITION_INDEPENDENT_CODE TRUE)
+set_target_properties(common PROPERTIES ${DEFAULT_TARGET_PROPS} POSITION_INDEPENDENT_CODE TRUE)
 
 
 unset(HAS_ROUTER)
@@ -1367,8 +1367,8 @@ else()
             ${OpenAL_SOURCE_DIR}/common
             ${OpenAL_BINARY_DIR}
         )
-        set_target_properties(OpenAL PROPERTIES PREFIX "")
-        set_target_properties(OpenAL PROPERTIES OUTPUT_NAME ${LIBNAME})
+        set_target_properties(OpenAL PROPERTIES ${DEFAULT_TARGET_PROPS} PREFIX ""
+            OUTPUT_NAME ${LIBNAME})
         if(TARGET build_version)
             add_dependencies(OpenAL build_version)
         endif()
@@ -1394,7 +1394,7 @@ else()
         # Sets framework name to soft_oal to avoid ambiguity with the system OpenAL.framework
         set(LIBNAME "soft_oal")
         if(GIT_FOUND)
-            EXECUTE_PROCESS(COMMAND ${GIT_EXECUTABLE} rev-list --count HEAD
+            execute_process(COMMAND ${GIT_EXECUTABLE} rev-list --count HEAD
                 TIMEOUT 5
                 OUTPUT_VARIABLE BUNDLE_VERSION
                 OUTPUT_STRIP_TRAILING_WHITESPACE)
@@ -1439,7 +1439,8 @@ target_include_directories(${IMPL_TARGET}
     ${OpenAL_SOURCE_DIR}/common
 )
 
-set_target_properties(${IMPL_TARGET} PROPERTIES OUTPUT_NAME ${LIBNAME}
+set_target_properties(${IMPL_TARGET} PROPERTIES ${DEFAULT_TARGET_PROPS}
+    OUTPUT_NAME ${LIBNAME}
     VERSION ${LIB_VERSION}
     SOVERSION ${LIB_MAJOR_VERSION}
 )
@@ -1570,6 +1571,7 @@ if(ALSOFT_UTILS)
     target_include_directories(openal-info PRIVATE ${OpenAL_SOURCE_DIR}/common)
     target_compile_options(openal-info PRIVATE ${C_FLAGS})
     target_link_libraries(openal-info PRIVATE ${LINKER_FLAGS} OpenAL ${UNICODE_FLAG})
+    set_target_properties(openal-info PROPERTIES ${DEFAULT_TARGET_PROPS})
     if(ALSOFT_INSTALL_EXAMPLES)
         set(EXTRA_INSTALLS ${EXTRA_INSTALLS} openal-info)
     endif()
@@ -1582,6 +1584,7 @@ if(ALSOFT_UTILS)
         target_compile_options(uhjdecoder PRIVATE ${C_FLAGS})
         target_link_libraries(uhjdecoder PUBLIC common
             PRIVATE ${LINKER_FLAGS} SndFile::SndFile ${UNICODE_FLAG})
+        set_target_properties(uhjdecoder PROPERTIES ${DEFAULT_TARGET_PROPS})
 
         add_executable(uhjencoder utils/uhjencoder.cpp)
         target_compile_definitions(uhjencoder PRIVATE ${CPP_DEFS})
@@ -1590,6 +1593,7 @@ if(ALSOFT_UTILS)
         target_compile_options(uhjencoder PRIVATE ${C_FLAGS})
         target_link_libraries(uhjencoder PUBLIC common
             PRIVATE ${LINKER_FLAGS} SndFile::SndFile ${UNICODE_FLAG})
+        set_target_properties(uhjencoder PROPERTIES ${DEFAULT_TARGET_PROPS})
     endif()
 
     if(MYSOFA_FOUND)
@@ -1601,6 +1605,7 @@ if(ALSOFT_UTILS)
         target_include_directories(sofa-support PUBLIC ${OpenAL_SOURCE_DIR}/common)
         target_compile_options(sofa-support PRIVATE ${C_FLAGS})
         target_link_libraries(sofa-support PUBLIC common MySOFA::MySOFA PRIVATE ${LINKER_FLAGS})
+        set_target_properties(sofa-support PROPERTIES ${DEFAULT_TARGET_PROPS})
 
         set(MAKEMHR_SRCS
             utils/makemhr/loaddef.cpp
@@ -1618,6 +1623,7 @@ if(ALSOFT_UTILS)
             PRIVATE ${OpenAL_BINARY_DIR} ${OpenAL_SOURCE_DIR}/utils)
         target_compile_options(makemhr PRIVATE ${C_FLAGS})
         target_link_libraries(makemhr PRIVATE ${LINKER_FLAGS} sofa-support ${UNICODE_FLAG})
+        set_target_properties(makemhr PROPERTIES ${DEFAULT_TARGET_PROPS})
         if(ALSOFT_INSTALL_EXAMPLES)
             set(EXTRA_INSTALLS ${EXTRA_INSTALLS} makemhr)
         endif()
@@ -1628,6 +1634,7 @@ if(ALSOFT_UTILS)
         target_include_directories(sofa-info PRIVATE ${OpenAL_SOURCE_DIR}/utils)
         target_compile_options(sofa-info PRIVATE ${C_FLAGS})
         target_link_libraries(sofa-info PRIVATE ${LINKER_FLAGS} sofa-support ${UNICODE_FLAG})
+        set_target_properties(sofa-info PROPERTIES ${DEFAULT_TARGET_PROPS})
     endif()
     message(STATUS "Building utility programs")
 
@@ -1646,13 +1653,16 @@ target_compile_definitions(ex-common PUBLIC ${CPP_DEFS})
 target_include_directories(ex-common PUBLIC ${OpenAL_SOURCE_DIR}/common)
 target_compile_options(ex-common PUBLIC ${C_FLAGS})
 target_link_libraries(ex-common PUBLIC OpenAL PRIVATE ${RT_LIB})
+set_target_properties(ex-common PROPERTIES ${DEFAULT_TARGET_PROPS})
 
 if(ALSOFT_EXAMPLES)
     add_executable(altonegen examples/altonegen.c)
     target_link_libraries(altonegen PRIVATE ${LINKER_FLAGS} ${MATH_LIB} ex-common ${UNICODE_FLAG})
+    set_target_properties(altonegen PROPERTIES ${DEFAULT_TARGET_PROPS})
 
     add_executable(alrecord examples/alrecord.c)
     target_link_libraries(alrecord PRIVATE ${LINKER_FLAGS} ex-common ${UNICODE_FLAG})
+    set_target_properties(alrecord PROPERTIES ${DEFAULT_TARGET_PROPS})
 
     if(ALSOFT_INSTALL_EXAMPLES)
         set(EXTRA_INSTALLS ${EXTRA_INSTALLS} altonegen alrecord)
@@ -1664,34 +1674,42 @@ if(ALSOFT_EXAMPLES)
         add_executable(alplay examples/alplay.c)
         target_link_libraries(alplay PRIVATE ${LINKER_FLAGS} SndFile::SndFile ex-common
             ${UNICODE_FLAG})
+        set_target_properties(alplay PROPERTIES ${DEFAULT_TARGET_PROPS})
 
         add_executable(alstream examples/alstream.c)
         target_link_libraries(alstream PRIVATE ${LINKER_FLAGS} SndFile::SndFile ex-common
             ${UNICODE_FLAG})
+        set_target_properties(alstream PROPERTIES ${DEFAULT_TARGET_PROPS})
 
         add_executable(alreverb examples/alreverb.c)
         target_link_libraries(alreverb PRIVATE ${LINKER_FLAGS} SndFile::SndFile ex-common
             ${UNICODE_FLAG})
+        set_target_properties(alreverb PROPERTIES ${DEFAULT_TARGET_PROPS})
 
         add_executable(almultireverb examples/almultireverb.c)
         target_link_libraries(almultireverb
             PRIVATE ${LINKER_FLAGS} SndFile::SndFile ex-common ${MATH_LIB} ${UNICODE_FLAG})
+        set_target_properties(almultireverb PROPERTIES ${DEFAULT_TARGET_PROPS})
 
         add_executable(allatency examples/allatency.c)
         target_link_libraries(allatency PRIVATE ${LINKER_FLAGS} SndFile::SndFile ex-common
             ${UNICODE_FLAG})
+        set_target_properties(allatency PROPERTIES ${DEFAULT_TARGET_PROPS})
 
         add_executable(alhrtf examples/alhrtf.c)
         target_link_libraries(alhrtf
             PRIVATE ${LINKER_FLAGS} SndFile::SndFile ex-common ${MATH_LIB} ${UNICODE_FLAG})
+        set_target_properties(alhrtf PROPERTIES ${DEFAULT_TARGET_PROPS})
 
         add_executable(alstreamcb examples/alstreamcb.cpp)
         target_link_libraries(alstreamcb PRIVATE ${LINKER_FLAGS} SndFile::SndFile ex-common
             ${UNICODE_FLAG})
+        set_target_properties(alstreamcb PROPERTIES ${DEFAULT_TARGET_PROPS})
 
         add_executable(alconvolve examples/alconvolve.c)
         target_link_libraries(alconvolve PRIVATE ${LINKER_FLAGS} common SndFile::SndFile ex-common
             ${UNICODE_FLAG})
+        set_target_properties(alconvolve PROPERTIES ${DEFAULT_TARGET_PROPS})
 
         if(ALSOFT_INSTALL_EXAMPLES)
             set(EXTRA_INSTALLS ${EXTRA_INSTALLS} alplay alstream alreverb almultireverb allatency
@@ -1705,6 +1723,7 @@ if(ALSOFT_EXAMPLES)
         add_executable(alloopback examples/alloopback.c)
         target_link_libraries(alloopback
             PRIVATE ${LINKER_FLAGS} SDL2::SDL2 ex-common ${MATH_LIB})
+        set_target_properties(alloopback PROPERTIES ${DEFAULT_TARGET_PROPS})
 
         if(ALSOFT_INSTALL_EXAMPLES)
             set(EXTRA_INSTALLS ${EXTRA_INSTALLS} alloopback)
@@ -1741,6 +1760,7 @@ if(ALSOFT_EXAMPLES)
             target_include_directories(alffplay PRIVATE ${FFMPEG_INCLUDE_DIRS})
             target_link_libraries(alffplay
                 PRIVATE ${LINKER_FLAGS} SDL2::SDL2 ${FFMPEG_LIBRARIES} ex-common)
+            set_target_properties(alffplay PROPERTIES ${DEFAULT_TARGET_PROPS})
 
             if(ALSOFT_INSTALL_EXAMPLES)
                 set(EXTRA_INSTALLS ${EXTRA_INSTALLS} alffplay)

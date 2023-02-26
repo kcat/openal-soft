@@ -15,7 +15,8 @@ if(Qt5Widgets_FOUND)
     target_link_libraries(alsoft-config Qt5::Widgets)
     target_include_directories(alsoft-config PRIVATE "${alsoft-config_BINARY_DIR}"
         "${OpenAL_BINARY_DIR}")
-    set_target_properties(alsoft-config PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${OpenAL_BINARY_DIR})
+    set_target_properties(alsoft-config PROPERTIES ${DEFAULT_TARGET_PROPS}
+        RUNTIME_OUTPUT_DIRECTORY ${OpenAL_BINARY_DIR})
     if(TARGET build_version)
         add_dependencies(alsoft-config build_version)
     endif()

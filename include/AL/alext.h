@@ -604,6 +604,15 @@ AL_API void AL_APIENTRY alGetBufferPtrvSOFT(ALuint buffer, ALenum param, ALvoid 
 #define AL_SUPER_STEREO_WIDTH_SOFT               0x19B1
 #endif
 
+#ifndef AL_SOFT_UHJ_ex
+#define AL_SOFT_UHJ_ex
+#define AL_FORMAT_UHJ2CHN_MULAW_SOFT             0x19B3
+#define AL_FORMAT_UHJ2CHN_IMA4_SOFT              0x19B4
+#define AL_FORMAT_UHJ2CHN_MSADPCM_SOFT           0x19B5
+#define AL_FORMAT_UHJ3CHN_MULAW_SOFT             0x19B6
+#define AL_FORMAT_UHJ4CHN_MULAW_SOFT             0x19B7
+#endif
+
 #ifndef ALC_SOFT_output_mode
 #define ALC_SOFT_output_mode
 #define ALC_OUTPUT_MODE_SOFT                     0x19AC

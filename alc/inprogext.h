@@ -64,15 +64,6 @@ void AL_APIENTRY alSourcePlayAtTimevSOFT(ALsizei n, const ALuint *sources, ALint
 #endif
 #endif
 
-#ifndef AL_SOFT_UHJ_ex
-#define AL_SOFT_UHJ_ex
-#define AL_FORMAT_UHJ2CHN_MULAW_SOFT             0x19B3
-#define AL_FORMAT_UHJ2CHN_IMA4_SOFT              0x19B4
-#define AL_FORMAT_UHJ2CHN_MSADPCM_SOFT           0x19B5
-#define AL_FORMAT_UHJ3CHN_MULAW_SOFT             0x19B6
-#define AL_FORMAT_UHJ4CHN_MULAW_SOFT             0x19B7
-#endif
-
 
 /* Non-standard export. Not part of any extension. */
 AL_API const ALchar* AL_APIENTRY alsoft_get_version(void);

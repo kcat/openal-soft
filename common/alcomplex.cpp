@@ -116,7 +116,7 @@ complex_fft(const al::span<std::complex<Real>> buffer, const al::type_identity_t
                 std::swap(buffer[idx], buffer[revidx]);
         }
     }
-    else for(auto &rev : gBitReverses[log2_size]) [[likely]]
+    else for(auto &rev : gBitReverses[log2_size])
         std::swap(buffer[rev.first], buffer[rev.second]);
 
     /* Iterative form of Danielson-Lanczos lemma */

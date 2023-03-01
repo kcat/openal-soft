@@ -36,6 +36,17 @@
 #define ASSUME(x) ((void)0)
 #endif
 
+/* This shouldn't be needed since unknown attributes are ignored, but older
+ * versions of GCC choke on the attribute syntax in certain situations.
+ */
+#if !__has_attribute(likely)
+#define LIKELY
+#define UNLIKELY
+#else
+#define LIKELY [[likely]]
+#define UNLIKELY [[unlikely]]
+#endif
+
 namespace al {
 
 template<typename T>

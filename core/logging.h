@@ -25,17 +25,17 @@ void al_print(LogLevel level, FILE *logfile, const char *fmt, ...);
 
 #if (!defined(_WIN32) || defined(NDEBUG)) && !defined(__ANDROID__)
 #define TRACE(...) do {                                                       \
-    if(gLogLevel >= LogLevel::Trace) [[unlikely]]                             \
+    if(gLogLevel >= LogLevel::Trace) UNLIKELY                                 \
         al_print(LogLevel::Trace, gLogFile, __VA_ARGS__);                     \
 } while(0)
 
 #define WARN(...) do {                                                        \
-    if(gLogLevel >= LogLevel::Warning) [[unlikely]]                           \
+    if(gLogLevel >= LogLevel::Warning) UNLIKELY                               \
         al_print(LogLevel::Warning, gLogFile, __VA_ARGS__);                   \
 } while(0)
 
 #define ERR(...) do {                                                         \
-    if(gLogLevel >= LogLevel::Error) [[unlikely]]                             \
+    if(gLogLevel >= LogLevel::Error) UNLIKELY                                 \
         al_print(LogLevel::Error, gLogFile, __VA_ARGS__);                     \
 } while(0)
 

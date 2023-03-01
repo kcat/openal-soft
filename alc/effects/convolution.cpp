@@ -420,7 +420,7 @@ void ConvolutionState::update(const ContextBase *context, const EffectSlot *slot
         { SideRight,   Deg2Rad(  90.0f), Deg2Rad(0.0f) }
     };
 
-    if(mNumConvolveSegs < 1) [[unlikely]]
+    if(mNumConvolveSegs < 1) UNLIKELY
         return;
 
     mMix = &ConvolutionState::NormalMix;
@@ -524,7 +524,7 @@ void ConvolutionState::update(const ContextBase *context, const EffectSlot *slot
 void ConvolutionState::process(const size_t samplesToDo,
     const al::span<const FloatBufferLine> samplesIn, const al::span<FloatBufferLine> samplesOut)
 {
-    if(mNumConvolveSegs < 1) [[unlikely]]
+    if(mNumConvolveSegs < 1) UNLIKELY
         return;
 
     constexpr size_t m{ConvolveUpdateSize/2 + 1};

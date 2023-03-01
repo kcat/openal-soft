@@ -45,7 +45,7 @@ void al_print(LogLevel level, FILE *logfile, const char *fmt, ...)
     va_start(args, fmt);
     va_copy(args2, args);
     const int msglen{std::vsnprintf(msg.data(), msg.size(), fmt, args)};
-    if(msglen >= 0 && static_cast<size_t>(msglen) >= msg.size()) [[unlikely]]
+    if(msglen >= 0 && static_cast<size_t>(msglen) >= msg.size()) UNLIKELY
     {
         dynmsg.resize(static_cast<size_t>(msglen)+prefix.size() + 1u);
 

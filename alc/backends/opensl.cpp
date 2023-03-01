@@ -113,7 +113,7 @@ constexpr SLuint32 GetByteOrderEndianness() noexcept
     return SL_BYTEORDER_BIGENDIAN;
 }
 
-const char *res_str(SLresult result) noexcept
+constexpr const char *res_str(SLresult result) noexcept
 {
     switch(result)
     {
@@ -147,10 +147,11 @@ const char *res_str(SLresult result) noexcept
     return "Unknown error code";
 }
 
-#define PRINTERR(x, s) do {                                                   \
-    if((x) != SL_RESULT_SUCCESS) [[unlikely]]                                 \
-        ERR("%s: %s\n", (s), res_str((x)));                                   \
-} while(0)
+inline void PrintErr(SLresult res, const char *str)
+{
+    if(res != SL_RESULT_SUCCESS) UNLIKELY
+        ERR("%s: %s\n", str, res_str(res));
+}
 
 
 struct OpenSLPlayback final : public BackendBase {
@@ -234,11 +235,11 @@ int OpenSLPlayback::mixerProc()
     SLAndroidSimpleBufferQueueItf bufferQueue;
     SLresult result{VCALL(mBufferQueueObj,GetInterface)(SL_IID_ANDROIDSIMPLEBUFFERQUEUE,
         &bufferQueue)};
-    PRINTERR(result, "bufferQueue->GetInterface SL_IID_ANDROIDSIMPLEBUFFERQUEUE");
+    PrintErr(result, "bufferQueue->GetInterface SL_IID_ANDROIDSIMPLEBUFFERQUEUE");
     if(SL_RESULT_SUCCESS == result)
     {
         result = VCALL(mBufferQueueObj,GetInterface)(SL_IID_PLAY, &player);
-        PRINTERR(result, "bufferQueue->GetInterface SL_IID_PLAY");
+        PrintErr(result, "bufferQueue->GetInterface SL_IID_PLAY");
     }
 
     const size_t frame_step{mDevice->channelsFromFmt()};
@@ -254,11 +255,11 @@ int OpenSLPlayback::mixerProc()
             SLuint32 state{0};
 
             result = VCALL(player,GetPlayState)(&state);
-            PRINTERR(result, "player->GetPlayState");
+            PrintErr(result, "player->GetPlayState");
             if(SL_RESULT_SUCCESS == result && state != SL_PLAYSTATE_PLAYING)
             {
                 result = VCALL(player,SetPlayState)(SL_PLAYSTATE_PLAYING);
-                PRINTERR(result, "player->SetPlayState");
+                PrintErr(result, "player->SetPlayState");
             }
             if(SL_RESULT_SUCCESS != result)
             {
@@ -295,7 +296,7 @@ int OpenSLPlayback::mixerProc()
             }
 
             result = VCALL(bufferQueue,Enqueue)(data.first.buf, mDevice->UpdateSize*mFrameSize);
-            PRINTERR(result, "bufferQueue->Enqueue");
+            PrintErr(result, "bufferQueue->Enqueue");
             if(SL_RESULT_SUCCESS != result)
             {
                 mDevice->handleDisconnect("Failed to queue audio: 0x%08x", result);
@@ -324,26 +325,26 @@ void OpenSLPlayback::open(const char *name)
 
     // create engine
     SLresult result{slCreateEngine(&mEngineObj, 0, nullptr, 0, nullptr, nullptr)};
-    PRINTERR(result, "slCreateEngine");
+    PrintErr(result, "slCreateEngine");
     if(SL_RESULT_SUCCESS == result)
     {
         result = VCALL(mEngineObj,Realize)(SL_BOOLEAN_FALSE);
-        PRINTERR(result, "engine->Realize");
+        PrintErr(result, "engine->Realize");
     }
     if(SL_RESULT_SUCCESS == result)
     {
         result = VCALL(mEngineObj,GetInterface)(SL_IID_ENGINE, &mEngine);
-        PRINTERR(result, "engine->GetInterface");
+        PrintErr(result, "engine->GetInterface");
     }
     if(SL_RESULT_SUCCESS == result)
     {
         result = VCALL(mEngine,CreateOutputMix)(&mOutputMix, 0, nullptr, nullptr);
-        PRINTERR(result, "engine->CreateOutputMix");
+        PrintErr(result, "engine->CreateOutputMix");
     }
     if(SL_RESULT_SUCCESS == result)
     {
         result = VCALL(mOutputMix,Realize)(SL_BOOLEAN_FALSE);
-        PRINTERR(result, "outputMix->Realize");
+        PrintErr(result, "outputMix->Realize");
     }
 
     if(SL_RESULT_SUCCESS != result)
@@ -511,20 +512,20 @@ bool OpenSLPlayback::reset()
 
         result = VCALL(mEngine,CreateAudioPlayer)(&mBufferQueueObj, &audioSrc, &audioSnk, ids.size(),
             ids.data(), reqs.data());
-        PRINTERR(result, "engine->CreateAudioPlayer");
+        PrintErr(result, "engine->CreateAudioPlayer");
     }
     if(SL_RESULT_SUCCESS == result)
     {
         /* Set the stream type to "media" (games, music, etc), if possible. */
         SLAndroidConfigurationItf config;
         result = VCALL(mBufferQueueObj,GetInterface)(SL_IID_ANDROIDCONFIGURATION, &config);
-        PRINTERR(result, "bufferQueue->GetInterface SL_IID_ANDROIDCONFIGURATION");
+        PrintErr(result, "bufferQueue->GetInterface SL_IID_ANDROIDCONFIGURATION");
         if(SL_RESULT_SUCCESS == result)
         {
             SLint32 streamType = SL_ANDROID_STREAM_MEDIA;
             result = VCALL(config,SetConfiguration)(SL_ANDROID_KEY_STREAM_TYPE, &streamType,
                 sizeof(streamType));
-            PRINTERR(result, "config->SetConfiguration");
+            PrintErr(result, "config->SetConfiguration");
         }
 
         /* Clear any error since this was optional. */
@@ -533,7 +534,7 @@ bool OpenSLPlayback::reset()
     if(SL_RESULT_SUCCESS == result)
     {
         result = VCALL(mBufferQueueObj,Realize)(SL_BOOLEAN_FALSE);
-        PRINTERR(result, "bufferQueue->Realize");
+        PrintErr(result, "bufferQueue->Realize");
     }
     if(SL_RESULT_SUCCESS == result)
     {
@@ -560,11 +561,11 @@ void OpenSLPlayback::start()
     SLAndroidSimpleBufferQueueItf bufferQueue;
     SLresult result{VCALL(mBufferQueueObj,GetInterface)(SL_IID_ANDROIDSIMPLEBUFFERQUEUE,
         &bufferQueue)};
-    PRINTERR(result, "bufferQueue->GetInterface");
+    PrintErr(result, "bufferQueue->GetInterface");
     if(SL_RESULT_SUCCESS == result)
     {
         result = VCALL(bufferQueue,RegisterCallback)(&OpenSLPlayback::processC, this);
-        PRINTERR(result, "bufferQueue->RegisterCallback");
+        PrintErr(result, "bufferQueue->RegisterCallback");
     }
     if(SL_RESULT_SUCCESS != result)
         throw al::backend_exception{al::backend_error::DeviceError,
@@ -590,25 +591,25 @@ void OpenSLPlayback::stop()
 
     SLPlayItf player;
     SLresult result{VCALL(mBufferQueueObj,GetInterface)(SL_IID_PLAY, &player)};
-    PRINTERR(result, "bufferQueue->GetInterface");
+    PrintErr(result, "bufferQueue->GetInterface");
     if(SL_RESULT_SUCCESS == result)
     {
         result = VCALL(player,SetPlayState)(SL_PLAYSTATE_STOPPED);
-        PRINTERR(result, "player->SetPlayState");
+        PrintErr(result, "player->SetPlayState");
     }
 
     SLAndroidSimpleBufferQueueItf bufferQueue;
     result = VCALL(mBufferQueueObj,GetInterface)(SL_IID_ANDROIDSIMPLEBUFFERQUEUE, &bufferQueue);
-    PRINTERR(result, "bufferQueue->GetInterface");
+    PrintErr(result, "bufferQueue->GetInterface");
     if(SL_RESULT_SUCCESS == result)
     {
         result = VCALL0(bufferQueue,Clear)();
-        PRINTERR(result, "bufferQueue->Clear");
+        PrintErr(result, "bufferQueue->Clear");
     }
     if(SL_RESULT_SUCCESS == result)
     {
         result = VCALL(bufferQueue,RegisterCallback)(nullptr, nullptr);
-        PRINTERR(result, "bufferQueue->RegisterCallback");
+        PrintErr(result, "bufferQueue->RegisterCallback");
     }
     if(SL_RESULT_SUCCESS == result)
     {
@@ -617,7 +618,7 @@ void OpenSLPlayback::stop()
             std::this_thread::yield();
             result = VCALL(bufferQueue,GetState)(&state);
         } while(SL_RESULT_SUCCESS == result && state.count > 0);
-        PRINTERR(result, "bufferQueue->GetState");
+        PrintErr(result, "bufferQueue->GetState");
 
         mRing->reset();
     }
@@ -694,16 +695,16 @@ void OpenSLCapture::open(const char* name)
             name};
 
     SLresult result{slCreateEngine(&mEngineObj, 0, nullptr, 0, nullptr, nullptr)};
-    PRINTERR(result, "slCreateEngine");
+    PrintErr(result, "slCreateEngine");
     if(SL_RESULT_SUCCESS == result)
     {
         result = VCALL(mEngineObj,Realize)(SL_BOOLEAN_FALSE);
-        PRINTERR(result, "engine->Realize");
+        PrintErr(result, "engine->Realize");
     }
     if(SL_RESULT_SUCCESS == result)
     {
         result = VCALL(mEngineObj,GetInterface)(SL_IID_ENGINE, &mEngine);
-        PRINTERR(result, "engine->GetInterface");
+        PrintErr(result, "engine->GetInterface");
     }
     if(SL_RESULT_SUCCESS == result)
     {
@@ -778,7 +779,7 @@ void OpenSLCapture::open(const char* name)
                 result = VCALL(mEngine,CreateAudioRecorder)(&mRecordObj, &audioSrc, &audioSnk,
                     ids.size(), ids.data(), reqs.data());
             }
-            PRINTERR(result, "engine->CreateAudioRecorder");
+            PrintErr(result, "engine->CreateAudioRecorder");
         }
     }
     if(SL_RESULT_SUCCESS == result)
@@ -786,13 +787,13 @@ void OpenSLCapture::open(const char* name)
         /* Set the record preset to "generic", if possible. */
         SLAndroidConfigurationItf config;
         result = VCALL(mRecordObj,GetInterface)(SL_IID_ANDROIDCONFIGURATION, &config);
-        PRINTERR(result, "recordObj->GetInterface SL_IID_ANDROIDCONFIGURATION");
+        PrintErr(result, "recordObj->GetInterface SL_IID_ANDROIDCONFIGURATION");
         if(SL_RESULT_SUCCESS == result)
         {
             SLuint32 preset = SL_ANDROID_RECORDING_PRESET_GENERIC;
             result = VCALL(config,SetConfiguration)(SL_ANDROID_KEY_RECORDING_PRESET, &preset,
                 sizeof(preset));
-            PRINTERR(result, "config->SetConfiguration");
+            PrintErr(result, "config->SetConfiguration");
         }
 
         /* Clear any error since this was optional. */
@@ -801,19 +802,19 @@ void OpenSLCapture::open(const char* name)
     if(SL_RESULT_SUCCESS == result)
     {
         result = VCALL(mRecordObj,Realize)(SL_BOOLEAN_FALSE);
-        PRINTERR(result, "recordObj->Realize");
+        PrintErr(result, "recordObj->Realize");
     }
 
     SLAndroidSimpleBufferQueueItf bufferQueue;
     if(SL_RESULT_SUCCESS == result)
     {
         result = VCALL(mRecordObj,GetInterface)(SL_IID_ANDROIDSIMPLEBUFFERQUEUE, &bufferQueue);
-        PRINTERR(result, "recordObj->GetInterface");
+        PrintErr(result, "recordObj->GetInterface");
     }
     if(SL_RESULT_SUCCESS == result)
     {
         result = VCALL(bufferQueue,RegisterCallback)(&OpenSLCapture::processC, this);
-        PRINTERR(result, "bufferQueue->RegisterCallback");
+        PrintErr(result, "bufferQueue->RegisterCallback");
     }
     if(SL_RESULT_SUCCESS == result)
     {
@@ -826,12 +827,12 @@ void OpenSLCapture::open(const char* name)
         for(size_t i{0u};i < data.first.len && SL_RESULT_SUCCESS == result;i++)
         {
             result = VCALL(bufferQueue,Enqueue)(data.first.buf + chunk_size*i, chunk_size);
-            PRINTERR(result, "bufferQueue->Enqueue");
+            PrintErr(result, "bufferQueue->Enqueue");
         }
         for(size_t i{0u};i < data.second.len && SL_RESULT_SUCCESS == result;i++)
         {
             result = VCALL(bufferQueue,Enqueue)(data.second.buf + chunk_size*i, chunk_size);
-            PRINTERR(result, "bufferQueue->Enqueue");
+            PrintErr(result, "bufferQueue->Enqueue");
         }
     }
 
@@ -857,12 +858,12 @@ void OpenSLCapture::start()
 {
     SLRecordItf record;
     SLresult result{VCALL(mRecordObj,GetInterface)(SL_IID_RECORD, &record)};
-    PRINTERR(result, "recordObj->GetInterface");
+    PrintErr(result, "recordObj->GetInterface");
 
     if(SL_RESULT_SUCCESS == result)
     {
         result = VCALL(record,SetRecordState)(SL_RECORDSTATE_RECORDING);
-        PRINTERR(result, "record->SetRecordState");
+        PrintErr(result, "record->SetRecordState");
     }
     if(SL_RESULT_SUCCESS != result)
         throw al::backend_exception{al::backend_error::DeviceError,
@@ -873,12 +874,12 @@ void OpenSLCapture::stop()
 {
     SLRecordItf record;
     SLresult result{VCALL(mRecordObj,GetInterface)(SL_IID_RECORD, &record)};
-    PRINTERR(result, "recordObj->GetInterface");
+    PrintErr(result, "recordObj->GetInterface");
 
     if(SL_RESULT_SUCCESS == result)
     {
         result = VCALL(record,SetRecordState)(SL_RECORDSTATE_PAUSED);
-        PRINTERR(result, "record->SetRecordState");
+        PrintErr(result, "record->SetRecordState");
     }
 }
 
@@ -916,12 +917,12 @@ void OpenSLCapture::captureSamples(al::byte *buffer, uint samples)
     }
 
     SLAndroidSimpleBufferQueueItf bufferQueue{};
-    if(mDevice->Connected.load(std::memory_order_acquire)) [[likely]]
+    if(mDevice->Connected.load(std::memory_order_acquire)) LIKELY
     {
         const SLresult result{VCALL(mRecordObj,GetInterface)(SL_IID_ANDROIDSIMPLEBUFFERQUEUE,
             &bufferQueue)};
-        PRINTERR(result, "recordObj->GetInterface");
-        if(SL_RESULT_SUCCESS != result) [[unlikely]]
+        PrintErr(result, "recordObj->GetInterface");
+        if(SL_RESULT_SUCCESS != result) UNLIKELY
         {
             mDevice->handleDisconnect("Failed to get capture buffer queue: 0x%08x", result);
             bufferQueue = nullptr;
@@ -942,14 +943,14 @@ void OpenSLCapture::captureSamples(al::byte *buffer, uint samples)
 
     SLresult result{SL_RESULT_SUCCESS};
     auto wdata = mRing->getWriteVector();
-    if(adv_count > wdata.second.len) [[likely]]
+    if(adv_count > wdata.second.len) LIKELY
     {
         auto len1 = std::min(wdata.first.len, adv_count-wdata.second.len);
         auto buf1 = wdata.first.buf + chunk_size*(wdata.first.len-len1);
         for(size_t i{0u};i < len1 && SL_RESULT_SUCCESS == result;i++)
         {
             result = VCALL(bufferQueue,Enqueue)(buf1 + chunk_size*i, chunk_size);
-            PRINTERR(result, "bufferQueue->Enqueue");
+            PrintErr(result, "bufferQueue->Enqueue");
         }
     }
     if(wdata.second.len > 0)
@@ -959,7 +960,7 @@ void OpenSLCapture::captureSamples(al::byte *buffer, uint samples)
         for(size_t i{0u};i < len2 && SL_RESULT_SUCCESS == result;i++)
         {
             result = VCALL(bufferQueue,Enqueue)(buf2 + chunk_size*i, chunk_size);
-            PRINTERR(result, "bufferQueue->Enqueue");
+            PrintErr(result, "bufferQueue->Enqueue");
         }
     }
 }

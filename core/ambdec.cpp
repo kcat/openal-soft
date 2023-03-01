@@ -61,7 +61,7 @@ al::optional<std::string> make_error(size_t linenum, const char *fmt, ...)
     va_start(args, fmt);
     va_copy(args2, args);
     const int msglen{std::vsnprintf(&str[plen], str.size()-plen, fmt, args)};
-    if(msglen >= 0 && static_cast<size_t>(msglen) >= str.size()-plen) [[unlikely]]
+    if(msglen >= 0 && static_cast<size_t>(msglen) >= str.size()-plen)
     {
         str.resize(static_cast<size_t>(msglen) + plen + 1u);
         std::vsnprintf(&str[plen], str.size()-plen, fmt, args2);

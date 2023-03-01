@@ -310,7 +310,7 @@ struct DeviceBase {
     void ProcessBs2b(const size_t SamplesToDo);
 
     inline void postProcess(const size_t SamplesToDo)
-    { if(PostProcess) [[likely]] (this->*PostProcess)(SamplesToDo); }
+    { if(PostProcess) LIKELY (this->*PostProcess)(SamplesToDo); }
 
     void renderSamples(const al::span<float*> outBuffers, const uint numSamples);
     void renderSamples(void *outBuffer, const uint numSamples, const size_t frameStep);

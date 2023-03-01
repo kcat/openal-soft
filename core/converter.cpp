@@ -140,7 +140,7 @@ void Multi2Mono(uint chanmask, const size_t step, const float scale, float *REST
     std::fill_n(dst, frames, 0.0f);
     for(size_t c{0};chanmask;++c)
     {
-        if((chanmask&1)) [[likely]]
+        if((chanmask&1)) LIKELY
         {
             for(size_t i{0u};i < frames;i++)
                 dst[i] += LoadSample<T>(ssrc[i*step + c]);

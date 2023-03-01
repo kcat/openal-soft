@@ -2472,7 +2472,7 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
 bool ResetDeviceParams(ALCdevice *device, const int *attrList)
 {
     /* If the device was disconnected, reset it since we're opened anew. */
-    if(!device->Connected.load(std::memory_order_relaxed)) [[unlikely]]
+    if(!device->Connected.load(std::memory_order_relaxed)) UNLIKELY
     {
         /* Make sure disconnection is finished before continuing on. */
         device->waitForMix();
@@ -2504,7 +2504,7 @@ bool ResetDeviceParams(ALCdevice *device, const int *attrList)
     }
 
     ALCenum err{UpdateDeviceParams(device, attrList)};
-    if(err == ALC_NO_ERROR) [[likely]] return ALC_TRUE;
+    if(err == ALC_NO_ERROR) LIKELY return ALC_TRUE;
 
     alcSetError(device, err);
     return ALC_FALSE;
@@ -2556,7 +2556,7 @@ ContextRef GetContextRef(void)
              */
         }
         context = ALCcontext::sGlobalContext.load(std::memory_order_acquire);
-        if(context) [[likely]] context->add_ref();
+        if(context) LIKELY context->add_ref();
         ALCcontext::sGlobalContextLock.store(false, std::memory_order_release);
     }
     return ContextRef{context};

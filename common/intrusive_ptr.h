@@ -18,7 +18,7 @@ public:
     unsigned int dec_ref() noexcept
     {
         auto ref = DecrementRef(mRef);
-        if(ref == 0) [[unlikely]]
+        if(ref == 0) UNLIKELY
             delete static_cast<T*>(this);
         return ref;
     }
@@ -71,7 +71,7 @@ public:
     }
     intrusive_ptr& operator=(intrusive_ptr&& rhs) noexcept
     {
-        if(&rhs != this) [[likely]]
+        if(&rhs != this) LIKELY
         {
             if(mPtr) mPtr->dec_ref();
             mPtr = std::exchange(rhs.mPtr, nullptr);

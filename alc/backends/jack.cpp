@@ -345,7 +345,7 @@ int JackPlayback::processRt(jack_nframes_t numframes) noexcept
         out[numchans++] = static_cast<float*>(jack_port_get_buffer(port, numframes));
     }
 
-    if(mPlaying.load(std::memory_order_acquire)) [[likely]]
+    if(mPlaying.load(std::memory_order_acquire)) LIKELY
         mDevice->renderSamples({out.data(), numchans}, static_cast<uint>(numframes));
     else
     {
@@ -369,7 +369,7 @@ int JackPlayback::process(jack_nframes_t numframes) noexcept
     }
 
     jack_nframes_t total{0};
-    if(mPlaying.load(std::memory_order_acquire)) [[likely]]
+    if(mPlaying.load(std::memory_order_acquire)) LIKELY
     {
         auto data = mRing->getReadVector();
         jack_nframes_t todo{minu(numframes, static_cast<uint>(data.first.len))};

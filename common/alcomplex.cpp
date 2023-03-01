@@ -101,7 +101,7 @@ complex_fft(const al::span<std::complex<Real>> buffer, const al::type_identity_t
      */
     const size_t log2_size{static_cast<size_t>(al::countr_zero(fftsize))};
 
-    if(log2_size >= gBitReverses.size()) [[unlikely]]
+    if(log2_size >= gBitReverses.size()) UNLIKELY
     {
         for(size_t idx{1u};idx < fftsize-1;++idx)
         {

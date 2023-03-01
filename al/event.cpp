@@ -55,7 +55,7 @@ static int EventThread(ALCcontext *context)
             ring->readAdvance(1);
 
             quitnow = evt.EnumType == AsyncEvent::KillThread;
-            if(quitnow) [[unlikely]] break;
+            if(quitnow) UNLIKELY break;
 
             if(evt.EnumType == AsyncEvent::ReleaseEffectState)
             {
@@ -150,7 +150,7 @@ AL_API void AL_APIENTRY alEventControlSOFT(ALsizei count, const ALenum *types, A
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
-    if(!context) [[unlikely]] return;
+    if(!context) UNLIKELY return;
 
     if(count < 0) context->setError(AL_INVALID_VALUE, "Controlling %d events", count);
     if(count <= 0) return;
@@ -205,7 +205,7 @@ AL_API void AL_APIENTRY alEventCallbackSOFT(ALEVENTPROCSOFT callback, void *user
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
-    if(!context) [[unlikely]] return;
+    if(!context) UNLIKELY return;
 
     std::lock_guard<std::mutex> _{context->mPropLock};
     std::lock_guard<std::mutex> __{context->mEventCbLock};

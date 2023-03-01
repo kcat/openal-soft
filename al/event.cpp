@@ -35,7 +35,7 @@ static int EventThread(ALCcontext *context)
 {
     RingBuffer *ring{context->mAsyncEvents.get()};
     bool quitnow{false};
-    while(!quitnow) [[likely]]
+    while(!quitnow)
     {
         auto evt_data = ring->getReadVector().first;
         if(evt_data.len == 0)

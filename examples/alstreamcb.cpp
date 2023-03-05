@@ -83,10 +83,10 @@ struct StreamPlayer {
     StreamPlayer()
     {
         alGenBuffers(1, &mBuffer);
-        if(ALenum err{alGetError()})
+        if(alGetError() != AL_NO_ERROR)
             throw std::runtime_error{"alGenBuffers failed"};
         alGenSources(1, &mSource);
-        if(ALenum err{alGetError()})
+        if(alGetError() != AL_NO_ERROR)
         {
             alDeleteBuffers(1, &mBuffer);
             throw std::runtime_error{"alGenSources failed"};

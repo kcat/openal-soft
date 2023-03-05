@@ -157,9 +157,9 @@ struct StreamPlayer {
         int splblocksize{}, byteblocksize{};
         if(mSampleFormat == SampleType::IMA4 || mSampleFormat == SampleType::MSADPCM)
         {
-            SF_CHUNK_INFO inf{ "fmt ", 4, 0, NULL };
+            SF_CHUNK_INFO inf{ "fmt ", 4, 0, nullptr };
             SF_CHUNK_ITERATOR *iter = sf_get_chunk_iterator(mSndfile, &inf);
-            if(!iter || sf_get_chunk_size(iter, &inf) != SF_ERR_NO_ERROR)
+            if(!iter || sf_get_chunk_size(iter, &inf) != SF_ERR_NO_ERROR || inf.datalen < 14)
                 mSampleFormat = SampleType::Int16;
             else
             {

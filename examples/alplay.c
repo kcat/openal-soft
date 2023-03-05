@@ -122,7 +122,7 @@ static ALuint LoadSound(const char *filename)
         /* If there's an issue getting the chunk or block alignment, load as
          * 16-bit and have libsndfile do the conversion.
          */
-        if(!iter || sf_get_chunk_size(iter, &inf) != SF_ERR_NO_ERROR)
+        if(!iter || sf_get_chunk_size(iter, &inf) != SF_ERR_NO_ERROR || inf.datalen < 14)
             sample_format = Int16;
         else
         {

@@ -2172,8 +2172,19 @@ try {
     case AL_BUFFER:
         CheckSize(1);
         {
-            ALbufferQueueItem *BufferList{(Source->SourceType == AL_STATIC)
-                ? &Source->mQueue.front() : nullptr};
+            ALbufferQueueItem *BufferList{};
+            /* HACK: This query should technically only return the buffer set
+             * on a static source. However, some apps had used it to detect
+             * when a streaming source changed buffers, so report the current
+             * buffer's ID when playing.
+             */
+            if(Source->SourceType == AL_STATIC || Source->state == AL_INITIAL)
+                BufferList = &Source->mQueue.front();
+            else if(Voice *voice{GetSourceVoice(Source, Context)})
+            {
+                VoiceBufferItem *Current{voice->mCurrentBuffer.load(std::memory_order_relaxed)};
+                BufferList = static_cast<ALbufferQueueItem*>(Current);
+            }
             ALbuffer *buffer{BufferList ? BufferList->mBuffer : nullptr};
             values[0] = buffer ? static_cast<int>(buffer->id) : 0;
         }

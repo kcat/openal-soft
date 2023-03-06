@@ -1011,6 +1011,145 @@ enum SourceProp : ALenum {
 
 constexpr size_t MaxValues{6u};
 
+constexpr ALuint IntValsByProp(ALenum prop)
+{
+    switch(static_cast<SourceProp>(prop))
+    {
+    case AL_SOURCE_STATE:
+    case AL_SOURCE_TYPE:
+    case AL_BUFFERS_QUEUED:
+    case AL_BUFFERS_PROCESSED:
+    case AL_BYTE_LENGTH_SOFT:
+    case AL_SAMPLE_LENGTH_SOFT:
+    case AL_SOURCE_RELATIVE:
+    case AL_LOOPING:
+    case AL_BUFFER:
+    case AL_SAMPLE_OFFSET:
+    case AL_BYTE_OFFSET:
+    case AL_DIRECT_FILTER:
+    case AL_DIRECT_FILTER_GAINHF_AUTO:
+    case AL_AUXILIARY_SEND_FILTER_GAIN_AUTO:
+    case AL_AUXILIARY_SEND_FILTER_GAINHF_AUTO:
+    case AL_DIRECT_CHANNELS_SOFT:
+    case AL_DISTANCE_MODEL:
+    case AL_SOURCE_RESAMPLER_SOFT:
+    case AL_SOURCE_SPATIALIZE_SOFT:
+    case AL_STEREO_MODE_SOFT:
+        return 1;
+
+    case AL_CONE_INNER_ANGLE:
+    case AL_CONE_OUTER_ANGLE:
+    case AL_PITCH:
+    case AL_GAIN:
+    case AL_MIN_GAIN:
+    case AL_MAX_GAIN:
+    case AL_REFERENCE_DISTANCE:
+    case AL_ROLLOFF_FACTOR:
+    case AL_CONE_OUTER_GAIN:
+    case AL_MAX_DISTANCE:
+    case AL_SEC_OFFSET:
+    case AL_DOPPLER_FACTOR:
+    case AL_CONE_OUTER_GAINHF:
+    case AL_AIR_ABSORPTION_FACTOR:
+    case AL_ROOM_ROLLOFF_FACTOR:
+    case AL_SOURCE_RADIUS:
+    case AL_SEC_LENGTH_SOFT:
+    case AL_SUPER_STEREO_WIDTH_SOFT:
+        return 1; /* 1x float */
+
+    case AL_AUXILIARY_SEND_FILTER:
+        return 3;
+
+    case AL_POSITION:
+    case AL_VELOCITY:
+    case AL_DIRECTION:
+        return 3; /* 3x float */
+
+    case AL_ORIENTATION:
+        return 6; /* 6x float */
+
+    case AL_SAMPLE_OFFSET_LATENCY_SOFT:
+    case AL_SAMPLE_OFFSET_CLOCK_SOFT:
+    case AL_STEREO_ANGLES:
+        break; /* i64 only */
+    case AL_SEC_OFFSET_LATENCY_SOFT:
+    case AL_SEC_OFFSET_CLOCK_SOFT:
+        break; /* double only */
+    }
+
+    return 0;
+}
+
+constexpr ALuint Int64ValsByProp(ALenum prop)
+{
+    switch(static_cast<SourceProp>(prop))
+    {
+    case AL_SOURCE_STATE:
+    case AL_SOURCE_TYPE:
+    case AL_BUFFERS_QUEUED:
+    case AL_BUFFERS_PROCESSED:
+    case AL_BYTE_LENGTH_SOFT:
+    case AL_SAMPLE_LENGTH_SOFT:
+    case AL_SOURCE_RELATIVE:
+    case AL_LOOPING:
+    case AL_BUFFER:
+    case AL_SAMPLE_OFFSET:
+    case AL_BYTE_OFFSET:
+    case AL_DIRECT_FILTER:
+    case AL_DIRECT_FILTER_GAINHF_AUTO:
+    case AL_AUXILIARY_SEND_FILTER_GAIN_AUTO:
+    case AL_AUXILIARY_SEND_FILTER_GAINHF_AUTO:
+    case AL_DIRECT_CHANNELS_SOFT:
+    case AL_DISTANCE_MODEL:
+    case AL_SOURCE_RESAMPLER_SOFT:
+    case AL_SOURCE_SPATIALIZE_SOFT:
+    case AL_STEREO_MODE_SOFT:
+        return 1;
+
+    case AL_CONE_INNER_ANGLE:
+    case AL_CONE_OUTER_ANGLE:
+    case AL_PITCH:
+    case AL_GAIN:
+    case AL_MIN_GAIN:
+    case AL_MAX_GAIN:
+    case AL_REFERENCE_DISTANCE:
+    case AL_ROLLOFF_FACTOR:
+    case AL_CONE_OUTER_GAIN:
+    case AL_MAX_DISTANCE:
+    case AL_SEC_OFFSET:
+    case AL_DOPPLER_FACTOR:
+    case AL_CONE_OUTER_GAINHF:
+    case AL_AIR_ABSORPTION_FACTOR:
+    case AL_ROOM_ROLLOFF_FACTOR:
+    case AL_SOURCE_RADIUS:
+    case AL_SEC_LENGTH_SOFT:
+    case AL_SUPER_STEREO_WIDTH_SOFT:
+        return 1; /* 1x float */
+
+    case AL_SAMPLE_OFFSET_LATENCY_SOFT:
+    case AL_SAMPLE_OFFSET_CLOCK_SOFT:
+    case AL_STEREO_ANGLES:
+        return 2;
+
+    case AL_AUXILIARY_SEND_FILTER:
+        return 3;
+
+    case AL_POSITION:
+    case AL_VELOCITY:
+    case AL_DIRECTION:
+        return 3; /* 3x float */
+
+    case AL_ORIENTATION:
+        return 6; /* 6x float */
+
+    case AL_SEC_OFFSET_LATENCY_SOFT:
+    case AL_SEC_OFFSET_CLOCK_SOFT:
+        break; /* double only */
+    }
+
+    return 0;
+}
+
 constexpr ALuint FloatValsByProp(ALenum prop)
 {
     switch(static_cast<SourceProp>(prop))
@@ -1212,7 +1351,7 @@ auto GetCheckers(ALCcontext *const Context, const SourceProp prop, const al::spa
     return std::make_pair(
         [=](size_t expect) -> void
         {
-            if(values.size() == expect || values.size() == MaxValues) LIKELY return;
+            if(values.size() == expect) LIKELY return;
             Context->setError(AL_INVALID_ENUM, "Property 0x%04x expects %zu value(s), got %zu",
                 prop, expect, values.size());
             throw check_size_exception{};
@@ -1931,7 +2070,7 @@ auto GetSizeChecker(ALCcontext *const Context, const SourceProp prop, const al::
 {
     return [=](size_t expect) -> void
     {
-        if(values.size() == expect || values.size() == MaxValues) LIKELY return;
+        if(values.size() == expect) LIKELY return;
         Context->setError(AL_INVALID_ENUM, "Property 0x%04x expects %zu value(s), got %zu",
             prop, expect, values.size());
         throw check_size_exception{};
@@ -2825,11 +2964,12 @@ START_API_FUNC
     std::lock_guard<std::mutex> __{context->mSourceLock};
     ALsource *Source = LookupSource(context.get(), source);
     if(!Source) UNLIKELY
-        context->setError(AL_INVALID_NAME, "Invalid source ID %u", source);
-    else if(!values) UNLIKELY
-        context->setError(AL_INVALID_VALUE, "NULL pointer");
-    else
-        SetSourcefv(Source, context.get(), static_cast<SourceProp>(param), {values, MaxValues});
+        return context->setError(AL_INVALID_NAME, "Invalid source ID %u", source);
+    if(!values) UNLIKELY
+        return context->setError(AL_INVALID_VALUE, "NULL pointer");
+
+    const ALuint count{FloatValsByProp(param)};
+    SetSourcefv(Source, context.get(), static_cast<SourceProp>(param), {values, count});
 }
 END_API_FUNC
 
@@ -2883,17 +3023,14 @@ START_API_FUNC
     std::lock_guard<std::mutex> __{context->mSourceLock};
     ALsource *Source = LookupSource(context.get(), source);
     if(!Source) UNLIKELY
-        context->setError(AL_INVALID_NAME, "Invalid source ID %u", source);
-    else if(!values) UNLIKELY
-        context->setError(AL_INVALID_VALUE, "NULL pointer");
-    else
-    {
-        const ALuint count{DoubleValsByProp(param)};
-        float fvals[MaxValues];
-        for(ALuint i{0};i < count;i++)
-            fvals[i] = static_cast<float>(values[i]);
-        SetSourcefv(Source, context.get(), static_cast<SourceProp>(param), {fvals, count});
-    }
+        return context->setError(AL_INVALID_NAME, "Invalid source ID %u", source);
+    if(!values) UNLIKELY
+        return context->setError(AL_INVALID_VALUE, "NULL pointer");
+
+    const ALuint count{DoubleValsByProp(param)};
+    float fvals[MaxValues];
+    std::copy_n(values, count, fvals);
+    SetSourcefv(Source, context.get(), static_cast<SourceProp>(param), {fvals, count});
 }
 END_API_FUNC
 
@@ -2943,11 +3080,12 @@ START_API_FUNC
     std::lock_guard<std::mutex> __{context->mSourceLock};
     ALsource *Source = LookupSource(context.get(), source);
     if(!Source) UNLIKELY
-        context->setError(AL_INVALID_NAME, "Invalid source ID %u", source);
-    else if(!values) UNLIKELY
-        context->setError(AL_INVALID_VALUE, "NULL pointer");
-    else
-        SetSourceiv(Source, context.get(), static_cast<SourceProp>(param), {values, MaxValues});
+        return context->setError(AL_INVALID_NAME, "Invalid source ID %u", source);
+    if(!values) UNLIKELY
+        return context->setError(AL_INVALID_VALUE, "NULL pointer");
+
+    const ALuint count{IntValsByProp(param)};
+    SetSourceiv(Source, context.get(), static_cast<SourceProp>(param), {values, count});
 }
 END_API_FUNC
 
@@ -2997,11 +3135,12 @@ START_API_FUNC
     std::lock_guard<std::mutex> __{context->mSourceLock};
     ALsource *Source{LookupSource(context.get(), source)};
     if(!Source) UNLIKELY
-        context->setError(AL_INVALID_NAME, "Invalid source ID %u", source);
-    else if(!values) UNLIKELY
-        context->setError(AL_INVALID_VALUE, "NULL pointer");
-    else
-        SetSourcei64v(Source, context.get(), static_cast<SourceProp>(param), {values, MaxValues});
+        return context->setError(AL_INVALID_NAME, "Invalid source ID %u", source);
+    if(!values) UNLIKELY
+        return context->setError(AL_INVALID_VALUE, "NULL pointer");
+
+    const ALuint count{Int64ValsByProp(param)};
+    SetSourcei64v(Source, context.get(), static_cast<SourceProp>(param), {values, count});
 }
 END_API_FUNC
 
@@ -3061,19 +3200,14 @@ START_API_FUNC
     std::lock_guard<std::mutex> _{context->mSourceLock};
     ALsource *Source{LookupSource(context.get(), source)};
     if(!Source) UNLIKELY
-        context->setError(AL_INVALID_NAME, "Invalid source ID %u", source);
-    else if(!values) UNLIKELY
-        context->setError(AL_INVALID_VALUE, "NULL pointer");
-    else
-    {
-        const ALuint count{FloatValsByProp(param)};
-        double dvals[MaxValues];
-        if(GetSourcedv(Source, context.get(), static_cast<SourceProp>(param), {dvals, count}))
-        {
-            for(ALuint i{0};i < count;i++)
-                values[i] = static_cast<float>(dvals[i]);
-        }
-    }
+        return context->setError(AL_INVALID_NAME, "Invalid source ID %u", source);
+    if(!values) UNLIKELY
+        return context->setError(AL_INVALID_VALUE, "NULL pointer");
+
+    const ALuint count{FloatValsByProp(param)};
+    double dvals[MaxValues];
+    if(GetSourcedv(Source, context.get(), static_cast<SourceProp>(param), {dvals, count}))
+        std::copy_n(dvals, count, values);
 }
 END_API_FUNC
 
@@ -3129,11 +3263,12 @@ START_API_FUNC
     std::lock_guard<std::mutex> _{context->mSourceLock};
     ALsource *Source{LookupSource(context.get(), source)};
     if(!Source) UNLIKELY
-        context->setError(AL_INVALID_NAME, "Invalid source ID %u", source);
-    else if(!values) UNLIKELY
-        context->setError(AL_INVALID_VALUE, "NULL pointer");
-    else
-        GetSourcedv(Source, context.get(), static_cast<SourceProp>(param), {values, MaxValues});
+        return context->setError(AL_INVALID_NAME, "Invalid source ID %u", source);
+    if(!values) UNLIKELY
+        return context->setError(AL_INVALID_VALUE, "NULL pointer");
+
+    const ALuint count{DoubleValsByProp(param)};
+    GetSourcedv(Source, context.get(), static_cast<SourceProp>(param), {values, count});
 }
 END_API_FUNC
 
@@ -3189,11 +3324,12 @@ START_API_FUNC
     std::lock_guard<std::mutex> _{context->mSourceLock};
     ALsource *Source{LookupSource(context.get(), source)};
     if(!Source) UNLIKELY
-        context->setError(AL_INVALID_NAME, "Invalid source ID %u", source);
-    else if(!values) UNLIKELY
-        context->setError(AL_INVALID_VALUE, "NULL pointer");
-    else
-        GetSourceiv(Source, context.get(), static_cast<SourceProp>(param), {values, MaxValues});
+        return context->setError(AL_INVALID_NAME, "Invalid source ID %u", source);
+    if(!values) UNLIKELY
+        return context->setError(AL_INVALID_VALUE, "NULL pointer");
+
+    const ALuint count{IntValsByProp(param)};
+    GetSourceiv(Source, context.get(), static_cast<SourceProp>(param), {values, count});
 }
 END_API_FUNC
 
@@ -3249,11 +3385,12 @@ START_API_FUNC
     std::lock_guard<std::mutex> _{context->mSourceLock};
     ALsource *Source{LookupSource(context.get(), source)};
     if(!Source) UNLIKELY
-        context->setError(AL_INVALID_NAME, "Invalid source ID %u", source);
-    else if(!values) UNLIKELY
-        context->setError(AL_INVALID_VALUE, "NULL pointer");
-    else
-        GetSourcei64v(Source, context.get(), static_cast<SourceProp>(param), {values, MaxValues});
+        return context->setError(AL_INVALID_NAME, "Invalid source ID %u", source);
+    if(!values) UNLIKELY
+        return context->setError(AL_INVALID_VALUE, "NULL pointer");
+
+    const ALuint count{Int64ValsByProp(param)};
+    GetSourcei64v(Source, context.get(), static_cast<SourceProp>(param), {values, count});
 }
 END_API_FUNC
 

@@ -2179,7 +2179,10 @@ try {
              * buffer's ID when playing.
              */
             if(Source->SourceType == AL_STATIC || Source->state == AL_INITIAL)
-                BufferList = &Source->mQueue.front();
+            {
+                if(!Source->mQueue.empty())
+                    BufferList = &Source->mQueue.front();
+            }
             else if(Voice *voice{GetSourceVoice(Source, Context)})
             {
                 VoiceBufferItem *Current{voice->mCurrentBuffer.load(std::memory_order_relaxed)};

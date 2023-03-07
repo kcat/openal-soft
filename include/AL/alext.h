@@ -391,6 +391,13 @@ AL_API void AL_APIENTRY alProcessUpdatesSOFT(void);
 /*#define AL_SEC_LENGTH_SOFT                       0x200B*/
 #endif
 
+#ifndef AL_SOFT_buffer_length_query
+#define AL_SOFT_buffer_length_query 1
+/*#define AL_BYTE_LENGTH_SOFT                      0x2009*/
+/*#define AL_SAMPLE_LENGTH_SOFT                    0x200A*/
+/*#define AL_SEC_LENGTH_SOFT                       0x200B*/
+#endif
+
 #ifndef ALC_SOFT_pause_device
 #define ALC_SOFT_pause_device 1
 typedef void (ALC_APIENTRY*LPALCDEVICEPAUSESOFT)(ALCdevice *device);

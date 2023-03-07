@@ -1191,6 +1191,11 @@ START_API_FUNC
         context->setError(AL_INVALID_VALUE, "NULL pointer");
     else switch(param)
     {
+    case AL_SEC_LENGTH_SOFT:
+        *value = (albuf->mSampleRate < 1) ? 0.0f :
+            (static_cast<float>(albuf->mSampleLen) / static_cast<float>(albuf->mSampleRate));
+        break;
+
     default:
         context->setError(AL_INVALID_ENUM, "Invalid buffer float property 0x%04x", param);
     }
@@ -1276,8 +1281,16 @@ START_API_FUNC
         break;
 
     case AL_SIZE:
+        *value = albuf->mCallback ? 0 : static_cast<ALint>(albuf->mData.size());
+        break;
+
+    case AL_BYTE_LENGTH_SOFT:
         *value = static_cast<ALint>(albuf->mSampleLen / albuf->mBlockAlign
             * albuf->blockSizeFromFmt());
+        break;
+
+    case AL_SAMPLE_LENGTH_SOFT:
+        *value = static_cast<ALint>(albuf->mSampleLen);
         break;
 
     case AL_UNPACK_BLOCK_ALIGNMENT_SOFT:

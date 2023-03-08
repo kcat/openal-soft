@@ -1073,21 +1073,20 @@ START_API_FUNC
         if(ReadRef(albuf->ref) != 0) UNLIKELY
             context->setError(AL_INVALID_OPERATION, "Modifying in-use buffer %u's ambisonic layout",
                 buffer);
-        else if(value != AL_FUMA_SOFT && value != AL_ACN_SOFT) UNLIKELY
+        else if(const auto layout = AmbiLayoutFromEnum(value))
+            albuf->mAmbiLayout = layout.value();
+        else UNLIKELY
             context->setError(AL_INVALID_VALUE, "Invalid unpack ambisonic layout %04x", value);
-        else
-            albuf->mAmbiLayout = AmbiLayoutFromEnum(value).value();
         break;
 
     case AL_AMBISONIC_SCALING_SOFT:
         if(ReadRef(albuf->ref) != 0) UNLIKELY
             context->setError(AL_INVALID_OPERATION, "Modifying in-use buffer %u's ambisonic scaling",
                 buffer);
-        else if(value != AL_FUMA_SOFT && value != AL_SN3D_SOFT && value != AL_N3D_SOFT)
-            UNLIKELY
+        else if(const auto scaling = AmbiScalingFromEnum(value))
+            albuf->mAmbiScaling = scaling.value();
+        else UNLIKELY
             context->setError(AL_INVALID_VALUE, "Invalid unpack ambisonic scaling %04x", value);
-        else
-            albuf->mAmbiScaling = AmbiScalingFromEnum(value).value();
         break;
 
     case AL_UNPACK_AMBISONIC_ORDER_SOFT:

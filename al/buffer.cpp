@@ -177,6 +177,28 @@ al::optional<FmtType> FmtFromUserFmt(UserFmtType type)
 
 
 #ifdef ALSOFT_EAX
+al::optional<EaxStorage> EaxStorageFromEnum(ALenum scale)
+{
+    switch(scale)
+    {
+    case AL_STORAGE_AUTOMATIC: return EaxStorage::Automatic;
+    case AL_STORAGE_ACCESSIBLE: return EaxStorage::Accessible;
+    case AL_STORAGE_HARDWARE: return EaxStorage::Hardware;
+    }
+    return al::nullopt;
+}
+ALenum EnumFromEaxStorage(EaxStorage storage)
+{
+    switch(storage)
+    {
+    case EaxStorage::Automatic: return AL_STORAGE_AUTOMATIC;
+    case EaxStorage::Accessible: return AL_STORAGE_ACCESSIBLE;
+    case EaxStorage::Hardware: return AL_STORAGE_HARDWARE;
+    }
+    throw std::runtime_error{"Invalid EaxStorage: "+std::to_string(int(storage))};
+}
+
+
 bool eax_x_ram_check_availability(const ALCdevice &device, const ALbuffer &buffer,
     const ALuint newsize) noexcept
 {
@@ -409,7 +431,7 @@ void LoadData(ALCcontext *context, ALbuffer *ALBuf, ALsizei freq, ALuint size,
     const size_t newsize{static_cast<size_t>(blocks) * DstBlockSize};
 
 #ifdef ALSOFT_EAX
-    if(ALBuf->eax_x_ram_mode == AL_STORAGE_HARDWARE)
+    if(ALBuf->eax_x_ram_mode == EaxStorage::Hardware)
     {
         ALCdevice &device = *context->mALDevice;
         if(!eax_x_ram_check_availability(device, *ALBuf, size))
@@ -460,7 +482,7 @@ void LoadData(ALCcontext *context, ALbuffer *ALBuf, ALsizei freq, ALuint size,
     ALBuf->mLoopEnd = ALBuf->mSampleLen;
 
 #ifdef ALSOFT_EAX
-    if(eax_g_is_enabled && ALBuf->eax_x_ram_mode != AL_STORAGE_ACCESSIBLE)
+    if(eax_g_is_enabled && ALBuf->eax_x_ram_mode == EaxStorage::Hardware)
         eax_x_ram_apply(*context->mALDevice, *ALBuf);
 #endif
 }
@@ -1523,14 +1545,9 @@ START_API_FUNC
         return ALC_FALSE;
     }
 
-    switch(value)
+    const auto storage = EaxStorageFromEnum(value);
+    if(!storage)
     {
-    case AL_STORAGE_AUTOMATIC:
-    case AL_STORAGE_HARDWARE:
-    case AL_STORAGE_ACCESSIBLE:
-        break;
-
-    default:
         context->setError(AL_INVALID_ENUM, EAX_PREFIX "Unsupported X-RAM mode 0x%x", value);
         return ALC_FALSE;
     }
@@ -1573,7 +1590,7 @@ START_API_FUNC
          * only when not set/queued on a source?
          */
 
-        if(value == AL_STORAGE_HARDWARE && !al_buffer->eax_x_ram_is_hardware)
+        if(*storage == EaxStorage::Hardware && !al_buffer->eax_x_ram_is_hardware)
         {
             /* FIXME: This doesn't account for duplicate buffers. When the same
              * buffer ID is specified multiple times in the provided list, it
@@ -1606,11 +1623,11 @@ START_API_FUNC
         const auto al_buffer = LookupBuffer(device, buffer);
         assert(al_buffer);
 
-        if(value != AL_STORAGE_ACCESSIBLE)
+        if(*storage == EaxStorage::Hardware)
             eax_x_ram_apply(*device, *al_buffer);
         else
             eax_x_ram_clear(*device, *al_buffer);
-        al_buffer->eax_x_ram_mode = value;
+        al_buffer->eax_x_ram_mode = *storage;
     }
 
     return AL_TRUE;
@@ -1653,7 +1670,7 @@ START_API_FUNC
         return AL_NONE;
     }
 
-    return al_buffer->eax_x_ram_mode;
+    return EnumFromEaxStorage(al_buffer->eax_x_ram_mode);
 
 #undef EAX_PREFIX
 }

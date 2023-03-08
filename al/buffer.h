@@ -14,6 +14,12 @@
 
 #ifdef ALSOFT_EAX
 #include "eax/x_ram.h"
+
+enum class EaxStorage : uint8_t {
+    Automatic,
+    Accessible,
+    Hardware
+};
 #endif // ALSOFT_EAX
 
 /* User formats */
@@ -71,7 +77,7 @@ struct ALbuffer : public BufferStorage {
     DISABLE_ALLOC()
 
 #ifdef ALSOFT_EAX
-    ALenum eax_x_ram_mode{AL_STORAGE_AUTOMATIC};
+    EaxStorage eax_x_ram_mode{EaxStorage::Automatic};
     bool eax_x_ram_is_hardware{};
 #endif // ALSOFT_EAX
 };

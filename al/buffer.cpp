@@ -559,7 +559,7 @@ al::optional<DecompResult> DecomposeUserFormat(ALenum format)
         UserFmtChannels channels;
         UserFmtType type;
     };
-    static const std::array<FormatMap,60> UserFmtList{{
+    static const std::array<FormatMap,63> UserFmtList{{
         { AL_FORMAT_MONO8,             UserFmtMono, UserFmtUByte   },
         { AL_FORMAT_MONO16,            UserFmtMono, UserFmtShort   },
         { AL_FORMAT_MONO_FLOAT32,      UserFmtMono, UserFmtFloat   },
@@ -620,6 +620,7 @@ al::optional<DecompResult> DecomposeUserFormat(ALenum format)
         { AL_FORMAT_UHJ2CHN16_SOFT,       UserFmtUHJ2, UserFmtShort   },
         { AL_FORMAT_UHJ2CHN_FLOAT32_SOFT, UserFmtUHJ2, UserFmtFloat   },
         { AL_FORMAT_UHJ2CHN_MULAW_SOFT,   UserFmtUHJ2, UserFmtMulaw   },
+        { AL_FORMAT_UHJ2CHN_ALAW_SOFT,    UserFmtUHJ2, UserFmtAlaw    },
         { AL_FORMAT_UHJ2CHN_IMA4_SOFT,    UserFmtUHJ2, UserFmtIMA4    },
         { AL_FORMAT_UHJ2CHN_MSADPCM_SOFT, UserFmtUHJ2, UserFmtMSADPCM },
 
@@ -627,11 +628,13 @@ al::optional<DecompResult> DecomposeUserFormat(ALenum format)
         { AL_FORMAT_UHJ3CHN16_SOFT,       UserFmtUHJ3, UserFmtShort },
         { AL_FORMAT_UHJ3CHN_FLOAT32_SOFT, UserFmtUHJ3, UserFmtFloat },
         { AL_FORMAT_UHJ3CHN_MULAW_SOFT,   UserFmtUHJ3, UserFmtMulaw },
+        { AL_FORMAT_UHJ3CHN_ALAW_SOFT,    UserFmtUHJ3, UserFmtAlaw  },
 
         { AL_FORMAT_UHJ4CHN8_SOFT,        UserFmtUHJ4, UserFmtUByte },
         { AL_FORMAT_UHJ4CHN16_SOFT,       UserFmtUHJ4, UserFmtShort },
         { AL_FORMAT_UHJ4CHN_FLOAT32_SOFT, UserFmtUHJ4, UserFmtFloat },
         { AL_FORMAT_UHJ4CHN_MULAW_SOFT,   UserFmtUHJ4, UserFmtMulaw },
+        { AL_FORMAT_UHJ4CHN_ALAW_SOFT,    UserFmtUHJ4, UserFmtAlaw  },
     }};
 
     for(const auto &fmt : UserFmtList)

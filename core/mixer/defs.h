@@ -25,7 +25,7 @@ constexpr int MixerFracHalf{MixerFracOne >> 1};
 constexpr float GainSilenceThreshold{0.00001f}; /* -100dB */
 
 
-enum class Resampler {
+enum class Resampler : uint8_t {
     Point,
     Linear,
     Cubic,

@@ -203,6 +203,7 @@ EaxAutoWahEffect::EaxAutoWahEffect(int eax_version)
 
 void EaxAutoWahEffect::set_defaults(Props4& props)
 {
+    props.mType = EaxEffectType::Autowah;
     props.mAutowah.flAttackTime = EAXAUTOWAH_DEFAULTATTACKTIME;
     props.mAutowah.flReleaseTime = EAXAUTOWAH_DEFAULTRELEASETIME;
     props.mAutowah.lResonance = EAXAUTOWAH_DEFAULTRESONANCE;

@@ -219,6 +219,7 @@ EaxRingModulatorEffect::EaxRingModulatorEffect(int eax_version)
 
 void EaxRingModulatorEffect::set_defaults(Props4& props)
 {
+    props.mType = EaxEffectType::Modulator;
     props.mModulator.flFrequency = EAXRINGMODULATOR_DEFAULTFREQUENCY;
     props.mModulator.flHighPassCutOff = EAXRINGMODULATOR_DEFAULTHIGHPASSCUTOFF;
     props.mModulator.ulWaveform = EAXRINGMODULATOR_DEFAULTWAVEFORM;

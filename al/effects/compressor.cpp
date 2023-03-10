@@ -128,6 +128,7 @@ EaxCompressorEffect::EaxCompressorEffect(int eax_version)
 
 void EaxCompressorEffect::set_defaults(Props4& props)
 {
+    props.mType = EaxEffectType::Compressor;
     props.mCompressor.ulOnOff = EAXAGCCOMPRESSOR_DEFAULTONOFF;
 }
 

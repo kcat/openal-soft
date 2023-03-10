@@ -311,6 +311,7 @@ struct EaxChorusTraits
     using Props = EAXCHORUSPROPERTIES;
     static constexpr auto Field = &EaxEffectProps::mChorus;
 
+    static constexpr auto eax_effect_type() { return EaxEffectType::Chorus; }
     static constexpr auto efx_effect() { return AL_EFFECT_CHORUS; }
 
     static constexpr auto eax_none_param_id() { return EAXCHORUS_NONE; }
@@ -371,6 +372,7 @@ struct EaxFlangerTraits
     using Props = EAXFLANGERPROPERTIES;
     static constexpr auto Field = &EaxEffectProps::mFlanger;
 
+    static constexpr auto eax_effect_type() { return EaxEffectType::Flanger; }
     static constexpr auto efx_effect() { return AL_EFFECT_FLANGER; }
 
     static constexpr auto eax_none_param_id() { return EAXFLANGER_NONE; }
@@ -522,6 +524,7 @@ private:
     void set_defaults(Props4& props) override
     {
         auto&& all = props.*Field;
+        props.mType = Traits::eax_effect_type();
         all.ulWaveform = Traits::eax_default_waveform();
         all.lPhase = Traits::eax_default_phase();
         all.flRate = Traits::eax_default_rate();

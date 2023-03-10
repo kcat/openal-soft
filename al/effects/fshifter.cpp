@@ -213,6 +213,7 @@ EaxFrequencyShifterEffect::EaxFrequencyShifterEffect(int eax_version)
 
 void EaxFrequencyShifterEffect::set_defaults(Props4& props)
 {
+    props.mType = EaxEffectType::FrequencyShifter;
     props.mFrequencyShifter.flFrequency = EAXFREQUENCYSHIFTER_DEFAULTFREQUENCY;
     props.mFrequencyShifter.ulLeftDirection = EAXFREQUENCYSHIFTER_DEFAULTLEFTDIRECTION;
     props.mFrequencyShifter.ulRightDirection = EAXFREQUENCYSHIFTER_DEFAULTRIGHTDIRECTION;

@@ -369,6 +369,7 @@ EaxVocalMorpherEffect::EaxVocalMorpherEffect(int eax_version)
 
 void EaxVocalMorpherEffect::set_defaults(Props4& props)
 {
+    props.mType = EaxEffectType::VocalMorpher;
     props.mVocalMorpher.ulPhonemeA = EAXVOCALMORPHER_DEFAULTPHONEMEA;
     props.mVocalMorpher.lPhonemeACoarseTuning = EAXVOCALMORPHER_DEFAULTPHONEMEACOARSETUNING;
     props.mVocalMorpher.ulPhonemeB = EAXVOCALMORPHER_DEFAULTPHONEMEB;

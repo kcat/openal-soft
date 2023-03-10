@@ -222,6 +222,7 @@ EaxDistortionEffect::EaxDistortionEffect(int eax_version)
 
 void EaxDistortionEffect::set_defaults(Props4& props)
 {
+    props.mType = EaxEffectType::Distortion;
     props.mDistortion.flEdge = EAXDISTORTION_DEFAULTEDGE;
     props.mDistortion.lGain = EAXDISTORTION_DEFAULTGAIN;
     props.mDistortion.flLowPassCutOff = EAXDISTORTION_DEFAULTLOWPASSCUTOFF;

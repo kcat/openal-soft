@@ -342,6 +342,7 @@ EaxEqualizerEffect::EaxEqualizerEffect(int eax_version)
 
 void EaxEqualizerEffect::set_defaults(Props4& props)
 {
+    props.mType = EaxEffectType::Equalizer;
     props.mEqualizer.lLowGain = EAXEQUALIZER_DEFAULTLOWGAIN;
     props.mEqualizer.flLowCutOff = EAXEQUALIZER_DEFAULTLOWCUTOFF;
     props.mEqualizer.lMid1Gain = EAXEQUALIZER_DEFAULTMID1GAIN;

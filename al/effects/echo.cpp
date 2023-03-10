@@ -219,6 +219,7 @@ EaxEchoEffect::EaxEchoEffect(int eax_version)
 
 void EaxEchoEffect::set_defaults(Props4& props)
 {
+    props.mType = EaxEffectType::Echo;
     props.mEcho.flDelay = EAXECHO_DEFAULTDELAY;
     props.mEcho.flLRDelay = EAXECHO_DEFAULTLRDELAY;
     props.mEcho.flDamping = EAXECHO_DEFAULTDAMPING;

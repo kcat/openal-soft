@@ -1160,8 +1160,9 @@ private:
     static void set3(const EaxCall& call, Props3& props);
     void set(const EaxCall& call);
 
-    static void translate(const Props1& src, Props3& dst) noexcept;
-    static void translate(const Props2& src, Props3& dst) noexcept;
+    static void translate(const Props1& src, Props4& dst) noexcept;
+    static void translate(const Props2& src, Props4& dst) noexcept;
+    static void translate(const Props3& src, Props4& dst) noexcept;
 }; // EaxReverbEffect
 
 EaxReverbEffect::EaxReverbEffect(int eax_version) noexcept
@@ -1216,19 +1217,19 @@ void EaxReverbEffect::set_defaults() noexcept
     set_defaults(state1_);
     set_defaults(state2_);
     set_defaults(state3_);
-    state4_.d.mReverb = state3_.d;
-    state4_.i.mReverb = state3_.i;
-    state5_.d.mReverb = state3_.d;
-    state5_.i.mReverb = state3_.i;
+    translate(state3_.i, state4_.i);
+    state4_.d = state4_.i;
+    translate(state3_.i, state5_.i);
+    state5_.d = state5_.i;
 }
 
 void EaxReverbEffect::set_current_defaults()
 {
     switch (version_)
     {
-        case 1: translate(state1_.i, props_.mReverb); break;
-        case 2: translate(state2_.i, props_.mReverb); break;
-        case 3: props_.mReverb = state3_.i; break;
+        case 1: translate(state1_.i, props_); break;
+        case 2: translate(state2_.i, props_); break;
+        case 3: translate(state3_.i, props_); break;
         case 4: props_ = state4_.i; break;
         case 5: props_ = state5_.i; break;
         default: fail_unknown_version();
@@ -1538,15 +1539,15 @@ void EaxReverbEffect::get(const EaxCall& call)
     {
     case 1:
         state1_.i = state1_.d;
-        translate(state1_.d, props_.mReverb);
+        translate(state1_.d, props_);
         break;
     case 2:
         state2_.i = state2_.d;
-        translate(state2_.d, props_.mReverb);
+        translate(state2_.d, props_);
         break;
     case 3:
         state3_.i = state3_.d;
-        props_.mReverb = state3_.d;
+        translate(state3_.d, props_);
         break;
     case 4:
         state4_.i = state4_.d;
@@ -1917,43 +1918,51 @@ void EaxReverbEffect::set(const EaxCall& call)
     version_ = version;
 }
 
-void EaxReverbEffect::translate(const Props1& src, Props3& dst) noexcept
+void EaxReverbEffect::translate(const Props1& src, Props4& dst) noexcept
 {
     assert(src.environment <= EAX1REVERB_MAXENVIRONMENT);
-    dst = EAXREVERB_PRESETS[src.environment];
-    dst.flDecayTime = src.fDecayTime_sec;
-    dst.flDecayHFRatio = src.fDamping;
-    dst.lReverb = mini(static_cast<int>(gain_to_level_mb(src.fVolume)), 0);
+    dst.mType = EaxEffectType::Reverb;
+    dst.mReverb = EAXREVERB_PRESETS[src.environment];
+    dst.mReverb.flDecayTime = src.fDecayTime_sec;
+    dst.mReverb.flDecayHFRatio = src.fDamping;
+    dst.mReverb.lReverb = mini(static_cast<int>(gain_to_level_mb(src.fVolume)), 0);
 }
 
-void EaxReverbEffect::translate(const Props2& src, Props3& dst) noexcept
+void EaxReverbEffect::translate(const Props2& src, Props4& dst) noexcept
 {
     assert(src.dwEnvironment <= EAX1REVERB_MAXENVIRONMENT);
     const auto& env = EAXREVERB_PRESETS[src.dwEnvironment];
-    dst.ulEnvironment = src.dwEnvironment;
-    dst.flEnvironmentSize = src.flEnvironmentSize;
-    dst.flEnvironmentDiffusion = src.flEnvironmentDiffusion;
-    dst.lRoom = src.lRoom;
-    dst.lRoomHF = src.lRoomHF;
-    dst.lRoomLF = env.lRoomLF;
-    dst.flDecayTime = src.flDecayTime;
-    dst.flDecayHFRatio = src.flDecayHFRatio;
-    dst.flDecayLFRatio = env.flDecayLFRatio;
-    dst.lReflections = src.lReflections;
-    dst.flReflectionsDelay = src.flReflectionsDelay;
-    dst.vReflectionsPan = env.vReflectionsPan;
-    dst.lReverb = src.lReverb;
-    dst.flReverbDelay = src.flReverbDelay;
-    dst.vReverbPan = env.vReverbPan;
-    dst.flEchoTime = env.flEchoTime;
-    dst.flEchoDepth = env.flEchoDepth;
-    dst.flModulationTime = env.flModulationTime;
-    dst.flModulationDepth = env.flModulationDepth;
-    dst.flAirAbsorptionHF = src.flAirAbsorptionHF;
-    dst.flHFReference = env.flHFReference;
-    dst.flLFReference = env.flLFReference;
-    dst.flRoomRolloffFactor = src.flRoomRolloffFactor;
-    dst.ulFlags = src.dwFlags;
+    dst.mType = EaxEffectType::Reverb;
+    dst.mReverb.ulEnvironment = src.dwEnvironment;
+    dst.mReverb.flEnvironmentSize = src.flEnvironmentSize;
+    dst.mReverb.flEnvironmentDiffusion = src.flEnvironmentDiffusion;
+    dst.mReverb.lRoom = src.lRoom;
+    dst.mReverb.lRoomHF = src.lRoomHF;
+    dst.mReverb.lRoomLF = env.lRoomLF;
+    dst.mReverb.flDecayTime = src.flDecayTime;
+    dst.mReverb.flDecayHFRatio = src.flDecayHFRatio;
+    dst.mReverb.flDecayLFRatio = env.flDecayLFRatio;
+    dst.mReverb.lReflections = src.lReflections;
+    dst.mReverb.flReflectionsDelay = src.flReflectionsDelay;
+    dst.mReverb.vReflectionsPan = env.vReflectionsPan;
+    dst.mReverb.lReverb = src.lReverb;
+    dst.mReverb.flReverbDelay = src.flReverbDelay;
+    dst.mReverb.vReverbPan = env.vReverbPan;
+    dst.mReverb.flEchoTime = env.flEchoTime;
+    dst.mReverb.flEchoDepth = env.flEchoDepth;
+    dst.mReverb.flModulationTime = env.flModulationTime;
+    dst.mReverb.flModulationDepth = env.flModulationDepth;
+    dst.mReverb.flAirAbsorptionHF = src.flAirAbsorptionHF;
+    dst.mReverb.flHFReference = env.flHFReference;
+    dst.mReverb.flLFReference = env.flLFReference;
+    dst.mReverb.flRoomRolloffFactor = src.flRoomRolloffFactor;
+    dst.mReverb.ulFlags = src.dwFlags;
+}
+
+void EaxReverbEffect::translate(const Props3& src, Props4& dst) noexcept
+{
+    dst.mType = EaxEffectType::Reverb;
+    dst.mReverb = src;
 }
 
 } // namespace

@@ -152,6 +152,7 @@ EaxPitchShifterEffect::EaxPitchShifterEffect(int eax_version)
 
 void EaxPitchShifterEffect::set_defaults(Props4& props)
 {
+    props.mType = EaxEffectType::PitchShifter;
     props.mPitchShifter.lCoarseTune = EAXPITCHSHIFTER_DEFAULTCOARSETUNE;
     props.mPitchShifter.lFineTune = EAXPITCHSHIFTER_DEFAULTFINETUNE;
 }

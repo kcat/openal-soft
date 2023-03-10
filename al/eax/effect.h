@@ -16,19 +16,27 @@ struct EaxEffectErrorMessages
     static constexpr auto unknown_version() noexcept { return "Unknown version."; }
 }; // EaxEffectErrorMessages
 
-union EaxEffectProps {
-    EAXREVERBPROPERTIES mReverb;
-    EAXCHORUSPROPERTIES mChorus;
-    EAXAUTOWAHPROPERTIES mAutowah;
-    EAXAGCCOMPRESSORPROPERTIES mCompressor;
-    EAXDISTORTIONPROPERTIES mDistortion;
-    EAXECHOPROPERTIES mEcho;
-    EAXEQUALIZERPROPERTIES mEqualizer;
-    EAXFLANGERPROPERTIES mFlanger;
-    EAXFREQUENCYSHIFTERPROPERTIES mFrequencyShifter;
-    EAXRINGMODULATORPROPERTIES mModulator;
-    EAXPITCHSHIFTERPROPERTIES mPitchShifter;
-    EAXVOCALMORPHERPROPERTIES mVocalMorpher;
+/* TODO: Use std::variant (C++17). */
+enum class EaxEffectType {
+    None, Reverb, Chorus, Autowah, Compressor, Distortion, Echo, Equalizer, Flanger,
+    FrequencyShifter, Modulator, PitchShifter, VocalMorpher
+};
+struct EaxEffectProps {
+    EaxEffectType mType;
+    union {
+        EAXREVERBPROPERTIES mReverb;
+        EAXCHORUSPROPERTIES mChorus;
+        EAXAUTOWAHPROPERTIES mAutowah;
+        EAXAGCCOMPRESSORPROPERTIES mCompressor;
+        EAXDISTORTIONPROPERTIES mDistortion;
+        EAXECHOPROPERTIES mEcho;
+        EAXEQUALIZERPROPERTIES mEqualizer;
+        EAXFLANGERPROPERTIES mFlanger;
+        EAXFREQUENCYSHIFTERPROPERTIES mFrequencyShifter;
+        EAXRINGMODULATORPROPERTIES mModulator;
+        EAXPITCHSHIFTERPROPERTIES mPitchShifter;
+        EAXVOCALMORPHERPROPERTIES mVocalMorpher;
+    };
 };
 
 class EaxEffect {

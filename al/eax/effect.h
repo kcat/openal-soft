@@ -105,10 +105,7 @@ public:
     }
 
     void dispatch(const EaxCall& call) override
-    {
-        call.is_get() ? get(call) : set(call);
-        version_ = call.get_version();
-    }
+    { call.is_get() ? get(call) : set(call); }
 
     bool commit() final
     {
@@ -176,12 +173,14 @@ private:
 
     void set(const EaxCall& call)
     {
-        switch (call.get_version())
+        const auto version = call.get_version();
+        switch (version)
         {
             case 4: set(call, state4_.d); break;
             case 5: set(call, state5_.d); break;
             default: fail_unknown_version();
         }
+        version_ = version;
     }
 
     bool commit_state(State4& state)

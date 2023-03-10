@@ -102,7 +102,7 @@ namespace {
 
 class EaxNullEffect final : public EaxEffect {
 public:
-    EaxNullEffect() noexcept;
+    EaxNullEffect(int eax_version) noexcept;
 
     void dispatch(const EaxCall& call) override;
     /*[[nodiscard]]*/ bool commit() override;
@@ -117,8 +117,8 @@ public:
     {}
 }; // EaxNullEffectException
 
-EaxNullEffect::EaxNullEffect() noexcept
-    : EaxEffect{AL_EFFECT_NULL}
+EaxNullEffect::EaxNullEffect(int eax_version) noexcept
+    : EaxEffect{AL_EFFECT_NULL, eax_version}
 {}
 
 void EaxNullEffect::dispatch(const EaxCall& call)
@@ -134,9 +134,9 @@ bool EaxNullEffect::commit()
 
 } // namespace
 
-EaxEffectUPtr eax_create_eax_null_effect()
+EaxEffectUPtr eax_create_eax_null_effect(int eax_version)
 {
-    return std::make_unique<EaxNullEffect>();
+    return std::make_unique<EaxNullEffect>(eax_version);
 }
 
 #endif // ALSOFT_EAX

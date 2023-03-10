@@ -13,7 +13,7 @@ EaxEffectUPtr eax_create_eax_effect(ALenum al_effect_type, int eax_version)
     switch (al_effect_type)
     {
         case AL_EFFECT_NULL:
-            return eax_create_eax_null_effect();
+            return eax_create_eax_null_effect(eax_version);
 
         case AL_EFFECT_CHORUS:
             return eax_create_eax_chorus_effect(eax_version);

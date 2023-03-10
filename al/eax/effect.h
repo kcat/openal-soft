@@ -16,13 +16,64 @@ struct EaxEffectErrorMessages
     static constexpr auto unknown_version() noexcept { return "Unknown version."; }
 }; // EaxEffectErrorMessages
 
+union EaxEffectProps {
+    EAXREVERBPROPERTIES mReverb;
+    EAXCHORUSPROPERTIES mChorus;
+    EAXAUTOWAHPROPERTIES mAutowah;
+    EAXAGCCOMPRESSORPROPERTIES mCompressor;
+    EAXDISTORTIONPROPERTIES mDistortion;
+    EAXECHOPROPERTIES mEcho;
+    EAXEQUALIZERPROPERTIES mEqualizer;
+    EAXFLANGERPROPERTIES mFlanger;
+    EAXFREQUENCYSHIFTERPROPERTIES mFrequencyShifter;
+    EAXRINGMODULATORPROPERTIES mModulator;
+    EAXPITCHSHIFTERPROPERTIES mPitchShifter;
+    EAXVOCALMORPHERPROPERTIES mVocalMorpher;
+};
+
 class EaxEffect {
 public:
-    EaxEffect(ALenum type) noexcept : al_effect_type_{type} { }
+    EaxEffect(ALenum type, int eax_version) noexcept
+        : al_effect_type_{type}, version_{eax_version}
+    { }
     virtual ~EaxEffect() = default;
 
     const ALenum al_effect_type_;
     EffectProps al_effect_props_{};
+
+    using Props1 = EAX_REVERBPROPERTIES;
+    using Props2 = EAX20LISTENERPROPERTIES;
+    using Props3 = EAXREVERBPROPERTIES;
+    using Props4 = EaxEffectProps;
+
+    struct State1 {
+        Props1 i; // Immediate.
+        Props1 d; // Deferred.
+    };
+
+    struct State2 {
+        Props2 i; // Immediate.
+        Props2 d; // Deferred.
+    };
+
+    struct State3 {
+        Props3 i; // Immediate.
+        Props3 d; // Deferred.
+    };
+
+    struct State4 {
+        Props4 i; // Immediate.
+        Props4 d; // Deferred.
+    };
+
+    int version_;
+    bool changed_{};
+    Props4 props_{};
+    State1 state1_{};
+    State2 state2_{};
+    State3 state3_{};
+    State4 state4_{};
+    State4 state5_{};
 
     virtual void dispatch(const EaxCall& call) = 0;
 
@@ -31,13 +82,13 @@ public:
 }; // EaxEffect
 
 // Base class for EAX4+ effects.
-template<typename TException, typename TProps>
+template<typename TException>
 class EaxEffect4 : public EaxEffect
 {
 public:
     EaxEffect4(ALenum type, int eax_version)
-        : EaxEffect{type}, version_{clamp(eax_version, 4, 5)}
-    {}
+        : EaxEffect{type, clamp(eax_version, 4, 5)}
+    { }
 
     void initialize()
     {
@@ -63,17 +114,6 @@ public:
 
 protected:
     using Exception = TException;
-    using Props = TProps;
-
-    struct State {
-        Props i; // Immediate.
-        Props d; // Deferred.
-    }; // State
-
-    int version_{};
-    Props props_{};
-    State state4_{};
-    State state5_{};
 
     template<typename TValidator, typename TProperty>
     static void defer(const EaxCall& call, TProperty& property)
@@ -83,13 +123,13 @@ protected:
         property = value;
     }
 
-    virtual void set_defaults(Props& props) = 0;
+    virtual void set_defaults(Props4& props) = 0;
     virtual void set_efx_defaults() = 0;
 
-    virtual void get(const EaxCall& call, const Props& props) = 0;
-    virtual void set(const EaxCall& call, Props& props) = 0;
+    virtual void get(const EaxCall& call, const Props4& props) = 0;
+    virtual void set(const EaxCall& call, Props4& props) = 0;
 
-    virtual bool commit_props(const Props& props) = 0;
+    virtual bool commit_props(const Props4& props) = 0;
 
     [[noreturn]] static void fail(const char* message)
     {
@@ -136,7 +176,7 @@ private:
         }
     }
 
-    bool commit_state(State& state)
+    bool commit_state(State4& state)
     {
         const auto props = props_;
         state.i = state.d;
@@ -156,7 +196,7 @@ EaxEffectUPtr eax_create_eax4_effect(int eax_version)
     return effect;
 }
 
-EaxEffectUPtr eax_create_eax_null_effect();
+EaxEffectUPtr eax_create_eax_null_effect(int eax_version);
 EaxEffectUPtr eax_create_eax_chorus_effect(int eax_version);
 EaxEffectUPtr eax_create_eax_distortion_effect(int eax_version);
 EaxEffectUPtr eax_create_eax_echo_effect(int eax_version);

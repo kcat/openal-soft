@@ -127,7 +127,7 @@ public:
     {}
 }; // EaxEchoEffectException
 
-class EaxEchoEffect final : public EaxEffect4<EaxEchoEffectException, EAXECHOPROPERTIES>
+class EaxEchoEffect final : public EaxEffect4<EaxEchoEffectException>
 {
 public:
     EaxEchoEffect(int eax_version);
@@ -189,7 +189,7 @@ private:
     }; // SpreadValidator
 
     struct AllValidator {
-        void operator()(const Props& all) const
+        void operator()(const EAXECHOPROPERTIES& all) const
         {
             DelayValidator{}(all.flDelay);
             LrDelayValidator{}(all.flLRDelay);
@@ -199,7 +199,7 @@ private:
         }
     }; // AllValidator
 
-    void set_defaults(Props& props) override;
+    void set_defaults(Props4& props) override;
 
     void set_efx_delay() noexcept;
     void set_efx_lr_delay() noexcept;
@@ -208,28 +208,28 @@ private:
     void set_efx_spread() noexcept;
     void set_efx_defaults() override;
 
-    void get(const EaxCall& call, const Props& props) override;
-    void set(const EaxCall& call, Props& props) override;
-    bool commit_props(const Props& props) override;
+    void get(const EaxCall& call, const Props4& props) override;
+    void set(const EaxCall& call, Props4& props) override;
+    bool commit_props(const Props4& props) override;
 }; // EaxEchoEffect
 
 EaxEchoEffect::EaxEchoEffect(int eax_version)
     : EaxEffect4{AL_EFFECT_ECHO, eax_version}
 {}
 
-void EaxEchoEffect::set_defaults(Props& props)
+void EaxEchoEffect::set_defaults(Props4& props)
 {
-    props.flDelay = EAXECHO_DEFAULTDELAY;
-    props.flLRDelay = EAXECHO_DEFAULTLRDELAY;
-    props.flDamping = EAXECHO_DEFAULTDAMPING;
-    props.flFeedback = EAXECHO_DEFAULTFEEDBACK;
-    props.flSpread = EAXECHO_DEFAULTSPREAD;
+    props.mEcho.flDelay = EAXECHO_DEFAULTDELAY;
+    props.mEcho.flLRDelay = EAXECHO_DEFAULTLRDELAY;
+    props.mEcho.flDamping = EAXECHO_DEFAULTDAMPING;
+    props.mEcho.flFeedback = EAXECHO_DEFAULTFEEDBACK;
+    props.mEcho.flSpread = EAXECHO_DEFAULTSPREAD;
 }
 
 void EaxEchoEffect::set_efx_delay() noexcept
 {
     al_effect_props_.Echo.Delay = clamp(
-        props_.flDelay,
+        props_.mEcho.flDelay,
         AL_ECHO_MIN_DELAY,
         AL_ECHO_MAX_DELAY);
 }
@@ -237,7 +237,7 @@ void EaxEchoEffect::set_efx_delay() noexcept
 void EaxEchoEffect::set_efx_lr_delay() noexcept
 {
     al_effect_props_.Echo.LRDelay = clamp(
-        props_.flLRDelay,
+        props_.mEcho.flLRDelay,
         AL_ECHO_MIN_LRDELAY,
         AL_ECHO_MAX_LRDELAY);
 }
@@ -245,7 +245,7 @@ void EaxEchoEffect::set_efx_lr_delay() noexcept
 void EaxEchoEffect::set_efx_damping() noexcept
 {
     al_effect_props_.Echo.Damping = clamp(
-        props_.flDamping,
+        props_.mEcho.flDamping,
         AL_ECHO_MIN_DAMPING,
         AL_ECHO_MAX_DAMPING);
 }
@@ -253,7 +253,7 @@ void EaxEchoEffect::set_efx_damping() noexcept
 void EaxEchoEffect::set_efx_feedback() noexcept
 {
     al_effect_props_.Echo.Feedback = clamp(
-        props_.flFeedback,
+        props_.mEcho.flFeedback,
         AL_ECHO_MIN_FEEDBACK,
         AL_ECHO_MAX_FEEDBACK);
 }
@@ -261,7 +261,7 @@ void EaxEchoEffect::set_efx_feedback() noexcept
 void EaxEchoEffect::set_efx_spread() noexcept
 {
     al_effect_props_.Echo.Spread = clamp(
-        props_.flSpread,
+        props_.mEcho.flSpread,
         AL_ECHO_MIN_SPREAD,
         AL_ECHO_MAX_SPREAD);
 }
@@ -275,65 +275,65 @@ void EaxEchoEffect::set_efx_defaults()
     set_efx_spread();
 }
 
-void EaxEchoEffect::get(const EaxCall& call, const Props& props)
+void EaxEchoEffect::get(const EaxCall& call, const Props4& props)
 {
     switch(call.get_property_id())
     {
         case EAXECHO_NONE: break;
-        case EAXECHO_ALLPARAMETERS: call.set_value<Exception>(props); break;
-        case EAXECHO_DELAY: call.set_value<Exception>(props.flDelay); break;
-        case EAXECHO_LRDELAY: call.set_value<Exception>(props.flLRDelay); break;
-        case EAXECHO_DAMPING: call.set_value<Exception>(props.flDamping); break;
-        case EAXECHO_FEEDBACK: call.set_value<Exception>(props.flFeedback); break;
-        case EAXECHO_SPREAD: call.set_value<Exception>(props.flSpread); break;
+        case EAXECHO_ALLPARAMETERS: call.set_value<Exception>(props.mEcho); break;
+        case EAXECHO_DELAY: call.set_value<Exception>(props.mEcho.flDelay); break;
+        case EAXECHO_LRDELAY: call.set_value<Exception>(props.mEcho.flLRDelay); break;
+        case EAXECHO_DAMPING: call.set_value<Exception>(props.mEcho.flDamping); break;
+        case EAXECHO_FEEDBACK: call.set_value<Exception>(props.mEcho.flFeedback); break;
+        case EAXECHO_SPREAD: call.set_value<Exception>(props.mEcho.flSpread); break;
         default: fail_unknown_property_id();
     }
 }
 
-void EaxEchoEffect::set(const EaxCall& call, Props& props)
+void EaxEchoEffect::set(const EaxCall& call, Props4& props)
 {
     switch(call.get_property_id())
     {
         case EAXECHO_NONE: break;
-        case EAXECHO_ALLPARAMETERS: defer<AllValidator>(call, props); break;
-        case EAXECHO_DELAY: defer<DelayValidator>(call, props.flDelay); break;
-        case EAXECHO_LRDELAY: defer<LrDelayValidator>(call, props.flLRDelay); break;
-        case EAXECHO_DAMPING: defer<DampingValidator>(call, props.flDamping); break;
-        case EAXECHO_FEEDBACK: defer<FeedbackValidator>(call, props.flFeedback); break;
-        case EAXECHO_SPREAD: defer<SpreadValidator>(call, props.flSpread); break;
+        case EAXECHO_ALLPARAMETERS: defer<AllValidator>(call, props.mEcho); break;
+        case EAXECHO_DELAY: defer<DelayValidator>(call, props.mEcho.flDelay); break;
+        case EAXECHO_LRDELAY: defer<LrDelayValidator>(call, props.mEcho.flLRDelay); break;
+        case EAXECHO_DAMPING: defer<DampingValidator>(call, props.mEcho.flDamping); break;
+        case EAXECHO_FEEDBACK: defer<FeedbackValidator>(call, props.mEcho.flFeedback); break;
+        case EAXECHO_SPREAD: defer<SpreadValidator>(call, props.mEcho.flSpread); break;
         default: fail_unknown_property_id();
     }
 }
 
-bool EaxEchoEffect::commit_props(const Props& props)
+bool EaxEchoEffect::commit_props(const Props4& props)
 {
     auto is_dirty = false;
 
-    if (props_.flDelay != props.flDelay)
+    if (props_.mEcho.flDelay != props.mEcho.flDelay)
     {
         is_dirty = true;
         set_efx_delay();
     }
 
-    if (props_.flLRDelay != props.flLRDelay)
+    if (props_.mEcho.flLRDelay != props.mEcho.flLRDelay)
     {
         is_dirty = true;
         set_efx_lr_delay();
     }
 
-    if (props_.flDamping != props.flDamping)
+    if (props_.mEcho.flDamping != props.mEcho.flDamping)
     {
         is_dirty = true;
         set_efx_damping();
     }
 
-    if (props_.flFeedback != props.flFeedback)
+    if (props_.mEcho.flFeedback != props.mEcho.flFeedback)
     {
         is_dirty = true;
         set_efx_feedback();
     }
 
-    if (props_.flSpread != props.flSpread)
+    if (props_.mEcho.flSpread != props.mEcho.flSpread)
     {
         is_dirty = true;
         set_efx_spread();

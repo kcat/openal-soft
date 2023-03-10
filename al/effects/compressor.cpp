@@ -88,7 +88,7 @@ public:
     {}
 }; // EaxCompressorEffectException
 
-class EaxCompressorEffect final : public EaxEffect4<EaxCompressorEffectException, EAXAGCCOMPRESSORPROPERTIES>
+class EaxCompressorEffect final : public EaxEffect4<EaxCompressorEffectException>
 {
 public:
     EaxCompressorEffect(int eax_version);
@@ -106,35 +106,35 @@ private:
     }; // OnOffValidator
 
     struct AllValidator {
-        void operator()(const Props& all) const
+        void operator()(const EAXAGCCOMPRESSORPROPERTIES& all) const
         {
             OnOffValidator{}(all.ulOnOff);
         }
     }; // AllValidator
 
-    void set_defaults(Props& props) override;
+    void set_defaults(Props4& props) override;
 
     void set_efx_on_off() noexcept;
     void set_efx_defaults() override;
 
-    void get(const EaxCall& call, const Props& props) override;
-    void set(const EaxCall& call, Props& props) override;
-    bool commit_props(const Props& props) override;
+    void get(const EaxCall& call, const Props4& props) override;
+    void set(const EaxCall& call, Props4& props) override;
+    bool commit_props(const Props4& props) override;
 }; // EaxCompressorEffect
 
 EaxCompressorEffect::EaxCompressorEffect(int eax_version)
     : EaxEffect4{AL_EFFECT_COMPRESSOR, eax_version}
 {}
 
-void EaxCompressorEffect::set_defaults(Props& props)
+void EaxCompressorEffect::set_defaults(Props4& props)
 {
-    props.ulOnOff = EAXAGCCOMPRESSOR_DEFAULTONOFF;
+    props.mCompressor.ulOnOff = EAXAGCCOMPRESSOR_DEFAULTONOFF;
 }
 
 void EaxCompressorEffect::set_efx_on_off() noexcept
 {
     const auto on_off = clamp(
-        static_cast<ALint>(props_.ulOnOff),
+        static_cast<ALint>(props_.mCompressor.ulOnOff),
         AL_COMPRESSOR_MIN_ONOFF,
         AL_COMPRESSOR_MAX_ONOFF);
     al_effect_props_.Compressor.OnOff = (on_off != AL_FALSE);
@@ -145,33 +145,33 @@ void EaxCompressorEffect::set_efx_defaults()
     set_efx_on_off();
 }
 
-void EaxCompressorEffect::get(const EaxCall& call, const Props& props)
+void EaxCompressorEffect::get(const EaxCall& call, const Props4& props)
 {
     switch(call.get_property_id())
     {
         case EAXAGCCOMPRESSOR_NONE: break;
-        case EAXAGCCOMPRESSOR_ALLPARAMETERS: call.set_value<Exception>(props); break;
-        case EAXAGCCOMPRESSOR_ONOFF: call.set_value<Exception>(props.ulOnOff); break;
+        case EAXAGCCOMPRESSOR_ALLPARAMETERS: call.set_value<Exception>(props.mCompressor); break;
+        case EAXAGCCOMPRESSOR_ONOFF: call.set_value<Exception>(props.mCompressor.ulOnOff); break;
         default: fail_unknown_property_id();
     }
 }
 
-void EaxCompressorEffect::set(const EaxCall& call, Props& props)
+void EaxCompressorEffect::set(const EaxCall& call, Props4& props)
 {
     switch(call.get_property_id())
     {
         case EAXAGCCOMPRESSOR_NONE: break;
-        case EAXAGCCOMPRESSOR_ALLPARAMETERS: defer<AllValidator>(call, props); break;
-        case EAXAGCCOMPRESSOR_ONOFF: defer<OnOffValidator>(call, props.ulOnOff); break;
+        case EAXAGCCOMPRESSOR_ALLPARAMETERS: defer<AllValidator>(call, props.mCompressor); break;
+        case EAXAGCCOMPRESSOR_ONOFF: defer<OnOffValidator>(call, props.mCompressor.ulOnOff); break;
         default: fail_unknown_property_id();
     }
 }
 
-bool EaxCompressorEffect::commit_props(const Props& props)
+bool EaxCompressorEffect::commit_props(const Props4& props)
 {
     auto is_dirty = false;
 
-    if (props_.ulOnOff != props.ulOnOff)
+    if (props_.mCompressor.ulOnOff != props.mCompressor.ulOnOff)
     {
         is_dirty = true;
         set_efx_on_off();

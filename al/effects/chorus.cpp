@@ -309,6 +309,7 @@ struct EaxChorusTraits
 {
     using Exception = EaxChorusEffectException;
     using Props = EAXCHORUSPROPERTIES;
+    static constexpr auto Field = &EaxEffectProps::mChorus;
 
     static constexpr auto efx_effect() { return AL_EFFECT_CHORUS; }
 
@@ -368,6 +369,7 @@ struct EaxFlangerTraits
 {
     using Exception = EaxFlangerEffectException;
     using Props = EAXFLANGERPROPERTIES;
+    static constexpr auto Field = &EaxEffectProps::mFlanger;
 
     static constexpr auto efx_effect() { return AL_EFFECT_FLANGER; }
 
@@ -424,14 +426,15 @@ struct EaxFlangerTraits
 }; // EaxFlangerTraits
 
 template<typename TTraits>
-class EaxChorusFlangerEffect final : public EaxEffect4<typename TTraits::Exception, typename TTraits::Props> {
+class EaxChorusFlangerEffect final : public EaxEffect4<typename TTraits::Exception> {
 public:
     using Traits = TTraits;
-    using Base = EaxEffect4<typename Traits::Exception, typename Traits::Props>;
+    using Base = EaxEffect4<typename Traits::Exception>;
     using typename Base::Exception;
-    using typename Base::Props;
-    using typename Base::State;
+    using typename Base::Props4;
     using Base::defer;
+
+    static constexpr auto Field = Traits::Field;
 
     EaxChorusFlangerEffect(int eax_version)
         : Base{Traits::efx_effect(), eax_version}
@@ -505,7 +508,7 @@ private:
     }; // DelayValidator
 
     struct AllValidator {
-        void operator()(const Props& all) const
+        void operator()(const typename Traits::Props& all) const
         {
             WaveformValidator{}(all.ulWaveform);
             PhaseValidator{}(all.lPhase);
@@ -516,20 +519,21 @@ private:
         }
     }; // AllValidator
 
-    void set_defaults(Props& props) override
+    void set_defaults(Props4& props) override
     {
-        props.ulWaveform = Traits::eax_default_waveform();
-        props.lPhase = Traits::eax_default_phase();
-        props.flRate = Traits::eax_default_rate();
-        props.flDepth = Traits::eax_default_depth();
-        props.flFeedback = Traits::eax_default_feedback();
-        props.flDelay = Traits::eax_default_delay();
+        auto&& all = props.*Field;
+        all.ulWaveform = Traits::eax_default_waveform();
+        all.lPhase = Traits::eax_default_phase();
+        all.flRate = Traits::eax_default_rate();
+        all.flDepth = Traits::eax_default_depth();
+        all.flFeedback = Traits::eax_default_feedback();
+        all.flDelay = Traits::eax_default_delay();
     }
 
     void set_efx_waveform()
     {
         const auto waveform = clamp(
-            static_cast<ALint>(Base::props_.ulWaveform),
+            static_cast<ALint>((Base::props_.*Field).ulWaveform),
             Traits::efx_min_waveform(),
             Traits::efx_max_waveform());
         const auto efx_waveform = WaveformFromEnum(waveform);
@@ -540,7 +544,7 @@ private:
     void set_efx_phase() noexcept
     {
         Base::al_effect_props_.Chorus.Phase = clamp(
-            static_cast<ALint>(Base::props_.lPhase),
+            static_cast<ALint>((Base::props_.*Field).lPhase),
             Traits::efx_min_phase(),
             Traits::efx_max_phase());
     }
@@ -548,7 +552,7 @@ private:
     void set_efx_rate() noexcept
     {
         Base::al_effect_props_.Chorus.Rate = clamp(
-            Base::props_.flRate,
+            (Base::props_.*Field).flRate,
             Traits::efx_min_rate(),
             Traits::efx_max_rate());
     }
@@ -556,7 +560,7 @@ private:
     void set_efx_depth() noexcept
     {
         Base::al_effect_props_.Chorus.Depth = clamp(
-            Base::props_.flDepth,
+            (Base::props_.*Field).flDepth,
             Traits::efx_min_depth(),
             Traits::efx_max_depth());
     }
@@ -564,7 +568,7 @@ private:
     void set_efx_feedback() noexcept
     {
         Base::al_effect_props_.Chorus.Feedback = clamp(
-            Base::props_.flFeedback,
+            (Base::props_.*Field).flFeedback,
             Traits::efx_min_feedback(),
             Traits::efx_max_feedback());
     }
@@ -572,7 +576,7 @@ private:
     void set_efx_delay() noexcept
     {
         Base::al_effect_props_.Chorus.Delay = clamp(
-            Base::props_.flDelay,
+            (Base::props_.*Field).flDelay,
             Traits::efx_min_delay(),
             Traits::efx_max_delay());
     }
@@ -587,39 +591,40 @@ private:
         set_efx_delay();
     }
 
-    void get(const EaxCall& call, const Props& props) override
+    void get(const EaxCall& call, const Props4& props) override
     {
+        auto&& all = props.*Field;
         switch(call.get_property_id())
         {
             case Traits::eax_none_param_id():
                 break;
 
             case Traits::eax_allparameters_param_id():
-                call.template set_value<Exception>(props);
+                call.template set_value<Exception>(all);
                 break;
 
             case Traits::eax_waveform_param_id():
-                call.template set_value<Exception>(props.ulWaveform);
+                call.template set_value<Exception>(all.ulWaveform);
                 break;
 
             case Traits::eax_phase_param_id():
-                call.template set_value<Exception>(props.lPhase);
+                call.template set_value<Exception>(all.lPhase);
                 break;
 
             case Traits::eax_rate_param_id():
-                call.template set_value<Exception>(props.flRate);
+                call.template set_value<Exception>(all.flRate);
                 break;
 
             case Traits::eax_depth_param_id():
-                call.template set_value<Exception>(props.flDepth);
+                call.template set_value<Exception>(all.flDepth);
                 break;
 
             case Traits::eax_feedback_param_id():
-                call.template set_value<Exception>(props.flFeedback);
+                call.template set_value<Exception>(all.flFeedback);
                 break;
 
             case Traits::eax_delay_param_id():
-                call.template set_value<Exception>(props.flDelay);
+                call.template set_value<Exception>(all.flDelay);
                 break;
 
             default:
@@ -627,39 +632,40 @@ private:
         }
     }
 
-    void set(const EaxCall& call, Props& props) override
+    void set(const EaxCall& call, Props4& props) override
     {
+        auto&& all = props.*Field;
         switch(call.get_property_id())
         {
             case Traits::eax_none_param_id():
                 break;
 
             case Traits::eax_allparameters_param_id():
-                Base::template defer<AllValidator>(call, props);
+                Base::template defer<AllValidator>(call, all);
                 break;
 
             case Traits::eax_waveform_param_id():
-                Base::template defer<WaveformValidator>(call, props.ulWaveform);
+                Base::template defer<WaveformValidator>(call, all.ulWaveform);
                 break;
 
             case Traits::eax_phase_param_id():
-                Base::template defer<PhaseValidator>(call, props.lPhase);
+                Base::template defer<PhaseValidator>(call, all.lPhase);
                 break;
 
             case Traits::eax_rate_param_id():
-                Base::template defer<RateValidator>(call, props.flRate);
+                Base::template defer<RateValidator>(call, all.flRate);
                 break;
 
             case Traits::eax_depth_param_id():
-                Base::template defer<DepthValidator>(call, props.flDepth);
+                Base::template defer<DepthValidator>(call, all.flDepth);
                 break;
 
             case Traits::eax_feedback_param_id():
-                Base::template defer<FeedbackValidator>(call, props.flFeedback);
+                Base::template defer<FeedbackValidator>(call, all.flFeedback);
                 break;
 
             case Traits::eax_delay_param_id():
-                Base::template defer<DelayValidator>(call, props.flDelay);
+                Base::template defer<DelayValidator>(call, all.flDelay);
                 break;
 
             default:
@@ -667,41 +673,43 @@ private:
         }
     }
 
-    bool commit_props(const Props& props) override
+    bool commit_props(const Props4& props) override
     {
         auto is_dirty = false;
+        auto&& src = props.*Field;
+        auto&& dst = Base::props_.*Field;
 
-        if (Base::props_.ulWaveform != props.ulWaveform)
+        if (dst.ulWaveform != src.ulWaveform)
         {
             is_dirty = true;
             set_efx_waveform();
         }
 
-        if (Base::props_.lPhase != props.lPhase)
+        if (dst.lPhase != src.lPhase)
         {
             is_dirty = true;
             set_efx_phase();
         }
 
-        if (Base::props_.flRate != props.flRate)
+        if (dst.flRate != src.flRate)
         {
             is_dirty = true;
             set_efx_rate();
         }
 
-        if (Base::props_.flDepth != props.flDepth)
+        if (dst.flDepth != src.flDepth)
         {
             is_dirty = true;
             set_efx_depth();
         }
 
-        if (Base::props_.flFeedback != props.flFeedback)
+        if (dst.flFeedback != src.flFeedback)
         {
             is_dirty = true;
             set_efx_feedback();
         }
 
-        if (Base::props_.flDelay != props.flDelay)
+        if (dst.flDelay != src.flDelay)
         {
             is_dirty = true;
             set_efx_delay();

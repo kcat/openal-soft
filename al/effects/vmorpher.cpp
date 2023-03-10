@@ -265,7 +265,7 @@ public:
     {}
 }; // EaxVocalMorpherEffectException
 
-class EaxVocalMorpherEffect final : public EaxEffect4<EaxVocalMorpherEffectException, EAXVOCALMORPHERPROPERTIES> {
+class EaxVocalMorpherEffect final : public EaxEffect4<EaxVocalMorpherEffectException> {
 public:
     EaxVocalMorpherEffect(int eax_version);
 
@@ -337,7 +337,7 @@ private:
     }; // RateValidator
 
     struct AllValidator {
-        void operator()(const Props& all) const
+        void operator()(const EAXVOCALMORPHERPROPERTIES& all) const
         {
             PhonemeAValidator{}(all.ulPhonemeA);
             PhonemeACoarseTuningValidator{}(all.lPhonemeACoarseTuning);
@@ -348,7 +348,7 @@ private:
         }
     }; // AllValidator
 
-    void set_defaults(Props& props) override;
+    void set_defaults(Props4& props) override;
 
     void set_efx_phoneme_a();
     void set_efx_phoneme_a_coarse_tuning() noexcept;
@@ -358,29 +358,29 @@ private:
     void set_efx_rate() noexcept;
     void set_efx_defaults() override;
 
-    void get(const EaxCall& call, const Props& props) override;
-    void set(const EaxCall& call, Props& props) override;
-    bool commit_props(const Props& props) override;
+    void get(const EaxCall& call, const Props4& props) override;
+    void set(const EaxCall& call, Props4& props) override;
+    bool commit_props(const Props4& props) override;
 }; // EaxVocalMorpherEffect
 
 EaxVocalMorpherEffect::EaxVocalMorpherEffect(int eax_version)
     : EaxEffect4{AL_EFFECT_VOCAL_MORPHER, eax_version}
 {}
 
-void EaxVocalMorpherEffect::set_defaults(Props& props)
+void EaxVocalMorpherEffect::set_defaults(Props4& props)
 {
-    props.ulPhonemeA = EAXVOCALMORPHER_DEFAULTPHONEMEA;
-    props.lPhonemeACoarseTuning = EAXVOCALMORPHER_DEFAULTPHONEMEACOARSETUNING;
-    props.ulPhonemeB = EAXVOCALMORPHER_DEFAULTPHONEMEB;
-    props.lPhonemeBCoarseTuning = EAXVOCALMORPHER_DEFAULTPHONEMEBCOARSETUNING;
-    props.ulWaveform = EAXVOCALMORPHER_DEFAULTWAVEFORM;
-    props.flRate = EAXVOCALMORPHER_DEFAULTRATE;
+    props.mVocalMorpher.ulPhonemeA = EAXVOCALMORPHER_DEFAULTPHONEMEA;
+    props.mVocalMorpher.lPhonemeACoarseTuning = EAXVOCALMORPHER_DEFAULTPHONEMEACOARSETUNING;
+    props.mVocalMorpher.ulPhonemeB = EAXVOCALMORPHER_DEFAULTPHONEMEB;
+    props.mVocalMorpher.lPhonemeBCoarseTuning = EAXVOCALMORPHER_DEFAULTPHONEMEBCOARSETUNING;
+    props.mVocalMorpher.ulWaveform = EAXVOCALMORPHER_DEFAULTWAVEFORM;
+    props.mVocalMorpher.flRate = EAXVOCALMORPHER_DEFAULTRATE;
 }
 
 void EaxVocalMorpherEffect::set_efx_phoneme_a()
 {
     const auto phoneme_a = clamp(
-        static_cast<ALint>(props_.ulPhonemeA),
+        static_cast<ALint>(props_.mVocalMorpher.ulPhonemeA),
         AL_VOCAL_MORPHER_MIN_PHONEMEA,
         AL_VOCAL_MORPHER_MAX_PHONEMEA);
     const auto efx_phoneme_a = PhenomeFromEnum(phoneme_a);
@@ -391,7 +391,7 @@ void EaxVocalMorpherEffect::set_efx_phoneme_a()
 void EaxVocalMorpherEffect::set_efx_phoneme_a_coarse_tuning() noexcept
 {
     const auto phoneme_a_coarse_tuning = clamp(
-        static_cast<ALint>(props_.lPhonemeACoarseTuning),
+        static_cast<ALint>(props_.mVocalMorpher.lPhonemeACoarseTuning),
         AL_VOCAL_MORPHER_MIN_PHONEMEA_COARSE_TUNING,
         AL_VOCAL_MORPHER_MAX_PHONEMEA_COARSE_TUNING);
     al_effect_props_.Vmorpher.PhonemeACoarseTuning = phoneme_a_coarse_tuning;
@@ -400,7 +400,7 @@ void EaxVocalMorpherEffect::set_efx_phoneme_a_coarse_tuning() noexcept
 void EaxVocalMorpherEffect::set_efx_phoneme_b()
 {
     const auto phoneme_b = clamp(
-        static_cast<ALint>(props_.ulPhonemeB),
+        static_cast<ALint>(props_.mVocalMorpher.ulPhonemeB),
         AL_VOCAL_MORPHER_MIN_PHONEMEB,
         AL_VOCAL_MORPHER_MAX_PHONEMEB);
     const auto efx_phoneme_b = PhenomeFromEnum(phoneme_b);
@@ -411,7 +411,7 @@ void EaxVocalMorpherEffect::set_efx_phoneme_b()
 void EaxVocalMorpherEffect::set_efx_phoneme_b_coarse_tuning() noexcept
 {
     al_effect_props_.Vmorpher.PhonemeBCoarseTuning = clamp(
-        static_cast<ALint>(props_.lPhonemeBCoarseTuning),
+        static_cast<ALint>(props_.mVocalMorpher.lPhonemeBCoarseTuning),
         AL_VOCAL_MORPHER_MIN_PHONEMEB_COARSE_TUNING,
         AL_VOCAL_MORPHER_MAX_PHONEMEB_COARSE_TUNING);
 }
@@ -419,7 +419,7 @@ void EaxVocalMorpherEffect::set_efx_phoneme_b_coarse_tuning() noexcept
 void EaxVocalMorpherEffect::set_efx_waveform()
 {
     const auto waveform = clamp(
-        static_cast<ALint>(props_.ulWaveform),
+        static_cast<ALint>(props_.mVocalMorpher.ulWaveform),
         AL_VOCAL_MORPHER_MIN_WAVEFORM,
         AL_VOCAL_MORPHER_MAX_WAVEFORM);
     const auto wfx_waveform = WaveformFromEmum(waveform);
@@ -430,7 +430,7 @@ void EaxVocalMorpherEffect::set_efx_waveform()
 void EaxVocalMorpherEffect::set_efx_rate() noexcept
 {
     al_effect_props_.Vmorpher.Rate = clamp(
-        props_.flRate,
+        props_.mVocalMorpher.flRate,
         AL_VOCAL_MORPHER_MIN_RATE,
         AL_VOCAL_MORPHER_MAX_RATE);
 }
@@ -445,7 +445,7 @@ void EaxVocalMorpherEffect::set_efx_defaults()
     set_efx_rate();
 }
 
-void EaxVocalMorpherEffect::get(const EaxCall& call, const Props& props)
+void EaxVocalMorpherEffect::get(const EaxCall& call, const Props4& props)
 {
     switch(call.get_property_id())
     {
@@ -453,31 +453,31 @@ void EaxVocalMorpherEffect::get(const EaxCall& call, const Props& props)
             break;
 
         case EAXVOCALMORPHER_ALLPARAMETERS:
-            call.set_value<Exception>(props);
+            call.set_value<Exception>(props.mVocalMorpher);
             break;
 
         case EAXVOCALMORPHER_PHONEMEA:
-            call.set_value<Exception>(props.ulPhonemeA);
+            call.set_value<Exception>(props.mVocalMorpher.ulPhonemeA);
             break;
 
         case EAXVOCALMORPHER_PHONEMEACOARSETUNING:
-            call.set_value<Exception>(props.lPhonemeACoarseTuning);
+            call.set_value<Exception>(props.mVocalMorpher.lPhonemeACoarseTuning);
             break;
 
         case EAXVOCALMORPHER_PHONEMEB:
-            call.set_value<Exception>(props.ulPhonemeB);
+            call.set_value<Exception>(props.mVocalMorpher.ulPhonemeB);
             break;
 
         case EAXVOCALMORPHER_PHONEMEBCOARSETUNING:
-            call.set_value<Exception>(props.lPhonemeBCoarseTuning);
+            call.set_value<Exception>(props.mVocalMorpher.lPhonemeBCoarseTuning);
             break;
 
         case EAXVOCALMORPHER_WAVEFORM:
-            call.set_value<Exception>(props.ulWaveform);
+            call.set_value<Exception>(props.mVocalMorpher.ulWaveform);
             break;
 
         case EAXVOCALMORPHER_RATE:
-            call.set_value<Exception>(props.flRate);
+            call.set_value<Exception>(props.mVocalMorpher.flRate);
             break;
 
         default:
@@ -485,7 +485,7 @@ void EaxVocalMorpherEffect::get(const EaxCall& call, const Props& props)
     }
 }
 
-void EaxVocalMorpherEffect::set(const EaxCall& call, Props& props)
+void EaxVocalMorpherEffect::set(const EaxCall& call, Props4& props)
 {
     switch(call.get_property_id())
     {
@@ -493,31 +493,31 @@ void EaxVocalMorpherEffect::set(const EaxCall& call, Props& props)
             break;
 
         case EAXVOCALMORPHER_ALLPARAMETERS:
-            defer<AllValidator>(call, props);
+            defer<AllValidator>(call, props.mVocalMorpher);
             break;
 
         case EAXVOCALMORPHER_PHONEMEA:
-            defer<PhonemeAValidator>(call, props.ulPhonemeA);
+            defer<PhonemeAValidator>(call, props.mVocalMorpher.ulPhonemeA);
             break;
 
         case EAXVOCALMORPHER_PHONEMEACOARSETUNING:
-            defer<PhonemeACoarseTuningValidator>(call, props.lPhonemeACoarseTuning);
+            defer<PhonemeACoarseTuningValidator>(call, props.mVocalMorpher.lPhonemeACoarseTuning);
             break;
 
         case EAXVOCALMORPHER_PHONEMEB:
-            defer<PhonemeBValidator>(call, props.ulPhonemeB);
+            defer<PhonemeBValidator>(call, props.mVocalMorpher.ulPhonemeB);
             break;
 
         case EAXVOCALMORPHER_PHONEMEBCOARSETUNING:
-            defer<PhonemeBCoarseTuningValidator>(call, props.lPhonemeBCoarseTuning);
+            defer<PhonemeBCoarseTuningValidator>(call, props.mVocalMorpher.lPhonemeBCoarseTuning);
             break;
 
         case EAXVOCALMORPHER_WAVEFORM:
-            defer<WaveformValidator>(call, props.ulWaveform);
+            defer<WaveformValidator>(call, props.mVocalMorpher.ulWaveform);
             break;
 
         case EAXVOCALMORPHER_RATE:
-            defer<RateValidator>(call, props.flRate);
+            defer<RateValidator>(call, props.mVocalMorpher.flRate);
             break;
 
         default:
@@ -525,41 +525,41 @@ void EaxVocalMorpherEffect::set(const EaxCall& call, Props& props)
     }
 }
 
-bool EaxVocalMorpherEffect::commit_props(const Props& props)
+bool EaxVocalMorpherEffect::commit_props(const Props4& props)
 {
     auto is_dirty = false;
 
-    if (props_.ulPhonemeA != props.ulPhonemeA)
+    if (props_.mVocalMorpher.ulPhonemeA != props.mVocalMorpher.ulPhonemeA)
     {
         is_dirty = true;
         set_efx_phoneme_a();
     }
 
-    if (props_.lPhonemeACoarseTuning != props.lPhonemeACoarseTuning)
+    if (props_.mVocalMorpher.lPhonemeACoarseTuning != props.mVocalMorpher.lPhonemeACoarseTuning)
     {
         is_dirty = true;
         set_efx_phoneme_a_coarse_tuning();
     }
 
-    if (props_.ulPhonemeB != props.ulPhonemeB)
+    if (props_.mVocalMorpher.ulPhonemeB != props.mVocalMorpher.ulPhonemeB)
     {
         is_dirty = true;
         set_efx_phoneme_b();
     }
 
-    if (props_.lPhonemeBCoarseTuning != props.lPhonemeBCoarseTuning)
+    if (props_.mVocalMorpher.lPhonemeBCoarseTuning != props.mVocalMorpher.lPhonemeBCoarseTuning)
     {
         is_dirty = true;
         set_efx_phoneme_b_coarse_tuning();
     }
 
-    if (props_.ulWaveform != props.ulWaveform)
+    if (props_.mVocalMorpher.ulWaveform != props.mVocalMorpher.ulWaveform)
     {
         is_dirty = true;
         set_efx_waveform();
     }
 
-    if (props_.flRate != props.flRate)
+    if (props_.mVocalMorpher.flRate != props.mVocalMorpher.flRate)
     {
         is_dirty = true;
         set_efx_rate();

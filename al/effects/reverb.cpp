@@ -587,28 +587,6 @@ private:
 
     using Exception = EaxReverbEffectException;
 
-    using Props1 = EAX_REVERBPROPERTIES;
-    using Props2 = EAX20LISTENERPROPERTIES;
-    using Props3 = EAXREVERBPROPERTIES;
-
-    struct State1
-    {
-        Props1 i; // Immediate.
-        Props1 d; // Deferred.
-    }; // State1
-
-    struct State2
-    {
-        Props2 i; // Immediate.
-        Props2 d; // Deferred.
-    }; // State2
-
-    struct State3
-    {
-        Props3 i; // Immediate.
-        Props3 d; // Deferred.
-    }; // State3
-
     struct EnvironmentValidator1 {
         void operator()(unsigned long ulEnvironment) const
         {
@@ -654,7 +632,7 @@ private:
     }; // DampingValidator
 
     struct AllValidator1 {
-        void operator()(const Props1& all) const
+        void operator()(const EAX_REVERBPROPERTIES& all) const
         {
             EnvironmentValidator1{}(all.environment);
             VolumeValidator{}(all.fVolume);
@@ -796,7 +774,7 @@ private:
     }; // FlagsValidator2
 
     struct AllValidator2 {
-        void operator()(const Props2& all) const
+        void operator()(const EAX20LISTENERPROPERTIES& all) const
         {
             RoomValidator{}(all.lRoom);
             RoomHFValidator{}(all.lRoomHF);
@@ -931,7 +909,7 @@ private:
     }; // FlagsValidator3
 
     struct AllValidator3 {
-        void operator()(const Props3& all) const
+        void operator()(const EAXREVERBPROPERTIES& all) const
         {
             EnvironmentValidator3{}(all.ulEnvironment);
             EnvironmentSizeValidator{}(all.flEnvironmentSize);
@@ -961,14 +939,14 @@ private:
     }; // AllValidator3
 
     struct EnvironmentDeferrer2 {
-        void operator()(Props2& props, unsigned long dwEnvironment) const
+        void operator()(EAX20LISTENERPROPERTIES& props, unsigned long dwEnvironment) const
         {
             props = EAX2REVERB_PRESETS[dwEnvironment];
         }
     }; // EnvironmentDeferrer2
 
     struct EnvironmentSizeDeferrer2 {
-        void operator()(Props2& props, float flEnvironmentSize) const
+        void operator()(EAX20LISTENERPROPERTIES& props, float flEnvironmentSize) const
         {
             if (props.flEnvironmentSize == flEnvironmentSize)
             {
@@ -1024,7 +1002,7 @@ private:
     }; // EnvironmentSizeDeferrer2
 
     struct EnvironmentDeferrer3 {
-        void operator()(Props3& props, unsigned long ulEnvironment) const
+        void operator()(EAXREVERBPROPERTIES& props, unsigned long ulEnvironment) const
         {
             if (ulEnvironment == EAX_ENVIRONMENT_UNDEFINED)
             {
@@ -1037,7 +1015,7 @@ private:
     }; // EnvironmentDeferrer3
 
     struct EnvironmentSizeDeferrer3 {
-        void operator()(Props3& props, float flEnvironmentSize) const
+        void operator()(EAXREVERBPROPERTIES& props, float flEnvironmentSize) const
         {
             if (props.flEnvironmentSize == flEnvironmentSize)
             {
@@ -1108,14 +1086,6 @@ private:
         }
     }; // EnvironmentSizeDeferrer3
 
-    int version_;
-    bool changed_{};
-    Props3 props_{};
-    State1 state1_{};
-    State2 state2_{};
-    State3 state3_{};
-    State3 state4_{};
-    State3 state5_{};
 
     [[noreturn]] static void fail(const char* message);
     [[noreturn]] static void fail_unknown_property_id();
@@ -1195,7 +1165,7 @@ private:
 }; // EaxReverbEffect
 
 EaxReverbEffect::EaxReverbEffect(int eax_version) noexcept
-    : EaxEffect{AL_EFFECT_EAXREVERB}, version_{eax_version}
+    : EaxEffect{AL_EFFECT_EAXREVERB, eax_version}
 {
     set_defaults();
     set_current_defaults();
@@ -1246,17 +1216,19 @@ void EaxReverbEffect::set_defaults() noexcept
     set_defaults(state1_);
     set_defaults(state2_);
     set_defaults(state3_);
-    state4_ = state3_;
-    state5_ = state3_;
+    state4_.d.mReverb = state3_.d;
+    state4_.i.mReverb = state3_.i;
+    state5_.d.mReverb = state3_.d;
+    state5_.i.mReverb = state3_.i;
 }
 
 void EaxReverbEffect::set_current_defaults()
 {
     switch (version_)
     {
-        case 1: translate(state1_.i, props_); break;
-        case 2: translate(state2_.i, props_); break;
-        case 3: props_ = state3_.i; break;
+        case 1: translate(state1_.i, props_.mReverb); break;
+        case 2: translate(state2_.i, props_.mReverb); break;
+        case 3: props_.mReverb = state3_.i; break;
         case 4: props_ = state4_.i; break;
         case 5: props_ = state5_.i; break;
         default: fail_unknown_version();
@@ -1265,7 +1237,7 @@ void EaxReverbEffect::set_current_defaults()
 
 void EaxReverbEffect::set_efx_density_from_environment_size() noexcept
 {
-    const auto size = props_.flEnvironmentSize;
+    const auto size = props_.mReverb.flEnvironmentSize;
     const auto density = (size * size * size) / 16.0F;
     al_effect_props_.Reverb.Density = clamp(
         density,
@@ -1276,7 +1248,7 @@ void EaxReverbEffect::set_efx_density_from_environment_size() noexcept
 void EaxReverbEffect::set_efx_diffusion() noexcept
 {
     al_effect_props_.Reverb.Diffusion = clamp(
-        props_.flEnvironmentDiffusion,
+        props_.mReverb.flEnvironmentDiffusion,
         AL_EAXREVERB_MIN_DIFFUSION,
         AL_EAXREVERB_MAX_DIFFUSION);
 }
@@ -1284,7 +1256,7 @@ void EaxReverbEffect::set_efx_diffusion() noexcept
 void EaxReverbEffect::set_efx_gain() noexcept
 {
     al_effect_props_.Reverb.Gain = clamp(
-        level_mb_to_gain(static_cast<float>(props_.lRoom)),
+        level_mb_to_gain(static_cast<float>(props_.mReverb.lRoom)),
         AL_EAXREVERB_MIN_GAIN,
         AL_EAXREVERB_MAX_GAIN);
 }
@@ -1292,7 +1264,7 @@ void EaxReverbEffect::set_efx_gain() noexcept
 void EaxReverbEffect::set_efx_gain_hf() noexcept
 {
     al_effect_props_.Reverb.GainHF = clamp(
-        level_mb_to_gain(static_cast<float>(props_.lRoomHF)),
+        level_mb_to_gain(static_cast<float>(props_.mReverb.lRoomHF)),
         AL_EAXREVERB_MIN_GAINHF,
         AL_EAXREVERB_MAX_GAINHF);
 }
@@ -1300,7 +1272,7 @@ void EaxReverbEffect::set_efx_gain_hf() noexcept
 void EaxReverbEffect::set_efx_gain_lf() noexcept
 {
     al_effect_props_.Reverb.GainLF = clamp(
-        level_mb_to_gain(static_cast<float>(props_.lRoomLF)),
+        level_mb_to_gain(static_cast<float>(props_.mReverb.lRoomLF)),
         AL_EAXREVERB_MIN_GAINLF,
         AL_EAXREVERB_MAX_GAINLF);
 }
@@ -1308,7 +1280,7 @@ void EaxReverbEffect::set_efx_gain_lf() noexcept
 void EaxReverbEffect::set_efx_decay_time() noexcept
 {
     al_effect_props_.Reverb.DecayTime = clamp(
-        props_.flDecayTime,
+        props_.mReverb.flDecayTime,
         AL_EAXREVERB_MIN_DECAY_TIME,
         AL_EAXREVERB_MAX_DECAY_TIME);
 }
@@ -1316,7 +1288,7 @@ void EaxReverbEffect::set_efx_decay_time() noexcept
 void EaxReverbEffect::set_efx_decay_hf_ratio() noexcept
 {
     al_effect_props_.Reverb.DecayHFRatio = clamp(
-        props_.flDecayHFRatio,
+        props_.mReverb.flDecayHFRatio,
         AL_EAXREVERB_MIN_DECAY_HFRATIO,
         AL_EAXREVERB_MAX_DECAY_HFRATIO);
 }
@@ -1324,7 +1296,7 @@ void EaxReverbEffect::set_efx_decay_hf_ratio() noexcept
 void EaxReverbEffect::set_efx_decay_lf_ratio() noexcept
 {
     al_effect_props_.Reverb.DecayLFRatio = clamp(
-        props_.flDecayLFRatio,
+        props_.mReverb.flDecayLFRatio,
         AL_EAXREVERB_MIN_DECAY_LFRATIO,
         AL_EAXREVERB_MAX_DECAY_LFRATIO);
 }
@@ -1332,7 +1304,7 @@ void EaxReverbEffect::set_efx_decay_lf_ratio() noexcept
 void EaxReverbEffect::set_efx_reflections_gain() noexcept
 {
     al_effect_props_.Reverb.ReflectionsGain = clamp(
-        level_mb_to_gain(static_cast<float>(props_.lReflections)),
+        level_mb_to_gain(static_cast<float>(props_.mReverb.lReflections)),
         AL_EAXREVERB_MIN_REFLECTIONS_GAIN,
         AL_EAXREVERB_MAX_REFLECTIONS_GAIN);
 }
@@ -1340,22 +1312,22 @@ void EaxReverbEffect::set_efx_reflections_gain() noexcept
 void EaxReverbEffect::set_efx_reflections_delay() noexcept
 {
     al_effect_props_.Reverb.ReflectionsDelay = clamp(
-        props_.flReflectionsDelay,
+        props_.mReverb.flReflectionsDelay,
         AL_EAXREVERB_MIN_REFLECTIONS_DELAY,
         AL_EAXREVERB_MAX_REFLECTIONS_DELAY);
 }
 
 void EaxReverbEffect::set_efx_reflections_pan() noexcept
 {
-    al_effect_props_.Reverb.ReflectionsPan[0] = props_.vReflectionsPan.x;
-    al_effect_props_.Reverb.ReflectionsPan[1] = props_.vReflectionsPan.y;
-    al_effect_props_.Reverb.ReflectionsPan[2] = props_.vReflectionsPan.z;
+    al_effect_props_.Reverb.ReflectionsPan[0] = props_.mReverb.vReflectionsPan.x;
+    al_effect_props_.Reverb.ReflectionsPan[1] = props_.mReverb.vReflectionsPan.y;
+    al_effect_props_.Reverb.ReflectionsPan[2] = props_.mReverb.vReflectionsPan.z;
 }
 
 void EaxReverbEffect::set_efx_late_reverb_gain() noexcept
 {
     al_effect_props_.Reverb.LateReverbGain = clamp(
-        level_mb_to_gain(static_cast<float>(props_.lReverb)),
+        level_mb_to_gain(static_cast<float>(props_.mReverb.lReverb)),
         AL_EAXREVERB_MIN_LATE_REVERB_GAIN,
         AL_EAXREVERB_MAX_LATE_REVERB_GAIN);
 }
@@ -1363,22 +1335,22 @@ void EaxReverbEffect::set_efx_late_reverb_gain() noexcept
 void EaxReverbEffect::set_efx_late_reverb_delay() noexcept
 {
     al_effect_props_.Reverb.LateReverbDelay = clamp(
-        props_.flReverbDelay,
+        props_.mReverb.flReverbDelay,
         AL_EAXREVERB_MIN_LATE_REVERB_DELAY,
         AL_EAXREVERB_MAX_LATE_REVERB_DELAY);
 }
 
 void EaxReverbEffect::set_efx_late_reverb_pan() noexcept
 {
-    al_effect_props_.Reverb.LateReverbPan[0] = props_.vReverbPan.x;
-    al_effect_props_.Reverb.LateReverbPan[1] = props_.vReverbPan.y;
-    al_effect_props_.Reverb.LateReverbPan[2] = props_.vReverbPan.z;
+    al_effect_props_.Reverb.LateReverbPan[0] = props_.mReverb.vReverbPan.x;
+    al_effect_props_.Reverb.LateReverbPan[1] = props_.mReverb.vReverbPan.y;
+    al_effect_props_.Reverb.LateReverbPan[2] = props_.mReverb.vReverbPan.z;
 }
 
 void EaxReverbEffect::set_efx_echo_time() noexcept
 {
     al_effect_props_.Reverb.EchoTime = clamp(
-        props_.flEchoTime,
+        props_.mReverb.flEchoTime,
         AL_EAXREVERB_MIN_ECHO_TIME,
         AL_EAXREVERB_MAX_ECHO_TIME);
 }
@@ -1386,7 +1358,7 @@ void EaxReverbEffect::set_efx_echo_time() noexcept
 void EaxReverbEffect::set_efx_echo_depth() noexcept
 {
     al_effect_props_.Reverb.EchoDepth = clamp(
-        props_.flEchoDepth,
+        props_.mReverb.flEchoDepth,
         AL_EAXREVERB_MIN_ECHO_DEPTH,
         AL_EAXREVERB_MAX_ECHO_DEPTH);
 }
@@ -1394,7 +1366,7 @@ void EaxReverbEffect::set_efx_echo_depth() noexcept
 void EaxReverbEffect::set_efx_modulation_time() noexcept
 {
     al_effect_props_.Reverb.ModulationTime = clamp(
-        props_.flModulationTime,
+        props_.mReverb.flModulationTime,
         AL_EAXREVERB_MIN_MODULATION_TIME,
         AL_EAXREVERB_MAX_MODULATION_TIME);
 }
@@ -1402,7 +1374,7 @@ void EaxReverbEffect::set_efx_modulation_time() noexcept
 void EaxReverbEffect::set_efx_modulation_depth() noexcept
 {
     al_effect_props_.Reverb.ModulationDepth = clamp(
-        props_.flModulationDepth,
+        props_.mReverb.flModulationDepth,
         AL_EAXREVERB_MIN_MODULATION_DEPTH,
         AL_EAXREVERB_MAX_MODULATION_DEPTH);
 }
@@ -1410,7 +1382,7 @@ void EaxReverbEffect::set_efx_modulation_depth() noexcept
 void EaxReverbEffect::set_efx_air_absorption_gain_hf() noexcept
 {
     al_effect_props_.Reverb.AirAbsorptionGainHF = clamp(
-        level_mb_to_gain(props_.flAirAbsorptionHF),
+        level_mb_to_gain(props_.mReverb.flAirAbsorptionHF),
         AL_EAXREVERB_MIN_AIR_ABSORPTION_GAINHF,
         AL_EAXREVERB_MAX_AIR_ABSORPTION_GAINHF);
 }
@@ -1418,7 +1390,7 @@ void EaxReverbEffect::set_efx_air_absorption_gain_hf() noexcept
 void EaxReverbEffect::set_efx_hf_reference() noexcept
 {
     al_effect_props_.Reverb.HFReference = clamp(
-        props_.flHFReference,
+        props_.mReverb.flHFReference,
         AL_EAXREVERB_MIN_HFREFERENCE,
         AL_EAXREVERB_MAX_HFREFERENCE);
 }
@@ -1426,7 +1398,7 @@ void EaxReverbEffect::set_efx_hf_reference() noexcept
 void EaxReverbEffect::set_efx_lf_reference() noexcept
 {
     al_effect_props_.Reverb.LFReference = clamp(
-        props_.flLFReference,
+        props_.mReverb.flLFReference,
         AL_EAXREVERB_MIN_LFREFERENCE,
         AL_EAXREVERB_MAX_LFREFERENCE);
 }
@@ -1434,14 +1406,14 @@ void EaxReverbEffect::set_efx_lf_reference() noexcept
 void EaxReverbEffect::set_efx_room_rolloff_factor() noexcept
 {
     al_effect_props_.Reverb.RoomRolloffFactor = clamp(
-        props_.flRoomRolloffFactor,
+        props_.mReverb.flRoomRolloffFactor,
         AL_EAXREVERB_MIN_ROOM_ROLLOFF_FACTOR,
         AL_EAXREVERB_MAX_ROOM_ROLLOFF_FACTOR);
 }
 
 void EaxReverbEffect::set_efx_flags() noexcept
 {
-    al_effect_props_.Reverb.DecayHFLimit = ((props_.ulFlags & EAXREVERBFLAGS_DECAYHFLIMIT) != 0);
+    al_effect_props_.Reverb.DecayHFLimit = ((props_.mReverb.ulFlags & EAXREVERBFLAGS_DECAYHFLIMIT) != 0);
 }
 
 void EaxReverbEffect::set_efx_defaults() noexcept
@@ -1549,8 +1521,8 @@ void EaxReverbEffect::get(const EaxCall& call)
     case 1: get1(call, state1_.i); break;
     case 2: get2(call, state2_.i); break;
     case 3: get3(call, state3_.i); break;
-    case 4: get3(call, state4_.i); break;
-    case 5: get3(call, state5_.i); break;
+    case 4: get3(call, state4_.i.mReverb); break;
+    case 5: get3(call, state5_.i.mReverb); break;
     default: fail_unknown_version();
     }
 }
@@ -1566,15 +1538,15 @@ void EaxReverbEffect::get(const EaxCall& call)
     {
     case 1:
         state1_.i = state1_.d;
-        translate(state1_.d, props_);
+        translate(state1_.d, props_.mReverb);
         break;
     case 2:
         state2_.i = state2_.d;
-        translate(state2_.d, props_);
+        translate(state2_.d, props_.mReverb);
         break;
     case 3:
         state3_.i = state3_.d;
-        props_ = state3_.d;
+        props_.mReverb = state3_.d;
         break;
     case 4:
         state4_.i = state4_.d;
@@ -1591,139 +1563,139 @@ void EaxReverbEffect::get(const EaxCall& call)
 
     auto is_dirty = false;
 
-    if (props_.flEnvironmentSize != props.flEnvironmentSize)
+    if (props_.mReverb.flEnvironmentSize != props.mReverb.flEnvironmentSize)
     {
         is_dirty = true;
         set_efx_density_from_environment_size();
     }
 
-    if (props_.flEnvironmentDiffusion != props.flEnvironmentDiffusion)
+    if (props_.mReverb.flEnvironmentDiffusion != props.mReverb.flEnvironmentDiffusion)
     {
         is_dirty = true;
         set_efx_diffusion();
     }
 
-    if (props_.lRoom != props.lRoom)
+    if (props_.mReverb.lRoom != props.mReverb.lRoom)
     {
         is_dirty = true;
         set_efx_gain();
     }
 
-    if (props_.lRoomHF != props.lRoomHF)
+    if (props_.mReverb.lRoomHF != props.mReverb.lRoomHF)
     {
         is_dirty = true;
         set_efx_gain_hf();
     }
 
-    if (props_.lRoomLF != props.lRoomLF)
+    if (props_.mReverb.lRoomLF != props.mReverb.lRoomLF)
     {
         is_dirty = true;
         set_efx_gain_lf();
     }
 
-    if (props_.flDecayTime != props.flDecayTime)
+    if (props_.mReverb.flDecayTime != props.mReverb.flDecayTime)
     {
         is_dirty = true;
         set_efx_decay_time();
     }
 
-    if (props_.flDecayHFRatio != props.flDecayHFRatio)
+    if (props_.mReverb.flDecayHFRatio != props.mReverb.flDecayHFRatio)
     {
         is_dirty = true;
         set_efx_decay_hf_ratio();
     }
 
-    if (props_.flDecayLFRatio != props.flDecayLFRatio)
+    if (props_.mReverb.flDecayLFRatio != props.mReverb.flDecayLFRatio)
     {
         is_dirty = true;
         set_efx_decay_lf_ratio();
     }
 
-    if (props_.lReflections != props.lReflections)
+    if (props_.mReverb.lReflections != props.mReverb.lReflections)
     {
         is_dirty = true;
         set_efx_reflections_gain();
     }
 
-    if (props_.flReflectionsDelay != props.flReflectionsDelay)
+    if (props_.mReverb.flReflectionsDelay != props.mReverb.flReflectionsDelay)
     {
         is_dirty = true;
         set_efx_reflections_delay();
     }
 
-    if (props_.vReflectionsPan != props.vReflectionsPan)
+    if (props_.mReverb.vReflectionsPan != props.mReverb.vReflectionsPan)
     {
         is_dirty = true;
         set_efx_reflections_pan();
     }
 
-    if (props_.lReverb != props.lReverb)
+    if (props_.mReverb.lReverb != props.mReverb.lReverb)
     {
         is_dirty = true;
         set_efx_late_reverb_gain();
     }
 
-    if (props_.flReverbDelay != props.flReverbDelay)
+    if (props_.mReverb.flReverbDelay != props.mReverb.flReverbDelay)
     {
         is_dirty = true;
         set_efx_late_reverb_delay();
     }
 
-    if (props_.vReverbPan != props.vReverbPan)
+    if (props_.mReverb.vReverbPan != props.mReverb.vReverbPan)
     {
         is_dirty = true;
         set_efx_late_reverb_pan();
     }
 
-    if (props_.flEchoTime != props.flEchoTime)
+    if (props_.mReverb.flEchoTime != props.mReverb.flEchoTime)
     {
         is_dirty = true;
         set_efx_echo_time();
     }
 
-    if (props_.flEchoDepth != props.flEchoDepth)
+    if (props_.mReverb.flEchoDepth != props.mReverb.flEchoDepth)
     {
         is_dirty = true;
         set_efx_echo_depth();
     }
 
-    if (props_.flModulationTime != props.flModulationTime)
+    if (props_.mReverb.flModulationTime != props.mReverb.flModulationTime)
     {
         is_dirty = true;
         set_efx_modulation_time();
     }
 
-    if (props_.flModulationDepth != props.flModulationDepth)
+    if (props_.mReverb.flModulationDepth != props.mReverb.flModulationDepth)
     {
         is_dirty = true;
         set_efx_modulation_depth();
     }
 
-    if (props_.flAirAbsorptionHF != props.flAirAbsorptionHF)
+    if (props_.mReverb.flAirAbsorptionHF != props.mReverb.flAirAbsorptionHF)
     {
         is_dirty = true;
         set_efx_air_absorption_gain_hf();
     }
 
-    if (props_.flHFReference != props.flHFReference)
+    if (props_.mReverb.flHFReference != props.mReverb.flHFReference)
     {
         is_dirty = true;
         set_efx_hf_reference();
     }
 
-    if (props_.flLFReference != props.flLFReference)
+    if (props_.mReverb.flLFReference != props.mReverb.flLFReference)
     {
         is_dirty = true;
         set_efx_lf_reference();
     }
 
-    if (props_.flRoomRolloffFactor != props.flRoomRolloffFactor)
+    if (props_.mReverb.flRoomRolloffFactor != props.mReverb.flRoomRolloffFactor)
     {
         is_dirty = true;
         set_efx_room_rolloff_factor();
     }
 
-    if (props_.ulFlags != props.ulFlags)
+    if (props_.mReverb.ulFlags != props.mReverb.ulFlags)
     {
         is_dirty = true;
         set_efx_flags();
@@ -1937,8 +1909,8 @@ void EaxReverbEffect::set(const EaxCall& call)
     case 1: set1(call, state1_.d); break;
     case 2: set2(call, state2_.d); break;
     case 3: set3(call, state3_.d); break;
-    case 4: set3(call, state4_.d); break;
-    case 5: set3(call, state5_.d); break;
+    case 4: set3(call, state4_.d.mReverb); break;
+    case 5: set3(call, state5_.d.mReverb); break;
     default: fail_unknown_version();
     }
     changed_ = true;

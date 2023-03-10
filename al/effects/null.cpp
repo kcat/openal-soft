@@ -100,15 +100,6 @@ const EffectProps NullEffectProps{genDefaultProps()};
 #ifdef ALSOFT_EAX
 namespace {
 
-class EaxNullEffect final : public EaxEffect {
-public:
-    EaxNullEffect(int eax_version) noexcept;
-
-    void dispatch(const EaxCall& call) override;
-    /*[[nodiscard]]*/ bool commit() override;
-}; // EaxNullEffect
-
-
 class EaxNullEffectException : public EaxException
 {
 public:
@@ -117,17 +108,47 @@ public:
     {}
 }; // EaxNullEffectException
 
-EaxNullEffect::EaxNullEffect(int eax_version) noexcept
-    : EaxEffect{AL_EFFECT_NULL, eax_version}
+class EaxNullEffect final : public EaxEffect4<EaxNullEffectException>
+{
+public:
+    EaxNullEffect(int eax_version);
+
+private:
+    void set_defaults(Props4& props) override;
+
+    void set_efx_defaults() override;
+
+    void get(const EaxCall& call, const Props4& props) override;
+    void set(const EaxCall& call, Props4& props) override;
+    bool commit_props(const Props4& props) override;
+}; // EaxCompressorEffect
+
+EaxNullEffect::EaxNullEffect(int eax_version)
+    : EaxEffect4{AL_EFFECT_NULL, eax_version}
 {}
 
-void EaxNullEffect::dispatch(const EaxCall& call)
+void EaxNullEffect::set_defaults(Props4& props)
 {
-    if(call.get_property_id() != 0)
-        throw EaxNullEffectException{"Unsupported property id."};
+    props.mType = EaxEffectType::None;
 }
 
-bool EaxNullEffect::commit()
+void EaxNullEffect::set_efx_defaults()
+{
+}
+
+void EaxNullEffect::get(const EaxCall& call, const Props4&)
+{
+    if(call.get_property_id() != 0)
+        fail_unknown_property_id();
+}
+
+void EaxNullEffect::set(const EaxCall& call, Props4&)
+{
+    if(call.get_property_id() != 0)
+        fail_unknown_property_id();
+}
+
+bool EaxNullEffect::commit_props(const Props4&)
 {
     return false;
 }

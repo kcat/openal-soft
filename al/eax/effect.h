@@ -39,14 +39,143 @@ struct EaxEffectProps {
     };
 };
 
+constexpr ALenum EnumFromEaxEffectType(const EaxEffectProps &props)
+{
+    switch(props.mType)
+    {
+    case EaxEffectType::None: break;
+    case EaxEffectType::Reverb: return AL_EFFECT_EAXREVERB;
+    case EaxEffectType::Chorus: return AL_EFFECT_CHORUS;
+    case EaxEffectType::Autowah: return AL_EFFECT_AUTOWAH;
+    case EaxEffectType::Compressor: return AL_EFFECT_COMPRESSOR;
+    case EaxEffectType::Distortion: return AL_EFFECT_DISTORTION;
+    case EaxEffectType::Echo: return AL_EFFECT_ECHO;
+    case EaxEffectType::Equalizer: return AL_EFFECT_EQUALIZER;
+    case EaxEffectType::Flanger: return AL_EFFECT_FLANGER;
+    case EaxEffectType::FrequencyShifter: return AL_EFFECT_FREQUENCY_SHIFTER;
+    case EaxEffectType::Modulator: return AL_EFFECT_RING_MODULATOR;
+    case EaxEffectType::PitchShifter: return AL_EFFECT_PITCH_SHIFTER;
+    case EaxEffectType::VocalMorpher: return AL_EFFECT_VOCAL_MORPHER;
+    }
+    return AL_EFFECT_NULL;
+}
+
+struct EaxReverbCommitter {
+    struct Exception;
+
+    EaxReverbCommitter(EaxEffectProps &eaxprops, EffectProps &alprops)
+        : props_{eaxprops}, al_effect_props_{alprops}
+    { }
+
+    EaxEffectProps &props_;
+    EffectProps &al_effect_props_;
+
+    [[noreturn]] static void fail(const char* message);
+    [[noreturn]] static void fail_unknown_property_id()
+    { fail(EaxEffectErrorMessages::unknown_property_id()); }
+
+    template<typename TValidator, typename TProperty>
+    static void defer(const EaxCall& call, TProperty& property)
+    {
+        const auto& value = call.get_value<Exception, const TProperty>();
+        TValidator{}(value);
+        property = value;
+    }
+
+    template<typename TValidator, typename TDeferrer, typename TProperties, typename TProperty>
+    static void defer(const EaxCall& call, TProperties& properties, TProperty&)
+    {
+        const auto& value = call.get_value<Exception, const TProperty>();
+        TValidator{}(value);
+        TDeferrer{}(properties, value);
+    }
+
+    template<typename TValidator, typename TProperty>
+    static void defer3(const EaxCall& call, EAXREVERBPROPERTIES& properties, TProperty& property)
+    {
+        const auto& value = call.get_value<Exception, const TProperty>();
+        TValidator{}(value);
+        if (value == property)
+            return;
+        property = value;
+        properties.ulEnvironment = EAX_ENVIRONMENT_UNDEFINED;
+    }
+
+
+    bool commit(const EAX_REVERBPROPERTIES &props);
+    bool commit(const EAX20LISTENERPROPERTIES &props);
+    bool commit(const EAXREVERBPROPERTIES &props);
+    bool commit(const EaxEffectProps &props);
+
+    static void SetDefaults(EAX_REVERBPROPERTIES &props);
+    static void SetDefaults(EAX20LISTENERPROPERTIES &props);
+    static void SetDefaults(EAXREVERBPROPERTIES &props);
+    static void SetDefaults(EaxEffectProps &props);
+
+    static void Get(const EaxCall &call, const EAX_REVERBPROPERTIES &props);
+    static void Get(const EaxCall &call, const EAX20LISTENERPROPERTIES &props);
+    static void Get(const EaxCall &call, const EAXREVERBPROPERTIES &props);
+    static void Get(const EaxCall &call, const EaxEffectProps &props);
+
+    static void Set(const EaxCall &call, EAX_REVERBPROPERTIES &props);
+    static void Set(const EaxCall &call, EAX20LISTENERPROPERTIES &props);
+    static void Set(const EaxCall &call, EAXREVERBPROPERTIES &props);
+    static void Set(const EaxCall &call, EaxEffectProps &props);
+
+    static void translate(const EAX_REVERBPROPERTIES& src, EaxEffectProps& dst) noexcept;
+    static void translate(const EAX20LISTENERPROPERTIES& src, EaxEffectProps& dst) noexcept;
+    static void translate(const EAXREVERBPROPERTIES& src, EaxEffectProps& dst) noexcept;
+};
+
+template<typename T>
+struct EaxCommitter {
+    struct Exception;
+
+    EaxCommitter(EaxEffectProps &eaxprops, EffectProps &alprops)
+        : props_{eaxprops}, al_effect_props_{alprops}
+    { }
+
+    EaxEffectProps &props_;
+    EffectProps &al_effect_props_;
+
+    template<typename TValidator, typename TProperty>
+    static void defer(const EaxCall& call, TProperty& property)
+    {
+        const auto& value = call.get_value<Exception, const TProperty>();
+        TValidator{}(value);
+        property = value;
+    }
+
+    template<typename TValidator, typename TDeferrer, typename TProperties, typename TProperty>
+    static void defer(const EaxCall& call, TProperties& properties, TProperty&)
+    {
+        const auto& value = call.get_value<Exception, const TProperty>();
+        TValidator{}(value);
+        TDeferrer{}(properties, value);
+    }
+
+    [[noreturn]] static void fail(const char *message);
+    [[noreturn]] static void fail_unknown_property_id()
+    { fail(EaxEffectErrorMessages::unknown_property_id()); }
+
+    bool commit(const EaxEffectProps &props);
+
+    static void SetDefaults(EaxEffectProps &props);
+    static void Get(const EaxCall &call, const EaxEffectProps &props);
+    static void Set(const EaxCall &call, EaxEffectProps &props);
+};
+
+struct EaxNullCommitter : public EaxCommitter<EaxNullCommitter> {
+    using EaxCommitter<EaxNullCommitter>::EaxCommitter;
+};
+
+
 class EaxEffect {
 public:
-    EaxEffect(ALenum type, int eax_version) noexcept
-        : al_effect_type_{type}, version_{eax_version}
-    { }
+    EaxEffect() noexcept = default;
     virtual ~EaxEffect() = default;
 
-    const ALenum al_effect_type_;
+    ALenum al_effect_type_{AL_EFFECT_NULL};
     EffectProps al_effect_props_{};
 
     using Props1 = EAX_REVERBPROPERTIES;
@@ -74,7 +203,7 @@ public:
         Props4 d; // Deferred.
     };
 
-    int version_;
+    int version_{};
     bool changed_{};
     Props4 props_{};
     State1 state1_{};
@@ -83,10 +212,146 @@ public:
     State4 state4_{};
     State4 state5_{};
 
-    virtual void dispatch(const EaxCall& call) = 0;
+    [[deprecated]] virtual void dispatch(const EaxCall& /*call*/) { }
 
     // Returns "true" if any immediated property was changed.
-    /*[[nodiscard]]*/ virtual bool commit() = 0;
+    /*[[nodiscard]]*/ [[deprecated]] virtual bool commit() { return false; }
+
+    template<typename T, typename ...Args>
+    void call_set_defaults(Args&& ...args)
+    { return T::SetDefaults(std::forward<Args>(args)...); }
+
+    void call_set_defaults(const ALenum altype, EaxEffectProps &props)
+    {
+        if(altype == AL_EFFECT_EAXREVERB)
+            return call_set_defaults<EaxReverbCommitter>(props);
+        return call_set_defaults<EaxNullCommitter>(props);
+    }
+
+    template<typename T>
+    void init()
+    {
+        call_set_defaults<EaxReverbCommitter>(state1_.d);
+        state1_.i = state1_.d;
+        call_set_defaults<EaxReverbCommitter>(state2_.d);
+        state2_.i = state2_.d;
+        call_set_defaults<EaxReverbCommitter>(state3_.d);
+        state3_.i = state3_.d;
+        call_set_defaults<T>(state4_.d);
+        state4_.i = state4_.d;
+        call_set_defaults<T>(state5_.d);
+        state5_.i = state5_.d;
+    }
+
+    void set_defaults(int eax_version, ALenum altype)
+    {
+        switch(eax_version)
+        {
+        case 1: call_set_defaults<EaxReverbCommitter>(state1_.d); break;
+        case 2: call_set_defaults<EaxReverbCommitter>(state2_.d); break;
+        case 3: call_set_defaults<EaxReverbCommitter>(state3_.d); break;
+        case 4: call_set_defaults(altype, state4_.d); break;
+        case 5: call_set_defaults(altype, state5_.d); break;
+        }
+        changed_ = true;
+    }
+
+
+    template<typename T, typename ...Args>
+    void do_set(Args&& ...args)
+    { return T::Set(std::forward<Args>(args)...); }
+
+    void do_set(const EaxCall &call, EaxEffectProps &props)
+    {
+        if(props.mType == EaxEffectType::Reverb)
+            return do_set<EaxReverbCommitter>(call, props);
+        return do_set<EaxNullCommitter>(call, props);
+    }
+
+    void set(const EaxCall &call)
+    {
+        switch(call.get_version())
+        {
+        case 1: do_set<EaxReverbCommitter>(call, state1_.d); break;
+        case 2: do_set<EaxReverbCommitter>(call, state2_.d); break;
+        case 3: do_set<EaxReverbCommitter>(call, state3_.d); break;
+        case 4: do_set(call, state4_.d); break;
+        case 5: do_set(call, state5_.d); break;
+        }
+        changed_ = true;
+    }
+
+
+    template<typename T, typename ...Args>
+    void do_get(Args&& ...args)
+    { return T::Get(std::forward<Args>(args)...); }
+
+    void do_get(const EaxCall &call, const EaxEffectProps &props)
+    {
+        if(props.mType == EaxEffectType::Reverb)
+            return do_get<EaxReverbCommitter>(call, props);
+        return do_get<EaxNullCommitter>(call, props);
+    }
+
+    void get(const EaxCall &call)
+    {
+        switch(call.get_version())
+        {
+        case 1: do_get<EaxReverbCommitter>(call, state1_.d); break;
+        case 2: do_get<EaxReverbCommitter>(call, state2_.d); break;
+        case 3: do_get<EaxReverbCommitter>(call, state3_.d); break;
+        case 4: do_get(call, state4_.d); break;
+        case 5: do_get(call, state5_.d); break;
+        }
+    }
+
+
+    template<typename T, typename ...Args>
+    bool call_commit(Args&& ...args)
+    { return T{props_, al_effect_props_}.commit(std::forward<Args>(args)...); }
+
+    bool call_commit(const EaxEffectProps &props)
+    {
+        if(props.mType == EaxEffectType::Reverb)
+            return call_commit<EaxReverbCommitter>(props);
+        return call_commit<EaxNullCommitter>(props);
+    }
+
+    bool do_commit(int eax_version)
+    {
+        changed_ |= version_ != eax_version;
+        if(!changed_) return false;
+
+        bool ret{version_ != eax_version};
+        version_ = eax_version;
+        changed_ = false;
+
+        switch(eax_version)
+        {
+        case 1:
+            state1_.i = state1_.d;
+            ret |= call_commit<EaxReverbCommitter>(state1_.d);
+            break;
+        case 2:
+            state2_.i = state2_.d;
+            ret |= call_commit<EaxReverbCommitter>(state2_.d);
+            break;
+        case 3:
+            state3_.i = state3_.d;
+            ret |= call_commit<EaxReverbCommitter>(state3_.d);
+            break;
+        case 4:
+            state4_.i = state4_.d;
+            ret |= call_commit(state4_.d);
+            break;
+        case 5:
+            state5_.i = state5_.d;
+            ret |= call_commit(state5_.d);
+            break;
+        }
+        al_effect_type_ = EnumFromEaxEffectType(props_);
+        return ret;
+    }
 }; // EaxEffect
 
 // Base class for EAX4+ effects.
@@ -94,9 +359,7 @@ template<typename TException>
 class EaxEffect4 : public EaxEffect
 {
 public:
-    EaxEffect4(ALenum type, int eax_version)
-        : EaxEffect{type, clamp(eax_version, 4, 5)}
-    { }
+    EaxEffect4(ALenum, int) { }
 
     void initialize()
     {
@@ -202,19 +465,5 @@ EaxEffectUPtr eax_create_eax4_effect(int eax_version)
     effect->initialize();
     return effect;
 }
-
-EaxEffectUPtr eax_create_eax_null_effect(int eax_version);
-EaxEffectUPtr eax_create_eax_chorus_effect(int eax_version);
-EaxEffectUPtr eax_create_eax_distortion_effect(int eax_version);
-EaxEffectUPtr eax_create_eax_echo_effect(int eax_version);
-EaxEffectUPtr eax_create_eax_flanger_effect(int eax_version);
-EaxEffectUPtr eax_create_eax_frequency_shifter_effect(int eax_version);
-EaxEffectUPtr eax_create_eax_vocal_morpher_effect(int eax_version);
-EaxEffectUPtr eax_create_eax_pitch_shifter_effect(int eax_version);
-EaxEffectUPtr eax_create_eax_ring_modulator_effect(int eax_version);
-EaxEffectUPtr eax_create_eax_auto_wah_effect(int eax_version);
-EaxEffectUPtr eax_create_eax_compressor_effect(int eax_version);
-EaxEffectUPtr eax_create_eax_equalizer_effect(int eax_version);
-EaxEffectUPtr eax_create_eax_reverb_effect(int eax_version);
 
 #endif // !EAX_EFFECT_INCLUDED

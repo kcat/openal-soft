@@ -165,11 +165,17 @@ struct EaxCommitter {
     static void Set(const EaxCall &call, EaxEffectProps &props);
 };
 
+struct EaxAutowahCommitter : public EaxCommitter<EaxAutowahCommitter> {
+    using EaxCommitter<EaxAutowahCommitter>::EaxCommitter;
+};
 struct EaxChorusCommitter : public EaxCommitter<EaxChorusCommitter> {
     using EaxCommitter<EaxChorusCommitter>::EaxCommitter;
 };
 struct EaxCompressorCommitter : public EaxCommitter<EaxCompressorCommitter> {
     using EaxCommitter<EaxCompressorCommitter>::EaxCommitter;
+};
+struct EaxDistortionCommitter : public EaxCommitter<EaxDistortionCommitter> {
+    using EaxCommitter<EaxDistortionCommitter>::EaxCommitter;
 };
 struct EaxFlangerCommitter : public EaxCommitter<EaxFlangerCommitter> {
     using EaxCommitter<EaxFlangerCommitter>::EaxCommitter;
@@ -236,8 +242,12 @@ public:
             return call_set_defaults<EaxReverbCommitter>(props);
         if(altype == AL_EFFECT_CHORUS)
             return call_set_defaults<EaxChorusCommitter>(props);
+        if(altype == AL_EFFECT_AUTOWAH)
+            return call_set_defaults<EaxAutowahCommitter>(props);
         if(altype == AL_EFFECT_COMPRESSOR)
             return call_set_defaults<EaxCompressorCommitter>(props);
+        if(altype == AL_EFFECT_DISTORTION)
+            return call_set_defaults<EaxDistortionCommitter>(props);
         if(altype == AL_EFFECT_FLANGER)
             return call_set_defaults<EaxFlangerCommitter>(props);
         return call_set_defaults<EaxNullCommitter>(props);
@@ -277,8 +287,12 @@ public:
         return Callable<EaxReverbCommitter>(__VA_ARGS__);                     \
     if(T == EaxEffectType::Chorus)                                            \
         return Callable<EaxChorusCommitter>(__VA_ARGS__);                     \
+    if(T == EaxEffectType::Autowah)                                           \
+        return Callable<EaxAutowahCommitter>(__VA_ARGS__);                    \
     if(T == EaxEffectType::Compressor)                                        \
         return Callable<EaxCompressorCommitter>(__VA_ARGS__);                 \
+    if(T == EaxEffectType::Distortion)                                        \
+        return Callable<EaxDistortionCommitter>(__VA_ARGS__);                 \
     if(T == EaxEffectType::Flanger)                                           \
         return Callable<EaxFlangerCommitter>(__VA_ARGS__);                    \
     return Callable<EaxNullCommitter>(__VA_ARGS__)

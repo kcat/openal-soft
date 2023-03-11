@@ -136,9 +136,9 @@ private:
                 guidLoadEffect != EAX_AGCCOMPRESSOR_EFFECT &&
                 guidLoadEffect != EAX_AUTOWAH_EFFECT &&
                 guidLoadEffect != EAX_CHORUS_EFFECT &&
-                guidLoadEffect != EAX_DISTORTION_EFFECT /*&&
+                guidLoadEffect != EAX_DISTORTION_EFFECT &&
                 guidLoadEffect != EAX_ECHO_EFFECT &&
-                guidLoadEffect != EAX_EQUALIZER_EFFECT*/ &&
+                guidLoadEffect != EAX_EQUALIZER_EFFECT &&
                 guidLoadEffect != EAX_FLANGER_EFFECT /*&&
                 guidLoadEffect != EAX_FREQUENCYSHIFTER_EFFECT &&
                 guidLoadEffect != EAX_VOCALMORPHER_EFFECT &&

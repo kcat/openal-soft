@@ -177,170 +177,241 @@ const EffectProps EqualizerEffectProps{genDefaultProps()};
 #ifdef ALSOFT_EAX
 namespace {
 
-class EaxEqualizerEffectException : public EaxException
+using EqualizerCommitter = EaxCommitter<EaxEqualizerCommitter>;
+
+struct LowGainValidator {
+    void operator()(long lLowGain) const
+    {
+        eax_validate_range<EqualizerCommitter::Exception>(
+            "Low Gain",
+            lLowGain,
+            EAXEQUALIZER_MINLOWGAIN,
+            EAXEQUALIZER_MAXLOWGAIN);
+    }
+}; // LowGainValidator
+
+struct LowCutOffValidator {
+    void operator()(float flLowCutOff) const
+    {
+        eax_validate_range<EqualizerCommitter::Exception>(
+            "Low Cutoff",
+            flLowCutOff,
+            EAXEQUALIZER_MINLOWCUTOFF,
+            EAXEQUALIZER_MAXLOWCUTOFF);
+    }
+}; // LowCutOffValidator
+
+struct Mid1GainValidator {
+    void operator()(long lMid1Gain) const
+    {
+        eax_validate_range<EqualizerCommitter::Exception>(
+            "Mid1 Gain",
+            lMid1Gain,
+            EAXEQUALIZER_MINMID1GAIN,
+            EAXEQUALIZER_MAXMID1GAIN);
+    }
+}; // Mid1GainValidator
+
+struct Mid1CenterValidator {
+    void operator()(float flMid1Center) const
+    {
+        eax_validate_range<EqualizerCommitter::Exception>(
+            "Mid1 Center",
+            flMid1Center,
+            EAXEQUALIZER_MINMID1CENTER,
+            EAXEQUALIZER_MAXMID1CENTER);
+    }
+}; // Mid1CenterValidator
+
+struct Mid1WidthValidator {
+    void operator()(float flMid1Width) const
+    {
+        eax_validate_range<EqualizerCommitter::Exception>(
+            "Mid1 Width",
+            flMid1Width,
+            EAXEQUALIZER_MINMID1WIDTH,
+            EAXEQUALIZER_MAXMID1WIDTH);
+    }
+}; // Mid1WidthValidator
+
+struct Mid2GainValidator {
+    void operator()(long lMid2Gain) const
+    {
+        eax_validate_range<EqualizerCommitter::Exception>(
+            "Mid2 Gain",
+            lMid2Gain,
+            EAXEQUALIZER_MINMID2GAIN,
+            EAXEQUALIZER_MAXMID2GAIN);
+    }
+}; // Mid2GainValidator
+
+struct Mid2CenterValidator {
+    void operator()(float flMid2Center) const
+    {
+        eax_validate_range<EqualizerCommitter::Exception>(
+            "Mid2 Center",
+            flMid2Center,
+            EAXEQUALIZER_MINMID2CENTER,
+            EAXEQUALIZER_MAXMID2CENTER);
+    }
+}; // Mid2CenterValidator
+
+struct Mid2WidthValidator {
+    void operator()(float flMid2Width) const
+    {
+        eax_validate_range<EqualizerCommitter::Exception>(
+            "Mid2 Width",
+            flMid2Width,
+            EAXEQUALIZER_MINMID2WIDTH,
+            EAXEQUALIZER_MAXMID2WIDTH);
+    }
+}; // Mid2WidthValidator
+
+struct HighGainValidator {
+    void operator()(long lHighGain) const
+    {
+        eax_validate_range<EqualizerCommitter::Exception>(
+            "High Gain",
+            lHighGain,
+            EAXEQUALIZER_MINHIGHGAIN,
+            EAXEQUALIZER_MAXHIGHGAIN);
+    }
+}; // HighGainValidator
+
+struct HighCutOffValidator {
+    void operator()(float flHighCutOff) const
+    {
+        eax_validate_range<EqualizerCommitter::Exception>(
+            "High Cutoff",
+            flHighCutOff,
+            EAXEQUALIZER_MINHIGHCUTOFF,
+            EAXEQUALIZER_MAXHIGHCUTOFF);
+    }
+}; // HighCutOffValidator
+
+struct AllValidator {
+    void operator()(const EAXEQUALIZERPROPERTIES& all) const
+    {
+        LowGainValidator{}(all.lLowGain);
+        LowCutOffValidator{}(all.flLowCutOff);
+        Mid1GainValidator{}(all.lMid1Gain);
+        Mid1CenterValidator{}(all.flMid1Center);
+        Mid1WidthValidator{}(all.flMid1Width);
+        Mid2GainValidator{}(all.lMid2Gain);
+        Mid2CenterValidator{}(all.flMid2Center);
+        Mid2WidthValidator{}(all.flMid2Width);
+        HighGainValidator{}(all.lHighGain);
+        HighCutOffValidator{}(all.flHighCutOff);
+    }
+}; // AllValidator
+
+} // namespace
+
+template<>
+struct EqualizerCommitter::Exception : public EaxException {
+    explicit Exception(const char* message) : EaxException{"EAX_EQUALIZER_EFFECT", message}
+    { }
+};
+
+template<>
+[[noreturn]] void EqualizerCommitter::fail(const char *message)
 {
-public:
-    explicit EaxEqualizerEffectException(const char* message)
-        : EaxException{"EAX_EQUALIZER_EFFECT", message}
-    {}
-}; // EaxEqualizerEffectException
+    throw Exception{message};
+}
 
-class EaxEqualizerEffect final : public EaxEffect4<EaxEqualizerEffectException>
+template<>
+bool EqualizerCommitter::commit(const EaxEffectProps &props)
 {
-public:
-    EaxEqualizerEffect(int eax_version);
+    const auto orig = props_;
+    props_ = props;
 
-private:
-    struct LowGainValidator {
-        void operator()(long lLowGain) const
-        {
-            eax_validate_range<Exception>(
-                "Low Gain",
-                lLowGain,
-                EAXEQUALIZER_MINLOWGAIN,
-                EAXEQUALIZER_MAXLOWGAIN);
-        }
-    }; // LowGainValidator
+    auto is_dirty = bool{orig.mType != props_.mType};
+    if(props_.mEqualizer.lLowGain != props.mEqualizer.lLowGain)
+    {
+        is_dirty = true;
+        al_effect_props_.Equalizer.LowGain = clamp(
+            level_mb_to_gain(static_cast<float>(props_.mEqualizer.lLowGain)),
+            AL_EQUALIZER_MIN_LOW_GAIN,
+            AL_EQUALIZER_MAX_LOW_GAIN);
+    }
+    if(props_.mEqualizer.flLowCutOff != props.mEqualizer.flLowCutOff)
+    {
+        is_dirty = true;
+        al_effect_props_.Equalizer.LowCutoff = clamp(
+            props_.mEqualizer.flLowCutOff,
+            AL_EQUALIZER_MIN_LOW_CUTOFF,
+            AL_EQUALIZER_MAX_LOW_CUTOFF);
+    }
+    if(props_.mEqualizer.lMid1Gain != props.mEqualizer.lMid1Gain)
+    {
+        is_dirty = true;
+        al_effect_props_.Equalizer.Mid1Gain = clamp(
+            level_mb_to_gain(static_cast<float>(props_.mEqualizer.lMid1Gain)),
+            AL_EQUALIZER_MIN_MID1_GAIN,
+            AL_EQUALIZER_MAX_MID1_GAIN);
+    }
+    if(props_.mEqualizer.flMid1Center != props.mEqualizer.flMid1Center)
+    {
+        is_dirty = true;
+        al_effect_props_.Equalizer.Mid1Center = clamp(
+            props_.mEqualizer.flMid1Center,
+            AL_EQUALIZER_MIN_MID1_CENTER,
+            AL_EQUALIZER_MAX_MID1_CENTER);
+    }
+    if(props_.mEqualizer.flMid1Width != props.mEqualizer.flMid1Width)
+    {
+        is_dirty = true;
+        al_effect_props_.Equalizer.Mid1Width = clamp(
+            props_.mEqualizer.flMid1Width,
+            AL_EQUALIZER_MIN_MID1_WIDTH,
+            AL_EQUALIZER_MAX_MID1_WIDTH);
+    }
+    if(props_.mEqualizer.lMid2Gain != props.mEqualizer.lMid2Gain)
+    {
+        is_dirty = true;
+        al_effect_props_.Equalizer.Mid2Gain = clamp(
+            level_mb_to_gain(static_cast<float>(props_.mEqualizer.lMid2Gain)),
+            AL_EQUALIZER_MIN_MID2_GAIN,
+            AL_EQUALIZER_MAX_MID2_GAIN);
+    }
+    if(props_.mEqualizer.flMid2Center != props.mEqualizer.flMid2Center)
+    {
+        is_dirty = true;
+        al_effect_props_.Equalizer.Mid2Center = clamp(
+            props_.mEqualizer.flMid2Center,
+            AL_EQUALIZER_MIN_MID2_CENTER,
+            AL_EQUALIZER_MAX_MID2_CENTER);
+    }
+    if(props_.mEqualizer.flMid2Width != props.mEqualizer.flMid2Width)
+    {
+        is_dirty = true;
+        al_effect_props_.Equalizer.Mid2Width = clamp(
+            props_.mEqualizer.flMid2Width,
+            AL_EQUALIZER_MIN_MID2_WIDTH,
+            AL_EQUALIZER_MAX_MID2_WIDTH);
+    }
+    if(props_.mEqualizer.lHighGain != props.mEqualizer.lHighGain)
+    {
+        is_dirty = true;
+        al_effect_props_.Equalizer.HighGain = clamp(
+            level_mb_to_gain(static_cast<float>(props_.mEqualizer.lHighGain)),
+            AL_EQUALIZER_MIN_HIGH_GAIN,
+            AL_EQUALIZER_MAX_HIGH_GAIN);
+    }
+    if(props_.mEqualizer.flHighCutOff != props.mEqualizer.flHighCutOff)
+    {
+        is_dirty = true;
+        al_effect_props_.Equalizer.HighCutoff = clamp(
+            props_.mEqualizer.flHighCutOff,
+            AL_EQUALIZER_MIN_HIGH_CUTOFF,
+            AL_EQUALIZER_MAX_HIGH_CUTOFF);
+    }
 
-    struct LowCutOffValidator {
-        void operator()(float flLowCutOff) const
-        {
-            eax_validate_range<Exception>(
-                "Low Cutoff",
-                flLowCutOff,
-                EAXEQUALIZER_MINLOWCUTOFF,
-                EAXEQUALIZER_MAXLOWCUTOFF);
-        }
-    }; // LowCutOffValidator
+    return is_dirty;
+}
 
-    struct Mid1GainValidator {
-        void operator()(long lMid1Gain) const
-        {
-            eax_validate_range<Exception>(
-                "Mid1 Gain",
-                lMid1Gain,
-                EAXEQUALIZER_MINMID1GAIN,
-                EAXEQUALIZER_MAXMID1GAIN);
-        }
-    }; // Mid1GainValidator
-
-    struct Mid1CenterValidator {
-        void operator()(float flMid1Center) const
-        {
-            eax_validate_range<Exception>(
-                "Mid1 Center",
-                flMid1Center,
-                EAXEQUALIZER_MINMID1CENTER,
-                EAXEQUALIZER_MAXMID1CENTER);
-        }
-    }; // Mid1CenterValidator
-
-    struct Mid1WidthValidator {
-        void operator()(float flMid1Width) const
-        {
-            eax_validate_range<Exception>(
-                "Mid1 Width",
-                flMid1Width,
-                EAXEQUALIZER_MINMID1WIDTH,
-                EAXEQUALIZER_MAXMID1WIDTH);
-        }
-    }; // Mid1WidthValidator
-
-    struct Mid2GainValidator {
-        void operator()(long lMid2Gain) const
-        {
-            eax_validate_range<Exception>(
-                "Mid2 Gain",
-                lMid2Gain,
-                EAXEQUALIZER_MINMID2GAIN,
-                EAXEQUALIZER_MAXMID2GAIN);
-        }
-    }; // Mid2GainValidator
-
-    struct Mid2CenterValidator {
-        void operator()(float flMid2Center) const
-        {
-            eax_validate_range<Exception>(
-                "Mid2 Center",
-                flMid2Center,
-                EAXEQUALIZER_MINMID2CENTER,
-                EAXEQUALIZER_MAXMID2CENTER);
-        }
-    }; // Mid2CenterValidator
-
-    struct Mid2WidthValidator {
-        void operator()(float flMid2Width) const
-        {
-            eax_validate_range<Exception>(
-                "Mid2 Width",
-                flMid2Width,
-                EAXEQUALIZER_MINMID2WIDTH,
-                EAXEQUALIZER_MAXMID2WIDTH);
-        }
-    }; // Mid2WidthValidator
-
-    struct HighGainValidator {
-        void operator()(long lHighGain) const
-        {
-            eax_validate_range<Exception>(
-                "High Gain",
-                lHighGain,
-                EAXEQUALIZER_MINHIGHGAIN,
-                EAXEQUALIZER_MAXHIGHGAIN);
-        }
-    }; // HighGainValidator
-
-    struct HighCutOffValidator {
-        void operator()(float flHighCutOff) const
-        {
-            eax_validate_range<Exception>(
-                "High Cutoff",
-                flHighCutOff,
-                EAXEQUALIZER_MINHIGHCUTOFF,
-                EAXEQUALIZER_MAXHIGHCUTOFF);
-        }
-    }; // HighCutOffValidator
-
-    struct AllValidator {
-        void operator()(const EAXEQUALIZERPROPERTIES& all) const
-        {
-            LowGainValidator{}(all.lLowGain);
-            LowCutOffValidator{}(all.flLowCutOff);
-            Mid1GainValidator{}(all.lMid1Gain);
-            Mid1CenterValidator{}(all.flMid1Center);
-            Mid1WidthValidator{}(all.flMid1Width);
-            Mid2GainValidator{}(all.lMid2Gain);
-            Mid2CenterValidator{}(all.flMid2Center);
-            Mid2WidthValidator{}(all.flMid2Width);
-            HighGainValidator{}(all.lHighGain);
-            HighCutOffValidator{}(all.flHighCutOff);
-        }
-    }; // AllValidator
-
-    void set_defaults(Props4& props) override;
-
-    void set_efx_low_gain() noexcept;
-    void set_efx_low_cutoff() noexcept;
-    void set_efx_mid1_gain() noexcept;
-    void set_efx_mid1_center() noexcept;
-    void set_efx_mid1_width() noexcept;
-    void set_efx_mid2_gain() noexcept;
-    void set_efx_mid2_center() noexcept;
-    void set_efx_mid2_width() noexcept;
-    void set_efx_high_gain() noexcept;
-    void set_efx_high_cutoff() noexcept;
-    void set_efx_defaults() override;
-
-    void get(const EaxCall& call, const Props4& props) override;
-    void set(const EaxCall& call, Props4& props) override;
-    bool commit_props(const Props4& props) override;
-}; // EaxEqualizerEffect
-
-EaxEqualizerEffect::EaxEqualizerEffect(int eax_version)
-    : EaxEffect4{AL_EFFECT_EQUALIZER, eax_version}
-{}
-
-void EaxEqualizerEffect::set_defaults(Props4& props)
+template<>
+void EqualizerCommitter::SetDefaults(EaxEffectProps &props)
 {
     props.mType = EaxEffectType::Equalizer;
     props.mEqualizer.lLowGain = EAXEQUALIZER_DEFAULTLOWGAIN;
@@ -355,212 +426,46 @@ void EaxEqualizerEffect::set_defaults(Props4& props)
     props.mEqualizer.flHighCutOff = EAXEQUALIZER_DEFAULTHIGHCUTOFF;
 }
 
-void EaxEqualizerEffect::set_efx_low_gain() noexcept
-{
-    al_effect_props_.Equalizer.LowGain = clamp(
-        level_mb_to_gain(static_cast<float>(props_.mEqualizer.lLowGain)),
-        AL_EQUALIZER_MIN_LOW_GAIN,
-        AL_EQUALIZER_MAX_LOW_GAIN);
-}
-
-void EaxEqualizerEffect::set_efx_low_cutoff() noexcept
-{
-    al_effect_props_.Equalizer.LowCutoff = clamp(
-        props_.mEqualizer.flLowCutOff,
-        AL_EQUALIZER_MIN_LOW_CUTOFF,
-        AL_EQUALIZER_MAX_LOW_CUTOFF);
-}
-
-void EaxEqualizerEffect::set_efx_mid1_gain() noexcept
-{
-    al_effect_props_.Equalizer.Mid1Gain = clamp(
-        level_mb_to_gain(static_cast<float>(props_.mEqualizer.lMid1Gain)),
-        AL_EQUALIZER_MIN_MID1_GAIN,
-        AL_EQUALIZER_MAX_MID1_GAIN);
-}
-
-void EaxEqualizerEffect::set_efx_mid1_center() noexcept
-{
-    al_effect_props_.Equalizer.Mid1Center = clamp(
-        props_.mEqualizer.flMid1Center,
-        AL_EQUALIZER_MIN_MID1_CENTER,
-        AL_EQUALIZER_MAX_MID1_CENTER);
-}
-
-void EaxEqualizerEffect::set_efx_mid1_width() noexcept
-{
-    al_effect_props_.Equalizer.Mid1Width = clamp(
-        props_.mEqualizer.flMid1Width,
-        AL_EQUALIZER_MIN_MID1_WIDTH,
-        AL_EQUALIZER_MAX_MID1_WIDTH);
-}
-
-void EaxEqualizerEffect::set_efx_mid2_gain() noexcept
-{
-    al_effect_props_.Equalizer.Mid2Gain = clamp(
-        level_mb_to_gain(static_cast<float>(props_.mEqualizer.lMid2Gain)),
-        AL_EQUALIZER_MIN_MID2_GAIN,
-        AL_EQUALIZER_MAX_MID2_GAIN);
-}
-
-void EaxEqualizerEffect::set_efx_mid2_center() noexcept
-{
-    al_effect_props_.Equalizer.Mid2Center = clamp(
-        props_.mEqualizer.flMid2Center,
-        AL_EQUALIZER_MIN_MID2_CENTER,
-        AL_EQUALIZER_MAX_MID2_CENTER);
-}
-
-void EaxEqualizerEffect::set_efx_mid2_width() noexcept
-{
-    al_effect_props_.Equalizer.Mid2Width = clamp(
-        props_.mEqualizer.flMid2Width,
-        AL_EQUALIZER_MIN_MID2_WIDTH,
-        AL_EQUALIZER_MAX_MID2_WIDTH);
-}
-
-void EaxEqualizerEffect::set_efx_high_gain() noexcept
-{
-    al_effect_props_.Equalizer.HighGain = clamp(
-        level_mb_to_gain(static_cast<float>(props_.mEqualizer.lHighGain)),
-        AL_EQUALIZER_MIN_HIGH_GAIN,
-        AL_EQUALIZER_MAX_HIGH_GAIN);
-}
-
-void EaxEqualizerEffect::set_efx_high_cutoff() noexcept
-{
-    al_effect_props_.Equalizer.HighCutoff = clamp(
-        props_.mEqualizer.flHighCutOff,
-        AL_EQUALIZER_MIN_HIGH_CUTOFF,
-        AL_EQUALIZER_MAX_HIGH_CUTOFF);
-}
-
-void EaxEqualizerEffect::set_efx_defaults()
-{
-    set_efx_low_gain();
-    set_efx_low_cutoff();
-    set_efx_mid1_gain();
-    set_efx_mid1_center();
-    set_efx_mid1_width();
-    set_efx_mid2_gain();
-    set_efx_mid2_center();
-    set_efx_mid2_width();
-    set_efx_high_gain();
-    set_efx_high_cutoff();
-}
-
-void EaxEqualizerEffect::get(const EaxCall& call, const Props4& props)
+template<>
+void EqualizerCommitter::Get(const EaxCall &call, const EaxEffectProps &props)
 {
     switch(call.get_property_id())
     {
-        case EAXEQUALIZER_NONE: break;
-        case EAXEQUALIZER_ALLPARAMETERS: call.set_value<Exception>(props.mEqualizer); break;
-        case EAXEQUALIZER_LOWGAIN: call.set_value<Exception>(props.mEqualizer.lLowGain); break;
-        case EAXEQUALIZER_LOWCUTOFF: call.set_value<Exception>(props.mEqualizer.flLowCutOff); break;
-        case EAXEQUALIZER_MID1GAIN: call.set_value<Exception>(props.mEqualizer.lMid1Gain); break;
-        case EAXEQUALIZER_MID1CENTER: call.set_value<Exception>(props.mEqualizer.flMid1Center); break;
-        case EAXEQUALIZER_MID1WIDTH: call.set_value<Exception>(props.mEqualizer.flMid1Width); break;
-        case EAXEQUALIZER_MID2GAIN: call.set_value<Exception>(props.mEqualizer.lMid2Gain); break;
-        case EAXEQUALIZER_MID2CENTER: call.set_value<Exception>(props.mEqualizer.flMid2Center); break;
-        case EAXEQUALIZER_MID2WIDTH: call.set_value<Exception>(props.mEqualizer.flMid2Width); break;
-        case EAXEQUALIZER_HIGHGAIN: call.set_value<Exception>(props.mEqualizer.lHighGain); break;
-        case EAXEQUALIZER_HIGHCUTOFF: call.set_value<Exception>(props.mEqualizer.flHighCutOff); break;
-        default: fail_unknown_property_id();
+    case EAXEQUALIZER_NONE: break;
+    case EAXEQUALIZER_ALLPARAMETERS: call.set_value<Exception>(props.mEqualizer); break;
+    case EAXEQUALIZER_LOWGAIN: call.set_value<Exception>(props.mEqualizer.lLowGain); break;
+    case EAXEQUALIZER_LOWCUTOFF: call.set_value<Exception>(props.mEqualizer.flLowCutOff); break;
+    case EAXEQUALIZER_MID1GAIN: call.set_value<Exception>(props.mEqualizer.lMid1Gain); break;
+    case EAXEQUALIZER_MID1CENTER: call.set_value<Exception>(props.mEqualizer.flMid1Center); break;
+    case EAXEQUALIZER_MID1WIDTH: call.set_value<Exception>(props.mEqualizer.flMid1Width); break;
+    case EAXEQUALIZER_MID2GAIN: call.set_value<Exception>(props.mEqualizer.lMid2Gain); break;
+    case EAXEQUALIZER_MID2CENTER: call.set_value<Exception>(props.mEqualizer.flMid2Center); break;
+    case EAXEQUALIZER_MID2WIDTH: call.set_value<Exception>(props.mEqualizer.flMid2Width); break;
+    case EAXEQUALIZER_HIGHGAIN: call.set_value<Exception>(props.mEqualizer.lHighGain); break;
+    case EAXEQUALIZER_HIGHCUTOFF: call.set_value<Exception>(props.mEqualizer.flHighCutOff); break;
+    default: fail_unknown_property_id();
     }
 }
 
-void EaxEqualizerEffect::set(const EaxCall& call, Props4& props)
+template<>
+void EqualizerCommitter::Set(const EaxCall &call, EaxEffectProps &props)
 {
     switch(call.get_property_id())
     {
-        case EAXEQUALIZER_NONE: break;
-        case EAXEQUALIZER_ALLPARAMETERS: defer<AllValidator>(call, props.mEqualizer); break;
-        case EAXEQUALIZER_LOWGAIN: defer<LowGainValidator>(call, props.mEqualizer.lLowGain); break;
-        case EAXEQUALIZER_LOWCUTOFF: defer<LowCutOffValidator>(call, props.mEqualizer.flLowCutOff); break;
-        case EAXEQUALIZER_MID1GAIN: defer<Mid1GainValidator>(call, props.mEqualizer.lMid1Gain); break;
-        case EAXEQUALIZER_MID1CENTER: defer<Mid1CenterValidator>(call, props.mEqualizer.flMid1Center); break;
-        case EAXEQUALIZER_MID1WIDTH: defer<Mid1WidthValidator>(call, props.mEqualizer.flMid1Width); break;
-        case EAXEQUALIZER_MID2GAIN: defer<Mid2GainValidator>(call, props.mEqualizer.lMid2Gain); break;
-        case EAXEQUALIZER_MID2CENTER: defer<Mid2CenterValidator>(call, props.mEqualizer.flMid2Center); break;
-        case EAXEQUALIZER_MID2WIDTH: defer<Mid2WidthValidator>(call, props.mEqualizer.flMid2Width); break;
-        case EAXEQUALIZER_HIGHGAIN: defer<HighGainValidator>(call, props.mEqualizer.lHighGain); break;
-        case EAXEQUALIZER_HIGHCUTOFF: defer<HighCutOffValidator>(call, props.mEqualizer.flHighCutOff); break;
-        default: fail_unknown_property_id();
+    case EAXEQUALIZER_NONE: break;
+    case EAXEQUALIZER_ALLPARAMETERS: defer<AllValidator>(call, props.mEqualizer); break;
+    case EAXEQUALIZER_LOWGAIN: defer<LowGainValidator>(call, props.mEqualizer.lLowGain); break;
+    case EAXEQUALIZER_LOWCUTOFF: defer<LowCutOffValidator>(call, props.mEqualizer.flLowCutOff); break;
+    case EAXEQUALIZER_MID1GAIN: defer<Mid1GainValidator>(call, props.mEqualizer.lMid1Gain); break;
+    case EAXEQUALIZER_MID1CENTER: defer<Mid1CenterValidator>(call, props.mEqualizer.flMid1Center); break;
+    case EAXEQUALIZER_MID1WIDTH: defer<Mid1WidthValidator>(call, props.mEqualizer.flMid1Width); break;
+    case EAXEQUALIZER_MID2GAIN: defer<Mid2GainValidator>(call, props.mEqualizer.lMid2Gain); break;
+    case EAXEQUALIZER_MID2CENTER: defer<Mid2CenterValidator>(call, props.mEqualizer.flMid2Center); break;
+    case EAXEQUALIZER_MID2WIDTH: defer<Mid2WidthValidator>(call, props.mEqualizer.flMid2Width); break;
+    case EAXEQUALIZER_HIGHGAIN: defer<HighGainValidator>(call, props.mEqualizer.lHighGain); break;
+    case EAXEQUALIZER_HIGHCUTOFF: defer<HighCutOffValidator>(call, props.mEqualizer.flHighCutOff); break;
+    default: fail_unknown_property_id();
     }
-}
-
-bool EaxEqualizerEffect::commit_props(const Props4& props)
-{
-    auto is_dirty = false;
-
-    if (props_.mEqualizer.lLowGain != props.mEqualizer.lLowGain)
-    {
-        is_dirty = true;
-        set_efx_low_gain();
-    }
-
-    if (props_.mEqualizer.flLowCutOff != props.mEqualizer.flLowCutOff)
-    {
-        is_dirty = true;
-        set_efx_low_cutoff();
-    }
-
-    if (props_.mEqualizer.lMid1Gain != props.mEqualizer.lMid1Gain)
-    {
-        is_dirty = true;
-        set_efx_mid1_gain();
-    }
-
-    if (props_.mEqualizer.flMid1Center != props.mEqualizer.flMid1Center)
-    {
-        is_dirty = true;
-        set_efx_mid1_center();
-    }
-
-    if (props_.mEqualizer.flMid1Width != props.mEqualizer.flMid1Width)
-    {
-        is_dirty = true;
-        set_efx_mid1_width();
-    }
-
-    if (props_.mEqualizer.lMid2Gain != props.mEqualizer.lMid2Gain)
-    {
-        is_dirty = true;
-        set_efx_mid2_gain();
-    }
-
-    if (props_.mEqualizer.flMid2Center != props.mEqualizer.flMid2Center)
-    {
-        is_dirty = true;
-        set_efx_mid2_center();
-    }
-
-    if (props_.mEqualizer.flMid2Width != props.mEqualizer.flMid2Width)
-    {
-        is_dirty = true;
-        set_efx_mid2_width();
-    }
-
-    if (props_.mEqualizer.lHighGain != props.mEqualizer.lHighGain)
-    {
-        is_dirty = true;
-        set_efx_high_gain();
-    }
-
-    if (props_.mEqualizer.flHighCutOff != props.mEqualizer.flHighCutOff)
-    {
-        is_dirty = true;
-        set_efx_high_cutoff();
-    }
-
-    return is_dirty;
-}
-
-} // namespace
-
-EaxEffectUPtr eax_create_eax_equalizer_effect(int eax_version)
-{
-    return eax_create_eax4_effect<EaxEqualizerEffect>(eax_version);
 }
 
 #endif // ALSOFT_EAX

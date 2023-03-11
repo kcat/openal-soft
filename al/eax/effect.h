@@ -177,6 +177,12 @@ struct EaxCompressorCommitter : public EaxCommitter<EaxCompressorCommitter> {
 struct EaxDistortionCommitter : public EaxCommitter<EaxDistortionCommitter> {
     using EaxCommitter<EaxDistortionCommitter>::EaxCommitter;
 };
+struct EaxEchoCommitter : public EaxCommitter<EaxEchoCommitter> {
+    using EaxCommitter<EaxEchoCommitter>::EaxCommitter;
+};
+struct EaxEqualizerCommitter : public EaxCommitter<EaxEqualizerCommitter> {
+    using EaxCommitter<EaxEqualizerCommitter>::EaxCommitter;
+};
 struct EaxFlangerCommitter : public EaxCommitter<EaxFlangerCommitter> {
     using EaxCommitter<EaxFlangerCommitter>::EaxCommitter;
 };
@@ -248,6 +254,10 @@ public:
             return call_set_defaults<EaxCompressorCommitter>(props);
         if(altype == AL_EFFECT_DISTORTION)
             return call_set_defaults<EaxDistortionCommitter>(props);
+        if(altype == AL_EFFECT_ECHO)
+            return call_set_defaults<EaxEchoCommitter>(props);
+        if(altype == AL_EFFECT_EQUALIZER)
+            return call_set_defaults<EaxEqualizerCommitter>(props);
         if(altype == AL_EFFECT_FLANGER)
             return call_set_defaults<EaxFlangerCommitter>(props);
         return call_set_defaults<EaxNullCommitter>(props);
@@ -293,6 +303,10 @@ public:
         return Callable<EaxCompressorCommitter>(__VA_ARGS__);                 \
     if(T == EaxEffectType::Distortion)                                        \
         return Callable<EaxDistortionCommitter>(__VA_ARGS__);                 \
+    if(T == EaxEffectType::Echo)                                              \
+        return Callable<EaxEchoCommitter>(__VA_ARGS__);                       \
+    if(T == EaxEffectType::Equalizer)                                         \
+        return Callable<EaxEqualizerCommitter>(__VA_ARGS__);                  \
     if(T == EaxEffectType::Flanger)                                           \
         return Callable<EaxFlangerCommitter>(__VA_ARGS__);                    \
     return Callable<EaxNullCommitter>(__VA_ARGS__)

@@ -195,44 +195,18 @@ bool AutowahCommitter::commit(const EaxEffectProps &props)
     const auto orig = props_;
     props_ = props;
 
-    auto is_dirty = bool{orig.mType != props_.mType};
-    if(props_.mAutowah.flAttackTime != props.mAutowah.flAttackTime)
-    {
-        is_dirty = true;
-        al_effect_props_.Autowah.AttackTime = clamp(
-            props_.mAutowah.flAttackTime,
-            AL_AUTOWAH_MIN_ATTACK_TIME,
-            AL_AUTOWAH_MAX_ATTACK_TIME);
-    }
+    if(orig.mType == props_.mType && props_.mAutowah.flAttackTime == props.mAutowah.flAttackTime
+        && props_.mAutowah.flReleaseTime == props.mAutowah.flReleaseTime
+        && props_.mAutowah.lResonance == props.mAutowah.lResonance
+        && props_.mAutowah.lPeakLevel == props.mAutowah.lPeakLevel)
+        return false;
 
-    if(props_.mAutowah.flReleaseTime != props.mAutowah.flReleaseTime)
-    {
-        is_dirty = true;
-        al_effect_props_.Autowah.ReleaseTime = clamp(
-            props_.mAutowah.flReleaseTime,
-            AL_AUTOWAH_MIN_RELEASE_TIME,
-            AL_AUTOWAH_MAX_RELEASE_TIME);
-    }
+    al_effect_props_.Autowah.AttackTime = props_.mAutowah.flAttackTime;
+    al_effect_props_.Autowah.ReleaseTime = props_.mAutowah.flReleaseTime;
+    al_effect_props_.Autowah.Resonance = level_mb_to_gain(static_cast<float>(props_.mAutowah.lResonance));
+    al_effect_props_.Autowah.PeakGain = level_mb_to_gain(static_cast<float>(props_.mAutowah.lPeakLevel));
 
-    if(props_.mAutowah.lResonance != props.mAutowah.lResonance)
-    {
-        is_dirty = true;
-        al_effect_props_.Autowah.Resonance = clamp(
-            level_mb_to_gain(static_cast<float>(props_.mAutowah.lResonance)),
-            AL_AUTOWAH_MIN_RESONANCE,
-            AL_AUTOWAH_MAX_RESONANCE);
-    }
-
-    if(props_.mAutowah.lPeakLevel != props.mAutowah.lPeakLevel)
-    {
-        is_dirty = true;
-        al_effect_props_.Autowah.PeakGain = clamp(
-            level_mb_to_gain(static_cast<float>(props_.mAutowah.lPeakLevel)),
-            AL_AUTOWAH_MIN_PEAK_GAIN,
-            AL_AUTOWAH_MAX_PEAK_GAIN);
-    }
-
-    return is_dirty;
+    return true;
 }
 
 template<>

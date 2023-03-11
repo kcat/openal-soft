@@ -325,89 +325,30 @@ bool EqualizerCommitter::commit(const EaxEffectProps &props)
     const auto orig = props_;
     props_ = props;
 
-    auto is_dirty = bool{orig.mType != props_.mType};
-    if(props_.mEqualizer.lLowGain != props.mEqualizer.lLowGain)
-    {
-        is_dirty = true;
-        al_effect_props_.Equalizer.LowGain = clamp(
-            level_mb_to_gain(static_cast<float>(props_.mEqualizer.lLowGain)),
-            AL_EQUALIZER_MIN_LOW_GAIN,
-            AL_EQUALIZER_MAX_LOW_GAIN);
-    }
-    if(props_.mEqualizer.flLowCutOff != props.mEqualizer.flLowCutOff)
-    {
-        is_dirty = true;
-        al_effect_props_.Equalizer.LowCutoff = clamp(
-            props_.mEqualizer.flLowCutOff,
-            AL_EQUALIZER_MIN_LOW_CUTOFF,
-            AL_EQUALIZER_MAX_LOW_CUTOFF);
-    }
-    if(props_.mEqualizer.lMid1Gain != props.mEqualizer.lMid1Gain)
-    {
-        is_dirty = true;
-        al_effect_props_.Equalizer.Mid1Gain = clamp(
-            level_mb_to_gain(static_cast<float>(props_.mEqualizer.lMid1Gain)),
-            AL_EQUALIZER_MIN_MID1_GAIN,
-            AL_EQUALIZER_MAX_MID1_GAIN);
-    }
-    if(props_.mEqualizer.flMid1Center != props.mEqualizer.flMid1Center)
-    {
-        is_dirty = true;
-        al_effect_props_.Equalizer.Mid1Center = clamp(
-            props_.mEqualizer.flMid1Center,
-            AL_EQUALIZER_MIN_MID1_CENTER,
-            AL_EQUALIZER_MAX_MID1_CENTER);
-    }
-    if(props_.mEqualizer.flMid1Width != props.mEqualizer.flMid1Width)
-    {
-        is_dirty = true;
-        al_effect_props_.Equalizer.Mid1Width = clamp(
-            props_.mEqualizer.flMid1Width,
-            AL_EQUALIZER_MIN_MID1_WIDTH,
-            AL_EQUALIZER_MAX_MID1_WIDTH);
-    }
-    if(props_.mEqualizer.lMid2Gain != props.mEqualizer.lMid2Gain)
-    {
-        is_dirty = true;
-        al_effect_props_.Equalizer.Mid2Gain = clamp(
-            level_mb_to_gain(static_cast<float>(props_.mEqualizer.lMid2Gain)),
-            AL_EQUALIZER_MIN_MID2_GAIN,
-            AL_EQUALIZER_MAX_MID2_GAIN);
-    }
-    if(props_.mEqualizer.flMid2Center != props.mEqualizer.flMid2Center)
-    {
-        is_dirty = true;
-        al_effect_props_.Equalizer.Mid2Center = clamp(
-            props_.mEqualizer.flMid2Center,
-            AL_EQUALIZER_MIN_MID2_CENTER,
-            AL_EQUALIZER_MAX_MID2_CENTER);
-    }
-    if(props_.mEqualizer.flMid2Width != props.mEqualizer.flMid2Width)
-    {
-        is_dirty = true;
-        al_effect_props_.Equalizer.Mid2Width = clamp(
-            props_.mEqualizer.flMid2Width,
-            AL_EQUALIZER_MIN_MID2_WIDTH,
-            AL_EQUALIZER_MAX_MID2_WIDTH);
-    }
-    if(props_.mEqualizer.lHighGain != props.mEqualizer.lHighGain)
-    {
-        is_dirty = true;
-        al_effect_props_.Equalizer.HighGain = clamp(
-            level_mb_to_gain(static_cast<float>(props_.mEqualizer.lHighGain)),
-            AL_EQUALIZER_MIN_HIGH_GAIN,
-            AL_EQUALIZER_MAX_HIGH_GAIN);
-    }
-    if(props_.mEqualizer.flHighCutOff != props.mEqualizer.flHighCutOff)
-    {
-        is_dirty = true;
-        al_effect_props_.Equalizer.HighCutoff = clamp(
-            props_.mEqualizer.flHighCutOff,
-            AL_EQUALIZER_MIN_HIGH_CUTOFF,
-            AL_EQUALIZER_MAX_HIGH_CUTOFF);
-    }
+    if(orig.mType == props_.mType && props_.mEqualizer.lLowGain == props.mEqualizer.lLowGain
+        && props_.mEqualizer.flLowCutOff == props.mEqualizer.flLowCutOff
+        && props_.mEqualizer.lMid1Gain == props.mEqualizer.lMid1Gain
+        && props_.mEqualizer.flMid1Center == props.mEqualizer.flMid1Center
+        && props_.mEqualizer.flMid1Width == props.mEqualizer.flMid1Width
+        && props_.mEqualizer.lMid2Gain == props.mEqualizer.lMid2Gain
+        && props_.mEqualizer.flMid2Center == props.mEqualizer.flMid2Center
+        && props_.mEqualizer.flMid2Width == props.mEqualizer.flMid2Width
+        && props_.mEqualizer.lHighGain == props.mEqualizer.lHighGain
+        && props_.mEqualizer.flHighCutOff == props.mEqualizer.flHighCutOff)
+        return false;
 
-    return is_dirty;
+    al_effect_props_.Equalizer.LowGain = level_mb_to_gain(static_cast<float>(props_.mEqualizer.lLowGain));
+    al_effect_props_.Equalizer.LowCutoff = props_.mEqualizer.flLowCutOff;
+    al_effect_props_.Equalizer.Mid1Gain = level_mb_to_gain(static_cast<float>(props_.mEqualizer.lMid1Gain));
+    al_effect_props_.Equalizer.Mid1Center = props_.mEqualizer.flMid1Center;
+    al_effect_props_.Equalizer.Mid1Width = props_.mEqualizer.flMid1Width;
+    al_effect_props_.Equalizer.Mid2Gain = level_mb_to_gain(static_cast<float>(props_.mEqualizer.lMid2Gain));
+    al_effect_props_.Equalizer.Mid2Center = props_.mEqualizer.flMid2Center;
+    al_effect_props_.Equalizer.Mid2Width = props_.mEqualizer.flMid2Width;
+    al_effect_props_.Equalizer.HighGain = level_mb_to_gain(static_cast<float>(props_.mEqualizer.lHighGain));
+    al_effect_props_.Equalizer.HighCutoff = props_.mEqualizer.flHighCutOff;
+
+    return true;
 }
 
 template<>

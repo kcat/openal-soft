@@ -132,8 +132,8 @@ private:
         void operator()(const GUID& guidLoadEffect) const
         {
             if (guidLoadEffect != EAX_NULL_GUID &&
-                guidLoadEffect != EAX_REVERB_EFFECT /*&&
-                guidLoadEffect != EAX_AGCCOMPRESSOR_EFFECT &&
+                guidLoadEffect != EAX_REVERB_EFFECT &&
+                guidLoadEffect != EAX_AGCCOMPRESSOR_EFFECT /*&&
                 guidLoadEffect != EAX_AUTOWAH_EFFECT*/ &&
                 guidLoadEffect != EAX_CHORUS_EFFECT /*&&
                 guidLoadEffect != EAX_DISTORTION_EFFECT &&

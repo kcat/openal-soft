@@ -168,6 +168,9 @@ struct EaxCommitter {
 struct EaxChorusCommitter : public EaxCommitter<EaxChorusCommitter> {
     using EaxCommitter<EaxChorusCommitter>::EaxCommitter;
 };
+struct EaxCompressorCommitter : public EaxCommitter<EaxCompressorCommitter> {
+    using EaxCommitter<EaxCompressorCommitter>::EaxCommitter;
+};
 struct EaxFlangerCommitter : public EaxCommitter<EaxFlangerCommitter> {
     using EaxCommitter<EaxFlangerCommitter>::EaxCommitter;
 };
@@ -233,6 +236,8 @@ public:
             return call_set_defaults<EaxReverbCommitter>(props);
         if(altype == AL_EFFECT_CHORUS)
             return call_set_defaults<EaxChorusCommitter>(props);
+        if(altype == AL_EFFECT_COMPRESSOR)
+            return call_set_defaults<EaxCompressorCommitter>(props);
         if(altype == AL_EFFECT_FLANGER)
             return call_set_defaults<EaxFlangerCommitter>(props);
         return call_set_defaults<EaxNullCommitter>(props);
@@ -267,59 +272,54 @@ public:
     }
 
 
+#define EAXCALL(T, Callable, ...)                                             \
+    if(T == EaxEffectType::Reverb)                                            \
+        return Callable<EaxReverbCommitter>(__VA_ARGS__);                     \
+    if(T == EaxEffectType::Chorus)                                            \
+        return Callable<EaxChorusCommitter>(__VA_ARGS__);                     \
+    if(T == EaxEffectType::Compressor)                                        \
+        return Callable<EaxCompressorCommitter>(__VA_ARGS__);                 \
+    if(T == EaxEffectType::Flanger)                                           \
+        return Callable<EaxFlangerCommitter>(__VA_ARGS__);                    \
+    return Callable<EaxNullCommitter>(__VA_ARGS__)
+
     template<typename T, typename ...Args>
-    void do_set(Args&& ...args)
+    static void call_set(Args&& ...args)
     { return T::Set(std::forward<Args>(args)...); }
 
-    void do_set(const EaxCall &call, EaxEffectProps &props)
-    {
-        if(props.mType == EaxEffectType::Reverb)
-            return do_set<EaxReverbCommitter>(call, props);
-        if(props.mType == EaxEffectType::Chorus)
-            return do_set<EaxChorusCommitter>(call, props);
-        if(props.mType == EaxEffectType::Flanger)
-            return do_set<EaxFlangerCommitter>(call, props);
-        return do_set<EaxNullCommitter>(call, props);
-    }
+    static void call_set(const EaxCall &call, EaxEffectProps &props)
+    { EAXCALL(props.mType, call_set, call, props); }
 
     void set(const EaxCall &call)
     {
         switch(call.get_version())
         {
-        case 1: do_set<EaxReverbCommitter>(call, state1_.d); break;
-        case 2: do_set<EaxReverbCommitter>(call, state2_.d); break;
-        case 3: do_set<EaxReverbCommitter>(call, state3_.d); break;
-        case 4: do_set(call, state4_.d); break;
-        case 5: do_set(call, state5_.d); break;
+        case 1: call_set<EaxReverbCommitter>(call, state1_.d); break;
+        case 2: call_set<EaxReverbCommitter>(call, state2_.d); break;
+        case 3: call_set<EaxReverbCommitter>(call, state3_.d); break;
+        case 4: call_set(call, state4_.d); break;
+        case 5: call_set(call, state5_.d); break;
         }
         changed_ = true;
     }
 
 
     template<typename T, typename ...Args>
-    void do_get(Args&& ...args)
+    static void call_get(Args&& ...args)
     { return T::Get(std::forward<Args>(args)...); }
 
-    void do_get(const EaxCall &call, const EaxEffectProps &props)
-    {
-        if(props.mType == EaxEffectType::Reverb)
-            return do_get<EaxReverbCommitter>(call, props);
-        if(props.mType == EaxEffectType::Chorus)
-            return do_get<EaxChorusCommitter>(call, props);
-        if(props.mType == EaxEffectType::Flanger)
-            return do_get<EaxFlangerCommitter>(call, props);
-        return do_get<EaxNullCommitter>(call, props);
-    }
+    static void call_get(const EaxCall &call, const EaxEffectProps &props)
+    { EAXCALL(props.mType, call_get, call, props); }
 
     void get(const EaxCall &call)
     {
         switch(call.get_version())
         {
-        case 1: do_get<EaxReverbCommitter>(call, state1_.d); break;
-        case 2: do_get<EaxReverbCommitter>(call, state2_.d); break;
-        case 3: do_get<EaxReverbCommitter>(call, state3_.d); break;
-        case 4: do_get(call, state4_.d); break;
-        case 5: do_get(call, state5_.d); break;
+        case 1: call_get<EaxReverbCommitter>(call, state1_.d); break;
+        case 2: call_get<EaxReverbCommitter>(call, state2_.d); break;
+        case 3: call_get<EaxReverbCommitter>(call, state3_.d); break;
+        case 4: call_get(call, state4_.d); break;
+        case 5: call_get(call, state5_.d); break;
         }
     }
 
@@ -329,17 +329,9 @@ public:
     { return T{props_, al_effect_props_}.commit(std::forward<Args>(args)...); }
 
     bool call_commit(const EaxEffectProps &props)
-    {
-        if(props.mType == EaxEffectType::Reverb)
-            return call_commit<EaxReverbCommitter>(props);
-        if(props.mType == EaxEffectType::Chorus)
-            return call_commit<EaxChorusCommitter>(props);
-        if(props.mType == EaxEffectType::Flanger)
-            return call_commit<EaxFlangerCommitter>(props);
-        return call_commit<EaxNullCommitter>(props);
-    }
+    { EAXCALL(props.mType, call_commit, props); }
 
-    bool do_commit(int eax_version)
+    bool commit(int eax_version)
     {
         changed_ |= version_ != eax_version;
         if(!changed_) return false;
@@ -374,6 +366,7 @@ public:
         al_effect_type_ = EnumFromEaxEffectType(props_);
         return ret;
     }
+#undef EAXCALL
 }; // EaxEffect
 
 // Base class for EAX4+ effects.

@@ -1089,7 +1089,7 @@ void ALeffectslot::eax_commit()
             eax_fx_slot_set_flags();
     }
 
-    if(eax_effect_->do_commit(eax_version_))
+    if(eax_effect_->commit(eax_version_))
         eax_set_efx_slot_effect(*eax_effect_);
 }
 

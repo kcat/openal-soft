@@ -139,79 +139,94 @@ const EffectProps FshifterEffectProps{genDefaultProps()};
 #ifdef ALSOFT_EAX
 namespace {
 
-class EaxFrequencyShifterEffectException : public EaxException
+using FrequencyShifterCommitter = EaxCommitter<EaxFrequencyShifterCommitter>;
+
+struct FrequencyValidator {
+    void operator()(float flFrequency) const
+    {
+        eax_validate_range<FrequencyShifterCommitter::Exception>(
+            "Frequency",
+            flFrequency,
+            EAXFREQUENCYSHIFTER_MINFREQUENCY,
+            EAXFREQUENCYSHIFTER_MAXFREQUENCY);
+    }
+}; // FrequencyValidator
+
+struct LeftDirectionValidator {
+    void operator()(unsigned long ulLeftDirection) const
+    {
+        eax_validate_range<FrequencyShifterCommitter::Exception>(
+            "Left Direction",
+            ulLeftDirection,
+            EAXFREQUENCYSHIFTER_MINLEFTDIRECTION,
+            EAXFREQUENCYSHIFTER_MAXLEFTDIRECTION);
+    }
+}; // LeftDirectionValidator
+
+struct RightDirectionValidator {
+    void operator()(unsigned long ulRightDirection) const
+    {
+        eax_validate_range<FrequencyShifterCommitter::Exception>(
+            "Right Direction",
+            ulRightDirection,
+            EAXFREQUENCYSHIFTER_MINRIGHTDIRECTION,
+            EAXFREQUENCYSHIFTER_MAXRIGHTDIRECTION);
+    }
+}; // RightDirectionValidator
+
+struct AllValidator {
+    void operator()(const EAXFREQUENCYSHIFTERPROPERTIES& all) const
+    {
+        FrequencyValidator{}(all.flFrequency);
+        LeftDirectionValidator{}(all.ulLeftDirection);
+        RightDirectionValidator{}(all.ulRightDirection);
+    }
+}; // AllValidator
+
+} // namespace
+
+template<>
+struct FrequencyShifterCommitter::Exception : public EaxException {
+    explicit Exception(const char *message) : EaxException{"EAX_FREQUENCY_SHIFTER_EFFECT", message}
+    { }
+};
+
+template<>
+[[noreturn]] void FrequencyShifterCommitter::fail(const char *message)
 {
-public:
-    explicit EaxFrequencyShifterEffectException(const char* message)
-        : EaxException{"EAX_FREQUENCY_SHIFTER_EFFECT", message}
-    {}
-}; // EaxFrequencyShifterEffectException
+    throw Exception{message};
+}
 
-class EaxFrequencyShifterEffect final : public EaxEffect4<EaxFrequencyShifterEffectException> {
-public:
-    EaxFrequencyShifterEffect(int eax_version);
+template<>
+bool FrequencyShifterCommitter::commit(const EaxEffectProps &props)
+{
+    const auto orig = props_;
+    props_ = props;
 
-private:
-    struct FrequencyValidator {
-        void operator()(float flFrequency) const
-        {
-            eax_validate_range<Exception>(
-                "Frequency",
-                flFrequency,
-                EAXFREQUENCYSHIFTER_MINFREQUENCY,
-                EAXFREQUENCYSHIFTER_MAXFREQUENCY);
-        }
-    }; // FrequencyValidator
+    if(orig.mType == props_.mType
+        && props_.mFrequencyShifter.flFrequency == props.mFrequencyShifter.flFrequency
+        && props_.mFrequencyShifter.ulLeftDirection == props.mFrequencyShifter.ulLeftDirection
+        && props_.mFrequencyShifter.ulRightDirection == props.mFrequencyShifter.ulRightDirection)
+        return false;
 
-    struct LeftDirectionValidator {
-        void operator()(unsigned long ulLeftDirection) const
-        {
-            eax_validate_range<Exception>(
-                "Left Direction",
-                ulLeftDirection,
-                EAXFREQUENCYSHIFTER_MINLEFTDIRECTION,
-                EAXFREQUENCYSHIFTER_MAXLEFTDIRECTION);
-        }
-    }; // LeftDirectionValidator
+    auto get_direction = [](unsigned long dir) noexcept
+    {
+        if(dir == EAX_FREQUENCYSHIFTER_DOWN)
+            return FShifterDirection::Down;
+        if(dir == EAX_FREQUENCYSHIFTER_UP)
+            return FShifterDirection::Up;
+        return FShifterDirection::Off;
+    };
 
-    struct RightDirectionValidator {
-        void operator()(unsigned long ulRightDirection) const
-        {
-            eax_validate_range<Exception>(
-                "Right Direction",
-                ulRightDirection,
-                EAXFREQUENCYSHIFTER_MINRIGHTDIRECTION,
-                EAXFREQUENCYSHIFTER_MAXRIGHTDIRECTION);
-        }
-    }; // RightDirectionValidator
+    al_effect_props_.Fshifter.Frequency = props_.mFrequencyShifter.flFrequency;
+    al_effect_props_.Fshifter.LeftDirection = get_direction(props_.mFrequencyShifter.ulLeftDirection);
+    al_effect_props_.Fshifter.RightDirection = get_direction(props_.mFrequencyShifter.ulRightDirection);
 
-    struct AllValidator {
-        void operator()(const EAXFREQUENCYSHIFTERPROPERTIES& all) const
-        {
-            FrequencyValidator{}(all.flFrequency);
-            LeftDirectionValidator{}(all.ulLeftDirection);
-            RightDirectionValidator{}(all.ulRightDirection);
-        }
-    }; // AllValidator
+    return true;
+}
 
-    void set_defaults(Props4& props) override;
-
-    void set_efx_frequency() noexcept;
-    void set_efx_left_direction();
-    void set_efx_right_direction();
-    void set_efx_defaults() override;
-
-    void get(const EaxCall& call, const Props4& props) override;
-    void set(const EaxCall& call, Props4& props) override;
-    bool commit_props(const Props4& props) override;
-}; // EaxFrequencyShifterEffect
-
-
-EaxFrequencyShifterEffect::EaxFrequencyShifterEffect(int eax_version)
-    : EaxEffect4{AL_EFFECT_FREQUENCY_SHIFTER, eax_version}
-{}
-
-void EaxFrequencyShifterEffect::set_defaults(Props4& props)
+template<>
+void FrequencyShifterCommitter::SetDefaults(EaxEffectProps &props)
 {
     props.mType = EaxEffectType::FrequencyShifter;
     props.mFrequencyShifter.flFrequency = EAXFREQUENCYSHIFTER_DEFAULTFREQUENCY;
@@ -219,99 +234,32 @@ void EaxFrequencyShifterEffect::set_defaults(Props4& props)
     props.mFrequencyShifter.ulRightDirection = EAXFREQUENCYSHIFTER_DEFAULTRIGHTDIRECTION;
 }
 
-void EaxFrequencyShifterEffect::set_efx_frequency() noexcept
-{
-    al_effect_props_.Fshifter.Frequency = clamp(
-        props_.mFrequencyShifter.flFrequency,
-        AL_FREQUENCY_SHIFTER_MIN_FREQUENCY,
-        AL_FREQUENCY_SHIFTER_MAX_FREQUENCY);
-}
-
-void EaxFrequencyShifterEffect::set_efx_left_direction()
-{
-    const auto left_direction = clamp(
-        static_cast<ALint>(props_.mFrequencyShifter.ulLeftDirection),
-        AL_FREQUENCY_SHIFTER_MIN_LEFT_DIRECTION,
-        AL_FREQUENCY_SHIFTER_MAX_LEFT_DIRECTION);
-    const auto efx_left_direction = DirectionFromEmum(left_direction);
-    assert(efx_left_direction.has_value());
-    al_effect_props_.Fshifter.LeftDirection = *efx_left_direction;
-}
-
-void EaxFrequencyShifterEffect::set_efx_right_direction()
-{
-    const auto right_direction = clamp(
-        static_cast<ALint>(props_.mFrequencyShifter.ulRightDirection),
-        AL_FREQUENCY_SHIFTER_MIN_RIGHT_DIRECTION,
-        AL_FREQUENCY_SHIFTER_MAX_RIGHT_DIRECTION);
-    const auto efx_right_direction = DirectionFromEmum(right_direction);
-    assert(efx_right_direction.has_value());
-    al_effect_props_.Fshifter.RightDirection = *efx_right_direction;
-}
-
-void EaxFrequencyShifterEffect::set_efx_defaults()
-{
-    set_efx_frequency();
-    set_efx_left_direction();
-    set_efx_right_direction();
-}
-
-void EaxFrequencyShifterEffect::get(const EaxCall& call, const Props4& props)
+template<>
+void FrequencyShifterCommitter::Get(const EaxCall &call, const EaxEffectProps &props)
 {
     switch(call.get_property_id())
     {
-        case EAXFREQUENCYSHIFTER_NONE: break;
-        case EAXFREQUENCYSHIFTER_ALLPARAMETERS: call.set_value<Exception>(props.mFrequencyShifter); break;
-        case EAXFREQUENCYSHIFTER_FREQUENCY: call.set_value<Exception>(props.mFrequencyShifter.flFrequency); break;
-        case EAXFREQUENCYSHIFTER_LEFTDIRECTION: call.set_value<Exception>(props.mFrequencyShifter.ulLeftDirection); break;
-        case EAXFREQUENCYSHIFTER_RIGHTDIRECTION: call.set_value<Exception>(props.mFrequencyShifter.ulRightDirection); break;
-        default: fail_unknown_property_id();
+    case EAXFREQUENCYSHIFTER_NONE: break;
+    case EAXFREQUENCYSHIFTER_ALLPARAMETERS: call.set_value<Exception>(props.mFrequencyShifter); break;
+    case EAXFREQUENCYSHIFTER_FREQUENCY: call.set_value<Exception>(props.mFrequencyShifter.flFrequency); break;
+    case EAXFREQUENCYSHIFTER_LEFTDIRECTION: call.set_value<Exception>(props.mFrequencyShifter.ulLeftDirection); break;
+    case EAXFREQUENCYSHIFTER_RIGHTDIRECTION: call.set_value<Exception>(props.mFrequencyShifter.ulRightDirection); break;
+    default: fail_unknown_property_id();
     }
 }
 
-void EaxFrequencyShifterEffect::set(const EaxCall& call, Props4& props)
+template<>
+void FrequencyShifterCommitter::Set(const EaxCall &call, EaxEffectProps &props)
 {
     switch(call.get_property_id())
     {
-        case EAXFREQUENCYSHIFTER_NONE: break;
-        case EAXFREQUENCYSHIFTER_ALLPARAMETERS: defer<AllValidator>(call, props.mFrequencyShifter); break;
-        case EAXFREQUENCYSHIFTER_FREQUENCY: defer<FrequencyValidator>(call, props.mFrequencyShifter.flFrequency); break;
-        case EAXFREQUENCYSHIFTER_LEFTDIRECTION: defer<LeftDirectionValidator>(call, props.mFrequencyShifter.ulLeftDirection); break;
-        case EAXFREQUENCYSHIFTER_RIGHTDIRECTION: defer<RightDirectionValidator>(call, props.mFrequencyShifter.ulRightDirection); break;
-        default: fail_unknown_property_id();
+    case EAXFREQUENCYSHIFTER_NONE: break;
+    case EAXFREQUENCYSHIFTER_ALLPARAMETERS: defer<AllValidator>(call, props.mFrequencyShifter); break;
+    case EAXFREQUENCYSHIFTER_FREQUENCY: defer<FrequencyValidator>(call, props.mFrequencyShifter.flFrequency); break;
+    case EAXFREQUENCYSHIFTER_LEFTDIRECTION: defer<LeftDirectionValidator>(call, props.mFrequencyShifter.ulLeftDirection); break;
+    case EAXFREQUENCYSHIFTER_RIGHTDIRECTION: defer<RightDirectionValidator>(call, props.mFrequencyShifter.ulRightDirection); break;
+    default: fail_unknown_property_id();
     }
-}
-
-bool EaxFrequencyShifterEffect::commit_props(const Props4& props)
-{
-    auto is_dirty = false;
-
-    if (props_.mFrequencyShifter.flFrequency != props.mFrequencyShifter.flFrequency)
-    {
-        is_dirty = true;
-        set_efx_frequency();
-    }
-
-    if (props_.mFrequencyShifter.ulLeftDirection != props.mFrequencyShifter.ulLeftDirection)
-    {
-        is_dirty = true;
-        set_efx_left_direction();
-    }
-
-    if (props_.mFrequencyShifter.ulRightDirection != props.mFrequencyShifter.ulRightDirection)
-    {
-        is_dirty = true;
-        set_efx_right_direction();
-    }
-
-    return is_dirty;
-}
-
-} // namespace
-
-EaxEffectUPtr eax_create_eax_frequency_shifter_effect(int eax_version)
-{
-    return eax_create_eax4_effect<EaxFrequencyShifterEffect>(eax_version);
 }
 
 #endif // ALSOFT_EAX

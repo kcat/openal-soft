@@ -186,6 +186,9 @@ struct EaxEqualizerCommitter : public EaxCommitter<EaxEqualizerCommitter> {
 struct EaxFlangerCommitter : public EaxCommitter<EaxFlangerCommitter> {
     using EaxCommitter<EaxFlangerCommitter>::EaxCommitter;
 };
+struct EaxFrequencyShifterCommitter : public EaxCommitter<EaxFrequencyShifterCommitter> {
+    using EaxCommitter<EaxFrequencyShifterCommitter>::EaxCommitter;
+};
 struct EaxNullCommitter : public EaxCommitter<EaxNullCommitter> {
     using EaxCommitter<EaxNullCommitter>::EaxCommitter;
 };
@@ -260,6 +263,8 @@ public:
             return call_set_defaults<EaxEqualizerCommitter>(props);
         if(altype == AL_EFFECT_FLANGER)
             return call_set_defaults<EaxFlangerCommitter>(props);
+        if(altype == AL_EFFECT_FREQUENCY_SHIFTER)
+            return call_set_defaults<EaxFrequencyShifterCommitter>(props);
         return call_set_defaults<EaxNullCommitter>(props);
     }
 
@@ -309,6 +314,8 @@ public:
         return Callable<EaxEqualizerCommitter>(__VA_ARGS__);                  \
     if(T == EaxEffectType::Flanger)                                           \
         return Callable<EaxFlangerCommitter>(__VA_ARGS__);                    \
+    if(T == EaxEffectType::FrequencyShifter)                                  \
+        return Callable<EaxFrequencyShifterCommitter>(__VA_ARGS__);           \
     return Callable<EaxNullCommitter>(__VA_ARGS__)
 
     template<typename T, typename ...Args>

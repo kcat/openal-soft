@@ -3919,41 +3919,18 @@ ALsource::~ALsource()
 void UpdateAllSourceProps(ALCcontext *context)
 {
     std::lock_guard<std::mutex> _{context->mSourceLock};
-#ifdef ALSOFT_EAX
-    if(context->has_eax())
+    auto voicelist = context->getVoicesSpan();
+    ALuint vidx{0u};
+    for(Voice *voice : voicelist)
     {
-        /* If EAX is enabled, we need to go through and commit all sources' EAX
-         * changes, along with updating its voice, if any.
-         */
-        for(auto &sublist : context->mSourceList)
+        ALuint sid{voice->mSourceID.load(std::memory_order_acquire)};
+        ALsource *source = sid ? LookupSource(context, sid) : nullptr;
+        if(source && source->VoiceIdx == vidx)
         {
-            uint64_t usemask{~sublist.FreeMask};
-            while(usemask)
-            {
-                const int idx{al::countr_zero(usemask)};
-                usemask &= ~(1_u64 << idx);
-
-                ALsource *source{sublist.Sources + idx};
-                source->eax_commit_and_update();
-            }
+            if(std::exchange(source->mPropsDirty, false))
+                UpdateSourceProps(source, voice, context);
         }
-    }
-    else
-#endif
-    {
-        auto voicelist = context->getVoicesSpan();
-        ALuint vidx{0u};
-        for(Voice *voice : voicelist)
-        {
-            ALuint sid{voice->mSourceID.load(std::memory_order_acquire)};
-            ALsource *source = sid ? LookupSource(context, sid) : nullptr;
-            if(source && source->VoiceIdx == vidx)
-            {
-                if(std::exchange(source->mPropsDirty, false))
-                    UpdateSourceProps(source, voice, context);
-            }
-            ++vidx;
-        }
+        ++vidx;
     }
 }
 

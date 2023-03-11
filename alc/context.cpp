@@ -264,10 +264,6 @@ void ALCcontext::applyAllUpdates()
         /* busy-wait */
     }
 
-#ifdef ALSOFT_EAX
-    if(eax_is_initialized_)
-        eax_commit();
-#endif
     if(std::exchange(mPropsDirty, false))
         UpdateContextProps(this);
     UpdateAllEffectSlotProps(this);
@@ -353,8 +349,12 @@ ALenum ALCcontext::eax_eax_set(
         eax_fail_unknown_property_set_id();
     }
 
-    if(!call.is_deferred() && !mDeferUpdates)
-        applyAllUpdates();
+    if(!call.is_deferred())
+    {
+        eax_commit();
+        if(!mDeferUpdates)
+            applyAllUpdates();
+    }
 
     return AL_NO_ERROR;
 }
@@ -1002,8 +1002,6 @@ void ALCcontext::eax_context_commit()
     case 5:
         eax5_context_commit(eax5_, dst_df);
         break;
-    default:
-        eax_fail_unknown_version();
     }
 
     if(dst_df == EaxDirtyFlags{})
@@ -1031,6 +1029,8 @@ void ALCcontext::eax_context_commit()
 void ALCcontext::eax_commit()
 {
     eax_context_commit();
+    eax_commit_fx_slots();
+    eax_update_sources();
 }
 
 namespace {

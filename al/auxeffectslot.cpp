@@ -1013,10 +1013,6 @@ void ALeffectslot::updateProps(ALCcontext *context)
 void UpdateAllEffectSlotProps(ALCcontext *context)
 {
     std::lock_guard<std::mutex> _{context->mEffectSlotLock};
-#ifdef ALSOFT_EAX
-    if(context->has_eax())
-        context->eax_commit_fx_slots();
-#endif
     for(auto &sublist : context->mEffectSlotList)
     {
         uint64_t usemask{~sublist.FreeMask};

@@ -1058,7 +1058,7 @@ void ALeffectslot::eax_initialize(ALCcontext& al_context, EaxFxSlotIndexValue in
 
     eax_effect_ = std::make_unique<EaxEffect>();
     if(index == 0) eax_effect_->init<EaxReverbCommitter>();
-    //else if(index == 1) eax_effect_->init<EaxChorusCommitter>();
+    else if(index == 1) eax_effect_->init<EaxChorusCommitter>();
     else eax_effect_->init<EaxNullCommitter>();
 }
 

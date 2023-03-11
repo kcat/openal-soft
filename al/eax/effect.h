@@ -165,6 +165,12 @@ struct EaxCommitter {
     static void Set(const EaxCall &call, EaxEffectProps &props);
 };
 
+struct EaxChorusCommitter : public EaxCommitter<EaxChorusCommitter> {
+    using EaxCommitter<EaxChorusCommitter>::EaxCommitter;
+};
+struct EaxFlangerCommitter : public EaxCommitter<EaxFlangerCommitter> {
+    using EaxCommitter<EaxFlangerCommitter>::EaxCommitter;
+};
 struct EaxNullCommitter : public EaxCommitter<EaxNullCommitter> {
     using EaxCommitter<EaxNullCommitter>::EaxCommitter;
 };
@@ -225,6 +231,10 @@ public:
     {
         if(altype == AL_EFFECT_EAXREVERB)
             return call_set_defaults<EaxReverbCommitter>(props);
+        if(altype == AL_EFFECT_CHORUS)
+            return call_set_defaults<EaxChorusCommitter>(props);
+        if(altype == AL_EFFECT_FLANGER)
+            return call_set_defaults<EaxFlangerCommitter>(props);
         return call_set_defaults<EaxNullCommitter>(props);
     }
 
@@ -265,6 +275,10 @@ public:
     {
         if(props.mType == EaxEffectType::Reverb)
             return do_set<EaxReverbCommitter>(call, props);
+        if(props.mType == EaxEffectType::Chorus)
+            return do_set<EaxChorusCommitter>(call, props);
+        if(props.mType == EaxEffectType::Flanger)
+            return do_set<EaxFlangerCommitter>(call, props);
         return do_set<EaxNullCommitter>(call, props);
     }
 
@@ -290,6 +304,10 @@ public:
     {
         if(props.mType == EaxEffectType::Reverb)
             return do_get<EaxReverbCommitter>(call, props);
+        if(props.mType == EaxEffectType::Chorus)
+            return do_get<EaxChorusCommitter>(call, props);
+        if(props.mType == EaxEffectType::Flanger)
+            return do_get<EaxFlangerCommitter>(call, props);
         return do_get<EaxNullCommitter>(call, props);
     }
 
@@ -314,6 +332,10 @@ public:
     {
         if(props.mType == EaxEffectType::Reverb)
             return call_commit<EaxReverbCommitter>(props);
+        if(props.mType == EaxEffectType::Chorus)
+            return call_commit<EaxChorusCommitter>(props);
+        if(props.mType == EaxEffectType::Flanger)
+            return call_commit<EaxFlangerCommitter>(props);
         return call_commit<EaxNullCommitter>(props);
     }
 

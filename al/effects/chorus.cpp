@@ -291,24 +291,9 @@ const EffectProps FlangerEffectProps{genDefaultFlangerProps()};
 #ifdef ALSOFT_EAX
 namespace {
 
-class EaxChorusEffectException : public EaxException {
-public:
-    explicit EaxChorusEffectException(const char* message)
-        : EaxException{"EAX_CHORUS_EFFECT", message}
-    {}
-}; // EaxChorusEffectException
-
-class EaxFlangerEffectException : public EaxException {
-public:
-    explicit EaxFlangerEffectException(const char* message)
-        : EaxException{"EAX_FLANGER_EFFECT", message}
-    {}
-}; // EaxFlangerEffectException
-
-struct EaxChorusTraits
-{
-    using Exception = EaxChorusEffectException;
+struct EaxChorusTraits {
     using Props = EAXCHORUSPROPERTIES;
+    using Committer = EaxChorusCommitter;
     static constexpr auto Field = &EaxEffectProps::mChorus;
 
     static constexpr auto eax_effect_type() { return EaxEffectType::Chorus; }
@@ -364,12 +349,21 @@ struct EaxChorusTraits
     static constexpr auto efx_default_depth() { return AL_CHORUS_DEFAULT_DEPTH; }
     static constexpr auto efx_default_feedback() { return AL_CHORUS_DEFAULT_FEEDBACK; }
     static constexpr auto efx_default_delay() { return AL_CHORUS_DEFAULT_DELAY; }
+
+    static al::optional<ChorusWaveform> eax_waveform(unsigned long type)
+    {
+        switch(type)
+        {
+        case EAX_CHORUS_SINUSOID: return ChorusWaveform::Sinusoid;
+        case EAX_CHORUS_TRIANGLE: return ChorusWaveform::Triangle;
+        }
+        return al::nullopt;
+    }
 }; // EaxChorusTraits
 
-struct EaxFlangerTraits
-{
-    using Exception = EaxFlangerEffectException;
+struct EaxFlangerTraits {
     using Props = EAXFLANGERPROPERTIES;
+    using Committer = EaxFlangerCommitter;
     static constexpr auto Field = &EaxEffectProps::mFlanger;
 
     static constexpr auto eax_effect_type() { return EaxEffectType::Flanger; }
@@ -425,24 +419,26 @@ struct EaxFlangerTraits
     static constexpr auto efx_default_depth() { return AL_FLANGER_DEFAULT_DEPTH; }
     static constexpr auto efx_default_feedback() { return AL_FLANGER_DEFAULT_FEEDBACK; }
     static constexpr auto efx_default_delay() { return AL_FLANGER_DEFAULT_DELAY; }
+
+    static al::optional<ChorusWaveform> eax_waveform(unsigned long type)
+    {
+        switch(type)
+        {
+        case EAX_FLANGER_SINUSOID: return ChorusWaveform::Sinusoid;
+        case EAX_FLANGER_TRIANGLE: return ChorusWaveform::Triangle;
+        }
+        return al::nullopt;
+    }
 }; // EaxFlangerTraits
 
 template<typename TTraits>
-class EaxChorusFlangerEffect final : public EaxEffect4<typename TTraits::Exception> {
-public:
+struct ChorusFlangerEffect {
     using Traits = TTraits;
-    using Base = EaxEffect4<typename Traits::Exception>;
-    using typename Base::Exception;
-    using typename Base::Props4;
-    using Base::defer;
+    using Committer = typename Traits::Committer;
+    using Exception = typename Committer::Exception;
 
     static constexpr auto Field = Traits::Field;
 
-    EaxChorusFlangerEffect(int eax_version)
-        : Base{Traits::efx_effect(), eax_version}
-    {}
-
-private:
     struct WaveformValidator {
         void operator()(unsigned long ulWaveform) const
         {
@@ -521,7 +517,8 @@ private:
         }
     }; // AllValidator
 
-    void set_defaults(Props4& props) override
+public:
+    static void SetDefaults(EaxEffectProps &props)
     {
         auto&& all = props.*Field;
         props.mType = Traits::eax_effect_type();
@@ -533,213 +530,206 @@ private:
         all.flDelay = Traits::eax_default_delay();
     }
 
-    void set_efx_waveform()
+
+    static void Get(const EaxCall &call, const EaxEffectProps &props)
     {
-        const auto waveform = clamp(
-            static_cast<ALint>((Base::props_.*Field).ulWaveform),
-            Traits::efx_min_waveform(),
-            Traits::efx_max_waveform());
-        const auto efx_waveform = WaveformFromEnum(waveform);
+        auto&& all = props.*Field;
+        switch(call.get_property_id())
+        {
+        case Traits::eax_none_param_id():
+            break;
+
+        case Traits::eax_allparameters_param_id():
+            call.template set_value<Exception>(all);
+            break;
+
+        case Traits::eax_waveform_param_id():
+            call.template set_value<Exception>(all.ulWaveform);
+            break;
+
+        case Traits::eax_phase_param_id():
+            call.template set_value<Exception>(all.lPhase);
+            break;
+
+        case Traits::eax_rate_param_id():
+            call.template set_value<Exception>(all.flRate);
+            break;
+
+        case Traits::eax_depth_param_id():
+            call.template set_value<Exception>(all.flDepth);
+            break;
+
+        case Traits::eax_feedback_param_id():
+            call.template set_value<Exception>(all.flFeedback);
+            break;
+
+        case Traits::eax_delay_param_id():
+            call.template set_value<Exception>(all.flDelay);
+            break;
+
+        default:
+            Committer::fail_unknown_property_id();
+        }
+    }
+
+    static void Set(const EaxCall &call, EaxEffectProps &props)
+    {
+        auto&& all = props.*Field;
+        switch(call.get_property_id())
+        {
+        case Traits::eax_none_param_id():
+            break;
+
+        case Traits::eax_allparameters_param_id():
+            Committer::template defer<AllValidator>(call, all);
+            break;
+
+        case Traits::eax_waveform_param_id():
+            Committer::template defer<WaveformValidator>(call, all.ulWaveform);
+            break;
+
+        case Traits::eax_phase_param_id():
+            Committer::template defer<PhaseValidator>(call, all.lPhase);
+            break;
+
+        case Traits::eax_rate_param_id():
+            Committer::template defer<RateValidator>(call, all.flRate);
+            break;
+
+        case Traits::eax_depth_param_id():
+            Committer::template defer<DepthValidator>(call, all.flDepth);
+            break;
+
+        case Traits::eax_feedback_param_id():
+            Committer::template defer<FeedbackValidator>(call, all.flFeedback);
+            break;
+
+        case Traits::eax_delay_param_id():
+            Committer::template defer<DelayValidator>(call, all.flDelay);
+            break;
+
+        default:
+            Committer::fail_unknown_property_id();
+        }
+    }
+
+    static bool Commit(const EaxEffectProps &props, EaxEffectProps &props_,
+        EffectProps &al_effect_props_)
+    {
+        const auto orig = props_;
+        props_ = props;
+
+        auto&& src = orig.*Field;
+        auto&& dst = props_.*Field;
+        if(orig.mType == props_.mType && dst.ulWaveform == src.ulWaveform
+            && dst.lPhase == src.lPhase && dst.flRate == src.flRate && dst.flDepth == src.flDepth
+            && dst.flFeedback == src.flFeedback && dst.flDelay == src.flDelay)
+            return false;
+
+        const auto efx_waveform = Traits::eax_waveform(dst.ulWaveform);
         assert(efx_waveform.has_value());
-        Base::al_effect_props_.Chorus.Waveform = *efx_waveform;
-    }
+        al_effect_props_.Chorus.Waveform = *efx_waveform;
+        al_effect_props_.Chorus.Phase = clamp(static_cast<ALint>(dst.lPhase),
+            Traits::efx_min_phase(), Traits::efx_max_phase());
+        al_effect_props_.Chorus.Rate = clamp(dst.flRate,
+            Traits::efx_min_rate(), Traits::efx_max_rate());
+        al_effect_props_.Chorus.Depth = clamp(dst.flDepth,
+            Traits::efx_min_depth(), Traits::efx_max_depth());
+        al_effect_props_.Chorus.Feedback = clamp(dst.flFeedback,
+            Traits::efx_min_feedback(), Traits::efx_max_feedback());
+        al_effect_props_.Chorus.Delay = clamp(dst.flDelay,
+            Traits::efx_min_delay(), Traits::efx_max_delay());
 
-    void set_efx_phase() noexcept
-    {
-        Base::al_effect_props_.Chorus.Phase = clamp(
-            static_cast<ALint>((Base::props_.*Field).lPhase),
-            Traits::efx_min_phase(),
-            Traits::efx_max_phase());
-    }
-
-    void set_efx_rate() noexcept
-    {
-        Base::al_effect_props_.Chorus.Rate = clamp(
-            (Base::props_.*Field).flRate,
-            Traits::efx_min_rate(),
-            Traits::efx_max_rate());
-    }
-
-    void set_efx_depth() noexcept
-    {
-        Base::al_effect_props_.Chorus.Depth = clamp(
-            (Base::props_.*Field).flDepth,
-            Traits::efx_min_depth(),
-            Traits::efx_max_depth());
-    }
-
-    void set_efx_feedback() noexcept
-    {
-        Base::al_effect_props_.Chorus.Feedback = clamp(
-            (Base::props_.*Field).flFeedback,
-            Traits::efx_min_feedback(),
-            Traits::efx_max_feedback());
-    }
-
-    void set_efx_delay() noexcept
-    {
-        Base::al_effect_props_.Chorus.Delay = clamp(
-            (Base::props_.*Field).flDelay,
-            Traits::efx_min_delay(),
-            Traits::efx_max_delay());
-    }
-
-    void set_efx_defaults() override
-    {
-        set_efx_waveform();
-        set_efx_phase();
-        set_efx_rate();
-        set_efx_depth();
-        set_efx_feedback();
-        set_efx_delay();
-    }
-
-    void get(const EaxCall& call, const Props4& props) override
-    {
-        auto&& all = props.*Field;
-        switch(call.get_property_id())
-        {
-            case Traits::eax_none_param_id():
-                break;
-
-            case Traits::eax_allparameters_param_id():
-                call.template set_value<Exception>(all);
-                break;
-
-            case Traits::eax_waveform_param_id():
-                call.template set_value<Exception>(all.ulWaveform);
-                break;
-
-            case Traits::eax_phase_param_id():
-                call.template set_value<Exception>(all.lPhase);
-                break;
-
-            case Traits::eax_rate_param_id():
-                call.template set_value<Exception>(all.flRate);
-                break;
-
-            case Traits::eax_depth_param_id():
-                call.template set_value<Exception>(all.flDepth);
-                break;
-
-            case Traits::eax_feedback_param_id():
-                call.template set_value<Exception>(all.flFeedback);
-                break;
-
-            case Traits::eax_delay_param_id():
-                call.template set_value<Exception>(all.flDelay);
-                break;
-
-            default:
-                Base::fail_unknown_property_id();
-        }
-    }
-
-    void set(const EaxCall& call, Props4& props) override
-    {
-        auto&& all = props.*Field;
-        switch(call.get_property_id())
-        {
-            case Traits::eax_none_param_id():
-                break;
-
-            case Traits::eax_allparameters_param_id():
-                Base::template defer<AllValidator>(call, all);
-                break;
-
-            case Traits::eax_waveform_param_id():
-                Base::template defer<WaveformValidator>(call, all.ulWaveform);
-                break;
-
-            case Traits::eax_phase_param_id():
-                Base::template defer<PhaseValidator>(call, all.lPhase);
-                break;
-
-            case Traits::eax_rate_param_id():
-                Base::template defer<RateValidator>(call, all.flRate);
-                break;
-
-            case Traits::eax_depth_param_id():
-                Base::template defer<DepthValidator>(call, all.flDepth);
-                break;
-
-            case Traits::eax_feedback_param_id():
-                Base::template defer<FeedbackValidator>(call, all.flFeedback);
-                break;
-
-            case Traits::eax_delay_param_id():
-                Base::template defer<DelayValidator>(call, all.flDelay);
-                break;
-
-            default:
-                Base::fail_unknown_property_id();
-        }
-    }
-
-    bool commit_props(const Props4& props) override
-    {
-        auto is_dirty = false;
-        auto&& src = props.*Field;
-        auto&& dst = Base::props_.*Field;
-
-        if (dst.ulWaveform != src.ulWaveform)
-        {
-            is_dirty = true;
-            set_efx_waveform();
-        }
-
-        if (dst.lPhase != src.lPhase)
-        {
-            is_dirty = true;
-            set_efx_phase();
-        }
-
-        if (dst.flRate != src.flRate)
-        {
-            is_dirty = true;
-            set_efx_rate();
-        }
-
-        if (dst.flDepth != src.flDepth)
-        {
-            is_dirty = true;
-            set_efx_depth();
-        }
-
-        if (dst.flFeedback != src.flFeedback)
-        {
-            is_dirty = true;
-            set_efx_feedback();
-        }
-
-        if (dst.flDelay != src.flDelay)
-        {
-            is_dirty = true;
-            set_efx_delay();
-        }
-
-        return is_dirty;
+        return true;
     }
 }; // EaxChorusFlangerEffect
 
-template<typename TTraits>
-EaxEffectUPtr eax_create_eax_chorus_flanger_effect(int eax_version)
-{
-    return eax_create_eax4_effect<EaxChorusFlangerEffect<TTraits>>(eax_version);
-}
+
+using ChorusCommitter = EaxCommitter<EaxChorusCommitter>;
+using FlangerCommitter = EaxCommitter<EaxFlangerCommitter>;
 
 } // namespace
 
-// ==========================================================================
-
-EaxEffectUPtr eax_create_eax_chorus_effect(int eax_version)
+template<>
+struct ChorusCommitter::Exception : public EaxException
 {
-    return eax_create_eax_chorus_flanger_effect<EaxChorusTraits>(eax_version);
+    explicit Exception(const char *message) : EaxException{"EAX_CHORUS_EFFECT", message}
+    { }
+};
+
+template<>
+[[noreturn]] void ChorusCommitter::fail(const char *message)
+{
+    throw Exception{message};
 }
 
-EaxEffectUPtr eax_create_eax_flanger_effect(int eax_version)
+template<>
+bool ChorusCommitter::commit(const EaxEffectProps &props)
 {
-    return eax_create_eax_chorus_flanger_effect<EaxFlangerTraits>(eax_version);
+    using Committer = ChorusFlangerEffect<EaxChorusTraits>;
+    return Committer::Commit(props, props_, al_effect_props_);
+}
+
+template<>
+void ChorusCommitter::SetDefaults(EaxEffectProps &props)
+{
+    using Committer = ChorusFlangerEffect<EaxChorusTraits>;
+    Committer::SetDefaults(props);
+}
+
+template<>
+void ChorusCommitter::Get(const EaxCall &call, const EaxEffectProps &props)
+{
+    using Committer = ChorusFlangerEffect<EaxChorusTraits>;
+    Committer::Get(call, props);
+}
+
+template<>
+void ChorusCommitter::Set(const EaxCall &call, EaxEffectProps &props)
+{
+    using Committer = ChorusFlangerEffect<EaxChorusTraits>;
+    Committer::Set(call, props);
+}
+
+template<>
+struct FlangerCommitter::Exception : public EaxException
+{
+    explicit Exception(const char *message) : EaxException{"EAX_FLANGER_EFFECT", message}
+    { }
+};
+
+template<>
+[[noreturn]] void FlangerCommitter::fail(const char *message)
+{
+    throw Exception{message};
+}
+
+template<>
+bool FlangerCommitter::commit(const EaxEffectProps &props)
+{
+    using Committer = ChorusFlangerEffect<EaxFlangerTraits>;
+    return Committer::Commit(props, props_, al_effect_props_);
+}
+
+template<>
+void FlangerCommitter::SetDefaults(EaxEffectProps &props)
+{
+    using Committer = ChorusFlangerEffect<EaxFlangerTraits>;
+    Committer::SetDefaults(props);
+}
+
+template<>
+void FlangerCommitter::Get(const EaxCall &call, const EaxEffectProps &props)
+{
+    using Committer = ChorusFlangerEffect<EaxFlangerTraits>;
+    Committer::Get(call, props);
+}
+
+template<>
+void FlangerCommitter::Set(const EaxCall &call, EaxEffectProps &props)
+{
+    using Committer = ChorusFlangerEffect<EaxFlangerTraits>;
+    Committer::Set(call, props);
 }
 
 #endif // ALSOFT_EAX

@@ -63,6 +63,10 @@ users and sysadmins to control information provided to applications, as well
 as application-agnostic behavior of the library. See alsoftrc.sample for
 available settings.
 
+Compatibility
+-------------
+
+For a list of games and applications tested/potentially compatible with OpenAL Soft as well as demos, guides and other info, check out the Binaural Audio database: https://airtable.com/shryB7ft0Cle17cLA
 
 Acknowledgements
 ----------------

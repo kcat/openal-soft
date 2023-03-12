@@ -607,25 +607,27 @@ public:
         }
     }
 
-    static bool Commit(const EaxEffectProps &props, EaxEffectProps &props_,
-        EffectProps &al_effect_props_)
+    static bool Commit(const EaxEffectProps &props, EaxEffectProps &props_, EffectProps &al_props_)
     {
-        const auto orig = props_;
+        if(props.mType == props_.mType)
+        {
+            auto&& src = props_.*Field;
+            auto&& dst = props.*Field;
+            if(dst.ulWaveform == src.ulWaveform && dst.lPhase == src.lPhase
+                && dst.flRate == src.flRate && dst.flDepth == src.flDepth
+                && dst.flFeedback == src.flFeedback && dst.flDelay == src.flDelay)
+                return false;
+        }
+
         props_ = props;
+        auto&& dst = props.*Field;
 
-        auto&& src = orig.*Field;
-        auto&& dst = props_.*Field;
-        if(orig.mType == props_.mType && dst.ulWaveform == src.ulWaveform
-            && dst.lPhase == src.lPhase && dst.flRate == src.flRate && dst.flDepth == src.flDepth
-            && dst.flFeedback == src.flFeedback && dst.flDelay == src.flDelay)
-            return false;
-
-        al_effect_props_.Chorus.Waveform = Traits::eax_waveform(dst.ulWaveform);
-        al_effect_props_.Chorus.Phase = static_cast<ALint>(dst.lPhase);
-        al_effect_props_.Chorus.Rate = dst.flRate;
-        al_effect_props_.Chorus.Depth = dst.flDepth;
-        al_effect_props_.Chorus.Feedback = dst.flFeedback;
-        al_effect_props_.Chorus.Delay = dst.flDelay;
+        al_props_.Chorus.Waveform = Traits::eax_waveform(dst.ulWaveform);
+        al_props_.Chorus.Phase = static_cast<int>(dst.lPhase);
+        al_props_.Chorus.Rate = dst.flRate;
+        al_props_.Chorus.Depth = dst.flDepth;
+        al_props_.Chorus.Feedback = dst.flFeedback;
+        al_props_.Chorus.Delay = dst.flDelay;
 
         return true;
     }

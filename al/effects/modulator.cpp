@@ -206,14 +206,13 @@ template<>
 template<>
 bool ModulatorCommitter::commit(const EaxEffectProps &props)
 {
-    const auto orig = mEaxProps;
-    mEaxProps = props;
-
-    if(orig.mType == mEaxProps.mType
+    if(props.mType == mEaxProps.mType
         && mEaxProps.mModulator.flFrequency == props.mModulator.flFrequency
         && mEaxProps.mModulator.flHighPassCutOff == props.mModulator.flHighPassCutOff
         && mEaxProps.mModulator.ulWaveform == props.mModulator.ulWaveform)
         return false;
+
+    mEaxProps = props;
 
     auto get_waveform = [](unsigned long form)
     {
@@ -226,9 +225,9 @@ bool ModulatorCommitter::commit(const EaxEffectProps &props)
         return ModulatorWaveform::Sinusoid;
     };
 
-    mAlProps.Modulator.Frequency = mEaxProps.mModulator.flFrequency;
-    mAlProps.Modulator.HighPassCutoff = mEaxProps.mModulator.flHighPassCutOff;
-    mAlProps.Modulator.Waveform = get_waveform(mEaxProps.mModulator.ulWaveform);
+    mAlProps.Modulator.Frequency = props.mModulator.flFrequency;
+    mAlProps.Modulator.HighPassCutoff = props.mModulator.flHighPassCutOff;
+    mAlProps.Modulator.Waveform = get_waveform(props.mModulator.ulWaveform);
 
     return true;
 }

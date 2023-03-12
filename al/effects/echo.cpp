@@ -204,21 +204,20 @@ template<>
 template<>
 bool EchoCommitter::commit(const EaxEffectProps &props)
 {
-    const auto orig = mEaxProps;
-    mEaxProps = props;
-
-    if(orig.mType == mEaxProps.mType && mEaxProps.mEcho.flDelay == props.mEcho.flDelay
+    if(props.mType == mEaxProps.mType && mEaxProps.mEcho.flDelay == props.mEcho.flDelay
         && mEaxProps.mEcho.flLRDelay == props.mEcho.flLRDelay
         && mEaxProps.mEcho.flDamping == props.mEcho.flDamping
         && mEaxProps.mEcho.flFeedback == props.mEcho.flFeedback
         && mEaxProps.mEcho.flSpread == props.mEcho.flSpread)
         return false;
 
-    mAlProps.Echo.Delay = mEaxProps.mEcho.flDelay;
-    mAlProps.Echo.LRDelay = mEaxProps.mEcho.flLRDelay;
-    mAlProps.Echo.Damping = mEaxProps.mEcho.flDamping;
-    mAlProps.Echo.Feedback = mEaxProps.mEcho.flFeedback;
-    mAlProps.Echo.Spread = mEaxProps.mEcho.flSpread;
+    mEaxProps = props;
+
+    mAlProps.Echo.Delay = props.mEcho.flDelay;
+    mAlProps.Echo.LRDelay = props.mEcho.flLRDelay;
+    mAlProps.Echo.Damping = props.mEcho.flDamping;
+    mAlProps.Echo.Feedback = props.mEcho.flFeedback;
+    mAlProps.Echo.Spread = props.mEcho.flSpread;
 
     return true;
 }

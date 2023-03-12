@@ -322,10 +322,7 @@ template<>
 template<>
 bool EqualizerCommitter::commit(const EaxEffectProps &props)
 {
-    const auto orig = mEaxProps;
-    mEaxProps = props;
-
-    if(orig.mType == mEaxProps.mType && mEaxProps.mEqualizer.lLowGain == props.mEqualizer.lLowGain
+    if(props.mType == mEaxProps.mType && mEaxProps.mEqualizer.lLowGain == props.mEqualizer.lLowGain
         && mEaxProps.mEqualizer.flLowCutOff == props.mEqualizer.flLowCutOff
         && mEaxProps.mEqualizer.lMid1Gain == props.mEqualizer.lMid1Gain
         && mEaxProps.mEqualizer.flMid1Center == props.mEqualizer.flMid1Center
@@ -337,16 +334,18 @@ bool EqualizerCommitter::commit(const EaxEffectProps &props)
         && mEaxProps.mEqualizer.flHighCutOff == props.mEqualizer.flHighCutOff)
         return false;
 
-    mAlProps.Equalizer.LowGain = level_mb_to_gain(static_cast<float>(mEaxProps.mEqualizer.lLowGain));
-    mAlProps.Equalizer.LowCutoff = mEaxProps.mEqualizer.flLowCutOff;
-    mAlProps.Equalizer.Mid1Gain = level_mb_to_gain(static_cast<float>(mEaxProps.mEqualizer.lMid1Gain));
-    mAlProps.Equalizer.Mid1Center = mEaxProps.mEqualizer.flMid1Center;
-    mAlProps.Equalizer.Mid1Width = mEaxProps.mEqualizer.flMid1Width;
-    mAlProps.Equalizer.Mid2Gain = level_mb_to_gain(static_cast<float>(mEaxProps.mEqualizer.lMid2Gain));
-    mAlProps.Equalizer.Mid2Center = mEaxProps.mEqualizer.flMid2Center;
-    mAlProps.Equalizer.Mid2Width = mEaxProps.mEqualizer.flMid2Width;
-    mAlProps.Equalizer.HighGain = level_mb_to_gain(static_cast<float>(mEaxProps.mEqualizer.lHighGain));
-    mAlProps.Equalizer.HighCutoff = mEaxProps.mEqualizer.flHighCutOff;
+    mEaxProps = props;
+
+    mAlProps.Equalizer.LowGain = level_mb_to_gain(static_cast<float>(props.mEqualizer.lLowGain));
+    mAlProps.Equalizer.LowCutoff = props.mEqualizer.flLowCutOff;
+    mAlProps.Equalizer.Mid1Gain = level_mb_to_gain(static_cast<float>(props.mEqualizer.lMid1Gain));
+    mAlProps.Equalizer.Mid1Center = props.mEqualizer.flMid1Center;
+    mAlProps.Equalizer.Mid1Width = props.mEqualizer.flMid1Width;
+    mAlProps.Equalizer.Mid2Gain = level_mb_to_gain(static_cast<float>(props.mEqualizer.lMid2Gain));
+    mAlProps.Equalizer.Mid2Center = props.mEqualizer.flMid2Center;
+    mAlProps.Equalizer.Mid2Width = props.mEqualizer.flMid2Width;
+    mAlProps.Equalizer.HighGain = level_mb_to_gain(static_cast<float>(props.mEqualizer.lHighGain));
+    mAlProps.Equalizer.HighCutoff = props.mEqualizer.flHighCutOff;
 
     return true;
 }

@@ -118,12 +118,13 @@ template<>
 template<>
 bool CompressorCommitter::commit(const EaxEffectProps &props)
 {
-    const auto orig = mEaxProps;
-    mEaxProps = props;
-    if(orig.mType == mEaxProps.mType && orig.mCompressor.ulOnOff == mEaxProps.mCompressor.ulOnOff)
+    if(props.mType == mEaxProps.mType
+        && props.mCompressor.ulOnOff == mEaxProps.mCompressor.ulOnOff)
         return false;
 
-    mAlProps.Compressor.OnOff = (mEaxProps.mCompressor.ulOnOff != 0);
+    mEaxProps = props;
+
+    mAlProps.Compressor.OnOff = (props.mCompressor.ulOnOff != 0);
     return true;
 }
 

@@ -146,14 +146,6 @@ struct EaxCommitter {
         property = value;
     }
 
-    template<typename TValidator, typename TDeferrer, typename TProperties, typename TProperty>
-    static void defer(const EaxCall& call, TProperties& properties, TProperty&)
-    {
-        const auto& value = call.get_value<Exception, const TProperty>();
-        TValidator{}(value);
-        TDeferrer{}(properties, value);
-    }
-
     [[noreturn]] static void fail(const char *message);
     [[noreturn]] static void fail_unknown_property_id()
     { fail(EaxEffectErrorMessages::unknown_property_id()); }

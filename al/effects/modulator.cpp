@@ -145,79 +145,95 @@ const EffectProps ModulatorEffectProps{genDefaultProps()};
 #ifdef ALSOFT_EAX
 namespace {
 
-class EaxRingModulatorEffectException : public EaxException
+using ModulatorCommitter = EaxCommitter<EaxModulatorCommitter>;
+
+struct FrequencyValidator {
+    void operator()(float flFrequency) const
+    {
+        eax_validate_range<ModulatorCommitter::Exception>(
+            "Frequency",
+            flFrequency,
+            EAXRINGMODULATOR_MINFREQUENCY,
+            EAXRINGMODULATOR_MAXFREQUENCY);
+    }
+}; // FrequencyValidator
+
+struct HighPassCutOffValidator {
+    void operator()(float flHighPassCutOff) const
+    {
+        eax_validate_range<ModulatorCommitter::Exception>(
+            "High-Pass Cutoff",
+            flHighPassCutOff,
+            EAXRINGMODULATOR_MINHIGHPASSCUTOFF,
+            EAXRINGMODULATOR_MAXHIGHPASSCUTOFF);
+    }
+}; // HighPassCutOffValidator
+
+struct WaveformValidator {
+    void operator()(unsigned long ulWaveform) const
+    {
+        eax_validate_range<ModulatorCommitter::Exception>(
+            "Waveform",
+            ulWaveform,
+            EAXRINGMODULATOR_MINWAVEFORM,
+            EAXRINGMODULATOR_MAXWAVEFORM);
+    }
+}; // WaveformValidator
+
+struct AllValidator {
+    void operator()(const EAXRINGMODULATORPROPERTIES& all) const
+    {
+        FrequencyValidator{}(all.flFrequency);
+        HighPassCutOffValidator{}(all.flHighPassCutOff);
+        WaveformValidator{}(all.ulWaveform);
+    }
+}; // AllValidator
+
+} // namespace
+
+template<>
+struct ModulatorCommitter::Exception : public EaxException {
+    explicit Exception(const char *message) : EaxException{"EAX_RING_MODULATOR_EFFECT", message}
+    { }
+};
+
+template<>
+[[noreturn]] void ModulatorCommitter::fail(const char *message)
 {
-public:
-    explicit EaxRingModulatorEffectException(const char* message)
-        : EaxException{"EAX_RING_MODULATOR_EFFECT", message}
-    {}
-}; // EaxRingModulatorEffectException
+    throw Exception{message};
+}
 
-class EaxRingModulatorEffect final : public EaxEffect4<EaxRingModulatorEffectException>
+template<>
+bool ModulatorCommitter::commit(const EaxEffectProps &props)
 {
-public:
-    EaxRingModulatorEffect(int eax_version);
+    const auto orig = props_;
+    props_ = props;
 
-private:
-    struct FrequencyValidator {
-        void operator()(float flFrequency) const
-        {
-            eax_validate_range<EaxRingModulatorEffectException>(
-                "Frequency",
-                flFrequency,
-                EAXRINGMODULATOR_MINFREQUENCY,
-                EAXRINGMODULATOR_MAXFREQUENCY);
-        }
-    }; // FrequencyValidator
+    if(orig.mType == props_.mType && props_.mModulator.flFrequency == props.mModulator.flFrequency
+        && props_.mModulator.flHighPassCutOff == props.mModulator.flHighPassCutOff
+        && props_.mModulator.ulWaveform == props.mModulator.ulWaveform)
+        return false;
 
-    struct HighPassCutOffValidator {
-        void operator()(float flHighPassCutOff) const
-        {
-            eax_validate_range<EaxRingModulatorEffectException>(
-                "High-Pass Cutoff",
-                flHighPassCutOff,
-                EAXRINGMODULATOR_MINHIGHPASSCUTOFF,
-                EAXRINGMODULATOR_MAXHIGHPASSCUTOFF);
-        }
-    }; // HighPassCutOffValidator
+    auto get_waveform = [](unsigned long form)
+    {
+        if(form == EAX_RINGMODULATOR_SINUSOID)
+            return ModulatorWaveform::Sinusoid;
+        if(form == EAX_RINGMODULATOR_SAWTOOTH)
+            return ModulatorWaveform::Sawtooth;
+        if(form == EAX_RINGMODULATOR_SQUARE)
+            return ModulatorWaveform::Square;
+        return ModulatorWaveform::Sinusoid;
+    };
 
-    struct WaveformValidator {
-        void operator()(unsigned long ulWaveform) const
-        {
-            eax_validate_range<EaxRingModulatorEffectException>(
-                "Waveform",
-                ulWaveform,
-                EAXRINGMODULATOR_MINWAVEFORM,
-                EAXRINGMODULATOR_MAXWAVEFORM);
-        }
-    }; // WaveformValidator
+    al_effect_props_.Modulator.Frequency = props_.mModulator.flFrequency;
+    al_effect_props_.Modulator.HighPassCutoff = props_.mModulator.flHighPassCutOff;
+    al_effect_props_.Modulator.Waveform = get_waveform(props_.mModulator.ulWaveform);
 
-    struct AllValidator {
-        void operator()(const EAXRINGMODULATORPROPERTIES& all) const
-        {
-            FrequencyValidator{}(all.flFrequency);
-            HighPassCutOffValidator{}(all.flHighPassCutOff);
-            WaveformValidator{}(all.ulWaveform);
-        }
-    }; // AllValidator
+    return true;
+}
 
-    void set_defaults(Props4& props) override;
-
-    void set_efx_frequency() noexcept;
-    void set_efx_high_pass_cutoff() noexcept;
-    void set_efx_waveform();
-    void set_efx_defaults() override;
-
-    void get(const EaxCall& call, const Props4& props) override;
-    void set(const EaxCall& call, Props4& props) override;
-    bool commit_props(const Props4& props) override;
-}; // EaxRingModulatorEffect
-
-EaxRingModulatorEffect::EaxRingModulatorEffect(int eax_version)
-    : EaxEffect4{AL_EFFECT_RING_MODULATOR, eax_version}
-{}
-
-void EaxRingModulatorEffect::set_defaults(Props4& props)
+template<>
+void ModulatorCommitter::SetDefaults(EaxEffectProps &props)
 {
     props.mType = EaxEffectType::Modulator;
     props.mModulator.flFrequency = EAXRINGMODULATOR_DEFAULTFREQUENCY;
@@ -225,96 +241,32 @@ void EaxRingModulatorEffect::set_defaults(Props4& props)
     props.mModulator.ulWaveform = EAXRINGMODULATOR_DEFAULTWAVEFORM;
 }
 
-void EaxRingModulatorEffect::set_efx_frequency() noexcept
-{
-    al_effect_props_.Modulator.Frequency = clamp(
-        props_.mModulator.flFrequency,
-        AL_RING_MODULATOR_MIN_FREQUENCY,
-        AL_RING_MODULATOR_MAX_FREQUENCY);
-}
-
-void EaxRingModulatorEffect::set_efx_high_pass_cutoff() noexcept
-{
-    al_effect_props_.Modulator.HighPassCutoff = clamp(
-        props_.mModulator.flHighPassCutOff,
-        AL_RING_MODULATOR_MIN_HIGHPASS_CUTOFF,
-        AL_RING_MODULATOR_MAX_HIGHPASS_CUTOFF);
-}
-
-void EaxRingModulatorEffect::set_efx_waveform()
-{
-    const auto waveform = clamp(
-        static_cast<ALint>(props_.mModulator.ulWaveform),
-        AL_RING_MODULATOR_MIN_WAVEFORM,
-        AL_RING_MODULATOR_MAX_WAVEFORM);
-    const auto efx_waveform = WaveformFromEmum(waveform);
-    assert(efx_waveform.has_value());
-    al_effect_props_.Modulator.Waveform = *efx_waveform;
-}
-
-void EaxRingModulatorEffect::set_efx_defaults()
-{
-    set_efx_frequency();
-    set_efx_high_pass_cutoff();
-    set_efx_waveform();
-}
-
-void EaxRingModulatorEffect::get(const EaxCall& call, const Props4& props)
+template<>
+void ModulatorCommitter::Get(const EaxCall &call, const EaxEffectProps &props)
 {
     switch(call.get_property_id())
     {
-        case EAXRINGMODULATOR_NONE: break;
-        case EAXRINGMODULATOR_ALLPARAMETERS: call.set_value<Exception>(props.mModulator); break;
-        case EAXRINGMODULATOR_FREQUENCY: call.set_value<Exception>(props.mModulator.flFrequency); break;
-        case EAXRINGMODULATOR_HIGHPASSCUTOFF: call.set_value<Exception>(props.mModulator.flHighPassCutOff); break;
-        case EAXRINGMODULATOR_WAVEFORM: call.set_value<Exception>(props.mModulator.ulWaveform); break;
-        default: fail_unknown_property_id();
+    case EAXRINGMODULATOR_NONE: break;
+    case EAXRINGMODULATOR_ALLPARAMETERS: call.set_value<Exception>(props.mModulator); break;
+    case EAXRINGMODULATOR_FREQUENCY: call.set_value<Exception>(props.mModulator.flFrequency); break;
+    case EAXRINGMODULATOR_HIGHPASSCUTOFF: call.set_value<Exception>(props.mModulator.flHighPassCutOff); break;
+    case EAXRINGMODULATOR_WAVEFORM: call.set_value<Exception>(props.mModulator.ulWaveform); break;
+    default: fail_unknown_property_id();
     }
 }
 
-void EaxRingModulatorEffect::set(const EaxCall& call, Props4& props)
+template<>
+void ModulatorCommitter::Set(const EaxCall &call, EaxEffectProps &props)
 {
     switch (call.get_property_id())
     {
-        case EAXRINGMODULATOR_NONE: break;
-        case EAXRINGMODULATOR_ALLPARAMETERS: defer<AllValidator>(call, props.mModulator); break;
-        case EAXRINGMODULATOR_FREQUENCY: defer<FrequencyValidator>(call, props.mModulator.flFrequency); break;
-        case EAXRINGMODULATOR_HIGHPASSCUTOFF: defer<HighPassCutOffValidator>(call, props.mModulator.flHighPassCutOff); break;
-        case EAXRINGMODULATOR_WAVEFORM: defer<WaveformValidator>(call, props.mModulator.ulWaveform); break;
-        default: fail_unknown_property_id();
+    case EAXRINGMODULATOR_NONE: break;
+    case EAXRINGMODULATOR_ALLPARAMETERS: defer<AllValidator>(call, props.mModulator); break;
+    case EAXRINGMODULATOR_FREQUENCY: defer<FrequencyValidator>(call, props.mModulator.flFrequency); break;
+    case EAXRINGMODULATOR_HIGHPASSCUTOFF: defer<HighPassCutOffValidator>(call, props.mModulator.flHighPassCutOff); break;
+    case EAXRINGMODULATOR_WAVEFORM: defer<WaveformValidator>(call, props.mModulator.ulWaveform); break;
+    default: fail_unknown_property_id();
     }
-}
-
-bool EaxRingModulatorEffect::commit_props(const Props4& props)
-{
-    auto is_dirty = false;
-
-    if (props_.mModulator.flFrequency != props.mModulator.flFrequency)
-    {
-        is_dirty = true;
-        set_efx_frequency();
-    }
-
-    if (props_.mModulator.flHighPassCutOff != props.mModulator.flHighPassCutOff)
-    {
-        is_dirty = true;
-        set_efx_high_pass_cutoff();
-    }
-
-    if (props_.mModulator.ulWaveform != props.mModulator.ulWaveform)
-    {
-        is_dirty = true;
-        set_efx_waveform();
-    }
-
-    return is_dirty;
-}
-
-} // namespace
-
-EaxEffectUPtr eax_create_eax_ring_modulator_effect(int eax_version)
-{
-    return eax_create_eax4_effect<EaxRingModulatorEffect>(eax_version);
 }
 
 #endif // ALSOFT_EAX

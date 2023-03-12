@@ -151,7 +151,7 @@ EaxCall::EaxCall(
         fail("EAX version out of range.");
     }
 
-    switch(property_id)
+    switch(property_id_)
     {
     case EAXCONTEXT_LASTERROR:
     case EAXCONTEXT_SPEAKERCONFIG:

@@ -31,33 +31,31 @@ public:
         ALvoid* property_buffer,
         ALuint property_size);
 
-    bool is_get() const noexcept { return type_ == EaxCallType::get; }
-    bool is_deferred() const noexcept { return is_deferred_; }
-    int get_version() const noexcept { return version_; }
-    EaxCallPropertySetId get_property_set_id() const noexcept { return property_set_id_; }
-    ALuint get_property_id() const noexcept { return property_id_; }
-    ALuint get_property_al_name() const noexcept { return property_source_id_; }
-    EaxFxSlotIndex get_fx_slot_index() const noexcept { return fx_slot_index_; }
+    bool is_get() const noexcept { return mCallType == EaxCallType::get; }
+    bool is_deferred() const noexcept { return mIsDeferred; }
+    int get_version() const noexcept { return mVersion; }
+    EaxCallPropertySetId get_property_set_id() const noexcept { return mPropertySetId; }
+    ALuint get_property_id() const noexcept { return mPropertyId; }
+    ALuint get_property_al_name() const noexcept { return mPropertySourceId; }
+    EaxFxSlotIndex get_fx_slot_index() const noexcept { return mFxSlotIndex; }
 
     template<typename TException, typename TValue>
     TValue& get_value() const
     {
-        if (property_size_ < static_cast<ALuint>(sizeof(TValue)))
-        {
+        if(mPropertyBufferSize < sizeof(TValue))
             fail_too_small();
-        }
 
-        return *static_cast<TValue*>(property_buffer_);
+        return *static_cast<TValue*>(mPropertyBuffer);
     }
 
     template<typename TValue>
     al::span<TValue> get_values(size_t max_count) const
     {
-        if (max_count == 0 || property_size_ < static_cast<ALuint>(sizeof(TValue)))
+        if(max_count == 0 || mPropertyBufferSize < sizeof(TValue))
             fail_too_small();
 
-        const auto count = minz(property_size_ / sizeof(TValue), max_count);
-        return al::span<TValue>{static_cast<TValue*>(property_buffer_), count};
+        const auto count = minz(mPropertyBufferSize / sizeof(TValue), max_count);
+        return al::as_span(static_cast<TValue*>(mPropertyBuffer), count);
     }
 
     template<typename TValue>
@@ -73,16 +71,16 @@ public:
     }
 
 private:
-    EaxCallType type_;
-    int version_;
-    EaxFxSlotIndex fx_slot_index_;
-    EaxCallPropertySetId property_set_id_;
-    bool is_deferred_;
+    const EaxCallType mCallType;
+    int mVersion;
+    EaxFxSlotIndex mFxSlotIndex;
+    EaxCallPropertySetId mPropertySetId;
+    bool mIsDeferred;
 
-    ALuint property_id_;
-    ALuint property_source_id_;
-    ALvoid*property_buffer_;
-    ALuint property_size_;
+    const ALuint mPropertyId;
+    const ALuint mPropertySourceId;
+    ALvoid*const mPropertyBuffer;
+    const ALuint mPropertyBufferSize;
 
     [[noreturn]] static void fail(const char* message);
     [[noreturn]] static void fail_too_small();

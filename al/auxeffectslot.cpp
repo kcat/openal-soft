@@ -1186,7 +1186,6 @@ void ALeffectslot::eax_fx_slot_set_defaults()
     eax4_fx_slot_set_defaults(eax4_.i);
     eax5_fx_slot_set_defaults(eax5_.i);
     eax_ = eax5_.i;
-    eax_version_ = 5;
     eax_df_ = EaxDirtyFlags{};
 }
 

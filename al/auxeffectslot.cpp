@@ -1427,18 +1427,21 @@ bool ALeffectslot::eax_fx_slot_set(const EaxCall& call)
 // Returns `true` if all sources should be updated, or `false` otherwise.
 bool ALeffectslot::eax_set(const EaxCall& call)
 {
-    const auto version = call.get_version();
+    bool ret{false};
 
+    switch(call.get_property_set_id())
+    {
+    case EaxCallPropertySetId::fx_slot: ret = eax_fx_slot_set(call); break;
+    case EaxCallPropertySetId::fx_slot_effect: eax_effect_->set(call); break;
+    default: eax_fail_unknown_property_id();
+    }
+
+    const auto version = call.get_version();
     if(eax_version_ != version)
         eax_df_ = ~EaxDirtyFlags{};
     eax_version_ = version;
 
-    switch(call.get_property_set_id())
-    {
-    case EaxCallPropertySetId::fx_slot: return eax_fx_slot_set(call);
-    case EaxCallPropertySetId::fx_slot_effect: eax_effect_->set(call); return false;
-    default: eax_fail_unknown_property_id();
-    }
+    return ret;
 }
 
 void ALeffectslot::eax4_fx_slot_commit(EaxDirtyFlags& dst_df)

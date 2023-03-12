@@ -3744,10 +3744,25 @@ START_API_FUNC
             context->setError(AL_INVALID_NAME, "Queueing invalid buffer ID %u", buffers[i]);
             goto buffer_error;
         }
-        if(buffer && buffer->mCallback)
+        if(buffer)
         {
-            context->setError(AL_INVALID_OPERATION, "Queueing callback buffer %u", buffers[i]);
-            goto buffer_error;
+            if(buffer->mSampleRate < 0)
+            {
+                context->setError(AL_INVALID_OPERATION, "Queueing buffer %u with no format",
+                    buffer->id);
+                goto buffer_error;
+            }
+            if(buffer->mCallback)
+            {
+                context->setError(AL_INVALID_OPERATION, "Queueing callback buffer %u", buffer->id);
+                goto buffer_error;
+            }
+            if(buffer->MappedAccess != 0 && !(buffer->MappedAccess&AL_MAP_PERSISTENT_BIT_SOFT))
+            {
+                context->setError(AL_INVALID_OPERATION,
+                    "Queueing non-persistently mapped buffer %u", buffer->id);
+                goto buffer_error;
+            }
         }
 
         source->mQueue.emplace_back();
@@ -3766,13 +3781,6 @@ START_API_FUNC
         BufferList->mSamples = buffer->mData.data();
         BufferList->mBuffer = buffer;
         IncrementRef(buffer->ref);
-
-        if(buffer->MappedAccess != 0 && !(buffer->MappedAccess&AL_MAP_PERSISTENT_BIT_SOFT))
-        {
-            context->setError(AL_INVALID_OPERATION, "Queueing non-persistently mapped buffer %u",
-                buffer->id);
-            goto buffer_error;
-        }
 
         if(BufferFmt == nullptr)
             BufferFmt = buffer;

@@ -200,13 +200,13 @@ template<>
 template<>
 bool FrequencyShifterCommitter::commit(const EaxEffectProps &props)
 {
-    const auto orig = props_;
-    props_ = props;
+    const auto orig = mEaxProps;
+    mEaxProps = props;
 
-    if(orig.mType == props_.mType
-        && props_.mFrequencyShifter.flFrequency == props.mFrequencyShifter.flFrequency
-        && props_.mFrequencyShifter.ulLeftDirection == props.mFrequencyShifter.ulLeftDirection
-        && props_.mFrequencyShifter.ulRightDirection == props.mFrequencyShifter.ulRightDirection)
+    if(orig.mType == mEaxProps.mType
+        && mEaxProps.mFrequencyShifter.flFrequency == props.mFrequencyShifter.flFrequency
+        && mEaxProps.mFrequencyShifter.ulLeftDirection == props.mFrequencyShifter.ulLeftDirection
+        && mEaxProps.mFrequencyShifter.ulRightDirection == props.mFrequencyShifter.ulRightDirection)
         return false;
 
     auto get_direction = [](unsigned long dir) noexcept
@@ -218,9 +218,9 @@ bool FrequencyShifterCommitter::commit(const EaxEffectProps &props)
         return FShifterDirection::Off;
     };
 
-    al_effect_props_.Fshifter.Frequency = props_.mFrequencyShifter.flFrequency;
-    al_effect_props_.Fshifter.LeftDirection = get_direction(props_.mFrequencyShifter.ulLeftDirection);
-    al_effect_props_.Fshifter.RightDirection = get_direction(props_.mFrequencyShifter.ulRightDirection);
+    mAlProps.Fshifter.Frequency = mEaxProps.mFrequencyShifter.flFrequency;
+    mAlProps.Fshifter.LeftDirection = get_direction(mEaxProps.mFrequencyShifter.ulLeftDirection);
+    mAlProps.Fshifter.RightDirection = get_direction(mEaxProps.mFrequencyShifter.ulRightDirection);
 
     return true;
 }

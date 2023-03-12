@@ -120,8 +120,8 @@ template<>
 template<>
 bool NullCommitter::commit(const EaxEffectProps &props)
 {
-    const bool ret{props.mType != props_.mType};
-    props_ = props;
+    const bool ret{props.mType != mEaxProps.mType};
+    mEaxProps = props;
     return ret;
 }
 

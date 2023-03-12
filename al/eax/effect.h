@@ -64,11 +64,11 @@ struct EaxReverbCommitter {
     struct Exception;
 
     EaxReverbCommitter(EaxEffectProps &eaxprops, EffectProps &alprops)
-        : props_{eaxprops}, al_effect_props_{alprops}
+        : mEaxProps{eaxprops}, mAlProps{alprops}
     { }
 
-    EaxEffectProps &props_;
-    EffectProps &al_effect_props_;
+    EaxEffectProps &mEaxProps;
+    EffectProps &mAlProps;
 
     [[noreturn]] static void fail(const char* message);
     [[noreturn]] static void fail_unknown_property_id()
@@ -132,11 +132,11 @@ struct EaxCommitter {
     struct Exception;
 
     EaxCommitter(EaxEffectProps &eaxprops, EffectProps &alprops)
-        : props_{eaxprops}, al_effect_props_{alprops}
+        : mEaxProps{eaxprops}, mAlProps{alprops}
     { }
 
-    EaxEffectProps &props_;
-    EffectProps &al_effect_props_;
+    EaxEffectProps &mEaxProps;
+    EffectProps &mAlProps;
 
     template<typename TValidator, typename TProperty>
     static void defer(const EaxCall& call, TProperty& property)

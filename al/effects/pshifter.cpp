@@ -141,16 +141,16 @@ template<>
 template<>
 bool PitchShifterCommitter::commit(const EaxEffectProps &props)
 {
-    const auto orig = props_;
-    props_ = props;
+    const auto orig = mEaxProps;
+    mEaxProps = props;
 
-    if(orig.mType == props_.mType
-        && props_.mPitchShifter.lCoarseTune == props.mPitchShifter.lCoarseTune
-        && props_.mPitchShifter.lFineTune == props.mPitchShifter.lFineTune)
+    if(orig.mType == mEaxProps.mType
+        && mEaxProps.mPitchShifter.lCoarseTune == props.mPitchShifter.lCoarseTune
+        && mEaxProps.mPitchShifter.lFineTune == props.mPitchShifter.lFineTune)
         return false;
 
-    al_effect_props_.Pshifter.CoarseTune = static_cast<ALint>(props_.mPitchShifter.lCoarseTune);
-    al_effect_props_.Pshifter.FineTune = static_cast<ALint>(props_.mPitchShifter.lFineTune);
+    mAlProps.Pshifter.CoarseTune = static_cast<ALint>(mEaxProps.mPitchShifter.lCoarseTune);
+    mAlProps.Pshifter.FineTune = static_cast<ALint>(mEaxProps.mPitchShifter.lFineTune);
 
     return true;
 }

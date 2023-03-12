@@ -355,16 +355,16 @@ template<>
 template<>
 bool VocalMorpherCommitter::commit(const EaxEffectProps &props)
 {
-    const auto orig = props_;
-    props_ = props;
+    const auto orig = mEaxProps;
+    mEaxProps = props;
 
-    if(orig.mType == props_.mType
-        && props_.mVocalMorpher.ulPhonemeA == props.mVocalMorpher.ulPhonemeA
-        && props_.mVocalMorpher.lPhonemeACoarseTuning == props.mVocalMorpher.lPhonemeACoarseTuning
-        && props_.mVocalMorpher.ulPhonemeB == props.mVocalMorpher.ulPhonemeB
-        && props_.mVocalMorpher.lPhonemeBCoarseTuning == props.mVocalMorpher.lPhonemeBCoarseTuning
-        && props_.mVocalMorpher.ulWaveform == props.mVocalMorpher.ulWaveform
-        && props_.mVocalMorpher.flRate == props.mVocalMorpher.flRate)
+    if(orig.mType == mEaxProps.mType
+        && mEaxProps.mVocalMorpher.ulPhonemeA == props.mVocalMorpher.ulPhonemeA
+        && mEaxProps.mVocalMorpher.lPhonemeACoarseTuning == props.mVocalMorpher.lPhonemeACoarseTuning
+        && mEaxProps.mVocalMorpher.ulPhonemeB == props.mVocalMorpher.ulPhonemeB
+        && mEaxProps.mVocalMorpher.lPhonemeBCoarseTuning == props.mVocalMorpher.lPhonemeBCoarseTuning
+        && mEaxProps.mVocalMorpher.ulWaveform == props.mVocalMorpher.ulWaveform
+        && mEaxProps.mVocalMorpher.flRate == props.mVocalMorpher.flRate)
         return false;
 
     auto get_phoneme = [](unsigned long phoneme) noexcept
@@ -414,12 +414,12 @@ bool VocalMorpherCommitter::commit(const EaxEffectProps &props)
         return VMorpherWaveform::Sinusoid;
     };
 
-    al_effect_props_.Vmorpher.PhonemeA = get_phoneme(props_.mVocalMorpher.ulPhonemeA);
-    al_effect_props_.Vmorpher.PhonemeACoarseTuning = static_cast<ALint>(props_.mVocalMorpher.lPhonemeACoarseTuning);
-    al_effect_props_.Vmorpher.PhonemeB = get_phoneme(props_.mVocalMorpher.ulPhonemeB);
-    al_effect_props_.Vmorpher.PhonemeBCoarseTuning = static_cast<ALint>(props_.mVocalMorpher.lPhonemeBCoarseTuning);
-    al_effect_props_.Vmorpher.Waveform = get_waveform(props_.mVocalMorpher.ulWaveform);
-    al_effect_props_.Vmorpher.Rate = props_.mVocalMorpher.flRate;
+    mAlProps.Vmorpher.PhonemeA = get_phoneme(mEaxProps.mVocalMorpher.ulPhonemeA);
+    mAlProps.Vmorpher.PhonemeACoarseTuning = static_cast<ALint>(mEaxProps.mVocalMorpher.lPhonemeACoarseTuning);
+    mAlProps.Vmorpher.PhonemeB = get_phoneme(mEaxProps.mVocalMorpher.ulPhonemeB);
+    mAlProps.Vmorpher.PhonemeBCoarseTuning = static_cast<ALint>(mEaxProps.mVocalMorpher.lPhonemeBCoarseTuning);
+    mAlProps.Vmorpher.Waveform = get_waveform(mEaxProps.mVocalMorpher.ulWaveform);
+    mAlProps.Vmorpher.Rate = mEaxProps.mVocalMorpher.flRate;
 
     return true;
 }

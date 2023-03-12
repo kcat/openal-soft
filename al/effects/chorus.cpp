@@ -654,7 +654,7 @@ template<>
 bool ChorusCommitter::commit(const EaxEffectProps &props)
 {
     using Committer = ChorusFlangerEffect<EaxChorusTraits>;
-    return Committer::Commit(props, props_, al_effect_props_);
+    return Committer::Commit(props, mEaxProps, mAlProps);
 }
 
 template<>
@@ -695,7 +695,7 @@ template<>
 bool FlangerCommitter::commit(const EaxEffectProps &props)
 {
     using Committer = ChorusFlangerEffect<EaxFlangerTraits>;
-    return Committer::Commit(props, props_, al_effect_props_);
+    return Committer::Commit(props, mEaxProps, mAlProps);
 }
 
 template<>

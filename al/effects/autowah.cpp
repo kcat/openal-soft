@@ -192,19 +192,20 @@ template<>
 template<>
 bool AutowahCommitter::commit(const EaxEffectProps &props)
 {
-    const auto orig = props_;
-    props_ = props;
+    const auto orig = mEaxProps;
+    mEaxProps = props;
 
-    if(orig.mType == props_.mType && props_.mAutowah.flAttackTime == props.mAutowah.flAttackTime
-        && props_.mAutowah.flReleaseTime == props.mAutowah.flReleaseTime
-        && props_.mAutowah.lResonance == props.mAutowah.lResonance
-        && props_.mAutowah.lPeakLevel == props.mAutowah.lPeakLevel)
+    if(orig.mType == mEaxProps.mType
+        && mEaxProps.mAutowah.flAttackTime == props.mAutowah.flAttackTime
+        && mEaxProps.mAutowah.flReleaseTime == props.mAutowah.flReleaseTime
+        && mEaxProps.mAutowah.lResonance == props.mAutowah.lResonance
+        && mEaxProps.mAutowah.lPeakLevel == props.mAutowah.lPeakLevel)
         return false;
 
-    al_effect_props_.Autowah.AttackTime = props_.mAutowah.flAttackTime;
-    al_effect_props_.Autowah.ReleaseTime = props_.mAutowah.flReleaseTime;
-    al_effect_props_.Autowah.Resonance = level_mb_to_gain(static_cast<float>(props_.mAutowah.lResonance));
-    al_effect_props_.Autowah.PeakGain = level_mb_to_gain(static_cast<float>(props_.mAutowah.lPeakLevel));
+    mAlProps.Autowah.AttackTime = mEaxProps.mAutowah.flAttackTime;
+    mAlProps.Autowah.ReleaseTime = mEaxProps.mAutowah.flReleaseTime;
+    mAlProps.Autowah.Resonance = level_mb_to_gain(static_cast<float>(mEaxProps.mAutowah.lResonance));
+    mAlProps.Autowah.PeakGain = level_mb_to_gain(static_cast<float>(mEaxProps.mAutowah.lPeakLevel));
 
     return true;
 }

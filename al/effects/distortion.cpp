@@ -207,21 +207,21 @@ template<>
 template<>
 bool DistortionCommitter::commit(const EaxEffectProps &props)
 {
-    const auto orig = props_;
-    props_ = props;
+    const auto orig = mEaxProps;
+    mEaxProps = props;
 
-    if(orig.mType == props_.mType && props_.mDistortion.flEdge == props.mDistortion.flEdge
-        && props_.mDistortion.lGain == props.mDistortion.lGain
-        && props_.mDistortion.flLowPassCutOff == props.mDistortion.flLowPassCutOff
-        && props_.mDistortion.flEQCenter == props.mDistortion.flEQCenter
-        && props_.mDistortion.flEQBandwidth == props.mDistortion.flEQBandwidth)
+    if(orig.mType == mEaxProps.mType && mEaxProps.mDistortion.flEdge == props.mDistortion.flEdge
+        && mEaxProps.mDistortion.lGain == props.mDistortion.lGain
+        && mEaxProps.mDistortion.flLowPassCutOff == props.mDistortion.flLowPassCutOff
+        && mEaxProps.mDistortion.flEQCenter == props.mDistortion.flEQCenter
+        && mEaxProps.mDistortion.flEQBandwidth == props.mDistortion.flEQBandwidth)
         return false;
 
-    al_effect_props_.Distortion.Edge = props_.mDistortion.flEdge;
-    al_effect_props_.Distortion.Gain = level_mb_to_gain(static_cast<float>(props_.mDistortion.lGain));
-    al_effect_props_.Distortion.LowpassCutoff = props_.mDistortion.flLowPassCutOff;
-    al_effect_props_.Distortion.EQCenter = props_.mDistortion.flEQCenter;
-    al_effect_props_.Distortion.EQBandwidth = props_.mDistortion.flEdge;
+    mAlProps.Distortion.Edge = mEaxProps.mDistortion.flEdge;
+    mAlProps.Distortion.Gain = level_mb_to_gain(static_cast<float>(mEaxProps.mDistortion.lGain));
+    mAlProps.Distortion.LowpassCutoff = mEaxProps.mDistortion.flLowPassCutOff;
+    mAlProps.Distortion.EQCenter = mEaxProps.mDistortion.flEQCenter;
+    mAlProps.Distortion.EQBandwidth = mEaxProps.mDistortion.flEdge;
 
     return true;
 }

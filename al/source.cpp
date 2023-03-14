@@ -1317,7 +1317,7 @@ void CommitAndUpdateSourceProps(ALsource *source, ALCcontext *context)
 {
     if(!context->mDeferUpdates)
     {
-        if(source->eax_is_initialized())
+        if(context->has_eax())
             source->eax_commit();
         if(Voice *voice{GetSourceVoice(source, context)})
         {
@@ -2745,7 +2745,7 @@ void StartSources(ALCcontext *const context, const al::span<ALsource*> srchandle
             cur->mState = VChangeState::Play;
             source->state = AL_PLAYING;
 #ifdef ALSOFT_EAX
-            if(source->eax_is_initialized())
+            if(context->has_eax())
                 source->eax_commit();
 #endif // ALSOFT_EAX
             continue;
@@ -2765,7 +2765,7 @@ void StartSources(ALCcontext *const context, const al::span<ALsource*> srchandle
             assert(voice == nullptr);
             cur->mOldVoice = nullptr;
 #ifdef ALSOFT_EAX
-            if(source->eax_is_initialized())
+            if(context->has_eax())
                 source->eax_commit();
 #endif // ALSOFT_EAX
             break;
@@ -3974,8 +3974,13 @@ void ALsource::eax_initialize(ALCcontext *context) noexcept
 {
     assert(context != nullptr);
     eax_al_context_ = context;
+
     eax_primary_fx_slot_id_ = context->eax_get_primary_fx_slot_index();
     eax_set_defaults();
+
+    eax1_translate(eax1_.i, eax_);
+    eax_version_ = 1;
+    eax_changed_ = true;
 }
 
 void ALsource::eax_dispatch(const EaxCall& call)
@@ -4168,14 +4173,16 @@ void ALsource::eax1_translate(const Eax1Props& src, Eax5Props& dst) noexcept
     eax5_set_defaults(dst);
 
     if (src.fMix == EAX_REVERBMIX_USEDISTANCE)
+    {
         dst.source.ulFlags |= EAXSOURCEFLAGS_ROOMAUTO;
+        dst.sends[0].lSend = 0;
+    }
     else
+    {
         dst.source.ulFlags &= ~EAXSOURCEFLAGS_ROOMAUTO;
-
-    dst.sends[0].lSendHF = clamp(
-        static_cast<long>(gain_to_level_mb(src.fMix)),
-        EAXSOURCE_MINSENDHF,
-        EAXSOURCE_MAXSENDHF);
+        dst.sends[0].lSend = clamp(static_cast<long>(gain_to_level_mb(src.fMix)),
+            EAXSOURCE_MINSEND, EAXSOURCE_MAXSEND);
+    }
 }
 
 void ALsource::eax2_translate(const Eax2Props& src, Eax5Props& dst) noexcept
@@ -5217,9 +5224,6 @@ void ALsource::eax_commit_filters()
 
 void ALsource::eax_commit()
 {
-    if(!eax_version_)
-        return;
-
     const auto primary_fx_slot_id = eax_al_context_->eax_get_primary_fx_slot_index();
     const auto is_primary_fx_slot_id_changed = (eax_primary_fx_slot_id_ != primary_fx_slot_id);
 
@@ -5251,9 +5255,6 @@ void ALsource::eax_commit()
         eax5_.i = eax5_.d;
         eax_ = eax5_.d;
         break;
-
-    default:
-        eax_fail_unknown_version();
     }
 
     eax_set_efx_outer_gain_hf();

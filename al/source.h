@@ -164,7 +164,6 @@ public:
     void eax_commit();
     void eax_commit_and_update();
     void eax_mark_as_changed() { eax_changed_ = true; }
-    bool eax_is_initialized() const noexcept { return eax_version_ != 0; }
 
     static ALsource* eax_lookup_source(ALCcontext& al_context, ALuint source_id) noexcept;
 

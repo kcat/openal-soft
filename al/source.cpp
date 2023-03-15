@@ -3746,7 +3746,7 @@ START_API_FUNC
         }
         if(buffer)
         {
-            if(buffer->mSampleRate < 0)
+            if(buffer->mSampleRate < 1)
             {
                 context->setError(AL_INVALID_OPERATION, "Queueing buffer %u with no format",
                     buffer->id);

@@ -81,7 +81,10 @@ bool OboePlayback::reset()
     builder.setCallback(this);
 
     if(mDevice->Flags.test(FrequencyRequest))
+    {
+        builder.setSampleRateConversionQuality(oboe::SampleRateConversionQuality::High);
         builder.setSampleRate(static_cast<int32_t>(mDevice->Frequency));
+    }
     if(mDevice->Flags.test(ChannelsRequest))
     {
         /* Only use mono or stereo at user request. There's no telling what

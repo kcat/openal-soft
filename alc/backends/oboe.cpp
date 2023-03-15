@@ -107,6 +107,10 @@ bool OboePlayback::reset()
             break;
         case DevFmtInt:
         case DevFmtUInt:
+#if OBOE_VERSION_MAJOR > 1 || (OBOE_VERSION_MAJOR == 1 && OBOE_VERSION_MINOR >= 6)
+            format = oboe::AudioFormat::I32;
+            break;
+#endif
         case DevFmtFloat:
             format = oboe::AudioFormat::Float;
             break;
@@ -155,6 +159,12 @@ bool OboePlayback::reset()
     case oboe::AudioFormat::Float:
         mDevice->FmtType = DevFmtFloat;
         break;
+#if OBOE_VERSION_MAJOR > 1 || (OBOE_VERSION_MAJOR == 1 && OBOE_VERSION_MINOR >= 6)
+    case oboe::AudioFormat::I32:
+        mDevice->FmtType = DevFmtInt;
+        break;
+    case oboe::AudioFormat::I24:
+#endif
     case oboe::AudioFormat::Unspecified:
     case oboe::AudioFormat::Invalid:
         throw al::backend_exception{al::backend_error::DeviceError,
@@ -266,10 +276,14 @@ void OboeCapture::open(const char *name)
     case DevFmtFloat:
         builder.setFormat(oboe::AudioFormat::Float);
         break;
+    case DevFmtInt:
+#if OBOE_VERSION_MAJOR > 1 || (OBOE_VERSION_MAJOR == 1 && OBOE_VERSION_MINOR >= 6)
+        builder.setFormat(oboe::AudioFormat::I32);
+        break;
+#endif
     case DevFmtByte:
     case DevFmtUByte:
     case DevFmtUShort:
-    case DevFmtInt:
     case DevFmtUInt:
         throw al::backend_exception{al::backend_error::DeviceError,
             "%s capture samples not supported", DevFmtTypeString(mDevice->FmtType)};

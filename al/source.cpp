@@ -3958,15 +3958,6 @@ SourceSubList::~SourceSubList()
 
 
 #ifdef ALSOFT_EAX
-void EaxUpdateSourceVoice(ALsource *source, ALCcontext *context)
-{
-    if(Voice *voice{GetSourceVoice(source, context)})
-    {
-        if(std::exchange(source->mPropsDirty, false))
-            UpdateSourceProps(source, voice, context);
-    }
-}
-
 constexpr const ALsource::EaxFxSlotIds ALsource::eax4_fx_slot_ids;
 constexpr const ALsource::EaxFxSlotIds ALsource::eax5_fx_slot_ids;
 
@@ -3986,12 +3977,6 @@ void ALsource::eax_initialize(ALCcontext *context) noexcept
 void ALsource::eax_dispatch(const EaxCall& call)
 {
     call.is_get() ? eax_get(call) : eax_set(call);
-}
-
-void ALsource::eax_commit_and_update()
-{
-    eax_commit();
-    EaxUpdateSourceVoice(this, eax_al_context_);
 }
 
 ALsource* ALsource::eax_lookup_source(ALCcontext& al_context, ALuint source_id) noexcept

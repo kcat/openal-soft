@@ -204,7 +204,6 @@ public:
         ALvoid* property_value,
         ALuint property_value_size);
 
-    void eax_commit_and_update_sources();
     void eax_set_last_error() noexcept;
 
     EaxFxSlotIndex eax_get_primary_fx_slot_index() const noexcept
@@ -214,6 +213,9 @@ public:
     { return eax_fx_slots_.get(fx_slot_index); }
     ALeffectslot& eax_get_fx_slot(EaxFxSlotIndexValue fx_slot_index)
     { return eax_fx_slots_.get(fx_slot_index); }
+
+    bool eax_needs_commit() const noexcept { return eax_needs_commit_; }
+    void eax_commit();
 
     void eax_commit_fx_slots()
     { eax_fx_slots_.commit(); }
@@ -391,6 +393,7 @@ private:
     EaxFxSlots eax_fx_slots_{};
 
     int eax_version_{}; // Current EAX version.
+    bool eax_needs_commit_{};
     EaxDirtyFlags eax_df_{}; // Dirty flags for the current EAX version.
     Eax5State eax123_{}; // EAX1/EAX2/EAX3 state.
     Eax4State eax4_{}; // EAX4 state.
@@ -477,8 +480,6 @@ private:
     void eax_context_set_defaults();
     void eax_set_defaults();
 
-    void eax_initialize_sources();
-
     void eax_dispatch_fx_slot(const EaxCall& call);
     void eax_dispatch_source(const EaxCall& call);
 
@@ -507,7 +508,6 @@ private:
     void eax4_context_commit(Eax4State& state, EaxDirtyFlags& dst_df);
     void eax5_context_commit(Eax5State& state, EaxDirtyFlags& dst_df);
     void eax_context_commit();
-    void eax_commit();
 #endif // ALSOFT_EAX
 };
 

@@ -264,6 +264,11 @@ void ALCcontext::applyAllUpdates()
         /* busy-wait */
     }
 
+#ifdef ALSOFT_EAX
+    if(eax_needs_commit_)
+        eax_commit();
+#endif
+
     if(std::exchange(mPropsDirty, false))
         UpdateContextProps(this);
     UpdateAllEffectSlotProps(this);
@@ -344,6 +349,7 @@ ALenum ALCcontext::eax_eax_set(
     default:
         eax_fail_unknown_property_set_id();
     }
+    eax_needs_commit_ = true;
 
     if(!call.is_deferred())
     {
@@ -389,12 +395,6 @@ ALenum ALCcontext::eax_eax_get(
     }
 
     return AL_NO_ERROR;
-}
-
-void ALCcontext::eax_commit_and_update_sources()
-{
-    std::unique_lock<std::mutex> source_lock{mSourceLock};
-    ForEachSource(this, std::mem_fn(&ALsource::eax_commit_and_update));
 }
 
 void ALCcontext::eax_set_last_error() noexcept
@@ -487,10 +487,6 @@ void ALCcontext::eax_initialize()
     eax_initialize_fx_slots();
 
     eax_is_initialized_ = true;
-    mPropsDirty = true;
-
-    if(!mDeferUpdates)
-        applyAllUpdates();
 }
 
 bool ALCcontext::eax_has_no_default_effect_slot() const noexcept
@@ -997,6 +993,7 @@ void ALCcontext::eax_context_commit()
 
 void ALCcontext::eax_commit()
 {
+    eax_needs_commit_ = false;
     eax_context_commit();
     eax_commit_fx_slots();
     eax_update_sources();

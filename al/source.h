@@ -162,7 +162,6 @@ public:
     void eax_initialize(ALCcontext *context) noexcept;
     void eax_dispatch(const EaxCall& call);
     void eax_commit();
-    void eax_commit_and_update();
     void eax_mark_as_changed() { eax_changed_ = true; }
 
     static ALsource* eax_lookup_source(ALCcontext& al_context, ALuint source_id) noexcept;

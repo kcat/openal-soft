@@ -48,32 +48,23 @@ inline void UpdateProps(ALCcontext *context)
     context->mPropsDirty = true;
 }
 
-#ifdef ALSOFT_EAX
 inline void CommitAndUpdateProps(ALCcontext *context)
 {
     if(!context->mDeferUpdates)
     {
-        if(context->has_eax())
+#ifdef ALSOFT_EAX
+        if(context->eax_needs_commit())
         {
-            context->mHoldUpdates.store(true, std::memory_order_release);
-            while((context->mUpdateCount.load(std::memory_order_acquire)&1) != 0) {
-                /* busy-wait */
-            }
-
-            context->eax_commit_and_update_sources();
+            context->mPropsDirty = true;
+            context->applyAllUpdates();
+            return;
         }
+#endif
         UpdateContextProps(context);
-        context->mHoldUpdates.store(false, std::memory_order_release);
         return;
     }
     context->mPropsDirty = true;
 }
-
-#else
-
-inline void CommitAndUpdateProps(ALCcontext *context)
-{ UpdateProps(context); }
-#endif
 
 } // namespace
 

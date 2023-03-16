@@ -185,10 +185,10 @@ public:
 
 #ifdef ALSOFT_EAX
 public:
-    bool has_eax() const noexcept { return eax_is_initialized_; }
-    bool eax_is_capable() const noexcept;
+    bool hasEax() const noexcept { return mEaxIsInitialized; }
+    bool eaxIsCapable() const noexcept;
 
-    void eax_uninitialize() noexcept;
+    void eaxUninitialize() noexcept;
 
     ALenum eax_eax_set(
         const GUID* property_set_id,
@@ -204,21 +204,21 @@ public:
         ALvoid* property_value,
         ALuint property_value_size);
 
-    void eax_set_last_error() noexcept;
+    void eaxSetLastError() noexcept;
 
-    EaxFxSlotIndex eax_get_primary_fx_slot_index() const noexcept
-    { return eax_primary_fx_slot_index_; }
+    EaxFxSlotIndex eaxGetPrimaryFxSlotIndex() const noexcept
+    { return mEaxPrimaryFxSlotIndex; }
 
-    const ALeffectslot& eax_get_fx_slot(EaxFxSlotIndexValue fx_slot_index) const
-    { return eax_fx_slots_.get(fx_slot_index); }
-    ALeffectslot& eax_get_fx_slot(EaxFxSlotIndexValue fx_slot_index)
-    { return eax_fx_slots_.get(fx_slot_index); }
+    const ALeffectslot& eaxGetFxSlot(EaxFxSlotIndexValue fx_slot_index) const
+    { return mEaxFxSlots.get(fx_slot_index); }
+    ALeffectslot& eaxGetFxSlot(EaxFxSlotIndexValue fx_slot_index)
+    { return mEaxFxSlots.get(fx_slot_index); }
 
-    bool eax_needs_commit() const noexcept { return eax_needs_commit_; }
-    void eax_commit();
+    bool eaxNeedsCommit() const noexcept { return mEaxNeedsCommit; }
+    void eaxCommit();
 
-    void eax_commit_fx_slots()
-    { eax_fx_slots_.commit(); }
+    void eaxCommitFxSlots()
+    { mEaxFxSlots.commit(); }
 
 private:
     static constexpr auto eax_primary_fx_slot_id_dirty_bit = EaxDirtyFlags{1} << 0;
@@ -383,25 +383,25 @@ private:
         }
     };
 
-    bool eax_is_initialized_{};
-    bool eax_is_tried_{};
+    bool mEaxIsInitialized{};
+    bool mEaxIsTried{};
 
-    long eax_last_error_{};
-    unsigned long eax_speaker_config_{};
+    long mEaxLastError{};
+    unsigned long mEaxSpeakerConfig{};
 
-    EaxFxSlotIndex eax_primary_fx_slot_index_{};
-    EaxFxSlots eax_fx_slots_{};
+    EaxFxSlotIndex mEaxPrimaryFxSlotIndex{};
+    EaxFxSlots mEaxFxSlots{};
 
-    int eax_version_{}; // Current EAX version.
-    bool eax_needs_commit_{};
-    EaxDirtyFlags eax_df_{}; // Dirty flags for the current EAX version.
-    Eax5State eax123_{}; // EAX1/EAX2/EAX3 state.
-    Eax4State eax4_{}; // EAX4 state.
-    Eax5State eax5_{}; // EAX5 state.
-    Eax5Props eax_{}; // Current EAX state.
-    EAXSESSIONPROPERTIES eax_session_{};
+    int mEaxVersion{}; // Current EAX version.
+    bool mEaxNeedsCommit{};
+    EaxDirtyFlags mEaxDf{}; // Dirty flags for the current EAX version.
+    Eax5State mEax123{}; // EAX1/EAX2/EAX3 state.
+    Eax4State mEax4{}; // EAX4 state.
+    Eax5State mEax5{}; // EAX5 state.
+    Eax5Props mEax{}; // Current EAX state.
+    EAXSESSIONPROPERTIES mEaxSession{};
 
-    std::string eax_extension_list_{};
+    std::string mEaxExtensionList{};
 
     [[noreturn]] static void eax_fail(const char* message);
     [[noreturn]] static void eax_fail_unknown_property_set_id();
@@ -439,7 +439,7 @@ private:
         dst_d = src;
 
         if(dst_i != dst_d)
-            eax_df_ |= TDirtyBit;
+            mEaxDf |= TDirtyBit;
     }
 
     template<
@@ -450,12 +450,12 @@ private:
     void eax_context_commit_property(TState& state, EaxDirtyFlags& dst_df,
         TMemberResult TProps::*member) noexcept
     {
-        if((eax_df_ & TDirtyBit) != EaxDirtyFlags{})
+        if((mEaxDf & TDirtyBit) != EaxDirtyFlags{})
         {
             dst_df |= TDirtyBit;
             const auto& src_d = state.d.*member;
             state.i.*member = src_d;
-            eax_.*member = src_d;
+            mEax.*member = src_d;
         }
     }
 

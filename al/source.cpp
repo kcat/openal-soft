@@ -1317,8 +1317,8 @@ void CommitAndUpdateSourceProps(ALsource *source, ALCcontext *context)
 {
     if(!context->mDeferUpdates)
     {
-        if(context->has_eax())
-            source->eax_commit();
+        if(context->hasEax())
+            source->eaxCommit();
         if(Voice *voice{GetSourceVoice(source, context)})
         {
             UpdateSourceProps(source, voice, context);
@@ -2745,8 +2745,8 @@ void StartSources(ALCcontext *const context, const al::span<ALsource*> srchandle
             cur->mState = VChangeState::Play;
             source->state = AL_PLAYING;
 #ifdef ALSOFT_EAX
-            if(context->has_eax())
-                source->eax_commit();
+            if(context->hasEax())
+                source->eaxCommit();
 #endif // ALSOFT_EAX
             continue;
 
@@ -2765,8 +2765,8 @@ void StartSources(ALCcontext *const context, const al::span<ALsource*> srchandle
             assert(voice == nullptr);
             cur->mOldVoice = nullptr;
 #ifdef ALSOFT_EAX
-            if(context->has_eax())
-                source->eax_commit();
+            if(context->hasEax())
+                source->eaxCommit();
 #endif // ALSOFT_EAX
             break;
         }
@@ -2853,7 +2853,7 @@ START_API_FUNC
         sources[0] = source->id;
 
 #ifdef ALSOFT_EAX
-        source->eax_initialize(context.get());
+        source->eaxInitialize(context.get());
 #endif // ALSOFT_EAX
     }
     else
@@ -2865,7 +2865,7 @@ START_API_FUNC
             ids.emplace_back(source->id);
 
 #ifdef ALSOFT_EAX
-            source->eax_initialize(context.get());
+            source->eaxInitialize(context.get());
 #endif // ALSOFT_EAX
         } while(--n);
         std::copy(ids.cbegin(), ids.cend(), sources);
@@ -3961,25 +3961,25 @@ SourceSubList::~SourceSubList()
 constexpr const ALsource::EaxFxSlotIds ALsource::eax4_fx_slot_ids;
 constexpr const ALsource::EaxFxSlotIds ALsource::eax5_fx_slot_ids;
 
-void ALsource::eax_initialize(ALCcontext *context) noexcept
+void ALsource::eaxInitialize(ALCcontext *context) noexcept
 {
     assert(context != nullptr);
-    eax_al_context_ = context;
+    mEaxAlContext = context;
 
-    eax_primary_fx_slot_id_ = context->eax_get_primary_fx_slot_index();
+    mEaxPrimaryFxSlotId = context->eaxGetPrimaryFxSlotIndex();
     eax_set_defaults();
 
-    eax1_translate(eax1_.i, eax_);
-    eax_version_ = 1;
-    eax_changed_ = true;
+    eax1_translate(mEax1.i, mEax);
+    mEaxVersion = 1;
+    mEaxChanged = true;
 }
 
-void ALsource::eax_dispatch(const EaxCall& call)
+void ALsource::eaxDispatch(const EaxCall& call)
 {
     call.is_get() ? eax_get(call) : eax_set(call);
 }
 
-ALsource* ALsource::eax_lookup_source(ALCcontext& al_context, ALuint source_id) noexcept
+ALsource* ALsource::EaxLookupSource(ALCcontext& al_context, ALuint source_id) noexcept
 {
     return LookupSource(&al_context, source_id);
 }
@@ -4032,8 +4032,8 @@ void ALsource::eax1_set_defaults(Eax1Props& props) noexcept
 
 void ALsource::eax1_set_defaults() noexcept
 {
-    eax1_set_defaults(eax1_.i);
-    eax1_.d = eax1_.i;
+    eax1_set_defaults(mEax1.i);
+    mEax1.d = mEax1.i;
 }
 
 void ALsource::eax2_set_defaults(Eax2Props& props) noexcept
@@ -4055,8 +4055,8 @@ void ALsource::eax2_set_defaults(Eax2Props& props) noexcept
 
 void ALsource::eax2_set_defaults() noexcept
 {
-    eax2_set_defaults(eax2_.i);
-    eax2_.d = eax2_.i;
+    eax2_set_defaults(mEax2.i);
+    mEax2.d = mEax2.i;
 }
 
 void ALsource::eax3_set_defaults(Eax3Props& props) noexcept
@@ -4083,8 +4083,8 @@ void ALsource::eax3_set_defaults(Eax3Props& props) noexcept
 
 void ALsource::eax3_set_defaults() noexcept
 {
-    eax3_set_defaults(eax3_.i);
-    eax3_.d = eax3_.i;
+    eax3_set_defaults(mEax3.i);
+    mEax3.d = mEax3.i;
 }
 
 void ALsource::eax4_set_sends_defaults(EaxSends& sends) noexcept
@@ -4099,10 +4099,10 @@ void ALsource::eax4_set_active_fx_slots_defaults(EAX40ACTIVEFXSLOTS& slots) noex
 
 void ALsource::eax4_set_defaults() noexcept
 {
-    eax3_set_defaults(eax4_.i.source);
-    eax4_set_sends_defaults(eax4_.i.sends);
-    eax4_set_active_fx_slots_defaults(eax4_.i.active_fx_slots);
-    eax4_.d = eax4_.i;
+    eax3_set_defaults(mEax4.i.source);
+    eax4_set_sends_defaults(mEax4.i.sends);
+    eax4_set_active_fx_slots_defaults(mEax4.i.active_fx_slots);
+    mEax4.d = mEax4.i;
 }
 
 void ALsource::eax5_set_source_defaults(EAX50SOURCEPROPERTIES& props) noexcept
@@ -4140,8 +4140,8 @@ void ALsource::eax5_set_defaults(Eax5Props& props) noexcept
 
 void ALsource::eax5_set_defaults() noexcept
 {
-    eax5_set_defaults(eax5_.i);
-    eax5_.d = eax5_.i;
+    eax5_set_defaults(mEax5.i);
+    mEax5.d = mEax5.i;
 }
 
 void ALsource::eax_set_defaults() noexcept
@@ -4275,42 +4275,42 @@ float ALsource::eax_calculate_dst_occlusion_mb(
 EaxAlLowPassParam ALsource::eax_create_direct_filter_param() const noexcept
 {
     auto gain_mb =
-        static_cast<float>(eax_.source.lDirect) +
-        (static_cast<float>(eax_.source.lObstruction) * eax_.source.flObstructionLFRatio) +
+        static_cast<float>(mEax.source.lDirect) +
+        (static_cast<float>(mEax.source.lObstruction) * mEax.source.flObstructionLFRatio) +
         eax_calculate_dst_occlusion_mb(
-            eax_.source.lOcclusion,
-            eax_.source.flOcclusionDirectRatio,
-            eax_.source.flOcclusionLFRatio);
+            mEax.source.lOcclusion,
+            mEax.source.flOcclusionDirectRatio,
+            mEax.source.flOcclusionLFRatio);
 
-    const auto has_source_occlusion = (eax_.source.lOcclusion != 0);
+    const auto has_source_occlusion = (mEax.source.lOcclusion != 0);
 
     auto gain_hf_mb =
-        static_cast<float>(eax_.source.lDirectHF) +
-        static_cast<float>(eax_.source.lObstruction);
+        static_cast<float>(mEax.source.lDirectHF) +
+        static_cast<float>(mEax.source.lObstruction);
 
     for (auto i = std::size_t{}; i < EAX_MAX_FXSLOTS; ++i)
     {
-        if(!eax_active_fx_slots_[i])
+        if(!mEaxActiveFxSlots[i])
             continue;
 
         if(has_source_occlusion) {
-            const auto& fx_slot = eax_al_context_->eax_get_fx_slot(i);
+            const auto& fx_slot = mEaxAlContext->eaxGetFxSlot(i);
             const auto& fx_slot_eax = fx_slot.eax_get_eax_fx_slot();
             const auto is_environmental_fx = ((fx_slot_eax.ulFlags & EAXFXSLOTFLAGS_ENVIRONMENT) != 0);
-            const auto is_primary = (eax_primary_fx_slot_id_.value_or(-1) == fx_slot.eax_get_index());
+            const auto is_primary = (mEaxPrimaryFxSlotId.value_or(-1) == fx_slot.eax_get_index());
             const auto is_listener_environment = (is_environmental_fx && is_primary);
 
             if(is_listener_environment) {
                 gain_mb += eax_calculate_dst_occlusion_mb(
-                    eax_.source.lOcclusion,
-                    eax_.source.flOcclusionDirectRatio,
-                    eax_.source.flOcclusionLFRatio);
+                    mEax.source.lOcclusion,
+                    mEax.source.flOcclusionDirectRatio,
+                    mEax.source.flOcclusionLFRatio);
 
-                gain_hf_mb += static_cast<float>(eax_.source.lOcclusion) * eax_.source.flOcclusionDirectRatio;
+                gain_hf_mb += static_cast<float>(mEax.source.lOcclusion) * mEax.source.flOcclusionDirectRatio;
             }
         }
 
-        const auto& send = eax_.sends[i];
+        const auto& send = mEax.sends[i];
 
         if(send.lOcclusion != 0) {
             gain_mb += eax_calculate_dst_occlusion_mb(
@@ -4335,36 +4335,36 @@ EaxAlLowPassParam ALsource::eax_create_room_filter_param(
 {
     const auto& fx_slot_eax = fx_slot.eax_get_eax_fx_slot();
     const auto is_environmental_fx = ((fx_slot_eax.ulFlags & EAXFXSLOTFLAGS_ENVIRONMENT) != 0);
-    const auto is_primary = (eax_primary_fx_slot_id_.value_or(-1) == fx_slot.eax_get_index());
+    const auto is_primary = (mEaxPrimaryFxSlotId.value_or(-1) == fx_slot.eax_get_index());
     const auto is_listener_environment = (is_environmental_fx && is_primary);
 
     const auto gain_mb =
         (static_cast<float>(fx_slot_eax.lOcclusion) * fx_slot_eax.flOcclusionLFRatio) +
-        static_cast<float>((is_environmental_fx ? eax_.source.lRoom : 0) + send.lSend) +
+        static_cast<float>((is_environmental_fx ? mEax.source.lRoom : 0) + send.lSend) +
         (is_listener_environment ?
             eax_calculate_dst_occlusion_mb(
-                eax_.source.lOcclusion,
-                eax_.source.flOcclusionRoomRatio,
-                eax_.source.flOcclusionLFRatio) :
+                mEax.source.lOcclusion,
+                mEax.source.flOcclusionRoomRatio,
+                mEax.source.flOcclusionLFRatio) :
             0.0f) +
         eax_calculate_dst_occlusion_mb(
             send.lOcclusion,
             send.flOcclusionRoomRatio,
             send.flOcclusionLFRatio) +
         (is_listener_environment ?
-            (static_cast<float>(eax_.source.lExclusion) * eax_.source.flExclusionLFRatio) :
+            (static_cast<float>(mEax.source.lExclusion) * mEax.source.flExclusionLFRatio) :
             0.0f) +
         (static_cast<float>(send.lExclusion) * send.flExclusionLFRatio);
 
     const auto gain_hf_mb =
         static_cast<float>(fx_slot_eax.lOcclusion) +
-        static_cast<float>((is_environmental_fx ? eax_.source.lRoomHF : 0) + send.lSendHF) +
+        static_cast<float>((is_environmental_fx ? mEax.source.lRoomHF : 0) + send.lSendHF) +
         (is_listener_environment ?
-            ((static_cast<float>(eax_.source.lOcclusion) * eax_.source.flOcclusionRoomRatio)) :
+            ((static_cast<float>(mEax.source.lOcclusion) * mEax.source.flOcclusionRoomRatio)) :
             0.0f) +
         (static_cast<float>(send.lOcclusion) * send.flOcclusionRoomRatio) +
         (is_listener_environment ?
-            static_cast<float>(eax_.source.lExclusion + send.lExclusion) :
+            static_cast<float>(mEax.source.lExclusion + send.lExclusion) :
             0.0f);
 
     const auto al_low_pass_param = EaxAlLowPassParam{
@@ -4388,11 +4388,11 @@ void ALsource::eax_update_direct_filter()
 void ALsource::eax_update_room_filters()
 {
     for (auto i = size_t{}; i < EAX_MAX_FXSLOTS; ++i) {
-        if (!eax_active_fx_slots_[i])
+        if (!mEaxActiveFxSlots[i])
             continue;
 
-        auto& fx_slot = eax_al_context_->eax_get_fx_slot(i);
-        const auto& send = eax_.sends[i];
+        auto& fx_slot = mEaxAlContext->eaxGetFxSlot(i);
+        const auto& send = mEax.sends[i];
         const auto& room_param = eax_create_room_filter_param(fx_slot, send);
         eax_set_al_source_send(&fx_slot, i, room_param);
     }
@@ -4401,44 +4401,44 @@ void ALsource::eax_update_room_filters()
 void ALsource::eax_set_efx_outer_gain_hf()
 {
     OuterGainHF = clamp(
-        level_mb_to_gain(static_cast<float>(eax_.source.lOutsideVolumeHF)),
+        level_mb_to_gain(static_cast<float>(mEax.source.lOutsideVolumeHF)),
         AL_MIN_CONE_OUTER_GAINHF,
         AL_MAX_CONE_OUTER_GAINHF);
 }
 
 void ALsource::eax_set_efx_doppler_factor()
 {
-    DopplerFactor = eax_.source.flDopplerFactor;
+    DopplerFactor = mEax.source.flDopplerFactor;
 }
 
 void ALsource::eax_set_efx_rolloff_factor()
 {
-    RolloffFactor2 = eax_.source.flRolloffFactor;
+    RolloffFactor2 = mEax.source.flRolloffFactor;
 }
 
 void ALsource::eax_set_efx_room_rolloff_factor()
 {
-    RoomRolloffFactor = eax_.source.flRoomRolloffFactor;
+    RoomRolloffFactor = mEax.source.flRoomRolloffFactor;
 }
 
 void ALsource::eax_set_efx_air_absorption_factor()
 {
-    AirAbsorptionFactor = eax_.source.flAirAbsorptionFactor;
+    AirAbsorptionFactor = mEax.source.flAirAbsorptionFactor;
 }
 
 void ALsource::eax_set_efx_dry_gain_hf_auto()
 {
-    DryGainHFAuto = ((eax_.source.ulFlags & EAXSOURCEFLAGS_DIRECTHFAUTO) != 0);
+    DryGainHFAuto = ((mEax.source.ulFlags & EAXSOURCEFLAGS_DIRECTHFAUTO) != 0);
 }
 
 void ALsource::eax_set_efx_wet_gain_auto()
 {
-    WetGainAuto = ((eax_.source.ulFlags & EAXSOURCEFLAGS_ROOMAUTO) != 0);
+    WetGainAuto = ((mEax.source.ulFlags & EAXSOURCEFLAGS_ROOMAUTO) != 0);
 }
 
 void ALsource::eax_set_efx_wet_gain_hf_auto()
 {
-    WetGainHFAuto = ((eax_.source.ulFlags & EAXSOURCEFLAGS_ROOMHFAUTO) != 0);
+    WetGainHFAuto = ((mEax.source.ulFlags & EAXSOURCEFLAGS_ROOMHFAUTO) != 0);
 }
 
 void ALsource::eax1_set(const EaxCall& call, Eax1Props& props)
@@ -4775,15 +4775,15 @@ void ALsource::eax_set(const EaxCall& call)
     const auto eax_version = call.get_version();
     switch(eax_version)
     {
-    case 1: eax1_set(call, eax1_.d); break;
-    case 2: eax2_set(call, eax2_.d); break;
-    case 3: eax3_set(call, eax3_.d); break;
-    case 4: eax4_set(call, eax4_.d); break;
-    case 5: eax5_set(call, eax5_.d); break;
+    case 1: eax1_set(call, mEax1.d); break;
+    case 2: eax2_set(call, mEax2.d); break;
+    case 3: eax3_set(call, mEax3.d); break;
+    case 4: eax4_set(call, mEax4.d); break;
+    case 5: eax5_set(call, mEax5.d); break;
     default: eax_fail_unknown_property_id();
     }
-    eax_changed_ = true;
-    eax_version_ = eax_version;
+    mEaxChanged = true;
+    mEaxVersion = eax_version;
 }
 
 void ALsource::eax_get_active_fx_slot_id(const EaxCall& call, const GUID* ids, size_t max_count)
@@ -5135,11 +5135,11 @@ void ALsource::eax5_get(const EaxCall& call, const Eax5Props& props)
 void ALsource::eax_get(const EaxCall& call)
 {
     switch (call.get_version()) {
-        case 1: eax1_get(call, eax1_.i); break;
-        case 2: eax2_get(call, eax2_.i); break;
-        case 3: eax3_get(call, eax3_.i); break;
-        case 4: eax4_get(call, eax4_.i); break;
-        case 5: eax5_get(call, eax5_.i); break;
+        case 1: eax1_get(call, mEax1.i); break;
+        case 2: eax2_get(call, mEax2.i); break;
+        case 3: eax3_get(call, mEax3.i); break;
+        case 4: eax4_get(call, mEax4.i); break;
+        case 5: eax5_get(call, mEax5.i); break;
         default: eax_fail_unknown_version();
     }
 }
@@ -5168,10 +5168,10 @@ void ALsource::eax_set_al_source_send(ALeffectslot *slot, size_t sendidx, const 
 void ALsource::eax_commit_active_fx_slots()
 {
     // Clear all slots to an inactive state.
-    eax_active_fx_slots_.fill(false);
+    mEaxActiveFxSlots.fill(false);
 
     // Mark the set slots as active.
-    for(const auto& slot_id : eax_.active_fx_slots.guidActiveFXSlots)
+    for(const auto& slot_id : mEax.active_fx_slots.guidActiveFXSlots)
     {
         if(slot_id == EAX_NULL_GUID)
         {
@@ -5179,24 +5179,24 @@ void ALsource::eax_commit_active_fx_slots()
         else if(slot_id == EAX_PrimaryFXSlotID)
         {
             // Mark primary FX slot as active.
-            if(eax_primary_fx_slot_id_.has_value())
-                eax_active_fx_slots_[*eax_primary_fx_slot_id_] = true;
+            if(mEaxPrimaryFxSlotId.has_value())
+                mEaxActiveFxSlots[*mEaxPrimaryFxSlotId] = true;
         }
         else if(slot_id == EAXPROPERTYID_EAX50_FXSlot0)
-            eax_active_fx_slots_[0] = true;
+            mEaxActiveFxSlots[0] = true;
         else if(slot_id == EAXPROPERTYID_EAX50_FXSlot1)
-            eax_active_fx_slots_[1] = true;
+            mEaxActiveFxSlots[1] = true;
         else if(slot_id == EAXPROPERTYID_EAX50_FXSlot2)
-            eax_active_fx_slots_[2] = true;
+            mEaxActiveFxSlots[2] = true;
         else if(slot_id == EAXPROPERTYID_EAX50_FXSlot3)
-            eax_active_fx_slots_[3] = true;
+            mEaxActiveFxSlots[3] = true;
     }
 
     // Deactivate EFX auxiliary effect slots for inactive slots. Active slots
     // will be updated with the room filters.
     for(auto i = size_t{}; i < EAX_MAX_FXSLOTS; ++i)
     {
-        if(!eax_active_fx_slots_[i])
+        if(!mEaxActiveFxSlots[i])
             eax_set_al_source_send(nullptr, i, EaxAlLowPassParam{1.0f, 1.0f});
     }
 }
@@ -5207,38 +5207,38 @@ void ALsource::eax_commit_filters()
     eax_update_room_filters();
 }
 
-void ALsource::eax_commit()
+void ALsource::eaxCommit()
 {
-    const auto primary_fx_slot_id = eax_al_context_->eax_get_primary_fx_slot_index();
-    const auto is_primary_fx_slot_id_changed = (eax_primary_fx_slot_id_ != primary_fx_slot_id);
+    const auto primary_fx_slot_id = mEaxAlContext->eaxGetPrimaryFxSlotIndex();
+    const auto is_primary_fx_slot_id_changed = (mEaxPrimaryFxSlotId != primary_fx_slot_id);
 
-    if(!eax_changed_ && !is_primary_fx_slot_id_changed)
+    if(!mEaxChanged && !is_primary_fx_slot_id_changed)
         return;
 
-    eax_primary_fx_slot_id_ = primary_fx_slot_id;
-    eax_changed_ = false;
+    mEaxPrimaryFxSlotId = primary_fx_slot_id;
+    mEaxChanged = false;
 
-    switch(eax_version_)
+    switch(mEaxVersion)
     {
     case 1:
-        eax1_.i = eax1_.d;
-        eax1_translate(eax1_.i, eax_);
+        mEax1.i = mEax1.d;
+        eax1_translate(mEax1.i, mEax);
         break;
     case 2:
-        eax2_.i = eax2_.d;
-        eax2_translate(eax2_.i, eax_);
+        mEax2.i = mEax2.d;
+        eax2_translate(mEax2.i, mEax);
         break;
     case 3:
-        eax3_.i = eax3_.d;
-        eax3_translate(eax3_.i, eax_);
+        mEax3.i = mEax3.d;
+        eax3_translate(mEax3.i, mEax);
         break;
     case 4:
-        eax4_.i = eax4_.d;
-        eax4_translate(eax4_.i, eax_);
+        mEax4.i = mEax4.d;
+        eax4_translate(mEax4.i, mEax);
         break;
     case 5:
-        eax5_.i = eax5_.d;
-        eax_ = eax5_.d;
+        mEax5.i = mEax5.d;
+        mEax = mEax5.d;
         break;
     }
 

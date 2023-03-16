@@ -53,7 +53,7 @@ inline void CommitAndUpdateProps(ALCcontext *context)
     if(!context->mDeferUpdates)
     {
 #ifdef ALSOFT_EAX
-        if(context->eax_needs_commit())
+        if(context->eaxNeedsCommit())
         {
             context->mPropsDirty = true;
             context->applyAllUpdates();

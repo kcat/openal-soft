@@ -41,6 +41,8 @@ enum class SourceStereo : bool {
 
 #define INVALID_VOICE_IDX static_cast<ALuint>(-1)
 
+extern bool sBufferSubDataCompat;
+
 struct ALbufferQueueItem : public VoiceBufferItem {
     ALbuffer *mBuffer{nullptr};
 

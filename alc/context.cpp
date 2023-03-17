@@ -171,6 +171,20 @@ void ALCcontext::init()
 
     mExtensionList = alExtList;
 
+    if(sBufferSubDataCompat)
+    {
+        std::string extlist{mExtensionList};
+
+        const auto pos = extlist.find("AL_EXT_SOURCE_RADIUS ");
+        if(pos != std::string::npos)
+            extlist.replace(pos, 20, "AL_SOFT_buffer_sub_data");
+        else
+            extlist += " AL_SOFT_buffer_sub_data";
+
+        mExtensionListOverride = std::move(extlist);
+        mExtensionList = mExtensionListOverride.c_str();
+    }
+
 #ifdef ALSOFT_EAX
     eax_initialize_extensions();
 #endif // ALSOFT_EAX
@@ -441,30 +455,34 @@ void ALCcontext::eax_initialize_extensions()
         std::strlen(eax5_ext_name) + 1 +
         std::strlen(eax_x_ram_ext_name) + 1;
 
-    mEaxExtensionList.reserve(string_max_capacity);
+    std::string extlist;
+    extlist.reserve(string_max_capacity);
 
-    if(eaxIsCapable()) {
-        mEaxExtensionList += eax1_ext_name;
-        mEaxExtensionList += ' ';
+    if(eaxIsCapable())
+    {
+        extlist += eax1_ext_name;
+        extlist += ' ';
 
-        mEaxExtensionList += eax2_ext_name;
-        mEaxExtensionList += ' ';
+        extlist += eax2_ext_name;
+        extlist += ' ';
 
-        mEaxExtensionList += eax3_ext_name;
-        mEaxExtensionList += ' ';
+        extlist += eax3_ext_name;
+        extlist += ' ';
 
-        mEaxExtensionList += eax4_ext_name;
-        mEaxExtensionList += ' ';
+        extlist += eax4_ext_name;
+        extlist += ' ';
 
-        mEaxExtensionList += eax5_ext_name;
-        mEaxExtensionList += ' ';
+        extlist += eax5_ext_name;
+        extlist += ' ';
     }
 
-    mEaxExtensionList += eax_x_ram_ext_name;
-    mEaxExtensionList += ' ';
+    extlist += eax_x_ram_ext_name;
+    extlist += ' ';
 
-    mEaxExtensionList += mExtensionList;
-    mExtensionList = mEaxExtensionList.c_str();
+    extlist += mExtensionList;
+
+    mExtensionListOverride = std::move(extlist);
+    mExtensionList = mExtensionListOverride.c_str();
 }
 
 void ALCcontext::eax_initialize()

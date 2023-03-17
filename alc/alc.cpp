@@ -455,6 +455,8 @@ const struct {
 
     DECL(alSourcePlayAtTimeSOFT),
     DECL(alSourcePlayAtTimevSOFT),
+
+    DECL(alBufferSubDataSOFT),
 #ifdef ALSOFT_EAX
 }, eaxFunctions[] = {
     DECL(EAXGet),
@@ -1158,6 +1160,7 @@ void alc_initconfig(void)
             }
             return GetConfigValueBool(nullptr, "game_compat", optname, false);
         };
+        sBufferSubDataCompat = checkflag("__ALSOFT_ENABLE_SUB_DATA_EXT", "enable-sub-data-ext");
         compatflags.set(CompatFlags::ReverseX, checkflag("__ALSOFT_REVERSE_X", "reverse-x"));
         compatflags.set(CompatFlags::ReverseY, checkflag("__ALSOFT_REVERSE_Y", "reverse-y"));
         compatflags.set(CompatFlags::ReverseZ, checkflag("__ALSOFT_REVERSE_Z", "reverse-z"));

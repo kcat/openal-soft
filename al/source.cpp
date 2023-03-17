@@ -77,6 +77,8 @@
 #include <cassert>
 #endif // ALSOFT_EAX
 
+bool sBufferSubDataCompat{false};
+
 namespace {
 
 using namespace std::placeholders;
@@ -1006,6 +1008,10 @@ enum SourceProp : ALenum {
     /* AL_SOFT_UHJ */
     srcStereoMode = AL_STEREO_MODE_SOFT,
     srcSuperStereoWidth = AL_SUPER_STEREO_WIDTH_SOFT,
+
+    /* AL_SOFT_buffer_sub_data */
+    srcByteRWOffsetsSOFT = AL_BYTE_RW_OFFSETS_SOFT,
+    srcSampleRWOffsetsSOFT = AL_SAMPLE_RW_OFFSETS_SOFT,
 };
 
 
@@ -1037,6 +1043,10 @@ constexpr ALuint IntValsByProp(ALenum prop)
     case AL_STEREO_MODE_SOFT:
         return 1;
 
+    case AL_SOURCE_RADIUS: /*AL_BYTE_RW_OFFSETS_SOFT:*/
+        if(sBufferSubDataCompat)
+            return 2;
+        /*fall-through*/
     case AL_CONE_INNER_ANGLE:
     case AL_CONE_OUTER_ANGLE:
     case AL_PITCH:
@@ -1052,10 +1062,14 @@ constexpr ALuint IntValsByProp(ALenum prop)
     case AL_CONE_OUTER_GAINHF:
     case AL_AIR_ABSORPTION_FACTOR:
     case AL_ROOM_ROLLOFF_FACTOR:
-    case AL_SOURCE_RADIUS:
     case AL_SEC_LENGTH_SOFT:
     case AL_SUPER_STEREO_WIDTH_SOFT:
         return 1; /* 1x float */
+
+    case AL_SAMPLE_RW_OFFSETS_SOFT:
+        if(sBufferSubDataCompat)
+            return 2;
+        break;
 
     case AL_AUXILIARY_SEND_FILTER:
         return 3;
@@ -1106,6 +1120,10 @@ constexpr ALuint Int64ValsByProp(ALenum prop)
     case AL_STEREO_MODE_SOFT:
         return 1;
 
+    case AL_SOURCE_RADIUS: /*AL_BYTE_RW_OFFSETS_SOFT:*/
+        if(sBufferSubDataCompat)
+            return 2;
+        /*fall-through*/
     case AL_CONE_INNER_ANGLE:
     case AL_CONE_OUTER_ANGLE:
     case AL_PITCH:
@@ -1121,10 +1139,14 @@ constexpr ALuint Int64ValsByProp(ALenum prop)
     case AL_CONE_OUTER_GAINHF:
     case AL_AIR_ABSORPTION_FACTOR:
     case AL_ROOM_ROLLOFF_FACTOR:
-    case AL_SOURCE_RADIUS:
     case AL_SEC_LENGTH_SOFT:
     case AL_SUPER_STEREO_WIDTH_SOFT:
         return 1; /* 1x float */
+
+    case AL_SAMPLE_RW_OFFSETS_SOFT:
+        if(sBufferSubDataCompat)
+            return 2;
+        break;
 
     case AL_SAMPLE_OFFSET_LATENCY_SOFT:
     case AL_SAMPLE_OFFSET_CLOCK_SOFT:
@@ -1182,7 +1204,6 @@ constexpr ALuint FloatValsByProp(ALenum prop)
     case AL_BUFFERS_QUEUED:
     case AL_BUFFERS_PROCESSED:
     case AL_SOURCE_TYPE:
-    case AL_SOURCE_RADIUS:
     case AL_SOURCE_RESAMPLER_SOFT:
     case AL_SOURCE_SPATIALIZE_SOFT:
     case AL_BYTE_LENGTH_SOFT:
@@ -1191,6 +1212,13 @@ constexpr ALuint FloatValsByProp(ALenum prop)
     case AL_STEREO_MODE_SOFT:
     case AL_SUPER_STEREO_WIDTH_SOFT:
         return 1;
+
+    case AL_SOURCE_RADIUS: /*AL_BYTE_RW_OFFSETS_SOFT:*/
+        if(!sBufferSubDataCompat)
+            return 1;
+        /*fall-through*/
+    case AL_SAMPLE_RW_OFFSETS_SOFT:
+        break;
 
     case AL_STEREO_ANGLES:
         return 2;
@@ -1249,7 +1277,6 @@ constexpr ALuint DoubleValsByProp(ALenum prop)
     case AL_BUFFERS_QUEUED:
     case AL_BUFFERS_PROCESSED:
     case AL_SOURCE_TYPE:
-    case AL_SOURCE_RADIUS:
     case AL_SOURCE_RESAMPLER_SOFT:
     case AL_SOURCE_SPATIALIZE_SOFT:
     case AL_BYTE_LENGTH_SOFT:
@@ -1258,6 +1285,13 @@ constexpr ALuint DoubleValsByProp(ALenum prop)
     case AL_STEREO_MODE_SOFT:
     case AL_SUPER_STEREO_WIDTH_SOFT:
         return 1;
+
+    case AL_SOURCE_RADIUS: /*AL_BYTE_RW_OFFSETS_SOFT:*/
+        if(!sBufferSubDataCompat)
+            return 1;
+        /*fall-through*/
+    case AL_SAMPLE_RW_OFFSETS_SOFT:
+        break;
 
     case AL_SEC_OFFSET_LATENCY_SOFT:
     case AL_SEC_OFFSET_CLOCK_SOFT:
@@ -1499,7 +1533,12 @@ try {
         Source->Offset = values[0];
         return;
 
-    case AL_SOURCE_RADIUS:
+    case AL_SAMPLE_RW_OFFSETS_SOFT:
+        break;
+
+    case AL_SOURCE_RADIUS: /*AL_BYTE_RW_OFFSETS_SOFT:*/
+        if(sBufferSubDataCompat)
+            break;
         CheckSize(1);
         CheckValue(values[0] >= 0.0f && std::isfinite(values[0]));
 
@@ -1889,6 +1928,19 @@ try {
         return;
 
 
+    case AL_SAMPLE_RW_OFFSETS_SOFT:
+        if(sBufferSubDataCompat)
+            /* Query only */
+            return Context->setError(AL_INVALID_OPERATION,
+                "Setting read-only source property 0x%04x", prop);
+        break;
+
+    case AL_SOURCE_RADIUS: /*AL_BYTE_RW_OFFSETS_SOFT:*/
+        if(sBufferSubDataCompat)
+            return Context->setError(AL_INVALID_OPERATION,
+                "Setting read-only source property 0x%04x", prop);
+        /*fall-through*/
+
     /* 1x float */
     case AL_CONE_INNER_ANGLE:
     case AL_CONE_OUTER_ANGLE:
@@ -1904,7 +1956,6 @@ try {
     case AL_CONE_OUTER_GAINHF:
     case AL_AIR_ABSORPTION_FACTOR:
     case AL_ROOM_ROLLOFF_FACTOR:
-    case AL_SOURCE_RADIUS:
     case AL_SEC_LENGTH_SOFT:
     case AL_SUPER_STEREO_WIDTH_SOFT:
         CheckSize(1);
@@ -2009,6 +2060,21 @@ try {
         ivals[2] = static_cast<int>(values[2]);
         return SetSourceiv(Source, Context, prop, {ivals, 3u});
 
+    case AL_SAMPLE_RW_OFFSETS_SOFT:
+        if(sBufferSubDataCompat)
+        {
+            /* Query only */
+            return Context->setError(AL_INVALID_OPERATION,
+                "Setting read-only source property 0x%04x", prop);
+        }
+        break;
+
+    case AL_SOURCE_RADIUS: /*AL_BYTE_RW_OFFSETS_SOFT:*/
+        if(sBufferSubDataCompat)
+            return Context->setError(AL_INVALID_OPERATION,
+                "Setting read-only source property 0x%04x", prop);
+        /*fall-through*/
+
     /* 1x float */
     case AL_CONE_INNER_ANGLE:
     case AL_CONE_OUTER_ANGLE:
@@ -2024,7 +2090,6 @@ try {
     case AL_CONE_OUTER_GAINHF:
     case AL_AIR_ABSORPTION_FACTOR:
     case AL_ROOM_ROLLOFF_FACTOR:
-    case AL_SOURCE_RADIUS:
     case AL_SEC_LENGTH_SOFT:
     case AL_SUPER_STEREO_WIDTH_SOFT:
         CheckSize(1);
@@ -2170,7 +2235,12 @@ try {
         values[0] = Source->DopplerFactor;
         return true;
 
-    case AL_SOURCE_RADIUS:
+    case AL_SAMPLE_RW_OFFSETS_SOFT:
+        break;
+    case AL_SOURCE_RADIUS: /*AL_BYTE_RW_OFFSETS_SOFT:*/
+        if(sBufferSubDataCompat)
+            break;
+
         CheckSize(1);
         values[0] = Source->Radius;
         return true;
@@ -2423,6 +2493,35 @@ try {
         values[0] = EnumFromStereoMode(Source->mStereoMode);
         return true;
 
+    case AL_SAMPLE_RW_OFFSETS_SOFT:
+        if(sBufferSubDataCompat)
+        {
+            CheckSize(2);
+            const auto offset = GetSourceOffset(Source, AL_SAMPLE_OFFSET, Context);
+            /* FIXME: values[1] should be ahead of values[0] by the device
+             * update time. It needs to clamp or wrap the length of the buffer
+             * queue.
+             */
+            values[0] = static_cast<int>(mind(offset, std::numeric_limits<int>::max()));
+            values[1] = values[0];
+            return true;
+        }
+        break;
+    case AL_SOURCE_RADIUS: /*AL_BYTE_RW_OFFSETS_SOFT:*/
+        if(sBufferSubDataCompat)
+        {
+            CheckSize(2);
+            const auto offset = GetSourceOffset(Source, AL_BYTE_OFFSET, Context);
+            /* FIXME: values[1] should be ahead of values[0] by the device
+             * update time. It needs to clamp or wrap the length of the buffer
+             * queue.
+             */
+            values[0] = static_cast<int>(mind(offset, std::numeric_limits<int>::max()));
+            values[1] = values[0];
+            return true;
+        }
+        /*fall-through*/
+
     /* 1x float/double */
     case AL_CONE_INNER_ANGLE:
     case AL_CONE_OUTER_ANGLE:
@@ -2441,7 +2540,6 @@ try {
     case AL_AIR_ABSORPTION_FACTOR:
     case AL_ROOM_ROLLOFF_FACTOR:
     case AL_CONE_OUTER_GAINHF:
-    case AL_SOURCE_RADIUS:
     case AL_SUPER_STEREO_WIDTH_SOFT:
         CheckSize(1);
         if((err=GetSourcedv(Source, Context, prop, {dvals, 1u})) != false)
@@ -2545,6 +2643,33 @@ try {
         values[1] = srcclock.count();
         return true;
 
+    case AL_SAMPLE_RW_OFFSETS_SOFT:
+        if(sBufferSubDataCompat)
+        {
+            CheckSize(2);
+            /* FIXME: values[1] should be ahead of values[0] by the device
+             * update time. It needs to clamp or wrap the length of the buffer
+             * queue.
+             */
+            values[0] = static_cast<int64_t>(GetSourceOffset(Source, AL_SAMPLE_OFFSET, Context));
+            values[1] = values[0];
+            return true;
+        }
+        break;
+    case AL_SOURCE_RADIUS: /*AL_BYTE_RW_OFFSETS_SOFT:*/
+        if(sBufferSubDataCompat)
+        {
+            CheckSize(2);
+            /* FIXME: values[1] should be ahead of values[0] by the device
+             * update time. It needs to clamp or wrap the length of the buffer
+             * queue.
+             */
+            values[0] = static_cast<int64_t>(GetSourceOffset(Source, AL_BYTE_OFFSET, Context));
+            values[1] = values[0];
+            return true;
+        }
+        /*fall-through*/
+
     /* 1x float/double */
     case AL_CONE_INNER_ANGLE:
     case AL_CONE_OUTER_ANGLE:
@@ -2563,7 +2688,6 @@ try {
     case AL_AIR_ABSORPTION_FACTOR:
     case AL_ROOM_ROLLOFF_FACTOR:
     case AL_CONE_OUTER_GAINHF:
-    case AL_SOURCE_RADIUS:
     case AL_SUPER_STEREO_WIDTH_SOFT:
         CheckSize(1);
         if((err=GetSourcedv(Source, Context, prop, {dvals, 1u})) != false)

@@ -58,6 +58,12 @@ between 0 and 180 degrees, instead of the expected range of 0 to 360 degrees.
 Setting this to "true" or "1" restores the old buggy behavior, for apps that
 were written to expect the incorrect range.
 
+__ALSOFT_ENABLE_SUB_DATA_EXT
+The more widely used AL_EXT_SOURCE_RADIUS extension is incompatible with the
+now-defunct AL_SOFT_buffer_sub_data extension. Setting this to "true" or "1"
+restores the AL_SOFT_buffer_sub_data extension for apps that require it,
+disabling AL_EXT_SOURCE_RADIUS.
+
 __ALSOFT_REVERSE_Z
 Applications that don't natively use OpenAL's coordinate system have to convert
 to it before passing in 3D coordinates. Depending on how exactly this is done,

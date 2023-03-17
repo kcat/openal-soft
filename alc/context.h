@@ -103,6 +103,8 @@ struct ALCcontext : public al::intrusive_ref<ALCcontext>, ContextBase {
 
     const char *mExtensionList{nullptr};
 
+    std::string mExtensionListOverride{};
+
 
     ALCcontext(al::intrusive_ptr<ALCdevice> device);
     ALCcontext(const ALCcontext&) = delete;
@@ -400,8 +402,6 @@ private:
     Eax5State mEax5{}; // EAX5 state.
     Eax5Props mEax{}; // Current EAX state.
     EAXSESSIONPROPERTIES mEaxSession{};
-
-    std::string mEaxExtensionList{};
 
     [[noreturn]] static void eax_fail(const char* message);
     [[noreturn]] static void eax_fail_unknown_property_set_id();

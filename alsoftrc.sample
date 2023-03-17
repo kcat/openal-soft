@@ -646,6 +646,13 @@
 #  kilometer per unit, a value of 1000 will correctly adjust the filters.
 #nfc-scale = 1
 
+## enable-sub-data-ext: (global)
+#  Enables the AL_SOFT_buffer_sub_data extension, disabling the
+#  AL_EXT_SOURCE_RADIUS extension. These extensions are incompatible, so only
+#  one can be available. The latter extension is more commonly used, but this
+#  option can be enabled for older apps that want the former extension.
+#enable-sub-data-ext = false
+
 ## reverse-x: (global)
 #  Reverses the local X (left-right) position of 3D sound sources.
 #reverse-x = false

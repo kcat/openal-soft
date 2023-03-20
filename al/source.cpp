@@ -334,29 +334,11 @@ double GetSourceOffset(ALsource *Source, ALenum name, ALCcontext *context)
         break;
 
     case AL_BYTE_OFFSET:
-        if(BufferFmt->OriginalType == UserFmtIMA4)
-        {
-            ALuint FrameBlockSize{BufferFmt->mBlockAlign};
-            ALuint align{(BufferFmt->mBlockAlign-1)/2 + 4};
-            ALuint BlockSize{align * BufferFmt->channelsFromFmt()};
+        const ALuint BlockSamples{BufferFmt->mBlockAlign};
+        const ALuint BlockSize{BufferFmt->blockSizeFromFmt()};
 
-            /* Round down to nearest ADPCM block */
-            offset = static_cast<double>(readPos / FrameBlockSize * BlockSize);
-        }
-        else if(BufferFmt->OriginalType == UserFmtMSADPCM)
-        {
-            ALuint FrameBlockSize{BufferFmt->mBlockAlign};
-            ALuint align{(FrameBlockSize-2)/2 + 7};
-            ALuint BlockSize{align * BufferFmt->channelsFromFmt()};
-
-            /* Round down to nearest ADPCM block */
-            offset = static_cast<double>(readPos / FrameBlockSize * BlockSize);
-        }
-        else
-        {
-            const ALuint FrameSize{BufferFmt->frameSizeFromFmt()};
-            offset = static_cast<double>(readPos * FrameSize);
-        }
+        /* Round down to the block boundary. */
+        offset = static_cast<double>(readPos / BlockSamples) * BlockSize;
         break;
     }
     return offset;
@@ -390,25 +372,11 @@ double GetSourceLength(const ALsource *source, ALenum name)
         return static_cast<double>(length);
 
     case AL_BYTE_LENGTH_SOFT:
-        if(BufferFmt->OriginalType == UserFmtIMA4)
-        {
-            ALuint FrameBlockSize{BufferFmt->mBlockAlign};
-            ALuint align{(BufferFmt->mBlockAlign-1)/2 + 4};
-            ALuint BlockSize{align * BufferFmt->channelsFromFmt()};
+        const ALuint BlockSamples{BufferFmt->mBlockAlign};
+        const ALuint BlockSize{BufferFmt->blockSizeFromFmt()};
 
-            /* Round down to nearest ADPCM block */
-            return static_cast<double>(length / FrameBlockSize) * BlockSize;
-        }
-        else if(BufferFmt->OriginalType == UserFmtMSADPCM)
-        {
-            ALuint FrameBlockSize{BufferFmt->mBlockAlign};
-            ALuint align{(FrameBlockSize-2)/2 + 7};
-            ALuint BlockSize{align * BufferFmt->channelsFromFmt()};
-
-            /* Round down to nearest ADPCM block */
-            return static_cast<double>(length / FrameBlockSize) * BlockSize;
-        }
-        return static_cast<double>(length) * BufferFmt->frameSizeFromFmt();
+        /* Round down to the block boundary. */
+        return static_cast<double>(length / BlockSamples) * BlockSize;
     }
     return 0.0;
 }

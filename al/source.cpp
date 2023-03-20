@@ -442,21 +442,8 @@ al::optional<VoicePos> GetSampleOffset(al::deque<ALbufferQueueItem> &BufferList,
 
     case AL_BYTE_OFFSET:
         /* Determine the ByteOffset (and ensure it is block aligned) */
-        if(BufferFmt->OriginalType == UserFmtIMA4)
-        {
-            const ALuint align{(BufferFmt->mBlockAlign-1)/2 + 4};
-            Offset = std::floor(Offset / align / BufferFmt->channelsFromFmt());
-            Offset *= BufferFmt->mBlockAlign;
-        }
-        else if(BufferFmt->OriginalType == UserFmtMSADPCM)
-        {
-            const ALuint align{(BufferFmt->mBlockAlign-2)/2 + 7};
-            Offset = std::floor(Offset / align / BufferFmt->channelsFromFmt());
-            Offset *= BufferFmt->mBlockAlign;
-        }
-        else
-            Offset = std::floor(Offset / BufferFmt->channelsFromFmt());
-        offset = static_cast<int64_t>(Offset);
+        Offset = std::floor(Offset / BufferFmt->blockSizeFromFmt());
+        offset = static_cast<int64_t>(Offset) * BufferFmt->mBlockAlign;
         frac = 0;
         break;
     }
@@ -3886,7 +3873,7 @@ START_API_FUNC
                 fmt_mismatch |= BufferFmt->mAmbiScaling != buffer->mAmbiScaling;
             }
             fmt_mismatch |= BufferFmt->mAmbiOrder != buffer->mAmbiOrder;
-            fmt_mismatch |= BufferFmt->OriginalType != buffer->OriginalType;
+            fmt_mismatch |= BufferFmt->mType != buffer->mType;
         }
         if(fmt_mismatch) UNLIKELY
         {

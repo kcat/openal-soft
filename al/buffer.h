@@ -22,39 +22,12 @@ enum class EaxStorage : uint8_t {
 };
 #endif // ALSOFT_EAX
 
-/* User formats */
-enum UserFmtType : unsigned char {
-    UserFmtUByte = FmtUByte,
-    UserFmtShort = FmtShort,
-    UserFmtFloat = FmtFloat,
-    UserFmtMulaw = FmtMulaw,
-    UserFmtAlaw = FmtAlaw,
-    UserFmtDouble = FmtDouble,
-    UserFmtIMA4 = FmtIMA4,
-    UserFmtMSADPCM = FmtMSADPCM,
-};
-enum UserFmtChannels : unsigned char {
-    UserFmtMono = FmtMono,
-    UserFmtStereo = FmtStereo,
-    UserFmtRear = FmtRear,
-    UserFmtQuad = FmtQuad,
-    UserFmtX51 = FmtX51,
-    UserFmtX61 = FmtX61,
-    UserFmtX71 = FmtX71,
-    UserFmtBFormat2D = FmtBFormat2D,
-    UserFmtBFormat3D = FmtBFormat3D,
-    UserFmtUHJ2 = FmtUHJ2,
-    UserFmtUHJ3 = FmtUHJ3,
-    UserFmtUHJ4 = FmtUHJ4,
-};
-
 
 struct ALbuffer : public BufferStorage {
     ALbitfieldSOFT Access{0u};
 
     al::vector<al::byte,16> mData;
 
-    UserFmtType OriginalType{UserFmtShort};
     ALuint OriginalSize{0};
 
     ALuint UnpackAlign{0};

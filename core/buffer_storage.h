@@ -48,6 +48,9 @@ enum class AmbiScaling : unsigned char {
     UHJ,
 };
 
+const char *NameFromFormat(FmtType type) noexcept;
+const char *NameFromFormat(FmtChannels channels) noexcept;
+
 uint BytesFromFmt(FmtType type) noexcept;
 uint ChannelsFromFmt(FmtChannels chans, uint ambiorder) noexcept;
 inline uint FrameSizeFromFmt(FmtChannels chans, FmtType type, uint ambiorder) noexcept

@@ -3867,17 +3867,21 @@ START_API_FUNC
         {
             fmt_mismatch |= BufferFmt->mSampleRate != buffer->mSampleRate;
             fmt_mismatch |= BufferFmt->mChannels != buffer->mChannels;
+            fmt_mismatch |= BufferFmt->mType != buffer->mType;
             if(BufferFmt->isBFormat())
             {
                 fmt_mismatch |= BufferFmt->mAmbiLayout != buffer->mAmbiLayout;
                 fmt_mismatch |= BufferFmt->mAmbiScaling != buffer->mAmbiScaling;
             }
             fmt_mismatch |= BufferFmt->mAmbiOrder != buffer->mAmbiOrder;
-            fmt_mismatch |= BufferFmt->mType != buffer->mType;
         }
         if(fmt_mismatch) UNLIKELY
         {
-            context->setError(AL_INVALID_OPERATION, "Queueing buffer with mismatched format");
+            context->setError(AL_INVALID_OPERATION, "Queueing buffer with mismatched format\n"
+                "  Expected: %uhz, %s, %s ; Got: %uhz, %s, %s\n", BufferFmt->mSampleRate,
+                NameFromFormat(BufferFmt->mType), NameFromFormat(BufferFmt->mChannels),
+                buffer->mSampleRate, NameFromFormat(buffer->mType),
+                NameFromFormat(buffer->mChannels));
 
         buffer_error:
             /* A buffer failed (invalid ID or format), so unlock and release

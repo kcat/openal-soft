@@ -732,8 +732,17 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
     uint OutPos{0u};
 
     /* Check if we're doing a delayed start, and we start in this update. */
-    if(mStartTime > deviceTime)
+    if(mStartTime > deviceTime) UNLIKELY
     {
+        /* If the voice is supposed to be stopping but hasn't actually started
+         * yet, make sure its stopped.
+         */
+        if(vstate == Stopping)
+        {
+            mPlayState.store(Stopped, std::memory_order_release);
+            return;
+        }
+
         /* If the start time is too far ahead, don't bother. */
         auto diff = mStartTime - deviceTime;
         if(diff >= seconds{1})

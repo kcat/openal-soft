@@ -405,7 +405,7 @@ al::optional<VoicePos> GetSampleOffset(al::deque<ALbufferQueueItem> &BufferList,
         BufferFmt = item.mBuffer;
         if(BufferFmt) break;
     }
-    if(!BufferFmt || BufferFmt->mCallback)
+    if(!BufferFmt) UNLIKELY
         return al::nullopt;
 
     /* Get sample frame offset */
@@ -455,6 +455,9 @@ al::optional<VoicePos> GetSampleOffset(al::deque<ALbufferQueueItem> &BufferList,
             return al::nullopt;
         return VoicePos{static_cast<int>(offset), frac, &BufferList.front()};
     }
+
+    if(BufferFmt->mCallback)
+        return al::nullopt;
 
     int64_t totalBufferLen{0};
     for(auto &item : BufferList)

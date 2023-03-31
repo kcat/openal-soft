@@ -638,6 +638,16 @@ AL_API void AL_APIENTRY alGetBufferPtrvSOFT(ALuint buffer, ALenum param, ALvoid 
 #define ALC_SURROUND_7_1_SOFT                    0x1506
 #endif
 
+#ifndef AL_SOFT_source_start_delay
+#define AL_SOFT_source_start_delay
+typedef void (AL_APIENTRY*LPALSOURCEPLAYATTIMESOFT)(ALuint source, ALint64SOFT start_time);
+typedef void (AL_APIENTRY*LPALSOURCEPLAYATTIMEVSOFT)(ALsizei n, const ALuint *sources, ALint64SOFT start_time);
+#ifdef AL_ALEXT_PROTOTYPES
+void AL_APIENTRY alSourcePlayAtTimeSOFT(ALuint source, ALint64SOFT start_time);
+void AL_APIENTRY alSourcePlayAtTimevSOFT(ALsizei n, const ALuint *sources, ALint64SOFT start_time);
+#endif
+#endif
+
 #ifdef __cplusplus
 }
 #endif

@@ -54,16 +54,6 @@ AL_API void AL_APIENTRY alAuxiliaryEffectSlotStopvSOFT(ALsizei n, const ALuint *
 #define AL_STOP_SOURCES_ON_DISCONNECT_SOFT       0x19AB
 #endif
 
-#ifndef AL_SOFT_source_start_delay
-#define AL_SOFT_source_start_delay
-typedef void (AL_APIENTRY*LPALSOURCEPLAYATTIMESOFT)(ALuint source, ALint64SOFT start_time);
-typedef void (AL_APIENTRY*LPALSOURCEPLAYATTIMEVSOFT)(ALsizei n, const ALuint *sources, ALint64SOFT start_time);
-#ifdef AL_ALEXT_PROTOTYPES
-void AL_APIENTRY alSourcePlayAtTimeSOFT(ALuint source, ALint64SOFT start_time);
-void AL_APIENTRY alSourcePlayAtTimevSOFT(ALsizei n, const ALuint *sources, ALint64SOFT start_time);
-#endif
-#endif
-
 
 /* Non-standard export. Not part of any extension. */
 AL_API const ALchar* AL_APIENTRY alsoft_get_version(void);

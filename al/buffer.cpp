@@ -357,16 +357,17 @@ void LoadData(ALCcontext *context, ALbuffer *ALBuf, ALsizei freq, ALuint size,
      * size could cause problems for apps that use AL_SIZE to try to get the
      * buffer's play length.
      */
-    if(newsize != ALBuf->mData.size())
+    if(newsize != ALBuf->mDataStorage.size())
     {
         auto newdata = al::vector<al::byte,16>(newsize, al::byte{});
         if((access&AL_PRESERVE_DATA_BIT_SOFT))
         {
-            const size_t tocopy{minz(newdata.size(), ALBuf->mData.size())};
-            std::copy_n(ALBuf->mData.begin(), tocopy, newdata.begin());
+            const size_t tocopy{minz(newdata.size(), ALBuf->mDataStorage.size())};
+            std::copy_n(ALBuf->mDataStorage.begin(), tocopy, newdata.begin());
         }
-        newdata.swap(ALBuf->mData);
+        newdata.swap(ALBuf->mDataStorage);
     }
+    ALBuf->mData = ALBuf->mDataStorage;
 #ifdef ALSOFT_EAX
     eax_x_ram_clear(*context->mALDevice, *ALBuf);
 #endif
@@ -425,8 +426,9 @@ void PrepareCallback(ALCcontext *context, ALbuffer *ALBuf, ALsizei freq,
     static constexpr size_t line_size{DeviceBase::MixerLineSize*MaxPitch + MaxResamplerEdge};
     const size_t line_blocks{(line_size + align-1) / align};
 
-    using BufferVectorType = decltype(ALBuf->mData);
-    BufferVectorType(line_blocks*BlockSize).swap(ALBuf->mData);
+    using BufferVectorType = decltype(ALBuf->mDataStorage);
+    BufferVectorType(line_blocks*BlockSize).swap(ALBuf->mDataStorage);
+    ALBuf->mData = ALBuf->mDataStorage;
 
 #ifdef ALSOFT_EAX
     eax_x_ram_clear(*context->mALDevice, *ALBuf);

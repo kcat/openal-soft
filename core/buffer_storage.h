@@ -5,6 +5,7 @@
 
 #include "albyte.h"
 #include "alnumeric.h"
+#include "alspan.h"
 #include "ambidefs.h"
 
 
@@ -83,6 +84,8 @@ using CallbackType = int(*)(void*, void*, int);
 struct BufferStorage {
     CallbackType mCallback{nullptr};
     void *mUserData{nullptr};
+
+    al::span<al::byte> mData;
 
     uint mSampleRate{0u};
     FmtChannels mChannels{FmtMono};

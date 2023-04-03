@@ -26,7 +26,7 @@ enum class EaxStorage : uint8_t {
 struct ALbuffer : public BufferStorage {
     ALbitfieldSOFT Access{0u};
 
-    al::vector<al::byte,16> mData;
+    al::vector<al::byte,16> mDataStorage;
 
     ALuint OriginalSize{0};
 

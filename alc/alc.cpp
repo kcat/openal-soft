@@ -457,6 +457,8 @@ const struct {
     DECL(alSourcePlayAtTimevSOFT),
 
     DECL(alBufferSubDataSOFT),
+
+    DECL(alBufferDataStatic),
 #ifdef ALSOFT_EAX
 }, eaxFunctions[] = {
     DECL(EAXGet),

@@ -57,6 +57,7 @@ constexpr ALchar alExtList[] =
     "AL_EXT_OFFSET "
     "AL_EXT_source_distance_model "
     "AL_EXT_SOURCE_RADIUS "
+    "AL_EXT_STATIC_BUFFER "
     "AL_EXT_STEREO_ANGLES "
     "AL_LOKI_quadriphonic "
     "AL_SOFT_bformat_ex "

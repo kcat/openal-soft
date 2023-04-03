@@ -275,22 +275,6 @@ ALuint SanitizeAlignment(FmtType type, ALuint align)
 }
 
 
-const ALchar *NameFromFmtType(FmtType type)
-{
-    switch(type)
-    {
-    case FmtUByte: return "UInt8";
-    case FmtShort: return "Int16";
-    case FmtFloat: return "Float32";
-    case FmtDouble: return "Float64";
-    case FmtMulaw: return "muLaw";
-    case FmtAlaw: return "aLaw";
-    case FmtIMA4: return "IMA4 ADPCM";
-    case FmtMSADPCM: return "MSADPCM";
-    }
-    return "<internal type error>";
-}
-
 /** Loads the specified data into the buffer, using the specified format. */
 void LoadData(ALCcontext *context, ALbuffer *ALBuf, ALsizei freq, ALuint size,
     const FmtChannels DstChannels, const FmtType DstType, const al::byte *SrcData,
@@ -304,7 +288,7 @@ void LoadData(ALCcontext *context, ALbuffer *ALBuf, ALsizei freq, ALuint size,
     const ALuint align{SanitizeAlignment(DstType, unpackalign)};
     if(align < 1) UNLIKELY
         return context->setError(AL_INVALID_VALUE, "Invalid unpack alignment %u for %s samples",
-            unpackalign, NameFromFmtType(DstType));
+            unpackalign, NameFromFormat(DstType));
 
     const ALuint ambiorder{IsBFormat(DstChannels) ? ALBuf->UnpackAmbiOrder :
         (IsUHJ(DstChannels) ? 1 : 0)};
@@ -463,7 +447,7 @@ void PrepareUserPtr(ALCcontext *context, ALbuffer *ALBuf, ALsizei freq,
     const ALuint align{SanitizeAlignment(DstType, unpackalign)};
     if(align < 1) UNLIKELY
         return context->setError(AL_INVALID_VALUE, "Invalid unpack alignment %u for %s samples",
-            unpackalign, NameFromFmtType(DstType));
+            unpackalign, NameFromFormat(DstType));
 
     auto get_type_alignment = [](const FmtType type) noexcept -> ALuint
     {
@@ -486,7 +470,7 @@ void PrepareUserPtr(ALCcontext *context, ALbuffer *ALBuf, ALsizei freq,
     const auto typealign = get_type_alignment(DstType);
     if((reinterpret_cast<uintptr_t>(sdata) & (typealign-1)) != 0)
         return context->setError(AL_INVALID_VALUE, "Pointer %p is misaligned for %s samples (%u)",
-            static_cast<void*>(sdata), NameFromFmtType(DstType), typealign);
+            static_cast<void*>(sdata), NameFromFormat(DstType), typealign);
 
     const ALuint ambiorder{IsBFormat(DstChannels) ? ALBuf->UnpackAmbiOrder :
         (IsUHJ(DstChannels) ? 1 : 0)};

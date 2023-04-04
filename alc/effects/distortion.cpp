@@ -56,7 +56,7 @@ struct DistortionState final : public EffectState {
     alignas(16) float mBuffer[2][BufferLineSize]{};
 
 
-    void deviceUpdate(const DeviceBase *device, const Buffer &buffer) override;
+    void deviceUpdate(const DeviceBase *device, const BufferStorage *buffer) override;
     void update(const ContextBase *context, const EffectSlot *slot, const EffectProps *props,
         const EffectTarget target) override;
     void process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn,
@@ -65,7 +65,7 @@ struct DistortionState final : public EffectState {
     DEF_NEWDEL(DistortionState)
 };
 
-void DistortionState::deviceUpdate(const DeviceBase*, const Buffer&)
+void DistortionState::deviceUpdate(const DeviceBase*, const BufferStorage*)
 {
     mLowpass.clear();
     mBandpass.clear();

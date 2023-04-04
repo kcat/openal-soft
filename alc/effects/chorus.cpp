@@ -78,7 +78,7 @@ struct ChorusState final : public EffectState {
     void calcTriangleDelays(const size_t todo);
     void calcSinusoidDelays(const size_t todo);
 
-    void deviceUpdate(const DeviceBase *device, const Buffer &buffer) override;
+    void deviceUpdate(const DeviceBase *device, const BufferStorage *buffer) override;
     void update(const ContextBase *context, const EffectSlot *slot, const EffectProps *props,
         const EffectTarget target) override;
     void process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn,
@@ -87,7 +87,7 @@ struct ChorusState final : public EffectState {
     DEF_NEWDEL(ChorusState)
 };
 
-void ChorusState::deviceUpdate(const DeviceBase *Device, const Buffer&)
+void ChorusState::deviceUpdate(const DeviceBase *Device, const BufferStorage*)
 {
     constexpr float max_delay{maxf(ChorusMaxDelay, FlangerMaxDelay)};
 

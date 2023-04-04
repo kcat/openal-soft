@@ -105,7 +105,7 @@ struct PshifterState final : public EffectState {
     float mTargetGains[MaxAmbiChannels];
 
 
-    void deviceUpdate(const DeviceBase *device, const Buffer &buffer) override;
+    void deviceUpdate(const DeviceBase *device, const BufferStorage *buffer) override;
     void update(const ContextBase *context, const EffectSlot *slot, const EffectProps *props,
         const EffectTarget target) override;
     void process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn,
@@ -114,7 +114,7 @@ struct PshifterState final : public EffectState {
     DEF_NEWDEL(PshifterState)
 };
 
-void PshifterState::deviceUpdate(const DeviceBase*, const Buffer&)
+void PshifterState::deviceUpdate(const DeviceBase*, const BufferStorage*)
 {
     /* (Re-)initializing parameters and clear the buffers. */
     mCount       = 0;

@@ -622,7 +622,7 @@ struct ReverbState final : public EffectState {
 
     void allocLines(const float frequency);
 
-    void deviceUpdate(const DeviceBase *device, const Buffer &buffer) override;
+    void deviceUpdate(const DeviceBase *device, const BufferStorage *buffer) override;
     void update(const ContextBase *context, const EffectSlot *slot, const EffectProps *props,
         const EffectTarget target) override;
     void process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn,
@@ -717,7 +717,7 @@ void ReverbState::allocLines(const float frequency)
     }
 }
 
-void ReverbState::deviceUpdate(const DeviceBase *device, const Buffer&)
+void ReverbState::deviceUpdate(const DeviceBase *device, const BufferStorage*)
 {
     const auto frequency = static_cast<float>(device->Frequency);
 

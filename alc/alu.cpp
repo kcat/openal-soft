@@ -862,16 +862,10 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
         };
         auto&& scales = GetAmbiScales(voice->mAmbiScaling);
         auto coeffs = calc_coeffs(Device->mRenderMode);
-        /* Scale the panned W signal based on the coverage (full coverage means
-         * no panned signal). Scale the panned W signal according to channel
-         * scaling.
-         */
-        std::transform(coeffs.begin(), coeffs.end(), coeffs.begin(),
-            [scale=(1.0f-coverage)*scales[0]](const float c){ return c * scale; });
 
         if(!(coverage > 0.0f))
         {
-            ComputePanGains(&Device->Dry, coeffs.data(), DryGain.Base,
+            ComputePanGains(&Device->Dry, coeffs.data(), DryGain.Base*scales[0],
                 voice->mChans[0].mDryParams.Gains.Target);
             for(uint i{0};i < NumSends;i++)
             {
@@ -961,6 +955,12 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
             const uint8_t *index_map{Is2DAmbisonic(voice->mFmtChannels) ?
                 GetAmbi2DLayout(voice->mAmbiLayout).data() :
                 GetAmbiLayout(voice->mAmbiLayout).data()};
+
+            /* Scale the panned W signal inversely to coverage (full coverage
+             * means no panned signal), and according to the channel scaling.
+             */
+            std::for_each(coeffs.begin(), coeffs.end(),
+                [scale=(1.0f-coverage)*scales[0]](float &coeff) noexcept { coeff *= scale; });
 
             for(size_t c{0};c < num_channels;c++)
             {

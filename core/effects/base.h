@@ -61,32 +61,29 @@ enum class VMorpherWaveform {
 
 union EffectProps {
     struct {
-        // Shared Reverb Properties
         float Density;
         float Diffusion;
         float Gain;
         float GainHF;
+        float GainLF;
         float DecayTime;
         float DecayHFRatio;
+        float DecayLFRatio;
         float ReflectionsGain;
         float ReflectionsDelay;
+        float ReflectionsPan[3];
         float LateReverbGain;
         float LateReverbDelay;
-        float AirAbsorptionGainHF;
-        float RoomRolloffFactor;
-        bool DecayHFLimit;
-
-        // Additional EAX Reverb Properties
-        float GainLF;
-        float DecayLFRatio;
-        float ReflectionsPan[3];
         float LateReverbPan[3];
         float EchoTime;
         float EchoDepth;
         float ModulationTime;
         float ModulationDepth;
+        float AirAbsorptionGainHF;
         float HFReference;
         float LFReference;
+        float RoomRolloffFactor;
+        bool DecayHFLimit;
     } Reverb;
 
     struct {

@@ -113,12 +113,6 @@ void Reverb_setParamf(EffectProps *props, ALenum param, float val)
         props->Reverb.LateReverbDelay = val;
         break;
 
-    case AL_EAXREVERB_AIR_ABSORPTION_GAINHF:
-        if(!(val >= AL_EAXREVERB_MIN_AIR_ABSORPTION_GAINHF && val <= AL_EAXREVERB_MAX_AIR_ABSORPTION_GAINHF))
-            throw effect_exception{AL_INVALID_VALUE, "EAX Reverb air absorption gainhf out of range"};
-        props->Reverb.AirAbsorptionGainHF = val;
-        break;
-
     case AL_EAXREVERB_ECHO_TIME:
         if(!(val >= AL_EAXREVERB_MIN_ECHO_TIME && val <= AL_EAXREVERB_MAX_ECHO_TIME))
             throw effect_exception{AL_INVALID_VALUE, "EAX Reverb echo time out of range"};
@@ -141,6 +135,12 @@ void Reverb_setParamf(EffectProps *props, ALenum param, float val)
         if(!(val >= AL_EAXREVERB_MIN_MODULATION_DEPTH && val <= AL_EAXREVERB_MAX_MODULATION_DEPTH))
             throw effect_exception{AL_INVALID_VALUE, "EAX Reverb modulation depth out of range"};
         props->Reverb.ModulationDepth = val;
+        break;
+
+    case AL_EAXREVERB_AIR_ABSORPTION_GAINHF:
+        if(!(val >= AL_EAXREVERB_MIN_AIR_ABSORPTION_GAINHF && val <= AL_EAXREVERB_MAX_AIR_ABSORPTION_GAINHF))
+            throw effect_exception{AL_INVALID_VALUE, "EAX Reverb air absorption gainhf out of range"};
+        props->Reverb.AirAbsorptionGainHF = val;
         break;
 
     case AL_EAXREVERB_HFREFERENCE:
@@ -257,10 +257,6 @@ void Reverb_getParamf(const EffectProps *props, ALenum param, float *val)
         *val = props->Reverb.LateReverbDelay;
         break;
 
-    case AL_EAXREVERB_AIR_ABSORPTION_GAINHF:
-        *val = props->Reverb.AirAbsorptionGainHF;
-        break;
-
     case AL_EAXREVERB_ECHO_TIME:
         *val = props->Reverb.EchoTime;
         break;
@@ -275,6 +271,10 @@ void Reverb_getParamf(const EffectProps *props, ALenum param, float *val)
 
     case AL_EAXREVERB_MODULATION_DEPTH:
         *val = props->Reverb.ModulationDepth;
+        break;
+
+    case AL_EAXREVERB_AIR_ABSORPTION_GAINHF:
+        *val = props->Reverb.AirAbsorptionGainHF;
         break;
 
     case AL_EAXREVERB_HFREFERENCE:

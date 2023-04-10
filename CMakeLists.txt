@@ -751,7 +751,7 @@ set(OPENAL_OBJS
     al/effects/dedicated.cpp
     al/effects/distortion.cpp
     al/effects/echo.cpp
-	al/effects/effects.cpp
+    al/effects/effects.cpp
     al/effects/effects.h
     al/effects/equalizer.cpp
     al/effects/fshifter.cpp
@@ -801,7 +801,7 @@ set(ALC_OBJS
     alc/inprogext.h
     alc/panning.cpp)
 
-if (ALSOFT_EAX)
+if(ALSOFT_EAX)
     set(OPENAL_OBJS
         ${OPENAL_OBJS}
         al/eax/api.cpp
@@ -820,8 +820,8 @@ if (ALSOFT_EAX)
         al/eax/utils.cpp
         al/eax/utils.h
         al/eax/x_ram.h
-)
-endif ()
+    )
+endif()
 
 # Include SIMD mixers
 set(CPU_EXTS "Default")
@@ -1373,12 +1373,20 @@ else()
     # the project
     set(TARGET_PUBLIC_HEADERS include/AL/al.h include/AL/alc.h include/AL/alext.h include/AL/efx.h
         include/AL/efx-presets.h)
+
     add_library(${IMPL_TARGET} SHARED ${OPENAL_OBJS} ${ALC_OBJS} ${CORE_OBJS} ${RC_CONFIG}
         ${TARGET_PUBLIC_HEADERS})
     if(WIN32)
         set_target_properties(${IMPL_TARGET} PROPERTIES PREFIX "")
     endif()
     target_link_libraries(${IMPL_TARGET} PRIVATE common ${LINKER_FLAGS} ${EXTRA_LIBS} ${MATH_LIB})
+
+    if(NOT WIN32 AND NOT APPLE)
+        # FIXME: This doesn't put a dependency on the version script. Changing
+        # the version script will not cause a relink as it should.
+        set_property(TARGET ${IMPL_TARGET} APPEND_STRING PROPERTY
+            LINK_FLAGS " -Wl,--version-script=${OpenAL_SOURCE_DIR}/libopenal.version")
+    endif()
 
     if(APPLE AND ALSOFT_OSX_FRAMEWORK)
         # Sets framework name to soft_oal to avoid ambiguity with the system OpenAL.framework

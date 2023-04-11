@@ -1,4 +1,4 @@
-version: 1.23.0.{build}
+version: 1.23.1.{build}
 
 environment:
     APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017

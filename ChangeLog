@@ -1,3 +1,34 @@
+openal-soft-1.23.1:
+
+    Implemented the AL_SOFT_UHJ_ex extension.
+
+    Implemented the AL_SOFT_buffer_length_query extension.
+
+    Implemented the AL_SOFT_source_start_delay extension.
+
+    Implemented the AL_EXT_STATIC_BUFFER extension.
+
+    Fixed compiling with certain older versions of GCC.
+
+    Fixed compiling as a submodule.
+
+    Fixed compiling with newer versions of Oboe.
+
+    Improved EAX effect version switching.
+
+    Improved the quality of the reverb modulator.
+
+    Improved performance of the cubic resampler.
+
+    Added a compatibility option to restore AL_SOFT_buffer_sub_data. The option
+    disables AL_EXT_SOURCE_RADIUS due to incompatibility.
+
+    Reduced CPU usage when EAX is initialized and FXSlot0 or FXSlot1 are not
+    used.
+
+    Reduced memory usage for ADPCM buffer formats. They're no longer converted
+    to 16-bit samples on load.
+
 openal-soft-1.23.0:
 
     Fixed CoreAudio capture support.

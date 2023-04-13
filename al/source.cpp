@@ -3492,7 +3492,7 @@ START_API_FUNC
 }
 END_API_FUNC
 
-void AL_APIENTRY alSourcePlayAtTimeSOFT(ALuint source, ALint64SOFT start_time)
+FORCE_ALIGN void AL_APIENTRY alSourcePlayAtTimeSOFT(ALuint source, ALint64SOFT start_time)
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};
@@ -3544,7 +3544,8 @@ START_API_FUNC
 }
 END_API_FUNC
 
-void AL_APIENTRY alSourcePlayAtTimevSOFT(ALsizei n, const ALuint *sources, ALint64SOFT start_time)
+FORCE_ALIGN void AL_APIENTRY alSourcePlayAtTimevSOFT(ALsizei n, const ALuint *sources,
+    ALint64SOFT start_time)
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};

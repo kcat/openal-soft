@@ -773,8 +773,8 @@ START_API_FUNC
 }
 END_API_FUNC
 
-void AL_APIENTRY alBufferDataStatic(const ALuint buffer, ALenum format, ALvoid *data, ALsizei size,
-    ALsizei freq)
+FORCE_ALIGN void AL_APIENTRY alBufferDataStatic(const ALuint buffer, ALenum format, ALvoid *data,
+    ALsizei size, ALsizei freq)
 START_API_FUNC
 {
     ContextRef context{GetContextRef()};

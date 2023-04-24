@@ -388,6 +388,24 @@ void CoreAudioPlayback::open(const char *name)
         if(!devname.empty()) mDevice->DeviceName = std::move(devname);
         else mDevice->DeviceName = "Unknown Device Name";
     }
+
+    if(audioDevice != kAudioDeviceUnknown)
+    {
+        UInt32 type{};
+        err = GetDevProperty(audioDevice, kAudioDevicePropertyTransportType, false,
+            kAudioObjectPropertyElementMaster, sizeof(type), &type);
+        if(err != noErr)
+            ERR("Failed to get audio device type: %u\n", err);
+        else
+        {
+            static constexpr UInt32 HeadphoneType{('h'<<24u) | ('d'<<16u) | ('p'<<8u) | 'n'};
+            TRACE("Got device type '%c%c%c%c'\n", static_cast<char>((type>>24)&0xff),
+                static_cast<char>((type>>16)&0xff), static_cast<char>((type>>8)&0xff),
+                static_cast<char>(type&0xff));
+            mDevice->Flags.set(DirectEar, (type == HeadphoneType));
+        }
+    }
+
 #else
     mDevice->DeviceName = name;
 #endif

@@ -289,6 +289,7 @@ inline void LoadSamples<FmtIMA4>(float *RESTRICT dstSamples, const al::byte *src
     /* NOTE: This could probably be optimized better. */
     size_t wrote{0};
     do {
+        static constexpr int MaxStepIndex{static_cast<int>(al::size(IMAStep_size)) - 1};
         /* Each IMA4 block starts with a signed 16-bit sample, and a signed
          * 16-bit table index. The table index needs to be clamped.
          */
@@ -296,7 +297,7 @@ inline void LoadSamples<FmtIMA4>(float *RESTRICT dstSamples, const al::byte *src
         int index{src[srcChan*4 + 2] | (src[srcChan*4 + 3] << 8)};
 
         sample = (sample^0x8000) - 32768;
-        index = clampi((index^0x8000) - 32768, 0, int{al::size(IMAStep_size)}-1);
+        index = clampi((index^0x8000) - 32768, 0, MaxStepIndex);
 
         if(skip == 0)
         {
@@ -312,7 +313,7 @@ inline void LoadSamples<FmtIMA4>(float *RESTRICT dstSamples, const al::byte *src
             sample = clampi(sample, -32768, 32767);
 
             index += IMA4Index_adjust[nibble];
-            index = clampi(index, 0, int{al::size(IMAStep_size)}-1);
+            index = clampi(index, 0, MaxStepIndex);
 
             return sample;
         };

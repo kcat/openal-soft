@@ -93,7 +93,7 @@ std::atomic<ALCcontext*> ALCcontext::sGlobalContext{nullptr};
 thread_local ALCcontext *ALCcontext::sLocalContext{nullptr};
 ALCcontext::ThreadCtx::~ThreadCtx()
 {
-    if(ALCcontext *ctx{ALCcontext::sLocalContext})
+    if(ALCcontext *ctx{std::exchange(ALCcontext::sLocalContext, nullptr)})
     {
         const bool result{ctx->releaseIfNoDelete()};
         ERR("Context %p current for thread being destroyed%s!\n", voidp{ctx},

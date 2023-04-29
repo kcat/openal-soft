@@ -1526,6 +1526,9 @@ END_API_FUNC
 
 BufferSubList::~BufferSubList()
 {
+    if(!Buffers)
+        return;
+
     uint64_t usemask{~FreeMask};
     while(usemask)
     {

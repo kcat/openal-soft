@@ -548,6 +548,9 @@ void InitEffect(ALeffect *effect)
 
 EffectSubList::~EffectSubList()
 {
+    if(!Effects)
+        return;
+
     uint64_t usemask{~FreeMask};
     while(usemask)
     {

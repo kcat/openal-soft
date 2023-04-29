@@ -1023,6 +1023,9 @@ void UpdateAllEffectSlotProps(ALCcontext *context)
 
 EffectSlotSubList::~EffectSlotSubList()
 {
+    if(!EffectSlots)
+        return;
+
     uint64_t usemask{~FreeMask};
     while(usemask)
     {

@@ -709,6 +709,9 @@ END_API_FUNC
 
 FilterSubList::~FilterSubList()
 {
+    if(!Filters)
+        return;
+
     uint64_t usemask{~FreeMask};
     while(usemask)
     {

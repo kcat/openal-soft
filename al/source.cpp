@@ -4033,6 +4033,9 @@ void UpdateAllSourceProps(ALCcontext *context)
 
 SourceSubList::~SourceSubList()
 {
+    if(!Sources)
+        return;
+
     uint64_t usemask{~FreeMask};
     while(usemask)
     {

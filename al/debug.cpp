@@ -120,13 +120,13 @@ FORCE_ALIGN void AL_APIENTRY alDebugMessageControlSOFT(ALenum source, ALenum typ
         if(!ids)
             return context->setError(AL_INVALID_VALUE, "IDs is null with non-0 count");
         if(source == AL_DONT_CARE_SOFT)
-            return context->setError(AL_INVALID_VALUE,
+            return context->setError(AL_INVALID_OPERATION,
                 "Debug source cannot be AL_DONT_CARE_SOFT with IDs");
         if(type == AL_DONT_CARE_SOFT)
-            return context->setError(AL_INVALID_VALUE,
+            return context->setError(AL_INVALID_OPERATION,
                 "Debug type cannot be AL_DONT_CARE_SOFT with IDs");
         if(severity != AL_DONT_CARE_SOFT)
-            return context->setError(AL_INVALID_VALUE,
+            return context->setError(AL_INVALID_OPERATION,
                 "Debug severity must be AL_DONT_CARE_SOFT with IDs");
 
         return context->setError(AL_INVALID_VALUE, "Debug ID filtering not supported");
@@ -134,7 +134,7 @@ FORCE_ALIGN void AL_APIENTRY alDebugMessageControlSOFT(ALenum source, ALenum typ
     }
 
     if(enable != AL_TRUE && enable != AL_FALSE)
-        return context->setError(AL_INVALID_VALUE, "Invalid debug enable %d", enable);
+        return context->setError(AL_INVALID_ENUM, "Invalid debug enable %d", enable);
 
     static constexpr size_t ElemCount{DebugSourceCount + DebugTypeCount + DebugSeverityCount};
     static constexpr auto Values = make_array<uint,ElemCount>();

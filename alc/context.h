@@ -16,6 +16,7 @@
 #include "alnumeric.h"
 #include "atomic.h"
 #include "core/context.h"
+#include "inprogext.h"
 #include "intrusive_ptr.h"
 #include "vector.h"
 

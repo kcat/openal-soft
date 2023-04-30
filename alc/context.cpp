@@ -342,7 +342,7 @@ void ALCcontext::sendDebugMessage(DebugSource source, DebugType type, ALuint id,
         throw std::runtime_error{"Unexpected debug severity value "+std::to_string(al::to_underlying(severity))};
     };
 
-    std::lock_guard<std::mutex> _{mDebugCbLock};
+    std::unique_lock<std::mutex> debuglock{mDebugCbLock};
     if(!mDebugEnabled.load()) UNLIKELY
         return;
 
@@ -355,8 +355,13 @@ void ALCcontext::sendDebugMessage(DebugSource source, DebugType type, ALuint id,
         return;
 
     if(mDebugCb)
-        mDebugCb(get_source_enum(source), get_type_enum(type), id, get_severity_enum(severity),
-            length, message, mDebugParam);
+    {
+        auto callback = mDebugCb;
+        auto param = mDebugParam;
+        debuglock.unlock();
+        callback(get_source_enum(source), get_type_enum(type), id, get_severity_enum(severity),
+            length, message, param);
+    }
     else
     {
         /* TODO: Store in a log. */

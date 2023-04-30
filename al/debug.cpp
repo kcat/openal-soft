@@ -171,9 +171,9 @@ FORCE_ALIGN void AL_APIENTRY alDebugMessageControlSOFT(ALenum source, ALenum typ
     {
         auto iter = std::lower_bound(context->mDebugFilters.cbegin(),
             context->mDebugFilters.cend(), filter);
-        if(enable && (iter == context->mDebugFilters.cend() || *iter != filter))
+        if(!enable && (iter == context->mDebugFilters.cend() || *iter != filter))
             context->mDebugFilters.insert(iter, filter);
-        else if(!enable && iter != context->mDebugFilters.cend() && *iter == filter)
+        else if(enable && iter != context->mDebugFilters.cend() && *iter == filter)
             context->mDebugFilters.erase(iter);
     };
     auto apply_severity = [apply_filter,svrIndices](const uint filter)

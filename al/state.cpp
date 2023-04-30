@@ -24,6 +24,7 @@
 
 #include <atomic>
 #include <cmath>
+#include <cstring>
 #include <mutex>
 #include <stdexcept>
 #include <string>

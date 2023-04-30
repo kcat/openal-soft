@@ -2584,13 +2584,20 @@ END_API_FUNC
 ALC_API void ALC_APIENTRY alcSuspendContext(ALCcontext *context)
 START_API_FUNC
 {
-    if(!SuspendDefers)
-        return;
-
     ContextRef ctx{VerifyContext(context)};
     if(!ctx)
+    {
         alcSetError(nullptr, ALC_INVALID_CONTEXT);
-    else
+        return;
+    }
+
+    ctx->debugMessage(DebugSource::API, DebugType::Portability, 0, DebugSeverity::Medium, -1,
+        "alcSuspendContext behavior is not portable -- some implementations suspend all "
+        "rendering, some only defer property changes, and some are completely no-op; consider "
+        "using alcDevicePauseSOFT to suspend all rendering, or alDeferUpdatesSOFT to only defer "
+        "property changes");
+
+    if(SuspendDefers)
     {
         std::lock_guard<std::mutex> _{ctx->mPropLock};
         ctx->deferUpdates();
@@ -2601,13 +2608,20 @@ END_API_FUNC
 ALC_API void ALC_APIENTRY alcProcessContext(ALCcontext *context)
 START_API_FUNC
 {
-    if(!SuspendDefers)
-        return;
-
     ContextRef ctx{VerifyContext(context)};
     if(!ctx)
+    {
         alcSetError(nullptr, ALC_INVALID_CONTEXT);
-    else
+        return;
+    }
+
+    ctx->debugMessage(DebugSource::API, DebugType::Portability, 0, DebugSeverity::Medium, -1,
+        "alcProcessContext behavior is not portable -- some implementations resume rendering, "
+        "some apply deferred property changes, and some are completely no-op; consider using "
+        "alcDeviceResumeSOFT to resume rendering, or alProcessUpdatesSOFT to apply deferred "
+        "property changes");
+
+    if(SuspendDefers)
     {
         std::lock_guard<std::mutex> _{ctx->mPropLock};
         ctx->processUpdates();

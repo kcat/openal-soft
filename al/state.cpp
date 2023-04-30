@@ -261,6 +261,10 @@ START_API_FUNC
         break;
 
     case AL_DOPPLER_VELOCITY:
+        context->debugMessage(DebugSource::API, DebugType::DeprecatedBehavior, 0,
+            DebugSeverity::Medium, -1,
+            "AL_DOPPLER_VELOCITY is deprecated in AL 1.1, use AL_SPEED_OF_SOUND; "
+            "AL_DOPPLER_VELOCITY -> AL_SPEED_OF_SOUND / 343.3f");
         if(context->mDopplerVelocity != 0.0f)
             value = AL_TRUE;
         break;
@@ -317,6 +321,10 @@ START_API_FUNC
         break;
 
     case AL_DOPPLER_VELOCITY:
+        context->debugMessage(DebugSource::API, DebugType::DeprecatedBehavior, 0,
+            DebugSeverity::Medium, -1,
+            "AL_DOPPLER_VELOCITY is deprecated in AL 1.1, use AL_SPEED_OF_SOUND; "
+            "AL_DOPPLER_VELOCITY -> AL_SPEED_OF_SOUND / 343.3f");
         value = context->mDopplerVelocity;
         break;
 
@@ -368,6 +376,10 @@ START_API_FUNC
         break;
 
     case AL_DOPPLER_VELOCITY:
+        context->debugMessage(DebugSource::API, DebugType::DeprecatedBehavior, 0,
+            DebugSeverity::Medium, -1,
+            "AL_DOPPLER_VELOCITY is deprecated in AL 1.1, use AL_SPEED_OF_SOUND; "
+            "AL_DOPPLER_VELOCITY -> AL_SPEED_OF_SOUND / 343.3f");
         value = context->mDopplerVelocity;
         break;
 
@@ -419,6 +431,10 @@ START_API_FUNC
         break;
 
     case AL_DOPPLER_VELOCITY:
+        context->debugMessage(DebugSource::API, DebugType::DeprecatedBehavior, 0,
+            DebugSeverity::Medium, -1,
+            "AL_DOPPLER_VELOCITY is deprecated in AL 1.1, use AL_SPEED_OF_SOUND; "
+            "AL_DOPPLER_VELOCITY -> AL_SPEED_OF_SOUND / 343.3f");
         value = static_cast<ALint>(context->mDopplerVelocity);
         break;
 
@@ -505,6 +521,10 @@ START_API_FUNC
         break;
 
     case AL_DOPPLER_VELOCITY:
+        context->debugMessage(DebugSource::API, DebugType::DeprecatedBehavior, 0,
+            DebugSeverity::Medium, -1,
+            "AL_DOPPLER_VELOCITY is deprecated in AL 1.1, use AL_SPEED_OF_SOUND; "
+            "AL_DOPPLER_VELOCITY -> AL_SPEED_OF_SOUND / 343.3f");
         value = static_cast<ALint64SOFT>(context->mDopplerVelocity);
         break;
 
@@ -848,13 +868,10 @@ START_API_FUNC
     ContextRef context{GetContextRef()};
     if(!context) UNLIKELY return;
 
-    if(context->mDebugEnabled.load(std::memory_order_relaxed))
-    {
-        static constexpr char deprecatedMessage[] = "alDopplerVelocity is deprecated in AL 1.1";
-        context->sendDebugMessage(DebugSource::API, DebugType::DeprecatedBehavior, 0,
-            DebugSeverity::Medium, static_cast<int>(std::strlen(deprecatedMessage)),
-            deprecatedMessage);
-    }
+    context->debugMessage(DebugSource::API, DebugType::DeprecatedBehavior, 0,
+        DebugSeverity::Medium, -1,
+        "alDopplerVelocity is deprecated in AL 1.1, use alSpeedOfSound; "
+        "alDopplerVelocity(x) -> alSpeedOfSound(343.3f * x)");
 
     if(!(value >= 0.0f && std::isfinite(value)))
         context->setError(AL_INVALID_VALUE, "Doppler velocity %f out of range", value);

@@ -35,6 +35,7 @@ struct ALsource;
 using uint = unsigned int;
 
 
+constexpr size_t DebugSourceBase{0};
 enum class DebugSource : ALenum {
     API = AL_DEBUG_SOURCE_API_SOFT,
     System = AL_DEBUG_SOURCE_AUDIO_SYSTEM_SOFT,
@@ -42,6 +43,9 @@ enum class DebugSource : ALenum {
     Application = AL_DEBUG_SOURCE_APPLICATION_SOFT,
     Other = AL_DEBUG_SOURCE_OTHER_SOFT,
 };
+constexpr size_t DebugSourceCount{5};
+
+constexpr size_t DebugTypeBase{DebugSourceBase + DebugSourceCount};
 enum class DebugType : ALenum {
     Error = AL_DEBUG_TYPE_ERROR_SOFT,
     DeprecatedBehavior = AL_DEBUG_TYPE_DEPRECATED_BEHAVIOR_SOFT,
@@ -51,12 +55,16 @@ enum class DebugType : ALenum {
     Marker = AL_DEBUG_TYPE_MARKER_SOFT,
     Other = AL_DEBUG_TYPE_OTHER_SOFT,
 };
+constexpr size_t DebugTypeCount{7};
+
+constexpr size_t DebugSeverityBase{DebugTypeBase + DebugTypeCount};
 enum class DebugSeverity : ALenum {
     High = AL_DEBUG_SEVERITY_HIGH_SOFT,
     Medium = AL_DEBUG_SEVERITY_MEDIUM_SOFT,
     Low = AL_DEBUG_SEVERITY_LOW_SOFT,
     Notification = AL_DEBUG_SEVERITY_NOTIFICATION_SOFT,
 };
+constexpr size_t DebugSeverityCount{4};
 
 
 struct SourceSubList {
@@ -118,6 +126,7 @@ struct ALCcontext : public al::intrusive_ref<ALCcontext>, ContextBase {
     std::mutex mDebugCbLock;
     ALDEBUGPROCSOFT mDebugCb{};
     void *mDebugParam{nullptr};
+    std::vector<uint> mDebugFilters;
 
     ALlistener mListener{};
 

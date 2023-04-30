@@ -4,11 +4,13 @@
 #include "context.h"
 
 #include <algorithm>
+#include <array>
 #include <functional>
 #include <limits>
 #include <numeric>
 #include <stddef.h>
 #include <stdexcept>
+#include <utility>
 
 #include "AL/efx.h"
 
@@ -19,6 +21,7 @@
 #include "al/listener.h"
 #include "albit.h"
 #include "alc/alu.h"
+#include "alspan.h"
 #include "core/async_event.h"
 #include "core/device.h"
 #include "core/effectslot.h"
@@ -27,6 +30,7 @@
 #include "core/voice_change.h"
 #include "device.h"
 #include "ringbuffer.h"
+#include "threads.h"
 #include "vecmat.h"
 
 #ifdef ALSOFT_EAX
@@ -295,11 +299,45 @@ void ALCcontext::applyAllUpdates()
     mHoldUpdates.store(false, std::memory_order_release);
 }
 
+
 void ALCcontext::sendDebugMessage(DebugSource source, DebugType type, ALuint id,
     DebugSeverity severity, ALsizei length, const char *message)
 {
+    static_assert(DebugSeverityBase+DebugSeverityCount <= 32, "Too many debug bits");
+
     std::lock_guard<std::mutex> _{mDebugCbLock};
-    if(!mDebugEnabled.load())
+    if(!mDebugEnabled.load()) UNLIKELY
+        return;
+
+    uint filter{0};
+    switch(source)
+    {
+    case DebugSource::API: filter |= 1<<(DebugSourceBase+0); break;
+    case DebugSource::System: filter |= 1<<(DebugSourceBase+1); break;
+    case DebugSource::ThirdParty: filter |= 1<<(DebugSourceBase+2); break;
+    case DebugSource::Application: filter |= 1<<(DebugSourceBase+3); break;
+    case DebugSource::Other: filter |= 1<<(DebugSourceBase+4); break;
+    }
+    switch(type)
+    {
+    case DebugType::Error: filter |= 1<<(DebugTypeBase+0); break;
+    case DebugType::DeprecatedBehavior: filter |= 1<<(DebugTypeBase+1); break;
+    case DebugType::UndefinedBehavior: filter |= 1<<(DebugTypeBase+2); break;
+    case DebugType::Portability: filter |= 1<<(DebugTypeBase+3); break;
+    case DebugType::Performance: filter |= 1<<(DebugTypeBase+4); break;
+    case DebugType::Marker: filter |= 1<<(DebugTypeBase+5); break;
+    case DebugType::Other: filter |= 1<<(DebugTypeBase+6); break;
+    }
+    switch(severity)
+    {
+    case DebugSeverity::High: filter |= 1<<(DebugSeverityBase+0); break;
+    case DebugSeverity::Medium: filter |= 1<<(DebugSeverityBase+1); break;
+    case DebugSeverity::Low: filter |= 1<<(DebugSeverityBase+2); break;
+    case DebugSeverity::Notification: filter |= 1<<(DebugSeverityBase+3); break;
+    }
+
+    auto iter = std::lower_bound(mDebugFilters.cbegin(), mDebugFilters.cend(), filter);
+    if(iter != mDebugFilters.cend() && *iter == filter)
         return;
 
     if(mDebugCb)
@@ -369,6 +407,113 @@ FORCE_ALIGN void AL_APIENTRY alDebugMessageInsertSOFT(ALenum source, ALenum type
     }
 
     context->debugMessage(dsource, dtype, id, dseverity, length, message);
+}
+
+
+namespace {
+
+template<typename T, T ...Vals>
+constexpr auto make_array(std::integer_sequence<T, Vals...>)
+{ return std::array<T,sizeof...(Vals)>{Vals...}; }
+
+template<typename T, size_t N, typename Indices = std::make_integer_sequence<T,N>>
+constexpr auto make_array()
+{ return make_array(Indices{}); }
+
+} // namespace
+
+FORCE_ALIGN void AL_APIENTRY alDebugMessageControlSOFT(ALenum source, ALenum type, ALenum severity,
+    ALsizei count, const ALuint *ids, ALboolean enable) noexcept
+{
+    ContextRef context{GetContextRef()};
+    if(!context) UNLIKELY return;
+
+    if(count > 0)
+    {
+        if(!ids)
+            return context->setError(AL_INVALID_VALUE, "IDs is null with non-0 count");
+        if(source == AL_DONT_CARE_SOFT)
+            return context->setError(AL_INVALID_VALUE,
+                "Debug source cannot be AL_DONT_CARE_SOFT with IDs");
+        if(type == AL_DONT_CARE_SOFT)
+            return context->setError(AL_INVALID_VALUE,
+                "Debug type cannot be AL_DONT_CARE_SOFT with IDs");
+        if(severity != AL_DONT_CARE_SOFT)
+            return context->setError(AL_INVALID_VALUE,
+                "Debug severity must be AL_DONT_CARE_SOFT with IDs");
+
+        return context->setError(AL_INVALID_VALUE, "Debug ID filtering not supported");
+        return;
+    }
+
+    if(enable != AL_TRUE && enable != AL_FALSE)
+        return context->setError(AL_INVALID_VALUE, "Invalid debug enable %d", enable);
+
+    static constexpr size_t ElemCount{DebugSourceCount + DebugTypeCount + DebugSeverityCount};
+    static constexpr auto Values = make_array<uint,ElemCount>();
+
+    al::span<const uint> srcIndices{al::as_span(Values).subspan<DebugSourceBase,DebugSourceCount>()};
+    switch(source)
+    {
+    case AL_DEBUG_SOURCE_API_SOFT: srcIndices = srcIndices.subspan(0, 1); break;
+    case AL_DEBUG_SOURCE_AUDIO_SYSTEM_SOFT: srcIndices = srcIndices.subspan(1, 1); break;
+    case AL_DEBUG_SOURCE_THIRD_PARTY_SOFT: srcIndices = srcIndices.subspan(2, 1); break;
+    case AL_DEBUG_SOURCE_APPLICATION_SOFT: srcIndices = srcIndices.subspan(3, 1); break;
+    case AL_DEBUG_SOURCE_OTHER_SOFT: srcIndices = srcIndices.subspan(4, 1); break;
+    case AL_DONT_CARE_SOFT: break;
+    default:
+        return context->setError(AL_INVALID_VALUE, "Invalid debug source 0x%04x", source);
+    }
+
+    al::span<const uint> typeIndices{al::as_span(Values).subspan<DebugTypeBase,DebugTypeCount>()};
+    switch(type)
+    {
+    case AL_DEBUG_TYPE_ERROR_SOFT: typeIndices = typeIndices.subspan(0, 1); break;
+    case AL_DEBUG_TYPE_DEPRECATED_BEHAVIOR_SOFT: typeIndices = typeIndices.subspan(1, 1); break;
+    case AL_DEBUG_TYPE_UNDEFINED_BEHAVIOR_SOFT: typeIndices = typeIndices.subspan(2, 1); break;
+    case AL_DEBUG_TYPE_PORTABILITY_SOFT: typeIndices = typeIndices.subspan(3, 1); break;
+    case AL_DEBUG_TYPE_PERFORMANCE_SOFT: typeIndices = typeIndices.subspan(4, 1); break;
+    case AL_DEBUG_TYPE_MARKER_SOFT: typeIndices = typeIndices.subspan(5, 1); break;
+    case AL_DEBUG_TYPE_OTHER_SOFT: typeIndices = typeIndices.subspan(6, 1); break;
+    case AL_DONT_CARE_SOFT: break;
+    default:
+        return context->setError(AL_INVALID_VALUE, "Invalid debug type 0x%04x", type);
+    }
+
+    al::span<const uint> svrIndices{al::as_span(Values).subspan<DebugSeverityBase,DebugSeverityCount>()};
+    switch(severity)
+    {
+    case AL_DEBUG_SEVERITY_HIGH_SOFT: svrIndices = svrIndices.subspan(0, 1); break;
+    case AL_DEBUG_SEVERITY_MEDIUM_SOFT: svrIndices = svrIndices.subspan(1, 1); break;
+    case AL_DEBUG_SEVERITY_LOW_SOFT: svrIndices = svrIndices.subspan(2, 1); break;
+    case AL_DEBUG_SEVERITY_NOTIFICATION_SOFT: svrIndices = svrIndices.subspan(3, 1); break;
+    case AL_DONT_CARE_SOFT: break;
+    default:
+        return context->setError(AL_INVALID_VALUE, "Invalid debug severity 0x%04x", severity);
+    }
+
+    std::lock_guard<std::mutex> _{context->mDebugCbLock};
+    auto apply_filter = [enable,&context](const uint filter)
+    {
+        auto iter = std::lower_bound(context->mDebugFilters.cbegin(),
+            context->mDebugFilters.cend(), filter);
+        if(enable && (iter == context->mDebugFilters.cend() || *iter != filter))
+            context->mDebugFilters.insert(iter, filter);
+        else if(!enable && iter != context->mDebugFilters.cend() && *iter == filter)
+            context->mDebugFilters.erase(iter);
+    };
+    auto apply_severity = [apply_filter,svrIndices](const uint filter)
+    {
+        std::for_each(svrIndices.cbegin(), svrIndices.cend(),
+            [apply_filter,filter](const uint idx){ apply_filter(filter | (1<<idx)); });
+    };
+    auto apply_type = [apply_severity,typeIndices](const uint filter)
+    {
+        std::for_each(typeIndices.cbegin(), typeIndices.cend(),
+            [apply_severity,filter](const uint idx){ apply_severity(filter | (1<<idx)); });
+    };
+    std::for_each(srcIndices.cbegin(), srcIndices.cend(),
+        [apply_type](const uint idx){ apply_type(1<<idx); });
 }
 
 #ifdef ALSOFT_EAX

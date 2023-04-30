@@ -56,6 +56,7 @@ AL_API void AL_APIENTRY alAuxiliaryEffectSlotStopvSOFT(ALsizei n, const ALuint *
 
 #ifndef AL_SOFT_debug
 #define AL_SOFT_debug
+#define AL_DONT_CARE_SOFT                        0x0002
 #define AL_DEBUG_OUTPUT_SOFT                     0x19B2
 #define AL_DEBUG_CALLBACK_FUNCTION_SOFT          0x19B3
 #define AL_DEBUG_CALLBACK_USER_PARAM_SOFT        0x19B4
@@ -79,9 +80,11 @@ AL_API void AL_APIENTRY alAuxiliaryEffectSlotStopvSOFT(ALsizei n, const ALuint *
 typedef void (AL_APIENTRY*ALDEBUGPROCSOFT)(ALenum source, ALenum type, ALuint id, ALenum severity, ALsizei length, const ALchar *message, void *userParam);
 typedef void (AL_APIENTRY*LPALDEBUGMESSAGECALLBACKSOFT)(ALDEBUGPROCSOFT callback, void *userParam);
 typedef void (AL_APIENTRY*LPALDEBUGMESSAGEINSERTSOFT)(ALenum source, ALenum type, ALuint id, ALenum severity, ALsizei length, const ALchar *message);
+typedef void (AL_APIENTRY*LPALDEBUGMESSAGECONTROLSOFT)(ALenum source, ALenum type, ALenum severity, ALsizei count, const ALuint *ids, ALboolean enable);
 #ifdef AL_ALEXT_PROTOTYPES
 void AL_APIENTRY alDebugMessageCallbackSOFT(ALDEBUGPROCSOFT callback, void *userParam) noexcept;
 void AL_APIENTRY alDebugMessageInsertSOFT(ALenum source, ALenum type, ALuint id, ALenum severity, ALsizei length, const ALchar *message) noexcept;
+void AL_APIENTRY alDebugMessageControlSOFT(ALenum source, ALenum type, ALenum severity, ALsizei count, const ALuint *ids, ALboolean enable) noexcept;
 #endif
 #endif
 

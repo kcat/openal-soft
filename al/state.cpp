@@ -170,6 +170,10 @@ START_API_FUNC
         }
         break;
 
+    case AL_DEBUG_OUTPUT_SOFT:
+        context->mDebugEnabled = true;
+        break;
+
     case AL_STOP_SOURCES_ON_DISCONNECT_SOFT:
         context->setError(AL_INVALID_OPERATION, "Re-enabling AL_STOP_SOURCES_ON_DISCONNECT_SOFT not yet supported");
         break;
@@ -196,6 +200,10 @@ START_API_FUNC
         }
         break;
 
+    case AL_DEBUG_OUTPUT_SOFT:
+        context->mDebugEnabled = false;
+        break;
+
     case AL_STOP_SOURCES_ON_DISCONNECT_SOFT:
         context->mStopVoicesOnDisconnect = false;
         break;
@@ -218,6 +226,10 @@ START_API_FUNC
     {
     case AL_SOURCE_DISTANCE_MODEL:
         value = context->mSourceDistanceModel ? AL_TRUE : AL_FALSE;
+        break;
+
+    case AL_DEBUG_OUTPUT_SOFT:
+        value = context->mDebugEnabled ? AL_TRUE : AL_FALSE;
         break;
 
     case AL_STOP_SOURCES_ON_DISCONNECT_SOFT:
@@ -546,6 +558,14 @@ START_API_FUNC
         value = context->mEventParam;
         break;
 
+    case AL_DEBUG_CALLBACK_FUNCTION_SOFT:
+        value = reinterpret_cast<void*>(context->mDebugCb);
+        break;
+
+    case AL_DEBUG_CALLBACK_USER_PARAM_SOFT:
+        value = context->mDebugParam;
+        break;
+
     default:
         context->setError(AL_INVALID_VALUE, "Invalid pointer property 0x%04x", pname);
     }
@@ -726,10 +746,12 @@ START_API_FUNC
     {
         switch(pname)
         {
-            case AL_EVENT_CALLBACK_FUNCTION_SOFT:
-            case AL_EVENT_CALLBACK_USER_PARAM_SOFT:
-                values[0] = alGetPointerSOFT(pname);
-                return;
+        case AL_EVENT_CALLBACK_FUNCTION_SOFT:
+        case AL_EVENT_CALLBACK_USER_PARAM_SOFT:
+        case AL_DEBUG_CALLBACK_FUNCTION_SOFT:
+        case AL_DEBUG_CALLBACK_USER_PARAM_SOFT:
+            values[0] = alGetPointerSOFT(pname);
+            return;
         }
     }
 
@@ -824,6 +846,14 @@ START_API_FUNC
 {
     ContextRef context{GetContextRef()};
     if(!context) UNLIKELY return;
+
+    if(context->mDebugEnabled.load(std::memory_order_relaxed))
+    {
+        static constexpr char deprecatedMessage[] = "alDopplerVelocity is deprecated in AL 1.1";
+        context->sendDebugMessage(DebugSource::API, DebugType::DeprecatedBehavior, 0,
+            DebugSeverity::Medium, static_cast<int>(std::strlen(deprecatedMessage)),
+            deprecatedMessage);
+    }
 
     if(!(value >= 0.0f && std::isfinite(value)))
         context->setError(AL_INVALID_VALUE, "Doppler velocity %f out of range", value);

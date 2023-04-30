@@ -34,6 +34,30 @@ struct ALsource;
 using uint = unsigned int;
 
 
+enum class DebugSource : ALenum {
+    API = AL_DEBUG_SOURCE_API_SOFT,
+    System = AL_DEBUG_SOURCE_AUDIO_SYSTEM_SOFT,
+    ThirdParty = AL_DEBUG_SOURCE_THIRD_PARTY_SOFT,
+    Application = AL_DEBUG_SOURCE_APPLICATION_SOFT,
+    Other = AL_DEBUG_SOURCE_OTHER_SOFT,
+};
+enum class DebugType : ALenum {
+    Error = AL_DEBUG_TYPE_ERROR_SOFT,
+    DeprecatedBehavior = AL_DEBUG_TYPE_DEPRECATED_BEHAVIOR_SOFT,
+    UndefinedBehavior = AL_DEBUG_TYPE_UNDEFINED_BEHAVIOR_SOFT,
+    Portability = AL_DEBUG_TYPE_PORTABILITY_SOFT,
+    Performance = AL_DEBUG_TYPE_PERFORMANCE_SOFT,
+    Marker = AL_DEBUG_TYPE_MARKER_SOFT,
+    Other = AL_DEBUG_TYPE_OTHER_SOFT,
+};
+enum class DebugSeverity : ALenum {
+    High = AL_DEBUG_SEVERITY_HIGH_SOFT,
+    Medium = AL_DEBUG_SEVERITY_MEDIUM_SOFT,
+    Low = AL_DEBUG_SEVERITY_LOW_SOFT,
+    Notification = AL_DEBUG_SEVERITY_NOTIFICATION_SOFT,
+};
+
+
 struct SourceSubList {
     uint64_t FreeMask{~0_u64};
     ALsource *Sources{nullptr}; /* 64 */
@@ -76,6 +100,8 @@ struct ALCcontext : public al::intrusive_ref<ALCcontext>, ContextBase {
 
     std::atomic<ALenum> mLastError{AL_NO_ERROR};
 
+    std::atomic<bool> mDebugEnabled{false};
+
     DistanceModel mDistanceModel{DistanceModel::Default};
     bool mSourceDistanceModel{false};
 
@@ -87,6 +113,10 @@ struct ALCcontext : public al::intrusive_ref<ALCcontext>, ContextBase {
     std::mutex mEventCbLock;
     ALEVENTPROCSOFT mEventCb{};
     void *mEventParam{nullptr};
+
+    std::mutex mDebugCbLock;
+    ALDEBUGPROCSOFT mDebugCb{};
+    void *mDebugParam{nullptr};
 
     ALlistener mListener{};
 
@@ -148,6 +178,17 @@ struct ALCcontext : public al::intrusive_ref<ALCcontext>, ContextBase {
     [[gnu::format(printf, 3, 4)]]
 #endif
     void setError(ALenum errorCode, const char *msg, ...);
+
+    void sendDebugMessage(DebugSource source, DebugType type, ALuint id, DebugSeverity severity,
+        ALsizei length, const char *message);
+
+    void debugMessage(DebugSource source, DebugType type, ALuint id, DebugSeverity severity,
+        ALsizei length, const char *message)
+    {
+        if(!mDebugEnabled.load(std::memory_order_relaxed)) LIKELY
+            return;
+        sendDebugMessage(source, type, id, severity, length, message);
+    }
 
     /* Process-wide current context */
     static std::atomic<bool> sGlobalContextLock;

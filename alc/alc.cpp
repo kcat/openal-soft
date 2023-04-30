@@ -459,6 +459,8 @@ const struct {
     DECL(alBufferSubDataSOFT),
 
     DECL(alBufferDataStatic),
+
+    DECL(alDebugMessageCallbackSOFT),
 #ifdef ALSOFT_EAX
 }, eaxFunctions[] = {
     DECL(EAXGet),
@@ -914,6 +916,8 @@ constexpr struct {
     DECL(AL_FORMAT_UHJ3CHN_ALAW_SOFT),
     DECL(AL_FORMAT_UHJ4CHN_MULAW_SOFT),
     DECL(AL_FORMAT_UHJ4CHN_ALAW_SOFT),
+
+    DECL(AL_DEBUG_OUTPUT_SOFT),
 
     DECL(AL_STOP_SOURCES_ON_DISCONNECT_SOFT),
 

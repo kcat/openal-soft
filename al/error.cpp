@@ -61,8 +61,13 @@ void ALCcontext::setError(ALenum errorCode, const char *msg, ...)
     va_end(args2);
     va_end(args);
 
-    if(msglen >= 0) msg = message.data();
-    else msg = "<internal error constructing message>";
+    if(msglen >= 0)
+        msg = message.data();
+    else
+    {
+        msg = "<internal error constructing message>";
+        msglen = static_cast<int>(strlen(msg));
+    }
 
     WARN("Error generated on context %p, code 0x%04x, \"%s\"\n",
         decltype(std::declval<void*>()){this}, errorCode, msg);
@@ -79,6 +84,8 @@ void ALCcontext::setError(ALenum errorCode, const char *msg, ...)
 
     ALenum curerr{AL_NO_ERROR};
     mLastError.compare_exchange_strong(curerr, errorCode);
+
+    debugMessage(DebugSource::API, DebugType::Error, 0, DebugSeverity::High, msglen, msg);
 }
 
 AL_API ALenum AL_APIENTRY alGetError(void)

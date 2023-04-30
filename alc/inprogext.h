@@ -54,6 +54,37 @@ AL_API void AL_APIENTRY alAuxiliaryEffectSlotStopvSOFT(ALsizei n, const ALuint *
 #define AL_STOP_SOURCES_ON_DISCONNECT_SOFT       0x19AB
 #endif
 
+#ifndef AL_SOFT_debug
+#define AL_SOFT_debug
+#define AL_DEBUG_OUTPUT_SOFT                     0x19B2
+#define AL_DEBUG_CALLBACK_FUNCTION_SOFT          0x19B3
+#define AL_DEBUG_CALLBACK_USER_PARAM_SOFT        0x19B4
+#define AL_DEBUG_SOURCE_API_SOFT                 0x19B5
+#define AL_DEBUG_SOURCE_AUDIO_SYSTEM_SOFT        0x19B6
+#define AL_DEBUG_SOURCE_THIRD_PARTY_SOFT         0x19B7
+#define AL_DEBUG_SOURCE_APPLICATION_SOFT         0x19B8
+#define AL_DEBUG_SOURCE_OTHER_SOFT               0x19B9
+#define AL_DEBUG_TYPE_ERROR_SOFT                 0x19BA
+#define AL_DEBUG_TYPE_DEPRECATED_BEHAVIOR_SOFT   0x19BB
+#define AL_DEBUG_TYPE_UNDEFINED_BEHAVIOR_SOFT    0x19BC
+#define AL_DEBUG_TYPE_PORTABILITY_SOFT           0x19BD
+#define AL_DEBUG_TYPE_PERFORMANCE_SOFT           0x19BE
+#define AL_DEBUG_TYPE_MARKER_SOFT                0x19BF
+#define AL_DEBUG_TYPE_OTHER_SOFT                 0x19C0
+#define AL_DEBUG_SEVERITY_HIGH_SOFT              0x19C1
+#define AL_DEBUG_SEVERITY_MEDIUM_SOFT            0x19C2
+#define AL_DEBUG_SEVERITY_LOW_SOFT               0x19C3
+#define AL_DEBUG_SEVERITY_NOTIFICATION_SOFT      0x19C4
+
+typedef void (AL_APIENTRY*ALDEBUGPROCSOFT)(ALenum source, ALenum type, ALuint id, ALenum severity, ALsizei length, const ALchar *message, void *userParam);
+typedef void (AL_APIENTRY*LPALDEBUGMESSAGECALLBACKSOFT)(ALDEBUGPROCSOFT callback, void *userParam);
+typedef void (AL_APIENTRY*LPALDEBUGMESSAGEINSERTSOFT)(ALenum source, ALenum type, ALuint id, ALenum severity, ALsizei length, const ALchar *message);
+#ifdef AL_ALEXT_PROTOTYPES
+void AL_APIENTRY alDebugMessageCallbackSOFT(ALDEBUGPROCSOFT callback, void *userParam) noexcept;
+void AL_APIENTRY alDebugMessageInsertSOFT(ALenum source, ALenum type, ALuint id, ALenum severity, ALsizei length, const ALchar *message) noexcept;
+#endif
+#endif
+
 
 /* Non-standard export. Not part of any extension. */
 AL_API const ALchar* AL_APIENTRY alsoft_get_version(void);

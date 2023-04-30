@@ -742,6 +742,8 @@ set(OPENAL_OBJS
     al/auxeffectslot.h
     al/buffer.cpp
     al/buffer.h
+    al/debug.cpp
+    al/debug.h
     al/effect.cpp
     al/effect.h
     al/effects/autowah.cpp

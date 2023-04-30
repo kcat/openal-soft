@@ -12,6 +12,7 @@
 
 #include "alc/context.h"
 #include "alc/inprogext.h"
+#include "aloptional.h"
 #include "alspan.h"
 #include "opthelpers.h"
 #include "threads.h"
@@ -26,6 +27,47 @@ constexpr auto make_array(std::integer_sequence<T, Vals...>)
 template<typename T, size_t N, typename Indices = std::make_integer_sequence<T,N>>
 constexpr auto make_array()
 { return make_array(Indices{}); }
+
+
+constexpr al::optional<DebugSource> GetDebugSource(ALenum source) noexcept
+{
+    switch(source)
+    {
+    case AL_DEBUG_SOURCE_API_SOFT: return DebugSource::API;
+    case AL_DEBUG_SOURCE_AUDIO_SYSTEM_SOFT: return DebugSource::System;
+    case AL_DEBUG_SOURCE_THIRD_PARTY_SOFT: return DebugSource::ThirdParty;
+    case AL_DEBUG_SOURCE_APPLICATION_SOFT: return DebugSource::Application;
+    case AL_DEBUG_SOURCE_OTHER_SOFT: return DebugSource::Other;
+    }
+    return al::nullopt;
+}
+
+constexpr al::optional<DebugType> GetDebugType(ALenum type) noexcept
+{
+    switch(type)
+    {
+    case AL_DEBUG_TYPE_ERROR_SOFT: return DebugType::Error;
+    case AL_DEBUG_TYPE_DEPRECATED_BEHAVIOR_SOFT: return DebugType::DeprecatedBehavior;
+    case AL_DEBUG_TYPE_UNDEFINED_BEHAVIOR_SOFT: return DebugType::UndefinedBehavior;
+    case AL_DEBUG_TYPE_PORTABILITY_SOFT: return DebugType::Portability;
+    case AL_DEBUG_TYPE_PERFORMANCE_SOFT: return DebugType::Performance;
+    case AL_DEBUG_TYPE_MARKER_SOFT: return DebugType::Marker;
+    case AL_DEBUG_TYPE_OTHER_SOFT: return DebugType::Other;
+    }
+    return al::nullopt;
+}
+
+constexpr al::optional<DebugSeverity> GetDebugSeverity(ALenum severity) noexcept
+{
+    switch(severity)
+    {
+    case AL_DEBUG_SEVERITY_HIGH_SOFT: return DebugSeverity::High;
+    case AL_DEBUG_SEVERITY_MEDIUM_SOFT: return DebugSeverity::Medium;
+    case AL_DEBUG_SEVERITY_LOW_SOFT: return DebugSeverity::Low;
+    case AL_DEBUG_SEVERITY_NOTIFICATION_SOFT: return DebugSeverity::Notification;
+    }
+    return al::nullopt;
+}
 
 } // namespace
 
@@ -49,45 +91,21 @@ FORCE_ALIGN void AL_APIENTRY alDebugMessageInsertSOFT(ALenum source, ALenum type
     if(!message)
         return context->setError(AL_INVALID_VALUE, "Null message pointer");
 
-    DebugSource dsource{};
-    switch(source)
-    {
-    case AL_DEBUG_SOURCE_THIRD_PARTY_SOFT: dsource = DebugSource::ThirdParty; break;
-    case AL_DEBUG_SOURCE_APPLICATION_SOFT: dsource = DebugSource::Application; break;
-    case AL_DEBUG_SOURCE_API_SOFT:
-    case AL_DEBUG_SOURCE_AUDIO_SYSTEM_SOFT:
-    case AL_DEBUG_SOURCE_OTHER_SOFT:
-        return context->setError(AL_INVALID_ENUM, "Debug source enum 0x%04x not allowed", source);
-    default:
-        return context->setError(AL_INVALID_ENUM, "Invalid debug source enum 0x%04x", source);
-    }
+    auto dsource = GetDebugSource(source);
+    if(!dsource)
+        return context->setError(AL_INVALID_ENUM, "Invalid debug source 0x%04x", source);
+    if(*dsource != DebugSource::ThirdParty && *dsource != DebugSource::Application)
+        return context->setError(AL_INVALID_ENUM, "Debug source 0x%04x not allowed", source);
 
-    DebugType dtype{};
-    switch(type)
-    {
-    case AL_DEBUG_TYPE_ERROR_SOFT: dtype = DebugType::Error; break;
-    case AL_DEBUG_TYPE_DEPRECATED_BEHAVIOR_SOFT: dtype = DebugType::DeprecatedBehavior; break;
-    case AL_DEBUG_TYPE_UNDEFINED_BEHAVIOR_SOFT: dtype = DebugType::UndefinedBehavior; break;
-    case AL_DEBUG_TYPE_PORTABILITY_SOFT: dtype = DebugType::Portability; break;
-    case AL_DEBUG_TYPE_PERFORMANCE_SOFT: dtype = DebugType::Performance; break;
-    case AL_DEBUG_TYPE_MARKER_SOFT: dtype = DebugType::Marker; break;
-    case AL_DEBUG_TYPE_OTHER_SOFT: dtype = DebugType::Other; break;
-    default:
+    auto dtype = GetDebugType(type);
+    if(!dtype)
         return context->setError(AL_INVALID_ENUM, "Invalid debug type 0x%04x", type);
-    }
 
-    DebugSeverity dseverity{};
-    switch(severity)
-    {
-    case AL_DEBUG_SEVERITY_HIGH_SOFT: dseverity = DebugSeverity::High; break;
-    case AL_DEBUG_SEVERITY_MEDIUM_SOFT: dseverity = DebugSeverity::Medium; break;
-    case AL_DEBUG_SEVERITY_LOW_SOFT: dseverity = DebugSeverity::Low; break;
-    case AL_DEBUG_SEVERITY_NOTIFICATION_SOFT: dseverity = DebugSeverity::Notification; break;
-    default:
+    auto dseverity = GetDebugSeverity(severity);
+    if(!dseverity)
         return context->setError(AL_INVALID_ENUM, "Invalid debug severity 0x%04x", severity);
-    }
 
-    context->debugMessage(dsource, dtype, id, dseverity, length, message);
+    context->debugMessage(*dsource, *dtype, id, *dseverity, length, message);
 }
 
 
@@ -122,43 +140,30 @@ FORCE_ALIGN void AL_APIENTRY alDebugMessageControlSOFT(ALenum source, ALenum typ
     static constexpr auto Values = make_array<uint,ElemCount>();
 
     al::span<const uint> srcIndices{al::as_span(Values).subspan<DebugSourceBase,DebugSourceCount>()};
-    switch(source)
+    if(source != AL_DONT_CARE_SOFT)
     {
-    case AL_DEBUG_SOURCE_API_SOFT: srcIndices = srcIndices.subspan(0, 1); break;
-    case AL_DEBUG_SOURCE_AUDIO_SYSTEM_SOFT: srcIndices = srcIndices.subspan(1, 1); break;
-    case AL_DEBUG_SOURCE_THIRD_PARTY_SOFT: srcIndices = srcIndices.subspan(2, 1); break;
-    case AL_DEBUG_SOURCE_APPLICATION_SOFT: srcIndices = srcIndices.subspan(3, 1); break;
-    case AL_DEBUG_SOURCE_OTHER_SOFT: srcIndices = srcIndices.subspan(4, 1); break;
-    case AL_DONT_CARE_SOFT: break;
-    default:
-        return context->setError(AL_INVALID_VALUE, "Invalid debug source 0x%04x", source);
+        auto dsource = GetDebugSource(source);
+        if(!dsource)
+            return context->setError(AL_INVALID_ENUM, "Invalid debug source 0x%04x", source);
+        srcIndices = srcIndices.subspan(al::to_underlying(*dsource), 1);
     }
 
     al::span<const uint> typeIndices{al::as_span(Values).subspan<DebugTypeBase,DebugTypeCount>()};
-    switch(type)
+    if(type != AL_DONT_CARE_SOFT)
     {
-    case AL_DEBUG_TYPE_ERROR_SOFT: typeIndices = typeIndices.subspan(0, 1); break;
-    case AL_DEBUG_TYPE_DEPRECATED_BEHAVIOR_SOFT: typeIndices = typeIndices.subspan(1, 1); break;
-    case AL_DEBUG_TYPE_UNDEFINED_BEHAVIOR_SOFT: typeIndices = typeIndices.subspan(2, 1); break;
-    case AL_DEBUG_TYPE_PORTABILITY_SOFT: typeIndices = typeIndices.subspan(3, 1); break;
-    case AL_DEBUG_TYPE_PERFORMANCE_SOFT: typeIndices = typeIndices.subspan(4, 1); break;
-    case AL_DEBUG_TYPE_MARKER_SOFT: typeIndices = typeIndices.subspan(5, 1); break;
-    case AL_DEBUG_TYPE_OTHER_SOFT: typeIndices = typeIndices.subspan(6, 1); break;
-    case AL_DONT_CARE_SOFT: break;
-    default:
-        return context->setError(AL_INVALID_VALUE, "Invalid debug type 0x%04x", type);
+        auto dtype = GetDebugType(type);
+        if(!dtype)
+            return context->setError(AL_INVALID_ENUM, "Invalid debug type 0x%04x", type);
+        typeIndices = typeIndices.subspan(al::to_underlying(*dtype), 1);
     }
 
     al::span<const uint> svrIndices{al::as_span(Values).subspan<DebugSeverityBase,DebugSeverityCount>()};
-    switch(severity)
+    if(severity != AL_DONT_CARE_SOFT)
     {
-    case AL_DEBUG_SEVERITY_HIGH_SOFT: svrIndices = svrIndices.subspan(0, 1); break;
-    case AL_DEBUG_SEVERITY_MEDIUM_SOFT: svrIndices = svrIndices.subspan(1, 1); break;
-    case AL_DEBUG_SEVERITY_LOW_SOFT: svrIndices = svrIndices.subspan(2, 1); break;
-    case AL_DEBUG_SEVERITY_NOTIFICATION_SOFT: svrIndices = svrIndices.subspan(3, 1); break;
-    case AL_DONT_CARE_SOFT: break;
-    default:
-        return context->setError(AL_INVALID_VALUE, "Invalid debug severity 0x%04x", severity);
+        auto dseverity = GetDebugSeverity(severity);
+        if(!dseverity)
+            return context->setError(AL_INVALID_ENUM, "Invalid debug severity 0x%04x", severity);
+        svrIndices = svrIndices.subspan(al::to_underlying(*dseverity), 1);
     }
 
     std::lock_guard<std::mutex> _{context->mDebugCbLock};

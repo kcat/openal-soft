@@ -304,45 +304,56 @@ void ALCcontext::sendDebugMessage(DebugSource source, DebugType type, ALuint id,
     DebugSeverity severity, ALsizei length, const char *message)
 {
     static_assert(DebugSeverityBase+DebugSeverityCount <= 32, "Too many debug bits");
+    static auto get_source_enum = [](DebugSource source) noexcept
+    {
+        switch(source)
+        {
+        case DebugSource::API: return AL_DEBUG_SOURCE_API_SOFT;
+        case DebugSource::System: return AL_DEBUG_SOURCE_AUDIO_SYSTEM_SOFT;
+        case DebugSource::ThirdParty: return AL_DEBUG_SOURCE_THIRD_PARTY_SOFT;
+        case DebugSource::Application: return AL_DEBUG_SOURCE_APPLICATION_SOFT;
+        case DebugSource::Other: return AL_DEBUG_SOURCE_OTHER_SOFT;
+        }
+    };
+    static auto get_type_enum = [](DebugType type) noexcept
+    {
+        switch(type)
+        {
+        case DebugType::Error: return AL_DEBUG_TYPE_ERROR_SOFT;
+        case DebugType::DeprecatedBehavior: return AL_DEBUG_TYPE_DEPRECATED_BEHAVIOR_SOFT;
+        case DebugType::UndefinedBehavior: return AL_DEBUG_TYPE_UNDEFINED_BEHAVIOR_SOFT;
+        case DebugType::Portability: return AL_DEBUG_TYPE_PORTABILITY_SOFT;
+        case DebugType::Performance: return AL_DEBUG_TYPE_PERFORMANCE_SOFT;
+        case DebugType::Marker: return AL_DEBUG_TYPE_MARKER_SOFT;
+        case DebugType::Other: return AL_DEBUG_TYPE_OTHER_SOFT;
+        }
+    };
+    static auto get_severity_enum = [](DebugSeverity severity) noexcept
+    {
+        switch(severity)
+        {
+        case DebugSeverity::High: return AL_DEBUG_SEVERITY_HIGH_SOFT;
+        case DebugSeverity::Medium: return AL_DEBUG_SEVERITY_MEDIUM_SOFT;
+        case DebugSeverity::Low: return AL_DEBUG_SEVERITY_LOW_SOFT;
+        case DebugSeverity::Notification: return AL_DEBUG_SEVERITY_NOTIFICATION_SOFT;
+        }
+    };
 
     std::lock_guard<std::mutex> _{mDebugCbLock};
     if(!mDebugEnabled.load()) UNLIKELY
         return;
 
-    uint filter{0};
-    switch(source)
-    {
-    case DebugSource::API: filter |= 1<<(DebugSourceBase+0); break;
-    case DebugSource::System: filter |= 1<<(DebugSourceBase+1); break;
-    case DebugSource::ThirdParty: filter |= 1<<(DebugSourceBase+2); break;
-    case DebugSource::Application: filter |= 1<<(DebugSourceBase+3); break;
-    case DebugSource::Other: filter |= 1<<(DebugSourceBase+4); break;
-    }
-    switch(type)
-    {
-    case DebugType::Error: filter |= 1<<(DebugTypeBase+0); break;
-    case DebugType::DeprecatedBehavior: filter |= 1<<(DebugTypeBase+1); break;
-    case DebugType::UndefinedBehavior: filter |= 1<<(DebugTypeBase+2); break;
-    case DebugType::Portability: filter |= 1<<(DebugTypeBase+3); break;
-    case DebugType::Performance: filter |= 1<<(DebugTypeBase+4); break;
-    case DebugType::Marker: filter |= 1<<(DebugTypeBase+5); break;
-    case DebugType::Other: filter |= 1<<(DebugTypeBase+6); break;
-    }
-    switch(severity)
-    {
-    case DebugSeverity::High: filter |= 1<<(DebugSeverityBase+0); break;
-    case DebugSeverity::Medium: filter |= 1<<(DebugSeverityBase+1); break;
-    case DebugSeverity::Low: filter |= 1<<(DebugSeverityBase+2); break;
-    case DebugSeverity::Notification: filter |= 1<<(DebugSeverityBase+3); break;
-    }
+    const uint filter{(1u<<(DebugSourceBase+al::to_underlying(source)))
+        | (1u<<(DebugTypeBase+al::to_underlying(type)))
+        | (1u<<(DebugSeverityBase+al::to_underlying(severity)))};
 
     auto iter = std::lower_bound(mDebugFilters.cbegin(), mDebugFilters.cend(), filter);
     if(iter != mDebugFilters.cend() && *iter == filter)
         return;
 
     if(mDebugCb)
-        mDebugCb(al::to_underlying(source), al::to_underlying(type), id,
-            al::to_underlying(severity), length, message, mDebugParam);
+        mDebugCb(get_source_enum(source), get_type_enum(type), id, get_severity_enum(severity),
+            length, message, mDebugParam);
     else
     {
         /* TODO: Store in a log. */

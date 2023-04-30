@@ -24,9 +24,9 @@ template<typename T, T ...Vals>
 constexpr auto make_array(std::integer_sequence<T, Vals...>)
 { return std::array<T,sizeof...(Vals)>{Vals...}; }
 
-template<typename T, size_t N, typename Indices = std::make_integer_sequence<T,N>>
+template<typename T, size_t N>
 constexpr auto make_array()
-{ return make_array(Indices{}); }
+{ return make_array(std::make_integer_sequence<T,N>{}); }
 
 
 constexpr al::optional<DebugSource> GetDebugSource(ALenum source) noexcept

@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cstring>
 #include <functional>
 #include <limits>
 #include <numeric>
@@ -306,43 +307,6 @@ void ALCcontext::sendDebugMessage(DebugSource source, DebugType type, ALuint id,
     DebugSeverity severity, ALsizei length, const char *message)
 {
     static_assert(DebugSeverityBase+DebugSeverityCount <= 32, "Too many debug bits");
-    static auto get_source_enum = [](DebugSource source)
-    {
-        switch(source)
-        {
-        case DebugSource::API: return AL_DEBUG_SOURCE_API_SOFT;
-        case DebugSource::System: return AL_DEBUG_SOURCE_AUDIO_SYSTEM_SOFT;
-        case DebugSource::ThirdParty: return AL_DEBUG_SOURCE_THIRD_PARTY_SOFT;
-        case DebugSource::Application: return AL_DEBUG_SOURCE_APPLICATION_SOFT;
-        case DebugSource::Other: return AL_DEBUG_SOURCE_OTHER_SOFT;
-        }
-        throw std::runtime_error{"Unexpected debug source value "+std::to_string(al::to_underlying(source))};
-    };
-    static auto get_type_enum = [](DebugType type)
-    {
-        switch(type)
-        {
-        case DebugType::Error: return AL_DEBUG_TYPE_ERROR_SOFT;
-        case DebugType::DeprecatedBehavior: return AL_DEBUG_TYPE_DEPRECATED_BEHAVIOR_SOFT;
-        case DebugType::UndefinedBehavior: return AL_DEBUG_TYPE_UNDEFINED_BEHAVIOR_SOFT;
-        case DebugType::Portability: return AL_DEBUG_TYPE_PORTABILITY_SOFT;
-        case DebugType::Performance: return AL_DEBUG_TYPE_PERFORMANCE_SOFT;
-        case DebugType::Marker: return AL_DEBUG_TYPE_MARKER_SOFT;
-        case DebugType::Other: return AL_DEBUG_TYPE_OTHER_SOFT;
-        }
-        throw std::runtime_error{"Unexpected debug type value "+std::to_string(al::to_underlying(type))};
-    };
-    static auto get_severity_enum = [](DebugSeverity severity)
-    {
-        switch(severity)
-        {
-        case DebugSeverity::High: return AL_DEBUG_SEVERITY_HIGH_SOFT;
-        case DebugSeverity::Medium: return AL_DEBUG_SEVERITY_MEDIUM_SOFT;
-        case DebugSeverity::Low: return AL_DEBUG_SEVERITY_LOW_SOFT;
-        case DebugSeverity::Notification: return AL_DEBUG_SEVERITY_NOTIFICATION_SOFT;
-        }
-        throw std::runtime_error{"Unexpected debug severity value "+std::to_string(al::to_underlying(severity))};
-    };
 
     if(length < 0)
     {
@@ -364,6 +328,44 @@ void ALCcontext::sendDebugMessage(DebugSource source, DebugType type, ALuint id,
     if(!mDebugEnabled.load()) UNLIKELY
         return;
 
+    auto get_source_enum = [source]()
+    {
+        switch(source)
+        {
+        case DebugSource::API: return AL_DEBUG_SOURCE_API_SOFT;
+        case DebugSource::System: return AL_DEBUG_SOURCE_AUDIO_SYSTEM_SOFT;
+        case DebugSource::ThirdParty: return AL_DEBUG_SOURCE_THIRD_PARTY_SOFT;
+        case DebugSource::Application: return AL_DEBUG_SOURCE_APPLICATION_SOFT;
+        case DebugSource::Other: return AL_DEBUG_SOURCE_OTHER_SOFT;
+        }
+        throw std::runtime_error{"Unexpected debug source value "+std::to_string(al::to_underlying(source))};
+    };
+    auto get_type_enum = [type]()
+    {
+        switch(type)
+        {
+        case DebugType::Error: return AL_DEBUG_TYPE_ERROR_SOFT;
+        case DebugType::DeprecatedBehavior: return AL_DEBUG_TYPE_DEPRECATED_BEHAVIOR_SOFT;
+        case DebugType::UndefinedBehavior: return AL_DEBUG_TYPE_UNDEFINED_BEHAVIOR_SOFT;
+        case DebugType::Portability: return AL_DEBUG_TYPE_PORTABILITY_SOFT;
+        case DebugType::Performance: return AL_DEBUG_TYPE_PERFORMANCE_SOFT;
+        case DebugType::Marker: return AL_DEBUG_TYPE_MARKER_SOFT;
+        case DebugType::Other: return AL_DEBUG_TYPE_OTHER_SOFT;
+        }
+        throw std::runtime_error{"Unexpected debug type value "+std::to_string(al::to_underlying(type))};
+    };
+    auto get_severity_enum = [severity]()
+    {
+        switch(severity)
+        {
+        case DebugSeverity::High: return AL_DEBUG_SEVERITY_HIGH_SOFT;
+        case DebugSeverity::Medium: return AL_DEBUG_SEVERITY_MEDIUM_SOFT;
+        case DebugSeverity::Low: return AL_DEBUG_SEVERITY_LOW_SOFT;
+        case DebugSeverity::Notification: return AL_DEBUG_SEVERITY_NOTIFICATION_SOFT;
+        }
+        throw std::runtime_error{"Unexpected debug severity value "+std::to_string(al::to_underlying(severity))};
+    };
+
     const uint filter{(1u<<(DebugSourceBase+al::to_underlying(source)))
         | (1u<<(DebugTypeBase+al::to_underlying(type)))
         | (1u<<(DebugSeverityBase+al::to_underlying(severity)))};
@@ -377,8 +379,8 @@ void ALCcontext::sendDebugMessage(DebugSource source, DebugType type, ALuint id,
         auto callback = mDebugCb;
         auto param = mDebugParam;
         debuglock.unlock();
-        callback(get_source_enum(source), get_type_enum(type), id, get_severity_enum(severity),
-            length, message, param);
+        callback(get_source_enum(), get_type_enum(), id, get_severity_enum(), length, message,
+            param);
     }
     else
     {
@@ -391,8 +393,7 @@ void ALCcontext::sendDebugMessage(DebugSource source, DebugType type, ALuint id,
                 "  ID: %u\n"
                 "  Severity: 0x%04x\n"
                 "  Message: \"%s\"\n",
-                get_source_enum(source), get_type_enum(type), id, get_severity_enum(severity),
-                message);
+                get_source_enum(), get_type_enum(), id, get_severity_enum(), message);
     }
 }
 

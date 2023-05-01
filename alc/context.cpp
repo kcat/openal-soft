@@ -308,19 +308,22 @@ void ALCcontext::sendDebugMessage(DebugSource source, DebugType type, ALuint id,
 {
     static_assert(DebugSeverityBase+DebugSeverityCount <= 32, "Too many debug bits");
 
+    /* MaxDebugMessageLength is the size including the null terminator,
+     * <length> does not include the null terminator.
+     */
     if(length < 0)
     {
         size_t newlen{std::strlen(message)};
-        if(newlen > MaxDebugMessageLength) UNLIKELY
+        if(newlen >= MaxDebugMessageLength) UNLIKELY
         {
-            ERR("Debug message too long (%zu > %d)\n", newlen, MaxDebugMessageLength);
+            ERR("Debug message too long (%zu >= %d)\n", newlen, MaxDebugMessageLength);
             return;
         }
         length = static_cast<ALsizei>(newlen);
     }
-    else if(length > MaxDebugMessageLength) UNLIKELY
+    else if(length >= MaxDebugMessageLength) UNLIKELY
     {
-        ERR("Debug message too long (%d > %d)\n", length, MaxDebugMessageLength);
+        ERR("Debug message too long (%d >= %d)\n", length, MaxDebugMessageLength);
         return;
     }
 

@@ -134,15 +134,18 @@ FORCE_ALIGN void AL_APIENTRY alDebugMessageInsertSOFT(ALenum source, ALenum type
     if(!message)
         return context->setError(AL_INVALID_VALUE, "Null message pointer");
 
+    /* MaxDebugMessageLength is the size including the null terminator,
+     * <length> does not include the null terminator.
+     */
     if(length < 0)
     {
         size_t newlen{std::strlen(message)};
-        if(newlen > MaxDebugMessageLength) UNLIKELY
-            return context->setError(AL_INVALID_VALUE, "Debug message too long (%zu > %d)", newlen,
-                MaxDebugMessageLength);
+        if(newlen >= MaxDebugMessageLength) UNLIKELY
+            return context->setError(AL_INVALID_VALUE, "Debug message too long (%zu >= %d)",
+                newlen, MaxDebugMessageLength);
         length = static_cast<ALsizei>(newlen);
     }
-    else if(length > MaxDebugMessageLength) UNLIKELY
+    else if(length >= MaxDebugMessageLength) UNLIKELY
         return context->setError(AL_INVALID_VALUE, "Debug message too long (%d > %d)", length,
             MaxDebugMessageLength);
 

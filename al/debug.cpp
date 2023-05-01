@@ -4,8 +4,11 @@
 
 #include <algorithm>
 #include <array>
+#include <cstring>
 #include <mutex>
 #include <stddef.h>
+#include <stdexcept>
+#include <string>
 #include <utility>
 
 #include "AL/al.h"

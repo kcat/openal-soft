@@ -15,6 +15,7 @@
 #include "AL/efx.h"
 
 #include "al/auxeffectslot.h"
+#include "al/debug.h"
 #include "al/source.h"
 #include "al/effect.h"
 #include "al/event.h"
@@ -342,6 +343,22 @@ void ALCcontext::sendDebugMessage(DebugSource source, DebugType type, ALuint id,
         throw std::runtime_error{"Unexpected debug severity value "+std::to_string(al::to_underlying(severity))};
     };
 
+    if(length < 0)
+    {
+        size_t newlen{std::strlen(message)};
+        if(newlen > MaxDebugMessageLength) UNLIKELY
+        {
+            ERR("Debug message too long (%zu > %d)\n", newlen, MaxDebugMessageLength);
+            return;
+        }
+        length = static_cast<ALsizei>(newlen);
+    }
+    else if(length > MaxDebugMessageLength) UNLIKELY
+    {
+        ERR("Debug message too long (%d > %d)\n", length, MaxDebugMessageLength);
+        return;
+    }
+
     std::unique_lock<std::mutex> debuglock{mDebugCbLock};
     if(!mDebugEnabled.load()) UNLIKELY
         return;
@@ -364,7 +381,17 @@ void ALCcontext::sendDebugMessage(DebugSource source, DebugType type, ALuint id,
     }
     else
     {
-        /* TODO: Store in a log. */
+        if(mDebugLog.size() < MaxDebugLoggedMessages)
+            mDebugLog.emplace_back(source, type, id, severity, message);
+        else UNLIKELY
+            ERR("Debug message log overflow. Lost message:\n"
+                "  Source: 0x%04x\n"
+                "  Type: 0x%04x\n"
+                "  ID: %u\n"
+                "  Severity: 0x%04x\n"
+                "  Message: \"%s\"\n",
+                get_source_enum(source), get_type_enum(type), id, get_severity_enum(severity),
+                message);
     }
 }
 

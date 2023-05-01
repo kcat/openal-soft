@@ -2,6 +2,7 @@
 #define ALC_CONTEXT_H
 
 #include <atomic>
+#include <deque>
 #include <memory>
 #include <mutex>
 #include <stdint.h>
@@ -66,6 +67,23 @@ enum class DebugSeverity : uint8_t {
 };
 constexpr uint DebugSeverityCount{4};
 
+struct LogEntry {
+    const DebugSource mSource;
+    const DebugType mType;
+    const DebugSeverity mSeverity;
+    const uint mId;
+
+    std::string mMessage;
+
+    template<typename T>
+    LogEntry(DebugSource source, DebugType type, uint id, DebugSeverity severity, T&& message)
+        : mSource{source}, mType{type}, mSeverity{severity}, mId{id}
+        , mMessage{std::forward<T>(message)}
+    { }
+    LogEntry(const LogEntry&) = default;
+    LogEntry(LogEntry&&) = default;
+};
+
 
 struct SourceSubList {
     uint64_t FreeMask{~0_u64};
@@ -127,6 +145,7 @@ struct ALCcontext : public al::intrusive_ref<ALCcontext>, ContextBase {
     ALDEBUGPROCSOFT mDebugCb{};
     void *mDebugParam{nullptr};
     std::vector<uint> mDebugFilters;
+    std::deque<LogEntry> mDebugLog;
 
     ALlistener mListener{};
 

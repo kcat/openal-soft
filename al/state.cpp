@@ -33,6 +33,7 @@
 #include "AL/alc.h"
 #include "AL/alext.h"
 
+#include "al/debug.h"
 #include "alc/alu.h"
 #include "alc/context.h"
 #include "alc/inprogext.h"
@@ -259,6 +260,10 @@ START_API_FUNC
     case AL_DISTANCE_MODEL:
     case AL_NUM_RESAMPLERS_SOFT:
     case AL_DEFAULT_RESAMPLER_SOFT:
+    case AL_DEBUG_LOGGED_MESSAGES_SOFT:
+    case AL_DEBUG_NEXT_LOGGED_MESSAGE_LENGTH_SOFT:
+    case AL_MAX_DEBUG_MESSAGE_LENGTH_SOFT:
+    case AL_MAX_DEBUG_LOGGED_MESSAGES_SOFT:
         return alGetInteger(pname) != 0;
     }
 
@@ -299,6 +304,10 @@ START_API_FUNC
     case AL_DISTANCE_MODEL:
     case AL_NUM_RESAMPLERS_SOFT:
     case AL_DEFAULT_RESAMPLER_SOFT:
+    case AL_DEBUG_LOGGED_MESSAGES_SOFT:
+    case AL_DEBUG_NEXT_LOGGED_MESSAGE_LENGTH_SOFT:
+    case AL_MAX_DEBUG_MESSAGE_LENGTH_SOFT:
+    case AL_MAX_DEBUG_LOGGED_MESSAGES_SOFT:
         return alGetInteger(pname);
     }
 
@@ -325,8 +334,11 @@ START_API_FUNC
     case AL_DISTANCE_MODEL:
     case AL_NUM_RESAMPLERS_SOFT:
     case AL_DEFAULT_RESAMPLER_SOFT:
+    case AL_DEBUG_LOGGED_MESSAGES_SOFT:
+    case AL_DEBUG_NEXT_LOGGED_MESSAGE_LENGTH_SOFT:
+    case AL_MAX_DEBUG_MESSAGE_LENGTH_SOFT:
+    case AL_MAX_DEBUG_LOGGED_MESSAGES_SOFT:
         return static_cast<ALfloat>(alGetInteger(pname));
-        break;
 
     case AL_DEFERRED_UPDATES_SOFT:
         return alGetBoolean(pname) ? 1.0f : 0.0f;
@@ -401,6 +413,29 @@ START_API_FUNC
         value = al::to_underlying(ResamplerDefault);
         break;
 
+    case AL_DEBUG_LOGGED_MESSAGES_SOFT:
+    {
+        std::lock_guard<std::mutex> __{context->mDebugCbLock};
+        value = static_cast<ALint>(context->mDebugLog.size());
+        break;
+    }
+
+    case AL_DEBUG_NEXT_LOGGED_MESSAGE_LENGTH_SOFT:
+    {
+        std::lock_guard<std::mutex> __{context->mDebugCbLock};
+        value = context->mDebugLog.empty() ? 0
+            : static_cast<ALint>(context->mDebugLog.front().mMessage.size()+1);
+        break;
+    }
+
+    case AL_MAX_DEBUG_MESSAGE_LENGTH_SOFT:
+        value = MaxDebugMessageLength;
+        break;
+
+    case AL_MAX_DEBUG_LOGGED_MESSAGES_SOFT:
+        value = MaxDebugLoggedMessages;
+        break;
+
 #ifdef ALSOFT_EAX
 
 #define EAX_ERROR "[alGetInteger] EAX not enabled."
@@ -452,6 +487,10 @@ START_API_FUNC
     case AL_DISTANCE_MODEL:
     case AL_NUM_RESAMPLERS_SOFT:
     case AL_DEFAULT_RESAMPLER_SOFT:
+    case AL_DEBUG_LOGGED_MESSAGES_SOFT:
+    case AL_DEBUG_NEXT_LOGGED_MESSAGE_LENGTH_SOFT:
+    case AL_MAX_DEBUG_MESSAGE_LENGTH_SOFT:
+    case AL_MAX_DEBUG_LOGGED_MESSAGES_SOFT:
         return alGetInteger(pname);
     }
 
@@ -519,6 +558,10 @@ START_API_FUNC
         case AL_GAIN_LIMIT_SOFT:
         case AL_NUM_RESAMPLERS_SOFT:
         case AL_DEFAULT_RESAMPLER_SOFT:
+        case AL_DEBUG_LOGGED_MESSAGES_SOFT:
+        case AL_DEBUG_NEXT_LOGGED_MESSAGE_LENGTH_SOFT:
+        case AL_MAX_DEBUG_MESSAGE_LENGTH_SOFT:
+        case AL_MAX_DEBUG_LOGGED_MESSAGES_SOFT:
             values[0] = alGetBoolean(pname);
             return;
         }
@@ -552,6 +595,10 @@ START_API_FUNC
         case AL_GAIN_LIMIT_SOFT:
         case AL_NUM_RESAMPLERS_SOFT:
         case AL_DEFAULT_RESAMPLER_SOFT:
+        case AL_DEBUG_LOGGED_MESSAGES_SOFT:
+        case AL_DEBUG_NEXT_LOGGED_MESSAGE_LENGTH_SOFT:
+        case AL_MAX_DEBUG_MESSAGE_LENGTH_SOFT:
+        case AL_MAX_DEBUG_LOGGED_MESSAGES_SOFT:
             values[0] = alGetDouble(pname);
             return;
         }
@@ -585,6 +632,10 @@ START_API_FUNC
         case AL_GAIN_LIMIT_SOFT:
         case AL_NUM_RESAMPLERS_SOFT:
         case AL_DEFAULT_RESAMPLER_SOFT:
+        case AL_DEBUG_LOGGED_MESSAGES_SOFT:
+        case AL_DEBUG_NEXT_LOGGED_MESSAGE_LENGTH_SOFT:
+        case AL_MAX_DEBUG_MESSAGE_LENGTH_SOFT:
+        case AL_MAX_DEBUG_LOGGED_MESSAGES_SOFT:
             values[0] = alGetFloat(pname);
             return;
         }
@@ -618,6 +669,10 @@ START_API_FUNC
         case AL_GAIN_LIMIT_SOFT:
         case AL_NUM_RESAMPLERS_SOFT:
         case AL_DEFAULT_RESAMPLER_SOFT:
+        case AL_DEBUG_LOGGED_MESSAGES_SOFT:
+        case AL_DEBUG_NEXT_LOGGED_MESSAGE_LENGTH_SOFT:
+        case AL_MAX_DEBUG_MESSAGE_LENGTH_SOFT:
+        case AL_MAX_DEBUG_LOGGED_MESSAGES_SOFT:
             values[0] = alGetInteger(pname);
             return;
         }
@@ -651,6 +706,10 @@ START_API_FUNC
         case AL_GAIN_LIMIT_SOFT:
         case AL_NUM_RESAMPLERS_SOFT:
         case AL_DEFAULT_RESAMPLER_SOFT:
+        case AL_DEBUG_LOGGED_MESSAGES_SOFT:
+        case AL_DEBUG_NEXT_LOGGED_MESSAGE_LENGTH_SOFT:
+        case AL_MAX_DEBUG_MESSAGE_LENGTH_SOFT:
+        case AL_MAX_DEBUG_LOGGED_MESSAGES_SOFT:
             values[0] = alGetInteger64SOFT(pname);
             return;
         }

@@ -224,29 +224,18 @@ FORCE_ALIGN void AL_APIENTRY alDebugMessageControlSOFT(ALenum source, ALenum typ
     std::lock_guard<std::mutex> _{context->mDebugCbLock};
     if(count > 0)
     {
-        const uint filter{(1u<<srcIndices[0]) | (1u<<typeIndices[0])};
+        const uint filterbase{(1u<<srcIndices[0]) | (1u<<typeIndices[0])};
 
         for(const uint id : al::as_span(ids, static_cast<uint>(count)))
         {
-            if(!enable)
-            {
-                auto &idfilters = context->mDebugIdFilters[id];
-                auto iter = std::lower_bound(idfilters.cbegin(), idfilters.cend(), filter);
-                if(iter == idfilters.cend() || *iter != filter)
-                    idfilters.insert(iter, filter);
-                continue;
-            }
+            const uint64_t filter{filterbase | (uint64_t{id} << 32)};
 
-            auto iditer = context->mDebugIdFilters.find(id);
-            if(iditer == context->mDebugIdFilters.end())
-                continue;
-            auto iter = std::lower_bound(iditer->second.cbegin(), iditer->second.cend(), filter);
-            if(iter != iditer->second.cend() && *iter == filter)
-            {
-                iditer->second.erase(iter);
-                if(iditer->second.empty())
-                    context->mDebugIdFilters.erase(iditer);
-            }
+            auto iter = std::lower_bound(context->mDebugIdFilters.cbegin(),
+                context->mDebugIdFilters.cend(), filter);
+            if(!enable && (iter == context->mDebugIdFilters.cend() || *iter != filter))
+                context->mDebugIdFilters.insert(iter, filter);
+            else if(enable && iter != context->mDebugIdFilters.cend() && *iter == filter)
+                context->mDebugIdFilters.erase(iter);
         }
     }
     else

@@ -146,7 +146,7 @@ struct ALCcontext : public al::intrusive_ref<ALCcontext>, ContextBase {
     ALDEBUGPROCSOFT mDebugCb{};
     void *mDebugParam{nullptr};
     std::vector<uint> mDebugFilters;
-    std::unordered_map<uint,std::vector<uint>> mDebugIdFilters;
+    std::vector<uint64_t> mDebugIdFilters;
     std::deque<LogEntry> mDebugLog;
 
     ALlistener mListener{};

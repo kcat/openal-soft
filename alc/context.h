@@ -6,6 +6,7 @@
 #include <memory>
 #include <mutex>
 #include <stdint.h>
+#include <unordered_map>
 #include <utility>
 
 #include "AL/al.h"
@@ -145,6 +146,7 @@ struct ALCcontext : public al::intrusive_ref<ALCcontext>, ContextBase {
     ALDEBUGPROCSOFT mDebugCb{};
     void *mDebugParam{nullptr};
     std::vector<uint> mDebugFilters;
+    std::unordered_map<uint,std::vector<uint>> mDebugIdFilters;
     std::deque<LogEntry> mDebugLog;
 
     ALlistener mListener{};

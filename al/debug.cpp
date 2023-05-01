@@ -183,9 +183,6 @@ FORCE_ALIGN void AL_APIENTRY alDebugMessageControlSOFT(ALenum source, ALenum typ
         if(severity != AL_DONT_CARE_SOFT)
             return context->setError(AL_INVALID_OPERATION,
                 "Debug severity must be AL_DONT_CARE_SOFT with IDs");
-
-        return context->setError(AL_INVALID_VALUE, "Debug ID filtering not supported");
-        return;
     }
 
     if(enable != AL_TRUE && enable != AL_FALSE)
@@ -222,27 +219,57 @@ FORCE_ALIGN void AL_APIENTRY alDebugMessageControlSOFT(ALenum source, ALenum typ
     }
 
     std::lock_guard<std::mutex> _{context->mDebugCbLock};
-    auto apply_filter = [enable,&context](const uint filter)
+    if(count > 0)
     {
-        auto iter = std::lower_bound(context->mDebugFilters.cbegin(),
-            context->mDebugFilters.cend(), filter);
-        if(!enable && (iter == context->mDebugFilters.cend() || *iter != filter))
-            context->mDebugFilters.insert(iter, filter);
-        else if(enable && iter != context->mDebugFilters.cend() && *iter == filter)
-            context->mDebugFilters.erase(iter);
-    };
-    auto apply_severity = [apply_filter,svrIndices](const uint filter)
+        const uint filter{(1u<<srcIndices[0]) | (1u<<typeIndices[0])};
+
+        for(const uint id : al::as_span(ids, static_cast<uint>(count)))
+        {
+            if(!enable)
+            {
+                auto &idfilters = context->mDebugIdFilters[id];
+                auto iter = std::lower_bound(idfilters.cbegin(), idfilters.cend(), filter);
+                if(iter == idfilters.cend() || *iter != filter)
+                    idfilters.insert(iter, filter);
+                continue;
+            }
+
+            auto iditer = context->mDebugIdFilters.find(id);
+            if(iditer == context->mDebugIdFilters.end())
+                continue;
+            auto iter = std::lower_bound(iditer->second.cbegin(), iditer->second.cend(), filter);
+            if(iter != iditer->second.cend() && *iter == filter)
+            {
+                iditer->second.erase(iter);
+                if(iditer->second.empty())
+                    context->mDebugIdFilters.erase(iditer);
+            }
+        }
+    }
+    else
     {
-        std::for_each(svrIndices.cbegin(), svrIndices.cend(),
-            [apply_filter,filter](const uint idx){ apply_filter(filter | (1<<idx)); });
-    };
-    auto apply_type = [apply_severity,typeIndices](const uint filter)
-    {
-        std::for_each(typeIndices.cbegin(), typeIndices.cend(),
-            [apply_severity,filter](const uint idx){ apply_severity(filter | (1<<idx)); });
-    };
-    std::for_each(srcIndices.cbegin(), srcIndices.cend(),
-        [apply_type](const uint idx){ apply_type(1<<idx); });
+        auto apply_filter = [enable,&context](const uint filter)
+        {
+            auto iter = std::lower_bound(context->mDebugFilters.cbegin(),
+                context->mDebugFilters.cend(), filter);
+            if(!enable && (iter == context->mDebugFilters.cend() || *iter != filter))
+                context->mDebugFilters.insert(iter, filter);
+            else if(enable && iter != context->mDebugFilters.cend() && *iter == filter)
+                context->mDebugFilters.erase(iter);
+        };
+        auto apply_severity = [apply_filter,svrIndices](const uint filter)
+        {
+            std::for_each(svrIndices.cbegin(), svrIndices.cend(),
+                [apply_filter,filter](const uint idx){ apply_filter(filter | (1<<idx)); });
+        };
+        auto apply_type = [apply_severity,typeIndices](const uint filter)
+        {
+            std::for_each(typeIndices.cbegin(), typeIndices.cend(),
+                [apply_severity,filter](const uint idx){ apply_severity(filter | (1<<idx)); });
+        };
+        std::for_each(srcIndices.cbegin(), srcIndices.cend(),
+            [apply_type](const uint idx){ apply_type(1<<idx); });
+    }
 }
 
 

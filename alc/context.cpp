@@ -366,6 +366,17 @@ void ALCcontext::sendDebugMessage(DebugSource source, DebugType type, ALuint id,
         throw std::runtime_error{"Unexpected debug severity value "+std::to_string(al::to_underlying(severity))};
     };
 
+    auto iditer = mDebugIdFilters.find(id);
+    if(iditer != mDebugIdFilters.end())
+    {
+        const uint filter{(1u<<(DebugSourceBase+al::to_underlying(source)))
+            | (1u<<(DebugTypeBase+al::to_underlying(type)))};
+
+        auto iter = std::lower_bound(iditer->second.cbegin(), iditer->second.cend(), filter);
+        if(iter != iditer->second.cend() && *iter == filter)
+            return;
+    }
+
     const uint filter{(1u<<(DebugSourceBase+al::to_underlying(source)))
         | (1u<<(DebugTypeBase+al::to_underlying(type)))
         | (1u<<(DebugSeverityBase+al::to_underlying(severity)))};

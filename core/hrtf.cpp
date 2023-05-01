@@ -393,7 +393,7 @@ std::unique_ptr<HrtfStore> CreateHrtfStore(uint rate, uint8_t irSize,
     {
         Hrtf.reset(al::construct_at(static_cast<HrtfStore*>(ptr)));
         InitRef(Hrtf->mRef, 1u);
-        Hrtf->mSampleRate = rate;
+        Hrtf->mSampleRate = rate & 0xff'ff'ff;
         Hrtf->mIrSize = irSize;
 
         /* Set up pointers to storage following the main HRTF struct. */
@@ -1430,7 +1430,7 @@ HrtfStorePtr GetLoadedHrtf(const std::string &name, const uint devrate)
          */
         const float newIrSize{std::round(static_cast<float>(hrtf->mIrSize) * rate_scale)};
         hrtf->mIrSize = static_cast<uint8_t>(minf(HrirLength, newIrSize));
-        hrtf->mSampleRate = devrate;
+        hrtf->mSampleRate = devrate & 0xff'ff'ff;
     }
 
     TRACE("Loaded HRTF %s for sample rate %uhz, %u-sample filter\n", name.c_str(),

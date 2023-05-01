@@ -1201,13 +1201,7 @@ void alc_initconfig(void)
     }
     Voice::InitMixer(ConfigValueStr(nullptr, nullptr, "resampler"));
 
-    auto uhjfiltopt = ConfigValueStr(nullptr, "uhj", "decode-filter");
-    if(!uhjfiltopt)
-    {
-        if((uhjfiltopt = ConfigValueStr(nullptr, "uhj", "filter")))
-            WARN("uhj/filter is deprecated, please use uhj/decode-filter\n");
-    }
-    if(uhjfiltopt)
+    if(auto uhjfiltopt = ConfigValueStr(nullptr, "uhj", "decode-filter"))
     {
         if(al::strcasecmp(uhjfiltopt->c_str(), "fir256") == 0)
             UhjDecodeQuality = UhjQualityType::FIR256;
@@ -1218,7 +1212,7 @@ void alc_initconfig(void)
         else
             WARN("Unsupported uhj/decode-filter: %s\n", uhjfiltopt->c_str());
     }
-    if((uhjfiltopt = ConfigValueStr(nullptr, "uhj", "encode-filter")))
+    if(auto uhjfiltopt = ConfigValueStr(nullptr, "uhj", "encode-filter"))
     {
         if(al::strcasecmp(uhjfiltopt->c_str(), "fir256") == 0)
             UhjEncodeQuality = UhjQualityType::FIR256;

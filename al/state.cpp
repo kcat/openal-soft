@@ -136,6 +136,142 @@ ALenum ALenumFromDistanceModel(DistanceModel model)
     throw std::runtime_error{"Unexpected distance model "+std::to_string(static_cast<int>(model))};
 }
 
+enum PropertyValue : ALenum {
+    DopplerFactor = AL_DOPPLER_FACTOR,
+    DopplerVelocity = AL_DOPPLER_VELOCITY,
+    DistanceModel = AL_DISTANCE_MODEL,
+    SpeedOfSound = AL_SPEED_OF_SOUND,
+    DeferredUpdates = AL_DEFERRED_UPDATES_SOFT,
+    GainLimit = AL_GAIN_LIMIT_SOFT,
+    NumResamplers = AL_NUM_RESAMPLERS_SOFT,
+    DefaultResampler = AL_DEFAULT_RESAMPLER_SOFT,
+    DebugLoggedMessages = AL_DEBUG_LOGGED_MESSAGES_SOFT,
+    DebugNextLoggedMessageLength = AL_DEBUG_NEXT_LOGGED_MESSAGE_LENGTH_SOFT,
+    MaxDebugMessageLength = AL_MAX_DEBUG_MESSAGE_LENGTH_SOFT,
+    MaxDebugLoggedMessages = AL_MAX_DEBUG_LOGGED_MESSAGES_SOFT,
+    MaxDebugGroupDepth = AL_MAX_DEBUG_GROUP_STACK_DEPTH_SOFT,
+#ifdef ALSOFT_EAX
+    EaxRamSize = AL_EAX_RAM_SIZE,
+    EaxRamFree = AL_EAX_RAM_FREE,
+#endif
+};
+
+template<typename T>
+struct PropertyCastType {
+    template<typename U>
+    constexpr auto operator()(U&& value) const noexcept
+    { return static_cast<T>(std::forward<U>(value)); }
+};
+/* Special-case ALboolean to be an actual bool instead of a char type. */
+template<>
+struct PropertyCastType<ALboolean> {
+    template<typename U>
+    constexpr ALboolean operator()(U&& value) const noexcept
+    { return static_cast<bool>(std::forward<U>(value)) ? AL_TRUE : AL_FALSE; }
+};
+
+
+template<typename T>
+void GetValue(ALCcontext *context, ALenum pname, T *values)
+{
+    auto cast_value = PropertyCastType<T>{};
+
+    switch(static_cast<PropertyValue>(pname))
+    {
+    case AL_DOPPLER_FACTOR:
+        *values = cast_value(context->mDopplerFactor);
+        return;
+
+    case AL_DOPPLER_VELOCITY:
+        context->debugMessage(DebugSource::API, DebugType::DeprecatedBehavior, 0,
+            DebugSeverity::Medium, -1,
+            "AL_DOPPLER_VELOCITY is deprecated in AL 1.1, use AL_SPEED_OF_SOUND; "
+            "AL_DOPPLER_VELOCITY -> AL_SPEED_OF_SOUND / 343.3f");
+        *values = cast_value(context->mDopplerVelocity);
+        return;
+
+    case AL_SPEED_OF_SOUND:
+        *values = cast_value(context->mSpeedOfSound);
+        return;
+
+    case AL_GAIN_LIMIT_SOFT:
+        *values = cast_value(GainMixMax / context->mGainBoost);
+        return;
+
+    case AL_DEFERRED_UPDATES_SOFT:
+        *values = cast_value(context->mDeferUpdates ? AL_TRUE : AL_FALSE);
+        return;
+
+    case AL_DISTANCE_MODEL:
+        *values = cast_value(ALenumFromDistanceModel(context->mDistanceModel));
+        return;
+
+    case AL_NUM_RESAMPLERS_SOFT:
+        *values = cast_value(al::to_underlying(Resampler::Max) + 1);
+        return;
+
+    case AL_DEFAULT_RESAMPLER_SOFT:
+        *values = cast_value(al::to_underlying(ResamplerDefault));
+        return;
+
+    case AL_DEBUG_LOGGED_MESSAGES_SOFT:
+    {
+        std::lock_guard<std::mutex> _{context->mDebugCbLock};
+        *values = cast_value(context->mDebugLog.size());
+        return;
+    }
+
+    case AL_DEBUG_NEXT_LOGGED_MESSAGE_LENGTH_SOFT:
+    {
+        std::lock_guard<std::mutex> _{context->mDebugCbLock};
+        *values = cast_value(context->mDebugLog.empty() ? size_t{0}
+            : (context->mDebugLog.front().mMessage.size()+1));
+        return;
+    }
+
+    case AL_MAX_DEBUG_MESSAGE_LENGTH_SOFT:
+        *values = cast_value(MaxDebugMessageLength);
+        return;
+
+    case AL_MAX_DEBUG_LOGGED_MESSAGES_SOFT:
+        *values = cast_value(MaxDebugLoggedMessages);
+        return;
+
+    case AL_MAX_DEBUG_GROUP_STACK_DEPTH_SOFT:
+        *values = cast_value(MaxDebugGroupDepth);
+        return;
+
+#ifdef ALSOFT_EAX
+
+#define EAX_ERROR "[alGetInteger] EAX not enabled."
+
+    case AL_EAX_RAM_SIZE:
+        if(eax_g_is_enabled)
+        {
+            *values = cast_value(eax_x_ram_max_size);
+            return;
+        }
+        context->setError(AL_INVALID_ENUM, EAX_ERROR);
+        return;
+
+    case AL_EAX_RAM_FREE:
+        if(eax_g_is_enabled)
+        {
+            auto device = context->mALDevice.get();
+            std::lock_guard<std::mutex> device_lock{device->BufferLock};
+            *values = cast_value(device->eax_x_ram_free_size);
+            return;
+        }
+        context->setError(AL_INVALID_ENUM, EAX_ERROR);
+        return;
+
+#undef EAX_ERROR
+
+#endif // ALSOFT_EAX
+    }
+    context->setError(AL_INVALID_ENUM, "Invalid context property 0x%04x", pname);
+}
+
 } // namespace
 
 /* WARNING: Non-standard export! Not part of any extension, or exposed in the
@@ -251,41 +387,8 @@ END_API_FUNC
 AL_API ALboolean AL_APIENTRY alGetBoolean(ALenum pname)
 START_API_FUNC
 {
-    switch(pname)
-    {
-    case AL_DOPPLER_FACTOR:
-    case AL_DOPPLER_VELOCITY:
-    case AL_SPEED_OF_SOUND:
-    case AL_GAIN_LIMIT_SOFT:
-        return alGetFloat(pname) != 0.0f;
-
-    case AL_DISTANCE_MODEL:
-    case AL_NUM_RESAMPLERS_SOFT:
-    case AL_DEFAULT_RESAMPLER_SOFT:
-    case AL_DEBUG_LOGGED_MESSAGES_SOFT:
-    case AL_DEBUG_NEXT_LOGGED_MESSAGE_LENGTH_SOFT:
-    case AL_MAX_DEBUG_MESSAGE_LENGTH_SOFT:
-    case AL_MAX_DEBUG_LOGGED_MESSAGES_SOFT:
-    case AL_MAX_DEBUG_GROUP_STACK_DEPTH_SOFT:
-        return alGetInteger(pname) != 0;
-    }
-
-    ContextRef context{GetContextRef()};
-    if(!context) UNLIKELY return AL_FALSE;
-
-    std::lock_guard<std::mutex> _{context->mPropLock};
     ALboolean value{AL_FALSE};
-    switch(pname)
-    {
-    case AL_DEFERRED_UPDATES_SOFT:
-        if(context->mDeferUpdates)
-            value = AL_TRUE;
-        break;
-
-    default:
-        context->setError(AL_INVALID_VALUE, "Invalid boolean property 0x%04x", pname);
-    }
-
+    alGetBooleanv(pname, &value);
     return value;
 }
 END_API_FUNC
@@ -293,39 +396,8 @@ END_API_FUNC
 AL_API ALdouble AL_APIENTRY alGetDouble(ALenum pname)
 START_API_FUNC
 {
-    switch(pname)
-    {
-    case AL_DOPPLER_FACTOR:
-    case AL_DOPPLER_VELOCITY:
-    case AL_SPEED_OF_SOUND:
-    case AL_GAIN_LIMIT_SOFT:
-        return alGetFloat(pname);
-
-    case AL_DEFERRED_UPDATES_SOFT:
-        return alGetBoolean(pname) ? 1.0 : 0.0;
-
-    case AL_DISTANCE_MODEL:
-    case AL_NUM_RESAMPLERS_SOFT:
-    case AL_DEFAULT_RESAMPLER_SOFT:
-    case AL_DEBUG_LOGGED_MESSAGES_SOFT:
-    case AL_DEBUG_NEXT_LOGGED_MESSAGE_LENGTH_SOFT:
-    case AL_MAX_DEBUG_MESSAGE_LENGTH_SOFT:
-    case AL_MAX_DEBUG_LOGGED_MESSAGES_SOFT:
-    case AL_MAX_DEBUG_GROUP_STACK_DEPTH_SOFT:
-        return alGetInteger(pname);
-    }
-
-    ContextRef context{GetContextRef()};
-    if(!context) UNLIKELY return 0.0;
-
-    std::lock_guard<std::mutex> _{context->mPropLock};
     ALdouble value{0.0};
-    switch(pname)
-    {
-    default:
-        context->setError(AL_INVALID_VALUE, "Invalid double property 0x%04x", pname);
-    }
-
+    alGetDoublev(pname, &value);
     return value;
 }
 END_API_FUNC
@@ -333,53 +405,8 @@ END_API_FUNC
 AL_API ALfloat AL_APIENTRY alGetFloat(ALenum pname)
 START_API_FUNC
 {
-    switch(pname)
-    {
-    case AL_DISTANCE_MODEL:
-    case AL_NUM_RESAMPLERS_SOFT:
-    case AL_DEFAULT_RESAMPLER_SOFT:
-    case AL_DEBUG_LOGGED_MESSAGES_SOFT:
-    case AL_DEBUG_NEXT_LOGGED_MESSAGE_LENGTH_SOFT:
-    case AL_MAX_DEBUG_MESSAGE_LENGTH_SOFT:
-    case AL_MAX_DEBUG_LOGGED_MESSAGES_SOFT:
-    case AL_MAX_DEBUG_GROUP_STACK_DEPTH_SOFT:
-        return static_cast<ALfloat>(alGetInteger(pname));
-
-    case AL_DEFERRED_UPDATES_SOFT:
-        return alGetBoolean(pname) ? 1.0f : 0.0f;
-    }
-
-    ContextRef context{GetContextRef()};
-    if(!context) UNLIKELY return 0.0f;
-
-    std::lock_guard<std::mutex> _{context->mPropLock};
     ALfloat value{0.0f};
-    switch(pname)
-    {
-    case AL_DOPPLER_FACTOR:
-        value = context->mDopplerFactor;
-        break;
-
-    case AL_DOPPLER_VELOCITY:
-        context->debugMessage(DebugSource::API, DebugType::DeprecatedBehavior, 0,
-            DebugSeverity::Medium, -1,
-            "AL_DOPPLER_VELOCITY is deprecated in AL 1.1, use AL_SPEED_OF_SOUND; "
-            "AL_DOPPLER_VELOCITY -> AL_SPEED_OF_SOUND / 343.3f");
-        value = context->mDopplerVelocity;
-        break;
-
-    case AL_SPEED_OF_SOUND:
-        value = context->mSpeedOfSound;
-        break;
-
-    case AL_GAIN_LIMIT_SOFT:
-        value = GainMixMax / context->mGainBoost;
-        break;
-
-    default:
-        context->setError(AL_INVALID_VALUE, "Invalid float property 0x%04x", pname);
-    }
-
+    alGetFloatv(pname, &value);
     return value;
 }
 END_API_FUNC
@@ -387,94 +414,8 @@ END_API_FUNC
 AL_API ALint AL_APIENTRY alGetInteger(ALenum pname)
 START_API_FUNC
 {
-    switch(pname)
-    {
-    case AL_DOPPLER_FACTOR:
-    case AL_DOPPLER_VELOCITY:
-    case AL_SPEED_OF_SOUND:
-    case AL_GAIN_LIMIT_SOFT:
-        return static_cast<ALint>(alGetFloat(pname));
-
-    case AL_DEFERRED_UPDATES_SOFT:
-        return alGetBoolean(pname);
-    }
-
-    ContextRef context{GetContextRef()};
-    if(!context) UNLIKELY return 0;
-
-    std::lock_guard<std::mutex> _{context->mPropLock};
     ALint value{0};
-    switch(pname)
-    {
-    case AL_DISTANCE_MODEL:
-        value = ALenumFromDistanceModel(context->mDistanceModel);
-        break;
-
-    case AL_NUM_RESAMPLERS_SOFT:
-        value = al::to_underlying(Resampler::Max) + 1;
-        break;
-
-    case AL_DEFAULT_RESAMPLER_SOFT:
-        value = al::to_underlying(ResamplerDefault);
-        break;
-
-    case AL_DEBUG_LOGGED_MESSAGES_SOFT:
-    {
-        std::lock_guard<std::mutex> __{context->mDebugCbLock};
-        value = static_cast<ALint>(context->mDebugLog.size());
-        break;
-    }
-
-    case AL_DEBUG_NEXT_LOGGED_MESSAGE_LENGTH_SOFT:
-    {
-        std::lock_guard<std::mutex> __{context->mDebugCbLock};
-        value = context->mDebugLog.empty() ? 0
-            : static_cast<ALint>(context->mDebugLog.front().mMessage.size()+1);
-        break;
-    }
-
-    case AL_MAX_DEBUG_MESSAGE_LENGTH_SOFT:
-        value = MaxDebugMessageLength;
-        break;
-
-    case AL_MAX_DEBUG_LOGGED_MESSAGES_SOFT:
-        value = MaxDebugLoggedMessages;
-        break;
-
-    case AL_MAX_DEBUG_GROUP_STACK_DEPTH_SOFT:
-        value = MaxDebugGroupDepth;
-        break;
-
-#ifdef ALSOFT_EAX
-
-#define EAX_ERROR "[alGetInteger] EAX not enabled."
-
-    case AL_EAX_RAM_SIZE:
-        if(eax_g_is_enabled)
-            value = eax_x_ram_max_size;
-        else
-            context->setError(AL_INVALID_VALUE, EAX_ERROR);
-        break;
-
-    case AL_EAX_RAM_FREE:
-        if(eax_g_is_enabled)
-        {
-            auto device = context->mALDevice.get();
-            std::lock_guard<std::mutex> device_lock{device->BufferLock};
-            value = static_cast<ALint>(device->eax_x_ram_free_size);
-        }
-        else
-            context->setError(AL_INVALID_VALUE, EAX_ERROR);
-        break;
-
-#undef EAX_ERROR
-
-#endif // ALSOFT_EAX
-
-    default:
-        context->setError(AL_INVALID_VALUE, "Invalid integer property 0x%04x", pname);
-    }
-
+    alGetIntegerv(pname, &value);
     return value;
 }
 END_API_FUNC
@@ -482,39 +423,8 @@ END_API_FUNC
 AL_API ALint64SOFT AL_APIENTRY alGetInteger64SOFT(ALenum pname)
 START_API_FUNC
 {
-    switch(pname)
-    {
-    case AL_DOPPLER_FACTOR:
-    case AL_DOPPLER_VELOCITY:
-    case AL_SPEED_OF_SOUND:
-    case AL_GAIN_LIMIT_SOFT:
-        return static_cast<ALint64SOFT>(alGetFloat(pname));
-
-    case AL_DEFERRED_UPDATES_SOFT:
-        return alGetBoolean(pname);
-
-    case AL_DISTANCE_MODEL:
-    case AL_NUM_RESAMPLERS_SOFT:
-    case AL_DEFAULT_RESAMPLER_SOFT:
-    case AL_DEBUG_LOGGED_MESSAGES_SOFT:
-    case AL_DEBUG_NEXT_LOGGED_MESSAGE_LENGTH_SOFT:
-    case AL_MAX_DEBUG_MESSAGE_LENGTH_SOFT:
-    case AL_MAX_DEBUG_LOGGED_MESSAGES_SOFT:
-    case AL_MAX_DEBUG_GROUP_STACK_DEPTH_SOFT:
-        return alGetInteger(pname);
-    }
-
-    ContextRef context{GetContextRef()};
-    if(!context) UNLIKELY return 0_i64;
-
-    std::lock_guard<std::mutex> _{context->mPropLock};
     ALint64SOFT value{0};
-    switch(pname)
-    {
-    default:
-        context->setError(AL_INVALID_VALUE, "Invalid integer64 property 0x%04x", pname);
-    }
-
+    alGetInteger64vSOFT(pname, &value);
     return value;
 }
 END_API_FUNC
@@ -522,33 +432,8 @@ END_API_FUNC
 AL_API ALvoid* AL_APIENTRY alGetPointerSOFT(ALenum pname)
 START_API_FUNC
 {
-    ContextRef context{GetContextRef()};
-    if(!context) UNLIKELY return nullptr;
-
-    std::lock_guard<std::mutex> _{context->mPropLock};
-    void *value{nullptr};
-    switch(pname)
-    {
-    case AL_EVENT_CALLBACK_FUNCTION_SOFT:
-        value = reinterpret_cast<void*>(context->mEventCb);
-        break;
-
-    case AL_EVENT_CALLBACK_USER_PARAM_SOFT:
-        value = context->mEventParam;
-        break;
-
-    case AL_DEBUG_CALLBACK_FUNCTION_SOFT:
-        value = reinterpret_cast<void*>(context->mDebugCb);
-        break;
-
-    case AL_DEBUG_CALLBACK_USER_PARAM_SOFT:
-        value = context->mDebugParam;
-        break;
-
-    default:
-        context->setError(AL_INVALID_VALUE, "Invalid pointer property 0x%04x", pname);
-    }
-
+    ALvoid *value{nullptr};
+    alGetPointervSOFT(pname, &value);
     return value;
 }
 END_API_FUNC
@@ -556,218 +441,92 @@ END_API_FUNC
 AL_API void AL_APIENTRY alGetBooleanv(ALenum pname, ALboolean *values)
 START_API_FUNC
 {
-    if(values)
-    {
-        switch(pname)
-        {
-        case AL_DOPPLER_FACTOR:
-        case AL_DOPPLER_VELOCITY:
-        case AL_DISTANCE_MODEL:
-        case AL_SPEED_OF_SOUND:
-        case AL_DEFERRED_UPDATES_SOFT:
-        case AL_GAIN_LIMIT_SOFT:
-        case AL_NUM_RESAMPLERS_SOFT:
-        case AL_DEFAULT_RESAMPLER_SOFT:
-        case AL_DEBUG_LOGGED_MESSAGES_SOFT:
-        case AL_DEBUG_NEXT_LOGGED_MESSAGE_LENGTH_SOFT:
-        case AL_MAX_DEBUG_MESSAGE_LENGTH_SOFT:
-        case AL_MAX_DEBUG_LOGGED_MESSAGES_SOFT:
-        case AL_MAX_DEBUG_GROUP_STACK_DEPTH_SOFT:
-            values[0] = alGetBoolean(pname);
-            return;
-        }
-    }
-
     ContextRef context{GetContextRef()};
     if(!context) UNLIKELY return;
 
-    if(!values)
-        context->setError(AL_INVALID_VALUE, "NULL pointer");
-    else switch(pname)
-    {
-    default:
-        context->setError(AL_INVALID_VALUE, "Invalid boolean-vector property 0x%04x", pname);
-    }
+    if(!values) UNLIKELY
+        return context->setError(AL_INVALID_VALUE, "NULL pointer");
+    GetValue(context.get(), pname, values);
 }
 END_API_FUNC
 
 AL_API void AL_APIENTRY alGetDoublev(ALenum pname, ALdouble *values)
 START_API_FUNC
 {
-    if(values)
-    {
-        switch(pname)
-        {
-        case AL_DOPPLER_FACTOR:
-        case AL_DOPPLER_VELOCITY:
-        case AL_DISTANCE_MODEL:
-        case AL_SPEED_OF_SOUND:
-        case AL_DEFERRED_UPDATES_SOFT:
-        case AL_GAIN_LIMIT_SOFT:
-        case AL_NUM_RESAMPLERS_SOFT:
-        case AL_DEFAULT_RESAMPLER_SOFT:
-        case AL_DEBUG_LOGGED_MESSAGES_SOFT:
-        case AL_DEBUG_NEXT_LOGGED_MESSAGE_LENGTH_SOFT:
-        case AL_MAX_DEBUG_MESSAGE_LENGTH_SOFT:
-        case AL_MAX_DEBUG_LOGGED_MESSAGES_SOFT:
-        case AL_MAX_DEBUG_GROUP_STACK_DEPTH_SOFT:
-            values[0] = alGetDouble(pname);
-            return;
-        }
-    }
-
     ContextRef context{GetContextRef()};
     if(!context) UNLIKELY return;
 
-    if(!values)
-        context->setError(AL_INVALID_VALUE, "NULL pointer");
-    else switch(pname)
-    {
-    default:
-        context->setError(AL_INVALID_VALUE, "Invalid double-vector property 0x%04x", pname);
-    }
+    if(!values) UNLIKELY
+        return context->setError(AL_INVALID_VALUE, "NULL pointer");
+    GetValue(context.get(), pname, values);
 }
 END_API_FUNC
 
 AL_API void AL_APIENTRY alGetFloatv(ALenum pname, ALfloat *values)
 START_API_FUNC
 {
-    if(values)
-    {
-        switch(pname)
-        {
-        case AL_DOPPLER_FACTOR:
-        case AL_DOPPLER_VELOCITY:
-        case AL_DISTANCE_MODEL:
-        case AL_SPEED_OF_SOUND:
-        case AL_DEFERRED_UPDATES_SOFT:
-        case AL_GAIN_LIMIT_SOFT:
-        case AL_NUM_RESAMPLERS_SOFT:
-        case AL_DEFAULT_RESAMPLER_SOFT:
-        case AL_DEBUG_LOGGED_MESSAGES_SOFT:
-        case AL_DEBUG_NEXT_LOGGED_MESSAGE_LENGTH_SOFT:
-        case AL_MAX_DEBUG_MESSAGE_LENGTH_SOFT:
-        case AL_MAX_DEBUG_LOGGED_MESSAGES_SOFT:
-        case AL_MAX_DEBUG_GROUP_STACK_DEPTH_SOFT:
-            values[0] = alGetFloat(pname);
-            return;
-        }
-    }
-
     ContextRef context{GetContextRef()};
     if(!context) UNLIKELY return;
 
-    if(!values)
-        context->setError(AL_INVALID_VALUE, "NULL pointer");
-    else switch(pname)
-    {
-    default:
-        context->setError(AL_INVALID_VALUE, "Invalid float-vector property 0x%04x", pname);
-    }
+    if(!values) UNLIKELY
+        return context->setError(AL_INVALID_VALUE, "NULL pointer");
+    GetValue(context.get(), pname, values);
 }
 END_API_FUNC
 
 AL_API void AL_APIENTRY alGetIntegerv(ALenum pname, ALint *values)
 START_API_FUNC
 {
-    if(values)
-    {
-        switch(pname)
-        {
-        case AL_DOPPLER_FACTOR:
-        case AL_DOPPLER_VELOCITY:
-        case AL_DISTANCE_MODEL:
-        case AL_SPEED_OF_SOUND:
-        case AL_DEFERRED_UPDATES_SOFT:
-        case AL_GAIN_LIMIT_SOFT:
-        case AL_NUM_RESAMPLERS_SOFT:
-        case AL_DEFAULT_RESAMPLER_SOFT:
-        case AL_DEBUG_LOGGED_MESSAGES_SOFT:
-        case AL_DEBUG_NEXT_LOGGED_MESSAGE_LENGTH_SOFT:
-        case AL_MAX_DEBUG_MESSAGE_LENGTH_SOFT:
-        case AL_MAX_DEBUG_LOGGED_MESSAGES_SOFT:
-        case AL_MAX_DEBUG_GROUP_STACK_DEPTH_SOFT:
-            values[0] = alGetInteger(pname);
-            return;
-        }
-    }
-
     ContextRef context{GetContextRef()};
     if(!context) UNLIKELY return;
 
-    if(!values)
-        context->setError(AL_INVALID_VALUE, "NULL pointer");
-    else switch(pname)
-    {
-    default:
-        context->setError(AL_INVALID_VALUE, "Invalid integer-vector property 0x%04x", pname);
-    }
+    if(!values) UNLIKELY
+        return context->setError(AL_INVALID_VALUE, "NULL pointer");
+    GetValue(context.get(), pname, values);
 }
 END_API_FUNC
 
 AL_API void AL_APIENTRY alGetInteger64vSOFT(ALenum pname, ALint64SOFT *values)
 START_API_FUNC
 {
-    if(values)
-    {
-        switch(pname)
-        {
-        case AL_DOPPLER_FACTOR:
-        case AL_DOPPLER_VELOCITY:
-        case AL_DISTANCE_MODEL:
-        case AL_SPEED_OF_SOUND:
-        case AL_DEFERRED_UPDATES_SOFT:
-        case AL_GAIN_LIMIT_SOFT:
-        case AL_NUM_RESAMPLERS_SOFT:
-        case AL_DEFAULT_RESAMPLER_SOFT:
-        case AL_DEBUG_LOGGED_MESSAGES_SOFT:
-        case AL_DEBUG_NEXT_LOGGED_MESSAGE_LENGTH_SOFT:
-        case AL_MAX_DEBUG_MESSAGE_LENGTH_SOFT:
-        case AL_MAX_DEBUG_LOGGED_MESSAGES_SOFT:
-        case AL_MAX_DEBUG_GROUP_STACK_DEPTH_SOFT:
-            values[0] = alGetInteger64SOFT(pname);
-            return;
-        }
-    }
-
     ContextRef context{GetContextRef()};
     if(!context) UNLIKELY return;
 
-    if(!values)
-        context->setError(AL_INVALID_VALUE, "NULL pointer");
-    else switch(pname)
-    {
-    default:
-        context->setError(AL_INVALID_VALUE, "Invalid integer64-vector property 0x%04x", pname);
-    }
+    if(!values) UNLIKELY
+        return context->setError(AL_INVALID_VALUE, "NULL pointer");
+    GetValue(context.get(), pname, values);
 }
 END_API_FUNC
 
 AL_API void AL_APIENTRY alGetPointervSOFT(ALenum pname, ALvoid **values)
 START_API_FUNC
 {
-    if(values)
-    {
-        switch(pname)
-        {
-        case AL_EVENT_CALLBACK_FUNCTION_SOFT:
-        case AL_EVENT_CALLBACK_USER_PARAM_SOFT:
-        case AL_DEBUG_CALLBACK_FUNCTION_SOFT:
-        case AL_DEBUG_CALLBACK_USER_PARAM_SOFT:
-            values[0] = alGetPointerSOFT(pname);
-            return;
-        }
-    }
-
     ContextRef context{GetContextRef()};
     if(!context) UNLIKELY return;
 
-    if(!values)
-        context->setError(AL_INVALID_VALUE, "NULL pointer");
-    else switch(pname)
+    if(!values) UNLIKELY
+        return context->setError(AL_INVALID_VALUE, "NULL pointer");
+
+    switch(pname)
     {
+    case AL_EVENT_CALLBACK_FUNCTION_SOFT:
+        *values = reinterpret_cast<void*>(context->mEventCb);
+        break;
+
+    case AL_EVENT_CALLBACK_USER_PARAM_SOFT:
+        *values = context->mEventParam;
+        break;
+
+    case AL_DEBUG_CALLBACK_FUNCTION_SOFT:
+        *values = reinterpret_cast<void*>(context->mDebugCb);
+        break;
+
+    case AL_DEBUG_CALLBACK_USER_PARAM_SOFT:
+        *values = context->mDebugParam;
+        break;
+
     default:
-        context->setError(AL_INVALID_VALUE, "Invalid pointer-vector property 0x%04x", pname);
+        context->setError(AL_INVALID_ENUM, "Invalid context pointer property 0x%04x", pname);
     }
 }
 END_API_FUNC

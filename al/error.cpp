@@ -35,6 +35,7 @@
 #include "AL/al.h"
 #include "AL/alc.h"
 
+#include "al/debug.h"
 #include "alc/context.h"
 #include "almalloc.h"
 #include "core/except.h"

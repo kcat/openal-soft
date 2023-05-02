@@ -222,6 +222,7 @@ FORCE_ALIGN void AL_APIENTRY alDebugMessageControlSOFT(ALenum source, ALenum typ
     }
 
     std::lock_guard<std::mutex> _{context->mDebugCbLock};
+    DebugGroup &debug = context->mDebugGroups.back();
     if(count > 0)
     {
         const uint filterbase{(1u<<srcIndices[0]) | (1u<<typeIndices[0])};
@@ -230,24 +231,23 @@ FORCE_ALIGN void AL_APIENTRY alDebugMessageControlSOFT(ALenum source, ALenum typ
         {
             const uint64_t filter{filterbase | (uint64_t{id} << 32)};
 
-            auto iter = std::lower_bound(context->mDebugIdFilters.cbegin(),
-                context->mDebugIdFilters.cend(), filter);
-            if(!enable && (iter == context->mDebugIdFilters.cend() || *iter != filter))
-                context->mDebugIdFilters.insert(iter, filter);
-            else if(enable && iter != context->mDebugIdFilters.cend() && *iter == filter)
-                context->mDebugIdFilters.erase(iter);
+            auto iter = std::lower_bound(debug.mIdFilters.cbegin(), debug.mIdFilters.cend(),
+                filter);
+            if(!enable && (iter == debug.mIdFilters.cend() || *iter != filter))
+                debug.mIdFilters.insert(iter, filter);
+            else if(enable && iter != debug.mIdFilters.cend() && *iter == filter)
+                debug.mIdFilters.erase(iter);
         }
     }
     else
     {
-        auto apply_filter = [enable,&context](const uint filter)
+        auto apply_filter = [enable,&debug](const uint filter)
         {
-            auto iter = std::lower_bound(context->mDebugFilters.cbegin(),
-                context->mDebugFilters.cend(), filter);
-            if(!enable && (iter == context->mDebugFilters.cend() || *iter != filter))
-                context->mDebugFilters.insert(iter, filter);
-            else if(enable && iter != context->mDebugFilters.cend() && *iter == filter)
-                context->mDebugFilters.erase(iter);
+            auto iter = std::lower_bound(debug.mFilters.cbegin(), debug.mFilters.cend(), filter);
+            if(!enable && (iter == debug.mFilters.cend() || *iter != filter))
+                debug.mFilters.insert(iter, filter);
+            else if(enable && iter != debug.mFilters.cend() && *iter == filter)
+                debug.mFilters.erase(iter);
         };
         auto apply_severity = [apply_filter,svrIndices](const uint filter)
         {

@@ -122,6 +122,7 @@ void ALCcontext::setThreadContext(ALCcontext *context) noexcept
 ALCcontext::ALCcontext(al::intrusive_ptr<ALCdevice> device)
     : ContextBase{device.get()}, mALDevice{std::move(device)}
 {
+    mDebugGroups.emplace_back(DebugSource::Other, 0, std::string{});
 }
 
 ALCcontext::~ALCcontext()
@@ -328,6 +329,7 @@ void ALCcontext::sendDebugMessage(DebugSource source, DebugType type, ALuint id,
     }
 
     std::unique_lock<std::mutex> debuglock{mDebugCbLock};
+    DebugGroup &debug = mDebugGroups.back();
     if(!mDebugEnabled.load()) UNLIKELY
         return;
 
@@ -372,15 +374,15 @@ void ALCcontext::sendDebugMessage(DebugSource source, DebugType type, ALuint id,
     const uint64_t idfilter{(1_u64 << (DebugSourceBase+al::to_underlying(source)))
         | (1_u64 << (DebugTypeBase+al::to_underlying(type)))
         | (uint64_t{id} << 32)};
-    auto iditer = std::lower_bound(mDebugIdFilters.cbegin(), mDebugIdFilters.cend(), idfilter);
-    if(iditer != mDebugIdFilters.cend() && *iditer == idfilter)
+    auto iditer = std::lower_bound(debug.mIdFilters.cbegin(), debug.mIdFilters.cend(), idfilter);
+    if(iditer != debug.mIdFilters.cend() && *iditer == idfilter)
         return;
 
     const uint filter{(1u << (DebugSourceBase+al::to_underlying(source)))
         | (1u << (DebugTypeBase+al::to_underlying(type)))
         | (1u << (DebugSeverityBase+al::to_underlying(severity)))};
-    auto iter = std::lower_bound(mDebugFilters.cbegin(), mDebugFilters.cend(), filter);
-    if(iter != mDebugFilters.cend() && *iter == filter)
+    auto iter = std::lower_bound(debug.mFilters.cbegin(), debug.mFilters.cend(), filter);
+    if(iter != debug.mFilters.cend() && *iter == filter)
         return;
 
     if(mDebugCb)

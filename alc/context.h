@@ -166,15 +166,16 @@ struct ALCcontext : public al::intrusive_ref<ALCcontext>, ContextBase {
 #endif
     void setError(ALenum errorCode, const char *msg, ...);
 
-    void sendDebugMessage(DebugSource source, DebugType type, ALuint id, DebugSeverity severity,
-        ALsizei length, const char *message);
+    void sendDebugMessage(std::unique_lock<std::mutex> &debuglock, DebugSource source,
+        DebugType type, ALuint id, DebugSeverity severity, ALsizei length, const char *message);
 
     void debugMessage(DebugSource source, DebugType type, ALuint id, DebugSeverity severity,
         ALsizei length, const char *message)
     {
         if(!mDebugEnabled.load(std::memory_order_relaxed)) LIKELY
             return;
-        sendDebugMessage(source, type, id, severity, length, message);
+        std::unique_lock<std::mutex> debuglock{mDebugCbLock};
+        sendDebugMessage(debuglock, source, type, id, severity, length, message);
     }
 
     /* Process-wide current context */

@@ -69,6 +69,8 @@ constexpr ALchar alErrInvalidEnum[] = "Invalid Enum";
 constexpr ALchar alErrInvalidValue[] = "Invalid Value";
 constexpr ALchar alErrInvalidOp[] = "Invalid Operation";
 constexpr ALchar alErrOutOfMemory[] = "Out of Memory";
+constexpr ALchar alStackOverflow[] = "Stack Overflow";
+constexpr ALchar alStackUnderflow[] = "Stack Underflow";
 
 /* Resampler strings */
 template<Resampler rtype> struct ResamplerName { };
@@ -264,6 +266,7 @@ START_API_FUNC
     case AL_DEBUG_NEXT_LOGGED_MESSAGE_LENGTH_SOFT:
     case AL_MAX_DEBUG_MESSAGE_LENGTH_SOFT:
     case AL_MAX_DEBUG_LOGGED_MESSAGES_SOFT:
+    case AL_MAX_DEBUG_GROUP_STACK_DEPTH_SOFT:
         return alGetInteger(pname) != 0;
     }
 
@@ -308,6 +311,7 @@ START_API_FUNC
     case AL_DEBUG_NEXT_LOGGED_MESSAGE_LENGTH_SOFT:
     case AL_MAX_DEBUG_MESSAGE_LENGTH_SOFT:
     case AL_MAX_DEBUG_LOGGED_MESSAGES_SOFT:
+    case AL_MAX_DEBUG_GROUP_STACK_DEPTH_SOFT:
         return alGetInteger(pname);
     }
 
@@ -338,6 +342,7 @@ START_API_FUNC
     case AL_DEBUG_NEXT_LOGGED_MESSAGE_LENGTH_SOFT:
     case AL_MAX_DEBUG_MESSAGE_LENGTH_SOFT:
     case AL_MAX_DEBUG_LOGGED_MESSAGES_SOFT:
+    case AL_MAX_DEBUG_GROUP_STACK_DEPTH_SOFT:
         return static_cast<ALfloat>(alGetInteger(pname));
 
     case AL_DEFERRED_UPDATES_SOFT:
@@ -436,6 +441,10 @@ START_API_FUNC
         value = MaxDebugLoggedMessages;
         break;
 
+    case AL_MAX_DEBUG_GROUP_STACK_DEPTH_SOFT:
+        value = MaxDebugGroupDepth;
+        break;
+
 #ifdef ALSOFT_EAX
 
 #define EAX_ERROR "[alGetInteger] EAX not enabled."
@@ -491,6 +500,7 @@ START_API_FUNC
     case AL_DEBUG_NEXT_LOGGED_MESSAGE_LENGTH_SOFT:
     case AL_MAX_DEBUG_MESSAGE_LENGTH_SOFT:
     case AL_MAX_DEBUG_LOGGED_MESSAGES_SOFT:
+    case AL_MAX_DEBUG_GROUP_STACK_DEPTH_SOFT:
         return alGetInteger(pname);
     }
 
@@ -562,6 +572,7 @@ START_API_FUNC
         case AL_DEBUG_NEXT_LOGGED_MESSAGE_LENGTH_SOFT:
         case AL_MAX_DEBUG_MESSAGE_LENGTH_SOFT:
         case AL_MAX_DEBUG_LOGGED_MESSAGES_SOFT:
+        case AL_MAX_DEBUG_GROUP_STACK_DEPTH_SOFT:
             values[0] = alGetBoolean(pname);
             return;
         }
@@ -599,6 +610,7 @@ START_API_FUNC
         case AL_DEBUG_NEXT_LOGGED_MESSAGE_LENGTH_SOFT:
         case AL_MAX_DEBUG_MESSAGE_LENGTH_SOFT:
         case AL_MAX_DEBUG_LOGGED_MESSAGES_SOFT:
+        case AL_MAX_DEBUG_GROUP_STACK_DEPTH_SOFT:
             values[0] = alGetDouble(pname);
             return;
         }
@@ -636,6 +648,7 @@ START_API_FUNC
         case AL_DEBUG_NEXT_LOGGED_MESSAGE_LENGTH_SOFT:
         case AL_MAX_DEBUG_MESSAGE_LENGTH_SOFT:
         case AL_MAX_DEBUG_LOGGED_MESSAGES_SOFT:
+        case AL_MAX_DEBUG_GROUP_STACK_DEPTH_SOFT:
             values[0] = alGetFloat(pname);
             return;
         }
@@ -673,6 +686,7 @@ START_API_FUNC
         case AL_DEBUG_NEXT_LOGGED_MESSAGE_LENGTH_SOFT:
         case AL_MAX_DEBUG_MESSAGE_LENGTH_SOFT:
         case AL_MAX_DEBUG_LOGGED_MESSAGES_SOFT:
+        case AL_MAX_DEBUG_GROUP_STACK_DEPTH_SOFT:
             values[0] = alGetInteger(pname);
             return;
         }
@@ -710,6 +724,7 @@ START_API_FUNC
         case AL_DEBUG_NEXT_LOGGED_MESSAGE_LENGTH_SOFT:
         case AL_MAX_DEBUG_MESSAGE_LENGTH_SOFT:
         case AL_MAX_DEBUG_LOGGED_MESSAGES_SOFT:
+        case AL_MAX_DEBUG_GROUP_STACK_DEPTH_SOFT:
             values[0] = alGetInteger64SOFT(pname);
             return;
         }
@@ -804,6 +819,14 @@ START_API_FUNC
 
     case AL_OUT_OF_MEMORY:
         value = alErrOutOfMemory;
+        break;
+
+    case AL_STACK_OVERFLOW_SOFT:
+        value = alStackOverflow;
+        break;
+
+    case AL_STACK_UNDERFLOW_SOFT:
+        value = alStackUnderflow;
         break;
 
     default:

@@ -13,6 +13,7 @@ using uint = unsigned int;
  */
 constexpr uint8_t MaxDebugLoggedMessages{64};
 constexpr uint16_t MaxDebugMessageLength{1024};
+constexpr uint8_t MaxDebugGroupDepth{64};
 
 
 constexpr uint DebugSourceBase{0};
@@ -33,9 +34,11 @@ enum class DebugType : uint8_t {
     Portability,
     Performance,
     Marker,
+    PushGroup,
+    PopGroup,
     Other,
 };
-constexpr uint DebugTypeCount{7};
+constexpr uint DebugTypeCount{9};
 
 constexpr uint DebugSeverityBase{DebugTypeBase + DebugTypeCount};
 enum class DebugSeverity : uint8_t {

@@ -71,25 +71,34 @@ AL_API void AL_APIENTRY alAuxiliaryEffectSlotStopvSOFT(ALsizei n, const ALuint *
 #define AL_DEBUG_TYPE_PORTABILITY_SOFT           0x19BD
 #define AL_DEBUG_TYPE_PERFORMANCE_SOFT           0x19BE
 #define AL_DEBUG_TYPE_MARKER_SOFT                0x19BF
-#define AL_DEBUG_TYPE_OTHER_SOFT                 0x19C0
-#define AL_DEBUG_SEVERITY_HIGH_SOFT              0x19C1
-#define AL_DEBUG_SEVERITY_MEDIUM_SOFT            0x19C2
-#define AL_DEBUG_SEVERITY_LOW_SOFT               0x19C3
-#define AL_DEBUG_SEVERITY_NOTIFICATION_SOFT      0x19C4
-#define AL_DEBUG_LOGGED_MESSAGES_SOFT            0x19C5
-#define AL_DEBUG_NEXT_LOGGED_MESSAGE_LENGTH_SOFT 0x19C6
-#define AL_MAX_DEBUG_MESSAGE_LENGTH_SOFT         0x19C7
-#define AL_MAX_DEBUG_LOGGED_MESSAGES_SOFT        0x19C8
+#define AL_DEBUG_TYPE_PUSH_GROUP_SOFT            0x19C0
+#define AL_DEBUG_TYPE_POP_GROUP_SOFT             0x19C1
+#define AL_DEBUG_TYPE_OTHER_SOFT                 0x19C2
+#define AL_DEBUG_SEVERITY_HIGH_SOFT              0x19C3
+#define AL_DEBUG_SEVERITY_MEDIUM_SOFT            0x19C4
+#define AL_DEBUG_SEVERITY_LOW_SOFT               0x19C5
+#define AL_DEBUG_SEVERITY_NOTIFICATION_SOFT      0x19C6
+#define AL_DEBUG_LOGGED_MESSAGES_SOFT            0x19C7
+#define AL_DEBUG_NEXT_LOGGED_MESSAGE_LENGTH_SOFT 0x19C8
+#define AL_MAX_DEBUG_MESSAGE_LENGTH_SOFT         0x19C9
+#define AL_MAX_DEBUG_LOGGED_MESSAGES_SOFT        0x19CA
+#define AL_MAX_DEBUG_GROUP_STACK_DEPTH_SOFT      0x19CB
+#define AL_STACK_OVERFLOW_SOFT                   0x19CC
+#define AL_STACK_UNDERFLOW_SOFT                  0x19CD
 
 typedef void (AL_APIENTRY*ALDEBUGPROCSOFT)(ALenum source, ALenum type, ALuint id, ALenum severity, ALsizei length, const ALchar *message, void *userParam);
 typedef void (AL_APIENTRY*LPALDEBUGMESSAGECALLBACKSOFT)(ALDEBUGPROCSOFT callback, void *userParam);
 typedef void (AL_APIENTRY*LPALDEBUGMESSAGEINSERTSOFT)(ALenum source, ALenum type, ALuint id, ALenum severity, ALsizei length, const ALchar *message);
 typedef void (AL_APIENTRY*LPALDEBUGMESSAGECONTROLSOFT)(ALenum source, ALenum type, ALenum severity, ALsizei count, const ALuint *ids, ALboolean enable);
+typedef void (AL_APIENTRY*LPALPUSHDEBUGGROUPSOFT)(ALenum source, ALuint id, ALsizei length, const ALchar *message);
+typedef void (AL_APIENTRY*LPALPOPDEBUGGROUPSOFT)(void);
 typedef ALuint (AL_APIENTRY*LPALGETDEBUGMESSAGELOGSOFT)(ALuint count, ALsizei logBufSize, ALenum *sources, ALenum *types, ALuint *ids, ALenum *severities, ALsizei *lengths, ALchar *logBuf);
 #ifdef AL_ALEXT_PROTOTYPES
 void AL_APIENTRY alDebugMessageCallbackSOFT(ALDEBUGPROCSOFT callback, void *userParam) noexcept;
 void AL_APIENTRY alDebugMessageInsertSOFT(ALenum source, ALenum type, ALuint id, ALenum severity, ALsizei length, const ALchar *message) noexcept;
 void AL_APIENTRY alDebugMessageControlSOFT(ALenum source, ALenum type, ALenum severity, ALsizei count, const ALuint *ids, ALboolean enable) noexcept;
+void AL_APIENTRY alPushDebugGroupSOFT(ALenum source, ALuint id, ALsizei length, const ALchar *message) noexcept;
+void AL_APIENTRY alPopDebugGroupSOFT(void) noexcept;
 ALuint AL_APIENTRY alGetDebugMessageLogSOFT(ALuint count, ALsizei logBufSize, ALenum *sources, ALenum *types, ALuint *ids, ALenum *severities, ALsizei *lengths, ALchar *logBuf) noexcept;
 #endif
 #endif

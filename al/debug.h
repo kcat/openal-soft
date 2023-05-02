@@ -64,22 +64,4 @@ struct DebugGroup {
     DebugGroup(DebugGroup&&) = default;
 };
 
-
-struct DebugLogEntry {
-    const DebugSource mSource;
-    const DebugType mType;
-    const DebugSeverity mSeverity;
-    const uint mId;
-
-    std::string mMessage;
-
-    template<typename T>
-    DebugLogEntry(DebugSource source, DebugType type, uint id, DebugSeverity severity, T&& message)
-        : mSource{source}, mType{type}, mSeverity{severity}, mId{id}
-        , mMessage{std::forward<T>(message)}
-    { }
-    DebugLogEntry(const DebugLogEntry&) = default;
-    DebugLogEntry(DebugLogEntry&&) = default;
-};
-
 #endif /* AL_DEBUG_H */

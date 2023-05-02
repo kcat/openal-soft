@@ -34,13 +34,30 @@ struct ALeffect;
 struct ALeffectslot;
 struct ALsource;
 struct DebugGroup;
-struct DebugLogEntry;
 
 enum class DebugSource : uint8_t;
 enum class DebugType : uint8_t;
 enum class DebugSeverity : uint8_t;
 
 using uint = unsigned int;
+
+
+struct DebugLogEntry {
+    const DebugSource mSource;
+    const DebugType mType;
+    const DebugSeverity mSeverity;
+    const uint mId;
+
+    std::string mMessage;
+
+    template<typename T>
+    DebugLogEntry(DebugSource source, DebugType type, uint id, DebugSeverity severity, T&& message)
+        : mSource{source}, mType{type}, mSeverity{severity}, mId{id}
+        , mMessage{std::forward<T>(message)}
+    { }
+    DebugLogEntry(const DebugLogEntry&) = default;
+    DebugLogEntry(DebugLogEntry&&) = default;
+};
 
 
 struct SourceSubList {

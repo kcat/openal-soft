@@ -467,16 +467,19 @@ FORCE_ALIGN ALuint AL_APIENTRY alGetDebugMessageLogEXT(ALuint count, ALsizei log
 
         auto &entry = context->mDebugLog.front();
         const size_t tocopy{entry.mMessage.size() + 1};
-        const size_t avail{static_cast<ALuint>(logBufSize - logBufWritten)};
-        if(avail < tocopy)
-            return i;
+        if(logBuf)
+        {
+            const size_t avail{static_cast<ALuint>(logBufSize - logBufWritten)};
+            if(avail < tocopy)
+                return i;
+            std::copy_n(entry.mMessage.data(), tocopy, logBuf+logBufWritten);
+        }
 
         if(sources) sources[i] = GetDebugSourceEnum(entry.mSource);
         if(types) types[i] = GetDebugTypeEnum(entry.mType);
         if(ids) ids[i] = entry.mId;
         if(severities) severities[i] = GetDebugSeverityEnum(entry.mSeverity);
         if(lengths) lengths[i] = static_cast<ALsizei>(tocopy);
-        if(logBuf) std::copy_n(entry.mMessage.data(), tocopy, logBuf+logBufWritten);
 
         logBufWritten += static_cast<ALsizei>(tocopy);
         context->mDebugLog.pop_front();

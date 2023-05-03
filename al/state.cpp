@@ -145,11 +145,11 @@ enum PropertyValue : ALenum {
     GainLimit = AL_GAIN_LIMIT_SOFT,
     NumResamplers = AL_NUM_RESAMPLERS_SOFT,
     DefaultResampler = AL_DEFAULT_RESAMPLER_SOFT,
-    DebugLoggedMessages = AL_DEBUG_LOGGED_MESSAGES_SOFT,
-    DebugNextLoggedMessageLength = AL_DEBUG_NEXT_LOGGED_MESSAGE_LENGTH_SOFT,
-    MaxDebugMessageLength = AL_MAX_DEBUG_MESSAGE_LENGTH_SOFT,
-    MaxDebugLoggedMessages = AL_MAX_DEBUG_LOGGED_MESSAGES_SOFT,
-    MaxDebugGroupDepth = AL_MAX_DEBUG_GROUP_STACK_DEPTH_SOFT,
+    DebugLoggedMessages = AL_DEBUG_LOGGED_MESSAGES_EXT,
+    DebugNextLoggedMessageLength = AL_DEBUG_NEXT_LOGGED_MESSAGE_LENGTH_EXT,
+    MaxDebugMessageLength = AL_MAX_DEBUG_MESSAGE_LENGTH_EXT,
+    MaxDebugLoggedMessages = AL_MAX_DEBUG_LOGGED_MESSAGES_EXT,
+    MaxDebugGroupDepth = AL_MAX_DEBUG_GROUP_STACK_DEPTH_EXT,
 #ifdef ALSOFT_EAX
     EaxRamSize = AL_EAX_RAM_SIZE,
     EaxRamFree = AL_EAX_RAM_FREE,
@@ -214,14 +214,14 @@ void GetValue(ALCcontext *context, ALenum pname, T *values)
         *values = cast_value(al::to_underlying(ResamplerDefault));
         return;
 
-    case AL_DEBUG_LOGGED_MESSAGES_SOFT:
+    case AL_DEBUG_LOGGED_MESSAGES_EXT:
     {
         std::lock_guard<std::mutex> _{context->mDebugCbLock};
         *values = cast_value(context->mDebugLog.size());
         return;
     }
 
-    case AL_DEBUG_NEXT_LOGGED_MESSAGE_LENGTH_SOFT:
+    case AL_DEBUG_NEXT_LOGGED_MESSAGE_LENGTH_EXT:
     {
         std::lock_guard<std::mutex> _{context->mDebugCbLock};
         *values = cast_value(context->mDebugLog.empty() ? size_t{0}
@@ -229,15 +229,15 @@ void GetValue(ALCcontext *context, ALenum pname, T *values)
         return;
     }
 
-    case AL_MAX_DEBUG_MESSAGE_LENGTH_SOFT:
+    case AL_MAX_DEBUG_MESSAGE_LENGTH_EXT:
         *values = cast_value(MaxDebugMessageLength);
         return;
 
-    case AL_MAX_DEBUG_LOGGED_MESSAGES_SOFT:
+    case AL_MAX_DEBUG_LOGGED_MESSAGES_EXT:
         *values = cast_value(MaxDebugLoggedMessages);
         return;
 
-    case AL_MAX_DEBUG_GROUP_STACK_DEPTH_SOFT:
+    case AL_MAX_DEBUG_GROUP_STACK_DEPTH_EXT:
         *values = cast_value(MaxDebugGroupDepth);
         return;
 
@@ -310,7 +310,7 @@ START_API_FUNC
         }
         break;
 
-    case AL_DEBUG_OUTPUT_SOFT:
+    case AL_DEBUG_OUTPUT_EXT:
         context->mDebugEnabled = true;
         break;
 
@@ -340,7 +340,7 @@ START_API_FUNC
         }
         break;
 
-    case AL_DEBUG_OUTPUT_SOFT:
+    case AL_DEBUG_OUTPUT_EXT:
         context->mDebugEnabled = false;
         break;
 
@@ -368,7 +368,7 @@ START_API_FUNC
         value = context->mSourceDistanceModel ? AL_TRUE : AL_FALSE;
         break;
 
-    case AL_DEBUG_OUTPUT_SOFT:
+    case AL_DEBUG_OUTPUT_EXT:
         value = context->mDebugEnabled ? AL_TRUE : AL_FALSE;
         break;
 
@@ -517,11 +517,11 @@ START_API_FUNC
         *values = context->mEventParam;
         break;
 
-    case AL_DEBUG_CALLBACK_FUNCTION_SOFT:
+    case AL_DEBUG_CALLBACK_FUNCTION_EXT:
         *values = reinterpret_cast<void*>(context->mDebugCb);
         break;
 
-    case AL_DEBUG_CALLBACK_USER_PARAM_SOFT:
+    case AL_DEBUG_CALLBACK_USER_PARAM_EXT:
         *values = context->mDebugParam;
         break;
 
@@ -580,11 +580,11 @@ START_API_FUNC
         value = alErrOutOfMemory;
         break;
 
-    case AL_STACK_OVERFLOW_SOFT:
+    case AL_STACK_OVERFLOW_EXT:
         value = alStackOverflow;
         break;
 
-    case AL_STACK_UNDERFLOW_SOFT:
+    case AL_STACK_UNDERFLOW_EXT:
         value = alStackUnderflow;
         break;
 

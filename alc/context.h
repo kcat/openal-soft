@@ -118,7 +118,7 @@ struct ALCcontext : public al::intrusive_ref<ALCcontext>, ContextBase {
     void *mEventParam{nullptr};
 
     std::mutex mDebugCbLock;
-    ALDEBUGPROCSOFT mDebugCb{};
+    ALDEBUGPROCEXT mDebugCb{};
     void *mDebugParam{nullptr};
     std::vector<DebugGroup> mDebugGroups;
     std::deque<DebugLogEntry> mDebugLog;

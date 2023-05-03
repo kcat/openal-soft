@@ -39,11 +39,11 @@ constexpr al::optional<DebugSource> GetDebugSource(ALenum source) noexcept
 {
     switch(source)
     {
-    case AL_DEBUG_SOURCE_API_SOFT: return DebugSource::API;
-    case AL_DEBUG_SOURCE_AUDIO_SYSTEM_SOFT: return DebugSource::System;
-    case AL_DEBUG_SOURCE_THIRD_PARTY_SOFT: return DebugSource::ThirdParty;
-    case AL_DEBUG_SOURCE_APPLICATION_SOFT: return DebugSource::Application;
-    case AL_DEBUG_SOURCE_OTHER_SOFT: return DebugSource::Other;
+    case AL_DEBUG_SOURCE_API_EXT: return DebugSource::API;
+    case AL_DEBUG_SOURCE_AUDIO_SYSTEM_EXT: return DebugSource::System;
+    case AL_DEBUG_SOURCE_THIRD_PARTY_EXT: return DebugSource::ThirdParty;
+    case AL_DEBUG_SOURCE_APPLICATION_EXT: return DebugSource::Application;
+    case AL_DEBUG_SOURCE_OTHER_EXT: return DebugSource::Other;
     }
     return al::nullopt;
 }
@@ -52,15 +52,15 @@ constexpr al::optional<DebugType> GetDebugType(ALenum type) noexcept
 {
     switch(type)
     {
-    case AL_DEBUG_TYPE_ERROR_SOFT: return DebugType::Error;
-    case AL_DEBUG_TYPE_DEPRECATED_BEHAVIOR_SOFT: return DebugType::DeprecatedBehavior;
-    case AL_DEBUG_TYPE_UNDEFINED_BEHAVIOR_SOFT: return DebugType::UndefinedBehavior;
-    case AL_DEBUG_TYPE_PORTABILITY_SOFT: return DebugType::Portability;
-    case AL_DEBUG_TYPE_PERFORMANCE_SOFT: return DebugType::Performance;
-    case AL_DEBUG_TYPE_MARKER_SOFT: return DebugType::Marker;
-    case AL_DEBUG_TYPE_PUSH_GROUP_SOFT: return DebugType::PushGroup;
-    case AL_DEBUG_TYPE_POP_GROUP_SOFT: return DebugType::PopGroup;
-    case AL_DEBUG_TYPE_OTHER_SOFT: return DebugType::Other;
+    case AL_DEBUG_TYPE_ERROR_EXT: return DebugType::Error;
+    case AL_DEBUG_TYPE_DEPRECATED_BEHAVIOR_EXT: return DebugType::DeprecatedBehavior;
+    case AL_DEBUG_TYPE_UNDEFINED_BEHAVIOR_EXT: return DebugType::UndefinedBehavior;
+    case AL_DEBUG_TYPE_PORTABILITY_EXT: return DebugType::Portability;
+    case AL_DEBUG_TYPE_PERFORMANCE_EXT: return DebugType::Performance;
+    case AL_DEBUG_TYPE_MARKER_EXT: return DebugType::Marker;
+    case AL_DEBUG_TYPE_PUSH_GROUP_EXT: return DebugType::PushGroup;
+    case AL_DEBUG_TYPE_POP_GROUP_EXT: return DebugType::PopGroup;
+    case AL_DEBUG_TYPE_OTHER_EXT: return DebugType::Other;
     }
     return al::nullopt;
 }
@@ -69,10 +69,10 @@ constexpr al::optional<DebugSeverity> GetDebugSeverity(ALenum severity) noexcept
 {
     switch(severity)
     {
-    case AL_DEBUG_SEVERITY_HIGH_SOFT: return DebugSeverity::High;
-    case AL_DEBUG_SEVERITY_MEDIUM_SOFT: return DebugSeverity::Medium;
-    case AL_DEBUG_SEVERITY_LOW_SOFT: return DebugSeverity::Low;
-    case AL_DEBUG_SEVERITY_NOTIFICATION_SOFT: return DebugSeverity::Notification;
+    case AL_DEBUG_SEVERITY_HIGH_EXT: return DebugSeverity::High;
+    case AL_DEBUG_SEVERITY_MEDIUM_EXT: return DebugSeverity::Medium;
+    case AL_DEBUG_SEVERITY_LOW_EXT: return DebugSeverity::Low;
+    case AL_DEBUG_SEVERITY_NOTIFICATION_EXT: return DebugSeverity::Notification;
     }
     return al::nullopt;
 }
@@ -82,11 +82,11 @@ ALenum GetDebugSourceEnum(DebugSource source)
 {
     switch(source)
     {
-    case DebugSource::API: return AL_DEBUG_SOURCE_API_SOFT;
-    case DebugSource::System: return AL_DEBUG_SOURCE_AUDIO_SYSTEM_SOFT;
-    case DebugSource::ThirdParty: return AL_DEBUG_SOURCE_THIRD_PARTY_SOFT;
-    case DebugSource::Application: return AL_DEBUG_SOURCE_APPLICATION_SOFT;
-    case DebugSource::Other: return AL_DEBUG_SOURCE_OTHER_SOFT;
+    case DebugSource::API: return AL_DEBUG_SOURCE_API_EXT;
+    case DebugSource::System: return AL_DEBUG_SOURCE_AUDIO_SYSTEM_EXT;
+    case DebugSource::ThirdParty: return AL_DEBUG_SOURCE_THIRD_PARTY_EXT;
+    case DebugSource::Application: return AL_DEBUG_SOURCE_APPLICATION_EXT;
+    case DebugSource::Other: return AL_DEBUG_SOURCE_OTHER_EXT;
     }
     throw std::runtime_error{"Unexpected debug source value "+std::to_string(al::to_underlying(source))};
 }
@@ -95,15 +95,15 @@ ALenum GetDebugTypeEnum(DebugType type)
 {
     switch(type)
     {
-    case DebugType::Error: return AL_DEBUG_TYPE_ERROR_SOFT;
-    case DebugType::DeprecatedBehavior: return AL_DEBUG_TYPE_DEPRECATED_BEHAVIOR_SOFT;
-    case DebugType::UndefinedBehavior: return AL_DEBUG_TYPE_UNDEFINED_BEHAVIOR_SOFT;
-    case DebugType::Portability: return AL_DEBUG_TYPE_PORTABILITY_SOFT;
-    case DebugType::Performance: return AL_DEBUG_TYPE_PERFORMANCE_SOFT;
-    case DebugType::Marker: return AL_DEBUG_TYPE_MARKER_SOFT;
-    case DebugType::PushGroup: return AL_DEBUG_TYPE_PUSH_GROUP_SOFT;
-    case DebugType::PopGroup: return AL_DEBUG_TYPE_POP_GROUP_SOFT;
-    case DebugType::Other: return AL_DEBUG_TYPE_OTHER_SOFT;
+    case DebugType::Error: return AL_DEBUG_TYPE_ERROR_EXT;
+    case DebugType::DeprecatedBehavior: return AL_DEBUG_TYPE_DEPRECATED_BEHAVIOR_EXT;
+    case DebugType::UndefinedBehavior: return AL_DEBUG_TYPE_UNDEFINED_BEHAVIOR_EXT;
+    case DebugType::Portability: return AL_DEBUG_TYPE_PORTABILITY_EXT;
+    case DebugType::Performance: return AL_DEBUG_TYPE_PERFORMANCE_EXT;
+    case DebugType::Marker: return AL_DEBUG_TYPE_MARKER_EXT;
+    case DebugType::PushGroup: return AL_DEBUG_TYPE_PUSH_GROUP_EXT;
+    case DebugType::PopGroup: return AL_DEBUG_TYPE_POP_GROUP_EXT;
+    case DebugType::Other: return AL_DEBUG_TYPE_OTHER_EXT;
     }
     throw std::runtime_error{"Unexpected debug type value "+std::to_string(al::to_underlying(type))};
 }
@@ -112,12 +112,55 @@ ALenum GetDebugSeverityEnum(DebugSeverity severity)
 {
     switch(severity)
     {
-    case DebugSeverity::High: return AL_DEBUG_SEVERITY_HIGH_SOFT;
-    case DebugSeverity::Medium: return AL_DEBUG_SEVERITY_MEDIUM_SOFT;
-    case DebugSeverity::Low: return AL_DEBUG_SEVERITY_LOW_SOFT;
-    case DebugSeverity::Notification: return AL_DEBUG_SEVERITY_NOTIFICATION_SOFT;
+    case DebugSeverity::High: return AL_DEBUG_SEVERITY_HIGH_EXT;
+    case DebugSeverity::Medium: return AL_DEBUG_SEVERITY_MEDIUM_EXT;
+    case DebugSeverity::Low: return AL_DEBUG_SEVERITY_LOW_EXT;
+    case DebugSeverity::Notification: return AL_DEBUG_SEVERITY_NOTIFICATION_EXT;
     }
     throw std::runtime_error{"Unexpected debug severity value "+std::to_string(al::to_underlying(severity))};
+}
+
+
+const char *GetDebugSourceName(DebugSource source)
+{
+    switch(source)
+    {
+    case DebugSource::API: return "API";
+    case DebugSource::System: return "Audio System";
+    case DebugSource::ThirdParty: return "Third Party";
+    case DebugSource::Application: return "Application";
+    case DebugSource::Other: return "Other";
+    }
+    return "<invalid source>";
+}
+
+const char *GetDebugTypeName(DebugType type)
+{
+    switch(type)
+    {
+    case DebugType::Error: return "Error";
+    case DebugType::DeprecatedBehavior: return "Deprecated Behavior";
+    case DebugType::UndefinedBehavior: return "Undefined Behavior";
+    case DebugType::Portability: return "Portability";
+    case DebugType::Performance: return "Performance";
+    case DebugType::Marker: return "Marker";
+    case DebugType::PushGroup: return "Push Group";
+    case DebugType::PopGroup: return "Pop Group";
+    case DebugType::Other: return "Other";
+    }
+    return "<invalid type>";
+}
+
+const char *GetDebugSeverityName(DebugSeverity severity)
+{
+    switch(severity)
+    {
+    case DebugSeverity::High: return "High";
+    case DebugSeverity::Medium: return "Medium";
+    case DebugSeverity::Low: return "Low";
+    case DebugSeverity::Notification: return "Notification";
+    }
+    return "<invalid severity>";
 }
 
 } // namespace
@@ -178,18 +221,18 @@ void ALCcontext::sendDebugMessage(std::unique_lock<std::mutex> &debuglock, Debug
             mDebugLog.emplace_back(source, type, id, severity, message);
         else UNLIKELY
             ERR("Debug message log overflow. Lost message:\n"
-                "  Source: 0x%04x\n"
-                "  Type: 0x%04x\n"
+                "  Source: %s\n"
+                "  Type: %s\n"
                 "  ID: %u\n"
-                "  Severity: 0x%04x\n"
+                "  Severity: %s\n"
                 "  Message: \"%s\"\n",
-                GetDebugSourceEnum(source), GetDebugTypeEnum(type), id,
-                GetDebugSeverityEnum(severity), message);
+                GetDebugSourceName(source), GetDebugTypeName(type), id,
+                GetDebugSeverityName(severity), message);
     }
 }
 
 
-FORCE_ALIGN void AL_APIENTRY alDebugMessageCallbackSOFT(ALDEBUGPROCSOFT callback, void *userParam) noexcept
+FORCE_ALIGN void AL_APIENTRY alDebugMessageCallbackEXT(ALDEBUGPROCEXT callback, void *userParam) noexcept
 {
     ContextRef context{GetContextRef()};
     if(!context) UNLIKELY return;
@@ -199,7 +242,7 @@ FORCE_ALIGN void AL_APIENTRY alDebugMessageCallbackSOFT(ALDEBUGPROCSOFT callback
     context->mDebugParam = userParam;
 }
 
-FORCE_ALIGN void AL_APIENTRY alDebugMessageInsertSOFT(ALenum source, ALenum type, ALuint id,
+FORCE_ALIGN void AL_APIENTRY alDebugMessageInsertEXT(ALenum source, ALenum type, ALuint id,
     ALenum severity, ALsizei length, const ALchar *message) noexcept
 {
     ContextRef context{GetContextRef()};
@@ -238,7 +281,7 @@ FORCE_ALIGN void AL_APIENTRY alDebugMessageInsertSOFT(ALenum source, ALenum type
 }
 
 
-FORCE_ALIGN void AL_APIENTRY alDebugMessageControlSOFT(ALenum source, ALenum type, ALenum severity,
+FORCE_ALIGN void AL_APIENTRY alDebugMessageControlEXT(ALenum source, ALenum type, ALenum severity,
     ALsizei count, const ALuint *ids, ALboolean enable) noexcept
 {
     ContextRef context{GetContextRef()};
@@ -248,15 +291,15 @@ FORCE_ALIGN void AL_APIENTRY alDebugMessageControlSOFT(ALenum source, ALenum typ
     {
         if(!ids)
             return context->setError(AL_INVALID_VALUE, "IDs is null with non-0 count");
-        if(source == AL_DONT_CARE_SOFT)
+        if(source == AL_DONT_CARE_EXT)
             return context->setError(AL_INVALID_OPERATION,
-                "Debug source cannot be AL_DONT_CARE_SOFT with IDs");
-        if(type == AL_DONT_CARE_SOFT)
+                "Debug source cannot be AL_DONT_CARE_EXT with IDs");
+        if(type == AL_DONT_CARE_EXT)
             return context->setError(AL_INVALID_OPERATION,
-                "Debug type cannot be AL_DONT_CARE_SOFT with IDs");
-        if(severity != AL_DONT_CARE_SOFT)
+                "Debug type cannot be AL_DONT_CARE_EXT with IDs");
+        if(severity != AL_DONT_CARE_EXT)
             return context->setError(AL_INVALID_OPERATION,
-                "Debug severity must be AL_DONT_CARE_SOFT with IDs");
+                "Debug severity must be AL_DONT_CARE_EXT with IDs");
     }
 
     if(enable != AL_TRUE && enable != AL_FALSE)
@@ -266,7 +309,7 @@ FORCE_ALIGN void AL_APIENTRY alDebugMessageControlSOFT(ALenum source, ALenum typ
     static constexpr auto Values = make_array<uint,ElemCount>();
 
     al::span<const uint> srcIndices{al::as_span(Values).subspan<DebugSourceBase,DebugSourceCount>()};
-    if(source != AL_DONT_CARE_SOFT)
+    if(source != AL_DONT_CARE_EXT)
     {
         auto dsource = GetDebugSource(source);
         if(!dsource)
@@ -275,7 +318,7 @@ FORCE_ALIGN void AL_APIENTRY alDebugMessageControlSOFT(ALenum source, ALenum typ
     }
 
     al::span<const uint> typeIndices{al::as_span(Values).subspan<DebugTypeBase,DebugTypeCount>()};
-    if(type != AL_DONT_CARE_SOFT)
+    if(type != AL_DONT_CARE_EXT)
     {
         auto dtype = GetDebugType(type);
         if(!dtype)
@@ -284,7 +327,7 @@ FORCE_ALIGN void AL_APIENTRY alDebugMessageControlSOFT(ALenum source, ALenum typ
     }
 
     al::span<const uint> svrIndices{al::as_span(Values).subspan<DebugSeverityBase,DebugSeverityCount>()};
-    if(severity != AL_DONT_CARE_SOFT)
+    if(severity != AL_DONT_CARE_EXT)
     {
         auto dseverity = GetDebugSeverity(severity);
         if(!dseverity)
@@ -336,7 +379,7 @@ FORCE_ALIGN void AL_APIENTRY alDebugMessageControlSOFT(ALenum source, ALenum typ
 }
 
 
-FORCE_ALIGN void AL_APIENTRY alPushDebugGroupSOFT(ALenum source, ALuint id, ALsizei length, const ALchar *message) noexcept
+FORCE_ALIGN void AL_APIENTRY alPushDebugGroupEXT(ALenum source, ALuint id, ALsizei length, const ALchar *message) noexcept
 {
     ContextRef context{GetContextRef()};
     if(!context) UNLIKELY return;
@@ -363,7 +406,7 @@ FORCE_ALIGN void AL_APIENTRY alPushDebugGroupSOFT(ALenum source, ALuint id, ALsi
     if(context->mDebugGroups.size() >= MaxDebugGroupDepth)
     {
         debuglock.unlock();
-        return context->setError(AL_STACK_OVERFLOW_SOFT, "Pushing too many debug groups");
+        return context->setError(AL_STACK_OVERFLOW_EXT, "Pushing too many debug groups");
     }
 
     context->mDebugGroups.emplace_back(*dsource, id, message);
@@ -378,7 +421,7 @@ FORCE_ALIGN void AL_APIENTRY alPushDebugGroupSOFT(ALenum source, ALuint id, ALsi
         newback.mMessage.data());
 }
 
-FORCE_ALIGN void AL_APIENTRY alPopDebugGroupSOFT(void) noexcept
+FORCE_ALIGN void AL_APIENTRY alPopDebugGroupEXT(void) noexcept
 {
     ContextRef context{GetContextRef()};
     if(!context) UNLIKELY return;
@@ -387,7 +430,7 @@ FORCE_ALIGN void AL_APIENTRY alPopDebugGroupSOFT(void) noexcept
     if(context->mDebugGroups.size() <= 1)
     {
         debuglock.unlock();
-        return context->setError(AL_STACK_UNDERFLOW_SOFT,
+        return context->setError(AL_STACK_UNDERFLOW_EXT,
             "Attempting to pop the default debug group");
     }
 
@@ -402,7 +445,7 @@ FORCE_ALIGN void AL_APIENTRY alPopDebugGroupSOFT(void) noexcept
 }
 
 
-FORCE_ALIGN ALuint AL_APIENTRY alGetDebugMessageLogSOFT(ALuint count, ALsizei logBufSize,
+FORCE_ALIGN ALuint AL_APIENTRY alGetDebugMessageLogEXT(ALuint count, ALsizei logBufSize,
     ALenum *sources, ALenum *types, ALuint *ids, ALenum *severities, ALsizei *lengths,
     ALchar *logBuf) noexcept
 {

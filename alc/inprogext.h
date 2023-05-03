@@ -54,8 +54,14 @@ AL_API void AL_APIENTRY alAuxiliaryEffectSlotStopvSOFT(ALsizei n, const ALuint *
 #define AL_STOP_SOURCES_ON_DISCONNECT_SOFT       0x19AB
 #endif
 
-#ifndef AL_EXT_DEBUG
-#define AL_EXT_DEBUG
+#ifndef ALC_EXT_debug
+#define ALC_EXT_debug
+#define ALC_CONTEXT_FLAGS_EXT                    0x19CE
+#define ALC_CONTEXT_DEBUG_BIT_EXT                0x0001
+#endif
+
+#ifndef AL_EXT_debug
+#define AL_EXT_debug
 #define AL_DONT_CARE_EXT                         0x0002
 #define AL_DEBUG_OUTPUT_EXT                      0x19B2
 #define AL_DEBUG_CALLBACK_FUNCTION_EXT           0x19B3
@@ -85,6 +91,7 @@ AL_API void AL_APIENTRY alAuxiliaryEffectSlotStopvSOFT(ALsizei n, const ALuint *
 #define AL_MAX_DEBUG_GROUP_STACK_DEPTH_EXT       0x19CB
 #define AL_STACK_OVERFLOW_EXT                    0x19CC
 #define AL_STACK_UNDERFLOW_EXT                   0x19CD
+#define AL_CONTEXT_FLAGS_EXT                     0x19CE
 
 typedef void (AL_APIENTRY*ALDEBUGPROCEXT)(ALenum source, ALenum type, ALuint id, ALenum severity, ALsizei length, const ALchar *message, void *userParam);
 typedef void (AL_APIENTRY*LPALDEBUGMESSAGECALLBACKEXT)(ALDEBUGPROCEXT callback, void *userParam);

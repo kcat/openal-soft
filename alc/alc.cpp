@@ -573,6 +573,9 @@ constexpr struct {
     DECL(ALC_INVALID_VALUE),
     DECL(ALC_OUT_OF_MEMORY),
 
+    DECL(ALC_CONTEXT_FLAGS_EXT),
+    DECL(ALC_CONTEXT_DEBUG_BIT_EXT),
+
 
     DECL(AL_INVALID),
     DECL(AL_NONE),
@@ -1021,6 +1024,7 @@ constexpr ALCchar alcExtensionList[] =
     "ALC_ENUMERATE_ALL_EXT "
     "ALC_ENUMERATION_EXT "
     "ALC_EXT_CAPTURE "
+    "ALC_EXTX_debug "
     "ALC_EXT_DEDICATED "
     "ALC_EXT_disconnect "
     "ALC_EXT_EFX "
@@ -2619,11 +2623,12 @@ START_API_FUNC
         return;
     }
 
-    ctx->debugMessage(DebugSource::API, DebugType::Portability, 0, DebugSeverity::Medium, -1,
-        "alcSuspendContext behavior is not portable -- some implementations suspend all "
-        "rendering, some only defer property changes, and some are completely no-op; consider "
-        "using alcDevicePauseSOFT to suspend all rendering, or alDeferUpdatesSOFT to only defer "
-        "property changes");
+    if(context->mContextFlags.test(ContextFlags::DebugBit)) UNLIKELY
+        ctx->debugMessage(DebugSource::API, DebugType::Portability, 0, DebugSeverity::Medium, -1,
+            "alcSuspendContext behavior is not portable -- some implementations suspend all "
+            "rendering, some only defer property changes, and some are completely no-op; consider "
+            "using alcDevicePauseSOFT to suspend all rendering, or alDeferUpdatesSOFT to only "
+            "defer property changes");
 
     if(SuspendDefers)
     {
@@ -2643,11 +2648,12 @@ START_API_FUNC
         return;
     }
 
-    ctx->debugMessage(DebugSource::API, DebugType::Portability, 0, DebugSeverity::Medium, -1,
-        "alcProcessContext behavior is not portable -- some implementations resume rendering, "
-        "some apply deferred property changes, and some are completely no-op; consider using "
-        "alcDeviceResumeSOFT to resume rendering, or alProcessUpdatesSOFT to apply deferred "
-        "property changes");
+    if(context->mContextFlags.test(ContextFlags::DebugBit)) UNLIKELY
+        ctx->debugMessage(DebugSource::API, DebugType::Portability, 0, DebugSeverity::Medium, -1,
+            "alcProcessContext behavior is not portable -- some implementations resume rendering, "
+            "some apply deferred property changes, and some are completely no-op; consider using "
+            "alcDeviceResumeSOFT to resume rendering, or alProcessUpdatesSOFT to apply deferred "
+            "property changes");
 
     if(SuspendDefers)
     {
@@ -3366,7 +3372,20 @@ START_API_FUNC
         return nullptr;
     }
 
-    ContextRef context{new ALCcontext{dev}};
+    ContextFlagBitset ctxflags{0};
+    if(attrList)
+    {
+        for(size_t i{0};attrList[i];i+=2)
+        {
+            if(attrList[i] == ALC_CONTEXT_FLAGS_EXT)
+            {
+                ctxflags = static_cast<ALuint>(attrList[i+1]);
+                break;
+            }
+        }
+    }
+
+    ContextRef context{new ALCcontext{dev, ctxflags}};
     context->init();
 
     if(auto volopt = dev->configValue<float>(nullptr, "volume-adjust"))

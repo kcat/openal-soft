@@ -51,7 +51,7 @@ using voidp = void*;
 constexpr ALchar alExtList[] =
     "AL_EXT_ALAW "
     "AL_EXT_BFORMAT "
-    "AL_EXTX_DEBUG "
+    "AL_EXTX_debug "
     "AL_EXT_DOUBLE "
     "AL_EXT_EXPONENT_DISTANCE "
     "AL_EXT_FLOAT32 "
@@ -119,10 +119,11 @@ void ALCcontext::setThreadContext(ALCcontext *context) noexcept
 { sThreadContext.set(context); }
 #endif
 
-ALCcontext::ALCcontext(al::intrusive_ptr<ALCdevice> device)
-    : ContextBase{device.get()}, mALDevice{std::move(device)}
+ALCcontext::ALCcontext(al::intrusive_ptr<ALCdevice> device, ContextFlagBitset flags)
+    : ContextBase{device.get()}, mALDevice{std::move(device)}, mContextFlags{flags}
 {
     mDebugGroups.emplace_back(DebugSource::Other, 0, std::string{});
+    mDebugEnabled.store(mContextFlags.test(ContextFlags::DebugBit), std::memory_order_relaxed);
 }
 
 ALCcontext::~ALCcontext()

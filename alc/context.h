@@ -43,6 +43,12 @@ enum class DebugSeverity : uint8_t;
 using uint = unsigned int;
 
 
+enum ContextFlags {
+    DebugBit = 0, /* ALC_CONTEXT_DEBUG_BIT_EXT */
+};
+using ContextFlagBitset = std::bitset<sizeof(ALuint)*8>;
+
+
 struct DebugLogEntry {
     const DebugSource mSource;
     const DebugType mType;
@@ -103,6 +109,7 @@ struct ALCcontext : public al::intrusive_ref<ALCcontext>, ContextBase {
 
     std::atomic<ALenum> mLastError{AL_NO_ERROR};
 
+    const ContextFlagBitset mContextFlags;
     std::atomic<bool> mDebugEnabled{false};
 
     DistanceModel mDistanceModel{DistanceModel::Default};
@@ -141,7 +148,7 @@ struct ALCcontext : public al::intrusive_ref<ALCcontext>, ContextBase {
     std::string mExtensionListOverride{};
 
 
-    ALCcontext(al::intrusive_ptr<ALCdevice> device);
+    ALCcontext(al::intrusive_ptr<ALCdevice> device, ContextFlagBitset flags);
     ALCcontext(const ALCcontext&) = delete;
     ALCcontext& operator=(const ALCcontext&) = delete;
     ~ALCcontext();

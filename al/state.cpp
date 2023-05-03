@@ -150,6 +150,7 @@ enum PropertyValue : ALenum {
     MaxDebugMessageLength = AL_MAX_DEBUG_MESSAGE_LENGTH_EXT,
     MaxDebugLoggedMessages = AL_MAX_DEBUG_LOGGED_MESSAGES_EXT,
     MaxDebugGroupDepth = AL_MAX_DEBUG_GROUP_STACK_DEPTH_EXT,
+    ContextFlags = AL_CONTEXT_FLAGS_EXT,
 #ifdef ALSOFT_EAX
     EaxRamSize = AL_EAX_RAM_SIZE,
     EaxRamFree = AL_EAX_RAM_FREE,
@@ -183,10 +184,11 @@ void GetValue(ALCcontext *context, ALenum pname, T *values)
         return;
 
     case AL_DOPPLER_VELOCITY:
-        context->debugMessage(DebugSource::API, DebugType::DeprecatedBehavior, 0,
-            DebugSeverity::Medium, -1,
-            "AL_DOPPLER_VELOCITY is deprecated in AL 1.1, use AL_SPEED_OF_SOUND; "
-            "AL_DOPPLER_VELOCITY -> AL_SPEED_OF_SOUND / 343.3f");
+        if(context->mContextFlags.test(ContextFlags::DebugBit)) UNLIKELY
+            context->debugMessage(DebugSource::API, DebugType::DeprecatedBehavior, 0,
+                DebugSeverity::Medium, -1,
+                "AL_DOPPLER_VELOCITY is deprecated in AL 1.1, use AL_SPEED_OF_SOUND; "
+                "AL_DOPPLER_VELOCITY -> AL_SPEED_OF_SOUND / 343.3f");
         *values = cast_value(context->mDopplerVelocity);
         return;
 
@@ -239,6 +241,10 @@ void GetValue(ALCcontext *context, ALenum pname, T *values)
 
     case AL_MAX_DEBUG_GROUP_STACK_DEPTH_EXT:
         *values = cast_value(MaxDebugGroupDepth);
+        return;
+
+    case AL_CONTEXT_FLAGS_EXT:
+        *values = cast_value(context->mContextFlags.to_ulong());
         return;
 
 #ifdef ALSOFT_EAX
@@ -618,10 +624,11 @@ START_API_FUNC
     ContextRef context{GetContextRef()};
     if(!context) UNLIKELY return;
 
-    context->debugMessage(DebugSource::API, DebugType::DeprecatedBehavior, 0,
-        DebugSeverity::Medium, -1,
-        "alDopplerVelocity is deprecated in AL 1.1, use alSpeedOfSound; "
-        "alDopplerVelocity(x) -> alSpeedOfSound(343.3f * x)");
+    if(context->mContextFlags.test(ContextFlags::DebugBit)) UNLIKELY
+        context->debugMessage(DebugSource::API, DebugType::DeprecatedBehavior, 0,
+            DebugSeverity::Medium, -1,
+            "alDopplerVelocity is deprecated in AL 1.1, use alSpeedOfSound; "
+            "alDopplerVelocity(x) -> alSpeedOfSound(343.3f * x)");
 
     if(!(value >= 0.0f && std::isfinite(value)))
         context->setError(AL_INVALID_VALUE, "Doppler velocity %f out of range", value);

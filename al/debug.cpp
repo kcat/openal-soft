@@ -248,6 +248,9 @@ FORCE_ALIGN void AL_APIENTRY alDebugMessageInsertEXT(ALenum source, ALenum type,
     ContextRef context{GetContextRef()};
     if(!context) UNLIKELY return;
 
+    if(!context->mContextFlags.test(ContextFlags::DebugBit))
+        return;
+
     if(!message)
         return context->setError(AL_INVALID_VALUE, "Null message pointer");
 
@@ -416,9 +419,10 @@ FORCE_ALIGN void AL_APIENTRY alPushDebugGroupEXT(ALenum source, ALuint id, ALsiz
     newback.mFilters = oldback.mFilters;
     newback.mIdFilters = oldback.mIdFilters;
 
-    context->sendDebugMessage(debuglock, newback.mSource, DebugType::PushGroup, newback.mId,
-        DebugSeverity::Notification, static_cast<ALsizei>(newback.mMessage.size()),
-        newback.mMessage.data());
+    if(context->mContextFlags.test(ContextFlags::DebugBit))
+        context->sendDebugMessage(debuglock, newback.mSource, DebugType::PushGroup, newback.mId,
+            DebugSeverity::Notification, static_cast<ALsizei>(newback.mMessage.size()),
+            newback.mMessage.data());
 }
 
 FORCE_ALIGN void AL_APIENTRY alPopDebugGroupEXT(void) noexcept
@@ -440,8 +444,9 @@ FORCE_ALIGN void AL_APIENTRY alPopDebugGroupEXT(void) noexcept
     std::string message{std::move(debug.mMessage)};
 
     context->mDebugGroups.pop_back();
-    context->sendDebugMessage(debuglock, source, DebugType::PopGroup, id,
-        DebugSeverity::Notification, static_cast<ALsizei>(message.size()), message.data());
+    if(context->mContextFlags.test(ContextFlags::DebugBit))
+        context->sendDebugMessage(debuglock, source, DebugType::PopGroup, id,
+            DebugSeverity::Notification, static_cast<ALsizei>(message.size()), message.data());
 }
 
 

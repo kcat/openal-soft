@@ -199,7 +199,7 @@ NameGUIDPair get_device_name_and_guid(IMMDevice *device)
     std::string name, guid;
 
     ComPtr<IPropertyStore> ps;
-    HRESULT hr = device->OpenPropertyStore(STGM_READ, ps.getPtr());
+    HRESULT hr = device->OpenPropertyStore(STGM_READ, al::out_ptr(ps));
     if(FAILED(hr))
     {
         WARN("OpenPropertyStore failed: 0x%08lx\n", hr);
@@ -242,7 +242,7 @@ NameGUIDPair get_device_name_and_guid(IMMDevice *device)
 EndpointFormFactor get_device_formfactor(IMMDevice *device)
 {
     ComPtr<IPropertyStore> ps;
-    HRESULT hr{device->OpenPropertyStore(STGM_READ, ps.getPtr())};
+    HRESULT hr{device->OpenPropertyStore(STGM_READ, al::out_ptr(ps))};
     if(FAILED(hr))
     {
         WARN("OpenPropertyStore failed: 0x%08lx\n", hr);
@@ -306,7 +306,7 @@ void probe_devices(IMMDeviceEnumerator *devenum, EDataFlow flowdir, al::vector<D
     al::vector<DevMap>{}.swap(list);
 
     ComPtr<IMMDeviceCollection> coll;
-    HRESULT hr{devenum->EnumAudioEndpoints(flowdir, DEVICE_STATE_ACTIVE, coll.getPtr())};
+    HRESULT hr{devenum->EnumAudioEndpoints(flowdir, DEVICE_STATE_ACTIVE, al::out_ptr(coll))};
     if(FAILED(hr))
     {
         ERR("Failed to enumerate audio endpoints: 0x%08lx\n", hr);
@@ -319,7 +319,7 @@ void probe_devices(IMMDeviceEnumerator *devenum, EDataFlow flowdir, al::vector<D
         list.reserve(count);
 
     ComPtr<IMMDevice> device;
-    hr = devenum->GetDefaultAudioEndpoint(flowdir, eMultimedia, device.getPtr());
+    hr = devenum->GetDefaultAudioEndpoint(flowdir, eMultimedia, al::out_ptr(device));
     if(SUCCEEDED(hr))
     {
         if(WCHAR *devid{get_device_id(device.get())})
@@ -327,12 +327,12 @@ void probe_devices(IMMDeviceEnumerator *devenum, EDataFlow flowdir, al::vector<D
             add_device(device.get(), devid, list);
             CoTaskMemFree(devid);
         }
-        device = nullptr;
     }
 
     for(UINT i{0};i < count;++i)
     {
-        hr = coll->Item(i, device.getPtr());
+        device = nullptr;
+        hr = coll->Item(i, al::out_ptr(device));
         if(FAILED(hr)) continue;
 
         if(WCHAR *devid{get_device_id(device.get())})
@@ -340,7 +340,6 @@ void probe_devices(IMMDeviceEnumerator *devenum, EDataFlow flowdir, al::vector<D
             add_device(device.get(), devid, list);
             CoTaskMemFree(devid);
         }
-        device = nullptr;
     }
 }
 
@@ -598,15 +597,13 @@ int WasapiProxy::messageHandler(std::promise<HRESULT> *promise)
         case MsgType::EnumeratePlayback:
         case MsgType::EnumerateCapture:
             {
-                void *ptr{};
+                ComPtr<IMMDeviceEnumerator> devenum;
                 hr = CoCreateInstance(CLSID_MMDeviceEnumerator, nullptr, CLSCTX_INPROC_SERVER,
-                    IID_IMMDeviceEnumerator, &ptr);
+                    IID_IMMDeviceEnumerator, al::out_ptr(devenum));
                 if(FAILED(hr))
                     msg.mPromise.set_value(hr);
                 else
                 {
-                    ComPtr<IMMDeviceEnumerator> devenum{static_cast<IMMDeviceEnumerator*>(ptr)};
-
                     if(msg.mType == MsgType::EnumeratePlayback)
                         probe_devices(devenum.get(), eRender, PlaybackDevices);
                     else if(msg.mType == MsgType::EnumerateCapture)
@@ -841,17 +838,16 @@ HRESULT WasapiPlayback::openProxy(const char *name)
         devid = iter->devid.c_str();
     }
 
-    void *ptr;
+    ComPtr<IMMDeviceEnumerator> enumerator;
     ComPtr<IMMDevice> mmdev;
     HRESULT hr{CoCreateInstance(CLSID_MMDeviceEnumerator, nullptr, CLSCTX_INPROC_SERVER,
-        IID_IMMDeviceEnumerator, &ptr)};
+        IID_IMMDeviceEnumerator, al::out_ptr(enumerator))};
     if(SUCCEEDED(hr))
     {
-        ComPtr<IMMDeviceEnumerator> enumerator{static_cast<IMMDeviceEnumerator*>(ptr)};
         if(!devid)
-            hr = enumerator->GetDefaultAudioEndpoint(eRender, eMultimedia, mmdev.getPtr());
+            hr = enumerator->GetDefaultAudioEndpoint(eRender, eMultimedia, al::out_ptr(mmdev));
         else
-            hr = enumerator->GetDevice(devid, mmdev.getPtr());
+            hr = enumerator->GetDevice(devid, al::out_ptr(mmdev));
     }
     if(FAILED(hr))
     {
@@ -886,14 +882,13 @@ HRESULT WasapiPlayback::resetProxy()
 {
     mClient = nullptr;
 
-    void *ptr;
-    HRESULT hr{mMMDev->Activate(IID_IAudioClient, CLSCTX_INPROC_SERVER, nullptr, &ptr)};
+    HRESULT hr{mMMDev->Activate(IID_IAudioClient, CLSCTX_INPROC_SERVER, nullptr,
+        al::out_ptr(mClient))};
     if(FAILED(hr))
     {
         ERR("Failed to reactivate audio client: 0x%08lx\n", hr);
         return hr;
     }
-    mClient = ComPtr<IAudioClient>{static_cast<IAudioClient*>(ptr)};
 
     WAVEFORMATEX *wfx;
     hr = mClient->GetMixFormat(&wfx);
@@ -1242,11 +1237,9 @@ HRESULT WasapiPlayback::startProxy()
         return hr;
     }
 
-    void *ptr;
-    hr = mClient->GetService(IID_IAudioRenderClient, &ptr);
+    hr = mClient->GetService(IID_IAudioRenderClient, al::out_ptr(mRender));
     if(SUCCEEDED(hr))
     {
-        mRender = ComPtr<IAudioRenderClient>{static_cast<IAudioRenderClient*>(ptr)};
         try {
             mKillNow.store(false, std::memory_order_release);
             mThread = std::thread{std::mem_fn(&WasapiPlayback::mixerProc), this};
@@ -1516,16 +1509,15 @@ HRESULT WasapiCapture::openProxy(const char *name)
         devid = iter->devid.c_str();
     }
 
-    void *ptr;
+    ComPtr<IMMDeviceEnumerator> enumerator;
     HRESULT hr{CoCreateInstance(CLSID_MMDeviceEnumerator, nullptr, CLSCTX_INPROC_SERVER,
-        IID_IMMDeviceEnumerator, &ptr)};
+        IID_IMMDeviceEnumerator, al::out_ptr(enumerator))};
     if(SUCCEEDED(hr))
     {
-        ComPtr<IMMDeviceEnumerator> enumerator{static_cast<IMMDeviceEnumerator*>(ptr)};
         if(!devid)
-            hr = enumerator->GetDefaultAudioEndpoint(eCapture, eMultimedia, mMMDev.getPtr());
+            hr = enumerator->GetDefaultAudioEndpoint(eCapture, eMultimedia, al::out_ptr(mMMDev));
         else
-            hr = enumerator->GetDevice(devid, mMMDev.getPtr());
+            hr = enumerator->GetDevice(devid, al::out_ptr(mMMDev));
     }
     if(FAILED(hr))
     {
@@ -1550,14 +1542,13 @@ HRESULT WasapiCapture::resetProxy()
 {
     mClient = nullptr;
 
-    void *ptr;
-    HRESULT hr{mMMDev->Activate(IID_IAudioClient, CLSCTX_INPROC_SERVER, nullptr, &ptr)};
+    HRESULT hr{mMMDev->Activate(IID_IAudioClient, CLSCTX_INPROC_SERVER, nullptr,
+        al::out_ptr(mClient))};
     if(FAILED(hr))
     {
         ERR("Failed to reactivate audio client: 0x%08lx\n", hr);
         return hr;
     }
-    mClient = ComPtr<IAudioClient>{static_cast<IAudioClient*>(ptr)};
 
     WAVEFORMATEX *wfx;
     hr = mClient->GetMixFormat(&wfx);
@@ -1849,11 +1840,9 @@ HRESULT WasapiCapture::startProxy()
         return hr;
     }
 
-    void *ptr;
-    hr = mClient->GetService(IID_IAudioCaptureClient, &ptr);
+    hr = mClient->GetService(IID_IAudioCaptureClient, al::out_ptr(mCapture));
     if(SUCCEEDED(hr))
     {
-        mCapture = ComPtr<IAudioCaptureClient>{static_cast<IAudioCaptureClient*>(ptr)};
         try {
             mKillNow.store(false, std::memory_order_release);
             mThread = std::thread{std::mem_fn(&WasapiCapture::recordProc), this};
@@ -1916,19 +1905,15 @@ bool WasapiBackendFactory::init()
                 return hr;
             }
 
-            void *ptr{};
+            ComPtr<IMMDeviceEnumerator> enumerator;
             hr = CoCreateInstance(CLSID_MMDeviceEnumerator, nullptr, CLSCTX_INPROC_SERVER,
-                IID_IMMDeviceEnumerator, &ptr);
+                IID_IMMDeviceEnumerator, al::out_ptr(enumerator));
             if(FAILED(hr))
-            {
                 WARN("Failed to create IMMDeviceEnumerator instance: 0x%08lx\n", hr);
-                CoUninitialize();
-                return hr;
-            }
-            static_cast<IMMDeviceEnumerator*>(ptr)->Release();
+            enumerator = nullptr;
             CoUninitialize();
 
-            return S_OK;
+            return hr;
         });
 
         InitResult = res.get();

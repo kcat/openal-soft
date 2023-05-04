@@ -76,8 +76,8 @@ if(NOT CMAKE_DEBUG_POSTFIX)
 endif()
 
 set(DEFAULT_TARGET_PROPS
-    # Require C++14.
-    CXX_STANDARD 14
+    # Require C++17.
+    CXX_STANDARD 17
     CXX_STANDARD_REQUIRED TRUE
     # Prefer C11, but support C99 and earlier when possible.
     C_STANDARD 11)

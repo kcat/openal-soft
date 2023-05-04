@@ -815,8 +815,10 @@ struct NodeProxy {
     {
         pw_node_events ret{};
         ret.version = PW_VERSION_NODE_EVENTS;
-        ret.info = &NodeProxy::infoCallbackC;
-        ret.param = &NodeProxy::paramCallbackC;
+        ret.info = [](void *object, const pw_node_info *info)
+        { static_cast<NodeProxy*>(object)->infoCallback(info); };
+        ret.param = [](void *object, int seq, uint32_t id, uint32_t index, uint32_t next, const spa_pod *param)
+        { static_cast<NodeProxy*>(object)->paramCallback(seq, id, index, next, param); };
         return ret;
     }
 
@@ -842,13 +844,8 @@ struct NodeProxy {
 
 
     void infoCallback(const pw_node_info *info);
-    static void infoCallbackC(void *object, const pw_node_info *info)
-    { static_cast<NodeProxy*>(object)->infoCallback(info); }
 
     void paramCallback(int seq, uint32_t id, uint32_t index, uint32_t next, const spa_pod *param);
-    static void paramCallbackC(void *object, int seq, uint32_t id, uint32_t index, uint32_t next,
-        const spa_pod *param)
-    { static_cast<NodeProxy*>(object)->paramCallback(seq, id, index, next, param); }
 };
 
 void NodeProxy::infoCallback(const pw_node_info *info)
@@ -939,7 +936,8 @@ struct MetadataProxy {
     {
         pw_metadata_events ret{};
         ret.version = PW_VERSION_METADATA_EVENTS;
-        ret.property = &MetadataProxy::propertyCallbackC;
+        ret.property = [](void *object, uint32_t id, const char *key, const char *type, const char *value)
+        { return static_cast<MetadataProxy*>(object)->propertyCallback(id, key, type, value); };
         return ret;
     }
 
@@ -957,11 +955,7 @@ struct MetadataProxy {
     ~MetadataProxy()
     { spa_hook_remove(&mListener); }
 
-
     int propertyCallback(uint32_t id, const char *key, const char *type, const char *value);
-    static int propertyCallbackC(void *object, uint32_t id, const char *key, const char *type,
-        const char *value)
-    { return static_cast<MetadataProxy*>(object)->propertyCallback(id, key, type, value); }
 };
 
 int MetadataProxy::propertyCallback(uint32_t id, const char *key, const char *type,
@@ -1277,17 +1271,8 @@ spa_audio_info_raw make_spa_info(DeviceBase *device, bool is51rear, use_f32p_e u
 
 class PipeWirePlayback final : public BackendBase {
     void stateChangedCallback(pw_stream_state old, pw_stream_state state, const char *error);
-    static void stateChangedCallbackC(void *data, pw_stream_state old, pw_stream_state state,
-        const char *error)
-    { static_cast<PipeWirePlayback*>(data)->stateChangedCallback(old, state, error); }
-
     void ioChangedCallback(uint32_t id, void *area, uint32_t size);
-    static void ioChangedCallbackC(void *data, uint32_t id, void *area, uint32_t size)
-    { static_cast<PipeWirePlayback*>(data)->ioChangedCallback(id, area, size); }
-
     void outputCallback();
-    static void outputCallbackC(void *data)
-    { static_cast<PipeWirePlayback*>(data)->outputCallback(); }
 
     void open(const char *name) override;
     bool reset() override;
@@ -1310,9 +1295,12 @@ class PipeWirePlayback final : public BackendBase {
     {
         pw_stream_events ret{};
         ret.version = PW_VERSION_STREAM_EVENTS;
-        ret.state_changed = &PipeWirePlayback::stateChangedCallbackC;
-        ret.io_changed = &PipeWirePlayback::ioChangedCallbackC;
-        ret.process = &PipeWirePlayback::outputCallbackC;
+        ret.state_changed = [](void *data, pw_stream_state old, pw_stream_state state, const char *error)
+        { static_cast<PipeWirePlayback*>(data)->stateChangedCallback(old, state, error); };
+        ret.io_changed = [](void *data, uint32_t id, void *area, uint32_t size)
+        { static_cast<PipeWirePlayback*>(data)->ioChangedCallback(id, area, size); };
+        ret.process = [](void *data)
+        { static_cast<PipeWirePlayback*>(data)->outputCallback(); };
         return ret;
     }
 
@@ -1782,13 +1770,7 @@ ClockLatency PipeWirePlayback::getClockLatency()
 
 class PipeWireCapture final : public BackendBase {
     void stateChangedCallback(pw_stream_state old, pw_stream_state state, const char *error);
-    static void stateChangedCallbackC(void *data, pw_stream_state old, pw_stream_state state,
-        const char *error)
-    { static_cast<PipeWireCapture*>(data)->stateChangedCallback(old, state, error); }
-
     void inputCallback();
-    static void inputCallbackC(void *data)
-    { static_cast<PipeWireCapture*>(data)->inputCallback(); }
 
     void open(const char *name) override;
     void start() override;
@@ -1809,8 +1791,10 @@ class PipeWireCapture final : public BackendBase {
     {
         pw_stream_events ret{};
         ret.version = PW_VERSION_STREAM_EVENTS;
-        ret.state_changed = &PipeWireCapture::stateChangedCallbackC;
-        ret.process = &PipeWireCapture::inputCallbackC;
+        ret.state_changed = [](void *data, pw_stream_state old, pw_stream_state state, const char *error)
+        { static_cast<PipeWireCapture*>(data)->stateChangedCallback(old, state, error); };
+        ret.process = [](void *data)
+        { static_cast<PipeWireCapture*>(data)->inputCallback(); };
         return ret;
     }
 

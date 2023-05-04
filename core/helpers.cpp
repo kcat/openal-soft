@@ -41,7 +41,7 @@ const PathNamePair &GetProcBinary()
     static al::optional<PathNamePair> procbin;
     if(procbin) return *procbin;
 
-    auto fullpath = al::vector<WCHAR>(256);
+    auto fullpath = std::vector<WCHAR>(256);
     DWORD len{GetModuleFileNameW(nullptr, fullpath.data(), static_cast<DWORD>(fullpath.size()))};
     while(len == fullpath.size())
     {
@@ -75,7 +75,7 @@ const PathNamePair &GetProcBinary()
 
 namespace {
 
-void DirectorySearch(const char *path, const char *ext, al::vector<std::string> *const results)
+void DirectorySearch(const char *path, const char *ext, std::vector<std::string> *const results)
 {
     std::string pathstr{path};
     pathstr += "\\*";
@@ -106,7 +106,7 @@ void DirectorySearch(const char *path, const char *ext, al::vector<std::string> 
 
 } // namespace
 
-al::vector<std::string> SearchDataFiles(const char *ext, const char *subdir)
+std::vector<std::string> SearchDataFiles(const char *ext, const char *subdir)
 {
     auto is_slash = [](int c) noexcept -> int { return (c == '\\' || c == '/'); };
 
@@ -114,7 +114,7 @@ al::vector<std::string> SearchDataFiles(const char *ext, const char *subdir)
     std::lock_guard<std::mutex> _{search_lock};
 
     /* If the path is absolute, use it directly. */
-    al::vector<std::string> results;
+    std::vector<std::string> results;
     if(isalpha(subdir[0]) && subdir[1] == ':' && is_slash(subdir[2]))
     {
         std::string path{subdir};
@@ -212,7 +212,7 @@ const PathNamePair &GetProcBinary()
     static al::optional<PathNamePair> procbin;
     if(procbin) return *procbin;
 
-    al::vector<char> pathname;
+    std::vector<char> pathname;
 #ifdef __FreeBSD__
     size_t pathlen;
     int mib[4] = { CTL_KERN, KERN_PROC, KERN_PROC_PATHNAME, -1 };
@@ -295,7 +295,7 @@ const PathNamePair &GetProcBinary()
 
 namespace {
 
-void DirectorySearch(const char *path, const char *ext, al::vector<std::string> *const results)
+void DirectorySearch(const char *path, const char *ext, std::vector<std::string> *const results)
 {
     TRACE("Searching %s for *%s\n", path, ext);
     DIR *dir{opendir(path)};
@@ -331,12 +331,12 @@ void DirectorySearch(const char *path, const char *ext, al::vector<std::string> 
 
 } // namespace
 
-al::vector<std::string> SearchDataFiles(const char *ext, const char *subdir)
+std::vector<std::string> SearchDataFiles(const char *ext, const char *subdir)
 {
     static std::mutex search_lock;
     std::lock_guard<std::mutex> _{search_lock};
 
-    al::vector<std::string> results;
+    std::vector<std::string> results;
     if(subdir[0] == '/')
     {
         DirectorySearch(subdir, ext, &results);
@@ -348,7 +348,7 @@ al::vector<std::string> SearchDataFiles(const char *ext, const char *subdir)
         DirectorySearch(localpath->c_str(), ext, &results);
     else
     {
-        al::vector<char> cwdbuf(256);
+        std::vector<char> cwdbuf(256);
         while(!getcwd(cwdbuf.data(), cwdbuf.size()))
         {
             if(errno != ERANGE)

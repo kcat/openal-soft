@@ -44,6 +44,7 @@
 #include <algorithm>
 #include <functional>
 
+#include "albit.h"
 #include "alnumeric.h"
 #include "comptr.h"
 #include "core/device.h"
@@ -778,7 +779,7 @@ bool DSoundBackendFactory::init()
         }
 
 #define LOAD_FUNC(f) do {                                                     \
-    p##f = reinterpret_cast<decltype(p##f)>(GetSymbol(ds_handle, #f));        \
+    p##f = al::bit_cast<decltype(p##f)>(GetSymbol(ds_handle, #f));            \
     if(!p##f)                                                                 \
     {                                                                         \
         CloseLib(ds_handle);                                                  \

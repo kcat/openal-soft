@@ -38,6 +38,7 @@
 #include <sys/types.h>
 #include <utility>
 
+#include "albit.h"
 #include "albyte.h"
 #include "alc/alconfig.h"
 #include "almalloc.h"
@@ -1381,7 +1382,7 @@ bool PulseBackendFactory::init()
         }
 
 #define LOAD_FUNC(x) do {                                                     \
-    p##x = reinterpret_cast<decltype(p##x)>(GetSymbol(pulse_handle, #x));     \
+    p##x = al::bit_cast<decltype(p##x)>(GetSymbol(pulse_handle, #x));         \
     if(!(p##x)) {                                                             \
         ret = false;                                                          \
         missing_funcs += "\n" #x;                                             \

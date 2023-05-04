@@ -35,6 +35,7 @@
 #include "AL/alext.h"
 
 #include "al/debug.h"
+#include "albit.h"
 #include "alc/alu.h"
 #include "alc/context.h"
 #include "alc/inprogext.h"
@@ -516,7 +517,7 @@ START_API_FUNC
     switch(pname)
     {
     case AL_EVENT_CALLBACK_FUNCTION_SOFT:
-        *values = reinterpret_cast<void*>(context->mEventCb);
+        *values = al::bit_cast<void*>(context->mEventCb);
         break;
 
     case AL_EVENT_CALLBACK_USER_PARAM_SOFT:
@@ -524,7 +525,7 @@ START_API_FUNC
         break;
 
     case AL_DEBUG_CALLBACK_FUNCTION_EXT:
-        *values = reinterpret_cast<void*>(context->mDebugCb);
+        *values = al::bit_cast<void*>(context->mDebugCb);
         break;
 
     case AL_DEBUG_CALLBACK_USER_PARAM_EXT:

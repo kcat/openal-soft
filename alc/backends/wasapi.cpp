@@ -207,7 +207,7 @@ NameGUIDPair get_device_name_and_guid(IMMDevice *device)
     }
 
     PropVariant pvprop;
-    hr = ps->GetValue(reinterpret_cast<const PROPERTYKEY&>(DEVPKEY_Device_FriendlyName), pvprop.get());
+    hr = ps->GetValue(al::bit_cast<PROPERTYKEY>(DEVPKEY_Device_FriendlyName), pvprop.get());
     if(FAILED(hr))
     {
         WARN("GetValue Device_FriendlyName failed: 0x%08lx\n", hr);
@@ -222,7 +222,7 @@ NameGUIDPair get_device_name_and_guid(IMMDevice *device)
     }
 
     pvprop.clear();
-    hr = ps->GetValue(reinterpret_cast<const PROPERTYKEY&>(PKEY_AudioEndpoint_GUID), pvprop.get());
+    hr = ps->GetValue(al::bit_cast<PROPERTYKEY>(PKEY_AudioEndpoint_GUID), pvprop.get());
     if(FAILED(hr))
     {
         WARN("GetValue AudioEndpoint_GUID failed: 0x%08lx\n", hr);

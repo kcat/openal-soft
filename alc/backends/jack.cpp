@@ -31,6 +31,7 @@
 #include <thread>
 #include <functional>
 
+#include "albit.h"
 #include "alc/alconfig.h"
 #include "alnumeric.h"
 #include "core/device.h"
@@ -126,7 +127,7 @@ bool jack_load()
 
         error = false;
 #define LOAD_FUNC(f) do {                                                     \
-    p##f = reinterpret_cast<decltype(p##f)>(GetSymbol(jack_handle, #f));      \
+    p##f = al::bit_cast<decltype(p##f)>(GetSymbol(jack_handle, #f));          \
     if(p##f == nullptr) {                                                     \
         error = true;                                                         \
         missing_funcs += "\n" #f;                                             \
@@ -135,7 +136,7 @@ bool jack_load()
         JACK_FUNCS(LOAD_FUNC);
 #undef LOAD_FUNC
         /* Optional symbols. These don't exist in all versions of JACK. */
-#define LOAD_SYM(f) p##f = reinterpret_cast<decltype(p##f)>(GetSymbol(jack_handle, #f))
+#define LOAD_SYM(f) p##f = al::bit_cast<decltype(p##f)>(GetSymbol(jack_handle, #f))
         LOAD_SYM(jack_error_callback);
 #undef LOAD_SYM
 

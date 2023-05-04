@@ -1463,7 +1463,7 @@ START_API_FUNC
     else switch(param)
     {
     case AL_BUFFER_CALLBACK_FUNCTION_SOFT:
-        *value = reinterpret_cast<void*>(albuf->mCallback);
+        *value = al::bit_cast<void*>(albuf->mCallback);
         break;
     case AL_BUFFER_CALLBACK_USER_PARAM_SOFT:
         *value = albuf->mUserData;

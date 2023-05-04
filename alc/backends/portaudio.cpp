@@ -26,6 +26,7 @@
 #include <cstdlib>
 #include <cstring>
 
+#include "albit.h"
 #include "alc/alconfig.h"
 #include "alnumeric.h"
 #include "core/device.h"
@@ -376,7 +377,7 @@ bool PortBackendFactory::init()
             return false;
 
 #define LOAD_FUNC(f) do {                                                     \
-    p##f = reinterpret_cast<decltype(p##f)>(GetSymbol(pa_handle, #f));        \
+    p##f = al::bit_cast<decltype(p##f)>(GetSymbol(pa_handle, #f));            \
     if(p##f == nullptr)                                                       \
     {                                                                         \
         CloseLib(pa_handle);                                                  \

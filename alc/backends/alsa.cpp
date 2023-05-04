@@ -35,6 +35,7 @@
 #include <thread>
 #include <utility>
 
+#include "albit.h"
 #include "albyte.h"
 #include "alc/alconfig.h"
 #include "almalloc.h"
@@ -1204,7 +1205,7 @@ bool AlsaBackendFactory::init()
 
         error = false;
 #define LOAD_FUNC(f) do {                                                     \
-    p##f = reinterpret_cast<decltype(p##f)>(GetSymbol(alsa_handle, #f));      \
+    p##f = al::bit_cast<decltype(p##f)>(GetSymbol(alsa_handle, #f));          \
     if(p##f == nullptr) {                                                     \
         error = true;                                                         \
         missing_funcs += "\n" #f;                                             \

@@ -4,10 +4,10 @@
 #include <array>
 #include <cstddef>
 #include <memory>
+#include <optional>
 #include <string>
 
 #include "almalloc.h"
-#include "aloptional.h"
 #include "alspan.h"
 #include "atomic.h"
 #include "ambidefs.h"
@@ -83,7 +83,7 @@ struct DirectHrtfState {
 };
 
 
-al::vector<std::string> EnumerateHrtf(al::optional<std::string> pathopt);
+al::vector<std::string> EnumerateHrtf(std::optional<std::string> pathopt);
 HrtfStorePtr GetLoadedHrtf(const std::string &name, const uint devrate);
 
 #endif /* CORE_HRTF_H */

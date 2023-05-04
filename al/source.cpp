@@ -38,6 +38,7 @@
 #include <mutex>
 #include <new>
 #include <numeric>
+#include <optional>
 #include <stdexcept>
 #include <thread>
 #include <utility>
@@ -55,7 +56,6 @@
 #include "alc/inprogext.h"
 #include "almalloc.h"
 #include "alnumeric.h"
-#include "aloptional.h"
 #include "alspan.h"
 #include "atomic.h"
 #include "auxeffectslot.h"
@@ -395,8 +395,8 @@ struct VoicePos {
  * using the givem offset type and offset. If the offset is out of range,
  * returns an empty optional.
  */
-al::optional<VoicePos> GetSampleOffset(al::deque<ALbufferQueueItem> &BufferList, ALenum OffsetType,
-    double Offset)
+std::optional<VoicePos> GetSampleOffset(al::deque<ALbufferQueueItem> &BufferList,
+    ALenum OffsetType, double Offset)
 {
     /* Find the first valid Buffer in the Queue */
     const ALbuffer *BufferFmt{nullptr};
@@ -406,7 +406,7 @@ al::optional<VoicePos> GetSampleOffset(al::deque<ALbufferQueueItem> &BufferList,
         if(BufferFmt) break;
     }
     if(!BufferFmt) UNLIKELY
-        return al::nullopt;
+        return std::nullopt;
 
     /* Get sample frame offset */
     int64_t offset{};
@@ -452,12 +452,12 @@ al::optional<VoicePos> GetSampleOffset(al::deque<ALbufferQueueItem> &BufferList,
     if(offset < 0)
     {
         if(offset < std::numeric_limits<int>::min())
-            return al::nullopt;
+            return std::nullopt;
         return VoicePos{static_cast<int>(offset), frac, &BufferList.front()};
     }
 
     if(BufferFmt->mCallback)
-        return al::nullopt;
+        return std::nullopt;
 
     int64_t totalBufferLen{0};
     for(auto &item : BufferList)
@@ -473,7 +473,7 @@ al::optional<VoicePos> GetSampleOffset(al::deque<ALbufferQueueItem> &BufferList,
     }
 
     /* Offset is out of range of the queue */
-    return al::nullopt;
+    return std::nullopt;
 }
 
 
@@ -798,7 +798,7 @@ inline ALeffectslot *LookupEffectSlot(ALCcontext *context, ALuint id) noexcept
 }
 
 
-al::optional<SourceStereo> StereoModeFromEnum(ALenum mode)
+std::optional<SourceStereo> StereoModeFromEnum(ALenum mode)
 {
     switch(mode)
     {
@@ -806,7 +806,7 @@ al::optional<SourceStereo> StereoModeFromEnum(ALenum mode)
     case AL_SUPER_STEREO_SOFT: return SourceStereo::Enhanced;
     }
     WARN("Unsupported stereo mode: 0x%04x\n", mode);
-    return al::nullopt;
+    return std::nullopt;
 }
 ALenum EnumFromStereoMode(SourceStereo mode)
 {
@@ -818,7 +818,7 @@ ALenum EnumFromStereoMode(SourceStereo mode)
     throw std::runtime_error{"Invalid SourceStereo: "+std::to_string(int(mode))};
 }
 
-al::optional<SpatializeMode> SpatializeModeFromEnum(ALenum mode)
+std::optional<SpatializeMode> SpatializeModeFromEnum(ALenum mode)
 {
     switch(mode)
     {
@@ -827,7 +827,7 @@ al::optional<SpatializeMode> SpatializeModeFromEnum(ALenum mode)
     case AL_AUTO_SOFT: return SpatializeMode::Auto;
     }
     WARN("Unsupported spatialize mode: 0x%04x\n", mode);
-    return al::nullopt;
+    return std::nullopt;
 }
 ALenum EnumFromSpatializeMode(SpatializeMode mode)
 {
@@ -840,7 +840,7 @@ ALenum EnumFromSpatializeMode(SpatializeMode mode)
     throw std::runtime_error{"Invalid SpatializeMode: "+std::to_string(int(mode))};
 }
 
-al::optional<DirectMode> DirectModeFromEnum(ALenum mode)
+std::optional<DirectMode> DirectModeFromEnum(ALenum mode)
 {
     switch(mode)
     {
@@ -849,7 +849,7 @@ al::optional<DirectMode> DirectModeFromEnum(ALenum mode)
     case AL_REMIX_UNMATCHED_SOFT: return DirectMode::RemixMismatch;
     }
     WARN("Unsupported direct mode: 0x%04x\n", mode);
-    return al::nullopt;
+    return std::nullopt;
 }
 ALenum EnumFromDirectMode(DirectMode mode)
 {
@@ -862,7 +862,7 @@ ALenum EnumFromDirectMode(DirectMode mode)
     throw std::runtime_error{"Invalid DirectMode: "+std::to_string(int(mode))};
 }
 
-al::optional<DistanceModel> DistanceModelFromALenum(ALenum model)
+std::optional<DistanceModel> DistanceModelFromALenum(ALenum model)
 {
     switch(model)
     {
@@ -874,7 +874,7 @@ al::optional<DistanceModel> DistanceModelFromALenum(ALenum model)
     case AL_EXPONENT_DISTANCE: return DistanceModel::Exponent;
     case AL_EXPONENT_DISTANCE_CLAMPED: return DistanceModel::ExponentClamped;
     }
-    return al::nullopt;
+    return std::nullopt;
 }
 ALenum ALenumFromDistanceModel(DistanceModel model)
 {

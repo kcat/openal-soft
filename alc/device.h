@@ -4,6 +4,7 @@
 #include <atomic>
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <stdint.h>
 #include <string>
 #include <utility>
@@ -141,25 +142,25 @@ struct ALCdevice : public al::intrusive_ref<ALCdevice>, DeviceBase {
     { return GetConfigValueBool(DeviceName.c_str(), block, key, def); }
 
     template<typename T>
-    inline al::optional<T> configValue(const char *block, const char *key) = delete;
+    inline std::optional<T> configValue(const char *block, const char *key) = delete;
 
     DEF_NEWDEL(ALCdevice)
 };
 
 template<>
-inline al::optional<std::string> ALCdevice::configValue(const char *block, const char *key)
+inline std::optional<std::string> ALCdevice::configValue(const char *block, const char *key)
 { return ConfigValueStr(DeviceName.c_str(), block, key); }
 template<>
-inline al::optional<int> ALCdevice::configValue(const char *block, const char *key)
+inline std::optional<int> ALCdevice::configValue(const char *block, const char *key)
 { return ConfigValueInt(DeviceName.c_str(), block, key); }
 template<>
-inline al::optional<uint> ALCdevice::configValue(const char *block, const char *key)
+inline std::optional<uint> ALCdevice::configValue(const char *block, const char *key)
 { return ConfigValueUInt(DeviceName.c_str(), block, key); }
 template<>
-inline al::optional<float> ALCdevice::configValue(const char *block, const char *key)
+inline std::optional<float> ALCdevice::configValue(const char *block, const char *key)
 { return ConfigValueFloat(DeviceName.c_str(), block, key); }
 template<>
-inline al::optional<bool> ALCdevice::configValue(const char *block, const char *key)
+inline std::optional<bool> ALCdevice::configValue(const char *block, const char *key)
 { return ConfigValueBool(DeviceName.c_str(), block, key); }
 
 #endif

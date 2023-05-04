@@ -1,13 +1,13 @@
 
 #include "config.h"
 
+#include <optional>
 #include <stdexcept>
 
 #include "AL/al.h"
 #include "AL/efx.h"
 
 #include "alc/effects/base.h"
-#include "aloptional.h"
 #include "core/logging.h"
 #include "effects.h"
 
@@ -27,14 +27,14 @@ static_assert(FlangerMaxDelay >= AL_FLANGER_MAX_DELAY, "Flanger max delay too sm
 static_assert(AL_CHORUS_WAVEFORM_SINUSOID == AL_FLANGER_WAVEFORM_SINUSOID, "Chorus/Flanger waveform value mismatch");
 static_assert(AL_CHORUS_WAVEFORM_TRIANGLE == AL_FLANGER_WAVEFORM_TRIANGLE, "Chorus/Flanger waveform value mismatch");
 
-inline al::optional<ChorusWaveform> WaveformFromEnum(ALenum type)
+inline std::optional<ChorusWaveform> WaveformFromEnum(ALenum type)
 {
     switch(type)
     {
     case AL_CHORUS_WAVEFORM_SINUSOID: return ChorusWaveform::Sinusoid;
     case AL_CHORUS_WAVEFORM_TRIANGLE: return ChorusWaveform::Triangle;
     }
-    return al::nullopt;
+    return std::nullopt;
 }
 inline ALenum EnumFromWaveform(ChorusWaveform type)
 {

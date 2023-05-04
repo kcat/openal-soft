@@ -6,12 +6,12 @@
 #include <bitset>
 #include <chrono>
 #include <memory>
+#include <optional>
 #include <stddef.h>
 #include <string>
 
 #include "albyte.h"
 #include "almalloc.h"
-#include "aloptional.h"
 #include "alspan.h"
 #include "bufferline.h"
 #include "buffer_storage.h"
@@ -270,7 +270,7 @@ struct Voice {
 
     void prepare(DeviceBase *device);
 
-    static void InitMixer(al::optional<std::string> resampler);
+    static void InitMixer(std::optional<std::string> resampler);
 
     DEF_NEWDEL(Voice)
 };

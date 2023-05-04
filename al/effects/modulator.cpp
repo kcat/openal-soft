@@ -1,13 +1,13 @@
 
 #include "config.h"
 
+#include <optional>
 #include <stdexcept>
 
 #include "AL/al.h"
 #include "AL/efx.h"
 
 #include "alc/effects/base.h"
-#include "aloptional.h"
 #include "effects.h"
 
 #ifdef ALSOFT_EAX
@@ -20,7 +20,7 @@
 
 namespace {
 
-al::optional<ModulatorWaveform> WaveformFromEmum(ALenum value)
+std::optional<ModulatorWaveform> WaveformFromEmum(ALenum value)
 {
     switch(value)
     {
@@ -28,7 +28,7 @@ al::optional<ModulatorWaveform> WaveformFromEmum(ALenum value)
     case AL_RING_MODULATOR_SAWTOOTH: return ModulatorWaveform::Sawtooth;
     case AL_RING_MODULATOR_SQUARE: return ModulatorWaveform::Square;
     }
-    return al::nullopt;
+    return std::nullopt;
 }
 ALenum EnumFromWaveform(ModulatorWaveform type)
 {

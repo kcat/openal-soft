@@ -47,9 +47,9 @@ enum class ReaderScope {
 #else
 [[gnu::format(printf,2,3)]]
 #endif
-al::optional<std::string> make_error(size_t linenum, const char *fmt, ...)
+std::optional<std::string> make_error(size_t linenum, const char *fmt, ...)
 {
-    al::optional<std::string> ret;
+    std::optional<std::string> ret;
     auto &str = ret.emplace();
 
     str.resize(256);
@@ -77,7 +77,7 @@ al::optional<std::string> make_error(size_t linenum, const char *fmt, ...)
 AmbDecConf::~AmbDecConf() = default;
 
 
-al::optional<std::string> AmbDecConf::load(const char *fname) noexcept
+std::optional<std::string> AmbDecConf::load(const char *fname) noexcept
 {
     al::ifstream f{fname};
     if(!f.is_open())
@@ -291,7 +291,7 @@ al::optional<std::string> AmbDecConf::load(const char *fname) noexcept
             if(CoeffScale == AmbDecScale::Unset)
                 return make_error(linenum, "No coefficient scaling defined");
 
-            return al::nullopt;
+            return std::nullopt;
         }
         else
             return make_error(linenum, "Unexpected command: %s", command.c_str());

@@ -9,15 +9,15 @@
 #include <cstdlib>
 #include <cstdio>
 #include <cstring>
-#include <mutex>
 #include <limits>
+#include <mutex>
+#include <optional>
 #include <string>
 #include <tuple>
 
 #include "almalloc.h"
 #include "alfstream.h"
 #include "alnumeric.h"
-#include "aloptional.h"
 #include "alspan.h"
 #include "alstring.h"
 #include "logging.h"
@@ -38,7 +38,7 @@ bool AllowRTTimeLimit{true};
 
 const PathNamePair &GetProcBinary()
 {
-    static al::optional<PathNamePair> procbin;
+    static std::optional<PathNamePair> procbin;
     if(procbin) return *procbin;
 
     auto fullpath = std::vector<WCHAR>(256);
@@ -209,7 +209,7 @@ void SetRTPriority(void)
 
 const PathNamePair &GetProcBinary()
 {
-    static al::optional<PathNamePair> procbin;
+    static std::optional<PathNamePair> procbin;
     if(procbin) return *procbin;
 
     std::vector<char> pathname;

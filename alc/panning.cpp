@@ -32,6 +32,7 @@
 #include <memory>
 #include <new>
 #include <numeric>
+#include <optional>
 #include <string>
 
 #include "AL/al.h"
@@ -45,7 +46,6 @@
 #include "almalloc.h"
 #include "alnumbers.h"
 #include "alnumeric.h"
-#include "aloptional.h"
 #include "alspan.h"
 #include "alstring.h"
 #include "alu.h"
@@ -933,7 +933,7 @@ void InitUhjPanning(ALCdevice *device)
 
 } // namespace
 
-void aluInitRenderer(ALCdevice *device, int hrtf_id, al::optional<StereoEncoding> stereomode)
+void aluInitRenderer(ALCdevice *device, int hrtf_id, std::optional<StereoEncoding> stereomode)
 {
     /* Hold the HRTF the device last used, in case it's used again. */
     HrtfStorePtr old_hrtf{std::move(device->mHrtf)};

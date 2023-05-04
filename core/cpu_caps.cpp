@@ -51,14 +51,14 @@ inline std::array<reg_type,4> get_cpuid(unsigned int f)
 
 } // namespace
 
-al::optional<CPUInfo> GetCPUInfo()
+std::optional<CPUInfo> GetCPUInfo()
 {
     CPUInfo ret;
 
 #ifdef CAN_GET_CPUID
     auto cpuregs = get_cpuid(0);
     if(cpuregs[0] == 0)
-        return al::nullopt;
+        return std::nullopt;
 
     const reg_type maxfunc{cpuregs[0]};
 

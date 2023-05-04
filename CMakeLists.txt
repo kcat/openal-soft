@@ -599,7 +599,6 @@ set(COMMON_OBJS
     common/almalloc.h
     common/alnumbers.h
     common/alnumeric.h
-    common/aloptional.h
     common/alspan.h
     common/alstring.cpp
     common/alstring.h

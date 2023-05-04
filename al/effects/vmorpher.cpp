@@ -1,13 +1,13 @@
 
 #include "config.h"
 
+#include <optional>
 #include <stdexcept>
 
 #include "AL/al.h"
 #include "AL/efx.h"
 
 #include "alc/effects/base.h"
-#include "aloptional.h"
 #include "effects.h"
 
 #ifdef ALSOFT_EAX
@@ -20,7 +20,7 @@
 
 namespace {
 
-al::optional<VMorpherPhenome> PhenomeFromEnum(ALenum val)
+std::optional<VMorpherPhenome> PhenomeFromEnum(ALenum val)
 {
 #define HANDLE_PHENOME(x) case AL_VOCAL_MORPHER_PHONEME_ ## x:                \
     return VMorpherPhenome::x
@@ -57,7 +57,7 @@ al::optional<VMorpherPhenome> PhenomeFromEnum(ALenum val)
     HANDLE_PHENOME(V);
     HANDLE_PHENOME(Z);
     }
-    return al::nullopt;
+    return std::nullopt;
 #undef HANDLE_PHENOME
 }
 ALenum EnumFromPhenome(VMorpherPhenome phenome)
@@ -100,7 +100,7 @@ ALenum EnumFromPhenome(VMorpherPhenome phenome)
 #undef HANDLE_PHENOME
 }
 
-al::optional<VMorpherWaveform> WaveformFromEmum(ALenum value)
+std::optional<VMorpherWaveform> WaveformFromEmum(ALenum value)
 {
     switch(value)
     {
@@ -108,7 +108,7 @@ al::optional<VMorpherWaveform> WaveformFromEmum(ALenum value)
     case AL_VOCAL_MORPHER_WAVEFORM_TRIANGLE: return VMorpherWaveform::Triangle;
     case AL_VOCAL_MORPHER_WAVEFORM_SAWTOOTH: return VMorpherWaveform::Sawtooth;
     }
-    return al::nullopt;
+    return std::nullopt;
 }
 ALenum EnumFromWaveform(VMorpherWaveform type)
 {

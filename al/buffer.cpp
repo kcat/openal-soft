@@ -35,6 +35,7 @@
 #include <mutex>
 #include <new>
 #include <numeric>
+#include <optional>
 #include <stdexcept>
 #include <utility>
 
@@ -49,7 +50,6 @@
 #include "alc/inprogext.h"
 #include "almalloc.h"
 #include "alnumeric.h"
-#include "aloptional.h"
 #include "atomic.h"
 #include "core/except.h"
 #include "core/logging.h"
@@ -64,14 +64,14 @@
 
 namespace {
 
-al::optional<AmbiLayout> AmbiLayoutFromEnum(ALenum layout)
+std::optional<AmbiLayout> AmbiLayoutFromEnum(ALenum layout)
 {
     switch(layout)
     {
     case AL_FUMA_SOFT: return AmbiLayout::FuMa;
     case AL_ACN_SOFT: return AmbiLayout::ACN;
     }
-    return al::nullopt;
+    return std::nullopt;
 }
 ALenum EnumFromAmbiLayout(AmbiLayout layout)
 {
@@ -83,7 +83,7 @@ ALenum EnumFromAmbiLayout(AmbiLayout layout)
     throw std::runtime_error{"Invalid AmbiLayout: "+std::to_string(int(layout))};
 }
 
-al::optional<AmbiScaling> AmbiScalingFromEnum(ALenum scale)
+std::optional<AmbiScaling> AmbiScalingFromEnum(ALenum scale)
 {
     switch(scale)
     {
@@ -91,7 +91,7 @@ al::optional<AmbiScaling> AmbiScalingFromEnum(ALenum scale)
     case AL_SN3D_SOFT: return AmbiScaling::SN3D;
     case AL_N3D_SOFT: return AmbiScaling::N3D;
     }
-    return al::nullopt;
+    return std::nullopt;
 }
 ALenum EnumFromAmbiScaling(AmbiScaling scale)
 {
@@ -106,7 +106,7 @@ ALenum EnumFromAmbiScaling(AmbiScaling scale)
 }
 
 #ifdef ALSOFT_EAX
-al::optional<EaxStorage> EaxStorageFromEnum(ALenum scale)
+std::optional<EaxStorage> EaxStorageFromEnum(ALenum scale)
 {
     switch(scale)
     {
@@ -114,7 +114,7 @@ al::optional<EaxStorage> EaxStorageFromEnum(ALenum scale)
     case AL_STORAGE_ACCESSIBLE: return EaxStorage::Accessible;
     case AL_STORAGE_HARDWARE: return EaxStorage::Hardware;
     }
-    return al::nullopt;
+    return std::nullopt;
 }
 ALenum EnumFromEaxStorage(EaxStorage storage)
 {
@@ -536,7 +536,7 @@ void PrepareUserPtr(ALCcontext *context, ALbuffer *ALBuf, ALsizei freq,
 
 
 struct DecompResult { FmtChannels channels; FmtType type; };
-al::optional<DecompResult> DecomposeUserFormat(ALenum format)
+std::optional<DecompResult> DecomposeUserFormat(ALenum format)
 {
     struct FormatMap {
         ALenum format;
@@ -624,9 +624,9 @@ al::optional<DecompResult> DecomposeUserFormat(ALenum format)
     for(const auto &fmt : UserFmtList)
     {
         if(fmt.format == format)
-            return al::make_optional<DecompResult>({fmt.channels, fmt.type});
+            return DecompResult{fmt.channels, fmt.type};
     }
-    return al::nullopt;
+    return std::nullopt;
 }
 
 } // namespace

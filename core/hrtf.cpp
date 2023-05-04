@@ -16,6 +16,7 @@
 #include <memory>
 #include <mutex>
 #include <numeric>
+#include <optional>
 #include <type_traits>
 #include <utility>
 
@@ -25,7 +26,6 @@
 #include "almalloc.h"
 #include "alnumbers.h"
 #include "alnumeric.h"
-#include "aloptional.h"
 #include "alspan.h"
 #include "ambidefs.h"
 #include "filters/splitter.h"
@@ -1221,7 +1221,7 @@ al::span<const char> GetResource(int name)
 } // namespace
 
 
-al::vector<std::string> EnumerateHrtf(al::optional<std::string> pathopt)
+al::vector<std::string> EnumerateHrtf(std::optional<std::string> pathopt)
 {
     std::lock_guard<std::mutex> _{EnumeratedHrtfLock};
     EnumeratedHrtfs.clear();

@@ -1,13 +1,13 @@
 
 #include "config.h"
 
+#include <optional>
 #include <stdexcept>
 
 #include "AL/al.h"
 #include "AL/efx.h"
 
 #include "alc/effects/base.h"
-#include "aloptional.h"
 #include "effects.h"
 
 #ifdef ALSOFT_EAX
@@ -20,7 +20,7 @@
 
 namespace {
 
-al::optional<FShifterDirection> DirectionFromEmum(ALenum value)
+std::optional<FShifterDirection> DirectionFromEmum(ALenum value)
 {
     switch(value)
     {
@@ -28,7 +28,7 @@ al::optional<FShifterDirection> DirectionFromEmum(ALenum value)
     case AL_FREQUENCY_SHIFTER_DIRECTION_UP: return FShifterDirection::Up;
     case AL_FREQUENCY_SHIFTER_DIRECTION_OFF: return FShifterDirection::Off;
     }
-    return al::nullopt;
+    return std::nullopt;
 }
 ALenum EnumFromDirection(FShifterDirection dir)
 {

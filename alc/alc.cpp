@@ -48,6 +48,7 @@
 #include <memory>
 #include <mutex>
 #include <new>
+#include <optional>
 #include <stddef.h>
 #include <stdexcept>
 #include <string>
@@ -71,7 +72,6 @@
 #include "alconfig.h"
 #include "almalloc.h"
 #include "alnumeric.h"
-#include "aloptional.h"
 #include "alspan.h"
 #include "alstring.h"
 #include "alu.h"
@@ -1443,7 +1443,7 @@ void ProbeCaptureDeviceList()
 
 
 struct DevFmtPair { DevFmtChannels chans; DevFmtType type; };
-al::optional<DevFmtPair> DecomposeDevFormat(ALenum format)
+std::optional<DevFmtPair> DecomposeDevFormat(ALenum format)
 {
     static const struct {
         ALenum format;
@@ -1478,13 +1478,13 @@ al::optional<DevFmtPair> DecomposeDevFormat(ALenum format)
     for(const auto &item : list)
     {
         if(item.format == format)
-            return al::make_optional<DevFmtPair>({item.channels, item.type});
+            return DevFmtPair{item.channels, item.type};
     }
 
-    return al::nullopt;
+    return std::nullopt;
 }
 
-al::optional<DevFmtType> DevFmtTypeFromEnum(ALCenum type)
+std::optional<DevFmtType> DevFmtTypeFromEnum(ALCenum type)
 {
     switch(type)
     {
@@ -1497,7 +1497,7 @@ al::optional<DevFmtType> DevFmtTypeFromEnum(ALCenum type)
     case ALC_FLOAT_SOFT: return DevFmtFloat;
     }
     WARN("Unsupported format type: 0x%04x\n", type);
-    return al::nullopt;
+    return std::nullopt;
 }
 ALCenum EnumFromDevFmt(DevFmtType type)
 {
@@ -1514,7 +1514,7 @@ ALCenum EnumFromDevFmt(DevFmtType type)
     throw std::runtime_error{"Invalid DevFmtType: "+std::to_string(int(type))};
 }
 
-al::optional<DevFmtChannels> DevFmtChannelsFromEnum(ALCenum channels)
+std::optional<DevFmtChannels> DevFmtChannelsFromEnum(ALCenum channels)
 {
     switch(channels)
     {
@@ -1527,7 +1527,7 @@ al::optional<DevFmtChannels> DevFmtChannelsFromEnum(ALCenum channels)
     case ALC_BFORMAT3D_SOFT: return DevFmtAmbi3D;
     }
     WARN("Unsupported format channels: 0x%04x\n", channels);
-    return al::nullopt;
+    return std::nullopt;
 }
 ALCenum EnumFromDevFmt(DevFmtChannels channels)
 {
@@ -1547,7 +1547,7 @@ ALCenum EnumFromDevFmt(DevFmtChannels channels)
     throw std::runtime_error{"Invalid DevFmtChannels: "+std::to_string(int(channels))};
 }
 
-al::optional<DevAmbiLayout> DevAmbiLayoutFromEnum(ALCenum layout)
+std::optional<DevAmbiLayout> DevAmbiLayoutFromEnum(ALCenum layout)
 {
     switch(layout)
     {
@@ -1555,7 +1555,7 @@ al::optional<DevAmbiLayout> DevAmbiLayoutFromEnum(ALCenum layout)
     case ALC_ACN_SOFT: return DevAmbiLayout::ACN;
     }
     WARN("Unsupported ambisonic layout: 0x%04x\n", layout);
-    return al::nullopt;
+    return std::nullopt;
 }
 ALCenum EnumFromDevAmbi(DevAmbiLayout layout)
 {
@@ -1567,7 +1567,7 @@ ALCenum EnumFromDevAmbi(DevAmbiLayout layout)
     throw std::runtime_error{"Invalid DevAmbiLayout: "+std::to_string(int(layout))};
 }
 
-al::optional<DevAmbiScaling> DevAmbiScalingFromEnum(ALCenum scaling)
+std::optional<DevAmbiScaling> DevAmbiScalingFromEnum(ALCenum scaling)
 {
     switch(scaling)
     {
@@ -1576,7 +1576,7 @@ al::optional<DevAmbiScaling> DevAmbiScalingFromEnum(ALCenum scaling)
     case ALC_N3D_SOFT: return DevAmbiScaling::N3D;
     }
     WARN("Unsupported ambisonic scaling: 0x%04x\n", scaling);
-    return al::nullopt;
+    return std::nullopt;
 }
 ALCenum EnumFromDevAmbi(DevAmbiScaling scaling)
 {
@@ -1731,13 +1731,13 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
     uint numMono{device->NumMonoSources};
     uint numStereo{device->NumStereoSources};
     uint numSends{device->NumAuxSends};
-    al::optional<StereoEncoding> stereomode;
-    al::optional<bool> optlimit;
-    al::optional<uint> optsrate;
-    al::optional<DevFmtChannels> optchans;
-    al::optional<DevFmtType> opttype;
-    al::optional<DevAmbiLayout> optlayout;
-    al::optional<DevAmbiScaling> optscale;
+    std::optional<StereoEncoding> stereomode;
+    std::optional<bool> optlimit;
+    std::optional<uint> optsrate;
+    std::optional<DevFmtChannels> optchans;
+    std::optional<DevFmtType> opttype;
+    std::optional<DevAmbiLayout> optlayout;
+    std::optional<DevAmbiScaling> optscale;
     uint period_size{DEFAULT_UPDATE_SIZE};
     uint buffer_size{DEFAULT_UPDATE_SIZE * DEFAULT_NUM_UPDATES};
     int hrtf_id{-1};
@@ -1880,7 +1880,7 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
     if(attrList && attrList[0])
     {
         ALenum outmode{ALC_ANY_SOFT};
-        al::optional<bool> opthrtf;
+        std::optional<bool> opthrtf;
         int freqAttr{};
 
 #define ATTRIBUTE(a) a: TRACE("%s = %d\n", #a, attrList[attrIdx + 1]);
@@ -1940,7 +1940,7 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
                 else if(attrList[attrIdx + 1] == ALC_TRUE)
                     opthrtf = true;
                 else if(attrList[attrIdx + 1] == ALC_DONT_CARE_SOFT)
-                    opthrtf = al::nullopt;
+                    opthrtf = std::nullopt;
                 break;
 
             case ATTRIBUTE(ALC_HRTF_ID_SOFT)
@@ -1953,7 +1953,7 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
                 else if(attrList[attrIdx + 1] == ALC_TRUE)
                     optlimit = true;
                 else if(attrList[attrIdx + 1] == ALC_DONT_CARE_SOFT)
-                    optlimit = al::nullopt;
+                    optlimit = std::nullopt;
                 break;
 
             case ATTRIBUTE(ALC_OUTPUT_MODE_SOFT)

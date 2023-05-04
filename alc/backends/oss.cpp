@@ -45,7 +45,6 @@
 #include "alc/alconfig.h"
 #include "almalloc.h"
 #include "alnumeric.h"
-#include "aloptional.h"
 #include "core/device.h"
 #include "core/helpers.h"
 #include "core/logging.h"

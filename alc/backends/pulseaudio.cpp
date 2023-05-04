@@ -31,6 +31,7 @@
 #include <cstring>
 #include <limits>
 #include <mutex>
+#include <optional>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string>
@@ -41,7 +42,6 @@
 #include "alc/alconfig.h"
 #include "almalloc.h"
 #include "alnumeric.h"
-#include "aloptional.h"
 #include "alspan.h"
 #include "core/devformat.h"
 #include "core/device.h"
@@ -615,7 +615,7 @@ struct PulsePlayback final : public BackendBase {
 
     PulseMainloop mMainloop;
 
-    al::optional<std::string> mDeviceName{al::nullopt};
+    std::optional<std::string> mDeviceName{std::nullopt};
 
     bool mIs51Rear{false};
     pa_buffer_attr mAttr;
@@ -1042,7 +1042,7 @@ struct PulseCapture final : public BackendBase {
 
     PulseMainloop mMainloop;
 
-    al::optional<std::string> mDeviceName{al::nullopt};
+    std::optional<std::string> mDeviceName{std::nullopt};
 
     al::span<const al::byte> mCapBuffer;
     size_t mHoleLength{0};

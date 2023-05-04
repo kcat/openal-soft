@@ -31,6 +31,7 @@
 #include <list>
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <stdint.h>
 #include <thread>
 #include <type_traits>
@@ -40,7 +41,6 @@
 #include "alc/alconfig.h"
 #include "almalloc.h"
 #include "alnumeric.h"
-#include "aloptional.h"
 #include "alspan.h"
 #include "alstring.h"
 #include "core/devformat.h"
@@ -304,12 +304,12 @@ al::span<const Pod_t<T>> get_array_span(const spa_pod *pod)
 }
 
 template<uint32_t T>
-al::optional<Pod_t<T>> get_value(const spa_pod *value)
+std::optional<Pod_t<T>> get_value(const spa_pod *value)
 {
     Pod_t<T> val{};
     if(PodInfo<T>::get_value(value, &val) == 0)
         return val;
-    return al::nullopt;
+    return std::nullopt;
 }
 
 /* Internally, PipeWire types "inherit" from each other, but this is hidden
@@ -997,7 +997,7 @@ int MetadataProxy::propertyCallback(uint32_t id, const char *key, const char *ty
 
     auto get_json_string = [](spa_json *iter)
     {
-        al::optional<std::string> str;
+        std::optional<std::string> str;
 
         const char *val{};
         int len{spa_json_next(iter, &val)};

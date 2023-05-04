@@ -2,8 +2,7 @@
 #define ALU_H
 
 #include <bitset>
-
-#include "aloptional.h"
+#include <optional>
 
 struct ALCcontext;
 struct ALCdevice;
@@ -31,7 +30,7 @@ void aluInit(CompatFlagBitset flags, const float nfcscale);
  * Set up the appropriate panning method and mixing method given the device
  * properties.
  */
-void aluInitRenderer(ALCdevice *device, int hrtf_id, al::optional<StereoEncoding> stereomode);
+void aluInitRenderer(ALCdevice *device, int hrtf_id, std::optional<StereoEncoding> stereomode);
 
 void aluInitEffectPanning(EffectSlot *slot, ALCcontext *context);
 

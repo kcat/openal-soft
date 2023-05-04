@@ -14,7 +14,6 @@
 
 #include "albit.h"
 #include "core/logging.h"
-#include "aloptional.h"
 #endif
 
 #include "atomic.h"

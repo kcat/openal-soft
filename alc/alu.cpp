@@ -36,6 +36,7 @@
 #include <limits>
 #include <memory>
 #include <new>
+#include <optional>
 #include <stdint.h>
 #include <utility>
 

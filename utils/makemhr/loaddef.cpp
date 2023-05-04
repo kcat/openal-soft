@@ -33,11 +33,10 @@
 #include <iterator>
 #include <limits>
 #include <memory>
-#include <cstdarg>
+#include <optional>
 #include <vector>
 
 #include "alfstream.h"
-#include "aloptional.h"
 #include "alspan.h"
 #include "alstring.h"
 #include "makemhr.h"
@@ -1755,7 +1754,7 @@ static int ProcessSources(TokenReaderT *tr, HrirDataT *hData, const uint outRate
     PPhaseResampler onsetResampler;
     onsetResampler.init(hData->mIrRate, OnsetRateMultiple*hData->mIrRate);
 
-    al::optional<PPhaseResampler> resampler;
+    std::optional<PPhaseResampler> resampler;
     if(outRate && outRate != hData->mIrRate)
         resampler.emplace().init(hData->mIrRate, outRate);
     const double rateScale{outRate ? static_cast<double>(outRate) / hData->mIrRate : 1.0};

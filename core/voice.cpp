@@ -12,13 +12,13 @@
 #include <iterator>
 #include <memory>
 #include <new>
+#include <optional>
 #include <stdlib.h>
 #include <utility>
 #include <vector>
 
 #include "albyte.h"
 #include "alnumeric.h"
-#include "aloptional.h"
 #include "alspan.h"
 #include "alstring.h"
 #include "ambidefs.h"
@@ -129,7 +129,7 @@ inline HrtfMixerBlendFunc SelectHrtfBlendMixer()
 
 } // namespace
 
-void Voice::InitMixer(al::optional<std::string> resampler)
+void Voice::InitMixer(std::optional<std::string> resampler)
 {
     if(resampler)
     {

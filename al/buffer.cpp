@@ -26,6 +26,7 @@
 #include <array>
 #include <atomic>
 #include <cassert>
+#include <cstddef>
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
@@ -44,7 +45,6 @@
 #include "AL/alext.h"
 
 #include "albit.h"
-#include "albyte.h"
 #include "alc/context.h"
 #include "alc/device.h"
 #include "alc/inprogext.h"
@@ -277,7 +277,7 @@ ALuint SanitizeAlignment(FmtType type, ALuint align)
 
 /** Loads the specified data into the buffer, using the specified format. */
 void LoadData(ALCcontext *context, ALbuffer *ALBuf, ALsizei freq, ALuint size,
-    const FmtChannels DstChannels, const FmtType DstType, const al::byte *SrcData,
+    const FmtChannels DstChannels, const FmtType DstType, const std::byte *SrcData,
     ALbitfieldSOFT access)
 {
     if(ReadRef(ALBuf->ref) != 0 || ALBuf->MappedAccess != 0) UNLIKELY
@@ -343,7 +343,7 @@ void LoadData(ALCcontext *context, ALbuffer *ALBuf, ALsizei freq, ALuint size,
      */
     if(newsize != ALBuf->mDataStorage.size())
     {
-        auto newdata = al::vector<al::byte,16>(newsize, al::byte{});
+        auto newdata = al::vector<std::byte,16>(newsize, std::byte{});
         if((access&AL_PRESERVE_DATA_BIT_SOFT))
         {
             const size_t tocopy{minz(newdata.size(), ALBuf->mDataStorage.size())};
@@ -437,7 +437,7 @@ void PrepareCallback(ALCcontext *context, ALbuffer *ALBuf, ALsizei freq,
 
 /** Prepares the buffer to use caller-specified storage. */
 void PrepareUserPtr(ALCcontext *context, ALbuffer *ALBuf, ALsizei freq,
-    const FmtChannels DstChannels, const FmtType DstType, al::byte *sdata, const ALuint sdatalen)
+    const FmtChannels DstChannels, const FmtType DstType, std::byte *sdata, const ALuint sdatalen)
 {
     if(ReadRef(ALBuf->ref) != 0 || ALBuf->MappedAccess != 0) UNLIKELY
         return context->setError(AL_INVALID_OPERATION, "Modifying storage for in-use buffer %u",
@@ -506,7 +506,7 @@ void PrepareUserPtr(ALCcontext *context, ALbuffer *ALBuf, ALsizei freq,
 #endif
 
     decltype(ALBuf->mDataStorage){}.swap(ALBuf->mDataStorage);
-    ALBuf->mData = {static_cast<al::byte*>(sdata), sdatalen};
+    ALBuf->mData = {static_cast<std::byte*>(sdata), sdatalen};
 
 #ifdef ALSOFT_EAX
     eax_x_ram_clear(*context->mALDevice, *ALBuf);
@@ -767,7 +767,7 @@ START_API_FUNC
         else
         {
             LoadData(context.get(), albuf, freq, static_cast<ALuint>(size), usrfmt->channels,
-                usrfmt->type, static_cast<const al::byte*>(data), flags);
+                usrfmt->type, static_cast<const std::byte*>(data), flags);
         }
     }
 }
@@ -796,7 +796,7 @@ START_API_FUNC
         return context->setError(AL_INVALID_ENUM, "Invalid format 0x%04x", format);
 
     PrepareUserPtr(context.get(), albuf, freq, usrfmt->channels, usrfmt->type,
-        static_cast<al::byte*>(data), static_cast<ALuint>(size));
+        static_cast<std::byte*>(data), static_cast<ALuint>(size));
 }
 END_API_FUNC
 

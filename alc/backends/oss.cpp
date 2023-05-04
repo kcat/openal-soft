@@ -41,7 +41,6 @@
 #include <thread>
 #include <utility>
 
-#include "albyte.h"
 #include "alc/alconfig.h"
 #include "almalloc.h"
 #include "alnumeric.h"
@@ -237,7 +236,7 @@ struct OSSPlayback final : public BackendBase {
 
     int mFd{-1};
 
-    al::vector<al::byte> mMixData;
+    al::vector<std::byte> mMixData;
 
     std::atomic<bool> mKillNow{true};
     std::thread mThread;
@@ -283,7 +282,7 @@ int OSSPlayback::mixerProc()
             continue;
         }
 
-        al::byte *write_ptr{mMixData.data()};
+        std::byte *write_ptr{mMixData.data()};
         size_t to_write{mMixData.size()};
         mDevice->renderSamples(write_ptr, static_cast<uint>(to_write/frame_size), frame_step);
         while(to_write > 0 && !mKillNow.load(std::memory_order_acquire))
@@ -449,7 +448,7 @@ struct OSScapture final : public BackendBase {
     void open(const char *name) override;
     void start() override;
     void stop() override;
-    void captureSamples(al::byte *buffer, uint samples) override;
+    void captureSamples(std::byte *buffer, uint samples) override;
     uint availableSamples() override;
 
     int mFd{-1};
@@ -619,7 +618,7 @@ void OSScapture::stop()
         ERR("Error resetting device: %s\n", strerror(errno));
 }
 
-void OSScapture::captureSamples(al::byte *buffer, uint samples)
+void OSScapture::captureSamples(std::byte *buffer, uint samples)
 { mRing->read(buffer, samples); }
 
 uint OSScapture::availableSamples()

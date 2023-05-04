@@ -1309,7 +1309,7 @@ struct WasapiCapture final : public BackendBase, WasapiProxy {
     void stop() override;
     void stopProxy() override;
 
-    void captureSamples(al::byte *buffer, uint samples) override;
+    void captureSamples(std::byte *buffer, uint samples) override;
     uint availableSamples() override;
 
     HRESULT mOpenStatus{E_FAIL};
@@ -1881,7 +1881,7 @@ void WasapiCapture::stopProxy()
 }
 
 
-void WasapiCapture::captureSamples(al::byte *buffer, uint samples)
+void WasapiCapture::captureSamples(std::byte *buffer, uint samples)
 { mRing->read(buffer, samples); }
 
 uint WasapiCapture::availableSamples()

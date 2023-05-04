@@ -26,15 +26,14 @@
 
 #include <array>
 #include <complex>
+#include <cstddef>
 #include <cstring>
 #include <memory>
-#include <stddef.h>
 #include <string>
 #include <utility>
 #include <vector>
 
 #include "albit.h"
-#include "albyte.h"
 #include "alcomplex.h"
 #include "almalloc.h"
 #include "alnumbers.h"
@@ -64,7 +63,7 @@ using ushort = unsigned short;
 using uint = unsigned int;
 using complex_d = std::complex<double>;
 
-using byte4 = std::array<al::byte,4>;
+using byte4 = std::array<std::byte,4>;
 
 
 constexpr ubyte SUBTYPE_BFORMAT_FLOAT[]{
@@ -113,7 +112,7 @@ using FloatBufferSpan = al::span<float,BufferLineSize>;
 
 
 struct UhjDecoder {
-    constexpr static size_t sFilterDelay{1024};
+    constexpr static std::size_t sFilterDelay{1024};
 
     alignas(16) std::array<float,BufferLineSize+sFilterDelay> mS{};
     alignas(16) std::array<float,BufferLineSize+sFilterDelay> mD{};
@@ -126,10 +125,10 @@ struct UhjDecoder {
 
     alignas(16) std::array<float,BufferLineSize + sFilterDelay*2> mTemp{};
 
-    void decode(const float *RESTRICT InSamples, const size_t InChannels,
-        const al::span<FloatBufferLine> OutSamples, const size_t SamplesToDo);
+    void decode(const float *RESTRICT InSamples, const std::size_t InChannels,
+        const al::span<FloatBufferLine> OutSamples, const std::size_t SamplesToDo);
     void decode2(const float *RESTRICT InSamples, const al::span<FloatBufferLine> OutSamples,
-        const size_t SamplesToDo);
+        const std::size_t SamplesToDo);
 
     DEF_NEWDEL(UhjDecoder)
 };
@@ -210,8 +209,8 @@ const PhaseShifterT<UhjDecoder::sFilterDelay*2> PShift{};
  *
  * Not halving produces a result matching the original input.
  */
-void UhjDecoder::decode(const float *RESTRICT InSamples, const size_t InChannels,
-    const al::span<FloatBufferLine> OutSamples, const size_t SamplesToDo)
+void UhjDecoder::decode(const float *RESTRICT InSamples, const std::size_t InChannels,
+    const al::span<FloatBufferLine> OutSamples, const std::size_t SamplesToDo)
 {
     ASSUME(SamplesToDo > 0);
 
@@ -224,23 +223,23 @@ void UhjDecoder::decode(const float *RESTRICT InSamples, const size_t InChannels
      */
 
     /* S = Left + Right */
-    for(size_t i{0};i < SamplesToDo;++i)
+    for(std::size_t i{0};i < SamplesToDo;++i)
         mS[sFilterDelay+i] = InSamples[i*InChannels + 0] + InSamples[i*InChannels + 1];
 
     /* D = Left - Right */
-    for(size_t i{0};i < SamplesToDo;++i)
+    for(std::size_t i{0};i < SamplesToDo;++i)
         mD[sFilterDelay+i] = InSamples[i*InChannels + 0] - InSamples[i*InChannels + 1];
 
     if(InChannels > 2)
     {
         /* T */
-        for(size_t i{0};i < SamplesToDo;++i)
+        for(std::size_t i{0};i < SamplesToDo;++i)
             mT[sFilterDelay+i] = InSamples[i*InChannels + 2];
     }
     if(InChannels > 3)
     {
         /* Q */
-        for(size_t i{0};i < SamplesToDo;++i)
+        for(std::size_t i{0};i < SamplesToDo;++i)
             mQ[sFilterDelay+i] = InSamples[i*InChannels + 3];
     }
 
@@ -251,7 +250,7 @@ void UhjDecoder::decode(const float *RESTRICT InSamples, const size_t InChannels
     std::copy_n(mTemp.cbegin()+SamplesToDo, mDTHistory.size(), mDTHistory.begin());
     PShift.process({xoutput, SamplesToDo}, mTemp.data());
 
-    for(size_t i{0};i < SamplesToDo;++i)
+    for(std::size_t i{0};i < SamplesToDo;++i)
     {
         /* W = 0.981532*S + 0.197484*j(0.828331*D + 0.767820*T) */
         woutput[i] = 0.981532f*mS[i] + 0.197484f*xoutput[i];
@@ -265,7 +264,7 @@ void UhjDecoder::decode(const float *RESTRICT InSamples, const size_t InChannels
     std::copy_n(mTemp.cbegin()+SamplesToDo, mSHistory.size(), mSHistory.begin());
     PShift.process({youtput, SamplesToDo}, mTemp.data());
 
-    for(size_t i{0};i < SamplesToDo;++i)
+    for(std::size_t i{0};i < SamplesToDo;++i)
     {
         /* Y = 0.795968*D - 0.676392*T + j(0.186633*S) */
         youtput[i] = 0.795968f*mD[i] - 0.676392f*mT[i] + 0.186633f*youtput[i];
@@ -275,7 +274,7 @@ void UhjDecoder::decode(const float *RESTRICT InSamples, const size_t InChannels
     {
         float *zoutput{OutSamples[3].data()};
         /* Z = 1.023332*Q */
-        for(size_t i{0};i < SamplesToDo;++i)
+        for(std::size_t i{0};i < SamplesToDo;++i)
             zoutput[i] = 1.023332f*mQ[i];
     }
 
@@ -305,7 +304,7 @@ void UhjDecoder::decode(const float *RESTRICT InSamples, const size_t InChannels
  * halving here is merely a -6dB reduction in output, but it's still incorrect.
  */
 void UhjDecoder::decode2(const float *RESTRICT InSamples,
-    const al::span<FloatBufferLine> OutSamples, const size_t SamplesToDo)
+    const al::span<FloatBufferLine> OutSamples, const std::size_t SamplesToDo)
 {
     ASSUME(SamplesToDo > 0);
 
@@ -314,11 +313,11 @@ void UhjDecoder::decode2(const float *RESTRICT InSamples,
     float *youtput{OutSamples[2].data()};
 
     /* S = Left + Right */
-    for(size_t i{0};i < SamplesToDo;++i)
+    for(std::size_t i{0};i < SamplesToDo;++i)
         mS[sFilterDelay+i] = InSamples[i*2 + 0] + InSamples[i*2 + 1];
 
     /* D = Left - Right */
-    for(size_t i{0};i < SamplesToDo;++i)
+    for(std::size_t i{0};i < SamplesToDo;++i)
         mD[sFilterDelay+i] = InSamples[i*2 + 0] - InSamples[i*2 + 1];
 
     /* Precompute j*D and store in xoutput. */
@@ -327,7 +326,7 @@ void UhjDecoder::decode2(const float *RESTRICT InSamples,
     std::copy_n(mTemp.cbegin()+SamplesToDo, mDTHistory.size(), mDTHistory.begin());
     PShift.process({xoutput, SamplesToDo}, mTemp.data());
 
-    for(size_t i{0};i < SamplesToDo;++i)
+    for(std::size_t i{0};i < SamplesToDo;++i)
     {
         /* W = 0.981530*S + j*0.163585*D */
         woutput[i] = 0.981530f*mS[i] + 0.163585f*xoutput[i];
@@ -341,7 +340,7 @@ void UhjDecoder::decode2(const float *RESTRICT InSamples,
     std::copy_n(mTemp.cbegin()+SamplesToDo, mSHistory.size(), mSHistory.begin());
     PShift.process({youtput, SamplesToDo}, mTemp.data());
 
-    for(size_t i{0};i < SamplesToDo;++i)
+    for(std::size_t i{0};i < SamplesToDo;++i)
     {
         /* Y = 0.762956*D + j*0.384230*S */
         youtput[i] = 0.762956f*mD[i] + 0.384230f*youtput[i];
@@ -368,7 +367,7 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    size_t num_files{0}, num_decoded{0};
+    std::size_t num_files{0}, num_decoded{0};
     bool use_general{true};
     for(int fidx{1};fidx < argc;++fidx)
     {
@@ -473,7 +472,7 @@ int main(int argc, char **argv)
          * be fed through the decoder after reaching the end of the input file
          * to ensure none of the original input is lost.
          */
-        size_t LeadIn{UhjDecoder::sFilterDelay};
+        std::size_t LeadIn{UhjDecoder::sFilterDelay};
         sf_count_t LeadOut{UhjDecoder::sFilterDelay};
         while(LeadOut > 0)
         {
@@ -487,7 +486,7 @@ int main(int argc, char **argv)
                 LeadOut -= remaining;
             }
 
-            auto got = static_cast<size_t>(sgot);
+            auto got = static_cast<std::size_t>(sgot);
             if(ininfo.channels > 2 || use_general)
                 decoder->decode(inmem.get(), static_cast<uint>(ininfo.channels), decmem, got);
             else
@@ -499,16 +498,16 @@ int main(int argc, char **argv)
             }
 
             got -= LeadIn;
-            for(size_t i{0};i < got;++i)
+            for(std::size_t i{0};i < got;++i)
             {
                 /* Attenuate by -3dB for FuMa output levels. */
                 constexpr auto inv_sqrt2 = static_cast<float>(1.0/al::numbers::sqrt2);
-                for(size_t j{0};j < outchans;++j)
+                for(std::size_t j{0};j < outchans;++j)
                     outmem[i*outchans + j] = f32AsLEBytes(decmem[j][LeadIn+i] * inv_sqrt2);
             }
             LeadIn = 0;
 
-            size_t wrote{fwrite(outmem.get(), sizeof(byte4)*outchans, got, outfile.get())};
+            std::size_t wrote{fwrite(outmem.get(), sizeof(byte4)*outchans, got, outfile.get())};
             if(wrote < got)
             {
                 fprintf(stderr, "Error writing wave data: %s (%d)\n", strerror(errno), errno);

@@ -17,7 +17,6 @@
 #include <arm_neon.h>
 #endif
 
-#include "albyte.h"
 #include "alcomplex.h"
 #include "almalloc.h"
 #include "alnumbers.h"
@@ -72,7 +71,7 @@ namespace {
  */
 
 
-void LoadSamples(float *RESTRICT dst, const al::byte *src, const size_t srcstep, FmtType srctype,
+void LoadSamples(float *RESTRICT dst, const std::byte *src, const size_t srcstep, FmtType srctype,
     const size_t samples) noexcept
 {
 #define HANDLE_FMT(T)  case T: al::LoadSampleArray<T>(dst, src, srcstep, samples); break

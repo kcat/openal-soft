@@ -5,12 +5,11 @@
 #include <atomic>
 #include <bitset>
 #include <chrono>
+#include <cstddef>
 #include <memory>
 #include <optional>
-#include <stddef.h>
 #include <string>
 
-#include "albyte.h"
 #include "almalloc.h"
 #include "alspan.h"
 #include "bufferline.h"
@@ -100,7 +99,7 @@ struct VoiceBufferItem {
     uint mLoopStart{0u};
     uint mLoopEnd{0u};
 
-    al::byte *mSamples{nullptr};
+    std::byte *mSamples{nullptr};
 };
 
 

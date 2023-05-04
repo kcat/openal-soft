@@ -372,7 +372,7 @@ struct WinMMCapture final : public BackendBase {
     void open(const char *name) override;
     void start() override;
     void stop() override;
-    void captureSamples(al::byte *buffer, uint samples) override;
+    void captureSamples(std::byte *buffer, uint samples) override;
     uint availableSamples() override;
 
     std::atomic<uint> mReadable{0u};
@@ -571,7 +571,7 @@ void WinMMCapture::stop()
     mIdx = 0;
 }
 
-void WinMMCapture::captureSamples(al::byte *buffer, uint samples)
+void WinMMCapture::captureSamples(std::byte *buffer, uint samples)
 { mRing->read(buffer, samples); }
 
 uint WinMMCapture::availableSamples()

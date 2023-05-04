@@ -2,10 +2,10 @@
 #define AL_BUFFER_H
 
 #include <atomic>
+#include <cstddef>
 
 #include "AL/al.h"
 
-#include "albyte.h"
 #include "alc/inprogext.h"
 #include "almalloc.h"
 #include "atomic.h"
@@ -26,7 +26,7 @@ enum class EaxStorage : uint8_t {
 struct ALbuffer : public BufferStorage {
     ALbitfieldSOFT Access{0u};
 
-    al::vector<al::byte,16> mDataStorage;
+    al::vector<std::byte,16> mDataStorage;
 
     ALuint OriginalSize{0};
 

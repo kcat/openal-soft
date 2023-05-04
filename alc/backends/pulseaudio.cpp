@@ -39,7 +39,6 @@
 #include <utility>
 
 #include "albit.h"
-#include "albyte.h"
 #include "alc/alconfig.h"
 #include "almalloc.h"
 #include "alnumeric.h"
@@ -1037,7 +1036,7 @@ struct PulseCapture final : public BackendBase {
     void open(const char *name) override;
     void start() override;
     void stop() override;
-    void captureSamples(al::byte *buffer, uint samples) override;
+    void captureSamples(std::byte *buffer, uint samples) override;
     uint availableSamples() override;
     ClockLatency getClockLatency() override;
 
@@ -1045,12 +1044,12 @@ struct PulseCapture final : public BackendBase {
 
     std::optional<std::string> mDeviceName{std::nullopt};
 
-    al::span<const al::byte> mCapBuffer;
+    al::span<const std::byte> mCapBuffer;
     size_t mHoleLength{0};
     size_t mPacketLength{0};
 
     uint mLastReadable{0u};
-    al::byte mSilentVal{};
+    std::byte mSilentVal{};
 
     pa_buffer_attr mAttr{};
     pa_sample_spec mSpec{};
@@ -1159,7 +1158,7 @@ void PulseCapture::open(const char *name)
     switch(mDevice->FmtType)
     {
     case DevFmtUByte:
-        mSilentVal = al::byte(0x80);
+        mSilentVal = std::byte(0x80);
         mSpec.format = PA_SAMPLE_U8;
         break;
     case DevFmtShort:
@@ -1231,9 +1230,9 @@ void PulseCapture::stop()
     plock.waitForOperation(op);
 }
 
-void PulseCapture::captureSamples(al::byte *buffer, uint samples)
+void PulseCapture::captureSamples(std::byte *buffer, uint samples)
 {
-    al::span<al::byte> dstbuf{buffer, samples * pa_frame_size(&mSpec)};
+    al::span<std::byte> dstbuf{buffer, samples * pa_frame_size(&mSpec)};
 
     /* Capture is done in fragment-sized chunks, so we loop until we get all
      * that's available.
@@ -1291,7 +1290,7 @@ void PulseCapture::captureSamples(al::byte *buffer, uint samples)
         if(!capbuf) UNLIKELY
             mHoleLength = caplen;
         else
-            mCapBuffer = {static_cast<const al::byte*>(capbuf), caplen};
+            mCapBuffer = {static_cast<const std::byte*>(capbuf), caplen};
         mPacketLength = caplen;
     }
     if(!dstbuf.empty())

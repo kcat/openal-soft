@@ -589,7 +589,6 @@ check_symbol_exists(getopt unistd.h HAVE_GETOPT)
 # router, and certain tools and examples.
 set(COMMON_OBJS
     common/albit.h
-    common/albyte.h
     common/alcomplex.cpp
     common/alcomplex.h
     common/aldeque.h

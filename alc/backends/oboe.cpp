@@ -215,7 +215,7 @@ struct OboeCapture final : public BackendBase, public oboe::AudioStreamCallback 
     void open(const char *name) override;
     void start() override;
     void stop() override;
-    void captureSamples(al::byte *buffer, uint samples) override;
+    void captureSamples(std::byte *buffer, uint samples) override;
     uint availableSamples() override;
 };
 
@@ -322,7 +322,7 @@ void OboeCapture::stop()
 uint OboeCapture::availableSamples()
 { return static_cast<uint>(mRing->readSpace()); }
 
-void OboeCapture::captureSamples(al::byte *buffer, uint samples)
+void OboeCapture::captureSamples(std::byte *buffer, uint samples)
 { mRing->read(buffer, samples); }
 
 } // namespace

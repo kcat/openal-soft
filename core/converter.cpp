@@ -6,12 +6,12 @@
 #include <algorithm>
 #include <cassert>
 #include <cmath>
+#include <cstddef>
 #include <cstdint>
 #include <iterator>
 #include <limits.h>
 
 #include "albit.h"
-#include "albyte.h"
 #include "alnumeric.h"
 #include "fpu_ctrl.h"
 
@@ -219,7 +219,7 @@ uint SampleConverter::convert(const void **src, uint *srcframes, void *dst, uint
     const uint SrcFrameSize{static_cast<uint>(mChan.size()) * mSrcTypeSize};
     const uint DstFrameSize{static_cast<uint>(mChan.size()) * mDstTypeSize};
     const uint increment{mIncrement};
-    auto SamplesIn = static_cast<const al::byte*>(*src);
+    auto SamplesIn = static_cast<const std::byte*>(*src);
     uint NumSrcSamples{*srcframes};
 
     FPUCtl mixer_mode{};
@@ -265,8 +265,8 @@ uint SampleConverter::convert(const void **src, uint *srcframes, void *dst, uint
 
         for(size_t chan{0u};chan < mChan.size();chan++)
         {
-            const al::byte *SrcSamples{SamplesIn + mSrcTypeSize*chan};
-            al::byte *DstSamples = static_cast<al::byte*>(dst) + mDstTypeSize*chan;
+            const std::byte *SrcSamples{SamplesIn + mSrcTypeSize*chan};
+            std::byte *DstSamples = static_cast<std::byte*>(dst) + mDstTypeSize*chan;
 
             /* Load the previous samples into the source data first, then the
              * new samples from the input buffer.
@@ -299,7 +299,7 @@ uint SampleConverter::convert(const void **src, uint *srcframes, void *dst, uint
         SamplesIn += SrcFrameSize*srcread;
         NumSrcSamples -= srcread;
 
-        dst = static_cast<al::byte*>(dst) + DstFrameSize*DstSize;
+        dst = static_cast<std::byte*>(dst) + DstFrameSize*DstSize;
         pos += DstSize;
     }
 

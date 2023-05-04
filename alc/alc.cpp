@@ -38,6 +38,7 @@
 #include <climits>
 #include <cmath>
 #include <csignal>
+#include <cstddef>
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
@@ -68,7 +69,6 @@
 #include "al/listener.h"
 #include "al/source.h"
 #include "albit.h"
-#include "albyte.h"
 #include "alconfig.h"
 #include "almalloc.h"
 #include "alnumeric.h"
@@ -3883,7 +3883,7 @@ START_API_FUNC
         return;
     }
 
-    backend->captureSamples(static_cast<al::byte*>(buffer), usamples);
+    backend->captureSamples(static_cast<std::byte*>(buffer), usamples);
 }
 END_API_FUNC
 

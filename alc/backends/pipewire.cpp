@@ -24,6 +24,7 @@
 
 #include <algorithm>
 #include <atomic>
+#include <cstddef>
 #include <cstring>
 #include <cerrno>
 #include <chrono>
@@ -38,7 +39,6 @@
 #include <utility>
 
 #include "albit.h"
-#include "albyte.h"
 #include "alc/alconfig.h"
 #include "almalloc.h"
 #include "alnumeric.h"
@@ -1528,7 +1528,7 @@ bool PipeWirePlayback::reset()
      * magic value.
      */
     constexpr uint32_t pod_buffer_size{1024};
-    auto pod_buffer = std::make_unique<al::byte[]>(pod_buffer_size);
+    auto pod_buffer = std::make_unique<std::byte[]>(pod_buffer_size);
     spa_pod_builder b{make_pod_builder(pod_buffer.get(), pod_buffer_size)};
 
     const spa_pod *params{spa_format_audio_raw_build(&b, SPA_PARAM_EnumFormat, &info)};
@@ -1793,7 +1793,7 @@ class PipeWireCapture final : public BackendBase {
     void open(const char *name) override;
     void start() override;
     void stop() override;
-    void captureSamples(al::byte *buffer, uint samples) override;
+    void captureSamples(std::byte *buffer, uint samples) override;
     uint availableSamples() override;
 
     uint64_t mTargetId{PwIdAny};
@@ -1954,7 +1954,7 @@ void PipeWireCapture::open(const char *name)
     spa_audio_info_raw info{make_spa_info(mDevice, is51rear, UseDevType)};
 
     constexpr uint32_t pod_buffer_size{1024};
-    auto pod_buffer = std::make_unique<al::byte[]>(pod_buffer_size);
+    auto pod_buffer = std::make_unique<std::byte[]>(pod_buffer_size);
     spa_pod_builder b{make_pod_builder(pod_buffer.get(), pod_buffer_size)};
 
     const spa_pod *params[]{spa_format_audio_raw_build(&b, SPA_PARAM_EnumFormat, &info)};
@@ -2055,7 +2055,7 @@ void PipeWireCapture::stop()
 uint PipeWireCapture::availableSamples()
 { return static_cast<uint>(mRing->readSpace()); }
 
-void PipeWireCapture::captureSamples(al::byte *buffer, uint samples)
+void PipeWireCapture::captureSamples(std::byte *buffer, uint samples)
 { mRing->read(buffer, samples); }
 
 } // namespace

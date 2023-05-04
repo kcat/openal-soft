@@ -29,6 +29,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <thread>
+#include <vector>
 
 #include "alnumeric.h"
 #include "core/device.h"
@@ -36,7 +37,6 @@
 #include "core/logging.h"
 #include "ringbuffer.h"
 #include "threads.h"
-#include "vector.h"
 
 #include <sndio.h>
 
@@ -65,7 +65,7 @@ struct SndioPlayback final : public BackendBase {
     sio_hdl *mSndHandle{nullptr};
     uint mFrameStep{};
 
-    al::vector<al::byte> mBuffer;
+    std::vector<std::byte> mBuffer;
 
     std::atomic<bool> mKillNow{true};
     std::thread mThread;
@@ -91,7 +91,7 @@ int SndioPlayback::mixerProc()
     while(!mKillNow.load(std::memory_order_acquire)
         && mDevice->Connected.load(std::memory_order_acquire))
     {
-        al::span<al::byte> buffer{mBuffer};
+        al::span<std::byte> buffer{mBuffer};
 
         mDevice->renderSamples(buffer.data(), static_cast<uint>(buffer.size() / frameSize),
             frameStep);
@@ -231,9 +231,9 @@ retry_params:
 
     mBuffer.resize(mDevice->UpdateSize * par.pchan*par.bps);
     if(par.sig == 1)
-        std::fill(mBuffer.begin(), mBuffer.end(), al::byte{});
+        std::fill(mBuffer.begin(), mBuffer.end(), std::byte{});
     else if(par.bits == 8)
-        std::fill_n(mBuffer.data(), mBuffer.size(), al::byte(0x80));
+        std::fill_n(mBuffer.data(), mBuffer.size(), std::byte(0x80));
     else if(par.bits == 16)
         std::fill_n(reinterpret_cast<uint16_t*>(mBuffer.data()), mBuffer.size()/2, 0x8000);
     else if(par.bits == 32)
@@ -283,7 +283,7 @@ struct SndioCapture final : public BackendBase {
     void open(const char *name) override;
     void start() override;
     void stop() override;
-    void captureSamples(al::byte *buffer, uint samples) override;
+    void captureSamples(std::byte *buffer, uint samples) override;
     uint availableSamples() override;
 
     sio_hdl *mSndHandle{nullptr};
@@ -349,7 +349,7 @@ int SndioCapture::recordProc()
             continue;
 
         auto data = mRing->getWriteVector();
-        al::span<al::byte> buffer{data.first.buf, data.first.len*frameSize};
+        al::span<std::byte> buffer{data.first.buf, data.first.len*frameSize};
         while(!buffer.empty())
         {
             size_t got{sio_read(mSndHandle, buffer.data(), buffer.size())};
@@ -496,7 +496,7 @@ void SndioCapture::stop()
         ERR("Error stopping device\n");
 }
 
-void SndioCapture::captureSamples(al::byte *buffer, uint samples)
+void SndioCapture::captureSamples(std::byte *buffer, uint samples)
 { mRing->read(buffer, samples); }
 
 uint SndioCapture::availableSamples()

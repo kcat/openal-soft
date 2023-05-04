@@ -648,7 +648,7 @@ struct OpenSLCapture final : public BackendBase {
     void open(const char *name) override;
     void start() override;
     void stop() override;
-    void captureSamples(al::byte *buffer, uint samples) override;
+    void captureSamples(std::byte *buffer, uint samples) override;
     uint availableSamples() override;
 
     /* engine interfaces */
@@ -819,7 +819,7 @@ void OpenSLCapture::open(const char* name)
     if(SL_RESULT_SUCCESS == result)
     {
         const uint chunk_size{mDevice->UpdateSize * mFrameSize};
-        const auto silence = (mDevice->FmtType == DevFmtUByte) ? al::byte{0x80} : al::byte{0};
+        const auto silence = (mDevice->FmtType == DevFmtUByte) ? std::byte{0x80} : std::byte{0};
 
         auto data = mRing->getWriteVector();
         std::fill_n(data.first.buf, data.first.len*chunk_size, silence);
@@ -883,7 +883,7 @@ void OpenSLCapture::stop()
     }
 }
 
-void OpenSLCapture::captureSamples(al::byte *buffer, uint samples)
+void OpenSLCapture::captureSamples(std::byte *buffer, uint samples)
 {
     const uint update_size{mDevice->UpdateSize};
     const uint chunk_size{update_size * mFrameSize};

@@ -8,6 +8,7 @@
 #include <cassert>
 #include <cctype>
 #include <cmath>
+#include <cstddef>
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
@@ -21,7 +22,6 @@
 #include <utility>
 
 #include "albit.h"
-#include "albyte.h"
 #include "alfstream.h"
 #include "almalloc.h"
 #include "alnumbers.h"
@@ -492,10 +492,10 @@ T> readle(std::istream &data)
     static_assert(num_bits <= sizeof(T)*8, "num_bits is too large for the type");
 
     T ret{};
-    al::byte b[sizeof(T)]{};
+    std::byte b[sizeof(T)]{};
     if(!data.read(reinterpret_cast<char*>(b), num_bits/8))
         return static_cast<T>(EOF);
-    std::reverse_copy(std::begin(b), std::end(b), reinterpret_cast<al::byte*>(&ret));
+    std::reverse_copy(std::begin(b), std::end(b), reinterpret_cast<std::byte*>(&ret));
 
     return fixsign<num_bits>(ret);
 }

@@ -3,11 +3,11 @@
 
 #include <chrono>
 #include <cstdarg>
+#include <cstddef>
 #include <memory>
 #include <ratio>
 #include <string>
 
-#include "albyte.h"
 #include "core/device.h"
 #include "core/except.h"
 
@@ -26,7 +26,7 @@ struct BackendBase {
     virtual void start() = 0;
     virtual void stop() = 0;
 
-    virtual void captureSamples(al::byte *buffer, uint samples);
+    virtual void captureSamples(std::byte *buffer, uint samples);
     virtual uint availableSamples();
 
     virtual ClockLatency getClockLatency();

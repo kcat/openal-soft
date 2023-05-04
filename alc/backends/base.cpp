@@ -37,7 +37,7 @@ backend_exception::~backend_exception() = default;
 bool BackendBase::reset()
 { throw al::backend_exception{al::backend_error::DeviceError, "Invalid BackendBase call"}; }
 
-void BackendBase::captureSamples(al::byte*, uint)
+void BackendBase::captureSamples(std::byte*, uint)
 { }
 
 uint BackendBase::availableSamples()

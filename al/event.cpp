@@ -17,7 +17,6 @@
 #include "AL/al.h"
 #include "AL/alc.h"
 
-#include "albyte.h"
 #include "alc/context.h"
 #include "alc/effects/base.h"
 #include "alc/inprogext.h"

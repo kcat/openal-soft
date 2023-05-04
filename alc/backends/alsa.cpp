@@ -36,7 +36,6 @@
 #include <utility>
 
 #include "albit.h"
-#include "albyte.h"
 #include "alc/alconfig.h"
 #include "almalloc.h"
 #include "alnumeric.h"
@@ -439,7 +438,7 @@ struct AlsaPlayback final : public BackendBase {
     std::mutex mMutex;
 
     uint mFrameStep{};
-    al::vector<al::byte> mBuffer;
+    al::vector<std::byte> mBuffer;
 
     std::atomic<bool> mKillNow{true};
     std::thread mThread;
@@ -585,7 +584,7 @@ int AlsaPlayback::mixerNoMMapProc()
             continue;
         }
 
-        al::byte *WritePtr{mBuffer.data()};
+        std::byte *WritePtr{mBuffer.data()};
         avail = snd_pcm_bytes_to_frames(mPcmHandle, static_cast<ssize_t>(mBuffer.size()));
         std::lock_guard<std::mutex> _{mMutex};
         mDevice->renderSamples(WritePtr, static_cast<uint>(avail), mFrameStep);
@@ -874,13 +873,13 @@ struct AlsaCapture final : public BackendBase {
     void open(const char *name) override;
     void start() override;
     void stop() override;
-    void captureSamples(al::byte *buffer, uint samples) override;
+    void captureSamples(std::byte *buffer, uint samples) override;
     uint availableSamples() override;
     ClockLatency getClockLatency() override;
 
     snd_pcm_t *mPcmHandle{nullptr};
 
-    al::vector<al::byte> mBuffer;
+    al::vector<std::byte> mBuffer;
 
     bool mDoCapture{false};
     RingBufferPtr mRing{nullptr};
@@ -1024,7 +1023,7 @@ void AlsaCapture::stop()
         /* The ring buffer implicitly captures when checking availability.
          * Direct access needs to explicitly capture it into temp storage.
          */
-        auto temp = al::vector<al::byte>(
+        auto temp = al::vector<std::byte>(
             static_cast<size_t>(snd_pcm_frames_to_bytes(mPcmHandle, avail)));
         captureSamples(temp.data(), avail);
         mBuffer = std::move(temp);
@@ -1035,7 +1034,7 @@ void AlsaCapture::stop()
     mDoCapture = false;
 }
 
-void AlsaCapture::captureSamples(al::byte *buffer, uint samples)
+void AlsaCapture::captureSamples(std::byte *buffer, uint samples)
 {
     if(mRing)
     {
@@ -1093,7 +1092,7 @@ void AlsaCapture::captureSamples(al::byte *buffer, uint samples)
     }
     if(samples > 0)
         std::fill_n(buffer, snd_pcm_frames_to_bytes(mPcmHandle, samples),
-            al::byte((mDevice->FmtType == DevFmtUByte) ? 0x80 : 0));
+            std::byte((mDevice->FmtType == DevFmtUByte) ? 0x80 : 0));
 }
 
 uint AlsaCapture::availableSamples()

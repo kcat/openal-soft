@@ -34,7 +34,6 @@
 #include <thread>
 
 #include "albit.h"
-#include "albyte.h"
 #include "alc/alconfig.h"
 #include "almalloc.h"
 #include "alnumeric.h"
@@ -105,7 +104,7 @@ struct WaveBackend final : public BackendBase {
     FILE *mFile{nullptr};
     long mDataStart{-1};
 
-    al::vector<al::byte> mBuffer;
+    al::vector<std::byte> mBuffer;
 
     std::atomic<bool> mKillNow{true};
     std::thread mThread;

@@ -551,7 +551,7 @@ struct DSoundCapture final : public BackendBase {
     void open(const char *name) override;
     void start() override;
     void stop() override;
-    void captureSamples(al::byte *buffer, uint samples) override;
+    void captureSamples(std::byte *buffer, uint samples) override;
     uint availableSamples() override;
 
     ComPtr<IDirectSoundCapture> mDSC;
@@ -717,7 +717,7 @@ void DSoundCapture::stop()
     }
 }
 
-void DSoundCapture::captureSamples(al::byte *buffer, uint samples)
+void DSoundCapture::captureSamples(std::byte *buffer, uint samples)
 { mRing->read(buffer, samples); }
 
 uint DSoundCapture::availableSamples()

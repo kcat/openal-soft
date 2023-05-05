@@ -38,7 +38,6 @@
 #include <string>
 #include <utility>
 
-#include "albit.h"
 #include "alfstream.h"
 #include "alstring.h"
 #include "core/helpers.h"
@@ -419,7 +418,7 @@ void ReadALConfig()
         if((configURL=CFBundleCopyResourceURL(mainBundle, CFSTR(".alsoftrc"), CFSTR(""), nullptr)) &&
            CFURLGetFileSystemRepresentation(configURL, true, fileName, sizeof(fileName)))
         {
-            f = al::ifstream{al::bit_cast<char*>(fileName)};
+            f = al::ifstream{reinterpret_cast<char*>(fileName)};
             if(f.is_open())
                 LoadConfigFromFile(f);
         }

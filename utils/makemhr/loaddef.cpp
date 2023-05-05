@@ -1450,7 +1450,7 @@ static int ProcessMetrics(TokenReaderT *tr, const uint fftSize, const uint trunc
     }
     if(hData->mChannelType == CT_NONE)
         hData->mChannelType = CT_MONO;
-    const auto azs = al::as_span(azCounts).first<MAX_FD_COUNT>();
+    const auto azs = al::span{azCounts}.first<MAX_FD_COUNT>();
     if(!PrepareHrirData({distances, fdCount}, evCounts, azs, hData))
     {
         fprintf(stderr, "Error:  Out of memory.\n");

@@ -49,7 +49,7 @@ struct SplineFilterArray {
         mTable[pi].mDeltas[3] = -mTable[pi].mCoeffs[3];
     }
 
-    constexpr auto getTable() const noexcept { return al::as_span(mTable); }
+    constexpr auto& getTable() const noexcept { return mTable; }
 };
 
 constexpr SplineFilterArray SplineFilter{};

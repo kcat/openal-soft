@@ -113,12 +113,12 @@ void MagnitudeResponse(const uint n, const complex_d *in, double *out);
 
 // Performs a forward FFT.
 inline void FftForward(const uint n, complex_d *inout)
-{ forward_fft(al::as_span(inout, n)); }
+{ forward_fft(al::span{inout, n}); }
 
 // Performs an inverse FFT.
 inline void FftInverse(const uint n, complex_d *inout)
 {
-    inverse_fft(al::as_span(inout, n));
+    inverse_fft(al::span{inout, n});
     double f{1.0 / n};
     for(uint i{0};i < n;i++)
         inout[i] *= f;

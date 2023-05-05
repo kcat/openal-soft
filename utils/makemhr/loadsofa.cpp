@@ -87,7 +87,7 @@ static bool PrepareLayout(const uint m, const float *xyzs, HrirDataT *hData)
         ++fi;
     }
     fprintf(stdout, "Using %u of %u IRs.\n", ir_total, m);
-    const auto azs = al::as_span(azCounts).first<MAX_FD_COUNT>();
+    const auto azs = al::span{azCounts}.first<MAX_FD_COUNT>();
     return PrepareHrirData({distances, fi}, evCounts, azs, hData);
 }
 

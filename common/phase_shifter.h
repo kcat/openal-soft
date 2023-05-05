@@ -53,12 +53,12 @@ struct PhaseShifterT {
         std::fill_n(fftBuffer.get(), fft_size, complex_d{});
         fftBuffer[half_size] = 1.0;
 
-        forward_fft(al::as_span(fftBuffer.get(), fft_size));
+        forward_fft(al::span{fftBuffer.get(), fft_size});
         for(size_t i{0};i < half_size+1;++i)
             fftBuffer[i] = complex_d{-fftBuffer[i].imag(), fftBuffer[i].real()};
         for(size_t i{half_size+1};i < fft_size;++i)
             fftBuffer[i] = std::conj(fftBuffer[fft_size - i]);
-        inverse_fft(al::as_span(fftBuffer.get(), fft_size));
+        inverse_fft(al::span{fftBuffer.get(), fft_size});
 
         auto fftiter = fftBuffer.get() + half_size + (FilterSize/2 - 1);
         for(float &coeff : mCoeffs)

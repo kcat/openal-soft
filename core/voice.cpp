@@ -389,7 +389,7 @@ inline void LoadSamples<FmtMSADPCM>(float *RESTRICT dstSamples, const std::byte 
         sampleHistory[1] = int(input[2*srcChan + 0]) | (int(input[2*srcChan + 1])<<8);
         input += srcStep*2;
 
-        const auto coeffs = al::as_span(MSADPCMAdaptionCoeff[blockpred]);
+        const al::span coeffs{MSADPCMAdaptionCoeff[blockpred]};
         delta = (delta^0x8000) - 32768;
         sampleHistory[0] = (sampleHistory[0]^0x8000) - 32768;
         sampleHistory[1] = (sampleHistory[1]^0x8000) - 32768;
@@ -798,7 +798,7 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
         using ResBufType = decltype(DeviceBase::mResampleData);
         static constexpr uint srcSizeMax{static_cast<uint>(ResBufType{}.size()-MaxResamplerEdge)};
 
-        const auto prevSamples = al::as_span(mPrevSamples[chan]);
+        const al::span prevSamples{mPrevSamples[chan]};
         const auto resampleBuffer = std::copy(prevSamples.cbegin(), prevSamples.cend(),
             Device->mResampleData.begin()) - MaxResamplerEdge;
         int intPos{DataPosInt};

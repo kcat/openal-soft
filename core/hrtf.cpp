@@ -425,7 +425,7 @@ std::unique_ptr<HrtfStore> CreateHrtfStore(uint rate, uint8_t irSize,
         std::uninitialized_copy_n(delays, irCount, delays_);
 
         /* Finally, assign the storage pointers. */
-        Hrtf->mFields = al::as_span(field_, fields.size());
+        Hrtf->mFields = {field_, fields.size()};
         Hrtf->mElev = elev_;
         Hrtf->mCoeffs = coeffs_;
         Hrtf->mDelays = delays_;

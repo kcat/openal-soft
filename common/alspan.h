@@ -39,12 +39,15 @@ namespace detail_ {
         std::void_t<decltype(std::size(std::declval<T>())),decltype(std::data(std::declval<T>()))>>
         = true;
 
+    template<typename C>
+    constexpr bool is_valid_container_type = !is_span_v<C> && !is_std_array_v<C>
+        && !std::is_array<C>::value && has_size_and_data<C>;
+
     template<typename T, typename U>
     constexpr bool is_array_compatible = std::is_convertible<T(*)[],U(*)[]>::value;
 
     template<typename C, typename T>
-    constexpr bool is_valid_container = !is_span_v<C> && !is_std_array_v<C>
-        && !std::is_array<C>::value && has_size_and_data<C>
+    constexpr bool is_valid_container = is_valid_container_type<C>
         && is_array_compatible<std::remove_pointer_t<decltype(std::data(std::declval<C&>()))>,T>;
 } // namespace detail_
 
@@ -297,30 +300,21 @@ constexpr inline auto span<T,E>::subspan(size_t offset, size_t count) const
         span<element_type>{mData+offset, mData+offset+count};
 }
 
-/* Helpers to deal with the lack of user-defined deduction guides (C++17). */
-template<typename T, typename U>
-constexpr auto as_span(T ptr, U count_or_end)
-{
-    using value_type = typename std::pointer_traits<T>::element_type;
-    return span<value_type>{ptr, count_or_end};
-}
-template<typename T, size_t N>
-constexpr auto as_span(T (&arr)[N]) noexcept { return span<T,N>{std::data(arr), std::size(arr)}; }
-template<typename T, size_t N>
-constexpr auto as_span(std::array<T,N> &arr) noexcept
-{ return span<T,N>{std::data(arr), std::size(arr)}; }
-template<typename T, size_t N>
-constexpr auto as_span(const std::array<T,N> &arr) noexcept
-{ return span<std::add_const_t<T>,N>{std::data(arr), std::size(arr)}; }
-template<typename U, REQUIRES(!detail_::is_span_v<U> && !detail_::is_std_array_v<U>
-    && !std::is_array<U>::value && detail_::has_size_and_data<U>)>
-constexpr auto as_span(U&& cont)
-{
-    using value_type = std::remove_pointer_t<decltype(std::data(std::declval<U&>()))>;
-    return span<value_type>{std::data(cont), std::size(cont)};
-}
-template<typename T, size_t N>
-constexpr auto as_span(span<T,N> span_) noexcept { return span_; }
+
+template<typename T, typename EndOrSize>
+span(T, EndOrSize) -> span<std::remove_reference_t<decltype(*std::declval<T&>())>>;
+
+template<typename T, std::size_t N>
+span(T (&)[N]) -> span<T, N>;
+
+template<typename T, std::size_t N>
+span(std::array<T, N>&) -> span<T, N>;
+
+template<typename T, std::size_t N>
+span(const std::array<T, N>&) -> span<const T, N>;
+
+template<typename C, REQUIRES(detail_::is_valid_container_type<C>)>
+span(C&&) -> span<std::remove_reference_t<decltype(*std::data(std::declval<C&>()))>>;
 
 #undef REQUIRES
 

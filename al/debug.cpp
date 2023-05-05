@@ -311,7 +311,7 @@ FORCE_ALIGN void AL_APIENTRY alDebugMessageControlEXT(ALenum source, ALenum type
     static constexpr size_t ElemCount{DebugSourceCount + DebugTypeCount + DebugSeverityCount};
     static constexpr auto Values = make_array<uint,ElemCount>();
 
-    al::span<const uint> srcIndices{al::as_span(Values).subspan<DebugSourceBase,DebugSourceCount>()};
+    al::span<const uint> srcIndices{al::span{Values}.subspan<DebugSourceBase,DebugSourceCount>()};
     if(source != AL_DONT_CARE_EXT)
     {
         auto dsource = GetDebugSource(source);
@@ -320,7 +320,7 @@ FORCE_ALIGN void AL_APIENTRY alDebugMessageControlEXT(ALenum source, ALenum type
         srcIndices = srcIndices.subspan(al::to_underlying(*dsource), 1);
     }
 
-    al::span<const uint> typeIndices{al::as_span(Values).subspan<DebugTypeBase,DebugTypeCount>()};
+    al::span<const uint> typeIndices{al::span{Values}.subspan<DebugTypeBase,DebugTypeCount>()};
     if(type != AL_DONT_CARE_EXT)
     {
         auto dtype = GetDebugType(type);
@@ -329,7 +329,7 @@ FORCE_ALIGN void AL_APIENTRY alDebugMessageControlEXT(ALenum source, ALenum type
         typeIndices = typeIndices.subspan(al::to_underlying(*dtype), 1);
     }
 
-    al::span<const uint> svrIndices{al::as_span(Values).subspan<DebugSeverityBase,DebugSeverityCount>()};
+    al::span<const uint> svrIndices{al::span{Values}.subspan<DebugSeverityBase,DebugSeverityCount>()};
     if(severity != AL_DONT_CARE_EXT)
     {
         auto dseverity = GetDebugSeverity(severity);
@@ -344,7 +344,7 @@ FORCE_ALIGN void AL_APIENTRY alDebugMessageControlEXT(ALenum source, ALenum type
     {
         const uint filterbase{(1u<<srcIndices[0]) | (1u<<typeIndices[0])};
 
-        for(const uint id : al::as_span(ids, static_cast<uint>(count)))
+        for(const uint id : al::span{ids, static_cast<uint>(count)})
         {
             const uint64_t filter{filterbase | (uint64_t{id} << 32)};
 

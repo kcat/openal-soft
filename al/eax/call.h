@@ -55,7 +55,7 @@ public:
             fail_too_small();
 
         const auto count = minz(mPropertyBufferSize / sizeof(TValue), max_count);
-        return al::as_span(static_cast<TValue*>(mPropertyBuffer), count);
+        return {static_cast<TValue*>(mPropertyBuffer), count};
     }
 
     template<typename TValue>

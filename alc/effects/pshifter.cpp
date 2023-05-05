@@ -186,7 +186,7 @@ void PshifterState::process(const size_t samplesToDo,
             mFftBuffer[k] = mFIFO[src] * gWindow.mData[k];
         for(size_t src{0u}, k{StftSize-mPos};src < mPos;++src,++k)
             mFftBuffer[k] = mFIFO[src] * gWindow.mData[k];
-        forward_fft(al::as_span(mFftBuffer));
+        forward_fft(al::span{mFftBuffer});
 
         /* Analyze the obtained data. Since the real FFT is symmetric, only
          * StftHalfSize+1 samples are needed.
@@ -274,7 +274,7 @@ void PshifterState::process(const size_t samplesToDo,
         /* Apply an inverse FFT to get the time-domain signal, and accumulate
          * for the output with windowing.
          */
-        inverse_fft(al::as_span(mFftBuffer));
+        inverse_fft(al::span{mFftBuffer});
 
         static constexpr float scale{3.0f / OversampleFactor / StftSize};
         for(size_t dst{mPos}, k{0u};dst < StftSize;++dst,++k)

@@ -1085,9 +1085,9 @@ EventManager::~EventManager()
     if(mLoop) mLoop.stop();
 
     for(NodeProxy *node : mNodeList)
-        al::destroy_at(node);
+        std::destroy_at(node);
     if(mDefaultMetadata)
-        al::destroy_at(mDefaultMetadata);
+        std::destroy_at(mDefaultMetadata);
 }
 
 void EventManager::kill()
@@ -1095,10 +1095,10 @@ void EventManager::kill()
     if(mLoop) mLoop.stop();
 
     for(NodeProxy *node : mNodeList)
-        al::destroy_at(node);
+        std::destroy_at(node);
     mNodeList.clear();
     if(mDefaultMetadata)
-        al::destroy_at(mDefaultMetadata);
+        std::destroy_at(mDefaultMetadata);
     mDefaultMetadata = nullptr;
 
     mRegistry = nullptr;
@@ -1191,7 +1191,7 @@ void EventManager::removeCallback(uint32_t id)
     {
         if(node->mId != id)
             return false;
-        al::destroy_at(node);
+        std::destroy_at(node);
         return true;
     };
     auto node_end = std::remove_if(mNodeList.begin(), mNodeList.end(), clear_node);
@@ -1199,7 +1199,7 @@ void EventManager::removeCallback(uint32_t id)
 
     if(mDefaultMetadata && mDefaultMetadata->mId == id)
     {
-        al::destroy_at(mDefaultMetadata);
+        std::destroy_at(mDefaultMetadata);
         mDefaultMetadata = nullptr;
     }
 }

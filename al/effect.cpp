@@ -210,7 +210,7 @@ void FreeEffect(ALCdevice *device, ALeffect *effect)
     const size_t lidx{id >> 6};
     const ALuint slidx{id & 0x3f};
 
-    al::destroy_at(effect);
+    std::destroy_at(effect);
 
     device->EffectList[lidx].FreeMask |= 1_u64 << slidx;
 }
@@ -555,7 +555,7 @@ EffectSubList::~EffectSubList()
     while(usemask)
     {
         const int idx{al::countr_zero(usemask)};
-        al::destroy_at(Effects+idx);
+        std::destroy_at(Effects+idx);
         usemask &= ~(1_u64 << idx);
     }
     FreeMask = ~usemask;

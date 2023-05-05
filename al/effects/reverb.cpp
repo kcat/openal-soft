@@ -945,7 +945,7 @@ struct EnvironmentSizeDeferrer2 {
 
         if ((props.dwFlags & EAX2LISTENERFLAGS_DECAYTIMESCALE) != 0)
         {
-            props.flDecayTime = clamp(
+            props.flDecayTime = std::clamp(
                 props.flDecayTime * scale,
                 EAXREVERB_MINDECAYTIME,
                 EAXREVERB_MAXDECAYTIME);
@@ -954,7 +954,7 @@ struct EnvironmentSizeDeferrer2 {
         if ((props.dwFlags & EAX2LISTENERFLAGS_REFLECTIONSSCALE) != 0 &&
             (props.dwFlags & EAX2LISTENERFLAGS_REFLECTIONSDELAYSCALE) != 0)
         {
-            props.lReflections = clamp(
+            props.lReflections = std::clamp(
                 props.lReflections - static_cast<long>(gain_to_level_mb(scale)),
                 EAXREVERB_MINREFLECTIONS,
                 EAXREVERB_MAXREFLECTIONS);
@@ -962,7 +962,7 @@ struct EnvironmentSizeDeferrer2 {
 
         if ((props.dwFlags & EAX2LISTENERFLAGS_REFLECTIONSDELAYSCALE) != 0)
         {
-            props.flReflectionsDelay = clamp(
+            props.flReflectionsDelay = std::clamp(
                 props.flReflectionsDelay * scale,
                 EAXREVERB_MINREFLECTIONSDELAY,
                 EAXREVERB_MAXREFLECTIONSDELAY);
@@ -972,7 +972,7 @@ struct EnvironmentSizeDeferrer2 {
         {
             const auto log_scalar = ((props.dwFlags & EAXREVERBFLAGS_DECAYTIMESCALE) != 0) ? 2'000.0F : 3'000.0F;
 
-            props.lReverb = clamp(
+            props.lReverb = std::clamp(
                 props.lReverb - static_cast<long>(std::log10(scale) * log_scalar),
                 EAXREVERB_MINREVERB,
                 EAXREVERB_MAXREVERB);
@@ -980,7 +980,7 @@ struct EnvironmentSizeDeferrer2 {
 
         if ((props.dwFlags & EAX2LISTENERFLAGS_REVERBDELAYSCALE) != 0)
         {
-            props.flReverbDelay = clamp(
+            props.flReverbDelay = std::clamp(
                 props.flReverbDelay * scale,
                 EAXREVERB_MINREVERBDELAY,
                 EAXREVERB_MAXREVERBDELAY);
@@ -1015,7 +1015,7 @@ struct EnvironmentSizeDeferrer3 {
 
         if ((props.ulFlags & EAXREVERBFLAGS_DECAYTIMESCALE) != 0)
         {
-            props.flDecayTime = clamp(
+            props.flDecayTime = std::clamp(
                 props.flDecayTime * scale,
                 EAXREVERB_MINDECAYTIME,
                 EAXREVERB_MAXDECAYTIME);
@@ -1024,7 +1024,7 @@ struct EnvironmentSizeDeferrer3 {
         if ((props.ulFlags & EAXREVERBFLAGS_REFLECTIONSSCALE) != 0 &&
             (props.ulFlags & EAXREVERBFLAGS_REFLECTIONSDELAYSCALE) != 0)
         {
-            props.lReflections = clamp(
+            props.lReflections = std::clamp(
                 props.lReflections - static_cast<long>(gain_to_level_mb(scale)),
                 EAXREVERB_MINREFLECTIONS,
                 EAXREVERB_MAXREFLECTIONS);
@@ -1032,7 +1032,7 @@ struct EnvironmentSizeDeferrer3 {
 
         if ((props.ulFlags & EAXREVERBFLAGS_REFLECTIONSDELAYSCALE) != 0)
         {
-            props.flReflectionsDelay = clamp(
+            props.flReflectionsDelay = std::clamp(
                 props.flReflectionsDelay * scale,
                 EAXREVERB_MINREFLECTIONSDELAY,
                 EAXREVERB_MAXREFLECTIONSDELAY);
@@ -1041,7 +1041,7 @@ struct EnvironmentSizeDeferrer3 {
         if ((props.ulFlags & EAXREVERBFLAGS_REVERBSCALE) != 0)
         {
             const auto log_scalar = ((props.ulFlags & EAXREVERBFLAGS_DECAYTIMESCALE) != 0) ? 2'000.0F : 3'000.0F;
-            props.lReverb = clamp(
+            props.lReverb = std::clamp(
                 props.lReverb - static_cast<long>(std::log10(scale) * log_scalar),
                 EAXREVERB_MINREVERB,
                 EAXREVERB_MAXREVERB);
@@ -1049,7 +1049,7 @@ struct EnvironmentSizeDeferrer3 {
 
         if ((props.ulFlags & EAXREVERBFLAGS_REVERBDELAYSCALE) != 0)
         {
-            props.flReverbDelay = clamp(
+            props.flReverbDelay = std::clamp(
                 props.flReverbDelay * scale,
                 EAXREVERB_MINREVERBDELAY,
                 EAXREVERB_MAXREVERBDELAY);
@@ -1057,7 +1057,7 @@ struct EnvironmentSizeDeferrer3 {
 
         if ((props.ulFlags & EAXREVERBFLAGS_ECHOTIMESCALE) != 0)
         {
-            props.flEchoTime = clamp(
+            props.flEchoTime = std::clamp(
                 props.flEchoTime * scale,
                 EAXREVERB_MINECHOTIME,
                 EAXREVERB_MAXECHOTIME);
@@ -1065,7 +1065,7 @@ struct EnvironmentSizeDeferrer3 {
 
         if ((props.ulFlags & EAXREVERBFLAGS_MODULATIONTIMESCALE) != 0)
         {
-            props.flModulationTime = clamp(
+            props.flModulationTime = std::clamp(
                 props.flModulationTime * scale,
                 EAXREVERB_MINMODULATIONTIME,
                 EAXREVERB_MAXMODULATIONTIME);

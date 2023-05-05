@@ -222,7 +222,7 @@ void FreeBuffer(ALCdevice *device, ALbuffer *buffer)
     const size_t lidx{id >> 6};
     const ALuint slidx{id & 0x3f};
 
-    al::destroy_at(buffer);
+    std::destroy_at(buffer);
 
     device->BufferList[lidx].FreeMask |= 1_u64 << slidx;
 }
@@ -1533,7 +1533,7 @@ BufferSubList::~BufferSubList()
     while(usemask)
     {
         const int idx{al::countr_zero(usemask)};
-        al::destroy_at(Buffers+idx);
+        std::destroy_at(Buffers+idx);
         usemask &= ~(1_u64 << idx);
     }
     FreeMask = ~usemask;

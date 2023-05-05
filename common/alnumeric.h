@@ -283,12 +283,6 @@ inline float fast_roundf(float f) noexcept
 }
 
 
-template<typename T>
-constexpr const T& clamp(const T& value, const T& min_value, const T& max_value) noexcept
-{
-    return std::min(std::max(value, min_value), max_value);
-}
-
 // Converts level (mB) to gain.
 inline float level_mb_to_gain(float x)
 {

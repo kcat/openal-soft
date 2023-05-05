@@ -50,7 +50,7 @@ static int EventThread(ALCcontext *context)
             evt_data.len -= 1;
 
             AsyncEvent evt{*evt_ptr};
-            al::destroy_at(evt_ptr);
+            std::destroy_at(evt_ptr);
             ring->readAdvance(1);
 
             quitnow = evt.EnumType == AsyncEvent::KillThread;

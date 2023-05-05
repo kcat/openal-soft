@@ -738,7 +738,7 @@ void FreeSource(ALCcontext *context, ALsource *source)
         SendVoiceChanges(context, vchg);
     }
 
-    al::destroy_at(source);
+    std::destroy_at(source);
 
     context->mSourceList[lidx].FreeMask |= 1_u64 << slidx;
     context->mNumSources--;
@@ -4041,7 +4041,7 @@ SourceSubList::~SourceSubList()
     {
         const int idx{al::countr_zero(usemask)};
         usemask &= ~(1_u64 << idx);
-        al::destroy_at(Sources+idx);
+        std::destroy_at(Sources+idx);
     }
     FreeMask = ~usemask;
     al_free(Sources);
@@ -4257,7 +4257,7 @@ void ALsource::eax1_translate(const Eax1Props& src, Eax5Props& dst) noexcept
     else
     {
         dst.source.ulFlags &= ~EAXSOURCEFLAGS_ROOMAUTO;
-        dst.sends[0].lSend = clamp(static_cast<long>(gain_to_level_mb(src.fMix)),
+        dst.sends[0].lSend = std::clamp(static_cast<long>(gain_to_level_mb(src.fMix)),
             EAXSOURCE_MINSEND, EAXSOURCE_MAXSEND);
     }
 }
@@ -4492,7 +4492,7 @@ void ALsource::eax_update_room_filters()
 
 void ALsource::eax_set_efx_outer_gain_hf()
 {
-    OuterGainHF = clamp(
+    OuterGainHF = std::clamp(
         level_mb_to_gain(static_cast<float>(mEax.source.lOutsideVolumeHF)),
         AL_MIN_CONE_OUTER_GAINHF,
         AL_MAX_CONE_OUTER_GAINHF);

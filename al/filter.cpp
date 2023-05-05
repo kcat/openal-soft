@@ -380,7 +380,7 @@ void FreeFilter(ALCdevice *device, ALfilter *filter)
     const size_t lidx{id >> 6};
     const ALuint slidx{id & 0x3f};
 
-    al::destroy_at(filter);
+    std::destroy_at(filter);
 
     device->FilterList[lidx].FreeMask |= 1_u64 << slidx;
 }
@@ -716,7 +716,7 @@ FilterSubList::~FilterSubList()
     while(usemask)
     {
         const int idx{al::countr_zero(usemask)};
-        al::destroy_at(Filters+idx);
+        std::destroy_at(Filters+idx);
         usemask &= ~(1_u64 << idx);
     }
     FreeMask = ~usemask;

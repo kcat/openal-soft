@@ -1093,7 +1093,7 @@ void alc_initconfig(void)
         ALSOFT_GIT_BRANCH);
     {
         std::string names;
-        if(al::size(BackendList) < 1)
+        if(std::size(BackendList) < 1)
             names = "(none)";
         else
         {

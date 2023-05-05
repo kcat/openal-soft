@@ -800,7 +800,7 @@ void DeviceNode::parseChannelCount(const spa_pod *value) noexcept
 
 
 constexpr char MonitorPrefix[]{"Monitor of "};
-constexpr auto MonitorPrefixLen = al::size(MonitorPrefix) - 1;
+constexpr auto MonitorPrefixLen = std::size(MonitorPrefix) - 1;
 constexpr char AudioSinkClass[]{"Audio/Sink"};
 constexpr char AudioSourceClass[]{"Audio/Source"};
 constexpr char AudioSourceVirtualClass[]{"Audio/Source/Virtual"};
@@ -837,7 +837,7 @@ struct NodeProxy {
          * format, which is what we're interested in).
          */
         uint32_t fmtids[]{SPA_PARAM_EnumFormat};
-        ppw_node_subscribe_params(mNode.get(), al::data(fmtids), al::size(fmtids));
+        ppw_node_subscribe_params(mNode.get(), std::data(fmtids), std::size(fmtids));
     }
     ~NodeProxy()
     { spa_hook_remove(&mListener); }

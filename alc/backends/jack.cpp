@@ -587,7 +587,7 @@ void JackPlayback::start()
             throw al::backend_exception{al::backend_error::DeviceError, "No playback ports found"};
         }
 
-        for(size_t i{0};i < al::size(mPort) && mPort[i];++i)
+        for(size_t i{0};i < std::size(mPort) && mPort[i];++i)
         {
             if(!pnames[i])
             {

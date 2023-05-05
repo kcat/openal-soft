@@ -125,7 +125,7 @@ constexpr DWORD X71Mask{MaskFromTopBits(X7DOT1)};
 constexpr DWORD X714Mask{MaskFromTopBits(X7DOT1DOT4)};
 
 constexpr char DevNameHead[] = "OpenAL Soft on ";
-constexpr size_t DevNameHeadLen{al::size(DevNameHead) - 1};
+constexpr size_t DevNameHeadLen{std::size(DevNameHead) - 1};
 
 
 /* Scales the given reftime value, rounding the result. */
@@ -142,7 +142,7 @@ class GuidPrinter {
 public:
     GuidPrinter(const GUID &guid)
     {
-        std::snprintf(mMsg, al::size(mMsg), "{%08lx-%04x-%04x-%02x%02x-%02x%02x%02x%02x%02x%02x}",
+        std::snprintf(mMsg, std::size(mMsg), "{%08lx-%04x-%04x-%02x%02x-%02x%02x%02x%02x%02x%02x}",
             DWORD{guid.Data1}, guid.Data2, guid.Data3, guid.Data4[0], guid.Data4[1], guid.Data4[2],
             guid.Data4[3], guid.Data4[4], guid.Data4[5], guid.Data4[6], guid.Data4[7]);
     }

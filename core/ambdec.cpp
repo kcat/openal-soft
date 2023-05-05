@@ -139,7 +139,7 @@ std::optional<std::string> AmbDecConf::load(const char *fname) noexcept
                 {
                     --toread;
                     istr >> value;
-                    if(curgain < al::size(gains))
+                    if(curgain < std::size(gains))
                         gains[curgain++] = value;
                 }
             }

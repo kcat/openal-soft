@@ -288,7 +288,7 @@ inline void LoadSamples<FmtIMA4>(float *RESTRICT dstSamples, const std::byte *sr
     /* NOTE: This could probably be optimized better. */
     size_t wrote{0};
     do {
-        static constexpr int MaxStepIndex{static_cast<int>(al::size(IMAStep_size)) - 1};
+        static constexpr int MaxStepIndex{static_cast<int>(std::size(IMAStep_size)) - 1};
         /* Each IMA4 block starts with a signed 16-bit sample, and a signed
          * 16-bit table index. The table index needs to be clamped.
          */

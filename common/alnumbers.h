@@ -13,21 +13,21 @@ namespace detail_ {
 } // detail_
 
 template<typename T>
-static constexpr auto pi_v = detail_::as_fp<T>(3.141592653589793238462643383279502884L);
+constexpr auto pi_v = detail_::as_fp<T>(3.141592653589793238462643383279502884L);
 
 template<typename T>
-static constexpr auto inv_pi_v = detail_::as_fp<T>(0.318309886183790671537767526745028724L);
+constexpr auto inv_pi_v = detail_::as_fp<T>(0.318309886183790671537767526745028724L);
 
 template<typename T>
-static constexpr auto sqrt2_v = detail_::as_fp<T>(1.414213562373095048801688724209698079L);
+constexpr auto sqrt2_v = detail_::as_fp<T>(1.414213562373095048801688724209698079L);
 
 template<typename T>
-static constexpr auto sqrt3_v = detail_::as_fp<T>(1.732050807568877293527446341505872367L);
+constexpr auto sqrt3_v = detail_::as_fp<T>(1.732050807568877293527446341505872367L);
 
-static constexpr auto pi = pi_v<double>;
-static constexpr auto inv_pi = inv_pi_v<double>;
-static constexpr auto sqrt2 = sqrt2_v<double>;
-static constexpr auto sqrt3 = sqrt3_v<double>;
+constexpr auto pi = pi_v<double>;
+constexpr auto inv_pi = inv_pi_v<double>;
+constexpr auto sqrt2 = sqrt2_v<double>;
+constexpr auto sqrt3 = sqrt3_v<double>;
 
 } // namespace numbers
 

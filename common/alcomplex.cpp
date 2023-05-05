@@ -58,7 +58,7 @@ struct BitReverser {
                 ++ret_i;
             }
         }
-        assert(ret_i == al::size(mData));
+        assert(ret_i == std::size(mData));
     }
 };
 

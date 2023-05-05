@@ -1360,10 +1360,7 @@ auto GetCheckers(ALCcontext *const Context, const SourceProp prop, const al::spa
 void SetSourcefv(ALsource *const Source, ALCcontext *const Context, const SourceProp prop,
     const al::span<const float> values)
 try {
-    /* Structured bindings would be nice (C++17). */
-    auto Checkers = GetCheckers(Context, prop, values);
-    auto &CheckSize = Checkers.first;
-    auto &CheckValue = Checkers.second;
+    auto&& [CheckSize, CheckValue] = GetCheckers(Context, prop, values);
     int ival;
 
     switch(prop)
@@ -1601,9 +1598,7 @@ catch(check_exception&) {
 void SetSourceiv(ALsource *const Source, ALCcontext *const Context, const SourceProp prop,
     const al::span<const int> values)
 try {
-    auto Checkers = GetCheckers(Context, prop, values);
-    auto &CheckSize = Checkers.first;
-    auto &CheckValue = Checkers.second;
+    auto&& [CheckSize, CheckValue] = GetCheckers(Context, prop, values);
     ALCdevice *device{Context->mALDevice.get()};
     ALeffectslot *slot{nullptr};
     al::deque<ALbufferQueueItem> oldlist;
@@ -1958,9 +1953,7 @@ catch(check_exception&) {
 void SetSourcei64v(ALsource *const Source, ALCcontext *const Context, const SourceProp prop,
     const al::span<const int64_t> values)
 try {
-    auto Checkers = GetCheckers(Context, prop, values);
-    auto &CheckSize = Checkers.first;
-    auto &CheckValue = Checkers.second;
+    auto&& [CheckSize, CheckValue] = GetCheckers(Context, prop, values);
     float fvals[MaxValues];
     int   ivals[MaxValues];
 

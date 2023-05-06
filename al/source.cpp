@@ -281,7 +281,8 @@ double GetSourceSecOffset(ALsource *Source, ALCcontext *context, nanoseconds *cl
  * (Bytes, Samples or Seconds). The offset is relative to the start of the
  * queue (not the start of the current buffer).
  */
-double GetSourceOffset(ALsource *Source, ALenum name, ALCcontext *context)
+template<typename T>
+T GetSourceOffset(ALsource *Source, ALenum name, ALCcontext *context)
 {
     ALCdevice *device{context->mALDevice.get()};
     const VoiceBufferItem *Current{};
@@ -304,7 +305,7 @@ double GetSourceOffset(ALsource *Source, ALenum name, ALCcontext *context)
     } while(refcount != device->MixCount.load(std::memory_order_relaxed));
 
     if(!voice)
-        return 0.0;
+        return T{0};
 
     const ALbuffer *BufferFmt{nullptr};
     auto BufferList = Source->mQueue.cbegin();
@@ -321,24 +322,48 @@ double GetSourceOffset(ALsource *Source, ALenum name, ALCcontext *context)
     }
     ASSUME(BufferFmt != nullptr);
 
-    double offset{};
+    T offset{};
     switch(name)
     {
     case AL_SEC_OFFSET:
-        offset  = static_cast<double>(readPos) + readPosFrac/double{MixerFracOne};
-        offset /= BufferFmt->mSampleRate;
+        if constexpr(std::is_floating_point_v<T>)
+        {
+            offset  = static_cast<T>(readPos) + static_cast<T>(readPosFrac)/T{MixerFracOne};
+            offset /= static_cast<T>(BufferFmt->mSampleRate);
+        }
+        else
+        {
+            readPos /= BufferFmt->mSampleRate;
+            offset = static_cast<T>(clampi64(readPos, std::numeric_limits<T>::min(),
+                std::numeric_limits<T>::max()));
+        }
         break;
 
     case AL_SAMPLE_OFFSET:
-        offset = static_cast<double>(readPos) + readPosFrac/double{MixerFracOne};
+        if constexpr(std::is_floating_point_v<T>)
+            offset = static_cast<T>(readPos) + static_cast<T>(readPosFrac)/T{MixerFracOne};
+        else
+            offset = static_cast<T>(clampi64(readPos, std::numeric_limits<T>::min(),
+                std::numeric_limits<T>::max()));
         break;
 
     case AL_BYTE_OFFSET:
         const ALuint BlockSamples{BufferFmt->mBlockAlign};
         const ALuint BlockSize{BufferFmt->blockSizeFromFmt()};
-
         /* Round down to the block boundary. */
-        offset = static_cast<double>(readPos / BlockSamples) * BlockSize;
+        readPos = readPos / BlockSamples * BlockSize;
+
+        if constexpr(std::is_floating_point_v<T>)
+            offset = static_cast<T>(readPos);
+        else
+        {
+            if(readPos > std::numeric_limits<T>::max())
+                offset = RoundDown(std::numeric_limits<T>::max(), static_cast<T>(BlockSize));
+            else if(readPos < std::numeric_limits<T>::min())
+                offset = RoundUp(std::numeric_limits<T>::min(), static_cast<T>(BlockSize));
+            else
+                offset = static_cast<T>(readPos);
+        }
         break;
     }
     return offset;
@@ -349,7 +374,8 @@ double GetSourceOffset(ALsource *Source, ALenum name, ALCcontext *context)
  * Gets the length of the given Source's buffer queue, in the appropriate
  * format (Bytes, Samples or Seconds).
  */
-double GetSourceLength(const ALsource *source, ALenum name)
+template<typename T>
+T GetSourceLength(const ALsource *source, ALenum name)
 {
     uint64_t length{0};
     const ALbuffer *BufferFmt{nullptr};
@@ -360,25 +386,40 @@ double GetSourceLength(const ALsource *source, ALenum name)
         length += listitem.mSampleLen;
     }
     if(length == 0)
-        return 0.0;
+        return T{0};
 
     ASSUME(BufferFmt != nullptr);
     switch(name)
     {
     case AL_SEC_LENGTH_SOFT:
-        return static_cast<double>(length) / BufferFmt->mSampleRate;
+        if constexpr(std::is_floating_point_v<T>)
+            return static_cast<T>(length) / static_cast<T>(BufferFmt->mSampleRate);
+        else
+            return static_cast<T>(minu64(length/BufferFmt->mSampleRate,
+                std::numeric_limits<T>::max()));
 
     case AL_SAMPLE_LENGTH_SOFT:
-        return static_cast<double>(length);
+        if constexpr(std::is_floating_point_v<T>)
+            return static_cast<T>(length);
+        else
+            return static_cast<T>(minu64(length, std::numeric_limits<T>::max()));
 
     case AL_BYTE_LENGTH_SOFT:
         const ALuint BlockSamples{BufferFmt->mBlockAlign};
         const ALuint BlockSize{BufferFmt->blockSizeFromFmt()};
-
         /* Round down to the block boundary. */
-        return static_cast<double>(length / BlockSamples) * BlockSize;
+        length = length / BlockSamples * BlockSize;
+
+        if constexpr(std::is_floating_point_v<T>)
+            return static_cast<T>(length);
+        else
+        {
+            if(length > std::numeric_limits<T>::max())
+                return RoundDown(std::numeric_limits<T>::max(), static_cast<T>(BlockSize));
+            return static_cast<T>(length);
+        }
     }
-    return 0.0;
+    return T{0};
 }
 
 
@@ -1876,8 +1917,9 @@ void SetProperty(ALsource *const Source, ALCcontext *const Context, const Source
             }
 
             if(sendidx >= device->NumAuxSends) UNLIKELY
-                return Context->setError(AL_INVALID_VALUE, "Invalid send %s", std::to_string(sendidx).c_str());
-            auto &send = Source->Send[sendidx];
+                return Context->setError(AL_INVALID_VALUE, "Invalid send %s",
+                    std::to_string(sendidx).c_str());
+            auto &send = Source->Send[static_cast<size_t>(sendidx)];
 
             if(values[2])
             {
@@ -2018,13 +2060,7 @@ bool GetProperty(ALsource *const Source, ALCcontext *const Context, const Source
     case AL_SAMPLE_OFFSET:
     case AL_BYTE_OFFSET:
         CheckSize(1);
-        /* FIXME: If T==int64, this max limit rounds up to int64_max+1 as a
-         * double, exceeding the intended limit and wrap. It's very unlikely to
-         * happen in practice, but it should be fixed if possible without
-         * putting an undue burden on it.
-         */
-        values[0] = static_cast<T>(mind(GetSourceOffset(Source, prop, Context),
-            double{std::numeric_limits<T>::max()}));
+        values[0] = GetSourceOffset<T>(Source, prop, Context);
         return true;
 
     case AL_CONE_OUTER_GAINHF:
@@ -2053,11 +2089,7 @@ bool GetProperty(ALsource *const Source, ALCcontext *const Context, const Source
             if(sBufferSubDataCompat)
             {
                 CheckSize(2);
-                const auto offset = GetSourceOffset(Source, AL_SAMPLE_OFFSET, Context);
-                /* FIXME: As with AL_SAMPLE_OFFSET, this doesn't properly limit
-                 * the max for T==int64.
-                 */
-                values[0] = static_cast<int>(mind(offset, double{std::numeric_limits<T>::max()}));
+                values[0] = GetSourceOffset<T>(Source, AL_SAMPLE_OFFSET, Context);
                 /* FIXME: values[1] should be ahead of values[0] by the device
                  * update time. It needs to clamp or wrap the length of the
                  * buffer queue.
@@ -2082,11 +2114,7 @@ bool GetProperty(ALsource *const Source, ALCcontext *const Context, const Source
             if(sBufferSubDataCompat)
             {
                 CheckSize(2);
-                const auto offset = GetSourceOffset(Source, AL_BYTE_OFFSET, Context);
-                /* FIXME: As with AL_BYTE_OFFSET, this doesn't properly limit
-                 * the max for T==int64.
-                 */
-                values[0] = static_cast<int>(mind(offset, double{std::numeric_limits<T>::max()}));
+                values[0] = GetSourceOffset<T>(Source, AL_BYTE_OFFSET, Context);
                 /* FIXME: values[1] should be ahead of values[0] by the device
                  * update time. It needs to clamp or wrap the length of the
                  * buffer queue.
@@ -2106,11 +2134,7 @@ bool GetProperty(ALsource *const Source, ALCcontext *const Context, const Source
     case AL_SAMPLE_LENGTH_SOFT:
     case AL_SEC_LENGTH_SOFT:
         CheckSize(1);
-        /* FIXME: As with AL_*_OFFSET, this doesn't properly limit the max for
-         * T==int64.
-         */
-        values[0] = static_cast<T>(mind(GetSourceLength(Source, prop),
-            double{std::numeric_limits<T>::max()}));
+        values[0] = GetSourceLength<T>(Source, prop);
         return true;
 
     case AL_STEREO_ANGLES:

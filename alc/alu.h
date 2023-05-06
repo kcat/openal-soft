@@ -3,12 +3,13 @@
 
 #include <bitset>
 #include <optional>
+#include <stdint.h>
 
 struct ALCcontext;
 struct ALCdevice;
 struct EffectSlot;
 
-enum class StereoEncoding : unsigned char;
+enum class StereoEncoding : uint8_t;
 
 
 constexpr float GainMixMax{1000.0f}; /* +60dB */

@@ -9,6 +9,7 @@
 #include <chrono>
 #include <memory>
 #include <mutex>
+#include <stdint.h>
 #include <string>
 
 #include "almalloc.h"
@@ -43,20 +44,20 @@ using uint = unsigned int;
 #define DEFAULT_NUM_UPDATES  3
 
 
-enum class DeviceType : unsigned char {
+enum class DeviceType : uint8_t {
     Playback,
     Capture,
     Loopback
 };
 
 
-enum class RenderMode : unsigned char {
+enum class RenderMode : uint8_t {
     Normal,
     Pairwise,
     Hrtf
 };
 
-enum class StereoEncoding : unsigned char {
+enum class StereoEncoding : uint8_t {
     Basic,
     Uhj,
     Hrtf,

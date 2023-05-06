@@ -1650,7 +1650,8 @@ void SetProperty(ALsource *const Source, ALCcontext *const Context, const Source
     case AL_SAMPLE_OFFSET:
     case AL_BYTE_OFFSET:
         CheckSize(1);
-        CheckValue(std::isfinite(values[0]));
+        if constexpr(std::is_floating_point_v<T>)
+            CheckValue(std::isfinite(values[0]));
 
         if(Voice *voice{GetSourceVoice(Source, Context)})
         {
@@ -1688,7 +1689,10 @@ void SetProperty(ALsource *const Source, ALCcontext *const Context, const Source
             break;
         }
         CheckSize(1);
-        CheckValue(values[0] >= T{0} && std::isfinite(static_cast<float>(values[0])));
+        if constexpr(std::is_floating_point_v<T>)
+            CheckValue(values[0] >= T{0} && std::isfinite(static_cast<float>(values[0])));
+        else
+            CheckValue(values[0] >= T{0});
 
         Source->Radius = static_cast<float>(values[0]);
         return UpdateSourceProps(Source, Context);
@@ -1702,8 +1706,9 @@ void SetProperty(ALsource *const Source, ALCcontext *const Context, const Source
 
     case AL_STEREO_ANGLES:
         CheckSize(2);
-        CheckValue(std::isfinite(static_cast<float>(values[0]))
-            && std::isfinite(static_cast<float>(values[1])));
+        if constexpr(std::is_floating_point_v<T>)
+            CheckValue(std::isfinite(static_cast<float>(values[0]))
+                && std::isfinite(static_cast<float>(values[1])));
 
         Source->StereoPan[0] = static_cast<float>(values[0]);
         Source->StereoPan[1] = static_cast<float>(values[1]);
@@ -1712,9 +1717,10 @@ void SetProperty(ALsource *const Source, ALCcontext *const Context, const Source
 
     case AL_POSITION:
         CheckSize(3);
-        CheckValue(std::isfinite(static_cast<float>(values[0]))
-            && std::isfinite(static_cast<float>(values[1]))
-            && std::isfinite(static_cast<float>(values[2])));
+        if constexpr(std::is_floating_point_v<T>)
+            CheckValue(std::isfinite(static_cast<float>(values[0]))
+                && std::isfinite(static_cast<float>(values[1]))
+                && std::isfinite(static_cast<float>(values[2])));
 
         Source->Position[0] = static_cast<float>(values[0]);
         Source->Position[1] = static_cast<float>(values[1]);
@@ -1723,9 +1729,10 @@ void SetProperty(ALsource *const Source, ALCcontext *const Context, const Source
 
     case AL_VELOCITY:
         CheckSize(3);
-        CheckValue(std::isfinite(static_cast<float>(values[0]))
-            && std::isfinite(static_cast<float>(values[1]))
-            && std::isfinite(static_cast<float>(values[2])));
+        if constexpr(std::is_floating_point_v<T>)
+            CheckValue(std::isfinite(static_cast<float>(values[0]))
+                && std::isfinite(static_cast<float>(values[1]))
+                && std::isfinite(static_cast<float>(values[2])));
 
         Source->Velocity[0] = static_cast<float>(values[0]);
         Source->Velocity[1] = static_cast<float>(values[1]);
@@ -1734,9 +1741,10 @@ void SetProperty(ALsource *const Source, ALCcontext *const Context, const Source
 
     case AL_DIRECTION:
         CheckSize(3);
-        CheckValue(std::isfinite(static_cast<float>(values[0]))
-            && std::isfinite(static_cast<float>(values[1]))
-            && std::isfinite(static_cast<float>(values[2])));
+        if constexpr(std::is_floating_point_v<T>)
+            CheckValue(std::isfinite(static_cast<float>(values[0]))
+                && std::isfinite(static_cast<float>(values[1]))
+                && std::isfinite(static_cast<float>(values[2])));
 
         Source->Direction[0] = static_cast<float>(values[0]);
         Source->Direction[1] = static_cast<float>(values[1]);
@@ -1745,12 +1753,13 @@ void SetProperty(ALsource *const Source, ALCcontext *const Context, const Source
 
     case AL_ORIENTATION:
         CheckSize(6);
-        CheckValue(std::isfinite(static_cast<float>(values[0]))
-            && std::isfinite(static_cast<float>(values[1]))
-            && std::isfinite(static_cast<float>(values[2]))
-            && std::isfinite(static_cast<float>(values[3]))
-            && std::isfinite(static_cast<float>(values[4]))
-            && std::isfinite(static_cast<float>(values[5])));
+        if constexpr(std::is_floating_point_v<T>)
+            CheckValue(std::isfinite(static_cast<float>(values[0]))
+                && std::isfinite(static_cast<float>(values[1]))
+                && std::isfinite(static_cast<float>(values[2]))
+                && std::isfinite(static_cast<float>(values[3]))
+                && std::isfinite(static_cast<float>(values[4]))
+                && std::isfinite(static_cast<float>(values[5])));
 
         Source->OrientAt[0] = static_cast<float>(values[0]);
         Source->OrientAt[1] = static_cast<float>(values[1]);

@@ -180,14 +180,15 @@ void ALCcontext::sendDebugMessage(std::unique_lock<std::mutex> &debuglock, Debug
         size_t newlen{std::strlen(message)};
         if(newlen >= MaxDebugMessageLength) UNLIKELY
         {
-            ERR("Debug message too long (%zu >= %d)\n", newlen, MaxDebugMessageLength);
+            ERR("Debug message too long (%zu >= %d):\n-> %s\n", newlen, MaxDebugMessageLength,
+                message);
             return;
         }
         length = static_cast<ALsizei>(newlen);
     }
     else if(length >= MaxDebugMessageLength) UNLIKELY
     {
-        ERR("Debug message too long (%d >= %d)\n", length, MaxDebugMessageLength);
+        ERR("Debug message too long (%d >= %d):\n-> %s\n", length, MaxDebugMessageLength, message);
         return;
     }
 

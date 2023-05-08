@@ -279,6 +279,15 @@ void GetValue(ALCcontext *context, ALenum pname, T *values)
     context->setError(AL_INVALID_ENUM, "Invalid context property 0x%04x", pname);
 }
 
+
+inline void UpdateProps(ALCcontext *context)
+{
+    if(!context->mDeferUpdates)
+        UpdateContextProps(context);
+    else
+        context->mPropsDirty = true;
+}
+
 } // namespace
 
 /* WARNING: Non-standard export! Not part of any extension, or exposed in the
@@ -293,13 +302,6 @@ START_API_FUNC
 }
 END_API_FUNC
 
-#define DO_UPDATEPROPS() do {                                                 \
-    if(!context->mDeferUpdates)                                               \
-        UpdateContextProps(context.get());                                    \
-    else                                                                      \
-        context->mPropsDirty = true;                                          \
-} while(0)
-
 
 AL_API void AL_APIENTRY alEnable(ALenum capability)
 START_API_FUNC
@@ -313,7 +315,7 @@ START_API_FUNC
         {
             std::lock_guard<std::mutex> _{context->mPropLock};
             context->mSourceDistanceModel = true;
-            DO_UPDATEPROPS();
+            UpdateProps(context.get());
         }
         break;
 
@@ -343,7 +345,7 @@ START_API_FUNC
         {
             std::lock_guard<std::mutex> _{context->mPropLock};
             context->mSourceDistanceModel = false;
-            DO_UPDATEPROPS();
+            UpdateProps(context.get());
         }
         break;
 
@@ -614,7 +616,7 @@ START_API_FUNC
     {
         std::lock_guard<std::mutex> _{context->mPropLock};
         context->mDopplerFactor = value;
-        DO_UPDATEPROPS();
+        UpdateProps(context.get());
     }
 }
 END_API_FUNC
@@ -637,7 +639,7 @@ START_API_FUNC
     {
         std::lock_guard<std::mutex> _{context->mPropLock};
         context->mDopplerVelocity = value;
-        DO_UPDATEPROPS();
+        UpdateProps(context.get());
     }
 }
 END_API_FUNC
@@ -654,7 +656,7 @@ START_API_FUNC
     {
         std::lock_guard<std::mutex> _{context->mPropLock};
         context->mSpeedOfSound = value;
-        DO_UPDATEPROPS();
+        UpdateProps(context.get());
     }
 }
 END_API_FUNC
@@ -670,7 +672,7 @@ START_API_FUNC
         std::lock_guard<std::mutex> _{context->mPropLock};
         context->mDistanceModel = *model;
         if(!context->mSourceDistanceModel)
-            DO_UPDATEPROPS();
+            UpdateProps(context.get());
     }
     else
         context->setError(AL_INVALID_VALUE, "Distance model 0x%04x out of range", value);

@@ -11,12 +11,12 @@ using uint = unsigned int;
 /* Somewhat arbitrary. Avoid letting it get out of control if the app enables
  * logging but never reads it.
  */
-constexpr uint8_t MaxDebugLoggedMessages{64};
-constexpr uint16_t MaxDebugMessageLength{1024};
-constexpr uint8_t MaxDebugGroupDepth{64};
+inline constexpr uint8_t MaxDebugLoggedMessages{64};
+inline constexpr uint16_t MaxDebugMessageLength{1024};
+inline constexpr uint8_t MaxDebugGroupDepth{64};
 
 
-constexpr uint DebugSourceBase{0};
+inline constexpr uint DebugSourceBase{0};
 enum class DebugSource : uint8_t {
     API = 0,
     System,
@@ -24,9 +24,9 @@ enum class DebugSource : uint8_t {
     Application,
     Other,
 };
-constexpr uint DebugSourceCount{5};
+inline constexpr uint DebugSourceCount{5};
 
-constexpr uint DebugTypeBase{DebugSourceBase + DebugSourceCount};
+inline constexpr uint DebugTypeBase{DebugSourceBase + DebugSourceCount};
 enum class DebugType : uint8_t {
     Error = 0,
     DeprecatedBehavior,
@@ -38,16 +38,16 @@ enum class DebugType : uint8_t {
     PopGroup,
     Other,
 };
-constexpr uint DebugTypeCount{9};
+inline constexpr uint DebugTypeCount{9};
 
-constexpr uint DebugSeverityBase{DebugTypeBase + DebugTypeCount};
+inline constexpr uint DebugSeverityBase{DebugTypeBase + DebugTypeCount};
 enum class DebugSeverity : uint8_t {
     High = 0,
     Medium,
     Low,
     Notification,
 };
-constexpr uint DebugSeverityCount{4};
+inline constexpr uint DebugSeverityCount{4};
 
 struct DebugGroup {
     const uint mId;

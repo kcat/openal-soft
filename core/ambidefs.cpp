@@ -258,7 +258,7 @@ static_assert(FourthOrder2DDecoder.size() == FourthOrder2DEncoder.size(), "Fourt
 
 
 template<size_t N, size_t M>
-auto CalcAmbiUpsampler(const std::array<std::array<float,N>,M> &decoder,
+constexpr auto CalcAmbiUpsampler(const std::array<std::array<float,N>,M> &decoder,
     const std::array<AmbiChannelFloatArray,M> &encoder)
 {
     std::array<AmbiChannelFloatArray,N> res{};

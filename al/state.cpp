@@ -560,7 +560,7 @@ START_API_FUNC
         break;
 
     case AL_EXTENSIONS:
-        value = context->mExtensionList;
+        value = context->mExtensionsString.c_str();
         break;
 
     case AL_NO_ERROR:

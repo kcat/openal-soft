@@ -46,18 +46,10 @@ START_API_FUNC
     }
 
     size_t len{strlen(extName)};
-    const char *ptr{context->mExtensionList};
-    while(ptr && *ptr)
+    for(std::string_view ext : context->mExtensions)
     {
-        if(al::strncasecmp(ptr, extName, len) == 0 && (ptr[len] == '\0' || isspace(ptr[len])))
+        if(len == ext.length() && al::strncasecmp(ext.data(), extName, len) == 0)
             return AL_TRUE;
-
-        if((ptr=strchr(ptr, ' ')) != nullptr)
-        {
-            do {
-                ++ptr;
-            } while(isspace(*ptr));
-        }
     }
 
     return AL_FALSE;

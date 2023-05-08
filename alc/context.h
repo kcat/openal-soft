@@ -7,7 +7,7 @@
 #include <mutex>
 #include <stdint.h>
 #include <string>
-#include <unordered_map>
+#include <string_view>
 #include <utility>
 
 #include "AL/al.h"
@@ -143,9 +143,8 @@ struct ALCcontext : public al::intrusive_ref<ALCcontext>, ContextBase {
     /* Default effect slot */
     std::unique_ptr<ALeffectslot> mDefaultSlot;
 
-    const char *mExtensionList{nullptr};
-
-    std::string mExtensionListOverride{};
+    std::vector<std::string_view> mExtensions;
+    std::string mExtensionsString{};
 
 
     ALCcontext(al::intrusive_ptr<ALCdevice> device, ContextFlagBitset flags);

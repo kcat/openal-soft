@@ -11,6 +11,7 @@
 #include <mutex>
 #include <new>
 #include <string>
+#include <string_view>
 #include <thread>
 #include <utility>
 
@@ -25,6 +26,7 @@
 #include "core/except.h"
 #include "core/logging.h"
 #include "core/voice_change.h"
+#include "debug.h"
 #include "opthelpers.h"
 #include "ringbuffer.h"
 #include "threads.h"
@@ -63,11 +65,13 @@ static int EventThread(ALCcontext *context)
             }
 
             auto enabledevts = context->mEnabledEvts.load(std::memory_order_acquire);
-            if(!context->mEventCb || !enabledevts.test(evt.EnumType))
-                continue;
+            if(!context->mEventCb) continue;
 
             if(evt.EnumType == AsyncEvent::SourceStateChange)
             {
+                if(!enabledevts.test(AsyncEvent::SourceStateChange))
+                    continue;
+
                 ALuint state{};
                 std::string msg{"Source ID " + std::to_string(evt.u.srcstate.id)};
                 msg += " state has changed to ";
@@ -95,6 +99,9 @@ static int EventThread(ALCcontext *context)
             }
             else if(evt.EnumType == AsyncEvent::BufferCompleted)
             {
+                if(!enabledevts.test(AsyncEvent::BufferCompleted))
+                    continue;
+
                 std::string msg{std::to_string(evt.u.bufcomp.count)};
                 if(evt.u.bufcomp.count == 1) msg += " buffer completed";
                 else msg += " buffers completed";
@@ -104,9 +111,15 @@ static int EventThread(ALCcontext *context)
             }
             else if(evt.EnumType == AsyncEvent::Disconnected)
             {
-                context->mEventCb(AL_EVENT_TYPE_DISCONNECTED_SOFT, 0, 0,
-                    static_cast<ALsizei>(strlen(evt.u.disconnect.msg)), evt.u.disconnect.msg,
-                    context->mEventParam);
+                const std::string_view message{evt.u.disconnect.msg};
+
+                context->debugMessage(DebugSource::System, DebugType::Error, 0,
+                    DebugSeverity::High, static_cast<ALsizei>(message.length()), message.data());
+
+                if(enabledevts.test(AsyncEvent::Disconnected))
+                    context->mEventCb(AL_EVENT_TYPE_DISCONNECTED_SOFT, 0, 0,
+                        static_cast<ALsizei>(message.length()), message.data(),
+                        context->mEventParam);
             }
         } while(evt_data.len != 0);
     }

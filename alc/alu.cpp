@@ -2178,16 +2178,13 @@ void DeviceBase::handleDisconnect(const char *msg, ...)
 
         for(ContextBase *ctx : *mContexts.load())
         {
-            if(ctx->mEnabledEvts.load(std::memory_order_acquire).test(AsyncEvent::Disconnected))
+            RingBuffer *ring{ctx->mAsyncEvents.get()};
+            auto evt_data = ring->getWriteVector().first;
+            if(evt_data.len > 0)
             {
-                RingBuffer *ring{ctx->mAsyncEvents.get()};
-                auto evt_data = ring->getWriteVector().first;
-                if(evt_data.len > 0)
-                {
-                    al::construct_at(reinterpret_cast<AsyncEvent*>(evt_data.buf), evt);
-                    ring->writeAdvance(1);
-                    ctx->mEventSem.post();
-                }
+                al::construct_at(reinterpret_cast<AsyncEvent*>(evt_data.buf), evt);
+                ring->writeAdvance(1);
+                ctx->mEventSem.post();
             }
 
             if(!ctx->mStopVoicesOnDisconnect)

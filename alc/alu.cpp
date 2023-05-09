@@ -491,9 +491,9 @@ bool CalcEffectSlotParams(EffectSlot *slot, EffectSlot **sorted_slots, ContextBa
         auto evt_vec = ring->getWriteVector();
         if(evt_vec.first.len > 0) LIKELY
         {
-            AsyncEvent *evt{al::construct_at(reinterpret_cast<AsyncEvent*>(evt_vec.first.buf),
-                AsyncEvent::ReleaseEffectState)};
-            evt->u.mEffectState = oldstate;
+            AsyncEffectReleaseEvent &evt = InitAsyncEvent<AsyncEffectReleaseEvent>(
+                reinterpret_cast<AsyncEvent*>(evt_vec.first.buf));
+            evt.mEffectState = oldstate;
             ring->writeAdvance(1);
         }
         else
@@ -1701,22 +1701,22 @@ void SendSourceStateEvent(ContextBase *context, uint id, VChangeState state)
     auto evt_vec = ring->getWriteVector();
     if(evt_vec.first.len < 1) return;
 
-    AsyncEvent *evt{al::construct_at(reinterpret_cast<AsyncEvent*>(evt_vec.first.buf),
-        AsyncEvent::SourceStateChange)};
-    evt->u.srcstate.id = id;
+    AsyncSourceStateEvent &evt = InitAsyncEvent<AsyncSourceStateEvent>(
+        reinterpret_cast<AsyncEvent*>(evt_vec.first.buf));
+    evt.mId = id;
     switch(state)
     {
     case VChangeState::Reset:
-        evt->u.srcstate.state = AsyncEvent::SrcState::Reset;
+        evt.mState = AsyncSrcState::Reset;
         break;
     case VChangeState::Stop:
-        evt->u.srcstate.state = AsyncEvent::SrcState::Stop;
+        evt.mState = AsyncSrcState::Stop;
         break;
     case VChangeState::Play:
-        evt->u.srcstate.state = AsyncEvent::SrcState::Play;
+        evt.mState = AsyncSrcState::Play;
         break;
     case VChangeState::Pause:
-        evt->u.srcstate.state = AsyncEvent::SrcState::Pause;
+        evt.mState = AsyncSrcState::Pause;
         break;
     /* Shouldn't happen. */
     case VChangeState::Restart:
@@ -1813,7 +1813,7 @@ void ProcessVoiceChanges(ContextBase *ctx)
             }
             oldvoice->mPendingChange.store(false, std::memory_order_release);
         }
-        if(sendevt && enabledevt.test(AsyncEvent::SourceStateChange))
+        if(sendevt && enabledevt.test(al::to_underlying(AsyncEnableBits::SourceState)))
             SendSourceStateEvent(ctx, cur->mSourceID, cur->mState);
 
         next = cur->mNext.load(std::memory_order_acquire);
@@ -2166,15 +2166,16 @@ void DeviceBase::handleDisconnect(const char *msg, ...)
     IncrementRef(MixCount);
     if(Connected.exchange(false, std::memory_order_acq_rel))
     {
-        AsyncEvent evt{AsyncEvent::Disconnected};
+        AsyncEvent evt{std::in_place_type<AsyncDisconnectEvent>};
+        auto &disconnect = std::get<AsyncDisconnectEvent>(evt);
 
         va_list args;
         va_start(args, msg);
-        int msglen{vsnprintf(evt.u.disconnect.msg, sizeof(evt.u.disconnect.msg), msg, args)};
+        int msglen{vsnprintf(disconnect.msg, sizeof(disconnect.msg), msg, args)};
         va_end(args);
 
-        if(msglen < 0 || static_cast<size_t>(msglen) >= sizeof(evt.u.disconnect.msg))
-            evt.u.disconnect.msg[sizeof(evt.u.disconnect.msg)-1] = 0;
+        if(msglen < 0 || static_cast<size_t>(msglen) >= sizeof(disconnect.msg))
+            disconnect.msg[sizeof(disconnect.msg)-1] = 0;
 
         for(ContextBase *ctx : *mContexts.load())
         {

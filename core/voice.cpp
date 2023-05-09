@@ -226,10 +226,10 @@ void SendSourceStoppedEvent(ContextBase *context, uint id)
     auto evt_vec = ring->getWriteVector();
     if(evt_vec.first.len < 1) return;
 
-    AsyncEvent *evt{al::construct_at(reinterpret_cast<AsyncEvent*>(evt_vec.first.buf),
-        AsyncEvent::SourceStateChange)};
-    evt->u.srcstate.id = id;
-    evt->u.srcstate.state = AsyncEvent::SrcState::Stop;
+    AsyncSourceStateEvent &evt = InitAsyncEvent<AsyncSourceStateEvent>(
+        reinterpret_cast<AsyncEvent*>(evt_vec.first.buf));
+    evt.mId = id;
+    evt.mState = AsyncSrcState::Stop;
 
     ring->writeAdvance(1);
 }
@@ -1145,16 +1145,16 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
 
     /* Send any events now, after the position/buffer info was updated. */
     const auto enabledevt = Context->mEnabledEvts.load(std::memory_order_acquire);
-    if(buffers_done > 0 && enabledevt.test(AsyncEvent::BufferCompleted))
+    if(buffers_done > 0 && enabledevt.test(al::to_underlying(AsyncEnableBits::BufferCompleted)))
     {
         RingBuffer *ring{Context->mAsyncEvents.get()};
         auto evt_vec = ring->getWriteVector();
         if(evt_vec.first.len > 0)
         {
-            AsyncEvent *evt{al::construct_at(reinterpret_cast<AsyncEvent*>(evt_vec.first.buf),
-                AsyncEvent::BufferCompleted)};
-            evt->u.bufcomp.id = SourceID;
-            evt->u.bufcomp.count = buffers_done;
+            AsyncBufferCompleteEvent &evt = InitAsyncEvent<AsyncBufferCompleteEvent>(
+                reinterpret_cast<AsyncEvent*>(evt_vec.first.buf));
+            evt.mId = SourceID;
+            evt.mCount = buffers_done;
             ring->writeAdvance(1);
         }
     }
@@ -1165,7 +1165,7 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
          * ensures any residual noise fades to 0 amplitude.
          */
         mPlayState.store(Stopping, std::memory_order_release);
-        if(enabledevt.test(AsyncEvent::SourceStateChange))
+        if(enabledevt.test(al::to_underlying(AsyncEnableBits::SourceState)))
             SendSourceStoppedEvent(Context, SourceID);
     }
 }

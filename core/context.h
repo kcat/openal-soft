@@ -13,6 +13,7 @@
 #include "async_event.h"
 #include "atomic.h"
 #include "bufferline.h"
+#include "opthelpers.h"
 #include "threads.h"
 #include "vecmat.h"
 #include "vector.h"
@@ -137,7 +138,7 @@ struct ContextBase {
     std::thread mEventThread;
     al::semaphore mEventSem;
     std::unique_ptr<RingBuffer> mAsyncEvents;
-    using AsyncEventBitset = std::bitset<AsyncEvent::UserEventCount>;
+    using AsyncEventBitset = std::bitset<al::to_underlying(AsyncEnableBits::Count)>;
     std::atomic<AsyncEventBitset> mEnabledEvts{0u};
 
     /* Asynchronous voice change actions are processed as a linked list of

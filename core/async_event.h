@@ -1,6 +1,9 @@
 #ifndef CORE_EVENT_H
 #define CORE_EVENT_H
 
+#include <stdint.h>
+#include <variant>
+
 #include "almalloc.h"
 
 struct EffectState;
@@ -8,48 +11,50 @@ struct EffectState;
 using uint = unsigned int;
 
 
-struct AsyncEvent {
-    enum : uint {
-        /* User event types. */
-        SourceStateChange,
-        BufferCompleted,
-        Disconnected,
-        UserEventCount,
+enum class AsyncEnableBits : uint8_t {
+    SourceState,
+    BufferCompleted,
+    Disconnected,
 
-        /* Internal events, always processed. */
-        ReleaseEffectState = 128,
-
-        /* End event thread processing. */
-        KillThread,
-    };
-
-    enum class SrcState {
-        Reset,
-        Stop,
-        Play,
-        Pause
-    };
-
-    const uint EnumType;
-    union {
-        char dummy;
-        struct {
-            uint id;
-            SrcState state;
-        } srcstate;
-        struct {
-            uint id;
-            uint count;
-        } bufcomp;
-        struct {
-            char msg[244];
-        } disconnect;
-        EffectState *mEffectState;
-    } u{};
-
-    constexpr AsyncEvent(uint type) noexcept : EnumType{type} { }
-
-    DISABLE_ALLOC()
+    Count
 };
+
+
+enum class AsyncSrcState : uint8_t {
+    Reset,
+    Stop,
+    Play,
+    Pause
+};
+
+using AsyncKillThread = std::monostate;
+
+struct AsyncSourceStateEvent {
+    uint mId;
+    AsyncSrcState mState;
+};
+
+struct AsyncBufferCompleteEvent {
+    uint mId;
+    uint mCount;
+};
+
+struct AsyncDisconnectEvent {
+    char msg[244];
+};
+
+struct AsyncEffectReleaseEvent {
+    EffectState *mEffectState;
+};
+
+using AsyncEvent = std::variant<AsyncKillThread,
+        AsyncSourceStateEvent,
+        AsyncBufferCompleteEvent,
+        AsyncEffectReleaseEvent,
+        AsyncDisconnectEvent>;
+
+template<typename T, typename ...Args>
+auto &InitAsyncEvent(AsyncEvent *evt, Args&& ...args)
+{ return std::get<T>(*al::construct_at(evt, std::in_place_type<T>, std::forward<Args>(args)...)); }
 
 #endif

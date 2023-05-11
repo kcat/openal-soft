@@ -57,6 +57,8 @@
 #include "opthelpers.h"
 
 #ifdef ALSOFT_EAX
+#include <unordered_set>
+
 #include "eax/globals.h"
 #include "eax/x_ram.h"
 #endif // ALSOFT_EAX
@@ -1584,10 +1586,9 @@ FORCE_ALIGN ALboolean AL_APIENTRY EAXSetBufferMode(ALsizei n, const ALuint *buff
 
     auto device = context->mALDevice.get();
     std::lock_guard<std::mutex> device_lock{device->BufferLock};
-    size_t total_needed{0};
 
-    // Validate the buffers.
-    //
+    /* Validate the buffers. */
+    std::unordered_set<ALbuffer*> buflist;
     for(auto i = 0;i < n;++i)
     {
         const auto bufid = buffers[i];
@@ -1605,39 +1606,37 @@ FORCE_ALIGN ALboolean AL_APIENTRY EAXSetBufferMode(ALsizei n, const ALuint *buff
          * only when not set/queued on a source?
          */
 
-        if(*storage == EaxStorage::Hardware && !buffer->eax_x_ram_is_hardware)
+        buflist.emplace(buffer);
+    }
+
+    if(*storage == EaxStorage::Hardware)
+    {
+        size_t total_needed{0};
+        for(ALbuffer *buffer : buflist)
         {
-            /* FIXME: This doesn't account for duplicate buffers. When the same
-             * buffer ID is specified multiple times in the provided list, it
-             * counts each instance as more memory that needs to fit in X-RAM.
-             */
-            if(std::numeric_limits<size_t>::max()-buffer->OriginalSize < total_needed) UNLIKELY
+            if(!buffer->eax_x_ram_is_hardware)
             {
-                context->setError(AL_OUT_OF_MEMORY, EAX_PREFIX "Size overflow (%u + %zu)\n",
-                    buffer->OriginalSize, total_needed);
-                return ALC_FALSE;
+                if(std::numeric_limits<size_t>::max()-buffer->OriginalSize < total_needed) UNLIKELY
+                {
+                    context->setError(AL_OUT_OF_MEMORY, EAX_PREFIX "Size overflow (%u + %zu)\n",
+                        buffer->OriginalSize, total_needed);
+                    return ALC_FALSE;
+                }
+                total_needed += buffer->OriginalSize;
             }
-            total_needed += buffer->OriginalSize;
+        }
+        if(total_needed > device->eax_x_ram_free_size)
+        {
+            context->setError(AL_OUT_OF_MEMORY,
+                EAX_PREFIX "Out of X-RAM memory (need: %zu, avail: %u)", total_needed,
+                device->eax_x_ram_free_size);
+            return ALC_FALSE;
         }
     }
-    if(total_needed > device->eax_x_ram_free_size)
+
+    /* Update the mode. */
+    for(ALbuffer *buffer : buflist)
     {
-        context->setError(AL_OUT_OF_MEMORY,EAX_PREFIX "Out of X-RAM memory (need: %zu, avail: %u)",
-            total_needed, device->eax_x_ram_free_size);
-        return ALC_FALSE;
-    }
-
-    // Update the mode.
-    //
-    for(auto i = 0;i < n;++i)
-    {
-        const auto bufid = buffers[i];
-        if(bufid == AL_NONE)
-            continue;
-
-        const auto buffer = LookupBuffer(device, bufid);
-        assert(buffer);
-
         if(*storage == EaxStorage::Hardware)
             eax_x_ram_apply(*device, *buffer);
         else

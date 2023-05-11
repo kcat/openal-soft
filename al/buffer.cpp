@@ -1543,8 +1543,7 @@ BufferSubList::~BufferSubList()
 
 
 #ifdef ALSOFT_EAX
-FORCE_ALIGN ALboolean AL_APIENTRY EAXSetBufferMode(ALsizei n, const ALuint* buffers, ALint value)
-START_API_FUNC
+FORCE_ALIGN ALboolean AL_APIENTRY EAXSetBufferMode(ALsizei n, const ALuint *buffers, ALint value) noexcept
 {
 #define EAX_PREFIX "[EAXSetBufferMode] "
 
@@ -1650,10 +1649,8 @@ START_API_FUNC
 
 #undef EAX_PREFIX
 }
-END_API_FUNC
 
-FORCE_ALIGN ALenum AL_APIENTRY EAXGetBufferMode(ALuint buffer, ALint* pReserved)
-START_API_FUNC
+FORCE_ALIGN ALenum AL_APIENTRY EAXGetBufferMode(ALuint buffer, ALint *pReserved) noexcept
 {
 #define EAX_PREFIX "[EAXGetBufferMode] "
 
@@ -1690,6 +1687,5 @@ START_API_FUNC
 
 #undef EAX_PREFIX
 }
-END_API_FUNC
 
 #endif // ALSOFT_EAX

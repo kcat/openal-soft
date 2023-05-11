@@ -1553,39 +1553,76 @@ FORCE_ALIGN ALboolean AL_APIENTRY EAXSetBufferMode(ALsizei n, const ALuint *buff
     if(!context)
     {
         ERR(EAX_PREFIX "%s\n", "No current context.");
-        return ALC_FALSE;
+        return AL_FALSE;
     }
 
     if(!eax_g_is_enabled)
     {
         context->setError(AL_INVALID_OPERATION, EAX_PREFIX "%s", "EAX not enabled.");
-        return ALC_FALSE;
+        return AL_FALSE;
     }
 
     const auto storage = EaxStorageFromEnum(value);
     if(!storage)
     {
         context->setError(AL_INVALID_ENUM, EAX_PREFIX "Unsupported X-RAM mode 0x%x", value);
-        return ALC_FALSE;
+        return AL_FALSE;
     }
 
     if(n == 0)
-        return ALC_TRUE;
+        return AL_TRUE;
 
     if(n < 0)
     {
         context->setError(AL_INVALID_VALUE, EAX_PREFIX "Buffer count %d out of range", n);
-        return ALC_FALSE;
+        return AL_FALSE;
     }
 
     if(!buffers)
     {
         context->setError(AL_INVALID_VALUE, EAX_PREFIX "%s", "Null AL buffers");
-        return ALC_FALSE;
+        return AL_FALSE;
     }
 
     auto device = context->mALDevice.get();
     std::lock_guard<std::mutex> device_lock{device->BufferLock};
+
+    /* Special-case setting a single buffer, to avoid extraneous allocations. */
+    if(n == 1)
+    {
+        const auto bufid = buffers[0];
+        if(bufid == AL_NONE)
+            return AL_TRUE;
+
+        const auto buffer = LookupBuffer(device, bufid);
+        if(!buffer) UNLIKELY
+        {
+            ERR(EAX_PREFIX "Invalid buffer ID %u.\n", bufid);
+            return AL_FALSE;
+        }
+
+        /* TODO: Is the store location allowed to change for in-use buffers, or
+         * only when not set/queued on a source?
+         */
+
+        if(*storage == EaxStorage::Hardware)
+        {
+            if(!buffer->eax_x_ram_is_hardware
+                && buffer->OriginalSize > device->eax_x_ram_free_size) UNLIKELY
+            {
+                context->setError(AL_OUT_OF_MEMORY,
+                    EAX_PREFIX "Out of X-RAM memory (need: %u, avail: %u)", buffer->OriginalSize,
+                    device->eax_x_ram_free_size);
+                return AL_FALSE;
+            }
+
+            eax_x_ram_apply(*device, *buffer);
+        }
+        else
+            eax_x_ram_clear(*device, *buffer);
+        buffer->eax_x_ram_mode = *storage;
+        return AL_TRUE;
+    }
 
     /* Validate the buffers. */
     std::unordered_set<ALbuffer*> buflist;
@@ -1599,7 +1636,7 @@ FORCE_ALIGN ALboolean AL_APIENTRY EAXSetBufferMode(ALsizei n, const ALuint *buff
         if(!buffer) UNLIKELY
         {
             ERR(EAX_PREFIX "Invalid buffer ID %u.\n", bufid);
-            return ALC_FALSE;
+            return AL_FALSE;
         }
 
         /* TODO: Is the store location allowed to change for in-use buffers, or
@@ -1620,7 +1657,7 @@ FORCE_ALIGN ALboolean AL_APIENTRY EAXSetBufferMode(ALsizei n, const ALuint *buff
                 {
                     context->setError(AL_OUT_OF_MEMORY, EAX_PREFIX "Size overflow (%u + %zu)\n",
                         buffer->OriginalSize, total_needed);
-                    return ALC_FALSE;
+                    return AL_FALSE;
                 }
                 total_needed += buffer->OriginalSize;
             }
@@ -1630,7 +1667,7 @@ FORCE_ALIGN ALboolean AL_APIENTRY EAXSetBufferMode(ALsizei n, const ALuint *buff
             context->setError(AL_OUT_OF_MEMORY,
                 EAX_PREFIX "Out of X-RAM memory (need: %zu, avail: %u)", total_needed,
                 device->eax_x_ram_free_size);
-            return ALC_FALSE;
+            return AL_FALSE;
         }
     }
 

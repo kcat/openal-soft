@@ -1,24 +1,16 @@
 
 #include "cubic_tables.h"
 
-#include <algorithm>
 #include <array>
-#include <cassert>
-#include <cmath>
-#include <limits>
-#include <memory>
-#include <stdexcept>
+#include <stddef.h>
 
-#include "alnumbers.h"
-#include "core/mixer/defs.h"
+#include "cubic_defs.h"
 
 
 namespace {
 
-using uint = unsigned int;
-
 struct SplineFilterArray {
-    alignas(16) CubicCoefficients mTable[CubicPhaseCount]{};
+    alignas(16) std::array<CubicCoefficients,CubicPhaseCount> mTable{};
 
     constexpr SplineFilterArray()
     {

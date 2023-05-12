@@ -7,10 +7,11 @@
 #include <cmath>
 #include <limits>
 #include <memory>
-#include <stdexcept>
+#include <stddef.h>
 
 #include "alnumbers.h"
-#include "core/mixer/defs.h"
+#include "bsinc_defs.h"
+#include "resampler_limits.h"
 
 
 namespace {
@@ -142,26 +143,6 @@ constexpr BSincHeader bsinc12_hdr{60, 11};
 constexpr BSincHeader bsinc24_hdr{60, 23};
 
 
-/* NOTE: GCC 5 has an issue with BSincHeader objects being in an anonymous
- * namespace while also being used as non-type template parameters.
- */
-#if !defined(__clang__) && defined(__GNUC__) && __GNUC__ < 6
-
-/* The number of sample points is double the a value (rounded up to a multiple
- * of 4), and scale index 0 includes the doubling for downsampling. bsinc24 is
- * currently the highest quality filter, and will use the most sample points.
- */
-constexpr uint BSincPointsMax{(bsinc24_hdr.a[0]*2 + 3) & ~3u};
-static_assert(BSincPointsMax <= MaxResamplerPadding, "MaxResamplerPadding is too small");
-
-template<size_t total_size>
-struct BSincFilterArray {
-    alignas(16) std::array<float, total_size> mTable;
-    const BSincHeader &hdr;
-
-    BSincFilterArray(const BSincHeader &hdr_) : hdr{hdr_}
-    {
-#else
 template<const BSincHeader &hdr>
 struct BSincFilterArray {
     alignas(16) std::array<float, hdr.total_size> mTable{};
@@ -170,7 +151,7 @@ struct BSincFilterArray {
     {
         constexpr uint BSincPointsMax{(hdr.a[0]*2 + 3) & ~3u};
         static_assert(BSincPointsMax <= MaxResamplerPadding, "MaxResamplerPadding is too small");
-#endif
+
         using filter_type = double[BSincPhaseCount+1][BSincPointsMax];
         auto filter = std::make_unique<filter_type[]>(BSincScaleCount);
 
@@ -265,13 +246,8 @@ struct BSincFilterArray {
     constexpr const float *getTable() const noexcept { return &mTable.front(); }
 };
 
-#if !defined(__clang__) && defined(__GNUC__) && __GNUC__ < 6
-const BSincFilterArray<bsinc12_hdr.total_size> bsinc12_filter{bsinc12_hdr};
-const BSincFilterArray<bsinc24_hdr.total_size> bsinc24_filter{bsinc24_hdr};
-#else
 const BSincFilterArray<bsinc12_hdr> bsinc12_filter{};
 const BSincFilterArray<bsinc24_hdr> bsinc24_filter{};
-#endif
 
 template<typename T>
 constexpr BSincTable GenerateBSincTable(const T &filter)

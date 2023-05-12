@@ -22,16 +22,16 @@
 
 #include "coreaudio.h"
 
+#include <cmath>
 #include <inttypes.h>
+#include <memory>
+#include <mutex>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string>
 #include <string.h>
 #include <unistd.h>
-
-#include <cmath>
-#include <memory>
-#include <string>
 
 #include "alnumeric.h"
 #include "core/converter.h"

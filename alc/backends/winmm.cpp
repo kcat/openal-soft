@@ -55,8 +55,8 @@ namespace {
 #define DEVNAME_HEAD "OpenAL Soft on "
 
 
-al::vector<std::string> PlaybackDevices;
-al::vector<std::string> CaptureDevices;
+std::vector<std::string> PlaybackDevices;
+std::vector<std::string> CaptureDevices;
 
 bool checkName(const al::vector<std::string> &list, const std::string &name)
 { return std::find(list.cbegin(), list.cend(), name) != list.cend(); }

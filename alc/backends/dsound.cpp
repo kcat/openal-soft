@@ -25,10 +25,6 @@
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <memory.h>
-
 #include <cguid.h>
 #include <mmreg.h>
 #ifndef _WAVEFORMATEXTENSIBLE_
@@ -36,13 +32,17 @@
 #include <ksmedia.h>
 #endif
 
+#include <algorithm>
 #include <atomic>
 #include <cassert>
-#include <thread>
-#include <string>
-#include <vector>
-#include <algorithm>
 #include <functional>
+#include <memory.h>
+#include <mutex>
+#include <stdlib.h>
+#include <stdio.h>
+#include <string>
+#include <thread>
+#include <vector>
 
 #include "albit.h"
 #include "alnumeric.h"

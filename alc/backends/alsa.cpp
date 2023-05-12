@@ -31,6 +31,7 @@
 #include <exception>
 #include <functional>
 #include <memory>
+#include <mutex>
 #include <string>
 #include <thread>
 #include <utility>

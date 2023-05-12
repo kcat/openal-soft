@@ -26,9 +26,10 @@
 #include <stdlib.h>
 #include <jni.h>
 
-#include <new>
 #include <array>
 #include <cstring>
+#include <mutex>
+#include <new>
 #include <thread>
 #include <functional>
 

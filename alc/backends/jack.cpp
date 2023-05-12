@@ -22,12 +22,12 @@
 
 #include "jack.h"
 
+#include <array>
 #include <cstdlib>
 #include <cstdio>
 #include <cstring>
 #include <memory.h>
-
-#include <array>
+#include <mutex>
 #include <thread>
 #include <functional>
 

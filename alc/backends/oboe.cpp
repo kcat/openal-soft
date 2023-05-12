@@ -5,6 +5,7 @@
 
 #include <cassert>
 #include <cstring>
+#include <mutex>
 #include <stdint.h>
 
 #include "alnumeric.h"

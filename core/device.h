@@ -1,14 +1,12 @@
 #ifndef CORE_DEVICE_H
 #define CORE_DEVICE_H
 
-#include <stddef.h>
-
 #include <array>
 #include <atomic>
 #include <bitset>
 #include <chrono>
 #include <memory>
-#include <mutex>
+#include <stddef.h>
 #include <stdint.h>
 #include <string>
 

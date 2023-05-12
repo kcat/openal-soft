@@ -31,12 +31,10 @@
 #include <algorithm>
 #include <atomic>
 #include <cerrno>
-#include <cstdio>
 #include <cstring>
 #include <exception>
 #include <functional>
 #include <memory>
-#include <new>
 #include <string>
 #include <thread>
 #include <utility>

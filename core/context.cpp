@@ -2,7 +2,10 @@
 #include "config.h"
 
 #include <cassert>
+#include <limits>
 #include <memory>
+#include <stdexcept>
+#include <utility>
 
 #include "async_event.h"
 #include "context.h"

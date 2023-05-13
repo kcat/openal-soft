@@ -46,6 +46,7 @@
 
 #include "albit.h"
 #include "alnumeric.h"
+#include "alspan.h"
 #include "comptr.h"
 #include "core/device.h"
 #include "core/helpers.h"
@@ -130,10 +131,10 @@ struct DevMap {
     { }
 };
 
-al::vector<DevMap> PlaybackDevices;
-al::vector<DevMap> CaptureDevices;
+std::vector<DevMap> PlaybackDevices;
+std::vector<DevMap> CaptureDevices;
 
-bool checkName(const al::vector<DevMap> &list, const std::string &name)
+bool checkName(const al::span<DevMap> list, const std::string &name)
 {
     auto match_name = [&name](const DevMap &entry) -> bool
     { return entry.name == name; };
@@ -145,7 +146,7 @@ BOOL CALLBACK DSoundEnumDevices(GUID *guid, const WCHAR *desc, const WCHAR*, voi
     if(!guid)
         return TRUE;
 
-    auto& devices = *static_cast<al::vector<DevMap>*>(data);
+    auto& devices = *static_cast<std::vector<DevMap>*>(data);
     const std::string basename{DEVNAME_HEAD + wstr_to_utf8(desc)};
 
     int count{1};

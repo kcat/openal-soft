@@ -8,6 +8,7 @@
 #include <stdint.h>
 #include <string>
 #include <utility>
+#include <vector>
 
 #include "AL/alc.h"
 #include "AL/alext.h"
@@ -18,7 +19,6 @@
 #include "core/device.h"
 #include "inprogext.h"
 #include "intrusive_ptr.h"
-#include "vector.h"
 
 #ifdef ALSOFT_EAX
 #include "al/eax/x_ram.h"
@@ -95,7 +95,7 @@ struct ALCdevice : public al::intrusive_ref<ALCdevice>, DeviceBase {
     uint AuxiliaryEffectSlotMax{};
 
     std::string mHrtfName;
-    al::vector<std::string> mHrtfList;
+    std::vector<std::string> mHrtfList;
     ALCenum mHrtfStatus{ALC_FALSE};
 
     enum class OutputMode1 : ALCenum {
@@ -118,15 +118,15 @@ struct ALCdevice : public al::intrusive_ref<ALCdevice>, DeviceBase {
 
     // Map of Buffers for this device
     std::mutex BufferLock;
-    al::vector<BufferSubList> BufferList;
+    std::vector<BufferSubList> BufferList;
 
     // Map of Effects for this device
     std::mutex EffectLock;
-    al::vector<EffectSubList> EffectList;
+    std::vector<EffectSubList> EffectList;
 
     // Map of Filters for this device
     std::mutex FilterLock;
-    al::vector<FilterSubList> FilterList;
+    std::vector<FilterSubList> FilterList;
 
 #ifdef ALSOFT_EAX
     ALuint eax_x_ram_free_size{eax_x_ram_max_size};

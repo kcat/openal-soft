@@ -25,6 +25,7 @@
 #include <cstdlib>
 #include <iterator>
 #include <tuple>
+#include <vector>
 
 #include "alc/effects/base.h"
 #include "almalloc.h"
@@ -39,7 +40,6 @@
 #include "core/mixer.h"
 #include "intrusive_ptr.h"
 #include "opthelpers.h"
-#include "vector.h"
 
 
 namespace {
@@ -49,7 +49,7 @@ using uint = unsigned int;
 constexpr float LowpassFreqRef{5000.0f};
 
 struct EchoState final : public EffectState {
-    al::vector<float,16> mSampleBuffer;
+    std::vector<float> mSampleBuffer;
 
     // The echo is two tap. The delay is the number of samples from before the
     // current offset
@@ -87,7 +87,7 @@ void EchoState::deviceUpdate(const DeviceBase *Device, const BufferStorage*)
     const uint maxlen{NextPowerOf2(float2uint(EchoMaxDelay*frequency + 0.5f) +
         float2uint(EchoMaxLRDelay*frequency + 0.5f))};
     if(maxlen != mSampleBuffer.size())
-        al::vector<float,16>(maxlen).swap(mSampleBuffer);
+        decltype(mSampleBuffer)(maxlen).swap(mSampleBuffer);
 
     std::fill(mSampleBuffer.begin(), mSampleBuffer.end(), 0.0f);
     for(auto &e : mGains)

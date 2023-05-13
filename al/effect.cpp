@@ -31,6 +31,7 @@
 #include <new>
 #include <numeric>
 #include <utility>
+#include <vector>
 
 #include "AL/al.h"
 #include "AL/alc.h"
@@ -49,7 +50,6 @@
 #include "core/except.h"
 #include "core/logging.h"
 #include "opthelpers.h"
-#include "vector.h"
 
 #ifdef ALSOFT_EAX
 #include <cassert>
@@ -259,7 +259,7 @@ START_API_FUNC
         /* Store the allocated buffer IDs in a separate local list, to avoid
          * modifying the user storage in case of failure.
          */
-        al::vector<ALuint> ids;
+        std::vector<ALuint> ids;
         ids.reserve(static_cast<ALuint>(n));
         do {
             ALeffect *effect{AllocEffect(device)};

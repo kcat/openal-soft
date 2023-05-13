@@ -37,6 +37,7 @@
 #include <string>
 #include <sys/types.h>
 #include <utility>
+#include <vector>
 
 #include "albit.h"
 #include "alc/alconfig.h"
@@ -49,7 +50,6 @@
 #include "dynload.h"
 #include "opthelpers.h"
 #include "strutils.h"
-#include "vector.h"
 
 #include <pulse/pulseaudio.h>
 
@@ -282,8 +282,8 @@ bool checkName(const al::span<const DevMap> list, const std::string &name)
     return std::find_if(list.cbegin(), list.cend(), match_name) != list.cend();
 }
 
-al::vector<DevMap> PlaybackDevices;
-al::vector<DevMap> CaptureDevices;
+std::vector<DevMap> PlaybackDevices;
+std::vector<DevMap> CaptureDevices;
 
 
 /* Global flags and properties */

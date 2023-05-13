@@ -4,6 +4,7 @@
 #include <array>
 #include <cstddef>
 #include <memory>
+#include <vector>
 
 #include "almalloc.h"
 #include "alspan.h"
@@ -11,7 +12,6 @@
 #include "bufferline.h"
 #include "devformat.h"
 #include "filters/splitter.h"
-#include "vector.h"
 
 struct FrontStablizer;
 
@@ -43,7 +43,7 @@ class BFormatDec {
      * only be used in a standard layout struct, and a std::unique_ptr member
      * (mStablizer) causes GCC and Clang to warn it's not.
      */
-    al::vector<ChannelDecoder> mChannelDec;
+    std::vector<ChannelDecoder> mChannelDec;
 
 public:
     BFormatDec(const size_t inchans, const al::span<const ChannelDec> coeffs,

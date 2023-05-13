@@ -25,6 +25,7 @@
 #include <climits>
 #include <cstdlib>
 #include <iterator>
+#include <vector>
 
 #include "alc/effects/base.h"
 #include "almalloc.h"
@@ -41,7 +42,6 @@
 #include "core/resampler_limits.h"
 #include "intrusive_ptr.h"
 #include "opthelpers.h"
-#include "vector.h"
 
 
 namespace {
@@ -49,7 +49,7 @@ namespace {
 using uint = unsigned int;
 
 struct ChorusState final : public EffectState {
-    al::vector<float,16> mDelayBuffer;
+    std::vector<float> mDelayBuffer;
     uint mOffset{0};
 
     uint mLfoOffset{0};

@@ -35,6 +35,7 @@
 #include <string>
 #include <thread>
 #include <utility>
+#include <vector>
 
 #include "albit.h"
 #include "alc/alconfig.h"
@@ -46,7 +47,6 @@
 #include "dynload.h"
 #include "ringbuffer.h"
 #include "threads.h"
-#include "vector.h"
 
 #include <alsa/asoundlib.h>
 
@@ -248,8 +248,8 @@ struct DevMap {
     { }
 };
 
-al::vector<DevMap> PlaybackDevices;
-al::vector<DevMap> CaptureDevices;
+std::vector<DevMap> PlaybackDevices;
+std::vector<DevMap> CaptureDevices;
 
 
 const char *prefix_name(snd_pcm_stream_t stream)
@@ -258,9 +258,9 @@ const char *prefix_name(snd_pcm_stream_t stream)
     return (stream==SND_PCM_STREAM_PLAYBACK) ? "device-prefix" : "capture-prefix";
 }
 
-al::vector<DevMap> probe_devices(snd_pcm_stream_t stream)
+std::vector<DevMap> probe_devices(snd_pcm_stream_t stream)
 {
-    al::vector<DevMap> devlist;
+    std::vector<DevMap> devlist;
 
     snd_ctl_card_info_t *info;
     snd_ctl_card_info_malloc(&info);
@@ -439,7 +439,7 @@ struct AlsaPlayback final : public BackendBase {
     std::mutex mMutex;
 
     uint mFrameStep{};
-    al::vector<std::byte> mBuffer;
+    std::vector<std::byte> mBuffer;
 
     std::atomic<bool> mKillNow{true};
     std::thread mThread;
@@ -880,7 +880,7 @@ struct AlsaCapture final : public BackendBase {
 
     snd_pcm_t *mPcmHandle{nullptr};
 
-    al::vector<std::byte> mBuffer;
+    std::vector<std::byte> mBuffer;
 
     bool mDoCapture{false};
     RingBufferPtr mRing{nullptr};
@@ -1024,7 +1024,7 @@ void AlsaCapture::stop()
         /* The ring buffer implicitly captures when checking availability.
          * Direct access needs to explicitly capture it into temp storage.
          */
-        auto temp = al::vector<std::byte>(
+        auto temp = std::vector<std::byte>(
             static_cast<size_t>(snd_pcm_frames_to_bytes(mPcmHandle, avail)));
         captureSamples(temp.data(), avail);
         mBuffer = std::move(temp);

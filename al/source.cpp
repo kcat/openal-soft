@@ -42,6 +42,7 @@
 #include <stdexcept>
 #include <thread>
 #include <utility>
+#include <vector>
 
 #include "AL/al.h"
 #include "AL/alc.h"
@@ -2659,7 +2660,7 @@ START_API_FUNC
     }
     else
     {
-        al::vector<ALuint> ids;
+        std::vector<ALuint> ids;
         ids.reserve(static_cast<ALuint>(n));
         do {
             ALsource *source{AllocSource(context.get())};
@@ -3223,7 +3224,7 @@ START_API_FUNC
         context->setError(AL_INVALID_VALUE, "Playing %d sources", n);
     if(n <= 0) UNLIKELY return;
 
-    al::vector<ALsource*> extra_sources;
+    std::vector<ALsource*> extra_sources;
     std::array<ALsource*,8> source_storage;
     al::span<ALsource*> srchandles;
     if(static_cast<ALuint>(n) <= source_storage.size()) LIKELY
@@ -3261,7 +3262,7 @@ START_API_FUNC
     if(start_time < 0) UNLIKELY
         return context->setError(AL_INVALID_VALUE, "Invalid time point %" PRId64, start_time);
 
-    al::vector<ALsource*> extra_sources;
+    std::vector<ALsource*> extra_sources;
     std::array<ALsource*,8> source_storage;
     al::span<ALsource*> srchandles;
     if(static_cast<ALuint>(n) <= source_storage.size()) LIKELY
@@ -3301,7 +3302,7 @@ START_API_FUNC
         context->setError(AL_INVALID_VALUE, "Pausing %d sources", n);
     if(n <= 0) UNLIKELY return;
 
-    al::vector<ALsource*> extra_sources;
+    std::vector<ALsource*> extra_sources;
     std::array<ALsource*,8> source_storage;
     al::span<ALsource*> srchandles;
     if(static_cast<ALuint>(n) <= source_storage.size()) LIKELY
@@ -3377,7 +3378,7 @@ START_API_FUNC
         context->setError(AL_INVALID_VALUE, "Stopping %d sources", n);
     if(n <= 0) UNLIKELY return;
 
-    al::vector<ALsource*> extra_sources;
+    std::vector<ALsource*> extra_sources;
     std::array<ALsource*,8> source_storage;
     al::span<ALsource*> srchandles;
     if(static_cast<ALuint>(n) <= source_storage.size()) LIKELY
@@ -3440,7 +3441,7 @@ START_API_FUNC
         context->setError(AL_INVALID_VALUE, "Rewinding %d sources", n);
     if(n <= 0) UNLIKELY return;
 
-    al::vector<ALsource*> extra_sources;
+    std::vector<ALsource*> extra_sources;
     std::array<ALsource*,8> source_storage;
     al::span<ALsource*> srchandles;
     if(static_cast<ALuint>(n) <= source_storage.size()) LIKELY

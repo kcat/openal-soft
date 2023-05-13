@@ -59,6 +59,7 @@
 #include "albit.h"
 #include "alc/alconfig.h"
 #include "alnumeric.h"
+#include "alspan.h"
 #include "comptr.h"
 #include "core/converter.h"
 #include "core/device.h"
@@ -180,15 +181,14 @@ struct DevMap {
     { }
 };
 
-bool checkName(const al::vector<DevMap> &list, const std::string &name)
+bool checkName(const al::span<DevMap> list, const std::string &name)
 {
-    auto match_name = [&name](const DevMap &entry) -> bool
-    { return entry.name == name; };
+    auto match_name = [&name](const DevMap &entry) -> bool { return entry.name == name; };
     return std::find_if(list.cbegin(), list.cend(), match_name) != list.cend();
 }
 
-al::vector<DevMap> PlaybackDevices;
-al::vector<DevMap> CaptureDevices;
+std::vector<DevMap> PlaybackDevices;
+std::vector<DevMap> CaptureDevices;
 
 
 using NameGUIDPair = std::pair<std::string,std::string>;
@@ -262,7 +262,7 @@ EndpointFormFactor get_device_formfactor(IMMDevice *device)
 }
 
 
-void add_device(IMMDevice *device, const WCHAR *devid, al::vector<DevMap> &list)
+void add_device(IMMDevice *device, const WCHAR *devid, std::vector<DevMap> &list)
 {
     for(auto &entry : list)
     {
@@ -301,9 +301,9 @@ WCHAR *get_device_id(IMMDevice *device)
     return devid;
 }
 
-void probe_devices(IMMDeviceEnumerator *devenum, EDataFlow flowdir, al::vector<DevMap> &list)
+void probe_devices(IMMDeviceEnumerator *devenum, EDataFlow flowdir, std::vector<DevMap> &list)
 {
-    al::vector<DevMap>{}.swap(list);
+    std::vector<DevMap>{}.swap(list);
 
     ComPtr<IMMDeviceCollection> coll;
     HRESULT hr{devenum->EnumAudioEndpoints(flowdir, DEVICE_STATE_ACTIVE, al::out_ptr(coll))};
@@ -1355,7 +1355,7 @@ FORCE_ALIGN int WasapiCapture::recordProc()
 
     althrd_setname(RECORD_THREAD_NAME);
 
-    al::vector<float> samples;
+    std::vector<float> samples;
     while(!mKillNow.load(std::memory_order_relaxed))
     {
         UINT32 avail;

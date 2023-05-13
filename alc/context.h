@@ -9,6 +9,7 @@
 #include <string>
 #include <string_view>
 #include <utility>
+#include <vector>
 
 #include "AL/al.h"
 #include "AL/alc.h"
@@ -21,7 +22,6 @@
 #include "core/context.h"
 #include "inprogext.h"
 #include "intrusive_ptr.h"
-#include "vector.h"
 
 #ifdef ALSOFT_EAX
 #include "al/eax/call.h"
@@ -132,11 +132,11 @@ struct ALCcontext : public al::intrusive_ref<ALCcontext>, ContextBase {
 
     ALlistener mListener{};
 
-    al::vector<SourceSubList> mSourceList;
+    std::vector<SourceSubList> mSourceList;
     ALuint mNumSources{0};
     std::mutex mSourceLock;
 
-    al::vector<EffectSlotSubList> mEffectSlotList;
+    std::vector<EffectSlotSubList> mEffectSlotList;
     ALuint mNumEffectSlots{0u};
     std::mutex mEffectSlotLock;
 

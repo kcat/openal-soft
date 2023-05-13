@@ -341,7 +341,7 @@ START_API_FUNC
     }
     else
     {
-        al::vector<ALuint> ids;
+        std::vector<ALuint> ids;
         ALsizei count{n};
         ids.reserve(static_cast<ALuint>(count));
         do {
@@ -383,7 +383,7 @@ START_API_FUNC
     }
     else
     {
-        auto slots = al::vector<ALeffectslot*>(static_cast<ALuint>(n));
+        auto slots = std::vector<ALeffectslot*>(static_cast<ALuint>(n));
         for(size_t i{0};i < slots.size();++i)
         {
             ALeffectslot *slot{LookupEffectSlot(context.get(), effectslots[i])};
@@ -466,7 +466,7 @@ START_API_FUNC
         context->setError(AL_INVALID_VALUE, "Playing %d effect slots", n);
     if(n <= 0) UNLIKELY return;
 
-    auto slots = al::vector<ALeffectslot*>(static_cast<ALuint>(n));
+    auto slots = std::vector<ALeffectslot*>(static_cast<ALuint>(n));
     std::lock_guard<std::mutex> _{context->mEffectSlotLock};
     for(size_t i{0};i < slots.size();++i)
     {
@@ -520,7 +520,7 @@ START_API_FUNC
         context->setError(AL_INVALID_VALUE, "Stopping %d effect slots", n);
     if(n <= 0) UNLIKELY return;
 
-    auto slots = al::vector<ALeffectslot*>(static_cast<ALuint>(n));
+    auto slots = std::vector<ALeffectslot*>(static_cast<ALuint>(n));
     std::lock_guard<std::mutex> _{context->mEffectSlotLock};
     for(size_t i{0};i < slots.size();++i)
     {

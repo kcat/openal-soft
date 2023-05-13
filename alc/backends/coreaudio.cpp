@@ -25,13 +25,13 @@
 #include <cmath>
 #include <inttypes.h>
 #include <memory>
-#include <mutex>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string>
 #include <string.h>
 #include <unistd.h>
+#include <vector>
 
 #include "alnumeric.h"
 #include "core/converter.h"
@@ -578,7 +578,7 @@ struct CoreAudioCapture final : public BackendBase {
 
     SampleConverterPtr mConverter;
 
-    al::vector<char> mCaptureData;
+    std::vector<char> mCaptureData;
 
     RingBufferPtr mRing{nullptr};
 

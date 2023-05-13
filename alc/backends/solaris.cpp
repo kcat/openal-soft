@@ -35,6 +35,7 @@
 #include <poll.h>
 #include <math.h>
 #include <string.h>
+#include <vector>
 
 #include <thread>
 #include <functional>
@@ -44,7 +45,6 @@
 #include "core/helpers.h"
 #include "core/logging.h"
 #include "threads.h"
-#include "vector.h"
 
 #include <sys/audioio.h>
 
@@ -70,7 +70,7 @@ struct SolarisBackend final : public BackendBase {
     int mFd{-1};
 
     uint mFrameStep{};
-    al::vector<std::byte> mBuffer;
+    std::vector<std::byte> mBuffer;
 
     std::atomic<bool> mKillNow{true};
     std::thread mThread;

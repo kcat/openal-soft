@@ -31,6 +31,7 @@
 #include <mutex>
 #include <new>
 #include <numeric>
+#include <vector>
 
 #include "AL/al.h"
 #include "AL/alc.h"
@@ -43,7 +44,6 @@
 #include "alnumeric.h"
 #include "core/except.h"
 #include "opthelpers.h"
-#include "vector.h"
 
 
 namespace {
@@ -430,7 +430,7 @@ START_API_FUNC
         /* Store the allocated buffer IDs in a separate local list, to avoid
          * modifying the user storage in case of failure.
          */
-        al::vector<ALuint> ids;
+        std::vector<ALuint> ids;
         ids.reserve(static_cast<ALuint>(n));
         do {
             ALfilter *filter{AllocFilter(device)};

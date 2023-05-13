@@ -6,6 +6,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <vector>
 
 #include "almalloc.h"
 #include "alspan.h"
@@ -14,7 +15,6 @@
 #include "bufferline.h"
 #include "mixer/hrtfdefs.h"
 #include "intrusive_ptr.h"
-#include "vector.h"
 
 
 struct HrtfStore {
@@ -83,7 +83,7 @@ struct DirectHrtfState {
 };
 
 
-al::vector<std::string> EnumerateHrtf(std::optional<std::string> pathopt);
+std::vector<std::string> EnumerateHrtf(std::optional<std::string> pathopt);
 HrtfStorePtr GetLoadedHrtf(const std::string &name, const uint devrate);
 
 #endif /* CORE_HRTF_H */

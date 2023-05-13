@@ -30,6 +30,7 @@
 #include <mutex>
 #include <thread>
 #include <functional>
+#include <vector>
 
 #include "albit.h"
 #include "alc/alconfig.h"
@@ -168,10 +169,10 @@ struct DeviceEntry {
     { }
 };
 
-al::vector<DeviceEntry> PlaybackList;
+std::vector<DeviceEntry> PlaybackList;
 
 
-void EnumerateDevices(jack_client_t *client, al::vector<DeviceEntry> &list)
+void EnumerateDevices(jack_client_t *client, std::vector<DeviceEntry> &list)
 {
     std::remove_reference_t<decltype(list)>{}.swap(list);
 

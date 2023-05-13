@@ -55,6 +55,7 @@
 #include <string>
 #include <type_traits>
 #include <utility>
+#include <vector>
 
 #include "AL/al.h"
 #include "AL/alc.h"
@@ -102,7 +103,6 @@
 #include "opthelpers.h"
 #include "strutils.h"
 #include "threads.h"
-#include "vector.h"
 
 #include "backends/base.h"
 #include "backends/null.h"
@@ -1050,8 +1050,8 @@ using DeviceRef = al::intrusive_ptr<ALCdevice>;
 /************************************************
  * Device lists
  ************************************************/
-al::vector<ALCdevice*> DeviceList;
-al::vector<ALCcontext*> ContextList;
+std::vector<ALCdevice*> DeviceList;
+std::vector<ALCcontext*> ContextList;
 
 std::recursive_mutex ListLock;
 
@@ -3130,7 +3130,7 @@ START_API_FUNC
     }
     if(!dev || dev->Type == DeviceType::Capture)
     {
-        auto ivals = al::vector<int>(static_cast<uint>(size));
+        auto ivals = std::vector<int>(static_cast<uint>(size));
         if(size_t got{GetIntegerv(dev.get(), pname, ivals)})
             std::copy_n(ivals.begin(), got, values);
         return;
@@ -3249,7 +3249,7 @@ START_API_FUNC
         break;
 
     default:
-        auto ivals = al::vector<int>(static_cast<uint>(size));
+        auto ivals = std::vector<int>(static_cast<uint>(size));
         if(size_t got{GetIntegerv(dev.get(), pname, ivals)})
             std::copy_n(ivals.begin(), got, values);
         break;
@@ -3676,7 +3676,7 @@ START_API_FUNC
     DeviceList.erase(iter);
 
     std::unique_lock<std::mutex> statelock{dev->StateLock};
-    al::vector<ContextRef> orphanctxs;
+    std::vector<ContextRef> orphanctxs;
     for(ContextBase *ctx : *dev->mContexts.load())
     {
         auto ctxiter = std::lower_bound(ContextList.begin(), ContextList.end(), ctx);

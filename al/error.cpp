@@ -31,6 +31,7 @@
 #include <cstdio>
 #include <cstring>
 #include <mutex>
+#include <vector>
 
 #include "AL/al.h"
 #include "AL/alc.h"
@@ -41,14 +42,13 @@
 #include "core/except.h"
 #include "core/logging.h"
 #include "opthelpers.h"
-#include "vector.h"
 
 
 bool TrapALError{false};
 
 void ALCcontext::setError(ALenum errorCode, const char *msg, ...)
 {
-    auto message = al::vector<char>(256);
+    auto message = std::vector<char>(256);
 
     va_list args, args2;
     va_start(args, msg);

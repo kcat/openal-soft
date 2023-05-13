@@ -6,10 +6,10 @@
 #include <cstdarg>
 #include <cstdio>
 #include <string>
+#include <vector>
 
 #include "alspan.h"
 #include "strutils.h"
-#include "vector.h"
 
 
 #if defined(_WIN32)
@@ -34,7 +34,7 @@ void al_print(LogLevel level, FILE *logfile, const char *fmt, ...)
     case LogLevel::Trace: prefix = al::span{"[ALSOFT] (II) "}.first<14>(); break;
     }
 
-    al::vector<char> dynmsg;
+    std::vector<char> dynmsg;
     std::array<char,256> stcmsg{};
 
     char *str{stcmsg.data()};

@@ -38,6 +38,7 @@
 #include <string>
 #include <thread>
 #include <utility>
+#include <vector>
 
 #include "alc/alconfig.h"
 #include "almalloc.h"
@@ -47,7 +48,6 @@
 #include "core/logging.h"
 #include "ringbuffer.h"
 #include "threads.h"
-#include "vector.h"
 
 #include <sys/soundcard.h>
 
@@ -88,22 +88,22 @@ struct DevMap {
     std::string device_name;
 };
 
-al::vector<DevMap> PlaybackDevices;
-al::vector<DevMap> CaptureDevices;
+std::vector<DevMap> PlaybackDevices;
+std::vector<DevMap> CaptureDevices;
 
 
 #ifdef ALC_OSS_COMPAT
 
 #define DSP_CAP_OUTPUT 0x00020000
 #define DSP_CAP_INPUT 0x00010000
-void ALCossListPopulate(al::vector<DevMap> &devlist, int type)
+void ALCossListPopulate(std::vector<DevMap> &devlist, int type)
 {
     devlist.emplace_back(DevMap{DefaultName, (type==DSP_CAP_INPUT) ? DefaultCapture : DefaultPlayback});
 }
 
 #else
 
-void ALCossListAppend(al::vector<DevMap> &list, al::span<const char> handle, al::span<const char> path)
+void ALCossListAppend(std::vector<DevMap> &list, al::span<const char> handle, al::span<const char> path)
 {
 #ifdef ALC_OSS_DEVNODE_TRUC
     for(size_t i{0};i < path.size();++i)
@@ -148,7 +148,7 @@ void ALCossListAppend(al::vector<DevMap> &list, al::span<const char> handle, al:
     TRACE("Got device \"%s\", \"%s\"\n", entry.name.c_str(), entry.device_name.c_str());
 }
 
-void ALCossListPopulate(al::vector<DevMap> &devlist, int type_flag)
+void ALCossListPopulate(std::vector<DevMap> &devlist, int type_flag)
 {
     int fd{open("/dev/mixer", O_RDONLY)};
     if(fd < 0)
@@ -234,7 +234,7 @@ struct OSSPlayback final : public BackendBase {
 
     int mFd{-1};
 
-    al::vector<std::byte> mMixData;
+    std::vector<std::byte> mMixData;
 
     std::atomic<bool> mKillNow{true};
     std::thread mThread;

@@ -34,6 +34,7 @@
 #include <numeric>
 #include <optional>
 #include <string>
+#include <vector>
 
 #include "AL/al.h"
 #include "AL/alc.h"
@@ -628,7 +629,7 @@ void InitPanning(ALCdevice *device, const bool hqdec=false, const bool stablize=
     const size_t ambicount{decoder.mIs3D ? AmbiChannelsFromOrder(decoder.mOrder) :
         Ambi2DChannelsFromOrder(decoder.mOrder)};
     const bool dual_band{hqdec && !decoder.mCoeffsLF.empty()};
-    al::vector<ChannelDec> chancoeffs, chancoeffslf;
+    std::vector<ChannelDec> chancoeffs, chancoeffslf;
     for(size_t i{0u};i < decoder.mChannels.size();++i)
     {
         const uint idx{device->channelIdxByName(decoder.mChannels[i])};

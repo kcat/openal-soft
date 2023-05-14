@@ -742,6 +742,7 @@ set(OPENAL_OBJS
     al/buffer.h
     al/debug.cpp
     al/debug.h
+    al/direct_defs.h
     al/effect.cpp
     al/effect.h
     al/effects/autowah.cpp

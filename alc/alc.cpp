@@ -467,6 +467,28 @@ const struct {
     DECL(alPushDebugGroupEXT),
     DECL(alPopDebugGroupEXT),
     DECL(alGetDebugMessageLogEXT),
+
+    /* Direct Context functions */
+    DECL(alEnableDirect),
+    DECL(alDisableDirect),
+    DECL(alIsEnabledDirect),
+    DECL(alDopplerFactorDirect),
+    DECL(alSpeedOfSoundDirect),
+    DECL(alDistanceModelDirect),
+    DECL(alGetStringDirect),
+    DECL(alGetBooleanvDirect),
+    DECL(alGetIntegervDirect),
+    DECL(alGetFloatvDirect),
+    DECL(alGetDoublevDirect),
+    DECL(alGetBooleanDirect),
+    DECL(alGetIntegerDirect),
+    DECL(alGetFloatDirect),
+    DECL(alGetDoubleDirect),
+
+    DECL(alDeferUpdatesDirectSOFT),
+    DECL(alProcessUpdatesDirectSOFT),
+    DECL(alGetStringiDirectSOFT),
+
 #ifdef ALSOFT_EAX
 }, eaxFunctions[] = {
     DECL(EAXGet),

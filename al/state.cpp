@@ -45,6 +45,7 @@
 #include "core/except.h"
 #include "core/mixer/defs.h"
 #include "core/voice.h"
+#include "direct_defs.h"
 #include "intrusive_ptr.h"
 #include "opthelpers.h"
 #include "strutils.h"
@@ -303,11 +304,10 @@ START_API_FUNC
 END_API_FUNC
 
 
-AL_API void AL_APIENTRY alEnable(ALenum capability)
-START_API_FUNC
+FORCE_ALIGN void AL_APIENTRY alEnableDirect(ALCcontext *context, ALenum capability) noexcept
 {
-    ContextRef context{GetContextRef()};
-    if(!context) UNLIKELY return;
+    if(!context) UNLIKELY
+        return;
 
     switch(capability)
     {
@@ -315,7 +315,7 @@ START_API_FUNC
         {
             std::lock_guard<std::mutex> _{context->mPropLock};
             context->mSourceDistanceModel = true;
-            UpdateProps(context.get());
+            UpdateProps(context);
         }
         break;
 
@@ -331,13 +331,11 @@ START_API_FUNC
         context->setError(AL_INVALID_VALUE, "Invalid enable property 0x%04x", capability);
     }
 }
-END_API_FUNC
 
-AL_API void AL_APIENTRY alDisable(ALenum capability)
-START_API_FUNC
+FORCE_ALIGN void AL_APIENTRY alDisableDirect(ALCcontext *context, ALenum capability) noexcept
 {
-    ContextRef context{GetContextRef()};
-    if(!context) UNLIKELY return;
+    if(!context) UNLIKELY
+        return;
 
     switch(capability)
     {
@@ -345,7 +343,7 @@ START_API_FUNC
         {
             std::lock_guard<std::mutex> _{context->mPropLock};
             context->mSourceDistanceModel = false;
-            UpdateProps(context.get());
+            UpdateProps(context);
         }
         break;
 
@@ -361,13 +359,11 @@ START_API_FUNC
         context->setError(AL_INVALID_VALUE, "Invalid disable property 0x%04x", capability);
     }
 }
-END_API_FUNC
 
-AL_API ALboolean AL_APIENTRY alIsEnabled(ALenum capability)
-START_API_FUNC
+FORCE_ALIGN ALboolean AL_APIENTRY alIsEnabledDirect(ALCcontext *context, ALenum capability) noexcept
 {
-    ContextRef context{GetContextRef()};
-    if(!context) UNLIKELY return AL_FALSE;
+    if(!context) UNLIKELY
+        return AL_FALSE;
 
     std::lock_guard<std::mutex> _{context->mPropLock};
     ALboolean value{AL_FALSE};
@@ -391,127 +387,88 @@ START_API_FUNC
 
     return value;
 }
-END_API_FUNC
 
-AL_API ALboolean AL_APIENTRY alGetBoolean(ALenum pname)
-START_API_FUNC
-{
-    ALboolean value{AL_FALSE};
-    alGetBooleanv(pname, &value);
-    return value;
+#define DECL_GETFUNC(R, Name, Ext)                                            \
+AL_API R AL_APIENTRY Name##Ext(ALenum pname)                                  \
+START_API_FUNC                                                                \
+{                                                                             \
+    R value{};                                                                \
+    Name##vDirect##Ext(GetContextRef().get(), pname, &value);                 \
+    return value;                                                             \
+}                                                                             \
+END_API_FUNC                                                                  \
+FORCE_ALIGN R AL_APIENTRY Name##Direct##Ext(ALCcontext *context, ALenum pname) noexcept \
+{                                                                             \
+    R value{};                                                                \
+    Name##vDirect##Ext(context, pname, &value);                               \
+    return value;                                                             \
 }
-END_API_FUNC
 
-AL_API ALdouble AL_APIENTRY alGetDouble(ALenum pname)
-START_API_FUNC
-{
-    ALdouble value{0.0};
-    alGetDoublev(pname, &value);
-    return value;
-}
-END_API_FUNC
+DECL_GETFUNC(ALboolean, alGetBoolean,)
+DECL_GETFUNC(ALdouble, alGetDouble,)
+DECL_GETFUNC(ALfloat, alGetFloat,)
+DECL_GETFUNC(ALint, alGetInteger,)
 
-AL_API ALfloat AL_APIENTRY alGetFloat(ALenum pname)
-START_API_FUNC
-{
-    ALfloat value{0.0f};
-    alGetFloatv(pname, &value);
-    return value;
-}
-END_API_FUNC
+DECL_GETFUNC(ALint64SOFT, alGetInteger64,SOFT)
+DECL_GETFUNC(ALvoid*, alGetPointer,SOFT)
 
-AL_API ALint AL_APIENTRY alGetInteger(ALenum pname)
-START_API_FUNC
-{
-    ALint value{0};
-    alGetIntegerv(pname, &value);
-    return value;
-}
-END_API_FUNC
+#undef DECL_GETFUNC
 
-AL_API ALint64SOFT AL_APIENTRY alGetInteger64SOFT(ALenum pname)
-START_API_FUNC
-{
-    ALint64SOFT value{0};
-    alGetInteger64vSOFT(pname, &value);
-    return value;
-}
-END_API_FUNC
 
-AL_API ALvoid* AL_APIENTRY alGetPointerSOFT(ALenum pname)
-START_API_FUNC
+FORCE_ALIGN void AL_APIENTRY alGetBooleanvDirect(ALCcontext *context, ALenum pname, ALboolean *values) noexcept
 {
-    ALvoid *value{nullptr};
-    alGetPointervSOFT(pname, &value);
-    return value;
-}
-END_API_FUNC
-
-AL_API void AL_APIENTRY alGetBooleanv(ALenum pname, ALboolean *values)
-START_API_FUNC
-{
-    ContextRef context{GetContextRef()};
-    if(!context) UNLIKELY return;
+    if(!context) UNLIKELY
+        return;
 
     if(!values) UNLIKELY
         return context->setError(AL_INVALID_VALUE, "NULL pointer");
-    GetValue(context.get(), pname, values);
+    GetValue(context, pname, values);
 }
-END_API_FUNC
 
-AL_API void AL_APIENTRY alGetDoublev(ALenum pname, ALdouble *values)
-START_API_FUNC
+FORCE_ALIGN void AL_APIENTRY alGetDoublevDirect(ALCcontext *context, ALenum pname, ALdouble *values) noexcept
 {
-    ContextRef context{GetContextRef()};
-    if(!context) UNLIKELY return;
+    if(!context) UNLIKELY
+        return;
 
     if(!values) UNLIKELY
         return context->setError(AL_INVALID_VALUE, "NULL pointer");
-    GetValue(context.get(), pname, values);
+    GetValue(context, pname, values);
 }
-END_API_FUNC
 
-AL_API void AL_APIENTRY alGetFloatv(ALenum pname, ALfloat *values)
-START_API_FUNC
+FORCE_ALIGN void AL_APIENTRY alGetFloatvDirect(ALCcontext *context, ALenum pname, ALfloat *values) noexcept
 {
-    ContextRef context{GetContextRef()};
-    if(!context) UNLIKELY return;
+    if(!context) UNLIKELY
+        return;
 
     if(!values) UNLIKELY
         return context->setError(AL_INVALID_VALUE, "NULL pointer");
-    GetValue(context.get(), pname, values);
+    GetValue(context, pname, values);
 }
-END_API_FUNC
 
-AL_API void AL_APIENTRY alGetIntegerv(ALenum pname, ALint *values)
-START_API_FUNC
+FORCE_ALIGN void AL_APIENTRY alGetIntegervDirect(ALCcontext *context, ALenum pname, ALint *values) noexcept
 {
-    ContextRef context{GetContextRef()};
-    if(!context) UNLIKELY return;
+    if(!context) UNLIKELY
+        return;
 
     if(!values) UNLIKELY
         return context->setError(AL_INVALID_VALUE, "NULL pointer");
-    GetValue(context.get(), pname, values);
+    GetValue(context, pname, values);
 }
-END_API_FUNC
 
-AL_API void AL_APIENTRY alGetInteger64vSOFT(ALenum pname, ALint64SOFT *values)
-START_API_FUNC
+FORCE_ALIGN void AL_APIENTRY alGetInteger64vDirectSOFT(ALCcontext *context, ALenum pname, ALint64SOFT *values) noexcept
 {
-    ContextRef context{GetContextRef()};
-    if(!context) UNLIKELY return;
+    if(!context) UNLIKELY
+        return;
 
     if(!values) UNLIKELY
         return context->setError(AL_INVALID_VALUE, "NULL pointer");
-    GetValue(context.get(), pname, values);
+    GetValue(context, pname, values);
 }
-END_API_FUNC
 
-AL_API void AL_APIENTRY alGetPointervSOFT(ALenum pname, ALvoid **values)
-START_API_FUNC
+FORCE_ALIGN void AL_APIENTRY alGetPointervDirectSOFT(ALCcontext *context, ALenum pname, ALvoid **values) noexcept
 {
-    ContextRef context{GetContextRef()};
-    if(!context) UNLIKELY return;
+    if(!context) UNLIKELY
+        return;
 
     if(!values) UNLIKELY
         return context->setError(AL_INVALID_VALUE, "NULL pointer");
@@ -538,13 +495,11 @@ START_API_FUNC
         context->setError(AL_INVALID_ENUM, "Invalid context pointer property 0x%04x", pname);
     }
 }
-END_API_FUNC
 
-AL_API const ALchar* AL_APIENTRY alGetString(ALenum pname)
-START_API_FUNC
+FORCE_ALIGN const ALchar* AL_APIENTRY alGetStringDirect(ALCcontext *context, ALenum pname) noexcept
 {
-    ContextRef context{GetContextRef()};
-    if(!context) UNLIKELY return nullptr;
+    if(!context) UNLIKELY
+        return nullptr;
 
     const ALchar *value{nullptr};
     switch(pname)
@@ -602,13 +557,11 @@ START_API_FUNC
     }
     return value;
 }
-END_API_FUNC
 
-AL_API void AL_APIENTRY alDopplerFactor(ALfloat value)
-START_API_FUNC
+FORCE_ALIGN void AL_APIENTRY alDopplerFactorDirect(ALCcontext *context, ALfloat value) noexcept
 {
-    ContextRef context{GetContextRef()};
-    if(!context) UNLIKELY return;
+    if(!context) UNLIKELY
+        return;
 
     if(!(value >= 0.0f && std::isfinite(value)))
         context->setError(AL_INVALID_VALUE, "Doppler factor %f out of range", value);
@@ -616,10 +569,98 @@ START_API_FUNC
     {
         std::lock_guard<std::mutex> _{context->mPropLock};
         context->mDopplerFactor = value;
-        UpdateProps(context.get());
+        UpdateProps(context);
     }
 }
-END_API_FUNC
+
+FORCE_ALIGN void AL_APIENTRY alSpeedOfSoundDirect(ALCcontext *context, ALfloat value) noexcept
+{
+    if(!context) UNLIKELY
+        return;
+
+    if(!(value > 0.0f && std::isfinite(value)))
+        context->setError(AL_INVALID_VALUE, "Speed of sound %f out of range", value);
+    else
+    {
+        std::lock_guard<std::mutex> _{context->mPropLock};
+        context->mSpeedOfSound = value;
+        UpdateProps(context);
+    }
+}
+
+FORCE_ALIGN void AL_APIENTRY alDistanceModelDirect(ALCcontext *context, ALenum value) noexcept
+{
+    if(!context) UNLIKELY
+        return;
+
+    if(auto model = DistanceModelFromALenum(value))
+    {
+        std::lock_guard<std::mutex> _{context->mPropLock};
+        context->mDistanceModel = *model;
+        if(!context->mSourceDistanceModel)
+            UpdateProps(context);
+    }
+    else
+        context->setError(AL_INVALID_VALUE, "Distance model 0x%04x out of range", value);
+}
+
+
+FORCE_ALIGN void AL_APIENTRY alDeferUpdatesDirectSOFT(ALCcontext *context) noexcept
+{
+    if(!context) UNLIKELY
+        return;
+
+    std::lock_guard<std::mutex> _{context->mPropLock};
+    context->deferUpdates();
+}
+
+FORCE_ALIGN void AL_APIENTRY alProcessUpdatesDirectSOFT(ALCcontext *context) noexcept
+{
+    if(!context) UNLIKELY
+        return;
+
+    std::lock_guard<std::mutex> _{context->mPropLock};
+    context->processUpdates();
+}
+
+
+FORCE_ALIGN const ALchar* AL_APIENTRY alGetStringiDirectSOFT(ALCcontext *context, ALenum pname, ALsizei index) noexcept
+{
+    if(!context) UNLIKELY
+        return nullptr;
+
+    const ALchar *value{nullptr};
+    switch(pname)
+    {
+    case AL_RESAMPLER_NAME_SOFT:
+        if(index < 0 || index > static_cast<ALint>(Resampler::Max))
+            context->setError(AL_INVALID_VALUE, "Resampler name index %d out of range", index);
+        else
+            value = GetResamplerName(static_cast<Resampler>(index));
+        break;
+
+    default:
+        context->setError(AL_INVALID_VALUE, "Invalid string indexed property");
+    }
+    return value;
+}
+
+AL_API DECL_FUNC1(void, alEnable, ALenum)
+AL_API DECL_FUNC1(void, alDisable, ALenum)
+AL_API DECL_FUNC1(ALboolean, alIsEnabled, ALenum)
+AL_API DECL_FUNC2(void, alGetBooleanv, ALenum, ALboolean*)
+AL_API DECL_FUNC2(void, alGetDoublev, ALenum, ALdouble*)
+AL_API DECL_FUNC2(void, alGetFloatv, ALenum, ALfloat*)
+AL_API DECL_FUNC2(void, alGetIntegerv, ALenum, ALint*)
+AL_API DECL_FUNCEXT2(void, alGetInteger64v,SOFT, ALenum, ALint64SOFT*)
+AL_API DECL_FUNCEXT2(void, alGetPointerv,SOFT, ALenum, ALvoid**)
+AL_API DECL_FUNC1(const ALchar*, alGetString, ALenum)
+AL_API DECL_FUNC1(void, alDopplerFactor, ALfloat)
+AL_API DECL_FUNC1(void, alSpeedOfSound, ALfloat)
+AL_API DECL_FUNC1(void, alDistanceModel, ALenum)
+AL_API DECL_FUNCEXT(void, alDeferUpdates,SOFT)
+AL_API DECL_FUNCEXT(void, alProcessUpdates,SOFT)
+AL_API DECL_FUNCEXT2(const ALchar*, alGetStringi,SOFT, ALenum,ALsizei)
 
 AL_API void AL_APIENTRY alDopplerVelocity(ALfloat value)
 START_API_FUNC
@@ -641,88 +682,6 @@ START_API_FUNC
         context->mDopplerVelocity = value;
         UpdateProps(context.get());
     }
-}
-END_API_FUNC
-
-AL_API void AL_APIENTRY alSpeedOfSound(ALfloat value)
-START_API_FUNC
-{
-    ContextRef context{GetContextRef()};
-    if(!context) UNLIKELY return;
-
-    if(!(value > 0.0f && std::isfinite(value)))
-        context->setError(AL_INVALID_VALUE, "Speed of sound %f out of range", value);
-    else
-    {
-        std::lock_guard<std::mutex> _{context->mPropLock};
-        context->mSpeedOfSound = value;
-        UpdateProps(context.get());
-    }
-}
-END_API_FUNC
-
-AL_API void AL_APIENTRY alDistanceModel(ALenum value)
-START_API_FUNC
-{
-    ContextRef context{GetContextRef()};
-    if(!context) UNLIKELY return;
-
-    if(auto model = DistanceModelFromALenum(value))
-    {
-        std::lock_guard<std::mutex> _{context->mPropLock};
-        context->mDistanceModel = *model;
-        if(!context->mSourceDistanceModel)
-            UpdateProps(context.get());
-    }
-    else
-        context->setError(AL_INVALID_VALUE, "Distance model 0x%04x out of range", value);
-}
-END_API_FUNC
-
-
-AL_API void AL_APIENTRY alDeferUpdatesSOFT(void)
-START_API_FUNC
-{
-    ContextRef context{GetContextRef()};
-    if(!context) UNLIKELY return;
-
-    std::lock_guard<std::mutex> _{context->mPropLock};
-    context->deferUpdates();
-}
-END_API_FUNC
-
-AL_API void AL_APIENTRY alProcessUpdatesSOFT(void)
-START_API_FUNC
-{
-    ContextRef context{GetContextRef()};
-    if(!context) UNLIKELY return;
-
-    std::lock_guard<std::mutex> _{context->mPropLock};
-    context->processUpdates();
-}
-END_API_FUNC
-
-
-AL_API const ALchar* AL_APIENTRY alGetStringiSOFT(ALenum pname, ALsizei index)
-START_API_FUNC
-{
-    ContextRef context{GetContextRef()};
-    if(!context) UNLIKELY return nullptr;
-
-    const ALchar *value{nullptr};
-    switch(pname)
-    {
-    case AL_RESAMPLER_NAME_SOFT:
-        if(index < 0 || index > static_cast<ALint>(Resampler::Max))
-            context->setError(AL_INVALID_VALUE, "Resampler name index %d out of range", index);
-        else
-            value = GetResamplerName(static_cast<Resampler>(index));
-        break;
-
-    default:
-        context->setError(AL_INVALID_VALUE, "Invalid string indexed property");
-    }
-    return value;
 }
 END_API_FUNC
 

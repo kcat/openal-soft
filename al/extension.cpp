@@ -30,14 +30,15 @@
 #include "alc/context.h"
 #include "alstring.h"
 #include "core/except.h"
+#include "direct_defs.h"
 #include "opthelpers.h"
 
 
-AL_API ALboolean AL_APIENTRY alIsExtensionPresent(const ALchar *extName)
-START_API_FUNC
+AL_API DECL_FUNC1(ALboolean, alIsExtensionPresent, const ALchar*)
+FORCE_ALIGN ALboolean AL_APIENTRY alIsExtensionPresentDirect(ALCcontext *context, const ALchar *extName) noexcept
 {
-    ContextRef context{GetContextRef()};
-    if(!context) UNLIKELY return AL_FALSE;
+    if(!context) UNLIKELY
+        return AL_FALSE;
 
     if(!extName) UNLIKELY
     {
@@ -54,21 +55,28 @@ START_API_FUNC
 
     return AL_FALSE;
 }
-END_API_FUNC
 
 
 AL_API ALvoid* AL_APIENTRY alGetProcAddress(const ALchar *funcName)
-START_API_FUNC
 {
     if(!funcName) return nullptr;
     return alcGetProcAddress(nullptr, funcName);
 }
-END_API_FUNC
+
+FORCE_ALIGN ALvoid* AL_APIENTRY alGetProcAddressDirect(ALCcontext*, const ALchar *funcName) noexcept
+{
+    if(!funcName) return nullptr;
+    return alcGetProcAddress(nullptr, funcName);
+}
 
 AL_API ALenum AL_APIENTRY alGetEnumValue(const ALchar *enumName)
-START_API_FUNC
 {
     if(!enumName) return static_cast<ALenum>(0);
     return alcGetEnumValue(nullptr, enumName);
 }
-END_API_FUNC
+
+FORCE_ALIGN ALenum AL_APIENTRY alGetEnumValueDirect(ALCcontext*, const ALchar *enumName) noexcept
+{
+    if(!enumName) return static_cast<ALenum>(0);
+    return alcGetEnumValue(nullptr, enumName);
+}

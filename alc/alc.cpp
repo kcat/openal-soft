@@ -485,6 +485,11 @@ const struct {
     DECL(alGetFloatDirect),
     DECL(alGetDoubleDirect),
 
+    DECL(alGetErrorDirect),
+    DECL(alIsExtensionPresentDirect),
+    DECL(alGetProcAddress),
+    DECL(alGetEnumValueDirect),
+
     DECL(alDeferUpdatesDirectSOFT),
     DECL(alProcessUpdatesDirectSOFT),
     DECL(alGetStringiDirectSOFT),
@@ -495,6 +500,11 @@ const struct {
     DECL(EAXSet),
     DECL(EAXGetBufferMode),
     DECL(EAXSetBufferMode),
+
+    DECL(EAXGetDirect),
+    DECL(EAXSetDirect),
+    DECL(EAXGetBufferModeDirect),
+    DECL(EAXSetBufferModeDirect),
 #endif
 };
 #undef DECL

@@ -1049,16 +1049,14 @@ public:
 } // namespace
 
 
-FORCE_ALIGN ALenum AL_APIENTRY EAXSet(
-    const GUID* property_set_id,
-    ALuint property_id,
-    ALuint property_source_id,
-    ALvoid* property_value,
+FORCE_ALIGN ALenum AL_APIENTRY EAXSet(const GUID *property_set_id, ALuint property_id,
+    ALuint property_source_id, ALvoid *property_value, ALuint property_value_size) noexcept
+{ return EAXSetDirect(GetContextRef().get(), property_set_id, property_id, property_source_id, property_value, property_value_size); }
+FORCE_ALIGN ALenum AL_APIENTRY EAXSetDirect(ALCcontext *context, const GUID *property_set_id,
+    ALuint property_id, ALuint property_source_id, ALvoid *property_value,
     ALuint property_value_size) noexcept
 try
 {
-    auto context = GetContextRef();
-
     if(!context)
         eax_fail_set("No current context.");
 
@@ -1077,16 +1075,15 @@ catch (...)
     return AL_INVALID_OPERATION;
 }
 
-FORCE_ALIGN ALenum AL_APIENTRY EAXGet(
-    const GUID* property_set_id,
-    ALuint property_id,
-    ALuint property_source_id,
-    ALvoid* property_value,
+
+FORCE_ALIGN ALenum AL_APIENTRY EAXGet(const GUID *property_set_id, ALuint property_id,
+    ALuint property_source_id, ALvoid *property_value, ALuint property_value_size) noexcept
+{ return EAXGetDirect(GetContextRef().get(), property_set_id, property_id, property_source_id, property_value, property_value_size); }
+FORCE_ALIGN ALenum AL_APIENTRY EAXGetDirect(ALCcontext *context, const GUID *property_set_id,
+    ALuint property_id, ALuint property_source_id, ALvoid *property_value,
     ALuint property_value_size) noexcept
 try
 {
-    auto context = GetContextRef();
-
     if(!context)
         eax_fail_get("No current context.");
 

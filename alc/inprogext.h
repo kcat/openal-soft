@@ -20,11 +20,19 @@ typedef void (AL_APIENTRY*LPALBUFFERSTORAGESOFT)(ALuint buffer, ALenum format, c
 typedef void* (AL_APIENTRY*LPALMAPBUFFERSOFT)(ALuint buffer, ALsizei offset, ALsizei length, ALbitfieldSOFT access);
 typedef void (AL_APIENTRY*LPALUNMAPBUFFERSOFT)(ALuint buffer);
 typedef void (AL_APIENTRY*LPALFLUSHMAPPEDBUFFERSOFT)(ALuint buffer, ALsizei offset, ALsizei length);
+typedef void (AL_APIENTRY*LPALBUFFERSTORAGEDIRECTSOFT)(ALCcontext *context, ALuint buffer, ALenum format, const ALvoid *data, ALsizei size, ALsizei freq, ALbitfieldSOFT flags);
+typedef void* (AL_APIENTRY*LPALMAPBUFFERDIRECTSOFT)(ALCcontext *context, ALuint buffer, ALsizei offset, ALsizei length, ALbitfieldSOFT access);
+typedef void (AL_APIENTRY*LPALUNMAPBUFFERDIRECTSOFT)(ALCcontext *context, ALuint buffer);
+typedef void (AL_APIENTRY*LPALFLUSHMAPPEDBUFFERDIRECTSOFT)(ALCcontext *context, ALuint buffer, ALsizei offset, ALsizei length);
 #ifdef AL_ALEXT_PROTOTYPES
 AL_API void AL_APIENTRY alBufferStorageSOFT(ALuint buffer, ALenum format, const ALvoid *data, ALsizei size, ALsizei freq, ALbitfieldSOFT flags);
 AL_API void* AL_APIENTRY alMapBufferSOFT(ALuint buffer, ALsizei offset, ALsizei length, ALbitfieldSOFT access);
 AL_API void AL_APIENTRY alUnmapBufferSOFT(ALuint buffer);
 AL_API void AL_APIENTRY alFlushMappedBufferSOFT(ALuint buffer, ALsizei offset, ALsizei length);
+void AL_APIENTRY alBufferStorageDirectSOFT(ALCcontext *context, ALuint buffer, ALenum format, const ALvoid *data, ALsizei size, ALsizei freq, ALbitfieldSOFT flags) noexcept;
+void* AL_APIENTRY alMapBufferDirectSOFT(ALCcontext *context, ALuint buffer, ALsizei offset, ALsizei length, ALbitfieldSOFT access) noexcept;
+void AL_APIENTRY alUnmapBufferDirectSOFT(ALCcontext *context, ALuint buffer) noexcept;
+void AL_APIENTRY alFlushMappedBufferDirectSOFT(ALCcontext *context, ALuint buffer, ALsizei offset, ALsizei length) noexcept;
 #endif
 #endif
 

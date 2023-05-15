@@ -660,17 +660,17 @@ FORCE_ALIGN void AL_APIENTRY alGetFilterfvDirect(ALCcontext *context, ALuint fil
     }
 }
 
-DECL_FUNC2(void, alGenFilters, ALsizei, ALuint*)
-DECL_FUNC2(void, alDeleteFilters, ALsizei, const ALuint*)
-DECL_FUNC1(ALboolean, alIsFilter, ALuint)
-DECL_FUNC3(void, alFilterf, ALuint, ALenum, ALfloat)
-DECL_FUNC3(void, alFilterfv, ALuint, ALenum, const ALfloat*)
-DECL_FUNC3(void, alFilteri, ALuint, ALenum, ALint)
-DECL_FUNC3(void, alFilteriv, ALuint, ALenum, const ALint*)
-DECL_FUNC3(void, alGetFilterf, ALuint, ALenum, ALfloat*)
-DECL_FUNC3(void, alGetFilterfv, ALuint, ALenum, ALfloat*)
-DECL_FUNC3(void, alGetFilteri, ALuint, ALenum, ALint*)
-DECL_FUNC3(void, alGetFilteriv, ALuint, ALenum, ALint*)
+AL_API DECL_FUNC2(void, alGenFilters, ALsizei, ALuint*)
+AL_API DECL_FUNC2(void, alDeleteFilters, ALsizei, const ALuint*)
+AL_API DECL_FUNC1(ALboolean, alIsFilter, ALuint)
+AL_API DECL_FUNC3(void, alFilterf, ALuint, ALenum, ALfloat)
+AL_API DECL_FUNC3(void, alFilterfv, ALuint, ALenum, const ALfloat*)
+AL_API DECL_FUNC3(void, alFilteri, ALuint, ALenum, ALint)
+AL_API DECL_FUNC3(void, alFilteriv, ALuint, ALenum, const ALint*)
+AL_API DECL_FUNC3(void, alGetFilterf, ALuint, ALenum, ALfloat*)
+AL_API DECL_FUNC3(void, alGetFilterfv, ALuint, ALenum, ALfloat*)
+AL_API DECL_FUNC3(void, alGetFilteri, ALuint, ALenum, ALint*)
+AL_API DECL_FUNC3(void, alGetFilteriv, ALuint, ALenum, ALint*)
 
 
 FilterSubList::~FilterSubList()

@@ -380,16 +380,14 @@ FORCE_ALIGN ALboolean AL_APIENTRY alIsEnabledDirect(ALCcontext *context, ALenum 
 }
 
 #define DECL_GETFUNC(R, Name, Ext)                                            \
-AL_API R AL_APIENTRY Name##Ext(ALenum pname)                                  \
-START_API_FUNC                                                                \
+AL_API R AL_APIENTRY Name##Ext(ALenum pname) START_API_FUNC                   \
 {                                                                             \
     R value{};                                                                \
     auto context = GetContextRef();                                           \
     if(!context) UNLIKELY return value;                                       \
     Name##vDirect##Ext(GetContextRef().get(), pname, &value);                 \
     return value;                                                             \
-}                                                                             \
-END_API_FUNC                                                                  \
+} END_API_FUNC                                                                \
 FORCE_ALIGN R AL_APIENTRY Name##Direct##Ext(ALCcontext *context, ALenum pname) noexcept \
 {                                                                             \
     R value{};                                                                \
@@ -616,8 +614,7 @@ AL_API DECL_FUNCEXT(void, alDeferUpdates,SOFT)
 AL_API DECL_FUNCEXT(void, alProcessUpdates,SOFT)
 AL_API DECL_FUNCEXT2(const ALchar*, alGetStringi,SOFT, ALenum,ALsizei)
 
-AL_API void AL_APIENTRY alDopplerVelocity(ALfloat value)
-START_API_FUNC
+AL_API void AL_APIENTRY alDopplerVelocity(ALfloat value) START_API_FUNC
 {
     ContextRef context{GetContextRef()};
     if(!context) UNLIKELY return;
@@ -636,8 +633,7 @@ START_API_FUNC
         context->mDopplerVelocity = value;
         UpdateProps(context.get());
     }
-}
-END_API_FUNC
+} END_API_FUNC
 
 
 void UpdateContextProps(ALCcontext *context)

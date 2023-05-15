@@ -494,17 +494,17 @@ FORCE_ALIGN void AL_APIENTRY alGetEffectfvDirect(ALCcontext *context, ALuint eff
     }
 }
 
-DECL_FUNC2(void, alGenEffects, ALsizei, ALuint*)
-DECL_FUNC2(void, alDeleteEffects, ALsizei, const ALuint*)
-DECL_FUNC1(ALboolean, alIsEffect, ALuint)
-DECL_FUNC3(void, alEffectf, ALuint, ALenum, ALfloat)
-DECL_FUNC3(void, alEffectfv, ALuint, ALenum, const ALfloat*)
-DECL_FUNC3(void, alEffecti, ALuint, ALenum, ALint)
-DECL_FUNC3(void, alEffectiv, ALuint, ALenum, const ALint*)
-DECL_FUNC3(void, alGetEffectf, ALuint, ALenum, ALfloat*)
-DECL_FUNC3(void, alGetEffectfv, ALuint, ALenum, ALfloat*)
-DECL_FUNC3(void, alGetEffecti, ALuint, ALenum, ALint*)
-DECL_FUNC3(void, alGetEffectiv, ALuint, ALenum, ALint*)
+AL_API DECL_FUNC2(void, alGenEffects, ALsizei, ALuint*)
+AL_API DECL_FUNC2(void, alDeleteEffects, ALsizei, const ALuint*)
+AL_API DECL_FUNC1(ALboolean, alIsEffect, ALuint)
+AL_API DECL_FUNC3(void, alEffectf, ALuint, ALenum, ALfloat)
+AL_API DECL_FUNC3(void, alEffectfv, ALuint, ALenum, const ALfloat*)
+AL_API DECL_FUNC3(void, alEffecti, ALuint, ALenum, ALint)
+AL_API DECL_FUNC3(void, alEffectiv, ALuint, ALenum, const ALint*)
+AL_API DECL_FUNC3(void, alGetEffectf, ALuint, ALenum, ALfloat*)
+AL_API DECL_FUNC3(void, alGetEffectfv, ALuint, ALenum, ALfloat*)
+AL_API DECL_FUNC3(void, alGetEffecti, ALuint, ALenum, ALint*)
+AL_API DECL_FUNC3(void, alGetEffectiv, ALuint, ALenum, ALint*)
 
 
 void InitEffect(ALeffect *effect)

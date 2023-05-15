@@ -575,6 +575,13 @@ const struct {
 
     DECL(alEventControlDirectSOFT),
     DECL(alEventCallbackDirectSOFT),
+
+    DECL(alDebugMessageCallbackDirectEXT),
+    DECL(alDebugMessageInsertDirectEXT),
+    DECL(alDebugMessageControlDirectEXT),
+    DECL(alPushDebugGroupDirectEXT),
+    DECL(alPopDebugGroupDirectEXT),
+    DECL(alGetDebugMessageLogDirectEXT),
 #ifdef ALSOFT_EAX
 }, eaxFunctions[] = {
     DECL(EAXGet),

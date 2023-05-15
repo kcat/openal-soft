@@ -233,9 +233,6 @@ inline ALeffect *LookupEffect(ALCdevice *device, ALuint id)
 
 FORCE_ALIGN void AL_APIENTRY alGenEffectsDirect(ALCcontext *context, ALsizei n, ALuint *effects) noexcept
 {
-    if(!context) UNLIKELY
-        return;
-
     if(n < 0) UNLIKELY
         context->setError(AL_INVALID_VALUE, "Generating %d effects", n);
     if(n <= 0) UNLIKELY return;
@@ -272,9 +269,6 @@ FORCE_ALIGN void AL_APIENTRY alGenEffectsDirect(ALCcontext *context, ALsizei n, 
 FORCE_ALIGN void AL_APIENTRY alDeleteEffectsDirect(ALCcontext *context, ALsizei n,
     const ALuint *effects) noexcept
 {
-    if(!context) UNLIKELY
-        return;
-
     if(n < 0) UNLIKELY
         context->setError(AL_INVALID_VALUE, "Deleting %d effects", n);
     if(n <= 0) UNLIKELY return;
@@ -305,22 +299,16 @@ FORCE_ALIGN void AL_APIENTRY alDeleteEffectsDirect(ALCcontext *context, ALsizei 
 
 FORCE_ALIGN ALboolean AL_APIENTRY alIsEffectDirect(ALCcontext *context, ALuint effect) noexcept
 {
-    if(context) LIKELY
-    {
-        ALCdevice *device{context->mALDevice.get()};
-        std::lock_guard<std::mutex> _{device->EffectLock};
-        if(!effect || LookupEffect(device, effect))
-            return AL_TRUE;
-    }
+    ALCdevice *device{context->mALDevice.get()};
+    std::lock_guard<std::mutex> _{device->EffectLock};
+    if(!effect || LookupEffect(device, effect))
+        return AL_TRUE;
     return AL_FALSE;
 }
 
 FORCE_ALIGN void AL_APIENTRY alEffectiDirect(ALCcontext *context, ALuint effect, ALenum param,
     ALint value) noexcept
 {
-    if(!context) UNLIKELY
-        return;
-
     ALCdevice *device{context->mALDevice.get()};
     std::lock_guard<std::mutex> _{device->EffectLock};
 
@@ -367,9 +355,6 @@ FORCE_ALIGN void AL_APIENTRY alEffectivDirect(ALCcontext *context, ALuint effect
         return;
     }
 
-    if(!context) UNLIKELY
-        return;
-
     ALCdevice *device{context->mALDevice.get()};
     std::lock_guard<std::mutex> _{device->EffectLock};
 
@@ -389,9 +374,6 @@ FORCE_ALIGN void AL_APIENTRY alEffectivDirect(ALCcontext *context, ALuint effect
 FORCE_ALIGN void AL_APIENTRY alEffectfDirect(ALCcontext *context, ALuint effect, ALenum param,
     ALfloat value) noexcept
 {
-    if(!context) UNLIKELY
-        return;
-
     ALCdevice *device{context->mALDevice.get()};
     std::lock_guard<std::mutex> _{device->EffectLock};
 
@@ -411,9 +393,6 @@ FORCE_ALIGN void AL_APIENTRY alEffectfDirect(ALCcontext *context, ALuint effect,
 FORCE_ALIGN void AL_APIENTRY alEffectfvDirect(ALCcontext *context, ALuint effect, ALenum param,
     const ALfloat *values) noexcept
 {
-    if(!context) UNLIKELY
-        return;
-
     ALCdevice *device{context->mALDevice.get()};
     std::lock_guard<std::mutex> _{device->EffectLock};
 
@@ -433,9 +412,6 @@ FORCE_ALIGN void AL_APIENTRY alEffectfvDirect(ALCcontext *context, ALuint effect
 FORCE_ALIGN void AL_APIENTRY alGetEffectiDirect(ALCcontext *context, ALuint effect, ALenum param,
     ALint *value) noexcept
 {
-    if(!context) UNLIKELY
-        return;
-
     ALCdevice *device{context->mALDevice.get()};
     std::lock_guard<std::mutex> _{device->EffectLock};
 
@@ -464,9 +440,6 @@ FORCE_ALIGN void AL_APIENTRY alGetEffectivDirect(ALCcontext *context, ALuint eff
         return;
     }
 
-    if(!context) UNLIKELY
-        return;
-
     ALCdevice *device{context->mALDevice.get()};
     std::lock_guard<std::mutex> _{device->EffectLock};
 
@@ -486,9 +459,6 @@ FORCE_ALIGN void AL_APIENTRY alGetEffectivDirect(ALCcontext *context, ALuint eff
 FORCE_ALIGN void AL_APIENTRY alGetEffectfDirect(ALCcontext *context, ALuint effect, ALenum param,
     ALfloat *value) noexcept
 {
-    if(!context) UNLIKELY
-        return;
-
     ALCdevice *device{context->mALDevice.get()};
     std::lock_guard<std::mutex> _{device->EffectLock};
 
@@ -508,9 +478,6 @@ FORCE_ALIGN void AL_APIENTRY alGetEffectfDirect(ALCcontext *context, ALuint effe
 FORCE_ALIGN void AL_APIENTRY alGetEffectfvDirect(ALCcontext *context, ALuint effect, ALenum param,
     ALfloat *values) noexcept
 {
-    if(!context) UNLIKELY
-        return;
-
     ALCdevice *device{context->mALDevice.get()};
     std::lock_guard<std::mutex> _{device->EffectLock};
 

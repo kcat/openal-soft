@@ -313,9 +313,6 @@ inline void UpdateProps(ALeffectslot *slot, ALCcontext *context)
 FORCE_ALIGN void AL_APIENTRY alGenAuxiliaryEffectSlotsDirect(ALCcontext *context, ALsizei n,
     ALuint *effectslots) noexcept
 {
-    if(!context) UNLIKELY
-        return;
-
     if(n < 0) UNLIKELY
         context->setError(AL_INVALID_VALUE, "Generating %d effect slots", n);
     if(n <= 0) UNLIKELY return;
@@ -356,9 +353,6 @@ FORCE_ALIGN void AL_APIENTRY alGenAuxiliaryEffectSlotsDirect(ALCcontext *context
 FORCE_ALIGN void AL_APIENTRY alDeleteAuxiliaryEffectSlotsDirect(ALCcontext *context, ALsizei n,
     const ALuint *effectslots) noexcept
 {
-    if(!context) UNLIKELY
-        return;
-
     if(n < 0) UNLIKELY
         context->setError(AL_INVALID_VALUE, "Deleting %d effect slots", n);
     if(n <= 0) UNLIKELY return;
@@ -419,12 +413,9 @@ FORCE_ALIGN void AL_APIENTRY alDeleteAuxiliaryEffectSlotsDirect(ALCcontext *cont
 FORCE_ALIGN ALboolean AL_APIENTRY alIsAuxiliaryEffectSlotDirect(ALCcontext *context,
     ALuint effectslot) noexcept
 {
-    if(context) LIKELY
-    {
-        std::lock_guard<std::mutex> _{context->mEffectSlotLock};
-        if(LookupEffectSlot(context, effectslot) != nullptr)
-            return AL_TRUE;
-    }
+    std::lock_guard<std::mutex> _{context->mEffectSlotLock};
+    if(LookupEffectSlot(context, effectslot) != nullptr)
+        return AL_TRUE;
     return AL_FALSE;
 }
 
@@ -541,9 +532,6 @@ END_API_FUNC
 FORCE_ALIGN void AL_APIENTRY alAuxiliaryEffectSlotiDirect(ALCcontext *context, ALuint effectslot,
     ALenum param, ALint value) noexcept
 {
-    if(!context) UNLIKELY
-        return;
-
     std::lock_guard<std::mutex> _{context->mPropLock};
     std::lock_guard<std::mutex> __{context->mEffectSlotLock};
     ALeffectslot *slot = LookupEffectSlot(context, effectslot);
@@ -691,9 +679,6 @@ FORCE_ALIGN void AL_APIENTRY alAuxiliaryEffectSlotivDirect(ALCcontext *context, 
         return;
     }
 
-    if(!context) UNLIKELY
-        return;
-
     std::lock_guard<std::mutex> _{context->mEffectSlotLock};
     ALeffectslot *slot = LookupEffectSlot(context, effectslot);
     if(!slot) UNLIKELY
@@ -710,9 +695,6 @@ FORCE_ALIGN void AL_APIENTRY alAuxiliaryEffectSlotivDirect(ALCcontext *context, 
 FORCE_ALIGN void AL_APIENTRY alAuxiliaryEffectSlotfDirect(ALCcontext *context, ALuint effectslot,
     ALenum param, ALfloat value) noexcept
 {
-    if(!context) UNLIKELY
-        return;
-
     std::lock_guard<std::mutex> _{context->mPropLock};
     std::lock_guard<std::mutex> __{context->mEffectSlotLock};
     ALeffectslot *slot = LookupEffectSlot(context, effectslot);
@@ -746,9 +728,6 @@ FORCE_ALIGN void AL_APIENTRY alAuxiliaryEffectSlotfvDirect(ALCcontext *context, 
         return;
     }
 
-    if(!context) UNLIKELY
-        return;
-
     std::lock_guard<std::mutex> _{context->mEffectSlotLock};
     ALeffectslot *slot = LookupEffectSlot(context, effectslot);
     if(!slot) UNLIKELY
@@ -766,9 +745,6 @@ FORCE_ALIGN void AL_APIENTRY alAuxiliaryEffectSlotfvDirect(ALCcontext *context, 
 FORCE_ALIGN void AL_APIENTRY alGetAuxiliaryEffectSlotiDirect(ALCcontext *context,
     ALuint effectslot, ALenum param, ALint *value) noexcept
 {
-    if(!context) UNLIKELY
-        return;
-
     std::lock_guard<std::mutex> _{context->mEffectSlotLock};
     ALeffectslot *slot = LookupEffectSlot(context, effectslot);
     if(!slot) UNLIKELY
@@ -817,9 +793,6 @@ FORCE_ALIGN void AL_APIENTRY alGetAuxiliaryEffectSlotivDirect(ALCcontext *contex
         return;
     }
 
-    if(!context) UNLIKELY
-        return;
-
     std::lock_guard<std::mutex> _{context->mEffectSlotLock};
     ALeffectslot *slot = LookupEffectSlot(context, effectslot);
     if(!slot) UNLIKELY
@@ -836,9 +809,6 @@ FORCE_ALIGN void AL_APIENTRY alGetAuxiliaryEffectSlotivDirect(ALCcontext *contex
 FORCE_ALIGN void AL_APIENTRY alGetAuxiliaryEffectSlotfDirect(ALCcontext *context,
     ALuint effectslot, ALenum param, ALfloat *value) noexcept
 {
-    if(!context) UNLIKELY
-        return;
-
     std::lock_guard<std::mutex> _{context->mEffectSlotLock};
     ALeffectslot *slot = LookupEffectSlot(context, effectslot);
     if(!slot) UNLIKELY
@@ -864,9 +834,6 @@ FORCE_ALIGN void AL_APIENTRY alGetAuxiliaryEffectSlotfvDirect(ALCcontext *contex
         alGetAuxiliaryEffectSlotfDirect(context, effectslot, param, values);
         return;
     }
-
-    if(!context) UNLIKELY
-        return;
 
     std::lock_guard<std::mutex> _{context->mEffectSlotLock};
     ALeffectslot *slot = LookupEffectSlot(context, effectslot);

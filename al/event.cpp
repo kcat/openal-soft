@@ -176,9 +176,6 @@ void StopEventThrd(ALCcontext *ctx)
 FORCE_ALIGN void AL_APIENTRY alEventControlDirectSOFT(ALCcontext *context, ALsizei count,
     const ALenum *types, ALboolean enable) noexcept
 {
-    if(!context) UNLIKELY
-        return;
-
     if(count < 0) context->setError(AL_INVALID_VALUE, "Controlling %d events", count);
     if(count <= 0) return;
     if(!types) return context->setError(AL_INVALID_VALUE, "NULL pointer");
@@ -230,9 +227,6 @@ FORCE_ALIGN void AL_APIENTRY alEventControlDirectSOFT(ALCcontext *context, ALsiz
 FORCE_ALIGN void AL_APIENTRY alEventCallbackDirectSOFT(ALCcontext *context,
     ALEVENTPROCSOFT callback, void *userParam) noexcept
 {
-    if(!context) UNLIKELY
-        return;
-
     std::lock_guard<std::mutex> _{context->mPropLock};
     std::lock_guard<std::mutex> __{context->mEventCbLock};
     context->mEventCb = callback;

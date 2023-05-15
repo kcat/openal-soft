@@ -71,9 +71,6 @@ inline void CommitAndUpdateProps(ALCcontext *context)
 
 FORCE_ALIGN void AL_APIENTRY alListenerfDirect(ALCcontext *context, ALenum param, ALfloat value) noexcept
 {
-    if(!context) UNLIKELY
-        return;
-
     ALlistener &listener = context->mListener;
     std::lock_guard<std::mutex> _{context->mPropLock};
     switch(param)
@@ -100,9 +97,6 @@ FORCE_ALIGN void AL_APIENTRY alListenerfDirect(ALCcontext *context, ALenum param
 FORCE_ALIGN void AL_APIENTRY alListener3fDirect(ALCcontext *context, ALenum param, ALfloat value1,
     ALfloat value2, ALfloat value3) noexcept
 {
-    if(!context) UNLIKELY
-        return;
-
     ALlistener &listener = context->mListener;
     std::lock_guard<std::mutex> _{context->mPropLock};
     switch(param)
@@ -149,9 +143,6 @@ FORCE_ALIGN void AL_APIENTRY alListenerfvDirect(ALCcontext *context, ALenum para
         }
     }
 
-    if(!context) UNLIKELY
-        return;
-
     if(!values) UNLIKELY
         return context->setError(AL_INVALID_VALUE, "NULL pointer");
 
@@ -181,9 +172,6 @@ FORCE_ALIGN void AL_APIENTRY alListenerfvDirect(ALCcontext *context, ALenum para
 
 FORCE_ALIGN void AL_APIENTRY alListeneriDirect(ALCcontext *context, ALenum param, ALint /*value*/) noexcept
 {
-    if(!context) UNLIKELY
-        return;
-
     std::lock_guard<std::mutex> _{context->mPropLock};
     switch(param)
     {
@@ -203,9 +191,6 @@ FORCE_ALIGN void AL_APIENTRY alListener3iDirect(ALCcontext *context, ALenum para
             static_cast<ALfloat>(value2), static_cast<ALfloat>(value3));
         return;
     }
-
-    if(!context) UNLIKELY
-        return;
 
     std::lock_guard<std::mutex> _{context->mPropLock};
     switch(param)
@@ -241,9 +226,6 @@ FORCE_ALIGN void AL_APIENTRY alListenerivDirect(ALCcontext *context, ALenum para
         }
     }
 
-    if(!context) UNLIKELY
-        return;
-
     std::lock_guard<std::mutex> _{context->mPropLock};
     if(!values) UNLIKELY
         context->setError(AL_INVALID_VALUE, "NULL pointer");
@@ -258,9 +240,6 @@ FORCE_ALIGN void AL_APIENTRY alListenerivDirect(ALCcontext *context, ALenum para
 FORCE_ALIGN void AL_APIENTRY alGetListenerfDirect(ALCcontext *context, ALenum param,
     ALfloat *value) noexcept
 {
-    if(!context) UNLIKELY
-        return;
-
     ALlistener &listener = context->mListener;
     std::lock_guard<std::mutex> _{context->mPropLock};
     if(!value)
@@ -283,9 +262,6 @@ FORCE_ALIGN void AL_APIENTRY alGetListenerfDirect(ALCcontext *context, ALenum pa
 FORCE_ALIGN void AL_APIENTRY alGetListener3fDirect(ALCcontext *context, ALenum param,
     ALfloat *value1, ALfloat *value2, ALfloat *value3) noexcept
 {
-    if(!context) UNLIKELY
-        return;
-
     ALlistener &listener = context->mListener;
     std::lock_guard<std::mutex> _{context->mPropLock};
     if(!value1 || !value2 || !value3)
@@ -325,9 +301,6 @@ FORCE_ALIGN void AL_APIENTRY alGetListenerfvDirect(ALCcontext *context, ALenum p
         return;
     }
 
-    if(!context) UNLIKELY
-        return;
-
     ALlistener &listener = context->mListener;
     std::lock_guard<std::mutex> _{context->mPropLock};
     if(!values)
@@ -352,9 +325,6 @@ FORCE_ALIGN void AL_APIENTRY alGetListenerfvDirect(ALCcontext *context, ALenum p
 
 FORCE_ALIGN void AL_APIENTRY alGetListeneriDirect(ALCcontext *context, ALenum param, ALint *value) noexcept
 {
-    if(!context) UNLIKELY
-        return;
-
     std::lock_guard<std::mutex> _{context->mPropLock};
     if(!value)
         context->setError(AL_INVALID_VALUE, "NULL pointer");
@@ -368,9 +338,6 @@ FORCE_ALIGN void AL_APIENTRY alGetListeneriDirect(ALCcontext *context, ALenum pa
 FORCE_ALIGN void AL_APIENTRY alGetListener3iDirect(ALCcontext *context, ALenum param,
     ALint *value1, ALint *value2, ALint *value3) noexcept
 {
-    if(!context) UNLIKELY
-        return;
-
     ALlistener &listener = context->mListener;
     std::lock_guard<std::mutex> _{context->mPropLock};
     if(!value1 || !value2 || !value3)
@@ -404,9 +371,6 @@ FORCE_ALIGN void AL_APIENTRY alGetListenerivDirect(ALCcontext *context, ALenum p
         alGetListener3iDirect(context, param, values+0, values+1, values+2);
         return;
     }
-
-    if(!context) UNLIKELY
-        return;
 
     ALlistener &listener = context->mListener;
     std::lock_guard<std::mutex> _{context->mPropLock};

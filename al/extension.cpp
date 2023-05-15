@@ -37,9 +37,6 @@
 AL_API DECL_FUNC1(ALboolean, alIsExtensionPresent, const ALchar*)
 FORCE_ALIGN ALboolean AL_APIENTRY alIsExtensionPresentDirect(ALCcontext *context, const ALchar *extName) noexcept
 {
-    if(!context) UNLIKELY
-        return AL_FALSE;
-
     if(!extName) UNLIKELY
     {
         context->setError(AL_INVALID_VALUE, "NULL pointer");

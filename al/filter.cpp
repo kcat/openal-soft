@@ -404,9 +404,6 @@ inline ALfilter *LookupFilter(ALCdevice *device, ALuint id)
 
 FORCE_ALIGN void AL_APIENTRY alGenFiltersDirect(ALCcontext *context, ALsizei n, ALuint *filters) noexcept
 {
-    if(!context) UNLIKELY
-        return;
-
     if(n < 0) UNLIKELY
         context->setError(AL_INVALID_VALUE, "Generating %d filters", n);
     if(n <= 0) UNLIKELY return;
@@ -443,9 +440,6 @@ FORCE_ALIGN void AL_APIENTRY alGenFiltersDirect(ALCcontext *context, ALsizei n, 
 FORCE_ALIGN void AL_APIENTRY alDeleteFiltersDirect(ALCcontext *context, ALsizei n,
     const ALuint *filters) noexcept
 {
-    if(!context) UNLIKELY
-        return;
-
     if(n < 0) UNLIKELY
         context->setError(AL_INVALID_VALUE, "Deleting %d filters", n);
     if(n <= 0) UNLIKELY return;
@@ -476,13 +470,10 @@ FORCE_ALIGN void AL_APIENTRY alDeleteFiltersDirect(ALCcontext *context, ALsizei 
 
 FORCE_ALIGN ALboolean AL_APIENTRY alIsFilterDirect(ALCcontext *context, ALuint filter) noexcept
 {
-    if(context) LIKELY
-    {
-        ALCdevice *device{context->mALDevice.get()};
-        std::lock_guard<std::mutex> _{device->FilterLock};
-        if(!filter || LookupFilter(device, filter))
-            return AL_TRUE;
-    }
+    ALCdevice *device{context->mALDevice.get()};
+    std::lock_guard<std::mutex> _{device->FilterLock};
+    if(!filter || LookupFilter(device, filter))
+        return AL_TRUE;
     return AL_FALSE;
 }
 
@@ -490,9 +481,6 @@ FORCE_ALIGN ALboolean AL_APIENTRY alIsFilterDirect(ALCcontext *context, ALuint f
 FORCE_ALIGN void AL_APIENTRY alFilteriDirect(ALCcontext *context, ALuint filter, ALenum param,
     ALint value) noexcept
 {
-    if(!context) UNLIKELY
-        return;
-
     ALCdevice *device{context->mALDevice.get()};
     std::lock_guard<std::mutex> _{device->FilterLock};
 
@@ -530,9 +518,6 @@ FORCE_ALIGN void AL_APIENTRY alFilterivDirect(ALCcontext *context, ALuint filter
         return;
     }
 
-    if(!context) UNLIKELY
-        return;
-
     ALCdevice *device{context->mALDevice.get()};
     std::lock_guard<std::mutex> _{device->FilterLock};
 
@@ -552,9 +537,6 @@ FORCE_ALIGN void AL_APIENTRY alFilterivDirect(ALCcontext *context, ALuint filter
 FORCE_ALIGN void AL_APIENTRY alFilterfDirect(ALCcontext *context, ALuint filter, ALenum param,
     ALfloat value) noexcept
 {
-    if(!context) UNLIKELY
-        return;
-
     ALCdevice *device{context->mALDevice.get()};
     std::lock_guard<std::mutex> _{device->FilterLock};
 
@@ -574,9 +556,6 @@ FORCE_ALIGN void AL_APIENTRY alFilterfDirect(ALCcontext *context, ALuint filter,
 FORCE_ALIGN void AL_APIENTRY alFilterfvDirect(ALCcontext *context, ALuint filter, ALenum param,
     const ALfloat *values) noexcept
 {
-    if(!context) UNLIKELY
-        return;
-
     ALCdevice *device{context->mALDevice.get()};
     std::lock_guard<std::mutex> _{device->FilterLock};
 
@@ -596,9 +575,6 @@ FORCE_ALIGN void AL_APIENTRY alFilterfvDirect(ALCcontext *context, ALuint filter
 FORCE_ALIGN void AL_APIENTRY alGetFilteriDirect(ALCcontext *context, ALuint filter, ALenum param,
     ALint *value) noexcept
 {
-    if(!context) UNLIKELY
-        return;
-
     ALCdevice *device{context->mALDevice.get()};
     std::lock_guard<std::mutex> _{device->FilterLock};
 
@@ -630,9 +606,6 @@ FORCE_ALIGN void AL_APIENTRY alGetFilterivDirect(ALCcontext *context, ALuint fil
         return;
     }
 
-    if(!context) UNLIKELY
-        return;
-
     ALCdevice *device{context->mALDevice.get()};
     std::lock_guard<std::mutex> _{device->FilterLock};
 
@@ -652,9 +625,6 @@ FORCE_ALIGN void AL_APIENTRY alGetFilterivDirect(ALCcontext *context, ALuint fil
 FORCE_ALIGN void AL_APIENTRY alGetFilterfDirect(ALCcontext *context, ALuint filter, ALenum param,
     ALfloat *value) noexcept
 {
-    if(!context) UNLIKELY
-        return;
-
     ALCdevice *device{context->mALDevice.get()};
     std::lock_guard<std::mutex> _{device->FilterLock};
 
@@ -674,9 +644,6 @@ FORCE_ALIGN void AL_APIENTRY alGetFilterfDirect(ALCcontext *context, ALuint filt
 FORCE_ALIGN void AL_APIENTRY alGetFilterfvDirect(ALCcontext *context, ALuint filter, ALenum param,
     ALfloat *values) noexcept
 {
-    if(!context) UNLIKELY
-        return;
-
     ALCdevice *device{context->mALDevice.get()};
     std::lock_guard<std::mutex> _{device->FilterLock};
 

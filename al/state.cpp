@@ -306,9 +306,6 @@ END_API_FUNC
 
 FORCE_ALIGN void AL_APIENTRY alEnableDirect(ALCcontext *context, ALenum capability) noexcept
 {
-    if(!context) UNLIKELY
-        return;
-
     switch(capability)
     {
     case AL_SOURCE_DISTANCE_MODEL:
@@ -334,9 +331,6 @@ FORCE_ALIGN void AL_APIENTRY alEnableDirect(ALCcontext *context, ALenum capabili
 
 FORCE_ALIGN void AL_APIENTRY alDisableDirect(ALCcontext *context, ALenum capability) noexcept
 {
-    if(!context) UNLIKELY
-        return;
-
     switch(capability)
     {
     case AL_SOURCE_DISTANCE_MODEL:
@@ -362,9 +356,6 @@ FORCE_ALIGN void AL_APIENTRY alDisableDirect(ALCcontext *context, ALenum capabil
 
 FORCE_ALIGN ALboolean AL_APIENTRY alIsEnabledDirect(ALCcontext *context, ALenum capability) noexcept
 {
-    if(!context) UNLIKELY
-        return AL_FALSE;
-
     std::lock_guard<std::mutex> _{context->mPropLock};
     ALboolean value{AL_FALSE};
     switch(capability)
@@ -393,6 +384,8 @@ AL_API R AL_APIENTRY Name##Ext(ALenum pname)                                  \
 START_API_FUNC                                                                \
 {                                                                             \
     R value{};                                                                \
+    auto context = GetContextRef();                                           \
+    if(!context) UNLIKELY return value;                                       \
     Name##vDirect##Ext(GetContextRef().get(), pname, &value);                 \
     return value;                                                             \
 }                                                                             \
@@ -417,9 +410,6 @@ DECL_GETFUNC(ALvoid*, alGetPointer,SOFT)
 
 FORCE_ALIGN void AL_APIENTRY alGetBooleanvDirect(ALCcontext *context, ALenum pname, ALboolean *values) noexcept
 {
-    if(!context) UNLIKELY
-        return;
-
     if(!values) UNLIKELY
         return context->setError(AL_INVALID_VALUE, "NULL pointer");
     GetValue(context, pname, values);
@@ -427,9 +417,6 @@ FORCE_ALIGN void AL_APIENTRY alGetBooleanvDirect(ALCcontext *context, ALenum pna
 
 FORCE_ALIGN void AL_APIENTRY alGetDoublevDirect(ALCcontext *context, ALenum pname, ALdouble *values) noexcept
 {
-    if(!context) UNLIKELY
-        return;
-
     if(!values) UNLIKELY
         return context->setError(AL_INVALID_VALUE, "NULL pointer");
     GetValue(context, pname, values);
@@ -437,9 +424,6 @@ FORCE_ALIGN void AL_APIENTRY alGetDoublevDirect(ALCcontext *context, ALenum pnam
 
 FORCE_ALIGN void AL_APIENTRY alGetFloatvDirect(ALCcontext *context, ALenum pname, ALfloat *values) noexcept
 {
-    if(!context) UNLIKELY
-        return;
-
     if(!values) UNLIKELY
         return context->setError(AL_INVALID_VALUE, "NULL pointer");
     GetValue(context, pname, values);
@@ -447,9 +431,6 @@ FORCE_ALIGN void AL_APIENTRY alGetFloatvDirect(ALCcontext *context, ALenum pname
 
 FORCE_ALIGN void AL_APIENTRY alGetIntegervDirect(ALCcontext *context, ALenum pname, ALint *values) noexcept
 {
-    if(!context) UNLIKELY
-        return;
-
     if(!values) UNLIKELY
         return context->setError(AL_INVALID_VALUE, "NULL pointer");
     GetValue(context, pname, values);
@@ -457,9 +438,6 @@ FORCE_ALIGN void AL_APIENTRY alGetIntegervDirect(ALCcontext *context, ALenum pna
 
 FORCE_ALIGN void AL_APIENTRY alGetInteger64vDirectSOFT(ALCcontext *context, ALenum pname, ALint64SOFT *values) noexcept
 {
-    if(!context) UNLIKELY
-        return;
-
     if(!values) UNLIKELY
         return context->setError(AL_INVALID_VALUE, "NULL pointer");
     GetValue(context, pname, values);
@@ -467,9 +445,6 @@ FORCE_ALIGN void AL_APIENTRY alGetInteger64vDirectSOFT(ALCcontext *context, ALen
 
 FORCE_ALIGN void AL_APIENTRY alGetPointervDirectSOFT(ALCcontext *context, ALenum pname, ALvoid **values) noexcept
 {
-    if(!context) UNLIKELY
-        return;
-
     if(!values) UNLIKELY
         return context->setError(AL_INVALID_VALUE, "NULL pointer");
 
@@ -498,9 +473,6 @@ FORCE_ALIGN void AL_APIENTRY alGetPointervDirectSOFT(ALCcontext *context, ALenum
 
 FORCE_ALIGN const ALchar* AL_APIENTRY alGetStringDirect(ALCcontext *context, ALenum pname) noexcept
 {
-    if(!context) UNLIKELY
-        return nullptr;
-
     const ALchar *value{nullptr};
     switch(pname)
     {
@@ -560,9 +532,6 @@ FORCE_ALIGN const ALchar* AL_APIENTRY alGetStringDirect(ALCcontext *context, ALe
 
 FORCE_ALIGN void AL_APIENTRY alDopplerFactorDirect(ALCcontext *context, ALfloat value) noexcept
 {
-    if(!context) UNLIKELY
-        return;
-
     if(!(value >= 0.0f && std::isfinite(value)))
         context->setError(AL_INVALID_VALUE, "Doppler factor %f out of range", value);
     else
@@ -575,9 +544,6 @@ FORCE_ALIGN void AL_APIENTRY alDopplerFactorDirect(ALCcontext *context, ALfloat 
 
 FORCE_ALIGN void AL_APIENTRY alSpeedOfSoundDirect(ALCcontext *context, ALfloat value) noexcept
 {
-    if(!context) UNLIKELY
-        return;
-
     if(!(value > 0.0f && std::isfinite(value)))
         context->setError(AL_INVALID_VALUE, "Speed of sound %f out of range", value);
     else
@@ -590,9 +556,6 @@ FORCE_ALIGN void AL_APIENTRY alSpeedOfSoundDirect(ALCcontext *context, ALfloat v
 
 FORCE_ALIGN void AL_APIENTRY alDistanceModelDirect(ALCcontext *context, ALenum value) noexcept
 {
-    if(!context) UNLIKELY
-        return;
-
     if(auto model = DistanceModelFromALenum(value))
     {
         std::lock_guard<std::mutex> _{context->mPropLock};
@@ -607,18 +570,12 @@ FORCE_ALIGN void AL_APIENTRY alDistanceModelDirect(ALCcontext *context, ALenum v
 
 FORCE_ALIGN void AL_APIENTRY alDeferUpdatesDirectSOFT(ALCcontext *context) noexcept
 {
-    if(!context) UNLIKELY
-        return;
-
     std::lock_guard<std::mutex> _{context->mPropLock};
     context->deferUpdates();
 }
 
 FORCE_ALIGN void AL_APIENTRY alProcessUpdatesDirectSOFT(ALCcontext *context) noexcept
 {
-    if(!context) UNLIKELY
-        return;
-
     std::lock_guard<std::mutex> _{context->mPropLock};
     context->processUpdates();
 }
@@ -626,9 +583,6 @@ FORCE_ALIGN void AL_APIENTRY alProcessUpdatesDirectSOFT(ALCcontext *context) noe
 
 FORCE_ALIGN const ALchar* AL_APIENTRY alGetStringiDirectSOFT(ALCcontext *context, ALenum pname, ALsizei index) noexcept
 {
-    if(!context) UNLIKELY
-        return nullptr;
-
     const ALchar *value{nullptr};
     switch(pname)
     {

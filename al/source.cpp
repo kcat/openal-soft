@@ -2628,9 +2628,6 @@ void StartSources(ALCcontext *const context, const al::span<ALsource*> srchandle
 
 FORCE_ALIGN void AL_APIENTRY alGenSourcesDirect(ALCcontext *context, ALsizei n, ALuint *sources) noexcept
 {
-    if(!context) UNLIKELY
-        return;
-
     if(n < 0) UNLIKELY
         context->setError(AL_INVALID_VALUE, "Generating %d sources", n);
     if(n <= 0) UNLIKELY return;
@@ -2677,9 +2674,6 @@ FORCE_ALIGN void AL_APIENTRY alGenSourcesDirect(ALCcontext *context, ALsizei n, 
 FORCE_ALIGN void AL_APIENTRY alDeleteSourcesDirect(ALCcontext *context, ALsizei n,
     const ALuint *sources) noexcept
 {
-    if(!context) UNLIKELY
-        return;
-
     if(n < 0) UNLIKELY
         context->setError(AL_INVALID_VALUE, "Deleting %d sources", n);
     if(n <= 0) UNLIKELY return;
@@ -2706,12 +2700,9 @@ FORCE_ALIGN void AL_APIENTRY alDeleteSourcesDirect(ALCcontext *context, ALsizei 
 
 FORCE_ALIGN ALboolean AL_APIENTRY alIsSourceDirect(ALCcontext *context, ALuint source) noexcept
 {
-    if(context) LIKELY
-    {
-        std::lock_guard<std::mutex> _{context->mSourceLock};
-        if(LookupSource(context, source) != nullptr)
-            return AL_TRUE;
-    }
+    std::lock_guard<std::mutex> _{context->mSourceLock};
+    if(LookupSource(context, source) != nullptr)
+        return AL_TRUE;
     return AL_FALSE;
 }
 
@@ -2719,9 +2710,6 @@ FORCE_ALIGN ALboolean AL_APIENTRY alIsSourceDirect(ALCcontext *context, ALuint s
 FORCE_ALIGN void AL_APIENTRY alSourcefDirect(ALCcontext *context, ALuint source, ALenum param,
     ALfloat value) noexcept
 {
-    if(!context) UNLIKELY
-        return;
-
     std::lock_guard<std::mutex> _{context->mPropLock};
     std::lock_guard<std::mutex> __{context->mSourceLock};
     ALsource *Source = LookupSource(context, source);
@@ -2735,9 +2723,6 @@ FORCE_ALIGN void AL_APIENTRY alSourcefDirect(ALCcontext *context, ALuint source,
 FORCE_ALIGN void AL_APIENTRY alSource3fDirect(ALCcontext *context, ALuint source, ALenum param,
     ALfloat value1, ALfloat value2, ALfloat value3) noexcept
 {
-    if(!context) UNLIKELY
-        return;
-
     std::lock_guard<std::mutex> _{context->mPropLock};
     std::lock_guard<std::mutex> __{context->mSourceLock};
     ALsource *Source = LookupSource(context, source);
@@ -2751,9 +2736,6 @@ FORCE_ALIGN void AL_APIENTRY alSource3fDirect(ALCcontext *context, ALuint source
 FORCE_ALIGN void AL_APIENTRY alSourcefvDirect(ALCcontext *context, ALuint source, ALenum param,
     const ALfloat *values) noexcept
 {
-    if(!context) UNLIKELY
-        return;
-
     std::lock_guard<std::mutex> _{context->mPropLock};
     std::lock_guard<std::mutex> __{context->mSourceLock};
     ALsource *Source = LookupSource(context, source);
@@ -2770,9 +2752,6 @@ FORCE_ALIGN void AL_APIENTRY alSourcefvDirect(ALCcontext *context, ALuint source
 FORCE_ALIGN void AL_APIENTRY alSourcedDirectSOFT(ALCcontext *context, ALuint source, ALenum param,
     ALdouble value) noexcept
 {
-    if(!context) UNLIKELY
-        return;
-
     std::lock_guard<std::mutex> _{context->mPropLock};
     std::lock_guard<std::mutex> __{context->mSourceLock};
     ALsource *Source = LookupSource(context, source);
@@ -2786,9 +2765,6 @@ FORCE_ALIGN void AL_APIENTRY alSourcedDirectSOFT(ALCcontext *context, ALuint sou
 FORCE_ALIGN void AL_APIENTRY alSource3dDirectSOFT(ALCcontext *context, ALuint source, ALenum param,
     ALdouble value1, ALdouble value2, ALdouble value3) noexcept
 {
-    if(!context) UNLIKELY
-        return;
-
     std::lock_guard<std::mutex> _{context->mPropLock};
     std::lock_guard<std::mutex> __{context->mSourceLock};
     ALsource *Source = LookupSource(context, source);
@@ -2802,9 +2778,6 @@ FORCE_ALIGN void AL_APIENTRY alSource3dDirectSOFT(ALCcontext *context, ALuint so
 FORCE_ALIGN void AL_APIENTRY alSourcedvDirectSOFT(ALCcontext *context, ALuint source, ALenum param,
     const ALdouble *values) noexcept
 {
-    if(!context) UNLIKELY
-        return;
-
     std::lock_guard<std::mutex> _{context->mPropLock};
     std::lock_guard<std::mutex> __{context->mSourceLock};
     ALsource *Source = LookupSource(context, source);
@@ -2821,9 +2794,6 @@ FORCE_ALIGN void AL_APIENTRY alSourcedvDirectSOFT(ALCcontext *context, ALuint so
 FORCE_ALIGN void AL_APIENTRY alSourceiDirect(ALCcontext *context, ALuint source, ALenum param,
     ALint value) noexcept
 {
-    if(!context) UNLIKELY
-        return;
-
     std::lock_guard<std::mutex> _{context->mPropLock};
     std::lock_guard<std::mutex> __{context->mSourceLock};
     ALsource *Source = LookupSource(context, source);
@@ -2837,9 +2807,6 @@ FORCE_ALIGN void AL_APIENTRY alSourceiDirect(ALCcontext *context, ALuint source,
 FORCE_ALIGN void AL_APIENTRY alSource3iDirect(ALCcontext *context, ALuint source, ALenum param,
     ALint value1, ALint value2, ALint value3) noexcept
 {
-    if(!context) UNLIKELY
-        return;
-
     std::lock_guard<std::mutex> _{context->mPropLock};
     std::lock_guard<std::mutex> __{context->mSourceLock};
     ALsource *Source = LookupSource(context, source);
@@ -2853,9 +2820,6 @@ FORCE_ALIGN void AL_APIENTRY alSource3iDirect(ALCcontext *context, ALuint source
 FORCE_ALIGN void AL_APIENTRY alSourceivDirect(ALCcontext *context, ALuint source, ALenum param,
     const ALint *values) noexcept
 {
-    if(!context) UNLIKELY
-        return;
-
     std::lock_guard<std::mutex> _{context->mPropLock};
     std::lock_guard<std::mutex> __{context->mSourceLock};
     ALsource *Source = LookupSource(context, source);
@@ -2872,9 +2836,6 @@ FORCE_ALIGN void AL_APIENTRY alSourceivDirect(ALCcontext *context, ALuint source
 FORCE_ALIGN void AL_APIENTRY alSourcei64DirectSOFT(ALCcontext *context, ALuint source,
     ALenum param, ALint64SOFT value) noexcept
 {
-    if(!context) UNLIKELY
-        return;
-
     std::lock_guard<std::mutex> _{context->mPropLock};
     std::lock_guard<std::mutex> __{context->mSourceLock};
     ALsource *Source{LookupSource(context, source)};
@@ -2888,9 +2849,6 @@ FORCE_ALIGN void AL_APIENTRY alSourcei64DirectSOFT(ALCcontext *context, ALuint s
 FORCE_ALIGN void AL_APIENTRY alSource3i64DirectSOFT(ALCcontext *context, ALuint source,
     ALenum param, ALint64SOFT value1, ALint64SOFT value2, ALint64SOFT value3) noexcept
 {
-    if(!context) UNLIKELY
-        return;
-
     std::lock_guard<std::mutex> _{context->mPropLock};
     std::lock_guard<std::mutex> __{context->mSourceLock};
     ALsource *Source{LookupSource(context, source)};
@@ -2904,9 +2862,6 @@ FORCE_ALIGN void AL_APIENTRY alSource3i64DirectSOFT(ALCcontext *context, ALuint 
 FORCE_ALIGN void AL_APIENTRY alSourcei64vDirectSOFT(ALCcontext *context, ALuint source,
     ALenum param, const ALint64SOFT *values) noexcept
 {
-    if(!context) UNLIKELY
-        return;
-
     std::lock_guard<std::mutex> _{context->mPropLock};
     std::lock_guard<std::mutex> __{context->mSourceLock};
     ALsource *Source{LookupSource(context, source)};
@@ -2923,9 +2878,6 @@ FORCE_ALIGN void AL_APIENTRY alSourcei64vDirectSOFT(ALCcontext *context, ALuint 
 FORCE_ALIGN void AL_APIENTRY alGetSourcefDirect(ALCcontext *context, ALuint source, ALenum param,
     ALfloat *value) noexcept
 {
-    if(!context) UNLIKELY
-        return;
-
     std::lock_guard<std::mutex> _{context->mSourceLock};
     ALsource *Source{LookupSource(context, source)};
     if(!Source) UNLIKELY
@@ -2940,9 +2892,6 @@ FORCE_ALIGN void AL_APIENTRY alGetSourcefDirect(ALCcontext *context, ALuint sour
 FORCE_ALIGN void AL_APIENTRY alGetSource3fDirect(ALCcontext *context, ALuint source, ALenum param,
     ALfloat *value1, ALfloat *value2, ALfloat *value3) noexcept
 {
-    if(!context) UNLIKELY
-        return;
-
     std::lock_guard<std::mutex> _{context->mSourceLock};
     ALsource *Source{LookupSource(context, source)};
     if(!Source) UNLIKELY
@@ -2962,9 +2911,6 @@ FORCE_ALIGN void AL_APIENTRY alGetSource3fDirect(ALCcontext *context, ALuint sou
 FORCE_ALIGN void AL_APIENTRY alGetSourcefvDirect(ALCcontext *context, ALuint source, ALenum param,
     ALfloat *values) noexcept
 {
-    if(!context) UNLIKELY
-        return;
-
     std::lock_guard<std::mutex> _{context->mSourceLock};
     ALsource *Source{LookupSource(context, source)};
     if(!Source) UNLIKELY
@@ -2981,9 +2927,6 @@ FORCE_ALIGN void AL_APIENTRY alGetSourcefvDirect(ALCcontext *context, ALuint sou
 FORCE_ALIGN void AL_APIENTRY alGetSourcedDirectSOFT(ALCcontext *context, ALuint source,
     ALenum param, ALdouble *value) noexcept
 {
-    if(!context) UNLIKELY
-        return;
-
     std::lock_guard<std::mutex> _{context->mSourceLock};
     ALsource *Source{LookupSource(context, source)};
     if(!Source) UNLIKELY
@@ -2998,9 +2941,6 @@ FORCE_ALIGN void AL_APIENTRY alGetSourcedDirectSOFT(ALCcontext *context, ALuint 
 FORCE_ALIGN void AL_APIENTRY alGetSource3dDirectSOFT(ALCcontext *context, ALuint source,
     ALenum param, ALdouble *value1, ALdouble *value2, ALdouble *value3) noexcept
 {
-    if(!context) UNLIKELY
-        return;
-
     std::lock_guard<std::mutex> _{context->mSourceLock};
     ALsource *Source{LookupSource(context, source)};
     if(!Source) UNLIKELY
@@ -3020,9 +2960,6 @@ FORCE_ALIGN void AL_APIENTRY alGetSource3dDirectSOFT(ALCcontext *context, ALuint
 FORCE_ALIGN void AL_APIENTRY alGetSourcedvDirectSOFT(ALCcontext *context, ALuint source,
     ALenum param, ALdouble *values) noexcept
 {
-    if(!context) UNLIKELY
-        return;
-
     std::lock_guard<std::mutex> _{context->mSourceLock};
     ALsource *Source{LookupSource(context, source)};
     if(!Source) UNLIKELY
@@ -3039,9 +2976,6 @@ FORCE_ALIGN void AL_APIENTRY alGetSourcedvDirectSOFT(ALCcontext *context, ALuint
 FORCE_ALIGN void AL_APIENTRY alGetSourceiDirect(ALCcontext *context, ALuint source, ALenum param,
     ALint *value) noexcept
 {
-    if(!context) UNLIKELY
-        return;
-
     std::lock_guard<std::mutex> _{context->mSourceLock};
     ALsource *Source{LookupSource(context, source)};
     if(!Source) UNLIKELY
@@ -3056,9 +2990,6 @@ FORCE_ALIGN void AL_APIENTRY alGetSourceiDirect(ALCcontext *context, ALuint sour
 FORCE_ALIGN void AL_APIENTRY alGetSource3iDirect(ALCcontext *context, ALuint source, ALenum param,
     ALint *value1, ALint *value2, ALint *value3) noexcept
 {
-    if(!context) UNLIKELY
-        return;
-
     std::lock_guard<std::mutex> _{context->mSourceLock};
     ALsource *Source{LookupSource(context, source)};
     if(!Source) UNLIKELY
@@ -3078,9 +3009,6 @@ FORCE_ALIGN void AL_APIENTRY alGetSource3iDirect(ALCcontext *context, ALuint sou
 FORCE_ALIGN void AL_APIENTRY alGetSourceivDirect(ALCcontext *context, ALuint source, ALenum param,
     ALint *values) noexcept
 {
-    if(!context) UNLIKELY
-        return;
-
     std::lock_guard<std::mutex> _{context->mSourceLock};
     ALsource *Source{LookupSource(context, source)};
     if(!Source) UNLIKELY
@@ -3096,9 +3024,6 @@ FORCE_ALIGN void AL_APIENTRY alGetSourceivDirect(ALCcontext *context, ALuint sou
 
 FORCE_ALIGN void AL_APIENTRY alGetSourcei64DirectSOFT(ALCcontext *context, ALuint source, ALenum param, ALint64SOFT *value) noexcept
 {
-    if(!context) UNLIKELY
-        return;
-
     std::lock_guard<std::mutex> _{context->mSourceLock};
     ALsource *Source{LookupSource(context, source)};
     if(!Source) UNLIKELY
@@ -3113,9 +3038,6 @@ FORCE_ALIGN void AL_APIENTRY alGetSourcei64DirectSOFT(ALCcontext *context, ALuin
 FORCE_ALIGN void AL_APIENTRY alGetSource3i64DirectSOFT(ALCcontext *context, ALuint source,
     ALenum param, ALint64SOFT *value1, ALint64SOFT *value2, ALint64SOFT *value3) noexcept
 {
-    if(!context) UNLIKELY
-        return;
-
     std::lock_guard<std::mutex> _{context->mSourceLock};
     ALsource *Source{LookupSource(context, source)};
     if(!Source) UNLIKELY
@@ -3135,9 +3057,6 @@ FORCE_ALIGN void AL_APIENTRY alGetSource3i64DirectSOFT(ALCcontext *context, ALui
 FORCE_ALIGN void AL_APIENTRY alGetSourcei64vDirectSOFT(ALCcontext *context, ALuint source,
     ALenum param, ALint64SOFT *values) noexcept
 {
-    if(!context) UNLIKELY
-        return;
-
     std::lock_guard<std::mutex> _{context->mSourceLock};
     ALsource *Source{LookupSource(context, source)};
     if(!Source) UNLIKELY
@@ -3153,9 +3072,6 @@ FORCE_ALIGN void AL_APIENTRY alGetSourcei64vDirectSOFT(ALCcontext *context, ALui
 
 FORCE_ALIGN void AL_APIENTRY alSourcePlayDirect(ALCcontext *context, ALuint source) noexcept
 {
-    if(!context) UNLIKELY
-        return;
-
     std::lock_guard<std::mutex> _{context->mSourceLock};
     ALsource *srchandle{LookupSource(context, source)};
     if(!srchandle)
@@ -3167,9 +3083,6 @@ FORCE_ALIGN void AL_APIENTRY alSourcePlayDirect(ALCcontext *context, ALuint sour
 FORCE_ALIGN void AL_APIENTRY alSourcePlayAtTimeDirectSOFT(ALCcontext *context, ALuint source,
     ALint64SOFT start_time) noexcept
 {
-    if(!context) UNLIKELY
-        return;
-
     if(start_time < 0) UNLIKELY
         return context->setError(AL_INVALID_VALUE, "Invalid time point %" PRId64, start_time);
 
@@ -3184,9 +3097,6 @@ FORCE_ALIGN void AL_APIENTRY alSourcePlayAtTimeDirectSOFT(ALCcontext *context, A
 FORCE_ALIGN void AL_APIENTRY alSourcePlayvDirect(ALCcontext *context, ALsizei n,
     const ALuint *sources) noexcept
 {
-    if(!context) UNLIKELY
-        return;
-
     if(n < 0) UNLIKELY
         context->setError(AL_INVALID_VALUE, "Playing %d sources", n);
     if(n <= 0) UNLIKELY return;
@@ -3217,9 +3127,6 @@ FORCE_ALIGN void AL_APIENTRY alSourcePlayvDirect(ALCcontext *context, ALsizei n,
 FORCE_ALIGN void AL_APIENTRY alSourcePlayAtTimevDirectSOFT(ALCcontext *context, ALsizei n,
     const ALuint *sources, ALint64SOFT start_time) noexcept
 {
-    if(!context) UNLIKELY
-        return;
-
     if(n < 0) UNLIKELY
         context->setError(AL_INVALID_VALUE, "Playing %d sources", n);
     if(n <= 0) UNLIKELY return;
@@ -3257,9 +3164,6 @@ FORCE_ALIGN void AL_APIENTRY alSourcePauseDirect(ALCcontext *context, ALuint sou
 FORCE_ALIGN void AL_APIENTRY alSourcePausevDirect(ALCcontext *context, ALsizei n,
     const ALuint *sources) noexcept
 {
-    if(!context) UNLIKELY
-        return;
-
     if(n < 0) UNLIKELY
         context->setError(AL_INVALID_VALUE, "Pausing %d sources", n);
     if(n <= 0) UNLIKELY return;
@@ -3330,9 +3234,6 @@ FORCE_ALIGN void AL_APIENTRY alSourceStopDirect(ALCcontext *context, ALuint sour
 FORCE_ALIGN void AL_APIENTRY alSourceStopvDirect(ALCcontext *context, ALsizei n,
     const ALuint *sources) noexcept
 {
-    if(!context) UNLIKELY
-        return;
-
     if(n < 0) UNLIKELY
         context->setError(AL_INVALID_VALUE, "Stopping %d sources", n);
     if(n <= 0) UNLIKELY return;
@@ -3390,9 +3291,6 @@ FORCE_ALIGN void AL_APIENTRY alSourceRewindDirect(ALCcontext *context, ALuint so
 FORCE_ALIGN void AL_APIENTRY alSourceRewindvDirect(ALCcontext *context, ALsizei n,
     const ALuint *sources) noexcept
 {
-    if(!context) UNLIKELY
-        return;
-
     if(n < 0) UNLIKELY
         context->setError(AL_INVALID_VALUE, "Rewinding %d sources", n);
     if(n <= 0) UNLIKELY return;
@@ -3449,9 +3347,6 @@ FORCE_ALIGN void AL_APIENTRY alSourceRewindvDirect(ALCcontext *context, ALsizei 
 FORCE_ALIGN void AL_APIENTRY alSourceQueueBuffersDirect(ALCcontext *context, ALuint src,
     ALsizei nb, const ALuint *buffers) noexcept
 {
-    if(!context) UNLIKELY
-        return;
-
     if(nb < 0) UNLIKELY
         context->setError(AL_INVALID_VALUE, "Queueing %d buffers", nb);
     if(nb <= 0) UNLIKELY return;
@@ -3576,9 +3471,6 @@ FORCE_ALIGN void AL_APIENTRY alSourceQueueBuffersDirect(ALCcontext *context, ALu
 FORCE_ALIGN void AL_APIENTRY alSourceUnqueueBuffersDirect(ALCcontext *context, ALuint src,
     ALsizei nb, ALuint *buffers) noexcept
 {
-    if(!context) UNLIKELY
-        return;
-
     if(nb < 0) UNLIKELY
         context->setError(AL_INVALID_VALUE, "Unqueueing %d buffers", nb);
     if(nb <= 0) UNLIKELY return;
@@ -3663,10 +3555,18 @@ DECL_FUNCEXT5(void, alGetSource3i64,SOFT, ALuint, ALenum, ALint64SOFT*, ALint64S
 DECL_FUNCEXT3(void, alGetSourcei64v,SOFT, ALuint, ALenum, ALint64SOFT*)
 DECL_FUNC3(void, alSourceQueueBuffers, ALuint, ALsizei, const ALuint*)
 DECL_FUNC3(void, alSourceUnqueueBuffers, ALuint, ALsizei, ALuint*)
-FORCE_ALIGN void AL_APIENTRY alSourcePlayAtTimeSOFT(ALuint source, ALint64SOFT time)
-START_API_FUNC { return alSourcePlayAtTimeDirectSOFT(GetContextRef().get(), source, time); } END_API_FUNC
-FORCE_ALIGN void AL_APIENTRY alSourcePlayAtTimevSOFT(ALsizei n, const ALuint *sources, ALint64SOFT time)
-START_API_FUNC { return alSourcePlayAtTimevDirectSOFT(GetContextRef().get(), n, sources, time); } END_API_FUNC
+FORCE_ALIGN void AL_APIENTRY alSourcePlayAtTimeSOFT(ALuint source, ALint64SOFT time) START_API_FUNC
+{
+    auto context = GetContextRef();
+    if(!context) UNLIKELY return;
+    return alSourcePlayAtTimeDirectSOFT(context.get(), source, time);
+} END_API_FUNC
+FORCE_ALIGN void AL_APIENTRY alSourcePlayAtTimevSOFT(ALsizei n, const ALuint *sources, ALint64SOFT time) START_API_FUNC
+{
+    auto context = GetContextRef();
+    if(!context) UNLIKELY return;
+    return alSourcePlayAtTimevDirectSOFT(context.get(), n, sources, time);
+} END_API_FUNC
 
 AL_API void AL_APIENTRY alSourceQueueBufferLayersSOFT(ALuint, ALsizei, const ALuint*)
 START_API_FUNC

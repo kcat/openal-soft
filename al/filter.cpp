@@ -43,6 +43,7 @@
 #include "almalloc.h"
 #include "alnumeric.h"
 #include "core/except.h"
+#include "direct_defs.h"
 #include "opthelpers.h"
 
 
@@ -401,11 +402,10 @@ inline ALfilter *LookupFilter(ALCdevice *device, ALuint id)
 
 } // namespace
 
-AL_API void AL_APIENTRY alGenFilters(ALsizei n, ALuint *filters)
-START_API_FUNC
+FORCE_ALIGN void AL_APIENTRY alGenFiltersDirect(ALCcontext *context, ALsizei n, ALuint *filters) noexcept
 {
-    ContextRef context{GetContextRef()};
-    if(!context) UNLIKELY return;
+    if(!context) UNLIKELY
+        return;
 
     if(n < 0) UNLIKELY
         context->setError(AL_INVALID_VALUE, "Generating %d filters", n);
@@ -439,13 +439,12 @@ START_API_FUNC
         std::copy(ids.begin(), ids.end(), filters);
     }
 }
-END_API_FUNC
 
-AL_API void AL_APIENTRY alDeleteFilters(ALsizei n, const ALuint *filters)
-START_API_FUNC
+FORCE_ALIGN void AL_APIENTRY alDeleteFiltersDirect(ALCcontext *context, ALsizei n,
+    const ALuint *filters) noexcept
 {
-    ContextRef context{GetContextRef()};
-    if(!context) UNLIKELY return;
+    if(!context) UNLIKELY
+        return;
 
     if(n < 0) UNLIKELY
         context->setError(AL_INVALID_VALUE, "Deleting %d filters", n);
@@ -474,12 +473,9 @@ START_API_FUNC
     };
     std::for_each(filters, filters_end, delete_filter);
 }
-END_API_FUNC
 
-AL_API ALboolean AL_APIENTRY alIsFilter(ALuint filter)
-START_API_FUNC
+FORCE_ALIGN ALboolean AL_APIENTRY alIsFilterDirect(ALCcontext *context, ALuint filter) noexcept
 {
-    ContextRef context{GetContextRef()};
     if(context) LIKELY
     {
         ALCdevice *device{context->mALDevice.get()};
@@ -489,14 +485,13 @@ START_API_FUNC
     }
     return AL_FALSE;
 }
-END_API_FUNC
 
 
-AL_API void AL_APIENTRY alFilteri(ALuint filter, ALenum param, ALint value)
-START_API_FUNC
+FORCE_ALIGN void AL_APIENTRY alFilteriDirect(ALCcontext *context, ALuint filter, ALenum param,
+    ALint value) noexcept
 {
-    ContextRef context{GetContextRef()};
-    if(!context) UNLIKELY return;
+    if(!context) UNLIKELY
+        return;
 
     ALCdevice *device{context->mALDevice.get()};
     std::lock_guard<std::mutex> _{device->FilterLock};
@@ -524,20 +519,19 @@ START_API_FUNC
         }
     }
 }
-END_API_FUNC
 
-AL_API void AL_APIENTRY alFilteriv(ALuint filter, ALenum param, const ALint *values)
-START_API_FUNC
+FORCE_ALIGN void AL_APIENTRY alFilterivDirect(ALCcontext *context, ALuint filter, ALenum param,
+    const ALint *values) noexcept
 {
     switch(param)
     {
     case AL_FILTER_TYPE:
-        alFilteri(filter, param, values[0]);
+        alFilteriDirect(context, filter, param, values[0]);
         return;
     }
 
-    ContextRef context{GetContextRef()};
-    if(!context) UNLIKELY return;
+    if(!context) UNLIKELY
+        return;
 
     ALCdevice *device{context->mALDevice.get()};
     std::lock_guard<std::mutex> _{device->FilterLock};
@@ -554,13 +548,12 @@ START_API_FUNC
         context->setError(e.errorCode(), "%s", e.what());
     }
 }
-END_API_FUNC
 
-AL_API void AL_APIENTRY alFilterf(ALuint filter, ALenum param, ALfloat value)
-START_API_FUNC
+FORCE_ALIGN void AL_APIENTRY alFilterfDirect(ALCcontext *context, ALuint filter, ALenum param,
+    ALfloat value) noexcept
 {
-    ContextRef context{GetContextRef()};
-    if(!context) UNLIKELY return;
+    if(!context) UNLIKELY
+        return;
 
     ALCdevice *device{context->mALDevice.get()};
     std::lock_guard<std::mutex> _{device->FilterLock};
@@ -577,13 +570,12 @@ START_API_FUNC
         context->setError(e.errorCode(), "%s", e.what());
     }
 }
-END_API_FUNC
 
-AL_API void AL_APIENTRY alFilterfv(ALuint filter, ALenum param, const ALfloat *values)
-START_API_FUNC
+FORCE_ALIGN void AL_APIENTRY alFilterfvDirect(ALCcontext *context, ALuint filter, ALenum param,
+    const ALfloat *values) noexcept
 {
-    ContextRef context{GetContextRef()};
-    if(!context) UNLIKELY return;
+    if(!context) UNLIKELY
+        return;
 
     ALCdevice *device{context->mALDevice.get()};
     std::lock_guard<std::mutex> _{device->FilterLock};
@@ -600,13 +592,12 @@ START_API_FUNC
         context->setError(e.errorCode(), "%s", e.what());
     }
 }
-END_API_FUNC
 
-AL_API void AL_APIENTRY alGetFilteri(ALuint filter, ALenum param, ALint *value)
-START_API_FUNC
+FORCE_ALIGN void AL_APIENTRY alGetFilteriDirect(ALCcontext *context, ALuint filter, ALenum param,
+    ALint *value) noexcept
 {
-    ContextRef context{GetContextRef()};
-    if(!context) UNLIKELY return;
+    if(!context) UNLIKELY
+        return;
 
     ALCdevice *device{context->mALDevice.get()};
     std::lock_guard<std::mutex> _{device->FilterLock};
@@ -628,10 +619,9 @@ START_API_FUNC
         }
     }
 }
-END_API_FUNC
 
-AL_API void AL_APIENTRY alGetFilteriv(ALuint filter, ALenum param, ALint *values)
-START_API_FUNC
+FORCE_ALIGN void AL_APIENTRY alGetFilterivDirect(ALCcontext *context, ALuint filter, ALenum param,
+    ALint *values) noexcept
 {
     switch(param)
     {
@@ -640,8 +630,8 @@ START_API_FUNC
         return;
     }
 
-    ContextRef context{GetContextRef()};
-    if(!context) UNLIKELY return;
+    if(!context) UNLIKELY
+        return;
 
     ALCdevice *device{context->mALDevice.get()};
     std::lock_guard<std::mutex> _{device->FilterLock};
@@ -658,13 +648,12 @@ START_API_FUNC
         context->setError(e.errorCode(), "%s", e.what());
     }
 }
-END_API_FUNC
 
-AL_API void AL_APIENTRY alGetFilterf(ALuint filter, ALenum param, ALfloat *value)
-START_API_FUNC
+FORCE_ALIGN void AL_APIENTRY alGetFilterfDirect(ALCcontext *context, ALuint filter, ALenum param,
+    ALfloat *value) noexcept
 {
-    ContextRef context{GetContextRef()};
-    if(!context) UNLIKELY return;
+    if(!context) UNLIKELY
+        return;
 
     ALCdevice *device{context->mALDevice.get()};
     std::lock_guard<std::mutex> _{device->FilterLock};
@@ -681,13 +670,12 @@ START_API_FUNC
         context->setError(e.errorCode(), "%s", e.what());
     }
 }
-END_API_FUNC
 
-AL_API void AL_APIENTRY alGetFilterfv(ALuint filter, ALenum param, ALfloat *values)
-START_API_FUNC
+FORCE_ALIGN void AL_APIENTRY alGetFilterfvDirect(ALCcontext *context, ALuint filter, ALenum param,
+    ALfloat *values) noexcept
 {
-    ContextRef context{GetContextRef()};
-    if(!context) UNLIKELY return;
+    if(!context) UNLIKELY
+        return;
 
     ALCdevice *device{context->mALDevice.get()};
     std::lock_guard<std::mutex> _{device->FilterLock};
@@ -704,7 +692,18 @@ START_API_FUNC
         context->setError(e.errorCode(), "%s", e.what());
     }
 }
-END_API_FUNC
+
+DECL_FUNC2(void, alGenFilters, ALsizei, ALuint*)
+DECL_FUNC2(void, alDeleteFilters, ALsizei, const ALuint*)
+DECL_FUNC1(ALboolean, alIsFilter, ALuint)
+DECL_FUNC3(void, alFilterf, ALuint, ALenum, ALfloat)
+DECL_FUNC3(void, alFilterfv, ALuint, ALenum, const ALfloat*)
+DECL_FUNC3(void, alFilteri, ALuint, ALenum, ALint)
+DECL_FUNC3(void, alFilteriv, ALuint, ALenum, const ALint*)
+DECL_FUNC3(void, alGetFilterf, ALuint, ALenum, ALfloat*)
+DECL_FUNC3(void, alGetFilterfv, ALuint, ALenum, ALfloat*)
+DECL_FUNC3(void, alGetFilteri, ALuint, ALenum, ALint*)
+DECL_FUNC3(void, alGetFilteriv, ALuint, ALenum, ALint*)
 
 
 FilterSubList::~FilterSubList()

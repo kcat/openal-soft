@@ -25,6 +25,12 @@ R AL_API Name(T1 a, T2 b, T3 c) START_API_FUNC                                \
     return Name##Direct(GetContextRef().get(), a, b, c);                      \
 } END_API_FUNC
 
+#define DECL_FUNC4(R, Name, T1, T2, T3, T4)                                   \
+R AL_API Name(T1 a, T2 b, T3 c, T4 d) START_API_FUNC                          \
+{                                                                             \
+    return Name##Direct(GetContextRef().get(), a, b, c, d);                   \
+} END_API_FUNC
+
 #define DECL_FUNC5(R, Name, T1, T2, T3, T4, T5)                               \
 R AL_API Name(T1 a, T2 b, T3 c, T4 d, T5 e) START_API_FUNC                    \
 {                                                                             \

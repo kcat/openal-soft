@@ -490,6 +490,19 @@ const struct {
     DECL(alGetProcAddress),
     DECL(alGetEnumValueDirect),
 
+    DECL(alListeneriDirect),
+    DECL(alListener3iDirect),
+    DECL(alListenerivDirect),
+    DECL(alListenerfDirect),
+    DECL(alListener3fDirect),
+    DECL(alListenerfvDirect),
+    DECL(alGetListeneriDirect),
+    DECL(alGetListener3iDirect),
+    DECL(alGetListenerivDirect),
+    DECL(alGetListenerfDirect),
+    DECL(alGetListener3fDirect),
+    DECL(alGetListenerfvDirect),
+
     DECL(alGenBuffersDirect),
     DECL(alDeleteBuffersDirect),
     DECL(alIsBufferDirect),
@@ -560,6 +573,8 @@ const struct {
     DECL(alSourcePlayAtTimeDirectSOFT),
     DECL(alSourcePlayAtTimevDirectSOFT),
 
+    DECL(alEventControlDirectSOFT),
+    DECL(alEventCallbackDirectSOFT),
 #ifdef ALSOFT_EAX
 }, eaxFunctions[] = {
     DECL(EAXGet),

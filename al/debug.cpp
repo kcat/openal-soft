@@ -259,9 +259,6 @@ FORCE_ALIGN void AL_APIENTRY alDebugMessageInsertEXT(ALenum source, ALenum type,
 FORCE_ALIGN void AL_APIENTRY alDebugMessageInsertDirectEXT(ALCcontext *context, ALenum source,
     ALenum type, ALuint id, ALenum severity, ALsizei length, const ALchar *message) noexcept
 {
-    if(!context) UNLIKELY
-        return;
-
     if(!context->mContextFlags.test(ContextFlags::DebugBit))
         return;
 

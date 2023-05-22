@@ -3555,28 +3555,16 @@ AL_API DECL_FUNCEXT5(void, alGetSource3i64,SOFT, ALuint, ALenum, ALint64SOFT*, A
 AL_API DECL_FUNCEXT3(void, alGetSourcei64v,SOFT, ALuint, ALenum, ALint64SOFT*)
 AL_API DECL_FUNC3(void, alSourceQueueBuffers, ALuint, ALsizei, const ALuint*)
 AL_API DECL_FUNC3(void, alSourceUnqueueBuffers, ALuint, ALsizei, ALuint*)
-FORCE_ALIGN void AL_APIENTRY alSourcePlayAtTimeSOFT(ALuint source, ALint64SOFT time) START_API_FUNC
-{
-    auto context = GetContextRef();
-    if(!context) UNLIKELY return;
-    return alSourcePlayAtTimeDirectSOFT(context.get(), source, time);
-} END_API_FUNC
-FORCE_ALIGN void AL_APIENTRY alSourcePlayAtTimevSOFT(ALsizei n, const ALuint *sources, ALint64SOFT time) START_API_FUNC
-{
-    auto context = GetContextRef();
-    if(!context) UNLIKELY return;
-    return alSourcePlayAtTimevDirectSOFT(context.get(), n, sources, time);
-} END_API_FUNC
+FORCE_ALIGN DECL_FUNCEXT2(void, alSourcePlayAtTime,SOFT, ALuint, ALint64SOFT)
+FORCE_ALIGN DECL_FUNCEXT3(void, alSourcePlayAtTimev,SOFT, ALsizei, const ALuint*, ALint64SOFT)
 
-AL_API void AL_APIENTRY alSourceQueueBufferLayersSOFT(ALuint, ALsizei, const ALuint*)
-START_API_FUNC
+AL_API void AL_APIENTRY alSourceQueueBufferLayersSOFT(ALuint, ALsizei, const ALuint*) noexcept
 {
     ContextRef context{GetContextRef()};
     if(!context) UNLIKELY return;
 
     context->setError(AL_INVALID_OPERATION, "alSourceQueueBufferLayersSOFT not supported");
 }
-END_API_FUNC
 
 
 ALsource::ALsource()

@@ -339,14 +339,14 @@ struct AudioState {
     }
 
     static void AL_APIENTRY eventCallbackC(ALenum eventType, ALuint object, ALuint param,
-        ALsizei length, const ALchar *message, void *userParam)
+        ALsizei length, const ALchar *message, void *userParam) noexcept
     { static_cast<AudioState*>(userParam)->eventCallback(eventType, object, param, length, message); }
     void eventCallback(ALenum eventType, ALuint object, ALuint param, ALsizei length,
-        const ALchar *message);
+        const ALchar *message) noexcept;
 
-    static ALsizei AL_APIENTRY bufferCallbackC(void *userptr, void *data, ALsizei size)
+    static ALsizei AL_APIENTRY bufferCallbackC(void *userptr, void *data, ALsizei size) noexcept
     { return static_cast<AudioState*>(userptr)->bufferCallback(data, size); }
-    ALsizei bufferCallback(void *data, ALsizei size);
+    ALsizei bufferCallback(void *data, ALsizei size) noexcept;
 
     nanoseconds getClockNoLock();
     nanoseconds getClock()
@@ -840,7 +840,7 @@ bool AudioState::readAudio(int sample_skip)
 
 
 void AL_APIENTRY AudioState::eventCallback(ALenum eventType, ALuint object, ALuint param,
-    ALsizei length, const ALchar *message)
+    ALsizei length, const ALchar *message) noexcept
 {
     if(eventType == AL_EVENT_TYPE_BUFFER_COMPLETED_SOFT)
     {
@@ -878,7 +878,7 @@ void AL_APIENTRY AudioState::eventCallback(ALenum eventType, ALuint object, ALui
     }
 }
 
-ALsizei AudioState::bufferCallback(void *data, ALsizei size)
+ALsizei AudioState::bufferCallback(void *data, ALsizei size) noexcept
 {
     ALsizei got{0};
 

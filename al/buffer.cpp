@@ -721,14 +721,12 @@ FORCE_ALIGN ALboolean AL_APIENTRY alIsBufferDirect(ALCcontext *context, ALuint b
 }
 
 
-AL_API void AL_APIENTRY alBufferData(ALuint buffer, ALenum format, const ALvoid *data, ALsizei size, ALsizei freq)
-START_API_FUNC
+AL_API void AL_APIENTRY alBufferData(ALuint buffer, ALenum format, const ALvoid *data, ALsizei size, ALsizei freq) noexcept
 {
     auto context = GetContextRef();
     if(!context) UNLIKELY return;
     alBufferStorageDirectSOFT(context.get(), buffer, format, data, size, freq, 0);
 }
-END_API_FUNC
 
 FORCE_ALIGN void AL_APIENTRY alBufferDataDirect(ALCcontext *context, ALuint buffer, ALenum format, const ALvoid *data, ALsizei size, ALsizei freq) noexcept
 { alBufferStorageDirectSOFT(context, buffer, format, data, size, freq, 0); }
@@ -1409,40 +1407,33 @@ AL_API DECL_FUNCEXT3(void, alGetBufferPtrv,SOFT, ALuint, ALenum, ALvoid**)
 
 AL_API void AL_APIENTRY alBufferSamplesSOFT(ALuint /*buffer*/, ALuint /*samplerate*/,
     ALenum /*internalformat*/, ALsizei /*samples*/, ALenum /*channels*/, ALenum /*type*/,
-    const ALvoid* /*data*/)
-START_API_FUNC
+    const ALvoid* /*data*/) noexcept
 {
     ContextRef context{GetContextRef()};
     if(!context) UNLIKELY return;
 
     context->setError(AL_INVALID_OPERATION, "alBufferSamplesSOFT not supported");
 }
-END_API_FUNC
 
 AL_API void AL_APIENTRY alBufferSubSamplesSOFT(ALuint /*buffer*/, ALsizei /*offset*/,
-    ALsizei /*samples*/, ALenum /*channels*/, ALenum /*type*/, const ALvoid* /*data*/)
-START_API_FUNC
+    ALsizei /*samples*/, ALenum /*channels*/, ALenum /*type*/, const ALvoid* /*data*/) noexcept
 {
     ContextRef context{GetContextRef()};
     if(!context) UNLIKELY return;
 
     context->setError(AL_INVALID_OPERATION, "alBufferSubSamplesSOFT not supported");
 }
-END_API_FUNC
 
 AL_API void AL_APIENTRY alGetBufferSamplesSOFT(ALuint /*buffer*/, ALsizei /*offset*/,
-    ALsizei /*samples*/, ALenum /*channels*/, ALenum /*type*/, ALvoid* /*data*/)
-START_API_FUNC
+    ALsizei /*samples*/, ALenum /*channels*/, ALenum /*type*/, ALvoid* /*data*/) noexcept
 {
     ContextRef context{GetContextRef()};
     if(!context) UNLIKELY return;
 
     context->setError(AL_INVALID_OPERATION, "alGetBufferSamplesSOFT not supported");
 }
-END_API_FUNC
 
-AL_API ALboolean AL_APIENTRY alIsBufferFormatSupportedSOFT(ALenum /*format*/)
-START_API_FUNC
+AL_API ALboolean AL_APIENTRY alIsBufferFormatSupportedSOFT(ALenum /*format*/) noexcept
 {
     ContextRef context{GetContextRef()};
     if(!context) UNLIKELY return AL_FALSE;
@@ -1450,7 +1441,6 @@ START_API_FUNC
     context->setError(AL_INVALID_OPERATION, "alIsBufferFormatSupportedSOFT not supported");
     return AL_FALSE;
 }
-END_API_FUNC
 
 
 BufferSubList::~BufferSubList()

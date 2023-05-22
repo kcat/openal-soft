@@ -93,7 +93,7 @@ void ALCcontext::setError(ALenum errorCode, const char *msg, ...)
 /* Special-case alGetError since it (potentially) raises a debug signal and
  * returns a non-default value for a null context.
  */
-AL_API ALenum AL_APIENTRY alGetError(void) START_API_FUNC
+AL_API ALenum AL_APIENTRY alGetError(void) noexcept
 {
     auto context = GetContextRef();
     if(!context) UNLIKELY
@@ -112,7 +112,7 @@ AL_API ALenum AL_APIENTRY alGetError(void) START_API_FUNC
         return deferror;
     }
     return alGetErrorDirect(context.get());
-} END_API_FUNC
+}
 
 FORCE_ALIGN ALenum AL_APIENTRY alGetErrorDirect(ALCcontext *context) noexcept
 {

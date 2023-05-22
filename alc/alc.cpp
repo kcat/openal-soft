@@ -2759,18 +2759,15 @@ ContextRef GetContextRef(void)
  * Standard ALC functions
  ************************************************/
 
-ALC_API ALCenum ALC_APIENTRY alcGetError(ALCdevice *device)
-START_API_FUNC
+ALC_API ALCenum ALC_APIENTRY alcGetError(ALCdevice *device) noexcept
 {
     DeviceRef dev{VerifyDevice(device)};
     if(dev) return dev->LastError.exchange(ALC_NO_ERROR);
     return LastNullDeviceError.exchange(ALC_NO_ERROR);
 }
-END_API_FUNC
 
 
-ALC_API void ALC_APIENTRY alcSuspendContext(ALCcontext *context)
-START_API_FUNC
+ALC_API void ALC_APIENTRY alcSuspendContext(ALCcontext *context) noexcept
 {
     ContextRef ctx{VerifyContext(context)};
     if(!ctx)
@@ -2792,10 +2789,8 @@ START_API_FUNC
         ctx->deferUpdates();
     }
 }
-END_API_FUNC
 
-ALC_API void ALC_APIENTRY alcProcessContext(ALCcontext *context)
-START_API_FUNC
+ALC_API void ALC_APIENTRY alcProcessContext(ALCcontext *context) noexcept
 {
     ContextRef ctx{VerifyContext(context)};
     if(!ctx)
@@ -2817,11 +2812,9 @@ START_API_FUNC
         ctx->processUpdates();
     }
 }
-END_API_FUNC
 
 
-ALC_API const ALCchar* ALC_APIENTRY alcGetString(ALCdevice *Device, ALCenum param)
-START_API_FUNC
+ALC_API const ALCchar* ALC_APIENTRY alcGetString(ALCdevice *Device, ALCenum param) noexcept
 {
     const ALCchar *value{nullptr};
 
@@ -2940,7 +2933,6 @@ START_API_FUNC
 
     return value;
 }
-END_API_FUNC
 
 
 static size_t GetIntegerv(ALCdevice *device, ALCenum param, const al::span<int> values)
@@ -3264,8 +3256,7 @@ static size_t GetIntegerv(ALCdevice *device, ALCenum param, const al::span<int> 
     return 0;
 }
 
-ALC_API void ALC_APIENTRY alcGetIntegerv(ALCdevice *device, ALCenum param, ALCsizei size, ALCint *values)
-START_API_FUNC
+ALC_API void ALC_APIENTRY alcGetIntegerv(ALCdevice *device, ALCenum param, ALCsizei size, ALCint *values) noexcept
 {
     DeviceRef dev{VerifyDevice(device)};
     if(size <= 0 || values == nullptr)
@@ -3273,10 +3264,8 @@ START_API_FUNC
     else
         GetIntegerv(dev.get(), param, {values, static_cast<uint>(size)});
 }
-END_API_FUNC
 
-ALC_API void ALC_APIENTRY alcGetInteger64vSOFT(ALCdevice *device, ALCenum pname, ALCsizei size, ALCint64SOFT *values)
-START_API_FUNC
+ALC_API void ALC_APIENTRY alcGetInteger64vSOFT(ALCdevice *device, ALCenum pname, ALCsizei size, ALCint64SOFT *values) noexcept
 {
     DeviceRef dev{VerifyDevice(device)};
     if(size <= 0 || values == nullptr)
@@ -3411,11 +3400,9 @@ START_API_FUNC
         break;
     }
 }
-END_API_FUNC
 
 
-ALC_API ALCboolean ALC_APIENTRY alcIsExtensionPresent(ALCdevice *device, const ALCchar *extName)
-START_API_FUNC
+ALC_API ALCboolean ALC_APIENTRY alcIsExtensionPresent(ALCdevice *device, const ALCchar *extName) noexcept
 {
     DeviceRef dev{VerifyDevice(device)};
     if(!extName)
@@ -3439,11 +3426,9 @@ START_API_FUNC
     }
     return ALC_FALSE;
 }
-END_API_FUNC
 
 
-ALC_API ALCvoid* ALC_APIENTRY alcGetProcAddress(ALCdevice *device, const ALCchar *funcName)
-START_API_FUNC
+ALC_API ALCvoid* ALC_APIENTRY alcGetProcAddress(ALCdevice *device, const ALCchar *funcName) noexcept
 {
     if(!funcName)
     {
@@ -3468,11 +3453,9 @@ START_API_FUNC
     }
     return nullptr;
 }
-END_API_FUNC
 
 
-ALC_API ALCenum ALC_APIENTRY alcGetEnumValue(ALCdevice *device, const ALCchar *enumName)
-START_API_FUNC
+ALC_API ALCenum ALC_APIENTRY alcGetEnumValue(ALCdevice *device, const ALCchar *enumName) noexcept
 {
     if(!enumName)
     {
@@ -3498,11 +3481,9 @@ START_API_FUNC
 
     return 0;
 }
-END_API_FUNC
 
 
-ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCint *attrList)
-START_API_FUNC
+ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCint *attrList) noexcept
 {
     /* Explicitly hold the list lock while taking the StateLock in case the
      * device is asynchronously destroyed, to ensure this new context is
@@ -3606,10 +3587,8 @@ START_API_FUNC
     TRACE("Created context %p\n", voidp{context.get()});
     return context.release();
 }
-END_API_FUNC
 
-ALC_API void ALC_APIENTRY alcDestroyContext(ALCcontext *context)
-START_API_FUNC
+ALC_API void ALC_APIENTRY alcDestroyContext(ALCcontext *context) noexcept
 {
     std::unique_lock<std::recursive_mutex> listlock{ListLock};
     auto iter = std::lower_bound(ContextList.begin(), ContextList.end(), context);
@@ -3635,26 +3614,20 @@ START_API_FUNC
         Device->Flags.reset(DeviceRunning);
     }
 }
-END_API_FUNC
 
 
-ALC_API ALCcontext* ALC_APIENTRY alcGetCurrentContext(void)
-START_API_FUNC
+ALC_API ALCcontext* ALC_APIENTRY alcGetCurrentContext(void) noexcept
 {
     ALCcontext *Context{ALCcontext::getThreadContext()};
     if(!Context) Context = ALCcontext::sGlobalContext.load();
     return Context;
 }
-END_API_FUNC
 
 /** Returns the currently active thread-local context. */
-ALC_API ALCcontext* ALC_APIENTRY alcGetThreadContext(void)
-START_API_FUNC
+ALC_API ALCcontext* ALC_APIENTRY alcGetThreadContext(void) noexcept
 { return ALCcontext::getThreadContext(); }
-END_API_FUNC
 
-ALC_API ALCboolean ALC_APIENTRY alcMakeContextCurrent(ALCcontext *context)
-START_API_FUNC
+ALC_API ALCboolean ALC_APIENTRY alcMakeContextCurrent(ALCcontext *context) noexcept
 {
     /* context must be valid or nullptr */
     ContextRef ctx;
@@ -3688,11 +3661,9 @@ START_API_FUNC
 
     return ALC_TRUE;
 }
-END_API_FUNC
 
 /** Makes the given context the active context for the current thread. */
-ALC_API ALCboolean ALC_APIENTRY alcSetThreadContext(ALCcontext *context)
-START_API_FUNC
+ALC_API ALCboolean ALC_APIENTRY alcSetThreadContext(ALCcontext *context) noexcept
 {
     /* context must be valid or nullptr */
     ContextRef ctx;
@@ -3711,11 +3682,9 @@ START_API_FUNC
 
     return ALC_TRUE;
 }
-END_API_FUNC
 
 
-ALC_API ALCdevice* ALC_APIENTRY alcGetContextsDevice(ALCcontext *Context)
-START_API_FUNC
+ALC_API ALCdevice* ALC_APIENTRY alcGetContextsDevice(ALCcontext *Context) noexcept
 {
     ContextRef ctx{VerifyContext(Context)};
     if(!ctx)
@@ -3725,11 +3694,9 @@ START_API_FUNC
     }
     return ctx->mALDevice.get();
 }
-END_API_FUNC
 
 
-ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
-START_API_FUNC
+ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName) noexcept
 {
     InitConfig();
 
@@ -3807,10 +3774,8 @@ START_API_FUNC
     TRACE("Created device %p, \"%s\"\n", voidp{device.get()}, device->DeviceName.c_str());
     return device.release();
 }
-END_API_FUNC
 
-ALC_API ALCboolean ALC_APIENTRY alcCloseDevice(ALCdevice *device)
-START_API_FUNC
+ALC_API ALCboolean ALC_APIENTRY alcCloseDevice(ALCdevice *device) noexcept
 {
     std::unique_lock<std::recursive_mutex> listlock{ListLock};
     auto iter = std::lower_bound(DeviceList.begin(), DeviceList.end(), device);
@@ -3857,14 +3822,12 @@ START_API_FUNC
 
     return ALC_TRUE;
 }
-END_API_FUNC
 
 
 /************************************************
  * ALC capture functions
  ************************************************/
-ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, ALCuint frequency, ALCenum format, ALCsizei samples)
-START_API_FUNC
+ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, ALCuint frequency, ALCenum format, ALCsizei samples) noexcept
 {
     InitConfig();
 
@@ -3935,10 +3898,8 @@ START_API_FUNC
     TRACE("Created capture device %p, \"%s\"\n", voidp{device.get()}, device->DeviceName.c_str());
     return device.release();
 }
-END_API_FUNC
 
-ALC_API ALCboolean ALC_APIENTRY alcCaptureCloseDevice(ALCdevice *device)
-START_API_FUNC
+ALC_API ALCboolean ALC_APIENTRY alcCaptureCloseDevice(ALCdevice *device) noexcept
 {
     std::unique_lock<std::recursive_mutex> listlock{ListLock};
     auto iter = std::lower_bound(DeviceList.begin(), DeviceList.end(), device);
@@ -3964,10 +3925,8 @@ START_API_FUNC
 
     return ALC_TRUE;
 }
-END_API_FUNC
 
-ALC_API void ALC_APIENTRY alcCaptureStart(ALCdevice *device)
-START_API_FUNC
+ALC_API void ALC_APIENTRY alcCaptureStart(ALCdevice *device) noexcept
 {
     DeviceRef dev{VerifyDevice(device)};
     if(!dev || dev->Type != DeviceType::Capture)
@@ -3993,10 +3952,8 @@ START_API_FUNC
         }
     }
 }
-END_API_FUNC
 
-ALC_API void ALC_APIENTRY alcCaptureStop(ALCdevice *device)
-START_API_FUNC
+ALC_API void ALC_APIENTRY alcCaptureStop(ALCdevice *device) noexcept
 {
     DeviceRef dev{VerifyDevice(device)};
     if(!dev || dev->Type != DeviceType::Capture)
@@ -4009,10 +3966,8 @@ START_API_FUNC
         dev->Flags.reset(DeviceRunning);
     }
 }
-END_API_FUNC
 
-ALC_API void ALC_APIENTRY alcCaptureSamples(ALCdevice *device, ALCvoid *buffer, ALCsizei samples)
-START_API_FUNC
+ALC_API void ALC_APIENTRY alcCaptureSamples(ALCdevice *device, ALCvoid *buffer, ALCsizei samples) noexcept
 {
     DeviceRef dev{VerifyDevice(device)};
     if(!dev || dev->Type != DeviceType::Capture)
@@ -4041,7 +3996,6 @@ START_API_FUNC
 
     backend->captureSamples(static_cast<std::byte*>(buffer), usamples);
 }
-END_API_FUNC
 
 
 /************************************************
@@ -4049,8 +4003,7 @@ END_API_FUNC
  ************************************************/
 
 /** Open a loopback device, for manual rendering. */
-ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(const ALCchar *deviceName)
-START_API_FUNC
+ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(const ALCchar *deviceName) noexcept
 {
     InitConfig();
 
@@ -4107,13 +4060,11 @@ START_API_FUNC
     TRACE("Created loopback device %p\n", voidp{device.get()});
     return device.release();
 }
-END_API_FUNC
 
 /**
  * Determines if the loopback device supports the given format for rendering.
  */
-ALC_API ALCboolean ALC_APIENTRY alcIsRenderFormatSupportedSOFT(ALCdevice *device, ALCsizei freq, ALCenum channels, ALCenum type)
-START_API_FUNC
+ALC_API ALCboolean ALC_APIENTRY alcIsRenderFormatSupportedSOFT(ALCdevice *device, ALCsizei freq, ALCenum channels, ALCenum type) noexcept
 {
     DeviceRef dev{VerifyDevice(device)};
     if(!dev || dev->Type != DeviceType::Loopback)
@@ -4129,14 +4080,12 @@ START_API_FUNC
 
     return ALC_FALSE;
 }
-END_API_FUNC
 
 /**
  * Renders some samples into a buffer, using the format last set by the
  * attributes given to alcCreateContext.
  */
-FORCE_ALIGN ALC_API void ALC_APIENTRY alcRenderSamplesSOFT(ALCdevice *device, ALCvoid *buffer, ALCsizei samples)
-START_API_FUNC
+FORCE_ALIGN ALC_API void ALC_APIENTRY alcRenderSamplesSOFT(ALCdevice *device, ALCvoid *buffer, ALCsizei samples) noexcept
 {
     if(!device || device->Type != DeviceType::Loopback)
         alcSetError(device, ALC_INVALID_DEVICE);
@@ -4145,7 +4094,6 @@ START_API_FUNC
     else
         device->renderSamples(buffer, static_cast<uint>(samples), device->channelsFromFmt());
 }
-END_API_FUNC
 
 
 /************************************************
@@ -4153,8 +4101,7 @@ END_API_FUNC
  ************************************************/
 
 /** Pause the DSP to stop audio processing. */
-ALC_API void ALC_APIENTRY alcDevicePauseSOFT(ALCdevice *device)
-START_API_FUNC
+ALC_API void ALC_APIENTRY alcDevicePauseSOFT(ALCdevice *device) noexcept
 {
     DeviceRef dev{VerifyDevice(device)};
     if(!dev || dev->Type != DeviceType::Playback)
@@ -4168,11 +4115,9 @@ START_API_FUNC
         dev->Flags.set(DevicePaused);
     }
 }
-END_API_FUNC
 
 /** Resume the DSP to restart audio processing. */
-ALC_API void ALC_APIENTRY alcDeviceResumeSOFT(ALCdevice *device)
-START_API_FUNC
+ALC_API void ALC_APIENTRY alcDeviceResumeSOFT(ALCdevice *device) noexcept
 {
     DeviceRef dev{VerifyDevice(device)};
     if(!dev || dev->Type != DeviceType::Playback)
@@ -4203,7 +4148,6 @@ START_API_FUNC
         DevFmtChannelsString(device->FmtChans), DevFmtTypeString(device->FmtType),
         device->Frequency, device->UpdateSize, device->BufferSize);
 }
-END_API_FUNC
 
 
 /************************************************
@@ -4211,8 +4155,7 @@ END_API_FUNC
  ************************************************/
 
 /** Gets a string parameter at the given index. */
-ALC_API const ALCchar* ALC_APIENTRY alcGetStringiSOFT(ALCdevice *device, ALCenum paramName, ALCsizei index)
-START_API_FUNC
+ALC_API const ALCchar* ALC_APIENTRY alcGetStringiSOFT(ALCdevice *device, ALCenum paramName, ALCsizei index) noexcept
 {
     DeviceRef dev{VerifyDevice(device)};
     if(!dev || dev->Type == DeviceType::Capture)
@@ -4232,11 +4175,9 @@ START_API_FUNC
 
     return nullptr;
 }
-END_API_FUNC
 
 /** Resets the given device output, using the specified attribute list. */
-ALC_API ALCboolean ALC_APIENTRY alcResetDeviceSOFT(ALCdevice *device, const ALCint *attribs)
-START_API_FUNC
+ALC_API ALCboolean ALC_APIENTRY alcResetDeviceSOFT(ALCdevice *device, const ALCint *attribs) noexcept
 {
     std::unique_lock<std::recursive_mutex> listlock{ListLock};
     DeviceRef dev{VerifyDevice(device)};
@@ -4258,7 +4199,6 @@ START_API_FUNC
 
     return ResetDeviceParams(dev.get(), attribs) ? ALC_TRUE : ALC_FALSE;
 }
-END_API_FUNC
 
 
 /************************************************
@@ -4267,8 +4207,7 @@ END_API_FUNC
 
 /** Reopens the given device output, using the specified name and attribute list. */
 FORCE_ALIGN ALCboolean ALC_APIENTRY alcReopenDeviceSOFT(ALCdevice *device,
-    const ALCchar *deviceName, const ALCint *attribs)
-START_API_FUNC
+    const ALCchar *deviceName, const ALCint *attribs) noexcept
 {
     if(deviceName)
     {
@@ -4343,4 +4282,3 @@ START_API_FUNC
     ResetDeviceParams(dev.get(), attribs);
     return ALC_TRUE;
 }
-END_API_FUNC

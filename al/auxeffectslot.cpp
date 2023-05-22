@@ -420,8 +420,7 @@ FORCE_ALIGN ALboolean AL_APIENTRY alIsAuxiliaryEffectSlotDirect(ALCcontext *cont
 }
 
 
-AL_API void AL_APIENTRY alAuxiliaryEffectSlotPlaySOFT(ALuint slotid)
-START_API_FUNC
+AL_API void AL_APIENTRY alAuxiliaryEffectSlotPlaySOFT(ALuint slotid) noexcept
 {
     ContextRef context{GetContextRef()};
     if(!context) UNLIKELY return;
@@ -442,10 +441,8 @@ START_API_FUNC
     AddActiveEffectSlots({&slot, 1}, context.get());
     slot->mState = SlotState::Playing;
 }
-END_API_FUNC
 
-AL_API void AL_APIENTRY alAuxiliaryEffectSlotPlayvSOFT(ALsizei n, const ALuint *slotids)
-START_API_FUNC
+AL_API void AL_APIENTRY alAuxiliaryEffectSlotPlayvSOFT(ALsizei n, const ALuint *slotids) noexcept
 {
     ContextRef context{GetContextRef()};
     if(!context) UNLIKELY return;
@@ -477,10 +474,8 @@ START_API_FUNC
     for(auto slot : slots)
         slot->mState = SlotState::Playing;
 }
-END_API_FUNC
 
-AL_API void AL_APIENTRY alAuxiliaryEffectSlotStopSOFT(ALuint slotid)
-START_API_FUNC
+AL_API void AL_APIENTRY alAuxiliaryEffectSlotStopSOFT(ALuint slotid) noexcept
 {
     ContextRef context{GetContextRef()};
     if(!context) UNLIKELY return;
@@ -496,10 +491,8 @@ START_API_FUNC
     RemoveActiveEffectSlots({&slot, 1}, context.get());
     slot->mState = SlotState::Stopped;
 }
-END_API_FUNC
 
-AL_API void AL_APIENTRY alAuxiliaryEffectSlotStopvSOFT(ALsizei n, const ALuint *slotids)
-START_API_FUNC
+AL_API void AL_APIENTRY alAuxiliaryEffectSlotStopvSOFT(ALsizei n, const ALuint *slotids) noexcept
 {
     ContextRef context{GetContextRef()};
     if(!context) UNLIKELY return;
@@ -526,7 +519,6 @@ START_API_FUNC
     for(auto slot : slots)
         slot->mState = SlotState::Stopped;
 }
-END_API_FUNC
 
 
 FORCE_ALIGN void AL_APIENTRY alAuxiliaryEffectSlotiDirect(ALCcontext *context, ALuint effectslot,

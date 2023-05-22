@@ -276,9 +276,9 @@ struct StreamPlayer {
      * but it allows the callback implementation to have a nice 'this' pointer
      * with normal member access.
      */
-    static ALsizei AL_APIENTRY bufferCallbackC(void *userptr, void *data, ALsizei size)
+    static ALsizei AL_APIENTRY bufferCallbackC(void *userptr, void *data, ALsizei size) noexcept
     { return static_cast<StreamPlayer*>(userptr)->bufferCallback(data, size); }
-    ALsizei bufferCallback(void *data, ALsizei size)
+    ALsizei bufferCallback(void *data, ALsizei size) noexcept
     {
         /* NOTE: The callback *MUST* be real-time safe! That means no blocking,
          * no allocations or deallocations, no I/O, no page faults, or calls to

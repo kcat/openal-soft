@@ -54,7 +54,7 @@ FORCE_ALIGN ALboolean AL_APIENTRY alIsExtensionPresentDirect(ALCcontext *context
 }
 
 
-AL_API ALvoid* AL_APIENTRY alGetProcAddress(const ALchar *funcName)
+AL_API ALvoid* AL_APIENTRY alGetProcAddress(const ALchar *funcName) noexcept
 {
     if(!funcName) return nullptr;
     return alcGetProcAddress(nullptr, funcName);
@@ -66,7 +66,7 @@ FORCE_ALIGN ALvoid* AL_APIENTRY alGetProcAddressDirect(ALCcontext*, const ALchar
     return alcGetProcAddress(nullptr, funcName);
 }
 
-AL_API ALenum AL_APIENTRY alGetEnumValue(const ALchar *enumName)
+AL_API ALenum AL_APIENTRY alGetEnumValue(const ALchar *enumName) noexcept
 {
     if(!enumName) return static_cast<ALenum>(0);
     return alcGetEnumValue(nullptr, enumName);

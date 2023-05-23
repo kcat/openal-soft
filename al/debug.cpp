@@ -168,28 +168,15 @@ const char *GetDebugSeverityName(DebugSeverity severity)
 
 
 void ALCcontext::sendDebugMessage(std::unique_lock<std::mutex> &debuglock, DebugSource source,
-    DebugType type, ALuint id, DebugSeverity severity, ALsizei length, const char *message)
+    DebugType type, ALuint id, DebugSeverity severity, std::string_view message)
 {
     if(!mDebugEnabled.load()) UNLIKELY
         return;
 
-    /* MaxDebugMessageLength is the size including the null terminator,
-     * <length> does not include the null terminator.
-     */
-    if(length < 0)
+    if(message.length() >= MaxDebugMessageLength) UNLIKELY
     {
-        size_t newlen{std::strlen(message)};
-        if(newlen >= MaxDebugMessageLength) UNLIKELY
-        {
-            ERR("Debug message too long (%zu >= %d):\n-> %s\n", newlen, MaxDebugMessageLength,
-                message);
-            return;
-        }
-        length = static_cast<ALsizei>(newlen);
-    }
-    else if(length >= MaxDebugMessageLength) UNLIKELY
-    {
-        ERR("Debug message too long (%d >= %d):\n-> %s\n", length, MaxDebugMessageLength, message);
+        ERR("Debug message too long (%zu >= %d):\n-> %s\n", message.length(),
+            MaxDebugMessageLength, message.data());
         return;
     }
 
@@ -215,7 +202,8 @@ void ALCcontext::sendDebugMessage(std::unique_lock<std::mutex> &debuglock, Debug
         auto param = mDebugParam;
         debuglock.unlock();
         callback(GetDebugSourceEnum(source), GetDebugTypeEnum(type), id,
-            GetDebugSeverityEnum(severity), length, message, param);
+            GetDebugSeverityEnum(severity), static_cast<ALsizei>(message.length()), message.data(),
+            param);
     }
     else
     {
@@ -229,7 +217,7 @@ void ALCcontext::sendDebugMessage(std::unique_lock<std::mutex> &debuglock, Debug
                 "  Severity: %s\n"
                 "  Message: \"%s\"\n",
                 GetDebugSourceName(source), GetDebugTypeName(type), id,
-                GetDebugSeverityName(severity), message);
+                GetDebugSeverityName(severity), message.data());
     }
 }
 
@@ -251,20 +239,32 @@ FORCE_ALIGN void AL_APIENTRY alDebugMessageInsertDirectEXT(ALCcontext *context, 
     if(!context->mContextFlags.test(ContextFlags::DebugBit))
         return;
 
-    if(!message)
+    if(!message) UNLIKELY
         return context->setError(AL_INVALID_VALUE, "Null message pointer");
 
-    if(length < 0)
-    {
-        size_t newlen{std::strlen(message)};
-        if(newlen >= MaxDebugMessageLength) UNLIKELY
-            return context->setError(AL_INVALID_VALUE, "Debug message too long (%zu >= %d)",
-                newlen, MaxDebugMessageLength);
-        length = static_cast<ALsizei>(newlen);
-    }
-    else if(length >= MaxDebugMessageLength) UNLIKELY
-        return context->setError(AL_INVALID_VALUE, "Debug message too long (%d > %d)", length,
+    if(length >= MaxDebugMessageLength) UNLIKELY
+        return context->setError(AL_INVALID_VALUE, "Debug message too long (%d >= %d)", length,
             MaxDebugMessageLength);
+
+    std::string tmpmessage;
+    std::string_view msgview;
+    if(length < 0)
+        msgview = message;
+    /* Testing if the message is null terminated like this is kind of ugly, but
+     * it's the only way to avoid an otherwise unnecessary copy since the
+     * callback and trace calls need a null-terminated message string.
+     */
+    else if(message[length] == '\0')
+        msgview = {message, static_cast<uint>(length)};
+    else
+    {
+        tmpmessage.assign(message, static_cast<uint>(length));
+        msgview = tmpmessage;
+    }
+
+    if(msgview.length() >= MaxDebugMessageLength) UNLIKELY
+        return context->setError(AL_INVALID_VALUE, "Debug message too long (%zu >= %d)",
+            msgview.length(), MaxDebugMessageLength);
 
     auto dsource = GetDebugSource(source);
     if(!dsource)
@@ -280,7 +280,7 @@ FORCE_ALIGN void AL_APIENTRY alDebugMessageInsertDirectEXT(ALCcontext *context, 
     if(!dseverity)
         return context->setError(AL_INVALID_ENUM, "Invalid debug severity 0x%04x", severity);
 
-    context->debugMessage(*dsource, *dtype, id, *dseverity, length, message);
+    context->debugMessage(*dsource, *dtype, id, *dseverity, msgview);
 }
 
 
@@ -393,7 +393,7 @@ FORCE_ALIGN void AL_APIENTRY alPushDebugGroupDirectEXT(ALCcontext *context, ALen
         length = static_cast<ALsizei>(newlen);
     }
     else if(length >= MaxDebugMessageLength) UNLIKELY
-        return context->setError(AL_INVALID_VALUE, "Debug message too long (%d > %d)", length,
+        return context->setError(AL_INVALID_VALUE, "Debug message too long (%d >= %d)", length,
             MaxDebugMessageLength);
 
     auto dsource = GetDebugSource(source);
@@ -409,7 +409,8 @@ FORCE_ALIGN void AL_APIENTRY alPushDebugGroupDirectEXT(ALCcontext *context, ALen
         return context->setError(AL_STACK_OVERFLOW_EXT, "Pushing too many debug groups");
     }
 
-    context->mDebugGroups.emplace_back(*dsource, id, message);
+    context->mDebugGroups.emplace_back(*dsource, id,
+        std::string_view{message, static_cast<uint>(length)});
     auto &oldback = *(context->mDebugGroups.end()-2);
     auto &newback = context->mDebugGroups.back();
 
@@ -418,8 +419,7 @@ FORCE_ALIGN void AL_APIENTRY alPushDebugGroupDirectEXT(ALCcontext *context, ALen
 
     if(context->mContextFlags.test(ContextFlags::DebugBit))
         context->sendDebugMessage(debuglock, newback.mSource, DebugType::PushGroup, newback.mId,
-            DebugSeverity::Notification, static_cast<ALsizei>(newback.mMessage.size()),
-            newback.mMessage.data());
+            DebugSeverity::Notification, newback.mMessage);
 }
 
 FORCE_ALIGN DECL_FUNCEXT(void, alPopDebugGroup,EXT)
@@ -441,7 +441,7 @@ FORCE_ALIGN void AL_APIENTRY alPopDebugGroupDirectEXT(ALCcontext *context) noexc
     context->mDebugGroups.pop_back();
     if(context->mContextFlags.test(ContextFlags::DebugBit))
         context->sendDebugMessage(debuglock, source, DebugType::PopGroup, id,
-            DebugSeverity::Notification, static_cast<ALsizei>(message.size()), message.data());
+            DebugSeverity::Notification, message);
 }
 
 

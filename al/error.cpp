@@ -87,7 +87,8 @@ void ALCcontext::setError(ALenum errorCode, const char *msg, ...)
     ALenum curerr{AL_NO_ERROR};
     mLastError.compare_exchange_strong(curerr, errorCode);
 
-    debugMessage(DebugSource::API, DebugType::Error, 0, DebugSeverity::High, msglen, msg);
+    debugMessage(DebugSource::API, DebugType::Error, 0, DebugSeverity::High,
+        {msg, static_cast<uint>(msglen)});
 }
 
 /* Special-case alGetError since it (potentially) raises a debug signal and

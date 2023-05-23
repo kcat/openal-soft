@@ -188,7 +188,7 @@ void GetValue(ALCcontext *context, ALenum pname, T *values)
     case AL_DOPPLER_VELOCITY:
         if(context->mContextFlags.test(ContextFlags::DebugBit)) UNLIKELY
             context->debugMessage(DebugSource::API, DebugType::DeprecatedBehavior, 0,
-                DebugSeverity::Medium, -1,
+                DebugSeverity::Medium,
                 "AL_DOPPLER_VELOCITY is deprecated in AL 1.1, use AL_SPEED_OF_SOUND; "
                 "AL_DOPPLER_VELOCITY -> AL_SPEED_OF_SOUND / 343.3f");
         *values = cast_value(context->mDopplerVelocity);
@@ -619,7 +619,7 @@ AL_API void AL_APIENTRY alDopplerVelocity(ALfloat value) noexcept
 
     if(context->mContextFlags.test(ContextFlags::DebugBit)) UNLIKELY
         context->debugMessage(DebugSource::API, DebugType::DeprecatedBehavior, 0,
-            DebugSeverity::Medium, -1,
+            DebugSeverity::Medium,
             "alDopplerVelocity is deprecated in AL 1.1, use alSpeedOfSound; "
             "alDopplerVelocity(x) -> alSpeedOfSound(343.3f * x)");
 

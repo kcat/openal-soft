@@ -121,7 +121,7 @@ int EventThread(ALCcontext *context)
                 const std::string_view message{evt.msg};
 
                 context->debugMessage(DebugSource::System, DebugType::Error, 0,
-                    DebugSeverity::High, static_cast<ALsizei>(message.length()), message.data());
+                    DebugSeverity::High, message);
 
                 if(context->mEventCb
                     && enabledevts.test(al::to_underlying(AsyncEnableBits::Disconnected)))
@@ -130,9 +130,8 @@ int EventThread(ALCcontext *context)
                         context->mEventParam);
             };
 
-            std::visit(overloaded
-                {proc_srcstate, proc_buffercomp, proc_release, proc_disconnect, proc_killthread},
-                event);
+            std::visit(overloaded{proc_srcstate, proc_buffercomp, proc_release, proc_disconnect,
+                proc_killthread}, event);
         } while(evt_data.len != 0);
     }
     return 0;

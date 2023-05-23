@@ -2777,7 +2777,7 @@ ALC_API void ALC_APIENTRY alcSuspendContext(ALCcontext *context) noexcept
     }
 
     if(context->mContextFlags.test(ContextFlags::DebugBit)) UNLIKELY
-        ctx->debugMessage(DebugSource::API, DebugType::Portability, 0, DebugSeverity::Medium, -1,
+        ctx->debugMessage(DebugSource::API, DebugType::Portability, 0, DebugSeverity::Medium,
             "alcSuspendContext behavior is not portable -- some implementations suspend all "
             "rendering, some only defer property changes, and some are completely no-op; consider "
             "using alcDevicePauseSOFT to suspend all rendering, or alDeferUpdatesSOFT to only "
@@ -2800,7 +2800,7 @@ ALC_API void ALC_APIENTRY alcProcessContext(ALCcontext *context) noexcept
     }
 
     if(context->mContextFlags.test(ContextFlags::DebugBit)) UNLIKELY
-        ctx->debugMessage(DebugSource::API, DebugType::Portability, 0, DebugSeverity::Medium, -1,
+        ctx->debugMessage(DebugSource::API, DebugType::Portability, 0, DebugSeverity::Medium,
             "alcProcessContext behavior is not portable -- some implementations resume rendering, "
             "some apply deferred property changes, and some are completely no-op; consider using "
             "alcDeviceResumeSOFT to resume rendering, or alProcessUpdatesSOFT to apply deferred "

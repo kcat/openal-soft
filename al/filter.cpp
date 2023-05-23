@@ -598,7 +598,7 @@ FORCE_ALIGN void AL_APIENTRY alGetFilterivDirect(ALCcontext *context, ALuint fil
     switch(param)
     {
     case AL_FILTER_TYPE:
-        alGetFilteri(filter, param, values);
+        alGetFilteriDirect(context, filter, param, values);
         return;
     }
 

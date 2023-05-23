@@ -74,220 +74,6 @@ filter_exception::filter_exception(ALenum code, const char* msg, ...) : mErrorCo
 filter_exception::~filter_exception() = default;
 
 
-#define DEFINE_ALFILTER_VTABLE(T)                                  \
-const ALfilter::Vtable T##_vtable = {                              \
-    T##_setParami, T##_setParamiv, T##_setParamf, T##_setParamfv,  \
-    T##_getParami, T##_getParamiv, T##_getParamf, T##_getParamfv,  \
-}
-
-void ALlowpass_setParami(ALfilter*, ALenum param, int)
-{ throw filter_exception{AL_INVALID_ENUM, "Invalid low-pass integer property 0x%04x", param}; }
-void ALlowpass_setParamiv(ALfilter*, ALenum param, const int*)
-{
-    throw filter_exception{AL_INVALID_ENUM, "Invalid low-pass integer-vector property 0x%04x",
-        param};
-}
-void ALlowpass_setParamf(ALfilter *filter, ALenum param, float val)
-{
-    switch(param)
-    {
-    case AL_LOWPASS_GAIN:
-        if(!(val >= AL_LOWPASS_MIN_GAIN && val <= AL_LOWPASS_MAX_GAIN))
-            throw filter_exception{AL_INVALID_VALUE, "Low-pass gain %f out of range", val};
-        filter->Gain = val;
-        break;
-
-    case AL_LOWPASS_GAINHF:
-        if(!(val >= AL_LOWPASS_MIN_GAINHF && val <= AL_LOWPASS_MAX_GAINHF))
-            throw filter_exception{AL_INVALID_VALUE, "Low-pass gainhf %f out of range", val};
-        filter->GainHF = val;
-        break;
-
-    default:
-        throw filter_exception{AL_INVALID_ENUM, "Invalid low-pass float property 0x%04x", param};
-    }
-}
-void ALlowpass_setParamfv(ALfilter *filter, ALenum param, const float *vals)
-{ ALlowpass_setParamf(filter, param, vals[0]); }
-
-void ALlowpass_getParami(const ALfilter*, ALenum param, int*)
-{ throw filter_exception{AL_INVALID_ENUM, "Invalid low-pass integer property 0x%04x", param}; }
-void ALlowpass_getParamiv(const ALfilter*, ALenum param, int*)
-{
-    throw filter_exception{AL_INVALID_ENUM, "Invalid low-pass integer-vector property 0x%04x",
-        param};
-}
-void ALlowpass_getParamf(const ALfilter *filter, ALenum param, float *val)
-{
-    switch(param)
-    {
-    case AL_LOWPASS_GAIN:
-        *val = filter->Gain;
-        break;
-
-    case AL_LOWPASS_GAINHF:
-        *val = filter->GainHF;
-        break;
-
-    default:
-        throw filter_exception{AL_INVALID_ENUM, "Invalid low-pass float property 0x%04x", param};
-    }
-}
-void ALlowpass_getParamfv(const ALfilter *filter, ALenum param, float *vals)
-{ ALlowpass_getParamf(filter, param, vals); }
-
-DEFINE_ALFILTER_VTABLE(ALlowpass);
-
-
-void ALhighpass_setParami(ALfilter*, ALenum param, int)
-{ throw filter_exception{AL_INVALID_ENUM, "Invalid high-pass integer property 0x%04x", param}; }
-void ALhighpass_setParamiv(ALfilter*, ALenum param, const int*)
-{
-    throw filter_exception{AL_INVALID_ENUM, "Invalid high-pass integer-vector property 0x%04x",
-        param};
-}
-void ALhighpass_setParamf(ALfilter *filter, ALenum param, float val)
-{
-    switch(param)
-    {
-    case AL_HIGHPASS_GAIN:
-        if(!(val >= AL_HIGHPASS_MIN_GAIN && val <= AL_HIGHPASS_MAX_GAIN))
-            throw filter_exception{AL_INVALID_VALUE, "High-pass gain %f out of range", val};
-        filter->Gain = val;
-        break;
-
-    case AL_HIGHPASS_GAINLF:
-        if(!(val >= AL_HIGHPASS_MIN_GAINLF && val <= AL_HIGHPASS_MAX_GAINLF))
-            throw filter_exception{AL_INVALID_VALUE, "High-pass gainlf %f out of range", val};
-        filter->GainLF = val;
-        break;
-
-    default:
-        throw filter_exception{AL_INVALID_ENUM, "Invalid high-pass float property 0x%04x", param};
-    }
-}
-void ALhighpass_setParamfv(ALfilter *filter, ALenum param, const float *vals)
-{ ALhighpass_setParamf(filter, param, vals[0]); }
-
-void ALhighpass_getParami(const ALfilter*, ALenum param, int*)
-{ throw filter_exception{AL_INVALID_ENUM, "Invalid high-pass integer property 0x%04x", param}; }
-void ALhighpass_getParamiv(const ALfilter*, ALenum param, int*)
-{
-    throw filter_exception{AL_INVALID_ENUM, "Invalid high-pass integer-vector property 0x%04x",
-        param};
-}
-void ALhighpass_getParamf(const ALfilter *filter, ALenum param, float *val)
-{
-    switch(param)
-    {
-    case AL_HIGHPASS_GAIN:
-        *val = filter->Gain;
-        break;
-
-    case AL_HIGHPASS_GAINLF:
-        *val = filter->GainLF;
-        break;
-
-    default:
-        throw filter_exception{AL_INVALID_ENUM, "Invalid high-pass float property 0x%04x", param};
-    }
-}
-void ALhighpass_getParamfv(const ALfilter *filter, ALenum param, float *vals)
-{ ALhighpass_getParamf(filter, param, vals); }
-
-DEFINE_ALFILTER_VTABLE(ALhighpass);
-
-
-void ALbandpass_setParami(ALfilter*, ALenum param, int)
-{ throw filter_exception{AL_INVALID_ENUM, "Invalid band-pass integer property 0x%04x", param}; }
-void ALbandpass_setParamiv(ALfilter*, ALenum param, const int*)
-{
-    throw filter_exception{AL_INVALID_ENUM, "Invalid band-pass integer-vector property 0x%04x",
-        param};
-}
-void ALbandpass_setParamf(ALfilter *filter, ALenum param, float val)
-{
-    switch(param)
-    {
-    case AL_BANDPASS_GAIN:
-        if(!(val >= AL_BANDPASS_MIN_GAIN && val <= AL_BANDPASS_MAX_GAIN))
-            throw filter_exception{AL_INVALID_VALUE, "Band-pass gain %f out of range", val};
-        filter->Gain = val;
-        break;
-
-    case AL_BANDPASS_GAINHF:
-        if(!(val >= AL_BANDPASS_MIN_GAINHF && val <= AL_BANDPASS_MAX_GAINHF))
-            throw filter_exception{AL_INVALID_VALUE, "Band-pass gainhf %f out of range", val};
-        filter->GainHF = val;
-        break;
-
-    case AL_BANDPASS_GAINLF:
-        if(!(val >= AL_BANDPASS_MIN_GAINLF && val <= AL_BANDPASS_MAX_GAINLF))
-            throw filter_exception{AL_INVALID_VALUE, "Band-pass gainlf %f out of range", val};
-        filter->GainLF = val;
-        break;
-
-    default:
-        throw filter_exception{AL_INVALID_ENUM, "Invalid band-pass float property 0x%04x", param};
-    }
-}
-void ALbandpass_setParamfv(ALfilter *filter, ALenum param, const float *vals)
-{ ALbandpass_setParamf(filter, param, vals[0]); }
-
-void ALbandpass_getParami(const ALfilter*, ALenum param, int*)
-{ throw filter_exception{AL_INVALID_ENUM, "Invalid band-pass integer property 0x%04x", param}; }
-void ALbandpass_getParamiv(const ALfilter*, ALenum param, int*)
-{
-    throw filter_exception{AL_INVALID_ENUM, "Invalid band-pass integer-vector property 0x%04x",
-        param};
-}
-void ALbandpass_getParamf(const ALfilter *filter, ALenum param, float *val)
-{
-    switch(param)
-    {
-    case AL_BANDPASS_GAIN:
-        *val = filter->Gain;
-        break;
-
-    case AL_BANDPASS_GAINHF:
-        *val = filter->GainHF;
-        break;
-
-    case AL_BANDPASS_GAINLF:
-        *val = filter->GainLF;
-        break;
-
-    default:
-        throw filter_exception{AL_INVALID_ENUM, "Invalid band-pass float property 0x%04x", param};
-    }
-}
-void ALbandpass_getParamfv(const ALfilter *filter, ALenum param, float *vals)
-{ ALbandpass_getParamf(filter, param, vals); }
-
-DEFINE_ALFILTER_VTABLE(ALbandpass);
-
-
-void ALnullfilter_setParami(ALfilter*, ALenum param, int)
-{ throw filter_exception{AL_INVALID_ENUM, "Invalid null filter property 0x%04x", param}; }
-void ALnullfilter_setParamiv(ALfilter*, ALenum param, const int*)
-{ throw filter_exception{AL_INVALID_ENUM, "Invalid null filter property 0x%04x", param}; }
-void ALnullfilter_setParamf(ALfilter*, ALenum param, float)
-{ throw filter_exception{AL_INVALID_ENUM, "Invalid null filter property 0x%04x", param}; }
-void ALnullfilter_setParamfv(ALfilter*, ALenum param, const float*)
-{ throw filter_exception{AL_INVALID_ENUM, "Invalid null filter property 0x%04x", param}; }
-
-void ALnullfilter_getParami(const ALfilter*, ALenum param, int*)
-{ throw filter_exception{AL_INVALID_ENUM, "Invalid null filter property 0x%04x", param}; }
-void ALnullfilter_getParamiv(const ALfilter*, ALenum param, int*)
-{ throw filter_exception{AL_INVALID_ENUM, "Invalid null filter property 0x%04x", param}; }
-void ALnullfilter_getParamf(const ALfilter*, ALenum param, float*)
-{ throw filter_exception{AL_INVALID_ENUM, "Invalid null filter property 0x%04x", param}; }
-void ALnullfilter_getParamfv(const ALfilter*, ALenum param, float*)
-{ throw filter_exception{AL_INVALID_ENUM, "Invalid null filter property 0x%04x", param}; }
-
-DEFINE_ALFILTER_VTABLE(ALnullfilter);
-
-
 void InitFilterParams(ALfilter *filter, ALenum type)
 {
     if(type == AL_FILTER_LOWPASS)
@@ -297,7 +83,7 @@ void InitFilterParams(ALfilter *filter, ALenum type)
         filter->HFReference = LOWPASSFREQREF;
         filter->GainLF = 1.0f;
         filter->LFReference = HIGHPASSFREQREF;
-        filter->vtab = &ALlowpass_vtable;
+        filter->mTypeVariant.emplace<LowpassFilterTable>();
     }
     else if(type == AL_FILTER_HIGHPASS)
     {
@@ -306,7 +92,7 @@ void InitFilterParams(ALfilter *filter, ALenum type)
         filter->HFReference = LOWPASSFREQREF;
         filter->GainLF = AL_HIGHPASS_DEFAULT_GAINLF;
         filter->LFReference = HIGHPASSFREQREF;
-        filter->vtab = &ALhighpass_vtable;
+        filter->mTypeVariant.emplace<HighpassFilterTable>();
     }
     else if(type == AL_FILTER_BANDPASS)
     {
@@ -315,7 +101,7 @@ void InitFilterParams(ALfilter *filter, ALenum type)
         filter->HFReference = LOWPASSFREQREF;
         filter->GainLF = AL_BANDPASS_DEFAULT_GAINLF;
         filter->LFReference = HIGHPASSFREQREF;
-        filter->vtab = &ALbandpass_vtable;
+        filter->mTypeVariant.emplace<BandpassFilterTable>();
     }
     else
     {
@@ -324,7 +110,7 @@ void InitFilterParams(ALfilter *filter, ALenum type)
         filter->HFReference = LOWPASSFREQREF;
         filter->GainLF = 1.0f;
         filter->LFReference = HIGHPASSFREQREF;
-        filter->vtab = &ALnullfilter_vtable;
+        filter->mTypeVariant.emplace<NullFilterTable>();
     }
     filter->type = type;
 }
@@ -401,6 +187,217 @@ inline ALfilter *LookupFilter(ALCdevice *device, ALuint id)
 }
 
 } // namespace
+
+/* Null filter parameter handlers */
+template<>
+void FilterTable<NullFilterTable>::setParami(ALfilter*, ALenum param, int)
+{ throw filter_exception{AL_INVALID_ENUM, "Invalid null filter property 0x%04x", param}; }
+template<>
+void FilterTable<NullFilterTable>::setParamiv(ALfilter*, ALenum param, const int*)
+{ throw filter_exception{AL_INVALID_ENUM, "Invalid null filter property 0x%04x", param}; }
+template<>
+void FilterTable<NullFilterTable>::setParamf(ALfilter*, ALenum param, float)
+{ throw filter_exception{AL_INVALID_ENUM, "Invalid null filter property 0x%04x", param}; }
+template<>
+void FilterTable<NullFilterTable>::setParamfv(ALfilter*, ALenum param, const float*)
+{ throw filter_exception{AL_INVALID_ENUM, "Invalid null filter property 0x%04x", param}; }
+template<>
+void FilterTable<NullFilterTable>::getParami(const ALfilter*, ALenum param, int*)
+{ throw filter_exception{AL_INVALID_ENUM, "Invalid null filter property 0x%04x", param}; }
+template<>
+void FilterTable<NullFilterTable>::getParamiv(const ALfilter*, ALenum param, int*)
+{ throw filter_exception{AL_INVALID_ENUM, "Invalid null filter property 0x%04x", param}; }
+template<>
+void FilterTable<NullFilterTable>::getParamf(const ALfilter*, ALenum param, float*)
+{ throw filter_exception{AL_INVALID_ENUM, "Invalid null filter property 0x%04x", param}; }
+template<>
+void FilterTable<NullFilterTable>::getParamfv(const ALfilter*, ALenum param, float*)
+{ throw filter_exception{AL_INVALID_ENUM, "Invalid null filter property 0x%04x", param}; }
+
+/* Lowpass parameter handlers */
+template<>
+void FilterTable<LowpassFilterTable>::setParami(ALfilter*, ALenum param, int)
+{ throw filter_exception{AL_INVALID_ENUM, "Invalid low-pass integer property 0x%04x", param}; }
+template<>
+void FilterTable<LowpassFilterTable>::setParamiv(ALfilter *filter, ALenum param, const int *values)
+{ setParami(filter, param, values[0]); }
+template<>
+void FilterTable<LowpassFilterTable>::setParamf(ALfilter *filter, ALenum param, float val)
+{
+    switch(param)
+    {
+    case AL_LOWPASS_GAIN:
+        if(!(val >= AL_LOWPASS_MIN_GAIN && val <= AL_LOWPASS_MAX_GAIN))
+            throw filter_exception{AL_INVALID_VALUE, "Low-pass gain %f out of range", val};
+        filter->Gain = val;
+        break;
+
+    case AL_LOWPASS_GAINHF:
+        if(!(val >= AL_LOWPASS_MIN_GAINHF && val <= AL_LOWPASS_MAX_GAINHF))
+            throw filter_exception{AL_INVALID_VALUE, "Low-pass gainhf %f out of range", val};
+        filter->GainHF = val;
+        break;
+
+    default:
+        throw filter_exception{AL_INVALID_ENUM, "Invalid low-pass float property 0x%04x", param};
+    }
+}
+template<>
+void FilterTable<LowpassFilterTable>::setParamfv(ALfilter *filter, ALenum param, const float *vals)
+{ setParamf(filter, param, vals[0]); }
+template<>
+void FilterTable<LowpassFilterTable>::getParami(const ALfilter*, ALenum param, int*)
+{ throw filter_exception{AL_INVALID_ENUM, "Invalid low-pass integer property 0x%04x", param}; }
+template<>
+void FilterTable<LowpassFilterTable>::getParamiv(const ALfilter *filter, ALenum param, int *values)
+{ getParami(filter, param, values); }
+template<>
+void FilterTable<LowpassFilterTable>::getParamf(const ALfilter *filter, ALenum param, float *val)
+{
+    switch(param)
+    {
+    case AL_LOWPASS_GAIN:
+        *val = filter->Gain;
+        break;
+
+    case AL_LOWPASS_GAINHF:
+        *val = filter->GainHF;
+        break;
+
+    default:
+        throw filter_exception{AL_INVALID_ENUM, "Invalid low-pass float property 0x%04x", param};
+    }
+}
+template<>
+void FilterTable<LowpassFilterTable>::getParamfv(const ALfilter *filter, ALenum param, float *vals)
+{ getParamf(filter, param, vals); }
+
+/* Highpass parameter handlers */
+template<>
+void FilterTable<HighpassFilterTable>::setParami(ALfilter*, ALenum param, int)
+{ throw filter_exception{AL_INVALID_ENUM, "Invalid high-pass integer property 0x%04x", param}; }
+template<>
+void FilterTable<HighpassFilterTable>::setParamiv(ALfilter *filter, ALenum param, const int *values)
+{ setParami(filter, param, values[0]); }
+template<>
+void FilterTable<HighpassFilterTable>::setParamf(ALfilter *filter, ALenum param, float val)
+{
+    switch(param)
+    {
+    case AL_HIGHPASS_GAIN:
+        if(!(val >= AL_HIGHPASS_MIN_GAIN && val <= AL_HIGHPASS_MAX_GAIN))
+            throw filter_exception{AL_INVALID_VALUE, "High-pass gain %f out of range", val};
+        filter->Gain = val;
+        break;
+
+    case AL_HIGHPASS_GAINLF:
+        if(!(val >= AL_HIGHPASS_MIN_GAINLF && val <= AL_HIGHPASS_MAX_GAINLF))
+            throw filter_exception{AL_INVALID_VALUE, "High-pass gainlf %f out of range", val};
+        filter->GainLF = val;
+        break;
+
+    default:
+        throw filter_exception{AL_INVALID_ENUM, "Invalid high-pass float property 0x%04x", param};
+    }
+}
+template<>
+void FilterTable<HighpassFilterTable>::setParamfv(ALfilter *filter, ALenum param, const float *vals)
+{ setParamf(filter, param, vals[0]); }
+template<>
+void FilterTable<HighpassFilterTable>::getParami(const ALfilter*, ALenum param, int*)
+{ throw filter_exception{AL_INVALID_ENUM, "Invalid high-pass integer property 0x%04x", param}; }
+template<>
+void FilterTable<HighpassFilterTable>::getParamiv(const ALfilter *filter, ALenum param, int *values)
+{ getParami(filter, param, values); }
+template<>
+void FilterTable<HighpassFilterTable>::getParamf(const ALfilter *filter, ALenum param, float *val)
+{
+    switch(param)
+    {
+    case AL_HIGHPASS_GAIN:
+        *val = filter->Gain;
+        break;
+
+    case AL_HIGHPASS_GAINLF:
+        *val = filter->GainLF;
+        break;
+
+    default:
+        throw filter_exception{AL_INVALID_ENUM, "Invalid high-pass float property 0x%04x", param};
+    }
+}
+template<>
+void FilterTable<HighpassFilterTable>::getParamfv(const ALfilter *filter, ALenum param, float *vals)
+{ getParamf(filter, param, vals); }
+
+/* Bandpass parameter handlers */
+template<>
+void FilterTable<BandpassFilterTable>::setParami(ALfilter*, ALenum param, int)
+{ throw filter_exception{AL_INVALID_ENUM, "Invalid band-pass integer property 0x%04x", param}; }
+template<>
+void FilterTable<BandpassFilterTable>::setParamiv(ALfilter *filter, ALenum param, const int *values)
+{ setParami(filter, param, values[0]); }
+template<>
+void FilterTable<BandpassFilterTable>::setParamf(ALfilter *filter, ALenum param, float val)
+{
+    switch(param)
+    {
+    case AL_BANDPASS_GAIN:
+        if(!(val >= AL_BANDPASS_MIN_GAIN && val <= AL_BANDPASS_MAX_GAIN))
+            throw filter_exception{AL_INVALID_VALUE, "Band-pass gain %f out of range", val};
+        filter->Gain = val;
+        break;
+
+    case AL_BANDPASS_GAINHF:
+        if(!(val >= AL_BANDPASS_MIN_GAINHF && val <= AL_BANDPASS_MAX_GAINHF))
+            throw filter_exception{AL_INVALID_VALUE, "Band-pass gainhf %f out of range", val};
+        filter->GainHF = val;
+        break;
+
+    case AL_BANDPASS_GAINLF:
+        if(!(val >= AL_BANDPASS_MIN_GAINLF && val <= AL_BANDPASS_MAX_GAINLF))
+            throw filter_exception{AL_INVALID_VALUE, "Band-pass gainlf %f out of range", val};
+        filter->GainLF = val;
+        break;
+
+    default:
+        throw filter_exception{AL_INVALID_ENUM, "Invalid band-pass float property 0x%04x", param};
+    }
+}
+template<>
+void FilterTable<BandpassFilterTable>::setParamfv(ALfilter *filter, ALenum param, const float *vals)
+{ setParamf(filter, param, vals[0]); }
+template<>
+void FilterTable<BandpassFilterTable>::getParami(const ALfilter*, ALenum param, int*)
+{ throw filter_exception{AL_INVALID_ENUM, "Invalid band-pass integer property 0x%04x", param}; }
+template<>
+void FilterTable<BandpassFilterTable>::getParamiv(const ALfilter *filter, ALenum param, int *values)
+{ getParami(filter, param, values); }
+template<>
+void FilterTable<BandpassFilterTable>::getParamf(const ALfilter *filter, ALenum param, float *val)
+{
+    switch(param)
+    {
+    case AL_BANDPASS_GAIN:
+        *val = filter->Gain;
+        break;
+
+    case AL_BANDPASS_GAINHF:
+        *val = filter->GainHF;
+        break;
+
+    case AL_BANDPASS_GAINLF:
+        *val = filter->GainLF;
+        break;
+
+    default:
+        throw filter_exception{AL_INVALID_ENUM, "Invalid band-pass float property 0x%04x", param};
+    }
+}
+template<>
+void FilterTable<BandpassFilterTable>::getParamfv(const ALfilter *filter, ALenum param, float *vals)
+{ getParamf(filter, param, vals); }
+
 
 FORCE_ALIGN void AL_APIENTRY alGenFiltersDirect(ALCcontext *context, ALsizei n, ALuint *filters) noexcept
 {
@@ -487,24 +484,22 @@ FORCE_ALIGN void AL_APIENTRY alFilteriDirect(ALCcontext *context, ALuint filter,
     ALfilter *alfilt{LookupFilter(device, filter)};
     if(!alfilt) UNLIKELY
         context->setError(AL_INVALID_NAME, "Invalid filter ID %u", filter);
-    else
+    else if(param == AL_FILTER_TYPE)
     {
-        if(param == AL_FILTER_TYPE)
-        {
-            if(value == AL_FILTER_NULL || value == AL_FILTER_LOWPASS
-                || value == AL_FILTER_HIGHPASS || value == AL_FILTER_BANDPASS)
-                InitFilterParams(alfilt, value);
-            else
-                context->setError(AL_INVALID_VALUE, "Invalid filter type 0x%04x", value);
-        }
-        else try
-        {
-            /* Call the appropriate handler */
-            alfilt->setParami(param, value);
-        }
-        catch(filter_exception &e) {
-            context->setError(e.errorCode(), "%s", e.what());
-        }
+        if(value == AL_FILTER_NULL || value == AL_FILTER_LOWPASS
+            || value == AL_FILTER_HIGHPASS || value == AL_FILTER_BANDPASS)
+            InitFilterParams(alfilt, value);
+        else
+            context->setError(AL_INVALID_VALUE, "Invalid filter type 0x%04x", value);
+    }
+    else try
+    {
+        /* Call the appropriate handler */
+        std::visit([alfilt,param,value](auto&& thunk){thunk.setParami(alfilt, param, value);},
+            alfilt->mTypeVariant);
+    }
+    catch(filter_exception &e) {
+        context->setError(e.errorCode(), "%s", e.what());
     }
 }
 
@@ -527,7 +522,8 @@ FORCE_ALIGN void AL_APIENTRY alFilterivDirect(ALCcontext *context, ALuint filter
     else try
     {
         /* Call the appropriate handler */
-        alfilt->setParamiv(param, values);
+        std::visit([alfilt,param,values](auto&& thunk){thunk.setParamiv(alfilt, param, values);},
+            alfilt->mTypeVariant);
     }
     catch(filter_exception &e) {
         context->setError(e.errorCode(), "%s", e.what());
@@ -546,7 +542,8 @@ FORCE_ALIGN void AL_APIENTRY alFilterfDirect(ALCcontext *context, ALuint filter,
     else try
     {
         /* Call the appropriate handler */
-        alfilt->setParamf(param, value);
+        std::visit([alfilt,param,value](auto&& thunk){thunk.setParamf(alfilt, param, value);},
+            alfilt->mTypeVariant);
     }
     catch(filter_exception &e) {
         context->setError(e.errorCode(), "%s", e.what());
@@ -565,7 +562,8 @@ FORCE_ALIGN void AL_APIENTRY alFilterfvDirect(ALCcontext *context, ALuint filter
     else try
     {
         /* Call the appropriate handler */
-        alfilt->setParamfv(param, values);
+        std::visit([alfilt,param,values](auto&& thunk){thunk.setParamfv(alfilt, param, values);},
+            alfilt->mTypeVariant);
     }
     catch(filter_exception &e) {
         context->setError(e.errorCode(), "%s", e.what());
@@ -581,18 +579,16 @@ FORCE_ALIGN void AL_APIENTRY alGetFilteriDirect(ALCcontext *context, ALuint filt
     const ALfilter *alfilt{LookupFilter(device, filter)};
     if(!alfilt) UNLIKELY
         context->setError(AL_INVALID_NAME, "Invalid filter ID %u", filter);
-    else
+    else if(param == AL_FILTER_TYPE)
+        *value = alfilt->type;
+    else try
     {
-        if(param == AL_FILTER_TYPE)
-            *value = alfilt->type;
-        else try
-        {
-            /* Call the appropriate handler */
-            alfilt->getParami(param, value);
-        }
-        catch(filter_exception &e) {
-            context->setError(e.errorCode(), "%s", e.what());
-        }
+        /* Call the appropriate handler */
+        std::visit([alfilt,param,value](auto&& thunk){thunk.getParami(alfilt, param, value);},
+            alfilt->mTypeVariant);
+    }
+    catch(filter_exception &e) {
+        context->setError(e.errorCode(), "%s", e.what());
     }
 }
 
@@ -615,7 +611,8 @@ FORCE_ALIGN void AL_APIENTRY alGetFilterivDirect(ALCcontext *context, ALuint fil
     else try
     {
         /* Call the appropriate handler */
-        alfilt->getParamiv(param, values);
+        std::visit([alfilt,param,values](auto&& thunk){thunk.getParamiv(alfilt, param, values);},
+            alfilt->mTypeVariant);
     }
     catch(filter_exception &e) {
         context->setError(e.errorCode(), "%s", e.what());
@@ -634,7 +631,8 @@ FORCE_ALIGN void AL_APIENTRY alGetFilterfDirect(ALCcontext *context, ALuint filt
     else try
     {
         /* Call the appropriate handler */
-        alfilt->getParamf(param, value);
+        std::visit([alfilt,param,value](auto&& thunk){thunk.getParamf(alfilt, param, value);},
+            alfilt->mTypeVariant);
     }
     catch(filter_exception &e) {
         context->setError(e.errorCode(), "%s", e.what());
@@ -653,7 +651,8 @@ FORCE_ALIGN void AL_APIENTRY alGetFilterfvDirect(ALCcontext *context, ALuint fil
     else try
     {
         /* Call the appropriate handler */
-        alfilt->getParamfv(param, values);
+        std::visit([alfilt,param,values](auto&& thunk){thunk.getParamfv(alfilt, param, values);},
+            alfilt->mTypeVariant);
     }
     catch(filter_exception &e) {
         context->setError(e.errorCode(), "%s", e.what());

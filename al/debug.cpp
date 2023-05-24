@@ -471,6 +471,7 @@ FORCE_ALIGN ALuint AL_APIENTRY alGetDebugMessageLogDirectEXT(ALCcontext *context
             if(avail < tocopy)
                 return i;
             std::copy_n(entry.mMessage.data(), tocopy, logBuf+logBufWritten);
+            logBufWritten += static_cast<ALsizei>(tocopy);
         }
 
         if(sources) sources[i] = GetDebugSourceEnum(entry.mSource);
@@ -479,7 +480,6 @@ FORCE_ALIGN ALuint AL_APIENTRY alGetDebugMessageLogDirectEXT(ALCcontext *context
         if(severities) severities[i] = GetDebugSeverityEnum(entry.mSeverity);
         if(lengths) lengths[i] = static_cast<ALsizei>(tocopy);
 
-        logBufWritten += static_cast<ALsizei>(tocopy);
         context->mDebugLog.pop_front();
     }
 

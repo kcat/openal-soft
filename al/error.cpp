@@ -29,7 +29,9 @@
 #include <csignal>
 #include <cstdarg>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
+#include <limits>
 #include <mutex>
 #include <vector>
 
@@ -39,10 +41,12 @@
 #include "al/debug.h"
 #include "alc/context.h"
 #include "almalloc.h"
+#include "alstring.h"
 #include "core/except.h"
 #include "core/logging.h"
 #include "direct_defs.h"
 #include "opthelpers.h"
+#include "strutils.h"
 
 
 bool TrapALError{false};
@@ -99,7 +103,23 @@ AL_API ALenum AL_APIENTRY alGetError(void) noexcept
     auto context = GetContextRef();
     if(!context) UNLIKELY
     {
-        static constexpr ALenum deferror{AL_INVALID_OPERATION};
+        static const ALenum deferror{[](const char *envname, const char *optname) -> ALenum
+        {
+            auto optstr = al::getenv(envname);
+            if(!optstr)
+                optstr = ConfigValueStr(nullptr, "game_compat", optname);
+
+            if(optstr)
+            {
+                char *end{};
+                auto value = std::strtoul(optstr->c_str(), &end, 0);
+                if(end && *end == '\0' && value <= std::numeric_limits<ALenum>::max())
+                    return static_cast<ALenum>(value);
+                ERR("Invalid default error value: \"%s\"", optstr->c_str());
+            }
+            return AL_INVALID_OPERATION;
+        }("__ALSOFT_DEFAULT_ERROR", "default-error")};
+
         WARN("Querying error state on null context (implicitly 0x%04x)\n", deferror);
         if(TrapALError)
         {

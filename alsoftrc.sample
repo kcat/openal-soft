@@ -638,6 +638,15 @@
 ##
 [game_compat]
 
+## default-error: (global)
+#  An error value returned by alGetError when there's no current context. The
+#  default value is AL_INVALID_OPERATION, which lets the caller know the
+#  operation could not be executed. Some applications may erroneously call
+#  alGetError without a current context and expect 0 (AL_NO_ERROR), however
+#  that may cause other applications to think earlier AL calls succeeded when
+#  they actually failed.
+#default-error = 0xA004
+
 ## nfc-scale: (global)
 #  A meters-per-unit distance scale applied to NFC filters. If a game doesn't
 #  use real-world meters for in-game units, the filters may create a too-near

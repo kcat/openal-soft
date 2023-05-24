@@ -294,9 +294,7 @@ namespace {
 struct EaxChorusTraits {
     using Props = EAXCHORUSPROPERTIES;
     using Committer = EaxChorusCommitter;
-    static constexpr auto Field = &EaxEffectProps::mChorus;
 
-    static constexpr auto eax_effect_type() { return EaxEffectType::Chorus; }
     static constexpr auto efx_effect() { return AL_EFFECT_CHORUS; }
 
     static constexpr auto eax_none_param_id() { return EAXCHORUS_NONE; }
@@ -361,9 +359,7 @@ struct EaxChorusTraits {
 struct EaxFlangerTraits {
     using Props = EAXFLANGERPROPERTIES;
     using Committer = EaxFlangerCommitter;
-    static constexpr auto Field = &EaxEffectProps::mFlanger;
 
-    static constexpr auto eax_effect_type() { return EaxEffectType::Flanger; }
     static constexpr auto efx_effect() { return AL_EFFECT_FLANGER; }
 
     static constexpr auto eax_none_param_id() { return EAXFLANGER_NONE; }
@@ -430,8 +426,6 @@ struct ChorusFlangerEffect {
     using Traits = TTraits;
     using Committer = typename Traits::Committer;
     using Exception = typename Committer::Exception;
-
-    static constexpr auto Field = Traits::Field;
 
     struct WaveformValidator {
         void operator()(unsigned long ulWaveform) const
@@ -514,8 +508,7 @@ struct ChorusFlangerEffect {
 public:
     static void SetDefaults(EaxEffectProps &props)
     {
-        auto&& all = props.*Field;
-        props.mType = Traits::eax_effect_type();
+        auto&& all = props.emplace<typename Traits::Props>();
         all.ulWaveform = Traits::eax_default_waveform();
         all.lPhase = Traits::eax_default_phase();
         all.flRate = Traits::eax_default_rate();
@@ -527,7 +520,7 @@ public:
 
     static void Get(const EaxCall &call, const EaxEffectProps &props)
     {
-        auto&& all = props.*Field;
+        auto&& all = std::get<typename Traits::Props>(props);
         switch(call.get_property_id())
         {
         case Traits::eax_none_param_id():
@@ -568,7 +561,7 @@ public:
 
     static void Set(const EaxCall &call, EaxEffectProps &props)
     {
-        auto&& all = props.*Field;
+        auto&& all = std::get<typename Traits::Props>(props);
         switch(call.get_property_id())
         {
         case Traits::eax_none_param_id():
@@ -609,18 +602,11 @@ public:
 
     static bool Commit(const EaxEffectProps &props, EaxEffectProps &props_, EffectProps &al_props_)
     {
-        if(props.mType == props_.mType)
-        {
-            auto&& src = props_.*Field;
-            auto&& dst = props.*Field;
-            if(dst.ulWaveform == src.ulWaveform && dst.lPhase == src.lPhase
-                && dst.flRate == src.flRate && dst.flDepth == src.flDepth
-                && dst.flFeedback == src.flFeedback && dst.flDelay == src.flDelay)
-                return false;
-        }
+        if(props == props)
+            return false;
 
         props_ = props;
-        auto&& dst = props.*Field;
+        auto&& dst = std::get<typename Traits::Props>(props);
 
         al_props_.Chorus.Waveform = Traits::eax_waveform(dst.ulWaveform);
         al_props_.Chorus.Phase = static_cast<int>(dst.lPhase);

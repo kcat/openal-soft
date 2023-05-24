@@ -200,10 +200,7 @@ template<>
 template<>
 bool FrequencyShifterCommitter::commit(const EaxEffectProps &props)
 {
-    if(props.mType == mEaxProps.mType
-        && mEaxProps.mFrequencyShifter.flFrequency == props.mFrequencyShifter.flFrequency
-        && mEaxProps.mFrequencyShifter.ulLeftDirection == props.mFrequencyShifter.ulLeftDirection
-        && mEaxProps.mFrequencyShifter.ulRightDirection == props.mFrequencyShifter.ulRightDirection)
+    if(props == mEaxProps)
         return false;
 
     mEaxProps = props;
@@ -217,9 +214,10 @@ bool FrequencyShifterCommitter::commit(const EaxEffectProps &props)
         return FShifterDirection::Off;
     };
 
-    mAlProps.Fshifter.Frequency = props.mFrequencyShifter.flFrequency;
-    mAlProps.Fshifter.LeftDirection = get_direction(props.mFrequencyShifter.ulLeftDirection);
-    mAlProps.Fshifter.RightDirection = get_direction(props.mFrequencyShifter.ulRightDirection);
+    auto &eaxprops = std::get<EAXFREQUENCYSHIFTERPROPERTIES>(props);
+    mAlProps.Fshifter.Frequency = eaxprops.flFrequency;
+    mAlProps.Fshifter.LeftDirection = get_direction(eaxprops.ulLeftDirection);
+    mAlProps.Fshifter.RightDirection = get_direction(eaxprops.ulRightDirection);
 
     return true;
 }
@@ -227,36 +225,43 @@ bool FrequencyShifterCommitter::commit(const EaxEffectProps &props)
 template<>
 void FrequencyShifterCommitter::SetDefaults(EaxEffectProps &props)
 {
-    props.mType = EaxEffectType::FrequencyShifter;
-    props.mFrequencyShifter.flFrequency = EAXFREQUENCYSHIFTER_DEFAULTFREQUENCY;
-    props.mFrequencyShifter.ulLeftDirection = EAXFREQUENCYSHIFTER_DEFAULTLEFTDIRECTION;
-    props.mFrequencyShifter.ulRightDirection = EAXFREQUENCYSHIFTER_DEFAULTRIGHTDIRECTION;
+    static constexpr EAXFREQUENCYSHIFTERPROPERTIES defprops{[]
+    {
+        EAXFREQUENCYSHIFTERPROPERTIES ret{};
+        ret.flFrequency = EAXFREQUENCYSHIFTER_DEFAULTFREQUENCY;
+        ret.ulLeftDirection = EAXFREQUENCYSHIFTER_DEFAULTLEFTDIRECTION;
+        ret.ulRightDirection = EAXFREQUENCYSHIFTER_DEFAULTRIGHTDIRECTION;
+        return ret;
+    }()};
+    props = defprops;
 }
 
 template<>
-void FrequencyShifterCommitter::Get(const EaxCall &call, const EaxEffectProps &props)
+void FrequencyShifterCommitter::Get(const EaxCall &call, const EaxEffectProps &props_)
 {
+    auto &props = std::get<EAXFREQUENCYSHIFTERPROPERTIES>(props_);
     switch(call.get_property_id())
     {
     case EAXFREQUENCYSHIFTER_NONE: break;
-    case EAXFREQUENCYSHIFTER_ALLPARAMETERS: call.set_value<Exception>(props.mFrequencyShifter); break;
-    case EAXFREQUENCYSHIFTER_FREQUENCY: call.set_value<Exception>(props.mFrequencyShifter.flFrequency); break;
-    case EAXFREQUENCYSHIFTER_LEFTDIRECTION: call.set_value<Exception>(props.mFrequencyShifter.ulLeftDirection); break;
-    case EAXFREQUENCYSHIFTER_RIGHTDIRECTION: call.set_value<Exception>(props.mFrequencyShifter.ulRightDirection); break;
+    case EAXFREQUENCYSHIFTER_ALLPARAMETERS: call.set_value<Exception>(props); break;
+    case EAXFREQUENCYSHIFTER_FREQUENCY: call.set_value<Exception>(props.flFrequency); break;
+    case EAXFREQUENCYSHIFTER_LEFTDIRECTION: call.set_value<Exception>(props.ulLeftDirection); break;
+    case EAXFREQUENCYSHIFTER_RIGHTDIRECTION: call.set_value<Exception>(props.ulRightDirection); break;
     default: fail_unknown_property_id();
     }
 }
 
 template<>
-void FrequencyShifterCommitter::Set(const EaxCall &call, EaxEffectProps &props)
+void FrequencyShifterCommitter::Set(const EaxCall &call, EaxEffectProps &props_)
 {
+    auto &props = std::get<EAXFREQUENCYSHIFTERPROPERTIES>(props_);
     switch(call.get_property_id())
     {
     case EAXFREQUENCYSHIFTER_NONE: break;
-    case EAXFREQUENCYSHIFTER_ALLPARAMETERS: defer<AllValidator>(call, props.mFrequencyShifter); break;
-    case EAXFREQUENCYSHIFTER_FREQUENCY: defer<FrequencyValidator>(call, props.mFrequencyShifter.flFrequency); break;
-    case EAXFREQUENCYSHIFTER_LEFTDIRECTION: defer<LeftDirectionValidator>(call, props.mFrequencyShifter.ulLeftDirection); break;
-    case EAXFREQUENCYSHIFTER_RIGHTDIRECTION: defer<RightDirectionValidator>(call, props.mFrequencyShifter.ulRightDirection); break;
+    case EAXFREQUENCYSHIFTER_ALLPARAMETERS: defer<AllValidator>(call, props); break;
+    case EAXFREQUENCYSHIFTER_FREQUENCY: defer<FrequencyValidator>(call, props.flFrequency); break;
+    case EAXFREQUENCYSHIFTER_LEFTDIRECTION: defer<LeftDirectionValidator>(call, props.ulLeftDirection); break;
+    case EAXFREQUENCYSHIFTER_RIGHTDIRECTION: defer<RightDirectionValidator>(call, props.ulRightDirection); break;
     default: fail_unknown_property_id();
     }
 }

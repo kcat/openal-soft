@@ -120,7 +120,7 @@ template<>
 template<>
 bool NullCommitter::commit(const EaxEffectProps &props)
 {
-    const bool ret{props.mType != mEaxProps.mType};
+    const bool ret{props != mEaxProps};
     mEaxProps = props;
     return ret;
 }
@@ -128,8 +128,7 @@ bool NullCommitter::commit(const EaxEffectProps &props)
 template<>
 void NullCommitter::SetDefaults(EaxEffectProps &props)
 {
-    props = EaxEffectProps{};
-    props.mType = EaxEffectType::None;
+    props.emplace<std::monostate>();
 }
 
 template<>

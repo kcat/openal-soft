@@ -204,20 +204,17 @@ template<>
 template<>
 bool EchoCommitter::commit(const EaxEffectProps &props)
 {
-    if(props.mType == mEaxProps.mType && mEaxProps.mEcho.flDelay == props.mEcho.flDelay
-        && mEaxProps.mEcho.flLRDelay == props.mEcho.flLRDelay
-        && mEaxProps.mEcho.flDamping == props.mEcho.flDamping
-        && mEaxProps.mEcho.flFeedback == props.mEcho.flFeedback
-        && mEaxProps.mEcho.flSpread == props.mEcho.flSpread)
+    if(props == mEaxProps)
         return false;
 
     mEaxProps = props;
 
-    mAlProps.Echo.Delay = props.mEcho.flDelay;
-    mAlProps.Echo.LRDelay = props.mEcho.flLRDelay;
-    mAlProps.Echo.Damping = props.mEcho.flDamping;
-    mAlProps.Echo.Feedback = props.mEcho.flFeedback;
-    mAlProps.Echo.Spread = props.mEcho.flSpread;
+    auto &eaxprops = std::get<EAXECHOPROPERTIES>(props);
+    mAlProps.Echo.Delay = eaxprops.flDelay;
+    mAlProps.Echo.LRDelay = eaxprops.flLRDelay;
+    mAlProps.Echo.Damping = eaxprops.flDamping;
+    mAlProps.Echo.Feedback = eaxprops.flFeedback;
+    mAlProps.Echo.Spread = eaxprops.flSpread;
 
     return true;
 }
@@ -225,42 +222,49 @@ bool EchoCommitter::commit(const EaxEffectProps &props)
 template<>
 void EchoCommitter::SetDefaults(EaxEffectProps &props)
 {
-    props.mType = EaxEffectType::Echo;
-    props.mEcho.flDelay = EAXECHO_DEFAULTDELAY;
-    props.mEcho.flLRDelay = EAXECHO_DEFAULTLRDELAY;
-    props.mEcho.flDamping = EAXECHO_DEFAULTDAMPING;
-    props.mEcho.flFeedback = EAXECHO_DEFAULTFEEDBACK;
-    props.mEcho.flSpread = EAXECHO_DEFAULTSPREAD;
+    static constexpr EAXECHOPROPERTIES defprops{[]
+    {
+        EAXECHOPROPERTIES ret{};
+        ret.flDelay = EAXECHO_DEFAULTDELAY;
+        ret.flLRDelay = EAXECHO_DEFAULTLRDELAY;
+        ret.flDamping = EAXECHO_DEFAULTDAMPING;
+        ret.flFeedback = EAXECHO_DEFAULTFEEDBACK;
+        ret.flSpread = EAXECHO_DEFAULTSPREAD;
+        return ret;
+    }()};
+    props = defprops;
 }
 
 template<>
-void EchoCommitter::Get(const EaxCall &call, const EaxEffectProps &props)
+void EchoCommitter::Get(const EaxCall &call, const EaxEffectProps &props_)
 {
+    auto &props = std::get<EAXECHOPROPERTIES>(props_);
     switch(call.get_property_id())
     {
     case EAXECHO_NONE: break;
-    case EAXECHO_ALLPARAMETERS: call.set_value<Exception>(props.mEcho); break;
-    case EAXECHO_DELAY: call.set_value<Exception>(props.mEcho.flDelay); break;
-    case EAXECHO_LRDELAY: call.set_value<Exception>(props.mEcho.flLRDelay); break;
-    case EAXECHO_DAMPING: call.set_value<Exception>(props.mEcho.flDamping); break;
-    case EAXECHO_FEEDBACK: call.set_value<Exception>(props.mEcho.flFeedback); break;
-    case EAXECHO_SPREAD: call.set_value<Exception>(props.mEcho.flSpread); break;
+    case EAXECHO_ALLPARAMETERS: call.set_value<Exception>(props); break;
+    case EAXECHO_DELAY: call.set_value<Exception>(props.flDelay); break;
+    case EAXECHO_LRDELAY: call.set_value<Exception>(props.flLRDelay); break;
+    case EAXECHO_DAMPING: call.set_value<Exception>(props.flDamping); break;
+    case EAXECHO_FEEDBACK: call.set_value<Exception>(props.flFeedback); break;
+    case EAXECHO_SPREAD: call.set_value<Exception>(props.flSpread); break;
     default: fail_unknown_property_id();
     }
 }
 
 template<>
-void EchoCommitter::Set(const EaxCall &call, EaxEffectProps &props)
+void EchoCommitter::Set(const EaxCall &call, EaxEffectProps &props_)
 {
+    auto &props = std::get<EAXECHOPROPERTIES>(props_);
     switch(call.get_property_id())
     {
     case EAXECHO_NONE: break;
-    case EAXECHO_ALLPARAMETERS: defer<AllValidator>(call, props.mEcho); break;
-    case EAXECHO_DELAY: defer<DelayValidator>(call, props.mEcho.flDelay); break;
-    case EAXECHO_LRDELAY: defer<LrDelayValidator>(call, props.mEcho.flLRDelay); break;
-    case EAXECHO_DAMPING: defer<DampingValidator>(call, props.mEcho.flDamping); break;
-    case EAXECHO_FEEDBACK: defer<FeedbackValidator>(call, props.mEcho.flFeedback); break;
-    case EAXECHO_SPREAD: defer<SpreadValidator>(call, props.mEcho.flSpread); break;
+    case EAXECHO_ALLPARAMETERS: defer<AllValidator>(call, props); break;
+    case EAXECHO_DELAY: defer<DelayValidator>(call, props.flDelay); break;
+    case EAXECHO_LRDELAY: defer<LrDelayValidator>(call, props.flLRDelay); break;
+    case EAXECHO_DAMPING: defer<DampingValidator>(call, props.flDamping); break;
+    case EAXECHO_FEEDBACK: defer<FeedbackValidator>(call, props.flFeedback); break;
+    case EAXECHO_SPREAD: defer<SpreadValidator>(call, props.flSpread); break;
     default: fail_unknown_property_id();
     }
 }

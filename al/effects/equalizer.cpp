@@ -322,30 +322,22 @@ template<>
 template<>
 bool EqualizerCommitter::commit(const EaxEffectProps &props)
 {
-    if(props.mType == mEaxProps.mType && mEaxProps.mEqualizer.lLowGain == props.mEqualizer.lLowGain
-        && mEaxProps.mEqualizer.flLowCutOff == props.mEqualizer.flLowCutOff
-        && mEaxProps.mEqualizer.lMid1Gain == props.mEqualizer.lMid1Gain
-        && mEaxProps.mEqualizer.flMid1Center == props.mEqualizer.flMid1Center
-        && mEaxProps.mEqualizer.flMid1Width == props.mEqualizer.flMid1Width
-        && mEaxProps.mEqualizer.lMid2Gain == props.mEqualizer.lMid2Gain
-        && mEaxProps.mEqualizer.flMid2Center == props.mEqualizer.flMid2Center
-        && mEaxProps.mEqualizer.flMid2Width == props.mEqualizer.flMid2Width
-        && mEaxProps.mEqualizer.lHighGain == props.mEqualizer.lHighGain
-        && mEaxProps.mEqualizer.flHighCutOff == props.mEqualizer.flHighCutOff)
+    if(props == mEaxProps)
         return false;
 
     mEaxProps = props;
 
-    mAlProps.Equalizer.LowGain = level_mb_to_gain(static_cast<float>(props.mEqualizer.lLowGain));
-    mAlProps.Equalizer.LowCutoff = props.mEqualizer.flLowCutOff;
-    mAlProps.Equalizer.Mid1Gain = level_mb_to_gain(static_cast<float>(props.mEqualizer.lMid1Gain));
-    mAlProps.Equalizer.Mid1Center = props.mEqualizer.flMid1Center;
-    mAlProps.Equalizer.Mid1Width = props.mEqualizer.flMid1Width;
-    mAlProps.Equalizer.Mid2Gain = level_mb_to_gain(static_cast<float>(props.mEqualizer.lMid2Gain));
-    mAlProps.Equalizer.Mid2Center = props.mEqualizer.flMid2Center;
-    mAlProps.Equalizer.Mid2Width = props.mEqualizer.flMid2Width;
-    mAlProps.Equalizer.HighGain = level_mb_to_gain(static_cast<float>(props.mEqualizer.lHighGain));
-    mAlProps.Equalizer.HighCutoff = props.mEqualizer.flHighCutOff;
+    auto &eaxprops = std::get<EAXEQUALIZERPROPERTIES>(props);
+    mAlProps.Equalizer.LowGain = level_mb_to_gain(static_cast<float>(eaxprops.lLowGain));
+    mAlProps.Equalizer.LowCutoff = eaxprops.flLowCutOff;
+    mAlProps.Equalizer.Mid1Gain = level_mb_to_gain(static_cast<float>(eaxprops.lMid1Gain));
+    mAlProps.Equalizer.Mid1Center = eaxprops.flMid1Center;
+    mAlProps.Equalizer.Mid1Width = eaxprops.flMid1Width;
+    mAlProps.Equalizer.Mid2Gain = level_mb_to_gain(static_cast<float>(eaxprops.lMid2Gain));
+    mAlProps.Equalizer.Mid2Center = eaxprops.flMid2Center;
+    mAlProps.Equalizer.Mid2Width = eaxprops.flMid2Width;
+    mAlProps.Equalizer.HighGain = level_mb_to_gain(static_cast<float>(eaxprops.lHighGain));
+    mAlProps.Equalizer.HighCutoff = eaxprops.flHighCutOff;
 
     return true;
 }
@@ -353,57 +345,64 @@ bool EqualizerCommitter::commit(const EaxEffectProps &props)
 template<>
 void EqualizerCommitter::SetDefaults(EaxEffectProps &props)
 {
-    props.mType = EaxEffectType::Equalizer;
-    props.mEqualizer.lLowGain = EAXEQUALIZER_DEFAULTLOWGAIN;
-    props.mEqualizer.flLowCutOff = EAXEQUALIZER_DEFAULTLOWCUTOFF;
-    props.mEqualizer.lMid1Gain = EAXEQUALIZER_DEFAULTMID1GAIN;
-    props.mEqualizer.flMid1Center = EAXEQUALIZER_DEFAULTMID1CENTER;
-    props.mEqualizer.flMid1Width = EAXEQUALIZER_DEFAULTMID1WIDTH;
-    props.mEqualizer.lMid2Gain = EAXEQUALIZER_DEFAULTMID2GAIN;
-    props.mEqualizer.flMid2Center = EAXEQUALIZER_DEFAULTMID2CENTER;
-    props.mEqualizer.flMid2Width = EAXEQUALIZER_DEFAULTMID2WIDTH;
-    props.mEqualizer.lHighGain = EAXEQUALIZER_DEFAULTHIGHGAIN;
-    props.mEqualizer.flHighCutOff = EAXEQUALIZER_DEFAULTHIGHCUTOFF;
+    static constexpr EAXEQUALIZERPROPERTIES defprops{[]
+    {
+        EAXEQUALIZERPROPERTIES ret{};
+        ret.lLowGain = EAXEQUALIZER_DEFAULTLOWGAIN;
+        ret.flLowCutOff = EAXEQUALIZER_DEFAULTLOWCUTOFF;
+        ret.lMid1Gain = EAXEQUALIZER_DEFAULTMID1GAIN;
+        ret.flMid1Center = EAXEQUALIZER_DEFAULTMID1CENTER;
+        ret.flMid1Width = EAXEQUALIZER_DEFAULTMID1WIDTH;
+        ret.lMid2Gain = EAXEQUALIZER_DEFAULTMID2GAIN;
+        ret.flMid2Center = EAXEQUALIZER_DEFAULTMID2CENTER;
+        ret.flMid2Width = EAXEQUALIZER_DEFAULTMID2WIDTH;
+        ret.lHighGain = EAXEQUALIZER_DEFAULTHIGHGAIN;
+        ret.flHighCutOff = EAXEQUALIZER_DEFAULTHIGHCUTOFF;
+        return ret;
+    }()};
+    props = defprops;
 }
 
 template<>
-void EqualizerCommitter::Get(const EaxCall &call, const EaxEffectProps &props)
+void EqualizerCommitter::Get(const EaxCall &call, const EaxEffectProps &props_)
 {
+    auto &props = std::get<EAXEQUALIZERPROPERTIES>(props_);
     switch(call.get_property_id())
     {
     case EAXEQUALIZER_NONE: break;
-    case EAXEQUALIZER_ALLPARAMETERS: call.set_value<Exception>(props.mEqualizer); break;
-    case EAXEQUALIZER_LOWGAIN: call.set_value<Exception>(props.mEqualizer.lLowGain); break;
-    case EAXEQUALIZER_LOWCUTOFF: call.set_value<Exception>(props.mEqualizer.flLowCutOff); break;
-    case EAXEQUALIZER_MID1GAIN: call.set_value<Exception>(props.mEqualizer.lMid1Gain); break;
-    case EAXEQUALIZER_MID1CENTER: call.set_value<Exception>(props.mEqualizer.flMid1Center); break;
-    case EAXEQUALIZER_MID1WIDTH: call.set_value<Exception>(props.mEqualizer.flMid1Width); break;
-    case EAXEQUALIZER_MID2GAIN: call.set_value<Exception>(props.mEqualizer.lMid2Gain); break;
-    case EAXEQUALIZER_MID2CENTER: call.set_value<Exception>(props.mEqualizer.flMid2Center); break;
-    case EAXEQUALIZER_MID2WIDTH: call.set_value<Exception>(props.mEqualizer.flMid2Width); break;
-    case EAXEQUALIZER_HIGHGAIN: call.set_value<Exception>(props.mEqualizer.lHighGain); break;
-    case EAXEQUALIZER_HIGHCUTOFF: call.set_value<Exception>(props.mEqualizer.flHighCutOff); break;
+    case EAXEQUALIZER_ALLPARAMETERS: call.set_value<Exception>(props); break;
+    case EAXEQUALIZER_LOWGAIN: call.set_value<Exception>(props.lLowGain); break;
+    case EAXEQUALIZER_LOWCUTOFF: call.set_value<Exception>(props.flLowCutOff); break;
+    case EAXEQUALIZER_MID1GAIN: call.set_value<Exception>(props.lMid1Gain); break;
+    case EAXEQUALIZER_MID1CENTER: call.set_value<Exception>(props.flMid1Center); break;
+    case EAXEQUALIZER_MID1WIDTH: call.set_value<Exception>(props.flMid1Width); break;
+    case EAXEQUALIZER_MID2GAIN: call.set_value<Exception>(props.lMid2Gain); break;
+    case EAXEQUALIZER_MID2CENTER: call.set_value<Exception>(props.flMid2Center); break;
+    case EAXEQUALIZER_MID2WIDTH: call.set_value<Exception>(props.flMid2Width); break;
+    case EAXEQUALIZER_HIGHGAIN: call.set_value<Exception>(props.lHighGain); break;
+    case EAXEQUALIZER_HIGHCUTOFF: call.set_value<Exception>(props.flHighCutOff); break;
     default: fail_unknown_property_id();
     }
 }
 
 template<>
-void EqualizerCommitter::Set(const EaxCall &call, EaxEffectProps &props)
+void EqualizerCommitter::Set(const EaxCall &call, EaxEffectProps &props_)
 {
+    auto &props = std::get<EAXEQUALIZERPROPERTIES>(props_);
     switch(call.get_property_id())
     {
     case EAXEQUALIZER_NONE: break;
-    case EAXEQUALIZER_ALLPARAMETERS: defer<AllValidator>(call, props.mEqualizer); break;
-    case EAXEQUALIZER_LOWGAIN: defer<LowGainValidator>(call, props.mEqualizer.lLowGain); break;
-    case EAXEQUALIZER_LOWCUTOFF: defer<LowCutOffValidator>(call, props.mEqualizer.flLowCutOff); break;
-    case EAXEQUALIZER_MID1GAIN: defer<Mid1GainValidator>(call, props.mEqualizer.lMid1Gain); break;
-    case EAXEQUALIZER_MID1CENTER: defer<Mid1CenterValidator>(call, props.mEqualizer.flMid1Center); break;
-    case EAXEQUALIZER_MID1WIDTH: defer<Mid1WidthValidator>(call, props.mEqualizer.flMid1Width); break;
-    case EAXEQUALIZER_MID2GAIN: defer<Mid2GainValidator>(call, props.mEqualizer.lMid2Gain); break;
-    case EAXEQUALIZER_MID2CENTER: defer<Mid2CenterValidator>(call, props.mEqualizer.flMid2Center); break;
-    case EAXEQUALIZER_MID2WIDTH: defer<Mid2WidthValidator>(call, props.mEqualizer.flMid2Width); break;
-    case EAXEQUALIZER_HIGHGAIN: defer<HighGainValidator>(call, props.mEqualizer.lHighGain); break;
-    case EAXEQUALIZER_HIGHCUTOFF: defer<HighCutOffValidator>(call, props.mEqualizer.flHighCutOff); break;
+    case EAXEQUALIZER_ALLPARAMETERS: defer<AllValidator>(call, props); break;
+    case EAXEQUALIZER_LOWGAIN: defer<LowGainValidator>(call, props.lLowGain); break;
+    case EAXEQUALIZER_LOWCUTOFF: defer<LowCutOffValidator>(call, props.flLowCutOff); break;
+    case EAXEQUALIZER_MID1GAIN: defer<Mid1GainValidator>(call, props.lMid1Gain); break;
+    case EAXEQUALIZER_MID1CENTER: defer<Mid1CenterValidator>(call, props.flMid1Center); break;
+    case EAXEQUALIZER_MID1WIDTH: defer<Mid1WidthValidator>(call, props.flMid1Width); break;
+    case EAXEQUALIZER_MID2GAIN: defer<Mid2GainValidator>(call, props.lMid2Gain); break;
+    case EAXEQUALIZER_MID2CENTER: defer<Mid2CenterValidator>(call, props.flMid2Center); break;
+    case EAXEQUALIZER_MID2WIDTH: defer<Mid2WidthValidator>(call, props.flMid2Width); break;
+    case EAXEQUALIZER_HIGHGAIN: defer<HighGainValidator>(call, props.lHighGain); break;
+    case EAXEQUALIZER_HIGHCUTOFF: defer<HighCutOffValidator>(call, props.flHighCutOff); break;
     default: fail_unknown_property_id();
     }
 }

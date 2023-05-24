@@ -4,60 +4,55 @@
 
 #include <cassert>
 #include <memory>
+#include <variant>
 
 #include "alnumeric.h"
 #include "AL/al.h"
 #include "core/effects/base.h"
 #include "call.h"
 
-struct EaxEffectErrorMessages
-{
+struct EaxEffectErrorMessages {
     static constexpr auto unknown_property_id() noexcept { return "Unknown property id."; }
     static constexpr auto unknown_version() noexcept { return "Unknown version."; }
 }; // EaxEffectErrorMessages
 
-/* TODO: Use std::variant (C++17). */
-enum class EaxEffectType {
-    None, Reverb, Chorus, Autowah, Compressor, Distortion, Echo, Equalizer, Flanger,
-    FrequencyShifter, Modulator, PitchShifter, VocalMorpher
-};
-struct EaxEffectProps {
-    EaxEffectType mType;
-    union {
-        EAXREVERBPROPERTIES mReverb;
-        EAXCHORUSPROPERTIES mChorus;
-        EAXAUTOWAHPROPERTIES mAutowah;
-        EAXAGCCOMPRESSORPROPERTIES mCompressor;
-        EAXDISTORTIONPROPERTIES mDistortion;
-        EAXECHOPROPERTIES mEcho;
-        EAXEQUALIZERPROPERTIES mEqualizer;
-        EAXFLANGERPROPERTIES mFlanger;
-        EAXFREQUENCYSHIFTERPROPERTIES mFrequencyShifter;
-        EAXRINGMODULATORPROPERTIES mModulator;
-        EAXPITCHSHIFTERPROPERTIES mPitchShifter;
-        EAXVOCALMORPHERPROPERTIES mVocalMorpher;
-    };
-};
+using EaxEffectProps = std::variant<std::monostate,
+    EAXREVERBPROPERTIES,
+    EAXCHORUSPROPERTIES,
+    EAXAUTOWAHPROPERTIES,
+    EAXAGCCOMPRESSORPROPERTIES,
+    EAXDISTORTIONPROPERTIES,
+    EAXECHOPROPERTIES,
+    EAXEQUALIZERPROPERTIES,
+    EAXFLANGERPROPERTIES,
+    EAXFREQUENCYSHIFTERPROPERTIES,
+    EAXRINGMODULATORPROPERTIES,
+    EAXPITCHSHIFTERPROPERTIES,
+    EAXVOCALMORPHERPROPERTIES>;
 
-constexpr ALenum EnumFromEaxEffectType(const EaxEffectProps &props)
+template<typename... Ts>
+struct overloaded : Ts... { using Ts::operator()...; };
+
+template<typename... Ts>
+overloaded(Ts...) -> overloaded<Ts...>;
+
+constexpr ALenum EnumFromEaxEffectType(const EaxEffectProps &props) noexcept
 {
-    switch(props.mType)
-    {
-    case EaxEffectType::None: break;
-    case EaxEffectType::Reverb: return AL_EFFECT_EAXREVERB;
-    case EaxEffectType::Chorus: return AL_EFFECT_CHORUS;
-    case EaxEffectType::Autowah: return AL_EFFECT_AUTOWAH;
-    case EaxEffectType::Compressor: return AL_EFFECT_COMPRESSOR;
-    case EaxEffectType::Distortion: return AL_EFFECT_DISTORTION;
-    case EaxEffectType::Echo: return AL_EFFECT_ECHO;
-    case EaxEffectType::Equalizer: return AL_EFFECT_EQUALIZER;
-    case EaxEffectType::Flanger: return AL_EFFECT_FLANGER;
-    case EaxEffectType::FrequencyShifter: return AL_EFFECT_FREQUENCY_SHIFTER;
-    case EaxEffectType::Modulator: return AL_EFFECT_RING_MODULATOR;
-    case EaxEffectType::PitchShifter: return AL_EFFECT_PITCH_SHIFTER;
-    case EaxEffectType::VocalMorpher: return AL_EFFECT_VOCAL_MORPHER;
-    }
-    return AL_EFFECT_NULL;
+    return std::visit(overloaded{
+        [](const std::monostate&) noexcept { return AL_EFFECT_NULL; },
+        [](const EAXREVERBPROPERTIES&) noexcept { return AL_EFFECT_EAXREVERB; },
+        [](const EAXCHORUSPROPERTIES&) noexcept { return AL_EFFECT_CHORUS; },
+        [](const EAXAUTOWAHPROPERTIES&) noexcept { return AL_EFFECT_AUTOWAH; },
+        [](const EAXAGCCOMPRESSORPROPERTIES&) noexcept { return AL_EFFECT_COMPRESSOR; },
+        [](const EAXDISTORTIONPROPERTIES&) noexcept { return AL_EFFECT_DISTORTION; },
+        [](const EAXECHOPROPERTIES&) noexcept { return AL_EFFECT_ECHO; },
+        [](const EAXEQUALIZERPROPERTIES&) noexcept { return AL_EFFECT_EQUALIZER; },
+        [](const EAXFLANGERPROPERTIES&) noexcept { return AL_EFFECT_FLANGER; },
+        [](const EAXFREQUENCYSHIFTERPROPERTIES&) noexcept { return AL_EFFECT_FREQUENCY_SHIFTER; },
+        [](const EAXRINGMODULATORPROPERTIES&) noexcept { return AL_EFFECT_RING_MODULATOR; },
+        [](const EAXPITCHSHIFTERPROPERTIES&) noexcept { return AL_EFFECT_PITCH_SHIFTER; },
+        [](const EAXVOCALMORPHERPROPERTIES&) noexcept { return AL_EFFECT_VOCAL_MORPHER; }
+    }, props);
 }
 
 struct EaxReverbCommitter {
@@ -300,30 +295,30 @@ public:
     }
 
 
-#define EAXCALL(T, Callable, ...)                                             \
-    if(T == EaxEffectType::Reverb)                                            \
+#define EAXCALL(Props, Callable, ...)                                         \
+    if(std::holds_alternative<EAXREVERBPROPERTIES>(Props))                    \
         return Callable<EaxReverbCommitter>(__VA_ARGS__);                     \
-    if(T == EaxEffectType::Chorus)                                            \
+    if(std::holds_alternative<EAXCHORUSPROPERTIES>(Props))                    \
         return Callable<EaxChorusCommitter>(__VA_ARGS__);                     \
-    if(T == EaxEffectType::Autowah)                                           \
+    if(std::holds_alternative<EAXAUTOWAHPROPERTIES>(Props))                   \
         return Callable<EaxAutowahCommitter>(__VA_ARGS__);                    \
-    if(T == EaxEffectType::Compressor)                                        \
+    if(std::holds_alternative<EAXAGCCOMPRESSORPROPERTIES>(Props))             \
         return Callable<EaxCompressorCommitter>(__VA_ARGS__);                 \
-    if(T == EaxEffectType::Distortion)                                        \
+    if(std::holds_alternative<EAXDISTORTIONPROPERTIES>(Props))                \
         return Callable<EaxDistortionCommitter>(__VA_ARGS__);                 \
-    if(T == EaxEffectType::Echo)                                              \
+    if(std::holds_alternative<EAXECHOPROPERTIES>(Props))                      \
         return Callable<EaxEchoCommitter>(__VA_ARGS__);                       \
-    if(T == EaxEffectType::Equalizer)                                         \
+    if(std::holds_alternative<EAXEQUALIZERPROPERTIES>(Props))                 \
         return Callable<EaxEqualizerCommitter>(__VA_ARGS__);                  \
-    if(T == EaxEffectType::Flanger)                                           \
+    if(std::holds_alternative<EAXFLANGERPROPERTIES>(Props))                   \
         return Callable<EaxFlangerCommitter>(__VA_ARGS__);                    \
-    if(T == EaxEffectType::FrequencyShifter)                                  \
+    if(std::holds_alternative<EAXFREQUENCYSHIFTERPROPERTIES>(Props))          \
         return Callable<EaxFrequencyShifterCommitter>(__VA_ARGS__);           \
-    if(T == EaxEffectType::Modulator)                                         \
+    if(std::holds_alternative<EAXRINGMODULATORPROPERTIES>(Props))             \
         return Callable<EaxModulatorCommitter>(__VA_ARGS__);                  \
-    if(T == EaxEffectType::PitchShifter)                                      \
+    if(std::holds_alternative<EAXPITCHSHIFTERPROPERTIES>(Props))              \
         return Callable<EaxPitchShifterCommitter>(__VA_ARGS__);               \
-    if(T == EaxEffectType::VocalMorpher)                                      \
+    if(std::holds_alternative<EAXVOCALMORPHERPROPERTIES>(Props))              \
         return Callable<EaxVocalMorpherCommitter>(__VA_ARGS__);               \
     return Callable<EaxNullCommitter>(__VA_ARGS__)
 
@@ -332,7 +327,7 @@ public:
     { return T::Set(std::forward<Args>(args)...); }
 
     static void call_set(const EaxCall &call, EaxEffectProps &props)
-    { EAXCALL(props.mType, call_set, call, props); }
+    { EAXCALL(props, call_set, call, props); }
 
     void set(const EaxCall &call)
     {
@@ -353,7 +348,7 @@ public:
     { return T::Get(std::forward<Args>(args)...); }
 
     static void call_get(const EaxCall &call, const EaxEffectProps &props)
-    { EAXCALL(props.mType, call_get, call, props); }
+    { EAXCALL(props, call_get, call, props); }
 
     void get(const EaxCall &call)
     {
@@ -373,7 +368,7 @@ public:
     { return T{props_, al_effect_props_}.commit(std::forward<Args>(args)...); }
 
     bool call_commit(const EaxEffectProps &props)
-    { EAXCALL(props.mType, call_commit, props); }
+    { EAXCALL(props, call_commit, props); }
 
     bool commit(int eax_version)
     {

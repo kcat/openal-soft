@@ -206,10 +206,7 @@ template<>
 template<>
 bool ModulatorCommitter::commit(const EaxEffectProps &props)
 {
-    if(props.mType == mEaxProps.mType
-        && mEaxProps.mModulator.flFrequency == props.mModulator.flFrequency
-        && mEaxProps.mModulator.flHighPassCutOff == props.mModulator.flHighPassCutOff
-        && mEaxProps.mModulator.ulWaveform == props.mModulator.ulWaveform)
+    if(props == mEaxProps)
         return false;
 
     mEaxProps = props;
@@ -225,9 +222,10 @@ bool ModulatorCommitter::commit(const EaxEffectProps &props)
         return ModulatorWaveform::Sinusoid;
     };
 
-    mAlProps.Modulator.Frequency = props.mModulator.flFrequency;
-    mAlProps.Modulator.HighPassCutoff = props.mModulator.flHighPassCutOff;
-    mAlProps.Modulator.Waveform = get_waveform(props.mModulator.ulWaveform);
+    auto &eaxprops = std::get<EAXRINGMODULATORPROPERTIES>(props);
+    mAlProps.Modulator.Frequency = eaxprops.flFrequency;
+    mAlProps.Modulator.HighPassCutoff = eaxprops.flHighPassCutOff;
+    mAlProps.Modulator.Waveform = get_waveform(eaxprops.ulWaveform);
 
     return true;
 }
@@ -235,36 +233,43 @@ bool ModulatorCommitter::commit(const EaxEffectProps &props)
 template<>
 void ModulatorCommitter::SetDefaults(EaxEffectProps &props)
 {
-    props.mType = EaxEffectType::Modulator;
-    props.mModulator.flFrequency = EAXRINGMODULATOR_DEFAULTFREQUENCY;
-    props.mModulator.flHighPassCutOff = EAXRINGMODULATOR_DEFAULTHIGHPASSCUTOFF;
-    props.mModulator.ulWaveform = EAXRINGMODULATOR_DEFAULTWAVEFORM;
+    static constexpr EAXRINGMODULATORPROPERTIES defprops{[]
+    {
+        EAXRINGMODULATORPROPERTIES ret{};
+        ret.flFrequency = EAXRINGMODULATOR_DEFAULTFREQUENCY;
+        ret.flHighPassCutOff = EAXRINGMODULATOR_DEFAULTHIGHPASSCUTOFF;
+        ret.ulWaveform = EAXRINGMODULATOR_DEFAULTWAVEFORM;
+        return ret;
+    }()};
+    props = defprops;
 }
 
 template<>
-void ModulatorCommitter::Get(const EaxCall &call, const EaxEffectProps &props)
+void ModulatorCommitter::Get(const EaxCall &call, const EaxEffectProps &props_)
 {
+    auto &props = std::get<EAXRINGMODULATORPROPERTIES>(props_);
     switch(call.get_property_id())
     {
     case EAXRINGMODULATOR_NONE: break;
-    case EAXRINGMODULATOR_ALLPARAMETERS: call.set_value<Exception>(props.mModulator); break;
-    case EAXRINGMODULATOR_FREQUENCY: call.set_value<Exception>(props.mModulator.flFrequency); break;
-    case EAXRINGMODULATOR_HIGHPASSCUTOFF: call.set_value<Exception>(props.mModulator.flHighPassCutOff); break;
-    case EAXRINGMODULATOR_WAVEFORM: call.set_value<Exception>(props.mModulator.ulWaveform); break;
+    case EAXRINGMODULATOR_ALLPARAMETERS: call.set_value<Exception>(props); break;
+    case EAXRINGMODULATOR_FREQUENCY: call.set_value<Exception>(props.flFrequency); break;
+    case EAXRINGMODULATOR_HIGHPASSCUTOFF: call.set_value<Exception>(props.flHighPassCutOff); break;
+    case EAXRINGMODULATOR_WAVEFORM: call.set_value<Exception>(props.ulWaveform); break;
     default: fail_unknown_property_id();
     }
 }
 
 template<>
-void ModulatorCommitter::Set(const EaxCall &call, EaxEffectProps &props)
+void ModulatorCommitter::Set(const EaxCall &call, EaxEffectProps &props_)
 {
+    auto &props = std::get<EAXRINGMODULATORPROPERTIES>(props_);
     switch (call.get_property_id())
     {
     case EAXRINGMODULATOR_NONE: break;
-    case EAXRINGMODULATOR_ALLPARAMETERS: defer<AllValidator>(call, props.mModulator); break;
-    case EAXRINGMODULATOR_FREQUENCY: defer<FrequencyValidator>(call, props.mModulator.flFrequency); break;
-    case EAXRINGMODULATOR_HIGHPASSCUTOFF: defer<HighPassCutOffValidator>(call, props.mModulator.flHighPassCutOff); break;
-    case EAXRINGMODULATOR_WAVEFORM: defer<WaveformValidator>(call, props.mModulator.ulWaveform); break;
+    case EAXRINGMODULATOR_ALLPARAMETERS: defer<AllValidator>(call, props); break;
+    case EAXRINGMODULATOR_FREQUENCY: defer<FrequencyValidator>(call, props.flFrequency); break;
+    case EAXRINGMODULATOR_HIGHPASSCUTOFF: defer<HighPassCutOffValidator>(call, props.flHighPassCutOff); break;
+    case EAXRINGMODULATOR_WAVEFORM: defer<WaveformValidator>(call, props.ulWaveform); break;
     default: fail_unknown_property_id();
     }
 }

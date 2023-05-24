@@ -207,20 +207,17 @@ template<>
 template<>
 bool DistortionCommitter::commit(const EaxEffectProps &props)
 {
-    if(props.mType == mEaxProps.mType && mEaxProps.mDistortion.flEdge == props.mDistortion.flEdge
-        && mEaxProps.mDistortion.lGain == props.mDistortion.lGain
-        && mEaxProps.mDistortion.flLowPassCutOff == props.mDistortion.flLowPassCutOff
-        && mEaxProps.mDistortion.flEQCenter == props.mDistortion.flEQCenter
-        && mEaxProps.mDistortion.flEQBandwidth == props.mDistortion.flEQBandwidth)
+    if(props == mEaxProps)
         return false;
 
     mEaxProps = props;
 
-    mAlProps.Distortion.Edge = props.mDistortion.flEdge;
-    mAlProps.Distortion.Gain = level_mb_to_gain(static_cast<float>(props.mDistortion.lGain));
-    mAlProps.Distortion.LowpassCutoff = props.mDistortion.flLowPassCutOff;
-    mAlProps.Distortion.EQCenter = props.mDistortion.flEQCenter;
-    mAlProps.Distortion.EQBandwidth = props.mDistortion.flEdge;
+    auto &eaxprops = std::get<EAXDISTORTIONPROPERTIES>(props);
+    mAlProps.Distortion.Edge = eaxprops.flEdge;
+    mAlProps.Distortion.Gain = level_mb_to_gain(static_cast<float>(eaxprops.lGain));
+    mAlProps.Distortion.LowpassCutoff = eaxprops.flLowPassCutOff;
+    mAlProps.Distortion.EQCenter = eaxprops.flEQCenter;
+    mAlProps.Distortion.EQBandwidth = eaxprops.flEdge;
 
     return true;
 }
@@ -228,42 +225,49 @@ bool DistortionCommitter::commit(const EaxEffectProps &props)
 template<>
 void DistortionCommitter::SetDefaults(EaxEffectProps &props)
 {
-    props.mType = EaxEffectType::Distortion;
-    props.mDistortion.flEdge = EAXDISTORTION_DEFAULTEDGE;
-    props.mDistortion.lGain = EAXDISTORTION_DEFAULTGAIN;
-    props.mDistortion.flLowPassCutOff = EAXDISTORTION_DEFAULTLOWPASSCUTOFF;
-    props.mDistortion.flEQCenter = EAXDISTORTION_DEFAULTEQCENTER;
-    props.mDistortion.flEQBandwidth = EAXDISTORTION_DEFAULTEQBANDWIDTH;
+    static constexpr EAXDISTORTIONPROPERTIES defprops{[]
+    {
+        EAXDISTORTIONPROPERTIES ret{};
+        ret.flEdge = EAXDISTORTION_DEFAULTEDGE;
+        ret.lGain = EAXDISTORTION_DEFAULTGAIN;
+        ret.flLowPassCutOff = EAXDISTORTION_DEFAULTLOWPASSCUTOFF;
+        ret.flEQCenter = EAXDISTORTION_DEFAULTEQCENTER;
+        ret.flEQBandwidth = EAXDISTORTION_DEFAULTEQBANDWIDTH;
+        return ret;
+    }()};
+    props = defprops;
 }
 
 template<>
-void DistortionCommitter::Get(const EaxCall &call, const EaxEffectProps &props)
+void DistortionCommitter::Get(const EaxCall &call, const EaxEffectProps &props_)
 {
+    auto &props = std::get<EAXDISTORTIONPROPERTIES>(props_);
     switch(call.get_property_id())
     {
     case EAXDISTORTION_NONE: break;
-    case EAXDISTORTION_ALLPARAMETERS: call.set_value<Exception>(props.mDistortion); break;
-    case EAXDISTORTION_EDGE: call.set_value<Exception>(props.mDistortion.flEdge); break;
-    case EAXDISTORTION_GAIN: call.set_value<Exception>(props.mDistortion.lGain); break;
-    case EAXDISTORTION_LOWPASSCUTOFF: call.set_value<Exception>(props.mDistortion.flLowPassCutOff); break;
-    case EAXDISTORTION_EQCENTER: call.set_value<Exception>(props.mDistortion.flEQCenter); break;
-    case EAXDISTORTION_EQBANDWIDTH: call.set_value<Exception>(props.mDistortion.flEQBandwidth); break;
+    case EAXDISTORTION_ALLPARAMETERS: call.set_value<Exception>(props); break;
+    case EAXDISTORTION_EDGE: call.set_value<Exception>(props.flEdge); break;
+    case EAXDISTORTION_GAIN: call.set_value<Exception>(props.lGain); break;
+    case EAXDISTORTION_LOWPASSCUTOFF: call.set_value<Exception>(props.flLowPassCutOff); break;
+    case EAXDISTORTION_EQCENTER: call.set_value<Exception>(props.flEQCenter); break;
+    case EAXDISTORTION_EQBANDWIDTH: call.set_value<Exception>(props.flEQBandwidth); break;
     default: fail_unknown_property_id();
     }
 }
 
 template<>
-void DistortionCommitter::Set(const EaxCall &call, EaxEffectProps &props)
+void DistortionCommitter::Set(const EaxCall &call, EaxEffectProps &props_)
 {
+    auto &props = std::get<EAXDISTORTIONPROPERTIES>(props_);
     switch(call.get_property_id())
     {
     case EAXDISTORTION_NONE: break;
-    case EAXDISTORTION_ALLPARAMETERS: defer<AllValidator>(call, props.mDistortion); break;
-    case EAXDISTORTION_EDGE: defer<EdgeValidator>(call, props.mDistortion.flEdge); break;
-    case EAXDISTORTION_GAIN: defer<GainValidator>(call, props.mDistortion.lGain); break;
-    case EAXDISTORTION_LOWPASSCUTOFF: defer<LowPassCutOffValidator>(call, props.mDistortion.flLowPassCutOff); break;
-    case EAXDISTORTION_EQCENTER: defer<EqCenterValidator>(call, props.mDistortion.flEQCenter); break;
-    case EAXDISTORTION_EQBANDWIDTH: defer<EqBandwidthValidator>(call, props.mDistortion.flEQBandwidth); break;
+    case EAXDISTORTION_ALLPARAMETERS: defer<AllValidator>(call, props); break;
+    case EAXDISTORTION_EDGE: defer<EdgeValidator>(call, props.flEdge); break;
+    case EAXDISTORTION_GAIN: defer<GainValidator>(call, props.lGain); break;
+    case EAXDISTORTION_LOWPASSCUTOFF: defer<LowPassCutOffValidator>(call, props.flLowPassCutOff); break;
+    case EAXDISTORTION_EQCENTER: defer<EqCenterValidator>(call, props.flEQCenter); break;
+    case EAXDISTORTION_EQBANDWIDTH: defer<EqBandwidthValidator>(call, props.flEQBandwidth); break;
     default: fail_unknown_property_id();
     }
 }

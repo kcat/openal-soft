@@ -56,7 +56,7 @@ int EventThread(ALCcontext *context)
 
         std::lock_guard<std::mutex> _{context->mEventCbLock};
         do {
-            auto *evt_ptr = reinterpret_cast<AsyncEvent*>(evt_data.buf);
+            auto *evt_ptr = std::launder(reinterpret_cast<AsyncEvent*>(evt_data.buf));
             evt_data.buf += sizeof(AsyncEvent);
             evt_data.len -= 1;
 
@@ -164,7 +164,7 @@ void StopEventThrd(ALCcontext *ctx)
             evt_data = ring->getWriteVector().first;
         } while(evt_data.len == 0);
     }
-    std::ignore = InitAsyncEvent<AsyncKillThread>(reinterpret_cast<AsyncEvent*>(evt_data.buf));
+    std::ignore = InitAsyncEvent<AsyncKillThread>(evt_data.buf);
     ring->writeAdvance(1);
 
     ctx->mEventSem.post();

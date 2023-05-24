@@ -491,8 +491,7 @@ bool CalcEffectSlotParams(EffectSlot *slot, EffectSlot **sorted_slots, ContextBa
         auto evt_vec = ring->getWriteVector();
         if(evt_vec.first.len > 0) LIKELY
         {
-            AsyncEffectReleaseEvent &evt = InitAsyncEvent<AsyncEffectReleaseEvent>(
-                reinterpret_cast<AsyncEvent*>(evt_vec.first.buf));
+            auto &evt = InitAsyncEvent<AsyncEffectReleaseEvent>(evt_vec.first.buf);
             evt.mEffectState = oldstate;
             ring->writeAdvance(1);
         }
@@ -1701,8 +1700,7 @@ void SendSourceStateEvent(ContextBase *context, uint id, VChangeState state)
     auto evt_vec = ring->getWriteVector();
     if(evt_vec.first.len < 1) return;
 
-    AsyncSourceStateEvent &evt = InitAsyncEvent<AsyncSourceStateEvent>(
-        reinterpret_cast<AsyncEvent*>(evt_vec.first.buf));
+    auto &evt = InitAsyncEvent<AsyncSourceStateEvent>(evt_vec.first.buf);
     evt.mId = id;
     switch(state)
     {

@@ -66,12 +66,14 @@ ContextBase::~ContextBase()
         auto evt_vec = mAsyncEvents->getReadVector();
         if(evt_vec.first.len > 0)
         {
-            std::destroy_n(reinterpret_cast<AsyncEvent*>(evt_vec.first.buf), evt_vec.first.len);
+            std::destroy_n(std::launder(reinterpret_cast<AsyncEvent*>(evt_vec.first.buf)),
+                evt_vec.first.len);
             count += evt_vec.first.len;
         }
         if(evt_vec.second.len > 0)
         {
-            std::destroy_n(reinterpret_cast<AsyncEvent*>(evt_vec.second.buf), evt_vec.second.len);
+            std::destroy_n(std::launder(reinterpret_cast<AsyncEvent*>(evt_vec.second.buf)),
+                evt_vec.second.len);
             count += evt_vec.second.len;
         }
         if(count > 0)

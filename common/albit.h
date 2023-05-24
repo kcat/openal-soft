@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <cstring>
 #include <limits>
+#include <new>
 #include <type_traits>
 #if !defined(__GNUC__) && (defined(_WIN32) || defined(_WIN64))
 #include <intrin.h>
@@ -16,9 +17,9 @@ std::enable_if_t<sizeof(To) == sizeof(From) && std::is_trivially_copyable_v<From
     && std::is_trivially_copyable_v<To>,
 To> bit_cast(const From &src) noexcept
 {
-    union { char c; To dst; } u;
-    std::memcpy(&u.dst, &src, sizeof(To));
-    return u.dst;
+    std::aligned_storage_t<sizeof(To), alignof(To)> dst;
+    std::memcpy(&dst, &src, sizeof(To));
+    return *std::launder(reinterpret_cast<To*>(&dst));
 }
 
 #ifdef __BYTE_ORDER__

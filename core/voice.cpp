@@ -226,8 +226,7 @@ void SendSourceStoppedEvent(ContextBase *context, uint id)
     auto evt_vec = ring->getWriteVector();
     if(evt_vec.first.len < 1) return;
 
-    AsyncSourceStateEvent &evt = InitAsyncEvent<AsyncSourceStateEvent>(
-        reinterpret_cast<AsyncEvent*>(evt_vec.first.buf));
+    auto &evt = InitAsyncEvent<AsyncSourceStateEvent>(evt_vec.first.buf);
     evt.mId = id;
     evt.mState = AsyncSrcState::Stop;
 
@@ -1151,8 +1150,7 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
         auto evt_vec = ring->getWriteVector();
         if(evt_vec.first.len > 0)
         {
-            AsyncBufferCompleteEvent &evt = InitAsyncEvent<AsyncBufferCompleteEvent>(
-                reinterpret_cast<AsyncEvent*>(evt_vec.first.buf));
+            auto &evt = InitAsyncEvent<AsyncBufferCompleteEvent>(evt_vec.first.buf);
             evt.mId = SourceID;
             evt.mCount = buffers_done;
             ring->writeAdvance(1);

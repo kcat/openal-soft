@@ -34,11 +34,6 @@ struct OboePlayback final : public BackendBase, public oboe::AudioStreamCallback
     bool reset() override;
     void start() override;
     void stop() override;
-
-    void restart() {
-        reset();
-        start();
-    }
 };
 
 
@@ -55,11 +50,8 @@ oboe::DataCallbackResult OboePlayback::onAudioReady(oboe::AudioStream *oboeStrea
 
 void OboePlayback::onErrorAfterClose(oboe::AudioStream* audioStream, oboe::Result error)
 {
-    // Restart the stream if the error is a disconnect, otherwise do nothing and log the error
-    // reason.
     if (error == oboe::Result::ErrorDisconnected) {
-        TRACE("Restarting AudioStream");
-        this->restart();
+        mDevice->handleDisconnect("Oboe AudioStream was disconnected: %s", oboe::convertToText(error));
     }
     TRACE("Error was %s", oboe::convertToText(error));
 }

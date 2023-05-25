@@ -5,7 +5,6 @@
 
 #include <cassert>
 #include <cstring>
-#include <mutex>
 #include <stdint.h>
 
 #include "alnumeric.h"
@@ -29,6 +28,8 @@ struct OboePlayback final : public BackendBase, public oboe::AudioStreamCallback
     oboe::DataCallbackResult onAudioReady(oboe::AudioStream *oboeStream, void *audioData,
         int32_t numFrames) override;
 
+    void onErrorAfterClose(oboe::AudioStream* /* audioStream */, oboe::Result /* error */) override;
+
     void open(const char *name) override;
     bool reset() override;
     void start() override;
@@ -47,6 +48,13 @@ oboe::DataCallbackResult OboePlayback::onAudioReady(oboe::AudioStream *oboeStrea
     return oboe::DataCallbackResult::Continue;
 }
 
+void OboePlayback::onErrorAfterClose(oboe::AudioStream* audioStream, oboe::Result error)
+{
+    if (error == oboe::Result::ErrorDisconnected) {
+        mDevice->handleDisconnect("Oboe AudioStream was disconnected: %s", oboe::convertToText(error));
+    }
+    TRACE("Error was %s", oboe::convertToText(error));
+}
 
 void OboePlayback::open(const char *name)
 {

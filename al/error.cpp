@@ -39,6 +39,7 @@
 #include "AL/alc.h"
 
 #include "al/debug.h"
+#include "alc/alconfig.h"
 #include "alc/context.h"
 #include "almalloc.h"
 #include "alstring.h"

@@ -127,24 +127,21 @@ FORCE_ALIGN void AL_APIENTRY alListener3fDirect(ALCcontext *context, ALenum para
 FORCE_ALIGN void AL_APIENTRY alListenerfvDirect(ALCcontext *context, ALenum param,
     const ALfloat *values) noexcept
 {
-    if(values)
-    {
-        switch(param)
-        {
-        case AL_GAIN:
-        case AL_METERS_PER_UNIT:
-            alListenerfDirect(context, param, values[0]);
-            return;
-
-        case AL_POSITION:
-        case AL_VELOCITY:
-            alListener3fDirect(context, param, values[0], values[1], values[2]);
-            return;
-        }
-    }
-
     if(!values) UNLIKELY
         return context->setError(AL_INVALID_VALUE, "NULL pointer");
+
+    switch(param)
+    {
+    case AL_GAIN:
+    case AL_METERS_PER_UNIT:
+        alListenerfDirect(context, param, values[0]);
+        return;
+
+    case AL_POSITION:
+    case AL_VELOCITY:
+        alListener3fDirect(context, param, values[0], values[1], values[2]);
+        return;
+    }
 
     ALlistener &listener = context->mListener;
     std::lock_guard<std::mutex> _{context->mPropLock};
@@ -203,33 +200,32 @@ FORCE_ALIGN void AL_APIENTRY alListener3iDirect(ALCcontext *context, ALenum para
 FORCE_ALIGN void AL_APIENTRY alListenerivDirect(ALCcontext *context, ALenum param,
     const ALint *values) noexcept
 {
-    if(values)
-    {
-        ALfloat fvals[6];
-        switch(param)
-        {
-        case AL_POSITION:
-        case AL_VELOCITY:
-            alListener3fDirect(context, param, static_cast<ALfloat>(values[0]),
-                static_cast<ALfloat>(values[1]), static_cast<ALfloat>(values[2]));
-            return;
+    if(!values) UNLIKELY
+        return context->setError(AL_INVALID_VALUE, "NULL pointer");
 
-        case AL_ORIENTATION:
-            fvals[0] = static_cast<ALfloat>(values[0]);
-            fvals[1] = static_cast<ALfloat>(values[1]);
-            fvals[2] = static_cast<ALfloat>(values[2]);
-            fvals[3] = static_cast<ALfloat>(values[3]);
-            fvals[4] = static_cast<ALfloat>(values[4]);
-            fvals[5] = static_cast<ALfloat>(values[5]);
-            alListenerfvDirect(context, param, fvals);
-            return;
-        }
+    switch(param)
+    {
+    case AL_POSITION:
+    case AL_VELOCITY:
+        alListener3fDirect(context, param, static_cast<ALfloat>(values[0]),
+            static_cast<ALfloat>(values[1]), static_cast<ALfloat>(values[2]));
+        return;
+
+    case AL_ORIENTATION:
+        const ALfloat fvals[6]{
+            static_cast<ALfloat>(values[0]),
+            static_cast<ALfloat>(values[1]),
+            static_cast<ALfloat>(values[2]),
+            static_cast<ALfloat>(values[3]),
+            static_cast<ALfloat>(values[4]),
+            static_cast<ALfloat>(values[5]),
+        };
+        alListenerfvDirect(context, param, fvals);
+        return;
     }
 
     std::lock_guard<std::mutex> _{context->mPropLock};
-    if(!values) UNLIKELY
-        context->setError(AL_INVALID_VALUE, "NULL pointer");
-    else switch(param)
+    switch(param)
     {
     default:
         context->setError(AL_INVALID_ENUM, "Invalid listener integer-vector property");

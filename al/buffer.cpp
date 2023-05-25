@@ -1060,18 +1060,18 @@ FORCE_ALIGN void AL_APIENTRY alBuffer3iDirect(ALCcontext *context, ALuint buffer
 FORCE_ALIGN void AL_APIENTRY alBufferivDirect(ALCcontext *context, ALuint buffer, ALenum param,
     const ALint *values) noexcept
 {
-    if(values)
+    if(!values) UNLIKELY
+        return context->setError(AL_INVALID_VALUE, "NULL pointer");
+
+    switch(param)
     {
-        switch(param)
-        {
-        case AL_UNPACK_BLOCK_ALIGNMENT_SOFT:
-        case AL_PACK_BLOCK_ALIGNMENT_SOFT:
-        case AL_AMBISONIC_LAYOUT_SOFT:
-        case AL_AMBISONIC_SCALING_SOFT:
-        case AL_UNPACK_AMBISONIC_ORDER_SOFT:
-            alBufferiDirect(context, buffer, param, values[0]);
-            return;
-        }
+    case AL_UNPACK_BLOCK_ALIGNMENT_SOFT:
+    case AL_PACK_BLOCK_ALIGNMENT_SOFT:
+    case AL_AMBISONIC_LAYOUT_SOFT:
+    case AL_AMBISONIC_SCALING_SOFT:
+    case AL_UNPACK_AMBISONIC_ORDER_SOFT:
+        alBufferiDirect(context, buffer, param, values[0]);
+        return;
     }
 
     ALCdevice *device{context->mALDevice.get()};
@@ -1080,8 +1080,6 @@ FORCE_ALIGN void AL_APIENTRY alBufferivDirect(ALCcontext *context, ALuint buffer
     ALbuffer *albuf = LookupBuffer(device, buffer);
     if(!albuf) UNLIKELY
         context->setError(AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
-    else if(!values) UNLIKELY
-        context->setError(AL_INVALID_VALUE, "NULL pointer");
     else switch(param)
     {
     case AL_LOOP_POINTS_SOFT:

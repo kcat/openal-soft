@@ -1,15 +1,22 @@
 
 #include "config.h"
 
+#include <optional>
 #include <stdexcept>
 
 #include "AL/al.h"
 #include "AL/efx.h"
 
 #include "alc/effects/base.h"
-#include "aloptional.h"
 #include "core/logging.h"
 #include "effects.h"
+
+#ifdef ALSOFT_EAX
+#include <cassert>
+#include "alnumeric.h"
+#include "al/eax/exception.h"
+#include "al/eax/utils.h"
+#endif // ALSOFT_EAX
 
 
 namespace {
@@ -20,14 +27,14 @@ static_assert(FlangerMaxDelay >= AL_FLANGER_MAX_DELAY, "Flanger max delay too sm
 static_assert(AL_CHORUS_WAVEFORM_SINUSOID == AL_FLANGER_WAVEFORM_SINUSOID, "Chorus/Flanger waveform value mismatch");
 static_assert(AL_CHORUS_WAVEFORM_TRIANGLE == AL_FLANGER_WAVEFORM_TRIANGLE, "Chorus/Flanger waveform value mismatch");
 
-inline al::optional<ChorusWaveform> WaveformFromEnum(ALenum type)
+inline std::optional<ChorusWaveform> WaveformFromEnum(ALenum type)
 {
     switch(type)
     {
-    case AL_CHORUS_WAVEFORM_SINUSOID: return al::make_optional(ChorusWaveform::Sinusoid);
-    case AL_CHORUS_WAVEFORM_TRIANGLE: return al::make_optional(ChorusWaveform::Triangle);
+    case AL_CHORUS_WAVEFORM_SINUSOID: return ChorusWaveform::Sinusoid;
+    case AL_CHORUS_WAVEFORM_TRIANGLE: return ChorusWaveform::Triangle;
     }
-    return al::nullopt;
+    return std::nullopt;
 }
 inline ALenum EnumFromWaveform(ChorusWaveform type)
 {
@@ -142,7 +149,7 @@ void Chorus_getParamf(const EffectProps *props, ALenum param, float *val)
 void Chorus_getParamfv(const EffectProps *props, ALenum param, float *vals)
 { Chorus_getParamf(props, param, vals); }
 
-const EffectProps genDefaultChorusProps() noexcept
+EffectProps genDefaultChorusProps() noexcept
 {
     EffectProps props{};
     props.Chorus.Waveform = *WaveformFromEnum(AL_CHORUS_DEFAULT_WAVEFORM);
@@ -279,3 +286,425 @@ const EffectProps ChorusEffectProps{genDefaultChorusProps()};
 DEFINE_ALEFFECT_VTABLE(Flanger);
 
 const EffectProps FlangerEffectProps{genDefaultFlangerProps()};
+
+
+#ifdef ALSOFT_EAX
+namespace {
+
+struct EaxChorusTraits {
+    using Props = EAXCHORUSPROPERTIES;
+    using Committer = EaxChorusCommitter;
+
+    static constexpr auto efx_effect() { return AL_EFFECT_CHORUS; }
+
+    static constexpr auto eax_none_param_id() { return EAXCHORUS_NONE; }
+    static constexpr auto eax_allparameters_param_id() { return EAXCHORUS_ALLPARAMETERS; }
+    static constexpr auto eax_waveform_param_id() { return EAXCHORUS_WAVEFORM; }
+    static constexpr auto eax_phase_param_id() { return EAXCHORUS_PHASE; }
+    static constexpr auto eax_rate_param_id() { return EAXCHORUS_RATE; }
+    static constexpr auto eax_depth_param_id() { return EAXCHORUS_DEPTH; }
+    static constexpr auto eax_feedback_param_id() { return EAXCHORUS_FEEDBACK; }
+    static constexpr auto eax_delay_param_id() { return EAXCHORUS_DELAY; }
+
+    static constexpr auto eax_min_waveform() { return EAXCHORUS_MINWAVEFORM; }
+    static constexpr auto eax_min_phase() { return EAXCHORUS_MINPHASE; }
+    static constexpr auto eax_min_rate() { return EAXCHORUS_MINRATE; }
+    static constexpr auto eax_min_depth() { return EAXCHORUS_MINDEPTH; }
+    static constexpr auto eax_min_feedback() { return EAXCHORUS_MINFEEDBACK; }
+    static constexpr auto eax_min_delay() { return EAXCHORUS_MINDELAY; }
+
+    static constexpr auto eax_max_waveform() { return EAXCHORUS_MAXWAVEFORM; }
+    static constexpr auto eax_max_phase() { return EAXCHORUS_MAXPHASE; }
+    static constexpr auto eax_max_rate() { return EAXCHORUS_MAXRATE; }
+    static constexpr auto eax_max_depth() { return EAXCHORUS_MAXDEPTH; }
+    static constexpr auto eax_max_feedback() { return EAXCHORUS_MAXFEEDBACK; }
+    static constexpr auto eax_max_delay() { return EAXCHORUS_MAXDELAY; }
+
+    static constexpr auto eax_default_waveform() { return EAXCHORUS_DEFAULTWAVEFORM; }
+    static constexpr auto eax_default_phase() { return EAXCHORUS_DEFAULTPHASE; }
+    static constexpr auto eax_default_rate() { return EAXCHORUS_DEFAULTRATE; }
+    static constexpr auto eax_default_depth() { return EAXCHORUS_DEFAULTDEPTH; }
+    static constexpr auto eax_default_feedback() { return EAXCHORUS_DEFAULTFEEDBACK; }
+    static constexpr auto eax_default_delay() { return EAXCHORUS_DEFAULTDELAY; }
+
+    static constexpr auto efx_min_waveform() { return AL_CHORUS_MIN_WAVEFORM; }
+    static constexpr auto efx_min_phase() { return AL_CHORUS_MIN_PHASE; }
+    static constexpr auto efx_min_rate() { return AL_CHORUS_MIN_RATE; }
+    static constexpr auto efx_min_depth() { return AL_CHORUS_MIN_DEPTH; }
+    static constexpr auto efx_min_feedback() { return AL_CHORUS_MIN_FEEDBACK; }
+    static constexpr auto efx_min_delay() { return AL_CHORUS_MIN_DELAY; }
+
+    static constexpr auto efx_max_waveform() { return AL_CHORUS_MAX_WAVEFORM; }
+    static constexpr auto efx_max_phase() { return AL_CHORUS_MAX_PHASE; }
+    static constexpr auto efx_max_rate() { return AL_CHORUS_MAX_RATE; }
+    static constexpr auto efx_max_depth() { return AL_CHORUS_MAX_DEPTH; }
+    static constexpr auto efx_max_feedback() { return AL_CHORUS_MAX_FEEDBACK; }
+    static constexpr auto efx_max_delay() { return AL_CHORUS_MAX_DELAY; }
+
+    static constexpr auto efx_default_waveform() { return AL_CHORUS_DEFAULT_WAVEFORM; }
+    static constexpr auto efx_default_phase() { return AL_CHORUS_DEFAULT_PHASE; }
+    static constexpr auto efx_default_rate() { return AL_CHORUS_DEFAULT_RATE; }
+    static constexpr auto efx_default_depth() { return AL_CHORUS_DEFAULT_DEPTH; }
+    static constexpr auto efx_default_feedback() { return AL_CHORUS_DEFAULT_FEEDBACK; }
+    static constexpr auto efx_default_delay() { return AL_CHORUS_DEFAULT_DELAY; }
+
+    static ChorusWaveform eax_waveform(unsigned long type)
+    {
+        if(type == EAX_CHORUS_SINUSOID) return ChorusWaveform::Sinusoid;
+        if(type == EAX_CHORUS_TRIANGLE) return ChorusWaveform::Triangle;
+        return ChorusWaveform::Sinusoid;
+    }
+}; // EaxChorusTraits
+
+struct EaxFlangerTraits {
+    using Props = EAXFLANGERPROPERTIES;
+    using Committer = EaxFlangerCommitter;
+
+    static constexpr auto efx_effect() { return AL_EFFECT_FLANGER; }
+
+    static constexpr auto eax_none_param_id() { return EAXFLANGER_NONE; }
+    static constexpr auto eax_allparameters_param_id() { return EAXFLANGER_ALLPARAMETERS; }
+    static constexpr auto eax_waveform_param_id() { return EAXFLANGER_WAVEFORM; }
+    static constexpr auto eax_phase_param_id() { return EAXFLANGER_PHASE; }
+    static constexpr auto eax_rate_param_id() { return EAXFLANGER_RATE; }
+    static constexpr auto eax_depth_param_id() { return EAXFLANGER_DEPTH; }
+    static constexpr auto eax_feedback_param_id() { return EAXFLANGER_FEEDBACK; }
+    static constexpr auto eax_delay_param_id() { return EAXFLANGER_DELAY; }
+
+    static constexpr auto eax_min_waveform() { return EAXFLANGER_MINWAVEFORM; }
+    static constexpr auto eax_min_phase() { return EAXFLANGER_MINPHASE; }
+    static constexpr auto eax_min_rate() { return EAXFLANGER_MINRATE; }
+    static constexpr auto eax_min_depth() { return EAXFLANGER_MINDEPTH; }
+    static constexpr auto eax_min_feedback() { return EAXFLANGER_MINFEEDBACK; }
+    static constexpr auto eax_min_delay() { return EAXFLANGER_MINDELAY; }
+
+    static constexpr auto eax_max_waveform() { return EAXFLANGER_MAXWAVEFORM; }
+    static constexpr auto eax_max_phase() { return EAXFLANGER_MAXPHASE; }
+    static constexpr auto eax_max_rate() { return EAXFLANGER_MAXRATE; }
+    static constexpr auto eax_max_depth() { return EAXFLANGER_MAXDEPTH; }
+    static constexpr auto eax_max_feedback() { return EAXFLANGER_MAXFEEDBACK; }
+    static constexpr auto eax_max_delay() { return EAXFLANGER_MAXDELAY; }
+
+    static constexpr auto eax_default_waveform() { return EAXFLANGER_DEFAULTWAVEFORM; }
+    static constexpr auto eax_default_phase() { return EAXFLANGER_DEFAULTPHASE; }
+    static constexpr auto eax_default_rate() { return EAXFLANGER_DEFAULTRATE; }
+    static constexpr auto eax_default_depth() { return EAXFLANGER_DEFAULTDEPTH; }
+    static constexpr auto eax_default_feedback() { return EAXFLANGER_DEFAULTFEEDBACK; }
+    static constexpr auto eax_default_delay() { return EAXFLANGER_DEFAULTDELAY; }
+
+    static constexpr auto efx_min_waveform() { return AL_FLANGER_MIN_WAVEFORM; }
+    static constexpr auto efx_min_phase() { return AL_FLANGER_MIN_PHASE; }
+    static constexpr auto efx_min_rate() { return AL_FLANGER_MIN_RATE; }
+    static constexpr auto efx_min_depth() { return AL_FLANGER_MIN_DEPTH; }
+    static constexpr auto efx_min_feedback() { return AL_FLANGER_MIN_FEEDBACK; }
+    static constexpr auto efx_min_delay() { return AL_FLANGER_MIN_DELAY; }
+
+    static constexpr auto efx_max_waveform() { return AL_FLANGER_MAX_WAVEFORM; }
+    static constexpr auto efx_max_phase() { return AL_FLANGER_MAX_PHASE; }
+    static constexpr auto efx_max_rate() { return AL_FLANGER_MAX_RATE; }
+    static constexpr auto efx_max_depth() { return AL_FLANGER_MAX_DEPTH; }
+    static constexpr auto efx_max_feedback() { return AL_FLANGER_MAX_FEEDBACK; }
+    static constexpr auto efx_max_delay() { return AL_FLANGER_MAX_DELAY; }
+
+    static constexpr auto efx_default_waveform() { return AL_FLANGER_DEFAULT_WAVEFORM; }
+    static constexpr auto efx_default_phase() { return AL_FLANGER_DEFAULT_PHASE; }
+    static constexpr auto efx_default_rate() { return AL_FLANGER_DEFAULT_RATE; }
+    static constexpr auto efx_default_depth() { return AL_FLANGER_DEFAULT_DEPTH; }
+    static constexpr auto efx_default_feedback() { return AL_FLANGER_DEFAULT_FEEDBACK; }
+    static constexpr auto efx_default_delay() { return AL_FLANGER_DEFAULT_DELAY; }
+
+    static ChorusWaveform eax_waveform(unsigned long type)
+    {
+        if(type == EAX_FLANGER_SINUSOID) return ChorusWaveform::Sinusoid;
+        if(type == EAX_FLANGER_TRIANGLE) return ChorusWaveform::Triangle;
+        return ChorusWaveform::Sinusoid;
+    }
+}; // EaxFlangerTraits
+
+template<typename TTraits>
+struct ChorusFlangerEffect {
+    using Traits = TTraits;
+    using Committer = typename Traits::Committer;
+    using Exception = typename Committer::Exception;
+
+    struct WaveformValidator {
+        void operator()(unsigned long ulWaveform) const
+        {
+            eax_validate_range<Exception>(
+                "Waveform",
+                ulWaveform,
+                Traits::eax_min_waveform(),
+                Traits::eax_max_waveform());
+        }
+    }; // WaveformValidator
+
+    struct PhaseValidator {
+        void operator()(long lPhase) const
+        {
+            eax_validate_range<Exception>(
+                "Phase",
+                lPhase,
+                Traits::eax_min_phase(),
+                Traits::eax_max_phase());
+        }
+    }; // PhaseValidator
+
+    struct RateValidator {
+        void operator()(float flRate) const
+        {
+            eax_validate_range<Exception>(
+                "Rate",
+                flRate,
+                Traits::eax_min_rate(),
+                Traits::eax_max_rate());
+        }
+    }; // RateValidator
+
+    struct DepthValidator {
+        void operator()(float flDepth) const
+        {
+            eax_validate_range<Exception>(
+                "Depth",
+                flDepth,
+                Traits::eax_min_depth(),
+                Traits::eax_max_depth());
+        }
+    }; // DepthValidator
+
+    struct FeedbackValidator {
+        void operator()(float flFeedback) const
+        {
+            eax_validate_range<Exception>(
+                "Feedback",
+                flFeedback,
+                Traits::eax_min_feedback(),
+                Traits::eax_max_feedback());
+        }
+    }; // FeedbackValidator
+
+    struct DelayValidator {
+        void operator()(float flDelay) const
+        {
+            eax_validate_range<Exception>(
+                "Delay",
+                flDelay,
+                Traits::eax_min_delay(),
+                Traits::eax_max_delay());
+        }
+    }; // DelayValidator
+
+    struct AllValidator {
+        void operator()(const typename Traits::Props& all) const
+        {
+            WaveformValidator{}(all.ulWaveform);
+            PhaseValidator{}(all.lPhase);
+            RateValidator{}(all.flRate);
+            DepthValidator{}(all.flDepth);
+            FeedbackValidator{}(all.flFeedback);
+            DelayValidator{}(all.flDelay);
+        }
+    }; // AllValidator
+
+public:
+    static void SetDefaults(EaxEffectProps &props)
+    {
+        auto&& all = props.emplace<typename Traits::Props>();
+        all.ulWaveform = Traits::eax_default_waveform();
+        all.lPhase = Traits::eax_default_phase();
+        all.flRate = Traits::eax_default_rate();
+        all.flDepth = Traits::eax_default_depth();
+        all.flFeedback = Traits::eax_default_feedback();
+        all.flDelay = Traits::eax_default_delay();
+    }
+
+
+    static void Get(const EaxCall &call, const EaxEffectProps &props)
+    {
+        auto&& all = std::get<typename Traits::Props>(props);
+        switch(call.get_property_id())
+        {
+        case Traits::eax_none_param_id():
+            break;
+
+        case Traits::eax_allparameters_param_id():
+            call.template set_value<Exception>(all);
+            break;
+
+        case Traits::eax_waveform_param_id():
+            call.template set_value<Exception>(all.ulWaveform);
+            break;
+
+        case Traits::eax_phase_param_id():
+            call.template set_value<Exception>(all.lPhase);
+            break;
+
+        case Traits::eax_rate_param_id():
+            call.template set_value<Exception>(all.flRate);
+            break;
+
+        case Traits::eax_depth_param_id():
+            call.template set_value<Exception>(all.flDepth);
+            break;
+
+        case Traits::eax_feedback_param_id():
+            call.template set_value<Exception>(all.flFeedback);
+            break;
+
+        case Traits::eax_delay_param_id():
+            call.template set_value<Exception>(all.flDelay);
+            break;
+
+        default:
+            Committer::fail_unknown_property_id();
+        }
+    }
+
+    static void Set(const EaxCall &call, EaxEffectProps &props)
+    {
+        auto&& all = std::get<typename Traits::Props>(props);
+        switch(call.get_property_id())
+        {
+        case Traits::eax_none_param_id():
+            break;
+
+        case Traits::eax_allparameters_param_id():
+            Committer::template defer<AllValidator>(call, all);
+            break;
+
+        case Traits::eax_waveform_param_id():
+            Committer::template defer<WaveformValidator>(call, all.ulWaveform);
+            break;
+
+        case Traits::eax_phase_param_id():
+            Committer::template defer<PhaseValidator>(call, all.lPhase);
+            break;
+
+        case Traits::eax_rate_param_id():
+            Committer::template defer<RateValidator>(call, all.flRate);
+            break;
+
+        case Traits::eax_depth_param_id():
+            Committer::template defer<DepthValidator>(call, all.flDepth);
+            break;
+
+        case Traits::eax_feedback_param_id():
+            Committer::template defer<FeedbackValidator>(call, all.flFeedback);
+            break;
+
+        case Traits::eax_delay_param_id():
+            Committer::template defer<DelayValidator>(call, all.flDelay);
+            break;
+
+        default:
+            Committer::fail_unknown_property_id();
+        }
+    }
+
+    static bool Commit(const EaxEffectProps &props, EaxEffectProps &props_, EffectProps &al_props_)
+    {
+        if(props == props)
+            return false;
+
+        props_ = props;
+        auto&& dst = std::get<typename Traits::Props>(props);
+
+        al_props_.Chorus.Waveform = Traits::eax_waveform(dst.ulWaveform);
+        al_props_.Chorus.Phase = static_cast<int>(dst.lPhase);
+        al_props_.Chorus.Rate = dst.flRate;
+        al_props_.Chorus.Depth = dst.flDepth;
+        al_props_.Chorus.Feedback = dst.flFeedback;
+        al_props_.Chorus.Delay = dst.flDelay;
+
+        return true;
+    }
+}; // EaxChorusFlangerEffect
+
+
+using ChorusCommitter = EaxCommitter<EaxChorusCommitter>;
+using FlangerCommitter = EaxCommitter<EaxFlangerCommitter>;
+
+} // namespace
+
+template<>
+struct ChorusCommitter::Exception : public EaxException
+{
+    explicit Exception(const char *message) : EaxException{"EAX_CHORUS_EFFECT", message}
+    { }
+};
+
+template<>
+[[noreturn]] void ChorusCommitter::fail(const char *message)
+{
+    throw Exception{message};
+}
+
+template<>
+bool ChorusCommitter::commit(const EaxEffectProps &props)
+{
+    using Committer = ChorusFlangerEffect<EaxChorusTraits>;
+    return Committer::Commit(props, mEaxProps, mAlProps);
+}
+
+template<>
+void ChorusCommitter::SetDefaults(EaxEffectProps &props)
+{
+    using Committer = ChorusFlangerEffect<EaxChorusTraits>;
+    Committer::SetDefaults(props);
+}
+
+template<>
+void ChorusCommitter::Get(const EaxCall &call, const EaxEffectProps &props)
+{
+    using Committer = ChorusFlangerEffect<EaxChorusTraits>;
+    Committer::Get(call, props);
+}
+
+template<>
+void ChorusCommitter::Set(const EaxCall &call, EaxEffectProps &props)
+{
+    using Committer = ChorusFlangerEffect<EaxChorusTraits>;
+    Committer::Set(call, props);
+}
+
+template<>
+struct FlangerCommitter::Exception : public EaxException
+{
+    explicit Exception(const char *message) : EaxException{"EAX_FLANGER_EFFECT", message}
+    { }
+};
+
+template<>
+[[noreturn]] void FlangerCommitter::fail(const char *message)
+{
+    throw Exception{message};
+}
+
+template<>
+bool FlangerCommitter::commit(const EaxEffectProps &props)
+{
+    using Committer = ChorusFlangerEffect<EaxFlangerTraits>;
+    return Committer::Commit(props, mEaxProps, mAlProps);
+}
+
+template<>
+void FlangerCommitter::SetDefaults(EaxEffectProps &props)
+{
+    using Committer = ChorusFlangerEffect<EaxFlangerTraits>;
+    Committer::SetDefaults(props);
+}
+
+template<>
+void FlangerCommitter::Get(const EaxCall &call, const EaxEffectProps &props)
+{
+    using Committer = ChorusFlangerEffect<EaxFlangerTraits>;
+    Committer::Get(call, props);
+}
+
+template<>
+void FlangerCommitter::Set(const EaxCall &call, EaxEffectProps &props)
+{
+    using Committer = ChorusFlangerEffect<EaxFlangerTraits>;
+    Committer::Set(call, props);
+}
+
+#endif // ALSOFT_EAX

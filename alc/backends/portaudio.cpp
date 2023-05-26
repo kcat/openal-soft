@@ -26,6 +26,7 @@
 #include <cstdlib>
 #include <cstring>
 
+#include "albit.h"
 #include "alc/alconfig.h"
 #include "alnumeric.h"
 #include "core/device.h"
@@ -247,7 +248,7 @@ struct PortCapture final : public BackendBase {
     void open(const char *name) override;
     void start() override;
     void stop() override;
-    void captureSamples(al::byte *buffer, uint samples) override;
+    void captureSamples(std::byte *buffer, uint samples) override;
     uint availableSamples() override;
 
     PaStream *mStream{nullptr};
@@ -348,7 +349,7 @@ void PortCapture::stop()
 uint PortCapture::availableSamples()
 { return static_cast<uint>(mRing->readSpace()); }
 
-void PortCapture::captureSamples(al::byte *buffer, uint samples)
+void PortCapture::captureSamples(std::byte *buffer, uint samples)
 { mRing->read(buffer, samples); }
 
 } // namespace
@@ -376,7 +377,7 @@ bool PortBackendFactory::init()
             return false;
 
 #define LOAD_FUNC(f) do {                                                     \
-    p##f = reinterpret_cast<decltype(p##f)>(GetSymbol(pa_handle, #f));        \
+    p##f = al::bit_cast<decltype(p##f)>(GetSymbol(pa_handle, #f));            \
     if(p##f == nullptr)                                                       \
     {                                                                         \
         CloseLib(pa_handle);                                                  \

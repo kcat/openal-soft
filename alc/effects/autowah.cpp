@@ -27,8 +27,8 @@
 #include <utility>
 
 #include "alc/effects/base.h"
-#include "alc/effectslot.h"
 #include "almalloc.h"
+#include "alnumbers.h"
 #include "alnumeric.h"
 #include "alspan.h"
 #include "core/ambidefs.h"
@@ -36,9 +36,9 @@
 #include "core/context.h"
 #include "core/devformat.h"
 #include "core/device.h"
+#include "core/effectslot.h"
 #include "core/mixer.h"
 #include "intrusive_ptr.h"
-#include "math_defs.h"
 
 
 namespace {
@@ -65,21 +65,23 @@ struct AutowahState final : public EffectState {
     } mEnv[BufferLineSize];
 
     struct {
+        uint mTargetChannel{InvalidChannelIndex};
+
         /* Effect filters' history. */
         struct {
             float z1, z2;
-        } Filter;
+        } mFilter;
 
         /* Effect gains for each output channel */
-        float CurrentGains[MAX_OUTPUT_CHANNELS];
-        float TargetGains[MAX_OUTPUT_CHANNELS];
+        float mCurrentGain;
+        float mTargetGain;
     } mChans[MaxAmbiChannels];
 
     /* Effects buffers */
     alignas(16) float mBufferOut[BufferLineSize];
 
 
-    void deviceUpdate(const DeviceBase *device, const Buffer &buffer) override;
+    void deviceUpdate(const DeviceBase *device, const BufferStorage *buffer) override;
     void update(const ContextBase *context, const EffectSlot *slot, const EffectProps *props,
         const EffectTarget target) override;
     void process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn,
@@ -88,7 +90,7 @@ struct AutowahState final : public EffectState {
     DEF_NEWDEL(AutowahState)
 };
 
-void AutowahState::deviceUpdate(const DeviceBase*, const Buffer&)
+void AutowahState::deviceUpdate(const DeviceBase*, const BufferStorage*)
 {
     /* (Re-)initializing parameters and clear the buffers. */
 
@@ -108,9 +110,10 @@ void AutowahState::deviceUpdate(const DeviceBase*, const Buffer&)
 
     for(auto &chan : mChans)
     {
-        std::fill(std::begin(chan.CurrentGains), std::end(chan.CurrentGains), 0.0f);
-        chan.Filter.z1 = 0.0f;
-        chan.Filter.z2 = 0.0f;
+        chan.mTargetChannel = InvalidChannelIndex;
+        chan.mFilter.z1 = 0.0f;
+        chan.mFilter.z2 = 0.0f;
+        chan.mCurrentGain = 0.0f;
     }
 }
 
@@ -131,9 +134,12 @@ void AutowahState::update(const ContextBase *context, const EffectSlot *slot,
     mBandwidthNorm = (MaxFreq-MinFreq) / frequency;
 
     mOutTarget = target.Main->Buffer;
-    auto set_gains = [slot,target](auto &chan, al::span<const float,MaxAmbiChannels> coeffs)
-    { ComputePanGains(target.Main, coeffs.data(), slot->Gain, chan.TargetGains); };
-    SetAmbiPanIdentity(std::begin(mChans), slot->Wet.Buffer.size(), set_gains);
+    auto set_channel = [this](size_t idx, uint outchan, float outgain)
+    {
+        mChans[idx].mTargetChannel = outchan;
+        mChans[idx].mTargetGain = outgain;
+    };
+    target.Main->setAmbiMixParams(slot->Wet, slot->Gain, set_channel);
 }
 
 void AutowahState::process(const size_t samplesToDo,
@@ -156,26 +162,33 @@ void AutowahState::process(const size_t samplesToDo,
          */
         sample = peak_gain * std::fabs(samplesIn[0][i]);
         a = (sample > env_delay) ? attack_rate : release_rate;
-        env_delay = lerp(sample, env_delay, a);
+        env_delay = lerpf(sample, env_delay, a);
 
         /* Calculate the cos and alpha components for this sample's filter. */
-        w0 = minf((bandwidth*env_delay + freq_min), 0.46f) * al::MathDefs<float>::Tau();
+        w0 = minf((bandwidth*env_delay + freq_min), 0.46f) * (al::numbers::pi_v<float>*2.0f);
         mEnv[i].cos_w0 = std::cos(w0);
         mEnv[i].alpha = std::sin(w0)/(2.0f * QFactor);
     }
     mEnvDelay = env_delay;
 
-    auto chandata = std::addressof(mChans[0]);
+    auto chandata = std::begin(mChans);
     for(const auto &insamples : samplesIn)
     {
+        const size_t outidx{chandata->mTargetChannel};
+        if(outidx == InvalidChannelIndex)
+        {
+            ++chandata;
+            continue;
+        }
+
         /* This effectively inlines BiquadFilter_setParams for a peaking
          * filter and BiquadFilter_processC. The alpha and cosine components
          * for the filter coefficients were previously calculated with the
          * envelope. Because the filter changes for each sample, the
          * coefficients are transient and don't need to be held.
          */
-        float z1{chandata->Filter.z1};
-        float z2{chandata->Filter.z2};
+        float z1{chandata->mFilter.z1};
+        float z2{chandata->mFilter.z2};
 
         for(size_t i{0u};i < samplesToDo;i++)
         {
@@ -197,12 +210,12 @@ void AutowahState::process(const size_t samplesToDo,
             z2 = input*(b[2]/a[0]) - output*(a[2]/a[0]);
             mBufferOut[i] = output;
         }
-        chandata->Filter.z1 = z1;
-        chandata->Filter.z2 = z2;
+        chandata->mFilter.z1 = z1;
+        chandata->mFilter.z2 = z2;
 
         /* Now, mix the processed sound data to the output. */
-        MixSamples({mBufferOut, samplesToDo}, samplesOut, chandata->CurrentGains,
-            chandata->TargetGains, samplesToDo, 0);
+        MixSamples({mBufferOut, samplesToDo}, samplesOut[outidx].data(), chandata->mCurrentGain,
+            chandata->mTargetGain, samplesToDo);
         ++chandata;
     }
 }

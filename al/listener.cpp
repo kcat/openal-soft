@@ -33,112 +33,124 @@
 #include "almalloc.h"
 #include "atomic.h"
 #include "core/except.h"
+#include "direct_defs.h"
 #include "opthelpers.h"
 
 
-#define DO_UPDATEPROPS() do {                                                 \
-    if(!context->mDeferUpdates.load(std::memory_order_acquire))               \
-        UpdateListenerProps(context.get());                                   \
-    else                                                                      \
-        listener.mPropsDirty.set(std::memory_order_release);                  \
-} while(0)
+namespace {
 
-
-AL_API void AL_APIENTRY alListenerf(ALenum param, ALfloat value)
-START_API_FUNC
+inline void UpdateProps(ALCcontext *context)
 {
-    ContextRef context{GetContextRef()};
-    if UNLIKELY(!context) return;
+    if(!context->mDeferUpdates)
+    {
+        UpdateContextProps(context);
+        return;
+    }
+    context->mPropsDirty = true;
+}
 
+inline void CommitAndUpdateProps(ALCcontext *context)
+{
+    if(!context->mDeferUpdates)
+    {
+#ifdef ALSOFT_EAX
+        if(context->eaxNeedsCommit())
+        {
+            context->mPropsDirty = true;
+            context->applyAllUpdates();
+            return;
+        }
+#endif
+        UpdateContextProps(context);
+        return;
+    }
+    context->mPropsDirty = true;
+}
+
+} // namespace
+
+FORCE_ALIGN void AL_APIENTRY alListenerfDirect(ALCcontext *context, ALenum param, ALfloat value) noexcept
+{
     ALlistener &listener = context->mListener;
     std::lock_guard<std::mutex> _{context->mPropLock};
     switch(param)
     {
     case AL_GAIN:
         if(!(value >= 0.0f && std::isfinite(value)))
-            SETERR_RETURN(context, AL_INVALID_VALUE,, "Listener gain out of range");
+            return context->setError(AL_INVALID_VALUE, "Listener gain out of range");
         listener.Gain = value;
-        DO_UPDATEPROPS();
+        UpdateProps(context);
         break;
 
     case AL_METERS_PER_UNIT:
         if(!(value >= AL_MIN_METERS_PER_UNIT && value <= AL_MAX_METERS_PER_UNIT))
-            SETERR_RETURN(context, AL_INVALID_VALUE,, "Listener meters per unit out of range");
+            return context->setError(AL_INVALID_VALUE, "Listener meters per unit out of range");
         listener.mMetersPerUnit = value;
-        DO_UPDATEPROPS();
+        UpdateProps(context);
         break;
 
     default:
         context->setError(AL_INVALID_ENUM, "Invalid listener float property");
     }
 }
-END_API_FUNC
 
-AL_API void AL_APIENTRY alListener3f(ALenum param, ALfloat value1, ALfloat value2, ALfloat value3)
-START_API_FUNC
+FORCE_ALIGN void AL_APIENTRY alListener3fDirect(ALCcontext *context, ALenum param, ALfloat value1,
+    ALfloat value2, ALfloat value3) noexcept
 {
-    ContextRef context{GetContextRef()};
-    if UNLIKELY(!context) return;
-
     ALlistener &listener = context->mListener;
     std::lock_guard<std::mutex> _{context->mPropLock};
     switch(param)
     {
     case AL_POSITION:
         if(!(std::isfinite(value1) && std::isfinite(value2) && std::isfinite(value3)))
-            SETERR_RETURN(context, AL_INVALID_VALUE,, "Listener position out of range");
+            return context->setError(AL_INVALID_VALUE, "Listener position out of range");
         listener.Position[0] = value1;
         listener.Position[1] = value2;
         listener.Position[2] = value3;
-        DO_UPDATEPROPS();
+        CommitAndUpdateProps(context);
         break;
 
     case AL_VELOCITY:
         if(!(std::isfinite(value1) && std::isfinite(value2) && std::isfinite(value3)))
-            SETERR_RETURN(context, AL_INVALID_VALUE,, "Listener velocity out of range");
+            return context->setError(AL_INVALID_VALUE, "Listener velocity out of range");
         listener.Velocity[0] = value1;
         listener.Velocity[1] = value2;
         listener.Velocity[2] = value3;
-        DO_UPDATEPROPS();
+        CommitAndUpdateProps(context);
         break;
 
     default:
         context->setError(AL_INVALID_ENUM, "Invalid listener 3-float property");
     }
 }
-END_API_FUNC
 
-AL_API void AL_APIENTRY alListenerfv(ALenum param, const ALfloat *values)
-START_API_FUNC
+FORCE_ALIGN void AL_APIENTRY alListenerfvDirect(ALCcontext *context, ALenum param,
+    const ALfloat *values) noexcept
 {
-    if(values)
+    if(!values) UNLIKELY
+        return context->setError(AL_INVALID_VALUE, "NULL pointer");
+
+    switch(param)
     {
-        switch(param)
-        {
-        case AL_GAIN:
-        case AL_METERS_PER_UNIT:
-            alListenerf(param, values[0]);
-            return;
+    case AL_GAIN:
+    case AL_METERS_PER_UNIT:
+        alListenerfDirect(context, param, values[0]);
+        return;
 
-        case AL_POSITION:
-        case AL_VELOCITY:
-            alListener3f(param, values[0], values[1], values[2]);
-            return;
-        }
+    case AL_POSITION:
+    case AL_VELOCITY:
+        alListener3fDirect(context, param, values[0], values[1], values[2]);
+        return;
     }
-
-    ContextRef context{GetContextRef()};
-    if UNLIKELY(!context) return;
 
     ALlistener &listener = context->mListener;
     std::lock_guard<std::mutex> _{context->mPropLock};
-    if(!values) SETERR_RETURN(context, AL_INVALID_VALUE,, "NULL pointer");
     switch(param)
     {
     case AL_ORIENTATION:
         if(!(std::isfinite(values[0]) && std::isfinite(values[1]) && std::isfinite(values[2]) &&
              std::isfinite(values[3]) && std::isfinite(values[4]) && std::isfinite(values[5])))
-            SETERR_RETURN(context, AL_INVALID_VALUE,, "Listener orientation out of range");
+            return context->setError(AL_INVALID_VALUE, "Listener orientation out of range");
         /* AT then UP */
         listener.OrientAt[0] = values[0];
         listener.OrientAt[1] = values[1];
@@ -146,22 +158,17 @@ START_API_FUNC
         listener.OrientUp[0] = values[3];
         listener.OrientUp[1] = values[4];
         listener.OrientUp[2] = values[5];
-        DO_UPDATEPROPS();
+        CommitAndUpdateProps(context);
         break;
 
     default:
         context->setError(AL_INVALID_ENUM, "Invalid listener float-vector property");
     }
 }
-END_API_FUNC
 
 
-AL_API void AL_APIENTRY alListeneri(ALenum param, ALint /*value*/)
-START_API_FUNC
+FORCE_ALIGN void AL_APIENTRY alListeneriDirect(ALCcontext *context, ALenum param, ALint /*value*/) noexcept
 {
-    ContextRef context{GetContextRef()};
-    if UNLIKELY(!context) return;
-
     std::lock_guard<std::mutex> _{context->mPropLock};
     switch(param)
     {
@@ -169,21 +176,18 @@ START_API_FUNC
         context->setError(AL_INVALID_ENUM, "Invalid listener integer property");
     }
 }
-END_API_FUNC
 
-AL_API void AL_APIENTRY alListener3i(ALenum param, ALint value1, ALint value2, ALint value3)
-START_API_FUNC
+FORCE_ALIGN void AL_APIENTRY alListener3iDirect(ALCcontext *context, ALenum param, ALint value1,
+    ALint value2, ALint value3) noexcept
 {
     switch(param)
     {
     case AL_POSITION:
     case AL_VELOCITY:
-        alListener3f(param, static_cast<ALfloat>(value1), static_cast<ALfloat>(value2), static_cast<ALfloat>(value3));
+        alListener3fDirect(context, param, static_cast<ALfloat>(value1),
+            static_cast<ALfloat>(value2), static_cast<ALfloat>(value3));
         return;
     }
-
-    ContextRef context{GetContextRef()};
-    if UNLIKELY(!context) return;
 
     std::lock_guard<std::mutex> _{context->mPropLock};
     switch(param)
@@ -192,54 +196,46 @@ START_API_FUNC
         context->setError(AL_INVALID_ENUM, "Invalid listener 3-integer property");
     }
 }
-END_API_FUNC
 
-AL_API void AL_APIENTRY alListeneriv(ALenum param, const ALint *values)
-START_API_FUNC
+FORCE_ALIGN void AL_APIENTRY alListenerivDirect(ALCcontext *context, ALenum param,
+    const ALint *values) noexcept
 {
-    if(values)
-    {
-        ALfloat fvals[6];
-        switch(param)
-        {
-        case AL_POSITION:
-        case AL_VELOCITY:
-            alListener3f(param, static_cast<ALfloat>(values[0]), static_cast<ALfloat>(values[1]), static_cast<ALfloat>(values[2]));
-            return;
+    if(!values) UNLIKELY
+        return context->setError(AL_INVALID_VALUE, "NULL pointer");
 
-        case AL_ORIENTATION:
-            fvals[0] = static_cast<ALfloat>(values[0]);
-            fvals[1] = static_cast<ALfloat>(values[1]);
-            fvals[2] = static_cast<ALfloat>(values[2]);
-            fvals[3] = static_cast<ALfloat>(values[3]);
-            fvals[4] = static_cast<ALfloat>(values[4]);
-            fvals[5] = static_cast<ALfloat>(values[5]);
-            alListenerfv(param, fvals);
-            return;
-        }
+    switch(param)
+    {
+    case AL_POSITION:
+    case AL_VELOCITY:
+        alListener3fDirect(context, param, static_cast<ALfloat>(values[0]),
+            static_cast<ALfloat>(values[1]), static_cast<ALfloat>(values[2]));
+        return;
+
+    case AL_ORIENTATION:
+        const ALfloat fvals[6]{
+            static_cast<ALfloat>(values[0]),
+            static_cast<ALfloat>(values[1]),
+            static_cast<ALfloat>(values[2]),
+            static_cast<ALfloat>(values[3]),
+            static_cast<ALfloat>(values[4]),
+            static_cast<ALfloat>(values[5]),
+        };
+        alListenerfvDirect(context, param, fvals);
+        return;
     }
 
-    ContextRef context{GetContextRef()};
-    if UNLIKELY(!context) return;
-
     std::lock_guard<std::mutex> _{context->mPropLock};
-    if(!values)
-        context->setError(AL_INVALID_VALUE, "NULL pointer");
-    else switch(param)
+    switch(param)
     {
     default:
         context->setError(AL_INVALID_ENUM, "Invalid listener integer-vector property");
     }
 }
-END_API_FUNC
 
 
-AL_API void AL_APIENTRY alGetListenerf(ALenum param, ALfloat *value)
-START_API_FUNC
+FORCE_ALIGN void AL_APIENTRY alGetListenerfDirect(ALCcontext *context, ALenum param,
+    ALfloat *value) noexcept
 {
-    ContextRef context{GetContextRef()};
-    if UNLIKELY(!context) return;
-
     ALlistener &listener = context->mListener;
     std::lock_guard<std::mutex> _{context->mPropLock};
     if(!value)
@@ -258,14 +254,10 @@ START_API_FUNC
         context->setError(AL_INVALID_ENUM, "Invalid listener float property");
     }
 }
-END_API_FUNC
 
-AL_API void AL_APIENTRY alGetListener3f(ALenum param, ALfloat *value1, ALfloat *value2, ALfloat *value3)
-START_API_FUNC
+FORCE_ALIGN void AL_APIENTRY alGetListener3fDirect(ALCcontext *context, ALenum param,
+    ALfloat *value1, ALfloat *value2, ALfloat *value3) noexcept
 {
-    ContextRef context{GetContextRef()};
-    if UNLIKELY(!context) return;
-
     ALlistener &listener = context->mListener;
     std::lock_guard<std::mutex> _{context->mPropLock};
     if(!value1 || !value2 || !value3)
@@ -288,26 +280,22 @@ START_API_FUNC
         context->setError(AL_INVALID_ENUM, "Invalid listener 3-float property");
     }
 }
-END_API_FUNC
 
-AL_API void AL_APIENTRY alGetListenerfv(ALenum param, ALfloat *values)
-START_API_FUNC
+FORCE_ALIGN void AL_APIENTRY alGetListenerfvDirect(ALCcontext *context, ALenum param,
+    ALfloat *values) noexcept
 {
     switch(param)
     {
     case AL_GAIN:
     case AL_METERS_PER_UNIT:
-        alGetListenerf(param, values);
+        alGetListenerfDirect(context, param, values);
         return;
 
     case AL_POSITION:
     case AL_VELOCITY:
-        alGetListener3f(param, values+0, values+1, values+2);
+        alGetListener3fDirect(context, param, values+0, values+1, values+2);
         return;
     }
-
-    ContextRef context{GetContextRef()};
-    if UNLIKELY(!context) return;
 
     ALlistener &listener = context->mListener;
     std::lock_guard<std::mutex> _{context->mPropLock};
@@ -329,15 +317,10 @@ START_API_FUNC
         context->setError(AL_INVALID_ENUM, "Invalid listener float-vector property");
     }
 }
-END_API_FUNC
 
 
-AL_API void AL_APIENTRY alGetListeneri(ALenum param, ALint *value)
-START_API_FUNC
+FORCE_ALIGN void AL_APIENTRY alGetListeneriDirect(ALCcontext *context, ALenum param, ALint *value) noexcept
 {
-    ContextRef context{GetContextRef()};
-    if UNLIKELY(!context) return;
-
     std::lock_guard<std::mutex> _{context->mPropLock};
     if(!value)
         context->setError(AL_INVALID_VALUE, "NULL pointer");
@@ -347,14 +330,10 @@ START_API_FUNC
         context->setError(AL_INVALID_ENUM, "Invalid listener integer property");
     }
 }
-END_API_FUNC
 
-AL_API void AL_APIENTRY alGetListener3i(ALenum param, ALint *value1, ALint *value2, ALint *value3)
-START_API_FUNC
+FORCE_ALIGN void AL_APIENTRY alGetListener3iDirect(ALCcontext *context, ALenum param,
+    ALint *value1, ALint *value2, ALint *value3) noexcept
 {
-    ContextRef context{GetContextRef()};
-    if UNLIKELY(!context) return;
-
     ALlistener &listener = context->mListener;
     std::lock_guard<std::mutex> _{context->mPropLock};
     if(!value1 || !value2 || !value3)
@@ -377,21 +356,17 @@ START_API_FUNC
         context->setError(AL_INVALID_ENUM, "Invalid listener 3-integer property");
     }
 }
-END_API_FUNC
 
-AL_API void AL_APIENTRY alGetListeneriv(ALenum param, ALint* values)
-START_API_FUNC
+FORCE_ALIGN void AL_APIENTRY alGetListenerivDirect(ALCcontext *context, ALenum param,
+    ALint *values) noexcept
 {
     switch(param)
     {
     case AL_POSITION:
     case AL_VELOCITY:
-        alGetListener3i(param, values+0, values+1, values+2);
+        alGetListener3iDirect(context, param, values+0, values+1, values+2);
         return;
     }
-
-    ContextRef context{GetContextRef()};
-    if UNLIKELY(!context) return;
 
     ALlistener &listener = context->mListener;
     std::lock_guard<std::mutex> _{context->mPropLock};
@@ -413,40 +388,16 @@ START_API_FUNC
         context->setError(AL_INVALID_ENUM, "Invalid listener integer-vector property");
     }
 }
-END_API_FUNC
 
-
-void UpdateListenerProps(ALCcontext *context)
-{
-    /* Get an unused proprty container, or allocate a new one as needed. */
-    ListenerProps *props{context->mFreeListenerProps.load(std::memory_order_acquire)};
-    if(!props)
-        props = new ListenerProps{};
-    else
-    {
-        ListenerProps *next;
-        do {
-            next = props->next.load(std::memory_order_relaxed);
-        } while(context->mFreeListenerProps.compare_exchange_weak(props, next,
-                std::memory_order_seq_cst, std::memory_order_acquire) == 0);
-    }
-
-    /* Copy in current property values. */
-    ALlistener &listener = context->mListener;
-    props->Position = listener.Position;
-    props->Velocity = listener.Velocity;
-    props->OrientAt = listener.OrientAt;
-    props->OrientUp = listener.OrientUp;
-    props->Gain = listener.Gain;
-    props->MetersPerUnit = listener.mMetersPerUnit;
-
-    /* Set the new container for updating internal parameters. */
-    props = context->mParams.ListenerUpdate.exchange(props, std::memory_order_acq_rel);
-    if(props)
-    {
-        /* If there was an unused update container, put it back in the
-         * freelist.
-         */
-        AtomicReplaceHead(context->mFreeListenerProps, props);
-    }
-}
+AL_API DECL_FUNC2(void, alListenerf, ALenum, ALfloat)
+AL_API DECL_FUNC4(void, alListener3f, ALenum, ALfloat, ALfloat, ALfloat)
+AL_API DECL_FUNC2(void, alListenerfv, ALenum, const ALfloat*)
+AL_API DECL_FUNC2(void, alListeneri, ALenum, ALint)
+AL_API DECL_FUNC4(void, alListener3i, ALenum, ALint, ALint, ALint)
+AL_API DECL_FUNC2(void, alListeneriv, ALenum, const ALint*)
+AL_API DECL_FUNC2(void, alGetListenerf, ALenum, ALfloat*)
+AL_API DECL_FUNC4(void, alGetListener3f, ALenum, ALfloat*, ALfloat*, ALfloat*)
+AL_API DECL_FUNC2(void, alGetListenerfv, ALenum, ALfloat*)
+AL_API DECL_FUNC2(void, alGetListeneri, ALenum, ALint*)
+AL_API DECL_FUNC4(void, alGetListener3i, ALenum, ALint*, ALint*, ALint*)
+AL_API DECL_FUNC2(void, alGetListeneriv, ALenum, ALint*)

@@ -1,9 +1,8 @@
 #ifndef CORE_CPU_CAPS_H
 #define CORE_CPU_CAPS_H
 
+#include <optional>
 #include <string>
-
-#include "aloptional.h"
 
 
 extern int CPUCapFlags;
@@ -21,6 +20,6 @@ struct CPUInfo {
     int mCaps{0};
 };
 
-al::optional<CPUInfo> GetCPUInfo();
+std::optional<CPUInfo> GetCPUInfo();
 
 #endif /* CORE_CPU_CAPS_H */

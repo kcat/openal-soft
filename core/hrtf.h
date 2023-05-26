@@ -4,24 +4,24 @@
 #include <array>
 #include <cstddef>
 #include <memory>
+#include <optional>
 #include <string>
+#include <vector>
 
 #include "almalloc.h"
-#include "aloptional.h"
 #include "alspan.h"
 #include "atomic.h"
 #include "ambidefs.h"
 #include "bufferline.h"
 #include "mixer/hrtfdefs.h"
 #include "intrusive_ptr.h"
-#include "vector.h"
 
 
 struct HrtfStore {
     RefCount mRef;
 
-    uint sampleRate;
-    uint irSize;
+    uint mSampleRate : 24;
+    uint mIrSize : 8;
 
     struct Field {
         float distance;
@@ -30,19 +30,21 @@ struct HrtfStore {
     /* NOTE: Fields are stored *backwards*. field[0] is the farthest field, and
      * field[fdCount-1] is the nearest.
      */
-    uint fdCount;
-    const Field *field;
+    al::span<const Field> mFields;
 
     struct Elevation {
         ushort azCount;
         ushort irOffset;
     };
-    Elevation *elev;
-    const HrirArray *coeffs;
-    const ubyte2 *delays;
+    Elevation *mElev;
+    const HrirArray *mCoeffs;
+    const ubyte2 *mDelays;
+
+    void getCoeffs(float elevation, float azimuth, float distance, float spread, HrirArray &coeffs,
+        const al::span<uint,2> delays);
 
     void add_ref();
-    void release();
+    void dec_ref();
 
     DEF_PLACE_NEWDEL()
 };
@@ -58,7 +60,7 @@ struct AngularPoint {
 
 
 struct DirectHrtfState {
-    std::array<float,HrtfDirectDelay+BufferLineSize> mTemp;
+    std::array<float,BufferLineSize> mTemp;
 
     /* HRTF filter state for dry buffer content */
     uint mIrSize{0};
@@ -71,7 +73,7 @@ struct DirectHrtfState {
      * high-frequency gains for the decoder. The calculated impulse responses
      * are ordered and scaled according to the matrix input.
      */
-    void build(const HrtfStore *Hrtf, const uint irSize,
+    void build(const HrtfStore *Hrtf, const uint irSize, const bool perHrirMin,
         const al::span<const AngularPoint> AmbiPoints, const float (*AmbiMatrix)[MaxAmbiChannels],
         const float XOverFreq, const al::span<const float,MaxAmbiOrder+1> AmbiOrderHFGain);
 
@@ -81,10 +83,7 @@ struct DirectHrtfState {
 };
 
 
-al::vector<std::string> EnumerateHrtf(al::optional<std::string> pathopt);
+std::vector<std::string> EnumerateHrtf(std::optional<std::string> pathopt);
 HrtfStorePtr GetLoadedHrtf(const std::string &name, const uint devrate);
-
-void GetHrtfCoeffs(const HrtfStore *Hrtf, float elevation, float azimuth, float distance,
-    float spread, HrirArray &coeffs, const al::span<uint,2> delays);
 
 #endif /* CORE_HRTF_H */

@@ -88,6 +88,7 @@
 #include "../getopt.h"
 #endif
 
+#include "alcomplex.h"
 #include "alfstream.h"
 #include "alspan.h"
 #include "alstring.h"
@@ -107,6 +108,8 @@ using namespace std::placeholders;
 #define M_PI                         (3.14159265358979323846)
 #endif
 
+
+HrirDataT::~HrirDataT() = default;
 
 // Head model used for calculating the impulse delays.
 enum HeadModelT {
@@ -140,7 +143,7 @@ enum HeadModelT {
 #define DEFAULT_EQUALIZE             (1)
 #define DEFAULT_SURFACE              (1)
 #define DEFAULT_LIMIT                (24.0)
-#define DEFAULT_TRUNCSIZE            (32)
+#define DEFAULT_TRUNCSIZE            (64)
 #define DEFAULT_HEAD_MODEL           (HM_DATASET)
 #define DEFAULT_CUSTOM_RADIUS        (0.0)
 
@@ -222,94 +225,14 @@ static void TpdfDither(double *RESTRICT out, const double *RESTRICT in, const do
     }
 }
 
-/* Fast Fourier transform routines. The number of points must be a power of
- * two.
- */
-
-// Performs bit-reversal ordering.
-static void FftArrange(const uint n, complex_d *inout)
-{
-    // Handle in-place arrangement.
-    uint rk{0u};
-    for(uint k{0u};k < n;k++)
-    {
-        if(rk > k)
-            std::swap(inout[rk], inout[k]);
-
-        uint m{n};
-        while(rk&(m >>= 1))
-            rk &= ~m;
-        rk |= m;
-    }
-}
-
-// Performs the summation.
-static void FftSummation(const uint n, const double s, complex_d *cplx)
-{
-    double pi;
-    uint m, m2;
-    uint i, k, mk;
-
-    pi = s * M_PI;
-    for(m = 1, m2 = 2;m < n; m <<= 1, m2 <<= 1)
-    {
-        // v = Complex (-2.0 * sin (0.5 * pi / m) * sin (0.5 * pi / m), -sin (pi / m))
-        double sm = std::sin(0.5 * pi / m);
-        auto v = complex_d{-2.0*sm*sm, -std::sin(pi / m)};
-        auto w = complex_d{1.0, 0.0};
-        for(i = 0;i < m;i++)
-        {
-            for(k = i;k < n;k += m2)
-            {
-                mk = k + m;
-                auto t = w * cplx[mk];
-                cplx[mk] = cplx[k] - t;
-                cplx[k] = cplx[k] + t;
-            }
-            w += v*w;
-        }
-    }
-}
-
-// Performs a forward FFT.
-void FftForward(const uint n, complex_d *inout)
-{
-    FftArrange(n, inout);
-    FftSummation(n, 1.0, inout);
-}
-
-// Performs an inverse FFT.
-void FftInverse(const uint n, complex_d *inout)
-{
-    FftArrange(n, inout);
-    FftSummation(n, -1.0, inout);
-    double f{1.0 / n};
-    for(uint i{0};i < n;i++)
-        inout[i] *= f;
-}
 
 /* Calculate the complex helical sequence (or discrete-time analytical signal)
  * of the given input using the Hilbert transform. Given the natural logarithm
  * of a signal's magnitude response, the imaginary components can be used as
  * the angles for minimum-phase reconstruction.
  */
-static void Hilbert(const uint n, complex_d *inout)
-{
-    uint i;
-
-    // Handle in-place operation.
-    for(i = 0;i < n;i++)
-        inout[i].imag(0.0);
-
-    FftInverse(n, inout);
-    for(i = 1;i < (n+1)/2;i++)
-        inout[i] *= 2.0;
-    /* Increment i if n is even. */
-    i += (n&1)^1;
-    for(;i < n;i++)
-        inout[i] = complex_d{0.0, 0.0};
-    FftForward(n, inout);
-}
+inline static void Hilbert(const uint n, complex_d *inout)
+{ complex_hilbert({inout, n}); }
 
 /* Calculate the magnitude response of the given input.  This is used in
  * place of phase decomposition, since the phase residuals are discarded for
@@ -440,30 +363,31 @@ static int StoreMhr(const HrirDataT *hData, const char *filename)
         return 0;
     if(!WriteBin4(1, hData->mIrPoints, fp, filename))
         return 0;
-    if(!WriteBin4(1, hData->mFdCount, fp, filename))
+    if(!WriteBin4(1, static_cast<uint>(hData->mFds.size()), fp, filename))
         return 0;
-    for(fi = hData->mFdCount-1;fi < hData->mFdCount;fi--)
+    for(fi = static_cast<uint>(hData->mFds.size()-1);fi < hData->mFds.size();fi--)
     {
         auto fdist = static_cast<uint32_t>(std::round(1000.0 * hData->mFds[fi].mDistance));
         if(!WriteBin4(2, fdist, fp, filename))
             return 0;
-        if(!WriteBin4(1, hData->mFds[fi].mEvCount, fp, filename))
+        if(!WriteBin4(1, static_cast<uint32_t>(hData->mFds[fi].mEvs.size()), fp, filename))
             return 0;
-        for(ei = 0;ei < hData->mFds[fi].mEvCount;ei++)
+        for(ei = 0;ei < hData->mFds[fi].mEvs.size();ei++)
         {
-            if(!WriteBin4(1, hData->mFds[fi].mEvs[ei].mAzCount, fp, filename))
+            const auto &elev = hData->mFds[fi].mEvs[ei];
+            if(!WriteBin4(1, static_cast<uint32_t>(elev.mAzs.size()), fp, filename))
                 return 0;
         }
     }
 
-    for(fi = hData->mFdCount-1;fi < hData->mFdCount;fi--)
+    for(fi = static_cast<uint>(hData->mFds.size()-1);fi < hData->mFds.size();fi--)
     {
         constexpr double scale{8388607.0};
         constexpr uint bps{3u};
 
-        for(ei = 0;ei < hData->mFds[fi].mEvCount;ei++)
+        for(ei = 0;ei < hData->mFds[fi].mEvs.size();ei++)
         {
-            for(ai = 0;ai < hData->mFds[fi].mEvs[ei].mAzCount;ai++)
+            for(ai = 0;ai < hData->mFds[fi].mEvs[ei].mAzs.size();ai++)
             {
                 HrirAzT *azd = &hData->mFds[fi].mEvs[ei].mAzs[ai];
                 double out[2 * MAX_TRUNCSIZE];
@@ -480,16 +404,14 @@ static int StoreMhr(const HrirDataT *hData, const char *filename)
             }
         }
     }
-    for(fi = hData->mFdCount-1;fi < hData->mFdCount;fi--)
+    for(fi = static_cast<uint>(hData->mFds.size()-1);fi < hData->mFds.size();fi--)
     {
         /* Delay storage has 2 bits of extra precision. */
         constexpr double DelayPrecScale{4.0};
-        for(ei = 0;ei < hData->mFds[fi].mEvCount;ei++)
+        for(ei = 0;ei < hData->mFds[fi].mEvs.size();ei++)
         {
-            for(ai = 0;ai < hData->mFds[fi].mEvs[ei].mAzCount;ai++)
+            for(const auto &azd : hData->mFds[fi].mEvs[ei].mAzs)
             {
-                const HrirAzT &azd = hData->mFds[fi].mEvs[ei].mAzs[ai];
-
                 auto v = static_cast<uint>(std::round(azd.mDelays[0]*DelayPrecScale));
                 if(!WriteBin4(1, v, fp, filename)) return 0;
                 if(hData->mChannelType == CT_STEREO)
@@ -516,22 +438,21 @@ static int StoreMhr(const HrirDataT *hData, const char *filename)
 static void BalanceFieldMagnitudes(const HrirDataT *hData, const uint channels, const uint m)
 {
     double maxMags[MAX_FD_COUNT];
-    uint fi, ei, ai, ti, i;
+    uint fi, ei, ti, i;
 
     double maxMag{0.0};
-    for(fi = 0;fi < hData->mFdCount;fi++)
+    for(fi = 0;fi < hData->mFds.size();fi++)
     {
         maxMags[fi] = 0.0;
 
-        for(ei = hData->mFds[fi].mEvStart;ei < hData->mFds[fi].mEvCount;ei++)
+        for(ei = hData->mFds[fi].mEvStart;ei < hData->mFds[fi].mEvs.size();ei++)
         {
-            for(ai = 0;ai < hData->mFds[fi].mEvs[ei].mAzCount;ai++)
+            for(const auto &azd : hData->mFds[fi].mEvs[ei].mAzs)
             {
-                HrirAzT *azd = &hData->mFds[fi].mEvs[ei].mAzs[ai];
                 for(ti = 0;ti < channels;ti++)
                 {
                     for(i = 0;i < m;i++)
-                        maxMags[fi] = std::max(azd->mIrs[ti][i], maxMags[fi]);
+                        maxMags[fi] = std::max(azd.mIrs[ti][i], maxMags[fi]);
                 }
             }
         }
@@ -539,19 +460,18 @@ static void BalanceFieldMagnitudes(const HrirDataT *hData, const uint channels, 
         maxMag = std::max(maxMags[fi], maxMag);
     }
 
-    for(fi = 0;fi < hData->mFdCount;fi++)
+    for(fi = 0;fi < hData->mFds.size();fi++)
     {
         const double magFactor{maxMag / maxMags[fi]};
 
-        for(ei = hData->mFds[fi].mEvStart;ei < hData->mFds[fi].mEvCount;ei++)
+        for(ei = hData->mFds[fi].mEvStart;ei < hData->mFds[fi].mEvs.size();ei++)
         {
-            for(ai = 0;ai < hData->mFds[fi].mEvs[ei].mAzCount;ai++)
+            for(const auto &azd : hData->mFds[fi].mEvs[ei].mAzs)
             {
-                HrirAzT *azd = &hData->mFds[fi].mEvs[ei].mAzs[ai];
                 for(ti = 0;ti < channels;ti++)
                 {
                     for(i = 0;i < m;i++)
-                        azd->mIrs[ti][i] *= magFactor;
+                        azd.mIrs[ti][i] *= magFactor;
                 }
             }
         }
@@ -571,30 +491,32 @@ static void CalculateDfWeights(const HrirDataT *hData, double *weights)
     sum = 0.0;
     // The head radius acts as the limit for the inner radius.
     innerRa = hData->mRadius;
-    for(fi = 0;fi < hData->mFdCount;fi++)
+    for(fi = 0;fi < hData->mFds.size();fi++)
     {
         // Each volume ends half way between progressive field measurements.
-        if((fi + 1) < hData->mFdCount)
+        if((fi + 1) < hData->mFds.size())
             outerRa = 0.5f * (hData->mFds[fi].mDistance + hData->mFds[fi + 1].mDistance);
         // The final volume has its limit extended to some practical value.
         // This is done to emphasize the far-field responses in the average.
         else
             outerRa = 10.0f;
 
-        evs = M_PI / 2.0 / (hData->mFds[fi].mEvCount - 1);
-        for(ei = hData->mFds[fi].mEvStart;ei < hData->mFds[fi].mEvCount;ei++)
+        const double raPowDiff{std::pow(outerRa, 3.0) - std::pow(innerRa, 3.0)};
+        evs = M_PI / 2.0 / static_cast<double>(hData->mFds[fi].mEvs.size() - 1);
+        for(ei = hData->mFds[fi].mEvStart;ei < hData->mFds[fi].mEvs.size();ei++)
         {
+            const auto &elev = hData->mFds[fi].mEvs[ei];
             // For each elevation, calculate the upper and lower limits of
             // the patch band.
-            ev = hData->mFds[fi].mEvs[ei].mElevation;
+            ev = elev.mElevation;
             lowerEv = std::max(-M_PI / 2.0, ev - evs);
             upperEv = std::min(M_PI / 2.0, ev + evs);
             // Calculate the surface area of the patch band.
             solidAngle = 2.0 * M_PI * (std::sin(upperEv) - std::sin(lowerEv));
             // Then the volume of the extruded patch band.
-            solidVolume = solidAngle * (std::pow(outerRa, 3.0) - std::pow(innerRa, 3.0)) / 3.0;
+            solidVolume = solidAngle * raPowDiff / 3.0;
             // Each weight is the volume of one extruded patch.
-            weights[(fi * MAX_EV_COUNT) + ei] = solidVolume / hData->mFds[fi].mEvs[ei].mAzCount;
+            weights[(fi*MAX_EV_COUNT) + ei] = solidVolume / static_cast<double>(elev.mAzs.size());
             // Sum the total coverage volume of the HRIRs for all fields.
             sum += solidAngle;
         }
@@ -602,11 +524,11 @@ static void CalculateDfWeights(const HrirDataT *hData, double *weights)
         innerRa = outerRa;
     }
 
-    for(fi = 0;fi < hData->mFdCount;fi++)
+    for(fi = 0;fi < hData->mFds.size();fi++)
     {
         // Normalize the weights given the total surface coverage for all
         // fields.
-        for(ei = hData->mFds[fi].mEvStart;ei < hData->mFds[fi].mEvCount;ei++)
+        for(ei = hData->mFds[fi].mEvStart;ei < hData->mFds[fi].mEvs.size();ei++)
             weights[(fi * MAX_EV_COUNT) + ei] /= sum;
     }
 }
@@ -616,9 +538,10 @@ static void CalculateDfWeights(const HrirDataT *hData, double *weights)
  * coverage of each HRIR.  The final average can then be limited by the
  * specified magnitude range (in positive dB; 0.0 to skip).
  */
-static void CalculateDiffuseFieldAverage(const HrirDataT *hData, const uint channels, const uint m, const int weighted, const double limit, double *dfa)
+static void CalculateDiffuseFieldAverage(const HrirDataT *hData, const uint channels, const uint m,
+    const int weighted, const double limit, double *dfa)
 {
-    std::vector<double> weights(hData->mFdCount * MAX_EV_COUNT);
+    std::vector<double> weights(hData->mFds.size() * MAX_EV_COUNT);
     uint count, ti, fi, ei, i, ai;
 
     if(weighted)
@@ -633,16 +556,16 @@ static void CalculateDiffuseFieldAverage(const HrirDataT *hData, const uint chan
         // If coverage weighting is not used, the weights still need to be
         // averaged by the number of existing HRIRs.
         count = hData->mIrCount;
-        for(fi = 0;fi < hData->mFdCount;fi++)
+        for(fi = 0;fi < hData->mFds.size();fi++)
         {
             for(ei = 0;ei < hData->mFds[fi].mEvStart;ei++)
-                count -= hData->mFds[fi].mEvs[ei].mAzCount;
+                count -= static_cast<uint>(hData->mFds[fi].mEvs[ei].mAzs.size());
         }
         weight = 1.0 / count;
 
-        for(fi = 0;fi < hData->mFdCount;fi++)
+        for(fi = 0;fi < hData->mFds.size();fi++)
         {
-            for(ei = hData->mFds[fi].mEvStart;ei < hData->mFds[fi].mEvCount;ei++)
+            for(ei = hData->mFds[fi].mEvStart;ei < hData->mFds[fi].mEvs.size();ei++)
                 weights[(fi * MAX_EV_COUNT) + ei] = weight;
         }
     }
@@ -650,11 +573,11 @@ static void CalculateDiffuseFieldAverage(const HrirDataT *hData, const uint chan
     {
         for(i = 0;i < m;i++)
             dfa[(ti * m) + i] = 0.0;
-        for(fi = 0;fi < hData->mFdCount;fi++)
+        for(fi = 0;fi < hData->mFds.size();fi++)
         {
-            for(ei = hData->mFds[fi].mEvStart;ei < hData->mFds[fi].mEvCount;ei++)
+            for(ei = hData->mFds[fi].mEvStart;ei < hData->mFds[fi].mEvs.size();ei++)
             {
-                for(ai = 0;ai < hData->mFds[fi].mEvs[ei].mAzCount;ai++)
+                for(ai = 0;ai < hData->mFds[fi].mEvs[ei].mAzs.size();ai++)
                 {
                     HrirAzT *azd = &hData->mFds[fi].mEvs[ei].mAzs[ai];
                     // Get the weight for this HRIR's contribution.
@@ -680,112 +603,22 @@ static void CalculateDiffuseFieldAverage(const HrirDataT *hData, const uint chan
 // set using the given average response.
 static void DiffuseFieldEqualize(const uint channels, const uint m, const double *dfa, const HrirDataT *hData)
 {
-    uint ti, fi, ei, ai, i;
+    uint ti, fi, ei, i;
 
-    for(fi = 0;fi < hData->mFdCount;fi++)
+    for(fi = 0;fi < hData->mFds.size();fi++)
     {
-        for(ei = hData->mFds[fi].mEvStart;ei < hData->mFds[fi].mEvCount;ei++)
+        for(ei = hData->mFds[fi].mEvStart;ei < hData->mFds[fi].mEvs.size();ei++)
         {
-            for(ai = 0;ai < hData->mFds[fi].mEvs[ei].mAzCount;ai++)
+            for(auto &azd : hData->mFds[fi].mEvs[ei].mAzs)
             {
-                HrirAzT *azd = &hData->mFds[fi].mEvs[ei].mAzs[ai];
-
                 for(ti = 0;ti < channels;ti++)
                 {
                     for(i = 0;i < m;i++)
-                        azd->mIrs[ti][i] /= dfa[(ti * m) + i];
+                        azd.mIrs[ti][i] /= dfa[(ti * m) + i];
                 }
             }
         }
     }
-}
-
-// Resamples the HRIRs for use at the given sampling rate.
-static void ResampleHrirs(const uint rate, HrirDataT *hData)
-{
-    struct Resampler {
-        const double scale;
-        const size_t m;
-
-        /* Resampling from a lower rate to a higher rate. This likely only
-         * works properly when 1 <= scale <= 2.
-         */
-        void upsample(double *resampled, const double *ir) const
-        {
-            std::fill_n(resampled, m, 0.0);
-            resampled[0] = ir[0];
-            for(size_t in{1};in < m;++in)
-            {
-                const auto offset = static_cast<double>(in) / scale;
-                const auto out = static_cast<size_t>(offset);
-
-                const double a{offset - static_cast<double>(out)};
-                if(out == m-1)
-                    resampled[out] += ir[in]*(1.0-a);
-                else
-                {
-                    resampled[out  ] += ir[in]*(1.0-a);
-                    resampled[out+1] += ir[in]*a;
-                }
-            }
-        }
-
-        /* Resampling from a higher rate to a lower rate. This likely only
-         * works properly when 0.5 <= scale <= 1.0.
-         */
-        void downsample(double *resampled, const double *ir) const
-        {
-            resampled[0] = ir[0];
-            for(size_t out{1};out < m;++out)
-            {
-                const auto offset = static_cast<double>(out) * scale;
-                const auto in = static_cast<size_t>(offset);
-
-                const double a{offset - static_cast<double>(in)};
-                if(in == m-1)
-                    resampled[out] = ir[in]*(1.0-a);
-                else
-                    resampled[out] = ir[in]*(1.0-a) + ir[in+1]*a;
-            }
-        }
-    };
-
-    while(rate > hData->mIrRate*2)
-        ResampleHrirs(hData->mIrRate*2, hData);
-    while(rate < (hData->mIrRate+1)/2)
-        ResampleHrirs((hData->mIrRate+1)/2, hData);
-
-    const auto scale = static_cast<double>(rate) / hData->mIrRate;
-    const size_t m{hData->mFftSize/2u + 1u};
-    auto resampled = std::vector<double>(m);
-
-    const Resampler resampler{scale, m};
-    auto do_resample = std::bind(
-        std::mem_fn((scale > 1.0) ? &Resampler::upsample : &Resampler::downsample), &resampler,
-        _1, _2);
-
-    const uint channels{(hData->mChannelType == CT_STEREO) ? 2u : 1u};
-    for(uint fi{0};fi < hData->mFdCount;++fi)
-    {
-        for(uint ei{hData->mFds[fi].mEvStart};ei < hData->mFds[fi].mEvCount;++ei)
-        {
-            for(uint ai{0};ai < hData->mFds[fi].mEvs[ei].mAzCount;++ai)
-            {
-                HrirAzT *azd = &hData->mFds[fi].mEvs[ei].mAzs[ai];
-                for(uint ti{0};ti < channels;++ti)
-                {
-                    do_resample(resampled.data(), azd->mIrs[ti]);
-                    /* This should probably be rescaled according to the scale,
-                     * however it'll all be normalized in the end so a constant
-                     * scalar is fine to leave.
-                     */
-                    std::transform(resampled.cbegin(), resampled.cend(), azd->mIrs[ti],
-                        [](const double d) { return std::max(d, EPSILON); });
-                }
-            }
-        }
-    }
-    hData->mIrRate = rate;
 }
 
 /* Given field and elevation indices and an azimuth, calculate the indices of
@@ -794,12 +627,12 @@ static void ResampleHrirs(const uint rate, HrirDataT *hData)
  */
 static void CalcAzIndices(const HrirFdT &field, const uint ei, const double az, uint *a0, uint *a1, double *af)
 {
-    double f{(2.0*M_PI + az) * field.mEvs[ei].mAzCount / (2.0*M_PI)};
-    uint i{static_cast<uint>(f) % field.mEvs[ei].mAzCount};
+    double f{(2.0*M_PI + az) * static_cast<double>(field.mEvs[ei].mAzs.size()) / (2.0*M_PI)};
+    const uint i{static_cast<uint>(f) % static_cast<uint>(field.mEvs[ei].mAzs.size())};
 
     f -= std::floor(f);
     *a0 = i;
-    *a1 = (i + 1) % field.mEvs[ei].mAzCount;
+    *a1 = (i + 1) % static_cast<uint>(field.mEvs[ei].mAzs.size());
     *af = f;
 }
 
@@ -829,13 +662,13 @@ static void SynthesizeOnsets(HrirDataT *hData)
             /* Take the polar opposite position of the desired measurement and
              * swap the ears.
              */
-            field.mEvs[0].mAzs[0].mDelays[0] = field.mEvs[field.mEvCount-1].mAzs[0].mDelays[1];
-            field.mEvs[0].mAzs[0].mDelays[1] = field.mEvs[field.mEvCount-1].mAzs[0].mDelays[0];
+            field.mEvs[0].mAzs[0].mDelays[0] = field.mEvs[field.mEvs.size()-1].mAzs[0].mDelays[1];
+            field.mEvs[0].mAzs[0].mDelays[1] = field.mEvs[field.mEvs.size()-1].mAzs[0].mDelays[0];
             for(ei = 1u;ei < (upperElevReal+1)/2;++ei)
             {
-                const uint topElev{field.mEvCount-ei-1};
+                const uint topElev{static_cast<uint>(field.mEvs.size()-ei-1)};
 
-                for(uint ai{0u};ai < field.mEvs[ei].mAzCount;ai++)
+                for(uint ai{0u};ai < field.mEvs[ei].mAzs.size();ai++)
                 {
                     uint a0, a1;
                     double af;
@@ -859,12 +692,12 @@ static void SynthesizeOnsets(HrirDataT *hData)
         }
         else
         {
-            field.mEvs[0].mAzs[0].mDelays[0] = field.mEvs[field.mEvCount-1].mAzs[0].mDelays[0];
+            field.mEvs[0].mAzs[0].mDelays[0] = field.mEvs[field.mEvs.size()-1].mAzs[0].mDelays[0];
             for(ei = 1u;ei < (upperElevReal+1)/2;++ei)
             {
-                const uint topElev{field.mEvCount-ei-1};
+                const uint topElev{static_cast<uint>(field.mEvs.size()-ei-1)};
 
-                for(uint ai{0u};ai < field.mEvs[ei].mAzCount;ai++)
+                for(uint ai{0u};ai < field.mEvs[ei].mAzs.size();ai++)
                 {
                     uint a0, a1;
                     double af;
@@ -897,7 +730,7 @@ static void SynthesizeOnsets(HrirDataT *hData)
             const double ef{(field.mEvs[upperElevReal].mElevation - field.mEvs[ei].mElevation) /
                 (field.mEvs[upperElevReal].mElevation - field.mEvs[lowerElevFake].mElevation)};
 
-            for(uint ai{0u};ai < field.mEvs[ei].mAzCount;ai++)
+            for(uint ai{0u};ai < field.mEvs[ei].mAzs.size();ai++)
             {
                 uint a0, a1, a2, a3;
                 double af0, af1;
@@ -923,7 +756,7 @@ static void SynthesizeOnsets(HrirDataT *hData)
             }
         }
     };
-    std::for_each(hData->mFds.begin(), hData->mFds.begin()+hData->mFdCount, proc_field);
+    std::for_each(hData->mFds.begin(), hData->mFds.end(), proc_field);
 }
 
 /* Attempt to synthesize any missing HRIRs at the bottom elevations of each
@@ -990,7 +823,7 @@ static void SynthesizeHrirs(HrirDataT *hData)
             std::transform(htemp.cbegin(), htemp.cbegin()+m, filter.begin(),
                 [](const complex_d &c) -> double { return std::abs(c); });
 
-            for(uint ai{0u};ai < field.mEvs[ei].mAzCount;ai++)
+            for(uint ai{0u};ai < field.mEvs[ei].mAzs.size();ai++)
             {
                 uint a0, a1;
                 double af;
@@ -1036,7 +869,7 @@ static void SynthesizeHrirs(HrirDataT *hData)
                 field.mEvs[0].mAzs[0].mIrs[ti][i] *= filter[i];
         }
     };
-    std::for_each(hData->mFds.begin(), hData->mFds.begin()+hData->mFdCount, proc_field);
+    std::for_each(hData->mFds.begin(), hData->mFds.end(), proc_field);
 }
 
 // The following routines assume a full set of HRIRs for all elevations.
@@ -1101,15 +934,12 @@ static void ReconstructHrirs(const HrirDataT *hData, const uint numThreads)
     reconstructor.mDone.store(0, std::memory_order_relaxed);
     reconstructor.mFftSize = hData->mFftSize;
     reconstructor.mIrPoints = hData->mIrPoints;
-    for(uint fi{0u};fi < hData->mFdCount;fi++)
+    for(const auto &field : hData->mFds)
     {
-        const HrirFdT &field = hData->mFds[fi];
-        for(uint ei{0};ei < field.mEvCount;ei++)
+        for(auto &elev : field.mEvs)
         {
-            const HrirEvT &elev = field.mEvs[ei];
-            for(uint ai{0u};ai < elev.mAzCount;ai++)
+            for(const auto &azd : elev.mAzs)
             {
-                const HrirAzT &azd = elev.mAzs[ai];
                 for(uint ti{0u};ti < channels;ti++)
                     reconstructor.mIrs.push_back(azd.mIrs[ti]);
             }
@@ -1150,35 +980,28 @@ static void NormalizeHrirs(HrirDataT *hData)
 
     /* Find the maximum amplitude and RMS out of all the IRs. */
     struct LevelPair { double amp, rms; };
-    auto proc0_field = [channels,irSize](const LevelPair levels0, const HrirFdT &field) -> LevelPair
+    auto mesasure_channel = [irSize](const LevelPair levels, const double *ir)
     {
-        auto proc_elev = [channels,irSize](const LevelPair levels1, const HrirEvT &elev) -> LevelPair
-        {
-            auto proc_azi = [channels,irSize](const LevelPair levels2, const HrirAzT &azi) -> LevelPair
+        /* Calculate the peak amplitude and RMS of this IR. */
+        auto current = std::accumulate(ir, ir+irSize, LevelPair{0.0, 0.0},
+            [](const LevelPair cur, const double impulse)
             {
-                auto proc_channel = [irSize](const LevelPair levels3, const double *ir) -> LevelPair
-                {
-                    /* Calculate the peak amplitude and RMS of this IR. */
-                    auto current = std::accumulate(ir, ir+irSize, LevelPair{0.0, 0.0},
-                        [](const LevelPair cur, const double impulse) -> LevelPair
-                        {
-                            return {std::max(std::abs(impulse), cur.amp),
-                                cur.rms + impulse*impulse};
-                        });
-                    current.rms = std::sqrt(current.rms / irSize);
+                return LevelPair{std::max(std::abs(impulse), cur.amp), cur.rms + impulse*impulse};
+            });
+        current.rms = std::sqrt(current.rms / irSize);
 
-                    /* Accumulate levels by taking the maximum amplitude and RMS. */
-                    return LevelPair{std::max(current.amp, levels3.amp),
-                        std::max(current.rms, levels3.rms)};
-                };
-                return std::accumulate(azi.mIrs, azi.mIrs+channels, levels2, proc_channel);
-            };
-            return std::accumulate(elev.mAzs, elev.mAzs+elev.mAzCount, levels1, proc_azi);
-        };
-        return std::accumulate(field.mEvs, field.mEvs+field.mEvCount, levels0, proc_elev);
+        /* Accumulate levels by taking the maximum amplitude and RMS. */
+        return LevelPair{std::max(current.amp, levels.amp), std::max(current.rms, levels.rms)};
     };
-    const auto maxlev = std::accumulate(hData->mFds.begin(), hData->mFds.begin()+hData->mFdCount,
-        LevelPair{0.0, 0.0}, proc0_field);
+    auto measure_azi = [channels,mesasure_channel](const LevelPair levels, const HrirAzT &azi)
+    { return std::accumulate(azi.mIrs, azi.mIrs+channels, levels, mesasure_channel); };
+    auto measure_elev = [measure_azi](const LevelPair levels, const HrirEvT &elev)
+    { return std::accumulate(elev.mAzs.cbegin(), elev.mAzs.cend(), levels, measure_azi); };
+    auto measure_field = [measure_elev](const LevelPair levels, const HrirFdT &field)
+    { return std::accumulate(field.mEvs.cbegin(), field.mEvs.cend(), levels, measure_elev); };
+
+    const auto maxlev = std::accumulate(hData->mFds.begin(), hData->mFds.end(),
+        LevelPair{0.0, 0.0}, measure_field);
 
     /* Normalize using the maximum RMS of the HRIRs. The RMS measure for the
      * non-filtered signal is of an impulse with equal length (to the filter):
@@ -1195,24 +1018,16 @@ static void NormalizeHrirs(HrirDataT *hData)
     factor = std::min(factor, 0.99/maxlev.amp);
 
     /* Now scale all IRs by the given factor. */
-    auto proc1_field = [channels,irSize,factor](HrirFdT &field) -> void
-    {
-        auto proc_elev = [channels,irSize,factor](HrirEvT &elev) -> void
-        {
-            auto proc_azi = [channels,irSize,factor](HrirAzT &azi) -> void
-            {
-                auto proc_channel = [irSize,factor](double *ir) -> void
-                {
-                    std::transform(ir, ir+irSize, ir,
-                        std::bind(std::multiplies<double>{}, _1, factor));
-                };
-                std::for_each(azi.mIrs, azi.mIrs+channels, proc_channel);
-            };
-            std::for_each(elev.mAzs, elev.mAzs+elev.mAzCount, proc_azi);
-        };
-        std::for_each(field.mEvs, field.mEvs+field.mEvCount, proc_elev);
-    };
-    std::for_each(hData->mFds.begin(), hData->mFds.begin()+hData->mFdCount, proc1_field);
+    auto proc_channel = [irSize,factor](double *ir)
+    { std::transform(ir, ir+irSize, ir, [factor](double s){ return s * factor; }); };
+    auto proc_azi = [channels,proc_channel](HrirAzT &azi)
+    { std::for_each(azi.mIrs, azi.mIrs+channels, proc_channel); };
+    auto proc_elev = [proc_azi](HrirEvT &elev)
+    { std::for_each(elev.mAzs.begin(), elev.mAzs.end(), proc_azi); };
+    auto proc1_field = [proc_elev](HrirFdT &field)
+    { std::for_each(field.mEvs.begin(), field.mEvs.end(), proc_elev); };
+
+    std::for_each(hData->mFds.begin(), hData->mFds.end(), proc1_field);
 }
 
 // Calculate the left-ear time delay using a spherical head model.
@@ -1235,69 +1050,58 @@ static void CalculateHrtds(const HeadModelT model, const double radius, HrirData
 {
     uint channels = (hData->mChannelType == CT_STEREO) ? 2 : 1;
     double customRatio{radius / hData->mRadius};
-    uint ti, fi, ei, ai;
+    uint ti;
 
     if(model == HM_SPHERE)
     {
-        for(fi = 0;fi < hData->mFdCount;fi++)
+        for(auto &field : hData->mFds)
         {
-            for(ei = 0;ei < hData->mFds[fi].mEvCount;ei++)
+            for(auto &elev : field.mEvs)
             {
-                HrirEvT *evd = &hData->mFds[fi].mEvs[ei];
-
-                for(ai = 0;ai < evd->mAzCount;ai++)
+                for(auto &azd : elev.mAzs)
                 {
-                    HrirAzT *azd = &evd->mAzs[ai];
-
                     for(ti = 0;ti < channels;ti++)
-                        azd->mDelays[ti] = CalcLTD(evd->mElevation, azd->mAzimuth, radius, hData->mFds[fi].mDistance);
+                        azd.mDelays[ti] = CalcLTD(elev.mElevation, azd.mAzimuth, radius, field.mDistance);
                 }
             }
         }
     }
     else if(customRatio != 1.0)
     {
-        for(fi = 0;fi < hData->mFdCount;fi++)
+        for(auto &field : hData->mFds)
         {
-            for(ei = 0;ei < hData->mFds[fi].mEvCount;ei++)
+            for(auto &elev : field.mEvs)
             {
-                HrirEvT *evd = &hData->mFds[fi].mEvs[ei];
-
-                for(ai = 0;ai < evd->mAzCount;ai++)
+                for(auto &azd : elev.mAzs)
                 {
-                    HrirAzT *azd = &evd->mAzs[ai];
                     for(ti = 0;ti < channels;ti++)
-                        azd->mDelays[ti] *= customRatio;
+                        azd.mDelays[ti] *= customRatio;
                 }
             }
         }
     }
 
     double maxHrtd{0.0};
-    for(fi = 0;fi < hData->mFdCount;fi++)
+    for(auto &field : hData->mFds)
     {
         double minHrtd{std::numeric_limits<double>::infinity()};
-        for(ei = 0;ei < hData->mFds[fi].mEvCount;ei++)
+        for(auto &elev : field.mEvs)
         {
-            for(ai = 0;ai < hData->mFds[fi].mEvs[ei].mAzCount;ai++)
+            for(auto &azd : elev.mAzs)
             {
-                HrirAzT *azd = &hData->mFds[fi].mEvs[ei].mAzs[ai];
-
                 for(ti = 0;ti < channels;ti++)
-                    minHrtd = std::min(azd->mDelays[ti], minHrtd);
+                    minHrtd = std::min(azd.mDelays[ti], minHrtd);
             }
         }
 
-        for(ei = 0;ei < hData->mFds[fi].mEvCount;ei++)
+        for(auto &elev : field.mEvs)
         {
-            for(ai = 0;ai < hData->mFds[fi].mEvs[ei].mAzCount;ai++)
+            for(auto &azd : elev.mAzs)
             {
-                HrirAzT *azd = &hData->mFds[fi].mEvs[ei].mAzs[ai];
-
                 for(ti = 0;ti < channels;ti++)
                 {
-                    azd->mDelays[ti] = (azd->mDelays[ti]-minHrtd) * hData->mIrRate;
-                    maxHrtd = std::max(maxHrtd, azd->mDelays[ti]);
+                    azd.mDelays[ti] = (azd.mDelays[ti]-minHrtd) * hData->mIrRate;
+                    maxHrtd = std::max(maxHrtd, azd.mDelays[ti]);
                 }
             }
         }
@@ -1306,15 +1110,14 @@ static void CalculateHrtds(const HeadModelT model, const double radius, HrirData
     {
         fprintf(stdout, "  Scaling for max delay of %f samples to %f\n...\n", maxHrtd, MAX_HRTD);
         const double scale{MAX_HRTD / maxHrtd};
-        for(fi = 0;fi < hData->mFdCount;fi++)
+        for(auto &field : hData->mFds)
         {
-            for(ei = 0;ei < hData->mFds[fi].mEvCount;ei++)
+            for(auto &elev : field.mEvs)
             {
-                for(ai = 0;ai < hData->mFds[fi].mEvs[ei].mAzCount;ai++)
+                for(auto &azd : elev.mAzs)
                 {
-                    HrirAzT *azd = &hData->mFds[fi].mEvs[ei].mAzs[ai];
                     for(ti = 0;ti < channels;ti++)
-                        azd->mDelays[ti] *= scale;
+                        azd.mDelays[ti] *= scale;
                 }
             }
         }
@@ -1322,45 +1125,40 @@ static void CalculateHrtds(const HeadModelT model, const double radius, HrirData
 }
 
 // Allocate and configure dynamic HRIR structures.
-int PrepareHrirData(const uint fdCount, const double (&distances)[MAX_FD_COUNT],
-    const uint (&evCounts)[MAX_FD_COUNT], const uint azCounts[MAX_FD_COUNT * MAX_EV_COUNT],
-    HrirDataT *hData)
+bool PrepareHrirData(const al::span<const double> distances,
+    const al::span<const uint,MAX_FD_COUNT> evCounts,
+    const al::span<const std::array<uint,MAX_EV_COUNT>,MAX_FD_COUNT> azCounts, HrirDataT *hData)
 {
-    uint evTotal = 0, azTotal = 0, fi, ei, ai;
+    uint evTotal{0}, azTotal{0};
 
-    for(fi = 0;fi < fdCount;fi++)
+    for(size_t fi{0};fi < distances.size();++fi)
     {
         evTotal += evCounts[fi];
-        for(ei = 0;ei < evCounts[fi];ei++)
-            azTotal += azCounts[(fi * MAX_EV_COUNT) + ei];
+        for(size_t ei{0};ei < evCounts[fi];++ei)
+            azTotal += azCounts[fi][ei];
     }
-    if(!fdCount || !evTotal || !azTotal)
-        return 0;
+    if(!evTotal || !azTotal)
+        return false;
 
     hData->mEvsBase.resize(evTotal);
     hData->mAzsBase.resize(azTotal);
-    hData->mFds.resize(fdCount);
+    hData->mFds.resize(distances.size());
     hData->mIrCount = azTotal;
-    hData->mFdCount = fdCount;
     evTotal = 0;
     azTotal = 0;
-    for(fi = 0;fi < fdCount;fi++)
+    for(size_t fi{0};fi < distances.size();++fi)
     {
         hData->mFds[fi].mDistance = distances[fi];
-        hData->mFds[fi].mEvCount = evCounts[fi];
         hData->mFds[fi].mEvStart = 0;
-        hData->mFds[fi].mEvs = &hData->mEvsBase[evTotal];
+        hData->mFds[fi].mEvs = {&hData->mEvsBase[evTotal], evCounts[fi]};
         evTotal += evCounts[fi];
-        for(ei = 0;ei < evCounts[fi];ei++)
+        for(uint ei{0};ei < evCounts[fi];++ei)
         {
-            uint azCount = azCounts[(fi * MAX_EV_COUNT) + ei];
+            uint azCount = azCounts[fi][ei];
 
-            hData->mFds[fi].mIrCount += azCount;
             hData->mFds[fi].mEvs[ei].mElevation = -M_PI / 2.0 + M_PI * ei / (evCounts[fi] - 1);
-            hData->mFds[fi].mEvs[ei].mIrCount += azCount;
-            hData->mFds[fi].mEvs[ei].mAzCount = azCount;
-            hData->mFds[fi].mEvs[ei].mAzs = &hData->mAzsBase[azTotal];
-            for(ai = 0;ai < azCount;ai++)
+            hData->mFds[fi].mEvs[ei].mAzs = {&hData->mAzsBase[azTotal], azCount};
+            for(uint ai{0};ai < azCount;ai++)
             {
                 hData->mFds[fi].mEvs[ei].mAzs[ai].mAzimuth = 2.0 * M_PI * ai / azCount;
                 hData->mFds[fi].mEvs[ei].mAzs[ai].mIndex = azTotal + ai;
@@ -1372,7 +1170,7 @@ int PrepareHrirData(const uint fdCount, const double (&distances)[MAX_FD_COUNT],
             azTotal += azCount;
         }
     }
-    return 1;
+    return true;
 }
 
 
@@ -1392,7 +1190,7 @@ static int ProcessDefinition(const char *inName, const uint outRate, const Chann
     {
         inName = "stdin";
         fprintf(stdout, "Reading HRIR definition from %s...\n", inName);
-        if(!LoadDefInput(std::cin, nullptr, 0, inName, fftSize, truncSize, chanMode, &hData))
+        if(!LoadDefInput(std::cin, nullptr, 0, inName, fftSize, truncSize, outRate, chanMode, &hData))
             return 0;
     }
     else
@@ -1418,13 +1216,13 @@ static int ProcessDefinition(const char *inName, const uint outRate, const Chann
         {
             input = nullptr;
             fprintf(stdout, "Reading HRTF data from %s...\n", inName);
-            if(!LoadSofaFile(inName, numThreads, fftSize, truncSize, chanMode, &hData))
+            if(!LoadSofaFile(inName, numThreads, fftSize, truncSize, outRate, chanMode, &hData))
                 return 0;
         }
         else
         {
             fprintf(stdout, "Reading HRIR definition from %s...\n", inName);
-            if(!LoadDefInput(*input, startbytes, startbytecount, inName, fftSize, truncSize, chanMode, &hData))
+            if(!LoadDefInput(*input, startbytes, startbytecount, inName, fftSize, truncSize, outRate, chanMode, &hData))
                 return 0;
         }
     }
@@ -1435,7 +1233,7 @@ static int ProcessDefinition(const char *inName, const uint outRate, const Chann
         uint m{hData.mFftSize/2u + 1u};
         auto dfa = std::vector<double>(c * m);
 
-        if(hData.mFdCount > 1)
+        if(hData.mFds.size() > 1)
         {
             fprintf(stdout, "Balancing field magnitudes...\n");
             BalanceFieldMagnitudes(&hData, c, m);
@@ -1456,13 +1254,7 @@ static int ProcessDefinition(const char *inName, const uint outRate, const Chann
             fprintf(stdout, "Clearing %zu near field%s...\n", hData.mFds.size()-1,
                 (hData.mFds.size()-1 != 1) ? "s" : "");
             hData.mFds.erase(hData.mFds.cbegin(), hData.mFds.cend()-1);
-            hData.mFdCount = 1;
         }
-    }
-    if(outRate != 0 && outRate != hData.mIrRate)
-    {
-        fprintf(stdout, "Resampling HRIRs...\n");
-        ResampleHrirs(outRate, &hData);
     }
     fprintf(stdout, "Synthesizing missing elevations...\n");
     if(model == HM_DATASET)

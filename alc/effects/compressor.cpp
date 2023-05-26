@@ -38,7 +38,6 @@
 #include <utility>
 
 #include "alc/effects/base.h"
-#include "alc/effectslot.h"
 #include "almalloc.h"
 #include "alnumeric.h"
 #include "alspan.h"
@@ -46,6 +45,7 @@
 #include "core/bufferline.h"
 #include "core/devformat.h"
 #include "core/device.h"
+#include "core/effectslot.h"
 #include "core/mixer.h"
 #include "core/mixer/defs.h"
 #include "intrusive_ptr.h"
@@ -64,7 +64,10 @@ namespace {
 
 struct CompressorState final : public EffectState {
     /* Effect gains for each channel */
-    float mGain[MaxAmbiChannels][MAX_OUTPUT_CHANNELS]{};
+    struct {
+        uint mTarget{InvalidChannelIndex};
+        float mGain{1.0f};
+    } mChans[MaxAmbiChannels];
 
     /* Effect parameters */
     bool mEnabled{true};
@@ -73,7 +76,7 @@ struct CompressorState final : public EffectState {
     float mEnvFollower{1.0f};
 
 
-    void deviceUpdate(const DeviceBase *device, const Buffer &buffer) override;
+    void deviceUpdate(const DeviceBase *device, const BufferStorage *buffer) override;
     void update(const ContextBase *context, const EffectSlot *slot, const EffectProps *props,
         const EffectTarget target) override;
     void process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn,
@@ -82,7 +85,7 @@ struct CompressorState final : public EffectState {
     DEF_NEWDEL(CompressorState)
 };
 
-void CompressorState::deviceUpdate(const DeviceBase *device, const Buffer&)
+void CompressorState::deviceUpdate(const DeviceBase *device, const BufferStorage*)
 {
     /* Number of samples to do a full attack and release (non-integer sample
      * counts are okay).
@@ -103,9 +106,12 @@ void CompressorState::update(const ContextBase*, const EffectSlot *slot,
     mEnabled = props->Compressor.OnOff;
 
     mOutTarget = target.Main->Buffer;
-    auto set_gains = [slot,target](auto &gains, al::span<const float,MaxAmbiChannels> coeffs)
-    { ComputePanGains(target.Main, coeffs.data(), slot->Gain, gains); };
-    SetAmbiPanIdentity(std::begin(mGain), slot->Wet.Buffer.size(), set_gains);
+    auto set_channel = [this](size_t idx, uint outchan, float outgain)
+    {
+        mChans[idx].mTarget = outchan;
+        mChans[idx].mGain = outgain;
+    };
+    target.Main->setAmbiMixParams(slot->Wet, slot->Gain, set_channel);
 }
 
 void CompressorState::process(const size_t samplesToDo,
@@ -158,19 +164,22 @@ void CompressorState::process(const size_t samplesToDo,
         mEnvFollower = env;
 
         /* Now compress the signal amplitude to output. */
-        auto changains = std::addressof(mGain[0]);
+        auto chan = std::cbegin(mChans);
         for(const auto &input : samplesIn)
         {
-            const float *outgains{*(changains++)};
-            for(FloatBufferLine &output : samplesOut)
+            const size_t outidx{chan->mTarget};
+            if(outidx != InvalidChannelIndex)
             {
-                const float gain{*(outgains++)};
+                const float *RESTRICT src{input.data() + base};
+                float *RESTRICT dst{samplesOut[outidx].data() + base};
+                const float gain{chan->mGain};
                 if(!(std::fabs(gain) > GainSilenceThreshold))
-                    continue;
-
-                for(size_t i{0u};i < td;i++)
-                    output[base+i] += input[base+i] * gains[i] * gain;
+                {
+                    for(size_t i{0u};i < td;i++)
+                        dst[i] += src[i] * gains[i] * gain;
+                }
             }
+            ++chan;
         }
 
         base += td;

@@ -1,6 +1,8 @@
 #ifndef AL_NUMERIC_H
 #define AL_NUMERIC_H
 
+#include <algorithm>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #ifdef HAVE_INTRIN_H
@@ -10,6 +12,7 @@
 #include <xmmintrin.h>
 #endif
 
+#include "altraits.h"
 #include "opthelpers.h"
 
 
@@ -67,7 +70,7 @@ constexpr inline size_t clampz(size_t val, size_t min, size_t max) noexcept
 { return minz(max, maxz(min, val)); }
 
 
-constexpr inline float lerp(float val1, float val2, float mu) noexcept
+constexpr inline float lerpf(float val1, float val2, float mu) noexcept
 { return val1 + (val2-val1)*mu; }
 constexpr inline float cubic(float val1, float val2, float val3, float val4, float mu) noexcept
 {
@@ -95,12 +98,20 @@ inline uint32_t NextPowerOf2(uint32_t value) noexcept
     return value+1;
 }
 
-/** Round up a value to the next multiple. */
-inline size_t RoundUp(size_t value, size_t r) noexcept
-{
-    value += r-1;
-    return value - (value%r);
-}
+/**
+ * If the value is not already a multiple of r, round down to the next
+ * multiple.
+ */
+template<typename T>
+constexpr T RoundDown(T value, al::type_identity_t<T> r) noexcept
+{ return value - (value%r); }
+
+/**
+ * If the value is not already a multiple of r, round up to the next multiple.
+ */
+template<typename T>
+constexpr T RoundUp(T value, al::type_identity_t<T> r) noexcept
+{ return RoundDown(value + r-1, r); }
 
 
 /**
@@ -159,11 +170,11 @@ inline int float2int(float f) noexcept
     shift = ((conv.i>>23)&0xff) - (127+23);
 
     /* Over/underflow */
-    if UNLIKELY(shift >= 31 || shift < -23)
+    if(shift >= 31 || shift < -23) UNLIKELY
         return 0;
 
     mant = (conv.i&0x7fffff) | 0x800000;
-    if LIKELY(shift < 0)
+    if(shift < 0) LIKELY
         return (mant >> -shift) * sign;
     return (mant << shift) * sign;
 
@@ -196,11 +207,11 @@ inline int double2int(double d) noexcept
     shift = ((conv.i64 >> 52) & 0x7ff) - (1023 + 52);
 
     /* Over/underflow */
-    if UNLIKELY(shift >= 63 || shift < -52)
+    if(shift >= 63 || shift < -52) UNLIKELY
         return 0;
 
     mant = (conv.i64 & 0xfffffffffffff_i64) | 0x10000000000000_i64;
-    if LIKELY(shift < 0)
+    if(shift < 0) LIKELY
         return (int)(mant >> -shift) * sign;
     return (int)(mant << shift) * sign;
 
@@ -249,7 +260,7 @@ inline float fast_roundf(float f) noexcept
     sign = (conv.i>>31)&0x01;
     expo = (conv.i>>23)&0xff;
 
-    if UNLIKELY(expo >= 150/*+23*/)
+    if(expo >= 150/*+23*/) UNLIKELY
     {
         /* An exponent (base-2) of 23 or higher is incapable of sub-integral
          * precision, so it's already an integral value. We don't need to worry
@@ -269,6 +280,23 @@ inline float fast_roundf(float f) noexcept
     f += ilim[sign];
     return f - ilim[sign];
 #endif
+}
+
+
+// Converts level (mB) to gain.
+inline float level_mb_to_gain(float x)
+{
+    if(x <= -10'000.0f)
+        return 0.0f;
+    return std::pow(10.0f, x / 2'000.0f);
+}
+
+// Converts gain to level (mB).
+inline float gain_to_level_mb(float x)
+{
+    if (x <= 0.0f)
+        return -10'000.0f;
+    return maxf(std::log10(x) * 2'000.0f, -10'000.0f);
 }
 
 #endif /* AL_NUMERIC_H */

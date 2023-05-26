@@ -5,12 +5,12 @@
 #include <limits>
 
 #include "alnumeric.h"
-#include "core/bsinc_tables.h"
+#include "core/bsinc_defs.h"
+#include "core/cubic_defs.h"
 #include "defs.h"
 #include "hrtfbase.h"
 
 struct CTag;
-struct CopyTag;
 struct PointTag;
 struct LerpTag;
 struct CubicTag;
@@ -20,30 +20,46 @@ struct FastBSincTag;
 
 namespace {
 
-constexpr uint FracPhaseBitDiff{MixerFracBits - BSincPhaseBits};
-constexpr uint FracPhaseDiffOne{1 << FracPhaseBitDiff};
+constexpr uint BsincPhaseDiffBits{MixerFracBits - BSincPhaseBits};
+constexpr uint BsincPhaseDiffOne{1 << BsincPhaseDiffBits};
+constexpr uint BsincPhaseDiffMask{BsincPhaseDiffOne - 1u};
+
+constexpr uint CubicPhaseDiffBits{MixerFracBits - CubicPhaseBits};
+constexpr uint CubicPhaseDiffOne{1 << CubicPhaseDiffBits};
+constexpr uint CubicPhaseDiffMask{CubicPhaseDiffOne - 1u};
 
 inline float do_point(const InterpState&, const float *RESTRICT vals, const uint)
 { return vals[0]; }
 inline float do_lerp(const InterpState&, const float *RESTRICT vals, const uint frac)
-{ return lerp(vals[0], vals[1], static_cast<float>(frac)*(1.0f/MixerFracOne)); }
-inline float do_cubic(const InterpState&, const float *RESTRICT vals, const uint frac)
-{ return cubic(vals[0], vals[1], vals[2], vals[3], static_cast<float>(frac)*(1.0f/MixerFracOne)); }
+{ return lerpf(vals[0], vals[1], static_cast<float>(frac)*(1.0f/MixerFracOne)); }
+inline float do_cubic(const InterpState &istate, const float *RESTRICT vals, const uint frac)
+{
+    /* Calculate the phase index and factor. */
+    const uint pi{frac >> CubicPhaseDiffBits};
+    const float pf{static_cast<float>(frac&CubicPhaseDiffMask) * (1.0f/CubicPhaseDiffOne)};
+
+    const float *RESTRICT fil{al::assume_aligned<16>(istate.cubic.filter[pi].mCoeffs)};
+    const float *RESTRICT phd{al::assume_aligned<16>(istate.cubic.filter[pi].mDeltas)};
+
+    /* Apply the phase interpolated filter. */
+    return (fil[0] + pf*phd[0])*vals[0] + (fil[1] + pf*phd[1])*vals[1]
+        + (fil[2] + pf*phd[2])*vals[2] + (fil[3] + pf*phd[3])*vals[3];
+}
 inline float do_bsinc(const InterpState &istate, const float *RESTRICT vals, const uint frac)
 {
     const size_t m{istate.bsinc.m};
     ASSUME(m > 0);
 
-    // Calculate the phase index and factor.
-    const uint pi{frac >> FracPhaseBitDiff};
-    const float pf{static_cast<float>(frac & (FracPhaseDiffOne-1)) * (1.0f/FracPhaseDiffOne)};
+    /* Calculate the phase index and factor. */
+    const uint pi{frac >> BsincPhaseDiffBits};
+    const float pf{static_cast<float>(frac&BsincPhaseDiffMask) * (1.0f/BsincPhaseDiffOne)};
 
     const float *RESTRICT fil{istate.bsinc.filter + m*pi*2};
     const float *RESTRICT phd{fil + m};
     const float *RESTRICT scd{fil + BSincPhaseCount*2*m};
     const float *RESTRICT spd{scd + m};
 
-    // Apply the scale and phase interpolated filter.
+    /* Apply the scale and phase interpolated filter. */
     float r{0.0f};
     for(size_t j_f{0};j_f < m;j_f++)
         r += (fil[j_f] + istate.bsinc.sf*scd[j_f] + pf*(phd[j_f] + istate.bsinc.sf*spd[j_f])) * vals[j_f];
@@ -54,14 +70,14 @@ inline float do_fastbsinc(const InterpState &istate, const float *RESTRICT vals,
     const size_t m{istate.bsinc.m};
     ASSUME(m > 0);
 
-    // Calculate the phase index and factor.
-    const uint pi{frac >> FracPhaseBitDiff};
-    const float pf{static_cast<float>(frac & (FracPhaseDiffOne-1)) * (1.0f/FracPhaseDiffOne)};
+    /* Calculate the phase index and factor. */
+    const uint pi{frac >> BsincPhaseDiffBits};
+    const float pf{static_cast<float>(frac&BsincPhaseDiffMask) * (1.0f/BsincPhaseDiffOne)};
 
     const float *RESTRICT fil{istate.bsinc.filter + m*pi*2};
     const float *RESTRICT phd{fil + m};
 
-    // Apply the phase interpolated filter.
+    /* Apply the phase interpolated filter. */
     float r{0.0f};
     for(size_t j_f{0};j_f < m;j_f++)
         r += (fil[j_f] + pf*phd[j_f]) * vals[j_f];
@@ -70,10 +86,11 @@ inline float do_fastbsinc(const InterpState &istate, const float *RESTRICT vals,
 
 using SamplerT = float(&)(const InterpState&, const float*RESTRICT, const uint);
 template<SamplerT Sampler>
-float *DoResample(const InterpState *state, float *RESTRICT src, uint frac, uint increment,
-    const al::span<float> dst)
+void DoResample(const InterpState *state, const float *RESTRICT src, uint frac,
+    const uint increment, const al::span<float> dst)
 {
     const InterpState istate{*state};
+    ASSUME(frac < MixerFracOne);
     for(float &out : dst)
     {
         out = Sampler(istate, src, frac);
@@ -82,7 +99,6 @@ float *DoResample(const InterpState *state, float *RESTRICT src, uint frac, uint
         src  += frac>>MixerFracBits;
         frac &= MixerFracMask;
     }
-    return dst.data();
 }
 
 inline void ApplyCoeffs(float2 *RESTRICT Values, const size_t IrSize, const ConstHrirSpan Coeffs,
@@ -96,45 +112,63 @@ inline void ApplyCoeffs(float2 *RESTRICT Values, const size_t IrSize, const Cons
     }
 }
 
+force_inline void MixLine(const al::span<const float> InSamples, float *RESTRICT dst,
+    float &CurrentGain, const float TargetGain, const float delta, const size_t min_len,
+    size_t Counter)
+{
+    float gain{CurrentGain};
+    const float step{(TargetGain-gain) * delta};
+
+    size_t pos{0};
+    if(!(std::abs(step) > std::numeric_limits<float>::epsilon()))
+        gain = TargetGain;
+    else
+    {
+        float step_count{0.0f};
+        for(;pos != min_len;++pos)
+        {
+            dst[pos] += InSamples[pos] * (gain + step*step_count);
+            step_count += 1.0f;
+        }
+        if(pos == Counter)
+            gain = TargetGain;
+        else
+            gain += step*step_count;
+    }
+    CurrentGain = gain;
+
+    if(!(std::abs(gain) > GainSilenceThreshold))
+        return;
+    for(;pos != InSamples.size();++pos)
+        dst[pos] += InSamples[pos] * gain;
+}
+
 } // namespace
 
 template<>
-float *Resample_<CopyTag,CTag>(const InterpState*, float *RESTRICT src, uint, uint,
-    const al::span<float> dst)
-{
-#if defined(HAVE_SSE) || defined(HAVE_NEON)
-    /* Avoid copying the source data if it's aligned like the destination. */
-    if((reinterpret_cast<intptr_t>(src)&15) == (reinterpret_cast<intptr_t>(dst.data())&15))
-        return src;
-#endif
-    std::copy_n(src, dst.size(), dst.begin());
-    return dst.data();
-}
+void Resample_<PointTag,CTag>(const InterpState *state, const float *RESTRICT src, uint frac,
+    const uint increment, const al::span<float> dst)
+{ DoResample<do_point>(state, src, frac, increment, dst); }
 
 template<>
-float *Resample_<PointTag,CTag>(const InterpState *state, float *RESTRICT src, uint frac,
-    uint increment, const al::span<float> dst)
-{ return DoResample<do_point>(state, src, frac, increment, dst); }
+void Resample_<LerpTag,CTag>(const InterpState *state, const float *RESTRICT src, uint frac,
+    const uint increment, const al::span<float> dst)
+{ DoResample<do_lerp>(state, src, frac, increment, dst); }
 
 template<>
-float *Resample_<LerpTag,CTag>(const InterpState *state, float *RESTRICT src, uint frac,
-    uint increment, const al::span<float> dst)
-{ return DoResample<do_lerp>(state, src, frac, increment, dst); }
+void Resample_<CubicTag,CTag>(const InterpState *state, const float *RESTRICT src, uint frac,
+    const uint increment, const al::span<float> dst)
+{ DoResample<do_cubic>(state, src-1, frac, increment, dst); }
 
 template<>
-float *Resample_<CubicTag,CTag>(const InterpState *state, float *RESTRICT src, uint frac,
-    uint increment, const al::span<float> dst)
-{ return DoResample<do_cubic>(state, src-1, frac, increment, dst); }
+void Resample_<BSincTag,CTag>(const InterpState *state, const float *RESTRICT src, uint frac,
+    const uint increment, const al::span<float> dst)
+{ DoResample<do_bsinc>(state, src-state->bsinc.l, frac, increment, dst); }
 
 template<>
-float *Resample_<BSincTag,CTag>(const InterpState *state, float *RESTRICT src, uint frac,
-    uint increment, const al::span<float> dst)
-{ return DoResample<do_bsinc>(state, src-state->bsinc.l, frac, increment, dst); }
-
-template<>
-float *Resample_<FastBSincTag,CTag>(const InterpState *state, float *RESTRICT src, uint frac,
-    uint increment, const al::span<float> dst)
-{ return DoResample<do_fastbsinc>(state, src-state->bsinc.l, frac, increment, dst); }
+void Resample_<FastBSincTag,CTag>(const InterpState *state, const float *RESTRICT src, uint frac,
+    const uint increment, const al::span<float> dst)
+{ DoResample<do_fastbsinc>(state, src-state->bsinc.l, frac, increment, dst); }
 
 
 template<>
@@ -166,35 +200,19 @@ void Mix_<CTag>(const al::span<const float> InSamples, const al::span<FloatBuffe
 {
     const float delta{(Counter > 0) ? 1.0f / static_cast<float>(Counter) : 0.0f};
     const auto min_len = minz(Counter, InSamples.size());
+
     for(FloatBufferLine &output : OutBuffer)
-    {
-        float *RESTRICT dst{al::assume_aligned<16>(output.data()+OutPos)};
-        float gain{*CurrentGains};
-        const float step{(*TargetGains-gain) * delta};
+        MixLine(InSamples, al::assume_aligned<16>(output.data()+OutPos), *CurrentGains++,
+            *TargetGains++, delta, min_len, Counter);
+}
 
-        size_t pos{0};
-        if(!(std::abs(step) > std::numeric_limits<float>::epsilon()))
-            gain = *TargetGains;
-        else
-        {
-            float step_count{0.0f};
-            for(;pos != min_len;++pos)
-            {
-                dst[pos] += InSamples[pos] * (gain + step*step_count);
-                step_count += 1.0f;
-            }
-            if(pos == Counter)
-                gain = *TargetGains;
-            else
-                gain += step*step_count;
-        }
-        *CurrentGains = gain;
-        ++CurrentGains;
-        ++TargetGains;
+template<>
+void Mix_<CTag>(const al::span<const float> InSamples, float *OutBuffer, float &CurrentGain,
+    const float TargetGain, const size_t Counter)
+{
+    const float delta{(Counter > 0) ? 1.0f / static_cast<float>(Counter) : 0.0f};
+    const auto min_len = minz(Counter, InSamples.size());
 
-        if(!(std::abs(gain) > GainSilenceThreshold))
-            continue;
-        for(;pos != InSamples.size();++pos)
-            dst[pos] += InSamples[pos] * gain;
-    }
+    MixLine(InSamples, al::assume_aligned<16>(OutBuffer), CurrentGain,
+        TargetGain, delta, min_len, Counter);
 }

@@ -32,10 +32,6 @@
 
 #include "dbus_wrap.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 /* This is the reference implementation for a client for
  * RealtimeKit. You don't have to use this, but if do, just copy these
  * sources into your repository */
@@ -71,10 +67,5 @@ int rtkit_get_min_nice_level(DBusConnection *system_bus, int *min_nice_level);
  * realtime request. A negative value is an errno style error code.
  */
 long long rtkit_get_rttime_usec_max(DBusConnection *system_bus);
-
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif

@@ -3,13 +3,14 @@
 
 #include <array>
 #include <atomic>
+#include <bitset>
+#include <chrono>
+#include <cstddef>
 #include <memory>
-#include <stddef.h>
+#include <optional>
 #include <string>
 
-#include "albyte.h"
 #include "almalloc.h"
-#include "aloptional.h"
 #include "alspan.h"
 #include "bufferline.h"
 #include "buffer_storage.h"
@@ -47,10 +48,7 @@ enum class DirectMode : unsigned char {
 };
 
 
-/* Maximum number of extra source samples that may need to be loaded, for
- * resampling or conversion purposes.
- */
-constexpr uint MaxPostVoiceLoad{MaxResamplerEdge + UhjDecoder::sFilterDelay};
+constexpr uint MaxPitch{10};
 
 
 enum {
@@ -84,8 +82,8 @@ struct SendParams {
     BiquadFilter HighPass;
 
     struct {
-        std::array<float,MAX_OUTPUT_CHANNELS> Current;
-        std::array<float,MAX_OUTPUT_CHANNELS> Target;
+        std::array<float,MaxAmbiChannels> Current;
+        std::array<float,MaxAmbiChannels> Target;
     } Gains;
 };
 
@@ -96,11 +94,12 @@ struct VoiceBufferItem {
     CallbackType mCallback{nullptr};
     void *mUserData{nullptr};
 
+    uint mBlockAlign{0u};
     uint mSampleLen{0u};
     uint mLoopStart{0u};
     uint mLoopEnd{0u};
 
-    al::byte *mSamples{nullptr};
+    std::byte *mSamples{nullptr};
 };
 
 
@@ -138,6 +137,7 @@ struct VoiceProps {
     std::array<float,2> StereoPan;
 
     float Radius;
+    float EnhWidth;
 
     /** Direct filter and auxiliary send info. */
     struct {
@@ -163,13 +163,17 @@ struct VoicePropsItem : public VoiceProps {
     DEF_NEWDEL(VoicePropsItem)
 };
 
-constexpr uint VoiceIsStatic{       1u<<0};
-constexpr uint VoiceIsCallback{     1u<<1};
-constexpr uint VoiceIsAmbisonic{    1u<<2}; /* Needs HF scaling for ambisonic upsampling. */
-constexpr uint VoiceCallbackStopped{1u<<3};
-constexpr uint VoiceIsFading{       1u<<4}; /* Use gain stepping for smooth transitions. */
-constexpr uint VoiceHasHrtf{        1u<<5};
-constexpr uint VoiceHasNfc{         1u<<6};
+enum : uint {
+    VoiceIsStatic,
+    VoiceIsCallback,
+    VoiceIsAmbisonic,
+    VoiceCallbackStopped,
+    VoiceIsFading,
+    VoiceHasHrtf,
+    VoiceHasNfc,
+
+    VoiceFlagCount
+};
 
 struct Voice {
     enum State {
@@ -191,7 +195,7 @@ struct Voice {
      * Source offset in samples, relative to the currently playing buffer, NOT
      * the whole queue.
      */
-    std::atomic<uint> mPosition;
+    std::atomic<int> mPosition;
     /** Fractional (fixed-point) offset to the next sample. */
     std::atomic<uint> mPositionFrac;
 
@@ -203,17 +207,21 @@ struct Voice {
      */
     std::atomic<VoiceBufferItem*> mLoopBuffer;
 
+    std::chrono::nanoseconds mStartTime{};
+
     /* Properties for the attached buffer(s). */
     FmtChannels mFmtChannels;
     FmtType mFmtType;
     uint mFrequency;
-    uint mNumChannels;
-    uint mFrameSize;
+    uint mFrameStep; /**< In steps of the sample type size. */
+    uint mBytesPerBlock; /**< Or for PCM formats, BytesPerFrame. */
+    uint mSamplesPerBlock; /**< Always 1 for PCM formats. */
     AmbiLayout mAmbiLayout;
     AmbiScaling mAmbiScaling;
     uint mAmbiOrder;
 
-    std::unique_ptr<UhjDecoder> mDecoder;
+    std::unique_ptr<DecoderBase> mDecoder;
+    uint mDecoderPadding{};
 
     /** Current target parameters used for mixing. */
     uint mStep{0};
@@ -222,8 +230,9 @@ struct Voice {
 
     InterpState mResampleState;
 
-    uint mFlags{};
-    uint mNumCallbackSamples{0};
+    std::bitset<VoiceFlagCount> mFlags{};
+    uint mNumCallbackBlocks{0};
+    uint mCallbackBlockBase{0};
 
     struct TargetData {
         int FilterType;
@@ -241,7 +250,7 @@ struct Voice {
     al::vector<HistoryLine,16> mPrevSamples{2};
 
     struct ChannelData {
-        float mAmbiScale;
+        float mAmbiHFScale, mAmbiLFScale;
         BandSplitter mAmbiSplitter;
 
         DirectParams mDryParams;
@@ -250,16 +259,17 @@ struct Voice {
     al::vector<ChannelData> mChans{2};
 
     Voice() = default;
-    ~Voice() { delete mUpdate.exchange(nullptr, std::memory_order_acq_rel); }
+    ~Voice() = default;
 
     Voice(const Voice&) = delete;
     Voice& operator=(const Voice&) = delete;
 
-    void mix(const State vstate, ContextBase *Context, const uint SamplesToDo);
+    void mix(const State vstate, ContextBase *Context, const std::chrono::nanoseconds deviceTime,
+        const uint SamplesToDo);
 
     void prepare(DeviceBase *device);
 
-    static void InitMixer(al::optional<std::string> resampler);
+    static void InitMixer(std::optional<std::string> resampler);
 
     DEF_NEWDEL(Voice)
 };

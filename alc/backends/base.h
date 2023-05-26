@@ -3,11 +3,11 @@
 
 #include <chrono>
 #include <cstdarg>
+#include <cstddef>
 #include <memory>
 #include <ratio>
 #include <string>
 
-#include "albyte.h"
 #include "core/device.h"
 #include "core/except.h"
 
@@ -26,7 +26,7 @@ struct BackendBase {
     virtual void start() = 0;
     virtual void stop() = 0;
 
-    virtual void captureSamples(al::byte *buffer, uint samples);
+    virtual void captureSamples(std::byte *buffer, uint samples);
     virtual uint availableSamples();
 
     virtual ClockLatency getClockLatency();
@@ -41,11 +41,6 @@ protected:
     void setDefaultChannelOrder();
     /** Sets the default channel order used by WaveFormatEx. */
     void setDefaultWFXChannelOrder();
-
-#ifdef _WIN32
-    /** Sets the channel order given the WaveFormatEx mask. */
-    void setChannelOrderFromWFXMask(uint chanmask);
-#endif
 };
 using BackendPtr = std::unique_ptr<BackendBase>;
 
@@ -70,9 +65,8 @@ inline std::chrono::nanoseconds GetDeviceClockTime(DeviceBase *device)
 /* Helper to get the device latency from the backend, including any fixed
  * latency from post-processing.
  */
-inline ClockLatency GetClockLatency(DeviceBase *device)
+inline ClockLatency GetClockLatency(DeviceBase *device, BackendBase *backend)
 {
-    BackendBase *backend{device->Backend.get()};
     ClockLatency ret{backend->getClockLatency()};
     ret.Latency += device->FixedLatency;
     return ret;
@@ -109,13 +103,9 @@ public:
 #else
     [[gnu::format(printf, 3, 4)]]
 #endif
-    backend_exception(backend_error code, const char *msg, ...) : mErrorCode{code}
-    {
-        std::va_list args;
-        va_start(args, msg);
-        setMessage(msg, args);
-        va_end(args);
-    }
+    backend_exception(backend_error code, const char *msg, ...);
+    ~backend_exception() override;
+
     backend_error errorCode() const noexcept { return mErrorCode; }
 };
 

@@ -1,27 +1,34 @@
 
 #include "config.h"
 
+#include <optional>
 #include <stdexcept>
 
 #include "AL/al.h"
 #include "AL/efx.h"
 
 #include "alc/effects/base.h"
-#include "aloptional.h"
 #include "effects.h"
+
+#ifdef ALSOFT_EAX
+#include <cassert>
+#include "alnumeric.h"
+#include "al/eax/exception.h"
+#include "al/eax/utils.h"
+#endif // ALSOFT_EAX
 
 
 namespace {
 
-al::optional<ModulatorWaveform> WaveformFromEmum(ALenum value)
+std::optional<ModulatorWaveform> WaveformFromEmum(ALenum value)
 {
     switch(value)
     {
-    case AL_RING_MODULATOR_SINUSOID: return al::make_optional(ModulatorWaveform::Sinusoid);
-    case AL_RING_MODULATOR_SAWTOOTH: return al::make_optional(ModulatorWaveform::Sawtooth);
-    case AL_RING_MODULATOR_SQUARE: return al::make_optional(ModulatorWaveform::Square);
+    case AL_RING_MODULATOR_SINUSOID: return ModulatorWaveform::Sinusoid;
+    case AL_RING_MODULATOR_SAWTOOTH: return ModulatorWaveform::Sawtooth;
+    case AL_RING_MODULATOR_SQUARE: return ModulatorWaveform::Square;
     }
-    return al::nullopt;
+    return std::nullopt;
 }
 ALenum EnumFromWaveform(ModulatorWaveform type)
 {
@@ -134,3 +141,137 @@ EffectProps genDefaultProps() noexcept
 DEFINE_ALEFFECT_VTABLE(Modulator);
 
 const EffectProps ModulatorEffectProps{genDefaultProps()};
+
+#ifdef ALSOFT_EAX
+namespace {
+
+using ModulatorCommitter = EaxCommitter<EaxModulatorCommitter>;
+
+struct FrequencyValidator {
+    void operator()(float flFrequency) const
+    {
+        eax_validate_range<ModulatorCommitter::Exception>(
+            "Frequency",
+            flFrequency,
+            EAXRINGMODULATOR_MINFREQUENCY,
+            EAXRINGMODULATOR_MAXFREQUENCY);
+    }
+}; // FrequencyValidator
+
+struct HighPassCutOffValidator {
+    void operator()(float flHighPassCutOff) const
+    {
+        eax_validate_range<ModulatorCommitter::Exception>(
+            "High-Pass Cutoff",
+            flHighPassCutOff,
+            EAXRINGMODULATOR_MINHIGHPASSCUTOFF,
+            EAXRINGMODULATOR_MAXHIGHPASSCUTOFF);
+    }
+}; // HighPassCutOffValidator
+
+struct WaveformValidator {
+    void operator()(unsigned long ulWaveform) const
+    {
+        eax_validate_range<ModulatorCommitter::Exception>(
+            "Waveform",
+            ulWaveform,
+            EAXRINGMODULATOR_MINWAVEFORM,
+            EAXRINGMODULATOR_MAXWAVEFORM);
+    }
+}; // WaveformValidator
+
+struct AllValidator {
+    void operator()(const EAXRINGMODULATORPROPERTIES& all) const
+    {
+        FrequencyValidator{}(all.flFrequency);
+        HighPassCutOffValidator{}(all.flHighPassCutOff);
+        WaveformValidator{}(all.ulWaveform);
+    }
+}; // AllValidator
+
+} // namespace
+
+template<>
+struct ModulatorCommitter::Exception : public EaxException {
+    explicit Exception(const char *message) : EaxException{"EAX_RING_MODULATOR_EFFECT", message}
+    { }
+};
+
+template<>
+[[noreturn]] void ModulatorCommitter::fail(const char *message)
+{
+    throw Exception{message};
+}
+
+template<>
+bool ModulatorCommitter::commit(const EaxEffectProps &props)
+{
+    if(props == mEaxProps)
+        return false;
+
+    mEaxProps = props;
+
+    auto get_waveform = [](unsigned long form)
+    {
+        if(form == EAX_RINGMODULATOR_SINUSOID)
+            return ModulatorWaveform::Sinusoid;
+        if(form == EAX_RINGMODULATOR_SAWTOOTH)
+            return ModulatorWaveform::Sawtooth;
+        if(form == EAX_RINGMODULATOR_SQUARE)
+            return ModulatorWaveform::Square;
+        return ModulatorWaveform::Sinusoid;
+    };
+
+    auto &eaxprops = std::get<EAXRINGMODULATORPROPERTIES>(props);
+    mAlProps.Modulator.Frequency = eaxprops.flFrequency;
+    mAlProps.Modulator.HighPassCutoff = eaxprops.flHighPassCutOff;
+    mAlProps.Modulator.Waveform = get_waveform(eaxprops.ulWaveform);
+
+    return true;
+}
+
+template<>
+void ModulatorCommitter::SetDefaults(EaxEffectProps &props)
+{
+    static constexpr EAXRINGMODULATORPROPERTIES defprops{[]
+    {
+        EAXRINGMODULATORPROPERTIES ret{};
+        ret.flFrequency = EAXRINGMODULATOR_DEFAULTFREQUENCY;
+        ret.flHighPassCutOff = EAXRINGMODULATOR_DEFAULTHIGHPASSCUTOFF;
+        ret.ulWaveform = EAXRINGMODULATOR_DEFAULTWAVEFORM;
+        return ret;
+    }()};
+    props = defprops;
+}
+
+template<>
+void ModulatorCommitter::Get(const EaxCall &call, const EaxEffectProps &props_)
+{
+    auto &props = std::get<EAXRINGMODULATORPROPERTIES>(props_);
+    switch(call.get_property_id())
+    {
+    case EAXRINGMODULATOR_NONE: break;
+    case EAXRINGMODULATOR_ALLPARAMETERS: call.set_value<Exception>(props); break;
+    case EAXRINGMODULATOR_FREQUENCY: call.set_value<Exception>(props.flFrequency); break;
+    case EAXRINGMODULATOR_HIGHPASSCUTOFF: call.set_value<Exception>(props.flHighPassCutOff); break;
+    case EAXRINGMODULATOR_WAVEFORM: call.set_value<Exception>(props.ulWaveform); break;
+    default: fail_unknown_property_id();
+    }
+}
+
+template<>
+void ModulatorCommitter::Set(const EaxCall &call, EaxEffectProps &props_)
+{
+    auto &props = std::get<EAXRINGMODULATORPROPERTIES>(props_);
+    switch (call.get_property_id())
+    {
+    case EAXRINGMODULATOR_NONE: break;
+    case EAXRINGMODULATOR_ALLPARAMETERS: defer<AllValidator>(call, props); break;
+    case EAXRINGMODULATOR_FREQUENCY: defer<FrequencyValidator>(call, props.flFrequency); break;
+    case EAXRINGMODULATOR_HIGHPASSCUTOFF: defer<HighPassCutOffValidator>(call, props.flHighPassCutOff); break;
+    case EAXRINGMODULATOR_WAVEFORM: defer<WaveformValidator>(call, props.ulWaveform); break;
+    default: fail_unknown_property_id();
+    }
+}
+
+#endif // ALSOFT_EAX

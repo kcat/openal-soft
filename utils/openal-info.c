@@ -22,6 +22,7 @@
  * THE SOFTWARE.
  */
 
+#include <assert.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -33,82 +34,16 @@
 
 #include "win_main_utf8.h"
 
-
-#ifndef ALC_ENUMERATE_ALL_EXT
-#define ALC_DEFAULT_ALL_DEVICES_SPECIFIER        0x1012
-#define ALC_ALL_DEVICES_SPECIFIER                0x1013
+/* C doesn't allow casting between function and non-function pointer types, so
+ * with C99 we need to use a union to reinterpret the pointer type. Pre-C99
+ * still needs to use a normal cast and live with the warning (C++ is fine with
+ * a regular reinterpret_cast).
+ */
+#if __STDC_VERSION__ >= 199901L
+#define FUNCTION_CAST(T, ptr) (union{void *p; T f;}){ptr}.f
+#else
+#define FUNCTION_CAST(T, ptr) (T)(ptr)
 #endif
-
-#ifndef ALC_EXT_EFX
-#define ALC_EFX_MAJOR_VERSION                    0x20001
-#define ALC_EFX_MINOR_VERSION                    0x20002
-#define ALC_MAX_AUXILIARY_SENDS                  0x20003
-#endif
-
-
-#ifdef _WIN32
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
-
-static WCHAR *FromUTF8(const char *str)
-{
-    WCHAR *out = NULL;
-    int len;
-
-    if((len=MultiByteToWideChar(CP_UTF8, 0, str, -1, NULL, 0)) > 0)
-    {
-        out = calloc(sizeof(WCHAR), (unsigned int)(len));
-        MultiByteToWideChar(CP_UTF8, 0, str, -1, out, len);
-    }
-    return out;
-}
-
-/* Override printf, fprintf, and fwrite so we can print UTF-8 strings. */
-static void al_fprintf(FILE *file, const char *fmt, ...)
-{
-    char str[1024];
-    WCHAR *wstr;
-    va_list ap;
-
-    va_start(ap, fmt);
-    vsnprintf(str, sizeof(str), fmt, ap);
-    va_end(ap);
-
-    str[sizeof(str)-1] = 0;
-    wstr = FromUTF8(str);
-    if(!wstr)
-        fprintf(file, "<UTF-8 error> %s", str);
-    else
-        fprintf(file, "%ls", wstr);
-    free(wstr);
-}
-#define fprintf al_fprintf
-#define printf(...) al_fprintf(stdout, __VA_ARGS__)
-
-static size_t al_fwrite(const void *ptr, size_t size, size_t nmemb, FILE *file)
-{
-    char str[1024];
-    WCHAR *wstr;
-    size_t len;
-
-    len = size * nmemb;
-    if(len > sizeof(str)-1)
-        len = sizeof(str)-1;
-    memcpy(str, ptr, len);
-    str[len] = 0;
-
-    wstr = FromUTF8(str);
-    if(!wstr)
-        fprintf(file, "<UTF-8 error> %s", str);
-    else
-        fprintf(file, "%ls", wstr);
-    free(wstr);
-
-    return len / size;
-}
-#define fwrite al_fwrite
-#endif
-
 
 #define MAX_WIDTH  80
 
@@ -227,7 +162,8 @@ static void printHRTFInfo(ALCdevice *device)
         return;
     }
 
-    alcGetStringiSOFT = (LPALCGETSTRINGISOFT)alcGetProcAddress(device, "alcGetStringiSOFT");
+    alcGetStringiSOFT = FUNCTION_CAST(LPALCGETSTRINGISOFT,
+        alcGetProcAddress(device, "alcGetStringiSOFT"));
 
     alcGetIntegerv(device, ALC_NUM_HRTF_SPECIFIERS_SOFT, 1, &num_hrtfs);
     if(!num_hrtfs)
@@ -243,6 +179,40 @@ static void printHRTFInfo(ALCdevice *device)
         }
     }
     checkALCErrors(device);
+}
+
+static void printModeInfo(ALCdevice *device)
+{
+    ALCint srate = 0;
+
+    if(alcIsExtensionPresent(device, "ALC_SOFT_output_mode"))
+    {
+        const char *modename = "(error)";
+        ALCenum mode = 0;
+
+        alcGetIntegerv(device, ALC_OUTPUT_MODE_SOFT, 1, &mode);
+        checkALCErrors(device);
+        switch(mode)
+        {
+        case ALC_ANY_SOFT: modename = "Unknown / unspecified"; break;
+        case ALC_MONO_SOFT: modename = "Mono"; break;
+        case ALC_STEREO_SOFT: modename = "Stereo (unspecified encoding)"; break;
+        case ALC_STEREO_BASIC_SOFT: modename = "Stereo (basic)"; break;
+        case ALC_STEREO_UHJ_SOFT: modename = "Stereo (UHJ)"; break;
+        case ALC_STEREO_HRTF_SOFT: modename = "Stereo (HRTF)"; break;
+        case ALC_QUAD_SOFT: modename = "Quadraphonic"; break;
+        case ALC_SURROUND_5_1_SOFT: modename = "5.1 Surround"; break;
+        case ALC_SURROUND_6_1_SOFT: modename = "6.1 Surround"; break;
+        case ALC_SURROUND_7_1_SOFT: modename = "7.1 Surround"; break;
+        }
+        printf("Device output mode: %s\n", modename);
+    }
+    else
+        printf("Output mode extension not available\n");
+
+    alcGetIntegerv(device, ALC_FREQUENCY, 1, &srate);
+    if(checkALCErrors(device) == ALC_NO_ERROR)
+        printf("Device sample rate: %dhz\n", srate);
 }
 
 static void printALInfo(void)
@@ -267,7 +237,7 @@ static void printResamplerInfo(void)
         return;
     }
 
-    alGetStringiSOFT = (LPALGETSTRINGISOFT)alGetProcAddress("alGetStringiSOFT");
+    alGetStringiSOFT = FUNCTION_CAST(LPALGETSTRINGISOFT, alGetProcAddress("alGetStringiSOFT"));
 
     num_resamplers = alGetInteger(AL_NUM_RESAMPLERS_SOFT);
     def_resampler = alGetInteger(AL_DEFAULT_RESAMPLER_SOFT);
@@ -289,26 +259,35 @@ static void printResamplerInfo(void)
 
 static void printEFXInfo(ALCdevice *device)
 {
-    ALCint major, minor, sends;
-    static const ALchar filters[][32] = {
-        "AL_FILTER_LOWPASS", "AL_FILTER_HIGHPASS", "AL_FILTER_BANDPASS", ""
+    static LPALGENFILTERS palGenFilters;
+    static LPALDELETEFILTERS palDeleteFilters;
+    static LPALFILTERI palFilteri;
+    static LPALGENEFFECTS palGenEffects;
+    static LPALDELETEEFFECTS palDeleteEffects;
+    static LPALEFFECTI palEffecti;
+
+    static const ALint filters[] = {
+        AL_FILTER_LOWPASS, AL_FILTER_HIGHPASS, AL_FILTER_BANDPASS,
+        AL_FILTER_NULL
     };
     char filterNames[] = "Low-pass,High-pass,Band-pass,";
-    static const ALchar effects[][32] = {
-        "AL_EFFECT_EAXREVERB", "AL_EFFECT_REVERB", "AL_EFFECT_CHORUS",
-        "AL_EFFECT_DISTORTION", "AL_EFFECT_ECHO", "AL_EFFECT_FLANGER",
-        "AL_EFFECT_FREQUENCY_SHIFTER", "AL_EFFECT_VOCAL_MORPHER",
-        "AL_EFFECT_PITCH_SHIFTER", "AL_EFFECT_RING_MODULATOR",
-        "AL_EFFECT_AUTOWAH", "AL_EFFECT_COMPRESSOR", "AL_EFFECT_EQUALIZER", ""
+    static const ALint effects[] = {
+        AL_EFFECT_EAXREVERB, AL_EFFECT_REVERB, AL_EFFECT_CHORUS,
+        AL_EFFECT_DISTORTION, AL_EFFECT_ECHO, AL_EFFECT_FLANGER,
+        AL_EFFECT_FREQUENCY_SHIFTER, AL_EFFECT_VOCAL_MORPHER,
+        AL_EFFECT_PITCH_SHIFTER, AL_EFFECT_RING_MODULATOR,
+        AL_EFFECT_AUTOWAH, AL_EFFECT_COMPRESSOR, AL_EFFECT_EQUALIZER,
+        AL_EFFECT_NULL
     };
-    static const ALchar dedeffects[][64] = {
-        "AL_EFFECT_DEDICATED_DIALOGUE",
-        "AL_EFFECT_DEDICATED_LOW_FREQUENCY_EFFECT", ""
+    static const ALint dedeffects[] = {
+        AL_EFFECT_DEDICATED_DIALOGUE, AL_EFFECT_DEDICATED_LOW_FREQUENCY_EFFECT,
+        AL_EFFECT_NULL
     };
     char effectNames[] = "EAX Reverb,Reverb,Chorus,Distortion,Echo,Flanger,"
-                         "Frequency Shifter,Vocal Morpher,Pitch Shifter,"
-                         "Ring Modulator,Autowah,Compressor,Equalizer,"
-                         "Dedicated Dialog,Dedicated LFE,";
+        "Frequency Shifter,Vocal Morpher,Pitch Shifter,Ring Modulator,Autowah,"
+        "Compressor,Equalizer,Dedicated Dialog,Dedicated LFE,";
+    ALCint major, minor, sends;
+    ALuint object;
     char *current;
     int i;
 
@@ -318,6 +297,13 @@ static void printEFXInfo(ALCdevice *device)
         return;
     }
 
+    palGenFilters = FUNCTION_CAST(LPALGENFILTERS, alGetProcAddress("alGenFilters"));
+    palDeleteFilters = FUNCTION_CAST(LPALDELETEFILTERS, alGetProcAddress("alDeleteFilters"));
+    palFilteri = FUNCTION_CAST(LPALFILTERI, alGetProcAddress("alFilteri"));
+    palGenEffects = FUNCTION_CAST(LPALGENEFFECTS, alGetProcAddress("alGenEffects"));
+    palDeleteEffects = FUNCTION_CAST(LPALDELETEEFFECTS, alGetProcAddress("alDeleteEffects"));
+    palEffecti = FUNCTION_CAST(LPALEFFECTI, alGetProcAddress("alEffecti"));
+
     alcGetIntegerv(device, ALC_EFX_MAJOR_VERSION, 1, &major);
     alcGetIntegerv(device, ALC_EFX_MINOR_VERSION, 1, &minor);
     if(checkALCErrors(device) == ALC_NO_ERROR)
@@ -326,14 +312,17 @@ static void printEFXInfo(ALCdevice *device)
     if(checkALCErrors(device) == ALC_NO_ERROR)
         printf("Max auxiliary sends: %d\n", sends);
 
+    palGenFilters(1, &object);
+    checkALErrors();
+
     current = filterNames;
-    for(i = 0;filters[i][0];i++)
+    for(i = 0;filters[i] != AL_FILTER_NULL;i++)
     {
         char *next = strchr(current, ',');
-        ALenum val;
+        assert(next != NULL);
 
-        val = alGetEnumValue(filters[i]);
-        if(alGetError() != AL_NO_ERROR || val == 0 || val == -1)
+        palFilteri(object, AL_FILTER_TYPE, filters[i]);
+        if(alGetError() != AL_NO_ERROR)
             memmove(current, next+1, strlen(next));
         else
             current = next+1;
@@ -341,27 +330,31 @@ static void printEFXInfo(ALCdevice *device)
     printf("Supported filters:");
     printList(filterNames, ',');
 
+    palDeleteFilters(1, &object);
+    palGenEffects(1, &object);
+    checkALErrors();
+
     current = effectNames;
-    for(i = 0;effects[i][0];i++)
+    for(i = 0;effects[i] != AL_EFFECT_NULL;i++)
     {
         char *next = strchr(current, ',');
-        ALenum val;
+        assert(next != NULL);
 
-        val = alGetEnumValue(effects[i]);
-        if(alGetError() != AL_NO_ERROR || val == 0 || val == -1)
+        palEffecti(object, AL_EFFECT_TYPE, effects[i]);
+        if(alGetError() != AL_NO_ERROR)
             memmove(current, next+1, strlen(next));
         else
             current = next+1;
     }
     if(alcIsExtensionPresent(device, "ALC_EXT_DEDICATED"))
     {
-        for(i = 0;dedeffects[i][0];i++)
+        for(i = 0;dedeffects[i] != AL_EFFECT_NULL;i++)
         {
             char *next = strchr(current, ',');
-            ALenum val;
+            assert(next != NULL);
 
-            val = alGetEnumValue(dedeffects[i]);
-            if(alGetError() != AL_NO_ERROR || val == 0 || val == -1)
+            palEffecti(object, AL_EFFECT_TYPE, dedeffects[i]);
+            if(alGetError() != AL_NO_ERROR)
                 memmove(current, next+1, strlen(next));
             else
                 current = next+1;
@@ -369,20 +362,29 @@ static void printEFXInfo(ALCdevice *device)
     }
     else
     {
-        for(i = 0;dedeffects[i][0];i++)
+        for(i = 0;dedeffects[i] != AL_EFFECT_NULL;i++)
         {
             char *next = strchr(current, ',');
+            assert(next != NULL);
             memmove(current, next+1, strlen(next));
         }
     }
     printf("Supported effects:");
     printList(effectNames, ',');
+
+    palDeleteEffects(1, &object);
+    checkALErrors();
 }
 
 int main(int argc, char *argv[])
 {
     ALCdevice *device;
     ALCcontext *context;
+
+#ifdef _WIN32
+    /* OpenAL Soft gives UTF-8 strings, so set the console to expect that. */
+    SetConsoleOutputCP(CP_UTF8);
+#endif
 
     if(argc > 1 && (strcmp(argv[1], "--help") == 0 ||
                     strcmp(argv[1], "-h") == 0))
@@ -429,6 +431,7 @@ int main(int argc, char *argv[])
         return 1;
     }
 
+    printModeInfo(device);
     printALInfo();
     printResamplerInfo();
     printEFXInfo(device);

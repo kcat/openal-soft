@@ -20,7 +20,7 @@ struct NullState final : public EffectState {
     NullState();
     ~NullState() override;
 
-    void deviceUpdate(const DeviceBase *device, const Buffer &buffer) override;
+    void deviceUpdate(const DeviceBase *device, const BufferStorage *buffer) override;
     void update(const ContextBase *context, const EffectSlot *slot, const EffectProps *props,
         const EffectTarget target) override;
     void process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn,
@@ -44,7 +44,7 @@ NullState::~NullState() = default;
  * format) have been changed. Will always be followed by a call to the update
  * method, if successful.
  */
-void NullState::deviceUpdate(const DeviceBase* /*device*/, const Buffer& /*buffer*/)
+void NullState::deviceUpdate(const DeviceBase* /*device*/, const BufferStorage* /*buffer*/)
 {
 }
 

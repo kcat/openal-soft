@@ -29,9 +29,11 @@ void *al_calloc(size_t alignment, size_t size);
 #define DEF_NEWDEL(T)                                                         \
     void *operator new(size_t size)                                           \
     {                                                                         \
-        void *ret = al_malloc(alignof(T), size);                              \
-        if(!ret) throw std::bad_alloc();                                      \
-        return ret;                                                           \
+        static_assert(&operator new == &T::operator new,                      \
+            "Incorrect container type specified");                            \
+        if(void *ret{al_malloc(alignof(T), size)})                            \
+            return ret;                                                       \
+        throw std::bad_alloc();                                               \
     }                                                                         \
     void *operator new[](size_t size) { return operator new(size); }          \
     void operator delete(void *block) noexcept { al_free(block); }            \
@@ -50,8 +52,10 @@ enum FamCount : size_t { };
 #define DEF_FAM_NEWDEL(T, FamMem)                                             \
     static constexpr size_t Sizeof(size_t count) noexcept                     \
     {                                                                         \
-        return std::max<size_t>(sizeof(T),                                    \
-            decltype(FamMem)::Sizeof(count, offsetof(T, FamMem)));            \
+        static_assert(&Sizeof == &T::Sizeof,                                  \
+            "Incorrect container type specified");                            \
+        return std::max(decltype(FamMem)::Sizeof(count, offsetof(T, FamMem)), \
+            sizeof(T));                                                       \
     }                                                                         \
                                                                               \
     void *operator new(size_t /*size*/, FamCount count)                       \
@@ -68,8 +72,10 @@ enum FamCount : size_t { };
 
 namespace al {
 
-template<typename T, std::size_t alignment=alignof(T)>
+template<typename T, std::size_t Align=alignof(T)>
 struct allocator {
+    static constexpr std::size_t alignment{std::max(Align, alignof(T))};
+
     using value_type = T;
     using reference = T&;
     using const_reference = const T&;
@@ -81,7 +87,7 @@ struct allocator {
 
     template<typename U>
     struct rebind {
-        using other = allocator<U, (alignment<alignof(U))?alignof(U):alignment>;
+        using other = allocator<U, Align>;
     };
 
     constexpr explicit allocator() noexcept = default;
@@ -101,79 +107,23 @@ constexpr bool operator==(const allocator<T,N>&, const allocator<U,M>&) noexcept
 template<typename T, std::size_t N, typename U, std::size_t M>
 constexpr bool operator!=(const allocator<T,N>&, const allocator<U,M>&) noexcept { return false; }
 
-template<size_t alignment, typename T>
-[[gnu::assume_aligned(alignment)]] constexpr T* assume_aligned(T *ptr) noexcept { return ptr; }
+
+template<typename T>
+constexpr T *to_address(T *p) noexcept
+{
+    static_assert(!std::is_function<T>::value, "Can't be a function type");
+    return p;
+}
+
+template<typename T>
+constexpr auto to_address(const T &p) noexcept
+{ return to_address(p.operator->()); }
 
 
 template<typename T, typename ...Args>
 constexpr T* construct_at(T *ptr, Args&& ...args)
     noexcept(std::is_nothrow_constructible<T, Args...>::value)
 { return ::new(static_cast<void*>(ptr)) T{std::forward<Args>(args)...}; }
-
-/* At least VS 2015 complains that 'ptr' is unused when the given type's
- * destructor is trivial (a no-op). So disable that warning for this call.
- */
-DIAGNOSTIC_PUSH
-msc_pragma(warning(disable : 4100))
-template<typename T>
-constexpr std::enable_if_t<!std::is_array<T>::value>
-destroy_at(T *ptr) noexcept(std::is_nothrow_destructible<T>::value)
-{ ptr->~T(); }
-DIAGNOSTIC_POP
-template<typename T>
-constexpr std::enable_if_t<std::is_array<T>::value>
-destroy_at(T *ptr) noexcept(std::is_nothrow_destructible<std::remove_all_extents_t<T>>::value)
-{
-    for(auto &elem : *ptr)
-        al::destroy_at(std::addressof(elem));
-}
-
-template<typename T>
-constexpr void destroy(T first, T end) noexcept(noexcept(al::destroy_at(std::addressof(*first))))
-{
-    while(first != end)
-    {
-        al::destroy_at(std::addressof(*first));
-        ++first;
-    }
-}
-
-template<typename T, typename N>
-constexpr std::enable_if_t<std::is_integral<N>::value,T>
-destroy_n(T first, N count) noexcept(noexcept(al::destroy_at(std::addressof(*first))))
-{
-    if(count != 0)
-    {
-        do {
-            al::destroy_at(std::addressof(*first));
-            ++first;
-        } while(--count);
-    }
-    return first;
-}
-
-
-template<typename T, typename N>
-inline std::enable_if_t<std::is_integral<N>::value,
-T> uninitialized_default_construct_n(T first, N count)
-{
-    using ValueT = typename std::iterator_traits<T>::value_type;
-    T current{first};
-    if(count != 0)
-    {
-        try {
-            do {
-                ::new(static_cast<void*>(std::addressof(*current))) ValueT;
-                ++current;
-            } while(--count);
-        }
-        catch(...) {
-            al::destroy(first, current);
-            throw;
-        }
-    }
-    return current;
-}
 
 
 /* Storage for flexible array data. This is trivially destructible if type T is
@@ -189,12 +139,12 @@ struct FlexArrayStorage {
 
     static constexpr size_t Sizeof(size_t count, size_t base=0u) noexcept
     {
-        return std::max<size_t>(offsetof(FlexArrayStorage, mArray) + sizeof(T)*count,
-            sizeof(FlexArrayStorage)) + base;
+        const size_t len{sizeof(T)*count};
+        return std::max(offsetof(FlexArrayStorage,mArray)+len, sizeof(FlexArrayStorage)) + base;
     }
 
     FlexArrayStorage(size_t size) : mSize{size}
-    { al::uninitialized_default_construct_n(mArray, mSize); }
+    { std::uninitialized_default_construct_n(mArray, mSize); }
     ~FlexArrayStorage() = default;
 
     FlexArrayStorage(const FlexArrayStorage&) = delete;
@@ -211,13 +161,13 @@ struct FlexArrayStorage<T,alignment,false> {
 
     static constexpr size_t Sizeof(size_t count, size_t base) noexcept
     {
-        return std::max<size_t>(offsetof(FlexArrayStorage, mArray) + sizeof(T)*count,
-            sizeof(FlexArrayStorage)) + base;
+        const size_t len{sizeof(T)*count};
+        return std::max(offsetof(FlexArrayStorage,mArray)+len, sizeof(FlexArrayStorage)) + base;
     }
 
     FlexArrayStorage(size_t size) : mSize{size}
-    { al::uninitialized_default_construct_n(mArray, mSize); }
-    ~FlexArrayStorage() { al::destroy_n(mArray, mSize); }
+    { std::uninitialized_default_construct_n(mArray, mSize); }
+    ~FlexArrayStorage() { std::destroy_n(mArray, mSize); }
 
     FlexArrayStorage(const FlexArrayStorage&) = delete;
     FlexArrayStorage& operator=(const FlexArrayStorage&) = delete;

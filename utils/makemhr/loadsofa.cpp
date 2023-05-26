@@ -33,10 +33,12 @@
 #include <iterator>
 #include <memory>
 #include <numeric>
+#include <optional>
 #include <string>
 #include <thread>
 #include <vector>
 
+#include "alspan.h"
 #include "makemhr.h"
 #include "polyphase_resampler.h"
 #include "sofa-support.h"
@@ -65,7 +67,8 @@ static bool PrepareLayout(const uint m, const float *xyzs, HrirDataT *hData)
 
     double distances[MAX_FD_COUNT]{};
     uint evCounts[MAX_FD_COUNT]{};
-    auto azCounts = std::vector<uint>(MAX_FD_COUNT*MAX_EV_COUNT, 0u);
+    auto azCounts = std::vector<std::array<uint,MAX_EV_COUNT>>(MAX_FD_COUNT);
+    for(auto &azs : azCounts) azs.fill(0u);
 
     uint fi{0u}, ir_total{0u};
     for(const auto &field : fds)
@@ -74,21 +77,22 @@ static bool PrepareLayout(const uint m, const float *xyzs, HrirDataT *hData)
         evCounts[fi] = field.mEvCount;
 
         for(uint ei{0u};ei < field.mEvStart;ei++)
-            azCounts[fi*MAX_EV_COUNT + ei] = field.mAzCounts[field.mEvCount-ei-1];
+            azCounts[fi][ei] = field.mAzCounts[field.mEvCount-ei-1];
         for(uint ei{field.mEvStart};ei < field.mEvCount;ei++)
         {
-            azCounts[fi*MAX_EV_COUNT + ei] = field.mAzCounts[ei];
+            azCounts[fi][ei] = field.mAzCounts[ei];
             ir_total += field.mAzCounts[ei];
         }
 
         ++fi;
     }
     fprintf(stdout, "Using %u of %u IRs.\n", ir_total, m);
-    return PrepareHrirData(fi, distances, evCounts, azCounts.data(), hData) != 0;
+    const auto azs = al::span{azCounts}.first<MAX_FD_COUNT>();
+    return PrepareHrirData({distances, fi}, evCounts, azs, hData);
 }
 
 
-bool PrepareSampleRate(MYSOFA_HRTF *sofaHrtf, HrirDataT *hData)
+float GetSampleRate(MYSOFA_HRTF *sofaHrtf)
 {
     const char *srate_dim{nullptr};
     const char *srate_units{nullptr};
@@ -101,7 +105,7 @@ bool PrepareSampleRate(MYSOFA_HRTF *sofaHrtf, HrirDataT *hData)
             if(srate_dim)
             {
                 fprintf(stderr, "Duplicate SampleRate.DIMENSION_LIST\n");
-                return false;
+                return 0.0f;
             }
             srate_dim = srate_attrs->value;
         }
@@ -110,7 +114,7 @@ bool PrepareSampleRate(MYSOFA_HRTF *sofaHrtf, HrirDataT *hData)
             if(srate_units)
             {
                 fprintf(stderr, "Duplicate SampleRate.Units\n");
-                return false;
+                return 0.0f;
             }
             srate_units = srate_attrs->value;
         }
@@ -122,35 +126,40 @@ bool PrepareSampleRate(MYSOFA_HRTF *sofaHrtf, HrirDataT *hData)
     if(!srate_dim)
     {
         fprintf(stderr, "Missing sample rate dimensions\n");
-        return false;
+        return 0.0f;
     }
     if(srate_dim != std::string{"I"})
     {
         fprintf(stderr, "Unsupported sample rate dimensions: %s\n", srate_dim);
-        return false;
+        return 0.0f;
     }
     if(!srate_units)
     {
         fprintf(stderr, "Missing sample rate unit type\n");
-        return false;
+        return 0.0f;
     }
     if(srate_units != std::string{"hertz"})
     {
         fprintf(stderr, "Unsupported sample rate unit type: %s\n", srate_units);
-        return false;
+        return 0.0f;
     }
     /* I dimensions guarantees 1 element, so just extract it. */
-    hData->mIrRate = static_cast<uint>(srate_array->values[0] + 0.5f);
-    if(hData->mIrRate < MIN_RATE || hData->mIrRate > MAX_RATE)
+    if(srate_array->values[0] < MIN_RATE || srate_array->values[0] > MAX_RATE)
     {
-        fprintf(stderr, "Sample rate out of range: %u (expected %u to %u)", hData->mIrRate,
+        fprintf(stderr, "Sample rate out of range: %f (expected %u to %u)", srate_array->values[0],
             MIN_RATE, MAX_RATE);
-        return false;
+        return 0.0f;
     }
-    return true;
+    return srate_array->values[0];
 }
 
-bool PrepareDelay(MYSOFA_HRTF *sofaHrtf, HrirDataT *hData)
+enum class DelayType : uint8_t {
+    None,
+    I_R, /* [1][Channels] */
+    M_R, /* [HRIRs][Channels] */
+    Invalid,
+};
+DelayType PrepareDelay(MYSOFA_HRTF *sofaHrtf)
 {
     const char *delay_dim{nullptr};
     MYSOFA_ARRAY *delay_array{&sofaHrtf->DataDelay};
@@ -162,38 +171,27 @@ bool PrepareDelay(MYSOFA_HRTF *sofaHrtf, HrirDataT *hData)
             if(delay_dim)
             {
                 fprintf(stderr, "Duplicate Delay.DIMENSION_LIST\n");
-                return false;
+                return DelayType::Invalid;
             }
             delay_dim = delay_attrs->value;
         }
         else
             fprintf(stderr, "Unexpected delay attribute: %s = %s\n", delay_attrs->name,
-                delay_attrs->value);
+                delay_attrs->value ? delay_attrs->value : "<null>");
         delay_attrs = delay_attrs->next;
     }
     if(!delay_dim)
     {
         fprintf(stderr, "Missing delay dimensions\n");
-        /*return false;*/
+        return DelayType::None;
     }
-    else if(delay_dim != std::string{"I,R"})
-    {
-        fprintf(stderr, "Unsupported delay dimensions: %s\n", delay_dim);
-        return false;
-    }
-    else if(hData->mChannelType == CT_STEREO)
-    {
-        /* I,R is 1xChannelCount. Makemhr currently removes any delay constant,
-         * so we can ignore this as long as it's equal.
-         */
-        if(delay_array->values[0] != delay_array->values[1])
-        {
-            fprintf(stderr, "Mismatched delays not supported: %f, %f\n", delay_array->values[0],
-                delay_array->values[1]);
-            return false;
-        }
-    }
-    return true;
+    if(delay_dim == std::string{"I,R"})
+        return DelayType::I_R;
+    else if(delay_dim == std::string{"M,R"})
+        return DelayType::M_R;
+
+    fprintf(stderr, "Unsupported delay dimensions: %s\n", delay_dim);
+    return DelayType::Invalid;
 }
 
 bool CheckIrData(MYSOFA_HRTF *sofaHrtf)
@@ -214,7 +212,7 @@ bool CheckIrData(MYSOFA_HRTF *sofaHrtf)
         }
         else
             fprintf(stderr, "Unexpected IR attribute: %s = %s\n", ir_attrs->name,
-                ir_attrs->value);
+                ir_attrs->value ? ir_attrs->value : "<null>");
         ir_attrs = ir_attrs->next;
     }
     if(!ir_dim)
@@ -234,7 +232,7 @@ bool CheckIrData(MYSOFA_HRTF *sofaHrtf)
 /* Calculate the onset time of a HRIR. */
 static constexpr int OnsetRateMultiple{10};
 static double CalcHrirOnset(PPhaseResampler &rs, const uint rate, const uint n,
-    std::vector<double> &upsampled, const double *hrir)
+    al::span<double> upsampled, const double *hrir)
 {
     rs.process(n, hrir, static_cast<uint>(upsampled.size()), upsampled.data());
 
@@ -246,8 +244,7 @@ static double CalcHrirOnset(PPhaseResampler &rs, const uint rate, const uint n,
 }
 
 /* Calculate the magnitude response of a HRIR. */
-static void CalcHrirMagnitude(const uint points, const uint n, std::vector<complex_d> &h,
-    double *hrir)
+static void CalcHrirMagnitude(const uint points, const uint n, al::span<complex_d> h, double *hrir)
 {
     auto iter = std::copy_n(hrir, points, h.begin());
     std::fill(iter, h.end(), complex_d{0.0, 0.0});
@@ -256,15 +253,24 @@ static void CalcHrirMagnitude(const uint points, const uint n, std::vector<compl
     MagnitudeResponse(n, h.data(), hrir);
 }
 
-static bool LoadResponses(MYSOFA_HRTF *sofaHrtf, HrirDataT *hData)
+static bool LoadResponses(MYSOFA_HRTF *sofaHrtf, HrirDataT *hData, const DelayType delayType,
+    const uint outRate)
 {
     std::atomic<uint> loaded_count{0u};
 
-    auto load_proc = [sofaHrtf,hData,&loaded_count]() -> bool
+    auto load_proc = [sofaHrtf,hData,delayType,outRate,&loaded_count]() -> bool
     {
         const uint channels{(hData->mChannelType == CT_STEREO) ? 2u : 1u};
         hData->mHrirsBase.resize(channels * hData->mIrCount * hData->mIrSize, 0.0);
         double *hrirs = hData->mHrirsBase.data();
+
+        std::unique_ptr<double[]> restmp;
+        std::optional<PPhaseResampler> resampler;
+        if(outRate && outRate != hData->mIrRate)
+        {
+            resampler.emplace().init(hData->mIrRate, outRate);
+            restmp = std::make_unique<double[]>(sofaHrtf->N);
+        }
 
         for(uint si{0u};si < sofaHrtf->M;++si)
         {
@@ -284,22 +290,21 @@ static bool LoadResponses(MYSOFA_HRTF *sofaHrtf, HrirDataT *hData)
 
             auto field = std::find_if(hData->mFds.cbegin(), hData->mFds.cend(),
                 [&aer](const HrirFdT &fld) -> bool
-                {
-                    double delta = aer[2] - fld.mDistance;
-                    return (std::abs(delta) < 0.001);
-                });
+                { return (std::abs(aer[2] - fld.mDistance) < 0.001); });
             if(field == hData->mFds.cend())
                 continue;
 
-            double ef{(90.0+aer[1]) / 180.0 * (field->mEvCount-1)};
-            auto ei = static_cast<int>(std::round(ef));
-            ef = (ef-ei) * 180.0 / (field->mEvCount-1);
+            const double evscale{180.0 / static_cast<double>(field->mEvs.size()-1)};
+            double ef{(90.0 + aer[1]) / evscale};
+            auto ei = static_cast<uint>(std::round(ef));
+            ef = (ef - ei) * evscale;
             if(std::abs(ef) >= 0.1) continue;
 
-            double af{aer[0] / 360.0 * field->mEvs[ei].mAzCount};
-            auto ai = static_cast<int>(std::round(af));
-            af = (af-ai) * 360.0 / field->mEvs[ei].mAzCount;
-            ai %= field->mEvs[ei].mAzCount;
+            const double azscale{360.0 / static_cast<double>(field->mEvs[ei].mAzs.size())};
+            double af{aer[0] / azscale};
+            auto ai = static_cast<uint>(std::round(af));
+            af = (af-ai) * azscale;
+            ai %= static_cast<uint>(field->mEvs[ei].mAzs.size());
             if(std::abs(af) >= 0.1) continue;
 
             HrirAzT *azd = &field->mEvs[ei].mAzs[ai];
@@ -313,14 +318,39 @@ static bool LoadResponses(MYSOFA_HRTF *sofaHrtf, HrirDataT *hData)
             for(uint ti{0u};ti < channels;++ti)
             {
                 azd->mIrs[ti] = &hrirs[hData->mIrSize * (hData->mIrCount*ti + azd->mIndex)];
-                std::copy_n(&sofaHrtf->DataIR.values[(si*sofaHrtf->R + ti)*sofaHrtf->N],
-                    hData->mIrPoints, azd->mIrs[ti]);
+                if(!resampler)
+                    std::copy_n(&sofaHrtf->DataIR.values[(si*sofaHrtf->R + ti)*sofaHrtf->N],
+                        sofaHrtf->N, azd->mIrs[ti]);
+                else
+                {
+                    std::copy_n(&sofaHrtf->DataIR.values[(si*sofaHrtf->R + ti)*sofaHrtf->N],
+                        sofaHrtf->N, restmp.get());
+                    resampler->process(sofaHrtf->N, restmp.get(), hData->mIrSize, azd->mIrs[ti]);
+                }
             }
 
-            /* TODO: Since some SOFA files contain minimum phase HRIRs,
-             * it would be beneficial to check for per-measurement delays
-             * (when available) to reconstruct the HRTDs.
-             */
+            /* Include any per-channel or per-HRIR delays. */
+            if(delayType == DelayType::I_R)
+            {
+                const float *delayValues{sofaHrtf->DataDelay.values};
+                for(uint ti{0u};ti < channels;++ti)
+                    azd->mDelays[ti] = delayValues[ti] / static_cast<float>(hData->mIrRate);
+            }
+            else if(delayType == DelayType::M_R)
+            {
+                const float *delayValues{sofaHrtf->DataDelay.values};
+                for(uint ti{0u};ti < channels;++ti)
+                    azd->mDelays[ti] = delayValues[si*sofaHrtf->R + ti] /
+                        static_cast<float>(hData->mIrRate);
+            }
+        }
+
+        if(outRate && outRate != hData->mIrRate)
+        {
+            const double scale{static_cast<double>(outRate) / hData->mIrRate};
+            hData->mIrRate = outRate;
+            hData->mIrPoints = std::min(static_cast<uint>(std::ceil(hData->mIrPoints*scale)),
+                hData->mIrSize);
         }
         return true;
     };
@@ -376,7 +406,7 @@ struct MagCalculator {
 };
 
 bool LoadSofaFile(const char *filename, const uint numThreads, const uint fftSize,
-    const uint truncSize, const ChannelModeT chanMode, HrirDataT *hData)
+    const uint truncSize, const uint outRate, const ChannelModeT chanMode, HrirDataT *hData)
 {
     int err;
     MySofaHrtfPtr sofaHrtf{mysofa_load(filename, &err)};
@@ -429,39 +459,45 @@ bool LoadSofaFile(const char *filename, const uint numThreads, const uint fftSiz
     /* Assume a default head radius of 9cm. */
     hData->mRadius = 0.09;
 
-    if(!PrepareSampleRate(sofaHrtf.get(), hData) || !PrepareDelay(sofaHrtf.get(), hData)
-        || !CheckIrData(sofaHrtf.get()))
+    hData->mIrRate = static_cast<uint>(GetSampleRate(sofaHrtf.get()) + 0.5f);
+    if(!hData->mIrRate)
+        return false;
+
+    DelayType delayType = PrepareDelay(sofaHrtf.get());
+    if(delayType == DelayType::Invalid)
+        return false;
+
+    if(!CheckIrData(sofaHrtf.get()))
         return false;
     if(!PrepareLayout(sofaHrtf->M, sofaHrtf->SourcePosition.values, hData))
         return false;
-
-    if(!LoadResponses(sofaHrtf.get(), hData))
+    if(!LoadResponses(sofaHrtf.get(), hData, delayType, outRate))
         return false;
     sofaHrtf = nullptr;
 
-    for(uint fi{0u};fi < hData->mFdCount;fi++)
+    for(uint fi{0u};fi < hData->mFds.size();fi++)
     {
         uint ei{0u};
-        for(;ei < hData->mFds[fi].mEvCount;ei++)
+        for(;ei < hData->mFds[fi].mEvs.size();ei++)
         {
             uint ai{0u};
-            for(;ai < hData->mFds[fi].mEvs[ei].mAzCount;ai++)
+            for(;ai < hData->mFds[fi].mEvs[ei].mAzs.size();ai++)
             {
                 HrirAzT &azd = hData->mFds[fi].mEvs[ei].mAzs[ai];
                 if(azd.mIrs[0] != nullptr) break;
             }
-            if(ai < hData->mFds[fi].mEvs[ei].mAzCount)
+            if(ai < hData->mFds[fi].mEvs[ei].mAzs.size())
                 break;
         }
-        if(ei >= hData->mFds[fi].mEvCount)
+        if(ei >= hData->mFds[fi].mEvs.size())
         {
             fprintf(stderr, "Missing source references [ %d, *, * ].\n", fi);
             return false;
         }
         hData->mFds[fi].mEvStart = ei;
-        for(;ei < hData->mFds[fi].mEvCount;ei++)
+        for(;ei < hData->mFds[fi].mEvs.size();ei++)
         {
-            for(uint ai{0u};ai < hData->mFds[fi].mEvs[ei].mAzCount;ai++)
+            for(uint ai{0u};ai < hData->mFds[fi].mEvs[ei].mAzs.size();ai++)
             {
                 HrirAzT &azd = hData->mFds[fi].mEvs[ei].mAzs[ai];
                 if(azd.mIrs[0] == nullptr)
@@ -477,11 +513,11 @@ bool LoadSofaFile(const char *filename, const uint numThreads, const uint fftSiz
     size_t hrir_total{0};
     const uint channels{(hData->mChannelType == CT_STEREO) ? 2u : 1u};
     double *hrirs = hData->mHrirsBase.data();
-    for(uint fi{0u};fi < hData->mFdCount;fi++)
+    for(uint fi{0u};fi < hData->mFds.size();fi++)
     {
         for(uint ei{0u};ei < hData->mFds[fi].mEvStart;ei++)
         {
-            for(uint ai{0u};ai < hData->mFds[fi].mEvs[ei].mAzCount;ai++)
+            for(uint ai{0u};ai < hData->mFds[fi].mEvs[ei].mAzs.size();ai++)
             {
                 HrirAzT &azd = hData->mFds[fi].mEvs[ei].mAzs[ai];
                 for(uint ti{0u};ti < channels;ti++)
@@ -489,8 +525,8 @@ bool LoadSofaFile(const char *filename, const uint numThreads, const uint fftSiz
             }
         }
 
-        for(uint ei{hData->mFds[fi].mEvStart};ei < hData->mFds[fi].mEvCount;ei++)
-            hrir_total += hData->mFds[fi].mEvs[ei].mAzCount * channels;
+        for(uint ei{hData->mFds[fi].mEvStart};ei < hData->mFds[fi].mEvs.size();ei++)
+            hrir_total += hData->mFds[fi].mEvs[ei].mAzs.size() * channels;
     }
 
     std::atomic<size_t> hrir_done{0};
@@ -502,17 +538,16 @@ bool LoadSofaFile(const char *filename, const uint numThreads, const uint fftSiz
         PPhaseResampler rs;
         rs.init(hData->mIrRate, OnsetRateMultiple*hData->mIrRate);
 
-        for(uint fi{0u};fi < hData->mFdCount;fi++)
+        for(auto &field : hData->mFds)
         {
-            for(uint ei{hData->mFds[fi].mEvStart};ei < hData->mFds[fi].mEvCount;ei++)
+            for(auto &elev : field.mEvs.subspan(field.mEvStart))
             {
-                for(uint ai{0};ai < hData->mFds[fi].mEvs[ei].mAzCount;ai++)
+                for(auto &azd : elev.mAzs)
                 {
-                    HrirAzT &azd = hData->mFds[fi].mEvs[ei].mAzs[ai];
                     for(uint ti{0};ti < channels;ti++)
                     {
                         hrir_done.fetch_add(1u, std::memory_order_acq_rel);
-                        azd.mDelays[ti] = CalcHrirOnset(rs, hData->mIrRate, hData->mIrPoints,
+                        azd.mDelays[ti] += CalcHrirOnset(rs, hData->mIrRate, hData->mIrPoints,
                             upsampled, azd.mIrs[ti]);
                     }
                 }
@@ -533,13 +568,12 @@ bool LoadSofaFile(const char *filename, const uint numThreads, const uint fftSiz
         return false;
 
     MagCalculator calculator{hData->mFftSize, hData->mIrPoints};
-    for(uint fi{0u};fi < hData->mFdCount;fi++)
+    for(auto &field : hData->mFds)
     {
-        for(uint ei{hData->mFds[fi].mEvStart};ei < hData->mFds[fi].mEvCount;ei++)
+        for(auto &elev : field.mEvs.subspan(field.mEvStart))
         {
-            for(uint ai{0};ai < hData->mFds[fi].mEvs[ei].mAzCount;ai++)
+            for(auto &azd : elev.mAzs)
             {
-                HrirAzT &azd = hData->mFds[fi].mEvs[ei].mAzs[ai];
                 for(uint ti{0};ti < channels;ti++)
                     calculator.mIrs.push_back(azd.mIrs[ti]);
             }

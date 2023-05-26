@@ -9,33 +9,33 @@
 
 std::atomic<DriverIface*> CurrentCtxDriver{nullptr};
 
-#define DECL_THUNK1(R,n,T1) AL_API R AL_APIENTRY n(T1 a)                      \
+#define DECL_THUNK1(R,n,T1) AL_API R AL_APIENTRY n(T1 a) noexcept             \
 {                                                                             \
-    DriverIface *iface = ThreadCtxDriver;                                     \
+    DriverIface *iface = GetThreadDriver();                                   \
     if(!iface) iface = CurrentCtxDriver.load(std::memory_order_acquire);      \
     return iface->n(a);                                                       \
 }
-#define DECL_THUNK2(R,n,T1,T2) AL_API R AL_APIENTRY n(T1 a, T2 b) \
+#define DECL_THUNK2(R,n,T1,T2) AL_API R AL_APIENTRY n(T1 a, T2 b) noexcept    \
 {                                                                             \
-    DriverIface *iface = ThreadCtxDriver;                                     \
+    DriverIface *iface = GetThreadDriver();                                   \
     if(!iface) iface = CurrentCtxDriver.load(std::memory_order_acquire);      \
     return iface->n(a, b);                                                    \
 }
-#define DECL_THUNK3(R,n,T1,T2,T3) AL_API R AL_APIENTRY n(T1 a, T2 b, T3 c) \
+#define DECL_THUNK3(R,n,T1,T2,T3) AL_API R AL_APIENTRY n(T1 a, T2 b, T3 c) noexcept \
 {                                                                             \
-    DriverIface *iface = ThreadCtxDriver;                                     \
+    DriverIface *iface = GetThreadDriver();                                   \
     if(!iface) iface = CurrentCtxDriver.load(std::memory_order_acquire);      \
     return iface->n(a, b, c);                                                 \
 }
-#define DECL_THUNK4(R,n,T1,T2,T3,T4) AL_API R AL_APIENTRY n(T1 a, T2 b, T3 c, T4 d) \
+#define DECL_THUNK4(R,n,T1,T2,T3,T4) AL_API R AL_APIENTRY n(T1 a, T2 b, T3 c, T4 d) noexcept \
 {                                                                             \
-    DriverIface *iface = ThreadCtxDriver;                                     \
+    DriverIface *iface = GetThreadDriver();                                   \
     if(!iface) iface = CurrentCtxDriver.load(std::memory_order_acquire);      \
     return iface->n(a, b, c, d);                                              \
 }
-#define DECL_THUNK5(R,n,T1,T2,T3,T4,T5) AL_API R AL_APIENTRY n(T1 a, T2 b, T3 c, T4 d, T5 e) \
+#define DECL_THUNK5(R,n,T1,T2,T3,T4,T5) AL_API R AL_APIENTRY n(T1 a, T2 b, T3 c, T4 d, T5 e) noexcept \
 {                                                                             \
-    DriverIface *iface = ThreadCtxDriver;                                     \
+    DriverIface *iface = GetThreadDriver();                                   \
     if(!iface) iface = CurrentCtxDriver.load(std::memory_order_acquire);      \
     return iface->n(a, b, c, d, e);                                           \
 }
@@ -44,9 +44,9 @@ std::atomic<DriverIface*> CurrentCtxDriver{nullptr};
 /* Ugly hack for some apps calling alGetError without a current context, and
  * expecting it to be AL_NO_ERROR.
  */
-AL_API ALenum AL_APIENTRY alGetError(void)
+AL_API ALenum AL_APIENTRY alGetError(void) noexcept
 {
-    DriverIface *iface = ThreadCtxDriver;
+    DriverIface *iface = GetThreadDriver();
     if(!iface) iface = CurrentCtxDriver.load(std::memory_order_acquire);
     return iface ? iface->alGetError() : AL_NO_ERROR;
 }
@@ -131,6 +131,9 @@ DECL_THUNK5(void, alGetBuffer3i, ALuint, ALenum, ALint*, ALint*, ALint*)
 DECL_THUNK3(void, alGetBufferiv, ALuint, ALenum, ALint*)
 DECL_THUNK5(void, alBufferData, ALuint, ALenum, const ALvoid*, ALsizei, ALsizei)
 
+/* EFX 1.0. Required here to be exported from libOpenAL32.dll.a/OpenAL32.lib
+ * with the router enabled.
+ */
 DECL_THUNK2(void, alGenFilters, ALsizei, ALuint*)
 DECL_THUNK2(void, alDeleteFilters, ALsizei, const ALuint*)
 DECL_THUNK1(ALboolean, alIsFilter, ALuint)

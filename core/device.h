@@ -1,22 +1,22 @@
 #ifndef CORE_DEVICE_H
 #define CORE_DEVICE_H
 
-#include <stddef.h>
-
 #include <array>
 #include <atomic>
 #include <bitset>
 #include <chrono>
 #include <memory>
-#include <mutex>
+#include <stddef.h>
+#include <stdint.h>
 #include <string>
 
 #include "almalloc.h"
 #include "alspan.h"
 #include "ambidefs.h"
 #include "atomic.h"
-#include "core/bufferline.h"
+#include "bufferline.h"
 #include "devformat.h"
+#include "filters/nfc.h"
 #include "intrusive_ptr.h"
 #include "mixer/hrtfdefs.h"
 #include "opthelpers.h"
@@ -24,43 +24,43 @@
 #include "uhjfilter.h"
 #include "vector.h"
 
-struct BackendBase;
 class BFormatDec;
 struct bs2b;
 struct Compressor;
 struct ContextBase;
 struct DirectHrtfState;
 struct HrtfStore;
-struct UhjEncoder;
 
 using uint = unsigned int;
 
 
 #define MIN_OUTPUT_RATE      8000
 #define MAX_OUTPUT_RATE      192000
-#define DEFAULT_OUTPUT_RATE  44100
+#define DEFAULT_OUTPUT_RATE  48000
 
-#define DEFAULT_UPDATE_SIZE  882 /* 20ms */
+#define DEFAULT_UPDATE_SIZE  960 /* 20ms */
 #define DEFAULT_NUM_UPDATES  3
 
 
-enum class DeviceType : unsigned char {
+enum class DeviceType : uint8_t {
     Playback,
     Capture,
     Loopback
 };
 
 
-enum class RenderMode : unsigned char {
+enum class RenderMode : uint8_t {
     Normal,
     Pairwise,
     Hrtf
 };
 
-enum class StereoEncoding : unsigned char {
-    Normal,
+enum class StereoEncoding : uint8_t {
+    Basic,
     Uhj,
-    Hrtf
+    Hrtf,
+
+    Default = Basic
 };
 
 
@@ -68,17 +68,17 @@ struct InputRemixMap {
     struct TargetMix { Channel channel; float mix; };
 
     Channel channel;
-    std::array<TargetMix,2> targets;
+    al::span<const TargetMix> targets;
 };
 
 
-/* Maximum delay in samples for speaker distance compensation. */
-#define MAX_DELAY_LENGTH 1024
-
 struct DistanceComp {
+    /* Maximum delay in samples for speaker distance compensation. */
+    static constexpr uint MaxDelay{1024};
+
     struct ChanData {
         float Gain{1.0f};
-        uint Length{0u}; /* Valid range is [0...MAX_DELAY_LENGTH). */
+        uint Length{0u}; /* Valid range is [0...MaxDelay). */
         float *Buffer{nullptr};
     };
 
@@ -94,17 +94,49 @@ struct DistanceComp {
 };
 
 
+constexpr uint InvalidChannelIndex{~0u};
+
 struct BFChannelConfig {
     float Scale;
     uint Index;
 };
 
-
 struct MixParams {
     /* Coefficient channel mapping for mixing to the buffer. */
-    std::array<BFChannelConfig,MAX_OUTPUT_CHANNELS> AmbiMap{};
+    std::array<BFChannelConfig,MaxAmbiChannels> AmbiMap{};
 
     al::span<FloatBufferLine> Buffer;
+
+    /**
+     * Helper to set an identity/pass-through panning for ambisonic mixing. The
+     * source is expected to be a 3D ACN/N3D ambisonic buffer, and for each
+     * channel [0...count), the given functor is called with the source channel
+     * index, destination channel index, and the gain for that channel. If the
+     * destination channel is INVALID_CHANNEL_INDEX, the given source channel
+     * is not used for output.
+     */
+    template<typename F>
+    void setAmbiMixParams(const MixParams &inmix, const float gainbase, F func) const
+    {
+        const size_t numIn{inmix.Buffer.size()};
+        const size_t numOut{Buffer.size()};
+        for(size_t i{0};i < numIn;++i)
+        {
+            auto idx = InvalidChannelIndex;
+            auto gain = 0.0f;
+
+            for(size_t j{0};j < numOut;++j)
+            {
+                if(AmbiMap[j].Index == inmix.AmbiMap[i].Index)
+                {
+                    idx = static_cast<uint>(j);
+                    gain = AmbiMap[j].Scale * gainbase;
+                    break;
+                }
+            }
+            func(i, idx, gain);
+        }
+    }
 };
 
 struct RealMixParams {
@@ -114,10 +146,12 @@ struct RealMixParams {
     al::span<FloatBufferLine> Buffer;
 };
 
+using AmbiRotateMatrix = std::array<std::array<float,MaxAmbiChannels>,MaxAmbiChannels>;
+
 enum {
     // Frequency was requested by the app or config file
     FrequencyRequest,
-    // Channel configuration was requested by the config file
+    // Channel configuration was requested by the app or config file
     ChannelsRequest,
     // Sample type was requested by the config file
     SampleTypeRequest,
@@ -151,6 +185,8 @@ struct DeviceBase {
     DevFmtType FmtType{};
     uint mAmbiOrder{0};
     float mXOverFreq{400.0f};
+    /* If the main device mix is horizontal/2D only. */
+    bool m2DMixing{false};
     /* For DevFmtAmbi* output only, specifies the channel order and
      * normalization.
      */
@@ -172,17 +208,25 @@ struct DeviceBase {
      */
     float AvgSpeakerDist{0.0f};
 
+    /* The default NFC filter. Not used directly, but is pre-initialized with
+     * the control distance from AvgSpeakerDist.
+     */
+    NfcFilter mNFCtrlFilter{};
+
     uint SamplesDone{0u};
     std::chrono::nanoseconds ClockBase{0};
     std::chrono::nanoseconds FixedLatency{0};
 
-    /* Temp storage used for mixer processing. */
-    static constexpr size_t MixerLineSize{BufferLineSize + MaxResamplerPadding +
-        UhjDecoder::sFilterDelay};
-    using MixerBufferLine = std::array<float,MixerLineSize>;
-    alignas(16) std::array<MixerBufferLine,16> mSampleData;
+    AmbiRotateMatrix mAmbiRotateMatrix{};
+    AmbiRotateMatrix mAmbiRotateMatrix2{};
 
-    alignas(16) float ResampledData[BufferLineSize];
+    /* Temp storage used for mixer processing. */
+    static constexpr size_t MixerLineSize{BufferLineSize + DecoderBase::sMaxPadding};
+    static constexpr size_t MixerChannelsMax{16};
+    using MixerBufferLine = std::array<float,MixerLineSize>;
+    alignas(16) std::array<MixerBufferLine,MixerChannelsMax> mSampleData;
+    alignas(16) std::array<float,MixerLineSize+MaxResamplerPadding> mResampleData;
+
     alignas(16) float FilteredData[BufferLineSize];
     union {
         alignas(16) float HrtfSourceData[BufferLineSize + HrtfHistoryLength];
@@ -190,7 +234,7 @@ struct DeviceBase {
     };
 
     /* Persistent storage for HRTF mixing. */
-    alignas(16) float2 HrtfAccumData[BufferLineSize + HrirLength + HrtfDirectDelay];
+    alignas(16) float2 HrtfAccumData[BufferLineSize + HrirLength];
 
     /* Mixing buffer used by the Dry mix and Real output. */
     al::vector<FloatBufferLine, 16> MixBuffer;
@@ -210,7 +254,7 @@ struct DeviceBase {
     uint mIrSize{0};
 
     /* Ambisonic-to-UHJ encoder */
-    std::unique_ptr<UhjEncoder> mUhjEncoder;
+    std::unique_ptr<UhjEncoderBase> mUhjEncoder;
 
     /* Ambisonic decoder for speakers */
     std::unique_ptr<BFormatDec> AmbiDecoder;
@@ -240,13 +284,6 @@ struct DeviceBase {
     // Contexts created on this device
     std::atomic<al::FlexArray<ContextBase*>*> mContexts{nullptr};
 
-    /* This lock protects the device state (format, update size, etc) from
-     * being from being changed in multiple threads, or being accessed while
-     * being changed. It's also used to serialize calls to the backend.
-     */
-    std::mutex StateLock;
-    std::unique_ptr<BackendBase> Backend;
-
 
     DeviceBase(DeviceType type);
     DeviceBase(const DeviceBase&) = delete;
@@ -272,7 +309,7 @@ struct DeviceBase {
     void ProcessBs2b(const size_t SamplesToDo);
 
     inline void postProcess(const size_t SamplesToDo)
-    { if LIKELY(PostProcess) (this->*PostProcess)(SamplesToDo); }
+    { if(PostProcess) LIKELY (this->*PostProcess)(SamplesToDo); }
 
     void renderSamples(const al::span<float*> outBuffers, const uint numSamples);
     void renderSamples(void *outBuffer, const uint numSamples, const size_t frameStep);
@@ -285,26 +322,23 @@ struct DeviceBase {
 #endif
     void handleDisconnect(const char *msg, ...);
 
+    /**
+     * Returns the index for the given channel name (e.g. FrontCenter), or
+     * INVALID_CHANNEL_INDEX if it doesn't exist.
+     */
+    uint channelIdxByName(Channel chan) const noexcept
+    { return RealOut.ChannelIndex[chan]; }
+
     DISABLE_ALLOC()
 
 private:
     uint renderSamples(const uint numSamples);
 };
 
-
 /* Must be less than 15 characters (16 including terminating null) for
  * compatibility with pthread_setname_np limitations. */
 #define MIXER_THREAD_NAME "alsoft-mixer"
 
 #define RECORD_THREAD_NAME "alsoft-record"
-
-
-/**
- * Returns the index for the given channel name (e.g. FrontCenter), or
- * INVALID_CHANNEL_INDEX if it doesn't exist.
- */
-inline uint GetChannelIdxByName(const RealMixParams &real, Channel chan) noexcept
-{ return real.ChannelIndex[chan]; }
-#define INVALID_CHANNEL_INDEX ~0u
 
 #endif /* CORE_DEVICE_H */

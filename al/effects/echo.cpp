@@ -7,6 +7,12 @@
 #include "alc/effects/base.h"
 #include "effects.h"
 
+#ifdef ALSOFT_EAX
+#include "alnumeric.h"
+#include "al/eax/exception.h"
+#include "al/eax/utils.h"
+#endif // ALSOFT_EAX
+
 
 namespace {
 
@@ -109,3 +115,158 @@ EffectProps genDefaultProps() noexcept
 DEFINE_ALEFFECT_VTABLE(Echo);
 
 const EffectProps EchoEffectProps{genDefaultProps()};
+
+#ifdef ALSOFT_EAX
+namespace {
+
+using EchoCommitter = EaxCommitter<EaxEchoCommitter>;
+
+struct DelayValidator {
+    void operator()(float flDelay) const
+    {
+        eax_validate_range<EchoCommitter::Exception>(
+            "Delay",
+            flDelay,
+            EAXECHO_MINDELAY,
+            EAXECHO_MAXDELAY);
+    }
+}; // DelayValidator
+
+struct LrDelayValidator {
+    void operator()(float flLRDelay) const
+    {
+        eax_validate_range<EchoCommitter::Exception>(
+            "LR Delay",
+            flLRDelay,
+            EAXECHO_MINLRDELAY,
+            EAXECHO_MAXLRDELAY);
+    }
+}; // LrDelayValidator
+
+struct DampingValidator {
+    void operator()(float flDamping) const
+    {
+        eax_validate_range<EchoCommitter::Exception>(
+            "Damping",
+            flDamping,
+            EAXECHO_MINDAMPING,
+            EAXECHO_MAXDAMPING);
+    }
+}; // DampingValidator
+
+struct FeedbackValidator {
+    void operator()(float flFeedback) const
+    {
+        eax_validate_range<EchoCommitter::Exception>(
+            "Feedback",
+            flFeedback,
+            EAXECHO_MINFEEDBACK,
+            EAXECHO_MAXFEEDBACK);
+    }
+}; // FeedbackValidator
+
+struct SpreadValidator {
+    void operator()(float flSpread) const
+    {
+        eax_validate_range<EchoCommitter::Exception>(
+            "Spread",
+            flSpread,
+            EAXECHO_MINSPREAD,
+            EAXECHO_MAXSPREAD);
+    }
+}; // SpreadValidator
+
+struct AllValidator {
+    void operator()(const EAXECHOPROPERTIES& all) const
+    {
+        DelayValidator{}(all.flDelay);
+        LrDelayValidator{}(all.flLRDelay);
+        DampingValidator{}(all.flDamping);
+        FeedbackValidator{}(all.flFeedback);
+        SpreadValidator{}(all.flSpread);
+    }
+}; // AllValidator
+
+} // namespace
+
+template<>
+struct EchoCommitter::Exception : public EaxException {
+    explicit Exception(const char* message) : EaxException{"EAX_ECHO_EFFECT", message}
+    { }
+};
+
+template<>
+[[noreturn]] void EchoCommitter::fail(const char *message)
+{
+    throw Exception{message};
+}
+
+template<>
+bool EchoCommitter::commit(const EaxEffectProps &props)
+{
+    if(props == mEaxProps)
+        return false;
+
+    mEaxProps = props;
+
+    auto &eaxprops = std::get<EAXECHOPROPERTIES>(props);
+    mAlProps.Echo.Delay = eaxprops.flDelay;
+    mAlProps.Echo.LRDelay = eaxprops.flLRDelay;
+    mAlProps.Echo.Damping = eaxprops.flDamping;
+    mAlProps.Echo.Feedback = eaxprops.flFeedback;
+    mAlProps.Echo.Spread = eaxprops.flSpread;
+
+    return true;
+}
+
+template<>
+void EchoCommitter::SetDefaults(EaxEffectProps &props)
+{
+    static constexpr EAXECHOPROPERTIES defprops{[]
+    {
+        EAXECHOPROPERTIES ret{};
+        ret.flDelay = EAXECHO_DEFAULTDELAY;
+        ret.flLRDelay = EAXECHO_DEFAULTLRDELAY;
+        ret.flDamping = EAXECHO_DEFAULTDAMPING;
+        ret.flFeedback = EAXECHO_DEFAULTFEEDBACK;
+        ret.flSpread = EAXECHO_DEFAULTSPREAD;
+        return ret;
+    }()};
+    props = defprops;
+}
+
+template<>
+void EchoCommitter::Get(const EaxCall &call, const EaxEffectProps &props_)
+{
+    auto &props = std::get<EAXECHOPROPERTIES>(props_);
+    switch(call.get_property_id())
+    {
+    case EAXECHO_NONE: break;
+    case EAXECHO_ALLPARAMETERS: call.set_value<Exception>(props); break;
+    case EAXECHO_DELAY: call.set_value<Exception>(props.flDelay); break;
+    case EAXECHO_LRDELAY: call.set_value<Exception>(props.flLRDelay); break;
+    case EAXECHO_DAMPING: call.set_value<Exception>(props.flDamping); break;
+    case EAXECHO_FEEDBACK: call.set_value<Exception>(props.flFeedback); break;
+    case EAXECHO_SPREAD: call.set_value<Exception>(props.flSpread); break;
+    default: fail_unknown_property_id();
+    }
+}
+
+template<>
+void EchoCommitter::Set(const EaxCall &call, EaxEffectProps &props_)
+{
+    auto &props = std::get<EAXECHOPROPERTIES>(props_);
+    switch(call.get_property_id())
+    {
+    case EAXECHO_NONE: break;
+    case EAXECHO_ALLPARAMETERS: defer<AllValidator>(call, props); break;
+    case EAXECHO_DELAY: defer<DelayValidator>(call, props.flDelay); break;
+    case EAXECHO_LRDELAY: defer<LrDelayValidator>(call, props.flLRDelay); break;
+    case EAXECHO_DAMPING: defer<DampingValidator>(call, props.flDamping); break;
+    case EAXECHO_FEEDBACK: defer<FeedbackValidator>(call, props.flFeedback); break;
+    case EAXECHO_SPREAD: defer<SpreadValidator>(call, props.flSpread); break;
+    default: fail_unknown_property_id();
+    }
+}
+
+#endif // ALSOFT_EAX

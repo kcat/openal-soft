@@ -45,18 +45,6 @@
 #include "common/alhelpers.h"
 
 
-#ifndef AL_SOFT_callback_buffer
-#define AL_SOFT_callback_buffer
-typedef unsigned int ALbitfieldSOFT;
-#define AL_BUFFER_CALLBACK_FUNCTION_SOFT         0x19A0
-#define AL_BUFFER_CALLBACK_USER_PARAM_SOFT       0x19A1
-typedef ALsizei (AL_APIENTRY*LPALBUFFERCALLBACKTYPESOFT)(ALvoid *userptr, ALvoid *sampledata, ALsizei numsamples);
-typedef void (AL_APIENTRY*LPALBUFFERCALLBACKSOFT)(ALuint buffer, ALenum format, ALsizei freq, LPALBUFFERCALLBACKTYPESOFT callback, ALvoid *userptr, ALbitfieldSOFT flags);
-typedef void (AL_APIENTRY*LPALGETBUFFERPTRSOFT)(ALuint buffer, ALenum param, ALvoid **value);
-typedef void (AL_APIENTRY*LPALGETBUFFER3PTRSOFT)(ALuint buffer, ALenum param, ALvoid **value1, ALvoid **value2, ALvoid **value3);
-typedef void (AL_APIENTRY*LPALGETBUFFERPTRVSOFT)(ALuint buffer, ALenum param, ALvoid **values);
-#endif
-
 namespace {
 
 using std::chrono::seconds;
@@ -72,6 +60,13 @@ struct StreamPlayer {
     size_t mBufferDataSize{0};
     std::atomic<size_t> mReadPos{0};
     std::atomic<size_t> mWritePos{0};
+    size_t mSamplesPerBlock{1};
+    size_t mBytesPerBlock{1};
+
+    enum class SampleType {
+        Int16, Float, IMA4, MSADPCM
+    };
+    SampleType mSampleFormat{SampleType::Int16};
 
     /* The buffer to get the callback, and source to play with. */
     ALuint mBuffer{0}, mSource{0};
@@ -88,10 +83,10 @@ struct StreamPlayer {
     StreamPlayer()
     {
         alGenBuffers(1, &mBuffer);
-        if(ALenum err{alGetError()})
+        if(alGetError() != AL_NO_ERROR)
             throw std::runtime_error{"alGenBuffers failed"};
         alGenSources(1, &mSource);
-        if(ALenum err{alGetError()})
+        if(alGetError() != AL_NO_ERROR)
         {
             alDeleteBuffers(1, &mBuffer);
             throw std::runtime_error{"alGenSources failed"};
@@ -107,6 +102,9 @@ struct StreamPlayer {
 
     void close()
     {
+        if(mSamplesPerBlock > 1)
+            alBufferi(mBuffer, AL_UNPACK_BLOCK_ALIGNMENT_SOFT, 0);
+
         if(mSndfile)
         {
             alSourceRewind(mSource);
@@ -128,20 +126,129 @@ struct StreamPlayer {
             return false;
         }
 
+        switch((mSfInfo.format&SF_FORMAT_SUBMASK))
+        {
+        case SF_FORMAT_PCM_24:
+        case SF_FORMAT_PCM_32:
+        case SF_FORMAT_FLOAT:
+        case SF_FORMAT_DOUBLE:
+        case SF_FORMAT_VORBIS:
+        case SF_FORMAT_OPUS:
+        case SF_FORMAT_ALAC_20:
+        case SF_FORMAT_ALAC_24:
+        case SF_FORMAT_ALAC_32:
+        case 0x0080/*SF_FORMAT_MPEG_LAYER_I*/:
+        case 0x0081/*SF_FORMAT_MPEG_LAYER_II*/:
+        case 0x0082/*SF_FORMAT_MPEG_LAYER_III*/:
+            if(alIsExtensionPresent("AL_EXT_FLOAT32"))
+                mSampleFormat = SampleType::Float;
+            break;
+        case SF_FORMAT_IMA_ADPCM:
+            if(mSfInfo.channels <= 2 && (mSfInfo.format&SF_FORMAT_TYPEMASK) == SF_FORMAT_WAV
+                && alIsExtensionPresent("AL_EXT_IMA4")
+                && alIsExtensionPresent("AL_SOFT_block_alignment"))
+                mSampleFormat = SampleType::IMA4;
+            break;
+        case SF_FORMAT_MS_ADPCM:
+            if(mSfInfo.channels <= 2 && (mSfInfo.format&SF_FORMAT_TYPEMASK) == SF_FORMAT_WAV
+                && alIsExtensionPresent("AL_SOFT_MSADPCM")
+                && alIsExtensionPresent("AL_SOFT_block_alignment"))
+                mSampleFormat = SampleType::MSADPCM;
+            break;
+        }
+
+        int splblocksize{}, byteblocksize{};
+        if(mSampleFormat == SampleType::IMA4 || mSampleFormat == SampleType::MSADPCM)
+        {
+            SF_CHUNK_INFO inf{ "fmt ", 4, 0, nullptr };
+            SF_CHUNK_ITERATOR *iter = sf_get_chunk_iterator(mSndfile, &inf);
+            if(!iter || sf_get_chunk_size(iter, &inf) != SF_ERR_NO_ERROR || inf.datalen < 14)
+                mSampleFormat = SampleType::Int16;
+            else
+            {
+                auto fmtbuf = std::make_unique<ALubyte[]>(inf.datalen);
+                inf.data = fmtbuf.get();
+                if(sf_get_chunk_data(iter, &inf) != SF_ERR_NO_ERROR)
+                    mSampleFormat = SampleType::Int16;
+                else
+                {
+                    byteblocksize = fmtbuf[12] | (fmtbuf[13]<<8u);
+                    if(mSampleFormat == SampleType::IMA4)
+                    {
+                        splblocksize = (byteblocksize/mSfInfo.channels - 4)/4*8 + 1;
+                        if(splblocksize < 1
+                            || ((splblocksize-1)/2 + 4)*mSfInfo.channels != byteblocksize)
+                            mSampleFormat = SampleType::Int16;
+                    }
+                    else
+                    {
+                        splblocksize = (byteblocksize/mSfInfo.channels - 7)*2 + 2;
+                        if(splblocksize < 2
+                            || ((splblocksize-2)/2 + 7)*mSfInfo.channels != byteblocksize)
+                            mSampleFormat = SampleType::Int16;
+                    }
+                }
+            }
+        }
+
+        if(mSampleFormat == SampleType::Int16)
+        {
+            mSamplesPerBlock = 1;
+            mBytesPerBlock = static_cast<size_t>(mSfInfo.channels * 2);
+        }
+        else if(mSampleFormat == SampleType::Float)
+        {
+            mSamplesPerBlock = 1;
+            mBytesPerBlock = static_cast<size_t>(mSfInfo.channels * 4);
+        }
+        else
+        {
+            mSamplesPerBlock = static_cast<size_t>(splblocksize);
+            mBytesPerBlock = static_cast<size_t>(byteblocksize);
+        }
+
         mFormat = AL_NONE;
         if(mSfInfo.channels == 1)
-            mFormat = AL_FORMAT_MONO_FLOAT32;
+        {
+            if(mSampleFormat == SampleType::Int16)
+                mFormat = AL_FORMAT_MONO16;
+            else if(mSampleFormat == SampleType::Float)
+                mFormat = AL_FORMAT_MONO_FLOAT32;
+            else if(mSampleFormat == SampleType::IMA4)
+                mFormat = AL_FORMAT_MONO_IMA4;
+            else if(mSampleFormat == SampleType::MSADPCM)
+                mFormat = AL_FORMAT_MONO_MSADPCM_SOFT;
+        }
         else if(mSfInfo.channels == 2)
-            mFormat = AL_FORMAT_STEREO_FLOAT32;
+        {
+            if(mSampleFormat == SampleType::Int16)
+                mFormat = AL_FORMAT_STEREO16;
+            else if(mSampleFormat == SampleType::Float)
+                mFormat = AL_FORMAT_STEREO_FLOAT32;
+            else if(mSampleFormat == SampleType::IMA4)
+                mFormat = AL_FORMAT_STEREO_IMA4;
+            else if(mSampleFormat == SampleType::MSADPCM)
+                mFormat = AL_FORMAT_STEREO_MSADPCM_SOFT;
+        }
         else if(mSfInfo.channels == 3)
         {
             if(sf_command(mSndfile, SFC_WAVEX_GET_AMBISONIC, NULL, 0) == SF_AMBISONIC_B_FORMAT)
-                mFormat = AL_FORMAT_BFORMAT2D_FLOAT32;
+            {
+                if(mSampleFormat == SampleType::Int16)
+                    mFormat = AL_FORMAT_BFORMAT2D_16;
+                else if(mSampleFormat == SampleType::Float)
+                    mFormat = AL_FORMAT_BFORMAT2D_FLOAT32;
+            }
         }
         else if(mSfInfo.channels == 4)
         {
             if(sf_command(mSndfile, SFC_WAVEX_GET_AMBISONIC, NULL, 0) == SF_AMBISONIC_B_FORMAT)
-                mFormat = AL_FORMAT_BFORMAT3D_FLOAT32;
+            {
+                if(mSampleFormat == SampleType::Int16)
+                    mFormat = AL_FORMAT_BFORMAT3D_16;
+                else if(mSampleFormat == SampleType::Float)
+                    mFormat = AL_FORMAT_BFORMAT3D_FLOAT32;
+            }
         }
         if(!mFormat)
         {
@@ -153,7 +260,9 @@ struct StreamPlayer {
         }
 
         /* Set a 1s ring buffer size. */
-        mBufferDataSize = static_cast<ALuint>(mSfInfo.samplerate*mSfInfo.channels) * sizeof(float);
+        size_t numblocks{(static_cast<ALuint>(mSfInfo.samplerate) + mSamplesPerBlock-1)
+            / mSamplesPerBlock};
+        mBufferDataSize = static_cast<ALuint>(numblocks * mBytesPerBlock);
         mBufferData.reset(new ALbyte[mBufferDataSize]);
         mReadPos.store(0, std::memory_order_relaxed);
         mWritePos.store(0, std::memory_order_relaxed);
@@ -167,9 +276,9 @@ struct StreamPlayer {
      * but it allows the callback implementation to have a nice 'this' pointer
      * with normal member access.
      */
-    static ALsizei AL_APIENTRY bufferCallbackC(void *userptr, void *data, ALsizei size)
+    static ALsizei AL_APIENTRY bufferCallbackC(void *userptr, void *data, ALsizei size) noexcept
     { return static_cast<StreamPlayer*>(userptr)->bufferCallback(data, size); }
-    ALsizei bufferCallback(void *data, ALsizei size)
+    ALsizei bufferCallback(void *data, ALsizei size) noexcept
     {
         /* NOTE: The callback *MUST* be real-time safe! That means no blocking,
          * no allocations or deallocations, no I/O, no page faults, or calls to
@@ -219,7 +328,9 @@ struct StreamPlayer {
 
     bool prepare()
     {
-        alBufferCallbackSOFT(mBuffer, mFormat, mSfInfo.samplerate, bufferCallbackC, this, 0);
+        if(mSamplesPerBlock > 1)
+            alBufferi(mBuffer, AL_UNPACK_BLOCK_ALIGNMENT_SOFT, static_cast<int>(mSamplesPerBlock));
+        alBufferCallbackSOFT(mBuffer, mFormat, mSfInfo.samplerate, bufferCallbackC, this);
         alSourcei(mSource, AL_BUFFER, static_cast<ALint>(mBuffer));
         if(ALenum err{alGetError()})
         {
@@ -236,7 +347,6 @@ struct StreamPlayer {
         alGetSourcei(mSource, AL_SAMPLE_OFFSET, &pos);
         alGetSourcei(mSource, AL_SOURCE_STATE, &state);
 
-        const size_t frame_size{static_cast<ALuint>(mSfInfo.channels) * sizeof(float)};
         size_t woffset{mWritePos.load(std::memory_order_acquire)};
         if(state != AL_INITIAL)
         {
@@ -248,8 +358,9 @@ struct StreamPlayer {
              * For a playing/paused source, it's the source's offset including
              * the playback offset the source was started with.
              */
-            const size_t curtime{((state==AL_STOPPED) ? (mDecoderOffset-readable) / frame_size
-                : (static_cast<ALuint>(pos) + mStartOffset/frame_size))
+            const size_t curtime{((state == AL_STOPPED)
+                ? (mDecoderOffset-readable) / mBytesPerBlock * mSamplesPerBlock
+                : (static_cast<ALuint>(pos) + mStartOffset/mBytesPerBlock*mSamplesPerBlock))
                 / static_cast<ALuint>(mSfInfo.samplerate)};
             printf("\r%3zus (%3zu%% full)", curtime, readable * 100 / mBufferDataSize);
         }
@@ -268,15 +379,33 @@ struct StreamPlayer {
                  * at the read offset would be interpreted as being empty
                  * instead of full.
                  */
-                const size_t writable{roffset-woffset-1};
-                if(writable < frame_size) break;
+                const size_t writable{(roffset-woffset-1) / mBytesPerBlock};
+                if(!writable) break;
 
-                sf_count_t num_frames{sf_readf_float(mSndfile,
-                    reinterpret_cast<float*>(&mBufferData[woffset]),
-                    static_cast<sf_count_t>(writable/frame_size))};
-                if(num_frames < 1) break;
+                if(mSampleFormat == SampleType::Int16)
+                {
+                    sf_count_t num_frames{sf_readf_short(mSndfile,
+                        reinterpret_cast<short*>(&mBufferData[woffset]),
+                        static_cast<sf_count_t>(writable*mSamplesPerBlock))};
+                    if(num_frames < 1) break;
+                    read_bytes = static_cast<size_t>(num_frames) * mBytesPerBlock;
+                }
+                else if(mSampleFormat == SampleType::Float)
+                {
+                    sf_count_t num_frames{sf_readf_float(mSndfile,
+                        reinterpret_cast<float*>(&mBufferData[woffset]),
+                        static_cast<sf_count_t>(writable*mSamplesPerBlock))};
+                    if(num_frames < 1) break;
+                    read_bytes = static_cast<size_t>(num_frames) * mBytesPerBlock;
+                }
+                else
+                {
+                    sf_count_t numbytes{sf_read_raw(mSndfile, &mBufferData[woffset],
+                        static_cast<sf_count_t>(writable*mBytesPerBlock))};
+                    if(numbytes < 1) break;
+                    read_bytes = static_cast<size_t>(numbytes);
+                }
 
-                read_bytes = static_cast<size_t>(num_frames) * frame_size;
                 woffset += read_bytes;
             }
             else
@@ -286,16 +415,34 @@ struct StreamPlayer {
                  * data can fit, and calculate how much can go in front before
                  * wrapping.
                  */
-                const size_t writable{!roffset ? mBufferDataSize-woffset-1 :
-                    (mBufferDataSize-woffset)};
-                if(writable < frame_size) break;
+                const size_t writable{(!roffset ? mBufferDataSize-woffset-1 :
+                    (mBufferDataSize-woffset)) / mBytesPerBlock};
+                if(!writable) break;
 
-                sf_count_t num_frames{sf_readf_float(mSndfile,
-                    reinterpret_cast<float*>(&mBufferData[woffset]),
-                    static_cast<sf_count_t>(writable/frame_size))};
-                if(num_frames < 1) break;
+                if(mSampleFormat == SampleType::Int16)
+                {
+                    sf_count_t num_frames{sf_readf_short(mSndfile,
+                        reinterpret_cast<short*>(&mBufferData[woffset]),
+                        static_cast<sf_count_t>(writable*mSamplesPerBlock))};
+                    if(num_frames < 1) break;
+                    read_bytes = static_cast<size_t>(num_frames) * mBytesPerBlock;
+                }
+                else if(mSampleFormat == SampleType::Float)
+                {
+                    sf_count_t num_frames{sf_readf_float(mSndfile,
+                        reinterpret_cast<float*>(&mBufferData[woffset]),
+                        static_cast<sf_count_t>(writable*mSamplesPerBlock))};
+                    if(num_frames < 1) break;
+                    read_bytes = static_cast<size_t>(num_frames) * mBytesPerBlock;
+                }
+                else
+                {
+                    sf_count_t numbytes{sf_read_raw(mSndfile, &mBufferData[woffset],
+                        static_cast<sf_count_t>(writable*mBytesPerBlock))};
+                    if(numbytes < 1) break;
+                    read_bytes = static_cast<size_t>(numbytes);
+                }
 
-                read_bytes = static_cast<size_t>(num_frames) * frame_size;
                 woffset += read_bytes;
                 if(woffset == mBufferDataSize)
                     woffset = 0;
@@ -353,7 +500,7 @@ int main(int argc, char **argv)
     argv++; argc--;
     AudioManager almgr{&argv, &argc};
 
-    if(!alIsExtensionPresent("AL_SOFTX_callback_buffer"))
+    if(!alIsExtensionPresent("AL_SOFT_callback_buffer"))
     {
         fprintf(stderr, "AL_SOFT_callback_buffer extension not available\n");
         return 1;

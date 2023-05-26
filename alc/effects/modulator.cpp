@@ -26,8 +26,8 @@
 #include <iterator>
 
 #include "alc/effects/base.h"
-#include "alc/effectslot.h"
 #include "almalloc.h"
+#include "alnumbers.h"
 #include "alnumeric.h"
 #include "alspan.h"
 #include "core/ambidefs.h"
@@ -35,10 +35,10 @@
 #include "core/context.h"
 #include "core/devformat.h"
 #include "core/device.h"
+#include "core/effectslot.h"
 #include "core/filters/biquad.h"
 #include "core/mixer.h"
 #include "intrusive_ptr.h"
-#include "math_defs.h"
 
 
 namespace {
@@ -53,7 +53,7 @@ using uint = unsigned int;
 
 inline float Sin(uint index)
 {
-    constexpr float scale{al::MathDefs<float>::Tau() / WAVEFORM_FRACONE};
+    constexpr float scale{al::numbers::pi_v<float>*2.0f / WAVEFORM_FRACONE};
     return std::sin(static_cast<float>(index) * scale);
 }
 
@@ -84,14 +84,16 @@ struct ModulatorState final : public EffectState {
     uint mStep{1};
 
     struct {
-        BiquadFilter Filter;
+        uint mTargetChannel{InvalidChannelIndex};
 
-        float CurrentGains[MAX_OUTPUT_CHANNELS]{};
-        float TargetGains[MAX_OUTPUT_CHANNELS]{};
+        BiquadFilter mFilter;
+
+        float mCurrentGain{};
+        float mTargetGain{};
     } mChans[MaxAmbiChannels];
 
 
-    void deviceUpdate(const DeviceBase *device, const Buffer &buffer) override;
+    void deviceUpdate(const DeviceBase *device, const BufferStorage *buffer) override;
     void update(const ContextBase *context, const EffectSlot *slot, const EffectProps *props,
         const EffectTarget target) override;
     void process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn,
@@ -100,12 +102,13 @@ struct ModulatorState final : public EffectState {
     DEF_NEWDEL(ModulatorState)
 };
 
-void ModulatorState::deviceUpdate(const DeviceBase*, const Buffer&)
+void ModulatorState::deviceUpdate(const DeviceBase*, const BufferStorage*)
 {
     for(auto &e : mChans)
     {
-        e.Filter.clear();
-        std::fill(std::begin(e.CurrentGains), std::end(e.CurrentGains), 0.0f);
+        e.mTargetChannel = InvalidChannelIndex;
+        e.mFilter.clear();
+        e.mCurrentGain = 0.0f;
     }
 }
 
@@ -129,14 +132,17 @@ void ModulatorState::update(const ContextBase *context, const EffectSlot *slot,
     float f0norm{props->Modulator.HighPassCutoff / static_cast<float>(device->Frequency)};
     f0norm = clampf(f0norm, 1.0f/512.0f, 0.49f);
     /* Bandwidth value is constant in octaves. */
-    mChans[0].Filter.setParamsFromBandwidth(BiquadType::HighPass, f0norm, 1.0f, 0.75f);
+    mChans[0].mFilter.setParamsFromBandwidth(BiquadType::HighPass, f0norm, 1.0f, 0.75f);
     for(size_t i{1u};i < slot->Wet.Buffer.size();++i)
-        mChans[i].Filter.copyParamsFrom(mChans[0].Filter);
+        mChans[i].mFilter.copyParamsFrom(mChans[0].mFilter);
 
     mOutTarget = target.Main->Buffer;
-    auto set_gains = [slot,target](auto &chan, al::span<const float,MaxAmbiChannels> coeffs)
-    { ComputePanGains(target.Main, coeffs.data(), slot->Gain, chan.TargetGains); };
-    SetAmbiPanIdentity(std::begin(mChans), slot->Wet.Buffer.size(), set_gains);
+    auto set_channel = [this](size_t idx, uint outchan, float outgain)
+    {
+        mChans[idx].mTargetChannel = outchan;
+        mChans[idx].mTargetGain = outgain;
+    };
+    target.Main->setAmbiMixParams(slot->Wet, slot->Gain, set_channel);
 }
 
 void ModulatorState::process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn, const al::span<FloatBufferLine> samplesOut)
@@ -153,14 +159,18 @@ void ModulatorState::process(const size_t samplesToDo, const al::span<const Floa
         auto chandata = std::begin(mChans);
         for(const auto &input : samplesIn)
         {
-            alignas(16) float temps[MAX_UPDATE_SAMPLES];
+            const size_t outidx{chandata->mTargetChannel};
+            if(outidx != InvalidChannelIndex)
+            {
+                alignas(16) float temps[MAX_UPDATE_SAMPLES];
 
-            chandata->Filter.process({&input[base], td}, temps);
-            for(size_t i{0u};i < td;i++)
-                temps[i] *= modsamples[i];
+                chandata->mFilter.process({&input[base], td}, temps);
+                for(size_t i{0u};i < td;i++)
+                    temps[i] *= modsamples[i];
 
-            MixSamples({temps, td}, samplesOut, chandata->CurrentGains, chandata->TargetGains,
-                samplesToDo-base, base);
+                MixSamples({temps, td}, samplesOut[outidx].data()+base, chandata->mCurrentGain,
+                    chandata->mTargetGain, samplesToDo-base);
+            }
             ++chandata;
         }
 

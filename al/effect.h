@@ -57,4 +57,6 @@ void InitEffect(ALeffect *effect);
 
 void LoadReverbPreset(const char *name, ALeffect *effect);
 
+bool IsValidEffectType(ALenum type) noexcept;
+
 #endif

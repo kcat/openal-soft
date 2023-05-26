@@ -11,7 +11,27 @@ jobs:
       matrix:
         config:
         - {
-            name: "Visual Studio 64-bit",
+            name: "Win32-Release",
+            os: windows-latest,
+            cmake_opts: "-A Win32 \
+              -DALSOFT_BUILD_ROUTER=ON \
+              -DALSOFT_REQUIRE_WINMM=ON \
+              -DALSOFT_REQUIRE_DSOUND=ON \
+              -DALSOFT_REQUIRE_WASAPI=ON",
+            build_type: "Release"
+          }
+        - {
+            name: "Win32-Debug",
+            os: windows-latest,
+            cmake_opts: "-A Win32 \
+              -DALSOFT_BUILD_ROUTER=ON \
+              -DALSOFT_REQUIRE_WINMM=ON \
+              -DALSOFT_REQUIRE_DSOUND=ON \
+              -DALSOFT_REQUIRE_WASAPI=ON",
+            build_type: "Debug"
+          }
+        - {
+            name: "Win64-Release",
             os: windows-latest,
             cmake_opts: "-A x64 \
               -DALSOFT_BUILD_ROUTER=ON \
@@ -21,25 +41,37 @@ jobs:
             build_type: "Release"
           }
         - {
-            name: "macOS",
+            name: "Win64-Debug",
+            os: windows-latest,
+            cmake_opts: "-A x64 \
+              -DALSOFT_BUILD_ROUTER=ON \
+              -DALSOFT_REQUIRE_WINMM=ON \
+              -DALSOFT_REQUIRE_DSOUND=ON \
+              -DALSOFT_REQUIRE_WASAPI=ON",
+            build_type: "Debug"
+          }
+        - {
+            name: "macOS-Release",
             os: macos-latest,
             cmake_opts: "-DALSOFT_REQUIRE_COREAUDIO=ON",
             build_type: "Release"
           }
         - {
-            name: "Linux",
+            name: "Linux-Release",
             os: ubuntu-latest,
             cmake_opts: "-DALSOFT_REQUIRE_RTKIT=ON \
               -DALSOFT_REQUIRE_ALSA=ON \
               -DALSOFT_REQUIRE_OSS=ON \
               -DALSOFT_REQUIRE_PORTAUDIO=ON \
               -DALSOFT_REQUIRE_PULSEAUDIO=ON \
-              -DALSOFT_REQUIRE_JACK=ON",
+              -DALSOFT_REQUIRE_JACK=ON \
+              -DALSOFT_REQUIRE_PIPEWIRE=ON",
             deps_cmdline: "sudo apt update && sudo apt-get install -qq \
               libpulse-dev \
               portaudio19-dev \
               libasound2-dev \
               libjack-dev \
+              libpipewire-0.3-dev \
               qtbase5-dev \
               libdbus-1-dev",
             build_type: "Release"
@@ -64,3 +96,21 @@ jobs:
       shell: bash
       run: |
         cmake --build build --config ${{matrix.config.build_type}}
+
+    - name: Create Archive
+      if: ${{ matrix.config.os == 'windows-latest' }}
+      shell: bash
+      run: |
+        cd build
+        mkdir archive
+        mkdir archive/router
+        cp ${{matrix.config.build_type}}/soft_oal.dll archive
+        cp ${{matrix.config.build_type}}/OpenAL32.dll archive/router
+
+    - name: Upload Archive
+      # Upload package as an artifact of this workflow.
+      uses: actions/upload-artifact@v3.1.1
+      if: ${{ matrix.config.os == 'windows-latest' }}
+      with:
+        name: soft_oal-${{matrix.config.name}}
+        path: build/archive

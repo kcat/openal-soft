@@ -7,10 +7,12 @@
 
 #include <stdio.h>
 
-#include <vector>
-#include <string>
 #include <atomic>
+#include <memory>
 #include <mutex>
+#include <string>
+#include <utility>
+#include <vector>
 
 #include "AL/alc.h"
 #include "AL/al.h"
@@ -23,6 +25,7 @@ struct DriverIface {
     std::wstring Name;
     HMODULE Module{nullptr};
     int ALCVer{0};
+    std::once_flag InitOnceCtx{};
 
     LPALCCREATECONTEXT alcCreateContext{nullptr};
     LPALCMAKECONTEXTCURRENT alcMakeContextCurrent{nullptr};
@@ -122,6 +125,7 @@ struct DriverIface {
     LPALSPEEDOFSOUND alSpeedOfSound{nullptr};
     LPALDISTANCEMODEL alDistanceModel{nullptr};
 
+    /* Functions to load after first context creation. */
     LPALGENFILTERS alGenFilters{nullptr};
     LPALDELETEFILTERS alDeleteFilters{nullptr};
     LPALISFILTER alIsFilter{nullptr};
@@ -156,8 +160,9 @@ struct DriverIface {
     LPALGETAUXILIARYEFFECTSLOTI alGetAuxiliaryEffectSloti{nullptr};
     LPALGETAUXILIARYEFFECTSLOTIV alGetAuxiliaryEffectSlotiv{nullptr};
 
-    DriverIface(std::wstring name, HMODULE mod)
-      : Name(std::move(name)), Module(mod)
+    template<typename T>
+    DriverIface(T&& name, HMODULE mod)
+      : Name(std::forward<T>(name)), Module(mod)
     { }
     ~DriverIface()
     {
@@ -166,11 +171,23 @@ struct DriverIface {
         Module = nullptr;
     }
 };
+using DriverIfacePtr = std::unique_ptr<DriverIface>;
 
-extern std::vector<DriverIface> DriverList;
+extern std::vector<DriverIfacePtr> DriverList;
 
 extern thread_local DriverIface *ThreadCtxDriver;
 extern std::atomic<DriverIface*> CurrentCtxDriver;
+
+/* HACK: MinGW generates bad code when accessing an extern thread_local object.
+ * Add a wrapper function for it that only accesses it where it's defined.
+ */
+#ifdef __MINGW32__
+DriverIface *GetThreadDriver() noexcept;
+void SetThreadDriver(DriverIface *driver) noexcept;
+#else
+inline DriverIface *GetThreadDriver() noexcept { return ThreadCtxDriver; }
+inline void SetThreadDriver(DriverIface *driver) noexcept { ThreadCtxDriver = driver; }
+#endif
 
 
 class PtrIntMap {

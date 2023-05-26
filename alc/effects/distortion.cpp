@@ -26,26 +26,26 @@
 #include <iterator>
 
 #include "alc/effects/base.h"
-#include "alc/effectslot.h"
 #include "almalloc.h"
+#include "alnumbers.h"
 #include "alnumeric.h"
 #include "alspan.h"
 #include "core/bufferline.h"
 #include "core/context.h"
 #include "core/devformat.h"
 #include "core/device.h"
+#include "core/effectslot.h"
 #include "core/filters/biquad.h"
 #include "core/mixer.h"
 #include "core/mixer/defs.h"
 #include "intrusive_ptr.h"
-#include "math_defs.h"
 
 
 namespace {
 
 struct DistortionState final : public EffectState {
     /* Effect gains for each channel */
-    float mGain[MAX_OUTPUT_CHANNELS]{};
+    float mGain[MaxAmbiChannels]{};
 
     /* Effect parameters */
     BiquadFilter mLowpass;
@@ -53,10 +53,10 @@ struct DistortionState final : public EffectState {
     float mAttenuation{};
     float mEdgeCoeff{};
 
-    float mBuffer[2][BufferLineSize]{};
+    alignas(16) float mBuffer[2][BufferLineSize]{};
 
 
-    void deviceUpdate(const DeviceBase *device, const Buffer &buffer) override;
+    void deviceUpdate(const DeviceBase *device, const BufferStorage *buffer) override;
     void update(const ContextBase *context, const EffectSlot *slot, const EffectProps *props,
         const EffectTarget target) override;
     void process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn,
@@ -65,7 +65,7 @@ struct DistortionState final : public EffectState {
     DEF_NEWDEL(DistortionState)
 };
 
-void DistortionState::deviceUpdate(const DeviceBase*, const Buffer&)
+void DistortionState::deviceUpdate(const DeviceBase*, const BufferStorage*)
 {
     mLowpass.clear();
     mBandpass.clear();
@@ -77,7 +77,7 @@ void DistortionState::update(const ContextBase *context, const EffectSlot *slot,
     const DeviceBase *device{context->mDevice};
 
     /* Store waveshaper edge settings. */
-    const float edge{minf(std::sin(al::MathDefs<float>::Pi()*0.5f * props->Distortion.Edge),
+    const float edge{minf(std::sin(al::numbers::pi_v<float>*0.5f * props->Distortion.Edge),
         0.99f)};
     mEdgeCoeff = 2.0f * edge / (1.0f-edge);
 
@@ -95,7 +95,7 @@ void DistortionState::update(const ContextBase *context, const EffectSlot *slot,
     bandwidth = props->Distortion.EQBandwidth / (cutoff * 0.67f);
     mBandpass.setParamsFromBandwidth(BiquadType::BandPass, cutoff/frequency/4.0f, 1.0f, bandwidth);
 
-    const auto coeffs = CalcDirectionCoeffs({0.0f, 0.0f, -1.0f}, 0.0f);
+    static constexpr auto coeffs = CalcDirectionCoeffs({0.0f, 0.0f, -1.0f});
 
     mOutTarget = target.Main->Buffer;
     ComputePanGains(target.Main, coeffs.data(), slot->Gain*props->Distortion.Gain, mGain);

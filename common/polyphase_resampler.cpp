@@ -4,7 +4,7 @@
 #include <algorithm>
 #include <cmath>
 
-#include "math_defs.h"
+#include "alnumbers.h"
 #include "opthelpers.h"
 
 
@@ -21,9 +21,9 @@ using uint = unsigned int;
  */
 double Sinc(const double x)
 {
-    if UNLIKELY(std::abs(x) < Epsilon)
+    if(std::abs(x) < Epsilon) UNLIKELY
         return 1.0;
-    return std::sin(al::MathDefs<double>::Pi()*x) / (al::MathDefs<double>::Pi()*x);
+    return std::sin(al::numbers::pi*x) / (al::numbers::pi*x);
 }
 
 /* The zero-order modified Bessel function of the first kind, used for the
@@ -95,8 +95,8 @@ constexpr uint Gcd(uint x, uint y)
  */
 constexpr uint CalcKaiserOrder(const double rejection, const double transition)
 {
-    const double w_t{2.0 * al::MathDefs<double>::Pi() * transition};
-    if LIKELY(rejection > 21.0)
+    const double w_t{2.0 * al::numbers::pi * transition};
+    if(rejection > 21.0) LIKELY
         return static_cast<uint>(std::ceil((rejection - 7.95) / (2.285 * w_t)));
     return static_cast<uint>(std::ceil(5.79 / w_t));
 }
@@ -104,7 +104,7 @@ constexpr uint CalcKaiserOrder(const double rejection, const double transition)
 // Calculates the beta value of the Kaiser window.  Rejection is in dB.
 constexpr double CalcKaiserBeta(const double rejection)
 {
-    if LIKELY(rejection > 50.0)
+    if(rejection > 50.0) LIKELY
         return 0.1102 * (rejection - 8.7);
     if(rejection >= 21.0)
         return (0.5842 * std::pow(rejection - 21.0, 0.4)) +
@@ -171,13 +171,13 @@ void PPhaseResampler::init(const uint srcRate, const uint dstRate)
 // polyphase filter implementation.
 void PPhaseResampler::process(const uint inN, const double *in, const uint outN, double *out)
 {
-    if UNLIKELY(outN == 0)
+    if(outN == 0) UNLIKELY
         return;
 
     // Handle in-place operation.
     std::vector<double> workspace;
     double *work{out};
-    if UNLIKELY(work == in)
+    if(work == in) UNLIKELY
     {
         workspace.resize(outN);
         work = workspace.data();
@@ -195,17 +195,17 @@ void PPhaseResampler::process(const uint inN, const double *in, const uint outN,
 
         // Only take input when 0 <= j_s < inN.
         double r{0.0};
-        if LIKELY(j_f < m)
+        if(j_f < m) LIKELY
         {
             size_t filt_len{(m-j_f+p-1) / p};
-            if LIKELY(j_s+1 > inN)
+            if(j_s+1 > inN) LIKELY
             {
                 size_t skip{std::min<size_t>(j_s+1 - inN, filt_len)};
                 j_f += p*skip;
                 j_s -= skip;
                 filt_len -= skip;
             }
-            if(size_t todo{std::min<size_t>(j_s+1, filt_len)})
+            if(size_t todo{std::min<size_t>(j_s+1, filt_len)}) LIKELY
             {
                 do {
                     r += f[j_f] * in[j_s];

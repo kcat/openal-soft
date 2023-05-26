@@ -259,7 +259,7 @@ int main(int argc, char **argv)
     }
 
     /* Define a macro to help load the function pointers. */
-#define LOAD_PROC(T, x)  ((x) = (T)alGetProcAddress(#x))
+#define LOAD_PROC(T, x)  ((x) = FUNCTION_CAST(T, alGetProcAddress(#x)))
     LOAD_PROC(LPALGENEFFECTS, alGenEffects);
     LOAD_PROC(LPALDELETEEFFECTS, alDeleteEffects);
     LOAD_PROC(LPALISEFFECT, alIsEffect);

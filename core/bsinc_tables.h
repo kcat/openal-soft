@@ -11,7 +11,7 @@ struct BSincTable {
     const float *Tab;
 };
 
-extern const BSincTable bsinc12;
-extern const BSincTable bsinc24;
+extern const BSincTable gBSinc12;
+extern const BSincTable gBSinc24;
 
 #endif /* CORE_BSINC_TABLES_H */

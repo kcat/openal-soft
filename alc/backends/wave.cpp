@@ -32,9 +32,9 @@
 #include <exception>
 #include <functional>
 #include <thread>
+#include <vector>
 
 #include "albit.h"
-#include "albyte.h"
 #include "alc/alconfig.h"
 #include "almalloc.h"
 #include "alnumeric.h"
@@ -44,7 +44,6 @@
 #include "opthelpers.h"
 #include "strutils.h"
 #include "threads.h"
-#include "vector.h"
 
 
 namespace {
@@ -105,7 +104,7 @@ struct WaveBackend final : public BackendBase {
     FILE *mFile{nullptr};
     long mDataStart{-1};
 
-    al::vector<al::byte> mBuffer;
+    std::vector<std::byte> mBuffer;
 
     std::atomic<bool> mKillNow{true};
     std::thread mThread;
@@ -149,29 +148,23 @@ int WaveBackend::mixerProc()
             mDevice->renderSamples(mBuffer.data(), mDevice->UpdateSize, frameStep);
             done += mDevice->UpdateSize;
 
-            if_constexpr(al::endian::native != al::endian::little)
+            if(al::endian::native != al::endian::little)
             {
                 const uint bytesize{mDevice->bytesFromFmt()};
 
                 if(bytesize == 2)
                 {
-                    ushort *samples = reinterpret_cast<ushort*>(mBuffer.data());
-                    const size_t len{mBuffer.size() / 2};
-                    for(size_t i{0};i < len;i++)
-                    {
-                        const ushort samp{samples[i]};
-                        samples[i] = static_cast<ushort>((samp>>8) | (samp<<8));
-                    }
+                    const size_t len{mBuffer.size() & ~size_t{1}};
+                    for(size_t i{0};i < len;i+=2)
+                        std::swap(mBuffer[i], mBuffer[i+1]);
                 }
                 else if(bytesize == 4)
                 {
-                    uint *samples = reinterpret_cast<uint*>(mBuffer.data());
-                    const size_t len{mBuffer.size() / 4};
-                    for(size_t i{0};i < len;i++)
+                    const size_t len{mBuffer.size() & ~size_t{3}};
+                    for(size_t i{0};i < len;i+=4)
                     {
-                        const uint samp{samples[i]};
-                        samples[i] = (samp>>24) | ((samp>>8)&0x0000ff00) |
-                                     ((samp<<8)&0x00ff0000) | (samp<<24);
+                        std::swap(mBuffer[i  ], mBuffer[i+3]);
+                        std::swap(mBuffer[i+1], mBuffer[i+2]);
                     }
                 }
             }
@@ -240,7 +233,7 @@ bool WaveBackend::reset()
     fseek(mFile, 0, SEEK_SET);
     clearerr(mFile);
 
-    if(GetConfigValueBool(nullptr, "wave", "bformat", 0))
+    if(GetConfigValueBool(nullptr, "wave", "bformat", false))
     {
         mDevice->FmtChans = DevFmtAmbi3D;
         mDevice->mAmbiOrder = 1;
@@ -271,6 +264,12 @@ bool WaveBackend::reset()
     case DevFmtX51: chanmask = 0x01 | 0x02 | 0x04 | 0x08 | 0x200 | 0x400; break;
     case DevFmtX61: chanmask = 0x01 | 0x02 | 0x04 | 0x08 | 0x100 | 0x200 | 0x400; break;
     case DevFmtX71: chanmask = 0x01 | 0x02 | 0x04 | 0x08 | 0x010 | 0x020 | 0x200 | 0x400; break;
+    case DevFmtX714:
+        chanmask = 0x01 | 0x02 | 0x04 | 0x08 | 0x010 | 0x020 | 0x200 | 0x400 | 0x1000 | 0x4000
+            | 0x8000 | 0x20000;
+        break;
+    /* NOTE: Same as 7.1. */
+    case DevFmtX3D71: chanmask = 0x01 | 0x02 | 0x04 | 0x08 | 0x010 | 0x020 | 0x200 | 0x400; break;
     case DevFmtAmbi3D:
         /* .amb output requires FuMa */
         mDevice->mAmbiOrder = minu(mDevice->mAmbiOrder, 3);

@@ -31,27 +31,23 @@
 #include <algorithm>
 #include <atomic>
 #include <cerrno>
-#include <cstdio>
 #include <cstring>
 #include <exception>
 #include <functional>
 #include <memory>
-#include <new>
 #include <string>
 #include <thread>
 #include <utility>
+#include <vector>
 
-#include "albyte.h"
 #include "alc/alconfig.h"
 #include "almalloc.h"
 #include "alnumeric.h"
-#include "aloptional.h"
 #include "core/device.h"
 #include "core/helpers.h"
 #include "core/logging.h"
 #include "ringbuffer.h"
 #include "threads.h"
-#include "vector.h"
 
 #include <sys/soundcard.h>
 
@@ -92,22 +88,22 @@ struct DevMap {
     std::string device_name;
 };
 
-al::vector<DevMap> PlaybackDevices;
-al::vector<DevMap> CaptureDevices;
+std::vector<DevMap> PlaybackDevices;
+std::vector<DevMap> CaptureDevices;
 
 
 #ifdef ALC_OSS_COMPAT
 
 #define DSP_CAP_OUTPUT 0x00020000
 #define DSP_CAP_INPUT 0x00010000
-void ALCossListPopulate(al::vector<DevMap> &devlist, int type)
+void ALCossListPopulate(std::vector<DevMap> &devlist, int type)
 {
     devlist.emplace_back(DevMap{DefaultName, (type==DSP_CAP_INPUT) ? DefaultCapture : DefaultPlayback});
 }
 
 #else
 
-void ALCossListAppend(al::vector<DevMap> &list, al::span<const char> handle, al::span<const char> path)
+void ALCossListAppend(std::vector<DevMap> &list, al::span<const char> handle, al::span<const char> path)
 {
 #ifdef ALC_OSS_DEVNODE_TRUC
     for(size_t i{0};i < path.size();++i)
@@ -152,7 +148,7 @@ void ALCossListAppend(al::vector<DevMap> &list, al::span<const char> handle, al:
     TRACE("Got device \"%s\", \"%s\"\n", entry.name.c_str(), entry.device_name.c_str());
 }
 
-void ALCossListPopulate(al::vector<DevMap> &devlist, int type_flag)
+void ALCossListPopulate(std::vector<DevMap> &devlist, int type_flag)
 {
     int fd{open("/dev/mixer", O_RDONLY)};
     if(fd < 0)
@@ -238,7 +234,7 @@ struct OSSPlayback final : public BackendBase {
 
     int mFd{-1};
 
-    al::vector<al::byte> mMixData;
+    std::vector<std::byte> mMixData;
 
     std::atomic<bool> mKillNow{true};
     std::thread mThread;
@@ -284,7 +280,7 @@ int OSSPlayback::mixerProc()
             continue;
         }
 
-        al::byte *write_ptr{mMixData.data()};
+        std::byte *write_ptr{mMixData.data()};
         size_t to_write{mMixData.size()};
         mDevice->renderSamples(write_ptr, static_cast<uint>(to_write/frame_size), frame_step);
         while(to_write > 0 && !mKillNow.load(std::memory_order_acquire))
@@ -450,7 +446,7 @@ struct OSScapture final : public BackendBase {
     void open(const char *name) override;
     void start() override;
     void stop() override;
-    void captureSamples(al::byte *buffer, uint samples) override;
+    void captureSamples(std::byte *buffer, uint samples) override;
     uint availableSamples() override;
 
     int mFd{-1};
@@ -620,7 +616,7 @@ void OSScapture::stop()
         ERR("Error resetting device: %s\n", strerror(errno));
 }
 
-void OSScapture::captureSamples(al::byte *buffer, uint samples)
+void OSScapture::captureSamples(std::byte *buffer, uint samples)
 { mRing->read(buffer, samples); }
 
 uint OSScapture::availableSamples()

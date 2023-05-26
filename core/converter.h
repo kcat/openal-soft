@@ -1,6 +1,7 @@
 #ifndef CORE_CONVERTER_H
 #define CORE_CONVERTER_H
 
+#include <chrono>
 #include <cstddef>
 #include <memory>
 
@@ -17,7 +18,7 @@ struct SampleConverter {
     uint mSrcTypeSize{};
     uint mDstTypeSize{};
 
-    int mSrcPrepCount{};
+    uint mSrcPrepCount{};
 
     uint mFracOffset{};
     uint mIncrement{};
@@ -37,13 +38,19 @@ struct SampleConverter {
     uint convert(const void **src, uint *srcframes, void *dst, uint dstframes);
     uint availableOut(uint srcframes) const;
 
+    using SampleOffset = std::chrono::duration<int64_t, std::ratio<1,MixerFracOne>>;
+    SampleOffset currentInputDelay() const noexcept
+    {
+        const int64_t prep{int64_t{mSrcPrepCount} - MaxResamplerEdge};
+        return SampleOffset{(prep<<MixerFracBits) + mFracOffset};
+    }
+
+    static std::unique_ptr<SampleConverter> Create(DevFmtType srcType, DevFmtType dstType,
+        size_t numchans, uint srcRate, uint dstRate, Resampler resampler);
+
     DEF_FAM_NEWDEL(SampleConverter, mChan)
 };
 using SampleConverterPtr = std::unique_ptr<SampleConverter>;
-
-SampleConverterPtr CreateSampleConverter(DevFmtType srcType, DevFmtType dstType, size_t numchans,
-    uint srcRate, uint dstRate, Resampler resampler);
-
 
 struct ChannelConverter {
     DevFmtType mSrcType{};

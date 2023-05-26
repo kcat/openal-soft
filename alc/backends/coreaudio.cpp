@@ -22,16 +22,16 @@
 
 #include "coreaudio.h"
 
+#include <cmath>
 #include <inttypes.h>
+#include <memory>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string>
 #include <string.h>
 #include <unistd.h>
-
-#include <cmath>
-#include <memory>
-#include <string>
+#include <vector>
 
 #include "alnumeric.h"
 #include "core/converter.h"
@@ -41,6 +41,7 @@
 
 #include <AudioUnit/AudioUnit.h>
 #include <AudioToolbox/AudioToolbox.h>
+#include <IOKit/audio/IOAudioTypes.h>
 
 
 namespace {
@@ -51,8 +52,30 @@ namespace {
 #define CAN_ENUMERATE 1
 #endif
 
-static const char ca_device[] = "CoreAudio Default";
+constexpr auto OutputElement = 0;
+constexpr auto InputElement = 1;
 
+struct FourCCPrinter {
+    char mString[sizeof(UInt32) + 1]{};
+
+    constexpr FourCCPrinter(UInt32 code) noexcept
+    {
+        for(size_t i{0};i < sizeof(UInt32);++i)
+        {
+            const auto ch = static_cast<char>(code & 0xff);
+            /* If this breaks early it'll leave the first byte null, to get
+             * read as a 0-length string.
+             */
+            if(ch <= 0x1f || ch >= 0x7f)
+                break;
+            mString[sizeof(UInt32)-1-i] = ch;
+            code >>= 8;
+        }
+    }
+    constexpr FourCCPrinter(int code) noexcept : FourCCPrinter{static_cast<UInt32>(code)} { }
+
+    constexpr const char *c_str() const noexcept { return mString; }
+};
 
 #if CAN_ENUMERATE
 struct DeviceEntry {
@@ -147,7 +170,8 @@ UInt32 GetDeviceChannelCount(AudioDeviceID devId, bool isCapture)
         &propSize);
     if(err)
     {
-        ERR("kAudioDevicePropertyStreamConfiguration size query failed: %u\n", err);
+        ERR("kAudioDevicePropertyStreamConfiguration size query failed: '%s' (%u)\n",
+            FourCCPrinter{err}.c_str(), err);
         return 0;
     }
 
@@ -158,7 +182,8 @@ UInt32 GetDeviceChannelCount(AudioDeviceID devId, bool isCapture)
         buflist);
     if(err)
     {
-        ERR("kAudioDevicePropertyStreamConfiguration query failed: %u\n", err);
+        ERR("kAudioDevicePropertyStreamConfiguration query failed: '%s' (%u)\n",
+            FourCCPrinter{err}.c_str(), err);
         return 0;
     }
 
@@ -182,7 +207,7 @@ void EnumerateDevices(std::vector<DeviceEntry> &list, bool isCapture)
     auto devIds = std::vector<AudioDeviceID>(propSize/sizeof(AudioDeviceID), kAudioDeviceUnknown);
     if(auto err = GetHwProperty(kAudioHardwarePropertyDevices, propSize, devIds.data()))
     {
-        ERR("Failed to get device list: %u\n", err);
+        ERR("Failed to get device list: '%s' (%u)\n", FourCCPrinter{err}.c_str(), err);
         return;
     }
 
@@ -246,6 +271,10 @@ void EnumerateDevices(std::vector<DeviceEntry> &list, bool isCapture)
     newdevs.shrink_to_fit();
     newdevs.swap(list);
 }
+
+#else
+
+static constexpr char ca_device[] = "CoreAudio Default";
 #endif
 
 
@@ -256,13 +285,6 @@ struct CoreAudioPlayback final : public BackendBase {
     OSStatus MixerProc(AudioUnitRenderActionFlags *ioActionFlags,
         const AudioTimeStamp *inTimeStamp, UInt32 inBusNumber, UInt32 inNumberFrames,
         AudioBufferList *ioData) noexcept;
-    static OSStatus MixerProcC(void *inRefCon, AudioUnitRenderActionFlags *ioActionFlags,
-        const AudioTimeStamp *inTimeStamp, UInt32 inBusNumber, UInt32 inNumberFrames,
-        AudioBufferList *ioData) noexcept
-    {
-        return static_cast<CoreAudioPlayback*>(inRefCon)->MixerProc(ioActionFlags, inTimeStamp,
-            inBusNumber, inNumberFrames, ioData);
-    }
 
     void open(const char *name) override;
     bool reset() override;
@@ -347,18 +369,18 @@ void CoreAudioPlayback::open(const char *name)
     OSStatus err{AudioComponentInstanceNew(comp, &audioUnit)};
     if(err != noErr)
         throw al::backend_exception{al::backend_error::NoDevice,
-            "Could not create component instance: %u", err};
+            "Could not create component instance: '%s' (%u)", FourCCPrinter{err}.c_str(), err};
 
 #if CAN_ENUMERATE
     if(audioDevice != kAudioDeviceUnknown)
         AudioUnitSetProperty(audioUnit, kAudioOutputUnitProperty_CurrentDevice,
-            kAudioUnitScope_Global, 0, &audioDevice, sizeof(AudioDeviceID));
+            kAudioUnitScope_Global, OutputElement, &audioDevice, sizeof(AudioDeviceID));
 #endif
 
     err = AudioUnitInitialize(audioUnit);
     if(err != noErr)
         throw al::backend_exception{al::backend_error::DeviceError,
-            "Could not initialize audio unit: %u", err};
+            "Could not initialize audio unit: '%s' (%u)", FourCCPrinter{err}.c_str(), err};
 
     /* WARNING: I don't know if "valid" audio unit values are guaranteed to be
      * non-0. If not, this logic is broken.
@@ -378,12 +400,27 @@ void CoreAudioPlayback::open(const char *name)
         UInt32 propSize{sizeof(audioDevice)};
         audioDevice = kAudioDeviceUnknown;
         AudioUnitGetProperty(audioUnit, kAudioOutputUnitProperty_CurrentDevice,
-            kAudioUnitScope_Global, 0, &audioDevice, &propSize);
+            kAudioUnitScope_Global, OutputElement, &audioDevice, &propSize);
 
         std::string devname{GetDeviceName(audioDevice)};
         if(!devname.empty()) mDevice->DeviceName = std::move(devname);
         else mDevice->DeviceName = "Unknown Device Name";
     }
+
+    if(audioDevice != kAudioDeviceUnknown)
+    {
+        UInt32 type{};
+        err = GetDevProperty(audioDevice, kAudioDevicePropertyDataSource, false,
+            kAudioObjectPropertyElementMaster, sizeof(type), &type);
+        if(err != noErr)
+            ERR("Failed to get audio device type: %u\n", err);
+        else
+        {
+            TRACE("Got device type '%s'\n", FourCCPrinter{type}.c_str());
+            mDevice->Flags.set(DirectEar, (type == kIOAudioOutputPortSubTypeHeadphones));
+        }
+    }
+
 #else
     mDevice->DeviceName = name;
 #endif
@@ -393,16 +430,17 @@ bool CoreAudioPlayback::reset()
 {
     OSStatus err{AudioUnitUninitialize(mAudioUnit)};
     if(err != noErr)
-        ERR("-- AudioUnitUninitialize failed.\n");
+        ERR("AudioUnitUninitialize failed: '%s' (%u)\n", FourCCPrinter{err}.c_str(), err);
 
     /* retrieve default output unit's properties (output side) */
     AudioStreamBasicDescription streamFormat{};
     UInt32 size{sizeof(streamFormat)};
     err = AudioUnitGetProperty(mAudioUnit, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Output,
-        0, &streamFormat, &size);
+        OutputElement, &streamFormat, &size);
     if(err != noErr || size != sizeof(streamFormat))
     {
-        ERR("AudioUnitGetProperty failed\n");
+        ERR("AudioUnitGetProperty(StreamFormat) failed: '%s' (%u)\n", FourCCPrinter{err}.c_str(),
+            err);
         return false;
     }
 
@@ -421,8 +459,8 @@ bool CoreAudioPlayback::reset()
      */
     if(mDevice->Frequency != streamFormat.mSampleRate)
     {
-        mDevice->BufferSize = static_cast<uint>(uint64_t{mDevice->BufferSize} *
-            streamFormat.mSampleRate / mDevice->Frequency);
+        mDevice->BufferSize = static_cast<uint>(mDevice->BufferSize*streamFormat.mSampleRate/
+            mDevice->Frequency + 0.5);
         mDevice->Frequency = static_cast<uint>(streamFormat.mSampleRate);
     }
 
@@ -466,10 +504,11 @@ bool CoreAudioPlayback::reset()
     streamFormat.mBytesPerPacket = streamFormat.mBytesPerFrame*streamFormat.mFramesPerPacket;
 
     err = AudioUnitSetProperty(mAudioUnit, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Input,
-        0, &streamFormat, sizeof(streamFormat));
+        OutputElement, &streamFormat, sizeof(streamFormat));
     if(err != noErr)
     {
-        ERR("AudioUnitSetProperty failed\n");
+        ERR("AudioUnitSetProperty(StreamFormat) failed: '%s' (%u)\n", FourCCPrinter{err}.c_str(),
+            err);
         return false;
     }
 
@@ -478,14 +517,16 @@ bool CoreAudioPlayback::reset()
     /* setup callback */
     mFrameSize = mDevice->frameSizeFromFmt();
     AURenderCallbackStruct input{};
-    input.inputProc = CoreAudioPlayback::MixerProcC;
+    input.inputProc = [](void *inRefCon, AudioUnitRenderActionFlags *ioActionFlags, const AudioTimeStamp *inTimeStamp, UInt32 inBusNumber, UInt32 inNumberFrames, AudioBufferList *ioData) noexcept
+    { return static_cast<CoreAudioPlayback*>(inRefCon)->MixerProc(ioActionFlags, inTimeStamp, inBusNumber, inNumberFrames, ioData); };
     input.inputProcRefCon = this;
 
     err = AudioUnitSetProperty(mAudioUnit, kAudioUnitProperty_SetRenderCallback,
-        kAudioUnitScope_Input, 0, &input, sizeof(AURenderCallbackStruct));
+        kAudioUnitScope_Input, OutputElement, &input, sizeof(AURenderCallbackStruct));
     if(err != noErr)
     {
-        ERR("AudioUnitSetProperty failed\n");
+        ERR("AudioUnitSetProperty(SetRenderCallback) failed: '%s' (%u)\n",
+            FourCCPrinter{err}.c_str(), err);
         return false;
     }
 
@@ -493,7 +534,7 @@ bool CoreAudioPlayback::reset()
     err = AudioUnitInitialize(mAudioUnit);
     if(err != noErr)
     {
-        ERR("AudioUnitInitialize failed\n");
+        ERR("AudioUnitInitialize failed: '%s' (%u)\n", FourCCPrinter{err}.c_str(), err);
         return false;
     }
 
@@ -505,14 +546,14 @@ void CoreAudioPlayback::start()
     const OSStatus err{AudioOutputUnitStart(mAudioUnit)};
     if(err != noErr)
         throw al::backend_exception{al::backend_error::DeviceError,
-            "AudioOutputUnitStart failed: %d", err};
+            "AudioOutputUnitStart failed: '%s' (%u)", FourCCPrinter{err}.c_str(), err};
 }
 
 void CoreAudioPlayback::stop()
 {
     OSStatus err{AudioOutputUnitStop(mAudioUnit)};
     if(err != noErr)
-        ERR("AudioOutputUnitStop failed\n");
+        ERR("AudioOutputUnitStop failed: '%s' (%u)\n", FourCCPrinter{err}.c_str(), err);
 }
 
 
@@ -523,18 +564,11 @@ struct CoreAudioCapture final : public BackendBase {
     OSStatus RecordProc(AudioUnitRenderActionFlags *ioActionFlags,
         const AudioTimeStamp *inTimeStamp, UInt32 inBusNumber,
         UInt32 inNumberFrames, AudioBufferList *ioData) noexcept;
-    static OSStatus RecordProcC(void *inRefCon, AudioUnitRenderActionFlags *ioActionFlags,
-        const AudioTimeStamp *inTimeStamp, UInt32 inBusNumber, UInt32 inNumberFrames,
-        AudioBufferList *ioData) noexcept
-    {
-        return static_cast<CoreAudioCapture*>(inRefCon)->RecordProc(ioActionFlags, inTimeStamp,
-            inBusNumber, inNumberFrames, ioData);
-    }
 
     void open(const char *name) override;
     void start() override;
     void stop() override;
-    void captureSamples(al::byte *buffer, uint samples) override;
+    void captureSamples(std::byte *buffer, uint samples) override;
     uint availableSamples() override;
 
     AudioUnit mAudioUnit{0};
@@ -543,6 +577,8 @@ struct CoreAudioCapture final : public BackendBase {
     AudioStreamBasicDescription mFormat{};  // This is the OpenAL format as a CoreAudio ASBD
 
     SampleConverterPtr mConverter;
+
+    std::vector<char> mCaptureData;
 
     RingBufferPtr mRing{nullptr};
 
@@ -557,49 +593,29 @@ CoreAudioCapture::~CoreAudioCapture()
 }
 
 
-OSStatus CoreAudioCapture::RecordProc(AudioUnitRenderActionFlags*,
-    const AudioTimeStamp *inTimeStamp, UInt32, UInt32 inNumberFrames,
+OSStatus CoreAudioCapture::RecordProc(AudioUnitRenderActionFlags *ioActionFlags,
+    const AudioTimeStamp *inTimeStamp, UInt32 inBusNumber, UInt32 inNumberFrames,
     AudioBufferList*) noexcept
 {
-    AudioUnitRenderActionFlags flags = 0;
     union {
-        al::byte _[sizeof(AudioBufferList) + sizeof(AudioBuffer)*2];
+        std::byte _[maxz(sizeof(AudioBufferList), offsetof(AudioBufferList, mBuffers[1]))];
         AudioBufferList list;
     } audiobuf{};
 
-    auto rec_vec = mRing->getWriteVector();
-    inNumberFrames = static_cast<UInt32>(minz(inNumberFrames,
-        rec_vec.first.len+rec_vec.second.len));
+    audiobuf.list.mNumberBuffers = 1;
+    audiobuf.list.mBuffers[0].mNumberChannels = mFormat.mChannelsPerFrame;
+    audiobuf.list.mBuffers[0].mData = mCaptureData.data();
+    audiobuf.list.mBuffers[0].mDataByteSize = static_cast<UInt32>(mCaptureData.size());
 
-    // Fill the ringbuffer's two segments with data from the input device
-    if(rec_vec.first.len >= inNumberFrames)
-    {
-        audiobuf.list.mNumberBuffers = 1;
-        audiobuf.list.mBuffers[0].mNumberChannels = mFormat.mChannelsPerFrame;
-        audiobuf.list.mBuffers[0].mData = rec_vec.first.buf;
-        audiobuf.list.mBuffers[0].mDataByteSize = inNumberFrames * mFormat.mBytesPerFrame;
-    }
-    else
-    {
-        const auto remaining = static_cast<uint>(inNumberFrames - rec_vec.first.len);
-        audiobuf.list.mNumberBuffers = 2;
-        audiobuf.list.mBuffers[0].mNumberChannels = mFormat.mChannelsPerFrame;
-        audiobuf.list.mBuffers[0].mData = rec_vec.first.buf;
-        audiobuf.list.mBuffers[0].mDataByteSize = static_cast<UInt32>(rec_vec.first.len) *
-            mFormat.mBytesPerFrame;
-        audiobuf.list.mBuffers[1].mNumberChannels = mFormat.mChannelsPerFrame;
-        audiobuf.list.mBuffers[1].mData = rec_vec.second.buf;
-        audiobuf.list.mBuffers[1].mDataByteSize = remaining * mFormat.mBytesPerFrame;
-    }
-    OSStatus err{AudioUnitRender(mAudioUnit, &flags, inTimeStamp, audiobuf.list.mNumberBuffers,
+    OSStatus err{AudioUnitRender(mAudioUnit, ioActionFlags, inTimeStamp, inBusNumber,
         inNumberFrames, &audiobuf.list)};
     if(err != noErr)
     {
-        ERR("AudioUnitRender error: %d\n", err);
+        ERR("AudioUnitRender capture error: '%s' (%u)\n", FourCCPrinter{err}.c_str(), err);
         return err;
     }
 
-    mRing->writeAdvance(inNumberFrames);
+    mRing->write(mCaptureData.data(), inNumberFrames);
     return noErr;
 }
 
@@ -654,63 +670,67 @@ void CoreAudioCapture::open(const char *name)
     OSStatus err{AudioComponentInstanceNew(comp, &mAudioUnit)};
     if(err != noErr)
         throw al::backend_exception{al::backend_error::NoDevice,
-            "Could not create component instance: %u", err};
-
-#if CAN_ENUMERATE
-    if(audioDevice != kAudioDeviceUnknown)
-        AudioUnitSetProperty(mAudioUnit, kAudioOutputUnitProperty_CurrentDevice,
-            kAudioUnitScope_Global, 0, &audioDevice, sizeof(AudioDeviceID));
-#endif
+            "Could not create component instance: '%s' (%u)", FourCCPrinter{err}.c_str(), err};
 
     // Turn off AudioUnit output
     UInt32 enableIO{0};
     err = AudioUnitSetProperty(mAudioUnit, kAudioOutputUnitProperty_EnableIO,
-        kAudioUnitScope_Output, 0, &enableIO, sizeof(enableIO));
+        kAudioUnitScope_Output, OutputElement, &enableIO, sizeof(enableIO));
     if(err != noErr)
         throw al::backend_exception{al::backend_error::DeviceError,
-            "Could not disable audio unit output property: %u", err};
+            "Could not disable audio unit output property: '%s' (%u)", FourCCPrinter{err}.c_str(),
+            err};
 
     // Turn on AudioUnit input
     enableIO = 1;
     err = AudioUnitSetProperty(mAudioUnit, kAudioOutputUnitProperty_EnableIO,
-        kAudioUnitScope_Input, 1, &enableIO, sizeof(enableIO));
+        kAudioUnitScope_Input, InputElement, &enableIO, sizeof(enableIO));
     if(err != noErr)
         throw al::backend_exception{al::backend_error::DeviceError,
-            "Could not enable audio unit input property: %u", err};
+            "Could not enable audio unit input property: '%s' (%u)", FourCCPrinter{err}.c_str(),
+            err};
+
+#if CAN_ENUMERATE
+    if(audioDevice != kAudioDeviceUnknown)
+        AudioUnitSetProperty(mAudioUnit, kAudioOutputUnitProperty_CurrentDevice,
+            kAudioUnitScope_Global, InputElement, &audioDevice, sizeof(AudioDeviceID));
+#endif
 
     // set capture callback
     AURenderCallbackStruct input{};
-    input.inputProc = CoreAudioCapture::RecordProcC;
+    input.inputProc = [](void *inRefCon, AudioUnitRenderActionFlags *ioActionFlags, const AudioTimeStamp *inTimeStamp, UInt32 inBusNumber, UInt32 inNumberFrames, AudioBufferList *ioData) noexcept
+    { return static_cast<CoreAudioCapture*>(inRefCon)->RecordProc(ioActionFlags, inTimeStamp, inBusNumber, inNumberFrames, ioData); };
     input.inputProcRefCon = this;
 
     err = AudioUnitSetProperty(mAudioUnit, kAudioOutputUnitProperty_SetInputCallback,
-        kAudioUnitScope_Global, 0, &input, sizeof(AURenderCallbackStruct));
+        kAudioUnitScope_Global, InputElement, &input, sizeof(AURenderCallbackStruct));
     if(err != noErr)
         throw al::backend_exception{al::backend_error::DeviceError,
-            "Could not set capture callback: %u", err};
+            "Could not set capture callback: '%s' (%u)", FourCCPrinter{err}.c_str(), err};
 
     // Disable buffer allocation for capture
     UInt32 flag{0};
     err = AudioUnitSetProperty(mAudioUnit, kAudioUnitProperty_ShouldAllocateBuffer,
-        kAudioUnitScope_Output, 1, &flag, sizeof(flag));
+        kAudioUnitScope_Output, InputElement, &flag, sizeof(flag));
     if(err != noErr)
         throw al::backend_exception{al::backend_error::DeviceError,
-            "Could not disable buffer allocation property: %u", err};
+            "Could not disable buffer allocation property: '%s' (%u)", FourCCPrinter{err}.c_str(),
+            err};
 
     // Initialize the device
     err = AudioUnitInitialize(mAudioUnit);
     if(err != noErr)
         throw al::backend_exception{al::backend_error::DeviceError,
-            "Could not initialize audio unit: %u", err};
+            "Could not initialize audio unit: '%s' (%u)", FourCCPrinter{err}.c_str(), err};
 
     // Get the hardware format
     AudioStreamBasicDescription hardwareFormat{};
     UInt32 propertySize{sizeof(hardwareFormat)};
     err = AudioUnitGetProperty(mAudioUnit, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Input,
-        1, &hardwareFormat, &propertySize);
+        InputElement, &hardwareFormat, &propertySize);
     if(err != noErr || propertySize != sizeof(hardwareFormat))
         throw al::backend_exception{al::backend_error::DeviceError,
-            "Could not get input format: %u", err};
+            "Could not get input format: '%s' (%u)", FourCCPrinter{err}.c_str(), err};
 
     // Set up the requested format description
     AudioStreamBasicDescription requestedFormat{};
@@ -762,6 +782,8 @@ void CoreAudioCapture::open(const char *name)
     case DevFmtX51:
     case DevFmtX61:
     case DevFmtX71:
+    case DevFmtX714:
+    case DevFmtX3D71:
     case DevFmtAmbi3D:
         throw al::backend_exception{al::backend_error::DeviceError, "%s not supported",
             DevFmtChannelsString(mDevice->FmtChans)};
@@ -786,15 +808,15 @@ void CoreAudioCapture::open(const char *name)
     // The output format should be the requested format, but using the hardware sample rate
     // This is because the AudioUnit will automatically scale other properties, except for sample rate
     err = AudioUnitSetProperty(mAudioUnit, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Output,
-        1, &outputFormat, sizeof(outputFormat));
+        InputElement, &outputFormat, sizeof(outputFormat));
     if(err != noErr)
         throw al::backend_exception{al::backend_error::DeviceError,
-            "Could not set input format: %u", err};
+            "Could not set input format: '%s' (%u)", FourCCPrinter{err}.c_str(), err};
 
     /* Calculate the minimum AudioUnit output format frame count for the pre-
      * conversion ring buffer. Ensure at least 100ms for the total buffer.
      */
-    double srateScale{double{outputFormat.mSampleRate} / mDevice->Frequency};
+    double srateScale{outputFormat.mSampleRate / mDevice->Frequency};
     auto FrameCount64 = maxu64(static_cast<uint64_t>(std::ceil(mDevice->BufferSize*srateScale)),
         static_cast<UInt32>(outputFormat.mSampleRate)/10);
     FrameCount64 += MaxResamplerPadding;
@@ -805,17 +827,19 @@ void CoreAudioCapture::open(const char *name)
     UInt32 outputFrameCount{};
     propertySize = sizeof(outputFrameCount);
     err = AudioUnitGetProperty(mAudioUnit, kAudioUnitProperty_MaximumFramesPerSlice,
-        kAudioUnitScope_Global, 0, &outputFrameCount, &propertySize);
+        kAudioUnitScope_Global, OutputElement, &outputFrameCount, &propertySize);
     if(err != noErr || propertySize != sizeof(outputFrameCount))
         throw al::backend_exception{al::backend_error::DeviceError,
-            "Could not get input frame count: %u", err};
+            "Could not get input frame count: '%s' (%u)", FourCCPrinter{err}.c_str(), err};
+
+    mCaptureData.resize(outputFrameCount * mFrameSize);
 
     outputFrameCount = static_cast<UInt32>(maxu64(outputFrameCount, FrameCount64));
     mRing = RingBuffer::Create(outputFrameCount, mFrameSize, false);
 
     /* Set up sample converter if needed */
     if(outputFormat.mSampleRate != mDevice->Frequency)
-        mConverter = CreateSampleConverter(mDevice->FmtType, mDevice->FmtType,
+        mConverter = SampleConverter::Create(mDevice->FmtType, mDevice->FmtType,
             mFormat.mChannelsPerFrame, static_cast<uint>(hardwareFormat.mSampleRate),
             mDevice->Frequency, Resampler::FastBSinc24);
 
@@ -827,7 +851,7 @@ void CoreAudioCapture::open(const char *name)
         UInt32 propSize{sizeof(audioDevice)};
         audioDevice = kAudioDeviceUnknown;
         AudioUnitGetProperty(mAudioUnit, kAudioOutputUnitProperty_CurrentDevice,
-            kAudioUnitScope_Global, 0, &audioDevice, &propSize);
+            kAudioUnitScope_Global, InputElement, &audioDevice, &propSize);
 
         std::string devname{GetDeviceName(audioDevice)};
         if(!devname.empty()) mDevice->DeviceName = std::move(devname);
@@ -844,17 +868,17 @@ void CoreAudioCapture::start()
     OSStatus err{AudioOutputUnitStart(mAudioUnit)};
     if(err != noErr)
         throw al::backend_exception{al::backend_error::DeviceError,
-            "AudioOutputUnitStart failed: %d", err};
+            "AudioOutputUnitStart failed: '%s' (%u)", FourCCPrinter{err}.c_str(), err};
 }
 
 void CoreAudioCapture::stop()
 {
     OSStatus err{AudioOutputUnitStop(mAudioUnit)};
     if(err != noErr)
-        ERR("AudioOutputUnitStop failed\n");
+        ERR("AudioOutputUnitStop failed: '%s' (%u)\n", FourCCPrinter{err}.c_str(), err);
 }
 
-void CoreAudioCapture::captureSamples(al::byte *buffer, uint samples)
+void CoreAudioCapture::captureSamples(std::byte *buffer, uint samples)
 {
     if(!mConverter)
     {

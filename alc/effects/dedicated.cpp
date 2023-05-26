@@ -26,12 +26,12 @@
 #include <iterator>
 
 #include "alc/effects/base.h"
-#include "alc/effectslot.h"
 #include "almalloc.h"
 #include "alspan.h"
 #include "core/bufferline.h"
 #include "core/devformat.h"
 #include "core/device.h"
+#include "core/effectslot.h"
 #include "core/mixer.h"
 #include "intrusive_ptr.h"
 
@@ -43,11 +43,15 @@ namespace {
 using uint = unsigned int;
 
 struct DedicatedState final : public EffectState {
+    /* The "dedicated" effect can output to the real output, so should have
+     * gains for all possible output channels and not just the main ambisonic
+     * buffer.
+     */
     float mCurrentGains[MAX_OUTPUT_CHANNELS];
     float mTargetGains[MAX_OUTPUT_CHANNELS];
 
 
-    void deviceUpdate(const DeviceBase *device, const Buffer &buffer) override;
+    void deviceUpdate(const DeviceBase *device, const BufferStorage *buffer) override;
     void update(const ContextBase *context, const EffectSlot *slot, const EffectProps *props,
         const EffectTarget target) override;
     void process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn,
@@ -56,7 +60,7 @@ struct DedicatedState final : public EffectState {
     DEF_NEWDEL(DedicatedState)
 };
 
-void DedicatedState::deviceUpdate(const DeviceBase*, const Buffer&)
+void DedicatedState::deviceUpdate(const DeviceBase*, const BufferStorage*)
 {
     std::fill(std::begin(mCurrentGains), std::end(mCurrentGains), 0.0f);
 }
@@ -70,9 +74,8 @@ void DedicatedState::update(const ContextBase*, const EffectSlot *slot,
 
     if(slot->EffectType == EffectSlotType::DedicatedLFE)
     {
-        const uint idx{!target.RealOut ? INVALID_CHANNEL_INDEX :
-            GetChannelIdxByName(*target.RealOut, LFE)};
-        if(idx != INVALID_CHANNEL_INDEX)
+        const uint idx{target.RealOut ? target.RealOut->ChannelIndex[LFE] : InvalidChannelIndex};
+        if(idx != InvalidChannelIndex)
         {
             mOutTarget = target.RealOut->Buffer;
             mTargetGains[idx] = Gain;
@@ -82,16 +85,16 @@ void DedicatedState::update(const ContextBase*, const EffectSlot *slot,
     {
         /* Dialog goes to the front-center speaker if it exists, otherwise it
          * plays from the front-center location. */
-        const uint idx{!target.RealOut ? INVALID_CHANNEL_INDEX :
-            GetChannelIdxByName(*target.RealOut, FrontCenter)};
-        if(idx != INVALID_CHANNEL_INDEX)
+        const uint idx{target.RealOut ? target.RealOut->ChannelIndex[FrontCenter]
+            : InvalidChannelIndex};
+        if(idx != InvalidChannelIndex)
         {
             mOutTarget = target.RealOut->Buffer;
             mTargetGains[idx] = Gain;
         }
         else
         {
-            const auto coeffs = CalcDirectionCoeffs({0.0f, 0.0f, -1.0f}, 0.0f);
+            static constexpr auto coeffs = CalcDirectionCoeffs({0.0f, 0.0f, -1.0f});
 
             mOutTarget = target.Main->Buffer;
             ComputePanGains(target.Main, coeffs.data(), Gain, mTargetGains);

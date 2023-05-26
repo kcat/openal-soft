@@ -29,25 +29,32 @@
 #include <csignal>
 #include <cstdarg>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
+#include <limits>
 #include <mutex>
+#include <vector>
 
 #include "AL/al.h"
 #include "AL/alc.h"
 
+#include "al/debug.h"
+#include "alc/alconfig.h"
 #include "alc/context.h"
 #include "almalloc.h"
+#include "alstring.h"
 #include "core/except.h"
 #include "core/logging.h"
+#include "direct_defs.h"
 #include "opthelpers.h"
-#include "vector.h"
+#include "strutils.h"
 
 
 bool TrapALError{false};
 
 void ALCcontext::setError(ALenum errorCode, const char *msg, ...)
 {
-    auto message = al::vector<char>(256);
+    auto message = std::vector<char>(256);
 
     va_list args, args2;
     va_start(args, msg);
@@ -61,8 +68,13 @@ void ALCcontext::setError(ALenum errorCode, const char *msg, ...)
     va_end(args2);
     va_end(args);
 
-    if(msglen >= 0) msg = message.data();
-    else msg = "<internal error constructing message>";
+    if(msglen >= 0)
+        msg = message.data();
+    else
+    {
+        msg = "<internal error constructing message>";
+        msglen = static_cast<int>(strlen(msg));
+    }
 
     WARN("Error generated on context %p, code 0x%04x, \"%s\"\n",
         decltype(std::declval<void*>()){this}, errorCode, msg);
@@ -79,15 +91,36 @@ void ALCcontext::setError(ALenum errorCode, const char *msg, ...)
 
     ALenum curerr{AL_NO_ERROR};
     mLastError.compare_exchange_strong(curerr, errorCode);
+
+    debugMessage(DebugSource::API, DebugType::Error, 0, DebugSeverity::High,
+        {msg, static_cast<uint>(msglen)});
 }
 
-AL_API ALenum AL_APIENTRY alGetError(void)
-START_API_FUNC
+/* Special-case alGetError since it (potentially) raises a debug signal and
+ * returns a non-default value for a null context.
+ */
+AL_API ALenum AL_APIENTRY alGetError(void) noexcept
 {
-    ContextRef context{GetContextRef()};
-    if(unlikely(!context))
+    auto context = GetContextRef();
+    if(!context) UNLIKELY
     {
-        constexpr ALenum deferror{AL_INVALID_OPERATION};
+        static const ALenum deferror{[](const char *envname, const char *optname) -> ALenum
+        {
+            auto optstr = al::getenv(envname);
+            if(!optstr)
+                optstr = ConfigValueStr(nullptr, "game_compat", optname);
+
+            if(optstr)
+            {
+                char *end{};
+                auto value = std::strtoul(optstr->c_str(), &end, 0);
+                if(end && *end == '\0' && value <= std::numeric_limits<ALenum>::max())
+                    return static_cast<ALenum>(value);
+                ERR("Invalid default error value: \"%s\"", optstr->c_str());
+            }
+            return AL_INVALID_OPERATION;
+        }("__ALSOFT_DEFAULT_ERROR", "default-error")};
+
         WARN("Querying error state on null context (implicitly 0x%04x)\n", deferror);
         if(TrapALError)
         {
@@ -100,7 +133,10 @@ START_API_FUNC
         }
         return deferror;
     }
+    return alGetErrorDirect(context.get());
+}
 
+FORCE_ALIGN ALenum AL_APIENTRY alGetErrorDirect(ALCcontext *context) noexcept
+{
     return context->mLastError.exchange(AL_NO_ERROR);
 }
-END_API_FUNC

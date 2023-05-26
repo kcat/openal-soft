@@ -4,6 +4,7 @@
 #include <vector>
 #include <complex>
 
+#include "alcomplex.h"
 #include "polyphase_resampler.h"
 
 
@@ -73,17 +74,13 @@ struct HrirAzT {
 
 struct HrirEvT {
     double mElevation{0.0};
-    uint mIrCount{0u};
-    uint mAzCount{0u};
-    HrirAzT *mAzs{nullptr};
+    al::span<HrirAzT> mAzs;
 };
 
 struct HrirFdT {
     double mDistance{0.0};
-    uint mIrCount{0u};
-    uint mEvCount{0u};
     uint mEvStart{0u};
-    HrirEvT *mEvs{nullptr};
+    al::span<HrirEvT> mEvs;
 };
 
 // The HRIR metrics and data set used when loading, processing, and storing
@@ -97,21 +94,35 @@ struct HrirDataT {
     uint mIrSize{0u};
     double mRadius{0.0};
     uint mIrCount{0u};
-    uint mFdCount{0u};
 
     std::vector<double> mHrirsBase;
     std::vector<HrirEvT> mEvsBase;
     std::vector<HrirAzT> mAzsBase;
 
     std::vector<HrirFdT> mFds;
+
+    /* GCC warns when it tries to inline this. */
+    ~HrirDataT();
 };
 
 
-int PrepareHrirData(const uint fdCount, const double (&distances)[MAX_FD_COUNT], const uint (&evCounts)[MAX_FD_COUNT], const uint azCounts[MAX_FD_COUNT * MAX_EV_COUNT], HrirDataT *hData);
+bool PrepareHrirData(const al::span<const double> distances,
+    const al::span<const uint,MAX_FD_COUNT> evCounts,
+    const al::span<const std::array<uint,MAX_EV_COUNT>,MAX_FD_COUNT> azCounts, HrirDataT *hData);
 void MagnitudeResponse(const uint n, const complex_d *in, double *out);
-void FftForward(const uint n, complex_d *inout);
-void FftInverse(const uint n, complex_d *inout);
 
+// Performs a forward FFT.
+inline void FftForward(const uint n, complex_d *inout)
+{ forward_fft(al::span{inout, n}); }
+
+// Performs an inverse FFT.
+inline void FftInverse(const uint n, complex_d *inout)
+{
+    inverse_fft(al::span{inout, n});
+    double f{1.0 / n};
+    for(uint i{0};i < n;i++)
+        inout[i] *= f;
+}
 
 // Performs linear interpolation.
 inline double Lerp(const double a, const double b, const double f)

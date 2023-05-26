@@ -66,7 +66,7 @@ float UpdateSlidingHold(SlidingHold *Hold, const uint i, const float in)
                     goto found_place;
             } while(lowerIndex--);
             lowerIndex = mask;
-        } while(1);
+        } while(true);
     found_place:
 
         lowerIndex = (lowerIndex + 1) & mask;
@@ -87,10 +87,10 @@ void ShiftSlidingHold(SlidingHold *Hold, const uint n)
     if(exp_last-exp_begin < 0)
     {
         std::transform(exp_begin, std::end(Hold->mExpiries), exp_begin,
-            std::bind(std::minus<>{}, _1, n));
+            [n](uint e){ return e - n; });
         exp_begin = std::begin(Hold->mExpiries);
     }
-    std::transform(exp_begin, exp_last+1, exp_begin, std::bind(std::minus<>{}, _1, n));
+    std::transform(exp_begin, exp_last+1, exp_begin, [n](uint e){ return e - n; });
 }
 
 
@@ -121,7 +121,7 @@ void LinkChannels(Compressor *Comp, const uint SamplesToDo, const FloatBufferLin
  * it uses an instantaneous squared peak detector and a squared RMS detector
  * both with 200ms release times.
  */
-static void CrestDetector(Compressor *Comp, const uint SamplesToDo)
+void CrestDetector(Compressor *Comp, const uint SamplesToDo)
 {
     const float a_crest{Comp->mCrestCoeff};
     float y2_peak{Comp->mLastPeakSq};
@@ -133,8 +133,8 @@ static void CrestDetector(Compressor *Comp, const uint SamplesToDo)
     {
         const float x2{clampf(x_abs * x_abs, 0.000001f, 1000000.0f)};
 
-        y2_peak = maxf(x2, lerp(x2, y2_peak, a_crest));
-        y2_rms = lerp(x2, y2_rms, a_crest);
+        y2_peak = maxf(x2, lerpf(x2, y2_peak, a_crest));
+        y2_rms = lerpf(x2, y2_rms, a_crest);
         return y2_peak / y2_rms;
     };
     auto side_begin = std::begin(Comp->mSideChain) + Comp->mLookAhead;
@@ -155,7 +155,7 @@ void PeakDetector(Compressor *Comp, const uint SamplesToDo)
     /* Clamp the minimum amplitude to near-zero and convert to logarithm. */
     auto side_begin = std::begin(Comp->mSideChain) + Comp->mLookAhead;
     std::transform(side_begin, side_begin+SamplesToDo, side_begin,
-        [](const float s) -> float { return std::log(maxf(0.000001f, s)); });
+        [](float s) { return std::log(maxf(0.000001f, s)); });
 }
 
 /* An optional hold can be used to extend the peak detector so it can more
@@ -243,15 +243,15 @@ void GainCompressor(Compressor *Comp, const uint SamplesToDo)
          * above to compensate for the chained operating mode.
          */
         const float x_L{-slope * y_G};
-        y_1 = maxf(x_L, lerp(x_L, y_1, a_rel));
-        y_L = lerp(y_1, y_L, a_att);
+        y_1 = maxf(x_L, lerpf(x_L, y_1, a_rel));
+        y_L = lerpf(y_1, y_L, a_att);
 
         /* Knee width and make-up gain automation make use of a smoothed
          * measurement of deviation between the control signal and estimate.
          * The estimate is also used to bias the measurement to hot-start its
          * average.
          */
-        c_dev = lerp(-(y_L+c_est), c_dev, a_adp);
+        c_dev = lerpf(-(y_L+c_est), c_dev, a_adp);
 
         if(autoPostGain)
         {
@@ -295,7 +295,7 @@ void SignalDelay(Compressor *Comp, const uint SamplesToDo, FloatBufferLine *OutB
         float *delaybuf{al::assume_aligned<16>(Comp->mDelay[c].data())};
 
         auto inout_end = inout + SamplesToDo;
-        if LIKELY(SamplesToDo >= lookAhead)
+        if(SamplesToDo >= lookAhead) LIKELY
         {
             auto delay_end = std::rotate(inout, inout_end - lookAhead, inout_end);
             std::swap_ranges(inout, delay_end, delaybuf);
@@ -382,10 +382,10 @@ std::unique_ptr<Compressor> Compressor::Create(const size_t NumChans, const floa
 Compressor::~Compressor()
 {
     if(mHold)
-        al::destroy_at(mHold);
+        std::destroy_at(mHold);
     mHold = nullptr;
     if(mDelay)
-        al::destroy_n(mDelay, mNumChans);
+        std::destroy_n(mDelay, mNumChans);
     mDelay = nullptr;
 }
 
@@ -404,7 +404,7 @@ void Compressor::process(const uint SamplesToDo, FloatBufferLine *OutBuffer)
         {
             float *buffer{al::assume_aligned<16>(input.data())};
             std::transform(buffer, buffer+SamplesToDo, buffer,
-                std::bind(std::multiplies<float>{}, _1, preGain));
+                [preGain](float s) { return s * preGain; });
         };
         std::for_each(OutBuffer, OutBuffer+numChans, apply_gain);
     }
@@ -430,7 +430,7 @@ void Compressor::process(const uint SamplesToDo, FloatBufferLine *OutBuffer)
         float *buffer{al::assume_aligned<16>(input.data())};
         const float *gains{al::assume_aligned<16>(&sideChain[0])};
         std::transform(gains, gains+SamplesToDo, buffer, buffer,
-            std::bind(std::multiplies<float>{}, _1, _2));
+            [](float g, float s) { return g * s; });
     };
     std::for_each(OutBuffer, OutBuffer+numChans, apply_comp);
 

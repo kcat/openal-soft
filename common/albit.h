@@ -2,14 +2,25 @@
 #define AL_BIT_H
 
 #include <cstdint>
+#include <cstring>
 #include <limits>
+#include <new>
 #include <type_traits>
 #if !defined(__GNUC__) && (defined(_WIN32) || defined(_WIN64))
 #include <intrin.h>
-#include "opthelpers.h"
 #endif
 
 namespace al {
+
+template<typename To, typename From>
+std::enable_if_t<sizeof(To) == sizeof(From) && std::is_trivially_copyable_v<From>
+    && std::is_trivially_copyable_v<To>,
+To> bit_cast(const From &src) noexcept
+{
+    std::aligned_storage_t<sizeof(To), alignof(To)> dst;
+    std::memcpy(&dst, &src, sizeof(To));
+    return *std::launder(reinterpret_cast<To*>(&dst));
+}
 
 #ifdef __BYTE_ORDER__
 enum class endian {
@@ -22,19 +33,19 @@ enum class endian {
 
 /* This doesn't support mixed-endian. */
 namespace detail_ {
-constexpr inline bool EndianTest() noexcept
+constexpr bool IsLittleEndian() noexcept
 {
     static_assert(sizeof(char) < sizeof(int), "char is too big");
 
     constexpr int test_val{1};
-    return static_cast<const char&>(test_val);
+    return static_cast<const char&>(test_val) ? true : false;
 }
 } // namespace detail_
 
 enum class endian {
-    little = 0,
-    big = 1,
-    native = detail_::EndianTest() ? little : big
+    big = 0,
+    little = 1,
+    native = detail_::IsLittleEndian() ? little : big
 };
 #endif
 
@@ -100,45 +111,44 @@ constexpr std::enable_if_t<std::is_integral<T>::value && std::is_unsigned<T>::va
 int> popcount(T val) noexcept
 {
     using fast_type = typename detail_::fast_utype<T>::type;
-    constexpr fast_type m55{detail_::repbits<fast_type>(0x55)};
-    constexpr fast_type m33{detail_::repbits<fast_type>(0x33)};
-    constexpr fast_type m0f{detail_::repbits<fast_type>(0x0f)};
-    constexpr fast_type m01{detail_::repbits<fast_type>(0x01)};
+    constexpr fast_type b01010101{detail_::repbits<fast_type>(0x55)};
+    constexpr fast_type b00110011{detail_::repbits<fast_type>(0x33)};
+    constexpr fast_type b00001111{detail_::repbits<fast_type>(0x0f)};
+    constexpr fast_type b00000001{detail_::repbits<fast_type>(0x01)};
 
-    auto v = val - ((fast_type{val} >> 1) & m55);
-    v = (v & m33) + ((v >> 2) & m33);
-    v = (v + (v >> 4)) & m0f;
-    return static_cast<int>(((v * m01) >> ((sizeof(T)-1)*8)) & 0xff);
+    fast_type v{fast_type{val} - ((fast_type{val} >> 1) & b01010101)};
+    v = (v & b00110011) + ((v >> 2) & b00110011);
+    v = (v + (v >> 4)) & b00001111;
+    return static_cast<int>(((v * b00000001) >> ((sizeof(T)-1)*8)) & 0xff);
 }
 
-#if defined(_WIN64)
+#ifdef _WIN32
 
 template<typename T>
-inline std::enable_if_t<std::is_integral<T>::value && std::is_unsigned<T>::value,
+inline std::enable_if_t<std::is_integral<T>::value && std::is_unsigned<T>::value
+    && std::numeric_limits<T>::digits <= 32,
 int> countr_zero(T v)
 {
     unsigned long idx{std::numeric_limits<T>::digits};
-    if_constexpr(std::numeric_limits<T>::digits <= 32)
-        _BitScanForward(&idx, static_cast<uint32_t>(v));
-    else // std::numeric_limits<T>::digits > 32
-        _BitScanForward64(&idx, v);
+    _BitScanForward(&idx, static_cast<uint32_t>(v));
     return static_cast<int>(idx);
 }
 
-#elif defined(_WIN32)
-
 template<typename T>
-inline std::enable_if_t<std::is_integral<T>::value && std::is_unsigned<T>::value,
+inline std::enable_if_t<std::is_integral<T>::value && std::is_unsigned<T>::value
+    && 32 < std::numeric_limits<T>::digits && std::numeric_limits<T>::digits <= 64,
 int> countr_zero(T v)
 {
     unsigned long idx{std::numeric_limits<T>::digits};
-    if_constexpr(std::numeric_limits<T>::digits <= 32)
-        _BitScanForward(&idx, static_cast<uint32_t>(v));
-    else if(!_BitScanForward(&idx, static_cast<uint32_t>(v)))
+#ifdef _WIN64
+    _BitScanForward64(&idx, v);
+#else
+    if(!_BitScanForward(&idx, static_cast<uint32_t>(v)))
     {
         if(_BitScanForward(&idx, static_cast<uint32_t>(v>>32)))
             idx += 32;
     }
+#endif /* _WIN64 */
     return static_cast<int>(idx);
 }
 

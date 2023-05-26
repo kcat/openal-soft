@@ -15,7 +15,12 @@
 #endif
 
 #if defined(__APPLE__)
+#include <AvailabilityMacros.h>
+#if (MAC_OS_X_VERSION_MIN_REQUIRED > 1050) && !defined(__ppc__)
 #include <dispatch/dispatch.h>
+#else
+#include <semaphore.h> /* Fallback option for Apple without a working libdispatch */
+#endif
 #elif !defined(_WIN32)
 #include <semaphore.h>
 #endif
@@ -27,7 +32,7 @@ namespace al {
 class semaphore {
 #ifdef _WIN32
     using native_type = void*;
-#elif defined(__APPLE__)
+#elif defined(__APPLE__) && ((MAC_OS_X_VERSION_MIN_REQUIRED > 1050) && !defined(__ppc__))
     using native_type = dispatch_semaphore_t;
 #else
     using native_type = sem_t;

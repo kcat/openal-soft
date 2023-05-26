@@ -128,7 +128,8 @@ void althrd_setname(const char *name [[maybe_unused]])
 #endif
 }
 
-#ifdef __APPLE__
+/* Do not try using libdispatch on systems where it is absent. */
+#if defined(__APPLE__) && ((MAC_OS_X_VERSION_MIN_REQUIRED > 1050) && !defined(__ppc__))
 
 namespace al {
 

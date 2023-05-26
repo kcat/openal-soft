@@ -206,8 +206,7 @@ void OboePlayback::stop()
 {
     oboe::Result result{mStream->stop()};
     if(result != oboe::Result::OK)
-        throw al::backend_exception{al::backend_error::DeviceError, "Failed to stop stream: %s",
-            oboe::convertToText(result)};
+        ERR("Failed to stop stream: %s\n", oboe::convertToText(result));
 }
 
 

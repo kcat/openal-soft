@@ -186,6 +186,20 @@ set(LIB_VERSION_NUM ${LIB_MAJOR_VERSION},${LIB_MINOR_VERSION},${LIB_REVISION},0)
 set(EXPORT_DECL "")
 
 
+# Some systems erroneously require the __STDC_FORMAT_MACROS macro to be defined
+# to get the fixed-width integer type formatter macros.
+check_cxx_source_compiles("#include <cinttypes>
+#include <cstdio>
+int main()
+{
+    int64_t i64{};
+    std::printf(\"%\" PRId64, i64);
+}"
+HAVE_STDC_FORMAT_MACROS)
+if(NOT HAVE_STDC_FORMAT_MACROS)
+    set(CPP_DEFS ${CPP_DEFS} __STDC_FORMAT_MACROS)
+endif()
+
 if(NOT WIN32)
     # Check if _POSIX_C_SOURCE and _XOPEN_SOURCE needs to be set for POSIX functions
     check_symbol_exists(posix_memalign stdlib.h HAVE_POSIX_MEMALIGN_DEFAULT)

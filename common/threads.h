@@ -2,10 +2,13 @@
 #define AL_THREADS_H
 
 #if defined(__GNUC__) && defined(__i386__)
-/* force_align_arg_pointer is required for proper function arguments aligning
- * when SSE code is used. Some systems (Windows, QNX) do not guarantee our
- * thread functions will be properly aligned on the stack, even though GCC may
- * generate code with the assumption that it is. */
+/* force_align_arg_pointer may be required for proper stack alignment when SSE
+ * code is used. GCC generates code with the assumption the stack pointer is
+ * suitably aligned, while some systems (Windows, QNX) do not guarantee non-
+ * exported functions will be properly aligned when called externally, and
+ * older apps for other systems may have been built with a lower stack
+ * alignment than expected by newer builds.
+ */
 #define FORCE_ALIGN __attribute__((force_align_arg_pointer))
 #else
 #define FORCE_ALIGN

@@ -514,6 +514,7 @@ check_include_file(guiddef.h HAVE_GUIDDEF_H)
 if(NOT HAVE_GUIDDEF_H)
     check_include_file(initguid.h HAVE_INITGUID_H)
 endif()
+check_include_file(dispatch/dispatch.h HAVE_DISPATCH_H)
 
 # Some systems need libm for some math functions to work
 set(MATH_LIB )

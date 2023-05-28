@@ -14,7 +14,7 @@
 #define FORCE_ALIGN
 #endif
 
-#if defined(__APPLE__)
+#if defined(HAVE_DISPATCH_H)
 #include <dispatch/dispatch.h>
 #elif !defined(_WIN32)
 #include <semaphore.h>
@@ -27,7 +27,7 @@ namespace al {
 class semaphore {
 #ifdef _WIN32
     using native_type = void*;
-#elif defined(__APPLE__)
+#elif defined(HAVE_DISPATCH_H)
     using native_type = dispatch_semaphore_t;
 #else
     using native_type = sem_t;

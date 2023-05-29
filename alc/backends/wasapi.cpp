@@ -78,6 +78,7 @@ using namespace Platform;
 using namespace Windows::Foundation;
 using namespace Windows::Media::Devices;
 using namespace Windows::Devices::Enumeration;
+using namespace Windows::Media::Devices;
 #endif
 
 /* Some headers seem to define these as macros for __uuidof, which is annoying
@@ -886,6 +887,10 @@ struct WasapiPlayback final : public BackendBase, WasapiProxy {
     std::atomic<bool> mKillNow{true};
     std::thread mThread;
 
+#if defined(ALSOFT_UWP)
+    Windows::Foundation::EventRegistrationToken mDefaultChangeHandler;
+#endif
+
     DEF_NEWDEL(WasapiPlayback)
 };
 
@@ -1071,11 +1076,24 @@ HRESULT WasapiPlayback::openProxy(const char *name)
         mDevice->DeviceName = std::string{DevNameHead} + name;
     else
         mDevice->DeviceName = DevNameHead + DeviceHelper::get_device_name_and_guid(mMMDev).first;
+
+#if defined(ALSOFT_UWP)
+    mDefaultChangeHandler = MediaDevice::DefaultAudioRenderDeviceChanged +=
+        ref new TypedEventHandler<Platform::Object ^, DefaultAudioRenderDeviceChangedEventArgs ^>(
+            [this](Platform::Object ^ sender, DefaultAudioRenderDeviceChangedEventArgs ^ args) {
+        if (args->Role == AudioDeviceRole::Default)
+            mDevice->handleDisconnect("Default audio device changed %s", wstr_to_utf8(args->Id->Data()).c_str());
+        });
+#endif
+
     return S_OK;
 }
 
 void WasapiPlayback::closeProxy()
 {
+#if defined(ALSOFT_UWP)
+    MediaDevice::DefaultAudioRenderDeviceChanged -= mDefaultChangeHandler;
+#endif
     mClient = nullptr;
     mMMDev = nullptr;
 }
@@ -1537,6 +1555,10 @@ struct WasapiCapture final : public BackendBase, WasapiProxy {
     std::atomic<bool> mKillNow{true};
     std::thread mThread;
 
+#if defined(ALSOFT_UWP)
+    Windows::Foundation::EventRegistrationToken mDefaultChangeHandler;
+#endif
+
     DEF_NEWDEL(WasapiCapture)
 };
 
@@ -1732,11 +1754,23 @@ HRESULT WasapiCapture::openProxy(const char *name)
         mDevice->DeviceName = std::string{ DevNameHead } + name;
     else
         mDevice->DeviceName = DevNameHead + DeviceHelper::get_device_name_and_guid(mMMDev).first;
+
+#if defined(ALSOFT_UWP)
+    mDefaultChangeHandler = MediaDevice::DefaultAudioRenderDeviceChanged +=
+        ref new TypedEventHandler<Platform::Object ^, DefaultAudioRenderDeviceChangedEventArgs ^>(
+            [this](Platform::Object ^ sender, DefaultAudioRenderDeviceChangedEventArgs ^ args) {
+        if (args->Role == AudioDeviceRole::Default)
+            mDevice->handleDisconnect("Default audio device changed %s", wstr_to_utf8(args->Id->Data()).c_str());
+        });
+#endif
     return S_OK;
 }
 
 void WasapiCapture::closeProxy()
 {
+#if defined(ALSOFT_UWP)
+    MediaDevice::DefaultAudioRenderDeviceChanged -= mDefaultChangeHandler;
+#endif
     mClient = nullptr;
     mMMDev = nullptr;
 }

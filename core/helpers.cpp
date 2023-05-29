@@ -3,6 +3,11 @@
 
 #include "helpers.h"
 
+#if defined(_WIN32)
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#endif
+
 #include <algorithm>
 #include <cerrno>
 #include <cstdarg>
@@ -58,7 +63,16 @@ const PathNamePair &GetProcBinary()
     fullpath.resize(len);
     if(fullpath.back() != 0)
         fullpath.push_back(0);
-
+#else
+    auto exePath               = __wargv[0];
+    if (!exePath)
+    {
+        ERR("Failed to get process name: error %lu\n", GetLastError());
+        procbin.emplace();
+        return *procbin;
+    }
+    std::vector<WCHAR> fullpath{exePath, exePath + wcslen(exePath) + 1};
+#endif
     std::replace(fullpath.begin(), fullpath.end(), '/', '\\');
     auto sep = std::find(fullpath.rbegin()+1, fullpath.rend(), '\\');
     if(sep != fullpath.rend())
@@ -70,7 +84,6 @@ const PathNamePair &GetProcBinary()
         procbin.emplace(std::string{}, wstr_to_utf8(fullpath.data()));
 
     TRACE("Got binary: %s, %s\n", procbin->path.c_str(), procbin->fname.c_str());
-#endif
     return *procbin;
 }
 
@@ -83,10 +96,9 @@ void DirectorySearch(const char *path, const char *ext, std::vector<std::string>
     pathstr += ext;
     TRACE("Searching %s\n", pathstr.c_str());
 
-#if !defined(ALSOFT_UWP)
     std::wstring wpath{utf8_to_wstr(pathstr.c_str())};
     WIN32_FIND_DATAW fdata;
-    HANDLE hdl{FindFirstFileW(wpath.c_str(), &fdata)};
+    HANDLE hdl{FindFirstFileExW(wpath.c_str(), FindExInfoStandard, &fdata, FindExSearchNameMatch, NULL, 0)};
     if(hdl == INVALID_HANDLE_VALUE) return;
 
     const auto base = results->size();
@@ -103,7 +115,6 @@ void DirectorySearch(const char *path, const char *ext, std::vector<std::string>
     std::sort(newlist.begin(), newlist.end());
     for(const auto &name : newlist)
         TRACE(" got %s\n", name.c_str());
-#endif
 }
 
 } // namespace
@@ -130,7 +141,6 @@ std::vector<std::string> SearchDataFiles(const char *ext, const char *subdir)
         return results;
     }
 
-#if !defined(ALSOFT_UWP)
     std::string path;
 
     /* Search the app-local directory. */
@@ -152,6 +162,7 @@ std::vector<std::string> SearchDataFiles(const char *ext, const char *subdir)
     std::replace(path.begin(), path.end(), '/', '\\');
     DirectorySearch(path.c_str(), ext, &results);
 
+#if !defined(ALSOFT_UWP)
     /* Search the local and global data dirs. */
     static const int ids[2]{ CSIDL_APPDATA, CSIDL_COMMON_APPDATA };
     for(int id : ids)

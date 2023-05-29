@@ -347,10 +347,10 @@ public:
     }
 #else
     /** ----------------------- IMMNotificationClient ------------ */
-    STDMETHOD(OnDeviceStateChanged(LPCWSTR pwstrDeviceId, DWORD dwNewState)) override { return S_OK; }
-    STDMETHOD(OnDeviceAdded(LPCWSTR pwstrDeviceId)) override { return S_OK; }
-    STDMETHOD(OnDeviceRemoved(LPCWSTR pwstrDeviceId)) override { return S_OK; }
-    STDMETHOD(OnPropertyValueChanged(LPCWSTR pwstrDeviceId, const PROPERTYKEY key)) override { return S_OK; }
+    STDMETHOD(OnDeviceStateChanged(LPCWSTR /*pwstrDeviceId*/, DWORD /*dwNewState*/)) override { return S_OK; }
+    STDMETHOD(OnDeviceAdded(LPCWSTR /*pwstrDeviceId*/)) override { return S_OK; }
+    STDMETHOD(OnDeviceRemoved(LPCWSTR /*pwstrDeviceId*/)) override { return S_OK; }
+    STDMETHOD(OnPropertyValueChanged(LPCWSTR /*pwstrDeviceId*/, const PROPERTYKEY /*key*/)) override { return S_OK; }
     STDMETHOD(OnDefaultDeviceChanged(EDataFlow flow, ERole role, LPCWSTR pwstrDefaultDeviceId)) override
     {
         if (role == eMultimedia && (flow == eRender || flow == eCapture))

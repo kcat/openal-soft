@@ -1058,7 +1058,7 @@ if(WIN32)
             set(BACKENDS  "${BACKENDS} WASAPI,")
             set(ALC_OBJS  ${ALC_OBJS} alc/backends/wasapi.cpp alc/backends/wasapi.h)
             if(ALSOFT_UWP)
-                set_source_files_properties(alc/backends/wasapi.cpp PROPERTIES COMPILE_FLAGS /ZW)
+                set_source_files_properties(alc/backends/wasapi.cpp alc/alconfig.cpp PROPERTIES COMPILE_FLAGS /ZW)
                     # Add compile and link flags required C++/CX
                     set(C_FLAGS "/Zc:twoPhase-" ${C_FLAGS})
                     set(LINKER_FLAGS_DEBUG "/nodefaultlib:vccorlibd /nodefaultlib:msvcrtd vccorlibd.lib msvcrtd.lib ${LINKER_FLAGS_DEBUG}")

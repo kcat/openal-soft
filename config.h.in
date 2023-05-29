@@ -117,3 +117,6 @@
 
 /* Define the installation data directory */
 #cmakedefine ALSOFT_INSTALL_DATADIR "@ALSOFT_INSTALL_DATADIR@"
+
+/* Define whether build alsoft for winuwp */
+#cmakedefine ALSOFT_UWP

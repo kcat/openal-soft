@@ -40,7 +40,7 @@ const PathNamePair &GetProcBinary()
 {
     static std::optional<PathNamePair> procbin;
     if(procbin) return *procbin;
-
+#if !defined(ALSOFT_UWP)
     auto fullpath = std::vector<WCHAR>(256);
     DWORD len{GetModuleFileNameW(nullptr, fullpath.data(), static_cast<DWORD>(fullpath.size()))};
     while(len == fullpath.size())
@@ -70,6 +70,7 @@ const PathNamePair &GetProcBinary()
         procbin.emplace(std::string{}, wstr_to_utf8(fullpath.data()));
 
     TRACE("Got binary: %s, %s\n", procbin->path.c_str(), procbin->fname.c_str());
+#endif
     return *procbin;
 }
 
@@ -82,6 +83,7 @@ void DirectorySearch(const char *path, const char *ext, std::vector<std::string>
     pathstr += ext;
     TRACE("Searching %s\n", pathstr.c_str());
 
+#if !defined(ALSOFT_UWP)
     std::wstring wpath{utf8_to_wstr(pathstr.c_str())};
     WIN32_FIND_DATAW fdata;
     HANDLE hdl{FindFirstFileW(wpath.c_str(), &fdata)};
@@ -97,11 +99,11 @@ void DirectorySearch(const char *path, const char *ext, std::vector<std::string>
         str += wstr_to_utf8(fdata.cFileName);
     } while(FindNextFileW(hdl, &fdata));
     FindClose(hdl);
-
     const al::span<std::string> newlist{results->data()+base, results->size()-base};
     std::sort(newlist.begin(), newlist.end());
     for(const auto &name : newlist)
         TRACE(" got %s\n", name.c_str());
+#endif
 }
 
 } // namespace
@@ -128,6 +130,7 @@ std::vector<std::string> SearchDataFiles(const char *ext, const char *subdir)
         return results;
     }
 
+#if !defined(ALSOFT_UWP)
     std::string path;
 
     /* Search the app-local directory. */
@@ -165,17 +168,20 @@ std::vector<std::string> SearchDataFiles(const char *ext, const char *subdir)
 
         DirectorySearch(path.c_str(), ext, &results);
     }
+#endif
 
     return results;
 }
 
 void SetRTPriority(void)
 {
+#if !defined(ALSOFT_UWP)
     if(RTPrioLevel > 0)
     {
         if(!SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL))
             ERR("Failed to set priority level for thread\n");
     }
+#endif
 }
 
 #else

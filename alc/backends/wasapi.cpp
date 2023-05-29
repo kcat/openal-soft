@@ -69,9 +69,6 @@
 #include "strutils.h"
 #include "threads.h"
 
-#include <wrl/client.h>
-#include <wrl/implements.h>
-
 #if defined(ALSOFT_UWP)
 #include <collection.h>
 using namespace Platform;
@@ -225,12 +222,11 @@ struct DeviceHandle
 using DeviceHandle = ComPtr<IMMDevice>;
 #endif
 
-struct DeviceHelper final : public Microsoft::WRL::RuntimeClass<Microsoft::WRL::RuntimeClassFlags<Microsoft::WRL::ClassicCom>,
-	Microsoft::WRL::FtmBase
 #if defined(ALSOFT_UWP)
-    ,IActivateAudioInterfaceCompletionHandler
+struct DeviceHelper final : public IActivateAudioInterfaceCompletionHandler
+#else
+struct DeviceHelper final : public IUnknown
 #endif
->
 {
 public:
     DeviceHelper() {
@@ -253,6 +249,89 @@ public:
 #endif
     }
 
+    /** -------------------------- IUnkonwn ----------------------------- */
+    LONG mRefCount{1};
+    ULONG STDMETHODCALLTYPE AddRef() override { return InterlockedIncrement(&mRefCount); }
+
+    ULONG STDMETHODCALLTYPE Release() override
+    {
+        ULONG ulRef = InterlockedDecrement(&mRefCount);
+        if (0 == ulRef)
+        {
+            delete this;
+        }
+        return ulRef;
+    }
+
+    HRESULT STDMETHODCALLTYPE QueryInterface(const IID& IId, void** UnknownPtrPtr) override
+    {
+        // Three rules of QueryInterface:
+        // https://docs.microsoft.com/en-us/windows/win32/com/rules-for-implementing-queryinterface
+        // 1. Objects must have identity.
+        // 2. The set of interfaces on an object instance must be static.
+        // 3. It must be possible to query successfully for any interface on an object from any other interface.
+
+        // If ppvObject(the address) is nullptr, then this method returns E_POINTER.
+        if (!UnknownPtrPtr)
+        {
+            return E_POINTER;
+        }
+
+        // https://docs.microsoft.com/en-us/windows/win32/com/implementing-reference-counting
+        // Whenever a client calls a method(or API function), such as QueryInterface, that returns a new interface
+        // pointer, the method being called is responsible for incrementing the reference count through the returned
+        // pointer. For example, when a client first creates an object, it receives an interface pointer to an object
+        // that, from the client's point of view, has a reference count of one. If the client then calls AddRef on the
+        // interface pointer, the reference count becomes two. The client must call Release twice on the interface
+        // pointer to drop all of its references to the object.
+        if (IId == __uuidof(IActivateAudioInterfaceCompletionHandler))
+        {
+            *UnknownPtrPtr = (IActivateAudioInterfaceCompletionHandler*)(this);
+            AddRef();
+            return S_OK;
+        }
+
+        if (IId == __uuidof(IAgileObject) || IId == __uuidof(IUnknown))
+        {
+            *UnknownPtrPtr = (IUnknown*)(this);
+            AddRef();
+            return S_OK;
+        }
+
+        // This method returns S_OK if the interface is supported, and E_NOINTERFACE otherwise.
+        *UnknownPtrPtr = nullptr;
+        return E_NOINTERFACE;
+    }
+
+    /** -------------------------- IActivateAudioInterfaceCompletionHandler ------------ */
+#if defined(ALSOFT_UWP)
+    HRESULT ActivateCompleted(IActivateAudioInterfaceAsyncOperation* operation) override
+    {
+        HRESULT hrActivateResult     = S_OK;
+        IUnknown* punkAudioInterface = nullptr;
+
+        HRESULT hr = operation->GetActivateResult(&hrActivateResult, &punkAudioInterface);
+        // Check for a successful activation result
+        hr = operation->GetActivateResult(&hrActivateResult, &punkAudioInterface);
+        if (SUCCEEDED(hr) && SUCCEEDED(hrActivateResult))
+        {
+            if (mPPV)
+            {
+                // Get the pointer for the Audio Client
+                IAudioClient3* audioClient;
+                punkAudioInterface->QueryInterface(IID_PPV_ARGS(&audioClient));
+                *mPPV = audioClient;
+            }
+        }
+
+        SetEvent(mActiveClientEvent);
+
+        // Need to return S_OK
+        return S_OK;
+    }
+#endif
+
+    /** -------------------------- DeviceHelper ----------------------------- */
     HRESULT OpenDevice(LPCWSTR devid, EDataFlow flow, DeviceHandle& device) 
     {
 #if !defined(ALSOFT_UWP)
@@ -519,31 +598,6 @@ public:
 
 private:
 #if defined(ALSOFT_UWP)
-    HRESULT ActivateCompleted(IActivateAudioInterfaceAsyncOperation* operation) override
-    {
-        HRESULT hrActivateResult     = S_OK;
-        IUnknown* punkAudioInterface = nullptr;
-
-        HRESULT hr = operation->GetActivateResult(&hrActivateResult, &punkAudioInterface);
-        // Check for a successful activation result
-        hr = operation->GetActivateResult(&hrActivateResult, &punkAudioInterface);
-        if (SUCCEEDED(hr) && SUCCEEDED(hrActivateResult))
-        {
-            if (mPPV)
-            {
-                // Get the pointer for the Audio Client
-                IAudioClient3* audioClient;
-                punkAudioInterface->QueryInterface(IID_PPV_ARGS(&audioClient));
-                *mPPV = audioClient;
-            }
-        }
-
-        SetEvent(mActiveClientEvent);
-
-        // Need to return S_OK
-        return S_OK;
-    }
-
     HRESULT ActivateAudioInterface(_In_ LPCWSTR deviceInterfacePath,
                                    _In_ REFIID riid,
                                    _In_opt_ PROPVARIANT* activationParams,
@@ -699,7 +753,7 @@ struct WasapiProxy {
     static std::mutex sThreadLock;
     static size_t sInitCount;
 
-    static Microsoft::WRL::ComPtr<DeviceHelper> sDeviceHelper;
+    static ComPtr<DeviceHelper> sDeviceHelper;
 
     std::future<HRESULT> pushMessage(MsgType type, const char *param=nullptr)
     {
@@ -772,7 +826,7 @@ std::deque<WasapiProxy::Msg> WasapiProxy::mMsgQueue;
 std::mutex WasapiProxy::mMsgQueueLock;
 std::condition_variable WasapiProxy::mMsgQueueCond;
 std::mutex WasapiProxy::sThreadLock;
-Microsoft::WRL::ComPtr<DeviceHelper> WasapiProxy::sDeviceHelper;
+ComPtr<DeviceHelper> WasapiProxy::sDeviceHelper;
 size_t WasapiProxy::sInitCount{0};
 
 int WasapiProxy::messageHandler(std::promise<HRESULT> *promise)
@@ -789,7 +843,7 @@ int WasapiProxy::messageHandler(std::promise<HRESULT> *promise)
     promise->set_value(S_OK);
     promise = nullptr;
 
-    sDeviceHelper = Microsoft::WRL::Make<DeviceHelper>();
+    sDeviceHelper.reset(new DeviceHelper());
 
     TRACE("Starting message loop\n");
     while(Msg msg{popMessage()})

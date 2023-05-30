@@ -1017,7 +1017,7 @@ struct WasapiPlayback final : public BackendBase, WasapiProxy {
 
     std::atomic<bool> mDefaultDeviceChanged{false};
     std::string mDefaultDeviceId;
-    EventRegistrationToken mDefaultChangeHandler;
+    EventRegistrationToken mDefaultChangeHandler{};
 
     DEF_NEWDEL(WasapiPlayback)
 };

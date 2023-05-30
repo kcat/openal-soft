@@ -1015,6 +1015,8 @@ struct WasapiPlayback final : public BackendBase, WasapiProxy {
     std::atomic<bool> mKillNow{true};
     std::thread mThread;
 
+    std::atomic<bool> mDefaultDeviceChanged{false};
+    std::string mDefaultDeviceId;
     EventRegistrationToken mDefaultChangeHandler;
 
     DEF_NEWDEL(WasapiPlayback)
@@ -1062,6 +1064,9 @@ FORCE_ALIGN int WasapiPlayback::mixerProc()
             break;
         }
         mPadding.store(written, std::memory_order_relaxed);
+
+        if (mDefaultDeviceChanged.exchange(false, std::memory_order_acq_rel))
+            mDevice->handleDefaultChanged(mDefaultDeviceId.c_str(), eRender);
 
         uint len{buffer_len - written};
         if(len < update_size)
@@ -1204,7 +1209,8 @@ HRESULT WasapiPlayback::openProxy(const char *name)
         mDevice->DeviceName = DevNameHead + DeviceHelper::get_device_name_and_guid(mMMDev).first;
 
     mDefaultChangeHandler = sDeviceHelper->RegisterDefaultChangeHandler(eRender, this, [this](LPCWSTR devid) {
-        mDevice->handleDefaultChanged(wstr_to_utf8(devid), eRender);
+        mDefaultDeviceId      = wstr_to_utf8(devid);
+        mDefaultDeviceChanged = true;
     });
 
     return S_OK;
@@ -1674,6 +1680,8 @@ struct WasapiCapture final : public BackendBase, WasapiProxy {
     std::atomic<bool> mKillNow{true};
     std::thread mThread;
 
+    std::atomic<bool> mDefaultDeviceChanged{false};
+    std::string mDefaultDeviceId;
     EventRegistrationToken mDefaultChangeHandler{};
 
     DEF_NEWDEL(WasapiCapture)
@@ -1776,6 +1784,9 @@ FORCE_ALIGN int WasapiCapture::recordProc()
             break;
         }
 
+        if (mDefaultDeviceChanged.exchange(false, std::memory_order_acq_rel))
+            mDevice->handleDefaultChanged(mDefaultDeviceId.c_str(), eCapture);
+
         DWORD res{WaitForSingleObjectEx(mNotifyEvent, 2000, FALSE)};
         if(res != WAIT_OBJECT_0)
             ERR("WaitForSingleObjectEx error: 0x%lx\n", res);
@@ -1872,10 +1883,10 @@ HRESULT WasapiCapture::openProxy(const char *name)
     else
         mDevice->DeviceName = DevNameHead + DeviceHelper::get_device_name_and_guid(mMMDev).first;
 
-    mDefaultChangeHandler = sDeviceHelper->RegisterDefaultChangeHandler(eCapture,
-        this, [this](LPCWSTR devid) {
-            mDevice->handleDefaultChanged(wstr_to_utf8(devid), eCapture);
-        });
+    mDefaultChangeHandler = sDeviceHelper->RegisterDefaultChangeHandler(eCapture, this, [this](LPCWSTR devid) {
+        mDefaultDeviceId      = wstr_to_utf8(devid);
+        mDefaultDeviceChanged = true;
+    });
     return S_OK;
 }
 

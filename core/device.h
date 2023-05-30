@@ -321,6 +321,7 @@ struct DeviceBase {
     [[gnu::format(printf,2,3)]]
 #endif
     void handleDisconnect(const char *msg, ...);
+    void handleDefaultChanged(std::string_view deviceId, uint dataFlow);
 
     /**
      * Returns the index for the given channel name (e.g. FrontCenter), or

@@ -1203,7 +1203,7 @@ HRESULT WasapiPlayback::openProxy(const char *name)
         mDevice->DeviceName = DevNameHead + DeviceHelper::get_device_name_and_guid(mMMDev).first;
 
     mDefaultChangeHandler = sDeviceHelper->RegisterDefaultChangeHandler(eRender, this, [this](LPCWSTR devid) {
-        mDevice->handleDisconnect("Default audio device changed to: %s", devid);
+        mDevice->handleDefaultChanged(wstr_to_utf8(devid), eRender);
     });
 
     return S_OK;
@@ -1872,7 +1872,9 @@ HRESULT WasapiCapture::openProxy(const char *name)
         mDevice->DeviceName = DevNameHead + DeviceHelper::get_device_name_and_guid(mMMDev).first;
 
     mDefaultChangeHandler = sDeviceHelper->RegisterDefaultChangeHandler(eCapture,
-        this, [this](LPCWSTR devid) { mDevice->handleDisconnect("Default audio device changed: %s", devid); });
+        this, [this](LPCWSTR devid) {
+            mDevice->handleDefaultChanged(wstr_to_utf8(devid), eCapture);
+        });
     return S_OK;
 }
 

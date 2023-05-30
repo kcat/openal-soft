@@ -551,6 +551,7 @@ ALC_API void ALC_APIENTRY alcGetInteger64vSOFT(ALCdevice *device, ALCenum pname,
 #define AL_EVENT_TYPE_BUFFER_COMPLETED_SOFT      0x19A4
 #define AL_EVENT_TYPE_SOURCE_STATE_CHANGED_SOFT  0x19A5
 #define AL_EVENT_TYPE_DISCONNECTED_SOFT          0x19A6
+#define AL_EVENT_TYPE_DEFAULT_DEVICE_CHANGED_SOFT 0x19A7
 typedef void (AL_APIENTRY*ALEVENTPROCSOFT)(ALenum eventType, ALuint object, ALuint param,
     ALsizei length, const ALchar *message, void *userParam) AL_API_NOEXCEPT17;
 typedef void (AL_APIENTRY*LPALEVENTCONTROLSOFT)(ALsizei count, const ALenum *types, ALboolean enable) AL_API_NOEXCEPT17;

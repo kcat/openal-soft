@@ -1058,13 +1058,17 @@ if(WIN32)
             set(BACKENDS  "${BACKENDS} WASAPI,")
             set(ALC_OBJS  ${ALC_OBJS} alc/backends/wasapi.cpp alc/backends/wasapi.h)
             if(ALSOFT_UWP)
-                set_source_files_properties(alc/backends/wasapi.cpp alc/alconfig.cpp PROPERTIES COMPILE_FLAGS /ZW)
-                    # Add compile and link flags required C++/CX
-                    set(C_FLAGS "/Zc:twoPhase-" ${C_FLAGS})
-                    set(LINKER_FLAGS_DEBUG "/nodefaultlib:vccorlibd /nodefaultlib:msvcrtd vccorlibd.lib msvcrtd.lib ${LINKER_FLAGS_DEBUG}")
-                    set(LINKER_FLAGS_RELEASE "/nodefaultlib:vccorlib /nodefaultlib:msvcrt vccorlib.lib msvcrt.lib ${LINKER_FLAGS_RELEASE}")
+                set_source_files_properties(alc/backends/wasapi.cpp alc/alconfig.cpp PROPERTIES COMPILE_FLAGS /ZW)   
             endif()
         endif()
+    endif()
+    
+    # Setup properly link flags for UWP
+    if(ALSOFT_UWP AND HAVE_WASAPI)
+        # Add compile and link flags required C++/CX
+        set(C_FLAGS "/Zc:twoPhase-" ${C_FLAGS})
+        set(LINKER_FLAGS_DEBUG "/nodefaultlib:vccorlibd /nodefaultlib:msvcrtd vccorlibd.lib msvcrtd.lib ${LINKER_FLAGS_DEBUG}")
+        set(LINKER_FLAGS_RELEASE "/nodefaultlib:vccorlib /nodefaultlib:msvcrt vccorlib.lib msvcrt.lib ${LINKER_FLAGS_RELEASE}")
     endif()
 endif()
 if(ALSOFT_REQUIRE_WINMM AND NOT HAVE_WINMM)

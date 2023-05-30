@@ -563,7 +563,7 @@ public:
             {
                 std::wstring wDevId{devIdStart, static_cast<size_t>(devIdStartEnd - devIdStart)};
                 guid = wstr_to_utf8(wDevId.c_str());
-                std::transform(guid.begin(), guid.end(), guid.begin(), std::toupper);
+                std::transform(guid.begin(), guid.end(), guid.begin(), [](char ch) { return static_cast<char>(std::toupper(ch)); });
             }
         }
 #endif
@@ -635,6 +635,7 @@ public:
     EventRegistrationToken RegisterDefaultChangeHandler(EDataFlow flow, void* target, _Fty&& cb)
     {
 #if defined(ALSOFT_UWP)
+        (void)target;
         if (flow == eRender)
             return MediaDevice::DefaultAudioRenderDeviceChanged +=
                    ref new TypedEventHandler<Platform::Object ^, DefaultAudioRenderDeviceChangedEventArgs ^>(

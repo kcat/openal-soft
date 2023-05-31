@@ -51,6 +51,16 @@ jobs:
             build_type: "Debug"
           }
         - {
+            name: "Win64-UWP",
+            os: windows-latest,
+            cmake_opts: "-A x64 \
+              -DCMAKE_SYSTEM_NAME=WindowsStore \
+              \"-DCMAKE_SYSTEM_VERSION=10.0\" \
+              -DALSOFT_BUILD_ROUTER=ON \
+              -DALSOFT_REQUIRE_WASAPI=ON",
+            build_type: "Release"
+          }
+        - {
             name: "macOS-Release",
             os: macos-latest,
             cmake_opts: "-DALSOFT_REQUIRE_COREAUDIO=ON",

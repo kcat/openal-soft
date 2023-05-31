@@ -15,7 +15,6 @@ enum class AsyncEnableBits : uint8_t {
     SourceState,
     BufferCompleted,
     Disconnected,
-
     Count
 };
 

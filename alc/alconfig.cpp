@@ -329,9 +329,14 @@ const char *GetConfigValue(const char *devName, const char *blockName, const cha
 #ifdef _WIN32
 void ReadALConfig()
 {
-    WCHAR buffer[MAX_PATH];
-    if(SHGetSpecialFolderPathW(nullptr, buffer, CSIDL_APPDATA, FALSE) != FALSE)
     {
+#if !defined(ALSOFT_UWP)
+        WCHAR buffer[MAX_PATH];
+        if (!SHGetSpecialFolderPathW(nullptr, buffer, CSIDL_APPDATA, FALSE))
+            return;
+#else
+        auto buffer = Windows::Storage::ApplicationData::Current->RoamingFolder->Path->Data();
+#endif
         std::string filepath{wstr_to_utf8(buffer)};
         filepath += "\\alsoft.ini";
 
@@ -340,6 +345,7 @@ void ReadALConfig()
         if(f.is_open())
             LoadConfigFromFile(f);
     }
+
 
     std::string ppath{GetProcBinary().path};
     if(!ppath.empty())

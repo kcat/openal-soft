@@ -131,7 +131,7 @@ int EventThread(ALCcontext *context)
             };
 
             std::visit(overloaded{proc_srcstate, proc_buffercomp, proc_release, proc_disconnect,
-			                      proc_killthread}, event);
+                proc_killthread}, event);
         } while(evt_data.len != 0);
     }
     return 0;

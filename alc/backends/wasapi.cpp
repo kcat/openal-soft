@@ -329,7 +329,6 @@ public:
 
         HRESULT hr = operation->GetActivateResult(&hrActivateResult, &punkAudioInterface);
         // Check for a successful activation result
-        hr = operation->GetActivateResult(&hrActivateResult, &punkAudioInterface);
         if (SUCCEEDED(hr) && SUCCEEDED(hrActivateResult))
         {
             if (mPPV)

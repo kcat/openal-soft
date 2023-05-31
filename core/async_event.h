@@ -15,7 +15,6 @@ enum class AsyncEnableBits : uint8_t {
     SourceState,
     BufferCompleted,
     Disconnected,
-    DefaultDeviceChanged,
     Count
 };
 
@@ -43,12 +42,6 @@ struct AsyncDisconnectEvent {
     char msg[244];
 };
 
-struct AsyncDefaultDeviceChangedEvent
-{
-    char mDeviceId[124];
-    uint mDataFlow;
-};
-
 struct AsyncEffectReleaseEvent {
     EffectState *mEffectState;
 };
@@ -57,8 +50,7 @@ using AsyncEvent = std::variant<AsyncKillThread,
         AsyncSourceStateEvent,
         AsyncBufferCompleteEvent,
         AsyncEffectReleaseEvent,
-        AsyncDisconnectEvent,
-        AsyncDefaultDeviceChangedEvent>;
+        AsyncDisconnectEvent>;
 
 template<typename T, typename ...Args>
 auto &InitAsyncEvent(std::byte *evtbuf, Args&& ...args)

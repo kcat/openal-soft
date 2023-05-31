@@ -1065,9 +1065,6 @@ FORCE_ALIGN int WasapiPlayback::mixerProc()
         }
         mPadding.store(written, std::memory_order_relaxed);
 
-        if (mDefaultDeviceChanged.exchange(false, std::memory_order_acq_rel))
-            mDevice->handleDefaultChanged(mDefaultDeviceId.c_str(), eRender);
-
         uint len{buffer_len - written};
         if(len < update_size)
         {
@@ -1783,9 +1780,6 @@ FORCE_ALIGN int WasapiCapture::recordProc()
             mDevice->handleDisconnect("Failed to capture samples: 0x%08lx", hr);
             break;
         }
-
-        if (mDefaultDeviceChanged.exchange(false, std::memory_order_acq_rel))
-            mDevice->handleDefaultChanged(mDefaultDeviceId.c_str(), eCapture);
 
         DWORD res{WaitForSingleObjectEx(mNotifyEvent, 2000, FALSE)};
         if(res != WAIT_OBJECT_0)

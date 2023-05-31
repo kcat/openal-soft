@@ -2205,29 +2205,3 @@ void DeviceBase::handleDisconnect(const char *msg, ...)
     }
     IncrementRef(MixCount);
 }
-
-void DeviceBase::handleDefaultChanged(std::string_view deviceId, uint dataFlow)
-{
-    if (Connected.load(std::memory_order_acquire))
-    {
-        AsyncEvent evt{std::in_place_type<AsyncDefaultDeviceChangedEvent>};
-        auto& default_changed = std::get<AsyncDefaultDeviceChangedEvent>(evt);
-        auto len              = std::min(deviceId.length(), sizeof(default_changed.mDeviceId) - 1);
-        if (len > 0)
-            memcpy(default_changed.mDeviceId, deviceId.data(), len);
-        default_changed.mDeviceId[len] = '\0';
-        default_changed.mDataFlow      = dataFlow;
-
-        for (ContextBase* ctx : *mContexts.load())
-        {
-            RingBuffer* ring{ctx->mAsyncEvents.get()};
-            auto evt_data = ring->getWriteVector().first;
-            if (evt_data.len > 0)
-            {
-                al::construct_at(reinterpret_cast<AsyncEvent*>(evt_data.buf), evt);
-                ring->writeAdvance(1);
-                ctx->mEventSem.post();
-            }
-        }
-    }
-}

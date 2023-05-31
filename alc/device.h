@@ -163,4 +163,7 @@ template<>
 inline std::optional<bool> ALCdevice::configValue(const char *block, const char *key)
 { return ConfigValueBool(DeviceName.c_str(), block, key); }
 
+/** Stores the latest ALC device error. */
+void alcSetError(ALCdevice *device, ALCenum errorCode);
+
 #endif

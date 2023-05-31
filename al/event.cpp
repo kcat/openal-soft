@@ -130,17 +130,8 @@ int EventThread(ALCcontext *context)
                         context->mEventParam);
             };
 
-            auto proc_default_device_changed = [context, enabledevts](AsyncDefaultDeviceChangedEvent &evt) {
-                std::string message = "Default device changed:";
-                message += evt.mDeviceId;
-                if (context->mEventCb && enabledevts.test(al::to_underlying(AsyncEnableBits::DefaultDeviceChanged)))
-                    context->mEventCb(AL_EVENT_TYPE_DEFAULT_DEVICE_CHANGED_SOFT, evt.mDataFlow, 0,
-                        static_cast<ALsizei>(message.length()), message.data(),
-                        context->mEventParam);
-            };
-
             std::visit(overloaded{proc_srcstate, proc_buffercomp, proc_release, proc_disconnect,
-			                      proc_default_device_changed, proc_killthread}, event);
+			                      proc_killthread}, event);
         } while(evt_data.len != 0);
     }
     return 0;
@@ -199,8 +190,6 @@ FORCE_ALIGN void AL_APIENTRY alEventControlDirectSOFT(ALCcontext *context, ALsiz
                 flags.set(al::to_underlying(AsyncEnableBits::SourceState));
             else if(type == AL_EVENT_TYPE_DISCONNECTED_SOFT)
                 flags.set(al::to_underlying(AsyncEnableBits::Disconnected));
-            else if (type == AL_EVENT_TYPE_DEFAULT_DEVICE_CHANGED_SOFT)
-                flags.set(al::to_underlying(AsyncEnableBits::DefaultDeviceChanged));
             else
                 return false;
             return true;

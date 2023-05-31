@@ -58,6 +58,7 @@
 
 #include "albit.h"
 #include "alc/alconfig.h"
+#include "alc/events.h"
 #include "alnumeric.h"
 #include "alspan.h"
 #include "comptr.h"
@@ -1015,7 +1016,6 @@ struct WasapiPlayback final : public BackendBase, WasapiProxy {
     std::atomic<bool> mKillNow{true};
     std::thread mThread;
 
-    std::atomic<bool> mDefaultDeviceChanged{false};
     std::string mDefaultDeviceId;
     EventRegistrationToken mDefaultChangeHandler{};
 
@@ -1207,7 +1207,7 @@ HRESULT WasapiPlayback::openProxy(const char *name)
 
     mDefaultChangeHandler = sDeviceHelper->RegisterDefaultChangeHandler(eRender, this, [this](LPCWSTR devid) {
         mDefaultDeviceId      = wstr_to_utf8(devid);
-        mDefaultDeviceChanged = true;
+        alc::Event(alc::EventType::DefaultDeviceChanged, (ALCdevice*)mDevice, mDefaultDeviceId);
     });
 
     return S_OK;
@@ -1677,7 +1677,6 @@ struct WasapiCapture final : public BackendBase, WasapiProxy {
     std::atomic<bool> mKillNow{true};
     std::thread mThread;
 
-    std::atomic<bool> mDefaultDeviceChanged{false};
     std::string mDefaultDeviceId;
     EventRegistrationToken mDefaultChangeHandler{};
 
@@ -1879,7 +1878,7 @@ HRESULT WasapiCapture::openProxy(const char *name)
 
     mDefaultChangeHandler = sDeviceHelper->RegisterDefaultChangeHandler(eCapture, this, [this](LPCWSTR devid) {
         mDefaultDeviceId      = wstr_to_utf8(devid);
-        mDefaultDeviceChanged = true;
+        alc::Event(alc::EventType::DefaultDeviceChanged, (ALCdevice*)mDevice, mDefaultDeviceId);
     });
     return S_OK;
 }

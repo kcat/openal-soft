@@ -40,6 +40,7 @@
 
 #include "albit.h"
 #include "alc/alconfig.h"
+#include "alc/events.h"
 #include "almalloc.h"
 #include "alnumeric.h"
 #include "alspan.h"
@@ -472,16 +473,19 @@ struct EventManager {
     auto lock() const { return mLoop.lock(); }
     auto unlock() const { return mLoop.unlock(); }
 
+    inline bool initIsDone(std::memory_order m=std::memory_order_seq_cst) noexcept
+    { return mInitDone.load(m); }
+
     /**
      * Waits for initialization to finish. The event manager must *NOT* be
      * locked when calling this.
      */
     void waitForInit()
     {
-        if(!mInitDone.load(std::memory_order_acquire)) UNLIKELY
+        if(!initIsDone(std::memory_order_acquire)) UNLIKELY
         {
             MainloopUniqueLock plock{mLoop};
-            plock.wait([this](){ return mInitDone.load(std::memory_order_acquire); });
+            plock.wait([this](){ return initIsDone(std::memory_order_acquire); });
         }
     }
 
@@ -497,7 +501,7 @@ struct EventManager {
         plock.wait([this,&has_audio]()
         {
             has_audio = mHasAudio.load(std::memory_order_acquire);
-            return has_audio || mInitDone.load(std::memory_order_acquire);
+            return has_audio || initIsDone(std::memory_order_acquire);
         });
         return has_audio;
     }
@@ -507,38 +511,34 @@ struct EventManager {
         /* If initialization isn't done, update the sequence ID so it won't
          * complete until after currently scheduled events.
          */
-        if(!mInitDone.load(std::memory_order_relaxed))
+        if(!initIsDone(std::memory_order_relaxed))
             mInitSeq = ppw_core_sync(mCore.get(), PW_ID_CORE, mInitSeq);
     }
 
     void addCallback(uint32_t id, uint32_t permissions, const char *type, uint32_t version,
-        const spa_dict *props);
-    static void addCallbackC(void *object, uint32_t id, uint32_t permissions, const char *type,
-        uint32_t version, const spa_dict *props)
-    { static_cast<EventManager*>(object)->addCallback(id, permissions, type, version, props); }
+        const spa_dict *props) noexcept;
 
-    void removeCallback(uint32_t id);
-    static void removeCallbackC(void *object, uint32_t id)
-    { static_cast<EventManager*>(object)->removeCallback(id); }
+    void removeCallback(uint32_t id) noexcept;
 
     static constexpr pw_registry_events CreateRegistryEvents()
     {
         pw_registry_events ret{};
         ret.version = PW_VERSION_REGISTRY_EVENTS;
-        ret.global = &EventManager::addCallbackC;
-        ret.global_remove = &EventManager::removeCallbackC;
+        ret.global = [](void *object, uint32_t id, uint32_t permissions, const char *type, uint32_t version, const spa_dict *props) noexcept
+        { static_cast<EventManager*>(object)->addCallback(id, permissions, type, version, props); };
+        ret.global_remove = [](void *object, uint32_t id) noexcept
+        { static_cast<EventManager*>(object)->removeCallback(id); };
         return ret;
     }
 
-    void coreCallback(uint32_t id, int seq);
-    static void coreCallbackC(void *object, uint32_t id, int seq)
-    { static_cast<EventManager*>(object)->coreCallback(id, seq); }
+    void coreCallback(uint32_t id, int seq) noexcept;
 
     static constexpr pw_core_events CreateCoreEvents()
     {
         pw_core_events ret{};
         ret.version = PW_VERSION_CORE_EVENTS;
-        ret.done = &EventManager::coreCallbackC;
+        ret.done = [](void *object, uint32_t id, int seq) noexcept
+        { static_cast<EventManager*>(object)->coreCallback(id, seq); };
         return ret;
     }
 };
@@ -571,6 +571,7 @@ struct DeviceNode {
     static std::vector<DeviceNode> sList;
     static DeviceNode &Add(uint32_t id);
     static DeviceNode *Find(uint32_t id);
+    static DeviceNode *FindByDevName(std::string_view devname);
     static void Remove(uint32_t id);
     static std::vector<DeviceNode> &GetList() noexcept { return sList; }
 
@@ -619,6 +620,17 @@ DeviceNode *DeviceNode::Find(uint32_t id)
     return nullptr;
 }
 
+DeviceNode *DeviceNode::FindByDevName(std::string_view devname)
+{
+    auto match_id = [devname](DeviceNode &n) noexcept -> bool
+    { return n.mDevName == devname; };
+
+    auto match = std::find_if(sList.begin(), sList.end(), match_id);
+    if(match != sList.end()) return al::to_address(match);
+
+    return nullptr;
+}
+
 void DeviceNode::Remove(uint32_t id)
 {
     auto match_id = [id](DeviceNode &n) noexcept -> bool
@@ -626,6 +638,11 @@ void DeviceNode::Remove(uint32_t id)
         if(n.mId != id)
             return false;
         TRACE("Removing device \"%s\"\n", n.mDevName.c_str());
+        if(gEventHandler.initIsDone(std::memory_order_relaxed))
+        {
+            const std::string msg{"Device removed: "+n.mName};
+            alc::Event(alc::EventType::DeviceRemoved, msg);
+        }
         return true;
     };
 
@@ -815,9 +832,9 @@ struct NodeProxy {
     {
         pw_node_events ret{};
         ret.version = PW_VERSION_NODE_EVENTS;
-        ret.info = [](void *object, const pw_node_info *info)
+        ret.info = [](void *object, const pw_node_info *info) noexcept
         { static_cast<NodeProxy*>(object)->infoCallback(info); };
-        ret.param = [](void *object, int seq, uint32_t id, uint32_t index, uint32_t next, const spa_pod *param)
+        ret.param = [](void *object, int seq, uint32_t id, uint32_t index, uint32_t next, const spa_pod *param) noexcept
         { static_cast<NodeProxy*>(object)->paramCallback(seq, id, index, next, param); };
         return ret;
     }
@@ -843,12 +860,12 @@ struct NodeProxy {
     { spa_hook_remove(&mListener); }
 
 
-    void infoCallback(const pw_node_info *info);
+    void infoCallback(const pw_node_info *info) noexcept;
 
-    void paramCallback(int seq, uint32_t id, uint32_t index, uint32_t next, const spa_pod *param);
+    void paramCallback(int seq, uint32_t id, uint32_t index, uint32_t next, const spa_pod *param) noexcept;
 };
 
-void NodeProxy::infoCallback(const pw_node_info *info)
+void NodeProxy::infoCallback(const pw_node_info *info) noexcept
 {
     /* We only care about property changes here (media class, name/desc).
      * Format changes will automatically invoke the param callback.
@@ -896,15 +913,31 @@ void NodeProxy::infoCallback(const pw_node_info *info)
         }
 #endif
 
+        std::string name;
+        if(nodeName && *nodeName) name = nodeName;
+        else name = "PipeWire node #"+std::to_string(info->id);
+
         const char *form_factor{spa_dict_lookup(info->props, PW_KEY_DEVICE_FORM_FACTOR)};
         TRACE("Got %s device \"%s\"%s%s%s\n", AsString(ntype), devName ? devName : "(nil)",
             form_factor?" (":"", form_factor?form_factor:"", form_factor?")":"");
-        TRACE("  \"%s\" = ID %" PRIu64 "\n", nodeName ? nodeName : "(nil)", serial_id);
+        TRACE("  \"%s\" = ID %" PRIu64 "\n", name.c_str(), serial_id);
 
         DeviceNode &node = DeviceNode::Add(info->id);
         node.mSerial = serial_id;
-        if(nodeName && *nodeName) node.mName = nodeName;
-        else node.mName = "PipeWire node #"+std::to_string(info->id);
+        if(node.mName != name)
+        {
+            if(gEventHandler.mInitDone.load(std::memory_order_relaxed))
+            {
+                if(!node.mName.empty())
+                {
+                    const std::string msg{"Device removed: "+node.mName};
+                    alc::Event(alc::EventType::DeviceRemoved, msg);
+                }
+                const std::string msg{"Device added: "+name};
+                alc::Event(alc::EventType::DeviceAdded, msg);
+            }
+            node.mName = std::move(name);
+        }
         node.mDevName = devName ? devName : "";
         node.mType = ntype;
         node.mIsHeadphones = form_factor && (al::strcasecmp(form_factor, "headphones") == 0
@@ -912,7 +945,7 @@ void NodeProxy::infoCallback(const pw_node_info *info)
     }
 }
 
-void NodeProxy::paramCallback(int, uint32_t id, uint32_t, uint32_t, const spa_pod *param)
+void NodeProxy::paramCallback(int, uint32_t id, uint32_t, uint32_t, const spa_pod *param) noexcept
 {
     if(id == SPA_PARAM_EnumFormat)
     {
@@ -936,7 +969,7 @@ struct MetadataProxy {
     {
         pw_metadata_events ret{};
         ret.version = PW_VERSION_METADATA_EVENTS;
-        ret.property = [](void *object, uint32_t id, const char *key, const char *type, const char *value)
+        ret.property = [](void *object, uint32_t id, const char *key, const char *type, const char *value) noexcept
         { return static_cast<MetadataProxy*>(object)->propertyCallback(id, key, type, value); };
         return ret;
     }
@@ -955,11 +988,11 @@ struct MetadataProxy {
     ~MetadataProxy()
     { spa_hook_remove(&mListener); }
 
-    int propertyCallback(uint32_t id, const char *key, const char *type, const char *value);
+    int propertyCallback(uint32_t id, const char *key, const char *type, const char *value) noexcept;
 };
 
 int MetadataProxy::propertyCallback(uint32_t id, const char *key, const char *type,
-    const char *value)
+    const char *value) noexcept
 {
     if(id != PW_ID_CORE)
         return 0;
@@ -1015,9 +1048,33 @@ int MetadataProxy::propertyCallback(uint32_t id, const char *key, const char *ty
             TRACE("Got default %s device \"%s\"\n", isCapture ? "capture" : "playback",
                 propValue->c_str());
             if(!isCapture)
-                DefaultSinkDevice = std::move(*propValue);
+            {
+                if(DefaultSinkDevice != *propValue)
+                {
+                    if(gEventHandler.mInitDone.load(std::memory_order_relaxed))
+                    {
+                        auto entry = DeviceNode::FindByDevName(*propValue);
+                        const std::string msg{"Default playback device changed: "+
+                            (entry ? entry->mName : std::string{})};
+                        alc::Event(alc::EventType::DefaultDeviceChanged, msg);
+                    }
+                    DefaultSinkDevice = std::move(*propValue);
+                }
+            }
             else
-                DefaultSourceDevice = std::move(*propValue);
+            {
+                if(DefaultSourceDevice != *propValue)
+                {
+                    if(gEventHandler.mInitDone.load(std::memory_order_relaxed))
+                    {
+                        auto entry = DeviceNode::FindByDevName(*propValue);
+                        const std::string msg{"Default capture device changed: "+
+                            (entry ? entry->mName : std::string{})};
+                        alc::Event(alc::EventType::DefaultDeviceChanged, msg);
+                    }
+                    DefaultSourceDevice = std::move(*propValue);
+                }
+            }
         }
         else
         {
@@ -1108,7 +1165,7 @@ void EventManager::kill()
 }
 
 void EventManager::addCallback(uint32_t id, uint32_t, const char *type, uint32_t version,
-    const spa_dict *props)
+    const spa_dict *props) noexcept
 {
     /* We're only interested in interface nodes. */
     if(std::strcmp(type, PW_TYPE_INTERFACE_Node) == 0)
@@ -1183,7 +1240,7 @@ void EventManager::addCallback(uint32_t id, uint32_t, const char *type, uint32_t
     }
 }
 
-void EventManager::removeCallback(uint32_t id)
+void EventManager::removeCallback(uint32_t id) noexcept
 {
     DeviceNode::Remove(id);
 
@@ -1204,7 +1261,7 @@ void EventManager::removeCallback(uint32_t id)
     }
 }
 
-void EventManager::coreCallback(uint32_t id, int seq)
+void EventManager::coreCallback(uint32_t id, int seq) noexcept
 {
     if(id == PW_ID_CORE && seq == mInitSeq)
     {

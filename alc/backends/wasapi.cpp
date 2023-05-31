@@ -228,7 +228,7 @@ using EventRegistrationToken = void*;
 #if defined(ALSOFT_UWP)
 struct DeviceHelper final : public IActivateAudioInterfaceCompletionHandler
 #else
-struct DeviceHelper final : public IMMNotificationClient
+struct DeviceHelper final : private IMMNotificationClient
 #endif
 {
 public:
@@ -236,10 +236,29 @@ public:
     {
 #if defined(ALSOFT_UWP)
         mActiveClientEvent = CreateEventW(nullptr, FALSE, FALSE, nullptr);
+
+        auto cb = [](const WCHAR *devid)
+        {
+            const std::string msg{"Default device changed: "+wstr_to_utf8(devid)};
+            alc::Event(alc::EventType::DefaultDeviceChanged, msg);
+        };
+
+        mRenderDeviceChangedToken = MediaDevice::DefaultAudioRenderDeviceChanged +=
+            ref new TypedEventHandler<Platform::Object ^, DefaultAudioRenderDeviceChangedEventArgs ^>(
+                [this,cb](Platform::Object ^ sender, DefaultAudioRenderDeviceChangedEventArgs ^ args) {
+                if (args->Role == AudioDeviceRole::Default)
+                    cb(args->Id->Data());
+            });
+        mCaptureDeviceChangedToken = MediaDevice::DefaultAudioCaptureDeviceChanged +=
+            ref new TypedEventHandler<Platform::Object ^, DefaultAudioCaptureDeviceChangedEventArgs ^>(
+                [this,cb](Platform::Object ^ sender, DefaultAudioCaptureDeviceChangedEventArgs ^ args) {
+                if (args->Role == AudioDeviceRole::Default)
+                    cb(args->Id->Data());
+            });
 #else
-        HRESULT hr = CoCreateInstance(CLSID_MMDeviceEnumerator, nullptr, CLSCTX_INPROC_SERVER, IID_IMMDeviceEnumerator,
-                                      al::out_ptr(mEnumerator));
-        if (SUCCEEDED(hr))
+        HRESULT hr{CoCreateInstance(CLSID_MMDeviceEnumerator, nullptr, CLSCTX_INPROC_SERVER,
+            IID_IMMDeviceEnumerator, al::out_ptr(mEnumerator))};
+        if(SUCCEEDED(hr))
             mEnumerator->RegisterEndpointNotificationCallback(this);
         else
             WARN("Failed to create IMMDeviceEnumerator instance: 0x%08lx\n", hr);
@@ -248,31 +267,31 @@ public:
     ~DeviceHelper()
     {
 #if defined(ALSOFT_UWP)
-        if (mActiveClientEvent != nullptr)
+        MediaDevice::DefaultAudioRenderDeviceChanged -= mRenderDeviceChangedToken;
+        MediaDevice::DefaultAudioCaptureDeviceChanged -= mCaptureDeviceChangedToken;
+
+        if(mActiveClientEvent != nullptr)
             CloseHandle(mActiveClientEvent);
         mActiveClientEvent = nullptr;
 #else
-        if (mEnumerator)
+        if(mEnumerator)
             mEnumerator->UnregisterEndpointNotificationCallback(this);
         mEnumerator = nullptr;
 #endif
     }
 
     /** -------------------------- IUnkonwn ----------------------------- */
-    LONG mRefCount{1};
-    ULONG STDMETHODCALLTYPE AddRef() override { return InterlockedIncrement(&mRefCount); }
+    std::atomic<ULONG> mRefCount{1};
+    STDMETHODIMP_(ULONG) AddRef() noexcept override { return mRefCount.fetch_add(1u) + 1u; }
 
-    ULONG STDMETHODCALLTYPE Release() override
+    STDMETHODIMP_(ULONG) Release() noexcept override
     {
-        ULONG ulRef = InterlockedDecrement(&mRefCount);
-        if (0 == ulRef)
-        {
-            delete this;
-        }
-        return ulRef;
+        auto ret = mRefCount.fetch_sub(1u) - 1u;
+        if(!ret) delete this;
+        return ret;
     }
 
-    HRESULT STDMETHODCALLTYPE QueryInterface(const IID& IId, void** UnknownPtrPtr) override
+    STDMETHODIMP QueryInterface(const IID& IId, void **UnknownPtrPtr) noexcept override
     {
         // Three rules of QueryInterface:
         // https://docs.microsoft.com/en-us/windows/win32/com/rules-for-implementing-queryinterface
@@ -281,10 +300,8 @@ public:
         // 3. It must be possible to query successfully for any interface on an object from any other interface.
 
         // If ppvObject(the address) is nullptr, then this method returns E_POINTER.
-        if (!UnknownPtrPtr)
-        {
+        if(!UnknownPtrPtr)
             return E_POINTER;
-        }
 
         // https://docs.microsoft.com/en-us/windows/win32/com/implementing-reference-counting
         // Whenever a client calls a method(or API function), such as QueryInterface, that returns a new interface
@@ -294,23 +311,23 @@ public:
         // interface pointer, the reference count becomes two. The client must call Release twice on the interface
         // pointer to drop all of its references to the object.
 #if defined(ALSOFT_UWP)
-        if (IId == __uuidof(IActivateAudioInterfaceCompletionHandler))
+        if(IId == __uuidof(IActivateAudioInterfaceCompletionHandler))
         {
-            *UnknownPtrPtr = (IActivateAudioInterfaceCompletionHandler*)(this);
+            *UnknownPtrPtr = static_cast<IActivateAudioInterfaceCompletionHandler*>(this);
             AddRef();
             return S_OK;
         }
 #else
-        if (IId == __uuidof(IMMNotificationClient))
+        if(IId == __uuidof(IMMNotificationClient))
         {
-            *UnknownPtrPtr = (IMMNotificationClient*)(this);
+            *UnknownPtrPtr = static_cast<IMMNotificationClient*>(this);
             AddRef();
             return S_OK;
         }
 #endif
-        else if (IId == __uuidof(IAgileObject) || IId == __uuidof(IUnknown))
+        else if(IId == __uuidof(IAgileObject) || IId == __uuidof(IUnknown))
         {
-            *UnknownPtrPtr = (IUnknown*)(this);
+            *UnknownPtrPtr = static_cast<IUnknown*>(this);
             AddRef();
             return S_OK;
         }
@@ -347,20 +364,16 @@ public:
     }
 #else
     /** ----------------------- IMMNotificationClient ------------ */
-    STDMETHOD(OnDeviceStateChanged(LPCWSTR /*pwstrDeviceId*/, DWORD /*dwNewState*/)) override { return S_OK; }
-    STDMETHOD(OnDeviceAdded(LPCWSTR /*pwstrDeviceId*/)) override { return S_OK; }
-    STDMETHOD(OnDeviceRemoved(LPCWSTR /*pwstrDeviceId*/)) override { return S_OK; }
-    STDMETHOD(OnPropertyValueChanged(LPCWSTR /*pwstrDeviceId*/, const PROPERTYKEY /*key*/)) override { return S_OK; }
-    STDMETHOD(OnDefaultDeviceChanged(EDataFlow flow, ERole role, LPCWSTR pwstrDefaultDeviceId)) override
+    STDMETHODIMP OnDeviceStateChanged(LPCWSTR /*pwstrDeviceId*/, DWORD /*dwNewState*/) noexcept override { return S_OK; }
+    STDMETHODIMP OnDeviceAdded(LPCWSTR /*pwstrDeviceId*/) noexcept override { return S_OK; }
+    STDMETHODIMP OnDeviceRemoved(LPCWSTR /*pwstrDeviceId*/) noexcept override { return S_OK; }
+    STDMETHODIMP OnPropertyValueChanged(LPCWSTR /*pwstrDeviceId*/, const PROPERTYKEY /*key*/) noexcept override { return S_OK; }
+    STDMETHODIMP OnDefaultDeviceChanged(EDataFlow flow, ERole role, LPCWSTR pwstrDefaultDeviceId) noexcept override
     {
-        if (role == eMultimedia && (flow == eRender || flow == eCapture))
+        if(role == eMultimedia && (flow == eRender || flow == eCapture))
         {
-            std::lock_guard<std::mutex> lck(mDefaultChangeHandlersMtx);
-            for (auto& handlerItem : mDefaultChangeHandlers)
-            {
-                if (handlerItem.second.first == flow)
-                    handlerItem.second.second(pwstrDefaultDeviceId);
-            }
+            const std::string msg{"Default device changed: "+wstr_to_utf8(pwstrDefaultDeviceId)};
+            alc::Event(alc::EventType::DefaultDeviceChanged, msg);
         }
         return S_OK;
     }
@@ -370,18 +383,15 @@ public:
     HRESULT OpenDevice(LPCWSTR devid, EDataFlow flow, DeviceHandle& device) 
     {
 #if !defined(ALSOFT_UWP)
-        HRESULT hr = E_POINTER;
-        if (mEnumerator)
+        HRESULT hr{E_POINTER};
+        if(mEnumerator)
         {
             if (!devid)
                 hr = mEnumerator->GetDefaultAudioEndpoint(flow, eMultimedia, al::out_ptr(device));
             else
                 hr = mEnumerator->GetDevice(devid, al::out_ptr(device));
         }
-        if (FAILED(hr))
-        {
-            return hr;
-        }
+        return hr;
 #else
         const auto deviceRole = Windows::Media::Devices::AudioDeviceRole::Default;
 		Platform::String^ devIfPath =
@@ -397,18 +407,17 @@ public:
 		{
 			return E_NOINTERFACE;
 		}
-#endif
         return S_OK;
+#endif
     }
 
-    HRESULT ActivateAudioClient(_In_ DeviceHandle& device,
-                                   void** ppv)
+    HRESULT ActivateAudioClient(_In_ DeviceHandle& device, void **ppv)
     {
 #if !defined(ALSOFT_UWP)
         HRESULT hr{device->Activate(__uuidof(IAudioClient3), CLSCTX_INPROC_SERVER, nullptr, ppv)};
 #else
-        HRESULT hr{ActivateAudioInterface(device.value->Id->Data(),
-                                          __uuidof(IAudioClient3), nullptr, ppv)};
+        HRESULT hr{ActivateAudioInterface(device.value->Id->Data(), __uuidof(IAudioClient3),
+            nullptr, ppv)};
 #endif
         return hr;
     }
@@ -419,8 +428,9 @@ public:
 
 #if !defined(ALSOFT_UWP)
         ComPtr<IMMDeviceCollection> coll;
-        HRESULT hr{mEnumerator->EnumAudioEndpoints(flowdir, DEVICE_STATE_ACTIVE, al::out_ptr(coll))};
-        if (FAILED(hr))
+        HRESULT hr{mEnumerator->EnumAudioEndpoints(flowdir, DEVICE_STATE_ACTIVE,
+            al::out_ptr(coll))};
+        if(FAILED(hr))
         {
             ERR("Failed to enumerate audio endpoints: 0x%08lx\n", hr);
             return hr;
@@ -428,14 +438,14 @@ public:
 
         UINT count{0};
         hr = coll->GetCount(&count);
-        if (SUCCEEDED(hr) && count > 0)
+        if(SUCCEEDED(hr) && count > 0)
             list.reserve(count);
 
         ComPtr<IMMDevice> device;
         hr = mEnumerator->GetDefaultAudioEndpoint(flowdir, eMultimedia, al::out_ptr(device));
-        if (SUCCEEDED(hr))
+        if(SUCCEEDED(hr))
         {
-            if (WCHAR * devid{get_device_id(device.get())})
+            if(WCHAR *devid{get_device_id(device.get())})
             {
                 add_device(device, devid, list);
                 CoTaskMemFree(devid);
@@ -443,13 +453,13 @@ public:
             device = nullptr;
         }
 
-        for (UINT i{0}; i < count; ++i)
+        for(UINT i{0};i < count;++i)
         {
             hr = coll->Item(i, al::out_ptr(device));
-            if (FAILED(hr))
+            if(FAILED(hr))
                 continue;
 
-            if (WCHAR * devid{get_device_id(device.get())})
+            if(WCHAR *devid{get_device_id(device.get())})
             {
                 add_device(device, devid, list);
                 CoTaskMemFree(devid);
@@ -595,12 +605,12 @@ public:
     }
 
 #if !defined(ALSOFT_UWP)
-    static WCHAR* get_device_id(IMMDevice* device)
+    static WCHAR *get_device_id(IMMDevice* device)
     {
-        WCHAR* devid;
+        WCHAR *devid;
 
         const HRESULT hr{device->GetId(&devid)};
-        if (FAILED(hr))
+        if(FAILED(hr))
         {
             ERR("Failed to get device id: %lx\n", hr);
             return nullptr;
@@ -612,7 +622,7 @@ public:
     {
         ComPtr<IPropertyStore> ps;
         HRESULT hr{device->OpenPropertyStore(STGM_READ, al::out_ptr(ps))};
-        if (FAILED(hr))
+        if(FAILED(hr))
         {
             WARN("OpenPropertyStore failed: 0x%08lx\n", hr);
             return UnknownFormFactor;
@@ -621,52 +631,16 @@ public:
         EndpointFormFactor formfactor{UnknownFormFactor};
         PropVariant pvform;
         hr = ps->GetValue(PKEY_AudioEndpoint_FormFactor, pvform.get());
-        if (FAILED(hr))
+        if(FAILED(hr))
             WARN("GetValue AudioEndpoint_FormFactor failed: 0x%08lx\n", hr);
-        else if (pvform->vt == VT_UI4)
+        else if(pvform->vt == VT_UI4)
             formfactor = static_cast<EndpointFormFactor>(pvform->ulVal);
-        else if (pvform->vt != VT_EMPTY)
+        else if(pvform->vt != VT_EMPTY)
             WARN("Unexpected PROPVARIANT type: 0x%04x\n", pvform->vt);
         return formfactor;
     }
 #endif
 
-    template <typename _Fty>
-    EventRegistrationToken RegisterDefaultChangeHandler(EDataFlow flow, void* target, _Fty&& cb)
-    {
-#if defined(ALSOFT_UWP)
-        (void)target;
-        if (flow == eRender)
-            return MediaDevice::DefaultAudioRenderDeviceChanged +=
-                   ref new TypedEventHandler<Platform::Object ^, DefaultAudioRenderDeviceChangedEventArgs ^>(
-                       [this, cb](Platform::Object ^ sender, DefaultAudioRenderDeviceChangedEventArgs ^ args) {
-                        if (args->Role == AudioDeviceRole::Default)
-                            cb(args->Id->Data());
-                   });
-        else
-            return MediaDevice::DefaultAudioCaptureDeviceChanged +=
-                   ref new TypedEventHandler<Platform::Object ^, DefaultAudioCaptureDeviceChangedEventArgs ^>(
-                       [this, cb](Platform::Object ^ sender, DefaultAudioCaptureDeviceChangedEventArgs ^ args) {
-                        if (args->Role == AudioDeviceRole::Default)
-                            cb(args->Id->Data());
-                   });
-#else
-        std::lock_guard<std::mutex> lck(mDefaultChangeHandlersMtx);
-        if (mDefaultChangeHandlers.emplace(target, std::make_pair(flow, cb)).second)
-            return target;
-        return nullptr;
-#endif
-    }
-
-    void UnregisterDefaultChangeHandler(EventRegistrationToken handler)
-    {
-#if defined(ALSOFT_UWP)
-        MediaDevice::DefaultAudioRenderDeviceChanged -= handler;
-#else
-        std::lock_guard<std::mutex> lck(mDefaultChangeHandlersMtx);
-        mDefaultChangeHandlers.erase(handler);
-#endif
-    }
 private:
 #if defined(ALSOFT_UWP)
     HRESULT ActivateAudioInterface(_In_ LPCWSTR deviceInterfacePath,
@@ -677,24 +651,24 @@ private:
         IActivateAudioInterfaceAsyncOperation* asyncOp{nullptr};
         mPPV       = ppv;
         HRESULT hr = ActivateAudioInterfaceAsync(deviceInterfacePath, riid, activationParams, this, &asyncOp);
-        if (FAILED(hr))
+        if(FAILED(hr))
             return hr;
-        if (asyncOp)
+        if(asyncOp)
             asyncOp->Release();
 
         DWORD res{WaitForSingleObjectEx(mActiveClientEvent, 2000, FALSE)};
-        if (res != WAIT_OBJECT_0)
+        if(res != WAIT_OBJECT_0)
             ERR("WaitForSingleObjectEx error: 0x%lx\n", res);
         return res;
     }
 
     HANDLE mActiveClientEvent{nullptr};
     void** mPPV{nullptr};
+
+    EventRegistrationToken mRenderDeviceChangedToken;
+    EventRegistrationToken mCaptureDeviceChangedToken;
 #else
     ComPtr<IMMDeviceEnumerator> mEnumerator{nullptr};
-
-    std::mutex mDefaultChangeHandlersMtx;
-    std::unordered_map<void*, std::pair<EDataFlow,std::function<void(LPCWSTR)>>> mDefaultChangeHandlers;
 #endif
 };
 
@@ -917,7 +891,7 @@ int WasapiProxy::messageHandler(std::promise<HRESULT> *promise)
     promise->set_value(S_OK);
     promise = nullptr;
 
-    sDeviceHelper.reset(new DeviceHelper());
+    sDeviceHelper.reset(new DeviceHelper{});
 
     TRACE("Starting message loop\n");
     while(Msg msg{popMessage()})
@@ -955,15 +929,13 @@ int WasapiProxy::messageHandler(std::promise<HRESULT> *promise)
 
         case MsgType::EnumeratePlayback:
         case MsgType::EnumerateCapture:
-            {
-            if (msg.mType == MsgType::EnumeratePlayback)
+            if(msg.mType == MsgType::EnumeratePlayback)
                 msg.mPromise.set_value(sDeviceHelper->probe_devices(eRender, PlaybackDevices));
-            else if (msg.mType == MsgType::EnumerateCapture)
+            else if(msg.mType == MsgType::EnumerateCapture)
                 msg.mPromise.set_value(sDeviceHelper->probe_devices(eCapture, CaptureDevices));
             else
                 msg.mPromise.set_value(E_FAIL);
-                continue;
-            }
+            continue;
 
         case MsgType::QuitThread:
             break;
@@ -1014,9 +986,6 @@ struct WasapiPlayback final : public BackendBase, WasapiProxy {
 
     std::atomic<bool> mKillNow{true};
     std::thread mThread;
-
-    std::string mDefaultDeviceId;
-    EventRegistrationToken mDefaultChangeHandler{};
 
     DEF_NEWDEL(WasapiPlayback)
 };
@@ -1204,17 +1173,11 @@ HRESULT WasapiPlayback::openProxy(const char *name)
     else
         mDevice->DeviceName = DevNameHead + DeviceHelper::get_device_name_and_guid(mMMDev).first;
 
-    mDefaultChangeHandler = sDeviceHelper->RegisterDefaultChangeHandler(eRender, this, [this](LPCWSTR devid) {
-        mDefaultDeviceId      = wstr_to_utf8(devid);
-        alc::Event(alc::EventType::DefaultDeviceChanged, (ALCdevice*)mDevice, mDefaultDeviceId);
-    });
-
     return S_OK;
 }
 
 void WasapiPlayback::closeProxy()
 {
-    sDeviceHelper->UnregisterDefaultChangeHandler(mDefaultChangeHandler);
     mClient = nullptr;
     mMMDev = nullptr;
 }
@@ -1676,9 +1639,6 @@ struct WasapiCapture final : public BackendBase, WasapiProxy {
     std::atomic<bool> mKillNow{true};
     std::thread mThread;
 
-    std::string mDefaultDeviceId;
-    EventRegistrationToken mDefaultChangeHandler{};
-
     DEF_NEWDEL(WasapiCapture)
 };
 
@@ -1875,16 +1835,11 @@ HRESULT WasapiCapture::openProxy(const char *name)
     else
         mDevice->DeviceName = DevNameHead + DeviceHelper::get_device_name_and_guid(mMMDev).first;
 
-    mDefaultChangeHandler = sDeviceHelper->RegisterDefaultChangeHandler(eCapture, this, [this](LPCWSTR devid) {
-        mDefaultDeviceId      = wstr_to_utf8(devid);
-        alc::Event(alc::EventType::DefaultDeviceChanged, (ALCdevice*)mDevice, mDefaultDeviceId);
-    });
     return S_OK;
 }
 
 void WasapiCapture::closeProxy()
 {
-    sDeviceHelper->UnregisterDefaultChangeHandler(mDefaultChangeHandler);
     mClient = nullptr;
     mMMDev = nullptr;
 }

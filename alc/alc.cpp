@@ -616,6 +616,9 @@ const struct {
     DECL(alPushDebugGroupDirectEXT),
     DECL(alPopDebugGroupDirectEXT),
     DECL(alGetDebugMessageLogDirectEXT),
+
+    DECL(alcEventControlSOFT),
+    DECL(alcEventCallbackSOFT),
 #ifdef ALSOFT_EAX
 }, eaxFunctions[] = {
     DECL(EAXGet),
@@ -1174,7 +1177,8 @@ constexpr ALCchar alcNoDeviceExtList[] =
     "ALC_EXT_thread_local_context "
     "ALC_SOFT_loopback "
     "ALC_SOFT_loopback_bformat "
-    "ALC_SOFT_reopen_device";
+    "ALC_SOFT_reopen_device "
+    "ALC_SOFTX_system_events";
 constexpr ALCchar alcExtensionList[] =
     "ALC_ENUMERATE_ALL_EXT "
     "ALC_ENUMERATION_EXT "
@@ -1192,7 +1196,8 @@ constexpr ALCchar alcExtensionList[] =
     "ALC_SOFT_output_limiter "
     "ALC_SOFT_output_mode "
     "ALC_SOFT_pause_device "
-    "ALC_SOFT_reopen_device";
+    "ALC_SOFT_reopen_device "
+    "ALC_SOFTX_system_events";
 constexpr int alcMajorVersion{1};
 constexpr int alcMinorVersion{1};
 
@@ -1813,28 +1818,6 @@ const std::array<InputRemixMap,2> X61Downmix{{
 const std::array<InputRemixMap,1> X71Downmix{{
     { BackCenter, BackStereoSplit },
 }};
-
-
-/** Stores the latest ALC device error. */
-void alcSetError(ALCdevice *device, ALCenum errorCode)
-{
-    WARN("Error generated on device %p, code 0x%04x\n", voidp{device}, errorCode);
-    if(TrapALCError)
-    {
-#ifdef _WIN32
-        /* DebugBreak() will cause an exception if there is no debugger */
-        if(IsDebuggerPresent())
-            DebugBreak();
-#elif defined(SIGTRAP)
-        raise(SIGTRAP);
-#endif
-    }
-
-    if(device)
-        device->LastError.store(errorCode);
-    else
-        LastNullDeviceError.store(errorCode);
-}
 
 
 std::unique_ptr<Compressor> CreateDeviceLimiter(const ALCdevice *device, const float threshold)
@@ -2754,6 +2737,25 @@ ContextRef GetContextRef(void)
     return ContextRef{context};
 }
 
+void alcSetError(ALCdevice *device, ALCenum errorCode)
+{
+    WARN("Error generated on device %p, code 0x%04x\n", voidp{device}, errorCode);
+    if(TrapALCError)
+    {
+#ifdef _WIN32
+        /* DebugBreak() will cause an exception if there is no debugger */
+        if(IsDebuggerPresent())
+            DebugBreak();
+#elif defined(SIGTRAP)
+        raise(SIGTRAP);
+#endif
+    }
+
+    if(device)
+        device->LastError.store(errorCode);
+    else
+        LastNullDeviceError.store(errorCode);
+}
 
 /************************************************
  * Standard ALC functions
@@ -3436,6 +3438,8 @@ ALC_API ALCvoid* ALC_APIENTRY alcGetProcAddress(ALCdevice *device, const ALCchar
         alcSetError(dev.get(), ALC_INVALID_VALUE);
         return nullptr;
     }
+
+    InitConfig();
 #ifdef ALSOFT_EAX
     if(eax_g_is_enabled)
     {
@@ -3463,6 +3467,8 @@ ALC_API ALCenum ALC_APIENTRY alcGetEnumValue(ALCdevice *device, const ALCchar *e
         alcSetError(dev.get(), ALC_INVALID_VALUE);
         return 0;
     }
+
+    InitConfig();
 #ifdef ALSOFT_EAX
     if(eax_g_is_enabled)
     {

@@ -813,6 +813,8 @@ set(ALC_OBJS
     alc/effects/pshifter.cpp
     alc/effects/reverb.cpp
     alc/effects/vmorpher.cpp
+    alc/events.cpp
+    alc/events.h
     alc/inprogext.h
     alc/panning.cpp)
 

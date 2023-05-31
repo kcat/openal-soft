@@ -891,8 +891,6 @@ int WasapiProxy::messageHandler(std::promise<HRESULT> *promise)
     promise->set_value(S_OK);
     promise = nullptr;
 
-    sDeviceHelper.reset(new DeviceHelper{});
-
     TRACE("Starting message loop\n");
     while(Msg msg{popMessage()})
     {
@@ -2217,6 +2215,9 @@ bool WasapiBackendFactory::init()
                 WARN("Failed to create IMMDeviceEnumerator instance: 0x%08lx\n", hr);
             enumerator = nullptr;
 #endif
+            if(SUCCEEDED(hr))
+                WasapiProxy::sDeviceHelper.reset(new DeviceHelper{});
+
             CoUninitialize();
 
             return hr;

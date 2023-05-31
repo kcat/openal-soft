@@ -1061,11 +1061,11 @@ if(WIN32)
             set(BACKENDS  "${BACKENDS} WASAPI,")
             set(ALC_OBJS  ${ALC_OBJS} alc/backends/wasapi.cpp alc/backends/wasapi.h)
             if(ALSOFT_UWP)
-                set_source_files_properties(alc/backends/wasapi.cpp alc/alconfig.cpp PROPERTIES COMPILE_FLAGS /ZW)   
+                set_source_files_properties(alc/backends/wasapi.cpp alc/alconfig.cpp PROPERTIES COMPILE_FLAGS /ZW)
             endif()
         endif()
     endif()
-    
+
     # Setup properly link flags for UWP
     if(ALSOFT_UWP AND HAVE_WASAPI)
         # Add compile and link flags required C++/CX
@@ -1416,8 +1416,8 @@ else()
     endif()
     target_link_libraries(${IMPL_TARGET} PRIVATE common ${LINKER_FLAGS} ${EXTRA_LIBS} ${MATH_LIB})
 
-    if (WIN32)
-        set_target_properties(${IMPL_TARGET} PROPERTIES 
+    if(ALSOFT_UWP AND HAVE_WASAPI)
+        set_target_properties(${IMPL_TARGET} PROPERTIES
             LINK_FLAGS_DEBUG "${LINKER_FLAGS_DEBUG}"
             LINK_FLAGS_RELEASE "${LINKER_FLAGS_RELEASE}"
             LINK_FLAGS_MINSIZEREL "${LINKER_FLAGS_RELEASE}"
@@ -1538,7 +1538,10 @@ if(FPMATH_SET)
     message(STATUS "Building with SSE${FPMATH_SET} codegen")
     message(STATUS "")
 endif()
-
+if(ALSOFT_UWP)
+    message(STATUS "Building with UWP support")
+    message(STATUS "")
+endif()
 if(ALSOFT_EAX)
     message(STATUS "Building with legacy EAX extension support")
     message(STATUS "")

@@ -815,6 +815,7 @@ set(ALC_OBJS
     alc/effects/vmorpher.cpp
     alc/events.cpp
     alc/events.h
+    alc/export_list.h
     alc/inprogext.h
     alc/panning.cpp)
 

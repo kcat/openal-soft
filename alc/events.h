@@ -26,9 +26,9 @@ inline std::mutex EventMutex;
 inline ALCEVENTPROCTYPESOFT EventCallback{};
 inline void *EventUserPtr{};
 
-void Event(ALCenum eventType, ALCdevice *device, std::string_view message) noexcept;
+void Event(alc::EventType eventType, ALCdevice *device, std::string_view message) noexcept;
 
-inline void Event(ALCenum eventType, std::string_view message) noexcept
+inline void Event(alc::EventType eventType, std::string_view message) noexcept
 { Event(eventType, nullptr, message); }
 
 } // namespace alc

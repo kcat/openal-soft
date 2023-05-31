@@ -41,16 +41,15 @@
 
 #include <AudioUnit/AudioUnit.h>
 #include <AudioToolbox/AudioToolbox.h>
-#include <IOKit/audio/IOAudioTypes.h>
-
-
-namespace {
 
 #if TARGET_OS_IOS || TARGET_OS_TV
 #define CAN_ENUMERATE 0
 #else
+#include <IOKit/audio/IOAudioTypes.h>
 #define CAN_ENUMERATE 1
 #endif
+
+namespace {
 
 constexpr auto OutputElement = 0;
 constexpr auto InputElement = 1;

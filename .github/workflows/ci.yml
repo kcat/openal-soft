@@ -67,6 +67,18 @@ jobs:
             build_type: "Release"
           }
         - {
+            name: "iOS-Release",
+            os: macos-latest,
+            cmake_opts: "-GXcode \
+            -DCMAKE_SYSTEM_NAME=iOS \
+            -DALSOFT_REQUIRE_COREAUDIO=ON \
+            -DALSOFT_UTILS=OFF \
+            -DALSOFT_EXAMPLES=OFF \
+            -DALSOFT_INSTALL=OFF \
+            \"-DCMAKE_OSX_ARCHITECTURES=arm64\"",
+            build_type: "Release"
+          }
+        - {
             name: "Linux-Release",
             os: ubuntu-latest,
             cmake_opts: "-DALSOFT_REQUIRE_RTKIT=ON \

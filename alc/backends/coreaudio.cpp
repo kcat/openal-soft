@@ -32,12 +32,14 @@
 #include <string.h>
 #include <unistd.h>
 #include <vector>
+#include <optional>
 
 #include "alnumeric.h"
 #include "core/converter.h"
 #include "core/device.h"
 #include "core/logging.h"
 #include "ringbuffer.h"
+#include "alc/events.h"
 
 #include <AudioUnit/AudioUnit.h>
 #include <AudioToolbox/AudioToolbox.h>
@@ -270,6 +272,47 @@ void EnumerateDevices(std::vector<DeviceEntry> &list, bool isCapture)
     newdevs.shrink_to_fit();
     newdevs.swap(list);
 }
+
+struct DeviceHelper
+{
+public:
+    DeviceHelper()
+    {
+        AudioObjectPropertyAddress addr = {kAudioHardwarePropertyDefaultOutputDevice,
+                                           kAudioObjectPropertyScopeGlobal, kAudioObjectPropertyElementMain};
+        OSStatus status = AudioObjectAddPropertyListener(kAudioObjectSystemObject, &addr, DeviceListenerProc, nil);
+        if (status != noErr)
+            ERR("AudioObjectAddPropertyListener fail: %d", status);
+    }
+    ~DeviceHelper()
+    {
+        AudioObjectPropertyAddress addr = {kAudioHardwarePropertyDefaultOutputDevice,
+                                           kAudioObjectPropertyScopeGlobal, kAudioObjectPropertyElementMain};
+        OSStatus status = AudioObjectRemovePropertyListener(kAudioObjectSystemObject, &addr, DeviceListenerProc, nil);
+        if (status != noErr)
+            ERR("AudioObjectRemovePropertyListener fail: %d", status);
+    }
+
+    static OSStatus DeviceListenerProc(AudioObjectID /*inObjectID*/,
+                                        UInt32 inNumberAddresses,
+                                        const AudioObjectPropertyAddress *inAddresses,
+                                        void* /*inClientData*/)
+    {
+        for (UInt32 i = 0; i < inNumberAddresses; ++i)
+        {
+            switch (inAddresses[i].mSelector)
+            {
+            case kAudioHardwarePropertyDefaultOutputDevice:
+            case kAudioHardwarePropertyDefaultSystemOutputDevice:
+            case kAudioHardwarePropertyDefaultInputDevice:
+                alc::Event(alc::EventType::DefaultDeviceChanged, "Default device changed: "+std::to_string(inAddresses[i].mSelector));
+                break;
+            }
+        }
+    }
+};
+
+static std::optional<DeviceHelper> sDeviceHelper;
 
 #else
 
@@ -915,7 +958,13 @@ BackendFactory &CoreAudioBackendFactory::getFactory()
     return factory;
 }
 
-bool CoreAudioBackendFactory::init() { return true; }
+bool CoreAudioBackendFactory::init() 
+{ 
+#if CAN_ENUMERATE
+    sDeviceHelper.emplace();
+#endif
+    return true; 
+}
 
 bool CoreAudioBackendFactory::querySupport(BackendType type)
 { return type == BackendType::Playback || type == BackendType::Capture; }

@@ -291,13 +291,14 @@ pa_context_flags_t pulse_ctx_flags;
 
 class PulseMainloop {
     pa_threaded_mainloop *mLoop{};
+    pa_context *mContext{};
 
 public:
     PulseMainloop() = default;
     PulseMainloop(const PulseMainloop&) = delete;
     PulseMainloop(PulseMainloop&& rhs) noexcept : mLoop{rhs.mLoop} { rhs.mLoop = nullptr; }
     explicit PulseMainloop(pa_threaded_mainloop *loop) noexcept : mLoop{loop} { }
-    ~PulseMainloop() { if(mLoop) pa_threaded_mainloop_free(mLoop); }
+    ~PulseMainloop();
 
     PulseMainloop& operator=(const PulseMainloop&) = delete;
     PulseMainloop& operator=(PulseMainloop&& rhs) noexcept
@@ -316,6 +317,7 @@ public:
     auto stop() const { return pa_threaded_mainloop_stop(mLoop); }
 
     auto getApi() const { return pa_threaded_mainloop_get_api(mLoop); }
+    auto getContext() const noexcept { return mContext; }
 
     auto lock() const { return pa_threaded_mainloop_lock(mLoop); }
     auto unlock() const { return pa_threaded_mainloop_unlock(mLoop); }
@@ -329,7 +331,7 @@ public:
     static void streamSuccessCallbackC(pa_stream *stream, int success, void *pdata) noexcept
     { static_cast<PulseMainloop*>(pdata)->streamSuccessCallback(stream, success); }
 
-    void close(pa_context *context, pa_stream *stream=nullptr);
+    void close(pa_stream *stream=nullptr);
 
 
     void deviceSinkCallback(pa_context*, const pa_sink_info *info, int eol) noexcept
@@ -434,31 +436,46 @@ struct MainloopUniqueLock : public std::unique_lock<PulseMainloop> {
             mutex()->signal();
     }
 
-    pa_context *connectContext();
-    pa_stream *connectStream(const char *device_name, pa_context *context, pa_stream_flags_t flags,
+    void connectContext();
+    pa_stream *connectStream(const char *device_name, pa_stream_flags_t flags,
         pa_buffer_attr *attr, pa_sample_spec *spec, pa_channel_map *chanmap, BackendType type);
 };
 using MainloopLockGuard = std::lock_guard<PulseMainloop>;
 
-
-pa_context *MainloopUniqueLock::connectContext()
+PulseMainloop::~PulseMainloop()
 {
-    pa_context *context{pa_context_new(mutex()->getApi(), nullptr)};
-    if(!context) throw al::backend_exception{al::backend_error::OutOfMemory,
+    if(mContext)
+    {
+        MainloopUniqueLock _{*this};
+        pa_context_disconnect(mContext);
+        pa_context_unref(mContext);
+    }
+    if(mLoop)
+        pa_threaded_mainloop_free(mLoop);
+}
+
+
+void MainloopUniqueLock::connectContext()
+{
+    if(mutex()->mContext)
+        return;
+
+    mutex()->mContext = pa_context_new(mutex()->getApi(), nullptr);
+    if(!mutex()->mContext) throw al::backend_exception{al::backend_error::OutOfMemory,
         "pa_context_new() failed"};
 
-    pa_context_set_state_callback(context, [](pa_context *ctx, void *pdata) noexcept
+    pa_context_set_state_callback(mutex()->mContext, [](pa_context *ctx, void *pdata) noexcept
     { return static_cast<MainloopUniqueLock*>(pdata)->contextStateCallback(ctx); }, this);
 
     int err;
-    if((err=pa_context_connect(context, nullptr, pulse_ctx_flags, nullptr)) >= 0)
+    if((err=pa_context_connect(mutex()->mContext, nullptr, pulse_ctx_flags, nullptr)) >= 0)
     {
         pa_context_state_t state;
-        while((state=pa_context_get_state(context)) != PA_CONTEXT_READY)
+        while((state=pa_context_get_state(mutex()->mContext)) != PA_CONTEXT_READY)
         {
             if(!PA_CONTEXT_IS_GOOD(state))
             {
-                err = pa_context_errno(context);
+                err = pa_context_errno(mutex()->mContext);
                 if(err > 0)  err = -err;
                 break;
             }
@@ -466,27 +483,25 @@ pa_context *MainloopUniqueLock::connectContext()
             wait();
         }
     }
-    pa_context_set_state_callback(context, nullptr, nullptr);
+    pa_context_set_state_callback(mutex()->mContext, nullptr, nullptr);
 
     if(err < 0)
     {
-        pa_context_unref(context);
+        pa_context_unref(mutex()->mContext);
+        mutex()->mContext = nullptr;
         throw al::backend_exception{al::backend_error::DeviceError, "Context did not connect (%s)",
             pa_strerror(err)};
     }
-
-    return context;
 }
 
-pa_stream *MainloopUniqueLock::connectStream(const char *device_name, pa_context *context,
-    pa_stream_flags_t flags, pa_buffer_attr *attr, pa_sample_spec *spec, pa_channel_map *chanmap,
-    BackendType type)
+pa_stream *MainloopUniqueLock::connectStream(const char *device_name, pa_stream_flags_t flags,
+    pa_buffer_attr *attr, pa_sample_spec *spec, pa_channel_map *chanmap, BackendType type)
 {
     const char *stream_id{(type==BackendType::Playback) ? "Playback Stream" : "Capture Stream"};
-    pa_stream *stream{pa_stream_new(context, stream_id, spec, chanmap)};
+    pa_stream *stream{pa_stream_new(mutex()->mContext, stream_id, spec, chanmap)};
     if(!stream)
         throw al::backend_exception{al::backend_error::OutOfMemory, "pa_stream_new() failed (%s)",
-            pa_strerror(pa_context_errno(context))};
+            pa_strerror(pa_context_errno(mutex()->mContext))};
 
     pa_stream_set_state_callback(stream, [](pa_stream *strm, void *pdata) noexcept
     { return static_cast<MainloopUniqueLock*>(pdata)->streamStateCallback(strm); }, this);
@@ -506,7 +521,7 @@ pa_stream *MainloopUniqueLock::connectStream(const char *device_name, pa_context
     {
         if(!PA_STREAM_IS_GOOD(state))
         {
-            err = pa_context_errno(context);
+            err = pa_context_errno(mutex()->mContext);
             pa_stream_unref(stream);
             throw al::backend_exception{al::backend_error::DeviceError,
                 "%s did not get ready (%s)", stream_id, pa_strerror(err)};
@@ -519,75 +534,57 @@ pa_stream *MainloopUniqueLock::connectStream(const char *device_name, pa_context
     return stream;
 }
 
-void PulseMainloop::close(pa_context *context, pa_stream *stream)
+void PulseMainloop::close(pa_stream *stream)
 {
-    MainloopUniqueLock _{*this};
-    if(stream)
-    {
-        pa_stream_set_state_callback(stream, nullptr, nullptr);
-        pa_stream_set_moved_callback(stream, nullptr, nullptr);
-        pa_stream_set_write_callback(stream, nullptr, nullptr);
-        pa_stream_set_buffer_attr_callback(stream, nullptr, nullptr);
-        pa_stream_disconnect(stream);
-        pa_stream_unref(stream);
-    }
+    if(!stream)
+        return;
 
-    pa_context_disconnect(context);
-    pa_context_unref(context);
+    MainloopUniqueLock _{*this};
+    pa_stream_set_state_callback(stream, nullptr, nullptr);
+    pa_stream_set_moved_callback(stream, nullptr, nullptr);
+    pa_stream_set_write_callback(stream, nullptr, nullptr);
+    pa_stream_set_buffer_attr_callback(stream, nullptr, nullptr);
+    pa_stream_disconnect(stream);
+    pa_stream_unref(stream);
 }
 
 
 void PulseMainloop::probePlaybackDevices()
 {
-    pa_context *context{};
-
     PlaybackDevices.clear();
     try {
         MainloopUniqueLock plock{*this};
         auto sink_callback = [](pa_context *ctx, const pa_sink_info *info, int eol, void *pdata) noexcept
         { return static_cast<PulseMainloop*>(pdata)->deviceSinkCallback(ctx, info, eol); };
 
-        context = plock.connectContext();
-        pa_operation *op{pa_context_get_sink_info_by_name(context, nullptr, sink_callback, this)};
+        pa_operation *op{pa_context_get_sink_info_by_name(mContext, nullptr, sink_callback, this)};
         plock.waitForOperation(op);
 
-        op = pa_context_get_sink_info_list(context, sink_callback, this);
+        op = pa_context_get_sink_info_list(mContext, sink_callback, this);
         plock.waitForOperation(op);
-
-        pa_context_disconnect(context);
-        pa_context_unref(context);
-        context = nullptr;
     }
     catch(std::exception &e) {
         ERR("Error enumerating devices: %s\n", e.what());
-        if(context) close(context);
     }
 }
 
 void PulseMainloop::probeCaptureDevices()
 {
-    pa_context *context{};
-
     CaptureDevices.clear();
     try {
         MainloopUniqueLock plock{*this};
         auto src_callback = [](pa_context *ctx, const pa_source_info *info, int eol, void *pdata) noexcept
         { return static_cast<PulseMainloop*>(pdata)->deviceSourceCallback(ctx, info, eol); };
 
-        context = plock.connectContext();
-        pa_operation *op{pa_context_get_source_info_by_name(context, nullptr, src_callback, this)};
+        pa_operation *op{pa_context_get_source_info_by_name(mContext, nullptr, src_callback,
+            this)};
         plock.waitForOperation(op);
 
-        op = pa_context_get_source_info_list(context, src_callback, this);
+        op = pa_context_get_source_info_list(mContext, src_callback, this);
         plock.waitForOperation(op);
-
-        pa_context_disconnect(context);
-        pa_context_unref(context);
-        context = nullptr;
     }
     catch(std::exception &e) {
         ERR("Error enumerating devices: %s\n", e.what());
-        if(context) close(context);
     }
 }
 
@@ -622,7 +619,6 @@ struct PulsePlayback final : public BackendBase {
     pa_sample_spec mSpec;
 
     pa_stream *mStream{nullptr};
-    pa_context *mContext{nullptr};
 
     uint mFrameSize{0u};
 
@@ -630,14 +626,7 @@ struct PulsePlayback final : public BackendBase {
 };
 
 PulsePlayback::~PulsePlayback()
-{
-    if(!mContext)
-        return;
-
-    mMainloop.close(mContext, mStream);
-    mContext = nullptr;
-    mStream = nullptr;
-}
+{ if(mStream) mMainloop.close(mStream); }
 
 
 void PulsePlayback::bufferAttrCallback(pa_stream *stream) noexcept
@@ -772,7 +761,7 @@ void PulsePlayback::open(const char *name)
     }
 
     MainloopUniqueLock plock{mMainloop};
-    mContext = plock.connectContext();
+    plock.connectContext();
 
     pa_stream_flags_t flags{PA_STREAM_START_CORKED | PA_STREAM_FIX_FORMAT | PA_STREAM_FIX_RATE |
         PA_STREAM_FIX_CHANNELS};
@@ -790,7 +779,7 @@ void PulsePlayback::open(const char *name)
         if(defname) pulse_name = defname->c_str();
     }
     TRACE("Connecting to \"%s\"\n", pulse_name ? pulse_name : "(default)");
-    mStream = plock.connectStream(pulse_name, mContext, flags, nullptr, &spec, nullptr,
+    mStream = plock.connectStream(pulse_name, flags, nullptr, &spec, nullptr,
         BackendType::Playback);
 
     pa_stream_set_moved_callback(mStream, [](pa_stream *stream, void *pdata) noexcept
@@ -803,7 +792,7 @@ void PulsePlayback::open(const char *name)
     {
         auto name_callback = [](pa_context *context, const pa_sink_info *info, int eol, void *pdata) noexcept
         { return static_cast<PulsePlayback*>(pdata)->sinkNameCallback(context, info, eol); };
-        pa_operation *op{pa_context_get_sink_info_by_name(mContext,
+        pa_operation *op{pa_context_get_sink_info_by_name(mMainloop.getContext(),
             pa_stream_get_device_name(mStream), name_callback, this)};
         plock.waitForOperation(op);
     }
@@ -829,7 +818,8 @@ bool PulsePlayback::reset()
 
     auto info_callback = [](pa_context *context, const pa_sink_info *info, int eol, void *pdata) noexcept
     { return static_cast<PulsePlayback*>(pdata)->sinkInfoCallback(context, info, eol); };
-    pa_operation *op{pa_context_get_sink_info_by_name(mContext, deviceName, info_callback, this)};
+    pa_operation *op{pa_context_get_sink_info_by_name(mMainloop.getContext(), deviceName,
+        info_callback, this)};
     plock.waitForOperation(op);
 
     pa_stream_flags_t flags{PA_STREAM_START_CORKED | PA_STREAM_INTERPOLATE_TIMING |
@@ -916,7 +906,7 @@ bool PulsePlayback::reset()
     mAttr.minreq = mDevice->UpdateSize * frame_size;
     mAttr.fragsize = ~0u;
 
-    mStream = plock.connectStream(deviceName, mContext, flags, &mAttr, &mSpec, &chanmap,
+    mStream = plock.connectStream(deviceName, flags, &mAttr, &mSpec, &chanmap,
         BackendType::Playback);
 
     pa_stream_set_state_callback(mStream, [](pa_stream *stream, void *pdata) noexcept
@@ -1055,20 +1045,12 @@ struct PulseCapture final : public BackendBase {
     pa_sample_spec mSpec{};
 
     pa_stream *mStream{nullptr};
-    pa_context *mContext{nullptr};
 
     DEF_NEWDEL(PulseCapture)
 };
 
 PulseCapture::~PulseCapture()
-{
-    if(!mContext)
-        return;
-
-    mMainloop.close(mContext, mStream);
-    mContext = nullptr;
-    mStream = nullptr;
-}
+{ if(mStream) mMainloop.close(mStream); }
 
 
 void PulseCapture::streamStateCallback(pa_stream *stream) noexcept
@@ -1122,7 +1104,7 @@ void PulseCapture::open(const char *name)
     }
 
     MainloopUniqueLock plock{mMainloop};
-    mContext = plock.connectContext();
+    plock.connectContext();
 
     pa_channel_map chanmap{};
     switch(mDevice->FmtChans)
@@ -1194,7 +1176,7 @@ void PulseCapture::open(const char *name)
         flags |= PA_STREAM_DONT_MOVE;
 
     TRACE("Connecting to \"%s\"\n", pulse_name ? pulse_name : "(default)");
-    mStream = plock.connectStream(pulse_name, mContext, flags, &mAttr, &mSpec, &chanmap,
+    mStream = plock.connectStream(pulse_name, flags, &mAttr, &mSpec, &chanmap,
         BackendType::Capture);
 
     pa_stream_set_moved_callback(mStream, [](pa_stream *stream, void *pdata) noexcept
@@ -1208,7 +1190,7 @@ void PulseCapture::open(const char *name)
     {
         auto name_callback = [](pa_context *context, const pa_source_info *info, int eol, void *pdata) noexcept
         { return static_cast<PulseCapture*>(pdata)->sourceNameCallback(context, info, eol); };
-        pa_operation *op{pa_context_get_source_info_by_name(mContext,
+        pa_operation *op{pa_context_get_source_info_by_name(mMainloop.getContext(),
             pa_stream_get_device_name(mStream), name_callback, this)};
         plock.waitForOperation(op);
     }
@@ -1281,7 +1263,7 @@ void PulseCapture::captureSamples(std::byte *buffer, uint samples)
         if(pa_stream_peek(mStream, &capbuf, &caplen) < 0) UNLIKELY
         {
             mDevice->handleDisconnect("Failed retrieving capture samples: %s",
-                pa_strerror(pa_context_errno(mContext)));
+                pa_strerror(pa_context_errno(mMainloop.getContext())));
             break;
         }
         plock.unlock();
@@ -1412,9 +1394,7 @@ bool PulseBackendFactory::init()
         }
 
         MainloopUniqueLock plock{gGlobalMainloop};
-        pa_context *context{plock.connectContext()};
-        pa_context_disconnect(context);
-        pa_context_unref(context);
+        plock.connectContext();
         return true;
     }
     catch(...) {

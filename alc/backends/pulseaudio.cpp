@@ -452,11 +452,13 @@ struct MainloopUniqueLock : public std::unique_lock<PulseMainloop> {
             if(eventFacility == PA_SUBSCRIPTION_EVENT_SINK
                 || eventFacility == PA_SUBSCRIPTION_EVENT_SOURCE)
             {
+                const auto deviceType = (eventFacility == PA_SUBSCRIPTION_EVENT_SINK)
+                    ? alc::DeviceType::Playback : alc::DeviceType::Capture;
                 const auto eventType = (t & PA_SUBSCRIPTION_EVENT_TYPE_MASK);
                 if(eventType == PA_SUBSCRIPTION_EVENT_NEW)
-                    alc::Event(alc::EventType::DeviceAdded, "Device added");
+                    alc::Event(alc::EventType::DeviceAdded, deviceType, "Device added");
                 else if(eventType == PA_SUBSCRIPTION_EVENT_REMOVE)
-                    alc::Event(alc::EventType::DeviceRemoved, "Device removed");
+                    alc::Event(alc::EventType::DeviceRemoved, deviceType, "Device removed");
             }
         };
         pa_context_set_subscribe_callback(mutex()->mContext, handler, nullptr);

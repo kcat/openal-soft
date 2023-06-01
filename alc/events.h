@@ -19,6 +19,11 @@ enum class EventType : uint8_t {
     Count
 };
 
+enum class DeviceType : ALCenum {
+    Playback = ALC_PLAYBACK_DEVICE_SOFT,
+    Capture = ALC_CAPTURE_DEVICE_SOFT,
+};
+
 inline std::bitset<al::to_underlying(EventType::Count)> EventsEnabled{0};
 
 inline std::mutex EventMutex;
@@ -26,10 +31,10 @@ inline std::mutex EventMutex;
 inline ALCEVENTPROCTYPESOFT EventCallback{};
 inline void *EventUserPtr{};
 
-void Event(alc::EventType eventType, ALCdevice *device, std::string_view message) noexcept;
+void Event(EventType eventType, DeviceType deviceType, ALCdevice *device, std::string_view message) noexcept;
 
-inline void Event(alc::EventType eventType, std::string_view message) noexcept
-{ Event(eventType, nullptr, message); }
+inline void Event(EventType eventType, DeviceType deviceType, std::string_view message) noexcept
+{ Event(eventType, deviceType, nullptr, message); }
 
 } // namespace alc
 

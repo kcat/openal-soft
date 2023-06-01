@@ -445,15 +445,17 @@ ALenum AL_APIENTRY EAXGetBufferModeDirect(ALCcontext *context, ALuint buffer, AL
 
 #ifndef ALC_SOFT_system_events
 #define ALC_SOFT_system_events
-#define ALC_EVENT_TYPE_DEFAULT_DEVICE_CHANGED_SOFT 0x19CF
-#define ALC_EVENT_TYPE_DEVICE_ADDED_SOFT         0x19D0
-#define ALC_EVENT_TYPE_DEVICE_REMOVED_SOFT       0x19D1
-typedef void (ALC_APIENTRY*ALCEVENTPROCTYPESOFT)(ALCenum eventType, ALCdevice *device,
-    ALCsizei length, const ALCchar *message, void *userParam) ALC_API_NOEXCEPT17;
-typedef ALCboolean (ALC_APIENTRY*LPALCEVENTCONTROLSOFT)(ALCsizei count, const ALCenum *types, ALCboolean enable) ALC_API_NOEXCEPT17;
+#define ALC_PLAYBACK_DEVICE_SOFT                 0x19CF
+#define ALC_CAPTURE_DEVICE_SOFT                  0x19D0
+#define ALC_EVENT_TYPE_DEFAULT_DEVICE_CHANGED_SOFT 0x19D1
+#define ALC_EVENT_TYPE_DEVICE_ADDED_SOFT         0x19D2
+#define ALC_EVENT_TYPE_DEVICE_REMOVED_SOFT       0x19D3
+typedef void (ALC_APIENTRY*ALCEVENTPROCTYPESOFT)(ALCenum eventType, ALCenum deviceType,
+    ALCdevice *device, ALCsizei length, const ALCchar *message, void *userParam) ALC_API_NOEXCEPT17;
+typedef ALCboolean (ALC_APIENTRY*LPALCEVENTCONTROLSOFT)(ALCsizei count, const ALCenum *events, ALCboolean enable) ALC_API_NOEXCEPT17;
 typedef void (ALC_APIENTRY*LPALCEVENTCALLBACKSOFT)(ALCEVENTPROCTYPESOFT callback, void *userParam) ALC_API_NOEXCEPT17;
 #ifdef AL_ALEXT_PROTOTYPES
-ALCboolean ALC_APIENTRY alcEventControlSOFT(ALCsizei count, const ALCenum *types, ALCboolean enable) ALC_API_NOEXCEPT;
+ALCboolean ALC_APIENTRY alcEventControlSOFT(ALCsizei count, const ALCenum *events, ALCboolean enable) ALC_API_NOEXCEPT;
 void ALC_APIENTRY alcEventCallbackSOFT(ALCEVENTPROCTYPESOFT callback, void *userParam) ALC_API_NOEXCEPT;
 #endif
 #endif

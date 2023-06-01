@@ -578,6 +578,16 @@ struct DeviceNode {
     void parseSampleRate(const spa_pod *value) noexcept;
     void parsePositions(const spa_pod *value) noexcept;
     void parseChannelCount(const spa_pod *value) noexcept;
+
+    void callEvent(alc::EventType type, std::string_view message)
+    {
+        /* Source nodes aren't recognized for playback, only Sink and Duplex
+         * nodes are. All node types are recognized for capture.
+         */
+        if(mType != NodeType::Source)
+            alc::Event(type, alc::DeviceType::Playback, message);
+        alc::Event(type, alc::DeviceType::Capture, message);
+    }
 };
 std::vector<DeviceNode> DeviceNode::sList;
 std::string DefaultSinkDevice;
@@ -641,7 +651,7 @@ void DeviceNode::Remove(uint32_t id)
         if(gEventHandler.initIsDone(std::memory_order_relaxed))
         {
             const std::string msg{"Device removed: "+n.mName};
-            alc::Event(alc::EventType::DeviceRemoved, msg);
+            n.callEvent(alc::EventType::DeviceRemoved, msg);
         }
         return true;
     };
@@ -940,10 +950,10 @@ void NodeProxy::infoCallback(const pw_node_info *info) noexcept
                 if(!node.mName.empty())
                 {
                     const std::string msg{"Device removed: "+node.mName};
-                    alc::Event(alc::EventType::DeviceRemoved, msg);
+                    node.callEvent(alc::EventType::DeviceRemoved, msg);
                 }
                 const std::string msg{"Device added: "+name};
-                alc::Event(alc::EventType::DeviceAdded, msg);
+                node.callEvent(alc::EventType::DeviceAdded, msg);
             }
             node.mName = std::move(name);
         }
@@ -1065,7 +1075,8 @@ int MetadataProxy::propertyCallback(uint32_t id, const char *key, const char *ty
                         auto entry = DeviceNode::FindByDevName(*propValue);
                         const std::string msg{"Default playback device changed: "+
                             (entry ? entry->mName : std::string{})};
-                        alc::Event(alc::EventType::DefaultDeviceChanged, msg);
+                        alc::Event(alc::EventType::DefaultDeviceChanged, alc::DeviceType::Playback,
+                            msg);
                     }
                     DefaultSinkDevice = std::move(*propValue);
                 }
@@ -1079,7 +1090,8 @@ int MetadataProxy::propertyCallback(uint32_t id, const char *key, const char *ty
                         auto entry = DeviceNode::FindByDevName(*propValue);
                         const std::string msg{"Default capture device changed: "+
                             (entry ? entry->mName : std::string{})};
-                        alc::Event(alc::EventType::DefaultDeviceChanged, msg);
+                        alc::Event(alc::EventType::DefaultDeviceChanged, alc::DeviceType::Capture,
+                            msg);
                     }
                     DefaultSourceDevice = std::move(*propValue);
                 }

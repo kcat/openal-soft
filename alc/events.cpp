@@ -40,17 +40,17 @@ ALCenum EnumFromEventType(const alc::EventType type)
 
 namespace alc {
 
-void Event(EventType eventType, ALCdevice *device, std::string_view message) noexcept
+void Event(EventType eventType, DeviceType deviceType, ALCdevice *device, std::string_view message) noexcept
 {
     auto eventlock = std::unique_lock{EventMutex};
     if(EventCallback && EventsEnabled.test(al::to_underlying(eventType)))
-        EventCallback(EnumFromEventType(eventType), device,
+        EventCallback(EnumFromEventType(eventType), al::to_underlying(deviceType), device,
             static_cast<ALCsizei>(message.length()), message.data(), EventUserPtr);
 }
 
 } // namespace alc
 
-FORCE_ALIGN ALCboolean ALC_APIENTRY alcEventControlSOFT(ALCsizei count, const ALCenum *types,
+FORCE_ALIGN ALCboolean ALC_APIENTRY alcEventControlSOFT(ALCsizei count, const ALCenum *events,
     ALCboolean enable) noexcept
 {
     if(enable != ALC_FALSE && enable != ALC_TRUE)
@@ -65,14 +65,14 @@ FORCE_ALIGN ALCboolean ALC_APIENTRY alcEventControlSOFT(ALCsizei count, const AL
     }
     if(count == 0)
         return ALC_TRUE;
-    if(!types)
+    if(!events)
     {
         alcSetError(nullptr, ALC_INVALID_VALUE);
         return ALC_FALSE;
     }
 
     std::bitset<al::to_underlying(alc::EventType::Count)> eventSet{0};
-    for(ALCenum type : al::span{types, static_cast<ALCuint>(count)})
+    for(ALCenum type : al::span{events, static_cast<ALCuint>(count)})
     {
         auto etype = GetEventType(type);
         if(!etype)

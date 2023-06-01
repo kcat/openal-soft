@@ -273,39 +273,39 @@ void EnumerateDevices(std::vector<DeviceEntry> &list, bool isCapture)
     newdevs.swap(list);
 }
 
-struct DeviceHelper
-{
-public:
+struct DeviceHelper {
     DeviceHelper()
     {
-        AudioObjectPropertyAddress addr = {kAudioHardwarePropertyDefaultOutputDevice,
-                                           kAudioObjectPropertyScopeGlobal, kAudioObjectPropertyElementMain};
+        AudioObjectPropertyAddress addr{kAudioHardwarePropertyDefaultOutputDevice,
+            kAudioObjectPropertyScopeGlobal, kAudioObjectPropertyElementMain};
         OSStatus status = AudioObjectAddPropertyListener(kAudioObjectSystemObject, &addr, DeviceListenerProc, nil);
         if (status != noErr)
             ERR("AudioObjectAddPropertyListener fail: %d", status);
     }
     ~DeviceHelper()
     {
-        AudioObjectPropertyAddress addr = {kAudioHardwarePropertyDefaultOutputDevice,
-                                           kAudioObjectPropertyScopeGlobal, kAudioObjectPropertyElementMain};
+        AudioObjectPropertyAddress addr{kAudioHardwarePropertyDefaultOutputDevice,
+            kAudioObjectPropertyScopeGlobal, kAudioObjectPropertyElementMain};
         OSStatus status = AudioObjectRemovePropertyListener(kAudioObjectSystemObject, &addr, DeviceListenerProc, nil);
         if (status != noErr)
             ERR("AudioObjectRemovePropertyListener fail: %d", status);
     }
 
-    static OSStatus DeviceListenerProc(AudioObjectID /*inObjectID*/,
-                                        UInt32 inNumberAddresses,
-                                        const AudioObjectPropertyAddress *inAddresses,
-                                        void* /*inClientData*/)
+    static OSStatus DeviceListenerProc(AudioObjectID /*inObjectID*/, UInt32 inNumberAddresses,
+        const AudioObjectPropertyAddress *inAddresses, void* /*inClientData*/)
     {
-        for (UInt32 i = 0; i < inNumberAddresses; ++i)
+        for(UInt32 i = 0; i < inNumberAddresses; ++i)
         {
-            switch (inAddresses[i].mSelector)
+            switch(inAddresses[i].mSelector)
             {
             case kAudioHardwarePropertyDefaultOutputDevice:
             case kAudioHardwarePropertyDefaultSystemOutputDevice:
+                alc::Event(alc::EventType::DefaultDeviceChanged, alc::DeviceType::Playback,
+                    "Default playback device changed: "+std::to_string(inAddresses[i].mSelector));
+                break;
             case kAudioHardwarePropertyDefaultInputDevice:
-                alc::Event(alc::EventType::DefaultDeviceChanged, "Default device changed: "+std::to_string(inAddresses[i].mSelector));
+                alc::Event(alc::EventType::DefaultDeviceChanged, alc::DeviceType::Capture,
+                    "Default capture device changed: "+std::to_string(inAddresses[i].mSelector));
                 break;
             }
         }

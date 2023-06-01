@@ -237,23 +237,33 @@ public:
 #if defined(ALSOFT_UWP)
         mActiveClientEvent = CreateEventW(nullptr, FALSE, FALSE, nullptr);
 
-        auto cb = [](const WCHAR *devid)
+        auto cb = [](alc::DeviceType type, const WCHAR *devid)
         {
             const std::string msg{"Default device changed: "+wstr_to_utf8(devid)};
-            alc::Event(alc::EventType::DefaultDeviceChanged, msg);
+            alc::Event(alc::EventType::DefaultDeviceChanged, type, msg);
         };
 
         mRenderDeviceChangedToken = MediaDevice::DefaultAudioRenderDeviceChanged +=
             ref new TypedEventHandler<Platform::Object ^, DefaultAudioRenderDeviceChangedEventArgs ^>(
                 [this,cb](Platform::Object ^ sender, DefaultAudioRenderDeviceChangedEventArgs ^ args) {
-                if (args->Role == AudioDeviceRole::Default)
-                    cb(args->Id->Data());
+                if(args->Role == AudioDeviceRole::Default)
+                {
+                    const std::string msg{"Default playback device changed: "+
+                        wstr_to_utf8(args->Id->Data())};
+                    alc::Event(alc::EventType::DefaultDeviceChanged, alc::DeviceType::Playback,
+                        msg);
+                }
             });
         mCaptureDeviceChangedToken = MediaDevice::DefaultAudioCaptureDeviceChanged +=
             ref new TypedEventHandler<Platform::Object ^, DefaultAudioCaptureDeviceChangedEventArgs ^>(
                 [this,cb](Platform::Object ^ sender, DefaultAudioCaptureDeviceChangedEventArgs ^ args) {
-                if (args->Role == AudioDeviceRole::Default)
-                    cb(args->Id->Data());
+                if(args->Role == AudioDeviceRole::Default)
+                {
+                    const std::string msg{"Default capture device changed: "+
+                        wstr_to_utf8(args->Id->Data())};
+                    alc::Event(alc::EventType::DefaultDeviceChanged, alc::DeviceType::Capture,
+                        msg);
+                }
             });
 #else
         HRESULT hr{CoCreateInstance(CLSID_MMDeviceEnumerator, nullptr, CLSCTX_INPROC_SERVER,
@@ -370,10 +380,20 @@ public:
     STDMETHODIMP OnPropertyValueChanged(LPCWSTR /*pwstrDeviceId*/, const PROPERTYKEY /*key*/) noexcept override { return S_OK; }
     STDMETHODIMP OnDefaultDeviceChanged(EDataFlow flow, ERole role, LPCWSTR pwstrDefaultDeviceId) noexcept override
     {
-        if(role == eMultimedia && (flow == eRender || flow == eCapture))
+        if(role != eMultimedia)
+            return S_OK;
+
+        if(flow == eRender)
         {
-            const std::string msg{"Default device changed: "+wstr_to_utf8(pwstrDefaultDeviceId)};
-            alc::Event(alc::EventType::DefaultDeviceChanged, msg);
+            const std::string msg{"Default playback device changed: "+
+                wstr_to_utf8(pwstrDefaultDeviceId)};
+            alc::Event(alc::EventType::DefaultDeviceChanged, alc::DeviceType::Playback, msg);
+        }
+        else if(flow == eCapture)
+        {
+            const std::string msg{"Default capture device changed: "+
+                wstr_to_utf8(pwstrDefaultDeviceId)};
+            alc::Event(alc::EventType::DefaultDeviceChanged, alc::DeviceType::Capture, msg);
         }
         return S_OK;
     }

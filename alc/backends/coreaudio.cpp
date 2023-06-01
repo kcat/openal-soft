@@ -311,7 +311,7 @@ public:
     }
 };
 
-static std::unique_ptr<DeviceHelper> sDeviceHelper;
+static std::optional<std::unique_ptr<DeviceHelper>> sDeviceHelper;
 
 #else
 
@@ -960,7 +960,7 @@ BackendFactory &CoreAudioBackendFactory::getFactory()
 bool CoreAudioBackendFactory::init() 
 { 
 #if CAN_ENUMERATE
-    sDeviceHelper.reset(new DeviceHelper());
+    sDeviceHelper = std::make_unique<DeviceHelper>();
 #endif
     return true; 
 }

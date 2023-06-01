@@ -328,13 +328,12 @@ void LoadDriverList(void)
     WCHAR cwd_path[MAX_PATH+1] = L"";
     WCHAR proc_path[MAX_PATH+1] = L"";
     WCHAR sys_path[MAX_PATH+1] = L"";
-    int len;
 
     if(GetLoadedModuleDirectory(L"OpenAL32.dll", dll_path, MAX_PATH))
         TRACE("Got DLL path %ls\n", dll_path);
 
     GetCurrentDirectoryW(MAX_PATH, cwd_path);
-    len = wcslen(cwd_path);
+    auto len = wcslen(cwd_path);
     if(len > 0 && (cwd_path[len-1] == '\\' || cwd_path[len-1] == '/'))
         cwd_path[len-1] = '\0';
     TRACE("Got current working directory %ls\n", cwd_path);

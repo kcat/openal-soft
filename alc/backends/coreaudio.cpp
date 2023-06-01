@@ -38,6 +38,7 @@
 #include "core/device.h"
 #include "core/logging.h"
 #include "ringbuffer.h"
+#include "alc/events.h"
 
 #include <AudioUnit/AudioUnit.h>
 #include <AudioToolbox/AudioToolbox.h>
@@ -291,10 +292,10 @@ public:
             ERR("AudioObjectRemovePropertyListener fail: %d", status);
     }
 
-    static OSStatus DeviceListenerProc(AudioObjectID inObjectID,
+    static OSStatus DeviceListenerProc(AudioObjectID /*inObjectID*/,
                                         UInt32 inNumberAddresses,
                                         const AudioObjectPropertyAddress *inAddresses,
-                                        void *__nullable inClientData)
+                                        void* /*inClientData*/)
     {
         for (UInt32 i = 0; i < inNumberAddresses; ++i)
         {

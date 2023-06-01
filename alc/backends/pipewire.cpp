@@ -924,9 +924,18 @@ void NodeProxy::infoCallback(const pw_node_info *info) noexcept
 
         DeviceNode &node = DeviceNode::Add(info->id);
         node.mSerial = serial_id;
+        /* This method is called both to notify about a new sink/source node,
+         * and update properties for the node. It's unclear what properties can
+         * change for an existing node without being removed first, so err on
+         * the side of caution: send a DeviceAdded event when the name differs,
+         * and send a DeviceRemoved event if it had a name that's being
+         * replaced.
+         *
+         * This is overkill if the name or devname can't change.
+         */
         if(node.mName != name)
         {
-            if(gEventHandler.mInitDone.load(std::memory_order_relaxed))
+            if(gEventHandler.initIsDone(std::memory_order_relaxed))
             {
                 if(!node.mName.empty())
                 {

@@ -32,6 +32,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <vector>
+#include <optional>
 
 #include "alnumeric.h"
 #include "core/converter.h"
@@ -311,7 +312,7 @@ public:
     }
 };
 
-static std::optional<std::unique_ptr<DeviceHelper>> sDeviceHelper;
+static std::optional<DeviceHelper> sDeviceHelper;
 
 #else
 
@@ -960,7 +961,7 @@ BackendFactory &CoreAudioBackendFactory::getFactory()
 bool CoreAudioBackendFactory::init() 
 { 
 #if CAN_ENUMERATE
-    sDeviceHelper = std::make_unique<DeviceHelper>();
+    sDeviceHelper.emplace();
 #endif
     return true; 
 }

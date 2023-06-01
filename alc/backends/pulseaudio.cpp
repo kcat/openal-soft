@@ -41,6 +41,7 @@
 
 #include "albit.h"
 #include "alc/alconfig.h"
+#include "alc/events.h"
 #include "almalloc.h"
 #include "alnumeric.h"
 #include "alspan.h"
@@ -65,6 +66,8 @@ using uint = unsigned int;
     MAGIC(pa_context_get_state);                                              \
     MAGIC(pa_context_disconnect);                                             \
     MAGIC(pa_context_set_state_callback);                                     \
+    MAGIC(pa_context_set_subscribe_callback);                                 \
+    MAGIC(pa_context_subscribe);                                              \
     MAGIC(pa_context_errno);                                                  \
     MAGIC(pa_context_connect);                                                \
     MAGIC(pa_context_get_server_info);                                        \
@@ -136,6 +139,8 @@ PULSE_FUNCS(MAKE_FUNC)
 #define pa_context_get_state ppa_context_get_state
 #define pa_context_disconnect ppa_context_disconnect
 #define pa_context_set_state_callback ppa_context_set_state_callback
+#define pa_context_set_subscribe_callback ppa_context_set_subscribe_callback
+#define pa_context_subscribe ppa_context_subscribe
 #define pa_context_errno ppa_context_errno
 #define pa_context_connect ppa_context_connect
 #define pa_context_get_server_info ppa_context_get_server_info
@@ -269,6 +274,9 @@ constexpr pa_context_flags_t& operator|=(pa_context_flags_t &lhs, pa_context_fla
     lhs = lhs | rhs;
     return lhs;
 }
+
+constexpr pa_subscription_mask_t operator|(pa_subscription_mask_t lhs, pa_subscription_mask_t rhs)
+{ return pa_subscription_mask_t(lhs | al::to_underlying(rhs)); }
 
 
 struct DevMap {
@@ -419,6 +427,39 @@ struct MainloopUniqueLock : public std::unique_lock<PulseMainloop> {
             wait([op]{ return pa_operation_get_state(op) != PA_OPERATION_RUNNING; });
             pa_operation_unref(op);
         }
+    }
+
+
+    void setEventHandler()
+    {
+        pa_operation *op{pa_context_subscribe(mutex()->mContext,
+            PA_SUBSCRIPTION_MASK_SINK | PA_SUBSCRIPTION_MASK_SOURCE,
+            [](pa_context*, int, void *pdata) noexcept
+            { static_cast<PulseMainloop*>(pdata)->signal(); },
+            mutex())};
+        waitForOperation(op);
+
+        /* Watch for device added/removed events.
+         *
+         * TODO: Also track the "default" device, in as much as PulseAudio has
+         * the concept of a default device (whatever device is opened when not
+         * specifying a specific sink or source name). There doesn't seem to be
+         * an event for this.
+         */
+        auto handler = [](pa_context*, pa_subscription_event_type_t t, uint32_t, void*) noexcept
+        {
+            const auto eventFacility = (t & PA_SUBSCRIPTION_EVENT_FACILITY_MASK);
+            if(eventFacility == PA_SUBSCRIPTION_EVENT_SINK
+                || eventFacility == PA_SUBSCRIPTION_EVENT_SOURCE)
+            {
+                const auto eventType = (t & PA_SUBSCRIPTION_EVENT_TYPE_MASK);
+                if(eventType == PA_SUBSCRIPTION_EVENT_NEW)
+                    alc::Event(alc::EventType::DeviceAdded, "Device added");
+                else if(eventType == PA_SUBSCRIPTION_EVENT_REMOVE)
+                    alc::Event(alc::EventType::DeviceRemoved, "Device removed");
+            }
+        };
+        pa_context_set_subscribe_callback(mutex()->mContext, handler, nullptr);
     }
 
 
@@ -1395,6 +1436,7 @@ bool PulseBackendFactory::init()
 
         MainloopUniqueLock plock{gGlobalMainloop};
         plock.connectContext();
+        plock.setEventHandler();
         return true;
     }
     catch(...) {

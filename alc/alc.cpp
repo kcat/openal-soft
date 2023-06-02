@@ -3228,11 +3228,17 @@ ALC_API ALCboolean ALC_APIENTRY alcIsRenderFormatSupportedSOFT(ALCdevice *device
  * Renders some samples into a buffer, using the format last set by the
  * attributes given to alcCreateContext.
  */
-FORCE_ALIGN ALC_API void ALC_APIENTRY alcRenderSamplesSOFT(ALCdevice *device, ALCvoid *buffer, ALCsizei samples) noexcept
+#if defined(__GNUC__) && defined(__i386__)
+/* Needed on x86-32 even without SSE codegen, since the mixer may still use SSE
+ * and GCC assumes the stack is aligned (x86-64 ABI guarantees alignment).
+ */
+[[gnu::force_align_arg_pointer]]
+#endif
+ALC_API void ALC_APIENTRY alcRenderSamplesSOFT(ALCdevice *device, ALCvoid *buffer, ALCsizei samples) noexcept
 {
-    if(!device || device->Type != DeviceType::Loopback)
+    if(!device || device->Type != DeviceType::Loopback) UNLIKELY
         alcSetError(device, ALC_INVALID_DEVICE);
-    else if(samples < 0 || (samples > 0 && buffer == nullptr))
+    else if(samples < 0 || (samples > 0 && buffer == nullptr)) UNLIKELY
         alcSetError(device, ALC_INVALID_VALUE);
     else
         device->renderSamples(buffer, static_cast<uint>(samples), device->channelsFromFmt());

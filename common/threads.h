@@ -1,19 +1,6 @@
 #ifndef AL_THREADS_H
 #define AL_THREADS_H
 
-#if defined(__GNUC__) && defined(__i386__)
-/* force_align_arg_pointer may be required for proper stack alignment when SSE
- * code is used. GCC generates code with the assumption the stack pointer is
- * suitably aligned, while some systems (Windows, QNX) do not guarantee non-
- * exported functions will be properly aligned when called externally, and
- * older apps for other systems may have been built with a lower stack
- * alignment than expected by newer builds.
- */
-#define FORCE_ALIGN __attribute__((force_align_arg_pointer))
-#else
-#define FORCE_ALIGN
-#endif
-
 #if defined(__APPLE__)
 #include <AvailabilityMacros.h>
 #include <TargetConditionals.h>

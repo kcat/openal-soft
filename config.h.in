@@ -1,3 +1,6 @@
+/* Define the alignment attribute for externally callable functions. */
+#define FORCE_ALIGN @ALSOFT_FORCE_ALIGN@
+
 /* Define if deprecated EAX extensions are enabled */
 #cmakedefine ALSOFT_EAX
 

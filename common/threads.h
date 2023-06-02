@@ -14,8 +14,6 @@
 #include <semaphore.h>
 #endif
 
-void althrd_setname(const char *name);
-
 namespace al {
 
 class semaphore {

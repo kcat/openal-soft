@@ -30,10 +30,10 @@
 #include <functional>
 #include <thread>
 
-#include "core/device.h"
+#include "althrd_setname.h"
 #include "almalloc.h"
+#include "core/device.h"
 #include "core/helpers.h"
-#include "threads.h"
 
 
 namespace {

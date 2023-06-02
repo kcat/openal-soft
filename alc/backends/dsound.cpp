@@ -47,6 +47,7 @@
 #include "albit.h"
 #include "alnumeric.h"
 #include "alspan.h"
+#include "althrd_setname.h"
 #include "comptr.h"
 #include "core/device.h"
 #include "core/helpers.h"
@@ -54,7 +55,6 @@
 #include "dynload.h"
 #include "ringbuffer.h"
 #include "strutils.h"
-#include "threads.h"
 
 /* MinGW-w64 needs this for some unknown reason now. */
 using LPCWAVEFORMATEX = const WAVEFORMATEX*;

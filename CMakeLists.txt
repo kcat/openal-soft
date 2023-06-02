@@ -621,6 +621,8 @@ set(COMMON_OBJS
     common/alspan.h
     common/alstring.cpp
     common/alstring.h
+    common/althrd_setname.cpp
+    common/althrd_setname.h
     common/altraits.h
     common/atomic.h
     common/comptr.h

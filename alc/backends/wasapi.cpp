@@ -61,6 +61,7 @@
 #include "alc/events.h"
 #include "alnumeric.h"
 #include "alspan.h"
+#include "althrd_setname.h"
 #include "comptr.h"
 #include "core/converter.h"
 #include "core/device.h"
@@ -68,7 +69,6 @@
 #include "core/logging.h"
 #include "ringbuffer.h"
 #include "strutils.h"
-#include "threads.h"
 
 #if defined(ALSOFT_UWP)
 #include <collection.h>

@@ -41,10 +41,10 @@
 #include <functional>
 
 #include "alc/alconfig.h"
+#include "althrd_setname.h"
 #include "core/device.h"
 #include "core/helpers.h"
 #include "core/logging.h"
-#include "threads.h"
 
 #include <sys/audioio.h>
 

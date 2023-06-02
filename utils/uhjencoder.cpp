@@ -25,8 +25,8 @@
 #include "config.h"
 
 #include <array>
+#include <cinttypes>
 #include <cstring>
-#include <inttypes.h>
 #include <memory>
 #include <stddef.h>
 #include <string>

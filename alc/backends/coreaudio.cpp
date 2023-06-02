@@ -22,8 +22,8 @@
 
 #include "coreaudio.h"
 
+#include <cinttypes>
 #include <cmath>
-#include <inttypes.h>
 #include <memory>
 #include <stdint.h>
 #include <stdio.h>

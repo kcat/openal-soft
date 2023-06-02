@@ -27,11 +27,11 @@
 #include <atomic>
 #include <cassert>
 #include <chrono>
+#include <cinttypes>
 #include <climits>
 #include <cmath>
 #include <cstdint>
 #include <functional>
-#include <inttypes.h>
 #include <iterator>
 #include <limits>
 #include <memory>

@@ -22,8 +22,8 @@
 
 #include "sndio.h"
 
+#include <cinttypes>
 #include <functional>
-#include <inttypes.h>
 #include <poll.h>
 #include <stdio.h>
 #include <stdlib.h>

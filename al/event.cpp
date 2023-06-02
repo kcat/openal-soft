@@ -30,7 +30,6 @@
 #include "direct_defs.h"
 #include "opthelpers.h"
 #include "ringbuffer.h"
-#include "threads.h"
 
 
 namespace {

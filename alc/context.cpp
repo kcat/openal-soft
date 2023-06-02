@@ -33,7 +33,6 @@
 #include "core/voice_change.h"
 #include "device.h"
 #include "ringbuffer.h"
-#include "threads.h"
 #include "vecmat.h"
 
 #ifdef ALSOFT_EAX

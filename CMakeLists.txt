@@ -618,6 +618,8 @@ set(COMMON_OBJS
     common/almalloc.h
     common/alnumbers.h
     common/alnumeric.h
+    common/alsem.cpp
+    common/alsem.h
     common/alspan.h
     common/alstring.cpp
     common/alstring.h
@@ -638,8 +640,6 @@ set(COMMON_OBJS
     common/ringbuffer.h
     common/strutils.cpp
     common/strutils.h
-    common/threads.cpp
-    common/threads.h
     common/vecmat.h
     common/vector.h)
 

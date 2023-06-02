@@ -20,7 +20,6 @@
 #include "core/logging.h"
 #include "direct_defs.h"
 #include "opthelpers.h"
-#include "threads.h"
 
 
 namespace {

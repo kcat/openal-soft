@@ -35,13 +35,13 @@
 
 #include "albit.h"
 #include "alnumeric.h"
+#include "alsem.h"
 #include "althrd_setname.h"
 #include "core/device.h"
 #include "core/helpers.h"
 #include "core/logging.h"
 #include "opthelpers.h"
 #include "ringbuffer.h"
-#include "threads.h"
 
 #include <SLES/OpenSLES.h>
 #include <SLES/OpenSLES_Android.h>

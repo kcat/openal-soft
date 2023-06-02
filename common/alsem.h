@@ -1,5 +1,5 @@
-#ifndef AL_THREADS_H
-#define AL_THREADS_H
+#ifndef COMMON_ALSEM_H
+#define COMMON_ALSEM_H
 
 #if defined(__APPLE__)
 #include <AvailabilityMacros.h>
@@ -40,4 +40,4 @@ public:
 
 } // namespace al
 
-#endif /* AL_THREADS_H */
+#endif /* COMMON_ALSEM_H */

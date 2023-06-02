@@ -20,10 +20,11 @@
 
 #include "config.h"
 
-#include "opthelpers.h"
-#include "threads.h"
+#include "alsem.h"
 
 #include <system_error>
+
+#include "opthelpers.h"
 
 
 #ifdef _WIN32

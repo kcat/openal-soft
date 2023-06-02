@@ -10,11 +10,11 @@
 #include <vector>
 
 #include "almalloc.h"
+#include "alsem.h"
 #include "alspan.h"
 #include "async_event.h"
 #include "atomic.h"
 #include "opthelpers.h"
-#include "threads.h"
 #include "vecmat.h"
 
 struct DeviceBase;

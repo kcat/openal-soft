@@ -35,13 +35,13 @@
 #include "albit.h"
 #include "alc/alconfig.h"
 #include "alnumeric.h"
+#include "alsem.h"
 #include "althrd_setname.h"
 #include "core/device.h"
 #include "core/helpers.h"
 #include "core/logging.h"
 #include "dynload.h"
 #include "ringbuffer.h"
-#include "threads.h"
 
 #include <jack/jack.h>
 #include <jack/ringbuffer.h>

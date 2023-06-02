@@ -6,7 +6,6 @@
 #include <optional>
 
 #include "alspan.h"
-#include "common/threads.h"
 #include "core/logging.h"
 #include "device.h"
 

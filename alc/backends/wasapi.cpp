@@ -237,15 +237,9 @@ public:
 #if defined(ALSOFT_UWP)
         mActiveClientEvent = CreateEventW(nullptr, FALSE, FALSE, nullptr);
 
-        auto cb = [](alc::DeviceType type, const WCHAR *devid)
-        {
-            const std::string msg{"Default device changed: "+wstr_to_utf8(devid)};
-            alc::Event(alc::EventType::DefaultDeviceChanged, type, msg);
-        };
-
         mRenderDeviceChangedToken = MediaDevice::DefaultAudioRenderDeviceChanged +=
             ref new TypedEventHandler<Platform::Object ^, DefaultAudioRenderDeviceChangedEventArgs ^>(
-                [this,cb](Platform::Object ^ sender, DefaultAudioRenderDeviceChangedEventArgs ^ args) {
+                [this](Platform::Object ^ sender, DefaultAudioRenderDeviceChangedEventArgs ^ args) {
                 if(args->Role == AudioDeviceRole::Default)
                 {
                     const std::string msg{"Default playback device changed: "+
@@ -256,7 +250,7 @@ public:
             });
         mCaptureDeviceChangedToken = MediaDevice::DefaultAudioCaptureDeviceChanged +=
             ref new TypedEventHandler<Platform::Object ^, DefaultAudioCaptureDeviceChangedEventArgs ^>(
-                [this,cb](Platform::Object ^ sender, DefaultAudioCaptureDeviceChangedEventArgs ^ args) {
+                [this](Platform::Object ^ sender, DefaultAudioCaptureDeviceChangedEventArgs ^ args) {
                 if(args->Role == AudioDeviceRole::Default)
                 {
                     const std::string msg{"Default capture device changed: "+

@@ -433,8 +433,8 @@ struct DeviceHelper final : private IMMNotificationClient
     {
         ComPtr<IActivateAudioInterfaceAsyncOperation> asyncOp;
         mPPV = ppv;
-        HRESULT hr{ActivateAudioInterfaceAsync(deviceInterfacePath, riid, activationParams, this,
-            al::out_ptr(asyncOp))};
+        HRESULT hr{ActivateAudioInterfaceAsync(device.value->Id->Data(), __uuidof(IAudioClient3),
+            nullptr, this, al::out_ptr(asyncOp))};
         if(FAILED(hr))
             return hr;
         asyncOp = nullptr;

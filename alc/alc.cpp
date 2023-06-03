@@ -2575,7 +2575,6 @@ ALC_API ALCvoid* ALC_APIENTRY alcGetProcAddress(ALCdevice *device, const ALCchar
         return nullptr;
     }
 
-    InitConfig();
 #ifdef ALSOFT_EAX
     if(eax_g_is_enabled)
     {
@@ -2604,7 +2603,6 @@ ALC_API ALCenum ALC_APIENTRY alcGetEnumValue(ALCdevice *device, const ALCchar *e
         return 0;
     }
 
-    InitConfig();
 #ifdef ALSOFT_EAX
     if(eax_g_is_enabled)
     {

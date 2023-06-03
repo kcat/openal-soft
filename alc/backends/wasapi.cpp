@@ -275,7 +275,7 @@ struct DeviceHelper final : private IMMNotificationClient
 #endif
     }
 
-    /** -------------------------- IUnkonwn ----------------------------- */
+    /** -------------------------- IUnknown ----------------------------- */
     std::atomic<ULONG> mRefCount{1};
     STDMETHODIMP_(ULONG) AddRef() noexcept override { return mRefCount.fetch_add(1u) + 1u; }
     STDMETHODIMP_(ULONG) Release() noexcept override { return mRefCount.fetch_sub(1u) - 1u; }

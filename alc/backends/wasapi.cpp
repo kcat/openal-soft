@@ -425,16 +425,29 @@ struct DeviceHelper final : private IMMNotificationClient
 #endif
     }
 
-    static HRESULT ActivateAudioClient(_In_ DeviceHandle& device, void **ppv)
-    {
 #if !defined(ALSOFT_UWP)
-        HRESULT hr{device->Activate(__uuidof(IAudioClient3), CLSCTX_INPROC_SERVER, nullptr, ppv)};
+    static HRESULT ActivateAudioClient(_In_ DeviceHandle& device, void **ppv)
+    { return device->Activate(__uuidof(IAudioClient3), CLSCTX_INPROC_SERVER, nullptr, ppv); }
 #else
-        HRESULT hr{ActivateAudioInterface(device.value->Id->Data(), __uuidof(IAudioClient3),
-            nullptr, ppv)};
-#endif
-        return hr;
+    HRESULT ActivateAudioClient(_In_ DeviceHandle& device, void **ppv)
+    {
+        ComPtr<IActivateAudioInterfaceAsyncOperation> asyncOp;
+        mPPV = ppv;
+        HRESULT hr{ActivateAudioInterfaceAsync(deviceInterfacePath, riid, activationParams, this,
+            al::out_ptr(asyncOp))};
+        if(FAILED(hr))
+            return hr;
+        asyncOp = nullptr;
+
+        DWORD res{WaitForSingleObjectEx(mActiveClientEvent, 2000, FALSE)};
+        if(res != WAIT_OBJECT_0)
+        {
+            ERR("WaitForSingleObjectEx error: 0x%lx\n", res);
+            return E_FAIL;
+        }
+        return S_OK;
     }
+#endif
 
     HRESULT probe_devices(EDataFlow flowdir, std::vector<DevMap>& list)
     {
@@ -656,25 +669,6 @@ struct DeviceHelper final : private IMMNotificationClient
 
 private:
 #if defined(ALSOFT_UWP)
-    HRESULT ActivateAudioInterface(_In_ LPCWSTR deviceInterfacePath,
-                                   _In_ REFIID riid,
-                                   _In_opt_ PROPVARIANT* activationParams,
-                                   void** ppv)
-    {
-        IActivateAudioInterfaceAsyncOperation* asyncOp{nullptr};
-        mPPV       = ppv;
-        HRESULT hr = ActivateAudioInterfaceAsync(deviceInterfacePath, riid, activationParams, this, &asyncOp);
-        if(FAILED(hr))
-            return hr;
-        if(asyncOp)
-            asyncOp->Release();
-
-        DWORD res{WaitForSingleObjectEx(mActiveClientEvent, 2000, FALSE)};
-        if(res != WAIT_OBJECT_0)
-            ERR("WaitForSingleObjectEx error: 0x%lx\n", res);
-        return res;
-    }
-
     HANDLE mActiveClientEvent{nullptr};
     void** mPPV{nullptr};
 

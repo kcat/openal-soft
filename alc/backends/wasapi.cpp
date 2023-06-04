@@ -426,15 +426,15 @@ struct DeviceHelper final : private IMMNotificationClient
     }
 
 #if !defined(ALSOFT_UWP)
-    static HRESULT ActivateAudioClient(_In_ DeviceHandle& device, void **ppv)
-    { return device->Activate(__uuidof(IAudioClient3), CLSCTX_INPROC_SERVER, nullptr, ppv); }
+    static HRESULT activateAudioClient(_In_ DeviceHandle& device, REFIID iid, void **ppv)
+    { return device->Activate(iid, CLSCTX_INPROC_SERVER, nullptr, ppv); }
 #else
-    HRESULT ActivateAudioClient(_In_ DeviceHandle& device, void **ppv)
+    HRESULT activateAudioClient(_In_ DeviceHandle& device, _In_ REFIID iid, void **ppv)
     {
         ComPtr<IActivateAudioInterfaceAsyncOperation> asyncOp;
         mPPV = ppv;
-        HRESULT hr{ActivateAudioInterfaceAsync(device.value->Id->Data(), __uuidof(IAudioClient3),
-            nullptr, this, al::out_ptr(asyncOp))};
+        HRESULT hr{ActivateAudioInterfaceAsync(device.value->Id->Data(), iid, nullptr, this,
+            al::out_ptr(asyncOp))};
         if(FAILED(hr))
             return hr;
         asyncOp = nullptr;
@@ -1156,7 +1156,8 @@ bool WasapiPlayback::reset()
 HRESULT WasapiPlayback::resetProxy()
 {
     mClient = nullptr;
-    HRESULT hr{sDeviceHelper->ActivateAudioClient(mMMDev, al::out_ptr(mClient))};
+    HRESULT hr{sDeviceHelper->activateAudioClient(mMMDev, __uuidof(IAudioClient),
+        al::out_ptr(mClient))};
     if(FAILED(hr))
     {
         ERR("Failed to reactivate audio client: 0x%08lx\n", hr);
@@ -1797,7 +1798,8 @@ HRESULT WasapiCapture::resetProxy()
 {
     mClient = nullptr;
 
-    HRESULT hr{sDeviceHelper->ActivateAudioClient(mMMDev, al::out_ptr(mClient))};
+    HRESULT hr{sDeviceHelper->activateAudioClient(mMMDev, __uuidof(IAudioClient),
+        al::out_ptr(mClient))};
     if(FAILED(hr))
     {
         ERR("Failed to reactivate audio client: 0x%08lx\n", hr);

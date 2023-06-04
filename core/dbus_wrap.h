@@ -28,8 +28,8 @@ MAGIC(dbus_message_iter_get_arg_type) \
 MAGIC(dbus_message_iter_get_basic) \
 MAGIC(dbus_set_error_from_message)
 
-extern void *dbus_handle;
-#define DECL_FUNC(x) extern decltype(x) *p##x;
+inline void *dbus_handle{};
+#define DECL_FUNC(x) inline decltype(x) *p##x{};
 DBUS_FUNCTIONS(DECL_FUNC)
 #undef DECL_FUNC
 

@@ -12,11 +12,6 @@
 #include "logging.h"
 
 
-void *dbus_handle{nullptr};
-#define DECL_FUNC(x) decltype(p##x) p##x{};
-DBUS_FUNCTIONS(DECL_FUNC)
-#undef DECL_FUNC
-
 void PrepareDBus()
 {
     static constexpr char libname[] = "libdbus-1.so.3";

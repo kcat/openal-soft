@@ -9,25 +9,18 @@
 #endif
 
 #include <algorithm>
-#include <cerrno>
-#include <cstdarg>
 #include <cstdlib>
-#include <cstdio>
 #include <cstring>
 #include <limits>
 #include <mutex>
 #include <optional>
 #include <string>
-#include <tuple>
 
-#include "almalloc.h"
-#include "alfstream.h"
 #include "alnumeric.h"
 #include "alspan.h"
 #include "alstring.h"
 #include "logging.h"
 #include "strutils.h"
-#include "vector.h"
 
 
 /* Mixing thread piority level */
@@ -39,6 +32,7 @@ bool AllowRTTimeLimit{true};
 
 #ifdef _WIN32
 
+#include <cctype>
 #include <shlobj.h>
 
 const PathNamePair &GetProcBinary()
@@ -121,14 +115,14 @@ void DirectorySearch(const char *path, const char *ext, std::vector<std::string>
 
 std::vector<std::string> SearchDataFiles(const char *ext, const char *subdir)
 {
-    auto is_slash = [](int c) noexcept -> int { return (c == '\\' || c == '/'); };
+    auto is_slash = [](int c) noexcept { return (c == '\\' || c == '/'); };
 
     static std::mutex search_lock;
     std::lock_guard<std::mutex> _{search_lock};
 
     /* If the path is absolute, use it directly. */
     std::vector<std::string> results;
-    if(isalpha(subdir[0]) && subdir[1] == ':' && is_slash(subdir[2]))
+    if(std::isalpha(subdir[0]) && subdir[1] == ':' && is_slash(subdir[2]))
     {
         std::string path{subdir};
         std::replace(path.begin(), path.end(), '/', '\\');
@@ -164,8 +158,7 @@ std::vector<std::string> SearchDataFiles(const char *ext, const char *subdir)
 
 #if !defined(ALSOFT_UWP)
     /* Search the local and global data dirs. */
-    static const int ids[2]{ CSIDL_APPDATA, CSIDL_COMMON_APPDATA };
-    for(int id : ids)
+    for(auto id : std::array{CSIDL_APPDATA, CSIDL_COMMON_APPDATA})
     {
         WCHAR buffer[MAX_PATH];
         if(SHGetSpecialFolderPathW(nullptr, buffer, id, FALSE) == FALSE)
@@ -197,9 +190,9 @@ void SetRTPriority(void)
 
 #else
 
-#include <sys/types.h>
-#include <unistd.h>
+#include <cerrno>
 #include <dirent.h>
+#include <unistd.h>
 #ifdef __FreeBSD__
 #include <sys/sysctl.h>
 #endif
@@ -214,7 +207,6 @@ void SetRTPriority(void)
 #include <sched.h>
 #endif
 #ifdef HAVE_RTKIT
-#include <sys/time.h>
 #include <sys/resource.h>
 
 #include "dbus_wrap.h"
@@ -264,7 +256,7 @@ const PathNamePair &GetProcBinary()
 #ifndef __SWITCH__
     if(pathname.empty())
     {
-        static const char SelfLinkNames[][32]{
+        const char *SelfLinkNames[]{
             "/proc/self/exe",
             "/proc/self/file",
             "/proc/curproc/exe",
@@ -442,7 +434,7 @@ std::vector<std::string> SearchDataFiles(const char *ext, const char *subdir)
 
 namespace {
 
-bool SetRTPriorityPthread(int prio)
+bool SetRTPriorityPthread(int prio [[maybe_unused]])
 {
     int err{ENOTSUP};
 #if defined(HAVE_PTHREAD_SETSCHEDPARAM) && !defined(__OpenBSD__)
@@ -462,16 +454,12 @@ bool SetRTPriorityPthread(int prio)
 #endif
         err = pthread_setschedparam(pthread_self(), SCHED_RR, &param);
     if(err == 0) return true;
-
-#else
-
-    std::ignore = prio;
 #endif
     WARN("pthread_setschedparam failed: %s (%d)\n", std::strerror(err), err);
     return false;
 }
 
-bool SetRTPriorityRTKit(int prio)
+bool SetRTPriorityRTKit(int prio [[maybe_unused]])
 {
 #ifdef HAVE_RTKIT
     if(!HasDBus())
@@ -564,7 +552,6 @@ bool SetRTPriorityRTKit(int prio)
 
 #else
 
-    std::ignore = prio;
     WARN("D-Bus not supported\n");
 #endif
     return false;

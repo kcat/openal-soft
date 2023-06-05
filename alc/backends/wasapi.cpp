@@ -188,7 +188,10 @@ struct DevMap {
       , endpoint_guid{std::forward<T1>(guid_)}
       , devid{std::forward<T2>(devid_)}
     { }
+    /* To prevent GCC from complaining it doesn't want to inline this. */
+    ~DevMap();
 };
+DevMap::~DevMap() = default;
 
 bool checkName(const al::span<DevMap> list, const std::string &name)
 {
@@ -205,22 +208,28 @@ private:
     std::mutex mMutex;
     std::vector<DevMap> mPlayback;
     std::vector<DevMap> mCapture;
+    std::wstring mPlaybackDefaultId;
+    std::wstring mCaptureDefaultId;
 
     friend struct DeviceListLock;
 };
 struct DeviceListLock : public std::unique_lock<DeviceList> {
     using std::unique_lock<DeviceList>::unique_lock;
 
-    auto& getPlaybackList() noexcept(noexcept(mutex())) { return mutex()->mPlayback; }
-    auto& getCaptureList() noexcept(noexcept(mutex())) { return mutex()->mCapture; }
+    auto& getPlaybackList() const noexcept { return mutex()->mPlayback; }
+    auto& getCaptureList() const noexcept { return mutex()->mCapture; }
+
+    void setPlaybackDefaultId(std::wstring_view devid) const { mutex()->mPlaybackDefaultId = devid; }
+    std::wstring_view getPlaybackDefaultId() const noexcept { return mutex()->mPlaybackDefaultId; }
+    void setCaptureDefaultId(std::wstring_view devid) const { mutex()->mCaptureDefaultId = devid; }
+    std::wstring_view getCaptureDefaultId() const noexcept { return mutex()->mCaptureDefaultId; }
 };
 
 DeviceList gDeviceList;
 
 
 #if defined(ALSOFT_UWP)
-enum EDataFlow
-{
+enum EDataFlow {
     eRender              = 0,
     eCapture             = (eRender + 1),
     eAll                 = (eCapture + 1),
@@ -229,8 +238,7 @@ enum EDataFlow
 #endif
 
 #if defined(ALSOFT_UWP)
-struct DeviceHandle
-{
+struct DeviceHandle {
     DeviceHandle& operator=(std::nullptr_t)
     {
         value = nullptr;
@@ -252,6 +260,9 @@ struct DeviceHelper final : private IMMNotificationClient
     DeviceHelper()
     {
 #if defined(ALSOFT_UWP)
+        /* TODO: UWP also needs to watch for device added/removed events and
+         * dynamically add/remove devices from the lists.
+         */
         mActiveClientEvent = CreateEventW(nullptr, FALSE, FALSE, nullptr);
 
         mRenderDeviceChangedToken = MediaDevice::DefaultAudioRenderDeviceChanged +=
@@ -373,8 +384,16 @@ struct DeviceHelper final : private IMMNotificationClient
 #else
     /** ----------------------- IMMNotificationClient ------------ */
     STDMETHODIMP OnDeviceStateChanged(LPCWSTR /*pwstrDeviceId*/, DWORD /*dwNewState*/) noexcept override { return S_OK; }
-    STDMETHODIMP OnDeviceAdded(LPCWSTR /*pwstrDeviceId*/) noexcept override { return S_OK; }
-    STDMETHODIMP OnDeviceRemoved(LPCWSTR /*pwstrDeviceId*/) noexcept override { return S_OK; }
+    STDMETHODIMP OnDeviceAdded(LPCWSTR pwstrDeviceId) noexcept override
+    {
+        add_device(pwstrDeviceId);
+        return S_OK;
+    }
+    STDMETHODIMP OnDeviceRemoved(LPCWSTR pwstrDeviceId) noexcept override
+    {
+        remove_device(pwstrDeviceId);
+        return S_OK;
+    }
     STDMETHODIMP OnPropertyValueChanged(LPCWSTR /*pwstrDeviceId*/, const PROPERTYKEY /*key*/) noexcept override { return S_OK; }
     STDMETHODIMP OnDefaultDeviceChanged(EDataFlow flow, ERole role, LPCWSTR pwstrDefaultDeviceId) noexcept override
     {
@@ -383,12 +402,14 @@ struct DeviceHelper final : private IMMNotificationClient
 
         if(flow == eRender)
         {
+            DeviceListLock{gDeviceList}.setPlaybackDefaultId(pwstrDefaultDeviceId);
             const std::string msg{"Default playback device changed: "+
                 wstr_to_utf8(pwstrDefaultDeviceId)};
             alc::Event(alc::EventType::DefaultDeviceChanged, alc::DeviceType::Playback, msg);
         }
         else if(flow == eCapture)
         {
+            DeviceListLock{gDeviceList}.setCaptureDefaultId(pwstrDefaultDeviceId);
             const std::string msg{"Default capture device changed: "+
                 wstr_to_utf8(pwstrDefaultDeviceId)};
             alc::Event(alc::EventType::DefaultDeviceChanged, alc::DeviceType::Capture, msg);
@@ -469,8 +490,9 @@ struct DeviceHelper final : private IMMNotificationClient
     }
 #endif
 
-    HRESULT probe_devices(EDataFlow flowdir, std::vector<DevMap>& list)
+    std::wstring probe_devices(EDataFlow flowdir, std::vector<DevMap>& list)
     {
+        std::wstring defaultId;
         std::vector<DevMap>{}.swap(list);
 
 #if !defined(ALSOFT_UWP)
@@ -480,7 +502,7 @@ struct DeviceHelper final : private IMMNotificationClient
         if(FAILED(hr))
         {
             ERR("Failed to enumerate audio endpoints: 0x%08lx\n", hr);
-            return hr;
+            return defaultId;
         }
 
         UINT count{0};
@@ -494,7 +516,7 @@ struct DeviceHelper final : private IMMNotificationClient
         {
             if(WCHAR *devid{get_device_id(device.get())})
             {
-                add_device(device, devid, list);
+                defaultId = devid;
                 CoTaskMemFree(devid);
             }
             device = nullptr;
@@ -514,19 +536,19 @@ struct DeviceHelper final : private IMMNotificationClient
             device = nullptr;
         }
 
-        return S_OK;
+        return defaultId;
 #else
         const auto deviceRole = Windows::Media::Devices::AudioDeviceRole::Default;
         auto DefaultAudioId   = flowdir == eRender ? MediaDevice::GetDefaultAudioRenderId(deviceRole)
                                                    : MediaDevice::GetDefaultAudioCaptureId(deviceRole);
         Concurrency::task<DeviceInformation ^> createDefaultOp(DeviceInformation::CreateFromIdAsync(DefaultAudioId, nullptr, DeviceInformationKind::DeviceInterface));
-        auto task_status = createDefaultOp
-                               .then([this, &list](DeviceInformation ^ deviceInfo) {
-            if (deviceInfo)
-                add_device(DeviceHandle{deviceInfo}, deviceInfo->Id->Data(), list);
+        auto task_status = createDefaultOp.then([&defaultId](DeviceInformation ^ deviceInfo)
+        {
+            if(deviceInfo)
+                defaultId = deviceInfo->Id->Data();
         }).wait();
-        if (task_status != Concurrency::task_group_status::completed)
-            return E_FAIL;
+        if(task_status != Concurrency::task_group_status::completed)
+            return;
 
         // Get the string identifier of the audio renderer
         auto AudioSelector = flowdir == eRender ? MediaDevice::GetAudioRenderSelector() : MediaDevice::GetAudioCaptureSelector();
@@ -534,32 +556,28 @@ struct DeviceHelper final : private IMMNotificationClient
         // Setup the asynchronous callback
         Concurrency::task<DeviceInformationCollection ^> enumOperation(
             DeviceInformation::FindAllAsync(AudioSelector, /*PropertyList*/nullptr, DeviceInformationKind::DeviceInterface));
-        task_status = enumOperation
-                          .then([this, &list](DeviceInformationCollection ^ DeviceInfoCollection) {
-            if (DeviceInfoCollection)
+        task_status = enumOperation.then([this,&list](DeviceInformationCollection ^ DeviceInfoCollection)
+        {
+            if(DeviceInfoCollection)
             {
-                try
-                {
+                try {
                     auto deviceCount = DeviceInfoCollection->Size;
-                    for (unsigned int i = 0; i < deviceCount; ++i)
+                    for(unsigned int i{0};i < deviceCount;++i)
                     {
                         DeviceInformation ^ deviceInfo = DeviceInfoCollection->GetAt(i);
-                        if (deviceInfo)
+                        if(deviceInfo)
                             add_device(DeviceHandle{deviceInfo}, deviceInfo->Id->Data(), list);
                     }
                 }
-                catch (Platform::Exception ^ e)
-                {
+                catch (Platform::Exception ^ e) {
                 }
             }
         }).wait();
-
-        return task_status == Concurrency::task_group_status::completed ? S_OK : E_FAIL;
 #endif
     }
 
     using NameGUIDPair = std::pair<std::string, std::string>;
-    static NameGUIDPair get_device_name_and_guid(const DeviceHandle& device)
+    static NameGUIDPair get_device_name_and_guid(const DeviceHandle &device)
     {
 #if !defined(ALSOFT_UWP)
         static constexpr char UnknownName[]{"Unknown Device Name"};
@@ -568,7 +586,7 @@ struct DeviceHelper final : private IMMNotificationClient
 
         ComPtr<IPropertyStore> ps;
         HRESULT hr = device->OpenPropertyStore(STGM_READ, al::out_ptr(ps));
-        if (FAILED(hr))
+        if(FAILED(hr))
         {
             WARN("OpenPropertyStore failed: 0x%08lx\n", hr);
             return std::make_pair(UnknownName, UnknownGuid);
@@ -576,31 +594,31 @@ struct DeviceHelper final : private IMMNotificationClient
 
         PropVariant pvprop;
         hr = ps->GetValue(al::bit_cast<PROPERTYKEY>(DEVPKEY_Device_FriendlyName), pvprop.get());
-        if (FAILED(hr))
+        if(FAILED(hr))
         {
             WARN("GetValue Device_FriendlyName failed: 0x%08lx\n", hr);
-            name += UnknownName;
+            name = UnknownName;
         }
-        else if (pvprop->vt == VT_LPWSTR)
-            name += wstr_to_utf8(pvprop->pwszVal);
+        else if(pvprop->vt == VT_LPWSTR)
+            name = wstr_to_utf8(pvprop->pwszVal);
         else
         {
-            WARN("Unexpected PROPVARIANT type: 0x%04x\n", pvprop->vt);
-            name += UnknownName;
+            WARN("Unexpected Device_FriendlyName PROPVARIANT type: 0x%04x\n", pvprop->vt);
+            name = UnknownName;
         }
 
         pvprop.clear();
         hr = ps->GetValue(al::bit_cast<PROPERTYKEY>(PKEY_AudioEndpoint_GUID), pvprop.get());
-        if (FAILED(hr))
+        if(FAILED(hr))
         {
             WARN("GetValue AudioEndpoint_GUID failed: 0x%08lx\n", hr);
             guid = UnknownGuid;
         }
-        else if (pvprop->vt == VT_LPWSTR)
+        else if(pvprop->vt == VT_LPWSTR)
             guid = wstr_to_utf8(pvprop->pwszVal);
         else
         {
-            WARN("Unexpected PROPVARIANT type: 0x%04x\n", pvprop->vt);
+            WARN("Unexpected AudioEndpoint_GUID PROPVARIANT type: 0x%04x\n", pvprop->vt);
             guid = UnknownGuid;
         }
 #else
@@ -611,11 +629,11 @@ struct DeviceHelper final : private IMMNotificationClient
         Platform::String ^ devIfPath = devInfo->Id;
         auto wcsDevIfPath            = devIfPath->Data();
         auto devIdStart              = wcsstr(wcsDevIfPath, L"}.");
-        if (devIdStart)
+        if(devIdStart)
         {
             devIdStart += 2;  // L"}."
             auto devIdStartEnd = wcschr(devIdStart, L'#');
-            if (devIdStartEnd)
+            if(devIdStartEnd)
             {
                 std::wstring wDevId{devIdStart, static_cast<size_t>(devIdStartEnd - devIdStart)};
                 guid = wstr_to_utf8(wDevId.c_str());
@@ -626,18 +644,18 @@ struct DeviceHelper final : private IMMNotificationClient
         return std::make_pair(std::move(name), std::move(guid));
     }
 
-    static void add_device(const DeviceHandle& device, const WCHAR* devid, std::vector<DevMap>& list)
+    static void add_device(const DeviceHandle &device, const WCHAR *devid, std::vector<DevMap> &list)
     {
-        for (auto& entry : list)
+        for(auto &entry : list)
         {
-            if (entry.devid == devid)
+            if(entry.devid == devid)
                 return;
         }
 
         auto name_guid = get_device_name_and_guid(device);
         int count{1};
         std::string newname{name_guid.first};
-        while (checkName(list, newname))
+        while(checkName(list, newname))
         {
             newname = name_guid.first;
             newname += " #";
@@ -651,6 +669,83 @@ struct DeviceHelper final : private IMMNotificationClient
     }
 
 #if !defined(ALSOFT_UWP)
+    void add_device(std::wstring_view devid)
+    {
+        ComPtr<IMMDevice> device;
+        HRESULT hr{mEnumerator->GetDevice(devid.data(), al::out_ptr(device))};
+        if(FAILED(hr))
+        {
+            ERR("Failed to get device: 0x%08lx\n", hr);
+            return;
+        }
+
+        ComPtr<IMMEndpoint> endpoint;
+        hr = device->QueryInterface(__uuidof(IMMEndpoint), al::out_ptr(endpoint));
+        if(FAILED(hr))
+        {
+            ERR("Failed to get device endpoint: 0x%08lx\n", hr);
+            return;
+        }
+
+        EDataFlow flowdir{};
+        hr = endpoint->GetDataFlow(&flowdir);
+        if(FAILED(hr))
+        {
+            ERR("Failed to get endpoint data flow: 0x%08lx\n", hr);
+            return;
+        }
+
+        auto devlock = DeviceListLock{gDeviceList};
+        auto &list = (flowdir==eRender) ? devlock.getPlaybackList() : devlock.getCaptureList();
+        auto devtype = (flowdir==eRender) ? alc::DeviceType::Playback:alc::DeviceType::Capture;
+
+        /* Ensure the ID doesn't already exist. */
+        auto iter = std::find_if(list.begin(), list.end(),
+            [devid](const DevMap &entry) noexcept { return devid == entry.devid; });
+        if(iter != list.end()) return;
+
+        auto name_guid = get_device_name_and_guid(device);
+        int count{1};
+        std::string newname{name_guid.first};
+        while(checkName(list, newname))
+        {
+            newname = name_guid.first;
+            newname += " #";
+            newname += std::to_string(++count);
+        }
+        list.emplace_back(std::move(newname), std::move(name_guid.second), devid);
+        const DevMap &newentry = list.back();
+
+        TRACE("Added device \"%s\", \"%s\", \"%ls\"\n", newentry.name.c_str(),
+            newentry.endpoint_guid.c_str(), newentry.devid.c_str());
+
+        std::string msg{"Device added: "+newentry.name};
+        alc::Event(alc::EventType::DeviceAdded, devtype, msg);
+    }
+
+    void remove_device(std::wstring_view devid)
+    {
+        auto devlock = DeviceListLock{gDeviceList};
+        for(auto flowdir : std::array{eRender, eCapture})
+        {
+            auto &list = (flowdir==eRender) ? devlock.getPlaybackList() : devlock.getCaptureList();
+            auto devtype = (flowdir==eRender)?alc::DeviceType::Playback : alc::DeviceType::Capture;
+
+            /* Find the ID in the list to remove. */
+            auto iter = std::find_if(list.begin(), list.end(),
+                [devid](const DevMap &entry) noexcept { return devid == entry.devid; });
+            if(iter == list.end()) continue;
+
+            TRACE("Removing device \"%s\", \"%s\", \"%ls\"\n", iter->name.c_str(),
+                iter->endpoint_guid.c_str(), iter->devid.c_str());
+
+            std::string msg{"Device removed: "+std::move(iter->name)};
+            list.erase(iter);
+
+            alc::Event(alc::EventType::DeviceRemoved, devtype, msg);
+        }
+    }
+
     static WCHAR *get_device_id(IMMDevice* device)
     {
         WCHAR *devid;
@@ -784,21 +879,17 @@ enum class MsgType {
     StartDevice,
     StopDevice,
     CloseDevice,
-    EnumeratePlayback,
-    EnumerateCapture,
 
     Count,
     QuitThread = Count
 };
 
-constexpr char MessageStr[static_cast<size_t>(MsgType::Count)][20]{
+constexpr char MessageStr[static_cast<size_t>(MsgType::Count)][16]{
     "Open Device",
     "Reset Device",
     "Start Device",
     "Stop Device",
     "Close Device",
-    "Enumerate Playback",
-    "Enumerate Capture"
 };
 
 
@@ -885,6 +976,14 @@ int WasapiProxy::messageHandler(std::promise<HRESULT> *promise)
     if(FAILED(hr))
         goto skip_loop;
 
+    {
+        auto devlock = DeviceListLock{gDeviceList};
+        auto defaultId = sDeviceHelper->probe_devices(eRender, devlock.getPlaybackList());
+        if(!defaultId.empty()) devlock.setPlaybackDefaultId(defaultId);
+        defaultId = sDeviceHelper->probe_devices(eCapture, devlock.getCaptureList());
+        if(!defaultId.empty()) devlock.setCaptureDefaultId(defaultId);
+    }
+
     TRACE("Starting message loop\n");
     while(Msg msg{popMessage()})
     {
@@ -917,18 +1016,6 @@ int WasapiProxy::messageHandler(std::promise<HRESULT> *promise)
         case MsgType::CloseDevice:
             msg.mProxy->closeProxy();
             msg.mPromise.set_value(S_OK);
-            continue;
-
-        case MsgType::EnumeratePlayback:
-        case MsgType::EnumerateCapture:
-            if(msg.mType == MsgType::EnumeratePlayback)
-                msg.mPromise.set_value(sDeviceHelper->probe_devices(eRender,
-                    DeviceListLock{gDeviceList}.getPlaybackList()));
-            else if(msg.mType == MsgType::EnumerateCapture)
-                msg.mPromise.set_value(sDeviceHelper->probe_devices(eCapture,
-                    DeviceListLock{gDeviceList}.getCaptureList()));
-            else
-                msg.mPromise.set_value(E_FAIL);
             continue;
 
         case MsgType::QuitThread:
@@ -1103,16 +1190,11 @@ void WasapiPlayback::open(const char *name)
             "Failed to create notify events"};
     }
 
-    if(name)
+    if(name && std::strncmp(name, DevNameHead, DevNameHeadLen) == 0)
     {
-        if(DeviceListLock{gDeviceList}.getPlaybackList().empty())
-            pushMessage(MsgType::EnumeratePlayback);
-        if(std::strncmp(name, DevNameHead, DevNameHeadLen) == 0)
-        {
-            name += DevNameHeadLen;
-            if(*name == '\0')
-                name = nullptr;
-        }
+        name += DevNameHeadLen;
+        if(*name == '\0')
+            name = nullptr;
     }
 
     mOpenStatus = pushMessage(MsgType::OpenDevice, name).get();
@@ -1748,16 +1830,11 @@ void WasapiCapture::open(const char *name)
             "Failed to create notify events"};
     }
 
-    if(name)
+    if(name && std::strncmp(name, DevNameHead, DevNameHeadLen) == 0)
     {
-        if(DeviceListLock{gDeviceList}.getCaptureList().empty())
-            pushMessage(MsgType::EnumerateCapture);
-        if(std::strncmp(name, DevNameHead, DevNameHeadLen) == 0)
-        {
-            name += DevNameHeadLen;
-            if(*name == '\0')
-                name = nullptr;
-        }
+        name += DevNameHeadLen;
+        if(*name == '\0')
+            name = nullptr;
     }
 
     mOpenStatus = pushMessage(MsgType::OpenDevice, name).get();
@@ -2198,28 +2275,42 @@ std::string WasapiBackendFactory::probe(BackendType type)
 {
     std::string outnames;
 
+    auto devlock = DeviceListLock{gDeviceList};
     switch(type)
     {
     case BackendType::Playback:
-        WasapiProxy::pushMessageStatic(MsgType::EnumeratePlayback).wait();
         {
-            auto devlock = DeviceListLock{gDeviceList};
+            auto defaultId = devlock.getPlaybackDefaultId();
             for(const DevMap &entry : devlock.getPlaybackList())
             {
-                /* +1 to also append the null char (to ensure a null-separated
-                 * list and double-null terminated list).
-                 */
-                outnames.append(DevNameHead).append(entry.name.c_str(), entry.name.length()+1);
+                if(entry.devid != defaultId)
+                {
+                    /* +1 to also append the null char (to ensure a null-
+                     * separated list and double-null terminated list).
+                     */
+                    outnames.append(DevNameHead).append(entry.name.c_str(), entry.name.length()+1);
+                    continue;
+                }
+                /* Default device goes first. */
+                std::string name{DevNameHead + entry.name};
+                outnames.insert(0, name.c_str(), name.length()+1);
             }
         }
         break;
 
     case BackendType::Capture:
-        WasapiProxy::pushMessageStatic(MsgType::EnumerateCapture).wait();
         {
-            auto devlock = DeviceListLock{gDeviceList};
+            auto defaultId = devlock.getCaptureDefaultId();
             for(const DevMap &entry : devlock.getCaptureList())
-                outnames.append(DevNameHead).append(entry.name.c_str(), entry.name.length()+1);
+            {
+                if(entry.devid != defaultId)
+                {
+                    outnames.append(DevNameHead).append(entry.name.c_str(), entry.name.length()+1);
+                    continue;
+                }
+                std::string name{DevNameHead + entry.name};
+                outnames.insert(0, name.c_str(), name.length()+1);
+            }
         }
         break;
     }

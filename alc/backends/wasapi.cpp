@@ -535,8 +535,6 @@ struct DeviceHelper final : private IMMNotificationClient
             }
             device = nullptr;
         }
-
-        return defaultId;
 #else
         const auto deviceRole = Windows::Media::Devices::AudioDeviceRole::Default;
         auto DefaultAudioId   = flowdir == eRender ? MediaDevice::GetDefaultAudioRenderId(deviceRole)
@@ -548,7 +546,7 @@ struct DeviceHelper final : private IMMNotificationClient
                 defaultId = deviceInfo->Id->Data();
         }).wait();
         if(task_status != Concurrency::task_group_status::completed)
-            return;
+            return defaultId;
 
         // Get the string identifier of the audio renderer
         auto AudioSelector = flowdir == eRender ? MediaDevice::GetAudioRenderSelector() : MediaDevice::GetAudioCaptureSelector();
@@ -574,6 +572,8 @@ struct DeviceHelper final : private IMMNotificationClient
             }
         }).wait();
 #endif
+
+        return defaultId;
     }
 
     using NameGUIDPair = std::pair<std::string, std::string>;

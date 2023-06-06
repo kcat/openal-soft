@@ -238,17 +238,10 @@ enum EDataFlow {
 #endif
 
 #if defined(ALSOFT_UWP)
-struct DeviceHandle {
-    DeviceHandle& operator=(std::nullptr_t)
-    {
-        value = nullptr;
-        return *this;
-    }
-    DeviceInformation^ value{nullptr};
-};
+using DeviceHandle = DeviceInformation^;
 using EventRegistrationToken = Windows::Foundation::EventRegistrationToken;
 #else
-using DeviceHandle           = ComPtr<IMMDevice>;
+using DeviceHandle = ComPtr<IMMDevice>;
 #endif
 
 
@@ -298,11 +291,10 @@ static NameGUIDPair GetDeviceNameAndGuid(const DeviceHandle &device)
         guid = UnknownGuid;
     }
 #else
-    auto devInfo = device.value;
-    std::string name{wstr_to_utf8(devInfo->Name->Data())};
+    std::string name{wstr_to_utf8(device->Name->Data())};
     std::string guid;
-    // devInfo->Id is DeviceInterfacePath: \\?\SWD#MMDEVAPI#{0.0.0.00000000}.{a21c17a0-fc1d-405e-ab5a-b513422b57d1}#{e6327cad-dcec-4949-ae8a-991e976a79d2}
-    Platform::String ^ devIfPath = devInfo->Id;
+    // device->Id is DeviceInterfacePath: \\?\SWD#MMDEVAPI#{0.0.0.00000000}.{a21c17a0-fc1d-405e-ab5a-b513422b57d1}#{e6327cad-dcec-4949-ae8a-991e976a79d2}
+    Platform::String^ devIfPath = device->Id;
     if(auto devIdStart = wcsstr(devIfPath->Data(), L"}."))
     {
         devIdStart += 2;  // L"}."
@@ -606,7 +598,7 @@ struct DeviceHelper final : private IMMNotificationClient
             DeviceInformation::CreateFromIdAsync(devIfPath, nullptr, DeviceInformationKind::DeviceInterface));
         auto status = createDeviceOp.then([&](DeviceInformation^ deviceInfo)
         {
-            device.value = deviceInfo;
+            device = deviceInfo;
         }).wait();
         if(status != Concurrency::task_status::completed)
         {
@@ -624,7 +616,7 @@ struct DeviceHelper final : private IMMNotificationClient
     {
         ComPtr<IActivateAudioInterfaceAsyncOperation> asyncOp;
         mPPV = ppv;
-        HRESULT hr{ActivateAudioInterfaceAsync(device.value->Id->Data(), iid, nullptr, this,
+        HRESULT hr{ActivateAudioInterfaceAsync(device->Id->Data(), iid, nullptr, this,
             al::out_ptr(asyncOp))};
         if(FAILED(hr))
             return hr;
@@ -712,10 +704,9 @@ struct DeviceHelper final : private IMMNotificationClient
                     auto deviceCount = DeviceInfoCollection->Size;
                     for(unsigned int i{0};i < deviceCount;++i)
                     {
-                        DeviceInformation ^ deviceInfo = DeviceInfoCollection->GetAt(i);
+                        DeviceInformation^ deviceInfo = DeviceInfoCollection->GetAt(i);
                         if(deviceInfo)
-                            std::ignore = AddDevice(DeviceHandle{deviceInfo},
-                                deviceInfo->Id->Data(), list);
+                            std::ignore = AddDevice(deviceInfo, deviceInfo->Id->Data(), list);
                     }
                 }
                 catch (Platform::Exception ^ e) {

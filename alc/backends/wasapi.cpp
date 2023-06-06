@@ -423,7 +423,7 @@ struct DeviceHelper final : private IMMNotificationClient
     {
 #if !defined(ALSOFT_UWP)
         HRESULT hr{CoCreateInstance(CLSID_MMDeviceEnumerator, nullptr, CLSCTX_INPROC_SERVER,
-            IID_IMMDeviceEnumerator, al::out_ptr(mEnumerator))};
+            __uuidof(IMMDeviceEnumerator), al::out_ptr(mEnumerator))};
         if(SUCCEEDED(hr))
             mEnumerator->RegisterEndpointNotificationCallback(this);
         else
@@ -1621,7 +1621,7 @@ HRESULT WasapiPlayback::startProxy()
         return hr;
     }
 
-    hr = mClient->GetService(IID_IAudioRenderClient, al::out_ptr(mRender));
+    hr = mClient->GetService(__uuidof(IAudioRenderClient), al::out_ptr(mRender));
     if(SUCCEEDED(hr))
     {
         try {
@@ -2201,7 +2201,7 @@ HRESULT WasapiCapture::startProxy()
         return hr;
     }
 
-    hr = mClient->GetService(IID_IAudioCaptureClient, al::out_ptr(mCapture));
+    hr = mClient->GetService(__uuidof(IAudioCaptureClient), al::out_ptr(mCapture));
     if(SUCCEEDED(hr))
     {
         try {

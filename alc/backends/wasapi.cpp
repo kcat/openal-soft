@@ -443,24 +443,8 @@ struct DeviceHelper final : private IMMNotificationClient
 
 #if defined(ALSOFT_UWP)
     /** ----------------------- IActivateAudioInterfaceCompletionHandler ------------ */
-    HRESULT ActivateCompleted(IActivateAudioInterfaceAsyncOperation* operation) override
+    HRESULT ActivateCompleted(IActivateAudioInterfaceAsyncOperation*) override
     {
-        HRESULT hrActivateResult     = S_OK;
-        IUnknown* punkAudioInterface = nullptr;
-
-        HRESULT hr = operation->GetActivateResult(&hrActivateResult, &punkAudioInterface);
-        // Check for a successful activation result
-        if (SUCCEEDED(hr) && SUCCEEDED(hrActivateResult))
-        {
-            if (mPPV)
-            {
-                // Get the pointer for the Audio Client
-                IAudioClient3* audioClient;
-                punkAudioInterface->QueryInterface(IID_PPV_ARGS(&audioClient));
-                *mPPV = audioClient;
-            }
-        }
-
         SetEvent(mActiveClientEvent);
 
         // Need to return S_OK
@@ -609,26 +593,35 @@ struct DeviceHelper final : private IMMNotificationClient
     }
 
 #if !defined(ALSOFT_UWP)
-    static HRESULT activateAudioClient(_In_ DeviceHandle& device, REFIID iid, void **ppv)
+    static HRESULT activateAudioClient(_In_ DeviceHandle &device, REFIID iid, void **ppv)
     { return device->Activate(iid, CLSCTX_INPROC_SERVER, nullptr, ppv); }
 #else
-    HRESULT activateAudioClient(_In_ DeviceHandle& device, _In_ REFIID iid, void **ppv)
+    HRESULT activateAudioClient(_In_ DeviceHandle &device, _In_ REFIID iid, void **ppv)
     {
         ComPtr<IActivateAudioInterfaceAsyncOperation> asyncOp;
-        mPPV = ppv;
         HRESULT hr{ActivateAudioInterfaceAsync(device->Id->Data(), iid, nullptr, this,
             al::out_ptr(asyncOp))};
         if(FAILED(hr))
             return hr;
-        asyncOp = nullptr;
 
-        DWORD res{WaitForSingleObjectEx(mActiveClientEvent, 2000, FALSE)};
+        /* I don't like waiting for INFINITE time, but the activate operation
+         * can take an indefinite amount of time since it can require user
+         * input.
+         */
+        DWORD res{WaitForSingleObjectEx(mActiveClientEvent, INFINITE, FALSE)};
         if(res != WAIT_OBJECT_0)
         {
             ERR("WaitForSingleObjectEx error: 0x%lx\n", res);
             return E_FAIL;
         }
-        return S_OK;
+
+        HRESULT hrActivateRes{E_FAIL};
+        ComPtr<IUnknown> punkAudioIface;
+        hr = asyncOp->GetActivateResult(&hrActivateRes, al::out_ptr(punkAudioIface));
+        if(SUCCEEDED(hr)) hr = hrActivateRes;
+        if(FAILED(hr)) return hr;
+
+        return punkAudioIface->QueryInterface(iid, ppv);
     }
 #endif
 
@@ -763,7 +756,6 @@ private:
 #else
 
     HANDLE mActiveClientEvent{nullptr};
-    void** mPPV{nullptr};
 
     EventRegistrationToken mRenderDeviceChangedToken;
     EventRegistrationToken mCaptureDeviceChangedToken;

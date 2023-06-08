@@ -331,7 +331,7 @@ void DSoundPlayback::open(const char *name)
             hr = CLSIDFromString(utf8_to_wstr(name).c_str(), &id);
             if(SUCCEEDED(hr))
                 iter = std::find_if(PlaybackDevices.cbegin(), PlaybackDevices.cend(),
-                    [&id](const DevMap &entry) -> bool { return entry.guid == id; });
+                    [&id](const DevMap &entry) -> bool { return !!IsEqualGUID(entry.guid, id); });
             if(iter == PlaybackDevices.cend())
                 throw al::backend_exception{al::backend_error::NoDevice,
                     "Device name \"%s\" not found", name};
@@ -606,7 +606,7 @@ void DSoundCapture::open(const char *name)
             hr = CLSIDFromString(utf8_to_wstr(name).c_str(), &id);
             if(SUCCEEDED(hr))
                 iter = std::find_if(CaptureDevices.cbegin(), CaptureDevices.cend(),
-                    [&id](const DevMap &entry) -> bool { return entry.guid == id; });
+                    [&id](const DevMap &entry) -> bool { return !!IsEqualGUID(entry.guid, id); });
             if(iter == CaptureDevices.cend())
                 throw al::backend_exception{al::backend_error::NoDevice,
                     "Device name \"%s\" not found", name};

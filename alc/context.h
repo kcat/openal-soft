@@ -24,6 +24,8 @@
 #include "intrusive_ptr.h"
 
 #ifdef ALSOFT_EAX
+#include <guiddef.h>
+
 #include "al/eax/call.h"
 #include "al/eax/exception.h"
 #include "al/eax/fx_slot_index.h"
@@ -307,11 +309,11 @@ private:
     struct Eax4PrimaryFxSlotIdValidator {
         void operator()(const GUID& guidPrimaryFXSlotID) const
         {
-            if(guidPrimaryFXSlotID != EAX_NULL_GUID &&
-                guidPrimaryFXSlotID != EAXPROPERTYID_EAX40_FXSlot0 &&
-                guidPrimaryFXSlotID != EAXPROPERTYID_EAX40_FXSlot1 &&
-                guidPrimaryFXSlotID != EAXPROPERTYID_EAX40_FXSlot2 &&
-                guidPrimaryFXSlotID != EAXPROPERTYID_EAX40_FXSlot3)
+            if(!IsEqualGUID(guidPrimaryFXSlotID, EAX_NULL_GUID) &&
+                !IsEqualGUID(guidPrimaryFXSlotID, EAXPROPERTYID_EAX40_FXSlot0) &&
+                !IsEqualGUID(guidPrimaryFXSlotID, EAXPROPERTYID_EAX40_FXSlot1) &&
+                !IsEqualGUID(guidPrimaryFXSlotID, EAXPROPERTYID_EAX40_FXSlot2) &&
+                !IsEqualGUID(guidPrimaryFXSlotID, EAXPROPERTYID_EAX40_FXSlot3))
             {
                 eax_fail_unknown_primary_fx_slot_id();
             }
@@ -364,11 +366,11 @@ private:
     struct Eax5PrimaryFxSlotIdValidator {
         void operator()(const GUID& guidPrimaryFXSlotID) const
         {
-            if(guidPrimaryFXSlotID != EAX_NULL_GUID &&
-                guidPrimaryFXSlotID != EAXPROPERTYID_EAX50_FXSlot0 &&
-                guidPrimaryFXSlotID != EAXPROPERTYID_EAX50_FXSlot1 &&
-                guidPrimaryFXSlotID != EAXPROPERTYID_EAX50_FXSlot2 &&
-                guidPrimaryFXSlotID != EAXPROPERTYID_EAX50_FXSlot3)
+            if(!IsEqualGUID(guidPrimaryFXSlotID, EAX_NULL_GUID) &&
+                !IsEqualGUID(guidPrimaryFXSlotID, EAXPROPERTYID_EAX50_FXSlot0) &&
+                !IsEqualGUID(guidPrimaryFXSlotID, EAXPROPERTYID_EAX50_FXSlot1) &&
+                !IsEqualGUID(guidPrimaryFXSlotID, EAXPROPERTYID_EAX50_FXSlot2) &&
+                !IsEqualGUID(guidPrimaryFXSlotID, EAXPROPERTYID_EAX50_FXSlot3))
             {
                 eax_fail_unknown_primary_fx_slot_id();
             }

@@ -415,21 +415,21 @@ struct DeviceHelper final : private IMMNotificationClient
         // interface pointer, the reference count becomes two. The client must call Release twice on the interface
         // pointer to drop all of its references to the object.
 #if defined(ALSOFT_UWP)
-        if(IId == __uuidof(IActivateAudioInterfaceCompletionHandler))
+        if(IsEqualIID(IId, __uuidof(IActivateAudioInterfaceCompletionHandler)))
         {
             *UnknownPtrPtr = static_cast<IActivateAudioInterfaceCompletionHandler*>(this);
             AddRef();
             return S_OK;
         }
 #else
-        if(IId == __uuidof(IMMNotificationClient))
+        if(IsEqualIID(IId, __uuidof(IMMNotificationClient)))
         {
             *UnknownPtrPtr = static_cast<IMMNotificationClient*>(this);
             AddRef();
             return S_OK;
         }
 #endif
-        else if(IId == __uuidof(IAgileObject) || IId == __uuidof(IUnknown))
+        else if(IsEqualIID(IId, __uuidof(IAgileObject)) || IsEqualIID(IId, __uuidof(IUnknown)))
         {
             *UnknownPtrPtr = static_cast<IUnknown*>(this);
             AddRef();

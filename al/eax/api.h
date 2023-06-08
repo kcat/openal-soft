@@ -10,17 +10,18 @@
 //
 
 
+#include <array>
 #include <cfloat>
 #include <cstdint>
 #include <cstring>
-
-#include <array>
+#ifdef _WIN32
+#include <guiddef.h>
+#endif
 
 #include "AL/al.h"
 
 
-#ifndef GUID_DEFINED
-#define GUID_DEFINED
+#ifndef _WIN32
 typedef struct _GUID {
     std::uint32_t Data1;
     std::uint16_t Data2;
@@ -28,15 +29,12 @@ typedef struct _GUID {
     std::uint8_t Data4[8];
 } GUID;
 
-#ifndef _SYS_GUID_OPERATOR_EQ_
-#define _SYS_GUID_OPERATOR_EQ_
 inline bool operator==(const GUID& lhs, const GUID& rhs) noexcept
 { return std::memcmp(&lhs, &rhs, sizeof(GUID)) == 0; }
 
 inline bool operator!=(const GUID& lhs, const GUID& rhs) noexcept
 { return !(lhs == rhs); }
-#endif  // _SYS_GUID_OPERATOR_EQ_
-#endif // GUID_DEFINED
+#endif // _WIN32
 
 #define DECL_EQOP(T) \
 friend bool operator==(const T &lhs, const T &rhs) noexcept { return std::memcmp(&lhs, &rhs, sizeof(T)) == 0;  } \

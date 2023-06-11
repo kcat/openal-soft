@@ -20,6 +20,5 @@ example.t.cpp
 )
 
 # This needs to come last
-enable_testing()
 include(GoogleTest)
 gtest_discover_tests(OpenAL_Tests)

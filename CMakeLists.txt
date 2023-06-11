@@ -1,6 +1,7 @@
 # CMake build file list for OpenAL
 
 cmake_minimum_required(VERSION 3.0.2)
+enable_testing()
 
 if(APPLE)
     # The workaround for try_compile failing with code signing

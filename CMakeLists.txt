@@ -111,6 +111,7 @@ option(ALSOFT_UTILS "Build utility programs"  ON)
 option(ALSOFT_NO_CONFIG_UTIL "Disable building the alsoft-config utility" OFF)
 
 option(ALSOFT_EXAMPLES  "Build example programs"  ON)
+option(ALSOFT_TESTS "Build test programs"  ON)
 
 option(ALSOFT_INSTALL "Install main library" ON)
 option(ALSOFT_INSTALL_CONFIG "Install alsoft.conf sample configuration file" ON)
@@ -1818,6 +1819,10 @@ if(ALSOFT_EXAMPLES)
         endif()
     endif()
     message(STATUS "")
+endif()
+
+if (ALSOFT_TESTS)
+add_subdirectory(tests)
 endif()
 
 if(EXTRA_INSTALLS)

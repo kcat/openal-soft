@@ -1,6 +1,6 @@
 name: CI
 
-on: [push]
+on: [push, pull_request]
 
 jobs:
   build:
@@ -118,6 +118,11 @@ jobs:
       shell: bash
       run: |
         cmake --build build --config ${{matrix.config.build_type}}
+
+    - name: Test
+      shell: bash
+      run: |
+        ctest
 
     - name: Create Archive
       if: ${{ matrix.config.os == 'windows-latest' }}

@@ -14,6 +14,7 @@ jobs:
             name: "Win32-Release",
             os: windows-latest,
             cmake_opts: "-A Win32 \
+              -DALSOFT_TESTS=ON \
               -DALSOFT_BUILD_ROUTER=ON \
               -DALSOFT_REQUIRE_WINMM=ON \
               -DALSOFT_REQUIRE_DSOUND=ON \
@@ -24,6 +25,7 @@ jobs:
             name: "Win32-Debug",
             os: windows-latest,
             cmake_opts: "-A Win32 \
+              -DALSOFT_TESTS=ON \
               -DALSOFT_BUILD_ROUTER=ON \
               -DALSOFT_REQUIRE_WINMM=ON \
               -DALSOFT_REQUIRE_DSOUND=ON \
@@ -34,6 +36,7 @@ jobs:
             name: "Win64-Release",
             os: windows-latest,
             cmake_opts: "-A x64 \
+              -DALSOFT_TESTS=ON \
               -DALSOFT_BUILD_ROUTER=ON \
               -DALSOFT_REQUIRE_WINMM=ON \
               -DALSOFT_REQUIRE_DSOUND=ON \
@@ -44,6 +47,7 @@ jobs:
             name: "Win64-Debug",
             os: windows-latest,
             cmake_opts: "-A x64 \
+              -DALSOFT_TESTS=ON \
               -DALSOFT_BUILD_ROUTER=ON \
               -DALSOFT_REQUIRE_WINMM=ON \
               -DALSOFT_REQUIRE_DSOUND=ON \
@@ -54,9 +58,9 @@ jobs:
             name: "Win64-UWP",
             os: windows-latest,
             cmake_opts: "-A x64 \
+              -DALSOFT_TESTS=OFF \
               -DCMAKE_SYSTEM_NAME=WindowsStore \
               \"-DCMAKE_SYSTEM_VERSION=10.0\" \
-              -DALSOFT_TESTS=OFF \
               -DALSOFT_BUILD_ROUTER=ON \
               -DALSOFT_REQUIRE_WASAPI=ON",
             build_type: "Release"
@@ -64,7 +68,8 @@ jobs:
         - {
             name: "macOS-Release",
             os: macos-latest,
-            cmake_opts: "-DALSOFT_REQUIRE_COREAUDIO=ON",
+            cmake_opts: "-DALSOFT_REQUIRE_COREAUDIO=ON \
+              -DALSOFT_TESTS=ON",
             build_type: "Release"
           }
         - {
@@ -89,7 +94,8 @@ jobs:
               -DALSOFT_REQUIRE_PORTAUDIO=ON \
               -DALSOFT_REQUIRE_PULSEAUDIO=ON \
               -DALSOFT_REQUIRE_JACK=ON \
-              -DALSOFT_REQUIRE_PIPEWIRE=ON",
+              -DALSOFT_REQUIRE_PIPEWIRE=ON \
+              -DALSOFT_TESTS=ON",
             deps_cmdline: "sudo apt update && sudo apt-get install -qq \
               libpulse-dev \
               portaudio19-dev \

@@ -2,8 +2,6 @@ build*/
 winbuild
 win64build
 .vs/
-CMakeCache.txt
-CMakeFiles/
 
 ## kdevelop
 *.kdev4

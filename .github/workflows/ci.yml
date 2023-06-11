@@ -56,6 +56,7 @@ jobs:
             cmake_opts: "-A x64 \
               -DCMAKE_SYSTEM_NAME=WindowsStore \
               \"-DCMAKE_SYSTEM_VERSION=10.0\" \
+              -DALSOFT_TESTS=OFF \
               -DALSOFT_BUILD_ROUTER=ON \
               -DALSOFT_REQUIRE_WASAPI=ON",
             build_type: "Release"
@@ -74,6 +75,7 @@ jobs:
             -DALSOFT_REQUIRE_COREAUDIO=ON \
             -DALSOFT_UTILS=OFF \
             -DALSOFT_EXAMPLES=OFF \
+            -DALSOFT_TESTS=OFF \
             -DALSOFT_INSTALL=OFF \
             \"-DCMAKE_OSX_ARCHITECTURES=arm64\"",
             build_type: "Release"

@@ -979,28 +979,39 @@ void aluInitRenderer(ALCdevice *device, int hrtf_id, std::optional<StereoEncodin
             {
                 ERR("Failed to load layout file %s\n", config);
                 ERR("  %s\n", err->c_str());
+                return false;
             }
             else if(conf.NumSpeakers > MAX_OUTPUT_CHANNELS)
+            {
                 ERR("Unsupported decoder speaker count %zu (max %d)\n", conf.NumSpeakers,
                     MAX_OUTPUT_CHANNELS);
+                return false;
+            }
             else if(conf.ChanMask > Ambi3OrderMask)
+            {
                 ERR("Unsupported decoder channel mask 0x%04x (max 0x%x)\n", conf.ChanMask,
                     Ambi3OrderMask);
-            else
-            {
-                device->mXOverFreq = clampf(conf.XOverFreq, 100.0f, 1000.0f);
-
-                decoder_store = std::make_unique<DecoderConfig<DualBand,MAX_OUTPUT_CHANNELS>>();
-                decoder = MakeDecoderView(device, &conf, *decoder_store);
-                for(size_t i{0};i < decoder.mChannels.size();++i)
-                    speakerdists[i] = conf.Speakers[i].Distance;
+                return false;
             }
+
+            TRACE("Using %s decoder: \"%s\"\n", DevFmtChannelsString(device->FmtChans),
+                conf.Description.c_str());
+            device->mXOverFreq = clampf(conf.XOverFreq, 100.0f, 1000.0f);
+
+            decoder_store = std::make_unique<DecoderConfig<DualBand,MAX_OUTPUT_CHANNELS>>();
+            decoder = MakeDecoderView(device, &conf, *decoder_store);
+            for(size_t i{0};i < decoder.mChannels.size();++i)
+                speakerdists[i] = conf.Speakers[i].Distance;
+            return true;
         };
+        bool usingCustom{false};
         if(layout)
         {
             if(auto decopt = device->configValue<std::string>("decoder", layout))
-                load_config(decopt->c_str());
+                usingCustom = load_config(decopt->c_str());
         }
+        if(!usingCustom && device->FmtChans != DevFmtAmbi3D)
+            TRACE("Using built-in %s decoder\n", DevFmtChannelsString(device->FmtChans));
 
         /* Enable the stablizer only for formats that have front-left, front-
          * right, and front-center outputs.

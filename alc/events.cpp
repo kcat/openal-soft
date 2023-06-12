@@ -85,7 +85,7 @@ FORCE_ALIGN ALCboolean ALC_APIENTRY alcEventControlSOFT(ALCsizei count, const AL
 
     auto eventlock = std::unique_lock{alc::EventMutex};
     if(enable) alc::EventsEnabled |= eventSet;
-    else alc::EventsEnabled &= eventSet;
+    else alc::EventsEnabled &= ~eventSet;
     return ALC_TRUE;
 }
 

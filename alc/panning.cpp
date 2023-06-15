@@ -314,17 +314,17 @@ void InitDistanceComp(ALCdevice *device, const al::span<const Channel> channels,
 }
 
 
-inline auto& GetAmbiScales(DevAmbiScaling scaletype) noexcept
+constexpr auto GetAmbiScales(DevAmbiScaling scaletype) noexcept
 {
-    if(scaletype == DevAmbiScaling::FuMa) return AmbiScale::FromFuMa();
-    if(scaletype == DevAmbiScaling::SN3D) return AmbiScale::FromSN3D();
-    return AmbiScale::FromN3D();
+    if(scaletype == DevAmbiScaling::FuMa) return al::span{AmbiScale::FromFuMa};
+    if(scaletype == DevAmbiScaling::SN3D) return al::span{AmbiScale::FromSN3D};
+    return al::span{AmbiScale::FromN3D};
 }
 
-inline auto& GetAmbiLayout(DevAmbiLayout layouttype) noexcept
+constexpr auto GetAmbiLayout(DevAmbiLayout layouttype) noexcept
 {
-    if(layouttype == DevAmbiLayout::FuMa) return AmbiIndex::FromFuMa();
-    return AmbiIndex::FromACN();
+    if(layouttype == DevAmbiLayout::FuMa) return al::span{AmbiIndex::FromFuMa};
+    return al::span{AmbiIndex::FromACN};
 }
 
 
@@ -355,8 +355,8 @@ DecoderView MakeDecoderView(ALCdevice *device, const AmbDecConf *conf,
 
     const auto num_coeffs = decoder.mIs3D ? AmbiChannelsFromOrder(decoder.mOrder)
         : Ambi2DChannelsFromOrder(decoder.mOrder);
-    const auto idx_map = decoder.mIs3D ? AmbiIndex::FromACN().data()
-        : AmbiIndex::FromACN2D().data();
+    const auto idx_map = decoder.mIs3D ? AmbiIndex::FromACN.data()
+        : AmbiIndex::FromACN2D.data();
     const auto hfmatrix = conf->HFMatrix;
     const auto lfmatrix = conf->LFMatrix;
 
@@ -601,13 +601,13 @@ void InitPanning(ALCdevice *device, const bool hqdec=false, const bool stablize=
         case DevFmtX714: decoder = X714Config; break;
         case DevFmtX3D71: decoder = X3D71Config; break;
         case DevFmtAmbi3D:
-            auto&& acnmap = GetAmbiLayout(device->mAmbiLayout);
-            auto&& n3dscale = GetAmbiScales(device->mAmbiScale);
+            const auto acnmap = GetAmbiLayout(device->mAmbiLayout);
+            const auto n3dscale = GetAmbiScales(device->mAmbiScale);
 
             /* For DevFmtAmbi3D, the ambisonic order is already set. */
             const size_t count{AmbiChannelsFromOrder(device->mAmbiOrder)};
             std::transform(acnmap.begin(), acnmap.begin()+count, std::begin(device->Dry.AmbiMap),
-                [&n3dscale](const uint8_t &acn) noexcept -> BFChannelConfig
+                [n3dscale](const uint8_t &acn) noexcept -> BFChannelConfig
                 { return BFChannelConfig{1.0f/n3dscale[acn], acn}; });
             AllocChannels(device, count, 0);
             device->m2DMixing = false;
@@ -640,8 +640,8 @@ void InitPanning(ALCdevice *device, const bool hqdec=false, const bool stablize=
             continue;
         }
 
-        auto ordermap = decoder.mIs3D ? AmbiIndex::OrderFromChannel().data()
-            : AmbiIndex::OrderFrom2DChannel().data();
+        auto ordermap = decoder.mIs3D ? AmbiIndex::OrderFromChannel.data()
+            : AmbiIndex::OrderFrom2DChannel.data();
 
         chancoeffs.resize(maxz(chancoeffs.size(), idx+1u), ChannelDec{});
         al::span<const float,MaxAmbiChannels> src{decoder.mCoeffs[i]};
@@ -663,11 +663,11 @@ void InitPanning(ALCdevice *device, const bool hqdec=false, const bool stablize=
     device->mAmbiOrder = decoder.mOrder;
     device->m2DMixing = !decoder.mIs3D;
 
-    const al::span<const uint8_t> acnmap{decoder.mIs3D ? AmbiIndex::FromACN().data() :
-        AmbiIndex::FromACN2D().data(), ambicount};
-    auto&& coeffscale = GetAmbiScales(decoder.mScaling);
+    const al::span<const uint8_t> acnmap{decoder.mIs3D ? AmbiIndex::FromACN.data() :
+        AmbiIndex::FromACN2D.data(), ambicount};
+    const auto coeffscale = GetAmbiScales(decoder.mScaling);
     std::transform(acnmap.begin(), acnmap.end(), std::begin(device->Dry.AmbiMap),
-        [&coeffscale](const uint8_t &acn) noexcept
+        [coeffscale](const uint8_t &acn) noexcept
         { return BFChannelConfig{1.0f/coeffscale[acn], acn}; });
     AllocChannels(device, ambicount, device->channelsFromFmt());
 
@@ -902,7 +902,7 @@ void InitHrtfPanning(ALCdevice *device)
     device->m2DMixing = false;
 
     const size_t count{AmbiChannelsFromOrder(ambi_order)};
-    std::transform(AmbiIndex::FromACN().begin(), AmbiIndex::FromACN().begin()+count,
+    std::transform(AmbiIndex::FromACN.begin(), AmbiIndex::FromACN.begin()+count,
         std::begin(device->Dry.AmbiMap),
         [](const uint8_t &index) noexcept { return BFChannelConfig{1.0f, index}; }
     );
@@ -925,10 +925,10 @@ void InitUhjPanning(ALCdevice *device)
     device->mAmbiOrder = 1;
     device->m2DMixing = true;
 
-    auto acnmap_begin = AmbiIndex::FromFuMa2D().begin();
+    auto acnmap_begin = AmbiIndex::FromFuMa2D.begin();
     std::transform(acnmap_begin, acnmap_begin + count, std::begin(device->Dry.AmbiMap),
         [](const uint8_t &acn) noexcept -> BFChannelConfig
-        { return BFChannelConfig{1.0f/AmbiScale::FromUHJ()[acn], acn}; });
+        { return BFChannelConfig{1.0f/AmbiScale::FromUHJ[acn], acn}; });
     AllocChannels(device, count, device->channelsFromFmt());
 }
 
@@ -1155,7 +1155,7 @@ void aluInitEffectPanning(EffectSlot *slot, ALCcontext *context)
 
     slot->mWetBuffer.resize(count);
 
-    auto acnmap_begin = AmbiIndex::FromACN().begin();
+    auto acnmap_begin = AmbiIndex::FromACN.begin();
     auto iter = std::transform(acnmap_begin, acnmap_begin + count, slot->Wet.AmbiMap.begin(),
         [](const uint8_t &acn) noexcept -> BFChannelConfig
         { return BFChannelConfig{1.0f, acn}; });

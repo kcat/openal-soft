@@ -1273,7 +1273,7 @@ void Voice::prepare(DeviceBase *device)
     else if(mAmbiOrder && device->mAmbiOrder > mAmbiOrder)
     {
         const uint8_t *OrderFromChan{Is2DAmbisonic(mFmtChannels) ?
-            AmbiIndex::OrderFrom2DChannel().data() : AmbiIndex::OrderFromChannel().data()};
+            AmbiIndex::OrderFrom2DChannel.data() : AmbiIndex::OrderFromChannel.data()};
         const auto scales = AmbiScale::GetHFOrderScales(mAmbiOrder, device->mAmbiOrder,
             device->m2DMixing);
 

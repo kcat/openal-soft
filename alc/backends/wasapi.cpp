@@ -577,7 +577,8 @@ struct DeviceHelper final : private IMMNotificationClient
         Platform::String^ devIfPath =
             devid.empty() ? (flow == eRender ? MediaDevice::GetDefaultAudioRenderId(deviceRole) : MediaDevice::GetDefaultAudioCaptureId(deviceRole))
             : ref new Platform::String(devid.data());
-
+        if (!devIfPath)
+            return E_POINTER;
         Concurrency::task<DeviceInformation^> createDeviceOp(
             DeviceInformation::CreateFromIdAsync(devIfPath, nullptr, DeviceInformationKind::DeviceInterface));
         auto status = createDeviceOp.then([&](DeviceInformation^ deviceInfo)

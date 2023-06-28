@@ -674,6 +674,8 @@ struct DeviceHelper final : private IMMNotificationClient
         const auto deviceRole = Windows::Media::Devices::AudioDeviceRole::Default;
         auto DefaultAudioId   = flowdir == eRender ? MediaDevice::GetDefaultAudioRenderId(deviceRole)
                                                    : MediaDevice::GetDefaultAudioCaptureId(deviceRole);
+        if (!DefaultAudioId)
+            return defaultId;
         Concurrency::task<DeviceInformation ^> createDefaultOp(DeviceInformation::CreateFromIdAsync(DefaultAudioId, nullptr, DeviceInformationKind::DeviceInterface));
         auto task_status = createDefaultOp.then([&defaultId](DeviceInformation ^ deviceInfo)
         {

@@ -53,8 +53,6 @@ struct Sdl2Backend final : public BackendBase {
     ~Sdl2Backend() override;
 
     void audioCallback(Uint8 *stream, int len) noexcept;
-    static void audioCallbackC(void *ptr, Uint8 *stream, int len) noexcept
-    { static_cast<Sdl2Backend*>(ptr)->audioCallback(stream, len); }
 
     void open(const char *name) override;
     bool reset() override;
@@ -103,7 +101,8 @@ void Sdl2Backend::open(const char *name)
     }
     want.channels = (mDevice->FmtChans == DevFmtMono) ? 1 : 2;
     want.samples = static_cast<Uint16>(minu(mDevice->UpdateSize, 8192));
-    want.callback = &Sdl2Backend::audioCallbackC;
+    want.callback = [](void *ptr, Uint8 *stream, int len) noexcept
+    { return static_cast<Sdl2Backend*>(ptr)->audioCallback(stream, len); };
     want.userdata = this;
 
     /* Passing nullptr to SDL_OpenAudioDevice opens a default, which isn't

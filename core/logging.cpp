@@ -19,7 +19,16 @@
 #include <android/log.h>
 #endif
 
-void al_print(LogLevel level, FILE *logfile, const char *fmt, ...)
+
+FILE *gLogFile{stderr};
+#ifdef _DEBUG
+LogLevel gLogLevel{LogLevel::Warning};
+#else
+LogLevel gLogLevel{LogLevel::Error};
+#endif
+
+
+void al_print(LogLevel level, const char *fmt, ...)
 {
     /* Kind of ugly since string literals are const char arrays with a size
      * that includes the null terminator, which we want to exclude from the
@@ -60,6 +69,7 @@ void al_print(LogLevel level, FILE *logfile, const char *fmt, ...)
 
     if(gLogLevel >= level)
     {
+        auto logfile = gLogFile;
         fputs(str, logfile);
         fflush(logfile);
     }

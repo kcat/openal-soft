@@ -162,13 +162,6 @@
 #endif // ALSOFT_EAX
 
 
-FILE *gLogFile{stderr};
-#ifdef _DEBUG
-LogLevel gLogLevel{LogLevel::Warning};
-#else
-LogLevel gLogLevel{LogLevel::Error};
-#endif
-
 /************************************************
  * Library initialization
  ************************************************/

@@ -72,6 +72,11 @@ functions with C linkage. For languages that can't directly use C-style
 headers, bindings may be developed to allow code written in that language to
 call into the library. Some bindings for some languages are listed here.
 
+C# Bindings:
+* [OpenTK](https://opentk.net/) includes low-level C# bindings for the OpenAL
+API, including some extensions. It also includes utility libraries for math and
+linear algebra, which can be useful for 3D calculations.
+
 Java Bindings:
 * [JOAL](https://jogamp.org/joal/www/), part of the JogAmp project, includes
 Java bindings for the OpenAL API, usable with OpenAL Soft. It also includes a

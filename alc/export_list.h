@@ -367,6 +367,8 @@ inline const FuncExport alcFunctions[]{
 
     DECL(alcEventControlSOFT),
     DECL(alcEventCallbackSOFT),
+
+    DECL(alsoft_set_log_callback),
 #ifdef ALSOFT_EAX
 }, eaxFunctions[]{
     DECL(EAXGet),

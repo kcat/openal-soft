@@ -1846,6 +1846,11 @@ ContextRef VerifyContext(ALCcontext *context)
 
 } // namespace
 
+FORCE_ALIGN void ALC_APIENTRY alsoft_set_log_callback(LPALSOFTLOGCALLBACK callback, void *userptr) noexcept
+{
+    al_set_log_callback(callback, userptr);
+}
+
 /** Returns a new reference to the currently active context for this thread. */
 ContextRef GetContextRef(void)
 {

@@ -55,7 +55,7 @@ jobs:
         copy "libmysofa/windows/third-party/zlib-1.2.11/bin/zlib.dll" "Artifacts/zlib.dll"
 
     - name: Upload makemhr artifact
-      uses: actions/upload-artifact@v3.1.1
+      uses: actions/upload-artifact@v3.1.2
       with:
         name: makemhr
         path: "Artifacts/"

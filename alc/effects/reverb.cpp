@@ -643,8 +643,8 @@ inline float CalcDelayLengthMult(float density)
  */
 void ReverbState::allocLines(const float frequency)
 {
-    /* All delay line lengths are calculated to accomodate the full range of
-     * lengths given their respective paramters.
+    /* All delay line lengths are calculated to accommodate the full range of
+     * lengths given their respective parameters.
      */
     size_t totalSamples{0u};
 

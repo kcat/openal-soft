@@ -1853,7 +1853,7 @@ void ProcessContexts(DeviceBase *device, const uint SamplesToDo)
         const EffectSlotArray &auxslots = *ctx->mActiveAuxSlots.load(std::memory_order_acquire);
         const al::span<Voice*> voices{ctx->getVoicesSpanAcquired()};
 
-        /* Process pending propery updates for objects on the context. */
+        /* Process pending property updates for objects on the context. */
         ProcessParamUpdates(ctx, auxslots, voices);
 
         /* Clear auxiliary effect slot mixing buffers. */

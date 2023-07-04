@@ -1836,7 +1836,7 @@ ClockLatency PipeWirePlayback::getClockLatency()
     delay -= monoclock - nanoseconds{ptime.now};
 
     /* Return the mixer time and delay. Clamp the delay to no less than 0,
-     * incase timer drift got that severe.
+     * in case timer drift got that severe.
      */
     ClockLatency ret{};
     ret.ClockTime = mixtime;

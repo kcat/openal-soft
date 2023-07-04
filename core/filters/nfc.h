@@ -39,7 +39,7 @@ public:
      * w1 = speed_of_sound / (control_distance * sample_rate);
      *
      * Generally speaking, the control distance should be approximately the
-     * average speaker distance, or based on the reference delay if outputing
+     * average speaker distance, or based on the reference delay if outputting
      * NFC-HOA. It must not be negative, 0, or infinite. The source distance
      * should not be too small relative to the control distance.
      */

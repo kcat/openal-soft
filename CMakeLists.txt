@@ -171,7 +171,7 @@ elseif(APPLE)
 endif()
 
 
-# QNX's gcc do not uses /usr/include and /usr/lib pathes by default
+# QNX's gcc do not uses /usr/include and /usr/lib paths by default
 if("${CMAKE_C_PLATFORM_ID}" STREQUAL "QNX")
     set(INC_PATHS ${INC_PATHS} /usr/include)
     set(LINKER_FLAGS ${LINKER_FLAGS} -L/usr/lib)
@@ -539,7 +539,7 @@ if(HAVE_LIBRT)
     set(RT_LIB rt)
 endif()
 
-# Check for the dlopen API (for dynamicly loading backend libs)
+# Check for the dlopen API (for dynamically loading backend libs)
 if(ALSOFT_DLOPEN)
     check_include_file(dlfcn.h HAVE_DLFCN_H)
     check_library_exists(dl dlopen "" HAVE_LIBDL)

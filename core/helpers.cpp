@@ -23,7 +23,7 @@
 #include "strutils.h"
 
 
-/* Mixing thread piority level */
+/* Mixing thread priority level */
 int RTPrioLevel{1};
 
 /* Allow reducing the process's RTTime limit for RTKit. */

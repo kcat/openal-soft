@@ -436,7 +436,7 @@ void SndioCapture::open(const char *name)
 
     if(!sio_setpar(mSndHandle, &par) || !sio_getpar(mSndHandle, &par))
         throw al::backend_exception{al::backend_error::DeviceError,
-            "Failed to set device praameters"};
+            "Failed to set device parameters"};
 
     if(par.bps > 1 && par.le != SIO_LE_NATIVE)
         throw al::backend_exception{al::backend_error::DeviceError,

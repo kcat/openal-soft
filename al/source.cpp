@@ -434,7 +434,7 @@ struct VoicePos {
  * GetSampleOffset
  *
  * Retrieves the voice position, fixed-point fraction, and bufferlist item
- * using the givem offset type and offset. If the offset is out of range,
+ * using the given offset type and offset. If the offset is out of range,
  * returns an empty optional.
  */
 std::optional<VoicePos> GetSampleOffset(al::deque<ALbufferQueueItem> &BufferList,
@@ -3870,7 +3870,7 @@ void ALsource::eax2_translate(const Eax2Props& src, Eax5Props& dst) noexcept
     dst.source.ulFlags = src.dwFlags;
     dst.source.flMacroFXFactor = EAXSOURCE_DEFAULTMACROFXFACTOR;
 
-    // Set everyting else to defaults.
+    // Set everything else to defaults.
     //
     eax5_set_sends_defaults(dst.sends);
     eax5_set_active_fx_slots_defaults(dst.active_fx_slots);
@@ -3884,7 +3884,7 @@ void ALsource::eax3_translate(const Eax3Props& src, Eax5Props& dst) noexcept
     static_cast<Eax3Props&>(dst.source) = src;
     dst.source.flMacroFXFactor = EAXSOURCE_DEFAULTMACROFXFACTOR;
 
-    // Set everyting else to defaults.
+    // Set everything else to defaults.
     //
     eax5_set_sends_defaults(dst.sends);
     eax5_set_active_fx_slots_defaults(dst.active_fx_slots);

@@ -614,7 +614,7 @@ struct EAX30SOURCEPROPERTIES {
     float flOcclusionLFRatio; // occlusion low-frequency level re. main control
     float flOcclusionRoomRatio; // relative occlusion control for room effect
     float flOcclusionDirectRatio; // relative occlusion control for direct path
-    long lExclusion; // main exlusion control (attenuation at high frequencies)
+    long lExclusion; // main exclusion control (attenuation at high frequencies)
     float flExclusionLFRatio; // exclusion low-frequency level re. main control
     long lOutsideVolumeHF; // outside sound cone level at high frequencies
     float flDopplerFactor; // like DS3D flDopplerFactor but per source

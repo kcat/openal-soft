@@ -167,7 +167,7 @@ WinMMPlayback::~WinMMPlayback()
 
 /* WinMMPlayback::waveOutProc
  *
- * Posts a message to 'WinMMPlayback::mixerProc' everytime a WaveOut Buffer is
+ * Posts a message to 'WinMMPlayback::mixerProc' every time a WaveOut Buffer is
  * completed and returns to the application (for more data)
  */
 void CALLBACK WinMMPlayback::waveOutProc(HWAVEOUT, UINT msg, DWORD_PTR, DWORD_PTR) noexcept
@@ -406,7 +406,7 @@ WinMMCapture::~WinMMCapture()
 
 /* WinMMCapture::waveInProc
  *
- * Posts a message to 'WinMMCapture::captureProc' everytime a WaveIn Buffer is
+ * Posts a message to 'WinMMCapture::captureProc' every time a WaveIn Buffer is
  * completed and returns to the application (with more data).
  */
 void CALLBACK WinMMCapture::waveInProc(HWAVEIN, UINT msg, DWORD_PTR, DWORD_PTR) noexcept

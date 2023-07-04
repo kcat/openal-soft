@@ -873,7 +873,7 @@ FORCE_ALIGN void AL_APIENTRY alFlushMappedBufferDirectSOFT(ALCcontext *context, 
     else
     {
         /* FIXME: Need to use some method of double-buffering for the mixer and
-         * app to hold separate memory, which can be safely transfered
+         * app to hold separate memory, which can be safely transferred
          * asynchronously. Currently we just say the app shouldn't write where
          * OpenAL's reading, and hope for the best...
          */

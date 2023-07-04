@@ -156,7 +156,7 @@ static ALuint CreateWave(enum WaveType type, ALuint freq, ALuint srate, ALfloat 
     alBufferData(buffer, AL_FORMAT_MONO_FLOAT32, data, (ALsizei)data_size, (ALsizei)srate);
     free(data);
 
-    /* Check if an error occured, and clean up if so. */
+    /* Check if an error occurred, and clean up if so. */
     err = alGetError();
     if(err != AL_NO_ERROR)
     {

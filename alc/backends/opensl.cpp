@@ -934,7 +934,7 @@ void OpenSLCapture::captureSamples(std::byte *buffer, uint samples)
         return;
 
     /* For each buffer chunk that was fully read, queue another writable buffer
-     * chunk to keep the OpenSL queue full. This is rather convulated, as a
+     * chunk to keep the OpenSL queue full. This is rather convoluted, as a
      * result of the ring buffer holding more elements than are writable at a
      * given time. The end of the write vector increments when the read pointer
      * advances, which will "expose" a previously unwritable element. So for

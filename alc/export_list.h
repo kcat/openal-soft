@@ -56,6 +56,9 @@ inline const FuncExport alcFunctions[]{
 
     DECL(alcReopenDeviceSOFT),
 
+    DECL(alcEventControlSOFT),
+    DECL(alcEventCallbackSOFT),
+
     DECL(alEnable),
     DECL(alDisable),
     DECL(alIsEnabled),
@@ -365,9 +368,7 @@ inline const FuncExport alcFunctions[]{
     DECL(alPopDebugGroupDirectEXT),
     DECL(alGetDebugMessageLogDirectEXT),
 
-    DECL(alcEventControlSOFT),
-    DECL(alcEventCallbackSOFT),
-
+    /* Extra functions */
     DECL(alsoft_set_log_callback),
 #ifdef ALSOFT_EAX
 }, eaxFunctions[]{

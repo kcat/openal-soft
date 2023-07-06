@@ -136,6 +136,17 @@ int EventThread(ALCcontext *context)
     return 0;
 }
 
+constexpr std::optional<AsyncEnableBits> GetEventType(ALenum etype) noexcept
+{
+    switch(etype)
+    {
+    case AL_EVENT_TYPE_BUFFER_COMPLETED_SOFT: return AsyncEnableBits::BufferCompleted;
+    case AL_EVENT_TYPE_DISCONNECTED_SOFT: return AsyncEnableBits::Disconnected;
+    case AL_EVENT_TYPE_SOURCE_STATE_CHANGED_SOFT: return AsyncEnableBits::SourceState;
+    }
+    return std::nullopt;
+}
+
 } // namespace
 
 
@@ -179,23 +190,13 @@ FORCE_ALIGN void AL_APIENTRY alEventControlDirectSOFT(ALCcontext *context, ALsiz
     if(!types) return context->setError(AL_INVALID_VALUE, "NULL pointer");
 
     ContextBase::AsyncEventBitset flags{};
-    const ALenum *types_end = types+count;
-    auto bad_type = std::find_if_not(types, types_end,
-        [&flags](ALenum type) noexcept -> bool
-        {
-            if(type == AL_EVENT_TYPE_BUFFER_COMPLETED_SOFT)
-                flags.set(al::to_underlying(AsyncEnableBits::BufferCompleted));
-            else if(type == AL_EVENT_TYPE_SOURCE_STATE_CHANGED_SOFT)
-                flags.set(al::to_underlying(AsyncEnableBits::SourceState));
-            else if(type == AL_EVENT_TYPE_DISCONNECTED_SOFT)
-                flags.set(al::to_underlying(AsyncEnableBits::Disconnected));
-            else
-                return false;
-            return true;
-        }
-    );
-    if(bad_type != types_end)
-        return context->setError(AL_INVALID_ENUM, "Invalid event type 0x%04x", *bad_type);
+    for(ALenum evttype : al::span{types, static_cast<uint>(count)})
+    {
+        auto etype = GetEventType(evttype);
+        if(!etype)
+            return context->setError(AL_INVALID_ENUM, "Invalid event type 0x%04x", evttype);
+        flags.set(al::to_underlying(*etype));
+    }
 
     if(enable)
     {

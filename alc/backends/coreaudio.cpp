@@ -309,6 +309,7 @@ struct DeviceHelper {
                 break;
             }
         }
+        return noErr;
     }
 };
 

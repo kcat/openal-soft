@@ -70,7 +70,7 @@ FORCE_ALIGN ALCboolean ALC_APIENTRY alcEventControlSOFT(ALCsizei count, const AL
         return ALC_FALSE;
     }
 
-    std::bitset<al::to_underlying(alc::EventType::Count)> eventSet{0};
+    alc::EventBitSet eventSet{0};
     for(ALCenum type : al::span{events, static_cast<ALCuint>(count)})
     {
         auto etype = GetEventType(type);

@@ -24,7 +24,8 @@ enum class DeviceType : ALCenum {
     Capture = ALC_CAPTURE_DEVICE_SOFT,
 };
 
-inline std::bitset<al::to_underlying(EventType::Count)> EventsEnabled{0};
+using EventBitSet = std::bitset<al::to_underlying(EventType::Count)>;
+inline EventBitSet EventsEnabled{0};
 
 inline std::mutex EventMutex;
 

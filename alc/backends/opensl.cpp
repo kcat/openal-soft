@@ -161,8 +161,6 @@ struct OpenSLPlayback final : public BackendBase {
     ~OpenSLPlayback() override;
 
     void process(SLAndroidSimpleBufferQueueItf bq) noexcept;
-    static void processC(SLAndroidSimpleBufferQueueItf bq, void *context) noexcept
-    { static_cast<OpenSLPlayback*>(context)->process(bq); }
 
     int mixerProc();
 
@@ -566,7 +564,9 @@ void OpenSLPlayback::start()
     PrintErr(result, "bufferQueue->GetInterface");
     if(SL_RESULT_SUCCESS == result)
     {
-        result = VCALL(bufferQueue,RegisterCallback)(&OpenSLPlayback::processC, this);
+        result = VCALL(bufferQueue,RegisterCallback)(
+            [](SLAndroidSimpleBufferQueueItf bq, void *context) noexcept
+            { static_cast<OpenSLPlayback*>(context)->process(bq); }, this);
         PrintErr(result, "bufferQueue->RegisterCallback");
     }
     if(SL_RESULT_SUCCESS != result)
@@ -644,8 +644,6 @@ struct OpenSLCapture final : public BackendBase {
     ~OpenSLCapture() override;
 
     void process(SLAndroidSimpleBufferQueueItf bq) noexcept;
-    static void processC(SLAndroidSimpleBufferQueueItf bq, void *context) noexcept
-    { static_cast<OpenSLCapture*>(context)->process(bq); }
 
     void open(const char *name) override;
     void start() override;
@@ -815,7 +813,9 @@ void OpenSLCapture::open(const char* name)
     }
     if(SL_RESULT_SUCCESS == result)
     {
-        result = VCALL(bufferQueue,RegisterCallback)(&OpenSLCapture::processC, this);
+        result = VCALL(bufferQueue,RegisterCallback)(
+            [](SLAndroidSimpleBufferQueueItf bq, void *context) noexcept
+            { static_cast<OpenSLCapture*>(context)->process(bq); }, this);
         PrintErr(result, "bufferQueue->RegisterCallback");
     }
     if(SL_RESULT_SUCCESS == result)

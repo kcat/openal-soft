@@ -1348,9 +1348,9 @@ spa_audio_info_raw make_spa_info(DeviceBase *device, bool is51rear, use_f32p_e u
 }
 
 class PipeWirePlayback final : public BackendBase {
-    void stateChangedCallback(pw_stream_state old, pw_stream_state state, const char *error);
-    void ioChangedCallback(uint32_t id, void *area, uint32_t size);
-    void outputCallback();
+    void stateChangedCallback(pw_stream_state old, pw_stream_state state, const char *error) noexcept;
+    void ioChangedCallback(uint32_t id, void *area, uint32_t size) noexcept;
+    void outputCallback() noexcept;
 
     void open(const char *name) override;
     bool reset() override;
@@ -1373,11 +1373,11 @@ class PipeWirePlayback final : public BackendBase {
     {
         pw_stream_events ret{};
         ret.version = PW_VERSION_STREAM_EVENTS;
-        ret.state_changed = [](void *data, pw_stream_state old, pw_stream_state state, const char *error)
+        ret.state_changed = [](void *data, pw_stream_state old, pw_stream_state state, const char *error) noexcept
         { static_cast<PipeWirePlayback*>(data)->stateChangedCallback(old, state, error); };
-        ret.io_changed = [](void *data, uint32_t id, void *area, uint32_t size)
+        ret.io_changed = [](void *data, uint32_t id, void *area, uint32_t size) noexcept
         { static_cast<PipeWirePlayback*>(data)->ioChangedCallback(id, area, size); };
-        ret.process = [](void *data)
+        ret.process = [](void *data) noexcept
         { static_cast<PipeWirePlayback*>(data)->outputCallback(); };
         return ret;
     }
@@ -1394,10 +1394,10 @@ public:
 };
 
 
-void PipeWirePlayback::stateChangedCallback(pw_stream_state, pw_stream_state, const char*)
+void PipeWirePlayback::stateChangedCallback(pw_stream_state, pw_stream_state, const char*) noexcept
 { mLoop.signal(false); }
 
-void PipeWirePlayback::ioChangedCallback(uint32_t id, void *area, uint32_t size)
+void PipeWirePlayback::ioChangedCallback(uint32_t id, void *area, uint32_t size) noexcept
 {
     switch(id)
     {
@@ -1408,7 +1408,7 @@ void PipeWirePlayback::ioChangedCallback(uint32_t id, void *area, uint32_t size)
     }
 }
 
-void PipeWirePlayback::outputCallback()
+void PipeWirePlayback::outputCallback() noexcept
 {
     pw_buffer *pw_buf{pw_stream_dequeue_buffer(mStream.get())};
     if(!pw_buf) UNLIKELY return;
@@ -1847,8 +1847,8 @@ ClockLatency PipeWirePlayback::getClockLatency()
 
 
 class PipeWireCapture final : public BackendBase {
-    void stateChangedCallback(pw_stream_state old, pw_stream_state state, const char *error);
-    void inputCallback();
+    void stateChangedCallback(pw_stream_state old, pw_stream_state state, const char *error) noexcept;
+    void inputCallback() noexcept;
 
     void open(const char *name) override;
     void start() override;
@@ -1869,9 +1869,9 @@ class PipeWireCapture final : public BackendBase {
     {
         pw_stream_events ret{};
         ret.version = PW_VERSION_STREAM_EVENTS;
-        ret.state_changed = [](void *data, pw_stream_state old, pw_stream_state state, const char *error)
+        ret.state_changed = [](void *data, pw_stream_state old, pw_stream_state state, const char *error) noexcept
         { static_cast<PipeWireCapture*>(data)->stateChangedCallback(old, state, error); };
-        ret.process = [](void *data)
+        ret.process = [](void *data) noexcept
         { static_cast<PipeWireCapture*>(data)->inputCallback(); };
         return ret;
     }
@@ -1884,10 +1884,10 @@ public:
 };
 
 
-void PipeWireCapture::stateChangedCallback(pw_stream_state, pw_stream_state, const char*)
+void PipeWireCapture::stateChangedCallback(pw_stream_state, pw_stream_state, const char*) noexcept
 { mLoop.signal(false); }
 
-void PipeWireCapture::inputCallback()
+void PipeWireCapture::inputCallback() noexcept
 {
     pw_buffer *pw_buf{pw_stream_dequeue_buffer(mStream.get())};
     if(!pw_buf) UNLIKELY return;

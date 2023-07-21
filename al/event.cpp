@@ -183,6 +183,7 @@ void StopEventThrd(ALCcontext *ctx)
         ctx->mEventThread.join();
 }
 
+AL_API DECL_FUNCEXT3(void, alEventControl,SOFT, ALsizei, const ALenum*, ALboolean)
 FORCE_ALIGN void AL_APIENTRY alEventControlDirectSOFT(ALCcontext *context, ALsizei count,
     const ALenum *types, ALboolean enable) noexcept
 {
@@ -224,14 +225,11 @@ FORCE_ALIGN void AL_APIENTRY alEventControlDirectSOFT(ALCcontext *context, ALsiz
     }
 }
 
+AL_API DECL_FUNCEXT2(void, alEventCallback,SOFT, ALEVENTPROCSOFT, void*)
 FORCE_ALIGN void AL_APIENTRY alEventCallbackDirectSOFT(ALCcontext *context,
     ALEVENTPROCSOFT callback, void *userParam) noexcept
 {
-    std::lock_guard<std::mutex> _{context->mPropLock};
-    std::lock_guard<std::mutex> __{context->mEventCbLock};
+    std::lock_guard<std::mutex> _{context->mEventCbLock};
     context->mEventCb = callback;
     context->mEventParam = userParam;
 }
-
-AL_API DECL_FUNCEXT3(void, alEventControl,SOFT, ALsizei, const ALenum*, ALboolean)
-AL_API DECL_FUNCEXT2(void, alEventCallback,SOFT, ALEVENTPROCSOFT, void*)

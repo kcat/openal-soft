@@ -2660,7 +2660,21 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
         }
     }
 
-    ContextRef context{new ALCcontext{dev, ctxflags}};
+    ContextRef context{[](auto&& ...args) -> ContextRef
+    {
+        try {
+            return ContextRef{new ALCcontext{std::forward<decltype(args)>(args)...}};
+        }
+        catch(std::exception& e) {
+            ERR("Failed to create ALCcontext: %s\n", e.what());
+            return ContextRef{};
+        }
+    }(dev, ctxflags)};
+    if(!context)
+    {
+        alcSetError(dev.get(), ALC_OUT_OF_MEMORY);
+        return nullptr;
+    }
     context->init();
 
     if(auto volopt = dev->configValue<float>(nullptr, "volume-adjust"))

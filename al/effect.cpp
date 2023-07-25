@@ -231,6 +231,7 @@ inline ALeffect *LookupEffect(ALCdevice *device, ALuint id)
 
 } // namespace
 
+AL_API DECL_FUNC2(void, alGenEffects, ALsizei, ALuint*)
 FORCE_ALIGN void AL_APIENTRY alGenEffectsDirect(ALCcontext *context, ALsizei n, ALuint *effects) noexcept
 {
     if(n < 0) UNLIKELY
@@ -266,6 +267,7 @@ FORCE_ALIGN void AL_APIENTRY alGenEffectsDirect(ALCcontext *context, ALsizei n, 
     }
 }
 
+AL_API DECL_FUNC2(void, alDeleteEffects, ALsizei, const ALuint*)
 FORCE_ALIGN void AL_APIENTRY alDeleteEffectsDirect(ALCcontext *context, ALsizei n,
     const ALuint *effects) noexcept
 {
@@ -297,6 +299,7 @@ FORCE_ALIGN void AL_APIENTRY alDeleteEffectsDirect(ALCcontext *context, ALsizei 
     std::for_each(effects, effects_end, delete_effect);
 }
 
+AL_API DECL_FUNC1(ALboolean, alIsEffect, ALuint)
 FORCE_ALIGN ALboolean AL_APIENTRY alIsEffectDirect(ALCcontext *context, ALuint effect) noexcept
 {
     ALCdevice *device{context->mALDevice.get()};
@@ -306,6 +309,7 @@ FORCE_ALIGN ALboolean AL_APIENTRY alIsEffectDirect(ALCcontext *context, ALuint e
     return AL_FALSE;
 }
 
+AL_API DECL_FUNC3(void, alEffecti, ALuint, ALenum, ALint)
 FORCE_ALIGN void AL_APIENTRY alEffectiDirect(ALCcontext *context, ALuint effect, ALenum param,
     ALint value) noexcept
 {
@@ -345,6 +349,7 @@ FORCE_ALIGN void AL_APIENTRY alEffectiDirect(ALCcontext *context, ALuint effect,
     }
 }
 
+AL_API DECL_FUNC3(void, alEffectiv, ALuint, ALenum, const ALint*)
 FORCE_ALIGN void AL_APIENTRY alEffectivDirect(ALCcontext *context, ALuint effect, ALenum param,
     const ALint *values) noexcept
 {
@@ -371,6 +376,7 @@ FORCE_ALIGN void AL_APIENTRY alEffectivDirect(ALCcontext *context, ALuint effect
     }
 }
 
+AL_API DECL_FUNC3(void, alEffectf, ALuint, ALenum, ALfloat)
 FORCE_ALIGN void AL_APIENTRY alEffectfDirect(ALCcontext *context, ALuint effect, ALenum param,
     ALfloat value) noexcept
 {
@@ -390,6 +396,7 @@ FORCE_ALIGN void AL_APIENTRY alEffectfDirect(ALCcontext *context, ALuint effect,
     }
 }
 
+AL_API DECL_FUNC3(void, alEffectfv, ALuint, ALenum, const ALfloat*)
 FORCE_ALIGN void AL_APIENTRY alEffectfvDirect(ALCcontext *context, ALuint effect, ALenum param,
     const ALfloat *values) noexcept
 {
@@ -409,6 +416,7 @@ FORCE_ALIGN void AL_APIENTRY alEffectfvDirect(ALCcontext *context, ALuint effect
     }
 }
 
+AL_API DECL_FUNC3(void, alGetEffecti, ALuint, ALenum, ALint*)
 FORCE_ALIGN void AL_APIENTRY alGetEffectiDirect(ALCcontext *context, ALuint effect, ALenum param,
     ALint *value) noexcept
 {
@@ -430,6 +438,7 @@ FORCE_ALIGN void AL_APIENTRY alGetEffectiDirect(ALCcontext *context, ALuint effe
     }
 }
 
+AL_API DECL_FUNC3(void, alGetEffectiv, ALuint, ALenum, ALint*)
 FORCE_ALIGN void AL_APIENTRY alGetEffectivDirect(ALCcontext *context, ALuint effect, ALenum param,
     ALint *values) noexcept
 {
@@ -456,6 +465,7 @@ FORCE_ALIGN void AL_APIENTRY alGetEffectivDirect(ALCcontext *context, ALuint eff
     }
 }
 
+AL_API DECL_FUNC3(void, alGetEffectf, ALuint, ALenum, ALfloat*)
 FORCE_ALIGN void AL_APIENTRY alGetEffectfDirect(ALCcontext *context, ALuint effect, ALenum param,
     ALfloat *value) noexcept
 {
@@ -475,6 +485,7 @@ FORCE_ALIGN void AL_APIENTRY alGetEffectfDirect(ALCcontext *context, ALuint effe
     }
 }
 
+AL_API DECL_FUNC3(void, alGetEffectfv, ALuint, ALenum, ALfloat*)
 FORCE_ALIGN void AL_APIENTRY alGetEffectfvDirect(ALCcontext *context, ALuint effect, ALenum param,
     ALfloat *values) noexcept
 {
@@ -493,18 +504,6 @@ FORCE_ALIGN void AL_APIENTRY alGetEffectfvDirect(ALCcontext *context, ALuint eff
         context->setError(e.errorCode(), "%s", e.what());
     }
 }
-
-AL_API DECL_FUNC2(void, alGenEffects, ALsizei, ALuint*)
-AL_API DECL_FUNC2(void, alDeleteEffects, ALsizei, const ALuint*)
-AL_API DECL_FUNC1(ALboolean, alIsEffect, ALuint)
-AL_API DECL_FUNC3(void, alEffectf, ALuint, ALenum, ALfloat)
-AL_API DECL_FUNC3(void, alEffectfv, ALuint, ALenum, const ALfloat*)
-AL_API DECL_FUNC3(void, alEffecti, ALuint, ALenum, ALint)
-AL_API DECL_FUNC3(void, alEffectiv, ALuint, ALenum, const ALint*)
-AL_API DECL_FUNC3(void, alGetEffectf, ALuint, ALenum, ALfloat*)
-AL_API DECL_FUNC3(void, alGetEffectfv, ALuint, ALenum, ALfloat*)
-AL_API DECL_FUNC3(void, alGetEffecti, ALuint, ALenum, ALint*)
-AL_API DECL_FUNC3(void, alGetEffectiv, ALuint, ALenum, ALint*)
 
 
 void InitEffect(ALeffect *effect)

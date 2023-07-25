@@ -69,6 +69,7 @@ inline void CommitAndUpdateProps(ALCcontext *context)
 
 } // namespace
 
+AL_API DECL_FUNC2(void, alListenerf, ALenum, ALfloat)
 FORCE_ALIGN void AL_APIENTRY alListenerfDirect(ALCcontext *context, ALenum param, ALfloat value) noexcept
 {
     ALlistener &listener = context->mListener;
@@ -94,6 +95,7 @@ FORCE_ALIGN void AL_APIENTRY alListenerfDirect(ALCcontext *context, ALenum param
     }
 }
 
+AL_API DECL_FUNC4(void, alListener3f, ALenum, ALfloat, ALfloat, ALfloat)
 FORCE_ALIGN void AL_APIENTRY alListener3fDirect(ALCcontext *context, ALenum param, ALfloat value1,
     ALfloat value2, ALfloat value3) noexcept
 {
@@ -124,6 +126,7 @@ FORCE_ALIGN void AL_APIENTRY alListener3fDirect(ALCcontext *context, ALenum para
     }
 }
 
+AL_API DECL_FUNC2(void, alListenerfv, ALenum, const ALfloat*)
 FORCE_ALIGN void AL_APIENTRY alListenerfvDirect(ALCcontext *context, ALenum param,
     const ALfloat *values) noexcept
 {
@@ -167,6 +170,7 @@ FORCE_ALIGN void AL_APIENTRY alListenerfvDirect(ALCcontext *context, ALenum para
 }
 
 
+AL_API DECL_FUNC2(void, alListeneri, ALenum, ALint)
 FORCE_ALIGN void AL_APIENTRY alListeneriDirect(ALCcontext *context, ALenum param, ALint /*value*/) noexcept
 {
     std::lock_guard<std::mutex> _{context->mPropLock};
@@ -177,6 +181,7 @@ FORCE_ALIGN void AL_APIENTRY alListeneriDirect(ALCcontext *context, ALenum param
     }
 }
 
+AL_API DECL_FUNC4(void, alListener3i, ALenum, ALint, ALint, ALint)
 FORCE_ALIGN void AL_APIENTRY alListener3iDirect(ALCcontext *context, ALenum param, ALint value1,
     ALint value2, ALint value3) noexcept
 {
@@ -197,6 +202,7 @@ FORCE_ALIGN void AL_APIENTRY alListener3iDirect(ALCcontext *context, ALenum para
     }
 }
 
+AL_API DECL_FUNC2(void, alListeneriv, ALenum, const ALint*)
 FORCE_ALIGN void AL_APIENTRY alListenerivDirect(ALCcontext *context, ALenum param,
     const ALint *values) noexcept
 {
@@ -233,6 +239,7 @@ FORCE_ALIGN void AL_APIENTRY alListenerivDirect(ALCcontext *context, ALenum para
 }
 
 
+AL_API DECL_FUNC2(void, alGetListenerf, ALenum, ALfloat*)
 FORCE_ALIGN void AL_APIENTRY alGetListenerfDirect(ALCcontext *context, ALenum param,
     ALfloat *value) noexcept
 {
@@ -255,6 +262,7 @@ FORCE_ALIGN void AL_APIENTRY alGetListenerfDirect(ALCcontext *context, ALenum pa
     }
 }
 
+AL_API DECL_FUNC4(void, alGetListener3f, ALenum, ALfloat*, ALfloat*, ALfloat*)
 FORCE_ALIGN void AL_APIENTRY alGetListener3fDirect(ALCcontext *context, ALenum param,
     ALfloat *value1, ALfloat *value2, ALfloat *value3) noexcept
 {
@@ -281,6 +289,7 @@ FORCE_ALIGN void AL_APIENTRY alGetListener3fDirect(ALCcontext *context, ALenum p
     }
 }
 
+AL_API DECL_FUNC2(void, alGetListenerfv, ALenum, ALfloat*)
 FORCE_ALIGN void AL_APIENTRY alGetListenerfvDirect(ALCcontext *context, ALenum param,
     ALfloat *values) noexcept
 {
@@ -319,6 +328,7 @@ FORCE_ALIGN void AL_APIENTRY alGetListenerfvDirect(ALCcontext *context, ALenum p
 }
 
 
+AL_API DECL_FUNC2(void, alGetListeneri, ALenum, ALint*)
 FORCE_ALIGN void AL_APIENTRY alGetListeneriDirect(ALCcontext *context, ALenum param, ALint *value) noexcept
 {
     std::lock_guard<std::mutex> _{context->mPropLock};
@@ -331,6 +341,7 @@ FORCE_ALIGN void AL_APIENTRY alGetListeneriDirect(ALCcontext *context, ALenum pa
     }
 }
 
+AL_API DECL_FUNC4(void, alGetListener3i, ALenum, ALint*, ALint*, ALint*)
 FORCE_ALIGN void AL_APIENTRY alGetListener3iDirect(ALCcontext *context, ALenum param,
     ALint *value1, ALint *value2, ALint *value3) noexcept
 {
@@ -357,6 +368,7 @@ FORCE_ALIGN void AL_APIENTRY alGetListener3iDirect(ALCcontext *context, ALenum p
     }
 }
 
+AL_API DECL_FUNC2(void, alGetListeneriv, ALenum, ALint*)
 FORCE_ALIGN void AL_APIENTRY alGetListenerivDirect(ALCcontext *context, ALenum param,
     ALint *values) noexcept
 {
@@ -388,16 +400,3 @@ FORCE_ALIGN void AL_APIENTRY alGetListenerivDirect(ALCcontext *context, ALenum p
         context->setError(AL_INVALID_ENUM, "Invalid listener integer-vector property");
     }
 }
-
-AL_API DECL_FUNC2(void, alListenerf, ALenum, ALfloat)
-AL_API DECL_FUNC4(void, alListener3f, ALenum, ALfloat, ALfloat, ALfloat)
-AL_API DECL_FUNC2(void, alListenerfv, ALenum, const ALfloat*)
-AL_API DECL_FUNC2(void, alListeneri, ALenum, ALint)
-AL_API DECL_FUNC4(void, alListener3i, ALenum, ALint, ALint, ALint)
-AL_API DECL_FUNC2(void, alListeneriv, ALenum, const ALint*)
-AL_API DECL_FUNC2(void, alGetListenerf, ALenum, ALfloat*)
-AL_API DECL_FUNC4(void, alGetListener3f, ALenum, ALfloat*, ALfloat*, ALfloat*)
-AL_API DECL_FUNC2(void, alGetListenerfv, ALenum, ALfloat*)
-AL_API DECL_FUNC2(void, alGetListeneri, ALenum, ALint*)
-AL_API DECL_FUNC4(void, alGetListener3i, ALenum, ALint*, ALint*, ALint*)
-AL_API DECL_FUNC2(void, alGetListeneriv, ALenum, ALint*)

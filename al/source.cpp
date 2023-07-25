@@ -2625,6 +2625,7 @@ void StartSources(ALCcontext *const context, const al::span<ALsource*> srchandle
 
 } // namespace
 
+AL_API DECL_FUNC2(void, alGenSources, ALsizei, ALuint*)
 FORCE_ALIGN void AL_APIENTRY alGenSourcesDirect(ALCcontext *context, ALsizei n, ALuint *sources) noexcept
 {
     if(n < 0) UNLIKELY
@@ -2670,6 +2671,7 @@ FORCE_ALIGN void AL_APIENTRY alGenSourcesDirect(ALCcontext *context, ALsizei n, 
     }
 }
 
+AL_API DECL_FUNC2(void, alDeleteSources, ALsizei, const ALuint*)
 FORCE_ALIGN void AL_APIENTRY alDeleteSourcesDirect(ALCcontext *context, ALsizei n,
     const ALuint *sources) noexcept
 {
@@ -2697,6 +2699,7 @@ FORCE_ALIGN void AL_APIENTRY alDeleteSourcesDirect(ALCcontext *context, ALsizei 
     std::for_each(sources, sources_end, delete_source);
 }
 
+AL_API DECL_FUNC1(ALboolean, alIsSource, ALuint)
 FORCE_ALIGN ALboolean AL_APIENTRY alIsSourceDirect(ALCcontext *context, ALuint source) noexcept
 {
     std::lock_guard<std::mutex> _{context->mSourceLock};
@@ -2706,6 +2709,7 @@ FORCE_ALIGN ALboolean AL_APIENTRY alIsSourceDirect(ALCcontext *context, ALuint s
 }
 
 
+AL_API DECL_FUNC3(void, alSourcef, ALuint, ALenum, ALfloat)
 FORCE_ALIGN void AL_APIENTRY alSourcefDirect(ALCcontext *context, ALuint source, ALenum param,
     ALfloat value) noexcept
 {
@@ -2719,6 +2723,7 @@ FORCE_ALIGN void AL_APIENTRY alSourcefDirect(ALCcontext *context, ALuint source,
         al::span<const float,1>{&value, 1u});
 }
 
+AL_API DECL_FUNC5(void, alSource3f, ALuint, ALenum, ALfloat, ALfloat, ALfloat)
 FORCE_ALIGN void AL_APIENTRY alSource3fDirect(ALCcontext *context, ALuint source, ALenum param,
     ALfloat value1, ALfloat value2, ALfloat value3) noexcept
 {
@@ -2732,6 +2737,7 @@ FORCE_ALIGN void AL_APIENTRY alSource3fDirect(ALCcontext *context, ALuint source
     SetProperty(Source, context, static_cast<SourceProp>(param), al::span{fvals});
 }
 
+AL_API DECL_FUNC3(void, alSourcefv, ALuint, ALenum, const ALfloat*)
 FORCE_ALIGN void AL_APIENTRY alSourcefvDirect(ALCcontext *context, ALuint source, ALenum param,
     const ALfloat *values) noexcept
 {
@@ -2748,6 +2754,7 @@ FORCE_ALIGN void AL_APIENTRY alSourcefvDirect(ALCcontext *context, ALuint source
 }
 
 
+AL_API DECL_FUNCEXT3(void, alSourced,SOFT, ALuint, ALenum, ALdouble)
 FORCE_ALIGN void AL_APIENTRY alSourcedDirectSOFT(ALCcontext *context, ALuint source, ALenum param,
     ALdouble value) noexcept
 {
@@ -2761,6 +2768,7 @@ FORCE_ALIGN void AL_APIENTRY alSourcedDirectSOFT(ALCcontext *context, ALuint sou
         al::span<const double,1>{&value, 1});
 }
 
+AL_API DECL_FUNCEXT5(void, alSource3d,SOFT, ALuint, ALenum, ALdouble, ALdouble, ALdouble)
 FORCE_ALIGN void AL_APIENTRY alSource3dDirectSOFT(ALCcontext *context, ALuint source, ALenum param,
     ALdouble value1, ALdouble value2, ALdouble value3) noexcept
 {
@@ -2774,6 +2782,7 @@ FORCE_ALIGN void AL_APIENTRY alSource3dDirectSOFT(ALCcontext *context, ALuint so
     SetProperty(Source, context, static_cast<SourceProp>(param), al::span{dvals});
 }
 
+AL_API DECL_FUNCEXT3(void, alSourcedv,SOFT, ALuint, ALenum, const ALdouble*)
 FORCE_ALIGN void AL_APIENTRY alSourcedvDirectSOFT(ALCcontext *context, ALuint source, ALenum param,
     const ALdouble *values) noexcept
 {
@@ -2790,6 +2799,7 @@ FORCE_ALIGN void AL_APIENTRY alSourcedvDirectSOFT(ALCcontext *context, ALuint so
 }
 
 
+AL_API DECL_FUNC3(void, alSourcei, ALuint, ALenum, ALint)
 FORCE_ALIGN void AL_APIENTRY alSourceiDirect(ALCcontext *context, ALuint source, ALenum param,
     ALint value) noexcept
 {
@@ -2803,6 +2813,7 @@ FORCE_ALIGN void AL_APIENTRY alSourceiDirect(ALCcontext *context, ALuint source,
         al::span<const int,1>{&value, 1u});
 }
 
+AL_API DECL_FUNC5(void, alSource3i, ALuint, ALenum, ALint, ALint, ALint)
 FORCE_ALIGN void AL_APIENTRY alSource3iDirect(ALCcontext *context, ALuint source, ALenum param,
     ALint value1, ALint value2, ALint value3) noexcept
 {
@@ -2816,6 +2827,7 @@ FORCE_ALIGN void AL_APIENTRY alSource3iDirect(ALCcontext *context, ALuint source
     SetProperty(Source, context, static_cast<SourceProp>(param), al::span{ivals});
 }
 
+AL_API DECL_FUNC3(void, alSourceiv, ALuint, ALenum, const ALint*)
 FORCE_ALIGN void AL_APIENTRY alSourceivDirect(ALCcontext *context, ALuint source, ALenum param,
     const ALint *values) noexcept
 {
@@ -2832,6 +2844,7 @@ FORCE_ALIGN void AL_APIENTRY alSourceivDirect(ALCcontext *context, ALuint source
 }
 
 
+AL_API DECL_FUNCEXT3(void, alSourcei64,SOFT, ALuint, ALenum, ALint64SOFT)
 FORCE_ALIGN void AL_APIENTRY alSourcei64DirectSOFT(ALCcontext *context, ALuint source,
     ALenum param, ALint64SOFT value) noexcept
 {
@@ -2845,6 +2858,7 @@ FORCE_ALIGN void AL_APIENTRY alSourcei64DirectSOFT(ALCcontext *context, ALuint s
         al::span<const int64_t,1>{&value, 1u});
 }
 
+AL_API DECL_FUNCEXT5(void, alSource3i64,SOFT, ALuint, ALenum, ALint64SOFT, ALint64SOFT, ALint64SOFT)
 FORCE_ALIGN void AL_APIENTRY alSource3i64DirectSOFT(ALCcontext *context, ALuint source,
     ALenum param, ALint64SOFT value1, ALint64SOFT value2, ALint64SOFT value3) noexcept
 {
@@ -2858,6 +2872,7 @@ FORCE_ALIGN void AL_APIENTRY alSource3i64DirectSOFT(ALCcontext *context, ALuint 
     SetProperty(Source, context, static_cast<SourceProp>(param), al::span{i64vals});
 }
 
+AL_API DECL_FUNCEXT3(void, alSourcei64v,SOFT, ALuint, ALenum, const ALint64SOFT*)
 FORCE_ALIGN void AL_APIENTRY alSourcei64vDirectSOFT(ALCcontext *context, ALuint source,
     ALenum param, const ALint64SOFT *values) noexcept
 {
@@ -2874,6 +2889,7 @@ FORCE_ALIGN void AL_APIENTRY alSourcei64vDirectSOFT(ALCcontext *context, ALuint 
 }
 
 
+AL_API DECL_FUNC3(void, alGetSourcef, ALuint, ALenum, ALfloat*)
 FORCE_ALIGN void AL_APIENTRY alGetSourcefDirect(ALCcontext *context, ALuint source, ALenum param,
     ALfloat *value) noexcept
 {
@@ -2888,6 +2904,7 @@ FORCE_ALIGN void AL_APIENTRY alGetSourcefDirect(ALCcontext *context, ALuint sour
         al::span<float,1>{value, 1});
 }
 
+AL_API DECL_FUNC5(void, alGetSource3f, ALuint, ALenum, ALfloat*, ALfloat*, ALfloat*)
 FORCE_ALIGN void AL_APIENTRY alGetSource3fDirect(ALCcontext *context, ALuint source, ALenum param,
     ALfloat *value1, ALfloat *value2, ALfloat *value3) noexcept
 {
@@ -2907,6 +2924,7 @@ FORCE_ALIGN void AL_APIENTRY alGetSource3fDirect(ALCcontext *context, ALuint sou
     }
 }
 
+AL_API DECL_FUNC3(void, alGetSourcefv, ALuint, ALenum, ALfloat*)
 FORCE_ALIGN void AL_APIENTRY alGetSourcefvDirect(ALCcontext *context, ALuint source, ALenum param,
     ALfloat *values) noexcept
 {
@@ -2923,6 +2941,7 @@ FORCE_ALIGN void AL_APIENTRY alGetSourcefvDirect(ALCcontext *context, ALuint sou
 }
 
 
+AL_API DECL_FUNCEXT3(void, alGetSourced,SOFT, ALuint, ALenum, ALdouble*)
 FORCE_ALIGN void AL_APIENTRY alGetSourcedDirectSOFT(ALCcontext *context, ALuint source,
     ALenum param, ALdouble *value) noexcept
 {
@@ -2937,6 +2956,7 @@ FORCE_ALIGN void AL_APIENTRY alGetSourcedDirectSOFT(ALCcontext *context, ALuint 
         al::span<double,1>{value, 1u});
 }
 
+AL_API DECL_FUNCEXT5(void, alGetSource3d,SOFT, ALuint, ALenum, ALdouble*, ALdouble*, ALdouble*)
 FORCE_ALIGN void AL_APIENTRY alGetSource3dDirectSOFT(ALCcontext *context, ALuint source,
     ALenum param, ALdouble *value1, ALdouble *value2, ALdouble *value3) noexcept
 {
@@ -2956,6 +2976,7 @@ FORCE_ALIGN void AL_APIENTRY alGetSource3dDirectSOFT(ALCcontext *context, ALuint
     }
 }
 
+AL_API DECL_FUNCEXT3(void, alGetSourcedv,SOFT, ALuint, ALenum, ALdouble*)
 FORCE_ALIGN void AL_APIENTRY alGetSourcedvDirectSOFT(ALCcontext *context, ALuint source,
     ALenum param, ALdouble *values) noexcept
 {
@@ -2972,6 +2993,7 @@ FORCE_ALIGN void AL_APIENTRY alGetSourcedvDirectSOFT(ALCcontext *context, ALuint
 }
 
 
+AL_API DECL_FUNC3(void, alGetSourcei, ALuint, ALenum, ALint*)
 FORCE_ALIGN void AL_APIENTRY alGetSourceiDirect(ALCcontext *context, ALuint source, ALenum param,
     ALint *value) noexcept
 {
@@ -2986,6 +3008,7 @@ FORCE_ALIGN void AL_APIENTRY alGetSourceiDirect(ALCcontext *context, ALuint sour
         al::span{value, 1u});
 }
 
+AL_API DECL_FUNC5(void, alGetSource3i, ALuint, ALenum, ALint*, ALint*, ALint*)
 FORCE_ALIGN void AL_APIENTRY alGetSource3iDirect(ALCcontext *context, ALuint source, ALenum param,
     ALint *value1, ALint *value2, ALint *value3) noexcept
 {
@@ -3005,6 +3028,7 @@ FORCE_ALIGN void AL_APIENTRY alGetSource3iDirect(ALCcontext *context, ALuint sou
     }
 }
 
+AL_API DECL_FUNC3(void, alGetSourceiv, ALuint, ALenum, ALint*)
 FORCE_ALIGN void AL_APIENTRY alGetSourceivDirect(ALCcontext *context, ALuint source, ALenum param,
     ALint *values) noexcept
 {
@@ -3021,6 +3045,7 @@ FORCE_ALIGN void AL_APIENTRY alGetSourceivDirect(ALCcontext *context, ALuint sou
 }
 
 
+AL_API DECL_FUNCEXT3(void, alGetSourcei64,SOFT, ALuint, ALenum, ALint64SOFT*)
 FORCE_ALIGN void AL_APIENTRY alGetSourcei64DirectSOFT(ALCcontext *context, ALuint source, ALenum param, ALint64SOFT *value) noexcept
 {
     std::lock_guard<std::mutex> _{context->mSourceLock};
@@ -3034,6 +3059,7 @@ FORCE_ALIGN void AL_APIENTRY alGetSourcei64DirectSOFT(ALCcontext *context, ALuin
         al::span{value, 1u});
 }
 
+AL_API DECL_FUNCEXT5(void, alGetSource3i64,SOFT, ALuint, ALenum, ALint64SOFT*, ALint64SOFT*, ALint64SOFT*)
 FORCE_ALIGN void AL_APIENTRY alGetSource3i64DirectSOFT(ALCcontext *context, ALuint source,
     ALenum param, ALint64SOFT *value1, ALint64SOFT *value2, ALint64SOFT *value3) noexcept
 {
@@ -3053,6 +3079,7 @@ FORCE_ALIGN void AL_APIENTRY alGetSource3i64DirectSOFT(ALCcontext *context, ALui
     }
 }
 
+AL_API DECL_FUNCEXT3(void, alGetSourcei64v,SOFT, ALuint, ALenum, ALint64SOFT*)
 FORCE_ALIGN void AL_APIENTRY alGetSourcei64vDirectSOFT(ALCcontext *context, ALuint source,
     ALenum param, ALint64SOFT *values) noexcept
 {
@@ -3069,6 +3096,7 @@ FORCE_ALIGN void AL_APIENTRY alGetSourcei64vDirectSOFT(ALCcontext *context, ALui
 }
 
 
+AL_API DECL_FUNC1(void, alSourcePlay, ALuint)
 FORCE_ALIGN void AL_APIENTRY alSourcePlayDirect(ALCcontext *context, ALuint source) noexcept
 {
     std::lock_guard<std::mutex> _{context->mSourceLock};
@@ -3079,6 +3107,7 @@ FORCE_ALIGN void AL_APIENTRY alSourcePlayDirect(ALCcontext *context, ALuint sour
     StartSources(context, {&srchandle, 1});
 }
 
+FORCE_ALIGN DECL_FUNCEXT2(void, alSourcePlayAtTime,SOFT, ALuint, ALint64SOFT)
 FORCE_ALIGN void AL_APIENTRY alSourcePlayAtTimeDirectSOFT(ALCcontext *context, ALuint source,
     ALint64SOFT start_time) noexcept
 {
@@ -3093,6 +3122,7 @@ FORCE_ALIGN void AL_APIENTRY alSourcePlayAtTimeDirectSOFT(ALCcontext *context, A
     StartSources(context, {&srchandle, 1}, nanoseconds{start_time});
 }
 
+AL_API DECL_FUNC2(void, alSourcePlayv, ALsizei, const ALuint*)
 FORCE_ALIGN void AL_APIENTRY alSourcePlayvDirect(ALCcontext *context, ALsizei n,
     const ALuint *sources) noexcept
 {
@@ -3123,6 +3153,7 @@ FORCE_ALIGN void AL_APIENTRY alSourcePlayvDirect(ALCcontext *context, ALsizei n,
     StartSources(context, srchandles);
 }
 
+FORCE_ALIGN DECL_FUNCEXT3(void, alSourcePlayAtTimev,SOFT, ALsizei, const ALuint*, ALint64SOFT)
 FORCE_ALIGN void AL_APIENTRY alSourcePlayAtTimevDirectSOFT(ALCcontext *context, ALsizei n,
     const ALuint *sources, ALint64SOFT start_time) noexcept
 {
@@ -3157,9 +3188,11 @@ FORCE_ALIGN void AL_APIENTRY alSourcePlayAtTimevDirectSOFT(ALCcontext *context, 
 }
 
 
+AL_API DECL_FUNC1(void, alSourcePause, ALuint)
 FORCE_ALIGN void AL_APIENTRY alSourcePauseDirect(ALCcontext *context, ALuint source) noexcept
 { alSourcePausevDirect(context, 1, &source); }
 
+AL_API DECL_FUNC2(void, alSourcePausev, ALsizei, const ALuint*)
 FORCE_ALIGN void AL_APIENTRY alSourcePausevDirect(ALCcontext *context, ALsizei n,
     const ALuint *sources) noexcept
 {
@@ -3227,9 +3260,11 @@ FORCE_ALIGN void AL_APIENTRY alSourcePausevDirect(ALCcontext *context, ALsizei n
 }
 
 
+AL_API DECL_FUNC1(void, alSourceStop, ALuint)
 FORCE_ALIGN void AL_APIENTRY alSourceStopDirect(ALCcontext *context, ALuint source) noexcept
 { alSourceStopvDirect(context, 1, &source); }
 
+AL_API DECL_FUNC2(void, alSourceStopv, ALsizei, const ALuint*)
 FORCE_ALIGN void AL_APIENTRY alSourceStopvDirect(ALCcontext *context, ALsizei n,
     const ALuint *sources) noexcept
 {
@@ -3284,9 +3319,11 @@ FORCE_ALIGN void AL_APIENTRY alSourceStopvDirect(ALCcontext *context, ALsizei n,
 }
 
 
+AL_API DECL_FUNC1(void, alSourceRewind, ALuint)
 FORCE_ALIGN void AL_APIENTRY alSourceRewindDirect(ALCcontext *context, ALuint source) noexcept
 { alSourceRewindvDirect(context, 1, &source); }
 
+AL_API DECL_FUNC2(void, alSourceRewindv, ALsizei, const ALuint*)
 FORCE_ALIGN void AL_APIENTRY alSourceRewindvDirect(ALCcontext *context, ALsizei n,
     const ALuint *sources) noexcept
 {
@@ -3343,6 +3380,7 @@ FORCE_ALIGN void AL_APIENTRY alSourceRewindvDirect(ALCcontext *context, ALsizei 
 }
 
 
+AL_API DECL_FUNC3(void, alSourceQueueBuffers, ALuint, ALsizei, const ALuint*)
 FORCE_ALIGN void AL_APIENTRY alSourceQueueBuffersDirect(ALCcontext *context, ALuint src,
     ALsizei nb, const ALuint *buffers) noexcept
 {
@@ -3467,6 +3505,7 @@ FORCE_ALIGN void AL_APIENTRY alSourceQueueBuffersDirect(ALCcontext *context, ALu
     }
 }
 
+AL_API DECL_FUNC3(void, alSourceUnqueueBuffers, ALuint, ALsizei, ALuint*)
 FORCE_ALIGN void AL_APIENTRY alSourceUnqueueBuffersDirect(ALCcontext *context, ALuint src,
     ALsizei nb, ALuint *buffers) noexcept
 {
@@ -3516,46 +3555,6 @@ FORCE_ALIGN void AL_APIENTRY alSourceUnqueueBuffersDirect(ALCcontext *context, A
     } while(--nb);
 }
 
-
-AL_API DECL_FUNC2(void, alGenSources, ALsizei, ALuint*)
-AL_API DECL_FUNC2(void, alDeleteSources, ALsizei, const ALuint*)
-AL_API DECL_FUNC1(ALboolean, alIsSource, ALuint)
-AL_API DECL_FUNC1(void, alSourcePlay, ALuint)
-AL_API DECL_FUNC1(void, alSourcePause, ALuint)
-AL_API DECL_FUNC1(void, alSourceStop, ALuint)
-AL_API DECL_FUNC1(void, alSourceRewind, ALuint)
-AL_API DECL_FUNC2(void, alSourcePlayv, ALsizei, const ALuint*)
-AL_API DECL_FUNC2(void, alSourcePausev, ALsizei, const ALuint*)
-AL_API DECL_FUNC2(void, alSourceStopv, ALsizei, const ALuint*)
-AL_API DECL_FUNC2(void, alSourceRewindv, ALsizei, const ALuint*)
-AL_API DECL_FUNC3(void, alSourcef, ALuint, ALenum, ALfloat)
-AL_API DECL_FUNC5(void, alSource3f, ALuint, ALenum, ALfloat, ALfloat, ALfloat)
-AL_API DECL_FUNC3(void, alSourcefv, ALuint, ALenum, const ALfloat*)
-AL_API DECL_FUNC3(void, alSourcei, ALuint, ALenum, ALint)
-AL_API DECL_FUNC5(void, alSource3i, ALuint, ALenum, ALint, ALint, ALint)
-AL_API DECL_FUNC3(void, alSourceiv, ALuint, ALenum, const ALint*)
-AL_API DECL_FUNCEXT3(void, alSourced,SOFT, ALuint, ALenum, ALdouble)
-AL_API DECL_FUNCEXT5(void, alSource3d,SOFT, ALuint, ALenum, ALdouble, ALdouble, ALdouble)
-AL_API DECL_FUNCEXT3(void, alSourcedv,SOFT, ALuint, ALenum, const ALdouble*)
-AL_API DECL_FUNCEXT3(void, alSourcei64,SOFT, ALuint, ALenum, ALint64SOFT)
-AL_API DECL_FUNCEXT5(void, alSource3i64,SOFT, ALuint, ALenum, ALint64SOFT, ALint64SOFT, ALint64SOFT)
-AL_API DECL_FUNCEXT3(void, alSourcei64v,SOFT, ALuint, ALenum, const ALint64SOFT*)
-AL_API DECL_FUNC3(void, alGetSourcef, ALuint, ALenum, ALfloat*)
-AL_API DECL_FUNC5(void, alGetSource3f, ALuint, ALenum, ALfloat*, ALfloat*, ALfloat*)
-AL_API DECL_FUNC3(void, alGetSourcefv, ALuint, ALenum, ALfloat*)
-AL_API DECL_FUNC3(void, alGetSourcei, ALuint, ALenum, ALint*)
-AL_API DECL_FUNC5(void, alGetSource3i, ALuint, ALenum, ALint*, ALint*, ALint*)
-AL_API DECL_FUNC3(void, alGetSourceiv, ALuint, ALenum, ALint*)
-AL_API DECL_FUNCEXT3(void, alGetSourced,SOFT, ALuint, ALenum, ALdouble*)
-AL_API DECL_FUNCEXT5(void, alGetSource3d,SOFT, ALuint, ALenum, ALdouble*, ALdouble*, ALdouble*)
-AL_API DECL_FUNCEXT3(void, alGetSourcedv,SOFT, ALuint, ALenum, ALdouble*)
-AL_API DECL_FUNCEXT3(void, alGetSourcei64,SOFT, ALuint, ALenum, ALint64SOFT*)
-AL_API DECL_FUNCEXT5(void, alGetSource3i64,SOFT, ALuint, ALenum, ALint64SOFT*, ALint64SOFT*, ALint64SOFT*)
-AL_API DECL_FUNCEXT3(void, alGetSourcei64v,SOFT, ALuint, ALenum, ALint64SOFT*)
-AL_API DECL_FUNC3(void, alSourceQueueBuffers, ALuint, ALsizei, const ALuint*)
-AL_API DECL_FUNC3(void, alSourceUnqueueBuffers, ALuint, ALsizei, ALuint*)
-FORCE_ALIGN DECL_FUNCEXT2(void, alSourcePlayAtTime,SOFT, ALuint, ALint64SOFT)
-FORCE_ALIGN DECL_FUNCEXT3(void, alSourcePlayAtTimev,SOFT, ALsizei, const ALuint*, ALint64SOFT)
 
 AL_API void AL_APIENTRY alSourceQueueBufferLayersSOFT(ALuint, ALsizei, const ALuint*) noexcept
 {

@@ -310,6 +310,7 @@ inline void UpdateProps(ALeffectslot *slot, ALCcontext *context)
 } // namespace
 
 
+AL_API DECL_FUNC2(void, alGenAuxiliaryEffectSlots, ALsizei, ALuint*)
 FORCE_ALIGN void AL_APIENTRY alGenAuxiliaryEffectSlotsDirect(ALCcontext *context, ALsizei n,
     ALuint *effectslots) noexcept
 {
@@ -350,6 +351,7 @@ FORCE_ALIGN void AL_APIENTRY alGenAuxiliaryEffectSlotsDirect(ALCcontext *context
     }
 }
 
+AL_API DECL_FUNC2(void, alDeleteAuxiliaryEffectSlots, ALsizei, const ALuint*)
 FORCE_ALIGN void AL_APIENTRY alDeleteAuxiliaryEffectSlotsDirect(ALCcontext *context, ALsizei n,
     const ALuint *effectslots) noexcept
 {
@@ -410,6 +412,7 @@ FORCE_ALIGN void AL_APIENTRY alDeleteAuxiliaryEffectSlotsDirect(ALCcontext *cont
     }
 }
 
+AL_API DECL_FUNC1(ALboolean, alIsAuxiliaryEffectSlot, ALuint)
 FORCE_ALIGN ALboolean AL_APIENTRY alIsAuxiliaryEffectSlotDirect(ALCcontext *context,
     ALuint effectslot) noexcept
 {
@@ -521,6 +524,7 @@ AL_API void AL_APIENTRY alAuxiliaryEffectSlotStopvSOFT(ALsizei n, const ALuint *
 }
 
 
+AL_API DECL_FUNC3(void, alAuxiliaryEffectSloti, ALuint, ALenum, ALint)
 FORCE_ALIGN void AL_APIENTRY alAuxiliaryEffectSlotiDirect(ALCcontext *context, ALuint effectslot,
     ALenum param, ALint value) noexcept
 {
@@ -657,6 +661,7 @@ FORCE_ALIGN void AL_APIENTRY alAuxiliaryEffectSlotiDirect(ALCcontext *context, A
     UpdateProps(slot, context);
 }
 
+AL_API DECL_FUNC3(void, alAuxiliaryEffectSlotiv, ALuint, ALenum, const ALint*)
 FORCE_ALIGN void AL_APIENTRY alAuxiliaryEffectSlotivDirect(ALCcontext *context, ALuint effectslot,
     ALenum param, const ALint *values) noexcept
 {
@@ -684,6 +689,7 @@ FORCE_ALIGN void AL_APIENTRY alAuxiliaryEffectSlotivDirect(ALCcontext *context, 
     }
 }
 
+AL_API DECL_FUNC3(void, alAuxiliaryEffectSlotf, ALuint, ALenum, ALfloat)
 FORCE_ALIGN void AL_APIENTRY alAuxiliaryEffectSlotfDirect(ALCcontext *context, ALuint effectslot,
     ALenum param, ALfloat value) noexcept
 {
@@ -710,6 +716,7 @@ FORCE_ALIGN void AL_APIENTRY alAuxiliaryEffectSlotfDirect(ALCcontext *context, A
     UpdateProps(slot, context);
 }
 
+AL_API DECL_FUNC3(void, alAuxiliaryEffectSlotfv, ALuint, ALenum, const ALfloat*)
 FORCE_ALIGN void AL_APIENTRY alAuxiliaryEffectSlotfvDirect(ALCcontext *context, ALuint effectslot,
     ALenum param, const ALfloat *values) noexcept
 {
@@ -734,6 +741,7 @@ FORCE_ALIGN void AL_APIENTRY alAuxiliaryEffectSlotfvDirect(ALCcontext *context, 
 }
 
 
+AL_API DECL_FUNC3(void, alGetAuxiliaryEffectSloti, ALuint, ALenum, ALint*)
 FORCE_ALIGN void AL_APIENTRY alGetAuxiliaryEffectSlotiDirect(ALCcontext *context,
     ALuint effectslot, ALenum param, ALint *value) noexcept
 {
@@ -771,6 +779,7 @@ FORCE_ALIGN void AL_APIENTRY alGetAuxiliaryEffectSlotiDirect(ALCcontext *context
     }
 }
 
+AL_API DECL_FUNC3(void, alGetAuxiliaryEffectSlotiv, ALuint, ALenum, ALint*)
 FORCE_ALIGN void AL_APIENTRY alGetAuxiliaryEffectSlotivDirect(ALCcontext *context,
     ALuint effectslot, ALenum param, ALint *values) noexcept
 {
@@ -798,6 +807,7 @@ FORCE_ALIGN void AL_APIENTRY alGetAuxiliaryEffectSlotivDirect(ALCcontext *contex
     }
 }
 
+AL_API DECL_FUNC3(void, alGetAuxiliaryEffectSlotf, ALuint, ALenum, ALfloat*)
 FORCE_ALIGN void AL_APIENTRY alGetAuxiliaryEffectSlotfDirect(ALCcontext *context,
     ALuint effectslot, ALenum param, ALfloat *value) noexcept
 {
@@ -817,6 +827,7 @@ FORCE_ALIGN void AL_APIENTRY alGetAuxiliaryEffectSlotfDirect(ALCcontext *context
     }
 }
 
+AL_API DECL_FUNC3(void, alGetAuxiliaryEffectSlotfv, ALuint, ALenum, ALfloat*)
 FORCE_ALIGN void AL_APIENTRY alGetAuxiliaryEffectSlotfvDirect(ALCcontext *context,
     ALuint effectslot, ALenum param, ALfloat *values) noexcept
 {
@@ -839,18 +850,6 @@ FORCE_ALIGN void AL_APIENTRY alGetAuxiliaryEffectSlotfvDirect(ALCcontext *contex
             param);
     }
 }
-
-AL_API DECL_FUNC2(void, alGenAuxiliaryEffectSlots, ALsizei, ALuint*)
-AL_API DECL_FUNC2(void, alDeleteAuxiliaryEffectSlots, ALsizei, const ALuint*)
-AL_API DECL_FUNC1(ALboolean, alIsAuxiliaryEffectSlot, ALuint)
-AL_API DECL_FUNC3(void, alAuxiliaryEffectSlotf, ALuint, ALenum, ALfloat)
-AL_API DECL_FUNC3(void, alAuxiliaryEffectSlotfv, ALuint, ALenum, const ALfloat*)
-AL_API DECL_FUNC3(void, alAuxiliaryEffectSloti, ALuint, ALenum, ALint)
-AL_API DECL_FUNC3(void, alAuxiliaryEffectSlotiv, ALuint, ALenum, const ALint*)
-AL_API DECL_FUNC3(void, alGetAuxiliaryEffectSlotf, ALuint, ALenum, ALfloat*)
-AL_API DECL_FUNC3(void, alGetAuxiliaryEffectSlotfv, ALuint, ALenum, ALfloat*)
-AL_API DECL_FUNC3(void, alGetAuxiliaryEffectSloti, ALuint, ALenum, ALint*)
-AL_API DECL_FUNC3(void, alGetAuxiliaryEffectSlotiv, ALuint, ALenum, ALint*)
 
 
 ALeffectslot::ALeffectslot(ALCcontext *context)

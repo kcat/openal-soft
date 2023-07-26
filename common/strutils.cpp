@@ -45,7 +45,11 @@ namespace al {
 
 std::optional<std::string> getenv(const char *envname)
 {
+#ifdef _GAMING_XBOX
+    const char *str{::getenv(envname)};
+#else
     const char *str{std::getenv(envname)};
+#endif
     if(str && str[0] != '\0')
         return str;
     return std::nullopt;

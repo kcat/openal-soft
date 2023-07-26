@@ -156,7 +156,7 @@ std::vector<std::string> SearchDataFiles(const char *ext, const char *subdir)
     std::replace(path.begin(), path.end(), '/', '\\');
     DirectorySearch(path.c_str(), ext, &results);
 
-#if !defined(ALSOFT_UWP)
+#if !defined(ALSOFT_UWP) && !defined(_GAMING_XBOX)
     /* Search the local and global data dirs. */
     for(auto id : std::array{CSIDL_APPDATA, CSIDL_COMMON_APPDATA})
     {

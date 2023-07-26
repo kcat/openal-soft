@@ -329,6 +329,7 @@ const char *GetConfigValue(const char *devName, const char *blockName, const cha
 #ifdef _WIN32
 void ReadALConfig()
 {
+#if !defined(_GAMING_XBOX)
     {
 #if !defined(ALSOFT_UWP)
         WCHAR buffer[MAX_PATH];
@@ -345,6 +346,7 @@ void ReadALConfig()
         if(f.is_open())
             LoadConfigFromFile(f);
     }
+#endif
 
 
     std::string ppath{GetProcBinary().path};

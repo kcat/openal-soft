@@ -602,7 +602,7 @@ public:
 
     static bool Commit(const EaxEffectProps &props, EaxEffectProps &props_, EffectProps &al_props_)
     {
-        if(props == props)
+        if(props == props_)
             return false;
 
         props_ = props;

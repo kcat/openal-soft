@@ -435,8 +435,75 @@ using MainloopLockGuard = std::lock_guard<ThreadMainloop>;
  * devices provided by the server.
  */
 
-struct NodeProxy;
-struct MetadataProxy;
+/* A generic PipeWire node proxy object used to track changes to sink and
+ * source nodes.
+ */
+struct NodeProxy {
+    static constexpr pw_node_events CreateNodeEvents()
+    {
+        pw_node_events ret{};
+        ret.version = PW_VERSION_NODE_EVENTS;
+        ret.info = [](void *object, const pw_node_info *info) noexcept
+        { static_cast<NodeProxy*>(object)->infoCallback(info); };
+        ret.param = [](void *object, int seq, uint32_t id, uint32_t index, uint32_t next, const spa_pod *param) noexcept
+        { static_cast<NodeProxy*>(object)->paramCallback(seq, id, index, next, param); };
+        return ret;
+    }
+
+    uint32_t mId{};
+
+    PwNodePtr mNode{};
+    spa_hook mListener{};
+
+    NodeProxy(uint32_t id, PwNodePtr node)
+      : mId{id}, mNode{std::move(node)}
+    {
+        static constexpr pw_node_events nodeEvents{CreateNodeEvents()};
+        ppw_node_add_listener(mNode.get(), &mListener, &nodeEvents, this);
+
+        /* Track changes to the enumerable formats (indicates the default
+         * format, which is what we're interested in).
+         */
+        uint32_t fmtids[]{SPA_PARAM_EnumFormat};
+        ppw_node_subscribe_params(mNode.get(), std::data(fmtids), std::size(fmtids));
+    }
+    ~NodeProxy()
+    { spa_hook_remove(&mListener); }
+
+
+    void infoCallback(const pw_node_info *info) noexcept;
+
+    void paramCallback(int seq, uint32_t id, uint32_t index, uint32_t next, const spa_pod *param) noexcept;
+};
+
+/* A metadata proxy object used to query the default sink and source. */
+struct MetadataProxy {
+    static constexpr pw_metadata_events CreateMetadataEvents()
+    {
+        pw_metadata_events ret{};
+        ret.version = PW_VERSION_METADATA_EVENTS;
+        ret.property = [](void *object, uint32_t id, const char *key, const char *type, const char *value) noexcept
+        { return static_cast<MetadataProxy*>(object)->propertyCallback(id, key, type, value); };
+        return ret;
+    }
+
+    uint32_t mId{};
+
+    PwMetadataPtr mMetadata{};
+    spa_hook mListener{};
+
+    MetadataProxy(uint32_t id, PwMetadataPtr mdata)
+      : mId{id}, mMetadata{std::move(mdata)}
+    {
+        static constexpr pw_metadata_events metadataEvents{CreateMetadataEvents()};
+        ppw_metadata_add_listener(mMetadata.get(), &mListener, &metadataEvents, this);
+    }
+    ~MetadataProxy()
+    { spa_hook_remove(&mListener); }
+
+    int propertyCallback(uint32_t id, const char *key, const char *type, const char *value) noexcept;
+};
+
 
 /* The global thread watching for global events. This particular class responds
  * to objects being added to or removed from the registry.
@@ -452,8 +519,8 @@ struct EventManager {
     /* A list of proxy objects watching for events about changes to objects in
      * the registry.
      */
-    std::vector<NodeProxy*> mNodeList;
-    MetadataProxy *mDefaultMetadata{nullptr};
+    std::vector<std::unique_ptr<NodeProxy>> mNodeList;
+    std::optional<MetadataProxy> mDefaultMetadata;
 
     /* Initialization handling. When init() is called, mInitSeq is set to a
      * SequenceID that marks the end of populating the registry. As objects of
@@ -465,8 +532,9 @@ struct EventManager {
     std::atomic<bool> mHasAudio{false};
     int mInitSeq{};
 
+    ~EventManager() { if(mLoop) mLoop.stop(); }
+
     bool init();
-    ~EventManager();
 
     void kill();
 
@@ -573,7 +641,7 @@ struct DeviceNode {
     static DeviceNode *Find(uint32_t id);
     static DeviceNode *FindByDevName(std::string_view devname);
     static void Remove(uint32_t id);
-    static std::vector<DeviceNode> &GetList() noexcept { return sList; }
+    static auto GetList() noexcept { return al::span{sList}; }
 
     void parseSampleRate(const spa_pod *value) noexcept;
     void parsePositions(const spa_pod *value) noexcept;
@@ -613,8 +681,7 @@ DeviceNode &DeviceNode::Add(uint32_t id)
     auto match = std::find_if(sList.begin(), sList.end(), match_id);
     if(match != sList.end()) return *match;
 
-    sList.emplace_back();
-    auto &n = sList.back();
+    auto &n = sList.emplace_back();
     n.mId = id;
     return n;
 }
@@ -834,47 +901,6 @@ constexpr char AudioSourceVirtualClass[]{"Audio/Source/Virtual"};
 constexpr char AudioDuplexClass[]{"Audio/Duplex"};
 constexpr char StreamClass[]{"Stream/"};
 
-/* A generic PipeWire node proxy object used to track changes to sink and
- * source nodes.
- */
-struct NodeProxy {
-    static constexpr pw_node_events CreateNodeEvents()
-    {
-        pw_node_events ret{};
-        ret.version = PW_VERSION_NODE_EVENTS;
-        ret.info = [](void *object, const pw_node_info *info) noexcept
-        { static_cast<NodeProxy*>(object)->infoCallback(info); };
-        ret.param = [](void *object, int seq, uint32_t id, uint32_t index, uint32_t next, const spa_pod *param) noexcept
-        { static_cast<NodeProxy*>(object)->paramCallback(seq, id, index, next, param); };
-        return ret;
-    }
-
-    uint32_t mId{};
-
-    PwNodePtr mNode{};
-    spa_hook mListener{};
-
-    NodeProxy(uint32_t id, PwNodePtr node)
-      : mId{id}, mNode{std::move(node)}
-    {
-        static constexpr pw_node_events nodeEvents{CreateNodeEvents()};
-        ppw_node_add_listener(mNode.get(), &mListener, &nodeEvents, this);
-
-        /* Track changes to the enumerable formats (indicates the default
-         * format, which is what we're interested in).
-         */
-        uint32_t fmtids[]{SPA_PARAM_EnumFormat};
-        ppw_node_subscribe_params(mNode.get(), std::data(fmtids), std::size(fmtids));
-    }
-    ~NodeProxy()
-    { spa_hook_remove(&mListener); }
-
-
-    void infoCallback(const pw_node_info *info) noexcept;
-
-    void paramCallback(int seq, uint32_t id, uint32_t index, uint32_t next, const spa_pod *param) noexcept;
-};
-
 void NodeProxy::infoCallback(const pw_node_info *info) noexcept
 {
     /* We only care about property changes here (media class, name/desc).
@@ -981,34 +1007,6 @@ void NodeProxy::paramCallback(int, uint32_t id, uint32_t, uint32_t, const spa_po
     }
 }
 
-
-/* A metadata proxy object used to query the default sink and source. */
-struct MetadataProxy {
-    static constexpr pw_metadata_events CreateMetadataEvents()
-    {
-        pw_metadata_events ret{};
-        ret.version = PW_VERSION_METADATA_EVENTS;
-        ret.property = [](void *object, uint32_t id, const char *key, const char *type, const char *value) noexcept
-        { return static_cast<MetadataProxy*>(object)->propertyCallback(id, key, type, value); };
-        return ret;
-    }
-
-    uint32_t mId{};
-
-    PwMetadataPtr mMetadata{};
-    spa_hook mListener{};
-
-    MetadataProxy(uint32_t id, PwMetadataPtr mdata)
-      : mId{id}, mMetadata{std::move(mdata)}
-    {
-        static constexpr pw_metadata_events metadataEvents{CreateMetadataEvents()};
-        ppw_metadata_add_listener(mMetadata.get(), &mListener, &metadataEvents, this);
-    }
-    ~MetadataProxy()
-    { spa_hook_remove(&mListener); }
-
-    int propertyCallback(uint32_t id, const char *key, const char *type, const char *value) noexcept;
-};
 
 int MetadataProxy::propertyCallback(uint32_t id, const char *key, const char *type,
     const char *value) noexcept
@@ -1158,26 +1156,12 @@ bool EventManager::init()
     return true;
 }
 
-EventManager::~EventManager()
-{
-    if(mLoop) mLoop.stop();
-
-    for(NodeProxy *node : mNodeList)
-        std::destroy_at(node);
-    if(mDefaultMetadata)
-        std::destroy_at(mDefaultMetadata);
-}
-
 void EventManager::kill()
 {
     if(mLoop) mLoop.stop();
 
-    for(NodeProxy *node : mNodeList)
-        std::destroy_at(node);
+    mDefaultMetadata.reset();
     mNodeList.clear();
-    if(mDefaultMetadata)
-        std::destroy_at(mDefaultMetadata);
-    mDefaultMetadata = nullptr;
 
     mRegistry = nullptr;
     mCore = nullptr;
@@ -1209,7 +1193,7 @@ void EventManager::addCallback(uint32_t id, uint32_t, const char *type, uint32_t
 
         /* Create the proxy object. */
         auto node = PwNodePtr{static_cast<pw_node*>(pw_registry_bind(mRegistry.get(), id, type,
-            version, sizeof(NodeProxy)))};
+            version, 0))};
         if(!node)
         {
             ERR("Failed to create node proxy object (errno: %d)\n", errno);
@@ -1219,8 +1203,7 @@ void EventManager::addCallback(uint32_t id, uint32_t, const char *type, uint32_t
         /* Initialize the NodeProxy to hold the node object, add it to the
          * active node list, and update the sync point.
          */
-        auto *proxy = static_cast<NodeProxy*>(pw_proxy_get_user_data(as<pw_proxy*>(node.get())));
-        mNodeList.emplace_back(al::construct_at(proxy, id, std::move(node)));
+        mNodeList.emplace_back(std::make_unique<NodeProxy>(id, std::move(node)));
         syncInit();
 
         /* Signal any waiters that we have found a source or sink for audio
@@ -1247,16 +1230,14 @@ void EventManager::addCallback(uint32_t id, uint32_t, const char *type, uint32_t
         }
 
         auto mdata = PwMetadataPtr{static_cast<pw_metadata*>(pw_registry_bind(mRegistry.get(), id,
-            type, version, sizeof(MetadataProxy)))};
+            type, version, 0))};
         if(!mdata)
         {
             ERR("Failed to create metadata proxy object (errno: %d)\n", errno);
             return;
         }
 
-        auto *proxy = static_cast<MetadataProxy*>(
-            pw_proxy_get_user_data(as<pw_proxy*>(mdata.get())));
-        mDefaultMetadata = al::construct_at(proxy, id, std::move(mdata));
+        mDefaultMetadata.emplace(id, std::move(mdata));
         syncInit();
     }
 }
@@ -1265,21 +1246,13 @@ void EventManager::removeCallback(uint32_t id) noexcept
 {
     DeviceNode::Remove(id);
 
-    auto clear_node = [id](NodeProxy *node) noexcept
-    {
-        if(node->mId != id)
-            return false;
-        std::destroy_at(node);
-        return true;
-    };
+    auto clear_node = [id](std::unique_ptr<NodeProxy> &node) noexcept
+    { return node->mId == id; };
     auto node_end = std::remove_if(mNodeList.begin(), mNodeList.end(), clear_node);
     mNodeList.erase(node_end, mNodeList.end());
 
     if(mDefaultMetadata && mDefaultMetadata->mId == id)
-    {
-        std::destroy_at(mDefaultMetadata);
-        mDefaultMetadata = nullptr;
-    }
+        mDefaultMetadata.reset();
 }
 
 void EventManager::coreCallback(uint32_t id, int seq) noexcept

@@ -174,8 +174,8 @@ void ALCcontext::sendDebugMessage(std::unique_lock<std::mutex> &debuglock, Debug
 
     if(message.length() >= MaxDebugMessageLength) UNLIKELY
     {
-        ERR("Debug message too long (%zu >= %d):\n-> %s\n", message.length(),
-            MaxDebugMessageLength, message.data());
+        ERR("Debug message too long (%zu >= %d):\n-> %.*s\n", message.length(),
+            MaxDebugMessageLength, static_cast<int>(message.length()), message.data());
         return;
     }
 
@@ -214,9 +214,10 @@ void ALCcontext::sendDebugMessage(std::unique_lock<std::mutex> &debuglock, Debug
                 "  Type: %s\n"
                 "  ID: %u\n"
                 "  Severity: %s\n"
-                "  Message: \"%s\"\n",
+                "  Message: \"%.*s\"\n",
                 GetDebugSourceName(source), GetDebugTypeName(type), id,
-                GetDebugSeverityName(severity), message.data());
+                GetDebugSeverityName(severity), static_cast<int>(message.length()),
+                message.data());
     }
 }
 
@@ -245,21 +246,8 @@ FORCE_ALIGN void AL_APIENTRY alDebugMessageInsertDirectEXT(ALCcontext *context, 
         return context->setError(AL_INVALID_VALUE, "Debug message too long (%d >= %d)", length,
             MaxDebugMessageLength);
 
-    std::string tmpmessage;
-    std::string_view msgview;
-    if(length < 0)
-        msgview = message;
-    /* Testing if the message is null terminated like this is kind of ugly, but
-     * it's the only way to avoid an otherwise unnecessary copy since the
-     * callback and trace calls need a null-terminated message string.
-     */
-    else if(message[length] == '\0')
-        msgview = {message, static_cast<uint>(length)};
-    else
-    {
-        tmpmessage.assign(message, static_cast<uint>(length));
-        msgview = tmpmessage;
-    }
+    auto msgview = (length < 0) ? std::string_view{message}
+        : std::string_view{message, static_cast<uint>(length)};
 
     if(msgview.length() >= MaxDebugMessageLength) UNLIKELY
         return context->setError(AL_INVALID_VALUE, "Debug message too long (%zu >= %d)",

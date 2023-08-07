@@ -96,7 +96,7 @@ struct WaveBackend final : public BackendBase {
 
     int mixerProc();
 
-    void open(const char *name) override;
+    void open(std::string_view name) override;
     bool reset() override;
     void start() override;
     void stop() override;
@@ -194,24 +194,24 @@ int WaveBackend::mixerProc()
     return 0;
 }
 
-void WaveBackend::open(const char *name)
+void WaveBackend::open(std::string_view name)
 {
     auto fname = ConfigValueStr(nullptr, "wave", "file");
     if(!fname) throw al::backend_exception{al::backend_error::NoDevice,
         "No wave output filename"};
 
-    if(!name)
+    if(name.empty())
         name = waveDevice;
-    else if(strcmp(name, waveDevice) != 0)
-        throw al::backend_exception{al::backend_error::NoDevice, "Device name \"%s\" not found",
-            name};
+    else if(name != waveDevice)
+        throw al::backend_exception{al::backend_error::NoDevice, "Device name \"%.*s\" not found",
+            static_cast<int>(name.length()), name.data()};
 
     /* There's only one "device", so if it's already open, we're done. */
     if(mFile) return;
 
 #ifdef _WIN32
     {
-        std::wstring wname{utf8_to_wstr(fname->c_str())};
+        std::wstring wname{utf8_to_wstr(fname.value())};
         mFile = _wfopen(wname.c_str(), L"wb");
     }
 #else

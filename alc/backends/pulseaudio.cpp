@@ -647,7 +647,7 @@ struct PulsePlayback final : public BackendBase {
     void sinkNameCallback(pa_context *context, const pa_sink_info *info, int eol) noexcept;
     void streamMovedCallback(pa_stream *stream) noexcept;
 
-    void open(const char *name) override;
+    void open(std::string_view name) override;
     bool reset() override;
     void start() override;
     void stop() override;
@@ -782,14 +782,14 @@ void PulsePlayback::streamMovedCallback(pa_stream *stream) noexcept
 }
 
 
-void PulsePlayback::open(const char *name)
+void PulsePlayback::open(std::string_view name)
 {
     mMainloop = PulseMainloop::Create();
     mMainloop.start();
 
     const char *pulse_name{nullptr};
     const char *dev_name{nullptr};
-    if(name)
+    if(!name.empty())
     {
         if(PlaybackDevices.empty())
             mMainloop.probePlaybackDevices();
@@ -798,7 +798,7 @@ void PulsePlayback::open(const char *name)
             [name](const DevMap &entry) -> bool { return entry.name == name; });
         if(iter == PlaybackDevices.cend())
             throw al::backend_exception{al::backend_error::NoDevice,
-                "Device name \"%s\" not found", name};
+                "Device name \"%.*s\" not found", static_cast<int>(name.length()), name.data()};
         pulse_name = iter->device_name.c_str();
         dev_name = iter->name.c_str();
     }
@@ -1066,7 +1066,7 @@ struct PulseCapture final : public BackendBase {
     void sourceNameCallback(pa_context *context, const pa_source_info *info, int eol) noexcept;
     void streamMovedCallback(pa_stream *stream) noexcept;
 
-    void open(const char *name) override;
+    void open(std::string_view name) override;
     void start() override;
     void stop() override;
     void captureSamples(std::byte *buffer, uint samples) override;
@@ -1123,7 +1123,7 @@ void PulseCapture::streamMovedCallback(pa_stream *stream) noexcept
 }
 
 
-void PulseCapture::open(const char *name)
+void PulseCapture::open(std::string_view name)
 {
     if(!mMainloop)
     {
@@ -1132,7 +1132,7 @@ void PulseCapture::open(const char *name)
     }
 
     const char *pulse_name{nullptr};
-    if(name)
+    if(!name.empty())
     {
         if(CaptureDevices.empty())
             mMainloop.probeCaptureDevices();
@@ -1141,7 +1141,7 @@ void PulseCapture::open(const char *name)
             [name](const DevMap &entry) -> bool { return entry.name == name; });
         if(iter == CaptureDevices.cend())
             throw al::backend_exception{al::backend_error::NoDevice,
-                "Device name \"%s\" not found", name};
+                "Device name \"%.*s\" not found", static_cast<int>(name.length()), name.data()};
         pulse_name = iter->device_name.c_str();
         mDevice->DeviceName = iter->name;
     }

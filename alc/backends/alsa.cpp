@@ -427,7 +427,7 @@ struct AlsaPlayback final : public BackendBase {
     int mixerProc();
     int mixerNoMMapProc();
 
-    void open(const char *name) override;
+    void open(std::string_view name) override;
     bool reset() override;
     void start() override;
     void stop() override;
@@ -626,10 +626,10 @@ int AlsaPlayback::mixerNoMMapProc()
 }
 
 
-void AlsaPlayback::open(const char *name)
+void AlsaPlayback::open(std::string_view name)
 {
     std::string driver{"default"};
-    if(name)
+    if(!name.empty())
     {
         if(PlaybackDevices.empty())
             PlaybackDevices = probe_devices(SND_PCM_STREAM_PLAYBACK);
@@ -638,7 +638,7 @@ void AlsaPlayback::open(const char *name)
             [name](const DevMap &entry) -> bool { return entry.name == name; });
         if(iter == PlaybackDevices.cend())
             throw al::backend_exception{al::backend_error::NoDevice,
-                "Device name \"%s\" not found", name};
+                "Device name \"%.*s\" not found", static_cast<int>(name.length()), name.data()};
         driver = iter->device_name;
     }
     else
@@ -871,7 +871,7 @@ struct AlsaCapture final : public BackendBase {
     AlsaCapture(DeviceBase *device) noexcept : BackendBase{device} { }
     ~AlsaCapture() override;
 
-    void open(const char *name) override;
+    void open(std::string_view name) override;
     void start() override;
     void stop() override;
     void captureSamples(std::byte *buffer, uint samples) override;
@@ -898,10 +898,10 @@ AlsaCapture::~AlsaCapture()
 }
 
 
-void AlsaCapture::open(const char *name)
+void AlsaCapture::open(std::string_view name)
 {
     std::string driver{"default"};
-    if(name)
+    if(!name.empty())
     {
         if(CaptureDevices.empty())
             CaptureDevices = probe_devices(SND_PCM_STREAM_CAPTURE);
@@ -910,7 +910,7 @@ void AlsaCapture::open(const char *name)
             [name](const DevMap &entry) -> bool { return entry.name == name; });
         if(iter == CaptureDevices.cend())
             throw al::backend_exception{al::backend_error::NoDevice,
-                "Device name \"%s\" not found", name};
+                "Device name \"%.*s\" not found", static_cast<int>(name.length()), name.data()};
         driver = iter->device_name;
     }
     else

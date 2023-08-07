@@ -1325,7 +1325,7 @@ class PipeWirePlayback final : public BackendBase {
     void ioChangedCallback(uint32_t id, void *area, uint32_t size) noexcept;
     void outputCallback() noexcept;
 
-    void open(const char *name) override;
+    void open(std::string_view name) override;
     bool reset() override;
     void start() override;
     void stop() override;
@@ -1428,14 +1428,14 @@ void PipeWirePlayback::outputCallback() noexcept
 }
 
 
-void PipeWirePlayback::open(const char *name)
+void PipeWirePlayback::open(std::string_view name)
 {
     static std::atomic<uint> OpenCount{0};
 
     uint64_t targetid{PwIdAny};
     std::string devname{};
     gEventHandler.waitForInit();
-    if(!name)
+    if(name.empty())
     {
         EventWatcherLockGuard _{gEventHandler};
         auto&& devlist = DeviceNode::GetList();
@@ -1470,7 +1470,7 @@ void PipeWirePlayback::open(const char *name)
         auto match = std::find_if(devlist.cbegin(), devlist.cend(), match_name);
         if(match == devlist.cend())
             throw al::backend_exception{al::backend_error::NoDevice,
-                "Device name \"%s\" not found", name};
+                "Device name \"%.*s\" not found", static_cast<int>(name.length()), name.data()};
 
         targetid = match->mSerial;
         devname = match->mName;
@@ -1823,7 +1823,7 @@ class PipeWireCapture final : public BackendBase {
     void stateChangedCallback(pw_stream_state old, pw_stream_state state, const char *error) noexcept;
     void inputCallback() noexcept;
 
-    void open(const char *name) override;
+    void open(std::string_view name) override;
     void start() override;
     void stop() override;
     void captureSamples(std::byte *buffer, uint samples) override;
@@ -1875,14 +1875,14 @@ void PipeWireCapture::inputCallback() noexcept
 }
 
 
-void PipeWireCapture::open(const char *name)
+void PipeWireCapture::open(std::string_view name)
 {
     static std::atomic<uint> OpenCount{0};
 
     uint64_t targetid{PwIdAny};
     std::string devname{};
     gEventHandler.waitForInit();
-    if(!name)
+    if(name.empty())
     {
         EventWatcherLockGuard _{gEventHandler};
         auto&& devlist = DeviceNode::GetList();
@@ -1920,16 +1920,17 @@ void PipeWireCapture::open(const char *name)
         auto match_name = [name](const DeviceNode &n) -> bool
         { return n.mType != NodeType::Sink && n.mName == name; };
         auto match = std::find_if(devlist.cbegin(), devlist.cend(), match_name);
-        if(match == devlist.cend() && std::strncmp(name, MonitorPrefix, MonitorPrefixLen) == 0)
+        if(match == devlist.cend() && name.length() >= MonitorPrefixLen
+            && std::strncmp(name.data(), MonitorPrefix, MonitorPrefixLen) == 0)
         {
-            const char *sinkname{name + MonitorPrefixLen};
+            const std::string_view sinkname{name.substr(MonitorPrefixLen)};
             auto match_sinkname = [sinkname](const DeviceNode &n) -> bool
             { return n.mType == NodeType::Sink && n.mName == sinkname; };
             match = std::find_if(devlist.cbegin(), devlist.cend(), match_sinkname);
         }
         if(match == devlist.cend())
             throw al::backend_exception{al::backend_error::NoDevice,
-                "Device name \"%s\" not found", name};
+                "Device name \"%.*s\" not found", static_cast<int>(name.length()), name.data()};
 
         targetid = match->mSerial;
         devname = name;

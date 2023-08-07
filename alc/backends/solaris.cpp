@@ -62,7 +62,7 @@ struct SolarisBackend final : public BackendBase {
 
     int mixerProc();
 
-    void open(const char *name) override;
+    void open(std::string_view name) override;
     bool reset() override;
     void start() override;
     void stop() override;
@@ -139,13 +139,13 @@ int SolarisBackend::mixerProc()
 }
 
 
-void SolarisBackend::open(const char *name)
+void SolarisBackend::open(std::string_view name)
 {
-    if(!name)
+    if(name.empty())
         name = solaris_device;
-    else if(strcmp(name, solaris_device) != 0)
-        throw al::backend_exception{al::backend_error::NoDevice, "Device name \"%s\" not found",
-            name};
+    else if(name != solaris_device)
+        throw al::backend_exception{al::backend_error::NoDevice, "Device name \"%.*s\" not found",
+            static_cast<int>(name.length()), name.data()};
 
     int fd{::open(solaris_driver.c_str(), O_WRONLY)};
     if(fd == -1)

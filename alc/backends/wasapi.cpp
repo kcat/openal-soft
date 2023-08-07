@@ -868,7 +868,7 @@ constexpr char MessageStr[static_cast<size_t>(MsgType::Count)][16]{
 struct WasapiProxy {
     virtual ~WasapiProxy() = default;
 
-    virtual HRESULT openProxy(const char *name) = 0;
+    virtual HRESULT openProxy(std::string_view name) = 0;
     virtual void closeProxy() = 0;
 
     virtual HRESULT resetProxy() = 0;
@@ -878,7 +878,7 @@ struct WasapiProxy {
     struct Msg {
         MsgType mType;
         WasapiProxy *mProxy;
-        const char *mParam;
+        std::string_view mParam;
         std::promise<HRESULT> mPromise;
 
         explicit operator bool() const noexcept { return mType != MsgType::QuitThread; }
@@ -889,7 +889,7 @@ struct WasapiProxy {
 
     static std::optional<DeviceHelper> sDeviceHelper;
 
-    std::future<HRESULT> pushMessage(MsgType type, const char *param=nullptr)
+    std::future<HRESULT> pushMessage(MsgType type, std::string_view param={})
     {
         std::promise<HRESULT> promise;
         std::future<HRESULT> future{promise.get_future()};
@@ -907,7 +907,7 @@ struct WasapiProxy {
         std::future<HRESULT> future{promise.get_future()};
         {
             std::lock_guard<std::mutex> _{mMsgQueueLock};
-            mMsgQueue.emplace_back(Msg{type, nullptr, nullptr, std::move(promise)});
+            mMsgQueue.emplace_back(Msg{type, nullptr, {}, std::move(promise)});
         }
         mMsgQueueCond.notify_one();
         return future;
@@ -958,9 +958,10 @@ int WasapiProxy::messageHandler(std::promise<HRESULT> *promise)
     TRACE("Starting message loop\n");
     while(Msg msg{popMessage()})
     {
-        TRACE("Got message \"%s\" (0x%04x, this=%p, param=%p)\n",
+        TRACE("Got message \"%s\" (0x%04x, this=%p, param={%p,%zu})\n",
             MessageStr[static_cast<size_t>(msg.mType)], static_cast<uint>(msg.mType),
-            static_cast<void*>(msg.mProxy), static_cast<const void*>(msg.mParam));
+            static_cast<void*>(msg.mProxy), static_cast<const void*>(msg.mParam.data()),
+            msg.mParam.length());
 
         switch(msg.mType)
         {
@@ -1010,8 +1011,8 @@ struct WasapiPlayback final : public BackendBase, WasapiProxy {
 
     int mixerProc();
 
-    void open(const char *name) override;
-    HRESULT openProxy(const char *name) override;
+    void open(std::string_view name) override;
+    HRESULT openProxy(std::string_view name) override;
     void closeProxy() override;
 
     bool reset() override;
@@ -1147,7 +1148,7 @@ FORCE_ALIGN int WasapiPlayback::mixerProc()
 }
 
 
-void WasapiPlayback::open(const char *name)
+void WasapiPlayback::open(std::string_view name)
 {
     if(SUCCEEDED(mOpenStatus))
         throw al::backend_exception{al::backend_error::DeviceError,
@@ -1161,11 +1162,10 @@ void WasapiPlayback::open(const char *name)
             "Failed to create notify events"};
     }
 
-    if(name && std::strncmp(name, DevNameHead, DevNameHeadLen) == 0)
+    if(name.length() >= DevNameHeadLen
+        && std::strncmp(name.data(), DevNameHead, DevNameHeadLen) == 0)
     {
-        name += DevNameHeadLen;
-        if(*name == '\0')
-            name = nullptr;
+        name = name.substr(DevNameHeadLen);
     }
 
     mOpenStatus = pushMessage(MsgType::OpenDevice, name).get();
@@ -1174,11 +1174,11 @@ void WasapiPlayback::open(const char *name)
             mOpenStatus};
 }
 
-HRESULT WasapiPlayback::openProxy(const char *name)
+HRESULT WasapiPlayback::openProxy(std::string_view name)
 {
     std::string devname;
     std::wstring devid;
-    if(name)
+    if(!name.empty())
     {
         auto devlock = DeviceListLock{gDeviceList};
         auto list = al::span{devlock.getPlaybackList()};
@@ -1194,7 +1194,8 @@ HRESULT WasapiPlayback::openProxy(const char *name)
         }
         if(iter == list.cend())
         {
-            WARN("Failed to find device name matching \"%s\"\n", name);
+            WARN("Failed to find device name matching \"%.*s\"\n", static_cast<int>(name.length()),
+                name.data());
             return E_FAIL;
         }
         devname = iter->name;
@@ -1654,8 +1655,8 @@ struct WasapiCapture final : public BackendBase, WasapiProxy {
 
     int recordProc();
 
-    void open(const char *name) override;
-    HRESULT openProxy(const char *name) override;
+    void open(std::string_view name) override;
+    HRESULT openProxy(std::string_view name) override;
     void closeProxy() override;
 
     HRESULT resetProxy() override;
@@ -1787,7 +1788,7 @@ FORCE_ALIGN int WasapiCapture::recordProc()
 }
 
 
-void WasapiCapture::open(const char *name)
+void WasapiCapture::open(std::string_view name)
 {
     if(SUCCEEDED(mOpenStatus))
         throw al::backend_exception{al::backend_error::DeviceError,
@@ -1801,11 +1802,10 @@ void WasapiCapture::open(const char *name)
             "Failed to create notify events"};
     }
 
-    if(name && std::strncmp(name, DevNameHead, DevNameHeadLen) == 0)
+    if(name.length() >= DevNameHeadLen
+        && std::strncmp(name.data(), DevNameHead, DevNameHeadLen) == 0)
     {
-        name += DevNameHeadLen;
-        if(*name == '\0')
-            name = nullptr;
+        name = name.substr(DevNameHeadLen);
     }
 
     mOpenStatus = pushMessage(MsgType::OpenDevice, name).get();
@@ -1822,11 +1822,11 @@ void WasapiCapture::open(const char *name)
     }
 }
 
-HRESULT WasapiCapture::openProxy(const char *name)
+HRESULT WasapiCapture::openProxy(std::string_view name)
 {
     std::string devname;
     std::wstring devid;
-    if(name)
+    if(!name.empty())
     {
         auto devlock = DeviceListLock{gDeviceList};
         auto devlist = al::span{devlock.getCaptureList()};
@@ -1842,7 +1842,8 @@ HRESULT WasapiCapture::openProxy(const char *name)
         }
         if(iter == devlist.cend())
         {
-            WARN("Failed to find device name matching \"%s\"\n", name);
+            WARN("Failed to find device name matching \"%.*s\"\n", static_cast<int>(name.length()),
+                name.data());
             return E_FAIL;
         }
         devname = iter->name;

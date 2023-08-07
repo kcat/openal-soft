@@ -7,6 +7,7 @@
 #include <memory>
 #include <ratio>
 #include <string>
+#include <string_view>
 
 #include "core/device.h"
 #include "core/except.h"
@@ -20,7 +21,7 @@ struct ClockLatency {
 };
 
 struct BackendBase {
-    virtual void open(const char *name) = 0;
+    virtual void open(std::string_view name) = 0;
 
     virtual bool reset();
     virtual void start() = 0;

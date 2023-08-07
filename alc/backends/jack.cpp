@@ -298,7 +298,7 @@ struct JackPlayback final : public BackendBase {
 
     int mixerProc();
 
-    void open(const char *name) override;
+    void open(std::string_view name) override;
     bool reset() override;
     void start() override;
     void stop() override;
@@ -460,7 +460,7 @@ int JackPlayback::mixerProc()
 }
 
 
-void JackPlayback::open(const char *name)
+void JackPlayback::open(std::string_view name)
 {
     if(!mClient)
     {
@@ -484,9 +484,9 @@ void JackPlayback::open(const char *name)
     if(PlaybackList.empty())
         EnumerateDevices(mClient, PlaybackList);
 
-    if(!name && !PlaybackList.empty())
+    if(name.empty() && !PlaybackList.empty())
     {
-        name = PlaybackList[0].mName.c_str();
+        name = PlaybackList[0].mName;
         mPortPattern = PlaybackList[0].mPattern;
     }
     else
@@ -496,13 +496,9 @@ void JackPlayback::open(const char *name)
         auto iter = std::find_if(PlaybackList.cbegin(), PlaybackList.cend(), check_name);
         if(iter == PlaybackList.cend())
             throw al::backend_exception{al::backend_error::NoDevice,
-                "Device name \"%s\" not found", name?name:""};
+                "Device name \"%.*s\" not found", static_cast<int>(name.length()), name.data()};
         mPortPattern = iter->mPattern;
     }
-
-    mRTMixing = GetConfigValueBool(name, "jack", "rt-mix", true);
-    jack_set_process_callback(mClient,
-        mRTMixing ? &JackPlayback::processRtC : &JackPlayback::processC, this);
 
     mDevice->DeviceName = name;
 }
@@ -513,6 +509,10 @@ bool JackPlayback::reset()
     { if(port) jack_port_unregister(mClient, port); };
     std::for_each(mPort.begin(), mPort.end(), unregister_port);
     mPort.fill(nullptr);
+
+    mRTMixing = GetConfigValueBool(mDevice->DeviceName.c_str(), "jack", "rt-mix", true);
+    jack_set_process_callback(mClient,
+        mRTMixing ? &JackPlayback::processRtC : &JackPlayback::processC, this);
 
     /* Ignore the requested buffer metrics and just keep one JACK-sized buffer
      * ready for when requested.

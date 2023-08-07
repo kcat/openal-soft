@@ -135,7 +135,7 @@ struct WinMMPlayback final : public BackendBase {
 
     int mixerProc();
 
-    void open(const char *name) override;
+    void open(std::string_view name) override;
     bool reset() override;
     void start() override;
     void stop() override;
@@ -208,18 +208,18 @@ FORCE_ALIGN int WinMMPlayback::mixerProc()
 }
 
 
-void WinMMPlayback::open(const char *name)
+void WinMMPlayback::open(std::string_view name)
 {
     if(PlaybackDevices.empty())
         ProbePlaybackDevices();
 
     // Find the Device ID matching the deviceName if valid
-    auto iter = name ?
+    auto iter = !name.empty() ?
         std::find(PlaybackDevices.cbegin(), PlaybackDevices.cend(), name) :
         PlaybackDevices.cbegin();
     if(iter == PlaybackDevices.cend())
-        throw al::backend_exception{al::backend_error::NoDevice, "Device name \"%s\" not found",
-            name};
+        throw al::backend_exception{al::backend_error::NoDevice, "Device name \"%.*s\" not found",
+            static_cast<int>(name.length()), name.data()};
     auto DeviceID = static_cast<UINT>(std::distance(PlaybackDevices.cbegin(), iter));
 
     DevFmtType fmttype{mDevice->FmtType};
@@ -370,7 +370,7 @@ struct WinMMCapture final : public BackendBase {
 
     int captureProc();
 
-    void open(const char *name) override;
+    void open(std::string_view name) override;
     void start() override;
     void stop() override;
     void captureSamples(std::byte *buffer, uint samples) override;
@@ -446,18 +446,18 @@ int WinMMCapture::captureProc()
 }
 
 
-void WinMMCapture::open(const char *name)
+void WinMMCapture::open(std::string_view name)
 {
     if(CaptureDevices.empty())
         ProbeCaptureDevices();
 
     // Find the Device ID matching the deviceName if valid
-    auto iter = name ?
+    auto iter = !name.empty() ?
         std::find(CaptureDevices.cbegin(), CaptureDevices.cend(), name) :
         CaptureDevices.cbegin();
     if(iter == CaptureDevices.cend())
-        throw al::backend_exception{al::backend_error::NoDevice, "Device name \"%s\" not found",
-            name};
+        throw al::backend_exception{al::backend_error::NoDevice, "Device name \"%.*s\" not found",
+            static_cast<int>(name.length()), name.data()};
     auto DeviceID = static_cast<UINT>(std::distance(CaptureDevices.cbegin(), iter));
 
     switch(mDevice->FmtChans)

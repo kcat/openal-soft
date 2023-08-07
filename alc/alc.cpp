@@ -2905,9 +2905,26 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName) noexcep
     device->NumAuxSends = DefaultSends;
 
     try {
+        /* We need to ensure the device name isn't too long. The string_view is
+         * printed using the "%.*s" formatter, which uses an int for the
+         * precision/length. It wouldn't be a significant problem if larger
+         * values simply printed fewer characters due to truncation, but
+         * negative values are ignored, treating it like a normal null-
+         * terminated string, and string_views don't need to be null-
+         * terminated.
+         *
+         * Other than the annoyance of checking, this shouldn't be a problem.
+         * Two billion bytes is enough for a device name.
+         */
+        const std::string_view devname{deviceName ? deviceName : ""};
+        if(devname.length() >= std::numeric_limits<int>::max())
+            throw al::backend_exception{al::backend_error::NoDevice,
+                "Device name too long (%zu >= %d)", devname.length(),
+                std::numeric_limits<int>::max()};
+
         auto backend = PlaybackFactory->createBackend(device.get(), BackendType::Playback);
         std::lock_guard<std::recursive_mutex> _{ListLock};
-        backend->open(deviceName);
+        backend->open(devname);
         device->Backend = std::move(backend);
     }
     catch(al::backend_exception &e) {
@@ -3024,14 +3041,20 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, 
     device->UpdateSize = static_cast<uint>(samples);
     device->BufferSize = static_cast<uint>(samples);
 
+    TRACE("Capture format: %s, %s, %uhz, %u / %u buffer\n", DevFmtChannelsString(device->FmtChans),
+        DevFmtTypeString(device->FmtType), device->Frequency, device->UpdateSize,
+        device->BufferSize);
+
     try {
-        TRACE("Capture format: %s, %s, %uhz, %u / %u buffer\n",
-            DevFmtChannelsString(device->FmtChans), DevFmtTypeString(device->FmtType),
-            device->Frequency, device->UpdateSize, device->BufferSize);
+        const std::string_view devname{deviceName ? deviceName : ""};
+        if(devname.length() >= std::numeric_limits<int>::max())
+            throw al::backend_exception{al::backend_error::NoDevice,
+                "Device name too long (%zu >= %d)", devname.length(),
+                std::numeric_limits<int>::max()};
 
         auto backend = CaptureFactory->createBackend(device.get(), BackendType::Capture);
         std::lock_guard<std::recursive_mutex> _{ListLock};
-        backend->open(deviceName);
+        backend->open(devname);
         device->Backend = std::move(backend);
     }
     catch(al::backend_exception &e) {
@@ -3393,8 +3416,14 @@ FORCE_ALIGN ALCboolean ALC_APIENTRY alcReopenDeviceSOFT(ALCdevice *device,
 
     BackendPtr newbackend;
     try {
+        const std::string_view devname{deviceName ? deviceName : ""};
+        if(devname.length() >= std::numeric_limits<int>::max())
+            throw al::backend_exception{al::backend_error::NoDevice,
+                "Device name too long (%zu >= %d)", devname.length(),
+                std::numeric_limits<int>::max()};
+
         newbackend = PlaybackFactory->createBackend(dev.get(), BackendType::Playback);
-        newbackend->open(deviceName);
+        newbackend->open(devname);
     }
     catch(al::backend_exception &e) {
         listlock.unlock();

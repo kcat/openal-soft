@@ -227,7 +227,7 @@ struct OSSPlayback final : public BackendBase {
 
     int mixerProc();
 
-    void open(const char *name) override;
+    void open(std::string_view name) override;
     bool reset() override;
     void start() override;
     void stop() override;
@@ -304,10 +304,10 @@ int OSSPlayback::mixerProc()
 }
 
 
-void OSSPlayback::open(const char *name)
+void OSSPlayback::open(std::string_view name)
 {
     const char *devname{DefaultPlayback.c_str()};
-    if(!name)
+    if(name.empty())
         name = DefaultName;
     else
     {
@@ -320,7 +320,7 @@ void OSSPlayback::open(const char *name)
         );
         if(iter == PlaybackDevices.cend())
             throw al::backend_exception{al::backend_error::NoDevice,
-                "Device name \"%s\" not found", name};
+                "Device name \"%.*s\" not found", static_cast<int>(name.length()), name.data()};
         devname = iter->device_name.c_str();
     }
 
@@ -443,7 +443,7 @@ struct OSScapture final : public BackendBase {
 
     int recordProc();
 
-    void open(const char *name) override;
+    void open(std::string_view name) override;
     void start() override;
     void stop() override;
     void captureSamples(std::byte *buffer, uint samples) override;
@@ -512,10 +512,10 @@ int OSScapture::recordProc()
 }
 
 
-void OSScapture::open(const char *name)
+void OSScapture::open(std::string_view name)
 {
     const char *devname{DefaultCapture.c_str()};
-    if(!name)
+    if(name.empty())
         name = DefaultName;
     else
     {
@@ -528,7 +528,7 @@ void OSScapture::open(const char *name)
         );
         if(iter == CaptureDevices.cend())
             throw al::backend_exception{al::backend_error::NoDevice,
-                "Device name \"%s\" not found", name};
+                "Device name \"%.*s\" not found", static_cast<int>(name.length()), name.data()};
         devname = iter->device_name.c_str();
     }
 

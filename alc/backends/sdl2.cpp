@@ -54,7 +54,7 @@ struct Sdl2Backend final : public BackendBase {
 
     void audioCallback(Uint8 *stream, int len) noexcept;
 
-    void open(const char *name) override;
+    void open(std::string_view name) override;
     bool reset() override;
     void start() override;
     void stop() override;
@@ -84,7 +84,7 @@ void Sdl2Backend::audioCallback(Uint8 *stream, int len) noexcept
     mDevice->renderSamples(stream, ulen / mFrameSize, mDevice->channelsFromFmt());
 }
 
-void Sdl2Backend::open(const char *name)
+void Sdl2Backend::open(std::string_view name)
 {
     SDL_AudioSpec want{}, have{};
 
@@ -109,16 +109,29 @@ void Sdl2Backend::open(const char *name)
      * necessarily the first in the list.
      */
     SDL_AudioDeviceID devid;
-    if(!name || strcmp(name, defaultDeviceName) == 0)
+    if(name.empty() || name == defaultDeviceName)
+    {
+        name = defaultDeviceName;
         devid = SDL_OpenAudioDevice(nullptr, SDL_FALSE, &want, &have, SDL_AUDIO_ALLOW_ANY_CHANGE);
+    }
     else
     {
         const size_t prefix_len = strlen(DEVNAME_PREFIX);
-        if(strncmp(name, DEVNAME_PREFIX, prefix_len) == 0)
-            devid = SDL_OpenAudioDevice(name+prefix_len, SDL_FALSE, &want, &have,
+        if(name.length() >= prefix_len && strncmp(name.data(), DEVNAME_PREFIX, prefix_len) == 0)
+        {
+            /* Copy the string_view to a string to ensure it's null terminated
+             * for this call.
+             */
+            const std::string devname{name.substr(prefix_len)};
+            devid = SDL_OpenAudioDevice(devname.c_str(), SDL_FALSE, &want, &have,
                 SDL_AUDIO_ALLOW_ANY_CHANGE);
+        }
         else
-            devid = SDL_OpenAudioDevice(name, SDL_FALSE, &want, &have, SDL_AUDIO_ALLOW_ANY_CHANGE);
+        {
+            const std::string devname{name};
+            devid = SDL_OpenAudioDevice(devname.c_str(), SDL_FALSE, &want, &have,
+                SDL_AUDIO_ALLOW_ANY_CHANGE);
+        }
     }
     if(!devid)
         throw al::backend_exception{al::backend_error::NoDevice, "%s", SDL_GetError()};
@@ -160,7 +173,7 @@ void Sdl2Backend::open(const char *name)
     mFmtType = devtype;
     mUpdateSize = have.samples;
 
-    mDevice->DeviceName = name ? name : defaultDeviceName;
+    mDevice->DeviceName = name;
 }
 
 bool Sdl2Backend::reset()

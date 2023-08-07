@@ -329,7 +329,7 @@ struct CoreAudioPlayback final : public BackendBase {
         const AudioTimeStamp *inTimeStamp, UInt32 inBusNumber, UInt32 inNumberFrames,
         AudioBufferList *ioData) noexcept;
 
-    void open(const char *name) override;
+    void open(std::string_view name) override;
     bool reset() override;
     void start() override;
     void stop() override;
@@ -362,11 +362,11 @@ OSStatus CoreAudioPlayback::MixerProc(AudioUnitRenderActionFlags*, const AudioTi
 }
 
 
-void CoreAudioPlayback::open(const char *name)
+void CoreAudioPlayback::open(std::string_view name)
 {
 #if CAN_ENUMERATE
     AudioDeviceID audioDevice{kAudioDeviceUnknown};
-    if(!name)
+    if(name.empty())
         GetHwProperty(kAudioHardwarePropertyDefaultOutputDevice, sizeof(audioDevice),
             &audioDevice);
     else
@@ -379,16 +379,16 @@ void CoreAudioPlayback::open(const char *name)
         auto devmatch = std::find_if(PlaybackList.cbegin(), PlaybackList.cend(), find_name);
         if(devmatch == PlaybackList.cend())
             throw al::backend_exception{al::backend_error::NoDevice,
-                "Device name \"%s\" not found", name};
+                "Device name \"%.*s\" not found", static_cast<int>(name.length()), name.data()};
 
         audioDevice = devmatch->mId;
     }
 #else
-    if(!name)
+    if(name.empty())
         name = ca_device;
-    else if(strcmp(name, ca_device) != 0)
-        throw al::backend_exception{al::backend_error::NoDevice, "Device name \"%s\" not found",
-            name};
+    else if(name != ca_device)
+        throw al::backend_exception{al::backend_error::NoDevice, "Device name \"%.*s\" not found",
+            static_cast<int>(name.length()), name.data()};
 #endif
 
     /* open the default output unit */
@@ -436,7 +436,7 @@ void CoreAudioPlayback::open(const char *name)
     mAudioUnit = audioUnit;
 
 #if CAN_ENUMERATE
-    if(name)
+    if(!name.empty())
         mDevice->DeviceName = name;
     else
     {
@@ -608,7 +608,7 @@ struct CoreAudioCapture final : public BackendBase {
         const AudioTimeStamp *inTimeStamp, UInt32 inBusNumber,
         UInt32 inNumberFrames, AudioBufferList *ioData) noexcept;
 
-    void open(const char *name) override;
+    void open(std::string_view name) override;
     void start() override;
     void stop() override;
     void captureSamples(std::byte *buffer, uint samples) override;
@@ -663,11 +663,11 @@ OSStatus CoreAudioCapture::RecordProc(AudioUnitRenderActionFlags *ioActionFlags,
 }
 
 
-void CoreAudioCapture::open(const char *name)
+void CoreAudioCapture::open(std::string_view name)
 {
 #if CAN_ENUMERATE
     AudioDeviceID audioDevice{kAudioDeviceUnknown};
-    if(!name)
+    if(name.empty())
         GetHwProperty(kAudioHardwarePropertyDefaultInputDevice, sizeof(audioDevice),
             &audioDevice);
     else
@@ -680,16 +680,16 @@ void CoreAudioCapture::open(const char *name)
         auto devmatch = std::find_if(CaptureList.cbegin(), CaptureList.cend(), find_name);
         if(devmatch == CaptureList.cend())
             throw al::backend_exception{al::backend_error::NoDevice,
-                "Device name \"%s\" not found", name};
+                "Device name \"%.*s\" not found", static_cast<int>(name.length()), name.data()};
 
         audioDevice = devmatch->mId;
     }
 #else
-    if(!name)
+    if(name.empty())
         name = ca_device;
-    else if(strcmp(name, ca_device) != 0)
-        throw al::backend_exception{al::backend_error::NoDevice, "Device name \"%s\" not found",
-            name};
+    else if(name != ca_device)
+        throw al::backend_exception{al::backend_error::NoDevice, "Device name \"%.*s\" not found",
+            static_cast<int>(name.length()), name.data()};
 #endif
 
     AudioComponentDescription desc{};
@@ -887,7 +887,7 @@ void CoreAudioCapture::open(const char *name)
             mDevice->Frequency, Resampler::FastBSinc24);
 
 #if CAN_ENUMERATE
-    if(name)
+    if(!name.empty())
         mDevice->DeviceName = name;
     else
     {

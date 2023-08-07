@@ -5,10 +5,11 @@
 #include <string>
 
 #ifdef _WIN32
+#include <string_view>
 #include <wchar.h>
 
-std::string wstr_to_utf8(const wchar_t *wstr);
-std::wstring utf8_to_wstr(const char *str);
+std::string wstr_to_utf8(std::wstring_view wstr);
+std::wstring utf8_to_wstr(std::string_view str);
 #endif
 
 namespace al {

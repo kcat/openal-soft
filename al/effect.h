@@ -1,6 +1,8 @@
 #ifndef AL_EFFECT_H
 #define AL_EFFECT_H
 
+#include <string_view>
+
 #include "AL/al.h"
 #include "AL/efx.h"
 

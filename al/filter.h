@@ -1,6 +1,7 @@
 #ifndef AL_FILTER_H
 #define AL_FILTER_H
 
+#include <string_view>
 #include <variant>
 
 #include "AL/al.h"

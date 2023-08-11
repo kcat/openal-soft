@@ -312,7 +312,7 @@ constexpr ALCchar alcExtensionList[] =
     "ALC_ENUMERATE_ALL_EXT "
     "ALC_ENUMERATION_EXT "
     "ALC_EXT_CAPTURE "
-    "ALC_EXTX_debug "
+    "ALC_EXT_debug "
     "ALC_EXT_DEDICATED "
     "ALC_EXTX_direct_context "
     "ALC_EXT_disconnect "

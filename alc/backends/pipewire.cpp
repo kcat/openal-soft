@@ -461,10 +461,10 @@ struct NodeProxy {
         static constexpr pw_node_events nodeEvents{CreateNodeEvents()};
         ppw_node_add_listener(mNode.get(), &mListener, &nodeEvents, this);
 
-        /* Track changes to the enumerable formats (indicates the default
-         * format, which is what we're interested in).
+        /* Track changes to the enumerable and current formats (indicates the
+         * default and active format, which is what we're interested in).
          */
-        uint32_t fmtids[]{SPA_PARAM_EnumFormat};
+        uint32_t fmtids[]{SPA_PARAM_EnumFormat, SPA_PARAM_Format};
         ppw_node_subscribe_params(mNode.get(), std::data(fmtids), std::size(fmtids));
     }
     ~NodeProxy()
@@ -643,9 +643,9 @@ struct DeviceNode {
     static void Remove(uint32_t id);
     static auto GetList() noexcept { return al::span{sList}; }
 
-    void parseSampleRate(const spa_pod *value) noexcept;
-    void parsePositions(const spa_pod *value) noexcept;
-    void parseChannelCount(const spa_pod *value) noexcept;
+    void parseSampleRate(const spa_pod *value, bool force_update) noexcept;
+    void parsePositions(const spa_pod *value, bool force_update) noexcept;
+    void parseChannelCount(const spa_pod *value, bool force_update) noexcept;
 
     void callEvent(alc::EventType type, std::string_view message)
     {
@@ -769,7 +769,7 @@ bool MatchChannelMap(const al::span<const uint32_t> map0, const spa_audio_channe
     return true;
 }
 
-void DeviceNode::parseSampleRate(const spa_pod *value) noexcept
+void DeviceNode::parseSampleRate(const spa_pod *value, bool force_update) noexcept
 {
     /* TODO: Can this be anything else? Long, Float, Double? */
     uint32_t nvals{}, choiceType{};
@@ -778,7 +778,7 @@ void DeviceNode::parseSampleRate(const spa_pod *value) noexcept
     const uint podType{get_pod_type(value)};
     if(podType != SPA_TYPE_Int)
     {
-        WARN("Unhandled sample rate POD type: %u\n", podType);
+        WARN("  Unhandled sample rate POD type: %u\n", podType);
         return;
     }
 
@@ -786,15 +786,15 @@ void DeviceNode::parseSampleRate(const spa_pod *value) noexcept
     {
         if(nvals != 3)
         {
-            WARN("Unexpected SPA_CHOICE_Range count: %u\n", nvals);
+            WARN("  Unexpected SPA_CHOICE_Range count: %u\n", nvals);
             return;
         }
         auto srates = get_pod_body<int32_t,3>(value);
 
         /* [0] is the default, [1] is the min, and [2] is the max. */
-        TRACE("Device ID %" PRIu64 " sample rate: %d (range: %d -> %d)\n", mSerial, srates[0],
-            srates[1], srates[2]);
-        mSampleRate = static_cast<uint>(clampi(srates[0], MIN_OUTPUT_RATE, MAX_OUTPUT_RATE));
+        TRACE("  sample rate: %d (range: %d -> %d)\n", srates[0], srates[1], srates[2]);
+        if(!mSampleRate || force_update)
+            mSampleRate = static_cast<uint>(clampi(srates[0], MIN_OUTPUT_RATE, MAX_OUTPUT_RATE));
         return;
     }
 
@@ -802,7 +802,7 @@ void DeviceNode::parseSampleRate(const spa_pod *value) noexcept
     {
         if(nvals == 0)
         {
-            WARN("Unexpected SPA_CHOICE_Enum count: %u\n", nvals);
+            WARN("  Unexpected SPA_CHOICE_Enum count: %u\n", nvals);
             return;
         }
         auto srates = get_pod_body<int32_t>(value, nvals);
@@ -814,7 +814,7 @@ void DeviceNode::parseSampleRate(const spa_pod *value) noexcept
             others += ", ";
             others += std::to_string(srates[i]);
         }
-        TRACE("Device ID %" PRIu64 " sample rate: %d (%s)\n", mSerial, srates[0], others.c_str());
+        TRACE("  sample rate: %d (%s)\n", srates[0], others.c_str());
         /* Pick the first rate listed that's within the allowed range (default
          * rate if possible).
          */
@@ -822,7 +822,8 @@ void DeviceNode::parseSampleRate(const spa_pod *value) noexcept
         {
             if(rate >= MIN_OUTPUT_RATE && rate <= MAX_OUTPUT_RATE)
             {
-                mSampleRate = static_cast<uint>(rate);
+                if(!mSampleRate || force_update)
+                    mSampleRate = static_cast<uint>(rate);
                 break;
             }
         }
@@ -833,63 +834,88 @@ void DeviceNode::parseSampleRate(const spa_pod *value) noexcept
     {
         if(nvals != 1)
         {
-            WARN("Unexpected SPA_CHOICE_None count: %u\n", nvals);
+            WARN("  Unexpected SPA_CHOICE_None count: %u\n", nvals);
             return;
         }
         auto srates = get_pod_body<int32_t,1>(value);
 
-        TRACE("Device ID %" PRIu64 " sample rate: %d\n", mSerial, srates[0]);
-        mSampleRate = static_cast<uint>(clampi(srates[0], MIN_OUTPUT_RATE, MAX_OUTPUT_RATE));
+        TRACE("  sample rate: %d\n", srates[0]);
+        if(!mSampleRate || force_update)
+            mSampleRate = static_cast<uint>(clampi(srates[0], MIN_OUTPUT_RATE, MAX_OUTPUT_RATE));
         return;
     }
 
-    WARN("Unhandled sample rate choice type: %u\n", choiceType);
+    WARN("  Unhandled sample rate choice type: %u\n", choiceType);
 }
 
-void DeviceNode::parsePositions(const spa_pod *value) noexcept
+void DeviceNode::parsePositions(const spa_pod *value, bool force_update) noexcept
 {
+    uint32_t choiceCount{}, choiceType{};
+    value = spa_pod_get_values(value, &choiceCount, &choiceType);
+
+    if(choiceType != SPA_CHOICE_None || choiceCount != 1)
+    {
+        ERR("  Unexpected positions choice: type=%u, count=%u\n", choiceType, choiceCount);
+        return;
+    }
+
     const auto chanmap = get_array_span<SPA_TYPE_Id>(value);
     if(chanmap.empty()) return;
 
-    mIs51Rear = false;
-
-    if(MatchChannelMap(chanmap, X714Map))
-        mChannels = DevFmtX714;
-    else if(MatchChannelMap(chanmap, X71Map))
-        mChannels = DevFmtX71;
-    else if(MatchChannelMap(chanmap, X61Map))
-        mChannels = DevFmtX61;
-    else if(MatchChannelMap(chanmap, X51Map))
-        mChannels = DevFmtX51;
-    else if(MatchChannelMap(chanmap, X51RearMap))
+    if(mChannels == InvalidChannelConfig || force_update)
     {
-        mChannels = DevFmtX51;
-        mIs51Rear = true;
+        mIs51Rear = false;
+
+        if(MatchChannelMap(chanmap, X714Map))
+            mChannels = DevFmtX714;
+        else if(MatchChannelMap(chanmap, X71Map))
+            mChannels = DevFmtX71;
+        else if(MatchChannelMap(chanmap, X61Map))
+            mChannels = DevFmtX61;
+        else if(MatchChannelMap(chanmap, X51Map))
+            mChannels = DevFmtX51;
+        else if(MatchChannelMap(chanmap, X51RearMap))
+        {
+            mChannels = DevFmtX51;
+            mIs51Rear = true;
+        }
+        else if(MatchChannelMap(chanmap, QuadMap))
+            mChannels = DevFmtQuad;
+        else if(MatchChannelMap(chanmap, StereoMap))
+            mChannels = DevFmtStereo;
+        else
+            mChannels = DevFmtMono;
     }
-    else if(MatchChannelMap(chanmap, QuadMap))
-        mChannels = DevFmtQuad;
-    else if(MatchChannelMap(chanmap, StereoMap))
-        mChannels = DevFmtStereo;
-    else
-        mChannels = DevFmtMono;
-    TRACE("Device ID %" PRIu64 " got %zu position%s for %s%s\n", mSerial, chanmap.size(),
-        (chanmap.size()==1)?"":"s", DevFmtChannelsString(mChannels), mIs51Rear?"(rear)":"");
+    TRACE("  %zu position%s for %s%s\n", chanmap.size(), (chanmap.size()==1)?"":"s",
+        DevFmtChannelsString(mChannels), mIs51Rear?"(rear)":"");
 }
 
-void DeviceNode::parseChannelCount(const spa_pod *value) noexcept
+void DeviceNode::parseChannelCount(const spa_pod *value, bool force_update) noexcept
 {
     /* As a fallback with just a channel count, just assume mono or stereo. */
+    uint32_t choiceCount{}, choiceType{};
+    value = spa_pod_get_values(value, &choiceCount, &choiceType);
+
+    if(choiceType != SPA_CHOICE_None || choiceCount != 1)
+    {
+        ERR("  Unexpected positions choice: type=%u, count=%u\n", choiceType, choiceCount);
+        return;
+    }
+
     const auto chancount = get_value<SPA_TYPE_Int>(value);
     if(!chancount) return;
 
-    mIs51Rear = false;
+    if(mChannels == InvalidChannelConfig || force_update)
+    {
+        mIs51Rear = false;
 
-    if(*chancount >= 2)
-        mChannels = DevFmtStereo;
-    else if(*chancount >= 1)
-        mChannels = DevFmtMono;
-    TRACE("Device ID %" PRIu64 " got %d channel%s for %s\n", mSerial, *chancount,
-        (*chancount==1)?"":"s", DevFmtChannelsString(mChannels));
+        if(*chancount >= 2)
+            mChannels = DevFmtStereo;
+        else if(*chancount >= 1)
+            mChannels = DevFmtMono;
+    }
+    TRACE("  %d channel%s for %s\n", *chancount, (*chancount==1)?"":"s",
+        DevFmtChannelsString(mChannels));
 }
 
 
@@ -992,18 +1018,22 @@ void NodeProxy::infoCallback(const pw_node_info *info) noexcept
 
 void NodeProxy::paramCallback(int, uint32_t id, uint32_t, uint32_t, const spa_pod *param) noexcept
 {
-    if(id == SPA_PARAM_EnumFormat)
+    if(id == SPA_PARAM_EnumFormat || id == SPA_PARAM_Format)
     {
         DeviceNode *node{DeviceNode::Find(mId)};
         if(!node) UNLIKELY return;
 
+        TRACE("Device ID %" PRIu64 " %s format:\n", node->mSerial,
+            (id == SPA_PARAM_EnumFormat) ? "enumerable" : "current");
+
+        const bool force_update{id == SPA_PARAM_Format};
         if(const spa_pod_prop *prop{spa_pod_find_prop(param, nullptr, SPA_FORMAT_AUDIO_rate)})
-            node->parseSampleRate(&prop->value);
+            node->parseSampleRate(&prop->value, force_update);
 
         if(const spa_pod_prop *prop{spa_pod_find_prop(param, nullptr, SPA_FORMAT_AUDIO_position)})
-            node->parsePositions(&prop->value);
+            node->parsePositions(&prop->value, force_update);
         else if((prop=spa_pod_find_prop(param, nullptr, SPA_FORMAT_AUDIO_channels)) != nullptr)
-            node->parseChannelCount(&prop->value);
+            node->parseChannelCount(&prop->value, force_update);
     }
 }
 

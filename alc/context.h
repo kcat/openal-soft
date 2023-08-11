@@ -8,6 +8,7 @@
 #include <stdint.h>
 #include <string>
 #include <string_view>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -146,6 +147,8 @@ struct ALCcontext : public al::intrusive_ref<ALCcontext>, ContextBase {
     std::vector<std::string_view> mExtensions;
     std::string mExtensionsString{};
 
+    std::unordered_map<ALuint,std::string> mSourceNames;
+    std::unordered_map<ALuint,std::string> mEffectSlotNames;
 
     ALCcontext(al::intrusive_ptr<ALCdevice> device, ContextFlagBitset flags);
     ALCcontext(const ALCcontext&) = delete;

@@ -14,6 +14,7 @@ using uint = unsigned int;
 inline constexpr uint8_t MaxDebugLoggedMessages{64};
 inline constexpr uint16_t MaxDebugMessageLength{1024};
 inline constexpr uint8_t MaxDebugGroupDepth{64};
+inline constexpr uint16_t MaxObjectLabelLength{1024};
 
 
 inline constexpr uint DebugSourceBase{0};

@@ -222,6 +222,8 @@ void FreeBuffer(ALCdevice *device, ALbuffer *buffer)
     eax_x_ram_clear(*device, *buffer);
 #endif // ALSOFT_EAX
 
+    device->mBufferNames.erase(buffer->id);
+
     const ALuint id{buffer->id - 1};
     const size_t lidx{id >> 6};
     const ALuint slidx{id & 0x3f};
@@ -1437,6 +1439,19 @@ AL_API ALboolean AL_APIENTRY alIsBufferFormatSupportedSOFT(ALenum /*format*/) no
 
     context->setError(AL_INVALID_OPERATION, "alIsBufferFormatSupportedSOFT not supported");
     return AL_FALSE;
+}
+
+
+void ALbuffer::SetName(ALCcontext *context, ALuint id, std::string_view name)
+{
+    ALCdevice *device{context->mALDevice.get()};
+    std::lock_guard<std::mutex> _{device->BufferLock};
+
+    auto buffer = LookupBuffer(device, id);
+    if(!buffer) UNLIKELY
+        return context->setError(AL_INVALID_NAME, "Invalid buffer ID %u", id);
+
+    device->mBufferNames.insert_or_assign(id, name);
 }
 
 

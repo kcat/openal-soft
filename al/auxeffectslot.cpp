@@ -286,6 +286,8 @@ ALeffectslot *AllocEffectSlot(ALCcontext *context)
 
 void FreeEffectSlot(ALCcontext *context, ALeffectslot *slot)
 {
+    context->mEffectSlotNames.erase(slot->id);
+
     const ALuint id{slot->id - 1};
     const size_t lidx{id >> 6};
     const ALuint slidx{id & 0x3f};
@@ -960,6 +962,17 @@ void ALeffectslot::updateProps(ALCcontext *context)
         props->State = nullptr;
         AtomicReplaceHead(context->mFreeEffectslotProps, props);
     }
+}
+
+void ALeffectslot::SetName(ALCcontext* context, ALuint id, std::string_view name)
+{
+    std::lock_guard<std::mutex> _{context->mEffectSlotLock};
+
+    auto slot = LookupEffectSlot(context, id);
+    if(!slot) UNLIKELY
+        return context->setError(AL_INVALID_NAME, "Invalid effect slot ID %u", id);
+
+    context->mEffectSlotNames.insert_or_assign(id, name);
 }
 
 void UpdateAllEffectSlotProps(ALCcontext *context)

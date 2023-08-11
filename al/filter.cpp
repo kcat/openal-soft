@@ -163,6 +163,8 @@ ALfilter *AllocFilter(ALCdevice *device)
 
 void FreeFilter(ALCdevice *device, ALfilter *filter)
 {
+    device->mFilterNames.erase(filter->id);
+
     const ALuint id{filter->id - 1};
     const size_t lidx{id >> 6};
     const ALuint slidx{id & 0x3f};
@@ -668,6 +670,19 @@ FORCE_ALIGN void AL_APIENTRY alGetFilterfvDirect(ALCcontext *context, ALuint fil
     catch(filter_exception &e) {
         context->setError(e.errorCode(), "%s", e.what());
     }
+}
+
+
+void ALfilter::SetName(ALCcontext *context, ALuint id, std::string_view name)
+{
+    ALCdevice *device{context->mALDevice.get()};
+    std::lock_guard<std::mutex> _{device->FilterLock};
+
+    auto filter = LookupFilter(device, id);
+    if(!filter) UNLIKELY
+        return context->setError(AL_INVALID_NAME, "Invalid filter ID %u", id);
+
+    device->mFilterNames.insert_or_assign(id, name);
 }
 
 

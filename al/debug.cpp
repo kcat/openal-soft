@@ -17,9 +17,14 @@
 #include "alc/context.h"
 #include "alc/inprogext.h"
 #include "alspan.h"
+#include "auxeffectslot.h"
+#include "buffer.h"
 #include "core/logging.h"
 #include "direct_defs.h"
+#include "effect.h"
+#include "filter.h"
 #include "opthelpers.h"
+#include "source.h"
 
 
 namespace {
@@ -242,13 +247,8 @@ FORCE_ALIGN void AL_APIENTRY alDebugMessageInsertDirectEXT(ALCcontext *context, 
     if(!message) UNLIKELY
         return context->setError(AL_INVALID_VALUE, "Null message pointer");
 
-    if(length >= MaxDebugMessageLength) UNLIKELY
-        return context->setError(AL_INVALID_VALUE, "Debug message too long (%d >= %d)", length,
-            MaxDebugMessageLength);
-
     auto msgview = (length < 0) ? std::string_view{message}
         : std::string_view{message, static_cast<uint>(length)};
-
     if(msgview.length() >= MaxDebugMessageLength) UNLIKELY
         return context->setError(AL_INVALID_VALUE, "Debug message too long (%zu >= %d)",
             msgview.length(), MaxDebugMessageLength);
@@ -471,4 +471,95 @@ FORCE_ALIGN ALuint AL_APIENTRY alGetDebugMessageLogDirectEXT(ALCcontext *context
     }
 
     return count;
+}
+
+FORCE_ALIGN DECL_FUNCEXT4(void, alObjectLabel,EXT, ALenum, ALuint, ALsizei, const ALchar*)
+FORCE_ALIGN void AL_APIENTRY alObjectLabelDirectEXT(ALCcontext *context, ALenum identifier,
+    ALuint name, ALsizei length, const ALchar *label) noexcept
+{
+    if(!label && length != 0) UNLIKELY
+        return context->setError(AL_INVALID_VALUE, "Null label pointer");
+
+    auto objname = (length < 0) ? std::string_view{label}
+        : std::string_view{label, static_cast<uint>(length)};
+    if(objname.length() >= MaxObjectLabelLength) UNLIKELY
+        return context->setError(AL_INVALID_VALUE, "Object label length too long (%zu >= %d)",
+            objname.length(), MaxObjectLabelLength);
+
+    if(identifier == AL_SOURCE_EXT)
+        return ALsource::SetName(context, name, objname);
+    if(identifier == AL_BUFFER)
+        return ALbuffer::SetName(context, name, objname);
+    if(identifier == AL_FILTER_EXT)
+        return ALfilter::SetName(context, name, objname);
+    if(identifier == AL_EFFECT_EXT)
+        return ALeffect::SetName(context, name, objname);
+    if(identifier == AL_AUXILIARY_EFFECT_SLOT_EXT)
+        return ALeffectslot::SetName(context, name, objname);
+
+    return context->setError(AL_INVALID_ENUM, "Invalid name identifier 0x%04x", identifier);
+}
+
+FORCE_ALIGN DECL_FUNCEXT5(void, alGetObjectLabel,EXT, ALenum, ALuint, ALsizei, ALsizei*, ALchar*)
+FORCE_ALIGN void AL_APIENTRY alGetObjectLabelDirectEXT(ALCcontext *context, ALenum identifier,
+    ALuint name, ALsizei bufSize, ALsizei *length, ALchar *label) noexcept
+{
+    if(bufSize < 0) UNLIKELY
+        return context->setError(AL_INVALID_VALUE, "Negative label bufSize");
+
+    if(!label && !length) UNLIKELY
+        return context->setError(AL_INVALID_VALUE, "Null length and label");
+    if(label && bufSize == 0) UNLIKELY
+        return context->setError(AL_INVALID_VALUE, "Zero label bufSize");
+
+    auto copy_name = [name,bufSize,length,label](std::unordered_map<ALuint,std::string> &names)
+    {
+        std::string_view objname;
+
+        auto iter = names.find(name);
+        if(iter != names.end())
+            objname = iter->second;
+
+        if(!label)
+            *length = static_cast<ALsizei>(objname.length());
+        else
+        {
+            const size_t tocopy{minz(objname.length(), static_cast<uint>(bufSize)-1)};
+            std::memcpy(label, objname.data(), tocopy);
+            label[tocopy] = '\0';
+            if(length)
+                *length = static_cast<ALsizei>(tocopy);
+        }
+    };
+
+    if(identifier == AL_SOURCE_EXT)
+    {
+        std::lock_guard _{context->mSourceLock};
+        copy_name(context->mSourceNames);
+    }
+    else if(identifier == AL_BUFFER)
+    {
+        ALCdevice *device{context->mALDevice.get()};
+        std::lock_guard _{device->BufferLock};
+        copy_name(device->mBufferNames);
+    }
+    else if(identifier == AL_FILTER_EXT)
+    {
+        ALCdevice *device{context->mALDevice.get()};
+        std::lock_guard _{device->FilterLock};
+        copy_name(device->mFilterNames);
+    }
+    else if(identifier == AL_EFFECT_EXT)
+    {
+        ALCdevice *device{context->mALDevice.get()};
+        std::lock_guard _{device->EffectLock};
+        copy_name(device->mEffectNames);
+    }
+    else if(identifier == AL_AUXILIARY_EFFECT_SLOT_EXT)
+    {
+        std::lock_guard _{context->mEffectSlotLock};
+        copy_name(context->mEffectSlotNames);
+    }
+    else
+        context->setError(AL_INVALID_ENUM, "Invalid name identifier 0x%04x", identifier);
 }

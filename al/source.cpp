@@ -764,6 +764,8 @@ ALsource *AllocSource(ALCcontext *context)
 
 void FreeSource(ALCcontext *context, ALsource *source)
 {
+    context->mSourceNames.erase(source->id);
+
     const ALuint id{source->id - 1};
     const size_t lidx{id >> 6};
     const ALuint slidx{id & 0x3f};
@@ -3613,6 +3615,18 @@ void UpdateAllSourceProps(ALCcontext *context)
         ++vidx;
     }
 }
+
+void ALsource::SetName(ALCcontext *context, ALuint id, std::string_view name)
+{
+    std::lock_guard<std::mutex> _{context->mSourceLock};
+
+    auto source = LookupSource(context, id);
+    if(!source) UNLIKELY
+        return context->setError(AL_INVALID_NAME, "Invalid source ID %u", id);
+
+    context->mSourceNames.insert_or_assign(id, name);
+}
+
 
 SourceSubList::~SourceSubList()
 {

@@ -7,6 +7,7 @@
 #include <optional>
 #include <stdint.h>
 #include <string>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -132,6 +133,10 @@ struct ALCdevice : public al::intrusive_ref<ALCdevice>, DeviceBase {
     ALuint eax_x_ram_free_size{eax_x_ram_max_size};
 #endif // ALSOFT_EAX
 
+
+    std::unordered_map<ALuint,std::string> mBufferNames;
+    std::unordered_map<ALuint,std::string> mEffectNames;
+    std::unordered_map<ALuint,std::string> mFilterNames;
 
     ALCdevice(DeviceType type);
     ~ALCdevice();

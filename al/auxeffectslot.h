@@ -3,6 +3,7 @@
 
 #include <atomic>
 #include <cstddef>
+#include <string_view>
 
 #include "AL/al.h"
 #include "AL/alc.h"
@@ -75,6 +76,8 @@ struct ALeffectslot {
 
     ALenum initEffect(ALenum effectType, const EffectProps &effectProps, ALCcontext *context);
     void updateProps(ALCcontext *context);
+
+    static void SetName(ALCcontext *context, ALuint id, std::string_view name);
 
     /* This can be new'd for the context's default effect slot. */
     DEF_NEWDEL(ALeffectslot)

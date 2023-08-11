@@ -207,6 +207,8 @@ ALeffect *AllocEffect(ALCdevice *device)
 
 void FreeEffect(ALCdevice *device, ALeffect *effect)
 {
+    device->mEffectNames.erase(effect->id);
+
     const ALuint id{effect->id - 1};
     const size_t lidx{id >> 6};
     const ALuint slidx{id & 0x3f};
@@ -510,6 +512,19 @@ void InitEffect(ALeffect *effect)
 {
     InitEffectParams(effect, AL_EFFECT_NULL);
 }
+
+void ALeffect::SetName(ALCcontext* context, ALuint id, std::string_view name)
+{
+    ALCdevice *device{context->mALDevice.get()};
+    std::lock_guard<std::mutex> _{device->EffectLock};
+
+    auto effect = LookupEffect(device, id);
+    if(!effect) UNLIKELY
+        return context->setError(AL_INVALID_NAME, "Invalid effect ID %u", id);
+
+    device->mEffectNames.insert_or_assign(id, name);
+}
+
 
 EffectSubList::~EffectSubList()
 {

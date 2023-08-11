@@ -367,6 +367,10 @@ inline const FuncExport alcFunctions[]{
     DECL(alPushDebugGroupDirectEXT),
     DECL(alPopDebugGroupDirectEXT),
     DECL(alGetDebugMessageLogDirectEXT),
+    DECL(alObjectLabelEXT),
+    DECL(alObjectLabelDirectEXT),
+    DECL(alGetObjectLabelEXT),
+    DECL(alGetObjectLabelDirectEXT),
 
     /* Extra functions */
     DECL(alsoft_set_log_callback),
@@ -862,8 +866,14 @@ inline const EnumExport alcEnumerations[]{
     DECL(AL_MAX_DEBUG_MESSAGE_LENGTH_EXT),
     DECL(AL_MAX_DEBUG_LOGGED_MESSAGES_EXT),
     DECL(AL_MAX_DEBUG_GROUP_STACK_DEPTH_EXT),
+    DECL(AL_MAX_LABEL_LENGTH_EXT),
     DECL(AL_STACK_OVERFLOW_EXT),
     DECL(AL_STACK_UNDERFLOW_EXT),
+    DECL(AL_BUFFER_EXT),
+    DECL(AL_SOURCE_EXT),
+    DECL(AL_FILTER_EXT),
+    DECL(AL_EFFECT_EXT),
+    DECL(AL_AUXILIARY_EFFECT_SLOT_EXT),
 
     DECL(AL_STOP_SOURCES_ON_DISCONNECT_SOFT),
 #ifdef ALSOFT_EAX

@@ -152,6 +152,7 @@ enum PropertyValue : ALenum {
     MaxDebugMessageLength = AL_MAX_DEBUG_MESSAGE_LENGTH_EXT,
     MaxDebugLoggedMessages = AL_MAX_DEBUG_LOGGED_MESSAGES_EXT,
     MaxDebugGroupDepth = AL_MAX_DEBUG_GROUP_STACK_DEPTH_EXT,
+    MaxLabelLength = AL_MAX_LABEL_LENGTH_EXT,
     ContextFlags = AL_CONTEXT_FLAGS_EXT,
 #ifdef ALSOFT_EAX
     EaxRamSize = AL_EAX_RAM_SIZE,
@@ -243,6 +244,10 @@ void GetValue(ALCcontext *context, ALenum pname, T *values)
 
     case AL_MAX_DEBUG_GROUP_STACK_DEPTH_EXT:
         *values = cast_value(MaxDebugGroupDepth);
+        return;
+
+    case AL_MAX_LABEL_LENGTH_EXT:
+        *values = cast_value(MaxObjectLabelLength);
         return;
 
     case AL_CONTEXT_FLAGS_EXT:

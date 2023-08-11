@@ -50,6 +50,8 @@ struct ALeffect {
     /* Self ID */
     ALuint id{0u};
 
+    static void SetName(ALCcontext *context, ALuint id, std::string_view name);
+
     DISABLE_ALLOC()
 };
 

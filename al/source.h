@@ -4,9 +4,10 @@
 #include <array>
 #include <atomic>
 #include <cstddef>
+#include <deque>
 #include <iterator>
 #include <limits>
-#include <deque>
+#include <string_view>
 
 #include "AL/al.h"
 #include "AL/alc.h"
@@ -156,6 +157,8 @@ struct ALsource {
 
     ALsource(const ALsource&) = delete;
     ALsource& operator=(const ALsource&) = delete;
+
+    static void SetName(ALCcontext *context, ALuint id, std::string_view name);
 
     DISABLE_ALLOC()
 

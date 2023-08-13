@@ -1020,48 +1020,20 @@ void ALCcontext::eaxCommit()
     eax_update_sources();
 }
 
-namespace {
 
-class EaxSetException : public EaxException {
-public:
-    explicit EaxSetException(const char* message)
-        : EaxException{"EAX_SET", message}
-    {}
-};
-
-[[noreturn]] void eax_fail_set(const char* message)
+FORCE_ALIGN ALenum AL_APIENTRY EAXSet(const GUID *a, ALuint b, ALuint c, ALvoid *d, ALuint e) noexcept
 {
-    throw EaxSetException{message};
+    auto context = GetContextRef();
+    if(!context) UNLIKELY return AL_INVALID_OPERATION;
+    return EAXSetDirect(context.get(), a, b, c, d, e);
 }
 
-class EaxGetException : public EaxException {
-public:
-    explicit EaxGetException(const char* message)
-        : EaxException{"EAX_GET", message}
-    {}
-};
-
-[[noreturn]] void eax_fail_get(const char* message)
-{
-    throw EaxGetException{message};
-}
-
-} // namespace
-
-
-FORCE_ALIGN ALenum AL_APIENTRY EAXSet(const GUID *property_set_id, ALuint property_id,
-    ALuint property_source_id, ALvoid *property_value, ALuint property_value_size) noexcept
-{ return EAXSetDirect(GetContextRef().get(), property_set_id, property_id, property_source_id, property_value, property_value_size); }
 FORCE_ALIGN ALenum AL_APIENTRY EAXSetDirect(ALCcontext *context, const GUID *property_set_id,
     ALuint property_id, ALuint property_source_id, ALvoid *property_value,
     ALuint property_value_size) noexcept
 try
 {
-    if(!context)
-        eax_fail_set("No current context.");
-
     std::lock_guard<std::mutex> prop_lock{context->mPropLock};
-
     return context->eax_eax_set(
         property_set_id,
         property_id,
@@ -1069,26 +1041,26 @@ try
         property_value,
         property_value_size);
 }
-catch (...)
+catch(...)
 {
     eax_log_exception(__func__);
     return AL_INVALID_OPERATION;
 }
 
 
-FORCE_ALIGN ALenum AL_APIENTRY EAXGet(const GUID *property_set_id, ALuint property_id,
-    ALuint property_source_id, ALvoid *property_value, ALuint property_value_size) noexcept
-{ return EAXGetDirect(GetContextRef().get(), property_set_id, property_id, property_source_id, property_value, property_value_size); }
+FORCE_ALIGN ALenum AL_APIENTRY EAXGet(const GUID *a, ALuint b, ALuint c, ALvoid *d, ALuint e) noexcept
+{
+    auto context = GetContextRef();
+    if(!context) UNLIKELY return AL_INVALID_OPERATION;
+    return EAXGetDirect(context.get(), a, b, c, d, e);
+}
+
 FORCE_ALIGN ALenum AL_APIENTRY EAXGetDirect(ALCcontext *context, const GUID *property_set_id,
     ALuint property_id, ALuint property_source_id, ALvoid *property_value,
     ALuint property_value_size) noexcept
 try
 {
-    if(!context)
-        eax_fail_get("No current context.");
-
     std::lock_guard<std::mutex> prop_lock{context->mPropLock};
-
     return context->eax_eax_get(
         property_set_id,
         property_id,
@@ -1096,7 +1068,7 @@ try
         property_value,
         property_value_size);
 }
-catch (...)
+catch(...)
 {
     eax_log_exception(__func__);
     return AL_INVALID_OPERATION;

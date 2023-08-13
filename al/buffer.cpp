@@ -1474,18 +1474,11 @@ BufferSubList::~BufferSubList()
 
 
 #ifdef ALSOFT_EAX
-FORCE_ALIGN ALboolean AL_APIENTRY EAXSetBufferMode(ALsizei n, const ALuint *buffers, ALint value) noexcept
-{ return EAXSetBufferModeDirect(GetContextRef().get(), n, buffers, value); }
+FORCE_ALIGN DECL_FUNC3(ALboolean, EAXSetBufferMode, ALsizei, const ALuint*, ALint)
 FORCE_ALIGN ALboolean AL_APIENTRY EAXSetBufferModeDirect(ALCcontext *context, ALsizei n,
     const ALuint *buffers, ALint value) noexcept
 {
 #define EAX_PREFIX "[EAXSetBufferMode] "
-
-    if(!context)
-    {
-        ERR(EAX_PREFIX "%s\n", "No current context.");
-        return AL_FALSE;
-    }
 
     if(!eax_g_is_enabled)
     {
@@ -1617,18 +1610,11 @@ FORCE_ALIGN ALboolean AL_APIENTRY EAXSetBufferModeDirect(ALCcontext *context, AL
 #undef EAX_PREFIX
 }
 
-FORCE_ALIGN ALenum AL_APIENTRY EAXGetBufferMode(ALuint buffer, ALint *pReserved) noexcept
-{ return EAXGetBufferModeDirect(GetContextRef().get(), buffer, pReserved); }
+FORCE_ALIGN DECL_FUNC2(ALenum, EAXGetBufferMode, ALuint, ALint*)
 FORCE_ALIGN ALenum AL_APIENTRY EAXGetBufferModeDirect(ALCcontext *context, ALuint buffer,
     ALint *pReserved) noexcept
 {
 #define EAX_PREFIX "[EAXGetBufferMode] "
-
-    if(!context)
-    {
-        ERR(EAX_PREFIX "%s\n", "No current context.");
-        return AL_NONE;
-    }
 
     if(!eax_g_is_enabled)
     {

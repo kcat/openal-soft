@@ -294,9 +294,9 @@ FORCE_ALIGN void AL_APIENTRY alDebugMessageControlDirectEXT(ALCcontext *context,
         return context->setError(AL_INVALID_ENUM, "Invalid debug enable %d", enable);
 
     static constexpr size_t ElemCount{DebugSourceCount + DebugTypeCount + DebugSeverityCount};
-    static constexpr auto Values = make_array_sequence<uint,ElemCount>();
+    static constexpr auto Values = make_array_sequence<uint8_t,ElemCount>();
 
-    al::span<const uint> srcIndices{al::span{Values}.subspan<DebugSourceBase,DebugSourceCount>()};
+    auto srcIndices = al::span{Values}.subspan(DebugSourceBase,DebugSourceCount);
     if(source != AL_DONT_CARE_EXT)
     {
         auto dsource = GetDebugSource(source);
@@ -305,7 +305,7 @@ FORCE_ALIGN void AL_APIENTRY alDebugMessageControlDirectEXT(ALCcontext *context,
         srcIndices = srcIndices.subspan(al::to_underlying(*dsource), 1);
     }
 
-    al::span<const uint> typeIndices{al::span{Values}.subspan<DebugTypeBase,DebugTypeCount>()};
+    auto typeIndices = al::span{Values}.subspan(DebugTypeBase,DebugTypeCount);
     if(type != AL_DONT_CARE_EXT)
     {
         auto dtype = GetDebugType(type);
@@ -314,7 +314,7 @@ FORCE_ALIGN void AL_APIENTRY alDebugMessageControlDirectEXT(ALCcontext *context,
         typeIndices = typeIndices.subspan(al::to_underlying(*dtype), 1);
     }
 
-    al::span<const uint> svrIndices{al::span{Values}.subspan<DebugSeverityBase,DebugSeverityCount>()};
+    auto svrIndices = al::span{Values}.subspan(DebugSeverityBase,DebugSeverityCount);
     if(severity != AL_DONT_CARE_EXT)
     {
         auto dseverity = GetDebugSeverity(severity);

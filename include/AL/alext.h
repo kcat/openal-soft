@@ -713,6 +713,23 @@ void AL_APIENTRY alGetObjectLabelEXT(ALenum identifier, ALuint name, ALsizei buf
 #endif
 #endif
 
+#ifndef ALC_SOFT_system_events
+#define ALC_SOFT_system_events
+#define ALC_PLAYBACK_DEVICE_SOFT                 0x19D4
+#define ALC_CAPTURE_DEVICE_SOFT                  0x19D5
+#define ALC_EVENT_TYPE_DEFAULT_DEVICE_CHANGED_SOFT 0x19D6
+#define ALC_EVENT_TYPE_DEVICE_ADDED_SOFT         0x19D7
+#define ALC_EVENT_TYPE_DEVICE_REMOVED_SOFT       0x19D8
+typedef void (ALC_APIENTRY*ALCEVENTPROCTYPESOFT)(ALCenum eventType, ALCenum deviceType,
+    ALCdevice *device, ALCsizei length, const ALCchar *message, void *userParam) ALC_API_NOEXCEPT17;
+typedef ALCboolean (ALC_APIENTRY*LPALCEVENTCONTROLSOFT)(ALCsizei count, const ALCenum *events, ALCboolean enable) ALC_API_NOEXCEPT17;
+typedef void (ALC_APIENTRY*LPALCEVENTCALLBACKSOFT)(ALCEVENTPROCTYPESOFT callback, void *userParam) ALC_API_NOEXCEPT17;
+#ifdef AL_ALEXT_PROTOTYPES
+ALCboolean ALC_APIENTRY alcEventControlSOFT(ALCsizei count, const ALCenum *events, ALCboolean enable) ALC_API_NOEXCEPT;
+void ALC_APIENTRY alcEventCallbackSOFT(ALCEVENTPROCTYPESOFT callback, void *userParam) ALC_API_NOEXCEPT;
+#endif
+#endif
+
 #ifdef __cplusplus
 }
 #endif

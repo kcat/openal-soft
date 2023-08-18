@@ -843,7 +843,6 @@ if(ALSOFT_EAX)
         al/eax/fx_slot_index.h
         al/eax/fx_slots.cpp
         al/eax/fx_slots.h
-        al/eax/globals.cpp
         al/eax/globals.h
         al/eax/utils.cpp
         al/eax/utils.h

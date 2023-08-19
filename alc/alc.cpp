@@ -366,7 +366,7 @@ void alc_initconfig(void)
         if(logf) gLogFile = logf;
         else
         {
-            auto u8name = wstr_to_utf8(logfile->c_str());
+            auto u8name = wstr_to_utf8(*logfile);
             ERR("Failed to open log file '%s'\n", u8name.c_str());
         }
     }

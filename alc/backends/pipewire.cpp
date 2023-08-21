@@ -965,6 +965,7 @@ void NodeProxy::infoCallback(const pw_node_info *info) noexcept
 #ifdef PW_KEY_OBJECT_SERIAL
         if(const char *serial_str{spa_dict_lookup(info->props, PW_KEY_OBJECT_SERIAL)})
         {
+            errno = 0;
             char *serial_end{};
             serial_id = std::strtoull(serial_str, &serial_end, 0);
             if(*serial_end != '\0' || errno == ERANGE)

@@ -649,7 +649,7 @@ void AL_APIENTRY alSourcePlayAtTimevSOFT(ALsizei n, const ALuint *sources, ALint
 
 #ifndef ALC_EXT_debug
 #define ALC_EXT_debug
-#define ALC_CONTEXT_FLAGS_EXT                    0x19CE
+#define ALC_CONTEXT_FLAGS_EXT                    0x19CF
 #define ALC_CONTEXT_DEBUG_BIT_EXT                0x0001
 #endif
 

@@ -2728,7 +2728,7 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
 
     if(ALeffectslot *slot{context->mDefaultSlot.get()})
     {
-        ALenum sloterr{slot->initEffect(ALCcontext::sDefaultEffect.type,
+        ALenum sloterr{slot->initEffect(0, ALCcontext::sDefaultEffect.type,
             ALCcontext::sDefaultEffect.Props, context.get())};
         if(sloterr == AL_NO_ERROR)
             slot->updateProps(context.get());

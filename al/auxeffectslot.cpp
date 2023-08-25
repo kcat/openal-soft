@@ -548,12 +548,12 @@ FORCE_ALIGN void AL_APIENTRY alAuxiliaryEffectSlotiDirect(ALCcontext *context, A
             std::lock_guard<std::mutex> ___{device->EffectLock};
             ALeffect *effect{value ? LookupEffect(device, static_cast<ALuint>(value)) : nullptr};
             if(effect)
-                err = slot->initEffect(effect->type, effect->Props, context);
+                err = slot->initEffect(effect->id, effect->type, effect->Props, context);
             else
             {
                 if(value != 0)
                     return context->setError(AL_INVALID_VALUE, "Invalid effect ID %u", value);
-                err = slot->initEffect(AL_EFFECT_NULL, EffectProps{}, context);
+                err = slot->initEffect(0, AL_EFFECT_NULL, EffectProps{}, context);
             }
         }
         if(err != AL_NO_ERROR) UNLIKELY
@@ -754,6 +754,10 @@ FORCE_ALIGN void AL_APIENTRY alGetAuxiliaryEffectSlotiDirect(ALCcontext *context
 
     switch(param)
     {
+    case AL_EFFECTSLOT_EFFECT:
+        *value = static_cast<ALint>(slot->EffectId);
+        break;
+
     case AL_EFFECTSLOT_AUXILIARY_SEND_AUTO:
         *value = slot->AuxSendAuto ? AL_TRUE : AL_FALSE;
         break;
@@ -887,7 +891,7 @@ ALeffectslot::~ALeffectslot()
     mSlot->InUse = false;
 }
 
-ALenum ALeffectslot::initEffect(ALenum effectType, const EffectProps &effectProps,
+ALenum ALeffectslot::initEffect(ALuint effectId, ALenum effectType, const EffectProps &effectProps,
     ALCcontext *context)
 {
     EffectSlotType newtype{EffectSlotTypeFromEnum(effectType)};
@@ -916,6 +920,7 @@ ALenum ALeffectslot::initEffect(ALenum effectType, const EffectProps &effectProp
     }
     else if(newtype != EffectSlotType::None)
         Effect.Props = effectProps;
+    EffectId = effectId;
 
     /* Remove state references from old effect slot property updates. */
     EffectSlotProps *props{context->mFreeEffectslotProps.load()};
@@ -1445,7 +1450,8 @@ void ALeffectslot::eax_set_efx_slot_effect(EaxEffect &effect)
 {
 #define EAX_PREFIX "[EAX_SET_EFFECT_SLOT_EFFECT] "
 
-    const auto error = initEffect(effect.al_effect_type_, effect.al_effect_props_, eax_al_context_);
+    const auto error = initEffect(0, effect.al_effect_type_, effect.al_effect_props_,
+        eax_al_context_);
 
     if(error != AL_NO_ERROR) {
         ERR(EAX_PREFIX "%s\n", "Failed to initialize an effect.");

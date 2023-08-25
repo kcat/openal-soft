@@ -12,6 +12,7 @@
 #include <xmmintrin.h>
 #endif
 
+#include "albit.h"
 #include "altraits.h"
 #include "opthelpers.h"
 
@@ -159,21 +160,16 @@ inline int float2int(float f) noexcept
 #elif (defined(_MSC_VER) && defined(_M_IX86_FP) && _M_IX86_FP == 0) \
     || ((defined(__GNUC__) || defined(__clang__)) && (defined(__i386__) || defined(__x86_64__)) \
         && !defined(__SSE_MATH__))
-    int sign, shift, mant;
-    union {
-        float f;
-        int i;
-    } conv;
+    const int conv_i{al::bit_cast<int>(f)};
 
-    conv.f = f;
-    sign = (conv.i>>31) | 1;
-    shift = ((conv.i>>23)&0xff) - (127+23);
+    const int sign{(conv_i>>31) | 1};
+    const int shift{((conv_i>>23)&0xff) - (127+23)};
 
     /* Over/underflow */
     if(shift >= 31 || shift < -23) UNLIKELY
         return 0;
 
-    mant = (conv.i&0x7fffff) | 0x800000;
+    const int mant{(conv_i&0x7fffff) | 0x800000};
     if(shift < 0) LIKELY
         return (mant >> -shift) * sign;
     return (mant << shift) * sign;
@@ -195,25 +191,19 @@ inline int double2int(double d) noexcept
 #elif (defined(_MSC_VER) && defined(_M_IX86_FP) && _M_IX86_FP < 2) \
     || ((defined(__GNUC__) || defined(__clang__)) && (defined(__i386__) || defined(__x86_64__)) \
         && !defined(__SSE2_MATH__))
-    int sign, shift;
-    int64_t mant;
-    union {
-        double d;
-        int64_t i64;
-    } conv;
+    const int64_t conv_i64{al::bit_cast<int64_t>(d)};
 
-    conv.d = d;
-    sign = (conv.i64 >> 63) | 1;
-    shift = ((conv.i64 >> 52) & 0x7ff) - (1023 + 52);
+    const int sign{static_cast<int>(conv_i64 >> 63) | 1};
+    const int shift{(static_cast<int>(conv_i64 >> 52) & 0x7ff) - (1023 + 52)};
 
     /* Over/underflow */
     if(shift >= 63 || shift < -52) UNLIKELY
         return 0;
 
-    mant = (conv.i64 & 0xfffffffffffff_i64) | 0x10000000000000_i64;
+    const int64_t mant{(conv_i64 & 0xfffffffffffff_i64) | 0x10000000000000_i64};
     if(shift < 0) LIKELY
-        return (int)(mant >> -shift) * sign;
-    return (int)(mant << shift) * sign;
+        return static_cast<int>(mant >> -shift) * sign;
+    return static_cast<int>(mant << shift) * sign;
 
 #else
 
@@ -246,19 +236,14 @@ inline float fast_roundf(float f) noexcept
     /* Integral limit, where sub-integral precision is not available for
      * floats.
      */
-    static const float ilim[2]{
+    static constexpr float ilim[2]{
          8388608.0f /*  0x1.0p+23 */,
         -8388608.0f /* -0x1.0p+23 */
     };
-    unsigned int sign, expo;
-    union {
-        float f;
-        unsigned int i;
-    } conv;
+    const unsigned int conv_i{al::bit_cast<unsigned int>(f)};
 
-    conv.f = f;
-    sign = (conv.i>>31)&0x01;
-    expo = (conv.i>>23)&0xff;
+    const unsigned int sign{(conv_i>>31)&0x01};
+    const unsigned int expo{(conv_i>>23)&0xff};
 
     if(expo >= 150/*+23*/) UNLIKELY
     {

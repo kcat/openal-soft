@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <cstdint>
 #include <string>
+#include <string_view>
 #include <type_traits>
 
 using EaxDirtyFlags = unsigned int;
@@ -13,7 +14,7 @@ struct EaxAlLowPassParam {
     float gain_hf;
 };
 
-void eax_log_exception(const char *message) noexcept;
+void eax_log_exception(std::string_view message) noexcept;
 
 template<typename TException, typename TValue>
 void eax_validate_range(

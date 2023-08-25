@@ -8,7 +8,7 @@
 #include "core/logging.h"
 
 
-void eax_log_exception(const char *message) noexcept
+void eax_log_exception(std::string_view message) noexcept
 {
     const auto exception_ptr = std::current_exception();
     assert(exception_ptr);
@@ -18,9 +18,9 @@ void eax_log_exception(const char *message) noexcept
     }
     catch(const std::exception& ex) {
         const auto ex_message = ex.what();
-        ERR("%s %s\n", message ? message : "", ex_message);
+        ERR("%.*s %s\n", static_cast<int>(message.length()), message.data(), ex_message);
     }
     catch(...) {
-        ERR("%s %s\n", message ? message : "", "Generic exception.");
+        ERR("%.*s %s\n", static_cast<int>(message.length()), message.data(), "Generic exception.");
     }
 }

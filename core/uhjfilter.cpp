@@ -29,23 +29,23 @@ template<>
 struct GetPhaseShifter<UhjLength512> { static auto& Get() noexcept { return PShiftHq; } };
 
 
-constexpr float square(float x) noexcept
-{ return x*x; }
+constexpr float square(double x) noexcept
+{ return static_cast<float>(x*x); }
 
 /* Filter coefficients for the 'base' all-pass IIR, which applies a frequency-
  * dependent phase-shift of N degrees. The output of the filter requires a 1-
  * sample delay.
  */
 constexpr std::array<float,4> Filter1Coeff{{
-    square(0.6923878f), square(0.9360654322959f), square(0.9882295226860f),
-    square(0.9987488452737f)
+    square(0.6923878), square(0.9360654322959), square(0.9882295226860),
+    square(0.9987488452737)
 }};
 /* Filter coefficients for the offset all-pass IIR, which applies a frequency-
  * dependent phase-shift of N+90 degrees.
  */
 constexpr std::array<float,4> Filter2Coeff{{
-    square(0.4021921162426f), square(0.8561710882420f), square(0.9722909545651f),
-    square(0.9952884791278f)
+    square(0.4021921162426), square(0.8561710882420), square(0.9722909545651),
+    square(0.9952884791278)
 }};
 
 } // namespace

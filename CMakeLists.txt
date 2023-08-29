@@ -33,9 +33,6 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "WindowsStore")
     set(ALSOFT_UWP TRUE)
 endif()
 
-set(CMAKE_C_VISIBILITY_PRESET hidden)
-set(CMAKE_CXX_VISIBILITY_PRESET hidden)
-
 if(COMMAND CMAKE_POLICY)
     cmake_policy(SET CMP0003 NEW)
     cmake_policy(SET CMP0005 NEW)
@@ -361,32 +358,32 @@ else()
 endif()
 
 # Set visibility/export options if available
-if(WIN32)
-    if(NOT LIBTYPE STREQUAL "STATIC")
+if(NOT LIBTYPE STREQUAL "STATIC")
+    if(WIN32)
         set(EXPORT_DECL "__declspec(dllexport)")
-    endif()
-else()
-    set(OLD_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS}")
-    # Yes GCC, really don't accept visibility modes you don't support
-    set(CMAKE_REQUIRED_FLAGS "${OLD_REQUIRED_FLAGS} -Wattributes -Werror")
-
-    check_c_source_compiles("int foo() __attribute__((visibility(\"protected\")));
-                             int main() {return 0;}" HAVE_GCC_PROTECTED_VISIBILITY)
-    if(HAVE_GCC_PROTECTED_VISIBILITY)
-        if(NOT LIBTYPE STREQUAL "STATIC")
-            set(EXPORT_DECL "__attribute__((visibility(\"protected\")))")
-        endif()
     else()
-        check_c_source_compiles("int foo() __attribute__((visibility(\"default\")));
-                                 int main() {return 0;}" HAVE_GCC_DEFAULT_VISIBILITY)
-        if(HAVE_GCC_DEFAULT_VISIBILITY)
-            if(NOT LIBTYPE STREQUAL "STATIC")
+        set(OLD_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS}")
+        # Yes GCC, really don't accept visibility modes you don't support
+        set(CMAKE_REQUIRED_FLAGS "${OLD_REQUIRED_FLAGS} -Wattributes -Werror")
+
+        check_c_source_compiles("int foo() __attribute__((visibility(\"protected\")));
+                                int main() {return 0;}" HAVE_GCC_PROTECTED_VISIBILITY)
+        if(HAVE_GCC_PROTECTED_VISIBILITY)
+            set(EXPORT_DECL "__attribute__((visibility(\"protected\")))")
+        else()
+            check_c_source_compiles("int foo() __attribute__((visibility(\"default\")));
+                                    int main() {return 0;}" HAVE_GCC_DEFAULT_VISIBILITY)
+            if(HAVE_GCC_DEFAULT_VISIBILITY)
                 set(EXPORT_DECL "__attribute__((visibility(\"default\")))")
             endif()
         endif()
-    endif()
+        if(HAVE_GCC_PROTECTED_VISIBILITY OR HAVE_GCC_DEFAULT_VISIBILITY)
+            set(CMAKE_C_VISIBILITY_PRESET hidden)
+            set(CMAKE_CXX_VISIBILITY_PRESET hidden)
+        endif()
 
-    set(CMAKE_REQUIRED_FLAGS "${OLD_REQUIRED_FLAGS}")
+        set(CMAKE_REQUIRED_FLAGS "${OLD_REQUIRED_FLAGS}")
+    endif()
 endif()
 
 

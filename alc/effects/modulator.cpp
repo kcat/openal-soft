@@ -45,8 +45,6 @@ namespace {
 
 using uint = unsigned int;
 
-#define MAX_UPDATE_SAMPLES 128
-
 #define WAVEFORM_FRACBITS  24
 #define WAVEFORM_FRACONE   (1<<WAVEFORM_FRACBITS)
 #define WAVEFORM_FRACMASK  (WAVEFORM_FRACONE-1)
@@ -82,6 +80,9 @@ struct ModulatorState final : public EffectState {
 
     uint mIndex{0};
     uint mStep{1};
+
+    alignas(16) FloatBufferLine mModSamples{};
+    alignas(16) FloatBufferLine mBuffer{};
 
     struct {
         uint mTargetChannel{InvalidChannelIndex};
@@ -147,34 +148,24 @@ void ModulatorState::update(const ContextBase *context, const EffectSlot *slot,
 
 void ModulatorState::process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn, const al::span<FloatBufferLine> samplesOut)
 {
-    for(size_t base{0u};base < samplesToDo;)
+    mGetSamples(mModSamples.data(), mIndex, mStep, samplesToDo);
+    mIndex += static_cast<uint>(mStep * samplesToDo);
+    mIndex &= WAVEFORM_FRACMASK;
+
+    auto chandata = std::begin(mChans);
+    for(const auto &input : samplesIn)
     {
-        alignas(16) float modsamples[MAX_UPDATE_SAMPLES];
-        const size_t td{minz(MAX_UPDATE_SAMPLES, samplesToDo-base)};
-
-        mGetSamples(modsamples, mIndex, mStep, td);
-        mIndex += static_cast<uint>(mStep * td);
-        mIndex &= WAVEFORM_FRACMASK;
-
-        auto chandata = std::begin(mChans);
-        for(const auto &input : samplesIn)
+        const size_t outidx{chandata->mTargetChannel};
+        if(outidx != InvalidChannelIndex)
         {
-            const size_t outidx{chandata->mTargetChannel};
-            if(outidx != InvalidChannelIndex)
-            {
-                alignas(16) float temps[MAX_UPDATE_SAMPLES];
+            chandata->mFilter.process({input.data(), samplesToDo}, mBuffer.data());
+            for(size_t i{0u};i < samplesToDo;++i)
+                mBuffer[i] *= mModSamples[i];
 
-                chandata->mFilter.process({&input[base], td}, temps);
-                for(size_t i{0u};i < td;i++)
-                    temps[i] *= modsamples[i];
-
-                MixSamples({temps, td}, samplesOut[outidx].data()+base, chandata->mCurrentGain,
-                    chandata->mTargetGain, samplesToDo-base);
-            }
-            ++chandata;
+            MixSamples({mBuffer.data(), samplesToDo}, samplesOut[outidx].data(),
+                chandata->mCurrentGain, chandata->mTargetGain, minz(samplesToDo, 64));
         }
-
-        base += td;
+        ++chandata;
     }
 }
 

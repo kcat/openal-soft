@@ -45,41 +45,46 @@ namespace {
 
 using uint = unsigned int;
 
-#define WAVEFORM_FRACBITS  24
-#define WAVEFORM_FRACONE   (1<<WAVEFORM_FRACBITS)
-#define WAVEFORM_FRACMASK  (WAVEFORM_FRACONE-1)
+inline float Sin(uint index, float scale)
+{ return std::sin(static_cast<float>(index) * scale); }
 
-inline float Sin(uint index)
-{
-    constexpr float scale{al::numbers::pi_v<float>*2.0f / WAVEFORM_FRACONE};
-    return std::sin(static_cast<float>(index) * scale);
-}
+inline float Saw(uint index, float scale)
+{ return static_cast<float>(index)*scale - 1.0f; }
 
-inline float Saw(uint index)
-{ return static_cast<float>(index)*(2.0f/WAVEFORM_FRACONE) - 1.0f; }
+inline float Square(uint index, float scale)
+{ return (static_cast<float>(index)*scale < 0.5f)*2.0f - 1.0f; }
 
-inline float Square(uint index)
-{ return static_cast<float>(static_cast<int>((index>>(WAVEFORM_FRACBITS-2))&2) - 1); }
-
-inline float One(uint) { return 1.0f; }
-
-template<float (&func)(uint)>
-void Modulate(float *RESTRICT dst, uint index, const uint step, size_t todo)
-{
-    for(size_t i{0u};i < todo;i++)
-    {
-        index += step;
-        index &= WAVEFORM_FRACMASK;
-        dst[i] = func(index);
-    }
-}
-
+inline float One(uint, float)
+{ return 1.0f; }
 
 struct ModulatorState final : public EffectState {
-    void (*mGetSamples)(float*RESTRICT, uint, const uint, size_t){};
+    template<float (&func)(uint,float)>
+    void Modulate(size_t todo)
+    {
+        const uint range{mRange};
+        const float scale{mIndexScale};
+        uint index{mIndex};
+
+        ASSUME(range > 1);
+        ASSUME(todo > 0);
+
+        for(size_t i{0};i < todo;)
+        {
+            size_t rem{minz(todo-i, range-index)};
+            do {
+                mModSamples[i++] = func(index++, scale);
+            } while(--rem);
+            if(index == range)
+                index = 0;
+        }
+        mIndex = index;
+    }
+
+    void (ModulatorState::*mGenModSamples)(size_t){};
 
     uint mIndex{0};
-    uint mStep{1};
+    uint mRange{1};
+    float mIndexScale{0.0f};
 
     alignas(16) FloatBufferLine mModSamples{};
     alignas(16) FloatBufferLine mBuffer{};
@@ -103,6 +108,13 @@ struct ModulatorState final : public EffectState {
     DEF_NEWDEL(ModulatorState)
 };
 
+template<>
+void ModulatorState::Modulate<One>(size_t todo)
+{
+    std::fill_n(mModSamples.begin(), todo, 1.0f);
+    mIndex = 0;
+}
+
 void ModulatorState::deviceUpdate(const DeviceBase*, const BufferStorage*)
 {
     for(auto &e : mChans)
@@ -118,17 +130,46 @@ void ModulatorState::update(const ContextBase *context, const EffectSlot *slot,
 {
     const DeviceBase *device{context->mDevice};
 
-    const float step{props->Modulator.Frequency / static_cast<float>(device->Frequency)};
-    mStep = fastf2u(clampf(step*WAVEFORM_FRACONE, 0.0f, float{WAVEFORM_FRACONE-1}));
+    /* The effective frequency will be adjusted to have a whole number of
+     * samples per cycle (at 48khz, that allows 8000, 6857.14, 6000, 5333.33,
+     * 4800, etc). We could do better by using fixed-point stepping over a sin
+     * function, with additive synthesis for the square and sawtooth waveforms,
+     * but that may need a more efficient sin function since it needs to do
+     * many iterations per sample.
+     */
+    const float samplesPerCycle{props->Modulator.Frequency > 0.0f
+        ? static_cast<float>(device->Frequency)/props->Modulator.Frequency + 0.5f
+        : 1.0f};
+    const uint range{static_cast<uint>(clampf(samplesPerCycle, 1.0f,
+        static_cast<float>(device->Frequency)))};
+    mIndex = static_cast<uint>(uint64_t{mIndex} * range / mRange);
+    mRange = range;
 
-    if(mStep == 0)
-        mGetSamples = Modulate<One>;
+    if(mRange == 1)
+    {
+        mIndexScale = 0.0f;
+        mGenModSamples = &ModulatorState::Modulate<One>;
+    }
     else if(props->Modulator.Waveform == ModulatorWaveform::Sinusoid)
-        mGetSamples = Modulate<Sin>;
+    {
+        mIndexScale = al::numbers::pi_v<float>*2.0f / static_cast<float>(mRange);
+        mGenModSamples = &ModulatorState::Modulate<Sin>;
+    }
     else if(props->Modulator.Waveform == ModulatorWaveform::Sawtooth)
-        mGetSamples = Modulate<Saw>;
+    {
+        mIndexScale = 2.0f / static_cast<float>(mRange-1);
+        mGenModSamples = &ModulatorState::Modulate<Saw>;
+    }
     else /*if(props->Modulator.Waveform == ModulatorWaveform::Square)*/
-        mGetSamples = Modulate<Square>;
+    {
+        /* For square wave, the range should be even (there should be an equal
+         * number of high and low samples). An odd number of samples per cycle
+         * would need a more complex value generator.
+         */
+        mRange = (mRange+1) & ~1u;
+        mIndexScale = 1.0f / static_cast<float>(mRange-1);
+        mGenModSamples = &ModulatorState::Modulate<Square>;
+    }
 
     float f0norm{props->Modulator.HighPassCutoff / static_cast<float>(device->Frequency)};
     f0norm = clampf(f0norm, 1.0f/512.0f, 0.49f);
@@ -148,9 +189,7 @@ void ModulatorState::update(const ContextBase *context, const EffectSlot *slot,
 
 void ModulatorState::process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn, const al::span<FloatBufferLine> samplesOut)
 {
-    mGetSamples(mModSamples.data(), mIndex, mStep, samplesToDo);
-    mIndex += static_cast<uint>(mStep * samplesToDo);
-    mIndex &= WAVEFORM_FRACMASK;
+    (this->*mGenModSamples)(samplesToDo);
 
     auto chandata = std::begin(mChans);
     for(const auto &input : samplesIn)

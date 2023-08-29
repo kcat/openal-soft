@@ -33,8 +33,11 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "WindowsStore")
     set(ALSOFT_UWP TRUE)
 endif()
 
+option(VISIBILITY_PRESET_HIDDEN "set the library visibility preset to hidden" ON)
+if(VISIBILITY_PRESET_HIDDEN)
 set(CMAKE_C_VISIBILITY_PRESET hidden)
 set(CMAKE_CXX_VISIBILITY_PRESET hidden)
+endif()
 
 if(COMMAND CMAKE_POLICY)
     cmake_policy(SET CMP0003 NEW)

@@ -1444,16 +1444,14 @@ void PipeWirePlayback::outputCallback() noexcept
         length = minu(length, data.maxsize/sizeof(float));
         *chanptr_end = static_cast<float*>(data.data);
         ++chanptr_end;
-    }
 
-    mDevice->renderSamples({mChannelPtrs.get(), chanptr_end}, length);
-
-    for(const auto &data : datas)
-    {
         data.chunk->offset = 0;
         data.chunk->stride = sizeof(float);
         data.chunk->size   = length * sizeof(float);
     }
+
+    mDevice->renderSamples({mChannelPtrs.get(), chanptr_end}, length);
+
     pw_buf->size = length;
     pw_stream_queue_buffer(mStream.get(), pw_buf);
 }
@@ -1745,7 +1743,10 @@ void PipeWirePlayback::start()
         }
 #endif
         if(!--wait_count)
+        {
+            ERR("Timeout getting PipeWire stream buffering info\n");
             break;
+        }
 
         plock.unlock();
         std::this_thread::sleep_for(milliseconds{20});

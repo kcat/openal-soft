@@ -526,18 +526,18 @@ struct DeviceHelper final : private IMMNotificationClient
         if(role != eMultimedia)
             return S_OK;
 
+        const std::wstring_view devid{pwstrDefaultDeviceId ? pwstrDefaultDeviceId
+            : std::wstring_view{}};
         if(flow == eRender)
         {
-            DeviceListLock{gDeviceList}.setPlaybackDefaultId(pwstrDefaultDeviceId);
-            const std::string msg{"Default playback device changed: "+
-                wstr_to_utf8(pwstrDefaultDeviceId)};
+            DeviceListLock{gDeviceList}.setPlaybackDefaultId(devid);
+            const std::string msg{"Default playback device changed: " + wstr_to_utf8(devid)};
             alc::Event(alc::EventType::DefaultDeviceChanged, alc::DeviceType::Playback, msg);
         }
         else if(flow == eCapture)
         {
-            DeviceListLock{gDeviceList}.setCaptureDefaultId(pwstrDefaultDeviceId);
-            const std::string msg{"Default capture device changed: "+
-                wstr_to_utf8(pwstrDefaultDeviceId)};
+            DeviceListLock{gDeviceList}.setCaptureDefaultId(devid);
+            const std::string msg{"Default capture device changed: " + wstr_to_utf8(devid)};
             alc::Event(alc::EventType::DefaultDeviceChanged, alc::DeviceType::Capture, msg);
         }
         return S_OK;

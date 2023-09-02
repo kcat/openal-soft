@@ -851,17 +851,22 @@ enum class MsgType {
     StopDevice,
     CloseDevice,
 
-    Count,
-    QuitThread = Count
+    QuitThread
 };
 
-constexpr char MessageStr[static_cast<size_t>(MsgType::Count)][16]{
-    "Open Device",
-    "Reset Device",
-    "Start Device",
-    "Stop Device",
-    "Close Device",
-};
+constexpr const char *GetMessageTypeName(MsgType type) noexcept
+{
+    switch(type)
+    {
+    case MsgType::OpenDevice: return "Open Device";
+    case MsgType::ResetDevice: return "Reset Device";
+    case MsgType::StartDevice: return "Start Device";
+    case MsgType::StopDevice: return "Stop Device";
+    case MsgType::CloseDevice: return "Close Device";
+    case MsgType::QuitThread: break;
+    }
+    return "";
+}
 
 
 /* Proxy interface used by the message handler. */
@@ -883,11 +888,11 @@ struct WasapiProxy {
 
         explicit operator bool() const noexcept { return mType != MsgType::QuitThread; }
     };
-    static std::deque<Msg> mMsgQueue;
-    static std::mutex mMsgQueueLock;
-    static std::condition_variable mMsgQueueCond;
+    static inline std::deque<Msg> mMsgQueue;
+    static inline std::mutex mMsgQueueLock;
+    static inline std::condition_variable mMsgQueueCond;
 
-    static std::optional<DeviceHelper> sDeviceHelper;
+    static inline std::optional<DeviceHelper> sDeviceHelper;
 
     std::future<HRESULT> pushMessage(MsgType type, std::string_view param={})
     {
@@ -924,10 +929,6 @@ struct WasapiProxy {
 
     static int messageHandler(std::promise<HRESULT> *promise);
 };
-std::deque<WasapiProxy::Msg> WasapiProxy::mMsgQueue;
-std::mutex WasapiProxy::mMsgQueueLock;
-std::condition_variable WasapiProxy::mMsgQueueCond;
-std::optional<DeviceHelper> WasapiProxy::sDeviceHelper;
 
 int WasapiProxy::messageHandler(std::promise<HRESULT> *promise)
 {
@@ -958,10 +959,10 @@ int WasapiProxy::messageHandler(std::promise<HRESULT> *promise)
     TRACE("Starting message loop\n");
     while(Msg msg{popMessage()})
     {
-        TRACE("Got message \"%s\" (0x%04x, this=%p, param={%p,%zu})\n",
-            MessageStr[static_cast<size_t>(msg.mType)], static_cast<uint>(msg.mType),
-            static_cast<void*>(msg.mProxy), static_cast<const void*>(msg.mParam.data()),
-            msg.mParam.length());
+        TRACE("Got message \"%s\" (0x%04x, this=%p, param=\"%.*s\")\n",
+            GetMessageTypeName(msg.mType), static_cast<uint>(msg.mType),
+            static_cast<void*>(msg.mProxy), static_cast<int>(msg.mParam.length()),
+            msg.mParam.data());
 
         switch(msg.mType)
         {

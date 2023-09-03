@@ -1146,7 +1146,7 @@ bool EventManager::init()
         return false;
     }
 
-    mContext = mLoop.newContext(pw_properties_new(PW_KEY_CONFIG_NAME, "client-rt.conf", nullptr));
+    mContext = mLoop.newContext();
     if(!mContext)
     {
         ERR("Failed to create PipeWire event context (errno: %d)\n", errno);

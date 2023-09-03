@@ -4,6 +4,7 @@
 #include <array>
 #include <cstddef>
 #include <memory>
+#include <variant>
 #include <vector>
 
 #include "almalloc.h"
@@ -23,27 +24,20 @@ class BFormatDec {
     static constexpr size_t sLFBand{1};
     static constexpr size_t sNumBands{2};
 
-    struct ChannelDecoder {
-        union MatrixU {
-            float Dual[sNumBands][MAX_OUTPUT_CHANNELS];
-            float Single[MAX_OUTPUT_CHANNELS];
-        } mGains{};
+    struct ChannelDecoderSingle {
+        float mGains[MAX_OUTPUT_CHANNELS];
+    };
 
-        /* NOTE: BandSplitter filter is unused with single-band decoding. */
+    struct ChannelDecoderDual {
         BandSplitter mXOver;
+        float mGains[sNumBands][MAX_OUTPUT_CHANNELS];
     };
 
     alignas(16) std::array<FloatBufferLine,2> mSamples;
 
     const std::unique_ptr<FrontStablizer> mStablizer;
-    const bool mDualBand{false};
 
-    /* TODO: This should ideally be a FlexArray, since ChannelDecoder is rather
-     * small and only a few are needed (3, 4, 5, 7, typically). But that can
-     * only be used in a standard layout struct, and a std::unique_ptr member
-     * (mStablizer) causes GCC and Clang to warn it's not.
-     */
-    std::vector<ChannelDecoder> mChannelDec;
+    std::variant<std::vector<ChannelDecoderSingle>,std::vector<ChannelDecoderDual>> mChannelDec;
 
 public:
     BFormatDec(const size_t inchans, const al::span<const ChannelDec> coeffs,

@@ -89,6 +89,20 @@ constexpr std::array<al::span<const ushort2>,11> gBitReverses{{
     BitReverser10.mData
 }};
 
+template<typename T>
+constexpr std::array<std::complex<T>,gBitReverses.size()-1> gArgAngle{{
+    {static_cast<T>(-1.00000000000000000e+00), static_cast<T>(0.00000000000000000e+00)},
+    {static_cast<T>( 0.00000000000000000e+00), static_cast<T>(1.00000000000000000e+00)},
+    {static_cast<T>( 7.07106781186547524e-01), static_cast<T>(7.07106781186547524e-01)},
+    {static_cast<T>( 9.23879532511286756e-01), static_cast<T>(3.82683432365089772e-01)},
+    {static_cast<T>( 9.80785280403230449e-01), static_cast<T>(1.95090322016128268e-01)},
+    {static_cast<T>( 9.95184726672196886e-01), static_cast<T>(9.80171403295606020e-02)},
+    {static_cast<T>( 9.98795456205172393e-01), static_cast<T>(4.90676743274180143e-02)},
+    {static_cast<T>( 9.99698818696204220e-01), static_cast<T>(2.45412285229122880e-02)},
+    {static_cast<T>( 9.99924701839144541e-01), static_cast<T>(1.22715382857199261e-02)},
+    {static_cast<T>( 9.99981175282601143e-01), static_cast<T>(6.13588464915447536e-03)},
+}};
+
 } // namespace
 
 template<typename Real>
@@ -101,7 +115,38 @@ complex_fft(const al::span<std::complex<Real>> buffer, const al::type_identity_t
      */
     const size_t log2_size{static_cast<size_t>(al::countr_zero(fftsize))};
 
-    if(log2_size >= gBitReverses.size()) UNLIKELY
+    if(log2_size < gBitReverses.size()) LIKELY
+    {
+        for(auto &rev : gBitReverses[log2_size])
+            std::swap(buffer[rev.first], buffer[rev.second]);
+
+        /* Iterative form of Danielson-Lanczos lemma */
+        for(size_t i{0};i < log2_size;++i)
+        {
+            const size_t step2{1u << i};
+            const size_t step{2u << i};
+            for(size_t k{0};k < fftsize;k+=step)
+            {
+                std::complex<Real> temp{buffer[k+step2]};
+                buffer[k+step2] = buffer[k] - temp;
+                buffer[k] += temp;
+            }
+
+            const std::complex<Real> w{gArgAngle<Real>[i].real(), gArgAngle<Real>[i].imag()*sign};
+            std::complex<Real> u{w};
+            for(size_t j{1};j < step2;j++)
+            {
+                for(size_t k{j};k < fftsize;k+=step)
+                {
+                    std::complex<Real> temp{buffer[k+step2] * u};
+                    buffer[k+step2] = buffer[k] - temp;
+                    buffer[k] += temp;
+                }
+                u *= w;
+            }
+        }
+    }
+    else
     {
         for(size_t idx{1u};idx < fftsize-1;++idx)
         {
@@ -115,34 +160,30 @@ complex_fft(const al::span<std::complex<Real>> buffer, const al::type_identity_t
             if(idx < revidx)
                 std::swap(buffer[idx], buffer[revidx]);
         }
-    }
-    else for(auto &rev : gBitReverses[log2_size])
-        std::swap(buffer[rev.first], buffer[rev.second]);
 
-    /* Iterative form of Danielson-Lanczos lemma */
-    const Real pi{al::numbers::pi_v<Real> * sign};
-    size_t step2{1u};
-    for(size_t i{0};i < log2_size;++i)
-    {
-        const Real arg{pi / static_cast<Real>(step2)};
-
-        /* TODO: Would std::polar(1.0, arg) be any better? */
-        const std::complex<Real> w{std::cos(arg), std::sin(arg)};
-        std::complex<Real> u{1.0, 0.0};
-        const size_t step{step2 << 1};
-        for(size_t j{0};j < step2;j++)
+        const Real pi{al::numbers::pi_v<Real> * sign};
+        size_t step2{1u};
+        for(size_t i{0};i < log2_size;++i)
         {
-            for(size_t k{j};k < fftsize;k+=step)
+            const Real arg{pi / static_cast<Real>(step2)};
+
+            const std::complex<Real> w{std::polar(Real{1}, arg)};
+            std::complex<Real> u{1.0, 0.0};
+            const size_t step{step2 << 1};
+            for(size_t j{0};j < step2;j++)
             {
-                std::complex<Real> temp{buffer[k+step2] * u};
-                buffer[k+step2] = buffer[k] - temp;
-                buffer[k] += temp;
+                for(size_t k{j};k < fftsize;k+=step)
+                {
+                    std::complex<Real> temp{buffer[k+step2] * u};
+                    buffer[k+step2] = buffer[k] - temp;
+                    buffer[k] += temp;
+                }
+
+                u *= w;
             }
 
-            u *= w;
+            step2 <<= 1;
         }
-
-        step2 <<= 1;
     }
 }
 

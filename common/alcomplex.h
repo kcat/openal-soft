@@ -19,19 +19,17 @@ complex_fft(const al::span<std::complex<Real>> buffer, const al::type_identity_t
  * Calculate the frequency-domain response of the time-domain signal in the
  * provided buffer, which MUST BE power of two.
  */
-template<typename Real, size_t N>
-std::enable_if_t<std::is_floating_point<Real>::value>
-forward_fft(const al::span<std::complex<Real>,N> buffer)
-{ complex_fft(buffer.subspan(0), -1); }
+template<typename T, size_t N>
+void forward_fft(const al::span<T,N> buffer)
+{ complex_fft(al::span<T>{buffer}, -1); }
 
 /**
  * Calculate the time-domain signal of the frequency-domain response in the
  * provided buffer, which MUST BE power of two.
  */
-template<typename Real, size_t N>
-std::enable_if_t<std::is_floating_point<Real>::value>
-inverse_fft(const al::span<std::complex<Real>,N> buffer)
-{ complex_fft(buffer.subspan(0), 1); }
+template<typename T, size_t N>
+void inverse_fft(const al::span<T,N> buffer)
+{ complex_fft(al::span<T>{buffer}, 1); }
 
 /**
  * Calculate the complex helical sequence (discrete-time analytical signal) of

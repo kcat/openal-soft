@@ -44,12 +44,13 @@ struct BitReverser {
         /* Bit-reversal permutation applied to a sequence of fftsize items. */
         for(size_t idx{1u};idx < fftsize-1;++idx)
         {
-            size_t revidx{0u}, imask{idx};
-            for(size_t i{0};i < N;++i)
-            {
-                revidx = (revidx<<1) | (imask&1);
-                imask >>= 1;
-            }
+            size_t revidx{idx};
+            revidx = ((revidx&0xaaaaaaaa) >> 1) | ((revidx&0x55555555) << 1);
+            revidx = ((revidx&0xcccccccc) >> 2) | ((revidx&0x33333333) << 2);
+            revidx = ((revidx&0xf0f0f0f0) >> 4) | ((revidx&0x0f0f0f0f) << 4);
+            revidx = ((revidx&0xff00ff00) >> 8) | ((revidx&0x00ff00ff) << 8);
+            revidx = (revidx >> 16) | ((revidx&0x0000ffff) << 16);
+            revidx >>= 32-N;
 
             if(idx < revidx)
             {
@@ -62,10 +63,9 @@ struct BitReverser {
     }
 };
 
-/* These bit-reversal swap tables support up to 10-bit indices (1024 elements),
- * which is the largest used by OpenAL Soft's filters and effects. Larger FFT
- * requests, used by some utilities where performance is less important, will
- * use a slower table-less path.
+/* These bit-reversal swap tables support up to 11-bit indices (2048 elements),
+ * which is large enough for the filters and effects in OpenAL Soft. Larger FFT
+ * requests will use a slower table-less path.
  */
 constexpr BitReverser<2> BitReverser2{};
 constexpr BitReverser<3> BitReverser3{};
@@ -76,7 +76,8 @@ constexpr BitReverser<7> BitReverser7{};
 constexpr BitReverser<8> BitReverser8{};
 constexpr BitReverser<9> BitReverser9{};
 constexpr BitReverser<10> BitReverser10{};
-constexpr std::array<al::span<const ushort2>,11> gBitReverses{{
+constexpr BitReverser<11> BitReverser11{};
+constexpr std::array<al::span<const ushort2>,12> gBitReverses{{
     {}, {},
     BitReverser2.mData,
     BitReverser3.mData,
@@ -86,9 +87,11 @@ constexpr std::array<al::span<const ushort2>,11> gBitReverses{{
     BitReverser7.mData,
     BitReverser8.mData,
     BitReverser9.mData,
-    BitReverser10.mData
+    BitReverser10.mData,
+    BitReverser11.mData
 }};
 
+/* Lookup table for std::polar(1, pi / (1<<index)); */
 template<typename T>
 constexpr std::array<std::complex<T>,gBitReverses.size()-1> gArgAngle{{
     {static_cast<T>(-1.00000000000000000e+00), static_cast<T>(0.00000000000000000e+00)},
@@ -101,6 +104,7 @@ constexpr std::array<std::complex<T>,gBitReverses.size()-1> gArgAngle{{
     {static_cast<T>( 9.99698818696204220e-01), static_cast<T>(2.45412285229122880e-02)},
     {static_cast<T>( 9.99924701839144541e-01), static_cast<T>(1.22715382857199261e-02)},
     {static_cast<T>( 9.99981175282601143e-01), static_cast<T>(6.13588464915447536e-03)},
+    {static_cast<T>( 9.99995293809576172e-01), static_cast<T>(3.06795676296597627e-03)}
 }};
 
 } // namespace
@@ -125,6 +129,9 @@ complex_fft(const al::span<std::complex<Real>> buffer, const al::type_identity_t
         {
             const size_t step2{1u << i};
             const size_t step{2u << i};
+            /* The first iteration of the inner loop would have u=1, which we
+             * can simplify to remove a number of complex multiplies.
+             */
             for(size_t k{0};k < fftsize;k+=step)
             {
                 std::complex<Real> temp{buffer[k+step2]};
@@ -150,27 +157,34 @@ complex_fft(const al::span<std::complex<Real>> buffer, const al::type_identity_t
     {
         for(size_t idx{1u};idx < fftsize-1;++idx)
         {
-            size_t revidx{0u}, imask{idx};
-            for(size_t i{0};i < log2_size;++i)
-            {
-                revidx = (revidx<<1) | (imask&1);
-                imask >>= 1;
-            }
+            size_t revidx{idx};
+            revidx = ((revidx&0xaaaaaaaa) >> 1) | ((revidx&0x55555555) << 1);
+            revidx = ((revidx&0xcccccccc) >> 2) | ((revidx&0x33333333) << 2);
+            revidx = ((revidx&0xf0f0f0f0) >> 4) | ((revidx&0x0f0f0f0f) << 4);
+            revidx = ((revidx&0xff00ff00) >> 8) | ((revidx&0x00ff00ff) << 8);
+            revidx = (revidx >> 16) | ((revidx&0x0000ffff) << 16);
+            revidx >>= 32-log2_size;
 
             if(idx < revidx)
                 std::swap(buffer[idx], buffer[revidx]);
         }
 
         const Real pi{al::numbers::pi_v<Real> * sign};
-        size_t step2{1u};
         for(size_t i{0};i < log2_size;++i)
         {
-            const Real arg{pi / static_cast<Real>(step2)};
+            const size_t step2{1u << i};
+            const size_t step{2u << i};
+            for(size_t k{0};k < fftsize;k+=step)
+            {
+                std::complex<Real> temp{buffer[k+step2]};
+                buffer[k+step2] = buffer[k] - temp;
+                buffer[k] += temp;
+            }
 
+            const Real arg{pi / static_cast<Real>(step2)};
             const std::complex<Real> w{std::polar(Real{1}, arg)};
-            std::complex<Real> u{1.0, 0.0};
-            const size_t step{step2 << 1};
-            for(size_t j{0};j < step2;j++)
+            std::complex<Real> u{w};
+            for(size_t j{1};j < step2;j++)
             {
                 for(size_t k{j};k < fftsize;k+=step)
                 {
@@ -178,11 +192,8 @@ complex_fft(const al::span<std::complex<Real>> buffer, const al::type_identity_t
                     buffer[k+step2] = buffer[k] - temp;
                     buffer[k] += temp;
                 }
-
                 u *= w;
             }
-
-            step2 <<= 1;
         }
     }
 }

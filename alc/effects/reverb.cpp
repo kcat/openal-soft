@@ -1505,14 +1505,19 @@ void ReverbPipeline::processEarly(size_t offset, const size_t samplesToDo,
 
 void Modulation::calcDelays(size_t todo)
 {
-    constexpr float mod_scale{al::numbers::pi_v<float> * 2.0f / MOD_FRACONE};
     uint idx{Index};
     const uint step{Step};
     const float depth{Depth};
     for(size_t i{0};i < todo;++i)
     {
         idx += step;
-        const float lfo{std::sin(static_cast<float>(idx&MOD_FRACMASK) * mod_scale)};
+        const float x{static_cast<float>(idx&MOD_FRACMASK) * (1.0f/MOD_FRACONE)};
+        /* Approximate sin(x*2pi). As long as it roughly fits a sinusoid shape
+         * and stays within [-1...+1], it needn't be perfect.
+         */
+        const float lfo{!(idx&(MOD_FRACONE>>1))
+            ? ((-16.0f * x * x) + (8.0f * x))
+            : ((16.0f * x * x) + (-8.0f * x) + (-16.0f * x) + 8.0f)};
         ModDelays[i] = (lfo+1.0f) * depth;
     }
     Index = idx;

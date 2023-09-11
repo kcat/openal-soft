@@ -461,8 +461,9 @@ struct ReverbPipeline {
 
     void updateDelayLine(const float earlyDelay, const float lateDelay, const float density_mult,
         const float decayTime, const float frequency);
-    void update3DPanning(const float *ReflectionsPan, const float *LateReverbPan,
-        const float earlyGain, const float lateGain, const bool doUpmix, const MixParams *mainMix);
+    void update3DPanning(const al::span<const float,3> ReflectionsPan,
+        const al::span<const float,3> LateReverbPan, const float earlyGain, const float lateGain,
+        const bool doUpmix, const MixParams *mainMix);
 
     void processEarly(size_t offset, const size_t samplesToDo,
         const al::span<ReverbUpdateLine,NUM_LINES> tempSamples,
@@ -1028,7 +1029,7 @@ void ReverbPipeline::updateDelayLine(const float earlyDelay, const float lateDel
  * focal strength. This function results in a B-Format transformation matrix
  * that spatially focuses the signal in the desired direction.
  */
-std::array<std::array<float,4>,4> GetTransformFromVector(const float *vec)
+std::array<std::array<float,4>,4> GetTransformFromVector(const al::span<const float,3> vec)
 {
     /* Normalize the panning vector according to the N3D scale, which has an
      * extra sqrt(3) term on the directional components. Converting from OpenAL
@@ -1041,9 +1042,10 @@ std::array<std::array<float,4>,4> GetTransformFromVector(const float *vec)
     float mag{std::sqrt(vec[0]*vec[0] + vec[1]*vec[1] + vec[2]*vec[2])};
     if(mag > 1.0f)
     {
-        norm[0] = vec[0] / mag * -al::numbers::sqrt3_v<float>;
-        norm[1] = vec[1] / mag * al::numbers::sqrt3_v<float>;
-        norm[2] = vec[2] / mag * al::numbers::sqrt3_v<float>;
+        const float scale{al::numbers::sqrt3_v<float> / mag};
+        norm[0] = vec[0] * -scale;
+        norm[1] = vec[1] * scale;
+        norm[2] = vec[2] * scale;
         mag = 1.0f;
     }
     else
@@ -1066,8 +1068,9 @@ std::array<std::array<float,4>,4> GetTransformFromVector(const float *vec)
 }
 
 /* Update the early and late 3D panning gains. */
-void ReverbPipeline::update3DPanning(const float *ReflectionsPan, const float *LateReverbPan,
-    const float earlyGain, const float lateGain, const bool doUpmix, const MixParams *mainMix)
+void ReverbPipeline::update3DPanning(const al::span<const float,3> ReflectionsPan,
+    const al::span<const float,3> LateReverbPan, const float earlyGain, const float lateGain,
+    const bool doUpmix, const MixParams *mainMix)
 {
     /* Create matrices that transform a B-Format signal according to the
      * panning vectors.

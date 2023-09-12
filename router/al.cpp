@@ -7,8 +7,6 @@
 #include "router.h"
 
 
-std::atomic<DriverIface*> CurrentCtxDriver{nullptr};
-
 #define DECL_THUNK1(R,n,T1) AL_API R AL_APIENTRY n(T1 a) noexcept             \
 {                                                                             \
     DriverIface *iface = GetThreadDriver();                                   \

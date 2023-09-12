@@ -17,17 +17,8 @@
 #include "version.h"
 
 
-std::vector<DriverIfacePtr> DriverList;
-
-thread_local DriverIface *ThreadCtxDriver;
-
 enum LogLevel LogLevel = LogLevel_Error;
 FILE *LogFile;
-
-#ifdef __MINGW32__
-DriverIface *GetThreadDriver() noexcept { return ThreadCtxDriver; }
-void SetThreadDriver(DriverIface *driver) noexcept { ThreadCtxDriver = driver; }
-#endif
 
 static void LoadDriverList(void);
 

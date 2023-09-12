@@ -102,7 +102,6 @@ std::vector<std::string_view> getContextExtensions() noexcept
 std::atomic<bool> ALCcontext::sGlobalContextLock{false};
 std::atomic<ALCcontext*> ALCcontext::sGlobalContext{nullptr};
 
-thread_local ALCcontext *ALCcontext::sLocalContext{nullptr};
 ALCcontext::ThreadCtx::~ThreadCtx()
 {
     if(ALCcontext *ctx{std::exchange(ALCcontext::sLocalContext, nullptr)})
@@ -116,13 +115,6 @@ thread_local ALCcontext::ThreadCtx ALCcontext::sThreadContext;
 
 ALeffect ALCcontext::sDefaultEffect;
 
-
-#ifdef __MINGW32__
-ALCcontext *ALCcontext::getThreadContext() noexcept
-{ return sLocalContext; }
-void ALCcontext::setThreadContext(ALCcontext *context) noexcept
-{ sThreadContext.set(context); }
-#endif
 
 ALCcontext::ALCcontext(al::intrusive_ptr<ALCdevice> device, ContextFlagBitset flags)
     : ContextBase{device.get()}, mALDevice{std::move(device)}, mContextFlags{flags}

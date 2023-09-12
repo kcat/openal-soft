@@ -173,21 +173,13 @@ struct DriverIface {
 };
 using DriverIfacePtr = std::unique_ptr<DriverIface>;
 
-extern std::vector<DriverIfacePtr> DriverList;
+inline std::vector<DriverIfacePtr> DriverList;
 
-extern thread_local DriverIface *ThreadCtxDriver;
-extern std::atomic<DriverIface*> CurrentCtxDriver;
+inline thread_local DriverIface *ThreadCtxDriver{};
+inline std::atomic<DriverIface*> CurrentCtxDriver{};
 
-/* HACK: MinGW generates bad code when accessing an extern thread_local object.
- * Add a wrapper function for it that only accesses it where it's defined.
- */
-#ifdef __MINGW32__
-DriverIface *GetThreadDriver() noexcept;
-void SetThreadDriver(DriverIface *driver) noexcept;
-#else
 inline DriverIface *GetThreadDriver() noexcept { return ThreadCtxDriver; }
 inline void SetThreadDriver(DriverIface *driver) noexcept { ThreadCtxDriver = driver; }
-#endif
 
 
 class PtrIntMap {

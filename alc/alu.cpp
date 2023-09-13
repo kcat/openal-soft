@@ -921,25 +921,25 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
             {
                 if(voice->mAmbiOrder == 1)
                 {
-                    auto&& upsampler = Is2DAmbisonic(voice->mFmtChannels) ?
-                        AmbiScale::FirstOrder2DUp : AmbiScale::FirstOrderUp;
+                    const auto upsampler = Is2DAmbisonic(voice->mFmtChannels) ?
+                        al::span{AmbiScale::FirstOrder2DUp} : al::span{AmbiScale::FirstOrderUp};
                     UpsampleBFormatTransform(mixmatrix, upsampler, shrot, Device->mAmbiOrder);
                 }
                 else if(voice->mAmbiOrder == 2)
                 {
-                    auto&& upsampler = Is2DAmbisonic(voice->mFmtChannels) ?
-                        AmbiScale::SecondOrder2DUp : AmbiScale::SecondOrderUp;
+                    const auto upsampler = Is2DAmbisonic(voice->mFmtChannels) ?
+                        al::span{AmbiScale::SecondOrder2DUp} : al::span{AmbiScale::SecondOrderUp};
                     UpsampleBFormatTransform(mixmatrix, upsampler, shrot, Device->mAmbiOrder);
                 }
                 else if(voice->mAmbiOrder == 3)
                 {
-                    auto&& upsampler = Is2DAmbisonic(voice->mFmtChannels) ?
-                        AmbiScale::ThirdOrder2DUp : AmbiScale::ThirdOrderUp;
+                    const auto upsampler = Is2DAmbisonic(voice->mFmtChannels) ?
+                        al::span{AmbiScale::ThirdOrder2DUp} : al::span{AmbiScale::ThirdOrderUp};
                     UpsampleBFormatTransform(mixmatrix, upsampler, shrot, Device->mAmbiOrder);
                 }
                 else if(voice->mAmbiOrder == 4)
                 {
-                    auto&& upsampler = AmbiScale::FourthOrder2DUp;
+                    const auto upsampler = al::span{AmbiScale::FourthOrder2DUp};
                     UpsampleBFormatTransform(mixmatrix, upsampler, shrot, Device->mAmbiOrder);
                 }
                 else

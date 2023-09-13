@@ -2564,6 +2564,9 @@ ALC_API ALCboolean ALC_APIENTRY alcIsExtensionPresent(ALCdevice *device, const A
 }
 
 
+ALCvoid* ALC_APIENTRY alcGetProcAddress2(ALCdevice *device, const ALCchar *funcName) noexcept
+{ return alcGetProcAddress(device, funcName); }
+
 ALC_API ALCvoid* ALC_APIENTRY alcGetProcAddress(ALCdevice *device, const ALCchar *funcName) noexcept
 {
     if(!funcName)

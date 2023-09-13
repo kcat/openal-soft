@@ -65,6 +65,8 @@ AL_API void AL_APIENTRY alAuxiliaryEffectSlotStopvSOFT(ALsizei n, const ALuint *
 
 #ifndef AL_EXT_direct_context
 #define AL_EXT_direct_context
+typedef ALCvoid* (ALC_APIENTRY *LPALCGETPROCADDRESS2)(ALCdevice *device, const ALCchar *funcname) AL_API_NOEXCEPT17;
+
 typedef void (AL_APIENTRY *LPALENABLEDIRECT)(ALCcontext *context, ALenum capability) AL_API_NOEXCEPT17;
 typedef void (AL_APIENTRY *LPALDISABLEDIRECT)(ALCcontext *context, ALenum capability) AL_API_NOEXCEPT17;
 typedef ALboolean (AL_APIENTRY *LPALISENABLEDDIRECT)(ALCcontext *context, ALenum capability) AL_API_NOEXCEPT17;
@@ -224,6 +226,8 @@ typedef ALenum (AL_APIENTRY *LPEAXGETDIRECT)(ALCcontext *context, const struct _
 typedef ALboolean (AL_APIENTRY *LPEAXSETBUFFERMODEDIRECT)(ALCcontext *context, ALsizei n, const ALuint *buffers, ALint value) AL_API_NOEXCEPT17;
 typedef ALenum (AL_APIENTRY *LPEAXGETBUFFERMODEDIRECT)(ALCcontext *context, ALuint buffer, ALint *pReserved) AL_API_NOEXCEPT17;
 #ifdef AL_ALEXT_PROTOTYPES
+ALCvoid* AL_APIENTRY alcGetProcAddress2(ALCdevice *device, const ALchar *funcName) AL_API_NOEXCEPT;
+
 void AL_APIENTRY alEnableDirect(ALCcontext *context, ALenum capability) AL_API_NOEXCEPT;
 void AL_APIENTRY alDisableDirect(ALCcontext *context, ALenum capability) AL_API_NOEXCEPT;
 ALboolean AL_APIENTRY alIsEnabledDirect(ALCcontext *context, ALenum capability) AL_API_NOEXCEPT;

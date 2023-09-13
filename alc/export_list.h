@@ -220,6 +220,7 @@ inline const FuncExport alcFunctions[]{
     DECL(alGetDebugMessageLogEXT),
 
     /* Direct Context functions */
+    DECL(alcGetProcAddress2),
     DECL(alEnableDirect),
     DECL(alDisableDirect),
     DECL(alIsEnabledDirect),

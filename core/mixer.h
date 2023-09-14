@@ -58,7 +58,7 @@ std::array<float,MaxAmbiChannels> CalcAmbiCoeffs(const float y, const float z, c
  * vector must be normalized (unit length), and the spread is the angular width
  * of the sound (0...tau).
  */
-inline std::array<float,MaxAmbiChannels> CalcDirectionCoeffs(const float (&dir)[3],
+inline std::array<float,MaxAmbiChannels> CalcDirectionCoeffs(const al::span<const float,3> dir,
     const float spread)
 {
     /* Convert from OpenAL coords to Ambisonics. */
@@ -71,7 +71,7 @@ inline std::array<float,MaxAmbiChannels> CalcDirectionCoeffs(const float (&dir)[
  * Calculates ambisonic coefficients based on an OpenAL direction vector. The
  * vector must be normalized (unit length).
  */
-constexpr std::array<float,MaxAmbiChannels> CalcDirectionCoeffs(const float (&dir)[3])
+constexpr std::array<float,MaxAmbiChannels> CalcDirectionCoeffs(const al::span<const float,3> dir)
 {
     /* Convert from OpenAL coords to Ambisonics. */
     return CalcAmbiCoeffs(-dir[0], dir[1], -dir[2]);

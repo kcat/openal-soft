@@ -84,6 +84,7 @@ namespace {
 
 using namespace std::placeholders;
 using std::chrono::nanoseconds;
+using seconds_d = std::chrono::duration<double>;
 
 Voice *GetSourceVoice(ALsource *source, ALCcontext *context)
 {
@@ -2011,10 +2012,9 @@ template<typename T, size_t N>
 bool GetProperty(ALsource *const Source, ALCcontext *const Context, const SourceProp prop,
     const al::span<T,N> values) try
 {
+    using std::chrono::duration_cast;
     auto CheckSize = GetSizeChecker(Context, prop, values);
     ALCdevice *device{Context->mALDevice.get()};
-    ClockLatency clocktime;
-    nanoseconds srcclock;
 
     switch(prop)
     {
@@ -2166,20 +2166,22 @@ bool GetProperty(ALsource *const Source, ALCcontext *const Context, const Source
             /* Get the source offset with the clock time first. Then get the
              * clock time with the device latency. Order is important.
              */
+            ClockLatency clocktime{};
+            nanoseconds srcclock{};
             values[0] = GetSourceSampleOffset(Source, Context, &srcclock);
             {
                 std::lock_guard<std::mutex> _{device->StateLock};
                 clocktime = GetClockLatency(device, device->Backend.get());
             }
             if(srcclock == clocktime.ClockTime)
-                values[1] = clocktime.Latency.count();
+                values[1] = nanoseconds{clocktime.Latency}.count();
             else
             {
                 /* If the clock time incremented, reduce the latency by that
                  * much since it's that much closer to the source offset it got
                  * earlier.
                  */
-                const nanoseconds diff{std::min(clocktime.Latency, clocktime.ClockTime-srcclock)};
+                const auto diff = std::min(clocktime.Latency, clocktime.ClockTime-srcclock);
                 values[1] = nanoseconds{clocktime.Latency - diff}.count();
             }
             return true;
@@ -2190,6 +2192,7 @@ bool GetProperty(ALsource *const Source, ALCcontext *const Context, const Source
         if constexpr(std::is_same_v<T,int64_t>)
         {
             CheckSize(2);
+            nanoseconds srcclock{};
             values[0] = GetSourceSampleOffset(Source, Context, &srcclock);
             values[1] = srcclock.count();
             return true;
@@ -2203,22 +2206,23 @@ bool GetProperty(ALsource *const Source, ALCcontext *const Context, const Source
             /* Get the source offset with the clock time first. Then get the
              * clock time with the device latency. Order is important.
              */
+            ClockLatency clocktime{};
+            nanoseconds srcclock{};
             values[0] = GetSourceSecOffset(Source, Context, &srcclock);
             {
                 std::lock_guard<std::mutex> _{device->StateLock};
                 clocktime = GetClockLatency(device, device->Backend.get());
             }
             if(srcclock == clocktime.ClockTime)
-                values[1] = static_cast<double>(clocktime.Latency.count()) / 1'000'000'000.0;
+                values[1] = duration_cast<seconds_d>(clocktime.Latency).count();
             else
             {
                 /* If the clock time incremented, reduce the latency by that
                  * much since it's that much closer to the source offset it got
                  * earlier.
                  */
-                const nanoseconds diff{clocktime.ClockTime - srcclock};
-                const nanoseconds latency{clocktime.Latency - std::min(clocktime.Latency, diff)};
-                values[1] = static_cast<double>(latency.count()) / 1'000'000'000.0;
+                const auto diff = std::min(clocktime.Latency, clocktime.ClockTime-srcclock);
+                values[1] = duration_cast<seconds_d>(clocktime.Latency - diff).count();
             }
             return true;
         }
@@ -2228,8 +2232,9 @@ bool GetProperty(ALsource *const Source, ALCcontext *const Context, const Source
         if constexpr(std::is_same_v<T,double>)
         {
             CheckSize(2);
+            nanoseconds srcclock{};
             values[0] = GetSourceSecOffset(Source, Context, &srcclock);
-            values[1] = static_cast<double>(srcclock.count()) / 1'000'000'000.0;
+            values[1] = duration_cast<seconds_d>(srcclock).count();
             return true;
         }
         break;

@@ -3133,7 +3133,7 @@ FORCE_ALIGN void AL_APIENTRY alSourcePlayvDirect(ALCcontext *context, ALsizei n,
     std::array<ALsource*,8> source_storage;
     al::span<ALsource*> srchandles;
     if(static_cast<ALuint>(n) <= source_storage.size()) LIKELY
-        srchandles = al::span{source_storage}.subspan(static_cast<ALuint>(n));
+        srchandles = al::span{source_storage}.first(static_cast<ALuint>(n));
     else
     {
         extra_sources.resize(static_cast<ALuint>(n));
@@ -3167,7 +3167,7 @@ FORCE_ALIGN void AL_APIENTRY alSourcePlayAtTimevDirectSOFT(ALCcontext *context, 
     std::array<ALsource*,8> source_storage;
     al::span<ALsource*> srchandles;
     if(static_cast<ALuint>(n) <= source_storage.size()) LIKELY
-        srchandles = al::span{source_storage}.subspan(static_cast<ALuint>(n));
+        srchandles = al::span{source_storage}.first(static_cast<ALuint>(n));
     else
     {
         extra_sources.resize(static_cast<ALuint>(n));
@@ -3203,7 +3203,7 @@ FORCE_ALIGN void AL_APIENTRY alSourcePausevDirect(ALCcontext *context, ALsizei n
     std::array<ALsource*,8> source_storage;
     al::span<ALsource*> srchandles;
     if(static_cast<ALuint>(n) <= source_storage.size()) LIKELY
-        srchandles = al::span{source_storage}.subspan(static_cast<ALuint>(n));
+        srchandles = al::span{source_storage}.first(static_cast<ALuint>(n));
     else
     {
         extra_sources.resize(static_cast<ALuint>(n));
@@ -3275,7 +3275,7 @@ FORCE_ALIGN void AL_APIENTRY alSourceStopvDirect(ALCcontext *context, ALsizei n,
     std::array<ALsource*,8> source_storage;
     al::span<ALsource*> srchandles;
     if(static_cast<ALuint>(n) <= source_storage.size()) LIKELY
-        srchandles = al::span{source_storage}.subspan(static_cast<ALuint>(n));
+        srchandles = al::span{source_storage}.first(static_cast<ALuint>(n));
     else
     {
         extra_sources.resize(static_cast<ALuint>(n));
@@ -3334,7 +3334,7 @@ FORCE_ALIGN void AL_APIENTRY alSourceRewindvDirect(ALCcontext *context, ALsizei 
     std::array<ALsource*,8> source_storage;
     al::span<ALsource*> srchandles;
     if(static_cast<ALuint>(n) <= source_storage.size()) LIKELY
-        srchandles = al::span{source_storage}.subspan(static_cast<ALuint>(n));
+        srchandles = al::span{source_storage}.first(static_cast<ALuint>(n));
     else
     {
         extra_sources.resize(static_cast<ALuint>(n));

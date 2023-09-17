@@ -1423,7 +1423,7 @@ auto GetCheckers(ALCcontext *const Context, const SourceProp prop, const al::spa
 }
 
 template<typename T>
-noinline void SetProperty(ALsource *const Source, ALCcontext *const Context, const SourceProp prop,
+NOINLINE void SetProperty(ALsource *const Source, ALCcontext *const Context, const SourceProp prop,
     const al::span<const T> values) try
 {
     auto&& [CheckSize, CheckValue] = GetCheckers(Context, prop, values);
@@ -2008,7 +2008,7 @@ auto GetSizeChecker(ALCcontext *const Context, const SourceProp prop, const al::
 }
 
 template<typename T>
-[[nodiscard]] noinline
+[[nodiscard]] NOINLINE
 bool GetProperty(ALsource *const Source, ALCcontext *const Context, const SourceProp prop,
     const al::span<T> values) try
 {

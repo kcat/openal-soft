@@ -19,13 +19,13 @@
 
 #ifdef __GNUC__
 #define force_inline [[gnu::always_inline]] inline
-#define noinline [[gnu::noinline]]
+#define NOINLINE [[gnu::noinline]]
 #elif defined(_MSC_VER)
 #define force_inline __forceinline
-#define noinline __declspec(noinline)
+#define NOINLINE __declspec(noinline)
 #else
 #define force_inline inline
-#define noinline
+#define NOINLINE
 #endif
 
 /* Unlike the likely attribute, ASSUME requires the condition to be true or

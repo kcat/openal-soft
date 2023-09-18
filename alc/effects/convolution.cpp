@@ -118,14 +118,17 @@ constexpr auto GetAmbi2DLayout(AmbiLayout layouttype) noexcept
 }
 
 
-struct ChanMap {
-    Channel channel;
-    float angle;
-    float elevation;
-};
+constexpr float sin30{0.5f};
+constexpr float cos30{0.866025403785f};
+constexpr float sin45{al::numbers::sqrt2_v<float>*0.5f};
+constexpr float cos45{al::numbers::sqrt2_v<float>*0.5f};
+constexpr float sin110{ 0.939692620786f};
+constexpr float cos110{-0.342020143326f};
 
-constexpr float Deg2Rad(float x) noexcept
-{ return static_cast<float>(al::numbers::pi / 180.0 * x); }
+struct ChanPosMap {
+    Channel channel;
+    std::array<float,3> pos;
+};
 
 
 using complex_f = std::complex<float>;
@@ -378,43 +381,43 @@ void ConvolutionState::update(const ContextBase *context, const EffectSlot *slot
      * to have its own output target since the main mixing buffer won't have an
      * LFE channel (due to being B-Format).
      */
-    static constexpr ChanMap MonoMap[1]{
-        { FrontCenter, 0.0f, 0.0f }
+    static constexpr ChanPosMap MonoMap[1]{
+        { FrontCenter, std::array{0.0f, 0.0f, -1.0f} }
     }, StereoMap[2]{
-        { FrontLeft,  Deg2Rad(-45.0f), Deg2Rad(0.0f) },
-        { FrontRight, Deg2Rad( 45.0f), Deg2Rad(0.0f) }
+        { FrontLeft,  std::array{-sin45, 0.0f, -cos45} },
+        { FrontRight, std::array{ sin45, 0.0f, -cos45} },
     }, RearMap[2]{
-        { BackLeft,  Deg2Rad(-135.0f), Deg2Rad(0.0f) },
-        { BackRight, Deg2Rad( 135.0f), Deg2Rad(0.0f) }
+        { BackLeft,  std::array{-sin45, 0.0f, cos45} },
+        { BackRight, std::array{ sin45, 0.0f, cos45} },
     }, QuadMap[4]{
-        { FrontLeft,  Deg2Rad( -45.0f), Deg2Rad(0.0f) },
-        { FrontRight, Deg2Rad(  45.0f), Deg2Rad(0.0f) },
-        { BackLeft,   Deg2Rad(-135.0f), Deg2Rad(0.0f) },
-        { BackRight,  Deg2Rad( 135.0f), Deg2Rad(0.0f) }
+        { FrontLeft,  std::array{-sin45, 0.0f, -cos45} },
+        { FrontRight, std::array{ sin45, 0.0f, -cos45} },
+        { BackLeft,   std::array{-sin45, 0.0f,  cos45} },
+        { BackRight,  std::array{ sin45, 0.0f,  cos45} },
     }, X51Map[6]{
-        { FrontLeft,   Deg2Rad( -30.0f), Deg2Rad(0.0f) },
-        { FrontRight,  Deg2Rad(  30.0f), Deg2Rad(0.0f) },
-        { FrontCenter, Deg2Rad(   0.0f), Deg2Rad(0.0f) },
-        { LFE, 0.0f, 0.0f },
-        { SideLeft,    Deg2Rad(-110.0f), Deg2Rad(0.0f) },
-        { SideRight,   Deg2Rad( 110.0f), Deg2Rad(0.0f) }
+        { FrontLeft,   std::array{-sin30, 0.0f, -cos30} },
+        { FrontRight,  std::array{ sin30, 0.0f, -cos30} },
+        { FrontCenter, std::array{  0.0f, 0.0f, -1.0f} },
+        { LFE, {} },
+        { SideLeft,    std::array{-sin110, 0.0f, -cos110} },
+        { SideRight,   std::array{ sin110, 0.0f, -cos110} },
     }, X61Map[7]{
-        { FrontLeft,   Deg2Rad(-30.0f), Deg2Rad(0.0f) },
-        { FrontRight,  Deg2Rad( 30.0f), Deg2Rad(0.0f) },
-        { FrontCenter, Deg2Rad(  0.0f), Deg2Rad(0.0f) },
-        { LFE, 0.0f, 0.0f },
-        { BackCenter,  Deg2Rad(180.0f), Deg2Rad(0.0f) },
-        { SideLeft,    Deg2Rad(-90.0f), Deg2Rad(0.0f) },
-        { SideRight,   Deg2Rad( 90.0f), Deg2Rad(0.0f) }
+        { FrontLeft,   std::array{-sin30, 0.0f, -cos30} },
+        { FrontRight,  std::array{ sin30, 0.0f, -cos30} },
+        { FrontCenter, std::array{  0.0f, 0.0f, -1.0f} },
+        { LFE, {} },
+        { BackCenter,  std::array{ 0.0f, 0.0f, 1.0f} },
+        { SideLeft,    std::array{-1.0f, 0.0f, 0.0f} },
+        { SideRight,   std::array{ 1.0f, 0.0f, 0.0f} },
     }, X71Map[8]{
-        { FrontLeft,   Deg2Rad( -30.0f), Deg2Rad(0.0f) },
-        { FrontRight,  Deg2Rad(  30.0f), Deg2Rad(0.0f) },
-        { FrontCenter, Deg2Rad(   0.0f), Deg2Rad(0.0f) },
-        { LFE, 0.0f, 0.0f },
-        { BackLeft,    Deg2Rad(-150.0f), Deg2Rad(0.0f) },
-        { BackRight,   Deg2Rad( 150.0f), Deg2Rad(0.0f) },
-        { SideLeft,    Deg2Rad( -90.0f), Deg2Rad(0.0f) },
-        { SideRight,   Deg2Rad(  90.0f), Deg2Rad(0.0f) }
+        { FrontLeft,   std::array{-sin30, 0.0f, -cos30} },
+        { FrontRight,  std::array{ sin30, 0.0f, -cos30} },
+        { FrontCenter, std::array{  0.0f, 0.0f, -1.0f} },
+        { LFE, {} },
+        { BackLeft,    std::array{-sin30, 0.0f, cos30} },
+        { BackRight,   std::array{ sin30, 0.0f, cos30} },
+        { SideLeft,    std::array{ -1.0f, 0.0f, 0.0f} },
+        { SideRight,   std::array{  1.0f, 0.0f, 0.0f} },
     };
 
     if(mNumConvolveSegs < 1) UNLIKELY
@@ -470,7 +473,7 @@ void ConvolutionState::update(const ContextBase *context, const EffectSlot *slot
     else
     {
         DeviceBase *device{context->mDevice};
-        al::span<const ChanMap> chanmap{};
+        al::span<const ChanPosMap> chanmap{};
         switch(mChannels)
         {
         case FmtMono: chanmap = MonoMap; break;
@@ -492,27 +495,54 @@ void ConvolutionState::update(const ContextBase *context, const EffectSlot *slot
         mOutTarget = target.Main->Buffer;
         if(device->mRenderMode == RenderMode::Pairwise)
         {
-            auto ScaleAzimuthFront = [](float azimuth, float scale) -> float
+            /* Scales the azimuth of the given vector by 3 if it's in front.
+             * Effectively scales +/-45 degrees to +/-90 degrees, leaving > +90
+             * and < -90 alone.
+             */
+            auto ScaleAzimuthFront = [](std::array<float,3> pos) -> std::array<float,3>
             {
-                constexpr float half_pi{al::numbers::pi_v<float>*0.5f};
-                const float abs_azi{std::fabs(azimuth)};
-                if(!(abs_azi >= half_pi))
-                    return std::copysign(minf(abs_azi*scale, half_pi), azimuth);
-                return azimuth;
+                if(pos[2] < 0.0f)
+                {
+                    /* Normalize the length of the x,z components for a 2D
+                     * vector of the azimuth angle. Negate Z since {0,0,-1} is
+                     * angle 0.
+                     */
+                    const float len2d{std::sqrt(pos[0]*pos[0] + pos[2]*pos[2])};
+                    float x{pos[0] / len2d};
+                    float z{-pos[2] / len2d};
+
+                    /* Z > cos(pi/4) = -45 < azimuth < 45 degrees. */
+                    if(z > cos45)
+                    {
+                        /* Double the angle represented by x,z. */
+                        const float resx{2.0f*x * z};
+                        const float resz{z*z - x*x};
+
+                        /* Scale the vector back to fit in 3D. */
+                        pos[0] = resx * len2d;
+                        pos[2] = -resz * len2d;
+                    }
+                    else
+                    {
+                        /* If azimuth >= 45 degrees, clamp to 90 degrees. */
+                        pos[0] = std::copysign(len2d, pos[0]);
+                        pos[2] = 0.0f;
+                    }
+                }
+                return pos;
             };
 
             for(size_t i{0};i < chanmap.size();++i)
             {
                 if(chanmap[i].channel == LFE) continue;
-                const auto coeffs = CalcAngleCoeffs(ScaleAzimuthFront(chanmap[i].angle, 2.0f),
-                    chanmap[i].elevation, 0.0f);
+                const auto coeffs = CalcDirectionCoeffs(ScaleAzimuthFront(chanmap[i].pos), 0.0f);
                 ComputePanGains(target.Main, coeffs.data(), gain, (*mChans)[i].Target);
             }
         }
         else for(size_t i{0};i < chanmap.size();++i)
         {
             if(chanmap[i].channel == LFE) continue;
-            const auto coeffs = CalcAngleCoeffs(chanmap[i].angle, chanmap[i].elevation, 0.0f);
+            const auto coeffs = CalcDirectionCoeffs(chanmap[i].pos, 0.0f);
             ComputePanGains(target.Main, coeffs.data(), gain, (*mChans)[i].Target);
         }
     }

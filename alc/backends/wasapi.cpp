@@ -176,10 +176,11 @@ overloaded(Ts...) -> overloaded<Ts...>;
 
 
 /* Scales the given reftime value, rounding the result. */
-inline uint RefTime2Samples(const ReferenceTime &val, uint srate)
+template<typename T>
+constexpr uint RefTime2Samples(const ReferenceTime &val, T srate) noexcept
 {
     const auto retval = (val*srate + ReferenceTime{seconds{1}}/2) / seconds{1};
-    return static_cast<uint>(mini64(retval, std::numeric_limits<uint>::max()));
+    return static_cast<uint>(std::min<decltype(retval)>(retval, std::numeric_limits<uint>::max()));
 }
 
 
@@ -1637,21 +1638,22 @@ HRESULT WasapiPlayback::resetProxy()
         if(FAILED(hr))
             ERR("Failed to get max frames: 0x%08lx\n", hr);
         else
-            TRACE("Max frames: %u\n", maxFrames);
+            TRACE("Max sample frames: %u\n", maxFrames);
         for(UINT32 i{1};i < fmtcount;++i)
         {
-            WAVEFORMATEX *other{};
-            hr = fmtenum->GetFormat(i, &other);
+            WAVEFORMATEX *otherFormat{};
+            hr = fmtenum->GetFormat(i, &otherFormat);
             if(FAILED(hr))
                 ERR("Failed to format %u: 0x%08lx\n", i+1, hr);
             else
             {
-                TraceFormat("Other mix format", other);
-                hr = audio.mClient->GetMaxFrameCount(other, &maxFrames);
+                TraceFormat("Other mix format", otherFormat);
+                UINT32 otherMaxFrames{};
+                hr = audio.mClient->GetMaxFrameCount(otherFormat, &otherMaxFrames);
                 if(FAILED(hr))
                     ERR("Failed to get max frames: 0x%08lx\n", hr);
                 else
-                    TRACE("Max frames: %u\n", maxFrames);
+                    TRACE("Max sample frames: %u\n", otherMaxFrames);
             }
         }
 
@@ -1716,16 +1718,16 @@ HRESULT WasapiPlayback::resetProxy()
         {
             switch(chans)
             {
-                case DevFmtMono: return ChannelMask_Mono;
-                case DevFmtStereo: return ChannelMask_Stereo;
-                case DevFmtQuad: return ChannelMask_Quad;
-                case DevFmtX51: return isRear51 ? ChannelMask_X51Rear : ChannelMask_X51;
-                case DevFmtX61: return ChannelMask_X61;
-                case DevFmtX3D71:
-                case DevFmtX71: return ChannelMask_X71;
-                case DevFmtX714: return ChannelMask_X714;
-                case DevFmtAmbi3D:
-                    break;
+            case DevFmtMono: return ChannelMask_Mono;
+            case DevFmtStereo: return ChannelMask_Stereo;
+            case DevFmtQuad: return ChannelMask_Quad;
+            case DevFmtX51: return isRear51 ? ChannelMask_X51Rear : ChannelMask_X51;
+            case DevFmtX61: return ChannelMask_X61;
+            case DevFmtX3D71:
+            case DevFmtX71: return ChannelMask_X71;
+            case DevFmtX714: return ChannelMask_X714;
+            case DevFmtAmbi3D:
+                break;
             }
             return ChannelMask_Stereo;
         };
@@ -1761,21 +1763,41 @@ HRESULT WasapiPlayback::resetProxy()
 
         setDefaultWFXChannelOrder();
 
-        /* TODO: Get the real update and buffer size. Does
-         * ISpatialAudioClient::GetMaxFrameCount give the buffer size, update
-         * size, or neither? According to MSDN, it
+        /* FIXME: Get the real update and buffer size. Presumably the actual
+         * device is configured once ActivateSpatialAudioStream succeeds, and
+         * an IAudioClient from the same IMMDevice accesses the same device
+         * configuration. This isn't obviously correct, but for now assume
+         * IAudioClient::GetDevicePeriod returns the current device period time
+         * that ISpatialAudioObjectRenderStream will try to wake up at.
          *
-         * "Gets the maximum possible frame count per processing pass."
-         *
-         * If it tries to keep a full buffer, the max possible could be a full
-         * buffer for the first update or underrun. Though if it always does a
-         * period at a time, it doesn't make sense for a pass to be less.
-         *
-         * Perhaps activating a normal IAudioClient to get the period size is
-         * the proper thing to do (still won't get us the buffer size though).
+         * Unfortunately this won't get the buffer size of the
+         * ISpatialAudioObjectRenderStream, so we only assume there's two
+         * periods.
          */
-        mOrigBufferSize = mDevice->BufferSize;
         mOrigUpdateSize = mDevice->UpdateSize;
+        mOrigBufferSize = mOrigUpdateSize*2;
+        ReferenceTime per_time{ReferenceTime{seconds{mDevice->UpdateSize}} / mDevice->Frequency};
+
+        ComPtr<IAudioClient> tmpClient;
+        hr = sDeviceHelper->activateAudioClient(mMMDev, __uuidof(IAudioClient),
+            al::out_ptr(tmpClient));
+        if(FAILED(hr))
+            ERR("Failed to activate audio client: 0x%08lx\n", hr);
+        else
+        {
+            hr = tmpClient->GetDevicePeriod(&reinterpret_cast<REFERENCE_TIME&>(per_time), nullptr);
+            if(FAILED(hr))
+                ERR("Failed to get device period: 0x%08lx\n", hr);
+            else
+            {
+                mOrigUpdateSize = RefTime2Samples(per_time, mFormat.Format.nSamplesPerSec);
+                mOrigBufferSize = mOrigUpdateSize*2;
+            }
+        }
+        tmpClient = nullptr;
+
+        mDevice->UpdateSize = RefTime2Samples(per_time, mDevice->Frequency);
+        mDevice->BufferSize = mDevice->UpdateSize*2;
 
         mResampler = nullptr;
         mResampleBuffer = nullptr;

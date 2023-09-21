@@ -1249,7 +1249,7 @@ FORCE_ALIGN int WasapiPlayback::mixerSpatialProc()
                 channels.reserve(static_cast<uint>(al::popcount(flags)));
                 while(flags)
                 {
-                    DWORD id{1u << al::countr_zero(flags)};
+                    auto id = UT{1} << al::countr_zero(flags);
                     flags &= ~id;
 
                     channels.emplace_back();

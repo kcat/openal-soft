@@ -579,6 +579,12 @@
 ##
 [wasapi]
 
+## spatial-api:
+#  Specifies whether to use a Spatial Audio stream for playback. This may
+#  provide expanded capabilities for surround sound and with-height speaker
+#  configurations. Very experimental.
+#spatial-api = false
+
 ## allow-resampler:
 #  Specifies whether to allow an extra resampler pass on the output. Enabling
 #  this will allow the playback device to be set to a different sample rate

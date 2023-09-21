@@ -165,6 +165,11 @@ enum {
     // ear buds, etc).
     DirectEar,
 
+    /* Specifies if output is using speaker virtualization (e.g. Windows
+     * Spatial Audio).
+     */
+    Virtualization,
+
     DeviceFlagsCount
 };
 

@@ -31,7 +31,9 @@
 
 #include <wtypes.h>
 #include <mmdeviceapi.h>
+#include <audiosessiontypes.h>
 #include <audioclient.h>
+#include <spatialaudioclient.h>
 #include <cguid.h>
 #include <devpropdef.h>
 #include <mmreg.h>
@@ -106,6 +108,9 @@ using ReferenceTime = std::chrono::duration<REFERENCE_TIME,std::ratio<1,10000000
 inline constexpr ReferenceTime operator "" _reftime(unsigned long long int n) noexcept
 { return ReferenceTime{static_cast<REFERENCE_TIME>(n)}; }
 
+constexpr AudioObjectType operator|(AudioObjectType lhs, AudioObjectType rhs) noexcept
+{ return static_cast<AudioObjectType>(lhs | al::to_underlying(rhs)); }
+
 
 #define MONO SPEAKER_FRONT_CENTER
 #define STEREO (SPEAKER_FRONT_LEFT|SPEAKER_FRONT_RIGHT)
@@ -134,8 +139,38 @@ constexpr DWORD X61Mask{MaskFromTopBits(X6DOT1)};
 constexpr DWORD X71Mask{MaskFromTopBits(X7DOT1)};
 constexpr DWORD X714Mask{MaskFromTopBits(X7DOT1DOT4)};
 
+constexpr AudioObjectType ChannelMask_Mono{AudioObjectType_FrontCenter};
+constexpr AudioObjectType ChannelMask_Stereo{AudioObjectType_FrontLeft
+    | AudioObjectType_FrontRight};
+constexpr AudioObjectType ChannelMask_Quad{AudioObjectType_FrontLeft | AudioObjectType_FrontRight
+    | AudioObjectType_BackLeft | AudioObjectType_BackRight};
+constexpr AudioObjectType ChannelMask_X51{AudioObjectType_FrontLeft | AudioObjectType_FrontRight
+    | AudioObjectType_FrontCenter | AudioObjectType_LowFrequency | AudioObjectType_SideLeft
+    | AudioObjectType_SideRight};
+constexpr AudioObjectType ChannelMask_X51Rear{AudioObjectType_FrontLeft
+    | AudioObjectType_FrontRight | AudioObjectType_FrontCenter | AudioObjectType_LowFrequency
+    | AudioObjectType_BackLeft | AudioObjectType_BackRight};
+constexpr AudioObjectType ChannelMask_X61{AudioObjectType_FrontLeft | AudioObjectType_FrontRight
+    | AudioObjectType_FrontCenter | AudioObjectType_LowFrequency | AudioObjectType_SideLeft
+    | AudioObjectType_SideRight | AudioObjectType_BackCenter};
+constexpr AudioObjectType ChannelMask_X71{AudioObjectType_FrontLeft | AudioObjectType_FrontRight
+    | AudioObjectType_FrontCenter | AudioObjectType_LowFrequency | AudioObjectType_SideLeft
+    | AudioObjectType_SideRight | AudioObjectType_BackLeft | AudioObjectType_BackRight};
+constexpr AudioObjectType ChannelMask_X714{AudioObjectType_FrontLeft | AudioObjectType_FrontRight
+    | AudioObjectType_FrontCenter | AudioObjectType_LowFrequency | AudioObjectType_SideLeft
+    | AudioObjectType_SideRight | AudioObjectType_BackLeft | AudioObjectType_BackRight
+    | AudioObjectType_TopFrontLeft | AudioObjectType_TopFrontRight | AudioObjectType_TopBackLeft
+    | AudioObjectType_TopBackRight};
+
 constexpr char DevNameHead[] = "OpenAL Soft on ";
 constexpr size_t DevNameHeadLen{std::size(DevNameHead) - 1};
+
+
+template<typename... Ts>
+struct overloaded : Ts... { using Ts::operator()...; };
+
+template<typename... Ts>
+overloaded(Ts...) -> overloaded<Ts...>;
 
 
 /* Scales the given reftime value, rounding the result. */
@@ -1011,6 +1046,7 @@ struct WasapiPlayback final : public BackendBase, WasapiProxy {
     ~WasapiPlayback() override;
 
     int mixerProc();
+    int mixerSpatialProc();
 
     void open(std::string_view name) override;
     HRESULT openProxy(std::string_view name) override;
@@ -1025,10 +1061,22 @@ struct WasapiPlayback final : public BackendBase, WasapiProxy {
 
     ClockLatency getClockLatency() override;
 
+    void prepareFormat(WAVEFORMATEXTENSIBLE &OutputType);
+    void finalizeFormat(WAVEFORMATEXTENSIBLE &OutputType);
+
     HRESULT mOpenStatus{E_FAIL};
     DeviceHandle mMMDev{nullptr};
-    ComPtr<IAudioClient> mClient{nullptr};
-    ComPtr<IAudioRenderClient> mRender{nullptr};
+
+    struct PlainDevice {
+        ComPtr<IAudioClient> mClient{nullptr};
+        ComPtr<IAudioRenderClient> mRender{nullptr};
+    };
+    struct SpatialDevice {
+        ComPtr<ISpatialAudioClient> mClient{nullptr};
+        ComPtr<ISpatialAudioObjectRenderStream> mRender{nullptr};
+        AudioObjectType mStaticMask{};
+    };
+    std::variant<std::monostate,PlainDevice,SpatialDevice> mAudio;
     HANDLE mNotifyEvent{nullptr};
 
     UINT32 mOrigBufferSize{}, mOrigUpdateSize{};
@@ -1069,6 +1117,8 @@ FORCE_ALIGN int WasapiPlayback::mixerProc()
         return 1;
     }
 
+    auto &audio = std::get<PlainDevice>(mAudio);
+
     SetRTPriority();
     althrd_setname(MIXER_THREAD_NAME);
 
@@ -1078,7 +1128,7 @@ FORCE_ALIGN int WasapiPlayback::mixerProc()
     while(!mKillNow.load(std::memory_order_relaxed))
     {
         UINT32 written;
-        hr = mClient->GetCurrentPadding(&written);
+        hr = audio.mClient->GetCurrentPadding(&written);
         if(FAILED(hr))
         {
             ERR("Failed to get padding: 0x%08lx\n", hr);
@@ -1097,7 +1147,7 @@ FORCE_ALIGN int WasapiPlayback::mixerProc()
         }
 
         BYTE *buffer;
-        hr = mRender->GetBuffer(len, &buffer);
+        hr = audio.mRender->GetBuffer(len, &buffer);
         if(SUCCEEDED(hr))
         {
             if(mResampler)
@@ -1133,7 +1183,7 @@ FORCE_ALIGN int WasapiPlayback::mixerProc()
                 mDevice->renderSamples(buffer, len, mFormat.Format.nChannels);
                 mPadding.store(written + len, std::memory_order_relaxed);
             }
-            hr = mRender->ReleaseBuffer(len, 0);
+            hr = audio.mRender->ReleaseBuffer(len, 0);
         }
         if(FAILED(hr))
         {
@@ -1141,6 +1191,90 @@ FORCE_ALIGN int WasapiPlayback::mixerProc()
             mDevice->handleDisconnect("Failed to send playback samples: 0x%08lx", hr);
             break;
         }
+    }
+    mPadding.store(0u, std::memory_order_release);
+
+    CoUninitialize();
+    return 0;
+}
+
+FORCE_ALIGN int WasapiPlayback::mixerSpatialProc()
+{
+    HRESULT hr{CoInitializeEx(nullptr, COINIT_MULTITHREADED)};
+    if(FAILED(hr))
+    {
+        ERR("CoInitializeEx(nullptr, COINIT_MULTITHREADED) failed: 0x%08lx\n", hr);
+        mDevice->handleDisconnect("COM init failed: 0x%08lx", hr);
+        return 1;
+    }
+
+    auto &audio = std::get<SpatialDevice>(mAudio);
+
+    SetRTPriority();
+    althrd_setname(MIXER_THREAD_NAME);
+
+    std::vector<ComPtr<ISpatialAudioObject>> channels;
+    std::vector<float*> buffers;
+
+    /* TODO: Set mPadding appropriately. There doesn't seem to be a way to
+     * update it dynamically based on the stream, so it may need to be set to a
+     * fixed size.
+     */
+
+    while(!mKillNow.load(std::memory_order_relaxed))
+    {
+        if(DWORD res{WaitForSingleObjectEx(mNotifyEvent, 1000, FALSE)}; res != WAIT_OBJECT_0)
+        {
+            ERR("WaitForSingleObjectEx error: 0x%lx\n", res);
+
+            hr = audio.mRender->Reset();
+            if(FAILED(hr))
+            {
+                ERR("ISpatialAudioObjectRenderStream::Reset failed: 0x%08lx\n", hr);
+                mDevice->handleDisconnect("Device lost: 0x%08lx", hr);
+                break;
+            }
+        }
+
+        UINT32 dynamicCount{}, framesToDo{};
+        hr = audio.mRender->BeginUpdatingAudioObjects(&dynamicCount, &framesToDo);
+        if(SUCCEEDED(hr))
+        {
+            if(channels.empty()) UNLIKELY
+            {
+                DWORD flags{audio.mStaticMask};
+                channels.reserve(static_cast<uint>(al::popcount(flags)));
+                while(flags)
+                {
+                    DWORD id{1u << al::countr_zero(flags)};
+                    flags &= ~id;
+
+                    channels.emplace_back();
+                    audio.mRender->ActivateSpatialAudioObject(static_cast<AudioObjectType>(id),
+                        al::out_ptr(channels.back()));
+                }
+                buffers.resize(channels.size());
+            }
+
+            /* We have to call to get each channel's buffer individually every
+             * update, unfortunately.
+             */
+            std::transform(channels.cbegin(), channels.cend(), buffers.begin(),
+                [](const ComPtr<ISpatialAudioObject> &obj) -> float*
+                {
+                    BYTE *buffer{};
+                    UINT32 size{};
+                    obj->GetBuffer(&buffer, &size);
+                    return reinterpret_cast<float*>(buffer);
+                });
+
+            mDevice->renderSamples(buffers, framesToDo);
+
+            hr = audio.mRender->EndUpdatingAudioObjects();
+        }
+
+        if(FAILED(hr))
+            ERR("Failed to update playback objects: 0x%08lx\n", hr);
     }
     mPadding.store(0u, std::memory_order_release);
 
@@ -1209,7 +1343,6 @@ HRESULT WasapiPlayback::openProxy(std::string_view name)
         WARN("Failed to open device \"%s\"\n", devname.empty() ? "(default)" : devname.c_str());
         return hr;
     }
-    mClient = nullptr;
     if(!devname.empty())
         mDevice->DeviceName = DevNameHead + std::move(devname);
     else
@@ -1220,50 +1353,13 @@ HRESULT WasapiPlayback::openProxy(std::string_view name)
 
 void WasapiPlayback::closeProxy()
 {
-    mClient = nullptr;
+    mAudio.emplace<std::monostate>();
     mMMDev = nullptr;
 }
 
 
-bool WasapiPlayback::reset()
+void WasapiPlayback::prepareFormat(WAVEFORMATEXTENSIBLE &OutputType)
 {
-    HRESULT hr{pushMessage(MsgType::ResetDevice).get()};
-    if(FAILED(hr))
-        throw al::backend_exception{al::backend_error::DeviceError, "0x%08lx", hr};
-    return true;
-}
-
-HRESULT WasapiPlayback::resetProxy()
-{
-    mClient = nullptr;
-    HRESULT hr{sDeviceHelper->activateAudioClient(mMMDev, __uuidof(IAudioClient),
-        al::out_ptr(mClient))};
-    if(FAILED(hr))
-    {
-        ERR("Failed to reactivate audio client: 0x%08lx\n", hr);
-        return hr;
-    }
-
-    WAVEFORMATEX *wfx;
-    hr = mClient->GetMixFormat(&wfx);
-    if(FAILED(hr))
-    {
-        ERR("Failed to get mix format: 0x%08lx\n", hr);
-        return hr;
-    }
-    TraceFormat("Device mix format", wfx);
-
-    WAVEFORMATEXTENSIBLE OutputType;
-    if(!MakeExtensible(&OutputType, wfx))
-    {
-        CoTaskMemFree(wfx);
-        return E_FAIL;
-    }
-    CoTaskMemFree(wfx);
-    wfx = nullptr;
-
-    const ReferenceTime per_time{ReferenceTime{seconds{mDevice->UpdateSize}} / mDevice->Frequency};
-    const ReferenceTime buf_time{ReferenceTime{seconds{mDevice->BufferSize}} / mDevice->Frequency};
     bool isRear51{false};
 
     if(!mDevice->Flags.test(FrequencyRequest))
@@ -1379,13 +1475,353 @@ HRESULT WasapiPlayback::resetProxy()
         OutputType.Format.wBitsPerSample / 8);
     OutputType.Format.nAvgBytesPerSec = OutputType.Format.nSamplesPerSec *
         OutputType.Format.nBlockAlign;
+}
+
+void WasapiPlayback::finalizeFormat(WAVEFORMATEXTENSIBLE &OutputType)
+{
+    if(!GetConfigValueBool(mDevice->DeviceName.c_str(), "wasapi", "allow-resampler", true))
+        mDevice->Frequency = OutputType.Format.nSamplesPerSec;
+    else
+        mDevice->Frequency = minu(mDevice->Frequency, OutputType.Format.nSamplesPerSec);
+
+    const uint32_t chancount{OutputType.Format.nChannels};
+    const DWORD chanmask{OutputType.dwChannelMask};
+    /* Don't update the channel format if the requested format fits what's
+     * supported.
+     */
+    bool chansok{false};
+    if(mDevice->Flags.test(ChannelsRequest))
+    {
+        /* When requesting a channel configuration, make sure it fits the
+         * mask's lsb (to ensure no gaps in the output channels). If there's no
+         * mask, assume the request fits with enough channels.
+         */
+        switch(mDevice->FmtChans)
+        {
+        case DevFmtMono:
+            chansok = (chancount >= 1 && ((chanmask&MonoMask) == MONO || !chanmask));
+            break;
+        case DevFmtStereo:
+            chansok = (chancount >= 2 && ((chanmask&StereoMask) == STEREO || !chanmask));
+            break;
+        case DevFmtQuad:
+            chansok = (chancount >= 4 && ((chanmask&QuadMask) == QUAD || !chanmask));
+            break;
+        case DevFmtX51:
+            chansok = (chancount >= 6 && ((chanmask&X51Mask) == X5DOT1
+                    || (chanmask&X51RearMask) == X5DOT1REAR || !chanmask));
+            break;
+        case DevFmtX61:
+            chansok = (chancount >= 7 && ((chanmask&X61Mask) == X6DOT1 || !chanmask));
+            break;
+        case DevFmtX71:
+        case DevFmtX3D71:
+            chansok = (chancount >= 8 && ((chanmask&X71Mask) == X7DOT1 || !chanmask));
+            break;
+        case DevFmtX714:
+            chansok = (chancount >= 12 && ((chanmask&X714Mask) == X7DOT1DOT4 || !chanmask));
+        case DevFmtAmbi3D:
+            break;
+        }
+    }
+    if(!chansok)
+    {
+        if(chancount >= 12 && (chanmask&X714Mask) == X7DOT1DOT4)
+            mDevice->FmtChans = DevFmtX714;
+        else if(chancount >= 8 && (chanmask&X71Mask) == X7DOT1)
+            mDevice->FmtChans = DevFmtX71;
+        else if(chancount >= 7 && (chanmask&X61Mask) == X6DOT1)
+            mDevice->FmtChans = DevFmtX61;
+        else if(chancount >= 6 && ((chanmask&X51Mask) == X5DOT1
+            || (chanmask&X51RearMask) == X5DOT1REAR))
+            mDevice->FmtChans = DevFmtX51;
+        else if(chancount >= 4 && (chanmask&QuadMask) == QUAD)
+            mDevice->FmtChans = DevFmtQuad;
+        else if(chancount >= 2 && ((chanmask&StereoMask) == STEREO || !chanmask))
+            mDevice->FmtChans = DevFmtStereo;
+        else if(chancount >= 1 && ((chanmask&MonoMask) == MONO || !chanmask))
+            mDevice->FmtChans = DevFmtMono;
+        else
+        {
+            ERR("Unhandled extensible channels: %d -- 0x%08lx\n", OutputType.Format.nChannels,
+                OutputType.dwChannelMask);
+            mDevice->FmtChans = DevFmtStereo;
+            OutputType.Format.nChannels = 2;
+            OutputType.dwChannelMask = STEREO;
+        }
+    }
+
+    if(IsEqualGUID(OutputType.SubFormat, KSDATAFORMAT_SUBTYPE_PCM))
+    {
+        if(OutputType.Format.wBitsPerSample == 8)
+            mDevice->FmtType = DevFmtUByte;
+        else if(OutputType.Format.wBitsPerSample == 16)
+            mDevice->FmtType = DevFmtShort;
+        else if(OutputType.Format.wBitsPerSample == 32)
+            mDevice->FmtType = DevFmtInt;
+        else
+        {
+            mDevice->FmtType = DevFmtShort;
+            OutputType.Format.wBitsPerSample = 16;
+        }
+    }
+    else if(IsEqualGUID(OutputType.SubFormat, KSDATAFORMAT_SUBTYPE_IEEE_FLOAT))
+    {
+        mDevice->FmtType = DevFmtFloat;
+        OutputType.Format.wBitsPerSample = 32;
+    }
+    else
+    {
+        ERR("Unhandled format sub-type: %s\n", GuidPrinter{OutputType.SubFormat}.c_str());
+        mDevice->FmtType = DevFmtShort;
+        if(OutputType.Format.wFormatTag != WAVE_FORMAT_EXTENSIBLE)
+            OutputType.Format.wFormatTag = WAVE_FORMAT_PCM;
+        OutputType.Format.wBitsPerSample = 16;
+        OutputType.SubFormat = KSDATAFORMAT_SUBTYPE_PCM;
+    }
+    OutputType.Samples.wValidBitsPerSample = OutputType.Format.wBitsPerSample;
+}
+
+
+bool WasapiPlayback::reset()
+{
+    HRESULT hr{pushMessage(MsgType::ResetDevice).get()};
+    if(FAILED(hr))
+        throw al::backend_exception{al::backend_error::DeviceError, "0x%08lx", hr};
+    return true;
+}
+
+HRESULT WasapiPlayback::resetProxy()
+{
+    if(GetConfigValueBool(mDevice->DeviceName.c_str(), "wasapi", "spatial-api", false))
+    {
+        auto &audio = mAudio.emplace<SpatialDevice>();
+        HRESULT hr{sDeviceHelper->activateAudioClient(mMMDev, __uuidof(ISpatialAudioClient),
+            al::out_ptr(audio.mClient))};
+        if(FAILED(hr))
+        {
+            ERR("Failed to activate spatial audio client: 0x%08lx\n", hr);
+            goto no_spatial;
+        }
+
+        ComPtr<IAudioFormatEnumerator> fmtenum;
+        hr = audio.mClient->GetSupportedAudioObjectFormatEnumerator(al::out_ptr(fmtenum));
+        if(FAILED(hr))
+        {
+            ERR("Failed to get format enumerator: 0x%08lx\n", hr);
+            goto no_spatial;
+        }
+
+        UINT32 fmtcount{};
+        hr = fmtenum->GetCount(&fmtcount);
+        if(FAILED(hr) || fmtcount == 0)
+        {
+            ERR("Failed to get format count: 0x%08lx\n", hr);
+            goto no_spatial;
+        }
+
+        WAVEFORMATEX *preferredFormat{};
+        hr = fmtenum->GetFormat(0, &preferredFormat);
+        if(FAILED(hr))
+        {
+            ERR("Failed to get preferred format: 0x%08lx\n", hr);
+            goto no_spatial;
+        }
+        TraceFormat("Preferred mix format", preferredFormat);
+
+        UINT32 maxFrames{};
+        hr = audio.mClient->GetMaxFrameCount(preferredFormat, &maxFrames);
+        if(FAILED(hr))
+            ERR("Failed to get max frames: 0x%08lx\n", hr);
+        else
+            TRACE("Max frames: %u\n", maxFrames);
+        for(UINT32 i{1};i < fmtcount;++i)
+        {
+            WAVEFORMATEX *other{};
+            hr = fmtenum->GetFormat(i, &other);
+            if(FAILED(hr))
+                ERR("Failed to format %u: 0x%08lx\n", i+1, hr);
+            else
+            {
+                TraceFormat("Other mix format", other);
+                hr = audio.mClient->GetMaxFrameCount(other, &maxFrames);
+                if(FAILED(hr))
+                    ERR("Failed to get max frames: 0x%08lx\n", hr);
+                else
+                    TRACE("Max frames: %u\n", maxFrames);
+            }
+        }
+
+        WAVEFORMATEXTENSIBLE OutputType;
+        if(!MakeExtensible(&OutputType, preferredFormat))
+            goto no_spatial;
+
+        /* Force 32-bit float. This is currently required for planar output. */
+        if(OutputType.Format.wFormatTag != WAVE_FORMAT_EXTENSIBLE
+            && OutputType.Format.wFormatTag != WAVE_FORMAT_IEEE_FLOAT)
+        {
+            OutputType.Format.wFormatTag = WAVE_FORMAT_IEEE_FLOAT;
+            OutputType.Format.cbSize = 0;
+        }
+        if(OutputType.Format.wBitsPerSample != 32)
+        {
+            OutputType.Format.nAvgBytesPerSec = OutputType.Format.nAvgBytesPerSec * 32u
+                / OutputType.Format.wBitsPerSample;
+            OutputType.Format.nBlockAlign = static_cast<WORD>(OutputType.Format.nBlockAlign * 32
+                / OutputType.Format.wBitsPerSample);
+            OutputType.Format.wBitsPerSample = 32;
+        }
+        OutputType.Samples.wValidBitsPerSample = OutputType.Format.wBitsPerSample;
+        OutputType.SubFormat = KSDATAFORMAT_SUBTYPE_IEEE_FLOAT;
+
+        bool isRear51{false};
+        if(!mDevice->Flags.test(ChannelsRequest))
+        {
+            const uint32_t chancount{OutputType.Format.nChannels};
+            const DWORD chanmask{OutputType.dwChannelMask};
+            if(chancount >= 12 && (chanmask&X714Mask) == X7DOT1DOT4)
+                mDevice->FmtChans = DevFmtX714;
+            else if(chancount >= 8 && (chanmask&X71Mask) == X7DOT1)
+                mDevice->FmtChans = DevFmtX71;
+            else if(chancount >= 7 && (chanmask&X61Mask) == X6DOT1)
+                mDevice->FmtChans = DevFmtX61;
+            else if(chancount >= 6 && (chanmask&X51Mask) == X5DOT1)
+                mDevice->FmtChans = DevFmtX51;
+            else if(chancount >= 6 && (chanmask&X51RearMask) == X5DOT1REAR)
+            {
+                mDevice->FmtChans = DevFmtX51;
+                isRear51 = true;
+            }
+            else if(chancount >= 4 && (chanmask&QuadMask) == QUAD)
+                mDevice->FmtChans = DevFmtQuad;
+            else if(chancount >= 2 && ((chanmask&StereoMask) == STEREO || !chanmask))
+                mDevice->FmtChans = DevFmtStereo;
+            /* HACK: Don't autoselect mono. Wine returns this and makes the
+             * audio terrible.
+             */
+            else if(!(chancount >= 1 && ((chanmask&MonoMask) == MONO || !chanmask)))
+                ERR("Unhandled channel config: %d -- 0x%08lx\n", chancount, chanmask);
+        }
+        else
+        {
+            const uint32_t chancount{OutputType.Format.nChannels};
+            const DWORD chanmask{OutputType.dwChannelMask};
+            isRear51 = (chancount == 6 && (chanmask&X51RearMask) == X5DOT1REAR);
+        }
+
+        auto getTypeMask = [isRear51](DevFmtChannels chans) noexcept
+        {
+            switch(chans)
+            {
+                case DevFmtMono: return ChannelMask_Mono;
+                case DevFmtStereo: return ChannelMask_Stereo;
+                case DevFmtQuad: return ChannelMask_Quad;
+                case DevFmtX51: return isRear51 ? ChannelMask_X51Rear : ChannelMask_X51;
+                case DevFmtX61: return ChannelMask_X61;
+                case DevFmtX3D71:
+                case DevFmtX71: return ChannelMask_X71;
+                case DevFmtX714: return ChannelMask_X714;
+                case DevFmtAmbi3D:
+                    break;
+            }
+            return ChannelMask_Stereo;
+        };
+
+        SpatialAudioObjectRenderStreamActivationParams streamParams{};
+        streamParams.ObjectFormat = &OutputType.Format;
+        streamParams.StaticObjectTypeMask = getTypeMask(mDevice->FmtChans);
+        streamParams.Category = AudioCategory_Media;
+        streamParams.EventHandle = mNotifyEvent;
+
+        PropVariant paramProp{};
+        paramProp->vt = VT_BLOB;
+        paramProp->blob.cbSize = sizeof(streamParams);
+        paramProp->blob.pBlobData = reinterpret_cast<BYTE*>(&streamParams);
+
+        hr = audio.mClient->ActivateSpatialAudioStream(paramProp.get(),
+            __uuidof(ISpatialAudioObjectRenderStream), al::out_ptr(audio.mRender));
+        if(FAILED(hr))
+        {
+            ERR("Failed to activate spatial audio stream: 0x%08lx\n", hr);
+            goto no_spatial;
+        }
+
+        audio.mStaticMask = streamParams.StaticObjectTypeMask;
+        mFormat = OutputType;
+
+        /* TODO: Support resampling. */
+        mDevice->FmtType = DevFmtFloat;
+        mDevice->Flags.reset(DirectEar).set(Virtualization);
+        if(streamParams.StaticObjectTypeMask == ChannelMask_Stereo)
+            mDevice->FmtChans = DevFmtStereo;
+        mDevice->Frequency = mFormat.Format.nSamplesPerSec;
+
+        setDefaultWFXChannelOrder();
+
+        /* TODO: Get the real update and buffer size. Does
+         * ISpatialAudioClient::GetMaxFrameCount give the buffer size, update
+         * size, or neither? According to MSDN, it
+         *
+         * "Gets the maximum possible frame count per processing pass."
+         *
+         * If it tries to keep a full buffer, the max possible could be a full
+         * buffer for the first update or underrun. Though if it always does a
+         * period at a time, it doesn't make sense for a pass to be less.
+         *
+         * Perhaps activating a normal IAudioClient to get the period size is
+         * the proper thing to do (still won't get us the buffer size though).
+         */
+        mOrigBufferSize = mDevice->BufferSize;
+        mOrigUpdateSize = mDevice->UpdateSize;
+
+        mResampler = nullptr;
+        mResampleBuffer = nullptr;
+        mBufferFilled = 0;
+
+        return S_OK;
+    }
+
+no_spatial:
+    mDevice->Flags.reset(Virtualization);
+
+    auto &audio = mAudio.emplace<PlainDevice>();
+    HRESULT hr{sDeviceHelper->activateAudioClient(mMMDev, __uuidof(IAudioClient),
+        al::out_ptr(audio.mClient))};
+    if(FAILED(hr))
+    {
+        ERR("Failed to reactivate audio client: 0x%08lx\n", hr);
+        return hr;
+    }
+
+    WAVEFORMATEX *wfx;
+    hr = audio.mClient->GetMixFormat(&wfx);
+    if(FAILED(hr))
+    {
+        ERR("Failed to get mix format: 0x%08lx\n", hr);
+        return hr;
+    }
+    TraceFormat("Device mix format", wfx);
+
+    WAVEFORMATEXTENSIBLE OutputType;
+    if(!MakeExtensible(&OutputType, wfx))
+    {
+        CoTaskMemFree(wfx);
+        return E_FAIL;
+    }
+    CoTaskMemFree(wfx);
+    wfx = nullptr;
+
+    const ReferenceTime per_time{ReferenceTime{seconds{mDevice->UpdateSize}} / mDevice->Frequency};
+    const ReferenceTime buf_time{ReferenceTime{seconds{mDevice->BufferSize}} / mDevice->Frequency};
+
+    prepareFormat(OutputType);
 
     TraceFormat("Requesting playback format", &OutputType.Format);
-    hr = mClient->IsFormatSupported(AUDCLNT_SHAREMODE_SHARED, &OutputType.Format, &wfx);
+    hr = audio.mClient->IsFormatSupported(AUDCLNT_SHAREMODE_SHARED, &OutputType.Format, &wfx);
     if(FAILED(hr))
     {
         WARN("Failed to check format support: 0x%08lx\n", hr);
-        hr = mClient->GetMixFormat(&wfx);
+        hr = audio.mClient->GetMixFormat(&wfx);
     }
     if(FAILED(hr))
     {
@@ -1404,107 +1840,7 @@ HRESULT WasapiPlayback::resetProxy()
         CoTaskMemFree(wfx);
         wfx = nullptr;
 
-        if(!GetConfigValueBool(mDevice->DeviceName.c_str(), "wasapi", "allow-resampler", true))
-            mDevice->Frequency = OutputType.Format.nSamplesPerSec;
-        else
-            mDevice->Frequency = minu(mDevice->Frequency, OutputType.Format.nSamplesPerSec);
-
-        const uint32_t chancount{OutputType.Format.nChannels};
-        const DWORD chanmask{OutputType.dwChannelMask};
-        /* Don't update the channel format if the requested format fits what's
-         * supported.
-         */
-        bool chansok{false};
-        if(mDevice->Flags.test(ChannelsRequest))
-        {
-            /* When requesting a channel configuration, make sure it fits the
-             * mask's lsb (to ensure no gaps in the output channels). If
-             * there's no mask, assume the request fits with enough channels.
-             */
-            switch(mDevice->FmtChans)
-            {
-            case DevFmtMono:
-                chansok = (chancount >= 1 && ((chanmask&MonoMask) == MONO || !chanmask));
-                break;
-            case DevFmtStereo:
-                chansok = (chancount >= 2 && ((chanmask&StereoMask) == STEREO || !chanmask));
-                break;
-            case DevFmtQuad:
-                chansok = (chancount >= 4 && ((chanmask&QuadMask) == QUAD || !chanmask));
-                break;
-            case DevFmtX51:
-                chansok = (chancount >= 6 && ((chanmask&X51Mask) == X5DOT1
-                        || (chanmask&X51RearMask) == X5DOT1REAR || !chanmask));
-                break;
-            case DevFmtX61:
-                chansok = (chancount >= 7 && ((chanmask&X61Mask) == X6DOT1 || !chanmask));
-                break;
-            case DevFmtX71:
-            case DevFmtX3D71:
-                chansok = (chancount >= 8 && ((chanmask&X71Mask) == X7DOT1 || !chanmask));
-                break;
-            case DevFmtX714:
-                chansok = (chancount >= 12 && ((chanmask&X714Mask) == X7DOT1DOT4 || !chanmask));
-            case DevFmtAmbi3D:
-                break;
-            }
-        }
-        if(!chansok)
-        {
-            if(chancount >= 12 && (chanmask&X714Mask) == X7DOT1DOT4)
-                mDevice->FmtChans = DevFmtX714;
-            else if(chancount >= 8 && (chanmask&X71Mask) == X7DOT1)
-                mDevice->FmtChans = DevFmtX71;
-            else if(chancount >= 7 && (chanmask&X61Mask) == X6DOT1)
-                mDevice->FmtChans = DevFmtX61;
-            else if(chancount >= 6 && ((chanmask&X51Mask) == X5DOT1
-                || (chanmask&X51RearMask) == X5DOT1REAR))
-                mDevice->FmtChans = DevFmtX51;
-            else if(chancount >= 4 && (chanmask&QuadMask) == QUAD)
-                mDevice->FmtChans = DevFmtQuad;
-            else if(chancount >= 2 && ((chanmask&StereoMask) == STEREO || !chanmask))
-                mDevice->FmtChans = DevFmtStereo;
-            else if(chancount >= 1 && ((chanmask&MonoMask) == MONO || !chanmask))
-                mDevice->FmtChans = DevFmtMono;
-            else
-            {
-                ERR("Unhandled extensible channels: %d -- 0x%08lx\n", OutputType.Format.nChannels,
-                    OutputType.dwChannelMask);
-                mDevice->FmtChans = DevFmtStereo;
-                OutputType.Format.nChannels = 2;
-                OutputType.dwChannelMask = STEREO;
-            }
-        }
-
-        if(IsEqualGUID(OutputType.SubFormat, KSDATAFORMAT_SUBTYPE_PCM))
-        {
-            if(OutputType.Format.wBitsPerSample == 8)
-                mDevice->FmtType = DevFmtUByte;
-            else if(OutputType.Format.wBitsPerSample == 16)
-                mDevice->FmtType = DevFmtShort;
-            else if(OutputType.Format.wBitsPerSample == 32)
-                mDevice->FmtType = DevFmtInt;
-            else
-            {
-                mDevice->FmtType = DevFmtShort;
-                OutputType.Format.wBitsPerSample = 16;
-            }
-        }
-        else if(IsEqualGUID(OutputType.SubFormat, KSDATAFORMAT_SUBTYPE_IEEE_FLOAT))
-        {
-            mDevice->FmtType = DevFmtFloat;
-            OutputType.Format.wBitsPerSample = 32;
-        }
-        else
-        {
-            ERR("Unhandled format sub-type: %s\n", GuidPrinter{OutputType.SubFormat}.c_str());
-            mDevice->FmtType = DevFmtShort;
-            if(OutputType.Format.wFormatTag != WAVE_FORMAT_EXTENSIBLE)
-                OutputType.Format.wFormatTag = WAVE_FORMAT_PCM;
-            OutputType.Format.wBitsPerSample = 16;
-            OutputType.SubFormat = KSDATAFORMAT_SUBTYPE_PCM;
-        }
-        OutputType.Samples.wValidBitsPerSample = OutputType.Format.wBitsPerSample;
+        finalizeFormat(OutputType);
     }
     mFormat = OutputType;
 
@@ -1516,7 +1852,7 @@ HRESULT WasapiPlayback::resetProxy()
 #endif
     setDefaultWFXChannelOrder();
 
-    hr = mClient->Initialize(AUDCLNT_SHAREMODE_SHARED, AUDCLNT_STREAMFLAGS_EVENTCALLBACK,
+    hr = audio.mClient->Initialize(AUDCLNT_SHAREMODE_SHARED, AUDCLNT_STREAMFLAGS_EVENTCALLBACK,
         buf_time.count(), 0, &OutputType.Format, nullptr);
     if(FAILED(hr))
     {
@@ -1526,12 +1862,19 @@ HRESULT WasapiPlayback::resetProxy()
 
     UINT32 buffer_len{};
     ReferenceTime min_per{};
-    hr = mClient->GetDevicePeriod(&reinterpret_cast<REFERENCE_TIME&>(min_per), nullptr);
+    hr = audio.mClient->GetDevicePeriod(&reinterpret_cast<REFERENCE_TIME&>(min_per), nullptr);
     if(SUCCEEDED(hr))
-        hr = mClient->GetBufferSize(&buffer_len);
+        hr = audio.mClient->GetBufferSize(&buffer_len);
     if(FAILED(hr))
     {
         ERR("Failed to get audio buffer info: 0x%08lx\n", hr);
+        return hr;
+    }
+
+    hr = audio.mClient->SetEventHandle(mNotifyEvent);
+    if(FAILED(hr))
+    {
+        ERR("Failed to set event handle: 0x%08lx\n", hr);
         return hr;
     }
 
@@ -1564,13 +1907,6 @@ HRESULT WasapiPlayback::resetProxy()
             mDevice->UpdateSize);
     }
 
-    hr = mClient->SetEventHandle(mNotifyEvent);
-    if(FAILED(hr))
-    {
-        ERR("Failed to set event handle: 0x%08lx\n", hr);
-        return hr;
-    }
-
     return hr;
 }
 
@@ -1587,31 +1923,61 @@ HRESULT WasapiPlayback::startProxy()
 {
     ResetEvent(mNotifyEvent);
 
-    HRESULT hr{mClient->Start()};
-    if(FAILED(hr))
+    auto mstate_fallback = [](std::monostate) -> HRESULT
+    { return E_FAIL; };
+    auto start_plain = [&](PlainDevice &audio) -> HRESULT
     {
-        ERR("Failed to start audio client: 0x%08lx\n", hr);
-        return hr;
-    }
+        HRESULT hr{audio.mClient->Start()};
+        if(FAILED(hr))
+        {
+            ERR("Failed to start audio client: 0x%08lx\n", hr);
+            return hr;
+        }
 
-    hr = mClient->GetService(__uuidof(IAudioRenderClient), al::out_ptr(mRender));
-    if(SUCCEEDED(hr))
+        hr = audio.mClient->GetService(__uuidof(IAudioRenderClient), al::out_ptr(audio.mRender));
+        if(SUCCEEDED(hr))
+        {
+            try {
+                mKillNow.store(false, std::memory_order_release);
+                mThread = std::thread{std::mem_fn(&WasapiPlayback::mixerProc), this};
+            }
+            catch(...) {
+                audio.mRender = nullptr;
+                ERR("Failed to start thread\n");
+                hr = E_FAIL;
+            }
+        }
+        if(FAILED(hr))
+            audio.mClient->Stop();
+        return hr;
+    };
+    auto start_spatial = [&](SpatialDevice &audio) -> HRESULT
     {
+        HRESULT hr{audio.mRender->Start()};
+        if(FAILED(hr))
+        {
+            ERR("Failed to start spatial audio stream: 0x%08lx\n", hr);
+            return hr;
+        }
+
         try {
             mKillNow.store(false, std::memory_order_release);
-            mThread = std::thread{std::mem_fn(&WasapiPlayback::mixerProc), this};
+            mThread = std::thread{std::mem_fn(&WasapiPlayback::mixerSpatialProc), this};
         }
         catch(...) {
-            mRender = nullptr;
             ERR("Failed to start thread\n");
             hr = E_FAIL;
         }
-    }
 
-    if(FAILED(hr))
-        mClient->Stop();
+        if(FAILED(hr))
+        {
+            audio.mRender->Stop();
+            audio.mRender->Reset();
+        }
+        return hr;
+    };
 
-    return hr;
+    return std::visit(overloaded{mstate_fallback, start_plain, start_spatial}, mAudio);
 }
 
 
@@ -1620,14 +1986,25 @@ void WasapiPlayback::stop()
 
 void WasapiPlayback::stopProxy()
 {
-    if(!mRender || !mThread.joinable())
+    if(!mThread.joinable())
         return;
 
     mKillNow.store(true, std::memory_order_release);
     mThread.join();
 
-    mRender = nullptr;
-    mClient->Stop();
+    auto mstate_fallback = [](std::monostate) -> void
+    { };
+    auto stop_plain = [](PlainDevice &audio) -> void
+    {
+        audio.mRender = nullptr;
+        audio.mClient->Stop();
+    };
+    auto stop_spatial = [](SpatialDevice &audio) -> void
+    {
+        audio.mRender->Stop();
+        audio.mRender->Reset();
+    };
+    std::visit(overloaded{mstate_fallback, stop_plain, stop_spatial}, mAudio);
 }
 
 

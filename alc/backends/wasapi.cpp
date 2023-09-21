@@ -108,8 +108,10 @@ using ReferenceTime = std::chrono::duration<REFERENCE_TIME,std::ratio<1,10000000
 inline constexpr ReferenceTime operator "" _reftime(unsigned long long int n) noexcept
 { return ReferenceTime{static_cast<REFERENCE_TIME>(n)}; }
 
+#ifndef _MSC_VER
 constexpr AudioObjectType operator|(AudioObjectType lhs, AudioObjectType rhs) noexcept
 { return static_cast<AudioObjectType>(lhs | al::to_underlying(rhs)); }
+#endif
 
 
 #define MONO SPEAKER_FRONT_CENTER

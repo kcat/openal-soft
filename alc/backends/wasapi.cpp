@@ -1244,7 +1244,8 @@ FORCE_ALIGN int WasapiPlayback::mixerSpatialProc()
         {
             if(channels.empty()) UNLIKELY
             {
-                auto flags = al::to_underlying(audio.mStaticMask);
+                using UT = std::make_unsigned_t<decltype(audio.mStaticMask)>;
+                auto flags = static_cast<UT>(al::to_underlying(audio.mStaticMask));
                 channels.reserve(static_cast<uint>(al::popcount(flags)));
                 while(flags)
                 {

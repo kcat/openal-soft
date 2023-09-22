@@ -73,8 +73,15 @@
 #include "strutils.h"
 
 #if defined(ALSOFT_UWP)
-#include <collection.h>
-using namespace Platform;
+
+#include <winrt/Windows.Media.Core.h> // !!This is important!!
+#include <winrt/Windows.Foundation.Collections.h>
+#include <winrt/Windows.Devices.h>
+#include <winrt/Windows.Foundation.h>
+#include <winrt/Windows.Devices.Enumeration.h>
+#include <winrt/Windows.Media.Devices.h>
+
+using namespace winrt;
 using namespace Windows::Foundation;
 using namespace Windows::Media::Devices;
 using namespace Windows::Devices::Enumeration;
@@ -276,8 +283,8 @@ enum EDataFlow {
 #endif
 
 #if defined(ALSOFT_UWP)
-using DeviceHandle = DeviceInformation^;
-using EventRegistrationToken = Windows::Foundation::EventRegistrationToken;
+using DeviceHandle = Windows::Devices::Enumeration::DeviceInformation;
+using EventRegistrationToken = winrt::event_token;
 #else
 using DeviceHandle = ComPtr<IMMDevice>;
 #endif
@@ -329,11 +336,11 @@ static NameGUIDPair GetDeviceNameAndGuid(const DeviceHandle &device)
         guid = UnknownGuid;
     }
 #else
-    std::string name{wstr_to_utf8(device->Name->Data())};
+    std::string name{wstr_to_utf8(device.Name())};
     std::string guid;
     // device->Id is DeviceInterfacePath: \\?\SWD#MMDEVAPI#{0.0.0.00000000}.{a21c17a0-fc1d-405e-ab5a-b513422b57d1}#{e6327cad-dcec-4949-ae8a-991e976a79d2}
-    Platform::String^ devIfPath = device->Id;
-    if(auto devIdStart = wcsstr(devIfPath->Data(), L"}."))
+    auto devIfPath = device.Id();
+    if(auto devIdStart = wcsstr(devIfPath.data(), L"}."))
     {
         devIdStart += 2;  // L"}."
         if(auto devIdStartEnd = wcschr(devIdStart, L'#'))
@@ -388,35 +395,32 @@ struct DeviceHelper final : private IMMNotificationClient
          */
         mActiveClientEvent = CreateEventW(nullptr, FALSE, FALSE, nullptr);
 
-        mRenderDeviceChangedToken = MediaDevice::DefaultAudioRenderDeviceChanged +=
-            ref new TypedEventHandler<Platform::Object ^, DefaultAudioRenderDeviceChangedEventArgs ^>(
-                [this](Platform::Object ^ sender, DefaultAudioRenderDeviceChangedEventArgs ^ args) {
-                if(args->Role == AudioDeviceRole::Default)
-                {
-                    const std::string msg{"Default playback device changed: "+
-                        wstr_to_utf8(args->Id->Data())};
-                    alc::Event(alc::EventType::DefaultDeviceChanged, alc::DeviceType::Playback,
-                        msg);
-                }
+        mRenderDeviceChangedToken = MediaDevice::DefaultAudioRenderDeviceChanged([this](const IInspectable& /*sender*/, const DefaultAudioRenderDeviceChangedEventArgs& args) {
+            if (args.Role() == AudioDeviceRole::Default)
+            {
+                const std::string msg{ "Default playback device changed: " +
+                    wstr_to_utf8(args.Id())};
+                alc::Event(alc::EventType::DefaultDeviceChanged, alc::DeviceType::Playback,
+                    msg);
+            }
             });
-        mCaptureDeviceChangedToken = MediaDevice::DefaultAudioCaptureDeviceChanged +=
-            ref new TypedEventHandler<Platform::Object ^, DefaultAudioCaptureDeviceChangedEventArgs ^>(
-                [this](Platform::Object ^ sender, DefaultAudioCaptureDeviceChangedEventArgs ^ args) {
-                if(args->Role == AudioDeviceRole::Default)
-                {
-                    const std::string msg{"Default capture device changed: "+
-                        wstr_to_utf8(args->Id->Data())};
-                    alc::Event(alc::EventType::DefaultDeviceChanged, alc::DeviceType::Capture,
-                        msg);
-                }
+
+        mCaptureDeviceChangedToken = MediaDevice::DefaultAudioCaptureDeviceChanged([this](const IInspectable& /*sender*/, const DefaultAudioCaptureDeviceChangedEventArgs& args) {
+            if (args.Role() == AudioDeviceRole::Default)
+            {
+                const std::string msg{ "Default capture device changed: " +
+                    wstr_to_utf8(args.Id()) };
+                alc::Event(alc::EventType::DefaultDeviceChanged, alc::DeviceType::Capture,
+                    msg);
+            }
             });
 #endif
     }
     ~DeviceHelper()
     {
 #if defined(ALSOFT_UWP)
-        MediaDevice::DefaultAudioRenderDeviceChanged -= mRenderDeviceChangedToken;
-        MediaDevice::DefaultAudioCaptureDeviceChanged -= mCaptureDeviceChangedToken;
+        MediaDevice::DefaultAudioRenderDeviceChanged(mRenderDeviceChangedToken);
+        MediaDevice::DefaultAudioCaptureDeviceChanged(mCaptureDeviceChangedToken);
 
         if(mActiveClientEvent != nullptr)
             CloseHandle(mActiveClientEvent);
@@ -612,21 +616,16 @@ struct DeviceHelper final : private IMMNotificationClient
         return hr;
 #else
         const auto deviceRole = Windows::Media::Devices::AudioDeviceRole::Default;
-        Platform::String^ devIfPath =
+        auto devIfPath =
             devid.empty() ? (flow == eRender ? MediaDevice::GetDefaultAudioRenderId(deviceRole) : MediaDevice::GetDefaultAudioCaptureId(deviceRole))
-            : ref new Platform::String(devid.data());
-        if (!devIfPath)
+            : winrt::hstring(devid.data());
+        if (devIfPath.empty())
             return E_POINTER;
-        Concurrency::task<DeviceInformation^> createDeviceOp(
-            DeviceInformation::CreateFromIdAsync(devIfPath, nullptr, DeviceInformationKind::DeviceInterface));
-        auto status = createDeviceOp.then([&](DeviceInformation^ deviceInfo)
-        {
-            device = deviceInfo;
-        }).wait();
-        if(status != Concurrency::task_status::completed)
-        {
+
+        auto&& deviceInfo = DeviceInformation::CreateFromIdAsync(devIfPath, nullptr, DeviceInformationKind::DeviceInterface).get();
+        if (!deviceInfo)
             return E_NOINTERFACE;
-        }
+        device = deviceInfo;
         return S_OK;
 #endif
     }
@@ -638,7 +637,7 @@ struct DeviceHelper final : private IMMNotificationClient
     HRESULT activateAudioClient(_In_ DeviceHandle &device, _In_ REFIID iid, void **ppv)
     {
         ComPtr<IActivateAudioInterfaceAsyncOperation> asyncOp;
-        HRESULT hr{ActivateAudioInterfaceAsync(device->Id->Data(), iid, nullptr, this,
+        HRESULT hr{ActivateAudioInterfaceAsync(device.Id().data(), iid, nullptr, this,
             al::out_ptr(asyncOp))};
         if(FAILED(hr))
             return hr;
@@ -713,40 +712,32 @@ struct DeviceHelper final : private IMMNotificationClient
         const auto deviceRole = Windows::Media::Devices::AudioDeviceRole::Default;
         auto DefaultAudioId   = flowdir == eRender ? MediaDevice::GetDefaultAudioRenderId(deviceRole)
                                                    : MediaDevice::GetDefaultAudioCaptureId(deviceRole);
-        if (!DefaultAudioId)
+        if (DefaultAudioId.empty())
             return defaultId;
-        Concurrency::task<DeviceInformation ^> createDefaultOp(DeviceInformation::CreateFromIdAsync(DefaultAudioId, nullptr, DeviceInformationKind::DeviceInterface));
-        auto task_status = createDefaultOp.then([&defaultId](DeviceInformation ^ deviceInfo)
-        {
-            if(deviceInfo)
-                defaultId = deviceInfo->Id->Data();
-        }).wait();
-        if(task_status != Concurrency::task_group_status::completed)
+
+        auto deviceInfo = DeviceInformation::CreateFromIdAsync(DefaultAudioId, nullptr, DeviceInformationKind::DeviceInterface).get();
+        if(!deviceInfo)
             return defaultId;
 
         // Get the string identifier of the audio renderer
         auto AudioSelector = flowdir == eRender ? MediaDevice::GetAudioRenderSelector() : MediaDevice::GetAudioCaptureSelector();
 
         // Setup the asynchronous callback
-        Concurrency::task<DeviceInformationCollection ^> enumOperation(
-            DeviceInformation::FindAllAsync(AudioSelector, /*PropertyList*/nullptr, DeviceInformationKind::DeviceInterface));
-        task_status = enumOperation.then([this,&list](DeviceInformationCollection ^ DeviceInfoCollection)
+        auto&& DeviceInfoCollection = DeviceInformation::FindAllAsync(AudioSelector, /*PropertyList*/nullptr, DeviceInformationKind::DeviceInterface).get();
+        if(DeviceInfoCollection)
         {
-            if(DeviceInfoCollection)
-            {
-                try {
-                    auto deviceCount = DeviceInfoCollection->Size;
-                    for(unsigned int i{0};i < deviceCount;++i)
-                    {
-                        DeviceInformation^ deviceInfo = DeviceInfoCollection->GetAt(i);
-                        if(deviceInfo)
-                            std::ignore = AddDevice(deviceInfo, deviceInfo->Id->Data(), list);
-                    }
-                }
-                catch (Platform::Exception ^ e) {
+            try {
+                auto deviceCount = DeviceInfoCollection.Size();
+                for(unsigned int i{0};i < deviceCount;++i)
+                {
+                    deviceInfo = DeviceInfoCollection.GetAt(i);
+                    if(deviceInfo)
+                        std::ignore = AddDevice(deviceInfo, deviceInfo.Id().data(), list);
                 }
             }
-        }).wait();
+            catch (std::exception& /*ex*/) {
+            }
+        }
 #endif
 
         return defaultId;

@@ -5,6 +5,7 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <type_traits>
 #ifdef HAVE_INTRIN_H
 #include <intrin.h>
 #endif
@@ -17,8 +18,13 @@
 #include "opthelpers.h"
 
 
-inline constexpr int64_t operator "" _i64(unsigned long long int n) noexcept { return static_cast<int64_t>(n); }
-inline constexpr uint64_t operator "" _u64(unsigned long long int n) noexcept { return static_cast<uint64_t>(n); }
+constexpr auto operator "" _i64(unsigned long long n) noexcept { return static_cast<int64_t>(n); }
+constexpr auto operator "" _u64(unsigned long long n) noexcept { return static_cast<uint64_t>(n); }
+
+constexpr auto operator "" _z(unsigned long long n) noexcept
+{ return static_cast<std::make_signed_t<size_t>>(n); }
+constexpr auto operator "" _uz(unsigned long long n) noexcept { return static_cast<size_t>(n); }
+constexpr auto operator "" _zu(unsigned long long n) noexcept { return static_cast<size_t>(n); }
 
 
 constexpr inline float minf(float a, float b) noexcept

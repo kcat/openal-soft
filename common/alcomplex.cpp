@@ -127,8 +127,8 @@ complex_fft(const al::span<std::complex<Real>> buffer, const al::type_identity_t
         /* Iterative form of Danielson-Lanczos lemma */
         for(size_t i{0};i < log2_size;++i)
         {
-            const size_t step2{1u << i};
-            const size_t step{2u << i};
+            const size_t step2{1_uz << i};
+            const size_t step{2_uz << i};
             /* The first iteration of the inner loop would have u=1, which we
              * can simplify to remove a number of complex multiplies.
              */
@@ -172,8 +172,8 @@ complex_fft(const al::span<std::complex<Real>> buffer, const al::type_identity_t
         const Real pi{al::numbers::pi_v<Real> * sign};
         for(size_t i{0};i < log2_size;++i)
         {
-            const size_t step2{1u << i};
-            const size_t step{2u << i};
+            const size_t step2{1_uz << i};
+            const size_t step{2_uz << i};
             for(size_t k{0};k < fftsize;k+=step)
             {
                 std::complex<Real> temp{buffer[k+step2]};

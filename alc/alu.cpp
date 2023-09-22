@@ -733,7 +733,7 @@ void AmbiRotator(AmbiRotateMatrix &matrix, const int order)
             }
         }
         last_band = band_idx;
-        band_idx += static_cast<uint>(l)*size_t{2} + 1;
+        band_idx += static_cast<uint>(l)*2_uz + 1;
     }
 }
 /* End ambisonic rotation helpers. */

@@ -162,7 +162,7 @@ void InitEffectParams(ALeffect *effect, ALenum type)
 
 bool EnsureEffects(ALCdevice *device, size_t needed)
 {
-    size_t count{std::accumulate(device->EffectList.cbegin(), device->EffectList.cend(), size_t{0},
+    size_t count{std::accumulate(device->EffectList.cbegin(), device->EffectList.cend(), 0_uz,
         [](size_t cur, const EffectSubList &sublist) noexcept -> size_t
         { return cur + static_cast<ALuint>(al::popcount(sublist.FreeMask)); })};
 

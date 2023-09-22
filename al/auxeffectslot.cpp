@@ -239,7 +239,7 @@ EffectSlotType EffectSlotTypeFromEnum(ALenum type)
 bool EnsureEffectSlots(ALCcontext *context, size_t needed)
 {
     size_t count{std::accumulate(context->mEffectSlotList.cbegin(),
-        context->mEffectSlotList.cend(), size_t{0},
+        context->mEffectSlotList.cend(), 0_uz,
         [](size_t cur, const EffectSlotSubList &sublist) noexcept -> size_t
         { return cur + static_cast<ALuint>(al::popcount(sublist.FreeMask)); })};
 

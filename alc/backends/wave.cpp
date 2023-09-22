@@ -154,13 +154,13 @@ int WaveBackend::mixerProc()
 
                 if(bytesize == 2)
                 {
-                    const size_t len{mBuffer.size() & ~size_t{1}};
+                    const size_t len{mBuffer.size() & ~1_uz};
                     for(size_t i{0};i < len;i+=2)
                         std::swap(mBuffer[i], mBuffer[i+1]);
                 }
                 else if(bytesize == 4)
                 {
-                    const size_t len{mBuffer.size() & ~size_t{3}};
+                    const size_t len{mBuffer.size() & ~3_uz};
                     for(size_t i{0};i < len;i+=4)
                     {
                         std::swap(mBuffer[i  ], mBuffer[i+3]);

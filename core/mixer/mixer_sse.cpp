@@ -307,7 +307,7 @@ void Mix_<SSETag>(const al::span<const float> InSamples, const al::span<FloatBuf
 {
     const float delta{(Counter > 0) ? 1.0f / static_cast<float>(Counter) : 0.0f};
     const auto min_len = minz(Counter, InSamples.size());
-    const auto aligned_len = minz((min_len+3) & ~size_t{3}, InSamples.size()) - min_len;
+    const auto aligned_len = minz((min_len+3) & ~3_uz, InSamples.size()) - min_len;
 
     for(FloatBufferLine &output : OutBuffer)
         MixLine(InSamples, al::assume_aligned<16>(output.data()+OutPos), *CurrentGains++,
@@ -320,7 +320,7 @@ void Mix_<SSETag>(const al::span<const float> InSamples, float *OutBuffer, float
 {
     const float delta{(Counter > 0) ? 1.0f / static_cast<float>(Counter) : 0.0f};
     const auto min_len = minz(Counter, InSamples.size());
-    const auto aligned_len = minz((min_len+3) & ~size_t{3}, InSamples.size()) - min_len;
+    const auto aligned_len = minz((min_len+3) & ~3_uz, InSamples.size()) - min_len;
 
     MixLine(InSamples, al::assume_aligned<16>(OutBuffer), CurrentGain, TargetGain, delta, min_len,
         aligned_len, Counter);

@@ -330,7 +330,7 @@ inline void LoadSamples<FmtIMA4>(float *RESTRICT dstSamples, const std::byte *sr
         for(;skip;--skip)
         {
             const size_t byteShift{(nibbleOffset&1) * 4};
-            const size_t wordOffset{(nibbleOffset>>1) & ~size_t{3}};
+            const size_t wordOffset{(nibbleOffset>>1) & ~3_uz};
             const size_t byteOffset{wordOffset*srcStep + ((nibbleOffset>>1)&3u)};
             ++nibbleOffset;
 
@@ -344,7 +344,7 @@ inline void LoadSamples<FmtIMA4>(float *RESTRICT dstSamples, const std::byte *sr
         for(size_t i{0};i < todo;++i)
         {
             const size_t byteShift{(nibbleOffset&1) * 4};
-            const size_t wordOffset{(nibbleOffset>>1) & ~size_t{3}};
+            const size_t wordOffset{(nibbleOffset>>1) & ~3_uz};
             const size_t byteOffset{wordOffset*srcStep + ((nibbleOffset>>1)&3u)};
             ++nibbleOffset;
 

@@ -61,7 +61,7 @@ public:
     template<typename TValue>
     al::span<TValue> get_values() const
     {
-        return get_values<TValue>(~size_t{});
+        return get_values<TValue>(~0_uz);
     }
 
     template<typename TException, typename TValue>

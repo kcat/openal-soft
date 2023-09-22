@@ -229,7 +229,7 @@ void GetValue(ALCcontext *context, ALenum pname, T *values)
     case AL_DEBUG_NEXT_LOGGED_MESSAGE_LENGTH_EXT:
     {
         std::lock_guard<std::mutex> _{context->mDebugCbLock};
-        *values = cast_value(context->mDebugLog.empty() ? size_t{0}
+        *values = cast_value(context->mDebugLog.empty() ? 0_uz
             : (context->mDebugLog.front().mMessage.size()+1));
         return;
     }

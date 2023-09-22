@@ -117,7 +117,7 @@ void InitFilterParams(ALfilter *filter, ALenum type)
 
 bool EnsureFilters(ALCdevice *device, size_t needed)
 {
-    size_t count{std::accumulate(device->FilterList.cbegin(), device->FilterList.cend(), size_t{0},
+    size_t count{std::accumulate(device->FilterList.cbegin(), device->FilterList.cend(), 0_uz,
         [](size_t cur, const FilterSubList &sublist) noexcept -> size_t
         { return cur + static_cast<ALuint>(al::popcount(sublist.FreeMask)); })};
 

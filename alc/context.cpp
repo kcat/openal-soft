@@ -127,7 +127,7 @@ ALCcontext::~ALCcontext()
 {
     TRACE("Freeing context %p\n", voidp{this});
 
-    size_t count{std::accumulate(mSourceList.cbegin(), mSourceList.cend(), size_t{0u},
+    size_t count{std::accumulate(mSourceList.cbegin(), mSourceList.cend(), 0_uz,
         [](size_t cur, const SourceSubList &sublist) noexcept -> size_t
         { return cur + static_cast<uint>(al::popcount(~sublist.FreeMask)); })};
     if(count > 0)
@@ -140,7 +140,7 @@ ALCcontext::~ALCcontext()
 #endif // ALSOFT_EAX
 
     mDefaultSlot = nullptr;
-    count = std::accumulate(mEffectSlotList.cbegin(), mEffectSlotList.cend(), size_t{0u},
+    count = std::accumulate(mEffectSlotList.cbegin(), mEffectSlotList.cend(), 0_uz,
         [](size_t cur, const EffectSlotSubList &sublist) noexcept -> size_t
         { return cur + static_cast<uint>(al::popcount(~sublist.FreeMask)); });
     if(count > 0)

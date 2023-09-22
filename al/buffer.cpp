@@ -174,7 +174,7 @@ constexpr ALbitfieldSOFT INVALID_MAP_FLAGS{~unsigned(AL_MAP_READ_BIT_SOFT | AL_M
 
 bool EnsureBuffers(ALCdevice *device, size_t needed)
 {
-    size_t count{std::accumulate(device->BufferList.cbegin(), device->BufferList.cend(), size_t{0},
+    size_t count{std::accumulate(device->BufferList.cbegin(), device->BufferList.cend(), 0_uz,
         [](size_t cur, const BufferSubList &sublist) noexcept -> size_t
         { return cur + static_cast<ALuint>(al::popcount(sublist.FreeMask)); })};
 

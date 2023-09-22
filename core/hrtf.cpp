@@ -1368,7 +1368,7 @@ HrtfStorePtr GetLoadedHrtf(const std::string &name, const uint devrate)
         TRACE("Resampling HRTF %s (%uhz -> %uhz)\n", name.c_str(), hrtf->mSampleRate, devrate);
 
         /* Calculate the last elevation's index and get the total IR count. */
-        const size_t lastEv{std::accumulate(hrtf->mFields.begin(), hrtf->mFields.end(), size_t{0},
+        const size_t lastEv{std::accumulate(hrtf->mFields.begin(), hrtf->mFields.end(), 0_uz,
             [](const size_t curval, const HrtfStore::Field &field) noexcept -> size_t
             { return curval + field.evCount; }
         ) - 1};

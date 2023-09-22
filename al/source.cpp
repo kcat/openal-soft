@@ -719,8 +719,7 @@ inline ALenum GetSourceState(ALsource *source, Voice *voice)
 
 bool EnsureSources(ALCcontext *context, size_t needed)
 {
-    size_t count{std::accumulate(context->mSourceList.cbegin(), context->mSourceList.cend(),
-        size_t{0},
+    size_t count{std::accumulate(context->mSourceList.cbegin(), context->mSourceList.cend(), 0_uz,
         [](size_t cur, const SourceSubList &sublist) noexcept -> size_t
         { return cur + static_cast<ALuint>(al::popcount(sublist.FreeMask)); })};
 
@@ -3697,7 +3696,8 @@ ALsource* ALsource::EaxLookupSource(ALCcontext& al_context, ALuint source_id) no
 
 void ALsource::eax_set_sends_defaults(EaxSends& sends, const EaxFxSlotIds& ids) noexcept
 {
-    for (auto i = size_t{}; i < EAX_MAX_FXSLOTS; ++i) {
+    for(size_t i{0};i < EAX_MAX_FXSLOTS;++i)
+    {
         auto& send = sends[i];
         send.guidReceivingFXSlotID = *(ids[i]);
         send.lSend = EAXSOURCE_DEFAULTSEND;
@@ -3809,7 +3809,8 @@ void ALsource::eax5_set_active_fx_slots_defaults(EAX50ACTIVEFXSLOTS& slots) noex
 
 void ALsource::eax5_set_speaker_levels_defaults(EaxSpeakerLevels& speaker_levels) noexcept
 {
-    for (auto i = size_t{}; i < eax_max_speakers; ++i) {
+    for(size_t i{0};i < eax_max_speakers;++i)
+    {
         auto& speaker_level = speaker_levels[i];
         speaker_level.lSpeakerID = static_cast<long>(EAXSPEAKER_FRONT_LEFT + i);
         speaker_level.lLevel = EAXSOURCE_DEFAULTSPEAKERLEVEL;
@@ -3912,7 +3913,7 @@ void ALsource::eax4_translate(const Eax4Props& src, Eax5Props& dst) noexcept
     //
     dst.sends = src.sends;
 
-    for (auto i = size_t{}; i < EAX_MAX_FXSLOTS; ++i)
+    for(size_t i{0};i < EAX_MAX_FXSLOTS;++i)
         dst.sends[i].guidReceivingFXSlotID = *(eax5_fx_slot_ids[i]);
 
     // Active FX slots.
@@ -3974,19 +3975,21 @@ EaxAlLowPassParam ALsource::eax_create_direct_filter_param() const noexcept
         static_cast<float>(mEax.source.lDirectHF) +
         static_cast<float>(mEax.source.lObstruction);
 
-    for (auto i = std::size_t{}; i < EAX_MAX_FXSLOTS; ++i)
+    for(size_t i{0};i < EAX_MAX_FXSLOTS;++i)
     {
         if(!mEaxActiveFxSlots[i])
             continue;
 
-        if(has_source_occlusion) {
+        if(has_source_occlusion)
+        {
             const auto& fx_slot = mEaxAlContext->eaxGetFxSlot(i);
             const auto& fx_slot_eax = fx_slot.eax_get_eax_fx_slot();
             const auto is_environmental_fx = ((fx_slot_eax.ulFlags & EAXFXSLOTFLAGS_ENVIRONMENT) != 0);
             const auto is_primary = (mEaxPrimaryFxSlotId.value_or(-1) == fx_slot.eax_get_index());
             const auto is_listener_environment = (is_environmental_fx && is_primary);
 
-            if(is_listener_environment) {
+            if(is_listener_environment)
+            {
                 gain_mb += eax_calculate_dst_occlusion_mb(
                     mEax.source.lOcclusion,
                     mEax.source.flOcclusionDirectRatio,
@@ -3998,7 +4001,8 @@ EaxAlLowPassParam ALsource::eax_create_direct_filter_param() const noexcept
 
         const auto& send = mEax.sends[i];
 
-        if(send.lOcclusion != 0) {
+        if(send.lOcclusion != 0)
+        {
             gain_mb += eax_calculate_dst_occlusion_mb(
                 send.lOcclusion,
                 send.flOcclusionDirectRatio,
@@ -4073,8 +4077,9 @@ void ALsource::eax_update_direct_filter()
 
 void ALsource::eax_update_room_filters()
 {
-    for (auto i = size_t{}; i < EAX_MAX_FXSLOTS; ++i) {
-        if (!mEaxActiveFxSlots[i])
+    for(size_t i{0};i < EAX_MAX_FXSLOTS;++i)
+    {
+        if(!mEaxActiveFxSlots[i])
             continue;
 
         auto& fx_slot = mEaxAlContext->eaxGetFxSlot(i);
@@ -4880,7 +4885,7 @@ void ALsource::eax_commit_active_fx_slots()
 
     // Deactivate EFX auxiliary effect slots for inactive slots. Active slots
     // will be updated with the room filters.
-    for(auto i = size_t{}; i < EAX_MAX_FXSLOTS; ++i)
+    for(size_t i{0};i < EAX_MAX_FXSLOTS;++i)
     {
         if(!mEaxActiveFxSlots[i])
             eax_set_al_source_send(nullptr, i, EaxAlLowPassParam{1.0f, 1.0f});

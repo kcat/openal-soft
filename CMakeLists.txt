@@ -1062,18 +1062,7 @@ if(WIN32)
             set(HAVE_WASAPI 1)
             set(BACKENDS  "${BACKENDS} WASAPI,")
             set(ALC_OBJS  ${ALC_OBJS} alc/backends/wasapi.cpp alc/backends/wasapi.h)
-            if(ALSOFT_UWP)
-                set_source_files_properties(alc/backends/wasapi.cpp alc/alconfig.cpp PROPERTIES COMPILE_FLAGS /ZW)
-            endif()
         endif()
-    endif()
-
-    # Setup properly link flags for UWP
-    if(ALSOFT_UWP AND HAVE_WASAPI)
-        # Add compile and link flags required C++/CX
-        set(C_FLAGS "/Zc:twoPhase-" ${C_FLAGS})
-        set(LINKER_FLAGS_DEBUG "/nodefaultlib:vccorlibd /nodefaultlib:msvcrtd vccorlibd.lib msvcrtd.lib ${LINKER_FLAGS_DEBUG}")
-        set(LINKER_FLAGS_RELEASE "/nodefaultlib:vccorlib /nodefaultlib:msvcrt vccorlib.lib msvcrt.lib ${LINKER_FLAGS_RELEASE}")
     endif()
 endif()
 if(ALSOFT_REQUIRE_WINMM AND NOT HAVE_WINMM)
@@ -1419,13 +1408,20 @@ else()
     endif()
     target_link_libraries(${IMPL_TARGET} PRIVATE alcommon ${LINKER_FLAGS} ${EXTRA_LIBS} ${MATH_LIB})
 
-    if(ALSOFT_UWP AND HAVE_WASAPI)
+    if(ALSOFT_UWP)
+        find_program(NUGET_EXE NAMES nuget)
+        if(NOT NUGET_EXE)
+            message("NUGET.EXE not found.")
+            message(FATAL_ERROR "Please install this executable, and run CMake again.")
+        endif()
+
+        exec_program(${NUGET_EXE}
+            ARGS install "Microsoft.Windows.CppWinRT" -Version 2.0.230706.1 -ExcludeVersion -OutputDirectory "\"${CMAKE_BINARY_DIR}/packages\"")
+
         set_target_properties(${IMPL_TARGET} PROPERTIES
-            LINK_FLAGS_DEBUG "${LINKER_FLAGS_DEBUG}"
-            LINK_FLAGS_RELEASE "${LINKER_FLAGS_RELEASE}"
-            LINK_FLAGS_MINSIZEREL "${LINKER_FLAGS_RELEASE}"
-            LINK_FLAGS_RELWITHDEBINFO "${LINKER_FLAGS_RELEASE}"
+            VS_PROJECT_IMPORT ${CMAKE_BINARY_DIR}/packages/Microsoft.Windows.CppWinRT/build/native/Microsoft.Windows.CppWinRT.props
         )
+        target_link_libraries(${IMPL_TARGET} PRIVATE ${CMAKE_BINARY_DIR}/packages/Microsoft.Windows.CppWinRT/build/native/Microsoft.Windows.CppWinRT.targets)
     endif()
 
     if(NOT WIN32 AND NOT APPLE)

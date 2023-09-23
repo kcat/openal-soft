@@ -735,7 +735,7 @@ struct DeviceHelper final : private IMMNotificationClient
                         std::ignore = AddDevice(deviceInfo, deviceInfo.Id().data(), list);
                 }
             }
-            catch (std::exception& /*ex*/) {
+            catch (const winrt::hresult_error& /*ex*/) {
             }
         }
 #endif

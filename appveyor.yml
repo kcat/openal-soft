@@ -1,8 +1,8 @@
 version: 1.23.1.{build}
 
 environment:
-    APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
-    GEN: "Visual Studio 15 2017"
+    APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
+    GEN: "Visual Studio 16 2019"
     matrix:
       - ARCH: Win32
         CFG: Release

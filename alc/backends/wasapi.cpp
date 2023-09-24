@@ -1710,6 +1710,10 @@ HRESULT WasapiPlayback::resetProxy()
         OutputType.Samples.wValidBitsPerSample = OutputType.Format.wBitsPerSample;
         OutputType.SubFormat = KSDATAFORMAT_SUBTYPE_IEEE_FLOAT;
 
+        /* Match the output rate if not requesting anything specific. */
+        if(!mDevice->Flags.test(FrequencyRequest))
+            mDevice->Frequency = OutputType.Format.nSamplesPerSec;
+
         bool isRear51{false};
         if(!mDevice->Flags.test(ChannelsRequest))
         {

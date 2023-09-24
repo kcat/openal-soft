@@ -115,11 +115,6 @@ using ReferenceTime = std::chrono::duration<REFERENCE_TIME,std::ratio<1,10000000
 inline constexpr ReferenceTime operator "" _reftime(unsigned long long int n) noexcept
 { return ReferenceTime{static_cast<REFERENCE_TIME>(n)}; }
 
-#ifndef _MSC_VER
-constexpr AudioObjectType operator|(AudioObjectType lhs, AudioObjectType rhs) noexcept
-{ return static_cast<AudioObjectType>(lhs | al::to_underlying(rhs)); }
-#endif
-
 
 #define MONO SPEAKER_FRONT_CENTER
 #define STEREO (SPEAKER_FRONT_LEFT|SPEAKER_FRONT_RIGHT)
@@ -148,6 +143,12 @@ constexpr DWORD X61Mask{MaskFromTopBits(X6DOT1)};
 constexpr DWORD X71Mask{MaskFromTopBits(X7DOT1)};
 constexpr DWORD X714Mask{MaskFromTopBits(X7DOT1DOT4)};
 
+
+#ifndef _MSC_VER
+constexpr AudioObjectType operator|(AudioObjectType lhs, AudioObjectType rhs) noexcept
+{ return static_cast<AudioObjectType>(lhs | al::to_underlying(rhs)); }
+#endif
+
 constexpr AudioObjectType ChannelMask_Mono{AudioObjectType_FrontCenter};
 constexpr AudioObjectType ChannelMask_Stereo{AudioObjectType_FrontLeft
     | AudioObjectType_FrontRight};
@@ -171,6 +172,7 @@ constexpr AudioObjectType ChannelMask_X714{AudioObjectType_FrontLeft | AudioObje
     | AudioObjectType_TopFrontLeft | AudioObjectType_TopFrontRight | AudioObjectType_TopBackLeft
     | AudioObjectType_TopBackRight};
 
+
 constexpr char DevNameHead[] = "OpenAL Soft on ";
 constexpr size_t DevNameHeadLen{std::size(DevNameHead) - 1};
 
@@ -180,6 +182,14 @@ struct overloaded : Ts... { using Ts::operator()...; };
 
 template<typename... Ts>
 overloaded(Ts...) -> overloaded<Ts...>;
+
+
+template<typename T>
+auto as_unsigned(T value) noexcept
+{
+    using UT = std::make_unsigned_t<T>;
+    return static_cast<UT>(value);
+}
 
 
 /* Scales the given reftime value, rounding the result. */
@@ -1209,11 +1219,14 @@ FORCE_ALIGN int WasapiPlayback::mixerSpatialProc()
 
     std::vector<ComPtr<ISpatialAudioObject>> channels;
     std::vector<float*> buffers;
+    std::vector<float*> resbuffers;
+    std::vector<const void*> tmpbuffers;
 
     /* TODO: Set mPadding appropriately. There doesn't seem to be a way to
-     * update it dynamically based on the stream, so it may need to be set to a
-     * fixed size.
+     * update it dynamically based on the stream, so a fixed size may be the
+     * best we can do.
      */
+    mPadding.store(mDevice->BufferSize-mDevice->UpdateSize, std::memory_order_release);
 
     while(!mKillNow.load(std::memory_order_relaxed))
     {
@@ -1236,12 +1249,11 @@ FORCE_ALIGN int WasapiPlayback::mixerSpatialProc()
         {
             if(channels.empty()) UNLIKELY
             {
-                using UT = std::make_unsigned_t<decltype(audio.mStaticMask)>;
-                auto flags = static_cast<UT>(al::to_underlying(audio.mStaticMask));
-                channels.reserve(static_cast<uint>(al::popcount(flags)));
+                auto flags = as_unsigned(audio.mStaticMask);
+                channels.reserve(as_unsigned(al::popcount(flags)));
                 while(flags)
                 {
-                    auto id = UT{1} << al::countr_zero(flags);
+                    auto id = decltype(flags){1} << al::countr_zero(flags);
                     flags &= ~id;
 
                     channels.emplace_back();
@@ -1249,6 +1261,14 @@ FORCE_ALIGN int WasapiPlayback::mixerSpatialProc()
                         al::out_ptr(channels.back()));
                 }
                 buffers.resize(channels.size());
+                if(mResampler)
+                {
+                    tmpbuffers.resize(buffers.size());
+                    resbuffers.resize(buffers.size());
+                    for(size_t i{0};i < tmpbuffers.size();++i)
+                        resbuffers[i] = reinterpret_cast<float*>(mResampleBuffer.get()) +
+                            mDevice->UpdateSize*i;
+                }
             }
 
             /* We have to call to get each channel's buffer individually every
@@ -1263,7 +1283,27 @@ FORCE_ALIGN int WasapiPlayback::mixerSpatialProc()
                     return reinterpret_cast<float*>(buffer);
                 });
 
-            mDevice->renderSamples(buffers, framesToDo);
+            if(!mResampler)
+                mDevice->renderSamples(buffers, framesToDo);
+            else
+            {
+                std::lock_guard<std::mutex> _{mMutex};
+                for(UINT32 pos{0};pos < framesToDo;)
+                {
+                    if(mBufferFilled == 0)
+                    {
+                        mDevice->renderSamples(resbuffers, mDevice->UpdateSize);
+                        std::copy(resbuffers.cbegin(), resbuffers.cend(), tmpbuffers.begin());
+                        mBufferFilled = mDevice->UpdateSize;
+                    }
+
+                    const uint got{mResampler->convertPlanar(tmpbuffers.data(), &mBufferFilled,
+                        reinterpret_cast<void**>(buffers.data()), framesToDo-pos)};
+                    for(auto &buf : buffers)
+                        buf += got;
+                    pos += got;
+                }
+            }
 
             hr = audio.mRender->EndUpdatingAudioObjects();
         }
@@ -1745,12 +1785,10 @@ HRESULT WasapiPlayback::resetProxy()
         audio.mStaticMask = streamParams.StaticObjectTypeMask;
         mFormat = OutputType;
 
-        /* TODO: Support resampling. */
         mDevice->FmtType = DevFmtFloat;
         mDevice->Flags.reset(DirectEar).set(Virtualization);
         if(streamParams.StaticObjectTypeMask == ChannelMask_Stereo)
             mDevice->FmtChans = DevFmtStereo;
-        mDevice->Frequency = mFormat.Format.nSamplesPerSec;
 
         setDefaultWFXChannelOrder();
 
@@ -1793,6 +1831,21 @@ HRESULT WasapiPlayback::resetProxy()
         mResampler = nullptr;
         mResampleBuffer = nullptr;
         mBufferFilled = 0;
+        if(mDevice->Frequency != mFormat.Format.nSamplesPerSec)
+        {
+            const auto flags = as_unsigned(streamParams.StaticObjectTypeMask);
+            const auto channelCount = as_unsigned(al::popcount(flags));
+            mResampler = SampleConverter::Create(mDevice->FmtType, mDevice->FmtType,
+                channelCount, mDevice->Frequency, mFormat.Format.nSamplesPerSec,
+                Resampler::FastBSinc24);
+            mResampleBuffer = std::make_unique<char[]>(size_t{mDevice->UpdateSize} * channelCount *
+                mFormat.Format.wBitsPerSample / 8);
+
+            TRACE("Created converter for %s/%s format, dst: %luhz (%u), src: %uhz (%u)\n",
+                DevFmtChannelsString(mDevice->FmtChans), DevFmtTypeString(mDevice->FmtType),
+                mFormat.Format.nSamplesPerSec, mOrigUpdateSize, mDevice->Frequency,
+                mDevice->UpdateSize);
+        }
 
         return S_OK;
     }

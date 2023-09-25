@@ -77,7 +77,7 @@ endif()
 
 set(DEFAULT_TARGET_PROPS
     # Require C++17.
-    CXX_STANDARD 20
+    CXX_STANDARD 17
     CXX_STANDARD_REQUIRED TRUE
     # Prefer C11, but support C99 and earlier when possible.
     C_STANDARD 11)

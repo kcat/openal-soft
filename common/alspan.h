@@ -76,9 +76,10 @@ public:
     template<bool is0=(extent == 0), REQUIRES(is0)>
     constexpr span() noexcept { }
     template<typename U>
-    constexpr explicit span(U iter, index_type) : mData{to_address(iter)} { }
+    constexpr explicit span(U iter, index_type) : mData{::al::to_address(iter)} { }
     template<typename U, typename V, REQUIRES(!std::is_convertible<V,size_t>::value)>
-    constexpr explicit span(U first, V) : mData{to_address(first)} { }
+    constexpr explicit span(U first, V) : mData{::al::to_address(first)}
+    {}
 
     constexpr span(type_identity_t<element_type> (&arr)[E]) noexcept
         : span{std::data(arr), std::size(arr)}
@@ -191,11 +192,10 @@ public:
 
     constexpr span() noexcept = default;
     template<typename U>
-    constexpr span(U iter, index_type count)
-        : mData{to_address(iter)}, mDataEnd{to_address(iter)+count}
+    constexpr span(U iter, index_type count) : mData{::al::to_address(iter)}, mDataEnd{::al::to_address(iter) + count}
     { }
     template<typename U, typename V, REQUIRES(!std::is_convertible<V,size_t>::value)>
-    constexpr span(U first, V last) : span{to_address(first), static_cast<size_t>(last-first)}
+    constexpr span(U first, V last) : span{::al::to_address(first), static_cast<size_t>(last - first)}
     { }
 
     template<size_t N>

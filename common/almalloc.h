@@ -117,7 +117,9 @@ constexpr T *to_address(T *p) noexcept
 
 template<typename T>
 constexpr auto to_address(const T &p) noexcept
-{ return to_address(p.operator->()); }
+{
+    return ::al::to_address(p.operator->());
+}
 
 
 template<typename T, typename ...Args>

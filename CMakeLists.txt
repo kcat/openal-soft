@@ -1409,6 +1409,8 @@ else()
     target_link_libraries(${IMPL_TARGET} PRIVATE alcommon ${LINKER_FLAGS} ${EXTRA_LIBS} ${MATH_LIB})
 
     if(ALSOFT_UWP)
+        set(ALSOFT_CPPWINRT_VERSION "2.0.230706.1" CACHE STRING "The soft-oal default cppwinrt version")
+        
         find_program(NUGET_EXE NAMES nuget)
         if(NOT NUGET_EXE)
             message("NUGET.EXE not found.")
@@ -1416,7 +1418,7 @@ else()
         endif()
 
         exec_program(${NUGET_EXE}
-            ARGS install "Microsoft.Windows.CppWinRT" -Version 2.0.230706.1 -ExcludeVersion -OutputDirectory "\"${CMAKE_BINARY_DIR}/packages\"")
+            ARGS install "Microsoft.Windows.CppWinRT" -Version ${ALSOFT_CPPWINRT_VERSION} -ExcludeVersion -OutputDirectory "\"${CMAKE_BINARY_DIR}/packages\"")
 
         set_target_properties(${IMPL_TARGET} PROPERTIES
             VS_PROJECT_IMPORT ${CMAKE_BINARY_DIR}/packages/Microsoft.Windows.CppWinRT/build/native/Microsoft.Windows.CppWinRT.props

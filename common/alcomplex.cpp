@@ -4,6 +4,7 @@
 #include "alcomplex.h"
 
 #include <algorithm>
+#include <array>
 #include <cassert>
 #include <cmath>
 #include <cstddef>
@@ -34,7 +35,7 @@ template<size_t N>
 struct BitReverser {
     static_assert(N <= sizeof(ushort)*8, "Too many bits for the bit-reversal table.");
 
-    ushort2 mData[BitReverseCounter(N)]{};
+    std::array<ushort2,BitReverseCounter(N)> mData{};
 
     constexpr BitReverser()
     {

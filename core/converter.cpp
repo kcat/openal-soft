@@ -309,7 +309,7 @@ uint SampleConverter::convert(const void **src, uint *srcframes, void *dst, uint
     return pos;
 }
 
-uint SampleConverter::convertPlanar(const void **src, uint *srcframes, void **dst, uint dstframes)
+uint SampleConverter::convertPlanar(const void **src, uint *srcframes, void *const*dst, uint dstframes)
 {
     const uint increment{mIncrement};
     uint NumSrcSamples{*srcframes};

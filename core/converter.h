@@ -36,7 +36,7 @@ struct SampleConverter {
     SampleConverter(size_t numchans) : mChan{numchans} { }
 
     uint convert(const void **src, uint *srcframes, void *dst, uint dstframes);
-    uint convertPlanar(const void **src, uint *srcframes, void **dst, uint dstframes);
+    uint convertPlanar(const void **src, uint *srcframes, void *const*dst, uint dstframes);
     uint availableOut(uint srcframes) const;
 
     using SampleOffset = std::chrono::duration<int64_t, std::ratio<1,MixerFracOne>>;

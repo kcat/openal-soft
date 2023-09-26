@@ -1298,7 +1298,7 @@ FORCE_ALIGN int WasapiPlayback::mixerSpatialProc()
                     }
 
                     const uint got{mResampler->convertPlanar(tmpbuffers.data(), &mBufferFilled,
-                        reinterpret_cast<void**>(buffers.data()), framesToDo-pos)};
+                        reinterpret_cast<void*const*>(buffers.data()), framesToDo-pos)};
                     for(auto &buf : buffers)
                         buf += got;
                     pos += got;

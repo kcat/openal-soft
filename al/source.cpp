@@ -284,7 +284,7 @@ double GetSourceSecOffset(ALsource *Source, ALCcontext *context, nanoseconds *cl
  * queue (not the start of the current buffer).
  */
 template<typename T>
-T GetSourceOffset(ALsource *Source, ALenum name, ALCcontext *context)
+NOINLINE T GetSourceOffset(ALsource *Source, ALenum name, ALCcontext *context)
 {
     ALCdevice *device{context->mALDevice.get()};
     const VoiceBufferItem *Current{};
@@ -377,7 +377,7 @@ T GetSourceOffset(ALsource *Source, ALenum name, ALCcontext *context)
  * format (Bytes, Samples or Seconds).
  */
 template<typename T>
-T GetSourceLength(const ALsource *source, ALenum name)
+NOINLINE T GetSourceLength(const ALsource *source, ALenum name)
 {
     uint64_t length{0};
     const ALbuffer *BufferFmt{nullptr};

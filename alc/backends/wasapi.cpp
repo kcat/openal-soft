@@ -1129,6 +1129,9 @@ FORCE_ALIGN int WasapiPlayback::mixerProc()
     const uint frame_size{mFormat.Format.nChannels * mFormat.Format.wBitsPerSample / 8u};
     const uint update_size{mOrigUpdateSize};
     const UINT32 buffer_len{mOrigBufferSize};
+    const void *resbufferptr{};
+
+    mBufferFilled = 0;
     while(!mKillNow.load(std::memory_order_relaxed))
     {
         UINT32 written;
@@ -1163,22 +1166,15 @@ FORCE_ALIGN int WasapiPlayback::mixerProc()
                     {
                         mDevice->renderSamples(mResampleBuffer.get(), mDevice->UpdateSize,
                             mFormat.Format.nChannels);
+                        resbufferptr = mResampleBuffer.get();
                         mBufferFilled = mDevice->UpdateSize;
                     }
 
-                    const void *src{mResampleBuffer.get()};
-                    uint srclen{mBufferFilled};
-                    uint got{mResampler->convert(&src, &srclen, buffer, len-done)};
+                    uint got{mResampler->convert(&resbufferptr, &mBufferFilled, buffer, len-done)};
                     buffer += got*frame_size;
                     done += got;
 
                     mPadding.store(written + done, std::memory_order_relaxed);
-                    if(srclen)
-                    {
-                        const char *bsrc{static_cast<const char*>(src)};
-                        std::copy(bsrc, bsrc + srclen*frame_size, mResampleBuffer.get());
-                    }
-                    mBufferFilled = srclen;
                 }
             }
             else
@@ -1228,6 +1224,7 @@ FORCE_ALIGN int WasapiPlayback::mixerSpatialProc()
      */
     mPadding.store(mOrigBufferSize-mOrigUpdateSize, std::memory_order_release);
 
+    mBufferFilled = 0;
     while(!mKillNow.load(std::memory_order_relaxed))
     {
         if(DWORD res{WaitForSingleObjectEx(mNotifyEvent, 1000, FALSE)}; res != WAIT_OBJECT_0)

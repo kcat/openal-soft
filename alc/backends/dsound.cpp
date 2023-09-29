@@ -307,12 +307,10 @@ void DSoundPlayback::open(std::string_view name)
     if(PlaybackDevices.empty())
     {
         /* Initialize COM to prevent name truncation */
-        HRESULT hrcom{CoInitialize(nullptr)};
+        ComWrapper com{};
         hr = DirectSoundEnumerateW(DSoundEnumDevices, &PlaybackDevices);
         if(FAILED(hr))
             ERR("Error enumerating DirectSound devices (0x%lx)!\n", hr);
-        if(SUCCEEDED(hrcom))
-            CoUninitialize();
     }
 
     const GUID *guid{nullptr};
@@ -583,12 +581,10 @@ void DSoundCapture::open(std::string_view name)
     if(CaptureDevices.empty())
     {
         /* Initialize COM to prevent name truncation */
-        HRESULT hrcom{CoInitialize(nullptr)};
+        ComWrapper com{};
         hr = DirectSoundCaptureEnumerateW(DSoundEnumDevices, &CaptureDevices);
         if(FAILED(hr))
             ERR("Error enumerating DirectSound devices (0x%lx)!\n", hr);
-        if(SUCCEEDED(hrcom))
-            CoUninitialize();
     }
 
     const GUID *guid{nullptr};
@@ -815,8 +811,8 @@ std::string DSoundBackendFactory::probe(BackendType type)
     };
 
     /* Initialize COM to prevent name truncation */
+    ComWrapper com{};
     HRESULT hr;
-    HRESULT hrcom{CoInitialize(nullptr)};
     switch(type)
     {
     case BackendType::Playback:
@@ -835,8 +831,6 @@ std::string DSoundBackendFactory::probe(BackendType type)
         std::for_each(CaptureDevices.cbegin(), CaptureDevices.cend(), add_device);
         break;
     }
-    if(SUCCEEDED(hrcom))
-        CoUninitialize();
 
     return outnames;
 }

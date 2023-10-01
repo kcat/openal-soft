@@ -110,9 +110,9 @@ using std::chrono::nanoseconds;
 using std::chrono::milliseconds;
 using std::chrono::seconds;
 
-using ReferenceTime = std::chrono::duration<REFERENCE_TIME,std::ratio<1,10000000>>;
+using ReferenceTime = std::chrono::duration<REFERENCE_TIME,std::ratio<1,10'000'000>>;
 
-inline constexpr ReferenceTime operator "" _reftime(unsigned long long int n) noexcept
+constexpr ReferenceTime operator "" _reftime(unsigned long long int n) noexcept
 { return ReferenceTime{static_cast<REFERENCE_TIME>(n)}; }
 
 
@@ -185,7 +185,7 @@ overloaded(Ts...) -> overloaded<Ts...>;
 
 
 template<typename T>
-auto as_unsigned(T value) noexcept
+constexpr auto as_unsigned(T value) noexcept
 {
     using UT = std::make_unsigned_t<T>;
     return static_cast<UT>(value);
@@ -248,9 +248,9 @@ struct DevMap {
 };
 DevMap::~DevMap() = default;
 
-bool checkName(const al::span<DevMap> list, const std::string &name)
+bool checkName(const al::span<DevMap> list, const std::string_view name)
 {
-    auto match_name = [&name](const DevMap &entry) -> bool { return entry.name == name; };
+    auto match_name = [name](const DevMap &entry) -> bool { return entry.name == name; };
     return std::find_if(list.cbegin(), list.cend(), match_name) != list.cend();
 }
 
@@ -309,7 +309,7 @@ static NameGUIDPair GetDeviceNameAndGuid(const DeviceHandle &device)
     std::string name, guid;
 
     ComPtr<IPropertyStore> ps;
-    HRESULT hr = device->OpenPropertyStore(STGM_READ, al::out_ptr(ps));
+    HRESULT hr{device->OpenPropertyStore(STGM_READ, al::out_ptr(ps))};
     if(FAILED(hr))
     {
         WARN("OpenPropertyStore failed: 0x%08lx\n", hr);
@@ -319,32 +319,20 @@ static NameGUIDPair GetDeviceNameAndGuid(const DeviceHandle &device)
     PropVariant pvprop;
     hr = ps->GetValue(al::bit_cast<PROPERTYKEY>(DEVPKEY_Device_FriendlyName), pvprop.get());
     if(FAILED(hr))
-    {
         WARN("GetValue Device_FriendlyName failed: 0x%08lx\n", hr);
-        name = UnknownName;
-    }
     else if(pvprop->vt == VT_LPWSTR)
         name = wstr_to_utf8(pvprop->pwszVal);
     else
-    {
         WARN("Unexpected Device_FriendlyName PROPVARIANT type: 0x%04x\n", pvprop->vt);
-        name = UnknownName;
-    }
 
     pvprop.clear();
     hr = ps->GetValue(al::bit_cast<PROPERTYKEY>(PKEY_AudioEndpoint_GUID), pvprop.get());
     if(FAILED(hr))
-    {
         WARN("GetValue AudioEndpoint_GUID failed: 0x%08lx\n", hr);
-        guid = UnknownGuid;
-    }
     else if(pvprop->vt == VT_LPWSTR)
         guid = wstr_to_utf8(pvprop->pwszVal);
     else
-    {
         WARN("Unexpected AudioEndpoint_GUID PROPVARIANT type: 0x%04x\n", pvprop->vt);
-        guid = UnknownGuid;
-    }
 #else
     std::string name{wstr_to_utf8(device.Name())};
     std::string guid;
@@ -361,9 +349,9 @@ static NameGUIDPair GetDeviceNameAndGuid(const DeviceHandle &device)
                 [](char ch) { return static_cast<char>(std::toupper(ch)); });
         }
     }
+#endif
     if(name.empty()) name = UnknownName;
     if(guid.empty()) guid = UnknownGuid;
-#endif
     return std::make_pair(std::move(name), std::move(guid));
 }
 #if !defined(ALSOFT_UWP)
@@ -722,12 +710,13 @@ struct DeviceHelper final : private IMMNotificationClient
         const auto deviceRole = Windows::Media::Devices::AudioDeviceRole::Default;
         auto DefaultAudioId   = flowdir == eRender ? MediaDevice::GetDefaultAudioRenderId(deviceRole)
                                                    : MediaDevice::GetDefaultAudioCaptureId(deviceRole);
-        if (DefaultAudioId.empty())
-            return defaultId;
-
-        auto deviceInfo = DeviceInformation::CreateFromIdAsync(DefaultAudioId, nullptr, DeviceInformationKind::DeviceInterface).get();
-        if(!deviceInfo)
-            return defaultId;
+        if(!DefaultAudioId.empty())
+        {
+            auto deviceInfo = DeviceInformation::CreateFromIdAsync(DefaultAudioId, nullptr,
+                DeviceInformationKind::DeviceInterface).get();
+            if(deviceInfo)
+                defaultId = deviceInfo.Id().data();
+        }
 
         // Get the string identifier of the audio renderer
         auto AudioSelector = flowdir == eRender ? MediaDevice::GetAudioRenderSelector() : MediaDevice::GetAudioCaptureSelector();

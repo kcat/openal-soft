@@ -729,7 +729,7 @@ struct DeviceHelper final : private IMMNotificationClient
                 auto deviceCount = DeviceInfoCollection.Size();
                 for(unsigned int i{0};i < deviceCount;++i)
                 {
-                    deviceInfo = DeviceInfoCollection.GetAt(i);
+                    auto deviceInfo = DeviceInfoCollection.GetAt(i);
                     if(deviceInfo)
                         std::ignore = AddDevice(deviceInfo, deviceInfo.Id().data(), list);
                 }

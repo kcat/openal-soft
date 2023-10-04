@@ -9,6 +9,7 @@
 
 #include <array>
 #include <stddef.h>
+#include <type_traits>
 
 #include "alcomplex.h"
 #include "alspan.h"
@@ -54,13 +55,15 @@ struct PhaseShifterT {
         fftBuffer[half_size] = 1.0;
 
         forward_fft(al::span{fftBuffer.get(), fft_size});
-        for(size_t i{0};i < half_size+1;++i)
+        fftBuffer[0] *= std::numeric_limits<double>::epsilon();
+        for(size_t i{1};i < half_size;++i)
             fftBuffer[i] = complex_d{-fftBuffer[i].imag(), fftBuffer[i].real()};
+        fftBuffer[half_size] *= std::numeric_limits<double>::epsilon();
         for(size_t i{half_size+1};i < fft_size;++i)
             fftBuffer[i] = std::conj(fftBuffer[fft_size - i]);
         inverse_fft(al::span{fftBuffer.get(), fft_size});
 
-        auto fftiter = fftBuffer.get() + half_size + (FilterSize/2 - 1);
+        auto fftiter = fftBuffer.get() + fft_size - 1;
         for(float &coeff : mCoeffs)
         {
             coeff = static_cast<float>(fftiter->real() / double{fft_size});

@@ -631,6 +631,8 @@ set(COMMON_OBJS
     common/dynload.h
     common/intrusive_ptr.h
     common/opthelpers.h
+    common/pffft.cpp
+    common/pffft.h
     common/phase_shifter.h
     common/polyphase_resampler.cpp
     common/polyphase_resampler.h

@@ -124,7 +124,7 @@ inline v4sf ld_ps1(const float *p) { v4sf v=vec_lde(0,p); return vec_splat(vec_p
 /*
  * SSE1 support macros
  */
-#elif defined(__x86_64__) || defined(__SSE__) || defined(_M_X86) || \
+#elif defined(__x86_64__) || defined(__SSE__) || defined(_M_X64) || \
     (defined(_M_IX86_FP) && _M_IX86_FP >= 1)
 
 #include <xmmintrin.h>

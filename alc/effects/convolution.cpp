@@ -34,6 +34,7 @@
 #include "core/fmt_traits.h"
 #include "core/mixer.h"
 #include "intrusive_ptr.h"
+#include "pffft.h"
 #include "polyphase_resampler.h"
 #include "vector.h"
 
@@ -45,6 +46,10 @@ namespace {
  * each segment has an FFT applied with a 256-sample buffer (the latter half
  * left silent) to get its frequency-domain response. The resulting response
  * has its positive/non-mirrored frequencies saved (129 bins) in each segment.
+ * Note that since the 0th and 129th bins are real for a real signal, their
+ * imaginary components are always 0 and can be dropped, allowing their real
+ * components to be combined so only 128 complex values are stored for the 129
+ * bins.
  *
  * Input samples are similarly broken up into 128-sample segments, with an FFT
  * applied to each new incoming segment to get its 129 bins. A history of FFT'd
@@ -52,8 +57,8 @@ namespace {
  *
  * To apply the reverberation, each impulse response segment is convolved with
  * its paired input segment (using complex multiplies, far cheaper than FIRs),
- * accumulating into a 256-bin FFT buffer. The input history is then shifted to
- * align with later impulse response segments for next time.
+ * accumulating into a 129-bin FFT buffer. The input history is then shifted to
+ * align with later impulse response segments for the next input segment.
  *
  * An inverse FFT is then applied to the accumulated FFT buffer to get a 256-
  * sample time-domain response for output, which is split in two halves. The
@@ -183,6 +188,35 @@ void apply_fir(al::span<float> dst, const float *RESTRICT src, const float *REST
 #endif
 }
 
+
+template<typename T>
+struct AlignedDeleter { };
+
+template<typename T>
+struct AlignedDeleter<T[]> {
+    static_assert(std::is_trivially_destructible_v<T>);
+    using type = T;
+
+    void operator()(T *ptr) { al_free(ptr); }
+};
+template<typename T>
+using AlignedUPtr = std::unique_ptr<T,AlignedDeleter<T>>;
+
+template<typename T, size_t A>
+auto MakeAlignedPtr(size_t count) -> AlignedUPtr<T>
+{
+    using Type = typename AlignedDeleter<T>::type;
+    void *ptr{al_calloc(A, sizeof(Type)*count)};
+    return AlignedUPtr<T>{::new(ptr) Type[count]};
+}
+
+
+struct PFFFTSetupDeleter {
+    void operator()(PFFFT_Setup *ptr) { pffft_destroy_setup(ptr); }
+};
+using PFFFTSetupPtr = std::unique_ptr<PFFFT_Setup,PFFFTSetupDeleter>;
+
+
 struct ConvolutionState final : public EffectState {
     FmtChannels mChannels{};
     AmbiLayout mAmbiLayout{};
@@ -194,7 +228,9 @@ struct ConvolutionState final : public EffectState {
     al::vector<std::array<float,ConvolveUpdateSamples>,16> mFilter;
     al::vector<std::array<float,ConvolveUpdateSamples*2>,16> mOutput;
 
-    alignas(16) std::array<complex_f,ConvolveUpdateSize> mFftBuffer{};
+    PFFFTSetupPtr mFft{};
+    alignas(16) std::array<float,ConvolveUpdateSize> mFftBuffer{};
+    alignas(16) std::array<float,ConvolveUpdateSize> mFftWorkBuffer{};
 
     size_t mCurrentSegment{0};
     size_t mNumConvolveSegs{0};
@@ -208,7 +244,7 @@ struct ConvolutionState final : public EffectState {
     };
     using ChannelDataArray = al::FlexArray<ChannelData>;
     std::unique_ptr<ChannelDataArray> mChans;
-    std::unique_ptr<complex_f[]> mComplexData;
+    AlignedUPtr<float[]> mComplexData;
 
 
     ConvolutionState() = default;
@@ -253,13 +289,17 @@ void ConvolutionState::deviceUpdate(const DeviceBase *device, const BufferStorag
     using UhjDecoderType = UhjDecoder<512>;
     static constexpr auto DecoderPadding = UhjDecoderType::sInputPadding;
 
-    constexpr uint MaxConvolveAmbiOrder{1u};
+    static constexpr uint MaxConvolveAmbiOrder{1u};
+
+    if(!mFft)
+        mFft = PFFFTSetupPtr{pffft_new_setup(ConvolveUpdateSize, PFFFT_REAL)};
 
     mFifoPos = 0;
     mInput.fill(0.0f);
     decltype(mFilter){}.swap(mFilter);
     decltype(mOutput){}.swap(mOutput);
-    mFftBuffer.fill(complex_f{});
+    mFftBuffer.fill(0.0f);
+    mFftWorkBuffer.fill(0.0f);
 
     mCurrentSegment = 0;
     mNumConvolveSegs = 0;
@@ -275,7 +315,6 @@ void ConvolutionState::deviceUpdate(const DeviceBase *device, const BufferStorag
     mAmbiScaling = IsUHJ(mChannels) ? AmbiScaling::UHJ : buffer->mAmbiScaling;
     mAmbiOrder = minu(buffer->mAmbiOrder, MaxConvolveAmbiOrder);
 
-    constexpr size_t m{ConvolveUpdateSize/2 + 1};
     const auto bytesPerSample = BytesFromFmt(buffer->mType);
     const auto realChannels = buffer->channelsFromFmt();
     const auto numChannels = (mChannels == FmtUHJ2) ? 3u : ChannelsFromFmt(mChannels, mAmbiOrder);
@@ -309,9 +348,9 @@ void ConvolutionState::deviceUpdate(const DeviceBase *device, const BufferStorag
     mNumConvolveSegs = (resampledCount+(ConvolveUpdateSamples-1)) / ConvolveUpdateSamples;
     mNumConvolveSegs = maxz(mNumConvolveSegs, 2) - 1;
 
-    const size_t complex_length{mNumConvolveSegs * m * (numChannels+1)};
-    mComplexData = std::make_unique<complex_f[]>(complex_length);
-    std::fill_n(mComplexData.get(), complex_length, complex_f{});
+    const size_t complex_length{mNumConvolveSegs * ConvolveUpdateSize * (numChannels+1)};
+    mComplexData = MakeAlignedPtr<float[],16>(complex_length);
+    std::fill_n(mComplexData.get(), complex_length, 0.0f);
 
     /* Load the samples from the buffer. */
     const size_t srclinelength{RoundUp(buffer->mSampleLen+DecoderPadding, 16)};
@@ -332,7 +371,10 @@ void ConvolutionState::deviceUpdate(const DeviceBase *device, const BufferStorag
 
     auto ressamples = std::make_unique<double[]>(buffer->mSampleLen +
         (resampler ? resampledCount : 0));
-    complex_f *filteriter = mComplexData.get() + mNumConvolveSegs*m;
+    auto ffttmp = al::vector<float,16>(ConvolveUpdateSize);
+    auto fftbuffer = std::vector<std::complex<double>>(ConvolveUpdateSize);
+
+    float *filteriter = mComplexData.get() + mNumConvolveSegs*ConvolveUpdateSize;
     for(size_t c{0};c < numChannels;++c)
     {
         /* Resample to match the device. */
@@ -353,18 +395,34 @@ void ConvolutionState::deviceUpdate(const DeviceBase *device, const BufferStorag
         std::transform(ressamples.get(), ressamples.get()+first_size, mFilter[c].rbegin(),
             [](const double d) noexcept -> float { return static_cast<float>(d); });
 
-        auto fftbuffer = std::vector<std::complex<double>>(ConvolveUpdateSize);
         size_t done{first_size};
         for(size_t s{0};s < mNumConvolveSegs;++s)
         {
             const size_t todo{minz(resampledCount-done, ConvolveUpdateSamples)};
 
+            /* Apply a double-precision forward FFT for more precise frequency
+             * measurements.
+             */
             auto iter = std::copy_n(&ressamples[done], todo, fftbuffer.begin());
             done += todo;
             std::fill(iter, fftbuffer.end(), std::complex<double>{});
-
             forward_fft(al::span{fftbuffer});
-            filteriter = std::copy_n(fftbuffer.cbegin(), m, filteriter);
+
+            /* Convert to, and pack in, a float buffer for PFFFT. Note that the
+             * first bin stores the real component of the half-frequency bin in
+             * the imaginary component.
+             */
+            for(size_t i{0};i < ConvolveUpdateSamples;++i)
+            {
+                ffttmp[i*2    ] = static_cast<float>(fftbuffer[i].real());
+                ffttmp[i*2 + 1] = static_cast<float>((i == 0) ?
+                    fftbuffer[ConvolveUpdateSamples+1].real() : fftbuffer[i].imag());
+            }
+            /* Reorder backward to make it suitable for pffft_zconvolve and the
+             * subsequent pffft_transform(..., PFFFT_BACKWARD).
+             */
+            pffft_zreorder(mFft.get(), ffttmp.data(), al::to_address(filteriter), PFFFT_BACKWARD);
+            filteriter += ConvolveUpdateSize;
         }
     }
 }
@@ -554,7 +612,6 @@ void ConvolutionState::process(const size_t samplesToDo,
     if(mNumConvolveSegs < 1) UNLIKELY
         return;
 
-    constexpr size_t m{ConvolveUpdateSize/2 + 1};
     size_t curseg{mCurrentSegment};
     auto &chans = *mChans;
 
@@ -591,54 +648,49 @@ void ConvolutionState::process(const size_t samplesToDo,
          * frequency bins to the FFT history.
          */
         auto fftiter = std::copy_n(mInput.cbegin(), ConvolveUpdateSamples, mFftBuffer.begin());
-        std::fill(fftiter, mFftBuffer.end(), complex_f{});
-        forward_fft(al::span{mFftBuffer});
+        std::fill(fftiter, mFftBuffer.end(), 0.0f);
+        pffft_transform(mFft.get(), mFftBuffer.data(),
+            mComplexData.get() + curseg*ConvolveUpdateSize, mFftWorkBuffer.data(), PFFFT_FORWARD);
 
-        std::copy_n(mFftBuffer.cbegin(), m, &mComplexData[curseg*m]);
-
-        const complex_f *RESTRICT filter{mComplexData.get() + mNumConvolveSegs*m};
+        const float *RESTRICT filter{mComplexData.get() + mNumConvolveSegs*ConvolveUpdateSize};
         for(size_t c{0};c < chans.size();++c)
         {
-            std::fill_n(mFftBuffer.begin(), m, complex_f{});
+            /* The iFFT'd response is scaled up by the number of bins, so apply
+             * the inverse to normalize the output.
+             */
+            static constexpr float fftscale{1.0f / float{ConvolveUpdateSize}};
 
             /* Convolve each input segment with its IR filter counterpart
              * (aligned in time).
              */
-            const complex_f *RESTRICT input{&mComplexData[curseg*m]};
+            mFftBuffer.fill(0.0f);
+            const float *RESTRICT input{&mComplexData[curseg*ConvolveUpdateSize]};
             for(size_t s{curseg};s < mNumConvolveSegs;++s)
             {
-                for(size_t i{0};i < m;++i,++input,++filter)
-                    mFftBuffer[i] += *input * *filter;
+                pffft_zconvolve_accumulate(mFft.get(), input, filter, mFftBuffer.data(), fftscale);
+                input += ConvolveUpdateSize;
+                filter += ConvolveUpdateSize;
             }
             input = mComplexData.get();
             for(size_t s{0};s < curseg;++s)
             {
-                for(size_t i{0};i < m;++i,++input,++filter)
-                    mFftBuffer[i] += *input * *filter;
+                pffft_zconvolve_accumulate(mFft.get(), input, filter, mFftBuffer.data(), fftscale);
+                input += ConvolveUpdateSize;
+                filter += ConvolveUpdateSize;
             }
-
-            /* Reconstruct the mirrored/negative frequencies to do a proper
-             * inverse FFT.
-             */
-            for(size_t i{m};i < ConvolveUpdateSize;++i)
-                mFftBuffer[i] = std::conj(mFftBuffer[ConvolveUpdateSize-i]);
 
             /* Apply iFFT to get the 256 (really 255) samples for output. The
              * 128 output samples are combined with the last output's 127
              * second-half samples (and this output's second half is
              * subsequently saved for next time).
              */
-            inverse_fft(al::span{mFftBuffer});
+            pffft_transform(mFft.get(), mFftBuffer.data(), mFftBuffer.data(),
+                mFftWorkBuffer.data(), PFFFT_BACKWARD);
 
-            /* The iFFT'd response is scaled up by the number of bins, so apply
-             * the inverse to normalize the output.
-             */
             for(size_t i{0};i < ConvolveUpdateSamples;++i)
-                mOutput[c][i] =
-                    (mFftBuffer[i].real()+mOutput[c][ConvolveUpdateSamples+i]) *
-                    (1.0f/float{ConvolveUpdateSize});
+                mOutput[c][i] = mFftBuffer[i] + mOutput[c][ConvolveUpdateSamples+i];
             for(size_t i{0};i < ConvolveUpdateSamples;++i)
-                mOutput[c][ConvolveUpdateSamples+i] = mFftBuffer[ConvolveUpdateSamples+i].real();
+                mOutput[c][ConvolveUpdateSamples+i] = mFftBuffer[ConvolveUpdateSamples+i];
         }
 
         /* Shift the input history. */

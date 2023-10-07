@@ -170,6 +170,63 @@ typedef float32x4_t v4sf;
 #define VSWAPHL(a,b) vcombine_f32(vget_low_f32(b), vget_high_f32(a))
 #define VALIGNED(ptr) ((reinterpret_cast<uintptr_t>(ptr) & 0x3) == 0)
 
+/*
+ * Generic GCC vector macros
+ */
+#elif defined(__GNUC__)
+
+using v4sf [[gnu::vector_size(16), gnu::aligned(16)]] = float;
+#define SIMD_SZ 4
+#define VZERO() v4sf{0,0,0,0}
+#define VMUL(a,b) ((a) * (b))
+#define VADD(a,b) ((a) + (b))
+#define VMADD(a,b,c) ((a)*(b) + (c))
+#define VSUB(a,b) ((a) - (b))
+#define SVMUL(f,v) ((f) * (v))
+
+constexpr v4sf ld_ps1(float a) noexcept { return v4sf{a, a, a, a}; }
+#define LD_PS1 ld_ps1
+
+[[gnu::always_inline]] inline v4sf unpacklo(v4sf a, v4sf b) noexcept
+{ return v4sf{a[0], b[0], a[1], b[1]}; }
+[[gnu::always_inline]] inline v4sf unpackhi(v4sf a, v4sf b) noexcept
+{ return v4sf{a[2], b[2], a[3], b[3]}; }
+
+[[gnu::always_inline]] inline void interleave2(v4sf in1, v4sf in2, v4sf &out1, v4sf &out2) noexcept
+{
+    v4sf tmp__{unpacklo(in1, in2)};
+    out2 = unpackhi(in1, in2);
+    out1 = tmp__;
+}
+#define INTERLEAVE2 interleave2
+
+[[gnu::always_inline]] inline void uninterleave2(v4sf in1, v4sf in2, v4sf &out1, v4sf &out2) noexcept
+{
+    v4sf tmp__{in1[0], in1[2], in2[0], in2[2]};
+    out2 = v4sf{in1[1], in1[3], in2[1], in2[3]};
+    out1 = tmp__;
+}
+#define UNINTERLEAVE2 uninterleave2
+
+[[gnu::always_inline]] inline void vtranspose4(v4sf &x0, v4sf &x1, v4sf &x2, v4sf &x3) noexcept
+{
+    v4sf tmp0 = unpacklo(x0, x1);
+    v4sf tmp2 = unpacklo(x2, x3);
+    v4sf tmp1 = unpackhi(x0, x1);
+    v4sf tmp3 = unpackhi(x2, x3);
+    x0 = v4sf{tmp0[0], tmp0[1], tmp2[0], tmp2[1]};
+    x1 = v4sf{tmp0[2], tmp0[3], tmp2[2], tmp2[3]};
+    x2 = v4sf{tmp1[0], tmp1[1], tmp3[0], tmp3[1]};
+    x3 = v4sf{tmp1[2], tmp1[3], tmp3[2], tmp3[3]};
+}
+#define VTRANSPOSE4 vtranspose4
+
+[[gnu::always_inline]] inline v4sf vswaphl(v4sf a, v4sf b) noexcept
+{ return v4sf{b[0], b[1], a[2], a[3]}; }
+#define VSWAPHL vswaphl
+
+#define VALIGNED(ptr) ((reinterpret_cast<uintptr_t>(ptr) & 0xF) == 0)
+
 #else
 
 #warning "building with simd disabled !\n";
@@ -192,8 +249,8 @@ typedef float v4sf;
 #endif
 
 // shortcuts for complex multiplcations
-#define VCPLXMUL(ar,ai,br,bi) do { v4sf tmp; tmp=VMUL(ar,bi); ar=VMUL(ar,br); ar=VSUB(ar,VMUL(ai,bi)); ai=VMUL(ai,br); ai=VADD(ai,tmp); } while(0)
-#define VCPLXMULCONJ(ar,ai,br,bi) do { v4sf tmp; tmp=VMUL(ar,bi); ar=VMUL(ar,br); ar=VADD(ar,VMUL(ai,bi)); ai=VMUL(ai,br); ai=VSUB(ai,tmp); } while(0)
+#define VCPLXMUL(ar,ai,br,bi) do { v4sf tmp=VMUL(ar,bi); ar=VMUL(ar,br); ar=VSUB(ar,VMUL(ai,bi)); ai=VMADD(ai,br,tmp); } while(0)
+#define VCPLXMULCONJ(ar,ai,br,bi) do { v4sf tmp=VMUL(ar,bi); ar=VMUL(ar,br); ar=VMADD(ai,bi,ar); ai=VSUB(VMUL(ai,br),tmp); } while(0)
 #ifndef SVMUL
 // multiply a scalar with a vector
 #define SVMUL(f,v) VMUL(LD_PS1(f),v)
@@ -1272,28 +1329,38 @@ struct PFFFT_Setup {
     int     Ncvec; // nb of complex simd vectors (N/4 if PFFFT_COMPLEX, N/8 if PFFFT_REAL)
     int ifac[15];
     pffft_transform_t transform;
-    v4sf *data; // allocated room for twiddle coefs
     float *e;    // points into 'data' , N/4*3 elements
     float *twiddle; // points into 'data', N/4 elements
+
+    alignas(MALLOC_V4SF_ALIGNMENT) v4sf data[1];
 };
 
 PFFFT_Setup *pffft_new_setup(int N, pffft_transform_t transform)
 {
-    PFFFT_Setup *s = new PFFFT_Setup{};
+    assert(transform == PFFFT_REAL || transform == PFFFT_COMPLEX);
+    assert(N > 0);
     /* unfortunately, the fft size must be a multiple of 16 for complex FFTs
      * and 32 for real FFTs -- a lot of stuff would need to be rewritten to
      * handle other cases (or maybe just switch to a scalar fft, I don't know..)
      */
-    if(transform == PFFFT_REAL) { assert((N%(2*SIMD_SZ*SIMD_SZ))==0 && N>0); }
-    if(transform == PFFFT_COMPLEX) { assert((N%(SIMD_SZ*SIMD_SZ))==0 && N>0); }
-    //assert((N % 32) == 0);
+    if(transform == PFFFT_REAL)
+        assert((N%(2*SIMD_SZ*SIMD_SZ)) == 0);
+    else
+        assert((N%(SIMD_SZ*SIMD_SZ)) == 0);
+
+    const unsigned int Ncvec = static_cast<unsigned>(transform == PFFFT_REAL ? N/2 : N)/SIMD_SZ;
+    size_t storelen{offsetof(PFFFT_Setup, data[0]) + (2u*Ncvec * sizeof(v4sf))};
+
+    void *store{al_calloc(MALLOC_V4SF_ALIGNMENT, storelen)};
+    if(!store) return nullptr;
+
+    PFFFT_Setup *s = ::new(store) PFFFT_Setup{};
     s->N = N;
     s->transform = transform;
     /* nb of complex simd vectors */
-    s->Ncvec = (transform == PFFFT_REAL ? N/2 : N)/SIMD_SZ;
-    s->data = static_cast<v4sf*>(pffft_aligned_malloc(2u*static_cast<unsigned>(s->Ncvec) * sizeof(v4sf)));
-    s->e = reinterpret_cast<float*>(s->data);
-    s->twiddle = reinterpret_cast<float*>(s->data + (2u*static_cast<unsigned>(s->Ncvec)*(SIMD_SZ-1))/SIMD_SZ);
+    s->Ncvec = static_cast<int>(Ncvec);
+    s->e = reinterpret_cast<float*>(&s->data[0]);
+    s->twiddle = reinterpret_cast<float*>(&s->data[2u*Ncvec*(SIMD_SZ-1)/SIMD_SZ]);
 
     if(transform == PFFFT_REAL)
     {
@@ -1343,8 +1410,8 @@ PFFFT_Setup *pffft_new_setup(int N, pffft_transform_t transform)
 
 void pffft_destroy_setup(PFFFT_Setup *s)
 {
-    pffft_aligned_free(s->data);
-    delete s;
+    std::destroy_at(s);
+    al_free(s);
 }
 
 #if !defined(PFFFT_SIMD_DISABLE)

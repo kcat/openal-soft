@@ -79,8 +79,7 @@
 #endif
 
 
-/*
- * vector support macros: the rest of the code is independant of
+/* Vector support macros: the rest of the code is independent of
  * SSE/Altivec/NEON -- adding support for other platforms with 4-element
  * vectors should be limited to these macros
  */
@@ -248,7 +247,7 @@ typedef float v4sf;
 #define VALIGNED(ptr) ((reinterpret_cast<uintptr_t>(ptr) & 0x3) == 0)
 #endif
 
-// shortcuts for complex multiplcations
+// shortcuts for complex multiplications
 #define VCPLXMUL(ar,ai,br,bi) do { v4sf tmp=VMUL(ar,bi); ar=VMUL(ar,br); ar=VSUB(ar,VMUL(ai,bi)); ai=VMADD(ai,br,tmp); } while(0)
 #define VCPLXMULCONJ(ar,ai,br,bi) do { v4sf tmp=VMUL(ar,bi); ar=VMUL(ar,br); ar=VMADD(ai,bi,ar); ai=VSUB(VMUL(ai,br),tmp); } while(0)
 #ifndef SVMUL
@@ -1866,6 +1865,8 @@ void pffft_transform_internal(PFFFT_Setup *setup, const float *finput, float *fo
 void pffft_zconvolve_accumulate(PFFFT_Setup *s, const float *a, const float *b, float *ab,
     float scaling)
 {
+    assert(VALIGNED(a) && VALIGNED(b) && VALIGNED(ab));
+
     const int Ncvec = s->Ncvec;
     const v4sf *RESTRICT va = reinterpret_cast<const v4sf*>(a);
     const v4sf *RESTRICT vb = reinterpret_cast<const v4sf*>(b);
@@ -1892,7 +1893,6 @@ void pffft_zconvolve_accumulate(PFFFT_Setup *s, const float *a, const float *b, 
 #ifndef ZCONVOLVE_USING_INLINE_ASM
     const v4sf vscal = LD_PS1(scaling);
 #endif
-    assert(VALIGNED(a) && VALIGNED(b) && VALIGNED(ab));
     float ar1 = reinterpret_cast<const v4sf_union*>(va)[0].f[0];
     float ai1 = reinterpret_cast<const v4sf_union*>(va)[1].f[0];
     float br1 = reinterpret_cast<const v4sf_union*>(vb)[0].f[0];

@@ -45,34 +45,36 @@
    SOFTWARE.
 */
 
-/*
-   PFFFT : a Pretty Fast FFT.
-
-   This is basically an adaptation of the single precision fftpack
-   (v4) as found on netlib taking advantage of SIMD instruction found
-   on cpus such as intel x86 (SSE1), powerpc (Altivec), and arm (NEON).
-
-   For architectures where no SIMD instruction is available, the code
-   falls back to a scalar version.
-
-   Restrictions:
-
-   - 1D transforms only, with 32-bit single precision.
-
-   - supports only transforms for inputs of length N of the form
-   N=(2^a)*(3^b)*(5^c), a >= 5, b >=0, c >= 0 (32, 48, 64, 96, 128,
-   144, 160, etc are all acceptable lengths). Performance is best for
-   128<=N<=8192.
-
-   - all (float*) pointers in the functions below are expected to
-   have an "simd-compatible" alignment, that is 16 bytes on x86 and
-   powerpc CPUs.
-
-   You can allocate such buffers with the functions
-   pffft_aligned_malloc / pffft_aligned_free (or with stuff like
-   posix_memalign..)
-
-*/
+/* PFFFT : a Pretty Fast FFT.
+ *
+ * This is basically an adaptation of the single precision fftpack (v4) as
+ * found on netlib taking advantage of SIMD instructions found on CPUs such as
+ * Intel x86 (SSE1), PowerPC (Altivec), and Arm (NEON).
+ *
+ * For architectures where SIMD instructions aren't available, the code falls
+ * back to a scalar version.
+ *
+ * Restrictions:
+ *
+ * - 1D transforms only, with 32-bit single precision.
+ *
+ * - supports only transforms for inputs of length N of the form
+ * N=(2^a)*(3^b)*(5^c), given a >= 5, b >=0, c >= 0 (32, 48, 64, 96, 128, 144,
+ * 160, etc are all acceptable lengths). Performance is best for 128<=N<=8192.
+ *
+ * - all (float*) pointers for the functions below are expected to have a
+ * "SIMD-compatible" alignment, that is 16 bytes.
+ *
+ * You can allocate such buffers with the pffft_aligned_malloc function, and
+ * deallocate them with pffft_aligned_free (or with stuff like posix_memalign,
+ * aligned_alloc, etc).
+ *
+ * Note that for the z-domain data of real transforms, when in the canonical
+ * order (as interleaved complex numbers) both 0-frequency and half-frequency
+ * components, which are real, are assembled in the first entry as
+ * F(0)+i*F(n/2+1). The original fftpack placed F(n/2+1) at the end of the
+ * arrays instead.
+ */
 
 #ifndef PFFFT_H
 #define PFFFT_H
@@ -100,77 +102,77 @@ typedef enum { PFFFT_REAL, PFFFT_COMPLEX } pffft_transform_t;
 
 #endif
 
-/*
-   prepare for performing transforms of size N -- the returned
-   PFFFT_Setup structure is read-only so it can safely be shared by
-   multiple concurrent threads.
-*/
+/**
+ * Prepare for performing transforms of size N -- the returned PFFFT_Setup
+ * structure is read-only so it can safely be shared by multiple concurrent
+ * threads.
+ */
 PFFFT_Setup *pffft_new_setup(int N, pffft_transform_t transform);
-void pffft_destroy_setup(PFFFT_Setup *);
-/*
-   Perform a Fourier transform , The z-domain data is stored in the
-   most efficient order for transforming it back, or using it for
-   convolution. If you need to have its content sorted in the
-   "usual" way, that is as an array of interleaved complex numbers,
-   either use pffft_transform_ordered , or call pffft_zreorder after
-   the forward fft, and before the backward fft.
+void pffft_destroy_setup(PFFFT_Setup *setup);
 
-   Transforms are not scaled: PFFFT_BACKWARD(PFFFT_FORWARD(x)) = N*x.
-   Typically you will want to scale the backward transform by 1/N.
-
-   The 'work' pointer must point to an area of N (2*N for complex
-   fft) floats, properly aligned. It cannot be NULL.
-
-   input and output may alias.
-*/
+/**
+ * Perform a Fourier transform. The z-domain data is stored in the most
+ * efficient order for transforming back or using for convolution, and as
+ * such, there's no guarantee to the order of the values. If you need to have
+ * its content sorted in the usual way, that is as an array of interleaved
+ * complex numbers, either use pffft_transform_ordered, or call pffft_zreorder
+ * after the forward fft and before the backward fft.
+ *
+ * Transforms are not scaled: PFFFT_BACKWARD(PFFFT_FORWARD(x)) = N*x. Typically
+ * you will want to scale the backward transform by 1/N.
+ *
+ * The 'work' pointer must point to an area of N (2*N for complex fft) floats,
+ * properly aligned. It cannot be NULL.
+ *
+ * The input and output parameters may alias.
+ */
 void pffft_transform(PFFFT_Setup *setup, const float *input, float *output, float *work, pffft_direction_t direction);
 
-/*
-   Similar to pffft_transform, but makes sure that the output is
-   ordered as expected (interleaved complex numbers).  This is
-   similar to calling pffft_transform and then pffft_zreorder.
-
-   input and output may alias.
-*/
+/**
+ * Similar to pffft_transform, but handles the complex values in the usual form
+ * (interleaved complex numbers). This is similar to calling
+ * pffft_transform(..., PFFFT_FORWARD) followed by
+ * pffft_zreorder(..., PFFFT_FORWARD), or
+ * pffft_zreorder(..., PFFFT_BACKWARD) followed by
+ * pffft_transform(..., PFFFT_BACKWARD), for the given direction.
+ *
+ * The input and output parameters may alias.
+ */
 void pffft_transform_ordered(PFFFT_Setup *setup, const float *input, float *output, float *work, pffft_direction_t direction);
 
-/*
-   call pffft_zreorder(.., PFFFT_FORWARD) after pffft_transform(...,
-   PFFFT_FORWARD) if you want to have the frequency components in
-   the correct "canonical" order, as interleaved complex numbers.
-
-   (for real transforms, both 0-frequency and half frequency
-   components, which are real, are assembled in the first entry as
-   F(0)+i*F(n/2+1). Note that the original fftpack did place
-   F(n/2+1) at the end of the arrays).
-
-   input and output should not alias.
-*/
+/**
+ * Reorder the z-domain data. For PFFFT_FORWARD, it reorders from the internal
+ * representation to the "canonical" order (as interleaved complex numbers).
+ * For PFFFT_BACKWARD, it reorders from the canonical order to the internal
+ * order suitable for pffft_transform(..., PFFFT_BACKWARD) or
+ * pffft_zconvolve_accumulate.
+ *
+ * The input and output parameters should not alias.
+ */
 void pffft_zreorder(PFFFT_Setup *setup, const float *input, float *output, pffft_direction_t direction);
 
-/*
-   Perform a multiplication of the frequency components of dft_a and
-   dft_b and accumulate them into dft_ab. The arrays should have
-   been obtained with pffft_transform(.., PFFFT_FORWARD) and should
-   *not* have been reordered with pffft_zreorder (otherwise just
-   perform the operation yourself as the dft coefs are stored as
-   interleaved complex numbers).
-
-   the operation performed is: dft_ab += (dft_a * fdt_b)*scaling
-
-   The dft_a, dft_b and dft_ab pointers may alias.
-*/
+/**
+ * Perform a multiplication of the z-domain data in dft_a and dft_b and
+ * accumulate them into dft_ab. The arrays should have been obtained with
+ * pffft_transform(..., PFFFT_FORWARD) or pffft_zreorder(..., PFFFT_BACKWARD)
+ * and should *not* be in the usual order (otherwise just perform the operation
+ * yourself as the dft coeffs are stored as interleaved complex numbers).
+ *
+ * The operation performed is: dft_ab += (dft_a * dft_b)*scaling
+ *
+ * The dft_a, dft_b, and dft_ab parameters may alias.
+ */
 void pffft_zconvolve_accumulate(PFFFT_Setup *setup, const float *dft_a, const float *dft_b, float *dft_ab, float scaling);
 
-/*
-   the float buffers must have the correct alignment (16-byte boundary
-   on intel and powerpc). This function may be used to obtain such
-   correctly aligned buffers.
-*/
+/**
+ * The float buffers must have the correct alignment (16-byte boundary on intel
+ * and powerpc). This function may be used to obtain such correctly aligned
+ * buffers.
+ */
 void *pffft_aligned_malloc(size_t nb_bytes);
 void pffft_aligned_free(void *);
 
-/* return 4 or 1 wether support SSE/Altivec instructions was enable when building pffft.c */
+/* Return 4 or 1 depending if vectorization was enable when building pffft.cpp. */
 int pffft_simd_size();
 
 #ifdef __cplusplus

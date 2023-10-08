@@ -103,8 +103,16 @@ typedef vector float v4sf;
 #define VADD(a,b) vec_add(a,b)
 #define VMADD(a,b,c) vec_madd(a,b,c)
 #define VSUB(a,b) vec_sub(a,b)
-inline v4sf ld_ps1(const float *p) { v4sf v=vec_lde(0,p); return vec_splat(vec_perm(v, v, vec_lvsl(0, p)), 0); }
-#define LD_PS1(p) ld_ps1(&p)
+#define LD_PS1(p) vec_splats(p)
+inline v4sf vset4(float a, float b, float c, float d)
+{
+    /* There a more efficient way to do this? */
+    alignas(16) std::array<float,4> vals{{a, b, c, d}};
+    return vec_ld(0, vals.data());
+}
+#define VSET4 vset4
+#define VEXTRACT0(v) vec_extract((v), 0)
+/* vec_insert(v, value, idx), v[idx] = value */
 #define INTERLEAVE2(in1, in2, out1, out2) do { v4sf tmp__ = vec_mergeh(in1, in2); out2 = vec_mergel(in1, in2); out1 = tmp__; } while(0)
 #define UNINTERLEAVE2(in1, in2, out1, out2) do {                           \
     vector unsigned char vperm1 =  (vector unsigned char)(0,1,2,3,8,9,10,11,16,17,18,19,24,25,26,27); \
@@ -139,6 +147,8 @@ typedef __m128 v4sf;
 #define VMADD(a,b,c) _mm_add_ps(_mm_mul_ps(a,b), c)
 #define VSUB(a,b) _mm_sub_ps(a,b)
 #define LD_PS1(p) _mm_set1_ps(p)
+#define VSET4 _mm_setr_ps
+#define VEXTRACT0 _mm_cvtss_f32
 #define INTERLEAVE2(in1, in2, out1, out2) do { v4sf tmp__ = _mm_unpacklo_ps(in1, in2); out2 = _mm_unpackhi_ps(in1, in2); out1 = tmp__; } while(0)
 #define UNINTERLEAVE2(in1, in2, out1, out2) do { v4sf tmp__ = _mm_shuffle_ps(in1, in2, _MM_SHUFFLE(2,0,2,0)); out2 = _mm_shuffle_ps(in1, in2, _MM_SHUFFLE(3,1,3,1)); out1 = tmp__; } while(0)
 #define VTRANSPOSE4(x0,x1,x2,x3) _MM_TRANSPOSE4_PS(x0,x1,x2,x3)
@@ -159,6 +169,16 @@ typedef float32x4_t v4sf;
 #define VMADD(a,b,c) vmlaq_f32(c,a,b)
 #define VSUB(a,b) vsubq_f32(a,b)
 #define LD_PS1(p) vld1q_dup_f32(&(p))
+inline v4sf vset4(float a, float b, float c, float d)
+{
+    float32x4_t ret{vmovq_n_f32(a)};
+    ret = vsetq_lane_f32(b, ret, 1);
+    ret = vsetq_lane_f32(c, ret, 2);
+    ret = vsetq_lane_f32(d, ret, 3);
+    return ret;
+}
+#define VSET4 vset4
+#define VEXTRACT0(v) vgetq_lane_f32((v), 0)
 #define INTERLEAVE2(in1, in2, out1, out2) do { float32x4x2_t tmp__ = vzipq_f32(in1,in2); out1=tmp__.val[0]; out2=tmp__.val[1]; } while(0)
 #define UNINTERLEAVE2(in1, in2, out1, out2) do { float32x4x2_t tmp__ = vuzpq_f32(in1,in2); out1=tmp__.val[0]; out2=tmp__.val[1]; } while(0)
 #define VTRANSPOSE4(x0,x1,x2,x3) do {                                   \
@@ -189,6 +209,8 @@ using v4sf [[gnu::vector_size(16), gnu::aligned(16)]] = float;
 
 constexpr v4sf ld_ps1(float a) noexcept { return v4sf{a, a, a, a}; }
 #define LD_PS1 ld_ps1
+#define VSET4(a, b, c, d) v4sf{(a), (b), (c), (d)}
+#define VEXTRACT0(v) ((v)[0])
 
 [[gnu::always_inline]] inline v4sf unpacklo(v4sf a, v4sf b) noexcept
 { return v4sf{a[0], b[0], a[1], b[1]}; }
@@ -1734,9 +1756,8 @@ static NEVER_INLINE(void) pffft_real_preprocess(int Ncvec, const v4sf *in, v4sf 
     std::array<float,SIMD_SZ> Xr, Xi;
     for(size_t k{0};k < 4;++k)
     {
-        /* TODO: Use _mm_cvtss_f32 or equivalent. */
-        Xr[k] = al::bit_cast<std::array<float,SIMD_SZ>>(in[4*k])[0];
-        Xi[k] = al::bit_cast<std::array<float,SIMD_SZ>>(in[4*k + 1])[0];
+        Xr[k] = VEXTRACT0(in[4*k]);
+        Xi[k] = VEXTRACT0(in[4*k + 1]);
     }
 
     pffft_real_preprocess_4x4(in, e, out+1, 1); // will write only 6 values
@@ -1755,16 +1776,16 @@ static NEVER_INLINE(void) pffft_real_preprocess(int Ncvec, const v4sf *in, v4sf 
     for(int k{1};k < dk;++k)
         pffft_real_preprocess_4x4(in+8*k, e + k*6, out-1+k*8, 0);
 
-    /* TODO: Use _mm_set_ps or equivalent. */
-    auto *uout = reinterpret_cast<v4sf_union*>(out);
-    const float cr0{(Xr[0]+Xi[0]) + 2*Xr[2]}; uout[0].f[0] = cr0;
-    const float cr1{(Xr[0]-Xi[0]) - 2*Xi[2]}; uout[0].f[1] = cr1;
-    const float cr2{(Xr[0]+Xi[0]) - 2*Xr[2]}; uout[0].f[2] = cr2;
-    const float cr3{(Xr[0]-Xi[0]) + 2*Xi[2]}; uout[0].f[3] = cr3;
-    const float ci0{ 2*(Xr[1]+Xr[3])};                   uout[2*Ncvec-1].f[0] = ci0;
-    const float ci1{ s*(Xr[1]-Xr[3]) - s*(Xi[1]+Xi[3])}; uout[2*Ncvec-1].f[1] = ci1;
-    const float ci2{ 2*(Xi[3]-Xi[1])};                   uout[2*Ncvec-1].f[2] = ci2;
-    const float ci3{-s*(Xr[1]-Xr[3]) - s*(Xi[1]+Xi[3])}; uout[2*Ncvec-1].f[3] = ci3;
+    const float cr0{(Xr[0]+Xi[0]) + 2*Xr[2]};
+    const float cr1{(Xr[0]-Xi[0]) - 2*Xi[2]};
+    const float cr2{(Xr[0]+Xi[0]) - 2*Xr[2]};
+    const float cr3{(Xr[0]-Xi[0]) + 2*Xi[2]};
+    out[0] = VSET4(cr0, cr1, cr2, cr3);
+    const float ci0{ 2*(Xr[1]+Xr[3])};
+    const float ci1{ s*(Xr[1]-Xr[3]) - s*(Xi[1]+Xi[3])};
+    const float ci2{ 2*(Xi[3]-Xi[1])};
+    const float ci3{-s*(Xr[1]-Xr[3]) - s*(Xi[1]+Xi[3])};
+    out[2*Ncvec-1] = VSET4(ci0, ci1, ci2, ci3);
 }
 
 
@@ -1879,13 +1900,12 @@ void pffft_zconvolve_accumulate(PFFFT_Setup *s, const float *a, const float *b, 
 #ifndef ZCONVOLVE_USING_INLINE_ASM
     const v4sf vscal{LD_PS1(scaling)};
 #endif
-    /* TODO: Use _mm_cvtss_f32 or equivalent. */
-    float ar1{reinterpret_cast<const v4sf_union*>(va)[0].f[0]};
-    float ai1{reinterpret_cast<const v4sf_union*>(va)[1].f[0]};
-    float br1{reinterpret_cast<const v4sf_union*>(vb)[0].f[0]};
-    float bi1{reinterpret_cast<const v4sf_union*>(vb)[1].f[0]};
-    float abr1{reinterpret_cast<v4sf_union*>(vab)[0].f[0]};
-    float abi1{reinterpret_cast<v4sf_union*>(vab)[1].f[0]};
+    float ar1{VEXTRACT0(va[0])};
+    float ai1{VEXTRACT0(va[1])};
+    float br1{VEXTRACT0(vb[0])};
+    float bi1{VEXTRACT0(vb[1])};
+    float abr1{VEXTRACT0(vab[0])};
+    float abi1{VEXTRACT0(vab[1])};
 
 #ifdef ZCONVOLVE_USING_INLINE_ASM // inline asm version, unfortunately miscompiled by clang 3.2, at least on ubuntu.. so this will be restricted to gcc
     const float *a_{a}, *b_{b}; float *ab_{ab};

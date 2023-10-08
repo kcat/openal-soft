@@ -25,6 +25,7 @@ namespace {
 #if defined(__GNUC__) && (defined(__i386__) || defined(__x86_64__))
 [[gnu::target("sse")]]
 #endif
+[[maybe_unused]]
 void disable_denormals(unsigned int *state [[maybe_unused]])
 {
 #if defined(HAVE_SSE_INTRINSICS)
@@ -52,6 +53,7 @@ void disable_denormals(unsigned int *state [[maybe_unused]])
 #if defined(__GNUC__) && (defined(__i386__) || defined(__x86_64__))
 [[gnu::target("sse")]]
 #endif
+[[maybe_unused]]
 void reset_fpu(unsigned int state [[maybe_unused]])
 {
 #if defined(HAVE_SSE_INTRINSICS) || defined(HAVE_SSE)

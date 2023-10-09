@@ -218,7 +218,7 @@ using v4sf [[gnu::vector_size(16), gnu::aligned(16)]] = float;
 constexpr v4sf ld_ps1(float a) noexcept { return v4sf{a, a, a, a}; }
 #define LD_PS1 ld_ps1
 #define VSET4(a, b, c, d) v4sf{(a), (b), (c), (d)}
-[[gnu::always_inline]] inline v4sf vinsert0(v4sf v, float a) noexcept
+constexpr v4sf vinsert0(v4sf v, float a) noexcept
 { return v4sf{a, v[1], v[2], v[3]}; }
 #define VINSERT0 vinsert0
 #define VEXTRACT0(v) ((v)[0])
@@ -305,7 +305,6 @@ void validate_pffft_simd()
     std::memcpy(&a2_v, f+8, 4*sizeof(float));
     std::memcpy(&a3_v, f+12, 4*sizeof(float));
 
-    t_v = a0_v; u_v = a1_v;
     t_v = VZERO(); t_f = al::bit_cast<float4>(t_v);
     printf("VZERO=[%2g %2g %2g %2g]\n", t_f[0], t_f[1], t_f[2], t_f[3]); assertv4(t, 0, 0, 0, 0);
     t_v = VADD(a1_v, a2_v); t_f = al::bit_cast<float4>(t_v);
@@ -1522,7 +1521,7 @@ void pffft_zreorder(PFFFT_Setup *setup, const float *in, float *out, pffft_direc
         }
         else
         {
-            for(int k=0; k < dk; ++k)
+            for(int k{0};k < dk;++k)
             {
                 UNINTERLEAVE2(vin[2*(0*dk + k) + 0], vin[2*(0*dk + k) + 1], vout[k*8 + 0], vout[k*8 + 1]);
                 UNINTERLEAVE2(vin[2*(2*dk + k) + 0], vin[2*(2*dk + k) + 1], vout[k*8 + 4], vout[k*8 + 5]);
@@ -1535,17 +1534,17 @@ void pffft_zreorder(PFFFT_Setup *setup, const float *in, float *out, pffft_direc
     {
         if(direction == PFFFT_FORWARD)
         {
-            for(int k=0; k < Ncvec; ++k)
+            for(int k{0};k < Ncvec;++k)
             {
-                int kk = (k/4) + (k%4)*(Ncvec/4);
+                int kk{(k/4) + (k%4)*(Ncvec/4)};
                 INTERLEAVE2(vin[k*2], vin[k*2+1], vout[kk*2], vout[kk*2+1]);
             }
         }
         else
         {
-            for(int k=0; k < Ncvec; ++k)
+            for(int k{0};k < Ncvec;++k)
             {
-                int kk = (k/4) + (k%4)*(Ncvec/4);
+                int kk{(k/4) + (k%4)*(Ncvec/4)};
                 UNINTERLEAVE2(vin[kk*2], vin[kk*2+1], vout[k*2], vout[k*2+1]);
             }
         }
@@ -1557,7 +1556,7 @@ void pffft_cplx_finalize(const int Ncvec, const v4sf *in, v4sf *out, const v4sf 
     assert(in != out);
 
     const int dk{Ncvec/SIMD_SZ}; // number of 4x4 matrix blocks
-    for(int k=0; k < dk; ++k)
+    for(int k{0};k < dk;++k)
     {
         v4sf r0{in[8*k+0]}, i0{in[8*k+1]};
         v4sf r1{in[8*k+2]}, i1{in[8*k+3]};
@@ -1601,7 +1600,7 @@ void pffft_cplx_preprocess(const int Ncvec, const v4sf *in, v4sf *out, const v4s
     assert(in != out);
 
     const int dk{Ncvec/SIMD_SZ}; // number of 4x4 matrix blocks
-    for(int k=0; k < dk; ++k)
+    for(int k{0};k < dk;++k)
     {
         v4sf r0{in[8*k+0]}, i0{in[8*k+1]};
         v4sf r1{in[8*k+2]}, i1{in[8*k+3]};
@@ -1641,8 +1640,7 @@ static ALWAYS_INLINE(void) pffft_real_finalize_4x4(const v4sf *in0, const v4sf *
     VTRANSPOSE4(r0,r1,r2,r3);
     VTRANSPOSE4(i0,i1,i2,i3);
 
-    /*
-     * transformation for each column is:
+    /* transformation for each column is:
      *
      * [1   1   1   1   0   0   0   0]   [r0]
      * [1   0  -1   0   0  -1   0   1]   [r1]
@@ -1831,10 +1829,10 @@ void pffft_transform_internal(PFFFT_Setup *setup, const v4sf *vinput, v4sf *vout
     assert(voutput != scratch);
 
     const int Ncvec{setup->Ncvec};
-    const int nf_odd{setup->ifac[1] & 1};
+    const bool nf_odd{(setup->ifac[1]&1) != 0};
 
     v4sf *buff[2]{voutput, scratch};
-    int ib{(nf_odd ^ ordered) ? 1 : 0};
+    bool ib{nf_odd != ordered};
     if(direction == PFFFT_FORWARD)
     {
         /* Swap the initial work buffer for forward FFTs, which helps avoid an
@@ -1925,9 +1923,6 @@ void pffft_zconvolve_accumulate(PFFFT_Setup *s, const float *a, const float *b, 
 #endif
 #endif
 
-#ifndef ZCONVOLVE_USING_INLINE_ASM
-    const v4sf vscal{LD_PS1(scaling)};
-#endif
     const float ar1{VEXTRACT0(va[0])};
     const float ai1{VEXTRACT0(va[1])};
     const float br1{VEXTRACT0(vb[0])};
@@ -1935,7 +1930,13 @@ void pffft_zconvolve_accumulate(PFFFT_Setup *s, const float *a, const float *b, 
     const float abr1{VEXTRACT0(vab[0])};
     const float abi1{VEXTRACT0(vab[1])};
 
-#ifdef ZCONVOLVE_USING_INLINE_ASM // inline asm version, unfortunately miscompiled by clang 3.2, at least on ubuntu.. so this will be restricted to gcc
+#ifdef ZCONVOLVE_USING_INLINE_ASM
+    /* Inline asm version, unfortunately miscompiled by clang 3.2, at least on
+     * Ubuntu. So this will be restricted to GCC.
+     *
+     * Does it still miscompile with Clang? Is it even needed with today's
+     * optimizers?
+     */
     const float *a_{a}, *b_{b}; float *ab_{ab};
     int N{Ncvec};
     asm volatile("mov         r8, %2                  \n"
@@ -1972,8 +1973,10 @@ void pffft_zconvolve_accumulate(PFFFT_Setup *s, const float *a, const float *b, 
                 "bne         1b                      \n"
                 : "+r"(a_), "+r"(b_), "+r"(ab_), "+r"(N) : "r"(scaling) : "r8", "q0","q1","q2","q3","q4","q5","q6","q7","q8","q9", "q10","q11","q12","q13","q15","memory");
 
-#else // default routine, works fine for non-arm cpus with current compilers
+#else
 
+    /* Default routine, works fine for non-arm cpus with current compilers. */
+    const v4sf vscal{LD_PS1(scaling)};
     for(int i{0};i < Ncvec;i += 2)
     {
         v4sf ar4{va[2*i+0]}, ai4{va[2*i+1]};
@@ -2051,17 +2054,16 @@ void pffft_transform_internal_nosimd(PFFFT_Setup *setup, const float *input, flo
     float *scratch, const pffft_direction_t direction, bool ordered)
 {
     const int Ncvec{setup->Ncvec};
-    const int nf_odd{setup->ifac[1] & 1};
+    const bool nf_odd{(setup->ifac[1]&1) != 0};
 
     assert(scratch != nullptr);
 
     /* z-domain data for complex transforms is already ordered without SIMD. */
     if(setup->transform == PFFFT_COMPLEX)
-        ordered = 0;
+        ordered = false;
 
     float *buff[2]{output, scratch};
-    int ib{(nf_odd ^ ordered) ? 1 : 0};
-
+    bool ib{nf_odd != ordered};
     if(direction == PFFFT_FORWARD)
     {
         if(setup->transform == PFFFT_REAL)
@@ -2115,10 +2117,10 @@ void pffft_zconvolve_accumulate_nosimd(PFFFT_Setup *s, const float *a, const flo
         ab[2*Ncvec-1] += a[2*Ncvec-1]*b[2*Ncvec-1]*scaling;
         ++ab; ++a; ++b; --Ncvec;
     }
-    for(int i=0; i < Ncvec; ++i)
+    for(int i{0};i < Ncvec;++i)
     {
-        float ar       = a[2*i+0], ai = a[2*i+1];
-        const float br = b[2*i+0], bi = b[2*i+1];
+        float ar{a[2*i+0]}, ai{a[2*i+1]};
+        const float br{b[2*i+0]}, bi{b[2*i+1]};
         VCPLXMUL(ar, ai, br, bi);
         ab[2*i+0] += ar*scaling;
         ab[2*i+1] += ai*scaling;

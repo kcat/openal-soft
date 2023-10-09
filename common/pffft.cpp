@@ -60,7 +60,7 @@
 #include <array>
 #include <assert.h>
 #include <cmath>
-#include <math.h>
+#include <cstring>
 #include <stdio.h>
 #include <stdlib.h>
 #include <vector>
@@ -80,6 +80,12 @@
 #define ALWAYS_INLINE(return_type) __forceinline return_type
 #define NEVER_INLINE(return_type) __declspec(noinline) return_type
 #define RESTRICT __restrict
+
+#else
+
+#define ALWAYS_INLINE(return_type) inline return_type
+#define NEVER_INLINE(return_type) return_type
+#define RESTRICT
 #endif
 
 
@@ -111,8 +117,8 @@ inline v4sf vset4(float a, float b, float c, float d)
     return vec_ld(0, vals.data());
 }
 #define VSET4 vset4
+#define VINSERT0(v, a) vec_insert((a), (v), 0)
 #define VEXTRACT0(v) vec_extract((v), 0)
-/* vec_insert(v, value, idx), v[idx] = value */
 #define INTERLEAVE2(in1, in2, out1, out2) do { v4sf tmp__ = vec_mergeh(in1, in2); out2 = vec_mergel(in1, in2); out1 = tmp__; } while(0)
 #define UNINTERLEAVE2(in1, in2, out1, out2) do {                           \
     vector unsigned char vperm1 =  (vector unsigned char)(0,1,2,3,8,9,10,11,16,17,18,19,24,25,26,27); \
@@ -148,6 +154,7 @@ typedef __m128 v4sf;
 #define VSUB(a,b) _mm_sub_ps(a,b)
 #define LD_PS1(p) _mm_set1_ps(p)
 #define VSET4 _mm_setr_ps
+#define VINSERT0(v, a) _mm_move_ss((v), _mm_set_ss(a))
 #define VEXTRACT0 _mm_cvtss_f32
 #define INTERLEAVE2(in1, in2, out1, out2) do { v4sf tmp__ = _mm_unpacklo_ps(in1, in2); out2 = _mm_unpackhi_ps(in1, in2); out1 = tmp__; } while(0)
 #define UNINTERLEAVE2(in1, in2, out1, out2) do { v4sf tmp__ = _mm_shuffle_ps(in1, in2, _MM_SHUFFLE(2,0,2,0)); out2 = _mm_shuffle_ps(in1, in2, _MM_SHUFFLE(3,1,3,1)); out1 = tmp__; } while(0)
@@ -178,6 +185,7 @@ inline v4sf vset4(float a, float b, float c, float d)
     return ret;
 }
 #define VSET4 vset4
+#define VINSERT0(v, a) vsetq_lane_f32((a), (v), 0)
 #define VEXTRACT0(v) vgetq_lane_f32((v), 0)
 #define INTERLEAVE2(in1, in2, out1, out2) do { float32x4x2_t tmp__ = vzipq_f32(in1,in2); out1=tmp__.val[0]; out2=tmp__.val[1]; } while(0)
 #define UNINTERLEAVE2(in1, in2, out1, out2) do { float32x4x2_t tmp__ = vuzpq_f32(in1,in2); out1=tmp__.val[0]; out2=tmp__.val[1]; } while(0)
@@ -210,6 +218,9 @@ using v4sf [[gnu::vector_size(16), gnu::aligned(16)]] = float;
 constexpr v4sf ld_ps1(float a) noexcept { return v4sf{a, a, a, a}; }
 #define LD_PS1 ld_ps1
 #define VSET4(a, b, c, d) v4sf{(a), (b), (c), (d)}
+[[gnu::always_inline]] inline v4sf vinsert0(v4sf v, float a) noexcept
+{ return v4sf{a, v[1], v[2], v[3]}; }
+#define VINSERT0 vinsert0
 #define VEXTRACT0(v) ((v)[0])
 
 [[gnu::always_inline]] inline v4sf unpacklo(v4sf a, v4sf b) noexcept
@@ -235,10 +246,10 @@ constexpr v4sf ld_ps1(float a) noexcept { return v4sf{a, a, a, a}; }
 
 [[gnu::always_inline]] inline void vtranspose4(v4sf &x0, v4sf &x1, v4sf &x2, v4sf &x3) noexcept
 {
-    v4sf tmp0 = unpacklo(x0, x1);
-    v4sf tmp2 = unpacklo(x2, x3);
-    v4sf tmp1 = unpackhi(x0, x1);
-    v4sf tmp3 = unpackhi(x2, x3);
+    v4sf tmp0{unpacklo(x0, x1)};
+    v4sf tmp2{unpacklo(x2, x3)};
+    v4sf tmp1{unpackhi(x0, x1)};
+    v4sf tmp3{unpackhi(x2, x3)};
     x0 = v4sf{tmp0[0], tmp0[1], tmp2[0], tmp2[1]};
     x1 = v4sf{tmp0[2], tmp0[3], tmp2[2], tmp2[3]};
     x2 = v4sf{tmp1[0], tmp1[1], tmp3[0], tmp3[1]};
@@ -282,52 +293,53 @@ typedef float v4sf;
 #endif
 
 #if !defined(PFFFT_SIMD_DISABLE)
-/* TODO: Remove this, type-punning to access individual SIMD values is bad. */
-typedef union v4sf_union {
-    v4sf  v;
-    float f[4];
-} v4sf_union;
 
-#include <string.h>
-
-#define assertv4(v,f0,f1,f2,f3) assert(v.f[0] == (f0) && v.f[1] == (f1) && v.f[2] == (f2) && v.f[3] == (f3))
+#define assertv4(v,f0,f1,f2,f3) assert(v##_f[0] == (f0) && v##_f[1] == (f1) && v##_f[2] == (f2) && v##_f[3] == (f3))
 
 /* detect bugs with the vector support macros */
 void validate_pffft_simd()
 {
-    float f[16] = { 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15 };
-    v4sf_union a0, a1, a2, a3, t, u;
-    memcpy(a0.f, f, 4*sizeof(float));
-    memcpy(a1.f, f+4, 4*sizeof(float));
-    memcpy(a2.f, f+8, 4*sizeof(float));
-    memcpy(a3.f, f+12, 4*sizeof(float));
+    using float4 = std::array<float,4>;
+    static constexpr float f[16]{0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15};
 
-    t = a0; u = a1; t.v = VZERO();
-    printf("VZERO=[%2g %2g %2g %2g]\n", t.f[0], t.f[1], t.f[2], t.f[3]); assertv4(t, 0, 0, 0, 0);
-    t.v = VADD(a1.v, a2.v);
-    printf("VADD(4:7,8:11)=[%2g %2g %2g %2g]\n", t.f[0], t.f[1], t.f[2], t.f[3]); assertv4(t, 12, 14, 16, 18);
-    t.v = VMUL(a1.v, a2.v);
-    printf("VMUL(4:7,8:11)=[%2g %2g %2g %2g]\n", t.f[0], t.f[1], t.f[2], t.f[3]); assertv4(t, 32, 45, 60, 77);
-    t.v = VMADD(a1.v, a2.v,a0.v);
-    printf("VMADD(4:7,8:11,0:3)=[%2g %2g %2g %2g]\n", t.f[0], t.f[1], t.f[2], t.f[3]); assertv4(t, 32, 46, 62, 80);
+    float4 a0_f, a1_f, a2_f, a3_f, t_f, u_f;
+    v4sf a0_v, a1_v, a2_v, a3_v, t_v, u_v;
+    std::memcpy(&a0_v, f, 4*sizeof(float));
+    std::memcpy(&a1_v, f+4, 4*sizeof(float));
+    std::memcpy(&a2_v, f+8, 4*sizeof(float));
+    std::memcpy(&a3_v, f+12, 4*sizeof(float));
 
-    INTERLEAVE2(a1.v,a2.v,t.v,u.v);
-    printf("INTERLEAVE2(4:7,8:11)=[%2g %2g %2g %2g] [%2g %2g %2g %2g]\n", t.f[0], t.f[1], t.f[2], t.f[3], u.f[0], u.f[1], u.f[2], u.f[3]);
+    t_v = a0_v; u_v = a1_v; t_v = VZERO();
+    t_f = al::bit_cast<float4>(t_v);
+    printf("VZERO=[%2g %2g %2g %2g]\n", t_f[0], t_f[1], t_f[2], t_f[3]); assertv4(t, 0, 0, 0, 0);
+    t_v = VADD(a1_v, a2_v); t_f = al::bit_cast<float4>(t_v);
+    printf("VADD(4:7,8:11)=[%2g %2g %2g %2g]\n", t_f[0], t_f[1], t_f[2], t_f[3]); assertv4(t, 12, 14, 16, 18);
+    t_v = VMUL(a1_v, a2_v); t_f = al::bit_cast<float4>(t_v);
+    printf("VMUL(4:7,8:11)=[%2g %2g %2g %2g]\n", t_f[0], t_f[1], t_f[2], t_f[3]); assertv4(t, 32, 45, 60, 77);
+    t_v = VMADD(a1_v, a2_v,a0_v); t_f = al::bit_cast<float4>(t_v);
+    printf("VMADD(4:7,8:11,0:3)=[%2g %2g %2g %2g]\n", t_f[0], t_f[1], t_f[2], t_f[3]); assertv4(t, 32, 46, 62, 80);
+
+    INTERLEAVE2(a1_v,a2_v,t_v,u_v); t_f = al::bit_cast<float4>(t_v); u_f = al::bit_cast<float4>(u_v);
+    printf("INTERLEAVE2(4:7,8:11)=[%2g %2g %2g %2g] [%2g %2g %2g %2g]\n", t_f[0], t_f[1], t_f[2], t_f[3], u_f[0], u_f[1], u_f[2], u_f[3]);
     assertv4(t, 4, 8, 5, 9); assertv4(u, 6, 10, 7, 11);
-    UNINTERLEAVE2(a1.v,a2.v,t.v,u.v);
-    printf("UNINTERLEAVE2(4:7,8:11)=[%2g %2g %2g %2g] [%2g %2g %2g %2g]\n", t.f[0], t.f[1], t.f[2], t.f[3], u.f[0], u.f[1], u.f[2], u.f[3]);
+    UNINTERLEAVE2(a1_v,a2_v,t_v,u_v); t_f = al::bit_cast<float4>(t_v); u_f = al::bit_cast<float4>(u_v);
+    printf("UNINTERLEAVE2(4:7,8:11)=[%2g %2g %2g %2g] [%2g %2g %2g %2g]\n", t_f[0], t_f[1], t_f[2], t_f[3], u_f[0], u_f[1], u_f[2], u_f[3]);
     assertv4(t, 4, 6, 8, 10); assertv4(u, 5, 7, 9, 11);
 
-    t.v=LD_PS1(f[15]);
-    printf("LD_PS1(15)=[%2g %2g %2g %2g]\n", t.f[0], t.f[1], t.f[2], t.f[3]);
+    t_v=LD_PS1(f[15]); t_f = al::bit_cast<float4>(t_v);
+    printf("LD_PS1(15)=[%2g %2g %2g %2g]\n", t_f[0], t_f[1], t_f[2], t_f[3]);
     assertv4(t, 15, 15, 15, 15);
-    t.v = VSWAPHL(a1.v, a2.v);
-    printf("VSWAPHL(4:7,8:11)=[%2g %2g %2g %2g]\n", t.f[0], t.f[1], t.f[2], t.f[3]);
+    t_v = VSWAPHL(a1_v, a2_v); t_f = al::bit_cast<float4>(t_v);
+    printf("VSWAPHL(4:7,8:11)=[%2g %2g %2g %2g]\n", t_f[0], t_f[1], t_f[2], t_f[3]);
     assertv4(t, 8, 9, 6, 7);
-    VTRANSPOSE4(a0.v, a1.v, a2.v, a3.v);
+    VTRANSPOSE4(a0_v, a1_v, a2_v, a3_v);
+    a0_f = al::bit_cast<float4>(a0_v);
+    a1_f = al::bit_cast<float4>(a1_v);
+    a2_f = al::bit_cast<float4>(a2_v);
+    a3_f = al::bit_cast<float4>(a3_v);
     printf("VTRANSPOSE4(0:3,4:7,8:11,12:15)=[%2g %2g %2g %2g] [%2g %2g %2g %2g] [%2g %2g %2g %2g] [%2g %2g %2g %2g]\n",
-          a0.f[0], a0.f[1], a0.f[2], a0.f[3], a1.f[0], a1.f[1], a1.f[2], a1.f[3],
-          a2.f[0], a2.f[1], a2.f[2], a2.f[3], a3.f[0], a3.f[1], a3.f[2], a3.f[3]);
+          a0_f[0], a0_f[1], a0_f[2], a0_f[3], a1_f[0], a1_f[1], a1_f[2], a1_f[3],
+          a2_f[0], a2_f[1], a2_f[2], a2_f[3], a3_f[0], a3_f[1], a3_f[2], a3_f[3]);
     assertv4(a0, 0, 4, 8, 12); assertv4(a1, 1, 5, 9, 13); assertv4(a2, 2, 6, 10, 14); assertv4(a3, 3, 7, 11, 15);
 }
 #endif //!PFFFT_SIMD_DISABLE
@@ -1680,15 +1692,14 @@ static NEVER_INLINE(void) pffft_real_finalize(int Ncvec, const v4sf *in, v4sf *o
      * [Xi(3N/4)] [0   0   0   0   0  -s   1  -s]
      */
 
-    auto *uout = reinterpret_cast<v4sf_union*>(out);
-    const float xr0{(cr[0]+cr[2]) + (cr[1]+cr[3])}; uout[0].f[0] = xr0;
-    const float xi0{(cr[0]+cr[2]) - (cr[1]+cr[3])}; uout[1].f[0] = xi0;
-    const float xr2{(cr[0]-cr[2])};                 uout[4].f[0] = xr2;
-    const float xi2{(cr[3]-cr[1])};                 uout[5].f[0] = xi2;
-    const float xr1{ ci[0] + s*(ci[1]-ci[3])};      uout[2].f[0] = xr1;
-    const float xi1{-ci[2] - s*(ci[1]+ci[3])};      uout[3].f[0] = xi1;
-    const float xr3{ ci[0] - s*(ci[1]-ci[3])};      uout[6].f[0] = xr3;
-    const float xi3{ ci[2] - s*(ci[1]+ci[3])};      uout[7].f[0] = xi3;
+    const float xr0{(cr[0]+cr[2]) + (cr[1]+cr[3])}; out[0] = VINSERT0(out[0], xr0);
+    const float xi0{(cr[0]+cr[2]) - (cr[1]+cr[3])}; out[1] = VINSERT0(out[1], xi0);
+    const float xr2{(cr[0]-cr[2])};                 out[4] = VINSERT0(out[4], xr2);
+    const float xi2{(cr[3]-cr[1])};                 out[5] = VINSERT0(out[5], xi2);
+    const float xr1{ ci[0] + s*(ci[1]-ci[3])};      out[2] = VINSERT0(out[2], xr1);
+    const float xi1{-ci[2] - s*(ci[1]+ci[3])};      out[3] = VINSERT0(out[3], xi1);
+    const float xr3{ ci[0] - s*(ci[1]-ci[3])};      out[6] = VINSERT0(out[6], xr3);
+    const float xi3{ ci[2] - s*(ci[1]+ci[3])};      out[7] = VINSERT0(out[7], xi3);
 
     for(int k{1};k < dk;++k)
         pffft_real_finalize_4x4(&in[8*k-1], &in[8*k+0], in + 8*k+1, e + k*6, out + k*8);
@@ -1963,8 +1974,8 @@ void pffft_zconvolve_accumulate(PFFFT_Setup *s, const float *a, const float *b, 
 
     if(s->transform == PFFFT_REAL)
     {
-        reinterpret_cast<v4sf_union*>(vab)[0].f[0] = abr1 + ar1*br1*scaling;
-        reinterpret_cast<v4sf_union*>(vab)[1].f[0] = abi1 + ai1*bi1*scaling;
+        vab[0] = VINSERT0(vab[0], abr1 + ar1*br1*scaling);
+        vab[1] = VINSERT0(vab[1], abi1 + ai1*bi1*scaling);
     }
 }
 

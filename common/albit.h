@@ -17,9 +17,9 @@ std::enable_if_t<sizeof(To) == sizeof(From) && std::is_trivially_copyable_v<From
     && std::is_trivially_copyable_v<To>,
 To> bit_cast(const From &src) noexcept
 {
-    std::aligned_storage_t<sizeof(To), alignof(To)> dst;
-    std::memcpy(&dst, &src, sizeof(To));
-    return *std::launder(reinterpret_cast<To*>(&dst));
+    alignas(To) char dst[sizeof(To)];
+    std::memcpy(&dst[0], &src, sizeof(To));
+    return *std::launder(reinterpret_cast<To*>(&dst[0]));
 }
 
 #ifdef __BYTE_ORDER__

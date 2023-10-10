@@ -107,7 +107,7 @@ typedef enum { PFFFT_REAL, PFFFT_COMPLEX } pffft_transform_t;
  * structure is read-only so it can safely be shared by multiple concurrent
  * threads.
  */
-PFFFT_Setup *pffft_new_setup(int N, pffft_transform_t transform);
+PFFFT_Setup *pffft_new_setup(unsigned int N, pffft_transform_t transform);
 void pffft_destroy_setup(PFFFT_Setup *setup);
 
 /**
@@ -170,7 +170,7 @@ void pffft_zconvolve_accumulate(PFFFT_Setup *setup, const float *dft_a, const fl
  * buffers.
  */
 void *pffft_aligned_malloc(size_t nb_bytes);
-void pffft_aligned_free(void *);
+void pffft_aligned_free(void *ptr);
 
 /* Return 4 or 1 depending if vectorization was enable when building pffft.cpp. */
 int pffft_simd_size();

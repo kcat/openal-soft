@@ -1421,6 +1421,7 @@ PFFFT_Setup *pffft_new_setup(unsigned int N, pffft_transform_t transform)
     if constexpr(SIMD_SZ > 1)
     {
         al::vector<float,16> e(2u*Ncvec*(SIMD_SZ-1));
+        std::fill(e.begin(), e.end(), 0.0f);
         for(size_t k{0};k < s->Ncvec;++k)
         {
             const size_t i{k / SIMD_SZ};
@@ -1739,8 +1740,8 @@ NEVER_INLINE(void) pffft_real_preprocess(const size_t Ncvec, const v4sf *in, v4s
     std::array<float,SIMD_SZ> Xr, Xi;
     for(size_t k{0};k < SIMD_SZ;++k)
     {
-        Xr[k] = VEXTRACT0(in[4*k]);
-        Xi[k] = VEXTRACT0(in[4*k + 1]);
+        Xr[k] = VEXTRACT0(in[2*k]);
+        Xi[k] = VEXTRACT0(in[2*k + 1]);
     }
 
     pffft_real_preprocess_4x4(in, e, out+1, true); // will write only 6 values

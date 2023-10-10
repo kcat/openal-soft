@@ -1310,23 +1310,24 @@ void rffti1_ps(const uint n, float *wa, const al::span<uint,15> ifac)
     size_t is{0};
     size_t nfm1{nf - 1};
     size_t l1{1};
-    for(size_t k1{1};k1 <= nfm1;++k1)
+    for(size_t k1{0};k1 < nfm1;++k1)
     {
-        const size_t ip{ifac[k1 + 1]};
+        const size_t ip{ifac[k1+2]};
         const size_t l2{l1*ip};
         const size_t ido{n / l2};
         const size_t ipm{ip - 1};
-        int ld{0};
-        for(size_t j{1};j <= ipm;++j)
+        size_t ld{0};
+        for(size_t j{0};j < ipm;++j)
         {
-            size_t i{is}, fi{0};
+            size_t i{is};
             ld += l1;
-            double argld{ld*argh};
-            for(size_t ii{3};ii <= ido;ii += 2)
+            const double argld{static_cast<double>(ld)*argh};
+            double fi{0.0};
+            for(size_t ii{2};ii < ido;ii += 2)
             {
-                fi += 1;
-                wa[i++] = static_cast<float>(std::cos(static_cast<double>(fi)*argld));
-                wa[i++] = static_cast<float>(std::sin(static_cast<double>(fi)*argld));
+                fi += 1.0;
+                wa[i++] = static_cast<float>(std::cos(fi*argld));
+                wa[i++] = static_cast<float>(std::sin(fi*argld));
             }
             is += ido;
         }
@@ -1342,26 +1343,27 @@ void cffti1_ps(const uint n, float *wa, const al::span<uint,15> ifac)
     const double argh{2.0*al::numbers::pi / n};
     size_t i{1};
     size_t l1{1};
-    for(size_t k1{1};k1 <= nf;++k1)
+    for(size_t k1{0};k1 < nf;++k1)
     {
-        const size_t ip{ifac[k1+1]};
+        const size_t ip{ifac[k1+2]};
         const size_t l2{l1*ip};
         const size_t ido{n / l2};
         const size_t idot{ido + ido + 2};
         const size_t ipm{ip - 1};
         size_t ld{0};
-        for(size_t j{1};j <= ipm;++j)
+        for(size_t j{0};j < ipm;++j)
         {
-            size_t i1{i}, fi{0};
+            size_t i1{i};
             wa[i-1] = 1;
             wa[i] = 0;
             ld += l1;
-            const double argld{ld*argh};
-            for(size_t ii{4};ii <= idot;ii += 2)
+            const double argld{static_cast<double>(ld)*argh};
+            double fi{0.0};
+            for(size_t ii{3};ii < idot;ii += 2)
             {
-                fi += 1;
-                wa[++i] = static_cast<float>(std::cos(static_cast<double>(fi)*argld));
-                wa[++i] = static_cast<float>(std::sin(static_cast<double>(fi)*argld));
+                fi += 1.0;
+                wa[++i] = static_cast<float>(std::cos(fi*argld));
+                wa[++i] = static_cast<float>(std::sin(fi*argld));
             }
             if(ip > 5)
             {

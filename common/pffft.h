@@ -152,8 +152,8 @@ void pffft_transform_ordered(PFFFT_Setup *setup, const float *input, float *outp
 void pffft_zreorder(PFFFT_Setup *setup, const float *input, float *output, pffft_direction_t direction);
 
 /**
- * Perform a multiplication of the z-domain data in dft_a and dft_b and
- * accumulate them into dft_ab. The arrays should have been obtained with
+ * Perform a multiplication of the z-domain data in dft_a and dft_b, and scale
+ * and accumulate into dft_ab. The arrays should have been obtained with
  * pffft_transform(..., PFFFT_FORWARD) or pffft_zreorder(..., PFFFT_BACKWARD)
  * and should *not* be in the usual order (otherwise just perform the operation
  * yourself as the dft coeffs are stored as interleaved complex numbers).
@@ -162,7 +162,17 @@ void pffft_zreorder(PFFFT_Setup *setup, const float *input, float *output, pffft
  *
  * The dft_a, dft_b, and dft_ab parameters may alias.
  */
-void pffft_zconvolve_accumulate(PFFFT_Setup *setup, const float *dft_a, const float *dft_b, float *dft_ab, float scaling);
+void pffft_zconvolve_scale_accumulate(PFFFT_Setup *setup, const float *dft_a, const float *dft_b, float *dft_ab, float scaling);
+
+/**
+ * Perform a multiplication of the z-domain data in dft_a and dft_b, and
+ * accumulate into dft_ab.
+ *
+ * The operation performed is: dft_ab += dft_a * dft_b
+ *
+ * The dft_a, dft_b, and dft_ab parameters may alias.
+ */
+void pffft_zconvolve_accumulate(PFFFT_Setup *setup, const float *dft_a, const float *dft_b, float *dft_ab);
 
 /**
  * The float buffers must have the correct alignment (16-byte boundary on intel

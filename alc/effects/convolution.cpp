@@ -655,11 +655,6 @@ void ConvolutionState::process(const size_t samplesToDo,
         const float *RESTRICT filter{mComplexData.get() + mNumConvolveSegs*ConvolveUpdateSize};
         for(size_t c{0};c < chans.size();++c)
         {
-            /* The iFFT'd response is scaled up by the number of bins, so apply
-             * the inverse to normalize the output.
-             */
-            static constexpr float fftscale{1.0f / float{ConvolveUpdateSize}};
-
             /* Convolve each input segment with its IR filter counterpart
              * (aligned in time).
              */
@@ -667,14 +662,14 @@ void ConvolutionState::process(const size_t samplesToDo,
             const float *RESTRICT input{&mComplexData[curseg*ConvolveUpdateSize]};
             for(size_t s{curseg};s < mNumConvolveSegs;++s)
             {
-                pffft_zconvolve_accumulate(mFft.get(), input, filter, mFftBuffer.data(), fftscale);
+                pffft_zconvolve_accumulate(mFft.get(), input, filter, mFftBuffer.data());
                 input += ConvolveUpdateSize;
                 filter += ConvolveUpdateSize;
             }
             input = mComplexData.get();
             for(size_t s{0};s < curseg;++s)
             {
-                pffft_zconvolve_accumulate(mFft.get(), input, filter, mFftBuffer.data(), fftscale);
+                pffft_zconvolve_accumulate(mFft.get(), input, filter, mFftBuffer.data());
                 input += ConvolveUpdateSize;
                 filter += ConvolveUpdateSize;
             }
@@ -687,8 +682,12 @@ void ConvolutionState::process(const size_t samplesToDo,
             pffft_transform(mFft.get(), mFftBuffer.data(), mFftBuffer.data(),
                 mFftWorkBuffer.data(), PFFFT_BACKWARD);
 
+            /* The iFFT'd response is scaled up by the number of bins, so apply
+             * the inverse to normalize the output.
+             */
+            static constexpr float fftscale{1.0f / float{ConvolveUpdateSize}};
             for(size_t i{0};i < ConvolveUpdateSamples;++i)
-                mOutput[c][i] = mFftBuffer[i] + mOutput[c][ConvolveUpdateSamples+i];
+                mOutput[c][i] = (mFftBuffer[i]+mOutput[c][ConvolveUpdateSamples+i]) * fftscale;
             for(size_t i{0};i < ConvolveUpdateSamples;++i)
                 mOutput[c][ConvolveUpdateSamples+i] = mFftBuffer[ConvolveUpdateSamples+i];
         }

@@ -1904,7 +1904,7 @@ void pffft_zreorder(PFFFT_Setup *setup, const float *in, float *out, pffft_direc
     }
 }
 
-void pffft_zconvolve_accumulate(PFFFT_Setup *s, const float *a, const float *b, float *ab,
+void pffft_zconvolve_scale_accumulate(PFFFT_Setup *s, const float *a, const float *b, float *ab,
     float scaling)
 {
     const size_t Ncvec{s->Ncvec};
@@ -2003,6 +2003,59 @@ void pffft_zconvolve_accumulate(PFFFT_Setup *s, const float *a, const float *b, 
     {
         vab[0] = VINSERT0(vab[0], abr1 + ar1*br1*scaling);
         vab[1] = VINSERT0(vab[1], abi1 + ai1*bi1*scaling);
+    }
+}
+
+void pffft_zconvolve_accumulate(PFFFT_Setup *s, const float *a, const float *b, float *ab)
+{
+    const size_t Ncvec{s->Ncvec};
+    const v4sf *RESTRICT va{reinterpret_cast<const v4sf*>(a)};
+    const v4sf *RESTRICT vb{reinterpret_cast<const v4sf*>(b)};
+    v4sf *RESTRICT vab{reinterpret_cast<v4sf*>(ab)};
+
+#ifdef __arm__
+    __builtin_prefetch(va);
+    __builtin_prefetch(vb);
+    __builtin_prefetch(vab);
+    __builtin_prefetch(va+2);
+    __builtin_prefetch(vb+2);
+    __builtin_prefetch(vab+2);
+    __builtin_prefetch(va+4);
+    __builtin_prefetch(vb+4);
+    __builtin_prefetch(vab+4);
+    __builtin_prefetch(va+6);
+    __builtin_prefetch(vb+6);
+    __builtin_prefetch(vab+6);
+#endif
+
+    const float ar1{VEXTRACT0(va[0])};
+    const float ai1{VEXTRACT0(va[1])};
+    const float br1{VEXTRACT0(vb[0])};
+    const float bi1{VEXTRACT0(vb[1])};
+    const float abr1{VEXTRACT0(vab[0])};
+    const float abi1{VEXTRACT0(vab[1])};
+
+    /* No inline assembly for this version. I'm not familiar enough with NEON
+     * assembly, and I don't know that it's needed with today's optimizers.
+     */
+    for(size_t i{0};i < Ncvec;i += 2)
+    {
+        v4sf ar4{va[2*i+0]}, ai4{va[2*i+1]};
+        v4sf br4{vb[2*i+0]}, bi4{vb[2*i+1]};
+        VCPLXMUL(ar4, ai4, br4, bi4);
+        vab[2*i+0] = VADD(ar4, vab[2*i+0]);
+        vab[2*i+1] = VADD(ai4, vab[2*i+1]);
+        ar4 = va[2*i+2]; ai4 = va[2*i+3];
+        br4 = vb[2*i+2]; bi4 = vb[2*i+3];
+        VCPLXMUL(ar4, ai4, br4, bi4);
+        vab[2*i+2] = VADD(ar4, vab[2*i+2]);
+        vab[2*i+3] = VADD(ai4, vab[2*i+3]);
+    }
+
+    if(s->transform == PFFFT_REAL)
+    {
+        vab[0] = VINSERT0(vab[0], abr1 + ar1*br1);
+        vab[1] = VINSERT0(vab[1], abi1 + ai1*bi1);
     }
 }
 
@@ -2115,8 +2168,7 @@ void pffft_zreorder_nosimd(PFFFT_Setup *setup, const float *in, float *out,
     }
 }
 
-#define pffft_zconvolve_accumulate_nosimd pffft_zconvolve_accumulate
-void pffft_zconvolve_accumulate_nosimd(PFFFT_Setup *s, const float *a, const float *b, float *ab,
+void pffft_zconvolve_scale_accumulate(PFFFT_Setup *s, const float *a, const float *b, float *ab,
     float scaling)
 {
     size_t Ncvec{s->Ncvec};
@@ -2135,6 +2187,27 @@ void pffft_zconvolve_accumulate_nosimd(PFFFT_Setup *s, const float *a, const flo
         VCPLXMUL(ar, ai, br, bi);
         ab[2*i+0] += ar*scaling;
         ab[2*i+1] += ai*scaling;
+    }
+}
+
+void pffft_zconvolve_accumulate(PFFFT_Setup *s, const float *a, const float *b, float *ab)
+{
+    size_t Ncvec{s->Ncvec};
+
+    if(s->transform == PFFFT_REAL)
+    {
+        // take care of the fftpack ordering
+        ab[0] += a[0]*b[0];
+        ab[2*Ncvec-1] += a[2*Ncvec-1]*b[2*Ncvec-1];
+        ++ab; ++a; ++b; --Ncvec;
+    }
+    for(size_t i{0};i < Ncvec;++i)
+    {
+        float ar{a[2*i+0]}, ai{a[2*i+1]};
+        const float br{b[2*i+0]}, bi{b[2*i+1]};
+        VCPLXMUL(ar, ai, br, bi);
+        ab[2*i+0] += ar;
+        ab[2*i+1] += ai;
     }
 }
 

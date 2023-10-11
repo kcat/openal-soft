@@ -410,13 +410,15 @@ void ConvolutionState::deviceUpdate(const DeviceBase *device, const BufferStorag
 
             /* Convert to, and pack in, a float buffer for PFFFT. Note that the
              * first bin stores the real component of the half-frequency bin in
-             * the imaginary component.
+             * the imaginary component. Also scale the FFT by its length so the
+             * iFFT'd output will be normalized.
              */
+            static constexpr float fftscale{1.0f / float{ConvolveUpdateSize}};
             for(size_t i{0};i < ConvolveUpdateSamples;++i)
             {
-                ffttmp[i*2    ] = static_cast<float>(fftbuffer[i].real());
+                ffttmp[i*2    ] = static_cast<float>(fftbuffer[i].real()) * fftscale;
                 ffttmp[i*2 + 1] = static_cast<float>((i == 0) ?
-                    fftbuffer[ConvolveUpdateSamples+1].real() : fftbuffer[i].imag());
+                    fftbuffer[ConvolveUpdateSamples+1].real() : fftbuffer[i].imag()) * fftscale;
             }
             /* Reorder backward to make it suitable for pffft_zconvolve and the
              * subsequent pffft_transform(..., PFFFT_BACKWARD).
@@ -553,7 +555,7 @@ void ConvolutionState::update(const ContextBase *context, const EffectSlot *slot
         mOutTarget = target.Main->Buffer;
         if(device->mRenderMode == RenderMode::Pairwise)
         {
-            /* Scales the azimuth of the given vector by 3 if it's in front.
+            /* Scales the azimuth of the given vector by 2 if it's in front.
              * Effectively scales +/-45 degrees to +/-90 degrees, leaving > +90
              * and < -90 alone.
              */
@@ -682,12 +684,9 @@ void ConvolutionState::process(const size_t samplesToDo,
             pffft_transform(mFft.get(), mFftBuffer.data(), mFftBuffer.data(),
                 mFftWorkBuffer.data(), PFFFT_BACKWARD);
 
-            /* The iFFT'd response is scaled up by the number of bins, so apply
-             * the inverse to normalize the output.
-             */
-            static constexpr float fftscale{1.0f / float{ConvolveUpdateSize}};
+            /* The filter was attenuated, so the response is already scaled. */
             for(size_t i{0};i < ConvolveUpdateSamples;++i)
-                mOutput[c][i] = (mFftBuffer[i]+mOutput[c][ConvolveUpdateSamples+i]) * fftscale;
+                mOutput[c][i] = mFftBuffer[i] + mOutput[c][ConvolveUpdateSamples+i];
             for(size_t i{0};i < ConvolveUpdateSamples;++i)
                 mOutput[c][ConvolveUpdateSamples+i] = mFftBuffer[ConvolveUpdateSamples+i];
         }

@@ -22,7 +22,7 @@
  * THE SOFTWARE.
  */
 
-/* This file contains an example for applying convolution reverb to a source. */
+/* This file contains an example for applying convolution to a source. */
 
 #include <assert.h>
 #include <inttypes.h>
@@ -39,9 +39,9 @@
 #include "common/alhelpers.h"
 
 
-#ifndef AL_SOFT_convolution_reverb
-#define AL_SOFT_convolution_reverb
-#define AL_EFFECT_CONVOLUTION_REVERB_SOFT        0xA000
+#ifndef AL_SOFT_convolution_effect
+#define AL_SOFT_convolution_effect
+#define AL_EFFECT_CONVOLUTION_SOFT               0xA000
 #endif
 
 
@@ -278,19 +278,19 @@ static int UpdatePlayer(StreamPlayer *player)
 }
 
 
-/* CreateEffect creates a new OpenAL effect object with a convolution reverb
- * type, and returns the new effect ID.
+/* CreateEffect creates a new OpenAL effect object with a convolution type, and
+ * returns the new effect ID.
  */
 static ALuint CreateEffect(void)
 {
     ALuint effect = 0;
     ALenum err;
 
-    printf("Using Convolution Reverb\n");
+    printf("Using Convolution\n");
 
-    /* Create the effect object and set the convolution reverb effect type. */
+    /* Create the effect object and set the convolution effect type. */
     alGenEffects(1, &effect);
-    alEffecti(effect, AL_EFFECT_TYPE, AL_EFFECT_CONVOLUTION_REVERB_SOFT);
+    alEffecti(effect, AL_EFFECT_TYPE, AL_EFFECT_CONVOLUTION_SOFT);
 
     /* Check if an error occurred, and clean up if so. */
     err = alGetError();
@@ -423,10 +423,10 @@ int main(int argc, char **argv)
     if(InitAL(&argv, &argc) != 0)
         return 1;
 
-    if(!alIsExtensionPresent("AL_SOFTX_convolution_reverb"))
+    if(!alIsExtensionPresent("AL_SOFTX_convolution_effect"))
     {
         CloseAL();
-        fprintf(stderr, "Error: Convolution revern not supported\n");
+        fprintf(stderr, "Error: Convolution effect not supported\n");
         return 1;
     }
 
@@ -500,11 +500,11 @@ int main(int argc, char **argv)
     alGenAuxiliaryEffectSlots(1, &slot);
 
     /* Set the impulse response sound buffer on the effect slot. This allows
-     * effects to access it as needed. In this case, convolution reverb uses it
-     * as the filter source. NOTE: Unlike the effect object, the buffer *is*
-     * kept referenced and may not be changed or deleted as long as it's set,
-     * just like with a source. When another buffer is set, or the effect slot
-     * is deleted, the buffer reference is released.
+     * effects to access it as needed. In this case, convolution uses it as the
+     * filter source. NOTE: Unlike the effect object, the buffer *is* kept
+     * referenced and may not be changed or deleted as long as it's set, just
+     * like with a source. When another buffer is set, or the effect slot is
+     * deleted, the buffer reference is released.
      *
      * The effect slot's gain is reduced because the impulse responses I've
      * tested with result in excessively loud reverb. Is that normal? Even with

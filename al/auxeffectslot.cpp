@@ -230,7 +230,7 @@ EffectSlotType EffectSlotTypeFromEnum(ALenum type)
     case AL_EFFECT_EAXREVERB: return EffectSlotType::EAXReverb;
     case AL_EFFECT_DEDICATED_LOW_FREQUENCY_EFFECT: return EffectSlotType::DedicatedLFE;
     case AL_EFFECT_DEDICATED_DIALOGUE: return EffectSlotType::DedicatedDialog;
-    case AL_EFFECT_CONVOLUTION_REVERB_SOFT: return EffectSlotType::Convolution;
+    case AL_EFFECT_CONVOLUTION_SOFT: return EffectSlotType::Convolution;
     }
     ERR("Unhandled effect enum: 0x%04x\n", type);
     return EffectSlotType::None;

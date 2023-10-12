@@ -83,6 +83,8 @@ void Convolution_getParamfv(const EffectProps *props, ALenum param, float *vals)
 EffectProps genDefaultProps() noexcept
 {
     EffectProps props{};
+    props.Convolution.OrientAt = {0.0f,  0.0f, -1.0f};
+    props.Convolution.OrientUp = {0.0f,  1.0f,  0.0f};
     return props;
 }
 

@@ -431,7 +431,7 @@ void ConvolutionState::deviceUpdate(const DeviceBase *device, const BufferStorag
 
 
 void ConvolutionState::update(const ContextBase *context, const EffectSlot *slot,
-    const EffectProps* /*props*/, const EffectTarget target)
+    const EffectProps *props, const EffectTarget target)
 {
     /* NOTE: Stereo and Rear are slightly different from normal mixing (as
      * defined in alu.cpp). These are 45 degrees from center, rather than the
@@ -516,6 +516,23 @@ void ConvolutionState::update(const ContextBase *context, const EffectSlot *slot
         }
         mOutTarget = target.Main->Buffer;
 
+        alu::Vector N{props->Convolution.OrientAt[0], props->Convolution.OrientAt[1],
+            props->Convolution.OrientAt[2], 0.0f};
+        N.normalize();
+        alu::Vector V{props->Convolution.OrientUp[0], props->Convolution.OrientUp[1],
+            props->Convolution.OrientUp[2], 0.0f};
+        V.normalize();
+        /* Build and normalize right-vector */
+        alu::Vector U{N.cross_product(V)};
+        U.normalize();
+
+        const float mixmatrix[4][4]{
+            {1.0f,  0.0f,  0.0f,  0.0f},
+            {0.0f,  U[0], -U[1],  U[2]},
+            {0.0f, -V[0],  V[1], -V[2]},
+            {0.0f, -N[0],  N[1], -N[2]},
+        };
+
         const auto scales = GetAmbiScales(mAmbiScaling);
         const uint8_t *index_map{Is2DAmbisonic(mChannels) ?
             GetAmbi2DLayout(mAmbiLayout).data() :
@@ -525,9 +542,12 @@ void ConvolutionState::update(const ContextBase *context, const EffectSlot *slot
         for(size_t c{0u};c < mChans->size();++c)
         {
             const size_t acn{index_map[c]};
-            coeffs[acn] = scales[acn];
+            const float scale{scales[acn]};
+
+            for(size_t x{0};x < 4;++x)
+                coeffs[x] = mixmatrix[acn][x] * scale;
+
             ComputePanGains(target.Main, coeffs.data(), gain, (*mChans)[c].Target);
-            coeffs[acn] = 0.0f;
         }
     }
     else

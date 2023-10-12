@@ -438,7 +438,7 @@ struct VoicePos {
  * using the given offset type and offset. If the offset is out of range,
  * returns an empty optional.
  */
-std::optional<VoicePos> GetSampleOffset(al::deque<ALbufferQueueItem> &BufferList,
+std::optional<VoicePos> GetSampleOffset(std::deque<ALbufferQueueItem> &BufferList,
     ALenum OffsetType, double Offset)
 {
     /* Find the first valid Buffer in the Queue */
@@ -1597,7 +1597,7 @@ NOINLINE void SetProperty(ALsource *const Source, ALCcontext *const Context, con
                     return Context->setError(AL_INVALID_OPERATION,
                         "Setting buffer on playing or paused source %u", Source->id);
             }
-            al::deque<ALbufferQueueItem> oldlist;
+            std::deque<ALbufferQueueItem> oldlist;
             if(values[0])
             {
                 using UT = std::make_unsigned_t<T>;
@@ -1614,7 +1614,7 @@ NOINLINE void SetProperty(ALsource *const Source, ALCcontext *const Context, con
                         "Setting already-set callback buffer %u", buffer->id);
 
                 /* Add the selected buffer to a one-item queue */
-                al::deque<ALbufferQueueItem> newlist;
+                std::deque<ALbufferQueueItem> newlist;
                 newlist.emplace_back();
                 newlist.back().mCallback = buffer->mCallback;
                 newlist.back().mUserData = buffer->mUserData;

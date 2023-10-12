@@ -15,7 +15,6 @@
 #include "alc/alu.h"
 #include "alc/context.h"
 #include "alc/inprogext.h"
-#include "aldeque.h"
 #include "almalloc.h"
 #include "alnumeric.h"
 #include "atomic.h"
@@ -139,7 +138,7 @@ struct ALsource {
     ALenum state{AL_INITIAL};
 
     /** Source Buffer Queue head. */
-    al::deque<ALbufferQueueItem> mQueue;
+    std::deque<ALbufferQueueItem> mQueue;
 
     bool mPropsDirty{true};
 

@@ -44,7 +44,8 @@ void AL_APIENTRY alFlushMappedBufferDirectSOFT(ALCcontext *context, ALuint buffe
 #ifndef AL_SOFT_convolution_reverb
 #define AL_SOFT_convolution_reverb
 #define AL_EFFECT_CONVOLUTION_REVERB_SOFT        0xA000
-#define AL_EFFECTSLOT_STATE_SOFT                 0x199D
+#define AL_CONVOLUTION_REVERB_ORIENTATION_SOFT   0x100F /* same as AL_ORIENTATION */
+#define AL_EFFECTSLOT_STATE_SOFT                 0x199E
 typedef void (AL_APIENTRY*LPALAUXILIARYEFFECTSLOTPLAYSOFT)(ALuint slotid) AL_API_NOEXCEPT17;
 typedef void (AL_APIENTRY*LPALAUXILIARYEFFECTSLOTPLAYVSOFT)(ALsizei n, const ALuint *slotids) AL_API_NOEXCEPT17;
 typedef void (AL_APIENTRY*LPALAUXILIARYEFFECTSLOTSTOPSOFT)(ALuint slotid) AL_API_NOEXCEPT17;

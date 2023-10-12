@@ -1,6 +1,8 @@
 
 #include "config.h"
 
+#include <cmath>
+
 #include "AL/al.h"
 #include "alc/inprogext.h"
 

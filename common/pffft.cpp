@@ -70,7 +70,6 @@
 #include "alnumbers.h"
 #include "alspan.h"
 #include "opthelpers.h"
-#include "vector.h"
 
 
 namespace {
@@ -1422,8 +1421,7 @@ PFFFT_Setup *pffft_new_setup(unsigned int N, pffft_transform_t transform)
 
     if constexpr(SIMD_SZ > 1)
     {
-        al::vector<float,16> e(2u*Ncvec*(SIMD_SZ-1));
-        std::fill(e.begin(), e.end(), 0.0f);
+        auto e = std::vector<float>(2u*Ncvec*(SIMD_SZ-1), 0.0f);
         for(size_t k{0};k < s->Ncvec;++k)
         {
             const size_t i{k / SIMD_SZ};
@@ -1431,8 +1429,8 @@ PFFFT_Setup *pffft_new_setup(unsigned int N, pffft_transform_t transform)
             for(size_t m{0};m < SIMD_SZ-1;++m)
             {
                 const double A{-2.0*al::numbers::pi*static_cast<double>((m+1)*k) / N};
-                e[(2*(i*3 + m) + 0)*SIMD_SZ + j] = static_cast<float>(std::cos(A));
-                e[(2*(i*3 + m) + 1)*SIMD_SZ + j] = static_cast<float>(std::sin(A));
+                e[((i*3 + m)*2 + 0)*SIMD_SZ + j] = static_cast<float>(std::cos(A));
+                e[((i*3 + m)*2 + 1)*SIMD_SZ + j] = static_cast<float>(std::sin(A));
             }
         }
         std::memcpy(s->e, e.data(), e.size()*sizeof(float));

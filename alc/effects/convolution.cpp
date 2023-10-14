@@ -418,7 +418,7 @@ void ConvolutionState::deviceUpdate(const DeviceBase *device, const BufferStorag
             {
                 ffttmp[i*2    ] = static_cast<float>(fftbuffer[i].real()) * fftscale;
                 ffttmp[i*2 + 1] = static_cast<float>((i == 0) ?
-                    fftbuffer[ConvolveUpdateSamples+1].real() : fftbuffer[i].imag()) * fftscale;
+                    fftbuffer[ConvolveUpdateSamples].real() : fftbuffer[i].imag()) * fftscale;
             }
             /* Reorder backward to make it suitable for pffft_zconvolve and the
              * subsequent pffft_transform(..., PFFFT_BACKWARD).

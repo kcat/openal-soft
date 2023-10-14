@@ -51,6 +51,9 @@ struct UhjEncoderBase {
 template<size_t N>
 struct UhjEncoder final : public UhjEncoderBase {
     static constexpr size_t sFilterDelay{N/2};
+    static constexpr size_t sFftLength{256};
+    static constexpr size_t sSegmentSize{sFftLength/2};
+    static constexpr size_t sNumSegments{N/sSegmentSize - 1};
 
     /* Delays and processing storage for the input signal. */
     alignas(16) std::array<float,BufferLineSize+sFilterDelay> mW{};
@@ -60,11 +63,13 @@ struct UhjEncoder final : public UhjEncoderBase {
     alignas(16) std::array<float,BufferLineSize> mS{};
     alignas(16) std::array<float,BufferLineSize> mD{};
 
-    /* History and temp storage for the FIR filter. New samples should be
-     * written to index sFilterDelay*2 - 1.
-     */
-    static constexpr size_t sWXInOffset{sFilterDelay*2 - 1};
-    alignas(16) std::array<float,BufferLineSize + sFilterDelay*2> mWX{};
+    /* History and temp storage for the convolution filter. */
+    size_t mFifoPos{}, mCurrentSegment{};
+    alignas(16) std::array<float,sFftLength> mWXIn{};
+    alignas(16) std::array<float,sFftLength> mWXOut{};
+    alignas(16) std::array<float,sFftLength> mFftBuffer{};
+    alignas(16) std::array<float,sFftLength> mWorkData{};
+    alignas(16) std::array<float,sFftLength*sNumSegments> mWXHistory{};
 
     alignas(16) std::array<std::array<float,sFilterDelay>,2> mDirectDelay{};
 
@@ -77,8 +82,6 @@ struct UhjEncoder final : public UhjEncoderBase {
      */
     void encode(float *LeftOut, float *RightOut, const al::span<const float*const,3> InSamples,
         const size_t SamplesToDo) override;
-
-    DEF_NEWDEL(UhjEncoder)
 };
 
 struct UhjEncoderIIR final : public UhjEncoderBase {

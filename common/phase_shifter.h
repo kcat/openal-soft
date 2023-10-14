@@ -15,6 +15,8 @@
 #include "alspan.h"
 
 
+struct NoInit { };
+
 /* Implements a wide-band +90 degree phase-shift. Note that this should be
  * given one sample less of a delay (FilterSize/2 - 1) compared to the direct
  * signal delay (FilterSize/2) to properly align.
@@ -70,6 +72,8 @@ struct PhaseShifterT {
             fftiter -= 2;
         }
     }
+
+    PhaseShifterT(NoInit) { }
 
     void process(al::span<float> dst, const float *RESTRICT src) const;
 

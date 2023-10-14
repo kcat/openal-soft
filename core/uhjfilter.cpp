@@ -235,7 +235,7 @@ void UhjEncoder<N>::encode(float *LeftOut, float *RightOut,
 
         /* Apply the first segment of the filter in the time domain. */
         auto buf_iter = mD.begin() + base;
-        Filter.mPShift.process({buf_iter, todo}, mWXIn.begin()+1 + mFifoPos);
+        Filter.mPShift.process({buf_iter, todo}, mWXIn.data()+1 + mFifoPos);
 
         /* Add the other segments of the filter that were previously processed
          * by the FFT.

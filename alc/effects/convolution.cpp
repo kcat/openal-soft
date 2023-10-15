@@ -224,7 +224,7 @@ struct ConvolutionState final : public EffectState {
     uint mAmbiOrder{};
 
     size_t mFifoPos{0};
-    std::array<float,ConvolveUpdateSamples*2> mInput{};
+    alignas(16) std::array<float,ConvolveUpdateSamples*2> mInput{};
     al::vector<std::array<float,ConvolveUpdateSamples>,16> mFilter;
     al::vector<std::array<float,ConvolveUpdateSamples*2>,16> mOutput;
 
@@ -665,14 +665,13 @@ void ConvolutionState::process(const size_t samplesToDo,
 
         /* Move the newest input to the front for the next iteration's history. */
         std::copy(mInput.cbegin()+ConvolveUpdateSamples, mInput.cend(), mInput.begin());
+        std::fill(mInput.begin()+ConvolveUpdateSamples, mInput.end(), 0.0f);
 
-        /* Calculate the frequency domain response and add the relevant
+        /* Calculate the frequency-domain response and add the relevant
          * frequency bins to the FFT history.
          */
-        auto fftiter = std::copy_n(mInput.cbegin(), ConvolveUpdateSamples, mFftBuffer.begin());
-        std::fill(fftiter, mFftBuffer.end(), 0.0f);
-        pffft_transform(mFft.get(), mFftBuffer.data(),
-            mComplexData.get() + curseg*ConvolveUpdateSize, mFftWorkBuffer.data(), PFFFT_FORWARD);
+        pffft_transform(mFft.get(), mInput.data(), mComplexData.get() + curseg*ConvolveUpdateSize,
+            mFftWorkBuffer.data(), PFFFT_FORWARD);
 
         const float *RESTRICT filter{mComplexData.get() + mNumConvolveSegs*ConvolveUpdateSize};
         for(size_t c{0};c < chans.size();++c)

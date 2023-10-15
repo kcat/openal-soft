@@ -433,22 +433,18 @@ void ConvolutionState::deviceUpdate(const DeviceBase *device, const BufferStorag
 void ConvolutionState::update(const ContextBase *context, const EffectSlot *slot,
     const EffectProps *props, const EffectTarget target)
 {
-    /* NOTE: Stereo and Rear are slightly different from normal mixing (as
-     * defined in alu.cpp). These are 45 degrees from center, rather than the
-     * 30 degrees used there.
-     *
-     * TODO: LFE is not mixed to output. This will require each buffer channel
+    /* TODO: LFE is not mixed to output. This will require each buffer channel
      * to have its own output target since the main mixing buffer won't have an
      * LFE channel (due to being B-Format).
      */
     static constexpr ChanPosMap MonoMap[1]{
         { FrontCenter, std::array{0.0f, 0.0f, -1.0f} }
     }, StereoMap[2]{
-        { FrontLeft,  std::array{-sin45, 0.0f, -cos45} },
-        { FrontRight, std::array{ sin45, 0.0f, -cos45} },
+        { FrontLeft,  std::array{-sin30, 0.0f, -cos30} },
+        { FrontRight, std::array{ sin30, 0.0f, -cos30} },
     }, RearMap[2]{
-        { BackLeft,  std::array{-sin45, 0.0f, cos45} },
-        { BackRight, std::array{ sin45, 0.0f, cos45} },
+        { BackLeft,  std::array{-sin30, 0.0f, cos30} },
+        { BackRight, std::array{ sin30, 0.0f, cos30} },
     }, QuadMap[4]{
         { FrontLeft,  std::array{-sin45, 0.0f, -cos45} },
         { FrontRight, std::array{ sin45, 0.0f, -cos45} },
@@ -575,8 +571,8 @@ void ConvolutionState::update(const ContextBase *context, const EffectSlot *slot
         mOutTarget = target.Main->Buffer;
         if(device->mRenderMode == RenderMode::Pairwise)
         {
-            /* Scales the azimuth of the given vector by 2 if it's in front.
-             * Effectively scales +/-45 degrees to +/-90 degrees, leaving > +90
+            /* Scales the azimuth of the given vector by 3 if it's in front.
+             * Effectively scales +/-30 degrees to +/-90 degrees, leaving > +90
              * and < -90 alone.
              */
             auto ScaleAzimuthFront = [](std::array<float,3> pos) -> std::array<float,3>
@@ -591,20 +587,20 @@ void ConvolutionState::update(const ContextBase *context, const EffectSlot *slot
                     float x{pos[0] / len2d};
                     float z{-pos[2] / len2d};
 
-                    /* Z > cos(pi/4) = -45 < azimuth < 45 degrees. */
-                    if(z > cos45)
+                    /* Z > cos(pi/6) = -30 < azimuth < 30 degrees. */
+                    if(z > cos30)
                     {
-                        /* Double the angle represented by x,z. */
-                        const float resx{2.0f*x * z};
-                        const float resz{z*z - x*x};
+                        /* Triple the angle represented by x,z. */
+                        x = x*3.0f - x*x*x*4.0f;
+                        z = z*z*z*4.0f - z*3.0f;
 
                         /* Scale the vector back to fit in 3D. */
-                        pos[0] = resx * len2d;
-                        pos[2] = -resz * len2d;
+                        pos[0] = x * len2d;
+                        pos[2] = -z * len2d;
                     }
                     else
                     {
-                        /* If azimuth >= 45 degrees, clamp to 90 degrees. */
+                        /* If azimuth >= 30 degrees, clamp to 90 degrees. */
                         pos[0] = std::copysign(len2d, pos[0]);
                         pos[2] = 0.0f;
                     }

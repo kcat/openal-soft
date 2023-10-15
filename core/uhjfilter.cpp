@@ -11,6 +11,7 @@
 #include "opthelpers.h"
 #include "pffft.h"
 #include "phase_shifter.h"
+#include "vector.h"
 
 
 UhjQualityType UhjDecodeQuality{UhjQualityType::Default};
@@ -96,8 +97,8 @@ struct SplitFilter {
             fftBuffer[i] = std::conj(fftBuffer[fft_size - i]);
         inverse_fft(al::span{fftBuffer.get(), fft_size});
 
-        /* Store the first segment of the buffer to apply as a time-domain
-         * filter (backwards for more efficient processing).
+        /* Store the first segment of the filter to apply in the time-domain
+         * (backwards for more efficient processing).
          */
         auto fftiter = fftBuffer.get() + sSampleLength - 1;
         for(float &coeff : mPShift.mCoeffs)
@@ -109,7 +110,7 @@ struct SplitFilter {
         /* The remaining segments of the filter are converted back to the
          * frequency domain, each on their own (0 stuffed).
          */
-        auto fftTmp = std::make_unique<float[]>(sFftLength);
+        auto fftTmp = al::vector<float,16>(sFftLength);
         float *filter{mFilterData.data()};
         for(size_t s{0};s < sNumSegments;++s)
         {
@@ -127,7 +128,7 @@ struct SplitFilter {
                 fftTmp[i*2 + 1] = static_cast<float>((i == 0) ? fftBuffer[sSampleLength].real()
                     : fftBuffer[i].imag()) / float{sFftLength};
             }
-            pffft_zreorder(mFft.get(), fftTmp.get(), filter, PFFFT_BACKWARD);
+            pffft_zreorder(mFft.get(), fftTmp.data(), filter, PFFFT_BACKWARD);
             filter += sFftLength;
         }
     }

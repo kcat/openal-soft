@@ -29,10 +29,10 @@ using PFFFTSetupPtr = std::unique_ptr<PFFFT_Setup,PFFFTSetupDeleter>;
  * segment has an FFT applied with a 256-sample buffer (the latter half left
  * silent) to get its frequency-domain response.
  *
- * Input samples are similarly broken up into 128-sample segments, with an FFT
- * applied with a 256-sample buffer to each new incoming segment to get its
- * frequency-domain response. A history of FFT'd input segments is maintained,
- * equal to the number of filter response segments.
+ * Input samples are similarly broken up into 128-sample segments, with a 256-
+ * sample FFT applied to each new incoming segment to get its frequency-domain
+ * response. A history of FFT'd input segments is maintained, equal to the
+ * number of filter response segments.
  *
  * To apply the convolution, each filter response segment is convolved with its
  * paired input segment (using complex multiplies, far cheaper than time-domain
@@ -82,6 +82,10 @@ struct SplitFilter {
 
         /* Convert to the frequency domain, shift the phase of each bin by +90
          * degrees, then convert back to the time domain.
+         *
+         * NOTE: The 0- and half-frequency are always real for a real signal.
+         * To maintain that and their phase (0 or pi), they're heavily
+         * attenuated instead of shifted like the others.
          */
         forward_fft(al::span{fftBuffer.get(), fft_size});
         fftBuffer[0] *= std::numeric_limits<double>::epsilon();
@@ -204,6 +208,7 @@ void UhjEncoder<N>::encode(float *LeftOut, float *RightOut,
 {
     static constexpr auto &Filter = gSplitFilter<N>;
     static_assert(sFftLength == Filter.sFftLength);
+    static_assert(sSegmentSize == Filter.sSampleLength);
     static_assert(sNumSegments == Filter.sNumSegments);
 
     ASSUME(SamplesToDo > 0);
@@ -223,13 +228,13 @@ void UhjEncoder<N>::encode(float *LeftOut, float *RightOut,
     /* Precompute j(-0.3420201*W + 0.5098604*X) and store in mD. */
     for(size_t base{0};base < SamplesToDo;)
     {
-        const size_t todo{minz(Filter.sSampleLength-mFifoPos, SamplesToDo-base)};
+        const size_t todo{minz(sSegmentSize-mFifoPos, SamplesToDo-base)};
 
         /* Transform the non-delayed input and store in the later half of the
          * filter input.
          */
         std::transform(winput+base, winput+base+todo, xinput+base,
-            mWXIn.begin()+Filter.sSampleLength + mFifoPos,
+            mWXIn.begin()+sSegmentSize + mFifoPos,
             [](const float w, const float x) noexcept -> float
             { return -0.3420201f*w + 0.5098604f*x; });
 
@@ -247,36 +252,36 @@ void UhjEncoder<N>::encode(float *LeftOut, float *RightOut,
         base += todo;
 
         /* Check whether the input buffer is filled with new samples. */
-        if(mFifoPos < Filter.sSampleLength) break;
+        if(mFifoPos < sSegmentSize) break;
         mFifoPos = 0;
 
         /* Move the newest input to the front for the next iteration's history. */
-        std::copy(mWXIn.cbegin()+Filter.sSampleLength, mWXIn.cend(), mWXIn.begin());
-        std::fill(mWXIn.begin()+Filter.sSampleLength, mWXIn.end(), 0.0f);
+        std::copy(mWXIn.cbegin()+sSegmentSize, mWXIn.cend(), mWXIn.begin());
+        std::fill(mWXIn.begin()+sSegmentSize, mWXIn.end(), 0.0f);
 
         /* Overwrite the stale/oldest FFT'd segment with the newest input. */
         const size_t curseg{mCurrentSegment};
-        pffft_transform(Filter.mFft.get(), mWXIn.data(),
-            mWXHistory.data() + curseg*Filter.sFftLength, mWorkData.data(), PFFFT_FORWARD);
+        pffft_transform(Filter.mFft.get(), mWXIn.data(), mWXHistory.data() + curseg*sFftLength,
+            mWorkData.data(), PFFFT_FORWARD);
 
         /* Convolve each input segment with its IR filter counterpart (aligned
          * in time).
          */
         mFftBuffer.fill(0.0f);
         const float *filter{Filter.mFilterData.data()};
-        const float *input{mWXHistory.data() + curseg*Filter.sFftLength};
+        const float *input{mWXHistory.data() + curseg*sFftLength};
         for(size_t s{curseg};s < sNumSegments;++s)
         {
             pffft_zconvolve_accumulate(Filter.mFft.get(), input, filter, mFftBuffer.data());
-            input += Filter.sFftLength;
-            filter += Filter.sFftLength;
+            input += sFftLength;
+            filter += sFftLength;
         }
         input = mWXHistory.data();
         for(size_t s{0};s < curseg;++s)
         {
             pffft_zconvolve_accumulate(Filter.mFft.get(), input, filter, mFftBuffer.data());
-            input += Filter.sFftLength;
-            filter += Filter.sFftLength;
+            input += sFftLength;
+            filter += sFftLength;
         }
 
         /* Convert back to samples, writing to the output and storing the extra
@@ -285,10 +290,10 @@ void UhjEncoder<N>::encode(float *LeftOut, float *RightOut,
         pffft_transform(Filter.mFft.get(), mFftBuffer.data(), mFftBuffer.data(),
             mWorkData.data(), PFFFT_BACKWARD);
 
-        for(size_t i{0};i < Filter.sSampleLength;++i)
-            mWXOut[i] = mFftBuffer[i] + mWXOut[Filter.sSampleLength+i];
-        for(size_t i{0};i < Filter.sSampleLength;++i)
-            mWXOut[Filter.sSampleLength+i] = mFftBuffer[Filter.sSampleLength+i];
+        for(size_t i{0};i < sSegmentSize;++i)
+            mWXOut[i] = mFftBuffer[i] + mWXOut[sSegmentSize+i];
+        for(size_t i{0};i < sSegmentSize;++i)
+            mWXOut[sSegmentSize+i] = mFftBuffer[sSegmentSize+i];
 
         /* Shift the input history. */
         mCurrentSegment = curseg ? (curseg-1) : (sNumSegments-1);

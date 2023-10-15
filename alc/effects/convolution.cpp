@@ -41,21 +41,21 @@
 
 namespace {
 
-/* Convolution reverb is implemented using a segmented overlap-add method. The
- * impulse response is broken up into multiple segments of 128 samples, and
- * each segment has an FFT applied with a 256-sample buffer (the latter half
- * left silent) to get its frequency-domain response. The resulting response
- * has its positive/non-mirrored frequencies saved (129 bins) in each segment.
- * Note that since the 0th and 129th bins are real for a real signal, their
- * imaginary components are always 0 and can be dropped, allowing their real
- * components to be combined so only 128 complex values are stored for the 129
- * bins.
+/* Convolution is implemented using a segmented overlap-add method. The impulse
+ * response is split into multiple segments of 128 samples, and each segment
+ * has an FFT applied with a 256-sample buffer (the latter half left silent) to
+ * get its frequency-domain response. The resulting response has its positive/
+ * non-mirrored frequencies saved (129 bins) in each segment. Note that since
+ * the 0- and half-frequency bins are real for a real signal, their imaginary
+ * components are always 0 and can be dropped, allowing their real components
+ * to be combined so only 128 complex values are stored for the 129 bins.
  *
- * Input samples are similarly broken up into 128-sample segments, with an FFT
- * applied to each new incoming segment to get its 129 bins. A history of FFT'd
- * input segments is maintained, equal to the length of the impulse response.
+ * Input samples are similarly broken up into 128-sample segments, with a 256-
+ * sample FFT applied to each new incoming segment to get its 129 bins. A
+ * history of FFT'd input segments is maintained, equal to the number of
+ * impulse response segments.
  *
- * To apply the reverberation, each impulse response segment is convolved with
+ * To apply the convolution, each impulse response segment is convolved with
  * its paired input segment (using complex multiplies, far cheaper than FIRs),
  * accumulating into a 129-bin FFT buffer. The input history is then shifted to
  * align with later impulse response segments for the next input segment.
@@ -64,15 +64,15 @@ namespace {
  * sample time-domain response for output, which is split in two halves. The
  * first half is the 128-sample output, and the second half is a 128-sample
  * (really, 127) delayed extension, which gets added to the output next time.
- * Convolving two time-domain responses of lengths N and M results in a time-
- * domain signal of length N+M-1, and this holds true regardless of the
- * convolution being applied in the frequency domain, so these "overflow"
- * samples need to be accounted for.
+ * Convolving two time-domain responses of length N results in a time-domain
+ * signal of length N*2 - 1, and this holds true regardless of the convolution
+ * being applied in the frequency domain, so these "overflow" samples need to
+ * be accounted for.
  *
- * To avoid a delay with gathering enough input samples to apply an FFT with,
- * the first segment is applied directly in the time-domain as the samples come
- * in. Once enough have been retrieved, the FFT is applied on the input and
- * it's paired with the remaining (FFT'd) filter segments for processing.
+ * To avoid a delay with gathering enough input samples for the FFT, the first
+ * segment is applied directly in the time-domain as the samples come in. Once
+ * enough have been retrieved, the FFT is applied on the input and it's paired
+ * with the remaining (FFT'd) filter segments for processing.
  */
 
 

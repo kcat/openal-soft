@@ -547,7 +547,7 @@ void ConvolutionState::update(const ContextBase *context, const EffectSlot *slot
             for(size_t x{0};x < 4;++x)
                 coeffs[x] = mixmatrix[acn][x] * scale;
 
-            ComputePanGains(target.Main, coeffs.data(), gain, (*mChans)[c].Target);
+            ComputePanGains(target.Main, coeffs, gain, (*mChans)[c].Target);
         }
     }
     else
@@ -616,14 +616,14 @@ void ConvolutionState::update(const ContextBase *context, const EffectSlot *slot
             {
                 if(chanmap[i].channel == LFE) continue;
                 const auto coeffs = CalcDirectionCoeffs(ScaleAzimuthFront(chanmap[i].pos), 0.0f);
-                ComputePanGains(target.Main, coeffs.data(), gain, (*mChans)[i].Target);
+                ComputePanGains(target.Main, coeffs, gain, (*mChans)[i].Target);
             }
         }
         else for(size_t i{0};i < chanmap.size();++i)
         {
             if(chanmap[i].channel == LFE) continue;
             const auto coeffs = CalcDirectionCoeffs(chanmap[i].pos, 0.0f);
-            ComputePanGains(target.Main, coeffs.data(), gain, (*mChans)[i].Target);
+            ComputePanGains(target.Main, coeffs, gain, (*mChans)[i].Target);
         }
     }
 }

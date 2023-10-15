@@ -145,7 +145,7 @@ void PshifterState::update(const ContextBase*, const EffectSlot *slot,
     static constexpr auto coeffs = CalcDirectionCoeffs(std::array{0.0f, 0.0f, -1.0f});
 
     mOutTarget = target.Main->Buffer;
-    ComputePanGains(target.Main, coeffs.data(), slot->Gain, mTargetGains);
+    ComputePanGains(target.Main, coeffs, slot->Gain, mTargetGains);
 }
 
 void PshifterState::process(const size_t samplesToDo,

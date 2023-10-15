@@ -133,8 +133,8 @@ void ChorusState::update(const ContextBase *Context, const EffectSlot *Slot,
     auto &rcoeffs = (device->mRenderMode != RenderMode::Pairwise) ? rcoeffs_nrml : rcoeffs_pw;
 
     mOutTarget = target.Main->Buffer;
-    ComputePanGains(target.Main, lcoeffs.data(), Slot->Gain, mGains[0].Target);
-    ComputePanGains(target.Main, rcoeffs.data(), Slot->Gain, mGains[1].Target);
+    ComputePanGains(target.Main, lcoeffs, Slot->Gain, mGains[0].Target);
+    ComputePanGains(target.Main, rcoeffs, Slot->Gain, mGains[1].Target);
 
     float rate{props->Chorus.Rate};
     if(!(rate > 0.0f))

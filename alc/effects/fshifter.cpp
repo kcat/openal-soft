@@ -172,8 +172,8 @@ void FshifterState::update(const ContextBase *context, const EffectSlot *slot,
     auto &rcoeffs = (device->mRenderMode != RenderMode::Pairwise) ? rcoeffs_nrml : rcoeffs_pw;
 
     mOutTarget = target.Main->Buffer;
-    ComputePanGains(target.Main, lcoeffs.data(), slot->Gain, mGains[0].Target);
-    ComputePanGains(target.Main, rcoeffs.data(), slot->Gain, mGains[1].Target);
+    ComputePanGains(target.Main, lcoeffs, slot->Gain, mGains[0].Target);
+    ComputePanGains(target.Main, rcoeffs, slot->Gain, mGains[1].Target);
 }
 
 void FshifterState::process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn, const al::span<FloatBufferLine> samplesOut)

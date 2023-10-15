@@ -1108,9 +1108,9 @@ void ReverbPipeline::update3DPanning(const al::span<const float,3> ReflectionsPa
         auto latecoeffs = mult_matrix(latemat);
 
         for(size_t i{0u};i < NUM_LINES;i++)
-            ComputePanGains(mainMix, earlycoeffs[i].data(), earlyGain, mEarly.TargetGains[i]);
+            ComputePanGains(mainMix, earlycoeffs[i], earlyGain, mEarly.TargetGains[i]);
         for(size_t i{0u};i < NUM_LINES;i++)
-            ComputePanGains(mainMix, latecoeffs[i].data(), lateGain, mLate.TargetGains[i]);
+            ComputePanGains(mainMix, latecoeffs[i], lateGain, mLate.TargetGains[i]);
     }
     else
     {
@@ -1140,9 +1140,9 @@ void ReverbPipeline::update3DPanning(const al::span<const float,3> ReflectionsPa
         auto latecoeffs = mult_matrix(LateA2B, latemat);
 
         for(size_t i{0u};i < NUM_LINES;i++)
-            ComputePanGains(mainMix, earlycoeffs[i].data(), earlyGain, mEarly.TargetGains[i]);
+            ComputePanGains(mainMix, earlycoeffs[i], earlyGain, mEarly.TargetGains[i]);
         for(size_t i{0u};i < NUM_LINES;i++)
-            ComputePanGains(mainMix, latecoeffs[i].data(), lateGain, mLate.TargetGains[i]);
+            ComputePanGains(mainMix, latecoeffs[i], lateGain, mLate.TargetGains[i]);
     }
 }
 

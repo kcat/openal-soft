@@ -103,7 +103,7 @@ inline std::array<float,MaxAmbiChannels> CalcAngleCoeffs(const float azimuth,
  * coeffs are a 'slice' of a transform matrix for the input channel, used to
  * scale and orient the sound samples.
  */
-void ComputePanGains(const MixParams *mix, const float*RESTRICT coeffs, const float ingain,
-    const al::span<float,MaxAmbiChannels> gains);
+void ComputePanGains(const MixParams *mix, const al::span<const float,MaxAmbiChannels> coeffs,
+    const float ingain, const al::span<float,MaxAmbiChannels> gains);
 
 #endif /* CORE_MIXER_H */

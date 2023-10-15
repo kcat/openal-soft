@@ -118,8 +118,8 @@ void EchoState::update(const ContextBase *context, const EffectSlot *slot,
     const auto coeffs1 = CalcAngleCoeffs( angle, 0.0f, 0.0f);
 
     mOutTarget = target.Main->Buffer;
-    ComputePanGains(target.Main, coeffs0.data(), slot->Gain, mGains[0].Target);
-    ComputePanGains(target.Main, coeffs1.data(), slot->Gain, mGains[1].Target);
+    ComputePanGains(target.Main, coeffs0, slot->Gain, mGains[0].Target);
+    ComputePanGains(target.Main, coeffs1, slot->Gain, mGains[1].Target);
 }
 
 void EchoState::process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn, const al::span<FloatBufferLine> samplesOut)

@@ -402,7 +402,7 @@ ALWAYS_INLINE(void) vcplxmulconj(v4sf &ar, v4sf &ai, v4sf br, v4sf bi) noexcept
 /*
   passf2 and passb2 has been merged here, fsign = -1 for passf2, +1 for passb2
 */
-NEVER_INLINE(void) passf2_ps(const size_t ido, const size_t l1, const v4sf *cc, v4sf *ch,
+NEVER_INLINE(void) passf2_ps(const size_t ido, const size_t l1, const v4sf *cc, v4sf *RESTRICT ch,
     const float *wa1, const float fsign)
 {
     const size_t l1ido{l1*ido};
@@ -438,7 +438,7 @@ NEVER_INLINE(void) passf2_ps(const size_t ido, const size_t l1, const v4sf *cc, 
 /*
   passf3 and passb3 has been merged here, fsign = -1 for passf3, +1 for passb3
 */
-NEVER_INLINE(void) passf3_ps(const size_t ido, const size_t l1, const v4sf *cc, v4sf *ch,
+NEVER_INLINE(void) passf3_ps(const size_t ido, const size_t l1, const v4sf *cc, v4sf *RESTRICT ch,
     const float *wa1, const float *wa2, const float fsign)
 {
     assert(ido > 2);
@@ -473,7 +473,7 @@ NEVER_INLINE(void) passf3_ps(const size_t ido, const size_t l1, const v4sf *cc, 
     }
 } /* passf3 */
 
-NEVER_INLINE(void) passf4_ps(const size_t ido, const size_t l1, const v4sf *cc, v4sf *ch,
+NEVER_INLINE(void) passf4_ps(const size_t ido, const size_t l1, const v4sf *cc, v4sf *RESTRICT ch,
     const float *wa1, const float *wa2, const float *wa3, const float fsign)
 {
     /* fsign == -1 for forward transform and +1 for backward transform */
@@ -548,7 +548,7 @@ NEVER_INLINE(void) passf4_ps(const size_t ido, const size_t l1, const v4sf *cc, 
 /*
  * passf5 and passb5 has been merged here, fsign = -1 for passf5, +1 for passb5
  */
-NEVER_INLINE(void) passf5_ps(const size_t ido, const size_t l1, const v4sf *cc, v4sf *ch,
+NEVER_INLINE(void) passf5_ps(const size_t ido, const size_t l1, const v4sf *cc, v4sf *RESTRICT ch,
     const float *wa1, const float *wa2, const float *wa3, const float *wa4, const float fsign)
 {
     const v4sf tr11{LD_PS1(0.309016994374947f)};
@@ -649,7 +649,7 @@ NEVER_INLINE(void) radf2_ps(const size_t ido, const size_t l1, const v4sf *RESTR
 } /* radf2 */
 
 
-NEVER_INLINE(void) radb2_ps(const size_t ido, const size_t l1, const v4sf *cc, v4sf *ch,
+NEVER_INLINE(void) radb2_ps(const size_t ido, const size_t l1, const v4sf *cc, v4sf *RESTRICT ch,
     const float *wa1)
 {
     const size_t l1ido{l1*ido};
@@ -1517,7 +1517,7 @@ void pffft_destroy_setup(PFFFT_Setup *s)
 namespace {
 
 /* [0 0 1 2 3 4 5 6 7 8] -> [0 8 7 6 5 4 3 2 1] */
-void reversed_copy(const size_t N, const v4sf *in, const int in_stride, v4sf *out)
+void reversed_copy(const size_t N, const v4sf *in, const int in_stride, v4sf *RESTRICT out)
 {
     v4sf g0, g1;
     interleave2(in[0], in[1], g0, g1);
@@ -1536,7 +1536,7 @@ void reversed_copy(const size_t N, const v4sf *in, const int in_stride, v4sf *ou
     *--out = VSWAPHL(g1, g0);
 }
 
-void unreversed_copy(const size_t N, const v4sf *in, v4sf *out, const int out_stride)
+void unreversed_copy(const size_t N, const v4sf *in, v4sf *RESTRICT out, const int out_stride)
 {
     v4sf g0{in[0]}, g1{g0};
     ++in;
@@ -1555,7 +1555,7 @@ void unreversed_copy(const size_t N, const v4sf *in, v4sf *out, const int out_st
     uninterleave2(h0, g1, out[0], out[1]);
 }
 
-void pffft_cplx_finalize(const size_t Ncvec, const v4sf *in, v4sf *out, const v4sf *e)
+void pffft_cplx_finalize(const size_t Ncvec, const v4sf *in, v4sf *RESTRICT out, const v4sf *e)
 {
     assert(in != out);
 
@@ -1599,7 +1599,7 @@ void pffft_cplx_finalize(const size_t Ncvec, const v4sf *in, v4sf *out, const v4
     }
 }
 
-void pffft_cplx_preprocess(const size_t Ncvec, const v4sf *in, v4sf *out, const v4sf *e)
+void pffft_cplx_preprocess(const size_t Ncvec, const v4sf *in, v4sf *RESTRICT out, const v4sf *e)
 {
     assert(in != out);
 
@@ -1635,7 +1635,7 @@ void pffft_cplx_preprocess(const size_t Ncvec, const v4sf *in, v4sf *out, const 
 
 
 ALWAYS_INLINE(void) pffft_real_finalize_4x4(const v4sf *in0, const v4sf *in1, const v4sf *in,
-    const v4sf *e, v4sf *out)
+    const v4sf *e, v4sf *RESTRICT out)
 {
     v4sf r0{*in0}, i0{*in1};
     v4sf r1{*in++}; v4sf i1{*in++};
@@ -1690,7 +1690,8 @@ ALWAYS_INLINE(void) pffft_real_finalize_4x4(const v4sf *in0, const v4sf *in1, co
     *out++ = i3;
 }
 
-NEVER_INLINE(void) pffft_real_finalize(const size_t Ncvec, const v4sf *in, v4sf *out, const v4sf *e)
+NEVER_INLINE(void) pffft_real_finalize(const size_t Ncvec, const v4sf *in, v4sf *RESTRICT out,
+    const v4sf *e)
 {
     static constexpr float s{al::numbers::sqrt2_v<float>/2.0f};
 
@@ -1728,7 +1729,7 @@ NEVER_INLINE(void) pffft_real_finalize(const size_t Ncvec, const v4sf *in, v4sf 
         pffft_real_finalize_4x4(&in[8*k-1], &in[8*k+0], in + 8*k+1, e + k*6, out + k*8);
 }
 
-ALWAYS_INLINE(void) pffft_real_preprocess_4x4(const v4sf *in, const v4sf *e, v4sf *out,
+ALWAYS_INLINE(void) pffft_real_preprocess_4x4(const v4sf *in, const v4sf *e, v4sf *RESTRICT out,
     const bool first)
 {
     v4sf r0{in[0]}, i0{in[1]}, r1{in[2]}, i1{in[3]};
@@ -1780,7 +1781,8 @@ ALWAYS_INLINE(void) pffft_real_preprocess_4x4(const v4sf *in, const v4sf *e, v4s
     *out++ = i3;
 }
 
-NEVER_INLINE(void) pffft_real_preprocess(const size_t Ncvec, const v4sf *in, v4sf *out, const v4sf *e)
+NEVER_INLINE(void) pffft_real_preprocess(const size_t Ncvec, const v4sf *in, v4sf *RESTRICT out,
+    const v4sf *e)
 {
     static constexpr float sqrt2{al::numbers::sqrt2_v<float>};
 
@@ -1908,7 +1910,7 @@ void pffft_zreorder(const PFFFT_Setup *setup, const float *in, float *out,
 
     const size_t N{setup->N}, Ncvec{setup->Ncvec};
     const v4sf *vin{reinterpret_cast<const v4sf*>(in)};
-    v4sf *vout{reinterpret_cast<v4sf*>(out)};
+    v4sf *RESTRICT vout{reinterpret_cast<v4sf*>(out)};
     if(setup->transform == PFFFT_REAL)
     {
         const size_t dk{N/32};
@@ -2192,7 +2194,7 @@ void pffft_transform_internal_nosimd(const PFFFT_Setup *setup, const float *inpu
 } // namespace
 
 #define pffft_zreorder_nosimd pffft_zreorder
-void pffft_zreorder_nosimd(const PFFFT_Setup *setup, const float *in, float *out,
+void pffft_zreorder_nosimd(const PFFFT_Setup *setup, const float *in, float *RESTRICT out,
     pffft_direction_t direction)
 {
     const size_t N{setup->N};

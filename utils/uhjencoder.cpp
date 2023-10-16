@@ -325,7 +325,7 @@ int main(int argc, char **argv)
                     return false;
                 for(const int id : a)
                 {
-                    if(std::find(b.begin(), b.end(), id) != b.end())
+                    if(std::find(b.begin(), b.end(), id) == b.end())
                         return false;
                 }
                 return true;

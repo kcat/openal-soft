@@ -90,7 +90,7 @@ void DirectorySearch(const char *path, const char *ext, std::vector<std::string>
     pathstr += ext;
     TRACE("Searching %s\n", pathstr.c_str());
 
-    std::wstring wpath{utf8_to_wstr(pathstr.c_str())};
+    std::wstring wpath{utf8_to_wstr(pathstr)};
     WIN32_FIND_DATAW fdata;
     HANDLE hdl{FindFirstFileExW(wpath.c_str(), FindExInfoStandard, &fdata, FindExSearchNameMatch, NULL, 0)};
     if(hdl == INVALID_HANDLE_VALUE) return;

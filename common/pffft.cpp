@@ -112,10 +112,10 @@ typedef vector float v4sf;
 #define SIMD_SZ 4
 #define VZERO() ((vector float) vec_splat_u8(0))
 #define VMUL(a,b) vec_madd(a,b, VZERO())
-#define VADD(a,b) vec_add(a,b)
-#define VMADD(a,b,c) vec_madd(a,b,c)
-#define VSUB(a,b) vec_sub(a,b)
-#define LD_PS1(p) vec_splats(p)
+#define VADD vec_add
+#define VMADD vec_madd
+#define VSUB vec_sub
+#define LD_PS1 vec_splats
 inline v4sf vset4(float a, float b, float c, float d)
 {
     /* There a more efficient way to do this? */
@@ -125,12 +125,20 @@ inline v4sf vset4(float a, float b, float c, float d)
 #define VSET4 vset4
 #define VINSERT0(v, a) vec_insert((a), (v), 0)
 #define VEXTRACT0(v) vec_extract((v), 0)
-#define INTERLEAVE2(in1, in2, out1, out2) do { v4sf tmp__ = vec_mergeh(in1, in2); out2 = vec_mergel(in1, in2); out1 = tmp__; } while(0)
-#define UNINTERLEAVE2(in1, in2, out1, out2) do {                           \
-    vector unsigned char vperm1 =  (vector unsigned char)(0,1,2,3,8,9,10,11,16,17,18,19,24,25,26,27); \
-    vector unsigned char vperm2 =  (vector unsigned char)(4,5,6,7,12,13,14,15,20,21,22,23,28,29,30,31); \
-    v4sf tmp__ = vec_perm(in1, in2, vperm1); out2 = vec_perm(in1, in2, vperm2); out1 = tmp__; \
-} while(0)
+ALWAYS_INLINE(void) interleave2(v4sf in1, v4sf in2, v4sf &out1, v4sf &out2) noexcept
+{
+    v4sf tmp{vec_mergeh(in1, in2)};
+    out2 = vec_mergel(in1, in2);
+    out1 = tmp;
+}
+#define INTERLEAVE2 interleave2
+ALWAYS_INLINE(void) uninterleave2(v4sf in1, v4sf in2, v4sf &out1, v4sf &out2) noexcept
+{
+    v4sf tmp{vec_perm(in1, in2, (vector unsigned char)(0,1,2,3,8,9,10,11,16,17,18,19,24,25,26,27))};
+    out2 = vec_perm(in1, in2, (vector unsigned char)(4,5,6,7,12,13,14,15,20,21,22,23,28,29,30,31));
+    out1 = tmp;
+}
+#define UNINTERLEAVE2 uninterleave2
 #define VTRANSPOSE4(x0,x1,x2,x3) do {           \
     v4sf y0 = vec_mergeh(x0, x2);               \
     v4sf y1 = vec_mergel(x0, x2);               \
@@ -162,8 +170,20 @@ typedef __m128 v4sf;
 #define VSET4 _mm_setr_ps
 #define VINSERT0(v, a) _mm_move_ss((v), _mm_set_ss(a))
 #define VEXTRACT0 _mm_cvtss_f32
-#define INTERLEAVE2(in1, in2, out1, out2) do { v4sf tmp__ = _mm_unpacklo_ps(in1, in2); out2 = _mm_unpackhi_ps(in1, in2); out1 = tmp__; } while(0)
-#define UNINTERLEAVE2(in1, in2, out1, out2) do { v4sf tmp__ = _mm_shuffle_ps(in1, in2, _MM_SHUFFLE(2,0,2,0)); out2 = _mm_shuffle_ps(in1, in2, _MM_SHUFFLE(3,1,3,1)); out1 = tmp__; } while(0)
+ALWAYS_INLINE(void) interleave2(v4sf in1, v4sf in2, v4sf &out1, v4sf &out2) noexcept
+{
+    v4sf tmp{_mm_unpacklo_ps(in1, in2)};
+    out2 = _mm_unpackhi_ps(in1, in2);
+    out1 = tmp;
+}
+#define INTERLEAVE2 interleave2
+ALWAYS_INLINE(void) uninterleave2(v4sf in1, v4sf in2, v4sf &out1, v4sf &out2) noexcept
+{
+    v4sf tmp{_mm_shuffle_ps(in1, in2, _MM_SHUFFLE(2,0,2,0))};
+    out2 = _mm_shuffle_ps(in1, in2, _MM_SHUFFLE(3,1,3,1));
+    out1 = tmp;
+}
+#define UNINTERLEAVE2 uninterleave2
 #define VTRANSPOSE4 _MM_TRANSPOSE4_PS
 #define VSWAPHL(a,b) _mm_shuffle_ps(b, a, _MM_SHUFFLE(3,2,1,0))
 #define VALIGNED(ptr) ((reinterpret_cast<uintptr_t>(ptr) & 0xF) == 0)
@@ -182,7 +202,7 @@ typedef float32x4_t v4sf;
 #define VMADD(a,b,c) vmlaq_f32(c,a,b)
 #define VSUB vsubq_f32
 #define LD_PS1 vdupq_n_f32
-inline v4sf vset4(float a, float b, float c, float d)
+ALWAYS_INLINE(v4sf) vset4(float a, float b, float c, float d) noexcept
 {
     float32x4_t ret{vmovq_n_f32(a)};
     ret = vsetq_lane_f32(b, ret, 1);
@@ -220,20 +240,20 @@ using v4sf [[gnu::vector_size(16), gnu::aligned(16)]] = float;
 #define VMADD(a,b,c) ((a)*(b) + (c))
 #define VSUB(a,b) ((a) - (b))
 
-constexpr v4sf ld_ps1(float a) noexcept { return v4sf{a, a, a, a}; }
+constexpr ALWAYS_INLINE(v4sf) ld_ps1(float a) noexcept { return v4sf{a, a, a, a}; }
 #define LD_PS1 ld_ps1
 #define VSET4(a, b, c, d) v4sf{(a), (b), (c), (d)}
-constexpr v4sf vinsert0(v4sf v, float a) noexcept
+constexpr ALWAYS_INLINE(v4sf) vinsert0(v4sf v, float a) noexcept
 { return v4sf{a, v[1], v[2], v[3]}; }
 #define VINSERT0 vinsert0
 #define VEXTRACT0(v) ((v)[0])
 
-[[gnu::always_inline]] inline v4sf unpacklo(v4sf a, v4sf b) noexcept
+ALWAYS_INLINE(v4sf) unpacklo(v4sf a, v4sf b) noexcept
 { return v4sf{a[0], b[0], a[1], b[1]}; }
-[[gnu::always_inline]] inline v4sf unpackhi(v4sf a, v4sf b) noexcept
+ALWAYS_INLINE(v4sf) unpackhi(v4sf a, v4sf b) noexcept
 { return v4sf{a[2], b[2], a[3], b[3]}; }
 
-[[gnu::always_inline]] inline void interleave2(v4sf in1, v4sf in2, v4sf &out1, v4sf &out2) noexcept
+ALWAYS_INLINE(void) interleave2(v4sf in1, v4sf in2, v4sf &out1, v4sf &out2) noexcept
 {
     v4sf tmp__{unpacklo(in1, in2)};
     out2 = unpackhi(in1, in2);
@@ -241,7 +261,7 @@ constexpr v4sf vinsert0(v4sf v, float a) noexcept
 }
 #define INTERLEAVE2 interleave2
 
-[[gnu::always_inline]] inline void uninterleave2(v4sf in1, v4sf in2, v4sf &out1, v4sf &out2) noexcept
+ALWAYS_INLINE(void) uninterleave2(v4sf in1, v4sf in2, v4sf &out1, v4sf &out2) noexcept
 {
     v4sf tmp__{in1[0], in1[2], in2[0], in2[2]};
     out2 = v4sf{in1[1], in1[3], in2[1], in2[3]};
@@ -249,7 +269,7 @@ constexpr v4sf vinsert0(v4sf v, float a) noexcept
 }
 #define UNINTERLEAVE2 uninterleave2
 
-[[gnu::always_inline]] inline void vtranspose4(v4sf &x0, v4sf &x1, v4sf &x2, v4sf &x3) noexcept
+ALWAYS_INLINE(void) vtranspose4(v4sf &x0, v4sf &x1, v4sf &x2, v4sf &x3) noexcept
 {
     v4sf tmp0{unpacklo(x0, x1)};
     v4sf tmp2{unpacklo(x2, x3)};
@@ -262,7 +282,7 @@ constexpr v4sf vinsert0(v4sf v, float a) noexcept
 }
 #define VTRANSPOSE4 vtranspose4
 
-[[gnu::always_inline]] inline v4sf vswaphl(v4sf a, v4sf b) noexcept
+ALWAYS_INLINE(v4sf) vswaphl(v4sf a, v4sf b) noexcept
 { return v4sf{b[0], b[1], a[2], a[3]}; }
 #define VSWAPHL vswaphl
 
@@ -290,8 +310,21 @@ typedef float v4sf;
 #endif
 
 // shortcuts for complex multiplications
-#define VCPLXMUL(ar,ai,br,bi) do { v4sf tmp=VMUL(ar,bi); ar=VMUL(ar,br); ar=VSUB(ar,VMUL(ai,bi)); ai=VMADD(ai,br,tmp); } while(0)
-#define VCPLXMULCONJ(ar,ai,br,bi) do { v4sf tmp=VMUL(ar,bi); ar=VMUL(ar,br); ar=VMADD(ai,bi,ar); ai=VSUB(VMUL(ai,br),tmp); } while(0)
+ALWAYS_INLINE(void) vcplxmul(v4sf &ar, v4sf &ai, v4sf br, v4sf bi) noexcept
+{
+    v4sf tmp{VMUL(ar, bi)};
+    ar = VSUB(VMUL(ar, br), VMUL(ai, bi));
+    ai = VMADD(ai, br, tmp);
+}
+#define VCPLXMUL vcplxmul
+
+ALWAYS_INLINE(void) vcplxmulconj(v4sf &ar, v4sf &ai, v4sf br, v4sf bi) noexcept
+{
+    v4sf tmp{VMUL(ar, bi)};
+    ar = VMADD(ai, bi, VMUL(ar, br));
+    ai = VSUB(VMUL(ai, br), tmp);
+}
+#define VCPLXMULCONJ vcplxmulconj
 
 #if !defined(PFFFT_SIMD_DISABLE)
 
@@ -366,14 +399,13 @@ NEVER_INLINE(void) passf2_ps(const size_t ido, const size_t l1, const v4sf *cc, 
     }
     else
     {
-        const v4sf vsign{LD_PS1(fsign)};
         for(size_t k{0};k < l1ido;k += ido, ch += ido, cc += 2*ido)
         {
             for(size_t i{0};i < ido-1;i += 2)
             {
                 v4sf tr2{VSUB(cc[i+0], cc[i+ido+0])};
                 v4sf ti2{VSUB(cc[i+1], cc[i+ido+1])};
-                v4sf wr{LD_PS1(wa1[i])}, wi{VMUL(vsign, LD_PS1(wa1[i+1]))};
+                v4sf wr{LD_PS1(wa1[i])}, wi{LD_PS1(wa1[i+1]*fsign)};
                 ch[i]   = VADD(cc[i+0], cc[i+ido+0]);
                 ch[i+1] = VADD(cc[i+1], cc[i+ido+1]);
                 VCPLXMUL(tr2, ti2, wr, wi);

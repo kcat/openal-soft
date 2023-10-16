@@ -1773,7 +1773,7 @@ NEVER_INLINE(void) pffft_real_preprocess(const size_t Ncvec, const v4sf *in, v4s
 }
 
 
-void pffft_transform_internal(PFFFT_Setup *setup, const v4sf *vinput, v4sf *voutput,
+void pffft_transform_internal(const PFFFT_Setup *setup, const v4sf *vinput, v4sf *voutput,
     v4sf *scratch, const pffft_direction_t direction, const bool ordered)
 {
     assert(scratch != nullptr);
@@ -1850,7 +1850,8 @@ void pffft_transform_internal(PFFFT_Setup *setup, const v4sf *vinput, v4sf *vout
 
 } // namespace
 
-void pffft_zreorder(PFFFT_Setup *setup, const float *in, float *out, pffft_direction_t direction)
+void pffft_zreorder(const PFFFT_Setup *setup, const float *in, float *out,
+    pffft_direction_t direction)
 {
     assert(in != out);
 
@@ -1902,8 +1903,8 @@ void pffft_zreorder(PFFFT_Setup *setup, const float *in, float *out, pffft_direc
     }
 }
 
-void pffft_zconvolve_scale_accumulate(PFFFT_Setup *s, const float *a, const float *b, float *ab,
-    float scaling)
+void pffft_zconvolve_scale_accumulate(const PFFFT_Setup *s, const float *a, const float *b,
+    float *ab, float scaling)
 {
     const size_t Ncvec{s->Ncvec};
     const v4sf *RESTRICT va{reinterpret_cast<const v4sf*>(a)};
@@ -2004,7 +2005,7 @@ void pffft_zconvolve_scale_accumulate(PFFFT_Setup *s, const float *a, const floa
     }
 }
 
-void pffft_zconvolve_accumulate(PFFFT_Setup *s, const float *a, const float *b, float *ab)
+void pffft_zconvolve_accumulate(const PFFFT_Setup *s, const float *a, const float *b, float *ab)
 {
     const size_t Ncvec{s->Ncvec};
     const v4sf *RESTRICT va{reinterpret_cast<const v4sf*>(a)};
@@ -2058,7 +2059,8 @@ void pffft_zconvolve_accumulate(PFFFT_Setup *s, const float *a, const float *b, 
 }
 
 
-void pffft_transform(PFFFT_Setup *setup, const float *input, float *output, float *work, pffft_direction_t direction)
+void pffft_transform(const PFFFT_Setup *setup, const float *input, float *output, float *work,
+    pffft_direction_t direction)
 {
     assert(VALIGNED(input) && VALIGNED(output) && VALIGNED(work));
     pffft_transform_internal(setup, reinterpret_cast<const v4sf*>(al::assume_aligned<16>(input)),
@@ -2066,7 +2068,8 @@ void pffft_transform(PFFFT_Setup *setup, const float *input, float *output, floa
         reinterpret_cast<v4sf*>(al::assume_aligned<16>(work)), direction, false);
 }
 
-void pffft_transform_ordered(PFFFT_Setup *setup, const float *input, float *output, float *work, pffft_direction_t direction)
+void pffft_transform_ordered(const PFFFT_Setup *setup, const float *input, float *output,
+    float *work, pffft_direction_t direction)
 {
     assert(VALIGNED(input) && VALIGNED(output) && VALIGNED(work));
     pffft_transform_internal(setup, reinterpret_cast<const v4sf*>(al::assume_aligned<16>(input)),
@@ -2081,7 +2084,7 @@ void pffft_transform_ordered(PFFFT_Setup *setup, const float *input, float *outp
 namespace {
 
 #define pffft_transform_internal_nosimd pffft_transform_internal
-void pffft_transform_internal_nosimd(PFFFT_Setup *setup, const float *input, float *output,
+void pffft_transform_internal_nosimd(const PFFFT_Setup *setup, const float *input, float *output,
     float *scratch, const pffft_direction_t direction, bool ordered)
 {
     const size_t Ncvec{setup->Ncvec};
@@ -2138,7 +2141,7 @@ void pffft_transform_internal_nosimd(PFFFT_Setup *setup, const float *input, flo
 } // namespace
 
 #define pffft_zreorder_nosimd pffft_zreorder
-void pffft_zreorder_nosimd(PFFFT_Setup *setup, const float *in, float *out,
+void pffft_zreorder_nosimd(const PFFFT_Setup *setup, const float *in, float *out,
     pffft_direction_t direction)
 {
     const size_t N{setup->N};
@@ -2166,8 +2169,8 @@ void pffft_zreorder_nosimd(PFFFT_Setup *setup, const float *in, float *out,
     }
 }
 
-void pffft_zconvolve_scale_accumulate(PFFFT_Setup *s, const float *a, const float *b, float *ab,
-    float scaling)
+void pffft_zconvolve_scale_accumulate(const PFFFT_Setup *s, const float *a, const float *b,
+    float *ab, float scaling)
 {
     size_t Ncvec{s->Ncvec};
 
@@ -2188,7 +2191,7 @@ void pffft_zconvolve_scale_accumulate(PFFFT_Setup *s, const float *a, const floa
     }
 }
 
-void pffft_zconvolve_accumulate(PFFFT_Setup *s, const float *a, const float *b, float *ab)
+void pffft_zconvolve_accumulate(const PFFFT_Setup *s, const float *a, const float *b, float *ab)
 {
     size_t Ncvec{s->Ncvec};
 
@@ -2210,12 +2213,14 @@ void pffft_zconvolve_accumulate(PFFFT_Setup *s, const float *a, const float *b, 
 }
 
 
-void pffft_transform(PFFFT_Setup *setup, const float *input, float *output, float *work, pffft_direction_t direction)
+void pffft_transform(const PFFFT_Setup *setup, const float *input, float *output, float *work,
+    pffft_direction_t direction)
 {
     pffft_transform_internal(setup, input, output, work, direction, false);
 }
 
-void pffft_transform_ordered(PFFFT_Setup *setup, const float *input, float *output, float *work, pffft_direction_t direction)
+void pffft_transform_ordered(const PFFFT_Setup *setup, const float *input, float *output,
+    float *work, pffft_direction_t direction)
 {
     pffft_transform_internal(setup, input, output, work, direction, true);
 }

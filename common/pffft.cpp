@@ -451,10 +451,10 @@ NEVER_INLINE(void) passf3_ps(const size_t ido, const size_t l1, const v4sf *cc, 
         for(size_t i{0};i < ido-1;i += 2)
         {
             v4sf tr2{VADD(cc[i+ido], cc[i+2*ido])};
-            v4sf cr2{VADD(cc[i], VMUL(taur,tr2))};
-            ch[i]  = VADD(cc[i], tr2);
+            v4sf cr2{VMADD(taur, tr2, cc[i])};
+            ch[i]  = VADD(tr2, cc[i]);
             v4sf ti2{VADD(cc[i+ido+1], cc[i+2*ido+1])};
-            v4sf ci2{VADD(cc[i    +1], VMUL(taur,ti2))};
+            v4sf ci2{VMADD(taur, ti2, cc[i+1])};
             ch[i+1] = VADD(cc[i+1], ti2);
             v4sf cr3{VMUL(taui, VSUB(cc[i+ido], cc[i+2*ido]))};
             v4sf ci3{VMUL(taui, VSUB(cc[i+ido+1], cc[i+2*ido+1]))};
@@ -574,12 +574,12 @@ NEVER_INLINE(void) passf5_ps(const size_t ido, const size_t l1, const v4sf *cc, 
             v4sf tr3{VADD(cc_ref(i-1, 3), cc_ref(i-1, 4))};
             ch_ref(i-1, 1) = VADD(cc_ref(i-1, 1), VADD(tr2, tr3));
             ch_ref(i  , 1) = VADD(cc_ref(i  , 1), VADD(ti2, ti3));
-            v4sf cr2{VADD(cc_ref(i-1, 1), VADD(VMUL(tr11, tr2),VMUL(tr12, tr3)))};
-            v4sf ci2{VADD(cc_ref(i  , 1), VADD(VMUL(tr11, ti2),VMUL(tr12, ti3)))};
-            v4sf cr3{VADD(cc_ref(i-1, 1), VADD(VMUL(tr12, tr2),VMUL(tr11, tr3)))};
-            v4sf ci3{VADD(cc_ref(i  , 1), VADD(VMUL(tr12, ti2),VMUL(tr11, ti3)))};
-            v4sf cr5{VADD(VMUL(ti11, tr5), VMUL(ti12, tr4))};
-            v4sf ci5{VADD(VMUL(ti11, ti5), VMUL(ti12, ti4))};
+            v4sf cr2{VADD(cc_ref(i-1, 1), VMADD(tr11, tr2, VMUL(tr12, tr3)))};
+            v4sf ci2{VADD(cc_ref(i  , 1), VMADD(tr11, ti2, VMUL(tr12, ti3)))};
+            v4sf cr3{VADD(cc_ref(i-1, 1), VMADD(tr12, tr2, VMUL(tr11, tr3)))};
+            v4sf ci3{VADD(cc_ref(i  , 1), VMADD(tr12, ti2, VMUL(tr11, ti3)))};
+            v4sf cr5{VMADD(ti11, tr5, VMUL(ti12, tr4))};
+            v4sf ci5{VMADD(ti11, ti5, VMUL(ti12, ti4))};
             v4sf cr4{VSUB(VMUL(ti12, tr5), VMUL(ti11, tr4))};
             v4sf ci4{VSUB(VMUL(ti12, ti5), VMUL(ti11, ti4))};
             v4sf dr3{VSUB(cr3, ci4)};
@@ -702,9 +702,9 @@ void radf3_ps(const size_t ido, const size_t l1, const v4sf *RESTRICT cc, v4sf *
     for(size_t k{0};k < l1;++k)
     {
         v4sf cr2{VADD(cc[(k + l1)*ido], cc[(k + 2*l1)*ido])};
-        ch[3*k*ido] = VADD(cc[k*ido], cr2);
-        ch[(3*k+2)*ido] = VMUL(taui, VSUB(cc[(k + l1*2)*ido], cc[(k + l1)*ido]));
-        ch[ido-1 + (3*k + 1)*ido] = VADD(cc[k*ido], VMUL(taur, cr2));
+        ch[        (3*k    )*ido] = VADD(cc[k*ido], cr2);
+        ch[        (3*k + 2)*ido] = VMUL(taui, VSUB(cc[(k + l1*2)*ido], cc[(k + l1)*ido]));
+        ch[ido-1 + (3*k + 1)*ido] = VMADD(taur, cr2, cc[k*ido]);
     }
     if(ido == 1)
         return;
@@ -716,27 +716,27 @@ void radf3_ps(const size_t ido, const size_t l1, const v4sf *RESTRICT cc, v4sf *
             v4sf wr1{LD_PS1(wa1[i - 2])};
             v4sf wi1{LD_PS1(wa1[i - 1])};
             v4sf dr2{cc[i - 1 + (k + l1)*ido]};
-            v4sf di2{cc[i + (k + l1)*ido]};
+            v4sf di2{cc[i     + (k + l1)*ido]};
             vcplxmulconj(dr2, di2, wr1, wi1);
 
             v4sf wr2{LD_PS1(wa2[i - 2])};
             v4sf wi2{LD_PS1(wa2[i - 1])};
             v4sf dr3{cc[i - 1 + (k + l1*2)*ido]};
-            v4sf di3{cc[i + (k + l1*2)*ido]};
+            v4sf di3{cc[i     + (k + l1*2)*ido]};
             vcplxmulconj(dr3, di3, wr2, wi2);
 
             v4sf cr2{VADD(dr2, dr3)};
             v4sf ci2{VADD(di2, di3)};
             ch[i - 1 + 3*k*ido] = VADD(cc[i - 1 + k*ido], cr2);
-            ch[i + 3*k*ido] = VADD(cc[i + k*ido], ci2);
-            v4sf tr2{VADD(cc[i - 1 + k*ido], VMUL(taur, cr2))};
-            v4sf ti2{VADD(cc[i + k*ido], VMUL(taur, ci2))};
+            ch[i     + 3*k*ido] = VADD(cc[i     + k*ido], ci2);
+            v4sf tr2{VMADD(taur, cr2, cc[i - 1 + k*ido])};
+            v4sf ti2{VMADD(taur, ci2, cc[i     + k*ido])};
             v4sf tr3{VMUL(taui, VSUB(di2, di3))};
             v4sf ti3{VMUL(taui, VSUB(dr3, dr2))};
-            ch[i - 1 + (3*k + 2)*ido] = VADD(tr2, tr3);
+            ch[i  - 1 + (3*k + 2)*ido] = VADD(tr2, tr3);
             ch[ic - 1 + (3*k + 1)*ido] = VSUB(tr2, tr3);
-            ch[i + (3*k + 2)*ido] = VADD(ti2, ti3);
-            ch[ic + (3*k + 1)*ido] = VSUB(ti3, ti2);
+            ch[i      + (3*k + 2)*ido] = VADD(ti2, ti3);
+            ch[ic     + (3*k + 1)*ido] = VSUB(ti3, ti2);
         }
     }
 } /* radf3 */
@@ -850,17 +850,17 @@ NEVER_INLINE(void) radf4_ps(const size_t ido, const size_t l1, const v4sf *RESTR
                 v4sf tr4{VSUB(cr4,cr2)};
                 v4sf tr2{VADD(pc[0],cr3)};
                 v4sf tr3{VSUB(pc[0],cr3)};
-                ch[i - 1 + 4*k] = VADD(tr1,tr2);
+                ch[i  - 1 + 4*k        ] = VADD(tr2,tr1);
                 ch[ic - 1 + 4*k + 3*ido] = VSUB(tr2,tr1); // at this point tr1 and tr2 can be disposed
                 v4sf ti1{VADD(ci2,ci4)};
                 v4sf ti4{VSUB(ci2,ci4)};
-                ch[i - 1 + 4*k + 2*ido] = VADD(ti4,tr3);
+                ch[i  - 1 + 4*k + 2*ido] = VADD(tr3,ti4);
                 ch[ic - 1 + 4*k + 1*ido] = VSUB(tr3,ti4); // dispose tr3, ti4
                 v4sf ti2{VADD(pc[1],ci3)};
                 v4sf ti3{VSUB(pc[1],ci3)};
-                ch[i + 4*k] = VADD(ti1, ti2);
+                ch[i  + 4*k        ] = VADD(ti1, ti2);
                 ch[ic + 4*k + 3*ido] = VSUB(ti1, ti2);
-                ch[i + 4*k + 2*ido] = VADD(tr4, ti3);
+                ch[i  + 4*k + 2*ido] = VADD(tr4, ti3);
                 ch[ic + 4*k + 1*ido] = VSUB(tr4, ti3);
             }
         }
@@ -872,12 +872,12 @@ NEVER_INLINE(void) radf4_ps(const size_t ido, const size_t l1, const v4sf *RESTR
     {
         v4sf a{cc[ido-1 + k + l1ido]}, b{cc[ido-1 + k + 3*l1ido]};
         v4sf c{cc[ido-1 + k]}, d{cc[ido-1 + k + 2*l1ido]};
-        v4sf ti1{VMUL(minus_hsqt2, VADD(a, b))};
+        v4sf ti1{VMUL(minus_hsqt2, VADD(b, a))};
         v4sf tr1{VMUL(minus_hsqt2, VSUB(b, a))};
-        ch[ido-1 + 4*k] = VADD(tr1, c);
+        ch[ido-1 + 4*k        ] = VADD(c, tr1);
         ch[ido-1 + 4*k + 2*ido] = VSUB(c, tr1);
-        ch[4*k + 1*ido] = VSUB(ti1, d);
-        ch[4*k + 3*ido] = VADD(ti1, d);
+        ch[        4*k + 1*ido] = VSUB(ti1, d);
+        ch[        4*k + 3*ido] = VADD(ti1, d);
     }
 } /* radf4 */
 
@@ -918,8 +918,8 @@ NEVER_INLINE(void) radb4_ps(const size_t ido, const size_t l1, const v4sf *RESTR
             v4sf *RESTRICT ph{ch + k + 1};
             for(size_t i{2};i < ido;i += 2)
             {
-                v4sf tr1{VSUB(pc[i], pc[4*ido - i])};
-                v4sf tr2{VADD(pc[i], pc[4*ido - i])};
+                v4sf tr1{VSUB(pc[        i], pc[4*ido - i])};
+                v4sf tr2{VADD(pc[        i], pc[4*ido - i])};
                 v4sf ti4{VSUB(pc[2*ido + i], pc[2*ido - i])};
                 v4sf tr3{VADD(pc[2*ido + i], pc[2*ido - i])};
                 ph[0] = VADD(tr2, tr3);
@@ -980,10 +980,8 @@ void radf5_ps(const size_t ido, const size_t l1, const v4sf *RESTRICT cc, v4sf *
 #define ch_ref(a_1,a_2,a_3) ch[((a_3)*5 + (a_2))*ido + a_1]
 
     /* Parameter adjustments */
-    const size_t ch_offset{1 + ido * 6};
-    ch -= ch_offset;
-    const size_t cc_offset{1 + ido * (1 + l1)};
-    cc -= cc_offset;
+    ch -= 1 + ido * 6;
+    cc -= 1 + ido * (1 + l1);
 
     /* Function Body */
     for(size_t k{1};k <= l1;++k)
@@ -1000,7 +998,7 @@ void radf5_ps(const size_t ido, const size_t l1, const v4sf *RESTRICT cc, v4sf *
         //printf("pffft: radf5, k=%d ch_ref=%f, ci4=%f\n", k, ch_ref(1, 5, k), ci4);
     }
     if(ido == 1)
-      return;
+        return;
 
     const size_t idp2{ido + 2};
     for(size_t k{1};k <= l1;++k)
@@ -1038,14 +1036,14 @@ void radf5_ps(const size_t ido, const size_t l1, const v4sf *RESTRICT cc, v4sf *
             v4sf ti5{VMADD(ti11, ci5, VMUL(ti12, ci4))};
             v4sf tr4{VSUB(VMUL(ti12, cr5), VMUL(ti11, cr4))};
             v4sf ti4{VSUB(VMUL(ti12, ci5), VMUL(ti11, ci4))};
-            ch_ref(i - 1, 3, k) = VSUB(tr2, tr5);
+            ch_ref(i  - 1, 3, k) = VSUB(tr2, tr5);
             ch_ref(ic - 1, 2, k) = VADD(tr2, tr5);
-            ch_ref(i, 3, k) = VADD(ti2, ti5);
-            ch_ref(ic, 2, k) = VSUB(ti5, ti2);
-            ch_ref(i - 1, 5, k) = VSUB(tr3, tr4);
+            ch_ref(i     , 3, k) = VADD(ti5, ti2);
+            ch_ref(ic    , 2, k) = VSUB(ti5, ti2);
+            ch_ref(i  - 1, 5, k) = VSUB(tr3, tr4);
             ch_ref(ic - 1, 4, k) = VADD(tr3, tr4);
-            ch_ref(i, 5, k) = VADD(ti3, ti4);
-            ch_ref(ic, 4, k) = VSUB(ti4, ti3);
+            ch_ref(i     , 5, k) = VADD(ti4, ti3);
+            ch_ref(ic    , 4, k) = VSUB(ti4, ti3);
         }
     }
 #undef cc_ref
@@ -1064,16 +1062,14 @@ void radb5_ps(const size_t ido, const size_t l1, const v4sf *RESTRICT cc, v4sf *
 #define ch_ref(a_1,a_2,a_3) ch[((a_3)*l1 + (a_2))*ido + a_1]
 
     /* Parameter adjustments */
-    const size_t ch_offset{1 + ido*(1 + l1)};
-    ch -= ch_offset;
-    const size_t cc_offset{1 + ido*6};
-    cc -= cc_offset;
+    ch -= 1 + ido*(1 + l1);
+    cc -= 1 + ido*6;
 
     /* Function Body */
     for(size_t k{1};k <= l1;++k)
     {
-        v4sf ti5{VADD(cc_ref(1, 3, k), cc_ref(1, 3, k))};
-        v4sf ti4{VADD(cc_ref(1, 5, k), cc_ref(1, 5, k))};
+        v4sf ti5{VADD(cc_ref(  1, 3, k), cc_ref(1, 3, k))};
+        v4sf ti4{VADD(cc_ref(  1, 5, k), cc_ref(1, 5, k))};
         v4sf tr2{VADD(cc_ref(ido, 2, k), cc_ref(ido, 2, k))};
         v4sf tr3{VADD(cc_ref(ido, 4, k), cc_ref(ido, 4, k))};
         ch_ref(1, k, 1) = VADD(cc_ref(1, 1, k), VADD(tr2, tr3));
@@ -1104,7 +1100,7 @@ void radb5_ps(const size_t ido, const size_t l1, const v4sf *RESTRICT cc, v4sf *
             v4sf tr4{VSUB(cc_ref(i-1, 5, k), cc_ref(ic-1, 4, k))};
             v4sf tr3{VADD(cc_ref(i-1, 5, k), cc_ref(ic-1, 4, k))};
             ch_ref(i - 1, k, 1) = VADD(cc_ref(i-1, 1, k), VADD(tr2, tr3));
-            ch_ref(i, k, 1) = VADD(cc_ref(i, 1, k), VADD(ti2, ti3));
+            ch_ref(i    , k, 1) = VADD(cc_ref(i  , 1, k), VADD(ti2, ti3));
             v4sf cr2{VADD(cc_ref(i-1, 1, k), VMADD(tr11, tr2, VMUL(tr12, tr3)))};
             v4sf ci2{VADD(cc_ref(i  , 1, k), VMADD(tr11, ti2, VMUL(tr12, ti3)))};
             v4sf cr3{VADD(cc_ref(i-1, 1, k), VMADD(tr12, tr2, VMUL(tr11, tr3)))};

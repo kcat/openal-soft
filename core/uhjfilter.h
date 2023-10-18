@@ -29,6 +29,7 @@ struct UhjAllPassFilter {
     };
     std::array<AllPassState,4> mState;
 
+    void processOne(const al::span<const float,4> coeffs, float x);
     void process(const al::span<const float,4> coeffs, const al::span<const float> src,
         const bool update, float *RESTRICT dst);
 };
@@ -163,17 +164,18 @@ struct UhjDecoder final : public DecoderBase {
 };
 
 struct UhjDecoderIIR final : public DecoderBase {
-    /* FIXME: These IIR decoder filters actually have a 1-sample delay on the
-     * non-filtered components, which is not reflected in the source latency
-     * value. sInputPadding is 0, however, because it doesn't need any extra
-     * input samples.
+    /* These IIR decoder filters normally have a 1-sample delay on the non-
+     * filtered components. However, the filtered components are made to skip
+     * the first output sample and take one future sample, which puts it ahead
+     * by one sample. The first filtered output sample is cut to align it with
+     * the first non-filtered sample, similar to the FIR filters.
      */
-    static constexpr size_t sInputPadding{0};
+    static constexpr size_t sInputPadding{1};
 
-    alignas(16) std::array<float,BufferLineSize> mS{};
-    alignas(16) std::array<float,BufferLineSize> mD{};
-    alignas(16) std::array<float,BufferLineSize+1> mTemp{};
-    float mDelayS{}, mDelayDT{}, mDelayQ{};
+    bool mFirstRun{true};
+    alignas(16) std::array<float,BufferLineSize+sInputPadding> mS{};
+    alignas(16) std::array<float,BufferLineSize+sInputPadding> mD{};
+    alignas(16) std::array<float,BufferLineSize+sInputPadding> mTemp{};
 
     UhjAllPassFilter mFilter1S;
     UhjAllPassFilter mFilter2DT;
@@ -214,14 +216,14 @@ struct UhjStereoDecoder final : public DecoderBase {
 };
 
 struct UhjStereoDecoderIIR final : public DecoderBase {
-    static constexpr size_t sInputPadding{0};
+    static constexpr size_t sInputPadding{1};
 
+    bool mFirstRun{true};
     float mCurrentWidth{-1.0f};
 
-    alignas(16) std::array<float,BufferLineSize> mS{};
-    alignas(16) std::array<float,BufferLineSize> mD{};
-    alignas(16) std::array<float,BufferLineSize+1> mTemp{};
-    float mDelayS{}, mDelayD{};
+    alignas(16) std::array<float,BufferLineSize+sInputPadding> mS{};
+    alignas(16) std::array<float,BufferLineSize+sInputPadding> mD{};
+    alignas(16) std::array<float,BufferLineSize> mTemp{};
 
     UhjAllPassFilter mFilter1S;
     UhjAllPassFilter mFilter2D;

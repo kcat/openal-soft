@@ -137,16 +137,8 @@ struct SplitFilter {
 template<size_t N>
 const SplitFilter<N> gSplitFilter;
 
-
-const PhaseShifterT<UhjLength256> PShiftLq{};
-const PhaseShifterT<UhjLength512> PShiftHq{};
-
 template<size_t N>
-struct GetPhaseShifter;
-template<>
-struct GetPhaseShifter<UhjLength256> { static auto& Get() noexcept { return PShiftLq; } };
-template<>
-struct GetPhaseShifter<UhjLength512> { static auto& Get() noexcept { return PShiftHq; } };
+const PhaseShifterT<N> PShifter;
 
 
 /* Filter coefficients for the 'base' all-pass IIR, which applies a frequency-
@@ -425,7 +417,7 @@ void UhjDecoder<N>::decode(const al::span<float*> samples, const size_t samplesT
 {
     static_assert(sInputPadding <= sMaxPadding, "Filter padding is too large");
 
-    const auto &PShift = GetPhaseShifter<N>::Get();
+    constexpr auto &PShift = PShifter<N>;
 
     ASSUME(samplesToDo > 0);
 
@@ -577,7 +569,7 @@ void UhjStereoDecoder<N>::decode(const al::span<float*> samples, const size_t sa
 {
     static_assert(sInputPadding <= sMaxPadding, "Filter padding is too large");
 
-    const auto &PShift = GetPhaseShifter<N>::Get();
+    constexpr auto &PShift = PShifter<N>;
 
     ASSUME(samplesToDo > 0);
 

@@ -314,7 +314,7 @@ template<typename T, std::size_t N>
 span(const std::array<T, N>&) -> span<const T, N>;
 
 template<typename C, REQUIRES(detail_::is_valid_container_type<C>)>
-span(C&&) -> span<std::remove_reference_t<decltype(*std::data(std::declval<C&>()))>>;
+span(C&&) -> span<std::remove_pointer_t<decltype(std::data(std::declval<C&>()))>>;
 
 #undef REQUIRES
 

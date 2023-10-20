@@ -265,7 +265,7 @@ void LoadConfigFromFile(std::istream &f)
             }
         }
 
-        TRACE(" found '%s' = '%s'\n", fullKey.c_str(), value.c_str());
+        TRACE(" setting '%s' = '%s'\n", fullKey.c_str(), value.c_str());
 
         /* Check if we already have this option set */
         auto find_key = [&fullKey](const ConfigEntry &entry) -> bool
@@ -316,17 +316,14 @@ const char *GetConfigValue(const char *devName, const char *blockName, const cha
         { return entry.key == key; });
     if(iter != ConfOpts.cend())
     {
-        TRACE("Found %s = \"%s\"\n", key.c_str(), iter->value.c_str());
+        TRACE("Found option %s = \"%s\"\n", key.c_str(), iter->value.c_str());
         if(!iter->value.empty())
             return iter->value.c_str();
         return nullptr;
     }
 
     if(!devName)
-    {
-        TRACE("Key %s not found\n", key.c_str());
         return nullptr;
-    }
     return GetConfigValue(nullptr, blockName, keyName);
 }
 

@@ -232,6 +232,7 @@ void UhjEncoder<N>::encode(float *LeftOut, float *RightOut,
         mS[i] = 0.9396926f*mW[i] + 0.1855740f*mX[i];
 
     /* Precompute j(-0.3420201*W + 0.5098604*X) and store in mD. */
+    size_t curseg{mCurrentSegment};
     for(size_t base{0};base < SamplesToDo;)
     {
         const size_t todo{minz(sSegmentSize-mFifoPos, SamplesToDo-base)};
@@ -266,7 +267,6 @@ void UhjEncoder<N>::encode(float *LeftOut, float *RightOut,
         std::fill(mWXIn.begin()+sSegmentSize, mWXIn.end(), 0.0f);
 
         /* Overwrite the stale/oldest FFT'd segment with the newest input. */
-        const size_t curseg{mCurrentSegment};
         pffft_transform(Filter.mFft.get(), mWXIn.data(), mWXHistory.data() + curseg*sFftLength,
             mWorkData.data(), PFFFT_FORWARD);
 
@@ -302,8 +302,9 @@ void UhjEncoder<N>::encode(float *LeftOut, float *RightOut,
             mWXOut[sSegmentSize+i] = mFftBuffer[sSegmentSize+i];
 
         /* Shift the input history. */
-        mCurrentSegment = curseg ? (curseg-1) : (sNumSegments-1);
+        curseg = curseg ? (curseg-1) : (sNumSegments-1);
     }
+    mCurrentSegment = curseg;
 
     /* D = j(-0.3420201*W + 0.5098604*X) + 0.6554516*Y */
     for(size_t i{0};i < SamplesToDo;++i)

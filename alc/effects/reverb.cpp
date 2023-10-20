@@ -1360,9 +1360,6 @@ void VectorScatterRevDelayIn(const DelayLineI delay, size_t offset, const float 
  * It works by vectorizing a regular all-pass filter and replacing the delay
  * element with a scattering matrix (like the one above) and a diagonal
  * matrix of delay elements.
- *
- * Two static specializations are used for transitional (cross-faded) delay
- * line processing and non-transitional processing.
  */
 void VecAllpass::process(const al::span<ReverbUpdateLine,NUM_LINES> samples, size_t offset,
     const float xCoeff, const float yCoeff, const size_t todo)

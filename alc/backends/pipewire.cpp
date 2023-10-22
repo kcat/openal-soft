@@ -109,11 +109,11 @@ template<typename T, size_t N>
 constexpr auto get_pod_body(const spa_pod *pod) noexcept
 { return al::span<T,N>{static_cast<T*>(SPA_POD_BODY(pod)), N}; }
 
-constexpr auto make_pod_builder(void *data, uint32_t size) noexcept
-{ return SPA_POD_BUILDER_INIT(data, size); }
-
 constexpr auto get_array_value_type(const spa_pod *pod) noexcept
 { return SPA_POD_ARRAY_VALUE_TYPE(pod); }
+
+constexpr auto make_pod_builder(void *data, uint32_t size) noexcept
+{ return SPA_POD_BUILDER_INIT(data, size); }
 
 constexpr auto PwIdAny = PW_ID_ANY;
 
@@ -121,6 +121,44 @@ constexpr auto PwIdAny = PW_ID_ANY;
 _Pragma("GCC diagnostic pop")
 
 namespace {
+
+struct PodDynamicBuilder {
+private:
+    std::vector<std::byte> mStorage;
+    spa_pod_builder mPod{};
+
+    int overflow(uint32_t size) noexcept
+    {
+        try {
+            mStorage.resize(size);
+        }
+        catch(...) {
+            ERR("Failed to resize POD storage\n");
+            return -ENOMEM;
+        }
+        mPod.data = mStorage.data();
+        mPod.size = size;
+        return 0;
+    }
+
+public:
+    PodDynamicBuilder(uint32_t initSize=0) : mStorage(initSize)
+        , mPod{make_pod_builder(mStorage.data(), initSize)}
+    {
+        static constexpr auto callbacks{[]
+        {
+            spa_pod_builder_callbacks cb{};
+            cb.version = SPA_VERSION_POD_BUILDER_CALLBACKS;
+            cb.overflow = [](void *data, uint32_t size) noexcept
+            { return static_cast<PodDynamicBuilder*>(data)->overflow(size); };
+            return cb;
+        }()};
+
+        spa_pod_builder_set_callbacks(&mPod, &callbacks, this);
+    }
+
+    spa_pod_builder *get() noexcept { return &mPod; }
+};
 
 /* Added in 0.3.33, but we currently only require 0.3.23. */
 #ifndef PW_KEY_NODE_RATE
@@ -1592,14 +1630,10 @@ bool PipeWirePlayback::reset()
      */
     spa_audio_info_raw info{make_spa_info(mDevice, is51rear, ForceF32Planar)};
 
-    /* TODO: How to tell what an appropriate size is? Examples just use this
-     * magic value.
-     */
-    constexpr uint32_t pod_buffer_size{1024};
-    auto pod_buffer = std::make_unique<std::byte[]>(pod_buffer_size);
-    spa_pod_builder b{make_pod_builder(pod_buffer.get(), pod_buffer_size)};
+    static constexpr uint32_t pod_buffer_size{1024};
+    PodDynamicBuilder b(pod_buffer_size);
 
-    const spa_pod *params{spa_format_audio_raw_build(&b, SPA_PARAM_EnumFormat, &info)};
+    const spa_pod *params{spa_format_audio_raw_build(b.get(), SPA_PARAM_EnumFormat, &info)};
     if(!params)
         throw al::backend_exception{al::backend_error::DeviceError,
             "Failed to set PipeWire audio format parameters"};
@@ -2021,11 +2055,10 @@ void PipeWireCapture::open(std::string_view name)
     }
     spa_audio_info_raw info{make_spa_info(mDevice, is51rear, UseDevType)};
 
-    constexpr uint32_t pod_buffer_size{1024};
-    auto pod_buffer = std::make_unique<std::byte[]>(pod_buffer_size);
-    spa_pod_builder b{make_pod_builder(pod_buffer.get(), pod_buffer_size)};
+    static constexpr uint32_t pod_buffer_size{1024};
+    PodDynamicBuilder b(pod_buffer_size);
 
-    const spa_pod *params[]{spa_format_audio_raw_build(&b, SPA_PARAM_EnumFormat, &info)};
+    const spa_pod *params[]{spa_format_audio_raw_build(b.get(), SPA_PARAM_EnumFormat, &info)};
     if(!params[0])
         throw al::backend_exception{al::backend_error::DeviceError,
             "Failed to set PipeWire audio format parameters"};

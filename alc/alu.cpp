@@ -279,8 +279,8 @@ ResamplerFunc PrepareResampler(Resampler resampler, uint increment, InterpState 
 void DeviceBase::ProcessHrtf(const size_t SamplesToDo)
 {
     /* HRTF is stereo output only. */
-    const uint lidx{RealOut.ChannelIndex[FrontLeft]};
-    const uint ridx{RealOut.ChannelIndex[FrontRight]};
+    const size_t lidx{RealOut.ChannelIndex[FrontLeft]};
+    const size_t ridx{RealOut.ChannelIndex[FrontRight]};
 
     MixDirectHrtf(RealOut.Buffer[lidx], RealOut.Buffer[ridx], Dry.Buffer, HrtfAccumData,
         mHrtfState->mTemp.data(), mHrtfState->mChannels.data(), mHrtfState->mIrSize, SamplesToDo);
@@ -294,9 +294,9 @@ void DeviceBase::ProcessAmbiDec(const size_t SamplesToDo)
 void DeviceBase::ProcessAmbiDecStablized(const size_t SamplesToDo)
 {
     /* Decode with front image stablization. */
-    const uint lidx{RealOut.ChannelIndex[FrontLeft]};
-    const uint ridx{RealOut.ChannelIndex[FrontRight]};
-    const uint cidx{RealOut.ChannelIndex[FrontCenter]};
+    const size_t lidx{RealOut.ChannelIndex[FrontLeft]};
+    const size_t ridx{RealOut.ChannelIndex[FrontRight]};
+    const size_t cidx{RealOut.ChannelIndex[FrontCenter]};
 
     AmbiDecoder->processStablize(RealOut.Buffer, Dry.Buffer.data(), lidx, ridx, cidx,
         SamplesToDo);
@@ -305,8 +305,8 @@ void DeviceBase::ProcessAmbiDecStablized(const size_t SamplesToDo)
 void DeviceBase::ProcessUhj(const size_t SamplesToDo)
 {
     /* UHJ is stereo output only. */
-    const uint lidx{RealOut.ChannelIndex[FrontLeft]};
-    const uint ridx{RealOut.ChannelIndex[FrontRight]};
+    const size_t lidx{RealOut.ChannelIndex[FrontLeft]};
+    const size_t ridx{RealOut.ChannelIndex[FrontRight]};
 
     /* Encode to stereo-compatible 2-channel UHJ output. */
     mUhjEncoder->encode(RealOut.Buffer[lidx].data(), RealOut.Buffer[ridx].data(),
@@ -319,8 +319,8 @@ void DeviceBase::ProcessBs2b(const size_t SamplesToDo)
     AmbiDecoder->process(RealOut.Buffer, Dry.Buffer.data(), SamplesToDo);
 
     /* BS2B is stereo output only. */
-    const uint lidx{RealOut.ChannelIndex[FrontLeft]};
-    const uint ridx{RealOut.ChannelIndex[FrontRight]};
+    const size_t lidx{RealOut.ChannelIndex[FrontLeft]};
+    const size_t ridx{RealOut.ChannelIndex[FrontRight]};
 
     /* Now apply the BS2B binaural/crossfeed filter. */
     bs2b_cross_feed(Bs2b.get(), RealOut.Buffer[lidx].data(), RealOut.Buffer[ridx].data(),

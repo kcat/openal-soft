@@ -677,7 +677,7 @@ void InitPanning(ALCdevice *device, const bool hqdec=false, const bool stablize=
         /* Only enable the stablizer if the decoder does not output to the
          * front-center channel.
          */
-        const auto cidx = device->RealOut.ChannelIndex[FrontCenter];
+        const size_t cidx{device->RealOut.ChannelIndex[FrontCenter]};
         bool hasfc{false};
         if(cidx < chancoeffs.size())
         {

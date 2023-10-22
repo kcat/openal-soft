@@ -880,73 +880,60 @@ ALCenum EnumFromDevAmbi(DevAmbiScaling scaling)
 }
 
 
-/* Downmixing channel arrays, to map the given format's missing channels to
- * existing ones. Based on Wine's DSound downmix values, which are based on
- * PulseAudio's.
+/* Downmixing channel arrays, to map a device format's missing channels to
+ * existing ones. Based on what PipeWire does, though simplified.
  */
-constexpr std::array<InputRemixMap::TargetMix,2> FrontStereoSplit{{
-    {FrontLeft, 0.5f}, {FrontRight, 0.5f}
-}};
-constexpr std::array<InputRemixMap::TargetMix,1> FrontLeft9{{
-    {FrontLeft, 1.0f/9.0f}
-}};
-constexpr std::array<InputRemixMap::TargetMix,1> FrontRight9{{
-    {FrontRight, 1.0f/9.0f}
-}};
-constexpr std::array<InputRemixMap::TargetMix,2> BackMonoToFrontSplit{{
-    {FrontLeft, 0.5f/9.0f}, {FrontRight, 0.5f/9.0f}
-}};
-constexpr std::array<InputRemixMap::TargetMix,2> LeftStereoSplit{{
-    {FrontLeft, 0.5f}, {BackLeft, 0.5f}
-}};
-constexpr std::array<InputRemixMap::TargetMix,2> RightStereoSplit{{
-    {FrontRight, 0.5f}, {BackRight, 0.5f}
-}};
-constexpr std::array<InputRemixMap::TargetMix,2> BackStereoSplit{{
-    {BackLeft, 0.5f}, {BackRight, 0.5f}
-}};
-constexpr std::array<InputRemixMap::TargetMix,2> SideStereoSplit{{
-    {SideLeft, 0.5f}, {SideRight, 0.5f}
-}};
-constexpr std::array<InputRemixMap::TargetMix,1> ToSideLeft{{
-    {SideLeft, 1.0f}
-}};
-constexpr std::array<InputRemixMap::TargetMix,1> ToSideRight{{
-    {SideRight, 1.0f}
-}};
-constexpr std::array<InputRemixMap::TargetMix,2> BackLeftSplit{{
-    {SideLeft, 0.5f}, {BackCenter, 0.5f}
-}};
-constexpr std::array<InputRemixMap::TargetMix,2> BackRightSplit{{
-    {SideRight, 0.5f}, {BackCenter, 0.5f}
-}};
+constexpr float inv_sqrt2f{static_cast<float>(1.0 / al::numbers::sqrt2)};
+constexpr std::array FrontStereo3dB{
+    InputRemixMap::TargetMix{FrontLeft, inv_sqrt2f},
+    InputRemixMap::TargetMix{FrontRight, inv_sqrt2f}
+};
+constexpr std::array FrontStereo6dB{
+    InputRemixMap::TargetMix{FrontLeft, 0.5f},
+    InputRemixMap::TargetMix{FrontRight, 0.5f}
+};
+constexpr std::array SideStereo3dB{
+    InputRemixMap::TargetMix{SideLeft, inv_sqrt2f},
+    InputRemixMap::TargetMix{SideRight, inv_sqrt2f}
+};
+constexpr std::array BackStereo3dB{
+    InputRemixMap::TargetMix{BackLeft, inv_sqrt2f},
+    InputRemixMap::TargetMix{BackRight, inv_sqrt2f}
+};
+constexpr std::array FrontLeft3dB{InputRemixMap::TargetMix{FrontLeft, inv_sqrt2f}};
+constexpr std::array FrontRight3dB{InputRemixMap::TargetMix{FrontRight, inv_sqrt2f}};
+constexpr std::array SideLeft0dB{InputRemixMap::TargetMix{SideLeft, 1.0f}};
+constexpr std::array SideRight0dB{InputRemixMap::TargetMix{SideRight, 1.0f}};
+constexpr std::array BackLeft0dB{InputRemixMap::TargetMix{BackLeft, 1.0f}};
+constexpr std::array BackRight0dB{InputRemixMap::TargetMix{BackRight, 1.0f}};
+constexpr std::array BackCenter3dB{InputRemixMap::TargetMix{BackCenter, inv_sqrt2f}};
 
-const std::array<InputRemixMap,6> StereoDownmix{{
-    { FrontCenter, FrontStereoSplit },
-    { SideLeft,    FrontLeft9 },
-    { SideRight,   FrontRight9 },
-    { BackLeft,    FrontLeft9 },
-    { BackRight,   FrontRight9 },
-    { BackCenter,  BackMonoToFrontSplit },
-}};
-const std::array<InputRemixMap,4> QuadDownmix{{
-    { FrontCenter, FrontStereoSplit },
-    { SideLeft,    LeftStereoSplit },
-    { SideRight,   RightStereoSplit },
-    { BackCenter,  BackStereoSplit },
-}};
-const std::array<InputRemixMap,3> X51Downmix{{
-    { BackLeft,   ToSideLeft },
-    { BackRight,  ToSideRight },
-    { BackCenter, SideStereoSplit },
-}};
-const std::array<InputRemixMap,2> X61Downmix{{
-    { BackLeft,  BackLeftSplit },
-    { BackRight, BackRightSplit },
-}};
-const std::array<InputRemixMap,1> X71Downmix{{
-    { BackCenter, BackStereoSplit },
-}};
+constexpr std::array StereoDownmix{
+    InputRemixMap{FrontCenter, FrontStereo3dB},
+    InputRemixMap{SideLeft,    FrontLeft3dB},
+    InputRemixMap{SideRight,   FrontRight3dB},
+    InputRemixMap{BackLeft,    FrontLeft3dB},
+    InputRemixMap{BackRight,   FrontRight3dB},
+    InputRemixMap{BackCenter,  FrontStereo6dB},
+};
+constexpr std::array QuadDownmix{
+    InputRemixMap{FrontCenter, FrontStereo3dB},
+    InputRemixMap{SideLeft,    BackLeft0dB},
+    InputRemixMap{SideRight,   BackRight0dB},
+    InputRemixMap{BackCenter,  BackStereo3dB},
+};
+constexpr std::array X51Downmix{
+    InputRemixMap{BackLeft,   SideLeft0dB},
+    InputRemixMap{BackRight,  SideRight0dB},
+    InputRemixMap{BackCenter, SideStereo3dB},
+};
+constexpr std::array X61Downmix{
+    InputRemixMap{BackLeft,  BackCenter3dB},
+    InputRemixMap{BackRight, BackCenter3dB},
+};
+constexpr std::array X71Downmix{
+    InputRemixMap{BackCenter, BackStereo3dB},
+};
 
 
 std::unique_ptr<Compressor> CreateDeviceLimiter(const ALCdevice *device, const float threshold)

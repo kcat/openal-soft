@@ -27,6 +27,11 @@
 #include "source.h"
 
 
+/* Declared here to prevent compilers from thinking it should be inlined, which
+ * GCC warns about increasing code size.
+ */
+DebugGroup::~DebugGroup() = default;
+
 namespace {
 
 static_assert(DebugSeverityBase+DebugSeverityCount <= 32, "Too many debug bits");

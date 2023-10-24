@@ -167,11 +167,11 @@ static void printHRTFInfo(ALCdevice *device)
 
     alcGetIntegerv(device, ALC_NUM_HRTF_SPECIFIERS_SOFT, 1, &num_hrtfs);
     if(!num_hrtfs)
-        printf("No HRTFs found\n");
+        printf("No HRTF profiles found\n");
     else
     {
         ALCint i;
-        printf("Available HRTFs:\n");
+        printf("Available HRTF profiles:\n");
         for(i = 0;i < num_hrtfs;++i)
         {
             const ALCchar *name = alcGetStringiSOFT(device, ALC_HRTF_SPECIFIER_SOFT, i);
@@ -213,6 +213,21 @@ static void printModeInfo(ALCdevice *device)
     alcGetIntegerv(device, ALC_FREQUENCY, 1, &srate);
     if(checkALCErrors(device) == ALC_NO_ERROR)
         printf("Device sample rate: %dhz\n", srate);
+
+    if(alcIsExtensionPresent(device, "ALC_SOFT_HRTF"))
+    {
+        const ALCchar *hrtfname = "(disabled)";
+        ALCint isenabled = 0;
+
+        alcGetIntegerv(device, ALC_HRTF_SOFT, 1, &isenabled);
+        checkALCErrors(device);
+        if(isenabled == ALC_TRUE)
+        {
+            hrtfname = alcGetString(device, ALC_HRTF_SPECIFIER_SOFT);
+            checkALCErrors(device);
+        }
+        printf("Device HRTF profile: %s\n", hrtfname ? hrtfname : "<null>");
+    }
 }
 
 static void printALInfo(void)

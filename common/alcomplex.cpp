@@ -21,6 +21,7 @@ namespace {
 
 using ushort = unsigned short;
 using ushort2 = std::pair<ushort,ushort>;
+using complex_d = std::complex<double>;
 
 constexpr size_t BitReverseCounter(size_t log2_size) noexcept
 {
@@ -110,9 +111,7 @@ constexpr std::array<std::complex<T>,gBitReverses.size()-1> gArgAngle{{
 
 } // namespace
 
-template<typename Real>
-std::enable_if_t<std::is_floating_point<Real>::value>
-complex_fft(const al::span<std::complex<Real>> buffer, const al::type_identity_t<Real> sign)
+void complex_fft(const al::span<std::complex<double>> buffer, const double sign)
 {
     const size_t fftsize{buffer.size()};
     /* Get the number of bits used for indexing. Simplifies bit-reversal and
@@ -135,18 +134,18 @@ complex_fft(const al::span<std::complex<Real>> buffer, const al::type_identity_t
              */
             for(size_t k{0};k < fftsize;k+=step)
             {
-                std::complex<Real> temp{buffer[k+step2]};
+                const complex_d temp{buffer[k+step2]};
                 buffer[k+step2] = buffer[k] - temp;
                 buffer[k] += temp;
             }
 
-            const std::complex<Real> w{gArgAngle<Real>[i].real(), gArgAngle<Real>[i].imag()*sign};
-            std::complex<Real> u{w};
+            const complex_d w{gArgAngle<double>[i].real(), gArgAngle<double>[i].imag()*sign};
+            complex_d u{w};
             for(size_t j{1};j < step2;j++)
             {
                 for(size_t k{j};k < fftsize;k+=step)
                 {
-                    std::complex<Real> temp{buffer[k+step2] * u};
+                    const complex_d temp{buffer[k+step2] * u};
                     buffer[k+step2] = buffer[k] - temp;
                     buffer[k] += temp;
                 }
@@ -170,26 +169,26 @@ complex_fft(const al::span<std::complex<Real>> buffer, const al::type_identity_t
                 std::swap(buffer[idx], buffer[revidx]);
         }
 
-        const Real pi{al::numbers::pi_v<Real> * sign};
+        const double pi{al::numbers::pi * sign};
         for(size_t i{0};i < log2_size;++i)
         {
             const size_t step2{1_uz << i};
             const size_t step{2_uz << i};
             for(size_t k{0};k < fftsize;k+=step)
             {
-                std::complex<Real> temp{buffer[k+step2]};
+                const complex_d temp{buffer[k+step2]};
                 buffer[k+step2] = buffer[k] - temp;
                 buffer[k] += temp;
             }
 
-            const Real arg{pi / static_cast<Real>(step2)};
-            const std::complex<Real> w{std::polar(Real{1}, arg)};
-            std::complex<Real> u{w};
+            const double arg{pi / static_cast<double>(step2)};
+            const complex_d w{std::polar(1.0, arg)};
+            complex_d u{w};
             for(size_t j{1};j < step2;j++)
             {
                 for(size_t k{j};k < fftsize;k+=step)
                 {
-                    std::complex<Real> temp{buffer[k+step2] * u};
+                    const complex_d temp{buffer[k+step2] * u};
                     buffer[k+step2] = buffer[k] - temp;
                     buffer[k] += temp;
                 }
@@ -218,7 +217,3 @@ void complex_hilbert(const al::span<std::complex<double>> buffer)
 
     forward_fft(buffer);
 }
-
-
-template void complex_fft<>(const al::span<std::complex<float>> buffer, const float sign);
-template void complex_fft<>(const al::span<std::complex<double>> buffer, const double sign);

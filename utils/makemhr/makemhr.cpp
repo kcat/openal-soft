@@ -297,10 +297,7 @@ static void MinimumPhase(const uint n, double *mags, complex_d *out)
     // Remove any DC offset the filter has.
     mags[0] = EPSILON;
     for(i = 0;i < n;i++)
-    {
-        auto a = std::exp(complex_d{0.0, out[i].imag()});
-        out[i] = a * mags[i];
-    }
+        out[i] = std::polar(mags[i], out[i].imag());
 }
 
 

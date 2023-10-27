@@ -76,24 +76,6 @@ namespace {
 
 using uint = unsigned int;
 
-#if defined(__GNUC__)
-#define ALWAYS_INLINE(return_type) inline return_type __attribute__ ((always_inline))
-#define NEVER_INLINE(return_type) return_type __attribute__ ((noinline))
-#define RESTRICT __restrict
-
-#elif defined(_MSC_VER)
-
-#define ALWAYS_INLINE(return_type) __forceinline return_type
-#define NEVER_INLINE(return_type) __declspec(noinline) return_type
-#define RESTRICT __restrict
-
-#else
-
-#define ALWAYS_INLINE(return_type) inline return_type
-#define NEVER_INLINE(return_type) return_type
-#define RESTRICT
-#endif
-
 
 /* Vector support macros: the rest of the code is independent of
  * SSE/Altivec/NEON -- adding support for other platforms with 4-element
@@ -116,7 +98,7 @@ typedef vector float v4sf;
 #define VMADD vec_madd
 #define VSUB vec_sub
 #define LD_PS1 vec_splats
-ALWAYS_INLINE(v4sf) vset4(float a, float b, float c, float d) noexcept
+force_inline v4sf vset4(float a, float b, float c, float d) noexcept
 {
     /* There a more efficient way to do this? */
     alignas(16) std::array<float,4> vals{{a, b, c, d}};
@@ -126,20 +108,20 @@ ALWAYS_INLINE(v4sf) vset4(float a, float b, float c, float d) noexcept
 #define VINSERT0(v, a) vec_insert((a), (v), 0)
 #define VEXTRACT0(v) vec_extract((v), 0)
 
-ALWAYS_INLINE(void) interleave2(v4sf in1, v4sf in2, v4sf &out1, v4sf &out2) noexcept
+force_inline void interleave2(v4sf in1, v4sf in2, v4sf &out1, v4sf &out2) noexcept
 {
     v4sf tmp{vec_mergeh(in1, in2)};
     out2 = vec_mergel(in1, in2);
     out1 = tmp;
 }
-ALWAYS_INLINE(void) uninterleave2(v4sf in1, v4sf in2, v4sf &out1, v4sf &out2) noexcept
+force_inline void uninterleave2(v4sf in1, v4sf in2, v4sf &out1, v4sf &out2) noexcept
 {
     v4sf tmp{vec_perm(in1, in2, (vector unsigned char)(0,1,2,3,8,9,10,11,16,17,18,19,24,25,26,27))};
     out2 = vec_perm(in1, in2, (vector unsigned char)(4,5,6,7,12,13,14,15,20,21,22,23,28,29,30,31));
     out1 = tmp;
 }
 
-ALWAYS_INLINE(void) vtranspose4(v4sf &x0, v4sf &x1, v4sf &x2, v4sf &x3) noexcept
+force_inline void vtranspose4(v4sf &x0, v4sf &x1, v4sf &x2, v4sf &x3) noexcept
 {
     v4sf y0{vec_mergeh(x0, x2)};
     v4sf y1{vec_mergel(x0, x2)};
@@ -172,20 +154,20 @@ typedef __m128 v4sf;
 #define VINSERT0(v, a) _mm_move_ss((v), _mm_set_ss(a))
 #define VEXTRACT0 _mm_cvtss_f32
 
-ALWAYS_INLINE(void) interleave2(v4sf in1, v4sf in2, v4sf &out1, v4sf &out2) noexcept
+force_inline void interleave2(v4sf in1, v4sf in2, v4sf &out1, v4sf &out2) noexcept
 {
     v4sf tmp{_mm_unpacklo_ps(in1, in2)};
     out2 = _mm_unpackhi_ps(in1, in2);
     out1 = tmp;
 }
-ALWAYS_INLINE(void) uninterleave2(v4sf in1, v4sf in2, v4sf &out1, v4sf &out2) noexcept
+force_inline void uninterleave2(v4sf in1, v4sf in2, v4sf &out1, v4sf &out2) noexcept
 {
     v4sf tmp{_mm_shuffle_ps(in1, in2, _MM_SHUFFLE(2,0,2,0))};
     out2 = _mm_shuffle_ps(in1, in2, _MM_SHUFFLE(3,1,3,1));
     out1 = tmp;
 }
 
-ALWAYS_INLINE(void) vtranspose4(v4sf &x0, v4sf &x1, v4sf &x2, v4sf &x3) noexcept
+force_inline void vtranspose4(v4sf &x0, v4sf &x1, v4sf &x2, v4sf &x3) noexcept
 { _MM_TRANSPOSE4_PS(x0, x1, x2, x3); }
 
 #define VSWAPHL(a,b) _mm_shuffle_ps(b, a, _MM_SHUFFLE(3,2,1,0))
@@ -204,7 +186,7 @@ typedef float32x4_t v4sf;
 #define VMADD(a,b,c) vmlaq_f32(c,a,b)
 #define VSUB vsubq_f32
 #define LD_PS1 vdupq_n_f32
-ALWAYS_INLINE(v4sf) vset4(float a, float b, float c, float d) noexcept
+force_inline v4sf vset4(float a, float b, float c, float d) noexcept
 {
     float32x4_t ret{vmovq_n_f32(a)};
     ret = vsetq_lane_f32(b, ret, 1);
@@ -216,20 +198,20 @@ ALWAYS_INLINE(v4sf) vset4(float a, float b, float c, float d) noexcept
 #define VINSERT0(v, a) vsetq_lane_f32((a), (v), 0)
 #define VEXTRACT0(v) vgetq_lane_f32((v), 0)
 
-ALWAYS_INLINE(void) interleave2(v4sf in1, v4sf in2, v4sf &out1, v4sf &out2) noexcept
+force_inline void interleave2(v4sf in1, v4sf in2, v4sf &out1, v4sf &out2) noexcept
 {
     float32x4x2_t tmp{vzipq_f32(in1, in2)};
     out1 = tmp.val[0];
     out2 = tmp.val[1];
 }
-ALWAYS_INLINE(void) uninterleave2(v4sf in1, v4sf in2, v4sf &out1, v4sf &out2) noexcept
+force_inline void uninterleave2(v4sf in1, v4sf in2, v4sf &out1, v4sf &out2) noexcept
 {
     float32x4x2_t tmp{vuzpq_f32(in1, in2)};
     out1 = tmp.val[0];
     out2 = tmp.val[1];
 }
 
-ALWAYS_INLINE(void) vtranspose4(v4sf &x0, v4sf &x1, v4sf &x2, v4sf &x3) noexcept
+force_inline void vtranspose4(v4sf &x0, v4sf &x1, v4sf &x2, v4sf &x3) noexcept
 {
     /* marginally faster version:
      * asm("vtrn.32 %q0, %q1;\n"
@@ -263,33 +245,33 @@ using v4sf [[gnu::vector_size(16), gnu::aligned(16)]] = float;
 #define VMADD(a,b,c) ((a)*(b) + (c))
 #define VSUB(a,b) ((a) - (b))
 
-constexpr ALWAYS_INLINE(v4sf) ld_ps1(float a) noexcept { return v4sf{a, a, a, a}; }
+constexpr force_inline v4sf ld_ps1(float a) noexcept { return v4sf{a, a, a, a}; }
 #define LD_PS1 ld_ps1
 #define VSET4(a, b, c, d) v4sf{(a), (b), (c), (d)}
-constexpr ALWAYS_INLINE(v4sf) vinsert0(v4sf v, float a) noexcept
+constexpr force_inline v4sf vinsert0(v4sf v, float a) noexcept
 { return v4sf{a, v[1], v[2], v[3]}; }
 #define VINSERT0 vinsert0
 #define VEXTRACT0(v) ((v)[0])
 
-ALWAYS_INLINE(v4sf) unpacklo(v4sf a, v4sf b) noexcept
+force_inline v4sf unpacklo(v4sf a, v4sf b) noexcept
 { return v4sf{a[0], b[0], a[1], b[1]}; }
-ALWAYS_INLINE(v4sf) unpackhi(v4sf a, v4sf b) noexcept
+force_inline v4sf unpackhi(v4sf a, v4sf b) noexcept
 { return v4sf{a[2], b[2], a[3], b[3]}; }
 
-ALWAYS_INLINE(void) interleave2(v4sf in1, v4sf in2, v4sf &out1, v4sf &out2) noexcept
+force_inline void interleave2(v4sf in1, v4sf in2, v4sf &out1, v4sf &out2) noexcept
 {
     v4sf tmp{unpacklo(in1, in2)};
     out2 = unpackhi(in1, in2);
     out1 = tmp;
 }
-ALWAYS_INLINE(void) uninterleave2(v4sf in1, v4sf in2, v4sf &out1, v4sf &out2) noexcept
+force_inline void uninterleave2(v4sf in1, v4sf in2, v4sf &out1, v4sf &out2) noexcept
 {
     v4sf tmp{in1[0], in1[2], in2[0], in2[2]};
     out2 = v4sf{in1[1], in1[3], in2[1], in2[3]};
     out1 = tmp;
 }
 
-ALWAYS_INLINE(void) vtranspose4(v4sf &x0, v4sf &x1, v4sf &x2, v4sf &x3) noexcept
+force_inline void vtranspose4(v4sf &x0, v4sf &x1, v4sf &x2, v4sf &x3) noexcept
 {
     v4sf tmp0{unpacklo(x0, x1)};
     v4sf tmp2{unpacklo(x2, x3)};
@@ -301,7 +283,7 @@ ALWAYS_INLINE(void) vtranspose4(v4sf &x0, v4sf &x1, v4sf &x2, v4sf &x3) noexcept
     x3 = v4sf{tmp1[2], tmp1[3], tmp3[2], tmp3[3]};
 }
 
-ALWAYS_INLINE(v4sf) vswaphl(v4sf a, v4sf b) noexcept
+force_inline v4sf vswaphl(v4sf a, v4sf b) noexcept
 { return v4sf{b[0], b[1], a[2], a[3]}; }
 #define VSWAPHL vswaphl
 
@@ -332,13 +314,13 @@ inline bool valigned(const float *ptr) noexcept
 }
 
 // shortcuts for complex multiplications
-ALWAYS_INLINE(void) vcplxmul(v4sf &ar, v4sf &ai, v4sf br, v4sf bi) noexcept
+force_inline void vcplxmul(v4sf &ar, v4sf &ai, v4sf br, v4sf bi) noexcept
 {
     v4sf tmp{VMUL(ar, bi)};
     ar = VSUB(VMUL(ar, br), VMUL(ai, bi));
     ai = VMADD(ai, br, tmp);
 }
-ALWAYS_INLINE(void) vcplxmulconj(v4sf &ar, v4sf &ai, v4sf br, v4sf bi) noexcept
+force_inline void vcplxmulconj(v4sf &ar, v4sf &ai, v4sf br, v4sf bi) noexcept
 {
     v4sf tmp{VMUL(ar, bi)};
     ar = VMADD(ai, bi, VMUL(ar, br));
@@ -402,7 +384,7 @@ ALWAYS_INLINE(void) vcplxmulconj(v4sf &ar, v4sf &ai, v4sf br, v4sf bi) noexcept
 /*
   passf2 and passb2 has been merged here, fsign = -1 for passf2, +1 for passb2
 */
-NEVER_INLINE(void) passf2_ps(const size_t ido, const size_t l1, const v4sf *cc, v4sf *RESTRICT ch,
+NOINLINE void passf2_ps(const size_t ido, const size_t l1, const v4sf *cc, v4sf *RESTRICT ch,
     const float *wa1, const float fsign)
 {
     const size_t l1ido{l1*ido};
@@ -438,7 +420,7 @@ NEVER_INLINE(void) passf2_ps(const size_t ido, const size_t l1, const v4sf *cc, 
 /*
   passf3 and passb3 has been merged here, fsign = -1 for passf3, +1 for passb3
 */
-NEVER_INLINE(void) passf3_ps(const size_t ido, const size_t l1, const v4sf *cc, v4sf *RESTRICT ch,
+NOINLINE void passf3_ps(const size_t ido, const size_t l1, const v4sf *cc, v4sf *RESTRICT ch,
     const float *wa1, const float *wa2, const float fsign)
 {
     assert(ido > 2);
@@ -473,7 +455,7 @@ NEVER_INLINE(void) passf3_ps(const size_t ido, const size_t l1, const v4sf *cc, 
     }
 } /* passf3 */
 
-NEVER_INLINE(void) passf4_ps(const size_t ido, const size_t l1, const v4sf *cc, v4sf *RESTRICT ch,
+NOINLINE void passf4_ps(const size_t ido, const size_t l1, const v4sf *cc, v4sf *RESTRICT ch,
     const float *wa1, const float *wa2, const float *wa3, const float fsign)
 {
     /* fsign == -1 for forward transform and +1 for backward transform */
@@ -548,7 +530,7 @@ NEVER_INLINE(void) passf4_ps(const size_t ido, const size_t l1, const v4sf *cc, 
 /*
  * passf5 and passb5 has been merged here, fsign = -1 for passf5, +1 for passb5
  */
-NEVER_INLINE(void) passf5_ps(const size_t ido, const size_t l1, const v4sf *cc, v4sf *RESTRICT ch,
+NOINLINE void passf5_ps(const size_t ido, const size_t l1, const v4sf *cc, v4sf *RESTRICT ch,
     const float *wa1, const float *wa2, const float *wa3, const float *wa4, const float fsign)
 {
     const v4sf tr11{LD_PS1(0.309016994374947f)};
@@ -610,7 +592,7 @@ NEVER_INLINE(void) passf5_ps(const size_t ido, const size_t l1, const v4sf *cc, 
 #undef cc_ref
 }
 
-NEVER_INLINE(void) radf2_ps(const size_t ido, const size_t l1, const v4sf *RESTRICT cc,
+NOINLINE void radf2_ps(const size_t ido, const size_t l1, const v4sf *RESTRICT cc,
     v4sf *RESTRICT ch, const float *wa1)
 {
     const size_t l1ido{l1*ido};
@@ -649,7 +631,7 @@ NEVER_INLINE(void) radf2_ps(const size_t ido, const size_t l1, const v4sf *RESTR
 } /* radf2 */
 
 
-NEVER_INLINE(void) radb2_ps(const size_t ido, const size_t l1, const v4sf *cc, v4sf *RESTRICT ch,
+NOINLINE void radb2_ps(const size_t ido, const size_t l1, const v4sf *cc, v4sf *RESTRICT ch,
     const float *wa1)
 {
     const size_t l1ido{l1*ido};
@@ -791,7 +773,7 @@ void radb3_ps(const size_t ido, const size_t l1, const v4sf *RESTRICT cc, v4sf *
     }
 } /* radb3 */
 
-NEVER_INLINE(void) radf4_ps(const size_t ido, const size_t l1, const v4sf *RESTRICT cc,
+NOINLINE void radf4_ps(const size_t ido, const size_t l1, const v4sf *RESTRICT cc,
     v4sf *RESTRICT ch, const float *RESTRICT wa1, const float *RESTRICT wa2,
     const float *RESTRICT wa3)
 {
@@ -882,7 +864,7 @@ NEVER_INLINE(void) radf4_ps(const size_t ido, const size_t l1, const v4sf *RESTR
 } /* radf4 */
 
 
-NEVER_INLINE(void) radb4_ps(const size_t ido, const size_t l1, const v4sf *RESTRICT cc,
+NOINLINE void radb4_ps(const size_t ido, const size_t l1, const v4sf *RESTRICT cc,
     v4sf *RESTRICT ch, const float *RESTRICT wa1, const float *RESTRICT wa2,
     const float *RESTRICT wa3)
 {
@@ -1132,8 +1114,8 @@ void radb5_ps(const size_t ido, const size_t l1, const v4sf *RESTRICT cc, v4sf *
 #undef ch_ref
 } /* radb5 */
 
-NEVER_INLINE(v4sf *) rfftf1_ps(const size_t n, const v4sf *input_readonly, v4sf *work1,
-    v4sf *work2, const float *wa, const al::span<const uint,15> ifac)
+NOINLINE v4sf *rfftf1_ps(const size_t n, const v4sf *input_readonly, v4sf *work1, v4sf *work2,
+    const float *wa, const al::span<const uint,15> ifac)
 {
     assert(work1 != work2);
 
@@ -1194,8 +1176,8 @@ NEVER_INLINE(v4sf *) rfftf1_ps(const size_t n, const v4sf *input_readonly, v4sf 
     return const_cast<v4sf*>(in); /* this is in fact the output .. */
 } /* rfftf1 */
 
-NEVER_INLINE(v4sf *) rfftb1_ps(const size_t n, const v4sf *input_readonly, v4sf *work1,
-    v4sf *work2, const float *wa, const al::span<const uint,15> ifac)
+NOINLINE v4sf *rfftb1_ps(const size_t n, const v4sf *input_readonly, v4sf *work1, v4sf *work2,
+    const float *wa, const al::span<const uint,15> ifac)
 {
     assert(work1 != work2);
 
@@ -1630,7 +1612,7 @@ void pffft_cplx_preprocess(const size_t Ncvec, const v4sf *in, v4sf *RESTRICT ou
 }
 
 
-ALWAYS_INLINE(void) pffft_real_finalize_4x4(const v4sf *in0, const v4sf *in1, const v4sf *in,
+force_inline void pffft_real_finalize_4x4(const v4sf *in0, const v4sf *in1, const v4sf *in,
     const v4sf *e, v4sf *RESTRICT out)
 {
     v4sf r0{*in0}, i0{*in1};
@@ -1686,7 +1668,7 @@ ALWAYS_INLINE(void) pffft_real_finalize_4x4(const v4sf *in0, const v4sf *in1, co
     *out++ = i3;
 }
 
-NEVER_INLINE(void) pffft_real_finalize(const size_t Ncvec, const v4sf *in, v4sf *RESTRICT out,
+NOINLINE void pffft_real_finalize(const size_t Ncvec, const v4sf *in, v4sf *RESTRICT out,
     const v4sf *e)
 {
     static constexpr float s{al::numbers::sqrt2_v<float>/2.0f};
@@ -1725,7 +1707,7 @@ NEVER_INLINE(void) pffft_real_finalize(const size_t Ncvec, const v4sf *in, v4sf 
         pffft_real_finalize_4x4(&in[8*k-1], &in[8*k+0], in + 8*k+1, e + k*6, out + k*8);
 }
 
-ALWAYS_INLINE(void) pffft_real_preprocess_4x4(const v4sf *in, const v4sf *e, v4sf *RESTRICT out,
+force_inline void pffft_real_preprocess_4x4(const v4sf *in, const v4sf *e, v4sf *RESTRICT out,
     const bool first)
 {
     v4sf r0{in[0]}, i0{in[1]}, r1{in[2]}, i1{in[3]};
@@ -1777,7 +1759,7 @@ ALWAYS_INLINE(void) pffft_real_preprocess_4x4(const v4sf *in, const v4sf *e, v4s
     *out++ = i3;
 }
 
-NEVER_INLINE(void) pffft_real_preprocess(const size_t Ncvec, const v4sf *in, v4sf *RESTRICT out,
+NOINLINE void pffft_real_preprocess(const size_t Ncvec, const v4sf *in, v4sf *RESTRICT out,
     const v4sf *e)
 {
     static constexpr float sqrt2{al::numbers::sqrt2_v<float>};

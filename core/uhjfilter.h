@@ -51,10 +51,10 @@ struct UhjEncoderBase {
 
 template<size_t N>
 struct UhjEncoder final : public UhjEncoderBase {
-    static constexpr size_t sFilterDelay{N/2};
     static constexpr size_t sFftLength{256};
     static constexpr size_t sSegmentSize{sFftLength/2};
-    static constexpr size_t sNumSegments{N/sSegmentSize - 1};
+    static constexpr size_t sNumSegments{N/sSegmentSize};
+    static constexpr size_t sFilterDelay{N/2 + sSegmentSize};
 
     /* Delays and processing storage for the input signal. */
     alignas(16) std::array<float,BufferLineSize+sFilterDelay> mW{};
@@ -66,8 +66,7 @@ struct UhjEncoder final : public UhjEncoderBase {
 
     /* History and temp storage for the convolution filter. */
     size_t mFifoPos{}, mCurrentSegment{};
-    alignas(16) std::array<float,sFftLength> mWXIn{};
-    alignas(16) std::array<float,sFftLength> mWXOut{};
+    alignas(16) std::array<float,sFftLength> mWXInOut{};
     alignas(16) std::array<float,sFftLength> mFftBuffer{};
     alignas(16) std::array<float,sFftLength> mWorkData{};
     alignas(16) std::array<float,sFftLength*sNumSegments> mWXHistory{};

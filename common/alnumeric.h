@@ -89,6 +89,9 @@ constexpr inline float cubic(float val1, float val2, float val3, float val4, flo
     return val1*a0 + val2*a1 + val3*a2 + val4*a3;
 }
 
+constexpr inline double lerpd(double val1, double val2, double mu) noexcept
+{ return val1 + (val2-val1)*mu; }
+
 
 /** Find the next power-of-2 for non-power-of-2 numbers. */
 inline uint32_t NextPowerOf2(uint32_t value) noexcept

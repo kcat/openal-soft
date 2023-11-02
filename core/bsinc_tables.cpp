@@ -10,6 +10,7 @@
 #include <stddef.h>
 
 #include "alnumbers.h"
+#include "alnumeric.h"
 #include "bsinc_defs.h"
 #include "resampler_limits.h"
 
@@ -108,7 +109,6 @@ struct BSincHeader {
     double width{};
     double beta{};
     double scaleBase{};
-    double scaleRange{};
     double besseli_0_beta{};
 
     uint a[BSincScaleCount]{};
@@ -119,13 +119,12 @@ struct BSincHeader {
         width = CalcKaiserWidth(Rejection, Order);
         beta = CalcKaiserBeta(Rejection);
         scaleBase = width / 2.0;
-        scaleRange = 1.0 - scaleBase;
         besseli_0_beta = BesselI_0(beta);
 
         uint num_points{Order+1};
         for(uint si{0};si < BSincScaleCount;++si)
         {
-            const double scale{scaleBase + (scaleRange * (si+1) / BSincScaleCount)};
+            const double scale{lerpd(scaleBase, 1.0, (si+1) / double{BSincScaleCount})};
             const uint a_{std::min(static_cast<uint>(num_points / 2.0 / scale), num_points)};
             const uint m{2 * a_};
 
@@ -162,7 +161,7 @@ struct BSincFilterArray {
         {
             const uint m{hdr.a[si] * 2};
             const size_t o{(BSincPointsMax-m) / 2};
-            const double scale{hdr.scaleBase + (hdr.scaleRange * (si+1) / BSincScaleCount)};
+            const double scale{lerpd(hdr.scaleBase, 1.0, (si+1) / double{BSincScaleCount})};
             const double cutoff{scale - (hdr.scaleBase * std::max(1.0, scale*2.0))};
             const auto a = static_cast<double>(hdr.a[si]);
             const double l{a - 1.0/BSincPhaseCount};
@@ -255,7 +254,7 @@ constexpr BSincTable GenerateBSincTable(const T &filter)
     BSincTable ret{};
     const BSincHeader &hdr = filter.getHeader();
     ret.scaleBase = static_cast<float>(hdr.scaleBase);
-    ret.scaleRange = static_cast<float>(1.0 / hdr.scaleRange);
+    ret.scaleRange = static_cast<float>(1.0 / (1.0 - hdr.scaleBase));
     for(size_t i{0};i < BSincScaleCount;++i)
         ret.m[i] = ((hdr.a[i]*2) + 3) & ~3u;
     ret.filterOffset[0] = 0;

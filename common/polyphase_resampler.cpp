@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <numeric>
 
 #include "alnumbers.h"
 #include "opthelpers.h"
@@ -67,23 +68,11 @@ constexpr double BesselI_0(const double x)
  *
  *   k = 2 i / M - 1,   where 0 <= i <= M.
  */
-double Kaiser(const double b, const double k)
+double Kaiser(const double beta, const double k, const double besseli_0_beta)
 {
     if(!(k >= -1.0 && k <= 1.0))
         return 0.0;
-    return BesselI_0(b * std::sqrt(1.0 - k*k)) / BesselI_0(b);
-}
-
-// Calculates the greatest common divisor of a and b.
-constexpr uint Gcd(uint x, uint y)
-{
-    while(y > 0)
-    {
-        const uint z{y};
-        y = x % y;
-        x = z;
-    }
-    return x;
+    return BesselI_0(beta * std::sqrt(1.0 - k*k)) / besseli_0_beta;
 }
 
 /* Calculates the size (order) of the Kaiser window.  Rejection is in dB and
@@ -124,11 +113,11 @@ constexpr double CalcKaiserBeta(const double rejection)
  *   p    -- gain compensation factor when sampling
  *   f_t  -- normalized center frequency (or cutoff; 0.5 is nyquist)
  */
-double SincFilter(const uint l, const double b, const double gain, const double cutoff,
-    const uint i)
+double SincFilter(const uint l, const double beta, const double besseli_0_beta, const double gain,
+    const double cutoff, const uint i)
 {
     const double x{static_cast<double>(i) - l};
-    return Kaiser(b, x / l) * 2.0 * gain * cutoff * Sinc(2.0 * cutoff * x);
+    return Kaiser(beta, x/l, besseli_0_beta) * 2.0 * gain * cutoff * Sinc(2.0 * cutoff * x);
 }
 
 } // namespace
@@ -137,7 +126,7 @@ double SincFilter(const uint l, const double b, const double gain, const double 
 // that's used to cut frequencies above the destination nyquist.
 void PPhaseResampler::init(const uint srcRate, const uint dstRate)
 {
-    const uint gcd{Gcd(srcRate, dstRate)};
+    const uint gcd{std::gcd(srcRate, dstRate)};
     mP = dstRate / gcd;
     mQ = srcRate / gcd;
 
@@ -160,11 +149,12 @@ void PPhaseResampler::init(const uint srcRate, const uint dstRate)
     // calculating the left offset to avoid increasing the transition width.
     const uint l{(CalcKaiserOrder(180.0, width)+1) / 2};
     const double beta{CalcKaiserBeta(180.0)};
+    const double besseli_0_beta{BesselI_0(beta)};
     mM = l*2 + 1;
     mL = l;
     mF.resize(mM);
     for(uint i{0};i < mM;i++)
-        mF[i] = SincFilter(l, beta, mP, cutoff, i);
+        mF[i] = SincFilter(l, beta, besseli_0_beta, mP, cutoff, i);
 }
 
 // Perform the upsample-filter-downsample resampling operation using a

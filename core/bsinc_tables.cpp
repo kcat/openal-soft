@@ -33,35 +33,6 @@ constexpr double Sinc(const double x)
     return std::sin(al::numbers::pi*x) / (al::numbers::pi*x);
 }
 
-/* The zero-order modified Bessel function of the first kind, used for the
- * Kaiser window.
- *
- *   I_0(x) = sum_{k=0}^inf (1 / k!)^2 (x / 2)^(2 k)
- *          = sum_{k=0}^inf ((x / 2)^k / k!)^2
- */
-constexpr double BesselI_0(const double x) noexcept
-{
-    /* Start at k=1 since k=0 is trivial. */
-    const double x2{x / 2.0};
-    double term{1.0};
-    double sum{1.0};
-    double last_sum{};
-    int k{1};
-
-    /* Let the integration converge until the term of the sum is no longer
-     * significant.
-     */
-    do {
-        const double y{x2 / k};
-        ++k;
-        last_sum = sum;
-        term *= y * y;
-        sum += term;
-    } while(sum != last_sum);
-
-    return sum;
-}
-
 /* Calculate a Kaiser window from the given beta value and a normalized k
  * [-1, 1].
  *
@@ -80,7 +51,7 @@ constexpr double Kaiser(const double beta, const double k, const double besseli_
 {
     if(!(k >= -1.0 && k <= 1.0))
         return 0.0;
-    return BesselI_0(beta * std::sqrt(1.0 - k*k)) / besseli_0_beta;
+    return std::cyl_bessel_i(0, beta * std::sqrt(1.0 - k*k)) / besseli_0_beta;
 }
 
 /* Calculates the (normalized frequency) transition width of the Kaiser window.
@@ -109,7 +80,6 @@ struct BSincHeader {
     double width{};
     double beta{};
     double scaleBase{};
-    double besseli_0_beta{};
 
     uint a[BSincScaleCount]{};
     uint total_size{};
@@ -119,7 +89,6 @@ struct BSincHeader {
         width = CalcKaiserWidth(Rejection, Order);
         beta = CalcKaiserBeta(Rejection);
         scaleBase = width / 2.0;
-        besseli_0_beta = BesselI_0(beta);
 
         uint num_points{Order+1};
         for(uint si{0};si < BSincScaleCount;++si)
@@ -154,6 +123,8 @@ struct BSincFilterArray {
         using filter_type = double[BSincPhaseCount+1][BSincPointsMax];
         auto filter = std::make_unique<filter_type[]>(BSincScaleCount);
 
+        const double besseli_0_beta{std::cyl_bessel_i(0, hdr.beta)};
+
         /* Calculate the Kaiser-windowed Sinc filter coefficients for each
          * scale and phase index.
          */
@@ -176,7 +147,7 @@ struct BSincFilterArray {
                 for(uint i{0};i < m;++i)
                 {
                     const double x{i - phase};
-                    filter[si][pi][o+i] = Kaiser(hdr.beta, x/l, hdr.besseli_0_beta) * cutoff *
+                    filter[si][pi][o+i] = Kaiser(hdr.beta, x/l, besseli_0_beta) * cutoff *
                         Sinc(cutoff*x);
                 }
             }

@@ -27,33 +27,6 @@ double Sinc(const double x)
     return std::sin(al::numbers::pi*x) / (al::numbers::pi*x);
 }
 
-/* The zero-order modified Bessel function of the first kind, used for the
- * Kaiser window.
- *
- *   I_0(x) = sum_{k=0}^inf (1 / k!)^2 (x / 2)^(2 k)
- *          = sum_{k=0}^inf ((x / 2)^k / k!)^2
- */
-constexpr double BesselI_0(const double x)
-{
-    // Start at k=1 since k=0 is trivial.
-    const double x2{x/2.0};
-    double term{1.0};
-    double sum{1.0};
-    int k{1};
-
-    // Let the integration converge until the term of the sum is no longer
-    // significant.
-    double last_sum{};
-    do {
-        const double y{x2 / k};
-        ++k;
-        last_sum = sum;
-        term *= y * y;
-        sum += term;
-    } while(sum != last_sum);
-    return sum;
-}
-
 /* Calculate a Kaiser window from the given beta value and a normalized k
  * [-1, 1].
  *
@@ -72,7 +45,7 @@ double Kaiser(const double beta, const double k, const double besseli_0_beta)
 {
     if(!(k >= -1.0 && k <= 1.0))
         return 0.0;
-    return BesselI_0(beta * std::sqrt(1.0 - k*k)) / besseli_0_beta;
+    return std::cyl_bessel_i(0, beta * std::sqrt(1.0 - k*k)) / besseli_0_beta;
 }
 
 /* Calculates the size (order) of the Kaiser window.  Rejection is in dB and
@@ -149,7 +122,7 @@ void PPhaseResampler::init(const uint srcRate, const uint dstRate)
     // calculating the left offset to avoid increasing the transition width.
     const uint l{(CalcKaiserOrder(180.0, width)+1) / 2};
     const double beta{CalcKaiserBeta(180.0)};
-    const double besseli_0_beta{BesselI_0(beta)};
+    const double besseli_0_beta{std::cyl_bessel_i(0, beta)};
     mM = l*2 + 1;
     mL = l;
     mF.resize(mM);

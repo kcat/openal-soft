@@ -603,19 +603,18 @@ inline std::array<float,3> ScaleAzimuthFront3_2(std::array<float,3> pos)
  * precomputed since they're constant. The second-order coefficients are
  * followed by the third-order coefficients, etc.
  */
-template<size_t L>
-constexpr size_t CalcRotatorSize()
-{ return (L*2 + 1)*(L*2 + 1) + CalcRotatorSize<L-1>(); }
-
-template<> constexpr size_t CalcRotatorSize<0>() = delete;
-template<> constexpr size_t CalcRotatorSize<1>() = delete;
-template<> constexpr size_t CalcRotatorSize<2>() { return 5*5; }
+constexpr size_t CalcRotatorSize(size_t l) noexcept
+{
+    if(l >= 2)
+        return (l*2 + 1)*(l*2 + 1) + CalcRotatorSize(l-1);
+    return 0;
+}
 
 struct RotatorCoeffs {
     struct CoeffValues {
         float u, v, w;
     };
-    std::array<CoeffValues,CalcRotatorSize<MaxAmbiOrder>()> mCoeffs{};
+    std::array<CoeffValues,CalcRotatorSize(MaxAmbiOrder)> mCoeffs{};
 
     RotatorCoeffs()
     {

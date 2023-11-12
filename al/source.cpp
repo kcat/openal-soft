@@ -78,8 +78,6 @@
 #include <cassert>
 #endif // ALSOFT_EAX
 
-bool sBufferSubDataCompat{false};
-
 namespace {
 
 using namespace std::placeholders;
@@ -97,7 +95,7 @@ Voice *GetSourceVoice(ALsource *source, ALCcontext *context)
         if(voice->mSourceID.load(std::memory_order_acquire) == sid)
             return voice;
     }
-    source->VoiceIdx = INVALID_VOICE_IDX;
+    source->VoiceIdx = InvalidVoiceIndex;
     return nullptr;
 }
 
@@ -3310,7 +3308,7 @@ FORCE_ALIGN void AL_APIENTRY alSourceStopvDirect(ALCcontext *context, ALsizei n,
         }
         source->Offset = 0.0;
         source->OffsetType = AL_NONE;
-        source->VoiceIdx = INVALID_VOICE_IDX;
+        source->VoiceIdx = InvalidVoiceIndex;
     }
     if(tail) LIKELY
         SendVoiceChanges(context, tail);
@@ -3371,7 +3369,7 @@ FORCE_ALIGN void AL_APIENTRY alSourceRewindvDirect(ALCcontext *context, ALsizei 
         }
         source->Offset = 0.0;
         source->OffsetType = AL_NONE;
-        source->VoiceIdx = INVALID_VOICE_IDX;
+        source->VoiceIdx = InvalidVoiceIndex;
     }
     if(tail) LIKELY
         SendVoiceChanges(context, tail);

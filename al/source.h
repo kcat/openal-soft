@@ -39,9 +39,9 @@ enum class SourceStereo : bool {
 
 #define DEFAULT_SENDS  2
 
-#define INVALID_VOICE_IDX static_cast<ALuint>(-1)
+inline constexpr ALuint InvalidVoiceIndex{std::numeric_limits<ALuint>::max()};
 
-extern bool sBufferSubDataCompat;
+inline bool sBufferSubDataCompat{false};
 
 struct ALbufferQueueItem : public VoiceBufferItem {
     ALbuffer *mBuffer{nullptr};
@@ -145,7 +145,7 @@ struct ALsource {
     /* Index into the context's Voices array. Lazily updated, only checked and
      * reset when looking up the voice.
      */
-    ALuint VoiceIdx{INVALID_VOICE_IDX};
+    ALuint VoiceIdx{InvalidVoiceIndex};
 
     /** Self ID */
     ALuint id{0};

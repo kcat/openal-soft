@@ -31,6 +31,14 @@ struct FmtTypeTraits<FmtShort> {
     static constexpr OutT to(const Type val) noexcept { return val*OutT{1.0/32768.0}; }
 };
 template<>
+struct FmtTypeTraits<FmtInt> {
+    using Type = int32_t;
+
+    template<typename OutT>
+    static constexpr OutT to(const Type val) noexcept
+    { return static_cast<OutT>(val)*OutT{1.0/2147483648.0}; }
+};
+template<>
 struct FmtTypeTraits<FmtFloat> {
     using Type = float;
 

@@ -84,6 +84,7 @@ void LoadSamples(float *RESTRICT dst, const std::byte *src, const size_t srcstep
     {
     HANDLE_FMT(FmtUByte);
     HANDLE_FMT(FmtShort);
+    HANDLE_FMT(FmtInt);
     HANDLE_FMT(FmtFloat);
     HANDLE_FMT(FmtDouble);
     HANDLE_FMT(FmtMulaw);

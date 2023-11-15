@@ -464,6 +464,7 @@ void PrepareUserPtr(ALCcontext *context, ALbuffer *ALBuf, ALsizei freq,
         {
         case FmtUByte: return alignof(ALubyte);
         case FmtShort: return alignof(ALshort);
+        case FmtInt: return alignof(ALint);
         case FmtFloat: return alignof(ALfloat);
         case FmtDouble: return alignof(ALdouble);
         case FmtMulaw: return alignof(ALubyte);

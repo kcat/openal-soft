@@ -12,6 +12,7 @@ const char *NameFromFormat(FmtType type) noexcept
     {
     case FmtUByte: return "UInt8";
     case FmtShort: return "Int16";
+    case FmtInt: return "Int32";
     case FmtFloat: return "Float";
     case FmtDouble: return "Double";
     case FmtMulaw: return "muLaw";
@@ -49,6 +50,7 @@ uint BytesFromFmt(FmtType type) noexcept
     {
     case FmtUByte: return sizeof(uint8_t);
     case FmtShort: return sizeof(int16_t);
+    case FmtInt: return sizeof(int32_t);
     case FmtFloat: return sizeof(float);
     case FmtDouble: return sizeof(double);
     case FmtMulaw: return sizeof(uint8_t);

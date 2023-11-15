@@ -15,6 +15,7 @@ using uint = unsigned int;
 enum FmtType : unsigned char {
     FmtUByte,
     FmtShort,
+    FmtInt,
     FmtFloat,
     FmtDouble,
     FmtMulaw,

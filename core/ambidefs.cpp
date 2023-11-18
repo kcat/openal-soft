@@ -279,13 +279,13 @@ constexpr auto CalcAmbiUpsampler(const std::array<std::array<float,N>,M> &decode
 
 } // namespace
 
-const std::array AmbiScale::FirstOrderUp = CalcAmbiUpsampler(FirstOrderDecoder, FirstOrderEncoder);
-const std::array AmbiScale::FirstOrder2DUp = CalcAmbiUpsampler(FirstOrder2DDecoder, FirstOrder2DEncoder);
-const std::array AmbiScale::SecondOrderUp = CalcAmbiUpsampler(SecondOrderDecoder, SecondOrderEncoder);
-const std::array AmbiScale::SecondOrder2DUp = CalcAmbiUpsampler(SecondOrder2DDecoder, SecondOrder2DEncoder);
-const std::array AmbiScale::ThirdOrderUp = CalcAmbiUpsampler(ThirdOrderDecoder, ThirdOrderEncoder);
-const std::array AmbiScale::ThirdOrder2DUp = CalcAmbiUpsampler(ThirdOrder2DDecoder, ThirdOrder2DEncoder);
-const std::array AmbiScale::FourthOrder2DUp = CalcAmbiUpsampler(FourthOrder2DDecoder, FourthOrder2DEncoder);
+const std::array<std::array<float,MaxAmbiChannels>,4> AmbiScale::FirstOrderUp{CalcAmbiUpsampler(FirstOrderDecoder, FirstOrderEncoder)};
+const std::array<std::array<float,MaxAmbiChannels>,4> AmbiScale::FirstOrder2DUp{CalcAmbiUpsampler(FirstOrder2DDecoder, FirstOrder2DEncoder)};
+const std::array<std::array<float,MaxAmbiChannels>,9> AmbiScale::SecondOrderUp{CalcAmbiUpsampler(SecondOrderDecoder, SecondOrderEncoder)};
+const std::array<std::array<float,MaxAmbiChannels>,9> AmbiScale::SecondOrder2DUp{CalcAmbiUpsampler(SecondOrder2DDecoder, SecondOrder2DEncoder)};
+const std::array<std::array<float,MaxAmbiChannels>,16> AmbiScale::ThirdOrderUp{CalcAmbiUpsampler(ThirdOrderDecoder, ThirdOrderEncoder)};
+const std::array<std::array<float,MaxAmbiChannels>,16> AmbiScale::ThirdOrder2DUp{CalcAmbiUpsampler(ThirdOrder2DDecoder, ThirdOrder2DEncoder)};
+const std::array<std::array<float,MaxAmbiChannels>,25> AmbiScale::FourthOrder2DUp{CalcAmbiUpsampler(FourthOrder2DDecoder, FourthOrder2DEncoder)};
 
 
 std::array<float,MaxAmbiOrder+1> AmbiScale::GetHFOrderScales(const uint src_order,

@@ -740,29 +740,39 @@ std::optional<DevFmtPair> DecomposeDevFormat(ALenum format)
         DevFmtChannels channels;
         DevFmtType type;
     } list[] = {
-        { AL_FORMAT_MONO8,        DevFmtMono, DevFmtUByte },
-        { AL_FORMAT_MONO16,       DevFmtMono, DevFmtShort },
+        { AL_FORMAT_MONO8,    DevFmtMono, DevFmtUByte },
+        { AL_FORMAT_MONO16,   DevFmtMono, DevFmtShort },
+        { AL_FORMAT_MONO_I32, DevFmtMono, DevFmtInt },
         { AL_FORMAT_MONO_FLOAT32, DevFmtMono, DevFmtFloat },
 
-        { AL_FORMAT_STEREO8,        DevFmtStereo, DevFmtUByte },
-        { AL_FORMAT_STEREO16,       DevFmtStereo, DevFmtShort },
+        { AL_FORMAT_STEREO8,    DevFmtStereo, DevFmtUByte },
+        { AL_FORMAT_STEREO16,   DevFmtStereo, DevFmtShort },
+        { AL_FORMAT_STEREO_I32, DevFmtStereo, DevFmtInt },
         { AL_FORMAT_STEREO_FLOAT32, DevFmtStereo, DevFmtFloat },
 
-        { AL_FORMAT_QUAD8,  DevFmtQuad, DevFmtUByte },
-        { AL_FORMAT_QUAD16, DevFmtQuad, DevFmtShort },
-        { AL_FORMAT_QUAD32, DevFmtQuad, DevFmtFloat },
+        { AL_FORMAT_QUAD8,    DevFmtQuad, DevFmtUByte },
+        { AL_FORMAT_QUAD16,   DevFmtQuad, DevFmtShort },
+        { AL_FORMAT_QUAD32,   DevFmtQuad, DevFmtFloat },
+        { AL_FORMAT_QUAD_I32, DevFmtQuad, DevFmtInt },
+        { AL_FORMAT_QUAD_FLOAT32, DevFmtQuad, DevFmtFloat },
 
-        { AL_FORMAT_51CHN8,  DevFmtX51, DevFmtUByte },
-        { AL_FORMAT_51CHN16, DevFmtX51, DevFmtShort },
-        { AL_FORMAT_51CHN32, DevFmtX51, DevFmtFloat },
+        { AL_FORMAT_51CHN8,    DevFmtX51, DevFmtUByte },
+        { AL_FORMAT_51CHN16,   DevFmtX51, DevFmtShort },
+        { AL_FORMAT_51CHN32,   DevFmtX51, DevFmtFloat },
+        { AL_FORMAT_51CHN_I32, DevFmtX51, DevFmtInt },
+        { AL_FORMAT_51CHN_FLOAT32, DevFmtX51, DevFmtFloat },
 
-        { AL_FORMAT_61CHN8,  DevFmtX61, DevFmtUByte },
-        { AL_FORMAT_61CHN16, DevFmtX61, DevFmtShort },
-        { AL_FORMAT_61CHN32, DevFmtX61, DevFmtFloat },
+        { AL_FORMAT_61CHN8,    DevFmtX61, DevFmtUByte },
+        { AL_FORMAT_61CHN16,   DevFmtX61, DevFmtShort },
+        { AL_FORMAT_61CHN32,   DevFmtX61, DevFmtFloat },
+        { AL_FORMAT_61CHN_I32, DevFmtX61, DevFmtInt },
+        { AL_FORMAT_61CHN_FLOAT32, DevFmtX61, DevFmtFloat },
 
-        { AL_FORMAT_71CHN8,  DevFmtX71, DevFmtUByte },
-        { AL_FORMAT_71CHN16, DevFmtX71, DevFmtShort },
-        { AL_FORMAT_71CHN32, DevFmtX71, DevFmtFloat },
+        { AL_FORMAT_71CHN8,    DevFmtX71, DevFmtUByte },
+        { AL_FORMAT_71CHN16,   DevFmtX71, DevFmtShort },
+        { AL_FORMAT_71CHN32,   DevFmtX71, DevFmtFloat },
+        { AL_FORMAT_71CHN_I32, DevFmtX71, DevFmtInt },
+        { AL_FORMAT_71CHN_FLOAT32, DevFmtX71, DevFmtFloat },
     };
 
     for(const auto &item : list)

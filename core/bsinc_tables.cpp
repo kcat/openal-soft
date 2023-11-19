@@ -8,6 +8,7 @@
 #include <limits>
 #include <memory>
 #include <stddef.h>
+#include <stdexcept>
 
 #include "alnumbers.h"
 #include "alnumeric.h"
@@ -19,6 +20,47 @@ namespace {
 
 using uint = unsigned int;
 
+#if __cpp_lib_math_special_functions >= 201603L
+using std::cyl_bessel_i;
+
+#else
+
+/* The zero-order modified Bessel function of the first kind, used for the
+ * Kaiser window.
+ *
+ *   I_0(x) = sum_{k=0}^inf (1 / k!)^2 (x / 2)^(2 k)
+ *          = sum_{k=0}^inf ((x / 2)^k / k!)^2
+ *
+ * This implementation only handles nu = 0, and isn't the most precise (it
+ * starts with the largest value and accumulates successively smaller values,
+ * compounding the rounding and precision error), but it's good enough.
+ */
+template<typename T, typename U>
+U cyl_bessel_i(T nu, U x)
+{
+    if(nu != T{0})
+        throw std::runtime_error{"cyl_bessel_i: nu != 0"};
+
+    /* Start at k=1 since k=0 is trivial. */
+    const double x2{x/2.0};
+    double term{1.0};
+    double sum{1.0};
+    int k{1};
+
+    /* Let the integration converge until the term of the sum is no longer
+     * significant.
+     */
+    double last_sum{};
+    do {
+        const double y{x2 / k};
+        ++k;
+        last_sum = sum;
+        term *= y * y;
+        sum += term;
+    } while(sum != last_sum);
+    return static_cast<U>(sum);
+}
+#endif
 
 /* This is the normalized cardinal sine (sinc) function.
  *
@@ -51,7 +93,7 @@ constexpr double Kaiser(const double beta, const double k, const double besseli_
 {
     if(!(k >= -1.0 && k <= 1.0))
         return 0.0;
-    return std::cyl_bessel_i(0, beta * std::sqrt(1.0 - k*k)) / besseli_0_beta;
+    return cyl_bessel_i(0, beta * std::sqrt(1.0 - k*k)) / besseli_0_beta;
 }
 
 /* Calculates the (normalized frequency) transition width of the Kaiser window.
@@ -123,7 +165,7 @@ struct BSincFilterArray {
         using filter_type = double[BSincPhaseCount+1][BSincPointsMax];
         auto filter = std::make_unique<filter_type[]>(BSincScaleCount);
 
-        const double besseli_0_beta{std::cyl_bessel_i(0, hdr.beta)};
+        const double besseli_0_beta{cyl_bessel_i(0, hdr.beta)};
 
         /* Calculate the Kaiser-windowed Sinc filter coefficients for each
          * scale and phase index.

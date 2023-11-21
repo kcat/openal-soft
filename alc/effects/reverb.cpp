@@ -1482,8 +1482,9 @@ void ReverbPipeline::processEarly(size_t offset, const size_t samplesToDo,
                 feedb_tap &= early_delay.Mask;
                 size_t td{minz(early_delay.Mask+1 - feedb_tap, todo - i)};
                 do {
-                    tempSamples[j][i] += early_delay.Line[feedb_tap++][j]*feedb_coeff;
-                    out[i] = tempSamples[j][i];
+                    float sample{early_delay.Line[feedb_tap++][j]};
+                    out[i] = tempSamples[j][i] + sample*feedb_coeff;
+                    tempSamples[j][i] = sample;
                     ++i;
                 } while(--td);
             }

@@ -98,8 +98,6 @@ struct CubicFilter {
 constexpr CubicFilter gCubicTable;
 
 
-using namespace std::placeholders;
-
 /* Max samples per process iteration. Used to limit the size needed for
  * temporary buffers. Must be a multiple of 4 for SIMD alignment.
  */
@@ -122,12 +120,9 @@ constexpr size_t NUM_LINES{4u};
 constexpr float MODULATION_DEPTH_COEFF{0.05f};
 
 
-/* The B-Format to A-Format conversion matrix. The arrangement of rows is
- * deliberately chosen to align the resulting lines to their spatial opposites
- * (0:above front left <-> 3:above back right, 1:below front right <-> 2:below
- * back left). It's not quite opposite, since the A-Format results in a
- * tetrahedron, but it's close enough. Should the model be extended to 8-lines
- * in the future, true opposites can be used.
+/* The B-Format to (W-normalized) A-Format conversion matrix. This produces a
+ * tetrahedral array of discrete signals (boosted by a factor of sqrt(3), to
+ * reduce the error introduced in the conversion).
  */
 alignas(16) constexpr float B2A[NUM_LINES][NUM_LINES]{
     { 0.5f,  0.5f,  0.5f,  0.5f },
@@ -136,7 +131,9 @@ alignas(16) constexpr float B2A[NUM_LINES][NUM_LINES]{
     { 0.5f, -0.5f,  0.5f, -0.5f }
 };
 
-/* Converts A-Format to B-Format for early reflections. */
+/* Converts (W-normalized) A-Format to B-Format for early reflections (scaled
+ * by 1/sqrt(3) to compensate for the boost in the B2A matrix).
+ */
 alignas(16) constexpr std::array<std::array<float,NUM_LINES>,NUM_LINES> EarlyA2B{{
     {{ 0.5f,  0.5f,  0.5f,  0.5f }},
     {{ 0.5f, -0.5f,  0.5f, -0.5f }},
@@ -144,7 +141,11 @@ alignas(16) constexpr std::array<std::array<float,NUM_LINES>,NUM_LINES> EarlyA2B
     {{ 0.5f,  0.5f, -0.5f, -0.5f }}
 }};
 
-/* Converts A-Format to B-Format for late reverb. */
+/* Converts (W-normalized) A-Format to B-Format for late reverb (scaled
+ * by 1/sqrt(3) to compensate for the boost in the B2A matrix). The response
+ * is rotated around Z (ambisonic X) so that the front lines are placed
+ * horizontally in front, and the rear lines are placed vertically in back.
+ */
 constexpr auto InvSqrt2 = static_cast<float>(1.0/al::numbers::sqrt2);
 alignas(16) constexpr std::array<std::array<float,NUM_LINES>,NUM_LINES> LateA2B{{
     {{ 0.5f,  0.5f,  0.5f,  0.5f }},
@@ -327,6 +328,39 @@ struct DelayLineI {
             size_t td{minz(Mask+1 - offset, count - i)};
             do {
                 Line[offset++][c] = in[i++];
+            } while(--td);
+        }
+    }
+
+    /* Writes the given input lines to the delay buffer, applying a geometric
+     * reflection. This effectively applies the matrix
+     *
+     * [ -1/2 +1/2 +1/2 +1/2 ]
+     * [ +1/2 -1/2 +1/2 +1/2 ]
+     * [ +1/2 +1/2 -1/2 +1/2 ]
+     * [ +1/2 +1/2 +1/2 -1/2 ]
+     *
+     * to the four input lines when writing to the delay buffer. The effect on
+     * the B-Format signal is negating X,Y,Z, moving each response to its
+     * spatially opposite location.
+     */
+    void writeReflected(size_t offset, const al::span<const ReverbUpdateLine,NUM_LINES> in,
+        const size_t count) const noexcept
+    {
+        ASSUME(count > 0);
+        for(size_t i{0u};i < count;)
+        {
+            offset &= Mask;
+            size_t td{minz(Mask+1 - offset, count - i)};
+            do {
+                const std::array src{in[0][i], in[1][i], in[2][i], in[3][i]};
+                ++i;
+
+                Line[offset][0] = (         src[1] + src[2] + src[3] - src[0]) * 0.5f;
+                Line[offset][1] = (src[0] +          src[2] + src[3] - src[1]) * 0.5f;
+                Line[offset][2] = (src[0] + src[1] +          src[3] - src[2]) * 0.5f;
+                Line[offset][3] = (src[0] + src[1] + src[2]          - src[3]) * 0.5f;
+                ++offset;
             } while(--td);
         }
     }
@@ -1337,7 +1371,9 @@ inline auto VectorPartialScatter(const std::array<float,NUM_LINES> &RESTRICT in,
     }};
 }
 
-/* Utilizes the above, but reverses the input channels. */
+/* Utilizes the above, but also applies a geometric reflection on the input
+ * channels.
+ */
 void VectorScatterRevDelayIn(const DelayLineI delay, size_t offset, const float xCoeff,
     const float yCoeff, const al::span<const ReverbUpdateLine,NUM_LINES> in, const size_t count)
 {
@@ -1348,9 +1384,13 @@ void VectorScatterRevDelayIn(const DelayLineI delay, size_t offset, const float 
         offset &= delay.Mask;
         size_t td{minz(delay.Mask+1 - offset, count-i)};
         do {
-            std::array<float,NUM_LINES> f;
-            for(size_t j{0u};j < NUM_LINES;j++)
-                f[NUM_LINES-1-j] = in[j][i];
+            std::array src{in[0][i], in[1][i], in[2][i], in[3][i]};
+            std::array f{
+                (         src[1] + src[2] + src[3] - src[0]) * 0.5f,
+                (src[0] +          src[2] + src[3] - src[1]) * 0.5f,
+                (src[0] + src[1] +          src[3] - src[2]) * 0.5f,
+                (src[0] + src[1] + src[2]          - src[3]) * 0.5f
+            };
             ++i;
 
             delay.Line[offset++] = VectorPartialScatter(f, xCoeff, yCoeff);
@@ -1473,8 +1513,7 @@ void ReverbPipeline::processEarly(size_t offset, const size_t samplesToDo,
         /* Apply a delay and bounce to generate secondary reflections, combine
          * with the primary reflections and write out the result for mixing.
          */
-        for(size_t j{0u};j < NUM_LINES;j++)
-            early_delay.write(offset, NUM_LINES-1-j, tempSamples[j].data(), todo);
+        early_delay.writeReflected(offset, tempSamples, todo);
         for(size_t j{0u};j < NUM_LINES;j++)
         {
             size_t feedb_tap{offset - mEarly.Offset[j]};

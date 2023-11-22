@@ -1018,8 +1018,12 @@ void ReverbPipeline::updateDelayLine(const float earlyDelay, const float lateDel
         mEarlyDelayTap[i][1] = float2uint((earlyDelay+length) * frequency);
         mEarlyDelayCoeff[i] = CalcDecayCoeff(length, decayTime);
 
+        /* Reduce the late delay tap by the shortest early delay line length to
+         * compensate for the late line input being fed by the delayed early
+         * output.
+         */
         length = (LATE_LINE_LENGTHS[i] - LATE_LINE_LENGTHS.front())/float{NUM_LINES}*density_mult +
-            lateDelay;
+            std::max(lateDelay - EARLY_LINE_LENGTHS[0]*density_mult, 0.0f);
         mLateDelayTap[i][1] = float2uint(length * frequency);
     }
 }

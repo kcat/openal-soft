@@ -11,6 +11,7 @@
 
 #include "core/device.h"
 #include "core/except.h"
+#include "alc/events.h"
 
 
 using uint = unsigned int;
@@ -78,6 +79,10 @@ struct BackendFactory {
     virtual bool init() = 0;
 
     virtual bool querySupport(BackendType type) = 0;
+
+    virtual alc::EventSupport queryEventSupport(alc::EventType eventType, BackendType type) {
+        return alc::EventSupport::NoSupport;
+    }
 
     virtual std::string probe(BackendType type) = 0;
 

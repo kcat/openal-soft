@@ -6,6 +6,7 @@
 
 #include <bitset>
 #include <mutex>
+#include <optional>
 #include <string_view>
 
 
@@ -17,6 +18,14 @@ enum class EventType : uint8_t {
     DeviceRemoved,
 
     Count
+};
+
+std::optional<alc::EventType> GetEventType(ALCenum type);
+
+enum class EventSupport : ALCenum {
+    FullSupport = ALC_EVENT_SUPPORTED,
+    PartialSupport = ALC_EVENT_PARTIALLY_SUPPORTED,
+    NoSupport = ALC_EVENT_NOT_SUPPORTED,
 };
 
 enum class DeviceType : ALCenum {

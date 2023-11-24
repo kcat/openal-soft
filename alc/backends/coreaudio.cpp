@@ -39,7 +39,6 @@
 #include "core/device.h"
 #include "core/logging.h"
 #include "ringbuffer.h"
-#include "alc/events.h"
 
 #include <AudioUnit/AudioUnit.h>
 #include <AudioToolbox/AudioToolbox.h>
@@ -1012,4 +1011,14 @@ BackendPtr CoreAudioBackendFactory::createBackend(DeviceBase *device, BackendTyp
     if(type == BackendType::Capture)
         return BackendPtr{new CoreAudioCapture{device}};
     return nullptr;
+}
+
+alc::EventSupport CoreAudioBackendFactory::queryEventSupport(alc::EventType eventType, BackendType type)
+{
+    switch(eventType) {
+        case alc::EventType::DefaultDeviceChanged: {
+            return alc::EventSupport::FullSupport;
+        }
+    }
+    return alc::EventSupport::NoSupport;
 }

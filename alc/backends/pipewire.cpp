@@ -40,7 +40,6 @@
 
 #include "albit.h"
 #include "alc/alconfig.h"
-#include "alc/events.h"
 #include "almalloc.h"
 #include "alnumeric.h"
 #include "alspan.h"
@@ -2265,4 +2264,20 @@ BackendFactory &PipeWireBackendFactory::getFactory()
 {
     static PipeWireBackendFactory factory{};
     return factory;
+}
+
+alc::EventSupport PipeWireBackendFactory::queryEventSupport(alc::EventType eventType, BackendType type)
+{
+    switch(eventType) {
+        case alc::EventType::DefaultDeviceChanged: {
+            return alc::EventSupport::FullSupport;
+        }
+        case alc::EventType::DeviceAdded: {
+            return alc::EventSupport::FullSupport;
+        }
+        case alc::EventType::DeviceRemoved: {
+            return alc::EventSupport::FullSupport;
+        }
+    }
+    return alc::EventSupport::NoSupport;
 }

@@ -1450,14 +1450,13 @@ void VecAllpass::process(const al::span<ReverbUpdateLine,NUM_LINES> samples, siz
  * same direction as the source) from the main delay line.  These are
  * attenuated and all-pass filtered (based on the diffusion parameter).
  *
- * The early lines are then fed in reverse (according to the approximately
- * opposite spatial location of the A-Format lines) to create the secondary
+ * The early lines are then reflected about the origin to create the secondary
  * reflections (those arriving from the opposite direction as the source).
  *
  * The early response is then completed by combining the primary reflections
  * with the delayed and attenuated output from the early lines.
  *
- * Finally, the early response is reversed, scattered (based on diffusion),
+ * Finally, the early response is reflected, scattered (based on diffusion),
  * and fed into the late reverb section of the main delay line.
  */
 void ReverbPipeline::processEarly(size_t offset, const size_t samplesToDo,

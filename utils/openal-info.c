@@ -238,15 +238,15 @@ static void printALCSOFTSystemEventIsSupportedResult(LPALCEVENTISSUPPORTEDSOFT a
         return;
     }
     ALCenum supported = alcEventIsSupportedSOFT(eventType, deviceType);
-    if (supported == ALC_EVENT_SUPPORTED)
+    if (supported == ALC_EVENT_SUPPORTED_SOFT)
     {
         printf("SUPPORTED\n");
     }
-    else if (supported == ALC_EVENT_PARTIALLY_SUPPORTED)
+    else if (supported == ALC_EVENT_PARTIALLY_SUPPORTED_SOFT)
     {
         printf("PARTIALLY SUPPORTED\n");
     }
-    else if (supported == ALC_EVENT_NOT_SUPPORTED)
+    else if (supported == ALC_EVENT_NOT_SUPPORTED_SOFT)
     {
         printf("NOT SUPPORTED\n");
     }

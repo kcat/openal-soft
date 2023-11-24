@@ -23,9 +23,9 @@ enum class EventType : uint8_t {
 std::optional<alc::EventType> GetEventType(ALCenum type);
 
 enum class EventSupport : ALCenum {
-    FullSupport = ALC_EVENT_SUPPORTED,
-    PartialSupport = ALC_EVENT_PARTIALLY_SUPPORTED,
-    NoSupport = ALC_EVENT_NOT_SUPPORTED,
+    FullSupport = ALC_EVENT_SUPPORTED_SOFT,
+    PartialSupport = ALC_EVENT_PARTIALLY_SUPPORTED_SOFT,
+    NoSupport = ALC_EVENT_NOT_SUPPORTED_SOFT,
 };
 
 enum class DeviceType : ALCenum {

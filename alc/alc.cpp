@@ -3482,7 +3482,7 @@ FORCE_ALIGN ALCenum ALC_APIENTRY alcEventIsSupportedSOFT(ALCenum eventType, ALCe
     {
         WARN("Invalid event type: 0x%04x\n", eventType);
         alcSetError(nullptr, ALC_INVALID_ENUM);
-        return ALC_EVENT_NOT_SUPPORTED;
+        return ALC_EVENT_NOT_SUPPORTED_SOFT;
     }
     switch(deviceType)
     {
@@ -3490,7 +3490,7 @@ FORCE_ALIGN ALCenum ALC_APIENTRY alcEventIsSupportedSOFT(ALCenum eventType, ALCe
         {
             if(!PlaybackFactory)
             {
-                return ALC_EVENT_NOT_SUPPORTED;
+                return ALC_EVENT_NOT_SUPPORTED_SOFT;
             }
 
             auto supported = PlaybackFactory->queryEventSupport(*etype, BackendType::Playback);
@@ -3500,12 +3500,12 @@ FORCE_ALIGN ALCenum ALC_APIENTRY alcEventIsSupportedSOFT(ALCenum eventType, ALCe
         {
             if(!CaptureFactory)
             {
-                return ALC_EVENT_NOT_SUPPORTED;
+                return ALC_EVENT_NOT_SUPPORTED_SOFT;
             }
 
             auto supported = CaptureFactory->queryEventSupport(*etype, BackendType::Capture);
             return al::to_underlying(supported);
         }
     }
-    return ALC_EVENT_NOT_SUPPORTED;
+    return ALC_EVENT_NOT_SUPPORTED_SOFT;
 }

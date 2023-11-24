@@ -715,14 +715,14 @@ void AL_APIENTRY alGetObjectLabelEXT(ALenum identifier, ALuint name, ALsizei buf
 
 #ifndef ALC_SOFT_system_events
 #define ALC_SOFT_system_events
-#define ALC_PLAYBACK_DEVICE_SOFT                   0x19D4
-#define ALC_CAPTURE_DEVICE_SOFT                    0x19D5
+#define ALC_PLAYBACK_DEVICE_SOFT                 0x19D4
+#define ALC_CAPTURE_DEVICE_SOFT                  0x19D5
 #define ALC_EVENT_TYPE_DEFAULT_DEVICE_CHANGED_SOFT 0x19D6
-#define ALC_EVENT_TYPE_DEVICE_ADDED_SOFT           0x19D7
-#define ALC_EVENT_TYPE_DEVICE_REMOVED_SOFT         0x19D8
-#define ALC_EVENT_SUPPORTED                        0x19D9
-#define ALC_EVENT_PARTIALLY_SUPPORTED              0x19DA
-#define ALC_EVENT_NOT_SUPPORTED                    0x19DB
+#define ALC_EVENT_TYPE_DEVICE_ADDED_SOFT         0x19D7
+#define ALC_EVENT_TYPE_DEVICE_REMOVED_SOFT       0x19D8
+#define ALC_EVENT_SUPPORTED_SOFT                 0x19D9
+#define ALC_EVENT_PARTIALLY_SUPPORTED_SOFT       0x19DA
+#define ALC_EVENT_NOT_SUPPORTED_SOFT             0x19DB
 typedef void (ALC_APIENTRY*ALCEVENTPROCTYPESOFT)(ALCenum eventType, ALCenum deviceType,
     ALCdevice *device, ALCsizei length, const ALCchar *message, void *userParam) ALC_API_NOEXCEPT17;
 typedef ALCenum (ALC_APIENTRY*LPALCEVENTISSUPPORTEDSOFT)(ALCenum eventType, ALCenum deviceType) ALC_API_NOEXCEPT17;

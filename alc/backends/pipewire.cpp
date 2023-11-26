@@ -2266,18 +2266,17 @@ BackendFactory &PipeWireBackendFactory::getFactory()
     return factory;
 }
 
-alc::EventSupport PipeWireBackendFactory::queryEventSupport(alc::EventType eventType, BackendType type)
+alc::EventSupport PipeWireBackendFactory::queryEventSupport(alc::EventType eventType, BackendType)
 {
-    switch(eventType) {
-        case alc::EventType::DefaultDeviceChanged: {
-            return alc::EventSupport::FullSupport;
-        }
-        case alc::EventType::DeviceAdded: {
-            return alc::EventSupport::FullSupport;
-        }
-        case alc::EventType::DeviceRemoved: {
-            return alc::EventSupport::FullSupport;
-        }
+    switch(eventType)
+    {
+    case alc::EventType::DefaultDeviceChanged:
+    case alc::EventType::DeviceAdded:
+    case alc::EventType::DeviceRemoved:
+        return alc::EventSupport::FullSupport;
+
+    case alc::EventType::Count:
+        break;
     }
     return alc::EventSupport::NoSupport;
 }

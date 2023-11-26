@@ -80,9 +80,8 @@ struct BackendFactory {
 
     virtual bool querySupport(BackendType type) = 0;
 
-    virtual alc::EventSupport queryEventSupport(alc::EventType eventType, BackendType type) {
-        return alc::EventSupport::NoSupport;
-    }
+    virtual alc::EventSupport queryEventSupport(alc::EventType, BackendType)
+    { return alc::EventSupport::NoSupport; }
 
     virtual std::string probe(BackendType type) = 0;
 

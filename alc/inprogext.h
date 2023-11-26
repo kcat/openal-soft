@@ -400,22 +400,22 @@ ALenum AL_APIENTRY EAXGetBufferModeDirect(ALCcontext *context, ALuint buffer, AL
 
 #ifndef AL_EXT_int32
 #define AL_EXT_int32
-#define AL_FORMAT_MONO_I32                       0x9999 /* TBD, same as AL_FORMAT_MONO32 */
+#define AL_FORMAT_MONO_I32                       0x1202 /* Same as AL_FORMAT_MONO32 */
 #define AL_FORMAT_STEREO_I32                     0x1203 /* Same as AL_FORMAT_STEREO32 */
-#define AL_FORMAT_REAR_I32                       0x19D9
-#define AL_FORMAT_QUAD_I32                       0x19DA
-#define AL_FORMAT_51CHN_I32                      0x19DB
-#define AL_FORMAT_61CHN_I32                      0x19DC
-#define AL_FORMAT_71CHN_I32                      0x19DD
-#define AL_FORMAT_UHJ2CHN_I32                    0x19DE
-#define AL_FORMAT_UHJ3CHN_I32                    0x19DF
-#define AL_FORMAT_UHJ4CHN_I32                    0x19E0
+#define AL_FORMAT_REAR_I32                       0x19DB
+#define AL_FORMAT_QUAD_I32                       0x19DC
+#define AL_FORMAT_51CHN_I32                      0x19DD
+#define AL_FORMAT_61CHN_I32                      0x19DE
+#define AL_FORMAT_71CHN_I32                      0x19DF
+#define AL_FORMAT_UHJ2CHN_I32                    0x19E0
+#define AL_FORMAT_UHJ3CHN_I32                    0x19E1
+#define AL_FORMAT_UHJ4CHN_I32                    0x19E2
 
-#define AL_FORMAT_REAR_FLOAT32                   0x19E1
-#define AL_FORMAT_QUAD_FLOAT32                   0x19E2
-#define AL_FORMAT_51CHN_FLOAT32                  0x19E3
-#define AL_FORMAT_61CHN_FLOAT32                  0x19E4
-#define AL_FORMAT_71CHN_FLOAT32                  0x19E5
+#define AL_FORMAT_REAR_FLOAT32                   0x19E3
+#define AL_FORMAT_QUAD_FLOAT32                   0x19E4
+#define AL_FORMAT_51CHN_FLOAT32                  0x19E5
+#define AL_FORMAT_61CHN_FLOAT32                  0x19E6
+#define AL_FORMAT_71CHN_FLOAT32                  0x19E7
 #endif
 
 /* Non-standard exports. Not part of any extension. */

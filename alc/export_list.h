@@ -56,6 +56,7 @@ inline const FuncExport alcFunctions[]{
 
     DECL(alcReopenDeviceSOFT),
 
+    DECL(alcEventIsSupportedSOFT),
     DECL(alcEventControlSOFT),
     DECL(alcEventCallbackSOFT),
 

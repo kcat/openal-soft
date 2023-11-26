@@ -13,6 +13,8 @@ public:
 
     bool querySupport(BackendType type) override;
 
+    alc::EventSupport queryEventSupport(alc::EventType eventType, BackendType type) override;
+
     std::string probe(BackendType type) override;
 
     BackendPtr createBackend(DeviceBase *device, BackendType type) override;

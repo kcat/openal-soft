@@ -3,25 +3,12 @@
 
 #include "events.h"
 
-#include <optional>
-
 #include "alspan.h"
 #include "core/logging.h"
 #include "device.h"
 
 
 namespace {
-
-std::optional<alc::EventType> GetEventType(ALCenum type)
-{
-    switch(type)
-    {
-    case ALC_EVENT_TYPE_DEFAULT_DEVICE_CHANGED_SOFT: return alc::EventType::DefaultDeviceChanged;
-    case ALC_EVENT_TYPE_DEVICE_ADDED_SOFT: return alc::EventType::DeviceAdded;
-    case ALC_EVENT_TYPE_DEVICE_REMOVED_SOFT: return alc::EventType::DeviceRemoved;
-    }
-    return std::nullopt;
-}
 
 ALCenum EnumFromEventType(const alc::EventType type)
 {
@@ -38,6 +25,17 @@ ALCenum EnumFromEventType(const alc::EventType type)
 } // namespace
 
 namespace alc {
+
+std::optional<alc::EventType> GetEventType(ALCenum type)
+{
+    switch(type)
+    {
+    case ALC_EVENT_TYPE_DEFAULT_DEVICE_CHANGED_SOFT: return alc::EventType::DefaultDeviceChanged;
+    case ALC_EVENT_TYPE_DEVICE_ADDED_SOFT: return alc::EventType::DeviceAdded;
+    case ALC_EVENT_TYPE_DEVICE_REMOVED_SOFT: return alc::EventType::DeviceRemoved;
+    }
+    return std::nullopt;
+}
 
 void Event(EventType eventType, DeviceType deviceType, ALCdevice *device, std::string_view message) noexcept
 {
@@ -73,7 +71,7 @@ FORCE_ALIGN ALCboolean ALC_APIENTRY alcEventControlSOFT(ALCsizei count, const AL
     alc::EventBitSet eventSet{0};
     for(ALCenum type : al::span{events, static_cast<ALCuint>(count)})
     {
-        auto etype = GetEventType(type);
+        auto etype = alc::GetEventType(type);
         if(!etype)
         {
             WARN("Invalid event type: 0x%04x\n", type);

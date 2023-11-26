@@ -24,7 +24,6 @@ std::optional<alc::EventType> GetEventType(ALCenum type);
 
 enum class EventSupport : ALCenum {
     FullSupport = ALC_EVENT_SUPPORTED_SOFT,
-    PartialSupport = ALC_EVENT_PARTIALLY_SUPPORTED_SOFT,
     NoSupport = ALC_EVENT_NOT_SUPPORTED_SOFT,
 };
 

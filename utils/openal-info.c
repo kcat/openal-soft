@@ -242,17 +242,13 @@ static void printALCSOFTSystemEventIsSupportedResult(LPALCEVENTISSUPPORTEDSOFT a
     {
         printf("SUPPORTED\n");
     }
-    else if (supported == ALC_EVENT_PARTIALLY_SUPPORTED_SOFT)
-    {
-        printf("PARTIALLY SUPPORTED\n");
-    }
     else if (supported == ALC_EVENT_NOT_SUPPORTED_SOFT)
     {
         printf("NOT SUPPORTED\n");
     }
     else
     {
-        printf("UNEXPECTED RETURN : %d\n", supported);
+        printf("UNEXPECTED VALUE : %d\n", supported);
     }
 }
 

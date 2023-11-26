@@ -374,8 +374,7 @@ inline const FuncExport alcFunctions[]{
     DECL(alGetObjectLabelEXT),
     DECL(alGetObjectLabelDirectEXT),
 
-    /* Extra functions */
-    DECL(alsoft_set_log_callback),
+    DECL(alcLogCallbackSOFT),
 #ifdef ALSOFT_EAX
 }, eaxFunctions[]{
     DECL(EAXGet),

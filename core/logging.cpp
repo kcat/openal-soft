@@ -46,18 +46,6 @@ LogState gLogState{LogState::FirstRun};
 LogCallbackFunc gLogCallback{};
 void *gLogCallbackPtr{};
 
-constexpr std::optional<char> GetLevelCode(LogLevel level)
-{
-    switch(level)
-    {
-    case LogLevel::Disable: break;
-    case LogLevel::Error: return 'E';
-    case LogLevel::Warning: return 'W';
-    case LogLevel::Trace: return 'I';
-    }
-    return std::nullopt;
-}
-
 } // namespace
 
 void al_set_log_callback(LogCallbackFunc callback, void *userptr)
@@ -75,7 +63,7 @@ void al_set_log_callback(LogCallbackFunc callback, void *userptr)
     }
 }
 
-void al_print(LogLevel level, const char *fmt, ...)
+void al_print(LogLevel level, const char *entity, const char *fmt, ...)
 {
     /* Kind of ugly since string literals are const char arrays with a size
      * that includes the null terminator, which we want to exclude from the
@@ -158,12 +146,23 @@ void al_print(LogLevel level, const char *fmt, ...)
             msg.back() = '\0';
             msg = msg.first(msg.size()-1);
         }
-        if(auto logcode = GetLevelCode(level); logcode && !msg.empty())
+        if(!msg.empty())
         {
             if(gLogCallback)
-                gLogCallback(gLogCallbackPtr, *logcode, msg.data(), static_cast<int>(msg.size()));
+            {
+                if (entity == NULL)
+                {
+                    gLogCallback(gLogCallbackPtr, level, NULL, 0, msg.data(), static_cast<int>(msg.size()));
+                }
+                else
+                {
+                    gLogCallback(gLogCallbackPtr, level, entity, static_cast<int>(std::strlen(entity)), msg.data(), static_cast<int>(msg.size()));
+                }
+            }
             else if(gLogState == LogState::FirstRun)
+            {
                 gLogState = LogState::Disable;
+            }
         }
     }
 }

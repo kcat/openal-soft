@@ -308,7 +308,8 @@ constexpr ALCchar alcNoDeviceExtList[] =
     "ALC_SOFT_loopback "
     "ALC_SOFT_loopback_bformat "
     "ALC_SOFT_reopen_device "
-    "ALC_SOFT_system_events";
+    "ALC_SOFT_system_events "
+    "ALC_SOFT_logging_events";
 constexpr ALCchar alcExtensionList[] =
     "ALC_ENUMERATE_ALL_EXT "
     "ALC_ENUMERATION_EXT "
@@ -327,7 +328,8 @@ constexpr ALCchar alcExtensionList[] =
     "ALC_SOFT_output_mode "
     "ALC_SOFT_pause_device "
     "ALC_SOFT_reopen_device "
-    "ALC_SOFT_system_events";
+    "ALC_SOFT_system_events "
+    "ALC_SOFT_logging_events";
 constexpr int alcMajorVersion{1};
 constexpr int alcMinorVersion{1};
 
@@ -1844,9 +1846,44 @@ ContextRef VerifyContext(ALCcontext *context)
 
 } // namespace
 
-FORCE_ALIGN void ALC_APIENTRY alsoft_set_log_callback(LPALSOFTLOGCALLBACK callback, void *userptr) noexcept
+ALCenum EnumFromLevelCode(const LogLevel level)
 {
-    al_set_log_callback(callback, userptr);
+    switch(level)
+    {
+    case LogLevel::Disable: break;
+    case LogLevel::Error: return ALC_LOG_LEVEL_ERROR_SOFT;
+    case LogLevel::Warning: return ALC_LOG_LEVEL_WARNING_SOFT;
+    case LogLevel::Trace: return ALC_LOG_LEVEL_TRACE_SOFT;
+    }
+    throw std::runtime_error{"Invalid LogLevel: "+std::to_string(al::to_underlying(level))};
+}
+
+std::mutex gLogCallbackMutex;
+
+ALCSOFTLOGCALLBACK gLogCallback = NULL;
+
+
+void logCallbackFunc(void *userptrReceived, LogLevel level, const char *entity, int entityLength, const char *message, int messageLength) noexcept
+{
+    auto cblock = std::lock_guard{gLogCallbackMutex};
+    gLogCallback(
+        userptrReceived, EnumFromLevelCode(level),
+        entity, entityLength, message, messageLength
+    );
+}
+
+FORCE_ALIGN void ALC_APIENTRY alcLogCallbackSOFT(ALCSOFTLOGCALLBACK callback, void *userptr) noexcept
+{
+    auto cblock = std::lock_guard{gLogCallbackMutex};
+    if (callback && !gLogCallback)
+    {
+        al_set_log_callback(&logCallbackFunc, userptr);
+    }
+    else if (!callback && gLogCallback)
+    {
+        al_set_log_callback(NULL, userptr);
+    }
+    gLogCallback = callback;
 }
 
 /** Returns a new reference to the currently active context for this thread. */
@@ -3480,7 +3517,7 @@ FORCE_ALIGN ALCenum ALC_APIENTRY alcEventIsSupportedSOFT(ALCenum eventType, ALCe
     auto etype = alc::GetEventType(eventType);
     if(!etype)
     {
-        WARN("Invalid event type: 0x%04x\n", eventType);
+        WARN_FOR("ALC_SOFT_system_events", "Invalid event type: 0x%04x\n", eventType);
         alcSetError(nullptr, ALC_INVALID_ENUM);
         return ALC_EVENT_NOT_SUPPORTED_SOFT;
     }
@@ -3499,7 +3536,7 @@ FORCE_ALIGN ALCenum ALC_APIENTRY alcEventIsSupportedSOFT(ALCenum eventType, ALCe
             break;
 
         default:
-            WARN("Invalid device type: 0x%04x\n", deviceType);
+            WARN_FOR("ALC_SOFT_system_events", "Invalid device type: 0x%04x\n", deviceType);
             alcSetError(nullptr, ALC_INVALID_ENUM);
     }
     return al::to_underlying(supported);

@@ -734,6 +734,17 @@ void ALC_APIENTRY alcEventCallbackSOFT(ALCEVENTPROCTYPESOFT callback, void *user
 #endif
 #endif
 
+#ifndef ALC_SOFT_logging_events
+#define ALC_SOFT_logging_events
+#define ALC_LOG_LEVEL_ERROR_SOFT                 0x19DB
+#define ALC_LOG_LEVEL_WARNING_SOFT               0x19DC
+#define ALC_LOG_LEVEL_TRACE_SOFT                 0x19DE
+typedef void (ALC_APIENTRY*ALCSOFTLOGCALLBACK)(void *userptr, ALCenum level, const char *entity, int entityLength, const char *message, int messageLength) ALC_API_NOEXCEPT17;
+#ifdef AL_ALEXT_PROTOTYPES
+void ALC_APIENTRY alcLogCallbackSOFT(ALCSOFTLOGCALLBACK callback, void *userptr) ALC_API_NOEXCEPT;
+#endif
+#endif
+
 #ifdef __cplusplus
 }
 #endif

@@ -254,29 +254,23 @@ static void printALCSOFTSystemEventIsSupportedResult(LPALCEVENTISSUPPORTEDSOFT a
 
 static void printALC_SOFT_system_event(void)
 {
-    printf("ALC_SOFT_system_events:");
-    if (alcIsExtensionPresent(NULL, "ALC_SOFT_system_events"))
+    if(alcIsExtensionPresent(NULL, "ALC_SOFT_system_events"))
     {
-        static LPALCEVENTISSUPPORTEDSOFT alcEventIsSupportedSOFT;
+        LPALCEVENTISSUPPORTEDSOFT alcEventIsSupportedSOFT;
         alcEventIsSupportedSOFT = FUNCTION_CAST(LPALCEVENTISSUPPORTEDSOFT, alGetProcAddress("alcEventIsSupportedSOFT"));
-        printf(" Supported.\n");
-        printf("    Events:\n");
-        printf("        ALC_EVENT_TYPE_DEFAULT_DEVICE_CHANGED_SOFT for ALC_PLAYBACK_DEVICE_SOFT - ");
+        printf("Available events:\n");
+        printf("    ALC_EVENT_TYPE_DEFAULT_DEVICE_CHANGED_SOFT for ALC_PLAYBACK_DEVICE_SOFT - ");
         printALCSOFTSystemEventIsSupportedResult(alcEventIsSupportedSOFT, ALC_EVENT_TYPE_DEFAULT_DEVICE_CHANGED_SOFT, ALC_PLAYBACK_DEVICE_SOFT);
-        printf("        ALC_EVENT_TYPE_DEFAULT_DEVICE_CHANGED_SOFT for ALC_CAPTURE_DEVICE_SOFT - ");
+        printf("    ALC_EVENT_TYPE_DEFAULT_DEVICE_CHANGED_SOFT for ALC_CAPTURE_DEVICE_SOFT - ");
         printALCSOFTSystemEventIsSupportedResult(alcEventIsSupportedSOFT, ALC_EVENT_TYPE_DEFAULT_DEVICE_CHANGED_SOFT, ALC_CAPTURE_DEVICE_SOFT);
-        printf("        ALC_EVENT_TYPE_DEVICE_ADDED_SOFT for ALC_PLAYBACK_DEVICE_SOFT - ");
+        printf("    ALC_EVENT_TYPE_DEVICE_ADDED_SOFT for ALC_PLAYBACK_DEVICE_SOFT - ");
         printALCSOFTSystemEventIsSupportedResult(alcEventIsSupportedSOFT, ALC_EVENT_TYPE_DEVICE_ADDED_SOFT, ALC_PLAYBACK_DEVICE_SOFT);
-        printf("        ALC_EVENT_TYPE_DEVICE_ADDED_SOFT for ALC_CAPTURE_DEVICE_SOFT - ");
+        printf("    ALC_EVENT_TYPE_DEVICE_ADDED_SOFT for ALC_CAPTURE_DEVICE_SOFT - ");
         printALCSOFTSystemEventIsSupportedResult(alcEventIsSupportedSOFT, ALC_EVENT_TYPE_DEVICE_ADDED_SOFT, ALC_CAPTURE_DEVICE_SOFT);
-        printf("        ALC_EVENT_TYPE_DEVICE_REMOVED_SOFT for ALC_PLAYBACK_DEVICE_SOFT - ");
+        printf("    ALC_EVENT_TYPE_DEVICE_REMOVED_SOFT for ALC_PLAYBACK_DEVICE_SOFT - ");
         printALCSOFTSystemEventIsSupportedResult(alcEventIsSupportedSOFT, ALC_EVENT_TYPE_DEVICE_REMOVED_SOFT, ALC_PLAYBACK_DEVICE_SOFT);
-        printf("        ALC_EVENT_TYPE_DEVICE_REMOVED_SOFT for ALC_CAPTURE_DEVICE_SOFT - ");
+        printf("    ALC_EVENT_TYPE_DEVICE_REMOVED_SOFT for ALC_CAPTURE_DEVICE_SOFT - ");
         printALCSOFTSystemEventIsSupportedResult(alcEventIsSupportedSOFT, ALC_EVENT_TYPE_DEVICE_REMOVED_SOFT, ALC_CAPTURE_DEVICE_SOFT);
-    }
-    else
-    {
-        printf(" Not supported.\n");
     }
 }
 

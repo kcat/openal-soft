@@ -1604,7 +1604,7 @@ void ReverbPipeline::processLate(size_t offset, const size_t samplesToDo,
             size_t late_delay_tap1{offset - mLateDelayTap[j][1]};
             size_t late_feedb_tap{offset - mLate.Offset[j]};
             const float midGain{mLate.T60[j].MidGain};
-            const float densityGain{mLate.DensityGain * midGain};
+            const float densityGain{mLate.DensityGain};
             const float densityStep{late_delay_tap0 != late_delay_tap1 ?
                 densityGain*fadeStep : 0.0f};
             float fadeCount{0.0f};
@@ -1641,9 +1641,9 @@ void ReverbPipeline::processLate(size_t offset, const size_t samplesToDo,
                     const float fade0{densityGain - densityStep*fadeCount};
                     const float fade1{densityStep*fadeCount};
                     fadeCount += 1.0f;
-                    tempSamples[j][i] = out*midGain +
+                    tempSamples[j][i] = (out +
                         in_delay.Line[late_delay_tap0++][j]*fade0 +
-                        in_delay.Line[late_delay_tap1++][j]*fade1;
+                        in_delay.Line[late_delay_tap1++][j]*fade1) * midGain;
                     ++i;
                 } while(--td);
             }

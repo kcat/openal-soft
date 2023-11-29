@@ -124,12 +124,6 @@ static ALCenum checkALCErrors(ALCdevice *device, int linenum)
 }
 #define checkALCErrors(x) checkALCErrors((x),__LINE__)
 
-static void printALCIntegerValue(ALCdevice *device, ALCenum enumValue, char* enumName)
-{
-    ALCint value;
-    alcGetIntegerv(device, enumValue, 1, &value);
-    printf("%s: %d\n", enumName, value);
-}
 
 static void printALCInfo(ALCdevice *device)
 {
@@ -153,10 +147,6 @@ static void printALCInfo(ALCdevice *device)
     {
         printf("ALC extensions:");
         printList(alcGetString(device, ALC_EXTENSIONS), ' ');
-        checkALCErrors(device);
-        printALCIntegerValue(device, ALC_MONO_SOURCES, "ALC_MONO_SOURCES");
-        checkALCErrors(device);
-        printALCIntegerValue(device, ALC_STEREO_SOURCES, "ALC_STEREO_SOURCES");
         checkALCErrors(device);
     }
 }
@@ -189,6 +179,14 @@ static void printHRTFInfo(ALCdevice *device)
         }
     }
     checkALCErrors(device);
+}
+
+static void printALCIntegerValue(ALCdevice *device, ALCenum enumValue, char* enumName)
+{
+    ALCint value;
+    alcGetIntegerv(device, enumValue, 1, &value);
+    if (checkALCErrors(device) == ALC_NO_ERROR)
+        printf("%s: %d\n", enumName, value);
 }
 
 static void printModeInfo(ALCdevice *device)
@@ -238,6 +236,9 @@ static void printModeInfo(ALCdevice *device)
         }
         printf("Device HRTF profile: %s\n", hrtfname ? hrtfname : "<null>");
     }
+
+    printALCIntegerValue(device, ALC_MONO_SOURCES, "Device number of mono sources");
+    printALCIntegerValue(device, ALC_STEREO_SOURCES, "Device number of stereo sources");
 }
 
 static void printALCSOFTSystemEventIsSupportedResult(LPALCEVENTISSUPPORTEDSOFT alcEventIsSupportedSOFT, ALCenum eventType, ALCenum deviceType)

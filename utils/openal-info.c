@@ -124,6 +124,12 @@ static ALCenum checkALCErrors(ALCdevice *device, int linenum)
 }
 #define checkALCErrors(x) checkALCErrors((x),__LINE__)
 
+static void printALCIntegerValue(ALCdevice *device, ALCenum enumValue, char* enumName)
+{
+    ALCint value;
+    alcGetIntegerv(device, enumValue, 1, &value);
+    printf("%s: %d\n", enumName, value);
+}
 
 static void printALCInfo(ALCdevice *device)
 {
@@ -147,6 +153,10 @@ static void printALCInfo(ALCdevice *device)
     {
         printf("ALC extensions:");
         printList(alcGetString(device, ALC_EXTENSIONS), ' ');
+        checkALCErrors(device);
+        printALCIntegerValue(device, ALC_MONO_SOURCES, "ALC_MONO_SOURCES");
+        checkALCErrors(device);
+        printALCIntegerValue(device, ALC_STEREO_SOURCES, "ALC_STEREO_SOURCES");
         checkALCErrors(device);
     }
 }

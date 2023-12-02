@@ -252,7 +252,7 @@ constexpr std::array<float,NUM_LINES> EARLY_ALLPASS_LENGTHS{{
  * Using an average dimension of 1m, we get:
  */
 constexpr std::array<float,NUM_LINES> EARLY_LINE_LENGTHS{{
-    5.9850400e-4f, 1.0913150e-3f, 1.5376658e-3f, 1.9419362e-3f
+    0.0000000e+0f, 4.9281100e-4f, 9.3916180e-4f, 1.3434322e-3f
 }};
 
 /* The late all-pass filter lengths are based on the late line lengths:
@@ -1057,7 +1057,7 @@ void ReverbPipeline::updateDelayLine(const float earlyDelay, const float lateDel
          * output.
          */
         length = (LATE_LINE_LENGTHS[i] - LATE_LINE_LENGTHS.front())/float{NUM_LINES}*density_mult +
-            std::max(lateDelay - EARLY_LINE_LENGTHS[0]*density_mult, 0.0f);
+            lateDelay;
         mLateDelayTap[i][1] = float2uint(length * frequency);
     }
 }
@@ -1504,10 +1504,11 @@ void ReverbPipeline::processEarly(size_t offset, const size_t samplesToDo,
             mEarlyDelayTap[j][0] = mEarlyDelayTap[j][1];
         }
 
-        /* Apply a vector all-pass, to help color the initial reflections based
-         * on the diffusion strength.
+        /* Apply a vector all-pass, to help color the initial reflections.
+         * Don't apply diffusion-based scattering since these are still the
+         * first reflections.
          */
-        mEarly.VecAp.process(tempSamples, offset, mixX, mixY, todo);
+        mEarly.VecAp.process(tempSamples, offset, 1.0f, 0.0f, todo);
 
         /* Apply a delay and bounce to generate secondary reflections, combine
          * with the primary reflections and write out the result for mixing.
@@ -1525,7 +1526,7 @@ void ReverbPipeline::processEarly(size_t offset, const size_t samplesToDo,
                 size_t td{minz(early_delay.Mask+1 - feedb_tap, todo - i)};
                 do {
                     float sample{early_delay.Line[feedb_tap++][j]};
-                    out[i] = tempSamples[j][i] + sample*feedb_coeff;
+                    out[i] = (tempSamples[j][i] + sample*feedb_coeff) * 0.5f;
                     tempSamples[j][i] = sample;
                     ++i;
                 } while(--td);

@@ -181,6 +181,14 @@ static void printHRTFInfo(ALCdevice *device)
     checkALCErrors(device);
 }
 
+static void printALCIntegerValue(ALCdevice *device, ALCenum enumValue, char* enumName)
+{
+    ALCint value;
+    alcGetIntegerv(device, enumValue, 1, &value);
+    if (checkALCErrors(device) == ALC_NO_ERROR)
+        printf("%s: %d\n", enumName, value);
+}
+
 static void printModeInfo(ALCdevice *device)
 {
     ALCint srate = 0;
@@ -228,6 +236,9 @@ static void printModeInfo(ALCdevice *device)
         }
         printf("Device HRTF profile: %s\n", hrtfname ? hrtfname : "<null>");
     }
+
+    printALCIntegerValue(device, ALC_MONO_SOURCES, "Device number of mono sources");
+    printALCIntegerValue(device, ALC_STEREO_SOURCES, "Device number of stereo sources");
 }
 
 static void printALCSOFTSystemEventIsSupportedResult(LPALCEVENTISSUPPORTEDSOFT alcEventIsSupportedSOFT, ALCenum eventType, ALCenum deviceType)

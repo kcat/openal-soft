@@ -22,8 +22,8 @@ using LogCallbackFunc = void(*)(void *userptr, char level, const char *message, 
 void al_set_log_callback(LogCallbackFunc callback, void *userptr);
 
 
-#ifdef __USE_MINGW_ANSI_STDIO
-[[gnu::format(gnu_printf,2,3)]]
+#ifdef __MINGW32__
+[[gnu::format(__MINGW_PRINTF_FORMAT,2,3)]]
 #else
 [[gnu::format(printf,2,3)]]
 #endif

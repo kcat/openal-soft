@@ -852,7 +852,7 @@ ClockLatency AlsaPlayback::getClockLatency()
     ClockLatency ret;
 
     std::lock_guard<std::mutex> _{mMutex};
-    ret.ClockTime = GetDeviceClockTime(mDevice);
+    ret.ClockTime = mDevice->getClockTime();
     snd_pcm_sframes_t delay{};
     int err{snd_pcm_delay(mPcmHandle, &delay)};
     if(err < 0)
@@ -1170,7 +1170,7 @@ ClockLatency AlsaCapture::getClockLatency()
 {
     ClockLatency ret;
 
-    ret.ClockTime = GetDeviceClockTime(mDevice);
+    ret.ClockTime = mDevice->getClockTime();
     snd_pcm_sframes_t delay{};
     int err{snd_pcm_delay(mPcmHandle, &delay)};
     if(err < 0)

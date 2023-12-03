@@ -50,7 +50,7 @@ ClockLatency BackendBase::getClockLatency()
     uint refcount;
     do {
         refcount = mDevice->waitForMix();
-        ret.ClockTime = GetDeviceClockTime(mDevice);
+        ret.ClockTime = mDevice->getClockTime();
         std::atomic_thread_fence(std::memory_order_acquire);
     } while(refcount != ReadRef(mDevice->MixCount));
 

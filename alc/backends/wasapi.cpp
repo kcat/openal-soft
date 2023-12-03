@@ -2072,7 +2072,7 @@ ClockLatency WasapiPlayback::getClockLatency()
     ClockLatency ret;
 
     std::lock_guard<std::mutex> _{mMutex};
-    ret.ClockTime = GetDeviceClockTime(mDevice);
+    ret.ClockTime = mDevice->getClockTime();
     ret.Latency  = seconds{mPadding.load(std::memory_order_relaxed)};
     ret.Latency /= mFormat.Format.nSamplesPerSec;
     if(mResampler)

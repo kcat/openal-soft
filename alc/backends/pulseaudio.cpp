@@ -1034,7 +1034,7 @@ ClockLatency PulsePlayback::getClockLatency()
 
     {
         MainloopUniqueLock plock{mMainloop};
-        ret.ClockTime = GetDeviceClockTime(mDevice);
+        ret.ClockTime = mDevice->getClockTime();
         err = pa_stream_get_latency(mStream, &latency, &neg);
     }
 
@@ -1362,7 +1362,7 @@ ClockLatency PulseCapture::getClockLatency()
 
     {
         MainloopUniqueLock plock{mMainloop};
-        ret.ClockTime = GetDeviceClockTime(mDevice);
+        ret.ClockTime = mDevice->getClockTime();
         err = pa_stream_get_latency(mStream, &latency, &neg);
     }
 

@@ -202,7 +202,7 @@ int64_t GetSourceSampleOffset(ALsource *Source, ALCcontext *context, nanoseconds
 
     do {
         refcount = device->waitForMix();
-        *clocktime = GetDeviceClockTime(device);
+        *clocktime = device->getClockTime();
         voice = GetSourceVoice(Source, context);
         if(voice)
         {
@@ -242,7 +242,7 @@ double GetSourceSecOffset(ALsource *Source, ALCcontext *context, nanoseconds *cl
 
     do {
         refcount = device->waitForMix();
-        *clocktime = GetDeviceClockTime(device);
+        *clocktime = device->getClockTime();
         voice = GetSourceVoice(Source, context);
         if(voice)
         {

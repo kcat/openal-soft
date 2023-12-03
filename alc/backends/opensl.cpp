@@ -631,7 +631,7 @@ ClockLatency OpenSLPlayback::getClockLatency()
     ClockLatency ret;
 
     std::lock_guard<std::mutex> _{mMutex};
-    ret.ClockTime = GetDeviceClockTime(mDevice);
+    ret.ClockTime = mDevice->getClockTime();
     ret.Latency  = std::chrono::seconds{mRing->readSpace() * mDevice->UpdateSize};
     ret.Latency /= mDevice->Frequency;
 

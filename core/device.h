@@ -218,8 +218,8 @@ struct DeviceBase {
      */
     NfcFilter mNFCtrlFilter{};
 
-    uint SamplesDone{0u};
-    std::chrono::nanoseconds ClockBase{0};
+    std::atomic<uint> mSamplesDone{0u};
+    std::atomic<std::chrono::nanoseconds> mClockBase{std::chrono::nanoseconds{}};
     std::chrono::nanoseconds FixedLatency{0};
 
     AmbiRotateMatrix mAmbiRotateMatrix{};
@@ -305,6 +305,20 @@ struct DeviceBase {
         while((refcount=MixCount.load(std::memory_order_acquire))&1) {
         }
         return refcount;
+    }
+
+    /**
+     * Helper to get the current clock time from the device's ClockBase, and
+     * SamplesDone converted from the sample rate. Should only be called while
+     * watching the MixCount.
+     */
+    std::chrono::nanoseconds getClockTime() const noexcept
+    {
+        using std::chrono::seconds;
+        using std::chrono::nanoseconds;
+
+        auto ns = nanoseconds{seconds{mSamplesDone.load(std::memory_order_relaxed)}} / Frequency;
+        return mClockBase.load(std::memory_order_relaxed) + ns;
     }
 
     void ProcessHrtf(const size_t SamplesToDo);

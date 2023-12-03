@@ -55,14 +55,8 @@ enum class BackendType {
 /* Helper to get the current clock time from the device's ClockBase, and
  * SamplesDone converted from the sample rate.
  */
-inline std::chrono::nanoseconds GetDeviceClockTime(DeviceBase *device)
-{
-    using std::chrono::seconds;
-    using std::chrono::nanoseconds;
-
-    auto ns = nanoseconds{seconds{device->SamplesDone}} / device->Frequency;
-    return device->ClockBase + ns;
-}
+inline std::chrono::nanoseconds GetDeviceClockTime(const DeviceBase *device) noexcept
+{ return device->getClockTime(); }
 
 /* Helper to get the device latency from the backend, including any fixed
  * latency from post-processing.

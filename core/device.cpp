@@ -9,6 +9,9 @@
 #include "mastering.h"
 
 
+static_assert(std::atomic<std::chrono::nanoseconds>::is_always_lock_free);
+
+
 al::FlexArray<ContextBase*> DeviceBase::sEmptyContextArray{0u};
 
 

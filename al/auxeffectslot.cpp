@@ -370,7 +370,7 @@ FORCE_ALIGN void AL_APIENTRY alDeleteAuxiliaryEffectSlotsDirect(ALCcontext *cont
             context->setError(AL_INVALID_NAME, "Invalid effect slot ID %u", effectslots[0]);
             return;
         }
-        if(ReadRef(slot->ref) != 0) UNLIKELY
+        if(slot->ref.load(std::memory_order_relaxed) != 0) UNLIKELY
         {
             context->setError(AL_INVALID_OPERATION, "Deleting in-use effect slot %u",
                 effectslots[0]);
@@ -390,7 +390,7 @@ FORCE_ALIGN void AL_APIENTRY alDeleteAuxiliaryEffectSlotsDirect(ALCcontext *cont
                 context->setError(AL_INVALID_NAME, "Invalid effect slot ID %u", effectslots[i]);
                 return;
             }
-            if(ReadRef(slot->ref) != 0) UNLIKELY
+            if(slot->ref.load(std::memory_order_relaxed) != 0) UNLIKELY
             {
                 context->setError(AL_INVALID_OPERATION, "Deleting in-use effect slot %u",
                     effectslots[i]);
@@ -1530,7 +1530,8 @@ void eax_delete_al_effect_slot(ALCcontext& context, ALeffectslot& effect_slot)
 
     std::lock_guard<std::mutex> effect_slot_lock{context.mEffectSlotLock};
 
-    if(ReadRef(effect_slot.ref) != 0) {
+    if(effect_slot.ref.load(std::memory_order_relaxed) != 0)
+    {
         ERR(EAX_PREFIX "Deleting in-use effect slot %u.\n", effect_slot.id);
         return;
     }

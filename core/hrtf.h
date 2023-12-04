@@ -18,7 +18,7 @@
 
 
 struct HrtfStore {
-    RefCount mRef;
+    std::atomic<uint> mRef;
 
     uint mSampleRate : 24;
     uint mIrSize : 8;

@@ -1604,10 +1604,11 @@ NOINLINE void SetProperty(ALsource *const Source, ALCcontext *const Context, con
                 if(!buffer) UNLIKELY
                     return Context->setError(AL_INVALID_VALUE, "Invalid buffer ID %s",
                         std::to_string(values[0]).c_str());
-                if(buffer->MappedAccess && !(buffer->MappedAccess&AL_MAP_PERSISTENT_BIT_SOFT)) UNLIKELY
+                if(buffer->MappedAccess
+                    && !(buffer->MappedAccess&AL_MAP_PERSISTENT_BIT_SOFT)) UNLIKELY
                     return Context->setError(AL_INVALID_OPERATION,
                         "Setting non-persistently mapped buffer %u", buffer->id);
-                if(buffer->mCallback && ReadRef(buffer->ref) != 0) UNLIKELY
+                if(buffer->mCallback && buffer->ref.load(std::memory_order_relaxed) != 0) UNLIKELY
                     return Context->setError(AL_INVALID_OPERATION,
                         "Setting already-set callback buffer %u", buffer->id);
 

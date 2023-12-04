@@ -11,7 +11,7 @@ namespace al {
 
 template<typename T>
 class intrusive_ref {
-    RefCount mRef{1u};
+    std::atomic<unsigned int> mRef{1u};
 
 public:
     unsigned int add_ref() noexcept { return IncrementRef(mRef); }

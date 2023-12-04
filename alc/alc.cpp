@@ -2514,7 +2514,8 @@ ALC_API void ALC_APIENTRY alcGetInteger64vSOFT(ALCdevice *device, ALCenum pname,
                 refcount = dev->waitForMix();
                 basecount = dev->mClockBase.load(std::memory_order_relaxed);
                 samplecount = dev->mSamplesDone.load(std::memory_order_relaxed);
-            } while(refcount != ReadRef(dev->MixCount));
+                std::atomic_thread_fence(std::memory_order_acquire);
+            } while(refcount != dev->MixCount.load(std::memory_order_relaxed));
             basecount += nanoseconds{seconds{samplecount}} / dev->Frequency;
             *values = basecount.count();
         }

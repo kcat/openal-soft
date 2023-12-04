@@ -286,7 +286,7 @@ void LoadData(ALCcontext *context, ALbuffer *ALBuf, ALsizei freq, ALuint size,
     const FmtChannels DstChannels, const FmtType DstType, const std::byte *SrcData,
     ALbitfieldSOFT access)
 {
-    if(ReadRef(ALBuf->ref) != 0 || ALBuf->MappedAccess != 0) UNLIKELY
+    if(ALBuf->ref.load(std::memory_order_relaxed) != 0 || ALBuf->MappedAccess != 0) UNLIKELY
         return context->setError(AL_INVALID_OPERATION, "Modifying storage for in-use buffer %u",
             ALBuf->id);
 
@@ -393,7 +393,7 @@ void PrepareCallback(ALCcontext *context, ALbuffer *ALBuf, ALsizei freq,
     const FmtChannels DstChannels, const FmtType DstType, ALBUFFERCALLBACKTYPESOFT callback,
     void *userptr)
 {
-    if(ReadRef(ALBuf->ref) != 0 || ALBuf->MappedAccess != 0) UNLIKELY
+    if(ALBuf->ref.load(std::memory_order_relaxed) != 0 || ALBuf->MappedAccess != 0) UNLIKELY
         return context->setError(AL_INVALID_OPERATION, "Modifying callback for in-use buffer %u",
             ALBuf->id);
 
@@ -445,7 +445,7 @@ void PrepareCallback(ALCcontext *context, ALbuffer *ALBuf, ALsizei freq,
 void PrepareUserPtr(ALCcontext *context, ALbuffer *ALBuf, ALsizei freq,
     const FmtChannels DstChannels, const FmtType DstType, std::byte *sdata, const ALuint sdatalen)
 {
-    if(ReadRef(ALBuf->ref) != 0 || ALBuf->MappedAccess != 0) UNLIKELY
+    if(ALBuf->ref.load(std::memory_order_relaxed) != 0 || ALBuf->MappedAccess != 0) UNLIKELY
         return context->setError(AL_INVALID_OPERATION, "Modifying storage for in-use buffer %u",
             ALBuf->id);
 
@@ -711,7 +711,7 @@ FORCE_ALIGN void AL_APIENTRY alDeleteBuffersDirect(ALCcontext *context, ALsizei 
             context->setError(AL_INVALID_NAME, "Invalid buffer ID %u", bid);
             return false;
         }
-        if(ReadRef(ALBuf->ref) != 0) UNLIKELY
+        if(ALBuf->ref.load(std::memory_order_relaxed) != 0) UNLIKELY
         {
             context->setError(AL_INVALID_OPERATION, "Deleting in-use buffer %u", bid);
             return false;
@@ -826,7 +826,8 @@ FORCE_ALIGN void* AL_APIENTRY alMapBufferDirectSOFT(ALCcontext *context, ALuint 
     else
     {
         ALbitfieldSOFT unavailable = (albuf->Access^access) & access;
-        if(ReadRef(albuf->ref) != 0 && !(access&AL_MAP_PERSISTENT_BIT_SOFT)) UNLIKELY
+        if(albuf->ref.load(std::memory_order_relaxed) != 0
+            && !(access&AL_MAP_PERSISTENT_BIT_SOFT)) UNLIKELY
             context->setError(AL_INVALID_OPERATION,
                 "Mapping in-use buffer %u without persistent mapping", buffer);
         else if(albuf->MappedAccess != 0) UNLIKELY
@@ -1042,7 +1043,7 @@ FORCE_ALIGN void AL_APIENTRY alBufferiDirect(ALCcontext *context, ALuint buffer,
         break;
 
     case AL_AMBISONIC_LAYOUT_SOFT:
-        if(ReadRef(albuf->ref) != 0) UNLIKELY
+        if(albuf->ref.load(std::memory_order_relaxed) != 0) UNLIKELY
             context->setError(AL_INVALID_OPERATION, "Modifying in-use buffer %u's ambisonic layout",
                 buffer);
         else if(const auto layout = AmbiLayoutFromEnum(value))
@@ -1052,7 +1053,7 @@ FORCE_ALIGN void AL_APIENTRY alBufferiDirect(ALCcontext *context, ALuint buffer,
         break;
 
     case AL_AMBISONIC_SCALING_SOFT:
-        if(ReadRef(albuf->ref) != 0) UNLIKELY
+        if(albuf->ref.load(std::memory_order_relaxed) != 0) UNLIKELY
             context->setError(AL_INVALID_OPERATION, "Modifying in-use buffer %u's ambisonic scaling",
                 buffer);
         else if(const auto scaling = AmbiScalingFromEnum(value))
@@ -1116,7 +1117,7 @@ FORCE_ALIGN void AL_APIENTRY alBufferivDirect(ALCcontext *context, ALuint buffer
     else switch(param)
     {
     case AL_LOOP_POINTS_SOFT:
-        if(ReadRef(albuf->ref) != 0) UNLIKELY
+        if(albuf->ref.load(std::memory_order_relaxed) != 0) UNLIKELY
             context->setError(AL_INVALID_OPERATION, "Modifying in-use buffer %u's loop points",
                 buffer);
         else if(values[0] < 0 || values[0] >= values[1]

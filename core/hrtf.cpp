@@ -392,7 +392,7 @@ std::unique_ptr<HrtfStore> CreateHrtfStore(uint rate, uint8_t irSize,
     if(void *ptr{al_calloc(16, total)})
     {
         Hrtf.reset(al::construct_at(static_cast<HrtfStore*>(ptr)));
-        InitRef(Hrtf->mRef, 1u);
+        Hrtf->mRef.store(1u, std::memory_order_relaxed);
         Hrtf->mSampleRate = rate & 0xff'ff'ff;
         Hrtf->mIrSize = irSize;
 
@@ -1459,9 +1459,9 @@ void HrtfStore::dec_ref()
         auto remove_unused = [](LoadedHrtf &hrtf) -> bool
         {
             HrtfStore *entry{hrtf.mEntry.get()};
-            if(entry && ReadRef(entry->mRef) == 0)
+            if(entry && entry->mRef.load() == 0)
             {
-                TRACE("Unloading unused HRTF %s\n", hrtf.mFilename.data());
+                TRACE("Unloading unused HRTF %s\n", hrtf.mFilename.c_str());
                 hrtf.mEntry = nullptr;
                 return true;
             }

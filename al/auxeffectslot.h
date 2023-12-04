@@ -63,7 +63,7 @@ struct ALeffectslot {
 
     SlotState mState{SlotState::Initial};
 
-    RefCount ref{0u};
+    std::atomic<ALuint> ref{0u};
 
     EffectSlot *mSlot{nullptr};
 

@@ -284,7 +284,7 @@ struct DeviceBase {
      * the end, so the bottom bit indicates if the device is currently mixing
      * and the upper bits indicates how many mixes have been done.
      */
-    RefCount MixCount{0u};
+    std::atomic<uint> MixCount{0u};
 
     // Contexts created on this device
     std::atomic<al::FlexArray<ContextBase*>*> mContexts{nullptr};

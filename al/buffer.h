@@ -43,7 +43,7 @@ struct ALbuffer : public BufferStorage {
     ALuint mLoopEnd{0u};
 
     /* Number of times buffer was attached to a source (deletion can only occur when 0) */
-    RefCount ref{0u};
+    std::atomic<ALuint> ref{0u};
 
     /* Self ID */
     ALuint id{0};

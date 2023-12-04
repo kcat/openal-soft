@@ -85,7 +85,7 @@ struct ContextBase {
     /* Counter for the pre-mixing updates, in 31.1 fixed point (lowest bit
      * indicates if updates are currently happening).
      */
-    RefCount mUpdateCount{0u};
+    std::atomic<unsigned int> mUpdateCount{0u};
     std::atomic<bool> mHoldUpdates{false};
     std::atomic<bool> mStopVoicesOnDisconnect{true};
 

@@ -4,15 +4,12 @@
 #include <atomic>
 
 
-using RefCount = std::atomic<unsigned int>;
-
-inline void InitRef(RefCount &ref, unsigned int value)
-{ ref.store(value, std::memory_order_relaxed); }
-inline unsigned int ReadRef(RefCount &ref)
-{ return ref.load(std::memory_order_acquire); }
-inline unsigned int IncrementRef(RefCount &ref)
+template<typename T>
+auto IncrementRef(std::atomic<T> &ref) noexcept
 { return ref.fetch_add(1u, std::memory_order_acq_rel)+1u; }
-inline unsigned int DecrementRef(RefCount &ref)
+
+template<typename T>
+auto DecrementRef(std::atomic<T> &ref) noexcept
 { return ref.fetch_sub(1u, std::memory_order_acq_rel)-1u; }
 
 

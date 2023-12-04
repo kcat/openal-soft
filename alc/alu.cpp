@@ -2135,28 +2135,22 @@ uint DeviceBase::renderSamples(const uint numSamples)
     for(FloatBufferLine &buffer : MixBuffer)
         buffer.fill(0.0f);
 
-    /* Increment the mix count at the start (lsb should now be 1). */
-    const auto mixCount = MixCount.load(std::memory_order_relaxed);
-    MixCount.store(mixCount+1, std::memory_order_relaxed);
-    std::atomic_thread_fence(std::memory_order_release);
-
-    /* Process and mix each context's sources and effects. */
-    ProcessContexts(this, samplesToDo);
-
-    /* Increment the clock time. Every second's worth of samples is converted
-     * and added to clock base so that large sample counts don't overflow
-     * during conversion. This also guarantees a stable conversion.
-     */
     {
+        const auto mixLock = getWriteMixLock();
+
+        /* Process and mix each context's sources and effects. */
+        ProcessContexts(this, samplesToDo);
+
+        /* Every second's worth of samples is converted and added to clock base
+         * so that large sample counts don't overflow during conversion. This
+         * also guarantees a stable conversion.
+         */
         auto samplesDone = mSamplesDone.load(std::memory_order_relaxed) + samplesToDo;
         auto clockBase = mClockBase.load(std::memory_order_relaxed) +
             std::chrono::seconds{samplesDone/Frequency};
         mSamplesDone.store(samplesDone%Frequency, std::memory_order_relaxed);
         mClockBase.store(clockBase, std::memory_order_relaxed);
     }
-
-    /* Increment the mix count at the end (lsb should now be 0). */
-    MixCount.store(mixCount+2, std::memory_order_release);
 
     /* Apply any needed post-process for finalizing the Dry mix to the RealOut
      * (Ambisonic decode, UHJ encode, etc).
@@ -2232,9 +2226,7 @@ void DeviceBase::renderSamples(void *outBuffer, const uint numSamples, const siz
 
 void DeviceBase::handleDisconnect(const char *msg, ...)
 {
-    const auto mixCount = MixCount.load(std::memory_order_relaxed);
-    MixCount.store(mixCount+1, std::memory_order_relaxed);
-    std::atomic_thread_fence(std::memory_order_release);
+    const auto mixLock = getWriteMixLock();
 
     if(Connected.exchange(false, std::memory_order_acq_rel))
     {
@@ -2277,6 +2269,4 @@ void DeviceBase::handleDisconnect(const char *msg, ...)
             std::for_each(voicelist.begin(), voicelist.end(), stop_voice);
         }
     }
-
-    MixCount.store(mixCount+2, std::memory_order_release);
 }

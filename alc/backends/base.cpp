@@ -52,7 +52,7 @@ ClockLatency BackendBase::getClockLatency()
         refcount = mDevice->waitForMix();
         ret.ClockTime = mDevice->getClockTime();
         std::atomic_thread_fence(std::memory_order_acquire);
-    } while(refcount != mDevice->MixCount.load(std::memory_order_relaxed));
+    } while(refcount != mDevice->mMixCount.load(std::memory_order_relaxed));
 
     /* NOTE: The device will generally have about all but one periods filled at
      * any given time during playback. Without a more accurate measurement from

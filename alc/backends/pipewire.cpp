@@ -1827,7 +1827,7 @@ ClockLatency PipeWirePlayback::getClockLatency()
         mixtime = mDevice->getClockTime();
         clock_gettime(CLOCK_MONOTONIC, &tspec);
         std::atomic_thread_fence(std::memory_order_acquire);
-    } while(refcount != mDevice->MixCount.load(std::memory_order_relaxed));
+    } while(refcount != mDevice->mMixCount.load(std::memory_order_relaxed));
 
     /* Convert the monotonic clock, stream ticks, and stream delay to
      * nanoseconds.

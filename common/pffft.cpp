@@ -1436,7 +1436,8 @@ PFFFT_Setup *pffft_new_setup(unsigned int N, pffft_transform_t transform)
         assert((N%(SIMD_SZ*SIMD_SZ)) == 0);
 
     const uint Ncvec = (transform == PFFFT_REAL ? N/2 : N)/SIMD_SZ;
-    const size_t storelen{offsetof(PFFFT_Setup, e[0]) + (2u*Ncvec * sizeof(v4sf))};
+    const size_t storelen{std::max(sizeof(PFFFT_Setup),
+        offsetof(PFFFT_Setup, e[0]) + (2u*Ncvec * sizeof(v4sf)))};
 
     void *store{al_calloc(MALLOC_V4SF_ALIGNMENT, storelen)};
     if(!store) return nullptr;

@@ -434,21 +434,18 @@ static int StoreMhr(const HrirDataT *hData, const char *filename)
  */
 static void BalanceFieldMagnitudes(const HrirDataT *hData, const uint channels, const uint m)
 {
-    double maxMags[MAX_FD_COUNT];
-    uint fi, ei, ti, i;
-
+    std::array<double,MAX_FD_COUNT> maxMags{};
     double maxMag{0.0};
-    for(fi = 0;fi < hData->mFds.size();fi++)
-    {
-        maxMags[fi] = 0.0;
 
-        for(ei = hData->mFds[fi].mEvStart;ei < hData->mFds[fi].mEvs.size();ei++)
+    for(size_t fi{0};fi < hData->mFds.size();++fi)
+    {
+        for(size_t ei{hData->mFds[fi].mEvStart};ei < hData->mFds[fi].mEvs.size();++ei)
         {
             for(const auto &azd : hData->mFds[fi].mEvs[ei].mAzs)
             {
-                for(ti = 0;ti < channels;ti++)
+                for(size_t ti{0};ti < channels;++ti)
                 {
-                    for(i = 0;i < m;i++)
+                    for(size_t i{0};i < m;++i)
                         maxMags[fi] = std::max(azd.mIrs[ti][i], maxMags[fi]);
                 }
             }
@@ -457,17 +454,17 @@ static void BalanceFieldMagnitudes(const HrirDataT *hData, const uint channels, 
         maxMag = std::max(maxMags[fi], maxMag);
     }
 
-    for(fi = 0;fi < hData->mFds.size();fi++)
+    for(size_t fi{0};fi < hData->mFds.size();++fi)
     {
         const double magFactor{maxMag / maxMags[fi]};
 
-        for(ei = hData->mFds[fi].mEvStart;ei < hData->mFds[fi].mEvs.size();ei++)
+        for(size_t ei{hData->mFds[fi].mEvStart};ei < hData->mFds[fi].mEvs.size();++ei)
         {
             for(const auto &azd : hData->mFds[fi].mEvs[ei].mAzs)
             {
-                for(ti = 0;ti < channels;ti++)
+                for(size_t ti{0};ti < channels;++ti)
                 {
-                    for(i = 0;i < m;i++)
+                    for(size_t i{0};i < m;++i)
                         azd.mIrs[ti][i] *= magFactor;
                 }
             }

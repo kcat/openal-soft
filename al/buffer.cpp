@@ -402,6 +402,10 @@ void PrepareCallback(ALCcontext *context, ALbuffer *ALBuf, ALsizei freq,
 
     const ALuint unpackalign{ALBuf->UnpackAlign};
     const ALuint align{SanitizeAlignment(DstType, unpackalign)};
+    if(align < 1) UNLIKELY
+        return context->setError(AL_INVALID_VALUE, "Invalid unpack alignment %u for %s samples",
+            unpackalign, NameFromFormat(DstType));
+
     const ALuint BlockSize{ChannelsFromFmt(DstChannels, ambiorder) *
         ((DstType == FmtIMA4) ? (align-1)/2 + 4 :
         (DstType == FmtMSADPCM) ? (align-2)/2 + 7 :

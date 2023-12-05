@@ -321,7 +321,6 @@ int main(int argc, char *argv[])
 
         if(pos > last_pos)
         {
-            last_pos = 0;
             printf("%d...\n", seconds - pos);
             fflush(stdout);
         }

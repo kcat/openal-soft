@@ -155,6 +155,8 @@ void complex_fft(const al::span<std::complex<double>> buffer, const double sign)
     }
     else
     {
+        assert(log2_size < 32);
+
         for(size_t idx{1u};idx < fftsize-1;++idx)
         {
             size_t revidx{idx};

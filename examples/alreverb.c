@@ -40,6 +40,8 @@
 
 #include "common/alhelpers.h"
 
+#include "win_main_utf8.h"
+
 
 /* Effect object functions */
 static LPALGENEFFECTS alGenEffects;

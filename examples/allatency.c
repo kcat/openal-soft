@@ -37,6 +37,8 @@
 
 #include "common/alhelpers.h"
 
+#include "win_main_utf8.h"
+
 
 static LPALSOURCEDSOFT alSourcedSOFT;
 static LPALSOURCE3DSOFT alSource3dSOFT;

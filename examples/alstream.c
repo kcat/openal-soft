@@ -37,6 +37,8 @@
 
 #include "common/alhelpers.h"
 
+#include "win_main_utf8.h"
+
 
 /* Define the number of buffers and buffer size (in milliseconds) to use. 4
  * buffers at 200ms each gives a nice per-chunk size, and lets the queue last

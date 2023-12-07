@@ -38,6 +38,8 @@
 
 #include "common/alhelpers.h"
 
+#include "win_main_utf8.h"
+
 
 #ifndef AL_SOFT_convolution_effect
 #define AL_SOFT_convolution_effect

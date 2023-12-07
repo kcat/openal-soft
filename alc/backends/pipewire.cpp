@@ -1791,8 +1791,7 @@ void PipeWirePlayback::stop()
 {
     MainloopUniqueLock plock{mLoop};
     if(int res{pw_stream_set_active(mStream.get(), false)})
-        throw al::backend_exception{al::backend_error::DeviceError,
-            "Failed to stop PipeWire stream (res: %d)", res};
+        ERR("Failed to stop PipeWire stream (res: %d)\n", res);
 
     /* Wait for the stream to stop playing. */
     plock.wait([stream=mStream.get()]()
@@ -2145,8 +2144,7 @@ void PipeWireCapture::stop()
 {
     MainloopUniqueLock plock{mLoop};
     if(int res{pw_stream_set_active(mStream.get(), false)})
-        throw al::backend_exception{al::backend_error::DeviceError,
-            "Failed to stop PipeWire stream (res: %d)", res};
+        ERR("Failed to stop PipeWire stream (res: %d)\n", res);
 
     plock.wait([stream=mStream.get()]()
     { return pw_stream_get_state(stream, nullptr) != PW_STREAM_STATE_STREAMING; });

@@ -776,8 +776,9 @@ struct GainTriplet { float Base, HF, LF; };
 
 void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, const float zpos,
     const float Distance, const float Spread, const GainTriplet &DryGain,
-    const al::span<const GainTriplet,MAX_SENDS> WetGain, EffectSlot *(&SendSlots)[MAX_SENDS],
-    const VoiceProps *props, const ContextParams &Context, DeviceBase *Device)
+    const al::span<const GainTriplet,MAX_SENDS> WetGain,
+    const al::span<EffectSlot*,MAX_SENDS> SendSlots, const VoiceProps *props,
+    const ContextParams &Context, DeviceBase *Device)
 {
     static constexpr ChanPosMap MonoMap[1]{
         { FrontCenter, std::array{0.0f, 0.0f, -1.0f} }
@@ -1446,20 +1447,30 @@ void CalcAttnSourceParams(Voice *voice, const VoiceProps *props, const ContextBa
 
     /* Set mixing buffers and get send parameters. */
     voice->mDirect.Buffer = Device->Dry.Buffer;
-    EffectSlot *SendSlots[MAX_SENDS];
-    uint UseDryAttnForRoom{0};
+    std::array<EffectSlot*,MAX_SENDS> SendSlots{};
+    std::array<float,MAX_SENDS> RoomRolloff{};
+    std::bitset<MAX_SENDS> UseDryAttnForRoom{0};
     for(uint i{0};i < NumSends;i++)
     {
         SendSlots[i] = props->Send[i].Slot;
         if(!SendSlots[i] || SendSlots[i]->EffectType == EffectSlotType::None)
             SendSlots[i] = nullptr;
-        else if(!SendSlots[i]->AuxSendAuto)
+        else if(SendSlots[i]->AuxSendAuto)
         {
-            /* If the slot's auxiliary send auto is off, the data sent to the
-             * effect slot is the same as the dry path, sans filter effects.
+            /* NOTE: Contrary to the EFX docs, the effect's room rolloff factor
+             * applies to the selected distance model along with the source's
+             * room rolloff factor, not necessarily the inverse distance model.
+             *
+             * Generic Software also applies these rolloff factors regardless
+             * of any setting. It doesn't seem to use the effect slot's send
+             * auto for anything, though as far as I understand, it's supposed
+             * to control whether the send gets the same gain/gainhf as the
+             * direct path (excluding the filter).
              */
-            UseDryAttnForRoom |= 1u<<i;
+            RoomRolloff[i] = props->RoomRolloffFactor + SendSlots[i]->RoomRolloff;
         }
+        else
+            UseDryAttnForRoom.set(i);
 
         if(!SendSlots[i])
             voice->mSend[i].Buffer = {};
@@ -1491,62 +1502,77 @@ void CalcAttnSourceParams(Voice *voice, const VoiceProps *props, const ContextBa
     /* Calculate distance attenuation */
     float ClampedDist{Distance};
     float DryGainBase{props->Gain};
-    float WetGainBase{props->Gain};
+    std::array<float,MAX_SENDS> WetGainBase{};
+    WetGainBase.fill(props->Gain);
 
+    float DryAttnBase{1.0f};
     switch(context->mParams.SourceDistanceModel ? props->mDistanceModel
         : context->mParams.mDistanceModel)
     {
-        case DistanceModel::InverseClamped:
-            if(props->MaxDistance < props->RefDistance) break;
-            ClampedDist = clampf(ClampedDist, props->RefDistance, props->MaxDistance);
-            /*fall-through*/
-        case DistanceModel::Inverse:
-            if(props->RefDistance > 0.0f)
+    case DistanceModel::InverseClamped:
+        if(props->MaxDistance < props->RefDistance) break;
+        ClampedDist = clampf(ClampedDist, props->RefDistance, props->MaxDistance);
+        /*fall-through*/
+    case DistanceModel::Inverse:
+        if(props->RefDistance > 0.0f)
+        {
+            float dist{lerpf(props->RefDistance, ClampedDist, props->RolloffFactor)};
+            if(dist > 0.0f)
             {
-                float dist{lerpf(props->RefDistance, ClampedDist, props->RolloffFactor)};
-                if(dist > 0.0f) DryGainBase *= props->RefDistance / dist;
-
-                dist = lerpf(props->RefDistance, ClampedDist, props->RoomRolloffFactor);
-                if(dist > 0.0f) WetGainBase *= props->RefDistance / dist;
+                DryAttnBase = props->RefDistance / dist;
+                DryGainBase *= DryAttnBase;
             }
-            break;
 
-        case DistanceModel::LinearClamped:
-            if(props->MaxDistance < props->RefDistance) break;
-            ClampedDist = clampf(ClampedDist, props->RefDistance, props->MaxDistance);
-            /*fall-through*/
-        case DistanceModel::Linear:
-            if(props->MaxDistance != props->RefDistance)
+            for(size_t i{0};i < NumSends;++i)
             {
-                float attn{(ClampedDist-props->RefDistance) /
-                    (props->MaxDistance-props->RefDistance) * props->RolloffFactor};
-                DryGainBase *= maxf(1.0f - attn, 0.0f);
+                dist = lerpf(props->RefDistance, ClampedDist, RoomRolloff[i]);
+                if(dist > 0.0f) WetGainBase[i] *= props->RefDistance / dist;
+            }
+        }
+        break;
 
+    case DistanceModel::LinearClamped:
+        if(props->MaxDistance < props->RefDistance) break;
+        ClampedDist = clampf(ClampedDist, props->RefDistance, props->MaxDistance);
+        /*fall-through*/
+    case DistanceModel::Linear:
+        if(props->MaxDistance != props->RefDistance)
+        {
+            float attn{(ClampedDist-props->RefDistance) /
+                (props->MaxDistance-props->RefDistance) * props->RolloffFactor};
+            DryAttnBase = maxf(1.0f - attn, 0.0f);
+            DryGainBase *= DryAttnBase;
+
+            for(size_t i{0};i < NumSends;++i)
+            {
                 attn = (ClampedDist-props->RefDistance) /
-                    (props->MaxDistance-props->RefDistance) * props->RoomRolloffFactor;
-                WetGainBase *= maxf(1.0f - attn, 0.0f);
+                    (props->MaxDistance-props->RefDistance) * RoomRolloff[i];
+                WetGainBase[i] *= maxf(1.0f - attn, 0.0f);
             }
-            break;
+        }
+        break;
 
-        case DistanceModel::ExponentClamped:
-            if(props->MaxDistance < props->RefDistance) break;
-            ClampedDist = clampf(ClampedDist, props->RefDistance, props->MaxDistance);
-            /*fall-through*/
-        case DistanceModel::Exponent:
-            if(ClampedDist > 0.0f && props->RefDistance > 0.0f)
-            {
-                const float dist_ratio{ClampedDist/props->RefDistance};
-                DryGainBase *= std::pow(dist_ratio, -props->RolloffFactor);
-                WetGainBase *= std::pow(dist_ratio, -props->RoomRolloffFactor);
-            }
-            break;
+    case DistanceModel::ExponentClamped:
+        if(props->MaxDistance < props->RefDistance) break;
+        ClampedDist = clampf(ClampedDist, props->RefDistance, props->MaxDistance);
+        /*fall-through*/
+    case DistanceModel::Exponent:
+        if(ClampedDist > 0.0f && props->RefDistance > 0.0f)
+        {
+            const float dist_ratio{ClampedDist/props->RefDistance};
+            DryAttnBase = std::pow(dist_ratio, -props->RolloffFactor);
+            DryGainBase *= DryAttnBase;
+            for(size_t i{0};i < NumSends;++i)
+                WetGainBase[i] *= std::pow(dist_ratio, -RoomRolloff[i]);
+        }
+        break;
 
-        case DistanceModel::Disable:
-            break;
+    case DistanceModel::Disable:
+        break;
     }
 
     /* Calculate directional soundcones */
-    float ConeHF{1.0f}, WetConeHF{1.0f};
+    float ConeHF{1.0f}, WetCone{1.0f}, WetConeHF{1.0f};
     if(directional && props->InnerAngle < 360.0f)
     {
         static constexpr float Rad2Deg{static_cast<float>(180.0 / al::numbers::pi)};
@@ -1566,29 +1592,31 @@ void CalcAttnSourceParams(Voice *voice, const VoiceProps *props, const ContextBa
         }
 
         DryGainBase *= ConeGain;
-        WetGainBase *= lerpf(1.0f, ConeGain, props->WetGainAuto);
-
-        WetConeHF = lerpf(1.0f, ConeHF, props->WetGainHFAuto);
+        if(props->WetGainAuto)
+            WetCone = ConeGain;
+        if(props->WetGainHFAuto)
+            WetConeHF = ConeHF;
     }
 
     /* Apply gain and frequency filters */
-    DryGainBase = clampf(DryGainBase, props->MinGain, props->MaxGain) * context->mParams.Gain;
-    WetGainBase = clampf(WetGainBase, props->MinGain, props->MaxGain) * context->mParams.Gain;
-
     GainTriplet DryGain{};
+    DryGainBase = clampf(DryGainBase, props->MinGain, props->MaxGain) * context->mParams.Gain;
     DryGain.Base = minf(DryGainBase * props->Direct.Gain, GainMixMax);
     DryGain.HF = ConeHF * props->Direct.GainHF;
     DryGain.LF = props->Direct.GainLF;
-    GainTriplet WetGain[MAX_SENDS]{};
+
+    std::array<GainTriplet,MAX_SENDS> WetGain{};
     for(uint i{0};i < NumSends;i++)
     {
+        WetGainBase[i] = clampf(WetGainBase[i]*WetCone, props->MinGain, props->MaxGain) *
+            context->mParams.Gain;
         /* If this effect slot's Auxiliary Send Auto is off, then use the dry
          * path distance and cone attenuation, otherwise use the wet (room)
          * path distance and cone attenuation. The send filter is used instead
          * of the direct filter, regardless.
          */
-        const bool use_room{!(UseDryAttnForRoom&(1u<<i))};
-        const float gain{use_room ? WetGainBase : DryGainBase};
+        const bool use_room{!UseDryAttnForRoom.test(i)};
+        const float gain{use_room ? WetGainBase[i] : DryGainBase};
         WetGain[i].Base = minf(gain * props->Send[i].Gain, GainMixMax);
         WetGain[i].HF = (use_room ? WetConeHF : ConeHF) * props->Send[i].GainHF;
         WetGain[i].LF = props->Send[i].GainLF;
@@ -1611,26 +1639,15 @@ void CalcAttnSourceParams(Voice *voice, const VoiceProps *props, const ContextBa
             if(!SendSlots[i] || !(SendSlots[i]->DecayTime > 0.0f))
                 continue;
 
-            auto calc_attenuation = [](float distance, float refdist, float rolloff) noexcept
-            {
-                const float dist{lerpf(refdist, distance, rolloff)};
-                if(dist > refdist) return refdist / dist;
-                return 1.0f;
-            };
-
-            /* The reverb effect's room rolloff factor always applies to an
-             * inverse distance rolloff model.
-             */
-            if(props->RefDistance > 0.0f)
-                WetGain[i].Base *= calc_attenuation(Distance, props->RefDistance,
-                    SendSlots[i]->RoomRolloff);
-
             if(distance_meters > std::numeric_limits<float>::epsilon())
                 WetGain[i].HF *= std::pow(SendSlots[i]->AirAbsorptionGainHF, distance_meters);
 
             /* If this effect slot's Auxiliary Send Auto is off, don't apply
-             * the automatic initial reverb decay (should the reverb's room
-             * rolloff still apply?).
+             * the automatic initial reverb decay.
+             *
+             * NOTE: Generic Software applies the initial decay regardless of
+             * this setting. It doesn't seem to use it for anything, only the
+             * source's send filter gain auto flag affects this.
              */
             if(!SendSlots[i]->AuxSendAuto)
                 continue;
@@ -1641,7 +1658,7 @@ void CalcAttnSourceParams(Voice *voice, const VoiceProps *props, const ContextBa
              */
             DecayDistance.Base = SendSlots[i]->DecayTime * SpeedOfSoundMetersPerSec;
             DecayDistance.LF = DecayDistance.Base * SendSlots[i]->DecayLFRatio;
-            DecayDistance.HF = DecayDistance.Base * SendSlots[i]->DecayHFRatio;
+            DecayDistance.HF = SendSlots[i]->DecayHFRatio;
             if(SendSlots[i]->DecayHFLimit)
             {
                 const float airAbsorption{SendSlots[i]->AirAbsorptionGainHF};
@@ -1657,14 +1674,18 @@ void CalcAttnSourceParams(Voice *voice, const VoiceProps *props, const ContextBa
                     DecayDistance.HF = minf(absorb_dist, DecayDistance.HF);
                 }
             }
-
-            const float baseAttn = calc_attenuation(Distance, props->RefDistance,
-                props->RolloffFactor);
+            DecayDistance.HF *= DecayDistance.Base;
 
             /* Apply a decay-time transformation to the wet path, based on the
              * source distance. The initial decay of the reverb effect is
              * calculated and applied to the wet path.
+             *
+             * FIXME: This is very likely not correct. It more likely should
+             * work by calculating a rolloff dynamically based on the reverb
+             * parameters (and source distance?) and add it to the room rolloff
+             * with the reverb and source rolloff parameters.
              */
+            const float baseAttn{DryAttnBase};
             const float fact{distance_base / DecayDistance.Base};
             const float gain{std::pow(ReverbDecayGain, fact)*(1.0f-baseAttn) + baseAttn};
             WetGain[i].Base *= gain;

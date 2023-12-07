@@ -1621,8 +1621,9 @@ void CalcAttnSourceParams(Voice *voice, const VoiceProps *props, const ContextBa
             /* The reverb effect's room rolloff factor always applies to an
              * inverse distance rolloff model.
              */
-            WetGain[i].Base *= calc_attenuation(Distance, props->RefDistance,
-                SendSlots[i]->RoomRolloff);
+            if(props->RefDistance > 0.0f)
+                WetGain[i].Base *= calc_attenuation(Distance, props->RefDistance,
+                    SendSlots[i]->RoomRolloff);
 
             if(distance_meters > std::numeric_limits<float>::epsilon())
                 WetGain[i].HF *= std::pow(SendSlots[i]->AirAbsorptionGainHF, distance_meters);

@@ -1371,21 +1371,22 @@ struct PropType<ALfloat> { static const char *Name() { return "float"; } };
 template<>
 struct PropType<ALdouble> { static const char *Name() { return "double"; } };
 
-template<typename T>
 struct HexPrinter {
-    char mStr[sizeof(T)*2 + 3]{};
+    std::array<char,32> mStr{};
+
+    template<typename T>
     HexPrinter(T value)
     {
         using ST = std::make_signed_t<std::remove_cv_t<T>>;
         if constexpr(std::is_same_v<ST,int>)
-            std::snprintf(mStr, std::size(mStr), "0x%x", value);
+            std::snprintf(mStr.data(), mStr.size(), "0x%x", value);
         else if constexpr(std::is_same_v<ST,long>)
-            std::snprintf(mStr, std::size(mStr), "0x%lx", value);
+            std::snprintf(mStr.data(), mStr.size(), "0x%lx", value);
         else if constexpr(std::is_same_v<ST,long long>)
-            std::snprintf(mStr, std::size(mStr), "0x%llx", value);
+            std::snprintf(mStr.data(), mStr.size(), "0x%llx", value);
     }
 
-    const char *c_str() const noexcept { return mStr; }
+    [[nodiscard]] auto c_str() const noexcept -> const char* { return mStr.data(); }
 };
 
 

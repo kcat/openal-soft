@@ -71,10 +71,10 @@ union EffectProps {
         float DecayLFRatio;
         float ReflectionsGain;
         float ReflectionsDelay;
-        float ReflectionsPan[3];
+        std::array<float,3> ReflectionsPan;
         float LateReverbGain;
         float LateReverbDelay;
-        float LateReverbPan[3];
+        std::array<float,3> LateReverbPan;
         float EchoTime;
         float EchoDepth;
         float ModulationTime;

@@ -657,7 +657,7 @@ OSStatus CoreAudioCapture::RecordProc(AudioUnitRenderActionFlags *ioActionFlags,
         return err;
     }
 
-    mRing->write(mCaptureData.data(), inNumberFrames);
+    std::ignore = mRing->write(mCaptureData.data(), inNumberFrames);
     return noErr;
 }
 
@@ -924,7 +924,7 @@ void CoreAudioCapture::captureSamples(std::byte *buffer, uint samples)
 {
     if(!mConverter)
     {
-        mRing->read(buffer, samples);
+        std::ignore = mRing->read(buffer, samples);
         return;
     }
 

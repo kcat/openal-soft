@@ -230,7 +230,7 @@ struct OboeCapture final : public BackendBase, public oboe::AudioStreamCallback 
 oboe::DataCallbackResult OboeCapture::onAudioReady(oboe::AudioStream*, void *audioData,
     int32_t numFrames)
 {
-    mRing->write(audioData, static_cast<uint32_t>(numFrames));
+    std::ignore = mRing->write(audioData, static_cast<uint32_t>(numFrames));
     return oboe::DataCallbackResult::Continue;
 }
 
@@ -330,7 +330,7 @@ uint OboeCapture::availableSamples()
 { return static_cast<uint>(mRing->readSpace()); }
 
 void OboeCapture::captureSamples(std::byte *buffer, uint samples)
-{ mRing->read(buffer, samples); }
+{ std::ignore = mRing->read(buffer, samples); }
 
 } // namespace
 

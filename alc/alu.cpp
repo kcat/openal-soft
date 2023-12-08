@@ -2257,10 +2257,10 @@ void DeviceBase::handleDisconnect(const char *msg, ...)
 
         va_list args;
         va_start(args, msg);
-        int msglen{vsnprintf(disconnect.msg, sizeof(disconnect.msg), msg, args)};
+        int msglen{vsnprintf(disconnect.msg.data(), disconnect.msg.size(), msg, args)};
         va_end(args);
 
-        if(msglen < 0 || static_cast<size_t>(msglen) >= sizeof(disconnect.msg))
+        if(msglen < 0 || static_cast<size_t>(msglen) >= disconnect.msg.size())
             disconnect.msg[sizeof(disconnect.msg)-1] = 0;
 
         for(ContextBase *ctx : *mContexts.load())

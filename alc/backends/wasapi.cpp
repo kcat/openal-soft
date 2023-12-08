@@ -2651,7 +2651,7 @@ void WasapiCapture::stopProxy()
 
 
 void WasapiCapture::captureSamples(std::byte *buffer, uint samples)
-{ mRing->read(buffer, samples); }
+{ std::ignore = mRing->read(buffer, samples); }
 
 uint WasapiCapture::availableSamples()
 { return static_cast<uint>(mRing->readSpace()); }

@@ -660,7 +660,7 @@ void alc_initconfig(void)
             {
                 if(len == strlen(effectitem.name) &&
                    strncmp(effectitem.name, str, len) == 0)
-                    DisabledEffects[effectitem.type] = true;
+                    DisabledEffects.set(effectitem.type);
             }
         } while(next++);
     }
@@ -683,15 +683,15 @@ void alc_initconfig(void)
         else
             eax_g_is_enabled = true;
 
-        if((DisabledEffects[EAXREVERB_EFFECT] || DisabledEffects[CHORUS_EFFECT])
+        if((DisabledEffects.test(EAXREVERB_EFFECT) || DisabledEffects.test(CHORUS_EFFECT))
             && eax_g_is_enabled)
         {
             eax_g_is_enabled = false;
             TRACE("EAX disabled because %s disabled.\n",
-                (DisabledEffects[EAXREVERB_EFFECT] && DisabledEffects[CHORUS_EFFECT])
+                (DisabledEffects.test(EAXREVERB_EFFECT) && DisabledEffects.test(CHORUS_EFFECT))
                     ? "EAXReverb and Chorus are" :
-                DisabledEffects[EAXREVERB_EFFECT] ? "EAXReverb is" :
-                DisabledEffects[CHORUS_EFFECT] ? "Chorus is" : "");
+                DisabledEffects.test(EAXREVERB_EFFECT) ? "EAXReverb is" :
+                DisabledEffects.test(CHORUS_EFFECT) ? "Chorus is" : "");
         }
     }
 #endif // ALSOFT_EAX

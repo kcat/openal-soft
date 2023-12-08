@@ -14,7 +14,7 @@ namespace alu {
 template<typename T>
 class VectorR {
     static_assert(std::is_floating_point<T>::value, "Must use floating-point types");
-    alignas(16) T mVals[4];
+    alignas(16) std::array<T,4> mVals;
 
 public:
     constexpr VectorR() noexcept = default;
@@ -58,7 +58,7 @@ public:
         return T{0};
     }
 
-    constexpr VectorR cross_product(const alu::VectorR<T> &rhs) const noexcept
+    [[nodiscard]] constexpr auto cross_product(const alu::VectorR<T> &rhs) const noexcept -> VectorR
     {
         return VectorR{
             mVals[1]*rhs.mVals[2] - mVals[2]*rhs.mVals[1],
@@ -67,7 +67,7 @@ public:
             T{0}};
     }
 
-    constexpr T dot_product(const alu::VectorR<T> &rhs) const noexcept
+    [[nodiscard]] constexpr auto dot_product(const alu::VectorR<T> &rhs) const noexcept -> T
     { return mVals[0]*rhs.mVals[0] + mVals[1]*rhs.mVals[1] + mVals[2]*rhs.mVals[2]; }
 };
 using Vector = VectorR<float>;
@@ -75,7 +75,7 @@ using Vector = VectorR<float>;
 template<typename T>
 class MatrixR {
     static_assert(std::is_floating_point<T>::value, "Must use floating-point types");
-    alignas(16) T mVals[16];
+    alignas(16) std::array<T,16> mVals;
 
 public:
     constexpr MatrixR() noexcept = default;

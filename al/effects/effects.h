@@ -24,7 +24,7 @@ public:
     effect_exception(ALenum code, const char *msg, ...);
     ~effect_exception() override;
 
-    ALenum errorCode() const noexcept { return mErrorCode; }
+    [[nodiscard]] auto errorCode() const noexcept -> ALenum { return mErrorCode; }
 };
 
 

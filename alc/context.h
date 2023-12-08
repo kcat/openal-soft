@@ -560,7 +560,7 @@ private:
 
 using ContextRef = al::intrusive_ptr<ALCcontext>;
 
-ContextRef GetContextRef(void);
+ContextRef GetContextRef();
 
 void UpdateContextProps(ALCcontext *context);
 

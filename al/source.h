@@ -978,21 +978,21 @@ private:
     }
 
     template<typename TValidator, size_t TIdCount>
-    void eax_defer_active_fx_slot_id(const EaxCall& call, GUID (&dst_ids)[TIdCount])
+    void eax_defer_active_fx_slot_id(const EaxCall& call, const al::span<GUID,TIdCount> dst_ids)
     {
         const auto src_ids = call.get_values<const GUID>(TIdCount);
         std::for_each(src_ids.cbegin(), src_ids.cend(), TValidator{});
-        std::uninitialized_copy(src_ids.cbegin(), src_ids.cend(), dst_ids);
+        std::uninitialized_copy(src_ids.cbegin(), src_ids.cend(), dst_ids.begin());
     }
 
     template<size_t TIdCount>
-    void eax4_defer_active_fx_slot_id(const EaxCall& call, GUID (&dst_ids)[TIdCount])
+    void eax4_defer_active_fx_slot_id(const EaxCall& call, const al::span<GUID,TIdCount> dst_ids)
     {
         eax_defer_active_fx_slot_id<Eax4ActiveFxSlotIdValidator>(call, dst_ids);
     }
 
     template<size_t TIdCount>
-    void eax5_defer_active_fx_slot_id(const EaxCall& call, GUID (&dst_ids)[TIdCount])
+    void eax5_defer_active_fx_slot_id(const EaxCall& call, const al::span<GUID,TIdCount> dst_ids)
     {
         eax_defer_active_fx_slot_id<Eax5ActiveFxSlotIdValidator>(call, dst_ids);
     }

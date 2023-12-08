@@ -1039,7 +1039,7 @@ void AlsaCapture::captureSamples(std::byte *buffer, uint samples)
 {
     if(mRing)
     {
-        mRing->read(buffer, samples);
+        std::ignore = mRing->read(buffer, samples);
         return;
     }
 

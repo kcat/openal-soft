@@ -58,7 +58,7 @@
 #include "eax/exception.h"
 #endif // ALSOFT_EAX
 
-const EffectList gEffectList[16]{
+const std::array<EffectList,16> gEffectList{{
     { "eaxreverb",   EAXREVERB_EFFECT,   AL_EFFECT_EAXREVERB },
     { "reverb",      REVERB_EFFECT,      AL_EFFECT_REVERB },
     { "autowah",     AUTOWAH_EFFECT,     AL_EFFECT_AUTOWAH },
@@ -75,9 +75,7 @@ const EffectList gEffectList[16]{
     { "dedicated",   DEDICATED_EFFECT,   AL_EFFECT_DEDICATED_LOW_FREQUENCY_EFFECT },
     { "dedicated",   DEDICATED_EFFECT,   AL_EFFECT_DEDICATED_DIALOGUE },
     { "convolution", CONVOLUTION_EFFECT, AL_EFFECT_CONVOLUTION_SOFT },
-};
-
-bool DisabledEffects[MAX_EFFECTS];
+}};
 
 
 effect_exception::effect_exception(ALenum code, const char *msg, ...) : mErrorCode{code}
@@ -328,7 +326,7 @@ FORCE_ALIGN void AL_APIENTRY alEffectiDirect(ALCcontext *context, ALuint effect,
         {
             for(const EffectList &effectitem : gEffectList)
             {
-                if(value == effectitem.val && !DisabledEffects[effectitem.type])
+                if(value == effectitem.val && !DisabledEffects.test(effectitem.type))
                 {
                     isOk = true;
                     break;
@@ -687,9 +685,9 @@ void LoadReverbPreset(const char *name, ALeffect *effect)
         return;
     }
 
-    if(!DisabledEffects[EAXREVERB_EFFECT])
+    if(!DisabledEffects.test(EAXREVERB_EFFECT))
         InitEffectParams(effect, AL_EFFECT_EAXREVERB);
-    else if(!DisabledEffects[REVERB_EFFECT])
+    else if(!DisabledEffects.test(REVERB_EFFECT))
         InitEffectParams(effect, AL_EFFECT_REVERB);
     else
         InitEffectParams(effect, AL_EFFECT_NULL);
@@ -742,7 +740,7 @@ bool IsValidEffectType(ALenum type) noexcept
 
     for(const auto &effect_item : gEffectList)
     {
-        if(type == effect_item.val && !DisabledEffects[effect_item.type])
+        if(type == effect_item.val && !DisabledEffects.test(effect_item.type))
             return true;
     }
     return false;

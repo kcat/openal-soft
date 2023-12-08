@@ -1,6 +1,8 @@
 #ifndef AL_EFFECT_H
 #define AL_EFFECT_H
 
+#include <array>
+#include <bitset>
 #include <string_view>
 
 #include "AL/al.h"
@@ -29,16 +31,14 @@ enum {
 
     MAX_EFFECTS
 };
-extern bool DisabledEffects[MAX_EFFECTS];
-
-extern float ReverbBoost;
+inline std::bitset<MAX_EFFECTS> DisabledEffects;
 
 struct EffectList {
     const char name[16];
-    int type;
+    ALuint type;
     ALenum val;
 };
-extern const EffectList gEffectList[16];
+extern const std::array<EffectList,16> gEffectList;
 
 
 struct ALeffect {

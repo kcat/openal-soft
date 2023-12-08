@@ -617,7 +617,7 @@ void OSScapture::stop()
 }
 
 void OSScapture::captureSamples(std::byte *buffer, uint samples)
-{ mRing->read(buffer, samples); }
+{ std::ignore = mRing->read(buffer, samples); }
 
 uint OSScapture::availableSamples()
 { return static_cast<uint>(mRing->readSpace()); }

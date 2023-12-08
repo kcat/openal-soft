@@ -211,34 +211,34 @@ struct FlexArray {
     FlexArray(index_type size) : mStore{size} { }
     ~FlexArray() = default;
 
-    index_type size() const noexcept { return mStore.mSize; }
-    bool empty() const noexcept { return mStore.mSize == 0; }
+    [[nodiscard]] auto size() const noexcept -> index_type { return mStore.mSize; }
+    [[nodiscard]] auto empty() const noexcept -> bool { return mStore.mSize == 0; }
 
-    pointer data() noexcept { return mStore.mArray; }
-    const_pointer data() const noexcept { return mStore.mArray; }
+    [[nodiscard]] auto data() noexcept -> pointer { return mStore.mArray; }
+    [[nodiscard]] auto data() const noexcept -> const_pointer { return mStore.mArray; }
 
-    reference operator[](index_type i) noexcept { return mStore.mArray[i]; }
-    const_reference operator[](index_type i) const noexcept { return mStore.mArray[i]; }
+    [[nodiscard]] auto operator[](index_type i) noexcept -> reference { return mStore.mArray[i]; }
+    [[nodiscard]] auto operator[](index_type i) const noexcept -> const_reference { return mStore.mArray[i]; }
 
-    reference front() noexcept { return mStore.mArray[0]; }
-    const_reference front() const noexcept { return mStore.mArray[0]; }
+    [[nodiscard]] auto front() noexcept -> reference { return mStore.mArray[0]; }
+    [[nodiscard]] auto front() const noexcept -> const_reference { return mStore.mArray[0]; }
 
-    reference back() noexcept { return mStore.mArray[mStore.mSize-1]; }
-    const_reference back() const noexcept { return mStore.mArray[mStore.mSize-1]; }
+    [[nodiscard]] auto back() noexcept -> reference { return mStore.mArray[mStore.mSize-1]; }
+    [[nodiscard]] auto back() const noexcept -> const_reference { return mStore.mArray[mStore.mSize-1]; }
 
-    iterator begin() noexcept { return mStore.mArray; }
-    const_iterator begin() const noexcept { return mStore.mArray; }
-    const_iterator cbegin() const noexcept { return mStore.mArray; }
-    iterator end() noexcept { return mStore.mArray + mStore.mSize; }
-    const_iterator end() const noexcept { return mStore.mArray + mStore.mSize; }
-    const_iterator cend() const noexcept { return mStore.mArray + mStore.mSize; }
+    [[nodiscard]] auto begin() noexcept -> iterator { return mStore.mArray; }
+    [[nodiscard]] auto begin() const noexcept -> const_iterator { return mStore.mArray; }
+    [[nodiscard]] auto cbegin() const noexcept -> const_iterator { return mStore.mArray; }
+    [[nodiscard]] auto end() noexcept -> iterator { return mStore.mArray + mStore.mSize; }
+    [[nodiscard]] auto end() const noexcept -> const_iterator { return mStore.mArray + mStore.mSize; }
+    [[nodiscard]] auto cend() const noexcept -> const_iterator { return mStore.mArray + mStore.mSize; }
 
-    reverse_iterator rbegin() noexcept { return end(); }
-    const_reverse_iterator rbegin() const noexcept { return end(); }
-    const_reverse_iterator crbegin() const noexcept { return cend(); }
-    reverse_iterator rend() noexcept { return begin(); }
-    const_reverse_iterator rend() const noexcept { return begin(); }
-    const_reverse_iterator crend() const noexcept { return cbegin(); }
+    [[nodiscard]] auto rbegin() noexcept -> reverse_iterator { return end(); }
+    [[nodiscard]] auto rbegin() const noexcept -> const_reverse_iterator { return end(); }
+    [[nodiscard]] auto crbegin() const noexcept -> const_reverse_iterator { return cend(); }
+    [[nodiscard]] auto rend() noexcept -> reverse_iterator { return begin(); }
+    [[nodiscard]] auto rend() const noexcept -> const_reverse_iterator { return begin(); }
+    [[nodiscard]] auto crend() const noexcept -> const_reverse_iterator { return cbegin(); }
 
     DEF_PLACE_NEWDEL()
 };

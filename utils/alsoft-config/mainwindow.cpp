@@ -583,7 +583,7 @@ QStringList MainWindow::collectHrtfs()
                         break;
                     }
                     ++i;
-                } while(1);
+                } while(true);
             }
         }
     }
@@ -618,7 +618,7 @@ QStringList MainWindow::collectHrtfs()
                             break;
                         }
                         ++i;
-                    } while(1);
+                    } while(true);
                 }
             }
         }

@@ -31,16 +31,16 @@ public:
         ALvoid* property_buffer,
         ALuint property_size);
 
-    bool is_get() const noexcept { return mCallType == EaxCallType::get; }
-    bool is_deferred() const noexcept { return mIsDeferred; }
-    int get_version() const noexcept { return mVersion; }
-    EaxCallPropertySetId get_property_set_id() const noexcept { return mPropertySetId; }
-    ALuint get_property_id() const noexcept { return mPropertyId; }
-    ALuint get_property_al_name() const noexcept { return mPropertySourceId; }
-    EaxFxSlotIndex get_fx_slot_index() const noexcept { return mFxSlotIndex; }
+    [[nodiscard]] auto is_get() const noexcept -> bool { return mCallType == EaxCallType::get; }
+    [[nodiscard]] auto is_deferred() const noexcept -> bool { return mIsDeferred; }
+    [[nodiscard]] auto get_version() const noexcept -> int { return mVersion; }
+    [[nodiscard]] auto get_property_set_id() const noexcept -> EaxCallPropertySetId { return mPropertySetId; }
+    [[nodiscard]] auto get_property_id() const noexcept -> ALuint { return mPropertyId; }
+    [[nodiscard]] auto get_property_al_name() const noexcept -> ALuint { return mPropertySourceId; }
+    [[nodiscard]] auto get_fx_slot_index() const noexcept -> EaxFxSlotIndex { return mFxSlotIndex; }
 
     template<typename TException, typename TValue>
-    TValue& get_value() const
+    [[nodiscard]] auto get_value() const -> TValue&
     {
         if(mPropertyBufferSize < sizeof(TValue))
             fail_too_small();
@@ -49,7 +49,7 @@ public:
     }
 
     template<typename TValue>
-    al::span<TValue> get_values(size_t max_count) const
+    [[nodiscard]] auto get_values(size_t max_count) const -> al::span<TValue>
     {
         if(max_count == 0 || mPropertyBufferSize < sizeof(TValue))
             fail_too_small();
@@ -59,28 +59,28 @@ public:
     }
 
     template<typename TValue>
-    al::span<TValue> get_values() const
+    [[nodiscard]] auto get_values() const -> al::span<TValue>
     {
         return get_values<TValue>(~0_uz);
     }
 
     template<typename TException, typename TValue>
-    void set_value(const TValue& value) const
+    auto set_value(const TValue& value) const -> void
     {
         get_value<TException, TValue>() = value;
     }
 
 private:
-    const EaxCallType mCallType;
-    int mVersion;
-    EaxFxSlotIndex mFxSlotIndex;
-    EaxCallPropertySetId mPropertySetId;
-    bool mIsDeferred;
+    const EaxCallType mCallType{};
+    int mVersion{};
+    EaxFxSlotIndex mFxSlotIndex{};
+    EaxCallPropertySetId mPropertySetId{};
+    bool mIsDeferred{};
 
-    const ALuint mPropertyId;
-    const ALuint mPropertySourceId;
-    ALvoid*const mPropertyBuffer;
-    const ALuint mPropertyBufferSize;
+    const ALuint mPropertyId{};
+    const ALuint mPropertySourceId{};
+    ALvoid*const mPropertyBuffer{};
+    const ALuint mPropertyBufferSize{};
 
     [[noreturn]] static void fail(const char* message);
     [[noreturn]] static void fail_too_small();

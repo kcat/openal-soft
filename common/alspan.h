@@ -107,43 +107,43 @@ public:
 
     constexpr span& operator=(const span &rhs) noexcept = default;
 
-    constexpr reference front() const { return *mData; }
-    constexpr reference back() const { return *(mData+E-1); }
-    constexpr reference operator[](index_type idx) const { return mData[idx]; }
-    constexpr pointer data() const noexcept { return mData; }
+    [[nodiscard]] constexpr auto front() const -> reference { return *mData; }
+    [[nodiscard]] constexpr auto back() const -> reference { return *(mData+E-1); }
+    [[nodiscard]] constexpr auto operator[](index_type idx) const -> reference { return mData[idx]; }
+    [[nodiscard]] constexpr auto data() const noexcept -> pointer { return mData; }
 
-    constexpr index_type size() const noexcept { return E; }
-    constexpr index_type size_bytes() const noexcept { return E * sizeof(value_type); }
-    constexpr bool empty() const noexcept { return E == 0; }
+    [[nodiscard]] constexpr auto size() const noexcept -> index_type { return E; }
+    [[nodiscard]] constexpr auto size_bytes() const noexcept -> index_type { return E * sizeof(value_type); }
+    [[nodiscard]] constexpr auto empty() const noexcept -> bool { return E == 0; }
 
-    constexpr iterator begin() const noexcept { return mData; }
-    constexpr iterator end() const noexcept { return mData+E; }
-    constexpr const_iterator cbegin() const noexcept { return mData; }
-    constexpr const_iterator cend() const noexcept { return mData+E; }
+    [[nodiscard]] constexpr auto begin() const noexcept -> iterator { return mData; }
+    [[nodiscard]] constexpr auto end() const noexcept -> iterator { return mData+E; }
+    [[nodiscard]] constexpr auto cbegin() const noexcept -> const_iterator { return mData; }
+    [[nodiscard]] constexpr auto cend() const noexcept -> const_iterator { return mData+E; }
 
-    constexpr reverse_iterator rbegin() const noexcept { return reverse_iterator{end()}; }
-    constexpr reverse_iterator rend() const noexcept { return reverse_iterator{begin()}; }
-    constexpr const_reverse_iterator crbegin() const noexcept
+    [[nodiscard]] constexpr auto rbegin() const noexcept -> reverse_iterator { return reverse_iterator{end()}; }
+    [[nodiscard]] constexpr auto rend() const noexcept -> reverse_iterator { return reverse_iterator{begin()}; }
+    [[nodiscard]] constexpr auto crbegin() const noexcept -> const_reverse_iterator
     { return const_reverse_iterator{cend()}; }
-    constexpr const_reverse_iterator crend() const noexcept
+    [[nodiscard]] constexpr auto crend() const noexcept -> const_reverse_iterator
     { return const_reverse_iterator{cbegin()}; }
 
     template<size_t C>
-    constexpr span<element_type,C> first() const
+    [[nodiscard]] constexpr auto first() const -> span<element_type,C>
     {
         static_assert(E >= C, "New size exceeds original capacity");
         return span<element_type,C>{mData, C};
     }
 
     template<size_t C>
-    constexpr span<element_type,C> last() const
+    [[nodiscard]] constexpr auto last() const -> span<element_type,C>
     {
         static_assert(E >= C, "New size exceeds original capacity");
         return span<element_type,C>{mData+(E-C), C};
     }
 
     template<size_t O, size_t C>
-    constexpr auto subspan() const -> std::enable_if_t<C!=dynamic_extent,span<element_type,C>>
+    [[nodiscard]] constexpr auto subspan() const -> std::enable_if_t<C!=dynamic_extent,span<element_type,C>>
     {
         static_assert(E >= O, "Offset exceeds extent");
         static_assert(E-O >= C, "New size exceeds original capacity");
@@ -151,7 +151,7 @@ public:
     }
 
     template<size_t O, size_t C=dynamic_extent>
-    constexpr auto subspan() const -> std::enable_if_t<C==dynamic_extent,span<element_type,E-O>>
+    [[nodiscard]] constexpr auto subspan() const -> std::enable_if_t<C==dynamic_extent,span<element_type,E-O>>
     {
         static_assert(E >= O, "Offset exceeds extent");
         return span<element_type,E-O>{mData+O, E-O};
@@ -161,10 +161,10 @@ public:
      * defining the specialization. As a result, these methods need to be
      * defined later.
      */
-    constexpr span<element_type,dynamic_extent> first(size_t count) const;
-    constexpr span<element_type,dynamic_extent> last(size_t count) const;
-    constexpr span<element_type,dynamic_extent> subspan(size_t offset,
-        size_t count=dynamic_extent) const;
+    [[nodiscard]] constexpr auto first(size_t count) const -> span<element_type,dynamic_extent>;
+    [[nodiscard]] constexpr auto last(size_t count) const -> span<element_type,dynamic_extent>;
+    [[nodiscard]] constexpr auto subspan(size_t offset,
+        size_t count=dynamic_extent) const -> span<element_type,dynamic_extent>;
 
 private:
     pointer mData{nullptr};
@@ -221,51 +221,51 @@ public:
 
     constexpr span& operator=(const span &rhs) noexcept = default;
 
-    constexpr reference front() const { return *mData; }
-    constexpr reference back() const { return *(mDataEnd-1); }
-    constexpr reference operator[](index_type idx) const { return mData[idx]; }
-    constexpr pointer data() const noexcept { return mData; }
+    [[nodiscard]] constexpr auto front() const -> reference { return *mData; }
+    [[nodiscard]] constexpr auto back() const -> reference { return *(mDataEnd-1); }
+    [[nodiscard]] constexpr auto operator[](index_type idx) const -> reference { return mData[idx]; }
+    [[nodiscard]] constexpr auto data() const noexcept -> pointer { return mData; }
 
-    constexpr index_type size() const noexcept { return static_cast<index_type>(mDataEnd-mData); }
-    constexpr index_type size_bytes() const noexcept
+    [[nodiscard]] constexpr auto size() const noexcept -> index_type { return static_cast<index_type>(mDataEnd-mData); }
+    [[nodiscard]] constexpr auto size_bytes() const noexcept -> index_type
     { return static_cast<index_type>(mDataEnd-mData) * sizeof(value_type); }
-    constexpr bool empty() const noexcept { return mData == mDataEnd; }
+    [[nodiscard]] constexpr auto empty() const noexcept -> bool { return mData == mDataEnd; }
 
-    constexpr iterator begin() const noexcept { return mData; }
-    constexpr iterator end() const noexcept { return mDataEnd; }
-    constexpr const_iterator cbegin() const noexcept { return mData; }
-    constexpr const_iterator cend() const noexcept { return mDataEnd; }
+    [[nodiscard]] constexpr auto begin() const noexcept -> iterator { return mData; }
+    [[nodiscard]] constexpr auto end() const noexcept -> iterator { return mDataEnd; }
+    [[nodiscard]] constexpr auto cbegin() const noexcept -> const_iterator { return mData; }
+    [[nodiscard]] constexpr auto cend() const noexcept -> const_iterator { return mDataEnd; }
 
-    constexpr reverse_iterator rbegin() const noexcept { return reverse_iterator{end()}; }
-    constexpr reverse_iterator rend() const noexcept { return reverse_iterator{begin()}; }
-    constexpr const_reverse_iterator crbegin() const noexcept
+    [[nodiscard]] constexpr auto rbegin() const noexcept -> reverse_iterator { return reverse_iterator{end()}; }
+    [[nodiscard]] constexpr auto rend() const noexcept -> reverse_iterator { return reverse_iterator{begin()}; }
+    [[nodiscard]] constexpr auto crbegin() const noexcept -> const_reverse_iterator
     { return const_reverse_iterator{cend()}; }
-    constexpr const_reverse_iterator crend() const noexcept
+    [[nodiscard]] constexpr auto crend() const noexcept -> const_reverse_iterator
     { return const_reverse_iterator{cbegin()}; }
 
     template<size_t C>
-    constexpr span<element_type,C> first() const
+    [[nodiscard]] constexpr auto first() const -> span<element_type,C>
     { return span<element_type,C>{mData, C}; }
 
-    constexpr span first(size_t count) const
+    [[nodiscard]] constexpr auto first(size_t count) const -> span
     { return (count >= size()) ? *this : span{mData, mData+count}; }
 
     template<size_t C>
-    constexpr span<element_type,C> last() const
+    [[nodiscard]] constexpr auto last() const -> span<element_type,C>
     { return span<element_type,C>{mDataEnd-C, C}; }
 
-    constexpr span last(size_t count) const
+    [[nodiscard]] constexpr auto last(size_t count) const -> span
     { return (count >= size()) ? *this : span{mDataEnd-count, mDataEnd}; }
 
     template<size_t O, size_t C>
-    constexpr auto subspan() const -> std::enable_if_t<C!=dynamic_extent,span<element_type,C>>
+    [[nodiscard]] constexpr auto subspan() const -> std::enable_if_t<C!=dynamic_extent,span<element_type,C>>
     { return span<element_type,C>{mData+O, C}; }
 
     template<size_t O, size_t C=dynamic_extent>
-    constexpr auto subspan() const -> std::enable_if_t<C==dynamic_extent,span<element_type,C>>
+    [[nodiscard]] constexpr auto subspan() const -> std::enable_if_t<C==dynamic_extent,span<element_type,C>>
     { return span<element_type,C>{mData+O, mDataEnd}; }
 
-    constexpr span subspan(size_t offset, size_t count=dynamic_extent) const
+    [[nodiscard]] constexpr auto subspan(size_t offset, size_t count=dynamic_extent) const -> span
     {
         return (offset > size()) ? span{} :
             (count >= size()-offset) ? span{mData+offset, mDataEnd} :
@@ -278,21 +278,21 @@ private:
 };
 
 template<typename T, size_t E>
-constexpr inline auto span<T,E>::first(size_t count) const -> span<element_type,dynamic_extent>
+[[nodiscard]] constexpr inline auto span<T,E>::first(size_t count) const -> span<element_type,dynamic_extent>
 {
     return (count >= size()) ? span<element_type>{mData, extent} :
         span<element_type>{mData, count};
 }
 
 template<typename T, size_t E>
-constexpr inline auto span<T,E>::last(size_t count) const -> span<element_type,dynamic_extent>
+[[nodiscard]] constexpr inline auto span<T,E>::last(size_t count) const -> span<element_type,dynamic_extent>
 {
     return (count >= size()) ? span<element_type>{mData, extent} :
         span<element_type>{mData+extent-count, count};
 }
 
 template<typename T, size_t E>
-constexpr inline auto span<T,E>::subspan(size_t offset, size_t count) const
+[[nodiscard]] constexpr inline auto span<T,E>::subspan(size_t offset, size_t count) const
     -> span<element_type,dynamic_extent>
 {
     return (offset > size()) ? span<element_type>{} :

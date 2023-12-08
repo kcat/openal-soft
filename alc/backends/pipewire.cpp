@@ -1933,7 +1933,8 @@ void PipeWireCapture::inputCallback() noexcept
     const uint offset{minu(bufdata->chunk->offset, bufdata->maxsize)};
     const uint size{minu(bufdata->chunk->size, bufdata->maxsize - offset)};
 
-    mRing->write(static_cast<char*>(bufdata->data) + offset, size / mRing->getElemSize());
+    std::ignore = mRing->write(static_cast<char*>(bufdata->data) + offset,
+        size / mRing->getElemSize());
 
     pw_stream_queue_buffer(mStream.get(), pw_buf);
 }
@@ -2154,7 +2155,7 @@ uint PipeWireCapture::availableSamples()
 { return static_cast<uint>(mRing->readSpace()); }
 
 void PipeWireCapture::captureSamples(std::byte *buffer, uint samples)
-{ mRing->read(buffer, samples); }
+{ std::ignore = mRing->read(buffer, samples); }
 
 } // namespace
 

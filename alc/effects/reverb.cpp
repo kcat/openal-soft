@@ -48,11 +48,6 @@
 #include "vecmat.h"
 #include "vector.h"
 
-/* This is a user config option for modifying the overall output of the reverb
- * effect.
- */
-float ReverbBoost = 1.0f;
-
 namespace {
 
 using uint = unsigned int;

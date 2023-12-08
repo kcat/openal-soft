@@ -3917,27 +3917,30 @@ void ALsource::eax4_translate(const Eax4Props& src, Eax5Props& dst) noexcept
 
     // Active FX slots.
     //
-    for (auto i = 0; i < EAX50_MAX_ACTIVE_FXSLOTS; ++i) {
+    for(size_t i{0};i < EAX50_MAX_ACTIVE_FXSLOTS;++i)
+    {
         auto& dst_id = dst.active_fx_slots.guidActiveFXSlots[i];
 
-        if (i < EAX40_MAX_ACTIVE_FXSLOTS) {
+        if(i < EAX40_MAX_ACTIVE_FXSLOTS)
+        {
             const auto& src_id = src.active_fx_slots.guidActiveFXSlots[i];
 
-            if (src_id == EAX_NULL_GUID)
+            if(src_id == EAX_NULL_GUID)
                 dst_id = EAX_NULL_GUID;
-            else if (src_id == EAX_PrimaryFXSlotID)
+            else if(src_id == EAX_PrimaryFXSlotID)
                 dst_id = EAX_PrimaryFXSlotID;
-            else if (src_id == EAXPROPERTYID_EAX40_FXSlot0)
+            else if(src_id == EAXPROPERTYID_EAX40_FXSlot0)
                 dst_id = EAXPROPERTYID_EAX50_FXSlot0;
-            else if (src_id == EAXPROPERTYID_EAX40_FXSlot1)
+            else if(src_id == EAXPROPERTYID_EAX40_FXSlot1)
                 dst_id = EAXPROPERTYID_EAX50_FXSlot1;
-            else if (src_id == EAXPROPERTYID_EAX40_FXSlot2)
+            else if(src_id == EAXPROPERTYID_EAX40_FXSlot2)
                 dst_id = EAXPROPERTYID_EAX50_FXSlot2;
-            else if (src_id == EAXPROPERTYID_EAX40_FXSlot3)
+            else if(src_id == EAXPROPERTYID_EAX40_FXSlot3)
                 dst_id = EAXPROPERTYID_EAX50_FXSlot3;
             else
                 assert(false && "Unknown active FX slot ID.");
-        } else
+        }
+        else
             dst_id = EAX_NULL_GUID;
     }
 
@@ -4359,7 +4362,7 @@ void ALsource::eax4_set(const EaxCall& call, Eax4Props& props)
             break;
 
         case EAXSOURCE_ACTIVEFXSLOTID:
-            eax4_defer_active_fx_slot_id(call, props.active_fx_slots.guidActiveFXSlots);
+            eax4_defer_active_fx_slot_id(call, al::span{props.active_fx_slots.guidActiveFXSlots});
             break;
 
         default:
@@ -4440,7 +4443,7 @@ void ALsource::eax5_set(const EaxCall& call, Eax5Props& props)
             break;
 
         case EAXSOURCE_ACTIVEFXSLOTID:
-            eax5_defer_active_fx_slot_id(call, props.active_fx_slots.guidActiveFXSlots);
+            eax5_defer_active_fx_slot_id(call, al::span{props.active_fx_slots.guidActiveFXSlots});
             break;
 
         case EAXSOURCE_MACROFXFACTOR:
@@ -4730,7 +4733,8 @@ void ALsource::eax4_get(const EaxCall& call, const Eax4Props& props)
             break;
 
         case EAXSOURCE_ACTIVEFXSLOTID:
-            eax_get_active_fx_slot_id(call, props.active_fx_slots.guidActiveFXSlots, EAX40_MAX_ACTIVE_FXSLOTS);
+            eax_get_active_fx_slot_id(call, props.active_fx_slots.guidActiveFXSlots.data(),
+                EAX40_MAX_ACTIVE_FXSLOTS);
             break;
 
         default:
@@ -4802,7 +4806,8 @@ void ALsource::eax5_get(const EaxCall& call, const Eax5Props& props)
             break;
 
         case EAXSOURCE_ACTIVEFXSLOTID:
-            eax_get_active_fx_slot_id(call, props.active_fx_slots.guidActiveFXSlots, EAX50_MAX_ACTIVE_FXSLOTS);
+            eax_get_active_fx_slot_id(call, props.active_fx_slots.guidActiveFXSlots.data(),
+                EAX50_MAX_ACTIVE_FXSLOTS);
             break;
 
         case EAXSOURCE_MACROFXFACTOR:

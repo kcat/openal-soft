@@ -435,7 +435,8 @@ int WinMMCapture::captureProc()
             WAVEHDR &waveHdr = mWaveBuffer[widx];
             widx = (widx+1) % mWaveBuffer.size();
 
-            mRing->write(waveHdr.lpData, waveHdr.dwBytesRecorded / mFormat.nBlockAlign);
+            std::ignore = mRing->write(waveHdr.lpData,
+                waveHdr.dwBytesRecorded / mFormat.nBlockAlign);
             mReadable.fetch_sub(1, std::memory_order_acq_rel);
             waveInAddBuffer(mInHdl, &waveHdr, sizeof(WAVEHDR));
         } while(--todo);
@@ -573,7 +574,7 @@ void WinMMCapture::stop()
 }
 
 void WinMMCapture::captureSamples(std::byte *buffer, uint samples)
-{ mRing->read(buffer, samples); }
+{ std::ignore = mRing->read(buffer, samples); }
 
 uint WinMMCapture::availableSamples()
 { return static_cast<uint>(mRing->readSpace()); }

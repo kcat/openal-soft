@@ -1,6 +1,7 @@
 #ifndef AL_BIT_H
 #define AL_BIT_H
 
+#include <array>
 #include <cstdint>
 #include <cstring>
 #include <limits>
@@ -17,9 +18,9 @@ std::enable_if_t<sizeof(To) == sizeof(From) && std::is_trivially_copyable_v<From
     && std::is_trivially_copyable_v<To>,
 To> bit_cast(const From &src) noexcept
 {
-    alignas(To) char dst[sizeof(To)];
-    std::memcpy(&dst[0], &src, sizeof(To));
-    return *std::launder(reinterpret_cast<To*>(&dst[0]));
+    alignas(To) std::array<char,sizeof(To)> dst;
+    std::memcpy(dst.data(), &src, sizeof(To));
+    return *std::launder(reinterpret_cast<To*>(dst.data()));
 }
 
 #ifdef __BYTE_ORDER__

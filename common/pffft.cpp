@@ -58,11 +58,11 @@
 #include "pffft.h"
 
 #include <array>
-#include <assert.h>
+#include <cassert>
 #include <cmath>
+#include <cstdio>
+#include <cstdlib>
 #include <cstring>
-#include <stdio.h>
-#include <stdlib.h>
 #include <vector>
 
 #include "albit.h"
@@ -90,7 +90,7 @@ using uint = unsigned int;
  * Altivec support macros
  */
 #if defined(__ppc__) || defined(__ppc64__) || defined(__powerpc__) || defined(__powerpc64__)
-typedef vector float v4sf;
+using v4sf = vector float;
 #define SIMD_SZ 4
 #define VZERO() ((vector float) vec_splat_u8(0))
 #define VMUL(a,b) vec_madd(a,b, VZERO())
@@ -142,7 +142,7 @@ force_inline void vtranspose4(v4sf &x0, v4sf &x1, v4sf &x2, v4sf &x3) noexcept
     (defined(_M_IX86_FP) && _M_IX86_FP >= 1)
 
 #include <xmmintrin.h>
-typedef __m128 v4sf;
+using v4sf = __m128;
 #define SIMD_SZ 4 // 4 floats by simd vector -- this is pretty much hardcoded in the preprocess/finalize functions anyway so you will have to work if you want to enable AVX with its 256-bit vectors.
 #define VZERO _mm_setzero_ps
 #define VMUL _mm_mul_ps
@@ -178,7 +178,7 @@ force_inline void vtranspose4(v4sf &x0, v4sf &x1, v4sf &x2, v4sf &x3) noexcept
 #elif defined(__ARM_NEON) || defined(__aarch64__) || defined(__arm64)
 
 #include <arm_neon.h>
-typedef float32x4_t v4sf;
+using v4sf = float32x4_t;
 #define SIMD_SZ 4
 #define VZERO() vdupq_n_f32(0)
 #define VMUL vmulq_f32
@@ -297,7 +297,7 @@ force_inline v4sf vswaphl(v4sf a, v4sf b) noexcept
 
 // fallback mode for situations where SIMD is not available, use scalar mode instead
 #ifdef PFFFT_SIMD_DISABLE
-typedef float v4sf;
+using v4sf = float;
 #define SIMD_SZ 1
 #define VZERO() 0.f
 #define VMUL(a,b) ((a)*(b))
@@ -335,14 +335,14 @@ force_inline void vcplxmulconj(v4sf &ar, v4sf &ai, v4sf br, v4sf bi) noexcept
 [[maybe_unused]] void validate_pffft_simd()
 {
     using float4 = std::array<float,4>;
-    static constexpr float f[16]{0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15};
+    static constexpr std::array<float,16> f{{0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15}};
 
     float4 a0_f, a1_f, a2_f, a3_f, t_f, u_f;
     v4sf a0_v, a1_v, a2_v, a3_v, t_v, u_v;
-    std::memcpy(&a0_v, f, 4*sizeof(float));
-    std::memcpy(&a1_v, f+4, 4*sizeof(float));
-    std::memcpy(&a2_v, f+8, 4*sizeof(float));
-    std::memcpy(&a3_v, f+12, 4*sizeof(float));
+    std::memcpy(&a0_v, f.data(), 4*sizeof(float));
+    std::memcpy(&a1_v, f.data()+4, 4*sizeof(float));
+    std::memcpy(&a2_v, f.data()+8, 4*sizeof(float));
+    std::memcpy(&a3_v, f.data()+12, 4*sizeof(float));
 
     t_v = VZERO(); t_f = al::bit_cast<float4>(t_v);
     printf("VZERO=[%2g %2g %2g %2g]\n", t_f[0], t_f[1], t_f[2], t_f[3]); assertv4(t, 0, 0, 0, 0);
@@ -1331,7 +1331,7 @@ uint decompose(const uint n, const al::span<uint,15> ifac, const al::span<const 
 
 void rffti1_ps(const uint n, float *wa, const al::span<uint,15> ifac)
 {
-    static constexpr uint ntryh[]{4,2,3,5};
+    static constexpr std::array ntryh{4u,2u,3u,5u};
 
     const uint nf{decompose(n, ifac, ntryh)};
     const double argh{2.0*al::numbers::pi / n};
@@ -1365,7 +1365,7 @@ void rffti1_ps(const uint n, float *wa, const al::span<uint,15> ifac)
 
 void cffti1_ps(const uint n, float *wa, const al::span<uint,15> ifac)
 {
-    static constexpr uint ntryh[]{5,3,4,2};
+    static constexpr std::array ntryh{5u,3u,4u,2u};
 
     const uint nf{decompose(n, ifac, ntryh)};
     const double argh{2.0*al::numbers::pi / n};
@@ -1814,7 +1814,7 @@ void pffft_transform_internal(const PFFFT_Setup *setup, const v4sf *vinput, v4sf
     const size_t Ncvec{setup->Ncvec};
     const bool nf_odd{(setup->ifac[1]&1) != 0};
 
-    v4sf *buff[2]{voutput, scratch};
+    std::array buff{voutput, scratch};
     bool ib{nf_odd != ordered};
     if(direction == PFFFT_FORWARD)
     {

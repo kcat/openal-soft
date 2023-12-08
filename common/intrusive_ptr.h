@@ -81,9 +81,9 @@ public:
 
     explicit operator bool() const noexcept { return mPtr != nullptr; }
 
-    T& operator*() const noexcept { return *mPtr; }
-    T* operator->() const noexcept { return mPtr; }
-    T* get() const noexcept { return mPtr; }
+    [[nodiscard]] auto operator*() const noexcept -> T& { return *mPtr; }
+    [[nodiscard]] auto operator->() const noexcept -> T* { return mPtr; }
+    [[nodiscard]] auto get() const noexcept -> T* { return mPtr; }
 
     void reset(T *ptr=nullptr) noexcept
     {

@@ -25,11 +25,9 @@ public:
     }
 
 
-    const ALeffectslot& get(
-        EaxFxSlotIndex index) const;
+    [[nodiscard]] auto get(EaxFxSlotIndex index) const -> const ALeffectslot&;
 
-    ALeffectslot& get(
-        EaxFxSlotIndex index);
+    [[nodiscard]] auto get(EaxFxSlotIndex index) -> ALeffectslot&;
 
 private:
     using Items = std::array<EaxAlEffectSlotUPtr, EAX_MAX_FXSLOTS>;
@@ -39,8 +37,7 @@ private:
 
 
     [[noreturn]]
-    static void fail(
-        const char* message);
+    static void fail(const char* message);
 
     void initialize_fx_slots(ALCcontext& al_context);
 }; // EaxFxSlots

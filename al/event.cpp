@@ -118,7 +118,7 @@ int EventThread(ALCcontext *context)
             };
             auto proc_disconnect = [context,enabledevts](AsyncDisconnectEvent &evt)
             {
-                const std::string_view message{evt.msg};
+                const std::string_view message{evt.msg.data()};
 
                 context->debugMessage(DebugSource::System, DebugType::Error, 0,
                     DebugSeverity::High, message);

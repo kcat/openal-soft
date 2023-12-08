@@ -1,6 +1,7 @@
 #ifndef CORE_EVENT_H
 #define CORE_EVENT_H
 
+#include <array>
 #include <stdint.h>
 #include <variant>
 
@@ -39,7 +40,7 @@ struct AsyncBufferCompleteEvent {
 };
 
 struct AsyncDisconnectEvent {
-    char msg[244];
+    std::array<char,244> msg;
 };
 
 struct AsyncEffectReleaseEvent {

@@ -36,26 +36,26 @@ public:
     RingBuffer(const std::size_t count) : mBuffer{count} { }
 
     /** Reset the read and write pointers to zero. This is not thread safe. */
-    void reset() noexcept;
+    auto reset() noexcept -> void;
 
     /**
      * The non-copying data reader. Returns two ringbuffer data pointers that
      * hold the current readable data. If the readable data is in one segment
      * the second segment has zero length.
      */
-    DataPair getReadVector() const noexcept;
+    [[nodiscard]] auto getReadVector() const noexcept -> DataPair;
     /**
      * The non-copying data writer. Returns two ringbuffer data pointers that
      * hold the current writeable data. If the writeable data is in one segment
      * the second segment has zero length.
      */
-    DataPair getWriteVector() const noexcept;
+    [[nodiscard]] auto getWriteVector() const noexcept -> DataPair;
 
     /**
      * Return the number of elements available for reading. This is the number
      * of elements in front of the read pointer and behind the write pointer.
      */
-    std::size_t readSpace() const noexcept
+    [[nodiscard]] auto readSpace() const noexcept -> size_t
     {
         const size_t w{mWritePtr.load(std::memory_order_acquire)};
         const size_t r{mReadPtr.load(std::memory_order_acquire)};
@@ -66,14 +66,14 @@ public:
      * The copying data reader. Copy at most `cnt' elements into `dest'.
      * Returns the actual number of elements copied.
      */
-    std::size_t read(void *dest, std::size_t cnt) noexcept;
+    [[nodiscard]] auto read(void *dest, size_t cnt) noexcept -> size_t;
     /**
      * The copying data reader w/o read pointer advance. Copy at most `cnt'
      * elements into `dest'. Returns the actual number of elements copied.
      */
-    std::size_t peek(void *dest, std::size_t cnt) const noexcept;
+    [[nodiscard]] auto peek(void *dest, size_t cnt) const noexcept -> size_t;
     /** Advance the read pointer `cnt' places. */
-    void readAdvance(std::size_t cnt) noexcept
+    auto readAdvance(size_t cnt) noexcept -> void
     { mReadPtr.fetch_add(cnt, std::memory_order_acq_rel); }
 
 
@@ -81,7 +81,7 @@ public:
      * Return the number of elements available for writing. This is the number
      * of elements in front of the write pointer and behind the read pointer.
      */
-    std::size_t writeSpace() const noexcept
+    [[nodiscard]] auto writeSpace() const noexcept -> size_t
     {
         const size_t w{mWritePtr.load(std::memory_order_acquire)};
         const size_t r{mReadPtr.load(std::memory_order_acquire) + mWriteSize - mSizeMask};
@@ -92,12 +92,12 @@ public:
      * The copying data writer. Copy at most `cnt' elements from `src'. Returns
      * the actual number of elements copied.
      */
-    std::size_t write(const void *src, std::size_t cnt) noexcept;
+    [[nodiscard]] auto write(const void *src, size_t cnt) noexcept -> size_t;
     /** Advance the write pointer `cnt' places. */
-    void writeAdvance(std::size_t cnt) noexcept
+    auto writeAdvance(size_t cnt) noexcept -> void
     { mWritePtr.fetch_add(cnt, std::memory_order_acq_rel); }
 
-    std::size_t getElemSize() const noexcept { return mElemSize; }
+    [[nodiscard]] auto getElemSize() const noexcept -> size_t { return mElemSize; }
 
     /**
      * Create a new ringbuffer to hold at least `sz' elements of `elem_sz'
@@ -105,7 +105,8 @@ public:
      * (even if it is already a power of two, to ensure the requested amount
      * can be written).
      */
-    static std::unique_ptr<RingBuffer> Create(std::size_t sz, std::size_t elem_sz, int limit_writes);
+    [[nodiscard]]
+    static auto Create(size_t sz, size_t elem_sz, int limit_writes) -> std::unique_ptr<RingBuffer>;
 
     DEF_FAM_NEWDEL(RingBuffer, mBuffer)
 };

@@ -276,7 +276,7 @@ bool ALCcontext::deinit()
         mDevice->mContexts.store(newarray);
         if(oldarray != &DeviceBase::sEmptyContextArray)
         {
-            mDevice->waitForMix();
+            std::ignore = mDevice->waitForMix();
             delete oldarray;
         }
 

@@ -98,19 +98,19 @@ struct BufferStorage {
     AmbiScaling mAmbiScaling{AmbiScaling::FuMa};
     uint mAmbiOrder{0u};
 
-    inline uint bytesFromFmt() const noexcept { return BytesFromFmt(mType); }
-    inline uint channelsFromFmt() const noexcept
+    [[nodiscard]] auto bytesFromFmt() const noexcept -> uint { return BytesFromFmt(mType); }
+    [[nodiscard]] auto channelsFromFmt() const noexcept -> uint
     { return ChannelsFromFmt(mChannels, mAmbiOrder); }
-    inline uint frameSizeFromFmt() const noexcept { return channelsFromFmt() * bytesFromFmt(); }
+    [[nodiscard]] auto frameSizeFromFmt() const noexcept -> uint { return channelsFromFmt() * bytesFromFmt(); }
 
-    inline uint blockSizeFromFmt() const noexcept
+    [[nodiscard]] auto blockSizeFromFmt() const noexcept -> uint
     {
         if(mType == FmtIMA4) return ((mBlockAlign-1)/2 + 4) * channelsFromFmt();
         if(mType == FmtMSADPCM) return ((mBlockAlign-2)/2 + 7) * channelsFromFmt();
         return frameSizeFromFmt();
     };
 
-    inline bool isBFormat() const noexcept { return IsBFormat(mChannels); }
+    [[nodiscard]] auto isBFormat() const noexcept -> bool { return IsBFormat(mChannels); }
 };
 
 #endif /* CORE_BUFFER_STORAGE_H */

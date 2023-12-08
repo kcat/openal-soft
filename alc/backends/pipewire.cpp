@@ -831,7 +831,7 @@ void DeviceNode::parseSampleRate(const spa_pod *value, bool force_update) noexce
         /* [0] is the default, [1] is the min, and [2] is the max. */
         TRACE("  sample rate: %d (range: %d -> %d)\n", srates[0], srates[1], srates[2]);
         if(!mSampleRate || force_update)
-            mSampleRate = static_cast<uint>(clampi(srates[0], MIN_OUTPUT_RATE, MAX_OUTPUT_RATE));
+            mSampleRate = static_cast<uint>(clampi(srates[0], MinOutputRate, MaxOutputRate));
         return;
     }
 
@@ -857,7 +857,7 @@ void DeviceNode::parseSampleRate(const spa_pod *value, bool force_update) noexce
          */
         for(const auto &rate : srates)
         {
-            if(rate >= MIN_OUTPUT_RATE && rate <= MAX_OUTPUT_RATE)
+            if(rate >= int{MinOutputRate} && rate <= int{MaxOutputRate})
             {
                 if(!mSampleRate || force_update)
                     mSampleRate = static_cast<uint>(rate);
@@ -878,7 +878,7 @@ void DeviceNode::parseSampleRate(const spa_pod *value, bool force_update) noexce
 
         TRACE("  sample rate: %d\n", srates[0]);
         if(!mSampleRate || force_update)
-            mSampleRate = static_cast<uint>(clampi(srates[0], MIN_OUTPUT_RATE, MAX_OUTPUT_RATE));
+            mSampleRate = static_cast<uint>(clampi(srates[0], MinOutputRate, MaxOutputRate));
         return;
     }
 

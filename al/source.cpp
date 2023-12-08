@@ -171,7 +171,7 @@ void UpdateSourceProps(const ALsource *source, Voice *voice, ALCcontext *context
         ret.LFReference = srcsend.LFReference;
         return ret;
     };
-    std::transform(source->Send.cbegin(), source->Send.cend(), props->Send, copy_send);
+    std::transform(source->Send.cbegin(), source->Send.cend(), props->Send.begin(), copy_send);
     if(!props->Send[0].Slot && context->mDefaultSlot)
         props->Send[0].Slot = context->mDefaultSlot->mSlot;
 
@@ -575,7 +575,7 @@ void SendVoiceChanges(ALCcontext *ctx, VoiceChange *tail)
     oldhead->mNext.store(tail, std::memory_order_release);
 
     const bool connected{device->Connected.load(std::memory_order_acquire)};
-    device->waitForMix();
+    std::ignore = device->waitForMix();
     if(!connected) UNLIKELY
     {
         if(ctx->mStopVoicesOnDisconnect.load(std::memory_order_acquire))
@@ -681,7 +681,7 @@ bool SetVoiceOffset(Voice *oldvoice, const VoicePos &vpos, ALsource *source, ALC
         return true;
 
     /* Otherwise, wait for any current mix to finish and check one last time. */
-    device->waitForMix();
+    std::ignore = device->waitForMix();
     if(newvoice->mPlayState.load(std::memory_order_acquire) != Voice::Pending)
         return true;
     /* The change-over failed because the old voice stopped before the new
@@ -1316,11 +1316,11 @@ constexpr ALuint DoubleValsByProp(ALenum prop)
 struct check_exception : std::exception {
 };
 struct check_size_exception final : check_exception {
-    const char *what() const noexcept override
+    [[nodiscard]] auto what() const noexcept -> const char* override
     { return "check_size_exception"; }
 };
 struct check_value_exception final : check_exception {
-    const char *what() const noexcept override
+    [[nodiscard]] auto what() const noexcept -> const char* override
     { return "check_value_exception"; }
 };
 
@@ -1580,7 +1580,7 @@ NOINLINE void SetProperty(ALsource *const Source, ALCcontext *const Context, con
                  * to ensure it isn't currently looping back or reaching the
                  * end.
                  */
-                device->waitForMix();
+                std::ignore = device->waitForMix();
             }
             return;
         }

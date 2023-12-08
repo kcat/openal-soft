@@ -36,7 +36,7 @@ BFormatDec::BFormatDec(const size_t inchans, const al::span<const ChannelDec> co
         auto &decoder = mChannelDec.emplace<std::vector<ChannelDecoderSingle>>(inchans);
         for(size_t j{0};j < decoder.size();++j)
         {
-            float *outcoeffs{decoder[j].mGains};
+            float *outcoeffs{decoder[j].mGains.data()};
             for(const ChannelDec &incoeffs : coeffs)
                 *(outcoeffs++) = incoeffs[j];
         }
@@ -50,11 +50,11 @@ BFormatDec::BFormatDec(const size_t inchans, const al::span<const ChannelDec> co
 
         for(size_t j{0};j < decoder.size();++j)
         {
-            float *outcoeffs{decoder[j].mGains[sHFBand]};
+            float *outcoeffs{decoder[j].mGains[sHFBand].data()};
             for(const ChannelDec &incoeffs : coeffs)
                 *(outcoeffs++) = incoeffs[j];
 
-            outcoeffs = decoder[j].mGains[sLFBand];
+            outcoeffs = decoder[j].mGains[sLFBand].data();
             for(const ChannelDec &incoeffs : coeffslf)
                 *(outcoeffs++) = incoeffs[j];
         }
@@ -76,8 +76,10 @@ void BFormatDec::process(const al::span<FloatBufferLine> OutBuffer,
         {
             chandec.mXOver.process({input->data(), SamplesToDo}, hfSamples.data(),
                 lfSamples.data());
-            MixSamples(hfSamples, OutBuffer, chandec.mGains[sHFBand], chandec.mGains[sHFBand],0,0);
-            MixSamples(lfSamples, OutBuffer, chandec.mGains[sLFBand], chandec.mGains[sLFBand],0,0);
+            MixSamples(hfSamples, OutBuffer, chandec.mGains[sHFBand].data(),
+                chandec.mGains[sHFBand].data(), 0, 0);
+            MixSamples(lfSamples, OutBuffer, chandec.mGains[sLFBand].data(),
+                chandec.mGains[sLFBand].data(), 0, 0);
             ++input;
         }
     };
@@ -86,8 +88,8 @@ void BFormatDec::process(const al::span<FloatBufferLine> OutBuffer,
         auto *input = InSamples;
         for(auto &chandec : decoder)
         {
-            MixSamples({input->data(), SamplesToDo}, OutBuffer, chandec.mGains, chandec.mGains,
-                0, 0);
+            MixSamples({input->data(), SamplesToDo}, OutBuffer, chandec.mGains.data(),
+                chandec.mGains.data(), 0, 0);
             ++input;
         }
     };

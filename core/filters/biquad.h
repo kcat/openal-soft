@@ -119,9 +119,9 @@ public:
     void dualProcess(BiquadFilterR &other, const al::span<const Real> src, Real *dst);
 
     /* Rather hacky. It's just here to support "manual" processing. */
-    std::pair<Real,Real> getComponents() const noexcept { return {mZ1, mZ2}; }
+    [[nodiscard]] auto getComponents() const noexcept -> std::pair<Real,Real> { return {mZ1, mZ2}; }
     void setComponents(Real z1, Real z2) noexcept { mZ1 = z1; mZ2 = z2; }
-    Real processOne(const Real in, Real &z1, Real &z2) const noexcept
+    [[nodiscard]] auto processOne(const Real in, Real &z1, Real &z2) const noexcept -> Real
     {
         const Real out{in*mB0 + z1};
         z1 = in*mB1 - out*mA1 + z2;

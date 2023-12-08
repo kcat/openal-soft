@@ -24,7 +24,9 @@
 
 #include <algorithm>
 #include <climits>
+#include <limits>
 #include <stdexcept>
+#include <stdint.h>
 
 #include "almalloc.h"
 
@@ -40,7 +42,7 @@ RingBufferPtr RingBuffer::Create(std::size_t sz, std::size_t elem_sz, int limit_
         power_of_two |= power_of_two>>4;
         power_of_two |= power_of_two>>8;
         power_of_two |= power_of_two>>16;
-        if constexpr(SIZE_MAX > UINT_MAX)
+        if constexpr(std::numeric_limits<size_t>::max() > std::numeric_limits<int32_t>::max())
             power_of_two |= power_of_two>>32;
     }
     ++power_of_two;

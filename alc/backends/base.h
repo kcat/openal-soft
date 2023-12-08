@@ -99,7 +99,7 @@ public:
     backend_exception(backend_error code, const char *msg, ...);
     ~backend_exception() override;
 
-    backend_error errorCode() const noexcept { return mErrorCode; }
+    [[nodiscard]] auto errorCode() const noexcept -> backend_error { return mErrorCode; }
 };
 
 } // namespace al

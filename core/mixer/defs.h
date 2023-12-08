@@ -94,7 +94,8 @@ void MixDirectHrtf_(const FloatBufferSpan LeftOut, const FloatBufferSpan RightOu
 
 /* Vectorized resampler helpers */
 template<size_t N>
-inline void InitPosArrays(uint frac, uint increment, uint (&frac_arr)[N], uint (&pos_arr)[N])
+inline void InitPosArrays(uint frac, uint increment, const al::span<uint,N> frac_arr,
+    const al::span<uint,N> pos_arr)
 {
     pos_arr[0] = 0;
     frac_arr[0] = frac;

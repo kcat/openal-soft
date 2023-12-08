@@ -218,8 +218,8 @@ struct ConvolutionState final : public EffectState {
         alignas(16) FloatBufferLine mBuffer{};
         float mHfScale{}, mLfScale{};
         BandSplitter mFilter{};
-        float Current[MAX_OUTPUT_CHANNELS]{};
-        float Target[MAX_OUTPUT_CHANNELS]{};
+        std::array<float,MaxOutputChannels> Current{};
+        std::array<float,MaxOutputChannels> Target{};
     };
     std::vector<ChannelData> mChans;
     al::vector<float,16> mComplexData;
@@ -246,8 +246,8 @@ void ConvolutionState::NormalMix(const al::span<FloatBufferLine> samplesOut,
     const size_t samplesToDo)
 {
     for(auto &chan : mChans)
-        MixSamples({chan.mBuffer.data(), samplesToDo}, samplesOut, chan.Current, chan.Target,
-            samplesToDo, 0);
+        MixSamples({chan.mBuffer.data(), samplesToDo}, samplesOut, chan.Current.data(),
+            chan.Target.data(), samplesToDo, 0);
 }
 
 void ConvolutionState::UpsampleMix(const al::span<FloatBufferLine> samplesOut,
@@ -257,7 +257,7 @@ void ConvolutionState::UpsampleMix(const al::span<FloatBufferLine> samplesOut,
     {
         const al::span<float> src{chan.mBuffer.data(), samplesToDo};
         chan.mFilter.processScale(src, chan.mHfScale, chan.mLfScale);
-        MixSamples(src, samplesOut, chan.Current, chan.Target, samplesToDo, 0);
+        MixSamples(src, samplesOut, chan.Current.data(), chan.Target.data(), samplesToDo, 0);
     }
 }
 

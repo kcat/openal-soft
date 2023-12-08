@@ -32,7 +32,7 @@ enum class DistanceModel : unsigned char;
 using uint = unsigned int;
 
 
-#define MAX_SENDS  6
+inline constexpr size_t MaxSendCount{6};
 
 
 enum class SpatializeMode : unsigned char {
@@ -72,8 +72,8 @@ struct DirectParams {
     } Hrtf;
 
     struct {
-        std::array<float,MAX_OUTPUT_CHANNELS> Current;
-        std::array<float,MAX_OUTPUT_CHANNELS> Target;
+        std::array<float,MaxOutputChannels> Current;
+        std::array<float,MaxOutputChannels> Target;
     } Gains;
 };
 
@@ -154,7 +154,8 @@ struct VoiceProps {
         float HFReference;
         float GainLF;
         float LFReference;
-    } Send[MAX_SENDS];
+    };
+    std::array<SendData,MaxSendCount> Send;
 };
 
 struct VoicePropsItem : public VoiceProps {
@@ -239,7 +240,7 @@ struct Voice {
         al::span<FloatBufferLine> Buffer;
     };
     TargetData mDirect;
-    std::array<TargetData,MAX_SENDS> mSend;
+    std::array<TargetData,MaxSendCount> mSend;
 
     /* The first MaxResamplerPadding/2 elements are the sample history from the
      * previous mix, with an additional MaxResamplerPadding/2 elements that are
@@ -254,7 +255,7 @@ struct Voice {
         BandSplitter mAmbiSplitter;
 
         DirectParams mDryParams;
-        std::array<SendParams,MAX_SENDS> mWetParams;
+        std::array<SendParams,MaxSendCount> mWetParams;
     };
     al::vector<ChannelData> mChans{2};
 

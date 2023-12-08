@@ -45,7 +45,7 @@ void Resample_<LerpTag,SSE2Tag>(const InterpState*, const float *RESTRICT src, u
     const __m128i fracMask4{_mm_set1_epi32(MixerFracMask)};
 
     alignas(16) uint pos_[4], frac_[4];
-    InitPosArrays(frac, increment, frac_, pos_);
+    InitPosArrays(frac, increment, al::span{frac_}, al::span{pos_});
     __m128i frac4{_mm_setr_epi32(static_cast<int>(frac_[0]), static_cast<int>(frac_[1]),
         static_cast<int>(frac_[2]), static_cast<int>(frac_[3]))};
     __m128i pos4{_mm_setr_epi32(static_cast<int>(pos_[0]), static_cast<int>(pos_[1]),

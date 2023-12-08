@@ -9,11 +9,11 @@
 #include <cassert>
 #include <climits>
 #include <cstdint>
+#include <cstdlib>
 #include <iterator>
 #include <memory>
 #include <new>
 #include <optional>
-#include <stdlib.h>
 #include <utility>
 #include <vector>
 
@@ -133,18 +133,18 @@ void Voice::InitMixer(std::optional<std::string> resampler)
     if(resampler)
     {
         struct ResamplerEntry {
-            const char name[16];
+            const char *name;
             const Resampler resampler;
         };
-        constexpr ResamplerEntry ResamplerList[]{
-            { "none", Resampler::Point },
-            { "point", Resampler::Point },
-            { "linear", Resampler::Linear },
-            { "cubic", Resampler::Cubic },
-            { "bsinc12", Resampler::BSinc12 },
-            { "fast_bsinc12", Resampler::FastBSinc12 },
-            { "bsinc24", Resampler::BSinc24 },
-            { "fast_bsinc24", Resampler::FastBSinc24 },
+        constexpr std::array ResamplerList{
+            ResamplerEntry{"none", Resampler::Point},
+            ResamplerEntry{"point", Resampler::Point},
+            ResamplerEntry{"linear", Resampler::Linear},
+            ResamplerEntry{"cubic", Resampler::Cubic},
+            ResamplerEntry{"bsinc12", Resampler::BSinc12},
+            ResamplerEntry{"fast_bsinc12", Resampler::FastBSinc12},
+            ResamplerEntry{"bsinc24", Resampler::BSinc24},
+            ResamplerEntry{"fast_bsinc24", Resampler::FastBSinc24},
         };
 
         const char *str{resampler->c_str()};
@@ -159,10 +159,10 @@ void Voice::InitMixer(std::optional<std::string> resampler)
             str = "cubic";
         }
 
-        auto iter = std::find_if(std::begin(ResamplerList), std::end(ResamplerList),
+        auto iter = std::find_if(ResamplerList.begin(), ResamplerList.end(),
             [str](const ResamplerEntry &entry) -> bool
             { return al::strcasecmp(str, entry.name) == 0; });
-        if(iter == std::end(ResamplerList))
+        if(iter == ResamplerList.end())
             ERR("Invalid resampler: %s\n", str);
         else
             ResamplerDefault = iter->resampler;
@@ -178,7 +178,7 @@ void Voice::InitMixer(std::optional<std::string> resampler)
 namespace {
 
 /* IMA ADPCM Stepsize table */
-constexpr int IMAStep_size[89] = {
+constexpr std::array<int,89> IMAStep_size{{
        7,    8,    9,   10,   11,   12,   13,   14,   16,   17,   19,
       21,   23,   25,   28,   31,   34,   37,   41,   45,   50,   55,
       60,   66,   73,   80,   88,   97,  107,  118,  130,  143,  157,
@@ -188,35 +188,35 @@ constexpr int IMAStep_size[89] = {
     4026, 4428, 4871, 5358, 5894, 6484, 7132, 7845, 8630, 9493,10442,
    11487,12635,13899,15289,16818,18500,20350,22358,24633,27086,29794,
    32767
-};
+}};
 
 /* IMA4 ADPCM Codeword decode table */
-constexpr int IMA4Codeword[16] = {
+constexpr std::array<int,16> IMA4Codeword{{
     1, 3, 5, 7, 9, 11, 13, 15,
    -1,-3,-5,-7,-9,-11,-13,-15,
-};
+}};
 
 /* IMA4 ADPCM Step index adjust decode table */
-constexpr int IMA4Index_adjust[16] = {
+constexpr std::array<int,16>IMA4Index_adjust{{
    -1,-1,-1,-1, 2, 4, 6, 8,
    -1,-1,-1,-1, 2, 4, 6, 8
-};
+}};
 
 /* MSADPCM Adaption table */
-constexpr int MSADPCMAdaption[16] = {
+constexpr std::array<int,16> MSADPCMAdaption{{
     230, 230, 230, 230, 307, 409, 512, 614,
     768, 614, 512, 409, 307, 230, 230, 230
-};
+}};
 
 /* MSADPCM Adaption Coefficient tables */
-constexpr int MSADPCMAdaptionCoeff[7][2] = {
-    { 256,    0 },
-    { 512, -256 },
-    {   0,    0 },
-    { 192,   64 },
-    { 240,    0 },
-    { 460, -208 },
-    { 392, -232 }
+constexpr std::array MSADPCMAdaptionCoeff{
+    std::array{256,    0},
+    std::array{512, -256},
+    std::array{  0,    0},
+    std::array{192,   64},
+    std::array{240,    0},
+    std::array{460, -208},
+    std::array{392, -232}
 };
 
 
@@ -307,7 +307,7 @@ inline void LoadSamples<FmtIMA4>(float *RESTRICT dstSamples, const std::byte *sr
 
         auto decode_sample = [&sample,&index](const uint nibble)
         {
-            sample += IMA4Codeword[nibble] * IMAStep_size[index] / 8;
+            sample += IMA4Codeword[nibble] * IMAStep_size[static_cast<uint>(index)] / 8;
             sample = clampi(sample, -32768, 32767);
 
             index += IMA4Index_adjust[nibble];
@@ -382,7 +382,7 @@ inline void LoadSamples<FmtMSADPCM>(float *RESTRICT dstSamples, const std::byte 
         int delta{int(input[2*srcChan + 0]) | (int(input[2*srcChan + 1]) << 8)};
         input += srcStep*2;
 
-        int sampleHistory[2]{};
+        std::array<int,2> sampleHistory{};
         sampleHistory[0] = int(input[2*srcChan + 0]) | (int(input[2*srcChan + 1])<<8);
         input += srcStep*2;
         sampleHistory[1] = int(input[2*srcChan + 0]) | (int(input[2*srcChan + 1])<<8);
@@ -421,7 +421,7 @@ inline void LoadSamples<FmtMSADPCM>(float *RESTRICT dstSamples, const std::byte 
             sampleHistory[1] = sampleHistory[0];
             sampleHistory[0] = pred;
 
-            delta = (MSADPCMAdaption[nibble] * delta) / 256;
+            delta = (MSADPCMAdaption[static_cast<uint>(nibble)] * delta) / 256;
             delta = maxi(16, delta);
 
             return pred;
@@ -630,8 +630,8 @@ void DoHrtfMix(const float *samples, const uint DstBufferSize, DirectParams &par
             parms.Hrtf.Target.Coeffs,
             parms.Hrtf.Target.Delay,
             0.0f, gain / static_cast<float>(fademix)};
-        MixHrtfBlendSamples(HrtfSamples, AccumSamples+OutPos, IrSize, &parms.Hrtf.Old, &hrtfparams,
-            fademix);
+        MixHrtfBlendSamples(HrtfSamples.data(), AccumSamples.data()+OutPos, IrSize,
+            &parms.Hrtf.Old, &hrtfparams, fademix);
 
         /* Update the old parameters with the result. */
         parms.Hrtf.Old = parms.Hrtf.Target;
@@ -658,7 +658,8 @@ void DoHrtfMix(const float *samples, const uint DstBufferSize, DirectParams &par
             parms.Hrtf.Target.Delay,
             parms.Hrtf.Old.Gain,
             (gain - parms.Hrtf.Old.Gain) / static_cast<float>(todo)};
-        MixHrtfSamples(HrtfSamples+fademix, AccumSamples+OutPos, IrSize, &hrtfparams, todo);
+        MixHrtfSamples(HrtfSamples.data()+fademix, AccumSamples.data()+OutPos, IrSize, &hrtfparams,
+            todo);
 
         /* Store the now-current gain for next time. */
         parms.Hrtf.Old.Gain = gain;
@@ -669,8 +670,8 @@ void DoNfcMix(const al::span<const float> samples, FloatBufferLine *OutBuffer, D
     const float *TargetGains, const uint Counter, const uint OutPos, DeviceBase *Device)
 {
     using FilterProc = void (NfcFilter::*)(const al::span<const float>, float*);
-    static constexpr FilterProc NfcProcess[MaxAmbiOrder+1]{
-        nullptr, &NfcFilter::process1, &NfcFilter::process2, &NfcFilter::process3};
+    static constexpr std::array<FilterProc,MaxAmbiOrder+1> NfcProcess{{
+        nullptr, &NfcFilter::process1, &NfcFilter::process2, &NfcFilter::process3}};
 
     float *CurrentGains{parms.Gains.Current.data()};
     MixSamples(samples, {OutBuffer, 1u}, CurrentGains, TargetGains, Counter, OutPos);
@@ -678,7 +679,7 @@ void DoNfcMix(const al::span<const float> samples, FloatBufferLine *OutBuffer, D
     ++CurrentGains;
     ++TargetGains;
 
-    const al::span<float> nfcsamples{Device->NfcSampleData, samples.size()};
+    const al::span<float> nfcsamples{Device->NfcSampleData.data(), samples.size()};
     size_t order{1};
     while(const size_t chancount{Device->NumChannelsPerOrder[order]})
     {
@@ -697,7 +698,7 @@ void DoNfcMix(const al::span<const float> samples, FloatBufferLine *OutBuffer, D
 void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds deviceTime,
     const uint SamplesToDo)
 {
-    static constexpr std::array<float,MAX_OUTPUT_CHANNELS> SilentTarget{};
+    static constexpr std::array<float,MaxOutputChannels> SilentTarget{};
 
     ASSUME(SamplesToDo > 0);
 

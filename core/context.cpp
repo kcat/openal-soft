@@ -142,7 +142,7 @@ void ContextBase::allocVoices(size_t addcount)
 
     if(auto *oldvoices = mVoices.exchange(newarray.release(), std::memory_order_acq_rel))
     {
-        mDevice->waitForMix();
+        std::ignore = mDevice->waitForMix();
         delete oldvoices;
     }
 }

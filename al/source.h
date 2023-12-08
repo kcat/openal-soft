@@ -37,7 +37,7 @@ enum class SourceStereo : bool {
     Enhanced = AL_SUPER_STEREO_SOFT
 };
 
-#define DEFAULT_SENDS  2
+inline constexpr size_t DefaultSendCount{2};
 
 inline constexpr ALuint InvalidVoiceIndex{std::numeric_limits<ALuint>::max()};
 
@@ -122,7 +122,7 @@ struct ALsource {
         float GainLF;
         float LFReference;
     };
-    std::array<SendData,MAX_SENDS> Send;
+    std::array<SendData,MaxSendCount> Send;
 
     /**
      * Last user-specified offset, and the offset type (bytes, samples, or
@@ -173,18 +173,18 @@ public:
 private:
     using Exception = EaxSourceException;
 
-    static constexpr auto eax_max_speakers = 9;
+    static constexpr auto eax_max_speakers{9u};
 
-    using EaxFxSlotIds = const GUID* [EAX_MAX_FXSLOTS];
+    using EaxFxSlotIds = std::array<const GUID*,EAX_MAX_FXSLOTS>;
 
-    static constexpr const EaxFxSlotIds eax4_fx_slot_ids = {
+    static constexpr const EaxFxSlotIds eax4_fx_slot_ids{
         &EAXPROPERTYID_EAX40_FXSlot0,
         &EAXPROPERTYID_EAX40_FXSlot1,
         &EAXPROPERTYID_EAX40_FXSlot2,
         &EAXPROPERTYID_EAX40_FXSlot3,
     };
 
-    static constexpr const EaxFxSlotIds eax5_fx_slot_ids = {
+    static constexpr const EaxFxSlotIds eax5_fx_slot_ids{
         &EAXPROPERTYID_EAX50_FXSlot0,
         &EAXPROPERTYID_EAX50_FXSlot1,
         &EAXPROPERTYID_EAX50_FXSlot2,
@@ -839,11 +839,10 @@ private:
         float path_ratio,
         float lf_ratio) noexcept;
 
-    EaxAlLowPassParam eax_create_direct_filter_param() const noexcept;
+    [[nodiscard]] auto eax_create_direct_filter_param() const noexcept -> EaxAlLowPassParam;
 
-    EaxAlLowPassParam eax_create_room_filter_param(
-        const ALeffectslot& fx_slot,
-        const EAXSOURCEALLSENDPROPERTIES& send) const noexcept;
+    [[nodiscard]] auto eax_create_room_filter_param(const ALeffectslot& fx_slot,
+        const EAXSOURCEALLSENDPROPERTIES& send) const noexcept -> EaxAlLowPassParam;
 
     void eax_update_direct_filter();
     void eax_update_room_filters();

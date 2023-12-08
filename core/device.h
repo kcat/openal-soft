@@ -34,12 +34,12 @@ struct HrtfStore;
 using uint = unsigned int;
 
 
-#define MIN_OUTPUT_RATE      8000
-#define MAX_OUTPUT_RATE      192000
-#define DEFAULT_OUTPUT_RATE  48000
+inline constexpr size_t MinOutputRate{8000};
+inline constexpr size_t MaxOutputRate{192000};
+inline constexpr size_t DefaultOutputRate{48000};
 
-#define DEFAULT_UPDATE_SIZE  960 /* 20ms */
-#define DEFAULT_NUM_UPDATES  3
+inline constexpr size_t DefaultUpdateSize{960}; /* 20ms */
+inline constexpr size_t DefaultNumUpdates{3};
 
 
 enum class DeviceType : uint8_t {
@@ -82,7 +82,7 @@ struct DistanceComp {
         float *Buffer{nullptr};
     };
 
-    std::array<ChanData,MAX_OUTPUT_CHANNELS> mChannels;
+    std::array<ChanData,MaxOutputChannels> mChannels;
     al::FlexArray<float,16> mSamples;
 
     DistanceComp(size_t count) : mSamples{count} { }
@@ -232,21 +232,21 @@ struct DeviceBase {
     alignas(16) std::array<MixerBufferLine,MixerChannelsMax> mSampleData;
     alignas(16) std::array<float,MixerLineSize+MaxResamplerPadding> mResampleData;
 
-    alignas(16) float FilteredData[BufferLineSize];
+    alignas(16) std::array<float,BufferLineSize> FilteredData;
     union {
-        alignas(16) float HrtfSourceData[BufferLineSize + HrtfHistoryLength];
-        alignas(16) float NfcSampleData[BufferLineSize];
+        alignas(16) std::array<float,BufferLineSize+HrtfHistoryLength> HrtfSourceData;
+        alignas(16) std::array<float,BufferLineSize> NfcSampleData;
     };
 
     /* Persistent storage for HRTF mixing. */
-    alignas(16) float2 HrtfAccumData[BufferLineSize + HrirLength];
+    alignas(16) std::array<float2,BufferLineSize+HrirLength> HrtfAccumData;
 
     /* Mixing buffer used by the Dry mix and Real output. */
     al::vector<FloatBufferLine, 16> MixBuffer;
 
     /* The "dry" path corresponds to the main output. */
     MixParams Dry;
-    uint NumChannelsPerOrder[MaxAmbiOrder+1]{};
+    std::array<uint,MaxAmbiOrder+1> NumChannelsPerOrder{};
 
     /* "Real" output, which will be written to the device buffer. May alias the
      * dry buffer.
@@ -295,9 +295,9 @@ struct DeviceBase {
     DeviceBase& operator=(const DeviceBase&) = delete;
     ~DeviceBase();
 
-    uint bytesFromFmt() const noexcept { return BytesFromDevFmt(FmtType); }
-    uint channelsFromFmt() const noexcept { return ChannelsFromDevFmt(FmtChans, mAmbiOrder); }
-    uint frameSizeFromFmt() const noexcept { return bytesFromFmt() * channelsFromFmt(); }
+    [[nodiscard]] auto bytesFromFmt() const noexcept -> uint { return BytesFromDevFmt(FmtType); }
+    [[nodiscard]] auto channelsFromFmt() const noexcept -> uint { return ChannelsFromDevFmt(FmtChans, mAmbiOrder); }
+    [[nodiscard]] auto frameSizeFromFmt() const noexcept -> uint { return bytesFromFmt() * channelsFromFmt(); }
 
     struct MixLock {
         std::atomic<uint> &mCount;
@@ -323,7 +323,7 @@ struct DeviceBase {
     }
 
     /** Waits for the mixer to not be mixing or updating the clock. */
-    uint waitForMix() const noexcept
+    [[nodiscard]] auto waitForMix() const noexcept -> uint
     {
         uint refcount;
         while((refcount=mMixCount.load(std::memory_order_acquire))&1) {
@@ -336,7 +336,7 @@ struct DeviceBase {
      * SamplesDone converted from the sample rate. Should only be called while
      * watching the MixCount.
      */
-    std::chrono::nanoseconds getClockTime() const noexcept
+    [[nodiscard]] auto getClockTime() const noexcept -> std::chrono::nanoseconds
     {
         using std::chrono::seconds;
         using std::chrono::nanoseconds;
@@ -369,7 +369,7 @@ struct DeviceBase {
      * Returns the index for the given channel name (e.g. FrontCenter), or
      * InvalidChannelIndex if it doesn't exist.
      */
-    uint8_t channelIdxByName(Channel chan) const noexcept
+    [[nodiscard]] auto channelIdxByName(Channel chan) const noexcept -> uint8_t
     { return RealOut.ChannelIndex[chan]; }
 
     DISABLE_ALLOC()

@@ -47,8 +47,8 @@ struct DedicatedState final : public EffectState {
      * gains for all possible output channels and not just the main ambisonic
      * buffer.
      */
-    float mCurrentGains[MAX_OUTPUT_CHANNELS];
-    float mTargetGains[MAX_OUTPUT_CHANNELS];
+    std::array<float,MaxOutputChannels> mCurrentGains;
+    std::array<float,MaxOutputChannels> mTargetGains;
 
 
     void deviceUpdate(const DeviceBase *device, const BufferStorage *buffer) override;
@@ -104,8 +104,8 @@ void DedicatedState::update(const ContextBase*, const EffectSlot *slot,
 
 void DedicatedState::process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn, const al::span<FloatBufferLine> samplesOut)
 {
-    MixSamples({samplesIn[0].data(), samplesToDo}, samplesOut, mCurrentGains, mTargetGains,
-        samplesToDo, 0);
+    MixSamples({samplesIn[0].data(), samplesToDo}, samplesOut, mCurrentGains.data(),
+        mTargetGains.data(), samplesToDo, 0);
 }
 
 

@@ -149,7 +149,7 @@ void Resample_<LerpTag,NEONTag>(const InterpState*, const float *RESTRICT src, u
     alignas(16) uint pos_[4], frac_[4];
     int32x4_t pos4, frac4;
 
-    InitPosArrays(frac, increment, frac_, pos_);
+    InitPosArrays(frac, increment, al::span{frac_}, al::span{pos_});
     frac4 = vld1q_s32(reinterpret_cast<int*>(frac_));
     pos4 = vld1q_s32(reinterpret_cast<int*>(pos_));
 

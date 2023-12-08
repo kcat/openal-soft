@@ -25,12 +25,12 @@ class BFormatDec {
     static constexpr size_t sNumBands{2};
 
     struct ChannelDecoderSingle {
-        float mGains[MAX_OUTPUT_CHANNELS];
+        std::array<float,MaxOutputChannels> mGains;
     };
 
     struct ChannelDecoderDual {
         BandSplitter mXOver;
-        float mGains[sNumBands][MAX_OUTPUT_CHANNELS];
+        std::array<std::array<float,MaxOutputChannels>,sNumBands> mGains;
     };
 
     alignas(16) std::array<FloatBufferLine,2> mSamples;
@@ -44,7 +44,7 @@ public:
         const al::span<const ChannelDec> coeffslf, const float xover_f0norm,
         std::unique_ptr<FrontStablizer> stablizer);
 
-    bool hasStablizer() const noexcept { return mStablizer != nullptr; }
+    [[nodiscard]] auto hasStablizer() const noexcept -> bool { return mStablizer != nullptr; }
 
     /* Decodes the ambisonic input to the given output channels. */
     void process(const al::span<FloatBufferLine> OutBuffer, const FloatBufferLine *InSamples,

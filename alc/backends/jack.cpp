@@ -307,7 +307,7 @@ struct JackPlayback final : public BackendBase {
     std::string mPortPattern;
 
     jack_client_t *mClient{nullptr};
-    std::array<jack_port_t*,MAX_OUTPUT_CHANNELS> mPort{};
+    std::array<jack_port_t*,MaxOutputChannels> mPort{};
 
     std::mutex mMutex;
 
@@ -339,7 +339,7 @@ JackPlayback::~JackPlayback()
 
 int JackPlayback::processRt(jack_nframes_t numframes) noexcept
 {
-    std::array<jack_default_audio_sample_t*,MAX_OUTPUT_CHANNELS> out;
+    std::array<jack_default_audio_sample_t*,MaxOutputChannels> out;
     size_t numchans{0};
     for(auto port : mPort)
     {
@@ -363,7 +363,7 @@ int JackPlayback::processRt(jack_nframes_t numframes) noexcept
 
 int JackPlayback::process(jack_nframes_t numframes) noexcept
 {
-    std::array<jack_default_audio_sample_t*,MAX_OUTPUT_CHANNELS> out;
+    std::array<jack_default_audio_sample_t*,MaxOutputChannels> out;
     size_t numchans{0};
     for(auto port : mPort)
     {

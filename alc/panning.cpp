@@ -249,7 +249,7 @@ void InitNearFieldCtrl(ALCdevice *device, float ctrl_dist, uint order, bool is3d
 }
 
 void InitDistanceComp(ALCdevice *device, const al::span<const Channel> channels,
-    const al::span<const float,MAX_OUTPUT_CHANNELS> dists)
+    const al::span<const float,MaxOutputChannels> dists)
 {
     const float maxdist{std::accumulate(std::begin(dists), std::end(dists), 0.0f, maxf)};
 
@@ -329,7 +329,7 @@ constexpr auto GetAmbiLayout(DevAmbiLayout layouttype) noexcept
 
 
 DecoderView MakeDecoderView(ALCdevice *device, const AmbDecConf *conf,
-    DecoderConfig<DualBand, MAX_OUTPUT_CHANNELS> &decoder)
+    DecoderConfig<DualBand,MaxOutputChannels> &decoder)
 {
     DecoderView ret{};
 
@@ -969,9 +969,9 @@ void aluInitRenderer(ALCdevice *device, int hrtf_id, std::optional<StereoEncodin
             break;
         }
 
-        std::unique_ptr<DecoderConfig<DualBand,MAX_OUTPUT_CHANNELS>> decoder_store;
+        std::unique_ptr<DecoderConfig<DualBand,MaxOutputChannels>> decoder_store;
         DecoderView decoder{};
-        float speakerdists[MAX_OUTPUT_CHANNELS]{};
+        std::array<float,MaxOutputChannels> speakerdists{};
         auto load_config = [device,&decoder_store,&decoder,&speakerdists](const char *config)
         {
             AmbDecConf conf{};
@@ -981,10 +981,10 @@ void aluInitRenderer(ALCdevice *device, int hrtf_id, std::optional<StereoEncodin
                 ERR("  %s\n", err->c_str());
                 return false;
             }
-            else if(conf.NumSpeakers > MAX_OUTPUT_CHANNELS)
+            else if(conf.NumSpeakers > MaxOutputChannels)
             {
-                ERR("Unsupported decoder speaker count %zu (max %d)\n", conf.NumSpeakers,
-                    MAX_OUTPUT_CHANNELS);
+                ERR("Unsupported decoder speaker count %zu (max %zu)\n", conf.NumSpeakers,
+                    MaxOutputChannels);
                 return false;
             }
             else if(conf.ChanMask > Ambi3OrderMask)
@@ -998,7 +998,7 @@ void aluInitRenderer(ALCdevice *device, int hrtf_id, std::optional<StereoEncodin
                 conf.Description.c_str());
             device->mXOverFreq = clampf(conf.XOverFreq, 100.0f, 1000.0f);
 
-            decoder_store = std::make_unique<DecoderConfig<DualBand,MAX_OUTPUT_CHANNELS>>();
+            decoder_store = std::make_unique<DecoderConfig<DualBand,MaxOutputChannels>>();
             decoder = MakeDecoderView(device, &conf, *decoder_store);
             for(size_t i{0};i < decoder.mChannels.size();++i)
                 speakerdists[i] = conf.Speakers[i].Distance;

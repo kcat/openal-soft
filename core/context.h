@@ -117,12 +117,12 @@ struct ContextBase {
     std::atomic<size_t> mActiveVoiceCount{};
 
     void allocVoices(size_t addcount);
-    al::span<Voice*> getVoicesSpan() const noexcept
+    [[nodiscard]] auto getVoicesSpan() const noexcept -> al::span<Voice*>
     {
         return {mVoices.load(std::memory_order_relaxed)->data(),
             mActiveVoiceCount.load(std::memory_order_relaxed)};
     }
-    al::span<Voice*> getVoicesSpanAcquired() const noexcept
+    [[nodiscard]] auto getVoicesSpanAcquired() const noexcept -> al::span<Voice*>
     {
         return {mVoices.load(std::memory_order_acquire)->data(),
             mActiveVoiceCount.load(std::memory_order_acquire)};

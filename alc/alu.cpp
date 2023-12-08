@@ -282,7 +282,7 @@ void DeviceBase::ProcessHrtf(const size_t SamplesToDo)
     const size_t lidx{RealOut.ChannelIndex[FrontLeft]};
     const size_t ridx{RealOut.ChannelIndex[FrontRight]};
 
-    MixDirectHrtf(RealOut.Buffer[lidx], RealOut.Buffer[ridx], Dry.Buffer, HrtfAccumData,
+    MixDirectHrtf(RealOut.Buffer[lidx], RealOut.Buffer[ridx], Dry.Buffer, HrtfAccumData.data(),
         mHrtfState->mTemp.data(), mHrtfState->mChannels.data(), mHrtfState->mIrSize, SamplesToDo);
 }
 
@@ -776,8 +776,8 @@ struct GainTriplet { float Base, HF, LF; };
 
 void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, const float zpos,
     const float Distance, const float Spread, const GainTriplet &DryGain,
-    const al::span<const GainTriplet,MAX_SENDS> WetGain,
-    const al::span<EffectSlot*,MAX_SENDS> SendSlots, const VoiceProps *props,
+    const al::span<const GainTriplet,MaxSendCount> WetGain,
+    const al::span<EffectSlot*,MaxSendCount> SendSlots, const VoiceProps *props,
     const ContextParams &Context, DeviceBase *Device)
 {
     static constexpr ChanPosMap MonoMap[1]{
@@ -1397,7 +1397,7 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
 void CalcNonAttnSourceParams(Voice *voice, const VoiceProps *props, const ContextBase *context)
 {
     DeviceBase *Device{context->mDevice};
-    EffectSlot *SendSlots[MAX_SENDS];
+    std::array<EffectSlot*,MaxSendCount> SendSlots;
 
     voice->mDirect.Buffer = Device->Dry.Buffer;
     for(uint i{0};i < Device->NumAuxSends;i++)
@@ -1427,7 +1427,8 @@ void CalcNonAttnSourceParams(Voice *voice, const VoiceProps *props, const Contex
         context->mParams.Gain, GainMixMax);
     DryGain.HF = props->Direct.GainHF;
     DryGain.LF = props->Direct.GainLF;
-    GainTriplet WetGain[MAX_SENDS];
+
+    std::array<GainTriplet,MaxSendCount> WetGain;
     for(uint i{0};i < Device->NumAuxSends;i++)
     {
         WetGain[i].Base = minf(clampf(props->Gain, props->MinGain, props->MaxGain) *
@@ -1447,9 +1448,9 @@ void CalcAttnSourceParams(Voice *voice, const VoiceProps *props, const ContextBa
 
     /* Set mixing buffers and get send parameters. */
     voice->mDirect.Buffer = Device->Dry.Buffer;
-    std::array<EffectSlot*,MAX_SENDS> SendSlots{};
-    std::array<float,MAX_SENDS> RoomRolloff{};
-    std::bitset<MAX_SENDS> UseDryAttnForRoom{0};
+    std::array<EffectSlot*,MaxSendCount> SendSlots{};
+    std::array<float,MaxSendCount> RoomRolloff{};
+    std::bitset<MaxSendCount> UseDryAttnForRoom{0};
     for(uint i{0};i < NumSends;i++)
     {
         SendSlots[i] = props->Send[i].Slot;
@@ -1502,7 +1503,7 @@ void CalcAttnSourceParams(Voice *voice, const VoiceProps *props, const ContextBa
     /* Calculate distance attenuation */
     float ClampedDist{Distance};
     float DryGainBase{props->Gain};
-    std::array<float,MAX_SENDS> WetGainBase{};
+    std::array<float,MaxSendCount> WetGainBase{};
     WetGainBase.fill(props->Gain);
 
     float DryAttnBase{1.0f};
@@ -1605,7 +1606,7 @@ void CalcAttnSourceParams(Voice *voice, const VoiceProps *props, const ContextBa
     DryGain.HF = ConeHF * props->Direct.GainHF;
     DryGain.LF = props->Direct.GainLF;
 
-    std::array<GainTriplet,MAX_SENDS> WetGain{};
+    std::array<GainTriplet,MaxSendCount> WetGain{};
     for(uint i{0};i < NumSends;i++)
     {
         WetGainBase[i] = clampf(WetGainBase[i]*WetCone, props->MinGain, props->MaxGain) *

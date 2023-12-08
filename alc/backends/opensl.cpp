@@ -439,7 +439,7 @@ bool OpenSLPlayback::reset()
         JCALL(env,ReleaseStringUTFChars)(srateStr, strchars);
 
         if(!sampleRate) sampleRate = device->Frequency;
-        else sampleRate = maxu(sampleRate, MIN_OUTPUT_RATE);
+        else sampleRate = maxu(sampleRate, MinOutputRate);
     }
 #endif
 

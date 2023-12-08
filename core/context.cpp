@@ -86,10 +86,11 @@ ContextBase::~ContextBase()
 
 void ContextBase::allocVoiceChanges()
 {
+    static constexpr size_t clustersize{std::tuple_size_v<VoiceChangeCluster::element_type>};
+
     VoiceChangeCluster clusterptr{std::make_unique<VoiceChangeCluster::element_type>()};
     const auto cluster = al::span{*clusterptr};
 
-    const size_t clustersize{cluster.size()};
     for(size_t i{1};i < clustersize;++i)
         cluster[i-1].mNext.store(std::addressof(cluster[i]), std::memory_order_relaxed);
     cluster[clustersize-1].mNext.store(mVoiceChangeTail, std::memory_order_relaxed);
@@ -100,12 +101,12 @@ void ContextBase::allocVoiceChanges()
 
 void ContextBase::allocVoiceProps()
 {
-    auto clusterptr = std::make_unique<VoicePropsCluster::element_type>();
-    const size_t clustersize{clusterptr->size()};
+    static constexpr size_t clustersize{std::tuple_size_v<VoicePropsCluster::element_type>};
 
     TRACE("Increasing allocated voice properties to %zu\n",
         (mVoicePropClusters.size()+1) * clustersize);
 
+    auto clusterptr = std::make_unique<VoicePropsCluster::element_type>();
     auto cluster = al::span{*clusterptr};
     for(size_t i{1};i < clustersize;++i)
         cluster[i-1].next.store(std::addressof(cluster[i]), std::memory_order_relaxed);
@@ -120,6 +121,10 @@ void ContextBase::allocVoiceProps()
 
 void ContextBase::allocVoices(size_t addcount)
 {
+    static constexpr size_t clustersize{std::tuple_size_v<VoiceCluster::element_type>};
+    /* Convert element count to cluster count. */
+    addcount = (addcount+(clustersize-1)) / clustersize;
+
     if(!addcount)
     {
         if(!mVoiceClusters.empty())
@@ -127,19 +132,16 @@ void ContextBase::allocVoices(size_t addcount)
         ++addcount;
     }
 
+    if(addcount >= std::numeric_limits<int>::max()/clustersize - mVoiceClusters.size())
+        throw std::runtime_error{"Allocating too many voices"};
+    const size_t totalcount{(mVoiceClusters.size()+addcount) * clustersize};
+    TRACE("Increasing allocated voices to %zu\n", totalcount);
+
     while(addcount)
     {
-        auto voicesptr = std::make_unique<VoiceCluster::element_type>();
-        const size_t clustersize{voicesptr->size()};
-        if(1u >= std::numeric_limits<int>::max()/clustersize - mVoiceClusters.size())
-            throw std::runtime_error{"Allocating too many voices"};
-
-        mVoiceClusters.emplace_back(std::move(voicesptr));
-        addcount -= std::min(addcount, clustersize);;
+        mVoiceClusters.emplace_back(std::make_unique<VoiceCluster::element_type>());
+        --addcount;
     }
-
-    const size_t totalcount{mVoiceClusters.size() * mVoiceClusters.front()->size()};
-    TRACE("Increasing allocated voices to %zu\n", totalcount);
 
     auto newarray = VoiceArray::Create(totalcount);
     auto voice_iter = newarray->begin();

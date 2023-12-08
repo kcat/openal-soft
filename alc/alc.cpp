@@ -1628,9 +1628,10 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
         std::unique_lock<std::mutex> slotlock{context->mEffectSlotLock};
 
         /* Clear out unused effect slot clusters. */
-        auto slot_cluster_not_in_use = [](ContextBase::EffectSlotCluster &cluster)
+        auto slot_cluster_not_in_use = [](ContextBase::EffectSlotCluster &clusterptr)
         {
-            for(size_t i{0};i < ContextBase::EffectSlotClusterSize;++i)
+            const auto cluster = al::span{*clusterptr};
+            for(size_t i{0};i < cluster.size();++i)
             {
                 if(cluster[i].InUse)
                     return false;
@@ -1644,13 +1645,14 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
         /* Free all wet buffers. Any in use will be reallocated with an updated
          * configuration in aluInitEffectPanning.
          */
-        for(auto&& slots : context->mEffectSlotClusters)
+        for(auto& clusterptr : context->mEffectSlotClusters)
         {
-            for(size_t i{0};i < ContextBase::EffectSlotClusterSize;++i)
+            const auto cluster = al::span{*clusterptr};
+            for(size_t i{0};i < cluster.size();++i)
             {
-                slots[i].mWetBuffer.clear();
-                slots[i].mWetBuffer.shrink_to_fit();
-                slots[i].Wet.Buffer = {};
+                cluster[i].mWetBuffer.clear();
+                cluster[i].mWetBuffer.shrink_to_fit();
+                cluster[i].Wet.Buffer = {};
             }
         }
 

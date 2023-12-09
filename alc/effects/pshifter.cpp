@@ -74,12 +74,6 @@ struct Windower {
 const Windower gWindow{};
 
 
-struct PFFFTSetupDeleter {
-    void operator()(PFFFT_Setup *ptr) { pffft_destroy_setup(ptr); }
-};
-using PFFFTSetupPtr = std::unique_ptr<PFFFT_Setup,PFFFTSetupDeleter>;
-
-
 struct FrequencyBin {
     float Magnitude;
     float FreqBin;
@@ -99,7 +93,7 @@ struct PshifterState final : public EffectState {
     std::array<float,StftHalfSize+1> mSumPhase;
     std::array<float,StftSize> mOutputAccum;
 
-    PFFFTSetupPtr mFft;
+    PFFFTSetup mFft;
     alignas(16) std::array<float,StftSize> mFftBuffer;
     alignas(16) std::array<float,StftSize> mFftWorkBuffer;
 
@@ -142,7 +136,7 @@ void PshifterState::deviceUpdate(const DeviceBase*, const BufferStorage*)
     std::fill(std::begin(mTargetGains),  std::end(mTargetGains),  0.0f);
 
     if(!mFft)
-        mFft = PFFFTSetupPtr{pffft_new_setup(StftSize, PFFFT_REAL)};
+        mFft = PFFFTSetup{StftSize, PFFFT_REAL};
 }
 
 void PshifterState::update(const ContextBase*, const EffectSlot *slot,
@@ -197,8 +191,8 @@ void PshifterState::process(const size_t samplesToDo,
             mFftBuffer[k] = mFIFO[src] * gWindow.mData[k];
         for(size_t src{0u}, k{StftSize-mPos};src < mPos;++src,++k)
             mFftBuffer[k] = mFIFO[src] * gWindow.mData[k];
-        pffft_transform_ordered(mFft.get(), mFftBuffer.data(), mFftBuffer.data(),
-            mFftWorkBuffer.data(), PFFFT_FORWARD);
+        mFft.transform_ordered(mFftBuffer.data(), mFftBuffer.data(), mFftWorkBuffer.data(),
+            PFFFT_FORWARD);
 
         /* Analyze the obtained data. Since the real FFT is symmetric, only
          * StftHalfSize+1 samples are needed.
@@ -296,8 +290,8 @@ void PshifterState::process(const size_t samplesToDo,
         /* Apply an inverse FFT to get the time-domain signal, and accumulate
          * for the output with windowing.
          */
-        pffft_transform_ordered(mFft.get(), mFftBuffer.data(), mFftBuffer.data(),
-            mFftWorkBuffer.data(), PFFFT_BACKWARD);
+        mFft.transform_ordered(mFftBuffer.data(), mFftBuffer.data(), mFftWorkBuffer.data(),
+            PFFFT_BACKWARD);
 
         static constexpr float scale{3.0f / OversampleFactor / StftSize};
         for(size_t dst{mPos}, k{0u};dst < StftSize;++dst,++k)

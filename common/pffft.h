@@ -83,23 +83,27 @@
 #include <stdint.h>
 
 #ifdef __cplusplus
+#include <cstddef>
+#include <utility>
+
 extern "C" {
 #endif
 
 /* opaque struct holding internal stuff (precomputed twiddle factors) this
  * struct can be shared by many threads as it contains only read-only data.
  */
-typedef struct PFFFT_Setup PFFFT_Setup;
-
-#ifndef PFFFT_COMMON_ENUMS
-#define PFFFT_COMMON_ENUMS
+struct PFFFT_Setup;
 
 /* direction of the transform */
-typedef enum { PFFFT_FORWARD, PFFFT_BACKWARD } pffft_direction_t;
+enum pffft_direction_t { PFFFT_FORWARD, PFFFT_BACKWARD };
 
 /* type of transform */
-typedef enum { PFFFT_REAL, PFFFT_COMPLEX } pffft_transform_t;
+enum pffft_transform_t { PFFFT_REAL, PFFFT_COMPLEX };
 
+#ifndef __cplusplus
+typedef struct PFFFT_Setup PFFFT_Setup;
+typedef enum pffft_direction_t pffft_direction_t;
+typedef enum pffft_transform_t pffft_transform_t;
 #endif
 
 /**
@@ -187,6 +191,47 @@ int pffft_simd_size();
 
 #ifdef __cplusplus
 }
+
+struct PFFFTSetup {
+    PFFFT_Setup *mSetup{};
+
+    PFFFTSetup() = default;
+    PFFFTSetup(const PFFFTSetup&) = delete;
+    PFFFTSetup(PFFFTSetup&& rhs) : mSetup{rhs.mSetup} { rhs.mSetup = nullptr; }
+    explicit PFFFTSetup(std::nullptr_t) { }
+    explicit PFFFTSetup(unsigned int n, pffft_transform_t transform)
+        : mSetup{pffft_new_setup(n, transform)}
+    { }
+    ~PFFFTSetup() { if(mSetup) pffft_destroy_setup(mSetup); }
+
+    PFFFTSetup& operator=(const PFFFTSetup&) = delete;
+    PFFFTSetup& operator=(PFFFTSetup&& rhs)
+    {
+        if(mSetup)
+            pffft_destroy_setup(mSetup);
+        mSetup = std::exchange(rhs.mSetup, nullptr);
+        return *this;
+    }
+
+    void transform(const float *input, float *output, float *work, pffft_direction_t direction) const
+    { pffft_transform(mSetup, input, output, work, direction); }
+
+    void transform_ordered(const float *input, float *output, float *work,
+        pffft_direction_t direction) const
+    { pffft_transform_ordered(mSetup, input, output, work, direction); }
+
+    void zreorder(const float *input, float *output, pffft_direction_t direction) const
+    { pffft_zreorder(mSetup, input, output, direction); }
+
+    void zconvolve_scale_accumulate(const float *dft_a, const float *dft_b, float *dft_ab,
+        float scaling) const
+    { pffft_zconvolve_scale_accumulate(mSetup, dft_a, dft_b, dft_ab, scaling); }
+
+    void zconvolve_accumulate(const float *dft_a, const float *dft_b, float *dft_ab) const
+    { pffft_zconvolve_accumulate(mSetup, dft_a, dft_b, dft_ab); }
+
+    [[nodiscard]] operator bool() const noexcept { return mSetup != nullptr; }
+};
 #endif
 
 #endif // PFFFT_H

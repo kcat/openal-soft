@@ -1413,13 +1413,13 @@ void pffft_aligned_free(void *p) { al_free(p); }
 int pffft_simd_size() { return SIMD_SZ; }
 
 struct PFFFT_Setup {
-    uint N;
+    alignas(MALLOC_V4SF_ALIGNMENT) uint N;
     uint Ncvec; // nb of complex simd vectors (N/4 if PFFFT_COMPLEX, N/8 if PFFFT_REAL)
     std::array<uint,15> ifac;
     pffft_transform_t transform;
 
     float *twiddle; // N/4 elements
-    alignas(MALLOC_V4SF_ALIGNMENT) v4sf e[1]; // N/4*3 elements
+    al::span<v4sf> e; // N/4*3 elements
 };
 
 PFFFT_Setup *pffft_new_setup(unsigned int N, pffft_transform_t transform)
@@ -1436,8 +1436,7 @@ PFFFT_Setup *pffft_new_setup(unsigned int N, pffft_transform_t transform)
         assert((N%(SIMD_SZ*SIMD_SZ)) == 0);
 
     const uint Ncvec = (transform == PFFFT_REAL ? N/2 : N)/SIMD_SZ;
-    const size_t storelen{std::max(sizeof(PFFFT_Setup),
-        offsetof(PFFFT_Setup, e[0]) + (2u*Ncvec * sizeof(v4sf)))};
+    const size_t storelen{sizeof(PFFFT_Setup) + (2u*Ncvec * sizeof(v4sf))};
 
     void *store{al_calloc(MALLOC_V4SF_ALIGNMENT, storelen)};
     if(!store) return nullptr;
@@ -1447,6 +1446,7 @@ PFFFT_Setup *pffft_new_setup(unsigned int N, pffft_transform_t transform)
     s->transform = transform;
     /* nb of complex simd vectors */
     s->Ncvec = Ncvec;
+    s->e = {reinterpret_cast<v4sf*>(reinterpret_cast<char*>(s+1)), 2u*Ncvec};
     s->twiddle = reinterpret_cast<float*>(&s->e[2u*Ncvec*(SIMD_SZ-1)/SIMD_SZ]);
 
     if constexpr(SIMD_SZ > 1)
@@ -1463,7 +1463,7 @@ PFFFT_Setup *pffft_new_setup(unsigned int N, pffft_transform_t transform)
                 e[((i*3 + m)*2 + 1)*SIMD_SZ + j] = static_cast<float>(std::sin(A));
             }
         }
-        std::memcpy(s->e, e.data(), e.size()*sizeof(float));
+        std::memcpy(s->e.data(), e.data(), e.size()*sizeof(float));
     }
     if(transform == PFFFT_REAL)
         rffti1_ps(N/SIMD_SZ, s->twiddle, s->ifac);
@@ -1825,7 +1825,7 @@ void pffft_transform_internal(const PFFFT_Setup *setup, const v4sf *vinput, v4sf
         if(setup->transform == PFFFT_REAL)
         {
             ib = (rfftf1_ps(Ncvec*2, vinput, buff[ib], buff[!ib], setup->twiddle, setup->ifac) == buff[1]);
-            pffft_real_finalize(Ncvec, buff[ib], buff[!ib], setup->e);
+            pffft_real_finalize(Ncvec, buff[ib], buff[!ib], setup->e.data());
         }
         else
         {
@@ -1834,7 +1834,7 @@ void pffft_transform_internal(const PFFFT_Setup *setup, const v4sf *vinput, v4sf
                 uninterleave2(vinput[k*2], vinput[k*2+1], tmp[k*2], tmp[k*2+1]);
 
             ib = (cfftf1_ps(Ncvec, buff[ib], buff[!ib], buff[ib], setup->twiddle, setup->ifac, -1.0f) == buff[1]);
-            pffft_cplx_finalize(Ncvec, buff[ib], buff[!ib], setup->e);
+            pffft_cplx_finalize(Ncvec, buff[ib], buff[!ib], setup->e.data());
         }
         if(ordered)
             pffft_zreorder(setup, reinterpret_cast<float*>(buff[!ib]),
@@ -1856,12 +1856,12 @@ void pffft_transform_internal(const PFFFT_Setup *setup, const v4sf *vinput, v4sf
         }
         if(setup->transform == PFFFT_REAL)
         {
-            pffft_real_preprocess(Ncvec, vinput, buff[ib], setup->e);
+            pffft_real_preprocess(Ncvec, vinput, buff[ib], setup->e.data());
             ib = (rfftb1_ps(Ncvec*2, buff[ib], buff[0], buff[1], setup->twiddle, setup->ifac) == buff[1]);
         }
         else
         {
-            pffft_cplx_preprocess(Ncvec, vinput, buff[ib], setup->e);
+            pffft_cplx_preprocess(Ncvec, vinput, buff[ib], setup->e.data());
             ib = (cfftf1_ps(Ncvec, buff[ib], buff[0], buff[1],  setup->twiddle, setup->ifac, +1.0f) == buff[1]);
             for(size_t k{0};k < Ncvec;++k)
                 interleave2(buff[ib][k*2], buff[ib][k*2+1], buff[ib][k*2], buff[ib][k*2+1]);

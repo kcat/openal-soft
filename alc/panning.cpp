@@ -1131,9 +1131,9 @@ void aluInitRenderer(ALCdevice *device, int hrtf_id, std::optional<StereoEncodin
         {
             if(*cflevopt > 0 && *cflevopt <= 6)
             {
-                device->Bs2b = std::make_unique<bs2b>();
-                bs2b_set_params(device->Bs2b.get(), *cflevopt,
-                    static_cast<int>(device->Frequency));
+                auto bs2b = std::make_unique<Bs2b::bs2b>();
+                bs2b->set_params(*cflevopt, static_cast<int>(device->Frequency));
+                device->Bs2b = std::move(bs2b);
                 TRACE("BS2B enabled\n");
                 InitPanning(device);
                 device->PostProcess = &ALCdevice::ProcessBs2b;

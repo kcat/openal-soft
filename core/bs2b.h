@@ -24,66 +24,65 @@
 #ifndef CORE_BS2B_H
 #define CORE_BS2B_H
 
-#include "almalloc.h"
+#include <array>
 
-/* Number of crossfeed levels */
-#define BS2B_CLEVELS           3
+namespace Bs2b {
 
-/* Normal crossfeed levels */
-#define BS2B_HIGH_CLEVEL       3
-#define BS2B_MIDDLE_CLEVEL     2
-#define BS2B_LOW_CLEVEL        1
+enum {
+    /* Normal crossfeed levels */
+    LowCLevel    = 1,
+    MiddleCLevel = 2,
+    HighCLevel   = 3,
 
-/* Easy crossfeed levels */
-#define BS2B_HIGH_ECLEVEL      BS2B_HIGH_CLEVEL    + BS2B_CLEVELS
-#define BS2B_MIDDLE_ECLEVEL    BS2B_MIDDLE_CLEVEL  + BS2B_CLEVELS
-#define BS2B_LOW_ECLEVEL       BS2B_LOW_CLEVEL     + BS2B_CLEVELS
+    /* Easy crossfeed levels */
+    LowECLevel    = 4,
+    MiddleECLevel = 5,
+    HighECLevel   = 6,
 
-/* Default crossfeed levels */
-#define BS2B_DEFAULT_CLEVEL    BS2B_HIGH_ECLEVEL
-/* Default sample rate (Hz) */
-#define BS2B_DEFAULT_SRATE     44100
+    DefaultCLevel = HighECLevel
+};
 
 struct bs2b {
-    int level;  /* Crossfeed level */
-    int srate;   /* Sample rate (Hz) */
+    int level{}; /* Crossfeed level */
+    int srate{}; /* Sample rate (Hz) */
 
     /* Lowpass IIR filter coefficients */
-    float a0_lo;
-    float b1_lo;
+    float a0_lo{};
+    float b1_lo{};
 
     /* Highboost IIR filter coefficients */
-    float a0_hi;
-    float a1_hi;
-    float b1_hi;
+    float a0_hi{};
+    float a1_hi{};
+    float b1_hi{};
 
     /* Buffer of filter history
      * [0] - first channel, [1] - second channel
      */
     struct t_last_sample {
-        float lo;
-        float hi;
-    } history[2];
+        float lo{};
+        float hi{};
+    };
+    std::array<t_last_sample,2> history{};
 
-    DEF_NEWDEL(bs2b)
+    /* Clear buffers and set new coefficients with new crossfeed level and
+     * sample rate values.
+     * level - crossfeed level of *Level enum values.
+     * srate - sample rate by Hz.
+     */
+    void set_params(int level, int srate);
+
+    /* Return current crossfeed level value */
+    [[nodiscard]] auto get_level() const noexcept -> int { return level; }
+
+    /* Return current sample rate value */
+    [[nodiscard]] auto get_srate() const noexcept -> int { return srate; }
+
+    /* Clear buffer */
+    void clear();
+
+    void cross_feed(float *Left, float *Right, size_t SamplesToDo);
 };
 
-/* Clear buffers and set new coefficients with new crossfeed level and sample
- * rate values.
- * level - crossfeed level of *LEVEL values.
- * srate - sample rate by Hz.
- */
-void bs2b_set_params(bs2b *bs2b, int level, int srate);
-
-/* Return current crossfeed level value */
-int bs2b_get_level(bs2b *bs2b);
-
-/* Return current sample rate value */
-int bs2b_get_srate(bs2b *bs2b);
-
-/* Clear buffer */
-void bs2b_clear(bs2b *bs2b);
-
-void bs2b_cross_feed(bs2b *bs2b, float *Left, float *Right, size_t SamplesToDo);
+} // namespace Bs2b
 
 #endif /* CORE_BS2B_H */

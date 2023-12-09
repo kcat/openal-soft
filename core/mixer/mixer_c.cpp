@@ -38,8 +38,8 @@ inline float do_cubic(const InterpState &istate, const float *RESTRICT vals, con
     const uint pi{frac >> CubicPhaseDiffBits};
     const float pf{static_cast<float>(frac&CubicPhaseDiffMask) * (1.0f/CubicPhaseDiffOne)};
 
-    const float *RESTRICT fil{al::assume_aligned<16>(istate.cubic.filter[pi].mCoeffs)};
-    const float *RESTRICT phd{al::assume_aligned<16>(istate.cubic.filter[pi].mDeltas)};
+    const float *RESTRICT fil{al::assume_aligned<16>(istate.cubic.filter[pi].mCoeffs.data())};
+    const float *RESTRICT phd{al::assume_aligned<16>(istate.cubic.filter[pi].mDeltas.data())};
 
     /* Apply the phase interpolated filter. */
     return (fil[0] + pf*phd[0])*vals[0] + (fil[1] + pf*phd[1])*vals[1]

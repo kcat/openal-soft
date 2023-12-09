@@ -29,6 +29,7 @@
 #include <chrono>
 #include <climits>
 #include <cstdarg>
+#include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <functional>
@@ -37,7 +38,6 @@
 #include <memory>
 #include <new>
 #include <optional>
-#include <stdint.h>
 #include <utility>
 
 #include "almalloc.h"
@@ -141,7 +141,7 @@ using HrtfDirectMixerFunc = void(*)(const FloatBufferSpan LeftOut, const FloatBu
 
 HrtfDirectMixerFunc MixDirectHrtf{MixDirectHrtf_<CTag>};
 
-inline HrtfDirectMixerFunc SelectHrtfMixer(void)
+inline HrtfDirectMixerFunc SelectHrtfMixer()
 {
 #ifdef HAVE_NEON
     if((CPUCapFlags&CPU_CAP_NEON))
@@ -323,8 +323,7 @@ void DeviceBase::ProcessBs2b(const size_t SamplesToDo)
     const size_t ridx{RealOut.ChannelIndex[FrontRight]};
 
     /* Now apply the BS2B binaural/crossfeed filter. */
-    bs2b_cross_feed(Bs2b.get(), RealOut.Buffer[lidx].data(), RealOut.Buffer[ridx].data(),
-        SamplesToDo);
+    Bs2b->cross_feed(RealOut.Buffer[lidx].data(), RealOut.Buffer[ridx].data(), SamplesToDo);
 }
 
 
@@ -780,45 +779,50 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
     const al::span<EffectSlot*,MaxSendCount> SendSlots, const VoiceProps *props,
     const ContextParams &Context, DeviceBase *Device)
 {
-    static constexpr ChanPosMap MonoMap[1]{
-        { FrontCenter, std::array{0.0f, 0.0f, -1.0f} }
-    }, RearMap[2]{
-        { BackLeft,  std::array{-sin30, 0.0f, cos30} },
-        { BackRight, std::array{ sin30, 0.0f, cos30} },
-    }, QuadMap[4]{
-        { FrontLeft,  std::array{-sin45, 0.0f, -cos45} },
-        { FrontRight, std::array{ sin45, 0.0f, -cos45} },
-        { BackLeft,   std::array{-sin45, 0.0f,  cos45} },
-        { BackRight,  std::array{ sin45, 0.0f,  cos45} },
-    }, X51Map[6]{
-        { FrontLeft,   std::array{-sin30, 0.0f, -cos30} },
-        { FrontRight,  std::array{ sin30, 0.0f, -cos30} },
-        { FrontCenter, std::array{  0.0f, 0.0f, -1.0f} },
-        { LFE, {} },
-        { SideLeft,    std::array{-sin110, 0.0f, -cos110} },
-        { SideRight,   std::array{ sin110, 0.0f, -cos110} },
-    }, X61Map[7]{
-        { FrontLeft,   std::array{-sin30, 0.0f, -cos30} },
-        { FrontRight,  std::array{ sin30, 0.0f, -cos30} },
-        { FrontCenter, std::array{  0.0f, 0.0f, -1.0f} },
-        { LFE, {} },
-        { BackCenter,  std::array{ 0.0f, 0.0f, 1.0f} },
-        { SideLeft,    std::array{-1.0f, 0.0f, 0.0f} },
-        { SideRight,   std::array{ 1.0f, 0.0f, 0.0f} },
-    }, X71Map[8]{
-        { FrontLeft,   std::array{-sin30, 0.0f, -cos30} },
-        { FrontRight,  std::array{ sin30, 0.0f, -cos30} },
-        { FrontCenter, std::array{  0.0f, 0.0f, -1.0f} },
-        { LFE, {} },
-        { BackLeft,    std::array{-sin30, 0.0f, cos30} },
-        { BackRight,   std::array{ sin30, 0.0f, cos30} },
-        { SideLeft,    std::array{ -1.0f, 0.0f, 0.0f} },
-        { SideRight,   std::array{  1.0f, 0.0f, 0.0f} },
+    static constexpr std::array MonoMap{
+        ChanPosMap{FrontCenter, std::array{0.0f, 0.0f, -1.0f}}
+    };
+    static constexpr std::array RearMap{
+        ChanPosMap{BackLeft,  std::array{-sin30, 0.0f, cos30}},
+        ChanPosMap{BackRight, std::array{ sin30, 0.0f, cos30}},
+    };
+    static constexpr std::array QuadMap{
+        ChanPosMap{FrontLeft,  std::array{-sin45, 0.0f, -cos45}},
+        ChanPosMap{FrontRight, std::array{ sin45, 0.0f, -cos45}},
+        ChanPosMap{BackLeft,   std::array{-sin45, 0.0f,  cos45}},
+        ChanPosMap{BackRight,  std::array{ sin45, 0.0f,  cos45}},
+    };
+    static constexpr std::array X51Map{
+        ChanPosMap{FrontLeft,   std::array{-sin30, 0.0f, -cos30}},
+        ChanPosMap{FrontRight,  std::array{ sin30, 0.0f, -cos30}},
+        ChanPosMap{FrontCenter, std::array{  0.0f, 0.0f, -1.0f}},
+        ChanPosMap{LFE, {}},
+        ChanPosMap{SideLeft,    std::array{-sin110, 0.0f, -cos110}},
+        ChanPosMap{SideRight,   std::array{ sin110, 0.0f, -cos110}},
+    };
+    static constexpr std::array X61Map{
+        ChanPosMap{FrontLeft,   std::array{-sin30, 0.0f, -cos30}},
+        ChanPosMap{FrontRight,  std::array{ sin30, 0.0f, -cos30}},
+        ChanPosMap{FrontCenter, std::array{  0.0f, 0.0f, -1.0f}},
+        ChanPosMap{LFE, {}},
+        ChanPosMap{BackCenter,  std::array{ 0.0f, 0.0f, 1.0f}},
+        ChanPosMap{SideLeft,    std::array{-1.0f, 0.0f, 0.0f}},
+        ChanPosMap{SideRight,   std::array{ 1.0f, 0.0f, 0.0f}},
+    };
+    static constexpr std::array X71Map{
+        ChanPosMap{FrontLeft,   std::array{-sin30, 0.0f, -cos30}},
+        ChanPosMap{FrontRight,  std::array{ sin30, 0.0f, -cos30}},
+        ChanPosMap{FrontCenter, std::array{  0.0f, 0.0f, -1.0f}},
+        ChanPosMap{LFE, {}},
+        ChanPosMap{BackLeft,    std::array{-sin30, 0.0f, cos30}},
+        ChanPosMap{BackRight,   std::array{ sin30, 0.0f, cos30}},
+        ChanPosMap{SideLeft,    std::array{ -1.0f, 0.0f, 0.0f}},
+        ChanPosMap{SideRight,   std::array{  1.0f, 0.0f, 0.0f}},
     };
 
-    ChanPosMap StereoMap[2]{
-        { FrontLeft,   std::array{-sin30, 0.0f, -cos30} },
-        { FrontRight,  std::array{ sin30, 0.0f, -cos30} },
+    std::array StereoMap{
+        ChanPosMap{FrontLeft,   std::array{-sin30, 0.0f, -cos30}},
+        ChanPosMap{FrontRight,  std::array{ sin30, 0.0f, -cos30}},
     };
 
     const auto Frequency = static_cast<float>(Device->Frequency);
@@ -835,45 +839,45 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
             [](SendParams &params) -> void { params.Gains.Target.fill(0.0f); });
     }
 
-    DirectMode DirectChannels{props->DirectChannels};
-    const ChanPosMap *chans{nullptr};
-    switch(voice->mFmtChannels)
+    const auto getChans = [props,&StereoMap](FmtChannels chanfmt) noexcept
+        -> std::pair<DirectMode,al::span<const ChanPosMap>>
     {
-    case FmtMono:
-        chans = MonoMap;
-        /* Mono buffers are never played direct. */
-        DirectChannels = DirectMode::Off;
-        break;
-
-    case FmtStereo:
-        if(DirectChannels == DirectMode::Off)
+        switch(chanfmt)
         {
-            for(size_t i{0};i < 2;++i)
+        case FmtMono:
+            /* Mono buffers are never played direct. */
+            return {DirectMode::Off, al::span{MonoMap}};
+
+        case FmtStereo:
+            if(props->DirectChannels == DirectMode::Off)
             {
-                /* StereoPan is counter-clockwise in radians. */
-                const float a{props->StereoPan[i]};
-                StereoMap[i].pos[0] = -std::sin(a);
-                StereoMap[i].pos[2] = -std::cos(a);
+                for(size_t i{0};i < 2;++i)
+                {
+                    /* StereoPan is counter-clockwise in radians. */
+                    const float a{props->StereoPan[i]};
+                    StereoMap[i].pos[0] = -std::sin(a);
+                    StereoMap[i].pos[2] = -std::cos(a);
+                }
             }
+            return {props->DirectChannels, al::span{StereoMap}};
+
+        case FmtRear: return {props->DirectChannels, al::span{RearMap}};
+        case FmtQuad: return {props->DirectChannels, al::span{QuadMap}};
+        case FmtX51: return {props->DirectChannels, al::span{X51Map}};
+        case FmtX61: return {props->DirectChannels, al::span{X61Map}};
+        case FmtX71: return {props->DirectChannels, al::span{X71Map}};
+
+        case FmtBFormat2D:
+        case FmtBFormat3D:
+        case FmtUHJ2:
+        case FmtUHJ3:
+        case FmtUHJ4:
+        case FmtSuperStereo:
+            return {DirectMode::Off, {}};
         }
-        chans = StereoMap;
-        break;
-
-    case FmtRear: chans = RearMap; break;
-    case FmtQuad: chans = QuadMap; break;
-    case FmtX51: chans = X51Map; break;
-    case FmtX61: chans = X61Map; break;
-    case FmtX71: chans = X71Map; break;
-
-    case FmtBFormat2D:
-    case FmtBFormat3D:
-    case FmtUHJ2:
-    case FmtUHJ3:
-    case FmtUHJ4:
-    case FmtSuperStereo:
-        DirectChannels = DirectMode::Off;
-        break;
-    }
+        return {props->DirectChannels, {}};
+    };
+    const auto [DirectChannels,chans] = getChans(voice->mFmtChannels);
 
     voice->mFlags.reset(VoiceHasHrtf).reset(VoiceHasNfc);
     if(auto *decoder{voice->mDecoder.get()})
@@ -1066,8 +1070,8 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
                 voice->mChans[c].mDryParams.Gains.Target[idx] = DryGain.Base;
             else if(DirectChannels == DirectMode::RemixMismatch)
             {
-                auto match_channel = [chans,c](const InputRemixMap &map) noexcept -> bool
-                { return chans[c].channel == map.channel; };
+                auto match_channel = [channel=chans[c].channel](const InputRemixMap &map) noexcept
+                { return channel == map.channel; };
                 auto remap = std::find_if(Device->RealOut.RemixMap.cbegin(),
                     Device->RealOut.RemixMap.cend(), match_channel);
                 if(remap != Device->RealOut.RemixMap.cend())

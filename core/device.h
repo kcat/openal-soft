@@ -25,7 +25,9 @@
 #include "vector.h"
 
 class BFormatDec;
+namespace Bs2b {
 struct bs2b;
+} // namespace Bs2b
 struct Compressor;
 struct ContextBase;
 struct DirectHrtfState;
@@ -265,7 +267,7 @@ struct DeviceBase {
     std::unique_ptr<BFormatDec> AmbiDecoder;
 
     /* Stereo-to-binaural filter */
-    std::unique_ptr<bs2b> Bs2b;
+    std::unique_ptr<Bs2b::bs2b> Bs2b;
 
     using PostProc = void(DeviceBase::*)(const size_t SamplesToDo);
     PostProc PostProcess{nullptr};

@@ -1,13 +1,15 @@
 #ifndef CORE_BSINC_TABLES_H
 #define CORE_BSINC_TABLES_H
 
+#include <array>
+
 #include "bsinc_defs.h"
 
 
 struct BSincTable {
     float scaleBase, scaleRange;
-    unsigned int m[BSincScaleCount];
-    unsigned int filterOffset[BSincScaleCount];
+    std::array<unsigned int,BSincScaleCount> m;
+    std::array<unsigned int,BSincScaleCount> filterOffset;
     const float *Tab;
 };
 

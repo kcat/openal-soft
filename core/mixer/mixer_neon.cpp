@@ -209,8 +209,8 @@ void Resample_<CubicTag,NEONTag>(const InterpState *state, const float *RESTRICT
         /* Apply the phase interpolated filter. */
 
         /* f = fil + pf*phd */
-        const float32x4_t f4 = vmlaq_f32(vld1q_f32(filter[pi].mCoeffs), pf4,
-            vld1q_f32(filter[pi].mDeltas));
+        const float32x4_t f4 = vmlaq_f32(vld1q_f32(filter[pi].mCoeffs.data()), pf4,
+            vld1q_f32(filter[pi].mDeltas.data()));
         /* r = f*src */
         float32x4_t r4{vmulq_f32(f4, vld1q_f32(src))};
 

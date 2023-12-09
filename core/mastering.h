@@ -1,6 +1,7 @@
 #ifndef CORE_MASTERING_H
 #define CORE_MASTERING_H
 
+#include <array>
 #include <memory>
 
 #include "almalloc.h"
@@ -44,8 +45,8 @@ struct Compressor {
     float mAttack{0.0f};
     float mRelease{0.0f};
 
-    alignas(16) float mSideChain[2*BufferLineSize]{};
-    alignas(16) float mCrestFactor[BufferLineSize]{};
+    alignas(16) std::array<float,2*BufferLineSize> mSideChain{};
+    alignas(16) std::array<float,BufferLineSize> mCrestFactor{};
 
     SlidingHold *mHold{nullptr};
     FloatBufferLine *mDelay{nullptr};
@@ -63,7 +64,7 @@ struct Compressor {
 
     ~Compressor();
     void process(const uint SamplesToDo, FloatBufferLine *OutBuffer);
-    int getLookAhead() const noexcept { return static_cast<int>(mLookAhead); }
+    [[nodiscard]] auto getLookAhead() const noexcept -> int { return static_cast<int>(mLookAhead); }
 
     DEF_PLACE_NEWDEL()
 

@@ -198,7 +198,7 @@ void GainCompressor(Compressor *Comp, const uint SamplesToDo)
     const float release{Comp->mRelease};
     const float c_est{Comp->mGainEstimate};
     const float a_adp{Comp->mAdaptCoeff};
-    const float *crestFactor{Comp->mCrestFactor};
+    const float *crestFactor{Comp->mCrestFactor.data()};
     float postGain{Comp->mPostGain};
     float knee{Comp->mKnee};
     float t_att{attack};
@@ -211,7 +211,7 @@ void GainCompressor(Compressor *Comp, const uint SamplesToDo)
 
     ASSUME(SamplesToDo > 0);
 
-    for(float &sideChain : al::span<float>{Comp->mSideChain, SamplesToDo})
+    for(float &sideChain : al::span{Comp->mSideChain.data(), SamplesToDo})
     {
         if(autoKnee)
             knee = maxf(0.0f, 2.5f * (c_dev + c_est));
@@ -424,16 +424,16 @@ void Compressor::process(const uint SamplesToDo, FloatBufferLine *OutBuffer)
     if(mDelay)
         SignalDelay(this, SamplesToDo, OutBuffer);
 
-    const float (&sideChain)[BufferLineSize*2] = mSideChain;
-    auto apply_comp = [SamplesToDo,&sideChain](FloatBufferLine &input) noexcept -> void
+    const auto sideChain = al::span{mSideChain};
+    auto apply_comp = [SamplesToDo,sideChain](FloatBufferLine &input) noexcept -> void
     {
         float *buffer{al::assume_aligned<16>(input.data())};
-        const float *gains{al::assume_aligned<16>(&sideChain[0])};
+        const float *gains{al::assume_aligned<16>(sideChain.data())};
         std::transform(gains, gains+SamplesToDo, buffer, buffer,
-            [](float g, float s) { return g * s; });
+            [](const float g, const float s) noexcept { return g * s; });
     };
     std::for_each(OutBuffer, OutBuffer+numChans, apply_comp);
 
-    auto side_begin = std::begin(mSideChain) + SamplesToDo;
-    std::copy(side_begin, side_begin+mLookAhead, std::begin(mSideChain));
+    auto side_begin = mSideChain.begin() + SamplesToDo;
+    std::copy(side_begin, side_begin+mLookAhead, mSideChain.begin());
 }

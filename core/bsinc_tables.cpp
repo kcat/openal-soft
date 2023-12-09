@@ -5,9 +5,9 @@
 #include <array>
 #include <cassert>
 #include <cmath>
+#include <cstddef>
 #include <limits>
 #include <memory>
-#include <stddef.h>
 #include <stdexcept>
 
 #include "alnumbers.h"
@@ -123,7 +123,7 @@ struct BSincHeader {
     double beta{};
     double scaleBase{};
 
-    uint a[BSincScaleCount]{};
+    std::array<uint,BSincScaleCount> a{};
     uint total_size{};
 
     constexpr BSincHeader(uint Rejection, uint Order) noexcept
@@ -162,8 +162,9 @@ struct BSincFilterArray {
         constexpr uint BSincPointsMax{(hdr.a[0]*2 + 3) & ~3u};
         static_assert(BSincPointsMax <= MaxResamplerPadding, "MaxResamplerPadding is too small");
 
-        using filter_type = double[BSincPhaseCount+1][BSincPointsMax];
-        auto filter = std::make_unique<filter_type[]>(BSincScaleCount);
+        using filter_type = std::array<std::array<double,BSincPointsMax>,BSincPhaseCount+1>;
+        auto filterptr = std::make_unique<std::array<filter_type,BSincScaleCount>>();
+        const auto filter = filterptr->begin();
 
         const double besseli_0_beta{cyl_bessel_i(0, hdr.beta)};
 
@@ -254,8 +255,8 @@ struct BSincFilterArray {
         assert(idx == hdr.total_size);
     }
 
-    constexpr const BSincHeader &getHeader() const noexcept { return hdr; }
-    constexpr const float *getTable() const noexcept { return &mTable.front(); }
+    [[nodiscard]] constexpr auto getHeader() const noexcept -> const BSincHeader& { return hdr; }
+    [[nodiscard]] constexpr auto getTable() const noexcept -> const float* { return mTable.data(); }
 };
 
 const BSincFilterArray<bsinc12_hdr> bsinc12_filter{};

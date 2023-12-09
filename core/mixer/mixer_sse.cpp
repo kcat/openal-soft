@@ -171,8 +171,8 @@ void Resample_<CubicTag,SSETag>(const InterpState *state, const float *RESTRICT 
         /* Apply the phase interpolated filter. */
 
         /* f = fil + pf*phd */
-        const __m128 f4 = MLA4(_mm_load_ps(filter[pi].mCoeffs), pf4,
-            _mm_load_ps(filter[pi].mDeltas));
+        const __m128 f4 = MLA4(_mm_load_ps(filter[pi].mCoeffs.data()), pf4,
+            _mm_load_ps(filter[pi].mDeltas.data()));
         /* r = f*src */
         __m128 r4{_mm_mul_ps(f4, _mm_loadu_ps(src))};
 

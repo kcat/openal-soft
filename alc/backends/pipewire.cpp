@@ -28,12 +28,12 @@
 #include <cstring>
 #include <cerrno>
 #include <chrono>
+#include <cstdint>
 #include <ctime>
 #include <list>
 #include <memory>
 #include <mutex>
 #include <optional>
-#include <stdint.h>
 #include <thread>
 #include <type_traits>
 #include <utility>
@@ -169,8 +169,10 @@ using std::chrono::milliseconds;
 using std::chrono::nanoseconds;
 using uint = unsigned int;
 
+/* NOLINTBEGIN(*-avoid-c-arrays) */
 constexpr char pwireDevice[] = "PipeWire Output";
 constexpr char pwireInput[] = "PipeWire Input";
+/* NOLINTEND(*-avoid-c-arrays) */
 
 
 bool check_version(const char *version)
@@ -238,7 +240,7 @@ bool pwire_load()
     if(pwire_handle)
         return true;
 
-    static constexpr char pwire_library[] = "libpipewire-0.3.so.0";
+    const char *pwire_library{"libpipewire-0.3.so.0"};
     std::string missing_funcs;
 
     pwire_handle = LoadLib(pwire_library);
@@ -434,9 +436,11 @@ public:
 
     explicit operator bool() const noexcept { return mLoop != nullptr; }
 
+    [[nodiscard]]
     auto start() const { return pw_thread_loop_start(mLoop); }
     auto stop() const { return pw_thread_loop_stop(mLoop); }
 
+    [[nodiscard]]
     auto getLoop() const { return pw_thread_loop_get_loop(mLoop); }
 
     auto lock() const { return pw_thread_loop_lock(mLoop); }
@@ -501,8 +505,8 @@ struct NodeProxy {
         /* Track changes to the enumerable and current formats (indicates the
          * default and active format, which is what we're interested in).
          */
-        uint32_t fmtids[]{SPA_PARAM_EnumFormat, SPA_PARAM_Format};
-        ppw_node_subscribe_params(mNode.get(), std::data(fmtids), std::size(fmtids));
+        std::array<uint32_t,2> fmtids{{SPA_PARAM_EnumFormat, SPA_PARAM_Format}};
+        ppw_node_subscribe_params(mNode.get(), fmtids.data(), fmtids.size());
     }
     ~NodeProxy()
     { spa_hook_remove(&mListener); }
@@ -765,25 +769,32 @@ void DeviceNode::Remove(uint32_t id)
 }
 
 
-const spa_audio_channel MonoMap[]{
+constexpr std::array MonoMap{
     SPA_AUDIO_CHANNEL_MONO
-}, StereoMap[] {
+};
+constexpr std::array StereoMap{
     SPA_AUDIO_CHANNEL_FL, SPA_AUDIO_CHANNEL_FR
-}, QuadMap[]{
+};
+constexpr std::array QuadMap{
     SPA_AUDIO_CHANNEL_FL, SPA_AUDIO_CHANNEL_FR, SPA_AUDIO_CHANNEL_RL, SPA_AUDIO_CHANNEL_RR
-}, X51Map[]{
+};
+constexpr std::array X51Map{
     SPA_AUDIO_CHANNEL_FL, SPA_AUDIO_CHANNEL_FR, SPA_AUDIO_CHANNEL_FC, SPA_AUDIO_CHANNEL_LFE,
     SPA_AUDIO_CHANNEL_SL, SPA_AUDIO_CHANNEL_SR
-}, X51RearMap[]{
+};
+constexpr std::array X51RearMap{
     SPA_AUDIO_CHANNEL_FL, SPA_AUDIO_CHANNEL_FR, SPA_AUDIO_CHANNEL_FC, SPA_AUDIO_CHANNEL_LFE,
     SPA_AUDIO_CHANNEL_RL, SPA_AUDIO_CHANNEL_RR
-}, X61Map[]{
+};
+constexpr std::array X61Map{
     SPA_AUDIO_CHANNEL_FL, SPA_AUDIO_CHANNEL_FR, SPA_AUDIO_CHANNEL_FC, SPA_AUDIO_CHANNEL_LFE,
     SPA_AUDIO_CHANNEL_RC, SPA_AUDIO_CHANNEL_SL, SPA_AUDIO_CHANNEL_SR
-}, X71Map[]{
+};
+constexpr std::array X71Map{
     SPA_AUDIO_CHANNEL_FL, SPA_AUDIO_CHANNEL_FR, SPA_AUDIO_CHANNEL_FC, SPA_AUDIO_CHANNEL_LFE,
     SPA_AUDIO_CHANNEL_RL, SPA_AUDIO_CHANNEL_RR, SPA_AUDIO_CHANNEL_SL, SPA_AUDIO_CHANNEL_SR
-}, X714Map[]{
+};
+constexpr std::array X714Map{
     SPA_AUDIO_CHANNEL_FL, SPA_AUDIO_CHANNEL_FR, SPA_AUDIO_CHANNEL_FC, SPA_AUDIO_CHANNEL_LFE,
     SPA_AUDIO_CHANNEL_RL, SPA_AUDIO_CHANNEL_RR, SPA_AUDIO_CHANNEL_SL, SPA_AUDIO_CHANNEL_SR,
     SPA_AUDIO_CHANNEL_TFL, SPA_AUDIO_CHANNEL_TFR, SPA_AUDIO_CHANNEL_TRL, SPA_AUDIO_CHANNEL_TRR
@@ -793,10 +804,10 @@ const spa_audio_channel MonoMap[]{
  * Checks if every channel in 'map1' exists in 'map0' (that is, map0 is equal
  * to or a superset of map1).
  */
-template<size_t N>
-bool MatchChannelMap(const al::span<const uint32_t> map0, const spa_audio_channel (&map1)[N])
+bool MatchChannelMap(const al::span<const uint32_t> map0,
+    const al::span<const spa_audio_channel> map1)
 {
-    if(map0.size() < N)
+    if(map0.size() < map1.size())
         return false;
     for(const spa_audio_channel chid : map1)
     {
@@ -956,6 +967,7 @@ void DeviceNode::parseChannelCount(const spa_pod *value, bool force_update) noex
 }
 
 
+/* NOLINTBEGIN(*-avoid-c-arrays) */
 constexpr char MonitorPrefix[]{"Monitor of "};
 constexpr auto MonitorPrefixLen = std::size(MonitorPrefix) - 1;
 constexpr char AudioSinkClass[]{"Audio/Sink"};
@@ -963,6 +975,7 @@ constexpr char AudioSourceClass[]{"Audio/Source"};
 constexpr char AudioSourceVirtualClass[]{"Audio/Source/Virtual"};
 constexpr char AudioDuplexClass[]{"Audio/Duplex"};
 constexpr char StreamClass[]{"Stream/"};
+/* NOLINTEND(*-avoid-c-arrays) */
 
 void NodeProxy::infoCallback(const pw_node_info *info) noexcept
 {
@@ -1103,8 +1116,8 @@ int MetadataProxy::propertyCallback(uint32_t id, const char *key, const char *ty
         return 0;
     }
 
-    spa_json it[2]{};
-    spa_json_init(&it[0], value, strlen(value));
+    std::array<spa_json,2> it{};
+    spa_json_init(it.data(), value, strlen(value));
     if(spa_json_enter_object(&it[0], &it[1]) <= 0)
         return 0;
 
@@ -1425,7 +1438,7 @@ class PipeWirePlayback final : public BackendBase {
 
 public:
     PipeWirePlayback(DeviceBase *device) noexcept : BackendBase{device} { }
-    ~PipeWirePlayback()
+    ~PipeWirePlayback() final
     {
         /* Stop the mainloop so the stream can be properly destroyed. */
         if(mLoop) mLoop.stop();
@@ -1915,7 +1928,7 @@ class PipeWireCapture final : public BackendBase {
 
 public:
     PipeWireCapture(DeviceBase *device) noexcept : BackendBase{device} { }
-    ~PipeWireCapture() { if(mLoop) mLoop.stop(); }
+    ~PipeWireCapture() final { if(mLoop) mLoop.stop(); }
 
     DEF_NEWDEL(PipeWireCapture)
 };
@@ -2057,7 +2070,8 @@ void PipeWireCapture::open(std::string_view name)
     static constexpr uint32_t pod_buffer_size{1024};
     PodDynamicBuilder b(pod_buffer_size);
 
-    const spa_pod *params[]{spa_format_audio_raw_build(b.get(), SPA_PARAM_EnumFormat, &info)};
+    std::array params{static_cast<const spa_pod*>(spa_format_audio_raw_build(b.get(),
+        SPA_PARAM_EnumFormat, &info))};
     if(!params[0])
         throw al::backend_exception{al::backend_error::DeviceError,
             "Failed to set PipeWire audio format parameters"};
@@ -2099,7 +2113,7 @@ void PipeWireCapture::open(std::string_view name)
 
     constexpr pw_stream_flags Flags{PW_STREAM_FLAG_AUTOCONNECT | PW_STREAM_FLAG_INACTIVE
         | PW_STREAM_FLAG_MAP_BUFFERS | PW_STREAM_FLAG_RT_PROCESS};
-    if(int res{pw_stream_connect(mStream.get(), PW_DIRECTION_INPUT, PwIdAny, Flags, params, 1)})
+    if(int res{pw_stream_connect(mStream.get(), PW_DIRECTION_INPUT, PwIdAny, Flags, params.data(), 1)})
         throw al::backend_exception{al::backend_error::DeviceError,
             "Error connecting PipeWire stream (res: %d)", res};
 
@@ -2174,7 +2188,7 @@ bool PipeWireBackendFactory::init()
     }
     TRACE("Found PipeWire version \"%s\" (%s or newer)\n", version, pw_get_headers_version());
 
-    pw_init(0, nullptr);
+    pw_init(nullptr, nullptr);
     if(!gEventHandler.init())
         return false;
 

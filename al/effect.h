@@ -34,7 +34,7 @@ enum {
 inline std::bitset<MAX_EFFECTS> DisabledEffects;
 
 struct EffectList {
-    const char name[16];
+    const char name[16]; /* NOLINT(*-avoid-c-arrays) */
     ALuint type;
     ALenum val;
 };

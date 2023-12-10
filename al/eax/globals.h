@@ -3,6 +3,7 @@
 
 inline bool eax_g_is_enabled{true};
 
+/* NOLINTBEGIN(*-avoid-c-arrays) */
 inline constexpr char eax1_ext_name[]{"EAX"};
 inline constexpr char eax2_ext_name[]{"EAX2.0"};
 inline constexpr char eax3_ext_name[]{"EAX3.0"};
@@ -16,5 +17,6 @@ inline constexpr char eax_eax_get_func_name[]{"EAXGet"};
 
 inline constexpr char eax_eax_set_buffer_mode_func_name[]{"EAXSetBufferMode"};
 inline constexpr char eax_eax_get_buffer_mode_func_name[]{"EAXGetBufferMode"};
+/* NOLINTEND(*-avoid-c-arrays) */
 
 #endif // !EAX_GLOBALS_INCLUDED

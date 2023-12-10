@@ -16,7 +16,8 @@ struct FuncExport {
     const char *funcName;
     void *address;
 };
-#define DECL(x) { #x, reinterpret_cast<void*>(x) }
+#define DECL(x) FuncExport{#x, reinterpret_cast<void*>(x)}
+/* NOLINTNEXTLINE(*-avoid-c-arrays) Too large for std::array auto-deduction :( */
 inline const FuncExport alcFunctions[]{
     DECL(alcCreateContext),
     DECL(alcMakeContextCurrent),
@@ -376,8 +377,9 @@ inline const FuncExport alcFunctions[]{
 
     /* Extra functions */
     DECL(alsoft_set_log_callback),
+};
 #ifdef ALSOFT_EAX
-}, eaxFunctions[]{
+inline const std::array eaxFunctions{
     DECL(EAXGet),
     DECL(EAXSet),
     DECL(EAXGetBufferMode),
@@ -387,15 +389,16 @@ inline const FuncExport alcFunctions[]{
     DECL(EAXSetDirect),
     DECL(EAXGetBufferModeDirect),
     DECL(EAXSetBufferModeDirect),
-#endif
 };
+#endif
 #undef DECL
 
 struct EnumExport {
     const char *enumName;
     int value;
 };
-#define DECL(x) { #x, (x) }
+#define DECL(x) EnumExport{#x, (x)}
+/* NOLINTNEXTLINE(*-avoid-c-arrays) Too large for std::array auto-deduction :( */
 inline const EnumExport alcEnumerations[]{
     DECL(ALC_INVALID),
     DECL(ALC_FALSE),
@@ -901,15 +904,16 @@ inline const EnumExport alcEnumerations[]{
     DECL(AL_AUXILIARY_EFFECT_SLOT_EXT),
 
     DECL(AL_STOP_SOURCES_ON_DISCONNECT_SOFT),
+};
 #ifdef ALSOFT_EAX
-}, eaxEnumerations[]{
+inline const std::array eaxEnumerations{
     DECL(AL_EAX_RAM_SIZE),
     DECL(AL_EAX_RAM_FREE),
     DECL(AL_STORAGE_AUTOMATIC),
     DECL(AL_STORAGE_HARDWARE),
     DECL(AL_STORAGE_ACCESSIBLE),
-#endif // ALSOFT_EAX
 };
+#endif // ALSOFT_EAX
 #undef DECL
 
 #endif /* ALC_EXPORT_LIST_H */

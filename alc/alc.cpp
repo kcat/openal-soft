@@ -50,7 +50,6 @@
 #include <mutex>
 #include <new>
 #include <optional>
-#include <stddef.h>
 #include <stdexcept>
 #include <string>
 #include <type_traits>
@@ -196,66 +195,66 @@ using float2 = std::array<float,2>;
  ************************************************/
 struct BackendInfo {
     const char *name;
-    BackendFactory& (*getFactory)(void);
+    BackendFactory& (*getFactory)();
 };
 
-BackendInfo BackendList[] = {
+std::array BackendList{
 #ifdef HAVE_PIPEWIRE
-    { "pipewire", PipeWireBackendFactory::getFactory },
+    BackendInfo{"pipewire", PipeWireBackendFactory::getFactory},
 #endif
 #ifdef HAVE_PULSEAUDIO
-    { "pulse", PulseBackendFactory::getFactory },
+    BackendInfo{"pulse", PulseBackendFactory::getFactory},
 #endif
 #ifdef HAVE_WASAPI
-    { "wasapi", WasapiBackendFactory::getFactory },
+    BackendInfo{"wasapi", WasapiBackendFactory::getFactory},
 #endif
 #ifdef HAVE_COREAUDIO
-    { "core", CoreAudioBackendFactory::getFactory },
+    BackendInfo{"core", CoreAudioBackendFactory::getFactory},
 #endif
 #ifdef HAVE_OBOE
-    { "oboe", OboeBackendFactory::getFactory },
+    BackendInfo{"oboe", OboeBackendFactory::getFactory},
 #endif
 #ifdef HAVE_OPENSL
-    { "opensl", OSLBackendFactory::getFactory },
+    BackendInfo{"opensl", OSLBackendFactory::getFactory},
 #endif
 #ifdef HAVE_ALSA
-    { "alsa", AlsaBackendFactory::getFactory },
+    BackendInfo{"alsa", AlsaBackendFactory::getFactory},
 #endif
 #ifdef HAVE_SOLARIS
-    { "solaris", SolarisBackendFactory::getFactory },
+    BackendInfo{"solaris", SolarisBackendFactory::getFactory},
 #endif
 #ifdef HAVE_SNDIO
-    { "sndio", SndIOBackendFactory::getFactory },
+    BackendInfo{"sndio", SndIOBackendFactory::getFactory},
 #endif
 #ifdef HAVE_OSS
-    { "oss", OSSBackendFactory::getFactory },
+    BackendInfo{"oss", OSSBackendFactory::getFactory},
 #endif
 #ifdef HAVE_JACK
-    { "jack", JackBackendFactory::getFactory },
+    BackendInfo{"jack", JackBackendFactory::getFactory},
 #endif
 #ifdef HAVE_DSOUND
-    { "dsound", DSoundBackendFactory::getFactory },
+    BackendInfo{"dsound", DSoundBackendFactory::getFactory},
 #endif
 #ifdef HAVE_WINMM
-    { "winmm", WinMMBackendFactory::getFactory },
+    BackendInfo{"winmm", WinMMBackendFactory::getFactory},
 #endif
 #ifdef HAVE_PORTAUDIO
-    { "port", PortBackendFactory::getFactory },
+    BackendInfo{"port", PortBackendFactory::getFactory},
 #endif
 #ifdef HAVE_SDL2
-    { "sdl2", SDL2BackendFactory::getFactory },
+    BackendInfo{"sdl2", SDL2BackendFactory::getFactory},
 #endif
 
-    { "null", NullBackendFactory::getFactory },
+    BackendInfo{"null", NullBackendFactory::getFactory},
 #ifdef HAVE_WAVE
-    { "wave", WaveBackendFactory::getFactory },
+    BackendInfo{"wave", WaveBackendFactory::getFactory},
 #endif
 };
 
 BackendFactory *PlaybackFactory{};
 BackendFactory *CaptureFactory{};
 
-
+/* NOLINTBEGIN(*-avoid-c-arrays) */
 constexpr ALCchar alcNoError[] = "No Error";
 constexpr ALCchar alcErrInvalidDevice[] = "Invalid Device";
 constexpr ALCchar alcErrInvalidContext[] = "Invalid Context";
@@ -270,6 +269,7 @@ constexpr ALCchar alcErrOutOfMemory[] = "Out of Memory";
 
 /* Enumerated device names */
 constexpr ALCchar alcDefaultName[] = "OpenAL Soft\0";
+/* NOLINTEND(*-avoid-c-arrays) */
 
 std::string alcAllDevicesList;
 std::string alcCaptureDeviceList;
@@ -298,6 +298,7 @@ constexpr uint DitherRNGSeed{22222u};
 /************************************************
  * ALC information
  ************************************************/
+/* NOLINTBEGIN(*-avoid-c-arrays) */
 constexpr ALCchar alcNoDeviceExtList[] =
     "ALC_ENUMERATE_ALL_EXT "
     "ALC_ENUMERATION_EXT "
@@ -328,6 +329,7 @@ constexpr ALCchar alcExtensionList[] =
     "ALC_SOFT_pause_device "
     "ALC_SOFT_reopen_device "
     "ALC_SOFT_system_events";
+/* NOLINTEND(*-avoid-c-arrays) */
 constexpr int alcMajorVersion{1};
 constexpr int alcMinorVersion{1};
 
@@ -347,7 +349,7 @@ std::vector<ALCcontext*> ContextList;
 std::recursive_mutex ListLock;
 
 
-void alc_initconfig(void)
+void alc_initconfig()
 {
     if(auto loglevel = al::getenv("ALSOFT_LOGLEVEL"))
     {
@@ -672,7 +674,7 @@ void alc_initconfig(void)
 
 #ifdef ALSOFT_EAX
     {
-        static constexpr char eax_block_name[] = "eax";
+        const char *eax_block_name{"eax"};
 
         if(const auto eax_enable_opt = ConfigValueBool(nullptr, eax_block_name, "enable"))
         {
@@ -736,44 +738,45 @@ void ProbeCaptureDeviceList()
 struct DevFmtPair { DevFmtChannels chans; DevFmtType type; };
 std::optional<DevFmtPair> DecomposeDevFormat(ALenum format)
 {
-    static const struct {
+    struct FormatType {
         ALenum format;
         DevFmtChannels channels;
         DevFmtType type;
-    } list[] = {
-        { AL_FORMAT_MONO8,    DevFmtMono, DevFmtUByte },
-        { AL_FORMAT_MONO16,   DevFmtMono, DevFmtShort },
-        { AL_FORMAT_MONO_I32, DevFmtMono, DevFmtInt },
-        { AL_FORMAT_MONO_FLOAT32, DevFmtMono, DevFmtFloat },
+    };
+    static constexpr std::array list{
+        FormatType{AL_FORMAT_MONO8,    DevFmtMono, DevFmtUByte},
+        FormatType{AL_FORMAT_MONO16,   DevFmtMono, DevFmtShort},
+        FormatType{AL_FORMAT_MONO_I32, DevFmtMono, DevFmtInt},
+        FormatType{AL_FORMAT_MONO_FLOAT32, DevFmtMono, DevFmtFloat},
 
-        { AL_FORMAT_STEREO8,    DevFmtStereo, DevFmtUByte },
-        { AL_FORMAT_STEREO16,   DevFmtStereo, DevFmtShort },
-        { AL_FORMAT_STEREO_I32, DevFmtStereo, DevFmtInt },
-        { AL_FORMAT_STEREO_FLOAT32, DevFmtStereo, DevFmtFloat },
+        FormatType{AL_FORMAT_STEREO8,    DevFmtStereo, DevFmtUByte},
+        FormatType{AL_FORMAT_STEREO16,   DevFmtStereo, DevFmtShort},
+        FormatType{AL_FORMAT_STEREO_I32, DevFmtStereo, DevFmtInt},
+        FormatType{AL_FORMAT_STEREO_FLOAT32, DevFmtStereo, DevFmtFloat},
 
-        { AL_FORMAT_QUAD8,    DevFmtQuad, DevFmtUByte },
-        { AL_FORMAT_QUAD16,   DevFmtQuad, DevFmtShort },
-        { AL_FORMAT_QUAD32,   DevFmtQuad, DevFmtFloat },
-        { AL_FORMAT_QUAD_I32, DevFmtQuad, DevFmtInt },
-        { AL_FORMAT_QUAD_FLOAT32, DevFmtQuad, DevFmtFloat },
+        FormatType{AL_FORMAT_QUAD8,    DevFmtQuad, DevFmtUByte},
+        FormatType{AL_FORMAT_QUAD16,   DevFmtQuad, DevFmtShort},
+        FormatType{AL_FORMAT_QUAD32,   DevFmtQuad, DevFmtFloat},
+        FormatType{AL_FORMAT_QUAD_I32, DevFmtQuad, DevFmtInt},
+        FormatType{AL_FORMAT_QUAD_FLOAT32, DevFmtQuad, DevFmtFloat},
 
-        { AL_FORMAT_51CHN8,    DevFmtX51, DevFmtUByte },
-        { AL_FORMAT_51CHN16,   DevFmtX51, DevFmtShort },
-        { AL_FORMAT_51CHN32,   DevFmtX51, DevFmtFloat },
-        { AL_FORMAT_51CHN_I32, DevFmtX51, DevFmtInt },
-        { AL_FORMAT_51CHN_FLOAT32, DevFmtX51, DevFmtFloat },
+        FormatType{AL_FORMAT_51CHN8,    DevFmtX51, DevFmtUByte},
+        FormatType{AL_FORMAT_51CHN16,   DevFmtX51, DevFmtShort},
+        FormatType{AL_FORMAT_51CHN32,   DevFmtX51, DevFmtFloat},
+        FormatType{AL_FORMAT_51CHN_I32, DevFmtX51, DevFmtInt},
+        FormatType{AL_FORMAT_51CHN_FLOAT32, DevFmtX51, DevFmtFloat},
 
-        { AL_FORMAT_61CHN8,    DevFmtX61, DevFmtUByte },
-        { AL_FORMAT_61CHN16,   DevFmtX61, DevFmtShort },
-        { AL_FORMAT_61CHN32,   DevFmtX61, DevFmtFloat },
-        { AL_FORMAT_61CHN_I32, DevFmtX61, DevFmtInt },
-        { AL_FORMAT_61CHN_FLOAT32, DevFmtX61, DevFmtFloat },
+        FormatType{AL_FORMAT_61CHN8,    DevFmtX61, DevFmtUByte},
+        FormatType{AL_FORMAT_61CHN16,   DevFmtX61, DevFmtShort},
+        FormatType{AL_FORMAT_61CHN32,   DevFmtX61, DevFmtFloat},
+        FormatType{AL_FORMAT_61CHN_I32, DevFmtX61, DevFmtInt},
+        FormatType{AL_FORMAT_61CHN_FLOAT32, DevFmtX61, DevFmtFloat},
 
-        { AL_FORMAT_71CHN8,    DevFmtX71, DevFmtUByte },
-        { AL_FORMAT_71CHN16,   DevFmtX71, DevFmtShort },
-        { AL_FORMAT_71CHN32,   DevFmtX71, DevFmtFloat },
-        { AL_FORMAT_71CHN_I32, DevFmtX71, DevFmtInt },
-        { AL_FORMAT_71CHN_FLOAT32, DevFmtX71, DevFmtFloat },
+        FormatType{AL_FORMAT_71CHN8,    DevFmtX71, DevFmtUByte},
+        FormatType{AL_FORMAT_71CHN16,   DevFmtX71, DevFmtShort},
+        FormatType{AL_FORMAT_71CHN32,   DevFmtX71, DevFmtFloat},
+        FormatType{AL_FORMAT_71CHN_I32, DevFmtX71, DevFmtInt},
+        FormatType{AL_FORMAT_71CHN_FLOAT32, DevFmtX71, DevFmtFloat},
     };
 
     for(const auto &item : list)
@@ -1034,54 +1037,56 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
 
         if(auto typeopt = device->configValue<std::string>(nullptr, "sample-type"))
         {
-            static constexpr struct TypeMap {
-                const char name[8];
+            struct TypeMap {
+                const char name[8]; /* NOLINT(*-avoid-c-arrays) */
                 DevFmtType type;
-            } typelist[] = {
-                { "int8",    DevFmtByte   },
-                { "uint8",   DevFmtUByte  },
-                { "int16",   DevFmtShort  },
-                { "uint16",  DevFmtUShort },
-                { "int32",   DevFmtInt    },
-                { "uint32",  DevFmtUInt   },
-                { "float32", DevFmtFloat  },
+            };
+            static constexpr std::array typelist{
+                TypeMap{"int8",    DevFmtByte  },
+                TypeMap{"uint8",   DevFmtUByte },
+                TypeMap{"int16",   DevFmtShort },
+                TypeMap{"uint16",  DevFmtUShort},
+                TypeMap{"int32",   DevFmtInt   },
+                TypeMap{"uint32",  DevFmtUInt  },
+                TypeMap{"float32", DevFmtFloat },
             };
 
             const ALCchar *fmt{typeopt->c_str()};
-            auto iter = std::find_if(std::begin(typelist), std::end(typelist),
+            auto iter = std::find_if(typelist.begin(), typelist.end(),
                 [fmt](const TypeMap &entry) -> bool
                 { return al::strcasecmp(entry.name, fmt) == 0; });
-            if(iter == std::end(typelist))
+            if(iter == typelist.end())
                 ERR("Unsupported sample-type: %s\n", fmt);
             else
                 opttype = iter->type;
         }
         if(auto chanopt = device->configValue<std::string>(nullptr, "channels"))
         {
-            static constexpr struct ChannelMap {
-                const char name[16];
+            struct ChannelMap {
+                const char name[16]; /* NOLINT(*-avoid-c-arrays) */
                 DevFmtChannels chans;
                 uint8_t order;
-            } chanlist[] = {
-                { "mono",       DevFmtMono,   0 },
-                { "stereo",     DevFmtStereo, 0 },
-                { "quad",       DevFmtQuad,   0 },
-                { "surround51", DevFmtX51,    0 },
-                { "surround61", DevFmtX61,    0 },
-                { "surround71", DevFmtX71,    0 },
-                { "surround714", DevFmtX714,  0 },
-                { "surround3d71", DevFmtX3D71, 0 },
-                { "surround51rear", DevFmtX51, 0 },
-                { "ambi1", DevFmtAmbi3D, 1 },
-                { "ambi2", DevFmtAmbi3D, 2 },
-                { "ambi3", DevFmtAmbi3D, 3 },
+            };
+            static constexpr std::array chanlist{
+                ChannelMap{"mono",       DevFmtMono,   0},
+                ChannelMap{"stereo",     DevFmtStereo, 0},
+                ChannelMap{"quad",       DevFmtQuad,   0},
+                ChannelMap{"surround51", DevFmtX51,    0},
+                ChannelMap{"surround61", DevFmtX61,    0},
+                ChannelMap{"surround71", DevFmtX71,    0},
+                ChannelMap{"surround714", DevFmtX714,  0},
+                ChannelMap{"surround3d71", DevFmtX3D71, 0},
+                ChannelMap{"surround51rear", DevFmtX51, 0},
+                ChannelMap{"ambi1", DevFmtAmbi3D, 1},
+                ChannelMap{"ambi2", DevFmtAmbi3D, 2},
+                ChannelMap{"ambi3", DevFmtAmbi3D, 3},
             };
 
             const ALCchar *fmt{chanopt->c_str()};
-            auto iter = std::find_if(std::begin(chanlist), std::end(chanlist),
+            auto iter = std::find_if(chanlist.end(), chanlist.end(),
                 [fmt](const ChannelMap &entry) -> bool
                 { return al::strcasecmp(entry.name, fmt) == 0; });
-            if(iter == std::end(chanlist))
+            if(iter == chanlist.end())
                 ERR("Unsupported channels: %s\n", fmt);
             else
             {
@@ -1856,7 +1861,7 @@ FORCE_ALIGN void ALC_APIENTRY alsoft_set_log_callback(LPALSOFTLOGCALLBACK callba
 }
 
 /** Returns a new reference to the currently active context for this thread. */
-ContextRef GetContextRef(void)
+ContextRef GetContextRef()
 {
     ALCcontext *context{ALCcontext::getThreadContext()};
     if(context)
@@ -2980,7 +2985,7 @@ ALC_API ALCboolean ALC_APIENTRY alcCloseDevice(ALCdevice *device) noexcept
         auto ctxiter = std::lower_bound(ContextList.begin(), ContextList.end(), ctx);
         if(ctxiter != ContextList.end() && *ctxiter == ctx)
         {
-            orphanctxs.emplace_back(ContextRef{*ctxiter});
+            orphanctxs.emplace_back(*ctxiter);
             ContextList.erase(ctxiter);
         }
     }

@@ -15,11 +15,11 @@ struct PathNamePair {
         : path{std::forward<T>(path_)}, fname{std::forward<U>(fname_)}
     { }
 };
-const PathNamePair &GetProcBinary(void);
+const PathNamePair &GetProcBinary();
 
 extern int RTPrioLevel;
 extern bool AllowRTTimeLimit;
-void SetRTPriority(void);
+void SetRTPriority();
 
 std::vector<std::string> SearchDataFiles(const char *match, const char *subdir);
 

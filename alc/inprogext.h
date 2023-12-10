@@ -1,6 +1,7 @@
 #ifndef INPROGEXT_H
 #define INPROGEXT_H
 
+/* NOLINTBEGIN */
 #include "AL/al.h"
 #include "AL/alc.h"
 #include "AL/alext.h"
@@ -436,5 +437,6 @@ void AL_APIENTRY alGetInteger64vDirectSOFT(ALCcontext *context, ALenum pname, AL
 #ifdef __cplusplus
 } /* extern "C" */
 #endif
+/* NOLINTEND */
 
 #endif /* INPROGEXT_H */

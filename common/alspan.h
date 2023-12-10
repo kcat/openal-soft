@@ -44,7 +44,7 @@ namespace detail_ {
         && !std::is_array<C>::value && has_size_and_data<C>;
 
     template<typename T, typename U>
-    constexpr bool is_array_compatible = std::is_convertible<T(*)[],U(*)[]>::value;
+    constexpr bool is_array_compatible = std::is_convertible<T(*)[],U(*)[]>::value; /* NOLINT(*-avoid-c-arrays) */
 
     template<typename C, typename T>
     constexpr bool is_valid_container = is_valid_container_type<C>
@@ -81,7 +81,7 @@ public:
     constexpr explicit span(U first, V) : mData{::al::to_address(first)}
     {}
 
-    constexpr span(type_identity_t<element_type> (&arr)[E]) noexcept
+    constexpr span(type_identity_t<element_type> (&arr)[E]) noexcept /* NOLINT(*-avoid-c-arrays) */
         : span{std::data(arr), std::size(arr)}
     { }
     constexpr span(std::array<value_type,E> &arr) noexcept
@@ -199,7 +199,7 @@ public:
     { }
 
     template<size_t N>
-    constexpr span(type_identity_t<element_type> (&arr)[N]) noexcept
+    constexpr span(type_identity_t<element_type> (&arr)[N]) noexcept /* NOLINT(*-avoid-c-arrays) */
         : span{std::data(arr), std::size(arr)}
     { }
     template<size_t N>
@@ -305,7 +305,7 @@ template<typename T, typename EndOrSize>
 span(T, EndOrSize) -> span<std::remove_reference_t<decltype(*std::declval<T&>())>>;
 
 template<typename T, std::size_t N>
-span(T (&)[N]) -> span<T, N>;
+span(T (&)[N]) -> span<T, N>; /* NOLINT(*-avoid-c-arrays) */
 
 template<typename T, std::size_t N>
 span(std::array<T, N>&) -> span<T, N>;

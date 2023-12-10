@@ -17,6 +17,7 @@
 #include "bufferline.h"
 #include "devformat.h"
 #include "filters/nfc.h"
+#include "flexarray.h"
 #include "intrusive_ptr.h"
 #include "mixer/hrtfdefs.h"
 #include "opthelpers.h"

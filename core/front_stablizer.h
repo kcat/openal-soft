@@ -7,6 +7,7 @@
 #include "almalloc.h"
 #include "bufferline.h"
 #include "filters/splitter.h"
+#include "flexarray.h"
 
 
 struct FrontStablizer {

@@ -99,6 +99,7 @@
 #include "device.h"
 #include "effects/base.h"
 #include "export_list.h"
+#include "flexarray.h"
 #include "inprogext.h"
 #include "intrusive_ptr.h"
 #include "opthelpers.h"

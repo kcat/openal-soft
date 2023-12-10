@@ -7,6 +7,7 @@
 #include <utility>
 
 #include "almalloc.h"
+#include "flexarray.h"
 
 
 /* NOTE: This lockless ringbuffer implementation is copied from JACK, extended

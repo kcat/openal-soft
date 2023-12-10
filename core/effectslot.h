@@ -6,6 +6,7 @@
 #include "almalloc.h"
 #include "device.h"
 #include "effects/base.h"
+#include "flexarray.h"
 #include "intrusive_ptr.h"
 
 struct EffectSlot;

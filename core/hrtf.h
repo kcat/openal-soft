@@ -13,8 +13,9 @@
 #include "atomic.h"
 #include "ambidefs.h"
 #include "bufferline.h"
-#include "mixer/hrtfdefs.h"
+#include "flexarray.h"
 #include "intrusive_ptr.h"
+#include "mixer/hrtfdefs.h"
 
 
 struct HrtfStore {

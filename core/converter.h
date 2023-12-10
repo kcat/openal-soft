@@ -7,6 +7,7 @@
 
 #include "almalloc.h"
 #include "devformat.h"
+#include "flexarray.h"
 #include "mixer/defs.h"
 
 using uint = unsigned int;

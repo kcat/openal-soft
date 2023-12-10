@@ -14,6 +14,7 @@
 #include "alspan.h"
 #include "async_event.h"
 #include "atomic.h"
+#include "flexarray.h"
 #include "opthelpers.h"
 #include "vecmat.h"
 

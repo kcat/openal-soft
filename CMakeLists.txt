@@ -628,6 +628,7 @@ set(COMMON_OBJS
     common/comptr.h
     common/dynload.cpp
     common/dynload.h
+    common/flexarray.h
     common/intrusive_ptr.h
     common/opthelpers.h
     common/pffft.cpp

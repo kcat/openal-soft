@@ -1,7 +1,7 @@
 
 #include "config.h"
 
-#include <stddef.h>
+#include <cstddef>
 
 #include "almalloc.h"
 #include "alspan.h"

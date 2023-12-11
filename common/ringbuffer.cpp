@@ -24,9 +24,9 @@
 
 #include <algorithm>
 #include <climits>
+#include <cstdint>
 #include <limits>
 #include <stdexcept>
-#include <stdint.h>
 
 #include "almalloc.h"
 

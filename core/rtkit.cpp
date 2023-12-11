@@ -30,14 +30,14 @@
 
 #include "rtkit.h"
 
-#include <errno.h>
+#include <cerrno>
 
 #ifndef _GNU_SOURCE
 #define _GNU_SOURCE
 #endif
 
 #include <memory>
-#include <string.h>
+#include <cstring>
 #include <unistd.h>
 #include <sys/types.h>
 #ifdef __linux__

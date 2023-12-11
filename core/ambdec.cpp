@@ -111,7 +111,7 @@ std::optional<std::string> AmbDecConf::load(const char *fname) noexcept
         {
             if(command == "add_spkr")
             {
-                if(speaker_pos == NumSpeakers)
+                if(speaker_pos == Speakers.size())
                     return make_error(linenum, "Too many speakers specified");
 
                 AmbDecConf::SpeakerConf &spkr = Speakers[speaker_pos++];
@@ -145,7 +145,7 @@ std::optional<std::string> AmbDecConf::load(const char *fname) noexcept
             }
             else if(command == "add_row")
             {
-                if(pos == NumSpeakers)
+                if(pos == Speakers.size())
                     return make_error(linenum, "Too many matrix rows specified");
 
                 unsigned int mask{ChanMask};
@@ -205,12 +205,13 @@ std::optional<std::string> AmbDecConf::load(const char *fname) noexcept
         }
         else if(command == "/dec/speakers")
         {
-            if(NumSpeakers)
+            if(!Speakers.empty())
                 return make_error(linenum, "Duplicate speakers");
-            istr >> NumSpeakers;
-            if(!NumSpeakers)
-                return make_error(linenum, "Invalid speakers: %zu", NumSpeakers);
-            Speakers = std::make_unique<SpeakerConf[]>(NumSpeakers);
+            size_t numspeakers{};
+            istr >> numspeakers;
+            if(!numspeakers)
+                return make_error(linenum, "Invalid speakers: %zu", numspeakers);
+            Speakers.resize(numspeakers);
         }
         else if(command == "/dec/coeff_scale")
         {
@@ -243,22 +244,22 @@ std::optional<std::string> AmbDecConf::load(const char *fname) noexcept
         }
         else if(command == "/speakers/{")
         {
-            if(!NumSpeakers)
+            if(Speakers.empty())
                 return make_error(linenum, "Speakers defined without a count");
             scope = ReaderScope::Speakers;
         }
         else if(command == "/lfmatrix/{" || command == "/hfmatrix/{" || command == "/matrix/{")
         {
-            if(!NumSpeakers)
+            if(Speakers.empty())
                 return make_error(linenum, "Matrix defined without a speaker count");
             if(!ChanMask)
                 return make_error(linenum, "Matrix defined without a channel mask");
 
-            if(!Matrix)
+            if(Matrix.empty())
             {
-                Matrix = std::make_unique<CoeffArray[]>(NumSpeakers * FreqBands);
-                LFMatrix = Matrix.get();
-                HFMatrix = LFMatrix + NumSpeakers*(FreqBands-1);
+                Matrix.resize(Speakers.size() * FreqBands);
+                LFMatrix = Matrix.data();
+                HFMatrix = LFMatrix + Speakers.size()*(FreqBands-1);
             }
 
             if(FreqBands == 1)
@@ -285,8 +286,8 @@ std::optional<std::string> AmbDecConf::load(const char *fname) noexcept
             if(!is_at_end(buffer, endpos))
                 return make_error(linenum, "Extra junk on end: %s", buffer.substr(endpos).c_str());
 
-            if(speaker_pos < NumSpeakers || hfmatrix_pos < NumSpeakers
-                || (FreqBands == 2 && lfmatrix_pos < NumSpeakers))
+            if(speaker_pos < Speakers.empty() || hfmatrix_pos < Speakers.empty()
+                || (FreqBands == 2 && lfmatrix_pos < Speakers.empty()))
                 return make_error(linenum, "Incomplete decoder definition");
             if(CoeffScale == AmbDecScale::Unset)
                 return make_error(linenum, "No coefficient scaling defined");

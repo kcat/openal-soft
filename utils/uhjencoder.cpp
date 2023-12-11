@@ -26,9 +26,9 @@
 
 #include <array>
 #include <cinttypes>
+#include <cstddef>
 #include <cstring>
 #include <memory>
-#include <stddef.h>
 #include <string>
 #include <utility>
 #include <vector>
@@ -179,50 +179,55 @@ struct SpeakerPos {
 };
 
 /* Azimuth is counter-clockwise. */
-constexpr SpeakerPos StereoMap[2]{
-    { SF_CHANNEL_MAP_LEFT,   30.0f, 0.0f },
-    { SF_CHANNEL_MAP_RIGHT, -30.0f, 0.0f },
-}, QuadMap[4]{
-    { SF_CHANNEL_MAP_LEFT,         45.0f, 0.0f },
-    { SF_CHANNEL_MAP_RIGHT,       -45.0f, 0.0f },
-    { SF_CHANNEL_MAP_REAR_LEFT,   135.0f, 0.0f },
-    { SF_CHANNEL_MAP_REAR_RIGHT, -135.0f, 0.0f },
-}, X51Map[6]{
-    { SF_CHANNEL_MAP_LEFT,         30.0f, 0.0f },
-    { SF_CHANNEL_MAP_RIGHT,       -30.0f, 0.0f },
-    { SF_CHANNEL_MAP_CENTER,        0.0f, 0.0f },
-    { SF_CHANNEL_MAP_LFE, 0.0f, 0.0f },
-    { SF_CHANNEL_MAP_SIDE_LEFT,   110.0f, 0.0f },
-    { SF_CHANNEL_MAP_SIDE_RIGHT, -110.0f, 0.0f },
-}, X51RearMap[6]{
-    { SF_CHANNEL_MAP_LEFT,         30.0f, 0.0f },
-    { SF_CHANNEL_MAP_RIGHT,       -30.0f, 0.0f },
-    { SF_CHANNEL_MAP_CENTER,        0.0f, 0.0f },
-    { SF_CHANNEL_MAP_LFE, 0.0f, 0.0f },
-    { SF_CHANNEL_MAP_REAR_LEFT,   110.0f, 0.0f },
-    { SF_CHANNEL_MAP_REAR_RIGHT, -110.0f, 0.0f },
-}, X71Map[8]{
-    { SF_CHANNEL_MAP_LEFT,         30.0f, 0.0f },
-    { SF_CHANNEL_MAP_RIGHT,       -30.0f, 0.0f },
-    { SF_CHANNEL_MAP_CENTER,        0.0f, 0.0f },
-    { SF_CHANNEL_MAP_LFE, 0.0f, 0.0f },
-    { SF_CHANNEL_MAP_REAR_LEFT,   150.0f, 0.0f },
-    { SF_CHANNEL_MAP_REAR_RIGHT, -150.0f, 0.0f },
-    { SF_CHANNEL_MAP_SIDE_LEFT,    90.0f, 0.0f },
-    { SF_CHANNEL_MAP_SIDE_RIGHT,  -90.0f, 0.0f },
-}, X714Map[12]{
-    { SF_CHANNEL_MAP_LEFT,         30.0f,  0.0f },
-    { SF_CHANNEL_MAP_RIGHT,       -30.0f,  0.0f },
-    { SF_CHANNEL_MAP_CENTER,        0.0f,  0.0f },
-    { SF_CHANNEL_MAP_LFE, 0.0f, 0.0f },
-    { SF_CHANNEL_MAP_REAR_LEFT,   150.0f,  0.0f },
-    { SF_CHANNEL_MAP_REAR_RIGHT, -150.0f,  0.0f },
-    { SF_CHANNEL_MAP_SIDE_LEFT,    90.0f,  0.0f },
-    { SF_CHANNEL_MAP_SIDE_RIGHT,  -90.0f,  0.0f },
-    { SF_CHANNEL_MAP_TOP_FRONT_LEFT,    45.0f, 35.0f },
-    { SF_CHANNEL_MAP_TOP_FRONT_RIGHT,  -45.0f, 35.0f },
-    { SF_CHANNEL_MAP_TOP_REAR_LEFT,    135.0f, 35.0f },
-    { SF_CHANNEL_MAP_TOP_REAR_RIGHT,  -135.0f, 35.0f },
+constexpr std::array StereoMap{
+    SpeakerPos{SF_CHANNEL_MAP_LEFT,   30.0f, 0.0f},
+    SpeakerPos{SF_CHANNEL_MAP_RIGHT, -30.0f, 0.0f},
+};
+constexpr std::array QuadMap{
+    SpeakerPos{SF_CHANNEL_MAP_LEFT,         45.0f, 0.0f},
+    SpeakerPos{SF_CHANNEL_MAP_RIGHT,       -45.0f, 0.0f},
+    SpeakerPos{SF_CHANNEL_MAP_REAR_LEFT,   135.0f, 0.0f},
+    SpeakerPos{SF_CHANNEL_MAP_REAR_RIGHT, -135.0f, 0.0f},
+};
+constexpr std::array X51Map{
+    SpeakerPos{SF_CHANNEL_MAP_LEFT,         30.0f, 0.0f},
+    SpeakerPos{SF_CHANNEL_MAP_RIGHT,       -30.0f, 0.0f},
+    SpeakerPos{SF_CHANNEL_MAP_CENTER,        0.0f, 0.0f},
+    SpeakerPos{SF_CHANNEL_MAP_LFE, 0.0f, 0.0f},
+    SpeakerPos{SF_CHANNEL_MAP_SIDE_LEFT,   110.0f, 0.0f},
+    SpeakerPos{SF_CHANNEL_MAP_SIDE_RIGHT, -110.0f, 0.0f},
+};
+constexpr std::array X51RearMap{
+    SpeakerPos{SF_CHANNEL_MAP_LEFT,         30.0f, 0.0f},
+    SpeakerPos{SF_CHANNEL_MAP_RIGHT,       -30.0f, 0.0f},
+    SpeakerPos{SF_CHANNEL_MAP_CENTER,        0.0f, 0.0f},
+    SpeakerPos{SF_CHANNEL_MAP_LFE, 0.0f, 0.0f},
+    SpeakerPos{SF_CHANNEL_MAP_REAR_LEFT,   110.0f, 0.0f},
+    SpeakerPos{SF_CHANNEL_MAP_REAR_RIGHT, -110.0f, 0.0f},
+};
+constexpr std::array X71Map{
+    SpeakerPos{SF_CHANNEL_MAP_LEFT,         30.0f, 0.0f},
+    SpeakerPos{SF_CHANNEL_MAP_RIGHT,       -30.0f, 0.0f},
+    SpeakerPos{SF_CHANNEL_MAP_CENTER,        0.0f, 0.0f},
+    SpeakerPos{SF_CHANNEL_MAP_LFE, 0.0f, 0.0f},
+    SpeakerPos{SF_CHANNEL_MAP_REAR_LEFT,   150.0f, 0.0f},
+    SpeakerPos{SF_CHANNEL_MAP_REAR_RIGHT, -150.0f, 0.0f},
+    SpeakerPos{SF_CHANNEL_MAP_SIDE_LEFT,    90.0f, 0.0f},
+    SpeakerPos{SF_CHANNEL_MAP_SIDE_RIGHT,  -90.0f, 0.0f},
+};
+constexpr std::array X714Map{
+    SpeakerPos{SF_CHANNEL_MAP_LEFT,         30.0f,  0.0f},
+    SpeakerPos{SF_CHANNEL_MAP_RIGHT,       -30.0f,  0.0f},
+    SpeakerPos{SF_CHANNEL_MAP_CENTER,        0.0f,  0.0f},
+    SpeakerPos{SF_CHANNEL_MAP_LFE, 0.0f, 0.0f},
+    SpeakerPos{SF_CHANNEL_MAP_REAR_LEFT,   150.0f,  0.0f},
+    SpeakerPos{SF_CHANNEL_MAP_REAR_RIGHT, -150.0f,  0.0f},
+    SpeakerPos{SF_CHANNEL_MAP_SIDE_LEFT,    90.0f,  0.0f},
+    SpeakerPos{SF_CHANNEL_MAP_SIDE_RIGHT,  -90.0f,  0.0f},
+    SpeakerPos{SF_CHANNEL_MAP_TOP_FRONT_LEFT,    45.0f, 35.0f},
+    SpeakerPos{SF_CHANNEL_MAP_TOP_FRONT_RIGHT,  -45.0f, 35.0f},
+    SpeakerPos{SF_CHANNEL_MAP_TOP_REAR_LEFT,    135.0f, 35.0f},
+    SpeakerPos{SF_CHANNEL_MAP_TOP_REAR_RIGHT,  -135.0f, 35.0f},
 };
 
 constexpr auto GenCoeffs(double x /*+front*/, double y /*+left*/, double z /*+up*/) noexcept

@@ -94,24 +94,24 @@ struct EffectPropsItem {
     const EffectProps &DefaultProps;
     const EffectVtable &Vtable;
 };
-constexpr EffectPropsItem EffectPropsList[] = {
-    { AL_EFFECT_NULL, NullEffectProps, NullEffectVtable },
-    { AL_EFFECT_EAXREVERB, ReverbEffectProps, ReverbEffectVtable },
-    { AL_EFFECT_REVERB, StdReverbEffectProps, StdReverbEffectVtable },
-    { AL_EFFECT_AUTOWAH, AutowahEffectProps, AutowahEffectVtable },
-    { AL_EFFECT_CHORUS, ChorusEffectProps, ChorusEffectVtable },
-    { AL_EFFECT_COMPRESSOR, CompressorEffectProps, CompressorEffectVtable },
-    { AL_EFFECT_DISTORTION, DistortionEffectProps, DistortionEffectVtable },
-    { AL_EFFECT_ECHO, EchoEffectProps, EchoEffectVtable },
-    { AL_EFFECT_EQUALIZER, EqualizerEffectProps, EqualizerEffectVtable },
-    { AL_EFFECT_FLANGER, FlangerEffectProps, FlangerEffectVtable },
-    { AL_EFFECT_FREQUENCY_SHIFTER, FshifterEffectProps, FshifterEffectVtable },
-    { AL_EFFECT_RING_MODULATOR, ModulatorEffectProps, ModulatorEffectVtable },
-    { AL_EFFECT_PITCH_SHIFTER, PshifterEffectProps, PshifterEffectVtable },
-    { AL_EFFECT_VOCAL_MORPHER, VmorpherEffectProps, VmorpherEffectVtable },
-    { AL_EFFECT_DEDICATED_DIALOGUE, DedicatedEffectProps, DedicatedEffectVtable },
-    { AL_EFFECT_DEDICATED_LOW_FREQUENCY_EFFECT, DedicatedEffectProps, DedicatedEffectVtable },
-    { AL_EFFECT_CONVOLUTION_SOFT, ConvolutionEffectProps, ConvolutionEffectVtable },
+constexpr std::array EffectPropsList{
+    EffectPropsItem{AL_EFFECT_NULL, NullEffectProps, NullEffectVtable},
+    EffectPropsItem{AL_EFFECT_EAXREVERB, ReverbEffectProps, ReverbEffectVtable},
+    EffectPropsItem{AL_EFFECT_REVERB, StdReverbEffectProps, StdReverbEffectVtable},
+    EffectPropsItem{AL_EFFECT_AUTOWAH, AutowahEffectProps, AutowahEffectVtable},
+    EffectPropsItem{AL_EFFECT_CHORUS, ChorusEffectProps, ChorusEffectVtable},
+    EffectPropsItem{AL_EFFECT_COMPRESSOR, CompressorEffectProps, CompressorEffectVtable},
+    EffectPropsItem{AL_EFFECT_DISTORTION, DistortionEffectProps, DistortionEffectVtable},
+    EffectPropsItem{AL_EFFECT_ECHO, EchoEffectProps, EchoEffectVtable},
+    EffectPropsItem{AL_EFFECT_EQUALIZER, EqualizerEffectProps, EqualizerEffectVtable},
+    EffectPropsItem{AL_EFFECT_FLANGER, FlangerEffectProps, FlangerEffectVtable},
+    EffectPropsItem{AL_EFFECT_FREQUENCY_SHIFTER, FshifterEffectProps, FshifterEffectVtable},
+    EffectPropsItem{AL_EFFECT_RING_MODULATOR, ModulatorEffectProps, ModulatorEffectVtable},
+    EffectPropsItem{AL_EFFECT_PITCH_SHIFTER, PshifterEffectProps, PshifterEffectVtable},
+    EffectPropsItem{AL_EFFECT_VOCAL_MORPHER, VmorpherEffectProps, VmorpherEffectVtable},
+    EffectPropsItem{AL_EFFECT_DEDICATED_DIALOGUE, DedicatedEffectProps, DedicatedEffectVtable},
+    EffectPropsItem{AL_EFFECT_DEDICATED_LOW_FREQUENCY_EFFECT, DedicatedEffectProps, DedicatedEffectVtable},
+    EffectPropsItem{AL_EFFECT_CONVOLUTION_SOFT, ConvolutionEffectProps, ConvolutionEffectVtable},
 };
 
 
@@ -136,7 +136,7 @@ void ALeffect_getParamfv(const ALeffect *effect, ALenum param, float *values)
 
 const EffectPropsItem *getEffectPropsItemByType(ALenum type)
 {
-    auto iter = std::find_if(std::begin(EffectPropsList), std::end(EffectPropsList),
+    auto iter = std::find_if(EffectPropsList.begin(), EffectPropsList.end(),
         [type](const EffectPropsItem &item) noexcept -> bool
         { return item.Type == type; });
     return (iter != std::end(EffectPropsList)) ? al::to_address(iter) : nullptr;
@@ -542,11 +542,12 @@ EffectSubList::~EffectSubList()
 }
 
 
-#define DECL(x) { #x, EFX_REVERB_PRESET_##x }
-static const struct {
-    const char name[32];
+struct EffectPreset {
+    const char name[32]; /* NOLINT(*-avoid-c-arrays) */
     EFXEAXREVERBPROPERTIES props;
-} reverblist[] = {
+};
+#define DECL(x) EffectPreset{#x, EFX_REVERB_PRESET_##x}
+static constexpr std::array reverblist{
     DECL(GENERIC),
     DECL(PADDEDCELL),
     DECL(ROOM),

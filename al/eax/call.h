@@ -71,16 +71,16 @@ public:
     }
 
 private:
-    const EaxCallType mCallType{};
+    const EaxCallType mCallType;
     int mVersion{};
     EaxFxSlotIndex mFxSlotIndex{};
-    EaxCallPropertySetId mPropertySetId{};
-    bool mIsDeferred{};
+    EaxCallPropertySetId mPropertySetId{EaxCallPropertySetId::none};
+    bool mIsDeferred;
 
-    const ALuint mPropertyId{};
-    const ALuint mPropertySourceId{};
-    ALvoid*const mPropertyBuffer{};
-    const ALuint mPropertyBufferSize{};
+    const ALuint mPropertyId;
+    const ALuint mPropertySourceId;
+    ALvoid*const mPropertyBuffer;
+    const ALuint mPropertyBufferSize;
 
     [[noreturn]] static void fail(const char* message);
     [[noreturn]] static void fail_too_small();

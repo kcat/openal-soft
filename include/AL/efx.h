@@ -1,6 +1,7 @@
 #ifndef AL_EFX_H
 #define AL_EFX_H
 
+/* NOLINTBEGIN */
 #include <float.h>
 
 #include "alc.h"
@@ -758,5 +759,6 @@ AL_API void AL_APIENTRY alGetAuxiliaryEffectSlotfv(ALuint effectslot, ALenum par
 #ifdef __cplusplus
 }  /* extern "C" */
 #endif
+/* NOLINTEND */
 
 #endif /* AL_EFX_H */

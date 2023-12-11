@@ -3,7 +3,7 @@
 
 #include "effectslot.h"
 
-#include <stddef.h>
+#include <cstddef>
 
 #include "almalloc.h"
 #include "context.h"

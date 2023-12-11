@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <iterator>
+#include <vector>
 
 #include "alcomplex.h"
 #include "alnumeric.h"
@@ -64,8 +65,7 @@ struct SegmentedFilter {
         /* To set up the filter, we need to generate the desired response.
          * Start with a pure delay that passes all frequencies through.
          */
-        auto fftBuffer = std::make_unique<complex_d[]>(fft_size);
-        std::fill_n(fftBuffer.get(), fft_size, complex_d{});
+        auto fftBuffer = std::vector<complex_d>(fft_size, complex_d{});
         fftBuffer[half_size] = 1.0;
 
         /* Convert to the frequency domain, shift the phase of each bin by +90
@@ -75,27 +75,27 @@ struct SegmentedFilter {
          * To maintain that and their phase (0 or pi), they're heavily
          * attenuated instead of shifted like the others.
          */
-        forward_fft(al::span{fftBuffer.get(), fft_size});
+        forward_fft(al::span{fftBuffer});
         fftBuffer[0] *= std::numeric_limits<double>::epsilon();
         for(size_t i{1};i < half_size;++i)
             fftBuffer[i] = complex_d{-fftBuffer[i].imag(), fftBuffer[i].real()};
         fftBuffer[half_size] *= std::numeric_limits<double>::epsilon();
         for(size_t i{half_size+1};i < fft_size;++i)
             fftBuffer[i] = std::conj(fftBuffer[fft_size - i]);
-        inverse_fft(al::span{fftBuffer.get(), fft_size});
+        inverse_fft(al::span{fftBuffer});
 
         /* The segments of the filter are converted back to the frequency
          * domain, each on their own (0 stuffed).
          */
-        auto fftBuffer2 = std::make_unique<complex_d[]>(sFftLength);
+        auto fftBuffer2 = std::vector<complex_d>(sFftLength);
         auto fftTmp = al::vector<float,16>(sFftLength);
         float *filter{mFilterData.data()};
         for(size_t s{0};s < sNumSegments;++s)
         {
             for(size_t i{0};i < sSampleLength;++i)
                 fftBuffer2[i] = fftBuffer[sSampleLength*s + i].real() / double{fft_size};
-            std::fill_n(fftBuffer2.get()+sSampleLength, sSampleLength, complex_d{});
-            forward_fft(al::span{fftBuffer2.get(), sFftLength});
+            std::fill_n(fftBuffer2.data()+sSampleLength, sSampleLength, complex_d{});
+            forward_fft(al::span{fftBuffer2});
 
             /* Convert to zdomain data for PFFFT, scaled by the FFT length so
              * the iFFT result will be normalized.

@@ -55,31 +55,31 @@ namespace {
 
 struct FactoryItem {
     EffectSlotType Type;
-    EffectStateFactory* (&GetFactory)(void);
+    EffectStateFactory* (&GetFactory)();
 };
-constexpr FactoryItem FactoryList[] = {
-    { EffectSlotType::None, NullStateFactory_getFactory },
-    { EffectSlotType::EAXReverb, ReverbStateFactory_getFactory },
-    { EffectSlotType::Reverb, StdReverbStateFactory_getFactory },
-    { EffectSlotType::Autowah, AutowahStateFactory_getFactory },
-    { EffectSlotType::Chorus, ChorusStateFactory_getFactory },
-    { EffectSlotType::Compressor, CompressorStateFactory_getFactory },
-    { EffectSlotType::Distortion, DistortionStateFactory_getFactory },
-    { EffectSlotType::Echo, EchoStateFactory_getFactory },
-    { EffectSlotType::Equalizer, EqualizerStateFactory_getFactory },
-    { EffectSlotType::Flanger, FlangerStateFactory_getFactory },
-    { EffectSlotType::FrequencyShifter, FshifterStateFactory_getFactory },
-    { EffectSlotType::RingModulator, ModulatorStateFactory_getFactory },
-    { EffectSlotType::PitchShifter, PshifterStateFactory_getFactory },
-    { EffectSlotType::VocalMorpher, VmorpherStateFactory_getFactory },
-    { EffectSlotType::DedicatedDialog, DedicatedStateFactory_getFactory },
-    { EffectSlotType::DedicatedLFE, DedicatedStateFactory_getFactory },
-    { EffectSlotType::Convolution, ConvolutionStateFactory_getFactory },
+constexpr std::array FactoryList{
+    FactoryItem{EffectSlotType::None, NullStateFactory_getFactory},
+    FactoryItem{EffectSlotType::EAXReverb, ReverbStateFactory_getFactory},
+    FactoryItem{EffectSlotType::Reverb, StdReverbStateFactory_getFactory},
+    FactoryItem{EffectSlotType::Autowah, AutowahStateFactory_getFactory},
+    FactoryItem{EffectSlotType::Chorus, ChorusStateFactory_getFactory},
+    FactoryItem{EffectSlotType::Compressor, CompressorStateFactory_getFactory},
+    FactoryItem{EffectSlotType::Distortion, DistortionStateFactory_getFactory},
+    FactoryItem{EffectSlotType::Echo, EchoStateFactory_getFactory},
+    FactoryItem{EffectSlotType::Equalizer, EqualizerStateFactory_getFactory},
+    FactoryItem{EffectSlotType::Flanger, FlangerStateFactory_getFactory},
+    FactoryItem{EffectSlotType::FrequencyShifter, FshifterStateFactory_getFactory},
+    FactoryItem{EffectSlotType::RingModulator, ModulatorStateFactory_getFactory},
+    FactoryItem{EffectSlotType::PitchShifter, PshifterStateFactory_getFactory},
+    FactoryItem{EffectSlotType::VocalMorpher, VmorpherStateFactory_getFactory},
+    FactoryItem{EffectSlotType::DedicatedDialog, DedicatedStateFactory_getFactory},
+    FactoryItem{EffectSlotType::DedicatedLFE, DedicatedStateFactory_getFactory},
+    FactoryItem{EffectSlotType::Convolution, ConvolutionStateFactory_getFactory},
 };
 
 EffectStateFactory *getFactoryByType(EffectSlotType type)
 {
-    auto iter = std::find_if(std::begin(FactoryList), std::end(FactoryList),
+    auto iter = std::find_if(FactoryList.begin(), FactoryList.end(),
         [type](const FactoryItem &item) noexcept -> bool
         { return item.Type == type; });
     return (iter != std::end(FactoryList)) ? iter->GetFactory() : nullptr;

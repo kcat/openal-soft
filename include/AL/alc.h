@@ -1,6 +1,7 @@
 #ifndef AL_ALC_H
 #define AL_ALC_H
 
+/* NOLINTBEGIN */
 #ifdef __cplusplus
 extern "C" {
 
@@ -289,5 +290,6 @@ typedef void           (ALC_APIENTRY *LPALCCAPTURESAMPLES)(ALCdevice *device, AL
 #ifdef __cplusplus
 } /* extern "C" */
 #endif
+/* NOLINTEND */
 
 #endif /* AL_ALC_H */

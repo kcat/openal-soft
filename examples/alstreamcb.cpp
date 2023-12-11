@@ -24,12 +24,12 @@
 
 /* This file contains a streaming audio player using a callback buffer. */
 
-#include <string.h>
-#include <stdlib.h>
-#include <stdio.h>
 
 #include <atomic>
 #include <chrono>
+#include <cstring>
+#include <cstdlib>
+#include <cstdio>
 #include <memory>
 #include <stdexcept>
 #include <string>
@@ -58,8 +58,7 @@ struct StreamPlayer {
     /* A lockless ring-buffer (supports single-provider, single-consumer
      * operation).
      */
-    std::unique_ptr<ALbyte[]> mBufferData;
-    size_t mBufferDataSize{0};
+    std::vector<ALbyte> mBufferData;
     std::atomic<size_t> mReadPos{0};
     std::atomic<size_t> mWritePos{0};
     size_t mSamplesPerBlock{1};
@@ -234,7 +233,7 @@ struct StreamPlayer {
         }
         else if(mSfInfo.channels == 3)
         {
-            if(sf_command(mSndfile, SFC_WAVEX_GET_AMBISONIC, NULL, 0) == SF_AMBISONIC_B_FORMAT)
+            if(sf_command(mSndfile, SFC_WAVEX_GET_AMBISONIC, nullptr, 0) == SF_AMBISONIC_B_FORMAT)
             {
                 if(mSampleFormat == SampleType::Int16)
                     mFormat = AL_FORMAT_BFORMAT2D_16;
@@ -244,7 +243,7 @@ struct StreamPlayer {
         }
         else if(mSfInfo.channels == 4)
         {
-            if(sf_command(mSndfile, SFC_WAVEX_GET_AMBISONIC, NULL, 0) == SF_AMBISONIC_B_FORMAT)
+            if(sf_command(mSndfile, SFC_WAVEX_GET_AMBISONIC, nullptr, 0) == SF_AMBISONIC_B_FORMAT)
             {
                 if(mSampleFormat == SampleType::Int16)
                     mFormat = AL_FORMAT_BFORMAT3D_16;
@@ -264,8 +263,7 @@ struct StreamPlayer {
         /* Set a 1s ring buffer size. */
         size_t numblocks{(static_cast<ALuint>(mSfInfo.samplerate) + mSamplesPerBlock-1)
             / mSamplesPerBlock};
-        mBufferDataSize = static_cast<ALuint>(numblocks * mBytesPerBlock);
-        mBufferData.reset(new ALbyte[mBufferDataSize]);
+        mBufferData.resize(static_cast<ALuint>(numblocks * mBytesPerBlock));
         mReadPos.store(0, std::memory_order_relaxed);
         mWritePos.store(0, std::memory_order_relaxed);
         mDecoderOffset = 0;
@@ -305,7 +303,7 @@ struct StreamPlayer {
              * that case, otherwise read up to the write offset. Also limit the
              * amount to copy given how much is remaining to write.
              */
-            size_t todo{((woffset < roffset) ? mBufferDataSize : woffset) - roffset};
+            size_t todo{((woffset < roffset) ? mBufferData.size() : woffset) - roffset};
             todo = std::min<size_t>(todo, static_cast<ALuint>(size-got));
 
             /* Copy from the ring buffer to the provided output buffer. Wrap
@@ -317,7 +315,7 @@ struct StreamPlayer {
             got += static_cast<ALsizei>(todo);
 
             roffset += todo;
-            if(roffset == mBufferDataSize)
+            if(roffset == mBufferData.size())
                 roffset = 0;
         }
         /* Finally, store the updated read offset, and return how many bytes
@@ -353,7 +351,7 @@ struct StreamPlayer {
         if(state != AL_INITIAL)
         {
             const size_t roffset{mReadPos.load(std::memory_order_relaxed)};
-            const size_t readable{((woffset >= roffset) ? woffset : (mBufferDataSize+woffset)) -
+            const size_t readable{((woffset >= roffset) ? woffset : (mBufferData.size()+woffset)) -
                 roffset};
             /* For a stopped (underrun) source, the current playback offset is
              * the current decoder offset excluding the readable buffered data.
@@ -364,7 +362,7 @@ struct StreamPlayer {
                 ? (mDecoderOffset-readable) / mBytesPerBlock * mSamplesPerBlock
                 : (static_cast<ALuint>(pos) + mStartOffset/mBytesPerBlock*mSamplesPerBlock))
                 / static_cast<ALuint>(mSfInfo.samplerate)};
-            printf("\r%3zus (%3zu%% full)", curtime, readable * 100 / mBufferDataSize);
+            printf("\r%3zus (%3zu%% full)", curtime, readable * 100 / mBufferData.size());
         }
         else
             fputs("Starting...", stdout);
@@ -417,8 +415,8 @@ struct StreamPlayer {
                  * data can fit, and calculate how much can go in front before
                  * wrapping.
                  */
-                const size_t writable{(!roffset ? mBufferDataSize-woffset-1 :
-                    (mBufferDataSize-woffset)) / mBytesPerBlock};
+                const size_t writable{(!roffset ? mBufferData.size()-woffset-1 :
+                    (mBufferData.size()-woffset)) / mBytesPerBlock};
                 if(!writable) break;
 
                 if(mSampleFormat == SampleType::Int16)
@@ -446,7 +444,7 @@ struct StreamPlayer {
                 }
 
                 woffset += read_bytes;
-                if(woffset == mBufferDataSize)
+                if(woffset == mBufferData.size())
                     woffset = 0;
             }
             mWritePos.store(woffset, std::memory_order_release);
@@ -461,7 +459,7 @@ struct StreamPlayer {
              * what's available.
              */
             const size_t roffset{mReadPos.load(std::memory_order_relaxed)};
-            const size_t readable{((woffset >= roffset) ? woffset : (mBufferDataSize+woffset)) -
+            const size_t readable{((woffset >= roffset) ? woffset : (mBufferData.size()+woffset)) -
                 roffset};
             if(readable == 0)
                 return false;

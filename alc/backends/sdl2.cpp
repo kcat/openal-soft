@@ -46,7 +46,8 @@ namespace {
 #define DEVNAME_PREFIX ""
 #endif
 
-constexpr char defaultDeviceName[] = DEVNAME_PREFIX "Default Device";
+/* NOLINTNEXTLINE(*-avoid-c-arrays) */
+constexpr char defaultDeviceName[]{DEVNAME_PREFIX "Default Device"};
 
 struct Sdl2Backend final : public BackendBase {
     Sdl2Backend(DeviceBase *device) noexcept : BackendBase{device} { }

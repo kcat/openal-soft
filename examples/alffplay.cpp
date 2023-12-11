@@ -310,8 +310,9 @@ struct AudioState {
     int mSamplesPos{0};
     int mSamplesMax{0};
 
-    std::unique_ptr<uint8_t[]> mBufferData;
-    size_t mBufferDataSize{0};
+    std::vector<uint8_t> mBufferData_;
+    //std::unique_ptr<uint8_t[]> mBufferData;
+    //size_t mBufferDataSize{0};
     std::atomic<size_t> mReadPos{0};
     std::atomic<size_t> mWritePos{0};
 
@@ -485,7 +486,7 @@ nanoseconds AudioState::getClockNoLock()
         return device_time - mDeviceStartTime - latency;
     }
 
-    if(mBufferDataSize > 0)
+    if(!mBufferData_.empty())
     {
         if(mDeviceStartTime == nanoseconds::min())
             return nanoseconds::zero();
@@ -522,7 +523,7 @@ nanoseconds AudioState::getClockNoLock()
              */
             const size_t woffset{mWritePos.load(std::memory_order_acquire)};
             const size_t roffset{mReadPos.load(std::memory_order_relaxed)};
-            const size_t readable{((woffset >= roffset) ? woffset : (mBufferDataSize+woffset)) -
+            const size_t readable{((woffset>=roffset) ? woffset : (mBufferData_.size()+woffset)) -
                 roffset};
 
             pts = mCurrentPts - nanoseconds{seconds{readable/mFrameSize}}/mCodecCtx->sample_rate;
@@ -584,10 +585,10 @@ bool AudioState::startPlayback()
 {
     const size_t woffset{mWritePos.load(std::memory_order_acquire)};
     const size_t roffset{mReadPos.load(std::memory_order_relaxed)};
-    const size_t readable{((woffset >= roffset) ? woffset : (mBufferDataSize+woffset)) -
+    const size_t readable{((woffset >= roffset) ? woffset : (mBufferData_.size()+woffset)) -
         roffset};
 
-    if(mBufferDataSize > 0)
+    if(!mBufferData_.empty())
     {
         if(readable == 0)
             return false;
@@ -620,7 +621,7 @@ bool AudioState::startPlayback()
          * the device time the stream would have started at to reach where it
          * is now.
          */
-        if(mBufferDataSize > 0)
+        if(!mBufferData_.empty())
         {
             nanoseconds startpts{mCurrentPts -
                 nanoseconds{seconds{readable/mFrameSize}}/mCodecCtx->sample_rate};
@@ -789,17 +790,17 @@ bool AudioState::readAudio(int sample_skip)
     while(mSamplesLen > 0)
     {
         const size_t nsamples{((roffset > woffset) ? roffset-woffset-1
-            : (roffset == 0) ? (mBufferDataSize-woffset-1)
-            : (mBufferDataSize-woffset)) / mFrameSize};
+            : (roffset == 0) ? (mBufferData_.size()-woffset-1)
+            : (mBufferData_.size()-woffset)) / mFrameSize};
         if(!nsamples) break;
 
         if(mSamplesPos < 0)
         {
             const size_t rem{std::min<size_t>(nsamples, static_cast<ALuint>(-mSamplesPos))};
 
-            sample_dup(&mBufferData[woffset], mSamples, rem, mFrameSize);
+            sample_dup(&mBufferData_[woffset], mSamples, rem, mFrameSize);
             woffset += rem * mFrameSize;
-            if(woffset == mBufferDataSize) woffset = 0;
+            if(woffset == mBufferData_.size()) woffset = 0;
             mWritePos.store(woffset, std::memory_order_release);
 
             mCurrentPts += nanoseconds{seconds{rem}} / mCodecCtx->sample_rate;
@@ -811,9 +812,9 @@ bool AudioState::readAudio(int sample_skip)
         const size_t boffset{static_cast<ALuint>(mSamplesPos) * size_t{mFrameSize}};
         const size_t nbytes{rem * mFrameSize};
 
-        memcpy(&mBufferData[woffset], mSamples + boffset, nbytes);
+        memcpy(&mBufferData_[woffset], mSamples + boffset, nbytes);
         woffset += nbytes;
-        if(woffset == mBufferDataSize) woffset = 0;
+        if(woffset == mBufferData_.size()) woffset = 0;
         mWritePos.store(woffset, std::memory_order_release);
 
         mCurrentPts += nanoseconds{seconds{rem}} / mCodecCtx->sample_rate;
@@ -886,15 +887,15 @@ ALsizei AudioState::bufferCallback(void *data, ALsizei size) noexcept
         const size_t woffset{mWritePos.load(std::memory_order_relaxed)};
         if(woffset == roffset) break;
 
-        size_t todo{((woffset < roffset) ? mBufferDataSize : woffset) - roffset};
+        size_t todo{((woffset < roffset) ? mBufferData_.size() : woffset) - roffset};
         todo = std::min<size_t>(todo, static_cast<ALuint>(size-got));
 
-        memcpy(data, &mBufferData[roffset], todo);
+        memcpy(data, &mBufferData_[roffset], todo);
         data = static_cast<ALbyte*>(data) + todo;
         got += static_cast<ALsizei>(todo);
 
         roffset += todo;
-        if(roffset == mBufferDataSize)
+        if(roffset == mBufferData_.size())
             roffset = 0;
     }
     mReadPos.store(roffset, std::memory_order_release);
@@ -934,7 +935,7 @@ int AudioState::handler()
     };
     EventControlManager event_controller{sleep_time};
 
-    std::unique_ptr<uint8_t[]> samples;
+    std::vector<uint8_t> samples;
     ALsizei buffer_len{0};
 
     /* Find a suitable format for OpenAL. */
@@ -1235,13 +1236,12 @@ int AudioState::handler()
         }
         else
         {
-            mBufferDataSize = static_cast<size_t>(duration_cast<seconds>(mCodecCtx->sample_rate *
-                AudioBufferTotalTime).count()) * mFrameSize;
-            mBufferData = std::make_unique<uint8_t[]>(mBufferDataSize);
-            std::fill_n(mBufferData.get(), mBufferDataSize, uint8_t{});
+            mBufferData_.resize(static_cast<size_t>(duration_cast<seconds>(mCodecCtx->sample_rate *
+                AudioBufferTotalTime).count()) * mFrameSize);
+            std::fill(mBufferData_.begin(), mBufferData_.end(), uint8_t{});
 
             mReadPos.store(0, std::memory_order_relaxed);
-            mWritePos.store(mBufferDataSize/mFrameSize/2*mFrameSize, std::memory_order_relaxed);
+            mWritePos.store(mBufferData_.size()/mFrameSize/2*mFrameSize, std::memory_order_relaxed);
 
             ALCint refresh{};
             alcGetIntegerv(alcGetContextsDevice(alcGetCurrentContext()), ALC_REFRESH, 1, &refresh);
@@ -1253,7 +1253,7 @@ int AudioState::handler()
         buffer_len = static_cast<int>(duration_cast<seconds>(mCodecCtx->sample_rate *
             AudioBufferTime).count() * mFrameSize);
     if(buffer_len > 0)
-        samples = std::make_unique<uint8_t[]>(static_cast<ALuint>(buffer_len));
+        samples.resize(static_cast<ALuint>(buffer_len));
 
     /* Prefill the codec buffer. */
     auto packet_sender = [this]()
@@ -1301,7 +1301,7 @@ int AudioState::handler()
         }
 
         ALenum state;
-        if(mBufferDataSize > 0)
+        if(!mBufferData_.empty())
         {
             alGetSourcei(mSource, AL_SOURCE_STATE, &state);
 
@@ -1331,13 +1331,13 @@ int AudioState::handler()
                 /* Read the next chunk of data, filling the buffer, and queue
                  * it on the source.
                  */
-                if(!readAudio(samples.get(), static_cast<ALuint>(buffer_len), sync_skip))
+                if(!readAudio(samples.data(), static_cast<ALuint>(buffer_len), sync_skip))
                     break;
 
                 const ALuint bufid{mBuffers[mBufferIdx]};
                 mBufferIdx = static_cast<ALuint>((mBufferIdx+1) % mBuffers.size());
 
-                alBufferData(bufid, mFormat, samples.get(), buffer_len, mCodecCtx->sample_rate);
+                alBufferData(bufid, mFormat, samples.data(), buffer_len, mCodecCtx->sample_rate);
                 alSourceQueueBuffers(mSource, 1, &bufid);
                 ++queued;
             }

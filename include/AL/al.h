@@ -1,6 +1,7 @@
 #ifndef AL_AL_H
 #define AL_AL_H
 
+/* NOLINTBEGIN */
 #ifdef __cplusplus
 extern "C" {
 
@@ -689,5 +690,6 @@ typedef void          (AL_APIENTRY *LPALDISTANCEMODEL)(ALenum distanceModel) AL_
 #ifdef __cplusplus
 }  /* extern "C" */
 #endif
+/* NOLINTEND */
 
 #endif /* AL_AL_H */

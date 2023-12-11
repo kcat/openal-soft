@@ -60,6 +60,7 @@
 
 namespace {
 
+/* NOLINTBEGIN(*-avoid-c-arrays) */
 constexpr ALchar alVendor[] = "OpenAL Community";
 constexpr ALchar alVersion[] = "1.1 ALSOFT " ALSOFT_VERSION;
 constexpr ALchar alRenderer[] = "OpenAL Soft";
@@ -73,6 +74,7 @@ constexpr ALchar alErrInvalidOp[] = "Invalid Operation";
 constexpr ALchar alErrOutOfMemory[] = "Out of Memory";
 constexpr ALchar alStackOverflow[] = "Stack Overflow";
 constexpr ALchar alStackUnderflow[] = "Stack Underflow";
+/* NOLINTEND(*-avoid-c-arrays) */
 
 /* Resampler strings */
 template<Resampler rtype> struct ResamplerName { };

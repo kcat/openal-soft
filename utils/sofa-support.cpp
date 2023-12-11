@@ -24,11 +24,11 @@
 
 #include "sofa-support.h"
 
-#include <stdio.h>
 
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <cstdio>
 #include <utility>
 #include <vector>
 
@@ -47,7 +47,7 @@ using double3 = std::array<double,3>;
  * equality of unique elements.
  */
 std::vector<double> GetUniquelySortedElems(const std::vector<double3> &aers, const uint axis,
-    const double *const (&filters)[3], const double (&epsilons)[3])
+    const std::array<const double*,3> filters, const std::array<double,3> epsilons)
 {
     std::vector<double> elems;
     for(const double3 &aer : aers)
@@ -183,8 +183,8 @@ std::vector<SofaField> GetCompatibleLayout(const size_t m, const float *xyzs)
     auto aers = std::vector<double3>(m, double3{});
     for(size_t i{0u};i < m;++i)
     {
-        float vals[3]{xyzs[i*3], xyzs[i*3 + 1], xyzs[i*3 + 2]};
-        mysofa_c2s(&vals[0]);
+        std::array vals{xyzs[i*3], xyzs[i*3 + 1], xyzs[i*3 + 2]};
+        mysofa_c2s(vals.data());
         aers[i] = {vals[0], vals[1], vals[2]};
     }
 

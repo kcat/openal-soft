@@ -14,7 +14,7 @@
 
 void PrepareDBus()
 {
-    static constexpr char libname[] = "libdbus-1.so.3";
+    const char *libname{"libdbus-1.so.3"};
 
     auto load_func = [](auto &f, const char *name) -> void
     { f = al::bit_cast<std::remove_reference_t<decltype(f)>>(GetSymbol(dbus_handle, name)); };

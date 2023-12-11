@@ -2,7 +2,7 @@
 #include "cubic_tables.h"
 
 #include <array>
-#include <stddef.h>
+#include <cstddef>
 
 #include "cubic_defs.h"
 
@@ -41,7 +41,7 @@ struct SplineFilterArray {
         mTable[pi].mDeltas[3] = -mTable[pi].mCoeffs[3];
     }
 
-    constexpr auto& getTable() const noexcept { return mTable; }
+    [[nodiscard]] constexpr auto& getTable() const noexcept { return mTable; }
 };
 
 constexpr SplineFilterArray SplineFilter{};

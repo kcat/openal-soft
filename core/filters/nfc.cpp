@@ -48,12 +48,12 @@
 
 namespace {
 
-constexpr float B[5][4] = {
-    {    0.0f                             },
-    {    1.0f                             },
-    {    3.0f,     3.0f                   },
-    { 3.6778f,  6.4595f, 2.3222f          },
-    { 4.2076f, 11.4877f, 5.7924f, 9.1401f }
+constexpr std::array B{
+    std::array{   0.0f,     0.0f,    0.0f,    0.0f},
+    std::array{   1.0f,     0.0f,    0.0f,    0.0f},
+    std::array{   3.0f,     3.0f,    0.0f,    0.0f},
+    std::array{3.6778f,  6.4595f, 2.3222f,    0.0f},
+    std::array{4.2076f, 11.4877f, 5.7924f, 9.1401f}
 };
 
 NfcFilter1 NfcFilterCreate1(const float w0, const float w1) noexcept

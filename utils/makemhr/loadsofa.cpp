@@ -65,8 +65,8 @@ static bool PrepareLayout(const uint m, const float *xyzs, HrirDataT *hData)
         return false;
     }
 
-    double distances[MAX_FD_COUNT]{};
-    uint evCounts[MAX_FD_COUNT]{};
+    std::array<double,MAX_FD_COUNT> distances{};
+    std::array<uint,MAX_FD_COUNT> evCounts{};
     auto azCounts = std::vector<std::array<uint,MAX_EV_COUNT>>(MAX_FD_COUNT);
     for(auto &azs : azCounts) azs.fill(0u);
 
@@ -88,7 +88,7 @@ static bool PrepareLayout(const uint m, const float *xyzs, HrirDataT *hData)
     }
     fprintf(stdout, "Using %u of %u IRs.\n", ir_total, m);
     const auto azs = al::span{azCounts}.first<MAX_FD_COUNT>();
-    return PrepareHrirData({distances, fi}, evCounts, azs, hData);
+    return PrepareHrirData(al::span{distances}.first(fi), evCounts, azs, hData);
 }
 
 
@@ -264,24 +264,24 @@ static bool LoadResponses(MYSOFA_HRTF *sofaHrtf, HrirDataT *hData, const DelayTy
         hData->mHrirsBase.resize(channels * hData->mIrCount * hData->mIrSize, 0.0);
         double *hrirs = hData->mHrirsBase.data();
 
-        std::unique_ptr<double[]> restmp;
+        std::vector<double> restmp;
         std::optional<PPhaseResampler> resampler;
         if(outRate && outRate != hData->mIrRate)
         {
             resampler.emplace().init(hData->mIrRate, outRate);
-            restmp = std::make_unique<double[]>(sofaHrtf->N);
+            restmp.resize(sofaHrtf->N);
         }
 
         for(uint si{0u};si < sofaHrtf->M;++si)
         {
             loaded_count.fetch_add(1u);
 
-            float aer[3]{
+            std::array aer{
                 sofaHrtf->SourcePosition.values[3*si],
                 sofaHrtf->SourcePosition.values[3*si + 1],
                 sofaHrtf->SourcePosition.values[3*si + 2]
             };
-            mysofa_c2s(aer);
+            mysofa_c2s(aer.data());
 
             if(std::abs(aer[1]) >= 89.999f)
                 aer[0] = 0.0f;
@@ -324,8 +324,8 @@ static bool LoadResponses(MYSOFA_HRTF *sofaHrtf, HrirDataT *hData, const DelayTy
                 else
                 {
                     std::copy_n(&sofaHrtf->DataIR.values[(si*sofaHrtf->R + ti)*sofaHrtf->N],
-                        sofaHrtf->N, restmp.get());
-                    resampler->process(sofaHrtf->N, restmp.get(), hData->mIrSize, azd->mIrs[ti]);
+                        sofaHrtf->N, restmp.data());
+                    resampler->process(sofaHrtf->N, restmp.data(), hData->mIrSize, azd->mIrs[ti]);
                 }
             }
 
@@ -382,7 +382,7 @@ struct MagCalculator {
     {
         auto htemp = std::vector<complex_d>(mFftSize);
 
-        while(1)
+        while(true)
         {
             /* Load the current index to process. */
             size_t idx{mCurrent.load()};

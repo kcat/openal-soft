@@ -1420,8 +1420,7 @@ class PipeWirePlayback final : public BackendBase {
     PwStreamPtr mStream;
     spa_hook mStreamListener{};
     spa_io_rate_match *mRateMatch{};
-    std::unique_ptr<float*[]> mChannelPtrs;
-    uint mNumChannels{};
+    std::vector<float*> mChannelPtrs;
 
     static constexpr pw_stream_events CreateEvents()
     {
@@ -1468,7 +1467,7 @@ void PipeWirePlayback::outputCallback() noexcept
     if(!pw_buf) UNLIKELY return;
 
     const al::span<spa_data> datas{pw_buf->buffer->datas,
-        minu(mNumChannels, pw_buf->buffer->n_datas)};
+        minz(mChannelPtrs.size(), pw_buf->buffer->n_datas)};
 #if PW_CHECK_VERSION(0,3,49)
     /* In 0.3.49, pw_buffer::requested specifies the number of samples needed
      * by the resampler/graph for this audio update.
@@ -1488,7 +1487,7 @@ void PipeWirePlayback::outputCallback() noexcept
      * buffer length in any one channel is smaller than we wanted (shouldn't
      * be, but just in case).
      */
-    float **chanptr_end{mChannelPtrs.get()};
+    auto chanptr_end = mChannelPtrs.begin();
     for(const auto &data : datas)
     {
         length = minu(length, data.maxsize/sizeof(float));
@@ -1500,7 +1499,7 @@ void PipeWirePlayback::outputCallback() noexcept
         data.chunk->size   = length * sizeof(float);
     }
 
-    mDevice->renderSamples({mChannelPtrs.get(), chanptr_end}, length);
+    mDevice->renderSamples(mChannelPtrs, length);
 
     pw_buf->size = length;
     pw_stream_queue_buffer(mStream.get(), pw_buf);
@@ -1711,8 +1710,7 @@ bool PipeWirePlayback::reset()
      */
     plock.unlock();
 
-    mNumChannels = mDevice->channelsFromFmt();
-    mChannelPtrs = std::make_unique<float*[]>(mNumChannels);
+    mChannelPtrs.resize(mDevice->channelsFromFmt());
 
     setDefaultWFXChannelOrder();
 

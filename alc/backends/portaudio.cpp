@@ -39,7 +39,8 @@
 
 namespace {
 
-constexpr char pa_device[] = "PortAudio Default";
+/* NOLINTNEXTLINE(*-avoid-c-arrays) */
+constexpr char pa_device[]{"PortAudio Default"};
 
 
 #ifdef HAVE_DYNLOAD

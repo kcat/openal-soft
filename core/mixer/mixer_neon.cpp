@@ -146,12 +146,11 @@ void Resample_<LerpTag,NEONTag>(const InterpState*, const float *RESTRICT src, u
     const int32x4_t increment4 = vdupq_n_s32(static_cast<int>(increment*4));
     const float32x4_t fracOne4 = vdupq_n_f32(1.0f/MixerFracOne);
     const int32x4_t fracMask4 = vdupq_n_s32(MixerFracMask);
-    alignas(16) uint pos_[4], frac_[4];
-    int32x4_t pos4, frac4;
 
+    alignas(16) std::array<uint,4> pos_, frac_;
     InitPosArrays(frac, increment, al::span{frac_}, al::span{pos_});
-    frac4 = vld1q_s32(reinterpret_cast<int*>(frac_));
-    pos4 = vld1q_s32(reinterpret_cast<int*>(pos_));
+    int32x4_t frac4 = vld1q_s32(reinterpret_cast<int*>(frac_));
+    int32x4_t pos4 = vld1q_s32(reinterpret_cast<int*>(pos_));
 
     auto dst_iter = dst.begin();
     for(size_t todo{dst.size()>>2};todo;--todo)

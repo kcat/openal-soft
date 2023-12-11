@@ -8,13 +8,12 @@ namespace Ui {
 class MainWindow;
 }
 
-class MainWindow : public QMainWindow
-{
+class MainWindow : public QMainWindow {
     Q_OBJECT
 
 public:
-    explicit MainWindow(QWidget *parent = 0);
-    ~MainWindow();
+    explicit MainWindow(QWidget *parent=nullptr);
+    ~MainWindow() override;
 
 private slots:
     void cancelCloseAction();
@@ -63,17 +62,17 @@ private slots:
 private:
     Ui::MainWindow *ui;
 
-    QValidator *mPeriodSizeValidator;
-    QValidator *mPeriodCountValidator;
-    QValidator *mSourceCountValidator;
-    QValidator *mEffectSlotValidator;
-    QValidator *mSourceSendValidator;
-    QValidator *mSampleRateValidator;
-    QValidator *mJackBufferValidator;
+    QValidator *mPeriodSizeValidator{};
+    QValidator *mPeriodCountValidator{};
+    QValidator *mSourceCountValidator{};
+    QValidator *mEffectSlotValidator{};
+    QValidator *mSourceSendValidator{};
+    QValidator *mSampleRateValidator{};
+    QValidator *mJackBufferValidator{};
 
-    bool mNeedsSave;
+    bool mNeedsSave{};
 
-    void closeEvent(QCloseEvent *event);
+    void closeEvent(QCloseEvent *event) override;
 
     void selectDecoderFile(QLineEdit *line, const char *name);
 

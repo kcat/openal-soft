@@ -68,8 +68,8 @@ enum ChannelTypeT {
 struct HrirAzT {
     double mAzimuth{0.0};
     uint mIndex{0u};
-    double mDelays[2]{0.0, 0.0};
-    double *mIrs[2]{nullptr, nullptr};
+    std::array<double,2> mDelays{};
+    std::array<double*,2> mIrs{};
 };
 
 struct HrirEvT {

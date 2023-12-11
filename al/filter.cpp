@@ -61,7 +61,7 @@ public:
     filter_exception(ALenum code, const char *msg, ...);
     ~filter_exception() override;
 
-    ALenum errorCode() const noexcept { return mErrorCode; }
+    [[nodiscard]] auto errorCode() const noexcept -> ALenum { return mErrorCode; }
 };
 
 filter_exception::filter_exception(ALenum code, const char* msg, ...) : mErrorCode{code}

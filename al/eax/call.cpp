@@ -22,8 +22,7 @@ EaxCall::EaxCall(
     ALuint property_source_id,
     ALvoid* property_buffer,
     ALuint property_size)
-    : mCallType{type}, mVersion{0}, mPropertySetId{EaxCallPropertySetId::none}
-    , mIsDeferred{(property_id & deferred_flag) != 0}
+    : mCallType{type}, mIsDeferred{(property_id & deferred_flag) != 0}
     , mPropertyId{property_id & ~deferred_flag}, mPropertySourceId{property_source_id}
     , mPropertyBuffer{property_buffer}, mPropertyBufferSize{property_size}
 {

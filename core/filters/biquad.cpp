@@ -27,8 +27,8 @@ void BiquadFilterR<Real>::setParams(BiquadType type, Real f0norm, Real gain, Rea
     const Real alpha{sin_w0/2.0f * rcpQ};
 
     Real sqrtgain_alpha_2;
-    Real a[3]{ 1.0f, 0.0f, 0.0f };
-    Real b[3]{ 1.0f, 0.0f, 0.0f };
+    std::array<Real,3> a{{1.0f, 0.0f, 0.0f}};
+    std::array<Real,3> b{{1.0f, 0.0f, 0.0f}};
 
     /* Calculate filter coefficients depending on filter type */
     switch(type)

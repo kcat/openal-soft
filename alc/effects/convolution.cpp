@@ -5,10 +5,10 @@
 #include <array>
 #include <complex>
 #include <cstddef>
+#include <cstdint>
 #include <functional>
 #include <iterator>
 #include <memory>
-#include <stdint.h>
 #include <utility>
 
 #ifdef HAVE_SSE_INTRINSICS

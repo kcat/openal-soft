@@ -66,22 +66,22 @@ using complex_d = std::complex<double>;
 using byte4 = std::array<std::byte,4>;
 
 
-constexpr ubyte SUBTYPE_BFORMAT_FLOAT[]{
+constexpr std::array<ubyte,16> SUBTYPE_BFORMAT_FLOAT{
     0x03, 0x00, 0x00, 0x00, 0x21, 0x07, 0xd3, 0x11, 0x86, 0x44, 0xc8, 0xc1,
     0xca, 0x00, 0x00, 0x00
 };
 
 void fwrite16le(ushort val, FILE *f)
 {
-    ubyte data[2]{ static_cast<ubyte>(val&0xff), static_cast<ubyte>((val>>8)&0xff) };
-    fwrite(data, 1, 2, f);
+    std::array data{static_cast<ubyte>(val&0xff), static_cast<ubyte>((val>>8)&0xff)};
+    fwrite(data.data(), 1, data.size(), f);
 }
 
 void fwrite32le(uint val, FILE *f)
 {
-    ubyte data[4]{ static_cast<ubyte>(val&0xff), static_cast<ubyte>((val>>8)&0xff),
-        static_cast<ubyte>((val>>16)&0xff), static_cast<ubyte>((val>>24)&0xff) };
-    fwrite(data, 1, 4, f);
+    std::array data{static_cast<ubyte>(val&0xff), static_cast<ubyte>((val>>8)&0xff),
+        static_cast<ubyte>((val>>16)&0xff), static_cast<ubyte>((val>>24)&0xff)};
+    fwrite(data.data(), 1, data.size(), f);
 }
 
 template<al::endian = al::endian::native>
@@ -389,7 +389,7 @@ int main(int argc, char **argv)
             fprintf(stderr, "Failed to open %s\n", argv[fidx]);
             continue;
         }
-        if(sf_command(infile.get(), SFC_WAVEX_GET_AMBISONIC, NULL, 0) == SF_AMBISONIC_B_FORMAT)
+        if(sf_command(infile.get(), SFC_WAVEX_GET_AMBISONIC, nullptr, 0) == SF_AMBISONIC_B_FORMAT)
         {
             fprintf(stderr, "%s is already B-Format\n", argv[fidx]);
             continue;
@@ -438,7 +438,7 @@ int main(int argc, char **argv)
         // 32-bit val, frequency
         fwrite32le(static_cast<uint>(ininfo.samplerate), outfile.get());
         // 32-bit val, bytes per second
-        fwrite32le(static_cast<uint>(ininfo.samplerate)*sizeof(float)*outchans, outfile.get());
+        fwrite32le(static_cast<uint>(ininfo.samplerate)*outchans*sizeof(float), outfile.get());
         // 16-bit val, frame size
         fwrite16le(static_cast<ushort>(sizeof(float)*outchans), outfile.get());
         // 16-bit val, bits per sample
@@ -450,7 +450,7 @@ int main(int argc, char **argv)
         // 32-bit val, channel mask
         fwrite32le(0, outfile.get());
         // 16 byte GUID, sub-type format
-        fwrite(SUBTYPE_BFORMAT_FLOAT, 1, 16, outfile.get());
+        fwrite(SUBTYPE_BFORMAT_FLOAT.data(), 1, SUBTYPE_BFORMAT_FLOAT.size(), outfile.get());
 
         fputs("data", outfile.get());
         fwrite32le(0xFFFFFFFF, outfile.get()); // 'data' header len; filled in at close
@@ -463,9 +463,9 @@ int main(int argc, char **argv)
         auto DataStart = ftell(outfile.get());
 
         auto decoder = std::make_unique<UhjDecoder>();
-        auto inmem = std::make_unique<float[]>(BufferLineSize*static_cast<uint>(ininfo.channels));
+        auto inmem = std::vector<float>(BufferLineSize*static_cast<uint>(ininfo.channels));
         auto decmem = al::vector<std::array<float,BufferLineSize>, 16>(outchans);
-        auto outmem = std::make_unique<byte4[]>(BufferLineSize*outchans);
+        auto outmem = std::vector<byte4>(BufferLineSize*outchans);
 
         /* A number of initial samples need to be skipped to cut the lead-in
          * from the all-pass filter delay. The same number of samples need to
@@ -476,21 +476,21 @@ int main(int argc, char **argv)
         sf_count_t LeadOut{UhjDecoder::sFilterDelay};
         while(LeadOut > 0)
         {
-            sf_count_t sgot{sf_readf_float(infile.get(), inmem.get(), BufferLineSize)};
+            sf_count_t sgot{sf_readf_float(infile.get(), inmem.data(), BufferLineSize)};
             sgot = std::max<sf_count_t>(sgot, 0);
             if(sgot < BufferLineSize)
             {
                 const sf_count_t remaining{std::min(BufferLineSize - sgot, LeadOut)};
-                std::fill_n(inmem.get() + sgot*ininfo.channels, remaining*ininfo.channels, 0.0f);
+                std::fill_n(inmem.data() + sgot*ininfo.channels, remaining*ininfo.channels, 0.0f);
                 sgot += remaining;
                 LeadOut -= remaining;
             }
 
             auto got = static_cast<std::size_t>(sgot);
             if(ininfo.channels > 2 || use_general)
-                decoder->decode(inmem.get(), static_cast<uint>(ininfo.channels), decmem, got);
+                decoder->decode(inmem.data(), static_cast<uint>(ininfo.channels), decmem, got);
             else
-                decoder->decode2(inmem.get(), decmem, got);
+                decoder->decode2(inmem.data(), decmem, got);
             if(LeadIn >= got)
             {
                 LeadIn -= got;
@@ -507,7 +507,7 @@ int main(int argc, char **argv)
             }
             LeadIn = 0;
 
-            std::size_t wrote{fwrite(outmem.get(), sizeof(byte4)*outchans, got, outfile.get())};
+            std::size_t wrote{fwrite(outmem.data(), sizeof(byte4)*outchans, got, outfile.get())};
             if(wrote < got)
             {
                 fprintf(stderr, "Error writing wave data: %s (%d)\n", strerror(errno), errno);

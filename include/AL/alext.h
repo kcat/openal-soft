@@ -1,6 +1,7 @@
 #ifndef AL_ALEXT_H
 #define AL_ALEXT_H
 
+/* NOLINTBEGIN */
 #include <stddef.h>
 /* Define int64 and uint64 types */
 #if (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L) ||             \
@@ -737,5 +738,6 @@ void ALC_APIENTRY alcEventCallbackSOFT(ALCEVENTPROCTYPESOFT callback, void *user
 #ifdef __cplusplus
 }
 #endif
+/* NOLINTEND */
 
 #endif

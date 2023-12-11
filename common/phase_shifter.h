@@ -10,6 +10,7 @@
 #include <array>
 #include <stddef.h>
 #include <type_traits>
+#include <vector>
 
 #include "alcomplex.h"
 #include "alspan.h"
@@ -52,20 +53,19 @@ struct PhaseShifterT {
         constexpr size_t fft_size{FilterSize};
         constexpr size_t half_size{fft_size / 2};
 
-        auto fftBuffer = std::make_unique<complex_d[]>(fft_size);
-        std::fill_n(fftBuffer.get(), fft_size, complex_d{});
+        auto fftBuffer = std::vector<complex_d>(fft_size, complex_d{});
         fftBuffer[half_size] = 1.0;
 
-        forward_fft(al::span{fftBuffer.get(), fft_size});
+        forward_fft(al::span{fftBuffer});
         fftBuffer[0] *= std::numeric_limits<double>::epsilon();
         for(size_t i{1};i < half_size;++i)
             fftBuffer[i] = complex_d{-fftBuffer[i].imag(), fftBuffer[i].real()};
         fftBuffer[half_size] *= std::numeric_limits<double>::epsilon();
         for(size_t i{half_size+1};i < fft_size;++i)
             fftBuffer[i] = std::conj(fftBuffer[fft_size - i]);
-        inverse_fft(al::span{fftBuffer.get(), fft_size});
+        inverse_fft(al::span{fftBuffer});
 
-        auto fftiter = fftBuffer.get() + fft_size - 1;
+        auto fftiter = fftBuffer.data() + fft_size - 1;
         for(float &coeff : mCoeffs)
         {
             coeff = static_cast<float>(fftiter->real() / double{fft_size});

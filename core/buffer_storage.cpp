@@ -3,7 +3,7 @@
 
 #include "buffer_storage.h"
 
-#include <stdint.h>
+#include <cstdint>
 
 
 const char *NameFromFormat(FmtType type) noexcept

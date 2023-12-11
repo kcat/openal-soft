@@ -3,8 +3,8 @@
 
 #include "device.h"
 
+#include <cstddef>
 #include <numeric>
-#include <stddef.h>
 
 #include "albit.h"
 #include "alconfig.h"

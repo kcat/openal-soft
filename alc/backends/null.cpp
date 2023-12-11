@@ -42,6 +42,7 @@ using std::chrono::seconds;
 using std::chrono::milliseconds;
 using std::chrono::nanoseconds;
 
+/* NOLINTNEXTLINE(*-avoid-c-arrays) */
 constexpr char nullDevice[] = "No Output";
 
 

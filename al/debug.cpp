@@ -4,10 +4,10 @@
 
 #include <algorithm>
 #include <array>
+#include <cstddef>
 #include <cstring>
 #include <mutex>
 #include <optional>
-#include <stddef.h>
 #include <stdexcept>
 #include <string>
 #include <utility>

@@ -89,14 +89,15 @@ struct ModulatorState final : public EffectState {
     alignas(16) FloatBufferLine mModSamples{};
     alignas(16) FloatBufferLine mBuffer{};
 
-    struct {
+    struct OutParams {
         uint mTargetChannel{InvalidChannelIndex};
 
         BiquadFilter mFilter;
 
         float mCurrentGain{};
         float mTargetGain{};
-    } mChans[MaxAmbiChannels];
+    };
+    std::array<OutParams,MaxAmbiChannels> mChans;
 
 
     void deviceUpdate(const DeviceBase *device, const BufferStorage *buffer) override;

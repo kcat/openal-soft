@@ -22,11 +22,11 @@
 
 #include <algorithm>
 #include <array>
+#include <cstdint>
 #include <cstdio>
 #include <functional>
 #include <iterator>
 #include <numeric>
-#include <stdint.h>
 
 #include "alc/effects/base.h"
 #include "almalloc.h"
@@ -65,7 +65,7 @@ struct CubicFilter {
     static constexpr size_t sTableSteps{1 << sTableBits};
     static constexpr size_t sTableMask{sTableSteps - 1};
 
-    float mFilter[sTableSteps*2 + 1]{};
+    std::array<float,sTableSteps*2 + 1> mFilter{};
 
     constexpr CubicFilter()
     {
@@ -85,10 +85,14 @@ struct CubicFilter {
         }
     }
 
-    constexpr float getCoeff0(size_t i) const noexcept { return mFilter[sTableSteps+i]; }
-    constexpr float getCoeff1(size_t i) const noexcept { return mFilter[i]; }
-    constexpr float getCoeff2(size_t i) const noexcept { return mFilter[sTableSteps-i]; }
-    constexpr float getCoeff3(size_t i) const noexcept { return mFilter[sTableSteps*2-i]; }
+    [[nodiscard]] constexpr auto getCoeff0(size_t i) const noexcept -> float
+    { return mFilter[sTableSteps+i]; }
+    [[nodiscard]] constexpr auto getCoeff1(size_t i) const noexcept -> float
+    { return mFilter[i]; }
+    [[nodiscard]] constexpr auto getCoeff2(size_t i) const noexcept -> float
+    { return mFilter[sTableSteps-i]; }
+    [[nodiscard]] constexpr auto getCoeff3(size_t i) const noexcept -> float
+    { return mFilter[sTableSteps*2-i]; }
 };
 constexpr CubicFilter gCubicTable;
 
@@ -119,12 +123,12 @@ constexpr float MODULATION_DEPTH_COEFF{0.05f};
  * tetrahedral array of discrete signals (boosted by a factor of sqrt(3), to
  * reduce the error introduced in the conversion).
  */
-alignas(16) constexpr float B2A[NUM_LINES][NUM_LINES]{
-    { 0.5f,  0.5f,  0.5f,  0.5f },
-    { 0.5f, -0.5f, -0.5f,  0.5f },
-    { 0.5f,  0.5f, -0.5f, -0.5f },
-    { 0.5f, -0.5f,  0.5f, -0.5f }
-};
+alignas(16) constexpr std::array<std::array<float,NUM_LINES>,NUM_LINES> B2A{{
+    {{ 0.5f,  0.5f,  0.5f,  0.5f }},
+    {{ 0.5f, -0.5f, -0.5f,  0.5f }},
+    {{ 0.5f,  0.5f, -0.5f, -0.5f }},
+    {{ 0.5f, -0.5f,  0.5f, -0.5f }}
+}};
 
 /* Converts (W-normalized) A-Format to B-Format for early reflections (scaled
  * by 1/sqrt(3) to compensate for the boost in the B2A matrix).
@@ -364,7 +368,7 @@ struct DelayLineI {
 struct VecAllpass {
     DelayLineI Delay;
     float Coeff{0.0f};
-    size_t Offset[NUM_LINES]{};
+    std::array<size_t,NUM_LINES> Offset{};
 
     void process(const al::span<ReverbUpdateLine,NUM_LINES> samples, size_t offset,
         const float xCoeff, const float yCoeff, const size_t todo);
@@ -397,12 +401,12 @@ struct EarlyReflections {
      * reflections.
      */
     DelayLineI Delay;
-    size_t Offset[NUM_LINES]{};
-    float Coeff[NUM_LINES]{};
+    std::array<size_t,NUM_LINES> Offset{};
+    std::array<float,NUM_LINES> Coeff{};
 
     /* The gain for each output channel based on 3D panning. */
-    float CurrentGains[NUM_LINES][MaxAmbiChannels]{};
-    float TargetGains[NUM_LINES][MaxAmbiChannels]{};
+    std::array<std::array<float,MaxAmbiChannels>,NUM_LINES> CurrentGains{};
+    std::array<std::array<float,MaxAmbiChannels>,NUM_LINES> TargetGains{};
 
     void updateLines(const float density_mult, const float diffusion, const float decayTime,
         const float frequency);
@@ -418,7 +422,7 @@ struct Modulation {
     /* The depth of frequency change, in samples. */
     float Depth;
 
-    float ModDelays[MAX_UPDATE_SAMPLES];
+    std::array<float,MAX_UPDATE_SAMPLES> ModDelays;
 
     void updateModulator(float modTime, float modDepth, float frequency);
 
@@ -428,7 +432,7 @@ struct Modulation {
 struct LateReverb {
     /* A recursive delay line is used fill in the reverb tail. */
     DelayLineI Delay;
-    size_t     Offset[NUM_LINES]{};
+    std::array<size_t,NUM_LINES> Offset{};
 
     /* Attenuation to compensate for the modal density and decay rate of the
      * late lines.
@@ -436,7 +440,7 @@ struct LateReverb {
     float DensityGain{0.0f};
 
     /* T60 decay filters are used to simulate absorption. */
-    T60Filter T60[NUM_LINES];
+    std::array<T60Filter,NUM_LINES> T60;
 
     Modulation Mod;
 
@@ -444,8 +448,8 @@ struct LateReverb {
     VecAllpass VecAp;
 
     /* The gain for each output channel based on 3D panning. */
-    float CurrentGains[NUM_LINES][MaxAmbiChannels]{};
-    float TargetGains[NUM_LINES][MaxAmbiChannels]{};
+    std::array<std::array<float,MaxAmbiChannels>,NUM_LINES> CurrentGains{};
+    std::array<std::array<float,MaxAmbiChannels>,NUM_LINES> TargetGains{};
 
     void updateLines(const float density_mult, const float diffusion, const float lfDecayTime,
         const float mfDecayTime, const float hfDecayTime, const float lf0norm,
@@ -460,21 +464,22 @@ struct LateReverb {
 
 struct ReverbPipeline {
     /* Master effect filters */
-    struct {
+    struct FilterPair {
         BiquadFilter Lp;
         BiquadFilter Hp;
-    } mFilter[NUM_LINES];
+    };
+    std::array<FilterPair,NUM_LINES> mFilter;
 
     /* Core delay line (early reflections and late reverb tap from this). */
     DelayLineI mEarlyDelayIn;
     DelayLineI mLateDelayIn;
 
     /* Tap points for early reflection delay. */
-    size_t mEarlyDelayTap[NUM_LINES][2]{};
-    float mEarlyDelayCoeff[NUM_LINES]{};
+    std::array<std::array<size_t,2>,NUM_LINES> mEarlyDelayTap{};
+    std::array<float,NUM_LINES> mEarlyDelayCoeff{};
 
     /* Tap points for late reverb feed and delay. */
-    size_t mLateDelayTap[NUM_LINES][2]{};
+    std::array<std::array<size_t,2>,NUM_LINES> mLateDelayTap{};
 
     /* Coefficients for the all-pass and line scattering matrices. */
     float mMixX{0.0f};
@@ -548,7 +553,7 @@ struct ReverbState final : public EffectState {
     PipelineState mPipelineState{DeviceClear};
     uint8_t mCurrentPipeline{0};
 
-    ReverbPipeline mPipelines[2];
+    std::array<ReverbPipeline,2> mPipelines;
 
     /* The current write offset for all delay lines. */
     size_t mOffset{};
@@ -577,14 +582,14 @@ struct ReverbState final : public EffectState {
         for(size_t c{0u};c < NUM_LINES;c++)
         {
             const al::span<float> tmpspan{mEarlySamples[c].data(), todo};
-            MixSamples(tmpspan, samplesOut, pipeline.mEarly.CurrentGains[c],
-                pipeline.mEarly.TargetGains[c], todo, 0);
+            MixSamples(tmpspan, samplesOut, pipeline.mEarly.CurrentGains[c].data(),
+                pipeline.mEarly.TargetGains[c].data(), todo, 0);
         }
         for(size_t c{0u};c < NUM_LINES;c++)
         {
             const al::span<float> tmpspan{mLateSamples[c].data(), todo};
-            MixSamples(tmpspan, samplesOut, pipeline.mLate.CurrentGains[c],
-                pipeline.mLate.TargetGains[c], todo, 0);
+            MixSamples(tmpspan, samplesOut, pipeline.mLate.CurrentGains[c].data(),
+                pipeline.mLate.TargetGains[c].data(), todo, 0);
         }
     }
 
@@ -627,8 +632,8 @@ struct ReverbState final : public EffectState {
             const float hfscale{(c==0) ? mOrderScales[0] : mOrderScales[1]};
             pipeline.mAmbiSplitter[0][c].processHfScale(tmpspan, hfscale);
 
-            MixSamples(tmpspan, samplesOut, pipeline.mEarly.CurrentGains[c],
-                pipeline.mEarly.TargetGains[c], todo, 0);
+            MixSamples(tmpspan, samplesOut, pipeline.mEarly.CurrentGains[c].data(),
+                pipeline.mEarly.TargetGains[c].data(), todo, 0);
         }
         for(size_t c{0u};c < NUM_LINES;c++)
         {
@@ -637,8 +642,8 @@ struct ReverbState final : public EffectState {
             const float hfscale{(c==0) ? mOrderScales[0] : mOrderScales[1]};
             pipeline.mAmbiSplitter[1][c].processHfScale(tmpspan, hfscale);
 
-            MixSamples(tmpspan, samplesOut, pipeline.mLate.CurrentGains[c],
-                pipeline.mLate.TargetGains[c], todo, 0);
+            MixSamples(tmpspan, samplesOut, pipeline.mLate.CurrentGains[c].data(),
+                pipeline.mLate.TargetGains[c].data(), todo, 0);
         }
     }
 
@@ -756,17 +761,16 @@ void ReverbState::deviceUpdate(const DeviceBase *device, const BufferStorage*)
 
     for(auto &pipeline : mPipelines)
     {
-        /* Clear filters and gain coefficients since the delay lines were all just
-        * cleared (if not reallocated).
-        */
+        /* Clear filters and gain coefficients since the delay lines were all
+         * just cleared (if not reallocated).
+         */
         for(auto &filter : pipeline.mFilter)
         {
             filter.Lp.clear();
             filter.Hp.clear();
         }
 
-        std::fill(std::begin(pipeline.mEarlyDelayCoeff),std::end(pipeline.mEarlyDelayCoeff), 0.0f);
-        std::fill(std::begin(pipeline.mEarlyDelayCoeff),std::end(pipeline.mEarlyDelayCoeff), 0.0f);
+        pipeline.mEarlyDelayCoeff.fill(0.0f);
 
         pipeline.mLate.DensityGain = 0.0f;
         for(auto &t60 : pipeline.mLate.T60)
@@ -781,13 +785,13 @@ void ReverbState::deviceUpdate(const DeviceBase *device, const BufferStorage*)
         pipeline.mLate.Mod.Depth = 0.0f;
 
         for(auto &gains : pipeline.mEarly.CurrentGains)
-            std::fill(std::begin(gains), std::end(gains), 0.0f);
+            gains.fill(0.0f);
         for(auto &gains : pipeline.mEarly.TargetGains)
-            std::fill(std::begin(gains), std::end(gains), 0.0f);
+            gains.fill(0.0f);
         for(auto &gains : pipeline.mLate.CurrentGains)
-            std::fill(std::begin(gains), std::end(gains), 0.0f);
+            gains.fill(0.0f);
         for(auto &gains : pipeline.mLate.TargetGains)
-            std::fill(std::begin(gains), std::end(gains), 0.0f);
+            gains.fill(0.0f);
     }
     mPipelineState = DeviceClear;
 
@@ -1071,7 +1075,7 @@ std::array<std::array<float,4>,4> GetTransformFromVector(const al::span<const fl
      * rest of OpenAL which use right-handed. This is fixed by negating Z,
      * which cancels out with the B-Format Z negation.
      */
-    float norm[3];
+    std::array<float,3> norm;
     float mag{std::sqrt(vec[0]*vec[0] + vec[1]*vec[1] + vec[2]*vec[2])};
     if(mag > 1.0f)
     {
@@ -1408,7 +1412,7 @@ void VecAllpass::process(const al::span<ReverbUpdateLine,NUM_LINES> samples, siz
 
     ASSUME(todo > 0);
 
-    size_t vap_offset[NUM_LINES];
+    std::array<size_t,NUM_LINES> vap_offset;
     for(size_t j{0u};j < NUM_LINES;j++)
         vap_offset[j] = offset - Offset[j];
     for(size_t i{0u};i < todo;)

@@ -57,29 +57,30 @@ namespace {
 
 using uint = unsigned int;
 
-#define MAX_UPDATE_SAMPLES 256
-#define NUM_FORMANTS       4
-#define NUM_FILTERS        2
-#define Q_FACTOR           5.0f
+constexpr size_t MaxUpdateSamples{256};
+constexpr size_t NumFormants{4};
+constexpr float QFactor{5.0f};
+enum : size_t {
+    VowelAIndex,
+    VowelBIndex,
+    NumFilters
+};
 
-#define VOWEL_A_INDEX      0
-#define VOWEL_B_INDEX      1
-
-#define WAVEFORM_FRACBITS  24
-#define WAVEFORM_FRACONE   (1<<WAVEFORM_FRACBITS)
-#define WAVEFORM_FRACMASK  (WAVEFORM_FRACONE-1)
+constexpr size_t WaveformFracBits{24};
+constexpr size_t WaveformFracOne{1<<WaveformFracBits};
+constexpr size_t WaveformFracMask{WaveformFracOne-1};
 
 inline float Sin(uint index)
 {
-    constexpr float scale{al::numbers::pi_v<float>*2.0f / WAVEFORM_FRACONE};
+    constexpr float scale{al::numbers::pi_v<float>*2.0f / float{WaveformFracOne}};
     return std::sin(static_cast<float>(index) * scale)*0.5f + 0.5f;
 }
 
 inline float Saw(uint index)
-{ return static_cast<float>(index) / float{WAVEFORM_FRACONE}; }
+{ return static_cast<float>(index) / float{WaveformFracOne}; }
 
 inline float Triangle(uint index)
-{ return std::fabs(static_cast<float>(index)*(2.0f/WAVEFORM_FRACONE) - 1.0f); }
+{ return std::fabs(static_cast<float>(index)*(2.0f/WaveformFracOne) - 1.0f); }
 
 inline float Half(uint) { return 0.5f; }
 
@@ -89,13 +90,12 @@ void Oscillate(float *RESTRICT dst, uint index, const uint step, size_t todo)
     for(size_t i{0u};i < todo;i++)
     {
         index += step;
-        index &= WAVEFORM_FRACMASK;
+        index &= WaveformFracMask;
         dst[i] = func(index);
     }
 }
 
-struct FormantFilter
-{
+struct FormantFilter {
     float mCoeff{0.0f};
     float mGain{1.0f};
     float mS1{0.0f};
@@ -106,20 +106,21 @@ struct FormantFilter
       : mCoeff{std::tan(al::numbers::pi_v<float> * f0norm)}, mGain{gain}
     { }
 
-    inline void process(const float *samplesIn, float *samplesOut, const size_t numInput)
+    void process(const float *samplesIn, float *samplesOut, const size_t numInput) noexcept
     {
         /* A state variable filter from a topology-preserving transform.
          * Based on a talk given by Ivan Cohen: https://www.youtube.com/watch?v=esjHXGPyrhg
          */
         const float g{mCoeff};
         const float gain{mGain};
-        const float h{1.0f / (1.0f + (g/Q_FACTOR) + (g*g))};
+        const float h{1.0f / (1.0f + (g/QFactor) + (g*g))};
+        const float coeff{1.0f/QFactor + g};
         float s1{mS1};
         float s2{mS2};
 
         for(size_t i{0u};i < numInput;i++)
         {
-            const float H{(samplesIn[i] - (1.0f/Q_FACTOR + g)*s1 - s2)*h};
+            const float H{(samplesIn[i] - coeff*s1 - s2)*h};
             const float B{g*H + s1};
             const float L{g*B + s2};
 
@@ -133,7 +134,7 @@ struct FormantFilter
         mS2 = s2;
     }
 
-    inline void clear()
+    void clear() noexcept
     {
         mS1 = 0.0f;
         mS2 = 0.0f;
@@ -142,16 +143,17 @@ struct FormantFilter
 
 
 struct VmorpherState final : public EffectState {
-    struct {
+    struct OutParams {
         uint mTargetChannel{InvalidChannelIndex};
 
         /* Effect parameters */
-        FormantFilter mFormants[NUM_FILTERS][NUM_FORMANTS];
+        std::array<std::array<FormantFilter,NumFormants>,NumFilters> mFormants;
 
         /* Effect gains for each channel */
         float mCurrentGain{};
         float mTargetGain{};
-    } mChans[MaxAmbiChannels];
+    };
+    std::array<OutParams,MaxAmbiChannels> mChans;
 
     void (*mGetSamples)(float*RESTRICT, uint, const uint, size_t){};
 
@@ -159,9 +161,9 @@ struct VmorpherState final : public EffectState {
     uint mStep{1};
 
     /* Effects buffers */
-    alignas(16) float mSampleBufferA[MAX_UPDATE_SAMPLES]{};
-    alignas(16) float mSampleBufferB[MAX_UPDATE_SAMPLES]{};
-    alignas(16) float mLfo[MAX_UPDATE_SAMPLES]{};
+    alignas(16) std::array<float,MaxUpdateSamples> mSampleBufferA{};
+    alignas(16) std::array<float,MaxUpdateSamples> mSampleBufferB{};
+    alignas(16) std::array<float,MaxUpdateSamples> mLfo{};
 
     void deviceUpdate(const DeviceBase *device, const BufferStorage *buffer) override;
     void update(const ContextBase *context, const EffectSlot *slot, const EffectProps *props,
@@ -169,14 +171,14 @@ struct VmorpherState final : public EffectState {
     void process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn,
         const al::span<FloatBufferLine> samplesOut) override;
 
-    static std::array<FormantFilter,4> getFiltersByPhoneme(VMorpherPhenome phoneme,
-        float frequency, float pitch);
+    static std::array<FormantFilter,NumFormants> getFiltersByPhoneme(VMorpherPhenome phoneme,
+        float frequency, float pitch) noexcept;
 
     DEF_NEWDEL(VmorpherState)
 };
 
-std::array<FormantFilter,4> VmorpherState::getFiltersByPhoneme(VMorpherPhenome phoneme,
-    float frequency, float pitch)
+std::array<FormantFilter,NumFormants> VmorpherState::getFiltersByPhoneme(VMorpherPhenome phoneme,
+    float frequency, float pitch) noexcept
 {
     /* Using soprano formant set of values to
      * better match mid-range frequency space.
@@ -232,9 +234,9 @@ void VmorpherState::deviceUpdate(const DeviceBase*, const BufferStorage*)
     for(auto &e : mChans)
     {
         e.mTargetChannel = InvalidChannelIndex;
-        std::for_each(std::begin(e.mFormants[VOWEL_A_INDEX]), std::end(e.mFormants[VOWEL_A_INDEX]),
+        std::for_each(e.mFormants[VowelAIndex].begin(), e.mFormants[VowelAIndex].end(),
             std::mem_fn(&FormantFilter::clear));
-        std::for_each(std::begin(e.mFormants[VOWEL_B_INDEX]), std::end(e.mFormants[VOWEL_B_INDEX]),
+        std::for_each(e.mFormants[VowelBIndex].begin(), e.mFormants[VowelBIndex].end(),
             std::mem_fn(&FormantFilter::clear));
         e.mCurrentGain = 0.0f;
     }
@@ -246,7 +248,7 @@ void VmorpherState::update(const ContextBase *context, const EffectSlot *slot,
     const DeviceBase *device{context->mDevice};
     const float frequency{static_cast<float>(device->Frequency)};
     const float step{props->Vmorpher.Rate / frequency};
-    mStep = fastf2u(clampf(step*WAVEFORM_FRACONE, 0.0f, float{WAVEFORM_FRACONE-1}));
+    mStep = fastf2u(clampf(step*WaveformFracOne, 0.0f, float{WaveformFracOne}-1.0f));
 
     if(mStep == 0)
         mGetSamples = Oscillate<Half>;
@@ -268,8 +270,8 @@ void VmorpherState::update(const ContextBase *context, const EffectSlot *slot,
     /* Copy the filter coefficients to the input channels. */
     for(size_t i{0u};i < slot->Wet.Buffer.size();++i)
     {
-        std::copy(vowelA.begin(), vowelA.end(), std::begin(mChans[i].mFormants[VOWEL_A_INDEX]));
-        std::copy(vowelB.begin(), vowelB.end(), std::begin(mChans[i].mFormants[VOWEL_B_INDEX]));
+        std::copy(vowelA.begin(), vowelA.end(), mChans[i].mFormants[VowelAIndex].begin());
+        std::copy(vowelB.begin(), vowelB.end(), mChans[i].mFormants[VowelBIndex].begin());
     }
 
     mOutTarget = target.Main->Buffer;
@@ -288,11 +290,11 @@ void VmorpherState::process(const size_t samplesToDo, const al::span<const Float
      */
     for(size_t base{0u};base < samplesToDo;)
     {
-        const size_t td{minz(MAX_UPDATE_SAMPLES, samplesToDo-base)};
+        const size_t td{minz(MaxUpdateSamples, samplesToDo-base)};
 
-        mGetSamples(mLfo, mIndex, mStep, td);
+        mGetSamples(mLfo.data(), mIndex, mStep, td);
         mIndex += static_cast<uint>(mStep * td);
-        mIndex &= WAVEFORM_FRACMASK;
+        mIndex &= WaveformFracMask;
 
         auto chandata = std::begin(mChans);
         for(const auto &input : samplesIn)
@@ -304,30 +306,30 @@ void VmorpherState::process(const size_t samplesToDo, const al::span<const Float
                 continue;
             }
 
-            auto& vowelA = chandata->mFormants[VOWEL_A_INDEX];
-            auto& vowelB = chandata->mFormants[VOWEL_B_INDEX];
+            const auto vowelA = al::span{chandata->mFormants[VowelAIndex]};
+            const auto vowelB = al::span{chandata->mFormants[VowelBIndex]};
 
             /* Process first vowel. */
             std::fill_n(std::begin(mSampleBufferA), td, 0.0f);
-            vowelA[0].process(&input[base], mSampleBufferA, td);
-            vowelA[1].process(&input[base], mSampleBufferA, td);
-            vowelA[2].process(&input[base], mSampleBufferA, td);
-            vowelA[3].process(&input[base], mSampleBufferA, td);
+            vowelA[0].process(&input[base], mSampleBufferA.data(), td);
+            vowelA[1].process(&input[base], mSampleBufferA.data(), td);
+            vowelA[2].process(&input[base], mSampleBufferA.data(), td);
+            vowelA[3].process(&input[base], mSampleBufferA.data(), td);
 
             /* Process second vowel. */
             std::fill_n(std::begin(mSampleBufferB), td, 0.0f);
-            vowelB[0].process(&input[base], mSampleBufferB, td);
-            vowelB[1].process(&input[base], mSampleBufferB, td);
-            vowelB[2].process(&input[base], mSampleBufferB, td);
-            vowelB[3].process(&input[base], mSampleBufferB, td);
+            vowelB[0].process(&input[base], mSampleBufferB.data(), td);
+            vowelB[1].process(&input[base], mSampleBufferB.data(), td);
+            vowelB[2].process(&input[base], mSampleBufferB.data(), td);
+            vowelB[3].process(&input[base], mSampleBufferB.data(), td);
 
-            alignas(16) float blended[MAX_UPDATE_SAMPLES];
+            alignas(16) std::array<float,MaxUpdateSamples> blended;
             for(size_t i{0u};i < td;i++)
                 blended[i] = lerpf(mSampleBufferA[i], mSampleBufferB[i], mLfo[i]);
 
             /* Now, mix the processed sound data to the output. */
-            MixSamples({blended, td}, samplesOut[outidx].data()+base, chandata->mCurrentGain,
-                chandata->mTargetGain, samplesToDo-base);
+            MixSamples({blended.data(), td}, samplesOut[outidx].data()+base,
+                chandata->mCurrentGain, chandata->mTargetGain, samplesToDo-base);
             ++chandata;
         }
 

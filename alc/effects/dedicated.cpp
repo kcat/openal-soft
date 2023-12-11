@@ -62,13 +62,13 @@ struct DedicatedState final : public EffectState {
 
 void DedicatedState::deviceUpdate(const DeviceBase*, const BufferStorage*)
 {
-    std::fill(std::begin(mCurrentGains), std::end(mCurrentGains), 0.0f);
+    std::fill(mCurrentGains.begin(), mCurrentGains.end(), 0.0f);
 }
 
 void DedicatedState::update(const ContextBase*, const EffectSlot *slot,
     const EffectProps *props, const EffectTarget target)
 {
-    std::fill(std::begin(mTargetGains), std::end(mTargetGains), 0.0f);
+    std::fill(mTargetGains.begin(), mTargetGains.end(), 0.0f);
 
     const float Gain{slot->Gain * props->Dedicated.Gain};
 

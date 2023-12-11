@@ -58,16 +58,17 @@ struct ChorusState final : public EffectState {
     uint mLfoDisp{0};
 
     /* Calculated delays to apply to the left and right outputs. */
-    uint mModDelays[2][BufferLineSize];
+    std::array<std::array<uint,BufferLineSize>,2> mModDelays;
 
     /* Temp storage for the modulated left and right outputs. */
-    alignas(16) float mBuffer[2][BufferLineSize];
+    alignas(16) std::array<FloatBufferLine,2> mBuffer;
 
     /* Gains for left and right outputs. */
-    struct {
-        float Current[MaxAmbiChannels]{};
-        float Target[MaxAmbiChannels]{};
-    } mGains[2];
+    struct OutGains {
+        std::array<float,MaxAmbiChannels> Current{};
+        std::array<float,MaxAmbiChannels> Target{};
+    };
+    std::array<OutGains,2> mGains;
 
     /* effect parameters */
     ChorusWaveform mWaveform{};
@@ -99,8 +100,8 @@ void ChorusState::deviceUpdate(const DeviceBase *Device, const BufferStorage*)
     std::fill(mDelayBuffer.begin(), mDelayBuffer.end(), 0.0f);
     for(auto &e : mGains)
     {
-        std::fill(std::begin(e.Current), std::end(e.Current), 0.0f);
-        std::fill(std::begin(e.Target), std::end(e.Target), 0.0f);
+        e.Current.fill(0.0f);
+        e.Target.fill(0.0f);
     }
 }
 
@@ -266,10 +267,10 @@ void ChorusState::process(const size_t samplesToDo, const al::span<const FloatBu
     else /*if(mWaveform == ChorusWaveform::Triangle)*/
         calcTriangleDelays(samplesToDo);
 
-    const uint *RESTRICT ldelays{mModDelays[0]};
-    const uint *RESTRICT rdelays{mModDelays[1]};
-    float *RESTRICT lbuffer{al::assume_aligned<16>(mBuffer[0])};
-    float *RESTRICT rbuffer{al::assume_aligned<16>(mBuffer[1])};
+    const uint *RESTRICT ldelays{mModDelays[0].data()};
+    const uint *RESTRICT rdelays{mModDelays[1].data()};
+    float *RESTRICT lbuffer{al::assume_aligned<16>(mBuffer[0].data())};
+    float *RESTRICT rbuffer{al::assume_aligned<16>(mBuffer[1].data())};
     for(size_t i{0u};i < samplesToDo;++i)
     {
         // Feed the buffer's input first (necessary for delays < 1).
@@ -292,10 +293,10 @@ void ChorusState::process(const size_t samplesToDo, const al::span<const FloatBu
         ++offset;
     }
 
-    MixSamples({lbuffer, samplesToDo}, samplesOut, mGains[0].Current, mGains[0].Target,
-        samplesToDo, 0);
-    MixSamples({rbuffer, samplesToDo}, samplesOut, mGains[1].Current, mGains[1].Target,
-        samplesToDo, 0);
+    MixSamples({lbuffer, samplesToDo}, samplesOut, mGains[0].Current.data(),
+        mGains[0].Target.data(), samplesToDo, 0);
+    MixSamples({rbuffer, samplesToDo}, samplesOut, mGains[1].Current.data(),
+        mGains[1].Target.data(), samplesToDo, 0);
 
     mOffset = offset;
 }

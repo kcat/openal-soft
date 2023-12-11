@@ -45,7 +45,7 @@ namespace {
 
 struct DistortionState final : public EffectState {
     /* Effect gains for each channel */
-    float mGain[MaxAmbiChannels]{};
+    std::array<float,MaxAmbiChannels> mGain{};
 
     /* Effect parameters */
     BiquadFilter mLowpass;
@@ -53,7 +53,7 @@ struct DistortionState final : public EffectState {
     float mAttenuation{};
     float mEdgeCoeff{};
 
-    alignas(16) float mBuffer[2][BufferLineSize]{};
+    alignas(16) std::array<FloatBufferLine,2> mBuffer{};
 
 
     void deviceUpdate(const DeviceBase *device, const BufferStorage *buffer) override;
@@ -124,7 +124,7 @@ void DistortionState::process(const size_t samplesToDo, const al::span<const Flo
          * (which is fortunately first step of distortion). So combine three
          * operations into the one.
          */
-        mLowpass.process({mBuffer[0], todo}, mBuffer[1]);
+        mLowpass.process({mBuffer[0].data(), todo}, mBuffer[1].data());
 
         /* Second step, do distortion using waveshaper function to emulate
          * signal processing during tube overdriving. Three steps of
@@ -138,15 +138,15 @@ void DistortionState::process(const size_t samplesToDo, const al::span<const Flo
             smp = (1.0f + fc) * smp/(1.0f + fc*std::abs(smp));
             return smp;
         };
-        std::transform(std::begin(mBuffer[1]), std::begin(mBuffer[1])+todo, std::begin(mBuffer[0]),
+        std::transform(mBuffer[1].begin(), mBuffer[1].begin()+todo, mBuffer[0].begin(),
             proc_sample);
 
         /* Third step, do bandpass filtering of distorted signal. */
-        mBandpass.process({mBuffer[0], todo}, mBuffer[1]);
+        mBandpass.process({mBuffer[0].data(), todo}, mBuffer[1].data());
 
         todo >>= 2;
-        const float *outgains{mGain};
-        for(FloatBufferLine &output : samplesOut)
+        const float *outgains{mGain.data()};
+        for(FloatBufferLine &RESTRICT output : samplesOut)
         {
             /* Fourth step, final, do attenuation and perform decimation,
              * storing only one sample out of four.

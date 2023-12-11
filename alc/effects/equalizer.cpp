@@ -86,16 +86,17 @@ namespace {
 
 
 struct EqualizerState final : public EffectState {
-    struct {
+    struct OutParams {
         uint mTargetChannel{InvalidChannelIndex};
 
         /* Effect parameters */
-        BiquadFilter mFilter[4];
+        std::array<BiquadFilter,4> mFilter;
 
         /* Effect gains for each channel */
         float mCurrentGain{};
         float mTargetGain{};
-    } mChans[MaxAmbiChannels];
+    };
+    std::array<OutParams,MaxAmbiChannels> mChans;
 
     alignas(16) FloatBufferLine mSampleBuffer{};
 
@@ -114,8 +115,7 @@ void EqualizerState::deviceUpdate(const DeviceBase*, const BufferStorage*)
     for(auto &e : mChans)
     {
         e.mTargetChannel = InvalidChannelIndex;
-        std::for_each(std::begin(e.mFilter), std::end(e.mFilter),
-            std::mem_fn(&BiquadFilter::clear));
+        std::for_each(e.mFilter.begin(), e.mFilter.end(), std::mem_fn(&BiquadFilter::clear));
         e.mCurrentGain = 0.0f;
     }
 }
@@ -125,7 +125,6 @@ void EqualizerState::update(const ContextBase *context, const EffectSlot *slot,
 {
     const DeviceBase *device{context->mDevice};
     auto frequency = static_cast<float>(device->Frequency);
-    float gain, f0norm;
 
     /* Calculate coefficients for the each type of filter. Note that the shelf
      * and peaking filters' gain is for the centerpoint of the transition band,
@@ -133,8 +132,8 @@ void EqualizerState::update(const ContextBase *context, const EffectSlot *slot,
      * property gains need their dB halved (sqrt of linear gain) for the
      * shelf/peak to reach the provided gain.
      */
-    gain = std::sqrt(props->Equalizer.LowGain);
-    f0norm = props->Equalizer.LowCutoff / frequency;
+    float gain{std::sqrt(props->Equalizer.LowGain)};
+    float f0norm{props->Equalizer.LowCutoff / frequency};
     mChans[0].mFilter[0].setParamsFromSlope(BiquadType::LowShelf, f0norm, gain, 0.75f);
 
     gain = std::sqrt(props->Equalizer.Mid1Gain);

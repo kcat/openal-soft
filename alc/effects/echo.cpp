@@ -53,21 +53,20 @@ struct EchoState final : public EffectState {
 
     // The echo is two tap. The delay is the number of samples from before the
     // current offset
-    struct {
-        size_t delay{0u};
-    } mTap[2];
+    std::array<size_t,2> mDelayTap{};
     size_t mOffset{0u};
 
     /* The panning gains for the two taps */
-    struct {
-        float Current[MaxAmbiChannels]{};
-        float Target[MaxAmbiChannels]{};
-    } mGains[2];
+    struct OutGains {
+        std::array<float,MaxAmbiChannels> Current{};
+        std::array<float,MaxAmbiChannels> Target{};
+    };
+    std::array<OutGains,2> mGains;
 
     BiquadFilter mFilter;
     float mFeedGain{0.0f};
 
-    alignas(16) float mTempBuffer[2][BufferLineSize];
+    alignas(16) std::array<FloatBufferLine,2> mTempBuffer;
 
     void deviceUpdate(const DeviceBase *device, const BufferStorage *buffer) override;
     void update(const ContextBase *context, const EffectSlot *slot, const EffectProps *props,
@@ -92,8 +91,8 @@ void EchoState::deviceUpdate(const DeviceBase *Device, const BufferStorage*)
     std::fill(mSampleBuffer.begin(), mSampleBuffer.end(), 0.0f);
     for(auto &e : mGains)
     {
-        std::fill(std::begin(e.Current), std::end(e.Current), 0.0f);
-        std::fill(std::begin(e.Target), std::end(e.Target), 0.0f);
+        std::fill(e.Current.begin(), e.Current.end(), 0.0f);
+        std::fill(e.Target.begin(), e.Target.end(), 0.0f);
     }
 }
 
@@ -103,8 +102,8 @@ void EchoState::update(const ContextBase *context, const EffectSlot *slot,
     const DeviceBase *device{context->mDevice};
     const auto frequency = static_cast<float>(device->Frequency);
 
-    mTap[0].delay = maxu(float2uint(props->Echo.Delay*frequency + 0.5f), 1);
-    mTap[1].delay = float2uint(props->Echo.LRDelay*frequency + 0.5f) + mTap[0].delay;
+    mDelayTap[0] = maxu(float2uint(props->Echo.Delay*frequency + 0.5f), 1);
+    mDelayTap[1] = float2uint(props->Echo.LRDelay*frequency + 0.5f) + mDelayTap[0];
 
     const float gainhf{maxf(1.0f - props->Echo.Damping, 0.0625f)}; /* Limit -24dB */
     mFilter.setParamsFromSlope(BiquadType::HighShelf, LowpassFreqRef/frequency, gainhf, 1.0f);
@@ -127,14 +126,13 @@ void EchoState::process(const size_t samplesToDo, const al::span<const FloatBuff
     const size_t mask{mSampleBuffer.size()-1};
     float *RESTRICT delaybuf{mSampleBuffer.data()};
     size_t offset{mOffset};
-    size_t tap1{offset - mTap[0].delay};
-    size_t tap2{offset - mTap[1].delay};
-    float z1, z2;
+    size_t tap1{offset - mDelayTap[0]};
+    size_t tap2{offset - mDelayTap[1]};
 
     ASSUME(samplesToDo > 0);
 
     const BiquadFilter filter{mFilter};
-    std::tie(z1, z2) = mFilter.getComponents();
+    auto [z1, z2] = mFilter.getComponents();
     for(size_t i{0u};i < samplesToDo;)
     {
         offset &= mask;
@@ -161,8 +159,8 @@ void EchoState::process(const size_t samplesToDo, const al::span<const FloatBuff
     mOffset = offset;
 
     for(size_t c{0};c < 2;c++)
-        MixSamples({mTempBuffer[c], samplesToDo}, samplesOut, mGains[c].Current, mGains[c].Target,
-            samplesToDo, 0);
+        MixSamples({mTempBuffer[c].data(), samplesToDo}, samplesOut, mGains[c].Current.data(),
+            mGains[c].Target.data(), samplesToDo, 0);
 }
 
 

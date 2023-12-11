@@ -91,10 +91,11 @@ struct FshifterState final : public EffectState {
     alignas(16) FloatBufferLine mBufferOut{};
 
     /* Effect gains for each output channel */
-    struct {
-        float Current[MaxAmbiChannels]{};
-        float Target[MaxAmbiChannels]{};
-    } mGains[2];
+    struct OutGains {
+        std::array<float,MaxAmbiChannels> Current{};
+        std::array<float,MaxAmbiChannels> Target{};
+    };
+    std::array<OutGains,2> mGains;
 
 
     void deviceUpdate(const DeviceBase *device, const BufferStorage *buffer) override;
@@ -122,8 +123,8 @@ void FshifterState::deviceUpdate(const DeviceBase*, const BufferStorage*)
 
     for(auto &gain : mGains)
     {
-        std::fill(std::begin(gain.Current), std::end(gain.Current), 0.0f);
-        std::fill(std::begin(gain.Target), std::end(gain.Target), 0.0f);
+        gain.Current.fill(0.0f);
+        gain.Target.fill(0.0f);
     }
 }
 
@@ -235,8 +236,8 @@ void FshifterState::process(const size_t samplesToDo, const al::span<const Float
         mPhase[c] = phase_idx;
 
         /* Now, mix the processed sound data to the output. */
-        MixSamples({BufferOut, samplesToDo}, samplesOut, mGains[c].Current, mGains[c].Target,
-            maxz(samplesToDo, 512), 0);
+        MixSamples({BufferOut, samplesToDo}, samplesOut, mGains[c].Current.data(),
+            mGains[c].Target.data(), maxz(samplesToDo, 512), 0);
     }
 }
 

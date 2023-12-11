@@ -103,8 +103,8 @@ struct PshifterState final : public EffectState {
     alignas(16) FloatBufferLine mBufferOut;
 
     /* Effect gains for each output channel */
-    float mCurrentGains[MaxAmbiChannels];
-    float mTargetGains[MaxAmbiChannels];
+    std::array<float,MaxAmbiChannels> mCurrentGains;
+    std::array<float,MaxAmbiChannels> mTargetGains;
 
 
     void deviceUpdate(const DeviceBase *device, const BufferStorage *buffer) override;
@@ -132,8 +132,8 @@ void PshifterState::deviceUpdate(const DeviceBase*, const BufferStorage*)
     mAnalysisBuffer.fill(FrequencyBin{});
     mSynthesisBuffer.fill(FrequencyBin{});
 
-    std::fill(std::begin(mCurrentGains), std::end(mCurrentGains), 0.0f);
-    std::fill(std::begin(mTargetGains),  std::end(mTargetGains),  0.0f);
+    mCurrentGains.fill(0.0f);
+    mTargetGains.fill(0.0f);
 
     if(!mFft)
         mFft = PFFFTSetup{StftSize, PFFFT_REAL};
@@ -305,8 +305,8 @@ void PshifterState::process(const size_t samplesToDo,
     }
 
     /* Now, mix the processed sound data to the output. */
-    MixSamples({mBufferOut.data(), samplesToDo}, samplesOut, mCurrentGains, mTargetGains,
-        maxz(samplesToDo, 512), 0);
+    MixSamples({mBufferOut.data(), samplesToDo}, samplesOut, mCurrentGains.data(),
+        mTargetGains.data(), maxz(samplesToDo, 512), 0);
 }
 
 

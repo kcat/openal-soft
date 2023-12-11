@@ -64,10 +64,11 @@ namespace {
 
 struct CompressorState final : public EffectState {
     /* Effect gains for each channel */
-    struct {
+    struct TargetGain {
         uint mTarget{InvalidChannelIndex};
         float mGain{1.0f};
-    } mChans[MaxAmbiChannels];
+    };
+    std::array<TargetGain,MaxAmbiChannels> mChans;
 
     /* Effect parameters */
     bool mEnabled{true};
@@ -119,8 +120,8 @@ void CompressorState::process(const size_t samplesToDo,
 {
     for(size_t base{0u};base < samplesToDo;)
     {
-        float gains[256];
-        const size_t td{minz(256, samplesToDo-base)};
+        std::array<float,256> gains;
+        const size_t td{minz(gains.size(), samplesToDo-base)};
 
         /* Generate the per-sample gains from the signal envelope. */
         float env{mEnvFollower};

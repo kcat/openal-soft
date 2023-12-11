@@ -149,8 +149,8 @@ void Resample_<LerpTag,NEONTag>(const InterpState*, const float *RESTRICT src, u
 
     alignas(16) std::array<uint,4> pos_, frac_;
     InitPosArrays(frac, increment, al::span{frac_}, al::span{pos_});
-    int32x4_t frac4 = vld1q_s32(reinterpret_cast<int*>(frac_));
-    int32x4_t pos4 = vld1q_s32(reinterpret_cast<int*>(pos_));
+    int32x4_t frac4 = vld1q_s32(reinterpret_cast<int*>(frac_.data()));
+    int32x4_t pos4 = vld1q_s32(reinterpret_cast<int*>(pos_.data()));
 
     auto dst_iter = dst.begin();
     for(size_t todo{dst.size()>>2};todo;--todo)

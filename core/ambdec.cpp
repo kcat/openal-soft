@@ -286,8 +286,8 @@ std::optional<std::string> AmbDecConf::load(const char *fname) noexcept
             if(!is_at_end(buffer, endpos))
                 return make_error(linenum, "Extra junk on end: %s", buffer.substr(endpos).c_str());
 
-            if(speaker_pos < Speakers.empty() || hfmatrix_pos < Speakers.empty()
-                || (FreqBands == 2 && lfmatrix_pos < Speakers.empty()))
+            if(speaker_pos < Speakers.size() || hfmatrix_pos < Speakers.size()
+                || (FreqBands == 2 && lfmatrix_pos < Speakers.size()))
                 return make_error(linenum, "Incomplete decoder definition");
             if(CoeffScale == AmbDecScale::Unset)
                 return make_error(linenum, "No coefficient scaling defined");

@@ -102,6 +102,7 @@ decltype(jack_error_callback) * pjack_error_callback;
 #endif
 
 
+/* NOLINTNEXTLINE(*-avoid-c-arrays) */
 constexpr char JackDefaultAudioType[] = JACK_DEFAULT_AUDIO_TYPE;
 
 jack_options_t ClientOptions = JackNullOption;
@@ -158,7 +159,7 @@ bool jack_load()
 struct JackDeleter {
     void operator()(void *ptr) { jack_free(ptr); }
 };
-using JackPortsPtr = std::unique_ptr<const char*[],JackDeleter>;
+using JackPortsPtr = std::unique_ptr<const char*[],JackDeleter>; /* NOLINT(*-avoid-c-arrays) */
 
 struct DeviceEntry {
     std::string mName;

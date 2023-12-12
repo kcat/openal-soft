@@ -22,8 +22,8 @@
 
 #include "winmm.h"
 
-#include <stdlib.h>
-#include <stdio.h>
+#include <cstdlib>
+#include <cstdio>
 #include <memory.h>
 
 #include <windows.h>
@@ -62,7 +62,7 @@ std::vector<std::string> CaptureDevices;
 bool checkName(const std::vector<std::string> &list, const std::string &name)
 { return std::find(list.cbegin(), list.cend(), name) != list.cend(); }
 
-void ProbePlaybackDevices(void)
+void ProbePlaybackDevices()
 {
     PlaybackDevices.clear();
 
@@ -93,7 +93,7 @@ void ProbePlaybackDevices(void)
     }
 }
 
-void ProbeCaptureDevices(void)
+void ProbeCaptureDevices()
 {
     CaptureDevices.clear();
 

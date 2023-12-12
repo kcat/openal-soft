@@ -55,38 +55,39 @@ using std::chrono::nanoseconds;
 using ubyte = unsigned char;
 using ushort = unsigned short;
 
+/* NOLINTNEXTLINE(*-avoid-c-arrays) */
 constexpr char waveDevice[] = "Wave File Writer";
 
-constexpr ubyte SUBTYPE_PCM[]{
+constexpr std::array<ubyte,16> SUBTYPE_PCM{{
     0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x10, 0x00, 0x80, 0x00, 0x00, 0xaa,
     0x00, 0x38, 0x9b, 0x71
-};
-constexpr ubyte SUBTYPE_FLOAT[]{
+}};
+constexpr std::array<ubyte,16> SUBTYPE_FLOAT{{
     0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x10, 0x00, 0x80, 0x00, 0x00, 0xaa,
     0x00, 0x38, 0x9b, 0x71
-};
+}};
 
-constexpr ubyte SUBTYPE_BFORMAT_PCM[]{
+constexpr std::array<ubyte,16> SUBTYPE_BFORMAT_PCM{{
     0x01, 0x00, 0x00, 0x00, 0x21, 0x07, 0xd3, 0x11, 0x86, 0x44, 0xc8, 0xc1,
     0xca, 0x00, 0x00, 0x00
-};
+}};
 
-constexpr ubyte SUBTYPE_BFORMAT_FLOAT[]{
+constexpr std::array<ubyte,16> SUBTYPE_BFORMAT_FLOAT{{
     0x03, 0x00, 0x00, 0x00, 0x21, 0x07, 0xd3, 0x11, 0x86, 0x44, 0xc8, 0xc1,
     0xca, 0x00, 0x00, 0x00
-};
+}};
 
 void fwrite16le(ushort val, FILE *f)
 {
-    ubyte data[2]{ static_cast<ubyte>(val&0xff), static_cast<ubyte>((val>>8)&0xff) };
-    fwrite(data, 1, 2, f);
+    std::array data{static_cast<ubyte>(val&0xff), static_cast<ubyte>((val>>8)&0xff)};
+    fwrite(data.data(), 1, data.size(), f);
 }
 
 void fwrite32le(uint val, FILE *f)
 {
-    ubyte data[4]{ static_cast<ubyte>(val&0xff), static_cast<ubyte>((val>>8)&0xff),
-        static_cast<ubyte>((val>>16)&0xff), static_cast<ubyte>((val>>24)&0xff) };
-    fwrite(data, 1, 4, f);
+    std::array data{static_cast<ubyte>(val&0xff), static_cast<ubyte>((val>>8)&0xff),
+        static_cast<ubyte>((val>>16)&0xff), static_cast<ubyte>((val>>24)&0xff)};
+    fwrite(data.data(), 1, data.size(), f);
 }
 
 
@@ -228,7 +229,6 @@ bool WaveBackend::reset()
 {
     uint channels{0}, bytes{0}, chanmask{0};
     bool isbformat{false};
-    size_t val;
 
     fseek(mFile, 0, SEEK_SET);
     clearerr(mFile);
@@ -311,10 +311,9 @@ bool WaveBackend::reset()
     // 32-bit val, channel mask
     fwrite32le(chanmask, mFile);
     // 16 byte GUID, sub-type format
-    val = fwrite((mDevice->FmtType == DevFmtFloat) ?
-        (isbformat ? SUBTYPE_BFORMAT_FLOAT : SUBTYPE_FLOAT) :
-        (isbformat ? SUBTYPE_BFORMAT_PCM : SUBTYPE_PCM), 1, 16, mFile);
-    (void)val;
+    std::ignore = fwrite((mDevice->FmtType == DevFmtFloat) ?
+        (isbformat ? SUBTYPE_BFORMAT_FLOAT.data() : SUBTYPE_FLOAT.data()) :
+        (isbformat ? SUBTYPE_BFORMAT_PCM.data() : SUBTYPE_PCM.data()), 1, 16, mFile);
 
     fputs("data", mFile);
     fwrite32le(0xFFFFFFFF, mFile); // 'data' header len; filled in at close

@@ -79,7 +79,9 @@
 
 namespace {
 
+/* NOLINTNEXTLINE(*-avoid-c-arrays) */
 constexpr char DefaultName[] = "OSS Default";
+
 std::string DefaultPlayback{"/dev/dsp"};
 std::string DefaultCapture{"/dev/dsp"};
 
@@ -379,7 +381,7 @@ bool OSSPlayback::reset()
     CHECKERR(ioctl(mFd, SNDCTL_DSP_CHANNELS, &numChannels));
     CHECKERR(ioctl(mFd, SNDCTL_DSP_SPEED, &ossSpeed));
     CHECKERR(ioctl(mFd, SNDCTL_DSP_GETOSPACE, &info));
-    if(0)
+    if(false)
     {
     err:
         ERR("%s failed: %s\n", err, strerror(errno));

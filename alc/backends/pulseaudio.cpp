@@ -28,12 +28,12 @@
 #include <atomic>
 #include <bitset>
 #include <chrono>
+#include <cstdint>
+#include <cstdlib>
 #include <cstring>
 #include <limits>
 #include <mutex>
 #include <optional>
-#include <stdint.h>
-#include <stdlib.h>
 #include <string>
 #include <sys/types.h>
 #include <utility>
@@ -320,11 +320,12 @@ public:
 
     explicit operator bool() const noexcept { return mLoop != nullptr; }
 
+    [[nodiscard]]
     auto start() const { return pa_threaded_mainloop_start(mLoop); }
     auto stop() const { return pa_threaded_mainloop_stop(mLoop); }
 
-    auto getApi() const { return pa_threaded_mainloop_get_api(mLoop); }
-    auto getContext() const noexcept { return mContext; }
+    [[nodiscard]] auto getApi() const { return pa_threaded_mainloop_get_api(mLoop); }
+    [[nodiscard]] auto getContext() const noexcept { return mContext; }
 
     auto lock() const { return pa_threaded_mainloop_lock(mLoop); }
     auto unlock() const { return pa_threaded_mainloop_unlock(mLoop); }
@@ -753,9 +754,9 @@ void PulsePlayback::sinkInfoCallback(pa_context*, const pa_sink_info *info, int 
     else
     {
         mIs51Rear = false;
-        char chanmap_str[PA_CHANNEL_MAP_SNPRINT_MAX]{};
-        pa_channel_map_snprint(chanmap_str, sizeof(chanmap_str), &info->channel_map);
-        WARN("Failed to find format for channel map:\n    %s\n", chanmap_str);
+        std::array<char,PA_CHANNEL_MAP_SNPRINT_MAX> chanmap_str{};
+        pa_channel_map_snprint(chanmap_str.data(), chanmap_str.size(), &info->channel_map);
+        WARN("Failed to find format for channel map:\n    %s\n", chanmap_str.data());
     }
 
     if(info->active_port)
@@ -784,7 +785,9 @@ void PulsePlayback::streamMovedCallback(pa_stream *stream) noexcept
 void PulsePlayback::open(std::string_view name)
 {
     mMainloop = PulseMainloop::Create();
-    mMainloop.start();
+    if(mMainloop.start() != 0)
+        throw al::backend_exception{al::backend_error::DeviceError,
+            "Failed to start device mainloop"};
 
     const char *pulse_name{nullptr};
     const char *dev_name{nullptr};
@@ -1127,7 +1130,9 @@ void PulseCapture::open(std::string_view name)
     if(!mMainloop)
     {
         mMainloop = PulseMainloop::Create();
-        mMainloop.start();
+        if(mMainloop.start() != 0)
+            throw al::backend_exception{al::backend_error::DeviceError,
+                "Failed to start device mainloop"};
     }
 
     const char *pulse_name{nullptr};
@@ -1432,7 +1437,11 @@ bool PulseBackendFactory::init()
         if(!gGlobalMainloop)
         {
             gGlobalMainloop = PulseMainloop::Create();
-            gGlobalMainloop.start();
+            if(gGlobalMainloop.start() != 0)
+            {
+                gGlobalMainloop = nullptr;
+                return false;
+            }
         }
 
         MainloopUniqueLock plock{gGlobalMainloop};

@@ -51,6 +51,7 @@
 
 namespace {
 
+/* NOLINTNEXTLINE(*-avoid-c-arrays) */
 constexpr char solaris_device[] = "Solaris Default";
 
 std::string solaris_driver{"/dev/audio"};
@@ -91,7 +92,7 @@ int SolarisBackend::mixerProc()
     althrd_setname(MIXER_THREAD_NAME);
 
     const size_t frame_step{mDevice->channelsFromFmt()};
-    const uint frame_size{mDevice->frameSizeFromFmt()};
+    const size_t frame_size{mDevice->frameSizeFromFmt()};
 
     while(!mKillNow.load(std::memory_order_acquire)
         && mDevice->Connected.load(std::memory_order_acquire))
@@ -115,12 +116,12 @@ int SolarisBackend::mixerProc()
             continue;
         }
 
-        std::byte *write_ptr{mBuffer.data()};
-        size_t to_write{mBuffer.size()};
-        mDevice->renderSamples(write_ptr, static_cast<uint>(to_write/frame_size), frame_step);
-        while(to_write > 0 && !mKillNow.load(std::memory_order_acquire))
+        al::span<std::byte> buffer{mBuffer};
+        mDevice->renderSamples(buffer.data(), static_cast<uint>(buffer.size()/frame_size),
+            frame_step);
+        while(!buffer.empty() && !mKillNow.load(std::memory_order_acquire))
         {
-            ssize_t wrote{write(mFd, write_ptr, to_write)};
+            ssize_t wrote{write(mFd, buffer.data(), buffer.size())};
             if(wrote < 0)
             {
                 if(errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR)
@@ -130,8 +131,7 @@ int SolarisBackend::mixerProc()
                 break;
             }
 
-            to_write -= static_cast<size_t>(wrote);
-            write_ptr += wrote;
+            buffer = buffer.subspan(static_cast<size_t>(wrote));
         }
     }
 

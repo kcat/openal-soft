@@ -35,11 +35,11 @@
 #include <algorithm>
 #include <atomic>
 #include <cassert>
+#include <cstdio>
+#include <cstdlib>
 #include <functional>
 #include <memory.h>
 #include <mutex>
-#include <stdlib.h>
-#include <stdio.h>
 #include <string>
 #include <thread>
 #include <vector>

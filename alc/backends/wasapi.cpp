@@ -25,8 +25,8 @@
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 
-#include <stdlib.h>
-#include <stdio.h>
+#include <cstdio>
+#include <cstdlib>
 #include <memory.h>
 
 #include <wtypes.h>
@@ -171,7 +171,7 @@ constexpr AudioObjectType ChannelMask_X714{AudioObjectType_FrontLeft | AudioObje
     | AudioObjectType_TopFrontLeft | AudioObjectType_TopFrontRight | AudioObjectType_TopBackLeft
     | AudioObjectType_TopBackRight};
 
-
+/* NOLINTNEXTLINE(*-avoid-c-arrays) */
 constexpr char DevNameHead[] = "OpenAL Soft on ";
 constexpr size_t DevNameHeadLen{std::size(DevNameHead) - 1};
 
@@ -201,16 +201,16 @@ constexpr uint RefTime2Samples(const ReferenceTime &val, T srate) noexcept
 
 
 class GuidPrinter {
-    char mMsg[64];
+    std::array<char,64> mMsg;
 
 public:
     GuidPrinter(const GUID &guid)
     {
-        std::snprintf(mMsg, std::size(mMsg), "{%08lx-%04x-%04x-%02x%02x-%02x%02x%02x%02x%02x%02x}",
+        std::snprintf(mMsg.data(), mMsg.size(), "{%08lx-%04x-%04x-%02x%02x-%02x%02x%02x%02x%02x%02x}",
             DWORD{guid.Data1}, guid.Data2, guid.Data3, guid.Data4[0], guid.Data4[1], guid.Data4[2],
             guid.Data4[3], guid.Data4[4], guid.Data4[5], guid.Data4[6], guid.Data4[7]);
     }
-    const char *c_str() const { return mMsg; }
+    [[nodiscard]] auto c_str() const -> const char* { return mMsg.data(); }
 };
 
 struct PropVariant {
@@ -270,13 +270,13 @@ private:
 struct DeviceListLock : public std::unique_lock<DeviceList> {
     using std::unique_lock<DeviceList>::unique_lock;
 
-    auto& getPlaybackList() const noexcept { return mutex()->mPlayback; }
-    auto& getCaptureList() const noexcept { return mutex()->mCapture; }
+    [[nodiscard]] auto& getPlaybackList() const noexcept { return mutex()->mPlayback; }
+    [[nodiscard]] auto& getCaptureList() const noexcept { return mutex()->mCapture; }
 
     void setPlaybackDefaultId(std::wstring_view devid) const { mutex()->mPlaybackDefaultId = devid; }
-    std::wstring_view getPlaybackDefaultId() const noexcept { return mutex()->mPlaybackDefaultId; }
+    [[nodiscard]] auto getPlaybackDefaultId() const noexcept -> std::wstring_view { return mutex()->mPlaybackDefaultId; }
     void setCaptureDefaultId(std::wstring_view devid) const { mutex()->mCaptureDefaultId = devid; }
-    std::wstring_view getCaptureDefaultId() const noexcept { return mutex()->mCaptureDefaultId; }
+    [[nodiscard]] auto getCaptureDefaultId() const noexcept -> std::wstring_view { return mutex()->mCaptureDefaultId; }
 };
 
 DeviceList gDeviceList;
@@ -302,8 +302,10 @@ using DeviceHandle = ComPtr<IMMDevice>;
 using NameGUIDPair = std::pair<std::string,std::string>;
 static NameGUIDPair GetDeviceNameAndGuid(const DeviceHandle &device)
 {
+    /* NOLINTBEGIN(*-avoid-c-arrays) */
     static constexpr char UnknownName[]{"Unknown Device Name"};
     static constexpr char UnknownGuid[]{"Unknown Device GUID"};
+    /* NOLINTEND(*-avoid-c-arrays) */
 #if !defined(ALSOFT_UWP)
     std::string name, guid;
 
@@ -384,9 +386,9 @@ struct DeviceHelper final : public IActivateAudioInterfaceCompletionHandler
 struct DeviceHelper final : private IMMNotificationClient
 #endif
 {
+#if defined(ALSOFT_UWP)
     DeviceHelper()
     {
-#if defined(ALSOFT_UWP)
         /* TODO: UWP also needs to watch for device added/removed events and
          * dynamically add/remove devices from the lists.
          */
@@ -411,8 +413,10 @@ struct DeviceHelper final : private IMMNotificationClient
                     msg);
             }
             });
-#endif
     }
+#else
+    DeviceHelper() = default;
+#endif
     ~DeviceHelper()
     {
 #if defined(ALSOFT_UWP)
@@ -1071,7 +1075,7 @@ struct WasapiPlayback final : public BackendBase, WasapiProxy {
     HANDLE mNotifyEvent{nullptr};
 
     UINT32 mOrigBufferSize{}, mOrigUpdateSize{};
-    std::unique_ptr<char[]> mResampleBuffer{};
+    std::vector<char> mResampleBuffer{};
     uint mBufferFilled{0};
     SampleConverterPtr mResampler;
 
@@ -1151,9 +1155,9 @@ FORCE_ALIGN int WasapiPlayback::mixerProc()
                 {
                     if(mBufferFilled == 0)
                     {
-                        mDevice->renderSamples(mResampleBuffer.get(), mDevice->UpdateSize,
+                        mDevice->renderSamples(mResampleBuffer.data(), mDevice->UpdateSize,
                             mFormat.Format.nChannels);
-                        resbufferptr = mResampleBuffer.get();
+                        resbufferptr = mResampleBuffer.data();
                         mBufferFilled = mDevice->UpdateSize;
                     }
 
@@ -1249,7 +1253,7 @@ FORCE_ALIGN int WasapiPlayback::mixerSpatialProc()
                     tmpbuffers.resize(buffers.size());
                     resbuffers.resize(buffers.size());
                     for(size_t i{0};i < tmpbuffers.size();++i)
-                        resbuffers[i] = reinterpret_cast<float*>(mResampleBuffer.get()) +
+                        resbuffers[i] = reinterpret_cast<float*>(mResampleBuffer.data()) +
                             mDevice->UpdateSize*i;
                 }
             }
@@ -1819,7 +1823,8 @@ HRESULT WasapiPlayback::resetProxy()
         mDevice->BufferSize = mDevice->UpdateSize*2;
 
         mResampler = nullptr;
-        mResampleBuffer = nullptr;
+        mResampleBuffer.clear();
+        mResampleBuffer.shrink_to_fit();
         mBufferFilled = 0;
         if(mDevice->Frequency != mFormat.Format.nSamplesPerSec)
         {
@@ -1828,7 +1833,7 @@ HRESULT WasapiPlayback::resetProxy()
             mResampler = SampleConverter::Create(mDevice->FmtType, mDevice->FmtType,
                 channelCount, mDevice->Frequency, mFormat.Format.nSamplesPerSec,
                 Resampler::FastBSinc24);
-            mResampleBuffer = std::make_unique<char[]>(size_t{mDevice->UpdateSize} * channelCount *
+            mResampleBuffer.resize(size_t{mDevice->UpdateSize} * channelCount *
                 mFormat.Format.wBitsPerSample / 8);
 
             TRACE("Created converter for %s/%s format, dst: %luhz (%u), src: %uhz (%u)\n",
@@ -1950,15 +1955,16 @@ no_spatial:
         mDevice->BufferSize/2);
 
     mResampler = nullptr;
-    mResampleBuffer = nullptr;
+    mResampleBuffer.clear();
+    mResampleBuffer.shrink_to_fit();
     mBufferFilled = 0;
     if(mDevice->Frequency != mFormat.Format.nSamplesPerSec)
     {
         mResampler = SampleConverter::Create(mDevice->FmtType, mDevice->FmtType,
             mFormat.Format.nChannels, mDevice->Frequency, mFormat.Format.nSamplesPerSec,
             Resampler::FastBSinc24);
-        mResampleBuffer = std::make_unique<char[]>(size_t{mDevice->UpdateSize} *
-            mFormat.Format.nChannels * mFormat.Format.wBitsPerSample / 8);
+        mResampleBuffer.resize(size_t{mDevice->UpdateSize} * mFormat.Format.nChannels *
+            mFormat.Format.wBitsPerSample / 8);
 
         TRACE("Created converter for %s/%s format, dst: %luhz (%u), src: %uhz (%u)\n",
             DevFmtChannelsString(mDevice->FmtChans), DevFmtTypeString(mDevice->FmtType),

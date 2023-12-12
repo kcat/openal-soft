@@ -23,10 +23,10 @@
 
 #include "opensl.h"
 
-#include <stdlib.h>
 #include <jni.h>
 
 #include <array>
+#include <cstdlib>
 #include <cstring>
 #include <mutex>
 #include <new>
@@ -56,6 +56,7 @@ namespace {
 #define VCALL0(obj, func)  ((*(obj))->func((obj) EXTRACT_VCALL_ARGS
 
 
+/* NOLINTNEXTLINE(*-avoid-c-arrays) */
 constexpr char opensl_device[] = "OpenSL";
 
 

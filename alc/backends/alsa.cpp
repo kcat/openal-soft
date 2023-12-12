@@ -53,6 +53,7 @@
 
 namespace {
 
+/* NOLINTNEXTLINE(*-avoid-c-arrays) */
 constexpr char alsaDevice[] = "ALSA Default";
 
 
@@ -715,17 +716,18 @@ bool AlsaPlayback::reset()
     /* test and set format (implicitly sets sample bits) */
     if(snd_pcm_hw_params_test_format(mPcmHandle, hp.get(), format) < 0)
     {
-        static const struct {
+        struct FormatMap {
             snd_pcm_format_t format;
             DevFmtType fmttype;
-        } formatlist[] = {
-            { SND_PCM_FORMAT_FLOAT, DevFmtFloat  },
-            { SND_PCM_FORMAT_S32,   DevFmtInt    },
-            { SND_PCM_FORMAT_U32,   DevFmtUInt   },
-            { SND_PCM_FORMAT_S16,   DevFmtShort  },
-            { SND_PCM_FORMAT_U16,   DevFmtUShort },
-            { SND_PCM_FORMAT_S8,    DevFmtByte   },
-            { SND_PCM_FORMAT_U8,    DevFmtUByte  },
+        };
+        static constexpr std::array formatlist{
+            FormatMap{SND_PCM_FORMAT_FLOAT, DevFmtFloat },
+            FormatMap{SND_PCM_FORMAT_S32,   DevFmtInt   },
+            FormatMap{SND_PCM_FORMAT_U32,   DevFmtUInt  },
+            FormatMap{SND_PCM_FORMAT_S16,   DevFmtShort },
+            FormatMap{SND_PCM_FORMAT_U16,   DevFmtUShort},
+            FormatMap{SND_PCM_FORMAT_S8,    DevFmtByte  },
+            FormatMap{SND_PCM_FORMAT_U8,    DevFmtUByte },
         };
 
         for(const auto &fmt : formatlist)

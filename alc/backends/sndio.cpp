@@ -23,11 +23,11 @@
 #include "sndio.h"
 
 #include <cinttypes>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
 #include <functional>
 #include <poll.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #include <thread>
 #include <vector>
 
@@ -43,7 +43,8 @@
 
 namespace {
 
-static const char sndio_device[] = "SndIO Default";
+/* NOLINTNEXTLINE(*-avoid-c-arrays) */
+constexpr char sndio_device[] = "SndIO Default";
 
 struct SioPar : public sio_par {
     SioPar() { sio_initpar(this); }
@@ -317,19 +318,19 @@ int SndioCapture::recordProc()
         return 1;
     }
 
-    auto fds = std::make_unique<pollfd[]>(static_cast<uint>(nfds_pre));
+    auto fds = std::vector<pollfd>(static_cast<uint>(nfds_pre));
 
     while(!mKillNow.load(std::memory_order_acquire)
         && mDevice->Connected.load(std::memory_order_acquire))
     {
         /* Wait until there's some samples to read. */
-        const int nfds{sio_pollfd(mSndHandle, fds.get(), POLLIN)};
+        const int nfds{sio_pollfd(mSndHandle, fds.data(), POLLIN)};
         if(nfds <= 0)
         {
             mDevice->handleDisconnect("Failed to get polling fds: %d", nfds);
             break;
         }
-        int pollres{::poll(fds.get(), static_cast<uint>(nfds), 2000)};
+        int pollres{::poll(fds.data(), fds.size(), 2000)};
         if(pollres < 0)
         {
             if(errno == EINTR) continue;
@@ -339,7 +340,7 @@ int SndioCapture::recordProc()
         if(pollres == 0)
             continue;
 
-        const int revents{sio_revents(mSndHandle, fds.get())};
+        const int revents{sio_revents(mSndHandle, fds.data())};
         if((revents&POLLHUP))
         {
             mDevice->handleDisconnect("Got POLLHUP from poll events");
@@ -373,8 +374,8 @@ int SndioCapture::recordProc()
         if(buffer.empty())
         {
             /* Got samples to read, but no place to store it. Drop it. */
-            static char junk[4096];
-            sio_read(mSndHandle, junk, sizeof(junk) - (sizeof(junk)%frameSize));
+            static std::array<char,4096> junk;
+            sio_read(mSndHandle, junk.data(), junk.size() - (junk.size()%frameSize));
         }
     }
 

@@ -164,9 +164,13 @@ void ALCcontext::init()
     else
     {
         auxslots = EffectSlot::CreatePtrArray(1);
-        (*auxslots)[0] = mDefaultSlot->mSlot;
-        mDefaultSlot->mState = SlotState::Playing;
+        if(auxslots)
+        {
+            (*auxslots)[0] = mDefaultSlot->mSlot;
+            mDefaultSlot->mState = SlotState::Playing;
+        }
     }
+    if(!auxslots) throw std::bad_alloc{};
     mActiveAuxSlots.store(auxslots, std::memory_order_relaxed);
 
     allocVoiceChanges();

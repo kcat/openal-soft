@@ -4,8 +4,8 @@
 #include "oboe.h"
 
 #include <cassert>
+#include <cstdint>
 #include <cstring>
-#include <stdint.h>
 
 #include "alnumeric.h"
 #include "core/device.h"
@@ -17,6 +17,7 @@
 
 namespace {
 
+/* NOLINTNEXTLINE(*-avoid-c-arrays) */
 constexpr char device_name[] = "Oboe Default";
 
 
@@ -48,11 +49,10 @@ oboe::DataCallbackResult OboePlayback::onAudioReady(oboe::AudioStream *oboeStrea
     return oboe::DataCallbackResult::Continue;
 }
 
-void OboePlayback::onErrorAfterClose(oboe::AudioStream* audioStream, oboe::Result error)
+void OboePlayback::onErrorAfterClose(oboe::AudioStream*, oboe::Result error)
 {
-    if (error == oboe::Result::ErrorDisconnected) {
+    if(error == oboe::Result::ErrorDisconnected)
         mDevice->handleDisconnect("Oboe AudioStream was disconnected: %s", oboe::convertToText(error));
-    }
     TRACE("Error was %s", oboe::convertToText(error));
 }
 

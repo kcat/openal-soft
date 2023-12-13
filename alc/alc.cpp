@@ -3450,8 +3450,9 @@ FORCE_ALIGN ALCboolean ALC_APIENTRY alcReopenDeviceSOFT(ALCdevice *device,
     }
     std::lock_guard<std::mutex> _{dev->StateLock};
 
-    /* Force the backend to stop mixing first since we're reopening. */
-    if(dev->mDeviceState == DeviceState::Playing)
+    /* Force the backend device to stop first since we're opening another one. */
+    const bool wasPlaying{dev->mDeviceState == DeviceState::Playing};
+    if(wasPlaying)
     {
         dev->Backend->stop();
         dev->mDeviceState = DeviceState::Configured;
@@ -3476,11 +3477,7 @@ FORCE_ALIGN ALCboolean ALC_APIENTRY alcReopenDeviceSOFT(ALCdevice *device,
         alcSetError(dev.get(), (e.errorCode() == al::backend_error::OutOfMemory)
             ? ALC_OUT_OF_MEMORY : ALC_INVALID_VALUE);
 
-        /* If the device is connected, not paused, and has contexts, ensure it
-         * continues playing.
-         */
-        if(dev->Connected.load(std::memory_order_relaxed) && !dev->Flags.test(DevicePaused)
-            && dev->mDeviceState == DeviceState::Configured)
+        if(dev->Connected.load(std::memory_order_relaxed) && wasPlaying)
         {
             try {
                 auto backend = dev->Backend.get();

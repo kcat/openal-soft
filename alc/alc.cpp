@@ -3312,12 +3312,6 @@ ALC_API void ALC_APIENTRY alcDevicePauseSOFT(ALCdevice *device) noexcept
     else
     {
         std::lock_guard<std::mutex> _{dev->StateLock};
-        if(!dev->Connected.load())
-        {
-            WARN("Cannot pause a disconnected device\n");
-            alcSetError(dev.get(), ALC_INVALID_DEVICE);
-            return;
-        }
         if(dev->mDeviceState == DeviceState::Playing)
         {
             dev->Backend->stop();

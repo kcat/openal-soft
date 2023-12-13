@@ -24,6 +24,7 @@
 #include "al/listener.h"
 #include "albit.h"
 #include "alc/alu.h"
+#include "alc/backends/base.h"
 #include "alspan.h"
 #include "core/async_event.h"
 #include "core/device.h"
@@ -236,7 +237,7 @@ void ALCcontext::init()
     mActiveVoiceCount.store(64, std::memory_order_relaxed);
 }
 
-bool ALCcontext::deinit()
+void ALCcontext::deinit()
 {
     if(sLocalContext == this)
     {
@@ -256,7 +257,7 @@ bool ALCcontext::deinit()
         dec_ref();
     }
 
-    bool ret{};
+    bool stopPlayback{};
     /* First make sure this context exists in the device's list. */
     auto *oldarray = mDevice->mContexts.load(std::memory_order_acquire);
     if(auto toremove = static_cast<size_t>(std::count(oldarray->begin(), oldarray->end(), this)))
@@ -285,14 +286,18 @@ bool ALCcontext::deinit()
             delete oldarray;
         }
 
-        ret = !newarray->empty();
+        stopPlayback = newarray->empty();
     }
     else
-        ret = !oldarray->empty();
+        stopPlayback = oldarray->empty();
 
     StopEventThrd(this);
 
-    return ret;
+    if(stopPlayback && mALDevice->mDeviceState == DeviceState::Playing)
+    {
+        mALDevice->Backend->stop();
+        mALDevice->mDeviceState = DeviceState::Configured;
+    }
 }
 
 void ALCcontext::applyAllUpdates()

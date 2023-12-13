@@ -1340,16 +1340,19 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
         /* If a context is already running on the device, stop playback so the
          * device attributes can be updated.
          */
-        if(device->Flags.test(DeviceRunning))
+        if(device->mDeviceState == DeviceState::Playing)
+        {
             device->Backend->stop();
-        device->Flags.reset(DeviceRunning);
+            device->mDeviceState = DeviceState::Unprepared;
+        }
 
         UpdateClockBase(device);
     }
 
-    if(device->Flags.test(DeviceRunning))
+    if(device->mDeviceState == DeviceState::Playing)
         return ALC_NO_ERROR;
 
+    device->mDeviceState = DeviceState::Unprepared;
     device->AvgSpeakerDist = 0.0f;
     device->mNFCtrlFilter = NfcFilter{};
     device->mUhjEncoder = nullptr;
@@ -1759,12 +1762,13 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
     }
     mixer_mode.leave();
 
+    device->mDeviceState = DeviceState::Configured;
     if(!device->Flags.test(DevicePaused))
     {
         try {
             auto backend = device->Backend.get();
             backend->start();
-            device->Flags.set(DeviceRunning);
+            device->mDeviceState = DeviceState::Playing;
         }
         catch(al::backend_exception& e) {
             ERR("%s\n", e.what());
@@ -2774,11 +2778,7 @@ ALC_API void ALC_APIENTRY alcDestroyContext(ALCcontext *context) noexcept
     ALCdevice *Device{ctx->mALDevice.get()};
 
     std::lock_guard<std::mutex> _{Device->StateLock};
-    if(!ctx->deinit() && Device->Flags.test(DeviceRunning))
-    {
-        Device->Backend->stop();
-        Device->Flags.reset(DeviceRunning);
-    }
+    ctx->deinit();
 }
 
 
@@ -2999,9 +2999,11 @@ ALC_API ALCboolean ALC_APIENTRY alcCloseDevice(ALCdevice *device) noexcept
     }
     orphanctxs.clear();
 
-    if(dev->Flags.test(DeviceRunning))
+    if(dev->mDeviceState == DeviceState::Playing)
+    {
         dev->Backend->stop();
-    dev->Flags.reset(DeviceRunning);
+        dev->mDeviceState = DeviceState::Configured;
+    }
 
     return ALC_TRUE;
 }
@@ -3083,6 +3085,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, 
         auto iter = std::lower_bound(DeviceList.cbegin(), DeviceList.cend(), device.get());
         DeviceList.emplace(iter, device.get());
     }
+    device->mDeviceState = DeviceState::Configured;
 
     TRACE("Created capture device %p, \"%s\"\n", voidp{device.get()}, device->DeviceName.c_str());
     return device.release();
@@ -3108,9 +3111,11 @@ ALC_API ALCboolean ALC_APIENTRY alcCaptureCloseDevice(ALCdevice *device) noexcep
     listlock.unlock();
 
     std::lock_guard<std::mutex> _{dev->StateLock};
-    if(dev->Flags.test(DeviceRunning))
+    if(dev->mDeviceState == DeviceState::Playing)
+    {
         dev->Backend->stop();
-    dev->Flags.reset(DeviceRunning);
+        dev->mDeviceState = DeviceState::Configured;
+    }
 
     return ALC_TRUE;
 }
@@ -3125,14 +3130,15 @@ ALC_API void ALC_APIENTRY alcCaptureStart(ALCdevice *device) noexcept
     }
 
     std::lock_guard<std::mutex> _{dev->StateLock};
-    if(!dev->Connected.load(std::memory_order_acquire))
+    if(!dev->Connected.load(std::memory_order_acquire)
+        || dev->mDeviceState < DeviceState::Configured)
         alcSetError(dev.get(), ALC_INVALID_DEVICE);
-    else if(!dev->Flags.test(DeviceRunning))
+    else if(dev->mDeviceState != DeviceState::Playing)
     {
         try {
             auto backend = dev->Backend.get();
             backend->start();
-            dev->Flags.set(DeviceRunning);
+            dev->mDeviceState = DeviceState::Playing;
         }
         catch(al::backend_exception& e) {
             ERR("%s\n", e.what());
@@ -3150,9 +3156,11 @@ ALC_API void ALC_APIENTRY alcCaptureStop(ALCdevice *device) noexcept
     else
     {
         std::lock_guard<std::mutex> _{dev->StateLock};
-        if(dev->Flags.test(DeviceRunning))
+        if(dev->mDeviceState == DeviceState::Playing)
+        {
             dev->Backend->stop();
-        dev->Flags.reset(DeviceRunning);
+            dev->mDeviceState = DeviceState::Configured;
+        }
     }
 }
 
@@ -3304,9 +3312,17 @@ ALC_API void ALC_APIENTRY alcDevicePauseSOFT(ALCdevice *device) noexcept
     else
     {
         std::lock_guard<std::mutex> _{dev->StateLock};
-        if(dev->Flags.test(DeviceRunning))
+        if(!dev->Connected.load())
+        {
+            WARN("Cannot pause a disconnected device\n");
+            alcSetError(dev.get(), ALC_INVALID_DEVICE);
+            return;
+        }
+        if(dev->mDeviceState == DeviceState::Playing)
+        {
             dev->Backend->stop();
-        dev->Flags.reset(DeviceRunning);
+            dev->mDeviceState = DeviceState::Configured;
+        }
         dev->Flags.set(DevicePaused);
     }
 }
@@ -3324,6 +3340,18 @@ ALC_API void ALC_APIENTRY alcDeviceResumeSOFT(ALCdevice *device) noexcept
     std::lock_guard<std::mutex> _{dev->StateLock};
     if(!dev->Flags.test(DevicePaused))
         return;
+    if(dev->mDeviceState < DeviceState::Configured)
+    {
+        WARN("Cannot resume unconfigured device\n");
+        alcSetError(dev.get(), ALC_INVALID_DEVICE);
+        return;
+    }
+    if(!dev->Connected.load())
+    {
+        WARN("Cannot resume a disconnected device\n");
+        alcSetError(dev.get(), ALC_INVALID_DEVICE);
+        return;
+    }
     dev->Flags.reset(DevicePaused);
     if(dev->mContexts.load()->empty())
         return;
@@ -3331,7 +3359,7 @@ ALC_API void ALC_APIENTRY alcDeviceResumeSOFT(ALCdevice *device) noexcept
     try {
         auto backend = dev->Backend.get();
         backend->start();
-        dev->Flags.set(DeviceRunning);
+        dev->mDeviceState = DeviceState::Playing;
     }
     catch(al::backend_exception& e) {
         ERR("%s\n", e.what());
@@ -3340,8 +3368,8 @@ ALC_API void ALC_APIENTRY alcDeviceResumeSOFT(ALCdevice *device) noexcept
         return;
     }
     TRACE("Post-resume: %s, %s, %uhz, %u / %u buffer\n",
-        DevFmtChannelsString(device->FmtChans), DevFmtTypeString(device->FmtType),
-        device->Frequency, device->UpdateSize, device->BufferSize);
+        DevFmtChannelsString(dev->FmtChans), DevFmtTypeString(dev->FmtType),
+        dev->Frequency, dev->UpdateSize, dev->BufferSize);
 }
 
 
@@ -3388,9 +3416,11 @@ ALC_API ALCboolean ALC_APIENTRY alcResetDeviceSOFT(ALCdevice *device, const ALCi
     /* Force the backend to stop mixing first since we're resetting. Also reset
      * the connected state so lost devices can attempt recover.
      */
-    if(dev->Flags.test(DeviceRunning))
+    if(dev->mDeviceState == DeviceState::Playing)
+    {
         dev->Backend->stop();
-    dev->Flags.reset(DeviceRunning);
+        dev->mDeviceState = DeviceState::Configured;
+    }
 
     return ResetDeviceParams(dev.get(), attribs) ? ALC_TRUE : ALC_FALSE;
 }
@@ -3421,11 +3451,10 @@ FORCE_ALIGN ALCboolean ALC_APIENTRY alcReopenDeviceSOFT(ALCdevice *device,
     std::lock_guard<std::mutex> _{dev->StateLock};
 
     /* Force the backend to stop mixing first since we're reopening. */
-    if(dev->Flags.test(DeviceRunning))
+    if(dev->mDeviceState == DeviceState::Playing)
     {
-        auto backend = dev->Backend.get();
-        backend->stop();
-        dev->Flags.reset(DeviceRunning);
+        dev->Backend->stop();
+        dev->mDeviceState = DeviceState::Configured;
     }
 
     BackendPtr newbackend;
@@ -3451,12 +3480,12 @@ FORCE_ALIGN ALCboolean ALC_APIENTRY alcReopenDeviceSOFT(ALCdevice *device,
          * continues playing.
          */
         if(dev->Connected.load(std::memory_order_relaxed) && !dev->Flags.test(DevicePaused)
-            && !dev->mContexts.load(std::memory_order_relaxed)->empty())
+            && dev->mDeviceState == DeviceState::Configured)
         {
             try {
                 auto backend = dev->Backend.get();
                 backend->start();
-                dev->Flags.set(DeviceRunning);
+                dev->mDeviceState = DeviceState::Playing;
             }
             catch(al::backend_exception &be) {
                 ERR("%s\n", be.what());
@@ -3467,6 +3496,7 @@ FORCE_ALIGN ALCboolean ALC_APIENTRY alcReopenDeviceSOFT(ALCdevice *device,
     }
     listlock.unlock();
     dev->Backend = std::move(newbackend);
+    dev->mDeviceState = DeviceState::Unprepared;
     TRACE("Reopened device %p, \"%s\"\n", voidp{dev.get()}, dev->DeviceName.c_str());
 
     /* Always return true even if resetting fails. It shouldn't fail, but this

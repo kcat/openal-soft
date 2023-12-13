@@ -158,10 +158,10 @@ struct ALCcontext : public al::intrusive_ref<ALCcontext>, ContextBase {
     void init();
     /**
      * Removes the context from its device and removes it from being current on
-     * the running thread or globally. Returns true if other contexts still
-     * exist on the device.
+     * the running thread or globally. Stops device playback if this was the
+     * last context on its device.
      */
-    bool deinit();
+    void deinit();
 
     /**
      * Defers/suspends updates for the given context's listener and sources.

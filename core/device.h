@@ -161,8 +161,6 @@ enum {
 
     // Specifies if the DSP is paused at user request
     DevicePaused,
-    // Specifies if the device is currently running
-    DeviceRunning,
 
     // Specifies if the output plays directly on/in ears (headphones, headset,
     // ear buds, etc).
@@ -174,6 +172,12 @@ enum {
     Virtualization,
 
     DeviceFlagsCount
+};
+
+enum class DeviceState : uint8_t {
+    Unprepared,
+    Configured,
+    Playing
 };
 
 struct DeviceBase {
@@ -205,6 +209,7 @@ struct DeviceBase {
 
     // Device flags
     std::bitset<DeviceFlagsCount> Flags{};
+    DeviceState mDeviceState{DeviceState::Unprepared};
 
     uint NumAuxSends{};
 

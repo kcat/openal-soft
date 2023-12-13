@@ -20,7 +20,7 @@
 enum LogLevel LogLevel = LogLevel_Error;
 FILE *LogFile;
 
-static void LoadDriverList(void);
+static void LoadDriverList();
 
 
 BOOL APIENTRY DllMain(HINSTANCE, DWORD reason, void*)
@@ -313,7 +313,7 @@ static int GetLoadedModuleDirectory(const WCHAR *name, WCHAR *moddir, DWORD leng
     return 1;
 }
 
-void LoadDriverList(void)
+void LoadDriverList()
 {
     WCHAR dll_path[MAX_PATH+1] = L"";
     WCHAR cwd_path[MAX_PATH+1] = L"";

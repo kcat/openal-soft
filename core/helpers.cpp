@@ -177,7 +177,7 @@ std::vector<std::string> SearchDataFiles(const char *ext, const char *subdir)
     return results;
 }
 
-void SetRTPriority(void)
+void SetRTPriority()
 {
 #if !defined(ALSOFT_UWP)
     if(RTPrioLevel > 0)

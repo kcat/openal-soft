@@ -18,6 +18,7 @@
 #include <mutex>
 #include <numeric>
 #include <optional>
+#include <tuple>
 #include <type_traits>
 #include <utility>
 #include <vector>
@@ -903,7 +904,7 @@ std::unique_ptr<HrtfStore> LoadHrtf02(std::istream &data, const char *filename)
             elevs__end = std::copy_backward(elevs_src, elevs_src+field.evCount, elevs__end);
             return ebase + field.evCount;
         };
-        (void)std::accumulate(fields.cbegin(), fields.cend(), ptrdiff_t{0}, copy_azs);
+        std::ignore = std::accumulate(fields.cbegin(), fields.cend(), ptrdiff_t{0}, copy_azs);
         assert(elevs_.begin() == elevs__end);
 
         /* Reestablish the IR offset for each elevation index, given the new
@@ -938,7 +939,7 @@ std::unique_ptr<HrtfStore> LoadHrtf02(std::istream &data, const char *filename)
 
             return ebase + field.evCount;
         };
-        (void)std::accumulate(fields.cbegin(), fields.cend(), ptrdiff_t{0}, copy_irs);
+        std::ignore = std::accumulate(fields.cbegin(), fields.cend(), ptrdiff_t{0}, copy_irs);
         assert(coeffs_.begin() == coeffs_end);
         assert(delays_.begin() == delays_end);
 

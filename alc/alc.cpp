@@ -2782,7 +2782,7 @@ ALC_API void ALC_APIENTRY alcDestroyContext(ALCcontext *context) noexcept
 }
 
 
-ALC_API ALCcontext* ALC_APIENTRY alcGetCurrentContext(void) noexcept
+ALC_API auto ALC_APIENTRY alcGetCurrentContext() noexcept -> ALCcontext*
 {
     ALCcontext *Context{ALCcontext::getThreadContext()};
     if(!Context) Context = ALCcontext::sGlobalContext.load();
@@ -2790,7 +2790,7 @@ ALC_API ALCcontext* ALC_APIENTRY alcGetCurrentContext(void) noexcept
 }
 
 /** Returns the currently active thread-local context. */
-ALC_API ALCcontext* ALC_APIENTRY alcGetThreadContext(void) noexcept
+ALC_API auto ALC_APIENTRY alcGetThreadContext() noexcept -> ALCcontext*
 { return ALCcontext::getThreadContext(); }
 
 ALC_API ALCboolean ALC_APIENTRY alcMakeContextCurrent(ALCcontext *context) noexcept

@@ -42,7 +42,7 @@
 #elif HAS_BUILTIN(__builtin_unreachable)
 #define ASSUME(x) do { if(x) break; __builtin_unreachable(); } while(0)
 #else
-#define ASSUME(x) ((void)0)
+#define ASSUME(x) (static_cast<void>(0))
 #endif
 
 /* This shouldn't be needed since unknown attributes are ignored, but older

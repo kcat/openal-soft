@@ -12,7 +12,7 @@ constexpr void DefaultVal() noexcept { }
 } // namespace detail_
 
 #define DECL_FUNC(R, Name)                                                    \
-R AL_APIENTRY Name(void) noexcept                                             \
+auto AL_APIENTRY Name() noexcept -> R                                         \
 {                                                                             \
     auto context = GetContextRef();                                           \
     if(!context) UNLIKELY return detail_::DefaultVal<R>();                    \
@@ -20,7 +20,7 @@ R AL_APIENTRY Name(void) noexcept                                             \
 }
 
 #define DECL_FUNC1(R, Name, T1)                                               \
-R AL_APIENTRY Name(T1 a) noexcept                                             \
+auto AL_APIENTRY Name(T1 a) noexcept -> R                                     \
 {                                                                             \
     auto context = GetContextRef();                                           \
     if(!context) UNLIKELY return detail_::DefaultVal<R>();                    \
@@ -28,7 +28,7 @@ R AL_APIENTRY Name(T1 a) noexcept                                             \
 }
 
 #define DECL_FUNC2(R, Name, T1, T2)                                           \
-R AL_APIENTRY Name(T1 a, T2 b) noexcept                                       \
+auto AL_APIENTRY Name(T1 a, T2 b) noexcept -> R                               \
 {                                                                             \
     auto context = GetContextRef();                                           \
     if(!context) UNLIKELY return detail_::DefaultVal<R>();                    \
@@ -36,7 +36,7 @@ R AL_APIENTRY Name(T1 a, T2 b) noexcept                                       \
 }
 
 #define DECL_FUNC3(R, Name, T1, T2, T3)                                       \
-R AL_APIENTRY Name(T1 a, T2 b, T3 c) noexcept                                 \
+auto AL_APIENTRY Name(T1 a, T2 b, T3 c) noexcept -> R                         \
 {                                                                             \
     auto context = GetContextRef();                                           \
     if(!context) UNLIKELY return detail_::DefaultVal<R>();                    \
@@ -44,7 +44,7 @@ R AL_APIENTRY Name(T1 a, T2 b, T3 c) noexcept                                 \
 }
 
 #define DECL_FUNC4(R, Name, T1, T2, T3, T4)                                   \
-R AL_APIENTRY Name(T1 a, T2 b, T3 c, T4 d) noexcept                           \
+auto AL_APIENTRY Name(T1 a, T2 b, T3 c, T4 d) noexcept -> R                   \
 {                                                                             \
     auto context = GetContextRef();                                           \
     if(!context) UNLIKELY return detail_::DefaultVal<R>();                    \
@@ -52,7 +52,7 @@ R AL_APIENTRY Name(T1 a, T2 b, T3 c, T4 d) noexcept                           \
 }
 
 #define DECL_FUNC5(R, Name, T1, T2, T3, T4, T5)                               \
-R AL_APIENTRY Name(T1 a, T2 b, T3 c, T4 d, T5 e) noexcept                     \
+auto AL_APIENTRY Name(T1 a, T2 b, T3 c, T4 d, T5 e) noexcept -> R             \
 {                                                                             \
     auto context = GetContextRef();                                           \
     if(!context) UNLIKELY return detail_::DefaultVal<R>();                    \
@@ -61,7 +61,7 @@ R AL_APIENTRY Name(T1 a, T2 b, T3 c, T4 d, T5 e) noexcept                     \
 
 
 #define DECL_FUNCEXT(R, Name,Ext)                                             \
-R AL_APIENTRY Name##Ext(void) noexcept                                        \
+auto AL_APIENTRY Name##Ext() noexcept -> R                                    \
 {                                                                             \
     auto context = GetContextRef();                                           \
     if(!context) UNLIKELY return detail_::DefaultVal<R>();                    \
@@ -69,7 +69,7 @@ R AL_APIENTRY Name##Ext(void) noexcept                                        \
 }
 
 #define DECL_FUNCEXT1(R, Name,Ext, T1)                                        \
-R AL_APIENTRY Name##Ext(T1 a) noexcept                                        \
+auto AL_APIENTRY Name##Ext(T1 a) noexcept -> R                                \
 {                                                                             \
     auto context = GetContextRef();                                           \
     if(!context) UNLIKELY return detail_::DefaultVal<R>();                    \
@@ -77,7 +77,7 @@ R AL_APIENTRY Name##Ext(T1 a) noexcept                                        \
 }
 
 #define DECL_FUNCEXT2(R, Name,Ext, T1, T2)                                    \
-R AL_APIENTRY Name##Ext(T1 a, T2 b) noexcept                                  \
+auto AL_APIENTRY Name##Ext(T1 a, T2 b) noexcept -> R                          \
 {                                                                             \
     auto context = GetContextRef();                                           \
     if(!context) UNLIKELY return detail_::DefaultVal<R>();                    \
@@ -85,7 +85,7 @@ R AL_APIENTRY Name##Ext(T1 a, T2 b) noexcept                                  \
 }
 
 #define DECL_FUNCEXT3(R, Name,Ext, T1, T2, T3)                                \
-R AL_APIENTRY Name##Ext(T1 a, T2 b, T3 c) noexcept                            \
+auto AL_APIENTRY Name##Ext(T1 a, T2 b, T3 c) noexcept -> R                    \
 {                                                                             \
     auto context = GetContextRef();                                           \
     if(!context) UNLIKELY return detail_::DefaultVal<R>();                    \
@@ -93,7 +93,7 @@ R AL_APIENTRY Name##Ext(T1 a, T2 b, T3 c) noexcept                            \
 }
 
 #define DECL_FUNCEXT4(R, Name,Ext, T1, T2, T3, T4)                            \
-R AL_APIENTRY Name##Ext(T1 a, T2 b, T3 c, T4 d) noexcept                      \
+auto AL_APIENTRY Name##Ext(T1 a, T2 b, T3 c, T4 d) noexcept -> R              \
 {                                                                             \
     auto context = GetContextRef();                                           \
     if(!context) UNLIKELY return detail_::DefaultVal<R>();                    \
@@ -101,7 +101,7 @@ R AL_APIENTRY Name##Ext(T1 a, T2 b, T3 c, T4 d) noexcept                      \
 }
 
 #define DECL_FUNCEXT5(R, Name,Ext, T1, T2, T3, T4, T5)                        \
-R AL_APIENTRY Name##Ext(T1 a, T2 b, T3 c, T4 d, T5 e) noexcept                \
+auto AL_APIENTRY Name##Ext(T1 a, T2 b, T3 c, T4 d, T5 e) noexcept -> R        \
 {                                                                             \
     auto context = GetContextRef();                                           \
     if(!context) UNLIKELY return detail_::DefaultVal<R>();                    \
@@ -109,7 +109,7 @@ R AL_APIENTRY Name##Ext(T1 a, T2 b, T3 c, T4 d, T5 e) noexcept                \
 }
 
 #define DECL_FUNCEXT6(R, Name,Ext, T1, T2, T3, T4, T5, T6)                    \
-R AL_APIENTRY Name##Ext(T1 a, T2 b, T3 c, T4 d, T5 e, T6 f) noexcept          \
+auto AL_APIENTRY Name##Ext(T1 a, T2 b, T3 c, T4 d, T5 e, T6 f) noexcept -> R  \
 {                                                                             \
     auto context = GetContextRef();                                           \
     if(!context) UNLIKELY return detail_::DefaultVal<R>();                    \
@@ -117,7 +117,7 @@ R AL_APIENTRY Name##Ext(T1 a, T2 b, T3 c, T4 d, T5 e, T6 f) noexcept          \
 }
 
 #define DECL_FUNCEXT8(R, Name,Ext, T1, T2, T3, T4, T5, T6, T7, T8)            \
-R AL_APIENTRY Name##Ext(T1 a, T2 b, T3 c, T4 d, T5 e, T6 f, T7 g, T8 h) noexcept \
+auto AL_APIENTRY Name##Ext(T1 a, T2 b, T3 c, T4 d, T5 e, T6 f, T7 g, T8 h) noexcept -> R \
 {                                                                             \
     auto context = GetContextRef();                                           \
     if(!context) UNLIKELY return detail_::DefaultVal<R>();                    \

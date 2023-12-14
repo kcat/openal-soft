@@ -3,8 +3,9 @@
 
 #include "mainwindow.h"
 
-#include <iostream>
+#include <array>
 #include <cmath>
+#include <iostream>
 
 #include <QFileDialog>
 #include <QMessageBox>
@@ -19,137 +20,133 @@
 #include <shlobj.h>
 #endif
 
+#include "alspan.h"
+
 namespace {
 
-const struct {
+struct BackendNamePair {
+    /* NOLINTBEGIN(*-avoid-c-arrays) */
     char backend_name[16];
     char full_string[32];
-} backendList[] = {
-#ifdef HAVE_JACK
-    { "jack", "JACK" },
-#endif
+    /* NOLINTEND(*-avoid-c-arrays) */
+};
+constexpr std::array backendList{
 #ifdef HAVE_PIPEWIRE
-    { "pipewire", "PipeWire" },
+    BackendNamePair{ "pipewire", "PipeWire" },
 #endif
 #ifdef HAVE_PULSEAUDIO
-    { "pulse", "PulseAudio" },
+    BackendNamePair{ "pulse", "PulseAudio" },
 #endif
 #ifdef HAVE_ALSA
-    { "alsa", "ALSA" },
+    BackendNamePair{ "alsa", "ALSA" },
+#endif
+#ifdef HAVE_JACK
+    BackendNamePair{ "jack", "JACK" },
 #endif
 #ifdef HAVE_COREAUDIO
-    { "core", "CoreAudio" },
+    BackendNamePair{ "core", "CoreAudio" },
 #endif
 #ifdef HAVE_OSS
-    { "oss", "OSS" },
+    BackendNamePair{ "oss", "OSS" },
 #endif
 #ifdef HAVE_SOLARIS
-    { "solaris", "Solaris" },
+    BackendNamePair{ "solaris", "Solaris" },
 #endif
 #ifdef HAVE_SNDIO
-    { "sndio", "SoundIO" },
-#endif
-#ifdef HAVE_QSA
-    { "qsa", "QSA" },
+    BackendNamePair{ "sndio", "SoundIO" },
 #endif
 #ifdef HAVE_WASAPI
-    { "wasapi", "WASAPI" },
+    BackendNamePair{ "wasapi", "WASAPI" },
 #endif
 #ifdef HAVE_DSOUND
-    { "dsound", "DirectSound" },
+    BackendNamePair{ "dsound", "DirectSound" },
 #endif
 #ifdef HAVE_WINMM
-    { "winmm", "Windows Multimedia" },
+    BackendNamePair{ "winmm", "Windows Multimedia" },
 #endif
 #ifdef HAVE_PORTAUDIO
-    { "port", "PortAudio" },
+    BackendNamePair{ "port", "PortAudio" },
 #endif
 #ifdef HAVE_OPENSL
-    { "opensl", "OpenSL" },
+    BackendNamePair{ "opensl", "OpenSL" },
 #endif
 
-    { "null", "Null Output" },
+    BackendNamePair{ "null", "Null Output" },
 #ifdef HAVE_WAVE
-    { "wave", "Wave Writer" },
+    BackendNamePair{ "wave", "Wave Writer" },
 #endif
-    { "", "" }
 };
 
-const struct NameValuePair {
+struct NameValuePair {
+    /* NOLINTBEGIN(*-avoid-c-arrays) */
     const char name[64];
     const char value[16];
-} speakerModeList[] = {
-    { "Autodetect", "" },
-    { "Mono", "mono" },
-    { "Stereo", "stereo" },
-    { "Quadraphonic", "quad" },
-    { "5.1 Surround", "surround51" },
-    { "6.1 Surround", "surround61" },
-    { "7.1 Surround", "surround71" },
-    { "3D7.1 Surround", "surround3d71" },
+    /* NOLINTEND(*-avoid-c-arrays) */
+};
+constexpr std::array speakerModeList{
+    NameValuePair{ "Autodetect", "" },
+    NameValuePair{ "Mono", "mono" },
+    NameValuePair{ "Stereo", "stereo" },
+    NameValuePair{ "Quadraphonic", "quad" },
+    NameValuePair{ "5.1 Surround", "surround51" },
+    NameValuePair{ "6.1 Surround", "surround61" },
+    NameValuePair{ "7.1 Surround", "surround71" },
+    NameValuePair{ "3D7.1 Surround", "surround3d71" },
 
-    { "Ambisonic, 1st Order", "ambi1" },
-    { "Ambisonic, 2nd Order", "ambi2" },
-    { "Ambisonic, 3rd Order", "ambi3" },
-
-    { "", "" }
-}, sampleTypeList[] = {
-    { "Autodetect", "" },
-    { "8-bit int", "int8" },
-    { "8-bit uint", "uint8" },
-    { "16-bit int", "int16" },
-    { "16-bit uint", "uint16" },
-    { "32-bit int", "int32" },
-    { "32-bit uint", "uint32" },
-    { "32-bit float", "float32" },
-
-    { "", "" }
-}, resamplerList[] = {
-    { "Point", "point" },
-    { "Linear", "linear" },
-    { "Cubic Spline", "cubic" },
-    { "Default (Cubic Spline)", "" },
-    { "11th order Sinc (fast)", "fast_bsinc12" },
-    { "11th order Sinc", "bsinc12" },
-    { "23rd order Sinc (fast)", "fast_bsinc24" },
-    { "23rd order Sinc", "bsinc24" },
-
-    { "", "" }
-}, stereoModeList[] = {
-    { "Autodetect", "" },
-    { "Speakers", "speakers" },
-    { "Headphones", "headphones" },
-
-    { "", "" }
-}, stereoEncList[] = {
-    { "Default", "" },
-    { "Basic", "panpot" },
-    { "UHJ", "uhj" },
-    { "Binaural", "hrtf" },
-
-    { "", "" }
-}, ambiFormatList[] = {
-    { "Default", "" },
-    { "AmbiX (ACN, SN3D)", "ambix" },
-    { "Furse-Malham", "fuma" },
-    { "ACN, N3D", "acn+n3d" },
-    { "ACN, FuMa", "acn+fuma" },
-
-    { "", "" }
-}, hrtfModeList[] = {
-    { "1st Order Ambisonic", "ambi1" },
-    { "2nd Order Ambisonic", "ambi2" },
-    { "3rd Order Ambisonic", "ambi3" },
-    { "Default (Full)", "" },
-    { "Full", "full" },
-
-    { "", "" }
+    NameValuePair{ "Ambisonic, 1st Order", "ambi1" },
+    NameValuePair{ "Ambisonic, 2nd Order", "ambi2" },
+    NameValuePair{ "Ambisonic, 3rd Order", "ambi3" },
+};
+constexpr std::array sampleTypeList{
+    NameValuePair{ "Autodetect", "" },
+    NameValuePair{ "8-bit int", "int8" },
+    NameValuePair{ "8-bit uint", "uint8" },
+    NameValuePair{ "16-bit int", "int16" },
+    NameValuePair{ "16-bit uint", "uint16" },
+    NameValuePair{ "32-bit int", "int32" },
+    NameValuePair{ "32-bit uint", "uint32" },
+    NameValuePair{ "32-bit float", "float32" },
+};
+constexpr std::array resamplerList{
+    NameValuePair{ "Point", "point" },
+    NameValuePair{ "Linear", "linear" },
+    NameValuePair{ "Cubic Spline", "cubic" },
+    NameValuePair{ "Default (Cubic Spline)", "" },
+    NameValuePair{ "11th order Sinc (fast)", "fast_bsinc12" },
+    NameValuePair{ "11th order Sinc", "bsinc12" },
+    NameValuePair{ "23rd order Sinc (fast)", "fast_bsinc24" },
+    NameValuePair{ "23rd order Sinc", "bsinc24" },
+};
+constexpr std::array stereoModeList{
+    NameValuePair{ "Autodetect", "" },
+    NameValuePair{ "Speakers", "speakers" },
+    NameValuePair{ "Headphones", "headphones" },
+};
+constexpr std::array stereoEncList{
+    NameValuePair{ "Default", "" },
+    NameValuePair{ "Basic", "panpot" },
+    NameValuePair{ "UHJ", "uhj" },
+    NameValuePair{ "Binaural", "hrtf" },
+};
+constexpr std::array ambiFormatList{
+    NameValuePair{ "Default", "" },
+    NameValuePair{ "AmbiX (ACN, SN3D)", "ambix" },
+    NameValuePair{ "Furse-Malham", "fuma" },
+    NameValuePair{ "ACN, N3D", "acn+n3d" },
+    NameValuePair{ "ACN, FuMa", "acn+fuma" },
+};
+constexpr std::array hrtfModeList{
+    NameValuePair{ "1st Order Ambisonic", "ambi1" },
+    NameValuePair{ "2nd Order Ambisonic", "ambi2" },
+    NameValuePair{ "3rd Order Ambisonic", "ambi3" },
+    NameValuePair{ "Default (Full)", "" },
+    NameValuePair{ "Full", "full" },
 };
 
 QString getDefaultConfigName()
 {
 #ifdef Q_OS_WIN32
-    static const char fname[] = "alsoft.ini";
+    static constexpr char fname[] = "alsoft.ini"; /* NOLINT(*-avoid-c-arrays) */
     auto get_appdata_path = []() noexcept -> QString
     {
         WCHAR buffer[MAX_PATH];
@@ -159,7 +156,7 @@ QString getDefaultConfigName()
     };
     QString base = get_appdata_path();
 #else
-    static const char fname[] = "alsoft.conf";
+    static constexpr char fname[] = "alsoft.conf"; /* NOLINT(*-avoid-c-arrays) */
     QByteArray base = qgetenv("XDG_CONFIG_HOME");
     if(base.isEmpty())
     {
@@ -226,10 +223,9 @@ QStringList getAllDataPaths(const QString &append)
     return list;
 }
 
-template<size_t N>
-QString getValueFromName(const NameValuePair (&list)[N], const QString &str)
+QString getValueFromName(const al::span<const NameValuePair> list, const QString &str)
 {
-    for(size_t i = 0;i < N-1;i++)
+    for(size_t i{0};i < list.size();++i)
     {
         if(str == list[i].name)
             return list[i].value;
@@ -237,10 +233,9 @@ QString getValueFromName(const NameValuePair (&list)[N], const QString &str)
     return QString{};
 }
 
-template<size_t N>
-QString getNameFromValue(const NameValuePair (&list)[N], const QString &str)
+QString getNameFromValue(const al::span<const NameValuePair> list, const QString &str)
 {
-    for(size_t i = 0;i < N-1;i++)
+    for(size_t i{0};i < list.size();++i)
     {
         if(str == list[i].value)
             return list[i].name;
@@ -270,44 +265,29 @@ QString getCheckValue(const QCheckBox *checkbox)
 
 }
 
-MainWindow::MainWindow(QWidget *parent) :
-    QMainWindow(parent),
-    ui(new Ui::MainWindow),
-    mPeriodSizeValidator(nullptr),
-    mPeriodCountValidator(nullptr),
-    mSourceCountValidator(nullptr),
-    mEffectSlotValidator(nullptr),
-    mSourceSendValidator(nullptr),
-    mSampleRateValidator(nullptr),
-    mJackBufferValidator(nullptr),
-    mNeedsSave(false)
+MainWindow::MainWindow(QWidget *parent) : QMainWindow{parent}
+    , ui{std::make_unique<Ui::MainWindow>()}
 {
     ui->setupUi(this);
 
-    for(int i = 0;speakerModeList[i].name[0];i++)
-        ui->channelConfigCombo->addItem(speakerModeList[i].name);
+    for(auto &item : speakerModeList)
+        ui->channelConfigCombo->addItem(item.name);
     ui->channelConfigCombo->adjustSize();
-    for(int i = 0;sampleTypeList[i].name[0];i++)
-        ui->sampleFormatCombo->addItem(sampleTypeList[i].name);
+    for(auto &item : sampleTypeList)
+        ui->sampleFormatCombo->addItem(item.name);
     ui->sampleFormatCombo->adjustSize();
-    for(int i = 0;stereoModeList[i].name[0];i++)
-        ui->stereoModeCombo->addItem(stereoModeList[i].name);
+    for(auto &item : stereoModeList)
+        ui->stereoModeCombo->addItem(item.name);
     ui->stereoModeCombo->adjustSize();
-    for(int i = 0;stereoEncList[i].name[0];i++)
-        ui->stereoEncodingComboBox->addItem(stereoEncList[i].name);
+    for(auto &item : stereoEncList)
+        ui->stereoEncodingComboBox->addItem(item.name);
     ui->stereoEncodingComboBox->adjustSize();
-    for(int i = 0;ambiFormatList[i].name[0];i++)
-        ui->ambiFormatComboBox->addItem(ambiFormatList[i].name);
+    for(auto &item : ambiFormatList)
+        ui->ambiFormatComboBox->addItem(item.name);
     ui->ambiFormatComboBox->adjustSize();
 
-    int count;
-    for(count = 0;resamplerList[count].name[0];count++) {
-    }
-    ui->resamplerSlider->setRange(0, count-1);
-
-    for(count = 0;hrtfModeList[count].name[0];count++) {
-    }
-    ui->hrtfmodeSlider->setRange(0, count-1);
+    ui->resamplerSlider->setRange(0, resamplerList.size()-1);
+    ui->hrtfmodeSlider->setRange(0, hrtfModeList.size()-1);
 
 #if !defined(HAVE_NEON) && !defined(HAVE_SSE)
     ui->cpuExtDisabledLabel->move(ui->cpuExtDisabledLabel->x(), ui->cpuExtDisabledLabel->y() - 60);
@@ -355,22 +335,22 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->enableEaxCheck->setVisible(false);
 #endif
 
-    mPeriodSizeValidator = new QIntValidator{64, 8192, this};
-    ui->periodSizeEdit->setValidator(mPeriodSizeValidator);
-    mPeriodCountValidator = new QIntValidator{2, 16, this};
-    ui->periodCountEdit->setValidator(mPeriodCountValidator);
+    mPeriodSizeValidator = std::make_unique<QIntValidator>(64, 8192, this);
+    ui->periodSizeEdit->setValidator(mPeriodSizeValidator.get());
+    mPeriodCountValidator = std::make_unique<QIntValidator>(2, 16, this);
+    ui->periodCountEdit->setValidator(mPeriodCountValidator.get());
 
-    mSourceCountValidator = new QIntValidator{0, 4096, this};
-    ui->srcCountLineEdit->setValidator(mSourceCountValidator);
-    mEffectSlotValidator = new QIntValidator{0, 64, this};
-    ui->effectSlotLineEdit->setValidator(mEffectSlotValidator);
-    mSourceSendValidator = new QIntValidator{0, 16, this};
-    ui->srcSendLineEdit->setValidator(mSourceSendValidator);
-    mSampleRateValidator = new QIntValidator{8000, 192000, this};
-    ui->sampleRateCombo->lineEdit()->setValidator(mSampleRateValidator);
+    mSourceCountValidator = std::make_unique<QIntValidator>(0, 4096, this);
+    ui->srcCountLineEdit->setValidator(mSourceCountValidator.get());
+    mEffectSlotValidator = std::make_unique<QIntValidator>(0, 64, this);
+    ui->effectSlotLineEdit->setValidator(mEffectSlotValidator.get());
+    mSourceSendValidator = std::make_unique<QIntValidator>(0, 16, this);
+    ui->srcSendLineEdit->setValidator(mSourceSendValidator.get());
+    mSampleRateValidator = std::make_unique<QIntValidator>(8000, 192000, this);
+    ui->sampleRateCombo->lineEdit()->setValidator(mSampleRateValidator.get());
 
-    mJackBufferValidator = new QIntValidator{0, 8192, this};
-    ui->jackBufferSizeLine->setValidator(mJackBufferValidator);
+    mJackBufferValidator = std::make_unique<QIntValidator>(0, 8192, this);
+    ui->jackBufferSizeLine->setValidator(mJackBufferValidator.get());
 
     connect(ui->actionLoad, &QAction::triggered, this, &MainWindow::loadConfigFromFile);
     connect(ui->actionSave_As, &QAction::triggered, this, &MainWindow::saveConfigAsFile);
@@ -495,7 +475,7 @@ MainWindow::MainWindow(QWidget *parent) :
 
     for(int i = 1;i < ui->backendListWidget->count();i++)
         ui->backendListWidget->setRowHidden(i, true);
-    for(int i = 0;backendList[i].backend_name[0];i++)
+    for(size_t i{0};i < backendList.size();++i)
     {
         QList<QListWidgetItem*> items = ui->backendListWidget->findItems(
             backendList[i].full_string, Qt::MatchFixedString);
@@ -506,17 +486,7 @@ MainWindow::MainWindow(QWidget *parent) :
     loadConfig(getDefaultConfigName());
 }
 
-MainWindow::~MainWindow()
-{
-    delete ui;
-    delete mPeriodSizeValidator;
-    delete mPeriodCountValidator;
-    delete mSourceCountValidator;
-    delete mEffectSlotValidator;
-    delete mSourceSendValidator;
-    delete mSampleRateValidator;
-    delete mJackBufferValidator;
-}
+MainWindow::~MainWindow() = default;
 
 void MainWindow::closeEvent(QCloseEvent *event)
 {
@@ -789,7 +759,7 @@ void MainWindow::loadConfig(const QString &fname)
     /* The "basic" mode name is no longer supported. Use "ambi2" instead. */
     if(hrtfmode == "basic")
         hrtfmode = "ambi2";
-    for(int i = 0;hrtfModeList[i].name[0];i++)
+    for(size_t i{0};i < hrtfModeList.size();++i)
     {
         if(hrtfmode == hrtfModeList[i].value)
         {
@@ -869,7 +839,8 @@ void MainWindow::loadConfig(const QString &fname)
             if(lastWasEmpty) continue;
 
             if(!backend.startsWith(QChar('-')))
-                for(int j = 0;backendList[j].backend_name[0];j++)
+            {
+                for(size_t j{0};j < backendList.size();++j)
                 {
                     if(backend == backendList[j].backend_name)
                     {
@@ -877,10 +848,11 @@ void MainWindow::loadConfig(const QString &fname)
                         break;
                     }
                 }
+            }
             else if(backend.size() > 1)
             {
                 QStringRef backendref{backend.rightRef(backend.size()-1)};
-                for(int j = 0;backendList[j].backend_name[0];j++)
+                for(size_t j{0};j < backendList.size();++j)
                 {
                     if(backendref == backendList[j].backend_name)
                     {
@@ -1070,7 +1042,7 @@ void MainWindow::saveConfig(const QString &fname) const
     for(int i = 0;i < ui->enabledBackendList->count();i++)
     {
         QString label{ui->enabledBackendList->item(i)->text()};
-        for(int j = 0;backendList[j].backend_name[0];j++)
+        for(size_t j{0};j < backendList.size();++j)
         {
             if(label == backendList[j].full_string)
             {
@@ -1082,7 +1054,7 @@ void MainWindow::saveConfig(const QString &fname) const
     for(int i = 0;i < ui->disabledBackendList->count();i++)
     {
         QString label{ui->disabledBackendList->item(i)->text()};
-        for(int j = 0;backendList[j].backend_name[0];j++)
+        for(size_t j{0};j < backendList.size();++j)
         {
             if(label == backendList[j].full_string)
             {
@@ -1294,7 +1266,7 @@ void MainWindow::updateJackBufferSizeSlider()
 
 void MainWindow::updateHrtfModeLabel(int num)
 {
-    ui->hrtfmodeLabel->setText(hrtfModeList[num].name);
+    ui->hrtfmodeLabel->setText(hrtfModeList[static_cast<uint>(num)].name);
     enableApplyButton();
 }
 
@@ -1336,7 +1308,7 @@ void MainWindow::showEnabledBackendMenu(QPoint pt)
     if(ui->enabledBackendList->selectedItems().empty())
         removeAction->setEnabled(false);
     ctxmenu.addSeparator();
-    for(size_t i = 0;backendList[i].backend_name[0];i++)
+    for(size_t i{0};i < backendList.size();++i)
     {
         QString backend{backendList[i].full_string};
         QAction *action{ctxmenu.addAction(QString("Add ")+backend)};
@@ -1374,7 +1346,7 @@ void MainWindow::showDisabledBackendMenu(QPoint pt)
     if(ui->disabledBackendList->selectedItems().empty())
         removeAction->setEnabled(false);
     ctxmenu.addSeparator();
-    for(size_t i = 0;backendList[i].backend_name[0];i++)
+    for(size_t i{0};i < backendList.size();++i)
     {
         QString backend{backendList[i].full_string};
         QAction *action{ctxmenu.addAction(QString("Add ")+backend)};

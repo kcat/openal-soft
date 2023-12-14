@@ -9,35 +9,43 @@
 
 
 // The maximum path length used when processing filenames.
-#define MAX_PATH_LEN                 (256)
+enum { MAX_PATH_LEN = 256u };
 
 // The limit to the number of 'distances' listed in the data set definition.
 // Must be less than 256
-#define MAX_FD_COUNT                 (16)
+enum { MAX_FD_COUNT = 16u };
 
 // The limits to the number of 'elevations' listed in the data set definition.
 // Must be less than 256.
-#define MIN_EV_COUNT                 (5)
-#define MAX_EV_COUNT                 (181)
+enum {
+    MIN_EV_COUNT = 5u,
+    MAX_EV_COUNT = 181u
+};
 
 // The limits for each of the 'azimuths' listed in the data set definition.
 // Must be less than 256.
-#define MIN_AZ_COUNT                 (1)
-#define MAX_AZ_COUNT                 (255)
+enum {
+    MIN_AZ_COUNT = 1u,
+    MAX_AZ_COUNT = 255u
+};
 
 // The limits for the 'distance' from source to listener for each field in
 // the definition file.
-#define MIN_DISTANCE                 (0.05)
-#define MAX_DISTANCE                 (2.50)
+inline constexpr double MIN_DISTANCE{0.05};
+inline constexpr double MAX_DISTANCE{2.50};
 
 // The limits for the sample 'rate' metric in the data set definition and for
 // resampling.
-#define MIN_RATE                     (32000)
-#define MAX_RATE                     (96000)
+enum {
+    MIN_RATE = 32000u,
+    MAX_RATE = 96000u
+};
 
 // The limits for the HRIR 'points' metric in the data set definition.
-#define MIN_POINTS                   (16)
-#define MAX_POINTS                   (8192)
+enum {
+    MIN_POINTS = 16u,
+    MAX_POINTS = 8192u
+};
 
 
 using uint = unsigned int;

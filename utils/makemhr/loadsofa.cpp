@@ -144,7 +144,7 @@ float GetSampleRate(MYSOFA_HRTF *sofaHrtf)
         return 0.0f;
     }
     /* I dimensions guarantees 1 element, so just extract it. */
-    if(srate_array->values[0] < MIN_RATE || srate_array->values[0] > MAX_RATE)
+    if(srate_array->values[0] < float{MIN_RATE} || srate_array->values[0] > float{MAX_RATE})
     {
         fprintf(stderr, "Sample rate out of range: %f (expected %u to %u)", srate_array->values[0],
             MIN_RATE, MAX_RATE);

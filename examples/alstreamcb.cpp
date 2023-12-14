@@ -167,8 +167,8 @@ struct StreamPlayer {
                 mSampleFormat = SampleType::Int16;
             else
             {
-                auto fmtbuf = std::make_unique<ALubyte[]>(inf.datalen);
-                inf.data = fmtbuf.get();
+                auto fmtbuf = std::vector<ALubyte>(inf.datalen);
+                inf.data = fmtbuf.data();
                 if(sf_get_chunk_data(iter, &inf) != SF_ERR_NO_ERROR)
                     mSampleFormat = SampleType::Int16;
                 else

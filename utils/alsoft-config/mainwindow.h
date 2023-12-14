@@ -1,6 +1,8 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
+#include <memory>
+
 #include <QMainWindow>
 #include <QListWidget>
 
@@ -60,15 +62,15 @@ private slots:
     void selectWaveOutput();
 
 private:
-    Ui::MainWindow *ui;
+    std::unique_ptr<QValidator> mPeriodSizeValidator;
+    std::unique_ptr<QValidator> mPeriodCountValidator;
+    std::unique_ptr<QValidator> mSourceCountValidator;
+    std::unique_ptr<QValidator> mEffectSlotValidator;
+    std::unique_ptr<QValidator> mSourceSendValidator;
+    std::unique_ptr<QValidator> mSampleRateValidator;
+    std::unique_ptr<QValidator> mJackBufferValidator;
 
-    QValidator *mPeriodSizeValidator{};
-    QValidator *mPeriodCountValidator{};
-    QValidator *mSourceCountValidator{};
-    QValidator *mEffectSlotValidator{};
-    QValidator *mSourceSendValidator{};
-    QValidator *mSampleRateValidator{};
-    QValidator *mJackBufferValidator{};
+    std::unique_ptr<Ui::MainWindow> ui;
 
     bool mNeedsSave{};
 

@@ -90,11 +90,11 @@ static LPALGETAUXILIARYEFFECTSLOTFV alGetAuxiliaryEffectSlotfv;
 /* This stuff defines a simple streaming player object, the same as alstream.c.
  * Comments are removed for brevity, see alstream.c for more details.
  */
-#define NUM_BUFFERS 4
-#define BUFFER_SAMPLES 8192
+enum { NumBuffers = 4 };
+enum { BufferSamples = 8192 };
 
 typedef struct StreamPlayer {
-    ALuint buffers[NUM_BUFFERS];
+    ALuint buffers[NumBuffers];
     ALuint source;
 
     SNDFILE *sndfile;
@@ -111,7 +111,7 @@ static StreamPlayer *NewPlayer(void)
     player = calloc(1, sizeof(*player));
     assert(player != NULL);
 
-    alGenBuffers(NUM_BUFFERS, player->buffers);
+    alGenBuffers(NumBuffers, player->buffers);
     assert(alGetError() == AL_NO_ERROR && "Could not create buffers");
 
     alGenSources(1, &player->source);
@@ -140,11 +140,11 @@ static void DeletePlayer(StreamPlayer *player)
     ClosePlayerFile(player);
 
     alDeleteSources(1, &player->source);
-    alDeleteBuffers(NUM_BUFFERS, player->buffers);
+    alDeleteBuffers(NumBuffers, player->buffers);
     if(alGetError() != AL_NO_ERROR)
         fprintf(stderr, "Failed to delete object IDs\n");
 
-    memset(player, 0, sizeof(*player));
+    memset(player, 0, sizeof(*player)); /* NOLINT(clang-analyzer-security.insecureAPI.*) */
     free(player);
 }
 
@@ -186,7 +186,7 @@ static int OpenPlayerFile(StreamPlayer *player, const char *filename)
         return 0;
     }
 
-    frame_size = (size_t)(BUFFER_SAMPLES * player->sfinfo.channels) * sizeof(float);
+    frame_size = (size_t)(BufferSamples * player->sfinfo.channels) * sizeof(float);
     player->membuf = malloc(frame_size);
 
     return 1;
@@ -199,9 +199,9 @@ static int StartPlayer(StreamPlayer *player)
     alSourceRewind(player->source);
     alSourcei(player->source, AL_BUFFER, 0);
 
-    for(i = 0;i < NUM_BUFFERS;i++)
+    for(i = 0;i < NumBuffers;i++)
     {
-        sf_count_t slen = sf_readf_float(player->sndfile, player->membuf, BUFFER_SAMPLES);
+        sf_count_t slen = sf_readf_float(player->sndfile, player->membuf, BufferSamples);
         if(slen < 1) break;
 
         slen *= player->sfinfo.channels * (sf_count_t)sizeof(float);
@@ -245,7 +245,7 @@ static int UpdatePlayer(StreamPlayer *player)
         alSourceUnqueueBuffers(player->source, 1, &bufid);
         processed--;
 
-        slen = sf_readf_float(player->sndfile, player->membuf, BUFFER_SAMPLES);
+        slen = sf_readf_float(player->sndfile, player->membuf, BufferSamples);
         if(slen > 0)
         {
             slen *= player->sfinfo.channels * (sf_count_t)sizeof(float);

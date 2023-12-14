@@ -46,12 +46,12 @@
 #include "mysofa.h"
 
 // Constants for accessing the token reader's ring buffer.
-#define TR_RING_BITS                 (16)
-#define TR_RING_SIZE                 (1 << TR_RING_BITS)
-#define TR_RING_MASK                 (TR_RING_SIZE - 1)
+constexpr uint TRRingBits{16};
+constexpr uint TRRingSize{1 << TRRingBits};
+constexpr uint TRRingMask{TRRingSize - 1};
 
 // The token reader's load interval in bytes.
-#define TR_LOAD_SIZE                 (TR_RING_SIZE >> 2)
+constexpr uint TRLoadSize{TRRingSize >> 2};
 
 // Token reader state for parsing the data set definition.
 struct TokenReaderT {
@@ -59,7 +59,7 @@ struct TokenReaderT {
     const char *mName{};
     uint        mLine{};
     uint        mColumn{};
-    char mRing[TR_RING_SIZE]{};
+    std::array<char,TRRingSize> mRing{};
     std::streamsize mIn{};
     std::streamsize mOut{};
 
@@ -70,44 +70,48 @@ struct TokenReaderT {
 
 // The maximum identifier length used when processing the data set
 // definition.
-#define MAX_IDENT_LEN                (16)
+constexpr uint MaxIdentLen{16};
 
 // The limits for the listener's head 'radius' in the data set definition.
-#define MIN_RADIUS                   (0.05)
-#define MAX_RADIUS                   (0.15)
+constexpr double MinRadius{0.05};
+constexpr double MaxRadius{0.15};
 
 // The maximum number of channels that can be addressed for a WAVE file
 // source listed in the data set definition.
-#define MAX_WAVE_CHANNELS            (65535)
+constexpr uint MaxWaveChannels{65535};
 
 // The limits to the byte size for a binary source listed in the definition
 // file.
-#define MIN_BIN_SIZE                 (2)
-#define MAX_BIN_SIZE                 (4)
-
-// The minimum number of significant bits for binary sources listed in the
-// data set definition.  The maximum is calculated from the byte size.
-#define MIN_BIN_BITS                 (16)
+enum : uint {
+    MinBinSize = 2,
+    MaxBinSize = 4
+};
 
 // The limits to the number of significant bits for an ASCII source listed in
 // the data set definition.
-#define MIN_ASCII_BITS               (16)
-#define MAX_ASCII_BITS               (32)
+enum : uint {
+    MinASCIIBits = 16,
+    MaxASCIIBits = 32
+};
 
 // The four-character-codes for RIFF/RIFX WAVE file chunks.
-#define FOURCC_RIFF                  (0x46464952) // 'RIFF'
-#define FOURCC_RIFX                  (0x58464952) // 'RIFX'
-#define FOURCC_WAVE                  (0x45564157) // 'WAVE'
-#define FOURCC_FMT                   (0x20746D66) // 'fmt '
-#define FOURCC_DATA                  (0x61746164) // 'data'
-#define FOURCC_LIST                  (0x5453494C) // 'LIST'
-#define FOURCC_WAVL                  (0x6C766177) // 'wavl'
-#define FOURCC_SLNT                  (0x746E6C73) // 'slnt'
+enum : uint {
+    FOURCC_RIFF = 0x46464952, // 'RIFF'
+    FOURCC_RIFX = 0x58464952, // 'RIFX'
+    FOURCC_WAVE = 0x45564157, // 'WAVE'
+    FOURCC_FMT  = 0x20746D66, // 'fmt '
+    FOURCC_DATA = 0x61746164, // 'data'
+    FOURCC_LIST = 0x5453494C, // 'LIST'
+    FOURCC_WAVL = 0x6C766177, // 'wavl'
+    FOURCC_SLNT = 0x746E6C73, // 'slnt'
+};
 
 // The supported wave formats.
-#define WAVE_FORMAT_PCM              (0x0001)
-#define WAVE_FORMAT_IEEE_FLOAT       (0x0003)
-#define WAVE_FORMAT_EXTENSIBLE       (0xFFFE)
+enum : uint {
+    WAVE_FORMAT_PCM        = 0x0001,
+    WAVE_FORMAT_IEEE_FLOAT = 0x0003,
+    WAVE_FORMAT_EXTENSIBLE = 0xFFFE,
+};
 
 
 enum ByteOrderT {
@@ -197,13 +201,14 @@ static int TrLoad(TokenReaderT *tr)
 {
     std::istream &istream = tr->mIStream;
 
-    std::streamsize toLoad{TR_RING_SIZE - static_cast<std::streamsize>(tr->mIn - tr->mOut)};
-    if(toLoad >= TR_LOAD_SIZE && istream.good())
+    std::streamsize toLoad{TRRingSize - static_cast<std::streamsize>(tr->mIn - tr->mOut)};
+    if(toLoad >= TRLoadSize && istream.good())
     {
-        // Load TR_LOAD_SIZE (or less if at the end of the file) per read.
-        toLoad = TR_LOAD_SIZE;
-        std::streamsize in{tr->mIn&TR_RING_MASK};
-        std::streamsize count{TR_RING_SIZE - in};
+        // Load TRLoadSize (or less if at the end of the file) per read.
+        toLoad = TRLoadSize;
+
+        const auto in = static_cast<uint>(tr->mIn&TRRingMask);
+        std::streamsize count{TRRingSize - in};
         if(count < toLoad)
         {
             istream.read(&tr->mRing[in], count);
@@ -217,10 +222,10 @@ static int TrLoad(TokenReaderT *tr)
             tr->mIn += istream.gcount();
         }
 
-        if(tr->mOut >= TR_RING_SIZE)
+        if(tr->mOut >= TRRingSize)
         {
-            tr->mOut -= TR_RING_SIZE;
-            tr->mIn -= TR_RING_SIZE;
+            tr->mOut -= TRRingSize;
+            tr->mIn -= TRRingSize;
         }
     }
     if(tr->mIn > tr->mOut)
@@ -264,7 +269,7 @@ static void TrSkipLine(TokenReaderT *tr)
 
     while(TrLoad(tr))
     {
-        ch = tr->mRing[tr->mOut&TR_RING_MASK];
+        ch = tr->mRing[tr->mOut&TRRingMask];
         tr->mOut++;
         if(ch == '\n')
         {
@@ -281,7 +286,7 @@ static int TrSkipWhitespace(TokenReaderT *tr)
 {
     while(TrLoad(tr))
     {
-        char ch{tr->mRing[tr->mOut&TR_RING_MASK]};
+        char ch{tr->mRing[tr->mOut&TRRingMask]};
         if(isspace(ch))
         {
             tr->mOut++;
@@ -315,7 +320,7 @@ static int TrIsIdent(TokenReaderT *tr)
 {
     if(!TrSkipWhitespace(tr))
         return 0;
-    char ch{tr->mRing[tr->mOut&TR_RING_MASK]};
+    char ch{tr->mRing[tr->mOut&TRRingMask]};
     return ch == '_' || isalpha(ch);
 }
 
@@ -334,7 +339,7 @@ static int TrIsOperator(TokenReaderT *tr, const char *op)
     len = 0;
     while(op[len] != '\0' && out < tr->mIn)
     {
-        ch = tr->mRing[out&TR_RING_MASK];
+        ch = tr->mRing[out&TRRingMask];
         if(ch != op[len]) break;
         len++;
         out++;
@@ -359,7 +364,7 @@ static int TrReadIdent(TokenReaderT *tr, const uint maxLen, char *ident)
     if(TrSkipWhitespace(tr))
     {
         col = tr->mColumn;
-        ch = tr->mRing[tr->mOut&TR_RING_MASK];
+        ch = tr->mRing[tr->mOut&TRRingMask];
         if(ch == '_' || isalpha(ch))
         {
             len = 0;
@@ -370,7 +375,7 @@ static int TrReadIdent(TokenReaderT *tr, const uint maxLen, char *ident)
                 tr->mOut++;
                 if(!TrLoad(tr))
                     break;
-                ch = tr->mRing[tr->mOut&TR_RING_MASK];
+                ch = tr->mRing[tr->mOut&TRRingMask];
             } while(ch == '_' || isdigit(ch) || isalpha(ch));
 
             tr->mColumn += len;
@@ -396,7 +401,7 @@ static int TrReadInt(TokenReaderT *tr, const int loBound, const int hiBound, int
         col = tr->mColumn;
         uint len{0};
         std::array<char,64+1> temp{};
-        char ch{tr->mRing[tr->mOut&TR_RING_MASK]};
+        char ch{tr->mRing[tr->mOut&TRRingMask]};
         if(ch == '+' || ch == '-')
         {
             temp[len] = ch;
@@ -406,7 +411,7 @@ static int TrReadInt(TokenReaderT *tr, const int loBound, const int hiBound, int
         uint digis{0};
         while(TrLoad(tr))
         {
-            ch = tr->mRing[tr->mOut&TR_RING_MASK];
+            ch = tr->mRing[tr->mOut&TRRingMask];
             if(!isdigit(ch)) break;
             if(len < 64)
                 temp[len] = ch;
@@ -445,7 +450,7 @@ static int TrReadFloat(TokenReaderT *tr, const double loBound, const double hiBo
         col = tr->mColumn;
         std::array<char,64+1> temp{};
         uint len{0};
-        char ch{tr->mRing[tr->mOut&TR_RING_MASK]};
+        char ch{tr->mRing[tr->mOut&TRRingMask]};
         if(ch == '+' || ch == '-')
         {
             temp[len] = ch;
@@ -456,7 +461,7 @@ static int TrReadFloat(TokenReaderT *tr, const double loBound, const double hiBo
         uint digis{0};
         while(TrLoad(tr))
         {
-            ch = tr->mRing[tr->mOut&TR_RING_MASK];
+            ch = tr->mRing[tr->mOut&TRRingMask];
             if(!isdigit(ch)) break;
             if(len < 64)
                 temp[len] = ch;
@@ -473,7 +478,7 @@ static int TrReadFloat(TokenReaderT *tr, const double loBound, const double hiBo
         }
         while(TrLoad(tr))
         {
-            ch = tr->mRing[tr->mOut&TR_RING_MASK];
+            ch = tr->mRing[tr->mOut&TRRingMask];
             if(!isdigit(ch)) break;
             if(len < 64)
                 temp[len] = ch;
@@ -499,7 +504,7 @@ static int TrReadFloat(TokenReaderT *tr, const double loBound, const double hiBo
                 }
                 while(TrLoad(tr))
                 {
-                    ch = tr->mRing[tr->mOut&TR_RING_MASK];
+                    ch = tr->mRing[tr->mOut&TRRingMask];
                     if(!isdigit(ch)) break;
                     if(len < 64)
                         temp[len] = ch;
@@ -543,14 +548,14 @@ static int TrReadString(TokenReaderT *tr, const uint maxLen, char *text)
     if(TrSkipWhitespace(tr))
     {
         col = tr->mColumn;
-        ch = tr->mRing[tr->mOut&TR_RING_MASK];
+        ch = tr->mRing[tr->mOut&TRRingMask];
         if(ch == '\"')
         {
             tr->mOut++;
             len = 0;
             while(TrLoad(tr))
             {
-                ch = tr->mRing[tr->mOut&TR_RING_MASK];
+                ch = tr->mRing[tr->mOut&TRRingMask];
                 tr->mOut++;
                 if(ch == '\"')
                     break;
@@ -596,7 +601,7 @@ static int TrReadOperator(TokenReaderT *tr, const char *op)
         len = 0;
         while(op[len] != '\0' && TrLoad(tr))
         {
-            ch = tr->mRing[tr->mOut&TR_RING_MASK];
+            ch = tr->mRing[tr->mOut&TRRingMask];
             if(ch != op[len]) break;
             len++;
             tr->mOut++;
@@ -1225,7 +1230,7 @@ static int ProcessMetrics(TokenReaderT *tr, const uint fftSize, const uint trunc
 {
     int hasRate = 0, hasType = 0, hasPoints = 0, hasRadius = 0;
     int hasDistance = 0, hasAzimuths = 0;
-    std::array<char,MAX_IDENT_LEN+1> ident;
+    std::array<char,MaxIdentLen+1> ident;
     uint line, col;
     double fpVal;
     uint points;
@@ -1240,7 +1245,7 @@ static int ProcessMetrics(TokenReaderT *tr, const uint fftSize, const uint trunc
     while(TrIsIdent(tr))
     {
         TrIndication(tr, &line, &col);
-        if(!TrReadIdent(tr, MAX_IDENT_LEN, ident.data()))
+        if(!TrReadIdent(tr, MaxIdentLen, ident.data()))
             return 0;
         if(al::strcasecmp(ident.data(), "rate") == 0)
         {
@@ -1258,7 +1263,7 @@ static int ProcessMetrics(TokenReaderT *tr, const uint fftSize, const uint trunc
         }
         else if(al::strcasecmp(ident.data(), "type") == 0)
         {
-            std::array<char,MAX_IDENT_LEN+1> type;
+            std::array<char,MaxIdentLen+1> type;
 
             if(hasType)
             {
@@ -1268,7 +1273,7 @@ static int ProcessMetrics(TokenReaderT *tr, const uint fftSize, const uint trunc
             if(!TrReadOperator(tr, "="))
                 return 0;
 
-            if(!TrReadIdent(tr, MAX_IDENT_LEN, type.data()))
+            if(!TrReadIdent(tr, MaxIdentLen, type.data()))
                 return 0;
             hData->mChannelType = MatchChannelType(type.data());
             if(hData->mChannelType == CT_NONE)
@@ -1322,7 +1327,7 @@ static int ProcessMetrics(TokenReaderT *tr, const uint fftSize, const uint trunc
             }
             if(!TrReadOperator(tr, "="))
                 return 0;
-            if(!TrReadFloat(tr, MIN_RADIUS, MAX_RADIUS, &fpVal))
+            if(!TrReadFloat(tr, MinRadius, MaxRadius, &fpVal))
                 return 0;
             hData->mRadius = fpVal;
             hasRadius = 1;
@@ -1511,13 +1516,13 @@ static ElementTypeT MatchElementType(const char *ident)
 // Parse and validate a source reference from the data set definition.
 static int ReadSourceRef(TokenReaderT *tr, SourceRefT *src)
 {
-    std::array<char,MAX_IDENT_LEN+1> ident;
+    std::array<char,MaxIdentLen+1> ident;
     uint line, col;
     double fpVal;
     int intVal;
 
     TrIndication(tr, &line, &col);
-    if(!TrReadIdent(tr, MAX_IDENT_LEN, ident.data()))
+    if(!TrReadIdent(tr, MaxIdentLen, ident.data()))
         return 0;
     src->mFormat = MatchSourceFormat(ident.data());
     if(src->mFormat == SF_NONE)
@@ -1544,7 +1549,7 @@ static int ReadSourceRef(TokenReaderT *tr, SourceRefT *src)
         src->mAzimuth = fpVal;
         if(!TrReadOperator(tr, ":"))
             return 0;
-        if(!TrReadInt(tr, 0, MAX_WAVE_CHANNELS, &intVal))
+        if(!TrReadInt(tr, 0, MaxWaveChannels, &intVal))
             return 0;
         src->mType = ET_NONE;
         src->mSize = 0;
@@ -1554,7 +1559,7 @@ static int ReadSourceRef(TokenReaderT *tr, SourceRefT *src)
     }
     else if(src->mFormat == SF_WAVE)
     {
-        if(!TrReadInt(tr, 0, MAX_WAVE_CHANNELS, &intVal))
+        if(!TrReadInt(tr, 0, MaxWaveChannels, &intVal))
             return 0;
         src->mType = ET_NONE;
         src->mSize = 0;
@@ -1565,7 +1570,7 @@ static int ReadSourceRef(TokenReaderT *tr, SourceRefT *src)
     else
     {
         TrIndication(tr, &line, &col);
-        if(!TrReadIdent(tr, MAX_IDENT_LEN, ident.data()))
+        if(!TrReadIdent(tr, MaxIdentLen, ident.data()))
             return 0;
         src->mType = MatchElementType(ident.data());
         if(src->mType == ET_NONE)
@@ -1579,7 +1584,7 @@ static int ReadSourceRef(TokenReaderT *tr, SourceRefT *src)
                 return 0;
             if(src->mType == ET_INT)
             {
-                if(!TrReadInt(tr, MIN_BIN_SIZE, MAX_BIN_SIZE, &intVal))
+                if(!TrReadInt(tr, MinBinSize, MaxBinSize, &intVal))
                     return 0;
                 src->mSize = static_cast<uint>(intVal);
                 if(!TrIsOperator(tr, ","))
@@ -1590,9 +1595,9 @@ static int ReadSourceRef(TokenReaderT *tr, SourceRefT *src)
                     TrIndication(tr, &line, &col);
                     if(!TrReadInt(tr, -2147483647-1, 2147483647, &intVal))
                         return 0;
-                    if(std::abs(intVal) < MIN_BIN_BITS || static_cast<uint>(std::abs(intVal)) > (8*src->mSize))
+                    if(std::abs(intVal) < int{MinBinSize}*8 || static_cast<uint>(std::abs(intVal)) > (8*src->mSize))
                     {
-                        TrErrorAt(tr, line, col, "Expected a value of (+/-) %d to %d.\n", MIN_BIN_BITS, 8*src->mSize);
+                        TrErrorAt(tr, line, col, "Expected a value of (+/-) %d to %d.\n", MinBinSize*8, 8*src->mSize);
                         return 0;
                     }
                     src->mBits = intVal;
@@ -1616,7 +1621,7 @@ static int ReadSourceRef(TokenReaderT *tr, SourceRefT *src)
         {
             if(!TrReadOperator(tr, ","))
                 return 0;
-            if(!TrReadInt(tr, MIN_ASCII_BITS, MAX_ASCII_BITS, &intVal))
+            if(!TrReadInt(tr, MinASCIIBits, MaxASCIIBits, &intVal))
                 return 0;
             src->mSize = 0;
             src->mBits = intVal;
@@ -1658,12 +1663,12 @@ static int ReadSourceRef(TokenReaderT *tr, SourceRefT *src)
 // Parse and validate a SOFA source reference from the data set definition.
 static int ReadSofaRef(TokenReaderT *tr, SourceRefT *src)
 {
-    std::array<char,MAX_IDENT_LEN+1> ident;
+    std::array<char,MaxIdentLen+1> ident;
     uint line, col;
     int intVal;
 
     TrIndication(tr, &line, &col);
-    if(!TrReadIdent(tr, MAX_IDENT_LEN, ident.data()))
+    if(!TrReadIdent(tr, MaxIdentLen, ident.data()))
         return 0;
     src->mFormat = MatchSourceFormat(ident.data());
     if(src->mFormat != SF_SOFA)
@@ -1780,9 +1785,9 @@ static int ProcessSources(TokenReaderT *tr, HrirDataT *hData, const uint outRate
 
             if(hData->mChannelType == CT_STEREO)
             {
-                std::array<char,MAX_IDENT_LEN+1> type{};
+                std::array<char,MaxIdentLen+1> type{};
 
-                if(!TrReadIdent(tr, MAX_IDENT_LEN, type.data()))
+                if(!TrReadIdent(tr, MaxIdentLen, type.data()))
                     return 0;
 
                 const ChannelTypeT channelType{MatchChannelType(type.data())};
@@ -1801,8 +1806,8 @@ static int ProcessSources(TokenReaderT *tr, HrirDataT *hData, const uint outRate
             }
             else
             {
-                std::array<char,MAX_IDENT_LEN+1> type{};
-                if(!TrReadIdent(tr, MAX_IDENT_LEN, type.data()))
+                std::array<char,MaxIdentLen+1> type{};
+                if(!TrReadIdent(tr, MaxIdentLen, type.data()))
                     return 0;
 
                 ChannelTypeT channelType{MatchChannelType(type.data())};
@@ -1925,8 +1930,8 @@ static int ProcessSources(TokenReaderT *tr, HrirDataT *hData, const uint outRate
             uint ti{0};
             if(hData->mChannelType == CT_STEREO)
             {
-                std::array<char,MAX_IDENT_LEN+1> ident{};
-                if(!TrReadIdent(tr, MAX_IDENT_LEN, ident.data()))
+                std::array<char,MaxIdentLen+1> ident{};
+                if(!TrReadIdent(tr, MaxIdentLen, ident.data()))
                     return 0;
                 ti = static_cast<uint>(MatchTargetEar(ident.data()));
                 if(static_cast<int>(ti) < 0)

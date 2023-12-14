@@ -1339,7 +1339,8 @@ configure_file(
 
 
 add_library(alcommon STATIC EXCLUDE_FROM_ALL ${COMMON_OBJS})
-target_include_directories(alcommon PRIVATE ${OpenAL_BINARY_DIR} ${OpenAL_SOURCE_DIR}/include)
+target_include_directories(alcommon PRIVATE ${OpenAL_BINARY_DIR} ${OpenAL_SOURCE_DIR}/include
+    PUBLIC ${OpenAL_SOURCE_DIR}/common)
 target_compile_definitions(alcommon PRIVATE ${CPP_DEFS})
 target_compile_options(alcommon PRIVATE ${C_FLAGS})
 set_target_properties(alcommon PROPERTIES ${DEFAULT_TARGET_PROPS} POSITION_INDEPENDENT_CODE TRUE)

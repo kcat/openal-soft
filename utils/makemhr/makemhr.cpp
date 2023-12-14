@@ -90,6 +90,7 @@
 
 #include "alcomplex.h"
 #include "alfstream.h"
+#include "alnumbers.h"
 #include "alspan.h"
 #include "alstring.h"
 #include "loaddef.h"
@@ -98,61 +99,56 @@
 #include "win_main_utf8.h"
 
 
+HrirDataT::~HrirDataT() = default;
+
 namespace {
 
 using namespace std::placeholders;
 
-} // namespace
+// The epsilon used to maintain signal stability.
+constexpr double Epsilon{1e-9};
 
-#ifndef M_PI
-#define M_PI                         (3.14159265358979323846)
-#endif
+// The limits to the FFT window size override on the command line.
+constexpr uint MinFftSize{65536};
+constexpr uint MaxFftSize{131072};
 
+// The limits to the equalization range limit on the command line.
+constexpr double MinLimit{2.0};
+constexpr double MaxLimit{120.0};
 
-HrirDataT::~HrirDataT() = default;
+// The limits to the truncation window size on the command line.
+constexpr uint MinTruncSize{16};
+constexpr uint MaxTruncSize{128};
+
+// The limits to the custom head radius on the command line.
+constexpr double MinCustomRadius{0.05};
+constexpr double MaxCustomRadius{0.15};
+
+// The maximum propagation delay value supported by OpenAL Soft.
+constexpr double MaxHrtd{63.0};
+
+// The OpenAL Soft HRTF format marker.  It stands for minimum-phase head
+// response protocol 03.
+constexpr char MHRFormat[] = "MinPHR03"; // NOLINT(*-avoid-c-arrays)
+
 
 // Head model used for calculating the impulse delays.
 enum HeadModelT {
     HM_NONE,
     HM_DATASET, // Measure the onset from the dataset.
-    HM_SPHERE   // Calculate the onset using a spherical head model.
+    HM_SPHERE,   // Calculate the onset using a spherical head model.
+
+    DEFAULT_HEAD_MODEL = HM_DATASET
 };
 
 
-// The epsilon used to maintain signal stability.
-#define EPSILON                      (1e-9)
-
-// The limits to the FFT window size override on the command line.
-#define MIN_FFTSIZE                  (65536)
-#define MAX_FFTSIZE                  (131072)
-
-// The limits to the equalization range limit on the command line.
-#define MIN_LIMIT                    (2.0)
-#define MAX_LIMIT                    (120.0)
-
-// The limits to the truncation window size on the command line.
-#define MIN_TRUNCSIZE                (16)
-#define MAX_TRUNCSIZE                (128)
-
-// The limits to the custom head radius on the command line.
-#define MIN_CUSTOM_RADIUS            (0.05)
-#define MAX_CUSTOM_RADIUS            (0.15)
-
 // The defaults for the command line options.
-#define DEFAULT_FFTSIZE              (65536)
-#define DEFAULT_EQUALIZE             (1)
-#define DEFAULT_SURFACE              (1)
-#define DEFAULT_LIMIT                (24.0)
-#define DEFAULT_TRUNCSIZE            (64)
-#define DEFAULT_HEAD_MODEL           (HM_DATASET)
-#define DEFAULT_CUSTOM_RADIUS        (0.0)
-
-// The maximum propagation delay value supported by OpenAL Soft.
-#define MAX_HRTD                     (63.0)
-
-// The OpenAL Soft HRTF format marker.  It stands for minimum-phase head
-// response protocol 03.
-#define MHR_FORMAT                   ("MinPHR03")
+constexpr uint DefaultFftSize{65536};
+constexpr bool DefaultEqualize{true};
+constexpr bool DefaultSurface{true};
+constexpr double DefaultLimit{24.0};
+constexpr uint DefaultTruncSize{64};
+constexpr double DefaultCustomRadius{0.0};
 
 /* Channel index enums. Mono uses LeftChannel only. */
 enum ChannelIndex : uint {
@@ -165,7 +161,7 @@ enum ChannelIndex : uint {
  * pattern string are replaced with the replacement string.  The result is
  * truncated if necessary.
  */
-static std::string StrSubst(al::span<const char> in, const al::span<const char> pat,
+std::string StrSubst(al::span<const char> in, const al::span<const char> pat,
     const al::span<const char> rep)
 {
     std::string ret;
@@ -198,12 +194,12 @@ static std::string StrSubst(al::span<const char> in, const al::span<const char> 
  *********************/
 
 // Simple clamp routine.
-static double Clamp(const double val, const double lower, const double upper)
+double Clamp(const double val, const double lower, const double upper)
 {
     return std::min(std::max(val, lower), upper);
 }
 
-static inline uint dither_rng(uint *seed)
+inline uint dither_rng(uint *seed)
 {
     *seed = *seed * 96314165 + 907633515;
     return *seed;
@@ -211,8 +207,8 @@ static inline uint dither_rng(uint *seed)
 
 // Performs a triangular probability density function dither. The input samples
 // should be normalized (-1 to +1).
-static void TpdfDither(double *RESTRICT out, const double *RESTRICT in, const double scale,
-                       const uint count, const uint step, uint *seed)
+void TpdfDither(double *RESTRICT out, const double *RESTRICT in, const double scale,
+    const uint count, const uint step, uint *seed)
 {
     static constexpr double PRNG_SCALE = 1.0 / std::numeric_limits<uint>::max();
 
@@ -231,8 +227,10 @@ static void TpdfDither(double *RESTRICT out, const double *RESTRICT in, const do
  * of a signal's magnitude response, the imaginary components can be used as
  * the angles for minimum-phase reconstruction.
  */
-inline static void Hilbert(const uint n, complex_d *inout)
+inline void Hilbert(const uint n, complex_d *inout)
 { complex_hilbert({inout, n}); }
+
+} // namespace
 
 /* Calculate the magnitude response of the given input.  This is used in
  * place of phase decomposition, since the phase residuals are discarded for
@@ -244,7 +242,7 @@ void MagnitudeResponse(const uint n, const complex_d *in, double *out)
     const uint m = 1 + (n / 2);
     uint i;
     for(i = 0;i < m;i++)
-        out[i] = std::max(std::abs(in[i]), EPSILON);
+        out[i] = std::max(std::abs(in[i]), Epsilon);
 }
 
 /* Apply a range limit (in dB) to the given magnitude response.  This is used
@@ -295,7 +293,7 @@ static void MinimumPhase(const uint n, double *mags, complex_d *out)
     }
     Hilbert(n, out);
     // Remove any DC offset the filter has.
-    mags[0] = EPSILON;
+    mags[0] = Epsilon;
     for(i = 0;i < n;i++)
         out[i] = std::polar(mags[i], out[i].imag());
 }
@@ -350,7 +348,7 @@ static int StoreMhr(const HrirDataT *hData, const char *filename)
         fprintf(stderr, "\nError: Could not open MHR file '%s'.\n", filename);
         return 0;
     }
-    if(!WriteAscii(MHR_FORMAT, fp, filename))
+    if(!WriteAscii(MHRFormat, fp, filename))
         return 0;
     if(!WriteBin4(4, hData->mIrRate, fp, filename))
         return 0;
@@ -385,7 +383,7 @@ static int StoreMhr(const HrirDataT *hData, const char *filename)
             for(ai = 0;ai < hData->mFds[fi].mEvs[ei].mAzs.size();ai++)
             {
                 HrirAzT *azd = &hData->mFds[fi].mEvs[ei].mAzs[ai];
-                std::array<double,2*MAX_TRUNCSIZE> out{};
+                std::array<double,2*MaxTruncSize> out{};
 
                 TpdfDither(out.data(), azd->mIrs[0], scale, n, channels, &dither_seed);
                 if(hData->mChannelType == CT_STEREO)
@@ -494,17 +492,17 @@ static void CalculateDfWeights(const HrirDataT *hData, double *weights)
             outerRa = 10.0f;
 
         const double raPowDiff{std::pow(outerRa, 3.0) - std::pow(innerRa, 3.0)};
-        evs = M_PI / 2.0 / static_cast<double>(hData->mFds[fi].mEvs.size() - 1);
+        evs = al::numbers::pi / 2.0 / static_cast<double>(hData->mFds[fi].mEvs.size() - 1);
         for(ei = hData->mFds[fi].mEvStart;ei < hData->mFds[fi].mEvs.size();ei++)
         {
             const auto &elev = hData->mFds[fi].mEvs[ei];
             // For each elevation, calculate the upper and lower limits of
             // the patch band.
             ev = elev.mElevation;
-            lowerEv = std::max(-M_PI / 2.0, ev - evs);
-            upperEv = std::min(M_PI / 2.0, ev + evs);
+            lowerEv = std::max(-al::numbers::pi / 2.0, ev - evs);
+            upperEv = std::min(al::numbers::pi / 2.0, ev + evs);
             // Calculate the surface area of the patch band.
-            solidAngle = 2.0 * M_PI * (std::sin(upperEv) - std::sin(lowerEv));
+            solidAngle = 2.0 * al::numbers::pi * (std::sin(upperEv) - std::sin(lowerEv));
             // Then the volume of the extruded patch band.
             solidVolume = solidAngle * raPowDiff / 3.0;
             // Each weight is the volume of one extruded patch.
@@ -583,7 +581,7 @@ static void CalculateDiffuseFieldAverage(const HrirDataT *hData, const uint chan
         }
         // Finish the average calculation and keep it from being too small.
         for(i = 0;i < m;i++)
-            dfa[(ti * m) + i] = std::max(sqrt(dfa[(ti * m) + i]), EPSILON);
+            dfa[(ti * m) + i] = std::max(sqrt(dfa[(ti * m) + i]), Epsilon);
         // Apply a limit to the magnitude range of the diffuse-field average
         // if desired.
         if(limit > 0.0)
@@ -619,7 +617,8 @@ static void DiffuseFieldEqualize(const uint channels, const uint m, const double
  */
 static void CalcAzIndices(const HrirFdT &field, const uint ei, const double az, uint *a0, uint *a1, double *af)
 {
-    double f{(2.0*M_PI + az) * static_cast<double>(field.mEvs[ei].mAzs.size()) / (2.0*M_PI)};
+    double f{(2.0*al::numbers::pi + az) * static_cast<double>(field.mEvs[ei].mAzs.size()) /
+        (2.0*al::numbers::pi)};
     const uint i{static_cast<uint>(f) % static_cast<uint>(field.mEvs[ei].mAzs.size())};
 
     f -= std::floor(f);
@@ -669,7 +668,7 @@ static void SynthesizeOnsets(HrirDataT *hData)
                      * the mirrored elevation to find the indices for the polar
                      * opposite position (may need blending).
                      */
-                    const double az{field.mEvs[ei].mAzs[ai].mAzimuth + M_PI};
+                    const double az{field.mEvs[ei].mAzs[ai].mAzimuth + al::numbers::pi};
                     CalcAzIndices(field, topElev, az, &a0, &a1, &af);
 
                     /* Blend the delays, and again, swap the ears. */
@@ -701,8 +700,8 @@ static void SynthesizeOnsets(HrirDataT *hData)
                      * measurement).
                      */
                     double az{field.mEvs[ei].mAzs[ai].mAzimuth};
-                    if(az <= M_PI) az = M_PI - az;
-                    else az = (M_PI*2.0)-az + M_PI;
+                    if(az <= al::numbers::pi) az = al::numbers::pi - az;
+                    else az = (al::numbers::pi*2.0)-az + al::numbers::pi;
                     CalcAzIndices(field, topElev, az, &a0, &a1, &af);
 
                     field.mEvs[ei].mAzs[ai].mDelays[0] = Lerp(
@@ -780,7 +779,7 @@ static void SynthesizeHrirs(HrirDataT *hData)
              * and vice-versa, this produces a decent phantom-center response
              * underneath the head.
              */
-            CalcAzIndices(field, oi, ((ti==0) ? -M_PI : M_PI) / 2.0, &a0, &a1, &af);
+            CalcAzIndices(field, oi, al::numbers::pi / ((ti==0) ? -2.0 : 2.0), &a0, &a1, &af);
             for(uint i{0u};i < m;i++)
             {
                 field.mEvs[0].mAzs[0].mIrs[ti][i] = Lerp(field.mEvs[oi].mAzs[a0].mIrs[ti][i],
@@ -902,7 +901,7 @@ struct HrirReconstructor {
              * time-domain response.
              */
             for(size_t i{0};i < m;++i)
-                mags[i] = std::max(mIrs[idx][i], EPSILON);
+                mags[i] = std::max(mIrs[idx][i], Epsilon);
             MinimumPhase(mFftSize, mags.data(), h.data());
             FftInverse(mFftSize, h.data());
             for(uint i{0u};i < mIrPoints;++i)
@@ -1030,7 +1029,7 @@ static double CalcLTD(const double ev, const double az, const double rad, const 
     azp = std::asin(std::cos(ev) * std::sin(az));
     dlp = std::sqrt((dist*dist) + (rad*rad) + (2.0*dist*rad*sin(azp)));
     l = std::sqrt((dist*dist) - (rad*rad));
-    al = (0.5 * M_PI) + azp;
+    al = (0.5 * al::numbers::pi) + azp;
     if(dlp > l)
         dlp = l + (rad * (al - std::acos(rad / dist)));
     return dlp / 343.3;
@@ -1098,10 +1097,10 @@ static void CalculateHrtds(const HeadModelT model, const double radius, HrirData
             }
         }
     }
-    if(maxHrtd > MAX_HRTD)
+    if(maxHrtd > MaxHrtd)
     {
-        fprintf(stdout, "  Scaling for max delay of %f samples to %f\n...\n", maxHrtd, MAX_HRTD);
-        const double scale{MAX_HRTD / maxHrtd};
+        fprintf(stdout, "  Scaling for max delay of %f samples to %f\n...\n", maxHrtd, MaxHrtd);
+        const double scale{MaxHrtd / maxHrtd};
         for(auto &field : hData->mFds)
         {
             for(auto &elev : field.mEvs)
@@ -1148,11 +1147,12 @@ bool PrepareHrirData(const al::span<const double> distances,
         {
             uint azCount = azCounts[fi][ei];
 
-            hData->mFds[fi].mEvs[ei].mElevation = -M_PI / 2.0 + M_PI * ei / (evCounts[fi] - 1);
+            hData->mFds[fi].mEvs[ei].mElevation = -al::numbers::pi / 2.0 + al::numbers::pi * ei /
+                (evCounts[fi] - 1);
             hData->mFds[fi].mEvs[ei].mAzs = {&hData->mAzsBase[azTotal], azCount};
             for(uint ai{0};ai < azCount;ai++)
             {
-                hData->mFds[fi].mEvs[ei].mAzs[ai].mAzimuth = 2.0 * M_PI * ai / azCount;
+                hData->mFds[fi].mEvs[ei].mAzs[ai].mAzimuth = 2.0 * al::numbers::pi * ai / azCount;
                 hData->mFds[fi].mEvs[ei].mAzs[ai].mIndex = azTotal + ai;
                 hData->mFds[fi].mEvs[ei].mAzs[ai].mDelays[0] = 0.0;
                 hData->mFds[fi].mEvs[ei].mAzs[ai].mDelays[1] = 0.0;
@@ -1260,7 +1260,7 @@ static int ProcessDefinition(const char *inName, const uint outRate, const Chann
     fprintf(stdout, "Normalizing final HRIRs...\n");
     NormalizeHrirs(&hData);
     fprintf(stdout, "Calculating impulse delays...\n");
-    CalculateHrtds(model, (radius > DEFAULT_CUSTOM_RADIUS) ? radius : hData.mRadius, &hData);
+    CalculateHrtds(model, (radius > DefaultCustomRadius) ? radius : hData.mRadius, &hData);
 
     const auto rateStr = std::to_string(hData.mIrRate);
     const auto expName = StrSubst({outName, strlen(outName)}, {"%r", 2},
@@ -1279,13 +1279,13 @@ static void PrintHelp(const char *argv0, FILE *ofile)
     fprintf(ofile, "                 right ear.\n");
     fprintf(ofile, " -a              Change the data set to single field, using the farthest field.\n");
     fprintf(ofile, " -j <threads>    Number of threads used to process HRIRs (default: 2).\n");
-    fprintf(ofile, " -f <points>     Override the FFT window size (default: %u).\n", DEFAULT_FFTSIZE);
-    fprintf(ofile, " -e {on|off}     Toggle diffuse-field equalization (default: %s).\n", (DEFAULT_EQUALIZE ? "on" : "off"));
-    fprintf(ofile, " -s {on|off}     Toggle surface-weighted diffuse-field average (default: %s).\n", (DEFAULT_SURFACE ? "on" : "off"));
+    fprintf(ofile, " -f <points>     Override the FFT window size (default: %u).\n", DefaultFftSize);
+    fprintf(ofile, " -e {on|off}     Toggle diffuse-field equalization (default: %s).\n", (DefaultEqualize ? "on" : "off"));
+    fprintf(ofile, " -s {on|off}     Toggle surface-weighted diffuse-field average (default: %s).\n", (DefaultSurface ? "on" : "off"));
     fprintf(ofile, " -l {<dB>|none}  Specify a limit to the magnitude range of the diffuse-field\n");
-    fprintf(ofile, "                 average (default: %.2f).\n", DEFAULT_LIMIT);
+    fprintf(ofile, "                 average (default: %.2f).\n", DefaultLimit);
     fprintf(ofile, " -w <points>     Specify the size of the truncation window that's applied\n");
-    fprintf(ofile, "                 after minimum-phase reconstruction (default: %u).\n", DEFAULT_TRUNCSIZE);
+    fprintf(ofile, "                 after minimum-phase reconstruction (default: %u).\n", DefaultTruncSize);
     fprintf(ofile, " -d {dataset|    Specify the model used for calculating the head-delay timing\n");
     fprintf(ofile, "     sphere}     values (default: %s).\n", ((DEFAULT_HEAD_MODEL == HM_DATASET) ? "dataset" : "sphere"));
     fprintf(ofile, " -c <radius>     Use a customized head radius measured to-ear in meters.\n");
@@ -1320,14 +1320,14 @@ int main(int argc, char *argv[])
     outName = "./oalsoft_hrtf_%r.mhr";
     outRate = 0;
     chanMode = CM_AllowStereo;
-    fftSize = DEFAULT_FFTSIZE;
-    equalize = DEFAULT_EQUALIZE;
-    surface = DEFAULT_SURFACE;
-    limit = DEFAULT_LIMIT;
+    fftSize = DefaultFftSize;
+    equalize = DefaultEqualize;
+    surface = DefaultSurface;
+    limit = DefaultLimit;
     numThreads = 2;
-    truncSize = DEFAULT_TRUNCSIZE;
+    truncSize = DefaultTruncSize;
     model = DEFAULT_HEAD_MODEL;
-    radius = DEFAULT_CUSTOM_RADIUS;
+    radius = DefaultCustomRadius;
     farfield = false;
 
     while((opt=getopt(argc, argv, "r:maj:f:e:s:l:w:d:c:e:i:o:h")) != -1)
@@ -1364,9 +1364,9 @@ int main(int argc, char *argv[])
 
         case 'f':
             fftSize = static_cast<uint>(strtoul(optarg, &end, 10));
-            if(end[0] != '\0' || (fftSize&(fftSize-1)) || fftSize < MIN_FFTSIZE || fftSize > MAX_FFTSIZE)
+            if(end[0] != '\0' || (fftSize&(fftSize-1)) || fftSize < MinFftSize || fftSize > MaxFftSize)
             {
-                fprintf(stderr, "\nError: Got unexpected value \"%s\" for option -%c, expected a power-of-two between %u to %u.\n", optarg, opt, MIN_FFTSIZE, MAX_FFTSIZE);
+                fprintf(stderr, "\nError: Got unexpected value \"%s\" for option -%c, expected a power-of-two between %u to %u.\n", optarg, opt, MinFftSize, MaxFftSize);
                 exit(EXIT_FAILURE);
             }
             break;
@@ -1401,9 +1401,9 @@ int main(int argc, char *argv[])
             else
             {
                 limit = strtod(optarg, &end);
-                if(end[0] != '\0' || limit < MIN_LIMIT || limit > MAX_LIMIT)
+                if(end[0] != '\0' || limit < MinLimit || limit > MaxLimit)
                 {
-                    fprintf(stderr, "\nError: Got unexpected value \"%s\" for option -%c, expected between %.0f to %.0f.\n", optarg, opt, MIN_LIMIT, MAX_LIMIT);
+                    fprintf(stderr, "\nError: Got unexpected value \"%s\" for option -%c, expected between %.0f to %.0f.\n", optarg, opt, MinLimit, MaxLimit);
                     exit(EXIT_FAILURE);
                 }
             }
@@ -1411,9 +1411,9 @@ int main(int argc, char *argv[])
 
         case 'w':
             truncSize = static_cast<uint>(strtoul(optarg, &end, 10));
-            if(end[0] != '\0' || truncSize < MIN_TRUNCSIZE || truncSize > MAX_TRUNCSIZE)
+            if(end[0] != '\0' || truncSize < MinTruncSize || truncSize > MaxTruncSize)
             {
-                fprintf(stderr, "\nError: Got unexpected value \"%s\" for option -%c, expected between %u to %u.\n", optarg, opt, MIN_TRUNCSIZE, MAX_TRUNCSIZE);
+                fprintf(stderr, "\nError: Got unexpected value \"%s\" for option -%c, expected between %u to %u.\n", optarg, opt, MinTruncSize, MaxTruncSize);
                 exit(EXIT_FAILURE);
             }
             break;
@@ -1432,9 +1432,9 @@ int main(int argc, char *argv[])
 
         case 'c':
             radius = strtod(optarg, &end);
-            if(end[0] != '\0' || radius < MIN_CUSTOM_RADIUS || radius > MAX_CUSTOM_RADIUS)
+            if(end[0] != '\0' || radius < MinCustomRadius || radius > MaxCustomRadius)
             {
-                fprintf(stderr, "\nError: Got unexpected value \"%s\" for option -%c, expected between %.2f to %.2f.\n", optarg, opt, MIN_CUSTOM_RADIUS, MAX_CUSTOM_RADIUS);
+                fprintf(stderr, "\nError: Got unexpected value \"%s\" for option -%c, expected between %.2f to %.2f.\n", optarg, opt, MinCustomRadius, MaxCustomRadius);
                 exit(EXIT_FAILURE);
             }
             break;

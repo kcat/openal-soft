@@ -68,6 +68,7 @@
 #include "albit.h"
 #include "almalloc.h"
 #include "alnumbers.h"
+#include "alnumeric.h"
 #include "alspan.h"
 #include "opthelpers.h"
 
@@ -538,8 +539,8 @@ NOINLINE void passf5_ps(const size_t ido, const size_t l1, const v4sf *cc, v4sf 
     const v4sf ti11{LD_PS1(0.951056516295154f*fsign)};
     const v4sf ti12{LD_PS1(0.587785252292473f*fsign)};
 
-#define cc_ref(a_1,a_2) cc[(a_2-1)*ido + (a_1) + 1]
-#define ch_ref(a_1,a_3) ch[(a_3-1)*l1*ido + (a_1) + 1]
+#define cc_ref(a_1,a_2) cc[((a_2)-1)*ido + (a_1) + 1]
+#define ch_ref(a_1,a_3) ch[((a_3)-1)*l1*ido + (a_1) + 1]
 
     assert(ido > 2);
     for(size_t k{0};k < l1;++k, cc += 5*ido, ch += ido)
@@ -958,8 +959,8 @@ void radf5_ps(const size_t ido, const size_t l1, const v4sf *RESTRICT cc, v4sf *
     const v4sf tr12{LD_PS1(-0.809016994374947f)};
     const v4sf ti12{LD_PS1(0.587785252292473f)};
 
-#define cc_ref(a_1,a_2,a_3) cc[((a_3)*l1 + (a_2))*ido + a_1]
-#define ch_ref(a_1,a_2,a_3) ch[((a_3)*5 + (a_2))*ido + a_1]
+#define cc_ref(a_1,a_2,a_3) cc[((a_3)*l1 + (a_2))*ido + (a_1)]
+#define ch_ref(a_1,a_2,a_3) ch[((a_3)*5 + (a_2))*ido + (a_1)]
 
     /* Parameter adjustments */
     ch -= 1 + ido * 6;
@@ -1040,8 +1041,8 @@ void radb5_ps(const size_t ido, const size_t l1, const v4sf *RESTRICT cc, v4sf *
     const v4sf tr12{LD_PS1(-0.809016994374947f)};
     const v4sf ti12{LD_PS1(0.587785252292473f)};
 
-#define cc_ref(a_1,a_2,a_3) cc[((a_3)*5 + (a_2))*ido + a_1]
-#define ch_ref(a_1,a_2,a_3) ch[((a_3)*l1 + (a_2))*ido + a_1]
+#define cc_ref(a_1,a_2,a_3) cc[((a_3)*5 + (a_2))*ido + (a_1)]
+#define ch_ref(a_1,a_2,a_3) ch[((a_3)*l1 + (a_2))*ido + (a_1)]
 
     /* Parameter adjustments */
     ch -= 1 + ido*(1 + l1);
@@ -1408,9 +1409,9 @@ void cffti1_ps(const uint n, float *wa, const al::span<uint,15> ifac)
 void *pffft_aligned_malloc(size_t nb_bytes)
 { return al_malloc(MALLOC_V4SF_ALIGNMENT, nb_bytes); }
 
-void pffft_aligned_free(void *p) { al_free(p); }
+void pffft_aligned_free(void *p) noexcept { al_free(p); }
 
-int pffft_simd_size() { return SIMD_SZ; }
+int pffft_simd_size() noexcept { return SIMD_SZ; }
 
 struct PFFFT_Setup {
     alignas(MALLOC_V4SF_ALIGNMENT) uint N;
@@ -1436,7 +1437,7 @@ PFFFT_Setup *pffft_new_setup(unsigned int N, pffft_transform_t transform)
         assert((N%(SIMD_SZ*SIMD_SZ)) == 0);
 
     const uint Ncvec = (transform == PFFFT_REAL ? N/2 : N)/SIMD_SZ;
-    const size_t storelen{sizeof(PFFFT_Setup) + (2u*Ncvec * sizeof(v4sf))};
+    const size_t storelen{sizeof(PFFFT_Setup) + (2_zu*Ncvec * sizeof(v4sf))};
 
     void *store{al_calloc(MALLOC_V4SF_ALIGNMENT, storelen)};
     if(!store) return nullptr;
@@ -1446,12 +1447,12 @@ PFFFT_Setup *pffft_new_setup(unsigned int N, pffft_transform_t transform)
     s->transform = transform;
     /* nb of complex simd vectors */
     s->Ncvec = Ncvec;
-    s->e = {reinterpret_cast<v4sf*>(reinterpret_cast<char*>(s+1)), 2u*Ncvec};
+    s->e = {reinterpret_cast<v4sf*>(reinterpret_cast<char*>(s+1)), 2_zu*Ncvec};
     s->twiddle = reinterpret_cast<float*>(&s->e[2u*Ncvec*(SIMD_SZ-1)/SIMD_SZ]);
 
     if constexpr(SIMD_SZ > 1)
     {
-        auto e = std::vector<float>(2u*Ncvec*(SIMD_SZ-1), 0.0f);
+        auto e = std::vector<float>(2_zu*Ncvec*(SIMD_SZ-1), 0.0f);
         for(size_t k{0};k < s->Ncvec;++k)
         {
             const size_t i{k / SIMD_SZ};
@@ -1485,7 +1486,7 @@ PFFFT_Setup *pffft_new_setup(unsigned int N, pffft_transform_t transform)
 }
 
 
-void pffft_destroy_setup(PFFFT_Setup *s)
+void pffft_destroy_setup(PFFFT_Setup *s) noexcept
 {
     std::destroy_at(s);
     al_free(s);

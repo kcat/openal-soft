@@ -111,8 +111,9 @@ typedef enum pffft_transform_t pffft_transform_t;
  * structure is read-only so it can safely be shared by multiple concurrent
  * threads.
  */
+[[gnu::malloc]]
 PFFFT_Setup *pffft_new_setup(unsigned int N, pffft_transform_t transform);
-void pffft_destroy_setup(PFFFT_Setup *setup);
+void pffft_destroy_setup(PFFFT_Setup *setup) noexcept;
 
 /**
  * Perform a Fourier transform. The z-domain data is stored in the most
@@ -183,11 +184,12 @@ void pffft_zconvolve_accumulate(const PFFFT_Setup *setup, const float *dft_a, co
  * and powerpc). This function may be used to obtain such correctly aligned
  * buffers.
  */
+[[gnu::alloc_size(1), gnu::malloc]]
 void *pffft_aligned_malloc(size_t nb_bytes);
-void pffft_aligned_free(void *ptr);
+void pffft_aligned_free(void *ptr) noexcept;
 
 /* Return 4 or 1 depending if vectorization was enable when building pffft.cpp. */
-int pffft_simd_size();
+int pffft_simd_size() noexcept;
 
 #ifdef __cplusplus
 }
@@ -197,7 +199,7 @@ struct PFFFTSetup {
 
     PFFFTSetup() = default;
     PFFFTSetup(const PFFFTSetup&) = delete;
-    PFFFTSetup(PFFFTSetup&& rhs) : mSetup{rhs.mSetup} { rhs.mSetup = nullptr; }
+    PFFFTSetup(PFFFTSetup&& rhs) noexcept : mSetup{rhs.mSetup} { rhs.mSetup = nullptr; }
     explicit PFFFTSetup(std::nullptr_t) { }
     explicit PFFFTSetup(unsigned int n, pffft_transform_t transform)
         : mSetup{pffft_new_setup(n, transform)}
@@ -205,7 +207,7 @@ struct PFFFTSetup {
     ~PFFFTSetup() { if(mSetup) pffft_destroy_setup(mSetup); }
 
     PFFFTSetup& operator=(const PFFFTSetup&) = delete;
-    PFFFTSetup& operator=(PFFFTSetup&& rhs)
+    PFFFTSetup& operator=(PFFFTSetup&& rhs) noexcept
     {
         if(mSetup)
             pffft_destroy_setup(mSetup);

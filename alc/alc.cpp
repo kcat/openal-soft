@@ -1084,7 +1084,7 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
             };
 
             const ALCchar *fmt{chanopt->c_str()};
-            auto iter = std::find_if(chanlist.end(), chanlist.end(),
+            auto iter = std::find_if(chanlist.begin(), chanlist.end(),
                 [fmt](const ChannelMap &entry) -> bool
                 { return al::strcasecmp(entry.name, fmt) == 0; });
             if(iter == chanlist.end())

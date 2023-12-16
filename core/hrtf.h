@@ -47,7 +47,7 @@ struct HrtfStore {
     void add_ref();
     void dec_ref();
 
-    DEF_PLACE_NEWDEL()
+    DEF_PLACE_NEWDEL
 };
 using HrtfStorePtr = al::intrusive_ptr<HrtfStore>;
 

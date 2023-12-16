@@ -105,7 +105,7 @@ struct FlexArray {
     [[nodiscard]] auto rend() const noexcept -> const_reverse_iterator { return begin(); }
     [[nodiscard]] auto crend() const noexcept -> const_reverse_iterator { return cbegin(); }
 
-    DEF_PLACE_NEWDEL()
+    DEF_PLACE_NEWDEL
 };
 
 } // namespace al

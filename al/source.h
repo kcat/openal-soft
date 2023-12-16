@@ -46,7 +46,7 @@ inline bool sBufferSubDataCompat{false};
 struct ALbufferQueueItem : public VoiceBufferItem {
     ALbuffer *mBuffer{nullptr};
 
-    DISABLE_ALLOC()
+    DISABLE_ALLOC
 };
 
 
@@ -159,7 +159,7 @@ struct ALsource {
 
     static void SetName(ALCcontext *context, ALuint id, std::string_view name);
 
-    DISABLE_ALLOC()
+    DISABLE_ALLOC
 
 #ifdef ALSOFT_EAX
 public:

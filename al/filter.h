@@ -51,7 +51,7 @@ struct ALfilter {
 
     static void SetName(ALCcontext *context, ALuint id, std::string_view name);
 
-    DISABLE_ALLOC()
+    DISABLE_ALLOC
 };
 
 #endif

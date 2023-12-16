@@ -18,7 +18,7 @@ struct ALlistener {
     float Gain{1.0f};
     float mMetersPerUnit{AL_DEFAULT_METERS_PER_UNIT};
 
-    DISABLE_ALLOC()
+    DISABLE_ALLOC
 };
 
 #endif

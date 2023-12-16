@@ -50,7 +50,7 @@ struct ALbuffer : public BufferStorage {
 
     static void SetName(ALCcontext *context, ALuint id, std::string_view name);
 
-    DISABLE_ALLOC()
+    DISABLE_ALLOC
 
 #ifdef ALSOFT_EAX
     EaxStorage eax_x_ram_mode{EaxStorage::Automatic};

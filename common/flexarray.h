@@ -2,6 +2,7 @@
 #define AL_FLEXARRAY_H
 
 #include <cstddef>
+#include <stdexcept>
 #include <type_traits>
 
 #include "almalloc.h"
@@ -69,11 +70,20 @@ struct FlexArray {
     { return Storage_t_::Sizeof(count, base); }
     static std::unique_ptr<FlexArray> Create(index_type count)
     {
-        void *ptr{al_calloc(alignof(FlexArray), Sizeof(count))};
-        return std::unique_ptr<FlexArray>{al::construct_at(static_cast<FlexArray*>(ptr), count)};
+        if(void *ptr{al_calloc(alignof(FlexArray), Sizeof(count))})
+        {
+            try {
+                return std::unique_ptr<FlexArray>{::new(ptr) FlexArray{count}};
+            }
+            catch(...) {
+                al_free(ptr);
+                throw;
+            }
+        }
+        throw std::bad_alloc();
     }
 
-    FlexArray(index_type size) : mStore{size} { }
+    FlexArray(index_type size) noexcept(noexcept(Storage_t_{size})) : mStore{size} { }
     ~FlexArray() = default;
 
     [[nodiscard]] auto size() const noexcept -> index_type { return mStore.mData.size(); }

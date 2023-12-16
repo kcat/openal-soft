@@ -20,7 +20,9 @@ struct FlexArrayStorage {
     static constexpr size_t Sizeof(size_t count, size_t base=0u) noexcept
     { return sizeof(FlexArrayStorage) + sizeof(T)*count + base; }
 
-    FlexArrayStorage(size_t size) : mData{::new(static_cast<void*>(this+1)) T[size], size} { }
+    FlexArrayStorage(size_t size) noexcept(std::is_nothrow_constructible_v<T>)
+        : mData{::new(static_cast<void*>(this+1)) T[size], size}
+    { }
     ~FlexArrayStorage() = default;
 
     FlexArrayStorage(const FlexArrayStorage&) = delete;
@@ -34,7 +36,9 @@ struct FlexArrayStorage<T,alignment,false> {
     static constexpr size_t Sizeof(size_t count, size_t base=0u) noexcept
     { return sizeof(FlexArrayStorage) + sizeof(T)*count + base; }
 
-    FlexArrayStorage(size_t size) : mData{::new(static_cast<void*>(this+1)) T[size], size} { }
+    FlexArrayStorage(size_t size) noexcept(std::is_nothrow_constructible_v<T>)
+        : mData{::new(static_cast<void*>(this+1)) T[size], size}
+    { }
     ~FlexArrayStorage() { std::destroy(mData.begin(), mData.end()); }
 
     FlexArrayStorage(const FlexArrayStorage&) = delete;
@@ -83,7 +87,9 @@ struct FlexArray {
         throw std::bad_alloc();
     }
 
-    FlexArray(index_type size) noexcept(noexcept(Storage_t_{size})) : mStore{size} { }
+    FlexArray(index_type size) noexcept(std::is_nothrow_constructible_v<Storage_t_>)
+        : mStore{size}
+    { }
     ~FlexArray() = default;
 
     [[nodiscard]] auto size() const noexcept -> index_type { return mStore.mData.size(); }

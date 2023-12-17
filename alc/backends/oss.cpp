@@ -240,8 +240,6 @@ struct OSSPlayback final : public BackendBase {
 
     std::atomic<bool> mKillNow{true};
     std::thread mThread;
-
-    DEF_NEWDEL(OSSPlayback)
 };
 
 OSSPlayback::~OSSPlayback()
@@ -457,8 +455,6 @@ struct OSScapture final : public BackendBase {
 
     std::atomic<bool> mKillNow{true};
     std::thread mThread;
-
-    DEF_NEWDEL(OSScapture)
 };
 
 OSScapture::~OSScapture()

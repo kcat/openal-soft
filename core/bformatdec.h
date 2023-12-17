@@ -58,8 +58,6 @@ public:
     static std::unique_ptr<BFormatDec> Create(const size_t inchans,
         const al::span<const ChannelDec> coeffs, const al::span<const ChannelDec> coeffslf,
         const float xover_f0norm, std::unique_ptr<FrontStablizer> stablizer);
-
-    DEF_NEWDEL(BFormatDec)
 };
 
 #endif /* CORE_BFORMATDEC_H */

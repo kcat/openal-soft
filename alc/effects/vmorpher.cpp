@@ -173,8 +173,6 @@ struct VmorpherState final : public EffectState {
 
     static std::array<FormantFilter,NumFormants> getFiltersByPhoneme(VMorpherPhenome phoneme,
         float frequency, float pitch) noexcept;
-
-    DEF_NEWDEL(VmorpherState)
 };
 
 std::array<FormantFilter,NumFormants> VmorpherState::getFiltersByPhoneme(VMorpherPhenome phoneme,

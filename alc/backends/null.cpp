@@ -58,8 +58,6 @@ struct NullBackend final : public BackendBase {
 
     std::atomic<bool> mKillNow{true};
     std::thread mThread;
-
-    DEF_NEWDEL(NullBackend)
 };
 
 int NullBackend::mixerProc()

@@ -148,8 +148,6 @@ struct ALCdevice : public al::intrusive_ref<ALCdevice>, DeviceBase {
 
     template<typename T>
     inline std::optional<T> configValue(const char *block, const char *key) = delete;
-
-    DEF_NEWDEL(ALCdevice)
 };
 
 template<>

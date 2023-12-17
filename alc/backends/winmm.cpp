@@ -151,8 +151,6 @@ struct WinMMPlayback final : public BackendBase {
 
     std::atomic<bool> mKillNow{true};
     std::thread mThread;
-
-    DEF_NEWDEL(WinMMPlayback)
 };
 
 WinMMPlayback::~WinMMPlayback()
@@ -389,8 +387,6 @@ struct WinMMCapture final : public BackendBase {
 
     std::atomic<bool> mKillNow{true};
     std::thread mThread;
-
-    DEF_NEWDEL(WinMMCapture)
 };
 
 WinMMCapture::~WinMMCapture()

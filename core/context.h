@@ -27,9 +27,9 @@ struct VoiceChange;
 struct VoicePropsItem;
 
 
-constexpr float SpeedOfSoundMetersPerSec{343.3f};
+inline constexpr float SpeedOfSoundMetersPerSec{343.3f};
 
-constexpr float AirAbsorbGainHF{0.99426f}; /* -0.05dB */
+inline constexpr float AirAbsorbGainHF{0.99426f}; /* -0.05dB */
 
 enum class DistanceModel : unsigned char {
     Disable,
@@ -57,8 +57,6 @@ struct ContextProps {
     DistanceModel mDistanceModel;
 
     std::atomic<ContextProps*> next;
-
-    DEF_NEWDEL(ContextProps)
 };
 
 struct ContextParams {

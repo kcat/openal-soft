@@ -46,8 +46,6 @@ struct EffectSlotProps {
     al::intrusive_ptr<EffectState> State;
 
     std::atomic<EffectSlotProps*> next;
-
-    DEF_NEWDEL(EffectSlotProps)
 };
 
 
@@ -83,8 +81,6 @@ struct EffectSlot {
 
 
     static EffectSlotArray *CreatePtrArray(size_t count) noexcept;
-
-    DEF_NEWDEL(EffectSlot)
 };
 
 #endif /* CORE_EFFECTSLOT_H */

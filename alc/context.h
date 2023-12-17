@@ -230,8 +230,6 @@ public:
     /* Default effect that applies to sources that don't have an effect on send 0. */
     static ALeffect sDefaultEffect;
 
-    DEF_NEWDEL(ALCcontext)
-
 #ifdef ALSOFT_EAX
 public:
     bool hasEax() const noexcept { return mEaxIsInitialized; }

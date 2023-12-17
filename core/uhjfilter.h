@@ -110,8 +110,6 @@ struct UhjEncoderIIR final : public UhjEncoderBase {
      */
     void encode(float *LeftOut, float *RightOut, const al::span<const float*const,3> InSamples,
         const size_t SamplesToDo) override;
-
-    DEF_NEWDEL(UhjEncoderIIR)
 };
 
 
@@ -158,8 +156,6 @@ struct UhjDecoder final : public DecoderBase {
      */
     void decode(const al::span<float*> samples, const size_t samplesToDo,
         const bool updateState) override;
-
-    DEF_NEWDEL(UhjDecoder)
 };
 
 struct UhjDecoderIIR final : public DecoderBase {
@@ -184,8 +180,6 @@ struct UhjDecoderIIR final : public DecoderBase {
 
     void decode(const al::span<float*> samples, const size_t samplesToDo,
         const bool updateState) override;
-
-    DEF_NEWDEL(UhjDecoderIIR)
 };
 
 template<size_t N>
@@ -210,8 +204,6 @@ struct UhjStereoDecoder final : public DecoderBase {
      */
     void decode(const al::span<float*> samples, const size_t samplesToDo,
         const bool updateState) override;
-
-    DEF_NEWDEL(UhjStereoDecoder)
 };
 
 struct UhjStereoDecoderIIR final : public DecoderBase {
@@ -231,8 +223,6 @@ struct UhjStereoDecoderIIR final : public DecoderBase {
 
     void decode(const al::span<float*> samples, const size_t samplesToDo,
         const bool updateState) override;
-
-    DEF_NEWDEL(UhjStereoDecoderIIR)
 };
 
 #endif /* CORE_UHJFILTER_H */

@@ -67,8 +67,6 @@ struct Sdl2Backend final : public BackendBase {
     DevFmtChannels mFmtChans{};
     DevFmtType     mFmtType{};
     uint mUpdateSize{0u};
-
-    DEF_NEWDEL(Sdl2Backend)
 };
 
 Sdl2Backend::~Sdl2Backend()

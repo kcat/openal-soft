@@ -1086,8 +1086,6 @@ struct WasapiPlayback final : public BackendBase, WasapiProxy {
 
     std::atomic<bool> mKillNow{true};
     std::thread mThread;
-
-    DEF_NEWDEL(WasapiPlayback)
 };
 
 WasapiPlayback::~WasapiPlayback()
@@ -2123,8 +2121,6 @@ struct WasapiCapture final : public BackendBase, WasapiProxy {
 
     std::atomic<bool> mKillNow{true};
     std::thread mThread;
-
-    DEF_NEWDEL(WasapiCapture)
 };
 
 WasapiCapture::~WasapiCapture()

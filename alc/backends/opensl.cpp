@@ -190,8 +190,6 @@ struct OpenSLPlayback final : public BackendBase {
 
     std::atomic<bool> mKillNow{true};
     std::thread mThread;
-
-    DEF_NEWDEL(OpenSLPlayback)
 };
 
 OpenSLPlayback::~OpenSLPlayback()
@@ -595,8 +593,6 @@ struct OpenSLCapture final : public BackendBase {
     uint mSplOffset{0u};
 
     uint mFrameSize{0};
-
-    DEF_NEWDEL(OpenSLCapture)
 };
 
 OpenSLCapture::~OpenSLCapture()

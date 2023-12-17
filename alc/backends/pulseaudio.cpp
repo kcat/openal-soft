@@ -664,8 +664,6 @@ struct PulsePlayback final : public BackendBase {
     pa_stream *mStream{nullptr};
 
     uint mFrameSize{0u};
-
-    DEF_NEWDEL(PulsePlayback)
 };
 
 PulsePlayback::~PulsePlayback()
@@ -1090,8 +1088,6 @@ struct PulseCapture final : public BackendBase {
     pa_sample_spec mSpec{};
 
     pa_stream *mStream{nullptr};
-
-    DEF_NEWDEL(PulseCapture)
 };
 
 PulseCapture::~PulseCapture()

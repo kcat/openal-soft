@@ -34,8 +34,6 @@ struct LoopbackBackend final : public BackendBase {
     bool reset() override;
     void start() override;
     void stop() override;
-
-    DEF_NEWDEL(LoopbackBackend)
 };
 
 

@@ -160,8 +160,6 @@ struct VoiceProps {
 
 struct VoicePropsItem : public VoiceProps {
     std::atomic<VoicePropsItem*> next{nullptr};
-
-    DEF_NEWDEL(VoicePropsItem)
 };
 
 enum : uint {
@@ -271,8 +269,6 @@ struct Voice {
     void prepare(DeviceBase *device);
 
     static void InitMixer(std::optional<std::string> resampler);
-
-    DEF_NEWDEL(Voice)
 };
 
 extern Resampler ResamplerDefault;

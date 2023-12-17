@@ -70,8 +70,6 @@ struct SndioPlayback final : public BackendBase {
 
     std::atomic<bool> mKillNow{true};
     std::thread mThread;
-
-    DEF_NEWDEL(SndioPlayback)
 };
 
 SndioPlayback::~SndioPlayback()
@@ -293,8 +291,6 @@ struct SndioCapture final : public BackendBase {
 
     std::atomic<bool> mKillNow{true};
     std::thread mThread;
-
-    DEF_NEWDEL(SndioCapture)
 };
 
 SndioCapture::~SndioCapture()

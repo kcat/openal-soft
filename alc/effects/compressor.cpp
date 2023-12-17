@@ -82,8 +82,6 @@ struct CompressorState final : public EffectState {
         const EffectTarget target) override;
     void process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn,
         const al::span<FloatBufferLine> samplesOut) override;
-
-    DEF_NEWDEL(CompressorState)
 };
 
 void CompressorState::deviceUpdate(const DeviceBase *device, const BufferStorage*)

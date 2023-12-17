@@ -1442,8 +1442,6 @@ public:
         /* Stop the mainloop so the stream can be properly destroyed. */
         if(mLoop) mLoop.stop();
     }
-
-    DEF_NEWDEL(PipeWirePlayback)
 };
 
 
@@ -1927,8 +1925,6 @@ class PipeWireCapture final : public BackendBase {
 public:
     PipeWireCapture(DeviceBase *device) noexcept : BackendBase{device} { }
     ~PipeWireCapture() final { if(mLoop) mLoop.stop(); }
-
-    DEF_NEWDEL(PipeWireCapture)
 };
 
 

@@ -380,8 +380,6 @@ struct DeviceBase {
     [[nodiscard]] auto channelIdxByName(Channel chan) const noexcept -> uint8_t
     { return RealOut.ChannelIndex[chan]; }
 
-    DISABLE_ALLOC
-
 private:
     uint renderSamples(const uint numSamples);
 };

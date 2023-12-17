@@ -191,8 +191,6 @@ struct DSoundPlayback final : public BackendBase {
 
     std::atomic<bool> mKillNow{true};
     std::thread mThread;
-
-    DEF_NEWDEL(DSoundPlayback)
 };
 
 DSoundPlayback::~DSoundPlayback()
@@ -560,8 +558,6 @@ struct DSoundCapture final : public BackendBase {
     DWORD mCursor{0u};
 
     RingBufferPtr mRing;
-
-    DEF_NEWDEL(DSoundCapture)
 };
 
 DSoundCapture::~DSoundCapture()

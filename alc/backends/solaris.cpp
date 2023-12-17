@@ -75,8 +75,6 @@ struct SolarisBackend final : public BackendBase {
 
     std::atomic<bool> mKillNow{true};
     std::thread mThread;
-
-    DEF_NEWDEL(SolarisBackend)
 };
 
 SolarisBackend::~SolarisBackend()

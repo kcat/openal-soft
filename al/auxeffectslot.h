@@ -81,9 +81,6 @@ struct ALeffectslot {
 
     static void SetName(ALCcontext *context, ALuint id, std::string_view name);
 
-    /* This can be new'd for the context's default effect slot. */
-    DEF_NEWDEL(ALeffectslot)
-
 
 #ifdef ALSOFT_EAX
 public:

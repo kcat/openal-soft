@@ -26,19 +26,6 @@ void *al_calloc(size_t alignment, size_t size);
     void operator delete(void*) noexcept = delete;                            \
     void operator delete[](void*) noexcept = delete;
 
-#define DEF_NEWDEL(T)                                                         \
-    void *operator new(size_t size)                                           \
-    {                                                                         \
-        static_assert(&operator new == &T::operator new,                      \
-            "Incorrect container type specified");                            \
-        if(void *ret{al_malloc(alignof(T), size)})                            \
-            return ret;                                                       \
-        throw std::bad_alloc();                                               \
-    }                                                                         \
-    void *operator new[](size_t size) { return operator new(size); }          \
-    void operator delete(void *block) noexcept { al_free(block); }            \
-    void operator delete[](void *block) noexcept { operator delete(block); }
-
 #define DEF_PLACE_NEWDEL                                                      \
     void *operator new(size_t) = delete;                                      \
     void *operator new[](size_t) = delete;                                    \

@@ -35,7 +35,6 @@
 
 #include "albit.h"
 #include "alcomplex.h"
-#include "almalloc.h"
 #include "alnumbers.h"
 #include "alspan.h"
 #include "vector.h"
@@ -129,8 +128,6 @@ struct UhjDecoder {
         const al::span<FloatBufferLine> OutSamples, const std::size_t SamplesToDo);
     void decode2(const float *RESTRICT InSamples, const al::span<FloatBufferLine> OutSamples,
         const std::size_t SamplesToDo);
-
-    DEF_NEWDEL(UhjDecoder)
 };
 
 const PhaseShifterT<UhjDecoder::sFilterDelay*2> PShift{};

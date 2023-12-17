@@ -95,8 +95,6 @@ struct PortPlayback final : public BackendBase {
     PaStream *mStream{nullptr};
     PaStreamParameters mParams{};
     uint mUpdateSize{0u};
-
-    DEF_NEWDEL(PortPlayback)
 };
 
 PortPlayback::~PortPlayback()
@@ -256,8 +254,6 @@ struct PortCapture final : public BackendBase {
     PaStreamParameters mParams;
 
     RingBufferPtr mRing{nullptr};
-
-    DEF_NEWDEL(PortCapture)
 };
 
 PortCapture::~PortCapture()

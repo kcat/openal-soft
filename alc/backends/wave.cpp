@@ -109,8 +109,6 @@ struct WaveBackend final : public BackendBase {
 
     std::atomic<bool> mKillNow{true};
     std::thread mThread;
-
-    DEF_NEWDEL(WaveBackend)
 };
 
 WaveBackend::~WaveBackend()

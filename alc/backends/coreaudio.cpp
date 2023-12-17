@@ -337,8 +337,6 @@ struct CoreAudioPlayback final : public BackendBase {
 
     uint mFrameSize{0u};
     AudioStreamBasicDescription mFormat{}; // This is the OpenAL format as a CoreAudio ASBD
-
-    DEF_NEWDEL(CoreAudioPlayback)
 };
 
 CoreAudioPlayback::~CoreAudioPlayback()
@@ -623,8 +621,6 @@ struct CoreAudioCapture final : public BackendBase {
     std::vector<char> mCaptureData;
 
     RingBufferPtr mRing{nullptr};
-
-    DEF_NEWDEL(CoreAudioCapture)
 };
 
 CoreAudioCapture::~CoreAudioCapture()

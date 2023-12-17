@@ -33,7 +33,6 @@
 #include <utility>
 #include <vector>
 
-#include "almalloc.h"
 #include "alnumbers.h"
 #include "alspan.h"
 #include "opthelpers.h"
@@ -82,8 +81,6 @@ struct UhjEncoder {
 
     void encode(const al::span<FloatBufferLine> OutSamples,
         const al::span<FloatBufferLine,4> InSamples, const size_t SamplesToDo);
-
-    DEF_NEWDEL(UhjEncoder)
 };
 
 const PhaseShifterT<UhjEncoder::sFilterDelay*2> PShift{};

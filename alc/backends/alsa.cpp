@@ -444,8 +444,6 @@ struct AlsaPlayback final : public BackendBase {
 
     std::atomic<bool> mKillNow{true};
     std::thread mThread;
-
-    DEF_NEWDEL(AlsaPlayback)
 };
 
 AlsaPlayback::~AlsaPlayback()
@@ -888,8 +886,6 @@ struct AlsaCapture final : public BackendBase {
     RingBufferPtr mRing{nullptr};
 
     snd_pcm_sframes_t mLastAvail{0};
-
-    DEF_NEWDEL(AlsaCapture)
 };
 
 AlsaCapture::~AlsaCapture()

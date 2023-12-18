@@ -1532,7 +1532,7 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
     case DevFmtAmbi3D: break;
     }
 
-    nanoseconds::rep sample_delay{0};
+    size_t sample_delay{0};
     if(auto *encoder{device->mUhjEncoder.get()})
         sample_delay += encoder->getDelay();
 
@@ -1625,6 +1625,7 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
     }
 
     /* Convert the sample delay from samples to nanosamples to nanoseconds. */
+    sample_delay = std::min<size_t>(sample_delay, std::numeric_limits<int>::max());
     device->FixedLatency += nanoseconds{seconds{sample_delay}} / device->Frequency;
     TRACE("Fixed device latency: %" PRId64 "ns\n", int64_t{device->FixedLatency.count()});
 

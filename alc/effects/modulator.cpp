@@ -52,7 +52,7 @@ inline float Saw(uint index, float scale)
 { return static_cast<float>(index)*scale - 1.0f; }
 
 inline float Square(uint index, float scale)
-{ return (static_cast<float>(index)*scale < 0.5f)*2.0f - 1.0f; }
+{ return float(static_cast<float>(index)*scale < 0.5f)*2.0f - 1.0f; }
 
 inline float One(uint, float)
 { return 1.0f; }

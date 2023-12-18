@@ -64,6 +64,8 @@ inline ClockLatency GetClockLatency(DeviceBase *device, BackendBase *backend)
 
 
 struct BackendFactory {
+    virtual ~BackendFactory() = default;
+
     virtual bool init() = 0;
 
     virtual bool querySupport(BackendType type) = 0;
@@ -74,9 +76,6 @@ struct BackendFactory {
     virtual std::string probe(BackendType type) = 0;
 
     virtual BackendPtr createBackend(DeviceBase *device, BackendType type) = 0;
-
-protected:
-    virtual ~BackendFactory() = default;
 };
 
 namespace al {

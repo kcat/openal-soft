@@ -1181,7 +1181,7 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
              * where it can be 0 or full (non-mono sources are always full
              * spread here).
              */
-            const float spread{Spread * (voice->mFmtChannels == FmtMono)};
+            const float spread{Spread * float(voice->mFmtChannels == FmtMono)};
 
             /* Local sources on HRTF play with each channel panned to its
              * relative location around the listener, providing "virtual
@@ -1329,7 +1329,7 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
              * where it can be 0 or full (non-mono sources are always full
              * spread here).
              */
-            const float spread{Spread * (voice->mFmtChannels == FmtMono)};
+            const float spread{Spread * float(voice->mFmtChannels == FmtMono)};
             for(size_t c{0};c < num_channels;c++)
             {
                 /* Special-case LFE */
@@ -1587,13 +1587,15 @@ void CalcAttnSourceParams(Voice *voice, const VoiceProps *props, const ContextBa
         if(Angle >= props->OuterAngle)
         {
             ConeGain = props->OuterGain;
-            ConeHF = lerpf(1.0f, props->OuterGainHF, props->DryGainHFAuto);
+            if(props->DryGainHFAuto)
+                ConeHF = props->OuterGainHF;
         }
         else if(Angle >= props->InnerAngle)
         {
             const float scale{(Angle-props->InnerAngle) / (props->OuterAngle-props->InnerAngle)};
             ConeGain = lerpf(1.0f, props->OuterGain, scale);
-            ConeHF = lerpf(1.0f, props->OuterGainHF, scale * props->DryGainHFAuto);
+            if(props->DryGainHFAuto)
+                ConeHF = lerpf(1.0f, props->OuterGainHF, scale);
         }
 
         DryGainBase *= ConeGain;
@@ -1770,7 +1772,7 @@ void CalcSourceParams(Voice *voice, ContextBase *context, bool force)
 
     if(props)
     {
-        voice->mProps = *props;
+        voice->mProps = static_cast<VoiceProps&>(*props);
 
         AtomicReplaceHead(context->mFreeVoiceProps, props);
     }

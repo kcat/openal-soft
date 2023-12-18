@@ -252,11 +252,11 @@ void HrtfStore::getCoeffs(float elevation, float azimuth, float distance, float 
     }};
 
     /* Calculate the blended HRIR delays. */
-    float d{mDelays[idx[0]][0]*blend[0] + mDelays[idx[1]][0]*blend[1] + mDelays[idx[2]][0]*blend[2]
-        + mDelays[idx[3]][0]*blend[3]};
+    float d{float(mDelays[idx[0]][0])*blend[0] + float(mDelays[idx[1]][0])*blend[1]
+        + float(mDelays[idx[2]][0])*blend[2] + float(mDelays[idx[3]][0])*blend[3]};
     delays[0] = fastf2u(d * float{1.0f/HrirDelayFracOne});
-    d = mDelays[idx[0]][1]*blend[0] + mDelays[idx[1]][1]*blend[1] + mDelays[idx[2]][1]*blend[2]
-        + mDelays[idx[3]][1]*blend[3];
+    d = float(mDelays[idx[0]][1])*blend[0] + float(mDelays[idx[1]][1])*blend[1]
+        + float(mDelays[idx[2]][1])*blend[2] + float(mDelays[idx[3]][1])*blend[3];
     delays[1] = fastf2u(d * float{1.0f/HrirDelayFracOne});
 
     /* Calculate the blended HRIR coefficients. */
@@ -580,7 +580,7 @@ std::unique_ptr<HrtfStore> LoadHrtf00(std::istream &data, const char *filename)
     for(auto &hrir : coeffs)
     {
         for(auto &val : al::span<float2>{hrir.data(), irSize})
-            val[0] = readle<int16_t>(data) / 32768.0f;
+            val[0] = float(readle<int16_t>(data)) / 32768.0f;
     }
     for(auto &val : delays)
         val[0] = readle<uint8_t>(data);
@@ -658,7 +658,7 @@ std::unique_ptr<HrtfStore> LoadHrtf01(std::istream &data, const char *filename)
     for(auto &hrir : coeffs)
     {
         for(auto &val : al::span<float2>{hrir.data(), irSize})
-            val[0] = readle<int16_t>(data) / 32768.0f;
+            val[0] = float(readle<int16_t>(data)) / 32768.0f;
     }
     for(auto &val : delays)
         val[0] = readle<uint8_t>(data);
@@ -750,7 +750,7 @@ std::unique_ptr<HrtfStore> LoadHrtf02(std::istream &data, const char *filename)
             return nullptr;
         }
 
-        fields[f].distance = distance / 1000.0f;
+        fields[f].distance = float(distance) / 1000.0f;
         fields[f].evCount = evCount;
         if(f > 0 && fields[f].distance <= fields[f-1].distance)
         {
@@ -799,7 +799,7 @@ std::unique_ptr<HrtfStore> LoadHrtf02(std::istream &data, const char *filename)
             for(auto &hrir : coeffs)
             {
                 for(auto &val : al::span<float2>{hrir.data(), irSize})
-                    val[0] = readle<int16_t>(data) / 32768.0f;
+                    val[0] = float(readle<int16_t>(data)) / 32768.0f;
             }
         }
         else if(sampleType == SampleType_S24)
@@ -838,8 +838,8 @@ std::unique_ptr<HrtfStore> LoadHrtf02(std::istream &data, const char *filename)
             {
                 for(auto &val : al::span<float2>{hrir.data(), irSize})
                 {
-                    val[0] = readle<int16_t>(data) / 32768.0f;
-                    val[1] = readle<int16_t>(data) / 32768.0f;
+                    val[0] = float(readle<int16_t>(data)) / 32768.0f;
+                    val[1] = float(readle<int16_t>(data)) / 32768.0f;
                 }
             }
         }
@@ -1010,7 +1010,7 @@ std::unique_ptr<HrtfStore> LoadHrtf03(std::istream &data, const char *filename)
             return nullptr;
         }
 
-        fields[f].distance = distance / 1000.0f;
+        fields[f].distance = float(distance) / 1000.0f;
         fields[f].evCount = evCount;
         if(f > 0 && fields[f].distance > fields[f-1].distance)
         {
@@ -1402,7 +1402,7 @@ HrtfStorePtr GetLoadedHrtf(const std::string &name, const uint devrate)
         {
             for(size_t j{0};j < 2;++j)
             {
-                const float new_delay{std::round(hrtf->mDelays[i][j] * rate_scale) /
+                const float new_delay{std::round(float(hrtf->mDelays[i][j]) * rate_scale) /
                     float{HrirDelayFracOne}};
                 max_delay = maxf(max_delay, new_delay);
                 new_delays[i][j] = new_delay;

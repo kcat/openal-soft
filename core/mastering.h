@@ -64,7 +64,7 @@ struct Compressor {
 
     ~Compressor();
     void process(const uint SamplesToDo, FloatBufferLine *OutBuffer);
-    [[nodiscard]] auto getLookAhead() const noexcept -> int { return static_cast<int>(mLookAhead); }
+    [[nodiscard]] auto getLookAhead() const noexcept -> uint { return mLookAhead; }
 
     DEF_PLACE_NEWDEL
 

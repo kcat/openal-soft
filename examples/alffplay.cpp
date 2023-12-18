@@ -749,7 +749,7 @@ bool AudioState::readAudio(uint8_t *samples, unsigned int length, int &sample_sk
             sample_dup(samples, mSamples, rem, mFrameSize);
         }
 
-        mSamplesPos += rem;
+        mSamplesPos += static_cast<int>(rem);
         mCurrentPts += nanoseconds{seconds{rem}} / mCodecCtx->sample_rate;
         samples += rem*mFrameSize;
         audio_size += rem;

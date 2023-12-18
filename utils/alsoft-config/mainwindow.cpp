@@ -763,7 +763,7 @@ void MainWindow::loadConfig(const QString &fname)
     {
         if(hrtfmode == hrtfModeList[i].value)
         {
-            ui->hrtfmodeSlider->setValue(i);
+            ui->hrtfmodeSlider->setValue(static_cast<int>(i));
             ui->hrtfmodeLabel->setText(hrtfModeList[i].name);
             break;
         }

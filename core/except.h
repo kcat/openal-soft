@@ -14,11 +14,12 @@ class base_exception : public std::exception {
 
 protected:
     base_exception() = default;
-    ~base_exception() override;
 
     auto setMessage(const char *msg, std::va_list args) -> void;
 
 public:
+    ~base_exception() override;
+
     [[nodiscard]] auto what() const noexcept -> const char* override { return mMessage.c_str(); }
 };
 

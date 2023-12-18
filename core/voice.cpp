@@ -954,7 +954,7 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
                 fracPos += dstBufferSize*increment;
                 const uint srcOffset{fracPos >> MixerFracBits};
                 fracPos &= MixerFracMask;
-                intPos += srcOffset;
+                intPos += static_cast<int>(srcOffset);
 
                 /* If more samples need to be loaded, copy the back of the
                  * resampleBuffer to the front to reuse it. prevSamples isn't
@@ -1018,7 +1018,7 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
 
             if(mFlags.test(VoiceHasHrtf))
             {
-                const float TargetGain{parms.Hrtf.Target.Gain * (vstate == Playing)};
+                const float TargetGain{parms.Hrtf.Target.Gain * float(vstate == Playing)};
                 DoHrtfMix(samples, samplesToMix, parms, TargetGain, Counter, OutPos,
                     (vstate == Playing), Device);
             }
@@ -1064,8 +1064,7 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
 
     /* Update voice positions and buffers as needed. */
     DataPosFrac += increment*samplesToMix;
-    const uint SrcSamplesDone{DataPosFrac>>MixerFracBits};
-    DataPosInt  += SrcSamplesDone;
+    DataPosInt  += static_cast<int>(DataPosFrac>>MixerFracBits);
     DataPosFrac &= MixerFracMask;
 
     uint buffers_done{0u};
@@ -1121,7 +1120,7 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
                 if(BufferListItem->mSampleLen > static_cast<uint>(DataPosInt))
                     break;
 
-                DataPosInt -= BufferListItem->mSampleLen;
+                DataPosInt -= static_cast<int>(BufferListItem->mSampleLen);
 
                 ++buffers_done;
                 BufferListItem = BufferListItem->mNext.load(std::memory_order_relaxed);

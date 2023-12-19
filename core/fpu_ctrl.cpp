@@ -64,29 +64,24 @@ void reset_fpu(unsigned int state [[maybe_unused]])
 } // namespace
 
 
-void FPUCtl::enter() noexcept
+unsigned int FPUCtl::Set() noexcept
 {
-    if(this->in_mode) return;
-
+    unsigned int state{};
 #if defined(HAVE_SSE_INTRINSICS)
-    disable_denormals(&this->sse_state);
+    disable_denormals(&state);
 #elif defined(HAVE_SSE)
     if((CPUCapFlags&CPU_CAP_SSE))
-        disable_denormals(&this->sse_state);
+        disable_denormals(&state);
 #endif
-
-    this->in_mode = true;
+    return state;
 }
 
-void FPUCtl::leave() noexcept
+void FPUCtl::Reset(unsigned int state [[maybe_unused]]) noexcept
 {
-    if(!this->in_mode) return;
-
 #if defined(HAVE_SSE_INTRINSICS)
-    reset_fpu(this->sse_state);
+    reset_fpu(state);
 #elif defined(HAVE_SSE)
     if((CPUCapFlags&CPU_CAP_SSE))
-        reset_fpu(this->sse_state);
+        reset_fpu(state);
 #endif
-    this->in_mode = false;
 }

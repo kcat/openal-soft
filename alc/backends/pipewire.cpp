@@ -76,6 +76,10 @@ _Pragma("GCC diagnostic ignored \"-Weverything\"")
 #include "spa/pod/builder.h"
 #include "spa/utils/json.h"
 
+/* NOLINTBEGIN : All kinds of unsafe C stuff here from PipeWire headers
+ * (function-like macros, C style casts in macros, etc), which we can't do
+ * anything about except wrap into inline functions.
+ */
 namespace {
 /* Wrap some nasty macros here too... */
 template<typename ...Args>
@@ -117,6 +121,7 @@ constexpr auto make_pod_builder(void *data, uint32_t size) noexcept
 constexpr auto PwIdAny = PW_ID_ANY;
 
 } // namespace
+/* NOLINTEND */
 _Pragma("GCC diagnostic pop")
 
 namespace {

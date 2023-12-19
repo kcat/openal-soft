@@ -2,20 +2,31 @@
 #define CORE_FPU_CTRL_H
 
 class FPUCtl {
-#if defined(HAVE_SSE_INTRINSICS) || (defined(__GNUC__) && defined(HAVE_SSE))
     unsigned int sse_state{};
-#endif
     bool in_mode{};
 
+    static unsigned int Set() noexcept;
+    static void Reset(unsigned int state) noexcept;
+
 public:
-    FPUCtl() noexcept { enter(); in_mode = true; }
-    ~FPUCtl() { if(in_mode) leave(); }
+    FPUCtl() noexcept : sse_state{Set()}, in_mode{true} { }
+    ~FPUCtl() { if(in_mode) Reset(sse_state); }
 
     FPUCtl(const FPUCtl&) = delete;
     FPUCtl& operator=(const FPUCtl&) = delete;
 
-    void enter() noexcept;
-    void leave() noexcept;
+    void enter() noexcept
+    {
+        if(!in_mode)
+            sse_state = Set();
+        in_mode = true;
+    }
+    void leave() noexcept
+    {
+        if(in_mode)
+            Reset(sse_state);
+        in_mode = false;
+    }
 };
 
 #endif /* CORE_FPU_CTRL_H */

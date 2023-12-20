@@ -25,15 +25,15 @@ class BFormatDec {
     static constexpr size_t sNumBands{2};
 
     struct ChannelDecoderSingle {
-        std::array<float,MaxOutputChannels> mGains;
+        std::array<float,MaxOutputChannels> mGains{};
     };
 
     struct ChannelDecoderDual {
         BandSplitter mXOver;
-        std::array<std::array<float,MaxOutputChannels>,sNumBands> mGains;
+        std::array<std::array<float,MaxOutputChannels>,sNumBands> mGains{};
     };
 
-    alignas(16) std::array<FloatBufferLine,2> mSamples;
+    alignas(16) std::array<FloatBufferLine,2> mSamples{};
 
     const std::unique_ptr<FrontStablizer> mStablizer;
 

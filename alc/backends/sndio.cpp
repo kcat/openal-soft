@@ -47,7 +47,7 @@ namespace {
 constexpr char sndio_device[] = "SndIO Default";
 
 struct SioPar : public sio_par {
-    SioPar() { sio_initpar(this); }
+    SioPar() : sio_par{} { sio_initpar(this); }
 
     void clear() { sio_initpar(this); }
 };

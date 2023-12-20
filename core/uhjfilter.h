@@ -25,7 +25,7 @@ extern UhjQualityType UhjEncodeQuality;
 struct UhjAllPassFilter {
     struct AllPassState {
         /* Last two delayed components for direct form II. */
-        std::array<float,2> z;
+        std::array<float,2> z{};
     };
     std::array<AllPassState,4> mState;
 

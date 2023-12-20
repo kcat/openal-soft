@@ -79,13 +79,6 @@ struct PortPlayback final : public BackendBase {
 
     int writeCallback(const void *inputBuffer, void *outputBuffer, unsigned long framesPerBuffer,
         const PaStreamCallbackTimeInfo *timeInfo, const PaStreamCallbackFlags statusFlags) noexcept;
-    static int writeCallbackC(const void *inputBuffer, void *outputBuffer,
-        unsigned long framesPerBuffer, const PaStreamCallbackTimeInfo *timeInfo,
-        const PaStreamCallbackFlags statusFlags, void *userData) noexcept
-    {
-        return static_cast<PortPlayback*>(userData)->writeCallback(inputBuffer, outputBuffer,
-            framesPerBuffer, timeInfo, statusFlags);
-    }
 
     void open(std::string_view name) override;
     bool reset() override;
@@ -156,9 +149,16 @@ void PortPlayback::open(std::string_view name)
     }
 
 retry_open:
+    static constexpr auto writeCallback = [](const void *inputBuffer, void *outputBuffer,
+        unsigned long framesPerBuffer, const PaStreamCallbackTimeInfo *timeInfo,
+        const PaStreamCallbackFlags statusFlags, void *userData) noexcept
+    {
+        return static_cast<PortPlayback*>(userData)->writeCallback(inputBuffer, outputBuffer,
+            framesPerBuffer, timeInfo, statusFlags);
+    };
     PaStream *stream{};
     PaError err{Pa_OpenStream(&stream, nullptr, &params, mDevice->Frequency, mDevice->UpdateSize,
-        paNoFlag, &PortPlayback::writeCallbackC, this)};
+        paNoFlag, writeCallback, this)};
     if(err != paNoError)
     {
         if(params.sampleFormat == paFloat32)
@@ -236,13 +236,6 @@ struct PortCapture final : public BackendBase {
 
     int readCallback(const void *inputBuffer, void *outputBuffer, unsigned long framesPerBuffer,
         const PaStreamCallbackTimeInfo *timeInfo, const PaStreamCallbackFlags statusFlags) noexcept;
-    static int readCallbackC(const void *inputBuffer, void *outputBuffer,
-        unsigned long framesPerBuffer, const PaStreamCallbackTimeInfo *timeInfo,
-        const PaStreamCallbackFlags statusFlags, void *userData) noexcept
-    {
-        return static_cast<PortCapture*>(userData)->readCallback(inputBuffer, outputBuffer,
-            framesPerBuffer, timeInfo, statusFlags);
-    }
 
     void open(std::string_view name) override;
     void start() override;
@@ -251,7 +244,7 @@ struct PortCapture final : public BackendBase {
     uint availableSamples() override;
 
     PaStream *mStream{nullptr};
-    PaStreamParameters mParams;
+    PaStreamParameters mParams{};
 
     RingBufferPtr mRing{nullptr};
 };
@@ -317,8 +310,15 @@ void PortCapture::open(std::string_view name)
     }
     mParams.channelCount = static_cast<int>(mDevice->channelsFromFmt());
 
+    static constexpr auto readCallback = [](const void *inputBuffer, void *outputBuffer,
+        unsigned long framesPerBuffer, const PaStreamCallbackTimeInfo *timeInfo,
+        const PaStreamCallbackFlags statusFlags, void *userData) noexcept
+    {
+        return static_cast<PortCapture*>(userData)->readCallback(inputBuffer, outputBuffer,
+            framesPerBuffer, timeInfo, statusFlags);
+    };
     PaError err{Pa_OpenStream(&mStream, &mParams, nullptr, mDevice->Frequency,
-        paFramesPerBufferUnspecified, paNoFlag, &PortCapture::readCallbackC, this)};
+        paFramesPerBufferUnspecified, paNoFlag, readCallback, this)};
     if(err != paNoError)
         throw al::backend_exception{al::backend_error::NoDevice, "Failed to open stream: %s",
             Pa_GetErrorText(err)};

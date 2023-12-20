@@ -658,8 +658,8 @@ struct PulsePlayback final : public BackendBase {
     std::optional<std::string> mDeviceName{std::nullopt};
 
     bool mIs51Rear{false};
-    pa_buffer_attr mAttr;
-    pa_sample_spec mSpec;
+    pa_buffer_attr mAttr{};
+    pa_sample_spec mSpec{};
 
     pa_stream *mStream{nullptr};
 

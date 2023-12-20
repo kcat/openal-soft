@@ -50,18 +50,18 @@ constexpr float QFactor{5.0f};
 
 struct AutowahState final : public EffectState {
     /* Effect parameters */
-    float mAttackRate;
-    float mReleaseRate;
-    float mResonanceGain;
-    float mPeakGain;
-    float mFreqMinNorm;
-    float mBandwidthNorm;
-    float mEnvDelay;
+    float mAttackRate{};
+    float mReleaseRate{};
+    float mResonanceGain{};
+    float mPeakGain{};
+    float mFreqMinNorm{};
+    float mBandwidthNorm{};
+    float mEnvDelay{};
 
     /* Filter components derived from the envelope. */
     struct FilterParam {
-        float cos_w0;
-        float alpha;
+        float cos_w0{};
+        float alpha{};
     };
     std::array<FilterParam,BufferLineSize> mEnv;
 
@@ -70,17 +70,17 @@ struct AutowahState final : public EffectState {
 
         /* Effect filters' history. */
         struct {
-            float z1, z2;
+            float z1{}, z2{};
         } mFilter;
 
         /* Effect gains for each output channel */
-        float mCurrentGain;
-        float mTargetGain;
+        float mCurrentGain{};
+        float mTargetGain{};
     };
     std::array<ChannelData,MaxAmbiChannels> mChans;
 
     /* Effects buffers */
-    alignas(16) FloatBufferLine mBufferOut;
+    alignas(16) FloatBufferLine mBufferOut{};
 
 
     void deviceUpdate(const DeviceBase *device, const BufferStorage *buffer) override;

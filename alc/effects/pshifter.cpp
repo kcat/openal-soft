@@ -58,7 +58,7 @@ constexpr size_t StftStep{StftSize / OversampleFactor};
 
 /* Define a Hann window, used to filter the STFT input and output. */
 struct Windower {
-    alignas(16) std::array<float,StftSize> mData;
+    alignas(16) std::array<float,StftSize> mData{};
 
     Windower()
     {
@@ -82,29 +82,29 @@ struct FrequencyBin {
 
 struct PshifterState final : public EffectState {
     /* Effect parameters */
-    size_t mCount;
-    size_t mPos;
-    uint mPitchShiftI;
-    float mPitchShift;
+    size_t mCount{};
+    size_t mPos{};
+    uint mPitchShiftI{};
+    float mPitchShift{};
 
     /* Effects buffers */
-    std::array<float,StftSize> mFIFO;
-    std::array<float,StftHalfSize+1> mLastPhase;
-    std::array<float,StftHalfSize+1> mSumPhase;
-    std::array<float,StftSize> mOutputAccum;
+    std::array<float,StftSize> mFIFO{};
+    std::array<float,StftHalfSize+1> mLastPhase{};
+    std::array<float,StftHalfSize+1> mSumPhase{};
+    std::array<float,StftSize> mOutputAccum{};
 
     PFFFTSetup mFft;
-    alignas(16) std::array<float,StftSize> mFftBuffer;
-    alignas(16) std::array<float,StftSize> mFftWorkBuffer;
+    alignas(16) std::array<float,StftSize> mFftBuffer{};
+    alignas(16) std::array<float,StftSize> mFftWorkBuffer{};
 
-    std::array<FrequencyBin,StftHalfSize+1> mAnalysisBuffer;
-    std::array<FrequencyBin,StftHalfSize+1> mSynthesisBuffer;
+    std::array<FrequencyBin,StftHalfSize+1> mAnalysisBuffer{};
+    std::array<FrequencyBin,StftHalfSize+1> mSynthesisBuffer{};
 
-    alignas(16) FloatBufferLine mBufferOut;
+    alignas(16) FloatBufferLine mBufferOut{};
 
     /* Effect gains for each output channel */
-    std::array<float,MaxAmbiChannels> mCurrentGains;
-    std::array<float,MaxAmbiChannels> mTargetGains;
+    std::array<float,MaxAmbiChannels> mCurrentGains{};
+    std::array<float,MaxAmbiChannels> mTargetGains{};
 
 
     void deviceUpdate(const DeviceBase *device, const BufferStorage *buffer) override;

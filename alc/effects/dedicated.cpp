@@ -47,8 +47,8 @@ struct DedicatedState final : public EffectState {
      * gains for all possible output channels and not just the main ambisonic
      * buffer.
      */
-    std::array<float,MaxOutputChannels> mCurrentGains;
-    std::array<float,MaxOutputChannels> mTargetGains;
+    std::array<float,MaxOutputChannels> mCurrentGains{};
+    std::array<float,MaxOutputChannels> mTargetGains{};
 
 
     void deviceUpdate(const DeviceBase *device, const BufferStorage *buffer) override;

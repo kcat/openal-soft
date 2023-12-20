@@ -58,10 +58,10 @@ struct ChorusState final : public EffectState {
     uint mLfoDisp{0};
 
     /* Calculated delays to apply to the left and right outputs. */
-    std::array<std::array<uint,BufferLineSize>,2> mModDelays;
+    std::array<std::array<uint,BufferLineSize>,2> mModDelays{};
 
     /* Temp storage for the modulated left and right outputs. */
-    alignas(16) std::array<FloatBufferLine,2> mBuffer;
+    alignas(16) std::array<FloatBufferLine,2> mBuffer{};
 
     /* Gains for left and right outputs. */
     struct OutGains {

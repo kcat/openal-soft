@@ -8,24 +8,24 @@
 
 
 struct NfcFilter1 {
-    float base_gain, gain;
-    float b1, a1;
-    std::array<float,1> z;
+    float base_gain{1.0f}, gain{1.0f};
+    float b1{}, a1{};
+    std::array<float,1> z{};
 };
 struct NfcFilter2 {
-    float base_gain, gain;
-    float b1, b2, a1, a2;
-    std::array<float,2> z;
+    float base_gain{1.0f}, gain{1.0f};
+    float b1{}, b2{}, a1{}, a2{};
+    std::array<float,2> z{};
 };
 struct NfcFilter3 {
-    float base_gain, gain;
-    float b1, b2, b3, a1, a2, a3;
-    std::array<float,3> z;
+    float base_gain{1.0f}, gain{1.0f};
+    float b1{}, b2{}, b3{}, a1{}, a2{}, a3{};
+    std::array<float,3> z{};
 };
 struct NfcFilter4 {
-    float base_gain, gain;
-    float b1, b2, b3, b4, a1, a2, a3, a4;
-    std::array<float,4> z;
+    float base_gain{1.0f}, gain{1.0f};
+    float b1{}, b2{}, b3{}, b4{}, a1{}, a2{}, a3{}, a4{};
+    std::array<float,4> z{};
 };
 
 class NfcFilter {

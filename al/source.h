@@ -108,19 +108,19 @@ struct ALsource {
 
     /** Direct filter and auxiliary send info. */
     struct {
-        float Gain;
-        float GainHF;
-        float HFReference;
-        float GainLF;
-        float LFReference;
+        float Gain{};
+        float GainHF{};
+        float HFReference{};
+        float GainLF{};
+        float LFReference{};
     } Direct;
     struct SendData {
-        ALeffectslot *Slot;
-        float Gain;
-        float GainHF;
-        float HFReference;
-        float GainLF;
-        float LFReference;
+        ALeffectslot *Slot{};
+        float Gain{};
+        float GainHF{};
+        float HFReference{};
+        float GainLF{};
+        float LFReference{};
     };
     std::array<SendData,MaxSendCount> Send;
 

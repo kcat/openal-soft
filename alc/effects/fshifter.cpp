@@ -57,7 +57,7 @@ constexpr size_t HilStep{HilSize / OversampleFactor};
 
 /* Define a Hann window, used to filter the HIL input and output. */
 struct Windower {
-    alignas(16) std::array<double,HilSize> mData;
+    alignas(16) std::array<double,HilSize> mData{};
 
     Windower()
     {

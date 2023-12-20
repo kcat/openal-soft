@@ -40,7 +40,7 @@ struct PPhaseResampler {
     explicit operator bool() const noexcept { return !mF.empty(); }
 
 private:
-    uint mP, mQ, mM, mL;
+    uint mP{}, mQ{}, mM{}, mL{};
     std::vector<double> mF;
 };
 

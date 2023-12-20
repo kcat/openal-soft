@@ -871,10 +871,10 @@ static void SynthesizeHrirs(HrirDataT *hData)
  */
 struct HrirReconstructor {
     std::vector<double*> mIrs;
-    std::atomic<size_t> mCurrent;
-    std::atomic<size_t> mDone;
-    uint mFftSize;
-    uint mIrPoints;
+    std::atomic<size_t> mCurrent{};
+    std::atomic<size_t> mDone{};
+    uint mFftSize{};
+    uint mIrPoints{};
 
     void Worker()
     {

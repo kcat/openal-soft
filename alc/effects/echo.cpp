@@ -66,7 +66,7 @@ struct EchoState final : public EffectState {
     BiquadFilter mFilter;
     float mFeedGain{0.0f};
 
-    alignas(16) std::array<FloatBufferLine,2> mTempBuffer;
+    alignas(16) std::array<FloatBufferLine,2> mTempBuffer{};
 
     void deviceUpdate(const DeviceBase *device, const BufferStorage *buffer) override;
     void update(const ContextBase *context, const EffectSlot *slot, const EffectProps *props,

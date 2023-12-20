@@ -237,17 +237,17 @@ struct DeviceBase {
     static constexpr size_t MixerLineSize{BufferLineSize + DecoderBase::sMaxPadding};
     static constexpr size_t MixerChannelsMax{16};
     using MixerBufferLine = std::array<float,MixerLineSize>;
-    alignas(16) std::array<MixerBufferLine,MixerChannelsMax> mSampleData;
-    alignas(16) std::array<float,MixerLineSize+MaxResamplerPadding> mResampleData;
+    alignas(16) std::array<MixerBufferLine,MixerChannelsMax> mSampleData{};
+    alignas(16) std::array<float,MixerLineSize+MaxResamplerPadding> mResampleData{};
 
-    alignas(16) std::array<float,BufferLineSize> FilteredData;
+    alignas(16) std::array<float,BufferLineSize> FilteredData{};
     union {
-        alignas(16) std::array<float,BufferLineSize+HrtfHistoryLength> HrtfSourceData;
+        alignas(16) std::array<float,BufferLineSize+HrtfHistoryLength> HrtfSourceData{};
         alignas(16) std::array<float,BufferLineSize> NfcSampleData;
     };
 
     /* Persistent storage for HRTF mixing. */
-    alignas(16) std::array<float2,BufferLineSize+HrirLength> HrtfAccumData;
+    alignas(16) std::array<float2,BufferLineSize+HrirLength> HrtfAccumData{};
 
     /* Mixing buffer used by the Dry mix and Real output. */
     al::vector<FloatBufferLine, 16> MixBuffer;

@@ -417,12 +417,12 @@ struct Modulation {
     /* The vibrato time is tracked with an index over a (MOD_FRACONE)
      * normalized range.
      */
-    uint Index, Step;
+    uint Index{}, Step{};
 
     /* The depth of frequency change, in samples. */
-    float Depth;
+    float Depth{};
 
-    std::array<float,MAX_UPDATE_SAMPLES> ModDelays;
+    std::array<float,MAX_UPDATE_SAMPLES> ModDelays{};
 
     void updateModulator(float modTime, float modDepth, float frequency);
 

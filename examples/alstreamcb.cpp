@@ -79,7 +79,7 @@ struct StreamPlayer {
     size_t mDecoderOffset{0};
 
     /* The format of the callback samples. */
-    ALenum mFormat;
+    ALenum mFormat{};
 
     StreamPlayer()
     {

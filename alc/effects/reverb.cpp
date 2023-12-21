@@ -551,7 +551,7 @@ struct ReverbState final : public EffectState {
         Normal,
     };
     PipelineState mPipelineState{DeviceClear};
-    uint8_t mCurrentPipeline{0};
+    bool mCurrentPipeline{false};
 
     std::array<ReverbPipeline,2> mPipelines;
 
@@ -1235,7 +1235,7 @@ void ReverbState::update(const ContextBase *Context, const EffectSlot *Slot,
         mParams.LFReference = props->Reverb.LFReference;
 
         mPipelineState = (mPipelineState != DeviceClear) ? StartFade : Normal;
-        mCurrentPipeline ^= 1;
+        mCurrentPipeline = !mCurrentPipeline;
     }
     auto &pipeline = mPipelines[mCurrentPipeline];
 
@@ -1671,7 +1671,7 @@ void ReverbState::process(const size_t samplesToDo, const al::span<const FloatBu
 
     ASSUME(samplesToDo > 0);
 
-    auto &oldpipeline = mPipelines[mCurrentPipeline^1];
+    auto &oldpipeline = mPipelines[!mCurrentPipeline];
     auto &pipeline = mPipelines[mCurrentPipeline];
 
     if(mPipelineState >= Fading)
@@ -1781,7 +1781,7 @@ void ReverbState::process(const size_t samplesToDo, const al::span<const FloatBu
         if(mPipelineState == Cleanup)
         {
             size_t numSamples{mSampleBuffer.size()/2};
-            size_t pipelineOffset{numSamples * (mCurrentPipeline^1)};
+            size_t pipelineOffset{numSamples * (!mCurrentPipeline)};
             std::fill_n(mSampleBuffer.data()+pipelineOffset, numSamples,
                 decltype(mSampleBuffer)::value_type{});
 

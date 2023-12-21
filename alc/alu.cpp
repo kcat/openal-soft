@@ -1967,16 +1967,13 @@ void ProcessContexts(DeviceBase *device, const uint SamplesToDo)
         }
 
         /* Process effects. */
-        if(const size_t num_slots{auxslots.size()})
+        if(!auxslots.empty())
         {
-            auto slots = auxslots.data();
-            auto slots_end = slots + num_slots;
-
             /* Sort the slots into extra storage, so that effect slots come
              * before their effect slot target (or their targets' target).
              */
-            const al::span<EffectSlot*> sorted_slots{const_cast<EffectSlot**>(slots_end),
-                num_slots};
+            const al::span sorted_slots{const_cast<EffectSlot**>(al::to_address(auxslots.end())),
+                auxslots.size()};
             /* Skip sorting if it has already been done. */
             if(!sorted_slots[0])
             {
@@ -1984,7 +1981,7 @@ void ProcessContexts(DeviceBase *device, const uint SamplesToDo)
                  * sorted list so that all slots without a target slot go to
                  * the end.
                  */
-                std::copy(slots, slots_end, sorted_slots.begin());
+                std::copy(auxslots.begin(), auxslots.end(), sorted_slots.begin());
                 auto split_point = std::partition(sorted_slots.begin(), sorted_slots.end(),
                     [](const EffectSlot *slot) noexcept -> bool
                     { return slot->Target != nullptr; });

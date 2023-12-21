@@ -5,6 +5,7 @@
 #include <cstddef>
 #include <initializer_list>
 #include <iterator>
+#include <stdexcept>
 #include <type_traits>
 
 #include "almalloc.h"
@@ -12,7 +13,7 @@
 
 namespace al {
 
-constexpr size_t dynamic_extent{static_cast<size_t>(-1)};
+inline constexpr size_t dynamic_extent{static_cast<size_t>(-1)};
 
 template<typename T, size_t E=dynamic_extent>
 class span;
@@ -23,31 +24,31 @@ namespace detail_ {
     template<typename T, size_t E>
     struct is_span_<span<T,E>> : std::true_type { };
     template<typename T>
-    constexpr bool is_span_v = is_span_<std::remove_cv_t<T>>::value;
+    inline constexpr bool is_span_v = is_span_<std::remove_cv_t<T>>::value;
 
     template<typename T>
     struct is_std_array_ : std::false_type { };
     template<typename T, size_t N>
     struct is_std_array_<std::array<T,N>> : std::true_type { };
     template<typename T>
-    constexpr bool is_std_array_v = is_std_array_<std::remove_cv_t<T>>::value;
+    inline constexpr bool is_std_array_v = is_std_array_<std::remove_cv_t<T>>::value;
 
     template<typename T, typename = void>
-    constexpr bool has_size_and_data = false;
+    inline constexpr bool has_size_and_data = false;
     template<typename T>
-    constexpr bool has_size_and_data<T,
+    inline constexpr bool has_size_and_data<T,
         std::void_t<decltype(std::size(std::declval<T>())),decltype(std::data(std::declval<T>()))>>
         = true;
 
     template<typename C>
-    constexpr bool is_valid_container_type = !is_span_v<C> && !is_std_array_v<C>
+    inline constexpr bool is_valid_container_type = !is_span_v<C> && !is_std_array_v<C>
         && !std::is_array<C>::value && has_size_and_data<C>;
 
     template<typename T, typename U>
-    constexpr bool is_array_compatible = std::is_convertible<T(*)[],U(*)[]>::value; /* NOLINT(*-avoid-c-arrays) */
+    inline constexpr bool is_array_compatible = std::is_convertible<T(*)[],U(*)[]>::value; /* NOLINT(*-avoid-c-arrays) */
 
     template<typename C, typename T>
-    constexpr bool is_valid_container = is_valid_container_type<C>
+    inline constexpr bool is_valid_container = is_valid_container_type<C>
         && is_array_compatible<std::remove_pointer_t<decltype(std::data(std::declval<C&>()))>,T>;
 } // namespace detail_
 
@@ -79,7 +80,7 @@ public:
     constexpr explicit span(U iter, index_type) : mData{::al::to_address(iter)} { }
     template<typename U, typename V, REQUIRES(!std::is_convertible<V,size_t>::value)>
     constexpr explicit span(U first, V) : mData{::al::to_address(first)}
-    {}
+    { }
 
     constexpr span(type_identity_t<element_type> (&arr)[E]) noexcept /* NOLINT(*-avoid-c-arrays) */
         : span{std::data(arr), std::size(arr)}
@@ -107,8 +108,8 @@ public:
 
     constexpr span& operator=(const span &rhs) noexcept = default;
 
-    [[nodiscard]] constexpr auto front() const -> reference { return *mData; }
-    [[nodiscard]] constexpr auto back() const -> reference { return *(mData+E-1); }
+    [[nodiscard]] constexpr auto front() const -> reference { return mData[0]; }
+    [[nodiscard]] constexpr auto back() const -> reference { return mData[E-1]; }
     [[nodiscard]] constexpr auto operator[](index_type idx) const -> reference { return mData[idx]; }
     [[nodiscard]] constexpr auto data() const noexcept -> pointer { return mData; }
 
@@ -192,7 +193,7 @@ public:
 
     constexpr span() noexcept = default;
     template<typename U>
-    constexpr span(U iter, index_type count) : mData{::al::to_address(iter)}, mDataEnd{::al::to_address(iter) + count}
+    constexpr span(U iter, index_type count) : mData{::al::to_address(iter)}, mDataLength{count}
     { }
     template<typename U, typename V, REQUIRES(!std::is_convertible<V,size_t>::value)>
     constexpr span(U first, V last) : span{::al::to_address(first), static_cast<size_t>(last - first)}
@@ -221,20 +222,19 @@ public:
 
     constexpr span& operator=(const span &rhs) noexcept = default;
 
-    [[nodiscard]] constexpr auto front() const -> reference { return *mData; }
-    [[nodiscard]] constexpr auto back() const -> reference { return *(mDataEnd-1); }
+    [[nodiscard]] constexpr auto front() const -> reference { return mData[0]; }
+    [[nodiscard]] constexpr auto back() const -> reference { return mData[mDataLength-1]; }
     [[nodiscard]] constexpr auto operator[](index_type idx) const -> reference { return mData[idx]; }
     [[nodiscard]] constexpr auto data() const noexcept -> pointer { return mData; }
 
-    [[nodiscard]] constexpr auto size() const noexcept -> index_type { return static_cast<index_type>(mDataEnd-mData); }
-    [[nodiscard]] constexpr auto size_bytes() const noexcept -> index_type
-    { return static_cast<index_type>(mDataEnd-mData) * sizeof(value_type); }
-    [[nodiscard]] constexpr auto empty() const noexcept -> bool { return mData == mDataEnd; }
+    [[nodiscard]] constexpr auto size() const noexcept -> index_type { return mDataLength; }
+    [[nodiscard]] constexpr auto size_bytes() const noexcept -> index_type { return mDataLength * sizeof(value_type); }
+    [[nodiscard]] constexpr auto empty() const noexcept -> bool { return mDataLength == 0; }
 
     [[nodiscard]] constexpr auto begin() const noexcept -> iterator { return mData; }
-    [[nodiscard]] constexpr auto end() const noexcept -> iterator { return mDataEnd; }
+    [[nodiscard]] constexpr auto end() const noexcept -> iterator { return mData+mDataLength; }
     [[nodiscard]] constexpr auto cbegin() const noexcept -> const_iterator { return mData; }
-    [[nodiscard]] constexpr auto cend() const noexcept -> const_iterator { return mDataEnd; }
+    [[nodiscard]] constexpr auto cend() const noexcept -> const_iterator { return mData+mDataLength; }
 
     [[nodiscard]] constexpr auto rbegin() const noexcept -> reverse_iterator { return reverse_iterator{end()}; }
     [[nodiscard]] constexpr auto rend() const noexcept -> reverse_iterator { return reverse_iterator{begin()}; }
@@ -245,59 +245,99 @@ public:
 
     template<size_t C>
     [[nodiscard]] constexpr auto first() const -> span<element_type,C>
-    { return span<element_type,C>{mData, C}; }
+    {
+        if(C > mDataLength)
+            throw std::out_of_range{"Subspan count out of range"};
+        return span<element_type,C>{mData, C};
+    }
 
     [[nodiscard]] constexpr auto first(size_t count) const -> span
-    { return (count >= size()) ? *this : span{mData, mData+count}; }
+    {
+        if(count > mDataLength)
+            throw std::out_of_range{"Subspan count out of range"};
+        return span{mData, count};
+    }
 
     template<size_t C>
     [[nodiscard]] constexpr auto last() const -> span<element_type,C>
-    { return span<element_type,C>{mDataEnd-C, C}; }
+    {
+        if(C > mDataLength)
+            throw std::out_of_range{"Subspan count out of range"};
+        return span<element_type,C>{mData+mDataLength-C, C};
+    }
 
     [[nodiscard]] constexpr auto last(size_t count) const -> span
-    { return (count >= size()) ? *this : span{mDataEnd-count, mDataEnd}; }
+    {
+        if(count > mDataLength)
+            throw std::out_of_range{"Subspan count out of range"};
+        return span{mData+mDataLength-count, count};
+    }
 
     template<size_t O, size_t C>
     [[nodiscard]] constexpr auto subspan() const -> std::enable_if_t<C!=dynamic_extent,span<element_type,C>>
-    { return span<element_type,C>{mData+O, C}; }
+    {
+        if(O > mDataLength)
+            throw std::out_of_range{"Subspan offset out of range"};
+        if(C > mDataLength-O)
+            throw std::out_of_range{"Subspan length out of range"};
+        return span<element_type,C>{mData+O, C};
+    }
 
     template<size_t O, size_t C=dynamic_extent>
     [[nodiscard]] constexpr auto subspan() const -> std::enable_if_t<C==dynamic_extent,span<element_type,C>>
-    { return span<element_type,C>{mData+O, mDataEnd}; }
+    {
+        if(O > mDataLength)
+            throw std::out_of_range{"Subspan offset out of range"};
+        return span<element_type,C>{mData+O, mDataLength-O};
+    }
 
     [[nodiscard]] constexpr auto subspan(size_t offset, size_t count=dynamic_extent) const -> span
     {
-        return (offset > size()) ? span{} :
-            (count >= size()-offset) ? span{mData+offset, mDataEnd} :
-            span{mData+offset, mData+offset+count};
+        if(offset > mDataLength)
+            throw std::out_of_range{"Subspan offset out of range"};
+        if(count != dynamic_extent)
+        {
+            if(count > mDataLength-offset)
+                throw std::out_of_range{"Subspan length out of range"};
+            return span{mData+offset, count};
+        }
+        return span{mData+offset, mDataLength-offset};
     }
 
 private:
     pointer mData{nullptr};
-    pointer mDataEnd{nullptr};
+    index_type mDataLength{0};
 };
 
 template<typename T, size_t E>
 [[nodiscard]] constexpr inline auto span<T,E>::first(size_t count) const -> span<element_type,dynamic_extent>
 {
-    return (count >= size()) ? span<element_type>{mData, extent} :
-        span<element_type>{mData, count};
+    if(count > size())
+        throw std::out_of_range{"Subspan count out of range"};
+    return span<element_type>{mData, count};
 }
 
 template<typename T, size_t E>
 [[nodiscard]] constexpr inline auto span<T,E>::last(size_t count) const -> span<element_type,dynamic_extent>
 {
-    return (count >= size()) ? span<element_type>{mData, extent} :
-        span<element_type>{mData+extent-count, count};
+    if(count > size())
+        throw std::out_of_range{"Subspan count out of range"};
+    return span<element_type>{mData+size()-count, count};
 }
 
 template<typename T, size_t E>
 [[nodiscard]] constexpr inline auto span<T,E>::subspan(size_t offset, size_t count) const
     -> span<element_type,dynamic_extent>
 {
-    return (offset > size()) ? span<element_type>{} :
-        (count >= size()-offset) ? span<element_type>{mData+offset, mData+extent} :
-        span<element_type>{mData+offset, mData+offset+count};
+    if(offset > size())
+        throw std::out_of_range{"Subspan offset out of range"};
+    if(count != dynamic_extent)
+    {
+        if(count > size()-offset)
+            throw std::out_of_range{"Subspan length out of range"};
+        return span{mData+offset, count};
+    }
+    return span{mData+offset, size()-offset};
 }
 
 

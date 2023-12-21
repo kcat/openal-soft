@@ -586,7 +586,7 @@ void ALCcontext::eax_update_speaker_configuration()
 
 void ALCcontext::eax_set_last_error_defaults() noexcept
 {
-    mEaxLastError = EAX_OK;
+    mEaxLastError = EAXCONTEXT_DEFAULTLASTERROR;
 }
 
 void ALCcontext::eax_session_set_defaults() noexcept
@@ -675,6 +675,7 @@ void ALCcontext::eax_get_misc(const EaxCall& call)
         break;
     case EAXCONTEXT_LASTERROR:
         call.set_value<ContextException>(mEaxLastError);
+        mEaxLastError = EAX_OK;
         break;
     case EAXCONTEXT_SPEAKERCONFIG:
         call.set_value<ContextException>(mEaxSpeakerConfig);
@@ -1045,6 +1046,7 @@ try
 }
 catch(...)
 {
+    context->eaxSetLastError();
     eax_log_exception(__func__);
     return AL_INVALID_OPERATION;
 }
@@ -1072,6 +1074,7 @@ try
 }
 catch(...)
 {
+    context->eaxSetLastError();
     eax_log_exception(__func__);
     return AL_INVALID_OPERATION;
 }

@@ -2068,11 +2068,12 @@ void ApplyDistanceComp(const al::span<FloatBufferLine> Samples, const size_t Sam
 void ApplyDither(const al::span<FloatBufferLine> Samples, uint *dither_seed,
     const float quant_scale, const size_t SamplesToDo)
 {
+    static constexpr double invRNGRange{1.0 / std::numeric_limits<uint>::max()};
     ASSUME(SamplesToDo > 0);
 
     /* Dithering. Generate whitenoise (uniform distribution of random values
      * between -1 and +1) and add it to the sample values, after scaling up to
-     * the desired quantization depth amd before rounding.
+     * the desired quantization depth and before rounding.
      */
     const float invscale{1.0f / quant_scale};
     uint seed{*dither_seed};
@@ -2081,7 +2082,7 @@ void ApplyDither(const al::span<FloatBufferLine> Samples, uint *dither_seed,
         float val{sample * quant_scale};
         uint rng0{dither_rng(&seed)};
         uint rng1{dither_rng(&seed)};
-        val += static_cast<float>(rng0*(1.0/UINT_MAX) - rng1*(1.0/UINT_MAX));
+        val += static_cast<float>(rng0*invRNGRange - rng1*invRNGRange);
         return fast_roundf(val) * invscale;
     };
     for(FloatBufferLine &inout : Samples)

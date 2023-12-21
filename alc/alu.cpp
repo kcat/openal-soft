@@ -261,15 +261,15 @@ ResamplerFunc PrepareResampler(Resampler resampler, uint increment, InterpState 
     case Resampler::Linear:
         break;
     case Resampler::Cubic:
-        state->cubic.filter = gCubicSpline.Tab.data();
+        state->emplace<CubicState>().filter = gCubicSpline.Tab.data();
         break;
     case Resampler::FastBSinc12:
     case Resampler::BSinc12:
-        BsincPrepare(increment, &state->bsinc, &gBSinc12);
+        BsincPrepare(increment, &state->emplace<BsincState>(), &gBSinc12);
         break;
     case Resampler::FastBSinc24:
     case Resampler::BSinc24:
-        BsincPrepare(increment, &state->bsinc, &gBSinc24);
+        BsincPrepare(increment, &state->emplace<BsincState>(), &gBSinc24);
         break;
     }
     return SelectResampler(resampler, increment);

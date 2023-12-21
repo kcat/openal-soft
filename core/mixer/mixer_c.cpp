@@ -28,33 +28,33 @@ constexpr uint CubicPhaseDiffBits{MixerFracBits - CubicPhaseBits};
 constexpr uint CubicPhaseDiffOne{1 << CubicPhaseDiffBits};
 constexpr uint CubicPhaseDiffMask{CubicPhaseDiffOne - 1u};
 
-inline float do_point(const InterpState&, const float *RESTRICT vals, const uint)
+inline float do_point(const float *RESTRICT vals, const uint)
 { return vals[0]; }
-inline float do_lerp(const InterpState&, const float *RESTRICT vals, const uint frac)
+inline float do_lerp(const float *RESTRICT vals, const uint frac)
 { return lerpf(vals[0], vals[1], static_cast<float>(frac)*(1.0f/MixerFracOne)); }
-inline float do_cubic(const InterpState &istate, const float *RESTRICT vals, const uint frac)
+inline float do_cubic(const CubicState &istate, const float *RESTRICT vals, const uint frac)
 {
     /* Calculate the phase index and factor. */
     const uint pi{frac >> CubicPhaseDiffBits};
     const float pf{static_cast<float>(frac&CubicPhaseDiffMask) * (1.0f/CubicPhaseDiffOne)};
 
-    const float *RESTRICT fil{al::assume_aligned<16>(istate.cubic.filter[pi].mCoeffs.data())};
-    const float *RESTRICT phd{al::assume_aligned<16>(istate.cubic.filter[pi].mDeltas.data())};
+    const float *RESTRICT fil{al::assume_aligned<16>(istate.filter[pi].mCoeffs.data())};
+    const float *RESTRICT phd{al::assume_aligned<16>(istate.filter[pi].mDeltas.data())};
 
     /* Apply the phase interpolated filter. */
     return (fil[0] + pf*phd[0])*vals[0] + (fil[1] + pf*phd[1])*vals[1]
         + (fil[2] + pf*phd[2])*vals[2] + (fil[3] + pf*phd[3])*vals[3];
 }
-inline float do_bsinc(const InterpState &istate, const float *RESTRICT vals, const uint frac)
+inline float do_bsinc(const BsincState &istate, const float *RESTRICT vals, const uint frac)
 {
-    const size_t m{istate.bsinc.m};
+    const size_t m{istate.m};
     ASSUME(m > 0);
 
     /* Calculate the phase index and factor. */
     const uint pi{frac >> BsincPhaseDiffBits};
     const float pf{static_cast<float>(frac&BsincPhaseDiffMask) * (1.0f/BsincPhaseDiffOne)};
 
-    const float *RESTRICT fil{istate.bsinc.filter + m*pi*2};
+    const float *RESTRICT fil{istate.filter + m*pi*2};
     const float *RESTRICT phd{fil + m};
     const float *RESTRICT scd{fil + BSincPhaseCount*2*m};
     const float *RESTRICT spd{scd + m};
@@ -62,19 +62,19 @@ inline float do_bsinc(const InterpState &istate, const float *RESTRICT vals, con
     /* Apply the scale and phase interpolated filter. */
     float r{0.0f};
     for(size_t j_f{0};j_f < m;j_f++)
-        r += (fil[j_f] + istate.bsinc.sf*scd[j_f] + pf*(phd[j_f] + istate.bsinc.sf*spd[j_f])) * vals[j_f];
+        r += (fil[j_f] + istate.sf*scd[j_f] + pf*(phd[j_f] + istate.sf*spd[j_f])) * vals[j_f];
     return r;
 }
-inline float do_fastbsinc(const InterpState &istate, const float *RESTRICT vals, const uint frac)
+inline float do_fastbsinc(const BsincState &istate, const float *RESTRICT vals, const uint frac)
 {
-    const size_t m{istate.bsinc.m};
+    const size_t m{istate.m};
     ASSUME(m > 0);
 
     /* Calculate the phase index and factor. */
     const uint pi{frac >> BsincPhaseDiffBits};
     const float pf{static_cast<float>(frac&BsincPhaseDiffMask) * (1.0f/BsincPhaseDiffOne)};
 
-    const float *RESTRICT fil{istate.bsinc.filter + m*pi*2};
+    const float *RESTRICT fil{istate.filter + m*pi*2};
     const float *RESTRICT phd{fil + m};
 
     /* Apply the phase interpolated filter. */
@@ -84,16 +84,30 @@ inline float do_fastbsinc(const InterpState &istate, const float *RESTRICT vals,
     return r;
 }
 
-using SamplerT = float(&)(const InterpState&, const float*RESTRICT, const uint);
+using SamplerT = float(&)(const float*RESTRICT, const uint);
 template<SamplerT Sampler>
-void DoResample(const InterpState *state, const float *RESTRICT src, uint frac,
-    const uint increment, const al::span<float> dst)
+void DoResample(const float *RESTRICT src, uint frac, const uint increment,
+    const al::span<float> dst)
 {
-    const InterpState istate{*state};
     ASSUME(frac < MixerFracOne);
     for(float &out : dst)
     {
-        out = Sampler(istate, src, frac);
+        out = Sampler(src, frac);
+
+        frac += increment;
+        src  += frac>>MixerFracBits;
+        frac &= MixerFracMask;
+    }
+}
+
+template<typename T, typename U>
+void DoResample(T sampler, const U istate, const float *RESTRICT src, uint frac,
+    const uint increment, const al::span<float> dst)
+{
+    ASSUME(frac < MixerFracOne);
+    for(float &out : dst)
+    {
+        out = sampler(istate, src, frac);
 
         frac += increment;
         src  += frac>>MixerFracBits;
@@ -146,29 +160,35 @@ force_inline void MixLine(const al::span<const float> InSamples, float *RESTRICT
 } // namespace
 
 template<>
-void Resample_<PointTag,CTag>(const InterpState *state, const float *RESTRICT src, uint frac,
+void Resample_<PointTag,CTag>(const InterpState*, const float *RESTRICT src, uint frac,
     const uint increment, const al::span<float> dst)
-{ DoResample<do_point>(state, src, frac, increment, dst); }
+{ DoResample<do_point>(src, frac, increment, dst); }
 
 template<>
-void Resample_<LerpTag,CTag>(const InterpState *state, const float *RESTRICT src, uint frac,
+void Resample_<LerpTag,CTag>(const InterpState*, const float *RESTRICT src, uint frac,
     const uint increment, const al::span<float> dst)
-{ DoResample<do_lerp>(state, src, frac, increment, dst); }
+{ DoResample<do_lerp>(src, frac, increment, dst); }
 
 template<>
 void Resample_<CubicTag,CTag>(const InterpState *state, const float *RESTRICT src, uint frac,
     const uint increment, const al::span<float> dst)
-{ DoResample<do_cubic>(state, src-1, frac, increment, dst); }
+{ DoResample(do_cubic, std::get<CubicState>(*state), src-1, frac, increment, dst); }
 
 template<>
 void Resample_<BSincTag,CTag>(const InterpState *state, const float *RESTRICT src, uint frac,
     const uint increment, const al::span<float> dst)
-{ DoResample<do_bsinc>(state, src-state->bsinc.l, frac, increment, dst); }
+{
+    const auto istate = std::get<BsincState>(*state);
+    DoResample(do_bsinc, istate, src-istate.l, frac, increment, dst);
+}
 
 template<>
 void Resample_<FastBSincTag,CTag>(const InterpState *state, const float *RESTRICT src, uint frac,
     const uint increment, const al::span<float> dst)
-{ DoResample<do_fastbsinc>(state, src-state->bsinc.l, frac, increment, dst); }
+{
+    const auto istate = std::get<BsincState>(*state);
+    DoResample(do_fastbsinc, istate, src-istate.l, frac, increment, dst);
+}
 
 
 template<>

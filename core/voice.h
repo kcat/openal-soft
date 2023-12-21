@@ -48,7 +48,7 @@ enum class DirectMode : unsigned char {
 };
 
 
-constexpr uint MaxPitch{10};
+inline constexpr uint MaxPitch{10};
 
 
 enum {

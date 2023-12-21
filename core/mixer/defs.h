@@ -2,7 +2,8 @@
 #define CORE_MIXER_DEFS_H
 
 #include <array>
-#include <stdlib.h>
+#include <cstdlib>
+#include <variant>
 
 #include "alspan.h"
 #include "core/bufferline.h"
@@ -17,12 +18,12 @@ using uint = unsigned int;
 using float2 = std::array<float,2>;
 
 
-constexpr int MixerFracBits{16};
-constexpr int MixerFracOne{1 << MixerFracBits};
-constexpr int MixerFracMask{MixerFracOne - 1};
-constexpr int MixerFracHalf{MixerFracOne >> 1};
+inline constexpr int MixerFracBits{16};
+inline constexpr int MixerFracOne{1 << MixerFracBits};
+inline constexpr int MixerFracMask{MixerFracOne - 1};
+inline constexpr int MixerFracHalf{MixerFracOne >> 1};
 
-constexpr float GainSilenceThreshold{0.00001f}; /* -100dB */
+inline constexpr float GainSilenceThreshold{0.00001f}; /* -100dB */
 
 
 enum class Resampler : uint8_t {
@@ -59,10 +60,7 @@ struct CubicState {
     const CubicCoefficients *filter;
 };
 
-union InterpState {
-    CubicState cubic;
-    BsincState bsinc;
-};
+using InterpState = std::variant<CubicState,BsincState>;
 
 using ResamplerFunc = void(*)(const InterpState *state, const float *RESTRICT src, uint frac,
     const uint increment, const al::span<float> dst);

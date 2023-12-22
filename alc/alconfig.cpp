@@ -22,9 +22,6 @@
 
 #include "alconfig.h"
 
-#include <cstdlib>
-#include <cctype>
-#include <cstring>
 #ifdef _WIN32
 #include <windows.h>
 #include <shlobj.h>
@@ -34,16 +31,20 @@
 #endif
 
 #include <algorithm>
-#include <cstdio>
+#include <cctype>
+#include <cstdlib>
+#include <istream>
+#include <limits>
 #include <string>
+#include <string_view>
 #include <utility>
+#include <vector>
 
 #include "alfstream.h"
 #include "alstring.h"
 #include "core/helpers.h"
 #include "core/logging.h"
 #include "strutils.h"
-#include "vector.h"
 
 #if defined(ALSOFT_UWP)
 #include <winrt/Windows.Media.Core.h> // !!This is important!!
@@ -79,57 +80,43 @@ bool readline(std::istream &f, std::string &output)
     return std::getline(f, output) && !output.empty();
 }
 
-std::string expdup(const char *str)
+std::string expdup(std::string_view str)
 {
     std::string output;
 
-    std::string envval;
-    while(*str != '\0')
+    while(!str.empty())
     {
-        const char *addstr;
-        size_t addstrlen;
-
-        if(str[0] != '$')
+        if(auto nextpos = str.find('$'))
         {
-            const char *next = std::strchr(str, '$');
-            addstr = str;
-            addstrlen = next ? static_cast<size_t>(next-str) : std::strlen(str);
+            output += str.substr(0, nextpos);
+            if(nextpos == std::string_view::npos)
+                break;
 
-            str += addstrlen;
+            str.remove_prefix(nextpos);
         }
-        else
+
+        str.remove_prefix(1);
+        if(str.front() == '$')
         {
-            str++;
-            if(*str == '$')
-            {
-                const char *next = std::strchr(str+1, '$');
-                addstr = str;
-                addstrlen = next ? static_cast<size_t>(next-str) : std::strlen(str);
-
-                str += addstrlen;
-            }
-            else
-            {
-                const bool hasbraces{(*str == '{')};
-
-                if(hasbraces) str++;
-                const char *envstart = str;
-                while(std::isalnum(*str) || *str == '_')
-                    ++str;
-                if(hasbraces && *str != '}')
-                    continue;
-                const std::string envname{envstart, str};
-                if(hasbraces) str++;
-
-                envval = al::getenv(envname.c_str()).value_or(std::string{});
-                addstr = envval.data();
-                addstrlen = envval.length();
-            }
-        }
-        if(addstrlen == 0)
+            output += '$';
+            str.remove_prefix(1);
             continue;
+        }
 
-        output.append(addstr, addstrlen);
+        const bool hasbraces{str.front() == '{'};
+        if(hasbraces) str.remove_prefix(1);
+
+        size_t envend{0};
+        while(std::isalnum(str[envend]) || str[envend] == '_')
+            ++envend;
+        if(hasbraces && str[envend] != '}')
+            continue;
+        const std::string envname{str.substr(0, envend)};
+        if(hasbraces) ++envend;
+        str.remove_prefix(envend);
+
+        if(auto envval = al::getenv(envname.c_str()))
+            output += *envval;
     }
 
     return output;
@@ -147,42 +134,42 @@ void LoadConfigFromFile(std::istream &f)
 
         if(buffer[0] == '[')
         {
-            auto line = const_cast<char*>(buffer.data());
-            char *section = line+1;
-            char *endsection;
-
-            endsection = std::strchr(section, ']');
-            if(!endsection || section == endsection)
+            auto endpos = buffer.find(']', 1);
+            if(endpos == 1 || endpos == std::string::npos)
             {
-                ERR(" config parse error: bad line \"%s\"\n", line);
+                ERR(" config parse error: bad line \"%s\"\n", buffer.c_str());
                 continue;
             }
-            if(endsection[1] != 0)
+            if(buffer[endpos+1] != '\0')
             {
-                char *end = endsection+1;
-                while(std::isspace(*end))
-                    ++end;
-                if(*end != 0 && *end != '#')
+                size_t last{endpos+1};
+                while(last < buffer.size() && std::isspace(buffer[last]))
+                    ++last;
+
+                if(last < buffer.size() && buffer[last] != '#')
                 {
-                    ERR(" config parse error: bad line \"%s\"\n", line);
+                    ERR(" config parse error: bad line \"%s\"\n", buffer.c_str());
                     continue;
                 }
             }
-            *endsection = 0;
+
+            auto section = std::string_view{buffer}.substr(1, endpos-1);
+            auto generalName = std::string_view{"general"};
 
             curSection.clear();
-            if(al::strcasecmp(section, "general") != 0)
+            if(section.size() != generalName.size()
+                || al::strncasecmp(section.data(), generalName.data(), section.size()) != 0)
             {
                 do {
-                    char *nextp = std::strchr(section, '%');
-                    if(!nextp)
+                    auto nextp = section.find('%');
+                    if(nextp == std::string_view::npos)
                     {
                         curSection += section;
                         break;
                     }
 
-                    curSection.append(section, nextp);
-                    section = nextp;
+                    curSection += section.substr(0, nextp);
+                    section.remove_prefix(nextp);
 
                     if(((section[1] >= '0' && section[1] <= '9') ||
                         (section[1] >= 'a' && section[1] <= 'f') ||
@@ -205,19 +192,19 @@ void LoadConfigFromFile(std::istream &f)
                         else if(section[2] >= 'A' && section[2] <= 'F')
                             b |= (section[2]-'A'+0x0a);
                         curSection += static_cast<char>(b);
-                        section += 3;
+                        section.remove_prefix(3);
                     }
                     else if(section[1] == '%')
                     {
                         curSection += '%';
-                        section += 2;
+                        section.remove_prefix(2);
                     }
                     else
                     {
                         curSection += '%';
-                        section += 1;
+                        section.remove_prefix(1);
                     }
-                } while(*section != 0);
+                } while(!section.empty());
             }
 
             continue;
@@ -235,16 +222,17 @@ void LoadConfigFromFile(std::istream &f)
             ERR(" config parse error: malformed option line: \"%s\"\n", buffer.c_str());
             continue;
         }
-        auto keyend = sep++;
-        while(keyend > 0 && std::isspace(buffer[keyend-1]))
-            --keyend;
-        if(!keyend)
+        auto keypart = std::string_view{buffer}.substr(0, sep++);
+        while(!keypart.empty() && std::isspace(keypart.back()))
+            keypart.remove_suffix(1);
+        if(keypart.empty())
         {
             ERR(" config parse error: malformed option line: \"%s\"\n", buffer.c_str());
             continue;
         }
-        while(sep < buffer.size() && std::isspace(buffer[sep]))
-            sep++;
+        auto valpart = std::string_view{buffer}.substr(sep);
+        while(!valpart.empty() && std::isspace(valpart.front()))
+            valpart.remove_prefix(1);
 
         std::string fullKey;
         if(!curSection.empty())
@@ -252,20 +240,25 @@ void LoadConfigFromFile(std::istream &f)
             fullKey += curSection;
             fullKey += '/';
         }
-        fullKey += buffer.substr(0u, keyend);
+        fullKey += keypart;
 
-        std::string value{(sep < buffer.size()) ? buffer.substr(sep) : std::string{}};
-        if(value.size() > 1)
+        if(valpart.size() > std::numeric_limits<int>::max())
         {
-            if((value.front() == '"' && value.back() == '"')
-                || (value.front() == '\'' && value.back() == '\''))
+            ERR(" config parse error: value too long in line \"%s\"\n", buffer.c_str());
+            continue;
+        }
+        if(valpart.size() > 1)
+        {
+            if((valpart.front() == '"' && valpart.back() == '"')
+                || (valpart.front() == '\'' && valpart.back() == '\''))
             {
-                value.pop_back();
-                value.erase(value.begin());
+                valpart.remove_prefix(1);
+                valpart.remove_suffix(1);
             }
         }
 
-        TRACE(" setting '%s' = '%s'\n", fullKey.c_str(), value.c_str());
+        TRACE(" setting '%s' = '%.*s'\n", fullKey.c_str(), static_cast<int>(valpart.size()),
+            valpart.data());
 
         /* Check if we already have this option set */
         auto find_key = [&fullKey](const ConfigEntry &entry) -> bool
@@ -273,13 +266,13 @@ void LoadConfigFromFile(std::istream &f)
         auto ent = std::find_if(ConfOpts.begin(), ConfOpts.end(), find_key);
         if(ent != ConfOpts.end())
         {
-            if(!value.empty())
-                ent->value = expdup(value.c_str());
+            if(!valpart.empty())
+                ent->value = expdup(valpart);
             else
                 ConfOpts.erase(ent);
         }
-        else if(!value.empty())
-            ConfOpts.emplace_back(ConfigEntry{std::move(fullKey), expdup(value.c_str())});
+        else if(!valpart.empty())
+            ConfOpts.emplace_back(ConfigEntry{std::move(fullKey), expdup(valpart)});
     }
     ConfOpts.shrink_to_fit();
 }

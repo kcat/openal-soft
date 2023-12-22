@@ -189,6 +189,26 @@ struct EaxNullCommitter : public EaxCommitter<EaxNullCommitter> {
     using EaxCommitter<EaxNullCommitter>::EaxCommitter;
 };
 
+template<typename T>
+struct CommitterFromProps { };
+
+template<> struct CommitterFromProps<std::monostate> { using type = EaxNullCommitter; };
+template<> struct CommitterFromProps<EAXREVERBPROPERTIES> { using type = EaxReverbCommitter; };
+template<> struct CommitterFromProps<EAXCHORUSPROPERTIES> { using type = EaxChorusCommitter; };
+template<> struct CommitterFromProps<EAXAGCCOMPRESSORPROPERTIES> { using type = EaxCompressorCommitter; };
+template<> struct CommitterFromProps<EAXAUTOWAHPROPERTIES> { using type = EaxAutowahCommitter; };
+template<> struct CommitterFromProps<EAXDISTORTIONPROPERTIES> { using type = EaxDistortionCommitter; };
+template<> struct CommitterFromProps<EAXECHOPROPERTIES> { using type = EaxEchoCommitter; };
+template<> struct CommitterFromProps<EAXEQUALIZERPROPERTIES> { using type = EaxEqualizerCommitter; };
+template<> struct CommitterFromProps<EAXFLANGERPROPERTIES> { using type = EaxFlangerCommitter; };
+template<> struct CommitterFromProps<EAXFREQUENCYSHIFTERPROPERTIES> { using type = EaxFrequencyShifterCommitter; };
+template<> struct CommitterFromProps<EAXRINGMODULATORPROPERTIES> { using type = EaxModulatorCommitter; };
+template<> struct CommitterFromProps<EAXPITCHSHIFTERPROPERTIES> { using type = EaxPitchShifterCommitter; };
+template<> struct CommitterFromProps<EAXVOCALMORPHERPROPERTIES> { using type = EaxVocalMorpherCommitter; };
+
+template<typename T>
+using CommitterFor = typename CommitterFromProps<std::remove_cv_t<std::remove_reference_t<T>>>::type;
+
 
 class EaxEffect {
 public:
@@ -287,29 +307,16 @@ public:
     }
 
 
-#define EAXCALL(Props, Callable, ...)                                         \
-    return std::visit(overloaded{                                             \
-        [&](const std::monostate&) { return Callable<EaxNullCommitter>(__VA_ARGS__); }, \
-        [&](const EAXREVERBPROPERTIES&) { return Callable<EaxReverbCommitter>(__VA_ARGS__); }, \
-        [&](const EAXCHORUSPROPERTIES&) { return Callable<EaxChorusCommitter>(__VA_ARGS__); }, \
-        [&](const EAXAUTOWAHPROPERTIES&) { return Callable<EaxAutowahCommitter>(__VA_ARGS__); }, \
-        [&](const EAXAGCCOMPRESSORPROPERTIES&) { return Callable<EaxCompressorCommitter>(__VA_ARGS__); }, \
-        [&](const EAXDISTORTIONPROPERTIES&) { return Callable<EaxDistortionCommitter>(__VA_ARGS__); }, \
-        [&](const EAXECHOPROPERTIES&) { return Callable<EaxEchoCommitter>(__VA_ARGS__); }, \
-        [&](const EAXEQUALIZERPROPERTIES&) { return Callable<EaxEqualizerCommitter>(__VA_ARGS__); }, \
-        [&](const EAXFLANGERPROPERTIES&) { return Callable<EaxFlangerCommitter>(__VA_ARGS__); }, \
-        [&](const EAXFREQUENCYSHIFTERPROPERTIES&) { return Callable<EaxFrequencyShifterCommitter>(__VA_ARGS__); }, \
-        [&](const EAXRINGMODULATORPROPERTIES&) { return Callable<EaxModulatorCommitter>(__VA_ARGS__); }, \
-        [&](const EAXPITCHSHIFTERPROPERTIES&) { return Callable<EaxPitchShifterCommitter>(__VA_ARGS__); }, \
-        [&](const EAXVOCALMORPHERPROPERTIES&) { return Callable<EaxVocalMorpherCommitter>(__VA_ARGS__); } \
-    }, Props)
-
     template<typename T, typename ...Args>
     static void call_set(Args&& ...args)
     { return T::Set(std::forward<Args>(args)...); }
 
     static void call_set(const EaxCall &call, EaxEffectProps &props)
-    { EAXCALL(props, call_set, call, props); }
+    {
+        return std::visit([&](const auto &arg)
+        { return call_set<CommitterFor<decltype(arg)>>(call, props); },
+        props);
+    }
 
     void set(const EaxCall &call)
     {
@@ -330,7 +337,11 @@ public:
     { return T::Get(std::forward<Args>(args)...); }
 
     static void call_get(const EaxCall &call, const EaxEffectProps &props)
-    { EAXCALL(props, call_get, call, props); }
+    {
+        return std::visit([&](const auto &arg)
+        { return call_get<CommitterFor<decltype(arg)>>(call, props); },
+        props);
+    }
 
     void get(const EaxCall &call)
     {
@@ -350,7 +361,11 @@ public:
     { return T{props_, al_effect_props_}.commit(std::forward<Args>(args)...); }
 
     bool call_commit(const EaxEffectProps &props)
-    { EAXCALL(props, call_commit, props); }
+    {
+        return std::visit([&](const auto &arg)
+        { return call_commit<CommitterFor<decltype(arg)>>(props); },
+        props);
+    }
 
     bool commit(int eax_version)
     {

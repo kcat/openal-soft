@@ -239,30 +239,22 @@ public:
 
     void call_set_defaults(const ALenum altype, EaxEffectProps &props)
     {
-        if(altype == AL_EFFECT_EAXREVERB)
-            return call_set_defaults<EaxReverbCommitter>(props);
-        if(altype == AL_EFFECT_CHORUS)
-            return call_set_defaults<EaxChorusCommitter>(props);
-        if(altype == AL_EFFECT_AUTOWAH)
-            return call_set_defaults<EaxAutowahCommitter>(props);
-        if(altype == AL_EFFECT_COMPRESSOR)
-            return call_set_defaults<EaxCompressorCommitter>(props);
-        if(altype == AL_EFFECT_DISTORTION)
-            return call_set_defaults<EaxDistortionCommitter>(props);
-        if(altype == AL_EFFECT_ECHO)
-            return call_set_defaults<EaxEchoCommitter>(props);
-        if(altype == AL_EFFECT_EQUALIZER)
-            return call_set_defaults<EaxEqualizerCommitter>(props);
-        if(altype == AL_EFFECT_FLANGER)
-            return call_set_defaults<EaxFlangerCommitter>(props);
-        if(altype == AL_EFFECT_FREQUENCY_SHIFTER)
-            return call_set_defaults<EaxFrequencyShifterCommitter>(props);
-        if(altype == AL_EFFECT_RING_MODULATOR)
-            return call_set_defaults<EaxModulatorCommitter>(props);
-        if(altype == AL_EFFECT_PITCH_SHIFTER)
-            return call_set_defaults<EaxPitchShifterCommitter>(props);
-        if(altype == AL_EFFECT_VOCAL_MORPHER)
-            return call_set_defaults<EaxVocalMorpherCommitter>(props);
+        switch(altype)
+        {
+        case AL_EFFECT_EAXREVERB: return call_set_defaults<EaxReverbCommitter>(props);
+        case AL_EFFECT_CHORUS: return call_set_defaults<EaxChorusCommitter>(props);
+        case AL_EFFECT_AUTOWAH: return call_set_defaults<EaxAutowahCommitter>(props);
+        case AL_EFFECT_COMPRESSOR: return call_set_defaults<EaxCompressorCommitter>(props);
+        case AL_EFFECT_DISTORTION: return call_set_defaults<EaxDistortionCommitter>(props);
+        case AL_EFFECT_ECHO: return call_set_defaults<EaxEchoCommitter>(props);
+        case AL_EFFECT_EQUALIZER: return call_set_defaults<EaxEqualizerCommitter>(props);
+        case AL_EFFECT_FLANGER: return call_set_defaults<EaxFlangerCommitter>(props);
+        case AL_EFFECT_FREQUENCY_SHIFTER: return call_set_defaults<EaxFrequencyShifterCommitter>(props);
+        case AL_EFFECT_RING_MODULATOR: return call_set_defaults<EaxModulatorCommitter>(props);
+        case AL_EFFECT_PITCH_SHIFTER: return call_set_defaults<EaxPitchShifterCommitter>(props);
+        case AL_EFFECT_VOCAL_MORPHER: return call_set_defaults<EaxVocalMorpherCommitter>(props);
+        case AL_EFFECT_NULL: break;
+        }
         return call_set_defaults<EaxNullCommitter>(props);
     }
 

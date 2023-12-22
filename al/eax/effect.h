@@ -296,31 +296,21 @@ public:
 
 
 #define EAXCALL(Props, Callable, ...)                                         \
-    if(std::holds_alternative<EAXREVERBPROPERTIES>(Props))                    \
-        return Callable<EaxReverbCommitter>(__VA_ARGS__);                     \
-    if(std::holds_alternative<EAXCHORUSPROPERTIES>(Props))                    \
-        return Callable<EaxChorusCommitter>(__VA_ARGS__);                     \
-    if(std::holds_alternative<EAXAUTOWAHPROPERTIES>(Props))                   \
-        return Callable<EaxAutowahCommitter>(__VA_ARGS__);                    \
-    if(std::holds_alternative<EAXAGCCOMPRESSORPROPERTIES>(Props))             \
-        return Callable<EaxCompressorCommitter>(__VA_ARGS__);                 \
-    if(std::holds_alternative<EAXDISTORTIONPROPERTIES>(Props))                \
-        return Callable<EaxDistortionCommitter>(__VA_ARGS__);                 \
-    if(std::holds_alternative<EAXECHOPROPERTIES>(Props))                      \
-        return Callable<EaxEchoCommitter>(__VA_ARGS__);                       \
-    if(std::holds_alternative<EAXEQUALIZERPROPERTIES>(Props))                 \
-        return Callable<EaxEqualizerCommitter>(__VA_ARGS__);                  \
-    if(std::holds_alternative<EAXFLANGERPROPERTIES>(Props))                   \
-        return Callable<EaxFlangerCommitter>(__VA_ARGS__);                    \
-    if(std::holds_alternative<EAXFREQUENCYSHIFTERPROPERTIES>(Props))          \
-        return Callable<EaxFrequencyShifterCommitter>(__VA_ARGS__);           \
-    if(std::holds_alternative<EAXRINGMODULATORPROPERTIES>(Props))             \
-        return Callable<EaxModulatorCommitter>(__VA_ARGS__);                  \
-    if(std::holds_alternative<EAXPITCHSHIFTERPROPERTIES>(Props))              \
-        return Callable<EaxPitchShifterCommitter>(__VA_ARGS__);               \
-    if(std::holds_alternative<EAXVOCALMORPHERPROPERTIES>(Props))              \
-        return Callable<EaxVocalMorpherCommitter>(__VA_ARGS__);               \
-    return Callable<EaxNullCommitter>(__VA_ARGS__)
+    return std::visit(overloaded{                                             \
+        [&](const std::monostate&) { return Callable<EaxNullCommitter>(__VA_ARGS__); }, \
+        [&](const EAXREVERBPROPERTIES&) { return Callable<EaxReverbCommitter>(__VA_ARGS__); }, \
+        [&](const EAXCHORUSPROPERTIES&) { return Callable<EaxChorusCommitter>(__VA_ARGS__); }, \
+        [&](const EAXAUTOWAHPROPERTIES&) { return Callable<EaxAutowahCommitter>(__VA_ARGS__); }, \
+        [&](const EAXAGCCOMPRESSORPROPERTIES&) { return Callable<EaxCompressorCommitter>(__VA_ARGS__); }, \
+        [&](const EAXDISTORTIONPROPERTIES&) { return Callable<EaxDistortionCommitter>(__VA_ARGS__); }, \
+        [&](const EAXECHOPROPERTIES&) { return Callable<EaxEchoCommitter>(__VA_ARGS__); }, \
+        [&](const EAXEQUALIZERPROPERTIES&) { return Callable<EaxEqualizerCommitter>(__VA_ARGS__); }, \
+        [&](const EAXFLANGERPROPERTIES&) { return Callable<EaxFlangerCommitter>(__VA_ARGS__); }, \
+        [&](const EAXFREQUENCYSHIFTERPROPERTIES&) { return Callable<EaxFrequencyShifterCommitter>(__VA_ARGS__); }, \
+        [&](const EAXRINGMODULATORPROPERTIES&) { return Callable<EaxModulatorCommitter>(__VA_ARGS__); }, \
+        [&](const EAXPITCHSHIFTERPROPERTIES&) { return Callable<EaxPitchShifterCommitter>(__VA_ARGS__); }, \
+        [&](const EAXVOCALMORPHERPROPERTIES&) { return Callable<EaxVocalMorpherCommitter>(__VA_ARGS__); } \
+    }, Props)
 
     template<typename T, typename ...Args>
     static void call_set(Args&& ...args)

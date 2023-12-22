@@ -253,10 +253,11 @@ std::vector<DevMap> PlaybackDevices;
 std::vector<DevMap> CaptureDevices;
 
 
-const char *prefix_name(snd_pcm_stream_t stream)
+const std::string_view prefix_name(snd_pcm_stream_t stream)
 {
-    assert(stream == SND_PCM_STREAM_PLAYBACK || stream == SND_PCM_STREAM_CAPTURE);
-    return (stream==SND_PCM_STREAM_PLAYBACK) ? "device-prefix" : "capture-prefix";
+    if(stream == SND_PCM_STREAM_PLAYBACK)
+        return "device-prefix";
+    return "capture-prefix";
 }
 
 std::vector<DevMap> probe_devices(snd_pcm_stream_t stream)
@@ -268,11 +269,11 @@ std::vector<DevMap> probe_devices(snd_pcm_stream_t stream)
     snd_pcm_info_t *pcminfo;
     snd_pcm_info_malloc(&pcminfo);
 
-    auto defname = ConfigValueStr(nullptr, "alsa",
+    auto defname = ConfigValueStr({}, "alsa",
         (stream == SND_PCM_STREAM_PLAYBACK) ? "device" : "capture");
     devlist.emplace_back(alsaDevice, defname ? defname->c_str() : "default");
 
-    if(auto customdevs = ConfigValueStr(nullptr, "alsa",
+    if(auto customdevs = ConfigValueStr({}, "alsa",
         (stream == SND_PCM_STREAM_PLAYBACK) ? "custom-devices" : "custom-captures"))
     {
         size_t nextpos{customdevs->find_first_not_of(';')};
@@ -300,8 +301,8 @@ std::vector<DevMap> probe_devices(snd_pcm_stream_t stream)
         }
     }
 
-    const std::string main_prefix{
-        ConfigValueStr(nullptr, "alsa", prefix_name(stream)).value_or("plughw:")};
+    const std::string main_prefix{ConfigValueStr({}, "alsa", prefix_name(stream))
+        .value_or("plughw:")};
 
     int card{-1};
     int err{snd_card_next(&card)};
@@ -327,8 +328,7 @@ std::vector<DevMap> probe_devices(snd_pcm_stream_t stream)
         name = prefix_name(stream);
         name += '-';
         name += cardid;
-        const std::string card_prefix{
-            ConfigValueStr(nullptr, "alsa", name.c_str()).value_or(main_prefix)};
+        const std::string card_prefix{ConfigValueStr({}, "alsa", name).value_or(main_prefix)};
 
         int dev{-1};
         while(true)
@@ -353,8 +353,7 @@ std::vector<DevMap> probe_devices(snd_pcm_stream_t stream)
             name += cardid;
             name += '-';
             name += std::to_string(dev);
-            const std::string device_prefix{
-                ConfigValueStr(nullptr, "alsa", name.c_str()).value_or(card_prefix)};
+            const std::string device_prefix{ConfigValueStr({},"alsa", name).value_or(card_prefix)};
 
             /* "CardName, PcmName (CARD=cardid,DEV=dev)" */
             name = cardname;
@@ -643,7 +642,7 @@ void AlsaPlayback::open(std::string_view name)
     else
     {
         name = alsaDevice;
-        if(auto driveropt = ConfigValueStr(nullptr, "alsa", "device"))
+        if(auto driveropt = ConfigValueStr({}, "alsa", "device"))
             driver = std::move(driveropt).value();
     }
     TRACE("Opening device \"%s\"\n", driver.c_str());
@@ -691,7 +690,7 @@ bool AlsaPlayback::reset()
         break;
     }
 
-    bool allowmmap{!!GetConfigValueBool(mDevice->DeviceName.c_str(), "alsa", "mmap", true)};
+    bool allowmmap{GetConfigValueBool(mDevice->DeviceName, "alsa", "mmap", true)};
     uint periodLen{static_cast<uint>(mDevice->UpdateSize * 1000000_u64 / mDevice->Frequency)};
     uint bufferLen{static_cast<uint>(mDevice->BufferSize * 1000000_u64 / mDevice->Frequency)};
     uint rate{mDevice->Frequency};
@@ -750,7 +749,7 @@ bool AlsaPlayback::reset()
         else mDevice->FmtChans = DevFmtStereo;
     }
     /* set rate (implicitly constrains period/buffer parameters) */
-    if(!GetConfigValueBool(mDevice->DeviceName.c_str(), "alsa", "allow-resampler", false)
+    if(!GetConfigValueBool(mDevice->DeviceName, "alsa", "allow-resampler", false)
         || !mDevice->Flags.test(FrequencyRequest))
     {
         if(snd_pcm_hw_params_set_rate_resample(mPcmHandle, hp.get(), 0) < 0)
@@ -914,7 +913,7 @@ void AlsaCapture::open(std::string_view name)
     else
     {
         name = alsaDevice;
-        if(auto driveropt = ConfigValueStr(nullptr, "alsa", "capture"))
+        if(auto driveropt = ConfigValueStr({}, "alsa", "capture"))
             driver = std::move(driveropt).value();
     }
 

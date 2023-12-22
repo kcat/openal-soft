@@ -210,7 +210,7 @@ void EnumerateDevices(jack_client_t *client, std::vector<DeviceEntry> &list)
         }
     }
 
-    if(auto listopt = ConfigValueStr(nullptr, "jack", "custom-devices"))
+    if(auto listopt = ConfigValueStr({}, "jack", "custom-devices"))
     {
         for(size_t strpos{0};strpos < listopt->size();)
         {
@@ -509,7 +509,7 @@ bool JackPlayback::reset()
     std::for_each(mPort.begin(), mPort.end(), unregister_port);
     mPort.fill(nullptr);
 
-    mRTMixing = GetConfigValueBool(mDevice->DeviceName.c_str(), "jack", "rt-mix", true);
+    mRTMixing = GetConfigValueBool(mDevice->DeviceName, "jack", "rt-mix", true);
     jack_set_process_callback(mClient,
         mRTMixing ? &JackPlayback::processRtC : &JackPlayback::processC, this);
 
@@ -527,7 +527,7 @@ bool JackPlayback::reset()
     }
     else
     {
-        const char *devname{mDevice->DeviceName.c_str()};
+        const std::string_view devname{mDevice->DeviceName};
         uint bufsize{ConfigValueUInt(devname, "jack", "buffer-size").value_or(mDevice->UpdateSize)};
         bufsize = maxu(NextPowerOf2(bufsize), mDevice->UpdateSize);
         mDevice->BufferSize = bufsize + mDevice->UpdateSize;
@@ -577,7 +577,7 @@ void JackPlayback::start()
     if(jack_activate(mClient))
         throw al::backend_exception{al::backend_error::DeviceError, "Failed to activate client"};
 
-    const char *devname{mDevice->DeviceName.c_str()};
+    const std::string_view devname{mDevice->DeviceName};
     if(ConfigValueBool(devname, "jack", "connect-ports").value_or(true))
     {
         JackPortsPtr pnames{jack_get_ports(mClient, mPortPattern.c_str(), JackDefaultAudioType,
@@ -676,7 +676,7 @@ bool JackBackendFactory::init()
     if(!jack_load())
         return false;
 
-    if(!GetConfigValueBool(nullptr, "jack", "spawn-server", false))
+    if(!GetConfigValueBool({}, "jack", "spawn-server", false))
         ClientOptions = static_cast<jack_options_t>(ClientOptions | JackNoStartServer);
 
     const PathNamePair &binname = GetProcBinary();

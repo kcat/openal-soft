@@ -1688,7 +1688,7 @@ bool PipeWirePlayback::reset()
 
     pw_stream_flags flags{PW_STREAM_FLAG_AUTOCONNECT | PW_STREAM_FLAG_INACTIVE
         | PW_STREAM_FLAG_MAP_BUFFERS};
-    if(GetConfigValueBool(mDevice->DeviceName.c_str(), "pipewire", "rt-mix", false))
+    if(GetConfigValueBool(mDevice->DeviceName, "pipewire", "rt-mix", false))
         flags |= PW_STREAM_FLAG_RT_PROCESS;
     if(int res{pw_stream_connect(mStream.get(), PW_DIRECTION_OUTPUT, PwIdAny, flags, &params, 1)})
         throw al::backend_exception{al::backend_error::DeviceError,
@@ -2191,7 +2191,7 @@ bool PipeWireBackendFactory::init()
     if(!gEventHandler.init())
         return false;
 
-    if(!GetConfigValueBool(nullptr, "pipewire", "assume-audio", false)
+    if(!GetConfigValueBool({}, "pipewire", "assume-audio", false)
         && !gEventHandler.waitForAudio())
     {
         gEventHandler.kill();

@@ -631,9 +631,9 @@ BackendFactory &OSSBackendFactory::getFactory()
 
 bool OSSBackendFactory::init()
 {
-    if(auto devopt = ConfigValueStr(nullptr, "oss", "device"))
+    if(auto devopt = ConfigValueStr({}, "oss", "device"))
         DefaultPlayback = std::move(*devopt);
-    if(auto capopt = ConfigValueStr(nullptr, "oss", "capture"))
+    if(auto capopt = ConfigValueStr({}, "oss", "capture"))
         DefaultCapture = std::move(*capopt);
 
     return true;

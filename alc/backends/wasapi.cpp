@@ -1498,7 +1498,7 @@ void WasapiPlayback::prepareFormat(WAVEFORMATEXTENSIBLE &OutputType)
 
 void WasapiPlayback::finalizeFormat(WAVEFORMATEXTENSIBLE &OutputType)
 {
-    if(!GetConfigValueBool(mDevice->DeviceName.c_str(), "wasapi", "allow-resampler", true))
+    if(!GetConfigValueBool(mDevice->DeviceName, "wasapi", "allow-resampler", true))
         mDevice->Frequency = OutputType.Format.nSamplesPerSec;
     else
         mDevice->Frequency = minu(mDevice->Frequency, OutputType.Format.nSamplesPerSec);
@@ -1612,7 +1612,7 @@ bool WasapiPlayback::reset()
 
 HRESULT WasapiPlayback::resetProxy()
 {
-    if(GetConfigValueBool(mDevice->DeviceName.c_str(), "wasapi", "spatial-api", false))
+    if(GetConfigValueBool(mDevice->DeviceName, "wasapi", "spatial-api", false))
     {
         auto &audio = mAudio.emplace<SpatialDevice>();
         HRESULT hr{sDeviceHelper->activateAudioClient(mMMDev, __uuidof(ISpatialAudioClient),
@@ -1777,7 +1777,7 @@ HRESULT WasapiPlayback::resetProxy()
         mDevice->Flags.reset(DirectEar).set(Virtualization);
         if(streamParams.StaticObjectTypeMask == ChannelMask_Stereo)
             mDevice->FmtChans = DevFmtStereo;
-        if(!GetConfigValueBool(mDevice->DeviceName.c_str(), "wasapi", "allow-resampler", true))
+        if(!GetConfigValueBool(mDevice->DeviceName, "wasapi", "allow-resampler", true))
             mDevice->Frequency = OutputType.Format.nSamplesPerSec;
         else
             mDevice->Frequency = minu(mDevice->Frequency, OutputType.Format.nSamplesPerSec);

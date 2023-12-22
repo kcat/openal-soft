@@ -808,7 +808,7 @@ void PulsePlayback::open(std::string_view name)
 
     pa_stream_flags_t flags{PA_STREAM_START_CORKED | PA_STREAM_FIX_FORMAT | PA_STREAM_FIX_RATE |
         PA_STREAM_FIX_CHANNELS};
-    if(!GetConfigValueBool(nullptr, "pulse", "allow-moves", true))
+    if(!GetConfigValueBool({}, "pulse", "allow-moves", true))
         flags |= PA_STREAM_DONT_MOVE;
 
     pa_sample_spec spec{};
@@ -867,9 +867,9 @@ bool PulsePlayback::reset()
 
     pa_stream_flags_t flags{PA_STREAM_START_CORKED | PA_STREAM_INTERPOLATE_TIMING |
         PA_STREAM_AUTO_TIMING_UPDATE | PA_STREAM_EARLY_REQUESTS};
-    if(!GetConfigValueBool(nullptr, "pulse", "allow-moves", true))
+    if(!GetConfigValueBool({}, "pulse", "allow-moves", true))
         flags |= PA_STREAM_DONT_MOVE;
-    if(GetConfigValueBool(mDevice->DeviceName.c_str(), "pulse", "adjust-latency", false))
+    if(GetConfigValueBool(mDevice->DeviceName, "pulse", "adjust-latency", false))
     {
         /* ADJUST_LATENCY can't be specified with EARLY_REQUESTS, for some
          * reason. So if the user wants to adjust the overall device latency,
@@ -878,7 +878,7 @@ bool PulsePlayback::reset()
         flags &= ~PA_STREAM_EARLY_REQUESTS;
         flags |= PA_STREAM_ADJUST_LATENCY;
     }
-    if(GetConfigValueBool(mDevice->DeviceName.c_str(), "pulse", "fix-rate", false)
+    if(GetConfigValueBool(mDevice->DeviceName, "pulse", "fix-rate", false)
         || !mDevice->Flags.test(FrequencyRequest))
         flags |= PA_STREAM_FIX_RATE;
 
@@ -1215,7 +1215,7 @@ void PulseCapture::open(std::string_view name)
     mAttr.fragsize = minu(samples, 50*mDevice->Frequency/1000) * frame_size;
 
     pa_stream_flags_t flags{PA_STREAM_START_CORKED | PA_STREAM_ADJUST_LATENCY};
-    if(!GetConfigValueBool(nullptr, "pulse", "allow-moves", true))
+    if(!GetConfigValueBool({}, "pulse", "allow-moves", true))
         flags |= PA_STREAM_DONT_MOVE;
 
     TRACE("Connecting to \"%s\"\n", pulse_name ? pulse_name : "(default)");
@@ -1426,7 +1426,7 @@ bool PulseBackendFactory::init()
 #endif /* HAVE_DYNLOAD */
 
     pulse_ctx_flags = PA_CONTEXT_NOFLAGS;
-    if(!GetConfigValueBool(nullptr, "pulse", "spawn-server", false))
+    if(!GetConfigValueBool({}, "pulse", "spawn-server", false))
         pulse_ctx_flags |= PA_CONTEXT_NOAUTOSPAWN;
 
     try {

@@ -846,7 +846,7 @@ void InitHrtfPanning(ALCdevice *device)
      */
     device->mRenderMode = RenderMode::Hrtf;
     uint ambi_order{1};
-    if(auto modeopt = device->configValue<std::string>(nullptr, "hrtf-mode"))
+    if(auto modeopt = device->configValue<std::string>({}, "hrtf-mode"))
     {
         struct HrtfModeEntry {
             char name[7]; /* NOLINT(*-avoid-c-arrays) */
@@ -1024,7 +1024,7 @@ void aluInitRenderer(ALCdevice *device, int hrtf_id, std::optional<StereoEncodin
         const bool stablize{device->RealOut.ChannelIndex[FrontCenter] != InvalidChannelIndex
             && device->RealOut.ChannelIndex[FrontLeft] != InvalidChannelIndex
             && device->RealOut.ChannelIndex[FrontRight] != InvalidChannelIndex
-            && device->getConfigValueBool(nullptr, "front-stablizer", false) != 0};
+            && device->getConfigValueBool({}, "front-stablizer", false) != 0};
         const bool hqdec{device->getConfigValueBool("decoder", "hq-mode", true) != 0};
         InitPanning(device, hqdec, stablize, decoder);
         if(decoder)
@@ -1093,7 +1093,7 @@ void aluInitRenderer(ALCdevice *device, int hrtf_id, std::optional<StereoEncodin
 
             HrtfStore *hrtf{device->mHrtf.get()};
             device->mIrSize = hrtf->mIrSize;
-            if(auto hrtfsizeopt = device->configValue<uint>(nullptr, "hrtf-size"))
+            if(auto hrtfsizeopt = device->configValue<uint>({}, "hrtf-size"))
             {
                 if(*hrtfsizeopt > 0 && *hrtfsizeopt < device->mIrSize)
                     device->mIrSize = maxu(*hrtfsizeopt, MinIrLength);
@@ -1132,7 +1132,7 @@ void aluInitRenderer(ALCdevice *device, int hrtf_id, std::optional<StereoEncodin
     device->mRenderMode = RenderMode::Pairwise;
     if(device->Type != DeviceType::Loopback)
     {
-        if(auto cflevopt = device->configValue<int>(nullptr, "cf_level"))
+        if(auto cflevopt = device->configValue<int>({}, "cf_level"))
         {
             if(*cflevopt > 0 && *cflevopt <= 6)
             {

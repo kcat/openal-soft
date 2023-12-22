@@ -117,7 +117,7 @@ void PortPlayback::open(std::string_view name)
             static_cast<int>(name.length()), name.data()};
 
     PaStreamParameters params{};
-    auto devidopt = ConfigValueInt(nullptr, "port", "device");
+    auto devidopt = ConfigValueInt({}, "port", "device");
     if(devidopt && *devidopt >= 0) params.device = *devidopt;
     else params.device = Pa_GetDefaultOutputDevice();
     params.suggestedLatency = mDevice->BufferSize / static_cast<double>(mDevice->Frequency);
@@ -280,7 +280,7 @@ void PortCapture::open(std::string_view name)
 
     mRing = RingBuffer::Create(samples, frame_size, false);
 
-    auto devidopt = ConfigValueInt(nullptr, "port", "capture");
+    auto devidopt = ConfigValueInt({}, "port", "capture");
     if(devidopt && *devidopt >= 0) mParams.device = *devidopt;
     else mParams.device = Pa_GetDefaultOutputDevice();
     mParams.suggestedLatency = 0.0f;

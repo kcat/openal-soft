@@ -108,7 +108,7 @@ AL_API auto AL_APIENTRY alGetError() noexcept -> ALenum
     {
         auto optstr = al::getenv(envname);
         if(!optstr)
-            optstr = ConfigValueStr(nullptr, "game_compat", optname);
+            optstr = ConfigValueStr({}, "game_compat", optname);
 
         if(optstr)
         {

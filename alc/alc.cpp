@@ -427,7 +427,7 @@ void alc_initconfig()
 #ifdef HAVE_NEON
     capfilter |= CPU_CAP_NEON;
 #endif
-    if(auto cpuopt = ConfigValueStr(nullptr, nullptr, "disable-cpu-exts"))
+    if(auto cpuopt = ConfigValueStr({}, {}, "disable-cpu-exts"))
     {
         const char *str{cpuopt->c_str()};
         if(al::strcasecmp(str, "all") == 0)
@@ -480,9 +480,9 @@ void alc_initconfig()
         CPUCapFlags = caps & capfilter;
     }
 
-    if(auto priopt = ConfigValueInt(nullptr, nullptr, "rt-prio"))
+    if(auto priopt = ConfigValueInt({}, {}, "rt-prio"))
         RTPrioLevel = *priopt;
-    if(auto limopt = ConfigValueBool(nullptr, nullptr, "rt-time-limit"))
+    if(auto limopt = ConfigValueBool({}, {}, "rt-time-limit"))
         AllowRTTimeLimit = *limopt;
 
     {
@@ -496,18 +496,18 @@ void alc_initconfig()
                     return true;
                 return false;
             }
-            return GetConfigValueBool(nullptr, "game_compat", optname, false);
+            return GetConfigValueBool({}, "game_compat", optname, false);
         };
         sBufferSubDataCompat = checkflag("__ALSOFT_ENABLE_SUB_DATA_EXT", "enable-sub-data-ext");
         compatflags.set(CompatFlags::ReverseX, checkflag("__ALSOFT_REVERSE_X", "reverse-x"));
         compatflags.set(CompatFlags::ReverseY, checkflag("__ALSOFT_REVERSE_Y", "reverse-y"));
         compatflags.set(CompatFlags::ReverseZ, checkflag("__ALSOFT_REVERSE_Z", "reverse-z"));
 
-        aluInit(compatflags, ConfigValueFloat(nullptr, "game_compat", "nfc-scale").value_or(1.0f));
+        aluInit(compatflags, ConfigValueFloat({}, "game_compat", "nfc-scale").value_or(1.0f));
     }
-    Voice::InitMixer(ConfigValueStr(nullptr, nullptr, "resampler"));
+    Voice::InitMixer(ConfigValueStr({}, {}, "resampler"));
 
-    if(auto uhjfiltopt = ConfigValueStr(nullptr, "uhj", "decode-filter"))
+    if(auto uhjfiltopt = ConfigValueStr({}, "uhj", "decode-filter"))
     {
         if(al::strcasecmp(uhjfiltopt->c_str(), "fir256") == 0)
             UhjDecodeQuality = UhjQualityType::FIR256;
@@ -518,7 +518,7 @@ void alc_initconfig()
         else
             WARN("Unsupported uhj/decode-filter: %s\n", uhjfiltopt->c_str());
     }
-    if(auto uhjfiltopt = ConfigValueStr(nullptr, "uhj", "encode-filter"))
+    if(auto uhjfiltopt = ConfigValueStr({}, "uhj", "encode-filter"))
     {
         if(al::strcasecmp(uhjfiltopt->c_str(), "fir256") == 0)
             UhjEncodeQuality = UhjQualityType::FIR256;
@@ -544,17 +544,17 @@ void alc_initconfig()
             TrapALError = al::strcasecmp(traperr->c_str(), "true") == 0
                 || strtol(traperr->c_str(), nullptr, 0) == 1;
         else
-            TrapALError = !!GetConfigValueBool(nullptr, nullptr, "trap-al-error", false);
+            TrapALError = GetConfigValueBool({}, {}, "trap-al-error", false);
 
         traperr = al::getenv("ALSOFT_TRAP_ALC_ERROR");
         if(traperr)
             TrapALCError = al::strcasecmp(traperr->c_str(), "true") == 0
                 || strtol(traperr->c_str(), nullptr, 0) == 1;
         else
-            TrapALCError = !!GetConfigValueBool(nullptr, nullptr, "trap-alc-error", false);
+            TrapALCError = GetConfigValueBool({}, {}, "trap-alc-error", false);
     }
 
-    if(auto boostopt = ConfigValueFloat(nullptr, "reverb", "boost"))
+    if(auto boostopt = ConfigValueFloat({}, "reverb", "boost"))
     {
         const float valf{std::isfinite(*boostopt) ? clampf(*boostopt, -24.0f, 24.0f) : 0.0f};
         ReverbBoost *= std::pow(10.0f, valf / 20.0f);
@@ -562,7 +562,7 @@ void alc_initconfig()
 
     auto BackendListEnd = std::end(BackendList);
     auto devopt = al::getenv("ALSOFT_DRIVERS");
-    if(devopt || (devopt=ConfigValueStr(nullptr, nullptr, "drivers")))
+    if(devopt || (devopt=ConfigValueStr({}, {}, "drivers")))
     {
         auto backendlist_cur = std::begin(BackendList);
 
@@ -648,7 +648,7 @@ void alc_initconfig()
     if(!CaptureFactory)
         WARN("No capture backend available!\n");
 
-    if(auto exclopt = ConfigValueStr(nullptr, nullptr, "excludefx"))
+    if(auto exclopt = ConfigValueStr({}, {}, "excludefx"))
     {
         const char *next{exclopt->c_str()};
         do {
@@ -670,14 +670,12 @@ void alc_initconfig()
 
     InitEffect(&ALCcontext::sDefaultEffect);
     auto defrevopt = al::getenv("ALSOFT_DEFAULT_REVERB");
-    if(defrevopt || (defrevopt=ConfigValueStr(nullptr, nullptr, "default-reverb")))
+    if(defrevopt || (defrevopt=ConfigValueStr({}, {}, "default-reverb")))
         LoadReverbPreset(defrevopt->c_str(), &ALCcontext::sDefaultEffect);
 
 #ifdef ALSOFT_EAX
     {
-        const char *eax_block_name{"eax"};
-
-        if(const auto eax_enable_opt = ConfigValueBool(nullptr, eax_block_name, "enable"))
+        if(const auto eax_enable_opt = ConfigValueBool({}, "eax", "enable"))
         {
             eax_g_is_enabled = *eax_enable_opt;
             if(!eax_g_is_enabled)
@@ -1021,7 +1019,7 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
     {
         /* Get default settings from the user configuration */
 
-        if(auto freqopt = device->configValue<uint>(nullptr, "frequency"))
+        if(auto freqopt = device->configValue<uint>({}, "frequency"))
         {
             optsrate = clampu(*freqopt, MinOutputRate, MaxOutputRate);
 
@@ -1029,14 +1027,14 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
             period_size = static_cast<uint>(period_size*scale + 0.5);
         }
 
-        if(auto persizeopt = device->configValue<uint>(nullptr, "period_size"))
+        if(auto persizeopt = device->configValue<uint>({}, "period_size"))
             period_size = clampu(*persizeopt, 64, 8192);
-        if(auto numperopt = device->configValue<uint>(nullptr, "periods"))
+        if(auto numperopt = device->configValue<uint>({}, "periods"))
             buffer_size = clampu(*numperopt, 2, 16) * period_size;
         else
             buffer_size = period_size * uint{DefaultNumUpdates};
 
-        if(auto typeopt = device->configValue<std::string>(nullptr, "sample-type"))
+        if(auto typeopt = device->configValue<std::string>({}, "sample-type"))
         {
             struct TypeMap {
                 const char name[8]; /* NOLINT(*-avoid-c-arrays) */
@@ -1061,7 +1059,7 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
             else
                 opttype = iter->type;
         }
-        if(auto chanopt = device->configValue<std::string>(nullptr, "channels"))
+        if(auto chanopt = device->configValue<std::string>({}, "channels"))
         {
             struct ChannelMap {
                 const char name[16]; /* NOLINT(*-avoid-c-arrays) */
@@ -1095,7 +1093,7 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
                 aorder = iter->order;
             }
         }
-        if(auto ambiopt = device->configValue<std::string>(nullptr, "ambi-format"))
+        if(auto ambiopt = device->configValue<std::string>({}, "ambi-format"))
         {
             const ALCchar *fmt{ambiopt->c_str()};
             if(al::strcasecmp(fmt, "fuma") == 0)
@@ -1122,7 +1120,7 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
                 ERR("Unsupported ambi-format: %s\n", fmt);
         }
 
-        if(auto hrtfopt = device->configValue<std::string>(nullptr, "hrtf"))
+        if(auto hrtfopt = device->configValue<std::string>({}, "hrtf"))
         {
             WARN("general/hrtf is deprecated, please use stereo-encoding instead\n");
 
@@ -1139,7 +1137,7 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
         }
     }
 
-    if(auto encopt = device->configValue<std::string>(nullptr, "stereo-encoding"))
+    if(auto encopt = device->configValue<std::string>({}, "stereo-encoding"))
     {
         const char *mode{encopt->c_str()};
         if(al::strcasecmp(mode, "basic") == 0 || al::strcasecmp(mode, "panpot") == 0)
@@ -1475,7 +1473,7 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
 
     if(device->Type != DeviceType::Loopback)
     {
-        if(auto modeopt = device->configValue<std::string>(nullptr, "stereo-mode"))
+        if(auto modeopt = device->configValue<std::string>({}, "stereo-mode"))
         {
             const char *mode{modeopt->c_str()};
             if(al::strcasecmp(mode, "headphones") == 0)
@@ -1492,7 +1490,7 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
     /* Calculate the max number of sources, and split them between the mono and
      * stereo count given the requested number of stereo sources.
      */
-    if(auto srcsopt = device->configValue<uint>(nullptr, "sources"))
+    if(auto srcsopt = device->configValue<uint>({}, "sources"))
     {
         if(*srcsopt <= 0) numMono = 256;
         else numMono = maxu(*srcsopt, 16);
@@ -1508,7 +1506,7 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
     device->NumMonoSources = numMono;
     device->NumStereoSources = numStereo;
 
-    if(auto sendsopt = device->configValue<int>(nullptr, "sends"))
+    if(auto sendsopt = device->configValue<int>({}, "sends"))
         numSends = minu(numSends, static_cast<uint>(clampi(*sendsopt, 0, MaxSendCount)));
     device->NumAuxSends = numSends;
 
@@ -1536,9 +1534,9 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
     if(auto *encoder{device->mUhjEncoder.get()})
         sample_delay += encoder->getDelay();
 
-    if(device->getConfigValueBool(nullptr, "dither", true))
+    if(device->getConfigValueBool({}, "dither", true))
     {
-        int depth{device->configValue<int>(nullptr, "dither-depth").value_or(0)};
+        int depth{device->configValue<int>({}, "dither-depth").value_or(0)};
         if(depth <= 0)
         {
             switch(device->FmtType)
@@ -1571,7 +1569,7 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
               device->DitherDepth);
 
     if(!optlimit)
-        optlimit = device->configValue<bool>(nullptr, "output-limiter");
+        optlimit = device->configValue<bool>({}, "output-limiter");
 
     /* If the gain limiter is unset, use the limiter for integer-based output
      * (where samples must be clamped), and don't for floating-point (which can
@@ -2696,7 +2694,7 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
     }
     context->init();
 
-    if(auto volopt = dev->configValue<float>(nullptr, "volume-adjust"))
+    if(auto volopt = dev->configValue<float>({}, "volume-adjust"))
     {
         const float valf{*volopt};
         if(!std::isfinite(valf))

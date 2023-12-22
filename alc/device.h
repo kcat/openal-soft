@@ -143,28 +143,28 @@ struct ALCdevice : public al::intrusive_ref<ALCdevice>, DeviceBase {
 
     void enumerateHrtfs();
 
-    bool getConfigValueBool(const char *block, const char *key, bool def)
-    { return GetConfigValueBool(DeviceName.c_str(), block, key, def); }
+    bool getConfigValueBool(const std::string_view block, const std::string_view key, bool def)
+    { return GetConfigValueBool(DeviceName, block, key, def); }
 
     template<typename T>
-    inline std::optional<T> configValue(const char *block, const char *key) = delete;
+    inline std::optional<T> configValue(const std::string_view block, const std::string_view key) = delete;
 };
 
 template<>
-inline std::optional<std::string> ALCdevice::configValue(const char *block, const char *key)
-{ return ConfigValueStr(DeviceName.c_str(), block, key); }
+inline std::optional<std::string> ALCdevice::configValue(const std::string_view block, const std::string_view key)
+{ return ConfigValueStr(DeviceName, block, key); }
 template<>
-inline std::optional<int> ALCdevice::configValue(const char *block, const char *key)
-{ return ConfigValueInt(DeviceName.c_str(), block, key); }
+inline std::optional<int> ALCdevice::configValue(const std::string_view block, const std::string_view key)
+{ return ConfigValueInt(DeviceName, block, key); }
 template<>
-inline std::optional<uint> ALCdevice::configValue(const char *block, const char *key)
-{ return ConfigValueUInt(DeviceName.c_str(), block, key); }
+inline std::optional<uint> ALCdevice::configValue(const std::string_view block, const std::string_view key)
+{ return ConfigValueUInt(DeviceName, block, key); }
 template<>
-inline std::optional<float> ALCdevice::configValue(const char *block, const char *key)
-{ return ConfigValueFloat(DeviceName.c_str(), block, key); }
+inline std::optional<float> ALCdevice::configValue(const std::string_view block, const std::string_view key)
+{ return ConfigValueFloat(DeviceName, block, key); }
 template<>
-inline std::optional<bool> ALCdevice::configValue(const char *block, const char *key)
-{ return ConfigValueBool(DeviceName.c_str(), block, key); }
+inline std::optional<bool> ALCdevice::configValue(const std::string_view block, const std::string_view key)
+{ return ConfigValueBool(DeviceName, block, key); }
 
 /** Stores the latest ALC device error. */
 void alcSetError(ALCdevice *device, ALCenum errorCode);

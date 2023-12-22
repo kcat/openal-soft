@@ -277,16 +277,19 @@ void LoadConfigFromFile(std::istream &f)
     ConfOpts.shrink_to_fit();
 }
 
-const char *GetConfigValue(const char *devName, const char *blockName, const char *keyName)
+const char *GetConfigValue(const std::string_view devName, const std::string_view blockName,
+    const std::string_view keyName)
 {
-    if(!keyName)
+    if(keyName.empty())
         return nullptr;
 
+    auto generalName = std::string_view{"general"};
     std::string key;
-    if(blockName && al::strcasecmp(blockName, "general") != 0)
+    if(!blockName.empty() && (blockName.size() != generalName.size() ||
+        al::strncasecmp(blockName.data(), generalName.data(), blockName.size()) != 0))
     {
         key = blockName;
-        if(devName)
+        if(!devName.empty())
         {
             key += '/';
             key += devName;
@@ -296,7 +299,7 @@ const char *GetConfigValue(const char *devName, const char *blockName, const cha
     }
     else
     {
-        if(devName)
+        if(!devName.empty())
         {
             key = devName;
             key += '/';
@@ -315,9 +318,9 @@ const char *GetConfigValue(const char *devName, const char *blockName, const cha
         return nullptr;
     }
 
-    if(!devName)
+    if(devName.empty())
         return nullptr;
-    return GetConfigValue(nullptr, blockName, keyName);
+    return GetConfigValue({}, blockName, keyName);
 }
 
 } // namespace
@@ -489,35 +492,40 @@ void ReadALConfig()
 }
 #endif
 
-std::optional<std::string> ConfigValueStr(const char *devName, const char *blockName, const char *keyName)
+std::optional<std::string> ConfigValueStr(const std::string_view devName,
+    const std::string_view blockName, const std::string_view keyName)
 {
     if(const char *val{GetConfigValue(devName, blockName, keyName)})
         return val;
     return std::nullopt;
 }
 
-std::optional<int> ConfigValueInt(const char *devName, const char *blockName, const char *keyName)
+std::optional<int> ConfigValueInt(const std::string_view devName, const std::string_view blockName,
+    const std::string_view keyName)
 {
     if(const char *val{GetConfigValue(devName, blockName, keyName)})
         return static_cast<int>(std::strtol(val, nullptr, 0));
     return std::nullopt;
 }
 
-std::optional<unsigned int> ConfigValueUInt(const char *devName, const char *blockName, const char *keyName)
+std::optional<unsigned int> ConfigValueUInt(const std::string_view devName,
+    const std::string_view blockName, const std::string_view keyName)
 {
     if(const char *val{GetConfigValue(devName, blockName, keyName)})
         return static_cast<unsigned int>(std::strtoul(val, nullptr, 0));
     return std::nullopt;
 }
 
-std::optional<float> ConfigValueFloat(const char *devName, const char *blockName, const char *keyName)
+std::optional<float> ConfigValueFloat(const std::string_view devName,
+    const std::string_view blockName, const std::string_view keyName)
 {
     if(const char *val{GetConfigValue(devName, blockName, keyName)})
         return std::strtof(val, nullptr);
     return std::nullopt;
 }
 
-std::optional<bool> ConfigValueBool(const char *devName, const char *blockName, const char *keyName)
+std::optional<bool> ConfigValueBool(const std::string_view devName,
+    const std::string_view blockName, const std::string_view keyName)
 {
     if(const char *val{GetConfigValue(devName, blockName, keyName)})
         return al::strcasecmp(val, "on") == 0 || al::strcasecmp(val, "yes") == 0
@@ -525,7 +533,8 @@ std::optional<bool> ConfigValueBool(const char *devName, const char *blockName, 
     return std::nullopt;
 }
 
-bool GetConfigValueBool(const char *devName, const char *blockName, const char *keyName, bool def)
+bool GetConfigValueBool(const std::string_view devName, const std::string_view blockName,
+    const std::string_view keyName, bool def)
 {
     if(const char *val{GetConfigValue(devName, blockName, keyName)})
         return (al::strcasecmp(val, "on") == 0 || al::strcasecmp(val, "yes") == 0

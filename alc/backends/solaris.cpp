@@ -265,7 +265,7 @@ BackendFactory &SolarisBackendFactory::getFactory()
 
 bool SolarisBackendFactory::init()
 {
-    if(auto devopt = ConfigValueStr(nullptr, "solaris", "device"))
+    if(auto devopt = ConfigValueStr({}, "solaris", "device"))
         solaris_driver = std::move(*devopt);
     return true;
 }

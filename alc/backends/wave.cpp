@@ -195,7 +195,7 @@ int WaveBackend::mixerProc()
 
 void WaveBackend::open(std::string_view name)
 {
-    auto fname = ConfigValueStr(nullptr, "wave", "file");
+    auto fname = ConfigValueStr({}, "wave", "file");
     if(!fname) throw al::backend_exception{al::backend_error::NoDevice,
         "No wave output filename"};
 
@@ -231,7 +231,7 @@ bool WaveBackend::reset()
     fseek(mFile, 0, SEEK_SET);
     clearerr(mFile);
 
-    if(GetConfigValueBool(nullptr, "wave", "bformat", false))
+    if(GetConfigValueBool({}, "wave", "bformat", false))
     {
         mDevice->FmtChans = DevFmtAmbi3D;
         mDevice->mAmbiOrder = 1;

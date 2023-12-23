@@ -3410,8 +3410,8 @@ FORCE_ALIGN void AL_APIENTRY alSourceQueueBuffersDirect(ALCcontext *context, ALu
     for(ALsizei i{0};i < nb;i++)
     {
         bool fmt_mismatch{false};
-        ALbuffer *buffer{nullptr};
-        if(buffers[i] && (buffer=LookupBuffer(device, buffers[i])) == nullptr)
+        ALbuffer *buffer{buffers[i] ? LookupBuffer(device, buffers[i]) : nullptr};
+        if(buffers[i] && !buffer)
         {
             context->setError(AL_INVALID_NAME, "Queueing invalid buffer ID %u", buffers[i]);
             goto buffer_error;

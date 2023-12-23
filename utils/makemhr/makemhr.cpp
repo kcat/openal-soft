@@ -342,9 +342,9 @@ static int StoreMhr(const HrirDataT *hData, const char *filename)
     const uint n{hData->mIrPoints};
     uint dither_seed{22222};
     uint fi, ei, ai, i;
-    FILE *fp;
 
-    if((fp=fopen(filename, "wb")) == nullptr)
+    FILE *fp{fopen(filename, "wb")};
+    if(!fp)
     {
         fprintf(stderr, "\nError: Could not open MHR file '%s'.\n", filename);
         return 0;

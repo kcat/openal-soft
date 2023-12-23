@@ -562,7 +562,8 @@ void alc_initconfig()
 
     auto BackendListEnd = std::end(BackendList);
     auto devopt = al::getenv("ALSOFT_DRIVERS");
-    if(devopt || (devopt=ConfigValueStr({}, {}, "drivers")))
+    if(!devopt) devopt = ConfigValueStr({}, {}, "drivers");
+    if(devopt)
     {
         auto backendlist_cur = std::begin(BackendList);
 
@@ -670,8 +671,8 @@ void alc_initconfig()
 
     InitEffect(&ALCcontext::sDefaultEffect);
     auto defrevopt = al::getenv("ALSOFT_DEFAULT_REVERB");
-    if(defrevopt || (defrevopt=ConfigValueStr({}, {}, "default-reverb")))
-        LoadReverbPreset(defrevopt->c_str(), &ALCcontext::sDefaultEffect);
+    if(!defrevopt) defrevopt = ConfigValueStr({}, {}, "default-reverb");
+    if(defrevopt) LoadReverbPreset(defrevopt->c_str(), &ALCcontext::sDefaultEffect);
 
 #ifdef ALSOFT_EAX
     {
@@ -2556,23 +2557,25 @@ ALC_API ALCboolean ALC_APIENTRY alcIsExtensionPresent(ALCdevice *device, const A
 {
     DeviceRef dev{VerifyDevice(device)};
     if(!extName)
-        alcSetError(dev.get(), ALC_INVALID_VALUE);
-    else
     {
-        size_t len = strlen(extName);
-        const char *ptr = (dev ? alcExtensionList : alcNoDeviceExtList);
-        while(ptr && *ptr)
-        {
-            if(al::strncasecmp(ptr, extName, len) == 0 && (ptr[len] == '\0' || isspace(ptr[len])))
-                return ALC_TRUE;
+        alcSetError(dev.get(), ALC_INVALID_VALUE);
+        return ALC_FALSE;
+    }
 
-            if((ptr=strchr(ptr, ' ')) != nullptr)
-            {
-                do {
-                    ++ptr;
-                } while(isspace(*ptr));
-            }
-        }
+    const std::string_view tofind{extName};
+    auto extlist = dev ? std::string_view{alcExtensionList} : std::string_view{alcNoDeviceExtList};
+    while(!extlist.empty())
+    {
+        auto nextpos = extlist.find(' ');
+        auto tocheck = extlist.substr(0, nextpos);
+        if(tocheck.size() == tofind.size()
+            && al::strncasecmp(tofind.data(), tocheck.data(), tofind.size()) == 0)
+            return ALC_TRUE;
+
+        if(nextpos == std::string_view::npos)
+            break;
+
+        extlist.remove_prefix(nextpos+1);
     }
     return ALC_FALSE;
 }

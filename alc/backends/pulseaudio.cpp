@@ -510,8 +510,8 @@ void MainloopUniqueLock::connectContext()
     pa_context_set_state_callback(mutex()->mContext, [](pa_context *ctx, void *pdata) noexcept
     { return static_cast<MainloopUniqueLock*>(pdata)->contextStateCallback(ctx); }, this);
 
-    int err;
-    if((err=pa_context_connect(mutex()->mContext, nullptr, pulse_ctx_flags, nullptr)) >= 0)
+    int err{pa_context_connect(mutex()->mContext, nullptr, pulse_ctx_flags, nullptr)};
+    if(err >= 0)
     {
         pa_context_state_t state;
         while((state=pa_context_get_state(mutex()->mContext)) != PA_CONTEXT_READY)

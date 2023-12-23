@@ -1088,8 +1088,11 @@ void NodeProxy::paramCallback(int, uint32_t id, uint32_t, uint32_t, const spa_po
 
         if(const spa_pod_prop *prop{spa_pod_find_prop(param, nullptr, SPA_FORMAT_AUDIO_position)})
             node->parsePositions(&prop->value, force_update);
-        else if((prop=spa_pod_find_prop(param, nullptr, SPA_FORMAT_AUDIO_channels)) != nullptr)
-            node->parseChannelCount(&prop->value, force_update);
+        else
+        {
+            prop = spa_pod_find_prop(param, nullptr, SPA_FORMAT_AUDIO_channels);
+            if(prop) node->parseChannelCount(&prop->value, force_update);
+        }
     }
 }
 

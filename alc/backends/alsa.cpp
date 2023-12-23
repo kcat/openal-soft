@@ -311,12 +311,14 @@ std::vector<DevMap> probe_devices(snd_pcm_stream_t stream)
         std::string name{"hw:" + std::to_string(card)};
 
         snd_ctl_t *handle;
-        if((err=snd_ctl_open(&handle, name.c_str(), 0)) < 0)
+        err = snd_ctl_open(&handle, name.c_str(), 0);
+        if(err < 0)
         {
             ERR("control open (hw:%d): %s\n", card, snd_strerror(err));
             continue;
         }
-        if((err=snd_ctl_card_info(handle, info)) < 0)
+        err = snd_ctl_card_info(handle, info);
+        if(err < 0)
         {
             ERR("control hardware info (hw:%d): %s\n", card, snd_strerror(err));
             snd_ctl_close(handle);
@@ -340,7 +342,8 @@ std::vector<DevMap> probe_devices(snd_pcm_stream_t stream)
             snd_pcm_info_set_device(pcminfo, static_cast<uint>(dev));
             snd_pcm_info_set_subdevice(pcminfo, 0);
             snd_pcm_info_set_stream(pcminfo, stream);
-            if((err=snd_ctl_pcm_info(handle, pcminfo)) < 0)
+            err = snd_ctl_pcm_info(handle, pcminfo);
+            if(err < 0)
             {
                 if(err != -ENOENT)
                     ERR("control digital audio info (hw:%d): %s\n", card, snd_strerror(err));
@@ -405,13 +408,14 @@ int verify_state(snd_pcm_t *handle)
             break;
 
         case SND_PCM_STATE_XRUN:
-            if((err=snd_pcm_recover(handle, -EPIPE, 1)) < 0)
-                return err;
+            err=snd_pcm_recover(handle, -EPIPE, 1);
+            if(err < 0) return err;
             break;
         case SND_PCM_STATE_SUSPENDED:
-            if((err=snd_pcm_recover(handle, -ESTRPIPE, 1)) < 0)
-                return err;
+            err = snd_pcm_recover(handle, -ESTRPIPE, 1);
+            if(err < 0) return err;
             break;
+
         case SND_PCM_STATE_DISCONNECTED:
             return -ENODEV;
     }
@@ -698,7 +702,8 @@ bool AlsaPlayback::reset()
     int err{};
     HwParamsPtr hp{CreateHwParams()};
 #define CHECK(x) do {                                                         \
-    if((err=(x)) < 0)                                                         \
+    err = (x);                                                                \
+    if(err < 0)                                                               \
         throw al::backend_exception{al::backend_error::DeviceError, #x " failed: %s", \
             snd_strerror(err)};                                               \
 } while(0)
@@ -759,11 +764,11 @@ bool AlsaPlayback::reset()
         WARN("Failed to enable ALSA resampler\n");
     CHECK(snd_pcm_hw_params_set_rate_near(mPcmHandle, hp.get(), &rate, nullptr));
     /* set period time (implicitly constrains period/buffer parameters) */
-    if((err=snd_pcm_hw_params_set_period_time_near(mPcmHandle, hp.get(), &periodLen, nullptr)) < 0)
-        ERR("snd_pcm_hw_params_set_period_time_near failed: %s\n", snd_strerror(err));
+    err = snd_pcm_hw_params_set_period_time_near(mPcmHandle, hp.get(), &periodLen, nullptr);
+    if(err < 0) ERR("snd_pcm_hw_params_set_period_time_near failed: %s\n", snd_strerror(err));
     /* set buffer time (implicitly sets buffer size/bytes/time and period size/bytes) */
-    if((err=snd_pcm_hw_params_set_buffer_time_near(mPcmHandle, hp.get(), &bufferLen, nullptr)) < 0)
-        ERR("snd_pcm_hw_params_set_buffer_time_near failed: %s\n", snd_strerror(err));
+    err = snd_pcm_hw_params_set_buffer_time_near(mPcmHandle, hp.get(), &bufferLen, nullptr);
+    if(err < 0) ERR("snd_pcm_hw_params_set_buffer_time_near failed: %s\n", snd_strerror(err));
     /* install and prepare hardware configuration */
     CHECK(snd_pcm_hw_params(mPcmHandle, hp.get()));
 
@@ -801,7 +806,8 @@ void AlsaPlayback::start()
     snd_pcm_access_t access{};
     HwParamsPtr hp{CreateHwParams()};
 #define CHECK(x) do {                                                         \
-    if((err=(x)) < 0)                                                         \
+    err = (x);                                                                \
+    if(err < 0)                                                               \
         throw al::backend_exception{al::backend_error::DeviceError, #x " failed: %s", \
             snd_strerror(err)};                                               \
 } while(0)
@@ -958,7 +964,8 @@ void AlsaCapture::open(std::string_view name)
     bool needring{false};
     HwParamsPtr hp{CreateHwParams()};
 #define CHECK(x) do {                                                         \
-    if((err=(x)) < 0)                                                         \
+    err = (x);                                                                \
+    if(err < 0)                                                               \
         throw al::backend_exception{al::backend_error::DeviceError, #x " failed: %s", \
             snd_strerror(err)};                                               \
 } while(0)
@@ -1065,7 +1072,8 @@ void AlsaCapture::captureSamples(std::byte *buffer, uint samples)
 
             if(amt == -EAGAIN)
                 continue;
-            if((amt=snd_pcm_recover(mPcmHandle, static_cast<int>(amt), 1)) >= 0)
+            amt = snd_pcm_recover(mPcmHandle, static_cast<int>(amt), 1);
+            if(amt >= 0)
             {
                 amt = snd_pcm_start(mPcmHandle);
                 if(amt >= 0)
@@ -1102,7 +1110,8 @@ uint AlsaCapture::availableSamples()
     {
         ERR("avail update failed: %s\n", snd_strerror(static_cast<int>(avail)));
 
-        if((avail=snd_pcm_recover(mPcmHandle, static_cast<int>(avail), 1)) >= 0)
+        avail = snd_pcm_recover(mPcmHandle, static_cast<int>(avail), 1);
+        if(avail >= 0)
         {
             if(mDoCapture)
                 avail = snd_pcm_start(mPcmHandle);
@@ -1138,7 +1147,8 @@ uint AlsaCapture::availableSamples()
 
             if(amt == -EAGAIN)
                 continue;
-            if((amt=snd_pcm_recover(mPcmHandle, static_cast<int>(amt), 1)) >= 0)
+            amt = snd_pcm_recover(mPcmHandle, static_cast<int>(amt), 1);
+            if(amt >= 0)
             {
                 if(mDoCapture)
                     amt = snd_pcm_start(mPcmHandle);

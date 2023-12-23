@@ -522,7 +522,8 @@ int main(int argc, char **argv)
 
         /* Get the name portion, without the path, for display. */
         const char *namepart{strrchr(argv[i], '/')};
-        if(namepart || (namepart=strrchr(argv[i], '\\')))
+        if(!namepart) namepart = strrchr(argv[i], '\\');
+        if(namepart)
             ++namepart;
         else
             namepart = argv[i];

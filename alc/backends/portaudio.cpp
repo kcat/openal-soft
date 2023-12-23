@@ -394,7 +394,8 @@ bool PortBackendFactory::init()
         LOAD_FUNC(Pa_GetStreamInfo);
 #undef LOAD_FUNC
 
-        if((err=Pa_Initialize()) != paNoError)
+        err = Pa_Initialize();
+        if(err != paNoError)
         {
             ERR("Pa_Initialize() returned an error: %s\n", Pa_GetErrorText(err));
             CloseLib(pa_handle);

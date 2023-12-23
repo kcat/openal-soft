@@ -38,6 +38,7 @@
 
 #include "albit.h"
 #include "alfstream.h"
+#include "alnumeric.h"
 #include "alspan.h"
 #include "alstring.h"
 #include "makemhr.h"
@@ -1153,7 +1154,7 @@ static int LoadSofaSource(SourceRefT *src, const uint hrirRate, const uint n, do
         return 0;
     }
 
-    al::span<float,3> coords{&sofa->hrtf->SourcePosition.values[3 * nearest], 3};
+    al::span<float,3> coords{&sofa->hrtf->SourcePosition.values[3_z * nearest], 3};
     if(std::abs(coords[0] - target[0]) > 0.001 || std::abs(coords[1] - target[1]) > 0.001
         || std::abs(coords[2] - target[2]) > 0.001)
     {
@@ -1745,12 +1746,12 @@ static void AverageHrirMagnitude(const uint points, const uint n, const double *
 static int ProcessSources(TokenReaderT *tr, HrirDataT *hData, const uint outRate)
 {
     const uint channels{(hData->mChannelType == CT_STEREO) ? 2u : 1u};
-    hData->mHrirsBase.resize(channels * hData->mIrCount * hData->mIrSize);
+    hData->mHrirsBase.resize(size_t{channels} * hData->mIrCount * hData->mIrSize);
     double *hrirs = hData->mHrirsBase.data();
     auto hrir = std::vector<double>(hData->mIrSize);
     uint line, col, fi, ei, ai;
 
-    std::vector<double> onsetSamples(OnsetRateMultiple * hData->mIrPoints);
+    std::vector<double> onsetSamples(size_t{OnsetRateMultiple} * hData->mIrPoints);
     PPhaseResampler onsetResampler;
     onsetResampler.init(hData->mIrRate, OnsetRateMultiple*hData->mIrRate);
 
@@ -1828,9 +1829,9 @@ static int ProcessSources(TokenReaderT *tr, HrirDataT *hData, const uint outRate
                 fflush(stdout);
 
                 std::array aer{
-                    sofa->hrtf->SourcePosition.values[3*si],
-                    sofa->hrtf->SourcePosition.values[3*si + 1],
-                    sofa->hrtf->SourcePosition.values[3*si + 2]
+                    sofa->hrtf->SourcePosition.values[3_uz*si],
+                    sofa->hrtf->SourcePosition.values[3_uz*si + 1],
+                    sofa->hrtf->SourcePosition.values[3_uz*si + 2]
                 };
                 mysofa_c2s(aer.data());
 
@@ -1869,7 +1870,7 @@ static int ProcessSources(TokenReaderT *tr, HrirDataT *hData, const uint outRate
                 }
 
                 ExtractSofaHrir(sofa, si, 0, src.mOffset, hData->mIrPoints, hrir.data());
-                azd->mIrs[0] = &hrirs[hData->mIrSize * azd->mIndex];
+                azd->mIrs[0] = &hrirs[size_t{hData->mIrSize} * azd->mIndex];
                 azd->mDelays[0] = AverageHrirOnset(onsetResampler, onsetSamples, hData->mIrRate,
                     hData->mIrPoints, hrir.data(), 1.0, azd->mDelays[0]);
                 if(resampler)
@@ -1879,7 +1880,7 @@ static int ProcessSources(TokenReaderT *tr, HrirDataT *hData, const uint outRate
                 if(src.mChannel == 1)
                 {
                     ExtractSofaHrir(sofa, si, 1, src.mOffset, hData->mIrPoints, hrir.data());
-                    azd->mIrs[1] = &hrirs[hData->mIrSize * (hData->mIrCount + azd->mIndex)];
+                    azd->mIrs[1] = &hrirs[hData->mIrSize * (size_t{hData->mIrCount}+azd->mIndex)];
                     azd->mDelays[1] = AverageHrirOnset(onsetResampler, onsetSamples,
                         hData->mIrRate, hData->mIrPoints, hrir.data(), 1.0, azd->mDelays[1]);
                     if(resampler)
@@ -1940,7 +1941,7 @@ static int ProcessSources(TokenReaderT *tr, HrirDataT *hData, const uint outRate
                     return 0;
                 }
             }
-            azd->mIrs[ti] = &hrirs[hData->mIrSize * (ti * hData->mIrCount + azd->mIndex)];
+            azd->mIrs[ti] = &hrirs[hData->mIrSize * (ti*size_t{hData->mIrCount} + azd->mIndex)];
             azd->mDelays[ti] = AverageHrirOnset(onsetResampler, onsetSamples, hData->mIrRate,
                 hData->mIrPoints, hrir.data(), 1.0 / factor[ti], azd->mDelays[ti]);
             if(resampler)
@@ -2017,7 +2018,7 @@ static int ProcessSources(TokenReaderT *tr, HrirDataT *hData, const uint outRate
                 {
                     HrirAzT *azd = &hData->mFds[fi].mEvs[ei].mAzs[ai];
 
-                    azd->mIrs[ti] = &hrirs[hData->mIrSize * (ti * hData->mIrCount + azd->mIndex)];
+                    azd->mIrs[ti] = &hrirs[hData->mIrSize * (ti*size_t{hData->mIrCount} + azd->mIndex)];
                 }
             }
         }

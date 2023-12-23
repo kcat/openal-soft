@@ -1771,7 +1771,7 @@ void PipeWirePlayback::start()
 
             mDevice->UpdateSize = updatesize;
             mDevice->BufferSize = static_cast<uint>(ptime.buffered + delay +
-                totalbuffers*updatesize);
+                uint64_t{totalbuffers}*updatesize);
             break;
         }
 #else

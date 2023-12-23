@@ -415,11 +415,11 @@ int main(int argc, char **argv)
         }
 
         auto encoder = std::make_unique<UhjEncoder>();
-        auto splbuf = al::vector<FloatBufferLine, 16>(static_cast<uint>(9+ininfo.channels)+uhjchans);
-        auto ambmem = al::span<FloatBufferLine,4>{splbuf.data(), 4};
-        auto encmem = al::span<FloatBufferLine,4>{&splbuf[4], 4};
-        auto srcmem = al::span<float,BufferLineSize>{splbuf[8].data(), BufferLineSize};
-        auto outmem = al::span<float>{splbuf[9].data(), BufferLineSize*uhjchans};
+        auto splbuf = al::vector<FloatBufferLine, 16>(static_cast<uint>(ininfo.channels)+9+size_t{uhjchans});
+        auto ambmem = al::span{splbuf}.subspan<0,4>();
+        auto encmem = al::span{splbuf}.subspan<4,4>();
+        auto srcmem = al::span{splbuf[8]};
+        auto outmem = al::span<float>{splbuf[9].data(), size_t{BufferLineSize}*uhjchans};
 
         /* A number of initial samples need to be skipped to cut the lead-in
          * from the all-pass filter delay. The same number of samples need to

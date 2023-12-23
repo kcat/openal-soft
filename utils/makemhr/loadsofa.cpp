@@ -39,6 +39,7 @@
 #include <vector>
 
 #include "alspan.h"
+#include "alnumeric.h"
 #include "makemhr.h"
 #include "polyphase_resampler.h"
 #include "sofa-support.h"
@@ -261,7 +262,7 @@ static bool LoadResponses(MYSOFA_HRTF *sofaHrtf, HrirDataT *hData, const DelayTy
     auto load_proc = [sofaHrtf,hData,delayType,outRate,&loaded_count]() -> bool
     {
         const uint channels{(hData->mChannelType == CT_STEREO) ? 2u : 1u};
-        hData->mHrirsBase.resize(channels * hData->mIrCount * hData->mIrSize, 0.0);
+        hData->mHrirsBase.resize(channels * size_t{hData->mIrCount} * hData->mIrSize, 0.0);
         double *hrirs = hData->mHrirsBase.data();
 
         std::vector<double> restmp;
@@ -277,9 +278,9 @@ static bool LoadResponses(MYSOFA_HRTF *sofaHrtf, HrirDataT *hData, const DelayTy
             loaded_count.fetch_add(1u);
 
             std::array aer{
-                sofaHrtf->SourcePosition.values[3*si],
-                sofaHrtf->SourcePosition.values[3*si + 1],
-                sofaHrtf->SourcePosition.values[3*si + 2]
+                sofaHrtf->SourcePosition.values[3_uz*si],
+                sofaHrtf->SourcePosition.values[3_uz*si + 1],
+                sofaHrtf->SourcePosition.values[3_uz*si + 2]
             };
             mysofa_c2s(aer.data());
 
@@ -317,13 +318,13 @@ static bool LoadResponses(MYSOFA_HRTF *sofaHrtf, HrirDataT *hData, const DelayTy
 
             for(uint ti{0u};ti < channels;++ti)
             {
-                azd->mIrs[ti] = &hrirs[hData->mIrSize * (hData->mIrCount*ti + azd->mIndex)];
+                azd->mIrs[ti] = &hrirs[(size_t{hData->mIrCount}*ti + azd->mIndex)*hData->mIrSize];
                 if(!resampler)
-                    std::copy_n(&sofaHrtf->DataIR.values[(si*sofaHrtf->R + ti)*sofaHrtf->N],
+                    std::copy_n(&sofaHrtf->DataIR.values[(size_t{si}*sofaHrtf->R + ti)*sofaHrtf->N],
                         sofaHrtf->N, azd->mIrs[ti]);
                 else
                 {
-                    std::copy_n(&sofaHrtf->DataIR.values[(si*sofaHrtf->R + ti)*sofaHrtf->N],
+                    std::copy_n(&sofaHrtf->DataIR.values[(size_t{si}*sofaHrtf->R + ti)*sofaHrtf->N],
                         sofaHrtf->N, restmp.data());
                     resampler->process(sofaHrtf->N, restmp.data(), hData->mIrSize, azd->mIrs[ti]);
                 }
@@ -520,7 +521,7 @@ bool LoadSofaFile(const char *filename, const uint numThreads, const uint fftSiz
             for(uint ai{0u};ai < hData->mFds[fi].mEvs[ei].mAzs.size();ai++)
             {
                 HrirAzT &azd = hData->mFds[fi].mEvs[ei].mAzs[ai];
-                for(uint ti{0u};ti < channels;ti++)
+                for(size_t ti{0u};ti < channels;ti++)
                     azd.mIrs[ti] = &hrirs[hData->mIrSize * (hData->mIrCount*ti + azd.mIndex)];
             }
         }
@@ -533,7 +534,7 @@ bool LoadSofaFile(const char *filename, const uint numThreads, const uint fftSiz
     auto onset_proc = [hData,channels,&hrir_done]() -> bool
     {
         /* Temporary buffer used to calculate the IR's onset. */
-        auto upsampled = std::vector<double>(OnsetRateMultiple * hData->mIrPoints);
+        auto upsampled = std::vector<double>(size_t{OnsetRateMultiple} * hData->mIrPoints);
         /* This resampler is used to help detect the response onset. */
         PPhaseResampler rs;
         rs.init(hData->mIrRate, OnsetRateMultiple*hData->mIrRate);

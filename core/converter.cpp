@@ -213,8 +213,8 @@ uint SampleConverter::availableOut(uint srcframes) const
 
 uint SampleConverter::convert(const void **src, uint *srcframes, void *dst, uint dstframes)
 {
-    const uint SrcFrameSize{static_cast<uint>(mChan.size()) * mSrcTypeSize};
-    const uint DstFrameSize{static_cast<uint>(mChan.size()) * mDstTypeSize};
+    const size_t SrcFrameSize{mChan.size() * mSrcTypeSize};
+    const size_t DstFrameSize{mChan.size() * mDstTypeSize};
     const uint increment{mIncrement};
     auto SamplesIn = static_cast<const std::byte*>(*src);
     uint NumSrcSamples{*srcframes};
@@ -325,9 +325,9 @@ uint SampleConverter::convertPlanar(const void **src, uint *srcframes, void *con
              */
             for(size_t chan{0u};chan < mChan.size();chan++)
             {
-                LoadSamples(&mChan[chan].PrevSamples[prepcount],
-                    static_cast<const std::byte*>(src[chan]), 1, mSrcType, readable);
-                src[chan] = static_cast<const std::byte*>(src[chan]) + mSrcTypeSize*readable;
+                auto *samples = static_cast<const std::byte*>(src[chan]);
+                LoadSamples(&mChan[chan].PrevSamples[prepcount], samples, 1, mSrcType, readable);
+                src[chan] = samples + size_t{mSrcTypeSize}*readable;
             }
 
             mSrcPrepCount = prepcount + readable;
@@ -374,7 +374,7 @@ uint SampleConverter::convertPlanar(const void **src, uint *srcframes, void *con
             mResample(&mState, SrcData+MaxResamplerEdge, DataPosFrac, increment,
                 {DstData, DstSize});
 
-            std::byte *DstSamples = static_cast<std::byte*>(dst[chan]) + pos*mDstTypeSize;
+            auto *DstSamples = static_cast<std::byte*>(dst[chan]) + pos*size_t{mDstTypeSize};
             StoreSamples(DstSamples, DstData, 1, mDstType, DstSize);
         }
 
@@ -387,7 +387,7 @@ uint SampleConverter::convertPlanar(const void **src, uint *srcframes, void *con
         /* Update the src and dst pointers in case there's still more to do. */
         const uint srcread{minu(NumSrcSamples, SrcDataEnd + mSrcPrepCount - prepcount)};
         for(size_t chan{0u};chan < mChan.size();chan++)
-            src[chan] = static_cast<const std::byte*>(src[chan]) + mSrcTypeSize*srcread;
+            src[chan] = static_cast<const std::byte*>(src[chan]) + size_t{mSrcTypeSize}*srcread;
         NumSrcSamples -= srcread;
 
         pos += DstSize;

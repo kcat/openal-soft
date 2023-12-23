@@ -208,9 +208,9 @@ void Resample_<BSincTag,SSETag>(const InterpState *state, const float *RESTRICT 
         __m128 r4{_mm_setzero_ps()};
         {
             const __m128 pf4{_mm_set1_ps(pf)};
-            const float *RESTRICT fil{filter + m*pi*2};
+            const float *RESTRICT fil{filter + m*pi*2_uz};
             const float *RESTRICT phd{fil + m};
-            const float *RESTRICT scd{fil + BSincPhaseCount*2*m};
+            const float *RESTRICT scd{fil + BSincPhaseCount*2_uz*m};
             const float *RESTRICT spd{scd + m};
             size_t td{m >> 2};
             size_t j{0u};
@@ -256,7 +256,7 @@ void Resample_<FastBSincTag,SSETag>(const InterpState *state, const float *RESTR
         __m128 r4{_mm_setzero_ps()};
         {
             const __m128 pf4{_mm_set1_ps(pf)};
-            const float *RESTRICT fil{filter + m*pi*2};
+            const float *RESTRICT fil{filter + m*pi*2_uz};
             const float *RESTRICT phd{fil + m};
             size_t td{m >> 2};
             size_t j{0u};

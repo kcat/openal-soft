@@ -244,9 +244,9 @@ void Resample_<BSincTag,NEONTag>(const InterpState *state, const float *RESTRICT
         float32x4_t r4{vdupq_n_f32(0.0f)};
         {
             const float32x4_t pf4{vdupq_n_f32(pf)};
-            const float *RESTRICT fil{filter + m*pi*2};
+            const float *RESTRICT fil{filter + m*pi*2_uz};
             const float *RESTRICT phd{fil + m};
-            const float *RESTRICT scd{fil + BSincPhaseCount*2*m};
+            const float *RESTRICT scd{fil + BSincPhaseCount*2_uz*m};
             const float *RESTRICT spd{scd + m};
             size_t td{m >> 2};
             size_t j{0u};
@@ -291,7 +291,7 @@ void Resample_<FastBSincTag,NEONTag>(const InterpState *state, const float *REST
         float32x4_t r4{vdupq_n_f32(0.0f)};
         {
             const float32x4_t pf4{vdupq_n_f32(pf)};
-            const float *RESTRICT fil{filter + m*pi*2};
+            const float *RESTRICT fil{filter + m*pi*2_uz};
             const float *RESTRICT phd{fil + m};
             size_t td{m >> 2};
             size_t j{0u};

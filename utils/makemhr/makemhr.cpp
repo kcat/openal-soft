@@ -91,6 +91,7 @@
 #include "alcomplex.h"
 #include "alfstream.h"
 #include "alnumbers.h"
+#include "alnumeric.h"
 #include "alspan.h"
 #include "alstring.h"
 #include "loaddef.h"
@@ -383,7 +384,7 @@ static int StoreMhr(const HrirDataT *hData, const char *filename)
             for(ai = 0;ai < hData->mFds[fi].mEvs[ei].mAzs.size();ai++)
             {
                 HrirAzT *azd = &hData->mFds[fi].mEvs[ei].mAzs[ai];
-                std::array<double,2*MaxTruncSize> out{};
+                std::array<double,MaxTruncSize*2_uz> out{};
 
                 TpdfDither(out.data(), azd->mIrs[0], scale, n, channels, &dither_seed);
                 if(hData->mChannelType == CT_STEREO)
@@ -532,7 +533,7 @@ static void CalculateDiffuseFieldAverage(const HrirDataT *hData, const uint chan
     const int weighted, const double limit, double *dfa)
 {
     std::vector<double> weights(hData->mFds.size() * MAX_EV_COUNT);
-    uint count, ti, fi, ei, i, ai;
+    uint count;
 
     if(weighted)
     {
@@ -546,41 +547,41 @@ static void CalculateDiffuseFieldAverage(const HrirDataT *hData, const uint chan
         // If coverage weighting is not used, the weights still need to be
         // averaged by the number of existing HRIRs.
         count = hData->mIrCount;
-        for(fi = 0;fi < hData->mFds.size();fi++)
+        for(size_t fi{0};fi < hData->mFds.size();++fi)
         {
-            for(ei = 0;ei < hData->mFds[fi].mEvStart;ei++)
+            for(size_t ei{0};ei < hData->mFds[fi].mEvStart;++ei)
                 count -= static_cast<uint>(hData->mFds[fi].mEvs[ei].mAzs.size());
         }
         weight = 1.0 / count;
 
-        for(fi = 0;fi < hData->mFds.size();fi++)
+        for(size_t fi{0};fi < hData->mFds.size();++fi)
         {
-            for(ei = hData->mFds[fi].mEvStart;ei < hData->mFds[fi].mEvs.size();ei++)
+            for(size_t ei{hData->mFds[fi].mEvStart};ei < hData->mFds[fi].mEvs.size();++ei)
                 weights[(fi * MAX_EV_COUNT) + ei] = weight;
         }
     }
-    for(ti = 0;ti < channels;ti++)
+    for(size_t ti{0};ti < channels;++ti)
     {
-        for(i = 0;i < m;i++)
+        for(size_t i{0};i < m;++i)
             dfa[(ti * m) + i] = 0.0;
-        for(fi = 0;fi < hData->mFds.size();fi++)
+        for(size_t fi{0};fi < hData->mFds.size();++fi)
         {
-            for(ei = hData->mFds[fi].mEvStart;ei < hData->mFds[fi].mEvs.size();ei++)
+            for(size_t ei{hData->mFds[fi].mEvStart};ei < hData->mFds[fi].mEvs.size();++ei)
             {
-                for(ai = 0;ai < hData->mFds[fi].mEvs[ei].mAzs.size();ai++)
+                for(size_t ai{0};ai < hData->mFds[fi].mEvs[ei].mAzs.size();++ai)
                 {
                     HrirAzT *azd = &hData->mFds[fi].mEvs[ei].mAzs[ai];
                     // Get the weight for this HRIR's contribution.
                     double weight = weights[(fi * MAX_EV_COUNT) + ei];
 
                     // Add this HRIR's weighted power average to the total.
-                    for(i = 0;i < m;i++)
+                    for(size_t i{0};i < m;++i)
                         dfa[(ti * m) + i] += weight * azd->mIrs[ti][i] * azd->mIrs[ti][i];
                 }
             }
         }
         // Finish the average calculation and keep it from being too small.
-        for(i = 0;i < m;i++)
+        for(size_t i{0};i < m;++i)
             dfa[(ti * m) + i] = std::max(sqrt(dfa[(ti * m) + i]), Epsilon);
         // Apply a limit to the magnitude range of the diffuse-field average
         // if desired.
@@ -593,17 +594,15 @@ static void CalculateDiffuseFieldAverage(const HrirDataT *hData, const uint chan
 // set using the given average response.
 static void DiffuseFieldEqualize(const uint channels, const uint m, const double *dfa, const HrirDataT *hData)
 {
-    uint ti, fi, ei, i;
-
-    for(fi = 0;fi < hData->mFds.size();fi++)
+    for(size_t fi{0};fi < hData->mFds.size();++fi)
     {
-        for(ei = hData->mFds[fi].mEvStart;ei < hData->mFds[fi].mEvs.size();ei++)
+        for(size_t ei{hData->mFds[fi].mEvStart};ei < hData->mFds[fi].mEvs.size();++ei)
         {
             for(auto &azd : hData->mFds[fi].mEvs[ei].mAzs)
             {
-                for(ti = 0;ti < channels;ti++)
+                for(size_t ti{0};ti < channels;++ti)
                 {
-                    for(i = 0;i < m;i++)
+                    for(size_t i{0};i < m;++i)
                         azd.mIrs[ti][i] /= dfa[(ti * m) + i];
                 }
             }
@@ -1224,7 +1223,7 @@ static int ProcessDefinition(const char *inName, const uint outRate, const Chann
     {
         uint c{(hData.mChannelType == CT_STEREO) ? 2u : 1u};
         uint m{hData.mFftSize/2u + 1u};
-        auto dfa = std::vector<double>(c * m);
+        auto dfa = std::vector<double>(size_t{c} * m);
 
         if(hData.mFds.size() > 1)
         {

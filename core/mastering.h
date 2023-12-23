@@ -5,6 +5,7 @@
 #include <memory>
 
 #include "almalloc.h"
+#include "alnumeric.h"
 #include "bufferline.h"
 
 struct SlidingHold;
@@ -45,7 +46,7 @@ struct Compressor {
     float mAttack{0.0f};
     float mRelease{0.0f};
 
-    alignas(16) std::array<float,2*BufferLineSize> mSideChain{};
+    alignas(16) std::array<float,BufferLineSize*2_uz> mSideChain{};
     alignas(16) std::array<float,BufferLineSize> mCrestFactor{};
 
     SlidingHold *mHold{nullptr};

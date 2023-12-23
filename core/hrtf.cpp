@@ -270,7 +270,7 @@ void HrtfStore::getCoeffs(float elevation, float azimuth, float distance, float 
         const float mult{blend[c]};
         auto blend_coeffs = [mult](const float src, const float coeff) noexcept -> float
         { return src*mult + coeff; };
-        std::transform(srccoeffs, srccoeffs + HrirLength*2, coeffout, coeffout, blend_coeffs);
+        std::transform(srccoeffs, srccoeffs + HrirLength*2_uz, coeffout, coeffout, blend_coeffs);
     }
 }
 

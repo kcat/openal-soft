@@ -409,7 +409,7 @@ bool OSSPlayback::reset()
 
     setDefaultChannelOrder();
 
-    mMixData.resize(mDevice->UpdateSize * mDevice->frameSizeFromFmt());
+    mMixData.resize(size_t{mDevice->UpdateSize} * mDevice->frameSizeFromFmt());
 
     return true;
 }

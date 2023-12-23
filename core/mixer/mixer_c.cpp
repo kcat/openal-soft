@@ -54,9 +54,9 @@ inline float do_bsinc(const BsincState &istate, const float *RESTRICT vals, cons
     const uint pi{frac >> BsincPhaseDiffBits};
     const float pf{static_cast<float>(frac&BsincPhaseDiffMask) * (1.0f/BsincPhaseDiffOne)};
 
-    const float *RESTRICT fil{istate.filter + m*pi*2};
+    const float *RESTRICT fil{istate.filter + m*pi*2_uz};
     const float *RESTRICT phd{fil + m};
-    const float *RESTRICT scd{fil + BSincPhaseCount*2*m};
+    const float *RESTRICT scd{fil + BSincPhaseCount*2_uz*m};
     const float *RESTRICT spd{scd + m};
 
     /* Apply the scale and phase interpolated filter. */
@@ -74,7 +74,7 @@ inline float do_fastbsinc(const BsincState &istate, const float *RESTRICT vals, 
     const uint pi{frac >> BsincPhaseDiffBits};
     const float pf{static_cast<float>(frac&BsincPhaseDiffMask) * (1.0f/BsincPhaseDiffOne)};
 
-    const float *RESTRICT fil{istate.filter + m*pi*2};
+    const float *RESTRICT fil{istate.filter + m*pi*2_uz};
     const float *RESTRICT phd{fil + m};
 
     /* Apply the phase interpolated filter. */

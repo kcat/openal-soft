@@ -338,21 +338,21 @@ static int StartPlayer(StreamPlayer *player)
         if(player->sample_type == Int16)
         {
             slen = sf_readf_short(player->sndfile, player->membuf,
-                player->block_count * player->sampleblockalign);
+                (sf_count_t)player->block_count * player->sampleblockalign);
             if(slen < 1) break;
             slen *= player->byteblockalign;
         }
         else if(player->sample_type == Float)
         {
             slen = sf_readf_float(player->sndfile, player->membuf,
-                player->block_count * player->sampleblockalign);
+                (sf_count_t)player->block_count * player->sampleblockalign);
             if(slen < 1) break;
             slen *= player->byteblockalign;
         }
         else
         {
             slen = sf_read_raw(player->sndfile, player->membuf,
-                player->block_count * player->byteblockalign);
+                (sf_count_t)player->block_count * player->byteblockalign);
             if(slen > 0) slen -= slen%player->byteblockalign;
             if(slen < 1) break;
         }
@@ -409,19 +409,19 @@ static int UpdatePlayer(StreamPlayer *player)
         if(player->sample_type == Int16)
         {
             slen = sf_readf_short(player->sndfile, player->membuf,
-                player->block_count * player->sampleblockalign);
+                (sf_count_t)player->block_count * player->sampleblockalign);
             if(slen > 0) slen *= player->byteblockalign;
         }
         else if(player->sample_type == Float)
         {
             slen = sf_readf_float(player->sndfile, player->membuf,
-                player->block_count * player->sampleblockalign);
+                (sf_count_t)player->block_count * player->sampleblockalign);
             if(slen > 0) slen *= player->byteblockalign;
         }
         else
         {
             slen = sf_read_raw(player->sndfile, player->membuf,
-                player->block_count * player->byteblockalign);
+                (sf_count_t)player->block_count * player->byteblockalign);
             if(slen > 0) slen -= slen%player->byteblockalign;
         }
 

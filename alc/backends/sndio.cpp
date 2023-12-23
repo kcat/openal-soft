@@ -228,7 +228,7 @@ retry_params:
     mDevice->UpdateSize = par.round;
     mDevice->BufferSize = par.bufsz + par.round;
 
-    mBuffer.resize(mDevice->UpdateSize * par.pchan*par.bps);
+    mBuffer.resize(size_t{mDevice->UpdateSize} * par.pchan*par.bps);
     if(par.sig == 1)
         std::fill(mBuffer.begin(), mBuffer.end(), std::byte{});
     else if(par.bits == 8)
@@ -458,7 +458,7 @@ void SndioCapture::open(std::string_view name)
             DevFmtTypeString(mDevice->FmtType), DevFmtChannelsString(mDevice->FmtChans),
             mDevice->Frequency, par.sig?'s':'u', par.bps*8, par.rchan, par.rate};
 
-    mRing = RingBuffer::Create(mDevice->BufferSize, par.bps*par.rchan, false);
+    mRing = RingBuffer::Create(mDevice->BufferSize, size_t{par.bps}*par.rchan, false);
     mDevice->BufferSize = static_cast<uint>(mRing->writeSpace());
     mDevice->UpdateSize = par.round;
 

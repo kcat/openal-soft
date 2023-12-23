@@ -904,8 +904,8 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
                     const size_t needBlocks{(needSamples + mSamplesPerBlock-1) / mSamplesPerBlock};
                     if(!mFlags.test(VoiceCallbackStopped) && needBlocks > mNumCallbackBlocks)
                     {
-                        const size_t byteOffset{mNumCallbackBlocks*mBytesPerBlock};
-                        const size_t needBytes{(needBlocks-mNumCallbackBlocks)*mBytesPerBlock};
+                        const size_t byteOffset{mNumCallbackBlocks*size_t{mBytesPerBlock}};
+                        const size_t needBytes{(needBlocks-mNumCallbackBlocks)*size_t{mBytesPerBlock}};
 
                         const int gotBytes{BufferListItem->mCallback(BufferListItem->mUserData,
                             &BufferListItem->mSamples[byteOffset], static_cast<int>(needBytes))};
@@ -919,7 +919,7 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
                         else
                             mNumCallbackBlocks = static_cast<uint>(needBlocks);
                     }
-                    const size_t numSamples{uint{mNumCallbackBlocks} * mSamplesPerBlock};
+                    const size_t numSamples{size_t{mNumCallbackBlocks} * mSamplesPerBlock};
                     LoadBufferCallback(BufferListItem, bufferOffset, numSamples, mFmtType, chan,
                         mFrameStep, srcSampleDelay, srcBufferSize, al::to_address(resampleBuffer));
                 }
@@ -1099,8 +1099,8 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
             const uint blocksDone{currentBlock - mCallbackBlockBase};
             if(blocksDone < mNumCallbackBlocks)
             {
-                const size_t byteOffset{blocksDone*mBytesPerBlock};
-                const size_t byteEnd{mNumCallbackBlocks*mBytesPerBlock};
+                const size_t byteOffset{blocksDone*size_t{mBytesPerBlock}};
+                const size_t byteEnd{mNumCallbackBlocks*size_t{mBytesPerBlock}};
                 std::byte *data{BufferListItem->mSamples};
                 std::copy(data+byteOffset, data+byteEnd, data);
                 mNumCallbackBlocks -= blocksDone;

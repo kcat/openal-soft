@@ -117,9 +117,9 @@ template<>
     throw Exception{message};
 }
 
-bool EaxNullCommitter::commit(const EaxEffectProps &props)
+bool EaxNullCommitter::commit(const std::monostate &props)
 {
-    const bool ret{props != mEaxProps};
+    const bool ret{std::holds_alternative<std::monostate>(mEaxProps)};
     mEaxProps = props;
     return ret;
 }
@@ -129,13 +129,13 @@ void EaxNullCommitter::SetDefaults(EaxEffectProps &props)
     props.emplace<std::monostate>();
 }
 
-void EaxNullCommitter::Get(const EaxCall &call, const EaxEffectProps&)
+void EaxNullCommitter::Get(const EaxCall &call, const std::monostate&)
 {
     if(call.get_property_id() != 0)
         fail_unknown_property_id();
 }
 
-void EaxNullCommitter::Set(const EaxCall &call, EaxEffectProps&)
+void EaxNullCommitter::Set(const EaxCall &call, std::monostate&)
 {
     if(call.get_property_id() != 0)
         fail_unknown_property_id();

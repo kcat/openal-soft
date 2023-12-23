@@ -189,18 +189,17 @@ template<>
     throw Exception{message};
 }
 
-bool EaxAutowahCommitter::commit(const EaxEffectProps &props)
+bool EaxAutowahCommitter::commit(const EAXAUTOWAHPROPERTIES &props)
 {
-    if(props == mEaxProps)
+    if(auto *cur = std::get_if<EAXAUTOWAHPROPERTIES>(&mEaxProps); cur && *cur == props)
         return false;
 
     mEaxProps = props;
 
-    auto &eaxprops = std::get<EAXAUTOWAHPROPERTIES>(props);
-    mAlProps.Autowah.AttackTime = eaxprops.flAttackTime;
-    mAlProps.Autowah.ReleaseTime = eaxprops.flReleaseTime;
-    mAlProps.Autowah.Resonance = level_mb_to_gain(static_cast<float>(eaxprops.lResonance));
-    mAlProps.Autowah.PeakGain = level_mb_to_gain(static_cast<float>(eaxprops.lPeakLevel));
+    mAlProps.Autowah.AttackTime = props.flAttackTime;
+    mAlProps.Autowah.ReleaseTime = props.flReleaseTime;
+    mAlProps.Autowah.Resonance = level_mb_to_gain(static_cast<float>(props.lResonance));
+    mAlProps.Autowah.PeakGain = level_mb_to_gain(static_cast<float>(props.lPeakLevel));
 
     return true;
 }
@@ -219,9 +218,8 @@ void EaxAutowahCommitter::SetDefaults(EaxEffectProps &props)
     props = defprops;
 }
 
-void EaxAutowahCommitter::Get(const EaxCall &call, const EaxEffectProps &props_)
+void EaxAutowahCommitter::Get(const EaxCall &call, const EAXAUTOWAHPROPERTIES &props)
 {
-    auto &props = std::get<EAXAUTOWAHPROPERTIES>(props_);
     switch(call.get_property_id())
     {
     case EAXAUTOWAH_NONE: break;
@@ -234,9 +232,8 @@ void EaxAutowahCommitter::Get(const EaxCall &call, const EaxEffectProps &props_)
     }
 }
 
-void EaxAutowahCommitter::Set(const EaxCall &call, EaxEffectProps &props_)
+void EaxAutowahCommitter::Set(const EaxCall &call, EAXAUTOWAHPROPERTIES &props)
 {
-    auto &props = std::get<EAXAUTOWAHPROPERTIES>(props_);
     switch(call.get_property_id())
     {
     case EAXAUTOWAH_NONE: break;

@@ -319,24 +319,23 @@ template<>
     throw Exception{message};
 }
 
-bool EaxEqualizerCommitter::commit(const EaxEffectProps &props)
+bool EaxEqualizerCommitter::commit(const EAXEQUALIZERPROPERTIES &props)
 {
-    if(props == mEaxProps)
+    if(auto *cur = std::get_if<EAXEQUALIZERPROPERTIES>(&mEaxProps); cur && *cur == props)
         return false;
 
     mEaxProps = props;
 
-    auto &eaxprops = std::get<EAXEQUALIZERPROPERTIES>(props);
-    mAlProps.Equalizer.LowGain = level_mb_to_gain(static_cast<float>(eaxprops.lLowGain));
-    mAlProps.Equalizer.LowCutoff = eaxprops.flLowCutOff;
-    mAlProps.Equalizer.Mid1Gain = level_mb_to_gain(static_cast<float>(eaxprops.lMid1Gain));
-    mAlProps.Equalizer.Mid1Center = eaxprops.flMid1Center;
-    mAlProps.Equalizer.Mid1Width = eaxprops.flMid1Width;
-    mAlProps.Equalizer.Mid2Gain = level_mb_to_gain(static_cast<float>(eaxprops.lMid2Gain));
-    mAlProps.Equalizer.Mid2Center = eaxprops.flMid2Center;
-    mAlProps.Equalizer.Mid2Width = eaxprops.flMid2Width;
-    mAlProps.Equalizer.HighGain = level_mb_to_gain(static_cast<float>(eaxprops.lHighGain));
-    mAlProps.Equalizer.HighCutoff = eaxprops.flHighCutOff;
+    mAlProps.Equalizer.LowGain = level_mb_to_gain(static_cast<float>(props.lLowGain));
+    mAlProps.Equalizer.LowCutoff = props.flLowCutOff;
+    mAlProps.Equalizer.Mid1Gain = level_mb_to_gain(static_cast<float>(props.lMid1Gain));
+    mAlProps.Equalizer.Mid1Center = props.flMid1Center;
+    mAlProps.Equalizer.Mid1Width = props.flMid1Width;
+    mAlProps.Equalizer.Mid2Gain = level_mb_to_gain(static_cast<float>(props.lMid2Gain));
+    mAlProps.Equalizer.Mid2Center = props.flMid2Center;
+    mAlProps.Equalizer.Mid2Width = props.flMid2Width;
+    mAlProps.Equalizer.HighGain = level_mb_to_gain(static_cast<float>(props.lHighGain));
+    mAlProps.Equalizer.HighCutoff = props.flHighCutOff;
 
     return true;
 }
@@ -361,9 +360,8 @@ void EaxEqualizerCommitter::SetDefaults(EaxEffectProps &props)
     props = defprops;
 }
 
-void EaxEqualizerCommitter::Get(const EaxCall &call, const EaxEffectProps &props_)
+void EaxEqualizerCommitter::Get(const EaxCall &call, const EAXEQUALIZERPROPERTIES &props)
 {
-    auto &props = std::get<EAXEQUALIZERPROPERTIES>(props_);
     switch(call.get_property_id())
     {
     case EAXEQUALIZER_NONE: break;
@@ -382,9 +380,8 @@ void EaxEqualizerCommitter::Get(const EaxCall &call, const EaxEffectProps &props
     }
 }
 
-void EaxEqualizerCommitter::Set(const EaxCall &call, EaxEffectProps &props_)
+void EaxEqualizerCommitter::Set(const EaxCall &call, EAXEQUALIZERPROPERTIES &props)
 {
-    auto &props = std::get<EAXEQUALIZERPROPERTIES>(props_);
     switch(call.get_property_id())
     {
     case EAXEQUALIZER_NONE: break;

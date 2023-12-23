@@ -100,7 +100,6 @@ struct EaxReverbCommitter {
     bool commit(const EAX_REVERBPROPERTIES &props);
     bool commit(const EAX20LISTENERPROPERTIES &props);
     bool commit(const EAXREVERBPROPERTIES &props);
-    bool commit(const EaxEffectProps &props);
 
     static void SetDefaults(EAX_REVERBPROPERTIES &props);
     static void SetDefaults(EAX20LISTENERPROPERTIES &props);
@@ -110,16 +109,13 @@ struct EaxReverbCommitter {
     static void Get(const EaxCall &call, const EAX_REVERBPROPERTIES &props);
     static void Get(const EaxCall &call, const EAX20LISTENERPROPERTIES &props);
     static void Get(const EaxCall &call, const EAXREVERBPROPERTIES &props);
-    static void Get(const EaxCall &call, const EaxEffectProps &props);
 
     static void Set(const EaxCall &call, EAX_REVERBPROPERTIES &props);
     static void Set(const EaxCall &call, EAX20LISTENERPROPERTIES &props);
     static void Set(const EaxCall &call, EAXREVERBPROPERTIES &props);
-    static void Set(const EaxCall &call, EaxEffectProps &props);
 
-    static void translate(const EAX_REVERBPROPERTIES& src, EaxEffectProps& dst) noexcept;
-    static void translate(const EAX20LISTENERPROPERTIES& src, EaxEffectProps& dst) noexcept;
-    static void translate(const EAXREVERBPROPERTIES& src, EaxEffectProps& dst) noexcept;
+    static void translate(const EAX_REVERBPROPERTIES& src, EAXREVERBPROPERTIES& dst) noexcept;
+    static void translate(const EAX20LISTENERPROPERTIES& src, EAXREVERBPROPERTIES& dst) noexcept;
 };
 
 template<typename T>
@@ -149,110 +145,110 @@ struct EaxCommitter {
 struct EaxAutowahCommitter : public EaxCommitter<EaxAutowahCommitter> {
     using EaxCommitter<EaxAutowahCommitter>::EaxCommitter;
 
-    bool commit(const EaxEffectProps &props);
+    bool commit(const EAXAUTOWAHPROPERTIES &props);
 
     static void SetDefaults(EaxEffectProps &props);
-    static void Get(const EaxCall &call, const EaxEffectProps &props);
-    static void Set(const EaxCall &call, EaxEffectProps &props);
+    static void Get(const EaxCall &call, const EAXAUTOWAHPROPERTIES &props);
+    static void Set(const EaxCall &call, EAXAUTOWAHPROPERTIES &props);
 };
 struct EaxChorusCommitter : public EaxCommitter<EaxChorusCommitter> {
     using EaxCommitter<EaxChorusCommitter>::EaxCommitter;
 
-    bool commit(const EaxEffectProps &props);
+    bool commit(const EAXCHORUSPROPERTIES &props);
 
     static void SetDefaults(EaxEffectProps &props);
-    static void Get(const EaxCall &call, const EaxEffectProps &props);
-    static void Set(const EaxCall &call, EaxEffectProps &props);
+    static void Get(const EaxCall &call, const EAXCHORUSPROPERTIES &props);
+    static void Set(const EaxCall &call, EAXCHORUSPROPERTIES &props);
 };
 struct EaxCompressorCommitter : public EaxCommitter<EaxCompressorCommitter> {
     using EaxCommitter<EaxCompressorCommitter>::EaxCommitter;
 
-    bool commit(const EaxEffectProps &props);
+    bool commit(const EAXAGCCOMPRESSORPROPERTIES &props);
 
     static void SetDefaults(EaxEffectProps &props);
-    static void Get(const EaxCall &call, const EaxEffectProps &props);
-    static void Set(const EaxCall &call, EaxEffectProps &props);
+    static void Get(const EaxCall &call, const EAXAGCCOMPRESSORPROPERTIES &props);
+    static void Set(const EaxCall &call, EAXAGCCOMPRESSORPROPERTIES &props);
 };
 struct EaxDistortionCommitter : public EaxCommitter<EaxDistortionCommitter> {
     using EaxCommitter<EaxDistortionCommitter>::EaxCommitter;
 
-    bool commit(const EaxEffectProps &props);
+    bool commit(const EAXDISTORTIONPROPERTIES &props);
 
     static void SetDefaults(EaxEffectProps &props);
-    static void Get(const EaxCall &call, const EaxEffectProps &props);
-    static void Set(const EaxCall &call, EaxEffectProps &props);
+    static void Get(const EaxCall &call, const EAXDISTORTIONPROPERTIES &props);
+    static void Set(const EaxCall &call, EAXDISTORTIONPROPERTIES &props);
 };
 struct EaxEchoCommitter : public EaxCommitter<EaxEchoCommitter> {
     using EaxCommitter<EaxEchoCommitter>::EaxCommitter;
 
-    bool commit(const EaxEffectProps &props);
+    bool commit(const EAXECHOPROPERTIES &props);
 
     static void SetDefaults(EaxEffectProps &props);
-    static void Get(const EaxCall &call, const EaxEffectProps &props);
-    static void Set(const EaxCall &call, EaxEffectProps &props);
+    static void Get(const EaxCall &call, const EAXECHOPROPERTIES &props);
+    static void Set(const EaxCall &call, EAXECHOPROPERTIES &props);
 };
 struct EaxEqualizerCommitter : public EaxCommitter<EaxEqualizerCommitter> {
     using EaxCommitter<EaxEqualizerCommitter>::EaxCommitter;
 
-    bool commit(const EaxEffectProps &props);
+    bool commit(const EAXEQUALIZERPROPERTIES &props);
 
     static void SetDefaults(EaxEffectProps &props);
-    static void Get(const EaxCall &call, const EaxEffectProps &props);
-    static void Set(const EaxCall &call, EaxEffectProps &props);
+    static void Get(const EaxCall &call, const EAXEQUALIZERPROPERTIES &props);
+    static void Set(const EaxCall &call, EAXEQUALIZERPROPERTIES &props);
 };
 struct EaxFlangerCommitter : public EaxCommitter<EaxFlangerCommitter> {
     using EaxCommitter<EaxFlangerCommitter>::EaxCommitter;
 
-    bool commit(const EaxEffectProps &props);
+    bool commit(const EAXFLANGERPROPERTIES &props);
 
     static void SetDefaults(EaxEffectProps &props);
-    static void Get(const EaxCall &call, const EaxEffectProps &props);
-    static void Set(const EaxCall &call, EaxEffectProps &props);
+    static void Get(const EaxCall &call, const EAXFLANGERPROPERTIES &props);
+    static void Set(const EaxCall &call, EAXFLANGERPROPERTIES &props);
 };
 struct EaxFrequencyShifterCommitter : public EaxCommitter<EaxFrequencyShifterCommitter> {
     using EaxCommitter<EaxFrequencyShifterCommitter>::EaxCommitter;
 
-    bool commit(const EaxEffectProps &props);
+    bool commit(const EAXFREQUENCYSHIFTERPROPERTIES &props);
 
     static void SetDefaults(EaxEffectProps &props);
-    static void Get(const EaxCall &call, const EaxEffectProps &props);
-    static void Set(const EaxCall &call, EaxEffectProps &props);
+    static void Get(const EaxCall &call, const EAXFREQUENCYSHIFTERPROPERTIES &props);
+    static void Set(const EaxCall &call, EAXFREQUENCYSHIFTERPROPERTIES &props);
 };
 struct EaxModulatorCommitter : public EaxCommitter<EaxModulatorCommitter> {
     using EaxCommitter<EaxModulatorCommitter>::EaxCommitter;
 
-    bool commit(const EaxEffectProps &props);
+    bool commit(const EAXRINGMODULATORPROPERTIES &props);
 
     static void SetDefaults(EaxEffectProps &props);
-    static void Get(const EaxCall &call, const EaxEffectProps &props);
-    static void Set(const EaxCall &call, EaxEffectProps &props);
+    static void Get(const EaxCall &call, const EAXRINGMODULATORPROPERTIES &props);
+    static void Set(const EaxCall &call, EAXRINGMODULATORPROPERTIES &props);
 };
 struct EaxPitchShifterCommitter : public EaxCommitter<EaxPitchShifterCommitter> {
     using EaxCommitter<EaxPitchShifterCommitter>::EaxCommitter;
 
-    bool commit(const EaxEffectProps &props);
+    bool commit(const EAXPITCHSHIFTERPROPERTIES &props);
 
     static void SetDefaults(EaxEffectProps &props);
-    static void Get(const EaxCall &call, const EaxEffectProps &props);
-    static void Set(const EaxCall &call, EaxEffectProps &props);
+    static void Get(const EaxCall &call, const EAXPITCHSHIFTERPROPERTIES &props);
+    static void Set(const EaxCall &call, EAXPITCHSHIFTERPROPERTIES &props);
 };
 struct EaxVocalMorpherCommitter : public EaxCommitter<EaxVocalMorpherCommitter> {
     using EaxCommitter<EaxVocalMorpherCommitter>::EaxCommitter;
 
-    bool commit(const EaxEffectProps &props);
+    bool commit(const EAXVOCALMORPHERPROPERTIES &props);
 
     static void SetDefaults(EaxEffectProps &props);
-    static void Get(const EaxCall &call, const EaxEffectProps &props);
-    static void Set(const EaxCall &call, EaxEffectProps &props);
+    static void Get(const EaxCall &call, const EAXVOCALMORPHERPROPERTIES &props);
+    static void Set(const EaxCall &call, EAXVOCALMORPHERPROPERTIES &props);
 };
 struct EaxNullCommitter : public EaxCommitter<EaxNullCommitter> {
     using EaxCommitter<EaxNullCommitter>::EaxCommitter;
 
-    bool commit(const EaxEffectProps &props);
+    bool commit(const std::monostate &props);
 
     static void SetDefaults(EaxEffectProps &props);
-    static void Get(const EaxCall &call, const EaxEffectProps &props);
-    static void Set(const EaxCall &call, EaxEffectProps &props);
+    static void Get(const EaxCall &call, const std::monostate &props);
+    static void Set(const EaxCall &call, std::monostate &props);
 };
 
 template<typename T>
@@ -371,8 +367,8 @@ public:
 
     static void call_set(const EaxCall &call, EaxEffectProps &props)
     {
-        return std::visit([&](const auto &arg)
-        { return CommitterFor<decltype(arg)>::Set(call, props); },
+        return std::visit([&](auto &arg)
+        { return CommitterFor<decltype(arg)>::Set(call, arg); },
         props);
     }
 
@@ -392,8 +388,8 @@ public:
 
     static void call_get(const EaxCall &call, const EaxEffectProps &props)
     {
-        return std::visit([&](const auto &arg)
-        { return CommitterFor<decltype(arg)>::Get(call, props); },
+        return std::visit([&](auto &arg)
+        { return CommitterFor<decltype(arg)>::Get(call, arg); },
         props);
     }
 
@@ -412,8 +408,8 @@ public:
 
     bool call_commit(const EaxEffectProps &props)
     {
-        return std::visit([&](const auto &arg)
-        { return CommitterFor<decltype(arg)>{props_, al_effect_props_}.commit(props); },
+        return std::visit([&](auto &arg)
+        { return CommitterFor<decltype(arg)>{props_, al_effect_props_}.commit(arg); },
         props);
     }
 

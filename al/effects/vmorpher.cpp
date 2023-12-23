@@ -352,9 +352,9 @@ template<>
     throw Exception{message};
 }
 
-bool EaxVocalMorpherCommitter::commit(const EaxEffectProps &props)
+bool EaxVocalMorpherCommitter::commit(const EAXVOCALMORPHERPROPERTIES &props)
 {
-    if(props == mEaxProps)
+    if(auto *cur = std::get_if<EAXVOCALMORPHERPROPERTIES>(&mEaxProps); cur && *cur == props)
         return false;
 
     mEaxProps = props;
@@ -406,13 +406,12 @@ bool EaxVocalMorpherCommitter::commit(const EaxEffectProps &props)
         return VMorpherWaveform::Sinusoid;
     };
 
-    auto &eaxprops = std::get<EAXVOCALMORPHERPROPERTIES>(props);
-    mAlProps.Vmorpher.PhonemeA = get_phoneme(eaxprops.ulPhonemeA);
-    mAlProps.Vmorpher.PhonemeACoarseTuning = static_cast<int>(eaxprops.lPhonemeACoarseTuning);
-    mAlProps.Vmorpher.PhonemeB = get_phoneme(eaxprops.ulPhonemeB);
-    mAlProps.Vmorpher.PhonemeBCoarseTuning = static_cast<int>(eaxprops.lPhonemeBCoarseTuning);
-    mAlProps.Vmorpher.Waveform = get_waveform(eaxprops.ulWaveform);
-    mAlProps.Vmorpher.Rate = eaxprops.flRate;
+    mAlProps.Vmorpher.PhonemeA = get_phoneme(props.ulPhonemeA);
+    mAlProps.Vmorpher.PhonemeACoarseTuning = static_cast<int>(props.lPhonemeACoarseTuning);
+    mAlProps.Vmorpher.PhonemeB = get_phoneme(props.ulPhonemeB);
+    mAlProps.Vmorpher.PhonemeBCoarseTuning = static_cast<int>(props.lPhonemeBCoarseTuning);
+    mAlProps.Vmorpher.Waveform = get_waveform(props.ulWaveform);
+    mAlProps.Vmorpher.Rate = props.flRate;
 
     return true;
 }
@@ -433,9 +432,8 @@ void EaxVocalMorpherCommitter::SetDefaults(EaxEffectProps &props)
     props = defprops;
 }
 
-void EaxVocalMorpherCommitter::Get(const EaxCall &call, const EaxEffectProps &props_)
+void EaxVocalMorpherCommitter::Get(const EaxCall &call, const EAXVOCALMORPHERPROPERTIES &props)
 {
-    auto &props = std::get<EAXVOCALMORPHERPROPERTIES>(props_);
     switch(call.get_property_id())
     {
     case EAXVOCALMORPHER_NONE: break;
@@ -450,9 +448,8 @@ void EaxVocalMorpherCommitter::Get(const EaxCall &call, const EaxEffectProps &pr
     }
 }
 
-void EaxVocalMorpherCommitter::Set(const EaxCall &call, EaxEffectProps &props_)
+void EaxVocalMorpherCommitter::Set(const EaxCall &call, EAXVOCALMORPHERPROPERTIES &props)
 {
-    auto &props = std::get<EAXVOCALMORPHERPROPERTIES>(props_);
     switch(call.get_property_id())
     {
     case EAXVOCALMORPHER_NONE: break;

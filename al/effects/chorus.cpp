@@ -518,9 +518,8 @@ public:
     }
 
 
-    static void Get(const EaxCall &call, const EaxEffectProps &props)
+    static void Get(const EaxCall &call, const typename Traits::Props &all)
     {
-        auto&& all = std::get<typename Traits::Props>(props);
         switch(call.get_property_id())
         {
         case Traits::eax_none_param_id():
@@ -559,9 +558,8 @@ public:
         }
     }
 
-    static void Set(const EaxCall &call, EaxEffectProps &props)
+    static void Set(const EaxCall &call, typename Traits::Props &all)
     {
-        auto&& all = std::get<typename Traits::Props>(props);
         switch(call.get_property_id())
         {
         case Traits::eax_none_param_id():
@@ -600,20 +598,19 @@ public:
         }
     }
 
-    static bool Commit(const EaxEffectProps &props, EaxEffectProps &props_, EffectProps &al_props_)
+    static bool Commit(const typename Traits::Props &props, EaxEffectProps &props_, EffectProps &al_props_)
     {
-        if(props == props_)
+        if(auto *cur = std::get_if<typename Traits::Props>(&props_); cur && *cur == props)
             return false;
 
         props_ = props;
-        auto&& dst = std::get<typename Traits::Props>(props);
 
-        al_props_.Chorus.Waveform = Traits::eax_waveform(dst.ulWaveform);
-        al_props_.Chorus.Phase = static_cast<int>(dst.lPhase);
-        al_props_.Chorus.Rate = dst.flRate;
-        al_props_.Chorus.Depth = dst.flDepth;
-        al_props_.Chorus.Feedback = dst.flFeedback;
-        al_props_.Chorus.Delay = dst.flDelay;
+        al_props_.Chorus.Waveform = Traits::eax_waveform(props.ulWaveform);
+        al_props_.Chorus.Phase = static_cast<int>(props.lPhase);
+        al_props_.Chorus.Rate = props.flRate;
+        al_props_.Chorus.Depth = props.flDepth;
+        al_props_.Chorus.Feedback = props.flFeedback;
+        al_props_.Chorus.Delay = props.flDelay;
 
         return true;
     }
@@ -638,7 +635,7 @@ template<>
     throw Exception{message};
 }
 
-bool EaxChorusCommitter::commit(const EaxEffectProps &props)
+bool EaxChorusCommitter::commit(const EAXCHORUSPROPERTIES &props)
 {
     using Committer = ChorusFlangerEffect<EaxChorusTraits>;
     return Committer::Commit(props, mEaxProps, mAlProps);
@@ -650,13 +647,13 @@ void EaxChorusCommitter::SetDefaults(EaxEffectProps &props)
     Committer::SetDefaults(props);
 }
 
-void EaxChorusCommitter::Get(const EaxCall &call, const EaxEffectProps &props)
+void EaxChorusCommitter::Get(const EaxCall &call, const EAXCHORUSPROPERTIES &props)
 {
     using Committer = ChorusFlangerEffect<EaxChorusTraits>;
     Committer::Get(call, props);
 }
 
-void EaxChorusCommitter::Set(const EaxCall &call, EaxEffectProps &props)
+void EaxChorusCommitter::Set(const EaxCall &call, EAXCHORUSPROPERTIES &props)
 {
     using Committer = ChorusFlangerEffect<EaxChorusTraits>;
     Committer::Set(call, props);
@@ -675,7 +672,7 @@ template<>
     throw Exception{message};
 }
 
-bool EaxFlangerCommitter::commit(const EaxEffectProps &props)
+bool EaxFlangerCommitter::commit(const EAXFLANGERPROPERTIES &props)
 {
     using Committer = ChorusFlangerEffect<EaxFlangerTraits>;
     return Committer::Commit(props, mEaxProps, mAlProps);
@@ -687,13 +684,13 @@ void EaxFlangerCommitter::SetDefaults(EaxEffectProps &props)
     Committer::SetDefaults(props);
 }
 
-void EaxFlangerCommitter::Get(const EaxCall &call, const EaxEffectProps &props)
+void EaxFlangerCommitter::Get(const EaxCall &call, const EAXFLANGERPROPERTIES &props)
 {
     using Committer = ChorusFlangerEffect<EaxFlangerTraits>;
     Committer::Get(call, props);
 }
 
-void EaxFlangerCommitter::Set(const EaxCall &call, EaxEffectProps &props)
+void EaxFlangerCommitter::Set(const EaxCall &call, EAXFLANGERPROPERTIES &props)
 {
     using Committer = ChorusFlangerEffect<EaxFlangerTraits>;
     Committer::Set(call, props);

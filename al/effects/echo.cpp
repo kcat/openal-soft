@@ -201,19 +201,18 @@ template<>
     throw Exception{message};
 }
 
-bool EaxEchoCommitter::commit(const EaxEffectProps &props)
+bool EaxEchoCommitter::commit(const EAXECHOPROPERTIES &props)
 {
-    if(props == mEaxProps)
+    if(auto *cur = std::get_if<EAXECHOPROPERTIES>(&mEaxProps); cur && *cur == props)
         return false;
 
     mEaxProps = props;
 
-    auto &eaxprops = std::get<EAXECHOPROPERTIES>(props);
-    mAlProps.Echo.Delay = eaxprops.flDelay;
-    mAlProps.Echo.LRDelay = eaxprops.flLRDelay;
-    mAlProps.Echo.Damping = eaxprops.flDamping;
-    mAlProps.Echo.Feedback = eaxprops.flFeedback;
-    mAlProps.Echo.Spread = eaxprops.flSpread;
+    mAlProps.Echo.Delay = props.flDelay;
+    mAlProps.Echo.LRDelay = props.flLRDelay;
+    mAlProps.Echo.Damping = props.flDamping;
+    mAlProps.Echo.Feedback = props.flFeedback;
+    mAlProps.Echo.Spread = props.flSpread;
 
     return true;
 }
@@ -233,9 +232,8 @@ void EaxEchoCommitter::SetDefaults(EaxEffectProps &props)
     props = defprops;
 }
 
-void EaxEchoCommitter::Get(const EaxCall &call, const EaxEffectProps &props_)
+void EaxEchoCommitter::Get(const EaxCall &call, const EAXECHOPROPERTIES &props)
 {
-    auto &props = std::get<EAXECHOPROPERTIES>(props_);
     switch(call.get_property_id())
     {
     case EAXECHO_NONE: break;
@@ -249,9 +247,8 @@ void EaxEchoCommitter::Get(const EaxCall &call, const EaxEffectProps &props_)
     }
 }
 
-void EaxEchoCommitter::Set(const EaxCall &call, EaxEffectProps &props_)
+void EaxEchoCommitter::Set(const EaxCall &call, EAXECHOPROPERTIES &props)
 {
-    auto &props = std::get<EAXECHOPROPERTIES>(props_);
     switch(call.get_property_id())
     {
     case EAXECHO_NONE: break;

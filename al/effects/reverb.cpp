@@ -1086,98 +1086,85 @@ struct EaxReverbCommitter::Exception : public EaxReverbEffectException
     throw Exception{message};
 }
 
-void EaxReverbCommitter::translate(const EAX_REVERBPROPERTIES& src, EaxEffectProps& dst) noexcept
+void EaxReverbCommitter::translate(const EAX_REVERBPROPERTIES& src, EAXREVERBPROPERTIES& dst) noexcept
 {
     assert(src.environment <= EAX1REVERB_MAXENVIRONMENT);
-    auto&& eaxprops = dst.emplace<EAXREVERBPROPERTIES>(EAXREVERB_PRESETS[src.environment]);
-    eaxprops.flDecayTime = src.fDecayTime_sec;
-    eaxprops.flDecayHFRatio = src.fDamping;
-    eaxprops.lReverb = mini(static_cast<int>(gain_to_level_mb(src.fVolume)), 0);
+    dst = EAXREVERB_PRESETS[src.environment];
+    dst.flDecayTime = src.fDecayTime_sec;
+    dst.flDecayHFRatio = src.fDamping;
+    dst.lReverb = mini(static_cast<int>(gain_to_level_mb(src.fVolume)), 0);
 }
 
-void EaxReverbCommitter::translate(const EAX20LISTENERPROPERTIES& src, EaxEffectProps& dst) noexcept
+void EaxReverbCommitter::translate(const EAX20LISTENERPROPERTIES& src, EAXREVERBPROPERTIES& dst) noexcept
 {
     assert(src.dwEnvironment <= EAX1REVERB_MAXENVIRONMENT);
-    auto&& eaxprops = dst.emplace<EAXREVERBPROPERTIES>(EAXREVERB_PRESETS[src.dwEnvironment]);
-    eaxprops.ulEnvironment = src.dwEnvironment;
-    eaxprops.flEnvironmentSize = src.flEnvironmentSize;
-    eaxprops.flEnvironmentDiffusion = src.flEnvironmentDiffusion;
-    eaxprops.lRoom = src.lRoom;
-    eaxprops.lRoomHF = src.lRoomHF;
-    eaxprops.flDecayTime = src.flDecayTime;
-    eaxprops.flDecayHFRatio = src.flDecayHFRatio;
-    eaxprops.lReflections = src.lReflections;
-    eaxprops.flReflectionsDelay = src.flReflectionsDelay;
-    eaxprops.lReverb = src.lReverb;
-    eaxprops.flReverbDelay = src.flReverbDelay;
-    eaxprops.flAirAbsorptionHF = src.flAirAbsorptionHF;
-    eaxprops.flRoomRolloffFactor = src.flRoomRolloffFactor;
-    eaxprops.ulFlags = src.dwFlags;
-}
-
-void EaxReverbCommitter::translate(const EAXREVERBPROPERTIES& src, EaxEffectProps& dst) noexcept
-{
-    dst = src;
+    dst = EAXREVERB_PRESETS[src.dwEnvironment];
+    dst.ulEnvironment = src.dwEnvironment;
+    dst.flEnvironmentSize = src.flEnvironmentSize;
+    dst.flEnvironmentDiffusion = src.flEnvironmentDiffusion;
+    dst.lRoom = src.lRoom;
+    dst.lRoomHF = src.lRoomHF;
+    dst.flDecayTime = src.flDecayTime;
+    dst.flDecayHFRatio = src.flDecayHFRatio;
+    dst.lReflections = src.lReflections;
+    dst.flReflectionsDelay = src.flReflectionsDelay;
+    dst.lReverb = src.lReverb;
+    dst.flReverbDelay = src.flReverbDelay;
+    dst.flAirAbsorptionHF = src.flAirAbsorptionHF;
+    dst.flRoomRolloffFactor = src.flRoomRolloffFactor;
+    dst.ulFlags = src.dwFlags;
 }
 
 bool EaxReverbCommitter::commit(const EAX_REVERBPROPERTIES &props)
 {
-    EaxEffectProps dst{};
+    EAXREVERBPROPERTIES dst{};
     translate(props, dst);
     return commit(dst);
 }
 
 bool EaxReverbCommitter::commit(const EAX20LISTENERPROPERTIES &props)
 {
-    EaxEffectProps dst{};
+    EAXREVERBPROPERTIES dst{};
     translate(props, dst);
     return commit(dst);
 }
 
 bool EaxReverbCommitter::commit(const EAXREVERBPROPERTIES &props)
 {
-    EaxEffectProps dst{};
-    translate(props, dst);
-    return commit(dst);
-}
-
-bool EaxReverbCommitter::commit(const EaxEffectProps &props)
-{
-    if(props == mEaxProps)
+    if(auto *cur = std::get_if<EAXREVERBPROPERTIES>(&mEaxProps); cur && *cur == props)
         return false;
 
     mEaxProps = props;
 
-    auto &eaxprops = std::get<EAXREVERBPROPERTIES>(props);
-    const auto size = eaxprops.flEnvironmentSize;
-    const auto density = (size * size * size) / 16.0F;
+    const auto size = props.flEnvironmentSize;
+    const auto density = (size * size * size) / 16.0f;
     mAlProps.Reverb.Density = std::min(density, AL_EAXREVERB_MAX_DENSITY);
-    mAlProps.Reverb.Diffusion = eaxprops.flEnvironmentDiffusion;
-    mAlProps.Reverb.Gain = level_mb_to_gain(static_cast<float>(eaxprops.lRoom));
-    mAlProps.Reverb.GainHF = level_mb_to_gain(static_cast<float>(eaxprops.lRoomHF));
-    mAlProps.Reverb.GainLF = level_mb_to_gain(static_cast<float>(eaxprops.lRoomLF));
-    mAlProps.Reverb.DecayTime = eaxprops.flDecayTime;
-    mAlProps.Reverb.DecayHFRatio = eaxprops.flDecayHFRatio;
-    mAlProps.Reverb.DecayLFRatio = eaxprops.flDecayLFRatio;
-    mAlProps.Reverb.ReflectionsGain = level_mb_to_gain(static_cast<float>(eaxprops.lReflections));
-    mAlProps.Reverb.ReflectionsDelay = eaxprops.flReflectionsDelay;
-    mAlProps.Reverb.ReflectionsPan[0] = eaxprops.vReflectionsPan.x;
-    mAlProps.Reverb.ReflectionsPan[1] = eaxprops.vReflectionsPan.y;
-    mAlProps.Reverb.ReflectionsPan[2] = eaxprops.vReflectionsPan.z;
-    mAlProps.Reverb.LateReverbGain = level_mb_to_gain(static_cast<float>(eaxprops.lReverb));
-    mAlProps.Reverb.LateReverbDelay = eaxprops.flReverbDelay;
-    mAlProps.Reverb.LateReverbPan[0] = eaxprops.vReverbPan.x;
-    mAlProps.Reverb.LateReverbPan[1] = eaxprops.vReverbPan.y;
-    mAlProps.Reverb.LateReverbPan[2] = eaxprops.vReverbPan.z;
-    mAlProps.Reverb.EchoTime = eaxprops.flEchoTime;
-    mAlProps.Reverb.EchoDepth = eaxprops.flEchoDepth;
-    mAlProps.Reverb.ModulationTime = eaxprops.flModulationTime;
-    mAlProps.Reverb.ModulationDepth = eaxprops.flModulationDepth;
-    mAlProps.Reverb.AirAbsorptionGainHF = level_mb_to_gain(eaxprops.flAirAbsorptionHF);
-    mAlProps.Reverb.HFReference = eaxprops.flHFReference;
-    mAlProps.Reverb.LFReference = eaxprops.flLFReference;
-    mAlProps.Reverb.RoomRolloffFactor = eaxprops.flRoomRolloffFactor;
-    mAlProps.Reverb.DecayHFLimit = ((eaxprops.ulFlags & EAXREVERBFLAGS_DECAYHFLIMIT) != 0);
+    mAlProps.Reverb.Diffusion = props.flEnvironmentDiffusion;
+    mAlProps.Reverb.Gain = level_mb_to_gain(static_cast<float>(props.lRoom));
+    mAlProps.Reverb.GainHF = level_mb_to_gain(static_cast<float>(props.lRoomHF));
+    mAlProps.Reverb.GainLF = level_mb_to_gain(static_cast<float>(props.lRoomLF));
+    mAlProps.Reverb.DecayTime = props.flDecayTime;
+    mAlProps.Reverb.DecayHFRatio = props.flDecayHFRatio;
+    mAlProps.Reverb.DecayLFRatio = props.flDecayLFRatio;
+    mAlProps.Reverb.ReflectionsGain = level_mb_to_gain(static_cast<float>(props.lReflections));
+    mAlProps.Reverb.ReflectionsDelay = props.flReflectionsDelay;
+    mAlProps.Reverb.ReflectionsPan[0] = props.vReflectionsPan.x;
+    mAlProps.Reverb.ReflectionsPan[1] = props.vReflectionsPan.y;
+    mAlProps.Reverb.ReflectionsPan[2] = props.vReflectionsPan.z;
+    mAlProps.Reverb.LateReverbGain = level_mb_to_gain(static_cast<float>(props.lReverb));
+    mAlProps.Reverb.LateReverbDelay = props.flReverbDelay;
+    mAlProps.Reverb.LateReverbPan[0] = props.vReverbPan.x;
+    mAlProps.Reverb.LateReverbPan[1] = props.vReverbPan.y;
+    mAlProps.Reverb.LateReverbPan[2] = props.vReverbPan.z;
+    mAlProps.Reverb.EchoTime = props.flEchoTime;
+    mAlProps.Reverb.EchoDepth = props.flEchoDepth;
+    mAlProps.Reverb.ModulationTime = props.flModulationTime;
+    mAlProps.Reverb.ModulationDepth = props.flModulationDepth;
+    mAlProps.Reverb.AirAbsorptionGainHF = level_mb_to_gain(props.flAirAbsorptionHF);
+    mAlProps.Reverb.HFReference = props.flHFReference;
+    mAlProps.Reverb.LFReference = props.flLFReference;
+    mAlProps.Reverb.RoomRolloffFactor = props.flRoomRolloffFactor;
+    mAlProps.Reverb.DecayHFLimit = ((props.ulFlags & EAXREVERBFLAGS_DECAYHFLIMIT) != 0);
     return true;
 }
 
@@ -1274,11 +1261,6 @@ void EaxReverbCommitter::Get(const EaxCall &call, const EAXREVERBPROPERTIES &pro
     }
 }
 
-void EaxReverbCommitter::Get(const EaxCall &call, const EaxEffectProps &props)
-{
-    Get(call, std::get<EAXREVERBPROPERTIES>(props));
-}
-
 
 void EaxReverbCommitter::Set(const EaxCall &call, EAX_REVERBPROPERTIES &props)
 {
@@ -1297,71 +1279,23 @@ void EaxReverbCommitter::Set(const EaxCall &call, EAX20LISTENERPROPERTIES &props
 {
     switch(call.get_property_id())
     {
-    case DSPROPERTY_EAX20LISTENER_NONE:
-        break;
-
-    case DSPROPERTY_EAX20LISTENER_ALLPARAMETERS:
-        defer<AllValidator2>(call, props);
-        break;
-
-    case DSPROPERTY_EAX20LISTENER_ROOM:
-        defer<RoomValidator>(call, props.lRoom);
-        break;
-
-    case DSPROPERTY_EAX20LISTENER_ROOMHF:
-        defer<RoomHFValidator>(call, props.lRoomHF);
-        break;
-
-    case DSPROPERTY_EAX20LISTENER_ROOMROLLOFFFACTOR:
-        defer<RoomRolloffFactorValidator>(call, props.flRoomRolloffFactor);
-        break;
-
-    case DSPROPERTY_EAX20LISTENER_DECAYTIME:
-        defer<DecayTimeValidator>(call, props.flDecayTime);
-        break;
-
-    case DSPROPERTY_EAX20LISTENER_DECAYHFRATIO:
-        defer<DecayHFRatioValidator>(call, props.flDecayHFRatio);
-        break;
-
-    case DSPROPERTY_EAX20LISTENER_REFLECTIONS:
-        defer<ReflectionsValidator>(call, props.lReflections);
-        break;
-
-    case DSPROPERTY_EAX20LISTENER_REFLECTIONSDELAY:
-        defer<ReflectionsDelayValidator>(call, props.flReverbDelay);
-        break;
-
-    case DSPROPERTY_EAX20LISTENER_REVERB:
-        defer<ReverbValidator>(call, props.lReverb);
-        break;
-
-    case DSPROPERTY_EAX20LISTENER_REVERBDELAY:
-        defer<ReverbDelayValidator>(call, props.flReverbDelay);
-        break;
-
-    case DSPROPERTY_EAX20LISTENER_ENVIRONMENT:
-        defer<EnvironmentValidator1, EnvironmentDeferrer2>(call, props, props.dwEnvironment);
-        break;
-
-    case DSPROPERTY_EAX20LISTENER_ENVIRONMENTSIZE:
-        defer<EnvironmentSizeValidator, EnvironmentSizeDeferrer2>(call, props, props.flEnvironmentSize);
-        break;
-
-    case DSPROPERTY_EAX20LISTENER_ENVIRONMENTDIFFUSION:
-        defer<EnvironmentDiffusionValidator>(call, props.flEnvironmentDiffusion);
-        break;
-
-    case DSPROPERTY_EAX20LISTENER_AIRABSORPTIONHF:
-        defer<AirAbsorptionHFValidator>(call, props.flAirAbsorptionHF);
-        break;
-
-    case DSPROPERTY_EAX20LISTENER_FLAGS:
-        defer<FlagsValidator2>(call, props.dwFlags);
-        break;
-
-    default:
-        fail_unknown_property_id();
+    case DSPROPERTY_EAX20LISTENER_NONE: break;
+    case DSPROPERTY_EAX20LISTENER_ALLPARAMETERS: defer<AllValidator2>(call, props); break;
+    case DSPROPERTY_EAX20LISTENER_ROOM: defer<RoomValidator>(call, props.lRoom); break;
+    case DSPROPERTY_EAX20LISTENER_ROOMHF: defer<RoomHFValidator>(call, props.lRoomHF); break;
+    case DSPROPERTY_EAX20LISTENER_ROOMROLLOFFFACTOR: defer<RoomRolloffFactorValidator>(call, props.flRoomRolloffFactor); break;
+    case DSPROPERTY_EAX20LISTENER_DECAYTIME: defer<DecayTimeValidator>(call, props.flDecayTime); break;
+    case DSPROPERTY_EAX20LISTENER_DECAYHFRATIO: defer<DecayHFRatioValidator>(call, props.flDecayHFRatio); break;
+    case DSPROPERTY_EAX20LISTENER_REFLECTIONS: defer<ReflectionsValidator>(call, props.lReflections); break;
+    case DSPROPERTY_EAX20LISTENER_REFLECTIONSDELAY: defer<ReflectionsDelayValidator>(call, props.flReverbDelay); break;
+    case DSPROPERTY_EAX20LISTENER_REVERB: defer<ReverbValidator>(call, props.lReverb); break;
+    case DSPROPERTY_EAX20LISTENER_REVERBDELAY: defer<ReverbDelayValidator>(call, props.flReverbDelay); break;
+    case DSPROPERTY_EAX20LISTENER_ENVIRONMENT: defer<EnvironmentValidator1, EnvironmentDeferrer2>(call, props, props.dwEnvironment); break;
+    case DSPROPERTY_EAX20LISTENER_ENVIRONMENTSIZE: defer<EnvironmentSizeValidator, EnvironmentSizeDeferrer2>(call, props, props.flEnvironmentSize); break;
+    case DSPROPERTY_EAX20LISTENER_ENVIRONMENTDIFFUSION: defer<EnvironmentDiffusionValidator>(call, props.flEnvironmentDiffusion); break;
+    case DSPROPERTY_EAX20LISTENER_AIRABSORPTIONHF: defer<AirAbsorptionHFValidator>(call, props.flAirAbsorptionHF); break;
+    case DSPROPERTY_EAX20LISTENER_FLAGS: defer<FlagsValidator2>(call, props.dwFlags); break;
+    default: fail_unknown_property_id();
     }
 }
 
@@ -1369,117 +1303,34 @@ void EaxReverbCommitter::Set(const EaxCall &call, EAXREVERBPROPERTIES &props)
 {
     switch(call.get_property_id())
     {
-    case EAXREVERB_NONE:
-        break;
-
-    case EAXREVERB_ALLPARAMETERS:
-        defer<AllValidator3>(call, props);
-        break;
-
-    case EAXREVERB_ENVIRONMENT:
-        defer<EnvironmentValidator3, EnvironmentDeferrer3>(call, props, props.ulEnvironment);
-        break;
-
-    case EAXREVERB_ENVIRONMENTSIZE:
-        defer<EnvironmentSizeValidator, EnvironmentSizeDeferrer3>(call, props, props.flEnvironmentSize);
-        break;
-
-    case EAXREVERB_ENVIRONMENTDIFFUSION:
-        defer3<EnvironmentDiffusionValidator>(call, props, props.flEnvironmentDiffusion);
-        break;
-
-    case EAXREVERB_ROOM:
-        defer3<RoomValidator>(call, props, props.lRoom);
-        break;
-
-    case EAXREVERB_ROOMHF:
-        defer3<RoomHFValidator>(call, props, props.lRoomHF);
-        break;
-
-    case EAXREVERB_ROOMLF:
-        defer3<RoomLFValidator>(call, props, props.lRoomLF);
-        break;
-
-    case EAXREVERB_DECAYTIME:
-        defer3<DecayTimeValidator>(call, props, props.flDecayTime);
-        break;
-
-    case EAXREVERB_DECAYHFRATIO:
-        defer3<DecayHFRatioValidator>(call, props, props.flDecayHFRatio);
-        break;
-
-    case EAXREVERB_DECAYLFRATIO:
-        defer3<DecayLFRatioValidator>(call, props, props.flDecayLFRatio);
-        break;
-
-    case EAXREVERB_REFLECTIONS:
-        defer3<ReflectionsValidator>(call, props, props.lReflections);
-        break;
-
-    case EAXREVERB_REFLECTIONSDELAY:
-        defer3<ReflectionsDelayValidator>(call, props, props.flReflectionsDelay);
-        break;
-
-    case EAXREVERB_REFLECTIONSPAN:
-        defer3<VectorValidator>(call, props, props.vReflectionsPan);
-        break;
-
-    case EAXREVERB_REVERB:
-        defer3<ReverbValidator>(call, props, props.lReverb);
-        break;
-
-    case EAXREVERB_REVERBDELAY:
-        defer3<ReverbDelayValidator>(call, props, props.flReverbDelay);
-        break;
-
-    case EAXREVERB_REVERBPAN:
-        defer3<VectorValidator>(call, props, props.vReverbPan);
-        break;
-
-    case EAXREVERB_ECHOTIME:
-        defer3<EchoTimeValidator>(call, props, props.flEchoTime);
-        break;
-
-    case EAXREVERB_ECHODEPTH:
-        defer3<EchoDepthValidator>(call, props, props.flEchoDepth);
-        break;
-
-    case EAXREVERB_MODULATIONTIME:
-        defer3<ModulationTimeValidator>(call, props, props.flModulationTime);
-        break;
-
-    case EAXREVERB_MODULATIONDEPTH:
-        defer3<ModulationDepthValidator>(call, props, props.flModulationDepth);
-        break;
-
-    case EAXREVERB_AIRABSORPTIONHF:
-        defer3<AirAbsorptionHFValidator>(call, props, props.flAirAbsorptionHF);
-        break;
-
-    case EAXREVERB_HFREFERENCE:
-        defer3<HFReferenceValidator>(call, props, props.flHFReference);
-        break;
-
-    case EAXREVERB_LFREFERENCE:
-        defer3<LFReferenceValidator>(call, props, props.flLFReference);
-        break;
-
-    case EAXREVERB_ROOMROLLOFFFACTOR:
-        defer3<RoomRolloffFactorValidator>(call, props, props.flRoomRolloffFactor);
-        break;
-
-    case EAXREVERB_FLAGS:
-        defer3<FlagsValidator3>(call, props, props.ulFlags);
-        break;
-
-    default:
-        fail_unknown_property_id();
+    case EAXREVERB_NONE: break;
+    case EAXREVERB_ALLPARAMETERS: defer<AllValidator3>(call, props); break;
+    case EAXREVERB_ENVIRONMENT: defer<EnvironmentValidator3, EnvironmentDeferrer3>(call, props, props.ulEnvironment); break;
+    case EAXREVERB_ENVIRONMENTSIZE: defer<EnvironmentSizeValidator, EnvironmentSizeDeferrer3>(call, props, props.flEnvironmentSize); break;
+    case EAXREVERB_ENVIRONMENTDIFFUSION: defer3<EnvironmentDiffusionValidator>(call, props, props.flEnvironmentDiffusion); break;
+    case EAXREVERB_ROOM: defer3<RoomValidator>(call, props, props.lRoom); break;
+    case EAXREVERB_ROOMHF: defer3<RoomHFValidator>(call, props, props.lRoomHF); break;
+    case EAXREVERB_ROOMLF: defer3<RoomLFValidator>(call, props, props.lRoomLF); break;
+    case EAXREVERB_DECAYTIME: defer3<DecayTimeValidator>(call, props, props.flDecayTime); break;
+    case EAXREVERB_DECAYHFRATIO: defer3<DecayHFRatioValidator>(call, props, props.flDecayHFRatio); break;
+    case EAXREVERB_DECAYLFRATIO: defer3<DecayLFRatioValidator>(call, props, props.flDecayLFRatio); break;
+    case EAXREVERB_REFLECTIONS: defer3<ReflectionsValidator>(call, props, props.lReflections); break;
+    case EAXREVERB_REFLECTIONSDELAY: defer3<ReflectionsDelayValidator>(call, props, props.flReflectionsDelay); break;
+    case EAXREVERB_REFLECTIONSPAN: defer3<VectorValidator>(call, props, props.vReflectionsPan); break;
+    case EAXREVERB_REVERB: defer3<ReverbValidator>(call, props, props.lReverb); break;
+    case EAXREVERB_REVERBDELAY: defer3<ReverbDelayValidator>(call, props, props.flReverbDelay); break;
+    case EAXREVERB_REVERBPAN: defer3<VectorValidator>(call, props, props.vReverbPan); break;
+    case EAXREVERB_ECHOTIME: defer3<EchoTimeValidator>(call, props, props.flEchoTime); break;
+    case EAXREVERB_ECHODEPTH: defer3<EchoDepthValidator>(call, props, props.flEchoDepth); break;
+    case EAXREVERB_MODULATIONTIME: defer3<ModulationTimeValidator>(call, props, props.flModulationTime); break;
+    case EAXREVERB_MODULATIONDEPTH: defer3<ModulationDepthValidator>(call, props, props.flModulationDepth); break;
+    case EAXREVERB_AIRABSORPTIONHF: defer3<AirAbsorptionHFValidator>(call, props, props.flAirAbsorptionHF); break;
+    case EAXREVERB_HFREFERENCE: defer3<HFReferenceValidator>(call, props, props.flHFReference); break;
+    case EAXREVERB_LFREFERENCE: defer3<LFReferenceValidator>(call, props, props.flLFReference); break;
+    case EAXREVERB_ROOMROLLOFFFACTOR: defer3<RoomRolloffFactorValidator>(call, props, props.flRoomRolloffFactor); break;
+    case EAXREVERB_FLAGS: defer3<FlagsValidator3>(call, props, props.ulFlags); break;
+    default: fail_unknown_property_id();
     }
-}
-
-void EaxReverbCommitter::Set(const EaxCall &call, EaxEffectProps &props)
-{
-    Set(call, std::get<EAXREVERBPROPERTIES>(props));
 }
 
 #endif // ALSOFT_EAX

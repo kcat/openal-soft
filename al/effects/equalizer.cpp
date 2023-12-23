@@ -319,8 +319,7 @@ template<>
     throw Exception{message};
 }
 
-template<>
-bool EqualizerCommitter::commit(const EaxEffectProps &props)
+bool EaxEqualizerCommitter::commit(const EaxEffectProps &props)
 {
     if(props == mEaxProps)
         return false;
@@ -342,8 +341,7 @@ bool EqualizerCommitter::commit(const EaxEffectProps &props)
     return true;
 }
 
-template<>
-void EqualizerCommitter::SetDefaults(EaxEffectProps &props)
+void EaxEqualizerCommitter::SetDefaults(EaxEffectProps &props)
 {
     static constexpr EAXEQUALIZERPROPERTIES defprops{[]
     {
@@ -363,8 +361,7 @@ void EqualizerCommitter::SetDefaults(EaxEffectProps &props)
     props = defprops;
 }
 
-template<>
-void EqualizerCommitter::Get(const EaxCall &call, const EaxEffectProps &props_)
+void EaxEqualizerCommitter::Get(const EaxCall &call, const EaxEffectProps &props_)
 {
     auto &props = std::get<EAXEQUALIZERPROPERTIES>(props_);
     switch(call.get_property_id())
@@ -385,8 +382,7 @@ void EqualizerCommitter::Get(const EaxCall &call, const EaxEffectProps &props_)
     }
 }
 
-template<>
-void EqualizerCommitter::Set(const EaxCall &call, EaxEffectProps &props_)
+void EaxEqualizerCommitter::Set(const EaxCall &call, EaxEffectProps &props_)
 {
     auto &props = std::get<EAXEQUALIZERPROPERTIES>(props_);
     switch(call.get_property_id())

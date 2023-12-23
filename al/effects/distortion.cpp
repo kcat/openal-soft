@@ -204,8 +204,7 @@ template<>
     throw Exception{message};
 }
 
-template<>
-bool DistortionCommitter::commit(const EaxEffectProps &props)
+bool EaxDistortionCommitter::commit(const EaxEffectProps &props)
 {
     if(props == mEaxProps)
         return false;
@@ -222,8 +221,7 @@ bool DistortionCommitter::commit(const EaxEffectProps &props)
     return true;
 }
 
-template<>
-void DistortionCommitter::SetDefaults(EaxEffectProps &props)
+void EaxDistortionCommitter::SetDefaults(EaxEffectProps &props)
 {
     static constexpr EAXDISTORTIONPROPERTIES defprops{[]
     {
@@ -238,8 +236,7 @@ void DistortionCommitter::SetDefaults(EaxEffectProps &props)
     props = defprops;
 }
 
-template<>
-void DistortionCommitter::Get(const EaxCall &call, const EaxEffectProps &props_)
+void EaxDistortionCommitter::Get(const EaxCall &call, const EaxEffectProps &props_)
 {
     auto &props = std::get<EAXDISTORTIONPROPERTIES>(props_);
     switch(call.get_property_id())
@@ -255,8 +252,7 @@ void DistortionCommitter::Get(const EaxCall &call, const EaxEffectProps &props_)
     }
 }
 
-template<>
-void DistortionCommitter::Set(const EaxCall &call, EaxEffectProps &props_)
+void EaxDistortionCommitter::Set(const EaxCall &call, EaxEffectProps &props_)
 {
     auto &props = std::get<EAXDISTORTIONPROPERTIES>(props_);
     switch(call.get_property_id())

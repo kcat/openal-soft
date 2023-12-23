@@ -189,8 +189,7 @@ template<>
     throw Exception{message};
 }
 
-template<>
-bool AutowahCommitter::commit(const EaxEffectProps &props)
+bool EaxAutowahCommitter::commit(const EaxEffectProps &props)
 {
     if(props == mEaxProps)
         return false;
@@ -206,8 +205,7 @@ bool AutowahCommitter::commit(const EaxEffectProps &props)
     return true;
 }
 
-template<>
-void AutowahCommitter::SetDefaults(EaxEffectProps &props)
+void EaxAutowahCommitter::SetDefaults(EaxEffectProps &props)
 {
     static constexpr EAXAUTOWAHPROPERTIES defprops{[]
     {
@@ -221,8 +219,7 @@ void AutowahCommitter::SetDefaults(EaxEffectProps &props)
     props = defprops;
 }
 
-template<>
-void AutowahCommitter::Get(const EaxCall &call, const EaxEffectProps &props_)
+void EaxAutowahCommitter::Get(const EaxCall &call, const EaxEffectProps &props_)
 {
     auto &props = std::get<EAXAUTOWAHPROPERTIES>(props_);
     switch(call.get_property_id())
@@ -237,8 +234,7 @@ void AutowahCommitter::Get(const EaxCall &call, const EaxEffectProps &props_)
     }
 }
 
-template<>
-void AutowahCommitter::Set(const EaxCall &call, EaxEffectProps &props_)
+void EaxAutowahCommitter::Set(const EaxCall &call, EaxEffectProps &props_)
 {
     auto &props = std::get<EAXAUTOWAHPROPERTIES>(props_);
     switch(call.get_property_id())

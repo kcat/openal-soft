@@ -352,8 +352,7 @@ template<>
     throw Exception{message};
 }
 
-template<>
-bool VocalMorpherCommitter::commit(const EaxEffectProps &props)
+bool EaxVocalMorpherCommitter::commit(const EaxEffectProps &props)
 {
     if(props == mEaxProps)
         return false;
@@ -418,8 +417,7 @@ bool VocalMorpherCommitter::commit(const EaxEffectProps &props)
     return true;
 }
 
-template<>
-void VocalMorpherCommitter::SetDefaults(EaxEffectProps &props)
+void EaxVocalMorpherCommitter::SetDefaults(EaxEffectProps &props)
 {
     static constexpr EAXVOCALMORPHERPROPERTIES defprops{[]
     {
@@ -435,87 +433,37 @@ void VocalMorpherCommitter::SetDefaults(EaxEffectProps &props)
     props = defprops;
 }
 
-template<>
-void VocalMorpherCommitter::Get(const EaxCall &call, const EaxEffectProps &props_)
+void EaxVocalMorpherCommitter::Get(const EaxCall &call, const EaxEffectProps &props_)
 {
     auto &props = std::get<EAXVOCALMORPHERPROPERTIES>(props_);
     switch(call.get_property_id())
     {
-    case EAXVOCALMORPHER_NONE:
-        break;
-
-    case EAXVOCALMORPHER_ALLPARAMETERS:
-        call.set_value<Exception>(props);
-        break;
-
-    case EAXVOCALMORPHER_PHONEMEA:
-        call.set_value<Exception>(props.ulPhonemeA);
-        break;
-
-    case EAXVOCALMORPHER_PHONEMEACOARSETUNING:
-        call.set_value<Exception>(props.lPhonemeACoarseTuning);
-        break;
-
-    case EAXVOCALMORPHER_PHONEMEB:
-        call.set_value<Exception>(props.ulPhonemeB);
-        break;
-
-    case EAXVOCALMORPHER_PHONEMEBCOARSETUNING:
-        call.set_value<Exception>(props.lPhonemeBCoarseTuning);
-        break;
-
-    case EAXVOCALMORPHER_WAVEFORM:
-        call.set_value<Exception>(props.ulWaveform);
-        break;
-
-    case EAXVOCALMORPHER_RATE:
-        call.set_value<Exception>(props.flRate);
-        break;
-
-    default:
-        fail_unknown_property_id();
+    case EAXVOCALMORPHER_NONE: break;
+    case EAXVOCALMORPHER_ALLPARAMETERS: call.set_value<Exception>(props); break;
+    case EAXVOCALMORPHER_PHONEMEA: call.set_value<Exception>(props.ulPhonemeA); break;
+    case EAXVOCALMORPHER_PHONEMEACOARSETUNING: call.set_value<Exception>(props.lPhonemeACoarseTuning); break;
+    case EAXVOCALMORPHER_PHONEMEB: call.set_value<Exception>(props.ulPhonemeB); break;
+    case EAXVOCALMORPHER_PHONEMEBCOARSETUNING: call.set_value<Exception>(props.lPhonemeBCoarseTuning); break;
+    case EAXVOCALMORPHER_WAVEFORM: call.set_value<Exception>(props.ulWaveform); break;
+    case EAXVOCALMORPHER_RATE: call.set_value<Exception>(props.flRate); break;
+    default: fail_unknown_property_id();
     }
 }
 
-template<>
-void VocalMorpherCommitter::Set(const EaxCall &call, EaxEffectProps &props_)
+void EaxVocalMorpherCommitter::Set(const EaxCall &call, EaxEffectProps &props_)
 {
     auto &props = std::get<EAXVOCALMORPHERPROPERTIES>(props_);
     switch(call.get_property_id())
     {
-    case EAXVOCALMORPHER_NONE:
-        break;
-
-    case EAXVOCALMORPHER_ALLPARAMETERS:
-        defer<AllValidator>(call, props);
-        break;
-
-    case EAXVOCALMORPHER_PHONEMEA:
-        defer<PhonemeAValidator>(call, props.ulPhonemeA);
-        break;
-
-    case EAXVOCALMORPHER_PHONEMEACOARSETUNING:
-        defer<PhonemeACoarseTuningValidator>(call, props.lPhonemeACoarseTuning);
-        break;
-
-    case EAXVOCALMORPHER_PHONEMEB:
-        defer<PhonemeBValidator>(call, props.ulPhonemeB);
-        break;
-
-    case EAXVOCALMORPHER_PHONEMEBCOARSETUNING:
-        defer<PhonemeBCoarseTuningValidator>(call, props.lPhonemeBCoarseTuning);
-        break;
-
-    case EAXVOCALMORPHER_WAVEFORM:
-        defer<WaveformValidator>(call, props.ulWaveform);
-        break;
-
-    case EAXVOCALMORPHER_RATE:
-        defer<RateValidator>(call, props.flRate);
-        break;
-
-    default:
-        fail_unknown_property_id();
+    case EAXVOCALMORPHER_NONE: break;
+    case EAXVOCALMORPHER_ALLPARAMETERS: defer<AllValidator>(call, props); break;
+    case EAXVOCALMORPHER_PHONEMEA: defer<PhonemeAValidator>(call, props.ulPhonemeA); break;
+    case EAXVOCALMORPHER_PHONEMEACOARSETUNING: defer<PhonemeACoarseTuningValidator>(call, props.lPhonemeACoarseTuning); break;
+    case EAXVOCALMORPHER_PHONEMEB: defer<PhonemeBValidator>(call, props.ulPhonemeB); break;
+    case EAXVOCALMORPHER_PHONEMEBCOARSETUNING: defer<PhonemeBCoarseTuningValidator>(call, props.lPhonemeBCoarseTuning); break;
+    case EAXVOCALMORPHER_WAVEFORM: defer<WaveformValidator>(call, props.ulWaveform); break;
+    case EAXVOCALMORPHER_RATE: defer<RateValidator>(call, props.flRate); break;
+    default: fail_unknown_property_id();
     }
 }
 

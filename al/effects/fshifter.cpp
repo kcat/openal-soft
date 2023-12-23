@@ -197,8 +197,7 @@ template<>
     throw Exception{message};
 }
 
-template<>
-bool FrequencyShifterCommitter::commit(const EaxEffectProps &props)
+bool EaxFrequencyShifterCommitter::commit(const EaxEffectProps &props)
 {
     if(props == mEaxProps)
         return false;
@@ -222,8 +221,7 @@ bool FrequencyShifterCommitter::commit(const EaxEffectProps &props)
     return true;
 }
 
-template<>
-void FrequencyShifterCommitter::SetDefaults(EaxEffectProps &props)
+void EaxFrequencyShifterCommitter::SetDefaults(EaxEffectProps &props)
 {
     static constexpr EAXFREQUENCYSHIFTERPROPERTIES defprops{[]
     {
@@ -236,8 +234,7 @@ void FrequencyShifterCommitter::SetDefaults(EaxEffectProps &props)
     props = defprops;
 }
 
-template<>
-void FrequencyShifterCommitter::Get(const EaxCall &call, const EaxEffectProps &props_)
+void EaxFrequencyShifterCommitter::Get(const EaxCall &call, const EaxEffectProps &props_)
 {
     auto &props = std::get<EAXFREQUENCYSHIFTERPROPERTIES>(props_);
     switch(call.get_property_id())
@@ -251,8 +248,7 @@ void FrequencyShifterCommitter::Get(const EaxCall &call, const EaxEffectProps &p
     }
 }
 
-template<>
-void FrequencyShifterCommitter::Set(const EaxCall &call, EaxEffectProps &props_)
+void EaxFrequencyShifterCommitter::Set(const EaxCall &call, EaxEffectProps &props_)
 {
     auto &props = std::get<EAXFREQUENCYSHIFTERPROPERTIES>(props_);
     switch(call.get_property_id())

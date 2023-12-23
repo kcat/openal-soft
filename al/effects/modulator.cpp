@@ -203,8 +203,7 @@ template<>
     throw Exception{message};
 }
 
-template<>
-bool ModulatorCommitter::commit(const EaxEffectProps &props)
+bool EaxModulatorCommitter::commit(const EaxEffectProps &props)
 {
     if(props == mEaxProps)
         return false;
@@ -230,8 +229,7 @@ bool ModulatorCommitter::commit(const EaxEffectProps &props)
     return true;
 }
 
-template<>
-void ModulatorCommitter::SetDefaults(EaxEffectProps &props)
+void EaxModulatorCommitter::SetDefaults(EaxEffectProps &props)
 {
     static constexpr EAXRINGMODULATORPROPERTIES defprops{[]
     {
@@ -244,8 +242,7 @@ void ModulatorCommitter::SetDefaults(EaxEffectProps &props)
     props = defprops;
 }
 
-template<>
-void ModulatorCommitter::Get(const EaxCall &call, const EaxEffectProps &props_)
+void EaxModulatorCommitter::Get(const EaxCall &call, const EaxEffectProps &props_)
 {
     auto &props = std::get<EAXRINGMODULATORPROPERTIES>(props_);
     switch(call.get_property_id())
@@ -259,8 +256,7 @@ void ModulatorCommitter::Get(const EaxCall &call, const EaxEffectProps &props_)
     }
 }
 
-template<>
-void ModulatorCommitter::Set(const EaxCall &call, EaxEffectProps &props_)
+void EaxModulatorCommitter::Set(const EaxCall &call, EaxEffectProps &props_)
 {
     auto &props = std::get<EAXRINGMODULATORPROPERTIES>(props_);
     switch (call.get_property_id())

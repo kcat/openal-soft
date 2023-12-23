@@ -117,29 +117,25 @@ template<>
     throw Exception{message};
 }
 
-template<>
-bool NullCommitter::commit(const EaxEffectProps &props)
+bool EaxNullCommitter::commit(const EaxEffectProps &props)
 {
     const bool ret{props != mEaxProps};
     mEaxProps = props;
     return ret;
 }
 
-template<>
-void NullCommitter::SetDefaults(EaxEffectProps &props)
+void EaxNullCommitter::SetDefaults(EaxEffectProps &props)
 {
     props.emplace<std::monostate>();
 }
 
-template<>
-void NullCommitter::Get(const EaxCall &call, const EaxEffectProps&)
+void EaxNullCommitter::Get(const EaxCall &call, const EaxEffectProps&)
 {
     if(call.get_property_id() != 0)
         fail_unknown_property_id();
 }
 
-template<>
-void NullCommitter::Set(const EaxCall &call, EaxEffectProps&)
+void EaxNullCommitter::Set(const EaxCall &call, EaxEffectProps&)
 {
     if(call.get_property_id() != 0)
         fail_unknown_property_id();

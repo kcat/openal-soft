@@ -201,8 +201,7 @@ template<>
     throw Exception{message};
 }
 
-template<>
-bool EchoCommitter::commit(const EaxEffectProps &props)
+bool EaxEchoCommitter::commit(const EaxEffectProps &props)
 {
     if(props == mEaxProps)
         return false;
@@ -219,8 +218,7 @@ bool EchoCommitter::commit(const EaxEffectProps &props)
     return true;
 }
 
-template<>
-void EchoCommitter::SetDefaults(EaxEffectProps &props)
+void EaxEchoCommitter::SetDefaults(EaxEffectProps &props)
 {
     static constexpr EAXECHOPROPERTIES defprops{[]
     {
@@ -235,8 +233,7 @@ void EchoCommitter::SetDefaults(EaxEffectProps &props)
     props = defprops;
 }
 
-template<>
-void EchoCommitter::Get(const EaxCall &call, const EaxEffectProps &props_)
+void EaxEchoCommitter::Get(const EaxCall &call, const EaxEffectProps &props_)
 {
     auto &props = std::get<EAXECHOPROPERTIES>(props_);
     switch(call.get_property_id())
@@ -252,8 +249,7 @@ void EchoCommitter::Get(const EaxCall &call, const EaxEffectProps &props_)
     }
 }
 
-template<>
-void EchoCommitter::Set(const EaxCall &call, EaxEffectProps &props_)
+void EaxEchoCommitter::Set(const EaxCall &call, EaxEffectProps &props_)
 {
     auto &props = std::get<EAXECHOPROPERTIES>(props_);
     switch(call.get_property_id())

@@ -638,29 +638,25 @@ template<>
     throw Exception{message};
 }
 
-template<>
-bool ChorusCommitter::commit(const EaxEffectProps &props)
+bool EaxChorusCommitter::commit(const EaxEffectProps &props)
 {
     using Committer = ChorusFlangerEffect<EaxChorusTraits>;
     return Committer::Commit(props, mEaxProps, mAlProps);
 }
 
-template<>
-void ChorusCommitter::SetDefaults(EaxEffectProps &props)
+void EaxChorusCommitter::SetDefaults(EaxEffectProps &props)
 {
     using Committer = ChorusFlangerEffect<EaxChorusTraits>;
     Committer::SetDefaults(props);
 }
 
-template<>
-void ChorusCommitter::Get(const EaxCall &call, const EaxEffectProps &props)
+void EaxChorusCommitter::Get(const EaxCall &call, const EaxEffectProps &props)
 {
     using Committer = ChorusFlangerEffect<EaxChorusTraits>;
     Committer::Get(call, props);
 }
 
-template<>
-void ChorusCommitter::Set(const EaxCall &call, EaxEffectProps &props)
+void EaxChorusCommitter::Set(const EaxCall &call, EaxEffectProps &props)
 {
     using Committer = ChorusFlangerEffect<EaxChorusTraits>;
     Committer::Set(call, props);
@@ -679,29 +675,25 @@ template<>
     throw Exception{message};
 }
 
-template<>
-bool FlangerCommitter::commit(const EaxEffectProps &props)
+bool EaxFlangerCommitter::commit(const EaxEffectProps &props)
 {
     using Committer = ChorusFlangerEffect<EaxFlangerTraits>;
     return Committer::Commit(props, mEaxProps, mAlProps);
 }
 
-template<>
-void FlangerCommitter::SetDefaults(EaxEffectProps &props)
+void EaxFlangerCommitter::SetDefaults(EaxEffectProps &props)
 {
     using Committer = ChorusFlangerEffect<EaxFlangerTraits>;
     Committer::SetDefaults(props);
 }
 
-template<>
-void FlangerCommitter::Get(const EaxCall &call, const EaxEffectProps &props)
+void EaxFlangerCommitter::Get(const EaxCall &call, const EaxEffectProps &props)
 {
     using Committer = ChorusFlangerEffect<EaxFlangerTraits>;
     Committer::Get(call, props);
 }
 
-template<>
-void FlangerCommitter::Set(const EaxCall &call, EaxEffectProps &props)
+void EaxFlangerCommitter::Set(const EaxCall &call, EaxEffectProps &props)
 {
     using Committer = ChorusFlangerEffect<EaxFlangerTraits>;
     Committer::Set(call, props);

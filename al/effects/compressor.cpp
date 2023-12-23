@@ -115,8 +115,7 @@ template<>
     throw Exception{message};
 }
 
-template<>
-bool CompressorCommitter::commit(const EaxEffectProps &props)
+bool EaxCompressorCommitter::commit(const EaxEffectProps &props)
 {
     if(props == mEaxProps)
         return false;
@@ -127,14 +126,12 @@ bool CompressorCommitter::commit(const EaxEffectProps &props)
     return true;
 }
 
-template<>
-void CompressorCommitter::SetDefaults(EaxEffectProps &props)
+void EaxCompressorCommitter::SetDefaults(EaxEffectProps &props)
 {
     props = EAXAGCCOMPRESSORPROPERTIES{EAXAGCCOMPRESSOR_DEFAULTONOFF};
 }
 
-template<>
-void CompressorCommitter::Get(const EaxCall &call, const EaxEffectProps &props_)
+void EaxCompressorCommitter::Get(const EaxCall &call, const EaxEffectProps &props_)
 {
     auto &props = std::get<EAXAGCCOMPRESSORPROPERTIES>(props_);
     switch(call.get_property_id())
@@ -146,8 +143,7 @@ void CompressorCommitter::Get(const EaxCall &call, const EaxEffectProps &props_)
     }
 }
 
-template<>
-void CompressorCommitter::Set(const EaxCall &call, EaxEffectProps &props_)
+void EaxCompressorCommitter::Set(const EaxCall &call, EaxEffectProps &props_)
 {
     auto &props = std::get<EAXAGCCOMPRESSORPROPERTIES>(props_);
     switch(call.get_property_id())

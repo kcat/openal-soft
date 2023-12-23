@@ -138,8 +138,7 @@ template<>
     throw Exception{message};
 }
 
-template<>
-bool PitchShifterCommitter::commit(const EaxEffectProps &props)
+bool EaxPitchShifterCommitter::commit(const EaxEffectProps &props)
 {
     if(props == mEaxProps)
         return false;
@@ -153,15 +152,13 @@ bool PitchShifterCommitter::commit(const EaxEffectProps &props)
     return true;
 }
 
-template<>
-void PitchShifterCommitter::SetDefaults(EaxEffectProps &props)
+void EaxPitchShifterCommitter::SetDefaults(EaxEffectProps &props)
 {
     props = EAXPITCHSHIFTERPROPERTIES{EAXPITCHSHIFTER_DEFAULTCOARSETUNE,
         EAXPITCHSHIFTER_DEFAULTFINETUNE};
 }
 
-template<>
-void PitchShifterCommitter::Get(const EaxCall &call, const EaxEffectProps &props_)
+void EaxPitchShifterCommitter::Get(const EaxCall &call, const EaxEffectProps &props_)
 {
     auto &props = std::get<EAXPITCHSHIFTERPROPERTIES>(props_);
     switch(call.get_property_id())
@@ -174,8 +171,7 @@ void PitchShifterCommitter::Get(const EaxCall &call, const EaxEffectProps &props
     }
 }
 
-template<>
-void PitchShifterCommitter::Set(const EaxCall &call, EaxEffectProps &props_)
+void EaxPitchShifterCommitter::Set(const EaxCall &call, EaxEffectProps &props_)
 {
     auto &props = std::get<EAXPITCHSHIFTERPROPERTIES>(props_);
     switch(call.get_property_id())

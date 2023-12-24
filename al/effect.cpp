@@ -109,8 +109,8 @@ constexpr std::array EffectPropsList{
     EffectPropsItem{AL_EFFECT_RING_MODULATOR, ModulatorEffectProps, ModulatorEffectVtable},
     EffectPropsItem{AL_EFFECT_PITCH_SHIFTER, PshifterEffectProps, PshifterEffectVtable},
     EffectPropsItem{AL_EFFECT_VOCAL_MORPHER, VmorpherEffectProps, VmorpherEffectVtable},
-    EffectPropsItem{AL_EFFECT_DEDICATED_DIALOGUE, DedicatedEffectProps, DedicatedEffectVtable},
-    EffectPropsItem{AL_EFFECT_DEDICATED_LOW_FREQUENCY_EFFECT, DedicatedEffectProps, DedicatedEffectVtable},
+    EffectPropsItem{AL_EFFECT_DEDICATED_DIALOGUE, DedicatedDialogEffectProps, DedicatedDialogEffectVtable},
+    EffectPropsItem{AL_EFFECT_DEDICATED_LOW_FREQUENCY_EFFECT, DedicatedLfeEffectProps, DedicatedLfeEffectVtable},
     EffectPropsItem{AL_EFFECT_CONVOLUTION_SOFT, ConvolutionEffectProps, ConvolutionEffectVtable},
 };
 

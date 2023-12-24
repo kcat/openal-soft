@@ -64,7 +64,8 @@ extern const EffectProps FshifterEffectProps;
 extern const EffectProps ModulatorEffectProps;
 extern const EffectProps PshifterEffectProps;
 extern const EffectProps VmorpherEffectProps;
-extern const EffectProps DedicatedEffectProps;
+extern const EffectProps DedicatedDialogEffectProps;
+extern const EffectProps DedicatedLfeEffectProps;
 extern const EffectProps ConvolutionEffectProps;
 
 /* Vtables to get/set properties for the given effect types. */
@@ -82,7 +83,8 @@ extern const EffectVtable FshifterEffectVtable;
 extern const EffectVtable ModulatorEffectVtable;
 extern const EffectVtable PshifterEffectVtable;
 extern const EffectVtable VmorpherEffectVtable;
-extern const EffectVtable DedicatedEffectVtable;
+extern const EffectVtable DedicatedDialogEffectVtable;
+extern const EffectVtable DedicatedLfeEffectVtable;
 extern const EffectVtable ConvolutionEffectVtable;
 
 #endif /* AL_EFFECTS_EFFECTS_H */

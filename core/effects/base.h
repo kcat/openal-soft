@@ -171,7 +171,11 @@ struct VmorpherProps {
     VMorpherWaveform Waveform;
 };
 
-struct DedicatedProps {
+struct DedicatedDialogProps {
+    float Gain;
+};
+
+struct DedicatedLfeProps {
     float Gain;
 };
 
@@ -193,7 +197,8 @@ union EffectProps {
     ModulatorProps Modulator;
     PshifterProps Pshifter;
     VmorpherProps Vmorpher;
-    DedicatedProps Dedicated;
+    DedicatedDialogProps DedicatedDialog;
+    DedicatedLfeProps DedicatedLfe;
     ConvolutionProps Convolution;
 };
 

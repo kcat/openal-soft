@@ -72,8 +72,8 @@ constexpr std::array FactoryList{
     FactoryItem{EffectSlotType::RingModulator, ModulatorStateFactory_getFactory},
     FactoryItem{EffectSlotType::PitchShifter, PshifterStateFactory_getFactory},
     FactoryItem{EffectSlotType::VocalMorpher, VmorpherStateFactory_getFactory},
-    FactoryItem{EffectSlotType::DedicatedDialog, DedicatedStateFactory_getFactory},
-    FactoryItem{EffectSlotType::DedicatedLFE, DedicatedStateFactory_getFactory},
+    FactoryItem{EffectSlotType::DedicatedDialog, DedicatedDialogStateFactory_getFactory},
+    FactoryItem{EffectSlotType::DedicatedLFE, DedicatedLfeStateFactory_getFactory},
     FactoryItem{EffectSlotType::Convolution, ConvolutionStateFactory_getFactory},
 };
 

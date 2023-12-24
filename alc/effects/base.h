@@ -25,7 +25,8 @@ EffectStateFactory *ModulatorStateFactory_getFactory();
 EffectStateFactory *PshifterStateFactory_getFactory();
 EffectStateFactory* VmorpherStateFactory_getFactory();
 
-EffectStateFactory *DedicatedStateFactory_getFactory();
+EffectStateFactory *DedicatedDialogStateFactory_getFactory();
+EffectStateFactory *DedicatedLfeStateFactory_getFactory();
 
 EffectStateFactory *ConvolutionStateFactory_getFactory();
 

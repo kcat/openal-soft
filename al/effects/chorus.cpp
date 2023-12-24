@@ -168,7 +168,7 @@ void Flanger_setParami(EffectProps *props, ALenum param, int val)
     {
     case AL_FLANGER_WAVEFORM:
         if(auto formopt = WaveformFromEnum(val))
-            props->Chorus.Waveform = *formopt;
+            props->Flanger.Waveform = *formopt;
         else
             throw effect_exception{AL_INVALID_VALUE, "Invalid flanger waveform: 0x%04x", val};
         break;
@@ -176,7 +176,7 @@ void Flanger_setParami(EffectProps *props, ALenum param, int val)
     case AL_FLANGER_PHASE:
         if(!(val >= AL_FLANGER_MIN_PHASE && val <= AL_FLANGER_MAX_PHASE))
             throw effect_exception{AL_INVALID_VALUE, "Flanger phase out of range: %d", val};
-        props->Chorus.Phase = val;
+        props->Flanger.Phase = val;
         break;
 
     default:
@@ -192,25 +192,25 @@ void Flanger_setParamf(EffectProps *props, ALenum param, float val)
     case AL_FLANGER_RATE:
         if(!(val >= AL_FLANGER_MIN_RATE && val <= AL_FLANGER_MAX_RATE))
             throw effect_exception{AL_INVALID_VALUE, "Flanger rate out of range: %f", val};
-        props->Chorus.Rate = val;
+        props->Flanger.Rate = val;
         break;
 
     case AL_FLANGER_DEPTH:
         if(!(val >= AL_FLANGER_MIN_DEPTH && val <= AL_FLANGER_MAX_DEPTH))
             throw effect_exception{AL_INVALID_VALUE, "Flanger depth out of range: %f", val};
-        props->Chorus.Depth = val;
+        props->Flanger.Depth = val;
         break;
 
     case AL_FLANGER_FEEDBACK:
         if(!(val >= AL_FLANGER_MIN_FEEDBACK && val <= AL_FLANGER_MAX_FEEDBACK))
             throw effect_exception{AL_INVALID_VALUE, "Flanger feedback out of range: %f", val};
-        props->Chorus.Feedback = val;
+        props->Flanger.Feedback = val;
         break;
 
     case AL_FLANGER_DELAY:
         if(!(val >= AL_FLANGER_MIN_DELAY && val <= AL_FLANGER_MAX_DELAY))
             throw effect_exception{AL_INVALID_VALUE, "Flanger delay out of range: %f", val};
-        props->Chorus.Delay = val;
+        props->Flanger.Delay = val;
         break;
 
     default:
@@ -225,11 +225,11 @@ void Flanger_getParami(const EffectProps *props, ALenum param, int *val)
     switch(param)
     {
     case AL_FLANGER_WAVEFORM:
-        *val = EnumFromWaveform(props->Chorus.Waveform);
+        *val = EnumFromWaveform(props->Flanger.Waveform);
         break;
 
     case AL_FLANGER_PHASE:
-        *val = props->Chorus.Phase;
+        *val = props->Flanger.Phase;
         break;
 
     default:
@@ -243,19 +243,19 @@ void Flanger_getParamf(const EffectProps *props, ALenum param, float *val)
     switch(param)
     {
     case AL_FLANGER_RATE:
-        *val = props->Chorus.Rate;
+        *val = props->Flanger.Rate;
         break;
 
     case AL_FLANGER_DEPTH:
-        *val = props->Chorus.Depth;
+        *val = props->Flanger.Depth;
         break;
 
     case AL_FLANGER_FEEDBACK:
-        *val = props->Chorus.Feedback;
+        *val = props->Flanger.Feedback;
         break;
 
     case AL_FLANGER_DELAY:
-        *val = props->Chorus.Delay;
+        *val = props->Flanger.Delay;
         break;
 
     default:
@@ -268,12 +268,12 @@ void Flanger_getParamfv(const EffectProps *props, ALenum param, float *vals)
 EffectProps genDefaultFlangerProps() noexcept
 {
     EffectProps props{};
-    props.Chorus.Waveform = *WaveformFromEnum(AL_FLANGER_DEFAULT_WAVEFORM);
-    props.Chorus.Phase = AL_FLANGER_DEFAULT_PHASE;
-    props.Chorus.Rate = AL_FLANGER_DEFAULT_RATE;
-    props.Chorus.Depth = AL_FLANGER_DEFAULT_DEPTH;
-    props.Chorus.Feedback = AL_FLANGER_DEFAULT_FEEDBACK;
-    props.Chorus.Delay = AL_FLANGER_DEFAULT_DELAY;
+    props.Flanger.Waveform = *WaveformFromEnum(AL_FLANGER_DEFAULT_WAVEFORM);
+    props.Flanger.Phase = AL_FLANGER_DEFAULT_PHASE;
+    props.Flanger.Rate = AL_FLANGER_DEFAULT_RATE;
+    props.Flanger.Depth = AL_FLANGER_DEFAULT_DEPTH;
+    props.Flanger.Feedback = AL_FLANGER_DEFAULT_FEEDBACK;
+    props.Flanger.Delay = AL_FLANGER_DEFAULT_DELAY;
     return props;
 }
 
@@ -292,8 +292,9 @@ const EffectProps FlangerEffectProps{genDefaultFlangerProps()};
 namespace {
 
 struct EaxChorusTraits {
-    using Props = EAXCHORUSPROPERTIES;
+    using EaxProps = EAXCHORUSPROPERTIES;
     using Committer = EaxChorusCommitter;
+    using AlProps = ChorusProps;
 
     static constexpr auto efx_effect() { return AL_EFFECT_CHORUS; }
 
@@ -357,8 +358,9 @@ struct EaxChorusTraits {
 }; // EaxChorusTraits
 
 struct EaxFlangerTraits {
-    using Props = EAXFLANGERPROPERTIES;
+    using EaxProps = EAXFLANGERPROPERTIES;
     using Committer = EaxFlangerCommitter;
+    using AlProps = FlangerProps;
 
     static constexpr auto efx_effect() { return AL_EFFECT_FLANGER; }
 
@@ -424,7 +426,9 @@ struct EaxFlangerTraits {
 template<typename TTraits>
 struct ChorusFlangerEffect {
     using Traits = TTraits;
+    using EaxProps = typename Traits::EaxProps;
     using Committer = typename Traits::Committer;
+    using AlProps = typename Traits::AlProps;
     using Exception = typename Committer::Exception;
 
     struct WaveformValidator {
@@ -494,7 +498,7 @@ struct ChorusFlangerEffect {
     }; // DelayValidator
 
     struct AllValidator {
-        void operator()(const typename Traits::Props& all) const
+        void operator()(const EaxProps& all) const
         {
             WaveformValidator{}(all.ulWaveform);
             PhaseValidator{}(all.lPhase);
@@ -508,7 +512,7 @@ struct ChorusFlangerEffect {
 public:
     static void SetDefaults(EaxEffectProps &props)
     {
-        auto&& all = props.emplace<typename Traits::Props>();
+        auto&& all = props.emplace<EaxProps>();
         all.ulWaveform = Traits::eax_default_waveform();
         all.lPhase = Traits::eax_default_phase();
         all.flRate = Traits::eax_default_rate();
@@ -518,99 +522,83 @@ public:
     }
 
 
-    static void Get(const EaxCall &call, const typename Traits::Props &all)
+    static void Get(const EaxCall &call, const EaxProps &all)
     {
         switch(call.get_property_id())
         {
         case Traits::eax_none_param_id():
             break;
-
         case Traits::eax_allparameters_param_id():
             call.template set_value<Exception>(all);
             break;
-
         case Traits::eax_waveform_param_id():
             call.template set_value<Exception>(all.ulWaveform);
             break;
-
         case Traits::eax_phase_param_id():
             call.template set_value<Exception>(all.lPhase);
             break;
-
         case Traits::eax_rate_param_id():
             call.template set_value<Exception>(all.flRate);
             break;
-
         case Traits::eax_depth_param_id():
             call.template set_value<Exception>(all.flDepth);
             break;
-
         case Traits::eax_feedback_param_id():
             call.template set_value<Exception>(all.flFeedback);
             break;
-
         case Traits::eax_delay_param_id():
             call.template set_value<Exception>(all.flDelay);
             break;
-
         default:
             Committer::fail_unknown_property_id();
         }
     }
 
-    static void Set(const EaxCall &call, typename Traits::Props &all)
+    static void Set(const EaxCall &call, EaxProps &all)
     {
         switch(call.get_property_id())
         {
         case Traits::eax_none_param_id():
             break;
-
         case Traits::eax_allparameters_param_id():
             Committer::template defer<AllValidator>(call, all);
             break;
-
         case Traits::eax_waveform_param_id():
             Committer::template defer<WaveformValidator>(call, all.ulWaveform);
             break;
-
         case Traits::eax_phase_param_id():
             Committer::template defer<PhaseValidator>(call, all.lPhase);
             break;
-
         case Traits::eax_rate_param_id():
             Committer::template defer<RateValidator>(call, all.flRate);
             break;
-
         case Traits::eax_depth_param_id():
             Committer::template defer<DepthValidator>(call, all.flDepth);
             break;
-
         case Traits::eax_feedback_param_id():
             Committer::template defer<FeedbackValidator>(call, all.flFeedback);
             break;
-
         case Traits::eax_delay_param_id():
             Committer::template defer<DelayValidator>(call, all.flDelay);
             break;
-
         default:
             Committer::fail_unknown_property_id();
         }
     }
 
-    static bool Commit(const typename Traits::Props &props, EaxEffectProps &props_, EffectProps &al_props_)
+    static bool Commit(const EaxProps &props, EaxEffectProps &props_, AlProps &al_props_)
     {
-        if(auto *cur = std::get_if<typename Traits::Props>(&props_); cur && *cur == props)
+        if(auto *cur = std::get_if<EaxProps>(&props_); cur && *cur == props)
             return false;
 
         props_ = props;
 
-        al_props_.Chorus.Waveform = Traits::eax_waveform(props.ulWaveform);
-        al_props_.Chorus.Phase = static_cast<int>(props.lPhase);
-        al_props_.Chorus.Rate = props.flRate;
-        al_props_.Chorus.Depth = props.flDepth;
-        al_props_.Chorus.Feedback = props.flFeedback;
-        al_props_.Chorus.Delay = props.flDelay;
+        al_props_.Waveform = Traits::eax_waveform(props.ulWaveform);
+        al_props_.Phase = static_cast<int>(props.lPhase);
+        al_props_.Rate = props.flRate;
+        al_props_.Depth = props.flDepth;
+        al_props_.Feedback = props.flFeedback;
+        al_props_.Delay = props.flDelay;
 
         return true;
     }
@@ -638,7 +626,7 @@ template<>
 bool EaxChorusCommitter::commit(const EAXCHORUSPROPERTIES &props)
 {
     using Committer = ChorusFlangerEffect<EaxChorusTraits>;
-    return Committer::Commit(props, mEaxProps, mAlProps);
+    return Committer::Commit(props, mEaxProps, mAlProps.Chorus);
 }
 
 void EaxChorusCommitter::SetDefaults(EaxEffectProps &props)
@@ -675,7 +663,7 @@ template<>
 bool EaxFlangerCommitter::commit(const EAXFLANGERPROPERTIES &props)
 {
     using Committer = ChorusFlangerEffect<EaxFlangerTraits>;
-    return Committer::Commit(props, mEaxProps, mAlProps);
+    return Committer::Commit(props, mEaxProps, mAlProps.Flanger);
 }
 
 void EaxFlangerCommitter::SetDefaults(EaxEffectProps &props)

@@ -101,6 +101,15 @@ struct ChorusProps {
     float Delay;
 };
 
+struct FlangerProps {
+    ChorusWaveform Waveform;
+    int Phase;
+    float Rate;
+    float Depth;
+    float Feedback;
+    float Delay;
+};
+
 struct CompressorProps {
     bool OnOff;
 };
@@ -174,7 +183,8 @@ struct ConvolutionProps {
 union EffectProps {
     ReverbProps Reverb;
     AutowahProps Autowah;
-    ChorusProps Chorus; /* Also Flanger */
+    ChorusProps Chorus;
+    FlangerProps Flanger;
     CompressorProps Compressor;
     DistortionProps Distortion;
     EchoProps Echo;

@@ -48,7 +48,14 @@ namespace {
 
 using uint = unsigned int;
 
-struct ChorusState final : public EffectState {
+constexpr auto inv_sqrt2 = static_cast<float>(1.0 / al::numbers::sqrt2);
+constexpr auto lcoeffs_pw = CalcDirectionCoeffs(std::array{-1.0f, 0.0f, 0.0f});
+constexpr auto rcoeffs_pw = CalcDirectionCoeffs(std::array{ 1.0f, 0.0f, 0.0f});
+constexpr auto lcoeffs_nrml = CalcDirectionCoeffs(std::array{-inv_sqrt2, 0.0f, inv_sqrt2});
+constexpr auto rcoeffs_nrml = CalcDirectionCoeffs(std::array{ inv_sqrt2, 0.0f, inv_sqrt2});
+
+
+struct ChorusState : public EffectState {
     std::vector<float> mDelayBuffer;
     uint mOffset{0};
 
@@ -79,19 +86,40 @@ struct ChorusState final : public EffectState {
     void calcTriangleDelays(const size_t todo);
     void calcSinusoidDelays(const size_t todo);
 
-    void deviceUpdate(const DeviceBase *device, const BufferStorage *buffer) override;
+    void deviceUpdate(const DeviceBase *device, const float MaxDelay);
+    void update(const ContextBase *context, const EffectSlot *slot, const ChorusWaveform waveform,
+            const float delay, const float depth, const float feedback, const float rate,
+            int phase, const EffectTarget target);
+
+    void deviceUpdate(const DeviceBase *device, const BufferStorage*) override
+    { deviceUpdate(device, ChorusMaxDelay); }
     void update(const ContextBase *context, const EffectSlot *slot, const EffectProps *props,
-        const EffectTarget target) override;
+        const EffectTarget target) override
+    {
+        update(context, slot, props->Chorus.Waveform, props->Chorus.Delay, props->Chorus.Depth,
+            props->Chorus.Feedback, props->Chorus.Rate, props->Chorus.Phase, target);
+    }
     void process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn,
-        const al::span<FloatBufferLine> samplesOut) override;
+        const al::span<FloatBufferLine> samplesOut) final;
 };
 
-void ChorusState::deviceUpdate(const DeviceBase *Device, const BufferStorage*)
-{
-    constexpr float max_delay{maxf(ChorusMaxDelay, FlangerMaxDelay)};
+struct FlangerState final : public ChorusState {
+    void deviceUpdate(const DeviceBase *device, const BufferStorage*) final
+    { ChorusState::deviceUpdate(device, FlangerMaxDelay); }
+    void update(const ContextBase *context, const EffectSlot *slot, const EffectProps *props,
+        const EffectTarget target) final
+    {
+        ChorusState::update(context, slot, props->Flanger.Waveform, props->Flanger.Delay,
+            props->Flanger.Depth, props->Flanger.Feedback, props->Flanger.Rate,
+            props->Flanger.Phase, target);
+    }
+};
 
+
+void ChorusState::deviceUpdate(const DeviceBase *Device, const float MaxDelay)
+{
     const auto frequency = static_cast<float>(Device->Frequency);
-    const size_t maxlen{NextPowerOf2(float2uint(max_delay*2.0f*frequency) + 1u)};
+    const size_t maxlen{NextPowerOf2(float2uint(MaxDelay*2.0f*frequency) + 1u)};
     if(maxlen != mDelayBuffer.size())
         decltype(mDelayBuffer)(maxlen).swap(mDelayBuffer);
 
@@ -103,39 +131,35 @@ void ChorusState::deviceUpdate(const DeviceBase *Device, const BufferStorage*)
     }
 }
 
-void ChorusState::update(const ContextBase *Context, const EffectSlot *Slot,
-    const EffectProps *props, const EffectTarget target)
+void ChorusState::update(const ContextBase *context, const EffectSlot *slot,
+    const ChorusWaveform waveform, const float delay, const float depth, const float feedback,
+    const float rate, int phase, const EffectTarget target)
 {
-    constexpr int mindelay{(MaxResamplerPadding>>1) << MixerFracBits};
+    static constexpr int mindelay{(MaxResamplerPadding>>1) << MixerFracBits};
 
     /* The LFO depth is scaled to be relative to the sample delay. Clamp the
      * delay and depth to allow enough padding for resampling.
      */
-    const DeviceBase *device{Context->mDevice};
+    const DeviceBase *device{context->mDevice};
     const auto frequency = static_cast<float>(device->Frequency);
 
-    mWaveform = props->Chorus.Waveform;
+    mWaveform = waveform;
 
-    mDelay = maxi(float2int(props->Chorus.Delay*frequency*MixerFracOne + 0.5f), mindelay);
-    mDepth = minf(props->Chorus.Depth * static_cast<float>(mDelay),
+    mDelay = maxi(float2int(delay*frequency*MixerFracOne + 0.5f), mindelay);
+    mDepth = minf(depth * static_cast<float>(mDelay),
         static_cast<float>(mDelay - mindelay));
 
-    mFeedback = props->Chorus.Feedback;
+    mFeedback = feedback;
 
     /* Gains for left and right sides */
-    static constexpr auto inv_sqrt2 = static_cast<float>(1.0 / al::numbers::sqrt2);
-    static constexpr auto lcoeffs_pw = CalcDirectionCoeffs(std::array{-1.0f, 0.0f, 0.0f});
-    static constexpr auto rcoeffs_pw = CalcDirectionCoeffs(std::array{ 1.0f, 0.0f, 0.0f});
-    static constexpr auto lcoeffs_nrml = CalcDirectionCoeffs(std::array{-inv_sqrt2, 0.0f, inv_sqrt2});
-    static constexpr auto rcoeffs_nrml = CalcDirectionCoeffs(std::array{ inv_sqrt2, 0.0f, inv_sqrt2});
-    auto &lcoeffs = (device->mRenderMode != RenderMode::Pairwise) ? lcoeffs_nrml : lcoeffs_pw;
-    auto &rcoeffs = (device->mRenderMode != RenderMode::Pairwise) ? rcoeffs_nrml : rcoeffs_pw;
+    const bool ispairwise{device->mRenderMode == RenderMode::Pairwise};
+    const auto lcoeffs = (!ispairwise) ? al::span{lcoeffs_nrml} : al::span{lcoeffs_pw};
+    const auto rcoeffs = (!ispairwise) ? al::span{rcoeffs_nrml} : al::span{rcoeffs_pw};
 
     mOutTarget = target.Main->Buffer;
-    ComputePanGains(target.Main, lcoeffs, Slot->Gain, mGains[0].Target);
-    ComputePanGains(target.Main, rcoeffs, Slot->Gain, mGains[1].Target);
+    ComputePanGains(target.Main, lcoeffs, slot->Gain, mGains[0].Target);
+    ComputePanGains(target.Main, rcoeffs, slot->Gain, mGains[1].Target);
 
-    float rate{props->Chorus.Rate};
     if(!(rate > 0.0f))
     {
         mLfoOffset = 0;
@@ -148,7 +172,7 @@ void ChorusState::update(const ContextBase *Context, const EffectSlot *Slot,
         /* Calculate LFO coefficient (number of samples per cycle). Limit the
          * max range to avoid overflow when calculating the displacement.
          */
-        uint lfo_range{float2uint(minf(frequency/rate + 0.5f, float{INT_MAX/360 - 180}))};
+        const uint lfo_range{float2uint(minf(frequency/rate + 0.5f, float{INT_MAX/360 - 180}))};
 
         mLfoOffset = mLfoOffset * lfo_range / mLfoRange;
         mLfoRange = lfo_range;
@@ -163,7 +187,6 @@ void ChorusState::update(const ContextBase *Context, const EffectSlot *Slot,
         }
 
         /* Calculate lfo phase displacement */
-        int phase{props->Chorus.Phase};
         if(phase < 0) phase = 360 + phase;
         mLfoDisp = (mLfoRange*static_cast<uint>(phase) + 180) / 360;
     }
@@ -311,7 +334,7 @@ struct ChorusStateFactory final : public EffectStateFactory {
  */
 struct FlangerStateFactory final : public EffectStateFactory {
     al::intrusive_ptr<EffectState> create() override
-    { return al::intrusive_ptr<EffectState>{new ChorusState{}}; }
+    { return al::intrusive_ptr<EffectState>{new FlangerState{}}; }
 };
 
 } // namespace

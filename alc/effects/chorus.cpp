@@ -93,11 +93,12 @@ struct ChorusState : public EffectState {
 
     void deviceUpdate(const DeviceBase *device, const BufferStorage*) override
     { deviceUpdate(device, ChorusMaxDelay); }
-    void update(const ContextBase *context, const EffectSlot *slot, const EffectProps *props,
+    void update(const ContextBase *context, const EffectSlot *slot, const EffectProps *props_,
         const EffectTarget target) override
     {
-        update(context, slot, props->Chorus.Waveform, props->Chorus.Delay, props->Chorus.Depth,
-            props->Chorus.Feedback, props->Chorus.Rate, props->Chorus.Phase, target);
+        auto &props = std::get<ChorusProps>(*props_);
+        update(context, slot, props.Waveform, props.Delay, props.Depth, props.Feedback, props.Rate,
+            props.Phase, target);
     }
     void process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn,
         const al::span<FloatBufferLine> samplesOut) final;
@@ -106,12 +107,12 @@ struct ChorusState : public EffectState {
 struct FlangerState final : public ChorusState {
     void deviceUpdate(const DeviceBase *device, const BufferStorage*) final
     { ChorusState::deviceUpdate(device, FlangerMaxDelay); }
-    void update(const ContextBase *context, const EffectSlot *slot, const EffectProps *props,
+    void update(const ContextBase *context, const EffectSlot *slot, const EffectProps *props_,
         const EffectTarget target) final
     {
-        ChorusState::update(context, slot, props->Flanger.Waveform, props->Flanger.Delay,
-            props->Flanger.Depth, props->Flanger.Feedback, props->Flanger.Rate,
-            props->Flanger.Phase, target);
+        auto &props = std::get<FlangerProps>(*props_);
+        ChorusState::update(context, slot, props.Waveform, props.Delay, props.Depth,
+            props.Feedback, props.Rate, props.Phase, target);
     }
 };
 

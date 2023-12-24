@@ -127,14 +127,15 @@ void FshifterState::deviceUpdate(const DeviceBase*, const BufferStorage*)
 }
 
 void FshifterState::update(const ContextBase *context, const EffectSlot *slot,
-    const EffectProps *props, const EffectTarget target)
+    const EffectProps *props_, const EffectTarget target)
 {
+    auto &props = std::get<FshifterProps>(*props_);
     const DeviceBase *device{context->mDevice};
 
-    const float step{props->Fshifter.Frequency / static_cast<float>(device->Frequency)};
+    const float step{props.Frequency / static_cast<float>(device->Frequency)};
     mPhaseStep[0] = mPhaseStep[1] = fastf2u(minf(step, 1.0f) * MixerFracOne);
 
-    switch(props->Fshifter.LeftDirection)
+    switch(props.LeftDirection)
     {
     case FShifterDirection::Down:
         mSign[0] = -1.0;
@@ -148,7 +149,7 @@ void FshifterState::update(const ContextBase *context, const EffectSlot *slot,
         break;
     }
 
-    switch(props->Fshifter.RightDirection)
+    switch(props.RightDirection)
     {
     case FShifterDirection::Down:
         mSign[1] = -1.0;

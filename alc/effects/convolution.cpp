@@ -401,7 +401,7 @@ void ConvolutionState::deviceUpdate(const DeviceBase *device, const BufferStorag
 
 
 void ConvolutionState::update(const ContextBase *context, const EffectSlot *slot,
-    const EffectProps *props, const EffectTarget target)
+    const EffectProps *props_, const EffectTarget target)
 {
     /* TODO: LFE is not mixed to output. This will require each buffer channel
      * to have its own output target since the main mixing buffer won't have an
@@ -455,6 +455,7 @@ void ConvolutionState::update(const ContextBase *context, const EffectSlot *slot
     if(mNumConvolveSegs < 1) UNLIKELY
         return;
 
+    auto &props = std::get<ConvolutionProps>(*props_);
     mMix = &ConvolutionState::NormalMix;
 
     for(auto &chan : mChans)
@@ -488,11 +489,9 @@ void ConvolutionState::update(const ContextBase *context, const EffectSlot *slot
         }
         mOutTarget = target.Main->Buffer;
 
-        alu::Vector N{props->Convolution.OrientAt[0], props->Convolution.OrientAt[1],
-            props->Convolution.OrientAt[2], 0.0f};
+        alu::Vector N{props.OrientAt[0], props.OrientAt[1], props.OrientAt[2], 0.0f};
         N.normalize();
-        alu::Vector V{props->Convolution.OrientUp[0], props->Convolution.OrientUp[1],
-            props->Convolution.OrientUp[2], 0.0f};
+        alu::Vector V{props.OrientUp[0], props.OrientUp[1], props.OrientUp[2], 0.0f};
         V.normalize();
         /* Build and normalize right-vector */
         alu::Vector U{N.cross_product(V)};

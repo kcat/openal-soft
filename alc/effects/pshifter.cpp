@@ -138,9 +138,10 @@ void PshifterState::deviceUpdate(const DeviceBase*, const BufferStorage*)
 }
 
 void PshifterState::update(const ContextBase*, const EffectSlot *slot,
-    const EffectProps *props, const EffectTarget target)
+    const EffectProps *props_, const EffectTarget target)
 {
-    const int tune{props->Pshifter.CoarseTune*100 + props->Pshifter.FineTune};
+    auto &props = std::get<PshifterProps>(*props_);
+    const int tune{props.CoarseTune*100 + props.FineTune};
     const float pitch{std::pow(2.0f, static_cast<float>(tune) / 1200.0f)};
     mPitchShiftI = clampu(fastf2u(pitch*MixerFracOne), MixerFracHalf, MixerFracOne*2);
     mPitchShift  = static_cast<float>(mPitchShiftI) * float{1.0f/MixerFracOne};

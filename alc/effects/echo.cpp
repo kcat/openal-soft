@@ -95,21 +95,22 @@ void EchoState::deviceUpdate(const DeviceBase *Device, const BufferStorage*)
 }
 
 void EchoState::update(const ContextBase *context, const EffectSlot *slot,
-    const EffectProps *props, const EffectTarget target)
+    const EffectProps *props_, const EffectTarget target)
 {
+    auto &props = std::get<EchoProps>(*props_);
     const DeviceBase *device{context->mDevice};
     const auto frequency = static_cast<float>(device->Frequency);
 
-    mDelayTap[0] = maxu(float2uint(props->Echo.Delay*frequency + 0.5f), 1);
-    mDelayTap[1] = float2uint(props->Echo.LRDelay*frequency + 0.5f) + mDelayTap[0];
+    mDelayTap[0] = maxu(float2uint(props.Delay*frequency + 0.5f), 1);
+    mDelayTap[1] = float2uint(props.LRDelay*frequency + 0.5f) + mDelayTap[0];
 
-    const float gainhf{maxf(1.0f - props->Echo.Damping, 0.0625f)}; /* Limit -24dB */
+    const float gainhf{maxf(1.0f - props.Damping, 0.0625f)}; /* Limit -24dB */
     mFilter.setParamsFromSlope(BiquadType::HighShelf, LowpassFreqRef/frequency, gainhf, 1.0f);
 
-    mFeedGain = props->Echo.Feedback;
+    mFeedGain = props.Feedback;
 
     /* Convert echo spread (where 0 = center, +/-1 = sides) to angle. */
-    const float angle{std::asin(props->Echo.Spread)};
+    const float angle{std::asin(props.Spread)};
 
     const auto coeffs0 = CalcAngleCoeffs(-angle, 0.0f, 0.0f);
     const auto coeffs1 = CalcAngleCoeffs( angle, 0.0f, 0.0f);

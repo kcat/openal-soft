@@ -125,8 +125,9 @@ void ModulatorState::deviceUpdate(const DeviceBase*, const BufferStorage*)
 }
 
 void ModulatorState::update(const ContextBase *context, const EffectSlot *slot,
-    const EffectProps *props, const EffectTarget target)
+    const EffectProps *props_, const EffectTarget target)
 {
+    auto &props = std::get<ModulatorProps>(*props_);
     const DeviceBase *device{context->mDevice};
 
     /* The effective frequency will be adjusted to have a whole number of
@@ -136,8 +137,8 @@ void ModulatorState::update(const ContextBase *context, const EffectSlot *slot,
      * but that may need a more efficient sin function since it needs to do
      * many iterations per sample.
      */
-    const float samplesPerCycle{props->Modulator.Frequency > 0.0f
-        ? static_cast<float>(device->Frequency)/props->Modulator.Frequency + 0.5f
+    const float samplesPerCycle{props.Frequency > 0.0f
+        ? static_cast<float>(device->Frequency)/props.Frequency + 0.5f
         : 1.0f};
     const uint range{static_cast<uint>(clampf(samplesPerCycle, 1.0f,
         static_cast<float>(device->Frequency)))};
@@ -149,17 +150,17 @@ void ModulatorState::update(const ContextBase *context, const EffectSlot *slot,
         mIndexScale = 0.0f;
         mGenModSamples = &ModulatorState::Modulate<One>;
     }
-    else if(props->Modulator.Waveform == ModulatorWaveform::Sinusoid)
+    else if(props.Waveform == ModulatorWaveform::Sinusoid)
     {
         mIndexScale = al::numbers::pi_v<float>*2.0f / static_cast<float>(mRange);
         mGenModSamples = &ModulatorState::Modulate<Sin>;
     }
-    else if(props->Modulator.Waveform == ModulatorWaveform::Sawtooth)
+    else if(props.Waveform == ModulatorWaveform::Sawtooth)
     {
         mIndexScale = 2.0f / static_cast<float>(mRange-1);
         mGenModSamples = &ModulatorState::Modulate<Saw>;
     }
-    else /*if(props->Modulator.Waveform == ModulatorWaveform::Square)*/
+    else /*if(props.Waveform == ModulatorWaveform::Square)*/
     {
         /* For square wave, the range should be even (there should be an equal
          * number of high and low samples). An odd number of samples per cycle
@@ -170,7 +171,7 @@ void ModulatorState::update(const ContextBase *context, const EffectSlot *slot,
         mGenModSamples = &ModulatorState::Modulate<Square>;
     }
 
-    float f0norm{props->Modulator.HighPassCutoff / static_cast<float>(device->Frequency)};
+    float f0norm{props.HighPassCutoff / static_cast<float>(device->Frequency)};
     f0norm = clampf(f0norm, 1.0f/512.0f, 0.49f);
     /* Bandwidth value is constant in octaves. */
     mChans[0].mFilter.setParamsFromBandwidth(BiquadType::HighPass, f0norm, 1.0f, 0.75f);

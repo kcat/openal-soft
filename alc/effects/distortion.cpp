@@ -70,16 +70,17 @@ void DistortionState::deviceUpdate(const DeviceBase*, const BufferStorage*)
 }
 
 void DistortionState::update(const ContextBase *context, const EffectSlot *slot,
-    const EffectProps *props, const EffectTarget target)
+    const EffectProps *props_, const EffectTarget target)
 {
+    auto &props = std::get<DistortionProps>(*props_);
     const DeviceBase *device{context->mDevice};
 
     /* Store waveshaper edge settings. */
-    const float edge{minf(std::sin(al::numbers::pi_v<float>*0.5f * props->Distortion.Edge),
+    const float edge{minf(std::sin(al::numbers::pi_v<float>*0.5f * props.Edge),
         0.99f)};
     mEdgeCoeff = 2.0f * edge / (1.0f-edge);
 
-    float cutoff{props->Distortion.LowpassCutoff};
+    float cutoff{props.LowpassCutoff};
     /* Bandwidth value is constant in octaves. */
     float bandwidth{(cutoff / 2.0f) / (cutoff * 0.67f)};
     /* Divide normalized frequency by the amount of oversampling done during
@@ -88,15 +89,15 @@ void DistortionState::update(const ContextBase *context, const EffectSlot *slot,
     auto frequency = static_cast<float>(device->Frequency);
     mLowpass.setParamsFromBandwidth(BiquadType::LowPass, cutoff/frequency/4.0f, 1.0f, bandwidth);
 
-    cutoff = props->Distortion.EQCenter;
+    cutoff = props.EQCenter;
     /* Convert bandwidth in Hz to octaves. */
-    bandwidth = props->Distortion.EQBandwidth / (cutoff * 0.67f);
+    bandwidth = props.EQBandwidth / (cutoff * 0.67f);
     mBandpass.setParamsFromBandwidth(BiquadType::BandPass, cutoff/frequency/4.0f, 1.0f, bandwidth);
 
     static constexpr auto coeffs = CalcDirectionCoeffs(std::array{0.0f, 0.0f, -1.0f});
 
     mOutTarget = target.Main->Buffer;
-    ComputePanGains(target.Main, coeffs, slot->Gain*props->Distortion.Gain, mGain);
+    ComputePanGains(target.Main, coeffs, slot->Gain*props.Gain, mGain);
 }
 
 void DistortionState::process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn, const al::span<FloatBufferLine> samplesOut)

@@ -118,18 +118,19 @@ void AutowahState::deviceUpdate(const DeviceBase*, const BufferStorage*)
 }
 
 void AutowahState::update(const ContextBase *context, const EffectSlot *slot,
-    const EffectProps *props, const EffectTarget target)
+    const EffectProps *props_, const EffectTarget target)
 {
+    auto &props = std::get<AutowahProps>(*props_);
     const DeviceBase *device{context->mDevice};
     const auto frequency = static_cast<float>(device->Frequency);
 
-    const float ReleaseTime{clampf(props->Autowah.ReleaseTime, 0.001f, 1.0f)};
+    const float ReleaseTime{clampf(props.ReleaseTime, 0.001f, 1.0f)};
 
-    mAttackRate    = std::exp(-1.0f / (props->Autowah.AttackTime*frequency));
+    mAttackRate    = std::exp(-1.0f / (props.AttackTime*frequency));
     mReleaseRate   = std::exp(-1.0f / (ReleaseTime*frequency));
     /* 0-20dB Resonance Peak gain */
-    mResonanceGain = std::sqrt(std::log10(props->Autowah.Resonance)*10.0f / 3.0f);
-    mPeakGain      = 1.0f - std::log10(props->Autowah.PeakGain / GainScale);
+    mResonanceGain = std::sqrt(std::log10(props.Resonance)*10.0f / 3.0f);
+    mPeakGain      = 1.0f - std::log10(props.PeakGain / GainScale);
     mFreqMinNorm   = MinFreq / frequency;
     mBandwidthNorm = (MaxFreq-MinFreq) / frequency;
 

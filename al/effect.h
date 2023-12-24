@@ -47,8 +47,6 @@ struct ALeffect {
 
     EffectProps Props{};
 
-    const EffectVtable *vtab{nullptr};
-
     /* Self ID */
     ALuint id{0u};
 

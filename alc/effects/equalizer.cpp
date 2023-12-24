@@ -119,8 +119,9 @@ void EqualizerState::deviceUpdate(const DeviceBase*, const BufferStorage*)
 }
 
 void EqualizerState::update(const ContextBase *context, const EffectSlot *slot,
-    const EffectProps *props, const EffectTarget target)
+    const EffectProps *props_, const EffectTarget target)
 {
+    auto &props = std::get<EqualizerProps>(*props_);
     const DeviceBase *device{context->mDevice};
     auto frequency = static_cast<float>(device->Frequency);
 
@@ -130,22 +131,22 @@ void EqualizerState::update(const ContextBase *context, const EffectSlot *slot,
      * property gains need their dB halved (sqrt of linear gain) for the
      * shelf/peak to reach the provided gain.
      */
-    float gain{std::sqrt(props->Equalizer.LowGain)};
-    float f0norm{props->Equalizer.LowCutoff / frequency};
+    float gain{std::sqrt(props.LowGain)};
+    float f0norm{props.LowCutoff / frequency};
     mChans[0].mFilter[0].setParamsFromSlope(BiquadType::LowShelf, f0norm, gain, 0.75f);
 
-    gain = std::sqrt(props->Equalizer.Mid1Gain);
-    f0norm = props->Equalizer.Mid1Center / frequency;
+    gain = std::sqrt(props.Mid1Gain);
+    f0norm = props.Mid1Center / frequency;
     mChans[0].mFilter[1].setParamsFromBandwidth(BiquadType::Peaking, f0norm, gain,
-        props->Equalizer.Mid1Width);
+        props.Mid1Width);
 
-    gain = std::sqrt(props->Equalizer.Mid2Gain);
-    f0norm = props->Equalizer.Mid2Center / frequency;
+    gain = std::sqrt(props.Mid2Gain);
+    f0norm = props.Mid2Center / frequency;
     mChans[0].mFilter[2].setParamsFromBandwidth(BiquadType::Peaking, f0norm, gain,
-        props->Equalizer.Mid2Width);
+        props.Mid2Width);
 
-    gain = std::sqrt(props->Equalizer.HighGain);
-    f0norm = props->Equalizer.HighCutoff / frequency;
+    gain = std::sqrt(props.HighGain);
+    f0norm = props.HighCutoff / frequency;
     mChans[0].mFilter[3].setParamsFromSlope(BiquadType::HighShelf, f0norm, gain, 0.75f);
 
     /* Copy the filter coefficients for the other input channels. */

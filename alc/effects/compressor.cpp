@@ -102,7 +102,7 @@ void CompressorState::deviceUpdate(const DeviceBase *device, const BufferStorage
 void CompressorState::update(const ContextBase*, const EffectSlot *slot,
     const EffectProps *props, const EffectTarget target)
 {
-    mEnabled = props->Compressor.OnOff;
+    mEnabled = std::get<CompressorProps>(*props).OnOff;
 
     mOutTarget = target.Main->Buffer;
     auto set_channel = [this](size_t idx, uint outchan, float outgain)

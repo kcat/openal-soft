@@ -73,7 +73,7 @@ void DedicatedState::update(const ContextBase*, const EffectSlot *slot,
 {
     std::fill(mTargetGains.begin(), mTargetGains.end(), 0.0f);
 
-    const float Gain{slot->Gain * props->DedicatedDialog.Gain};
+    const float Gain{slot->Gain * std::get<DedicatedDialogProps>(*props).Gain};
 
     /* Dialog goes to the front-center speaker if it exists, otherwise it plays
      * from the front-center location.
@@ -99,7 +99,7 @@ void DedicatedLfeState::update(const ContextBase*, const EffectSlot *slot,
 {
     std::fill(mTargetGains.begin(), mTargetGains.end(), 0.0f);
 
-    const float Gain{slot->Gain * props->DedicatedLfe.Gain};
+    const float Gain{slot->Gain * std::get<DedicatedLfeProps>(*props).Gain};
 
     const size_t idx{target.RealOut ? target.RealOut->ChannelIndex[LFE] : InvalidChannelIndex};
     if(idx != InvalidChannelIndex)

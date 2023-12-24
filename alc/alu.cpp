@@ -450,14 +450,14 @@ bool CalcEffectSlotParams(EffectSlot *slot, EffectSlot **sorted_slots, ContextBa
     slot->Target = props->Target;
     slot->EffectType = props->Type;
     slot->mEffectProps = props->Props;
-    if(props->Type == EffectSlotType::Reverb || props->Type == EffectSlotType::EAXReverb)
+    if(auto *reverbprops = std::get_if<ReverbProps>(&props->Props))
     {
-        slot->RoomRolloff = props->Props.Reverb.RoomRolloffFactor;
-        slot->DecayTime = props->Props.Reverb.DecayTime;
-        slot->DecayLFRatio = props->Props.Reverb.DecayLFRatio;
-        slot->DecayHFRatio = props->Props.Reverb.DecayHFRatio;
-        slot->DecayHFLimit = props->Props.Reverb.DecayHFLimit;
-        slot->AirAbsorptionGainHF = props->Props.Reverb.AirAbsorptionGainHF;
+        slot->RoomRolloff = reverbprops->RoomRolloffFactor;
+        slot->DecayTime = reverbprops->DecayTime;
+        slot->DecayLFRatio = reverbprops->DecayLFRatio;
+        slot->DecayHFRatio = reverbprops->DecayHFRatio;
+        slot->DecayHFLimit = reverbprops->DecayHFLimit;
+        slot->AirAbsorptionGainHF = reverbprops->AirAbsorptionGainHF;
     }
     else
     {

@@ -1182,57 +1182,56 @@ void ReverbPipeline::update3DPanning(const al::span<const float,3> ReflectionsPa
 }
 
 void ReverbState::update(const ContextBase *Context, const EffectSlot *Slot,
-    const EffectProps *props, const EffectTarget target)
+    const EffectProps *props_, const EffectTarget target)
 {
+    auto &props = std::get<ReverbProps>(*props_);
     const DeviceBase *Device{Context->mDevice};
     const auto frequency = static_cast<float>(Device->Frequency);
 
     /* If the HF limit parameter is flagged, calculate an appropriate limit
      * based on the air absorption parameter.
      */
-    float hfRatio{props->Reverb.DecayHFRatio};
-    if(props->Reverb.DecayHFLimit && props->Reverb.AirAbsorptionGainHF < 1.0f)
-        hfRatio = CalcLimitedHfRatio(hfRatio, props->Reverb.AirAbsorptionGainHF,
-            props->Reverb.DecayTime);
+    float hfRatio{props.DecayHFRatio};
+    if(props.DecayHFLimit && props.AirAbsorptionGainHF < 1.0f)
+        hfRatio = CalcLimitedHfRatio(hfRatio, props.AirAbsorptionGainHF, props.DecayTime);
 
     /* Calculate the LF/HF decay times. */
     constexpr float MinDecayTime{0.1f}, MaxDecayTime{20.0f};
-    const float lfDecayTime{clampf(props->Reverb.DecayTime*props->Reverb.DecayLFRatio,
-        MinDecayTime, MaxDecayTime)};
-    const float hfDecayTime{clampf(props->Reverb.DecayTime*hfRatio, MinDecayTime, MaxDecayTime)};
+    const float lfDecayTime{clampf(props.DecayTime*props.DecayLFRatio, MinDecayTime,MaxDecayTime)};
+    const float hfDecayTime{clampf(props.DecayTime*hfRatio, MinDecayTime, MaxDecayTime)};
 
     /* Determine if a full update is required. */
     const bool fullUpdate{mPipelineState == DeviceClear ||
         /* Density is essentially a master control for the feedback delays, so
          * changes the offsets of many delay lines.
          */
-        mParams.Density != props->Reverb.Density ||
+        mParams.Density != props.Density ||
         /* Diffusion and decay times influences the decay rate (gain) of the
          * late reverb T60 filter.
          */
-        mParams.Diffusion != props->Reverb.Diffusion ||
-        mParams.DecayTime != props->Reverb.DecayTime ||
+        mParams.Diffusion != props.Diffusion ||
+        mParams.DecayTime != props.DecayTime ||
         mParams.HFDecayTime != hfDecayTime ||
         mParams.LFDecayTime != lfDecayTime ||
         /* Modulation time and depth both require fading the modulation delay. */
-        mParams.ModulationTime != props->Reverb.ModulationTime ||
-        mParams.ModulationDepth != props->Reverb.ModulationDepth ||
+        mParams.ModulationTime != props.ModulationTime ||
+        mParams.ModulationDepth != props.ModulationDepth ||
         /* HF/LF References control the weighting used to calculate the density
          * gain.
          */
-        mParams.HFReference != props->Reverb.HFReference ||
-        mParams.LFReference != props->Reverb.LFReference};
+        mParams.HFReference != props.HFReference ||
+        mParams.LFReference != props.LFReference};
     if(fullUpdate)
     {
-        mParams.Density = props->Reverb.Density;
-        mParams.Diffusion = props->Reverb.Diffusion;
-        mParams.DecayTime = props->Reverb.DecayTime;
+        mParams.Density = props.Density;
+        mParams.Diffusion = props.Diffusion;
+        mParams.DecayTime = props.DecayTime;
         mParams.HFDecayTime = hfDecayTime;
         mParams.LFDecayTime = lfDecayTime;
-        mParams.ModulationTime = props->Reverb.ModulationTime;
-        mParams.ModulationDepth = props->Reverb.ModulationDepth;
-        mParams.HFReference = props->Reverb.HFReference;
-        mParams.LFReference = props->Reverb.LFReference;
+        mParams.ModulationTime = props.ModulationTime;
+        mParams.ModulationDepth = props.ModulationDepth;
+        mParams.HFReference = props.HFReference;
+        mParams.LFReference = props.LFReference;
 
         mPipelineState = (mPipelineState != DeviceClear) ? StartFade : Normal;
         mCurrentPipeline = !mCurrentPipeline;
@@ -1241,16 +1240,15 @@ void ReverbState::update(const ContextBase *Context, const EffectSlot *Slot,
 
     /* Update early and late 3D panning. */
     mOutTarget = target.Main->Buffer;
-    const float gain{props->Reverb.Gain * Slot->Gain * ReverbBoost};
-    pipeline.update3DPanning(props->Reverb.ReflectionsPan, props->Reverb.LateReverbPan,
-        props->Reverb.ReflectionsGain*gain, props->Reverb.LateReverbGain*gain, mUpmixOutput,
-        target.Main);
+    const float gain{props.Gain * Slot->Gain * ReverbBoost};
+    pipeline.update3DPanning(props.ReflectionsPan, props.LateReverbPan, props.ReflectionsGain*gain,
+        props.LateReverbGain*gain, mUpmixOutput, target.Main);
 
     /* Calculate the master filters */
-    float hf0norm{minf(props->Reverb.HFReference/frequency, 0.49f)};
-    pipeline.mFilter[0].Lp.setParamsFromSlope(BiquadType::HighShelf, hf0norm, props->Reverb.GainHF, 1.0f);
-    float lf0norm{minf(props->Reverb.LFReference/frequency, 0.49f)};
-    pipeline.mFilter[0].Hp.setParamsFromSlope(BiquadType::LowShelf, lf0norm, props->Reverb.GainLF, 1.0f);
+    float hf0norm{minf(props.HFReference/frequency, 0.49f)};
+    pipeline.mFilter[0].Lp.setParamsFromSlope(BiquadType::HighShelf, hf0norm, props.GainHF, 1.0f);
+    float lf0norm{minf(props.LFReference/frequency, 0.49f)};
+    pipeline.mFilter[0].Hp.setParamsFromSlope(BiquadType::LowShelf, lf0norm, props.GainLF, 1.0f);
     for(size_t i{1u};i < NUM_LINES;i++)
     {
         pipeline.mFilter[i].Lp.copyParamsFrom(pipeline.mFilter[0].Lp);
@@ -1258,34 +1256,32 @@ void ReverbState::update(const ContextBase *Context, const EffectSlot *Slot,
     }
 
     /* The density-based room size (delay length) multiplier. */
-    const float density_mult{CalcDelayLengthMult(props->Reverb.Density)};
+    const float density_mult{CalcDelayLengthMult(props.Density)};
 
     /* Update the main effect delay and associated taps. */
-    pipeline.updateDelayLine(props->Reverb.ReflectionsDelay, props->Reverb.LateReverbDelay,
-        density_mult, props->Reverb.DecayTime, frequency);
+    pipeline.updateDelayLine(props.ReflectionsDelay, props.LateReverbDelay, density_mult,
+        props.DecayTime, frequency);
 
     if(fullUpdate)
     {
         /* Update the early lines. */
-        pipeline.mEarly.updateLines(density_mult, props->Reverb.Diffusion, props->Reverb.DecayTime,
-            frequency);
+        pipeline.mEarly.updateLines(density_mult, props.Diffusion, props.DecayTime, frequency);
 
         /* Get the mixing matrix coefficients. */
-        CalcMatrixCoeffs(props->Reverb.Diffusion, &pipeline.mMixX, &pipeline.mMixY);
+        CalcMatrixCoeffs(props.Diffusion, &pipeline.mMixX, &pipeline.mMixY);
 
         /* Update the modulator rate and depth. */
-        pipeline.mLate.Mod.updateModulator(props->Reverb.ModulationTime,
-            props->Reverb.ModulationDepth, frequency);
+        pipeline.mLate.Mod.updateModulator(props.ModulationTime, props.ModulationDepth, frequency);
 
         /* Update the late lines. */
-        pipeline.mLate.updateLines(density_mult, props->Reverb.Diffusion, lfDecayTime,
-            props->Reverb.DecayTime, hfDecayTime, lf0norm, hf0norm, frequency);
+        pipeline.mLate.updateLines(density_mult, props.Diffusion, lfDecayTime, props.DecayTime,
+            hfDecayTime, lf0norm, hf0norm, frequency);
     }
 
     /* Calculate the gain at the start of the late reverb stage, and the gain
      * difference from the decay target (0.001, or -60dB).
      */
-    const float decayBase{props->Reverb.ReflectionsGain * props->Reverb.LateReverbGain};
+    const float decayBase{props.ReflectionsGain * props.LateReverbGain};
     const float decayDiff{ReverbDecayGain / decayBase};
 
     if(decayDiff < 1.0f)
@@ -1294,10 +1290,10 @@ void ReverbState::update(const ContextBase *Context, const EffectSlot *Slot,
          * by -60dB), calculate the time to decay to -60dB from the start of
          * the late reverb.
          */
-        const float diffTime{std::log10(decayDiff)*(20.0f / -60.0f) * props->Reverb.DecayTime};
+        const float diffTime{std::log10(decayDiff)*(20.0f / -60.0f) * props.DecayTime};
 
-        const float decaySamples{(props->Reverb.ReflectionsDelay + props->Reverb.LateReverbDelay
-            + diffTime) * frequency};
+        const float decaySamples{(props.ReflectionsDelay+props.LateReverbDelay+diffTime)
+            * frequency};
         /* Limit to 100,000 samples (a touch over 2 seconds at 48khz) to
          * avoid excessive double-processing.
          */
@@ -1308,8 +1304,7 @@ void ReverbState::update(const ContextBase *Context, const EffectSlot *Slot,
         /* Otherwise, if the late reverb already starts at -60dB or less, only
          * include the time to get to the late reverb.
          */
-        const float decaySamples{(props->Reverb.ReflectionsDelay + props->Reverb.LateReverbDelay)
-            * frequency};
+        const float decaySamples{(props.ReflectionsDelay+props.LateReverbDelay) * frequency};
         pipeline.mFadeSampleCount = static_cast<size_t>(minf(decaySamples, 100'000.0f));
     }
 }

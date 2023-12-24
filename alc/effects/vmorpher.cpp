@@ -241,29 +241,28 @@ void VmorpherState::deviceUpdate(const DeviceBase*, const BufferStorage*)
 }
 
 void VmorpherState::update(const ContextBase *context, const EffectSlot *slot,
-    const EffectProps *props, const EffectTarget target)
+    const EffectProps *props_, const EffectTarget target)
 {
+    auto &props = std::get<VmorpherProps>(*props_);
     const DeviceBase *device{context->mDevice};
     const float frequency{static_cast<float>(device->Frequency)};
-    const float step{props->Vmorpher.Rate / frequency};
+    const float step{props.Rate / frequency};
     mStep = fastf2u(clampf(step*WaveformFracOne, 0.0f, float{WaveformFracOne}-1.0f));
 
     if(mStep == 0)
         mGetSamples = Oscillate<Half>;
-    else if(props->Vmorpher.Waveform == VMorpherWaveform::Sinusoid)
+    else if(props.Waveform == VMorpherWaveform::Sinusoid)
         mGetSamples = Oscillate<Sin>;
-    else if(props->Vmorpher.Waveform == VMorpherWaveform::Triangle)
+    else if(props.Waveform == VMorpherWaveform::Triangle)
         mGetSamples = Oscillate<Triangle>;
-    else /*if(props->Vmorpher.Waveform == VMorpherWaveform::Sawtooth)*/
+    else /*if(props.Waveform == VMorpherWaveform::Sawtooth)*/
         mGetSamples = Oscillate<Saw>;
 
-    const float pitchA{std::pow(2.0f,
-        static_cast<float>(props->Vmorpher.PhonemeACoarseTuning) / 12.0f)};
-    const float pitchB{std::pow(2.0f,
-        static_cast<float>(props->Vmorpher.PhonemeBCoarseTuning) / 12.0f)};
+    const float pitchA{std::pow(2.0f, static_cast<float>(props.PhonemeACoarseTuning) / 12.0f)};
+    const float pitchB{std::pow(2.0f, static_cast<float>(props.PhonemeBCoarseTuning) / 12.0f)};
 
-    auto vowelA = getFiltersByPhoneme(props->Vmorpher.PhonemeA, frequency, pitchA);
-    auto vowelB = getFiltersByPhoneme(props->Vmorpher.PhonemeB, frequency, pitchB);
+    auto vowelA = getFiltersByPhoneme(props.PhonemeA, frequency, pitchA);
+    auto vowelB = getFiltersByPhoneme(props.PhonemeB, frequency, pitchB);
 
     /* Copy the filter coefficients to the input channels. */
     for(size_t i{0u};i < slot->Wet.Buffer.size();++i)

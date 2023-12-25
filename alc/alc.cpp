@@ -1025,7 +1025,7 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
             optsrate = clampu(*freqopt, MinOutputRate, MaxOutputRate);
 
             const double scale{static_cast<double>(*optsrate) / double{DefaultOutputRate}};
-            period_size = static_cast<uint>(period_size*scale + 0.5);
+            period_size = static_cast<uint>(std::lround(period_size * scale));
         }
 
         if(auto persizeopt = device->configValue<uint>({}, "period_size"))
@@ -1330,8 +1330,8 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
                 freqAttr = clampi(freqAttr, MinOutputRate, MaxOutputRate);
 
                 const double scale{static_cast<double>(freqAttr) / oldrate};
-                period_size = static_cast<uint>(period_size*scale + 0.5);
-                buffer_size = static_cast<uint>(buffer_size*scale + 0.5);
+                period_size = static_cast<uint>(std::lround(period_size * scale));
+                buffer_size = static_cast<uint>(std::lround(buffer_size * scale));
                 optsrate = static_cast<uint>(freqAttr);
             }
         }

@@ -1629,11 +1629,12 @@ bool PipeWirePlayback::reset()
             {
                 /* Scale the update size if the sample rate changes. */
                 const double scale{static_cast<double>(match->mSampleRate) / mDevice->Frequency};
-                const double numbufs{static_cast<double>(mDevice->BufferSize)/mDevice->UpdateSize};
+                const double updatesize{std::round(mDevice->UpdateSize * scale)};
+                const double buffersize{std::round(mDevice->BufferSize * scale)};
+
                 mDevice->Frequency = match->mSampleRate;
-                mDevice->UpdateSize = static_cast<uint>(clampd(mDevice->UpdateSize*scale + 0.5,
-                    64.0, 8192.0));
-                mDevice->BufferSize = static_cast<uint>(numbufs*mDevice->UpdateSize + 0.5);
+                mDevice->UpdateSize = static_cast<uint>(clampd(updatesize, 64.0, 8192.0));
+                mDevice->BufferSize = static_cast<uint>(maxd(buffersize, 128.0));
             }
             if(!mDevice->Flags.test(ChannelsRequest) && match->mChannels != InvalidChannelConfig)
                 mDevice->FmtChans = match->mChannels;

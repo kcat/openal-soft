@@ -460,7 +460,7 @@ bool LoadSofaFile(const char *filename, const uint numThreads, const uint fftSiz
     /* Assume a default head radius of 9cm. */
     hData->mRadius = 0.09;
 
-    hData->mIrRate = static_cast<uint>(GetSampleRate(sofaHrtf.get()) + 0.5f);
+    hData->mIrRate = static_cast<uint>(std::lround(GetSampleRate(sofaHrtf.get())));
     if(!hData->mIrRate)
         return false;
 

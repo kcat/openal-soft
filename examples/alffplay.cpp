@@ -1509,9 +1509,9 @@ void VideoState::updateVideo(SDL_Window *screen, SDL_Renderer *renderer, bool re
             {
                 double aspect_ratio = av_q2d(frame->sample_aspect_ratio);
                 if(aspect_ratio >= 1.0)
-                    frame_width = static_cast<int>(frame_width*aspect_ratio + 0.5);
+                    frame_width = static_cast<int>(std::lround(frame_width * aspect_ratio));
                 else if(aspect_ratio > 0.0)
-                    frame_height = static_cast<int>(frame_height/aspect_ratio + 0.5);
+                    frame_height = static_cast<int>(std::lround(frame_height / aspect_ratio));
             }
             SDL_SetWindowSize(screen, frame_width, frame_height);
         }

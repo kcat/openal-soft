@@ -45,8 +45,8 @@ EffectProps genDefaultProps() noexcept
 {
     FshifterProps props{};
     props.Frequency      = AL_FREQUENCY_SHIFTER_DEFAULT_FREQUENCY;
-    props.LeftDirection  = *DirectionFromEmum(AL_FREQUENCY_SHIFTER_DEFAULT_LEFT_DIRECTION);
-    props.RightDirection = *DirectionFromEmum(AL_FREQUENCY_SHIFTER_DEFAULT_RIGHT_DIRECTION);
+    props.LeftDirection  = DirectionFromEmum(AL_FREQUENCY_SHIFTER_DEFAULT_LEFT_DIRECTION).value();
+    props.RightDirection = DirectionFromEmum(AL_FREQUENCY_SHIFTER_DEFAULT_RIGHT_DIRECTION).value();
     return props;
 }
 

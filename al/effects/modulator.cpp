@@ -47,7 +47,7 @@ EffectProps genDefaultProps() noexcept
     ModulatorProps props{};
     props.Frequency      = AL_RING_MODULATOR_DEFAULT_FREQUENCY;
     props.HighPassCutoff = AL_RING_MODULATOR_DEFAULT_HIGHPASS_CUTOFF;
-    props.Waveform       = *WaveformFromEmum(AL_RING_MODULATOR_DEFAULT_WAVEFORM);
+    props.Waveform       = WaveformFromEmum(AL_RING_MODULATOR_DEFAULT_WAVEFORM).value();
     return props;
 }
 

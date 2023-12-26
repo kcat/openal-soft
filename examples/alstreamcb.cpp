@@ -195,12 +195,12 @@ struct StreamPlayer {
         if(mSampleFormat == SampleType::Int16)
         {
             mSamplesPerBlock = 1;
-            mBytesPerBlock = static_cast<size_t>(mSfInfo.channels * 2);
+            mBytesPerBlock = static_cast<size_t>(mSfInfo.channels) * 2;
         }
         else if(mSampleFormat == SampleType::Float)
         {
             mSamplesPerBlock = 1;
-            mBytesPerBlock = static_cast<size_t>(mSfInfo.channels * 4);
+            mBytesPerBlock = static_cast<size_t>(mSfInfo.channels) * 4;
         }
         else
         {

@@ -367,11 +367,9 @@ bool OSSPlayback::reset()
     uint numFragmentsLogSize{(periods << 16) | log2FragmentSize};
 
     audio_buf_info info{};
-    const char *err;
-#define CHECKERR(func) if((func) < 0) {                                       \
-    err = #func;                                                              \
-    goto err;                                                                 \
-}
+#define CHECKERR(func) if((func) < 0)                                         \
+    throw al::backend_exception{al::backend_error::DeviceError, "%s failed: %s\n", #func, strerror(errno)};
+
     /* Don't fail if SETFRAGMENT fails. We can handle just about anything
      * that's reported back via GETOSPACE */
     ioctl(mFd, SNDCTL_DSP_SETFRAGMENT, &numFragmentsLogSize);
@@ -379,12 +377,6 @@ bool OSSPlayback::reset()
     CHECKERR(ioctl(mFd, SNDCTL_DSP_CHANNELS, &numChannels));
     CHECKERR(ioctl(mFd, SNDCTL_DSP_SPEED, &ossSpeed));
     CHECKERR(ioctl(mFd, SNDCTL_DSP_GETOSPACE, &info));
-    if(false)
-    {
-    err:
-        ERR("%s failed: %s\n", err, strerror(errno));
-        return false;
-    }
 #undef CHECKERR
 
     if(mDevice->channelsFromFmt() != numChannels)

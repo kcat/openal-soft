@@ -678,16 +678,16 @@ void AmbiRotator(AmbiRotateMatrix &matrix, const int order)
     auto P = [](const int i, const int l, const int a, const int n, const size_t last_band,
         const AmbiRotateMatrix &R)
     {
-        const float ri1{ R[ 1+2][static_cast<size_t>(i+2)]};
-        const float rim1{R[-1+2][static_cast<size_t>(i+2)]};
-        const float ri0{ R[ 0+2][static_cast<size_t>(i+2)]};
+        const float ri1{ R[ 1+2][static_cast<size_t>(i+2_z)]};
+        const float rim1{R[-1+2][static_cast<size_t>(i+2_z)]};
+        const float ri0{ R[ 0+2][static_cast<size_t>(i+2_z)]};
 
         const size_t y{last_band + static_cast<size_t>(a+l-1)};
         if(n == -l)
-            return ri1*R[last_band][y] + rim1*R[last_band + static_cast<size_t>(l-1)*2][y];
+            return ri1*R[last_band][y] + rim1*R[last_band + static_cast<size_t>(l-1_z)*2][y];
         if(n == l)
-            return ri1*R[last_band + static_cast<size_t>(l-1)*2][y] - rim1*R[last_band][y];
-        return ri0*R[last_band + static_cast<size_t>(n+l-1)][y];
+            return ri1*R[last_band + static_cast<size_t>(l-1_z)*2][y] - rim1*R[last_band][y];
+        return ri0*R[last_band + static_cast<size_t>(l-1_z+n)][y];
     };
 
     auto U = [P](const int l, const int m, const int n, const size_t last_band,

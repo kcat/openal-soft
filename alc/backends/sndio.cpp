@@ -135,72 +135,75 @@ bool SndioPlayback::reset()
     SioPar par;
 
     auto tryfmt = mDevice->FmtType;
-retry_params:
-    switch(tryfmt)
+    while(true)
     {
-    case DevFmtByte:
-        par.bits = 8;
-        par.sig = 1;
-        break;
-    case DevFmtUByte:
-        par.bits = 8;
-        par.sig = 0;
-        break;
-    case DevFmtShort:
-        par.bits = 16;
-        par.sig = 1;
-        break;
-    case DevFmtUShort:
-        par.bits = 16;
-        par.sig = 0;
-        break;
-    case DevFmtFloat:
-    case DevFmtInt:
-        par.bits = 32;
-        par.sig = 1;
-        break;
-    case DevFmtUInt:
-        par.bits = 32;
-        par.sig = 0;
-        break;
-    }
-    par.bps = SIO_BPS(par.bits);
-    par.le = SIO_LE_NATIVE;
-    par.msb = 1;
+        switch(tryfmt)
+        {
+        case DevFmtByte:
+            par.bits = 8;
+            par.sig = 1;
+            break;
+        case DevFmtUByte:
+            par.bits = 8;
+            par.sig = 0;
+            break;
+        case DevFmtShort:
+            par.bits = 16;
+            par.sig = 1;
+            break;
+        case DevFmtUShort:
+            par.bits = 16;
+            par.sig = 0;
+            break;
+        case DevFmtFloat:
+        case DevFmtInt:
+            par.bits = 32;
+            par.sig = 1;
+            break;
+        case DevFmtUInt:
+            par.bits = 32;
+            par.sig = 0;
+            break;
+        }
+        par.bps = SIO_BPS(par.bits);
+        par.le = SIO_LE_NATIVE;
+        par.msb = 1;
 
-    par.rate = mDevice->Frequency;
-    par.pchan = mDevice->channelsFromFmt();
+        par.rate = mDevice->Frequency;
+        par.pchan = mDevice->channelsFromFmt();
 
-    par.round = mDevice->UpdateSize;
-    par.appbufsz = mDevice->BufferSize - mDevice->UpdateSize;
-    if(!par.appbufsz) par.appbufsz = mDevice->UpdateSize;
+        par.round = mDevice->UpdateSize;
+        par.appbufsz = mDevice->BufferSize - mDevice->UpdateSize;
+        if(!par.appbufsz) par.appbufsz = mDevice->UpdateSize;
 
-    try {
-        if(!sio_setpar(mSndHandle, &par))
-            throw al::backend_exception{al::backend_error::DeviceError,
-                "Failed to set device parameters"};
+        try {
+            if(!sio_setpar(mSndHandle, &par))
+                throw al::backend_exception{al::backend_error::DeviceError,
+                    "Failed to set device parameters"};
 
-        par.clear();
-        if(!sio_getpar(mSndHandle, &par))
-            throw al::backend_exception{al::backend_error::DeviceError,
-                "Failed to get device parameters"};
+            par.clear();
+            if(!sio_getpar(mSndHandle, &par))
+                throw al::backend_exception{al::backend_error::DeviceError,
+                    "Failed to get device parameters"};
 
-        if(par.bps > 1 && par.le != SIO_LE_NATIVE)
-            throw al::backend_exception{al::backend_error::DeviceError,
-                "%s-endian samples not supported", par.le ? "Little" : "Big"};
-        if(par.bits < par.bps*8 && !par.msb)
-            throw al::backend_exception{al::backend_error::DeviceError,
-                "MSB-padded samples not supported (%u of %u bits)", par.bits, par.bps*8};
-        if(par.pchan < 1)
-            throw al::backend_exception{al::backend_error::DeviceError,
-                "No playback channels on device"};
-    }
-    catch(al::backend_exception &e) {
-        if(tryfmt == DevFmtShort)
-            throw;
-        par.clear();
-        tryfmt = DevFmtShort;
-        goto retry_params;
+            if(par.bps > 1 && par.le != SIO_LE_NATIVE)
+                throw al::backend_exception{al::backend_error::DeviceError,
+                    "%s-endian samples not supported", par.le ? "Little" : "Big"};
+            if(par.bits < par.bps*8 && !par.msb)
+                throw al::backend_exception{al::backend_error::DeviceError,
+                    "MSB-padded samples not supported (%u of %u bits)", par.bits, par.bps*8};
+            if(par.pchan < 1)
+                throw al::backend_exception{al::backend_error::DeviceError,
+                    "No playback channels on device"};
+
+            break;
+        }
+        catch(al::backend_exception &e) {
+            if(tryfmt == DevFmtShort)
+                throw;
+            par.clear();
+            tryfmt = DevFmtShort;
+        }
     }
 
     if(par.bps == 1)

@@ -361,10 +361,10 @@ static ALuint LoadSound(const char *filename)
     }
 
     namepart = strrchr(filename, '/');
-    if(namepart || (namepart=strrchr(filename, '\\')))
-        namepart++;
-    else
-        namepart = filename;
+    if(!namepart) namepart = strrchr(filename, '\\');
+    if(!namepart) namepart = filename;
+    else namepart++;
+
     printf("Loading: %s (%s, %dhz, %" PRId64 " samples / %.2f seconds)\n", namepart,
         FormatName(format), sfinfo.samplerate, sfinfo.frames,
         (double)sfinfo.frames / sfinfo.samplerate);
@@ -557,10 +557,9 @@ int main(int argc, char **argv)
             continue;
 
         namepart = strrchr(argv[i], '/');
-        if(namepart || (namepart=strrchr(argv[i], '\\')))
-            namepart++;
-        else
-            namepart = argv[i];
+        if(!namepart) namepart = strrchr(argv[i], '\\');
+        if(!namepart) namepart = argv[i];
+        else namepart++;
 
         printf("Playing: %s (%s, %dhz)\n", namepart, FormatName(player->format),
             player->sfinfo.samplerate);

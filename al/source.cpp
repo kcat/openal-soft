@@ -3407,89 +3407,93 @@ FORCE_ALIGN void AL_APIENTRY alSourceQueueBuffersDirect(ALCcontext *context, ALu
 
     std::unique_lock<std::mutex> buflock{device->BufferLock};
     const size_t NewListStart{source->mQueue.size()};
-    ALbufferQueueItem *BufferList{nullptr};
-    for(ALsizei i{0};i < nb;i++)
-    {
-        bool fmt_mismatch{false};
-        ALbuffer *buffer{buffers[i] ? LookupBuffer(device, buffers[i]) : nullptr};
-        if(buffers[i] && !buffer)
+    try {
+        ALbufferQueueItem *BufferList{nullptr};
+        for(ALsizei i{0};i < nb;i++)
         {
-            context->setError(AL_INVALID_NAME, "Queueing invalid buffer ID %u", buffers[i]);
-            goto buffer_error;
-        }
-        if(buffer)
-        {
-            if(buffer->mSampleRate < 1)
+            bool fmt_mismatch{false};
+            ALbuffer *buffer{buffers[i] ? LookupBuffer(device, buffers[i]) : nullptr};
+            if(buffers[i] && !buffer)
             {
-                context->setError(AL_INVALID_OPERATION, "Queueing buffer %u with no format",
-                    buffer->id);
-                goto buffer_error;
+                context->setError(AL_INVALID_NAME, "Queueing invalid buffer ID %u", buffers[i]);
+                throw std::exception{};
             }
-            if(buffer->mCallback)
+            if(buffer)
             {
-                context->setError(AL_INVALID_OPERATION, "Queueing callback buffer %u", buffer->id);
-                goto buffer_error;
+                if(buffer->mSampleRate < 1)
+                {
+                    context->setError(AL_INVALID_OPERATION, "Queueing buffer %u with no format",
+                        buffer->id);
+                    throw std::exception{};
+                }
+                if(buffer->mCallback)
+                {
+                    context->setError(AL_INVALID_OPERATION, "Queueing callback buffer %u",
+                        buffer->id);
+                    throw std::exception{};
+                }
+                if(buffer->MappedAccess != 0 && !(buffer->MappedAccess&AL_MAP_PERSISTENT_BIT_SOFT))
+                {
+                    context->setError(AL_INVALID_OPERATION,
+                        "Queueing non-persistently mapped buffer %u", buffer->id);
+                    throw std::exception{};
+                }
             }
-            if(buffer->MappedAccess != 0 && !(buffer->MappedAccess&AL_MAP_PERSISTENT_BIT_SOFT))
-            {
-                context->setError(AL_INVALID_OPERATION,
-                    "Queueing non-persistently mapped buffer %u", buffer->id);
-                goto buffer_error;
-            }
-        }
 
-        source->mQueue.emplace_back();
-        if(!BufferList)
-            BufferList = &source->mQueue.back();
-        else
-        {
-            auto &item = source->mQueue.back();
-            BufferList->mNext.store(&item, std::memory_order_relaxed);
-            BufferList = &item;
-        }
-        if(!buffer) continue;
-        BufferList->mBlockAlign = buffer->mBlockAlign;
-        BufferList->mSampleLen = buffer->mSampleLen;
-        BufferList->mLoopEnd = buffer->mSampleLen;
-        BufferList->mSamples = buffer->mData.data();
-        BufferList->mBuffer = buffer;
-        IncrementRef(buffer->ref);
-
-        if(BufferFmt == nullptr)
-            BufferFmt = buffer;
-        else
-        {
-            fmt_mismatch |= BufferFmt->mSampleRate != buffer->mSampleRate;
-            fmt_mismatch |= BufferFmt->mChannels != buffer->mChannels;
-            fmt_mismatch |= BufferFmt->mType != buffer->mType;
-            if(BufferFmt->isBFormat())
+            source->mQueue.emplace_back();
+            if(!BufferList)
+                BufferList = &source->mQueue.back();
+            else
             {
-                fmt_mismatch |= BufferFmt->mAmbiLayout != buffer->mAmbiLayout;
-                fmt_mismatch |= BufferFmt->mAmbiScaling != buffer->mAmbiScaling;
+                auto &item = source->mQueue.back();
+                BufferList->mNext.store(&item, std::memory_order_relaxed);
+                BufferList = &item;
             }
-            fmt_mismatch |= BufferFmt->mAmbiOrder != buffer->mAmbiOrder;
-        }
-        if(fmt_mismatch) UNLIKELY
-        {
-            context->setError(AL_INVALID_OPERATION, "Queueing buffer with mismatched format\n"
-                "  Expected: %uhz, %s, %s ; Got: %uhz, %s, %s\n", BufferFmt->mSampleRate,
-                NameFromFormat(BufferFmt->mType), NameFromFormat(BufferFmt->mChannels),
-                buffer->mSampleRate, NameFromFormat(buffer->mType),
-                NameFromFormat(buffer->mChannels));
+            if(!buffer) continue;
+            BufferList->mBlockAlign = buffer->mBlockAlign;
+            BufferList->mSampleLen = buffer->mSampleLen;
+            BufferList->mLoopEnd = buffer->mSampleLen;
+            BufferList->mSamples = buffer->mData.data();
+            BufferList->mBuffer = buffer;
+            IncrementRef(buffer->ref);
 
-        buffer_error:
-            /* A buffer failed (invalid ID or format), so unlock and release
-             * each buffer we had.
-             */
-            auto iter = source->mQueue.begin() + ptrdiff_t(NewListStart);
-            for(;iter != source->mQueue.end();++iter)
+            if(BufferFmt == nullptr)
+                BufferFmt = buffer;
+            else
             {
-                if(ALbuffer *buf{iter->mBuffer})
-                    DecrementRef(buf->ref);
+                fmt_mismatch |= BufferFmt->mSampleRate != buffer->mSampleRate;
+                fmt_mismatch |= BufferFmt->mChannels != buffer->mChannels;
+                fmt_mismatch |= BufferFmt->mType != buffer->mType;
+                if(BufferFmt->isBFormat())
+                {
+                    fmt_mismatch |= BufferFmt->mAmbiLayout != buffer->mAmbiLayout;
+                    fmt_mismatch |= BufferFmt->mAmbiScaling != buffer->mAmbiScaling;
+                }
+                fmt_mismatch |= BufferFmt->mAmbiOrder != buffer->mAmbiOrder;
             }
-            source->mQueue.resize(NewListStart);
-            return;
+            if(fmt_mismatch) UNLIKELY
+            {
+                context->setError(AL_INVALID_OPERATION, "Queueing buffer with mismatched format\n"
+                    "  Expected: %uhz, %s, %s ; Got: %uhz, %s, %s\n", BufferFmt->mSampleRate,
+                    NameFromFormat(BufferFmt->mType), NameFromFormat(BufferFmt->mChannels),
+                    buffer->mSampleRate, NameFromFormat(buffer->mType),
+                    NameFromFormat(buffer->mChannels));
+                throw std::exception{};
+            }
         }
+    }
+    catch(...) {
+        /* A buffer failed (invalid ID or format), or there was some other
+         * unexpected error, so unlock and release each buffer we had.
+         */
+        auto iter = source->mQueue.begin() + ptrdiff_t(NewListStart);
+        for(;iter != source->mQueue.end();++iter)
+        {
+            if(ALbuffer *buf{iter->mBuffer})
+                DecrementRef(buf->ref);
+        }
+        source->mQueue.resize(NewListStart);
+        return;
     }
     /* All buffers good. */
     buflock.unlock();

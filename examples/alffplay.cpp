@@ -1297,7 +1297,7 @@ int AudioState::handler()
                 mSamplesLen = decodeFrame();
                 mSamplesPos = mSamplesLen;
             } while(mSamplesLen > 0);
-            goto finish;
+            break;
         }
 
         ALenum state;
@@ -1378,7 +1378,6 @@ int AudioState::handler()
 
         mSrcCond.wait_for(srclock, sleep_time);
     }
-finish:
 
     alSourceRewind(mSource);
     alSourcei(mSource, AL_BUFFER, 0);

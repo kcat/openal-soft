@@ -49,7 +49,7 @@ inline ALenum EnumFromWaveform(ChorusWaveform type)
 EffectProps genDefaultChorusProps() noexcept
 {
     ChorusProps props{};
-    props.Waveform = *WaveformFromEnum(AL_CHORUS_DEFAULT_WAVEFORM);
+    props.Waveform = WaveformFromEnum(AL_CHORUS_DEFAULT_WAVEFORM).value();
     props.Phase = AL_CHORUS_DEFAULT_PHASE;
     props.Rate = AL_CHORUS_DEFAULT_RATE;
     props.Depth = AL_CHORUS_DEFAULT_DEPTH;
@@ -61,7 +61,7 @@ EffectProps genDefaultChorusProps() noexcept
 EffectProps genDefaultFlangerProps() noexcept
 {
     FlangerProps props{};
-    props.Waveform = *WaveformFromEnum(AL_FLANGER_DEFAULT_WAVEFORM);
+    props.Waveform = WaveformFromEnum(AL_FLANGER_DEFAULT_WAVEFORM).value();
     props.Phase = AL_FLANGER_DEFAULT_PHASE;
     props.Rate = AL_FLANGER_DEFAULT_RATE;
     props.Depth = AL_FLANGER_DEFAULT_DEPTH;

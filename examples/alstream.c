@@ -294,7 +294,7 @@ static int OpenPlayerFile(StreamPlayer *player, const char *filename)
 
     player->block_count = player->sfinfo.samplerate / player->sampleblockalign;
     player->block_count = player->block_count * BufferMillisec / 1000;
-    player->membuf = malloc((size_t)(player->block_count * player->byteblockalign));
+    player->membuf = malloc((size_t)player->block_count * (size_t)player->byteblockalign);
 
     return 1;
 }
@@ -488,10 +488,9 @@ int main(int argc, char **argv)
 
         /* Get the name portion, without the path, for display. */
         namepart = strrchr(argv[i], '/');
-        if(namepart || (namepart=strrchr(argv[i], '\\')))
-            namepart++;
-        else
-            namepart = argv[i];
+        if(!namepart) namepart = strrchr(argv[i], '\\');
+        if(!namepart) namepart = argv[i];
+        else namepart++;
 
         printf("Playing: %s (%s, %dhz)\n", namepart, FormatName(player->format),
             player->sfinfo.samplerate);

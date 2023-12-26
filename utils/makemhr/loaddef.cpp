@@ -907,7 +907,8 @@ static int ReadWaveList(std::istream &istream, const SourceRefT *src, const Byte
                 fprintf(stderr, "\nError: Bad read from file '%s'.\n", src->mPath.data());
                 return 0;
             }
-            istream.seekg(static_cast<long>(src->mOffset * block), std::ios::cur);
+            using off_type = std::istream::off_type;
+            istream.seekg(off_type(src->mOffset) * off_type(block), std::ios::cur);
             if(!ReadWaveData(istream, src, order, n, &hrir[0]))
                 return 0;
             return 1;
@@ -939,7 +940,8 @@ static int ReadWaveList(std::istream &istream, const SourceRefT *src, const Byte
             count = chunkSize / block;
             if(count > skip)
             {
-                istream.seekg(static_cast<long>(skip * block), std::ios::cur);
+                using off_type = std::istream::off_type;
+                istream.seekg(off_type(skip) * off_type(block), std::ios::cur);
                 chunkSize -= skip * block;
                 count -= skip;
                 skip = 0;

@@ -968,8 +968,9 @@ bool PulsePlayback::reset()
         const auto scale = static_cast<double>(mSpec.rate) / mDevice->Frequency;
         const auto perlen = static_cast<uint>(clampd(scale*mDevice->UpdateSize + 0.5, 64.0,
             8192.0));
-        const auto buflen = static_cast<uint>(clampd(scale*mDevice->BufferSize + 0.5, perlen*2,
-            std::numeric_limits<int>::max()/mFrameSize));
+        const auto bufmax = uint{std::numeric_limits<int>::max() / mFrameSize};
+        const auto buflen = static_cast<uint>(clampd(scale*mDevice->BufferSize + 0.5, perlen*2.0,
+            bufmax));
 
         mAttr.maxlength = ~0u;
         mAttr.tlength = buflen * mFrameSize;

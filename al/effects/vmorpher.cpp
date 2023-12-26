@@ -126,11 +126,11 @@ EffectProps genDefaultProps() noexcept
 {
     VmorpherProps props{};
     props.Rate                 = AL_VOCAL_MORPHER_DEFAULT_RATE;
-    props.PhonemeA             = *PhenomeFromEnum(AL_VOCAL_MORPHER_DEFAULT_PHONEMEA);
-    props.PhonemeB             = *PhenomeFromEnum(AL_VOCAL_MORPHER_DEFAULT_PHONEMEB);
+    props.PhonemeA             = PhenomeFromEnum(AL_VOCAL_MORPHER_DEFAULT_PHONEMEA).value();
+    props.PhonemeB             = PhenomeFromEnum(AL_VOCAL_MORPHER_DEFAULT_PHONEMEB).value();
     props.PhonemeACoarseTuning = AL_VOCAL_MORPHER_DEFAULT_PHONEMEA_COARSE_TUNING;
     props.PhonemeBCoarseTuning = AL_VOCAL_MORPHER_DEFAULT_PHONEMEB_COARSE_TUNING;
-    props.Waveform             = *WaveformFromEmum(AL_VOCAL_MORPHER_DEFAULT_WAVEFORM);
+    props.Waveform             = WaveformFromEmum(AL_VOCAL_MORPHER_DEFAULT_WAVEFORM).value();
     return props;
 }
 

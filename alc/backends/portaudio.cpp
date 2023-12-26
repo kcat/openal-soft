@@ -148,7 +148,6 @@ void PortPlayback::open(std::string_view name)
         break;
     }
 
-retry_open:
     static constexpr auto writeCallback = [](const void *inputBuffer, void *outputBuffer,
         unsigned long framesPerBuffer, const PaStreamCallbackTimeInfo *timeInfo,
         const PaStreamCallbackFlags statusFlags, void *userData) noexcept
@@ -157,17 +156,13 @@ retry_open:
             framesPerBuffer, timeInfo, statusFlags);
     };
     PaStream *stream{};
-    PaError err{Pa_OpenStream(&stream, nullptr, &params, mDevice->Frequency, mDevice->UpdateSize,
-        paNoFlag, writeCallback, this)};
-    if(err != paNoError)
+    while(PaError err{Pa_OpenStream(&stream, nullptr, &params, mDevice->Frequency,
+        mDevice->UpdateSize, paNoFlag, writeCallback, this)})
     {
-        if(params.sampleFormat == paFloat32)
-        {
-            params.sampleFormat = paInt16;
-            goto retry_open;
-        }
-        throw al::backend_exception{al::backend_error::NoDevice, "Failed to open stream: %s",
-            Pa_GetErrorText(err)};
+        if(params.sampleFormat != paFloat32)
+            throw al::backend_exception{al::backend_error::NoDevice, "Failed to open stream: %s",
+                Pa_GetErrorText(err)};
+        params.sampleFormat = paInt16;
     }
 
     Pa_CloseStream(mStream);

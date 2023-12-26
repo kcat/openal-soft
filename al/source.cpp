@@ -1923,7 +1923,8 @@ NOINLINE void SetProperty(ALsource *const Source, ALCcontext *const Context, con
             ALeffectslot *slot{};
             if(values[0])
             {
-                if((slot=LookupEffectSlot(Context, slotid)) == nullptr) UNLIKELY
+                slot = LookupEffectSlot(Context, slotid);
+                if(!slot) UNLIKELY
                     return Context->setError(AL_INVALID_VALUE, "Invalid effect ID %s",
                         std::to_string(slotid).c_str());
             }

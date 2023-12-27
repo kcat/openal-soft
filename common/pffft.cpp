@@ -380,7 +380,9 @@ force_inline void vcplxmulconj(v4sf &ar, v4sf &ai, v4sf br, v4sf bi) noexcept
 #endif //!PFFFT_SIMD_DISABLE
 
 /* SSE and co like 16-bytes aligned pointers */
-#define MALLOC_V4SF_ALIGNMENT 64 // with a 64-byte alignment, we are even aligned on L2 cache lines...
+/* with a 64-byte alignment, we are even aligned on L2 cache lines... */
+constexpr auto V4sfAlignment = size_t(64);
+constexpr auto V4sfAlignVal = std::align_val_t(V4sfAlignment);
 
 /*
   passf2 and passb2 has been merged here, fsign = -1 for passf2, +1 for passb2
@@ -1406,24 +1408,20 @@ void cffti1_ps(const uint n, float *wa, const al::span<uint,15> ifac)
 
 } // namespace
 
-void *pffft_aligned_malloc(size_t nb_bytes)
-{ return al_malloc(MALLOC_V4SF_ALIGNMENT, nb_bytes); }
-
-void pffft_aligned_free(void *p) noexcept { al_free(p); }
-
-int pffft_simd_size() noexcept { return SIMD_SZ; }
-
+/* NOLINTNEXTLINE(clang-analyzer-optin.performance.Padding) */
 struct PFFFT_Setup {
-    alignas(MALLOC_V4SF_ALIGNMENT) uint N;
-    uint Ncvec; // nb of complex simd vectors (N/4 if PFFFT_COMPLEX, N/8 if PFFFT_REAL)
-    std::array<uint,15> ifac;
-    pffft_transform_t transform;
+    uint N{};
+    uint Ncvec{}; /* nb of complex simd vectors (N/4 if PFFFT_COMPLEX, N/8 if PFFFT_REAL) */
+    std::array<uint,15> ifac{};
+    pffft_transform_t transform{};
 
-    float *twiddle; // N/4 elements
-    al::span<v4sf> e; // N/4*3 elements
+    float *twiddle{}; /* N/4 elements */
+    al::span<v4sf> e; /* N/4*3 elements */
+
+    alignas(V4sfAlignment) std::byte end;
 };
 
-PFFFT_Setup *pffft_new_setup(unsigned int N, pffft_transform_t transform)
+gsl::owner<PFFFT_Setup*> pffft_new_setup(unsigned int N, pffft_transform_t transform)
 {
     assert(transform == PFFFT_REAL || transform == PFFFT_COMPLEX);
     assert(N > 0);
@@ -1436,23 +1434,25 @@ PFFFT_Setup *pffft_new_setup(unsigned int N, pffft_transform_t transform)
     else
         assert((N%(SIMD_SZ*SIMD_SZ)) == 0);
 
-    const uint Ncvec = (transform == PFFFT_REAL ? N/2 : N)/SIMD_SZ;
-    const size_t storelen{sizeof(PFFFT_Setup) + (2_zu*Ncvec * sizeof(v4sf))};
+    const uint Ncvec{(transform == PFFFT_REAL ? N/2 : N)/SIMD_SZ};
 
-    void *store{al_calloc(MALLOC_V4SF_ALIGNMENT, storelen)};
-    if(!store) return nullptr;
+    const size_t storelen{std::max(offsetof(PFFFT_Setup, end) + 2_zu*Ncvec*sizeof(v4sf),
+        sizeof(PFFFT_Setup))};
+    gsl::owner<std::byte*> storage{::new(V4sfAlignVal) std::byte[storelen]{}};
+    al::span extrastore{&storage[offsetof(PFFFT_Setup, end)], 2_zu*Ncvec*sizeof(v4sf)};
 
-    PFFFT_Setup *s{::new(store) PFFFT_Setup{}};
+    gsl::owner<PFFFT_Setup*> s{::new(storage) PFFFT_Setup{}};
     s->N = N;
     s->transform = transform;
-    /* nb of complex simd vectors */
     s->Ncvec = Ncvec;
-    s->e = {reinterpret_cast<v4sf*>(reinterpret_cast<char*>(s+1)), 2_zu*Ncvec};
-    s->twiddle = reinterpret_cast<float*>(&s->e[2u*Ncvec*(SIMD_SZ-1)/SIMD_SZ]);
+
+    const size_t ecount{2_zu*Ncvec*(SIMD_SZ-1)/SIMD_SZ};
+    s->e = {std::launder(reinterpret_cast<v4sf*>(extrastore.data())), ecount};
+    s->twiddle = std::launder(reinterpret_cast<float*>(&extrastore[ecount*sizeof(v4sf)]));
 
     if constexpr(SIMD_SZ > 1)
     {
-        auto e = std::vector<float>(2_zu*Ncvec*(SIMD_SZ-1), 0.0f);
+        auto e = std::vector<float>(s->e.size()*SIMD_SZ, 0.0f);
         for(size_t k{0};k < s->Ncvec;++k)
         {
             const size_t i{k / SIMD_SZ};
@@ -1486,10 +1486,11 @@ PFFFT_Setup *pffft_new_setup(unsigned int N, pffft_transform_t transform)
 }
 
 
-void pffft_destroy_setup(PFFFT_Setup *s) noexcept
+void pffft_destroy_setup(gsl::owner<PFFFT_Setup*> s) noexcept
 {
     std::destroy_at(s);
-    al_free(s);
+    auto storage = reinterpret_cast<gsl::owner<std::byte*>>(s);
+    ::operator delete[](storage, V4sfAlignVal);
 }
 
 #if !defined(PFFFT_SIMD_DISABLE)

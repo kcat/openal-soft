@@ -79,15 +79,12 @@
 #ifndef PFFFT_H
 #define PFFFT_H
 
-#include <stddef.h> // for size_t
-#include <stdint.h>
-
-#ifdef __cplusplus
 #include <cstddef>
+#include <cstdint>
 #include <utility>
 
-extern "C" {
-#endif
+#include "almalloc.h"
+
 
 /* opaque struct holding internal stuff (precomputed twiddle factors) this
  * struct can be shared by many threads as it contains only read-only data.
@@ -100,20 +97,14 @@ enum pffft_direction_t { PFFFT_FORWARD, PFFFT_BACKWARD };
 /* type of transform */
 enum pffft_transform_t { PFFFT_REAL, PFFFT_COMPLEX };
 
-#ifndef __cplusplus
-typedef struct PFFFT_Setup PFFFT_Setup;
-typedef enum pffft_direction_t pffft_direction_t;
-typedef enum pffft_transform_t pffft_transform_t;
-#endif
-
 /**
  * Prepare for performing transforms of size N -- the returned PFFFT_Setup
  * structure is read-only so it can safely be shared by multiple concurrent
  * threads.
  */
 [[gnu::malloc]]
-PFFFT_Setup *pffft_new_setup(unsigned int N, pffft_transform_t transform);
-void pffft_destroy_setup(PFFFT_Setup *setup) noexcept;
+gsl::owner<PFFFT_Setup*> pffft_new_setup(unsigned int N, pffft_transform_t transform);
+void pffft_destroy_setup(gsl::owner<PFFFT_Setup*> setup) noexcept;
 
 /**
  * Perform a Fourier transform. The z-domain data is stored in the most
@@ -179,28 +170,14 @@ void pffft_zconvolve_scale_accumulate(const PFFFT_Setup *setup, const float *dft
  */
 void pffft_zconvolve_accumulate(const PFFFT_Setup *setup, const float *dft_a, const float *dft_b, float *dft_ab);
 
-/**
- * The float buffers must have the correct alignment (16-byte boundary on intel
- * and powerpc). This function may be used to obtain such correctly aligned
- * buffers.
- */
-[[gnu::alloc_size(1), gnu::malloc]]
-void *pffft_aligned_malloc(size_t nb_bytes);
-void pffft_aligned_free(void *ptr) noexcept;
-
-/* Return 4 or 1 depending if vectorization was enable when building pffft.cpp. */
-int pffft_simd_size() noexcept;
-
-#ifdef __cplusplus
-}
 
 struct PFFFTSetup {
-    PFFFT_Setup *mSetup{};
+    gsl::owner<PFFFT_Setup*> mSetup{};
 
     PFFFTSetup() = default;
     PFFFTSetup(const PFFFTSetup&) = delete;
     PFFFTSetup(PFFFTSetup&& rhs) noexcept : mSetup{rhs.mSetup} { rhs.mSetup = nullptr; }
-    explicit PFFFTSetup(std::nullptr_t) { }
+    explicit PFFFTSetup(std::nullptr_t) noexcept { }
     explicit PFFFTSetup(unsigned int n, pffft_transform_t transform)
         : mSetup{pffft_new_setup(n, transform)}
     { }
@@ -211,7 +188,8 @@ struct PFFFTSetup {
     {
         if(mSetup)
             pffft_destroy_setup(mSetup);
-        mSetup = std::exchange(rhs.mSetup, nullptr);
+        mSetup = rhs.mSetup;
+        rhs.mSetup = nullptr;
         return *this;
     }
 
@@ -234,6 +212,5 @@ struct PFFFTSetup {
 
     [[nodiscard]] operator bool() const noexcept { return mSetup != nullptr; }
 };
-#endif
 
 #endif // PFFFT_H

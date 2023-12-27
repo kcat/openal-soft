@@ -134,7 +134,8 @@ bool EnsureEffects(ALCdevice *device, size_t needed)
         device->EffectList.emplace_back();
         auto sublist = device->EffectList.end() - 1;
         sublist->FreeMask = ~0_u64;
-        sublist->Effects = static_cast<ALeffect*>(al_calloc(alignof(ALeffect), sizeof(ALeffect)*64));
+        sublist->Effects = static_cast<gsl::owner<ALeffect*>>(al_calloc(alignof(ALeffect),
+            sizeof(ALeffect)*64));
         if(!sublist->Effects) UNLIKELY
         {
             device->EffectList.pop_back();

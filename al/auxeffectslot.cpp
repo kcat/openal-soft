@@ -155,19 +155,17 @@ void AddActiveEffectSlots(const al::span<ALeffectslot*> auxslots, ALCcontext *co
      */
     if(newcount < newarray->size()) UNLIKELY
     {
-        curarray = newarray;
+        std::unique_ptr<EffectSlotArray> oldarray{newarray};
         newarray = EffectSlot::CreatePtrArray(newcount);
-        std::copy_n(curarray->begin(), newcount, newarray->begin());
-        delete curarray;
-        curarray = nullptr;
+        std::copy_n(oldarray->begin(), newcount, newarray->begin());
     }
     std::uninitialized_fill_n(newarray->end(), newcount, nullptr);
 
-    curarray = context->mActiveAuxSlots.exchange(newarray, std::memory_order_acq_rel);
+    std::unique_ptr<EffectSlotArray> oldarray{context->mActiveAuxSlots.exchange(newarray,
+        std::memory_order_acq_rel)};
     std::ignore = context->mDevice->waitForMix();
 
-    std::destroy_n(curarray->end(), curarray->size());
-    delete curarray;
+    std::destroy_n(oldarray->end(), oldarray->size());
 }
 
 void RemoveActiveEffectSlots(const al::span<ALeffectslot*> auxslots, ALCcontext *context)
@@ -193,20 +191,17 @@ void RemoveActiveEffectSlots(const al::span<ALeffectslot*> auxslots, ALCcontext 
     auto newsize = static_cast<size_t>(std::distance(newarray->begin(), new_end));
     if(newsize != newarray->size()) LIKELY
     {
-        curarray = newarray;
+        std::unique_ptr<EffectSlotArray> oldarray{newarray};
         newarray = EffectSlot::CreatePtrArray(newsize);
-        std::copy_n(curarray->begin(), newsize, newarray->begin());
-
-        delete curarray;
-        curarray = nullptr;
+        std::copy_n(oldarray->begin(), newsize, newarray->begin());
     }
     std::uninitialized_fill_n(newarray->end(), newsize, nullptr);
 
-    curarray = context->mActiveAuxSlots.exchange(newarray, std::memory_order_acq_rel);
+    std::unique_ptr<EffectSlotArray> oldarray{context->mActiveAuxSlots.exchange(newarray,
+        std::memory_order_acq_rel)};
     std::ignore = context->mDevice->waitForMix();
 
     std::destroy_n(curarray->end(), curarray->size());
-    delete curarray;
 }
 
 
@@ -251,7 +246,7 @@ bool EnsureEffectSlots(ALCcontext *context, size_t needed)
         context->mEffectSlotList.emplace_back();
         auto sublist = context->mEffectSlotList.end() - 1;
         sublist->FreeMask = ~0_u64;
-        sublist->EffectSlots = static_cast<ALeffectslot*>(
+        sublist->EffectSlots = static_cast<gsl::owner<ALeffectslot*>>(
             al_calloc(alignof(ALeffectslot), sizeof(ALeffectslot)*64));
         if(!sublist->EffectSlots) UNLIKELY
         {

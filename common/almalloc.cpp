@@ -13,13 +13,13 @@
 #endif
 
 
-void *al_malloc(size_t alignment, size_t size)
+gsl::owner<void*> al_malloc(size_t alignment, size_t size)
 {
     assert((alignment & (alignment-1)) == 0);
     alignment = std::max(alignment, alignof(std::max_align_t));
 
 #if defined(HAVE_POSIX_MEMALIGN)
-    void *ret{};
+    gsl::owner<void*> ret{};
     if(posix_memalign(&ret, alignment, size) == 0)
         return ret;
     return nullptr;
@@ -41,14 +41,14 @@ void *al_malloc(size_t alignment, size_t size)
 #endif
 }
 
-void *al_calloc(size_t alignment, size_t size)
+gsl::owner<void*> al_calloc(size_t alignment, size_t size)
 {
-    void *ret{al_malloc(alignment, size)};
+    gsl::owner<void*> ret{al_malloc(alignment, size)};
     if(ret) std::memset(ret, 0, size);
     return ret;
 }
 
-void al_free(void *ptr) noexcept
+void al_free(gsl::owner<void*> ptr) noexcept
 {
 #if defined(HAVE_POSIX_MEMALIGN)
     std::free(ptr);
@@ -56,6 +56,6 @@ void al_free(void *ptr) noexcept
     _aligned_free(ptr);
 #else
     if(ptr != nullptr)
-        std::free(*(static_cast<void**>(ptr) - 1));
+        std::free(*(static_cast<gsl::owner<void*>*>(ptr) - 1));
 #endif
 }

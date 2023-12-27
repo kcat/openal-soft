@@ -70,7 +70,7 @@ struct DebugLogEntry {
 
 struct SourceSubList {
     uint64_t FreeMask{~0_u64};
-    ALsource *Sources{nullptr}; /* 64 */
+    gsl::owner<ALsource*> Sources{nullptr}; /* 64 */
 
     SourceSubList() noexcept = default;
     SourceSubList(const SourceSubList&) = delete;
@@ -85,7 +85,7 @@ struct SourceSubList {
 
 struct EffectSlotSubList {
     uint64_t FreeMask{~0_u64};
-    ALeffectslot *EffectSlots{nullptr}; /* 64 */
+    gsl::owner<ALeffectslot*> EffectSlots{nullptr}; /* 64 */
 
     EffectSlotSubList() noexcept = default;
     EffectSlotSubList(const EffectSlotSubList&) = delete;

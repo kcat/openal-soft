@@ -13,11 +13,15 @@
 #include "pragmadefs.h"
 
 
-void al_free(void *ptr) noexcept;
+namespace gsl {
+template<typename T> using owner = T;
+};
+
+void al_free(gsl::owner<void*> ptr) noexcept;
 [[gnu::alloc_align(1), gnu::alloc_size(2), gnu::malloc]]
-void *al_malloc(size_t alignment, size_t size);
+gsl::owner<void*> al_malloc(size_t alignment, size_t size);
 [[gnu::alloc_align(1), gnu::alloc_size(2), gnu::malloc]]
-void *al_calloc(size_t alignment, size_t size);
+gsl::owner<void*> al_calloc(size_t alignment, size_t size);
 
 
 #define DISABLE_ALLOC                                                         \
@@ -29,10 +33,10 @@ void *al_calloc(size_t alignment, size_t size);
 #define DEF_PLACE_NEWDEL                                                      \
     void *operator new(size_t) = delete;                                      \
     void *operator new[](size_t) = delete;                                    \
-    void operator delete(void *block, void*) noexcept { al_free(block); }     \
-    void operator delete(void *block) noexcept { al_free(block); }            \
-    void operator delete[](void *block, void*) noexcept { al_free(block); }   \
-    void operator delete[](void *block) noexcept { al_free(block); }
+    void operator delete(gsl::owner<void*> block, void*) noexcept { al_free(block); } \
+    void operator delete(gsl::owner<void*> block) noexcept { al_free(block); } \
+    void operator delete[](gsl::owner<void*> block, void*) noexcept { al_free(block); } \
+    void operator delete[](gsl::owner<void*> block) noexcept { al_free(block); }
 
 enum FamCount : size_t { };
 
@@ -45,15 +49,22 @@ enum FamCount : size_t { };
             sizeof(T));                                                       \
     }                                                                         \
                                                                               \
-    void *operator new(size_t /*size*/, FamCount count)                       \
+    gsl::owner<void*> operator new(size_t /*size*/, FamCount count)           \
     {                                                                         \
-        if(void *ret{al_malloc(alignof(T), T::Sizeof(count))})                \
-            return ret;                                                       \
-        throw std::bad_alloc();                                               \
+        const auto align = std::align_val_t(alignof(T));                      \
+        return ::new(align) std::byte[T::Sizeof(count)];                      \
     }                                                                         \
     void *operator new[](size_t /*size*/) = delete;                           \
-    void operator delete(void *block, FamCount) noexcept { al_free(block); }  \
-    void operator delete(void *block) noexcept { al_free(block); }            \
+    void operator delete(gsl::owner<void*> block, FamCount) noexcept          \
+    {                                                                         \
+        const auto align = std::align_val_t(alignof(T));                      \
+        ::operator delete[](static_cast<gsl::owner<std::byte*>>(block), align); \
+    }                                                                         \
+    void operator delete(gsl::owner<void*> block) noexcept                    \
+    {                                                                         \
+        const auto align = std::align_val_t(alignof(T));                      \
+        ::operator delete[](static_cast<gsl::owner<std::byte*>>(block), align); \
+    }                                                                         \
     void operator delete[](void* /*block*/) = delete;
 
 
@@ -61,7 +72,8 @@ namespace al {
 
 template<typename T, std::size_t Align=alignof(T)>
 struct allocator {
-    static constexpr std::size_t alignment{std::max(Align, alignof(T))};
+    static constexpr auto alignment = std::max(Align, alignof(T));
+    static constexpr auto AlignVal = std::align_val_t(alignment);
 
     using value_type = T;
     using reference = T&;
@@ -81,13 +93,13 @@ struct allocator {
     template<typename U, std::size_t N>
     constexpr explicit allocator(const allocator<U,N>&) noexcept { }
 
-    T *allocate(std::size_t n)
+    gsl::owner<T*> allocate(std::size_t n)
     {
         if(n > std::numeric_limits<std::size_t>::max()/sizeof(T)) throw std::bad_alloc();
-        if(auto p = al_malloc(alignment, n*sizeof(T))) return static_cast<T*>(p);
-        throw std::bad_alloc();
+        return reinterpret_cast<gsl::owner<T*>>(::new(AlignVal) std::byte[n*sizeof(T)]);
     }
-    void deallocate(T *p, std::size_t) noexcept { al_free(p); }
+    void deallocate(gsl::owner<T*> p, std::size_t) noexcept
+    { ::operator delete[](reinterpret_cast<gsl::owner<std::byte*>>(p), AlignVal); }
 };
 template<typename T, std::size_t N, typename U, std::size_t M>
 constexpr bool operator==(const allocator<T,N>&, const allocator<U,M>&) noexcept { return true; }
@@ -111,8 +123,15 @@ constexpr auto to_address(const T &p) noexcept
 
 template<typename T, typename ...Args>
 constexpr T* construct_at(T *ptr, Args&& ...args)
-    noexcept(std::is_nothrow_constructible<T, Args...>::value)
-{ return ::new(static_cast<void*>(ptr)) T{std::forward<Args>(args)...}; }
+    noexcept(std::is_nothrow_constructible_v<T, Args...>)
+{
+    /* NOLINTBEGIN(cppcoreguidelines-owning-memory) construct_at doesn't
+     * necessarily handle the address from an owner, while placement new
+     * expects to.
+     */
+    return ::new(static_cast<void*>(ptr)) T{std::forward<Args>(args)...};
+    /* NOLINTEND(cppcoreguidelines-owning-memory) */
+}
 
 } // namespace al
 

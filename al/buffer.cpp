@@ -186,7 +186,8 @@ bool EnsureBuffers(ALCdevice *device, size_t needed)
         device->BufferList.emplace_back();
         auto sublist = device->BufferList.end() - 1;
         sublist->FreeMask = ~0_u64;
-        sublist->Buffers = static_cast<ALbuffer*>(al_calloc(alignof(ALbuffer), sizeof(ALbuffer)*64));
+        sublist->Buffers = static_cast<gsl::owner<ALbuffer*>>(al_calloc(alignof(ALbuffer),
+            sizeof(ALbuffer)*64));
         if(!sublist->Buffers) UNLIKELY
         {
             device->BufferList.pop_back();

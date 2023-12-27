@@ -2735,7 +2735,7 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
         if(oldarray != &DeviceBase::sEmptyContextArray)
         {
             std::ignore = dev->waitForMix();
-            delete oldarray;
+            newarray.reset(oldarray);
         }
     }
     statelock.unlock();

@@ -55,6 +55,11 @@ using std::chrono::nanoseconds;
 using ubyte = unsigned char;
 using ushort = unsigned short;
 
+struct FileDeleter {
+    void operator()(FILE *f) { fclose(f); }
+};
+using FilePtr = std::unique_ptr<FILE,FileDeleter>;
+
 /* NOLINTNEXTLINE(*-avoid-c-arrays) */
 constexpr char waveDevice[] = "Wave File Writer";
 
@@ -102,7 +107,7 @@ struct WaveBackend final : public BackendBase {
     void start() override;
     void stop() override;
 
-    FILE *mFile{nullptr};
+    FilePtr mFile{nullptr};
     long mDataStart{-1};
 
     std::vector<std::byte> mBuffer;
@@ -111,12 +116,7 @@ struct WaveBackend final : public BackendBase {
     std::thread mThread;
 };
 
-WaveBackend::~WaveBackend()
-{
-    if(mFile)
-        fclose(mFile);
-    mFile = nullptr;
-}
+WaveBackend::~WaveBackend() = default;
 
 int WaveBackend::mixerProc()
 {
@@ -168,8 +168,8 @@ int WaveBackend::mixerProc()
                 }
             }
 
-            const size_t fs{fwrite(mBuffer.data(), frameSize, mDevice->UpdateSize, mFile)};
-            if(fs < mDevice->UpdateSize || ferror(mFile))
+            const size_t fs{fwrite(mBuffer.data(), frameSize, mDevice->UpdateSize, mFile.get())};
+            if(fs < mDevice->UpdateSize || ferror(mFile.get()))
             {
                 ERR("Error writing to file\n");
                 mDevice->handleDisconnect("Failed to write playback samples");
@@ -211,10 +211,10 @@ void WaveBackend::open(std::string_view name)
 #ifdef _WIN32
     {
         std::wstring wname{utf8_to_wstr(fname.value())};
-        mFile = _wfopen(wname.c_str(), L"wb");
+        mFile.reset(_wfopen(wname.c_str(), L"wb"));
     }
 #else
-    mFile = fopen(fname->c_str(), "wb");
+    mFile.reset(fopen(fname->c_str(), "wb"));
 #endif
     if(!mFile)
         throw al::backend_exception{al::backend_error::DeviceError, "Could not open file '%s': %s",
@@ -228,8 +228,8 @@ bool WaveBackend::reset()
     uint channels{0}, bytes{0}, chanmask{0};
     bool isbformat{false};
 
-    fseek(mFile, 0, SEEK_SET);
-    clearerr(mFile);
+    fseek(mFile.get(), 0, SEEK_SET);
+    clearerr(mFile.get());
 
     if(GetConfigValueBool({}, "wave", "bformat", false))
     {
@@ -280,48 +280,48 @@ bool WaveBackend::reset()
     bytes = mDevice->bytesFromFmt();
     channels = mDevice->channelsFromFmt();
 
-    rewind(mFile);
+    rewind(mFile.get());
 
-    fputs("RIFF", mFile);
-    fwrite32le(0xFFFFFFFF, mFile); // 'RIFF' header len; filled in at close
+    fputs("RIFF", mFile.get());
+    fwrite32le(0xFFFFFFFF, mFile.get()); // 'RIFF' header len; filled in at close
 
-    fputs("WAVE", mFile);
+    fputs("WAVE", mFile.get());
 
-    fputs("fmt ", mFile);
-    fwrite32le(40, mFile); // 'fmt ' header len; 40 bytes for EXTENSIBLE
+    fputs("fmt ", mFile.get());
+    fwrite32le(40, mFile.get()); // 'fmt ' header len; 40 bytes for EXTENSIBLE
 
     // 16-bit val, format type id (extensible: 0xFFFE)
-    fwrite16le(0xFFFE, mFile);
+    fwrite16le(0xFFFE, mFile.get());
     // 16-bit val, channel count
-    fwrite16le(static_cast<ushort>(channels), mFile);
+    fwrite16le(static_cast<ushort>(channels), mFile.get());
     // 32-bit val, frequency
-    fwrite32le(mDevice->Frequency, mFile);
+    fwrite32le(mDevice->Frequency, mFile.get());
     // 32-bit val, bytes per second
-    fwrite32le(mDevice->Frequency * channels * bytes, mFile);
+    fwrite32le(mDevice->Frequency * channels * bytes, mFile.get());
     // 16-bit val, frame size
-    fwrite16le(static_cast<ushort>(channels * bytes), mFile);
+    fwrite16le(static_cast<ushort>(channels * bytes), mFile.get());
     // 16-bit val, bits per sample
-    fwrite16le(static_cast<ushort>(bytes * 8), mFile);
+    fwrite16le(static_cast<ushort>(bytes * 8), mFile.get());
     // 16-bit val, extra byte count
-    fwrite16le(22, mFile);
+    fwrite16le(22, mFile.get());
     // 16-bit val, valid bits per sample
-    fwrite16le(static_cast<ushort>(bytes * 8), mFile);
+    fwrite16le(static_cast<ushort>(bytes * 8), mFile.get());
     // 32-bit val, channel mask
-    fwrite32le(chanmask, mFile);
+    fwrite32le(chanmask, mFile.get());
     // 16 byte GUID, sub-type format
     std::ignore = fwrite((mDevice->FmtType == DevFmtFloat) ?
         (isbformat ? SUBTYPE_BFORMAT_FLOAT.data() : SUBTYPE_FLOAT.data()) :
-        (isbformat ? SUBTYPE_BFORMAT_PCM.data() : SUBTYPE_PCM.data()), 1, 16, mFile);
+        (isbformat ? SUBTYPE_BFORMAT_PCM.data() : SUBTYPE_PCM.data()), 1, 16, mFile.get());
 
-    fputs("data", mFile);
-    fwrite32le(0xFFFFFFFF, mFile); // 'data' header len; filled in at close
+    fputs("data", mFile.get());
+    fwrite32le(0xFFFFFFFF, mFile.get()); // 'data' header len; filled in at close
 
-    if(ferror(mFile))
+    if(ferror(mFile.get()))
     {
         ERR("Error writing header: %s\n", strerror(errno));
         return false;
     }
-    mDataStart = ftell(mFile);
+    mDataStart = ftell(mFile.get());
 
     setDefaultWFXChannelOrder();
 
@@ -333,7 +333,7 @@ bool WaveBackend::reset()
 
 void WaveBackend::start()
 {
-    if(mDataStart > 0 && fseek(mFile, 0, SEEK_END) != 0)
+    if(mDataStart > 0 && fseek(mFile.get(), 0, SEEK_END) != 0)
         WARN("Failed to seek on output file\n");
     try {
         mKillNow.store(false, std::memory_order_release);
@@ -353,14 +353,14 @@ void WaveBackend::stop()
 
     if(mDataStart > 0)
     {
-        long size{ftell(mFile)};
+        long size{ftell(mFile.get())};
         if(size > 0)
         {
             long dataLen{size - mDataStart};
-            if(fseek(mFile, 4, SEEK_SET) == 0)
-                fwrite32le(static_cast<uint>(size-8), mFile); // 'WAVE' header len
-            if(fseek(mFile, mDataStart-4, SEEK_SET) == 0)
-                fwrite32le(static_cast<uint>(dataLen), mFile); // 'data' header len
+            if(fseek(mFile.get(), 4, SEEK_SET) == 0)
+                fwrite32le(static_cast<uint>(size-8), mFile.get()); // 'WAVE' header len
+            if(fseek(mFile.get(), mDataStart-4, SEEK_SET) == 0)
+                fwrite32le(static_cast<uint>(dataLen), mFile.get()); // 'data' header len
         }
     }
 }

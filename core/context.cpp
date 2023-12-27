@@ -29,15 +29,12 @@ ContextBase::~ContextBase()
 {
     size_t count{0};
     ContextProps *cprops{mParams.ContextUpdate.exchange(nullptr, std::memory_order_relaxed)};
-    if(cprops)
-    {
+    if(std::unique_ptr<ContextProps> old{cprops})
         ++count;
-        delete cprops;
-    }
+
     cprops = mFreeContextProps.exchange(nullptr, std::memory_order_acquire);
-    while(cprops)
+    while(std::unique_ptr<ContextProps> old{cprops})
     {
-        std::unique_ptr<ContextProps> old{cprops};
         cprops = old->next.load(std::memory_order_relaxed);
         ++count;
     }
@@ -45,21 +42,17 @@ ContextBase::~ContextBase()
 
     count = 0;
     EffectSlotProps *eprops{mFreeEffectslotProps.exchange(nullptr, std::memory_order_acquire)};
-    while(eprops)
+    while(std::unique_ptr<EffectSlotProps> old{eprops})
     {
-        std::unique_ptr<EffectSlotProps> old{eprops};
         eprops = old->next.load(std::memory_order_relaxed);
         ++count;
     }
     TRACE("Freed %zu AuxiliaryEffectSlot property object%s\n", count, (count==1)?"":"s");
 
-    if(EffectSlotArray *curarray{mActiveAuxSlots.exchange(nullptr, std::memory_order_relaxed)})
-    {
+    if(std::unique_ptr<EffectSlotArray> curarray{mActiveAuxSlots.exchange(nullptr, std::memory_order_relaxed)})
         std::destroy_n(curarray->end(), curarray->size());
-        delete curarray;
-    }
 
-    delete mVoices.exchange(nullptr, std::memory_order_relaxed);
+    std::unique_ptr<ContextBase::VoiceArray>{mVoices.exchange(nullptr, std::memory_order_relaxed)};
 
     if(mAsyncEvents)
     {
@@ -149,11 +142,8 @@ void ContextBase::allocVoices(size_t addcount)
         voice_iter = std::transform(cluster->begin(), cluster->end(), voice_iter,
             [](Voice &voice) noexcept -> Voice* { return &voice; });
 
-    if(auto *oldvoices = mVoices.exchange(newarray.release(), std::memory_order_acq_rel))
-    {
+    if(std::unique_ptr<ContextBase::VoiceArray> oldvoices{mVoices.exchange(newarray.release(), std::memory_order_acq_rel)})
         std::ignore = mDevice->waitForMix();
-        delete oldvoices;
-    }
 }
 
 

@@ -74,7 +74,7 @@ struct FlexArray {
     { return Storage_t_::Sizeof(count, base); }
     static std::unique_ptr<FlexArray> Create(index_type count)
     {
-        if(void *ptr{al_calloc(alignof(FlexArray), Sizeof(count))})
+        if(gsl::owner<void*> ptr{al_calloc(alignof(FlexArray), Sizeof(count))})
         {
             try {
                 return std::unique_ptr<FlexArray>{::new(ptr) FlexArray{count}};
@@ -87,7 +87,7 @@ struct FlexArray {
         throw std::bad_alloc();
     }
 
-    FlexArray(index_type size) noexcept(std::is_nothrow_constructible_v<Storage_t_>)
+    FlexArray(index_type size) noexcept(std::is_nothrow_constructible_v<Storage_t_,index_type>)
         : mStore{size}
     { }
     ~FlexArray() = default;

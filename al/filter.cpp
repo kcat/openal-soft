@@ -129,7 +129,8 @@ bool EnsureFilters(ALCdevice *device, size_t needed)
         device->FilterList.emplace_back();
         auto sublist = device->FilterList.end() - 1;
         sublist->FreeMask = ~0_u64;
-        sublist->Filters = static_cast<ALfilter*>(al_calloc(alignof(ALfilter), sizeof(ALfilter)*64));
+        sublist->Filters = static_cast<gsl::owner<ALfilter*>>(al_calloc(alignof(ALfilter),
+            sizeof(ALfilter)*64));
         if(!sublist->Filters) UNLIKELY
         {
             device->FilterList.pop_back();

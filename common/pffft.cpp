@@ -1438,7 +1438,7 @@ gsl::owner<PFFFT_Setup*> pffft_new_setup(unsigned int N, pffft_transform_t trans
 
     const size_t storelen{std::max(offsetof(PFFFT_Setup, end) + 2_zu*Ncvec*sizeof(v4sf),
         sizeof(PFFFT_Setup))};
-    gsl::owner<std::byte*> storage{::new(V4sfAlignVal) std::byte[storelen]{}};
+    auto storage = static_cast<gsl::owner<std::byte*>>(::operator new[](storelen, V4sfAlignVal));
     al::span extrastore{&storage[offsetof(PFFFT_Setup, end)], 2_zu*Ncvec*sizeof(v4sf)};
 
     gsl::owner<PFFFT_Setup*> s{::new(storage) PFFFT_Setup{}};
@@ -1489,8 +1489,7 @@ gsl::owner<PFFFT_Setup*> pffft_new_setup(unsigned int N, pffft_transform_t trans
 void pffft_destroy_setup(gsl::owner<PFFFT_Setup*> s) noexcept
 {
     std::destroy_at(s);
-    auto storage = reinterpret_cast<gsl::owner<std::byte*>>(s);
-    ::operator delete[](storage, V4sfAlignVal);
+    ::operator delete[](gsl::owner<void*>{s}, V4sfAlignVal);
 }
 
 #if !defined(PFFFT_SIMD_DISABLE)

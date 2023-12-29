@@ -30,54 +30,11 @@ struct ALbuffer;
 struct ALeffect;
 struct ALfilter;
 struct BackendBase;
+struct BufferSubList;
+struct EffectSubList;
+struct FilterSubList;
 
 using uint = unsigned int;
-
-
-struct BufferSubList {
-    uint64_t FreeMask{~0_u64};
-    gsl::owner<std::array<ALbuffer,64>*> Buffers{nullptr};
-
-    BufferSubList() noexcept = default;
-    BufferSubList(const BufferSubList&) = delete;
-    BufferSubList(BufferSubList&& rhs) noexcept : FreeMask{rhs.FreeMask}, Buffers{rhs.Buffers}
-    { rhs.FreeMask = ~0_u64; rhs.Buffers = nullptr; }
-    ~BufferSubList();
-
-    BufferSubList& operator=(const BufferSubList&) = delete;
-    BufferSubList& operator=(BufferSubList&& rhs) noexcept
-    { std::swap(FreeMask, rhs.FreeMask); std::swap(Buffers, rhs.Buffers); return *this; }
-};
-
-struct EffectSubList {
-    uint64_t FreeMask{~0_u64};
-    gsl::owner<std::array<ALeffect,64>*> Effects{nullptr}; /* 64 */
-
-    EffectSubList() noexcept = default;
-    EffectSubList(const EffectSubList&) = delete;
-    EffectSubList(EffectSubList&& rhs) noexcept : FreeMask{rhs.FreeMask}, Effects{rhs.Effects}
-    { rhs.FreeMask = ~0_u64; rhs.Effects = nullptr; }
-    ~EffectSubList();
-
-    EffectSubList& operator=(const EffectSubList&) = delete;
-    EffectSubList& operator=(EffectSubList&& rhs) noexcept
-    { std::swap(FreeMask, rhs.FreeMask); std::swap(Effects, rhs.Effects); return *this; }
-};
-
-struct FilterSubList {
-    uint64_t FreeMask{~0_u64};
-    gsl::owner<std::array<ALfilter,64>*> Filters{nullptr};
-
-    FilterSubList() noexcept = default;
-    FilterSubList(const FilterSubList&) = delete;
-    FilterSubList(FilterSubList&& rhs) noexcept : FreeMask{rhs.FreeMask}, Filters{rhs.Filters}
-    { rhs.FreeMask = ~0_u64; rhs.Filters = nullptr; }
-    ~FilterSubList();
-
-    FilterSubList& operator=(const FilterSubList&) = delete;
-    FilterSubList& operator=(FilterSubList&& rhs) noexcept
-    { std::swap(FreeMask, rhs.FreeMask); std::swap(Filters, rhs.Filters); return *this; }
-};
 
 
 struct ALCdevice : public al::intrusive_ref<ALCdevice>, DeviceBase {

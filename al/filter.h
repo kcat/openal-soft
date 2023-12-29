@@ -1,6 +1,8 @@
 #ifndef AL_FILTER_H
 #define AL_FILTER_H
 
+#include <array>
+#include <cstdint>
 #include <string_view>
 #include <variant>
 
@@ -9,6 +11,7 @@
 #include "AL/alext.h"
 
 #include "almalloc.h"
+#include "alnumeric.h"
 
 #define LOWPASSFREQREF  5000.0f
 #define HIGHPASSFREQREF  250.0f
@@ -52,6 +55,21 @@ struct ALfilter {
     static void SetName(ALCcontext *context, ALuint id, std::string_view name);
 
     DISABLE_ALLOC
+};
+
+struct FilterSubList {
+    uint64_t FreeMask{~0_u64};
+    gsl::owner<std::array<ALfilter,64>*> Filters{nullptr};
+
+    FilterSubList() noexcept = default;
+    FilterSubList(const FilterSubList&) = delete;
+    FilterSubList(FilterSubList&& rhs) noexcept : FreeMask{rhs.FreeMask}, Filters{rhs.Filters}
+    { rhs.FreeMask = ~0_u64; rhs.Filters = nullptr; }
+    ~FilterSubList();
+
+    FilterSubList& operator=(const FilterSubList&) = delete;
+    FilterSubList& operator=(FilterSubList&& rhs) noexcept
+    { std::swap(FreeMask, rhs.FreeMask); std::swap(Filters, rhs.Filters); return *this; }
 };
 
 #endif

@@ -6,6 +6,9 @@
 #include <cstddef>
 #include <numeric>
 
+#include "al/buffer.h"
+#include "al/effect.h"
+#include "al/filter.h"
 #include "albit.h"
 #include "alconfig.h"
 #include "backends/base.h"

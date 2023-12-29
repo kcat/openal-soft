@@ -37,6 +37,8 @@ struct ALeffect;
 struct ALeffectslot;
 struct ALsource;
 struct DebugGroup;
+struct EffectSlotSubList;
+struct SourceSubList;
 
 enum class DebugSource : uint8_t;
 enum class DebugType : uint8_t;
@@ -68,37 +70,6 @@ struct DebugLogEntry {
     DebugLogEntry(DebugLogEntry&&) = default;
 };
 
-
-struct SourceSubList {
-    uint64_t FreeMask{~0_u64};
-    gsl::owner<std::array<ALsource,64>*> Sources{nullptr};
-
-    SourceSubList() noexcept = default;
-    SourceSubList(const SourceSubList&) = delete;
-    SourceSubList(SourceSubList&& rhs) noexcept : FreeMask{rhs.FreeMask}, Sources{rhs.Sources}
-    { rhs.FreeMask = ~0_u64; rhs.Sources = nullptr; }
-    ~SourceSubList();
-
-    SourceSubList& operator=(const SourceSubList&) = delete;
-    SourceSubList& operator=(SourceSubList&& rhs) noexcept
-    { std::swap(FreeMask, rhs.FreeMask); std::swap(Sources, rhs.Sources); return *this; }
-};
-
-struct EffectSlotSubList {
-    uint64_t FreeMask{~0_u64};
-    gsl::owner<std::array<ALeffectslot,64>*> EffectSlots{nullptr};
-
-    EffectSlotSubList() noexcept = default;
-    EffectSlotSubList(const EffectSlotSubList&) = delete;
-    EffectSlotSubList(EffectSlotSubList&& rhs) noexcept
-      : FreeMask{rhs.FreeMask}, EffectSlots{rhs.EffectSlots}
-    { rhs.FreeMask = ~0_u64; rhs.EffectSlots = nullptr; }
-    ~EffectSlotSubList();
-
-    EffectSlotSubList& operator=(const EffectSlotSubList&) = delete;
-    EffectSlotSubList& operator=(EffectSlotSubList&& rhs) noexcept
-    { std::swap(FreeMask, rhs.FreeMask); std::swap(EffectSlots, rhs.EffectSlots); return *this; }
-};
 
 struct ALCcontext : public al::intrusive_ref<ALCcontext>, ContextBase {
     const al::intrusive_ptr<ALCdevice> mALDevice;

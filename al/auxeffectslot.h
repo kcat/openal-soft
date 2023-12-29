@@ -3,6 +3,7 @@
 
 #include <atomic>
 #include <cstddef>
+#include <cstdint>
 #include <string_view>
 
 #include "AL/al.h"
@@ -12,6 +13,7 @@
 #include "alc/device.h"
 #include "alc/effects/base.h"
 #include "almalloc.h"
+#include "alnumeric.h"
 #include "atomic.h"
 #include "core/effectslot.h"
 #include "intrusive_ptr.h"
@@ -366,5 +368,21 @@ using EaxAlEffectSlotUPtr = std::unique_ptr<ALeffectslot, ALeffectslot::EaxDelet
 EaxAlEffectSlotUPtr eax_create_al_effect_slot(ALCcontext& context);
 void eax_delete_al_effect_slot(ALCcontext& context, ALeffectslot& effect_slot);
 #endif // ALSOFT_EAX
+
+struct EffectSlotSubList {
+    uint64_t FreeMask{~0_u64};
+    gsl::owner<std::array<ALeffectslot,64>*> EffectSlots{nullptr};
+
+    EffectSlotSubList() noexcept = default;
+    EffectSlotSubList(const EffectSlotSubList&) = delete;
+    EffectSlotSubList(EffectSlotSubList&& rhs) noexcept
+      : FreeMask{rhs.FreeMask}, EffectSlots{rhs.EffectSlots}
+    { rhs.FreeMask = ~0_u64; rhs.EffectSlots = nullptr; }
+    ~EffectSlotSubList();
+
+    EffectSlotSubList& operator=(const EffectSlotSubList&) = delete;
+    EffectSlotSubList& operator=(EffectSlotSubList&& rhs) noexcept
+    { std::swap(FreeMask, rhs.FreeMask); std::swap(EffectSlots, rhs.EffectSlots); return *this; }
+};
 
 #endif

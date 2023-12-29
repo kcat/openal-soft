@@ -3,6 +3,7 @@
 
 #include <array>
 #include <bitset>
+#include <cstdint>
 #include <string_view>
 
 #include "AL/al.h"
@@ -10,6 +11,8 @@
 
 #include "al/effects/effects.h"
 #include "alc/effects/base.h"
+#include "almalloc.h"
+#include "alnumeric.h"
 
 
 enum {
@@ -60,5 +63,20 @@ void InitEffect(ALeffect *effect);
 void LoadReverbPreset(const char *name, ALeffect *effect);
 
 bool IsValidEffectType(ALenum type) noexcept;
+
+struct EffectSubList {
+    uint64_t FreeMask{~0_u64};
+    gsl::owner<std::array<ALeffect,64>*> Effects{nullptr}; /* 64 */
+
+    EffectSubList() noexcept = default;
+    EffectSubList(const EffectSubList&) = delete;
+    EffectSubList(EffectSubList&& rhs) noexcept : FreeMask{rhs.FreeMask}, Effects{rhs.Effects}
+    { rhs.FreeMask = ~0_u64; rhs.Effects = nullptr; }
+    ~EffectSubList();
+
+    EffectSubList& operator=(const EffectSubList&) = delete;
+    EffectSubList& operator=(EffectSubList&& rhs) noexcept
+    { std::swap(FreeMask, rhs.FreeMask); std::swap(Effects, rhs.Effects); return *this; }
+};
 
 #endif

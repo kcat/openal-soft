@@ -4,6 +4,7 @@
 #include <array>
 #include <atomic>
 #include <cstddef>
+#include <cstdint>
 #include <deque>
 #include <iterator>
 #include <limits>
@@ -1041,5 +1042,20 @@ private:
 };
 
 void UpdateAllSourceProps(ALCcontext *context);
+
+struct SourceSubList {
+    uint64_t FreeMask{~0_u64};
+    gsl::owner<std::array<ALsource,64>*> Sources{nullptr};
+
+    SourceSubList() noexcept = default;
+    SourceSubList(const SourceSubList&) = delete;
+    SourceSubList(SourceSubList&& rhs) noexcept : FreeMask{rhs.FreeMask}, Sources{rhs.Sources}
+    { rhs.FreeMask = ~0_u64; rhs.Sources = nullptr; }
+    ~SourceSubList();
+
+    SourceSubList& operator=(const SourceSubList&) = delete;
+    SourceSubList& operator=(SourceSubList&& rhs) noexcept
+    { std::swap(FreeMask, rhs.FreeMask); std::swap(Sources, rhs.Sources); return *this; }
+};
 
 #endif

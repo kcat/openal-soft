@@ -186,8 +186,8 @@ bool EnsureBuffers(ALCdevice *device, size_t needed)
         device->BufferList.emplace_back();
         auto sublist = device->BufferList.end() - 1;
         sublist->FreeMask = ~0_u64;
-        sublist->Buffers = static_cast<gsl::owner<ALbuffer*>>(al_calloc(alignof(ALbuffer),
-            sizeof(ALbuffer)*64));
+        sublist->Buffers = static_cast<gsl::owner<std::array<ALbuffer,64>*>>(al_calloc(
+            alignof(ALbuffer), sizeof(*sublist->Buffers)));
         if(!sublist->Buffers) UNLIKELY
         {
             device->BufferList.pop_back();
@@ -207,7 +207,7 @@ ALbuffer *AllocBuffer(ALCdevice *device)
     auto slidx = static_cast<ALuint>(al::countr_zero(sublist->FreeMask));
     ASSUME(slidx < 64);
 
-    ALbuffer *buffer{al::construct_at(sublist->Buffers + slidx)};
+    ALbuffer *buffer{al::construct_at(al::to_address(sublist->Buffers->begin() + slidx))};
 
     /* Add 1 to avoid buffer ID 0. */
     buffer->id = ((lidx<<6) | slidx) + 1;
@@ -244,7 +244,7 @@ inline ALbuffer *LookupBuffer(ALCdevice *device, ALuint id)
     BufferSubList &sublist = device->BufferList[lidx];
     if(sublist.FreeMask & (1_u64 << slidx)) UNLIKELY
         return nullptr;
-    return sublist.Buffers + slidx;
+    return al::to_address(sublist.Buffers->begin() + slidx);
 }
 
 
@@ -1486,7 +1486,7 @@ BufferSubList::~BufferSubList()
     while(usemask)
     {
         const int idx{al::countr_zero(usemask)};
-        std::destroy_at(Buffers+idx);
+        std::destroy_at(al::to_address(Buffers->begin() + idx));
         usemask &= ~(1_u64 << idx);
     }
     FreeMask = ~usemask;

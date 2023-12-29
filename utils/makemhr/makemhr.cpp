@@ -104,6 +104,11 @@ HrirDataT::~HrirDataT() = default;
 
 namespace {
 
+struct FileDeleter {
+    void operator()(gsl::owner<FILE*> f) { fclose(f); }
+};
+using FilePtr = std::unique_ptr<FILE,FileDeleter>;
+
 using namespace std::placeholders;
 
 // The epsilon used to maintain signal stability.
@@ -312,7 +317,6 @@ static int WriteAscii(const char *out, FILE *fp, const char *filename)
     len = strlen(out);
     if(fwrite(out, 1, len, fp) != len)
     {
-        fclose(fp);
         fprintf(stderr, "\nError: Bad write to file '%s'.\n", filename);
         return 0;
     }
@@ -343,33 +347,33 @@ static int StoreMhr(const HrirDataT *hData, const char *filename)
     uint dither_seed{22222};
     uint fi, ei, ai, i;
 
-    FILE *fp{fopen(filename, "wb")};
+    FilePtr fp{fopen(filename, "wb")};
     if(!fp)
     {
         fprintf(stderr, "\nError: Could not open MHR file '%s'.\n", filename);
         return 0;
     }
-    if(!WriteAscii(MHRFormat, fp, filename))
+    if(!WriteAscii(MHRFormat, fp.get(), filename))
         return 0;
-    if(!WriteBin4(4, hData->mIrRate, fp, filename))
+    if(!WriteBin4(4, hData->mIrRate, fp.get(), filename))
         return 0;
-    if(!WriteBin4(1, static_cast<uint32_t>(hData->mChannelType), fp, filename))
+    if(!WriteBin4(1, static_cast<uint32_t>(hData->mChannelType), fp.get(), filename))
         return 0;
-    if(!WriteBin4(1, hData->mIrPoints, fp, filename))
+    if(!WriteBin4(1, hData->mIrPoints, fp.get(), filename))
         return 0;
-    if(!WriteBin4(1, static_cast<uint>(hData->mFds.size()), fp, filename))
+    if(!WriteBin4(1, static_cast<uint>(hData->mFds.size()), fp.get(), filename))
         return 0;
     for(fi = static_cast<uint>(hData->mFds.size()-1);fi < hData->mFds.size();fi--)
     {
         auto fdist = static_cast<uint32_t>(std::round(1000.0 * hData->mFds[fi].mDistance));
-        if(!WriteBin4(2, fdist, fp, filename))
+        if(!WriteBin4(2, fdist, fp.get(), filename))
             return 0;
-        if(!WriteBin4(1, static_cast<uint32_t>(hData->mFds[fi].mEvs.size()), fp, filename))
+        if(!WriteBin4(1, static_cast<uint32_t>(hData->mFds[fi].mEvs.size()), fp.get(), filename))
             return 0;
         for(ei = 0;ei < hData->mFds[fi].mEvs.size();ei++)
         {
             const auto &elev = hData->mFds[fi].mEvs[ei];
-            if(!WriteBin4(1, static_cast<uint32_t>(elev.mAzs.size()), fp, filename))
+            if(!WriteBin4(1, static_cast<uint32_t>(elev.mAzs.size()), fp.get(), filename))
                 return 0;
         }
     }
@@ -392,7 +396,7 @@ static int StoreMhr(const HrirDataT *hData, const char *filename)
                 for(i = 0;i < (channels * n);i++)
                 {
                     const auto v = static_cast<int>(Clamp(out[i], -scale-1.0, scale));
-                    if(!WriteBin4(bps, static_cast<uint32_t>(v), fp, filename))
+                    if(!WriteBin4(bps, static_cast<uint32_t>(v), fp.get(), filename))
                         return 0;
                 }
             }
@@ -407,16 +411,15 @@ static int StoreMhr(const HrirDataT *hData, const char *filename)
             for(const auto &azd : hData->mFds[fi].mEvs[ei].mAzs)
             {
                 auto v = static_cast<uint>(std::round(azd.mDelays[0]*DelayPrecScale));
-                if(!WriteBin4(1, v, fp, filename)) return 0;
+                if(!WriteBin4(1, v, fp.get(), filename)) return 0;
                 if(hData->mChannelType == CT_STEREO)
                 {
                     v = static_cast<uint>(std::round(azd.mDelays[1]*DelayPrecScale));
-                    if(!WriteBin4(1, v, fp, filename)) return 0;
+                    if(!WriteBin4(1, v, fp.get(), filename)) return 0;
                 }
             }
         }
     }
-    fclose(fp);
     return 1;
 }
 

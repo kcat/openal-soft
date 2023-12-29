@@ -338,10 +338,10 @@ void ForEachSource(ALCcontext *context, F func)
         uint64_t usemask{~sublist.FreeMask};
         while(usemask)
         {
-            const int idx{al::countr_zero(usemask)};
+            const auto idx = static_cast<uint>(al::countr_zero(usemask));
             usemask &= ~(1_u64 << idx);
 
-            func(sublist.Sources[idx]);
+            func((*sublist.Sources)[idx]);
         }
     }
 }

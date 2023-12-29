@@ -729,7 +729,8 @@ bool EnsureSources(ALCcontext *context, size_t needed)
         context->mSourceList.emplace_back();
         auto sublist = context->mSourceList.end() - 1;
         sublist->FreeMask = ~0_u64;
-        sublist->Sources = static_cast<ALsource*>(al_calloc(alignof(ALsource), sizeof(ALsource)*64));
+        sublist->Sources = static_cast<gsl::owner<std::array<ALsource,64>*>>(al_calloc(
+            alignof(ALsource), sizeof(*sublist->Sources)));
         if(!sublist->Sources) UNLIKELY
         {
             context->mSourceList.pop_back();
@@ -749,7 +750,7 @@ ALsource *AllocSource(ALCcontext *context)
     auto slidx = static_cast<ALuint>(al::countr_zero(sublist->FreeMask));
     ASSUME(slidx < 64);
 
-    ALsource *source{al::construct_at(sublist->Sources + slidx)};
+    ALsource *source{al::construct_at(al::to_address(sublist->Sources->begin() + slidx))};
 
     /* Add 1 to avoid source ID 0. */
     source->id = ((lidx<<6) | slidx) + 1;
@@ -797,7 +798,7 @@ inline ALsource *LookupSource(ALCcontext *context, ALuint id) noexcept
     SourceSubList &sublist{context->mSourceList[lidx]};
     if(sublist.FreeMask & (1_u64 << slidx)) UNLIKELY
         return nullptr;
-    return sublist.Sources + slidx;
+    return al::to_address(sublist.Sources->begin() + slidx);
 }
 
 auto LookupBuffer = [](ALCdevice *device, auto id) noexcept -> ALbuffer*
@@ -810,7 +811,7 @@ auto LookupBuffer = [](ALCdevice *device, auto id) noexcept -> ALbuffer*
     BufferSubList &sublist = device->BufferList[static_cast<size_t>(lidx)];
     if(sublist.FreeMask & (1_u64 << slidx)) UNLIKELY
         return nullptr;
-    return sublist.Buffers + static_cast<size_t>(slidx);
+    return al::to_address(sublist.Buffers->begin() + static_cast<size_t>(slidx));
 };
 
 auto LookupFilter = [](ALCdevice *device, auto id) noexcept -> ALfilter*
@@ -823,7 +824,7 @@ auto LookupFilter = [](ALCdevice *device, auto id) noexcept -> ALfilter*
     FilterSubList &sublist = device->FilterList[static_cast<size_t>(lidx)];
     if(sublist.FreeMask & (1_u64 << slidx)) UNLIKELY
         return nullptr;
-    return sublist.Filters + static_cast<size_t>(slidx);
+    return al::to_address(sublist.Filters->begin() + static_cast<size_t>(slidx));
 };
 
 auto LookupEffectSlot = [](ALCcontext *context, auto id) noexcept -> ALeffectslot*
@@ -836,7 +837,7 @@ auto LookupEffectSlot = [](ALCcontext *context, auto id) noexcept -> ALeffectslo
     EffectSlotSubList &sublist{context->mEffectSlotList[static_cast<size_t>(lidx)]};
     if(sublist.FreeMask & (1_u64 << slidx)) UNLIKELY
         return nullptr;
-    return sublist.EffectSlots + static_cast<size_t>(slidx);
+    return al::to_address(sublist.EffectSlots->begin() + static_cast<size_t>(slidx));
 };
 
 
@@ -3639,7 +3640,7 @@ SourceSubList::~SourceSubList()
     {
         const int idx{al::countr_zero(usemask)};
         usemask &= ~(1_u64 << idx);
-        std::destroy_at(Sources+idx);
+        std::destroy_at(al::to_address(Sources->begin() + idx));
     }
     FreeMask = ~usemask;
     al_free(Sources);

@@ -318,10 +318,10 @@ std::unique_ptr<Compressor> Compressor::Create(const size_t NumChans, const floa
     const float PostGainDb, const float ThresholdDb, const float Ratio, const float KneeDb,
     const float AttackTime, const float ReleaseTime)
 {
-    const auto lookAhead = static_cast<uint>(
-        clampf(std::round(LookAheadTime*SampleRate), 0.0f, BufferLineSize-1));
-    const auto hold = static_cast<uint>(
-        clampf(std::round(HoldTime*SampleRate), 0.0f, BufferLineSize-1));
+    const auto lookAhead = static_cast<uint>(clampf(std::round(LookAheadTime*SampleRate), 0.0f,
+        BufferLineSize-1));
+    const auto hold = static_cast<uint>(clampf(std::round(HoldTime*SampleRate), 0.0f,
+        BufferLineSize-1));
 
     size_t size{sizeof(Compressor)};
     if(lookAhead > 0)
@@ -335,7 +335,10 @@ std::unique_ptr<Compressor> Compressor::Create(const size_t NumChans, const floa
             size += sizeof(*Compressor::mHold);
     }
 
-    auto Comp = CompressorPtr{al::construct_at(static_cast<Compressor*>(al_calloc(16, size)))};
+    gsl::owner<void*> storage{al_calloc(16, size)};
+    if(!storage) throw std::bad_alloc{};
+
+    auto Comp = CompressorPtr{::new(storage) Compressor{}};
     Comp->mNumChans = NumChans;
     Comp->mAuto.Knee = AutoKnee;
     Comp->mAuto.Attack = AutoAttack;

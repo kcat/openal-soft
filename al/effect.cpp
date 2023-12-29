@@ -134,8 +134,8 @@ bool EnsureEffects(ALCdevice *device, size_t needed)
         device->EffectList.emplace_back();
         auto sublist = device->EffectList.end() - 1;
         sublist->FreeMask = ~0_u64;
-        sublist->Effects = static_cast<gsl::owner<ALeffect*>>(al_calloc(alignof(ALeffect),
-            sizeof(ALeffect)*64));
+        sublist->Effects = static_cast<gsl::owner<std::array<ALeffect,64>*>>(al_calloc(
+            alignof(ALeffect), sizeof(*sublist->Effects)));
         if(!sublist->Effects) UNLIKELY
         {
             device->EffectList.pop_back();
@@ -155,7 +155,7 @@ ALeffect *AllocEffect(ALCdevice *device)
     auto slidx = static_cast<ALuint>(al::countr_zero(sublist->FreeMask));
     ASSUME(slidx < 64);
 
-    ALeffect *effect{al::construct_at(sublist->Effects + slidx)};
+    ALeffect *effect{al::construct_at(al::to_address(sublist->Effects->begin() + slidx))};
     InitEffectParams(effect, AL_EFFECT_NULL);
 
     /* Add 1 to avoid effect ID 0. */
@@ -189,7 +189,7 @@ inline ALeffect *LookupEffect(ALCdevice *device, ALuint id)
     EffectSubList &sublist = device->EffectList[lidx];
     if(sublist.FreeMask & (1_u64 << slidx)) UNLIKELY
         return nullptr;
-    return sublist.Effects + slidx;
+    return al::to_address(sublist.Effects->begin() + slidx);
 }
 
 } // namespace
@@ -568,7 +568,7 @@ EffectSubList::~EffectSubList()
     while(usemask)
     {
         const int idx{al::countr_zero(usemask)};
-        std::destroy_at(Effects+idx);
+        std::destroy_at(al::to_address(Effects->begin()+idx));
         usemask &= ~(1_u64 << idx);
     }
     FreeMask = ~usemask;

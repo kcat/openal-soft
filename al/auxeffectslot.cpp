@@ -96,7 +96,7 @@ inline ALeffectslot *LookupEffectSlot(ALCcontext *context, ALuint id) noexcept
     EffectSlotSubList &sublist{context->mEffectSlotList[lidx]};
     if(sublist.FreeMask & (1_u64 << slidx)) UNLIKELY
         return nullptr;
-    return sublist.EffectSlots + slidx;
+    return al::to_address(sublist.EffectSlots->begin() + slidx);
 }
 
 inline ALeffect *LookupEffect(ALCdevice *device, ALuint id) noexcept
@@ -109,7 +109,7 @@ inline ALeffect *LookupEffect(ALCdevice *device, ALuint id) noexcept
     EffectSubList &sublist = device->EffectList[lidx];
     if(sublist.FreeMask & (1_u64 << slidx)) UNLIKELY
         return nullptr;
-    return sublist.Effects + slidx;
+    return al::to_address(sublist.Effects->begin() + slidx);
 }
 
 inline ALbuffer *LookupBuffer(ALCdevice *device, ALuint id) noexcept
@@ -122,7 +122,7 @@ inline ALbuffer *LookupBuffer(ALCdevice *device, ALuint id) noexcept
     BufferSubList &sublist = device->BufferList[lidx];
     if(sublist.FreeMask & (1_u64 << slidx)) UNLIKELY
         return nullptr;
-    return sublist.Buffers + slidx;
+    return al::to_address(sublist.Buffers->begin() + slidx);
 }
 
 
@@ -246,8 +246,8 @@ bool EnsureEffectSlots(ALCcontext *context, size_t needed)
         context->mEffectSlotList.emplace_back();
         auto sublist = context->mEffectSlotList.end() - 1;
         sublist->FreeMask = ~0_u64;
-        sublist->EffectSlots = static_cast<gsl::owner<ALeffectslot*>>(
-            al_calloc(alignof(ALeffectslot), sizeof(ALeffectslot)*64));
+        sublist->EffectSlots = static_cast<gsl::owner<std::array<ALeffectslot,64>*>>(
+            al_calloc(alignof(ALeffectslot), sizeof(*sublist->EffectSlots)));
         if(!sublist->EffectSlots) UNLIKELY
         {
             context->mEffectSlotList.pop_back();
@@ -267,7 +267,8 @@ ALeffectslot *AllocEffectSlot(ALCcontext *context)
     auto slidx = static_cast<ALuint>(al::countr_zero(sublist->FreeMask));
     ASSUME(slidx < 64);
 
-    ALeffectslot *slot{al::construct_at(sublist->EffectSlots + slidx, context)};
+    ALeffectslot *slot{al::construct_at(al::to_address(sublist->EffectSlots->begin() + slidx),
+        context)};
     aluInitEffectPanning(slot->mSlot, context);
 
     /* Add 1 to avoid ID 0. */
@@ -875,12 +876,9 @@ ALeffectslot::~ALeffectslot()
         DecrementRef(Buffer->ref);
     Buffer = nullptr;
 
-    if(EffectSlotProps *props{mSlot->Update.exchange(nullptr)})
-    {
+    if(std::unique_ptr<EffectSlotProps> props{mSlot->Update.exchange(nullptr)})
         TRACE("Freed unapplied AuxiliaryEffectSlot update %p\n",
-            decltype(std::declval<void*>()){props});
-        delete props;
-    }
+            decltype(std::declval<void*>()){props.get()});
 
     mSlot->mEffectState = nullptr;
     mSlot->InUse = false;
@@ -983,12 +981,12 @@ void UpdateAllEffectSlotProps(ALCcontext *context)
         uint64_t usemask{~sublist.FreeMask};
         while(usemask)
         {
-            const int idx{al::countr_zero(usemask)};
+            const auto idx = static_cast<uint>(al::countr_zero(usemask));
             usemask &= ~(1_u64 << idx);
-            ALeffectslot *slot{sublist.EffectSlots + idx};
+            auto &slot = (*sublist.EffectSlots)[idx];
 
-            if(slot->mState != SlotState::Stopped && std::exchange(slot->mPropsDirty, false))
-                slot->updateProps(context);
+            if(slot.mState != SlotState::Stopped && std::exchange(slot.mPropsDirty, false))
+                slot.updateProps(context);
         }
     }
 }
@@ -1002,7 +1000,7 @@ EffectSlotSubList::~EffectSlotSubList()
     while(usemask)
     {
         const int idx{al::countr_zero(usemask)};
-        std::destroy_at(EffectSlots+idx);
+        std::destroy_at(al::to_address(EffectSlots->begin() + idx));
         usemask &= ~(1_u64 << idx);
     }
     FreeMask = ~usemask;

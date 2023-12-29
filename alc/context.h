@@ -1,6 +1,7 @@
 #ifndef ALC_CONTEXT_H
 #define ALC_CONTEXT_H
 
+#include <array>
 #include <atomic>
 #include <deque>
 #include <memory>
@@ -70,7 +71,7 @@ struct DebugLogEntry {
 
 struct SourceSubList {
     uint64_t FreeMask{~0_u64};
-    gsl::owner<ALsource*> Sources{nullptr}; /* 64 */
+    gsl::owner<std::array<ALsource,64>*> Sources{nullptr};
 
     SourceSubList() noexcept = default;
     SourceSubList(const SourceSubList&) = delete;
@@ -85,7 +86,7 @@ struct SourceSubList {
 
 struct EffectSlotSubList {
     uint64_t FreeMask{~0_u64};
-    gsl::owner<ALeffectslot*> EffectSlots{nullptr}; /* 64 */
+    gsl::owner<std::array<ALeffectslot,64>*> EffectSlots{nullptr};
 
     EffectSlotSubList() noexcept = default;
     EffectSlotSubList(const EffectSlotSubList&) = delete;

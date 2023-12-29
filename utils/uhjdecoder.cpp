@@ -35,6 +35,7 @@
 
 #include "albit.h"
 #include "alcomplex.h"
+#include "almalloc.h"
 #include "alnumbers.h"
 #include "alspan.h"
 #include "vector.h"
@@ -47,7 +48,7 @@
 
 
 struct FileDeleter {
-    void operator()(FILE *file) { fclose(file); }
+    void operator()(gsl::owner<FILE*> file) { fclose(file); }
 };
 using FilePtr = std::unique_ptr<FILE,FileDeleter>;
 

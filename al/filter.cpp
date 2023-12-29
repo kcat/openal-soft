@@ -129,8 +129,8 @@ bool EnsureFilters(ALCdevice *device, size_t needed)
         device->FilterList.emplace_back();
         auto sublist = device->FilterList.end() - 1;
         sublist->FreeMask = ~0_u64;
-        sublist->Filters = static_cast<gsl::owner<ALfilter*>>(al_calloc(alignof(ALfilter),
-            sizeof(ALfilter)*64));
+        sublist->Filters = static_cast<gsl::owner<std::array<ALfilter,64>*>>(al_calloc(
+            alignof(ALfilter), sizeof(*sublist->Filters)));
         if(!sublist->Filters) UNLIKELY
         {
             device->FilterList.pop_back();
@@ -151,7 +151,7 @@ ALfilter *AllocFilter(ALCdevice *device)
     auto slidx = static_cast<ALuint>(al::countr_zero(sublist->FreeMask));
     ASSUME(slidx < 64);
 
-    ALfilter *filter{al::construct_at(sublist->Filters + slidx)};
+    ALfilter *filter{al::construct_at(al::to_address(sublist->Filters->begin() + slidx))};
     InitFilterParams(filter, AL_FILTER_NULL);
 
     /* Add 1 to avoid filter ID 0. */
@@ -186,7 +186,7 @@ inline ALfilter *LookupFilter(ALCdevice *device, ALuint id)
     FilterSubList &sublist = device->FilterList[lidx];
     if(sublist.FreeMask & (1_u64 << slidx)) UNLIKELY
         return nullptr;
-    return sublist.Filters + slidx;
+    return al::to_address(sublist.Filters->begin() + slidx);
 }
 
 } // namespace
@@ -696,7 +696,7 @@ FilterSubList::~FilterSubList()
     while(usemask)
     {
         const int idx{al::countr_zero(usemask)};
-        std::destroy_at(Filters+idx);
+        std::destroy_at(al::to_address(Filters->begin() + idx));
         usemask &= ~(1_u64 << idx);
     }
     FreeMask = ~usemask;

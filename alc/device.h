@@ -1,6 +1,7 @@
 #ifndef ALC_DEVICE_H
 #define ALC_DEVICE_H
 
+#include <array>
 #include <atomic>
 #include <memory>
 #include <mutex>
@@ -35,7 +36,7 @@ using uint = unsigned int;
 
 struct BufferSubList {
     uint64_t FreeMask{~0_u64};
-    gsl::owner<ALbuffer*> Buffers{nullptr}; /* 64 */
+    gsl::owner<std::array<ALbuffer,64>*> Buffers{nullptr};
 
     BufferSubList() noexcept = default;
     BufferSubList(const BufferSubList&) = delete;
@@ -50,7 +51,7 @@ struct BufferSubList {
 
 struct EffectSubList {
     uint64_t FreeMask{~0_u64};
-    gsl::owner<ALeffect*> Effects{nullptr}; /* 64 */
+    gsl::owner<std::array<ALeffect,64>*> Effects{nullptr}; /* 64 */
 
     EffectSubList() noexcept = default;
     EffectSubList(const EffectSubList&) = delete;
@@ -65,7 +66,7 @@ struct EffectSubList {
 
 struct FilterSubList {
     uint64_t FreeMask{~0_u64};
-    gsl::owner<ALfilter*> Filters{nullptr}; /* 64 */
+    gsl::owner<std::array<ALfilter,64>*> Filters{nullptr};
 
     FilterSubList() noexcept = default;
     FilterSubList(const FilterSubList&) = delete;

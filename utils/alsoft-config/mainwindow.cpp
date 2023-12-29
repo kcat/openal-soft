@@ -20,6 +20,7 @@
 #include <shlobj.h>
 #endif
 
+#include "almalloc.h"
 #include "alspan.h"
 
 namespace {
@@ -1283,11 +1284,10 @@ void MainWindow::addHrtfFile()
 
 void MainWindow::removeHrtfFile()
 {
-    QList<QListWidgetItem*> selected{ui->hrtfFileList->selectedItems()};
+    QList<gsl::owner<QListWidgetItem*>> selected{ui->hrtfFileList->selectedItems()};
     if(!selected.isEmpty())
     {
-        foreach(QListWidgetItem *item, selected)
-            delete item;
+        std::for_each(selected.begin(), selected.end(), std::default_delete<QListWidgetItem>{});
         enableApplyButton();
     }
 }
@@ -1321,9 +1321,8 @@ void MainWindow::showEnabledBackendMenu(QPoint pt)
     QAction *gotAction{ctxmenu.exec(pt)};
     if(gotAction == removeAction)
     {
-        QList<QListWidgetItem*> selected{ui->enabledBackendList->selectedItems()};
-        foreach(QListWidgetItem *item, selected)
-            delete item;
+        QList<gsl::owner<QListWidgetItem*>> selected{ui->enabledBackendList->selectedItems()};
+        std::for_each(selected.begin(), selected.end(), std::default_delete<QListWidgetItem>{});
         enableApplyButton();
     }
     else if(gotAction != nullptr)
@@ -1359,9 +1358,8 @@ void MainWindow::showDisabledBackendMenu(QPoint pt)
     QAction *gotAction{ctxmenu.exec(pt)};
     if(gotAction == removeAction)
     {
-        QList<QListWidgetItem*> selected{ui->disabledBackendList->selectedItems()};
-        foreach(QListWidgetItem *item, selected)
-            delete item;
+        QList<gsl::owner<QListWidgetItem*>> selected{ui->disabledBackendList->selectedItems()};
+        std::for_each(selected.begin(), selected.end(), std::default_delete<QListWidgetItem>{});
         enableApplyButton();
     }
     else if(gotAction != nullptr)

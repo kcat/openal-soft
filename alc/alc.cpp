@@ -1682,16 +1682,16 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
             uint64_t usemask{~sublist.FreeMask};
             while(usemask)
             {
-                const int idx{al::countr_zero(usemask)};
-                ALeffectslot *slot{sublist.EffectSlots + idx};
+                const auto idx = static_cast<uint>(al::countr_zero(usemask));
+                auto &slot = (*sublist.EffectSlots)[idx];
                 usemask &= ~(1_u64 << idx);
 
-                aluInitEffectPanning(slot->mSlot, context);
+                aluInitEffectPanning(slot.mSlot, context);
 
-                EffectState *state{slot->Effect.State.get()};
+                EffectState *state{slot.Effect.State.get()};
                 state->mOutTarget = device->Dry.Buffer;
-                state->deviceUpdate(device, slot->Buffer);
-                slot->updateProps(context);
+                state->deviceUpdate(device, slot.Buffer);
+                slot.updateProps(context);
             }
         }
         slotlock.unlock();
@@ -1703,8 +1703,8 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
             uint64_t usemask{~sublist.FreeMask};
             while(usemask)
             {
-                const int idx{al::countr_zero(usemask)};
-                ALsource *source{sublist.Sources + idx};
+                const auto idx = static_cast<uint>(al::countr_zero(usemask));
+                auto &source = (*sublist.Sources)[idx];
                 usemask &= ~(1_u64 << idx);
 
                 auto clear_send = [](ALsource::SendData &send) -> void
@@ -1718,10 +1718,10 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
                     send.GainLF = 1.0f;
                     send.LFReference = HIGHPASSFREQREF;
                 };
-                auto send_begin = source->Send.begin() + static_cast<ptrdiff_t>(num_sends);
-                std::for_each(send_begin, source->Send.end(), clear_send);
+                auto send_begin = source.Send.begin() + static_cast<ptrdiff_t>(num_sends);
+                std::for_each(send_begin, source.Send.end(), clear_send);
 
-                source->mPropsDirty = true;
+                source.mPropsDirty = true;
             }
         }
 
@@ -2905,7 +2905,13 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName) noexcep
         uint{DefaultSendCount}
     };
 
-    DeviceRef device{new ALCdevice{DeviceType::Playback}};
+    DeviceRef device{new(std::nothrow) ALCdevice{DeviceType::Playback}};
+    if(!device)
+    {
+        WARN("Failed to create playback device handle\n");
+        alcSetError(nullptr, ALC_OUT_OF_MEMORY);
+        return nullptr;
+    }
 
     /* Set output format */
     device->FmtChans = DevFmtChannelsDefault;
@@ -3040,7 +3046,13 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, 
     else
         TRACE("Opening default capture device\n");
 
-    DeviceRef device{new ALCdevice{DeviceType::Capture}};
+    DeviceRef device{new(std::nothrow) ALCdevice{DeviceType::Capture}};
+    if(!device)
+    {
+        WARN("Failed to create capture device handle\n");
+        alcSetError(nullptr, ALC_OUT_OF_MEMORY);
+        return nullptr;
+    }
 
     auto decompfmt = DecomposeDevFormat(format);
     if(!decompfmt)
@@ -3220,7 +3232,13 @@ ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(const ALCchar *deviceN
         uint{DefaultSendCount}
     };
 
-    DeviceRef device{new ALCdevice{DeviceType::Loopback}};
+    DeviceRef device{new(std::nothrow) ALCdevice{DeviceType::Loopback}};
+    if(!device)
+    {
+        WARN("Failed to create loopback device handle\n");
+        alcSetError(nullptr, ALC_OUT_OF_MEMORY);
+        return nullptr;
+    }
 
     device->SourcesMax = 256;
     device->AuxiliaryEffectSlotMax = 64;

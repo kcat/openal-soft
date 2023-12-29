@@ -56,7 +56,7 @@ using ubyte = unsigned char;
 using ushort = unsigned short;
 
 struct FileDeleter {
-    void operator()(FILE *f) { fclose(f); }
+    void operator()(gsl::owner<FILE*> f) { fclose(f); }
 };
 using FilePtr = std::unique_ptr<FILE,FileDeleter>;
 
@@ -211,10 +211,10 @@ void WaveBackend::open(std::string_view name)
 #ifdef _WIN32
     {
         std::wstring wname{utf8_to_wstr(fname.value())};
-        mFile.reset(_wfopen(wname.c_str(), L"wb"));
+        mFile = FilePtr{_wfopen(wname.c_str(), L"wb")};
     }
 #else
-    mFile.reset(fopen(fname->c_str(), "wb"));
+    mFile = FilePtr{fopen(fname->c_str(), "wb")};
 #endif
     if(!mFile)
         throw al::backend_exception{al::backend_error::DeviceError, "Could not open file '%s': %s",

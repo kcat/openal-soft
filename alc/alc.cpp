@@ -1714,9 +1714,9 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
                     send.Slot = nullptr;
                     send.Gain = 1.0f;
                     send.GainHF = 1.0f;
-                    send.HFReference = LOWPASSFREQREF;
+                    send.HFReference = LowPassFreqRef;
                     send.GainLF = 1.0f;
-                    send.LFReference = HIGHPASSFREQREF;
+                    send.LFReference = HighPassFreqRef;
                 };
                 auto send_begin = source.Send.begin() + static_cast<ptrdiff_t>(num_sends);
                 std::for_each(send_begin, source.Send.end(), clear_send);

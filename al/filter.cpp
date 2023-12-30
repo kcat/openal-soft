@@ -80,36 +80,36 @@ void InitFilterParams(ALfilter *filter, ALenum type)
     {
         filter->Gain = AL_LOWPASS_DEFAULT_GAIN;
         filter->GainHF = AL_LOWPASS_DEFAULT_GAINHF;
-        filter->HFReference = LOWPASSFREQREF;
+        filter->HFReference = LowPassFreqRef;
         filter->GainLF = 1.0f;
-        filter->LFReference = HIGHPASSFREQREF;
+        filter->LFReference = HighPassFreqRef;
         filter->mTypeVariant.emplace<LowpassFilterTable>();
     }
     else if(type == AL_FILTER_HIGHPASS)
     {
         filter->Gain = AL_HIGHPASS_DEFAULT_GAIN;
         filter->GainHF = 1.0f;
-        filter->HFReference = LOWPASSFREQREF;
+        filter->HFReference = LowPassFreqRef;
         filter->GainLF = AL_HIGHPASS_DEFAULT_GAINLF;
-        filter->LFReference = HIGHPASSFREQREF;
+        filter->LFReference = HighPassFreqRef;
         filter->mTypeVariant.emplace<HighpassFilterTable>();
     }
     else if(type == AL_FILTER_BANDPASS)
     {
         filter->Gain = AL_BANDPASS_DEFAULT_GAIN;
         filter->GainHF = AL_BANDPASS_DEFAULT_GAINHF;
-        filter->HFReference = LOWPASSFREQREF;
+        filter->HFReference = LowPassFreqRef;
         filter->GainLF = AL_BANDPASS_DEFAULT_GAINLF;
-        filter->LFReference = HIGHPASSFREQREF;
+        filter->LFReference = HighPassFreqRef;
         filter->mTypeVariant.emplace<BandpassFilterTable>();
     }
     else
     {
         filter->Gain = 1.0f;
         filter->GainHF = 1.0f;
-        filter->HFReference = LOWPASSFREQREF;
+        filter->HFReference = LowPassFreqRef;
         filter->GainLF = 1.0f;
-        filter->LFReference = HIGHPASSFREQREF;
+        filter->LFReference = HighPassFreqRef;
         filter->mTypeVariant.emplace<NullFilterTable>();
     }
     filter->type = type;

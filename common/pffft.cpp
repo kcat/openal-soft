@@ -92,7 +92,7 @@ using uint = unsigned int;
  */
 #if defined(__ppc__) || defined(__ppc64__) || defined(__powerpc__) || defined(__powerpc64__)
 using v4sf = vector float;
-#define SIMD_SZ 4
+constexpr uint SimdSize{4};
 #define VZERO() ((vector float) vec_splat_u8(0))
 #define VMUL(a,b) vec_madd(a,b, VZERO())
 #define VADD vec_add
@@ -144,18 +144,26 @@ force_inline void vtranspose4(v4sf &x0, v4sf &x1, v4sf &x2, v4sf &x3) noexcept
 
 #include <xmmintrin.h>
 using v4sf = __m128;
-#define SIMD_SZ 4 // 4 floats by simd vector -- this is pretty much hardcoded in the preprocess/finalize functions anyway so you will have to work if you want to enable AVX with its 256-bit vectors.
+/* 4 floats by simd vector -- this is pretty much hardcoded in the preprocess/
+ * finalize functions anyway so you will have to work if you want to enable AVX
+ * with its 256-bit vectors.
+ */
+constexpr uint SimdSize{4};
 #define VZERO _mm_setzero_ps
 #define VMUL _mm_mul_ps
 #define VADD _mm_add_ps
-#define VMADD(a,b,c) _mm_add_ps(_mm_mul_ps(a,b), c)
+force_inline v4sf vmadd(const v4sf a, const v4sf b, const v4sf c) noexcept
+{ return _mm_add_ps(_mm_mul_ps(a,b), c); }
+#define VMADD vmadd
 #define VSUB _mm_sub_ps
 #define LD_PS1 _mm_set1_ps
 #define VSET4 _mm_setr_ps
-#define VINSERT0(v, a) _mm_move_ss((v), _mm_set_ss(a))
+force_inline v4sf vinsert0(const v4sf v, const float a) noexcept
+{ return _mm_move_ss(v, _mm_set_ss(a)); }
+#define VINSERT0 vinsert0
 #define VEXTRACT0 _mm_cvtss_f32
 
-force_inline void interleave2(v4sf in1, v4sf in2, v4sf &out1, v4sf &out2) noexcept
+force_inline void interleave2(const v4sf in1, const v4sf in2, v4sf &out1, v4sf &out2) noexcept
 {
     v4sf tmp{_mm_unpacklo_ps(in1, in2)};
     out2 = _mm_unpackhi_ps(in1, in2);
@@ -171,7 +179,7 @@ force_inline void uninterleave2(v4sf in1, v4sf in2, v4sf &out1, v4sf &out2) noex
 force_inline void vtranspose4(v4sf &x0, v4sf &x1, v4sf &x2, v4sf &x3) noexcept
 { _MM_TRANSPOSE4_PS(x0, x1, x2, x3); }
 
-#define VSWAPHL(a,b) _mm_shuffle_ps(b, a, _MM_SHUFFLE(3,2,1,0))
+#define VSWAPHL(a,b) _mm_shuffle_ps((b), (a), _MM_SHUFFLE(3,2,1,0))
 
 /*
  * ARM NEON support macros
@@ -180,7 +188,7 @@ force_inline void vtranspose4(v4sf &x0, v4sf &x1, v4sf &x2, v4sf &x3) noexcept
 
 #include <arm_neon.h>
 using v4sf = float32x4_t;
-#define SIMD_SZ 4
+constexpr uint SimdSize{4};
 #define VZERO() vdupq_n_f32(0)
 #define VMUL vmulq_f32
 #define VADD vaddq_f32
@@ -239,7 +247,7 @@ force_inline void vtranspose4(v4sf &x0, v4sf &x1, v4sf &x2, v4sf &x3) noexcept
 #elif defined(__GNUC__)
 
 using v4sf [[gnu::vector_size(16), gnu::aligned(16)]] = float;
-#define SIMD_SZ 4
+constexpr uint SimdSize{4};
 #define VZERO() v4sf{0,0,0,0}
 #define VMUL(a,b) ((a) * (b))
 #define VADD(a,b) ((a) + (b))
@@ -299,7 +307,7 @@ force_inline v4sf vswaphl(v4sf a, v4sf b) noexcept
 // fallback mode for situations where SIMD is not available, use scalar mode instead
 #ifdef PFFFT_SIMD_DISABLE
 using v4sf = float;
-#define SIMD_SZ 1
+constexpr uint SimdSize{1};
 #define VZERO() 0.f
 #define VMUL(a,b) ((a)*(b))
 #define VADD(a,b) ((a)+(b))
@@ -310,7 +318,7 @@ using v4sf = float;
 
 inline bool valigned(const float *ptr) noexcept
 {
-    static constexpr uintptr_t alignmask{SIMD_SZ*4 - 1};
+    static constexpr uintptr_t alignmask{SimdSize*4 - 1};
     return (reinterpret_cast<uintptr_t>(ptr) & alignmask) == 0;
 }
 
@@ -1430,11 +1438,11 @@ gsl::owner<PFFFT_Setup*> pffft_new_setup(unsigned int N, pffft_transform_t trans
      * handle other cases (or maybe just switch to a scalar fft, I don't know..)
      */
     if(transform == PFFFT_REAL)
-        assert((N%(2*SIMD_SZ*SIMD_SZ)) == 0);
+        assert((N%(2*SimdSize*SimdSize)) == 0);
     else
-        assert((N%(SIMD_SZ*SIMD_SZ)) == 0);
+        assert((N%(SimdSize*SimdSize)) == 0);
 
-    const uint Ncvec{(transform == PFFFT_REAL ? N/2 : N)/SIMD_SZ};
+    const uint Ncvec{(transform == PFFFT_REAL ? N/2 : N) / SimdSize};
 
     const size_t storelen{std::max(offsetof(PFFFT_Setup, end) + 2_zu*Ncvec*sizeof(v4sf),
         sizeof(PFFFT_Setup))};
@@ -1446,37 +1454,37 @@ gsl::owner<PFFFT_Setup*> pffft_new_setup(unsigned int N, pffft_transform_t trans
     s->transform = transform;
     s->Ncvec = Ncvec;
 
-    const size_t ecount{2_zu*Ncvec*(SIMD_SZ-1)/SIMD_SZ};
+    const size_t ecount{2_zu*Ncvec*(SimdSize-1)/SimdSize};
     s->e = {std::launder(reinterpret_cast<v4sf*>(extrastore.data())), ecount};
     s->twiddle = std::launder(reinterpret_cast<float*>(&extrastore[ecount*sizeof(v4sf)]));
 
-    if constexpr(SIMD_SZ > 1)
+    if constexpr(SimdSize > 1)
     {
-        auto e = std::vector<float>(s->e.size()*SIMD_SZ, 0.0f);
+        auto e = std::vector<float>(s->e.size()*SimdSize, 0.0f);
         for(size_t k{0};k < s->Ncvec;++k)
         {
-            const size_t i{k / SIMD_SZ};
-            const size_t j{k % SIMD_SZ};
-            for(size_t m{0};m < SIMD_SZ-1;++m)
+            const size_t i{k / SimdSize};
+            const size_t j{k % SimdSize};
+            for(size_t m{0};m < SimdSize-1;++m)
             {
                 const double A{-2.0*al::numbers::pi*static_cast<double>((m+1)*k) / N};
-                e[((i*3 + m)*2 + 0)*SIMD_SZ + j] = static_cast<float>(std::cos(A));
-                e[((i*3 + m)*2 + 1)*SIMD_SZ + j] = static_cast<float>(std::sin(A));
+                e[((i*3 + m)*2 + 0)*SimdSize + j] = static_cast<float>(std::cos(A));
+                e[((i*3 + m)*2 + 1)*SimdSize + j] = static_cast<float>(std::sin(A));
             }
         }
         std::memcpy(s->e.data(), e.data(), e.size()*sizeof(float));
     }
     if(transform == PFFFT_REAL)
-        rffti1_ps(N/SIMD_SZ, s->twiddle, s->ifac);
+        rffti1_ps(N/SimdSize, s->twiddle, s->ifac);
     else
-        cffti1_ps(N/SIMD_SZ, s->twiddle, s->ifac);
+        cffti1_ps(N/SimdSize, s->twiddle, s->ifac);
 
     /* check that N is decomposable with allowed prime factors */
     size_t m{1};
     for(size_t k{0};k < s->ifac[1];++k)
         m *= s->ifac[2+k];
 
-    if(m != N/SIMD_SZ)
+    if(m != N/SimdSize)
     {
         pffft_destroy_setup(s);
         s = nullptr;
@@ -1539,7 +1547,7 @@ void pffft_cplx_finalize(const size_t Ncvec, const v4sf *in, v4sf *RESTRICT out,
 {
     assert(in != out);
 
-    const size_t dk{Ncvec/SIMD_SZ}; // number of 4x4 matrix blocks
+    const size_t dk{Ncvec/SimdSize}; // number of 4x4 matrix blocks
     for(size_t k{0};k < dk;++k)
     {
         v4sf r0{in[8*k+0]}, i0{in[8*k+1]};
@@ -1583,7 +1591,7 @@ void pffft_cplx_preprocess(const size_t Ncvec, const v4sf *in, v4sf *RESTRICT ou
 {
     assert(in != out);
 
-    const size_t dk{Ncvec/SIMD_SZ}; // number of 4x4 matrix blocks
+    const size_t dk{Ncvec/SimdSize}; // number of 4x4 matrix blocks
     for(size_t k{0};k < dk;++k)
     {
         v4sf r0{in[8*k+0]}, i0{in[8*k+1]};
@@ -1676,12 +1684,12 @@ NOINLINE void pffft_real_finalize(const size_t Ncvec, const v4sf *in, v4sf *REST
     static constexpr float s{al::numbers::sqrt2_v<float>/2.0f};
 
     assert(in != out);
-    const size_t dk{Ncvec/SIMD_SZ}; // number of 4x4 matrix blocks
+    const size_t dk{Ncvec/SimdSize}; // number of 4x4 matrix blocks
     /* fftpack order is f0r f1r f1i f2r f2i ... f(n-1)r f(n-1)i f(n)r */
 
     const v4sf zero{VZERO()};
-    const auto cr = al::bit_cast<std::array<float,SIMD_SZ>>(in[0]);
-    const auto ci = al::bit_cast<std::array<float,SIMD_SZ>>(in[Ncvec*2-1]);
+    const auto cr = al::bit_cast<std::array<float,SimdSize>>(in[0]);
+    const auto ci = al::bit_cast<std::array<float,SimdSize>>(in[Ncvec*2-1]);
     pffft_real_finalize_4x4(&zero, &zero, in+1, e, out);
 
     /* [cr0 cr1 cr2 cr3 ci0 ci1 ci2 ci3]
@@ -1767,11 +1775,11 @@ NOINLINE void pffft_real_preprocess(const size_t Ncvec, const v4sf *in, v4sf *RE
     static constexpr float sqrt2{al::numbers::sqrt2_v<float>};
 
     assert(in != out);
-    const size_t dk{Ncvec/SIMD_SZ}; // number of 4x4 matrix blocks
+    const size_t dk{Ncvec/SimdSize}; // number of 4x4 matrix blocks
     /* fftpack order is f0r f1r f1i f2r f2i ... f(n-1)r f(n-1)i f(n)r */
 
-    std::array<float,SIMD_SZ> Xr, Xi;
-    for(size_t k{0};k < SIMD_SZ;++k)
+    std::array<float,SimdSize> Xr, Xi;
+    for(size_t k{0};k < SimdSize;++k)
     {
         Xr[k] = VEXTRACT0(in[2*k]);
         Xi[k] = VEXTRACT0(in[2*k + 1]);
@@ -1901,8 +1909,8 @@ void pffft_zreorder(const PFFFT_Setup *setup, const float *in, float *out,
                 interleave2(vin[k*8 + 0], vin[k*8 + 1], vout[2*(0*dk + k) + 0], vout[2*(0*dk + k) + 1]);
                 interleave2(vin[k*8 + 4], vin[k*8 + 5], vout[2*(2*dk + k) + 0], vout[2*(2*dk + k) + 1]);
             }
-            reversed_copy(dk, vin+2, 8, vout + N/SIMD_SZ/2);
-            reversed_copy(dk, vin+6, 8, vout + N/SIMD_SZ);
+            reversed_copy(dk, vin+2, 8, vout + N/SimdSize/2);
+            reversed_copy(dk, vin+6, 8, vout + N/SimdSize);
         }
         else
         {
@@ -1911,8 +1919,8 @@ void pffft_zreorder(const PFFFT_Setup *setup, const float *in, float *out,
                 uninterleave2(vin[2*(0*dk + k) + 0], vin[2*(0*dk + k) + 1], vout[k*8 + 0], vout[k*8 + 1]);
                 uninterleave2(vin[2*(2*dk + k) + 0], vin[2*(2*dk + k) + 1], vout[k*8 + 4], vout[k*8 + 5]);
             }
-            unreversed_copy(dk, vin + N/SIMD_SZ/4, vout + N/SIMD_SZ - 6, -8);
-            unreversed_copy(dk, vin + 3*N/SIMD_SZ/4, vout + N/SIMD_SZ - 2, -8);
+            unreversed_copy(dk, vin + N/SimdSize/4, vout + N/SimdSize - 6, -8);
+            unreversed_copy(dk, vin + 3_uz*N/SimdSize/4, vout + N/SimdSize - 2, -8);
         }
     }
     else

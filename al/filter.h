@@ -13,9 +13,9 @@
 #include "almalloc.h"
 #include "alnumeric.h"
 
-#define LOWPASSFREQREF  5000.0f
-#define HIGHPASSFREQREF  250.0f
 
+inline constexpr float LowPassFreqRef{5000.0f};
+inline constexpr float HighPassFreqRef{250.0f};
 
 template<typename T>
 struct FilterTable {
@@ -41,9 +41,9 @@ struct ALfilter {
 
     float Gain{1.0f};
     float GainHF{1.0f};
-    float HFReference{LOWPASSFREQREF};
+    float HFReference{LowPassFreqRef};
     float GainLF{1.0f};
-    float LFReference{HIGHPASSFREQREF};
+    float LFReference{HighPassFreqRef};
 
     using TableTypes = std::variant<NullFilterTable,LowpassFilterTable,HighpassFilterTable,
         BandpassFilterTable>;

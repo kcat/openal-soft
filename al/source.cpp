@@ -1796,9 +1796,9 @@ NOINLINE void SetProperty(ALsource *const Source, ALCcontext *const Context, con
             {
                 Source->Direct.Gain = 1.0f;
                 Source->Direct.GainHF = 1.0f;
-                Source->Direct.HFReference = LOWPASSFREQREF;
+                Source->Direct.HFReference = LowPassFreqRef;
                 Source->Direct.GainLF = 1.0f;
-                Source->Direct.LFReference = HIGHPASSFREQREF;
+                Source->Direct.LFReference = HighPassFreqRef;
             }
             return UpdateSourceProps(Source, Context);
         }
@@ -1954,9 +1954,9 @@ NOINLINE void SetProperty(ALsource *const Source, ALCcontext *const Context, con
                 /* Disable filter */
                 send.Gain = 1.0f;
                 send.GainHF = 1.0f;
-                send.HFReference = LOWPASSFREQREF;
+                send.HFReference = LowPassFreqRef;
                 send.GainLF = 1.0f;
-                send.LFReference = HIGHPASSFREQREF;
+                send.LFReference = HighPassFreqRef;
             }
 
             /* We must force an update if the current auxiliary slot is valid
@@ -3573,17 +3573,17 @@ ALsource::ALsource()
 {
     Direct.Gain = 1.0f;
     Direct.GainHF = 1.0f;
-    Direct.HFReference = LOWPASSFREQREF;
+    Direct.HFReference = LowPassFreqRef;
     Direct.GainLF = 1.0f;
-    Direct.LFReference = HIGHPASSFREQREF;
+    Direct.LFReference = HighPassFreqRef;
     for(auto &send : Send)
     {
         send.Slot = nullptr;
         send.Gain = 1.0f;
         send.GainHF = 1.0f;
-        send.HFReference = LOWPASSFREQREF;
+        send.HFReference = LowPassFreqRef;
         send.GainLF = 1.0f;
-        send.LFReference = HIGHPASSFREQREF;
+        send.LFReference = HighPassFreqRef;
     }
 }
 
@@ -4078,9 +4078,9 @@ void ALsource::eax_update_direct_filter()
     const auto& direct_param = eax_create_direct_filter_param();
     Direct.Gain = direct_param.gain;
     Direct.GainHF = direct_param.gain_hf;
-    Direct.HFReference = LOWPASSFREQREF;
+    Direct.HFReference = LowPassFreqRef;
     Direct.GainLF = 1.0f;
-    Direct.LFReference = HIGHPASSFREQREF;
+    Direct.LFReference = HighPassFreqRef;
     mPropsDirty = true;
 }
 
@@ -4854,9 +4854,9 @@ void ALsource::eax_set_al_source_send(ALeffectslot *slot, size_t sendidx, const 
     auto &send = Send[sendidx];
     send.Gain = filter.gain;
     send.GainHF = filter.gain_hf;
-    send.HFReference = LOWPASSFREQREF;
+    send.HFReference = LowPassFreqRef;
     send.GainLF = 1.0f;
-    send.LFReference = HIGHPASSFREQREF;
+    send.LFReference = HighPassFreqRef;
 
     if(slot != nullptr)
         IncrementRef(slot->ref);

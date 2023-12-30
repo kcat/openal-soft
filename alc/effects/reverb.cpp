@@ -1587,16 +1587,51 @@ void ReverbPipeline::processLate(size_t offset, const size_t samplesToDo,
         /* First, calculate the modulated delays for the late feedback. */
         mLate.Mod.calcDelays(todo);
 
-        /* Next, load decorrelated samples from the main and feedback delay
-         * lines. Filter the signal to apply its frequency-dependent decay.
+        /* Now load samples from the feedback delay lines. Filter the signal to
+         * apply its frequency-dependent decay.
          */
+        for(size_t j{0u};j < NUM_LINES;++j)
+        {
+            size_t late_feedb_tap{offset - mLate.Offset[j]};
+            const float midGain{mLate.T60[j].MidGain};
+
+            for(size_t i{0u};i < todo;++i)
+            {
+                /* Calculate the read offset and offset between it and the next
+                 * sample.
+                 */
+                const float fdelay{mLate.Mod.ModDelays[i]};
+                const size_t idelay{float2uint(fdelay * float{gCubicTable.sTableSteps})};
+                const size_t delay{late_feedb_tap - (idelay>>gCubicTable.sTableBits)};
+                const size_t delayoffset{idelay & gCubicTable.sTableMask};
+                ++late_feedb_tap;
+
+                /* Get the samples around by the delayed offset. */
+                const float out0{late_delay.Line[(delay  ) & late_delay.Mask][j]};
+                const float out1{late_delay.Line[(delay-1) & late_delay.Mask][j]};
+                const float out2{late_delay.Line[(delay-2) & late_delay.Mask][j]};
+                const float out3{late_delay.Line[(delay-3) & late_delay.Mask][j]};
+
+                /* The output is obtained by interpolating the four samples
+                 * that were acquired above, and combined with the main delay
+                 * tap.
+                 */
+                const float out{out0*gCubicTable.getCoeff0(delayoffset)
+                    + out1*gCubicTable.getCoeff1(delayoffset)
+                    + out2*gCubicTable.getCoeff2(delayoffset)
+                    + out3*gCubicTable.getCoeff3(delayoffset)};
+                tempSamples[j][i] = out * midGain;
+            }
+
+            mLate.T60[j].process({tempSamples[j].data(), todo});
+        }
+
+        /* Next load decorrelated samples from the main delay lines. */
         const float fadeStep{1.0f / static_cast<float>(todo)};
-        for(size_t j{0u};j < NUM_LINES;j++)
+        for(size_t j{0u};j < NUM_LINES;++j)
         {
             size_t late_delay_tap0{offset - mLateDelayTap[j][0]};
             size_t late_delay_tap1{offset - mLateDelayTap[j][1]};
-            size_t late_feedb_tap{offset - mLate.Offset[j]};
-            const float midGain{mLate.T60[j].MidGain};
             const float densityGain{mLate.DensityGain};
             const float densityStep{late_delay_tap0 != late_delay_tap1 ?
                 densityGain*fadeStep : 0.0f};
@@ -1608,48 +1643,22 @@ void ReverbPipeline::processLate(size_t offset, const size_t samplesToDo,
                 late_delay_tap1 &= in_delay.Mask;
                 size_t td{minz(todo-i, in_delay.Mask+1 - maxz(late_delay_tap0, late_delay_tap1))};
                 do {
-                    /* Calculate the read offset and offset between it and the
-                     * next sample.
-                     */
-                    const float fdelay{mLate.Mod.ModDelays[i]};
-                    const size_t idelay{float2uint(fdelay * float{gCubicTable.sTableSteps})};
-                    const size_t delay{late_feedb_tap - (idelay>>gCubicTable.sTableBits)};
-                    const size_t delayoffset{idelay & gCubicTable.sTableMask};
-                    ++late_feedb_tap;
-
-                    /* Get the samples around by the delayed offset. */
-                    const float out0{late_delay.Line[(delay  ) & late_delay.Mask][j]};
-                    const float out1{late_delay.Line[(delay-1) & late_delay.Mask][j]};
-                    const float out2{late_delay.Line[(delay-2) & late_delay.Mask][j]};
-                    const float out3{late_delay.Line[(delay-3) & late_delay.Mask][j]};
-
-                    /* The output is obtained by interpolating the four samples
-                     * that were acquired above, and combined with the main
-                     * delay tap.
-                     */
-                    const float out{out0*gCubicTable.getCoeff0(delayoffset)
-                        + out1*gCubicTable.getCoeff1(delayoffset)
-                        + out2*gCubicTable.getCoeff2(delayoffset)
-                        + out3*gCubicTable.getCoeff3(delayoffset)};
                     const float fade0{densityGain - densityStep*fadeCount};
                     const float fade1{densityStep*fadeCount};
                     fadeCount += 1.0f;
-                    tempSamples[j][i] = (out +
-                        in_delay.Line[late_delay_tap0++][j]*fade0 +
-                        in_delay.Line[late_delay_tap1++][j]*fade1) * midGain;
+                    tempSamples[j][i] += in_delay.Line[late_delay_tap0++][j]*fade0 +
+                        in_delay.Line[late_delay_tap1++][j]*fade1;
                     ++i;
                 } while(--td);
             }
             mLateDelayTap[j][0] = mLateDelayTap[j][1];
-
-            mLate.T60[j].process({tempSamples[j].data(), todo});
         }
 
         /* Apply a vector all-pass to improve micro-surface diffusion, and
          * write out the results for mixing.
          */
         mLate.VecAp.process(tempSamples, offset, mixX, mixY, todo);
-        for(size_t j{0u};j < NUM_LINES;j++)
+        for(size_t j{0u};j < NUM_LINES;++j)
             std::copy_n(tempSamples[j].begin(), todo, outSamples[j].begin()+base);
 
         /* Finally, scatter and bounce the results to refeed the feedback buffer. */
@@ -1674,7 +1683,7 @@ void ReverbState::process(const size_t samplesToDo, const al::span<const FloatBu
         /* Convert B-Format to A-Format for processing. */
         const size_t numInput{minz(samplesIn.size(), NUM_LINES)};
         const al::span<float> tmpspan{al::assume_aligned<16>(mTempLine.data()), samplesToDo};
-        for(size_t c{0u};c < NUM_LINES;c++)
+        for(size_t c{0u};c < NUM_LINES;++c)
         {
             std::fill(tmpspan.begin(), tmpspan.end(), 0.0f);
             for(size_t i{0};i < numInput;++i)
@@ -1715,7 +1724,7 @@ void ReverbState::process(const size_t samplesToDo, const al::span<const FloatBu
         const al::span<float> tmpspan{al::assume_aligned<16>(mTempLine.data()), samplesToDo};
         const float fadeStep{1.0f / static_cast<float>(samplesToDo)};
 
-        for(size_t c{0u};c < NUM_LINES;c++)
+        for(size_t c{0u};c < NUM_LINES;++c)
         {
             std::fill(tmpspan.begin(), tmpspan.end(), 0.0f);
             for(size_t i{0};i < numInput;++i)
@@ -1739,7 +1748,7 @@ void ReverbState::process(const size_t samplesToDo, const al::span<const FloatBu
             filter.process(tmpspan, tmpspan.data());
             pipeline.mEarlyDelayIn.write(offset, c, tmpspan.cbegin(), samplesToDo);
         }
-        for(size_t c{0u};c < NUM_LINES;c++)
+        for(size_t c{0u};c < NUM_LINES;++c)
         {
             std::fill(tmpspan.begin(), tmpspan.end(), 0.0f);
             for(size_t i{0};i < numInput;++i)

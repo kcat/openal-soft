@@ -46,6 +46,7 @@
 #include "core/logging.h"
 #include "ringbuffer.h"
 #include "strutils.h"
+#include "vector.h"
 
 #ifndef WAVE_FORMAT_IEEE_FLOAT
 #define WAVE_FORMAT_IEEE_FLOAT  0x0003
@@ -144,6 +145,7 @@ struct WinMMPlayback final : public BackendBase {
     al::semaphore mSem;
     uint mIdx{0u};
     std::array<WAVEHDR,4> mWaveBuffer{};
+    al::vector<char,16> mBuffer;
 
     HWAVEOUT mOutHdl{nullptr};
 
@@ -158,9 +160,6 @@ WinMMPlayback::~WinMMPlayback()
     if(mOutHdl)
         waveOutClose(mOutHdl);
     mOutHdl = nullptr;
-
-    al_free(mWaveBuffer[0].lpData);
-    std::fill(mWaveBuffer.begin(), mWaveBuffer.end(), WAVEHDR{});
 }
 
 /* WinMMPlayback::waveOutProc
@@ -311,11 +310,11 @@ bool WinMMPlayback::reset()
     }
     setDefaultWFXChannelOrder();
 
-    uint BufferSize{mDevice->UpdateSize * mFormat.nChannels * mDevice->bytesFromFmt()};
+    const uint BufferSize{mDevice->UpdateSize * mFormat.nChannels * mDevice->bytesFromFmt()};
 
-    al_free(mWaveBuffer[0].lpData);
+    decltype(mBuffer)(BufferSize*mWaveBuffer.size()).swap(mBuffer);
     mWaveBuffer[0] = WAVEHDR{};
-    mWaveBuffer[0].lpData = static_cast<char*>(al_calloc(16, BufferSize * mWaveBuffer.size()));
+    mWaveBuffer[0].lpData = mBuffer.data();
     mWaveBuffer[0].dwBufferLength = BufferSize;
     for(size_t i{1};i < mWaveBuffer.size();i++)
     {
@@ -378,6 +377,7 @@ struct WinMMCapture final : public BackendBase {
     al::semaphore mSem;
     uint mIdx{0};
     std::array<WAVEHDR,4> mWaveBuffer{};
+    al::vector<char,16> mBuffer;
 
     HWAVEIN mInHdl{nullptr};
 
@@ -395,9 +395,6 @@ WinMMCapture::~WinMMCapture()
     if(mInHdl)
         waveInClose(mInHdl);
     mInHdl = nullptr;
-
-    al_free(mWaveBuffer[0].lpData);
-    std::fill(mWaveBuffer.begin(), mWaveBuffer.end(), WAVEHDR{});
 }
 
 /* WinMMCapture::waveInProc
@@ -516,9 +513,9 @@ void WinMMCapture::open(std::string_view name)
 
     mRing = RingBuffer::Create(CapturedDataSize, mFormat.nBlockAlign, false);
 
-    al_free(mWaveBuffer[0].lpData);
+    decltype(mBuffer)(BufferSize*mWaveBuffer.size()).swap(mBuffer);
     mWaveBuffer[0] = WAVEHDR{};
-    mWaveBuffer[0].lpData = static_cast<char*>(al_calloc(16, BufferSize * mWaveBuffer.size()));
+    mWaveBuffer[0].lpData = mBuffer.data();
     mWaveBuffer[0].dwBufferLength = BufferSize;
     for(size_t i{1};i < mWaveBuffer.size();++i)
     {

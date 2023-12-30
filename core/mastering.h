@@ -6,6 +6,7 @@
 
 #include "almalloc.h"
 #include "alnumeric.h"
+#include "alspan.h"
 #include "bufferline.h"
 
 struct SlidingHold;
@@ -50,7 +51,7 @@ struct Compressor {
     alignas(16) std::array<float,BufferLineSize> mCrestFactor{};
 
     SlidingHold *mHold{nullptr};
-    FloatBufferLine *mDelay{nullptr};
+    al::span<FloatBufferLine> mDelay;
 
     float mCrestCoeff{0.0f};
     float mGainEstimate{0.0f};

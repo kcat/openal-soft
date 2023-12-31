@@ -34,6 +34,8 @@
 #include <limits>
 #include <memory>
 #include <optional>
+#include <string>
+#include <string_view>
 #include <vector>
 
 #include "albit.h"
@@ -1073,15 +1075,39 @@ static int LoadWaveSource(std::istream &istream, SourceRefT *src, const uint hri
 }
 
 
+namespace {
+
+struct SofaEasyDeleter {
+    void operator()(gsl::owner<MYSOFA_EASY*> sofa)
+    {
+        if(sofa->neighborhood) mysofa_neighborhood_free(sofa->neighborhood);
+        if(sofa->lookup) mysofa_lookup_free(sofa->lookup);
+        if(sofa->hrtf) mysofa_free(sofa->hrtf);
+        delete sofa;
+    }
+};
+using SofaEasyPtr = std::unique_ptr<MYSOFA_EASY,SofaEasyDeleter>;
+
+struct SofaCacheEntry {
+    std::string mName;
+    uint mSampleRate{};
+    SofaEasyPtr mSofa;
+};
+std::vector<SofaCacheEntry> gSofaCache;
+
+} // namespace
 
 // Load a Spatially Oriented Format for Accoustics (SOFA) file.
 static MYSOFA_EASY* LoadSofaFile(SourceRefT *src, const uint hrirRate, const uint n)
 {
-    MYSOFA_EASY *sofa{mysofa_cache_lookup(src->mPath.data(), static_cast<float>(hrirRate))};
-    if(sofa) return sofa;
+    const std::string_view srcname{src->mPath.data()};
+    auto iter = std::find_if(gSofaCache.begin(), gSofaCache.end(),
+        [srcname,hrirRate](SofaCacheEntry &entry) -> bool
+        { return entry.mName == srcname && entry.mSampleRate == hrirRate; });
+    if(iter != gSofaCache.end()) return iter->mSofa.get();
 
-    sofa = static_cast<MYSOFA_EASY*>(calloc(1, sizeof(*sofa)));
-    if(sofa == nullptr)
+    SofaEasyPtr sofa{new(std::nothrow) MYSOFA_EASY{}};
+    if(!sofa)
     {
         fprintf(stderr, "\nError:  Out of memory.\n");
         return nullptr;
@@ -1093,23 +1119,22 @@ static MYSOFA_EASY* LoadSofaFile(SourceRefT *src, const uint hrirRate, const uin
     sofa->hrtf = mysofa_load(src->mPath.data(), &err);
     if(!sofa->hrtf)
     {
-        mysofa_close(sofa);
-        fprintf(stderr, "\nError: Could not load source file '%s'.\n", src->mPath.data());
+        fprintf(stderr, "\nError: Could not load source file '%s' (error: %d).\n",
+            src->mPath.data(), err);
         return nullptr;
     }
     /* NOTE: Some valid SOFA files are failing this check. */
     err = mysofa_check(sofa->hrtf);
     if(err != MYSOFA_OK)
-        fprintf(stderr, "\nWarning: Supposedly malformed source file '%s'.\n", src->mPath.data());
+        fprintf(stderr, "\nWarning: Supposedly malformed source file '%s' (error: %d).\n",
+            src->mPath.data(), err);
     if((src->mOffset + n) > sofa->hrtf->N)
     {
-        mysofa_close(sofa);
         fprintf(stderr, "\nError: Not enough samples in SOFA file '%s'.\n", src->mPath.data());
         return nullptr;
     }
     if(src->mChannel >= sofa->hrtf->R)
     {
-        mysofa_close(sofa);
         fprintf(stderr, "\nError: Missing source receiver in SOFA file '%s'.\n",src->mPath.data());
         return nullptr;
     }
@@ -1117,11 +1142,11 @@ static MYSOFA_EASY* LoadSofaFile(SourceRefT *src, const uint hrirRate, const uin
     sofa->lookup = mysofa_lookup_init(sofa->hrtf);
     if(sofa->lookup == nullptr)
     {
-        mysofa_close(sofa);
         fprintf(stderr, "\nError:  Out of memory.\n");
         return nullptr;
     }
-    return mysofa_cache_store(sofa, src->mPath.data(), static_cast<float>(hrirRate));
+    gSofaCache.emplace_back(SofaCacheEntry{std::string{srcname}, hrirRate, std::move(sofa)});
+    return gSofaCache.back().mSofa.get();
 }
 
 // Copies the HRIR data from a particular SOFA measurement.
@@ -2027,12 +2052,12 @@ static int ProcessSources(TokenReaderT *tr, HrirDataT *hData, const uint outRate
     }
     if(!TrLoad(tr))
     {
-        mysofa_cache_release_all();
+        gSofaCache.clear();
         return 1;
     }
 
     TrError(tr, "Errant data at end of source list.\n");
-    mysofa_cache_release_all();
+    gSofaCache.clear();
     return 0;
 }
 

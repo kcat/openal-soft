@@ -14,7 +14,8 @@ EffectSlotArray *EffectSlot::CreatePtrArray(size_t count) noexcept
     /* Allocate space for twice as many pointers, so the mixer has scratch
      * space to store a sorted list during mixing.
      */
-    if(void *ptr{al_calloc(alignof(EffectSlotArray), EffectSlotArray::Sizeof(count*2))})
+    static constexpr auto AlignVal = std::align_val_t{alignof(EffectSlotArray)};
+    if(gsl::owner<void*> ptr{::operator new[](EffectSlotArray::Sizeof(count*2), AlignVal)})
         return al::construct_at(static_cast<EffectSlotArray*>(ptr), count);
     return nullptr;
 }

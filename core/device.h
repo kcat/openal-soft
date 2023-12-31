@@ -29,7 +29,7 @@ class BFormatDec;
 namespace Bs2b {
 struct bs2b;
 } // namespace Bs2b
-struct Compressor;
+class Compressor;
 struct ContextBase;
 struct DirectHrtfState;
 struct HrtfStore;

@@ -52,7 +52,7 @@ class Compressor {
     alignas(16) std::array<float,BufferLineSize> mCrestFactor{};
 
     std::unique_ptr<SlidingHold> mHold;
-    al::vector<FloatBufferLine> mDelay;
+    al::vector<FloatBufferLine,16> mDelay;
 
     float mCrestCoeff{0.0f};
     float mGainEstimate{0.0f};

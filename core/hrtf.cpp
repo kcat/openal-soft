@@ -382,6 +382,10 @@ std::unique_ptr<HrtfStore> CreateHrtfStore(uint rate, uint8_t irSize,
     const al::span<const HrtfStore::Elevation> elevs, const HrirArray *coeffs,
     const ubyte2 *delays, const char *filename)
 {
+    static_assert(alignof(HrtfStore::Field) <= alignof(HrtfStore));
+    static_assert(alignof(HrtfStore::Elevation) <= alignof(HrtfStore));
+    static_assert(16 <= alignof(HrtfStore));
+
     const size_t irCount{size_t{elevs.back().azCount} + elevs.back().irOffset};
     size_t total{sizeof(HrtfStore)};
     total  = RoundUp(total, alignof(HrtfStore::Field)); /* Align for field infos */

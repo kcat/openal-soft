@@ -1,6 +1,7 @@
 #ifndef AL_FLEXARRAY_H
 #define AL_FLEXARRAY_H
 
+#include <algorithm>
 #include <cstddef>
 #include <stdexcept>
 #include <type_traits>
@@ -15,7 +16,7 @@ namespace al {
  */
 template<typename T, size_t alignment, bool = std::is_trivially_destructible<T>::value>
 struct FlexArrayStorage {
-    alignas(alignment) const ::al::span<T> mData;
+    alignas(std::max(alignment, alignof(::al::span<T>))) const ::al::span<T> mData;
 
     static constexpr size_t Sizeof(size_t count, size_t base=0u) noexcept
     { return sizeof(FlexArrayStorage) + sizeof(T)*count + base; }
@@ -31,7 +32,7 @@ struct FlexArrayStorage {
 
 template<typename T, size_t alignment>
 struct FlexArrayStorage<T,alignment,false> {
-    alignas(alignment) const ::al::span<T> mData;
+    alignas(std::max(alignment, alignof(::al::span<T>))) const ::al::span<T> mData;
 
     static constexpr size_t Sizeof(size_t count, size_t base=0u) noexcept
     { return sizeof(FlexArrayStorage) + sizeof(T)*count + base; }
@@ -49,7 +50,7 @@ struct FlexArrayStorage<T,alignment,false> {
  * struct, with placement new, to have a run-time-sized array that's embedded
  * with its size.
  */
-template<typename T, size_t alignment=alignof(T)>
+template<typename T, size_t Align=alignof(T)>
 struct FlexArray {
     using element_type = T;
     using value_type = std::remove_cv_t<T>;
@@ -66,6 +67,7 @@ struct FlexArray {
     using reverse_iterator = std::reverse_iterator<iterator>;
     using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
+    static constexpr size_t alignment{std::max(alignof(T), Align)};
     using Storage_t_ = FlexArrayStorage<element_type,alignment>;
 
     Storage_t_ mStore;
@@ -73,19 +75,7 @@ struct FlexArray {
     static constexpr index_type Sizeof(index_type count, index_type base=0u) noexcept
     { return Storage_t_::Sizeof(count, base); }
     static std::unique_ptr<FlexArray> Create(index_type count)
-    {
-        if(gsl::owner<void*> ptr{al_calloc(alignof(FlexArray), Sizeof(count))})
-        {
-            try {
-                return std::unique_ptr<FlexArray>{::new(ptr) FlexArray{count}};
-            }
-            catch(...) {
-                al_free(ptr);
-                throw;
-            }
-        }
-        throw std::bad_alloc();
-    }
+    { return std::unique_ptr<FlexArray>{new(FamCount{count}) FlexArray{count}}; }
 
     FlexArray(index_type size) noexcept(std::is_nothrow_constructible_v<Storage_t_,index_type>)
         : mStore{size}
@@ -121,7 +111,16 @@ struct FlexArray {
     [[nodiscard]] auto rend() const noexcept -> const_reverse_iterator { return begin(); }
     [[nodiscard]] auto crend() const noexcept -> const_reverse_iterator { return cbegin(); }
 
-    DEF_PLACE_NEWDEL
+    gsl::owner<void*> operator new(size_t, FamCount count)
+    { return ::operator new[](Sizeof(count), std::align_val_t{alignof(FlexArray)}); }
+    void operator delete(gsl::owner<void*> block, FamCount) noexcept
+    { ::operator delete[](block, std::align_val_t{alignof(FlexArray)}); }
+    void operator delete(gsl::owner<void*> block) noexcept
+    { ::operator delete[](block, std::align_val_t{alignof(FlexArray)}); }
+
+    void *operator new(size_t size) = delete;
+    void *operator new[](size_t size) = delete;
+    void operator delete[](void *block) = delete;
 };
 
 } // namespace al

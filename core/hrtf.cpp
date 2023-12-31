@@ -392,10 +392,11 @@ std::unique_ptr<HrtfStore> CreateHrtfStore(uint rate, uint8_t irSize,
     total += sizeof(std::declval<HrtfStore&>().mCoeffs[0])*irCount;
     total += sizeof(std::declval<HrtfStore&>().mDelays[0])*irCount;
 
+    static constexpr auto AlignVal = std::align_val_t{alignof(HrtfStore)};
     std::unique_ptr<HrtfStore> Hrtf{};
-    if(void *ptr{al_calloc(16, total)})
+    if(gsl::owner<void*> ptr{::operator new[](total, AlignVal, std::nothrow)})
     {
-        Hrtf.reset(al::construct_at(static_cast<HrtfStore*>(ptr)));
+        Hrtf = decltype(Hrtf){::new(ptr) HrtfStore{}};
         Hrtf->mRef.store(1u, std::memory_order_relaxed);
         Hrtf->mSampleRate = rate & 0xff'ff'ff;
         Hrtf->mIrSize = irSize;

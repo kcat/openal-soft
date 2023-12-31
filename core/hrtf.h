@@ -18,7 +18,7 @@
 #include "mixer/hrtfdefs.h"
 
 
-struct HrtfStore {
+struct alignas(16) HrtfStore {
     std::atomic<uint> mRef;
 
     uint mSampleRate : 24;
@@ -47,7 +47,14 @@ struct HrtfStore {
     void add_ref();
     void dec_ref();
 
-    DEF_PLACE_NEWDEL
+    void *operator new(size_t) = delete;
+    void *operator new[](size_t) = delete;
+    void operator delete[](void*) noexcept = delete;
+
+    void operator delete(gsl::owner<void*> block, void*) noexcept
+    { ::operator delete[](block, std::align_val_t{alignof(HrtfStore)}); }
+    void operator delete(gsl::owner<void*> block) noexcept
+    { ::operator delete[](block, std::align_val_t{alignof(HrtfStore)}); }
 };
 using HrtfStorePtr = al::intrusive_ptr<HrtfStore>;
 

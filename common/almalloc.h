@@ -30,13 +30,6 @@ gsl::owner<void*> al_calloc(size_t alignment, size_t size);
     void operator delete(void*) noexcept = delete;                            \
     void operator delete[](void*) noexcept = delete;
 
-#define DEF_PLACE_NEWDEL                                                      \
-    void *operator new(size_t) = delete;                                      \
-    void *operator new[](size_t) = delete;                                    \
-    void operator delete(gsl::owner<void*> block, void*) noexcept { al_free(block); } \
-    void operator delete(gsl::owner<void*> block) noexcept { al_free(block); } \
-    void operator delete[](gsl::owner<void*> block, void*) noexcept { al_free(block); } \
-    void operator delete[](gsl::owner<void*> block) noexcept { al_free(block); }
 
 enum FamCount : size_t { };
 

@@ -52,7 +52,7 @@ ContextBase::~ContextBase()
     if(std::unique_ptr<EffectSlotArray> curarray{mActiveAuxSlots.exchange(nullptr, std::memory_order_relaxed)})
         std::destroy_n(curarray->end(), curarray->size());
 
-    std::unique_ptr<ContextBase::VoiceArray>{mVoices.exchange(nullptr, std::memory_order_relaxed)};
+    mVoices.store(nullptr, std::memory_order_relaxed);
 
     if(mAsyncEvents)
     {
@@ -142,7 +142,7 @@ void ContextBase::allocVoices(size_t addcount)
         voice_iter = std::transform(cluster->begin(), cluster->end(), voice_iter,
             [](Voice &voice) noexcept -> Voice* { return &voice; });
 
-    if(std::unique_ptr<ContextBase::VoiceArray> oldvoices{mVoices.exchange(newarray.release(), std::memory_order_acq_rel)})
+    if(auto oldvoices = mVoices.exchange(std::move(newarray), std::memory_order_acq_rel))
         std::ignore = mDevice->waitForMix();
 }
 

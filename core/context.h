@@ -112,7 +112,7 @@ struct ContextBase {
     ContextParams mParams;
 
     using VoiceArray = al::FlexArray<Voice*>;
-    std::atomic<VoiceArray*> mVoices{};
+    al::atomic_unique_ptr<VoiceArray> mVoices{};
     std::atomic<size_t> mActiveVoiceCount{};
 
     void allocVoices(size_t addcount);

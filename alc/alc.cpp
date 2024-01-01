@@ -2719,8 +2719,7 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
          * old array.
          */
         auto *oldarray = device->mContexts.load();
-        const size_t newcount{oldarray->size()+1};
-        std::unique_ptr<ContextArray> newarray{ContextArray::Create(newcount)};
+        auto newarray = ContextArray::Create(oldarray->size() + 1);
 
         /* Copy the current/old context handles to the new array, appending the
          * new context.
@@ -2731,12 +2730,8 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
         /* Store the new context array in the device. Wait for any current mix
          * to finish before deleting the old array.
          */
-        dev->mContexts.store(newarray.release());
-        if(oldarray != &DeviceBase::sEmptyContextArray)
-        {
-            std::ignore = dev->waitForMix();
-            newarray.reset(oldarray);
-        }
+        auto prevarray = dev->mContexts.exchange(std::move(newarray));
+        std::ignore = dev->waitForMix();
     }
     statelock.unlock();
 
@@ -2817,7 +2812,7 @@ ALC_API ALCboolean ALC_APIENTRY alcMakeContextCurrent(ALCcontext *context) noexc
          * the current context as its refcount is decremented.
          */
     }
-    ContextRef{ALCcontext::sGlobalContext.exchange(ctx.release())};
+    ctx = ContextRef{ALCcontext::sGlobalContext.exchange(ctx.release())};
     ALCcontext::sGlobalContextLock.store(false, std::memory_order_release);
 
     /* Take ownership of the thread-local context reference (if any), clearing

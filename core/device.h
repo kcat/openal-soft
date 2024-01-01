@@ -181,11 +181,6 @@ enum class DeviceState : uint8_t {
 };
 
 struct DeviceBase {
-    /* To avoid extraneous allocations, a 0-sized FlexArray<ContextBase*> is
-     * defined globally as a sharable object.
-     */
-    static al::FlexArray<ContextBase*> sEmptyContextArray;
-
     std::atomic<bool> Connected{true};
     const DeviceType Type{};
 
@@ -295,7 +290,7 @@ struct DeviceBase {
     std::atomic<uint> mMixCount{0u};
 
     // Contexts created on this device
-    std::atomic<al::FlexArray<ContextBase*>*> mContexts{nullptr};
+    al::atomic_unique_ptr<al::FlexArray<ContextBase*>> mContexts;
 
 
     DeviceBase(DeviceType type);

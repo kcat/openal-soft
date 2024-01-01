@@ -263,12 +263,8 @@ void ALCcontext::deinit()
     if(auto toremove = static_cast<size_t>(std::count(oldarray->begin(), oldarray->end(), this)))
     {
         using ContextArray = al::FlexArray<ContextBase*>;
-        auto alloc_ctx_array = [](const size_t count) -> ContextArray*
-        {
-            if(count == 0) return &DeviceBase::sEmptyContextArray;
-            return ContextArray::Create(count).release();
-        };
-        auto *newarray = alloc_ctx_array(oldarray->size() - toremove);
+        const size_t newsize{oldarray->size() - toremove};
+        auto newarray = ContextArray::Create(newsize);
 
         /* Copy the current/old context handles to the new array, excluding the
          * given context.
@@ -279,14 +275,10 @@ void ALCcontext::deinit()
         /* Store the new context array in the device. Wait for any current mix
          * to finish before deleting the old array.
          */
-        mDevice->mContexts.store(newarray);
-        if(oldarray != &DeviceBase::sEmptyContextArray)
-        {
-            std::ignore = mDevice->waitForMix();
-            delete oldarray;
-        }
+        auto prevarray = mDevice->mContexts.exchange(std::move(newarray));
+        std::ignore = mDevice->waitForMix();
 
-        stopPlayback = newarray->empty();
+        stopPlayback = (newsize == 0);
     }
     else
         stopPlayback = oldarray->empty();

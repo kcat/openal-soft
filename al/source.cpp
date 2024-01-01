@@ -80,7 +80,7 @@
 
 namespace {
 
-using namespace std::placeholders;
+using SubListAllocator = typename al::allocator<std::array<ALsource,64>>;
 using std::chrono::nanoseconds;
 using seconds_d = std::chrono::duration<double>;
 
@@ -721,22 +721,21 @@ bool EnsureSources(ALCcontext *context, size_t needed)
         [](size_t cur, const SourceSubList &sublist) noexcept -> size_t
         { return cur + static_cast<ALuint>(al::popcount(sublist.FreeMask)); })};
 
-    while(needed > count)
-    {
-        if(context->mSourceList.size() >= 1<<25) UNLIKELY
-            return false;
-
-        context->mSourceList.emplace_back();
-        auto sublist = context->mSourceList.end() - 1;
-        sublist->FreeMask = ~0_u64;
-        sublist->Sources = static_cast<gsl::owner<std::array<ALsource,64>*>>(al_calloc(
-            alignof(ALsource), sizeof(*sublist->Sources)));
-        if(!sublist->Sources) UNLIKELY
+    try {
+        while(needed > count)
         {
-            context->mSourceList.pop_back();
-            return false;
+            if(context->mSourceList.size() >= 1<<25) UNLIKELY
+                return false;
+
+            SourceSubList sublist{};
+            sublist.FreeMask = ~0_u64;
+            sublist.Sources = SubListAllocator{}.allocate(1);
+            context->mSourceList.emplace_back(std::move(sublist));
+            count += 64;
         }
-        count += 64;
+    }
+    catch(...) {
+        return false;
     }
     return true;
 }
@@ -3643,7 +3642,7 @@ SourceSubList::~SourceSubList()
         std::destroy_at(al::to_address(Sources->begin() + idx));
     }
     FreeMask = ~usemask;
-    al_free(alignof(ALsource), Sources);
+    SubListAllocator{}.deallocate(Sources, 1);
     Sources = nullptr;
 }
 

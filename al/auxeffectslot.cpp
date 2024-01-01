@@ -53,6 +53,8 @@
 
 namespace {
 
+using SubListAllocator = typename al::allocator<std::array<ALeffectslot,64>>;
+
 struct FactoryItem {
     EffectSlotType Type;
     EffectStateFactory* (&GetFactory)();
@@ -238,22 +240,21 @@ bool EnsureEffectSlots(ALCcontext *context, size_t needed)
         [](size_t cur, const EffectSlotSubList &sublist) noexcept -> size_t
         { return cur + static_cast<ALuint>(al::popcount(sublist.FreeMask)); })};
 
-    while(needed > count)
-    {
-        if(context->mEffectSlotList.size() >= 1<<25) UNLIKELY
-            return false;
-
-        context->mEffectSlotList.emplace_back();
-        auto sublist = context->mEffectSlotList.end() - 1;
-        sublist->FreeMask = ~0_u64;
-        sublist->EffectSlots = static_cast<gsl::owner<std::array<ALeffectslot,64>*>>(
-            al_calloc(alignof(ALeffectslot), sizeof(*sublist->EffectSlots)));
-        if(!sublist->EffectSlots) UNLIKELY
+    try {
+        while(needed > count)
         {
-            context->mEffectSlotList.pop_back();
-            return false;
+            if(context->mEffectSlotList.size() >= 1<<25) UNLIKELY
+                return false;
+
+            EffectSlotSubList sublist{};
+            sublist.FreeMask = ~0_u64;
+            sublist.EffectSlots = SubListAllocator{}.allocate(1);
+            context->mEffectSlotList.emplace_back(std::move(sublist));
+            count += 64;
         }
-        count += 64;
+    }
+    catch(...) {
+        return false;
     }
     return true;
 }
@@ -1004,7 +1005,7 @@ EffectSlotSubList::~EffectSlotSubList()
         usemask &= ~(1_u64 << idx);
     }
     FreeMask = ~usemask;
-    al_free(alignof(ALeffectslot), EffectSlots);
+    SubListAllocator{}.deallocate(EffectSlots, 1);
     EffectSlots = nullptr;
 }
 

@@ -89,6 +89,8 @@ effect_exception::~effect_exception() = default;
 
 namespace {
 
+using SubListAllocator = typename al::allocator<std::array<ALeffect,64>>;
+
 auto GetDefaultProps(ALenum type) -> const EffectProps&
 {
     switch(type)
@@ -126,22 +128,21 @@ bool EnsureEffects(ALCdevice *device, size_t needed)
         [](size_t cur, const EffectSubList &sublist) noexcept -> size_t
         { return cur + static_cast<ALuint>(al::popcount(sublist.FreeMask)); })};
 
-    while(needed > count)
-    {
-        if(device->EffectList.size() >= 1<<25) UNLIKELY
-            return false;
-
-        device->EffectList.emplace_back();
-        auto sublist = device->EffectList.end() - 1;
-        sublist->FreeMask = ~0_u64;
-        sublist->Effects = static_cast<gsl::owner<std::array<ALeffect,64>*>>(al_calloc(
-            alignof(ALeffect), sizeof(*sublist->Effects)));
-        if(!sublist->Effects) UNLIKELY
+    try {
+        while(needed > count)
         {
-            device->EffectList.pop_back();
-            return false;
+            if(device->EffectList.size() >= 1<<25) UNLIKELY
+                return false;
+
+            EffectSubList sublist{};
+            sublist.FreeMask = ~0_u64;
+            sublist.Effects = SubListAllocator{}.allocate(1);
+            device->EffectList.emplace_back(std::move(sublist));
+            count += 64;
         }
-        count += 64;
+    }
+    catch(...) {
+        return false;
     }
     return true;
 }
@@ -572,7 +573,7 @@ EffectSubList::~EffectSubList()
         usemask &= ~(1_u64 << idx);
     }
     FreeMask = ~usemask;
-    al_free(alignof(ALeffect), Effects);
+    SubListAllocator{}.deallocate(Effects, 1);
     Effects = nullptr;
 }
 

@@ -49,6 +49,8 @@
 
 namespace {
 
+using SubListAllocator = typename al::allocator<std::array<ALfilter,64>>;
+
 class filter_exception final : public al::base_exception {
     ALenum mErrorCode;
 
@@ -121,22 +123,21 @@ bool EnsureFilters(ALCdevice *device, size_t needed)
         [](size_t cur, const FilterSubList &sublist) noexcept -> size_t
         { return cur + static_cast<ALuint>(al::popcount(sublist.FreeMask)); })};
 
-    while(needed > count)
-    {
-        if(device->FilterList.size() >= 1<<25) UNLIKELY
-            return false;
-
-        device->FilterList.emplace_back();
-        auto sublist = device->FilterList.end() - 1;
-        sublist->FreeMask = ~0_u64;
-        sublist->Filters = static_cast<gsl::owner<std::array<ALfilter,64>*>>(al_calloc(
-            alignof(ALfilter), sizeof(*sublist->Filters)));
-        if(!sublist->Filters) UNLIKELY
+    try {
+        while(needed > count)
         {
-            device->FilterList.pop_back();
-            return false;
+            if(device->FilterList.size() >= 1<<25) UNLIKELY
+                return false;
+
+            FilterSubList sublist{};
+            sublist.FreeMask = ~0_u64;
+            sublist.Filters = SubListAllocator{}.allocate(1);
+            device->FilterList.emplace_back(std::move(sublist));
+            count += 64;
         }
-        count += 64;
+    }
+    catch(...) {
+        return false;
     }
     return true;
 }
@@ -700,6 +701,6 @@ FilterSubList::~FilterSubList()
         usemask &= ~(1_u64 << idx);
     }
     FreeMask = ~usemask;
-    al_free(alignof(ALfilter), Filters);
+    SubListAllocator{}.deallocate(Filters, 1);
     Filters = nullptr;
 }

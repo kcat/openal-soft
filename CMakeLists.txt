@@ -610,7 +610,6 @@ set(COMMON_OBJS
     common/alcomplex.h
     common/alfstream.cpp
     common/alfstream.h
-    common/almalloc.cpp
     common/almalloc.h
     common/alnumbers.h
     common/alnumeric.h

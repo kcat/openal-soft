@@ -68,6 +68,8 @@
 
 namespace {
 
+using SubListAllocator = typename al::allocator<std::array<ALbuffer,64>>;
+
 std::optional<AmbiLayout> AmbiLayoutFromEnum(ALenum layout)
 {
     switch(layout)
@@ -178,22 +180,21 @@ bool EnsureBuffers(ALCdevice *device, size_t needed)
         [](size_t cur, const BufferSubList &sublist) noexcept -> size_t
         { return cur + static_cast<ALuint>(al::popcount(sublist.FreeMask)); })};
 
-    while(needed > count)
-    {
-        if(device->BufferList.size() >= 1<<25) UNLIKELY
-            return false;
-
-        device->BufferList.emplace_back();
-        auto sublist = device->BufferList.end() - 1;
-        sublist->FreeMask = ~0_u64;
-        sublist->Buffers = static_cast<gsl::owner<std::array<ALbuffer,64>*>>(al_calloc(
-            alignof(ALbuffer), sizeof(*sublist->Buffers)));
-        if(!sublist->Buffers) UNLIKELY
+    try {
+        while(needed > count)
         {
-            device->BufferList.pop_back();
-            return false;
+            if(device->BufferList.size() >= 1<<25) UNLIKELY
+                return false;
+
+            BufferSubList sublist{};
+            sublist.FreeMask = ~0_u64;
+            sublist.Buffers = SubListAllocator{}.allocate(1);
+            device->BufferList.emplace_back(std::move(sublist));
+            count += 64;
         }
-        count += 64;
+    }
+    catch(...) {
+        return false;
     }
     return true;
 }
@@ -1490,7 +1491,7 @@ BufferSubList::~BufferSubList()
         usemask &= ~(1_u64 << idx);
     }
     FreeMask = ~usemask;
-    al_free(alignof(ALbuffer), Buffers);
+    SubListAllocator{}.deallocate(Buffers, 1);
     Buffers = nullptr;
 }
 

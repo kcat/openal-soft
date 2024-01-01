@@ -17,11 +17,6 @@ namespace gsl {
 template<typename T> using owner = T;
 };
 
-inline void al_free(size_t alignment, gsl::owner<void*> ptr) noexcept
-{ ::operator delete[](ptr, std::align_val_t{alignment}); }
-[[gnu::alloc_align(1), gnu::alloc_size(2), gnu::malloc]]
-gsl::owner<void*> al_calloc(size_t alignment, size_t size);
-
 
 #define DISABLE_ALLOC                                                         \
     void *operator new(size_t) = delete;                                      \
@@ -61,18 +56,18 @@ struct allocator {
     static constexpr auto Alignment = std::max(AlignV, alignof(T));
     static constexpr auto AlignVal = std::align_val_t{Alignment};
 
-    using value_type = T;
-    using reference = T&;
-    using const_reference = const T&;
-    using pointer = T*;
-    using const_pointer = const T*;
+    using value_type = std::remove_cv_t<std::remove_reference_t<T>>;
+    using reference = value_type&;
+    using const_reference = const value_type&;
+    using pointer = value_type*;
+    using const_pointer = const value_type*;
     using size_type = std::size_t;
     using difference_type = std::ptrdiff_t;
     using is_always_equal = std::true_type;
 
-    template<typename U>
+    template<typename U, std::enable_if_t<alignof(U) <= Alignment,bool> = true>
     struct rebind {
-        using other = std::enable_if_t<alignof(U) <= Alignment, allocator<U,Alignment>>;
+        using other = allocator<U,Alignment>;
     };
 
     constexpr explicit allocator() noexcept = default;

@@ -361,7 +361,7 @@ void LoadDriverList()
 PtrIntMap::~PtrIntMap()
 {
     std::lock_guard<std::mutex> maplock{mLock};
-    al_free(mKeys);
+    free(mKeys);
     mKeys = nullptr;
     mValues = nullptr;
     mSize = 0;
@@ -382,8 +382,7 @@ ALenum PtrIntMap::insert(void *key, int value)
             ALsizei newcap{mCapacity ? (mCapacity<<1) : 4};
             if(newcap > mCapacity)
                 newkeys = static_cast<void**>(
-                    al_calloc(16, (sizeof(mKeys[0])+sizeof(mValues[0]))*newcap)
-                );
+                    calloc(newcap, sizeof(mKeys[0])+sizeof(mValues[0])));
             if(!newkeys)
                 return AL_OUT_OF_MEMORY;
             auto newvalues = reinterpret_cast<int*>(&newkeys[newcap]);
@@ -393,7 +392,7 @@ ALenum PtrIntMap::insert(void *key, int value)
                 std::copy_n(mKeys, mSize, newkeys);
                 std::copy_n(mValues, mSize, newvalues);
             }
-            al_free(mKeys);
+            free(mKeys);
             mKeys = newkeys;
             mValues = newvalues;
             mCapacity = newcap;

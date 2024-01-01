@@ -66,7 +66,7 @@ struct FlexArray {
     static constexpr size_t alignment{std::max(alignof(T), Align)};
     using Storage_t_ = FlexArrayStorage<element_type,alignment>;
 
-    Storage_t_ mStore;
+    const Storage_t_ mStore;
 
     static constexpr index_type Sizeof(index_type count, index_type base=0u) noexcept
     { return Storage_t_::Sizeof(count, base); }

@@ -15,14 +15,12 @@ namespace al {
  * trivially destructible.
  */
 template<typename T, size_t alignment, bool = std::is_trivially_destructible<T>::value>
-struct FlexArrayStorage {
-    alignas(std::max(alignment, alignof(::al::span<T>))) const ::al::span<T> mData;
-
+struct alignas(std::max(alignment, alignof(al::span<T>))) FlexArrayStorage : al::span<T> {
     static constexpr size_t Sizeof(size_t count, size_t base=0u) noexcept
     { return sizeof(FlexArrayStorage) + sizeof(T)*count + base; }
 
     FlexArrayStorage(size_t size) noexcept(std::is_nothrow_constructible_v<T>)
-        : mData{::new(static_cast<void*>(this+1)) T[size], size}
+        : al::span<T>{::new(static_cast<void*>(this+1)) T[size], size}
     { }
     ~FlexArrayStorage() = default;
 
@@ -31,16 +29,14 @@ struct FlexArrayStorage {
 };
 
 template<typename T, size_t alignment>
-struct FlexArrayStorage<T,alignment,false> {
-    alignas(std::max(alignment, alignof(::al::span<T>))) const ::al::span<T> mData;
-
+struct alignas(std::max(alignment, alignof(al::span<T>))) FlexArrayStorage<T,alignment,false> : al::span<T> {
     static constexpr size_t Sizeof(size_t count, size_t base=0u) noexcept
     { return sizeof(FlexArrayStorage) + sizeof(T)*count + base; }
 
     FlexArrayStorage(size_t size) noexcept(std::is_nothrow_constructible_v<T>)
-        : mData{::new(static_cast<void*>(this+1)) T[size], size}
+        : al::span<T>{::new(static_cast<void*>(this+1)) T[size], size}
     { }
-    ~FlexArrayStorage() { std::destroy(mData.begin(), mData.end()); }
+    ~FlexArrayStorage() { std::destroy(this->begin(), this->end()); }
 
     FlexArrayStorage(const FlexArrayStorage&) = delete;
     FlexArrayStorage& operator=(const FlexArrayStorage&) = delete;
@@ -82,33 +78,33 @@ struct FlexArray {
     { }
     ~FlexArray() = default;
 
-    [[nodiscard]] auto size() const noexcept -> index_type { return mStore.mData.size(); }
-    [[nodiscard]] auto empty() const noexcept -> bool { return mStore.mData.empty(); }
+    [[nodiscard]] auto size() const noexcept -> index_type { return mStore.size(); }
+    [[nodiscard]] auto empty() const noexcept -> bool { return mStore.empty(); }
 
-    [[nodiscard]] auto data() noexcept -> pointer { return mStore.mData.data(); }
-    [[nodiscard]] auto data() const noexcept -> const_pointer { return mStore.mData.data(); }
+    [[nodiscard]] auto data() noexcept -> pointer { return mStore.data(); }
+    [[nodiscard]] auto data() const noexcept -> const_pointer { return mStore.data(); }
 
-    [[nodiscard]] auto operator[](index_type i) noexcept -> reference { return mStore.mData[i]; }
-    [[nodiscard]] auto operator[](index_type i) const noexcept -> const_reference { return mStore.mData[i]; }
+    [[nodiscard]] auto operator[](index_type i) noexcept -> reference { return mStore[i]; }
+    [[nodiscard]] auto operator[](index_type i) const noexcept -> const_reference { return mStore[i]; }
 
-    [[nodiscard]] auto front() noexcept -> reference { return mStore.mData.front(); }
-    [[nodiscard]] auto front() const noexcept -> const_reference { return mStore.mData.front(); }
+    [[nodiscard]] auto front() noexcept -> reference { return mStore.front(); }
+    [[nodiscard]] auto front() const noexcept -> const_reference { return mStore.front(); }
 
-    [[nodiscard]] auto back() noexcept -> reference { return mStore.mData.back(); }
-    [[nodiscard]] auto back() const noexcept -> const_reference { return mStore.mData.back(); }
+    [[nodiscard]] auto back() noexcept -> reference { return mStore.back(); }
+    [[nodiscard]] auto back() const noexcept -> const_reference { return mStore.back(); }
 
-    [[nodiscard]] auto begin() noexcept -> iterator { return mStore.mData.begin(); }
-    [[nodiscard]] auto begin() const noexcept -> const_iterator { return mStore.mData.begin(); }
-    [[nodiscard]] auto cbegin() const noexcept -> const_iterator { return mStore.mData.cbegin(); }
-    [[nodiscard]] auto end() noexcept -> iterator { return mStore.mData.end(); }
-    [[nodiscard]] auto end() const noexcept -> const_iterator { return mStore.mData.end(); }
-    [[nodiscard]] auto cend() const noexcept -> const_iterator { return mStore.mData.cend(); }
+    [[nodiscard]] auto begin() noexcept -> iterator { return mStore.begin(); }
+    [[nodiscard]] auto begin() const noexcept -> const_iterator { return mStore.cbegin(); }
+    [[nodiscard]] auto cbegin() const noexcept -> const_iterator { return mStore.cbegin(); }
+    [[nodiscard]] auto end() noexcept -> iterator { return mStore.end(); }
+    [[nodiscard]] auto end() const noexcept -> const_iterator { return mStore.cend(); }
+    [[nodiscard]] auto cend() const noexcept -> const_iterator { return mStore.cend(); }
 
     [[nodiscard]] auto rbegin() noexcept -> reverse_iterator { return end(); }
-    [[nodiscard]] auto rbegin() const noexcept -> const_reverse_iterator { return end(); }
+    [[nodiscard]] auto rbegin() const noexcept -> const_reverse_iterator { return cend(); }
     [[nodiscard]] auto crbegin() const noexcept -> const_reverse_iterator { return cend(); }
     [[nodiscard]] auto rend() noexcept -> reverse_iterator { return begin(); }
-    [[nodiscard]] auto rend() const noexcept -> const_reverse_iterator { return begin(); }
+    [[nodiscard]] auto rend() const noexcept -> const_reverse_iterator { return cbegin(); }
     [[nodiscard]] auto crend() const noexcept -> const_reverse_iterator { return cbegin(); }
 
     gsl::owner<void*> operator new(size_t, FamCount count)

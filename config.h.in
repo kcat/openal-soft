@@ -7,12 +7,6 @@
 /* Define if HRTF data is embedded in the library */
 #cmakedefine ALSOFT_EMBED_HRTF_DATA
 
-/* Define if we have the posix_memalign function */
-#cmakedefine HAVE_POSIX_MEMALIGN
-
-/* Define if we have the _aligned_malloc function */
-#cmakedefine HAVE__ALIGNED_MALLOC
-
 /* Define if we have the proc_pidpath function */
 #cmakedefine HAVE_PROC_PIDPATH
 

@@ -3643,7 +3643,7 @@ SourceSubList::~SourceSubList()
         std::destroy_at(al::to_address(Sources->begin() + idx));
     }
     FreeMask = ~usemask;
-    al_free(Sources);
+    al_free(alignof(ALsource), Sources);
     Sources = nullptr;
 }
 

@@ -1004,7 +1004,7 @@ EffectSlotSubList::~EffectSlotSubList()
         usemask &= ~(1_u64 << idx);
     }
     FreeMask = ~usemask;
-    al_free(EffectSlots);
+    al_free(alignof(ALeffectslot), EffectSlots);
     EffectSlots = nullptr;
 }
 

@@ -700,6 +700,6 @@ FilterSubList::~FilterSubList()
         usemask &= ~(1_u64 << idx);
     }
     FreeMask = ~usemask;
-    al_free(Filters);
+    al_free(alignof(ALfilter), Filters);
     Filters = nullptr;
 }

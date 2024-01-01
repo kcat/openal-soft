@@ -572,7 +572,7 @@ EffectSubList::~EffectSubList()
         usemask &= ~(1_u64 << idx);
     }
     FreeMask = ~usemask;
-    al_free(Effects);
+    al_free(alignof(ALeffect), Effects);
     Effects = nullptr;
 }
 

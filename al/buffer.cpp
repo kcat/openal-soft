@@ -1490,7 +1490,7 @@ BufferSubList::~BufferSubList()
         usemask &= ~(1_u64 << idx);
     }
     FreeMask = ~usemask;
-    al_free(Buffers);
+    al_free(alignof(ALbuffer), Buffers);
     Buffers = nullptr;
 }
 

@@ -17,9 +17,8 @@ namespace gsl {
 template<typename T> using owner = T;
 };
 
-void al_free(gsl::owner<void*> ptr) noexcept;
-[[gnu::alloc_align(1), gnu::alloc_size(2), gnu::malloc]]
-gsl::owner<void*> al_malloc(size_t alignment, size_t size);
+inline void al_free(size_t alignment, gsl::owner<void*> ptr) noexcept
+{ ::operator delete[](ptr, std::align_val_t{alignment}); }
 [[gnu::alloc_align(1), gnu::alloc_size(2), gnu::malloc]]
 gsl::owner<void*> al_calloc(size_t alignment, size_t size);
 

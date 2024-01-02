@@ -291,7 +291,8 @@ void DirectHrtfState::build(const HrtfStore *Hrtf, const uint irSize, const bool
 
     const double xover_norm{double{XOverFreq} / Hrtf->mSampleRate};
     mChannels[0].mSplitter.init(static_cast<float>(xover_norm));
-    for(size_t i{0};i < mChannels.size();++i)
+    mChannels[0].mHfScale = AmbiOrderHFGain[0];
+    for(size_t i{1};i < mChannels.size();++i)
     {
         const size_t order{AmbiIndex::OrderFromChannel[i]};
         mChannels[i].mSplitter = mChannels[0].mSplitter;

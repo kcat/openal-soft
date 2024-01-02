@@ -338,34 +338,38 @@ void DirectHrtfState::build(const HrtfStore *Hrtf, const uint irSize, const bool
 
     auto tmpres = std::vector<std::array<double2,HrirLength>>(mChannels.size());
     max_delay = 0;
-    for(size_t c{0u};c < AmbiPoints.size();++c)
+    auto matrixline = AmbiMatrix.cbegin();
+    for(auto &impulse : impres)
     {
-        const ConstHrirSpan hrir{impres[c].hrir};
-        const uint base_delay{perHrirMin ? minu(impres[c].ldelay, impres[c].rdelay) : min_delay};
-        const uint ldelay{hrir_delay_round(impres[c].ldelay - base_delay)};
-        const uint rdelay{hrir_delay_round(impres[c].rdelay - base_delay)};
-        max_delay = maxu(max_delay, maxu(impres[c].ldelay, impres[c].rdelay) - base_delay);
+        const ConstHrirSpan hrir{impulse.hrir};
+        const uint base_delay{perHrirMin ? std::min(impulse.ldelay, impulse.rdelay) : min_delay};
+        const uint ldelay{hrir_delay_round(impulse.ldelay - base_delay)};
+        const uint rdelay{hrir_delay_round(impulse.rdelay - base_delay)};
+        max_delay = std::max(max_delay, std::max(impulse.ldelay, impulse.rdelay) - base_delay);
 
-        for(size_t i{0u};i < mChannels.size();++i)
+        auto gains = matrixline->cbegin();
+        ++matrixline;
+        for(auto &result : tmpres)
         {
-            const double mult{AmbiMatrix[c][i]};
-            const size_t numirs{HrirLength - maxz(ldelay, rdelay)};
+            const double mult{*(gains++)};
+            const size_t numirs{HrirLength - std::max(ldelay, rdelay)};
             size_t lidx{ldelay}, ridx{rdelay};
             for(size_t j{0};j < numirs;++j)
             {
-                tmpres[i][lidx++][0] += hrir[j][0] * mult;
-                tmpres[i][ridx++][1] += hrir[j][1] * mult;
+                result[lidx++][0] += hrir[j][0] * mult;
+                result[ridx++][1] += hrir[j][1] * mult;
             }
         }
     }
     impres.clear();
 
-    for(size_t i{0u};i < mChannels.size();++i)
+    auto output = mChannels.begin();
+    for(auto &result : tmpres)
     {
-        auto copy_arr = [](const double2 &in) noexcept -> float2
+        auto cast_array2 = [](const double2 &in) noexcept -> float2
         { return float2{{static_cast<float>(in[0]), static_cast<float>(in[1])}}; };
-        std::transform(tmpres[i].cbegin(), tmpres[i].cend(), mChannels[i].mCoeffs.begin(),
-            copy_arr);
+        std::transform(result.cbegin(), result.cend(), output->mCoeffs.begin(), cast_array2);
+        ++output;
     }
     tmpres.clear();
 

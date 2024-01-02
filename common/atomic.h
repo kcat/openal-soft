@@ -41,7 +41,11 @@ public:
     explicit atomic_unique_ptr(std::nullptr_t) noexcept { }
     explicit atomic_unique_ptr(gsl::owner<T*> ptr) noexcept : mPointer{ptr} { }
     explicit atomic_unique_ptr(std::unique_ptr<T>&& rhs) noexcept : mPointer{rhs.release()} { }
-    ~atomic_unique_ptr() { if(auto ptr = mPointer.load(std::memory_order_relaxed)) D{}(ptr); }
+    ~atomic_unique_ptr()
+    {
+        if(auto ptr = mPointer.exchange(nullptr, std::memory_order_relaxed))
+            D{}(ptr);
+    }
 
     atomic_unique_ptr& operator=(const atomic_unique_ptr&) = delete;
     atomic_unique_ptr& operator=(std::nullptr_t) noexcept

@@ -93,7 +93,7 @@ public:
     { return unique_ptr_t{mPointer.exchange(ptr.release(), m)}; }
 
     [[nodiscard]]
-    auto is_lock_free() const noexcept -> bool { mPointer.is_lock_free(); }
+    auto is_lock_free() const noexcept -> bool { return mPointer.is_lock_free(); }
 
     static constexpr auto is_always_lock_free = std::atomic<gsl::owner<T*>>::is_always_lock_free;
 };

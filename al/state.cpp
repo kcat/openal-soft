@@ -643,18 +643,18 @@ AL_API void AL_APIENTRY alDopplerVelocity(ALfloat value) noexcept
 
 void UpdateContextProps(ALCcontext *context)
 {
-    /* Get an unused proprty container, or allocate a new one as needed. */
+    /* Get an unused property container, or allocate a new one as needed. */
     ContextProps *props{context->mFreeContextProps.load(std::memory_order_acquire)};
     if(!props)
-        props = new ContextProps{};
-    else
     {
-        ContextProps *next;
-        do {
-            next = props->next.load(std::memory_order_relaxed);
-        } while(context->mFreeContextProps.compare_exchange_weak(props, next,
-                std::memory_order_seq_cst, std::memory_order_acquire) == 0);
+        context->allocContextProps();
+        props = context->mFreeContextProps.load(std::memory_order_acquire);
     }
+    ContextProps *next;
+    do {
+        next = props->next.load(std::memory_order_relaxed);
+    } while(context->mFreeContextProps.compare_exchange_weak(props, next,
+        std::memory_order_acq_rel, std::memory_order_acquire) == false);
 
     /* Copy in current property values. */
     ALlistener &listener = context->mListener;

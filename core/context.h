@@ -108,6 +108,7 @@ struct ContextBase {
     void allocVoiceChanges();
     void allocVoiceProps();
     void allocEffectSlotProps();
+    void allocContextProps();
 
     ContextParams mParams;
 
@@ -159,6 +160,12 @@ struct ContextBase {
 
     using EffectSlotPropsCluster = std::unique_ptr<std::array<EffectSlotProps,4>>;
     std::vector<EffectSlotPropsCluster> mEffectSlotPropClusters;
+
+    /* This could be greater than 2, but there should be no way there can be
+     * more than two context property updates in use simultaneously.
+     */
+    using ContextPropsCluster = std::unique_ptr<std::array<ContextProps,2>>;
+    std::vector<ContextPropsCluster> mContextPropClusters;
 
 
     ContextBase(DeviceBase *device);

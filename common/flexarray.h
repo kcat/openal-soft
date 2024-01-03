@@ -43,8 +43,9 @@ struct alignas(std::max(alignment, alignof(al::span<T>))) FlexArrayStorage<T,ali
 };
 
 /* A flexible array type. Used either standalone or at the end of a parent
- * struct, with placement new, to have a run-time-sized array that's embedded
- * with its size.
+ * struct, to have a run-time-sized array that's embedded with its size. Should
+ * be used delicately, ensuring there's no additional data after the FlexArray
+ * member.
  */
 template<typename T, size_t Align=alignof(T)>
 struct FlexArray {

@@ -256,7 +256,7 @@ bool pwire_load()
     }
 
 #define LOAD_FUNC(f) do {                                                     \
-    p##f = al::bit_cast<decltype(p##f)>(GetSymbol(pwire_handle, #f));         \
+    p##f = reinterpret_cast<decltype(p##f)>(GetSymbol(pwire_handle, #f));     \
     if(p##f == nullptr) missing_funcs += "\n" #f;                             \
 } while(0);
     PWIRE_FUNCS(LOAD_FUNC)
@@ -374,11 +374,11 @@ To as(From) noexcept = delete;
  * - pw_metadata
  */
 template<>
-pw_proxy* as(pw_registry *reg) noexcept { return al::bit_cast<pw_proxy*>(reg); }
+pw_proxy* as(pw_registry *reg) noexcept { return reinterpret_cast<pw_proxy*>(reg); }
 template<>
-pw_proxy* as(pw_node *node) noexcept { return al::bit_cast<pw_proxy*>(node); }
+pw_proxy* as(pw_node *node) noexcept { return reinterpret_cast<pw_proxy*>(node); }
 template<>
-pw_proxy* as(pw_metadata *mdata) noexcept { return al::bit_cast<pw_proxy*>(mdata); }
+pw_proxy* as(pw_metadata *mdata) noexcept { return reinterpret_cast<pw_proxy*>(mdata); }
 
 
 struct PwContextDeleter {

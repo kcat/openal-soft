@@ -1196,13 +1196,9 @@ ClockLatency AlsaCapture::getClockLatency()
 
 bool AlsaBackendFactory::init()
 {
-    bool error{false};
-
 #ifdef HAVE_DYNLOAD
     if(!alsa_handle)
     {
-        std::string missing_funcs;
-
         alsa_handle = LoadLib("libasound.so.2");
         if(!alsa_handle)
         {
@@ -1210,27 +1206,25 @@ bool AlsaBackendFactory::init()
             return false;
         }
 
-        error = false;
+        std::string missing_funcs;
 #define LOAD_FUNC(f) do {                                                     \
-    p##f = al::bit_cast<decltype(p##f)>(GetSymbol(alsa_handle, #f));          \
-    if(p##f == nullptr) {                                                     \
-        error = true;                                                         \
-        missing_funcs += "\n" #f;                                             \
-    }                                                                         \
+    p##f = reinterpret_cast<decltype(p##f)>(GetSymbol(alsa_handle, #f));      \
+    if(p##f == nullptr) missing_funcs += "\n" #f;                             \
 } while(0)
         ALSA_FUNCS(LOAD_FUNC);
 #undef LOAD_FUNC
 
-        if(error)
+        if(!missing_funcs.empty())
         {
             WARN("Missing expected functions:%s\n", missing_funcs.c_str());
             CloseLib(alsa_handle);
             alsa_handle = nullptr;
+            return false;
         }
     }
 #endif
 
-    return !error;
+    return true;
 }
 
 bool AlsaBackendFactory::querySupport(BackendType type)

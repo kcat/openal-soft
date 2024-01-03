@@ -109,13 +109,9 @@ jack_options_t ClientOptions = JackNullOption;
 
 bool jack_load()
 {
-    bool error{false};
-
 #ifdef HAVE_DYNLOAD
     if(!jack_handle)
     {
-        std::string missing_funcs;
-
 #ifdef _WIN32
 #define JACKLIB "libjack.dll"
 #else
@@ -128,31 +124,29 @@ bool jack_load()
             return false;
         }
 
-        error = false;
+        std::string missing_funcs;
 #define LOAD_FUNC(f) do {                                                     \
-    p##f = al::bit_cast<decltype(p##f)>(GetSymbol(jack_handle, #f));          \
-    if(p##f == nullptr) {                                                     \
-        error = true;                                                         \
-        missing_funcs += "\n" #f;                                             \
-    }                                                                         \
+    p##f = reinterpret_cast<decltype(p##f)>(GetSymbol(jack_handle, #f));      \
+    if(p##f == nullptr) missing_funcs += "\n" #f;                             \
 } while(0)
         JACK_FUNCS(LOAD_FUNC);
 #undef LOAD_FUNC
         /* Optional symbols. These don't exist in all versions of JACK. */
-#define LOAD_SYM(f) p##f = al::bit_cast<decltype(p##f)>(GetSymbol(jack_handle, #f))
+#define LOAD_SYM(f) p##f = reinterpret_cast<decltype(p##f)>(GetSymbol(jack_handle, #f))
         LOAD_SYM(jack_error_callback);
 #undef LOAD_SYM
 
-        if(error)
+        if(!missing_funcs.empty())
         {
             WARN("Missing expected functions:%s\n", missing_funcs.c_str());
             CloseLib(jack_handle);
             jack_handle = nullptr;
+            return false;
         }
     }
 #endif
 
-    return !error;
+    return true;
 }
 
 

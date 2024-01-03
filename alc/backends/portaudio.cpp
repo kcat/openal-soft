@@ -349,8 +349,6 @@ void PortCapture::captureSamples(std::byte *buffer, uint samples)
 
 bool PortBackendFactory::init()
 {
-    PaError err;
-
 #ifdef HAVE_DYNLOAD
     if(!pa_handle)
     {
@@ -369,7 +367,7 @@ bool PortBackendFactory::init()
             return false;
 
 #define LOAD_FUNC(f) do {                                                     \
-    p##f = al::bit_cast<decltype(p##f)>(GetSymbol(pa_handle, #f));            \
+    p##f = reinterpret_cast<decltype(p##f)>(GetSymbol(pa_handle, #f));        \
     if(p##f == nullptr)                                                       \
     {                                                                         \
         CloseLib(pa_handle);                                                  \
@@ -389,7 +387,7 @@ bool PortBackendFactory::init()
         LOAD_FUNC(Pa_GetStreamInfo);
 #undef LOAD_FUNC
 
-        err = Pa_Initialize();
+        const PaError err{Pa_Initialize()};
         if(err != paNoError)
         {
             ERR("Pa_Initialize() returned an error: %s\n", Pa_GetErrorText(err));
@@ -399,7 +397,8 @@ bool PortBackendFactory::init()
         }
     }
 #else
-    if((err=Pa_Initialize()) != paNoError)
+    const PaError err{Pa_Initialize()};
+    if(err != paNoError)
     {
         ERR("Pa_Initialize() returned an error: %s\n", Pa_GetErrorText(err));
         return false;

@@ -463,7 +463,7 @@ FORCE_ALIGN void AL_APIENTRY alGetPointervDirectSOFT(ALCcontext *context, ALenum
     switch(pname)
     {
     case AL_EVENT_CALLBACK_FUNCTION_SOFT:
-        *values = al::bit_cast<void*>(context->mEventCb);
+        *values = reinterpret_cast<void*>(context->mEventCb);
         break;
 
     case AL_EVENT_CALLBACK_USER_PARAM_SOFT:
@@ -471,7 +471,7 @@ FORCE_ALIGN void AL_APIENTRY alGetPointervDirectSOFT(ALCcontext *context, ALenum
         break;
 
     case AL_DEBUG_CALLBACK_FUNCTION_EXT:
-        *values = al::bit_cast<void*>(context->mDebugCb);
+        *values = reinterpret_cast<void*>(context->mDebugCb);
         break;
 
     case AL_DEBUG_CALLBACK_USER_PARAM_EXT:

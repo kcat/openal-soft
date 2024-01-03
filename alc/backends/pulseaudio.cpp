@@ -1389,9 +1389,6 @@ bool PulseBackendFactory::init()
 #ifdef HAVE_DYNLOAD
     if(!pulse_handle)
     {
-        bool ret{true};
-        std::string missing_funcs;
-
 #ifdef _WIN32
 #define PALIB "libpulse-0.dll"
 #elif defined(__APPLE__) && defined(__MACH__)
@@ -1406,17 +1403,15 @@ bool PulseBackendFactory::init()
             return false;
         }
 
+        std::string missing_funcs;
 #define LOAD_FUNC(x) do {                                                     \
-    p##x = al::bit_cast<decltype(p##x)>(GetSymbol(pulse_handle, #x));         \
-    if(!(p##x)) {                                                             \
-        ret = false;                                                          \
-        missing_funcs += "\n" #x;                                             \
-    }                                                                         \
+    p##x = reinterpret_cast<decltype(p##x)>(GetSymbol(pulse_handle, #x));     \
+    if(!(p##x)) missing_funcs += "\n" #x;                                     \
 } while(0)
         PULSE_FUNCS(LOAD_FUNC)
 #undef LOAD_FUNC
 
-        if(!ret)
+        if(!missing_funcs.empty())
         {
             WARN("Missing expected functions:%s\n", missing_funcs.c_str());
             CloseLib(pulse_handle);

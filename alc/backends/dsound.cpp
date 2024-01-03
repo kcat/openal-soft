@@ -774,7 +774,7 @@ bool DSoundBackendFactory::init()
         }
 
 #define LOAD_FUNC(f) do {                                                     \
-    p##f = al::bit_cast<decltype(p##f)>(GetSymbol(ds_handle, #f));            \
+    p##f = reinterpret_cast<decltype(p##f)>(GetSymbol(ds_handle, #f));        \
     if(!p##f)                                                                 \
     {                                                                         \
         CloseLib(ds_handle);                                                  \

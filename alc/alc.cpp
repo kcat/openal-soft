@@ -1667,12 +1667,16 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
 
         if(ALeffectslot *slot{context->mDefaultSlot.get()})
         {
-            aluInitEffectPanning(slot->mSlot, context);
+            auto *slotbase = slot->mSlot;
+            aluInitEffectPanning(slotbase, context);
+
+            if(auto *props = slotbase->Update.exchange(nullptr, std::memory_order_relaxed))
+                AtomicReplaceHead(context->mFreeEffectSlotProps, props);
 
             EffectState *state{slot->Effect.State.get()};
             state->mOutTarget = device->Dry.Buffer;
             state->deviceUpdate(device, slot->Buffer);
-            slot->updateProps(context);
+            slot->mPropsDirty = true;
         }
 
         if(EffectSlotArray *curarray{context->mActiveAuxSlots.load(std::memory_order_relaxed)})
@@ -1686,14 +1690,21 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
                 auto &slot = (*sublist.EffectSlots)[idx];
                 usemask &= ~(1_u64 << idx);
 
-                aluInitEffectPanning(slot.mSlot, context);
+                auto *slotbase = slot.mSlot;
+                aluInitEffectPanning(slotbase, context);
+
+                if(auto *props = slotbase->Update.exchange(nullptr, std::memory_order_relaxed))
+                    AtomicReplaceHead(context->mFreeEffectSlotProps, props);
 
                 EffectState *state{slot.Effect.State.get()};
                 state->mOutTarget = device->Dry.Buffer;
                 state->deviceUpdate(device, slot.Buffer);
-                slot.updateProps(context);
+                slot.mPropsDirty = true;
             }
         }
+        /* Clear all effect slot props to let them get allocated again. */
+        context->mEffectSlotPropClusters.clear();
+        context->mFreeEffectSlotProps.store(nullptr, std::memory_order_relaxed);
         slotlock.unlock();
 
         const uint num_sends{device->NumAuxSends};
@@ -1725,8 +1736,7 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
             }
         }
 
-        auto voicelist = context->getVoicesSpan();
-        for(Voice *voice : voicelist)
+        for(Voice *voice : context->getVoicesSpan())
         {
             /* Clear extraneous property set sends. */
             std::fill(std::begin(voice->mProps.Send)+num_sends, std::end(voice->mProps.Send),
@@ -1758,6 +1768,7 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
 
         context->mPropsDirty = false;
         UpdateContextProps(context);
+        UpdateAllEffectSlotProps(context);
         UpdateAllSourceProps(context);
     }
     mixer_mode.leave();

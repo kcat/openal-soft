@@ -40,15 +40,6 @@ ContextBase::~ContextBase()
     }
     TRACE("Freed %zu context property object%s\n", count, (count==1)?"":"s");
 
-    count = 0;
-    EffectSlotProps *eprops{mFreeEffectslotProps.exchange(nullptr, std::memory_order_acquire)};
-    while(std::unique_ptr<EffectSlotProps> old{eprops})
-    {
-        eprops = old->next.load(std::memory_order_relaxed);
-        ++count;
-    }
-    TRACE("Freed %zu AuxiliaryEffectSlot property object%s\n", count, (count==1)?"":"s");
-
     if(std::unique_ptr<EffectSlotArray> curarray{mActiveAuxSlots.exchange(nullptr, std::memory_order_relaxed)})
         std::destroy_n(curarray->end(), curarray->size());
 
@@ -146,6 +137,26 @@ void ContextBase::allocVoices(size_t addcount)
         std::ignore = mDevice->waitForMix();
 }
 
+
+void ContextBase::allocEffectSlotProps()
+{
+    static constexpr size_t clustersize{std::tuple_size_v<EffectSlotPropsCluster::element_type>};
+
+    TRACE("Increasing allocated effect slot properties to %zu\n",
+        (mEffectSlotPropClusters.size()+1) * clustersize);
+
+    auto clusterptr = std::make_unique<EffectSlotPropsCluster::element_type>();
+    auto cluster = al::span{*clusterptr};
+    for(size_t i{1};i < clustersize;++i)
+        cluster[i-1].next.store(std::addressof(cluster[i]), std::memory_order_relaxed);
+    auto *newcluster = mEffectSlotPropClusters.emplace_back(std::move(clusterptr)).get();
+
+    EffectSlotProps *oldhead{mFreeEffectSlotProps.load(std::memory_order_acquire)};
+    do {
+        newcluster->back().next.store(oldhead, std::memory_order_relaxed);
+    } while(mFreeEffectSlotProps.compare_exchange_weak(oldhead, newcluster->data(),
+        std::memory_order_acq_rel, std::memory_order_acquire) == false);
+}
 
 EffectSlot *ContextBase::getEffectSlot()
 {

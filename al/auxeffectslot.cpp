@@ -877,9 +877,8 @@ ALeffectslot::~ALeffectslot()
         DecrementRef(Buffer->ref);
     Buffer = nullptr;
 
-    if(std::unique_ptr<EffectSlotProps> props{mSlot->Update.exchange(nullptr)})
-        TRACE("Freed unapplied AuxiliaryEffectSlot update %p\n",
-            decltype(std::declval<void*>()){props.get()});
+    if(auto *slot = mSlot->Update.exchange(nullptr, std::memory_order_relaxed))
+        slot->State = nullptr;
 
     mSlot->mEffectState = nullptr;
     mSlot->InUse = false;
@@ -917,7 +916,7 @@ ALenum ALeffectslot::initEffect(ALuint effectId, ALenum effectType, const Effect
     EffectId = effectId;
 
     /* Remove state references from old effect slot property updates. */
-    EffectSlotProps *props{context->mFreeEffectslotProps.load()};
+    EffectSlotProps *props{context->mFreeEffectSlotProps.load()};
     while(props)
     {
         props->State = nullptr;
@@ -930,17 +929,17 @@ ALenum ALeffectslot::initEffect(ALuint effectId, ALenum effectType, const Effect
 void ALeffectslot::updateProps(ALCcontext *context)
 {
     /* Get an unused property container, or allocate a new one as needed. */
-    EffectSlotProps *props{context->mFreeEffectslotProps.load(std::memory_order_relaxed)};
+    EffectSlotProps *props{context->mFreeEffectSlotProps.load(std::memory_order_acquire)};
     if(!props)
-        props = new EffectSlotProps{};
-    else
     {
-        EffectSlotProps *next;
-        do {
-            next = props->next.load(std::memory_order_relaxed);
-        } while(context->mFreeEffectslotProps.compare_exchange_weak(props, next,
-                std::memory_order_seq_cst, std::memory_order_acquire) == 0);
+        context->allocEffectSlotProps();
+        props = context->mFreeEffectSlotProps.load(std::memory_order_acquire);
     }
+    EffectSlotProps *next;
+    do {
+        next = props->next.load(std::memory_order_relaxed);
+    } while(context->mFreeEffectSlotProps.compare_exchange_weak(props, next,
+        std::memory_order_acq_rel, std::memory_order_acquire) == false);
 
     /* Copy in current property values. */
     props->Gain = Gain;
@@ -959,7 +958,7 @@ void ALeffectslot::updateProps(ALCcontext *context)
          * freelist.
          */
         props->State = nullptr;
-        AtomicReplaceHead(context->mFreeEffectslotProps, props);
+        AtomicReplaceHead(context->mFreeEffectSlotProps, props);
     }
 }
 

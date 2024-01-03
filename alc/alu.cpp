@@ -498,7 +498,7 @@ bool CalcEffectSlotParams(EffectSlot *slot, EffectSlot **sorted_slots, ContextBa
         }
     }
 
-    AtomicReplaceHead(context->mFreeEffectslotProps, props);
+    AtomicReplaceHead(context->mFreeEffectSlotProps, props);
 
     EffectTarget output;
     if(EffectSlot *target{slot->Target})

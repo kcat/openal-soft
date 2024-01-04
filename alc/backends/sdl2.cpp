@@ -26,6 +26,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <string>
+#include <string_view>
 
 #include "almalloc.h"
 #include "alnumeric.h"
@@ -46,8 +47,9 @@ namespace {
 #define DEVNAME_PREFIX ""
 #endif
 
-/* NOLINTNEXTLINE(*-avoid-c-arrays) */
-constexpr char defaultDeviceName[]{DEVNAME_PREFIX "Default Device"};
+constexpr auto getDevicePrefix() noexcept -> std::string_view { return DEVNAME_PREFIX; }
+constexpr auto getDefaultDeviceName() noexcept -> std::string_view
+{ return DEVNAME_PREFIX "Default Device"; }
 
 struct Sdl2Backend final : public BackendBase {
     Sdl2Backend(DeviceBase *device) noexcept : BackendBase{device} { }
@@ -107,6 +109,7 @@ void Sdl2Backend::open(std::string_view name)
     /* Passing nullptr to SDL_OpenAudioDevice opens a default, which isn't
      * necessarily the first in the list.
      */
+    const auto defaultDeviceName = getDefaultDeviceName();
     SDL_AudioDeviceID devid;
     if(name.empty() || name == defaultDeviceName)
     {
@@ -115,13 +118,13 @@ void Sdl2Backend::open(std::string_view name)
     }
     else
     {
-        const size_t prefix_len = strlen(DEVNAME_PREFIX);
-        if(name.length() >= prefix_len && strncmp(name.data(), DEVNAME_PREFIX, prefix_len) == 0)
+        const auto namePrefix = getDevicePrefix();
+        if(name.size() >= namePrefix.size() && name.substr(0, namePrefix.size()) == namePrefix)
         {
             /* Copy the string_view to a string to ensure it's null terminated
              * for this call.
              */
-            const std::string devname{name.substr(prefix_len)};
+            const std::string devname{name.substr(namePrefix.size())};
             devid = SDL_OpenAudioDevice(devname.c_str(), SDL_FALSE, &want, &have,
                 SDL_AUDIO_ALLOW_ANY_CHANGE);
         }
@@ -216,13 +219,16 @@ std::string SDL2BackendFactory::probe(BackendType type)
     int num_devices{SDL_GetNumAudioDevices(SDL_FALSE)};
 
     /* Includes null char. */
-    outnames.append(defaultDeviceName, sizeof(defaultDeviceName));
+    outnames += getDefaultDeviceName();
+    outnames += '\0';
     for(int i{0};i < num_devices;++i)
     {
-        std::string name{DEVNAME_PREFIX};
-        name += SDL_GetAudioDeviceName(i, SDL_FALSE);
-        if(!name.empty())
-            outnames.append(name.c_str(), name.length()+1);
+        outnames += getDevicePrefix();
+        if(const char *name = SDL_GetAudioDeviceName(i, SDL_FALSE))
+            outnames += name;
+        else
+            outnames += "Unknown Device Name #"+std::to_string(i);
+        outnames += '\0';
     }
     return outnames;
 }

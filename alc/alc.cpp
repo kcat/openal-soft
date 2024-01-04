@@ -2057,7 +2057,7 @@ ALC_API const ALCchar* ALC_APIENTRY alcGetString(ALCdevice *Device, ALCenum para
             ProbeAllDevicesList();
 
         /* Copy first entry as default. */
-        alcDefaultAllDevicesSpecifier = alcAllDevicesList.c_str();
+        alcDefaultAllDevicesSpecifier = alcAllDevicesList.substr(0, alcAllDevicesList.find('\0'));
         value = alcDefaultAllDevicesSpecifier.c_str();
         break;
 
@@ -2066,7 +2066,8 @@ ALC_API const ALCchar* ALC_APIENTRY alcGetString(ALCdevice *Device, ALCenum para
             ProbeCaptureDeviceList();
 
         /* Copy first entry as default. */
-        alcCaptureDefaultDeviceSpecifier = alcCaptureDeviceList.c_str();
+        alcCaptureDefaultDeviceSpecifier = alcCaptureDeviceList.substr(0,
+            alcCaptureDeviceList.find('\0'));
         value = alcCaptureDefaultDeviceSpecifier.c_str();
         break;
 

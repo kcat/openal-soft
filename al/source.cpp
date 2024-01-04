@@ -3648,9 +3648,6 @@ SourceSubList::~SourceSubList()
 
 
 #ifdef ALSOFT_EAX
-constexpr const ALsource::EaxFxSlotIds ALsource::eax4_fx_slot_ids;
-constexpr const ALsource::EaxFxSlotIds ALsource::eax5_fx_slot_ids;
-
 void ALsource::eaxInitialize(ALCcontext *context) noexcept
 {
     assert(context != nullptr);

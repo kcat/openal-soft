@@ -203,7 +203,6 @@ public:
     static ALeffect sDefaultEffect;
 
 #ifdef ALSOFT_EAX
-public:
     bool hasEax() const noexcept { return mEaxIsInitialized; }
     bool eaxIsCapable() const noexcept;
 

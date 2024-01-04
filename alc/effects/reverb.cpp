@@ -22,6 +22,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cassert>
 #include <cstdint>
 #include <cstdio>
 #include <functional>
@@ -289,20 +290,16 @@ struct DelayLineI {
      * of 2 to allow the use of bit-masking instead of a modulus for wrapping.
      */
     size_t Mask{0u};
-    union {
-        uintptr_t LineOffset{0u};
-        std::array<float,NUM_LINES> *Line;
-    };
+    std::array<float,NUM_LINES> *Line;
 
     /* Given the allocated sample buffer, this function updates each delay line
      * offset.
      */
     void realizeLineOffset(std::array<float,NUM_LINES> *sampleBuffer) noexcept
-    { Line = sampleBuffer + LineOffset; }
+    { Line = sampleBuffer; }
 
     /* Calculate the length of a delay line and store its mask and offset. */
-    uint calcLineLength(const float length, const uintptr_t offset, const float frequency,
-        const uint extra)
+    size_t calcLineLength(const float length, const float frequency, const uint extra)
     {
         /* All line lengths are powers of 2, calculated from their lengths in
          * seconds, rounded up.
@@ -312,7 +309,6 @@ struct DelayLineI {
 
         /* All lines share a single sample buffer. */
         Mask = samples - 1;
-        LineOffset = offset;
 
         /* Return the sample count for accumulation. */
         return samples;
@@ -676,11 +672,6 @@ inline float CalcDelayLengthMult(float density)
  */
 void ReverbState::allocLines(const float frequency)
 {
-    /* All delay line lengths are calculated to accommodate the full range of
-     * lengths given their respective parameters.
-     */
-    size_t totalSamples{0u};
-
     /* Multiplier for the maximum density value, i.e. density=1, which is
      * actually the least density...
      */
@@ -690,8 +681,12 @@ void ReverbState::allocLines(const float frequency)
      * time and depth coefficient, and halfed for the low-to-high frequency
      * swing.
      */
-    constexpr float max_mod_delay{MaxModulationTime*MODULATION_DEPTH_COEFF / 2.0f};
+    static constexpr float max_mod_delay{MaxModulationTime*MODULATION_DEPTH_COEFF / 2.0f};
 
+    std::array<size_t,12> lineoffsets{};
+    size_t oidx{0};
+
+    size_t totalSamples{0u};
     for(auto &pipeline : mPipelines)
     {
         /* The main delay length includes the maximum early reflection delay,
@@ -700,37 +695,45 @@ void ReverbState::allocLines(const float frequency)
          * update size (BufferLineSize) for block processing.
          */
         float length{ReverbMaxReflectionsDelay + EARLY_TAP_LENGTHS.back()*multiplier};
-        totalSamples += pipeline.mEarlyDelayIn.calcLineLength(length, totalSamples, frequency,
-            BufferLineSize);
+        size_t count{pipeline.mEarlyDelayIn.calcLineLength(length, frequency, BufferLineSize)};
+        lineoffsets[oidx++] = totalSamples;
+        totalSamples += count;
 
-        constexpr float LateLineDiffAvg{(LATE_LINE_LENGTHS.back()-LATE_LINE_LENGTHS.front()) /
+        static constexpr float LateDiffAvg{(LATE_LINE_LENGTHS.back()-LATE_LINE_LENGTHS.front()) /
             float{NUM_LINES}};
-        length = ReverbMaxLateReverbDelay + LateLineDiffAvg*multiplier;
-        totalSamples += pipeline.mLateDelayIn.calcLineLength(length, totalSamples, frequency,
-            BufferLineSize);
+        length = ReverbMaxLateReverbDelay + LateDiffAvg*multiplier;
+        count = pipeline.mLateDelayIn.calcLineLength(length, frequency, BufferLineSize);
+        lineoffsets[oidx++] = totalSamples;
+        totalSamples += count;
 
         /* The early vector all-pass line. */
         length = EARLY_ALLPASS_LENGTHS.back() * multiplier;
-        totalSamples += pipeline.mEarly.VecAp.Delay.calcLineLength(length, totalSamples, frequency,
-            0);
+        count = pipeline.mEarly.VecAp.Delay.calcLineLength(length, frequency, 0);
+        lineoffsets[oidx++] = totalSamples;
+        totalSamples += count;
 
         /* The early reflection line. */
         length = EARLY_LINE_LENGTHS.back() * multiplier;
-        totalSamples += pipeline.mEarly.Delay.calcLineLength(length, totalSamples, frequency,
-            MAX_UPDATE_SAMPLES);
+        count = pipeline.mEarly.Delay.calcLineLength(length, frequency, MAX_UPDATE_SAMPLES);
+        lineoffsets[oidx++] = totalSamples;
+        totalSamples += count;
 
         /* The late vector all-pass line. */
         length = LATE_ALLPASS_LENGTHS.back() * multiplier;
-        totalSamples += pipeline.mLate.VecAp.Delay.calcLineLength(length, totalSamples, frequency,
-            0);
+        count = pipeline.mLate.VecAp.Delay.calcLineLength(length, frequency, 0);
+        lineoffsets[oidx++] = totalSamples;
+        totalSamples += count;
 
         /* The late delay lines are calculated from the largest maximum density
          * line length, and the maximum modulation delay. Four additional
          * samples are needed for resampling the modulator delay.
          */
         length = LATE_LINE_LENGTHS.back()*multiplier + max_mod_delay;
-        totalSamples += pipeline.mLate.Delay.calcLineLength(length, totalSamples, frequency, 4);
+        count = pipeline.mLate.Delay.calcLineLength(length, frequency, 4);
+        lineoffsets[oidx++] = totalSamples;
+        totalSamples += count;
     }
+    assert(oidx == lineoffsets.size());
 
     if(totalSamples != mSampleBuffer.size())
         decltype(mSampleBuffer)(totalSamples).swap(mSampleBuffer);
@@ -739,14 +742,15 @@ void ReverbState::allocLines(const float frequency)
     std::fill(mSampleBuffer.begin(), mSampleBuffer.end(), decltype(mSampleBuffer)::value_type{});
 
     /* Update all delays to reflect the new sample buffer. */
+    oidx = 0;
     for(auto &pipeline : mPipelines)
     {
-        pipeline.mEarlyDelayIn.realizeLineOffset(mSampleBuffer.data());
-        pipeline.mLateDelayIn.realizeLineOffset(mSampleBuffer.data());
-        pipeline.mEarly.VecAp.Delay.realizeLineOffset(mSampleBuffer.data());
-        pipeline.mEarly.Delay.realizeLineOffset(mSampleBuffer.data());
-        pipeline.mLate.VecAp.Delay.realizeLineOffset(mSampleBuffer.data());
-        pipeline.mLate.Delay.realizeLineOffset(mSampleBuffer.data());
+        pipeline.mEarlyDelayIn.realizeLineOffset(mSampleBuffer.data() + lineoffsets[oidx++]);
+        pipeline.mLateDelayIn.realizeLineOffset(mSampleBuffer.data() + lineoffsets[oidx++]);
+        pipeline.mEarly.VecAp.Delay.realizeLineOffset(mSampleBuffer.data() + lineoffsets[oidx++]);
+        pipeline.mEarly.Delay.realizeLineOffset(mSampleBuffer.data() + lineoffsets[oidx++]);
+        pipeline.mLate.VecAp.Delay.realizeLineOffset(mSampleBuffer.data() + lineoffsets[oidx++]);
+        pipeline.mLate.Delay.realizeLineOffset(mSampleBuffer.data() + lineoffsets[oidx++]);
     }
 }
 

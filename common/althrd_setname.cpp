@@ -60,7 +60,7 @@ using setname_t4 = int(*)(pthread_t, const char*, void*);
 { func(pthread_self(), name); }
 
 [[maybe_unused]] void setname_caller(setname_t4 func, const char *name)
-{ func(pthread_self(), "%s", static_cast<void*>(const_cast<char*>(name))); }
+{ func(pthread_self(), "%s", const_cast<char*>(name)); /* NOLINT(*-const-cast) */ }
 
 } // namespace
 

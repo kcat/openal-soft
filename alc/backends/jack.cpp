@@ -371,7 +371,7 @@ int JackPlayback::process(jack_nframes_t numframes) noexcept
         jack_nframes_t todo{minu(numframes, static_cast<uint>(data.first.len))};
         auto write_first = [&data,numchans,todo](float *outbuf) -> float*
         {
-            const float *RESTRICT in = reinterpret_cast<float*>(data.first.buf);
+            const auto *RESTRICT in = reinterpret_cast<const float*>(data.first.buf);
             auto deinterlace_input = [&in,numchans]() noexcept -> float
             {
                 float ret{*in};
@@ -390,7 +390,7 @@ int JackPlayback::process(jack_nframes_t numframes) noexcept
         {
             auto write_second = [&data,numchans,todo](float *outbuf) -> float*
             {
-                const float *RESTRICT in = reinterpret_cast<float*>(data.second.buf);
+                const auto *RESTRICT in = reinterpret_cast<const float*>(data.second.buf);
                 auto deinterlace_input = [&in,numchans]() noexcept -> float
                 {
                     float ret{*in};

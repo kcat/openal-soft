@@ -1912,7 +1912,7 @@ void ProcessVoiceChanges(ContextBase *ctx)
     ctx->mCurrentVoiceChange.store(cur, std::memory_order_release);
 }
 
-void ProcessParamUpdates(ContextBase *ctx, const EffectSlotArray &slots,
+void ProcessParamUpdates(ContextBase *ctx, const al::span<EffectSlot*> slots,
     const al::span<Voice*> voices)
 {
     ProcessVoiceChanges(ctx);
@@ -1921,7 +1921,7 @@ void ProcessParamUpdates(ContextBase *ctx, const EffectSlotArray &slots,
     if(!ctx->mHoldUpdates.load(std::memory_order_acquire)) LIKELY
     {
         bool force{CalcContextParams(ctx)};
-        auto sorted_slots = const_cast<EffectSlot**>(slots.data() + slots.size());
+        auto sorted_slots = al::to_address(slots.end());
         for(EffectSlot *slot : slots)
             force |= CalcEffectSlotParams(slot, sorted_slots, ctx);
 
@@ -1945,7 +1945,7 @@ void ProcessContexts(DeviceBase *device, const uint SamplesToDo)
 
     for(ContextBase *ctx : *device->mContexts.load(std::memory_order_acquire))
     {
-        const EffectSlotArray &auxslots = *ctx->mActiveAuxSlots.load(std::memory_order_acquire);
+        auto auxslots = al::span{*ctx->mActiveAuxSlots.load(std::memory_order_acquire)};
         const al::span<Voice*> voices{ctx->getVoicesSpanAcquired()};
 
         /* Process pending property updates for objects on the context. */
@@ -1972,8 +1972,7 @@ void ProcessContexts(DeviceBase *device, const uint SamplesToDo)
             /* Sort the slots into extra storage, so that effect slots come
              * before their effect slot target (or their targets' target).
              */
-            const al::span sorted_slots{const_cast<EffectSlot**>(al::to_address(auxslots.end())),
-                auxslots.size()};
+            const al::span sorted_slots{al::to_address(auxslots.end()), auxslots.size()};
             /* Skip sorting if it has already been done. */
             if(!sorted_slots[0])
             {

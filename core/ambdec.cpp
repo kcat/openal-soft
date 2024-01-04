@@ -53,7 +53,7 @@ std::optional<std::string> make_error(size_t linenum, const char *fmt, ...)
     auto &str = ret.emplace();
 
     str.resize(256);
-    int printed{std::snprintf(const_cast<char*>(str.data()), str.length(), "Line %zu: ", linenum)};
+    int printed{std::snprintf(str.data(), str.length(), "Line %zu: ", linenum)};
     if(printed < 0) printed = 0;
     auto plen = std::min(static_cast<size_t>(printed), str.length());
 

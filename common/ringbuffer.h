@@ -33,7 +33,6 @@ public:
     };
     using DataPair = std::pair<Data,Data>;
 
-
     RingBuffer(const std::size_t count) : mBuffer{count} { }
 
     /** Reset the read and write pointers to zero. This is not thread safe. */
@@ -44,13 +43,13 @@ public:
      * hold the current readable data. If the readable data is in one segment
      * the second segment has zero length.
      */
-    [[nodiscard]] auto getReadVector() const noexcept -> DataPair;
+    [[nodiscard]] auto getReadVector() noexcept -> DataPair;
     /**
      * The non-copying data writer. Returns two ringbuffer data pointers that
      * hold the current writeable data. If the writeable data is in one segment
      * the second segment has zero length.
      */
-    [[nodiscard]] auto getWriteVector() const noexcept -> DataPair;
+    [[nodiscard]] auto getWriteVector() noexcept -> DataPair;
 
     /**
      * Return the number of elements available for reading. This is the number

@@ -161,7 +161,7 @@ std::size_t RingBuffer::write(const void *src, std::size_t cnt) noexcept
 }
 
 
-auto RingBuffer::getReadVector() const noexcept -> DataPair
+auto RingBuffer::getReadVector() noexcept -> DataPair
 {
     DataPair ret;
 
@@ -176,15 +176,15 @@ auto RingBuffer::getReadVector() const noexcept -> DataPair
     {
         /* Two part vector: the rest of the buffer after the current read ptr,
          * plus some from the start of the buffer. */
-        ret.first.buf = const_cast<std::byte*>(mBuffer.data() + r*mElemSize);
+        ret.first.buf = mBuffer.data() + r*mElemSize;
         ret.first.len = mSizeMask+1 - r;
-        ret.second.buf = const_cast<std::byte*>(mBuffer.data());
+        ret.second.buf = mBuffer.data();
         ret.second.len = cnt2 & mSizeMask;
     }
     else
     {
         /* Single part vector: just the rest of the buffer */
-        ret.first.buf = const_cast<std::byte*>(mBuffer.data() + r*mElemSize);
+        ret.first.buf = mBuffer.data() + r*mElemSize;
         ret.first.len = free_cnt;
         ret.second.buf = nullptr;
         ret.second.len = 0;
@@ -193,7 +193,7 @@ auto RingBuffer::getReadVector() const noexcept -> DataPair
     return ret;
 }
 
-auto RingBuffer::getWriteVector() const noexcept -> DataPair
+auto RingBuffer::getWriteVector() noexcept -> DataPair
 {
     DataPair ret;
 
@@ -208,14 +208,14 @@ auto RingBuffer::getWriteVector() const noexcept -> DataPair
     {
         /* Two part vector: the rest of the buffer after the current write ptr,
          * plus some from the start of the buffer. */
-        ret.first.buf = const_cast<std::byte*>(mBuffer.data() + w*mElemSize);
+        ret.first.buf = mBuffer.data() + w*mElemSize;
         ret.first.len = mSizeMask+1 - w;
-        ret.second.buf = const_cast<std::byte*>(mBuffer.data());
+        ret.second.buf = mBuffer.data();
         ret.second.len = cnt2 & mSizeMask;
     }
     else
     {
-        ret.first.buf = const_cast<std::byte*>(mBuffer.data() + w*mElemSize);
+        ret.first.buf = mBuffer.data() + w*mElemSize;
         ret.first.len = free_cnt;
         ret.second.buf = nullptr;
         ret.second.len = 0;

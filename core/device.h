@@ -236,10 +236,7 @@ struct DeviceBase {
     alignas(16) std::array<float,MixerLineSize+MaxResamplerPadding> mResampleData{};
 
     alignas(16) std::array<float,BufferLineSize> FilteredData{};
-    union {
-        alignas(16) std::array<float,BufferLineSize+HrtfHistoryLength> HrtfSourceData{};
-        alignas(16) std::array<float,BufferLineSize> NfcSampleData;
-    };
+    alignas(16) std::array<float,BufferLineSize+HrtfHistoryLength> ExtraSampleData{};
 
     /* Persistent storage for HRTF mixing. */
     alignas(16) std::array<float2,BufferLineSize+HrirLength> HrtfAccumData{};

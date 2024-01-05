@@ -595,16 +595,16 @@ void DoHrtfMix(const float *samples, const uint DstBufferSize, DirectParams &par
     DeviceBase *Device)
 {
     const uint IrSize{Device->mIrSize};
-    auto &HrtfSamples = Device->HrtfSourceData;
-    auto &AccumSamples = Device->HrtfAccumData;
+    const auto HrtfSamples = al::span{Device->ExtraSampleData};
+    const auto AccumSamples = al::span{Device->HrtfAccumData};
 
     /* Copy the HRTF history and new input samples into a temp buffer. */
     auto src_iter = std::copy(parms.Hrtf.History.begin(), parms.Hrtf.History.end(),
-        std::begin(HrtfSamples));
+        HrtfSamples.begin());
     std::copy_n(samples, DstBufferSize, src_iter);
     /* Copy the last used samples back into the history buffer for later. */
     if(IsPlaying) LIKELY
-        std::copy_n(std::begin(HrtfSamples) + DstBufferSize, parms.Hrtf.History.size(),
+        std::copy_n(HrtfSamples.begin() + DstBufferSize, parms.Hrtf.History.size(),
             parms.Hrtf.History.begin());
 
     /* If fading and this is the first mixing pass, fade between the IRs. */
@@ -679,7 +679,7 @@ void DoNfcMix(const al::span<const float> samples, FloatBufferLine *OutBuffer, D
     ++CurrentGains;
     ++TargetGains;
 
-    const al::span<float> nfcsamples{Device->NfcSampleData.data(), samples.size()};
+    const auto nfcsamples = al::span{Device->ExtraSampleData.begin(), samples.size()};
     size_t order{1};
     while(const size_t chancount{Device->NumChannelsPerOrder[order]})
     {

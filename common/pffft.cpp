@@ -396,7 +396,7 @@ constexpr auto V4sfAlignVal = std::align_val_t(V4sfAlignment);
   passf2 and passb2 has been merged here, fsign = -1 for passf2, +1 for passb2
 */
 NOINLINE void passf2_ps(const size_t ido, const size_t l1, const v4sf *cc, v4sf *RESTRICT ch,
-    const float *wa1, const float fsign)
+    const float *const wa1, const float fsign)
 {
     const size_t l1ido{l1*ido};
     if(ido <= 2)
@@ -432,13 +432,14 @@ NOINLINE void passf2_ps(const size_t ido, const size_t l1, const v4sf *cc, v4sf 
   passf3 and passb3 has been merged here, fsign = -1 for passf3, +1 for passb3
 */
 NOINLINE void passf3_ps(const size_t ido, const size_t l1, const v4sf *cc, v4sf *RESTRICT ch,
-    const float *wa1, const float *wa2, const float fsign)
+    const float *const wa1, const float fsign)
 {
     assert(ido > 2);
 
     const v4sf taur{LD_PS1(-0.5f)};
     const v4sf taui{LD_PS1(0.866025403784439f*fsign)};
     const size_t l1ido{l1*ido};
+    const auto wa2 = wa1 + ido;
     for(size_t k{0};k < l1ido;k += ido, cc += 3*ido, ch +=ido)
     {
         for(size_t i{0};i < ido-1;i += 2)
@@ -467,7 +468,7 @@ NOINLINE void passf3_ps(const size_t ido, const size_t l1, const v4sf *cc, v4sf 
 } /* passf3 */
 
 NOINLINE void passf4_ps(const size_t ido, const size_t l1, const v4sf *cc, v4sf *RESTRICT ch,
-    const float *wa1, const float *wa2, const float *wa3, const float fsign)
+    const float *const wa1, const float fsign)
 {
     /* fsign == -1 for forward transform and +1 for backward transform */
     const v4sf vsign{LD_PS1(fsign)};
@@ -497,6 +498,8 @@ NOINLINE void passf4_ps(const size_t ido, const size_t l1, const v4sf *cc, v4sf 
     }
     else
     {
+        const auto wa2 = wa1 + ido;
+        const auto wa3 = wa2 + ido;
         for(size_t k{0};k < l1ido;k += ido, ch+=ido, cc += 4*ido)
         {
             for(size_t i{0};i < ido-1;i+=2)
@@ -542,7 +545,7 @@ NOINLINE void passf4_ps(const size_t ido, const size_t l1, const v4sf *cc, v4sf 
  * passf5 and passb5 has been merged here, fsign = -1 for passf5, +1 for passb5
  */
 NOINLINE void passf5_ps(const size_t ido, const size_t l1, const v4sf *cc, v4sf *RESTRICT ch,
-    const float *wa1, const float *wa2, const float *wa3, const float *wa4, const float fsign)
+    const float *const wa1, const float fsign)
 {
     const v4sf tr11{LD_PS1(0.309016994374947f)};
     const v4sf tr12{LD_PS1(-0.809016994374947f)};
@@ -553,6 +556,10 @@ NOINLINE void passf5_ps(const size_t ido, const size_t l1, const v4sf *cc, v4sf 
 #define ch_ref(a_1,a_3) ch[((a_3)-1)*l1*ido + (a_1) + 1]
 
     assert(ido > 2);
+
+    const auto wa2 = wa1 + ido;
+    const auto wa3 = wa2 + ido;
+    const auto wa4 = wa3 + ido;
     for(size_t k{0};k < l1;++k, cc += 5*ido, ch += ido)
     {
         for(size_t i{0};i < ido-1;i += 2)
@@ -604,7 +611,7 @@ NOINLINE void passf5_ps(const size_t ido, const size_t l1, const v4sf *cc, v4sf 
 }
 
 NOINLINE void radf2_ps(const size_t ido, const size_t l1, const v4sf *RESTRICT cc,
-    v4sf *RESTRICT ch, const float *wa1)
+    v4sf *RESTRICT ch, const float *const wa1)
 {
     const size_t l1ido{l1*ido};
     for(size_t k{0};k < l1ido;k += ido)
@@ -643,7 +650,7 @@ NOINLINE void radf2_ps(const size_t ido, const size_t l1, const v4sf *RESTRICT c
 
 
 NOINLINE void radb2_ps(const size_t ido, const size_t l1, const v4sf *cc, v4sf *RESTRICT ch,
-    const float *wa1)
+    const float *const wa1)
 {
     const size_t l1ido{l1*ido};
     for(size_t k{0};k < l1ido;k += ido)
@@ -688,7 +695,7 @@ NOINLINE void radb2_ps(const size_t ido, const size_t l1, const v4sf *cc, v4sf *
 } /* radb2 */
 
 void radf3_ps(const size_t ido, const size_t l1, const v4sf *RESTRICT cc, v4sf *RESTRICT ch,
-    const float *wa1, const float *wa2)
+    const float *const wa1)
 {
     const v4sf taur{LD_PS1(-0.5f)};
     const v4sf taui{LD_PS1(0.866025403784439f)};
@@ -701,6 +708,8 @@ void radf3_ps(const size_t ido, const size_t l1, const v4sf *RESTRICT cc, v4sf *
     }
     if(ido == 1)
         return;
+
+    const auto wa2 = wa1 + ido;
     for(size_t k{0};k < l1;++k)
     {
         for(size_t i{2};i < ido;i += 2)
@@ -736,7 +745,7 @@ void radf3_ps(const size_t ido, const size_t l1, const v4sf *RESTRICT cc, v4sf *
 
 
 void radb3_ps(const size_t ido, const size_t l1, const v4sf *RESTRICT cc, v4sf *RESTRICT ch,
-    const float *wa1, const float *wa2)
+    const float *const wa1)
 {
     static constexpr float taur{-0.5f};
     static constexpr float taui{0.866025403784439f};
@@ -756,6 +765,8 @@ void radb3_ps(const size_t ido, const size_t l1, const v4sf *RESTRICT cc, v4sf *
     }
     if(ido == 1)
         return;
+
+    const auto wa2 = wa1 + ido;
     const v4sf vtaui{LD_PS1(taui)};
     for(size_t k{0};k < l1;++k)
     {
@@ -785,8 +796,7 @@ void radb3_ps(const size_t ido, const size_t l1, const v4sf *RESTRICT cc, v4sf *
 } /* radb3 */
 
 NOINLINE void radf4_ps(const size_t ido, const size_t l1, const v4sf *RESTRICT cc,
-    v4sf *RESTRICT ch, const float *RESTRICT wa1, const float *RESTRICT wa2,
-    const float *RESTRICT wa3)
+    v4sf *RESTRICT ch, const float *const wa1)
 {
     const size_t l1ido{l1*ido};
     {
@@ -812,6 +822,9 @@ NOINLINE void radf4_ps(const size_t ido, const size_t l1, const v4sf *RESTRICT c
         return;
     if(ido != 2)
     {
+        const auto wa2 = wa1 + ido;
+        const auto wa3 = wa2 + ido;
+
         for(size_t k{0};k < l1ido;k += ido)
         {
             const v4sf *RESTRICT pc{cc + 1 + k};
@@ -876,8 +889,7 @@ NOINLINE void radf4_ps(const size_t ido, const size_t l1, const v4sf *RESTRICT c
 
 
 NOINLINE void radb4_ps(const size_t ido, const size_t l1, const v4sf *RESTRICT cc,
-    v4sf *RESTRICT ch, const float *RESTRICT wa1, const float *RESTRICT wa2,
-    const float *RESTRICT wa3)
+    v4sf *RESTRICT ch, const float *const wa1)
 {
     const v4sf two{LD_PS1(2.0f)};
     const size_t l1ido{l1*ido};
@@ -905,6 +917,9 @@ NOINLINE void radb4_ps(const size_t ido, const size_t l1, const v4sf *RESTRICT c
         return;
     if(ido != 2)
     {
+        const auto wa2 = wa1 + ido;
+        const auto wa3 = wa2 + ido;
+
         for(size_t k{0};k < l1ido;k += ido)
         {
             const v4sf *RESTRICT pc{cc - 1 + 4*k};
@@ -962,7 +977,7 @@ NOINLINE void radb4_ps(const size_t ido, const size_t l1, const v4sf *RESTRICT c
 } /* radb4 */
 
 void radf5_ps(const size_t ido, const size_t l1, const v4sf *RESTRICT cc, v4sf *RESTRICT ch,
-    const float *wa1, const float *wa2, const float *wa3, const float *wa4)
+    const float *const wa1)
 {
     const v4sf tr11{LD_PS1(0.309016994374947f)};
     const v4sf ti11{LD_PS1(0.951056516295154f)};
@@ -975,6 +990,10 @@ void radf5_ps(const size_t ido, const size_t l1, const v4sf *RESTRICT cc, v4sf *
     /* Parameter adjustments */
     ch -= 1 + ido * 6;
     cc -= 1 + ido * (1 + l1);
+
+    const auto wa2 = wa1 + ido;
+    const auto wa3 = wa2 + ido;
+    const auto wa4 = wa3 + ido;
 
     /* Function Body */
     for(size_t k{1};k <= l1;++k)
@@ -1044,7 +1063,7 @@ void radf5_ps(const size_t ido, const size_t l1, const v4sf *RESTRICT cc, v4sf *
 } /* radf5 */
 
 void radb5_ps(const size_t ido, const size_t l1, const v4sf *RESTRICT cc, v4sf *RESTRICT ch,
-    const float *wa1, const float *wa2, const float *wa3, const float *wa4)
+    const float *const wa1)
 {
     const v4sf tr11{LD_PS1(0.309016994374947f)};
     const v4sf ti11{LD_PS1(0.951056516295154f)};
@@ -1057,6 +1076,10 @@ void radb5_ps(const size_t ido, const size_t l1, const v4sf *RESTRICT cc, v4sf *
     /* Parameter adjustments */
     ch -= 1 + ido*(1 + l1);
     cc -= 1 + ido*6;
+
+    const auto wa2 = wa1 + ido;
+    const auto wa3 = wa2 + ido;
+    const auto wa4 = wa3 + ido;
 
     /* Function Body */
     for(size_t k{1};k <= l1;++k)
@@ -1137,40 +1160,27 @@ NOINLINE v4sf *rfftf1_ps(const size_t n, const v4sf *input_readonly, v4sf *work1
     size_t iw{n-1};
     for(size_t k1{1};k1 <= nf;++k1)
     {
-        size_t kh{nf - k1};
-        size_t ip{ifac[kh + 2]};
-        size_t l1{l2 / ip};
-        size_t ido{n / l2};
+        const size_t kh{nf - k1};
+        const size_t ip{ifac[kh + 2]};
+        const size_t l1{l2 / ip};
+        const size_t ido{n / l2};
         iw -= (ip - 1)*ido;
         switch(ip)
         {
         case 5:
-            {
-                size_t ix2{iw + ido};
-                size_t ix3{ix2 + ido};
-                size_t ix4{ix3 + ido};
-                radf5_ps(ido, l1, in, out, &wa[iw], &wa[ix2], &wa[ix3], &wa[ix4]);
-            }
+            radf5_ps(ido, l1, in, out, &wa[iw]);
             break;
         case 4:
-            {
-                size_t ix2{iw + ido};
-                size_t ix3{ix2 + ido};
-                radf4_ps(ido, l1, in, out, &wa[iw], &wa[ix2], &wa[ix3]);
-            }
+            radf4_ps(ido, l1, in, out, &wa[iw]);
             break;
         case 3:
-            {
-                size_t ix2{iw + ido};
-                radf3_ps(ido, l1, in, out, &wa[iw], &wa[ix2]);
-            }
+            radf3_ps(ido, l1, in, out, &wa[iw]);
             break;
         case 2:
             radf2_ps(ido, l1, in, out, &wa[iw]);
             break;
         default:
             assert(0);
-            break;
         }
         l2 = l1;
         if(out == work2)
@@ -1184,7 +1194,7 @@ NOINLINE v4sf *rfftf1_ps(const size_t n, const v4sf *input_readonly, v4sf *work1
             in = work1;
         }
     }
-    return const_cast<v4sf*>(in); /* this is in fact the output .. */
+    return const_cast<v4sf*>(in); /* NOLINT(*-const-cast) this is in fact the output .. */
 } /* rfftf1 */
 
 NOINLINE v4sf *rfftb1_ps(const size_t n, const v4sf *input_readonly, v4sf *work1, v4sf *work2,
@@ -1199,38 +1209,25 @@ NOINLINE v4sf *rfftb1_ps(const size_t n, const v4sf *input_readonly, v4sf *work1
     size_t iw{0};
     for(size_t k1{1};k1 <= nf;++k1)
     {
-        size_t ip{ifac[k1 + 1]};
-        size_t l2{ip*l1};
-        size_t ido{n / l2};
+        const size_t ip{ifac[k1 + 1]};
+        const size_t l2{ip*l1};
+        const size_t ido{n / l2};
         switch(ip)
         {
         case 5:
-            {
-                size_t ix2{iw + ido};
-                size_t ix3{ix2 + ido};
-                size_t ix4{ix3 + ido};
-                radb5_ps(ido, l1, in, out, &wa[iw], &wa[ix2], &wa[ix3], &wa[ix4]);
-            }
+            radb5_ps(ido, l1, in, out, &wa[iw]);
             break;
         case 4:
-            {
-                size_t ix2{iw + ido};
-                size_t ix3{ix2 + ido};
-                radb4_ps(ido, l1, in, out, &wa[iw], &wa[ix2], &wa[ix3]);
-            }
+            radb4_ps(ido, l1, in, out, &wa[iw]);
             break;
         case 3:
-            {
-                size_t ix2{iw + ido};
-                radb3_ps(ido, l1, in, out, &wa[iw], &wa[ix2]);
-            }
+            radb3_ps(ido, l1, in, out, &wa[iw]);
             break;
         case 2:
             radb2_ps(ido, l1, in, out, &wa[iw]);
             break;
         default:
             assert(0);
-            break;
         }
         l1 = l2;
         iw += (ip - 1)*ido;
@@ -1246,7 +1243,7 @@ NOINLINE v4sf *rfftb1_ps(const size_t n, const v4sf *input_readonly, v4sf *work1
             in = work1;
         }
     }
-    return const_cast<v4sf*>(in); /* this is in fact the output .. */
+    return const_cast<v4sf*>(in); /* NOLINT(*-const-cast) this is in fact the output .. */
 }
 
 v4sf *cfftf1_ps(const size_t n, const v4sf *input_readonly, v4sf *work1, v4sf *work2,
@@ -1267,25 +1264,13 @@ v4sf *cfftf1_ps(const size_t n, const v4sf *input_readonly, v4sf *work1, v4sf *w
         switch(ip)
         {
         case 5:
-            {
-                size_t ix2{iw + idot};
-                size_t ix3{ix2 + idot};
-                size_t ix4{ix3 + idot};
-                passf5_ps(idot, l1, in, out, &wa[iw], &wa[ix2], &wa[ix3], &wa[ix4], fsign);
-            }
+            passf5_ps(idot, l1, in, out, &wa[iw], fsign);
             break;
         case 4:
-            {
-                size_t ix2{iw + idot};
-                size_t ix3{ix2 + idot};
-                passf4_ps(idot, l1, in, out, &wa[iw], &wa[ix2], &wa[ix3], fsign);
-            }
+            passf4_ps(idot, l1, in, out, &wa[iw], fsign);
             break;
         case 3:
-            {
-                size_t ix2{iw + idot};
-                passf3_ps(idot, l1, in, out, &wa[iw], &wa[ix2], fsign);
-            }
+            passf3_ps(idot, l1, in, out, &wa[iw], fsign);
             break;
         case 2:
             passf2_ps(idot, l1, in, out, &wa[iw], fsign);
@@ -1307,7 +1292,7 @@ v4sf *cfftf1_ps(const size_t n, const v4sf *input_readonly, v4sf *work1, v4sf *w
         }
     }
 
-    return const_cast<v4sf*>(in); /* this is in fact the output .. */
+    return const_cast<v4sf*>(in); /* NOLINT(*-const-cast) this is in fact the output .. */
 }
 
 

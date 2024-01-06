@@ -162,8 +162,10 @@ class databuf final : public std::streambuf {
 public:
     databuf(const char_type *start_, const char_type *end_) noexcept
     {
+        /* NOLINTBEGIN(*-const-cast) */
         setg(const_cast<char_type*>(start_), const_cast<char_type*>(start_),
-             const_cast<char_type*>(end_));
+            const_cast<char_type*>(end_));
+        /* NOLINTEND(*-const-cast) */
     }
 };
 
@@ -491,11 +493,11 @@ T> readle(std::istream &data)
     static_assert((num_bits&7) == 0, "num_bits must be a multiple of 8");
     static_assert(num_bits <= sizeof(T)*8, "num_bits is too large for the type");
 
-    T ret{};
-    if(!data.read(reinterpret_cast<char*>(&ret), num_bits/8))
+    alignas(T) std::array<char,sizeof(T)> ret{};
+    if(!data.read(ret.data(), num_bits/8))
         return static_cast<T>(EOF);
 
-    return fixsign<num_bits>(ret);
+    return fixsign<num_bits>(al::bit_cast<T>(ret));
 }
 
 template<typename T, size_t num_bits=sizeof(T)*8>
@@ -505,13 +507,12 @@ T> readle(std::istream &data)
     static_assert((num_bits&7) == 0, "num_bits must be a multiple of 8");
     static_assert(num_bits <= sizeof(T)*8, "num_bits is too large for the type");
 
-    T ret{};
-    std::array<std::byte,sizeof(T)> b{};
-    if(!data.read(reinterpret_cast<char*>(b.data()), num_bits/8))
+    alignas(T) std::array<char,sizeof(T)> ret{};
+    if(!data.read(ret.data(), num_bits/8))
         return static_cast<T>(EOF);
-    std::reverse_copy(b.begin(), b.end(), reinterpret_cast<std::byte*>(&ret));
+    std::reverse(ret.begin(), ret.end());
 
-    return fixsign<num_bits>(ret);
+    return fixsign<num_bits>(al::bit_cast<T>(ret));
 }
 
 template<>
@@ -1392,7 +1393,8 @@ HrtfStorePtr GetLoadedHrtf(const std::string &name, const uint devrate)
         rs.init(hrtf->mSampleRate, devrate);
         for(size_t i{0};i < irCount;++i)
         {
-            auto &coeffs = const_cast<HrirArray&>(hrtf->mCoeffs[i]);
+            /* NOLINTNEXTLINE(*-const-cast) */
+            auto coeffs = al::span{const_cast<HrirArray&>(hrtf->mCoeffs[i])};
             for(size_t j{0};j < 2;++j)
             {
                 std::transform(coeffs.cbegin(), coeffs.cend(), inout[0].begin(),
@@ -1432,9 +1434,11 @@ HrtfStorePtr GetLoadedHrtf(const std::string &name, const uint devrate)
 
         for(size_t i{0};i < irCount;++i)
         {
-            auto &delays = const_cast<ubyte2&>(hrtf->mDelays[i]);
-            for(size_t j{0};j < 2;++j)
-                delays[j] = static_cast<ubyte>(float2int(new_delays[i][j]*delay_scale + 0.5f));
+            /* NOLINTNEXTLINE(*-const-cast) */
+            auto delays = al::span{const_cast<ubyte2&>(hrtf->mDelays[i])};
+            std::transform(new_delays[i].cbegin(), new_delays[i].cend(), delays.begin(),
+                [delay_scale](const float delay)
+                { return static_cast<ubyte>(float2int(delay*delay_scale + 0.5f)); });
         }
 
         /* Scale the IR size for the new sample rate and update the stored

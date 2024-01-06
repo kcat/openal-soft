@@ -60,6 +60,9 @@ public:
     explicit intrusive_ptr(T *ptr) noexcept : mPtr{ptr} { }
     ~intrusive_ptr() { if(mPtr) mPtr->dec_ref(); }
 
+    /* NOLINTBEGIN(bugprone-unhandled-self-assignment)
+     * Self-assignment is handled properly here.
+     */
     intrusive_ptr& operator=(const intrusive_ptr &rhs) noexcept
     {
         static_assert(noexcept(std::declval<T*>()->dec_ref()), "dec_ref must be noexcept");
@@ -69,6 +72,7 @@ public:
         mPtr = rhs.mPtr;
         return *this;
     }
+    /* NOLINTEND(bugprone-unhandled-self-assignment) */
     intrusive_ptr& operator=(intrusive_ptr&& rhs) noexcept
     {
         if(&rhs != this) LIKELY

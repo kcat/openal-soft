@@ -401,8 +401,11 @@ struct EarlyReflections {
     std::array<float,NUM_LINES> Coeff{};
 
     /* The gain for each output channel based on 3D panning. */
-    std::array<std::array<float,MaxAmbiChannels>,NUM_LINES> CurrentGains{};
-    std::array<std::array<float,MaxAmbiChannels>,NUM_LINES> TargetGains{};
+    struct OutGains {
+        std::array<float,MaxAmbiChannels> Current{};
+        std::array<float,MaxAmbiChannels> Target{};
+    };
+    std::array<OutGains,NUM_LINES> Gains{};
 
     void updateLines(const float density_mult, const float diffusion, const float decayTime,
         const float frequency);
@@ -444,8 +447,11 @@ struct LateReverb {
     VecAllpass VecAp;
 
     /* The gain for each output channel based on 3D panning. */
-    std::array<std::array<float,MaxAmbiChannels>,NUM_LINES> CurrentGains{};
-    std::array<std::array<float,MaxAmbiChannels>,NUM_LINES> TargetGains{};
+    struct OutGains {
+        std::array<float,MaxAmbiChannels> Current{};
+        std::array<float,MaxAmbiChannels> Target{};
+    };
+    std::array<OutGains,NUM_LINES> Gains{};
 
     void updateLines(const float density_mult, const float diffusion, const float lfDecayTime,
         const float mfDecayTime, const float hfDecayTime, const float lf0norm,
@@ -575,17 +581,19 @@ struct ReverbState final : public EffectState {
         /* When not upsampling, the panning gains convert to B-Format and pan
          * at the same time.
          */
-        for(size_t c{0u};c < NUM_LINES;c++)
+        auto inBuffer = mEarlySamples.cbegin();
+        for(auto &gains : pipeline.mEarly.Gains)
         {
-            const al::span<float> tmpspan{mEarlySamples[c].data(), todo};
-            MixSamples(tmpspan, samplesOut, pipeline.mEarly.CurrentGains[c].data(),
-                pipeline.mEarly.TargetGains[c].data(), todo, 0);
+            MixSamples(al::span{inBuffer->cbegin(), todo}, samplesOut, gains.Current.data(),
+                gains.Target.data(), todo, 0);
+            ++inBuffer;
         }
-        for(size_t c{0u};c < NUM_LINES;c++)
+        inBuffer = mLateSamples.cbegin();
+        for(auto &gains : pipeline.mLate.Gains)
         {
-            const al::span<float> tmpspan{mLateSamples[c].data(), todo};
-            MixSamples(tmpspan, samplesOut, pipeline.mLate.CurrentGains[c].data(),
-                pipeline.mLate.TargetGains[c].data(), todo, 0);
+            MixSamples(al::span{inBuffer->cbegin(), todo}, samplesOut, gains.Current.data(),
+                gains.Target.data(), todo, 0);
+            ++inBuffer;
         }
     }
 
@@ -595,13 +603,14 @@ struct ReverbState final : public EffectState {
         ASSUME(todo > 0);
 
         auto DoMixRow = [](const al::span<float> OutBuffer, const al::span<const float,4> Gains,
-            const float *InSamples, const size_t InStride)
+            const al::span<const FloatBufferLine,4> InSamples)
         {
+            auto inBuffer = InSamples.cbegin();
             std::fill(OutBuffer.begin(), OutBuffer.end(), 0.0f);
             for(const float gain : Gains)
             {
-                const float *RESTRICT input{al::assume_aligned<16>(InSamples)};
-                InSamples += InStride;
+                const float *RESTRICT input{al::assume_aligned<16>(inBuffer->data())};
+                ++inBuffer;
 
                 if(!(std::fabs(gain) > GainSilenceThreshold))
                     continue;
@@ -618,28 +627,32 @@ struct ReverbState final : public EffectState {
          * The panning gains then pan and upsample the B-Format channels.
          */
         const al::span<float> tmpspan{al::assume_aligned<16>(mTempLine.data()), todo};
-        for(size_t c{0u};c < NUM_LINES;c++)
+        float hfscale{mOrderScales[0]};
+        auto splitter = pipeline.mAmbiSplitter[0].begin();
+        auto a2bcoeffs = EarlyA2B.cbegin();
+        for(auto &gains : pipeline.mEarly.Gains)
         {
-            DoMixRow(tmpspan, EarlyA2B[c], mEarlySamples[0].data(), mEarlySamples[0].size());
+            DoMixRow(tmpspan, *(a2bcoeffs++), mEarlySamples);
 
             /* Apply scaling to the B-Format's HF response to "upsample" it to
              * higher-order output.
              */
-            const float hfscale{(c==0) ? mOrderScales[0] : mOrderScales[1]};
-            pipeline.mAmbiSplitter[0][c].processHfScale(tmpspan, hfscale);
+            splitter->processHfScale(tmpspan, hfscale);
+            ++splitter; hfscale = mOrderScales[1];
 
-            MixSamples(tmpspan, samplesOut, pipeline.mEarly.CurrentGains[c].data(),
-                pipeline.mEarly.TargetGains[c].data(), todo, 0);
+            MixSamples(tmpspan, samplesOut, gains.Current.data(), gains.Target.data(), todo, 0);
         }
-        for(size_t c{0u};c < NUM_LINES;c++)
+        hfscale = mOrderScales[0];
+        splitter = pipeline.mAmbiSplitter[1].begin();
+        a2bcoeffs = LateA2B.cbegin();
+        for(auto &gains : pipeline.mLate.Gains)
         {
-            DoMixRow(tmpspan, LateA2B[c], mLateSamples[0].data(), mLateSamples[0].size());
+            DoMixRow(tmpspan, *(a2bcoeffs++), mLateSamples);
 
-            const float hfscale{(c==0) ? mOrderScales[0] : mOrderScales[1]};
-            pipeline.mAmbiSplitter[1][c].processHfScale(tmpspan, hfscale);
+            splitter->processHfScale(tmpspan, hfscale);
+            ++splitter; hfscale = mOrderScales[1];
 
-            MixSamples(tmpspan, samplesOut, pipeline.mLate.CurrentGains[c].data(),
-                pipeline.mLate.TargetGains[c].data(), todo, 0);
+            MixSamples(tmpspan, samplesOut, gains.Current.data(), gains.Target.data(), todo, 0);
         }
     }
 
@@ -786,14 +799,16 @@ void ReverbState::deviceUpdate(const DeviceBase *device, const BufferStorage*)
         pipeline.mLate.Mod.Step = 1;
         pipeline.mLate.Mod.Depth = 0.0f;
 
-        for(auto &gains : pipeline.mEarly.CurrentGains)
-            gains.fill(0.0f);
-        for(auto &gains : pipeline.mEarly.TargetGains)
-            gains.fill(0.0f);
-        for(auto &gains : pipeline.mLate.CurrentGains)
-            gains.fill(0.0f);
-        for(auto &gains : pipeline.mLate.TargetGains)
-            gains.fill(0.0f);
+        for(auto &gains : pipeline.mEarly.Gains)
+        {
+            gains.Current.fill(0.0f);
+            gains.Target.fill(0.0f);
+        }
+        for(auto &gains : pipeline.mLate.Gains)
+        {
+            gains.Current.fill(0.0f);
+            gains.Target.fill(0.0f);
+        }
     }
     mPipelineState = DeviceClear;
 
@@ -1114,45 +1129,39 @@ void ReverbPipeline::update3DPanning(const al::span<const float,3> ReflectionsPa
     /* Create matrices that transform a B-Format signal according to the
      * panning vectors.
      */
-    const std::array<std::array<float,4>,4> earlymat{GetTransformFromVector(ReflectionsPan)};
-    const std::array<std::array<float,4>,4> latemat{GetTransformFromVector(LateReverbPan)};
+    const auto earlymat = GetTransformFromVector(ReflectionsPan);
+    const auto latemat = GetTransformFromVector(LateReverbPan);
 
-    if(doUpmix)
-    {
-        /* When upsampling, combine the early and late transforms with the
-         * first-order upsample matrix. This results in panning gains that
-         * apply the panning transform to first-order B-Format, which is then
-         * upsampled.
-         */
-        auto mult_matrix = [](const al::span<const std::array<float,4>,4> mtx1)
+    const auto [earlycoeffs, latecoeffs] = [&]{
+        if(doUpmix)
         {
-            auto&& mtx2 = AmbiScale::FirstOrderUp;
-            std::array<std::array<float,MaxAmbiChannels>,NUM_LINES> res{};
-
-            for(size_t i{0};i < mtx1[0].size();++i)
+            /* When upsampling, combine the early and late transforms with the
+             * first-order upsample matrix. This results in panning gains that
+             * apply the panning transform to first-order B-Format, which is
+             * then upsampled.
+             */
+            auto mult_matrix = [](const al::span<const std::array<float,4>,4> mtx1)
             {
-                float *RESTRICT dst{res[i].data()};
-                for(size_t k{0};k < mtx1.size();++k)
+                auto&& mtx2 = AmbiScale::FirstOrderUp;
+                std::array<std::array<float,MaxAmbiChannels>,NUM_LINES> res{};
+
+                for(size_t i{0};i < mtx1[0].size();++i)
                 {
-                    const float *RESTRICT src{mtx2[k].data()};
-                    const float a{mtx1[k][i]};
-                    for(size_t j{0};j < mtx2[0].size();++j)
-                        dst[j] += a * src[j];
+                    const al::span dst{res[i]};
+                    for(size_t k{0};k < mtx1.size();++k)
+                    {
+                        const float a{mtx1[k][i]};
+                        std::transform(dst.begin(), dst.end(), mtx2[k].begin(), dst.begin(),
+                            [a](const float out, const float in) noexcept -> float
+                            { return out + a*in; });
+                    }
                 }
-            }
 
-            return res;
-        };
-        auto earlycoeffs = mult_matrix(earlymat);
-        auto latecoeffs = mult_matrix(latemat);
+                return res;
+            };
+            return std::make_pair(mult_matrix(earlymat), mult_matrix(latemat));
+        }
 
-        for(size_t i{0u};i < NUM_LINES;i++)
-            ComputePanGains(mainMix, earlycoeffs[i], earlyGain, mEarly.TargetGains[i]);
-        for(size_t i{0u};i < NUM_LINES;i++)
-            ComputePanGains(mainMix, latecoeffs[i], lateGain, mLate.TargetGains[i]);
-    }
-    else
-    {
         /* When not upsampling, combine the early and late A-to-B-Format
          * conversions with their respective transform. This results panning
          * gains that convert A-Format to B-Format, which is then panned.
@@ -1164,25 +1173,27 @@ void ReverbPipeline::update3DPanning(const al::span<const float,3> ReflectionsPa
 
             for(size_t i{0};i < mtx1[0].size();++i)
             {
-                float *RESTRICT dst{res[i].data()};
+                const al::span dst{res[i]};
                 for(size_t k{0};k < mtx1.size();++k)
                 {
                     const float a{mtx1[k][i]};
-                    for(size_t j{0};j < mtx2.size();++j)
-                        dst[j] += a * mtx2[j][k];
+                    std::transform(dst.begin(), dst.end(), mtx2[k].begin(), dst.begin(),
+                        [a](const float out, const float in) noexcept -> float
+                        { return out + a*in; });
                 }
             }
 
             return res;
         };
-        auto earlycoeffs = mult_matrix(EarlyA2B, earlymat);
-        auto latecoeffs = mult_matrix(LateA2B, latemat);
+        return std::make_pair(mult_matrix(EarlyA2B, earlymat), mult_matrix(LateA2B, latemat));
+    }();
 
-        for(size_t i{0u};i < NUM_LINES;i++)
-            ComputePanGains(mainMix, earlycoeffs[i], earlyGain, mEarly.TargetGains[i]);
-        for(size_t i{0u};i < NUM_LINES;i++)
-            ComputePanGains(mainMix, latecoeffs[i], lateGain, mLate.TargetGains[i]);
-    }
+    auto earlygains = mEarly.Gains.begin();
+    for(auto &coeffs : earlycoeffs)
+        ComputePanGains(mainMix, coeffs, earlyGain, (earlygains++)->Target);
+    auto lategains = mLate.Gains.begin();
+    for(auto &coeffs : latecoeffs)
+        ComputePanGains(mainMix, coeffs, lateGain, (lategains++)->Target);
 }
 
 void ReverbState::update(const ContextBase *Context, const EffectSlot *Slot,
@@ -1805,10 +1816,10 @@ void ReverbState::process(const size_t samplesToDo, const al::span<const FloatBu
              */
             if(samplesToDo >= oldpipeline.mFadeSampleCount)
             {
-                for(auto &gains : oldpipeline.mEarly.TargetGains)
-                    std::fill(std::begin(gains), std::end(gains), 0.0f);
-                for(auto &gains : oldpipeline.mLate.TargetGains)
-                    std::fill(std::begin(gains), std::end(gains), 0.0f);
+                for(auto &gains : oldpipeline.mEarly.Gains)
+                    std::fill(gains.Target.begin(), gains.Target.end(), 0.0f);
+                for(auto &gains : oldpipeline.mLate.Gains)
+                    std::fill(gains.Target.begin(), gains.Target.end(), 0.0f);
                 oldpipeline.mFadeSampleCount = 0;
                 mPipelineState = Cleanup;
             }

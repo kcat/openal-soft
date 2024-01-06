@@ -36,6 +36,7 @@
 #include <functional>
 #include <memory>
 #include <string>
+#include <string_view>
 #include <thread>
 #include <utility>
 #include <vector>
@@ -88,6 +89,11 @@ std::string DefaultCapture{"/dev/dsp"};
 struct DevMap {
     std::string name;
     std::string device_name;
+
+    template<typename T, typename U>
+    DevMap(T&& name_, U&& devname_)
+        : name{std::forward<T>(name_)}, device_name{std::forward<U>(devname_)}
+    { }
 };
 
 std::vector<DevMap> PlaybackDevices;
@@ -100,67 +106,90 @@ std::vector<DevMap> CaptureDevices;
 #define DSP_CAP_INPUT 0x00010000
 void ALCossListPopulate(std::vector<DevMap> &devlist, int type)
 {
-    devlist.emplace_back(DevMap{DefaultName, (type==DSP_CAP_INPUT) ? DefaultCapture : DefaultPlayback});
+    devlist.emplace_back(DefaultName, (type==DSP_CAP_INPUT) ? DefaultCapture : DefaultPlayback);
 }
 
 #else
 
-void ALCossListAppend(std::vector<DevMap> &list, al::span<const char> handle, al::span<const char> path)
+class FileHandle {
+    int mFd{-1};
+
+public:
+    FileHandle() = default;
+    FileHandle(const FileHandle&) = delete;
+    FileHandle& operator=(const FileHandle&) = delete;
+    ~FileHandle() { if(mFd != -1) ::close(mFd); }
+
+    template<typename ...Args>
+    [[nodiscard]] auto open(const char *fname, Args&& ...args) -> bool
+    {
+        close();
+        mFd = ::open(fname, std::forward<Args>(args)...);
+        return mFd != -1;
+    }
+    void close()
+    {
+        if(mFd != -1)
+            ::close(mFd);
+        mFd = -1;
+    }
+
+    [[nodiscard]]
+    auto get() const noexcept -> int { return mFd; }
+};
+
+void ALCossListAppend(std::vector<DevMap> &list, std::string_view handle, std::string_view path)
 {
 #ifdef ALC_OSS_DEVNODE_TRUC
     for(size_t i{0};i < path.size();++i)
     {
-        if(path[i] == '.' && handle.size() + i >= path.size())
+        if(path[i] == '.' && handle.size() >= path.size() - i)
         {
             const size_t hoffset{handle.size() + i - path.size()};
             if(strncmp(path.data() + i, handle.data() + hoffset, path.size() - i) == 0)
-                handle = handle.first(hoffset);
-            path = path.first(i);
+                handle = handle.substr(0, hoffset);
+            path = path.substr(0, i);
         }
     }
 #endif
     if(handle.empty())
         handle = path;
 
-    std::string basename{handle.data(), handle.size()};
-    std::string devname{path.data(), path.size()};
-
-    auto match_devname = [&devname](const DevMap &entry) -> bool
-    { return entry.device_name == devname; };
+    auto match_devname = [path](const DevMap &entry) -> bool
+    { return entry.device_name == path; };
     if(std::find_if(list.cbegin(), list.cend(), match_devname) != list.cend())
         return;
 
-    auto checkName = [&list](const std::string &name) -> bool
+    auto checkName = [&list](const std::string_view name) -> bool
     {
-        auto match_name = [&name](const DevMap &entry) -> bool { return entry.name == name; };
+        auto match_name = [name](const DevMap &entry) -> bool { return entry.name == name; };
         return std::find_if(list.cbegin(), list.cend(), match_name) != list.cend();
     };
     int count{1};
-    std::string newname{basename};
+    std::string newname{handle};
     while(checkName(newname))
     {
-        newname = basename;
+        newname = handle;
         newname += " #";
         newname += std::to_string(++count);
     }
 
-    list.emplace_back(DevMap{std::move(newname), std::move(devname)});
-    const DevMap &entry = list.back();
+    const DevMap &entry = list.emplace_back(std::move(newname), path);
 
     TRACE("Got device \"%s\", \"%s\"\n", entry.name.c_str(), entry.device_name.c_str());
 }
 
 void ALCossListPopulate(std::vector<DevMap> &devlist, int type_flag)
 {
-    int fd{open("/dev/mixer", O_RDONLY)};
-    if(fd < 0)
+    oss_sysinfo si{};
+    FileHandle file;
+    if(!file.open("/dev/mixer", O_RDONLY))
     {
         TRACE("Could not open /dev/mixer: %s\n", strerror(errno));
         goto done;
     }
 
-    oss_sysinfo si;
-    if(ioctl(fd, SNDCTL_SYSINFO, &si) == -1)
+    if(ioctl(file.get(), SNDCTL_SYSINFO, &si) == -1)
     {
         TRACE("SNDCTL_SYSINFO failed: %s\n", strerror(errno));
         goto done;
@@ -168,9 +197,9 @@ void ALCossListPopulate(std::vector<DevMap> &devlist, int type_flag)
 
     for(int i{0};i < si.numaudios;i++)
     {
-        oss_audioinfo ai;
+        oss_audioinfo ai{};
         ai.dev = i;
-        if(ioctl(fd, SNDCTL_AUDIOINFO, &ai) == -1)
+        if(ioctl(file.get(), SNDCTL_AUDIOINFO, &ai) == -1)
         {
             ERR("SNDCTL_AUDIOINFO (%d) failed: %s\n", i, strerror(errno));
             continue;
@@ -178,20 +207,18 @@ void ALCossListPopulate(std::vector<DevMap> &devlist, int type_flag)
         if(!(ai.caps&type_flag) || ai.devnode[0] == '\0')
             continue;
 
-        al::span<const char> handle;
+        std::string_view handle;
         if(ai.handle[0] != '\0')
             handle = {ai.handle, strnlen(ai.handle, sizeof(ai.handle))};
         else
             handle = {ai.name, strnlen(ai.name, sizeof(ai.name))};
-        al::span<const char> devnode{ai.devnode, strnlen(ai.devnode, sizeof(ai.devnode))};
+        const std::string_view devnode{ai.devnode, strnlen(ai.devnode, sizeof(ai.devnode))};
 
         ALCossListAppend(devlist, handle, devnode);
     }
 
 done:
-    if(fd >= 0)
-        close(fd);
-    fd = -1;
+    file.close();
 
     const char *defdev{((type_flag==DSP_CAP_INPUT) ? DefaultCapture : DefaultPlayback).c_str()};
     auto iter = std::find_if(devlist.cbegin(), devlist.cend(),

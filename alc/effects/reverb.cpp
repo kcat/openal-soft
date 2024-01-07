@@ -125,20 +125,22 @@ constexpr float MODULATION_DEPTH_COEFF{0.05f};
  * reduce the error introduced in the conversion).
  */
 alignas(16) constexpr std::array<std::array<float,NUM_LINES>,NUM_LINES> B2A{{
-    {{ 0.5f,  0.5f,  0.5f,  0.5f }},
-    {{ 0.5f, -0.5f, -0.5f,  0.5f }},
-    {{ 0.5f,  0.5f, -0.5f, -0.5f }},
-    {{ 0.5f, -0.5f,  0.5f, -0.5f }}
+    /*   W      Y      Z      X  */
+    {{ 0.5f,  0.5f,  0.5f,  0.5f }}, /* A0 */
+    {{ 0.5f, -0.5f, -0.5f,  0.5f }}, /* A1 */
+    {{ 0.5f,  0.5f, -0.5f, -0.5f }}, /* A2 */
+    {{ 0.5f, -0.5f,  0.5f, -0.5f }}  /* A3 */
 }};
 
 /* Converts (W-normalized) A-Format to B-Format for early reflections (scaled
  * by 1/sqrt(3) to compensate for the boost in the B2A matrix).
  */
 alignas(16) constexpr std::array<std::array<float,NUM_LINES>,NUM_LINES> EarlyA2B{{
-    {{ 0.5f,  0.5f,  0.5f,  0.5f }},
-    {{ 0.5f, -0.5f,  0.5f, -0.5f }},
-    {{ 0.5f, -0.5f, -0.5f,  0.5f }},
-    {{ 0.5f,  0.5f, -0.5f, -0.5f }}
+    /*  A0     A1     A2     A3  */
+    {{ 0.5f,  0.5f,  0.5f,  0.5f }}, /* W */
+    {{ 0.5f, -0.5f,  0.5f, -0.5f }}, /* Y */
+    {{ 0.5f, -0.5f, -0.5f,  0.5f }}, /* Z */
+    {{ 0.5f,  0.5f, -0.5f, -0.5f }}  /* X */
 }};
 
 /* Converts (W-normalized) A-Format to B-Format for late reverb (scaled
@@ -148,10 +150,11 @@ alignas(16) constexpr std::array<std::array<float,NUM_LINES>,NUM_LINES> EarlyA2B
  */
 constexpr auto InvSqrt2 = static_cast<float>(1.0/al::numbers::sqrt2);
 alignas(16) constexpr std::array<std::array<float,NUM_LINES>,NUM_LINES> LateA2B{{
-    {{ 0.5f,  0.5f,  0.5f,  0.5f }},
-    {{ InvSqrt2, -InvSqrt2,  0.0f,  0.0f }},
-    {{ 0.0f,  0.0f,  InvSqrt2, -InvSqrt2 }},
-    {{ 0.5f,  0.5f, -0.5f, -0.5f }}
+    /*     A0         A1         A2        A3   */
+    {{     0.5f,      0.5f,      0.5f,     0.5f }}, /* W */
+    {{ InvSqrt2, -InvSqrt2,      0.0f,     0.0f }}, /* Y */
+    {{     0.0f,      0.0f, -InvSqrt2, InvSqrt2 }}, /* Z */
+    {{     0.5f,      0.5f,     -0.5f,    -0.5f }}  /* X */
 }};
 
 /* The all-pass and delay lines have a variable length dependent on the

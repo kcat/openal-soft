@@ -907,16 +907,16 @@ std::unique_ptr<HrtfStore> LoadHrtf02(std::istream &data, const char *filename)
          * count. Reverse the order of the groups, keeping the relative order
          * of per-group azimuth counts.
          */
-        auto elevs__end = elevs_.end();
-        auto copy_azs = [&elevs,&elevs__end](const ptrdiff_t ebase, const HrtfStore::Field &field)
+        auto elevs_end = elevs_.end();
+        auto copy_azs = [&elevs,&elevs_end](const ptrdiff_t ebase, const HrtfStore::Field &field)
             -> ptrdiff_t
         {
             auto elevs_src = elevs.begin()+ebase;
-            elevs__end = std::copy_backward(elevs_src, elevs_src+field.evCount, elevs__end);
+            elevs_end = std::copy_backward(elevs_src, elevs_src+field.evCount, elevs_end);
             return ebase + field.evCount;
         };
         std::ignore = std::accumulate(fields.cbegin(), fields.cend(), ptrdiff_t{0}, copy_azs);
-        assert(elevs_.begin() == elevs__end);
+        assert(elevs_.begin() == elevs_end);
 
         /* Reestablish the IR offset for each elevation index, given the new
          * ordering of elevations.
@@ -1293,14 +1293,14 @@ std::vector<std::string> EnumerateHrtf(std::optional<std::string> pathopt)
 
 HrtfStorePtr GetLoadedHrtf(const std::string &name, const uint devrate)
 {
-    std::lock_guard<std::mutex> _{EnumeratedHrtfLock};
+    std::lock_guard<std::mutex> enumlock{EnumeratedHrtfLock};
     auto entry_iter = std::find_if(EnumeratedHrtfs.cbegin(), EnumeratedHrtfs.cend(),
         [&name](const HrtfEntry &entry) -> bool { return entry.mDispName == name; });
     if(entry_iter == EnumeratedHrtfs.cend())
         return nullptr;
     const std::string &fname = entry_iter->mFilename;
 
-    std::lock_guard<std::mutex> __{LoadedHrtfLock};
+    std::lock_guard<std::mutex> loadlock{LoadedHrtfLock};
     auto hrtf_lt_fname = [](LoadedHrtf &hrtf, const std::string &filename) -> bool
     { return hrtf.mFilename < filename; };
     auto handle = std::lower_bound(LoadedHrtfs.begin(), LoadedHrtfs.end(), fname, hrtf_lt_fname);

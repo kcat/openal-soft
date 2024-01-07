@@ -22,7 +22,7 @@
 
 
 #ifndef _WIN32
-using GUID = struct _GUID {
+using GUID = struct _GUID { /* NOLINT(*-reserved-identifier) */
     std::uint32_t Data1;
     std::uint16_t Data2;
     std::uint16_t Data3;

@@ -1815,7 +1815,7 @@ bool ResetDeviceParams(ALCdevice *device, const int *attrList)
             /* Clear any pending voice changes and reallocate voices to get a
              * clean restart.
              */
-            std::lock_guard<std::mutex> __{ctx->mSourceLock};
+            std::lock_guard<std::mutex> sourcelock{ctx->mSourceLock};
             auto *vchg = ctx->mCurrentVoiceChange.load(std::memory_order_acquire);
             while(auto *next = vchg->mNext.load(std::memory_order_acquire))
                 vchg = next;

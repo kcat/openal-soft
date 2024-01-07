@@ -684,9 +684,13 @@ int AudioState::decodeFrame()
             mDecodedFrame->nb_samples, mDstSampleFmt, 0);
         mSamplesMax = mDecodedFrame->nb_samples;
     }
+    /* Copy to a local to mark const. Don't know why this can't be implicit. */
+    using data_t = decltype(decltype(mDecodedFrame)::element_type::data);
+    std::array<const uint8_t*,std::extent_v<data_t>> cdata{};
+    std::copy(std::begin(mDecodedFrame->data), std::end(mDecodedFrame->data), cdata.begin());
     /* Return the amount of sample frames converted */
-    int data_size{swr_convert(mSwresCtx.get(), &mSamples, mDecodedFrame->nb_samples,
-        const_cast<const uint8_t**>(mDecodedFrame->data), mDecodedFrame->nb_samples)};
+    const int data_size{swr_convert(mSwresCtx.get(), &mSamples, mDecodedFrame->nb_samples,
+        cdata.data(), mDecodedFrame->nb_samples)};
 
     av_frame_unref(mDecodedFrame.get());
     return data_size;
@@ -939,6 +943,7 @@ int AudioState::handler()
     ALsizei buffer_len{0};
 
     /* Find a suitable format for OpenAL. */
+    const auto layoutmask = mCodecCtx->ch_layout.u.mask; /* NOLINT(*-union-access) */
     mDstChanLayout = 0;
     mFormat = AL_NONE;
     if((mCodecCtx->sample_fmt == AV_SAMPLE_FMT_FLT || mCodecCtx->sample_fmt == AV_SAMPLE_FMT_FLTP
@@ -956,29 +961,28 @@ int AudioState::handler()
         {
             if(alIsExtensionPresent("AL_EXT_MCFORMATS"))
             {
-                if(mCodecCtx->ch_layout.u.mask == AV_CH_LAYOUT_7POINT1)
+                if(layoutmask == AV_CH_LAYOUT_7POINT1)
                 {
-                    mDstChanLayout = mCodecCtx->ch_layout.u.mask;
+                    mDstChanLayout = layoutmask;
                     mFrameSize *= 8;
                     mFormat = alGetEnumValue("AL_FORMAT_71CHN32");
                 }
-                if(mCodecCtx->ch_layout.u.mask == AV_CH_LAYOUT_5POINT1
-                    || mCodecCtx->ch_layout.u.mask == AV_CH_LAYOUT_5POINT1_BACK)
+                if(layoutmask == AV_CH_LAYOUT_5POINT1 || layoutmask == AV_CH_LAYOUT_5POINT1_BACK)
                 {
-                    mDstChanLayout = mCodecCtx->ch_layout.u.mask;
+                    mDstChanLayout = layoutmask;
                     mFrameSize *= 6;
                     mFormat = alGetEnumValue("AL_FORMAT_51CHN32");
                 }
-                if(mCodecCtx->ch_layout.u.mask == AV_CH_LAYOUT_QUAD)
+                if(layoutmask == AV_CH_LAYOUT_QUAD)
                 {
-                    mDstChanLayout = mCodecCtx->ch_layout.u.mask;
+                    mDstChanLayout = layoutmask;
                     mFrameSize *= 4;
                     mFormat = alGetEnumValue("AL_FORMAT_QUAD32");
                 }
             }
-            if(mCodecCtx->ch_layout.u.mask == AV_CH_LAYOUT_MONO)
+            if(layoutmask == AV_CH_LAYOUT_MONO)
             {
-                mDstChanLayout = mCodecCtx->ch_layout.u.mask;
+                mDstChanLayout = layoutmask;
                 mFrameSize *= 1;
                 mFormat = AL_FORMAT_MONO_FLOAT32;
             }
@@ -1018,29 +1022,28 @@ int AudioState::handler()
         {
             if(alIsExtensionPresent("AL_EXT_MCFORMATS"))
             {
-                if(mCodecCtx->ch_layout.u.mask == AV_CH_LAYOUT_7POINT1)
+                if(layoutmask == AV_CH_LAYOUT_7POINT1)
                 {
-                    mDstChanLayout = mCodecCtx->ch_layout.u.mask;
+                    mDstChanLayout = layoutmask;
                     mFrameSize *= 8;
                     mFormat = alGetEnumValue("AL_FORMAT_71CHN8");
                 }
-                if(mCodecCtx->ch_layout.u.mask == AV_CH_LAYOUT_5POINT1
-                    || mCodecCtx->ch_layout.u.mask == AV_CH_LAYOUT_5POINT1_BACK)
+                if(layoutmask == AV_CH_LAYOUT_5POINT1 || layoutmask == AV_CH_LAYOUT_5POINT1_BACK)
                 {
-                    mDstChanLayout = mCodecCtx->ch_layout.u.mask;
+                    mDstChanLayout = layoutmask;
                     mFrameSize *= 6;
                     mFormat = alGetEnumValue("AL_FORMAT_51CHN8");
                 }
-                if(mCodecCtx->ch_layout.u.mask == AV_CH_LAYOUT_QUAD)
+                if(layoutmask == AV_CH_LAYOUT_QUAD)
                 {
-                    mDstChanLayout = mCodecCtx->ch_layout.u.mask;
+                    mDstChanLayout = layoutmask;
                     mFrameSize *= 4;
                     mFormat = alGetEnumValue("AL_FORMAT_QUAD8");
                 }
             }
-            if(mCodecCtx->ch_layout.u.mask == AV_CH_LAYOUT_MONO)
+            if(layoutmask == AV_CH_LAYOUT_MONO)
             {
-                mDstChanLayout = mCodecCtx->ch_layout.u.mask;
+                mDstChanLayout = layoutmask;
                 mFrameSize *= 1;
                 mFormat = AL_FORMAT_MONO8;
             }
@@ -1072,29 +1075,28 @@ int AudioState::handler()
         {
             if(alIsExtensionPresent("AL_EXT_MCFORMATS"))
             {
-                if(mCodecCtx->ch_layout.u.mask == AV_CH_LAYOUT_7POINT1)
+                if(layoutmask == AV_CH_LAYOUT_7POINT1)
                 {
-                    mDstChanLayout = mCodecCtx->ch_layout.u.mask;
+                    mDstChanLayout = layoutmask;
                     mFrameSize *= 8;
                     mFormat = alGetEnumValue("AL_FORMAT_71CHN16");
                 }
-                if(mCodecCtx->ch_layout.u.mask == AV_CH_LAYOUT_5POINT1
-                    || mCodecCtx->ch_layout.u.mask == AV_CH_LAYOUT_5POINT1_BACK)
+                if(layoutmask == AV_CH_LAYOUT_5POINT1 || layoutmask == AV_CH_LAYOUT_5POINT1_BACK)
                 {
-                    mDstChanLayout = mCodecCtx->ch_layout.u.mask;
+                    mDstChanLayout = layoutmask;
                     mFrameSize *= 6;
                     mFormat = alGetEnumValue("AL_FORMAT_51CHN16");
                 }
-                if(mCodecCtx->ch_layout.u.mask == AV_CH_LAYOUT_QUAD)
+                if(layoutmask == AV_CH_LAYOUT_QUAD)
                 {
-                    mDstChanLayout = mCodecCtx->ch_layout.u.mask;
+                    mDstChanLayout = layoutmask;
                     mFrameSize *= 4;
                     mFormat = alGetEnumValue("AL_FORMAT_QUAD16");
                 }
             }
-            if(mCodecCtx->ch_layout.u.mask == AV_CH_LAYOUT_MONO)
+            if(layoutmask == AV_CH_LAYOUT_MONO)
             {
-                mDstChanLayout = mCodecCtx->ch_layout.u.mask;
+                mDstChanLayout = layoutmask;
                 mFrameSize *= 1;
                 mFormat = AL_FORMAT_MONO16;
             }

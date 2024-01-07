@@ -421,7 +421,7 @@ struct Modulation {
     /* The depth of frequency change, in samples. */
     float Depth{};
 
-    std::array<float,MAX_UPDATE_SAMPLES> ModDelays{};
+    std::array<uint,MAX_UPDATE_SAMPLES> ModDelays{};
 
     void updateModulator(float modTime, float modDepth, float frequency);
 
@@ -1555,7 +1555,7 @@ void Modulation::calcDelays(size_t todo)
 {
     uint idx{Index};
     const uint step{Step};
-    const float depth{Depth};
+    const float depth{Depth * float{gCubicTable.sTableSteps}};
     for(size_t i{0};i < todo;++i)
     {
         idx += step;
@@ -1566,7 +1566,7 @@ void Modulation::calcDelays(size_t todo)
         const float lfo{!(idx&(MOD_FRACONE>>1))
             ? ((-16.0f * x * x) + (8.0f * x))
             : ((16.0f * x * x) + (-8.0f * x) + (-16.0f * x) + 8.0f)};
-        ModDelays[i] = (lfo+1.0f) * depth;
+        ModDelays[i] = float2uint((lfo+1.0f) * depth);
     }
     Index = idx;
 }
@@ -1615,8 +1615,7 @@ void ReverbPipeline::processLate(size_t offset, const size_t samplesToDo,
                 /* Calculate the read offset and offset between it and the next
                  * sample.
                  */
-                const float fdelay{mLate.Mod.ModDelays[i]};
-                const size_t idelay{float2uint(fdelay * float{gCubicTable.sTableSteps})};
+                const size_t idelay{mLate.Mod.ModDelays[i]};
                 const size_t delay{late_feedb_tap - (idelay>>gCubicTable.sTableBits)};
                 const size_t delayoffset{idelay & gCubicTable.sTableMask};
                 ++late_feedb_tap;

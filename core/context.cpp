@@ -27,7 +27,7 @@ ContextBase::ContextBase(DeviceBase *device) : mDevice{device}
 
 ContextBase::~ContextBase()
 {
-    if(std::unique_ptr<EffectSlotArray> curarray{mActiveAuxSlots.exchange(nullptr, std::memory_order_relaxed)})
+    if(auto curarray = mActiveAuxSlots.exchange(nullptr, std::memory_order_relaxed))
         std::destroy_n(curarray->end(), curarray->size());
 
     mVoices.store(nullptr, std::memory_order_relaxed);

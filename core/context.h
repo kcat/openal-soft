@@ -130,7 +130,7 @@ struct ContextBase {
 
 
     using EffectSlotArray = al::FlexArray<EffectSlot*>;
-    std::atomic<EffectSlotArray*> mActiveAuxSlots{nullptr};
+    al::atomic_unique_ptr<EffectSlotArray> mActiveAuxSlots;
 
     std::thread mEventThread;
     al::semaphore mEventSem;

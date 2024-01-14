@@ -159,7 +159,7 @@ void ALCcontext::init()
         aluInitEffectPanning(mDefaultSlot->mSlot, this);
     }
 
-    EffectSlotArray *auxslots;
+    std::unique_ptr<EffectSlotArray> auxslots;
     if(!mDefaultSlot)
         auxslots = EffectSlot::CreatePtrArray(0);
     else
@@ -171,8 +171,7 @@ void ALCcontext::init()
             mDefaultSlot->mState = SlotState::Playing;
         }
     }
-    if(!auxslots) throw std::bad_alloc{};
-    mActiveAuxSlots.store(auxslots, std::memory_order_relaxed);
+    mActiveAuxSlots.store(std::move(auxslots), std::memory_order_relaxed);
 
     allocVoiceChanges();
     {

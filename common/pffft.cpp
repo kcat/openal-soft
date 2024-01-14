@@ -552,8 +552,10 @@ NOINLINE void passf5_ps(const size_t ido, const size_t l1, const v4sf *cc, v4sf 
     const v4sf ti11{LD_PS1(0.951056516295154f*fsign)};
     const v4sf ti12{LD_PS1(0.587785252292473f*fsign)};
 
-#define cc_ref(a_1,a_2) cc[((a_2)-1)*ido + (a_1) + 1]
-#define ch_ref(a_1,a_3) ch[((a_3)-1)*l1*ido + (a_1) + 1]
+    auto cc_ref = [&cc,ido](size_t a_1, size_t a_2) noexcept -> auto&
+    { return cc[(a_2-1)*ido + a_1 + 1]; };
+    auto ch_ref = [&ch,ido,l1](size_t a_1, size_t a_3) noexcept -> auto&
+    { return ch[(a_3-1)*l1*ido + a_1 + 1]; };
 
     assert(ido > 2);
 
@@ -606,8 +608,6 @@ NOINLINE void passf5_ps(const size_t ido, const size_t l1, const v4sf *cc, v4sf 
             ch_ref(i, 5)     = di5;
         }
     }
-#undef ch_ref
-#undef cc_ref
 }
 
 NOINLINE void radf2_ps(const size_t ido, const size_t l1, const v4sf *RESTRICT cc,
@@ -984,8 +984,10 @@ void radf5_ps(const size_t ido, const size_t l1, const v4sf *RESTRICT cc, v4sf *
     const v4sf tr12{LD_PS1(-0.809016994374947f)};
     const v4sf ti12{LD_PS1(0.587785252292473f)};
 
-#define cc_ref(a_1,a_2,a_3) cc[((a_3)*l1 + (a_2))*ido + (a_1)]
-#define ch_ref(a_1,a_2,a_3) ch[((a_3)*5 + (a_2))*ido + (a_1)]
+    auto cc_ref = [&cc,l1,ido](size_t a_1, size_t a_2, size_t a_3) noexcept -> auto&
+    { return cc[(a_3*l1 + a_2)*ido + a_1]; };
+    auto ch_ref = [&ch,ido](size_t a_1, size_t a_2, size_t a_3) noexcept -> auto&
+    { return ch[(a_3*5 + a_2)*ido + a_1]; };
 
     /* Parameter adjustments */
     ch -= 1 + ido * 6;
@@ -1058,8 +1060,6 @@ void radf5_ps(const size_t ido, const size_t l1, const v4sf *RESTRICT cc, v4sf *
             ch_ref(ic    , 4, k) = VSUB(ti4, ti3);
         }
     }
-#undef cc_ref
-#undef ch_ref
 } /* radf5 */
 
 void radb5_ps(const size_t ido, const size_t l1, const v4sf *RESTRICT cc, v4sf *RESTRICT ch,
@@ -1070,8 +1070,10 @@ void radb5_ps(const size_t ido, const size_t l1, const v4sf *RESTRICT cc, v4sf *
     const v4sf tr12{LD_PS1(-0.809016994374947f)};
     const v4sf ti12{LD_PS1(0.587785252292473f)};
 
-#define cc_ref(a_1,a_2,a_3) cc[((a_3)*5 + (a_2))*ido + (a_1)]
-#define ch_ref(a_1,a_2,a_3) ch[((a_3)*l1 + (a_2))*ido + (a_1)]
+    auto cc_ref = [&cc,ido](size_t a_1, size_t a_2, size_t a_3) noexcept -> auto&
+    { return cc[(a_3*5 + a_2)*ido + a_1]; };
+    auto ch_ref = [&ch,ido,l1](size_t a_1, size_t a_2, size_t a_3) noexcept -> auto&
+    { return ch[(a_3*l1 + a_2)*ido + a_1]; };
 
     /* Parameter adjustments */
     ch -= 1 + ido*(1 + l1);
@@ -1144,8 +1146,6 @@ void radb5_ps(const size_t ido, const size_t l1, const v4sf *RESTRICT cc, v4sf *
             ch_ref(i-1, k, 5) = dr5; ch_ref(i, k, 5) = di5;
         }
     }
-#undef cc_ref
-#undef ch_ref
 } /* radb5 */
 
 NOINLINE v4sf *rfftf1_ps(const size_t n, const v4sf *input_readonly, v4sf *work1, v4sf *work2,

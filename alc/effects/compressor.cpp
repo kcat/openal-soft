@@ -55,11 +55,11 @@ struct ContextBase;
 
 namespace {
 
-#define AMP_ENVELOPE_MIN  0.5f
-#define AMP_ENVELOPE_MAX  2.0f
+constexpr float AmpEnvelopeMin{0.5f};
+constexpr float AmpEnvelopeMax{2.0f};
 
-#define ATTACK_TIME  0.1f /* 100ms to rise from min to max */
-#define RELEASE_TIME 0.2f /* 200ms to drop from max to min */
+constexpr float AttackTime{0.1f}; /* 100ms to rise from min to max */
+constexpr float ReleaseTime{0.2f}; /* 200ms to drop from max to min */
 
 
 struct CompressorState final : public EffectState {
@@ -89,14 +89,14 @@ void CompressorState::deviceUpdate(const DeviceBase *device, const BufferStorage
     /* Number of samples to do a full attack and release (non-integer sample
      * counts are okay).
      */
-    const float attackCount{static_cast<float>(device->Frequency) * ATTACK_TIME};
-    const float releaseCount{static_cast<float>(device->Frequency) * RELEASE_TIME};
+    const float attackCount{static_cast<float>(device->Frequency) * AttackTime};
+    const float releaseCount{static_cast<float>(device->Frequency) * ReleaseTime};
 
     /* Calculate per-sample multipliers to attack and release at the desired
      * rates.
      */
-    mAttackMult  = std::pow(AMP_ENVELOPE_MAX/AMP_ENVELOPE_MIN, 1.0f/attackCount);
-    mReleaseMult = std::pow(AMP_ENVELOPE_MIN/AMP_ENVELOPE_MAX, 1.0f/releaseCount);
+    mAttackMult  = std::pow(AmpEnvelopeMax/AmpEnvelopeMin, 1.0f/attackCount);
+    mReleaseMult = std::pow(AmpEnvelopeMin/AmpEnvelopeMax, 1.0f/releaseCount);
 }
 
 void CompressorState::update(const ContextBase*, const EffectSlot *slot,
@@ -130,8 +130,8 @@ void CompressorState::process(const size_t samplesToDo,
                 /* Clamp the absolute amplitude to the defined envelope limits,
                  * then attack or release the envelope to reach it.
                  */
-                const float amplitude{clampf(std::fabs(samplesIn[0][base+i]), AMP_ENVELOPE_MIN,
-                    AMP_ENVELOPE_MAX)};
+                const float amplitude{clampf(std::fabs(samplesIn[0][base+i]), AmpEnvelopeMin,
+                    AmpEnvelopeMax)};
                 if(amplitude > env)
                     env = minf(env*mAttackMult, amplitude);
                 else if(amplitude < env)

@@ -1024,8 +1024,8 @@ void aluInitRenderer(ALCdevice *device, int hrtf_id, std::optional<StereoEncodin
         const bool stablize{device->RealOut.ChannelIndex[FrontCenter] != InvalidChannelIndex
             && device->RealOut.ChannelIndex[FrontLeft] != InvalidChannelIndex
             && device->RealOut.ChannelIndex[FrontRight] != InvalidChannelIndex
-            && device->getConfigValueBool({}, "front-stablizer", false) != 0};
-        const bool hqdec{device->getConfigValueBool("decoder", "hq-mode", true) != 0};
+            && device->getConfigValueBool({}, "front-stablizer", false)};
+        const bool hqdec{device->getConfigValueBool("decoder", "hq-mode", true)};
         InitPanning(device, hqdec, stablize, decoder);
         if(decoder)
         {

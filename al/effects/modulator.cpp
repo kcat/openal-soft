@@ -20,7 +20,7 @@
 
 namespace {
 
-std::optional<ModulatorWaveform> WaveformFromEmum(ALenum value)
+constexpr std::optional<ModulatorWaveform> WaveformFromEmum(ALenum value) noexcept
 {
     switch(value)
     {
@@ -30,7 +30,7 @@ std::optional<ModulatorWaveform> WaveformFromEmum(ALenum value)
     }
     return std::nullopt;
 }
-ALenum EnumFromWaveform(ModulatorWaveform type)
+constexpr ALenum EnumFromWaveform(ModulatorWaveform type)
 {
     switch(type)
     {
@@ -42,7 +42,7 @@ ALenum EnumFromWaveform(ModulatorWaveform type)
         std::to_string(static_cast<int>(type))};
 }
 
-EffectProps genDefaultProps() noexcept
+constexpr EffectProps genDefaultProps() noexcept
 {
     ModulatorProps props{};
     props.Frequency      = AL_RING_MODULATOR_DEFAULT_FREQUENCY;

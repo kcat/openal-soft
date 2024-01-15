@@ -27,7 +27,7 @@ static_assert(FlangerMaxDelay >= AL_FLANGER_MAX_DELAY, "Flanger max delay too sm
 static_assert(AL_CHORUS_WAVEFORM_SINUSOID == AL_FLANGER_WAVEFORM_SINUSOID, "Chorus/Flanger waveform value mismatch");
 static_assert(AL_CHORUS_WAVEFORM_TRIANGLE == AL_FLANGER_WAVEFORM_TRIANGLE, "Chorus/Flanger waveform value mismatch");
 
-inline std::optional<ChorusWaveform> WaveformFromEnum(ALenum type)
+constexpr std::optional<ChorusWaveform> WaveformFromEnum(ALenum type) noexcept
 {
     switch(type)
     {
@@ -36,7 +36,7 @@ inline std::optional<ChorusWaveform> WaveformFromEnum(ALenum type)
     }
     return std::nullopt;
 }
-inline ALenum EnumFromWaveform(ChorusWaveform type)
+constexpr ALenum EnumFromWaveform(ChorusWaveform type)
 {
     switch(type)
     {
@@ -46,7 +46,7 @@ inline ALenum EnumFromWaveform(ChorusWaveform type)
     throw std::runtime_error{"Invalid chorus waveform: "+std::to_string(static_cast<int>(type))};
 }
 
-EffectProps genDefaultChorusProps() noexcept
+constexpr EffectProps genDefaultChorusProps() noexcept
 {
     ChorusProps props{};
     props.Waveform = WaveformFromEnum(AL_CHORUS_DEFAULT_WAVEFORM).value();
@@ -58,7 +58,7 @@ EffectProps genDefaultChorusProps() noexcept
     return props;
 }
 
-EffectProps genDefaultFlangerProps() noexcept
+constexpr EffectProps genDefaultFlangerProps() noexcept
 {
     FlangerProps props{};
     props.Waveform = WaveformFromEnum(AL_FLANGER_DEFAULT_WAVEFORM).value();

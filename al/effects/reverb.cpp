@@ -20,7 +20,7 @@
 
 namespace {
 
-EffectProps genDefaultProps() noexcept
+constexpr EffectProps genDefaultProps() noexcept
 {
     ReverbProps props{};
     props.Density   = AL_EAXREVERB_DEFAULT_DENSITY;
@@ -53,7 +53,7 @@ EffectProps genDefaultProps() noexcept
     return props;
 }
 
-EffectProps genDefaultStdProps() noexcept
+constexpr EffectProps genDefaultStdProps() noexcept
 {
     ReverbProps props{};
     props.Density   = AL_REVERB_DEFAULT_DENSITY;

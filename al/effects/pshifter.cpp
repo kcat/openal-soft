@@ -16,7 +16,7 @@
 
 namespace {
 
-EffectProps genDefaultProps() noexcept
+constexpr EffectProps genDefaultProps() noexcept
 {
     PshifterProps props{};
     props.CoarseTune = AL_PITCH_SHIFTER_DEFAULT_COARSE_TUNE;

@@ -20,7 +20,7 @@
 
 namespace {
 
-std::optional<FShifterDirection> DirectionFromEmum(ALenum value)
+constexpr std::optional<FShifterDirection> DirectionFromEmum(ALenum value) noexcept
 {
     switch(value)
     {
@@ -30,7 +30,7 @@ std::optional<FShifterDirection> DirectionFromEmum(ALenum value)
     }
     return std::nullopt;
 }
-ALenum EnumFromDirection(FShifterDirection dir)
+constexpr ALenum EnumFromDirection(FShifterDirection dir)
 {
     switch(dir)
     {
@@ -41,7 +41,7 @@ ALenum EnumFromDirection(FShifterDirection dir)
     throw std::runtime_error{"Invalid direction: "+std::to_string(static_cast<int>(dir))};
 }
 
-EffectProps genDefaultProps() noexcept
+constexpr EffectProps genDefaultProps() noexcept
 {
     FshifterProps props{};
     props.Frequency      = AL_FREQUENCY_SHIFTER_DEFAULT_FREQUENCY;

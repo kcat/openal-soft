@@ -19,7 +19,7 @@ namespace {
 static_assert(EchoMaxDelay >= AL_ECHO_MAX_DELAY, "Echo max delay too short");
 static_assert(EchoMaxLRDelay >= AL_ECHO_MAX_LRDELAY, "Echo max left-right delay too short");
 
-EffectProps genDefaultProps() noexcept
+constexpr EffectProps genDefaultProps() noexcept
 {
     EchoProps props{};
     props.Delay    = AL_ECHO_DEFAULT_DELAY;

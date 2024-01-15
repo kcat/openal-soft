@@ -12,7 +12,7 @@
 
 namespace {
 
-EffectProps genDefaultProps() noexcept
+constexpr EffectProps genDefaultProps() noexcept
 {
     ConvolutionProps props{};
     props.OrientAt = {0.0f,  0.0f, -1.0f};

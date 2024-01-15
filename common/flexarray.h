@@ -16,8 +16,13 @@ namespace al {
  */
 template<typename T, size_t alignment, bool = std::is_trivially_destructible<T>::value>
 struct alignas(std::max(alignment, alignof(al::span<T>))) FlexArrayStorage : al::span<T> {
+    /* NOLINTBEGIN(bugprone-sizeof-expression) clang-tidy warns about the
+     * sizeof(T) being suspicious when T is a pointer type, which it will be
+     * for flexible arrays of pointers.
+     */
     static constexpr size_t Sizeof(size_t count, size_t base=0u) noexcept
     { return sizeof(FlexArrayStorage) + sizeof(T)*count + base; }
+    /* NOLINTEND(bugprone-sizeof-expression)  */
 
     FlexArrayStorage(size_t size) noexcept(std::is_nothrow_constructible_v<T>)
         : al::span<T>{::new(static_cast<void*>(this+1)) T[size], size}

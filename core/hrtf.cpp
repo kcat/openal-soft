@@ -936,12 +936,13 @@ std::unique_ptr<HrtfStore> LoadHrtf02(std::istream &data, const char *filename)
         auto copy_irs = [&elevs,&coeffs,&delays,&coeffs_end,&delays_end](
             const ptrdiff_t ebase, const HrtfStore::Field &field) -> ptrdiff_t
         {
-            auto accum_az = [](int count, const HrtfStore::Elevation &elev) noexcept -> int
+            auto accum_az = [](const ptrdiff_t count, const HrtfStore::Elevation &elev) noexcept
+                -> ptrdiff_t
             { return count + elev.azCount; };
-            const auto elevs_mid = elevs.cbegin() + ebase;
-            const auto elevs_end = elevs_mid + field.evCount;
-            const int abase{std::accumulate(elevs.cbegin(), elevs_mid, 0, accum_az)};
-            const int num_azs{std::accumulate(elevs_mid, elevs_end, 0, accum_az)};
+            const auto elev_mid = elevs.cbegin() + ebase;
+            const auto abase = std::accumulate(elevs.cbegin(), elev_mid, ptrdiff_t{0}, accum_az);
+            const auto num_azs = std::accumulate(elev_mid, elev_mid + field.evCount, ptrdiff_t{0},
+                accum_az);
 
             coeffs_end = std::copy_backward(coeffs.cbegin() + abase,
                 coeffs.cbegin() + (abase+num_azs), coeffs_end);

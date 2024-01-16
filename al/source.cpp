@@ -750,6 +750,9 @@ ALsource *AllocSource(ALCcontext *context)
     ASSUME(slidx < 64);
 
     ALsource *source{al::construct_at(al::to_address(sublist->Sources->begin() + slidx))};
+#ifdef ALSOFT_EAX
+    source->eaxInitialize(context);
+#endif // ALSOFT_EAX
 
     /* Add 1 to avoid source ID 0. */
     source->id = ((lidx<<6) | slidx) + 1;
@@ -2655,12 +2658,8 @@ FORCE_ALIGN void AL_APIENTRY alGenSourcesDirect(ALCcontext *context, ALsizei n, 
 
     if(n == 1)
     {
-        ALsource *source{AllocSource(context)};
-        sources[0] = source->id;
-
-#ifdef ALSOFT_EAX
-        source->eaxInitialize(context);
-#endif // ALSOFT_EAX
+        /* Special handling for the easy and normal case. */
+        *sources = AllocSource(context)->id;
     }
     else
     {
@@ -2669,12 +2668,9 @@ FORCE_ALIGN void AL_APIENTRY alGenSourcesDirect(ALCcontext *context, ALsizei n, 
         do {
             ALsource *source{AllocSource(context)};
             ids.emplace_back(source->id);
-
-#ifdef ALSOFT_EAX
-            source->eaxInitialize(context);
-#endif // ALSOFT_EAX
         } while(--n);
-        std::copy(ids.cbegin(), ids.cend(), sources);
+        const al::span sids{sources, static_cast<ALuint>(n)};
+        std::copy(ids.cbegin(), ids.cend(), sids.begin());
     }
 }
 
@@ -2692,9 +2688,9 @@ FORCE_ALIGN void AL_APIENTRY alDeleteSourcesDirect(ALCcontext *context, ALsizei 
     auto validate_source = [context](const ALuint sid) -> bool
     { return LookupSource(context, sid) != nullptr; };
 
-    const ALuint *sources_end = sources + n;
-    auto invsrc = std::find_if_not(sources, sources_end, validate_source);
-    if(invsrc != sources_end) UNLIKELY
+    const al::span sids{sources, static_cast<ALuint>(n)};
+    auto invsrc = std::find_if_not(sids.begin(), sids.end(), validate_source);
+    if(invsrc != sids.end()) UNLIKELY
         return context->setError(AL_INVALID_NAME, "Invalid source ID %u", *invsrc);
 
     /* All good. Delete source IDs. */
@@ -2703,7 +2699,7 @@ FORCE_ALIGN void AL_APIENTRY alDeleteSourcesDirect(ALCcontext *context, ALsizei 
         ALsource *src{LookupSource(context, sid)};
         if(src) FreeSource(context, src);
     };
-    std::for_each(sources, sources_end, delete_source);
+    std::for_each(sids.begin(), sids.end(), delete_source);
 }
 
 AL_API DECL_FUNC1(ALboolean, alIsSource, ALuint)

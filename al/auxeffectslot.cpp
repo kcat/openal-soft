@@ -334,8 +334,8 @@ FORCE_ALIGN void AL_APIENTRY alGenAuxiliaryEffectSlotsDirect(ALCcontext *context
 
     if(n == 1)
     {
-        ALeffectslot *slot{AllocEffectSlot(context)};
-        effectslots[0] = slot->id;
+        /* Special handling for the easy and normal case. */
+        *effectslots = AllocEffectSlot(context)->id;
     }
     else
     {
@@ -346,7 +346,8 @@ FORCE_ALIGN void AL_APIENTRY alGenAuxiliaryEffectSlotsDirect(ALCcontext *context
             ALeffectslot *slot{AllocEffectSlot(context)};
             ids.emplace_back(slot->id);
         } while(--count);
-        std::copy(ids.cbegin(), ids.cend(), effectslots);
+        const al::span eids{effectslots, static_cast<ALuint>(n)};
+        std::copy(ids.cbegin(), ids.cend(), eids.begin());
     }
 }
 
@@ -378,36 +379,32 @@ FORCE_ALIGN void AL_APIENTRY alDeleteAuxiliaryEffectSlotsDirect(ALCcontext *cont
     }
     else
     {
+        const al::span eids{effectslots, static_cast<ALuint>(n)};
         auto slots = std::vector<ALeffectslot*>(static_cast<ALuint>(n));
         for(size_t i{0};i < slots.size();++i)
         {
-            ALeffectslot *slot{LookupEffectSlot(context, effectslots[i])};
+            ALeffectslot *slot{LookupEffectSlot(context, eids[i])};
             if(!slot) UNLIKELY
             {
-                context->setError(AL_INVALID_NAME, "Invalid effect slot ID %u", effectslots[i]);
+                context->setError(AL_INVALID_NAME, "Invalid effect slot ID %u", eids[i]);
                 return;
             }
             if(slot->ref.load(std::memory_order_relaxed) != 0) UNLIKELY
             {
-                context->setError(AL_INVALID_OPERATION, "Deleting in-use effect slot %u",
-                    effectslots[i]);
+                context->setError(AL_INVALID_OPERATION, "Deleting in-use effect slot %u", eids[i]);
                 return;
             }
             slots[i] = slot;
         }
-        /* Remove any duplicates. */
-        auto slots_end = slots.end();
-        for(auto start=slots.begin()+1;start != slots_end;++start)
-        {
-            slots_end = std::remove(start, slots_end, *(start-1));
-            if(start == slots_end) break;
-        }
-        slots.erase(slots_end, slots.end());
-
         /* All effectslots are valid, remove and delete them */
         RemoveActiveEffectSlots(slots, context);
-        for(ALeffectslot *slot : slots)
-            FreeEffectSlot(context, slot);
+
+        auto delete_effectslot = [context](const ALuint eid) -> void
+        {
+            if(ALeffectslot *slot{LookupEffectSlot(context, eid)})
+                FreeEffectSlot(context, slot);
+        };
+        std::for_each(eids.begin(), eids.end(), delete_effectslot);
     }
 }
 

@@ -678,8 +678,7 @@ FORCE_ALIGN void AL_APIENTRY alGenBuffersDirect(ALCcontext *context, ALsizei n, 
     if(n == 1) LIKELY
     {
         /* Special handling for the easy and normal case. */
-        ALbuffer *buffer{AllocBuffer(device)};
-        buffers[0] = buffer->id;
+        *buffers = AllocBuffer(device)->id;
     }
     else
     {
@@ -692,7 +691,8 @@ FORCE_ALIGN void AL_APIENTRY alGenBuffersDirect(ALCcontext *context, ALsizei n, 
             ALbuffer *buffer{AllocBuffer(device)};
             ids.emplace_back(buffer->id);
         } while(--n);
-        std::copy(ids.begin(), ids.end(), buffers);
+        const al::span bids{buffers, static_cast<ALuint>(n)};
+        std::copy(ids.cbegin(), ids.cend(), bids.begin());
     }
 }
 
@@ -724,9 +724,10 @@ FORCE_ALIGN void AL_APIENTRY alDeleteBuffersDirect(ALCcontext *context, ALsizei 
         }
         return true;
     };
-    const ALuint *buffers_end = buffers + n;
-    auto invbuf = std::find_if_not(buffers, buffers_end, validate_buffer);
-    if(invbuf != buffers_end) UNLIKELY return;
+
+    const al::span bids{buffers, static_cast<ALuint>(n)};
+    auto invbuf = std::find_if_not(bids.begin(), bids.end(), validate_buffer);
+    if(invbuf != bids.end()) UNLIKELY return;
 
     /* All good. Delete non-0 buffer IDs. */
     auto delete_buffer = [device](const ALuint bid) -> void
@@ -734,7 +735,7 @@ FORCE_ALIGN void AL_APIENTRY alDeleteBuffersDirect(ALCcontext *context, ALsizei 
         ALbuffer *buffer{bid ? LookupBuffer(device, bid) : nullptr};
         if(buffer) FreeBuffer(device, buffer);
     };
-    std::for_each(buffers, buffers_end, delete_buffer);
+    std::for_each(bids.begin(), bids.end(), delete_buffer);
 }
 
 AL_API DECL_FUNC1(ALboolean, alIsBuffer, ALuint)

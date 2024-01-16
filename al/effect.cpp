@@ -213,8 +213,7 @@ FORCE_ALIGN void AL_APIENTRY alGenEffectsDirect(ALCcontext *context, ALsizei n, 
     if(n == 1) LIKELY
     {
         /* Special handling for the easy and normal case. */
-        ALeffect *effect{AllocEffect(device)};
-        effects[0] = effect->id;
+        *effects = AllocEffect(device)->id;
     }
     else
     {
@@ -227,7 +226,8 @@ FORCE_ALIGN void AL_APIENTRY alGenEffectsDirect(ALCcontext *context, ALsizei n, 
             ALeffect *effect{AllocEffect(device)};
             ids.emplace_back(effect->id);
         } while(--n);
-        std::copy(ids.cbegin(), ids.cend(), effects);
+        const al::span eids{effects, static_cast<ALuint>(n)};
+        std::copy(ids.cbegin(), ids.cend(), eids.begin());
     }
 }
 
@@ -246,9 +246,9 @@ FORCE_ALIGN void AL_APIENTRY alDeleteEffectsDirect(ALCcontext *context, ALsizei 
     auto validate_effect = [device](const ALuint eid) -> bool
     { return !eid || LookupEffect(device, eid) != nullptr; };
 
-    const ALuint *effects_end = effects + n;
-    auto inveffect = std::find_if_not(effects, effects_end, validate_effect);
-    if(inveffect != effects_end) UNLIKELY
+    const al::span eids{effects, static_cast<ALuint>(n)};
+    auto inveffect = std::find_if_not(eids.begin(), eids.end(), validate_effect);
+    if(inveffect != eids.end()) UNLIKELY
     {
         context->setError(AL_INVALID_NAME, "Invalid effect ID %u", *inveffect);
         return;
@@ -260,7 +260,7 @@ FORCE_ALIGN void AL_APIENTRY alDeleteEffectsDirect(ALCcontext *context, ALsizei 
         ALeffect *effect{eid ? LookupEffect(device, eid) : nullptr};
         if(effect) FreeEffect(device, effect);
     };
-    std::for_each(effects, effects_end, delete_effect);
+    std::for_each(eids.begin(), eids.end(), delete_effect);
 }
 
 AL_API DECL_FUNC1(ALboolean, alIsEffect, ALuint)

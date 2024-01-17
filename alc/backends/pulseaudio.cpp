@@ -489,7 +489,7 @@ PulseMainloop::~PulseMainloop()
 {
     if(mContext)
     {
-        MainloopUniqueLock _{*this};
+        MainloopUniqueLock looplock{*this};
         pa_context_disconnect(mContext);
         pa_context_unref(mContext);
     }
@@ -582,7 +582,7 @@ void PulseMainloop::close(pa_stream *stream)
     if(!stream)
         return;
 
-    MainloopUniqueLock _{*this};
+    MainloopUniqueLock looplock{*this};
     pa_stream_set_state_callback(stream, nullptr, nullptr);
     pa_stream_set_moved_callback(stream, nullptr, nullptr);
     pa_stream_set_write_callback(stream, nullptr, nullptr);

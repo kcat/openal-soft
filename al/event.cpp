@@ -54,7 +54,7 @@ int EventThread(ALCcontext *context)
             continue;
         }
 
-        std::lock_guard<std::mutex> _{context->mEventCbLock};
+        std::lock_guard<std::mutex> eventlock{context->mEventCbLock};
         do {
             auto *evt_ptr = std::launder(reinterpret_cast<AsyncEvent*>(evt_data.buf));
             evt_data.buf += sizeof(AsyncEvent);
@@ -221,7 +221,7 @@ FORCE_ALIGN void AL_APIENTRY alEventControlDirectSOFT(ALCcontext *context, ALsiz
         /* Wait to ensure the event handler sees the changed flags before
          * returning.
          */
-        std::lock_guard<std::mutex> _{context->mEventCbLock};
+        std::lock_guard<std::mutex> eventlock{context->mEventCbLock};
     }
 }
 
@@ -229,7 +229,7 @@ AL_API DECL_FUNCEXT2(void, alEventCallback,SOFT, ALEVENTPROCSOFT, void*)
 FORCE_ALIGN void AL_APIENTRY alEventCallbackDirectSOFT(ALCcontext *context,
     ALEVENTPROCSOFT callback, void *userParam) noexcept
 {
-    std::lock_guard<std::mutex> _{context->mEventCbLock};
+    std::lock_guard<std::mutex> eventlock{context->mEventCbLock};
     context->mEventCb = callback;
     context->mEventParam = userParam;
 }

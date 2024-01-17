@@ -930,7 +930,7 @@ struct WasapiProxy {
         std::promise<HRESULT> promise;
         std::future<HRESULT> future{promise.get_future()};
         {
-            std::lock_guard<std::mutex> _{mMsgQueueLock};
+            std::lock_guard<std::mutex> msglock{mMsgQueueLock};
             mMsgQueue.emplace_back(Msg{type, this, param, std::move(promise)});
         }
         mMsgQueueCond.notify_one();
@@ -942,7 +942,7 @@ struct WasapiProxy {
         std::promise<HRESULT> promise;
         std::future<HRESULT> future{promise.get_future()};
         {
-            std::lock_guard<std::mutex> _{mMsgQueueLock};
+            std::lock_guard<std::mutex> msglock{mMsgQueueLock};
             mMsgQueue.emplace_back(Msg{type, nullptr, {}, std::move(promise)});
         }
         mMsgQueueCond.notify_one();
@@ -1148,7 +1148,7 @@ FORCE_ALIGN int WasapiPlayback::mixerProc()
         {
             if(mResampler)
             {
-                std::lock_guard<std::mutex> _{mMutex};
+                std::lock_guard<std::mutex> dlock{mMutex};
                 for(UINT32 done{0};done < len;)
                 {
                     if(mBufferFilled == 0)
@@ -1168,7 +1168,7 @@ FORCE_ALIGN int WasapiPlayback::mixerProc()
             }
             else
             {
-                std::lock_guard<std::mutex> _{mMutex};
+                std::lock_guard<std::mutex> dlock{mMutex};
                 mDevice->renderSamples(buffer, len, mFormat.Format.nChannels);
                 mPadding.store(written + len, std::memory_order_relaxed);
             }
@@ -1272,7 +1272,7 @@ FORCE_ALIGN int WasapiPlayback::mixerSpatialProc()
                 mDevice->renderSamples(buffers, framesToDo);
             else
             {
-                std::lock_guard<std::mutex> _{mMutex};
+                std::lock_guard<std::mutex> dlock{mMutex};
                 for(UINT32 pos{0};pos < framesToDo;)
                 {
                     if(mBufferFilled == 0)
@@ -2075,7 +2075,7 @@ ClockLatency WasapiPlayback::getClockLatency()
 {
     ClockLatency ret;
 
-    std::lock_guard<std::mutex> _{mMutex};
+    std::lock_guard<std::mutex> dlock{mMutex};
     ret.ClockTime = mDevice->getClockTime();
     ret.Latency  = seconds{mPadding.load(std::memory_order_relaxed)};
     ret.Latency /= mFormat.Format.nSamplesPerSec;

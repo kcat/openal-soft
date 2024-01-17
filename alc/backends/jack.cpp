@@ -442,7 +442,7 @@ int JackPlayback::mixerProc()
         const auto len1 = static_cast<uint>(minz(data.first.len, todo));
         const auto len2 = static_cast<uint>(minz(data.second.len, todo-len1));
 
-        std::lock_guard<std::mutex> _{mMutex};
+        std::lock_guard<std::mutex> dlock{mMutex};
         mDevice->renderSamples(data.first.buf, len1, frame_step);
         if(len2 > 0)
             mDevice->renderSamples(data.second.buf, len2, frame_step);
@@ -649,7 +649,7 @@ ClockLatency JackPlayback::getClockLatency()
 {
     ClockLatency ret;
 
-    std::lock_guard<std::mutex> _{mMutex};
+    std::lock_guard<std::mutex> dlock{mMutex};
     ret.ClockTime = mDevice->getClockTime();
     ret.Latency  = std::chrono::seconds{mRing ? mRing->readSpace() : mDevice->UpdateSize};
     ret.Latency /= mDevice->Frequency;

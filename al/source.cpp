@@ -1603,7 +1603,7 @@ NOINLINE void SetProperty(ALsource *const Source, ALCcontext *const Context, con
             if(values[0])
             {
                 using UT = std::make_unsigned_t<T>;
-                std::lock_guard<std::mutex> _{device->BufferLock};
+                std::lock_guard<std::mutex> buflock{device->BufferLock};
                 ALbuffer *buffer{LookupBuffer(device, static_cast<UT>(values[0]))};
                 if(!buffer) UNLIKELY
                     return Context->setError(AL_INVALID_VALUE, "Invalid buffer ID %s",
@@ -1783,7 +1783,7 @@ NOINLINE void SetProperty(ALsource *const Source, ALCcontext *const Context, con
             const auto filterid = static_cast<std::make_unsigned_t<T>>(values[0]);
             if(values[0])
             {
-                std::lock_guard<std::mutex> _{device->FilterLock};
+                std::lock_guard<std::mutex> filterlock{device->FilterLock};
                 ALfilter *filter{LookupFilter(device, filterid)};
                 if(!filter) UNLIKELY
                     return Context->setError(AL_INVALID_VALUE, "Invalid filter ID %s",
@@ -1939,7 +1939,7 @@ NOINLINE void SetProperty(ALsource *const Source, ALCcontext *const Context, con
 
             if(values[2])
             {
-                std::lock_guard<std::mutex> _{device->FilterLock};
+                std::lock_guard<std::mutex> filterlock{device->FilterLock};
                 ALfilter *filter{LookupFilter(device, filterid)};
                 if(!filter) UNLIKELY
                     return Context->setError(AL_INVALID_VALUE, "Invalid filter ID %s",
@@ -2173,7 +2173,7 @@ bool GetProperty(ALsource *const Source, ALCcontext *const Context, const Source
             nanoseconds srcclock{};
             values[0] = GetSourceSampleOffset(Source, Context, &srcclock);
             {
-                std::lock_guard<std::mutex> _{device->StateLock};
+                std::lock_guard<std::mutex> statelock{device->StateLock};
                 clocktime = GetClockLatency(device, device->Backend.get());
             }
             if(srcclock == clocktime.ClockTime)
@@ -2213,7 +2213,7 @@ bool GetProperty(ALsource *const Source, ALCcontext *const Context, const Source
             nanoseconds srcclock{};
             values[0] = GetSourceSecOffset(Source, Context, &srcclock);
             {
-                std::lock_guard<std::mutex> _{device->StateLock};
+                std::lock_guard<std::mutex> statelock{device->StateLock};
                 clocktime = GetClockLatency(device, device->Backend.get());
             }
             if(srcclock == clocktime.ClockTime)
@@ -2682,7 +2682,7 @@ FORCE_ALIGN void AL_APIENTRY alDeleteSourcesDirect(ALCcontext *context, ALsizei 
         context->setError(AL_INVALID_VALUE, "Deleting %d sources", n);
     if(n <= 0) UNLIKELY return;
 
-    std::lock_guard<std::mutex> _{context->mSourceLock};
+    std::lock_guard<std::mutex> srclock{context->mSourceLock};
 
     /* Check that all Sources are valid */
     auto validate_source = [context](const ALuint sid) -> bool
@@ -2705,7 +2705,7 @@ FORCE_ALIGN void AL_APIENTRY alDeleteSourcesDirect(ALCcontext *context, ALsizei 
 AL_API DECL_FUNC1(ALboolean, alIsSource, ALuint)
 FORCE_ALIGN ALboolean AL_APIENTRY alIsSourceDirect(ALCcontext *context, ALuint source) noexcept
 {
-    std::lock_guard<std::mutex> _{context->mSourceLock};
+    std::lock_guard<std::mutex> srclock{context->mSourceLock};
     if(LookupSource(context, source) != nullptr)
         return AL_TRUE;
     return AL_FALSE;
@@ -3597,13 +3597,13 @@ ALsource::~ALsource()
 
 void UpdateAllSourceProps(ALCcontext *context)
 {
-    std::lock_guard<std::mutex> _{context->mSourceLock};
+    std::lock_guard<std::mutex> srclock{context->mSourceLock};
     auto voicelist = context->getVoicesSpan();
     ALuint vidx{0u};
     for(Voice *voice : voicelist)
     {
         ALuint sid{voice->mSourceID.load(std::memory_order_acquire)};
-        ALsource *source = sid ? LookupSource(context, sid) : nullptr;
+        ALsource *source{sid ? LookupSource(context, sid) : nullptr};
         if(source && source->VoiceIdx == vidx)
         {
             if(std::exchange(source->mPropsDirty, false))
@@ -3615,7 +3615,7 @@ void UpdateAllSourceProps(ALCcontext *context)
 
 void ALsource::SetName(ALCcontext *context, ALuint id, std::string_view name)
 {
-    std::lock_guard<std::mutex> _{context->mSourceLock};
+    std::lock_guard<std::mutex> srclock{context->mSourceLock};
 
     auto source = LookupSource(context, id);
     if(!source) UNLIKELY

@@ -223,14 +223,14 @@ void GetValue(ALCcontext *context, ALenum pname, T *values)
 
     case AL_DEBUG_LOGGED_MESSAGES_EXT:
     {
-        std::lock_guard<std::mutex> _{context->mDebugCbLock};
+        std::lock_guard<std::mutex> debuglock{context->mDebugCbLock};
         *values = cast_value(context->mDebugLog.size());
         return;
     }
 
     case AL_DEBUG_NEXT_LOGGED_MESSAGE_LENGTH_EXT:
     {
-        std::lock_guard<std::mutex> _{context->mDebugCbLock};
+        std::lock_guard<std::mutex> debuglock{context->mDebugCbLock};
         *values = cast_value(context->mDebugLog.empty() ? 0_uz
             : (context->mDebugLog.front().mMessage.size()+1));
         return;
@@ -316,7 +316,7 @@ FORCE_ALIGN void AL_APIENTRY alEnableDirect(ALCcontext *context, ALenum capabili
     {
     case AL_SOURCE_DISTANCE_MODEL:
         {
-            std::lock_guard<std::mutex> _{context->mPropLock};
+            std::lock_guard<std::mutex> proplock{context->mPropLock};
             context->mSourceDistanceModel = true;
             UpdateProps(context);
         }
@@ -342,7 +342,7 @@ FORCE_ALIGN void AL_APIENTRY alDisableDirect(ALCcontext *context, ALenum capabil
     {
     case AL_SOURCE_DISTANCE_MODEL:
         {
-            std::lock_guard<std::mutex> _{context->mPropLock};
+            std::lock_guard<std::mutex> proplock{context->mPropLock};
             context->mSourceDistanceModel = false;
             UpdateProps(context);
         }
@@ -364,7 +364,7 @@ FORCE_ALIGN void AL_APIENTRY alDisableDirect(ALCcontext *context, ALenum capabil
 AL_API DECL_FUNC1(ALboolean, alIsEnabled, ALenum)
 FORCE_ALIGN ALboolean AL_APIENTRY alIsEnabledDirect(ALCcontext *context, ALenum capability) noexcept
 {
-    std::lock_guard<std::mutex> _{context->mPropLock};
+    std::lock_guard<std::mutex> proplock{context->mPropLock};
     ALboolean value{AL_FALSE};
     switch(capability)
     {
@@ -550,7 +550,7 @@ FORCE_ALIGN void AL_APIENTRY alDopplerFactorDirect(ALCcontext *context, ALfloat 
         context->setError(AL_INVALID_VALUE, "Doppler factor %f out of range", value);
     else
     {
-        std::lock_guard<std::mutex> _{context->mPropLock};
+        std::lock_guard<std::mutex> proplock{context->mPropLock};
         context->mDopplerFactor = value;
         UpdateProps(context);
     }
@@ -563,7 +563,7 @@ FORCE_ALIGN void AL_APIENTRY alSpeedOfSoundDirect(ALCcontext *context, ALfloat v
         context->setError(AL_INVALID_VALUE, "Speed of sound %f out of range", value);
     else
     {
-        std::lock_guard<std::mutex> _{context->mPropLock};
+        std::lock_guard<std::mutex> proplock{context->mPropLock};
         context->mSpeedOfSound = value;
         UpdateProps(context);
     }
@@ -574,7 +574,7 @@ FORCE_ALIGN void AL_APIENTRY alDistanceModelDirect(ALCcontext *context, ALenum v
 {
     if(auto model = DistanceModelFromALenum(value))
     {
-        std::lock_guard<std::mutex> _{context->mPropLock};
+        std::lock_guard<std::mutex> proplock{context->mPropLock};
         context->mDistanceModel = *model;
         if(!context->mSourceDistanceModel)
             UpdateProps(context);
@@ -587,14 +587,14 @@ FORCE_ALIGN void AL_APIENTRY alDistanceModelDirect(ALCcontext *context, ALenum v
 AL_API DECL_FUNCEXT(void, alDeferUpdates,SOFT)
 FORCE_ALIGN void AL_APIENTRY alDeferUpdatesDirectSOFT(ALCcontext *context) noexcept
 {
-    std::lock_guard<std::mutex> _{context->mPropLock};
+    std::lock_guard<std::mutex> proplock{context->mPropLock};
     context->deferUpdates();
 }
 
 AL_API DECL_FUNCEXT(void, alProcessUpdates,SOFT)
 FORCE_ALIGN void AL_APIENTRY alProcessUpdatesDirectSOFT(ALCcontext *context) noexcept
 {
-    std::lock_guard<std::mutex> _{context->mPropLock};
+    std::lock_guard<std::mutex> proplock{context->mPropLock};
     context->processUpdates();
 }
 
@@ -634,7 +634,7 @@ AL_API void AL_APIENTRY alDopplerVelocity(ALfloat value) noexcept
         context->setError(AL_INVALID_VALUE, "Doppler velocity %f out of range", value);
     else
     {
-        std::lock_guard<std::mutex> _{context->mPropLock};
+        std::lock_guard<std::mutex> proplock{context->mPropLock};
         context->mDopplerVelocity = value;
         UpdateProps(context.get());
     }

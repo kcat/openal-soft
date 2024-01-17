@@ -237,7 +237,7 @@ public:
     void setFinished()
     {
         {
-            std::lock_guard<std::mutex> _{mPacketMutex};
+            std::lock_guard<std::mutex> packetlock{mPacketMutex};
             mFinished = true;
         }
         mPacketCond.notify_one();
@@ -246,7 +246,7 @@ public:
     void flush()
     {
         {
-            std::lock_guard<std::mutex> _{mPacketMutex};
+            std::lock_guard<std::mutex> packetlock{mPacketMutex};
             mFinished = true;
 
             mPackets.clear();
@@ -258,7 +258,7 @@ public:
     bool put(const AVPacket *pkt)
     {
         {
-            std::unique_lock<std::mutex> lock{mPacketMutex};
+            std::lock_guard<std::mutex> packet_lock{mPacketMutex};
             if(mTotalSize >= SizeLimit || mFinished)
                 return false;
 
@@ -1392,7 +1392,7 @@ int AudioState::handler()
 nanoseconds VideoState::getClock()
 {
     /* NOTE: This returns incorrect times while not playing. */
-    std::lock_guard<std::mutex> _{mDispPtsMutex};
+    std::lock_guard<std::mutex> displock{mDispPtsMutex};
     if(mDisplayPtsTime == microseconds::min())
         return nanoseconds::zero();
     auto delta = get_avtime() - mDisplayPtsTime;
@@ -1571,7 +1571,7 @@ void VideoState::updateVideo(SDL_Window *screen, SDL_Renderer *renderer, bool re
     {
         auto disp_time = get_avtime();
 
-        std::lock_guard<std::mutex> _{mDispPtsMutex};
+        std::lock_guard<std::mutex> displock{mDispPtsMutex};
         mDisplayPts = vp->mPts;
         mDisplayPtsTime = disp_time;
     }
@@ -1604,7 +1604,7 @@ int VideoState::handler()
     auto sender = std::async(std::launch::async, packet_sender);
 
     {
-        std::lock_guard<std::mutex> _{mDispPtsMutex};
+        std::lock_guard<std::mutex> displock{mDispPtsMutex};
         mDisplayPtsTime = get_avtime();
     }
 

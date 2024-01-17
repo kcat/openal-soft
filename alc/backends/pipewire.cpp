@@ -1521,7 +1521,7 @@ void PipeWirePlayback::open(std::string_view name)
     gEventHandler.waitForInit();
     if(name.empty())
     {
-        EventWatcherLockGuard _{gEventHandler};
+        EventWatcherLockGuard evtlock{gEventHandler};
         auto&& devlist = DeviceNode::GetList();
 
         auto match = devlist.cend();
@@ -1546,7 +1546,7 @@ void PipeWirePlayback::open(std::string_view name)
     }
     else
     {
-        EventWatcherLockGuard _{gEventHandler};
+        EventWatcherLockGuard evtlock{gEventHandler};
         auto&& devlist = DeviceNode::GetList();
 
         auto match_name = [name](const DeviceNode &n) -> bool
@@ -1603,7 +1603,7 @@ bool PipeWirePlayback::reset()
 {
     if(mStream)
     {
-        MainloopLockGuard _{mLoop};
+        MainloopLockGuard looplock{mLoop};
         mStream = nullptr;
     }
     mStreamListener = {};
@@ -1617,7 +1617,7 @@ bool PipeWirePlayback::reset()
     mDevice->Flags.reset(DirectEar);
     if(mTargetId != PwIdAny)
     {
-        EventWatcherLockGuard _{gEventHandler};
+        EventWatcherLockGuard evtlock{gEventHandler};
         auto&& devlist = DeviceNode::GetList();
 
         auto match_id = [targetid=mTargetId](const DeviceNode &n) -> bool
@@ -1828,7 +1828,7 @@ ClockLatency PipeWirePlayback::getClockLatency()
     pw_time ptime{};
     if(mStream)
     {
-        MainloopLockGuard _{mLoop};
+        MainloopLockGuard looplock{mLoop};
         if(int res{pw_stream_get_time_n(mStream.get(), &ptime, sizeof(ptime))})
             ERR("Failed to get PipeWire stream time (res: %d)\n", res);
     }
@@ -1965,7 +1965,7 @@ void PipeWireCapture::open(std::string_view name)
     gEventHandler.waitForInit();
     if(name.empty())
     {
-        EventWatcherLockGuard _{gEventHandler};
+        EventWatcherLockGuard evtlock{gEventHandler};
         auto&& devlist = DeviceNode::GetList();
 
         auto match = devlist.cend();
@@ -1995,7 +1995,7 @@ void PipeWireCapture::open(std::string_view name)
     }
     else
     {
-        EventWatcherLockGuard _{gEventHandler};
+        EventWatcherLockGuard evtlock{gEventHandler};
         auto&& devlist = DeviceNode::GetList();
 
         auto match_name = [name](const DeviceNode &n) -> bool
@@ -2059,7 +2059,7 @@ void PipeWireCapture::open(std::string_view name)
     bool is51rear{false};
     if(mTargetId != PwIdAny)
     {
-        EventWatcherLockGuard _{gEventHandler};
+        EventWatcherLockGuard evtlock{gEventHandler};
         auto&& devlist = DeviceNode::GetList();
 
         auto match_id = [targetid=mTargetId](const DeviceNode &n) -> bool
@@ -2216,7 +2216,7 @@ std::string PipeWireBackendFactory::probe(BackendType type)
     std::string outnames;
 
     gEventHandler.waitForInit();
-    EventWatcherLockGuard _{gEventHandler};
+    EventWatcherLockGuard evtlock{gEventHandler};
     auto&& devlist = DeviceNode::GetList();
 
     auto match_defsink = [](const DeviceNode &n) -> bool

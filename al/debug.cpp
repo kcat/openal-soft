@@ -236,7 +236,7 @@ FORCE_ALIGN DECL_FUNCEXT2(void, alDebugMessageCallback,EXT, ALDEBUGPROCEXT, void
 FORCE_ALIGN void AL_APIENTRY alDebugMessageCallbackDirectEXT(ALCcontext *context,
     ALDEBUGPROCEXT callback, void *userParam) noexcept
 {
-    std::lock_guard<std::mutex> _{context->mDebugCbLock};
+    std::lock_guard<std::mutex> debuglock{context->mDebugCbLock};
     context->mDebugCb = callback;
     context->mDebugParam = userParam;
 }
@@ -328,7 +328,7 @@ FORCE_ALIGN void AL_APIENTRY alDebugMessageControlDirectEXT(ALCcontext *context,
         svrIndices = svrIndices.subspan(al::to_underlying(*dseverity), 1);
     }
 
-    std::lock_guard<std::mutex> _{context->mDebugCbLock};
+    std::lock_guard<std::mutex> debuglock{context->mDebugCbLock};
     DebugGroup &debug = context->mDebugGroups.back();
     if(count > 0)
     {
@@ -448,7 +448,7 @@ FORCE_ALIGN ALuint AL_APIENTRY alGetDebugMessageLogDirectEXT(ALCcontext *context
         return 0;
     }
 
-    std::lock_guard<std::mutex> _{context->mDebugCbLock};
+    std::lock_guard<std::mutex> debuglock{context->mDebugCbLock};
     ALsizei logBufWritten{0};
     for(ALuint i{0};i < count;++i)
     {
@@ -539,30 +539,30 @@ FORCE_ALIGN void AL_APIENTRY alGetObjectLabelDirectEXT(ALCcontext *context, ALen
 
     if(identifier == AL_SOURCE_EXT)
     {
-        std::lock_guard _{context->mSourceLock};
+        std::lock_guard srclock{context->mSourceLock};
         copy_name(context->mSourceNames);
     }
     else if(identifier == AL_BUFFER)
     {
         ALCdevice *device{context->mALDevice.get()};
-        std::lock_guard _{device->BufferLock};
+        std::lock_guard buflock{device->BufferLock};
         copy_name(device->mBufferNames);
     }
     else if(identifier == AL_FILTER_EXT)
     {
         ALCdevice *device{context->mALDevice.get()};
-        std::lock_guard _{device->FilterLock};
+        std::lock_guard filterlock{device->FilterLock};
         copy_name(device->mFilterNames);
     }
     else if(identifier == AL_EFFECT_EXT)
     {
         ALCdevice *device{context->mALDevice.get()};
-        std::lock_guard _{device->EffectLock};
+        std::lock_guard effectlock{device->EffectLock};
         copy_name(device->mEffectNames);
     }
     else if(identifier == AL_AUXILIARY_EFFECT_SLOT_EXT)
     {
-        std::lock_guard _{context->mEffectSlotLock};
+        std::lock_guard slotlock{context->mEffectSlotLock};
         copy_name(context->mEffectSlotNames);
     }
     else

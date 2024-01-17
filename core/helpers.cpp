@@ -117,8 +117,8 @@ std::vector<std::string> SearchDataFiles(const char *ext, const char *subdir)
 {
     auto is_slash = [](int c) noexcept { return (c == '\\' || c == '/'); };
 
-    static std::mutex search_lock;
-    std::lock_guard<std::mutex> _{search_lock};
+    static std::mutex sSearchLock;
+    std::lock_guard<std::mutex> srchlock{sSearchLock};
 
     /* If the path is absolute, use it directly. */
     std::vector<std::string> results;
@@ -342,8 +342,8 @@ void DirectorySearch(const char *path, const char *ext, std::vector<std::string>
 
 std::vector<std::string> SearchDataFiles(const char *ext, const char *subdir)
 {
-    static std::mutex search_lock;
-    std::lock_guard<std::mutex> _{search_lock};
+    static std::mutex sSearchLock;
+    std::lock_guard<std::mutex> srchlock{sSearchLock};
 
     std::vector<std::string> results;
     if(subdir[0] == '/')

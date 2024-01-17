@@ -1237,7 +1237,7 @@ al::span<const char> GetResource(int name)
 
 std::vector<std::string> EnumerateHrtf(std::optional<std::string> pathopt)
 {
-    std::lock_guard<std::mutex> _{EnumeratedHrtfLock};
+    std::lock_guard<std::mutex> enumlock{EnumeratedHrtfLock};
     EnumeratedHrtfs.clear();
 
     bool usedefaults{true};
@@ -1470,7 +1470,7 @@ void HrtfStore::dec_ref()
     TRACE("HrtfStore %p decreasing refcount to %u\n", decltype(std::declval<void*>()){this}, ref);
     if(ref == 0)
     {
-        std::lock_guard<std::mutex> _{LoadedHrtfLock};
+        std::lock_guard<std::mutex> loadlock{LoadedHrtfLock};
 
         /* Go through and remove all unused HRTFs. */
         auto remove_unused = [](LoadedHrtf &hrtf) -> bool

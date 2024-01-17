@@ -68,6 +68,7 @@ namespace {
 using namespace std::placeholders;
 using std::chrono::seconds;
 using std::chrono::nanoseconds;
+using std::string_view_literals::operator""sv;
 
 inline const char *GetLabelFromChannel(Channel channel)
 {
@@ -849,15 +850,15 @@ void InitHrtfPanning(ALCdevice *device)
     if(auto modeopt = device->configValue<std::string>({}, "hrtf-mode"))
     {
         struct HrtfModeEntry {
-            char name[7]; /* NOLINT(*-avoid-c-arrays) */
+            std::string_view name;
             RenderMode mode;
             uint order;
         };
-        static constexpr std::array hrtf_modes{
-            HrtfModeEntry{"full", RenderMode::Hrtf, 1},
-            HrtfModeEntry{"ambi1", RenderMode::Normal, 1},
-            HrtfModeEntry{"ambi2", RenderMode::Normal, 2},
-            HrtfModeEntry{"ambi3", RenderMode::Normal, 3},
+        constexpr std::array hrtf_modes{
+            HrtfModeEntry{"full"sv, RenderMode::Hrtf, 1},
+            HrtfModeEntry{"ambi1"sv, RenderMode::Normal, 1},
+            HrtfModeEntry{"ambi2"sv, RenderMode::Normal, 2},
+            HrtfModeEntry{"ambi3"sv, RenderMode::Normal, 3},
         };
 
         const char *mode{modeopt->c_str()};
@@ -867,8 +868,8 @@ void InitHrtfPanning(ALCdevice *device)
             mode = "ambi2";
         }
 
-        auto match_entry = [mode](const HrtfModeEntry &entry) -> bool
-        { return al::strcasecmp(mode, entry.name) == 0; };
+        auto match_entry = [svmode=std::string_view{mode}](const HrtfModeEntry &entry) -> bool
+        { return al::case_compare(svmode, entry.name) == 0; };
         auto iter = std::find_if(std::begin(hrtf_modes), std::end(hrtf_modes), match_entry);
         if(iter == std::end(hrtf_modes))
             ERR("Unexpected hrtf-mode: %s\n", mode);

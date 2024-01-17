@@ -50,16 +50,17 @@
 
 namespace {
 
+using std::string_view_literals::operator""sv;
+
 /* Helper macros */
 #define EXTRACT_VCALL_ARGS(...)  __VA_ARGS__))
 #define VCALL(obj, func)  ((*(obj))->func((obj), EXTRACT_VCALL_ARGS
 #define VCALL0(obj, func)  ((*(obj))->func((obj) EXTRACT_VCALL_ARGS
 
 
-/* NOLINTNEXTLINE(*-avoid-c-arrays) */
-constexpr char opensl_device[] = "OpenSL";
+[[nodiscard]] constexpr auto GetDeviceName() noexcept { return "OpenSL"sv; }
 
-
+[[nodiscard]]
 constexpr SLuint32 GetChannelMask(DevFmtChannels chans) noexcept
 {
     switch(chans)
@@ -314,8 +315,8 @@ int OpenSLPlayback::mixerProc()
 void OpenSLPlayback::open(std::string_view name)
 {
     if(name.empty())
-        name = opensl_device;
-    else if(name != opensl_device)
+        name = GetDeviceName();
+    else if(name != GetDeviceName())
         throw al::backend_exception{al::backend_error::NoDevice, "Device name \"%.*s\" not found",
             static_cast<int>(name.length()), name.data()};
 
@@ -618,8 +619,8 @@ void OpenSLCapture::process(SLAndroidSimpleBufferQueueItf) noexcept
 void OpenSLCapture::open(std::string_view name)
 {
     if(name.empty())
-        name = opensl_device;
-    else if(name != opensl_device)
+        name = GetDeviceName();
+    else if(name != GetDeviceName())
         throw al::backend_exception{al::backend_error::NoDevice, "Device name \"%.*s\" not found",
             static_cast<int>(name.length()), name.data()};
 
@@ -908,16 +909,14 @@ bool OSLBackendFactory::querySupport(BackendType type)
 
 std::string OSLBackendFactory::probe(BackendType type)
 {
-    std::string outnames;
     switch(type)
     {
     case BackendType::Playback:
     case BackendType::Capture:
-        /* Includes null char. */
-        outnames.append(opensl_device, sizeof(opensl_device));
-        break;
+        /* Include null char. */
+        return std::string{GetDeviceName()} + '\0';
     }
-    return outnames;
+    return std::string{};
 }
 
 BackendPtr OSLBackendFactory::createBackend(DeviceBase *device, BackendType type)

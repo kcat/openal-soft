@@ -186,6 +186,7 @@ namespace {
 using namespace std::placeholders;
 using std::chrono::seconds;
 using std::chrono::nanoseconds;
+using std::string_view_literals::operator""sv;
 
 using voidp = void*;
 using float2 = std::array<float,2>;
@@ -255,23 +256,21 @@ std::array BackendList{
 BackendFactory *PlaybackFactory{};
 BackendFactory *CaptureFactory{};
 
-/* NOLINTBEGIN(*-avoid-c-arrays) */
-constexpr ALCchar alcNoError[] = "No Error";
-constexpr ALCchar alcErrInvalidDevice[] = "Invalid Device";
-constexpr ALCchar alcErrInvalidContext[] = "Invalid Context";
-constexpr ALCchar alcErrInvalidEnum[] = "Invalid Enum";
-constexpr ALCchar alcErrInvalidValue[] = "Invalid Value";
-constexpr ALCchar alcErrOutOfMemory[] = "Out of Memory";
 
+[[nodiscard]] constexpr auto GetNoErrorString() noexcept { return "No Error"; }
+[[nodiscard]] constexpr auto GetInvalidDeviceString() noexcept { return "Invalid Device"; }
+[[nodiscard]] constexpr auto GetInvalidContextString() noexcept { return "Invalid Context"; }
+[[nodiscard]] constexpr auto GetInvalidEnumString() noexcept { return "Invalid Enum"; }
+[[nodiscard]] constexpr auto GetInvalidValueString() noexcept { return "Invalid Value"; }
+[[nodiscard]] constexpr auto GetOutOfMemoryString() noexcept { return "Out of Memory"; }
+
+[[nodiscard]] constexpr auto GetDefaultName() noexcept { return "OpenAL Soft\0"; }
 
 /************************************************
  * Global variables
  ************************************************/
 
 /* Enumerated device names */
-constexpr ALCchar alcDefaultName[] = "OpenAL Soft\0";
-/* NOLINTEND(*-avoid-c-arrays) */
-
 std::string alcAllDevicesList;
 std::string alcCaptureDeviceList;
 
@@ -299,38 +298,41 @@ constexpr uint DitherRNGSeed{22222u};
 /************************************************
  * ALC information
  ************************************************/
-/* NOLINTBEGIN(*-avoid-c-arrays) */
-constexpr ALCchar alcNoDeviceExtList[] =
-    "ALC_ENUMERATE_ALL_EXT "
-    "ALC_ENUMERATION_EXT "
-    "ALC_EXT_CAPTURE "
-    "ALC_EXTX_direct_context "
-    "ALC_EXT_EFX "
-    "ALC_EXT_thread_local_context "
-    "ALC_SOFT_loopback "
-    "ALC_SOFT_loopback_bformat "
-    "ALC_SOFT_reopen_device "
-    "ALC_SOFT_system_events";
-constexpr ALCchar alcExtensionList[] =
-    "ALC_ENUMERATE_ALL_EXT "
-    "ALC_ENUMERATION_EXT "
-    "ALC_EXT_CAPTURE "
-    "ALC_EXT_debug "
-    "ALC_EXT_DEDICATED "
-    "ALC_EXTX_direct_context "
-    "ALC_EXT_disconnect "
-    "ALC_EXT_EFX "
-    "ALC_EXT_thread_local_context "
-    "ALC_SOFT_device_clock "
-    "ALC_SOFT_HRTF "
-    "ALC_SOFT_loopback "
-    "ALC_SOFT_loopback_bformat "
-    "ALC_SOFT_output_limiter "
-    "ALC_SOFT_output_mode "
-    "ALC_SOFT_pause_device "
-    "ALC_SOFT_reopen_device "
-    "ALC_SOFT_system_events";
-/* NOLINTEND(*-avoid-c-arrays) */
+[[nodiscard]] constexpr auto GetNoDeviceExtList() noexcept -> std::string_view
+{
+    return  "ALC_ENUMERATE_ALL_EXT "
+        "ALC_ENUMERATION_EXT "
+        "ALC_EXT_CAPTURE "
+        "ALC_EXTX_direct_context "
+        "ALC_EXT_EFX "
+        "ALC_EXT_thread_local_context "
+        "ALC_SOFT_loopback "
+        "ALC_SOFT_loopback_bformat "
+        "ALC_SOFT_reopen_device "
+        "ALC_SOFT_system_events"sv;
+}
+[[nodiscard]] constexpr auto GetExtensionList() noexcept -> std::string_view
+{
+    return "ALC_ENUMERATE_ALL_EXT "
+        "ALC_ENUMERATION_EXT "
+        "ALC_EXT_CAPTURE "
+        "ALC_EXT_debug "
+        "ALC_EXT_DEDICATED "
+        "ALC_EXTX_direct_context "
+        "ALC_EXT_disconnect "
+        "ALC_EXT_EFX "
+        "ALC_EXT_thread_local_context "
+        "ALC_SOFT_device_clock "
+        "ALC_SOFT_HRTF "
+        "ALC_SOFT_loopback "
+        "ALC_SOFT_loopback_bformat "
+        "ALC_SOFT_output_limiter "
+        "ALC_SOFT_output_mode "
+        "ALC_SOFT_pause_device "
+        "ALC_SOFT_reopen_device "
+        "ALC_SOFT_system_events"sv;
+}
+
 constexpr int alcMajorVersion{1};
 constexpr int alcMinorVersion{1};
 
@@ -1038,23 +1040,23 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
         if(auto typeopt = device->configValue<std::string>({}, "sample-type"))
         {
             struct TypeMap {
-                const char name[8]; /* NOLINT(*-avoid-c-arrays) */
+                std::string_view name;
                 DevFmtType type;
             };
-            static constexpr std::array typelist{
-                TypeMap{"int8",    DevFmtByte  },
-                TypeMap{"uint8",   DevFmtUByte },
-                TypeMap{"int16",   DevFmtShort },
-                TypeMap{"uint16",  DevFmtUShort},
-                TypeMap{"int32",   DevFmtInt   },
-                TypeMap{"uint32",  DevFmtUInt  },
-                TypeMap{"float32", DevFmtFloat },
+            constexpr std::array typelist{
+                TypeMap{"int8"sv,    DevFmtByte  },
+                TypeMap{"uint8"sv,   DevFmtUByte },
+                TypeMap{"int16"sv,   DevFmtShort },
+                TypeMap{"uint16"sv,  DevFmtUShort},
+                TypeMap{"int32"sv,   DevFmtInt   },
+                TypeMap{"uint32"sv,  DevFmtUInt  },
+                TypeMap{"float32"sv, DevFmtFloat },
             };
 
             const ALCchar *fmt{typeopt->c_str()};
             auto iter = std::find_if(typelist.begin(), typelist.end(),
-                [fmt](const TypeMap &entry) -> bool
-                { return al::strcasecmp(entry.name, fmt) == 0; });
+                [svfmt=std::string_view{fmt}](const TypeMap &entry) -> bool
+                { return al::case_compare(entry.name, svfmt) == 0; });
             if(iter == typelist.end())
                 ERR("Unsupported sample-type: %s\n", fmt);
             else
@@ -1063,29 +1065,29 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
         if(auto chanopt = device->configValue<std::string>({}, "channels"))
         {
             struct ChannelMap {
-                const char name[16]; /* NOLINT(*-avoid-c-arrays) */
+                std::string_view name;
                 DevFmtChannels chans;
                 uint8_t order;
             };
-            static constexpr std::array chanlist{
-                ChannelMap{"mono",       DevFmtMono,   0},
-                ChannelMap{"stereo",     DevFmtStereo, 0},
-                ChannelMap{"quad",       DevFmtQuad,   0},
-                ChannelMap{"surround51", DevFmtX51,    0},
-                ChannelMap{"surround61", DevFmtX61,    0},
-                ChannelMap{"surround71", DevFmtX71,    0},
-                ChannelMap{"surround714", DevFmtX714,  0},
-                ChannelMap{"surround3d71", DevFmtX3D71, 0},
-                ChannelMap{"surround51rear", DevFmtX51, 0},
-                ChannelMap{"ambi1", DevFmtAmbi3D, 1},
-                ChannelMap{"ambi2", DevFmtAmbi3D, 2},
-                ChannelMap{"ambi3", DevFmtAmbi3D, 3},
+            constexpr std::array chanlist{
+                ChannelMap{"mono"sv,       DevFmtMono,   0},
+                ChannelMap{"stereo"sv,     DevFmtStereo, 0},
+                ChannelMap{"quad"sv,       DevFmtQuad,   0},
+                ChannelMap{"surround51"sv, DevFmtX51,    0},
+                ChannelMap{"surround61"sv, DevFmtX61,    0},
+                ChannelMap{"surround71"sv, DevFmtX71,    0},
+                ChannelMap{"surround714"sv, DevFmtX714,  0},
+                ChannelMap{"surround3d71"sv, DevFmtX3D71, 0},
+                ChannelMap{"surround51rear"sv, DevFmtX51, 0},
+                ChannelMap{"ambi1"sv, DevFmtAmbi3D, 1},
+                ChannelMap{"ambi2"sv, DevFmtAmbi3D, 2},
+                ChannelMap{"ambi3"sv, DevFmtAmbi3D, 3},
             };
 
             const ALCchar *fmt{chanopt->c_str()};
             auto iter = std::find_if(chanlist.begin(), chanlist.end(),
-                [fmt](const ChannelMap &entry) -> bool
-                { return al::strcasecmp(entry.name, fmt) == 0; });
+                [svfmt=std::string_view{fmt}](const ChannelMap &entry) -> bool
+                { return al::case_compare(entry.name, svfmt) == 0; });
             if(iter == chanlist.end())
                 ERR("Unsupported channels: %s\n", fmt);
             else
@@ -1981,32 +1983,15 @@ ALC_API const ALCchar* ALC_APIENTRY alcGetString(ALCdevice *Device, ALCenum para
 
     switch(param)
     {
-    case ALC_NO_ERROR:
-        value = alcNoError;
-        break;
-
-    case ALC_INVALID_ENUM:
-        value = alcErrInvalidEnum;
-        break;
-
-    case ALC_INVALID_VALUE:
-        value = alcErrInvalidValue;
-        break;
-
-    case ALC_INVALID_DEVICE:
-        value = alcErrInvalidDevice;
-        break;
-
-    case ALC_INVALID_CONTEXT:
-        value = alcErrInvalidContext;
-        break;
-
-    case ALC_OUT_OF_MEMORY:
-        value = alcErrOutOfMemory;
-        break;
+    case ALC_NO_ERROR: value = GetNoErrorString(); break;
+    case ALC_INVALID_ENUM: value = GetInvalidEnumString(); break;
+    case ALC_INVALID_VALUE: value = GetInvalidValueString(); break;
+    case ALC_INVALID_DEVICE: value = GetInvalidDeviceString(); break;
+    case ALC_INVALID_CONTEXT: value = GetInvalidContextString(); break;
+    case ALC_OUT_OF_MEMORY: value = GetOutOfMemoryString(); break;
 
     case ALC_DEVICE_SPECIFIER:
-        value = alcDefaultName;
+        value = GetDefaultName();
         break;
 
     case ALC_ALL_DEVICES_SPECIFIER:
@@ -2015,7 +2000,7 @@ ALC_API const ALCchar* ALC_APIENTRY alcGetString(ALCdevice *Device, ALCenum para
             if(dev->Type == DeviceType::Capture)
                 alcSetError(dev.get(), ALC_INVALID_ENUM);
             else if(dev->Type == DeviceType::Loopback)
-                value = alcDefaultName;
+                value = GetDefaultName();
             else
             {
                 std::lock_guard<std::mutex> statelock{dev->StateLock};
@@ -2049,7 +2034,7 @@ ALC_API const ALCchar* ALC_APIENTRY alcGetString(ALCdevice *Device, ALCenum para
 
     /* Default devices are always first in the list */
     case ALC_DEFAULT_DEVICE_SPECIFIER:
-        value = alcDefaultName;
+        value = GetDefaultName();
         break;
 
     case ALC_DEFAULT_ALL_DEVICES_SPECIFIER:
@@ -2073,9 +2058,9 @@ ALC_API const ALCchar* ALC_APIENTRY alcGetString(ALCdevice *Device, ALCenum para
 
     case ALC_EXTENSIONS:
         if(VerifyDevice(Device))
-            value = alcExtensionList;
+            value = GetExtensionList().data();
         else
-            value = alcNoDeviceExtList;
+            value = GetNoDeviceExtList().data();
         break;
 
     case ALC_HRTF_SPECIFIER_SOFT:
@@ -2575,19 +2560,15 @@ ALC_API ALCboolean ALC_APIENTRY alcIsExtensionPresent(ALCdevice *device, const A
     }
 
     const std::string_view tofind{extName};
-    auto extlist = dev ? std::string_view{alcExtensionList} : std::string_view{alcNoDeviceExtList};
-    while(!extlist.empty())
+    const auto extlist = dev ? GetExtensionList() : GetNoDeviceExtList();
+    auto matchpos = extlist.find(tofind);
+    while(matchpos != std::string_view::npos)
     {
-        auto nextpos = extlist.find(' ');
-        auto tocheck = extlist.substr(0, nextpos);
-        if(tocheck.size() == tofind.size()
-            && al::strncasecmp(tofind.data(), tocheck.data(), tofind.size()) == 0)
+        const auto endpos = matchpos + tofind.size();
+        if((matchpos == 0 || std::isspace(extlist[matchpos-1]))
+            && (endpos == extlist.size() || std::isspace(extlist[endpos])))
             return ALC_TRUE;
-
-        if(nextpos == std::string_view::npos)
-            break;
-
-        extlist.remove_prefix(nextpos+1);
+        matchpos = extlist.find(tofind, matchpos+1);
     }
     return ALC_FALSE;
 }
@@ -2885,7 +2866,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName) noexcep
     if(deviceName)
     {
         TRACE("Opening playback device \"%s\"\n", deviceName);
-        if(!deviceName[0] || al::strcasecmp(deviceName, alcDefaultName) == 0
+        if(!deviceName[0] || al::strcasecmp(deviceName, GetDefaultName()) == 0
 #ifdef _WIN32
             /* Some old Windows apps hardcode these expecting OpenAL to use a
              * specific audio API, even when they're not enumerated. Creative's
@@ -3047,7 +3028,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, 
     if(deviceName)
     {
         TRACE("Opening capture device \"%s\"\n", deviceName);
-        if(!deviceName[0] || al::strcasecmp(deviceName, alcDefaultName) == 0
+        if(!deviceName[0] || al::strcasecmp(deviceName, GetDefaultName()) == 0
             || al::strcasecmp(deviceName, "openal-soft") == 0)
             deviceName = nullptr;
     }
@@ -3227,7 +3208,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(const ALCchar *deviceN
     InitConfig();
 
     /* Make sure the device name, if specified, is us. */
-    if(deviceName && strcmp(deviceName, alcDefaultName) != 0)
+    if(deviceName && strcmp(deviceName, GetDefaultName()) != 0)
     {
         alcSetError(nullptr, ALC_INVALID_VALUE);
         return nullptr;
@@ -3458,7 +3439,7 @@ FORCE_ALIGN ALCboolean ALC_APIENTRY alcReopenDeviceSOFT(ALCdevice *device,
 {
     if(deviceName)
     {
-        if(!deviceName[0] || al::strcasecmp(deviceName, alcDefaultName) == 0)
+        if(!deviceName[0] || al::strcasecmp(deviceName, GetDefaultName()) == 0)
             deviceName = nullptr;
     }
 

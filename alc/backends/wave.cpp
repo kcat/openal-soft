@@ -51,6 +51,7 @@ namespace {
 using std::chrono::seconds;
 using std::chrono::milliseconds;
 using std::chrono::nanoseconds;
+using std::string_view_literals::operator""sv;
 
 using ubyte = unsigned char;
 using ushort = unsigned short;
@@ -60,8 +61,7 @@ struct FileDeleter {
 };
 using FilePtr = std::unique_ptr<FILE,FileDeleter>;
 
-/* NOLINTNEXTLINE(*-avoid-c-arrays) */
-constexpr char waveDevice[] = "Wave File Writer";
+[[nodiscard]] constexpr auto GetDeviceName() noexcept { return "Wave File Writer"sv; }
 
 constexpr std::array<ubyte,16> SUBTYPE_PCM{{
     0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x10, 0x00, 0x80, 0x00, 0x00, 0xaa,
@@ -200,8 +200,8 @@ void WaveBackend::open(std::string_view name)
         "No wave output filename"};
 
     if(name.empty())
-        name = waveDevice;
-    else if(name != waveDevice)
+        name = GetDeviceName();
+    else if(name != GetDeviceName())
         throw al::backend_exception{al::backend_error::NoDevice, "Device name \"%.*s\" not found",
             static_cast<int>(name.length()), name.data()};
 
@@ -376,17 +376,15 @@ bool WaveBackendFactory::querySupport(BackendType type)
 
 std::string WaveBackendFactory::probe(BackendType type)
 {
-    std::string outnames;
     switch(type)
     {
     case BackendType::Playback:
-        /* Includes null char. */
-        outnames.append(waveDevice, sizeof(waveDevice));
-        break;
+        /* Include null char. */
+        return std::string{GetDeviceName()} + '\0';
     case BackendType::Capture:
         break;
     }
-    return outnames;
+    return std::string{};
 }
 
 BackendPtr WaveBackendFactory::createBackend(DeviceBase *device, BackendType type)

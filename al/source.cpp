@@ -2735,7 +2735,7 @@ FORCE_ALIGN void AL_APIENTRY alSource3fDirect(ALCcontext *context, ALuint source
     if(!Source) UNLIKELY
         return context->setError(AL_INVALID_NAME, "Invalid source ID %u", source);
 
-    const float fvals[3]{ value1, value2, value3 };
+    const std::array fvals{ value1, value2, value3 };
     SetProperty<float>(Source, context, static_cast<SourceProp>(param), al::span{fvals});
 }
 
@@ -2779,7 +2779,7 @@ FORCE_ALIGN void AL_APIENTRY alSource3dDirectSOFT(ALCcontext *context, ALuint so
     if(!Source) UNLIKELY
         return context->setError(AL_INVALID_NAME, "Invalid source ID %u", source);
 
-    const double dvals[3]{value1, value2, value3};
+    const std::array dvals{value1, value2, value3};
     SetProperty<double>(Source, context, static_cast<SourceProp>(param), al::span{dvals});
 }
 
@@ -2823,7 +2823,7 @@ FORCE_ALIGN void AL_APIENTRY alSource3iDirect(ALCcontext *context, ALuint source
     if(!Source) UNLIKELY
         return context->setError(AL_INVALID_NAME, "Invalid source ID %u", source);
 
-    const int ivals[3]{ value1, value2, value3 };
+    const std::array ivals{ value1, value2, value3 };
     SetProperty<int>(Source, context, static_cast<SourceProp>(param), al::span{ivals});
 }
 
@@ -2867,7 +2867,7 @@ FORCE_ALIGN void AL_APIENTRY alSource3i64DirectSOFT(ALCcontext *context, ALuint 
     if(!Source) UNLIKELY
         return context->setError(AL_INVALID_NAME, "Invalid source ID %u", source);
 
-    const int64_t i64vals[3]{ value1, value2, value3 };
+    const std::array i64vals{ value1, value2, value3 };
     SetProperty<int64_t>(Source, context, static_cast<SourceProp>(param), al::span{i64vals});
 }
 
@@ -2913,7 +2913,7 @@ FORCE_ALIGN void AL_APIENTRY alGetSource3fDirect(ALCcontext *context, ALuint sou
     if(!(value1 && value2 && value3)) UNLIKELY
         return context->setError(AL_INVALID_VALUE, "NULL pointer");
 
-    float fvals[3];
+    std::array<float,3> fvals{};
     if(GetProperty<float>(Source, context, static_cast<SourceProp>(param), al::span{fvals}))
     {
         *value1 = fvals[0];
@@ -2964,7 +2964,7 @@ FORCE_ALIGN void AL_APIENTRY alGetSource3dDirectSOFT(ALCcontext *context, ALuint
     if(!(value1 && value2 && value3)) UNLIKELY
         return context->setError(AL_INVALID_VALUE, "NULL pointer");
 
-    double dvals[3];
+    std::array<double,3> dvals{};
     if(GetProperty<double>(Source, context, static_cast<SourceProp>(param), al::span{dvals}))
     {
         *value1 = dvals[0];
@@ -3015,7 +3015,7 @@ FORCE_ALIGN void AL_APIENTRY alGetSource3iDirect(ALCcontext *context, ALuint sou
     if(!(value1 && value2 && value3)) UNLIKELY
         return context->setError(AL_INVALID_VALUE, "NULL pointer");
     
-    int ivals[3];
+    std::array<int,3> ivals{};
     if(GetProperty<int>(Source, context, static_cast<SourceProp>(param), al::span{ivals}))
     {
         *value1 = ivals[0];
@@ -3065,7 +3065,7 @@ FORCE_ALIGN void AL_APIENTRY alGetSource3i64DirectSOFT(ALCcontext *context, ALui
     if(!(value1 && value2 && value3)) UNLIKELY
         return context->setError(AL_INVALID_VALUE, "NULL pointer");
 
-    int64_t i64vals[3];
+    std::array<int64_t,3> i64vals{};
     if(GetProperty<int64_t>(Source, context, static_cast<SourceProp>(param), al::span{i64vals}))
     {
         *value1 = i64vals[0];

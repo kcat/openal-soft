@@ -51,8 +51,9 @@
 
 namespace {
 
-/* NOLINTNEXTLINE(*-avoid-c-arrays) */
-constexpr char solaris_device[] = "Solaris Default";
+using std::string_view_literals::operator""sv;
+
+[[nodiscard]] constexpr auto GetDefaultName() noexcept { return "Solaris Default"sv; }
 
 std::string solaris_driver{"/dev/audio"};
 
@@ -140,8 +141,8 @@ int SolarisBackend::mixerProc()
 void SolarisBackend::open(std::string_view name)
 {
     if(name.empty())
-        name = solaris_device;
-    else if(name != solaris_device)
+        name = GetDefaultName();
+    else if(name != GetDefaultName())
         throw al::backend_exception{al::backend_error::NoDevice, "Device name \"%.*s\" not found",
             static_cast<int>(name.length()), name.data()};
 
@@ -275,21 +276,17 @@ bool SolarisBackendFactory::querySupport(BackendType type)
 
 std::string SolarisBackendFactory::probe(BackendType type)
 {
-    std::string outnames;
     switch(type)
     {
     case BackendType::Playback:
-    {
-        struct stat buf;
-        if(stat(solaris_driver.c_str(), &buf) == 0)
-            outnames.append(solaris_device, sizeof(solaris_device));
-    }
-    break;
+        if(struct stat buf{}; stat(solaris_driver.c_str(), &buf) == 0)
+            return std::string{GetDefaultName()} + '\0';
+        break;
 
     case BackendType::Capture:
         break;
     }
-    return outnames;
+    return std::string{};
 }
 
 BackendPtr SolarisBackendFactory::createBackend(DeviceBase *device, BackendType type)

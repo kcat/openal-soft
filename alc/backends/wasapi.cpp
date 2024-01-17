@@ -55,6 +55,7 @@
 #include <future>
 #include <mutex>
 #include <string>
+#include <string_view>
 #include <thread>
 #include <vector>
 
@@ -62,6 +63,7 @@
 #include "alc/alconfig.h"
 #include "alnumeric.h"
 #include "alspan.h"
+#include "alstring.h"
 #include "althrd_setname.h"
 #include "comptr.h"
 #include "core/converter.h"
@@ -108,6 +110,9 @@ namespace {
 using std::chrono::nanoseconds;
 using std::chrono::milliseconds;
 using std::chrono::seconds;
+using std::string_view_literals::operator""sv;
+
+[[nodiscard]] constexpr auto GetDevicePrefix() noexcept { return "OpenAL Soft on "sv; }
 
 using ReferenceTime = std::chrono::duration<REFERENCE_TIME,std::ratio<1,10'000'000>>;
 
@@ -170,10 +175,6 @@ constexpr AudioObjectType ChannelMask_X714{AudioObjectType_FrontLeft | AudioObje
     | AudioObjectType_SideRight | AudioObjectType_BackLeft | AudioObjectType_BackRight
     | AudioObjectType_TopFrontLeft | AudioObjectType_TopFrontRight | AudioObjectType_TopBackLeft
     | AudioObjectType_TopBackRight};
-
-/* NOLINTNEXTLINE(*-avoid-c-arrays) */
-constexpr char DevNameHead[] = "OpenAL Soft on ";
-constexpr size_t DevNameHeadLen{std::size(DevNameHead) - 1};
 
 
 template<typename... Ts>
@@ -302,10 +303,9 @@ using DeviceHandle = ComPtr<IMMDevice>;
 using NameGUIDPair = std::pair<std::string,std::string>;
 static NameGUIDPair GetDeviceNameAndGuid(const DeviceHandle &device)
 {
-    /* NOLINTBEGIN(*-avoid-c-arrays) */
-    static constexpr char UnknownName[]{"Unknown Device Name"};
-    static constexpr char UnknownGuid[]{"Unknown Device GUID"};
-    /* NOLINTEND(*-avoid-c-arrays) */
+    constexpr auto UnknownName = "Unknown Device Name"sv;
+    constexpr auto UnknownGuid = "Unknown Device GUID"sv;
+
 #if !defined(ALSOFT_UWP)
     std::string name, guid;
 
@@ -314,7 +314,7 @@ static NameGUIDPair GetDeviceNameAndGuid(const DeviceHandle &device)
     if(FAILED(hr))
     {
         WARN("OpenPropertyStore failed: 0x%08lx\n", hr);
-        return std::make_pair(UnknownName, UnknownGuid);
+        return {std::string{UnknownName}, std::string{UnknownGuid}};
     }
 
     PropVariant pvprop;
@@ -353,7 +353,7 @@ static NameGUIDPair GetDeviceNameAndGuid(const DeviceHandle &device)
 #endif
     if(name.empty()) name = UnknownName;
     if(guid.empty()) guid = UnknownGuid;
-    return std::make_pair(std::move(name), std::move(guid));
+    return {std::move(name), std::move(guid)};
 }
 #if !defined(ALSOFT_UWP)
 EndpointFormFactor GetDeviceFormfactor(IMMDevice *device)
@@ -1316,11 +1316,8 @@ void WasapiPlayback::open(std::string_view name)
             "Failed to create notify events"};
     }
 
-    if(name.length() >= DevNameHeadLen
-        && std::strncmp(name.data(), DevNameHead, DevNameHeadLen) == 0)
-    {
-        name = name.substr(DevNameHeadLen);
-    }
+    if(const auto prefix = GetDevicePrefix(); al::starts_with(name, prefix))
+        name = name.substr(prefix.size());
 
     mOpenStatus = pushMessage(MsgType::OpenDevice, name).get();
     if(FAILED(mOpenStatus))
@@ -1363,9 +1360,9 @@ HRESULT WasapiPlayback::openProxy(std::string_view name)
         return hr;
     }
     if(!devname.empty())
-        mDevice->DeviceName = DevNameHead + std::move(devname);
+        mDevice->DeviceName = std::string{GetDevicePrefix()}+std::move(devname);
     else
-        mDevice->DeviceName = DevNameHead + GetDeviceNameAndGuid(mMMDev).first;
+        mDevice->DeviceName = std::string{GetDevicePrefix()}+GetDeviceNameAndGuid(mMMDev).first;
 
     return S_OK;
 }
@@ -2240,11 +2237,8 @@ void WasapiCapture::open(std::string_view name)
             "Failed to create notify events"};
     }
 
-    if(name.length() >= DevNameHeadLen
-        && std::strncmp(name.data(), DevNameHead, DevNameHeadLen) == 0)
-    {
-        name = name.substr(DevNameHeadLen);
-    }
+    if(const auto prefix = GetDevicePrefix(); al::starts_with(name, prefix))
+        name = name.substr(prefix.size());
 
     mOpenStatus = pushMessage(MsgType::OpenDevice, name).get();
     if(FAILED(mOpenStatus))
@@ -2296,9 +2290,9 @@ HRESULT WasapiCapture::openProxy(std::string_view name)
     }
     mClient = nullptr;
     if(!devname.empty())
-        mDevice->DeviceName = DevNameHead + std::move(devname);
+        mDevice->DeviceName = std::string{GetDevicePrefix()}+std::move(devname);
     else
-        mDevice->DeviceName = DevNameHead + GetDeviceNameAndGuid(mMMDev).first;
+        mDevice->DeviceName = std::string{GetDevicePrefix()}+GetDeviceNameAndGuid(mMMDev).first;
 
     return S_OK;
 }
@@ -2698,11 +2692,12 @@ std::string WasapiBackendFactory::probe(BackendType type)
                     /* +1 to also append the null char (to ensure a null-
                      * separated list and double-null terminated list).
                      */
-                    outnames.append(DevNameHead).append(entry.name.c_str(), entry.name.length()+1);
+                    outnames.append(GetDevicePrefix()).append(entry.name.c_str(),
+                        entry.name.length()+1);
                     continue;
                 }
                 /* Default device goes first. */
-                std::string name{DevNameHead + entry.name};
+                std::string name{std::string{GetDevicePrefix()} + entry.name};
                 outnames.insert(0, name.c_str(), name.length()+1);
             }
         }
@@ -2715,10 +2710,11 @@ std::string WasapiBackendFactory::probe(BackendType type)
             {
                 if(entry.devid != defaultId)
                 {
-                    outnames.append(DevNameHead).append(entry.name.c_str(), entry.name.length()+1);
+                    outnames.append(GetDevicePrefix()).append(entry.name.c_str(),
+                        entry.name.length()+1);
                     continue;
                 }
-                std::string name{DevNameHead + entry.name};
+                std::string name{std::string{GetDevicePrefix()} + entry.name};
                 outnames.insert(0, name.c_str(), name.length()+1);
             }
         }

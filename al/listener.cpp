@@ -218,7 +218,7 @@ FORCE_ALIGN void AL_APIENTRY alListenerivDirect(ALCcontext *context, ALenum para
         return;
 
     case AL_ORIENTATION:
-        const ALfloat fvals[6]{
+        const std::array fvals{
             static_cast<ALfloat>(values[0]),
             static_cast<ALfloat>(values[1]),
             static_cast<ALfloat>(values[2]),
@@ -226,7 +226,7 @@ FORCE_ALIGN void AL_APIENTRY alListenerivDirect(ALCcontext *context, ALenum para
             static_cast<ALfloat>(values[4]),
             static_cast<ALfloat>(values[5]),
         };
-        alListenerfvDirect(context, param, fvals);
+        alListenerfvDirect(context, param, fvals.data());
         return;
     }
 

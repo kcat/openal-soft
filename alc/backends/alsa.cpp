@@ -33,6 +33,7 @@
 #include <memory>
 #include <mutex>
 #include <string>
+#include <string_view>
 #include <thread>
 #include <utility>
 #include <vector>
@@ -53,8 +54,9 @@
 
 namespace {
 
-/* NOLINTNEXTLINE(*-avoid-c-arrays) */
-constexpr char alsaDevice[] = "ALSA Default";
+using std::literals::string_view_literals::operator""sv;
+
+[[nodiscard]] constexpr auto GetDefaultName() noexcept { return "ALSA Default"sv; }
 
 
 #ifdef HAVE_DYNLOAD
@@ -256,8 +258,8 @@ std::vector<DevMap> CaptureDevices;
 const std::string_view prefix_name(snd_pcm_stream_t stream)
 {
     if(stream == SND_PCM_STREAM_PLAYBACK)
-        return "device-prefix";
-    return "capture-prefix";
+        return "device-prefix"sv;
+    return "capture-prefix"sv;
 }
 
 std::vector<DevMap> probe_devices(snd_pcm_stream_t stream)
@@ -269,12 +271,12 @@ std::vector<DevMap> probe_devices(snd_pcm_stream_t stream)
     snd_pcm_info_t *pcminfo;
     snd_pcm_info_malloc(&pcminfo);
 
-    auto defname = ConfigValueStr({}, "alsa",
-        (stream == SND_PCM_STREAM_PLAYBACK) ? "device" : "capture");
-    devlist.emplace_back(alsaDevice, defname ? defname->c_str() : "default");
+    auto defname = ConfigValueStr({}, "alsa"sv,
+        (stream == SND_PCM_STREAM_PLAYBACK) ? "device"sv : "capture"sv);
+    devlist.emplace_back(GetDefaultName(), defname ? std::string_view{*defname} : "default"sv);
 
-    if(auto customdevs = ConfigValueStr({}, "alsa",
-        (stream == SND_PCM_STREAM_PLAYBACK) ? "custom-devices" : "custom-captures"))
+    if(auto customdevs = ConfigValueStr({}, "alsa"sv,
+        (stream == SND_PCM_STREAM_PLAYBACK) ? "custom-devices"sv : "custom-captures"sv))
     {
         size_t nextpos{customdevs->find_first_not_of(';')};
         size_t curpos;
@@ -301,7 +303,7 @@ std::vector<DevMap> probe_devices(snd_pcm_stream_t stream)
         }
     }
 
-    const std::string main_prefix{ConfigValueStr({}, "alsa", prefix_name(stream))
+    const std::string main_prefix{ConfigValueStr({}, "alsa"sv, prefix_name(stream))
         .value_or("plughw:")};
 
     int card{-1};
@@ -330,7 +332,7 @@ std::vector<DevMap> probe_devices(snd_pcm_stream_t stream)
         name = prefix_name(stream);
         name += '-';
         name += cardid;
-        const std::string card_prefix{ConfigValueStr({}, "alsa", name).value_or(main_prefix)};
+        const std::string card_prefix{ConfigValueStr({}, "alsa"sv, name).value_or(main_prefix)};
 
         int dev{-1};
         while(true)
@@ -356,7 +358,8 @@ std::vector<DevMap> probe_devices(snd_pcm_stream_t stream)
             name += cardid;
             name += '-';
             name += std::to_string(dev);
-            const std::string device_prefix{ConfigValueStr({},"alsa", name).value_or(card_prefix)};
+            const std::string device_prefix{ConfigValueStr({}, "alsa"sv, name)
+                .value_or(card_prefix)};
 
             /* "CardName, PcmName (CARD=cardid,DEV=dev)" */
             name = cardname;
@@ -645,8 +648,8 @@ void AlsaPlayback::open(std::string_view name)
     }
     else
     {
-        name = alsaDevice;
-        if(auto driveropt = ConfigValueStr({}, "alsa", "device"))
+        name = GetDefaultName();
+        if(auto driveropt = ConfigValueStr({}, "alsa"sv, "device"sv))
             driver = std::move(driveropt).value();
     }
     TRACE("Opening device \"%s\"\n", driver.c_str());
@@ -694,16 +697,14 @@ bool AlsaPlayback::reset()
         break;
     }
 
-    bool allowmmap{GetConfigValueBool(mDevice->DeviceName, "alsa", "mmap", true)};
+    bool allowmmap{GetConfigValueBool(mDevice->DeviceName, "alsa"sv, "mmap"sv, true)};
     uint periodLen{static_cast<uint>(mDevice->UpdateSize * 1000000_u64 / mDevice->Frequency)};
     uint bufferLen{static_cast<uint>(mDevice->BufferSize * 1000000_u64 / mDevice->Frequency)};
     uint rate{mDevice->Frequency};
 
-    int err{};
     HwParamsPtr hp{CreateHwParams()};
 #define CHECK(x) do {                                                         \
-    err = (x);                                                                \
-    if(err < 0)                                                               \
+    if(int err{x}; err < 0)                                                   \
         throw al::backend_exception{al::backend_error::DeviceError, #x " failed: %s", \
             snd_strerror(err)};                                               \
 } while(0)
@@ -764,11 +765,11 @@ bool AlsaPlayback::reset()
         WARN("Failed to enable ALSA resampler\n");
     CHECK(snd_pcm_hw_params_set_rate_near(mPcmHandle, hp.get(), &rate, nullptr));
     /* set period time (implicitly constrains period/buffer parameters) */
-    err = snd_pcm_hw_params_set_period_time_near(mPcmHandle, hp.get(), &periodLen, nullptr);
-    if(err < 0) ERR("snd_pcm_hw_params_set_period_time_near failed: %s\n", snd_strerror(err));
+    if(int err{snd_pcm_hw_params_set_period_time_near(mPcmHandle, hp.get(), &periodLen, nullptr)}; err < 0)
+        ERR("snd_pcm_hw_params_set_period_time_near failed: %s\n", snd_strerror(err));
     /* set buffer time (implicitly sets buffer size/bytes/time and period size/bytes) */
-    err = snd_pcm_hw_params_set_buffer_time_near(mPcmHandle, hp.get(), &bufferLen, nullptr);
-    if(err < 0) ERR("snd_pcm_hw_params_set_buffer_time_near failed: %s\n", snd_strerror(err));
+    if(int err{snd_pcm_hw_params_set_buffer_time_near(mPcmHandle, hp.get(), &bufferLen, nullptr)}; err < 0)
+        ERR("snd_pcm_hw_params_set_buffer_time_near failed: %s\n", snd_strerror(err));
     /* install and prepare hardware configuration */
     CHECK(snd_pcm_hw_params(mPcmHandle, hp.get()));
 
@@ -802,12 +803,10 @@ bool AlsaPlayback::reset()
 
 void AlsaPlayback::start()
 {
-    int err{};
     snd_pcm_access_t access{};
     HwParamsPtr hp{CreateHwParams()};
 #define CHECK(x) do {                                                         \
-    err = (x);                                                                \
-    if(err < 0)                                                               \
+    if(int err{x}; err < 0)                                                   \
         throw al::backend_exception{al::backend_error::DeviceError, #x " failed: %s", \
             snd_strerror(err)};                                               \
 } while(0)
@@ -918,14 +917,13 @@ void AlsaCapture::open(std::string_view name)
     }
     else
     {
-        name = alsaDevice;
-        if(auto driveropt = ConfigValueStr({}, "alsa", "capture"))
+        name = GetDefaultName();
+        if(auto driveropt = ConfigValueStr({}, "alsa"sv, "capture"sv))
             driver = std::move(driveropt).value();
     }
 
     TRACE("Opening device \"%s\"\n", driver.c_str());
-    int err{snd_pcm_open(&mPcmHandle, driver.c_str(), SND_PCM_STREAM_CAPTURE, SND_PCM_NONBLOCK)};
-    if(err < 0)
+    if(int err{snd_pcm_open(&mPcmHandle, driver.c_str(), SND_PCM_STREAM_CAPTURE, SND_PCM_NONBLOCK)}; err < 0)
         throw al::backend_exception{al::backend_error::NoDevice,
             "Could not open ALSA device \"%s\"", driver.c_str()};
 
@@ -964,8 +962,7 @@ void AlsaCapture::open(std::string_view name)
     bool needring{false};
     HwParamsPtr hp{CreateHwParams()};
 #define CHECK(x) do {                                                         \
-    err = (x);                                                                \
-    if(err < 0)                                                               \
+    if(int err{x}; err < 0)                                                   \
         throw al::backend_exception{al::backend_error::DeviceError, #x " failed: %s", \
             snd_strerror(err)};                                               \
 } while(0)
@@ -1003,13 +1000,11 @@ void AlsaCapture::open(std::string_view name)
 
 void AlsaCapture::start()
 {
-    int err{snd_pcm_prepare(mPcmHandle)};
-    if(err < 0)
+    if(int err{snd_pcm_prepare(mPcmHandle)}; err < 0)
         throw al::backend_exception{al::backend_error::DeviceError, "snd_pcm_prepare failed: %s",
             snd_strerror(err)};
 
-    err = snd_pcm_start(mPcmHandle);
-    if(err < 0)
+    if(int err{snd_pcm_start(mPcmHandle)}; err < 0)
         throw al::backend_exception{al::backend_error::DeviceError, "snd_pcm_start failed: %s",
             snd_strerror(err)};
 
@@ -1033,8 +1028,7 @@ void AlsaCapture::stop()
         captureSamples(temp.data(), avail);
         mBuffer = std::move(temp);
     }
-    int err{snd_pcm_drop(mPcmHandle)};
-    if(err < 0)
+    if(int err{snd_pcm_drop(mPcmHandle)}; err < 0)
         ERR("drop failed: %s\n", snd_strerror(err));
     mDoCapture = false;
 }

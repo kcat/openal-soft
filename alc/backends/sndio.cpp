@@ -43,8 +43,9 @@
 
 namespace {
 
-/* NOLINTNEXTLINE(*-avoid-c-arrays) */
-constexpr char sndio_device[] = "SndIO Default";
+using std::string_view_literals::operator""sv;
+
+[[nodiscard]] constexpr auto GetDefaultName() noexcept { return "SndIO Default"sv; }
 
 struct SioPar : public sio_par {
     SioPar() : sio_par{} { sio_initpar(this); }
@@ -114,8 +115,8 @@ int SndioPlayback::mixerProc()
 void SndioPlayback::open(std::string_view name)
 {
     if(name.empty())
-        name = sndio_device;
-    else if(name != sndio_device)
+        name = GetDefaultName();
+    else if(name != GetDefaultName())
         throw al::backend_exception{al::backend_error::NoDevice, "Device name \"%.*s\" not found",
             static_cast<int>(name.length()), name.data()};
 
@@ -385,8 +386,8 @@ int SndioCapture::recordProc()
 void SndioCapture::open(std::string_view name)
 {
     if(name.empty())
-        name = sndio_device;
-    else if(name != sndio_device)
+        name = GetDefaultName();
+    else if(name != GetDefaultName())
         throw al::backend_exception{al::backend_error::NoDevice, "Device name \"%.*s\" not found",
             static_cast<int>(name.length()), name.data()};
 
@@ -518,16 +519,14 @@ bool SndIOBackendFactory::querySupport(BackendType type)
 
 std::string SndIOBackendFactory::probe(BackendType type)
 {
-    std::string outnames;
     switch(type)
     {
     case BackendType::Playback:
     case BackendType::Capture:
-        /* Includes null char. */
-        outnames.append(sndio_device, sizeof(sndio_device));
-        break;
+        /* Include null char. */
+        return std::string{GetDefaultName()} + '\0';
     }
-    return outnames;
+    return std::string{};
 }
 
 BackendPtr SndIOBackendFactory::createBackend(DeviceBase *device, BackendType type)

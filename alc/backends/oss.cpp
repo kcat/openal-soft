@@ -80,11 +80,13 @@
 
 namespace {
 
-/* NOLINTNEXTLINE(*-avoid-c-arrays) */
-constexpr char DefaultName[] = "OSS Default";
+using std::string_literals::operator""s;
+using std::string_view_literals::operator""sv;
 
-std::string DefaultPlayback{"/dev/dsp"};
-std::string DefaultCapture{"/dev/dsp"};
+[[nodiscard]] constexpr auto GetDefaultName() noexcept { return "OSS Default"sv; }
+
+std::string DefaultPlayback{"/dev/dsp"s};
+std::string DefaultCapture{"/dev/dsp"s};
 
 struct DevMap {
     std::string name;
@@ -106,7 +108,7 @@ std::vector<DevMap> CaptureDevices;
 #define DSP_CAP_INPUT 0x00010000
 void ALCossListPopulate(std::vector<DevMap> &devlist, int type)
 {
-    devlist.emplace_back(DefaultName, (type==DSP_CAP_INPUT) ? DefaultCapture : DefaultPlayback);
+    devlist.emplace_back(GetDefaultName(), (type==DSP_CAP_INPUT) ? DefaultCapture : DefaultPlayback);
 }
 
 #else
@@ -226,7 +228,7 @@ done:
         { return entry.device_name == defdev; }
     );
     if(iter == devlist.cend())
-        devlist.insert(devlist.begin(), DevMap{DefaultName, defdev});
+        devlist.insert(devlist.begin(), DevMap{GetDefaultName(), defdev});
     else
     {
         DevMap entry{std::move(*iter)};
@@ -335,7 +337,7 @@ void OSSPlayback::open(std::string_view name)
 {
     const char *devname{DefaultPlayback.c_str()};
     if(name.empty())
-        name = DefaultName;
+        name = GetDefaultName();
     else
     {
         if(PlaybackDevices.empty())
@@ -533,7 +535,7 @@ void OSScapture::open(std::string_view name)
 {
     const char *devname{DefaultCapture.c_str()};
     if(name.empty())
-        name = DefaultName;
+        name = GetDefaultName();
     else
     {
         if(CaptureDevices.empty())

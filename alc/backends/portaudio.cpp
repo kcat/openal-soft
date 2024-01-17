@@ -39,8 +39,9 @@
 
 namespace {
 
-/* NOLINTNEXTLINE(*-avoid-c-arrays) */
-constexpr char pa_device[]{"PortAudio Default"};
+using std::string_view_literals::operator""sv;
+
+[[nodiscard]] constexpr auto GetDefaultName() noexcept { return "PortAudio Default"sv; }
 
 
 #ifdef HAVE_DYNLOAD
@@ -111,8 +112,8 @@ int PortPlayback::writeCallback(const void*, void *outputBuffer, unsigned long f
 void PortPlayback::open(std::string_view name)
 {
     if(name.empty())
-        name = pa_device;
-    else if(name != pa_device)
+        name = GetDefaultName();
+    else if(name != GetDefaultName())
         throw al::backend_exception{al::backend_error::NoDevice, "Device name \"%.*s\" not found",
             static_cast<int>(name.length()), name.data()};
 
@@ -264,8 +265,8 @@ int PortCapture::readCallback(const void *inputBuffer, void*, unsigned long fram
 void PortCapture::open(std::string_view name)
 {
     if(name.empty())
-        name = pa_device;
-    else if(name != pa_device)
+        name = GetDefaultName();
+    else if(name != GetDefaultName())
         throw al::backend_exception{al::backend_error::NoDevice, "Device name \"%.*s\" not found",
             static_cast<int>(name.length()), name.data()};
 
@@ -412,16 +413,14 @@ bool PortBackendFactory::querySupport(BackendType type)
 
 std::string PortBackendFactory::probe(BackendType type)
 {
-    std::string outnames;
     switch(type)
     {
     case BackendType::Playback:
     case BackendType::Capture:
-        /* Includes null char. */
-        outnames.append(pa_device, sizeof(pa_device));
-        break;
+        /* Include null char. */
+        return std::string{GetDefaultName()} + '\0';
     }
-    return outnames;
+    return std::string{};
 }
 
 BackendPtr PortBackendFactory::createBackend(DeviceBase *device, BackendType type)

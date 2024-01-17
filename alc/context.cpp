@@ -467,17 +467,19 @@ void ALCcontext::eaxSetLastError() noexcept
 
 void ALCcontext::eax_initialize_extensions()
 {
+    using std::literals::string_view_literals::operator""sv;
+
     if(!eax_g_is_enabled)
         return;
 
-    mExtensions.emplace(mExtensions.begin(), eax_x_ram_ext_name);
+    mExtensions.emplace(mExtensions.begin(), "EAX-RAM"sv);
     if(eaxIsCapable())
     {
-        mExtensions.emplace(mExtensions.begin(), eax5_ext_name);
-        mExtensions.emplace(mExtensions.begin(), eax4_ext_name);
-        mExtensions.emplace(mExtensions.begin(), eax3_ext_name);
-        mExtensions.emplace(mExtensions.begin(), eax2_ext_name);
-        mExtensions.emplace(mExtensions.begin(), eax1_ext_name);
+        mExtensions.emplace(mExtensions.begin(), "EAX5.0"sv);
+        mExtensions.emplace(mExtensions.begin(), "EAX4.0"sv);
+        mExtensions.emplace(mExtensions.begin(), "EAX3.0"sv);
+        mExtensions.emplace(mExtensions.begin(), "EAX2.0"sv);
+        mExtensions.emplace(mExtensions.begin(), "EAX"sv);
     }
 }
 

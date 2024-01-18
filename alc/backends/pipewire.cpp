@@ -1041,11 +1041,15 @@ void NodeProxy::infoCallback(const pw_node_info *info) noexcept
         /* This method is called both to notify about a new sink/source node,
          * and update properties for the node. It's unclear what properties can
          * change for an existing node without being removed first, so err on
-         * the side of caution: send a DeviceAdded event when the name differs,
-         * and send a DeviceRemoved event if it had a name that's being
-         * replaced.
+         * the side of caution: send a DeviceRemoved event if it had a name
+         * that's being changed, and send a DeviceAdded event when the name
+         * differs or it didn't have one.
          *
-         * This is overkill if the name or devname can't change.
+         * The DeviceRemoved event needs to be called before the potentially
+         * new NodeType is set, so the removal event is called for the previous
+         * device type, while the DeviceAdded event needs to be called after.
+         *
+         * This is overkill if the node type, name, and devname can't change.
          */
         bool notifyAdd{false};
         if(node.mName != name)

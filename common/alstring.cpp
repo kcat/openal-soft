@@ -19,15 +19,14 @@ int case_compare(const std::string_view str0, const std::string_view str1) noexc
     auto ch1end = ch1 + std::min(str0.size(), str1.size());
     while(ch1 != ch1end)
     {
-        const auto u0 = Traits::to_char_type(std::toupper(Traits::to_int_type(*ch0)));
-        const auto u1 = Traits::to_char_type(std::toupper(Traits::to_int_type(*ch1)));
-        if(Traits::lt(u0, u1)) return -1;
-        if(Traits::lt(u1, u0)) return 1;
+        const int u0{std::toupper(Traits::to_int_type(*ch0))};
+        const int u1{std::toupper(Traits::to_int_type(*ch1))};
+        if(const int diff{u0-u1}) return diff;
         ++ch0; ++ch1;
     }
 
-    if(ch1 != str1.cend()) return -1;
-    if(ch0 != str0.cend()) return 1;
+    if(str0.size() < str1.size()) return -1;
+    if(str0.size() > str1.size()) return 1;
     return 0;
 }
 

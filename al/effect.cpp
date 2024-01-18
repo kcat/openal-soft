@@ -713,9 +713,11 @@ static constexpr std::array reverblist{
 };
 #undef DECL
 
-void LoadReverbPreset(const char *name, ALeffect *effect)
+void LoadReverbPreset(const std::string_view name, ALeffect *effect)
 {
-    if(al::strcasecmp(name, "NONE") == 0)
+    using std::string_view_literals::operator""sv;
+
+    if(al::case_compare(name, "NONE"sv) == 0)
     {
         InitEffectParams(effect, AL_EFFECT_NULL);
         TRACE("Loading reverb '%s'\n", "NONE");
@@ -730,7 +732,7 @@ void LoadReverbPreset(const char *name, ALeffect *effect)
         InitEffectParams(effect, AL_EFFECT_NULL);
     for(const auto &reverbitem : reverblist)
     {
-        if(al::strcasecmp(name, reverbitem.name) != 0)
+        if(al::case_compare(name, reverbitem.name) != 0)
             continue;
 
         TRACE("Loading reverb '%s'\n", reverbitem.name);
@@ -766,7 +768,7 @@ void LoadReverbPreset(const char *name, ALeffect *effect)
         return;
     }
 
-    WARN("Reverb preset '%s' not found\n", name);
+    WARN("Reverb preset '%.*s' not found\n", std::abs(static_cast<int>(name.size())), name.data());
 }
 
 bool IsValidEffectType(ALenum type) noexcept

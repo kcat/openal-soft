@@ -60,7 +60,7 @@ struct ALeffect {
 
 void InitEffect(ALeffect *effect);
 
-void LoadReverbPreset(const char *name, ALeffect *effect);
+void LoadReverbPreset(const std::string_view name, ALeffect *effect);
 
 bool IsValidEffectType(ALenum type) noexcept;
 

@@ -56,6 +56,8 @@ using namespace winrt;
 
 namespace {
 
+using std::string_view_literals::operator""sv;
+
 struct ConfigEntry {
     std::string key;
     std::string value;
@@ -283,33 +285,21 @@ const char *GetConfigValue(const std::string_view devName, const std::string_vie
     if(keyName.empty())
         return nullptr;
 
-    auto generalName = std::string_view{"general"};
     std::string key;
-    if(!blockName.empty() && (blockName.size() != generalName.size() ||
-        al::strncasecmp(blockName.data(), generalName.data(), blockName.size()) != 0))
+    if(!blockName.empty() && al::case_compare(blockName, "general"sv) != 0)
     {
         key = blockName;
-        if(!devName.empty())
-        {
-            key += '/';
-            key += devName;
-        }
         key += '/';
-        key += keyName;
     }
-    else
+    if(!devName.empty())
     {
-        if(!devName.empty())
-        {
-            key = devName;
-            key += '/';
-        }
-        key += keyName;
+        key += devName;
+        key += '/';
     }
+    key += keyName;
 
     auto iter = std::find_if(ConfOpts.cbegin(), ConfOpts.cend(),
-        [&key](const ConfigEntry &entry) -> bool
-        { return entry.key == key; });
+        [&key](const ConfigEntry &entry) -> bool { return entry.key == key; });
     if(iter != ConfOpts.cend())
     {
         TRACE("Found option %s = \"%s\"\n", key.c_str(), iter->value.c_str());
@@ -529,7 +519,7 @@ std::optional<bool> ConfigValueBool(const std::string_view devName,
 {
     if(const char *val{GetConfigValue(devName, blockName, keyName)})
         return al::strcasecmp(val, "on") == 0 || al::strcasecmp(val, "yes") == 0
-            || al::strcasecmp(val, "true")==0 || atoi(val) != 0;
+            || al::strcasecmp(val, "true") == 0 || atoi(val) != 0;
     return std::nullopt;
 }
 
@@ -537,7 +527,7 @@ bool GetConfigValueBool(const std::string_view devName, const std::string_view b
     const std::string_view keyName, bool def)
 {
     if(const char *val{GetConfigValue(devName, blockName, keyName)})
-        return (al::strcasecmp(val, "on") == 0 || al::strcasecmp(val, "yes") == 0
-            || al::strcasecmp(val, "true") == 0 || atoi(val) != 0);
+        return al::strcasecmp(val, "on") == 0 || al::strcasecmp(val, "yes") == 0
+            || al::strcasecmp(val, "true") == 0 || atoi(val) != 0;
     return def;
 }

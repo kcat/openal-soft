@@ -43,10 +43,10 @@ FORCE_ALIGN ALboolean AL_APIENTRY alIsExtensionPresentDirect(ALCcontext *context
         return AL_FALSE;
     }
 
-    size_t len{strlen(extName)};
+    const std::string_view tofind{extName};
     for(std::string_view ext : context->mExtensions)
     {
-        if(len == ext.length() && al::strncasecmp(ext.data(), extName, len) == 0)
+        if(al::case_compare(ext, tofind) == 0)
             return AL_TRUE;
     }
 

@@ -107,15 +107,14 @@ namespace {
 
 using uint = unsigned int;
 using namespace std::chrono;
-
-using namespace std::placeholders;
+using std::string_view_literals::operator""sv;
 
 float InitConeScale()
 {
     float ret{1.0f};
     if(auto optval = al::getenv("__ALSOFT_HALF_ANGLE_CONES"))
     {
-        if(al::strcasecmp(optval->c_str(), "true") == 0
+        if(al::case_compare(*optval, "true"sv) == 0
             || strtol(optval->c_str(), nullptr, 0) == 1)
             ret *= 0.5f;
     }

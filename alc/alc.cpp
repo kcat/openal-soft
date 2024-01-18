@@ -407,7 +407,7 @@ void alc_initconfig()
 
     if(auto suspendmode = al::getenv("__ALSOFT_SUSPEND_CONTEXT"))
     {
-        if(al::strcasecmp(suspendmode->c_str(), "ignore") == 0)
+        if(al::case_compare(*suspendmode, "ignore"sv) == 0)
         {
             SuspendDefers = false;
             TRACE("Selected context suspend behavior, \"ignore\"\n");
@@ -429,39 +429,41 @@ void alc_initconfig()
 #ifdef HAVE_NEON
     capfilter |= CPU_CAP_NEON;
 #endif
-    if(auto cpuopt = ConfigValueStr({}, {}, "disable-cpu-exts"))
+    if(auto cpuopt = ConfigValueStr({}, {}, "disable-cpu-exts"sv))
     {
-        const char *str{cpuopt->c_str()};
-        if(al::strcasecmp(str, "all") == 0)
+        std::string_view cpulist{*cpuopt};
+        if(al::case_compare(cpulist, "all"sv) == 0)
             capfilter = 0;
-        else
+        else while(!cpulist.empty())
         {
-            const char *next = str;
-            do {
-                str = next;
-                while(isspace(str[0]))
-                    str++;
-                next = strchr(str, ',');
+            auto nextpos = std::min(cpulist.find(','), cpulist.size());
+            auto entry = cpulist.substr(0, nextpos);
 
-                if(!str[0] || str[0] == ',')
-                    continue;
+            while(nextpos < cpulist.size() && cpulist[nextpos] == ',')
+                ++nextpos;
+            cpulist.remove_prefix(nextpos);
 
-                size_t len{next ? static_cast<size_t>(next-str) : strlen(str)};
-                while(len > 0 && isspace(str[len-1]))
-                    len--;
-                if(len == 3 && al::strncasecmp(str, "sse", len) == 0)
-                    capfilter &= ~CPU_CAP_SSE;
-                else if(len == 4 && al::strncasecmp(str, "sse2", len) == 0)
-                    capfilter &= ~CPU_CAP_SSE2;
-                else if(len == 4 && al::strncasecmp(str, "sse3", len) == 0)
-                    capfilter &= ~CPU_CAP_SSE3;
-                else if(len == 6 && al::strncasecmp(str, "sse4.1", len) == 0)
-                    capfilter &= ~CPU_CAP_SSE4_1;
-                else if(len == 4 && al::strncasecmp(str, "neon", len) == 0)
-                    capfilter &= ~CPU_CAP_NEON;
-                else
-                    WARN("Invalid CPU extension \"%s\"\n", str);
-            } while(next++);
+            while(!entry.empty() && std::isspace(entry.front()))
+                entry.remove_prefix(1);
+            while(!entry.empty() && std::isspace(entry.back()))
+                entry.remove_suffix(1);
+            if(entry.empty())
+                continue;
+
+            if(al::case_compare(entry, "sse"sv) == 0)
+                capfilter &= ~CPU_CAP_SSE;
+            else if(al::case_compare(entry, "sse2"sv) == 0)
+                capfilter &= ~CPU_CAP_SSE2;
+            else if(al::case_compare(entry, "sse3"sv) == 0)
+                capfilter &= ~CPU_CAP_SSE3;
+            else if(al::case_compare(entry, "sse4.1"sv) == 0)
+                capfilter &= ~CPU_CAP_SSE4_1;
+            else if(al::case_compare(entry, "neon"sv) == 0)
+                capfilter &= ~CPU_CAP_NEON;
+            else
+                WARN("Invalid CPU extension \"%.*s\"\n", std::abs(static_cast<int>(entry.size())),
+                    entry.data());
+
         }
     }
     if(auto cpuopt = GetCPUInfo())
@@ -482,58 +484,56 @@ void alc_initconfig()
         CPUCapFlags = caps & capfilter;
     }
 
-    if(auto priopt = ConfigValueInt({}, {}, "rt-prio"))
+    if(auto priopt = ConfigValueInt({}, {}, "rt-prio"sv))
         RTPrioLevel = *priopt;
-    if(auto limopt = ConfigValueBool({}, {}, "rt-time-limit"))
+    if(auto limopt = ConfigValueBool({}, {}, "rt-time-limit"sv))
         AllowRTTimeLimit = *limopt;
 
     {
         CompatFlagBitset compatflags{};
-        auto checkflag = [](const char *envname, const char *optname) -> bool
+        auto checkflag = [](const char *envname, const std::string_view optname) -> bool
         {
             if(auto optval = al::getenv(envname))
             {
-                if(al::strcasecmp(optval->c_str(), "true") == 0
-                    || strtol(optval->c_str(), nullptr, 0) == 1)
-                    return true;
-                return false;
+                return al::case_compare(*optval, "true"sv) == 0
+                    || strtol(optval->c_str(), nullptr, 0) == 1;
             }
             return GetConfigValueBool({}, "game_compat", optname, false);
         };
-        sBufferSubDataCompat = checkflag("__ALSOFT_ENABLE_SUB_DATA_EXT", "enable-sub-data-ext");
-        compatflags.set(CompatFlags::ReverseX, checkflag("__ALSOFT_REVERSE_X", "reverse-x"));
-        compatflags.set(CompatFlags::ReverseY, checkflag("__ALSOFT_REVERSE_Y", "reverse-y"));
-        compatflags.set(CompatFlags::ReverseZ, checkflag("__ALSOFT_REVERSE_Z", "reverse-z"));
+        sBufferSubDataCompat = checkflag("__ALSOFT_ENABLE_SUB_DATA_EXT", "enable-sub-data-ext"sv);
+        compatflags.set(CompatFlags::ReverseX, checkflag("__ALSOFT_REVERSE_X", "reverse-x"sv));
+        compatflags.set(CompatFlags::ReverseY, checkflag("__ALSOFT_REVERSE_Y", "reverse-y"sv));
+        compatflags.set(CompatFlags::ReverseZ, checkflag("__ALSOFT_REVERSE_Z", "reverse-z"sv));
 
-        aluInit(compatflags, ConfigValueFloat({}, "game_compat", "nfc-scale").value_or(1.0f));
+        aluInit(compatflags, ConfigValueFloat({}, "game_compat"sv, "nfc-scale"sv).value_or(1.0f));
     }
-    Voice::InitMixer(ConfigValueStr({}, {}, "resampler"));
+    Voice::InitMixer(ConfigValueStr({}, {}, "resampler"sv));
 
-    if(auto uhjfiltopt = ConfigValueStr({}, "uhj", "decode-filter"))
+    if(auto uhjfiltopt = ConfigValueStr({}, "uhj"sv, "decode-filter"sv))
     {
-        if(al::strcasecmp(uhjfiltopt->c_str(), "fir256") == 0)
+        if(al::case_compare(*uhjfiltopt, "fir256"sv) == 0)
             UhjDecodeQuality = UhjQualityType::FIR256;
-        else if(al::strcasecmp(uhjfiltopt->c_str(), "fir512") == 0)
+        else if(al::case_compare(*uhjfiltopt, "fir512"sv) == 0)
             UhjDecodeQuality = UhjQualityType::FIR512;
-        else if(al::strcasecmp(uhjfiltopt->c_str(), "iir") == 0)
+        else if(al::case_compare(*uhjfiltopt, "iir"sv) == 0)
             UhjDecodeQuality = UhjQualityType::IIR;
         else
             WARN("Unsupported uhj/decode-filter: %s\n", uhjfiltopt->c_str());
     }
-    if(auto uhjfiltopt = ConfigValueStr({}, "uhj", "encode-filter"))
+    if(auto uhjfiltopt = ConfigValueStr({}, "uhj"sv, "encode-filter"sv))
     {
-        if(al::strcasecmp(uhjfiltopt->c_str(), "fir256") == 0)
+        if(al::case_compare(*uhjfiltopt, "fir256"sv) == 0)
             UhjEncodeQuality = UhjQualityType::FIR256;
-        else if(al::strcasecmp(uhjfiltopt->c_str(), "fir512") == 0)
+        else if(al::case_compare(*uhjfiltopt, "fir512"sv) == 0)
             UhjEncodeQuality = UhjQualityType::FIR512;
-        else if(al::strcasecmp(uhjfiltopt->c_str(), "iir") == 0)
+        else if(al::case_compare(*uhjfiltopt, "iir"sv) == 0)
             UhjEncodeQuality = UhjQualityType::IIR;
         else
             WARN("Unsupported uhj/encode-filter: %s\n", uhjfiltopt->c_str());
     }
 
-    auto traperr = al::getenv("ALSOFT_TRAP_ERROR");
-    if(traperr && (al::strcasecmp(traperr->c_str(), "true") == 0
+    if(auto traperr = al::getenv("ALSOFT_TRAP_ERROR"); traperr
+        && (al::case_compare(*traperr, "true"sv) == 0
             || std::strtol(traperr->c_str(), nullptr, 0) == 1))
     {
         TrapALError  = true;
@@ -543,20 +543,20 @@ void alc_initconfig()
     {
         traperr = al::getenv("ALSOFT_TRAP_AL_ERROR");
         if(traperr)
-            TrapALError = al::strcasecmp(traperr->c_str(), "true") == 0
+            TrapALError = al::case_compare(*traperr, "true"sv) == 0
                 || strtol(traperr->c_str(), nullptr, 0) == 1;
         else
-            TrapALError = GetConfigValueBool({}, {}, "trap-al-error", false);
+            TrapALError = GetConfigValueBool({}, {}, "trap-al-error"sv, false);
 
         traperr = al::getenv("ALSOFT_TRAP_ALC_ERROR");
         if(traperr)
-            TrapALCError = al::strcasecmp(traperr->c_str(), "true") == 0
+            TrapALCError = al::case_compare(*traperr, "true"sv) == 0
                 || strtol(traperr->c_str(), nullptr, 0) == 1;
         else
-            TrapALCError = GetConfigValueBool({}, {}, "trap-alc-error", false);
+            TrapALCError = GetConfigValueBool({}, {}, "trap-alc-error"sv, false);
     }
 
-    if(auto boostopt = ConfigValueFloat({}, "reverb", "boost"))
+    if(auto boostopt = ConfigValueFloat({}, "reverb"sv, "boost"sv))
     {
         const float valf{std::isfinite(*boostopt) ? clampf(*boostopt, -24.0f, 24.0f) : 0.0f};
         ReverbBoost *= std::pow(10.0f, valf / 20.0f);
@@ -564,44 +564,47 @@ void alc_initconfig()
 
     auto BackendListEnd = std::end(BackendList);
     auto devopt = al::getenv("ALSOFT_DRIVERS");
-    if(!devopt) devopt = ConfigValueStr({}, {}, "drivers");
+    if(!devopt) devopt = ConfigValueStr({}, {}, "drivers"sv);
     if(devopt)
     {
         auto backendlist_cur = std::begin(BackendList);
 
         bool endlist{true};
-        const char *next{devopt->c_str()};
-        do {
-            const char *devs{next};
-            while(isspace(devs[0]))
-                devs++;
-            next = strchr(devs, ',');
+        std::string_view drvlist{*devopt};
+        while(!drvlist.empty())
+        {
+            auto nextpos = std::min(drvlist.find(','), drvlist.size());
+            auto entry = drvlist.substr(0, nextpos);
 
-            const bool delitem{devs[0] == '-'};
-            if(devs[0] == '-') devs++;
-
-            if(!devs[0] || devs[0] == ',')
+            endlist = true;
+            if(nextpos < drvlist.size())
             {
                 endlist = false;
-                continue;
+                while(nextpos < drvlist.size() && drvlist[nextpos] == ',')
+                    ++nextpos;
             }
-            endlist = true;
+            drvlist.remove_prefix(nextpos);
 
-            size_t len{next ? (static_cast<size_t>(next-devs)) : strlen(devs)};
-            while(len > 0 && isspace(devs[len-1])) --len;
+            while(!entry.empty() && std::isspace(entry.front()))
+                entry.remove_prefix(1);
+            const bool delitem{!entry.empty() && entry.front() == '-'};
+            if(delitem) entry.remove_prefix(1);
+
+            while(!entry.empty() && std::isspace(entry.back()))
+                entry.remove_suffix(1);
+            if(entry.empty())
+                continue;
+
 #ifdef HAVE_WASAPI
             /* HACK: For backwards compatibility, convert backend references of
              * mmdevapi to wasapi. This should eventually be removed.
              */
-            if(len == 8 && strncmp(devs, "mmdevapi", len) == 0)
-            {
-                devs = "wasapi";
-                len = 6;
-            }
+            if(entry == "mmdevapi"sv)
+                entry = "wasapi"sv;
 #endif
 
-            auto find_backend = [devs,len](const BackendInfo &backend) -> bool
-            { return len == strlen(backend.name) && strncmp(backend.name, devs, len) == 0; };
+            auto find_backend = [entry](const BackendInfo &backend) -> bool
+            { return entry == backend.name; };
             auto this_backend = std::find_if(std::begin(BackendList), BackendListEnd,
                 find_backend);
 
@@ -612,7 +615,7 @@ void alc_initconfig()
                 BackendListEnd = std::move(this_backend+1, BackendListEnd, this_backend);
             else
                 backendlist_cur = std::rotate(backendlist_cur, this_backend, this_backend+1);
-        } while(next++);
+        }
 
         if(endlist)
             BackendListEnd = backendlist_cur;
@@ -651,30 +654,28 @@ void alc_initconfig()
     if(!CaptureFactory)
         WARN("No capture backend available!\n");
 
-    if(auto exclopt = ConfigValueStr({}, {}, "excludefx"))
+    if(auto exclopt = ConfigValueStr({}, {}, "excludefx"sv))
     {
-        const char *next{exclopt->c_str()};
-        do {
-            const char *str{next};
-            next = strchr(str, ',');
+        std::string_view exclude{*exclopt};
+        while(!exclude.empty())
+        {
+            const auto nextpos = exclude.find(',');
+            const auto entry = exclude.substr(0, nextpos);
+            exclude.remove_prefix((nextpos < exclude.size()) ? nextpos+1 : exclude.size());
 
-            if(!str[0] || next == str)
-                continue;
-
-            size_t len{next ? static_cast<size_t>(next-str) : strlen(str)};
-            for(const EffectList &effectitem : gEffectList)
-            {
-                if(len == strlen(effectitem.name) &&
-                   strncmp(effectitem.name, str, len) == 0)
-                    DisabledEffects.set(effectitem.type);
-            }
-        } while(next++);
+            std::for_each(gEffectList.cbegin(), gEffectList.cend(),
+                [entry](const EffectList &effectitem) noexcept
+                {
+                    if(entry == effectitem.name)
+                        DisabledEffects.set(effectitem.type);
+                });
+        }
     }
 
     InitEffect(&ALCcontext::sDefaultEffect);
     auto defrevopt = al::getenv("ALSOFT_DEFAULT_REVERB");
-    if(!defrevopt) defrevopt = ConfigValueStr({}, {}, "default-reverb");
-    if(defrevopt) LoadReverbPreset(defrevopt->c_str(), &ALCcontext::sDefaultEffect);
+    if(!defrevopt) defrevopt = ConfigValueStr({}, {}, "default-reverb"sv);
+    if(defrevopt) LoadReverbPreset(*defrevopt, &ALCcontext::sDefaultEffect);
 
 #ifdef ALSOFT_EAX
     {
@@ -1096,61 +1097,59 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
                 aorder = iter->order;
             }
         }
-        if(auto ambiopt = device->configValue<std::string>({}, "ambi-format"))
+        if(auto ambiopt = device->configValue<std::string>({}, "ambi-format"sv))
         {
-            const ALCchar *fmt{ambiopt->c_str()};
-            if(al::strcasecmp(fmt, "fuma") == 0)
+            if(al::case_compare(*ambiopt, "fuma"sv) == 0)
             {
                 optlayout = DevAmbiLayout::FuMa;
                 optscale = DevAmbiScaling::FuMa;
             }
-            else if(al::strcasecmp(fmt, "acn+fuma") == 0)
+            else if(al::case_compare(*ambiopt, "acn+fuma"sv) == 0)
             {
                 optlayout = DevAmbiLayout::ACN;
                 optscale = DevAmbiScaling::FuMa;
             }
-            else if(al::strcasecmp(fmt, "ambix") == 0 || al::strcasecmp(fmt, "acn+sn3d") == 0)
+            else if(al::case_compare(*ambiopt, "ambix"sv) == 0
+                || al::case_compare(*ambiopt, "acn+sn3d"sv) == 0)
             {
                 optlayout = DevAmbiLayout::ACN;
                 optscale = DevAmbiScaling::SN3D;
             }
-            else if(al::strcasecmp(fmt, "acn+n3d") == 0)
+            else if(al::case_compare(*ambiopt, "acn+n3d"sv) == 0)
             {
                 optlayout = DevAmbiLayout::ACN;
                 optscale = DevAmbiScaling::N3D;
             }
             else
-                ERR("Unsupported ambi-format: %s\n", fmt);
+                ERR("Unsupported ambi-format: %s\n", ambiopt->c_str());
         }
 
-        if(auto hrtfopt = device->configValue<std::string>({}, "hrtf"))
+        if(auto hrtfopt = device->configValue<std::string>({}, "hrtf"sv))
         {
             WARN("general/hrtf is deprecated, please use stereo-encoding instead\n");
 
-            const char *hrtf{hrtfopt->c_str()};
-            if(al::strcasecmp(hrtf, "true") == 0)
+            if(al::case_compare(*hrtfopt, "true"sv) == 0)
                 stereomode = StereoEncoding::Hrtf;
-            else if(al::strcasecmp(hrtf, "false") == 0)
+            else if(al::case_compare(*hrtfopt, "false"sv) == 0)
             {
                 if(!stereomode || *stereomode == StereoEncoding::Hrtf)
                     stereomode = StereoEncoding::Default;
             }
-            else if(al::strcasecmp(hrtf, "auto") != 0)
-                ERR("Unexpected hrtf value: %s\n", hrtf);
+            else if(al::case_compare(*hrtfopt, "auto"sv) != 0)
+                ERR("Unexpected hrtf value: %s\n", hrtfopt->c_str());
         }
     }
 
-    if(auto encopt = device->configValue<std::string>({}, "stereo-encoding"))
+    if(auto encopt = device->configValue<std::string>({}, "stereo-encoding"sv))
     {
-        const char *mode{encopt->c_str()};
-        if(al::strcasecmp(mode, "basic") == 0 || al::strcasecmp(mode, "panpot") == 0)
+        if(al::case_compare(*encopt, "basic"sv) == 0 || al::case_compare(*encopt, "panpot"sv) == 0)
             stereomode = StereoEncoding::Basic;
-        else if(al::strcasecmp(mode, "uhj") == 0)
+        else if(al::case_compare(*encopt, "uhj") == 0)
             stereomode = StereoEncoding::Uhj;
-        else if(al::strcasecmp(mode, "hrtf") == 0)
+        else if(al::case_compare(*encopt, "hrtf") == 0)
             stereomode = StereoEncoding::Hrtf;
         else
-            ERR("Unexpected stereo-encoding: %s\n", mode);
+            ERR("Unexpected stereo-encoding: %s\n", encopt->c_str());
     }
 
     // Check for app-specified attributes
@@ -1478,13 +1477,12 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
     {
         if(auto modeopt = device->configValue<std::string>({}, "stereo-mode"))
         {
-            const char *mode{modeopt->c_str()};
-            if(al::strcasecmp(mode, "headphones") == 0)
+            if(al::case_compare(*modeopt, "headphones"sv) == 0)
                 device->Flags.set(DirectEar);
-            else if(al::strcasecmp(mode, "speakers") == 0)
+            else if(al::case_compare(*modeopt, "speakers"sv) == 0)
                 device->Flags.reset(DirectEar);
-            else if(al::strcasecmp(mode, "auto") != 0)
-                ERR("Unexpected stereo-mode: %s\n", mode);
+            else if(al::case_compare(*modeopt, "auto"sv) != 0)
+                ERR("Unexpected stereo-mode: %s\n", modeopt->c_str());
         }
     }
 
@@ -1493,7 +1491,7 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
     /* Calculate the max number of sources, and split them between the mono and
      * stereo count given the requested number of stereo sources.
      */
-    if(auto srcsopt = device->configValue<uint>({}, "sources"))
+    if(auto srcsopt = device->configValue<uint>({}, "sources"sv))
     {
         if(*srcsopt <= 0) numMono = 256;
         else numMono = maxu(*srcsopt, 16);
@@ -1509,7 +1507,7 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
     device->NumMonoSources = numMono;
     device->NumStereoSources = numStereo;
 
-    if(auto sendsopt = device->configValue<int>({}, "sends"))
+    if(auto sendsopt = device->configValue<int>({}, "sends"sv))
         numSends = minu(numSends, static_cast<uint>(clampi(*sendsopt, 0, MaxSendCount)));
     device->NumAuxSends = numSends;
 
@@ -1537,9 +1535,9 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
     if(auto *encoder{device->mUhjEncoder.get()})
         sample_delay += encoder->getDelay();
 
-    if(device->getConfigValueBool({}, "dither", true))
+    if(device->getConfigValueBool({}, "dither"sv, true))
     {
-        int depth{device->configValue<int>({}, "dither-depth").value_or(0)};
+        int depth{device->configValue<int>({}, "dither-depth"sv).value_or(0)};
         if(depth <= 0)
         {
             switch(device->FmtType)
@@ -2863,26 +2861,46 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName) noexcep
         return nullptr;
     }
 
-    if(deviceName)
+    /* We need to ensure the device name isn't too long. The string_view is
+     * printed using the "%.*s" formatter, which uses an int for the precision/
+     * length. It wouldn't be a significant problem if larger values simply
+     * printed fewer characters due to truncation, but negative values are
+     * ignored, treating it like a normal null-terminated string, and
+     * string_views don't need to be null-terminated.
+     *
+     * Other than the annoyance of checking, this shouldn't be a problem. Two
+     * billion bytes is enough for a device name.
+     */
+    std::string_view devname{deviceName ? deviceName : ""};
+    if(!devname.empty())
     {
-        TRACE("Opening playback device \"%s\"\n", deviceName);
-        if(!deviceName[0] || al::strcasecmp(deviceName, GetDefaultName()) == 0
+        if(devname.length() >= std::numeric_limits<int>::max())
+        {
+            ERR("Device name too long (%zu >= %d)\n", devname.length(),
+                std::numeric_limits<int>::max());
+            alcSetError(nullptr, ALC_INVALID_VALUE);
+            return nullptr;
+        }
+
+        TRACE("Opening playback device \"%.*s\"\n", static_cast<int>(devname.size()),
+            devname.data());
+        if(al::case_compare(devname, GetDefaultName()) == 0
 #ifdef _WIN32
             /* Some old Windows apps hardcode these expecting OpenAL to use a
              * specific audio API, even when they're not enumerated. Creative's
              * router effectively ignores them too.
              */
-            || al::strcasecmp(deviceName, "DirectSound3D") == 0
-            || al::strcasecmp(deviceName, "DirectSound") == 0
-            || al::strcasecmp(deviceName, "MMSYSTEM") == 0
+            || al::case_compare(devname, "DirectSound3D"sv) == 0
+            || al::case_compare(devname, "DirectSound"sv) == 0
+            || al::case_compare(devname, "MMSYSTEM"sv) == 0
 #endif
             /* Some old Linux apps hardcode configuration strings that were
              * supported by the OpenAL SI. We can't really do anything useful
              * with them, so just ignore.
              */
-            || (deviceName[0] == '\'' && deviceName[1] == '(')
-            || al::strcasecmp(deviceName, "openal-soft") == 0)
-            deviceName = nullptr;
+            || al::starts_with(devname, "'("sv)
+            || al::case_compare(devname, "openal-soft"sv) == 0)
+            devname = {};
     }
     else
         TRACE("Opening default playback device\n");
@@ -2916,23 +2934,6 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName) noexcep
     device->NumAuxSends = DefaultSends;
 
     try {
-        /* We need to ensure the device name isn't too long. The string_view is
-         * printed using the "%.*s" formatter, which uses an int for the
-         * precision/length. It wouldn't be a significant problem if larger
-         * values simply printed fewer characters due to truncation, but
-         * negative values are ignored, treating it like a normal null-
-         * terminated string, and string_views don't need to be null-
-         * terminated.
-         *
-         * Other than the annoyance of checking, this shouldn't be a problem.
-         * Two billion bytes is enough for a device name.
-         */
-        const std::string_view devname{deviceName ? deviceName : ""};
-        if(devname.length() >= std::numeric_limits<int>::max())
-            throw al::backend_exception{al::backend_error::NoDevice,
-                "Device name too long (%zu >= %d)", devname.length(),
-                std::numeric_limits<int>::max()};
-
         auto backend = PlaybackFactory->createBackend(device.get(), BackendType::Playback);
         std::lock_guard<std::recursive_mutex> listlock{ListLock};
         backend->open(devname);
@@ -3025,12 +3026,22 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, 
         return nullptr;
     }
 
-    if(deviceName)
+    std::string_view devname{deviceName ? deviceName : ""};
+    if(!devname.empty())
     {
-        TRACE("Opening capture device \"%s\"\n", deviceName);
-        if(!deviceName[0] || al::strcasecmp(deviceName, GetDefaultName()) == 0
-            || al::strcasecmp(deviceName, "openal-soft") == 0)
-            deviceName = nullptr;
+        if(devname.length() >= std::numeric_limits<int>::max())
+        {
+            ERR("Device name too long (%zu >= %d)\n", devname.length(),
+                std::numeric_limits<int>::max());
+            alcSetError(nullptr, ALC_INVALID_VALUE);
+            return nullptr;
+        }
+
+        TRACE("Opening capture device \"%.*s\"\n", static_cast<int>(devname.size()),
+            devname.data());
+        if(al::case_compare(devname, GetDefaultName()) == 0
+            || al::case_compare(devname, "openal-soft"sv) == 0)
+            devname = {};
     }
     else
         TRACE("Opening default capture device\n");
@@ -3065,12 +3076,6 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, 
         device->BufferSize);
 
     try {
-        const std::string_view devname{deviceName ? deviceName : ""};
-        if(devname.length() >= std::numeric_limits<int>::max())
-            throw al::backend_exception{al::backend_error::NoDevice,
-                "Device name too long (%zu >= %d)", devname.length(),
-                std::numeric_limits<int>::max()};
-
         auto backend = CaptureFactory->createBackend(device.get(), BackendType::Capture);
         std::lock_guard<std::recursive_mutex> listlock{ListLock};
         backend->open(devname);
@@ -3437,12 +3442,6 @@ ALC_API ALCboolean ALC_APIENTRY alcResetDeviceSOFT(ALCdevice *device, const ALCi
 FORCE_ALIGN ALCboolean ALC_APIENTRY alcReopenDeviceSOFT(ALCdevice *device,
     const ALCchar *deviceName, const ALCint *attribs) noexcept
 {
-    if(deviceName)
-    {
-        if(!deviceName[0] || al::strcasecmp(deviceName, GetDefaultName()) == 0)
-            deviceName = nullptr;
-    }
-
     std::unique_lock<std::recursive_mutex> listlock{ListLock};
     DeviceRef dev{VerifyDevice(device)};
     if(!dev || dev->Type != DeviceType::Playback)
@@ -3452,6 +3451,20 @@ FORCE_ALIGN ALCboolean ALC_APIENTRY alcReopenDeviceSOFT(ALCdevice *device,
         return ALC_FALSE;
     }
     std::lock_guard<std::mutex> statelock{dev->StateLock};
+
+    std::string_view devname{deviceName ? deviceName : ""};
+    if(!devname.empty())
+    {
+        if(devname.length() >= std::numeric_limits<int>::max())
+        {
+            ERR("Device name too long (%zu >= %d)\n", devname.length(),
+                std::numeric_limits<int>::max());
+            alcSetError(dev.get(), ALC_INVALID_VALUE);
+            return ALC_FALSE;
+        }
+        if(al::case_compare(devname, GetDefaultName()) == 0)
+            devname = {};
+    }
 
     /* Force the backend device to stop first since we're opening another one. */
     const bool wasPlaying{dev->mDeviceState == DeviceState::Playing};
@@ -3463,12 +3476,6 @@ FORCE_ALIGN ALCboolean ALC_APIENTRY alcReopenDeviceSOFT(ALCdevice *device,
 
     BackendPtr newbackend;
     try {
-        const std::string_view devname{deviceName ? deviceName : ""};
-        if(devname.length() >= std::numeric_limits<int>::max())
-            throw al::backend_exception{al::backend_error::NoDevice,
-                "Device name too long (%zu >= %d)", devname.length(),
-                std::numeric_limits<int>::max()};
-
         newbackend = PlaybackFactory->createBackend(dev.get(), BackendType::Playback);
         newbackend->open(devname);
     }

@@ -861,18 +861,18 @@ void InitHrtfPanning(ALCdevice *device)
             HrtfModeEntry{"ambi3"sv, RenderMode::Normal, 3},
         };
 
-        const char *mode{modeopt->c_str()};
-        if(al::strcasecmp(mode, "basic") == 0)
+        std::string_view mode{*modeopt};
+        if(al::case_compare(mode, "basic"sv) == 0)
         {
-            ERR("HRTF mode \"%s\" deprecated, substituting \"%s\"\n", mode, "ambi2");
+            ERR("HRTF mode \"%s\" deprecated, substituting \"%s\"\n", modeopt->c_str(), "ambi2");
             mode = "ambi2";
         }
 
-        auto match_entry = [svmode=std::string_view{mode}](const HrtfModeEntry &entry) -> bool
-        { return al::case_compare(svmode, entry.name) == 0; };
+        auto match_entry = [mode](const HrtfModeEntry &entry) -> bool
+        { return al::case_compare(mode, entry.name) == 0; };
         auto iter = std::find_if(std::begin(hrtf_modes), std::end(hrtf_modes), match_entry);
         if(iter == std::end(hrtf_modes))
-            ERR("Unexpected hrtf-mode: %s\n", mode);
+            ERR("Unexpected hrtf-mode: %s\n", modeopt->c_str());
         else
         {
             device->mRenderMode = iter->mode;

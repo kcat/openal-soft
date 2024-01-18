@@ -64,6 +64,7 @@ namespace {
 
 using uint = unsigned int;
 using namespace std::chrono;
+using std::string_view_literals::operator""sv;
 
 using HrtfMixerFunc = void(*)(const float *InSamples, float2 *AccumSamples, const uint IrSize,
     const MixHrtfFilter *hrtfparams, const size_t BufferSize);
@@ -128,42 +129,43 @@ inline HrtfMixerBlendFunc SelectHrtfBlendMixer()
 
 } // namespace
 
-void Voice::InitMixer(std::optional<std::string> resampler)
+void Voice::InitMixer(std::optional<std::string> resopt)
 {
-    if(resampler)
+    if(resopt)
     {
         struct ResamplerEntry {
-            const char *name;
+            const std::string_view name;
             const Resampler resampler;
         };
         constexpr std::array ResamplerList{
-            ResamplerEntry{"none", Resampler::Point},
-            ResamplerEntry{"point", Resampler::Point},
-            ResamplerEntry{"linear", Resampler::Linear},
-            ResamplerEntry{"cubic", Resampler::Cubic},
-            ResamplerEntry{"bsinc12", Resampler::BSinc12},
-            ResamplerEntry{"fast_bsinc12", Resampler::FastBSinc12},
-            ResamplerEntry{"bsinc24", Resampler::BSinc24},
-            ResamplerEntry{"fast_bsinc24", Resampler::FastBSinc24},
+            ResamplerEntry{"none"sv, Resampler::Point},
+            ResamplerEntry{"point"sv, Resampler::Point},
+            ResamplerEntry{"linear"sv, Resampler::Linear},
+            ResamplerEntry{"cubic"sv, Resampler::Cubic},
+            ResamplerEntry{"bsinc12"sv, Resampler::BSinc12},
+            ResamplerEntry{"fast_bsinc12"sv, Resampler::FastBSinc12},
+            ResamplerEntry{"bsinc24"sv, Resampler::BSinc24},
+            ResamplerEntry{"fast_bsinc24"sv, Resampler::FastBSinc24},
         };
 
-        const char *str{resampler->c_str()};
-        if(al::strcasecmp(str, "bsinc") == 0)
+        std::string_view resampler{*resopt};
+        if(al::case_compare(resampler, "bsinc"sv) == 0)
         {
-            WARN("Resampler option \"%s\" is deprecated, using bsinc12\n", str);
-            str = "bsinc12";
+            WARN("Resampler option \"%s\" is deprecated, using bsinc12\n", resopt->c_str());
+            resampler = "bsinc12"sv;
         }
-        else if(al::strcasecmp(str, "sinc4") == 0 || al::strcasecmp(str, "sinc8") == 0)
+        else if(al::case_compare(resampler, "sinc4"sv) == 0
+            || al::case_compare(resampler, "sinc8"sv) == 0)
         {
-            WARN("Resampler option \"%s\" is deprecated, using cubic\n", str);
-            str = "cubic";
+            WARN("Resampler option \"%s\" is deprecated, using cubic\n", resopt->c_str());
+            resampler = "cubic"sv;
         }
 
         auto iter = std::find_if(ResamplerList.begin(), ResamplerList.end(),
-            [str](const ResamplerEntry &entry) -> bool
-            { return al::strcasecmp(str, entry.name) == 0; });
+            [resampler](const ResamplerEntry &entry) -> bool
+            { return al::case_compare(resampler, entry.name) == 0; });
         if(iter == ResamplerList.end())
-            ERR("Invalid resampler: %s\n", str);
+            ERR("Invalid resampler: %s\n", resopt->c_str());
         else
             ResamplerDefault = iter->resampler;
     }

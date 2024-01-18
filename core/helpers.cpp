@@ -310,29 +310,25 @@ void DirectorySearch(const char *path, const char *ext, std::vector<std::string>
     DIR *dir{opendir(path)};
     if(!dir) return;
 
-    const auto base = results->size();
-    const size_t extlen{strlen(ext)};
-
+    const std::string_view extsv{ext};
+    const auto base = static_cast<std::make_signed_t<size_t>>(results->size());
     while(struct dirent *dirent{readdir(dir)})
     {
         if(strcmp(dirent->d_name, ".") == 0 || strcmp(dirent->d_name, "..") == 0)
             continue;
 
         const size_t len{strlen(dirent->d_name)};
-        if(len <= extlen) continue;
-        if(al::strcasecmp(dirent->d_name+len-extlen, ext) != 0)
+        if(len <= extsv.size()) continue;
+        if(al::case_compare(&dirent->d_name[len-extsv.size()], extsv) != 0)
             continue;
 
-        results->emplace_back();
-        std::string &str = results->back();
-        str = path;
-        if(str.back() != '/')
-            str.push_back('/');
+        std::string &str = results->emplace_back(path);
+        if(str.back() != '/') str.push_back('/');
         str += dirent->d_name;
     }
     closedir(dir);
 
-    const al::span<std::string> newlist{results->data()+base, results->size()-base};
+    const al::span newlist{results->begin()+base, results->end()};
     std::sort(newlist.begin(), newlist.end());
     for(const auto &name : newlist)
         TRACE(" got %s\n", name.c_str());

@@ -118,34 +118,32 @@ class databuf final : public std::streambuf {
         if((mode&std::ios_base::out) || !(mode&std::ios_base::in))
             return traits_type::eof();
 
-        char_type *cur;
         switch(whence)
         {
-            case std::ios_base::beg:
-                if(offset < 0 || offset > egptr()-eback())
-                    return traits_type::eof();
-                cur = eback() + offset;
-                break;
-
-            case std::ios_base::cur:
-                if((offset >= 0 && offset > egptr()-gptr()) ||
-                   (offset < 0 && -offset > gptr()-eback()))
-                    return traits_type::eof();
-                cur = gptr() + offset;
-                break;
-
-            case std::ios_base::end:
-                if(offset > 0 || -offset > egptr()-eback())
-                    return traits_type::eof();
-                cur = egptr() + offset;
-                break;
-
-            default:
+        case std::ios_base::beg:
+            if(offset < 0 || offset > egptr()-eback())
                 return traits_type::eof();
+            setg(eback(), eback()+offset, egptr());
+            break;
+
+        case std::ios_base::cur:
+            if((offset >= 0 && offset > egptr()-gptr()) ||
+                (offset < 0 && -offset > gptr()-eback()))
+                return traits_type::eof();
+            setg(eback(), gptr()+offset, egptr());
+            break;
+
+        case std::ios_base::end:
+            if(offset > 0 || -offset > egptr()-eback())
+                return traits_type::eof();
+            setg(eback(), egptr()+offset, egptr());
+            break;
+
+        default:
+            return traits_type::eof();
         }
 
-        setg(eback(), cur, egptr());
-        return cur - eback();
+        return gptr() - eback();
     }
 
     pos_type seekpos(pos_type pos, std::ios_base::openmode mode) override
@@ -157,7 +155,7 @@ class databuf final : public std::streambuf {
         if(pos < 0 || pos > egptr()-eback())
             return traits_type::eof();
 
-        setg(eback(), eback() + static_cast<size_t>(pos), egptr());
+        setg(eback(), eback()+static_cast<size_t>(pos), egptr());
         return pos;
     }
 
@@ -1245,35 +1243,32 @@ std::vector<std::string> EnumerateHrtf(std::optional<std::string> pathopt)
     bool usedefaults{true};
     if(pathopt)
     {
-        const char *pathlist{pathopt->c_str()};
-        while(pathlist && *pathlist)
+        std::string_view pathlist{*pathopt};
+        while(!pathlist.empty())
         {
-            const char *next, *end;
+            while(!pathlist.empty() && (std::isspace(pathlist.front()) || pathlist.front() == ','))
+                pathlist.remove_prefix(1);
+            if(pathlist.empty())
+                break;
 
-            while(isspace(*pathlist) || *pathlist == ',')
-                pathlist++;
-            if(*pathlist == '\0')
-                continue;
-
-            next = strchr(pathlist, ',');
-            if(next)
-                end = next++;
+            auto endpos = std::min(pathlist.find(','), pathlist.size());
+            auto entry = pathlist.substr(0, endpos);
+            if(endpos < pathlist.size())
+                pathlist.remove_prefix(++endpos);
             else
             {
-                end = pathlist + strlen(pathlist);
+                pathlist.remove_prefix(endpos);
                 usedefaults = false;
             }
 
-            while(end != pathlist && isspace(*(end-1)))
-                --end;
-            if(end != pathlist)
+            while(!entry.empty() && std::isspace(entry.back()))
+                entry.remove_suffix(1);
+            if(!entry.empty())
             {
-                const std::string pname{pathlist, end};
+                const std::string pname{entry};
                 for(const auto &fname : SearchDataFiles(".mhr", pname.c_str()))
                     AddFileEntry(fname);
             }
-
-            pathlist = next;
         }
     }
 

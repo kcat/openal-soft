@@ -262,14 +262,52 @@ const std::string_view prefix_name(snd_pcm_stream_t stream)
     return "capture-prefix"sv;
 }
 
+struct SndCtlCardInfo {
+    snd_ctl_card_info_t *mInfo{};
+
+    SndCtlCardInfo() { snd_ctl_card_info_malloc(&mInfo); }
+    ~SndCtlCardInfo() { if(mInfo) snd_ctl_card_info_free(mInfo); }
+    SndCtlCardInfo(const SndCtlCardInfo&) = delete;
+    SndCtlCardInfo& operator=(const SndCtlCardInfo&) = delete;
+
+    [[nodiscard]]
+    operator snd_ctl_card_info_t*() const noexcept { return mInfo; }
+};
+
+struct SndPcmInfo {
+    snd_pcm_info_t *mInfo{};
+
+    SndPcmInfo() { snd_pcm_info_malloc(&mInfo); }
+    ~SndPcmInfo() { if(mInfo) snd_pcm_info_free(mInfo); }
+    SndPcmInfo(const SndPcmInfo&) = delete;
+    SndPcmInfo& operator=(const SndPcmInfo&) = delete;
+
+    [[nodiscard]]
+    operator snd_pcm_info_t*() const noexcept { return mInfo; }
+};
+
+struct SndCtl {
+    snd_ctl_t *mHandle{};
+
+    SndCtl() = default;
+    ~SndCtl() { if(mHandle) snd_ctl_close(mHandle); }
+    SndCtl(const SndCtl&) = delete;
+    SndCtl& operator=(const SndCtl&) = delete;
+
+    [[nodiscard]]
+    auto open(const char *name, int mode) { return snd_ctl_open(&mHandle, name, mode); }
+
+    [[nodiscard]]
+    operator snd_ctl_t*() const noexcept { return mHandle; }
+};
+
+
 std::vector<DevMap> probe_devices(snd_pcm_stream_t stream)
 {
     std::vector<DevMap> devlist;
 
-    snd_ctl_card_info_t *info;
-    snd_ctl_card_info_malloc(&info);
-    snd_pcm_info_t *pcminfo;
-    snd_pcm_info_malloc(&pcminfo);
+    SndCtlCardInfo info;
+    SndPcmInfo pcminfo;
 
     auto defname = ConfigValueStr({}, "alsa"sv,
         (stream == SND_PCM_STREAM_PLAYBACK) ? "device"sv : "capture"sv);
@@ -278,28 +316,27 @@ std::vector<DevMap> probe_devices(snd_pcm_stream_t stream)
     if(auto customdevs = ConfigValueStr({}, "alsa"sv,
         (stream == SND_PCM_STREAM_PLAYBACK) ? "custom-devices"sv : "custom-captures"sv))
     {
-        size_t nextpos{customdevs->find_first_not_of(';')};
-        size_t curpos;
-        while((curpos=nextpos) < customdevs->length())
+        size_t curpos{customdevs->find_first_not_of(';')};
+        while(curpos < customdevs->length())
         {
-            nextpos = customdevs->find_first_of(';', curpos+1);
-
-            size_t seppos{customdevs->find_first_of('=', curpos)};
+            size_t nextpos{customdevs->find(';', curpos+1)};
+            const size_t seppos{customdevs->find('=', curpos)};
             if(seppos == curpos || seppos >= nextpos)
             {
-                std::string spec{customdevs->substr(curpos, nextpos-curpos)};
+                const std::string spec{customdevs->substr(curpos, nextpos-curpos)};
                 ERR("Invalid ALSA device specification \"%s\"\n", spec.c_str());
             }
             else
             {
-                devlist.emplace_back(customdevs->substr(curpos, seppos-curpos),
-                    customdevs->substr(seppos+1, nextpos-seppos-1));
-                const auto &entry = devlist.back();
+                const std::string_view strview{*customdevs};
+                const auto &entry = devlist.emplace_back(strview.substr(curpos, seppos-curpos),
+                    strview.substr(seppos+1, nextpos-seppos-1));
                 TRACE("Got device \"%s\", \"%s\"\n", entry.name.c_str(), entry.device_name.c_str());
             }
 
             if(nextpos < customdevs->length())
                 nextpos = customdevs->find_first_not_of(';', nextpos+1);
+            curpos = nextpos;
         }
     }
 
@@ -312,8 +349,8 @@ std::vector<DevMap> probe_devices(snd_pcm_stream_t stream)
     {
         std::string name{"hw:" + std::to_string(card)};
 
-        snd_ctl_t *handle;
-        err = snd_ctl_open(&handle, name.c_str(), 0);
+        SndCtl handle;
+        err = handle.open(name.c_str(), 0);
         if(err < 0)
         {
             ERR("control open (hw:%d): %s\n", card, snd_strerror(err));
@@ -323,7 +360,6 @@ std::vector<DevMap> probe_devices(snd_pcm_stream_t stream)
         if(err < 0)
         {
             ERR("control hardware info (hw:%d): %s\n", card, snd_strerror(err));
-            snd_ctl_close(handle);
             continue;
         }
 
@@ -378,17 +414,12 @@ std::vector<DevMap> probe_devices(snd_pcm_stream_t stream)
             device += ",DEV=";
             device += std::to_string(dev);
             
-            devlist.emplace_back(std::move(name), std::move(device));
-            const auto &entry = devlist.back();
+            const auto &entry = devlist.emplace_back(std::move(name), std::move(device));
             TRACE("Got device \"%s\", \"%s\"\n", entry.name.c_str(), entry.device_name.c_str());
         }
-        snd_ctl_close(handle);
     }
     if(err < 0)
         ERR("snd_card_next failed: %s\n", snd_strerror(err));
-
-    snd_pcm_info_free(pcminfo);
-    snd_ctl_card_info_free(info);
 
     return devlist;
 }
@@ -398,7 +429,6 @@ int verify_state(snd_pcm_t *handle)
 {
     snd_pcm_state_t state{snd_pcm_state(handle)};
 
-    int err;
     switch(state)
     {
         case SND_PCM_STATE_OPEN:
@@ -411,12 +441,12 @@ int verify_state(snd_pcm_t *handle)
             break;
 
         case SND_PCM_STATE_XRUN:
-            err=snd_pcm_recover(handle, -EPIPE, 1);
-            if(err < 0) return err;
+            if(int err{snd_pcm_recover(handle, -EPIPE, 1)}; err < 0)
+                return err;
             break;
         case SND_PCM_STATE_SUSPENDED:
-            err = snd_pcm_recover(handle, -ESTRPIPE, 1);
-            if(err < 0) return err;
+            if(int err{snd_pcm_recover(handle, -ESTRPIPE, 1)}; err < 0)
+                return err;
             break;
 
         case SND_PCM_STATE_DISCONNECTED:

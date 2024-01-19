@@ -513,18 +513,17 @@ void MainloopUniqueLock::connectContext()
     int err{pa_context_connect(mutex()->mContext, nullptr, pulse_ctx_flags, nullptr)};
     if(err >= 0)
     {
-        pa_context_state_t state;
-        while((state=pa_context_get_state(mutex()->mContext)) != PA_CONTEXT_READY)
+        wait([&err,this]()
         {
+            pa_context_state_t state{pa_context_get_state(mutex()->mContext)};
             if(!PA_CONTEXT_IS_GOOD(state))
             {
                 err = pa_context_errno(mutex()->mContext);
-                if(err > 0)  err = -err;
-                break;
+                if(err > 0) err = -err;
+                return true;
             }
-
-            wait();
-        }
+            return state == PA_CONTEXT_READY;
+        });
     }
     pa_context_set_state_callback(mutex()->mContext, nullptr, nullptr);
 
@@ -559,9 +558,9 @@ pa_stream *MainloopUniqueLock::connectStream(const char *device_name, pa_stream_
             stream_id, pa_strerror(err)};
     }
 
-    pa_stream_state_t state;
-    while((state=pa_stream_get_state(stream)) != PA_STREAM_READY)
+    wait([&err,stream,stream_id,this]()
     {
+        pa_stream_state_t state{pa_stream_get_state(stream)};
         if(!PA_STREAM_IS_GOOD(state))
         {
             err = pa_context_errno(mutex()->mContext);
@@ -569,9 +568,9 @@ pa_stream *MainloopUniqueLock::connectStream(const char *device_name, pa_stream_
             throw al::backend_exception{al::backend_error::DeviceError,
                 "%s did not get ready (%s)", stream_id, pa_strerror(err)};
         }
+        return state == PA_STREAM_READY;
+    });
 
-        wait();
-    }
     pa_stream_set_state_callback(stream, nullptr, nullptr);
 
     return stream;
@@ -1031,8 +1030,8 @@ void PulsePlayback::stop()
 ClockLatency PulsePlayback::getClockLatency()
 {
     ClockLatency ret;
-    pa_usec_t latency;
-    int neg, err;
+    pa_usec_t latency{};
+    int neg{}, err{};
 
     {
         MainloopUniqueLock plock{mMainloop};
@@ -1302,8 +1301,8 @@ void PulseCapture::captureSamples(std::byte *buffer, uint samples)
             break;
         }
 
-        const void *capbuf;
-        size_t caplen;
+        const void *capbuf{};
+        size_t caplen{};
         if(pa_stream_peek(mStream, &capbuf, &caplen) < 0) UNLIKELY
         {
             mDevice->handleDisconnect("Failed retrieving capture samples: %s",
@@ -1359,8 +1358,8 @@ uint PulseCapture::availableSamples()
 ClockLatency PulseCapture::getClockLatency()
 {
     ClockLatency ret;
-    pa_usec_t latency;
-    int neg, err;
+    pa_usec_t latency{};
+    int neg{}, err{};
 
     {
         MainloopUniqueLock plock{mMainloop};

@@ -335,7 +335,7 @@ using Pod_t = typename PodInfo<T>::Type;
 template<uint32_t T>
 al::span<const Pod_t<T>> get_array_span(const spa_pod *pod)
 {
-    uint32_t nvals;
+    uint32_t nvals{};
     if(void *v{spa_pod_get_array(pod, &nvals)})
     {
         if(get_array_value_type(pod) == T)

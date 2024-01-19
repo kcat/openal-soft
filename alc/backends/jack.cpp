@@ -457,7 +457,7 @@ void JackPlayback::open(std::string_view name)
         const PathNamePair &binname = GetProcBinary();
         const char *client_name{binname.fname.empty() ? "alsoft" : binname.fname.c_str()};
 
-        jack_status_t status;
+        jack_status_t status{};
         mClient = jack_client_open(client_name, ClientOptions, &status, nullptr);
         if(mClient == nullptr)
             throw al::backend_exception{al::backend_error::DeviceError,
@@ -675,7 +675,7 @@ bool JackBackendFactory::init()
 
     void (*old_error_cb)(const char*){&jack_error_callback ? jack_error_callback : nullptr};
     jack_set_error_function(jack_msg_handler);
-    jack_status_t status;
+    jack_status_t status{};
     jack_client_t *client{jack_client_open(client_name, ClientOptions, &status, nullptr)};
     jack_set_error_function(old_error_cb);
     if(!client)
@@ -704,7 +704,7 @@ std::string JackBackendFactory::probe(BackendType type)
 
     const PathNamePair &binname = GetProcBinary();
     const char *client_name{binname.fname.empty() ? "alsoft" : binname.fname.c_str()};
-    jack_status_t status;
+    jack_status_t status{};
     switch(type)
     {
     case BackendType::Playback:

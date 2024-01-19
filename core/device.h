@@ -325,9 +325,8 @@ struct DeviceBase {
     /** Waits for the mixer to not be mixing or updating the clock. */
     [[nodiscard]] auto waitForMix() const noexcept -> uint
     {
-        uint refcount;
-        while((refcount=mMixCount.load(std::memory_order_acquire))&1) {
-        }
+        uint refcount{mMixCount.load(std::memory_order_acquire)};
+        while((refcount&1)) refcount = mMixCount.load(std::memory_order_acquire);
         return refcount;
     }
 

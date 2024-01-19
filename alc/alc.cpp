@@ -2082,8 +2082,6 @@ ALC_API const ALCchar* ALC_APIENTRY alcGetString(ALCdevice *Device, ALCenum para
 
 static size_t GetIntegerv(ALCdevice *device, ALCenum param, const al::span<int> values)
 {
-    size_t i;
-
     if(values.empty())
     {
         alcSetError(device, ALC_INVALID_VALUE);
@@ -2144,11 +2142,9 @@ static size_t GetIntegerv(ALCdevice *device, ALCenum param, const al::span<int> 
             values[0] = MaxCaptureAttributes;
             return 1;
         case ALC_ALL_ATTRIBUTES:
-            i = 0;
-            if(values.size() < MaxCaptureAttributes)
-                alcSetError(device, ALC_INVALID_VALUE);
-            else
+            if(values.size() >= MaxCaptureAttributes)
             {
+                size_t i{0};
                 values[i++] = ALC_MAJOR_VERSION;
                 values[i++] = alcMajorVersion;
                 values[i++] = ALC_MINOR_VERSION;
@@ -2159,8 +2155,10 @@ static size_t GetIntegerv(ALCdevice *device, ALCenum param, const al::span<int> 
                 values[i++] = device->Connected.load(std::memory_order_relaxed);
                 values[i++] = 0;
                 assert(i == MaxCaptureAttributes);
+                return i;
             }
-            return i;
+            alcSetError(device, ALC_INVALID_VALUE);
+            return 0;
 
         case ALC_MAJOR_VERSION:
             values[0] = alcMajorVersion;
@@ -2184,7 +2182,7 @@ static size_t GetIntegerv(ALCdevice *device, ALCenum param, const al::span<int> 
     }
 
     /* render device */
-    auto NumAttrsForDevice = [](ALCdevice *aldev) noexcept
+    auto NumAttrsForDevice = [](const ALCdevice *aldev) noexcept -> uint8_t
     {
         if(aldev->Type == DeviceType::Loopback && aldev->FmtChans == DevFmtAmbi3D)
             return 37;
@@ -2197,11 +2195,9 @@ static size_t GetIntegerv(ALCdevice *device, ALCenum param, const al::span<int> 
         return 1;
 
     case ALC_ALL_ATTRIBUTES:
-        i = 0;
-        if(values.size() < static_cast<size_t>(NumAttrsForDevice(device)))
-            alcSetError(device, ALC_INVALID_VALUE);
-        else
+        if(values.size() >= NumAttrsForDevice(device))
         {
+            size_t i{0};
             values[i++] = ALC_MAJOR_VERSION;
             values[i++] = alcMajorVersion;
             values[i++] = ALC_MINOR_VERSION;
@@ -2267,8 +2263,11 @@ static size_t GetIntegerv(ALCdevice *device, ALCenum param, const al::span<int> 
             values[i++] = static_cast<ALCenum>(device->getOutputMode1());
 
             values[i++] = 0;
+            assert(i == NumAttrsForDevice(device));
+            return i;
         }
-        return i;
+        alcSetError(device, ALC_INVALID_VALUE);
+        return 0;
 
     case ALC_MAJOR_VERSION:
         values[0] = alcMajorVersion;
@@ -2503,7 +2502,7 @@ ALC_API void ALC_APIENTRY alcGetInteger64vSOFT(ALCdevice *device, ALCenum pname,
             values[i++] = clock.Latency.count();
 
             values[i++] = ALC_OUTPUT_MODE_SOFT;
-            values[i++] = static_cast<ALCenum>(device->getOutputMode1());
+            values[i++] = al::to_underlying(device->getOutputMode1());
 
             values[i++] = 0;
         }

@@ -150,17 +150,9 @@ void PPhaseResampler::init(const uint srcRate, const uint dstRate)
      * ends before the nyquist (0.5).  Both are scaled by the downsampling
      * factor.
      */
-    double cutoff, width;
-    if(mP > mQ)
-    {
-        cutoff = 0.475 / mP;
-        width = 0.05 / mP;
-    }
-    else
-    {
-        cutoff = 0.475 / mQ;
-        width = 0.05 / mQ;
-    }
+    const auto [cutoff, width] = (mP > mQ) ? std::make_tuple(0.475 / mP, 0.05 / mP)
+        : std::make_tuple(0.475 / mQ, 0.05 / mQ);
+
     // A rejection of -180 dB is used for the stop band. Round up when
     // calculating the left offset to avoid increasing the transition width.
     const uint l{(CalcKaiserOrder(180.0, width)+1) / 2};

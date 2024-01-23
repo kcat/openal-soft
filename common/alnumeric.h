@@ -135,21 +135,18 @@ inline int fastf2i(float f) noexcept
 #if defined(HAVE_SSE_INTRINSICS)
     return _mm_cvt_ss2si(_mm_set_ss(f));
 
-#elif defined(_MSC_VER) && defined(_M_IX86_FP)
+#elif defined(_MSC_VER) && defined(_M_IX86_FP) && _M_IX86_FP == 0
 
     int i;
     __asm fld f
     __asm fistp i
     return i;
 
-#elif (defined(__GNUC__) || defined(__clang__)) && (defined(__i386__) || defined(__x86_64__))
+#elif (defined(__GNUC__) || defined(__clang__)) && (defined(__i386__) || defined(__x86_64__)) \
+    && !defined(__SSE_MATH__)
 
     int i;
-#ifdef __SSE_MATH__
-    __asm__("cvtss2si %1, %0" : "=r"(i) : "x"(f));
-#else
     __asm__ __volatile__("fistpl %0" : "=m"(i) : "t"(f) : "st");
-#endif
     return i;
 
 #else

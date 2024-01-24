@@ -41,6 +41,7 @@
 #include <vector>
 
 #include "alfstream.h"
+#include "almalloc.h"
 #include "alstring.h"
 #include "core/helpers.h"
 #include "core/logging.h"
@@ -57,6 +58,12 @@ using namespace winrt;
 namespace {
 
 using std::string_view_literals::operator""sv;
+
+#if defined(_WIN32) && !defined(_GAMING_XBOX) && !defined(ALSOFT_UWP)
+struct CoTaskMemDeleter {
+    void operator()(void *mem) const { CoTaskMemFree(mem); }
+};
+#endif
 
 struct ConfigEntry {
     std::string key;
@@ -322,20 +329,25 @@ void ReadALConfig()
 #if !defined(_GAMING_XBOX)
     {
 #if !defined(ALSOFT_UWP)
-        WCHAR buffer[MAX_PATH];
-        if (!SHGetSpecialFolderPathW(nullptr, buffer, CSIDL_APPDATA, FALSE))
-            return;
+        std::unique_ptr<WCHAR,CoTaskMemDeleter> bufstore;
+        const HRESULT hr{SHGetKnownFolderPath(FOLDERID_RoamingAppData, KF_FLAG_DONT_UNEXPAND,
+            nullptr, al::out_ptr(bufstore))};
+        if(SUCCEEDED(hr))
+        {
+            const std::wstring_view buffer{bufstore.get()};
 #else
         winrt::Windows::Storage::ApplicationDataContainer localSettings = winrt::Windows::Storage::ApplicationData::Current().LocalSettings();
         auto buffer = Windows::Storage::ApplicationData::Current().RoamingFolder().Path();
+        {
 #endif
-        std::string filepath{wstr_to_utf8(buffer)};
-        filepath += "\\alsoft.ini";
+            std::string filepath{wstr_to_utf8(buffer)};
+            filepath += "\\alsoft.ini";
 
-        TRACE("Loading config %s...\n", filepath.c_str());
-        al::ifstream f{filepath};
-        if(f.is_open())
-            LoadConfigFromFile(f);
+            TRACE("Loading config %s...\n", filepath.c_str());
+            al::ifstream f{filepath};
+            if(f.is_open())
+                LoadConfigFromFile(f);
+        }
     }
 #endif
 

@@ -150,15 +150,18 @@ QString getDefaultConfigName()
     static constexpr char fname[] = "alsoft.ini"; /* NOLINT(*-avoid-c-arrays) */
     auto get_appdata_path = []() noexcept -> QString
     {
-        WCHAR buffer[MAX_PATH];
-        if(SHGetSpecialFolderPathW(nullptr, buffer, CSIDL_APPDATA, FALSE) != FALSE)
-            return QString::fromWCharArray(buffer);
-        return QString();
+        QString ret;
+        WCHAR *buffer{};
+        if(const HRESULT hr{SHGetKnownFolderPath(FOLDERID_RoamingAppData, KF_FLAG_DONT_UNEXPAND,
+            nullptr, &buffer)}; SUCCEEDED(hr))
+            ret = QString::fromWCharArray(buffer);
+        CoTaskMemFree(buffer);
+        return ret;
     };
     QString base = get_appdata_path();
 #else
     static constexpr char fname[] = "alsoft.conf"; /* NOLINT(*-avoid-c-arrays) */
-    QByteArray base = qgetenv("XDG_CONFIG_HOME");
+    QString base = qgetenv("XDG_CONFIG_HOME");
     if(base.isEmpty())
     {
         base = qgetenv("HOME");
@@ -176,14 +179,17 @@ QString getBaseDataPath()
 #ifdef Q_OS_WIN32
     auto get_appdata_path = []() noexcept -> QString
     {
-        WCHAR buffer[MAX_PATH];
-        if(SHGetSpecialFolderPathW(nullptr, buffer, CSIDL_APPDATA, FALSE) != FALSE)
-            return QString::fromWCharArray(buffer);
-        return QString();
+        QString ret;
+        WCHAR *buffer{};
+        if(const HRESULT hr{SHGetKnownFolderPath(FOLDERID_RoamingAppData, KF_FLAG_DONT_UNEXPAND,
+            nullptr, &buffer)}; SUCCEEDED(hr))
+            ret = QString::fromWCharArray(buffer);
+        CoTaskMemFree(buffer);
+        return ret;
     };
     QString base = get_appdata_path();
 #else
-    QByteArray base = qgetenv("XDG_DATA_HOME");
+    QString base = qgetenv("XDG_DATA_HOME");
     if(base.isEmpty())
     {
         base = qgetenv("HOME");

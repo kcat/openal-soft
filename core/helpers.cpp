@@ -16,6 +16,7 @@
 #include <optional>
 #include <string>
 
+#include "almalloc.h"
 #include "alnumeric.h"
 #include "alspan.h"
 #include "alstring.h"
@@ -83,7 +84,12 @@ const PathNamePair &GetProcBinary()
 
 namespace {
 
-void DirectorySearch(const char *path, const char *ext, std::vector<std::string> *const results)
+struct CoTaskMemDeleter {
+    void operator()(void *mem) const { CoTaskMemFree(mem); }
+};
+
+void DirectorySearch(const std::string_view path, const char *ext,
+    std::vector<std::string> *const results)
 {
     std::string pathstr{path};
     pathstr += "\\*";
@@ -98,9 +104,7 @@ void DirectorySearch(const char *path, const char *ext, std::vector<std::string>
     const auto base = results->size();
 
     do {
-        results->emplace_back();
-        std::string &str = results->back();
-        str = path;
+        std::string &str = results->emplace_back(path);
         str += '\\';
         str += wstr_to_utf8(fdata.cFileName);
     } while(FindNextFileW(hdl, &fdata));
@@ -140,7 +144,7 @@ std::vector<std::string> SearchDataFiles(const char *ext, const char *subdir)
     /* Search the app-local directory. */
     if(auto localpath = al::getenv(L"ALSOFT_LOCAL_PATH"))
     {
-        path = wstr_to_utf8(localpath->c_str());
+        path = wstr_to_utf8(*localpath);
         if(is_slash(path.back()))
             path.pop_back();
     }
@@ -154,23 +158,23 @@ std::vector<std::string> SearchDataFiles(const char *ext, const char *subdir)
     else
         path = ".";
     std::replace(path.begin(), path.end(), '/', '\\');
-    DirectorySearch(path.c_str(), ext, &results);
+    DirectorySearch(path, ext, &results);
 
 #if !defined(ALSOFT_UWP) && !defined(_GAMING_XBOX)
     /* Search the local and global data dirs. */
-    for(auto id : std::array{CSIDL_APPDATA, CSIDL_COMMON_APPDATA})
+    for(const auto &folderid : std::array{FOLDERID_RoamingAppData, FOLDERID_ProgramData})
     {
-        WCHAR buffer[MAX_PATH];
-        if(SHGetSpecialFolderPathW(nullptr, buffer, id, FALSE) == FALSE)
-            continue;
+        std::unique_ptr<WCHAR,CoTaskMemDeleter> buffer;
+        const HRESULT hr{SHGetKnownFolderPath(folderid, KF_FLAG_DONT_UNEXPAND, nullptr,
+            al::out_ptr(buffer))};
+        if(FAILED(hr)) continue;
 
-        path = wstr_to_utf8(buffer);
-        if(!is_slash(path.back()))
-            path += '\\';
+        path = wstr_to_utf8(buffer.get());
+        path += '\\';
         path += subdir;
         std::replace(path.begin(), path.end(), '/', '\\');
 
-        DirectorySearch(path.c_str(), ext, &results);
+        DirectorySearch(path, ext, &results);
     }
 #endif
 

@@ -9,6 +9,7 @@
 #include <new>
 #include <type_traits>
 #include <utility>
+#include <variant>
 
 #include "pragmadefs.h"
 
@@ -115,6 +116,39 @@ constexpr T* construct_at(T *ptr, Args&& ...args)
      */
     return ::new(static_cast<void*>(ptr)) T{std::forward<Args>(args)...};
     /* NOLINTEND(cppcoreguidelines-owning-memory) */
+}
+
+
+template<typename SP, typename PT, typename ...Args>
+class out_ptr_t {
+    static_assert(!std::is_same_v<PT,void*>);
+
+    SP &mRes;
+    std::variant<PT,void*> mPtr{};
+
+public:
+    out_ptr_t(SP &res) : mRes{res} { }
+    ~out_ptr_t()
+    {
+        auto set_res = [this](auto &ptr)
+        { mRes.reset(static_cast<PT>(ptr)); };
+        std::visit(set_res, mPtr);
+    }
+    out_ptr_t(const out_ptr_t&) = delete;
+    out_ptr_t& operator=(const out_ptr_t&) = delete;
+
+    operator PT*() noexcept
+    { return &std::get<PT>(mPtr); }
+
+    operator void**() noexcept
+    { return &mPtr.template emplace<void*>(); }
+};
+
+template<typename T=void, typename SP, typename ...Args>
+auto out_ptr(SP &res)
+{
+    using ptype = typename SP::element_type*;
+    return out_ptr_t<SP,ptype>{res};
 }
 
 } // namespace al

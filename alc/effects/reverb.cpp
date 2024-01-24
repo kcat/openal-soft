@@ -293,7 +293,7 @@ struct DelayLineI {
      * of 2 to allow the use of bit-masking instead of a modulus for wrapping.
      */
     size_t Mask{0u};
-    std::array<float,NUM_LINES> *Line;
+    std::array<float,NUM_LINES> *Line{};
 
     /* Given the allocated sample buffer, this function updates each delay line
      * offset.

@@ -84,9 +84,11 @@ const PathNamePair &GetProcBinary()
 
 namespace {
 
+#if !defined(ALSOFT_UWP) && !defined(_GAMING_XBOX)
 struct CoTaskMemDeleter {
     void operator()(void *mem) const { CoTaskMemFree(mem); }
 };
+#endif
 
 void DirectorySearch(const std::string_view path, const char *ext,
     std::vector<std::string> *const results)

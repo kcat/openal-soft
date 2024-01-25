@@ -17,7 +17,7 @@
 
 namespace {
 
-using std::string_view_literals::operator""sv;
+using namespace std::string_view_literals;
 
 [[nodiscard]] constexpr auto GetDeviceName() noexcept { return "Oboe Default"sv; }
 

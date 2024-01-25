@@ -50,7 +50,7 @@
 
 namespace {
 
-using std::string_view_literals::operator""sv;
+using namespace std::string_view_literals;
 
 /* Helper macros */
 #define EXTRACT_VCALL_ARGS(...)  __VA_ARGS__))

@@ -40,7 +40,7 @@
 
 namespace {
 
-using std::string_view_literals::operator""sv;
+using namespace std::string_view_literals;
 
 struct HrtfEntry {
     std::string mDispName;

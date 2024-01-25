@@ -41,7 +41,7 @@ namespace {
 using std::chrono::seconds;
 using std::chrono::milliseconds;
 using std::chrono::nanoseconds;
-using std::string_view_literals::operator""sv;
+using namespace std::string_view_literals;
 
 [[nodiscard]] constexpr auto GetDeviceName() noexcept { return "No Output"sv; }
 

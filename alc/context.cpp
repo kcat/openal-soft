@@ -45,56 +45,55 @@
 
 namespace {
 
-using namespace std::placeholders;
-
+using namespace std::string_view_literals;
 using voidp = void*;
 
 /* Default context extensions */
 std::vector<std::string_view> getContextExtensions() noexcept
 {
     return std::vector<std::string_view>{
-        "AL_EXT_ALAW",
-        "AL_EXT_BFORMAT",
-        "AL_EXT_debug",
-        "AL_EXTX_direct_context",
-        "AL_EXT_DOUBLE",
-        "AL_EXT_EXPONENT_DISTANCE",
-        "AL_EXT_FLOAT32",
-        "AL_EXT_IMA4",
-        "AL_EXT_LINEAR_DISTANCE",
-        "AL_EXT_MCFORMATS",
-        "AL_EXT_MULAW",
-        "AL_EXT_MULAW_BFORMAT",
-        "AL_EXT_MULAW_MCFORMATS",
-        "AL_EXT_OFFSET",
-        "AL_EXT_source_distance_model",
-        "AL_EXT_SOURCE_RADIUS",
-        "AL_EXT_STATIC_BUFFER",
-        "AL_EXT_STEREO_ANGLES",
-        "AL_LOKI_quadriphonic",
-        "AL_SOFT_bformat_ex",
-        "AL_SOFTX_bformat_hoa",
-        "AL_SOFT_block_alignment",
-        "AL_SOFT_buffer_length_query",
-        "AL_SOFT_callback_buffer",
-        "AL_SOFTX_convolution_effect",
-        "AL_SOFT_deferred_updates",
-        "AL_SOFT_direct_channels",
-        "AL_SOFT_direct_channels_remix",
-        "AL_SOFT_effect_target",
-        "AL_SOFT_events",
-        "AL_SOFT_gain_clamp_ex",
-        "AL_SOFTX_hold_on_disconnect",
-        "AL_SOFT_loop_points",
-        "AL_SOFTX_map_buffer",
-        "AL_SOFT_MSADPCM",
-        "AL_SOFT_source_latency",
-        "AL_SOFT_source_length",
-        "AL_SOFT_source_resampler",
-        "AL_SOFT_source_spatialize",
-        "AL_SOFT_source_start_delay",
-        "AL_SOFT_UHJ",
-        "AL_SOFT_UHJ_ex",
+        "AL_EXT_ALAW"sv,
+        "AL_EXT_BFORMAT"sv,
+        "AL_EXT_debug"sv,
+        "AL_EXTX_direct_context"sv,
+        "AL_EXT_DOUBLE"sv,
+        "AL_EXT_EXPONENT_DISTANCE"sv,
+        "AL_EXT_FLOAT32"sv,
+        "AL_EXT_IMA4"sv,
+        "AL_EXT_LINEAR_DISTANCE"sv,
+        "AL_EXT_MCFORMATS"sv,
+        "AL_EXT_MULAW"sv,
+        "AL_EXT_MULAW_BFORMAT"sv,
+        "AL_EXT_MULAW_MCFORMATS"sv,
+        "AL_EXT_OFFSET"sv,
+        "AL_EXT_source_distance_model"sv,
+        "AL_EXT_SOURCE_RADIUS"sv,
+        "AL_EXT_STATIC_BUFFER"sv,
+        "AL_EXT_STEREO_ANGLES"sv,
+        "AL_LOKI_quadriphonic"sv,
+        "AL_SOFT_bformat_ex"sv,
+        "AL_SOFTX_bformat_hoa"sv,
+        "AL_SOFT_block_alignment"sv,
+        "AL_SOFT_buffer_length_query"sv,
+        "AL_SOFT_callback_buffer"sv,
+        "AL_SOFTX_convolution_effect"sv,
+        "AL_SOFT_deferred_updates"sv,
+        "AL_SOFT_direct_channels"sv,
+        "AL_SOFT_direct_channels_remix"sv,
+        "AL_SOFT_effect_target"sv,
+        "AL_SOFT_events"sv,
+        "AL_SOFT_gain_clamp_ex"sv,
+        "AL_SOFTX_hold_on_disconnect"sv,
+        "AL_SOFT_loop_points"sv,
+        "AL_SOFTX_map_buffer"sv,
+        "AL_SOFT_MSADPCM"sv,
+        "AL_SOFT_source_latency"sv,
+        "AL_SOFT_source_length"sv,
+        "AL_SOFT_source_resampler"sv,
+        "AL_SOFT_source_spatialize"sv,
+        "AL_SOFT_source_start_delay"sv,
+        "AL_SOFT_UHJ"sv,
+        "AL_SOFT_UHJ_ex"sv,
     };
 }
 
@@ -467,8 +466,6 @@ void ALCcontext::eaxSetLastError() noexcept
 
 void ALCcontext::eax_initialize_extensions()
 {
-    using std::literals::string_view_literals::operator""sv;
-
     if(!eax_g_is_enabled)
         return;
 

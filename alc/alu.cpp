@@ -107,7 +107,7 @@ namespace {
 
 using uint = unsigned int;
 using namespace std::chrono;
-using std::string_view_literals::operator""sv;
+using namespace std::string_view_literals;
 
 float InitConeScale()
 {

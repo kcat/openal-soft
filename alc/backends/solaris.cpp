@@ -51,7 +51,7 @@
 
 namespace {
 
-using std::string_view_literals::operator""sv;
+using namespace std::string_view_literals;
 
 [[nodiscard]] constexpr auto GetDefaultName() noexcept { return "Solaris Default"sv; }
 

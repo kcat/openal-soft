@@ -57,7 +57,7 @@ using namespace winrt;
 
 namespace {
 
-using std::string_view_literals::operator""sv;
+using namespace std::string_view_literals;
 
 #if defined(_WIN32) && !defined(_GAMING_XBOX) && !defined(ALSOFT_UWP)
 struct CoTaskMemDeleter {

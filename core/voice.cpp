@@ -64,7 +64,7 @@ namespace {
 
 using uint = unsigned int;
 using namespace std::chrono;
-using std::string_view_literals::operator""sv;
+using namespace std::string_view_literals;
 
 using HrtfMixerFunc = void(*)(const float *InSamples, float2 *AccumSamples, const uint IrSize,
     const MixHrtfFilter *hrtfparams, const size_t BufferSize);

@@ -183,10 +183,9 @@ BOOL APIENTRY DllMain(HINSTANCE module, DWORD reason, LPVOID /*reserved*/)
 
 namespace {
 
-using namespace std::placeholders;
+using namespace std::string_view_literals;
 using std::chrono::seconds;
 using std::chrono::nanoseconds;
-using std::string_view_literals::operator""sv;
 
 using voidp = void*;
 using float2 = std::array<float,2>;

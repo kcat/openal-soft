@@ -48,10 +48,10 @@
 
 namespace {
 
+using namespace std::string_view_literals;
 using std::chrono::seconds;
 using std::chrono::milliseconds;
 using std::chrono::nanoseconds;
-using std::string_view_literals::operator""sv;
 
 using ubyte = unsigned char;
 using ushort = unsigned short;

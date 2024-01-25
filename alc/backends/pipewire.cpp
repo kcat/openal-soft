@@ -169,6 +169,7 @@ public:
 #define PW_KEY_NODE_RATE "node.rate"
 #endif
 
+using namespace std::string_view_literals;
 using std::chrono::seconds;
 using std::chrono::milliseconds;
 using std::chrono::nanoseconds;
@@ -966,8 +967,6 @@ void DeviceNode::parseChannelCount(const spa_pod *value, bool force_update) noex
         DevFmtChannelsString(mChannels));
 }
 
-
-using std::literals::string_view_literals::operator""sv;
 
 [[nodiscard]] constexpr auto GetMonitorPrefix() noexcept { return "Monitor of "sv; }
 [[nodiscard]] constexpr auto GetAudioSinkClassName() noexcept { return "Audio/Sink"sv; }

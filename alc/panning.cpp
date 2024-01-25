@@ -65,10 +65,9 @@
 
 namespace {
 
-using namespace std::placeholders;
+using namespace std::string_view_literals;
 using std::chrono::seconds;
 using std::chrono::nanoseconds;
-using std::string_view_literals::operator""sv;
 
 inline const char *GetLabelFromChannel(Channel channel)
 {

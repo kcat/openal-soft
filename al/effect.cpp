@@ -715,7 +715,7 @@ static constexpr std::array reverblist{
 
 void LoadReverbPreset(const std::string_view name, ALeffect *effect)
 {
-    using std::string_view_literals::operator""sv;
+    using namespace std::string_view_literals;
 
     if(al::case_compare(name, "NONE"sv) == 0)
     {

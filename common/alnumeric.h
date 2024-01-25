@@ -27,6 +27,16 @@ constexpr auto operator "" _uz(unsigned long long n) noexcept { return static_ca
 constexpr auto operator "" _zu(unsigned long long n) noexcept { return static_cast<size_t>(n); }
 
 
+constexpr auto GetCounterSuffix(size_t count) noexcept -> const char*
+{
+    auto &suffix = (((count%100)/10) == 1) ? "th" :
+        ((count%10) == 1) ? "st" :
+        ((count%10) == 2) ? "nd" :
+        ((count%10) == 3) ? "rd" : "th";
+    return std::data(suffix);
+}
+
+
 constexpr inline float minf(float a, float b) noexcept
 { return ((a > b) ? b : a); }
 constexpr inline float maxf(float a, float b) noexcept

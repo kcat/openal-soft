@@ -1420,11 +1420,7 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
                     || device->mAmbiScale == DevAmbiScaling::FuMa))
             {
                 ERR("FuMa is incompatible with %d%s order ambisonics (up to 3rd order only)\n",
-                    device->mAmbiOrder,
-                    static_cast<const char*>((((device->mAmbiOrder%100)/10) == 1) ? "th" :
-                    ((device->mAmbiOrder%10) == 1) ? "st" :
-                    ((device->mAmbiOrder%10) == 2) ? "nd" :
-                    ((device->mAmbiOrder%10) == 3) ? "rd" : "th"));
+                    device->mAmbiOrder, GetCounterSuffix(device->mAmbiOrder));
                 device->mAmbiOrder = 3;
             }
         }

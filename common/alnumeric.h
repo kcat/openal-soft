@@ -266,10 +266,14 @@ inline float fast_roundf(float f) noexcept
      * optimize this out because of non-associative rules on floating-point
      * math (as long as you don't use -fassociative-math,
      * -funsafe-math-optimizations, -ffast-math, or -Ofast, in which case this
-     * may break).
+     * may break without __builtin_assoc_barrier support).
      */
+#if HAS_BUILTIN(__builtin_assoc_barrier)
+    return __builtin_assoc_barrier(f + ilim[sign]) - ilim[sign];
+#else
     f += ilim[sign];
     return f - ilim[sign];
+#endif
 #endif
 }
 

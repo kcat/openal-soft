@@ -1407,7 +1407,7 @@ spa_audio_info_raw make_spa_info(DeviceBase *device, bool is51rear, use_f32p_e u
     if(!map.empty())
     {
         info.channels = static_cast<uint32_t>(map.size());
-        std::copy(map.begin(), map.end(), info.position);
+        std::copy(map.begin(), map.end(), std::begin(info.position));
     }
 
     return info;

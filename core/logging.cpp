@@ -97,6 +97,7 @@ void al_print(LogLevel level, const char *fmt, ...)
     auto prefend1 = std::copy_n(prefix.begin(), prefix.size(), stcmsg.begin());
     al::span<char> msg{prefend1, stcmsg.end()};
 
+    /* NOLINTBEGIN(*-array-to-pointer-decay) */
     std::va_list args, args2;
     va_start(args, fmt);
     va_copy(args2, args);
@@ -119,6 +120,7 @@ void al_print(LogLevel level, const char *fmt, ...)
         msg = {msg.data(), std::strlen(msg.data())};
     va_end(args2);
     va_end(args);
+    /* NOLINTEND(*-array-to-pointer-decay) */
 
     if(gLogLevel >= level)
     {

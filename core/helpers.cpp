@@ -318,17 +318,16 @@ void DirectorySearch(const char *path, const char *ext, std::vector<std::string>
     const auto base = static_cast<std::make_signed_t<size_t>>(results->size());
     while(struct dirent *dirent{readdir(dir)})
     {
-        if(strcmp(dirent->d_name, ".") == 0 || strcmp(dirent->d_name, "..") == 0)
-            continue;
+        const std::string_view d_name{std::data(dirent->d_name)};
+        if(d_name == "." || d_name == "..") continue;
 
-        const size_t len{strlen(dirent->d_name)};
-        if(len <= extsv.size()) continue;
-        if(al::case_compare(&dirent->d_name[len-extsv.size()], extsv) != 0)
+        if(d_name.size() <= extsv.size()) continue;
+        if(al::case_compare(d_name.substr(d_name.size()-extsv.size()), extsv) != 0)
             continue;
 
         std::string &str = results->emplace_back(path);
         if(str.back() != '/') str.push_back('/');
-        str += dirent->d_name;
+        str += d_name;
     }
     closedir(dir);
 

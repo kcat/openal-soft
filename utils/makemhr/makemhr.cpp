@@ -353,7 +353,7 @@ static int StoreMhr(const HrirDataT *hData, const char *filename)
         fprintf(stderr, "\nError: Could not open MHR file '%s'.\n", filename);
         return 0;
     }
-    if(!WriteAscii(MHRFormat, fp.get(), filename))
+    if(!WriteAscii(std::data(MHRFormat), fp.get(), filename))
         return 0;
     if(!WriteBin4(4, hData->mIrRate, fp.get(), filename))
         return 0;

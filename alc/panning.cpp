@@ -879,10 +879,10 @@ void InitHrtfPanning(ALCdevice *device)
         }
     }
     TRACE("%u%s order %sHRTF rendering enabled, using \"%s\"\n", ambi_order,
-        (((ambi_order%100)/10) == 1) ? "th" :
+        static_cast<const char*>((((ambi_order%100)/10) == 1) ? "th" :
         ((ambi_order%10) == 1) ? "st" :
         ((ambi_order%10) == 2) ? "nd" :
-        ((ambi_order%10) == 3) ? "rd" : "th",
+        ((ambi_order%10) == 3) ? "rd" : "th"),
         (device->mRenderMode == RenderMode::Hrtf) ? "+ Full " : "",
         device->mHrtfName.c_str());
 

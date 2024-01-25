@@ -80,10 +80,12 @@ const std::array<EffectList,16> gEffectList{{
 
 effect_exception::effect_exception(ALenum code, const char *msg, ...) : mErrorCode{code}
 {
+    /* NOLINTBEGIN(*-array-to-pointer-decay) */
     std::va_list args;
     va_start(args, msg);
     setMessage(msg, args);
     va_end(args);
+    /* NOLINTEND(*-array-to-pointer-decay) */
 }
 effect_exception::~effect_exception() = default;
 
@@ -732,10 +734,10 @@ void LoadReverbPreset(const std::string_view name, ALeffect *effect)
         InitEffectParams(effect, AL_EFFECT_NULL);
     for(const auto &reverbitem : reverblist)
     {
-        if(al::case_compare(name, reverbitem.name) != 0)
+        if(al::case_compare(name, std::data(reverbitem.name)) != 0)
             continue;
 
-        TRACE("Loading reverb '%s'\n", reverbitem.name);
+        TRACE("Loading reverb '%s'\n", std::data(reverbitem.name));
         const auto &props = reverbitem.props;
         auto &dst = std::get<ReverbProps>(effect->Props);
         dst.Density   = props.flDensity;

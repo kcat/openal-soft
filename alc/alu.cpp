@@ -2226,10 +2226,12 @@ void DeviceBase::handleDisconnect(const char *msg, ...)
         AsyncEvent evt{std::in_place_type<AsyncDisconnectEvent>};
         auto &disconnect = std::get<AsyncDisconnectEvent>(evt);
 
+        /* NOLINTBEGIN(*-array-to-pointer-decay) */
         va_list args;
         va_start(args, msg);
         int msglen{vsnprintf(disconnect.msg.data(), disconnect.msg.size(), msg, args)};
         va_end(args);
+        /* NOLINTEND(*-array-to-pointer-decay) */
 
         if(msglen < 0 || static_cast<size_t>(msglen) >= disconnect.msg.size())
             disconnect.msg[sizeof(disconnect.msg)-1] = 0;

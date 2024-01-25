@@ -49,6 +49,8 @@
 
 namespace {
 
+using namespace std::string_view_literals;
+
 #ifdef HAVE_DYNLOAD
 #define JACK_FUNCS(MAGIC)          \
     MAGIC(jack_client_open);       \
@@ -173,22 +175,18 @@ void EnumerateDevices(jack_client_t *client, std::vector<DeviceEntry> &list)
     {
         for(size_t i{0};ports[i];++i)
         {
-            const char *sep{std::strchr(ports[i], ':')};
-            if(!sep || ports[i] == sep) continue;
+            const std::string_view portname{ports[i]};
+            const size_t seppos{portname.find(':')};
+            if(seppos == 0 || seppos >= portname.size())
+                continue;
 
-            const al::span<const char> portdev{ports[i], sep};
+            const std::string_view portdev{ports[i], seppos};
             auto check_name = [portdev](const DeviceEntry &entry) -> bool
-            {
-                const size_t len{portdev.size()};
-                return entry.mName.length() == len
-                    && entry.mName.compare(0, len, portdev.data(), len) == 0;
-            };
+            { return entry.mName == portdev; };
             if(std::find_if(list.cbegin(), list.cend(), check_name) != list.cend())
                 continue;
 
-            std::string name{portdev.data(), portdev.size()};
-            list.emplace_back(name, name+":");
-            const auto &entry = list.back();
+            const auto &entry = list.emplace_back(portdev, std::string{portdev}+":");
             TRACE("Got device: %s = %s\n", entry.mName.c_str(), entry.mPattern.c_str());
         }
         /* There are ports but couldn't get device names from them. Add a
@@ -197,7 +195,7 @@ void EnumerateDevices(jack_client_t *client, std::vector<DeviceEntry> &list)
         if(ports[0] && list.empty())
         {
             WARN("No device names found in available ports, adding a generic name.\n");
-            list.emplace_back("JACK", "");
+            list.emplace_back("JACK"sv, ""sv);
         }
     }
 

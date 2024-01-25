@@ -68,10 +68,12 @@ public:
 
 filter_exception::filter_exception(ALenum code, const char* msg, ...) : mErrorCode{code}
 {
+    /* NOLINTBEGIN(*-array-to-pointer-decay) */
     std::va_list args;
     va_start(args, msg);
     setMessage(msg, args);
     va_end(args);
+    /* NOLINTEND(*-array-to-pointer-decay) */
 }
 filter_exception::~filter_exception() = default;
 

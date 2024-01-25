@@ -1037,7 +1037,7 @@ try
 catch(...)
 {
     context->eaxSetLastError();
-    eax_log_exception(__func__);
+    eax_log_exception(std::data(__func__));
     return AL_INVALID_OPERATION;
 }
 
@@ -1065,7 +1065,7 @@ try
 catch(...)
 {
     context->eaxSetLastError();
-    eax_log_exception(__func__);
+    eax_log_exception(std::data(__func__));
     return AL_INVALID_OPERATION;
 }
 #endif // ALSOFT_EAX

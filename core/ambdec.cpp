@@ -57,6 +57,7 @@ std::optional<std::string> make_error(size_t linenum, const char *fmt, ...)
     if(printed < 0) printed = 0;
     auto plen = std::min(static_cast<size_t>(printed), str.length());
 
+    /* NOLINTBEGIN(*-array-to-pointer-decay) */
     std::va_list args, args2;
     va_start(args, fmt);
     va_copy(args2, args);
@@ -68,6 +69,7 @@ std::optional<std::string> make_error(size_t linenum, const char *fmt, ...)
     }
     va_end(args2);
     va_end(args);
+    /* NOLINTEND(*-array-to-pointer-decay) */
 
     return ret;
 }

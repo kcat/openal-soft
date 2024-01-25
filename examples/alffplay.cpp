@@ -700,7 +700,7 @@ int AudioState::decodeFrame()
  * multiple of the template type size.
  */
 template<typename T>
-static void sample_dup(uint8_t *out, const uint8_t *in, size_t count, size_t frame_size)
+void sample_dup(uint8_t *out, const uint8_t *in, size_t count, size_t frame_size)
 {
     auto *sample = reinterpret_cast<const T*>(in);
     auto *dst = reinterpret_cast<T*>(out);
@@ -716,7 +716,7 @@ static void sample_dup(uint8_t *out, const uint8_t *in, size_t count, size_t fra
     }
 }
 
-static void sample_dup(uint8_t *out, const uint8_t *in, size_t count, size_t frame_size)
+void sample_dup(uint8_t *out, const uint8_t *in, size_t count, size_t frame_size)
 {
     if((frame_size&7) == 0)
         sample_dup<uint64_t>(out, in, count, frame_size);
@@ -1545,15 +1545,15 @@ void VideoState::updateVideo(SDL_Window *screen, SDL_Renderer *renderer, bool re
                 }
 
                 /* point pict at the queue */
-                std::array<uint8_t*,3> pict_data;
-                pict_data[0] = static_cast<uint8_t*>(pixels);
-                pict_data[1] = pict_data[0] + ptrdiff_t{w}*h;
-                pict_data[2] = pict_data[1] + ptrdiff_t{w}*h/4;
+                const std::array pict_data{
+                    static_cast<uint8_t*>(pixels),
+                    static_cast<uint8_t*>(pixels) + ptrdiff_t{w}*h,
+                    static_cast<uint8_t*>(pixels) + ptrdiff_t{w}*h + ptrdiff_t{w}*h/4
+                };
+                const std::array pict_linesize{pitch, pitch/2, pitch/2};
 
-                std::array pict_linesize{pitch, pitch/2, pitch/2};
-
-                sws_scale(mSwscaleCtx.get(), reinterpret_cast<uint8_t**>(frame->data),
-                    frame->linesize, 0, h, pict_data.data(), pict_linesize.data());
+                sws_scale(mSwscaleCtx.get(), std::data(frame->data), std::data(frame->linesize),
+                    0, h, pict_data.data(), pict_linesize.data());
                 SDL_UnlockTexture(mImage);
             }
 

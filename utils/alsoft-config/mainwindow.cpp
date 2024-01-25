@@ -147,7 +147,7 @@ constexpr std::array hrtfModeList{
 QString getDefaultConfigName()
 {
 #ifdef Q_OS_WIN32
-    static constexpr char fname[] = "alsoft.ini"; /* NOLINT(*-avoid-c-arrays) */
+    const char *fname{"alsoft.ini"};
     auto get_appdata_path = []() noexcept -> QString
     {
         QString ret;
@@ -160,7 +160,7 @@ QString getDefaultConfigName()
     };
     QString base = get_appdata_path();
 #else
-    static constexpr char fname[] = "alsoft.conf"; /* NOLINT(*-avoid-c-arrays) */
+    const char *fname{"alsoft.conf"};
     QString base = qgetenv("XDG_CONFIG_HOME");
     if(base.isEmpty())
     {
@@ -234,8 +234,8 @@ QString getValueFromName(const al::span<const NameValuePair> list, const QString
 {
     for(size_t i{0};i < list.size();++i)
     {
-        if(str == list[i].name)
-            return list[i].value;
+        if(str == std::data(list[i].name))
+            return std::data(list[i].value);
     }
     return QString{};
 }
@@ -244,8 +244,8 @@ QString getNameFromValue(const al::span<const NameValuePair> list, const QString
 {
     for(size_t i{0};i < list.size();++i)
     {
-        if(str == list[i].value)
-            return list[i].name;
+        if(str == std::data(list[i].value))
+            return std::data(list[i].name);
     }
     return QString{};
 }
@@ -278,19 +278,19 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow{parent}
     ui->setupUi(this);
 
     for(auto &item : speakerModeList)
-        ui->channelConfigCombo->addItem(item.name);
+        ui->channelConfigCombo->addItem(std::data(item.name));
     ui->channelConfigCombo->adjustSize();
     for(auto &item : sampleTypeList)
-        ui->sampleFormatCombo->addItem(item.name);
+        ui->sampleFormatCombo->addItem(std::data(item.name));
     ui->sampleFormatCombo->adjustSize();
     for(auto &item : stereoModeList)
-        ui->stereoModeCombo->addItem(item.name);
+        ui->stereoModeCombo->addItem(std::data(item.name));
     ui->stereoModeCombo->adjustSize();
     for(auto &item : stereoEncList)
-        ui->stereoEncodingComboBox->addItem(item.name);
+        ui->stereoEncodingComboBox->addItem(std::data(item.name));
     ui->stereoEncodingComboBox->adjustSize();
     for(auto &item : ambiFormatList)
-        ui->ambiFormatComboBox->addItem(item.name);
+        ui->ambiFormatComboBox->addItem(std::data(item.name));
     ui->ambiFormatComboBox->adjustSize();
 
     ui->resamplerSlider->setRange(0, resamplerList.size()-1);
@@ -485,7 +485,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow{parent}
     for(size_t i{0};i < backendList.size();++i)
     {
         QList<QListWidgetItem*> items = ui->backendListWidget->findItems(
-            backendList[i].full_string, Qt::MatchFixedString);
+            std::data(backendList[i].full_string), Qt::MatchFixedString);
         foreach(QListWidgetItem *item, items)
             item->setHidden(false);
     }
@@ -663,7 +663,7 @@ void MainWindow::loadConfig(const QString &fname)
 
     QString resampler = settings.value("resampler").toString().trimmed();
     ui->resamplerSlider->setValue(2);
-    ui->resamplerLabel->setText(resamplerList[2].name);
+    ui->resamplerLabel->setText(std::data(resamplerList[2].name));
     /* The "sinc4" and "sinc8" resamplers are no longer supported. Use "cubic"
      * as a fallback.
      */
@@ -674,10 +674,10 @@ void MainWindow::loadConfig(const QString &fname)
         resampler = "bsinc12";
     for(int i = 0;resamplerList[i].name[0];i++)
     {
-        if(resampler == resamplerList[i].value)
+        if(resampler == std::data(resamplerList[i].value))
         {
             ui->resamplerSlider->setValue(i);
-            ui->resamplerLabel->setText(resamplerList[i].name);
+            ui->resamplerLabel->setText(std::data(resamplerList[i].name));
             break;
         }
     }
@@ -762,16 +762,16 @@ void MainWindow::loadConfig(const QString &fname)
 
     QString hrtfmode{settings.value("hrtf-mode").toString().trimmed()};
     ui->hrtfmodeSlider->setValue(2);
-    ui->hrtfmodeLabel->setText(hrtfModeList[3].name);
+    ui->hrtfmodeLabel->setText(std::data(hrtfModeList[3].name));
     /* The "basic" mode name is no longer supported. Use "ambi2" instead. */
     if(hrtfmode == "basic")
         hrtfmode = "ambi2";
     for(size_t i{0};i < hrtfModeList.size();++i)
     {
-        if(hrtfmode == hrtfModeList[i].value)
+        if(hrtfmode == std::data(hrtfModeList[i].value))
         {
             ui->hrtfmodeSlider->setValue(static_cast<int>(i));
-            ui->hrtfmodeLabel->setText(hrtfModeList[i].name);
+            ui->hrtfmodeLabel->setText(std::data(hrtfModeList[i].name));
             break;
         }
     }
@@ -849,9 +849,9 @@ void MainWindow::loadConfig(const QString &fname)
             {
                 for(size_t j{0};j < backendList.size();++j)
                 {
-                    if(backend == backendList[j].backend_name)
+                    if(backend == std::data(backendList[j].backend_name))
                     {
-                        ui->enabledBackendList->addItem(backendList[j].full_string);
+                        ui->enabledBackendList->addItem(std::data(backendList[j].full_string));
                         break;
                     }
                 }
@@ -861,9 +861,9 @@ void MainWindow::loadConfig(const QString &fname)
                 QStringRef backendref{backend.rightRef(backend.size()-1)};
                 for(size_t j{0};j < backendList.size();++j)
                 {
-                    if(backendref == backendList[j].backend_name)
+                    if(backendref == std::data(backendList[j].backend_name))
                     {
-                        ui->disabledBackendList->addItem(backendList[j].full_string);
+                        ui->disabledBackendList->addItem(std::data(backendList[j].full_string));
                         break;
                     }
                 }
@@ -991,7 +991,7 @@ void MainWindow::saveConfig(const QString &fname) const
     settings.setValue("sources", ui->srcCountLineEdit->text());
     settings.setValue("slots", ui->effectSlotLineEdit->text());
 
-    settings.setValue("resampler", resamplerList[ui->resamplerSlider->value()].value);
+    settings.setValue("resampler", std::data(resamplerList[ui->resamplerSlider->value()].value));
 
     settings.setValue("stereo-mode", getValueFromName(stereoModeList, ui->stereoModeCombo->currentText()));
     settings.setValue("stereo-encoding", getValueFromName(stereoEncList, ui->stereoEncodingComboBox->currentText()));
@@ -1027,7 +1027,7 @@ void MainWindow::saveConfig(const QString &fname) const
         strlist.append("neon");
     settings.setValue("disable-cpu-exts", strlist.join(QChar(',')));
 
-    settings.setValue("hrtf-mode", hrtfModeList[ui->hrtfmodeSlider->value()].value);
+    settings.setValue("hrtf-mode", std::data(hrtfModeList[ui->hrtfmodeSlider->value()].value));
 
     if(ui->preferredHrtfComboBox->currentIndex() == 0)
         settings.setValue("default-hrtf", QString{});
@@ -1051,9 +1051,9 @@ void MainWindow::saveConfig(const QString &fname) const
         QString label{ui->enabledBackendList->item(i)->text()};
         for(size_t j{0};j < backendList.size();++j)
         {
-            if(label == backendList[j].full_string)
+            if(label == std::data(backendList[j].full_string))
             {
-                strlist.append(backendList[j].backend_name);
+                strlist.append(std::data(backendList[j].backend_name));
                 break;
             }
         }
@@ -1063,9 +1063,9 @@ void MainWindow::saveConfig(const QString &fname) const
         QString label{ui->disabledBackendList->item(i)->text()};
         for(size_t j{0};j < backendList.size();++j)
         {
-            if(label == backendList[j].full_string)
+            if(label == std::data(backendList[j].full_string))
             {
-                strlist.append(QChar{'-'}+QString{backendList[j].backend_name});
+                strlist.append(QChar{'-'}+QString{std::data(backendList[j].backend_name)});
                 break;
             }
         }
@@ -1173,7 +1173,7 @@ void MainWindow::enableApplyButton()
 
 void MainWindow::updateResamplerLabel(int num)
 {
-    ui->resamplerLabel->setText(resamplerList[num].name);
+    ui->resamplerLabel->setText(std::data(resamplerList[num].name));
     enableApplyButton();
 }
 
@@ -1273,7 +1273,7 @@ void MainWindow::updateJackBufferSizeSlider()
 
 void MainWindow::updateHrtfModeLabel(int num)
 {
-    ui->hrtfmodeLabel->setText(hrtfModeList[static_cast<uint>(num)].name);
+    ui->hrtfmodeLabel->setText(std::data(hrtfModeList[static_cast<uint>(num)].name));
     enableApplyButton();
 }
 
@@ -1316,7 +1316,7 @@ void MainWindow::showEnabledBackendMenu(QPoint pt)
     ctxmenu.addSeparator();
     for(size_t i{0};i < backendList.size();++i)
     {
-        QString backend{backendList[i].full_string};
+        QString backend{std::data(backendList[i].full_string)};
         QAction *action{ctxmenu.addAction(QString("Add ")+backend)};
         actionMap[action] = backend;
         if(!ui->enabledBackendList->findItems(backend, Qt::MatchFixedString).empty() ||
@@ -1353,7 +1353,7 @@ void MainWindow::showDisabledBackendMenu(QPoint pt)
     ctxmenu.addSeparator();
     for(size_t i{0};i < backendList.size();++i)
     {
-        QString backend{backendList[i].full_string};
+        QString backend{std::data(backendList[i].full_string)};
         QAction *action{ctxmenu.addAction(QString("Add ")+backend)};
         actionMap[action] = backend;
         if(!ui->disabledBackendList->findItems(backend, Qt::MatchFixedString).empty() ||

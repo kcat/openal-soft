@@ -13,8 +13,9 @@ namespace al {
 
 base_exception::~base_exception() = default;
 
-void base_exception::setMessage(const char* msg, std::va_list args)
+void base_exception::setMessage(const char *msg, std::va_list args)
 {
+    /* NOLINTBEGIN(*-array-to-pointer-decay) */
     std::va_list args2;
     va_copy(args2, args);
     int msglen{std::vsnprintf(nullptr, 0, msg, args)};
@@ -25,6 +26,7 @@ void base_exception::setMessage(const char* msg, std::va_list args)
         mMessage.pop_back();
     }
     va_end(args2);
+    /* NOLINTEND(*-array-to-pointer-decay) */
 }
 
 } // namespace al

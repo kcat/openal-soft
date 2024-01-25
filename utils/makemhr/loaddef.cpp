@@ -248,21 +248,23 @@ static void TrErrorVA(const TokenReaderT *tr, uint line, uint column, const char
 // Used to display an error at a saved line/column.
 static void TrErrorAt(const TokenReaderT *tr, uint line, uint column, const char *format, ...)
 {
+    /* NOLINTBEGIN(*-array-to-pointer-decay) */
     va_list argPtr;
-
     va_start(argPtr, format);
     TrErrorVA(tr, line, column, format, argPtr);
     va_end(argPtr);
+    /* NOLINTEND(*-array-to-pointer-decay) */
 }
 
 // Used to display an error at the current line/column.
 static void TrError(const TokenReaderT *tr, const char *format, ...)
 {
+    /* NOLINTBEGIN(*-array-to-pointer-decay) */
     va_list argPtr;
-
     va_start(argPtr, format);
     TrErrorVA(tr, tr->mLine, tr->mColumn, format, argPtr);
     va_end(argPtr);
+    /* NOLINTEND(*-array-to-pointer-decay) */
 }
 
 // Skips to the next line.

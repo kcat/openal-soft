@@ -665,7 +665,7 @@ void alc_initconfig()
             std::for_each(gEffectList.cbegin(), gEffectList.cend(),
                 [entry](const EffectList &effectitem) noexcept
                 {
-                    if(entry == effectitem.name)
+                    if(entry == std::data(effectitem.name))
                         DisabledEffects.set(effectitem.type);
                 });
         }
@@ -1421,10 +1421,10 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
             {
                 ERR("FuMa is incompatible with %d%s order ambisonics (up to 3rd order only)\n",
                     device->mAmbiOrder,
-                    (((device->mAmbiOrder%100)/10) == 1) ? "th" :
+                    static_cast<const char*>((((device->mAmbiOrder%100)/10) == 1) ? "th" :
                     ((device->mAmbiOrder%10) == 1) ? "st" :
                     ((device->mAmbiOrder%10) == 2) ? "nd" :
-                    ((device->mAmbiOrder%10) == 3) ? "rd" : "th");
+                    ((device->mAmbiOrder%10) == 3) ? "rd" : "th"));
                 device->mAmbiOrder = 3;
             }
         }

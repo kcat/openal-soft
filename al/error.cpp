@@ -56,6 +56,7 @@ void ALCcontext::setError(ALenum errorCode, const char *msg, ...)
 {
     auto message = std::vector<char>(256);
 
+    /* NOLINTBEGIN(*-array-to-pointer-decay) */
     va_list args, args2;
     va_start(args, msg);
     va_copy(args2, args);
@@ -67,6 +68,7 @@ void ALCcontext::setError(ALenum errorCode, const char *msg, ...)
     }
     va_end(args2);
     va_end(args);
+    /* NOLINTEND(*-array-to-pointer-decay) */
 
     if(msglen >= 0)
         msg = message.data();

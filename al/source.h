@@ -218,11 +218,6 @@ private:
         Eax3Props source;
         EaxSends sends;
         EAX40ACTIVEFXSLOTS active_fx_slots;
-
-        bool operator==(const Eax4Props& rhs) noexcept
-        {
-            return std::memcmp(this, &rhs, sizeof(Eax4Props)) == 0;
-        }
     };
 
     struct Eax4State {
@@ -235,11 +230,6 @@ private:
         EaxSends sends;
         EAX50ACTIVEFXSLOTS active_fx_slots;
         EaxSpeakerLevels speaker_levels;
-
-        bool operator==(const Eax5Props& rhs) noexcept
-        {
-            return std::memcmp(this, &rhs, sizeof(Eax5Props)) == 0;
-        }
     };
 
     struct Eax5State {

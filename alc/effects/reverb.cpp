@@ -1302,29 +1302,22 @@ void ReverbState::update(const ContextBase *Context, const EffectSlot *Slot,
     const float decayBase{props.ReflectionsGain * props.LateReverbGain};
     const float decayDiff{ReverbDecayGain / decayBase};
 
-    if(decayDiff < 1.0f)
-    {
-        /* Given the DecayTime (the amount of time for the late reverb to decay
-         * by -60dB), calculate the time to decay to -60dB from the start of
-         * the late reverb.
-         */
-        const float diffTime{std::log10(decayDiff)*(20.0f / -60.0f) * props.DecayTime};
+    /* Given the DecayTime (the amount of time for the late reverb to decay by
+     * -60dB), calculate the time to decay to -60dB from the start of the late
+     * reverb.
+     *
+     * Otherwise, if the late reverb already starts at -60dB or less, only
+     * include the time to get to the late reverb.
+     */
+    const float diffTime{!(decayDiff < 1.0f) ? 0.0f
+        : (std::log10(decayDiff)*(20.0f / -60.0f) * props.DecayTime)};
 
-        const float decaySamples{(props.ReflectionsDelay+props.LateReverbDelay+diffTime)
-            * frequency};
-        /* Limit to 100,000 samples (a touch over 2 seconds at 48khz) to
-         * avoid excessive double-processing.
-         */
-        pipeline.mFadeSampleCount = static_cast<size_t>(minf(decaySamples, 100'000.0f));
-    }
-    else
-    {
-        /* Otherwise, if the late reverb already starts at -60dB or less, only
-         * include the time to get to the late reverb.
-         */
-        const float decaySamples{(props.ReflectionsDelay+props.LateReverbDelay) * frequency};
-        pipeline.mFadeSampleCount = static_cast<size_t>(minf(decaySamples, 100'000.0f));
-    }
+    const float decaySamples{(props.ReflectionsDelay+props.LateReverbDelay+diffTime)
+        * frequency};
+    /* Limit to 100,000 samples (a touch over 2 seconds at 48khz) to avoid
+     * excessive double-processing.
+     */
+    pipeline.mFadeSampleCount = static_cast<size_t>(std::min(decaySamples, 100'000.0f));
 }
 
 

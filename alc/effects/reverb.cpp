@@ -604,10 +604,9 @@ struct ReverbState final : public EffectState {
     size_t mOffset{};
 
     /* Temporary storage used when processing. */
-    union {
-        alignas(16) FloatBufferLine mTempLine{};
-        alignas(16) std::array<ReverbUpdateLine,NUM_LINES> mTempSamples;
-    };
+    alignas(16) FloatBufferLine mTempLine{};
+    alignas(16) std::array<ReverbUpdateLine,NUM_LINES> mTempSamples{};
+
     alignas(16) std::array<FloatBufferLine,NUM_LINES> mEarlySamples{};
     alignas(16) std::array<FloatBufferLine,NUM_LINES> mLateSamples{};
 

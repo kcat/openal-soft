@@ -1158,7 +1158,8 @@ NOINLINE v4sf *rfftf1_ps(const size_t n, const v4sf *input_readonly, v4sf *work1
     const size_t nf{ifac[1]};
     size_t l2{n};
     size_t iw{n-1};
-    for(size_t k1{1};k1 <= nf;++k1)
+    size_t k1{1};
+    while(true)
     {
         const size_t kh{nf - k1};
         const size_t ip{ifac[kh + 2]};
@@ -1182,6 +1183,9 @@ NOINLINE v4sf *rfftf1_ps(const size_t n, const v4sf *input_readonly, v4sf *work1
         default:
             assert(0);
         }
+        if(++k1 > nf)
+            return out;
+
         l2 = l1;
         if(out == work2)
         {
@@ -1194,7 +1198,6 @@ NOINLINE v4sf *rfftf1_ps(const size_t n, const v4sf *input_readonly, v4sf *work1
             in = work1;
         }
     }
-    return const_cast<v4sf*>(in); /* NOLINT(*-const-cast) this is in fact the output .. */
 } /* rfftf1 */
 
 NOINLINE v4sf *rfftb1_ps(const size_t n, const v4sf *input_readonly, v4sf *work1, v4sf *work2,
@@ -1207,7 +1210,8 @@ NOINLINE v4sf *rfftb1_ps(const size_t n, const v4sf *input_readonly, v4sf *work1
     const size_t nf{ifac[1]};
     size_t l1{1};
     size_t iw{0};
-    for(size_t k1{1};k1 <= nf;++k1)
+    size_t k1{1};
+    while(true)
     {
         const size_t ip{ifac[k1 + 1]};
         const size_t l2{ip*l1};
@@ -1229,6 +1233,9 @@ NOINLINE v4sf *rfftb1_ps(const size_t n, const v4sf *input_readonly, v4sf *work1
         default:
             assert(0);
         }
+        if(++k1 > nf)
+            return out;
+
         l1 = l2;
         iw += (ip - 1)*ido;
 
@@ -1243,7 +1250,6 @@ NOINLINE v4sf *rfftb1_ps(const size_t n, const v4sf *input_readonly, v4sf *work1
             in = work1;
         }
     }
-    return const_cast<v4sf*>(in); /* NOLINT(*-const-cast) this is in fact the output .. */
 }
 
 v4sf *cfftf1_ps(const size_t n, const v4sf *input_readonly, v4sf *work1, v4sf *work2,
@@ -1255,7 +1261,8 @@ v4sf *cfftf1_ps(const size_t n, const v4sf *input_readonly, v4sf *work1, v4sf *w
     v4sf *out{in == work2 ? work1 : work2};
     const size_t nf{ifac[1]};
     size_t l1{1}, iw{0};
-    for(size_t k1{2};k1 <= nf+1;++k1)
+    size_t k1{2};
+    while(true)
     {
         const size_t ip{ifac[k1]};
         const size_t l2{ip*l1};
@@ -1278,6 +1285,9 @@ v4sf *cfftf1_ps(const size_t n, const v4sf *input_readonly, v4sf *work1, v4sf *w
         default:
             assert(0);
         }
+        if(++k1 > nf+1)
+            return out;
+
         l1 = l2;
         iw += (ip - 1)*idot;
         if(out == work2)
@@ -1291,8 +1301,6 @@ v4sf *cfftf1_ps(const size_t n, const v4sf *input_readonly, v4sf *work1, v4sf *w
             in = work1;
         }
     }
-
-    return const_cast<v4sf*>(in); /* NOLINT(*-const-cast) this is in fact the output .. */
 }
 
 

@@ -78,6 +78,7 @@
 #include <limits>
 #include <memory>
 #include <numeric>
+#include <string_view>
 #include <thread>
 #include <utility>
 #include <vector>
@@ -104,12 +105,12 @@ HrirDataT::~HrirDataT() = default;
 
 namespace {
 
+using namespace std::string_view_literals;
+
 struct FileDeleter {
     void operator()(gsl::owner<FILE*> f) { fclose(f); }
 };
 using FilePtr = std::unique_ptr<FILE,FileDeleter>;
-
-using namespace std::placeholders;
 
 // The epsilon used to maintain signal stability.
 constexpr double Epsilon{1e-9};
@@ -135,16 +136,16 @@ constexpr double MaxHrtd{63.0};
 
 // The OpenAL Soft HRTF format marker.  It stands for minimum-phase head
 // response protocol 03.
-constexpr char MHRFormat[] = "MinPHR03"; // NOLINT(*-avoid-c-arrays)
+constexpr auto GetMHRMarker() noexcept { return "MinPHR03"sv; }
 
 
 // Head model used for calculating the impulse delays.
 enum HeadModelT {
-    HM_NONE,
-    HM_DATASET, // Measure the onset from the dataset.
-    HM_SPHERE,   // Calculate the onset using a spherical head model.
+    HM_None,
+    HM_Dataset, // Measure the onset from the dataset.
+    HM_Sphere,   // Calculate the onset using a spherical head model.
 
-    DEFAULT_HEAD_MODEL = HM_DATASET
+    HM_Default = HM_Dataset
 };
 
 
@@ -251,11 +252,13 @@ void MagnitudeResponse(const uint n, const complex_d *in, double *out)
         out[i] = std::max(std::abs(in[i]), Epsilon);
 }
 
+namespace {
+
 /* Apply a range limit (in dB) to the given magnitude response.  This is used
  * to adjust the effects of the diffuse-field average on the equalization
  * process.
  */
-static void LimitMagnitudeResponse(const uint n, const uint m, const double limit, const double *in, double *out)
+void LimitMagnitudeResponse(const uint n, const uint m, const double limit, const double *in, double *out)
 {
     double halfLim;
     uint i, lower, upper;
@@ -285,7 +288,7 @@ static void LimitMagnitudeResponse(const uint n, const uint m, const double limi
  * residuals (which were discarded).  The mirrored half of the response is
  * reconstructed.
  */
-static void MinimumPhase(const uint n, double *mags, complex_d *out)
+void MinimumPhase(const uint n, double *mags, complex_d *out)
 {
     const uint m{(n/2) + 1};
 
@@ -310,12 +313,9 @@ static void MinimumPhase(const uint n, double *mags, complex_d *out)
  ***************************/
 
 // Write an ASCII string to a file.
-static int WriteAscii(const char *out, FILE *fp, const char *filename)
+int WriteAscii(const std::string_view out, FILE *fp, const char *filename)
 {
-    size_t len;
-
-    len = strlen(out);
-    if(fwrite(out, 1, len, fp) != len)
+    if(fwrite(out.data(), 1, out.size(), fp) != out.size())
     {
         fprintf(stderr, "\nError: Bad write to file '%s'.\n", filename);
         return 0;
@@ -325,7 +325,7 @@ static int WriteAscii(const char *out, FILE *fp, const char *filename)
 
 // Write a binary value of the given byte order and byte size to a file,
 // loading it from a 32-bit unsigned integer.
-static int WriteBin4(const uint bytes, const uint32_t in, FILE *fp, const char *filename)
+int WriteBin4(const uint bytes, const uint32_t in, FILE *fp, const char *filename)
 {
     std::array<uint8_t,4> out{};
     for(uint i{0};i < bytes;i++)
@@ -340,87 +340,86 @@ static int WriteBin4(const uint bytes, const uint32_t in, FILE *fp, const char *
 }
 
 // Store the OpenAL Soft HRTF data set.
-static int StoreMhr(const HrirDataT *hData, const char *filename)
+bool StoreMhr(const HrirDataT *hData, const char *filename)
 {
     const uint channels{(hData->mChannelType == CT_STEREO) ? 2u : 1u};
     const uint n{hData->mIrPoints};
     uint dither_seed{22222};
-    uint fi, ei, ai, i;
 
     FilePtr fp{fopen(filename, "wb")};
     if(!fp)
     {
         fprintf(stderr, "\nError: Could not open MHR file '%s'.\n", filename);
-        return 0;
+        return false;
     }
-    if(!WriteAscii(std::data(MHRFormat), fp.get(), filename))
-        return 0;
+    if(!WriteAscii(GetMHRMarker(), fp.get(), filename))
+        return false;
     if(!WriteBin4(4, hData->mIrRate, fp.get(), filename))
-        return 0;
+        return false;
     if(!WriteBin4(1, static_cast<uint32_t>(hData->mChannelType), fp.get(), filename))
-        return 0;
+        return false;
     if(!WriteBin4(1, hData->mIrPoints, fp.get(), filename))
-        return 0;
+        return false;
     if(!WriteBin4(1, static_cast<uint>(hData->mFds.size()), fp.get(), filename))
-        return 0;
-    for(fi = static_cast<uint>(hData->mFds.size()-1);fi < hData->mFds.size();fi--)
+        return false;
+    for(size_t fi{hData->mFds.size()-1};fi < hData->mFds.size();--fi)
     {
         auto fdist = static_cast<uint32_t>(std::round(1000.0 * hData->mFds[fi].mDistance));
         if(!WriteBin4(2, fdist, fp.get(), filename))
-            return 0;
+            return false;
         if(!WriteBin4(1, static_cast<uint32_t>(hData->mFds[fi].mEvs.size()), fp.get(), filename))
-            return 0;
-        for(ei = 0;ei < hData->mFds[fi].mEvs.size();ei++)
+            return false;
+        for(size_t ei{0};ei < hData->mFds[fi].mEvs.size();++ei)
         {
             const auto &elev = hData->mFds[fi].mEvs[ei];
             if(!WriteBin4(1, static_cast<uint32_t>(elev.mAzs.size()), fp.get(), filename))
-                return 0;
+                return false;
         }
     }
 
-    for(fi = static_cast<uint>(hData->mFds.size()-1);fi < hData->mFds.size();fi--)
+    for(size_t fi{hData->mFds.size()-1};fi < hData->mFds.size();--fi)
     {
-        constexpr double scale{8388607.0};
-        constexpr uint bps{3u};
+        static constexpr double scale{8388607.0};
+        static constexpr uint bps{3u};
 
-        for(ei = 0;ei < hData->mFds[fi].mEvs.size();ei++)
+        for(const auto &evd : hData->mFds[fi].mEvs)
         {
-            for(ai = 0;ai < hData->mFds[fi].mEvs[ei].mAzs.size();ai++)
+            for(const auto &azd : evd.mAzs)
             {
-                HrirAzT *azd = &hData->mFds[fi].mEvs[ei].mAzs[ai];
                 std::array<double,MaxTruncSize*2_uz> out{};
 
-                TpdfDither(out.data(), azd->mIrs[0], scale, n, channels, &dither_seed);
+                TpdfDither(out.data(), azd.mIrs[0], scale, n, channels, &dither_seed);
                 if(hData->mChannelType == CT_STEREO)
-                    TpdfDither(out.data()+1, azd->mIrs[1], scale, n, channels, &dither_seed);
-                for(i = 0;i < (channels * n);i++)
+                    TpdfDither(out.data()+1, azd.mIrs[1], scale, n, channels, &dither_seed);
+                const size_t numsamples{size_t{channels} * n};
+                for(size_t i{0};i < numsamples;i++)
                 {
                     const auto v = static_cast<int>(Clamp(out[i], -scale-1.0, scale));
                     if(!WriteBin4(bps, static_cast<uint32_t>(v), fp.get(), filename))
-                        return 0;
+                        return false;
                 }
             }
         }
     }
-    for(fi = static_cast<uint>(hData->mFds.size()-1);fi < hData->mFds.size();fi--)
+    for(size_t fi{hData->mFds.size()-1};fi < hData->mFds.size();--fi)
     {
         /* Delay storage has 2 bits of extra precision. */
-        constexpr double DelayPrecScale{4.0};
-        for(ei = 0;ei < hData->mFds[fi].mEvs.size();ei++)
+        static constexpr double DelayPrecScale{4.0};
+        for(const auto &evd : hData->mFds[fi].mEvs)
         {
-            for(const auto &azd : hData->mFds[fi].mEvs[ei].mAzs)
+            for(const auto &azd : evd.mAzs)
             {
                 auto v = static_cast<uint>(std::round(azd.mDelays[0]*DelayPrecScale));
-                if(!WriteBin4(1, v, fp.get(), filename)) return 0;
+                if(!WriteBin4(1, v, fp.get(), filename)) return false;
                 if(hData->mChannelType == CT_STEREO)
                 {
                     v = static_cast<uint>(std::round(azd.mDelays[1]*DelayPrecScale));
-                    if(!WriteBin4(1, v, fp.get(), filename)) return 0;
+                    if(!WriteBin4(1, v, fp.get(), filename)) return false;
                 }
             }
         }
     }
-    return 1;
+    return true;
 }
 
 
@@ -432,7 +431,7 @@ static int StoreMhr(const HrirDataT *hData, const char *filename)
  * independently normalizing each field in relation to the overall maximum.
  * This is done to ignore distance attenuation.
  */
-static void BalanceFieldMagnitudes(const HrirDataT *hData, const uint channels, const uint m)
+void BalanceFieldMagnitudes(const HrirDataT *hData, const uint channels, const uint m)
 {
     std::array<double,MAX_FD_COUNT> maxMags{};
     double maxMag{0.0};
@@ -476,7 +475,7 @@ static void BalanceFieldMagnitudes(const HrirDataT *hData, const uint channels, 
  * on its coverage volume.  All volumes are centered at the spherical HRIR
  * coordinates and measured by extruded solid angle.
  */
-static void CalculateDfWeights(const HrirDataT *hData, double *weights)
+void CalculateDfWeights(const HrirDataT *hData, double *weights)
 {
     double sum, innerRa, outerRa, evs, ev, upperEv, lowerEv;
     double solidAngle, solidVolume;
@@ -532,8 +531,8 @@ static void CalculateDfWeights(const HrirDataT *hData, double *weights)
  * coverage of each HRIR.  The final average can then be limited by the
  * specified magnitude range (in positive dB; 0.0 to skip).
  */
-static void CalculateDiffuseFieldAverage(const HrirDataT *hData, const uint channels, const uint m,
-    const int weighted, const double limit, double *dfa)
+void CalculateDiffuseFieldAverage(const HrirDataT *hData, const uint channels, const uint m,
+    const bool weighted, const double limit, double *dfa)
 {
     std::vector<double> weights(hData->mFds.size() * MAX_EV_COUNT);
     uint count;
@@ -595,7 +594,7 @@ static void CalculateDiffuseFieldAverage(const HrirDataT *hData, const uint chan
 
 // Perform diffuse-field equalization on the magnitude responses of the HRIR
 // set using the given average response.
-static void DiffuseFieldEqualize(const uint channels, const uint m, const double *dfa, const HrirDataT *hData)
+void DiffuseFieldEqualize(const uint channels, const uint m, const double *dfa, const HrirDataT *hData)
 {
     for(size_t fi{0};fi < hData->mFds.size();++fi)
     {
@@ -617,7 +616,7 @@ static void DiffuseFieldEqualize(const uint channels, const uint m, const double
  * the two HRIRs that bound the coordinate along with a factor for
  * calculating the continuous HRIR using interpolation.
  */
-static void CalcAzIndices(const HrirFdT &field, const uint ei, const double az, uint *a0, uint *a1, double *af)
+void CalcAzIndices(const HrirFdT &field, const uint ei, const double az, uint *a0, uint *a1, double *af)
 {
     double f{(2.0*al::numbers::pi + az) * static_cast<double>(field.mEvs[ei].mAzs.size()) /
         (2.0*al::numbers::pi)};
@@ -633,7 +632,7 @@ static void CalcAzIndices(const HrirFdT &field, const uint ei, const double az, 
  * This just mirrors some top elevations for the bottom, and blends the
  * remaining elevations (not an accurate model).
  */
-static void SynthesizeOnsets(HrirDataT *hData)
+void SynthesizeOnsets(HrirDataT *hData)
 {
     const uint channels{(hData->mChannelType == CT_STEREO) ? 2u : 1u};
 
@@ -757,7 +756,7 @@ static void SynthesizeOnsets(HrirDataT *hData)
  * applies a low-pass filter to simulate body occlusion.  It is a simple, if
  * inaccurate model.
  */
-static void SynthesizeHrirs(HrirDataT *hData)
+void SynthesizeHrirs(HrirDataT *hData)
 {
     const uint channels{(hData->mChannelType == CT_STEREO) ? 2u : 1u};
     auto htemp = std::vector<complex_d>(hData->mFftSize);
@@ -915,7 +914,7 @@ struct HrirReconstructor {
     }
 };
 
-static void ReconstructHrirs(const HrirDataT *hData, const uint numThreads)
+void ReconstructHrirs(const HrirDataT *hData, const uint numThreads)
 {
     const uint channels{(hData->mChannelType == CT_STEREO) ? 2u : 1u};
 
@@ -966,7 +965,7 @@ static void ReconstructHrirs(const HrirDataT *hData, const uint numThreads)
 }
 
 // Normalize the HRIR set and slightly attenuate the result.
-static void NormalizeHrirs(HrirDataT *hData)
+void NormalizeHrirs(HrirDataT *hData)
 {
     const uint channels{(hData->mChannelType == CT_STEREO) ? 2u : 1u};
     const uint irSize{hData->mIrPoints};
@@ -1024,7 +1023,7 @@ static void NormalizeHrirs(HrirDataT *hData)
 }
 
 // Calculate the left-ear time delay using a spherical head model.
-static double CalcLTD(const double ev, const double az, const double rad, const double dist)
+double CalcLTD(const double ev, const double az, const double rad, const double dist)
 {
     double azp, dlp, l, al;
 
@@ -1039,13 +1038,13 @@ static double CalcLTD(const double ev, const double az, const double rad, const 
 
 // Calculate the effective head-related time delays for each minimum-phase
 // HRIR. This is done per-field since distance delay is ignored.
-static void CalculateHrtds(const HeadModelT model, const double radius, HrirDataT *hData)
+void CalculateHrtds(const HeadModelT model, const double radius, HrirDataT *hData)
 {
     uint channels = (hData->mChannelType == CT_STEREO) ? 2 : 1;
     double customRatio{radius / hData->mRadius};
     uint ti;
 
-    if(model == HM_SPHERE)
+    if(model == HM_Sphere)
     {
         for(auto &field : hData->mFds)
         {
@@ -1117,6 +1116,8 @@ static void CalculateHrtds(const HeadModelT model, const double radius, HrirData
     }
 }
 
+} // namespace
+
 // Allocate and configure dynamic HRIR structures.
 bool PrepareHrirData(const al::span<const double> distances,
     const al::span<const uint,MAX_FD_COUNT> evCounts,
@@ -1168,13 +1169,15 @@ bool PrepareHrirData(const al::span<const double> distances,
 }
 
 
+namespace {
+
 /* Parse the data set definition and process the source data, storing the
  * resulting data set as desired.  If the input name is NULL it will read
  * from standard input.
  */
-static int ProcessDefinition(const char *inName, const uint outRate, const ChannelModeT chanMode,
-    const bool farfield, const uint numThreads, const uint fftSize, const int equalize,
-    const int surface, const double limit, const uint truncSize, const HeadModelT model,
+bool ProcessDefinition(const char *inName, const uint outRate, const ChannelModeT chanMode,
+    const bool farfield, const uint numThreads, const uint fftSize, const bool equalize,
+    const bool surface, const double limit, const uint truncSize, const HeadModelT model,
     const double radius, const char *outName)
 {
     HrirDataT hData;
@@ -1185,7 +1188,7 @@ static int ProcessDefinition(const char *inName, const uint outRate, const Chann
         inName = "stdin";
         fprintf(stdout, "Reading HRIR definition from %s...\n", inName);
         if(!LoadDefInput(std::cin, nullptr, 0, inName, fftSize, truncSize, outRate, chanMode, &hData))
-            return 0;
+            return false;
     }
     else
     {
@@ -1193,7 +1196,7 @@ static int ProcessDefinition(const char *inName, const uint outRate, const Chann
         if(!input->is_open())
         {
             fprintf(stderr, "Error: Could not open input file '%s'\n", inName);
-            return 0;
+            return false;
         }
 
         std::array<char,4> startbytes{};
@@ -1202,7 +1205,7 @@ static int ProcessDefinition(const char *inName, const uint outRate, const Chann
         if(startbytecount != startbytes.size() || !input->good())
         {
             fprintf(stderr, "Error: Could not read input file '%s'\n", inName);
-            return 0;
+            return false;
         }
 
         if(startbytes[0] == '\x89' && startbytes[1] == 'H' && startbytes[2] == 'D'
@@ -1211,14 +1214,14 @@ static int ProcessDefinition(const char *inName, const uint outRate, const Chann
             input = nullptr;
             fprintf(stdout, "Reading HRTF data from %s...\n", inName);
             if(!LoadSofaFile(inName, numThreads, fftSize, truncSize, outRate, chanMode, &hData))
-                return 0;
+                return false;
         }
         else
         {
             fprintf(stdout, "Reading HRIR definition from %s...\n", inName);
             if(!LoadDefInput(*input, startbytes.data(), startbytecount, inName, fftSize, truncSize,
                 outRate, chanMode, &hData))
-                return 0;
+                return false;
         }
     }
 
@@ -1252,7 +1255,7 @@ static int ProcessDefinition(const char *inName, const uint outRate, const Chann
         }
     }
     fprintf(stdout, "Synthesizing missing elevations...\n");
-    if(model == HM_DATASET)
+    if(model == HM_Dataset)
         SynthesizeOnsets(&hData);
     SynthesizeHrirs(&hData);
     fprintf(stdout, "Performing minimum phase reconstruction...\n");
@@ -1271,7 +1274,7 @@ static int ProcessDefinition(const char *inName, const uint outRate, const Chann
     return StoreMhr(&hData, expName.c_str());
 }
 
-static void PrintHelp(const char *argv0, FILE *ofile)
+void PrintHelp(const char *argv0, FILE *ofile)
 {
     fprintf(ofile, "Usage:  %s [<option>...]\n\n", argv0);
     fprintf(ofile, "Options:\n");
@@ -1289,29 +1292,18 @@ static void PrintHelp(const char *argv0, FILE *ofile)
     fprintf(ofile, " -w <points>     Specify the size of the truncation window that's applied\n");
     fprintf(ofile, "                 after minimum-phase reconstruction (default: %u).\n", DefaultTruncSize);
     fprintf(ofile, " -d {dataset|    Specify the model used for calculating the head-delay timing\n");
-    fprintf(ofile, "     sphere}     values (default: %s).\n", ((DEFAULT_HEAD_MODEL == HM_DATASET) ? "dataset" : "sphere"));
+    fprintf(ofile, "     sphere}     values (default: %s).\n", ((HM_Default == HM_Dataset) ? "dataset" : "sphere"));
     fprintf(ofile, " -c <radius>     Use a customized head radius measured to-ear in meters.\n");
     fprintf(ofile, " -i <filename>   Specify an HRIR definition file to use (defaults to stdin).\n");
     fprintf(ofile, " -o <filename>   Specify an output file. Use of '%%r' will be substituted with\n");
     fprintf(ofile, "                 the data set sample rate.\n");
 }
 
+} // namespace
+
 // Standard command line dispatch.
 int main(int argc, char *argv[])
 {
-    const char *inName = nullptr, *outName = nullptr;
-    uint outRate, fftSize;
-    int equalize, surface;
-    char *end = nullptr;
-    ChannelModeT chanMode;
-    HeadModelT model;
-    uint numThreads;
-    uint truncSize;
-    double radius;
-    bool farfield;
-    double limit;
-    int opt;
-
     if(argc < 2)
     {
         fprintf(stdout, "HRTF Processing and Composition Utility\n\n");
@@ -1319,21 +1311,24 @@ int main(int argc, char *argv[])
         exit(EXIT_SUCCESS);
     }
 
-    outName = "./oalsoft_hrtf_%r.mhr";
-    outRate = 0;
-    chanMode = CM_AllowStereo;
-    fftSize = DefaultFftSize;
-    equalize = DefaultEqualize;
-    surface = DefaultSurface;
-    limit = DefaultLimit;
-    numThreads = 2;
-    truncSize = DefaultTruncSize;
-    model = DEFAULT_HEAD_MODEL;
-    radius = DefaultCustomRadius;
-    farfield = false;
+    const char *outName{"./oalsoft_hrtf_%r.mhr"};
+    uint outRate{0};
+    ChannelModeT chanMode{CM_AllowStereo};
+    uint fftSize{DefaultFftSize};
+    bool equalize{DefaultEqualize};
+    bool surface{DefaultSurface};
+    double limit{DefaultLimit};
+    uint numThreads{2};
+    uint truncSize{DefaultTruncSize};
+    HeadModelT model{HM_Default};
+    double radius{DefaultCustomRadius};
+    bool farfield{false};
 
+    const char *inName{};
+    int opt;
     while((opt=getopt(argc, argv, "r:maj:f:e:s:l:w:d:c:e:i:o:h")) != -1)
     {
+        char *end{};
         switch(opt)
         {
         case 'r':
@@ -1375,9 +1370,9 @@ int main(int argc, char *argv[])
 
         case 'e':
             if(strcmp(optarg, "on") == 0)
-                equalize = 1;
+                equalize = true;
             else if(strcmp(optarg, "off") == 0)
-                equalize = 0;
+                equalize = false;
             else
             {
                 fprintf(stderr, "\nError: Got unexpected value \"%s\" for option -%c, expected on or off.\n", optarg, opt);
@@ -1387,9 +1382,9 @@ int main(int argc, char *argv[])
 
         case 's':
             if(strcmp(optarg, "on") == 0)
-                surface = 1;
+                surface = true;
             else if(strcmp(optarg, "off") == 0)
-                surface = 0;
+                surface = false;
             else
             {
                 fprintf(stderr, "\nError: Got unexpected value \"%s\" for option -%c, expected on or off.\n", optarg, opt);
@@ -1422,9 +1417,9 @@ int main(int argc, char *argv[])
 
         case 'd':
             if(strcmp(optarg, "dataset") == 0)
-                model = HM_DATASET;
+                model = HM_Dataset;
             else if(strcmp(optarg, "sphere") == 0)
-                model = HM_SPHERE;
+                model = HM_Sphere;
             else
             {
                 fprintf(stderr, "\nError: Got unexpected value \"%s\" for option -%c, expected dataset or sphere.\n", optarg, opt);
@@ -1459,8 +1454,8 @@ int main(int argc, char *argv[])
         }
     }
 
-    int ret = ProcessDefinition(inName, outRate, chanMode, farfield, numThreads, fftSize, equalize,
-        surface, limit, truncSize, model, radius, outName);
+    const int ret{ProcessDefinition(inName, outRate, chanMode, farfield, numThreads, fftSize,
+        equalize, surface, limit, truncSize, model, radius, outName)};
     if(!ret) return -1;
     fprintf(stdout, "Operation completed.\n");
 

@@ -293,12 +293,12 @@ struct DelayLineI {
      * of 2 to allow the use of bit-masking instead of a modulus for wrapping.
      */
     size_t Mask{0u};
-    std::array<float,NUM_LINES> *Line{};
+    float *Line{};
 
     /* Given the allocated sample buffer, this function updates each delay line
      * offset.
      */
-    void realizeLineOffset(std::array<float,NUM_LINES> *sampleBuffer) noexcept
+    void realizeLineOffset(float *sampleBuffer) noexcept
     { Line = sampleBuffer; }
 
     /* Calculate the length of a delay line and store its mask and offset. */
@@ -314,23 +314,26 @@ struct DelayLineI {
         Mask = samples - 1;
 
         /* Return the sample count for accumulation. */
-        return samples;
+        return samples*NUM_LINES;
     }
 
-    auto &get(size_t i, size_t chan) noexcept { return Line[i][chan]; }
-    auto &get(size_t i, size_t chan) const noexcept { return Line[i][chan]; }
-    auto &get(size_t i) noexcept { return Line[i]; }
-    auto &get(size_t i) const noexcept { return Line[i]; }
+    auto &get(size_t i, size_t chan) const noexcept { return Line[i*NUM_LINES + chan]; }
+    void set(size_t i, const std::array<float,NUM_LINES> &in) const noexcept
+    {
+        for(size_t c{0};c < NUM_LINES;++c)
+            Line[i*NUM_LINES + c] = in[c];
+    }
 
     void write(size_t offset, const size_t c, const float *RESTRICT in, const size_t count) const noexcept
     {
         ASSUME(count > 0);
+        float *out{Line + c};
         for(size_t i{0u};i < count;)
         {
             offset &= Mask;
             size_t td{minz(Mask+1 - offset, count - i)};
             do {
-                Line[offset++][c] = in[i++];
+                out[offset++ * NUM_LINES] = in[i++];
             } while(--td);
         }
     }
@@ -359,11 +362,11 @@ struct DelayLineI {
                 const std::array src{in[0][i], in[1][i], in[2][i], in[3][i]};
                 ++i;
 
-                Line[offset++] = std::array{
-                    (         src[1] + src[2] + src[3] - src[0]) * 0.5f,
-                    (src[0] +          src[2] + src[3] - src[1]) * 0.5f,
-                    (src[0] + src[1] +          src[3] - src[2]) * 0.5f,
-                    (src[0] + src[1] + src[2]          - src[3]) * 0.5f};
+                Line[offset*NUM_LINES + 0] = (         src[1] + src[2] + src[3] - src[0]) * 0.5f;
+                Line[offset*NUM_LINES + 1] = (src[0] +          src[2] + src[3] - src[1]) * 0.5f;
+                Line[offset*NUM_LINES + 2] = (src[0] + src[1] +          src[3] - src[2]) * 0.5f;
+                Line[offset*NUM_LINES + 3] = (src[0] + src[1] + src[2]          - src[3]) * 0.5f;
+                ++offset;
             } while(--td);
         }
     }
@@ -536,7 +539,7 @@ struct ReverbState final : public EffectState {
     /* All delay lines are allocated as a single buffer to reduce memory
      * fragmentation and management code.
      */
-    al::vector<std::array<float,NUM_LINES>,16> mSampleBuffer;
+    al::vector<float,16> mSampleBuffer;
 
     struct {
         /* Calculated parameters which indicate if cross-fading is needed after
@@ -1369,14 +1372,14 @@ void ReverbState::update(const ContextBase *Context, const EffectSlot *Slot,
  * whose combination of signs are being iterated.
  */
 inline auto VectorPartialScatter(const std::array<float,NUM_LINES> &RESTRICT in,
-    const float xCoeff, const float yCoeff) -> std::array<float,NUM_LINES>
+    const float xCoeff, const float yCoeff) noexcept
 {
-    return std::array<float,NUM_LINES>{{
+    return std::array{
         xCoeff*in[0] + yCoeff*(          in[1] + -in[2] + in[3]),
         xCoeff*in[1] + yCoeff*(-in[0]          +  in[2] + in[3]),
         xCoeff*in[2] + yCoeff*( in[0] + -in[1]          + in[3]),
         xCoeff*in[3] + yCoeff*(-in[0] + -in[1] + -in[2]        )
-    }};
+    };
 }
 
 /* Utilizes the above, but also applies a geometric reflection on the input
@@ -1401,7 +1404,7 @@ void VectorScatterRevDelayIn(const DelayLineI delay, size_t offset, const float 
             };
             ++i;
 
-            delay.get(offset++) = VectorPartialScatter(f, xCoeff, yCoeff);
+            delay.set(offset++, VectorPartialScatter(f, xCoeff, yCoeff));
         } while(--td);
     }
 }
@@ -1447,7 +1450,7 @@ void VecAllpass::process(const al::span<ReverbUpdateLine,NUM_LINES> samples, siz
             }
             ++i;
 
-            delay.get(offset++) = VectorPartialScatter(f, xCoeff, yCoeff);
+            delay.set(offset++, VectorPartialScatter(f, xCoeff, yCoeff));
         } while(--td);
     }
 }

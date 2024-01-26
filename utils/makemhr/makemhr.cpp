@@ -59,7 +59,7 @@
  *  1999
  */
 
-#define _UNICODE
+#define _UNICODE /* NOLINT(bugprone-reserved-identifier) */
 #include "config.h"
 
 #include "makemhr.h"

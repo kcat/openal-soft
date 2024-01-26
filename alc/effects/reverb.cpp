@@ -317,6 +317,11 @@ struct DelayLineI {
         return samples;
     }
 
+    auto &get(size_t i, size_t chan) noexcept { return Line[i][chan]; }
+    auto &get(size_t i, size_t chan) const noexcept { return Line[i][chan]; }
+    auto &get(size_t i) noexcept { return Line[i]; }
+    auto &get(size_t i) const noexcept { return Line[i]; }
+
     void write(size_t offset, const size_t c, const float *RESTRICT in, const size_t count) const noexcept
     {
         ASSUME(count > 0);
@@ -354,11 +359,11 @@ struct DelayLineI {
                 const std::array src{in[0][i], in[1][i], in[2][i], in[3][i]};
                 ++i;
 
-                Line[offset][0] = (         src[1] + src[2] + src[3] - src[0]) * 0.5f;
-                Line[offset][1] = (src[0] +          src[2] + src[3] - src[1]) * 0.5f;
-                Line[offset][2] = (src[0] + src[1] +          src[3] - src[2]) * 0.5f;
-                Line[offset][3] = (src[0] + src[1] + src[2]          - src[3]) * 0.5f;
-                ++offset;
+                Line[offset++] = std::array{
+                    (         src[1] + src[2] + src[3] - src[0]) * 0.5f,
+                    (src[0] +          src[2] + src[3] - src[1]) * 0.5f,
+                    (src[0] + src[1] +          src[3] - src[2]) * 0.5f,
+                    (src[0] + src[1] + src[2]          - src[3]) * 0.5f};
             } while(--td);
         }
     }
@@ -1396,7 +1401,7 @@ void VectorScatterRevDelayIn(const DelayLineI delay, size_t offset, const float 
             };
             ++i;
 
-            delay.Line[offset++] = VectorPartialScatter(f, xCoeff, yCoeff);
+            delay.get(offset++) = VectorPartialScatter(f, xCoeff, yCoeff);
         } while(--td);
     }
 }
@@ -1435,14 +1440,14 @@ void VecAllpass::process(const al::span<ReverbUpdateLine,NUM_LINES> samples, siz
             for(size_t j{0u};j < NUM_LINES;j++)
             {
                 const float input{samples[j][i]};
-                const float out{delay.Line[vap_offset[j]++][j] - feedCoeff*input};
+                const float out{delay.get(vap_offset[j]++, j) - feedCoeff*input};
                 f[j] = input + feedCoeff*out;
 
                 samples[j][i] = out;
             }
             ++i;
 
-            delay.Line[offset++] = VectorPartialScatter(f, xCoeff, yCoeff);
+            delay.get(offset++) = VectorPartialScatter(f, xCoeff, yCoeff);
         } while(--td);
     }
 }
@@ -1499,8 +1504,8 @@ void ReverbPipeline::processEarly(size_t offset, const size_t samplesToDo,
                     const float fade0{coeff - coeffStep*fadeCount};
                     const float fade1{coeffStep*fadeCount};
                     fadeCount += 1.0f;
-                    tempSamples[j][i++] = in_delay.Line[early_delay_tap0++][j]*fade0 +
-                        in_delay.Line[early_delay_tap1++][j]*fade1;
+                    tempSamples[j][i++] = in_delay.get(early_delay_tap0++, j)*fade0 +
+                        in_delay.get(early_delay_tap1++, j)*fade1;
                 } while(--td);
             }
 
@@ -1528,7 +1533,7 @@ void ReverbPipeline::processEarly(size_t offset, const size_t samplesToDo,
                 feedb_tap &= early_delay.Mask;
                 size_t td{minz(early_delay.Mask+1 - feedb_tap, todo - i)};
                 do {
-                    float sample{early_delay.Line[feedb_tap++][j]};
+                    float sample{early_delay.get(feedb_tap++, j)};
                     out[i] = tempSamples[j][i] + sample*feedb_coeff;
                     tempSamples[j][i] = sample;
                     ++i;
@@ -1617,10 +1622,10 @@ void ReverbPipeline::processLate(size_t offset, const size_t samplesToDo,
                 ++late_feedb_tap;
 
                 /* Get the samples around by the delayed offset. */
-                const float out0{late_delay.Line[(delay  ) & late_delay.Mask][j]};
-                const float out1{late_delay.Line[(delay-1) & late_delay.Mask][j]};
-                const float out2{late_delay.Line[(delay-2) & late_delay.Mask][j]};
-                const float out3{late_delay.Line[(delay-3) & late_delay.Mask][j]};
+                const float out0{late_delay.get((delay  ) & late_delay.Mask, j)};
+                const float out1{late_delay.get((delay-1) & late_delay.Mask, j)};
+                const float out2{late_delay.get((delay-2) & late_delay.Mask, j)};
+                const float out3{late_delay.get((delay-3) & late_delay.Mask, j)};
 
                 /* The output is obtained by interpolating the four samples
                  * that were acquired above, and combined with the main delay
@@ -1656,8 +1661,8 @@ void ReverbPipeline::processLate(size_t offset, const size_t samplesToDo,
                     const float fade0{densityGain - densityStep*fadeCount};
                     const float fade1{densityStep*fadeCount};
                     fadeCount += 1.0f;
-                    tempSamples[j][i] += in_delay.Line[late_delay_tap0++][j]*fade0 +
-                        in_delay.Line[late_delay_tap1++][j]*fade1;
+                    tempSamples[j][i] += in_delay.get(late_delay_tap0++, j)*fade0 +
+                        in_delay.get(late_delay_tap1++, j)*fade1;
                     ++i;
                 } while(--td);
             }

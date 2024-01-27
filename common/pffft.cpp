@@ -99,15 +99,15 @@ constexpr uint SimdSize{4};
 #define VMADD vec_madd
 #define VSUB vec_sub
 #define LD_PS1 vec_splats
+
 force_inline v4sf vset4(float a, float b, float c, float d) noexcept
 {
     /* There a more efficient way to do this? */
     alignas(16) std::array<float,4> vals{{a, b, c, d}};
     return vec_ld(0, vals.data());
 }
-#define VSET4 vset4
-#define VINSERT0(v, a) vec_insert((a), (v), 0)
-#define VEXTRACT0(v) vec_extract((v), 0)
+force_inline v4sf vinsert0(v4sf v, float a) noexcept { return vec_insert(a, v, 0); }
+force_inline float vextract0(v4sf v) noexcept { return vec_extract(v, 0); }
 
 force_inline void interleave2(v4sf in1, v4sf in2, v4sf &out1, v4sf &out2) noexcept
 {
@@ -134,7 +134,8 @@ force_inline void vtranspose4(v4sf &x0, v4sf &x1, v4sf &x2, v4sf &x3) noexcept
     x3 = vec_mergel(y1, y3);
 }
 
-#define VSWAPHL(a,b) vec_perm(a,b, (vector unsigned char)(16,17,18,19,20,21,22,23,8,9,10,11,12,13,14,15))
+force_inline v4sf vswaphl(v4sf a, v4sf b) noexcept
+{ return vec_perm(a,b, (vector unsigned char)(16,17,18,19,20,21,22,23,8,9,10,11,12,13,14,15)); }
 
 /*
  * SSE1 support macros
@@ -157,11 +158,13 @@ force_inline v4sf vmadd(const v4sf a, const v4sf b, const v4sf c) noexcept
 #define VMADD vmadd
 #define VSUB _mm_sub_ps
 #define LD_PS1 _mm_set1_ps
-#define VSET4 _mm_setr_ps
+
+force_inline v4sf vset4(float a, float b, float c, float d) noexcept
+{ return _mm_setr_ps(a, b, c, d); }
 force_inline v4sf vinsert0(const v4sf v, const float a) noexcept
 { return _mm_move_ss(v, _mm_set_ss(a)); }
-#define VINSERT0 vinsert0
-#define VEXTRACT0 _mm_cvtss_f32
+force_inline float vextract0(v4sf v) noexcept
+{ return _mm_cvtss_f32(v); }
 
 force_inline void interleave2(const v4sf in1, const v4sf in2, v4sf &out1, v4sf &out2) noexcept
 {
@@ -179,7 +182,8 @@ force_inline void uninterleave2(v4sf in1, v4sf in2, v4sf &out1, v4sf &out2) noex
 force_inline void vtranspose4(v4sf &x0, v4sf &x1, v4sf &x2, v4sf &x3) noexcept
 { _MM_TRANSPOSE4_PS(x0, x1, x2, x3); }
 
-#define VSWAPHL(a,b) _mm_shuffle_ps((b), (a), _MM_SHUFFLE(3,2,1,0))
+force_inline v4sf vswaphl(v4sf a, v4sf b) noexcept
+{ return _mm_shuffle_ps(b, a, _MM_SHUFFLE(3,2,1,0)); }
 
 /*
  * ARM NEON support macros
@@ -195,6 +199,7 @@ constexpr uint SimdSize{4};
 #define VMADD(a,b,c) vmlaq_f32(c,a,b)
 #define VSUB vsubq_f32
 #define LD_PS1 vdupq_n_f32
+
 force_inline v4sf vset4(float a, float b, float c, float d) noexcept
 {
     float32x4_t ret{vmovq_n_f32(a)};
@@ -203,9 +208,10 @@ force_inline v4sf vset4(float a, float b, float c, float d) noexcept
     ret = vsetq_lane_f32(d, ret, 3);
     return ret;
 }
-#define VSET4 vset4
-#define VINSERT0(v, a) vsetq_lane_f32((a), (v), 0)
-#define VEXTRACT0(v) vgetq_lane_f32((v), 0)
+force_inline v4sf vinsert0(v4sf v, float a) noexcept
+{ return vsetq_lane_f32(a, v, 0); }
+force_inline float vextract0(v4sf v) noexcept
+{ return vgetq_lane_f32(v, 0); }
 
 force_inline void interleave2(v4sf in1, v4sf in2, v4sf &out1, v4sf &out2) noexcept
 {
@@ -239,7 +245,8 @@ force_inline void vtranspose4(v4sf &x0, v4sf &x1, v4sf &x2, v4sf &x3) noexcept
     x3 = u1_.val[1];
 }
 
-#define VSWAPHL(a,b) vcombine_f32(vget_low_f32(b), vget_high_f32(a))
+force_inline v4sf vswaphl(v4sf a, v4sf b) noexcept
+{ return vcombine_f32(vget_low_f32(b), vget_high_f32(a)); }
 
 /*
  * Generic GCC vector macros
@@ -254,13 +261,14 @@ constexpr uint SimdSize{4};
 #define VMADD(a,b,c) ((a)*(b) + (c))
 #define VSUB(a,b) ((a) - (b))
 
-constexpr force_inline v4sf ld_ps1(float a) noexcept { return v4sf{a, a, a, a}; }
+force_inline constexpr v4sf ld_ps1(float a) noexcept { return v4sf{a, a, a, a}; }
 #define LD_PS1 ld_ps1
-#define VSET4(a, b, c, d) v4sf{(a), (b), (c), (d)}
-constexpr force_inline v4sf vinsert0(v4sf v, float a) noexcept
+force_inline constexpr v4sf vset4(float a, float b, float c, float d) noexcept
+{ return v4sf{a, b, c, d}; }
+force_inline constexpr v4sf vinsert0(v4sf v, float a) noexcept
 { return v4sf{a, v[1], v[2], v[3]}; }
-#define VINSERT0 vinsert0
-#define VEXTRACT0(v) ((v)[0])
+force_inline float vextract0(v4sf v) noexcept
+{ return v[0]; }
 
 force_inline v4sf unpacklo(v4sf a, v4sf b) noexcept
 { return v4sf{a[0], b[0], a[1], b[1]}; }
@@ -294,7 +302,6 @@ force_inline void vtranspose4(v4sf &x0, v4sf &x1, v4sf &x2, v4sf &x3) noexcept
 
 force_inline v4sf vswaphl(v4sf a, v4sf b) noexcept
 { return v4sf{b[0], b[1], a[2], a[3]}; }
-#define VSWAPHL vswaphl
 
 #else
 
@@ -314,13 +321,15 @@ constexpr uint SimdSize{1};
 #define VMADD(a,b,c) ((a)*(b)+(c))
 #define VSUB(a,b) ((a)-(b))
 #define LD_PS1(p) (p)
-#endif
+
+#else
 
 inline bool valigned(const float *ptr) noexcept
 {
-    static constexpr uintptr_t alignmask{SimdSize*4 - 1};
+    static constexpr uintptr_t alignmask{SimdSize*sizeof(float) - 1};
     return (reinterpret_cast<uintptr_t>(ptr) & alignmask) == 0;
 }
+#endif
 
 // shortcuts for complex multiplications
 force_inline void vcplxmul(v4sf &ar, v4sf &ai, v4sf br, v4sf bi) noexcept
@@ -372,7 +381,7 @@ force_inline void vcplxmulconj(v4sf &ar, v4sf &ai, v4sf br, v4sf bi) noexcept
     t_v=LD_PS1(f[15]); t_f = al::bit_cast<float4>(t_v);
     printf("LD_PS1(15)=[%2g %2g %2g %2g]\n", t_f[0], t_f[1], t_f[2], t_f[3]);
     assertv4(t, 15, 15, 15, 15);
-    t_v = VSWAPHL(a1_v, a2_v); t_f = al::bit_cast<float4>(t_v);
+    t_v = vswaphl(a1_v, a2_v); t_f = al::bit_cast<float4>(t_v);
     printf("VSWAPHL(4:7,8:11)=[%2g %2g %2g %2g]\n", t_f[0], t_f[1], t_f[2], t_f[3]);
     assertv4(t, 8, 9, 6, 7);
     vtranspose4(a0_v, a1_v, a2_v, a3_v);
@@ -1504,17 +1513,17 @@ void reversed_copy(const size_t N, const v4sf *in, const int in_stride, v4sf *RE
     interleave2(in[0], in[1], g0, g1);
     in += in_stride;
 
-    *--out = VSWAPHL(g0, g1); // [g0l, g0h], [g1l g1h] -> [g1l, g0h]
+    *--out = vswaphl(g0, g1); // [g0l, g0h], [g1l g1h] -> [g1l, g0h]
     for(size_t k{1};k < N;++k)
     {
         v4sf h0, h1;
         interleave2(in[0], in[1], h0, h1);
         in += in_stride;
-        *--out = VSWAPHL(g1, h0);
-        *--out = VSWAPHL(h0, h1);
+        *--out = vswaphl(g1, h0);
+        *--out = vswaphl(h0, h1);
         g1 = h1;
     }
-    *--out = VSWAPHL(g1, g0);
+    *--out = vswaphl(g1, g0);
 }
 
 void unreversed_copy(const size_t N, const v4sf *in, v4sf *RESTRICT out, const int out_stride)
@@ -1524,15 +1533,15 @@ void unreversed_copy(const size_t N, const v4sf *in, v4sf *RESTRICT out, const i
     for(size_t k{1};k < N;++k)
     {
         v4sf h0{*in++}; v4sf h1{*in++};
-        g1 = VSWAPHL(g1, h0);
-        h0 = VSWAPHL(h0, h1);
+        g1 = vswaphl(g1, h0);
+        h0 = vswaphl(h0, h1);
         uninterleave2(h0, g1, out[0], out[1]);
         out += out_stride;
         g1 = h1;
     }
     v4sf h0{*in++}, h1{g0};
-    g1 = VSWAPHL(g1, h0);
-    h0 = VSWAPHL(h0, h1);
+    g1 = vswaphl(g1, h0);
+    h0 = vswaphl(h0, h1);
     uninterleave2(h0, g1, out[0], out[1]);
 }
 
@@ -1697,14 +1706,14 @@ NOINLINE void pffft_real_finalize(const size_t Ncvec, const v4sf *in, v4sf *REST
      * [Xi(3N/4)] [0   0   0   0   0  -s   1  -s]
      */
 
-    const float xr0{(cr[0]+cr[2]) + (cr[1]+cr[3])}; out[0] = VINSERT0(out[0], xr0);
-    const float xi0{(cr[0]+cr[2]) - (cr[1]+cr[3])}; out[1] = VINSERT0(out[1], xi0);
-    const float xr2{(cr[0]-cr[2])};                 out[4] = VINSERT0(out[4], xr2);
-    const float xi2{(cr[3]-cr[1])};                 out[5] = VINSERT0(out[5], xi2);
-    const float xr1{ ci[0] + s*(ci[1]-ci[3])};      out[2] = VINSERT0(out[2], xr1);
-    const float xi1{-ci[2] - s*(ci[1]+ci[3])};      out[3] = VINSERT0(out[3], xi1);
-    const float xr3{ ci[0] - s*(ci[1]-ci[3])};      out[6] = VINSERT0(out[6], xr3);
-    const float xi3{ ci[2] - s*(ci[1]+ci[3])};      out[7] = VINSERT0(out[7], xi3);
+    const float xr0{(cr[0]+cr[2]) + (cr[1]+cr[3])}; out[0] = vinsert0(out[0], xr0);
+    const float xi0{(cr[0]+cr[2]) - (cr[1]+cr[3])}; out[1] = vinsert0(out[1], xi0);
+    const float xr2{(cr[0]-cr[2])};                 out[4] = vinsert0(out[4], xr2);
+    const float xi2{(cr[3]-cr[1])};                 out[5] = vinsert0(out[5], xi2);
+    const float xr1{ ci[0] + s*(ci[1]-ci[3])};      out[2] = vinsert0(out[2], xr1);
+    const float xi1{-ci[2] - s*(ci[1]+ci[3])};      out[3] = vinsert0(out[3], xi1);
+    const float xr3{ ci[0] - s*(ci[1]-ci[3])};      out[6] = vinsert0(out[6], xr3);
+    const float xi3{ ci[2] - s*(ci[1]+ci[3])};      out[7] = vinsert0(out[7], xi3);
 
     for(size_t k{1};k < dk;++k)
         pffft_real_finalize_4x4(&in[8*k-1], &in[8*k+0], in + 8*k+1, e + k*6, out + k*8);
@@ -1774,8 +1783,8 @@ NOINLINE void pffft_real_preprocess(const size_t Ncvec, const v4sf *in, v4sf *RE
     std::array<float,SimdSize> Xr, Xi;
     for(size_t k{0};k < SimdSize;++k)
     {
-        Xr[k] = VEXTRACT0(in[2*k]);
-        Xi[k] = VEXTRACT0(in[2*k + 1]);
+        Xr[k] = vextract0(in[2*k]);
+        Xi[k] = vextract0(in[2*k + 1]);
     }
 
     pffft_real_preprocess_4x4(in, e, out+1, true); // will write only 6 values
@@ -1798,12 +1807,12 @@ NOINLINE void pffft_real_preprocess(const size_t Ncvec, const v4sf *in, v4sf *RE
     const float cr1{(Xr[0]-Xi[0]) - 2*Xi[2]};
     const float cr2{(Xr[0]+Xi[0]) - 2*Xr[2]};
     const float cr3{(Xr[0]-Xi[0]) + 2*Xi[2]};
-    out[0] = VSET4(cr0, cr1, cr2, cr3);
+    out[0] = vset4(cr0, cr1, cr2, cr3);
     const float ci0{     2*(Xr[1]+Xr[3])};
     const float ci1{ sqrt2*(Xr[1]-Xr[3]) - sqrt2*(Xi[1]+Xi[3])};
     const float ci2{     2*(Xi[3]-Xi[1])};
     const float ci3{-sqrt2*(Xr[1]-Xr[3]) - sqrt2*(Xi[1]+Xi[3])};
-    out[2*Ncvec-1] = VSET4(ci0, ci1, ci2, ci3);
+    out[2*Ncvec-1] = vset4(ci0, ci1, ci2, ci3);
 }
 
 
@@ -1963,12 +1972,12 @@ void pffft_zconvolve_scale_accumulate(const PFFFT_Setup *s, const float *a, cons
 #endif
 #endif
 
-    const float ar1{VEXTRACT0(va[0])};
-    const float ai1{VEXTRACT0(va[1])};
-    const float br1{VEXTRACT0(vb[0])};
-    const float bi1{VEXTRACT0(vb[1])};
-    const float abr1{VEXTRACT0(vab[0])};
-    const float abi1{VEXTRACT0(vab[1])};
+    const float ar1{vextract0(va[0])};
+    const float ai1{vextract0(va[1])};
+    const float br1{vextract0(vb[0])};
+    const float bi1{vextract0(vb[1])};
+    const float abr1{vextract0(vab[0])};
+    const float abi1{vextract0(vab[1])};
 
 #ifdef ZCONVOLVE_USING_INLINE_ASM
     /* Inline asm version, unfortunately miscompiled by clang 3.2, at least on
@@ -2034,8 +2043,8 @@ void pffft_zconvolve_scale_accumulate(const PFFFT_Setup *s, const float *a, cons
 
     if(s->transform == PFFFT_REAL)
     {
-        vab[0] = VINSERT0(vab[0], abr1 + ar1*br1*scaling);
-        vab[1] = VINSERT0(vab[1], abi1 + ai1*bi1*scaling);
+        vab[0] = vinsert0(vab[0], abr1 + ar1*br1*scaling);
+        vab[1] = vinsert0(vab[1], abi1 + ai1*bi1*scaling);
     }
 }
 
@@ -2061,12 +2070,12 @@ void pffft_zconvolve_accumulate(const PFFFT_Setup *s, const float *a, const floa
     __builtin_prefetch(vab+6);
 #endif
 
-    const float ar1{VEXTRACT0(va[0])};
-    const float ai1{VEXTRACT0(va[1])};
-    const float br1{VEXTRACT0(vb[0])};
-    const float bi1{VEXTRACT0(vb[1])};
-    const float abr1{VEXTRACT0(vab[0])};
-    const float abi1{VEXTRACT0(vab[1])};
+    const float ar1{vextract0(va[0])};
+    const float ai1{vextract0(va[1])};
+    const float br1{vextract0(vb[0])};
+    const float bi1{vextract0(vb[1])};
+    const float abr1{vextract0(vab[0])};
+    const float abi1{vextract0(vab[1])};
 
     /* No inline assembly for this version. I'm not familiar enough with NEON
      * assembly, and I don't know that it's needed with today's optimizers.
@@ -2087,8 +2096,8 @@ void pffft_zconvolve_accumulate(const PFFFT_Setup *s, const float *a, const floa
 
     if(s->transform == PFFFT_REAL)
     {
-        vab[0] = VINSERT0(vab[0], abr1 + ar1*br1);
-        vab[1] = VINSERT0(vab[1], abi1 + ai1*bi1);
+        vab[0] = vinsert0(vab[0], abr1 + ar1*br1);
+        vab[1] = vinsert0(vab[1], abi1 + ai1*bi1);
     }
 }
 

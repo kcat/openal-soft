@@ -31,7 +31,8 @@ constexpr uint CubicPhaseDiffBits{MixerFracBits - CubicPhaseBits};
 constexpr uint CubicPhaseDiffOne{1 << CubicPhaseDiffBits};
 constexpr uint CubicPhaseDiffMask{CubicPhaseDiffOne - 1u};
 
-#define MLA4(x, y, z) _mm_add_ps(x, _mm_mul_ps(y, z))
+force_inline __m128 vmadd(const __m128 x, const __m128 y, const __m128 z) noexcept
+{ return _mm_add_ps(x, _mm_mul_ps(y, z)); }
 
 inline void ApplyCoeffs(float2 *RESTRICT Values, const size_t IrSize, const ConstHrirSpan Coeffs,
     const float left, const float right)
@@ -49,7 +50,7 @@ inline void ApplyCoeffs(float2 *RESTRICT Values, const size_t IrSize, const Cons
         {
             const __m128 coeffs{_mm_load_ps(Coeffs[i].data())};
             __m128 vals{_mm_load_ps(Values[i].data())};
-            vals = MLA4(vals, lrlr, coeffs);
+            vals = vmadd(vals, lrlr, coeffs);
             _mm_store_ps(Values[i].data(), vals);
         }
     }
@@ -105,7 +106,7 @@ force_inline void MixLine(const al::span<const float> InSamples, float *RESTRICT
                 __m128 dry4{_mm_load_ps(&dst[pos])};
 
                 /* dry += val * (gain + step*step_count) */
-                dry4 = MLA4(dry4, val4, MLA4(gain4, step4, step_count4));
+                dry4 = vmadd(dry4, val4, vmadd(gain4, step4, step_count4));
 
                 _mm_store_ps(&dst[pos], dry4);
                 step_count4 = _mm_add_ps(step_count4, four4);
@@ -171,7 +172,7 @@ void Resample_<CubicTag,SSETag>(const InterpState *state, const float *RESTRICT 
         /* Apply the phase interpolated filter. */
 
         /* f = fil + pf*phd */
-        const __m128 f4 = MLA4(_mm_load_ps(filter[pi].mCoeffs.data()), pf4,
+        const __m128 f4 = vmadd(_mm_load_ps(filter[pi].mCoeffs.data()), pf4,
             _mm_load_ps(filter[pi].mDeltas.data()));
         /* r = f*src */
         __m128 r4{_mm_mul_ps(f4, _mm_loadu_ps(src))};
@@ -217,11 +218,11 @@ void Resample_<BSincTag,SSETag>(const InterpState *state, const float *RESTRICT 
 
             do {
                 /* f = ((fil + sf*scd) + pf*(phd + sf*spd)) */
-                const __m128 f4 = MLA4(
-                    MLA4(_mm_load_ps(&fil[j]), sf4, _mm_load_ps(&scd[j])),
-                    pf4, MLA4(_mm_load_ps(&phd[j]), sf4, _mm_load_ps(&spd[j])));
+                const __m128 f4 = vmadd(
+                    vmadd(_mm_load_ps(&fil[j]), sf4, _mm_load_ps(&scd[j])),
+                    pf4, vmadd(_mm_load_ps(&phd[j]), sf4, _mm_load_ps(&spd[j])));
                 /* r += f*src */
-                r4 = MLA4(r4, f4, _mm_loadu_ps(&src[j]));
+                r4 = vmadd(r4, f4, _mm_loadu_ps(&src[j]));
                 j += 4;
             } while(--td);
         }
@@ -263,9 +264,9 @@ void Resample_<FastBSincTag,SSETag>(const InterpState *state, const float *RESTR
 
             do {
                 /* f = fil + pf*phd */
-                const __m128 f4 = MLA4(_mm_load_ps(&fil[j]), pf4, _mm_load_ps(&phd[j]));
+                const __m128 f4 = vmadd(_mm_load_ps(&fil[j]), pf4, _mm_load_ps(&phd[j]));
                 /* r += f*src */
-                r4 = MLA4(r4, f4, _mm_loadu_ps(&src[j]));
+                r4 = vmadd(r4, f4, _mm_loadu_ps(&src[j]));
                 j += 4;
             } while(--td);
         }

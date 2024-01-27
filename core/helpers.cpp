@@ -11,10 +11,12 @@
 #include <algorithm>
 #include <cstdlib>
 #include <cstring>
+#include <filesystem>
 #include <limits>
 #include <mutex>
 #include <optional>
 #include <string>
+#include <system_error>
 
 #include "almalloc.h"
 #include "alnumeric.h"
@@ -30,6 +32,49 @@ int RTPrioLevel{1};
 /* Allow reducing the process's RTTime limit for RTKit. */
 bool AllowRTTimeLimit{true};
 
+
+namespace {
+
+std::mutex gSearchLock;
+
+void DirectorySearch(const std::string_view path, const std::string_view ext,
+    std::vector<std::string> *const results)
+{
+    auto as_int = [](size_t value) noexcept -> int
+    { return static_cast<int>(std::min<size_t>(value, std::numeric_limits<int>::max())); };
+
+    const auto base = static_cast<std::make_signed_t<size_t>>(results->size());
+
+    TRACE("Searching %.*s for *%.*s\n", as_int(path.size()), path.data(), as_int(ext.size()),
+        ext.data());
+    try {
+        for(auto&& dirent : std::filesystem::directory_iterator{std::filesystem::u8path(path)})
+        {
+            auto&& entrypath = dirent.path();
+            if(!entrypath.has_extension())
+                continue;
+
+            const auto status = std::filesystem::status(entrypath);
+            if(status.type() == std::filesystem::file_type::regular
+                && al::case_compare(entrypath.extension().u8string(), ext) == 0)
+                results->emplace_back(entrypath.u8string());
+        }
+    }
+    catch(std::filesystem::filesystem_error &fe) {
+        if(fe.code() != std::make_error_code(std::errc::no_such_file_or_directory))
+            ERR("Error enumerating directory: %s\n", fe.what());
+    }
+    catch(std::exception& e) {
+        ERR("Error enumerating directory: %s\n", e.what());
+    }
+
+    const al::span newlist{results->begin()+base, results->end()};
+    std::sort(newlist.begin(), newlist.end());
+    for(const auto &name : newlist)
+        TRACE(" got %s\n", name.c_str());
+}
+
+} // namespace
 
 #ifdef _WIN32
 
@@ -90,55 +135,28 @@ struct CoTaskMemDeleter {
 };
 #endif
 
-void DirectorySearch(const std::string_view path, const char *ext,
-    std::vector<std::string> *const results)
-{
-    std::string pathstr{path};
-    pathstr += "\\*";
-    pathstr += ext;
-    TRACE("Searching %s\n", pathstr.c_str());
-
-    std::wstring wpath{utf8_to_wstr(pathstr)};
-    WIN32_FIND_DATAW fdata;
-    HANDLE hdl{FindFirstFileExW(wpath.c_str(), FindExInfoStandard, &fdata, FindExSearchNameMatch, NULL, 0)};
-    if(hdl == INVALID_HANDLE_VALUE) return;
-
-    const auto base = results->size();
-
-    do {
-        std::string &str = results->emplace_back(path);
-        str += '\\';
-        str += wstr_to_utf8(fdata.cFileName);
-    } while(FindNextFileW(hdl, &fdata));
-    FindClose(hdl);
-    const al::span<std::string> newlist{results->data()+base, results->size()-base};
-    std::sort(newlist.begin(), newlist.end());
-    for(const auto &name : newlist)
-        TRACE(" got %s\n", name.c_str());
-}
-
 } // namespace
 
 std::vector<std::string> SearchDataFiles(const char *ext, const char *subdir)
 {
-    auto is_slash = [](int c) noexcept { return (c == '\\' || c == '/'); };
-
-    static std::mutex sSearchLock;
-    std::lock_guard<std::mutex> srchlock{sSearchLock};
+    std::lock_guard<std::mutex> srchlock{gSearchLock};
 
     /* If the path is absolute, use it directly. */
     std::vector<std::string> results;
-    if(std::isalpha(subdir[0]) && subdir[1] == ':' && is_slash(subdir[2]))
-    {
-        std::string path{subdir};
-        std::replace(path.begin(), path.end(), '/', '\\');
-        DirectorySearch(path.c_str(), ext, &results);
-        return results;
+    try {
+        if(auto fpath = std::filesystem::u8path(subdir); fpath.is_absolute())
+        {
+            std::string path{fpath.make_preferred().u8string()};
+            DirectorySearch(path, ext, &results);
+            return results;
+        }
     }
-    if(subdir[0] == '\\' && subdir[1] == '\\' && subdir[2] == '?' && subdir[3] == '\\')
-    {
-        DirectorySearch(subdir, ext, &results);
-        return results;
+    catch(std::filesystem::filesystem_error &fe) {
+        if(fe.code() != std::make_error_code(std::errc::no_such_file_or_directory))
+            ERR("Error enumerating directory: %s\n", fe.what());
+    }
+    catch(std::exception& e) {
+        ERR("Error enumerating directory: %s\n", e.what());
     }
 
     std::string path;
@@ -147,20 +165,13 @@ std::vector<std::string> SearchDataFiles(const char *ext, const char *subdir)
     if(auto localpath = al::getenv(L"ALSOFT_LOCAL_PATH"))
     {
         path = wstr_to_utf8(*localpath);
-        if(is_slash(path.back()))
-            path.pop_back();
+        std::replace(path.begin(), path.end(), '/', '\\');
+        if(path.back() == '\\') path.pop_back();
     }
-    else if(WCHAR *cwdbuf{_wgetcwd(nullptr, 0)})
-    {
-        path = wstr_to_utf8(cwdbuf);
-        if(is_slash(path.back()))
-            path.pop_back();
-        free(cwdbuf);
-    }
-    else
-        path = ".";
-    std::replace(path.begin(), path.end(), '/', '\\');
-    DirectorySearch(path, ext, &results);
+    else if(auto curpath = std::filesystem::current_path(); !curpath.empty())
+        path = curpath.make_preferred().u8string();
+    if(!path.empty())
+        DirectorySearch(path, ext, &results);
 
 #if !defined(ALSOFT_UWP) && !defined(_GAMING_XBOX)
     /* Search the local and global data dirs. */
@@ -222,6 +233,8 @@ void SetRTPriority()
 #endif
 #endif
 
+using namespace std::string_view_literals;
+
 const PathNamePair &GetProcBinary()
 {
     static std::optional<PathNamePair> procbin;
@@ -232,7 +245,8 @@ const PathNamePair &GetProcBinary()
     size_t pathlen;
     int mib[4] = { CTL_KERN, KERN_PROC, KERN_PROC_PATHNAME, -1 };
     if(sysctl(mib, 4, nullptr, &pathlen, nullptr, 0) == -1)
-        WARN("Failed to sysctl kern.proc.pathname: %s\n", strerror(errno));
+        WARN("Failed to sysctl kern.proc.pathname: %s\n",
+            std::generic_category().message(errno).c_str());
     else
     {
         pathname.resize(pathlen + 1);
@@ -246,7 +260,8 @@ const PathNamePair &GetProcBinary()
         char procpath[PROC_PIDPATHINFO_MAXSIZE]{};
         const pid_t pid{getpid()};
         if(proc_pidpath(pid, procpath, sizeof(procpath)) < 1)
-            ERR("proc_pidpath(%d, ...) failed: %s\n", pid, strerror(errno));
+            ERR("proc_pidpath(%d, ...) failed: %s\n", pid,
+                std::generic_category().message(errno).c_str());
         else
             pathname.insert(pathname.end(), procpath, procpath+strlen(procpath));
     }
@@ -262,36 +277,38 @@ const PathNamePair &GetProcBinary()
 #ifndef __SWITCH__
     if(pathname.empty())
     {
-        std::array SelfLinkNames{
-            "/proc/self/exe",
-            "/proc/self/file",
-            "/proc/curproc/exe",
-            "/proc/curproc/file"
+        const std::array SelfLinkNames{
+            "/proc/self/exe"sv,
+            "/proc/self/file"sv,
+            "/proc/curproc/exe"sv,
+            "/proc/curproc/file"sv,
         };
 
-        pathname.resize(256);
-
-        const char *selfname{};
-        ssize_t len{};
-        for(const char *name : SelfLinkNames)
+        std::string selfname{};
+        for(const std::string_view name : SelfLinkNames)
         {
-            selfname = name;
-            len = readlink(selfname, pathname.data(), pathname.size());
-            if(len >= 0 || errno != ENOENT) break;
+            try {
+                auto path = std::filesystem::read_symlink(name);
+                if(!path.empty())
+                {
+                    selfname = path.u8string();
+                    break;
+                }
+            }
+            catch(std::filesystem::filesystem_error& fe) {
+                if(fe.code() != std::make_error_code(std::errc::no_such_file_or_directory))
+                    WARN("Failed to readlink %.*s: %s\n", static_cast<int>(name.size()),
+                        name.data(), fe.what());
+            }
+            catch(...) {
+            }
         }
 
-        while(len > 0 && static_cast<size_t>(len) == pathname.size())
+        if(!selfname.empty())
         {
-            pathname.resize(pathname.size() << 1);
-            len = readlink(selfname, pathname.data(), pathname.size());
+            pathname.resize(selfname.size());
+            std::copy(selfname.cbegin(), selfname.cend(), pathname.begin());
         }
-        if(len <= 0)
-        {
-            WARN("Failed to readlink %s: %s\n", selfname, strerror(errno));
-            len = 0;
-        }
-
-        pathname.resize(static_cast<size_t>(len));
     }
 #endif
     while(!pathname.empty() && pathname.back() == 0)
@@ -308,74 +325,31 @@ const PathNamePair &GetProcBinary()
     return *procbin;
 }
 
-namespace {
-
-void DirectorySearch(const char *path, const char *ext, std::vector<std::string> *const results)
-{
-    TRACE("Searching %s for *%s\n", path, ext);
-    DIR *dir{opendir(path)};
-    if(!dir) return;
-
-    const std::string_view extsv{ext};
-    const auto base = static_cast<std::make_signed_t<size_t>>(results->size());
-    while(struct dirent *dirent{readdir(dir)})
-    {
-        const std::string_view d_name{std::data(dirent->d_name)};
-        if(d_name == "." || d_name == "..") continue;
-
-        if(d_name.size() <= extsv.size()) continue;
-        if(al::case_compare(d_name.substr(d_name.size()-extsv.size()), extsv) != 0)
-            continue;
-
-        std::string &str = results->emplace_back(path);
-        if(str.back() != '/') str.push_back('/');
-        str += d_name;
-    }
-    closedir(dir);
-
-    const al::span newlist{results->begin()+base, results->end()};
-    std::sort(newlist.begin(), newlist.end());
-    for(const auto &name : newlist)
-        TRACE(" got %s\n", name.c_str());
-}
-
-} // namespace
-
 std::vector<std::string> SearchDataFiles(const char *ext, const char *subdir)
 {
-    static std::mutex sSearchLock;
-    std::lock_guard<std::mutex> srchlock{sSearchLock};
+    std::lock_guard<std::mutex> srchlock{gSearchLock};
 
     std::vector<std::string> results;
-    if(subdir[0] == '/')
-    {
-        DirectorySearch(subdir, ext, &results);
-        return results;
+    try {
+        if(auto fpath = std::filesystem::u8path(subdir); fpath.is_absolute())
+        {
+            DirectorySearch(subdir, ext, &results);
+            return results;
+        }
+    }
+    catch(std::filesystem::filesystem_error &fe) {
+        if(fe.code() != std::make_error_code(std::errc::no_such_file_or_directory))
+            ERR("Error enumerating directory: %s\n", fe.what());
+    }
+    catch(std::exception& e) {
+        ERR("Error enumerating directory: %s\n", e.what());
     }
 
     /* Search the app-local directory. */
     if(auto localpath = al::getenv("ALSOFT_LOCAL_PATH"))
-        DirectorySearch(localpath->c_str(), ext, &results);
-    else
-    {
-        std::vector<char> cwdbuf(256);
-        while(!getcwd(cwdbuf.data(), cwdbuf.size()))
-        {
-            if(errno != ERANGE)
-            {
-                cwdbuf.clear();
-                break;
-            }
-            cwdbuf.resize(cwdbuf.size() << 1);
-        }
-        if(cwdbuf.empty())
-            DirectorySearch(".", ext, &results);
-        else
-        {
-            DirectorySearch(cwdbuf.data(), ext, &results);
-            cwdbuf.clear();
-        }
-    }
+        DirectorySearch(*localpath, ext, &results);
+    else if(auto curpath = std::filesystem::current_path(); !curpath.empty())
+        DirectorySearch(curpath.u8string(), ext, &results);
 
     // Search local data dir
     if(auto datapath = al::getenv("XDG_DATA_HOME"))
@@ -384,7 +358,7 @@ std::vector<std::string> SearchDataFiles(const char *ext, const char *subdir)
         if(path.back() != '/')
             path += '/';
         path += subdir;
-        DirectorySearch(path.c_str(), ext, &results);
+        DirectorySearch(path, ext, &results);
     }
     else if(auto homepath = al::getenv("HOME"))
     {
@@ -393,7 +367,7 @@ std::vector<std::string> SearchDataFiles(const char *ext, const char *subdir)
             path.pop_back();
         path += "/.local/share/";
         path += subdir;
-        DirectorySearch(path.c_str(), ext, &results);
+        DirectorySearch(path, ext, &results);
     }
 
     // Search global data dirs
@@ -413,7 +387,7 @@ std::vector<std::string> SearchDataFiles(const char *ext, const char *subdir)
             path += '/';
         path += subdir;
 
-        DirectorySearch(path.c_str(), ext, &results);
+        DirectorySearch(path, ext, &results);
     }
 
 #ifdef ALSOFT_INSTALL_DATADIR
@@ -425,7 +399,7 @@ std::vector<std::string> SearchDataFiles(const char *ext, const char *subdir)
             if(path.back() != '/')
                 path += '/';
             path += subdir;
-            DirectorySearch(path.c_str(), ext, &results);
+            DirectorySearch(path, ext, &results);
         }
     }
 #endif
@@ -456,7 +430,8 @@ bool SetRTPriorityPthread(int prio [[maybe_unused]])
         err = pthread_setschedparam(pthread_self(), SCHED_RR, &param);
     if(err == 0) return true;
 #endif
-    WARN("pthread_setschedparam failed: %s (%d)\n", std::strerror(err), err);
+    WARN("pthread_setschedparam failed: %s (%d)\n", std::generic_category().message(err).c_str(),
+        err);
     return false;
 }
 
@@ -484,7 +459,7 @@ bool SetRTPriorityRTKit(int prio [[maybe_unused]])
     if(err == -ENOENT)
     {
         err = std::abs(err);
-        ERR("Could not query RTKit: %s (%d)\n", std::strerror(err), err);
+        ERR("Could not query RTKit: %s (%d)\n", std::generic_category().message(err).c_str(), err);
         return false;
     }
     int rtmax{rtkit_get_max_realtime_priority(conn.get())};
@@ -520,7 +495,7 @@ bool SetRTPriorityRTKit(int prio [[maybe_unused]])
             err = limit_rttime(conn.get());
             if(err != 0)
                 WARN("Failed to set RLIMIT_RTTIME for RTKit: %s (%d)\n",
-                    std::strerror(err), err);
+                    std::generic_category().message(err).c_str(), err);
         }
 
         /* Limit the maximum real-time priority to half. */
@@ -532,7 +507,8 @@ bool SetRTPriorityRTKit(int prio [[maybe_unused]])
         if(err == 0) return true;
 
         err = std::abs(err);
-        WARN("Failed to set real-time priority: %s (%d)\n", std::strerror(err), err);
+        WARN("Failed to set real-time priority: %s (%d)\n",
+            std::generic_category().message(err).c_str(), err);
     }
     /* Don't try to set the niceness for non-Linux systems. Standard POSIX has
      * niceness as a per-process attribute, while the intent here is for the
@@ -547,7 +523,8 @@ bool SetRTPriorityRTKit(int prio [[maybe_unused]])
         if(err == 0) return true;
 
         err = std::abs(err);
-        WARN("Failed to set high priority: %s (%d)\n", std::strerror(err), err);
+        WARN("Failed to set high priority: %s (%d)\n",
+            std::generic_category().message(err).c_str(), err);
     }
 #endif /* __linux__ */
 

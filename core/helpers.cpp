@@ -83,48 +83,52 @@ void DirectorySearch(const std::string_view path, const std::string_view ext,
 
 const PathNamePair &GetProcBinary()
 {
-    static std::optional<PathNamePair> procbin;
-    if(procbin) return *procbin;
+    auto get_procbin = []
+    {
 #if !defined(ALSOFT_UWP)
-    auto fullpath = std::vector<WCHAR>(256);
-    DWORD len{GetModuleFileNameW(nullptr, fullpath.data(), static_cast<DWORD>(fullpath.size()))};
-    while(len == fullpath.size())
-    {
-        fullpath.resize(fullpath.size() << 1);
-        len = GetModuleFileNameW(nullptr, fullpath.data(), static_cast<DWORD>(fullpath.size()));
-    }
-    if(len == 0)
-    {
-        ERR("Failed to get process name: error %lu\n", GetLastError());
-        procbin.emplace();
-        return *procbin;
-    }
+        auto fullpath = std::vector<WCHAR>(256);
+        DWORD len{GetModuleFileNameW(nullptr, fullpath.data(), static_cast<DWORD>(fullpath.size()))};
+        while(len == fullpath.size())
+        {
+            fullpath.resize(fullpath.size() << 1);
+            len = GetModuleFileNameW(nullptr, fullpath.data(), static_cast<DWORD>(fullpath.size()));
+        }
+        if(len == 0)
+        {
+            ERR("Failed to get process name: error %lu\n", GetLastError());
+            return PathNamePair{};
+        }
 
-    fullpath.resize(len);
-    if(fullpath.back() != 0)
-        fullpath.push_back(0);
+        fullpath.resize(len);
+        if(fullpath.back() != 0)
+            fullpath.push_back(0);
 #else
-    auto exePath               = __wargv[0];
-    if (!exePath)
-    {
-        ERR("Failed to get process name: error %lu\n", GetLastError());
-        procbin.emplace();
-        return *procbin;
-    }
-    std::vector<WCHAR> fullpath{exePath, exePath + wcslen(exePath) + 1};
+        const WCHAR *exePath{__wargv[0]};
+        if(!exePath)
+        {
+            ERR("Failed to get process name: __wargv[0] == nullptr\n");
+            return PathNamePair{};
+        }
+        std::vector<WCHAR> fullpath{exePath, exePath + wcslen(exePath) + 1};
 #endif
-    std::replace(fullpath.begin(), fullpath.end(), '/', '\\');
-    auto sep = std::find(fullpath.rbegin()+1, fullpath.rend(), '\\');
-    if(sep != fullpath.rend())
-    {
-        *sep = 0;
-        procbin.emplace(wstr_to_utf8(fullpath.data()), wstr_to_utf8(al::to_address(sep.base())));
-    }
-    else
-        procbin.emplace(std::string{}, wstr_to_utf8(fullpath.data()));
+        std::replace(fullpath.begin(), fullpath.end(), '/', '\\');
 
-    TRACE("Got binary: %s, %s\n", procbin->path.c_str(), procbin->fname.c_str());
-    return *procbin;
+        PathNamePair res{};
+        auto sep = std::find(fullpath.rbegin()+1, fullpath.rend(), '\\');
+        if(sep != fullpath.rend())
+        {
+            *sep = 0;
+            res.path = wstr_to_utf8(fullpath.data());
+            res.fname = wstr_to_utf8(al::to_address(sep.base()));
+        }
+        else
+            res.fname = wstr_to_utf8(fullpath.data());
+
+        TRACE("Got binary: %s, %s\n", res.path.c_str(), res.fname.c_str());
+        return res;
+    };
+    static const PathNamePair procbin{get_procbin()};
+    return procbin;
 }
 
 namespace {
@@ -237,92 +241,87 @@ using namespace std::string_view_literals;
 
 const PathNamePair &GetProcBinary()
 {
-    static std::optional<PathNamePair> procbin;
-    if(procbin) return *procbin;
-
-    std::vector<char> pathname;
+    auto get_procbin = []
+    {
+        std::string pathname;
 #ifdef __FreeBSD__
-    size_t pathlen;
-    int mib[4] = { CTL_KERN, KERN_PROC, KERN_PROC_PATHNAME, -1 };
-    if(sysctl(mib, 4, nullptr, &pathlen, nullptr, 0) == -1)
-        WARN("Failed to sysctl kern.proc.pathname: %s\n",
-            std::generic_category().message(errno).c_str());
-    else
-    {
-        pathname.resize(pathlen + 1);
-        sysctl(mib, 4, pathname.data(), &pathlen, nullptr, 0);
-        pathname.resize(pathlen);
-    }
-#endif
-#ifdef HAVE_PROC_PIDPATH
-    if(pathname.empty())
-    {
-        char procpath[PROC_PIDPATHINFO_MAXSIZE]{};
-        const pid_t pid{getpid()};
-        if(proc_pidpath(pid, procpath, sizeof(procpath)) < 1)
-            ERR("proc_pidpath(%d, ...) failed: %s\n", pid,
+        size_t pathlen{};
+        std::array<int,4> mib{{CTL_KERN, KERN_PROC, KERN_PROC_PATHNAME, -1}};
+        if(sysctl(mib.data(), mib.size(), nullptr, &pathlen, nullptr, 0) == -1)
+            WARN("Failed to sysctl kern.proc.pathname: %s\n",
                 std::generic_category().message(errno).c_str());
         else
-            pathname.insert(pathname.end(), procpath, procpath+strlen(procpath));
-    }
+        {
+            pathname.resize(pathlen+1, '\0');
+            sysctl(mib.data(), mib.size(), pathname.data(), &pathlen, nullptr, 0);
+            while(!pathname.empty() && pathname.back() == 0)
+                pathname.pop_back();
+        }
+#endif
+#ifdef HAVE_PROC_PIDPATH
+        if(pathname.empty())
+        {
+            std::array<char,PROC_PIDPATHINFO_MAXSIZE> procpath{};
+            const pid_t pid{getpid()};
+            if(proc_pidpath(pid, procpath.data(), procpath.size()) < 1)
+                ERR("proc_pidpath(%d, ...) failed: %s\n", pid,
+                    std::generic_category().message(errno).c_str());
+            else
+                pathname = std::string_view{procpath.data()};
+        }
 #endif
 #ifdef __HAIKU__
-    if(pathname.empty())
-    {
-        char procpath[PATH_MAX];
-        if(find_path(B_APP_IMAGE_SYMBOL, B_FIND_PATH_IMAGE_PATH, NULL, procpath, sizeof(procpath)) == B_OK)
-            pathname.insert(pathname.end(), procpath, procpath+strlen(procpath));
-    }
+        if(pathname.empty())
+        {
+            std::array<char,PATH_MAX> procpath{};
+            if(find_path(B_APP_IMAGE_SYMBOL, B_FIND_PATH_IMAGE_PATH, NULL, procpath.data(), procpath.size()) == B_OK)
+                pathname = std::string_view{procpath.data()};
+        }
 #endif
 #ifndef __SWITCH__
-    if(pathname.empty())
-    {
-        const std::array SelfLinkNames{
-            "/proc/self/exe"sv,
-            "/proc/self/file"sv,
-            "/proc/curproc/exe"sv,
-            "/proc/curproc/file"sv,
-        };
-
-        std::string selfname{};
-        for(const std::string_view name : SelfLinkNames)
+        if(pathname.empty())
         {
-            try {
-                auto path = std::filesystem::read_symlink(name);
-                if(!path.empty())
-                {
-                    selfname = path.u8string();
-                    break;
+            const std::array SelfLinkNames{
+                "/proc/self/exe"sv,
+                "/proc/self/file"sv,
+                "/proc/curproc/exe"sv,
+                "/proc/curproc/file"sv,
+            };
+
+            for(const std::string_view name : SelfLinkNames)
+            {
+                try {
+                    if(auto path = std::filesystem::read_symlink(name); !path.empty())
+                    {
+                        pathname = path.u8string();
+                        break;
+                    }
+                }
+                catch(std::filesystem::filesystem_error& fe) {
+                    if(fe.code() != std::make_error_code(std::errc::no_such_file_or_directory))
+                        WARN("Failed to read_symlink %.*s: %s\n", static_cast<int>(name.size()),
+                            name.data(), fe.what());
+                }
+                catch(...) {
                 }
             }
-            catch(std::filesystem::filesystem_error& fe) {
-                if(fe.code() != std::make_error_code(std::errc::no_such_file_or_directory))
-                    WARN("Failed to readlink %.*s: %s\n", static_cast<int>(name.size()),
-                        name.data(), fe.what());
-            }
-            catch(...) {
-            }
         }
-
-        if(!selfname.empty())
-        {
-            pathname.resize(selfname.size());
-            std::copy(selfname.cbegin(), selfname.cend(), pathname.begin());
-        }
-    }
 #endif
-    while(!pathname.empty() && pathname.back() == 0)
-        pathname.pop_back();
 
-    auto sep = std::find(pathname.crbegin(), pathname.crend(), '/');
-    if(sep != pathname.crend())
-        procbin.emplace(std::string(pathname.cbegin(), sep.base()-1),
-            std::string(sep.base(), pathname.cend()));
-    else
-        procbin.emplace(std::string{}, std::string(pathname.cbegin(), pathname.cend()));
+        PathNamePair res{};
+        if(auto seppos = pathname.rfind('/'); seppos < pathname.size())
+        {
+            res.path = std::string_view{pathname}.substr(0, seppos);
+            res.fname = std::string_view{pathname}.substr(seppos+1);
+        }
+        else
+            res.fname = pathname;
 
-    TRACE("Got binary: \"%s\", \"%s\"\n", procbin->path.c_str(), procbin->fname.c_str());
-    return *procbin;
+        TRACE("Got binary: \"%s\", \"%s\"\n", res.path.c_str(), res.fname.c_str());
+        return res;
+    };
+    static const PathNamePair procbin{get_procbin()};
+    return procbin;
 }
 
 std::vector<std::string> SearchDataFiles(const char *ext, const char *subdir)

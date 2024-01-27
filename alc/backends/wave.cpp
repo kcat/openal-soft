@@ -31,6 +31,7 @@
 #include <cstring>
 #include <exception>
 #include <functional>
+#include <system_error>
 #include <thread>
 #include <vector>
 
@@ -218,7 +219,7 @@ void WaveBackend::open(std::string_view name)
 #endif
     if(!mFile)
         throw al::backend_exception{al::backend_error::DeviceError, "Could not open file '%s': %s",
-            fname->c_str(), strerror(errno)};
+            fname->c_str(), std::generic_category().message(errno).c_str()};
 
     mDevice->DeviceName = name;
 }
@@ -318,7 +319,7 @@ bool WaveBackend::reset()
 
     if(ferror(mFile.get()))
     {
-        ERR("Error writing header: %s\n", strerror(errno));
+        ERR("Error writing header: %s\n", std::generic_category().message(errno).c_str());
         return false;
     }
     mDataStart = ftell(mFile.get());

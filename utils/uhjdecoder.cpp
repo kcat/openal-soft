@@ -30,6 +30,7 @@
 #include <cstring>
 #include <memory>
 #include <string>
+#include <system_error>
 #include <utility>
 #include <vector>
 
@@ -454,7 +455,8 @@ int main(int argc, char **argv)
         fwrite32le(0xFFFFFFFF, outfile.get()); // 'data' header len; filled in at close
         if(ferror(outfile.get()))
         {
-            fprintf(stderr, "Error writing wave file header: %s (%d)\n", strerror(errno), errno);
+            fprintf(stderr, "Error writing wave file header: %s (%d)\n",
+                std::generic_category().message(errno).c_str(), errno);
             continue;
         }
 
@@ -508,7 +510,8 @@ int main(int argc, char **argv)
             std::size_t wrote{fwrite(outmem.data(), sizeof(byte4)*outchans, got, outfile.get())};
             if(wrote < got)
             {
-                fprintf(stderr, "Error writing wave data: %s (%d)\n", strerror(errno), errno);
+                fprintf(stderr, "Error writing wave data: %s (%d)\n",
+                    std::generic_category().message(errno).c_str(), errno);
                 break;
             }
         }

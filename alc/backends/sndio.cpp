@@ -28,6 +28,7 @@
 #include <cstring>
 #include <functional>
 #include <poll.h>
+#include <system_error>
 #include <thread>
 #include <vector>
 
@@ -334,7 +335,8 @@ int SndioCapture::recordProc()
         if(pollres < 0)
         {
             if(errno == EINTR) continue;
-            mDevice->handleDisconnect("Poll error: %s", strerror(errno));
+            mDevice->handleDisconnect("Poll error: %s",
+                std::generic_category().message(errno).c_str());
             break;
         }
         if(pollres == 0)

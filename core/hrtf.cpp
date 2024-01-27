@@ -1265,8 +1265,7 @@ std::vector<std::string> EnumerateHrtf(std::optional<std::string> pathopt)
                 entry.remove_suffix(1);
             if(!entry.empty())
             {
-                const std::string pname{entry};
-                for(const auto &fname : SearchDataFiles(".mhr", pname.c_str()))
+                for(const auto &fname : SearchDataFiles(".mhr"sv, entry))
                     AddFileEntry(fname);
             }
         }
@@ -1274,7 +1273,7 @@ std::vector<std::string> EnumerateHrtf(std::optional<std::string> pathopt)
 
     if(usedefaults)
     {
-        for(const auto &fname : SearchDataFiles(".mhr", "openal/hrtf"))
+        for(const auto &fname : SearchDataFiles(".mhr"sv, "openal/hrtf"sv))
             AddFileEntry(fname);
 
         if(!GetResource(IDR_DEFAULT_HRTF_MHR).empty())

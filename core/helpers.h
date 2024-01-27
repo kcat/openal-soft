@@ -1,8 +1,8 @@
 #ifndef CORE_HELPERS_H
 #define CORE_HELPERS_H
 
-#include <utility>
 #include <string>
+#include <string_view>
 #include <vector>
 
 
@@ -15,6 +15,6 @@ extern int RTPrioLevel;
 extern bool AllowRTTimeLimit;
 void SetRTPriority();
 
-std::vector<std::string> SearchDataFiles(const char *match, const char *subdir);
+std::vector<std::string> SearchDataFiles(const std::string_view ext, const std::string_view subdir);
 
 #endif /* CORE_HELPERS_H */

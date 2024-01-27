@@ -141,7 +141,7 @@ struct CoTaskMemDeleter {
 
 } // namespace
 
-std::vector<std::string> SearchDataFiles(const char *ext, const char *subdir)
+std::vector<std::string> SearchDataFiles(const std::string_view ext, const std::string_view subdir)
 {
     std::lock_guard<std::mutex> srchlock{gSearchLock};
 
@@ -324,7 +324,7 @@ const PathNamePair &GetProcBinary()
     return procbin;
 }
 
-std::vector<std::string> SearchDataFiles(const char *ext, const char *subdir)
+std::vector<std::string> SearchDataFiles(const std::string_view ext, const std::string_view subdir)
 {
     std::lock_guard<std::mutex> srchlock{gSearchLock};
 

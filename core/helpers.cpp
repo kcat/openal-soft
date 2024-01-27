@@ -26,13 +26,6 @@
 #include "strutils.h"
 
 
-/* Mixing thread priority level */
-int RTPrioLevel{1};
-
-/* Allow reducing the process's RTTime limit for RTKit. */
-bool AllowRTTimeLimit{true};
-
-
 namespace {
 
 std::mutex gSearchLock;

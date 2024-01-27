@@ -11,8 +11,12 @@ struct PathNamePair {
 };
 const PathNamePair &GetProcBinary();
 
-extern int RTPrioLevel;
-extern bool AllowRTTimeLimit;
+/* Mixing thread priority level */
+inline int RTPrioLevel{1};
+
+/* Allow reducing the process's RTTime limit for RTKit. */
+inline bool AllowRTTimeLimit{true};
+
 void SetRTPriority();
 
 std::vector<std::string> SearchDataFiles(const std::string_view ext, const std::string_view subdir);

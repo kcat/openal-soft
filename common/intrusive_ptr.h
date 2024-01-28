@@ -102,23 +102,6 @@ public:
     void swap(intrusive_ptr&& rhs) noexcept { std::swap(mPtr, rhs.mPtr); }
 };
 
-#define AL_DECL_OP(op)                                                        \
-template<typename T>                                                          \
-inline bool operator op(const intrusive_ptr<T> &lhs, const T *rhs) noexcept   \
-{ return lhs.get() op rhs; }                                                  \
-template<typename T>                                                          \
-inline bool operator op(const T *lhs, const intrusive_ptr<T> &rhs) noexcept   \
-{ return lhs op rhs.get(); }
-
-AL_DECL_OP(==)
-AL_DECL_OP(!=)
-AL_DECL_OP(<=)
-AL_DECL_OP(>=)
-AL_DECL_OP(<)
-AL_DECL_OP(>)
-
-#undef AL_DECL_OP
-
 } // namespace al
 
 #endif /* INTRUSIVE_PTR_H */

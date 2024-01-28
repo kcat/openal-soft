@@ -377,8 +377,10 @@ private:
 
 /* Must be less than 15 characters (16 including terminating null) for
  * compatibility with pthread_setname_np limitations. */
-#define MIXER_THREAD_NAME "alsoft-mixer"
+[[nodiscard]] constexpr
+auto GetMixerThreadName() noexcept -> const char* { return "alsoft-mixer"; }
 
-#define RECORD_THREAD_NAME "alsoft-record"
+[[nodiscard]] constexpr
+auto GetRecordThreadName() noexcept -> const char* { return "alsoft-record"; }
 
 #endif /* CORE_DEVICE_H */

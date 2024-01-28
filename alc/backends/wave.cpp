@@ -124,7 +124,7 @@ int WaveBackend::mixerProc()
 {
     const milliseconds restTime{mDevice->UpdateSize*1000/mDevice->Frequency / 2};
 
-    althrd_setname(MIXER_THREAD_NAME);
+    althrd_setname(GetMixerThreadName());
 
     const size_t frameStep{mDevice->channelsFromFmt()};
     const size_t frameSize{mDevice->frameSizeFromFmt()};

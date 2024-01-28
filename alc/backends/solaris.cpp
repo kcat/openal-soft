@@ -89,7 +89,7 @@ SolarisBackend::~SolarisBackend()
 int SolarisBackend::mixerProc()
 {
     SetRTPriority();
-    althrd_setname(MIXER_THREAD_NAME);
+    althrd_setname(GetMixerThreadName());
 
     const size_t frame_step{mDevice->channelsFromFmt()};
     const size_t frame_size{mDevice->frameSizeFromFmt()};

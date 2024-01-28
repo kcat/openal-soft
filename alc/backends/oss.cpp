@@ -285,7 +285,7 @@ OSSPlayback::~OSSPlayback()
 int OSSPlayback::mixerProc()
 {
     SetRTPriority();
-    althrd_setname(MIXER_THREAD_NAME);
+    althrd_setname(GetMixerThreadName());
 
     const size_t frame_step{mDevice->channelsFromFmt()};
     const size_t frame_size{mDevice->frameSizeFromFmt()};
@@ -495,7 +495,7 @@ OSScapture::~OSScapture()
 int OSScapture::recordProc()
 {
     SetRTPriority();
-    althrd_setname(RECORD_THREAD_NAME);
+    althrd_setname(GetRecordThreadName());
 
     const size_t frame_size{mDevice->frameSizeFromFmt()};
     while(!mKillNow.load(std::memory_order_acquire))

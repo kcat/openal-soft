@@ -178,7 +178,7 @@ void CALLBACK WinMMPlayback::waveOutProc(HWAVEOUT, UINT msg, DWORD_PTR, DWORD_PT
 FORCE_ALIGN int WinMMPlayback::mixerProc()
 {
     SetRTPriority();
-    althrd_setname(MIXER_THREAD_NAME);
+    althrd_setname(GetMixerThreadName());
 
     while(!mKillNow.load(std::memory_order_acquire)
         && mDevice->Connected.load(std::memory_order_acquire))
@@ -412,7 +412,7 @@ void CALLBACK WinMMCapture::waveInProc(HWAVEIN, UINT msg, DWORD_PTR, DWORD_PTR) 
 
 int WinMMCapture::captureProc()
 {
-    althrd_setname(RECORD_THREAD_NAME);
+    althrd_setname(GetRecordThreadName());
 
     while(!mKillNow.load(std::memory_order_acquire) &&
           mDevice->Connected.load(std::memory_order_acquire))

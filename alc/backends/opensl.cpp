@@ -230,7 +230,7 @@ void OpenSLPlayback::process(SLAndroidSimpleBufferQueueItf) noexcept
 int OpenSLPlayback::mixerProc()
 {
     SetRTPriority();
-    althrd_setname(MIXER_THREAD_NAME);
+    althrd_setname(GetMixerThreadName());
 
     SLPlayItf player;
     SLAndroidSimpleBufferQueueItf bufferQueue;

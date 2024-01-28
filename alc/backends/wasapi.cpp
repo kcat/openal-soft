@@ -1112,7 +1112,7 @@ FORCE_ALIGN int WasapiPlayback::mixerProc()
     auto &audio = std::get<PlainDevice>(mAudio);
 
     SetRTPriority();
-    althrd_setname(MIXER_THREAD_NAME);
+    althrd_setname(GetMixerThreadName());
 
     const uint frame_size{mFormat.Format.nChannels * mFormat.Format.wBitsPerSample / 8u};
     const uint update_size{mOrigUpdateSize};
@@ -1198,7 +1198,7 @@ FORCE_ALIGN int WasapiPlayback::mixerSpatialProc()
     auto &audio = std::get<SpatialDevice>(mAudio);
 
     SetRTPriority();
-    althrd_setname(MIXER_THREAD_NAME);
+    althrd_setname(GetMixerThreadName());
 
     std::vector<ComPtr<ISpatialAudioObject>> channels;
     std::vector<float*> buffers;
@@ -2140,7 +2140,7 @@ FORCE_ALIGN int WasapiCapture::recordProc()
         return 1;
     }
 
-    althrd_setname(RECORD_THREAD_NAME);
+    althrd_setname(GetRecordThreadName());
 
     std::vector<float> samples;
     while(!mKillNow.load(std::memory_order_relaxed))

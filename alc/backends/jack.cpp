@@ -418,7 +418,7 @@ int JackPlayback::process(jack_nframes_t numframes) noexcept
 int JackPlayback::mixerProc()
 {
     SetRTPriority();
-    althrd_setname(MIXER_THREAD_NAME);
+    althrd_setname(GetMixerThreadName());
 
     const size_t frame_step{mDevice->channelsFromFmt()};
 

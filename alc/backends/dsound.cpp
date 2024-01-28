@@ -210,7 +210,7 @@ DSoundPlayback::~DSoundPlayback()
 FORCE_ALIGN int DSoundPlayback::mixerProc()
 {
     SetRTPriority();
-    althrd_setname(MIXER_THREAD_NAME);
+    althrd_setname(GetMixerThreadName());
 
     DSBCAPS DSBCaps{};
     DSBCaps.dwSize = sizeof(DSBCaps);

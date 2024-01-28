@@ -66,7 +66,7 @@ int NullBackend::mixerProc()
     const milliseconds restTime{mDevice->UpdateSize*1000/mDevice->Frequency / 2};
 
     SetRTPriority();
-    althrd_setname(MIXER_THREAD_NAME);
+    althrd_setname(GetMixerThreadName());
 
     int64_t done{0};
     auto start = std::chrono::steady_clock::now();

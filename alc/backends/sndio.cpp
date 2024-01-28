@@ -88,7 +88,7 @@ int SndioPlayback::mixerProc()
     const size_t frameSize{frameStep * mDevice->bytesFromFmt()};
 
     SetRTPriority();
-    althrd_setname(MIXER_THREAD_NAME);
+    althrd_setname(GetMixerThreadName());
 
     while(!mKillNow.load(std::memory_order_acquire)
         && mDevice->Connected.load(std::memory_order_acquire))
@@ -309,7 +309,7 @@ SndioCapture::~SndioCapture()
 int SndioCapture::recordProc()
 {
     SetRTPriority();
-    althrd_setname(RECORD_THREAD_NAME);
+    althrd_setname(GetRecordThreadName());
 
     const uint frameSize{mDevice->frameSizeFromFmt()};
 

@@ -33,6 +33,7 @@
 #include <vector>
 
 #include "alnumeric.h"
+#include "alstring.h"
 #include "althrd_setname.h"
 #include "core/device.h"
 #include "core/helpers.h"
@@ -119,7 +120,7 @@ void SndioPlayback::open(std::string_view name)
         name = GetDefaultName();
     else if(name != GetDefaultName())
         throw al::backend_exception{al::backend_error::NoDevice, "Device name \"%.*s\" not found",
-            static_cast<int>(name.length()), name.data()};
+            al::sizei(name), name.data()};
 
     sio_hdl *sndHandle{sio_open(nullptr, SIO_PLAY, 0)};
     if(!sndHandle)
@@ -391,7 +392,7 @@ void SndioCapture::open(std::string_view name)
         name = GetDefaultName();
     else if(name != GetDefaultName())
         throw al::backend_exception{al::backend_error::NoDevice, "Device name \"%.*s\" not found",
-            static_cast<int>(name.length()), name.data()};
+            al::sizei(name), name.data()};
 
     mSndHandle = sio_open(nullptr, SIO_REC, true);
     if(mSndHandle == nullptr)

@@ -29,6 +29,7 @@
 #include "albit.h"
 #include "alc/alconfig.h"
 #include "alnumeric.h"
+#include "alstring.h"
 #include "core/device.h"
 #include "core/logging.h"
 #include "dynload.h"
@@ -115,7 +116,7 @@ void PortPlayback::open(std::string_view name)
         name = GetDefaultName();
     else if(name != GetDefaultName())
         throw al::backend_exception{al::backend_error::NoDevice, "Device name \"%.*s\" not found",
-            static_cast<int>(name.length()), name.data()};
+            al::sizei(name), name.data()};
 
     PaStreamParameters params{};
     auto devidopt = ConfigValueInt({}, "port", "device");
@@ -268,7 +269,7 @@ void PortCapture::open(std::string_view name)
         name = GetDefaultName();
     else if(name != GetDefaultName())
         throw al::backend_exception{al::backend_error::NoDevice, "Device name \"%.*s\" not found",
-            static_cast<int>(name.length()), name.data()};
+            al::sizei(name), name.data()};
 
     uint samples{mDevice->BufferSize};
     samples = maxu(samples, 100 * mDevice->Frequency / 1000);

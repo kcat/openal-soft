@@ -42,6 +42,7 @@
 #include "alc/alconfig.h"
 #include "almalloc.h"
 #include "alnumeric.h"
+#include "alstring.h"
 #include "althrd_setname.h"
 #include "core/device.h"
 #include "core/helpers.h"
@@ -673,7 +674,7 @@ void AlsaPlayback::open(std::string_view name)
             [name](const DevMap &entry) -> bool { return entry.name == name; });
         if(iter == PlaybackDevices.cend())
             throw al::backend_exception{al::backend_error::NoDevice,
-                "Device name \"%.*s\" not found", static_cast<int>(name.length()), name.data()};
+                "Device name \"%.*s\" not found", al::sizei(name), name.data()};
         driver = iter->device_name;
     }
     else
@@ -942,7 +943,7 @@ void AlsaCapture::open(std::string_view name)
             [name](const DevMap &entry) -> bool { return entry.name == name; });
         if(iter == CaptureDevices.cend())
             throw al::backend_exception{al::backend_error::NoDevice,
-                "Device name \"%.*s\" not found", static_cast<int>(name.length()), name.data()};
+                "Device name \"%.*s\" not found", al::sizei(name), name.data()};
         driver = iter->device_name;
     }
     else

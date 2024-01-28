@@ -36,6 +36,7 @@
 #include "alc/alconfig.h"
 #include "alnumeric.h"
 #include "alsem.h"
+#include "alstring.h"
 #include "althrd_setname.h"
 #include "core/device.h"
 #include "core/helpers.h"
@@ -484,7 +485,7 @@ void JackPlayback::open(std::string_view name)
         auto iter = std::find_if(PlaybackList.cbegin(), PlaybackList.cend(), check_name);
         if(iter == PlaybackList.cend())
             throw al::backend_exception{al::backend_error::NoDevice,
-                "Device name \"%.*s\" not found", static_cast<int>(name.length()), name.data()};
+                "Device name \"%.*s\" not found", al::sizei(name), name.data()};
         mPortPattern = iter->mPattern;
     }
 

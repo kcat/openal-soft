@@ -8,6 +8,7 @@
 #include <cstring>
 
 #include "alnumeric.h"
+#include "alstring.h"
 #include "core/device.h"
 #include "core/logging.h"
 #include "ringbuffer.h"
@@ -63,7 +64,7 @@ void OboePlayback::open(std::string_view name)
         name = GetDeviceName();
     else if(name != GetDeviceName())
         throw al::backend_exception{al::backend_error::NoDevice, "Device name \"%.*s\" not found",
-            static_cast<int>(name.length()), name.data()};
+            al::sizei(name), name.data()};
 
     /* Open a basic output stream, just to ensure it can work. */
     oboe::ManagedStream stream;
@@ -243,7 +244,7 @@ void OboeCapture::open(std::string_view name)
         name = GetDeviceName();
     else if(name != GetDeviceName())
         throw al::backend_exception{al::backend_error::NoDevice, "Device name \"%.*s\" not found",
-            static_cast<int>(name.length()), name.data()};
+            al::sizei(name), name.data()};
 
     oboe::AudioStreamBuilder builder;
     builder.setDirection(oboe::Direction::Input)

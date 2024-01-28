@@ -5,6 +5,7 @@
 #include <cassert>
 #include <exception>
 
+#include "alstring.h"
 #include "core/logging.h"
 
 
@@ -17,10 +18,9 @@ void eax_log_exception(std::string_view message) noexcept
         std::rethrow_exception(exception_ptr);
     }
     catch(const std::exception& ex) {
-        const auto ex_message = ex.what();
-        ERR("%.*s %s\n", static_cast<int>(message.length()), message.data(), ex_message);
+        ERR("%.*s %s\n", al::sizei(message), message.data(), ex.what());
     }
     catch(...) {
-        ERR("%.*s %s\n", static_cast<int>(message.length()), message.data(), "Generic exception.");
+        ERR("%.*s %s\n", al::sizei(message), message.data(), "Generic exception.");
     }
 }

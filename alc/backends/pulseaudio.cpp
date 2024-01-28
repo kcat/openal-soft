@@ -44,6 +44,7 @@
 #include "almalloc.h"
 #include "alnumeric.h"
 #include "alspan.h"
+#include "alstring.h"
 #include "core/devformat.h"
 #include "core/device.h"
 #include "core/logging.h"
@@ -797,7 +798,7 @@ void PulsePlayback::open(std::string_view name)
             [name](const DevMap &entry) -> bool { return entry.name == name; });
         if(iter == PlaybackDevices.cend())
             throw al::backend_exception{al::backend_error::NoDevice,
-                "Device name \"%.*s\" not found", static_cast<int>(name.length()), name.data()};
+                "Device name \"%.*s\" not found", al::sizei(name), name.data()};
         pulse_name = iter->device_name.c_str();
         dev_name = iter->name.c_str();
     }
@@ -1141,7 +1142,7 @@ void PulseCapture::open(std::string_view name)
             [name](const DevMap &entry) -> bool { return entry.name == name; });
         if(iter == CaptureDevices.cend())
             throw al::backend_exception{al::backend_error::NoDevice,
-                "Device name \"%.*s\" not found", static_cast<int>(name.length()), name.data()};
+                "Device name \"%.*s\" not found", al::sizei(name), name.data()};
         pulse_name = iter->device_name.c_str();
         mDevice->DeviceName = iter->name;
     }

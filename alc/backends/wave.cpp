@@ -39,6 +39,7 @@
 #include "alc/alconfig.h"
 #include "almalloc.h"
 #include "alnumeric.h"
+#include "alstring.h"
 #include "althrd_setname.h"
 #include "core/device.h"
 #include "core/helpers.h"
@@ -204,7 +205,7 @@ void WaveBackend::open(std::string_view name)
         name = GetDeviceName();
     else if(name != GetDeviceName())
         throw al::backend_exception{al::backend_error::NoDevice, "Device name \"%.*s\" not found",
-            static_cast<int>(name.length()), name.data()};
+            al::sizei(name), name.data()};
 
     /* There's only one "device", so if it's already open, we're done. */
     if(mFile) return;

@@ -266,8 +266,7 @@ void LoadConfigFromFile(std::istream &f)
             }
         }
 
-        TRACE(" setting '%s' = '%.*s'\n", fullKey.c_str(), static_cast<int>(valpart.size()),
-            valpart.data());
+        TRACE(" setting '%s' = '%.*s'\n", fullKey.c_str(), al::sizei(valpart), valpart.data());
 
         /* Check if we already have this option set */
         auto find_key = [&fullKey](const ConfigEntry &entry) -> bool

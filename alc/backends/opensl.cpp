@@ -36,6 +36,7 @@
 #include "albit.h"
 #include "alnumeric.h"
 #include "alsem.h"
+#include "alstring.h"
 #include "althrd_setname.h"
 #include "core/device.h"
 #include "core/helpers.h"
@@ -318,7 +319,7 @@ void OpenSLPlayback::open(std::string_view name)
         name = GetDeviceName();
     else if(name != GetDeviceName())
         throw al::backend_exception{al::backend_error::NoDevice, "Device name \"%.*s\" not found",
-            static_cast<int>(name.length()), name.data()};
+            al::sizei(name), name.data()};
 
     /* There's only one device, so if it's already open, there's nothing to do. */
     if(mEngineObj) return;
@@ -622,7 +623,7 @@ void OpenSLCapture::open(std::string_view name)
         name = GetDeviceName();
     else if(name != GetDeviceName())
         throw al::backend_exception{al::backend_error::NoDevice, "Device name \"%.*s\" not found",
-            static_cast<int>(name.length()), name.data()};
+            al::sizei(name), name.data()};
 
     SLresult result{slCreateEngine(&mEngineObj, 0, nullptr, 0, nullptr, nullptr)};
     PrintErr(result, "slCreateEngine");

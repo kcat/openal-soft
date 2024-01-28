@@ -37,15 +37,11 @@ void DirectorySearch(const std::filesystem::path &path, const std::string_view e
 {
     namespace fs = std::filesystem;
 
-    auto as_int = [](size_t value) noexcept -> int
-    { return static_cast<int>(std::min<size_t>(value, std::numeric_limits<int>::max())); };
-
     const auto base = static_cast<std::make_signed_t<size_t>>(results->size());
 
     try {
         auto fpath = fs::canonical(path.lexically_normal());
-        TRACE("Searching %s for *%.*s\n", fpath.u8string().c_str(), as_int(ext.size()),
-            ext.data());
+        TRACE("Searching %s for *%.*s\n", fpath.u8string().c_str(), al::sizei(ext), ext.data());
         for(auto&& dirent : fs::directory_iterator{fpath})
         {
             auto&& entrypath = dirent.path();
@@ -272,12 +268,12 @@ const PathNamePair &GetProcBinary()
                 }
                 catch(std::filesystem::filesystem_error& fe) {
                     if(fe.code() != std::make_error_code(std::errc::no_such_file_or_directory))
-                        WARN("Failed to read_symlink %.*s: %s\n", static_cast<int>(name.size()),
-                            name.data(), fe.what());
+                        WARN("Failed to read_symlink %.*s: %s\n", al::sizei(name), name.data(),
+                            fe.what());
                 }
                 catch(std::exception& e) {
-                    WARN("Failed to read_symlink %.*s: %s\n", static_cast<int>(name.size()),
-                        name.data(), e.what());
+                    WARN("Failed to read_symlink %.*s: %s\n", al::sizei(name), name.data(),
+                        e.what());
                 }
             }
         }

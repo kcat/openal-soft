@@ -47,6 +47,7 @@
 #include "albit.h"
 #include "alnumeric.h"
 #include "alspan.h"
+#include "alstring.h"
 #include "althrd_setname.h"
 #include "comptr.h"
 #include "core/device.h"
@@ -330,8 +331,7 @@ void DSoundPlayback::open(std::string_view name)
                     [&id](const DevMap &entry) -> bool { return entry.guid == id; });
             if(iter == PlaybackDevices.cend())
                 throw al::backend_exception{al::backend_error::NoDevice,
-                    "Device name \"%.*s\" not found", static_cast<int>(name.length()),
-                    name.data()};
+                    "Device name \"%.*s\" not found", al::sizei(name), name.data()};
         }
         guid = &iter->guid;
     }
@@ -602,8 +602,7 @@ void DSoundCapture::open(std::string_view name)
                     [&id](const DevMap &entry) -> bool { return entry.guid == id; });
             if(iter == CaptureDevices.cend())
                 throw al::backend_exception{al::backend_error::NoDevice,
-                    "Device name \"%.*s\" not found", static_cast<int>(name.length()),
-                    name.data()};
+                    "Device name \"%.*s\" not found", al::sizei(name), name.data()};
         }
         guid = &iter->guid;
     }

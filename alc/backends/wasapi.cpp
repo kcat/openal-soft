@@ -992,8 +992,7 @@ int WasapiProxy::messageHandler(std::promise<HRESULT> *promise)
     {
         TRACE("Got message \"%s\" (0x%04x, this=%p, param=\"%.*s\")\n",
             GetMessageTypeName(msg.mType), static_cast<uint>(msg.mType),
-            static_cast<void*>(msg.mProxy), static_cast<int>(msg.mParam.length()),
-            msg.mParam.data());
+            static_cast<void*>(msg.mProxy), al::sizei(msg.mParam), msg.mParam.data());
 
         switch(msg.mType)
         {
@@ -1345,8 +1344,7 @@ HRESULT WasapiPlayback::openProxy(std::string_view name)
         }
         if(iter == list.cend())
         {
-            WARN("Failed to find device name matching \"%.*s\"\n", static_cast<int>(name.length()),
-                name.data());
+            WARN("Failed to find device name matching \"%.*s\"\n", al::sizei(name), name.data());
             return E_FAIL;
         }
         devname = iter->name;
@@ -2274,8 +2272,7 @@ HRESULT WasapiCapture::openProxy(std::string_view name)
         }
         if(iter == devlist.cend())
         {
-            WARN("Failed to find device name matching \"%.*s\"\n", static_cast<int>(name.length()),
-                name.data());
+            WARN("Failed to find device name matching \"%.*s\"\n", al::sizei(name), name.data());
             return E_FAIL;
         }
         devname = iter->name;

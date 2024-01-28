@@ -40,6 +40,7 @@
 
 #include "alnumeric.h"
 #include "alsem.h"
+#include "alstring.h"
 #include "althrd_setname.h"
 #include "core/device.h"
 #include "core/helpers.h"
@@ -216,7 +217,7 @@ void WinMMPlayback::open(std::string_view name)
         PlaybackDevices.cbegin();
     if(iter == PlaybackDevices.cend())
         throw al::backend_exception{al::backend_error::NoDevice, "Device name \"%.*s\" not found",
-            static_cast<int>(name.length()), name.data()};
+            al::sizei(name), name.data()};
     auto DeviceID = static_cast<UINT>(std::distance(PlaybackDevices.cbegin(), iter));
 
     DevFmtType fmttype{mDevice->FmtType};
@@ -451,7 +452,7 @@ void WinMMCapture::open(std::string_view name)
         CaptureDevices.cbegin();
     if(iter == CaptureDevices.cend())
         throw al::backend_exception{al::backend_error::NoDevice, "Device name \"%.*s\" not found",
-            static_cast<int>(name.length()), name.data()};
+            al::sizei(name), name.data()};
     auto DeviceID = static_cast<UINT>(std::distance(CaptureDevices.cbegin(), iter));
 
     switch(mDevice->FmtChans)

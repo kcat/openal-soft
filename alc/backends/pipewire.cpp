@@ -1558,7 +1558,7 @@ void PipeWirePlayback::open(std::string_view name)
         auto match = std::find_if(devlist.cbegin(), devlist.cend(), match_name);
         if(match == devlist.cend())
             throw al::backend_exception{al::backend_error::NoDevice,
-                "Device name \"%.*s\" not found", static_cast<int>(name.length()), name.data()};
+                "Device name \"%.*s\" not found", al::sizei(name), name.data()};
 
         targetid = match->mSerial;
         devname = match->mName;
@@ -2015,7 +2015,7 @@ void PipeWireCapture::open(std::string_view name)
         }
         if(match == devlist.cend())
             throw al::backend_exception{al::backend_error::NoDevice,
-                "Device name \"%.*s\" not found", static_cast<int>(name.length()), name.data()};
+                "Device name \"%.*s\" not found", al::sizei(name), name.data()};
 
         targetid = match->mSerial;
         devname = name;

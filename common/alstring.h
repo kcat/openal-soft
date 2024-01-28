@@ -4,10 +4,16 @@
 #include <algorithm>
 #include <cstddef>
 #include <cstring>
+#include <limits>
 #include <string_view>
 
 
 namespace al {
+
+template<typename T, typename Traits>
+[[nodiscard]] constexpr
+auto sizei(const std::basic_string_view<T,Traits> str) noexcept -> int
+{ return static_cast<int>(std::min<std::size_t>(str.size(), std::numeric_limits<int>::max())); }
 
 [[nodiscard]]
 constexpr bool contains(const std::string_view str0, const std::string_view str1) noexcept

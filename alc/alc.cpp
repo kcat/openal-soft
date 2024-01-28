@@ -460,9 +460,7 @@ void alc_initconfig()
             else if(al::case_compare(entry, "neon"sv) == 0)
                 capfilter &= ~CPU_CAP_NEON;
             else
-                WARN("Invalid CPU extension \"%.*s\"\n", std::abs(static_cast<int>(entry.size())),
-                    entry.data());
-
+                WARN("Invalid CPU extension \"%.*s\"\n", al::sizei(entry), entry.data());
         }
     }
     if(auto cpuopt = GetCPUInfo())
@@ -2855,29 +2853,10 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName) noexcep
         return nullptr;
     }
 
-    /* We need to ensure the device name isn't too long. The string_view is
-     * printed using the "%.*s" formatter, which uses an int for the precision/
-     * length. It wouldn't be a significant problem if larger values simply
-     * printed fewer characters due to truncation, but negative values are
-     * ignored, treating it like a normal null-terminated string, and
-     * string_views don't need to be null-terminated.
-     *
-     * Other than the annoyance of checking, this shouldn't be a problem. Two
-     * billion bytes is enough for a device name.
-     */
     std::string_view devname{deviceName ? deviceName : ""};
     if(!devname.empty())
     {
-        if(devname.length() >= std::numeric_limits<int>::max())
-        {
-            ERR("Device name too long (%zu >= %d)\n", devname.length(),
-                std::numeric_limits<int>::max());
-            alcSetError(nullptr, ALC_INVALID_VALUE);
-            return nullptr;
-        }
-
-        TRACE("Opening playback device \"%.*s\"\n", static_cast<int>(devname.size()),
-            devname.data());
+        TRACE("Opening playback device \"%.*s\"\n", al::sizei(devname), devname.data());
         if(al::case_compare(devname, GetDefaultName()) == 0
 #ifdef _WIN32
             /* Some old Windows apps hardcode these expecting OpenAL to use a
@@ -3023,16 +3002,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, 
     std::string_view devname{deviceName ? deviceName : ""};
     if(!devname.empty())
     {
-        if(devname.length() >= std::numeric_limits<int>::max())
-        {
-            ERR("Device name too long (%zu >= %d)\n", devname.length(),
-                std::numeric_limits<int>::max());
-            alcSetError(nullptr, ALC_INVALID_VALUE);
-            return nullptr;
-        }
-
-        TRACE("Opening capture device \"%.*s\"\n", static_cast<int>(devname.size()),
-            devname.data());
+        TRACE("Opening capture device \"%.*s\"\n", al::sizei(devname), devname.data());
         if(al::case_compare(devname, GetDefaultName()) == 0
             || al::case_compare(devname, "openal-soft"sv) == 0)
             devname = {};

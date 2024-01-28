@@ -770,7 +770,7 @@ void LoadReverbPreset(const std::string_view name, ALeffect *effect)
         return;
     }
 
-    WARN("Reverb preset '%.*s' not found\n", std::abs(static_cast<int>(name.size())), name.data());
+    WARN("Reverb preset '%.*s' not found\n", al::sizei(name), name.data());
 }
 
 bool IsValidEffectType(ALenum type) noexcept

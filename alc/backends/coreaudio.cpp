@@ -35,6 +35,7 @@
 #include <optional>
 
 #include "alnumeric.h"
+#include "alstring.h"
 #include "core/converter.h"
 #include "core/device.h"
 #include "core/logging.h"
@@ -376,7 +377,7 @@ void CoreAudioPlayback::open(std::string_view name)
         auto devmatch = std::find_if(PlaybackList.cbegin(), PlaybackList.cend(), find_name);
         if(devmatch == PlaybackList.cend())
             throw al::backend_exception{al::backend_error::NoDevice,
-                "Device name \"%.*s\" not found", static_cast<int>(name.length()), name.data()};
+                "Device name \"%.*s\" not found", al::sizei(name), name.data()};
 
         audioDevice = devmatch->mId;
     }
@@ -385,7 +386,7 @@ void CoreAudioPlayback::open(std::string_view name)
         name = ca_device;
     else if(name != ca_device)
         throw al::backend_exception{al::backend_error::NoDevice, "Device name \"%.*s\" not found",
-            static_cast<int>(name.length()), name.data()};
+            al::sizei(name), name.data()};
 #endif
 
     /* open the default output unit */
@@ -675,7 +676,7 @@ void CoreAudioCapture::open(std::string_view name)
         auto devmatch = std::find_if(CaptureList.cbegin(), CaptureList.cend(), find_name);
         if(devmatch == CaptureList.cend())
             throw al::backend_exception{al::backend_error::NoDevice,
-                "Device name \"%.*s\" not found", static_cast<int>(name.length()), name.data()};
+                "Device name \"%.*s\" not found", al::sizei(name), name.data()};
 
         audioDevice = devmatch->mId;
     }
@@ -684,7 +685,7 @@ void CoreAudioCapture::open(std::string_view name)
         name = ca_device;
     else if(name != ca_device)
         throw al::backend_exception{al::backend_error::NoDevice, "Device name \"%.*s\" not found",
-            static_cast<int>(name.length()), name.data()};
+            al::sizei(name), name.data()};
 #endif
 
     AudioComponentDescription desc{};

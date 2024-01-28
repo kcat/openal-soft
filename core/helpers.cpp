@@ -140,20 +140,11 @@ std::vector<std::string> SearchDataFiles(const std::string_view ext, const std::
 
     /* If the path is absolute, use it directly. */
     std::vector<std::string> results;
-    try {
-        if(auto fpath = std::filesystem::u8path(subdir); fpath.is_absolute())
-        {
-            std::string path{fpath.make_preferred().u8string()};
-            DirectorySearch(path, ext, &results);
-            return results;
-        }
-    }
-    catch(std::filesystem::filesystem_error &fe) {
-        if(fe.code() != std::make_error_code(std::errc::no_such_file_or_directory))
-            ERR("Error enumerating directory: %s\n", fe.what());
-    }
-    catch(std::exception& e) {
-        ERR("Error enumerating directory: %s\n", e.what());
+    if(auto fpath = std::filesystem::u8path(subdir); fpath.is_absolute())
+    {
+        std::string path{fpath.make_preferred().u8string()};
+        DirectorySearch(path, ext, &results);
+        return results;
     }
 
     std::string path;
@@ -245,10 +236,9 @@ const PathNamePair &GetProcBinary()
                 std::generic_category().message(errno).c_str());
         else
         {
-            pathname.resize(pathlen+1, '\0');
-            sysctl(mib.data(), mib.size(), pathname.data(), &pathlen, nullptr, 0);
-            while(!pathname.empty() && pathname.back() == 0)
-                pathname.pop_back();
+            auto procpath = std::vector<char>(pathlen+1, '\0');
+            sysctl(mib.data(), mib.size(), procpath.data(), &pathlen, nullptr, 0);
+            pathname = procpath.data();
         }
 #endif
 #ifdef HAVE_PROC_PIDPATH
@@ -260,7 +250,7 @@ const PathNamePair &GetProcBinary()
                 ERR("proc_pidpath(%d, ...) failed: %s\n", pid,
                     std::generic_category().message(errno).c_str());
             else
-                pathname = std::string_view{procpath.data()};
+                pathname = procpath.data();
         }
 #endif
 #ifdef __HAIKU__
@@ -268,7 +258,7 @@ const PathNamePair &GetProcBinary()
         {
             std::array<char,PATH_MAX> procpath{};
             if(find_path(B_APP_IMAGE_SYMBOL, B_FIND_PATH_IMAGE_PATH, NULL, procpath.data(), procpath.size()) == B_OK)
-                pathname = std::string_view{procpath.data()};
+                pathname = procpath.data();
         }
 #endif
 #ifndef __SWITCH__
@@ -295,7 +285,9 @@ const PathNamePair &GetProcBinary()
                         WARN("Failed to read_symlink %.*s: %s\n", static_cast<int>(name.size()),
                             name.data(), fe.what());
                 }
-                catch(...) {
+                catch(std::exception& e) {
+                    WARN("Failed to read_symlink %.*s: %s\n", static_cast<int>(name.size()),
+                        name.data(), e.what());
                 }
             }
         }
@@ -322,19 +314,10 @@ std::vector<std::string> SearchDataFiles(const std::string_view ext, const std::
     std::lock_guard<std::mutex> srchlock{gSearchLock};
 
     std::vector<std::string> results;
-    try {
-        if(auto fpath = std::filesystem::u8path(subdir); fpath.is_absolute())
-        {
-            DirectorySearch(subdir, ext, &results);
-            return results;
-        }
-    }
-    catch(std::filesystem::filesystem_error &fe) {
-        if(fe.code() != std::make_error_code(std::errc::no_such_file_or_directory))
-            ERR("Error enumerating directory: %s\n", fe.what());
-    }
-    catch(std::exception& e) {
-        ERR("Error enumerating directory: %s\n", e.what());
+    if(auto fpath = std::filesystem::u8path(subdir); fpath.is_absolute())
+    {
+        DirectorySearch(subdir, ext, &results);
+        return results;
     }
 
     /* Search the app-local directory. */
@@ -384,15 +367,12 @@ std::vector<std::string> SearchDataFiles(const std::string_view ext, const std::
 
 #ifdef ALSOFT_INSTALL_DATADIR
     // Search the installation data directory
+    if(std::string path{ALSOFT_INSTALL_DATADIR}; !path.empty())
     {
-        std::string path{ALSOFT_INSTALL_DATADIR};
-        if(!path.empty())
-        {
-            if(path.back() != '/')
-                path += '/';
-            path += subdir;
-            DirectorySearch(path, ext, &results);
-        }
+        if(path.back() != '/')
+            path += '/';
+        path += subdir;
+        DirectorySearch(path, ext, &results);
     }
 #endif
 

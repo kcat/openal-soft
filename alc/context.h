@@ -446,7 +446,7 @@ private:
         typename TMemberResult,
         typename TProps,
         typename TState>
-    void eax_defer(const EaxCall& call, TState& state, TMemberResult TProps::*member) noexcept
+    void eax_defer(const EaxCall& call, TState& state, TMemberResult TProps::*member)
     {
         const auto& src = call.get_value<ContextException, const TMemberResult>();
         TValidator{}(src);
@@ -529,7 +529,7 @@ private:
 
 using ContextRef = al::intrusive_ptr<ALCcontext>;
 
-ContextRef GetContextRef();
+ContextRef GetContextRef() noexcept;
 
 void UpdateContextProps(ALCcontext *context);
 

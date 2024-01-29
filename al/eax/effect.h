@@ -36,7 +36,7 @@ struct overloaded : Ts... { using Ts::operator()...; };
 template<typename... Ts>
 overloaded(Ts...) -> overloaded<Ts...>;
 
-constexpr ALenum EnumFromEaxEffectType(const EaxEffectProps &props) noexcept
+constexpr ALenum EnumFromEaxEffectType(const EaxEffectProps &props)
 {
     return std::visit(overloaded{
         [](const std::monostate&) noexcept { return AL_EFFECT_NULL; },

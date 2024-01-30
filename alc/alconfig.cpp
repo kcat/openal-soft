@@ -340,7 +340,8 @@ void ReadALConfig()
             const std::wstring_view buffer{bufstore.get()};
 #else
         winrt::Windows::Storage::ApplicationDataContainer localSettings = winrt::Windows::Storage::ApplicationData::Current().LocalSettings();
-        auto buffer = Windows::Storage::ApplicationData::Current().RoamingFolder().Path();
+        auto bufstore = Windows::Storage::ApplicationData::Current().RoamingFolder().Path();
+        std::wstring_view buffer{bufstore};
         {
 #endif
             path = fs::path{buffer};

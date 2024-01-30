@@ -325,12 +325,9 @@ int main(int argc, char **argv)
             {
                 if(a.size() != b.size())
                     return false;
-                for(const int id : a)
-                {
-                    if(std::find(b.begin(), b.end(), id) == b.end())
-                        return false;
-                }
-                return true;
+                auto find_channel = [b](const int id) -> bool
+                { return std::find(b.begin(), b.end(), id) != b.end(); };
+                return std::all_of(a.cbegin(), a.cend(), find_channel);
             };
             if(match_chanmap(chanmap, stereomap))
                 spkrs = StereoMap;

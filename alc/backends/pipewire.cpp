@@ -807,12 +807,10 @@ bool MatchChannelMap(const al::span<const uint32_t> map0,
 {
     if(map0.size() < map1.size())
         return false;
-    for(const spa_audio_channel chid : map1)
-    {
-        if(std::find(map0.begin(), map0.end(), chid) == map0.end())
-            return false;
-    }
-    return true;
+
+    auto find_channel = [map0](const spa_audio_channel chid) -> bool
+    { return std::find(map0.begin(), map0.end(), chid) != map0.end(); };
+    return std::all_of(map1.cbegin(), map1.cend(), find_channel);
 }
 
 void DeviceNode::parseSampleRate(const spa_pod *value, bool force_update) noexcept

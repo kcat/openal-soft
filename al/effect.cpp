@@ -778,10 +778,7 @@ bool IsValidEffectType(ALenum type) noexcept
     if(type == AL_EFFECT_NULL)
         return true;
 
-    for(const auto &effect_item : gEffectList)
-    {
-        if(type == effect_item.val && !DisabledEffects.test(effect_item.type))
-            return true;
-    }
-    return false;
+    auto check_effect = [type](const EffectList &item) noexcept -> bool
+    { return type == item.val && !DisabledEffects.test(item.type); };
+    return std::any_of(gEffectList.cbegin(), gEffectList.cend(), check_effect);
 }

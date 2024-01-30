@@ -426,7 +426,7 @@ void ReadALConfig()
         std::array<unsigned char,PATH_MAX> fileName{};
         if(configURL && CFURLGetFileSystemRepresentation(configURL, true, fileName.data(), fileName.size()))
         {
-            if(al::ifstream f{reinterpret_cast<char*>(fileName)}; f.is_open())
+            if(al::ifstream f{reinterpret_cast<char*>(fileName.data())}; f.is_open())
                 LoadConfigFromFile(f);
         }
     }

@@ -923,7 +923,7 @@ ALenum ALeffectslot::initEffect(ALuint effectId, ALenum effectType, const Effect
     return AL_NO_ERROR;
 }
 
-void ALeffectslot::updateProps(ALCcontext *context)
+void ALeffectslot::updateProps(ALCcontext *context) const
 {
     /* Get an unused property container, or allocate a new one as needed. */
     EffectSlotProps *props{context->mFreeEffectSlotProps.load(std::memory_order_acquire)};
@@ -935,8 +935,8 @@ void ALeffectslot::updateProps(ALCcontext *context)
     EffectSlotProps *next;
     do {
         next = props->next.load(std::memory_order_relaxed);
-    } while(context->mFreeEffectSlotProps.compare_exchange_weak(props, next,
-        std::memory_order_acq_rel, std::memory_order_acquire) == false);
+    } while(!context->mFreeEffectSlotProps.compare_exchange_weak(props, next,
+        std::memory_order_acq_rel, std::memory_order_acquire));
 
     /* Copy in current property values. */
     props->Gain = Gain;
@@ -1152,7 +1152,7 @@ void ALeffectslot::eax_fx_slot_set_defaults()
     eax_df_ = EaxDirtyFlags{};
 }
 
-void ALeffectslot::eax4_fx_slot_get(const EaxCall& call, const Eax4Props& props) const
+void ALeffectslot::eax4_fx_slot_get(const EaxCall& call, const Eax4Props& props)
 {
     switch(call.get_property_id())
     {
@@ -1176,7 +1176,7 @@ void ALeffectslot::eax4_fx_slot_get(const EaxCall& call, const Eax4Props& props)
     }
 }
 
-void ALeffectslot::eax5_fx_slot_get(const EaxCall& call, const Eax5Props& props) const
+void ALeffectslot::eax5_fx_slot_get(const EaxCall& call, const Eax5Props& props)
 {
     switch(call.get_property_id())
     {
@@ -1286,15 +1286,12 @@ void ALeffectslot::eax5_fx_slot_set_all(const EaxCall& call)
 
 bool ALeffectslot::eax_fx_slot_should_update_sources() const noexcept
 {
-    const auto dirty_bits =
+    static constexpr auto dirty_bits =
         eax_occlusion_dirty_bit |
         eax_occlusion_lf_ratio_dirty_bit |
         eax_flags_dirty_bit;
 
-    if((eax_df_ & dirty_bits) != EaxDirtyFlags{})
-        return true;
-
-    return false;
+    return (eax_df_ & dirty_bits) != EaxDirtyFlags{};
 }
 
 // Returns `true` if all sources should be updated, or `false` otherwise.

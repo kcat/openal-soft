@@ -74,9 +74,6 @@
 #include "opthelpers.h"
 #include "ringbuffer.h"
 
-#ifdef ALSOFT_EAX
-#include <cassert>
-#endif // ALSOFT_EAX
 
 namespace {
 

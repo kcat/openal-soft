@@ -38,7 +38,6 @@
 #include "vecmat.h"
 
 #ifdef ALSOFT_EAX
-#include <cstring>
 #include "alstring.h"
 #include "al/eax/globals.h"
 #endif // ALSOFT_EAX

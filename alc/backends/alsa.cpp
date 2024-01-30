@@ -256,7 +256,7 @@ std::vector<DevMap> PlaybackDevices;
 std::vector<DevMap> CaptureDevices;
 
 
-const std::string_view prefix_name(snd_pcm_stream_t stream)
+std::string_view prefix_name(snd_pcm_stream_t stream) noexcept
 {
     if(stream == SND_PCM_STREAM_PLAYBACK)
         return "device-prefix"sv;

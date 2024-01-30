@@ -616,7 +616,7 @@ struct ReverbState final : public EffectState {
 
 
     void MixOutPlain(ReverbPipeline &pipeline, const al::span<FloatBufferLine> samplesOut,
-        const size_t todo)
+        const size_t todo) const
     {
         ASSUME(todo > 0);
 

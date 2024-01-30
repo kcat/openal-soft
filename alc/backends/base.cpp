@@ -66,7 +66,7 @@ ClockLatency BackendBase::getClockLatency()
     return ret;
 }
 
-void BackendBase::setDefaultWFXChannelOrder()
+void BackendBase::setDefaultWFXChannelOrder() const
 {
     mDevice->RealOut.ChannelIndex.fill(InvalidChannelIndex);
 
@@ -141,7 +141,7 @@ void BackendBase::setDefaultWFXChannelOrder()
     }
 }
 
-void BackendBase::setDefaultChannelOrder()
+void BackendBase::setDefaultChannelOrder() const
 {
     mDevice->RealOut.ChannelIndex.fill(InvalidChannelIndex);
 

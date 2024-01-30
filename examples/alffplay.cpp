@@ -410,7 +410,7 @@ struct VideoState {
 
     nanoseconds getClock();
 
-    void display(SDL_Window *screen, SDL_Renderer *renderer, AVFrame *frame);
+    void display(SDL_Window *screen, SDL_Renderer *renderer, AVFrame *frame) const;
     void updateVideo(SDL_Window *screen, SDL_Renderer *renderer, bool redraw);
     int handler();
 };
@@ -450,14 +450,12 @@ struct MovieState {
 
     static int decode_interrupt_cb(void *ctx);
     bool prepare();
-    void setTitle(SDL_Window *window);
+    void setTitle(SDL_Window *window) const;
     void stop();
 
-    nanoseconds getClock();
-
-    nanoseconds getMasterClock();
-
-    nanoseconds getDuration();
+    [[nodiscard]] nanoseconds getClock() const;
+    [[nodiscard]] nanoseconds getMasterClock();
+    [[nodiscard]] nanoseconds getDuration() const;
 
     int streamComponentOpen(unsigned int stream_index);
     int parse_handler();
@@ -1400,7 +1398,7 @@ nanoseconds VideoState::getClock()
 }
 
 /* Called by VideoState::updateVideo to display the next video frame. */
-void VideoState::display(SDL_Window *screen, SDL_Renderer *renderer, AVFrame *frame)
+void VideoState::display(SDL_Window *screen, SDL_Renderer *renderer, AVFrame *frame) const
 {
     if(!mImage)
         return;
@@ -1703,7 +1701,7 @@ bool MovieState::prepare()
     return true;
 }
 
-void MovieState::setTitle(SDL_Window *window)
+void MovieState::setTitle(SDL_Window *window) const
 {
     auto pos1 = mFilename.rfind('/');
     auto pos2 = mFilename.rfind('\\');
@@ -1713,7 +1711,7 @@ void MovieState::setTitle(SDL_Window *window)
     SDL_SetWindowTitle(window, (mFilename.substr(fpos)+" - "+AppName).c_str());
 }
 
-nanoseconds MovieState::getClock()
+nanoseconds MovieState::getClock() const
 {
     if(mClockBase == microseconds::min())
         return nanoseconds::zero();
@@ -1729,7 +1727,7 @@ nanoseconds MovieState::getMasterClock()
     return getClock();
 }
 
-nanoseconds MovieState::getDuration()
+nanoseconds MovieState::getDuration() const
 { return std::chrono::duration<int64_t,std::ratio<1,AV_TIME_BASE>>(mFormatCtx->duration); }
 
 int MovieState::streamComponentOpen(unsigned int stream_index)

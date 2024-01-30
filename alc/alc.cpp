@@ -1585,7 +1585,7 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
             break;
         }
     }
-    if(optlimit.value_or(false) == false)
+    if(!optlimit.value_or(false))
         TRACE("Output limiter disabled\n");
     else
     {

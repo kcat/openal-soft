@@ -315,7 +315,7 @@ public:
     State4 state5_{};
 
 
-    void call_set_defaults(const ALenum altype, EaxEffectProps &props)
+    static void call_set_defaults(const ALenum altype, EaxEffectProps &props)
     {
         switch(altype)
         {
@@ -393,7 +393,7 @@ public:
         props);
     }
 
-    void get(const EaxCall &call)
+    void get(const EaxCall &call) const
     {
         switch(call.get_version())
         {

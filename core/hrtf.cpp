@@ -211,7 +211,7 @@ IdxBlend CalcAzIndex(uint azcount, float az)
  * and azimuth in radians. The coefficients are normalized.
  */
 void HrtfStore::getCoeffs(float elevation, float azimuth, float distance, float spread,
-    HrirArray &coeffs, const al::span<uint,2> delays)
+    HrirArray &coeffs, const al::span<uint,2> delays) const
 {
     const float dirfact{1.0f - (al::numbers::inv_pi_v<float>/2.0f * spread)};
 

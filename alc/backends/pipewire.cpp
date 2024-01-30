@@ -184,10 +184,8 @@ bool check_version(const char *version)
      */
     int major{0}, minor{0}, revision{0};
     int ret{sscanf(version, "%d.%d.%d", &major, &minor, &revision)};
-    if(ret == 3 && (major > PW_MAJOR || (major == PW_MAJOR && minor > PW_MINOR)
-        || (major == PW_MAJOR && minor == PW_MINOR && revision >= PW_MICRO)))
-        return true;
-    return false;
+    return ret == 3 && (major > PW_MAJOR || (major == PW_MAJOR && minor > PW_MINOR)
+        || (major == PW_MAJOR && minor == PW_MINOR && revision >= PW_MICRO));
 }
 
 #ifdef HAVE_DYNLOAD
@@ -449,7 +447,7 @@ public:
 
     auto signal(bool wait) const { return pw_thread_loop_signal(mLoop, wait); }
 
-    auto newContext(pw_properties *props=nullptr, size_t user_data_size=0)
+    auto newContext(pw_properties *props=nullptr, size_t user_data_size=0) const
     { return PwContextPtr{pw_context_new(getLoop(), props, user_data_size)}; }
 
     static auto Create(const char *name, spa_dict *props=nullptr)
@@ -485,8 +483,7 @@ struct NodeProxy {
     {
         pw_node_events ret{};
         ret.version = PW_VERSION_NODE_EVENTS;
-        ret.info = [](void *object, const pw_node_info *info) noexcept
-        { static_cast<NodeProxy*>(object)->infoCallback(info); };
+        ret.info = infoCallback;
         ret.param = [](void *object, int seq, uint32_t id, uint32_t index, uint32_t next, const spa_pod *param) noexcept
         { static_cast<NodeProxy*>(object)->paramCallback(seq, id, index, next, param); };
         return ret;
@@ -513,9 +510,8 @@ struct NodeProxy {
     { spa_hook_remove(&mListener); }
 
 
-    void infoCallback(const pw_node_info *info) noexcept;
-
-    void paramCallback(int seq, uint32_t id, uint32_t index, uint32_t next, const spa_pod *param) noexcept;
+    static void infoCallback(void *object, const pw_node_info *info) noexcept;
+    void paramCallback(int seq, uint32_t id, uint32_t index, uint32_t next, const spa_pod *param) const noexcept;
 };
 
 /* A metadata proxy object used to query the default sink and source. */
@@ -524,8 +520,7 @@ struct MetadataProxy {
     {
         pw_metadata_events ret{};
         ret.version = PW_VERSION_METADATA_EVENTS;
-        ret.property = [](void *object, uint32_t id, const char *key, const char *type, const char *value) noexcept
-        { return static_cast<MetadataProxy*>(object)->propertyCallback(id, key, type, value); };
+        ret.property = propertyCallback;
         return ret;
     }
 
@@ -543,7 +538,8 @@ struct MetadataProxy {
     ~MetadataProxy()
     { spa_hook_remove(&mListener); }
 
-    int propertyCallback(uint32_t id, const char *key, const char *type, const char *value) noexcept;
+    static auto propertyCallback(void *object, uint32_t id, const char *key, const char *type,
+        const char *value) noexcept -> int;
 };
 
 
@@ -583,7 +579,8 @@ struct EventManager {
     auto lock() const { return mLoop.lock(); }
     auto unlock() const { return mLoop.unlock(); }
 
-    inline bool initIsDone(std::memory_order m=std::memory_order_seq_cst) noexcept
+    [[nodiscard]] inline
+    bool initIsDone(std::memory_order m=std::memory_order_seq_cst) const noexcept
     { return mInitDone.load(m); }
 
     /**
@@ -689,7 +686,7 @@ struct DeviceNode {
     void parsePositions(const spa_pod *value, bool force_update) noexcept;
     void parseChannelCount(const spa_pod *value, bool force_update) noexcept;
 
-    void callEvent(alc::EventType type, std::string_view message)
+    void callEvent(alc::EventType type, std::string_view message) const
     {
         /* Source nodes aren't recognized for playback, only Sink and Duplex
          * nodes are. All node types are recognized for capture.
@@ -976,7 +973,7 @@ void DeviceNode::parseChannelCount(const spa_pod *value, bool force_update) noex
 { return "Audio/Source/Virtual"sv; }
 
 
-void NodeProxy::infoCallback(const pw_node_info *info) noexcept
+void NodeProxy::infoCallback(void*, const pw_node_info *info) noexcept
 {
     /* We only care about property changes here (media class, name/desc).
      * Format changes will automatically invoke the param callback.
@@ -1076,7 +1073,7 @@ void NodeProxy::infoCallback(const pw_node_info *info) noexcept
     }
 }
 
-void NodeProxy::paramCallback(int, uint32_t id, uint32_t, uint32_t, const spa_pod *param) noexcept
+void NodeProxy::paramCallback(int, uint32_t id, uint32_t, uint32_t, const spa_pod *param) const noexcept
 {
     if(id == SPA_PARAM_EnumFormat || id == SPA_PARAM_Format)
     {
@@ -1101,8 +1098,8 @@ void NodeProxy::paramCallback(int, uint32_t id, uint32_t, uint32_t, const spa_po
 }
 
 
-int MetadataProxy::propertyCallback(uint32_t id, const char *key, const char *type,
-    const char *value) noexcept
+auto MetadataProxy::propertyCallback(void*, uint32_t id, const char *key, const char *type,
+    const char *value) noexcept -> int
 {
     if(id != PW_ID_CORE)
         return 0;

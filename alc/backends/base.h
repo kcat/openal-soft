@@ -40,9 +40,9 @@ struct BackendBase {
 
 protected:
     /** Sets the default channel order used by most non-WaveFormatEx-based APIs. */
-    void setDefaultChannelOrder();
+    void setDefaultChannelOrder() const;
     /** Sets the default channel order used by WaveFormatEx. */
-    void setDefaultWFXChannelOrder();
+    void setDefaultWFXChannelOrder() const;
 };
 using BackendPtr = std::unique_ptr<BackendBase>;
 

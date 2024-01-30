@@ -336,14 +336,14 @@ public:
     static auto Create() { return PulseMainloop{pa_threaded_mainloop_new()}; }
 
 
-    void streamSuccessCallback(pa_stream*, int) noexcept { signal(); }
+    void streamSuccessCallback(pa_stream*, int) const noexcept { signal(); }
     static void streamSuccessCallbackC(pa_stream *stream, int success, void *pdata) noexcept
     { static_cast<PulseMainloop*>(pdata)->streamSuccessCallback(stream, success); }
 
     void close(pa_stream *stream=nullptr);
 
 
-    void deviceSinkCallback(pa_context*, const pa_sink_info *info, int eol) noexcept
+    void deviceSinkCallback(pa_context*, const pa_sink_info *info, int eol) const noexcept
     {
         if(eol)
         {
@@ -374,7 +374,7 @@ public:
         TRACE("Got device \"%s\", \"%s\"\n", newentry.name.c_str(), newentry.device_name.c_str());
     }
 
-    void deviceSourceCallback(pa_context*, const pa_source_info *info, int eol) noexcept
+    void deviceSourceCallback(pa_context*, const pa_source_info *info, int eol) const noexcept
     {
         if(eol)
         {
@@ -421,7 +421,7 @@ struct MainloopUniqueLock : public std::unique_lock<PulseMainloop> {
     auto wait(Predicate done_waiting) const -> void
     { while(!done_waiting()) wait(); }
 
-    void waitForOperation(pa_operation *op)
+    void waitForOperation(pa_operation *op) const
     {
         if(op)
         {

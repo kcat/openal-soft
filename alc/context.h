@@ -191,7 +191,14 @@ private:
     class ThreadCtx {
     public:
         ~ThreadCtx();
+        /* NOLINTBEGIN(readability-convert-member-functions-to-static)
+         * This should be non-static to invoke construction of the thread-local
+         * sThreadContext, so that it's destructor gets run at thread exit to
+         * clear sLocalContext (which isn't a member variable to make read
+         * access efficient).
+         */
         void set(ALCcontext *ctx) const noexcept { sLocalContext = ctx; }
+        /* NOLINTEND(readability-convert-member-functions-to-static) */
     };
     static thread_local ThreadCtx sThreadContext;
 

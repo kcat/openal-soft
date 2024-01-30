@@ -226,7 +226,8 @@ int main(int argc, char *argv[])
             CloseAL();
             return 1;
         }
-        else if(i+1 < argc && strcmp(argv[i], "-t") == 0)
+
+        if(i+1 < argc && strcmp(argv[i], "-t") == 0)
         {
             i++;
             seconds = atoi(argv[i]);

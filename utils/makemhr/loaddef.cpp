@@ -917,7 +917,7 @@ static int ReadWaveList(std::istream &istream, const SourceRefT *src, const Byte
                 return 0;
             return 1;
         }
-        else if(fourCC == FOURCC_LIST)
+        if(fourCC == FOURCC_LIST)
         {
             if(!ReadBin4(istream, src->mPath.data(), BO_LITTLE, 4, &fourCC))
                 return 0;
@@ -1311,7 +1311,7 @@ static int ProcessMetrics(TokenReaderT *tr, const uint fftSize, const uint trunc
                 TrErrorAt(tr, line, col, "Expected a channel type.\n");
                 return 0;
             }
-            else if(hData->mChannelType == CT_STEREO)
+            if(hData->mChannelType == CT_STEREO)
             {
                 if(chanMode == CM_ForceMono)
                     hData->mChannelType = CT_MONO;
@@ -1989,7 +1989,7 @@ static int ProcessSources(TokenReaderT *tr, HrirDataT *hData, const uint outRate
                 TrErrorAt(tr, line, col, "Missing left ear source reference(s).\n");
                 return 0;
             }
-            else if(azd->mIrs[1] == nullptr)
+            if(azd->mIrs[1] == nullptr)
             {
                 TrErrorAt(tr, line, col, "Missing right ear source reference(s).\n");
                 return 0;

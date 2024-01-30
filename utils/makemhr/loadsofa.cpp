@@ -188,7 +188,7 @@ DelayType PrepareDelay(MYSOFA_HRTF *sofaHrtf)
     }
     if(delay_dim == std::string{"I,R"})
         return DelayType::I_R;
-    else if(delay_dim == std::string{"M,R"})
+    if(delay_dim == std::string{"M,R"})
         return DelayType::M_R;
 
     fprintf(stderr, "Unsupported delay dimensions: %s\n", delay_dim);

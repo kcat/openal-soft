@@ -297,8 +297,7 @@ int OSSPlayback::mixerProc()
         pollitem.fd = mFd;
         pollitem.events = POLLOUT;
 
-        int pret{poll(&pollitem, 1, 1000)};
-        if(pret < 0)
+        if(int pret{poll(&pollitem, 1, 1000)}; pret < 0)
         {
             if(errno == EINTR || errno == EAGAIN)
                 continue;
@@ -504,8 +503,7 @@ int OSScapture::recordProc()
         pollitem.fd = mFd;
         pollitem.events = POLLIN;
 
-        int sret{poll(&pollitem, 1, 1000)};
-        if(sret < 0)
+        if(int sret{poll(&pollitem, 1, 1000)}; sret < 0)
         {
             if(errno == EINTR || errno == EAGAIN)
                 continue;

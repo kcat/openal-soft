@@ -32,7 +32,7 @@
 #include "alnumeric.h"
 
 
-RingBufferPtr RingBuffer::Create(std::size_t sz, std::size_t elem_sz, int limit_writes)
+RingBufferPtr RingBuffer::Create(std::size_t sz, std::size_t elem_sz, bool limit_writes)
 {
     std::size_t power_of_two{0u};
     if(sz > 0)

@@ -105,8 +105,8 @@ public:
      * (even if it is already a power of two, to ensure the requested amount
      * can be written).
      */
-    [[nodiscard]]
-    static auto Create(size_t sz, size_t elem_sz, int limit_writes) -> std::unique_ptr<RingBuffer>;
+    [[nodiscard]] static
+    auto Create(size_t sz, size_t elem_sz, bool limit_writes) -> std::unique_ptr<RingBuffer>;
 
     DEF_FAM_NEWDEL(RingBuffer, mBuffer)
 };

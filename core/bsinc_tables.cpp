@@ -112,7 +112,7 @@ constexpr double CalcKaiserBeta(const double rejection)
 {
     if(rejection > 50.0)
         return 0.1102 * (rejection-8.7);
-    else if(rejection >= 21.0)
+    if(rejection >= 21.0)
         return (0.5842 * std::pow(rejection-21.0, 0.4)) + (0.07886 * (rejection-21.0));
     return 0.0;
 }

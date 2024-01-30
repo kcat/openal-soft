@@ -982,13 +982,13 @@ void aluInitRenderer(ALCdevice *device, int hrtf_id, std::optional<StereoEncodin
                 ERR("  %s\n", err->c_str());
                 return false;
             }
-            else if(conf.Speakers.size() > MaxOutputChannels)
+            if(conf.Speakers.size() > MaxOutputChannels)
             {
                 ERR("Unsupported decoder speaker count %zu (max %zu)\n", conf.Speakers.size(),
                     MaxOutputChannels);
                 return false;
             }
-            else if(conf.ChanMask > Ambi3OrderMask)
+            if(conf.ChanMask > Ambi3OrderMask)
             {
                 ERR("Unsupported decoder channel mask 0x%04x (max 0x%x)\n", conf.ChanMask,
                     Ambi3OrderMask);

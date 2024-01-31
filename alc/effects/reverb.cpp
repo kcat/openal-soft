@@ -412,7 +412,7 @@ struct Allpass4 {
     float Coeff{0.0f};
     std::array<size_t,NUM_LINES> Offset{};
 
-    void process(const al::span<ReverbUpdateLine,NUM_LINES> samples, size_t offset,
+    void process(const al::span<ReverbUpdateLine,NUM_LINES> samples, const size_t offset,
         const size_t todo) noexcept;
 };
 
@@ -1488,7 +1488,7 @@ void VecAllpass::process(const al::span<ReverbUpdateLine,NUM_LINES> samples, siz
 /* This applies a more typical all-pass to each line, without the scattering
  * matrix.
  */
-void Allpass4::process(const al::span<ReverbUpdateLine,NUM_LINES> samples, size_t offset,
+void Allpass4::process(const al::span<ReverbUpdateLine,NUM_LINES> samples, const size_t offset,
     const size_t todo) noexcept
 {
     const DelayLineU delay{Delay};
@@ -1499,23 +1499,22 @@ void Allpass4::process(const al::span<ReverbUpdateLine,NUM_LINES> samples, size_
     for(size_t j{0u};j < NUM_LINES;j++)
     {
         float *buffer{delay.get(j).data()};
+        size_t dstoffset{offset};
         size_t vap_offset{offset - Offset[j]};
         for(size_t i{0u};i < todo;)
         {
             vap_offset &= delay.Mask;
-            offset &= delay.Mask;
+            dstoffset &= delay.Mask;
 
-            const size_t maxoff{std::max(offset, vap_offset)};
+            const size_t maxoff{std::max(dstoffset, vap_offset)};
             size_t td{std::min(delay.Mask+1 - maxoff, todo - i)};
 
             do {
                 const float x{samples[j][i]};
                 const float y{buffer[vap_offset++] - feedCoeff*x};
-                float f{x + feedCoeff*y};
+                buffer[dstoffset++] = x + feedCoeff*y;
 
                 samples[j][i++] = y;
-
-                buffer[offset++] = f;
             } while(--td);
         }
     }

@@ -107,6 +107,11 @@ std::string expdup(std::string_view str)
         }
 
         str.remove_prefix(1);
+        if(str.empty())
+        {
+            output += '$';
+            break;
+        }
         if(str.front() == '$')
         {
             output += '$';
@@ -118,9 +123,9 @@ std::string expdup(std::string_view str)
         if(hasbraces) str.remove_prefix(1);
 
         size_t envend{0};
-        while(std::isalnum(str[envend]) || str[envend] == '_')
+        while(envend < str.size() && (std::isalnum(str[envend]) || str[envend] == '_'))
             ++envend;
-        if(hasbraces && str[envend] != '}')
+        if(hasbraces && (envend == str.size() || str[envend] != '}'))
             continue;
         const std::string envname{str.substr(0, envend)};
         if(hasbraces) ++envend;
@@ -165,11 +170,9 @@ void LoadConfigFromFile(std::istream &f)
             }
 
             auto section = std::string_view{buffer}.substr(1, endpos-1);
-            auto generalName = std::string_view{"general"};
 
             curSection.clear();
-            if(section.size() != generalName.size()
-                || al::strncasecmp(section.data(), generalName.data(), section.size()) != 0)
+            if(al::case_compare(section, "general"sv) != 0)
             {
                 do {
                     auto nextp = section.find('%');
@@ -182,7 +185,8 @@ void LoadConfigFromFile(std::istream &f)
                     curSection += section.substr(0, nextp);
                     section.remove_prefix(nextp);
 
-                    if(((section[1] >= '0' && section[1] <= '9') ||
+                    if(section.size() > 2 &&
+                       ((section[1] >= '0' && section[1] <= '9') ||
                         (section[1] >= 'a' && section[1] <= 'f') ||
                         (section[1] >= 'A' && section[1] <= 'F')) &&
                        ((section[2] >= '0' && section[2] <= '9') ||
@@ -205,7 +209,7 @@ void LoadConfigFromFile(std::istream &f)
                         curSection += static_cast<char>(b);
                         section.remove_prefix(3);
                     }
-                    else if(section[1] == '%')
+                    else if(section.size() > 1 && section[1] == '%')
                     {
                         curSection += '%';
                         section.remove_prefix(2);

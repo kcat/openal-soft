@@ -290,14 +290,9 @@ FORCE_ALIGN void AL_APIENTRY alEffectiDirect(ALCcontext *context, ALuint effect,
         bool isOk{value == AL_EFFECT_NULL};
         if(!isOk)
         {
-            for(const EffectList &effectitem : gEffectList)
-            {
-                if(value == effectitem.val && !DisabledEffects.test(effectitem.type))
-                {
-                    isOk = true;
-                    break;
-                }
-            }
+            auto check_effect = [value](const EffectList &item) -> bool
+            { return value == item.val && !DisabledEffects.test(item.type); };
+            isOk = std::any_of(gEffectList.cbegin(), gEffectList.cend(), check_effect);
         }
 
         if(isOk)

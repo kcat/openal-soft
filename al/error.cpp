@@ -106,12 +106,11 @@ AL_API auto AL_APIENTRY alGetError() noexcept -> ALenum
     if(auto context = GetContextRef()) LIKELY
         return alGetErrorDirect(context.get());
 
-    static const ALenum deferror{[](const char *envname, const char *optname) -> ALenum
+    auto get_value = [](const char *envname, const char *optname) -> ALenum
     {
         auto optstr = al::getenv(envname);
         if(!optstr)
             optstr = ConfigValueStr({}, "game_compat", optname);
-
         if(optstr)
         {
             char *end{};
@@ -121,7 +120,8 @@ AL_API auto AL_APIENTRY alGetError() noexcept -> ALenum
             ERR("Invalid default error value: \"%s\"", optstr->c_str());
         }
         return AL_INVALID_OPERATION;
-    }("__ALSOFT_DEFAULT_ERROR", "default-error")};
+    };
+    static const ALenum deferror{get_value("__ALSOFT_DEFAULT_ERROR", "default-error")};
 
     WARN("Querying error state on null context (implicitly 0x%04x)\n", deferror);
     if(TrapALError)

@@ -306,7 +306,7 @@ int OSSPlayback::mixerProc()
             mDevice->handleDisconnect("Failed waiting for playback buffer: %s", errstr.c_str());
             break;
         }
-        else if(pret == 0)
+        else if(pret == 0) /* NOLINT(*-else-after-return) 'pret' is local to the if/else blocks */
         {
             WARN("poll timeout\n");
             continue;
@@ -503,7 +503,7 @@ int OSScapture::recordProc()
         pollitem.fd = mFd;
         pollitem.events = POLLIN;
 
-        if(int sret{poll(&pollitem, 1, 1000)}; sret < 0)
+        if(int pret{poll(&pollitem, 1, 1000)}; pret < 0)
         {
             if(errno == EINTR || errno == EAGAIN)
                 continue;
@@ -512,7 +512,7 @@ int OSScapture::recordProc()
             mDevice->handleDisconnect("Failed to check capture samples: %s", errstr.c_str());
             break;
         }
-        else if(sret == 0)
+        else if(pret == 0) /* NOLINT(*-else-after-return) 'pret' is local to the if/else blocks */
         {
             WARN("poll timeout\n");
             continue;

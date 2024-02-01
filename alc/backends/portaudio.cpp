@@ -35,7 +35,7 @@
 #include "dynload.h"
 #include "ringbuffer.h"
 
-#include <portaudio.h>
+#include <portaudio.h> /* NOLINT(*-duplicate-include) Not the same header. */
 
 
 namespace {

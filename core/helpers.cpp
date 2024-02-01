@@ -58,7 +58,7 @@ void DirectorySearch(const std::filesystem::path &path, const std::string_view e
             ERR("Error enumerating directory: %s\n", fe.what());
     }
     catch(std::exception& e) {
-        ERR("Error enumerating directory: %s\n", e.what());
+        ERR("Exception enumerating files: %s\n", e.what());
     }
 
     const al::span newlist{results->begin()+base, results->end()};

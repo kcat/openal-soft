@@ -40,7 +40,7 @@
 #include "core/logging.h"
 #include "ringbuffer.h"
 
-#include <sndio.h>
+#include <sndio.h> /* NOLINT(*-duplicate-include) Not the same header. */
 
 
 namespace {

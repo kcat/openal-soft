@@ -177,6 +177,9 @@ bool OboePlayback::reset()
         break;
     case oboe::AudioFormat::I24:
 #endif
+#if OBOE_VERSION_MAJOR > 1 || (OBOE_VERSION_MAJOR == 1 && OBOE_VERSION_MINOR >= 8)
+    case oboe::AudioFormat::IEC61937:
+#endif
     case oboe::AudioFormat::Unspecified:
     case oboe::AudioFormat::Invalid:
         throw al::backend_exception{al::backend_error::DeviceError,

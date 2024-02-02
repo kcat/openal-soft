@@ -95,6 +95,11 @@ constexpr uint HrirDelayFracBits{2};
 constexpr uint HrirDelayFracOne{1 << HrirDelayFracBits};
 constexpr uint HrirDelayFracHalf{HrirDelayFracOne >> 1};
 
+/* The sample rate is stored as a 24-bit integer, so 16MHz is the largest
+ * supported.
+ */
+constexpr uint MaxSampleRate{0xff'ff'ff};
+
 static_assert(MaxHrirDelay*HrirDelayFracOne < 256, "MAX_HRIR_DELAY or DELAY_FRAC too large");
 
 
@@ -398,6 +403,9 @@ std::unique_ptr<HrtfStore> CreateHrtfStore(uint rate, uint8_t irSize,
     static_assert(alignof(HrtfStore::Field) <= alignof(HrtfStore));
     static_assert(alignof(HrtfStore::Elevation) <= alignof(HrtfStore));
     static_assert(16 <= alignof(HrtfStore));
+
+    if(rate > MaxSampleRate)
+        throw std::runtime_error{"Sample rate is too large (max: "+std::to_string(MaxSampleRate)+"hz)"};
 
     const size_t irCount{size_t{elevs.back().azCount} + elevs.back().irOffset};
     size_t total{sizeof(HrtfStore)};
@@ -1247,6 +1255,11 @@ std::vector<std::string> EnumerateHrtf(std::optional<std::string> pathopt)
 
 HrtfStorePtr GetLoadedHrtf(const std::string_view name, const uint devrate)
 try {
+    if(devrate > MaxSampleRate)
+    {
+        WARN("Device sample rate too large for HRTF (%uhz > %uhz)\n", devrate, MaxSampleRate);
+        return nullptr;
+    }
     std::lock_guard<std::mutex> enumlock{EnumeratedHrtfLock};
     auto entry_iter = std::find_if(EnumeratedHrtfs.cbegin(), EnumeratedHrtfs.cend(),
         [name](const HrtfEntry &entry) -> bool { return entry.mDispName == name; });

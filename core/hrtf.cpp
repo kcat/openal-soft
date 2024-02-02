@@ -387,7 +387,7 @@ namespace {
 std::unique_ptr<HrtfStore> CreateHrtfStore(uint rate, uint8_t irSize,
     const al::span<const HrtfStore::Field> fields,
     const al::span<const HrtfStore::Elevation> elevs, const HrirArray *coeffs,
-    const ubyte2 *delays, const char *filename)
+    const ubyte2 *delays)
 {
     static_assert(alignof(HrtfStore::Field) <= alignof(HrtfStore));
     static_assert(alignof(HrtfStore::Elevation) <= alignof(HrtfStore));
@@ -404,50 +404,44 @@ std::unique_ptr<HrtfStore> CreateHrtfStore(uint rate, uint8_t irSize,
     total += sizeof(std::declval<HrtfStore&>().mDelays[0])*irCount;
 
     static constexpr auto AlignVal = std::align_val_t{alignof(HrtfStore)};
-    std::unique_ptr<HrtfStore> Hrtf{};
-    if(gsl::owner<void*> ptr{::operator new[](total, AlignVal, std::nothrow)})
-    {
-        Hrtf = decltype(Hrtf){::new(ptr) HrtfStore{}};
-        Hrtf->mRef.store(1u, std::memory_order_relaxed);
-        Hrtf->mSampleRate = rate & 0xff'ff'ff;
-        Hrtf->mIrSize = irSize;
+    std::unique_ptr<HrtfStore> Hrtf{::new(::operator new[](total, AlignVal)) HrtfStore{}};
+    Hrtf->mRef.store(1u, std::memory_order_relaxed);
+    Hrtf->mSampleRate = rate & 0xff'ff'ff;
+    Hrtf->mIrSize = irSize;
 
-        /* Set up pointers to storage following the main HRTF struct. */
-        char *base = reinterpret_cast<char*>(Hrtf.get());
-        size_t offset{sizeof(HrtfStore)};
+    /* Set up pointers to storage following the main HRTF struct. */
+    char *base = reinterpret_cast<char*>(Hrtf.get());
+    size_t offset{sizeof(HrtfStore)};
 
-        offset = RoundUp(offset, alignof(HrtfStore::Field)); /* Align for field infos */
-        auto field_ = reinterpret_cast<HrtfStore::Field*>(base + offset);
-        offset += sizeof(field_[0])*fields.size();
+    offset = RoundUp(offset, alignof(HrtfStore::Field)); /* Align for field infos */
+    auto field_ = reinterpret_cast<HrtfStore::Field*>(base + offset);
+    offset += sizeof(field_[0])*fields.size();
 
-        offset = RoundUp(offset, alignof(HrtfStore::Elevation)); /* Align for elevation infos */
-        auto elev_ = reinterpret_cast<HrtfStore::Elevation*>(base + offset);
-        offset += sizeof(elev_[0])*elevs.size();
+    offset = RoundUp(offset, alignof(HrtfStore::Elevation)); /* Align for elevation infos */
+    auto elev_ = reinterpret_cast<HrtfStore::Elevation*>(base + offset);
+    offset += sizeof(elev_[0])*elevs.size();
 
-        offset = RoundUp(offset, 16); /* Align for coefficients using SIMD */
-        auto coeffs_ = reinterpret_cast<HrirArray*>(base + offset);
-        offset += sizeof(coeffs_[0])*irCount;
+    offset = RoundUp(offset, 16); /* Align for coefficients using SIMD */
+    auto coeffs_ = reinterpret_cast<HrirArray*>(base + offset);
+    offset += sizeof(coeffs_[0])*irCount;
 
-        auto delays_ = reinterpret_cast<ubyte2*>(base + offset);
-        offset += sizeof(delays_[0])*irCount;
+    auto delays_ = reinterpret_cast<ubyte2*>(base + offset);
+    offset += sizeof(delays_[0])*irCount;
 
-        if(offset != total)
-            throw std::runtime_error{"HrtfStore allocation size mismatch"};
+    if(offset != total)
+        throw std::runtime_error{"HrtfStore allocation size mismatch"};
 
-        /* Copy input data to storage. */
-        std::uninitialized_copy(fields.cbegin(), fields.cend(), field_);
-        std::uninitialized_copy(elevs.cbegin(), elevs.cend(), elev_);
-        std::uninitialized_copy_n(coeffs, irCount, coeffs_);
-        std::uninitialized_copy_n(delays, irCount, delays_);
+    /* Copy input data to storage. */
+    std::uninitialized_copy(fields.cbegin(), fields.cend(), field_);
+    std::uninitialized_copy(elevs.cbegin(), elevs.cend(), elev_);
+    std::uninitialized_copy_n(coeffs, irCount, coeffs_);
+    std::uninitialized_copy_n(delays, irCount, delays_);
 
-        /* Finally, assign the storage pointers. */
-        Hrtf->mFields = {field_, fields.size()};
-        Hrtf->mElev = elev_;
-        Hrtf->mCoeffs = coeffs_;
-        Hrtf->mDelays = delays_;
-    }
-    else
-        ERR("Out of memory allocating storage for %s.\n", filename);
+    /* Finally, assign the storage pointers. */
+    Hrtf->mFields = {field_, fields.size()};
+    Hrtf->mElev = elev_;
+    Hrtf->mCoeffs = coeffs_;
+    Hrtf->mDelays = delays_;
 
     return Hrtf;
 }
@@ -520,17 +514,14 @@ inline uint8_t readle<uint8_t,8>(std::istream &data)
 { return static_cast<uint8_t>(data.get()); }
 
 
-std::unique_ptr<HrtfStore> LoadHrtf00(std::istream &data, const char *filename)
+std::unique_ptr<HrtfStore> LoadHrtf00(std::istream &data)
 {
     uint rate{readle<uint32_t>(data)};
     ushort irCount{readle<uint16_t>(data)};
     ushort irSize{readle<uint16_t>(data)};
     ubyte evCount{readle<uint8_t>(data)};
     if(!data || data.eof())
-    {
-        ERR("Failed reading %s\n", filename);
-        return nullptr;
-    }
+        throw std::runtime_error{"Premature end of file"};
 
     if(irSize < MinIrLength || irSize > HrirLength)
     {
@@ -548,10 +539,8 @@ std::unique_ptr<HrtfStore> LoadHrtf00(std::istream &data, const char *filename)
     for(auto &elev : elevs)
         elev.irOffset = readle<uint16_t>(data);
     if(!data || data.eof())
-    {
-        ERR("Failed reading %s\n", filename);
-        return nullptr;
-    }
+        throw std::runtime_error{"Premature end of file"};
+
     for(size_t i{1};i < evCount;i++)
     {
         if(elevs[i].irOffset <= elevs[i-1].irOffset)
@@ -596,10 +585,8 @@ std::unique_ptr<HrtfStore> LoadHrtf00(std::istream &data, const char *filename)
     for(auto &val : delays)
         val[0] = readle<uint8_t>(data);
     if(!data || data.eof())
-    {
-        ERR("Failed reading %s\n", filename);
-        return nullptr;
-    }
+        throw std::runtime_error{"Premature end of file"};
+
     for(size_t i{0};i < irCount;i++)
     {
         if(delays[i][0] > MaxHrirDelay)
@@ -615,19 +602,16 @@ std::unique_ptr<HrtfStore> LoadHrtf00(std::istream &data, const char *filename)
 
     const std::array field{HrtfStore::Field{0.0f, evCount}};
     return CreateHrtfStore(rate, static_cast<uint8_t>(irSize), field, elevs, coeffs.data(),
-        delays.data(), filename);
+        delays.data());
 }
 
-std::unique_ptr<HrtfStore> LoadHrtf01(std::istream &data, const char *filename)
+std::unique_ptr<HrtfStore> LoadHrtf01(std::istream &data)
 {
     uint rate{readle<uint32_t>(data)};
     uint8_t irSize{readle<uint8_t>(data)};
     ubyte evCount{readle<uint8_t>(data)};
     if(!data || data.eof())
-    {
-        ERR("Failed reading %s\n", filename);
-        return nullptr;
-    }
+        throw std::runtime_error{"Premature end of file"};
 
     if(irSize < MinIrLength || irSize > HrirLength)
     {
@@ -645,10 +629,8 @@ std::unique_ptr<HrtfStore> LoadHrtf01(std::istream &data, const char *filename)
     for(auto &elev : elevs)
         elev.azCount = readle<uint8_t>(data);
     if(!data || data.eof())
-    {
-        ERR("Failed reading %s\n", filename);
-        return nullptr;
-    }
+        throw std::runtime_error{"Premature end of file"};
+
     for(size_t i{0};i < evCount;++i)
     {
         if(elevs[i].azCount < MinAzCount || elevs[i].azCount > MaxAzCount)
@@ -674,10 +656,8 @@ std::unique_ptr<HrtfStore> LoadHrtf01(std::istream &data, const char *filename)
     for(auto &val : delays)
         val[0] = readle<uint8_t>(data);
     if(!data || data.eof())
-    {
-        ERR("Failed reading %s\n", filename);
-        return nullptr;
-    }
+        throw std::runtime_error{"Premature end of file"};
+
     for(size_t i{0};i < irCount;i++)
     {
         if(delays[i][0] > MaxHrirDelay)
@@ -692,15 +672,15 @@ std::unique_ptr<HrtfStore> LoadHrtf01(std::istream &data, const char *filename)
     MirrorLeftHrirs({elevs.data(), elevs.size()}, coeffs.data(), delays.data());
 
     const std::array field{HrtfStore::Field{0.0f, evCount}};
-    return CreateHrtfStore(rate, irSize, field, elevs, coeffs.data(), delays.data(), filename);
+    return CreateHrtfStore(rate, irSize, field, elevs, coeffs.data(), delays.data());
 }
 
-std::unique_ptr<HrtfStore> LoadHrtf02(std::istream &data, const char *filename)
+std::unique_ptr<HrtfStore> LoadHrtf02(std::istream &data)
 {
-    constexpr ubyte SampleType_S16{0};
-    constexpr ubyte SampleType_S24{1};
-    constexpr ubyte ChanType_LeftOnly{0};
-    constexpr ubyte ChanType_LeftRight{1};
+    static constexpr ubyte SampleType_S16{0};
+    static constexpr ubyte SampleType_S24{1};
+    static constexpr ubyte ChanType_LeftOnly{0};
+    static constexpr ubyte ChanType_LeftRight{1};
 
     uint rate{readle<uint32_t>(data)};
     ubyte sampleType{readle<uint8_t>(data)};
@@ -708,10 +688,7 @@ std::unique_ptr<HrtfStore> LoadHrtf02(std::istream &data, const char *filename)
     uint8_t irSize{readle<uint8_t>(data)};
     ubyte fdCount{readle<uint8_t>(data)};
     if(!data || data.eof())
-    {
-        ERR("Failed reading %s\n", filename);
-        return nullptr;
-    }
+        throw std::runtime_error{"Premature end of file"};
 
     if(sampleType > SampleType_S24)
     {
@@ -743,10 +720,7 @@ std::unique_ptr<HrtfStore> LoadHrtf02(std::istream &data, const char *filename)
         const ushort distance{readle<uint16_t>(data)};
         const ubyte evCount{readle<uint8_t>(data)};
         if(!data || data.eof())
-        {
-            ERR("Failed reading %s\n", filename);
-            return nullptr;
-        }
+            throw std::runtime_error{"Premature end of file"};
 
         if(distance < MinFdDistance || distance > MaxFdDistance)
         {
@@ -775,10 +749,7 @@ std::unique_ptr<HrtfStore> LoadHrtf02(std::istream &data, const char *filename)
         for(auto &elev : al::span<HrtfStore::Elevation>(elevs.data()+ebase, evCount))
             elev.azCount = readle<uint8_t>(data);
         if(!data || data.eof())
-        {
-            ERR("Failed reading %s\n", filename);
-            return nullptr;
-        }
+            throw std::runtime_error{"Premature end of file"};
 
         for(size_t e{0};e < evCount;e++)
         {
@@ -824,10 +795,8 @@ std::unique_ptr<HrtfStore> LoadHrtf02(std::istream &data, const char *filename)
         for(auto &val : delays)
             val[0] = readle<uint8_t>(data);
         if(!data || data.eof())
-        {
-            ERR("Failed reading %s\n", filename);
-            return nullptr;
-        }
+            throw std::runtime_error{"Premature end of file"};
+
         for(size_t i{0};i < irTotal;++i)
         {
             if(delays[i][0] > MaxHrirDelay)
@@ -871,10 +840,7 @@ std::unique_ptr<HrtfStore> LoadHrtf02(std::istream &data, const char *filename)
             val[1] = readle<uint8_t>(data);
         }
         if(!data || data.eof())
-        {
-            ERR("Failed reading %s\n", filename);
-            return nullptr;
-        }
+            throw std::runtime_error{"Premature end of file"};
 
         for(size_t i{0};i < irTotal;++i)
         {
@@ -961,23 +927,20 @@ std::unique_ptr<HrtfStore> LoadHrtf02(std::istream &data, const char *filename)
         delays = std::move(delays_);
     }
 
-    return CreateHrtfStore(rate, irSize, fields, elevs, coeffs.data(), delays.data(), filename);
+    return CreateHrtfStore(rate, irSize, fields, elevs, coeffs.data(), delays.data());
 }
 
-std::unique_ptr<HrtfStore> LoadHrtf03(std::istream &data, const char *filename)
+std::unique_ptr<HrtfStore> LoadHrtf03(std::istream &data)
 {
-    constexpr ubyte ChanType_LeftOnly{0};
-    constexpr ubyte ChanType_LeftRight{1};
+    static constexpr ubyte ChanType_LeftOnly{0};
+    static constexpr ubyte ChanType_LeftRight{1};
 
     uint rate{readle<uint32_t>(data)};
     ubyte channelType{readle<uint8_t>(data)};
     uint8_t irSize{readle<uint8_t>(data)};
     ubyte fdCount{readle<uint8_t>(data)};
     if(!data || data.eof())
-    {
-        ERR("Failed reading %s\n", filename);
-        return nullptr;
-    }
+        throw std::runtime_error{"Premature end of file"};
 
     if(channelType > ChanType_LeftRight)
     {
@@ -1004,10 +967,7 @@ std::unique_ptr<HrtfStore> LoadHrtf03(std::istream &data, const char *filename)
         const ushort distance{readle<uint16_t>(data)};
         const ubyte evCount{readle<uint8_t>(data)};
         if(!data || data.eof())
-        {
-            ERR("Failed reading %s\n", filename);
-            return nullptr;
-        }
+            throw std::runtime_error{"Premature end of file"};
 
         if(distance < MinFdDistance || distance > MaxFdDistance)
         {
@@ -1036,10 +996,7 @@ std::unique_ptr<HrtfStore> LoadHrtf03(std::istream &data, const char *filename)
         for(auto &elev : al::span<HrtfStore::Elevation>(elevs.data()+ebase, evCount))
             elev.azCount = readle<uint8_t>(data);
         if(!data || data.eof())
-        {
-            ERR("Failed reading %s\n", filename);
-            return nullptr;
-        }
+            throw std::runtime_error{"Premature end of file"};
 
         for(size_t e{0};e < evCount;e++)
         {
@@ -1074,10 +1031,8 @@ std::unique_ptr<HrtfStore> LoadHrtf03(std::istream &data, const char *filename)
         for(auto &val : delays)
             val[0] = readle<uint8_t>(data);
         if(!data || data.eof())
-        {
-            ERR("Failed reading %s\n", filename);
-            return nullptr;
-        }
+            throw std::runtime_error{"Premature end of file"};
+
         for(size_t i{0};i < irTotal;++i)
         {
             if(delays[i][0] > MaxHrirDelay<<HrirDelayFracBits)
@@ -1107,10 +1062,7 @@ std::unique_ptr<HrtfStore> LoadHrtf03(std::istream &data, const char *filename)
             val[1] = readle<uint8_t>(data);
         }
         if(!data || data.eof())
-        {
-            ERR("Failed reading %s\n", filename);
-            return nullptr;
-        }
+            throw std::runtime_error{"Premature end of file"};
 
         for(size_t i{0};i < irTotal;++i)
         {
@@ -1129,13 +1081,13 @@ std::unique_ptr<HrtfStore> LoadHrtf03(std::istream &data, const char *filename)
         }
     }
 
-    return CreateHrtfStore(rate, irSize, fields, elevs, coeffs.data(), delays.data(), filename);
+    return CreateHrtfStore(rate, irSize, fields, elevs, coeffs.data(), delays.data());
 }
 
 
-bool checkName(const std::string &name)
+bool checkName(const std::string_view name)
 {
-    auto match_name = [&name](const HrtfEntry &entry) -> bool { return name == entry.mDispName; };
+    auto match_name = [name](const HrtfEntry &entry) -> bool { return name == entry.mDispName; };
     auto &enum_names = EnumeratedHrtfs;
     return std::find_if(enum_names.cbegin(), enum_names.cend(), match_name) != enum_names.cend();
 }
@@ -1289,7 +1241,7 @@ std::vector<std::string> EnumerateHrtf(std::optional<std::string> pathopt)
 }
 
 HrtfStorePtr GetLoadedHrtf(const std::string &name, const uint devrate)
-{
+try {
     std::lock_guard<std::mutex> enumlock{EnumeratedHrtfLock};
     auto entry_iter = std::find_if(EnumeratedHrtfs.cbegin(), EnumeratedHrtfs.cend(),
         [&name](const HrtfEntry &entry) -> bool { return entry.mDispName == name; });
@@ -1346,32 +1298,29 @@ HrtfStorePtr GetLoadedHrtf(const std::string &name, const uint devrate)
     else if(GetMarker03Name() == std::string_view{magic.data(), magic.size()})
     {
         TRACE("Detected data set format v3\n");
-        hrtf = LoadHrtf03(*stream, name.c_str());
+        hrtf = LoadHrtf03(*stream);
     }
     else if(GetMarker02Name() == std::string_view{magic.data(), magic.size()})
     {
         TRACE("Detected data set format v2\n");
-        hrtf = LoadHrtf02(*stream, name.c_str());
+        hrtf = LoadHrtf02(*stream);
     }
     else if(GetMarker01Name() == std::string_view{magic.data(), magic.size()})
     {
         TRACE("Detected data set format v1\n");
-        hrtf = LoadHrtf01(*stream, name.c_str());
+        hrtf = LoadHrtf01(*stream);
     }
     else if(GetMarker00Name() == std::string_view{magic.data(), magic.size()})
     {
         TRACE("Detected data set format v0\n");
-        hrtf = LoadHrtf00(*stream, name.c_str());
+        hrtf = LoadHrtf00(*stream);
     }
     else
         ERR("Invalid header in %s: \"%.8s\"\n", name.c_str(), magic.data());
     stream.reset();
 
     if(!hrtf)
-    {
-        ERR("Failed to load %s\n", name.c_str());
         return nullptr;
-    }
 
     if(hrtf->mSampleRate != devrate)
     {
@@ -1446,11 +1395,15 @@ HrtfStorePtr GetLoadedHrtf(const std::string &name, const uint devrate)
         hrtf->mSampleRate = devrate & 0xff'ff'ff;
     }
 
-    TRACE("Loaded HRTF %s for sample rate %uhz, %u-sample filter\n", name.c_str(),
-        hrtf->mSampleRate, hrtf->mIrSize);
     handle = LoadedHrtfs.emplace(handle, fname, std::move(hrtf));
+    TRACE("Loaded HRTF %s for sample rate %uhz, %u-sample filter\n", name.c_str(),
+        handle->mEntry->mSampleRate, handle->mEntry->mIrSize);
 
     return HrtfStorePtr{handle->mEntry.get()};
+}
+catch(std::exception& e) {
+    ERR("Failed to load %s: %s\n", name.c_str(), e.what());
+    return nullptr;
 }
 
 

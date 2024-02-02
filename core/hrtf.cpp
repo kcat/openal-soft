@@ -58,11 +58,12 @@ HrtfEntry::~HrtfEntry() = default;
 
 struct LoadedHrtf {
     std::string mFilename;
+    uint mSampleRate{};
     std::unique_ptr<HrtfStore> mEntry;
 
     template<typename T, typename U>
-    LoadedHrtf(T&& name, U&& entry)
-        : mFilename{std::forward<T>(name)}, mEntry{std::forward<U>(entry)}
+    LoadedHrtf(T&& name, uint srate, U&& entry)
+        : mFilename{std::forward<T>(name)}, mSampleRate{srate}, mEntry{std::forward<U>(entry)}
     { }
     LoadedHrtf(LoadedHrtf&&) = default;
     /* GCC warns when it tries to inline this. */
@@ -1254,18 +1255,20 @@ try {
     const std::string &fname = entry_iter->mFilename;
 
     std::lock_guard<std::mutex> loadlock{LoadedHrtfLock};
-    auto hrtf_lt_fname = [](LoadedHrtf &hrtf, const std::string &filename) -> bool
-    { return hrtf.mFilename < filename; };
-    auto handle = std::lower_bound(LoadedHrtfs.begin(), LoadedHrtfs.end(), fname, hrtf_lt_fname);
-    while(handle != LoadedHrtfs.end() && handle->mFilename == fname)
+    auto hrtf_lt_fname = [devrate](LoadedHrtf &hrtf, const std::string_view filename) -> bool
     {
-        HrtfStore *hrtf{handle->mEntry.get()};
-        if(hrtf && hrtf->mSampleRate == devrate)
+        return hrtf.mSampleRate < devrate
+            || (hrtf.mSampleRate == devrate && hrtf.mFilename < filename);
+    };
+    auto handle = std::lower_bound(LoadedHrtfs.begin(), LoadedHrtfs.end(), fname, hrtf_lt_fname);
+    if(handle != LoadedHrtfs.end() && handle->mSampleRate == devrate && handle->mFilename == fname)
+    {
+        if(HrtfStore *hrtf{handle->mEntry.get()})
         {
+            assert(hrtf->mSampleRate == devrate);
             hrtf->add_ref();
             return HrtfStorePtr{hrtf};
         }
-        ++handle;
     }
 
     std::unique_ptr<std::istream> stream;
@@ -1400,7 +1403,7 @@ try {
         hrtf->mSampleRate = devrate & 0xff'ff'ff;
     }
 
-    handle = LoadedHrtfs.emplace(handle, fname, std::move(hrtf));
+    handle = LoadedHrtfs.emplace(handle, fname, devrate, std::move(hrtf));
     TRACE("Loaded HRTF %.*s for sample rate %uhz, %u-sample filter\n", al::sizei(name),name.data(),
         handle->mEntry->mSampleRate, handle->mEntry->mIrSize);
 

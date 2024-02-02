@@ -29,6 +29,7 @@
 #include "alnumbers.h"
 #include "alnumeric.h"
 #include "alspan.h"
+#include "alstring.h"
 #include "ambidefs.h"
 #include "filters/splitter.h"
 #include "helpers.h"
@@ -46,6 +47,10 @@ struct HrtfEntry {
     std::string mDispName;
     std::string mFilename;
 
+    template<typename T, typename U>
+    HrtfEntry(T&& dispname, U&& fname)
+        : mDispName{std::forward<T>(dispname)}, mFilename{std::forward<U>(fname)}
+    { }
     /* GCC warns when it tries to inline this. */
     ~HrtfEntry();
 };
@@ -1092,27 +1097,27 @@ bool checkName(const std::string_view name)
     return std::find_if(enum_names.cbegin(), enum_names.cend(), match_name) != enum_names.cend();
 }
 
-void AddFileEntry(const std::string &filename)
+void AddFileEntry(const std::string_view filename)
 {
     /* Check if this file has already been enumerated. */
     auto enum_iter = std::find_if(EnumeratedHrtfs.cbegin(), EnumeratedHrtfs.cend(),
-        [&filename](const HrtfEntry &entry) -> bool
+        [filename](const HrtfEntry &entry) -> bool
         { return entry.mFilename == filename; });
     if(enum_iter != EnumeratedHrtfs.cend())
     {
-        TRACE("Skipping duplicate file entry %s\n", filename.c_str());
+        TRACE("Skipping duplicate file entry %.*s\n", al::sizei(filename), filename.data());
         return;
     }
 
     /* TODO: Get a human-readable name from the HRTF data (possibly coming in a
      * format update). */
-    size_t namepos{filename.find_last_of('/')+1};
-    if(!namepos) namepos = filename.find_last_of('\\')+1;
+    size_t namepos{filename.rfind('/')+1};
+    if(!namepos) namepos = filename.rfind('\\')+1;
 
-    size_t extpos{filename.find_last_of('.')};
+    size_t extpos{filename.rfind('.')};
     if(extpos <= namepos) extpos = std::string::npos;
 
-    const std::string basename{(extpos == std::string::npos) ?
+    const std::string_view basename{(extpos == std::string::npos) ?
         filename.substr(namepos) : filename.substr(namepos, extpos-namepos)};
     std::string newname{basename};
     int count{1};
@@ -1122,8 +1127,7 @@ void AddFileEntry(const std::string &filename)
         newname += " #";
         newname += std::to_string(++count);
     }
-    EnumeratedHrtfs.emplace_back(HrtfEntry{newname, filename});
-    const HrtfEntry &entry = EnumeratedHrtfs.back();
+    const HrtfEntry &entry = EnumeratedHrtfs.emplace_back(newname, filename);
 
     TRACE("Adding file entry \"%s\"\n", entry.mFilename.c_str());
 }
@@ -1131,9 +1135,10 @@ void AddFileEntry(const std::string &filename)
 /* Unfortunate that we have to duplicate AddFileEntry to take a memory buffer
  * for input instead of opening the given filename.
  */
-void AddBuiltInEntry(const std::string &dispname, uint residx)
+void AddBuiltInEntry(const std::string_view dispname, uint residx)
 {
-    const std::string filename{'!'+std::to_string(residx)+'_'+dispname};
+    std::string filename{'!'+std::to_string(residx)+'_'};
+    filename += dispname;
 
     auto enum_iter = std::find_if(EnumeratedHrtfs.cbegin(), EnumeratedHrtfs.cend(),
         [&filename](const HrtfEntry &entry) -> bool
@@ -1155,8 +1160,7 @@ void AddBuiltInEntry(const std::string &dispname, uint residx)
         newname += " #";
         newname += std::to_string(++count);
     }
-    EnumeratedHrtfs.emplace_back(HrtfEntry{newname, filename});
-    const HrtfEntry &entry = EnumeratedHrtfs.back();
+    const HrtfEntry &entry = EnumeratedHrtfs.emplace_back(std::move(newname), std::move(filename));
 
     TRACE("Adding built-in entry \"%s\"\n", entry.mFilename.c_str());
 }
@@ -1240,11 +1244,11 @@ std::vector<std::string> EnumerateHrtf(std::optional<std::string> pathopt)
     return list;
 }
 
-HrtfStorePtr GetLoadedHrtf(const std::string &name, const uint devrate)
+HrtfStorePtr GetLoadedHrtf(const std::string_view name, const uint devrate)
 try {
     std::lock_guard<std::mutex> enumlock{EnumeratedHrtfLock};
     auto entry_iter = std::find_if(EnumeratedHrtfs.cbegin(), EnumeratedHrtfs.cend(),
-        [&name](const HrtfEntry &entry) -> bool { return entry.mDispName == name; });
+        [name](const HrtfEntry &entry) -> bool { return entry.mDispName == name; });
     if(entry_iter == EnumeratedHrtfs.cend())
         return nullptr;
     const std::string &fname = entry_iter->mFilename;
@@ -1273,7 +1277,7 @@ try {
         al::span<const char> res{GetResource(residx)};
         if(res.empty())
         {
-            ERR("Could not get resource %u, %s\n", residx, name.c_str());
+            ERR("Could not get resource %u, %.*s\n", residx, al::sizei(name), name.data());
             return nullptr;
         }
         stream = std::make_unique<idstream>(res.begin(), res.end());
@@ -1294,7 +1298,7 @@ try {
     std::array<char,GetMarker03Name().size()> magic{};
     stream->read(magic.data(), magic.size());
     if(stream->gcount() < static_cast<std::streamsize>(GetMarker03Name().size()))
-        ERR("%s data is too short (%zu bytes)\n", name.c_str(), stream->gcount());
+        ERR("%.*s data is too short (%zu bytes)\n", al::sizei(name),name.data(), stream->gcount());
     else if(GetMarker03Name() == std::string_view{magic.data(), magic.size()})
     {
         TRACE("Detected data set format v3\n");
@@ -1316,7 +1320,7 @@ try {
         hrtf = LoadHrtf00(*stream);
     }
     else
-        ERR("Invalid header in %s: \"%.8s\"\n", name.c_str(), magic.data());
+        ERR("Invalid header in %.*s: \"%.8s\"\n", al::sizei(name), name.data(), magic.data());
     stream.reset();
 
     if(!hrtf)
@@ -1324,7 +1328,8 @@ try {
 
     if(hrtf->mSampleRate != devrate)
     {
-        TRACE("Resampling HRTF %s (%uhz -> %uhz)\n", name.c_str(), hrtf->mSampleRate, devrate);
+        TRACE("Resampling HRTF %.*s (%uhz -> %uhz)\n", al::sizei(name), name.data(),
+            hrtf->mSampleRate, devrate);
 
         /* Calculate the last elevation's index and get the total IR count. */
         const size_t lastEv{std::accumulate(hrtf->mFields.begin(), hrtf->mFields.end(), 0_uz,
@@ -1396,13 +1401,13 @@ try {
     }
 
     handle = LoadedHrtfs.emplace(handle, fname, std::move(hrtf));
-    TRACE("Loaded HRTF %s for sample rate %uhz, %u-sample filter\n", name.c_str(),
+    TRACE("Loaded HRTF %.*s for sample rate %uhz, %u-sample filter\n", al::sizei(name),name.data(),
         handle->mEntry->mSampleRate, handle->mEntry->mIrSize);
 
     return HrtfStorePtr{handle->mEntry.get()};
 }
 catch(std::exception& e) {
-    ERR("Failed to load %s: %s\n", name.c_str(), e.what());
+    ERR("Failed to load %.*s: %s\n", al::sizei(name), name.data(), e.what());
     return nullptr;
 }
 

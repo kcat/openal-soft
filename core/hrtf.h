@@ -6,6 +6,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include "almalloc.h"
@@ -93,6 +94,6 @@ struct DirectHrtfState {
 
 
 std::vector<std::string> EnumerateHrtf(std::optional<std::string> pathopt);
-HrtfStorePtr GetLoadedHrtf(const std::string &name, const uint devrate);
+HrtfStorePtr GetLoadedHrtf(const std::string_view name, const uint devrate);
 
 #endif /* CORE_HRTF_H */

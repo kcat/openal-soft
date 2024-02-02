@@ -1062,7 +1062,7 @@ void aluInitRenderer(ALCdevice *device, int hrtf_id, std::optional<StereoEncodin
 
         if(hrtf_id >= 0 && static_cast<uint>(hrtf_id) < device->mHrtfList.size())
         {
-            const std::string &hrtfname = device->mHrtfList[static_cast<uint>(hrtf_id)];
+            const std::string_view hrtfname{device->mHrtfList[static_cast<uint>(hrtf_id)]};
             if(HrtfStorePtr hrtf{GetLoadedHrtf(hrtfname, device->Frequency)})
             {
                 device->mHrtf = std::move(hrtf);
@@ -1072,7 +1072,7 @@ void aluInitRenderer(ALCdevice *device, int hrtf_id, std::optional<StereoEncodin
 
         if(!device->mHrtf)
         {
-            for(const auto &hrtfname : device->mHrtfList)
+            for(const std::string_view hrtfname : device->mHrtfList)
             {
                 if(HrtfStorePtr hrtf{GetLoadedHrtf(hrtfname, device->Frequency)})
                 {

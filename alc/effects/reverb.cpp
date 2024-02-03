@@ -1187,18 +1187,19 @@ void ReverbPipeline::update3DPanning(const al::span<const float,3> ReflectionsPa
              */
             auto mult_matrix = [](const al::span<const std::array<float,4>,4> mtx1)
             {
-                auto&& mtx2 = AmbiScale::FirstOrderUp;
                 std::array<std::array<float,MaxAmbiChannels>,NUM_LINES> res{};
+                const auto mtx2 = al::span{AmbiScale::FirstOrderUp};
 
                 for(size_t i{0};i < mtx1[0].size();++i)
                 {
                     const al::span dst{res[i]};
+                    static_assert(dst.size() >= std::tuple_size_v<decltype(mtx2)::element_type>);
                     for(size_t k{0};k < mtx1.size();++k)
                     {
                         const float a{mtx1[k][i]};
-                        std::transform(dst.begin(), dst.end(), mtx2[k].begin(), dst.begin(),
-                            [a](const float out, const float in) noexcept -> float
-                            { return out + a*in; });
+                        std::transform(mtx2[k].begin(), mtx2[k].end(), dst.begin(), dst.begin(),
+                            [a](const float in, const float out) noexcept -> float
+                            { return a*in + out; });
                     }
                 }
 
@@ -1219,12 +1220,13 @@ void ReverbPipeline::update3DPanning(const al::span<const float,3> ReflectionsPa
             for(size_t i{0};i < mtx1[0].size();++i)
             {
                 const al::span dst{res[i]};
+                static_assert(dst.size() >= std::tuple_size_v<decltype(mtx2)::element_type>);
                 for(size_t k{0};k < mtx1.size();++k)
                 {
                     const float a{mtx1[k][i]};
-                    std::transform(dst.begin(), dst.end(), mtx2[k].begin(), dst.begin(),
-                        [a](const float out, const float in) noexcept -> float
-                        { return out + a*in; });
+                    std::transform(mtx2[k].begin(), mtx2[k].end(), dst.begin(), dst.begin(),
+                        [a](const float in, const float out) noexcept -> float
+                        { return a*in + out; });
                 }
             }
 

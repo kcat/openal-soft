@@ -509,7 +509,7 @@ void WinMMCapture::open(std::string_view name)
 
     // Allocate circular memory buffer for the captured audio
     // Make sure circular buffer is at least 100ms in size
-    const auto CapturedDataSize = std::max(size_t{mDevice->BufferSize},
+    const auto CapturedDataSize = std::max<size_t>(mDevice->BufferSize,
         BufferSize*mWaveBuffer.size());
 
     mRing = RingBuffer::Create(CapturedDataSize, mFormat.nBlockAlign, false);

@@ -109,11 +109,12 @@ void EchoState::update(const ContextBase *context, const EffectSlot *slot,
 
     mFeedGain = props.Feedback;
 
-    /* Convert echo spread (where 0 = center, +/-1 = sides) to angle. */
-    const float angle{std::asin(props.Spread)};
+    /* Convert echo spread (where 0 = center, +/-1 = sides) to a 2D vector. */
+    const float x{props.Spread}; /* +x = left */
+    const float z{std::sqrt(1.0f - x*x)};
 
-    const auto coeffs0 = CalcAngleCoeffs(-angle, 0.0f, 0.0f);
-    const auto coeffs1 = CalcAngleCoeffs( angle, 0.0f, 0.0f);
+    const auto coeffs0 = CalcAmbiCoeffs( x, 0.0f, z, 0.0f);
+    const auto coeffs1 = CalcAmbiCoeffs(-x, 0.0f, z, 0.0f);
 
     mOutTarget = target.Main->Buffer;
     ComputePanGains(target.Main, coeffs0, slot->Gain, mGains[0].Target);

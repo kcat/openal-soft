@@ -396,7 +396,7 @@ bool OSSPlayback::reset()
     uint ossSpeed{mDevice->Frequency};
     uint frameSize{numChannels * mDevice->bytesFromFmt()};
     /* According to the OSS spec, 16 bytes (log2(16)) is the minimum. */
-    uint log2FragmentSize{maxu(log2i(mDevice->UpdateSize*frameSize), 4)};
+    uint log2FragmentSize{std::max(log2i(mDevice->UpdateSize*frameSize), 4u)};
     uint numFragmentsLogSize{(periods << 16) | log2FragmentSize};
 
     audio_buf_info info{};
@@ -587,7 +587,7 @@ void OSScapture::open(std::string_view name)
     uint frameSize{numChannels * mDevice->bytesFromFmt()};
     uint ossSpeed{mDevice->Frequency};
     /* according to the OSS spec, 16 bytes are the minimum */
-    uint log2FragmentSize{maxu(log2i(mDevice->BufferSize * frameSize / periods), 4)};
+    uint log2FragmentSize{std::max(log2i(mDevice->BufferSize * frameSize / periods), 4u)};
     uint numFragmentsLogSize{(periods << 16) | log2FragmentSize};
 
     audio_buf_info info{};

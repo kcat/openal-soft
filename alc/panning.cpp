@@ -236,7 +236,7 @@ void InitNearFieldCtrl(ALCdevice *device, const float ctrl_dist, const uint orde
     if(!device->getConfigValueBool("decoder", "nfc", false) || !(ctrl_dist > 0.0f))
         return;
 
-    device->AvgSpeakerDist = clampf(ctrl_dist, 0.1f, 10.0f);
+    device->AvgSpeakerDist = std::clamp(ctrl_dist, 0.1f, 10.0f);
     TRACE("Using near-field reference distance: %.2f meters\n", device->AvgSpeakerDist);
 
     const float w1{SpeedOfSoundMetersPerSec /
@@ -251,7 +251,8 @@ void InitNearFieldCtrl(ALCdevice *device, const float ctrl_dist, const uint orde
 void InitDistanceComp(ALCdevice *device, const al::span<const Channel> channels,
     const al::span<const float,MaxOutputChannels> dists)
 {
-    const float maxdist{std::accumulate(std::begin(dists), std::end(dists), 0.0f, maxf)};
+    const float maxdist{std::accumulate(std::begin(dists), std::end(dists), 0.0f,
+        [](const float a, const float b) noexcept -> float { return std::max(a, b); })};
 
     if(!device->getConfigValueBool("decoder", "distance-comp", true) || !(maxdist > 0.0f))
         return;
@@ -997,7 +998,7 @@ void aluInitRenderer(ALCdevice *device, int hrtf_id, std::optional<StereoEncodin
 
             TRACE("Using %s decoder: \"%s\"\n", DevFmtChannelsString(device->FmtChans),
                 conf.Description.c_str());
-            device->mXOverFreq = clampf(conf.XOverFreq, 100.0f, 1000.0f);
+            device->mXOverFreq = std::clamp(conf.XOverFreq, 100.0f, 1000.0f);
 
             decoder_store = std::make_unique<DecoderConfig<DualBand,MaxOutputChannels>>();
             decoder = MakeDecoderView(device, &conf, *decoder_store);
@@ -1092,7 +1093,7 @@ void aluInitRenderer(ALCdevice *device, int hrtf_id, std::optional<StereoEncodin
             if(auto hrtfsizeopt = device->configValue<uint>({}, "hrtf-size"))
             {
                 if(*hrtfsizeopt > 0 && *hrtfsizeopt < device->mIrSize)
-                    device->mIrSize = maxu(*hrtfsizeopt, MinIrLength);
+                    device->mIrSize = std::max(*hrtfsizeopt, MinIrLength);
             }
 
             InitHrtfPanning(device);

@@ -271,9 +271,8 @@ void PortCapture::open(std::string_view name)
         throw al::backend_exception{al::backend_error::NoDevice, "Device name \"%.*s\" not found",
             al::sizei(name), name.data()};
 
-    uint samples{mDevice->BufferSize};
-    samples = maxu(samples, 100 * mDevice->Frequency / 1000);
-    uint frame_size{mDevice->frameSizeFromFmt()};
+    const uint samples{std::max(mDevice->BufferSize, mDevice->Frequency/10u)};
+    const uint frame_size{mDevice->frameSizeFromFmt()};
 
     mRing = RingBuffer::Create(samples, frame_size, false);
 

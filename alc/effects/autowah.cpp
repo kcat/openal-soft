@@ -124,7 +124,7 @@ void AutowahState::update(const ContextBase *context, const EffectSlot *slot,
     const DeviceBase *device{context->mDevice};
     const auto frequency = static_cast<float>(device->Frequency);
 
-    const float ReleaseTime{clampf(props.ReleaseTime, 0.001f, 1.0f)};
+    const float ReleaseTime{std::clamp(props.ReleaseTime, 0.001f, 1.0f)};
 
     mAttackRate    = std::exp(-1.0f / (props.AttackTime*frequency));
     mReleaseRate   = std::exp(-1.0f / (ReleaseTime*frequency));
@@ -164,7 +164,7 @@ void AutowahState::process(const size_t samplesToDo,
         env_delay = lerpf(sample, env_delay, a);
 
         /* Calculate the cos and alpha components for this sample's filter. */
-        const float w0{minf((bandwidth*env_delay + freq_min), 0.46f) *
+        const float w0{std::min(bandwidth*env_delay + freq_min, 0.46f) *
             (al::numbers::pi_v<float>*2.0f)};
         mEnv[i].cos_w0 = std::cos(w0);
         mEnv[i].alpha = std::sin(w0)/(2.0f * QFactor);

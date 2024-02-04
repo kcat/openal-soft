@@ -133,7 +133,7 @@ void Compressor::crestDetector(const uint SamplesToDo)
 
     auto calc_crest = [&y2_rms,&y2_peak,a_crest](const float x_abs) noexcept -> float
     {
-        const float x2{clampf(x_abs*x_abs, 0.000001f, 1000000.0f)};
+        const float x2{std::clamp(x_abs*x_abs, 0.000001f, 1000000.0f)};
 
         y2_peak = std::max(x2, lerpf(x2, y2_peak, a_crest));
         y2_rms = lerpf(x2, y2_rms, a_crest);
@@ -319,10 +319,10 @@ std::unique_ptr<Compressor> Compressor::Create(const size_t NumChans, const floa
     const float PostGainDb, const float ThresholdDb, const float Ratio, const float KneeDb,
     const float AttackTime, const float ReleaseTime)
 {
-    const auto lookAhead = static_cast<uint>(clampf(std::round(LookAheadTime*SampleRate), 0.0f,
-        BufferLineSize-1));
-    const auto hold = static_cast<uint>(clampf(std::round(HoldTime*SampleRate), 0.0f,
-        BufferLineSize-1));
+    const auto lookAhead = static_cast<uint>(std::clamp(std::round(LookAheadTime*SampleRate), 0.0f,
+        BufferLineSize-1.0f));
+    const auto hold = static_cast<uint>(std::clamp(std::round(HoldTime*SampleRate), 0.0f,
+        BufferLineSize-1.0f));
 
     auto Comp = CompressorPtr{new Compressor{}};
     Comp->mNumChans = NumChans;

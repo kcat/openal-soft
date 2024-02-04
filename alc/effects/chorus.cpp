@@ -146,8 +146,8 @@ void ChorusState::update(const ContextBase *context, const EffectSlot *slot,
 
     mWaveform = waveform;
 
-    mDelay = maxi(float2int(delay*frequency*MixerFracOne + 0.5f), mindelay);
-    mDepth = minf(depth * static_cast<float>(mDelay),
+    mDelay = std::max(float2int(std::round(delay*frequency*MixerFracOne)), mindelay);
+    mDepth = std::min(depth * static_cast<float>(mDelay),
         static_cast<float>(mDelay - mindelay));
 
     mFeedback = feedback;
@@ -173,7 +173,8 @@ void ChorusState::update(const ContextBase *context, const EffectSlot *slot,
         /* Calculate LFO coefficient (number of samples per cycle). Limit the
          * max range to avoid overflow when calculating the displacement.
          */
-        const uint lfo_range{float2uint(minf(frequency/rate + 0.5f, float{INT_MAX/360 - 180}))};
+        const uint lfo_range{float2uint(std::min(std::round(frequency/rate),
+            float{std::numeric_limits<int>::max()/360 - 180}))};
 
         mLfoOffset = mLfoOffset * lfo_range / mLfoRange;
         mLfoRange = lfo_range;

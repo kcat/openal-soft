@@ -78,11 +78,11 @@ inline DevFmtType_t<T> StoreSample(float) noexcept;
 template<> inline float StoreSample<DevFmtFloat>(float val) noexcept
 { return val; }
 template<> inline int32_t StoreSample<DevFmtInt>(float val) noexcept
-{ return fastf2i(clampf(val*2147483648.0f, -2147483648.0f, 2147483520.0f)); }
+{ return fastf2i(std::clamp(val*2147483648.0f, -2147483648.0f, 2147483520.0f)); }
 template<> inline int16_t StoreSample<DevFmtShort>(float val) noexcept
-{ return static_cast<int16_t>(fastf2i(clampf(val*32768.0f, -32768.0f, 32767.0f))); }
+{ return static_cast<int16_t>(fastf2i(std::clamp(val*32768.0f, -32768.0f, 32767.0f))); }
 template<> inline int8_t StoreSample<DevFmtByte>(float val) noexcept
-{ return static_cast<int8_t>(fastf2i(clampf(val*128.0f, -128.0f, 127.0f))); }
+{ return static_cast<int8_t>(fastf2i(std::clamp(val*128.0f, -128.0f, 127.0f))); }
 
 /* Define unsigned output variations. */
 template<> inline uint32_t StoreSample<DevFmtUInt>(float val) noexcept
@@ -165,16 +165,13 @@ SampleConverterPtr SampleConverter::Create(DevFmtType srcType, DevFmtType dstTyp
     converter->mSrcPrepCount = MaxResamplerPadding;
     converter->mFracOffset = 0;
     for(auto &chan : converter->mChan)
-    {
-        const al::span<float> buffer{chan.PrevSamples};
-        std::fill(buffer.begin(), buffer.end(), 0.0f);
-    }
+        chan.PrevSamples.fill(0.0f);
 
     /* Have to set the mixer FPU mode since that's what the resampler code expects. */
     FPUCtl mixer_mode{};
-    auto step = static_cast<uint>(
-        mind(srcRate*double{MixerFracOne}/dstRate + 0.5, MaxPitch*MixerFracOne));
-    converter->mIncrement = maxu(step, 1);
+    const auto step = std::min(std::round(srcRate*double{MixerFracOne}/dstRate),
+        MaxPitch*double{MixerFracOne});
+    converter->mIncrement = std::max(static_cast<uint>(step), 1u);
     if(converter->mIncrement == MixerFracOne)
         converter->mResample = [](const InterpState*, const float *RESTRICT src, uint, const uint,
             const al::span<float> dst) { std::copy_n(src, dst.size(), dst.begin()); };
@@ -207,8 +204,8 @@ uint SampleConverter::availableOut(uint srcframes) const
     DataSize64 -= mFracOffset;
 
     /* If we have a full prep, we can generate at least one sample. */
-    return static_cast<uint>(clampu64((DataSize64 + mIncrement-1)/mIncrement, 1,
-        std::numeric_limits<int>::max()));
+    return static_cast<uint>(std::clamp((DataSize64 + mIncrement-1)/mIncrement, 1_u64,
+        uint64_t{std::numeric_limits<int>::max()}));
 }
 
 uint SampleConverter::convert(const void **src, uint *srcframes, void *dst, uint dstframes)
@@ -224,7 +221,7 @@ uint SampleConverter::convert(const void **src, uint *srcframes, void *dst, uint
     while(pos < dstframes && NumSrcSamples > 0)
     {
         const uint prepcount{mSrcPrepCount};
-        const uint readable{minu(NumSrcSamples, BufferLineSize - prepcount)};
+        const uint readable{std::min(NumSrcSamples, uint{BufferLineSize} - prepcount)};
 
         if(prepcount < MaxResamplerPadding && MaxResamplerPadding-prepcount >= readable)
         {
@@ -250,15 +247,15 @@ uint SampleConverter::convert(const void **src, uint *srcframes, void *dst, uint
         DataSize64 -= DataPosFrac;
 
         /* If we have a full prep, we can generate at least one sample. */
-        auto DstSize = static_cast<uint>(
-            clampu64((DataSize64 + increment-1)/increment, 1, BufferLineSize));
-        DstSize = minu(DstSize, dstframes-pos);
+        auto DstSize = static_cast<uint>(std::clamp((DataSize64 + increment-1)/increment, 1_u64,
+            uint64_t{BufferLineSize}));
+        DstSize = std::min(DstSize, dstframes-pos);
 
         const uint DataPosEnd{DstSize*increment + DataPosFrac};
         const uint SrcDataEnd{DataPosEnd>>MixerFracBits};
 
         assert(prepcount+readable >= SrcDataEnd);
-        const uint nextprep{minu(prepcount + readable - SrcDataEnd, MaxResamplerPadding)};
+        const uint nextprep{std::min(prepcount+readable-SrcDataEnd, uint{MaxResamplerPadding})};
 
         for(size_t chan{0u};chan < mChan.size();chan++)
         {
@@ -292,7 +289,7 @@ uint SampleConverter::convert(const void **src, uint *srcframes, void *dst, uint
         mFracOffset = DataPosEnd & MixerFracMask;
 
         /* Update the src and dst pointers in case there's still more to do. */
-        const uint srcread{minu(NumSrcSamples, SrcDataEnd + mSrcPrepCount - prepcount)};
+        const uint srcread{std::min(NumSrcSamples, SrcDataEnd + mSrcPrepCount - prepcount)};
         SamplesIn += SrcFrameSize*srcread;
         NumSrcSamples -= srcread;
 
@@ -316,7 +313,7 @@ uint SampleConverter::convertPlanar(const void **src, uint *srcframes, void *con
     while(pos < dstframes && NumSrcSamples > 0)
     {
         const uint prepcount{mSrcPrepCount};
-        const uint readable{minu(NumSrcSamples, BufferLineSize - prepcount)};
+        const uint readable{std::min(NumSrcSamples, uint{BufferLineSize} - prepcount)};
 
         if(prepcount < MaxResamplerPadding && MaxResamplerPadding-prepcount >= readable)
         {
@@ -345,15 +342,15 @@ uint SampleConverter::convertPlanar(const void **src, uint *srcframes, void *con
         DataSize64 -= DataPosFrac;
 
         /* If we have a full prep, we can generate at least one sample. */
-        auto DstSize = static_cast<uint>(
-            clampu64((DataSize64 + increment-1)/increment, 1, BufferLineSize));
-        DstSize = minu(DstSize, dstframes-pos);
+        auto DstSize = static_cast<uint>(std::clamp((DataSize64 + increment-1)/increment, 1_u64,
+            uint64_t{BufferLineSize}));
+        DstSize = std::min(DstSize, dstframes-pos);
 
         const uint DataPosEnd{DstSize*increment + DataPosFrac};
         const uint SrcDataEnd{DataPosEnd>>MixerFracBits};
 
         assert(prepcount+readable >= SrcDataEnd);
-        const uint nextprep{minu(prepcount + readable - SrcDataEnd, MaxResamplerPadding)};
+        const uint nextprep{std::min(prepcount+readable-SrcDataEnd, uint{MaxResamplerPadding})};
 
         for(size_t chan{0u};chan < mChan.size();chan++)
         {
@@ -385,7 +382,7 @@ uint SampleConverter::convertPlanar(const void **src, uint *srcframes, void *con
         mFracOffset = DataPosEnd & MixerFracMask;
 
         /* Update the src and dst pointers in case there's still more to do. */
-        const uint srcread{minu(NumSrcSamples, SrcDataEnd + mSrcPrepCount - prepcount)};
+        const uint srcread{std::min(NumSrcSamples, SrcDataEnd + mSrcPrepCount - prepcount)};
         for(size_t chan{0u};chan < mChan.size();chan++)
             src[chan] = static_cast<const std::byte*>(src[chan]) + size_t{mSrcTypeSize}*srcread;
         NumSrcSamples -= srcread;

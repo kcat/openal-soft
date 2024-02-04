@@ -838,7 +838,8 @@ void DeviceNode::parseSampleRate(const spa_pod *value, bool force_update) noexce
         /* [0] is the default, [1] is the min, and [2] is the max. */
         TRACE("  sample rate: %d (range: %d -> %d)\n", srates[0], srates[1], srates[2]);
         if(!mSampleRate || force_update)
-            mSampleRate = static_cast<uint>(clampi(srates[0], MinOutputRate, MaxOutputRate));
+            mSampleRate = static_cast<uint>(std::clamp<int>(srates[0], MinOutputRate,
+                MaxOutputRate));
         return;
     }
 
@@ -885,7 +886,8 @@ void DeviceNode::parseSampleRate(const spa_pod *value, bool force_update) noexce
 
         TRACE("  sample rate: %d\n", srates[0]);
         if(!mSampleRate || force_update)
-            mSampleRate = static_cast<uint>(clampi(srates[0], MinOutputRate, MaxOutputRate));
+            mSampleRate = static_cast<uint>(std::clamp<int>(srates[0], MinOutputRate,
+                MaxOutputRate));
         return;
     }
 
@@ -1495,7 +1497,7 @@ void PipeWirePlayback::outputCallback() noexcept
     auto chanptr_end = mChannelPtrs.begin();
     for(const auto &data : datas)
     {
-        length = minu(length, data.maxsize/sizeof(float));
+        length = std::min(length, data.maxsize/uint{sizeof(float)});
         *chanptr_end = static_cast<float*>(data.data);
         ++chanptr_end;
 
@@ -1632,8 +1634,8 @@ bool PipeWirePlayback::reset()
                 const double buffersize{std::round(mDevice->BufferSize * scale)};
 
                 mDevice->Frequency = match->mSampleRate;
-                mDevice->UpdateSize = static_cast<uint>(clampd(updatesize, 64.0, 8192.0));
-                mDevice->BufferSize = static_cast<uint>(maxd(buffersize, 128.0));
+                mDevice->UpdateSize = static_cast<uint>(std::clamp(updatesize, 64.0, 8192.0));
+                mDevice->BufferSize = static_cast<uint>(std::max(buffersize, 128.0));
             }
             if(!mDevice->Flags.test(ChannelsRequest) && match->mChannels != InvalidChannelConfig)
                 mDevice->FmtChans = match->mChannels;
@@ -1945,8 +1947,8 @@ void PipeWireCapture::inputCallback() noexcept
     if(!pw_buf) UNLIKELY return;
 
     spa_data *bufdata{pw_buf->buffer->datas};
-    const uint offset{minu(bufdata->chunk->offset, bufdata->maxsize)};
-    const uint size{minu(bufdata->chunk->size, bufdata->maxsize - offset)};
+    const uint offset{std::min(bufdata->chunk->offset, bufdata->maxsize)};
+    const uint size{std::min(bufdata->chunk->size, bufdata->maxsize - offset)};
 
     std::ignore = mRing->write(static_cast<char*>(bufdata->data) + offset,
         size / mRing->getElemSize());
@@ -2134,7 +2136,7 @@ void PipeWireCapture::open(std::string_view name)
     setDefaultWFXChannelOrder();
 
     /* Ensure at least a 100ms capture buffer. */
-    mRing = RingBuffer::Create(maxu(mDevice->Frequency/10, mDevice->BufferSize),
+    mRing = RingBuffer::Create(std::max(mDevice->Frequency/10u, mDevice->BufferSize),
         mDevice->frameSizeFromFmt(), false);
 }
 

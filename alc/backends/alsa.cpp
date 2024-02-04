@@ -987,8 +987,10 @@ void AlsaCapture::open(std::string_view name)
         break;
     }
 
-    snd_pcm_uframes_t bufferSizeInFrames{maxu(mDevice->BufferSize, 100*mDevice->Frequency/1000)};
-    snd_pcm_uframes_t periodSizeInFrames{minu(mDevice->BufferSize, 25*mDevice->Frequency/1000)};
+    snd_pcm_uframes_t bufferSizeInFrames{std::max(mDevice->BufferSize,
+        100u*mDevice->Frequency/1000u)};
+    snd_pcm_uframes_t periodSizeInFrames{std::min(mDevice->BufferSize,
+        25u*mDevice->Frequency/1000u)};
 
     bool needring{false};
     HwParamsPtr hp{CreateHwParams()};

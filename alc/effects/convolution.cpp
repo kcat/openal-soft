@@ -284,7 +284,7 @@ void ConvolutionState::deviceUpdate(const DeviceBase *device, const BufferStorag
     mChannels = buffer->mChannels;
     mAmbiLayout = IsUHJ(mChannels) ? AmbiLayout::FuMa : buffer->mAmbiLayout;
     mAmbiScaling = IsUHJ(mChannels) ? AmbiScaling::UHJ : buffer->mAmbiScaling;
-    mAmbiOrder = minu(buffer->mAmbiOrder, MaxConvolveAmbiOrder);
+    mAmbiOrder = std::min(buffer->mAmbiOrder, MaxConvolveAmbiOrder);
 
     const auto bytesPerSample = BytesFromFmt(buffer->mType);
     const auto realChannels = buffer->channelsFromFmt();

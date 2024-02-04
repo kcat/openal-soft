@@ -1477,7 +1477,7 @@ void ALeffectslot::eax_set_efx_slot_gain(ALfloat gain)
     if(gain < 0.0f || gain > 1.0f)
         ERR(EAX_PREFIX "Gain out of range (%f)\n", gain);
 
-    Gain = clampf(gain, 0.0f, 1.0f);
+    Gain = std::clamp(gain, 0.0f, 1.0f);
     mPropsDirty = true;
 
 #undef EAX_PREFIX

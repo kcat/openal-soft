@@ -966,16 +966,14 @@ bool PulsePlayback::reset()
          * accordingly.
          */
         const auto scale = static_cast<double>(mSpec.rate) / mDevice->Frequency;
-        const auto perlen = static_cast<uint>(clampd(scale*mDevice->UpdateSize + 0.5, 64.0,
-            8192.0));
-        const auto bufmax = uint{std::numeric_limits<int>::max() / mFrameSize};
-        const auto buflen = static_cast<uint>(clampd(scale*mDevice->BufferSize + 0.5, perlen*2.0,
-            bufmax));
+        const auto perlen = std::clamp(std::round(scale*mDevice->UpdateSize), 64.0, 8192.0);
+        const auto bufmax = static_cast<double>(uint{std::numeric_limits<int>::max()}/mFrameSize);
+        const auto buflen = std::clamp(std::round(scale*mDevice->BufferSize), perlen*2.0, bufmax);
 
         mAttr.maxlength = ~0u;
-        mAttr.tlength = buflen * mFrameSize;
+        mAttr.tlength = static_cast<uint>(buflen) * mFrameSize;
         mAttr.prebuf = 0u;
-        mAttr.minreq = perlen * mFrameSize;
+        mAttr.minreq = static_cast<uint>(perlen) * mFrameSize;
 
         op = pa_stream_set_buffer_attr(mStream, &mAttr, &PulseMainloop::streamSuccessCallbackC,
             &mMainloop);
@@ -1208,12 +1206,12 @@ void PulseCapture::open(std::string_view name)
         throw al::backend_exception{al::backend_error::DeviceError, "Invalid sample format"};
 
     const auto frame_size = static_cast<uint>(pa_frame_size(&mSpec));
-    const uint samples{maxu(mDevice->BufferSize, 100 * mDevice->Frequency / 1000)};
+    const uint samples{std::max(mDevice->BufferSize, mDevice->Frequency*100u/1000u)};
     mAttr.minreq = ~0u;
     mAttr.prebuf = ~0u;
     mAttr.maxlength = samples * frame_size;
     mAttr.tlength = ~0u;
-    mAttr.fragsize = minu(samples, 50*mDevice->Frequency/1000) * frame_size;
+    mAttr.fragsize = std::min(samples, mDevice->Frequency*50u/1000u) * frame_size;
 
     pa_stream_flags_t flags{PA_STREAM_START_CORKED | PA_STREAM_ADJUST_LATENCY};
     if(!GetConfigValueBool({}, "pulse", "allow-moves", true))

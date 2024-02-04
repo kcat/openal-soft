@@ -724,7 +724,7 @@ struct ReverbState final : public EffectState {
  **************************************/
 
 inline float CalcDelayLengthMult(float density)
-{ return maxf(5.0f, std::cbrt(density*DENSITY_SCALE)); }
+{ return std::max(5.0f, std::cbrt(density*DENSITY_SCALE)); }
 
 /* Calculates the delay line metrics and allocates the shared sample buffer
  * for all lines given the sample rate (frequency).
@@ -948,7 +948,7 @@ float CalcLimitedHfRatio(const float hfRatio, const float airAbsorptionGainHF,
         CalcDecayLength(airAbsorptionGainHF, decayTime)};
 
     /* Using the limit calculated above, apply the upper bound to the HF ratio. */
-    return minf(limitRatio, hfRatio);
+    return std::min(limitRatio, hfRatio);
 }
 
 
@@ -1004,7 +1004,7 @@ void Modulation::updateModulator(float modTime, float modDepth, float frequency)
      * appropriate step size to generate an LFO, which will vary the feedback
      * delay over time.
      */
-    Step = maxu(fastf2u(MOD_FRACONE / (frequency * modTime)), 1);
+    Step = std::max(fastf2u(MOD_FRACONE / (frequency * modTime)), 1u);
 
     /* The modulation depth effects the amount of frequency change over the
      * range of the sinus. It needs to be scaled by the modulation time so that
@@ -1077,7 +1077,7 @@ void LateReverb::updateLines(const float density_mult, const float diffusion,
          * includes one sample of delay. Reduce by one to compensate.
          */
         length = LATE_LINE_LENGTHS[i] * density_mult;
-        Offset[i] = maxu(float2uint(length*frequency + 0.5f), 1u) - 1u;
+        Offset[i] = std::max(float2uint(length*frequency + 0.5f), 1u) - 1u;
 
         /* Approximate the absorption that the vector all-pass would exhibit
          * given the current diffusion so we don't have to process a full T60
@@ -1259,8 +1259,9 @@ void ReverbState::update(const ContextBase *Context, const EffectSlot *Slot,
 
     /* Calculate the LF/HF decay times. */
     constexpr float MinDecayTime{0.1f}, MaxDecayTime{20.0f};
-    const float lfDecayTime{clampf(props.DecayTime*props.DecayLFRatio, MinDecayTime,MaxDecayTime)};
-    const float hfDecayTime{clampf(props.DecayTime*hfRatio, MinDecayTime, MaxDecayTime)};
+    const float lfDecayTime{std::clamp(props.DecayTime*props.DecayLFRatio, MinDecayTime,
+        MaxDecayTime)};
+    const float hfDecayTime{std::clamp(props.DecayTime*hfRatio, MinDecayTime, MaxDecayTime)};
 
     /* Determine if a full update is required. */
     const bool fullUpdate{mPipelineState == DeviceClear ||
@@ -1318,9 +1319,9 @@ void ReverbState::update(const ContextBase *Context, const EffectSlot *Slot,
         props.LateReverbGain*gain, mUpmixOutput, target.Main);
 
     /* Calculate the master filters */
-    float hf0norm{minf(props.HFReference/frequency, 0.49f)};
+    float hf0norm{std::min(props.HFReference/frequency, 0.49f)};
     pipeline.mFilter[0].Lp.setParamsFromSlope(BiquadType::HighShelf, hf0norm, props.GainHF, 1.0f);
-    float lf0norm{minf(props.LFReference/frequency, 0.49f)};
+    float lf0norm{std::min(props.LFReference/frequency, 0.49f)};
     pipeline.mFilter[0].Hp.setParamsFromSlope(BiquadType::LowShelf, lf0norm, props.GainLF, 1.0f);
     for(size_t i{1u};i < NUM_LINES;i++)
     {

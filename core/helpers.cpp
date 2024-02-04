@@ -360,7 +360,7 @@ bool SetRTPriorityPthread(int prio [[maybe_unused]])
     rtmax = (rtmax-rtmin)/2 + rtmin;
 
     struct sched_param param{};
-    param.sched_priority = clampi(prio, rtmin, rtmax);
+    param.sched_priority = std::clamp(prio, rtmin, rtmax);
 #ifdef SCHED_RESET_ON_FORK
     err = pthread_setschedparam(pthread_self(), SCHED_RR|SCHED_RESET_ON_FORK, &param);
     if(err == EINVAL)
@@ -438,7 +438,7 @@ bool SetRTPriorityRTKit(int prio [[maybe_unused]])
 
         /* Limit the maximum real-time priority to half. */
         rtmax = (rtmax+1)/2;
-        prio = clampi(prio, 1, rtmax);
+        prio = std::clamp(prio, 1, rtmax);
 
         TRACE("Making real-time with priority %d (max: %d)\n", prio, rtmax);
         err = rtkit_make_realtime(conn.get(), 0, prio);

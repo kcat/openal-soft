@@ -641,10 +641,10 @@ void OpenSLCapture::open(std::string_view name)
     {
         mFrameSize = mDevice->frameSizeFromFmt();
         /* Ensure the total length is at least 100ms */
-        uint length{maxu(mDevice->BufferSize, mDevice->Frequency/10)};
+        uint length{std::max(mDevice->BufferSize, mDevice->Frequency/10u)};
         /* Ensure the per-chunk length is at least 10ms, and no more than 50ms. */
-        uint update_len{clampu(mDevice->BufferSize/3, mDevice->Frequency/100,
-            mDevice->Frequency/100*5)};
+        uint update_len{std::clamp(mDevice->BufferSize/3u, mDevice->Frequency/100u,
+            mDevice->Frequency/100u*5u)};
         uint num_updates{(length+update_len-1) / update_len};
 
         mRing = RingBuffer::Create(num_updates, update_len*mFrameSize, false);
@@ -828,7 +828,7 @@ void OpenSLCapture::captureSamples(std::byte *buffer, uint samples)
     auto rdata = mRing->getReadVector();
     for(uint i{0};i < samples;)
     {
-        const uint rem{minu(samples - i, update_size - mSplOffset)};
+        const uint rem{std::min(samples - i, update_size - mSplOffset)};
         std::copy_n(rdata.first.buf + mSplOffset*size_t{mFrameSize}, rem*size_t{mFrameSize},
             buffer + i*size_t{mFrameSize});
 

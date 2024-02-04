@@ -147,7 +147,7 @@ bool OboePlayback::reset()
     if(result != oboe::Result::OK)
         throw al::backend_exception{al::backend_error::DeviceError, "Failed to create stream: %s",
             oboe::convertToText(result)};
-    mStream->setBufferSizeInFrames(mini(static_cast<int32_t>(mDevice->BufferSize),
+    mStream->setBufferSizeInFrames(std::min(static_cast<int32_t>(mDevice->BufferSize),
         mStream->getBufferCapacityInFrames()));
     TRACE("Got stream with properties:\n%s", oboe::convertToText(mStream.get()));
 
@@ -192,9 +192,9 @@ bool OboePlayback::reset()
      * FramesPerBurst may not necessarily be correct, but hopefully it can act as a minimum
      * update size.
      */
-    mDevice->UpdateSize = maxu(mDevice->Frequency / 100,
+    mDevice->UpdateSize = std::max(mDevice->Frequency/100u,
         static_cast<uint32_t>(mStream->getFramesPerBurst()));
-    mDevice->BufferSize = maxu(mDevice->UpdateSize * 2,
+    mDevice->BufferSize = std::max(mDevice->UpdateSize*2u,
         static_cast<uint32_t>(mStream->getBufferSizeInFrames()));
 
     return true;
@@ -311,7 +311,7 @@ void OboeCapture::open(std::string_view name)
     TRACE("Got stream with properties:\n%s", oboe::convertToText(mStream.get()));
 
     /* Ensure a minimum ringbuffer size of 100ms. */
-    mRing = RingBuffer::Create(maxu(mDevice->BufferSize, mDevice->Frequency/10),
+    mRing = RingBuffer::Create(std::max(mDevice->BufferSize, mDevice->Frequency/10u),
         static_cast<uint32_t>(mStream->getBytesPerFrame()), false);
 
     mDevice->DeviceName = name;

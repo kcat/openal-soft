@@ -101,7 +101,7 @@ void Sdl2Backend::open(std::string_view name)
     case DevFmtFloat: want.format = AUDIO_F32; break;
     }
     want.channels = (mDevice->FmtChans == DevFmtMono) ? 1 : 2;
-    want.samples = static_cast<Uint16>(minu(mDevice->UpdateSize, 8192));
+    want.samples = static_cast<Uint16>(std::min(mDevice->UpdateSize, 8192u));
     want.callback = [](void *ptr, Uint8 *stream, int len) noexcept
     { return static_cast<Sdl2Backend*>(ptr)->audioCallback(stream, len); };
     want.userdata = this;

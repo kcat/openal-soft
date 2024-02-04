@@ -661,8 +661,7 @@ void DSoundCapture::open(std::string_view name)
         InputType.Format.cbSize = sizeof(WAVEFORMATEXTENSIBLE) - sizeof(WAVEFORMATEX);
     }
 
-    uint samples{mDevice->BufferSize};
-    samples = maxu(samples, 100 * mDevice->Frequency / 1000);
+    const uint samples{std::max(mDevice->BufferSize, mDevice->Frequency/10u)};
 
     DSCBUFFERDESC DSCBDescription{};
     DSCBDescription.dwSize = sizeof(DSCBDescription);

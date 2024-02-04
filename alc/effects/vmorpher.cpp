@@ -247,7 +247,7 @@ void VmorpherState::update(const ContextBase *context, const EffectSlot *slot,
     const DeviceBase *device{context->mDevice};
     const float frequency{static_cast<float>(device->Frequency)};
     const float step{props.Rate / frequency};
-    mStep = fastf2u(clampf(step*WaveformFracOne, 0.0f, float{WaveformFracOne}-1.0f));
+    mStep = fastf2u(std::clamp(step*WaveformFracOne, 0.0f, WaveformFracOne-1.0f));
 
     if(mStep == 0)
         mGetSamples = Oscillate<Half>;

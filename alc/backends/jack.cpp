@@ -364,7 +364,7 @@ int JackPlayback::process(jack_nframes_t numframes) noexcept
     if(mPlaying.load(std::memory_order_acquire)) LIKELY
     {
         auto data = mRing->getReadVector();
-        jack_nframes_t todo{minu(numframes, static_cast<uint>(data.first.len))};
+        jack_nframes_t todo{std::min(numframes, static_cast<jack_nframes_t>(data.first.len))};
         auto write_first = [&data,numchans,todo](float *outbuf) -> float*
         {
             const auto *RESTRICT in = reinterpret_cast<const float*>(data.first.buf);
@@ -381,7 +381,7 @@ int JackPlayback::process(jack_nframes_t numframes) noexcept
         std::transform(out.begin(), out.begin()+numchans, out.begin(), write_first);
         total += todo;
 
-        todo = minu(numframes-total, static_cast<uint>(data.second.len));
+        todo = std::min(numframes-total, static_cast<jack_nframes_t>(data.second.len));
         if(todo > 0)
         {
             auto write_second = [&data,numchans,todo](float *outbuf) -> float*
@@ -519,7 +519,7 @@ bool JackPlayback::reset()
     {
         const std::string_view devname{mDevice->DeviceName};
         uint bufsize{ConfigValueUInt(devname, "jack", "buffer-size").value_or(mDevice->UpdateSize)};
-        bufsize = maxu(NextPowerOf2(bufsize), mDevice->UpdateSize);
+        bufsize = std::max(NextPowerOf2(bufsize), mDevice->UpdateSize);
         mDevice->BufferSize = bufsize + mDevice->UpdateSize;
     }
 
@@ -605,7 +605,7 @@ void JackPlayback::start()
     else
     {
         uint bufsize{ConfigValueUInt(devname, "jack", "buffer-size").value_or(mDevice->UpdateSize)};
-        bufsize = maxu(NextPowerOf2(bufsize), mDevice->UpdateSize);
+        bufsize = std::max(NextPowerOf2(bufsize), mDevice->UpdateSize);
         mDevice->BufferSize = bufsize + mDevice->UpdateSize;
 
         mRing = RingBuffer::Create(bufsize, mDevice->frameSizeFromFmt(), true);

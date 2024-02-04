@@ -130,12 +130,12 @@ void CompressorState::process(const size_t samplesToDo,
                 /* Clamp the absolute amplitude to the defined envelope limits,
                  * then attack or release the envelope to reach it.
                  */
-                const float amplitude{clampf(std::fabs(samplesIn[0][base+i]), AmpEnvelopeMin,
+                const float amplitude{std::clamp(std::fabs(samplesIn[0][base+i]), AmpEnvelopeMin,
                     AmpEnvelopeMax)};
                 if(amplitude > env)
-                    env = minf(env*mAttackMult, amplitude);
+                    env = std::min(env*mAttackMult, amplitude);
                 else if(amplitude < env)
-                    env = maxf(env*mReleaseMult, amplitude);
+                    env = std::max(env*mReleaseMult, amplitude);
 
                 /* Apply the reciprocal of the envelope to normalize the volume
                  * (compress the dynamic range).
@@ -153,9 +153,9 @@ void CompressorState::process(const size_t samplesToDo,
             {
                 const float amplitude{1.0f};
                 if(amplitude > env)
-                    env = minf(env*mAttackMult, amplitude);
+                    env = std::min(env*mAttackMult, amplitude);
                 else if(amplitude < env)
-                    env = maxf(env*mReleaseMult, amplitude);
+                    env = std::max(env*mReleaseMult, amplitude);
 
                 gains[i] = 1.0f / env;
             }

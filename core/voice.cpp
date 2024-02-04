@@ -289,7 +289,7 @@ inline void LoadSamples<FmtIMA4>(float *RESTRICT dstSamples, const std::byte *sr
     /* NOTE: This could probably be optimized better. */
     size_t wrote{0};
     do {
-        static constexpr int MaxStepIndex{static_cast<int>(std::size(IMAStep_size)) - 1};
+        static constexpr int MaxStepIndex{static_cast<int>(IMAStep_size.size()) - 1};
         /* Each IMA4 block starts with a signed 16-bit sample, and a signed
          * 16-bit table index. The table index needs to be clamped.
          */
@@ -297,7 +297,7 @@ inline void LoadSamples<FmtIMA4>(float *RESTRICT dstSamples, const std::byte *sr
         int index{int(src[srcChan*4 + 2]) | (int(src[srcChan*4 + 3]) << 8)};
 
         sample = (sample^0x8000) - 32768;
-        index = clampi((index^0x8000) - 32768, 0, MaxStepIndex);
+        index = std::clamp((index^0x8000) - 32768, 0, MaxStepIndex);
 
         if(skip == 0)
         {
@@ -310,10 +310,10 @@ inline void LoadSamples<FmtIMA4>(float *RESTRICT dstSamples, const std::byte *sr
         auto decode_sample = [&sample,&index](const uint nibble)
         {
             sample += IMA4Codeword[nibble] * IMAStep_size[static_cast<uint>(index)] / 8;
-            sample = clampi(sample, -32768, 32767);
+            sample = std::clamp(sample, -32768, 32767);
 
             index += IMA4Index_adjust[nibble];
-            index = clampi(index, 0, MaxStepIndex);
+            index = std::clamp(index, 0, MaxStepIndex);
 
             return sample;
         };
@@ -418,13 +418,13 @@ inline void LoadSamples<FmtMSADPCM>(float *RESTRICT dstSamples, const std::byte 
         {
             int pred{(sampleHistory[0]*coeffs[0] + sampleHistory[1]*coeffs[1]) / 256};
             pred += ((nibble^0x08) - 0x08) * delta;
-            pred  = clampi(pred, -32768, 32767);
+            pred  = std::clamp(pred, -32768, 32767);
 
             sampleHistory[1] = sampleHistory[0];
             sampleHistory[0] = pred;
 
             delta = (MSADPCMAdaption[static_cast<uint>(nibble)] * delta) / 256;
-            delta = maxi(16, delta);
+            delta = std::max(16, delta);
 
             return pred;
         };
@@ -613,7 +613,7 @@ void DoHrtfMix(const float *samples, const uint DstBufferSize, DirectParams &par
     uint fademix{0u};
     if(Counter && OutPos == 0)
     {
-        fademix = minu(DstBufferSize, Counter);
+        fademix = std::min(DstBufferSize, Counter);
 
         float gain{TargetGain};
 
@@ -852,15 +852,14 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
                 }
                 return std::make_pair(dstBufferSize, srcSizeMax);
             };
-            const auto bufferSizes = calc_buffer_sizes(samplesToLoad - samplesLoaded);
-            const auto dstBufferSize = bufferSizes.first;
-            const auto srcBufferSize = bufferSizes.second;
+            const auto [dstBufferSize, srcBufferSize] = calc_buffer_sizes(
+                samplesToLoad - samplesLoaded);
 
             /* Load the necessary samples from the given buffer(s). */
             if(!BufferListItem)
             {
-                const uint avail{minu(srcBufferSize, MaxResamplerEdge)};
-                const uint tofill{maxu(srcBufferSize, MaxResamplerEdge)};
+                const uint avail{std::min(srcBufferSize, uint{MaxResamplerEdge})};
+                const uint tofill{std::max(srcBufferSize, uint{MaxResamplerEdge})};
 
                 /* When loading from a voice that ended prematurely, only take
                  * the samples that get closest to 0 amplitude. This helps
@@ -893,7 +892,7 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
 
                     std::fill_n(resampleBuffer, srcSampleDelay, 0.0f);
                 }
-                const uint uintPos{static_cast<uint>(maxi(intPos, 0))};
+                const uint uintPos{static_cast<uint>(std::max(intPos, 0))};
 
                 if(mFlags.test(VoiceIsStatic))
                     LoadBufferStatic(BufferListItem, BufferLoopItem, uintPos, mFmtType, chan,
@@ -984,7 +983,7 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
         }
     }
 
-    const uint Counter{mFlags.test(VoiceIsFading) ? minu(samplesToMix, 64u) : 0u};
+    const uint Counter{mFlags.test(VoiceIsFading) ? std::min(samplesToMix, 64u) : 0u};
     if(!Counter)
     {
         /* No fading, just overwrite the old/current params. */
@@ -1177,7 +1176,7 @@ void Voice::prepare(DeviceBase *device)
      * orders up to the device order. The rest are simply dropped.
      */
     uint num_channels{(mFmtChannels == FmtUHJ2 || mFmtChannels == FmtSuperStereo) ? 3 :
-        ChannelsFromFmt(mFmtChannels, minu(mAmbiOrder, device->mAmbiOrder))};
+        ChannelsFromFmt(mFmtChannels, std::min(mAmbiOrder, device->mAmbiOrder))};
     if(num_channels > device->mSampleData.size()) UNLIKELY
     {
         ERR("Unexpected channel count: %u (limit: %zu, %d:%d)\n", num_channels,
@@ -1189,9 +1188,9 @@ void Voice::prepare(DeviceBase *device)
         decltype(mChans){}.swap(mChans);
         decltype(mPrevSamples){}.swap(mPrevSamples);
     }
-    mChans.reserve(maxu(2, num_channels));
+    mChans.reserve(std::max(2u, num_channels));
     mChans.resize(num_channels);
-    mPrevSamples.reserve(maxu(2, num_channels));
+    mPrevSamples.reserve(std::max(2u, num_channels));
     mPrevSamples.resize(num_channels);
 
     mDecoder = nullptr;

@@ -435,8 +435,8 @@ void SndioCapture::open(std::string_view name)
     par.rchan = mDevice->channelsFromFmt();
     par.rate = mDevice->Frequency;
 
-    par.appbufsz = maxu(mDevice->BufferSize, mDevice->Frequency/10);
-    par.round = minu(par.appbufsz/2, mDevice->Frequency/40);
+    par.appbufsz = std::max(mDevice->BufferSize, mDevice->Frequency/10u);
+    par.round = std::min(par.appbufsz/2u, mDevice->Frequency/40u);
 
     if(!sio_setpar(mSndHandle, &par) || !sio_getpar(mSndHandle, &par))
         throw al::backend_exception{al::backend_error::DeviceError,

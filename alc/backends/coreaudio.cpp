@@ -856,8 +856,8 @@ void CoreAudioCapture::open(std::string_view name)
      * conversion ring buffer. Ensure at least 100ms for the total buffer.
      */
     double srateScale{outputFormat.mSampleRate / mDevice->Frequency};
-    auto FrameCount64 = maxu64(static_cast<uint64_t>(std::ceil(mDevice->BufferSize*srateScale)),
-        static_cast<UInt32>(outputFormat.mSampleRate)/10);
+    auto FrameCount64 = std::max(static_cast<uint64_t>(std::ceil(mDevice->BufferSize*srateScale)),
+        static_cast<UInt32>(outputFormat.mSampleRate)/10_u64);
     FrameCount64 += MaxResamplerPadding;
     if(FrameCount64 > std::numeric_limits<int32_t>::max())
         throw al::backend_exception{al::backend_error::DeviceError,
@@ -873,7 +873,7 @@ void CoreAudioCapture::open(std::string_view name)
 
     mCaptureData.resize(outputFrameCount * mFrameSize);
 
-    outputFrameCount = static_cast<UInt32>(maxu64(outputFrameCount, FrameCount64));
+    outputFrameCount = static_cast<UInt32>(std::max(uint64_t{outputFrameCount}, FrameCount64));
     mRing = RingBuffer::Create(outputFrameCount, mFrameSize, false);
 
     /* Set up sample converter if needed */

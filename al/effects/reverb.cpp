@@ -1007,7 +1007,7 @@ void EaxReverbCommitter::translate(const EAX_REVERBPROPERTIES& src, EAXREVERBPRO
     dst = EAXREVERB_PRESETS[src.environment];
     dst.flDecayTime = src.fDecayTime_sec;
     dst.flDecayHFRatio = src.fDamping;
-    dst.lReverb = mini(static_cast<int>(gain_to_level_mb(src.fVolume)), 0);
+    dst.lReverb = static_cast<int>(std::min(gain_to_level_mb(src.fVolume), 0.0f));
 }
 
 void EaxReverbCommitter::translate(const EAX20LISTENERPROPERTIES& src, EAXREVERBPROPERTIES& dst) noexcept

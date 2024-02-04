@@ -200,7 +200,7 @@ IdxBlend CalcEvIndex(uint evcount, float ev)
         al::numbers::inv_pi_v<float>;
     uint idx{float2uint(ev)};
 
-    return IdxBlend{minu(idx, evcount-1), ev-static_cast<float>(idx)};
+    return IdxBlend{std::min(idx, evcount-1u), ev-static_cast<float>(idx)};
 }
 
 /* Calculate the azimuth index given the polar azimuth in radians. This will
@@ -238,7 +238,7 @@ void HrtfStore::getCoeffs(float elevation, float azimuth, float distance, float 
 
     /* Calculate the elevation indices. */
     const auto elev0 = CalcEvIndex(field->evCount, elevation);
-    const size_t elev1_idx{minu(elev0.idx+1, field->evCount-1)};
+    const size_t elev1_idx{std::min(elev0.idx+1u, field->evCount-1u)};
     const size_t ir0offset{mElev[ebase + elev0.idx].irOffset};
     const size_t ir1offset{mElev[ebase + elev1_idx].irOffset};
 
@@ -318,7 +318,7 @@ void DirectHrtfState::build(const HrtfStore *Hrtf, const uint irSize, const bool
     {
         auto &field = Hrtf->mFields[0];
         const auto elev0 = CalcEvIndex(field.evCount, pt.Elev.value);
-        const size_t elev1_idx{minu(elev0.idx+1, field.evCount-1)};
+        const size_t elev1_idx{std::min(elev0.idx+1u, field.evCount-1u)};
         const size_t ir0offset{Hrtf->mElev[elev0.idx].irOffset};
         const size_t ir1offset{Hrtf->mElev[elev1_idx].irOffset};
 
@@ -337,8 +337,8 @@ void DirectHrtfState::build(const HrtfStore *Hrtf, const uint irSize, const bool
         ImpulseResponse res{Hrtf->mCoeffs[irOffset],
             Hrtf->mDelays[irOffset][0], Hrtf->mDelays[irOffset][1]};
 
-        min_delay = minu(min_delay, minu(res.ldelay, res.rdelay));
-        max_delay = maxu(max_delay, maxu(res.ldelay, res.rdelay));
+        min_delay = std::min(min_delay, std::min(res.ldelay, res.rdelay));
+        max_delay = std::max(max_delay, std::max(res.ldelay, res.rdelay));
 
         return res;
     };
@@ -386,7 +386,7 @@ void DirectHrtfState::build(const HrtfStore *Hrtf, const uint irSize, const bool
     }
     tmpres.clear();
 
-    const uint max_length{minu(hrir_delay_round(max_delay) + irSize, HrirLength)};
+    const uint max_length{std::min(hrir_delay_round(max_delay) + irSize, HrirLength)};
     TRACE("New max delay: %.2f, FIR length: %u\n", max_delay/double{HrirDelayFracOne},
         max_length);
     mIrSize = max_length;
@@ -1383,7 +1383,7 @@ try {
             {
                 const float new_delay{std::round(float(hrtf->mDelays[i][j]) * rate_scale) /
                     float{HrirDelayFracOne}};
-                max_delay = maxf(max_delay, new_delay);
+                max_delay = std::max(max_delay, new_delay);
                 new_delays[i][j] = new_delay;
             }
         }
@@ -1412,7 +1412,7 @@ try {
          * sample rate.
          */
         const float newIrSize{std::round(static_cast<float>(hrtf->mIrSize) * rate_scale)};
-        hrtf->mIrSize = static_cast<uint8_t>(minf(HrirLength, newIrSize));
+        hrtf->mIrSize = static_cast<uint8_t>(std::min(float{HrirLength}, newIrSize));
         hrtf->mSampleRate = devrate & 0xff'ff'ff;
     }
 

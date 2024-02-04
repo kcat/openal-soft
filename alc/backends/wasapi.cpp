@@ -1494,9 +1494,9 @@ void WasapiPlayback::prepareFormat(WAVEFORMATEXTENSIBLE &OutputType)
 void WasapiPlayback::finalizeFormat(WAVEFORMATEXTENSIBLE &OutputType)
 {
     if(!GetConfigValueBool(mDevice->DeviceName, "wasapi", "allow-resampler", true))
-        mDevice->Frequency = OutputType.Format.nSamplesPerSec;
+        mDevice->Frequency = uint(OutputType.Format.nSamplesPerSec);
     else
-        mDevice->Frequency = minu(mDevice->Frequency, OutputType.Format.nSamplesPerSec);
+        mDevice->Frequency = std::min(mDevice->Frequency, uint(OutputType.Format.nSamplesPerSec));
 
     const uint32_t chancount{OutputType.Format.nChannels};
     const DWORD chanmask{OutputType.dwChannelMask};
@@ -1773,9 +1773,10 @@ HRESULT WasapiPlayback::resetProxy()
         if(streamParams.StaticObjectTypeMask == ChannelMask_Stereo)
             mDevice->FmtChans = DevFmtStereo;
         if(!GetConfigValueBool(mDevice->DeviceName, "wasapi", "allow-resampler", true))
-            mDevice->Frequency = OutputType.Format.nSamplesPerSec;
+            mDevice->Frequency = uint(OutputType.Format.nSamplesPerSec);
         else
-            mDevice->Frequency = minu(mDevice->Frequency, OutputType.Format.nSamplesPerSec);
+            mDevice->Frequency = std::min(mDevice->Frequency,
+                uint(OutputType.Format.nSamplesPerSec));
 
         setDefaultWFXChannelOrder();
 
@@ -1937,15 +1938,16 @@ no_spatial:
 
     /* Find the nearest multiple of the period size to the update size */
     if(min_per < per_time)
-        min_per *= maxi64((per_time + min_per/2) / min_per, 1);
+        min_per *= std::max<int64_t>((per_time + min_per/2) / min_per, 1_i64);
 
     mOrigBufferSize = buffer_len;
-    mOrigUpdateSize = minu(RefTime2Samples(min_per, mFormat.Format.nSamplesPerSec), buffer_len/2);
+    mOrigUpdateSize = std::min(RefTime2Samples(min_per, mFormat.Format.nSamplesPerSec),
+        buffer_len/2u);
 
     mDevice->BufferSize = static_cast<uint>(uint64_t{buffer_len} * mDevice->Frequency /
         mFormat.Format.nSamplesPerSec);
-    mDevice->UpdateSize = minu(RefTime2Samples(min_per, mDevice->Frequency),
-        mDevice->BufferSize/2);
+    mDevice->UpdateSize = std::min(RefTime2Samples(min_per, mDevice->Frequency),
+        mDevice->BufferSize/2u);
 
     mResampler = nullptr;
     mResampleBuffer.clear();

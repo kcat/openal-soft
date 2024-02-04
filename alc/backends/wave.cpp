@@ -272,7 +272,7 @@ bool WaveBackend::reset()
     case DevFmtX3D71: chanmask = 0x01 | 0x02 | 0x04 | 0x08 | 0x010 | 0x020 | 0x200 | 0x400; break;
     case DevFmtAmbi3D:
         /* .amb output requires FuMa */
-        mDevice->mAmbiOrder = minu(mDevice->mAmbiOrder, 3);
+        mDevice->mAmbiOrder = std::min(mDevice->mAmbiOrder, 3u);
         mDevice->mAmbiLayout = DevAmbiLayout::FuMa;
         mDevice->mAmbiScale = DevAmbiScaling::FuMa;
         isbformat = true;

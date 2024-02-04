@@ -190,7 +190,7 @@ bool EnsureBuffers(ALCdevice *device, size_t needed)
             sublist.FreeMask = ~0_u64;
             sublist.Buffers = SubListAllocator{}.allocate(1);
             device->BufferList.emplace_back(std::move(sublist));
-            count += 64;
+            count += std::tuple_size_v<SubListAllocator::value_type>;
         }
     }
     catch(...) {

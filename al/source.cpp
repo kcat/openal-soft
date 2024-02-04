@@ -728,7 +728,7 @@ bool EnsureSources(ALCcontext *context, size_t needed)
             sublist.FreeMask = ~0_u64;
             sublist.Sources = SubListAllocator{}.allocate(1);
             context->mSourceList.emplace_back(std::move(sublist));
-            count += 64;
+            count += std::tuple_size_v<SubListAllocator::value_type>;
         }
     }
     catch(...) {

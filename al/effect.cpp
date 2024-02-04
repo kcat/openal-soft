@@ -140,7 +140,7 @@ bool EnsureEffects(ALCdevice *device, size_t needed)
             sublist.FreeMask = ~0_u64;
             sublist.Effects = SubListAllocator{}.allocate(1);
             device->EffectList.emplace_back(std::move(sublist));
-            count += 64;
+            count += std::tuple_size_v<SubListAllocator::value_type>;
         }
     }
     catch(...) {

@@ -173,8 +173,8 @@ void ChorusState::update(const ContextBase *context, const EffectSlot *slot,
         /* Calculate LFO coefficient (number of samples per cycle). Limit the
          * max range to avoid overflow when calculating the displacement.
          */
-        const uint lfo_range{float2uint(std::min(std::round(frequency/rate),
-            float{std::numeric_limits<int>::max()/360 - 180}))};
+        static constexpr int range_limit{std::numeric_limits<int>::max()/360 - 180};
+        const uint lfo_range{float2uint(std::min(std::round(frequency/rate), float{range_limit}))};
 
         mLfoOffset = mLfoOffset * lfo_range / mLfoRange;
         mLfoRange = lfo_range;

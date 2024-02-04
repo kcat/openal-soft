@@ -68,9 +68,9 @@
 
 namespace {
 
-using SubListAllocator = typename al::allocator<std::array<ALbuffer,64>>;
+using SubListAllocator = al::allocator<std::array<ALbuffer,64>>;
 
-std::optional<AmbiLayout> AmbiLayoutFromEnum(ALenum layout)
+std::optional<AmbiLayout> AmbiLayoutFromEnum(ALenum layout) noexcept
 {
     switch(layout)
     {
@@ -89,7 +89,7 @@ ALenum EnumFromAmbiLayout(AmbiLayout layout)
     throw std::runtime_error{"Invalid AmbiLayout: "+std::to_string(int(layout))};
 }
 
-std::optional<AmbiScaling> AmbiScalingFromEnum(ALenum scale)
+std::optional<AmbiScaling> AmbiScalingFromEnum(ALenum scale) noexcept
 {
     switch(scale)
     {
@@ -112,7 +112,7 @@ ALenum EnumFromAmbiScaling(AmbiScaling scale)
 }
 
 #ifdef ALSOFT_EAX
-std::optional<EaxStorage> EaxStorageFromEnum(ALenum scale)
+std::optional<EaxStorage> EaxStorageFromEnum(ALenum scale) noexcept
 {
     switch(scale)
     {
@@ -158,7 +158,7 @@ void eax_x_ram_apply(ALCdevice &device, ALbuffer &buffer) noexcept
     }
 }
 
-void eax_x_ram_clear(ALCdevice& al_device, ALbuffer& al_buffer)
+void eax_x_ram_clear(ALCdevice& al_device, ALbuffer& al_buffer) noexcept
 {
     if(al_buffer.eax_x_ram_is_hardware)
         al_device.eax_x_ram_free_size += al_buffer.OriginalSize;
@@ -354,7 +354,7 @@ void LoadData(ALCcontext *context, ALbuffer *ALBuf, ALsizei freq, ALuint size,
         auto newdata = decltype(ALBuf->mDataStorage)(newsize, std::byte{});
         if((access&AL_PRESERVE_DATA_BIT_SOFT))
         {
-            const size_t tocopy{minz(newdata.size(), ALBuf->mDataStorage.size())};
+            const size_t tocopy{std::min(newdata.size(), ALBuf->mDataStorage.size())};
             std::copy_n(ALBuf->mDataStorage.begin(), tocopy, newdata.begin());
         }
         newdata.swap(ALBuf->mDataStorage);

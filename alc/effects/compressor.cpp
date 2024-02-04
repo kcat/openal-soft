@@ -119,7 +119,7 @@ void CompressorState::process(const size_t samplesToDo,
     for(size_t base{0u};base < samplesToDo;)
     {
         std::array<float,256> gains;
-        const size_t td{minz(gains.size(), samplesToDo-base)};
+        const size_t td{std::min(gains.size(), samplesToDo-base)};
 
         /* Generate the per-sample gains from the signal envelope. */
         float env{mEnvFollower};

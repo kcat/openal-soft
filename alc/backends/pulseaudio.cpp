@@ -704,7 +704,7 @@ void PulsePlayback::streamWriteCallback(pa_stream *stream, size_t nbytes) noexce
             free_func = pa_xfree;
         }
         else
-            buflen = minz(buflen, nbytes);
+            buflen = std::min(buflen, nbytes);
         nbytes -= buflen;
 
         mDevice->renderSamples(buf, static_cast<uint>(buflen/mFrameSize), mSpec.channels);
@@ -1267,7 +1267,7 @@ void PulseCapture::captureSamples(std::byte *buffer, uint samples)
     {
         if(mHoleLength > 0) UNLIKELY
         {
-            const size_t rem{minz(dstbuf.size(), mHoleLength)};
+            const size_t rem{std::min(dstbuf.size(), mHoleLength)};
             std::fill_n(dstbuf.begin(), rem, mSilentVal);
             dstbuf = dstbuf.subspan(rem);
             mHoleLength -= rem;
@@ -1276,7 +1276,7 @@ void PulseCapture::captureSamples(std::byte *buffer, uint samples)
         }
         if(!mCapBuffer.empty())
         {
-            const size_t rem{minz(dstbuf.size(), mCapBuffer.size())};
+            const size_t rem{std::min(dstbuf.size(), mCapBuffer.size())};
             std::copy_n(mCapBuffer.begin(), rem, dstbuf.begin());
             dstbuf = dstbuf.subspan(rem);
             mCapBuffer = mCapBuffer.subspan(rem);
@@ -1324,7 +1324,7 @@ void PulseCapture::captureSamples(std::byte *buffer, uint samples)
 
 uint PulseCapture::availableSamples()
 {
-    size_t readable{maxz(mCapBuffer.size(), mHoleLength)};
+    size_t readable{std::max(mCapBuffer.size(), mHoleLength)};
 
     if(mDevice->Connected.load(std::memory_order_acquire))
     {

@@ -91,9 +91,9 @@ effect_exception::~effect_exception() = default;
 
 namespace {
 
-using SubListAllocator = typename al::allocator<std::array<ALeffect,64>>;
+using SubListAllocator = al::allocator<std::array<ALeffect,64>>;
 
-auto GetDefaultProps(ALenum type) -> const EffectProps&
+auto GetDefaultProps(ALenum type) noexcept -> const EffectProps&
 {
     switch(type)
     {

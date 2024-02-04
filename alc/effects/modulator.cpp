@@ -70,7 +70,7 @@ struct ModulatorState final : public EffectState {
 
         for(size_t i{0};i < todo;)
         {
-            size_t rem{minz(todo-i, range-index)};
+            size_t rem{std::min(todo-i, size_t{range-index})};
             do {
                 mModSamples[i++] = func(index++, scale);
             } while(--rem);
@@ -202,7 +202,7 @@ void ModulatorState::process(const size_t samplesToDo, const al::span<const Floa
                 mBuffer[i] *= mModSamples[i];
 
             MixSamples({mBuffer.data(), samplesToDo}, samplesOut[outidx].data(),
-                chandata->mCurrentGain, chandata->mTargetGain, minz(samplesToDo, 64));
+                chandata->mCurrentGain, chandata->mTargetGain, std::min(samplesToDo, 64_uz));
         }
         ++chandata;
     }

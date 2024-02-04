@@ -1474,7 +1474,7 @@ void PipeWirePlayback::outputCallback() noexcept
     if(!pw_buf) UNLIKELY return;
 
     const al::span<spa_data> datas{pw_buf->buffer->datas,
-        minz(mChannelPtrs.size(), pw_buf->buffer->n_datas)};
+        std::min(mChannelPtrs.size(), size_t{pw_buf->buffer->n_datas})};
 #if PW_CHECK_VERSION(0,3,49)
     /* In 0.3.49, pw_buffer::requested specifies the number of samples needed
      * by the resampler/graph for this audio update.

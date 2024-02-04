@@ -180,7 +180,7 @@ void FshifterState::process(const size_t samplesToDo, const al::span<const Float
 {
     for(size_t base{0u};base < samplesToDo;)
     {
-        size_t todo{minz(HilStep-mCount, samplesToDo-base)};
+        size_t todo{std::min(HilStep-mCount, samplesToDo-base)};
 
         /* Fill FIFO buffer with samples data */
         const size_t pos{mPos};

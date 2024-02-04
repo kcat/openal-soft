@@ -342,7 +342,7 @@ inline void LoadSamples<FmtIMA4>(float *RESTRICT dstSamples, const std::byte *sr
         /* Second, decode the rest of the block and write to the output, until
          * the end of the block or the end of output.
          */
-        const size_t todo{minz(samplesPerBlock-startOffset, samplesToLoad-wrote)};
+        const size_t todo{std::min(samplesPerBlock-startOffset, samplesToLoad-wrote)};
         for(size_t i{0};i < todo;++i)
         {
             const size_t byteShift{(nibbleOffset&1) * 4};
@@ -446,7 +446,7 @@ inline void LoadSamples<FmtMSADPCM>(float *RESTRICT dstSamples, const std::byte 
         /* Now decode the rest of the block, until the end of the block or the
          * dst buffer is filled.
          */
-        const size_t todo{minz(samplesPerBlock-startOffset, samplesToLoad-wrote)};
+        const size_t todo{std::min(samplesPerBlock-startOffset, samplesToLoad-wrote)};
         for(size_t j{0};j < todo;++j)
         {
             const size_t byteOffset{nibbleOffset>>1};
@@ -498,7 +498,7 @@ void LoadBufferStatic(VoiceBufferItem *buffer, VoiceBufferItem *bufferLoopItem,
         if(buffer->mSampleLen > dataPosInt) LIKELY
         {
             const size_t buffer_remaining{buffer->mSampleLen - dataPosInt};
-            const size_t remaining{minz(samplesToLoad-samplesLoaded, buffer_remaining)};
+            const size_t remaining{std::min(samplesToLoad-samplesLoaded, buffer_remaining)};
             LoadSamples(voiceSamples+samplesLoaded, buffer->mSamples, srcChannel, dataPosInt,
                 sampleType, srcStep, buffer->mBlockAlign, remaining);
             samplesLoaded += remaining;
@@ -520,14 +520,14 @@ void LoadBufferStatic(VoiceBufferItem *buffer, VoiceBufferItem *bufferLoopItem,
             : (((dataPosInt-loopStart)%(loopEnd-loopStart)) + loopStart)};
 
         /* Load what's left of this loop iteration */
-        const size_t remaining{minz(samplesToLoad-samplesLoaded, loopEnd-dataPosInt)};
+        const size_t remaining{std::min(samplesToLoad-samplesLoaded, loopEnd-dataPosInt)};
         LoadSamples(voiceSamples+samplesLoaded, buffer->mSamples, srcChannel, intPos, sampleType,
             srcStep, buffer->mBlockAlign, remaining);
         samplesLoaded += remaining;
 
         /* Load repeats of the loop to fill the buffer. */
         const size_t loopSize{loopEnd - loopStart};
-        while(const size_t toFill{minz(samplesToLoad - samplesLoaded, loopSize)})
+        while(const size_t toFill{std::min(samplesToLoad - samplesLoaded, loopSize)})
         {
             LoadSamples(voiceSamples+samplesLoaded, buffer->mSamples, srcChannel, loopStart,
                 sampleType, srcStep, buffer->mBlockAlign, toFill);
@@ -543,7 +543,8 @@ void LoadBufferCallback(VoiceBufferItem *buffer, const size_t dataPosInt,
     /* Load what's left to play from the buffer */
     if(numCallbackSamples > dataPosInt) LIKELY
     {
-        const size_t remaining{minz(samplesToLoad-samplesLoaded, numCallbackSamples-dataPosInt)};
+        const size_t remaining{std::min(samplesToLoad-samplesLoaded,
+            numCallbackSamples-dataPosInt)};
         LoadSamples(voiceSamples+samplesLoaded, buffer->mSamples, srcChannel, dataPosInt,
             sampleType, srcStep, buffer->mBlockAlign, remaining);
         samplesLoaded += remaining;
@@ -572,7 +573,8 @@ void LoadBufferQueue(VoiceBufferItem *buffer, VoiceBufferItem *bufferLoopItem,
             continue;
         }
 
-        const size_t remaining{minz(samplesToLoad-samplesLoaded, buffer->mSampleLen-dataPosInt)};
+        const size_t remaining{std::min(samplesToLoad-samplesLoaded,
+            buffer->mSampleLen-dataPosInt)};
         LoadSamples(voiceSamples+samplesLoaded, buffer->mSamples, srcChannel, dataPosInt,
             sampleType, srcStep, buffer->mBlockAlign, remaining);
 

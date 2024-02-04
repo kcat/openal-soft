@@ -54,7 +54,7 @@ public:
         if(max_count == 0 || mPropertyBufferSize < sizeof(TValue))
             fail_too_small();
 
-        const auto count = minz(mPropertyBufferSize / sizeof(TValue), max_count);
+        const auto count = std::min(mPropertyBufferSize/sizeof(TValue), max_count);
         return {static_cast<TValue*>(mPropertyBuffer), count};
     }
 

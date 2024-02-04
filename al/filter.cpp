@@ -49,7 +49,7 @@
 
 namespace {
 
-using SubListAllocator = typename al::allocator<std::array<ALfilter,64>>;
+using SubListAllocator = al::allocator<std::array<ALfilter,64>>;
 
 class filter_exception final : public al::base_exception {
     ALenum mErrorCode;

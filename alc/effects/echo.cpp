@@ -139,7 +139,7 @@ void EchoState::process(const size_t samplesToDo, const al::span<const FloatBuff
         tap1 &= mask;
         tap2 &= mask;
 
-        size_t td{minz(mask+1 - maxz(offset, maxz(tap1, tap2)), samplesToDo-i)};
+        size_t td{std::min(mask+1 - std::max(offset, std::max(tap1, tap2)), samplesToDo-i)};
         do {
             /* Feed the delay buffer's input first. */
             delaybuf[offset] = samplesIn[0][i];

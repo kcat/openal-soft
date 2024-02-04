@@ -77,7 +77,7 @@
 
 namespace {
 
-using SubListAllocator = typename al::allocator<std::array<ALsource,64>>;
+using SubListAllocator = al::allocator<std::array<ALsource,64>>;
 using std::chrono::nanoseconds;
 using seconds_d = std::chrono::duration<double>;
 

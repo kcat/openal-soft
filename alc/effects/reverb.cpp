@@ -1475,8 +1475,8 @@ void VecAllpass::process(const al::span<ReverbUpdateLine,NUM_LINES> samples, siz
 
         size_t maxoff{offset};
         for(size_t j{0u};j < NUM_LINES;j++)
-            maxoff = maxz(maxoff, vap_offset[j]);
-        size_t td{minz(delay.Mask+1 - maxoff, todo - i)};
+            maxoff = std::max(maxoff, vap_offset[j]);
+        size_t td{std::min(delay.Mask+1 - maxoff, todo - i)};
 
         do {
             std::array<float,NUM_LINES> f;
@@ -1559,7 +1559,7 @@ void ReverbPipeline::processEarly(const DelayLineU &main_delay, size_t offset,
 
     for(size_t base{0};base < samplesToDo;)
     {
-        const size_t todo{minz(samplesToDo-base, MAX_UPDATE_SAMPLES)};
+        const size_t todo{std::min(samplesToDo-base, MAX_UPDATE_SAMPLES)};
 
         /* First, load decorrelated samples from the main delay line as the
          * primary reflections.
@@ -1581,8 +1581,8 @@ void ReverbPipeline::processEarly(const DelayLineU &main_delay, size_t offset,
             {
                 early_delay_tap0 &= in_delay.Mask;
                 early_delay_tap1 &= in_delay.Mask;
-                const size_t max_tap{maxz(early_delay_tap0, early_delay_tap1)};
-                size_t td{minz(in_delay.Mask+1 - max_tap, todo-i)};
+                const size_t max_tap{std::max(early_delay_tap0, early_delay_tap1)};
+                size_t td{std::min(in_delay.Mask+1 - max_tap, todo-i)};
                 do {
                     tempSamples[j][i++] = lerpf(input[early_delay_tap0++]*coeff0,
                         input[early_delay_tap1++]*coeff1, coeffStep*fadeCount);
@@ -1612,7 +1612,7 @@ void ReverbPipeline::processEarly(const DelayLineU &main_delay, size_t offset,
             for(size_t i{0u};i < todo;)
             {
                 feedb_tap &= early_delay.Mask;
-                size_t td{minz(early_delay.Mask+1 - feedb_tap, todo - i)};
+                size_t td{std::min(early_delay.Mask+1 - feedb_tap, todo - i)};
                 do {
                     float sample{input[feedb_tap++]};
                     out[i] = tempSamples[j][i] + sample*feedb_coeff;
@@ -1680,7 +1680,8 @@ void ReverbPipeline::processLate(size_t offset, const size_t samplesToDo,
 
     for(size_t base{0};base < samplesToDo;)
     {
-        const size_t todo{minz(samplesToDo-base, minz(mLate.Offset[0], MAX_UPDATE_SAMPLES))};
+        const size_t todo{std::min(std::min(mLate.Offset[0], MAX_UPDATE_SAMPLES),
+            samplesToDo-base)};
         ASSUME(todo > 0);
 
         /* First, calculate the modulated delays for the late feedback. */
@@ -1737,7 +1738,8 @@ void ReverbPipeline::processLate(size_t offset, const size_t samplesToDo,
             {
                 late_delay_tap0 &= in_delay.Mask;
                 late_delay_tap1 &= in_delay.Mask;
-                size_t td{minz(todo-i, in_delay.Mask+1 - maxz(late_delay_tap0, late_delay_tap1))};
+                size_t td{std::min(in_delay.Mask+1 - std::max(late_delay_tap0, late_delay_tap1),
+                    todo-i)};
                 do {
                     const float fade0{densityGain - densityStep*fadeCount};
                     const float fade1{densityStep*fadeCount};
@@ -1777,7 +1779,7 @@ void ReverbState::process(const size_t samplesToDo, const al::span<const FloatBu
     auto &pipeline = mPipelines[mCurrentPipeline];
 
     /* Convert B-Format to A-Format for processing. */
-    const size_t numInput{minz(samplesIn.size(), NUM_LINES)};
+    const size_t numInput{std::min(samplesIn.size(), NUM_LINES)};
     const al::span<float> tmpspan{al::assume_aligned<16>(mTempLine.data()), samplesToDo};
     for(size_t c{0u};c < NUM_LINES;++c)
     {

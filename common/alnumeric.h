@@ -37,12 +37,6 @@ constexpr auto GetCounterSuffix(size_t count) noexcept -> const char*
 }
 
 
-constexpr inline size_t minz(size_t a, size_t b) noexcept
-{ return ((a > b) ? b : a); }
-constexpr inline size_t maxz(size_t a, size_t b) noexcept
-{ return ((a > b) ? a : b); }
-
-
 constexpr inline float lerpf(float val1, float val2, float mu) noexcept
 { return val1 + (val2-val1)*mu; }
 constexpr inline float cubic(float val1, float val2, float val3, float val4, float mu) noexcept

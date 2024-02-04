@@ -2371,8 +2371,8 @@ static size_t GetIntegerv(ALCdevice *device, ALCenum param, const al::span<int> 
 
     case ALC_NUM_HRTF_SPECIFIERS_SOFT:
         device->enumerateHrtfs();
-        values[0] = static_cast<int>(minz(device->mHrtfList.size(),
-            std::numeric_limits<int>::max()));
+        values[0] = static_cast<int>(std::min(device->mHrtfList.size(),
+            size_t{std::numeric_limits<int>::max()}));
         return 1;
 
     case ALC_OUTPUT_LIMITER_SOFT:

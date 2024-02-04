@@ -264,7 +264,7 @@ void InitDistanceComp(ALCdevice *device, const al::span<const Channel> channels,
     for(size_t chidx{0};chidx < channels.size();++chidx)
     {
         const Channel ch{channels[chidx]};
-        const uint idx{device->RealOut.ChannelIndex[ch]};
+        const size_t idx{device->RealOut.ChannelIndex[ch]};
         if(idx == InvalidChannelIndex)
             continue;
 
@@ -279,12 +279,12 @@ void InitDistanceComp(ALCdevice *device, const al::span<const Channel> channels,
         float delay{std::floor((maxdist - distance)*distSampleScale + 0.5f)};
         if(delay > float{DistanceComp::MaxDelay-1})
         {
-            ERR("Delay for channel %u (%s) exceeds buffer length (%f > %d)\n", idx,
+            ERR("Delay for channel %zu (%s) exceeds buffer length (%f > %d)\n", idx,
                 GetLabelFromChannel(ch), delay, DistanceComp::MaxDelay-1);
             delay = float{DistanceComp::MaxDelay-1};
         }
 
-        ChanDelay.resize(maxz(ChanDelay.size(), idx+1));
+        ChanDelay.resize(std::max(ChanDelay.size(), idx+1_uz));
         ChanDelay[idx].Length = static_cast<uint>(delay);
         ChanDelay[idx].Gain = distance / maxdist;
         TRACE("Channel %s distance comp: %u samples, %f gain\n", GetLabelFromChannel(ch),
@@ -632,7 +632,7 @@ void InitPanning(ALCdevice *device, const bool hqdec=false, const bool stablize=
     std::vector<ChannelDec> chancoeffs, chancoeffslf;
     for(size_t i{0u};i < decoder.mChannels.size();++i)
     {
-        const uint idx{device->channelIdxByName(decoder.mChannels[i])};
+        const size_t idx{device->channelIdxByName(decoder.mChannels[i])};
         if(idx == InvalidChannelIndex)
         {
             ERR("Failed to find %s channel in device\n",
@@ -643,7 +643,7 @@ void InitPanning(ALCdevice *device, const bool hqdec=false, const bool stablize=
         auto ordermap = decoder.mIs3D ? AmbiIndex::OrderFromChannel.data()
             : AmbiIndex::OrderFrom2DChannel.data();
 
-        chancoeffs.resize(maxz(chancoeffs.size(), idx+1u), ChannelDec{});
+        chancoeffs.resize(std::max(chancoeffs.size(), idx+1_zu), ChannelDec{});
         al::span<const float,MaxAmbiChannels> src{decoder.mCoeffs[i]};
         al::span<float,MaxAmbiChannels> dst{chancoeffs[idx]};
         for(size_t ambichan{0};ambichan < ambicount;++ambichan)
@@ -652,7 +652,7 @@ void InitPanning(ALCdevice *device, const bool hqdec=false, const bool stablize=
         if(!dual_band)
             continue;
 
-        chancoeffslf.resize(maxz(chancoeffslf.size(), idx+1u), ChannelDec{});
+        chancoeffslf.resize(std::max(chancoeffslf.size(), idx+1_zu), ChannelDec{});
         src = decoder.mCoeffsLF[i];
         dst = chancoeffslf[idx];
         for(size_t ambichan{0};ambichan < ambicount;++ambichan)

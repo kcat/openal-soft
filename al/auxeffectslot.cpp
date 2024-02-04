@@ -53,7 +53,7 @@
 
 namespace {
 
-using SubListAllocator = typename al::allocator<std::array<ALeffectslot,64>>;
+using SubListAllocator = al::allocator<std::array<ALeffectslot,64>>;
 
 struct FactoryItem {
     EffectSlotType Type;

@@ -167,7 +167,7 @@ void PshifterState::process(const size_t samplesToDo,
 
     for(size_t base{0u};base < samplesToDo;)
     {
-        const size_t todo{minz(StftStep-mCount, samplesToDo-base)};
+        const size_t todo{std::min(StftStep-mCount, samplesToDo-base)};
 
         /* Retrieve the output samples from the FIFO and fill in the new input
          * samples.
@@ -241,8 +241,8 @@ void PshifterState::process(const size_t samplesToDo,
          */
         std::fill(mSynthesisBuffer.begin(), mSynthesisBuffer.end(), FrequencyBin{});
 
-        constexpr size_t bin_limit{((StftHalfSize+1)<<MixerFracBits) - MixerFracHalf - 1};
-        const size_t bin_count{minz(StftHalfSize+1, bin_limit/mPitchShiftI + 1)};
+        static constexpr size_t bin_limit{((StftHalfSize+1)<<MixerFracBits) - MixerFracHalf - 1};
+        const size_t bin_count{std::min(StftHalfSize+1, bin_limit/mPitchShiftI + 1)};
         for(size_t k{0u};k < bin_count;k++)
         {
             const size_t j{(k*mPitchShiftI + MixerFracHalf) >> MixerFracBits};
@@ -306,7 +306,7 @@ void PshifterState::process(const size_t samplesToDo,
 
     /* Now, mix the processed sound data to the output. */
     MixSamples({mBufferOut.data(), samplesToDo}, samplesOut, mCurrentGains.data(),
-        mTargetGains.data(), maxz(samplesToDo, 512), 0);
+        mTargetGains.data(), std::max(samplesToDo, 512_uz), 0);
 }
 
 

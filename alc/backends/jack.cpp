@@ -435,8 +435,8 @@ int JackPlayback::mixerProc()
         size_t todo{data.first.len + data.second.len};
         todo -= todo%mDevice->UpdateSize;
 
-        const auto len1 = static_cast<uint>(minz(data.first.len, todo));
-        const auto len2 = static_cast<uint>(minz(data.second.len, todo-len1));
+        const auto len1 = static_cast<uint>(std::min(data.first.len, todo));
+        const auto len2 = static_cast<uint>(std::min(data.second.len, todo-len1));
 
         std::lock_guard<std::mutex> dlock{mMutex};
         mDevice->renderSamples(data.first.buf, len1, frame_step);

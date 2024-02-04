@@ -219,7 +219,7 @@ void Mix_<CTag>(const al::span<const float> InSamples, const al::span<FloatBuffe
     float *CurrentGains, const float *TargetGains, const size_t Counter, const size_t OutPos)
 {
     const float delta{(Counter > 0) ? 1.0f / static_cast<float>(Counter) : 0.0f};
-    const auto min_len = minz(Counter, InSamples.size());
+    const auto min_len = std::min(Counter, InSamples.size());
 
     for(FloatBufferLine &output : OutBuffer)
         MixLine(InSamples, al::assume_aligned<16>(output.data()+OutPos), *CurrentGains++,
@@ -231,7 +231,7 @@ void Mix_<CTag>(const al::span<const float> InSamples, float *OutBuffer, float &
     const float TargetGain, const size_t Counter)
 {
     const float delta{(Counter > 0) ? 1.0f / static_cast<float>(Counter) : 0.0f};
-    const auto min_len = minz(Counter, InSamples.size());
+    const auto min_len = std::min(Counter, InSamples.size());
 
     MixLine(InSamples, al::assume_aligned<16>(OutBuffer), CurrentGain,
         TargetGain, delta, min_len, Counter);

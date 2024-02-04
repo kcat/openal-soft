@@ -287,7 +287,7 @@ void VmorpherState::process(const size_t samplesToDo, const al::span<const Float
      */
     for(size_t base{0u};base < samplesToDo;)
     {
-        const size_t td{minz(MaxUpdateSamples, samplesToDo-base)};
+        const size_t td{std::min(MaxUpdateSamples, samplesToDo-base)};
 
         mGetSamples(mLfo.data(), mIndex, mStep, td);
         mIndex += static_cast<uint>(mStep * td);

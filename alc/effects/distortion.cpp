@@ -109,7 +109,7 @@ void DistortionState::process(const size_t samplesToDo, const al::span<const Flo
          * bandpass filters using high frequencies, at which classic IIR
          * filters became unstable.
          */
-        size_t todo{minz(BufferLineSize, (samplesToDo-base) * 4)};
+        size_t todo{std::min(BufferLineSize, (samplesToDo-base) * 4_uz)};
 
         /* Fill oversample buffer using zero stuffing. Multiply the sample by
          * the amount of oversampling to maintain the signal's power.

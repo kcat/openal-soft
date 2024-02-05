@@ -79,12 +79,20 @@ const PathNamePair &GetProcBinary()
     auto get_procbin = []
     {
 #if !defined(ALSOFT_UWP)
-        auto fullpath = std::vector<WCHAR>(256);
-        DWORD len{GetModuleFileNameW(nullptr, fullpath.data(), static_cast<DWORD>(fullpath.size()))};
+        DWORD pathlen{256};
+        auto fullpath = std::wstring(pathlen, L'\0');
+        DWORD len{GetModuleFileNameW(nullptr, fullpath.data(), pathlen)};
         while(len == fullpath.size())
         {
-            fullpath.resize(fullpath.size() << 1);
-            len = GetModuleFileNameW(nullptr, fullpath.data(), static_cast<DWORD>(fullpath.size()));
+            pathlen <<= 1;
+            if(pathlen == 0)
+            {
+                /* pathlen overflow (more than 4 billion characters??) */
+                len = 0;
+                break;
+            }
+            fullpath.resize(pathlen);
+            len = GetModuleFileNameW(nullptr, fullpath.data(), pathlen);
         }
         if(len == 0)
         {
@@ -93,8 +101,6 @@ const PathNamePair &GetProcBinary()
         }
 
         fullpath.resize(len);
-        if(fullpath.back() != 0)
-            fullpath.push_back(0);
 #else
         const WCHAR *exePath{__wargv[0]};
         if(!exePath)
@@ -102,20 +108,18 @@ const PathNamePair &GetProcBinary()
             ERR("Failed to get process name: __wargv[0] == nullptr\n");
             return PathNamePair{};
         }
-        std::vector<WCHAR> fullpath{exePath, exePath + wcslen(exePath) + 1};
+        std::wstring fullpath{exePath};
 #endif
-        std::replace(fullpath.begin(), fullpath.end(), '/', '\\');
+        std::replace(fullpath.begin(), fullpath.end(), L'/', L'\\');
 
         PathNamePair res{};
-        auto sep = std::find(fullpath.rbegin()+1, fullpath.rend(), '\\');
-        if(sep != fullpath.rend())
+        if(auto seppos = fullpath.rfind(L'\\'); seppos < fullpath.size())
         {
-            *sep = 0;
-            res.path = wstr_to_utf8(fullpath.data());
-            res.fname = wstr_to_utf8(al::to_address(sep.base()));
+            res.path = wstr_to_utf8(std::wstring_view{fullpath}.substr(0, seppos));
+            res.fname = wstr_to_utf8(std::wstring_view{fullpath}.substr(seppos+1));
         }
         else
-            res.fname = wstr_to_utf8(fullpath.data());
+            res.fname = wstr_to_utf8(fullpath);
 
         TRACE("Got binary: %s, %s\n", res.path.c_str(), res.fname.c_str());
         return res;
@@ -272,7 +276,7 @@ const PathNamePair &GetProcBinary()
                             fe.what());
                 }
                 catch(std::exception& e) {
-                    WARN("Failed to read_symlink %.*s: %s\n", al::sizei(name), name.data(),
+                    WARN("Exception getting symlink %.*s: %s\n", al::sizei(name), name.data(),
                         e.what());
                 }
             }

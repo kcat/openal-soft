@@ -346,21 +346,24 @@ force_inline void vcplxmulconj(v4sf &ar, v4sf &ai, v4sf br, v4sf bi) noexcept
 inline void assertv4(const al::span<float,4> v_f, float f0, float f1, float f2, float f3)
 { assert(v_f[0] == f0 && v_f[1] == f1 && v_f[2] == f2 && v_f[3] == f3); }
 
+template<typename T, T ...N>
+constexpr auto make_float_array(std::integer_sequence<T,N...>)
+{ return std::array{static_cast<float>(N)...}; }
+
 /* detect bugs with the vector support macros */
 [[maybe_unused]] void validate_pffft_simd()
 {
     using float4 = std::array<float,4>;
-    static constexpr std::array<float,16> f{{0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15}};
+    static constexpr auto f = make_float_array(std::make_index_sequence<16>{});
 
-    float4 a0_f{}, a1_f{}, a2_f{}, a3_f{}, t_f{}, u_f{};
-    v4sf a0_v{}, a1_v{}, a2_v{}, a3_v{}, t_v{}, u_v{};
-    std::memcpy(&a0_v, f.data(), 4*sizeof(float));
-    std::memcpy(&a1_v, f.data()+4, 4*sizeof(float));
-    std::memcpy(&a2_v, f.data()+8, 4*sizeof(float));
-    std::memcpy(&a3_v, f.data()+12, 4*sizeof(float));
+    v4sf a0_v{vset4(f[ 0], f[ 1], f[ 2], f[ 3])};
+    v4sf a1_v{vset4(f[ 4], f[ 5], f[ 6], f[ 7])};
+    v4sf a2_v{vset4(f[ 8], f[ 9], f[10], f[11])};
+    v4sf a3_v{vset4(f[12], f[13], f[14], f[15])};
+    v4sf u_v{};
 
-    t_v = vzero();
-    t_f = al::bit_cast<float4>(t_v);
+    auto t_v = vzero();
+    auto t_f = al::bit_cast<float4>(t_v);
     printf("VZERO=[%2g %2g %2g %2g]\n", t_f[0], t_f[1], t_f[2], t_f[3]);
     assertv4(t_f, 0, 0, 0, 0);
 
@@ -381,7 +384,7 @@ inline void assertv4(const al::span<float,4> v_f, float f0, float f1, float f2, 
 
     interleave2(a1_v, a2_v, t_v, u_v);
     t_f = al::bit_cast<float4>(t_v);
-    u_f = al::bit_cast<float4>(u_v);
+    auto u_f = al::bit_cast<float4>(u_v);
     printf("INTERLEAVE2(4:7,8:11)=[%2g %2g %2g %2g] [%2g %2g %2g %2g]\n",
         t_f[0], t_f[1], t_f[2], t_f[3], u_f[0], u_f[1], u_f[2], u_f[3]);
     assertv4(t_f, 4, 8, 5, 9);
@@ -406,10 +409,10 @@ inline void assertv4(const al::span<float,4> v_f, float f0, float f1, float f2, 
     assertv4(t_f, 8, 9, 6, 7);
 
     vtranspose4(a0_v, a1_v, a2_v, a3_v);
-    a0_f = al::bit_cast<float4>(a0_v);
-    a1_f = al::bit_cast<float4>(a1_v);
-    a2_f = al::bit_cast<float4>(a2_v);
-    a3_f = al::bit_cast<float4>(a3_v);
+    auto a0_f = al::bit_cast<float4>(a0_v);
+    auto a1_f = al::bit_cast<float4>(a1_v);
+    auto a2_f = al::bit_cast<float4>(a2_v);
+    auto a3_f = al::bit_cast<float4>(a3_v);
     printf("VTRANSPOSE4(0:3,4:7,8:11,12:15)=[%2g %2g %2g %2g] [%2g %2g %2g %2g] [%2g %2g %2g %2g] [%2g %2g %2g %2g]\n",
           a0_f[0], a0_f[1], a0_f[2], a0_f[3], a1_f[0], a1_f[1], a1_f[2], a1_f[3],
           a2_f[0], a2_f[1], a2_f[2], a2_f[3], a3_f[0], a3_f[1], a3_f[2], a3_f[3]);

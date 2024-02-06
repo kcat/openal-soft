@@ -343,7 +343,8 @@ force_inline void vcplxmulconj(v4sf &ar, v4sf &ai, v4sf br, v4sf bi) noexcept
 
 #if !defined(PFFFT_SIMD_DISABLE)
 
-#define assertv4(v,f0,f1,f2,f3) assert(v##_f[0] == (f0) && v##_f[1] == (f1) && v##_f[2] == (f2) && v##_f[3] == (f3))
+inline void assertv4(const al::span<float,4> v_f, float f0, float f1, float f2, float f3)
+{ assert(v_f[0] == f0 && v_f[1] == f1 && v_f[2] == f2 && v_f[3] == f3); }
 
 /* detect bugs with the vector support macros */
 [[maybe_unused]] void validate_pffft_simd()
@@ -351,35 +352,59 @@ force_inline void vcplxmulconj(v4sf &ar, v4sf &ai, v4sf br, v4sf bi) noexcept
     using float4 = std::array<float,4>;
     static constexpr std::array<float,16> f{{0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15}};
 
-    float4 a0_f, a1_f, a2_f, a3_f, t_f, u_f;
-    v4sf a0_v, a1_v, a2_v, a3_v, t_v, u_v;
+    float4 a0_f{}, a1_f{}, a2_f{}, a3_f{}, t_f{}, u_f{};
+    v4sf a0_v{}, a1_v{}, a2_v{}, a3_v{}, t_v{}, u_v{};
     std::memcpy(&a0_v, f.data(), 4*sizeof(float));
     std::memcpy(&a1_v, f.data()+4, 4*sizeof(float));
     std::memcpy(&a2_v, f.data()+8, 4*sizeof(float));
     std::memcpy(&a3_v, f.data()+12, 4*sizeof(float));
 
-    t_v = vzero(); t_f = al::bit_cast<float4>(t_v);
-    printf("VZERO=[%2g %2g %2g %2g]\n", t_f[0], t_f[1], t_f[2], t_f[3]); assertv4(t, 0, 0, 0, 0);
-    t_v = vadd(a1_v, a2_v); t_f = al::bit_cast<float4>(t_v);
-    printf("VADD(4:7,8:11)=[%2g %2g %2g %2g]\n", t_f[0], t_f[1], t_f[2], t_f[3]); assertv4(t, 12, 14, 16, 18);
-    t_v = vmul(a1_v, a2_v); t_f = al::bit_cast<float4>(t_v);
-    printf("VMUL(4:7,8:11)=[%2g %2g %2g %2g]\n", t_f[0], t_f[1], t_f[2], t_f[3]); assertv4(t, 32, 45, 60, 77);
-    t_v = vmadd(a1_v, a2_v,a0_v); t_f = al::bit_cast<float4>(t_v);
-    printf("VMADD(4:7,8:11,0:3)=[%2g %2g %2g %2g]\n", t_f[0], t_f[1], t_f[2], t_f[3]); assertv4(t, 32, 46, 62, 80);
+    t_v = vzero();
+    t_f = al::bit_cast<float4>(t_v);
+    printf("VZERO=[%2g %2g %2g %2g]\n", t_f[0], t_f[1], t_f[2], t_f[3]);
+    assertv4(t_f, 0, 0, 0, 0);
 
-    interleave2(a1_v,a2_v,t_v,u_v); t_f = al::bit_cast<float4>(t_v); u_f = al::bit_cast<float4>(u_v);
-    printf("INTERLEAVE2(4:7,8:11)=[%2g %2g %2g %2g] [%2g %2g %2g %2g]\n", t_f[0], t_f[1], t_f[2], t_f[3], u_f[0], u_f[1], u_f[2], u_f[3]);
-    assertv4(t, 4, 8, 5, 9); assertv4(u, 6, 10, 7, 11);
-    uninterleave2(a1_v,a2_v,t_v,u_v); t_f = al::bit_cast<float4>(t_v); u_f = al::bit_cast<float4>(u_v);
-    printf("UNINTERLEAVE2(4:7,8:11)=[%2g %2g %2g %2g] [%2g %2g %2g %2g]\n", t_f[0], t_f[1], t_f[2], t_f[3], u_f[0], u_f[1], u_f[2], u_f[3]);
-    assertv4(t, 4, 6, 8, 10); assertv4(u, 5, 7, 9, 11);
+    t_v = vadd(a1_v, a2_v);
+    t_f = al::bit_cast<float4>(t_v);
+    printf("VADD(4:7,8:11)=[%2g %2g %2g %2g]\n", t_f[0], t_f[1], t_f[2], t_f[3]);
+    assertv4(t_f, 12, 14, 16, 18);
 
-    t_v=ld_ps1(f[15]); t_f = al::bit_cast<float4>(t_v);
+    t_v = vmul(a1_v, a2_v);
+    t_f = al::bit_cast<float4>(t_v);
+    printf("VMUL(4:7,8:11)=[%2g %2g %2g %2g]\n", t_f[0], t_f[1], t_f[2], t_f[3]);
+    assertv4(t_f, 32, 45, 60, 77);
+
+    t_v = vmadd(a1_v, a2_v, a0_v);
+    t_f = al::bit_cast<float4>(t_v);
+    printf("VMADD(4:7,8:11,0:3)=[%2g %2g %2g %2g]\n", t_f[0], t_f[1], t_f[2], t_f[3]);
+    assertv4(t_f, 32, 46, 62, 80);
+
+    interleave2(a1_v, a2_v, t_v, u_v);
+    t_f = al::bit_cast<float4>(t_v);
+    u_f = al::bit_cast<float4>(u_v);
+    printf("INTERLEAVE2(4:7,8:11)=[%2g %2g %2g %2g] [%2g %2g %2g %2g]\n",
+        t_f[0], t_f[1], t_f[2], t_f[3], u_f[0], u_f[1], u_f[2], u_f[3]);
+    assertv4(t_f, 4, 8, 5, 9);
+    assertv4(u_f, 6, 10, 7, 11);
+
+    uninterleave2(a1_v, a2_v, t_v, u_v);
+    t_f = al::bit_cast<float4>(t_v);
+    u_f = al::bit_cast<float4>(u_v);
+    printf("UNINTERLEAVE2(4:7,8:11)=[%2g %2g %2g %2g] [%2g %2g %2g %2g]\n",
+        t_f[0], t_f[1], t_f[2], t_f[3], u_f[0], u_f[1], u_f[2], u_f[3]);
+    assertv4(t_f, 4, 6, 8, 10);
+    assertv4(u_f, 5, 7, 9, 11);
+
+    t_v = ld_ps1(f[15]);
+    t_f = al::bit_cast<float4>(t_v);
     printf("LD_PS1(15)=[%2g %2g %2g %2g]\n", t_f[0], t_f[1], t_f[2], t_f[3]);
-    assertv4(t, 15, 15, 15, 15);
-    t_v = vswaphl(a1_v, a2_v); t_f = al::bit_cast<float4>(t_v);
+    assertv4(t_f, 15, 15, 15, 15);
+
+    t_v = vswaphl(a1_v, a2_v);
+    t_f = al::bit_cast<float4>(t_v);
     printf("VSWAPHL(4:7,8:11)=[%2g %2g %2g %2g]\n", t_f[0], t_f[1], t_f[2], t_f[3]);
-    assertv4(t, 8, 9, 6, 7);
+    assertv4(t_f, 8, 9, 6, 7);
+
     vtranspose4(a0_v, a1_v, a2_v, a3_v);
     a0_f = al::bit_cast<float4>(a0_v);
     a1_f = al::bit_cast<float4>(a1_v);
@@ -388,7 +413,10 @@ force_inline void vcplxmulconj(v4sf &ar, v4sf &ai, v4sf br, v4sf bi) noexcept
     printf("VTRANSPOSE4(0:3,4:7,8:11,12:15)=[%2g %2g %2g %2g] [%2g %2g %2g %2g] [%2g %2g %2g %2g] [%2g %2g %2g %2g]\n",
           a0_f[0], a0_f[1], a0_f[2], a0_f[3], a1_f[0], a1_f[1], a1_f[2], a1_f[3],
           a2_f[0], a2_f[1], a2_f[2], a2_f[3], a3_f[0], a3_f[1], a3_f[2], a3_f[3]);
-    assertv4(a0, 0, 4, 8, 12); assertv4(a1, 1, 5, 9, 13); assertv4(a2, 2, 6, 10, 14); assertv4(a3, 3, 7, 11, 15);
+    assertv4(a0_f, 0, 4, 8, 12);
+    assertv4(a1_f, 1, 5, 9, 13);
+    assertv4(a2_f, 2, 6, 10, 14);
+    assertv4(a3_f, 3, 7, 11, 15);
 }
 #endif //!PFFFT_SIMD_DISABLE
 

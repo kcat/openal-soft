@@ -1427,7 +1427,7 @@ struct PFFFT_Setup {
     alignas(V4sfAlignment) std::byte end;
 };
 
-gsl::owner<PFFFT_Setup*> pffft_new_setup(unsigned int N, pffft_transform_t transform)
+PFFFTSetupPtr pffft_new_setup(unsigned int N, pffft_transform_t transform)
 {
     assert(transform == PFFFT_REAL || transform == PFFFT_COMPLEX);
     assert(N > 0);
@@ -1447,7 +1447,7 @@ gsl::owner<PFFFT_Setup*> pffft_new_setup(unsigned int N, pffft_transform_t trans
     auto storage = static_cast<gsl::owner<std::byte*>>(::operator new[](storelen, V4sfAlignVal));
     al::span extrastore{&storage[offsetof(PFFFT_Setup, end)], 2_zu*Ncvec*sizeof(v4sf)};
 
-    gsl::owner<PFFFT_Setup*> s{::new(storage) PFFFT_Setup{}};
+    PFFFTSetupPtr s{::new(storage) PFFFT_Setup{}};
     s->N = N;
     s->transform = transform;
     s->Ncvec = Ncvec;
@@ -1483,10 +1483,7 @@ gsl::owner<PFFFT_Setup*> pffft_new_setup(unsigned int N, pffft_transform_t trans
         m *= s->ifac[2+k];
 
     if(m != N/SimdSize)
-    {
-        pffft_destroy_setup(s);
         s = nullptr;
-    }
 
     return s;
 }

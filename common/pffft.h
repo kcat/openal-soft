@@ -81,6 +81,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <memory>
 #include <utility>
 
 #include "almalloc.h"
@@ -97,14 +98,18 @@ enum pffft_direction_t { PFFFT_FORWARD, PFFFT_BACKWARD };
 /* type of transform */
 enum pffft_transform_t { PFFFT_REAL, PFFFT_COMPLEX };
 
+void pffft_destroy_setup(gsl::owner<PFFFT_Setup*> setup) noexcept;
+struct PFFFTSetupDeleter {
+    void operator()(gsl::owner<PFFFT_Setup*> setup) const noexcept { pffft_destroy_setup(setup); }
+};
+using PFFFTSetupPtr = std::unique_ptr<PFFFT_Setup,PFFFTSetupDeleter>;
+
 /**
  * Prepare for performing transforms of size N -- the returned PFFFT_Setup
  * structure is read-only so it can safely be shared by multiple concurrent
  * threads.
  */
-[[gnu::malloc]]
-gsl::owner<PFFFT_Setup*> pffft_new_setup(unsigned int N, pffft_transform_t transform);
-void pffft_destroy_setup(gsl::owner<PFFFT_Setup*> setup) noexcept;
+PFFFTSetupPtr pffft_new_setup(unsigned int N, pffft_transform_t transform);
 
 /**
  * Perform a Fourier transform. The z-domain data is stored in the most
@@ -172,43 +177,36 @@ void pffft_zconvolve_accumulate(const PFFFT_Setup *setup, const float *dft_a, co
 
 
 struct PFFFTSetup {
-    gsl::owner<PFFFT_Setup*> mSetup{};
+    PFFFTSetupPtr mSetup{};
 
     PFFFTSetup() = default;
     PFFFTSetup(const PFFFTSetup&) = delete;
-    PFFFTSetup(PFFFTSetup&& rhs) noexcept : mSetup{rhs.mSetup} { rhs.mSetup = nullptr; }
+    PFFFTSetup(PFFFTSetup&& rhs) noexcept = default;
     explicit PFFFTSetup(std::nullptr_t) noexcept { }
     explicit PFFFTSetup(unsigned int n, pffft_transform_t transform)
         : mSetup{pffft_new_setup(n, transform)}
     { }
-    ~PFFFTSetup() { if(mSetup) pffft_destroy_setup(mSetup); }
+    ~PFFFTSetup() = default;
 
     PFFFTSetup& operator=(const PFFFTSetup&) = delete;
-    PFFFTSetup& operator=(PFFFTSetup&& rhs) noexcept
-    {
-        if(mSetup)
-            pffft_destroy_setup(mSetup);
-        mSetup = rhs.mSetup;
-        rhs.mSetup = nullptr;
-        return *this;
-    }
+    PFFFTSetup& operator=(PFFFTSetup&& rhs) noexcept = default;
 
     void transform(const float *input, float *output, float *work, pffft_direction_t direction) const
-    { pffft_transform(mSetup, input, output, work, direction); }
+    { pffft_transform(mSetup.get(), input, output, work, direction); }
 
     void transform_ordered(const float *input, float *output, float *work,
         pffft_direction_t direction) const
-    { pffft_transform_ordered(mSetup, input, output, work, direction); }
+    { pffft_transform_ordered(mSetup.get(), input, output, work, direction); }
 
     void zreorder(const float *input, float *output, pffft_direction_t direction) const
-    { pffft_zreorder(mSetup, input, output, direction); }
+    { pffft_zreorder(mSetup.get(), input, output, direction); }
 
     void zconvolve_scale_accumulate(const float *dft_a, const float *dft_b, float *dft_ab,
         float scaling) const
-    { pffft_zconvolve_scale_accumulate(mSetup, dft_a, dft_b, dft_ab, scaling); }
+    { pffft_zconvolve_scale_accumulate(mSetup.get(), dft_a, dft_b, dft_ab, scaling); }
 
     void zconvolve_accumulate(const float *dft_a, const float *dft_b, float *dft_ab) const
-    { pffft_zconvolve_accumulate(mSetup, dft_a, dft_b, dft_ab); }
+    { pffft_zconvolve_accumulate(mSetup.get(), dft_a, dft_b, dft_ab); }
 
     [[nodiscard]] operator bool() const noexcept { return mSetup != nullptr; }
 };

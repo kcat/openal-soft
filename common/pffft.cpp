@@ -2150,8 +2150,7 @@ void pffft_transform_ordered(const PFFFT_Setup *setup, const float *input, float
 
 namespace {
 
-#define pffft_transform_internal_nosimd pffft_transform_internal
-void pffft_transform_internal_nosimd(const PFFFT_Setup *setup, const float *input, float *output,
+void pffft_transform_internal(const PFFFT_Setup *setup, const float *input, float *output,
     float *scratch, const pffft_direction_t direction, bool ordered)
 {
     const size_t Ncvec{setup->Ncvec};
@@ -2207,8 +2206,7 @@ void pffft_transform_internal_nosimd(const PFFFT_Setup *setup, const float *inpu
 
 } // namespace
 
-#define pffft_zreorder_nosimd pffft_zreorder
-void pffft_zreorder_nosimd(const PFFFT_Setup *setup, const float *in, float *RESTRICT out,
+void pffft_zreorder(const PFFFT_Setup *setup, const float *in, float *RESTRICT out,
     pffft_direction_t direction)
 {
     const size_t N{setup->N};

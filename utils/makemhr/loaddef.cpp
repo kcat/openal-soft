@@ -30,6 +30,8 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <filesystem>
+#include <fstream>
 #include <iterator>
 #include <limits>
 #include <memory>
@@ -39,7 +41,6 @@
 #include <vector>
 
 #include "albit.h"
-#include "alfstream.h"
 #include "alnumeric.h"
 #include "alspan.h"
 #include "alstring.h"
@@ -1206,13 +1207,14 @@ static int LoadSofaSource(SourceRefT *src, const uint hrirRate, const uint n, do
 // Load a source HRIR from a supported file type.
 static int LoadSource(SourceRefT *src, const uint hrirRate, const uint n, double *hrir)
 {
-    std::unique_ptr<al::ifstream> istream;
+    std::unique_ptr<std::istream> istream;
     if(src->mFormat != SF_SOFA)
     {
         if(src->mFormat == SF_ASCII)
-            istream = std::make_unique<al::ifstream>(src->mPath.data());
+            istream = std::make_unique<std::ifstream>(std::filesystem::u8path(src->mPath.data()));
         else
-            istream = std::make_unique<al::ifstream>(src->mPath.data(), std::ios::binary);
+            istream = std::make_unique<std::ifstream>(std::filesystem::u8path(src->mPath.data()),
+                std::ios::binary);
         if(!istream->good())
         {
             fprintf(stderr, "\nError: Could not open source file '%s'.\n", src->mPath.data());

@@ -12,6 +12,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
+#include <filesystem>
 #include <fstream>
 #include <iterator>
 #include <memory>
@@ -24,7 +25,6 @@
 #include <vector>
 
 #include "albit.h"
-#include "alfstream.h"
 #include "almalloc.h"
 #include "alnumbers.h"
 #include "alnumeric.h"
@@ -1301,7 +1301,8 @@ try {
     else
     {
         TRACE("Loading %s...\n", fname.c_str());
-        auto fstr = std::make_unique<al::ifstream>(fname.c_str(), std::ios::binary);
+        auto fstr = std::make_unique<std::ifstream>(std::filesystem::u8path(fname),
+            std::ios::binary);
         if(!fstr->is_open())
         {
             ERR("Could not open %s\n", fname.c_str());

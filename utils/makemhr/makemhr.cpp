@@ -73,6 +73,8 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <filesystem>
+#include <fstream>
 #include <functional>
 #include <iostream>
 #include <limits>
@@ -90,7 +92,6 @@
 #endif
 
 #include "alcomplex.h"
-#include "alfstream.h"
 #include "alnumbers.h"
 #include "alnumeric.h"
 #include "alspan.h"
@@ -1192,7 +1193,7 @@ bool ProcessDefinition(const char *inName, const uint outRate, const ChannelMode
     }
     else
     {
-        std::unique_ptr<al::ifstream> input{new al::ifstream{inName}};
+        auto input = std::make_unique<std::ifstream>(std::filesystem::u8path(inName));
         if(!input->is_open())
         {
             fprintf(stderr, "Error: Could not open input file '%s'\n", inName);

@@ -18,13 +18,13 @@
 #include "opthelpers.h"
 
 
-constexpr auto operator "" _i64(unsigned long long n) noexcept { return static_cast<int64_t>(n); }
-constexpr auto operator "" _u64(unsigned long long n) noexcept { return static_cast<uint64_t>(n); }
+constexpr auto operator "" _i64(unsigned long long n) noexcept { return static_cast<std::int64_t>(n); }
+constexpr auto operator "" _u64(unsigned long long n) noexcept { return static_cast<std::uint64_t>(n); }
 
 constexpr auto operator "" _z(unsigned long long n) noexcept
-{ return static_cast<std::make_signed_t<size_t>>(n); }
-constexpr auto operator "" _uz(unsigned long long n) noexcept { return static_cast<size_t>(n); }
-constexpr auto operator "" _zu(unsigned long long n) noexcept { return static_cast<size_t>(n); }
+{ return static_cast<std::make_signed_t<std::size_t>>(n); }
+constexpr auto operator "" _uz(unsigned long long n) noexcept { return static_cast<std::size_t>(n); }
+constexpr auto operator "" _zu(unsigned long long n) noexcept { return static_cast<std::size_t>(n); }
 
 
 constexpr auto GetCounterSuffix(size_t count) noexcept -> const char*

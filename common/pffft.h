@@ -80,9 +80,7 @@
 #define PFFFT_H
 
 #include <cstddef>
-#include <cstdint>
 #include <memory>
-#include <utility>
 
 #include "almalloc.h"
 

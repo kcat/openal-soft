@@ -57,12 +57,15 @@
 
 #include "pffft.h"
 
+#include <algorithm>
 #include <array>
 #include <cassert>
 #include <cmath>
+#include <cstdint>
 #include <cstdio>
-#include <cstdlib>
 #include <cstring>
+#include <new>
+#include <utility>
 #include <vector>
 
 #include "albit.h"
@@ -73,10 +76,9 @@
 #include "opthelpers.h"
 
 
-namespace {
-
 using uint = unsigned int;
 
+namespace {
 
 /* Vector support macros: the rest of the code is independent of
  * SSE/Altivec/NEON -- adding support for other platforms with 4-element

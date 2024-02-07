@@ -2,7 +2,6 @@
 #define ALCOMPLEX_H
 
 #include <complex>
-#include <type_traits>
 
 #include "alspan.h"
 
@@ -17,17 +16,15 @@ void complex_fft(const al::span<std::complex<double>> buffer, const double sign)
  * Calculate the frequency-domain response of the time-domain signal in the
  * provided buffer, which MUST BE power of two.
  */
-template<size_t N>
-void forward_fft(const al::span<std::complex<double>,N> buffer)
-{ complex_fft(al::span<std::complex<double>>{buffer}, -1.0); }
+inline void forward_fft(const al::span<std::complex<double>> buffer)
+{ complex_fft(buffer, -1.0); }
 
 /**
  * Calculate the time-domain signal of the frequency-domain response in the
  * provided buffer, which MUST BE power of two.
  */
-template<size_t N>
-void inverse_fft(const al::span<std::complex<double>,N> buffer)
-{ complex_fft(al::span<std::complex<double>>{buffer}, +1.0); }
+inline void inverse_fft(const al::span<std::complex<double>> buffer)
+{ complex_fft(buffer, +1.0); }
 
 /**
  * Calculate the complex helical sequence (discrete-time analytical signal) of

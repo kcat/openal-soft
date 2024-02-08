@@ -171,12 +171,9 @@ class databuf final : public std::streambuf {
     }
 
 public:
-    databuf(const char_type *start_, const char_type *end_) noexcept
+    databuf(const al::span<char_type> data) noexcept
     {
-        /* NOLINTBEGIN(*-const-cast) */
-        setg(const_cast<char_type*>(start_), const_cast<char_type*>(start_),
-            const_cast<char_type*>(end_));
-        /* NOLINTEND(*-const-cast) */
+        setg(data.data(), data.data(), al::to_address(data.end()));
     }
 };
 
@@ -184,8 +181,7 @@ class idstream final : public std::istream {
     databuf mStreamBuf;
 
 public:
-    idstream(const char *start_, const char *end_)
-      : std::istream{nullptr}, mStreamBuf{start_, end_}
+    idstream(const al::span<char_type> data) : std::istream{nullptr}, mStreamBuf{data}
     { init(&mStreamBuf); }
 };
 
@@ -1296,7 +1292,8 @@ try {
             ERR("Could not get resource %u, %.*s\n", residx, al::sizei(name), name.data());
             return nullptr;
         }
-        stream = std::make_unique<idstream>(res.begin(), res.end());
+        /* NOLINTNEXTLINE(*-const-cast) */
+        stream = std::make_unique<idstream>(al::span{const_cast<char*>(res.data()), res.size()});
     }
     else
     {

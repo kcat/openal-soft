@@ -345,9 +345,9 @@ force_inline void vcplxmulconj(v4sf &ar, v4sf &ai, v4sf br, v4sf bi) noexcept
 
 #if !defined(PFFFT_SIMD_DISABLE)
 
-inline void assertv4(const al::span<float,4> v_f [[maybe_unused]], const float f0 [[maybe_unused]],
-    const float f1 [[maybe_unused]], const float f2 [[maybe_unused]],
-    const float f3 [[maybe_unused]])
+inline void assertv4(const al::span<const float,4> v_f [[maybe_unused]],
+    const float f0 [[maybe_unused]], const float f1 [[maybe_unused]],
+    const float f2 [[maybe_unused]], const float f3 [[maybe_unused]])
 { assert(v_f[0] == f0 && v_f[1] == f1 && v_f[2] == f2 && v_f[3] == f3); }
 
 template<typename T, T ...N>

@@ -360,14 +360,14 @@ struct DelayLineU {
     /* Writes the given input lines to the delay buffer, applying a geometric
      * reflection. This effectively applies the matrix
      *
-     * [ -1/2 +1/2 +1/2 +1/2 ]
-     * [ +1/2 -1/2 +1/2 +1/2 ]
-     * [ +1/2 +1/2 -1/2 +1/2 ]
-     * [ +1/2 +1/2 +1/2 -1/2 ]
+     * [ +1/2 -1/2 -1/2 -1/2 ]
+     * [ -1/2 +1/2 -1/2 -1/2 ]
+     * [ -1/2 -1/2 +1/2 -1/2 ]
+     * [ -1/2 -1/2 -1/2 +1/2 ]
      *
      * to the four input lines when writing to the delay buffer. The effect on
-     * the B-Format signal is negating X,Y,Z, moving each response to its
-     * spatially opposite location.
+     * the B-Format signal is negating W, applying a 180-degree phase shift and
+     * moving each response to its spatially opposite location.
      */
     void writeReflected(size_t offset, const al::span<const ReverbUpdateLine,NUM_LINES> in,
         const size_t count) const noexcept
@@ -383,10 +383,10 @@ struct DelayLineU {
                 ++i;
 
                 const std::array f{
-                    (         src[1] + src[2] + src[3] - src[0]) * 0.5f,
-                    (src[0] +          src[2] + src[3] - src[1]) * 0.5f,
-                    (src[0] + src[1] +          src[3] - src[2]) * 0.5f,
-                    (src[0] + src[1] + src[2]          - src[3]) * 0.5f
+                    (src[0]          - src[1] - src[2] - src[3]) * 0.5f,
+                    (src[1] - src[0]          - src[2] - src[3]) * 0.5f,
+                    (src[2] - src[0] - src[1]          - src[3]) * 0.5f,
+                    (src[3] - src[0] - src[1] - src[2]         ) * 0.5f
                 };
                 Line[0*stride + offset] = f[0];
                 Line[1*stride + offset] = f[1];
@@ -1435,10 +1435,10 @@ void VectorScatterRev(const float xCoeff, const float yCoeff,
     {
         std::array src{samples[0][i], samples[1][i], samples[2][i], samples[3][i]};
         const std::array f{
-            (         src[1] + src[2] + src[3] - src[0]) * 0.5f,
-            (src[0] +          src[2] + src[3] - src[1]) * 0.5f,
-            (src[0] + src[1] +          src[3] - src[2]) * 0.5f,
-            (src[0] + src[1] + src[2]          - src[3]) * 0.5f
+            (src[0]          - src[1] - src[2] - src[3]) * 0.5f,
+            (src[1] - src[0]          - src[2] - src[3]) * 0.5f,
+            (src[2] - src[0] - src[1]          - src[3]) * 0.5f,
+            (src[3] - src[0] - src[1] - src[2]         ) * 0.5f
         };
 
         src = VectorPartialScatter(f, xCoeff, yCoeff);

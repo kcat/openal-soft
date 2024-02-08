@@ -545,19 +545,16 @@ extern bool TrapALError;
 
 
 #ifdef ALSOFT_EAX
-ALenum AL_APIENTRY EAXSet(
-    const GUID* property_set_id,
-    ALuint property_id,
-    ALuint property_source_id,
-    ALvoid* property_value,
-    ALuint property_value_size) noexcept;
+/* NOLINTBEGIN(readability-inconsistent-declaration-parameter-name)
+ * These functions are defined using macros to forward them in a generic way to
+ * implementation functions, which gives the parameters generic names.
+ */
+ALenum AL_APIENTRY EAXSet(const GUID *property_set_id, ALuint property_id,
+    ALuint property_source_id, ALvoid *property_value, ALuint property_value_size) noexcept;
 
-ALenum AL_APIENTRY EAXGet(
-    const GUID* property_set_id,
-    ALuint property_id,
-    ALuint property_source_id,
-    ALvoid* property_value,
-    ALuint property_value_size) noexcept;
+ALenum AL_APIENTRY EAXGet(const GUID *property_set_id, ALuint property_id,
+    ALuint property_source_id, ALvoid *property_value, ALuint property_value_size) noexcept;
+/* NOLINTEND(readability-inconsistent-declaration-parameter-name) */
 #endif // ALSOFT_EAX
 
 #endif /* ALC_CONTEXT_H */

@@ -268,7 +268,7 @@ struct Voice {
 
     void prepare(DeviceBase *device);
 
-    static void InitMixer(std::optional<std::string> resampler);
+    static void InitMixer(std::optional<std::string> resopt);
 };
 
 extern Resampler ResamplerDefault;

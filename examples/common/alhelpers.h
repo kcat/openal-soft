@@ -8,7 +8,7 @@ extern "C" {
 #endif
 
 /* Some helper functions to get the name from the format enums. */
-const char *FormatName(ALenum type);
+const char *FormatName(ALenum format);
 
 /* Easy device init/deinit functions. InitAL returns 0 on success. */
 int InitAL(char ***argv, int *argc);

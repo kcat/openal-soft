@@ -30,9 +30,7 @@
 #include "AL/efx.h"
 
 #include "alc/context.h"
-#include "almalloc.h"
-#include "atomic.h"
-#include "core/except.h"
+#include "alc/inprogext.h"
 #include "direct_defs.h"
 #include "opthelpers.h"
 

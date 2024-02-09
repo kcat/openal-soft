@@ -25,22 +25,26 @@
 #include <algorithm>
 #include <array>
 #include <atomic>
+#include <bitset>
 #include <cassert>
 #include <chrono>
 #include <cinttypes>
-#include <climits>
 #include <cmath>
 #include <cstdint>
-#include <functional>
+#include <cstdio>
+#include <exception>
 #include <iterator>
 #include <limits>
 #include <memory>
 #include <mutex>
-#include <new>
 #include <numeric>
 #include <optional>
+#include <ratio>
 #include <stdexcept>
-#include <thread>
+#include <string>
+#include <tuple>
+#include <type_traits>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -50,7 +54,6 @@
 #include "AL/efx.h"
 
 #include "albit.h"
-#include "alc/alu.h"
 #include "alc/backends/base.h"
 #include "alc/context.h"
 #include "alc/device.h"
@@ -61,19 +64,22 @@
 #include "atomic.h"
 #include "auxeffectslot.h"
 #include "buffer.h"
-#include "core/ambidefs.h"
-#include "core/bformatdec.h"
-#include "core/except.h"
-#include "core/filters/nfc.h"
-#include "core/filters/splitter.h"
+#include "core/buffer_storage.h"
 #include "core/logging.h"
+#include "core/mixer/defs.h"
 #include "core/voice_change.h"
 #include "direct_defs.h"
-#include "event.h"
 #include "filter.h"
+#include "flexarray.h"
+#include "intrusive_ptr.h"
 #include "opthelpers.h"
-#include "ringbuffer.h"
 
+#ifdef ALSOFT_EAX
+#include "eax/api.h"
+#include "eax/call.h"
+#include "eax/fx_slot_index.h"
+#include "eax/utils.h"
+#endif
 
 namespace {
 

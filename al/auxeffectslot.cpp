@@ -24,32 +24,50 @@
 
 #include <algorithm>
 #include <cassert>
+#include <cstddef>
 #include <cstdint>
 #include <iterator>
 #include <memory>
 #include <mutex>
 #include <numeric>
-#include <thread>
+#include <stdexcept>
+#include <string>
+#include <tuple>
+#include <unordered_map>
+#include <vector>
 
 #include "AL/al.h"
 #include "AL/alc.h"
+#include "AL/alext.h"
 #include "AL/efx.h"
 
 #include "albit.h"
 #include "alc/alu.h"
 #include "alc/context.h"
 #include "alc/device.h"
+#include "alc/effects/base.h"
 #include "alc/inprogext.h"
 #include "almalloc.h"
 #include "alnumeric.h"
 #include "alspan.h"
+#include "atomic.h"
 #include "buffer.h"
-#include "core/except.h"
+#include "core/buffer_storage.h"
+#include "core/device.h"
 #include "core/fpu_ctrl.h"
 #include "core/logging.h"
 #include "direct_defs.h"
 #include "effect.h"
+#include "flexarray.h"
 #include "opthelpers.h"
+
+#ifdef ALSOFT_EAX
+#include "eax/api.h"
+#include "eax/call.h"
+#include "eax/effect.h"
+#include "eax/fx_slot_index.h"
+#include "eax/utils.h"
+#endif
 
 namespace {
 

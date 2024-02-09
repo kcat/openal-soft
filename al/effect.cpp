@@ -23,14 +23,18 @@
 #include "effect.h"
 
 #include <algorithm>
+#include <cstdarg>
 #include <cstdint>
 #include <cstring>
 #include <iterator>
 #include <memory>
 #include <mutex>
-#include <new>
 #include <numeric>
+#include <string>
+#include <type_traits>
+#include <unordered_map>
 #include <utility>
+#include <variant>
 #include <vector>
 
 #include "AL/al.h"
@@ -39,24 +43,20 @@
 #include "AL/efx-presets.h"
 #include "AL/efx.h"
 
+#include "al/effects/effects.h"
 #include "albit.h"
 #include "alc/context.h"
 #include "alc/device.h"
-#include "alc/effects/base.h"
 #include "alc/inprogext.h"
 #include "almalloc.h"
 #include "alnumeric.h"
+#include "alspan.h"
 #include "alstring.h"
-#include "core/except.h"
 #include "core/logging.h"
 #include "direct_defs.h"
+#include "intrusive_ptr.h"
 #include "opthelpers.h"
 
-#ifdef ALSOFT_EAX
-#include <cassert>
-
-#include "eax/exception.h"
-#endif // ALSOFT_EAX
 
 const std::array<EffectList,16> gEffectList{{
     { "eaxreverb",   EAXREVERB_EFFECT,   AL_EFFECT_EAXREVERB },

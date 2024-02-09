@@ -4,26 +4,35 @@
 
 #include <algorithm>
 #include <array>
-#include <cstddef>
+#include <atomic>
 #include <cstring>
+#include <deque>
 #include <mutex>
 #include <optional>
 #include <stdexcept>
 #include <string>
+#include <string_view>
+#include <unordered_map>
 #include <utility>
 
 #include "AL/al.h"
+#include "AL/alc.h"
+#include "AL/alext.h"
 
 #include "alc/context.h"
+#include "alc/device.h"
 #include "alc/inprogext.h"
+#include "alnumeric.h"
 #include "alspan.h"
 #include "alstring.h"
 #include "auxeffectslot.h"
 #include "buffer.h"
 #include "core/logging.h"
+#include "core/voice.h"
 #include "direct_defs.h"
 #include "effect.h"
 #include "filter.h"
+#include "intrusive_ptr.h"
 #include "opthelpers.h"
 #include "source.h"
 

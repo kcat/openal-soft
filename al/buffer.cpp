@@ -28,16 +28,16 @@
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
-#include <cstdlib>
 #include <cstring>
 #include <iterator>
 #include <limits>
 #include <memory>
 #include <mutex>
-#include <new>
 #include <numeric>
 #include <optional>
 #include <stdexcept>
+#include <string>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -51,11 +51,13 @@
 #include "alc/inprogext.h"
 #include "almalloc.h"
 #include "alnumeric.h"
-#include "atomic.h"
-#include "core/except.h"
+#include "alspan.h"
+#include "core/device.h"
 #include "core/logging.h"
+#include "core/resampler_limits.h"
 #include "core/voice.h"
 #include "direct_defs.h"
+#include "intrusive_ptr.h"
 #include "opthelpers.h"
 
 #ifdef ALSOFT_EAX

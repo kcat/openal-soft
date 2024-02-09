@@ -1,26 +1,24 @@
 #ifndef AL_AUXEFFECTSLOT_H
 #define AL_AUXEFFECTSLOT_H
 
+#include <array>
 #include <atomic>
-#include <cstddef>
 #include <cstdint>
 #include <string_view>
+#include <utility>
 
 #include "AL/al.h"
 #include "AL/alc.h"
-#include "AL/efx.h"
 
-#include "alc/device.h"
-#include "alc/effects/base.h"
 #include "almalloc.h"
 #include "alnumeric.h"
-#include "atomic.h"
+#include "core/effects/base.h"
 #include "core/effectslot.h"
 #include "intrusive_ptr.h"
-#include "vector.h"
 
 #ifdef ALSOFT_EAX
 #include <memory>
+#include "eax/api.h"
 #include "eax/call.h"
 #include "eax/effect.h"
 #include "eax/exception.h"
@@ -29,8 +27,6 @@
 #endif // ALSOFT_EAX
 
 struct ALbuffer;
-struct ALeffect;
-struct WetBuffer;
 
 #ifdef ALSOFT_EAX
 class EaxFxSlotException : public EaxException {

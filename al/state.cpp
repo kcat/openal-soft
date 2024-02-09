@@ -22,27 +22,28 @@
 
 #include "version.h"
 
+#include <array>
 #include <atomic>
 #include <cmath>
-#include <cstring>
+#include <deque>
 #include <mutex>
 #include <optional>
 #include <stdexcept>
 #include <string>
+#include <utility>
 
 #include "AL/al.h"
 #include "AL/alc.h"
 #include "AL/alext.h"
 
 #include "al/debug.h"
-#include "albit.h"
+#include "al/listener.h"
 #include "alc/alu.h"
 #include "alc/context.h"
 #include "alc/inprogext.h"
 #include "alnumeric.h"
 #include "atomic.h"
 #include "core/context.h"
-#include "core/except.h"
 #include "core/mixer/defs.h"
 #include "core/voice.h"
 #include "direct_defs.h"
@@ -619,7 +620,7 @@ void UpdateContextProps(ALCcontext *context)
         std::memory_order_acq_rel, std::memory_order_acquire) == false);
 
     /* Copy in current property values. */
-    ALlistener &listener = context->mListener;
+    const auto &listener = context->mListener;
     props->Position = listener.Position;
     props->Velocity = listener.Velocity;
     props->OrientAt = listener.OrientAt;

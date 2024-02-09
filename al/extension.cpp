@@ -20,16 +20,15 @@
 
 #include "config.h"
 
-#include <cctype>
-#include <cstdlib>
-#include <cstring>
+#include <string_view>
+#include <vector>
 
 #include "AL/al.h"
 #include "AL/alc.h"
 
 #include "alc/context.h"
+#include "alc/inprogext.h"
 #include "alstring.h"
-#include "core/except.h"
 #include "direct_defs.h"
 #include "opthelpers.h"
 

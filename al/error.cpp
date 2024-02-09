@@ -32,7 +32,9 @@
 #include <cstdlib>
 #include <cstring>
 #include <limits>
-#include <mutex>
+#include <optional>
+#include <string>
+#include <utility>
 #include <vector>
 
 #include "AL/al.h"
@@ -41,11 +43,8 @@
 #include "al/debug.h"
 #include "alc/alconfig.h"
 #include "alc/context.h"
-#include "almalloc.h"
-#include "alstring.h"
-#include "core/except.h"
+#include "alc/inprogext.h"
 #include "core/logging.h"
-#include "direct_defs.h"
 #include "opthelpers.h"
 #include "strutils.h"
 
@@ -57,7 +56,7 @@ void ALCcontext::setError(ALenum errorCode, const char *msg, ...)
     auto message = std::vector<char>(256);
 
     /* NOLINTBEGIN(*-array-to-pointer-decay) */
-    va_list args, args2;
+    std::va_list args, args2;
     va_start(args, msg);
     va_copy(args2, args);
     int msglen{std::vsnprintf(message.data(), message.size(), msg, args)};

@@ -4,11 +4,12 @@
 #include <array>
 #include <cstdint>
 #include <string_view>
+#include <utility>
 #include <variant>
 
 #include "AL/al.h"
 #include "AL/alc.h"
-#include "AL/alext.h"
+#include "AL/efx.h"
 
 #include "almalloc.h"
 #include "alnumeric.h"

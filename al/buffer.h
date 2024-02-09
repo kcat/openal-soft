@@ -1,23 +1,23 @@
 #ifndef AL_BUFFER_H
 #define AL_BUFFER_H
 
+#include <array>
 #include <atomic>
 #include <cstddef>
 #include <cstdint>
 #include <string_view>
+#include <utility>
 
 #include "AL/al.h"
+#include "AL/alc.h"
 
 #include "alc/inprogext.h"
 #include "almalloc.h"
 #include "alnumeric.h"
-#include "atomic.h"
 #include "core/buffer_storage.h"
 #include "vector.h"
 
 #ifdef ALSOFT_EAX
-#include "eax/x_ram.h"
-
 enum class EaxStorage : uint8_t {
     Automatic,
     Accessible,

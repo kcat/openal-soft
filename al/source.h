@@ -2,27 +2,26 @@
 #define AL_SOURCE_H
 
 #include <array>
-#include <atomic>
 #include <cstddef>
 #include <cstdint>
 #include <deque>
-#include <iterator>
 #include <limits>
 #include <string_view>
+#include <utility>
 
 #include "AL/al.h"
 #include "AL/alc.h"
+#include "AL/alext.h"
 
-#include "alc/alu.h"
-#include "alc/context.h"
-#include "alc/inprogext.h"
 #include "almalloc.h"
+#include "alnumbers.h"
 #include "alnumeric.h"
-#include "atomic.h"
+#include "alspan.h"
+#include "core/context.h"
 #include "core/voice.h"
-#include "vector.h"
 
 #ifdef ALSOFT_EAX
+#include "eax/api.h"
 #include "eax/call.h"
 #include "eax/exception.h"
 #include "eax/fx_slot_index.h"
@@ -31,7 +30,7 @@
 
 struct ALbuffer;
 struct ALeffectslot;
-
+enum class Resampler : uint8_t;
 
 enum class SourceStereo : bool {
     Normal = AL_NORMAL_SOFT,

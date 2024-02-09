@@ -3,9 +3,9 @@
 
 #include "event.h"
 
-#include <algorithm>
+#include <array>
 #include <atomic>
-#include <cstring>
+#include <bitset>
 #include <exception>
 #include <memory>
 #include <mutex>
@@ -14,21 +14,25 @@
 #include <string>
 #include <string_view>
 #include <thread>
+#include <tuple>
 #include <utility>
+#include <variant>
 
 #include "AL/al.h"
 #include "AL/alc.h"
+#include "AL/alext.h"
 
 #include "alc/context.h"
-#include "alc/effects/base.h"
 #include "alc/inprogext.h"
-#include "almalloc.h"
+#include "alsem.h"
+#include "alspan.h"
 #include "core/async_event.h"
-#include "core/except.h"
+#include "core/context.h"
+#include "core/effects/base.h"
 #include "core/logging.h"
-#include "core/voice_change.h"
 #include "debug.h"
 #include "direct_defs.h"
+#include "intrusive_ptr.h"
 #include "opthelpers.h"
 #include "ringbuffer.h"
 

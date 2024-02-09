@@ -29,8 +29,9 @@
 #include <iterator>
 #include <memory>
 #include <mutex>
-#include <new>
 #include <numeric>
+#include <string>
+#include <unordered_map>
 #include <vector>
 
 #include "AL/al.h"
@@ -40,10 +41,13 @@
 #include "albit.h"
 #include "alc/context.h"
 #include "alc/device.h"
+#include "alc/inprogext.h"
 #include "almalloc.h"
 #include "alnumeric.h"
+#include "alspan.h"
 #include "core/except.h"
 #include "direct_defs.h"
+#include "intrusive_ptr.h"
 #include "opthelpers.h"
 
 

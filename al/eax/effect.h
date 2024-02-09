@@ -8,6 +8,7 @@
 
 #include "alnumeric.h"
 #include "AL/al.h"
+#include "AL/alext.h"
 #include "core/effects/base.h"
 #include "call.h"
 

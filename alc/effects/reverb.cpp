@@ -1423,8 +1423,8 @@ inline auto VectorPartialScatter(const std::array<float,NUM_LINES> &RESTRICT in,
     };
 }
 
-/* Utilizes the above, but also applies a geometric reflection on the input
- * channels.
+/* Utilizes the above, but also applies a line-based reflection on the input
+ * channels (swapping 0<->3 and 1<->2).
  */
 void VectorScatterRev(const float xCoeff, const float yCoeff,
     const al::span<ReverbUpdateLine,NUM_LINES> samples, const size_t count) noexcept
@@ -1434,14 +1434,8 @@ void VectorScatterRev(const float xCoeff, const float yCoeff,
     for(size_t i{0u};i < count;++i)
     {
         std::array src{samples[0][i], samples[1][i], samples[2][i], samples[3][i]};
-        const std::array f{
-            (src[0]          - src[1] - src[2] - src[3]) * 0.5f,
-            (src[1] - src[0]          - src[2] - src[3]) * 0.5f,
-            (src[2] - src[0] - src[1]          - src[3]) * 0.5f,
-            (src[3] - src[0] - src[1] - src[2]         ) * 0.5f
-        };
 
-        src = VectorPartialScatter(f, xCoeff, yCoeff);
+        src = VectorPartialScatter(std::array{src[3], src[2], src[1], src[0]}, xCoeff, yCoeff);
         samples[0][i] = src[0];
         samples[1][i] = src[1];
         samples[2][i] = src[2];

@@ -163,11 +163,9 @@ void ALCcontext::init()
     else
     {
         auxslots = EffectSlot::CreatePtrArray(1);
-        if(auxslots)
-        {
-            (*auxslots)[0] = mDefaultSlot->mSlot;
-            mDefaultSlot->mState = SlotState::Playing;
-        }
+        (*auxslots)[0] = mDefaultSlot->mSlot;
+        std::uninitialized_fill_n(al::to_address(auxslots->end()), 1_uz, nullptr);
+        mDefaultSlot->mState = SlotState::Playing;
     }
     mActiveAuxSlots.store(std::move(auxslots), std::memory_order_relaxed);
 

@@ -94,7 +94,7 @@ public:
         if(int res{pthread_setspecific(mTss, to_ptr(init))}; res != 0)
             throw std::runtime_error{"al::tss::tss(T)"};
     }
-    ~tss() { tss_delete(mTss); }
+    ~tss() { pthread_key_delete(mTss); }
 
     void set(const T &value) const
     {

@@ -41,6 +41,7 @@
 #include <vector>
 
 #include "albit.h"
+#include "almalloc.h"
 #include "alnumeric.h"
 #include "alspan.h"
 #include "alstring.h"
@@ -211,18 +212,18 @@ static int TrLoad(TokenReaderT *tr)
         // Load TRLoadSize (or less if at the end of the file) per read.
         toLoad = TRLoadSize;
 
-        const auto in = static_cast<uint>(tr->mIn&TRRingMask);
+        const auto in = tr->mIn&TRRingMask;
         std::streamsize count{TRRingSize - in};
         if(count < toLoad)
         {
-            istream.read(&tr->mRing[in], count);
+            istream.read(al::to_address(tr->mRing.begin() + in), count);
             tr->mIn += istream.gcount();
-            istream.read(&tr->mRing[0], toLoad-count);
+            istream.read(tr->mRing.data(), toLoad-count);
             tr->mIn += istream.gcount();
         }
         else
         {
-            istream.read(&tr->mRing[in], toLoad);
+            istream.read(al::to_address(tr->mRing.begin() + in), toLoad);
             tr->mIn += istream.gcount();
         }
 

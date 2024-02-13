@@ -1127,7 +1127,7 @@ auto MetadataProxy::propertyCallback(void*, uint32_t id, const char *key, const 
 
     std::array<spa_json,2> it{};
     spa_json_init(it.data(), value, strlen(value));
-    if(spa_json_enter_object(&it[0], &it[1]) <= 0)
+    if(spa_json_enter_object(&std::get<0>(it), &std::get<1>(it)) <= 0)
         return 0;
 
     auto get_json_string = [](spa_json *iter)
@@ -1145,11 +1145,11 @@ auto MetadataProxy::propertyCallback(void*, uint32_t id, const char *key, const 
             str->pop_back();
         return str;
     };
-    while(auto propKey = get_json_string(&it[1]))
+    while(auto propKey = get_json_string(&std::get<1>(it)))
     {
         if("name"sv == *propKey)
         {
-            auto propValue = get_json_string(&it[1]);
+            auto propValue = get_json_string(&std::get<1>(it));
             if(!propValue) break;
 
             TRACE("Got default %s device \"%s\"\n", isCapture ? "capture" : "playback",
@@ -1188,7 +1188,7 @@ auto MetadataProxy::propertyCallback(void*, uint32_t id, const char *key, const 
         else
         {
             const char *v{};
-            if(spa_json_next(&it[1], &v) <= 0)
+            if(spa_json_next(&std::get<1>(it), &v) <= 0)
                 break;
         }
     }

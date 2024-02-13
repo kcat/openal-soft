@@ -90,8 +90,8 @@ void ALCcontext::setError(ALenum errorCode, const char *msg, ...)
 #endif
     }
 
-    ALenum curerr{AL_NO_ERROR};
-    mLastError.compare_exchange_strong(curerr, errorCode);
+    if(mLastThreadError.get() == AL_NO_ERROR)
+        mLastThreadError.set(errorCode);
 
     debugMessage(DebugSource::API, DebugType::Error, 0, DebugSeverity::High,
         {msg, static_cast<uint>(msglen)});
@@ -137,5 +137,8 @@ AL_API auto AL_APIENTRY alGetError() noexcept -> ALenum
 
 FORCE_ALIGN ALenum AL_APIENTRY alGetErrorDirect(ALCcontext *context) noexcept
 {
-    return context->mLastError.exchange(AL_NO_ERROR);
+    ALenum ret{context->mLastThreadError.get()};
+    if(ret != AL_NO_ERROR) UNLIKELY
+        context->mLastThreadError.set(AL_NO_ERROR);
+    return ret;
 }

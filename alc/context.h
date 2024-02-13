@@ -20,6 +20,7 @@
 #include "al/listener.h"
 #include "almalloc.h"
 #include "alnumeric.h"
+#include "althreads.h"
 #include "atomic.h"
 #include "core/context.h"
 #include "inprogext.h"
@@ -80,7 +81,7 @@ struct ALCcontext : public al::intrusive_ref<ALCcontext>, ContextBase {
 
     std::mutex mPropLock;
 
-    std::atomic<ALenum> mLastError{AL_NO_ERROR};
+    al::tss<ALenum> mLastThreadError{AL_NO_ERROR};
 
     const ContextFlagBitset mContextFlags;
     std::atomic<bool> mDebugEnabled{false};

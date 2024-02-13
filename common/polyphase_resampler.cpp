@@ -3,18 +3,19 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstddef>
 #include <numeric>
-#include <stdexcept>
+#include <tuple>
 
 #include "alnumbers.h"
 #include "opthelpers.h"
 
 
+using uint = unsigned int;
+
 namespace {
 
 constexpr double Epsilon{1e-9};
-
-using uint = unsigned int;
 
 #if __cpp_lib_math_special_functions >= 201603L
 using std::cyl_bessel_i;
@@ -188,22 +189,22 @@ void PPhaseResampler::process(const uint inN, const double *in, const uint outN,
     {
         // Input starts at l to compensate for the filter delay.  This will
         // drop any build-up from the first half of the filter.
-        size_t j_f{(l + q*i) % p};
-        size_t j_s{(l + q*i) / p};
+        std::size_t j_f{(l + q*i) % p};
+        std::size_t j_s{(l + q*i) / p};
 
         // Only take input when 0 <= j_s < inN.
         double r{0.0};
         if(j_f < m) LIKELY
         {
-            size_t filt_len{(m-j_f+p-1) / p};
+            std::size_t filt_len{(m-j_f+p-1) / p};
             if(j_s+1 > inN) LIKELY
             {
-                size_t skip{std::min<size_t>(j_s+1 - inN, filt_len)};
+                std::size_t skip{std::min<std::size_t>(j_s+1 - inN, filt_len)};
                 j_f += p*skip;
                 j_s -= skip;
                 filt_len -= skip;
             }
-            if(size_t todo{std::min<size_t>(j_s+1, filt_len)}) LIKELY
+            if(std::size_t todo{std::min<std::size_t>(j_s+1, filt_len)}) LIKELY
             {
                 do {
                     r += f[j_f] * in[j_s];

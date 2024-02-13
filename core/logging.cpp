@@ -3,6 +3,7 @@
 
 #include "logging.h"
 
+#include <array>
 #include <cctype>
 #include <cstdarg>
 #include <cstdio>

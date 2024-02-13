@@ -1,8 +1,9 @@
 #ifndef MAKEMHR_H
 #define MAKEMHR_H
 
-#include <vector>
+#include <array>
 #include <complex>
+#include <vector>
 
 #include "alcomplex.h"
 #include "polyphase_resampler.h"

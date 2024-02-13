@@ -3,15 +3,11 @@
 
 #include <algorithm>
 #include <cstddef>
-#include <iterator>
 #include <limits>
-#include <memory>
 #include <new>
 #include <type_traits>
 #include <utility>
 #include <variant>
-
-#include "pragmadefs.h"
 
 
 namespace gsl {

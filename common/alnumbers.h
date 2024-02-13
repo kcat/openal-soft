@@ -1,7 +1,7 @@
 #ifndef COMMON_ALNUMBERS_H
 #define COMMON_ALNUMBERS_H
 
-#include <utility>
+#include <type_traits>
 
 namespace al::numbers {
 

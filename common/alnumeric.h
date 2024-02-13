@@ -2,9 +2,11 @@
 #define AL_NUMERIC_H
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <iterator>
 #include <type_traits>
 #ifdef HAVE_INTRIN_H
 #include <intrin.h>

@@ -1,13 +1,13 @@
 #ifndef AL_SPAN_H
 #define AL_SPAN_H
 
-#include <array>
 #include <cassert>
 #include <cstddef>
-#include <initializer_list>
 #include <iterator>
 #include <stdexcept>
+#include <tuple>
 #include <type_traits>
+#include <utility>
 
 #include "almalloc.h"
 #include "altraits.h"

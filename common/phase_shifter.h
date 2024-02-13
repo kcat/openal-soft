@@ -8,8 +8,9 @@
 #endif
 
 #include <array>
-#include <stddef.h>
-#include <type_traits>
+#include <complex>
+#include <cstddef>
+#include <limits>
 #include <vector>
 
 #include "alcomplex.h"
@@ -22,7 +23,7 @@ struct NoInit { };
  * given one sample less of a delay (FilterSize/2 - 1) compared to the direct
  * signal delay (FilterSize/2) to properly align.
  */
-template<size_t FilterSize>
+template<std::size_t FilterSize>
 struct PhaseShifterT {
     static_assert(FilterSize >= 16, "FilterSize needs to be at least 16");
     static_assert((FilterSize&(FilterSize-1)) == 0, "FilterSize needs to be power-of-two");
@@ -50,18 +51,18 @@ struct PhaseShifterT {
     PhaseShifterT()
     {
         using complex_d = std::complex<double>;
-        constexpr size_t fft_size{FilterSize};
-        constexpr size_t half_size{fft_size / 2};
+        constexpr std::size_t fft_size{FilterSize};
+        constexpr std::size_t half_size{fft_size / 2};
 
         auto fftBuffer = std::vector<complex_d>(fft_size, complex_d{});
         fftBuffer[half_size] = 1.0;
 
         forward_fft(al::span{fftBuffer});
         fftBuffer[0] *= std::numeric_limits<double>::epsilon();
-        for(size_t i{1};i < half_size;++i)
+        for(std::size_t i{1};i < half_size;++i)
             fftBuffer[i] = complex_d{-fftBuffer[i].imag(), fftBuffer[i].real()};
         fftBuffer[half_size] *= std::numeric_limits<double>::epsilon();
-        for(size_t i{half_size+1};i < fft_size;++i)
+        for(std::size_t i{half_size+1};i < fft_size;++i)
             fftBuffer[i] = std::conj(fftBuffer[fft_size - i]);
         inverse_fft(al::span{fftBuffer});
 
@@ -100,17 +101,17 @@ private:
 #endif
 };
 
-template<size_t S>
+template<std::size_t S>
 inline void PhaseShifterT<S>::process(al::span<float> dst, const float *RESTRICT src) const
 {
 #ifdef HAVE_SSE_INTRINSICS
-    if(size_t todo{dst.size()>>1})
+    if(std::size_t todo{dst.size()>>1})
     {
         auto *out = reinterpret_cast<__m64*>(dst.data());
         do {
             __m128 r04{_mm_setzero_ps()};
             __m128 r14{_mm_setzero_ps()};
-            for(size_t j{0};j < mCoeffs.size();j+=4)
+            for(std::size_t j{0};j < mCoeffs.size();j+=4)
             {
                 const __m128 coeffs{_mm_load_ps(&mCoeffs[j])};
                 const __m128 s0{_mm_loadu_ps(&src[j*2])};
@@ -134,7 +135,7 @@ inline void PhaseShifterT<S>::process(al::span<float> dst, const float *RESTRICT
     if((dst.size()&1))
     {
         __m128 r4{_mm_setzero_ps()};
-        for(size_t j{0};j < mCoeffs.size();j+=4)
+        for(std::size_t j{0};j < mCoeffs.size();j+=4)
         {
             const __m128 coeffs{_mm_load_ps(&mCoeffs[j])};
             const __m128 s{_mm_setr_ps(src[j*2], src[j*2 + 2], src[j*2 + 4], src[j*2 + 6])};
@@ -148,13 +149,13 @@ inline void PhaseShifterT<S>::process(al::span<float> dst, const float *RESTRICT
 
 #elif defined(HAVE_NEON)
 
-    size_t pos{0};
-    if(size_t todo{dst.size()>>1})
+    std::size_t pos{0};
+    if(std::size_t todo{dst.size()>>1})
     {
         do {
             float32x4_t r04{vdupq_n_f32(0.0f)};
             float32x4_t r14{vdupq_n_f32(0.0f)};
-            for(size_t j{0};j < mCoeffs.size();j+=4)
+            for(std::size_t j{0};j < mCoeffs.size();j+=4)
             {
                 const float32x4_t coeffs{vld1q_f32(&mCoeffs[j])};
                 const float32x4_t s0{vld1q_f32(&src[j*2])};
@@ -176,7 +177,7 @@ inline void PhaseShifterT<S>::process(al::span<float> dst, const float *RESTRICT
     if((dst.size()&1))
     {
         float32x4_t r4{vdupq_n_f32(0.0f)};
-        for(size_t j{0};j < mCoeffs.size();j+=4)
+        for(std::size_t j{0};j < mCoeffs.size();j+=4)
         {
             const float32x4_t coeffs{vld1q_f32(&mCoeffs[j])};
             const float32x4_t s{load4(src[j*2], src[j*2 + 2], src[j*2 + 4], src[j*2 + 6])};
@@ -191,7 +192,7 @@ inline void PhaseShifterT<S>::process(al::span<float> dst, const float *RESTRICT
     for(float &output : dst)
     {
         float ret{0.0f};
-        for(size_t j{0};j < mCoeffs.size();++j)
+        for(std::size_t j{0};j < mCoeffs.size();++j)
             ret += src[j*2] * mCoeffs[j];
 
         output = ret;

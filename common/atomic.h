@@ -2,6 +2,7 @@
 #define AL_ATOMIC_H
 
 #include <atomic>
+#include <cstddef>
 #include <memory>
 
 #include "almalloc.h"

@@ -9,9 +9,7 @@ struct CubicTable {
     al::span<const CubicCoefficients,CubicPhaseCount> Tab;
 };
 
-/* A Catmull-Rom spline. The spline passes through the center two samples,
- * ensuring no discontinuity while moving through a series of samples.
- */
-extern const CubicTable gCubicSpline;
+/* A Gaussian-like resample filter. */
+extern const CubicTable gGaussianFilter;
 
 #endif /* CORE_CUBIC_TABLES_H */

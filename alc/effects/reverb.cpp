@@ -37,6 +37,7 @@
 #include "core/ambidefs.h"
 #include "core/bufferline.h"
 #include "core/context.h"
+#include "core/cubic_tables.h"
 #include "core/devformat.h"
 #include "core/device.h"
 #include "core/effectslot.h"
@@ -59,59 +60,6 @@ constexpr float DefaultModulationTime{0.25f};
 #define MOD_FRACBITS 24
 #define MOD_FRACONE  (1<<MOD_FRACBITS)
 #define MOD_FRACMASK (MOD_FRACONE-1)
-
-
-struct CubicFilter {
-    static constexpr size_t sTableBits{8};
-    static constexpr size_t sTableSteps{1 << sTableBits};
-    static constexpr size_t sTableMask{sTableSteps - 1};
-
-    std::array<float,sTableSteps*2 + 1> mFilter{};
-
-    [[nodiscard]]
-    auto GetCoeff(size_t idx) noexcept -> double
-    {
-        static constexpr double IndexScale{512.0 / double{sTableSteps*2}};
-        const double k{0.5 + static_cast<double>(idx)*IndexScale};
-        if(k > 512.0) return 0.0;
-        const double s{ std::sin(al::numbers::pi*1.280/1024 * k)};
-        const double t{(std::cos(al::numbers::pi*2.000/1023 * k) - 1.0) * 0.50};
-        const double u{(std::cos(al::numbers::pi*4.000/1023 * k) - 1.0) * 0.08};
-        return s * (t + u + 1.0) / k;
-    }
-
-    constexpr CubicFilter()
-    {
-        /* This creates a lookup table for a gaussian-like filter, with 256
-         * steps between samples. Only half the coefficients are needed, since
-         * Coeff2 is just Coeff1 in reverse and Coeff3 is just Coeff0 in
-         * reverse.
-         */
-        for(size_t i{0};i < sTableSteps/2;++i)
-        {
-            const double coeff0{GetCoeff(sTableSteps + i)};
-            const double coeff1{GetCoeff(i)};
-            const double coeff2{GetCoeff(sTableSteps - i)};
-            const double coeff3{GetCoeff(sTableSteps*2 - i)};
-
-            const double scale{1.0 / (coeff0 + coeff1 + coeff2 + coeff3)};
-            mFilter[sTableSteps + i] = static_cast<float>(coeff0 * scale);
-            mFilter[i] = static_cast<float>(coeff1 * scale);
-            mFilter[sTableSteps - i] = static_cast<float>(coeff2 * scale);
-            mFilter[sTableSteps*2 - i] = static_cast<float>(coeff3 * scale);
-        }
-    }
-
-    [[nodiscard]] constexpr auto getCoeff0(size_t i) const noexcept -> float
-    { return mFilter[sTableSteps+i]; }
-    [[nodiscard]] constexpr auto getCoeff1(size_t i) const noexcept -> float
-    { return mFilter[i]; }
-    [[nodiscard]] constexpr auto getCoeff2(size_t i) const noexcept -> float
-    { return mFilter[sTableSteps-i]; }
-    [[nodiscard]] constexpr auto getCoeff3(size_t i) const noexcept -> float
-    { return mFilter[sTableSteps*2-i]; }
-};
-const CubicFilter gCubicTable;
 
 
 /* Max samples per process iteration. Used to limit the size needed for

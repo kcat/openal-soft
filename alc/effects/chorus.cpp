@@ -22,20 +22,22 @@
 
 #include <algorithm>
 #include <array>
-#include <climits>
+#include <cmath>
 #include <cstdlib>
-#include <iterator>
+#include <limits>
+#include <variant>
 #include <vector>
 
 #include "alc/effects/base.h"
-#include "almalloc.h"
 #include "alnumbers.h"
 #include "alnumeric.h"
 #include "alspan.h"
+#include "core/ambidefs.h"
 #include "core/bufferline.h"
 #include "core/context.h"
-#include "core/devformat.h"
+#include "core/cubic_tables.h"
 #include "core/device.h"
+#include "core/effects/base.h"
 #include "core/effectslot.h"
 #include "core/mixer.h"
 #include "core/mixer/defs.h"
@@ -43,6 +45,7 @@
 #include "intrusive_ptr.h"
 #include "opthelpers.h"
 
+struct BufferStorage;
 
 namespace {
 
@@ -300,16 +303,20 @@ void ChorusState::process(const size_t samplesToDo, const al::span<const FloatBu
         delaybuf[offset&bufmask] = samplesIn[0][i];
 
         // Tap for the left output.
-        uint delay{offset - (ldelays[i]>>MixerFracBits)};
-        float mu{static_cast<float>(ldelays[i]&MixerFracMask) * (1.0f/MixerFracOne)};
-        lbuffer[i] = cubic(delaybuf[(delay+1) & bufmask], delaybuf[(delay  ) & bufmask],
-            delaybuf[(delay-1) & bufmask], delaybuf[(delay-2) & bufmask], mu);
+        size_t delay{offset - (ldelays[i]>>MixerFracBits)};
+        size_t phase{(ldelays[i]>>(MixerFracBits-gCubicTable.sTableBits))&gCubicTable.sTableMask};
+        lbuffer[i] = delaybuf[(delay+1) & bufmask]*gCubicTable.getCoeff0(phase) +
+            delaybuf[(delay  ) & bufmask]*gCubicTable.getCoeff1(phase) +
+            delaybuf[(delay-1) & bufmask]*gCubicTable.getCoeff2(phase) +
+            delaybuf[(delay-2) & bufmask]*gCubicTable.getCoeff3(phase);
 
         // Tap for the right output.
         delay = offset - (rdelays[i]>>MixerFracBits);
-        mu = static_cast<float>(rdelays[i]&MixerFracMask) * (1.0f/MixerFracOne);
-        rbuffer[i] = cubic(delaybuf[(delay+1) & bufmask], delaybuf[(delay  ) & bufmask],
-            delaybuf[(delay-1) & bufmask], delaybuf[(delay-2) & bufmask], mu);
+        phase = (rdelays[i]>>(MixerFracBits-gCubicTable.sTableBits))&gCubicTable.sTableMask;
+        rbuffer[i] = delaybuf[(delay+1) & bufmask]*gCubicTable.getCoeff0(phase) +
+            delaybuf[(delay  ) & bufmask]*gCubicTable.getCoeff1(phase) +
+            delaybuf[(delay-1) & bufmask]*gCubicTable.getCoeff2(phase) +
+            delaybuf[(delay-2) & bufmask]*gCubicTable.getCoeff3(phase);
 
         // Accumulate feedback from the average delay of the taps.
         delaybuf[offset&bufmask] += delaybuf[(offset-avgdelay) & bufmask] * feedback;

@@ -2,6 +2,7 @@
 #define CORE_MIXER_DEFS_H
 
 #include <array>
+#include <cstdint>
 #include <cstdlib>
 #include <variant>
 
@@ -26,7 +27,7 @@ inline constexpr int MixerFracHalf{MixerFracOne >> 1};
 inline constexpr float GainSilenceThreshold{0.00001f}; /* -100dB */
 
 
-enum class Resampler : uint8_t {
+enum class Resampler : std::uint8_t {
     Point,
     Linear,
     Cubic,
@@ -62,15 +63,15 @@ struct CubicState {
 
 using InterpState = std::variant<CubicState,BsincState>;
 
-using ResamplerFunc = void(*)(const InterpState *state, const float *RESTRICT src, uint frac,
+using ResamplerFunc = void(*)(const InterpState *state, const float *src, uint frac,
     const uint increment, const al::span<float> dst);
 
 ResamplerFunc PrepareResampler(Resampler resampler, uint increment, InterpState *state);
 
 
 template<typename TypeTag, typename InstTag>
-void Resample_(const InterpState *state, const float *RESTRICT src, uint frac,
-    const uint increment, const al::span<float> dst);
+void Resample_(const InterpState *state, const float *src, uint frac, const uint increment,
+    const al::span<float> dst);
 
 template<typename InstTag>
 void Mix_(const al::span<const float> InSamples, const al::span<FloatBufferLine> OutBuffer,
@@ -92,7 +93,7 @@ void MixDirectHrtf_(const FloatBufferSpan LeftOut, const FloatBufferSpan RightOu
 
 /* Vectorized resampler helpers */
 template<size_t N>
-inline void InitPosArrays(uint frac, uint increment, const al::span<uint,N> frac_arr,
+constexpr void InitPosArrays(uint frac, const uint increment, const al::span<uint,N> frac_arr,
     const al::span<uint,N> pos_arr)
 {
     pos_arr[0] = 0;

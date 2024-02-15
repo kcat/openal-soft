@@ -23,8 +23,13 @@
 #include <xmmintrin.h>
 #include <emmintrin.h>
 
+#include <array>
+#include <cstddef>
+
 #include "alnumeric.h"
+#include "alspan.h"
 #include "defs.h"
+#include "opthelpers.h"
 
 struct SSE2Tag;
 struct LerpTag;
@@ -35,7 +40,7 @@ struct LerpTag;
 #endif
 
 template<>
-void Resample_<LerpTag,SSE2Tag>(const InterpState*, const float *RESTRICT src, uint frac,
+void Resample_<LerpTag,SSE2Tag>(const InterpState*, const float *src, uint frac,
     const uint increment, const al::span<float> dst)
 {
     ASSUME(frac < MixerFracOne);

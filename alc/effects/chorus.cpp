@@ -139,7 +139,7 @@ void ChorusState::update(const ContextBase *context, const EffectSlot *slot,
     const ChorusWaveform waveform, const float delay, const float depth, const float feedback,
     const float rate, int phase, const EffectTarget target)
 {
-    static constexpr int mindelay{(MaxResamplerPadding>>1) << MixerFracBits};
+    static constexpr int mindelay{MaxResamplerEdge << gCubicTable.sTableBits};
 
     /* The LFO depth is scaled to be relative to the sample delay. Clamp the
      * delay and depth to allow enough padding for resampling.
@@ -149,9 +149,8 @@ void ChorusState::update(const ContextBase *context, const EffectSlot *slot,
 
     mWaveform = waveform;
 
-    mDelay = std::max(float2int(std::round(delay*frequency*MixerFracOne)), mindelay);
-    mDepth = std::min(depth * static_cast<float>(mDelay),
-        static_cast<float>(mDelay - mindelay));
+    mDelay = std::max(float2int(std::round(delay*frequency*gCubicTable.sTableSteps)), mindelay);
+    mDepth = std::min(static_cast<float>(mDelay)*depth, static_cast<float>(mDelay-mindelay));
 
     mFeedback = feedback;
 
@@ -303,16 +302,16 @@ void ChorusState::process(const size_t samplesToDo, const al::span<const FloatBu
         delaybuf[offset&bufmask] = samplesIn[0][i];
 
         // Tap for the left output.
-        size_t delay{offset - (ldelays[i]>>MixerFracBits)};
-        size_t phase{(ldelays[i]>>(MixerFracBits-gCubicTable.sTableBits))&gCubicTable.sTableMask};
+        size_t delay{offset - (ldelays[i] >> gCubicTable.sTableBits)};
+        size_t phase{ldelays[i] & gCubicTable.sTableMask};
         lbuffer[i] = delaybuf[(delay+1) & bufmask]*gCubicTable.getCoeff0(phase) +
             delaybuf[(delay  ) & bufmask]*gCubicTable.getCoeff1(phase) +
             delaybuf[(delay-1) & bufmask]*gCubicTable.getCoeff2(phase) +
             delaybuf[(delay-2) & bufmask]*gCubicTable.getCoeff3(phase);
 
         // Tap for the right output.
-        delay = offset - (rdelays[i]>>MixerFracBits);
-        phase = (rdelays[i]>>(MixerFracBits-gCubicTable.sTableBits))&gCubicTable.sTableMask;
+        delay = offset - (rdelays[i] >> gCubicTable.sTableBits);
+        phase = rdelays[i] & gCubicTable.sTableMask;
         rbuffer[i] = delaybuf[(delay+1) & bufmask]*gCubicTable.getCoeff0(phase) +
             delaybuf[(delay  ) & bufmask]*gCubicTable.getCoeff1(phase) +
             delaybuf[(delay-1) & bufmask]*gCubicTable.getCoeff2(phase) +

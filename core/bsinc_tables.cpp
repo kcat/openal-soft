@@ -157,10 +157,10 @@ struct BSincFilterArray {
 
     BSincFilterArray()
     {
-        constexpr uint BSincPointsMax{(hdr.a[0]*2 + 3) & ~3u};
+        static constexpr uint BSincPointsMax{(hdr.a[0]*2u + 3u) & ~3u};
         static_assert(BSincPointsMax <= MaxResamplerPadding, "MaxResamplerPadding is too small");
 
-        using filter_type = std::array<std::array<double,BSincPointsMax>,BSincPhaseCount+1>;
+        using filter_type = std::array<std::array<double,BSincPointsMax>,BSincPhaseCount>;
         auto filterptr = std::make_unique<std::array<filter_type,BSincScaleCount>>();
         const auto filter = filterptr->begin();
 
@@ -178,10 +178,7 @@ struct BSincFilterArray {
             const auto a = static_cast<double>(hdr.a[si]);
             const double l{a - 1.0/BSincPhaseCount};
 
-            /* Do one extra phase index so that the phase delta has a proper
-             * target for its last index.
-             */
-            for(uint pi{0};pi <= BSincPhaseCount;++pi)
+            for(uint pi{0};pi < BSincPhaseCount;++pi)
             {
                 const double phase{std::floor(l) + (pi/double{BSincPhaseCount})};
 
@@ -211,43 +208,71 @@ struct BSincFilterArray {
                 /* Linear interpolation between phases is simplified by pre-
                  * calculating the delta (b - a) in: x = a + f (b - a)
                  */
-                for(size_t i{0};i < m;++i)
+                if(pi < BSincPhaseCount-1)
                 {
-                    const double phDelta{filter[si][pi+1][o+i] - filter[si][pi][o+i]};
-                    mTable[idx++] = static_cast<float>(phDelta);
+                    for(size_t i{0};i < m;++i)
+                    {
+                        const double phDelta{filter[si][pi+1][o+i] - filter[si][pi][o+i]};
+                        mTable[idx++] = static_cast<float>(phDelta);
+                    }
+                }
+                else
+                {
+                    /* The delta target for the last phase index is the first
+                     * phase index with the coefficients offset by one. The
+                     * first delta targets 0, as it represents a coefficient
+                     * for a sample that won't be part of the filter.
+                     */
+                    mTable[idx++] = static_cast<float>(0.0 - filter[si][pi][o]);
+                    for(size_t i{1};i < m;++i)
+                    {
+                        const double phDelta{filter[si][0][o+i-1] - filter[si][pi][o+i]};
+                        mTable[idx++] = static_cast<float>(phDelta);
+                    }
                 }
             }
-            /* Calculate and write out each phase index's filter quality scale
-             * deltas. The last scale index doesn't have any scale or scale-
-             * phase deltas.
+
+            /* Now write out each phase index's scale and phase+scale deltas,
+             * to complete the bilinear equation for the combination of phase
+             * and scale.
              */
-            if(si == BSincScaleCount-1)
+            if(si < BSincScaleCount-1)
             {
+                for(size_t pi{0};pi < BSincPhaseCount;++pi)
+                {
+                    for(size_t i{0};i < m;++i)
+                    {
+                        const double scDelta{filter[si+1][pi][o+i] - filter[si][pi][o+i]};
+                        mTable[idx++] = static_cast<float>(scDelta);
+                    }
+
+                    if(pi < BSincPhaseCount-1)
+                    {
+                        for(size_t i{0};i < m;++i)
+                        {
+                            const double spDelta{(filter[si+1][pi+1][o+i]-filter[si+1][pi][o+i]) -
+                                (filter[si][pi+1][o+i]-filter[si][pi][o+i])};
+                            mTable[idx++] = static_cast<float>(spDelta);
+                        }
+                    }
+                    else
+                    {
+                        mTable[idx++] = static_cast<float>((0.0 - filter[si+1][pi][o]) -
+                            (0.0 - filter[si][pi][o]));
+                        for(size_t i{1};i < m;++i)
+                        {
+                            const double spDelta{(filter[si+1][0][o+i-1] - filter[si+1][pi][o+i]) -
+                                (filter[si][0][o+i-1] - filter[si][pi][o+i])};
+                            mTable[idx++] = static_cast<float>(spDelta);
+                        }
+                    }
+                }
+            }
+            else
+            {
+                /* The last scale index doesn't have scale-related deltas. */
                 for(size_t i{0};i < BSincPhaseCount*m*2;++i)
                     mTable[idx++] = 0.0f;
-            }
-            else for(size_t pi{0};pi < BSincPhaseCount;++pi)
-            {
-                /* Linear interpolation between scales is also simplified.
-                 *
-                 * Given a difference in the number of points between scales,
-                 * the destination points will be 0, thus: x = a + f (-a)
-                 */
-                for(size_t i{0};i < m;++i)
-                {
-                    const double scDelta{filter[si+1][pi][o+i] - filter[si][pi][o+i]};
-                    mTable[idx++] = static_cast<float>(scDelta);
-                }
-
-                /* This last simplification is done to complete the bilinear
-                 * equation for the combination of phase and scale.
-                 */
-                for(size_t i{0};i < m;++i)
-                {
-                    const double spDelta{(filter[si+1][pi+1][o+i] - filter[si+1][pi][o+i]) -
-                        (filter[si][pi+1][o+i] - filter[si][pi][o+i])};
-                    mTable[idx++] = static_cast<float>(spDelta);
-                }
             }
         }
         assert(idx == hdr.total_size);

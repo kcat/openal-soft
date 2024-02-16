@@ -22,24 +22,26 @@
 
 #include <algorithm>
 #include <array>
+#include <cmath>
 #include <cstdlib>
-#include <iterator>
+#include <variant>
 
 #include "alc/effects/base.h"
-#include "almalloc.h"
 #include "alnumbers.h"
 #include "alnumeric.h"
 #include "alspan.h"
+#include "core/ambidefs.h"
 #include "core/bufferline.h"
 #include "core/context.h"
-#include "core/devformat.h"
 #include "core/device.h"
+#include "core/effects/base.h"
 #include "core/effectslot.h"
 #include "core/filters/biquad.h"
 #include "core/mixer.h"
 #include "core/mixer/defs.h"
 #include "intrusive_ptr.h"
 
+struct BufferStorage;
 
 namespace {
 
@@ -131,9 +133,9 @@ void DistortionState::process(const size_t samplesToDo, const al::span<const Flo
          */
         auto proc_sample = [fc](float smp) -> float
         {
-            smp = (1.0f + fc) * smp/(1.0f + fc*std::abs(smp));
-            smp = (1.0f + fc) * smp/(1.0f + fc*std::abs(smp)) * -1.0f;
-            smp = (1.0f + fc) * smp/(1.0f + fc*std::abs(smp));
+            smp = (1.0f + fc) * smp/(1.0f + fc*std::fabs(smp));
+            smp = (1.0f + fc) * smp/(1.0f + fc*std::fabs(smp)) * -1.0f;
+            smp = (1.0f + fc) * smp/(1.0f + fc*std::fabs(smp));
             return smp;
         };
         std::transform(mBuffer[1].begin(), mBuffer[1].begin()+todo, mBuffer[0].begin(),

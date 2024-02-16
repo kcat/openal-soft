@@ -32,24 +32,23 @@
 
 #include "config.h"
 
+#include <algorithm>
 #include <array>
+#include <cmath>
 #include <cstdlib>
-#include <iterator>
-#include <utility>
+#include <variant>
 
 #include "alc/effects/base.h"
-#include "almalloc.h"
-#include "alnumeric.h"
 #include "alspan.h"
 #include "core/ambidefs.h"
 #include "core/bufferline.h"
-#include "core/devformat.h"
 #include "core/device.h"
+#include "core/effects/base.h"
 #include "core/effectslot.h"
-#include "core/mixer.h"
 #include "core/mixer/defs.h"
 #include "intrusive_ptr.h"
 
+struct BufferStorage;
 struct ContextBase;
 
 
@@ -163,7 +162,7 @@ void CompressorState::process(const size_t samplesToDo,
         mEnvFollower = env;
 
         /* Now compress the signal amplitude to output. */
-        auto chan = std::cbegin(mChans);
+        auto chan = mChans.cbegin();
         for(const auto &input : samplesIn)
         {
             const size_t outidx{chan->mTarget};

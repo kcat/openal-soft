@@ -23,11 +23,12 @@
 #include <algorithm>
 #include <array>
 #include <cassert>
+#include <cmath>
 #include <cstdint>
 #include <cstdio>
-#include <functional>
-#include <iterator>
 #include <numeric>
+#include <utility>
+#include <variant>
 
 #include "alc/effects/base.h"
 #include "almalloc.h"
@@ -38,8 +39,8 @@
 #include "core/bufferline.h"
 #include "core/context.h"
 #include "core/cubic_tables.h"
-#include "core/devformat.h"
 #include "core/device.h"
+#include "core/effects/base.h"
 #include "core/effectslot.h"
 #include "core/filters/biquad.h"
 #include "core/filters/splitter.h"
@@ -47,8 +48,9 @@
 #include "core/mixer/defs.h"
 #include "intrusive_ptr.h"
 #include "opthelpers.h"
-#include "vecmat.h"
 #include "vector.h"
+
+struct BufferStorage;
 
 namespace {
 

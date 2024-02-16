@@ -5,9 +5,7 @@
 #include <cstddef>
 #include <variant>
 
-#include "almalloc.h"
 #include "alspan.h"
-#include "atomic.h"
 #include "core/bufferline.h"
 #include "intrusive_ptr.h"
 

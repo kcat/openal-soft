@@ -3,14 +3,14 @@
 
 #include <algorithm>
 #include <array>
+#include <cmath>
 #include <complex>
 #include <cstddef>
 #include <cstdint>
 #include <functional>
-#include <iterator>
 #include <memory>
-#include <utility>
 #include <vector>
+#include <variant>
 
 #ifdef HAVE_SSE_INTRINSICS
 #include <xmmintrin.h>
@@ -30,13 +30,17 @@
 #include "core/context.h"
 #include "core/devformat.h"
 #include "core/device.h"
+#include "core/effects/base.h"
 #include "core/effectslot.h"
 #include "core/filters/splitter.h"
 #include "core/fmt_traits.h"
 #include "core/mixer.h"
+#include "core/uhjfilter.h"
 #include "intrusive_ptr.h"
+#include "opthelpers.h"
 #include "pffft.h"
 #include "polyphase_resampler.h"
+#include "vecmat.h"
 #include "vector.h"
 
 
@@ -459,7 +463,7 @@ void ConvolutionState::update(const ContextBase *context, const EffectSlot *slot
     mMix = &ConvolutionState::NormalMix;
 
     for(auto &chan : mChans)
-        std::fill(std::begin(chan.Target), std::end(chan.Target), 0.0f);
+        std::fill(chan.Target.begin(), chan.Target.end(), 0.0f);
     const float gain{slot->Gain};
     if(IsAmbisonic(mChannels))
     {

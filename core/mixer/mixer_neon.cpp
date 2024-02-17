@@ -29,6 +29,8 @@ struct FastBSincTag;
 #pragma GCC target("fpu=neon")
 #endif
 
+using uint = unsigned int;
+
 namespace {
 
 constexpr uint BSincPhaseDiffBits{MixerFracBits - BSincPhaseBits};
@@ -38,6 +40,19 @@ constexpr uint BSincPhaseDiffMask{BSincPhaseDiffOne - 1u};
 constexpr uint CubicPhaseDiffBits{MixerFracBits - CubicPhaseBits};
 constexpr uint CubicPhaseDiffOne{1 << CubicPhaseDiffBits};
 constexpr uint CubicPhaseDiffMask{CubicPhaseDiffOne - 1u};
+
+force_inline
+void vtranspose4(float32x4_t &x0, float32x4_t &x1, float32x4_t &x2, float32x4_t &x3) noexcept
+{
+    float32x4x2_t t0_{vzipq_f32(x0, x2)};
+    float32x4x2_t t1_{vzipq_f32(x1, x3)};
+    float32x4x2_t u0_{vzipq_f32(t0_.val[0], t1_.val[0])};
+    float32x4x2_t u1_{vzipq_f32(t0_.val[1], t1_.val[1])};
+    x0 = u0_.val[0];
+    x1 = u0_.val[1];
+    x2 = u1_.val[0];
+    x3 = u1_.val[1];
+}
 
 inline float32x4_t set_f4(float l0, float l1, float l2, float l3)
 {
@@ -150,42 +165,42 @@ void Resample_<LerpTag,NEONTag>(const InterpState*, const float *src, uint frac,
 {
     ASSUME(frac < MixerFracOne);
 
-    const int32x4_t increment4 = vdupq_n_s32(static_cast<int>(increment*4));
+    const uint32x4_t increment4 = vdupq_n_u32(increment*4u);
     const float32x4_t fracOne4 = vdupq_n_f32(1.0f/MixerFracOne);
-    const int32x4_t fracMask4 = vdupq_n_s32(MixerFracMask);
+    const uint32x4_t fracMask4 = vdupq_n_u32(MixerFracMask);
 
     alignas(16) std::array<uint,4> pos_, frac_;
     InitPosArrays(frac, increment, al::span{frac_}, al::span{pos_});
-    int32x4_t frac4 = vld1q_s32(reinterpret_cast<int*>(frac_.data()));
-    int32x4_t pos4 = vld1q_s32(reinterpret_cast<int*>(pos_.data()));
+    uint32x4_t frac4 = vld1q_u32(frac_.data());
+    uint32x4_t pos4 = vld1q_u32(pos_.data());
 
     auto dst_iter = dst.begin();
     for(size_t todo{dst.size()>>2};todo;--todo)
     {
-        const int pos0{vgetq_lane_s32(pos4, 0)};
-        const int pos1{vgetq_lane_s32(pos4, 1)};
-        const int pos2{vgetq_lane_s32(pos4, 2)};
-        const int pos3{vgetq_lane_s32(pos4, 3)};
+        const uint pos0{vgetq_lane_u32(pos4, 0)};
+        const uint pos1{vgetq_lane_u32(pos4, 1)};
+        const uint pos2{vgetq_lane_u32(pos4, 2)};
+        const uint pos3{vgetq_lane_u32(pos4, 3)};
         const float32x4_t val1{set_f4(src[pos0], src[pos1], src[pos2], src[pos3])};
-        const float32x4_t val2{set_f4(src[pos0+1], src[pos1+1], src[pos2+1], src[pos3+1])};
+        const float32x4_t val2{set_f4(src[pos0+1_uz], src[pos1+1_uz], src[pos2+1_uz], src[pos3+1_uz])};
 
         /* val1 + (val2-val1)*mu */
         const float32x4_t r0{vsubq_f32(val2, val1)};
-        const float32x4_t mu{vmulq_f32(vcvtq_f32_s32(frac4), fracOne4)};
+        const float32x4_t mu{vmulq_f32(vcvtq_f32_u32(frac4), fracOne4)};
         const float32x4_t out{vmlaq_f32(val1, mu, r0)};
 
         vst1q_f32(dst_iter, out);
         dst_iter += 4;
 
-        frac4 = vaddq_s32(frac4, increment4);
-        pos4 = vaddq_s32(pos4, vshrq_n_s32(frac4, MixerFracBits));
-        frac4 = vandq_s32(frac4, fracMask4);
+        frac4 = vaddq_u32(frac4, increment4);
+        pos4 = vaddq_u32(pos4, vshrq_n_u32(frac4, MixerFracBits));
+        frac4 = vandq_u32(frac4, fracMask4);
     }
 
     if(size_t todo{dst.size()&3})
     {
-        src += static_cast<uint>(vgetq_lane_s32(pos4, 0));
-        frac = static_cast<uint>(vgetq_lane_s32(frac4, 0));
+        src += vgetq_lane_u32(pos4, 0);
+        frac = vgetq_lane_u32(frac4, 0);
 
         do {
             *(dst_iter++) = lerpf(src[0], src[1], static_cast<float>(frac) * (1.0f/MixerFracOne));
@@ -205,29 +220,86 @@ void Resample_<CubicTag,NEONTag>(const InterpState *state, const float *src, uin
 
     const auto *filter = al::assume_aligned<16>(std::get<CubicState>(*state).filter);
 
+    const uint32x4_t increment4{vdupq_n_u32(increment*4u)};
+    const uint32x4_t fracMask4{vdupq_n_u32(MixerFracMask)};
+    const float32x4_t fracDiffOne4{vdupq_n_f32(1.0f/CubicPhaseDiffOne)};
+    const uint32x4_t fracDiffMask4{vdupq_n_u32(CubicPhaseDiffMask)};
+
+    alignas(16) std::array<uint,4> pos_, frac_;
+    InitPosArrays(frac, increment, al::span{frac_}, al::span{pos_});
+    uint32x4_t frac4{vld1q_u32(frac_.data())};
+    uint32x4_t pos4{vld1q_u32(pos_.data())};
+
     src -= 1;
-    std::generate(dst.begin(), dst.end(), [&src,&frac,increment,filter]() -> float
+    auto dst_iter = dst.begin();
+    for(size_t todo{dst.size()>>2};todo;--todo)
     {
-        const uint pi{frac >> CubicPhaseDiffBits};
-        const float pf{static_cast<float>(frac&CubicPhaseDiffMask) * (1.0f/CubicPhaseDiffOne)};
-        const float32x4_t pf4{vdupq_n_f32(pf)};
+        const uint pos0{vgetq_lane_u32(pos4, 0)};
+        const uint pos1{vgetq_lane_u32(pos4, 1)};
+        const uint pos2{vgetq_lane_u32(pos4, 2)};
+        const uint pos3{vgetq_lane_u32(pos4, 3)};
+        const float32x4_t val0{vld1q_f32(src+pos0)};
+        const float32x4_t val1{vld1q_f32(src+pos1)};
+        const float32x4_t val2{vld1q_f32(src+pos2)};
+        const float32x4_t val3{vld1q_f32(src+pos3)};
 
-        /* Apply the phase interpolated filter. */
+        const uint32x4_t pi4{vshrq_n_u32(frac4, CubicPhaseDiffBits)};
+        const uint pi0{vgetq_lane_u32(pi4, 0)};
+        const uint pi1{vgetq_lane_u32(pi4, 1)};
+        const uint pi2{vgetq_lane_u32(pi4, 2)};
+        const uint pi3{vgetq_lane_u32(pi4, 3)};
 
-        /* f = fil + pf*phd */
-        const float32x4_t f4 = vmlaq_f32(vld1q_f32(filter[pi].mCoeffs.data()), pf4,
-            vld1q_f32(filter[pi].mDeltas.data()));
-        /* r = f*src */
-        float32x4_t r4{vmulq_f32(f4, vld1q_f32(src))};
+        const float32x4_t pf4{vmulq_f32(vcvtq_f32_u32(vandq_u32(frac4, fracDiffMask4)),
+            fracDiffOne4)};
 
-        r4 = vaddq_f32(r4, vrev64q_f32(r4));
-        const float output{vget_lane_f32(vadd_f32(vget_low_f32(r4), vget_high_f32(r4)), 0)};
+        float32x4_t r0{vmulq_f32(val0,
+            vmlaq_f32(vld1q_f32(filter[pi0].mCoeffs.data()), vdupq_lane_f32(vget_low_f32(pf4), 0),
+                vld1q_f32(filter[pi0].mDeltas.data())))};
+        float32x4_t r1{vmulq_f32(val1,
+            vmlaq_f32(vld1q_f32(filter[pi1].mCoeffs.data()), vdupq_lane_f32(vget_low_f32(pf4), 1),
+                vld1q_f32(filter[pi1].mDeltas.data())))};
+        float32x4_t r2{vmulq_f32(val2,
+            vmlaq_f32(vld1q_f32(filter[pi2].mCoeffs.data()), vdupq_lane_f32(vget_high_f32(pf4), 0),
+                vld1q_f32(filter[pi2].mDeltas.data())))};
+        float32x4_t r3{vmulq_f32(val3,
+            vmlaq_f32(vld1q_f32(filter[pi3].mCoeffs.data()), vdupq_lane_f32(vget_high_f32(pf4), 1),
+                vld1q_f32(filter[pi3].mDeltas.data())))};
 
-        frac += increment;
-        src  += frac>>MixerFracBits;
-        frac &= MixerFracMask;
-        return output;
-    });
+        vtranspose4(r0, r1, r2, r3);
+        r0 = vaddq_f32(vaddq_f32(r0, r1), vaddq_f32(r2, r3));
+
+        vst1q_f32(dst_iter, r0);
+        dst_iter += 4;
+
+        frac4 = vaddq_u32(frac4, increment4);
+        pos4 = vaddq_u32(pos4, vshrq_n_u32(frac4, MixerFracBits));
+        frac4 = vandq_u32(frac4, fracMask4);
+    }
+
+    if(const size_t todo{dst.size()&3})
+    {
+        src += vgetq_lane_u32(pos4, 0);
+        frac = vgetq_lane_u32(frac4, 0);
+
+        std::generate(dst.end()-todo, dst.end(), [&src,&frac,increment,filter]() -> float
+        {
+            const uint pi{frac >> CubicPhaseDiffBits};
+            const float pf{static_cast<float>(frac&CubicPhaseDiffMask) * (1.0f/CubicPhaseDiffOne)};
+            const float32x4_t pf4{vdupq_n_f32(pf)};
+
+            const float32x4_t f4{vmlaq_f32(vld1q_f32(filter[pi].mCoeffs.data()), pf4,
+                vld1q_f32(filter[pi].mDeltas.data()))};
+            float32x4_t r4{vmulq_f32(f4, vld1q_f32(src))};
+
+            r4 = vaddq_f32(r4, vrev64q_f32(r4));
+            const float output{vget_lane_f32(vadd_f32(vget_low_f32(r4), vget_high_f32(r4)), 0)};
+
+            frac += increment;
+            src  += frac>>MixerFracBits;
+            frac &= MixerFracMask;
+            return output;
+        });
+    }
 }
 
 template<>

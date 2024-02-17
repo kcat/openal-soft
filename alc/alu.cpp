@@ -203,6 +203,14 @@ inline ResamplerFunc SelectResampler(Resampler resampler, uint increment)
         if((CPUCapFlags&CPU_CAP_NEON))
             return Resample_<CubicTag,NEONTag>;
 #endif
+#ifdef HAVE_SSE4_1
+        if((CPUCapFlags&CPU_CAP_SSE4_1))
+            return Resample_<CubicTag,SSE4Tag>;
+#endif
+#ifdef HAVE_SSE2
+        if((CPUCapFlags&CPU_CAP_SSE2))
+            return Resample_<CubicTag,SSE2Tag>;
+#endif
 #ifdef HAVE_SSE
         if((CPUCapFlags&CPU_CAP_SSE))
             return Resample_<CubicTag,SSETag>;

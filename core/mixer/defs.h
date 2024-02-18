@@ -96,9 +96,10 @@ template<size_t N>
 constexpr void InitPosArrays(uint frac, const uint increment, const al::span<uint,N> frac_arr,
     const al::span<uint,N> pos_arr)
 {
+    static_assert(pos_arr.size() == frac_arr.size());
     pos_arr[0] = 0;
     frac_arr[0] = frac;
-    for(size_t i{1};i < N;i++)
+    for(size_t i{1};i < pos_arr.size();i++)
     {
         const uint frac_tmp{frac_arr[i-1] + increment};
         pos_arr[i] = pos_arr[i-1] + (frac_tmp>>MixerFracBits);

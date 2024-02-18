@@ -6,6 +6,7 @@
 #include <cstddef>
 
 #include "alnumbers.h"
+#include "alnumeric.h"
 #include "cubic_defs.h"
 
 /* These filter tables are inspired by the gaussian-like filter found in the
@@ -44,7 +45,7 @@ struct GaussFilterArray {
             const double coeff0{GetCoeff(static_cast<double>(CubicPhaseCount + pi)*IndexScale)};
             const double coeff1{GetCoeff(static_cast<double>(pi)*IndexScale)};
             const double coeff2{GetCoeff(static_cast<double>(CubicPhaseCount - pi)*IndexScale)};
-            const double coeff3{GetCoeff(static_cast<double>(CubicPhaseCount*2 - pi)*IndexScale)};
+            const double coeff3{GetCoeff(static_cast<double>(CubicPhaseCount*2_uz-pi)*IndexScale)};
 
             const double scale{1.0 / (coeff0 + coeff1 + coeff2 + coeff3)};
             mTable[pi].mCoeffs[0] = static_cast<float>(coeff0 * scale);
@@ -87,7 +88,7 @@ CubicFilter::CubicFilter()
         const double coeff0{GetCoeff(static_cast<double>(sTableSteps + i)*IndexScale)};
         const double coeff1{GetCoeff(static_cast<double>(i)*IndexScale)};
         const double coeff2{GetCoeff(static_cast<double>(sTableSteps - i)*IndexScale)};
-        const double coeff3{GetCoeff(static_cast<double>(sTableSteps*2 - i)*IndexScale)};
+        const double coeff3{GetCoeff(static_cast<double>(sTableSteps*2_uz - i)*IndexScale)};
 
         const double scale{1.0 / (coeff0 + coeff1 + coeff2 + coeff3)};
         mFilter[sTableSteps + i] = static_cast<float>(coeff0 * scale);

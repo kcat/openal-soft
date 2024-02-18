@@ -71,8 +71,8 @@ void Resample_<LerpTag,SSE2Tag>(const InterpState*, const float *src, uint frac,
     __m128i pos4{_mm_setr_epi32(static_cast<int>(pos_[0]), static_cast<int>(pos_[1]),
         static_cast<int>(pos_[2]), static_cast<int>(pos_[3]))};
 
-    auto dst_iter = dst.begin();
-    for(size_t todo{dst.size()>>2};todo;--todo)
+    auto vecout = al::span<__m128>{reinterpret_cast<__m128*>(dst.data()), dst.size()/4};
+    std::generate(vecout.begin(), vecout.end(), [=,&pos4,&frac4]() -> __m128
     {
         const auto pos0 = static_cast<uint>(_mm_cvtsi128_si32(pos4));
         const auto pos1 = static_cast<uint>(_mm_cvtsi128_si32(_mm_srli_si128(pos4, 4)));
@@ -86,26 +86,26 @@ void Resample_<LerpTag,SSE2Tag>(const InterpState*, const float *src, uint frac,
         const __m128 mu{_mm_mul_ps(_mm_cvtepi32_ps(frac4), fracOne4)};
         const __m128 out{_mm_add_ps(val1, _mm_mul_ps(mu, r0))};
 
-        _mm_store_ps(dst_iter, out);
-        dst_iter += 4;
-
         frac4 = _mm_add_epi32(frac4, increment4);
         pos4 = _mm_add_epi32(pos4, _mm_srli_epi32(frac4, MixerFracBits));
         frac4 = _mm_and_si128(frac4, fracMask4);
-    }
+        return out;
+    });
 
     if(size_t todo{dst.size()&3})
     {
         src += static_cast<uint>(_mm_cvtsi128_si32(pos4));
         frac = static_cast<uint>(_mm_cvtsi128_si32(frac4));
 
-        do {
-            *(dst_iter++) = lerpf(src[0], src[1], static_cast<float>(frac) * (1.0f/MixerFracOne));
+        std::generate(dst.end()-todo, dst.end(), [&src,&frac,increment]() noexcept -> float
+        {
+            const float out{lerpf(src[0], src[1], static_cast<float>(frac) * (1.0f/MixerFracOne))};
 
             frac += increment;
             src  += frac>>MixerFracBits;
             frac &= MixerFracMask;
-        } while(--todo);
+            return out;
+        });
     }
 }
 
@@ -130,8 +130,8 @@ void Resample_<CubicTag,SSE2Tag>(const InterpState *state, const float *src, uin
         static_cast<int>(pos_[2]), static_cast<int>(pos_[3]))};
 
     src -= 1;
-    auto dst_iter = dst.begin();
-    for(size_t todo{dst.size()>>2};todo;--todo)
+    auto vecout = al::span<__m128>{reinterpret_cast<__m128*>(dst.data()), dst.size()/4};
+    std::generate(vecout.begin(), vecout.end(), [=,&pos4,&frac4]() -> __m128
     {
         const auto pos0 = static_cast<uint>(_mm_cvtsi128_si32(pos4));
         const auto pos1 = static_cast<uint>(_mm_cvtsi128_si32(_mm_srli_si128(pos4, 4)));
@@ -171,13 +171,11 @@ void Resample_<CubicTag,SSE2Tag>(const InterpState *state, const float *src, uin
         _MM_TRANSPOSE4_PS(r0, r1, r2, r3);
         r0 = _mm_add_ps(_mm_add_ps(r0, r1), _mm_add_ps(r2, r3));
 
-        _mm_store_ps(dst_iter, r0);
-        dst_iter += 4;
-
         frac4 = _mm_add_epi32(frac4, increment4);
         pos4 = _mm_add_epi32(pos4, _mm_srli_epi32(frac4, MixerFracBits));
         frac4 = _mm_and_si128(frac4, fracMask4);
-    }
+        return r0;
+    });
 
     if(const size_t todo{dst.size()&3})
     {

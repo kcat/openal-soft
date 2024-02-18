@@ -174,8 +174,8 @@ void Resample_<LerpTag,NEONTag>(const InterpState*, const float *src, uint frac,
     uint32x4_t frac4 = vld1q_u32(frac_.data());
     uint32x4_t pos4 = vld1q_u32(pos_.data());
 
-    auto dst_iter = dst.begin();
-    for(size_t todo{dst.size()>>2};todo;--todo)
+    auto vecout = al::span<float32x4_t>{reinterpret_cast<float32x4_t*>(dst.data()), dst.size()/4};
+    std::generate(vecout.begin(), vecout.end(), [=,&pos4,&frac4]() -> float32x4_t
     {
         const uint pos0{vgetq_lane_u32(pos4, 0)};
         const uint pos1{vgetq_lane_u32(pos4, 1)};
@@ -189,26 +189,26 @@ void Resample_<LerpTag,NEONTag>(const InterpState*, const float *src, uint frac,
         const float32x4_t mu{vmulq_f32(vcvtq_f32_u32(frac4), fracOne4)};
         const float32x4_t out{vmlaq_f32(val1, mu, r0)};
 
-        vst1q_f32(dst_iter, out);
-        dst_iter += 4;
-
         frac4 = vaddq_u32(frac4, increment4);
         pos4 = vaddq_u32(pos4, vshrq_n_u32(frac4, MixerFracBits));
         frac4 = vandq_u32(frac4, fracMask4);
-    }
+        return out;
+    });
 
     if(size_t todo{dst.size()&3})
     {
         src += vgetq_lane_u32(pos4, 0);
         frac = vgetq_lane_u32(frac4, 0);
 
-        do {
-            *(dst_iter++) = lerpf(src[0], src[1], static_cast<float>(frac) * (1.0f/MixerFracOne));
+        std::generate(dst.end()-todo, dst.end(), [&src,&frac,increment]() noexcept -> float
+        {
+            const float out{lerpf(src[0], src[1], static_cast<float>(frac) * (1.0f/MixerFracOne))};
 
             frac += increment;
             src  += frac>>MixerFracBits;
             frac &= MixerFracMask;
-        } while(--todo);
+            return out;
+        });
     }
 }
 
@@ -231,8 +231,8 @@ void Resample_<CubicTag,NEONTag>(const InterpState *state, const float *src, uin
     uint32x4_t pos4{vld1q_u32(pos_.data())};
 
     src -= 1;
-    auto dst_iter = dst.begin();
-    for(size_t todo{dst.size()>>2};todo;--todo)
+    auto vecout = al::span<float32x4_t>{reinterpret_cast<float32x4_t*>(dst.data()), dst.size()/4};
+    std::generate(vecout.begin(), vecout.end(), [=,&pos4,&frac4]() -> float32x4_t
     {
         const uint pos0{vgetq_lane_u32(pos4, 0)};
         const uint pos1{vgetq_lane_u32(pos4, 1)};
@@ -268,13 +268,11 @@ void Resample_<CubicTag,NEONTag>(const InterpState *state, const float *src, uin
         vtranspose4(r0, r1, r2, r3);
         r0 = vaddq_f32(vaddq_f32(r0, r1), vaddq_f32(r2, r3));
 
-        vst1q_f32(dst_iter, r0);
-        dst_iter += 4;
-
         frac4 = vaddq_u32(frac4, increment4);
         pos4 = vaddq_u32(pos4, vshrq_n_u32(frac4, MixerFracBits));
         frac4 = vandq_u32(frac4, fracMask4);
-    }
+        return r0;
+    });
 
     if(const size_t todo{dst.size()&3})
     {

@@ -24,8 +24,10 @@
 #include <emmintrin.h>
 #include <smmintrin.h>
 
+#include <algorithm>
 #include <array>
 #include <cstddef>
+#include <variant>
 
 #include "alnumeric.h"
 #include "alspan.h"

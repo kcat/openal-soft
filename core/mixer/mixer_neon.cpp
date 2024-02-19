@@ -66,12 +66,12 @@ inline float32x4_t set_f4(float l0, float l1, float l2, float l3)
 inline void ApplyCoeffs(float2 *RESTRICT Values, const size_t IrSize, const ConstHrirSpan Coeffs,
     const float left, const float right)
 {
-    float32x4_t leftright4;
+    auto dup_samples = [left,right]
     {
-        float32x2_t leftright2{vmov_n_f32(left)};
-        leftright2 = vset_lane_f32(right, leftright2, 1);
-        leftright4 = vcombine_f32(leftright2, leftright2);
-    }
+        float32x2_t leftright2{vset_lane_f32(right, vmov_n_f32(left), 1)};
+        return vcombine_f32(leftright2, leftright2);
+    };
+    const float32x4_t leftright4{dup_samples()};
 
     ASSUME(IrSize >= MinIrLength);
     for(size_t c{0};c < IrSize;c += 2)

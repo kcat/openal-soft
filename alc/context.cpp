@@ -54,7 +54,7 @@ std::vector<std::string_view> getContextExtensions() noexcept
         "AL_EXT_ALAW"sv,
         "AL_EXT_BFORMAT"sv,
         "AL_EXT_debug"sv,
-        "AL_EXTX_direct_context"sv,
+        "AL_EXT_direct_context"sv,
         "AL_EXT_DOUBLE"sv,
         "AL_EXT_EXPONENT_DISTANCE"sv,
         "AL_EXT_FLOAT32"sv,

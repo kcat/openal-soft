@@ -73,36 +73,29 @@ namespace {
 
 using SubListAllocator = al::allocator<std::array<ALeffectslot,64>>;
 
-struct FactoryItem {
-    EffectSlotType Type;
-    EffectStateFactory* (&GetFactory)();
-};
-constexpr std::array FactoryList{
-    FactoryItem{EffectSlotType::None, NullStateFactory_getFactory},
-    FactoryItem{EffectSlotType::EAXReverb, ReverbStateFactory_getFactory},
-    FactoryItem{EffectSlotType::Reverb, StdReverbStateFactory_getFactory},
-    FactoryItem{EffectSlotType::Autowah, AutowahStateFactory_getFactory},
-    FactoryItem{EffectSlotType::Chorus, ChorusStateFactory_getFactory},
-    FactoryItem{EffectSlotType::Compressor, CompressorStateFactory_getFactory},
-    FactoryItem{EffectSlotType::Distortion, DistortionStateFactory_getFactory},
-    FactoryItem{EffectSlotType::Echo, EchoStateFactory_getFactory},
-    FactoryItem{EffectSlotType::Equalizer, EqualizerStateFactory_getFactory},
-    FactoryItem{EffectSlotType::Flanger, FlangerStateFactory_getFactory},
-    FactoryItem{EffectSlotType::FrequencyShifter, FshifterStateFactory_getFactory},
-    FactoryItem{EffectSlotType::RingModulator, ModulatorStateFactory_getFactory},
-    FactoryItem{EffectSlotType::PitchShifter, PshifterStateFactory_getFactory},
-    FactoryItem{EffectSlotType::VocalMorpher, VmorpherStateFactory_getFactory},
-    FactoryItem{EffectSlotType::DedicatedDialog, DedicatedDialogStateFactory_getFactory},
-    FactoryItem{EffectSlotType::DedicatedLFE, DedicatedLfeStateFactory_getFactory},
-    FactoryItem{EffectSlotType::Convolution, ConvolutionStateFactory_getFactory},
-};
-
 EffectStateFactory *getFactoryByType(EffectSlotType type)
 {
-    auto iter = std::find_if(FactoryList.begin(), FactoryList.end(),
-        [type](const FactoryItem &item) noexcept -> bool
-        { return item.Type == type; });
-    return (iter != std::end(FactoryList)) ? iter->GetFactory() : nullptr;
+    switch(type)
+    {
+    case EffectSlotType::None: return NullStateFactory_getFactory();
+    case EffectSlotType::EAXReverb: return ReverbStateFactory_getFactory();
+    case EffectSlotType::Reverb: return StdReverbStateFactory_getFactory();
+    case EffectSlotType::Autowah: return AutowahStateFactory_getFactory();
+    case EffectSlotType::Chorus: return ChorusStateFactory_getFactory();
+    case EffectSlotType::Compressor: return CompressorStateFactory_getFactory();
+    case EffectSlotType::Distortion: return DistortionStateFactory_getFactory();
+    case EffectSlotType::Echo: return EchoStateFactory_getFactory();
+    case EffectSlotType::Equalizer: return EqualizerStateFactory_getFactory();
+    case EffectSlotType::Flanger: return FlangerStateFactory_getFactory();
+    case EffectSlotType::FrequencyShifter: return FshifterStateFactory_getFactory();
+    case EffectSlotType::RingModulator: return ModulatorStateFactory_getFactory();
+    case EffectSlotType::PitchShifter: return PshifterStateFactory_getFactory();
+    case EffectSlotType::VocalMorpher: return VmorpherStateFactory_getFactory();
+    case EffectSlotType::DedicatedDialog: return DedicatedDialogStateFactory_getFactory();
+    case EffectSlotType::DedicatedLFE: return DedicatedLfeStateFactory_getFactory();
+    case EffectSlotType::Convolution: return ConvolutionStateFactory_getFactory();
+    }
+    return nullptr;
 }
 
 

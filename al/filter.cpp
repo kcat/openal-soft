@@ -391,7 +391,7 @@ void FilterTable<BandpassFilterTable>::getParamfv(const ALfilter *filter, ALenum
 { getParamf(filter, param, vals); }
 
 
-AL_API DECL_FUNC2(void, alGenFilters, ALsizei, ALuint*)
+AL_API DECL_FUNC2(void, alGenFilters, ALsizei,n, ALuint*,filters)
 FORCE_ALIGN void AL_APIENTRY alGenFiltersDirect(ALCcontext *context, ALsizei n, ALuint *filters) noexcept
 {
     if(n < 0) UNLIKELY
@@ -427,7 +427,7 @@ FORCE_ALIGN void AL_APIENTRY alGenFiltersDirect(ALCcontext *context, ALsizei n, 
     }
 }
 
-AL_API DECL_FUNC2(void, alDeleteFilters, ALsizei, const ALuint*)
+AL_API DECL_FUNC2(void, alDeleteFilters, ALsizei,n, const ALuint*,filters)
 FORCE_ALIGN void AL_APIENTRY alDeleteFiltersDirect(ALCcontext *context, ALsizei n,
     const ALuint *filters) noexcept
 {
@@ -459,7 +459,7 @@ FORCE_ALIGN void AL_APIENTRY alDeleteFiltersDirect(ALCcontext *context, ALsizei 
     std::for_each(fids.begin(), fids.end(), delete_filter);
 }
 
-AL_API DECL_FUNC1(ALboolean, alIsFilter, ALuint)
+AL_API DECL_FUNC1(ALboolean, alIsFilter, ALuint,filter)
 FORCE_ALIGN ALboolean AL_APIENTRY alIsFilterDirect(ALCcontext *context, ALuint filter) noexcept
 {
     ALCdevice *device{context->mALDevice.get()};
@@ -470,7 +470,7 @@ FORCE_ALIGN ALboolean AL_APIENTRY alIsFilterDirect(ALCcontext *context, ALuint f
 }
 
 
-AL_API DECL_FUNC3(void, alFilteri, ALuint, ALenum, ALint)
+AL_API DECL_FUNC3(void, alFilteri, ALuint,filter, ALenum,param, ALint,value)
 FORCE_ALIGN void AL_APIENTRY alFilteriDirect(ALCcontext *context, ALuint filter, ALenum param,
     ALint value) noexcept
 {
@@ -499,7 +499,7 @@ FORCE_ALIGN void AL_APIENTRY alFilteriDirect(ALCcontext *context, ALuint filter,
     }
 }
 
-AL_API DECL_FUNC3(void, alFilteriv, ALuint, ALenum, const ALint*)
+AL_API DECL_FUNC3(void, alFilteriv, ALuint,filter, ALenum,param, const ALint*,values)
 FORCE_ALIGN void AL_APIENTRY alFilterivDirect(ALCcontext *context, ALuint filter, ALenum param,
     const ALint *values) noexcept
 {
@@ -527,7 +527,7 @@ FORCE_ALIGN void AL_APIENTRY alFilterivDirect(ALCcontext *context, ALuint filter
     }
 }
 
-AL_API DECL_FUNC3(void, alFilterf, ALuint, ALenum, ALfloat)
+AL_API DECL_FUNC3(void, alFilterf, ALuint,filter, ALenum,param, ALfloat,value)
 FORCE_ALIGN void AL_APIENTRY alFilterfDirect(ALCcontext *context, ALuint filter, ALenum param,
     ALfloat value) noexcept
 {
@@ -548,7 +548,7 @@ FORCE_ALIGN void AL_APIENTRY alFilterfDirect(ALCcontext *context, ALuint filter,
     }
 }
 
-AL_API DECL_FUNC3(void, alFilterfv, ALuint, ALenum, const ALfloat*)
+AL_API DECL_FUNC3(void, alFilterfv, ALuint,filter, ALenum,param, const ALfloat*,values)
 FORCE_ALIGN void AL_APIENTRY alFilterfvDirect(ALCcontext *context, ALuint filter, ALenum param,
     const ALfloat *values) noexcept
 {
@@ -569,7 +569,7 @@ FORCE_ALIGN void AL_APIENTRY alFilterfvDirect(ALCcontext *context, ALuint filter
     }
 }
 
-AL_API DECL_FUNC3(void, alGetFilteri, ALuint, ALenum, ALint*)
+AL_API DECL_FUNC3(void, alGetFilteri, ALuint,filter, ALenum,param, ALint*,value)
 FORCE_ALIGN void AL_APIENTRY alGetFilteriDirect(ALCcontext *context, ALuint filter, ALenum param,
     ALint *value) noexcept
 {
@@ -592,7 +592,7 @@ FORCE_ALIGN void AL_APIENTRY alGetFilteriDirect(ALCcontext *context, ALuint filt
     }
 }
 
-AL_API DECL_FUNC3(void, alGetFilteriv, ALuint, ALenum, ALint*)
+AL_API DECL_FUNC3(void, alGetFilteriv, ALuint,filter, ALenum,param, ALint*,values)
 FORCE_ALIGN void AL_APIENTRY alGetFilterivDirect(ALCcontext *context, ALuint filter, ALenum param,
     ALint *values) noexcept
 {
@@ -620,7 +620,7 @@ FORCE_ALIGN void AL_APIENTRY alGetFilterivDirect(ALCcontext *context, ALuint fil
     }
 }
 
-AL_API DECL_FUNC3(void, alGetFilterf, ALuint, ALenum, ALfloat*)
+AL_API DECL_FUNC3(void, alGetFilterf, ALuint,filter, ALenum,param, ALfloat*,value)
 FORCE_ALIGN void AL_APIENTRY alGetFilterfDirect(ALCcontext *context, ALuint filter, ALenum param,
     ALfloat *value) noexcept
 {
@@ -641,7 +641,7 @@ FORCE_ALIGN void AL_APIENTRY alGetFilterfDirect(ALCcontext *context, ALuint filt
     }
 }
 
-AL_API DECL_FUNC3(void, alGetFilterfv, ALuint, ALenum, ALfloat*)
+AL_API DECL_FUNC3(void, alGetFilterfv, ALuint,filter, ALenum,param, ALfloat*,values)
 FORCE_ALIGN void AL_APIENTRY alGetFilterfvDirect(ALCcontext *context, ALuint filter, ALenum param,
     ALfloat *values) noexcept
 {

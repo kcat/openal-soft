@@ -241,7 +241,7 @@ void ALCcontext::sendDebugMessage(std::unique_lock<std::mutex> &debuglock, Debug
 }
 
 
-FORCE_ALIGN DECL_FUNCEXT2(void, alDebugMessageCallback,EXT, ALDEBUGPROCEXT, void*)
+FORCE_ALIGN DECL_FUNCEXT2(void, alDebugMessageCallback,EXT, ALDEBUGPROCEXT,callback, void*,userParam)
 FORCE_ALIGN void AL_APIENTRY alDebugMessageCallbackDirectEXT(ALCcontext *context,
     ALDEBUGPROCEXT callback, void *userParam) noexcept
 {
@@ -251,7 +251,7 @@ FORCE_ALIGN void AL_APIENTRY alDebugMessageCallbackDirectEXT(ALCcontext *context
 }
 
 
-FORCE_ALIGN DECL_FUNCEXT6(void, alDebugMessageInsert,EXT, ALenum, ALenum, ALuint, ALenum, ALsizei, const ALchar*)
+FORCE_ALIGN DECL_FUNCEXT6(void, alDebugMessageInsert,EXT, ALenum,source, ALenum,type, ALuint,id, ALenum,severity, ALsizei,length, const ALchar*,message)
 FORCE_ALIGN void AL_APIENTRY alDebugMessageInsertDirectEXT(ALCcontext *context, ALenum source,
     ALenum type, ALuint id, ALenum severity, ALsizei length, const ALchar *message) noexcept
 {
@@ -285,7 +285,7 @@ FORCE_ALIGN void AL_APIENTRY alDebugMessageInsertDirectEXT(ALCcontext *context, 
 }
 
 
-FORCE_ALIGN DECL_FUNCEXT6(void, alDebugMessageControl,EXT, ALenum, ALenum, ALenum, ALsizei, const ALuint*, ALboolean)
+FORCE_ALIGN DECL_FUNCEXT6(void, alDebugMessageControl,EXT, ALenum,source, ALenum,type, ALenum,severity, ALsizei,count, const ALuint*,ids, ALboolean,enable)
 FORCE_ALIGN void AL_APIENTRY alDebugMessageControlDirectEXT(ALCcontext *context, ALenum source,
     ALenum type, ALenum severity, ALsizei count, const ALuint *ids, ALboolean enable) noexcept
 {
@@ -381,7 +381,7 @@ FORCE_ALIGN void AL_APIENTRY alDebugMessageControlDirectEXT(ALCcontext *context,
 }
 
 
-FORCE_ALIGN DECL_FUNCEXT4(void, alPushDebugGroup,EXT, ALenum, ALuint, ALsizei, const ALchar*)
+FORCE_ALIGN DECL_FUNCEXT4(void, alPushDebugGroup,EXT, ALenum,source, ALuint,id, ALsizei,length, const ALchar*,message)
 FORCE_ALIGN void AL_APIENTRY alPushDebugGroupDirectEXT(ALCcontext *context, ALenum source,
     ALuint id, ALsizei length, const ALchar *message) noexcept
 {
@@ -446,7 +446,7 @@ FORCE_ALIGN void AL_APIENTRY alPopDebugGroupDirectEXT(ALCcontext *context) noexc
 }
 
 
-FORCE_ALIGN DECL_FUNCEXT8(ALuint, alGetDebugMessageLog,EXT, ALuint, ALsizei, ALenum*, ALenum*, ALuint*, ALenum*, ALsizei*, ALchar*)
+FORCE_ALIGN DECL_FUNCEXT8(ALuint, alGetDebugMessageLog,EXT, ALuint,count, ALsizei,logBufSize, ALenum*,sources, ALenum*,types, ALuint*,ids, ALenum*,severities, ALsizei*,lengths, ALchar*,logBuf)
 FORCE_ALIGN ALuint AL_APIENTRY alGetDebugMessageLogDirectEXT(ALCcontext *context, ALuint count,
     ALsizei logBufSize, ALenum *sources, ALenum *types, ALuint *ids, ALenum *severities,
     ALsizei *lengths, ALchar *logBuf) noexcept
@@ -487,7 +487,7 @@ FORCE_ALIGN ALuint AL_APIENTRY alGetDebugMessageLogDirectEXT(ALCcontext *context
     return count;
 }
 
-FORCE_ALIGN DECL_FUNCEXT4(void, alObjectLabel,EXT, ALenum, ALuint, ALsizei, const ALchar*)
+FORCE_ALIGN DECL_FUNCEXT4(void, alObjectLabel,EXT, ALenum,identifier, ALuint,name, ALsizei,length, const ALchar*,label)
 FORCE_ALIGN void AL_APIENTRY alObjectLabelDirectEXT(ALCcontext *context, ALenum identifier,
     ALuint name, ALsizei length, const ALchar *label) noexcept
 {
@@ -514,7 +514,7 @@ FORCE_ALIGN void AL_APIENTRY alObjectLabelDirectEXT(ALCcontext *context, ALenum 
     return context->setError(AL_INVALID_ENUM, "Invalid name identifier 0x%04x", identifier);
 }
 
-FORCE_ALIGN DECL_FUNCEXT5(void, alGetObjectLabel,EXT, ALenum, ALuint, ALsizei, ALsizei*, ALchar*)
+FORCE_ALIGN DECL_FUNCEXT5(void, alGetObjectLabel,EXT, ALenum,identifier, ALuint,name, ALsizei,bufSize, ALsizei*,length, ALchar*,label)
 FORCE_ALIGN void AL_APIENTRY alGetObjectLabelDirectEXT(ALCcontext *context, ALenum identifier,
     ALuint name, ALsizei bufSize, ALsizei *length, ALchar *label) noexcept
 {

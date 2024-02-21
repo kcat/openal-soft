@@ -662,7 +662,7 @@ std::optional<DecompResult> DecomposeUserFormat(ALenum format)
 } // namespace
 
 
-AL_API DECL_FUNC2(void, alGenBuffers, ALsizei, ALuint*)
+AL_API DECL_FUNC2(void, alGenBuffers, ALsizei,n, ALuint*,buffers)
 FORCE_ALIGN void AL_APIENTRY alGenBuffersDirect(ALCcontext *context, ALsizei n, ALuint *buffers) noexcept
 {
     if(n < 0) UNLIKELY
@@ -698,7 +698,7 @@ FORCE_ALIGN void AL_APIENTRY alGenBuffersDirect(ALCcontext *context, ALsizei n, 
     }
 }
 
-AL_API DECL_FUNC2(void, alDeleteBuffers, ALsizei, const ALuint*)
+AL_API DECL_FUNC2(void, alDeleteBuffers, ALsizei,n, const ALuint*,buffers)
 FORCE_ALIGN void AL_APIENTRY alDeleteBuffersDirect(ALCcontext *context, ALsizei n,
     const ALuint *buffers) noexcept
 {
@@ -740,7 +740,7 @@ FORCE_ALIGN void AL_APIENTRY alDeleteBuffersDirect(ALCcontext *context, ALsizei 
     std::for_each(bids.begin(), bids.end(), delete_buffer);
 }
 
-AL_API DECL_FUNC1(ALboolean, alIsBuffer, ALuint)
+AL_API DECL_FUNC1(ALboolean, alIsBuffer, ALuint,buffer)
 FORCE_ALIGN ALboolean AL_APIENTRY alIsBufferDirect(ALCcontext *context, ALuint buffer) noexcept
 {
     ALCdevice *device{context->mALDevice.get()};
@@ -761,7 +761,7 @@ AL_API void AL_APIENTRY alBufferData(ALuint buffer, ALenum format, const ALvoid 
 FORCE_ALIGN void AL_APIENTRY alBufferDataDirect(ALCcontext *context, ALuint buffer, ALenum format, const ALvoid *data, ALsizei size, ALsizei freq) noexcept
 { alBufferStorageDirectSOFT(context, buffer, format, data, size, freq, 0); }
 
-AL_API DECL_FUNCEXT6(void, alBufferStorage,SOFT, ALuint, ALenum, const ALvoid*, ALsizei, ALsizei, ALbitfieldSOFT)
+AL_API DECL_FUNCEXT6(void, alBufferStorage,SOFT, ALuint,buffer, ALenum,format, const ALvoid*,data, ALsizei,size, ALsizei,freq, ALbitfieldSOFT,flags)
 FORCE_ALIGN void AL_APIENTRY alBufferStorageDirectSOFT(ALCcontext *context, ALuint buffer,
     ALenum format, const ALvoid *data, ALsizei size, ALsizei freq, ALbitfieldSOFT flags) noexcept
 {
@@ -794,7 +794,7 @@ FORCE_ALIGN void AL_APIENTRY alBufferStorageDirectSOFT(ALCcontext *context, ALui
     }
 }
 
-DECL_FUNC5(void, alBufferDataStatic, ALuint, ALenum, ALvoid*, ALsizei, ALsizei)
+FORCE_ALIGN DECL_FUNC5(void, alBufferDataStatic, ALuint,buffer, ALenum,format, ALvoid*,data, ALsizei,size, ALsizei,freq)
 FORCE_ALIGN void AL_APIENTRY alBufferDataStaticDirect(ALCcontext *context, const ALuint buffer,
     ALenum format, ALvoid *data, ALsizei size, ALsizei freq) noexcept
 {
@@ -817,7 +817,7 @@ FORCE_ALIGN void AL_APIENTRY alBufferDataStaticDirect(ALCcontext *context, const
         static_cast<std::byte*>(data), static_cast<ALuint>(size));
 }
 
-AL_API DECL_FUNCEXT4(void*, alMapBuffer,SOFT, ALuint, ALsizei, ALsizei, ALbitfieldSOFT)
+AL_API DECL_FUNCEXT4(void*, alMapBuffer,SOFT, ALuint,buffer, ALsizei,offset, ALsizei,length, ALbitfieldSOFT,access)
 FORCE_ALIGN void* AL_APIENTRY alMapBufferDirectSOFT(ALCcontext *context, ALuint buffer,
     ALsizei offset, ALsizei length, ALbitfieldSOFT access) noexcept
 {
@@ -869,7 +869,7 @@ FORCE_ALIGN void* AL_APIENTRY alMapBufferDirectSOFT(ALCcontext *context, ALuint 
     return nullptr;
 }
 
-AL_API DECL_FUNCEXT1(void, alUnmapBuffer,SOFT, ALuint)
+AL_API DECL_FUNCEXT1(void, alUnmapBuffer,SOFT, ALuint,buffer)
 FORCE_ALIGN void AL_APIENTRY alUnmapBufferDirectSOFT(ALCcontext *context, ALuint buffer) noexcept
 {
     ALCdevice *device{context->mALDevice.get()};
@@ -888,7 +888,7 @@ FORCE_ALIGN void AL_APIENTRY alUnmapBufferDirectSOFT(ALCcontext *context, ALuint
     }
 }
 
-AL_API DECL_FUNCEXT3(void, alFlushMappedBuffer,SOFT, ALuint, ALsizei, ALsizei)
+AL_API DECL_FUNCEXT3(void, alFlushMappedBuffer,SOFT, ALuint,buffer, ALsizei,offset, ALsizei,length)
 FORCE_ALIGN void AL_APIENTRY alFlushMappedBufferDirectSOFT(ALCcontext *context, ALuint buffer,
     ALsizei offset, ALsizei length) noexcept
 {
@@ -917,7 +917,7 @@ FORCE_ALIGN void AL_APIENTRY alFlushMappedBufferDirectSOFT(ALCcontext *context, 
     }
 }
 
-AL_API DECL_FUNCEXT5(void, alBufferSubData,SOFT, ALuint, ALenum, const ALvoid*, ALsizei, ALsizei)
+AL_API DECL_FUNCEXT5(void, alBufferSubData,SOFT, ALuint,buffer, ALenum,format, const ALvoid*,data, ALsizei,offset, ALsizei,length)
 FORCE_ALIGN void AL_APIENTRY alBufferSubDataDirectSOFT(ALCcontext *context, ALuint buffer,
     ALenum format, const ALvoid *data, ALsizei offset, ALsizei length) noexcept
 {
@@ -974,9 +974,9 @@ FORCE_ALIGN void AL_APIENTRY alBufferSubDataDirectSOFT(ALCcontext *context, ALui
 }
 
 
-AL_API DECL_FUNC3(void, alBufferf, ALuint, ALenum, ALfloat)
+AL_API DECL_FUNC3(void, alBufferf, ALuint,buffer, ALenum,param, ALfloat,value)
 FORCE_ALIGN void AL_APIENTRY alBufferfDirect(ALCcontext *context, ALuint buffer, ALenum param,
-    ALfloat /*value*/) noexcept
+    ALfloat value [[maybe_unused]]) noexcept
 {
     ALCdevice *device{context->mALDevice.get()};
     std::lock_guard<std::mutex> buflock{device->BufferLock};
@@ -990,9 +990,10 @@ FORCE_ALIGN void AL_APIENTRY alBufferfDirect(ALCcontext *context, ALuint buffer,
     }
 }
 
-AL_API DECL_FUNC5(void, alBuffer3f, ALuint, ALenum, ALfloat, ALfloat, ALfloat)
+AL_API DECL_FUNC5(void, alBuffer3f, ALuint,buffer, ALenum,param, ALfloat,value1, ALfloat,value2, ALfloat,value3)
 FORCE_ALIGN void AL_APIENTRY alBuffer3fDirect(ALCcontext *context, ALuint buffer, ALenum param,
-    ALfloat /*value1*/, ALfloat /*value2*/, ALfloat /*value3*/) noexcept
+    ALfloat value1 [[maybe_unused]], ALfloat value2 [[maybe_unused]],
+    ALfloat value3 [[maybe_unused]]) noexcept
 {
     ALCdevice *device{context->mALDevice.get()};
     std::lock_guard<std::mutex> buflock{device->BufferLock};
@@ -1006,7 +1007,7 @@ FORCE_ALIGN void AL_APIENTRY alBuffer3fDirect(ALCcontext *context, ALuint buffer
     }
 }
 
-AL_API DECL_FUNC3(void, alBufferfv, ALuint, ALenum, const ALfloat*)
+AL_API DECL_FUNC3(void, alBufferfv, ALuint,buffer, ALenum,param, const ALfloat*,values)
 FORCE_ALIGN void AL_APIENTRY alBufferfvDirect(ALCcontext *context, ALuint buffer, ALenum param,
     const ALfloat *values) noexcept
 {
@@ -1025,7 +1026,7 @@ FORCE_ALIGN void AL_APIENTRY alBufferfvDirect(ALCcontext *context, ALuint buffer
 }
 
 
-AL_API DECL_FUNC3(void, alBufferi, ALuint, ALenum, ALint)
+AL_API DECL_FUNC3(void, alBufferi, ALuint,buffer, ALenum,param, ALint,value)
 FORCE_ALIGN void AL_APIENTRY alBufferiDirect(ALCcontext *context, ALuint buffer, ALenum param,
     ALint value) noexcept
 {
@@ -1083,9 +1084,9 @@ FORCE_ALIGN void AL_APIENTRY alBufferiDirect(ALCcontext *context, ALuint buffer,
     }
 }
 
-AL_API DECL_FUNC5(void, alBuffer3i, ALuint, ALenum, ALint, ALint, ALint)
+AL_API DECL_FUNC5(void, alBuffer3i, ALuint,buffer, ALenum,param, ALint,value1, ALint,value2, ALint,value3)
 FORCE_ALIGN void AL_APIENTRY alBuffer3iDirect(ALCcontext *context, ALuint buffer, ALenum param,
-    ALint /*value1*/, ALint /*value2*/, ALint /*value3*/) noexcept
+    ALint value1 [[maybe_unused]], ALint value2 [[maybe_unused]], ALint value3 [[maybe_unused]]) noexcept
 {
     ALCdevice *device{context->mALDevice.get()};
     std::lock_guard<std::mutex> buflock{device->BufferLock};
@@ -1099,7 +1100,7 @@ FORCE_ALIGN void AL_APIENTRY alBuffer3iDirect(ALCcontext *context, ALuint buffer
     }
 }
 
-AL_API DECL_FUNC3(void, alBufferiv, ALuint, ALenum, const ALint*)
+AL_API DECL_FUNC3(void, alBufferiv, ALuint,buffer, ALenum,param, const ALint*,values)
 FORCE_ALIGN void AL_APIENTRY alBufferivDirect(ALCcontext *context, ALuint buffer, ALenum param,
     const ALint *values) noexcept
 {
@@ -1146,7 +1147,7 @@ FORCE_ALIGN void AL_APIENTRY alBufferivDirect(ALCcontext *context, ALuint buffer
 }
 
 
-AL_API DECL_FUNC3(void, alGetBufferf, ALuint, ALenum, ALfloat*)
+AL_API DECL_FUNC3(void, alGetBufferf, ALuint,buffer, ALenum,param, ALfloat*,value)
 FORCE_ALIGN void AL_APIENTRY alGetBufferfDirect(ALCcontext *context, ALuint buffer, ALenum param,
     ALfloat *value) noexcept
 {
@@ -1170,7 +1171,7 @@ FORCE_ALIGN void AL_APIENTRY alGetBufferfDirect(ALCcontext *context, ALuint buff
     }
 }
 
-AL_API DECL_FUNC5(void, alGetBuffer3f, ALuint, ALenum, ALfloat*, ALfloat*, ALfloat*)
+AL_API DECL_FUNC5(void, alGetBuffer3f, ALuint,buffer, ALenum,param, ALfloat*,value1, ALfloat*,value2, ALfloat*,value3)
 FORCE_ALIGN void AL_APIENTRY alGetBuffer3fDirect(ALCcontext *context, ALuint buffer, ALenum param,
     ALfloat *value1, ALfloat *value2, ALfloat *value3) noexcept
 {
@@ -1188,7 +1189,7 @@ FORCE_ALIGN void AL_APIENTRY alGetBuffer3fDirect(ALCcontext *context, ALuint buf
     }
 }
 
-AL_API DECL_FUNC3(void, alGetBufferfv, ALuint, ALenum, ALfloat*)
+AL_API DECL_FUNC3(void, alGetBufferfv, ALuint,buffer, ALenum,param, ALfloat*,values)
 FORCE_ALIGN void AL_APIENTRY alGetBufferfvDirect(ALCcontext *context, ALuint buffer, ALenum param,
     ALfloat *values) noexcept
 {
@@ -1214,7 +1215,7 @@ FORCE_ALIGN void AL_APIENTRY alGetBufferfvDirect(ALCcontext *context, ALuint buf
 }
 
 
-AL_API DECL_FUNC3(void, alGetBufferi, ALuint, ALenum, ALint*)
+AL_API DECL_FUNC3(void, alGetBufferi, ALuint,buffer, ALenum,param, ALint*,value)
 FORCE_ALIGN void AL_APIENTRY alGetBufferiDirect(ALCcontext *context, ALuint buffer, ALenum param,
     ALint *value) noexcept
 {
@@ -1278,7 +1279,7 @@ FORCE_ALIGN void AL_APIENTRY alGetBufferiDirect(ALCcontext *context, ALuint buff
     }
 }
 
-AL_API DECL_FUNC5(void, alGetBuffer3i, ALuint, ALenum, ALint*, ALint*, ALint*)
+AL_API DECL_FUNC5(void, alGetBuffer3i, ALuint,buffer, ALenum,param, ALint*,value1, ALint*,value2, ALint*,value3)
 FORCE_ALIGN void AL_APIENTRY alGetBuffer3iDirect(ALCcontext *context, ALuint buffer, ALenum param,
     ALint *value1, ALint *value2, ALint *value3) noexcept
 {
@@ -1295,7 +1296,7 @@ FORCE_ALIGN void AL_APIENTRY alGetBuffer3iDirect(ALCcontext *context, ALuint buf
     }
 }
 
-AL_API DECL_FUNC3(void, alGetBufferiv, ALuint, ALenum, ALint*)
+AL_API DECL_FUNC3(void, alGetBufferiv, ALuint,buffer, ALenum,param, ALint*,values)
 FORCE_ALIGN void AL_APIENTRY alGetBufferivDirect(ALCcontext *context, ALuint buffer, ALenum param,
     ALint *values) noexcept
 {
@@ -1337,7 +1338,7 @@ FORCE_ALIGN void AL_APIENTRY alGetBufferivDirect(ALCcontext *context, ALuint buf
 }
 
 
-AL_API DECL_FUNCEXT5(void, alBufferCallback,SOFT, ALuint, ALenum, ALsizei, ALBUFFERCALLBACKTYPESOFT, ALvoid*)
+AL_API DECL_FUNCEXT5(void, alBufferCallback,SOFT, ALuint,buffer, ALenum,format, ALsizei,freq, ALBUFFERCALLBACKTYPESOFT,callback, ALvoid*,userptr)
 FORCE_ALIGN void AL_APIENTRY alBufferCallbackDirectSOFT(ALCcontext *context, ALuint buffer,
     ALenum format, ALsizei freq, ALBUFFERCALLBACKTYPESOFT callback, ALvoid *userptr) noexcept
 {
@@ -1362,7 +1363,7 @@ FORCE_ALIGN void AL_APIENTRY alBufferCallbackDirectSOFT(ALCcontext *context, ALu
     }
 }
 
-AL_API DECL_FUNCEXT3(void, alGetBufferPtr,SOFT, ALuint, ALenum, ALvoid**)
+AL_API DECL_FUNCEXT3(void, alGetBufferPtr,SOFT, ALuint,buffer, ALenum,param, ALvoid**,value)
 FORCE_ALIGN void AL_APIENTRY alGetBufferPtrDirectSOFT(ALCcontext *context, ALuint buffer,
     ALenum param, ALvoid **value) noexcept
 {
@@ -1387,7 +1388,7 @@ FORCE_ALIGN void AL_APIENTRY alGetBufferPtrDirectSOFT(ALCcontext *context, ALuin
     }
 }
 
-AL_API DECL_FUNCEXT5(void, alGetBuffer3Ptr,SOFT, ALuint, ALenum, ALvoid**, ALvoid**, ALvoid**)
+AL_API DECL_FUNCEXT5(void, alGetBuffer3Ptr,SOFT, ALuint,buffer, ALenum,param, ALvoid**,value1, ALvoid**,value2, ALvoid**,value3)
 FORCE_ALIGN void AL_APIENTRY alGetBuffer3PtrDirectSOFT(ALCcontext *context, ALuint buffer,
     ALenum param, ALvoid **value1, ALvoid **value2, ALvoid **value3) noexcept
 {
@@ -1404,7 +1405,7 @@ FORCE_ALIGN void AL_APIENTRY alGetBuffer3PtrDirectSOFT(ALCcontext *context, ALui
     }
 }
 
-AL_API DECL_FUNCEXT3(void, alGetBufferPtrv,SOFT, ALuint, ALenum, ALvoid**)
+AL_API DECL_FUNCEXT3(void, alGetBufferPtrv,SOFT, ALuint,buffer, ALenum,param, ALvoid**,values)
 FORCE_ALIGN void AL_APIENTRY alGetBufferPtrvDirectSOFT(ALCcontext *context, ALuint buffer,
     ALenum param, ALvoid **values) noexcept
 {
@@ -1500,7 +1501,7 @@ BufferSubList::~BufferSubList()
 
 
 #ifdef ALSOFT_EAX
-FORCE_ALIGN DECL_FUNC3(ALboolean, EAXSetBufferMode, ALsizei, const ALuint*, ALint)
+FORCE_ALIGN DECL_FUNC3(ALboolean, EAXSetBufferMode, ALsizei,n, const ALuint*,buffers, ALint,value)
 FORCE_ALIGN ALboolean AL_APIENTRY EAXSetBufferModeDirect(ALCcontext *context, ALsizei n,
     const ALuint *buffers, ALint value) noexcept
 {
@@ -1636,7 +1637,7 @@ FORCE_ALIGN ALboolean AL_APIENTRY EAXSetBufferModeDirect(ALCcontext *context, AL
 #undef EAX_PREFIX
 }
 
-FORCE_ALIGN DECL_FUNC2(ALenum, EAXGetBufferMode, ALuint, ALint*)
+FORCE_ALIGN DECL_FUNC2(ALenum, EAXGetBufferMode, ALuint,buffer, ALint*,pReserved)
 FORCE_ALIGN ALenum AL_APIENTRY EAXGetBufferModeDirect(ALCcontext *context, ALuint buffer,
     ALint *pReserved) noexcept
 {

@@ -20,15 +20,15 @@
 struct RingBuffer {
 private:
 #ifdef __cpp_lib_hardware_interference_size
-    using std::hardware_destructive_interference_size;
+    static constexpr std::size_t sCacheAlignment{std::hardware_destructive_interference_size};
 #else
     /* Assume a 64-byte cache line, the most common/likely value. */
-    static constexpr std::size_t hardware_destructive_interference_size{64};
+    static constexpr std::size_t sCacheAlignment{64};
 #endif
-    alignas(hardware_destructive_interference_size) std::atomic<std::size_t> mWritePtr{0u};
-    alignas(hardware_destructive_interference_size) std::atomic<std::size_t> mReadPtr{0u};
+    alignas(sCacheAlignment) std::atomic<std::size_t> mWritePtr{0u};
+    alignas(sCacheAlignment) std::atomic<std::size_t> mReadPtr{0u};
 
-    alignas(hardware_destructive_interference_size) const std::size_t mWriteSize;
+    alignas(sCacheAlignment) const std::size_t mWriteSize;
     const std::size_t mSizeMask;
     const std::size_t mElemSize;
 

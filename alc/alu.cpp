@@ -268,7 +268,7 @@ ResamplerFunc PrepareResampler(Resampler resampler, uint increment, InterpState 
     case Resampler::Linear:
         break;
     case Resampler::Cubic:
-        state->emplace<CubicState>().filter = gGaussianFilter.Tab.data();
+        state->emplace<CubicState>(al::span{gGaussianFilter.mTable});
         break;
     case Resampler::FastBSinc12:
     case Resampler::BSinc12:

@@ -33,49 +33,41 @@ auto GetCoeff(double idx) noexcept -> double
     return s * (t + u + 1.0) / k;
 }
 
-struct GaussFilterArray {
-    alignas(16) std::array<CubicCoefficients,CubicPhaseCount> mTable{};
-
-    GaussFilterArray()
-    {
-        static constexpr double IndexScale{512.0 / double{CubicPhaseCount*2}};
-        /* Fill in the main coefficients. */
-        for(std::size_t pi{0};pi < CubicPhaseCount;++pi)
-        {
-            const double coeff0{GetCoeff(static_cast<double>(CubicPhaseCount + pi)*IndexScale)};
-            const double coeff1{GetCoeff(static_cast<double>(pi)*IndexScale)};
-            const double coeff2{GetCoeff(static_cast<double>(CubicPhaseCount - pi)*IndexScale)};
-            const double coeff3{GetCoeff(static_cast<double>(CubicPhaseCount*2_uz-pi)*IndexScale)};
-
-            const double scale{1.0 / (coeff0 + coeff1 + coeff2 + coeff3)};
-            mTable[pi].mCoeffs[0] = static_cast<float>(coeff0 * scale);
-            mTable[pi].mCoeffs[1] = static_cast<float>(coeff1 * scale);
-            mTable[pi].mCoeffs[2] = static_cast<float>(coeff2 * scale);
-            mTable[pi].mCoeffs[3] = static_cast<float>(coeff3 * scale);
-        }
-
-        /* Fill in the coefficient deltas. */
-        for(std::size_t pi{0};pi < CubicPhaseCount-1;++pi)
-        {
-            mTable[pi].mDeltas[0] = mTable[pi+1].mCoeffs[0] - mTable[pi].mCoeffs[0];
-            mTable[pi].mDeltas[1] = mTable[pi+1].mCoeffs[1] - mTable[pi].mCoeffs[1];
-            mTable[pi].mDeltas[2] = mTable[pi+1].mCoeffs[2] - mTable[pi].mCoeffs[2];
-            mTable[pi].mDeltas[3] = mTable[pi+1].mCoeffs[3] - mTable[pi].mCoeffs[3];
-        }
-
-        const std::size_t pi{CubicPhaseCount - 1};
-        mTable[pi].mDeltas[0] =                 0.0f - mTable[pi].mCoeffs[0];
-        mTable[pi].mDeltas[1] = mTable[0].mCoeffs[0] - mTable[pi].mCoeffs[1];
-        mTable[pi].mDeltas[2] = mTable[0].mCoeffs[1] - mTable[pi].mCoeffs[2];
-        mTable[pi].mDeltas[3] = mTable[0].mCoeffs[2] - mTable[pi].mCoeffs[3];
-    }
-};
-
-const GaussFilterArray GaussFilter{};
-
 } // namespace
 
-const CubicTable gGaussianFilter{GaussFilter.mTable};
+GaussianTable::GaussianTable()
+{
+    static constexpr double IndexScale{512.0 / double{CubicPhaseCount*2}};
+    /* Fill in the main coefficients. */
+    for(std::size_t pi{0};pi < CubicPhaseCount;++pi)
+    {
+        const double coeff0{GetCoeff(static_cast<double>(CubicPhaseCount + pi)*IndexScale)};
+        const double coeff1{GetCoeff(static_cast<double>(pi)*IndexScale)};
+        const double coeff2{GetCoeff(static_cast<double>(CubicPhaseCount - pi)*IndexScale)};
+        const double coeff3{GetCoeff(static_cast<double>(CubicPhaseCount*2_uz-pi)*IndexScale)};
+
+        const double scale{1.0 / (coeff0 + coeff1 + coeff2 + coeff3)};
+        mTable[pi].mCoeffs[0] = static_cast<float>(coeff0 * scale);
+        mTable[pi].mCoeffs[1] = static_cast<float>(coeff1 * scale);
+        mTable[pi].mCoeffs[2] = static_cast<float>(coeff2 * scale);
+        mTable[pi].mCoeffs[3] = static_cast<float>(coeff3 * scale);
+    }
+
+    /* Fill in the coefficient deltas. */
+    for(std::size_t pi{0};pi < CubicPhaseCount-1;++pi)
+    {
+        mTable[pi].mDeltas[0] = mTable[pi+1].mCoeffs[0] - mTable[pi].mCoeffs[0];
+        mTable[pi].mDeltas[1] = mTable[pi+1].mCoeffs[1] - mTable[pi].mCoeffs[1];
+        mTable[pi].mDeltas[2] = mTable[pi+1].mCoeffs[2] - mTable[pi].mCoeffs[2];
+        mTable[pi].mDeltas[3] = mTable[pi+1].mCoeffs[3] - mTable[pi].mCoeffs[3];
+    }
+
+    const std::size_t pi{CubicPhaseCount - 1};
+    mTable[pi].mDeltas[0] =                 0.0f - mTable[pi].mCoeffs[0];
+    mTable[pi].mDeltas[1] = mTable[0].mCoeffs[0] - mTable[pi].mCoeffs[1];
+    mTable[pi].mDeltas[2] = mTable[0].mCoeffs[1] - mTable[pi].mCoeffs[2];
+    mTable[pi].mDeltas[3] = mTable[0].mCoeffs[2] - mTable[pi].mCoeffs[3];
+}
 
 CubicFilter::CubicFilter()
 {

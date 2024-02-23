@@ -6,10 +6,13 @@
 
 
 struct CubicTable {
-    al::span<const CubicCoefficients,CubicPhaseCount> Tab;
+    std::array<CubicCoefficients,CubicPhaseCount> mTable{};
 };
 
-extern const CubicTable gGaussianFilter;
+struct GaussianTable : CubicTable {
+    GaussianTable();
+};
+inline const GaussianTable gGaussianFilter;
 
 
 struct CubicFilter {

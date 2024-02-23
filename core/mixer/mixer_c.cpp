@@ -46,8 +46,8 @@ auto do_cubic(const CubicState &istate, const float *vals, const uint frac) noex
     const uint pi{frac >> CubicPhaseDiffBits};
     const float pf{static_cast<float>(frac&CubicPhaseDiffMask) * (1.0f/CubicPhaseDiffOne)};
 
-    const float *fil{al::assume_aligned<16>(istate.filter[pi].mCoeffs.data())};
-    const float *phd{al::assume_aligned<16>(istate.filter[pi].mDeltas.data())};
+    const auto fil = al::span{istate.filter[pi].mCoeffs};
+    const auto phd = al::span{istate.filter[pi].mDeltas};
 
     /* Apply the phase interpolated filter. */
     return (fil[0] + pf*phd[0])*vals[0] + (fil[1] + pf*phd[1])*vals[1]

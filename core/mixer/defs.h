@@ -4,13 +4,13 @@
 #include <array>
 #include <cstdint>
 #include <cstdlib>
+#include <utility>
 #include <variant>
 
 #include "alspan.h"
 #include "core/bufferline.h"
-#include "core/resampler_limits.h"
+#include "core/cubic_defs.h"
 
-struct CubicCoefficients;
 struct HrtfChannelState;
 struct HrtfFilter;
 struct MixHrtfFilter;
@@ -58,10 +58,12 @@ struct CubicState {
     /* Filter coefficients, and coefficient deltas. Starting at phase index 0,
      * each subsequent phase index follows contiguously.
      */
-    const CubicCoefficients *filter;
+    al::span<const CubicCoefficients,CubicPhaseCount> filter;
+    template<typename T>
+    CubicState(T&& f) : filter{std::forward<T>(f)} { }
 };
 
-using InterpState = std::variant<CubicState,BsincState>;
+using InterpState = std::variant<std::monostate,CubicState,BsincState>;
 
 using ResamplerFunc = void(*)(const InterpState *state, const float *src, uint frac,
     const uint increment, const al::span<float> dst);

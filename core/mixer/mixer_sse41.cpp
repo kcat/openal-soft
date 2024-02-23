@@ -122,7 +122,7 @@ void Resample_<CubicTag,SSE4Tag>(const InterpState *state, const float *src, uin
 {
     ASSUME(frac < MixerFracOne);
 
-    const auto *filter = al::assume_aligned<16>(std::get<CubicState>(*state).filter);
+    const auto filter = std::get<CubicState>(*state).filter;
 
     const __m128i increment4{_mm_set1_epi32(static_cast<int>(increment*4))};
     const __m128i fracMask4{_mm_set1_epi32(MixerFracMask)};
@@ -154,6 +154,8 @@ void Resample_<CubicTag,SSE4Tag>(const InterpState *state, const float *src, uin
         const auto pi1 = static_cast<uint>(_mm_extract_epi32(pi4, 1));
         const auto pi2 = static_cast<uint>(_mm_extract_epi32(pi4, 2));
         const auto pi3 = static_cast<uint>(_mm_extract_epi32(pi4, 3));
+        ASSUME(pi0 < CubicPhaseCount); ASSUME(pi1 < CubicPhaseCount);
+        ASSUME(pi2 < CubicPhaseCount); ASSUME(pi3 < CubicPhaseCount);
 
         const __m128 pf4{_mm_mul_ps(_mm_cvtepi32_ps(_mm_and_si128(frac4, fracDiffMask4)),
             fracDiffOne4)};
@@ -191,7 +193,7 @@ void Resample_<CubicTag,SSE4Tag>(const InterpState *state, const float *src, uin
 
         std::generate(dst.end()-todo, dst.end(), [&src,&frac,increment,filter]() -> float
         {
-            const uint pi{frac >> CubicPhaseDiffBits};
+            const uint pi{frac >> CubicPhaseDiffBits}; ASSUME(pi < CubicPhaseCount);
             const float pf{static_cast<float>(frac&CubicPhaseDiffMask) * (1.0f/CubicPhaseDiffOne)};
             const __m128 pf4{_mm_set1_ps(pf)};
 

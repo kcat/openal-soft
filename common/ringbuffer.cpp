@@ -31,7 +31,7 @@
 #include "alnumeric.h"
 
 
-RingBufferPtr RingBuffer::Create(std::size_t sz, std::size_t elem_sz, bool limit_writes)
+auto RingBuffer::Create(std::size_t sz, std::size_t elem_sz, bool limit_writes) -> RingBufferPtr
 {
     std::size_t power_of_two{0u};
     if(sz > 0)
@@ -50,10 +50,8 @@ RingBufferPtr RingBuffer::Create(std::size_t sz, std::size_t elem_sz, bool limit
         throw std::overflow_error{"Ring buffer size overflow"};
 
     const std::size_t bufbytes{power_of_two * elem_sz};
-    RingBufferPtr rb{new(FamCount(bufbytes)) RingBuffer{bufbytes}};
-    rb->mWriteSize = limit_writes ? sz : (power_of_two-1);
-    rb->mSizeMask = power_of_two - 1;
-    rb->mElemSize = elem_sz;
+    RingBufferPtr rb{new(FamCount(bufbytes)) RingBuffer{limit_writes ? sz : (power_of_two-1),
+        power_of_two-1, elem_sz, bufbytes}};
 
     return rb;
 }
@@ -66,7 +64,7 @@ void RingBuffer::reset() noexcept
 }
 
 
-std::size_t RingBuffer::read(void *dest, std::size_t cnt) noexcept
+auto RingBuffer::read(void *dest, std::size_t cnt) noexcept -> std::size_t
 {
     const std::size_t free_cnt{readSpace()};
     if(free_cnt == 0) return 0;
@@ -90,7 +88,7 @@ std::size_t RingBuffer::read(void *dest, std::size_t cnt) noexcept
     return to_read;
 }
 
-std::size_t RingBuffer::peek(void *dest, std::size_t cnt) const noexcept
+auto RingBuffer::peek(void *dest, std::size_t cnt) const noexcept -> std::size_t
 {
     const std::size_t free_cnt{readSpace()};
     if(free_cnt == 0) return 0;
@@ -109,7 +107,7 @@ std::size_t RingBuffer::peek(void *dest, std::size_t cnt) const noexcept
     return to_read;
 }
 
-std::size_t RingBuffer::write(const void *src, std::size_t cnt) noexcept
+auto RingBuffer::write(const void *src, std::size_t cnt) noexcept -> std::size_t
 {
     const std::size_t free_cnt{writeSpace()};
     if(free_cnt == 0) return 0;

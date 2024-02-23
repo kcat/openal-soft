@@ -4,6 +4,7 @@
 #include <atomic>
 #include <cstddef>
 #include <memory>
+#include <new>
 #include <utility>
 
 #include "almalloc.h"
@@ -12,17 +13,24 @@
 
 /* NOTE: This lockless ringbuffer implementation is copied from JACK, extended
  * to include an element size. Consequently, parameters and return values for a
- * size or count is in 'elements', not bytes. Additionally, it only supports
+ * size or count are in 'elements', not bytes. Additionally, it only supports
  * single-consumer/single-provider operation.
  */
 
 struct RingBuffer {
 private:
-    std::atomic<std::size_t> mWritePtr{0u};
-    std::atomic<std::size_t> mReadPtr{0u};
-    std::size_t mWriteSize{0u};
-    std::size_t mSizeMask{0u};
-    std::size_t mElemSize{0u};
+#ifdef __cpp_lib_hardware_interference_size
+    using std::hardware_destructive_interference_size;
+#else
+    /* Assume a 64-byte cache line, the most common/likely value. */
+    static constexpr std::size_t hardware_destructive_interference_size{64};
+#endif
+    alignas(hardware_destructive_interference_size) std::atomic<std::size_t> mWritePtr{0u};
+    alignas(hardware_destructive_interference_size) std::atomic<std::size_t> mReadPtr{0u};
+
+    alignas(hardware_destructive_interference_size) const std::size_t mWriteSize;
+    const std::size_t mSizeMask;
+    const std::size_t mElemSize;
 
     al::FlexArray<std::byte, 16> mBuffer;
 
@@ -33,7 +41,10 @@ public:
     };
     using DataPair = std::pair<Data,Data>;
 
-    RingBuffer(const std::size_t count) : mBuffer{count} { }
+    RingBuffer(const std::size_t writesize, const std::size_t mask, const std::size_t elemsize,
+        const std::size_t numbytes)
+        : mWriteSize{writesize}, mSizeMask{mask}, mElemSize{elemsize}, mBuffer{numbytes}
+    { }
 
     /** Reset the read and write pointers to zero. This is not thread safe. */
     auto reset() noexcept -> void;
@@ -55,10 +66,10 @@ public:
      * Return the number of elements available for reading. This is the number
      * of elements in front of the read pointer and behind the write pointer.
      */
-    [[nodiscard]] auto readSpace() const noexcept -> size_t
+    [[nodiscard]] auto readSpace() const noexcept -> std::size_t
     {
-        const size_t w{mWritePtr.load(std::memory_order_acquire)};
-        const size_t r{mReadPtr.load(std::memory_order_acquire)};
+        const std::size_t w{mWritePtr.load(std::memory_order_acquire)};
+        const std::size_t r{mReadPtr.load(std::memory_order_acquire)};
         return (w-r) & mSizeMask;
     }
 
@@ -66,38 +77,34 @@ public:
      * The copying data reader. Copy at most `cnt' elements into `dest'.
      * Returns the actual number of elements copied.
      */
-    [[nodiscard]] auto read(void *dest, size_t cnt) noexcept -> size_t;
+    [[nodiscard]] auto read(void *dest, std::size_t cnt) noexcept -> std::size_t;
     /**
      * The copying data reader w/o read pointer advance. Copy at most `cnt'
      * elements into `dest'. Returns the actual number of elements copied.
      */
-    [[nodiscard]] auto peek(void *dest, size_t cnt) const noexcept -> size_t;
+    [[nodiscard]] auto peek(void *dest, std::size_t cnt) const noexcept -> std::size_t;
     /** Advance the read pointer `cnt' places. */
-    auto readAdvance(size_t cnt) noexcept -> void
-    { mReadPtr.fetch_add(cnt, std::memory_order_acq_rel); }
+    auto readAdvance(std::size_t cnt) noexcept -> void
+    { mReadPtr.store(mReadPtr.load(std::memory_order_relaxed)+cnt, std::memory_order_release); }
 
 
     /**
      * Return the number of elements available for writing. This is the number
      * of elements in front of the write pointer and behind the read pointer.
      */
-    [[nodiscard]] auto writeSpace() const noexcept -> size_t
-    {
-        const size_t w{mWritePtr.load(std::memory_order_acquire)};
-        const size_t r{mReadPtr.load(std::memory_order_acquire) + mWriteSize - mSizeMask};
-        return (r-w-1) & mSizeMask;
-    }
+    [[nodiscard]] auto writeSpace() const noexcept -> std::size_t
+    { return mWriteSize - readSpace(); }
 
     /**
      * The copying data writer. Copy at most `cnt' elements from `src'. Returns
      * the actual number of elements copied.
      */
-    [[nodiscard]] auto write(const void *src, size_t cnt) noexcept -> size_t;
+    [[nodiscard]] auto write(const void *src, std::size_t cnt) noexcept -> std::size_t;
     /** Advance the write pointer `cnt' places. */
-    auto writeAdvance(size_t cnt) noexcept -> void
-    { mWritePtr.fetch_add(cnt, std::memory_order_acq_rel); }
+    auto writeAdvance(std::size_t cnt) noexcept -> void
+    { mWritePtr.store(mWritePtr.load(std::memory_order_relaxed)+cnt, std::memory_order_release); }
 
-    [[nodiscard]] auto getElemSize() const noexcept -> size_t { return mElemSize; }
+    [[nodiscard]] auto getElemSize() const noexcept -> std::size_t { return mElemSize; }
 
     /**
      * Create a new ringbuffer to hold at least `sz' elements of `elem_sz'
@@ -106,7 +113,7 @@ public:
      * can be written).
      */
     [[nodiscard]] static
-    auto Create(size_t sz, size_t elem_sz, bool limit_writes) -> std::unique_ptr<RingBuffer>;
+    auto Create(std::size_t sz, std::size_t elem_sz, bool limit_writes) -> std::unique_ptr<RingBuffer>;
 
     DEF_FAM_NEWDEL(RingBuffer, mBuffer)
 };

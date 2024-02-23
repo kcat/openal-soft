@@ -214,7 +214,7 @@ bool PortPlayback::reset()
 void PortPlayback::start()
 {
     const PaError err{Pa_StartStream(mStream)};
-    if(err == paNoError)
+    if(err != paNoError)
         throw al::backend_exception{al::backend_error::DeviceError, "Failed to start playback: %s",
             Pa_GetErrorText(err)};
 }

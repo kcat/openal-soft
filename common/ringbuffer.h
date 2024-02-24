@@ -25,8 +25,8 @@ private:
     /* Assume a 64-byte cache line, the most common/likely value. */
     static constexpr std::size_t sCacheAlignment{64};
 #endif
-    alignas(sCacheAlignment) std::atomic<std::size_t> mWritePtr{0u};
-    alignas(sCacheAlignment) std::atomic<std::size_t> mReadPtr{0u};
+    alignas(sCacheAlignment) std::atomic<std::size_t> mWriteCount{0u};
+    alignas(sCacheAlignment) std::atomic<std::size_t> mReadCount{0u};
 
     alignas(sCacheAlignment) const std::size_t mWriteSize;
     const std::size_t mSizeMask;
@@ -55,22 +55,22 @@ public:
      */
     [[nodiscard]] auto readSpace() const noexcept -> std::size_t
     {
-        const std::size_t w{mWritePtr.load(std::memory_order_acquire)};
-        const std::size_t r{mReadPtr.load(std::memory_order_acquire)};
-        /* mWritePtr is never more than mWriteSize greater than mReadPtr. */
+        const std::size_t w{mWriteCount.load(std::memory_order_acquire)};
+        const std::size_t r{mReadCount.load(std::memory_order_acquire)};
+        /* mWriteCount is never more than mWriteSize greater than mReadCount. */
         return w - r;
     }
 
     /**
-     * The copying data reader. Copy at most `cnt' elements into `dest'.
+     * The copying data reader. Copy at most `count' elements into `dest'.
      * Returns the actual number of elements copied.
      */
-    [[nodiscard]] auto read(void *dest, std::size_t cnt) noexcept -> std::size_t;
+    [[nodiscard]] auto read(void *dest, std::size_t count) noexcept -> std::size_t;
     /**
-     * The copying data reader w/o read pointer advance. Copy at most `cnt'
+     * The copying data reader w/o read pointer advance. Copy at most `count'
      * elements into `dest'. Returns the actual number of elements copied.
      */
-    [[nodiscard]] auto peek(void *dest, std::size_t cnt) const noexcept -> std::size_t;
+    [[nodiscard]] auto peek(void *dest, std::size_t count) const noexcept -> std::size_t;
 
     /**
      * The non-copying data reader. Returns two ringbuffer data pointers that
@@ -78,9 +78,12 @@ public:
      * the second segment has zero length.
      */
     [[nodiscard]] auto getReadVector() noexcept -> DataPair;
-    /** Advance the read pointer `cnt' places. */
-    auto readAdvance(std::size_t cnt) noexcept -> void
-    { mReadPtr.store(mReadPtr.load(std::memory_order_relaxed)+cnt, std::memory_order_release); }
+    /** Advance the read pointer `count' places. */
+    auto readAdvance(std::size_t count) noexcept -> void
+    {
+        mReadCount.store(mReadCount.load(std::memory_order_relaxed)+count,
+            std::memory_order_release);
+    }
 
 
     /**
@@ -91,10 +94,10 @@ public:
     { return mWriteSize - readSpace(); }
 
     /**
-     * The copying data writer. Copy at most `cnt' elements from `src'. Returns
+     * The copying data writer. Copy at most `count' elements from `src'. Returns
      * the actual number of elements copied.
      */
-    [[nodiscard]] auto write(const void *src, std::size_t cnt) noexcept -> std::size_t;
+    [[nodiscard]] auto write(const void *src, std::size_t count) noexcept -> std::size_t;
 
     /**
      * The non-copying data writer. Returns two ringbuffer data pointers that
@@ -102,9 +105,12 @@ public:
      * the second segment has zero length.
      */
     [[nodiscard]] auto getWriteVector() noexcept -> DataPair;
-    /** Advance the write pointer `cnt' places. */
-    auto writeAdvance(std::size_t cnt) noexcept -> void
-    { mWritePtr.store(mWritePtr.load(std::memory_order_relaxed)+cnt, std::memory_order_release); }
+    /** Advance the write pointer `count' places. */
+    auto writeAdvance(std::size_t count) noexcept -> void
+    {
+        mWriteCount.store(mWriteCount.load(std::memory_order_relaxed)+count,
+            std::memory_order_release);
+    }
 
     [[nodiscard]] auto getElemSize() const noexcept -> std::size_t { return mElemSize; }
 

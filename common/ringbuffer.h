@@ -2,6 +2,7 @@
 #define RINGBUFFER_H
 
 #include <atomic>
+#include <cassert>
 #include <cstddef>
 #include <memory>
 #include <new>
@@ -81,8 +82,11 @@ public:
     /** Advance the read pointer `count' places. */
     auto readAdvance(std::size_t count) noexcept -> void
     {
-        mReadCount.store(mReadCount.load(std::memory_order_relaxed)+count,
-            std::memory_order_release);
+        const std::size_t w{mWriteCount.load(std::memory_order_acquire)};
+        const std::size_t r{mReadCount.load(std::memory_order_relaxed)};
+        [[maybe_unused]] const std::size_t readable{w - r};
+        assert(readable >= count);
+        mReadCount.store(r+count, std::memory_order_release);
     }
 
 
@@ -108,8 +112,11 @@ public:
     /** Advance the write pointer `count' places. */
     auto writeAdvance(std::size_t count) noexcept -> void
     {
-        mWriteCount.store(mWriteCount.load(std::memory_order_relaxed)+count,
-            std::memory_order_release);
+        const std::size_t w{mWriteCount.load(std::memory_order_relaxed)};
+        const std::size_t r{mReadCount.load(std::memory_order_acquire)};
+        [[maybe_unused]] const std::size_t writable{mWriteSize - (w - r)};
+        assert(writable >= count);
+        mWriteCount.store(w+count, std::memory_order_release);
     }
 
     [[nodiscard]] auto getElemSize() const noexcept -> std::size_t { return mElemSize; }

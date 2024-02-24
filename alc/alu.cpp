@@ -2009,10 +2009,11 @@ void ProcessContexts(DeviceBase *device, const uint SamplesToDo)
 
 
 void ApplyDistanceComp(const al::span<FloatBufferLine> Samples, const size_t SamplesToDo,
-    const DistanceComp::ChanData *distcomp)
+    const al::span<const DistanceComp::ChanData,MaxOutputChannels> chandata)
 {
     ASSUME(SamplesToDo > 0);
 
+    auto distcomp = chandata.begin();
     for(auto &chanbuffer : Samples)
     {
         const float gain{distcomp->Gain};
@@ -2163,7 +2164,7 @@ uint DeviceBase::renderSamples(const uint numSamples)
 
     /* Apply delays and attenuation for mismatched speaker distances. */
     if(ChannelDelays)
-        ApplyDistanceComp(RealOut.Buffer, samplesToDo, ChannelDelays->mChannels.data());
+        ApplyDistanceComp(RealOut.Buffer, samplesToDo, ChannelDelays->mChannels);
 
     /* Apply dithering. The compressor should have left enough headroom for the
      * dither noise to not saturate.

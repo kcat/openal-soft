@@ -40,7 +40,10 @@ void DirectorySearch(const std::filesystem::path &path, const std::string_view e
     const auto base = static_cast<std::make_signed_t<size_t>>(results->size());
 
     try {
-        auto fpath = fs::canonical(path.lexically_normal());
+        auto fpath = path.lexically_normal();
+        if(!fs::exists(fpath))
+            return;
+
         TRACE("Searching %s for *%.*s\n", fpath.u8string().c_str(), al::sizei(ext), ext.data());
         for(auto&& dirent : fs::directory_iterator{fpath})
         {
@@ -52,10 +55,6 @@ void DirectorySearch(const std::filesystem::path &path, const std::string_view e
                 && al::case_compare(entrypath.extension().u8string(), ext) == 0)
                 results->emplace_back(entrypath.u8string());
         }
-    }
-    catch(fs::filesystem_error& fe) {
-        if(fe.code() != std::make_error_code(std::errc::no_such_file_or_directory))
-            ERR("Error enumerating directory: %s\n", fe.what());
     }
     catch(std::exception& e) {
         ERR("Exception enumerating files: %s\n", e.what());
@@ -264,16 +263,13 @@ const PathNamePair &GetProcBinary()
             for(const std::string_view name : SelfLinkNames)
             {
                 try {
+                    if(!std::filesystem::exists(name))
+                        continue;
                     if(auto path = std::filesystem::read_symlink(name); !path.empty())
                     {
                         pathname = path.u8string();
                         break;
                     }
-                }
-                catch(std::filesystem::filesystem_error& fe) {
-                    if(fe.code() != std::make_error_code(std::errc::no_such_file_or_directory))
-                        WARN("Failed to read_symlink %.*s: %s\n", al::sizei(name), name.data(),
-                            fe.what());
                 }
                 catch(std::exception& e) {
                     WARN("Exception getting symlink %.*s: %s\n", al::sizei(name), name.data(),

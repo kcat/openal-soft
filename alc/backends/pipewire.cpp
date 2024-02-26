@@ -1138,8 +1138,8 @@ auto MetadataProxy::propertyCallback(void*, uint32_t id, const char *key, const 
         int len{spa_json_next(iter, &val)};
         if(len <= 0) return str;
 
-        str.emplace().resize(static_cast<uint>(len), '\0');
-        if(spa_json_parse_string(val, len, &str->front()) <= 0)
+        str.emplace(static_cast<uint>(len), '\0');
+        if(spa_json_parse_string(val, len, str->data()) <= 0)
             str.reset();
         else while(!str->empty() && str->back() == '\0')
             str->pop_back();
@@ -1154,35 +1154,29 @@ auto MetadataProxy::propertyCallback(void*, uint32_t id, const char *key, const 
 
             TRACE("Got default %s device \"%s\"\n", isCapture ? "capture" : "playback",
                 propValue->c_str());
-            if(!isCapture)
+            if(!isCapture && DefaultSinkDevice != *propValue)
             {
-                if(DefaultSinkDevice != *propValue)
+                if(gEventHandler.mInitDone.load(std::memory_order_relaxed))
                 {
-                    if(gEventHandler.mInitDone.load(std::memory_order_relaxed))
-                    {
-                        auto entry = DeviceNode::FindByDevName(*propValue);
-                        const std::string msg{"Default playback device changed: "+
-                            (entry ? entry->mName : std::string{})};
-                        alc::Event(alc::EventType::DefaultDeviceChanged, alc::DeviceType::Playback,
-                            msg);
-                    }
-                    DefaultSinkDevice = std::move(*propValue);
+                    auto entry = DeviceNode::FindByDevName(*propValue);
+                    const std::string message{"Default playback device changed: "+
+                        (entry ? entry->mName : std::string{})};
+                    alc::Event(alc::EventType::DefaultDeviceChanged, alc::DeviceType::Playback,
+                        message);
                 }
+                DefaultSinkDevice = std::move(*propValue);
             }
-            else
+            else if(isCapture && DefaultSourceDevice != *propValue)
             {
-                if(DefaultSourceDevice != *propValue)
+                if(gEventHandler.mInitDone.load(std::memory_order_relaxed))
                 {
-                    if(gEventHandler.mInitDone.load(std::memory_order_relaxed))
-                    {
-                        auto entry = DeviceNode::FindByDevName(*propValue);
-                        const std::string msg{"Default capture device changed: "+
-                            (entry ? entry->mName : std::string{})};
-                        alc::Event(alc::EventType::DefaultDeviceChanged, alc::DeviceType::Capture,
-                            msg);
-                    }
-                    DefaultSourceDevice = std::move(*propValue);
+                    auto entry = DeviceNode::FindByDevName(*propValue);
+                    const std::string message{"Default capture device changed: "+
+                        (entry ? entry->mName : std::string{})};
+                    alc::Event(alc::EventType::DefaultDeviceChanged, alc::DeviceType::Capture,
+                        message);
                 }
+                DefaultSourceDevice = std::move(*propValue);
             }
         }
         else
@@ -1464,6 +1458,8 @@ void PipeWirePlayback::ioChangedCallback(uint32_t id, void *area, uint32_t size)
     case SPA_IO_RateMatch:
         if(size >= sizeof(spa_io_rate_match))
             mRateMatch = static_cast<spa_io_rate_match*>(area);
+        else
+            mRateMatch = nullptr;
         break;
     }
 }

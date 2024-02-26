@@ -785,14 +785,6 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
     std::transform(Device->mSampleData.end() - mChans.size(), Device->mSampleData.end(),
         MixingSamples.begin(), get_bufferline);
 
-    /* If there's a matching sample step and no phase offset, use a simple copy
-     * for resampling.
-     */
-    const ResamplerFunc Resample{(increment == MixerFracOne && DataPosFrac == 0)
-        ? ResamplerFunc{[](const InterpState*, const float *RESTRICT src, uint, const uint,
-            const al::span<float> dst) { std::copy_n(src, dst.size(), dst.begin()); }}
-        : mResampler};
-
     /* UHJ2 and SuperStereo only have 2 buffer channels, but 3 mixing channels
      * (3rd channel is generated from decoding).
      */
@@ -931,8 +923,14 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
                         mFrameStep, srcSampleDelay, srcBufferSize, al::to_address(resampleBuffer));
             }
 
-            Resample(&mResampleState, al::to_address(resampleBuffer), fracPos, increment,
-                {MixingSamples[chan]+samplesLoaded, dstBufferSize});
+            /* If there's a matching sample step and no phase offset, use a
+             * simple copy for resampling.
+             */
+            if(increment == MixerFracOne && fracPos == 0)
+                std::copy_n(resampleBuffer, dstBufferSize, MixingSamples[chan]+samplesLoaded);
+            else
+                mResampler(&mResampleState, al::to_address(resampleBuffer), fracPos, increment,
+                    {MixingSamples[chan]+samplesLoaded, dstBufferSize});
 
             /* Store the last source samples used for next time. */
             if(vstate == Playing) LIKELY

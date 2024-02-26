@@ -792,12 +792,12 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
         : MixingSamples.size()};
     for(size_t chan{0};chan < realChannels;++chan)
     {
-        using ResBufType = decltype(DeviceBase::mResampleData);
-        static constexpr uint srcSizeMax{static_cast<uint>(ResBufType{}.size()-MaxResamplerEdge)};
+        static constexpr uint ResBufSize{std::tuple_size_v<decltype(DeviceBase::mResampleData)>};
+        static constexpr uint srcSizeMax{ResBufSize - MaxResamplerEdge};
 
         const al::span prevSamples{mPrevSamples[chan]};
-        const auto resampleBuffer = std::copy(prevSamples.cbegin(), prevSamples.cend(),
-            Device->mResampleData.begin()) - MaxResamplerEdge;
+        std::copy(prevSamples.cbegin(), prevSamples.cend(), Device->mResampleData.begin());
+        const auto resampleBuffer = Device->mResampleData.begin() + MaxResamplerEdge;
         int intPos{DataPosInt};
         uint fracPos{DataPosFrac};
 
@@ -852,8 +852,8 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
             /* Load the necessary samples from the given buffer(s). */
             if(!BufferListItem)
             {
-                const uint avail{std::min(srcBufferSize, uint{MaxResamplerEdge})};
-                const uint tofill{std::max(srcBufferSize, uint{MaxResamplerEdge})};
+                const uint avail{std::min(srcBufferSize, MaxResamplerEdge)};
+                const uint tofill{std::max(srcBufferSize, MaxResamplerEdge)};
 
                 /* When loading from a voice that ended prematurely, only take
                  * the samples that get closest to 0 amplitude. This helps

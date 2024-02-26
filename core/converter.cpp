@@ -255,7 +255,7 @@ uint SampleConverter::convert(const void **src, uint *srcframes, void *dst, uint
         const uint SrcDataEnd{DataPosEnd>>MixerFracBits};
 
         assert(prepcount+readable >= SrcDataEnd);
-        const uint nextprep{std::min(prepcount+readable-SrcDataEnd, uint{MaxResamplerPadding})};
+        const uint nextprep{std::min(prepcount+readable-SrcDataEnd, MaxResamplerPadding)};
 
         for(size_t chan{0u};chan < mChan.size();chan++)
         {
@@ -350,7 +350,7 @@ uint SampleConverter::convertPlanar(const void **src, uint *srcframes, void *con
         const uint SrcDataEnd{DataPosEnd>>MixerFracBits};
 
         assert(prepcount+readable >= SrcDataEnd);
-        const uint nextprep{std::min(prepcount+readable-SrcDataEnd, uint{MaxResamplerPadding})};
+        const uint nextprep{std::min(prepcount+readable-SrcDataEnd, MaxResamplerPadding)};
 
         for(size_t chan{0u};chan < mChan.size();chan++)
         {

@@ -189,7 +189,7 @@ const char *GetDebugSeverityName(DebugSeverity severity)
 void ALCcontext::sendDebugMessage(std::unique_lock<std::mutex> &debuglock, DebugSource source,
     DebugType type, ALuint id, DebugSeverity severity, std::string_view message)
 {
-    if(!mDebugEnabled.load()) UNLIKELY
+    if(!mDebugEnabled.load(std::memory_order_relaxed)) UNLIKELY
         return;
 
     if(message.length() >= MaxDebugMessageLength) UNLIKELY

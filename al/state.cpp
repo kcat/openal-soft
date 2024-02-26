@@ -322,7 +322,7 @@ FORCE_ALIGN void AL_APIENTRY alEnableDirect(ALCcontext *context, ALenum capabili
         break;
 
     case AL_DEBUG_OUTPUT_EXT:
-        context->mDebugEnabled = true;
+        context->mDebugEnabled.store(true);
         break;
 
     case AL_STOP_SOURCES_ON_DISCONNECT_SOFT:
@@ -348,11 +348,11 @@ FORCE_ALIGN void AL_APIENTRY alDisableDirect(ALCcontext *context, ALenum capabil
         break;
 
     case AL_DEBUG_OUTPUT_EXT:
-        context->mDebugEnabled = false;
+        context->mDebugEnabled.store(false);
         break;
 
     case AL_STOP_SOURCES_ON_DISCONNECT_SOFT:
-        context->mStopVoicesOnDisconnect = false;
+        context->mStopVoicesOnDisconnect.store(false);
         break;
 
     default:
@@ -376,7 +376,7 @@ FORCE_ALIGN ALboolean AL_APIENTRY alIsEnabledDirect(ALCcontext *context, ALenum 
         break;
 
     case AL_STOP_SOURCES_ON_DISCONNECT_SOFT:
-        value = context->mStopVoicesOnDisconnect ? AL_TRUE : AL_FALSE;
+        value = context->mStopVoicesOnDisconnect.load() ? AL_TRUE : AL_FALSE;
         break;
 
     default:

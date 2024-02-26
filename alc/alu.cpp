@@ -2256,7 +2256,7 @@ void DeviceBase::handleDisconnect(const char *msg, ...)
                 ctx->mEventSem.post();
             }
 
-            if(!ctx->mStopVoicesOnDisconnect)
+            if(!ctx->mStopVoicesOnDisconnect.load())
             {
                 ProcessVoiceChanges(ctx);
                 continue;

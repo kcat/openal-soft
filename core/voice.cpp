@@ -50,8 +50,7 @@ struct NEONTag;
 #endif
 
 
-static_assert(!(sizeof(DeviceBase::MixerBufferLine)&15),
-    "DeviceBase::MixerBufferLine must be a multiple of 16 bytes");
+static_assert(!(DeviceBase::MixerLineSize&3), "MixerLineSize must be a multiple of 4");
 static_assert(!(MaxResamplerEdge&3), "MaxResamplerEdge is not a multiple of 4");
 
 static_assert((BufferLineSize-1)/MaxPitch > 0, "MaxPitch is too large for BufferLineSize!");
@@ -780,10 +779,16 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
      */
     std::array<float*,DeviceBase::MixerChannelsMax> SamplePointers;
     const al::span<float*> MixingSamples{SamplePointers.data(), mChans.size()};
-    auto get_bufferline = [](DeviceBase::MixerBufferLine &bufline) noexcept -> float*
-    { return bufline.data(); };
-    std::transform(Device->mSampleData.end() - mChans.size(), Device->mSampleData.end(),
-        MixingSamples.begin(), get_bufferline);
+    {
+        const uint channelStep{(samplesToLoad+3u)&~3u};
+        auto base = Device->mSampleData.end() - mChans.size()*channelStep;
+        std::generate(MixingSamples.begin(), MixingSamples.end(), [&base,channelStep]
+        {
+            const auto ret = base;
+            base += channelStep;
+            return al::to_address(ret);
+        });
+    }
 
     /* UHJ2 and SuperStereo only have 2 buffer channels, but 3 mixing channels
      * (3rd channel is generated from decoding).
@@ -1180,11 +1185,11 @@ void Voice::prepare(DeviceBase *device)
     uint num_channels{(mFmtChannels == FmtUHJ2 || mFmtChannels == FmtSuperStereo) ? 3 :
         (mFmtChannels == FmtMonoDup) ? 2 :
         ChannelsFromFmt(mFmtChannels, std::min(mAmbiOrder, device->mAmbiOrder))};
-    if(num_channels > device->mSampleData.size()) UNLIKELY
+    if(num_channels > device->MixerChannelsMax) UNLIKELY
     {
         ERR("Unexpected channel count: %u (limit: %zu, %d:%d)\n", num_channels,
-            device->mSampleData.size(), mFmtChannels, mAmbiOrder);
-        num_channels = static_cast<uint>(device->mSampleData.size());
+            device->MixerChannelsMax, mFmtChannels, mAmbiOrder);
+        num_channels = device->MixerChannelsMax;
     }
     if(mChans.capacity() > 2 && num_channels < mChans.capacity())
     {

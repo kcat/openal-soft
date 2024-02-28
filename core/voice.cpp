@@ -789,7 +789,7 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
      * (3rd channel is generated from decoding).
      */
     const size_t realChannels{(mFmtChannels == FmtUHJ2 || mFmtChannels == FmtSuperStereo) ? 2u
-        : MixingSamples.size()};
+        : (mFmtChannels == FmtMonoDup) ? 1u : MixingSamples.size()};
     for(size_t chan{0};chan < realChannels;++chan)
     {
         static constexpr uint ResBufSize{std::tuple_size_v<decltype(DeviceBase::mResampleData)>};
@@ -966,7 +966,9 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
             }
         }
     }
-    for(auto &samples : MixingSamples.subspan(realChannels))
+    if(mFmtChannels == FmtMonoDup)
+        MixingSamples[1] = MixingSamples[0];
+    else for(auto &samples : MixingSamples.subspan(realChannels))
         std::fill_n(samples, samplesToLoad, 0.0f);
 
     if(mDecoder)
@@ -1176,6 +1178,7 @@ void Voice::prepare(DeviceBase *device)
      * orders up to the device order. The rest are simply dropped.
      */
     uint num_channels{(mFmtChannels == FmtUHJ2 || mFmtChannels == FmtSuperStereo) ? 3 :
+        (mFmtChannels == FmtMonoDup) ? 2 :
         ChannelsFromFmt(mFmtChannels, std::min(mAmbiOrder, device->mAmbiOrder))};
     if(num_channels > device->mSampleData.size()) UNLIKELY
     {

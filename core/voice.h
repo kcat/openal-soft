@@ -138,6 +138,7 @@ struct VoiceProps {
 
     float Radius;
     float EnhWidth;
+    float Panning;
 
     /** Direct filter and auxiliary send info. */
     struct {

@@ -156,6 +156,7 @@ void UpdateSourceProps(const ALsource *source, Voice *voice, ALCcontext *context
 
     props->Radius = source->Radius;
     props->EnhWidth = source->EnhWidth;
+    props->Panning = 0.0f;
 
     props->Direct.Gain = source->Direct.Gain;
     props->Direct.GainHF = source->Direct.GainHF;

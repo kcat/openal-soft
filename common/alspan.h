@@ -348,9 +348,9 @@ auto span<T,E>::subspan(std::size_t offset, std::size_t count) const
     {
         if(count > size()-offset)
             throw std::out_of_range{"Subspan length out of range"};
-        return span{mData+offset, count};
+        return span<element_type>{mData+offset, count};
     }
-    return span{mData+offset, size()-offset};
+    return span<element_type>{mData+offset, size()-offset};
 }
 
 

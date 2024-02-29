@@ -21,13 +21,15 @@ template<>
 struct FmtTypeTraits<FmtUByte> {
     using Type = uint8_t;
 
-    constexpr float operator()(const Type val) const noexcept { return val*(1.0f/128.0f) - 1.0f; }
+    constexpr float operator()(const Type val) const noexcept
+    { return float(val)*(1.0f/128.0f) - 1.0f; }
 };
 template<>
 struct FmtTypeTraits<FmtShort> {
     using Type = int16_t;
 
-    constexpr float operator()(const Type val) const noexcept { return val*(1.0f/32768.0f); }
+    constexpr float operator()(const Type val) const noexcept
+    { return float(val) * (1.0f/32768.0f); }
 };
 template<>
 struct FmtTypeTraits<FmtInt> {
@@ -53,14 +55,14 @@ struct FmtTypeTraits<FmtMulaw> {
     using Type = uint8_t;
 
     constexpr float operator()(const Type val) const noexcept
-    { return muLawDecompressionTable[val] * (1.0f/32768.0f); }
+    { return float(muLawDecompressionTable[val]) * (1.0f/32768.0f); }
 };
 template<>
 struct FmtTypeTraits<FmtAlaw> {
     using Type = uint8_t;
 
     constexpr float operator()(const Type val) const noexcept
-    { return aLawDecompressionTable[val] * (1.0f/32768.0f); }
+    { return float(aLawDecompressionTable[val]) * (1.0f/32768.0f); }
 };
 
 } // namespace al

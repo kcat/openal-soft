@@ -791,7 +791,8 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
     }
 
     /* UHJ2 and SuperStereo only have 2 buffer channels, but 3 mixing channels
-     * (3rd channel is generated from decoding).
+     * (3rd channel is generated from decoding). MonoDup only has 1 buffer
+     * channel, but 2 mixing channels (2nd channel is just duplicated).
      */
     const size_t realChannels{(mFmtChannels == FmtUHJ2 || mFmtChannels == FmtSuperStereo) ? 2u
         : (mFmtChannels == FmtMonoDup) ? 1u : MixingSamples.size()};
@@ -854,8 +855,28 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
             const auto [dstBufferSize, srcBufferSize] = calc_buffer_sizes(
                 samplesToLoad - samplesLoaded);
 
+            size_t srcSampleDelay{0};
+            if(intPos < 0) UNLIKELY
+            {
+                /* If the current position is negative, there's that many
+                 * silent samples to load before using the buffer.
+                 */
+                srcSampleDelay = static_cast<uint>(-intPos);
+                if(srcSampleDelay >= srcBufferSize)
+                {
+                    /* If the number of silent source samples exceeds the
+                     * number to load, the output will be silent.
+                     */
+                    std::fill_n(MixingSamples[chan]+samplesLoaded, dstBufferSize, 0.0f);
+                    std::fill_n(resampleBuffer, srcBufferSize, 0.0f);
+                    goto skip_resample;
+                }
+
+                std::fill_n(resampleBuffer, srcSampleDelay, 0.0f);
+            }
+
             /* Load the necessary samples from the given buffer(s). */
-            if(!BufferListItem)
+            if(!BufferListItem) UNLIKELY
             {
                 const uint avail{std::min(srcBufferSize, MaxResamplerEdge)};
                 const uint tofill{std::max(srcBufferSize, MaxResamplerEdge)};
@@ -870,62 +891,45 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
 
                 std::fill(srciter+1, resampleBuffer+tofill, *srciter);
             }
+            else if(mFlags.test(VoiceIsStatic))
+            {
+                const auto uintPos = static_cast<uint>(std::max(intPos, 0));
+                LoadBufferStatic(BufferListItem, BufferLoopItem, uintPos, mFmtType, chan,
+                    mFrameStep, srcSampleDelay, srcBufferSize, al::to_address(resampleBuffer));
+            }
+            else if(mFlags.test(VoiceIsCallback))
+            {
+                const auto uintPos = static_cast<uint>(std::max(intPos, 0));
+                const uint callbackBase{mCallbackBlockBase * mSamplesPerBlock};
+                const size_t bufferOffset{uintPos - callbackBase};
+                const size_t needSamples{bufferOffset + srcBufferSize - srcSampleDelay};
+                const size_t needBlocks{(needSamples + mSamplesPerBlock-1) / mSamplesPerBlock};
+                if(!mFlags.test(VoiceCallbackStopped) && needBlocks > mNumCallbackBlocks)
+                {
+                    const size_t byteOffset{mNumCallbackBlocks*size_t{mBytesPerBlock}};
+                    const size_t needBytes{(needBlocks-mNumCallbackBlocks)*size_t{mBytesPerBlock}};
+
+                    const int gotBytes{BufferListItem->mCallback(BufferListItem->mUserData,
+                        &BufferListItem->mSamples[byteOffset], static_cast<int>(needBytes))};
+                    if(gotBytes < 0)
+                        mFlags.set(VoiceCallbackStopped);
+                    else if(static_cast<uint>(gotBytes) < needBytes)
+                    {
+                        mFlags.set(VoiceCallbackStopped);
+                        mNumCallbackBlocks += static_cast<uint>(gotBytes) / mBytesPerBlock;
+                    }
+                    else
+                        mNumCallbackBlocks = static_cast<uint>(needBlocks);
+                }
+                const size_t numSamples{size_t{mNumCallbackBlocks} * mSamplesPerBlock};
+                LoadBufferCallback(BufferListItem, bufferOffset, numSamples, mFmtType, chan,
+                    mFrameStep, srcSampleDelay, srcBufferSize, al::to_address(resampleBuffer));
+            }
             else
             {
-                size_t srcSampleDelay{0};
-                if(intPos < 0) UNLIKELY
-                {
-                    /* If the current position is negative, there's that many
-                     * silent samples to load before using the buffer.
-                     */
-                    srcSampleDelay = static_cast<uint>(-intPos);
-                    if(srcSampleDelay >= srcBufferSize)
-                    {
-                        /* If the number of silent source samples exceeds the
-                         * number to load, the output will be silent.
-                         */
-                        std::fill_n(MixingSamples[chan]+samplesLoaded, dstBufferSize, 0.0f);
-                        std::fill_n(resampleBuffer, srcBufferSize, 0.0f);
-                        goto skip_resample;
-                    }
-
-                    std::fill_n(resampleBuffer, srcSampleDelay, 0.0f);
-                }
-                const uint uintPos{static_cast<uint>(std::max(intPos, 0))};
-
-                if(mFlags.test(VoiceIsStatic))
-                    LoadBufferStatic(BufferListItem, BufferLoopItem, uintPos, mFmtType, chan,
-                        mFrameStep, srcSampleDelay, srcBufferSize, al::to_address(resampleBuffer));
-                else if(mFlags.test(VoiceIsCallback))
-                {
-                    const uint callbackBase{mCallbackBlockBase * mSamplesPerBlock};
-                    const size_t bufferOffset{uintPos - callbackBase};
-                    const size_t needSamples{bufferOffset + srcBufferSize - srcSampleDelay};
-                    const size_t needBlocks{(needSamples + mSamplesPerBlock-1) / mSamplesPerBlock};
-                    if(!mFlags.test(VoiceCallbackStopped) && needBlocks > mNumCallbackBlocks)
-                    {
-                        const size_t byteOffset{mNumCallbackBlocks*size_t{mBytesPerBlock}};
-                        const size_t needBytes{(needBlocks-mNumCallbackBlocks)*size_t{mBytesPerBlock}};
-
-                        const int gotBytes{BufferListItem->mCallback(BufferListItem->mUserData,
-                            &BufferListItem->mSamples[byteOffset], static_cast<int>(needBytes))};
-                        if(gotBytes < 0)
-                            mFlags.set(VoiceCallbackStopped);
-                        else if(static_cast<uint>(gotBytes) < needBytes)
-                        {
-                            mFlags.set(VoiceCallbackStopped);
-                            mNumCallbackBlocks += static_cast<uint>(gotBytes) / mBytesPerBlock;
-                        }
-                        else
-                            mNumCallbackBlocks = static_cast<uint>(needBlocks);
-                    }
-                    const size_t numSamples{size_t{mNumCallbackBlocks} * mSamplesPerBlock};
-                    LoadBufferCallback(BufferListItem, bufferOffset, numSamples, mFmtType, chan,
-                        mFrameStep, srcSampleDelay, srcBufferSize, al::to_address(resampleBuffer));
-                }
-                else
-                    LoadBufferQueue(BufferListItem, BufferLoopItem, uintPos, mFmtType, chan,
-                        mFrameStep, srcSampleDelay, srcBufferSize, al::to_address(resampleBuffer));
+                const auto uintPos = static_cast<uint>(std::max(intPos, 0));
+                LoadBufferQueue(BufferListItem, BufferLoopItem, uintPos, mFmtType, chan,
+                    mFrameStep, srcSampleDelay, srcBufferSize, al::to_address(resampleBuffer));
             }
 
             /* If there's a matching sample step and no phase offset, use a
@@ -972,7 +976,13 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
         }
     }
     if(mFmtChannels == FmtMonoDup)
+    {
+        /* NOTE: a mono source shouldn't have a decoder or the VoiceIsAmbisonic
+         * flag, so aliasing instead of copying to the second channel shouldn't
+         * be a problem.
+         */
         MixingSamples[1] = MixingSamples[0];
+    }
     else for(auto &samples : MixingSamples.subspan(realChannels))
         std::fill_n(samples, samplesToLoad, 0.0f);
 

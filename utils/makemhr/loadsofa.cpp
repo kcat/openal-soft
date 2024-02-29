@@ -238,7 +238,7 @@ constexpr int OnsetRateMultiple{10};
 double CalcHrirOnset(PPhaseResampler &rs, const uint rate, const uint n,
     al::span<double> upsampled, const double *hrir)
 {
-    rs.process(n, hrir, static_cast<uint>(upsampled.size()), upsampled.data());
+    rs.process({hrir, n}, upsampled);
 
     auto abs_lt = [](const double &lhs, const double &rhs) -> bool
     { return std::abs(lhs) < std::abs(rhs); };
@@ -328,8 +328,8 @@ bool LoadResponses(MYSOFA_HRTF *sofaHrtf, HrirDataT *hData, const DelayType dela
                 else
                 {
                     std::copy_n(&sofaHrtf->DataIR.values[(size_t{si}*sofaHrtf->R + ti)*sofaHrtf->N],
-                        sofaHrtf->N, restmp.data());
-                    resampler->process(sofaHrtf->N, restmp.data(), hData->mIrSize, azd->mIrs[ti]);
+                        sofaHrtf->N, restmp.begin());
+                    resampler->process(restmp, {azd->mIrs[ti], hData->mIrSize});
                 }
             }
 

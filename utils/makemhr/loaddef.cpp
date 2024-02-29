@@ -1748,7 +1748,7 @@ static constexpr int OnsetRateMultiple{10};
 static double AverageHrirOnset(PPhaseResampler &rs, al::span<double> upsampled, const uint rate,
     const uint n, const double *hrir, const double f, const double onset)
 {
-    rs.process(n, hrir, static_cast<uint>(upsampled.size()), upsampled.data());
+    rs.process({hrir, n}, upsampled);
 
     auto abs_lt = [](const double &lhs, const double &rhs) -> bool
     { return std::abs(lhs) < std::abs(rhs); };
@@ -1906,7 +1906,8 @@ static int ProcessSources(TokenReaderT *tr, HrirDataT *hData, const uint outRate
                 azd->mDelays[0] = AverageHrirOnset(onsetResampler, onsetSamples, hData->mIrRate,
                     hData->mIrPoints, hrir.data(), 1.0, azd->mDelays[0]);
                 if(resampler)
-                    resampler->process(hData->mIrPoints, hrir.data(), hData->mIrSize, hrir.data());
+                    resampler->process(al::span{hrir}.first(hData->mIrPoints),
+                        al::span{hrir}.first(hData->mIrSize));
                 AverageHrirMagnitude(irPoints, hData->mFftSize, hrir.data(), 1.0, azd->mIrs[0]);
 
                 if(src.mChannel == 1)
@@ -1916,8 +1917,8 @@ static int ProcessSources(TokenReaderT *tr, HrirDataT *hData, const uint outRate
                     azd->mDelays[1] = AverageHrirOnset(onsetResampler, onsetSamples,
                         hData->mIrRate, hData->mIrPoints, hrir.data(), 1.0, azd->mDelays[1]);
                     if(resampler)
-                        resampler->process(hData->mIrPoints, hrir.data(), hData->mIrSize,
-                            hrir.data());
+                        resampler->process(al::span{hrir}.first(hData->mIrPoints),
+                            al::span{hrir}.first(hData->mIrSize));
                     AverageHrirMagnitude(irPoints, hData->mFftSize, hrir.data(), 1.0,
                         azd->mIrs[1]);
                 }
@@ -1977,7 +1978,8 @@ static int ProcessSources(TokenReaderT *tr, HrirDataT *hData, const uint outRate
             azd->mDelays[ti] = AverageHrirOnset(onsetResampler, onsetSamples, hData->mIrRate,
                 hData->mIrPoints, hrir.data(), 1.0 / factor[ti], azd->mDelays[ti]);
             if(resampler)
-                resampler->process(hData->mIrPoints, hrir.data(), hData->mIrSize, hrir.data());
+                resampler->process(al::span{hrir}.first(hData->mIrPoints),
+                    al::span{hrir}.first(hData->mIrSize));
             AverageHrirMagnitude(irPoints, hData->mFftSize, hrir.data(), 1.0 / factor[ti],
                 azd->mIrs[ti]);
             factor[ti] += 1.0;

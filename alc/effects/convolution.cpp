@@ -368,8 +368,8 @@ void ConvolutionState::deviceUpdate(const DeviceBase *device, const BufferStorag
         {
             std::copy_n(srcsamples.data() + srclinelength*c, buffer->mSampleLen,
                 ressamples.data() + resampledCount);
-            resampler.process(buffer->mSampleLen, ressamples.data()+resampledCount,
-                resampledCount, ressamples.data());
+            resampler.process(al::span{ressamples}.subspan(resampledCount, buffer->mSampleLen),
+                al::span{ressamples}.first(resampledCount));
         }
         else
             std::copy_n(srcsamples.data() + srclinelength*c, buffer->mSampleLen,

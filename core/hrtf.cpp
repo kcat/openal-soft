@@ -1364,7 +1364,7 @@ try {
             {
                 std::transform(coeffs.cbegin(), coeffs.cend(), inout[0].begin(),
                     [j](const float2 &in) noexcept -> double { return in[j]; });
-                rs.process(HrirLength, inout[0].data(), HrirLength, inout[1].data());
+                rs.process(inout[0], inout[1]);
                 for(size_t k{0};k < HrirLength;++k)
                     coeffs[k][j] = static_cast<float>(inout[1][k]);
             }

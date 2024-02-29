@@ -81,10 +81,23 @@ namespace {
  */
 
 
-void LoadSamples(float *RESTRICT dst, const std::byte *src, const size_t srcstep, FmtType srctype,
-    const size_t samples) noexcept
+template<FmtType SrcType>
+inline void LoadSampleArray(const al::span<float> dst, const std::byte *src,
+    const std::size_t srcstep) noexcept
 {
-#define HANDLE_FMT(T)  case T: al::LoadSampleArray<T>(dst, src, srcstep, samples); break
+    using TypeTraits = al::FmtTypeTraits<SrcType>;
+    using SampleType = typename TypeTraits::Type;
+    auto converter = TypeTraits{};
+
+    const SampleType *RESTRICT ssrc{reinterpret_cast<const SampleType*>(src)};
+    for(std::size_t i{0u};i < dst.size();i++)
+        dst[i] = converter(ssrc[i*srcstep]);
+}
+
+void LoadSamples(const al::span<float> dst, const std::byte *src, const size_t srcstep,
+    const FmtType srctype) noexcept
+{
+#define HANDLE_FMT(T)  case T: LoadSampleArray<T>(dst, src, srcstep); break
     switch(srctype)
     {
     HANDLE_FMT(FmtUByte);
@@ -97,7 +110,7 @@ void LoadSamples(float *RESTRICT dst, const std::byte *src, const size_t srcstep
     /* FIXME: Handle ADPCM decoding here. */
     case FmtIMA4:
     case FmtMSADPCM:
-        std::fill_n(dst, samples, 0.0f);
+        std::fill(dst.begin(), dst.end(), 0.0f);
         break;
     }
 #undef HANDLE_FMT
@@ -331,8 +344,8 @@ void ConvolutionState::deviceUpdate(const DeviceBase *device, const BufferStorag
     auto srcsamples = std::vector<float>(srclinelength * numChannels);
     std::fill(srcsamples.begin(), srcsamples.end(), 0.0f);
     for(size_t c{0};c < numChannels && c < realChannels;++c)
-        LoadSamples(srcsamples.data() + srclinelength*c, buffer->mData.data() + bytesPerSample*c,
-            realChannels, buffer->mType, buffer->mSampleLen);
+        LoadSamples(al::span{srcsamples}.subspan(srclinelength*c, buffer->mSampleLen),
+            buffer->mData.data() + bytesPerSample*c, realChannels, buffer->mType);
 
     if(IsUHJ(mChannels))
     {

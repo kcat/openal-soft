@@ -99,7 +99,7 @@ struct VoiceBufferItem {
     uint mLoopStart{0u};
     uint mLoopEnd{0u};
 
-    std::byte *mSamples{nullptr};
+    al::span<std::byte> mSamples{};
 };
 
 

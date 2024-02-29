@@ -1629,7 +1629,7 @@ NOINLINE void SetProperty(ALsource *const Source, ALCcontext *const Context, con
                 newlist.back().mSampleLen = buffer->mSampleLen;
                 newlist.back().mLoopStart = buffer->mLoopStart;
                 newlist.back().mLoopEnd = buffer->mLoopEnd;
-                newlist.back().mSamples = buffer->mData.data();
+                newlist.back().mSamples = buffer->mData;
                 newlist.back().mBuffer = buffer;
                 IncrementRef(buffer->ref);
 
@@ -3453,7 +3453,7 @@ FORCE_ALIGN void AL_APIENTRY alSourceQueueBuffersDirect(ALCcontext *context, ALu
             BufferList->mBlockAlign = buffer->mBlockAlign;
             BufferList->mSampleLen = buffer->mSampleLen;
             BufferList->mLoopEnd = buffer->mSampleLen;
-            BufferList->mSamples = buffer->mData.data();
+            BufferList->mSamples = buffer->mData;
             BufferList->mBuffer = buffer;
             IncrementRef(buffer->ref);
 

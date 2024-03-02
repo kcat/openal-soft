@@ -93,6 +93,7 @@ namespace {
  * Altivec support macros
  */
 #if defined(__ppc__) || defined(__ppc64__) || defined(__powerpc__) || defined(__powerpc64__)
+#include <altivec.h>
 using v4sf = vector float;
 constexpr uint SimdSize{4};
 force_inline v4sf vzero() noexcept { return (vector float)vec_splat_u8(0); }
@@ -119,8 +120,8 @@ force_inline void interleave2(v4sf in1, v4sf in2, v4sf &out1, v4sf &out2) noexce
 }
 force_inline void uninterleave2(v4sf in1, v4sf in2, v4sf &out1, v4sf &out2) noexcept
 {
-    v4sf tmp{vec_perm(in1, in2, (vector unsigned char)(0,1,2,3,8,9,10,11,16,17,18,19,24,25,26,27))};
-    out2 = vec_perm(in1, in2, (vector unsigned char)(4,5,6,7,12,13,14,15,20,21,22,23,28,29,30,31));
+    v4sf tmp{vec_perm(in1, in2, (vector unsigned char){0,1,2,3,8,9,10,11,16,17,18,19,24,25,26,27})};
+    out2 = vec_perm(in1, in2, (vector unsigned char){4,5,6,7,12,13,14,15,20,21,22,23,28,29,30,31});
     out1 = tmp;
 }
 
@@ -137,7 +138,7 @@ force_inline void vtranspose4(v4sf &x0, v4sf &x1, v4sf &x2, v4sf &x3) noexcept
 }
 
 force_inline v4sf vswaphl(v4sf a, v4sf b) noexcept
-{ return vec_perm(a,b, (vector unsigned char)(16,17,18,19,20,21,22,23,8,9,10,11,12,13,14,15)); }
+{ return vec_perm(a,b, (vector unsigned char){16,17,18,19,20,21,22,23,8,9,10,11,12,13,14,15}); }
 
 /*
  * SSE1 support macros

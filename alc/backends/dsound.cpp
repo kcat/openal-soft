@@ -47,6 +47,7 @@
 #include "albit.h"
 #include "alnumeric.h"
 #include "alspan.h"
+#include "alstring.h"
 #include "althrd_setname.h"
 #include "comptr.h"
 #include "core/device.h"
@@ -209,7 +210,7 @@ DSoundPlayback::~DSoundPlayback()
 FORCE_ALIGN int DSoundPlayback::mixerProc()
 {
     SetRTPriority();
-    althrd_setname(MIXER_THREAD_NAME);
+    althrd_setname(GetMixerThreadName());
 
     DSBCAPS DSBCaps{};
     DSBCaps.dwSize = sizeof(DSBCaps);
@@ -330,8 +331,7 @@ void DSoundPlayback::open(std::string_view name)
                     [&id](const DevMap &entry) -> bool { return entry.guid == id; });
             if(iter == PlaybackDevices.cend())
                 throw al::backend_exception{al::backend_error::NoDevice,
-                    "Device name \"%.*s\" not found", static_cast<int>(name.length()),
-                    name.data()};
+                    "Device name \"%.*s\" not found", al::sizei(name), name.data()};
         }
         guid = &iter->guid;
     }
@@ -602,8 +602,7 @@ void DSoundCapture::open(std::string_view name)
                     [&id](const DevMap &entry) -> bool { return entry.guid == id; });
             if(iter == CaptureDevices.cend())
                 throw al::backend_exception{al::backend_error::NoDevice,
-                    "Device name \"%.*s\" not found", static_cast<int>(name.length()),
-                    name.data()};
+                    "Device name \"%.*s\" not found", al::sizei(name), name.data()};
         }
         guid = &iter->guid;
     }
@@ -662,8 +661,7 @@ void DSoundCapture::open(std::string_view name)
         InputType.Format.cbSize = sizeof(WAVEFORMATEXTENSIBLE) - sizeof(WAVEFORMATEX);
     }
 
-    uint samples{mDevice->BufferSize};
-    samples = maxu(samples, 100 * mDevice->Frequency / 1000);
+    const uint samples{std::max(mDevice->BufferSize, mDevice->Frequency/10u)};
 
     DSCBUFFERDESC DSCBDescription{};
     DSCBDescription.dwSize = sizeof(DSCBDescription);
@@ -774,7 +772,7 @@ bool DSoundBackendFactory::init()
         }
 
 #define LOAD_FUNC(f) do {                                                     \
-    p##f = al::bit_cast<decltype(p##f)>(GetSymbol(ds_handle, #f));            \
+    p##f = reinterpret_cast<decltype(p##f)>(GetSymbol(ds_handle, #f));        \
     if(!p##f)                                                                 \
     {                                                                         \
         CloseLib(ds_handle);                                                  \

@@ -99,7 +99,7 @@ struct VoiceBufferItem {
     uint mLoopStart{0u};
     uint mLoopEnd{0u};
 
-    std::byte *mSamples{nullptr};
+    al::span<std::byte> mSamples{};
 };
 
 
@@ -138,6 +138,7 @@ struct VoiceProps {
 
     float Radius;
     float EnhWidth;
+    float Panning;
 
     /** Direct filter and auxiliary send info. */
     struct {
@@ -268,7 +269,7 @@ struct Voice {
 
     void prepare(DeviceBase *device);
 
-    static void InitMixer(std::optional<std::string> resampler);
+    static void InitMixer(std::optional<std::string> resopt);
 };
 
 extern Resampler ResamplerDefault;

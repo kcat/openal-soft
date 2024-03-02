@@ -22,20 +22,22 @@
 
 #include <algorithm>
 #include <array>
-#include <climits>
+#include <cmath>
 #include <cstdlib>
-#include <iterator>
+#include <limits>
+#include <variant>
 #include <vector>
 
 #include "alc/effects/base.h"
-#include "almalloc.h"
 #include "alnumbers.h"
 #include "alnumeric.h"
 #include "alspan.h"
+#include "core/ambidefs.h"
 #include "core/bufferline.h"
 #include "core/context.h"
-#include "core/devformat.h"
+#include "core/cubic_tables.h"
 #include "core/device.h"
+#include "core/effects/base.h"
 #include "core/effectslot.h"
 #include "core/mixer.h"
 #include "core/mixer/defs.h"
@@ -43,6 +45,7 @@
 #include "intrusive_ptr.h"
 #include "opthelpers.h"
 
+struct BufferStorage;
 
 namespace {
 
@@ -136,7 +139,7 @@ void ChorusState::update(const ContextBase *context, const EffectSlot *slot,
     const ChorusWaveform waveform, const float delay, const float depth, const float feedback,
     const float rate, int phase, const EffectTarget target)
 {
-    static constexpr int mindelay{(MaxResamplerPadding>>1) << MixerFracBits};
+    static constexpr int mindelay{MaxResamplerEdge << gCubicTable.sTableBits};
 
     /* The LFO depth is scaled to be relative to the sample delay. Clamp the
      * delay and depth to allow enough padding for resampling.
@@ -146,9 +149,8 @@ void ChorusState::update(const ContextBase *context, const EffectSlot *slot,
 
     mWaveform = waveform;
 
-    mDelay = maxi(float2int(delay*frequency*MixerFracOne + 0.5f), mindelay);
-    mDepth = minf(depth * static_cast<float>(mDelay),
-        static_cast<float>(mDelay - mindelay));
+    mDelay = std::max(float2int(std::round(delay*frequency*gCubicTable.sTableSteps)), mindelay);
+    mDepth = std::min(static_cast<float>(mDelay)*depth, static_cast<float>(mDelay-mindelay));
 
     mFeedback = feedback;
 
@@ -173,7 +175,8 @@ void ChorusState::update(const ContextBase *context, const EffectSlot *slot,
         /* Calculate LFO coefficient (number of samples per cycle). Limit the
          * max range to avoid overflow when calculating the displacement.
          */
-        const uint lfo_range{float2uint(minf(frequency/rate + 0.5f, float{INT_MAX/360 - 180}))};
+        static constexpr int range_limit{std::numeric_limits<int>::max()/360 - 180};
+        const uint lfo_range{float2uint(std::min(std::round(frequency/rate), float{range_limit}))};
 
         mLfoOffset = mLfoOffset * lfo_range / mLfoRange;
         mLfoRange = lfo_range;
@@ -213,7 +216,7 @@ void ChorusState::calcTriangleDelays(const size_t todo)
     uint offset{mLfoOffset};
     for(size_t i{0};i < todo;)
     {
-        size_t rem{minz(todo-i, lfo_range-offset)};
+        size_t rem{std::min(todo-i, size_t{lfo_range-offset})};
         do {
             mModDelays[0][i++] = gen_lfo(offset++);
         } while(--rem);
@@ -224,7 +227,7 @@ void ChorusState::calcTriangleDelays(const size_t todo)
     offset = (mLfoOffset+mLfoDisp) % lfo_range;
     for(size_t i{0};i < todo;)
     {
-        size_t rem{minz(todo-i, lfo_range-offset)};
+        size_t rem{std::min(todo-i, size_t{lfo_range-offset})};
         do {
             mModDelays[1][i++] = gen_lfo(offset++);
         } while(--rem);
@@ -254,7 +257,7 @@ void ChorusState::calcSinusoidDelays(const size_t todo)
     uint offset{mLfoOffset};
     for(size_t i{0};i < todo;)
     {
-        size_t rem{minz(todo-i, lfo_range-offset)};
+        size_t rem{std::min(todo-i, size_t{lfo_range-offset})};
         do {
             mModDelays[0][i++] = gen_lfo(offset++);
         } while(--rem);
@@ -265,7 +268,7 @@ void ChorusState::calcSinusoidDelays(const size_t todo)
     offset = (mLfoOffset+mLfoDisp) % lfo_range;
     for(size_t i{0};i < todo;)
     {
-        size_t rem{minz(todo-i, lfo_range-offset)};
+        size_t rem{std::min(todo-i, size_t{lfo_range-offset})};
         do {
             mModDelays[1][i++] = gen_lfo(offset++);
         } while(--rem);
@@ -299,16 +302,20 @@ void ChorusState::process(const size_t samplesToDo, const al::span<const FloatBu
         delaybuf[offset&bufmask] = samplesIn[0][i];
 
         // Tap for the left output.
-        uint delay{offset - (ldelays[i]>>MixerFracBits)};
-        float mu{static_cast<float>(ldelays[i]&MixerFracMask) * (1.0f/MixerFracOne)};
-        lbuffer[i] = cubic(delaybuf[(delay+1) & bufmask], delaybuf[(delay  ) & bufmask],
-            delaybuf[(delay-1) & bufmask], delaybuf[(delay-2) & bufmask], mu);
+        size_t delay{offset - (ldelays[i] >> gCubicTable.sTableBits)};
+        size_t phase{ldelays[i] & gCubicTable.sTableMask};
+        lbuffer[i] = delaybuf[(delay+1) & bufmask]*gCubicTable.getCoeff0(phase) +
+            delaybuf[(delay  ) & bufmask]*gCubicTable.getCoeff1(phase) +
+            delaybuf[(delay-1) & bufmask]*gCubicTable.getCoeff2(phase) +
+            delaybuf[(delay-2) & bufmask]*gCubicTable.getCoeff3(phase);
 
         // Tap for the right output.
-        delay = offset - (rdelays[i]>>MixerFracBits);
-        mu = static_cast<float>(rdelays[i]&MixerFracMask) * (1.0f/MixerFracOne);
-        rbuffer[i] = cubic(delaybuf[(delay+1) & bufmask], delaybuf[(delay  ) & bufmask],
-            delaybuf[(delay-1) & bufmask], delaybuf[(delay-2) & bufmask], mu);
+        delay = offset - (rdelays[i] >> gCubicTable.sTableBits);
+        phase = rdelays[i] & gCubicTable.sTableMask;
+        rbuffer[i] = delaybuf[(delay+1) & bufmask]*gCubicTable.getCoeff0(phase) +
+            delaybuf[(delay  ) & bufmask]*gCubicTable.getCoeff1(phase) +
+            delaybuf[(delay-1) & bufmask]*gCubicTable.getCoeff2(phase) +
+            delaybuf[(delay-2) & bufmask]*gCubicTable.getCoeff3(phase);
 
         // Accumulate feedback from the average delay of the taps.
         delaybuf[offset&bufmask] += delaybuf[(offset-avgdelay) & bufmask] * feedback;

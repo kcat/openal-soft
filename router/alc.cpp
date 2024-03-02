@@ -412,7 +412,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *devicename) noexcep
     if(devicename)
     {
         {
-            std::lock_guard<std::recursive_mutex> _{EnumerationLock};
+            std::lock_guard<std::recursive_mutex> enumlock{EnumerationLock};
             if(DevicesList.Names.empty())
                 std::ignore = alcGetString(nullptr, ALC_DEVICE_SPECIFIER);
             idx = GetDriverIndexForName(&DevicesList, devicename);
@@ -503,7 +503,7 @@ ALC_API ALCboolean ALC_APIENTRY alcMakeContextCurrent(ALCcontext *context) noexc
 {
     ALint idx = -1;
 
-    std::lock_guard<std::mutex> _{ContextSwitchLock};
+    std::lock_guard<std::mutex> ctxlock{ContextSwitchLock};
     if(context)
     {
         idx = ContextIfaceMap.lookupByKey(context);
@@ -714,7 +714,7 @@ ALC_API const ALCchar* ALC_APIENTRY alcGetString(ALCdevice *device, ALCenum para
 
     case ALC_DEVICE_SPECIFIER:
     {
-        std::lock_guard<std::recursive_mutex> _{EnumerationLock};
+        std::lock_guard<std::recursive_mutex> enumlock{EnumerationLock};
         DevicesList.clear();
         ALint idx{0};
         for(const auto &drv : DriverList)
@@ -735,7 +735,7 @@ ALC_API const ALCchar* ALC_APIENTRY alcGetString(ALCdevice *device, ALCenum para
 
     case ALC_ALL_DEVICES_SPECIFIER:
     {
-        std::lock_guard<std::recursive_mutex> _{EnumerationLock};
+        std::lock_guard<std::recursive_mutex> enumlock{EnumerationLock};
         AllDevicesList.clear();
         ALint idx{0};
         for(const auto &drv : DriverList)
@@ -761,7 +761,7 @@ ALC_API const ALCchar* ALC_APIENTRY alcGetString(ALCdevice *device, ALCenum para
 
     case ALC_CAPTURE_DEVICE_SPECIFIER:
     {
-        std::lock_guard<std::recursive_mutex> _{EnumerationLock};
+        std::lock_guard<std::recursive_mutex> enumlock{EnumerationLock};
         CaptureDevicesList.clear();
         ALint idx{0};
         for(const auto &drv : DriverList)
@@ -883,7 +883,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *devicename, 
     if(devicename)
     {
         {
-            std::lock_guard<std::recursive_mutex> _{EnumerationLock};
+            std::lock_guard<std::recursive_mutex> enumlock{EnumerationLock};
             if(CaptureDevicesList.Names.empty())
                 std::ignore = alcGetString(nullptr, ALC_CAPTURE_DEVICE_SPECIFIER);
             idx = GetDriverIndexForName(&CaptureDevicesList, devicename);

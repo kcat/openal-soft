@@ -29,18 +29,20 @@
 #include "albit.h"
 #include "alc/alconfig.h"
 #include "alnumeric.h"
+#include "alstring.h"
 #include "core/device.h"
 #include "core/logging.h"
 #include "dynload.h"
 #include "ringbuffer.h"
 
-#include <portaudio.h>
+#include <portaudio.h> /* NOLINT(*-duplicate-include) Not the same header. */
 
 
 namespace {
 
-/* NOLINTNEXTLINE(*-avoid-c-arrays) */
-constexpr char pa_device[]{"PortAudio Default"};
+using namespace std::string_view_literals;
+
+[[nodiscard]] constexpr auto GetDefaultName() noexcept { return "PortAudio Default"sv; }
 
 
 #ifdef HAVE_DYNLOAD
@@ -111,10 +113,10 @@ int PortPlayback::writeCallback(const void*, void *outputBuffer, unsigned long f
 void PortPlayback::open(std::string_view name)
 {
     if(name.empty())
-        name = pa_device;
-    else if(name != pa_device)
+        name = GetDefaultName();
+    else if(name != GetDefaultName())
         throw al::backend_exception{al::backend_error::NoDevice, "Device name \"%.*s\" not found",
-            static_cast<int>(name.length()), name.data()};
+            al::sizei(name), name.data()};
 
     PaStreamParameters params{};
     auto devidopt = ConfigValueInt({}, "port", "device");
@@ -212,7 +214,7 @@ bool PortPlayback::reset()
 void PortPlayback::start()
 {
     const PaError err{Pa_StartStream(mStream)};
-    if(err == paNoError)
+    if(err != paNoError)
         throw al::backend_exception{al::backend_error::DeviceError, "Failed to start playback: %s",
             Pa_GetErrorText(err)};
 }
@@ -230,7 +232,7 @@ struct PortCapture final : public BackendBase {
     ~PortCapture() override;
 
     int readCallback(const void *inputBuffer, void *outputBuffer, unsigned long framesPerBuffer,
-        const PaStreamCallbackTimeInfo *timeInfo, const PaStreamCallbackFlags statusFlags) noexcept;
+        const PaStreamCallbackTimeInfo *timeInfo, const PaStreamCallbackFlags statusFlags) const noexcept;
 
     void open(std::string_view name) override;
     void start() override;
@@ -254,7 +256,7 @@ PortCapture::~PortCapture()
 
 
 int PortCapture::readCallback(const void *inputBuffer, void*, unsigned long framesPerBuffer,
-    const PaStreamCallbackTimeInfo*, const PaStreamCallbackFlags) noexcept
+    const PaStreamCallbackTimeInfo*, const PaStreamCallbackFlags) const noexcept
 {
     std::ignore = mRing->write(inputBuffer, framesPerBuffer);
     return 0;
@@ -264,14 +266,13 @@ int PortCapture::readCallback(const void *inputBuffer, void*, unsigned long fram
 void PortCapture::open(std::string_view name)
 {
     if(name.empty())
-        name = pa_device;
-    else if(name != pa_device)
+        name = GetDefaultName();
+    else if(name != GetDefaultName())
         throw al::backend_exception{al::backend_error::NoDevice, "Device name \"%.*s\" not found",
-            static_cast<int>(name.length()), name.data()};
+            al::sizei(name), name.data()};
 
-    uint samples{mDevice->BufferSize};
-    samples = maxu(samples, 100 * mDevice->Frequency / 1000);
-    uint frame_size{mDevice->frameSizeFromFmt()};
+    const uint samples{std::max(mDevice->BufferSize, mDevice->Frequency/10u)};
+    const uint frame_size{mDevice->frameSizeFromFmt()};
 
     mRing = RingBuffer::Create(samples, frame_size, false);
 
@@ -349,8 +350,6 @@ void PortCapture::captureSamples(std::byte *buffer, uint samples)
 
 bool PortBackendFactory::init()
 {
-    PaError err;
-
 #ifdef HAVE_DYNLOAD
     if(!pa_handle)
     {
@@ -369,7 +368,7 @@ bool PortBackendFactory::init()
             return false;
 
 #define LOAD_FUNC(f) do {                                                     \
-    p##f = al::bit_cast<decltype(p##f)>(GetSymbol(pa_handle, #f));            \
+    p##f = reinterpret_cast<decltype(p##f)>(GetSymbol(pa_handle, #f));        \
     if(p##f == nullptr)                                                       \
     {                                                                         \
         CloseLib(pa_handle);                                                  \
@@ -389,7 +388,7 @@ bool PortBackendFactory::init()
         LOAD_FUNC(Pa_GetStreamInfo);
 #undef LOAD_FUNC
 
-        err = Pa_Initialize();
+        const PaError err{Pa_Initialize()};
         if(err != paNoError)
         {
             ERR("Pa_Initialize() returned an error: %s\n", Pa_GetErrorText(err));
@@ -399,7 +398,8 @@ bool PortBackendFactory::init()
         }
     }
 #else
-    if((err=Pa_Initialize()) != paNoError)
+    const PaError err{Pa_Initialize()};
+    if(err != paNoError)
     {
         ERR("Pa_Initialize() returned an error: %s\n", Pa_GetErrorText(err));
         return false;
@@ -413,16 +413,14 @@ bool PortBackendFactory::querySupport(BackendType type)
 
 std::string PortBackendFactory::probe(BackendType type)
 {
-    std::string outnames;
     switch(type)
     {
     case BackendType::Playback:
     case BackendType::Capture:
-        /* Includes null char. */
-        outnames.append(pa_device, sizeof(pa_device));
-        break;
+        /* Include null char. */
+        return std::string{GetDefaultName()} + '\0';
     }
-    return outnames;
+    return std::string{};
 }
 
 BackendPtr PortBackendFactory::createBackend(DeviceBase *device, BackendType type)

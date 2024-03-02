@@ -13,10 +13,6 @@ class MainWindow;
 class MainWindow : public QMainWindow {
     Q_OBJECT
 
-public:
-    explicit MainWindow(QWidget *parent=nullptr);
-    ~MainWindow() override;
-
 private slots:
     void cancelCloseAction();
 
@@ -60,6 +56,10 @@ private slots:
     void selectSolarisPlayback();
 
     void selectWaveOutput();
+
+public:
+    explicit MainWindow(QWidget *parent=nullptr);
+    ~MainWindow() override;
 
 private:
     std::unique_ptr<QValidator> mPeriodSizeValidator;

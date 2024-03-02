@@ -3,6 +3,7 @@
 
 #include "biquad.h"
 
+#include <array>
 #include <algorithm>
 #include <cassert>
 #include <cmath>

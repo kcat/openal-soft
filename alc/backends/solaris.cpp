@@ -41,6 +41,7 @@
 #include <functional>
 
 #include "alc/alconfig.h"
+#include "alstring.h"
 #include "althrd_setname.h"
 #include "core/device.h"
 #include "core/helpers.h"
@@ -51,8 +52,9 @@
 
 namespace {
 
-/* NOLINTNEXTLINE(*-avoid-c-arrays) */
-constexpr char solaris_device[] = "Solaris Default";
+using namespace std::string_view_literals;
+
+[[nodiscard]] constexpr auto GetDefaultName() noexcept { return "Solaris Default"sv; }
 
 std::string solaris_driver{"/dev/audio"};
 
@@ -87,7 +89,7 @@ SolarisBackend::~SolarisBackend()
 int SolarisBackend::mixerProc()
 {
     SetRTPriority();
-    althrd_setname(MIXER_THREAD_NAME);
+    althrd_setname(GetMixerThreadName());
 
     const size_t frame_step{mDevice->channelsFromFmt()};
     const size_t frame_size{mDevice->frameSizeFromFmt()};
@@ -140,10 +142,10 @@ int SolarisBackend::mixerProc()
 void SolarisBackend::open(std::string_view name)
 {
     if(name.empty())
-        name = solaris_device;
-    else if(name != solaris_device)
+        name = GetDefaultName();
+    else if(name != GetDefaultName())
         throw al::backend_exception{al::backend_error::NoDevice, "Device name \"%.*s\" not found",
-            static_cast<int>(name.length()), name.data()};
+            al::sizei(name), name.data()};
 
     int fd{::open(solaris_driver.c_str(), O_WRONLY)};
     if(fd == -1)
@@ -275,21 +277,17 @@ bool SolarisBackendFactory::querySupport(BackendType type)
 
 std::string SolarisBackendFactory::probe(BackendType type)
 {
-    std::string outnames;
     switch(type)
     {
     case BackendType::Playback:
-    {
-        struct stat buf;
-        if(stat(solaris_driver.c_str(), &buf) == 0)
-            outnames.append(solaris_device, sizeof(solaris_device));
-    }
-    break;
+        if(struct stat buf{}; stat(solaris_driver.c_str(), &buf) == 0)
+            return std::string{GetDefaultName()} + '\0';
+        break;
 
     case BackendType::Capture:
         break;
     }
-    return outnames;
+    return std::string{};
 }
 
 BackendPtr SolarisBackendFactory::createBackend(DeviceBase *device, BackendType type)

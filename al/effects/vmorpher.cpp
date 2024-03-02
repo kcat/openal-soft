@@ -20,7 +20,7 @@
 
 namespace {
 
-std::optional<VMorpherPhenome> PhenomeFromEnum(ALenum val)
+constexpr std::optional<VMorpherPhenome> PhenomeFromEnum(ALenum val) noexcept
 {
 #define HANDLE_PHENOME(x) case AL_VOCAL_MORPHER_PHONEME_ ## x:                \
     return VMorpherPhenome::x
@@ -60,7 +60,7 @@ std::optional<VMorpherPhenome> PhenomeFromEnum(ALenum val)
     return std::nullopt;
 #undef HANDLE_PHENOME
 }
-ALenum EnumFromPhenome(VMorpherPhenome phenome)
+constexpr ALenum EnumFromPhenome(VMorpherPhenome phenome)
 {
 #define HANDLE_PHENOME(x) case VMorpherPhenome::x: return AL_VOCAL_MORPHER_PHONEME_ ## x
     switch(phenome)
@@ -100,7 +100,7 @@ ALenum EnumFromPhenome(VMorpherPhenome phenome)
 #undef HANDLE_PHENOME
 }
 
-std::optional<VMorpherWaveform> WaveformFromEmum(ALenum value)
+constexpr std::optional<VMorpherWaveform> WaveformFromEmum(ALenum value) noexcept
 {
     switch(value)
     {
@@ -110,7 +110,7 @@ std::optional<VMorpherWaveform> WaveformFromEmum(ALenum value)
     }
     return std::nullopt;
 }
-ALenum EnumFromWaveform(VMorpherWaveform type)
+constexpr ALenum EnumFromWaveform(VMorpherWaveform type)
 {
     switch(type)
     {
@@ -122,7 +122,7 @@ ALenum EnumFromWaveform(VMorpherWaveform type)
         std::to_string(static_cast<int>(type))};
 }
 
-EffectProps genDefaultProps() noexcept
+constexpr EffectProps genDefaultProps() noexcept
 {
     VmorpherProps props{};
     props.Rate                 = AL_VOCAL_MORPHER_DEFAULT_RATE;

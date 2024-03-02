@@ -1,24 +1,24 @@
 #ifndef AL_AUXEFFECTSLOT_H
 #define AL_AUXEFFECTSLOT_H
 
+#include <array>
 #include <atomic>
-#include <cstddef>
+#include <cstdint>
 #include <string_view>
+#include <utility>
 
 #include "AL/al.h"
 #include "AL/alc.h"
-#include "AL/efx.h"
 
-#include "alc/device.h"
-#include "alc/effects/base.h"
 #include "almalloc.h"
-#include "atomic.h"
+#include "alnumeric.h"
+#include "core/effects/base.h"
 #include "core/effectslot.h"
 #include "intrusive_ptr.h"
-#include "vector.h"
 
 #ifdef ALSOFT_EAX
 #include <memory>
+#include "eax/api.h"
 #include "eax/call.h"
 #include "eax/effect.h"
 #include "eax/exception.h"
@@ -27,8 +27,6 @@
 #endif // ALSOFT_EAX
 
 struct ALbuffer;
-struct ALeffect;
-struct WetBuffer;
 
 #ifdef ALSOFT_EAX
 class EaxFxSlotException : public EaxException {
@@ -77,7 +75,7 @@ struct ALeffectslot {
 
     ALenum initEffect(ALuint effectId, ALenum effectType, const EffectProps &effectProps,
         ALCcontext *context);
-    void updateProps(ALCcontext *context);
+    void updateProps(ALCcontext *context) const;
 
     static void SetName(ALCcontext *context, ALuint id, std::string_view name);
 
@@ -295,8 +293,8 @@ private:
     void eax_fx_slot_set_current_defaults();
     void eax_fx_slot_set_defaults();
 
-    void eax4_fx_slot_get(const EaxCall& call, const Eax4Props& props) const;
-    void eax5_fx_slot_get(const EaxCall& call, const Eax5Props& props) const;
+    static void eax4_fx_slot_get(const EaxCall& call, const Eax4Props& props);
+    static void eax5_fx_slot_get(const EaxCall& call, const Eax5Props& props);
     void eax_fx_slot_get(const EaxCall& call) const;
     // Returns `true` if all sources should be updated, or `false` otherwise.
     bool eax_get(const EaxCall& call);
@@ -366,5 +364,21 @@ using EaxAlEffectSlotUPtr = std::unique_ptr<ALeffectslot, ALeffectslot::EaxDelet
 EaxAlEffectSlotUPtr eax_create_al_effect_slot(ALCcontext& context);
 void eax_delete_al_effect_slot(ALCcontext& context, ALeffectslot& effect_slot);
 #endif // ALSOFT_EAX
+
+struct EffectSlotSubList {
+    uint64_t FreeMask{~0_u64};
+    gsl::owner<std::array<ALeffectslot,64>*> EffectSlots{nullptr};
+
+    EffectSlotSubList() noexcept = default;
+    EffectSlotSubList(const EffectSlotSubList&) = delete;
+    EffectSlotSubList(EffectSlotSubList&& rhs) noexcept
+      : FreeMask{rhs.FreeMask}, EffectSlots{rhs.EffectSlots}
+    { rhs.FreeMask = ~0_u64; rhs.EffectSlots = nullptr; }
+    ~EffectSlotSubList();
+
+    EffectSlotSubList& operator=(const EffectSlotSubList&) = delete;
+    EffectSlotSubList& operator=(EffectSlotSubList&& rhs) noexcept
+    { std::swap(FreeMask, rhs.FreeMask); std::swap(EffectSlots, rhs.EffectSlots); return *this; }
+};
 
 #endif

@@ -2,14 +2,15 @@
 #define CORE_MIXER_DEFS_H
 
 #include <array>
+#include <cstdint>
 #include <cstdlib>
+#include <utility>
 #include <variant>
 
 #include "alspan.h"
 #include "core/bufferline.h"
-#include "core/resampler_limits.h"
+#include "core/cubic_defs.h"
 
-struct CubicCoefficients;
 struct HrtfChannelState;
 struct HrtfFilter;
 struct MixHrtfFilter;
@@ -26,7 +27,7 @@ inline constexpr int MixerFracHalf{MixerFracOne >> 1};
 inline constexpr float GainSilenceThreshold{0.00001f}; /* -100dB */
 
 
-enum class Resampler : uint8_t {
+enum class Resampler : std::uint8_t {
     Point,
     Linear,
     Cubic,
@@ -57,20 +58,21 @@ struct CubicState {
     /* Filter coefficients, and coefficient deltas. Starting at phase index 0,
      * each subsequent phase index follows contiguously.
      */
-    const CubicCoefficients *filter;
+    al::span<const CubicCoefficients,CubicPhaseCount> filter;
+    CubicState(al::span<const CubicCoefficients,CubicPhaseCount> f) : filter{f} { }
 };
 
-using InterpState = std::variant<CubicState,BsincState>;
+using InterpState = std::variant<std::monostate,CubicState,BsincState>;
 
-using ResamplerFunc = void(*)(const InterpState *state, const float *RESTRICT src, uint frac,
+using ResamplerFunc = void(*)(const InterpState *state, const float *src, uint frac,
     const uint increment, const al::span<float> dst);
 
 ResamplerFunc PrepareResampler(Resampler resampler, uint increment, InterpState *state);
 
 
 template<typename TypeTag, typename InstTag>
-void Resample_(const InterpState *state, const float *RESTRICT src, uint frac,
-    const uint increment, const al::span<float> dst);
+void Resample_(const InterpState *state, const float *src, uint frac, const uint increment,
+    const al::span<float> dst);
 
 template<typename InstTag>
 void Mix_(const al::span<const float> InSamples, const al::span<FloatBufferLine> OutBuffer,
@@ -92,12 +94,13 @@ void MixDirectHrtf_(const FloatBufferSpan LeftOut, const FloatBufferSpan RightOu
 
 /* Vectorized resampler helpers */
 template<size_t N>
-inline void InitPosArrays(uint frac, uint increment, const al::span<uint,N> frac_arr,
+constexpr void InitPosArrays(uint frac, const uint increment, const al::span<uint,N> frac_arr,
     const al::span<uint,N> pos_arr)
 {
+    static_assert(pos_arr.size() == frac_arr.size());
     pos_arr[0] = 0;
     frac_arr[0] = frac;
-    for(size_t i{1};i < N;i++)
+    for(size_t i{1};i < pos_arr.size();i++)
     {
         const uint frac_tmp{frac_arr[i-1] + increment};
         pos_arr[i] = pos_arr[i-1] + (frac_tmp>>MixerFracBits);

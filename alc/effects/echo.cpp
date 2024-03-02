@@ -22,25 +22,26 @@
 
 #include <algorithm>
 #include <array>
+#include <cmath>
 #include <cstdlib>
-#include <iterator>
-#include <tuple>
+#include <variant>
 #include <vector>
 
 #include "alc/effects/base.h"
-#include "almalloc.h"
 #include "alnumeric.h"
 #include "alspan.h"
+#include "core/ambidefs.h"
 #include "core/bufferline.h"
 #include "core/context.h"
-#include "core/devformat.h"
 #include "core/device.h"
+#include "core/effects/base.h"
 #include "core/effectslot.h"
 #include "core/filters/biquad.h"
 #include "core/mixer.h"
 #include "intrusive_ptr.h"
 #include "opthelpers.h"
 
+struct BufferStorage;
 
 namespace {
 
@@ -101,19 +102,20 @@ void EchoState::update(const ContextBase *context, const EffectSlot *slot,
     const DeviceBase *device{context->mDevice};
     const auto frequency = static_cast<float>(device->Frequency);
 
-    mDelayTap[0] = maxu(float2uint(props.Delay*frequency + 0.5f), 1);
-    mDelayTap[1] = float2uint(props.LRDelay*frequency + 0.5f) + mDelayTap[0];
+    mDelayTap[0] = std::max(float2uint(std::round(props.Delay*frequency)), 1u);
+    mDelayTap[1] = float2uint(std::round(props.LRDelay*frequency)) + mDelayTap[0];
 
-    const float gainhf{maxf(1.0f - props.Damping, 0.0625f)}; /* Limit -24dB */
+    const float gainhf{std::max(1.0f - props.Damping, 0.0625f)}; /* Limit -24dB */
     mFilter.setParamsFromSlope(BiquadType::HighShelf, LowpassFreqRef/frequency, gainhf, 1.0f);
 
     mFeedGain = props.Feedback;
 
-    /* Convert echo spread (where 0 = center, +/-1 = sides) to angle. */
-    const float angle{std::asin(props.Spread)};
+    /* Convert echo spread (where 0 = center, +/-1 = sides) to a 2D vector. */
+    const float x{props.Spread}; /* +x = left */
+    const float z{std::sqrt(1.0f - x*x)};
 
-    const auto coeffs0 = CalcAngleCoeffs(-angle, 0.0f, 0.0f);
-    const auto coeffs1 = CalcAngleCoeffs( angle, 0.0f, 0.0f);
+    const auto coeffs0 = CalcAmbiCoeffs( x, 0.0f, z, 0.0f);
+    const auto coeffs1 = CalcAmbiCoeffs(-x, 0.0f, z, 0.0f);
 
     mOutTarget = target.Main->Buffer;
     ComputePanGains(target.Main, coeffs0, slot->Gain, mGains[0].Target);
@@ -138,7 +140,7 @@ void EchoState::process(const size_t samplesToDo, const al::span<const FloatBuff
         tap1 &= mask;
         tap2 &= mask;
 
-        size_t td{minz(mask+1 - maxz(offset, maxz(tap1, tap2)), samplesToDo-i)};
+        size_t td{std::min(mask+1 - std::max(offset, std::max(tap1, tap2)), samplesToDo-i)};
         do {
             /* Feed the delay buffer's input first. */
             delaybuf[offset] = samplesIn[0][i];

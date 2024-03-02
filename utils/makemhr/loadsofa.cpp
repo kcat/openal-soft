@@ -35,6 +35,7 @@
 #include <numeric>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <thread>
 #include <vector>
 
@@ -47,6 +48,9 @@
 #include "mysofa.h"
 
 
+namespace {
+
+using namespace std::string_view_literals;
 using uint = unsigned int;
 
 /* Attempts to produce a compatible layout.  Most data sets tend to be
@@ -55,7 +59,7 @@ using uint = unsigned int;
  * possible.  Those sets that contain purely random measurements or use
  * different major axes will fail.
  */
-static bool PrepareLayout(const uint m, const float *xyzs, HrirDataT *hData)
+bool PrepareLayout(const uint m, const float *xyzs, HrirDataT *hData)
 {
     fprintf(stdout, "Detecting compatible layout...\n");
 
@@ -92,7 +96,6 @@ static bool PrepareLayout(const uint m, const float *xyzs, HrirDataT *hData)
     return PrepareHrirData(al::span{distances}.first(fi), evCounts, azs, hData);
 }
 
-
 float GetSampleRate(MYSOFA_HRTF *sofaHrtf)
 {
     const char *srate_dim{nullptr};
@@ -101,7 +104,7 @@ float GetSampleRate(MYSOFA_HRTF *sofaHrtf)
     MYSOFA_ATTRIBUTE *srate_attrs{srate_array->attributes};
     while(srate_attrs)
     {
-        if(std::string{"DIMENSION_LIST"} == srate_attrs->name)
+        if("DIMENSION_LIST"sv == srate_attrs->name)
         {
             if(srate_dim)
             {
@@ -110,7 +113,7 @@ float GetSampleRate(MYSOFA_HRTF *sofaHrtf)
             }
             srate_dim = srate_attrs->value;
         }
-        else if(std::string{"Units"} == srate_attrs->name)
+        else if("Units"sv == srate_attrs->name)
         {
             if(srate_units)
             {
@@ -129,7 +132,7 @@ float GetSampleRate(MYSOFA_HRTF *sofaHrtf)
         fprintf(stderr, "Missing sample rate dimensions\n");
         return 0.0f;
     }
-    if(srate_dim != std::string{"I"})
+    if(srate_dim != "I"sv)
     {
         fprintf(stderr, "Unsupported sample rate dimensions: %s\n", srate_dim);
         return 0.0f;
@@ -139,7 +142,7 @@ float GetSampleRate(MYSOFA_HRTF *sofaHrtf)
         fprintf(stderr, "Missing sample rate unit type\n");
         return 0.0f;
     }
-    if(srate_units != std::string{"hertz"})
+    if(srate_units != "hertz"sv)
     {
         fprintf(stderr, "Unsupported sample rate unit type: %s\n", srate_units);
         return 0.0f;
@@ -167,7 +170,7 @@ DelayType PrepareDelay(MYSOFA_HRTF *sofaHrtf)
     MYSOFA_ATTRIBUTE *delay_attrs{delay_array->attributes};
     while(delay_attrs)
     {
-        if(std::string{"DIMENSION_LIST"} == delay_attrs->name)
+        if("DIMENSION_LIST"sv == delay_attrs->name)
         {
             if(delay_dim)
             {
@@ -186,9 +189,9 @@ DelayType PrepareDelay(MYSOFA_HRTF *sofaHrtf)
         fprintf(stderr, "Missing delay dimensions\n");
         return DelayType::None;
     }
-    if(delay_dim == std::string{"I,R"})
+    if(delay_dim == "I,R"sv)
         return DelayType::I_R;
-    else if(delay_dim == std::string{"M,R"})
+    if(delay_dim == "M,R"sv)
         return DelayType::M_R;
 
     fprintf(stderr, "Unsupported delay dimensions: %s\n", delay_dim);
@@ -202,7 +205,7 @@ bool CheckIrData(MYSOFA_HRTF *sofaHrtf)
     MYSOFA_ATTRIBUTE *ir_attrs{ir_array->attributes};
     while(ir_attrs)
     {
-        if(std::string{"DIMENSION_LIST"} == ir_attrs->name)
+        if("DIMENSION_LIST"sv == ir_attrs->name)
         {
             if(ir_dim)
             {
@@ -221,7 +224,7 @@ bool CheckIrData(MYSOFA_HRTF *sofaHrtf)
         fprintf(stderr, "Missing IR dimensions\n");
         return false;
     }
-    if(ir_dim != std::string{"M,R,N"})
+    if(ir_dim != "M,R,N"sv)
     {
         fprintf(stderr, "Unsupported IR dimensions: %s\n", ir_dim);
         return false;
@@ -231,11 +234,11 @@ bool CheckIrData(MYSOFA_HRTF *sofaHrtf)
 
 
 /* Calculate the onset time of a HRIR. */
-static constexpr int OnsetRateMultiple{10};
-static double CalcHrirOnset(PPhaseResampler &rs, const uint rate, const uint n,
+constexpr int OnsetRateMultiple{10};
+double CalcHrirOnset(PPhaseResampler &rs, const uint rate, const uint n,
     al::span<double> upsampled, const double *hrir)
 {
-    rs.process(n, hrir, static_cast<uint>(upsampled.size()), upsampled.data());
+    rs.process({hrir, n}, upsampled);
 
     auto abs_lt = [](const double &lhs, const double &rhs) -> bool
     { return std::abs(lhs) < std::abs(rhs); };
@@ -245,7 +248,7 @@ static double CalcHrirOnset(PPhaseResampler &rs, const uint rate, const uint n,
 }
 
 /* Calculate the magnitude response of a HRIR. */
-static void CalcHrirMagnitude(const uint points, const uint n, al::span<complex_d> h, double *hrir)
+void CalcHrirMagnitude(const uint points, const uint n, al::span<complex_d> h, double *hrir)
 {
     auto iter = std::copy_n(hrir, points, h.begin());
     std::fill(iter, h.end(), complex_d{0.0, 0.0});
@@ -254,7 +257,7 @@ static void CalcHrirMagnitude(const uint points, const uint n, al::span<complex_
     MagnitudeResponse(n, h.data(), hrir);
 }
 
-static bool LoadResponses(MYSOFA_HRTF *sofaHrtf, HrirDataT *hData, const DelayType delayType,
+bool LoadResponses(MYSOFA_HRTF *sofaHrtf, HrirDataT *hData, const DelayType delayType,
     const uint outRate)
 {
     std::atomic<uint> loaded_count{0u};
@@ -325,8 +328,8 @@ static bool LoadResponses(MYSOFA_HRTF *sofaHrtf, HrirDataT *hData, const DelayTy
                 else
                 {
                     std::copy_n(&sofaHrtf->DataIR.values[(size_t{si}*sofaHrtf->R + ti)*sofaHrtf->N],
-                        sofaHrtf->N, restmp.data());
-                    resampler->process(sofaHrtf->N, restmp.data(), hData->mIrSize, azd->mIrs[ti]);
+                        sofaHrtf->N, restmp.begin());
+                    resampler->process(restmp, {azd->mIrs[ti], hData->mIrSize});
                 }
             }
 
@@ -405,6 +408,8 @@ struct MagCalculator {
         }
     }
 };
+
+} // namespace
 
 bool LoadSofaFile(const char *filename, const uint numThreads, const uint fftSize,
     const uint truncSize, const uint outRate, const ChannelModeT chanMode, HrirDataT *hData)

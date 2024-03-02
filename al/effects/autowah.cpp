@@ -20,7 +20,7 @@
 
 namespace {
 
-EffectProps genDefaultProps() noexcept
+constexpr EffectProps genDefaultProps() noexcept
 {
     AutowahProps props{};
     props.AttackTime = AL_AUTOWAH_DEFAULT_ATTACK_TIME;

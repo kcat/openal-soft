@@ -16,7 +16,7 @@
 
 namespace {
 
-EffectProps genDefaultProps() noexcept
+constexpr EffectProps genDefaultProps() noexcept
 {
     CompressorProps props{};
     props.OnOff = AL_COMPRESSOR_DEFAULT_ONOFF;

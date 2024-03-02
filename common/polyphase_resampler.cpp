@@ -3,18 +3,19 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstddef>
 #include <numeric>
-#include <stdexcept>
+#include <tuple>
 
 #include "alnumbers.h"
 #include "opthelpers.h"
 
 
+using uint = unsigned int;
+
 namespace {
 
 constexpr double Epsilon{1e-9};
-
-using uint = unsigned int;
 
 #if __cpp_lib_math_special_functions >= 201603L
 using std::cyl_bessel_i;
@@ -150,17 +151,9 @@ void PPhaseResampler::init(const uint srcRate, const uint dstRate)
      * ends before the nyquist (0.5).  Both are scaled by the downsampling
      * factor.
      */
-    double cutoff, width;
-    if(mP > mQ)
-    {
-        cutoff = 0.475 / mP;
-        width = 0.05 / mP;
-    }
-    else
-    {
-        cutoff = 0.475 / mQ;
-        width = 0.05 / mQ;
-    }
+    const auto [cutoff, width] = (mP > mQ) ? std::make_tuple(0.475 / mP, 0.05 / mP)
+        : std::make_tuple(0.475 / mQ, 0.05 / mQ);
+
     // A rejection of -180 dB is used for the stop band. Round up when
     // calculating the left offset to avoid increasing the transition width.
     const uint l{(CalcKaiserOrder(180.0, width)+1) / 2};
@@ -175,54 +168,53 @@ void PPhaseResampler::init(const uint srcRate, const uint dstRate)
 
 // Perform the upsample-filter-downsample resampling operation using a
 // polyphase filter implementation.
-void PPhaseResampler::process(const uint inN, const double *in, const uint outN, double *out)
+void PPhaseResampler::process(const al::span<const double> in, const al::span<double> out)
 {
-    if(outN == 0) UNLIKELY
+    if(out.empty()) UNLIKELY
         return;
 
     // Handle in-place operation.
     std::vector<double> workspace;
-    double *work{out};
-    if(work == in) UNLIKELY
+    al::span work{out};
+    if(work.data() == in.data()) UNLIKELY
     {
-        workspace.resize(outN);
-        work = workspace.data();
+        workspace.resize(out.size());
+        work = workspace;
     }
 
     // Resample the input.
     const uint p{mP}, q{mQ}, m{mM}, l{mL};
     const double *f{mF.data()};
-    for(uint i{0};i < outN;i++)
+    for(uint i{0};i < out.size();i++)
     {
         // Input starts at l to compensate for the filter delay.  This will
         // drop any build-up from the first half of the filter.
-        size_t j_f{(l + q*i) % p};
-        size_t j_s{(l + q*i) / p};
+        std::size_t j_f{(l + q*i) % p};
+        std::size_t j_s{(l + q*i) / p};
 
-        // Only take input when 0 <= j_s < inN.
+        // Only take input when 0 <= j_s < in.size().
         double r{0.0};
         if(j_f < m) LIKELY
         {
-            size_t filt_len{(m-j_f+p-1) / p};
-            if(j_s+1 > inN) LIKELY
+            std::size_t filt_len{(m-j_f+p-1) / p};
+            if(j_s+1 > in.size()) LIKELY
             {
-                size_t skip{std::min<size_t>(j_s+1 - inN, filt_len)};
+                std::size_t skip{std::min(j_s+1 - in.size(), filt_len)};
                 j_f += p*skip;
                 j_s -= skip;
                 filt_len -= skip;
             }
-            if(size_t todo{std::min<size_t>(j_s+1, filt_len)}) LIKELY
+            std::size_t todo{std::min(j_s+1, filt_len)};
+            while(todo)
             {
-                do {
-                    r += f[j_f] * in[j_s];
-                    j_f += p;
-                    --j_s;
-                } while(--todo);
+                r += f[j_f] * in[j_s];
+                j_f += p; --j_s;
+                --todo;
             }
         }
         work[i] = r;
     }
     // Clean up after in-place operation.
-    if(work != out)
-        std::copy_n(work, outN, out);
+    if(work.data() != out.data())
+        std::copy(work.cbegin(), work.cend(), out.begin());
 }

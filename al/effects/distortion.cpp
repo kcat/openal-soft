@@ -16,7 +16,7 @@
 
 namespace {
 
-EffectProps genDefaultProps() noexcept
+constexpr EffectProps genDefaultProps() noexcept
 {
     DistortionProps props{};
     props.Edge = AL_DISTORTION_DEFAULT_EDGE;

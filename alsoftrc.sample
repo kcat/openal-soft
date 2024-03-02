@@ -179,7 +179,7 @@
 #  Selects the default resampler used when mixing sources. Valid values are:
 #  point - nearest sample, no interpolation
 #  linear - extrapolates samples using a linear slope between samples
-#  cubic - extrapolates samples using a Catmull-Rom spline
+#  cubic - extrapolates samples using a 4-point Gaussian filter
 #  bsinc12 - extrapolates samples using a band-limited Sinc filter (varying
 #            between 12 and 24 points, with anti-aliasing)
 #  fast_bsinc12 - same as bsinc12, except without interpolation between down-

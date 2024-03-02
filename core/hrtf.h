@@ -6,6 +6,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include "almalloc.h"
@@ -18,7 +19,7 @@
 #include "mixer/hrtfdefs.h"
 
 
-struct HrtfStore {
+struct alignas(16) HrtfStore {
     std::atomic<uint> mRef;
 
     uint mSampleRate : 24;
@@ -42,12 +43,19 @@ struct HrtfStore {
     const ubyte2 *mDelays;
 
     void getCoeffs(float elevation, float azimuth, float distance, float spread, HrirArray &coeffs,
-        const al::span<uint,2> delays);
+        const al::span<uint,2> delays) const;
 
     void add_ref();
     void dec_ref();
 
-    DEF_PLACE_NEWDEL
+    void *operator new(size_t) = delete;
+    void *operator new[](size_t) = delete;
+    void operator delete[](void*) noexcept = delete;
+
+    void operator delete(gsl::owner<void*> block, void*) noexcept
+    { ::operator delete[](block, std::align_val_t{alignof(HrtfStore)}); }
+    void operator delete(gsl::owner<void*> block) noexcept
+    { ::operator delete[](block, std::align_val_t{alignof(HrtfStore)}); }
 };
 using HrtfStorePtr = al::intrusive_ptr<HrtfStore>;
 
@@ -86,6 +94,6 @@ struct DirectHrtfState {
 
 
 std::vector<std::string> EnumerateHrtf(std::optional<std::string> pathopt);
-HrtfStorePtr GetLoadedHrtf(const std::string &name, const uint devrate);
+HrtfStorePtr GetLoadedHrtf(const std::string_view name, const uint devrate);
 
 #endif /* CORE_HRTF_H */

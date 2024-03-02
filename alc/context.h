@@ -1,6 +1,7 @@
 #ifndef ALC_CONTEXT_H
 #define ALC_CONTEXT_H
 
+#include <array>
 #include <atomic>
 #include <deque>
 #include <memory>
@@ -19,6 +20,7 @@
 #include "al/listener.h"
 #include "almalloc.h"
 #include "alnumeric.h"
+#include "althreads.h"
 #include "atomic.h"
 #include "core/context.h"
 #include "inprogext.h"
@@ -36,6 +38,8 @@ struct ALeffect;
 struct ALeffectslot;
 struct ALsource;
 struct DebugGroup;
+struct EffectSlotSubList;
+struct SourceSubList;
 
 enum class DebugSource : uint8_t;
 enum class DebugType : uint8_t;
@@ -68,37 +72,6 @@ struct DebugLogEntry {
 };
 
 
-struct SourceSubList {
-    uint64_t FreeMask{~0_u64};
-    ALsource *Sources{nullptr}; /* 64 */
-
-    SourceSubList() noexcept = default;
-    SourceSubList(const SourceSubList&) = delete;
-    SourceSubList(SourceSubList&& rhs) noexcept : FreeMask{rhs.FreeMask}, Sources{rhs.Sources}
-    { rhs.FreeMask = ~0_u64; rhs.Sources = nullptr; }
-    ~SourceSubList();
-
-    SourceSubList& operator=(const SourceSubList&) = delete;
-    SourceSubList& operator=(SourceSubList&& rhs) noexcept
-    { std::swap(FreeMask, rhs.FreeMask); std::swap(Sources, rhs.Sources); return *this; }
-};
-
-struct EffectSlotSubList {
-    uint64_t FreeMask{~0_u64};
-    ALeffectslot *EffectSlots{nullptr}; /* 64 */
-
-    EffectSlotSubList() noexcept = default;
-    EffectSlotSubList(const EffectSlotSubList&) = delete;
-    EffectSlotSubList(EffectSlotSubList&& rhs) noexcept
-      : FreeMask{rhs.FreeMask}, EffectSlots{rhs.EffectSlots}
-    { rhs.FreeMask = ~0_u64; rhs.EffectSlots = nullptr; }
-    ~EffectSlotSubList();
-
-    EffectSlotSubList& operator=(const EffectSlotSubList&) = delete;
-    EffectSlotSubList& operator=(EffectSlotSubList&& rhs) noexcept
-    { std::swap(FreeMask, rhs.FreeMask); std::swap(EffectSlots, rhs.EffectSlots); return *this; }
-};
-
 struct ALCcontext : public al::intrusive_ref<ALCcontext>, ContextBase {
     const al::intrusive_ptr<ALCdevice> mALDevice;
 
@@ -108,7 +81,7 @@ struct ALCcontext : public al::intrusive_ref<ALCcontext>, ContextBase {
 
     std::mutex mPropLock;
 
-    std::atomic<ALenum> mLastError{AL_NO_ERROR};
+    al::tss<ALenum> mLastThreadError{AL_NO_ERROR};
 
     const ContextFlagBitset mContextFlags;
     std::atomic<bool> mDebugEnabled{false};
@@ -219,7 +192,14 @@ private:
     class ThreadCtx {
     public:
         ~ThreadCtx();
+        /* NOLINTBEGIN(readability-convert-member-functions-to-static)
+         * This should be non-static to invoke construction of the thread-local
+         * sThreadContext, so that it's destructor gets run at thread exit to
+         * clear sLocalContext (which isn't a member variable to make read
+         * access efficient).
+         */
         void set(ALCcontext *ctx) const noexcept { sLocalContext = ctx; }
+        /* NOLINTEND(readability-convert-member-functions-to-static) */
     };
     static thread_local ThreadCtx sThreadContext;
 
@@ -231,7 +211,6 @@ public:
     static ALeffect sDefaultEffect;
 
 #ifdef ALSOFT_EAX
-public:
     bool hasEax() const noexcept { return mEaxIsInitialized; }
     bool eaxIsCapable() const noexcept;
 
@@ -475,7 +454,7 @@ private:
         typename TMemberResult,
         typename TProps,
         typename TState>
-    void eax_defer(const EaxCall& call, TState& state, TMemberResult TProps::*member) noexcept
+    void eax_defer(const EaxCall& call, TState& state, TMemberResult TProps::*member)
     {
         const auto& src = call.get_value<ContextException, const TMemberResult>();
         TValidator{}(src);
@@ -558,7 +537,7 @@ private:
 
 using ContextRef = al::intrusive_ptr<ALCcontext>;
 
-ContextRef GetContextRef();
+ContextRef GetContextRef() noexcept;
 
 void UpdateContextProps(ALCcontext *context);
 
@@ -567,19 +546,16 @@ extern bool TrapALError;
 
 
 #ifdef ALSOFT_EAX
-ALenum AL_APIENTRY EAXSet(
-    const GUID* property_set_id,
-    ALuint property_id,
-    ALuint property_source_id,
-    ALvoid* property_value,
-    ALuint property_value_size) noexcept;
+/* NOLINTBEGIN(readability-inconsistent-declaration-parameter-name)
+ * These functions are defined using macros to forward them in a generic way to
+ * implementation functions, which gives the parameters generic names.
+ */
+ALenum AL_APIENTRY EAXSet(const GUID *property_set_id, ALuint property_id,
+    ALuint property_source_id, ALvoid *property_value, ALuint property_value_size) noexcept;
 
-ALenum AL_APIENTRY EAXGet(
-    const GUID* property_set_id,
-    ALuint property_id,
-    ALuint property_source_id,
-    ALvoid* property_value,
-    ALuint property_value_size) noexcept;
+ALenum AL_APIENTRY EAXGet(const GUID *property_set_id, ALuint property_id,
+    ALuint property_source_id, ALvoid *property_value, ALuint property_value_size) noexcept;
+/* NOLINTEND(readability-inconsistent-declaration-parameter-name) */
 #endif // ALSOFT_EAX
 
 #endif /* ALC_CONTEXT_H */

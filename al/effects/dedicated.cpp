@@ -12,14 +12,14 @@
 
 namespace {
 
-EffectProps genDefaultDialogProps() noexcept
+constexpr EffectProps genDefaultDialogProps() noexcept
 {
     DedicatedDialogProps props{};
     props.Gain = 1.0f;
     return props;
 }
 
-EffectProps genDefaultLfeProps() noexcept
+constexpr EffectProps genDefaultLfeProps() noexcept
 {
     DedicatedLfeProps props{};
     props.Gain = 1.0f;

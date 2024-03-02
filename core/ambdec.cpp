@@ -8,12 +8,13 @@
 #include <cstdarg>
 #include <cstddef>
 #include <cstdio>
+#include <filesystem>
+#include <fstream>
 #include <iterator>
 #include <sstream>
 #include <string>
 
 #include "albit.h"
-#include "alfstream.h"
 #include "alspan.h"
 #include "opthelpers.h"
 
@@ -53,10 +54,11 @@ std::optional<std::string> make_error(size_t linenum, const char *fmt, ...)
     auto &str = ret.emplace();
 
     str.resize(256);
-    int printed{std::snprintf(const_cast<char*>(str.data()), str.length(), "Line %zu: ", linenum)};
+    int printed{std::snprintf(str.data(), str.length(), "Line %zu: ", linenum)};
     if(printed < 0) printed = 0;
     auto plen = std::min(static_cast<size_t>(printed), str.length());
 
+    /* NOLINTBEGIN(*-array-to-pointer-decay) */
     std::va_list args, args2;
     va_start(args, fmt);
     va_copy(args2, args);
@@ -68,6 +70,7 @@ std::optional<std::string> make_error(size_t linenum, const char *fmt, ...)
     }
     va_end(args2);
     va_end(args);
+    /* NOLINTEND(*-array-to-pointer-decay) */
 
     return ret;
 }
@@ -79,7 +82,7 @@ AmbDecConf::~AmbDecConf() = default;
 
 std::optional<std::string> AmbDecConf::load(const char *fname) noexcept
 {
-    al::ifstream f{fname};
+    std::ifstream f{std::filesystem::u8path(fname)};
     if(!f.is_open())
         return std::string("Failed to open file \"")+fname+"\"";
 

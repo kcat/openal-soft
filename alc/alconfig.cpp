@@ -31,8 +31,11 @@
 #endif
 
 #include <algorithm>
+#include <array>
 #include <cctype>
 #include <cstdlib>
+#include <filesystem>
+#include <fstream>
 #include <istream>
 #include <limits>
 #include <string>
@@ -40,7 +43,7 @@
 #include <utility>
 #include <vector>
 
-#include "alfstream.h"
+#include "almalloc.h"
 #include "alstring.h"
 #include "core/helpers.h"
 #include "core/logging.h"
@@ -55,6 +58,14 @@ using namespace winrt;
 #endif
 
 namespace {
+
+using namespace std::string_view_literals;
+
+#if defined(_WIN32) && !defined(_GAMING_XBOX) && !defined(ALSOFT_UWP)
+struct CoTaskMemDeleter {
+    void operator()(void *mem) const { CoTaskMemFree(mem); }
+};
+#endif
 
 struct ConfigEntry {
     std::string key;
@@ -96,6 +107,11 @@ std::string expdup(std::string_view str)
         }
 
         str.remove_prefix(1);
+        if(str.empty())
+        {
+            output += '$';
+            break;
+        }
         if(str.front() == '$')
         {
             output += '$';
@@ -107,9 +123,9 @@ std::string expdup(std::string_view str)
         if(hasbraces) str.remove_prefix(1);
 
         size_t envend{0};
-        while(std::isalnum(str[envend]) || str[envend] == '_')
+        while(envend < str.size() && (std::isalnum(str[envend]) || str[envend] == '_'))
             ++envend;
-        if(hasbraces && str[envend] != '}')
+        if(hasbraces && (envend == str.size() || str[envend] != '}'))
             continue;
         const std::string envname{str.substr(0, envend)};
         if(hasbraces) ++envend;
@@ -154,11 +170,9 @@ void LoadConfigFromFile(std::istream &f)
             }
 
             auto section = std::string_view{buffer}.substr(1, endpos-1);
-            auto generalName = std::string_view{"general"};
 
             curSection.clear();
-            if(section.size() != generalName.size()
-                || al::strncasecmp(section.data(), generalName.data(), section.size()) != 0)
+            if(al::case_compare(section, "general"sv) != 0)
             {
                 do {
                     auto nextp = section.find('%');
@@ -171,7 +185,8 @@ void LoadConfigFromFile(std::istream &f)
                     curSection += section.substr(0, nextp);
                     section.remove_prefix(nextp);
 
-                    if(((section[1] >= '0' && section[1] <= '9') ||
+                    if(section.size() > 2 &&
+                       ((section[1] >= '0' && section[1] <= '9') ||
                         (section[1] >= 'a' && section[1] <= 'f') ||
                         (section[1] >= 'A' && section[1] <= 'F')) &&
                        ((section[2] >= '0' && section[2] <= '9') ||
@@ -194,7 +209,7 @@ void LoadConfigFromFile(std::istream &f)
                         curSection += static_cast<char>(b);
                         section.remove_prefix(3);
                     }
-                    else if(section[1] == '%')
+                    else if(section.size() > 1 && section[1] == '%')
                     {
                         curSection += '%';
                         section.remove_prefix(2);
@@ -257,8 +272,7 @@ void LoadConfigFromFile(std::istream &f)
             }
         }
 
-        TRACE(" setting '%s' = '%.*s'\n", fullKey.c_str(), static_cast<int>(valpart.size()),
-            valpart.data());
+        TRACE(" setting '%s' = '%.*s'\n", fullKey.c_str(), al::sizei(valpart), valpart.data());
 
         /* Check if we already have this option set */
         auto find_key = [&fullKey](const ConfigEntry &entry) -> bool
@@ -283,33 +297,21 @@ const char *GetConfigValue(const std::string_view devName, const std::string_vie
     if(keyName.empty())
         return nullptr;
 
-    auto generalName = std::string_view{"general"};
     std::string key;
-    if(!blockName.empty() && (blockName.size() != generalName.size() ||
-        al::strncasecmp(blockName.data(), generalName.data(), blockName.size()) != 0))
+    if(!blockName.empty() && al::case_compare(blockName, "general"sv) != 0)
     {
         key = blockName;
-        if(!devName.empty())
-        {
-            key += '/';
-            key += devName;
-        }
         key += '/';
-        key += keyName;
     }
-    else
+    if(!devName.empty())
     {
-        if(!devName.empty())
-        {
-            key = devName;
-            key += '/';
-        }
-        key += keyName;
+        key += devName;
+        key += '/';
     }
+    key += keyName;
 
     auto iter = std::find_if(ConfOpts.cbegin(), ConfOpts.cend(),
-        [&key](const ConfigEntry &entry) -> bool
-        { return entry.key == key; });
+        [&key](const ConfigEntry &entry) -> bool { return entry.key == key; });
     if(iter != ConfOpts.cend())
     {
         TRACE("Found option %s = \"%s\"\n", key.c_str(), iter->value.c_str());
@@ -329,42 +331,48 @@ const char *GetConfigValue(const std::string_view devName, const std::string_vie
 #ifdef _WIN32
 void ReadALConfig()
 {
+    namespace fs = std::filesystem;
+    fs::path path;
+
 #if !defined(_GAMING_XBOX)
     {
 #if !defined(ALSOFT_UWP)
-        WCHAR buffer[MAX_PATH];
-        if (!SHGetSpecialFolderPathW(nullptr, buffer, CSIDL_APPDATA, FALSE))
-            return;
+        std::unique_ptr<WCHAR,CoTaskMemDeleter> bufstore;
+        const HRESULT hr{SHGetKnownFolderPath(FOLDERID_RoamingAppData, KF_FLAG_DONT_UNEXPAND,
+            nullptr, al::out_ptr(bufstore))};
+        if(SUCCEEDED(hr))
+        {
+            const std::wstring_view buffer{bufstore.get()};
 #else
         winrt::Windows::Storage::ApplicationDataContainer localSettings = winrt::Windows::Storage::ApplicationData::Current().LocalSettings();
-        auto buffer = Windows::Storage::ApplicationData::Current().RoamingFolder().Path();
+        auto bufstore = Windows::Storage::ApplicationData::Current().RoamingFolder().Path();
+        std::wstring_view buffer{bufstore};
+        {
 #endif
-        std::string filepath{wstr_to_utf8(buffer)};
-        filepath += "\\alsoft.ini";
+            path = fs::path{buffer};
+            path /= L"alsoft.ini";
 
-        TRACE("Loading config %s...\n", filepath.c_str());
-        al::ifstream f{filepath};
-        if(f.is_open())
-            LoadConfigFromFile(f);
+            TRACE("Loading config %s...\n", path.u8string().c_str());
+            if(std::ifstream f{path}; f.is_open())
+                LoadConfigFromFile(f);
+        }
     }
 #endif
 
-
-    std::string ppath{GetProcBinary().path};
-    if(!ppath.empty())
+    path = fs::u8path(GetProcBinary().path);
+    if(!path.empty())
     {
-        ppath += "\\alsoft.ini";
-        TRACE("Loading config %s...\n", ppath.c_str());
-        al::ifstream f{ppath};
-        if(f.is_open())
+        path /= "alsoft.ini";
+        TRACE("Loading config %s...\n", path.u8string().c_str());
+        if(std::ifstream f{path}; f.is_open())
             LoadConfigFromFile(f);
     }
 
     if(auto confpath = al::getenv(L"ALSOFT_CONF"))
     {
-        TRACE("Loading config %s...\n", wstr_to_utf8(confpath->c_str()).c_str());
-        al::ifstream f{*confpath};
-        if(f.is_open())
+        path = *confpath;
+        TRACE("Loading config %s...\n", path.u8string().c_str());
+        if(std::ifstream f{path}; f.is_open())
             LoadConfigFromFile(f);
     }
 }
@@ -373,13 +381,12 @@ void ReadALConfig()
 
 void ReadALConfig()
 {
-    const char *str{"/etc/openal/alsoft.conf"};
+    namespace fs = std::filesystem;
+    fs::path path{"/etc/openal/alsoft.conf"};
 
-    TRACE("Loading config %s...\n", str);
-    al::ifstream f{str};
-    if(f.is_open())
+    TRACE("Loading config %s...\n", path.u8string().c_str());
+    if(std::ifstream f{path}; f.is_open())
         LoadConfigFromFile(f);
-    f.close();
 
     std::string confpaths{al::getenv("XDG_CONFIG_DIRS").value_or("/etc/xdg")};
     /* Go through the list in reverse, since "the order of base directories
@@ -387,48 +394,43 @@ void ReadALConfig()
      * important". Ergo, we need to load the settings from the later dirs
      * first so that the settings in the earlier dirs override them.
      */
-    std::string fname;
     while(!confpaths.empty())
     {
-        auto next = confpaths.find_last_of(':');
+        auto next = confpaths.rfind(':');
         if(next < confpaths.length())
         {
-            fname = confpaths.substr(next+1);
+            path = fs::path{std::string_view{confpaths}.substr(next+1)}.lexically_normal();
             confpaths.erase(next);
         }
         else
         {
-            fname = confpaths;
+            path = fs::path{confpaths}.lexically_normal();
             confpaths.clear();
         }
 
-        if(fname.empty() || fname.front() != '/')
-            WARN("Ignoring XDG config dir: %s\n", fname.c_str());
+        if(!path.is_absolute())
+            WARN("Ignoring XDG config dir: %s\n", path.u8string().c_str());
         else
         {
-            if(fname.back() != '/') fname += "/alsoft.conf";
-            else fname += "alsoft.conf";
+            path /= "alsoft.conf";
 
-            TRACE("Loading config %s...\n", fname.c_str());
-            f = al::ifstream{fname};
-            if(f.is_open())
+            TRACE("Loading config %s...\n", path.u8string().c_str());
+            if(std::ifstream f{path}; f.is_open())
                 LoadConfigFromFile(f);
         }
-        fname.clear();
     }
 
 #ifdef __APPLE__
     CFBundleRef mainBundle = CFBundleGetMainBundle();
     if(mainBundle)
     {
-        unsigned char fileName[PATH_MAX];
-        CFURLRef configURL;
+        CFURLRef configURL{CFBundleCopyResourceURL(mainBundle, CFSTR(".alsoftrc"), CFSTR(""),
+            nullptr)};
 
-        if((configURL=CFBundleCopyResourceURL(mainBundle, CFSTR(".alsoftrc"), CFSTR(""), nullptr)) &&
-           CFURLGetFileSystemRepresentation(configURL, true, fileName, sizeof(fileName)))
+        std::array<unsigned char,PATH_MAX> fileName{};
+        if(configURL && CFURLGetFileSystemRepresentation(configURL, true, fileName.data(), fileName.size()))
         {
-            f = al::ifstream{reinterpret_cast<char*>(fileName)};
-            if(f.is_open())
+            if(std::ifstream f{reinterpret_cast<char*>(fileName.data())}; f.is_open())
                 LoadConfigFromFile(f);
         }
     }
@@ -436,57 +438,49 @@ void ReadALConfig()
 
     if(auto homedir = al::getenv("HOME"))
     {
-        fname = *homedir;
-        if(fname.back() != '/') fname += "/.alsoftrc";
-        else fname += ".alsoftrc";
+        path = *homedir;
+        path /= ".alsoftrc";
 
-        TRACE("Loading config %s...\n", fname.c_str());
-        f = al::ifstream{fname};
-        if(f.is_open())
+        TRACE("Loading config %s...\n", path.u8string().c_str());
+        if(std::ifstream f{path}; f.is_open())
             LoadConfigFromFile(f);
     }
 
     if(auto configdir = al::getenv("XDG_CONFIG_HOME"))
     {
-        fname = *configdir;
-        if(fname.back() != '/') fname += "/alsoft.conf";
-        else fname += "alsoft.conf";
+        path = *configdir;
+        path /= "alsoft.conf";
     }
     else
     {
-        fname.clear();
+        path.clear();
         if(auto homedir = al::getenv("HOME"))
         {
-            fname = *homedir;
-            if(fname.back() != '/') fname += "/.config/alsoft.conf";
-            else fname += ".config/alsoft.conf";
+            path = *homedir;
+            path /= ".config/alsoft.conf";
         }
     }
-    if(!fname.empty())
+    if(!path.empty())
     {
-        TRACE("Loading config %s...\n", fname.c_str());
-        f = al::ifstream{fname};
-        if(f.is_open())
+        TRACE("Loading config %s...\n", path.u8string().c_str());
+        if(std::ifstream f{path}; f.is_open())
             LoadConfigFromFile(f);
     }
 
-    std::string ppath{GetProcBinary().path};
-    if(!ppath.empty())
+    path = GetProcBinary().path;
+    if(!path.empty())
     {
-        if(ppath.back() != '/') ppath += "/alsoft.conf";
-        else ppath += "alsoft.conf";
+        path /= "alsoft.conf";
 
-        TRACE("Loading config %s...\n", ppath.c_str());
-        f = al::ifstream{ppath};
-        if(f.is_open())
+        TRACE("Loading config %s...\n", path.u8string().c_str());
+        if(std::ifstream f{path}; f.is_open())
             LoadConfigFromFile(f);
     }
 
     if(auto confname = al::getenv("ALSOFT_CONF"))
     {
         TRACE("Loading config %s...\n", confname->c_str());
-        f = al::ifstream{*confname};
-        if(f.is_open())
+        if(std::ifstream f{*confname}; f.is_open())
             LoadConfigFromFile(f);
     }
 }
@@ -529,7 +523,7 @@ std::optional<bool> ConfigValueBool(const std::string_view devName,
 {
     if(const char *val{GetConfigValue(devName, blockName, keyName)})
         return al::strcasecmp(val, "on") == 0 || al::strcasecmp(val, "yes") == 0
-            || al::strcasecmp(val, "true")==0 || atoi(val) != 0;
+            || al::strcasecmp(val, "true") == 0 || atoi(val) != 0;
     return std::nullopt;
 }
 
@@ -537,7 +531,7 @@ bool GetConfigValueBool(const std::string_view devName, const std::string_view b
     const std::string_view keyName, bool def)
 {
     if(const char *val{GetConfigValue(devName, blockName, keyName)})
-        return (al::strcasecmp(val, "on") == 0 || al::strcasecmp(val, "yes") == 0
-            || al::strcasecmp(val, "true") == 0 || atoi(val) != 0);
+        return al::strcasecmp(val, "on") == 0 || al::strcasecmp(val, "yes") == 0
+            || al::strcasecmp(val, "true") == 0 || atoi(val) != 0;
     return def;
 }

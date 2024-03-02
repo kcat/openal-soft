@@ -30,8 +30,9 @@
 #include <functional>
 #include <thread>
 
-#include "althrd_setname.h"
 #include "almalloc.h"
+#include "alstring.h"
+#include "althrd_setname.h"
 #include "core/device.h"
 #include "core/helpers.h"
 
@@ -41,9 +42,9 @@ namespace {
 using std::chrono::seconds;
 using std::chrono::milliseconds;
 using std::chrono::nanoseconds;
+using namespace std::string_view_literals;
 
-/* NOLINTNEXTLINE(*-avoid-c-arrays) */
-constexpr char nullDevice[] = "No Output";
+[[nodiscard]] constexpr auto GetDeviceName() noexcept { return "No Output"sv; }
 
 
 struct NullBackend final : public BackendBase {
@@ -65,7 +66,7 @@ int NullBackend::mixerProc()
     const milliseconds restTime{mDevice->UpdateSize*1000/mDevice->Frequency / 2};
 
     SetRTPriority();
-    althrd_setname(MIXER_THREAD_NAME);
+    althrd_setname(GetMixerThreadName());
 
     int64_t done{0};
     auto start = std::chrono::steady_clock::now();
@@ -107,10 +108,10 @@ int NullBackend::mixerProc()
 void NullBackend::open(std::string_view name)
 {
     if(name.empty())
-        name = nullDevice;
-    else if(name != nullDevice)
+        name = GetDeviceName();
+    else if(name != GetDeviceName())
         throw al::backend_exception{al::backend_error::NoDevice, "Device name \"%.*s\" not found",
-            static_cast<int>(name.length()), name.data()};
+            al::sizei(name), name.data()};
 
     mDevice->DeviceName = name;
 }
@@ -151,17 +152,15 @@ bool NullBackendFactory::querySupport(BackendType type)
 
 std::string NullBackendFactory::probe(BackendType type)
 {
-    std::string outnames;
     switch(type)
     {
     case BackendType::Playback:
-        /* Includes null char. */
-        outnames.append(nullDevice, sizeof(nullDevice));
-        break;
+        /* Include null char. */
+        return std::string{GetDeviceName()} + '\0';
     case BackendType::Capture:
         break;
     }
-    return outnames;
+    return std::string{};
 }
 
 BackendPtr NullBackendFactory::createBackend(DeviceBase *device, BackendType type)

@@ -6,7 +6,9 @@
 
 #include "almalloc.h"
 #include "alnumeric.h"
+#include "alspan.h"
 #include "bufferline.h"
+#include "vector.h"
 
 struct SlidingHold;
 
@@ -23,7 +25,7 @@ using uint = unsigned int;
  *
  *   http://c4dm.eecs.qmul.ac.uk/audioengineering/compressors/
  */
-struct Compressor {
+class Compressor {
     size_t mNumChans{0u};
 
     struct {
@@ -49,8 +51,8 @@ struct Compressor {
     alignas(16) std::array<float,BufferLineSize*2_uz> mSideChain{};
     alignas(16) std::array<float,BufferLineSize> mCrestFactor{};
 
-    SlidingHold *mHold{nullptr};
-    FloatBufferLine *mDelay{nullptr};
+    std::unique_ptr<SlidingHold> mHold;
+    al::vector<FloatBufferLine,16> mDelay;
 
     float mCrestCoeff{0.0f};
     float mGainEstimate{0.0f};
@@ -62,12 +64,19 @@ struct Compressor {
     float mLastAttack{0.0f};
     float mLastGainDev{0.0f};
 
+    Compressor() = default;
 
+    void linkChannels(const uint SamplesToDo, const FloatBufferLine *OutBuffer);
+    void crestDetector(const uint SamplesToDo);
+    void peakDetector(const uint SamplesToDo);
+    void peakHoldDetector(const uint SamplesToDo);
+    void gainCompressor(const uint SamplesToDo);
+    void signalDelay(const uint SamplesToDo, FloatBufferLine *OutBuffer);
+
+public:
     ~Compressor();
     void process(const uint SamplesToDo, FloatBufferLine *OutBuffer);
     [[nodiscard]] auto getLookAhead() const noexcept -> uint { return mLookAhead; }
-
-    DEF_PLACE_NEWDEL
 
     /**
      * The compressor is initialized with the following settings:

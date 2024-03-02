@@ -29,7 +29,7 @@ class BFormatDec;
 namespace Bs2b {
 struct bs2b;
 } // namespace Bs2b
-struct Compressor;
+class Compressor;
 struct ContextBase;
 struct DirectHrtfState;
 struct HrtfStore;
@@ -181,11 +181,6 @@ enum class DeviceState : uint8_t {
 };
 
 struct DeviceBase {
-    /* To avoid extraneous allocations, a 0-sized FlexArray<ContextBase*> is
-     * defined globally as a sharable object.
-     */
-    static al::FlexArray<ContextBase*> sEmptyContextArray;
-
     std::atomic<bool> Connected{true};
     const DeviceType Type{};
 
@@ -236,15 +231,11 @@ struct DeviceBase {
     /* Temp storage used for mixer processing. */
     static constexpr size_t MixerLineSize{BufferLineSize + DecoderBase::sMaxPadding};
     static constexpr size_t MixerChannelsMax{16};
-    using MixerBufferLine = std::array<float,MixerLineSize>;
-    alignas(16) std::array<MixerBufferLine,MixerChannelsMax> mSampleData{};
+    alignas(16) std::array<float,MixerLineSize*MixerChannelsMax> mSampleData{};
     alignas(16) std::array<float,MixerLineSize+MaxResamplerPadding> mResampleData{};
 
     alignas(16) std::array<float,BufferLineSize> FilteredData{};
-    union {
-        alignas(16) std::array<float,BufferLineSize+HrtfHistoryLength> HrtfSourceData{};
-        alignas(16) std::array<float,BufferLineSize> NfcSampleData;
-    };
+    alignas(16) std::array<float,BufferLineSize+HrtfHistoryLength> ExtraSampleData{};
 
     /* Persistent storage for HRTF mixing. */
     alignas(16) std::array<float2,BufferLineSize+HrirLength> HrtfAccumData{};
@@ -295,7 +286,7 @@ struct DeviceBase {
     std::atomic<uint> mMixCount{0u};
 
     // Contexts created on this device
-    std::atomic<al::FlexArray<ContextBase*>*> mContexts{nullptr};
+    al::atomic_unique_ptr<al::FlexArray<ContextBase*>> mContexts;
 
 
     DeviceBase(DeviceType type);
@@ -308,34 +299,32 @@ struct DeviceBase {
     [[nodiscard]] auto frameSizeFromFmt() const noexcept -> uint { return bytesFromFmt() * channelsFromFmt(); }
 
     struct MixLock {
-        std::atomic<uint> &mCount;
-        const uint mLastVal;
+        DeviceBase *const self;
+        const uint mEndVal;
 
-        MixLock(std::atomic<uint> &count, const uint last_val) noexcept
-            : mCount{count}, mLastVal{last_val}
-        { }
-        /* Increment the mix count when the lock goes out of scope to "release"
-         * it (lsb should be 0).
+        MixLock(DeviceBase *device, const uint endval) noexcept : self{device}, mEndVal{endval} { }
+        MixLock(const MixLock&) = delete;
+        void operator=(const MixLock&) = delete;
+        /* Update the mix count when the lock goes out of scope to "release" it
+         * (lsb should be 0).
          */
-        ~MixLock() { mCount.store(mLastVal+2, std::memory_order_release); }
+        ~MixLock() { self->mMixCount.store(mEndVal, std::memory_order_release); }
     };
-    auto getWriteMixLock() noexcept
+    auto getWriteMixLock() noexcept -> MixLock
     {
         /* Increment the mix count at the start of mixing and writing clock
          * info (lsb should be 1).
          */
-        const auto mixCount = mMixCount.load(std::memory_order_relaxed);
-        mMixCount.store(mixCount+1, std::memory_order_relaxed);
-        std::atomic_thread_fence(std::memory_order_release);
-        return MixLock{mMixCount, mixCount};
+        auto mixCount = mMixCount.load(std::memory_order_relaxed);
+        mMixCount.store(++mixCount, std::memory_order_release);
+        return MixLock{this, ++mixCount};
     }
 
     /** Waits for the mixer to not be mixing or updating the clock. */
     [[nodiscard]] auto waitForMix() const noexcept -> uint
     {
-        uint refcount;
-        while((refcount=mMixCount.load(std::memory_order_acquire))&1) {
-        }
+        uint refcount{mMixCount.load(std::memory_order_acquire)};
+        while((refcount&1)) refcount = mMixCount.load(std::memory_order_acquire);
         return refcount;
     }
 
@@ -386,8 +375,10 @@ private:
 
 /* Must be less than 15 characters (16 including terminating null) for
  * compatibility with pthread_setname_np limitations. */
-#define MIXER_THREAD_NAME "alsoft-mixer"
+[[nodiscard]] constexpr
+auto GetMixerThreadName() noexcept -> const char* { return "alsoft-mixer"; }
 
-#define RECORD_THREAD_NAME "alsoft-record"
+[[nodiscard]] constexpr
+auto GetRecordThreadName() noexcept -> const char* { return "alsoft-record"; }
 
 #endif /* CORE_DEVICE_H */

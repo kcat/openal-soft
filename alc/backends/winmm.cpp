@@ -40,12 +40,14 @@
 
 #include "alnumeric.h"
 #include "alsem.h"
+#include "alstring.h"
 #include "althrd_setname.h"
 #include "core/device.h"
 #include "core/helpers.h"
 #include "core/logging.h"
 #include "ringbuffer.h"
 #include "strutils.h"
+#include "vector.h"
 
 #ifndef WAVE_FORMAT_IEEE_FLOAT
 #define WAVE_FORMAT_IEEE_FLOAT  0x0003
@@ -144,6 +146,7 @@ struct WinMMPlayback final : public BackendBase {
     al::semaphore mSem;
     uint mIdx{0u};
     std::array<WAVEHDR,4> mWaveBuffer{};
+    al::vector<char,16> mBuffer;
 
     HWAVEOUT mOutHdl{nullptr};
 
@@ -158,9 +161,6 @@ WinMMPlayback::~WinMMPlayback()
     if(mOutHdl)
         waveOutClose(mOutHdl);
     mOutHdl = nullptr;
-
-    al_free(mWaveBuffer[0].lpData);
-    std::fill(mWaveBuffer.begin(), mWaveBuffer.end(), WAVEHDR{});
 }
 
 /* WinMMPlayback::waveOutProc
@@ -178,7 +178,7 @@ void CALLBACK WinMMPlayback::waveOutProc(HWAVEOUT, UINT msg, DWORD_PTR, DWORD_PT
 FORCE_ALIGN int WinMMPlayback::mixerProc()
 {
     SetRTPriority();
-    althrd_setname(MIXER_THREAD_NAME);
+    althrd_setname(GetMixerThreadName());
 
     while(!mKillNow.load(std::memory_order_acquire)
         && mDevice->Connected.load(std::memory_order_acquire))
@@ -217,7 +217,7 @@ void WinMMPlayback::open(std::string_view name)
         PlaybackDevices.cbegin();
     if(iter == PlaybackDevices.cend())
         throw al::backend_exception{al::backend_error::NoDevice, "Device name \"%.*s\" not found",
-            static_cast<int>(name.length()), name.data()};
+            al::sizei(name), name.data()};
     auto DeviceID = static_cast<UINT>(std::distance(PlaybackDevices.cbegin(), iter));
 
     DevFmtType fmttype{mDevice->FmtType};
@@ -311,11 +311,11 @@ bool WinMMPlayback::reset()
     }
     setDefaultWFXChannelOrder();
 
-    uint BufferSize{mDevice->UpdateSize * mFormat.nChannels * mDevice->bytesFromFmt()};
+    const uint BufferSize{mDevice->UpdateSize * mFormat.nChannels * mDevice->bytesFromFmt()};
 
-    al_free(mWaveBuffer[0].lpData);
+    decltype(mBuffer)(BufferSize*mWaveBuffer.size()).swap(mBuffer);
     mWaveBuffer[0] = WAVEHDR{};
-    mWaveBuffer[0].lpData = static_cast<char*>(al_calloc(16, BufferSize * mWaveBuffer.size()));
+    mWaveBuffer[0].lpData = mBuffer.data();
     mWaveBuffer[0].dwBufferLength = BufferSize;
     for(size_t i{1};i < mWaveBuffer.size();i++)
     {
@@ -378,6 +378,7 @@ struct WinMMCapture final : public BackendBase {
     al::semaphore mSem;
     uint mIdx{0};
     std::array<WAVEHDR,4> mWaveBuffer{};
+    al::vector<char,16> mBuffer;
 
     HWAVEIN mInHdl{nullptr};
 
@@ -395,9 +396,6 @@ WinMMCapture::~WinMMCapture()
     if(mInHdl)
         waveInClose(mInHdl);
     mInHdl = nullptr;
-
-    al_free(mWaveBuffer[0].lpData);
-    std::fill(mWaveBuffer.begin(), mWaveBuffer.end(), WAVEHDR{});
 }
 
 /* WinMMCapture::waveInProc
@@ -414,7 +412,7 @@ void CALLBACK WinMMCapture::waveInProc(HWAVEIN, UINT msg, DWORD_PTR, DWORD_PTR) 
 
 int WinMMCapture::captureProc()
 {
-    althrd_setname(RECORD_THREAD_NAME);
+    althrd_setname(GetRecordThreadName());
 
     while(!mKillNow.load(std::memory_order_acquire) &&
           mDevice->Connected.load(std::memory_order_acquire))
@@ -454,7 +452,7 @@ void WinMMCapture::open(std::string_view name)
         CaptureDevices.cbegin();
     if(iter == CaptureDevices.cend())
         throw al::backend_exception{al::backend_error::NoDevice, "Device name \"%.*s\" not found",
-            static_cast<int>(name.length()), name.data()};
+            al::sizei(name), name.data()};
     auto DeviceID = static_cast<UINT>(std::distance(CaptureDevices.cbegin(), iter));
 
     switch(mDevice->FmtChans)
@@ -511,14 +509,14 @@ void WinMMCapture::open(std::string_view name)
 
     // Allocate circular memory buffer for the captured audio
     // Make sure circular buffer is at least 100ms in size
-    uint CapturedDataSize{mDevice->BufferSize};
-    CapturedDataSize = static_cast<uint>(maxz(CapturedDataSize, BufferSize*mWaveBuffer.size()));
+    const auto CapturedDataSize = std::max<size_t>(mDevice->BufferSize,
+        BufferSize*mWaveBuffer.size());
 
     mRing = RingBuffer::Create(CapturedDataSize, mFormat.nBlockAlign, false);
 
-    al_free(mWaveBuffer[0].lpData);
+    decltype(mBuffer)(BufferSize*mWaveBuffer.size()).swap(mBuffer);
     mWaveBuffer[0] = WAVEHDR{};
-    mWaveBuffer[0].lpData = static_cast<char*>(al_calloc(16, BufferSize * mWaveBuffer.size()));
+    mWaveBuffer[0].lpData = mBuffer.data();
     mWaveBuffer[0].dwBufferLength = BufferSize;
     for(size_t i{1};i < mWaveBuffer.size();++i)
     {

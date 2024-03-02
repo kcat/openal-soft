@@ -30,11 +30,13 @@
 #include <cstring>
 #include <memory>
 #include <string>
+#include <system_error>
 #include <utility>
 #include <vector>
 
 #include "albit.h"
 #include "alcomplex.h"
+#include "almalloc.h"
 #include "alnumbers.h"
 #include "alspan.h"
 #include "vector.h"
@@ -47,7 +49,7 @@
 
 
 struct FileDeleter {
-    void operator()(FILE *file) { fclose(file); }
+    void operator()(gsl::owner<FILE*> file) { fclose(file); }
 };
 using FilePtr = std::unique_ptr<FILE,FileDeleter>;
 
@@ -453,7 +455,8 @@ int main(int argc, char **argv)
         fwrite32le(0xFFFFFFFF, outfile.get()); // 'data' header len; filled in at close
         if(ferror(outfile.get()))
         {
-            fprintf(stderr, "Error writing wave file header: %s (%d)\n", strerror(errno), errno);
+            fprintf(stderr, "Error writing wave file header: %s (%d)\n",
+                std::generic_category().message(errno).c_str(), errno);
             continue;
         }
 
@@ -507,7 +510,8 @@ int main(int argc, char **argv)
             std::size_t wrote{fwrite(outmem.data(), sizeof(byte4)*outchans, got, outfile.get())};
             if(wrote < got)
             {
-                fprintf(stderr, "Error writing wave data: %s (%d)\n", strerror(errno), errno);
+                fprintf(stderr, "Error writing wave data: %s (%d)\n",
+                    std::generic_category().message(errno).c_str(), errno);
                 break;
             }
         }

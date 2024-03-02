@@ -153,29 +153,29 @@ int rtkit_get_int_property(DBusConnection *connection, const char *propname, lon
 
 } // namespace
 
-int rtkit_get_max_realtime_priority(DBusConnection *connection)
+int rtkit_get_max_realtime_priority(DBusConnection *system_bus)
 {
     long long retval{};
-    int err{rtkit_get_int_property(connection, "MaxRealtimePriority", &retval)};
+    int err{rtkit_get_int_property(system_bus, "MaxRealtimePriority", &retval)};
     return err < 0 ? err : static_cast<int>(retval);
 }
 
-int rtkit_get_min_nice_level(DBusConnection *connection, int *min_nice_level)
+int rtkit_get_min_nice_level(DBusConnection *system_bus, int *min_nice_level)
 {
     long long retval{};
-    int err{rtkit_get_int_property(connection, "MinNiceLevel", &retval)};
+    int err{rtkit_get_int_property(system_bus, "MinNiceLevel", &retval)};
     if(err >= 0) *min_nice_level = static_cast<int>(retval);
     return err;
 }
 
-long long rtkit_get_rttime_usec_max(DBusConnection *connection)
+long long rtkit_get_rttime_usec_max(DBusConnection *system_bus)
 {
     long long retval{};
-    int err{rtkit_get_int_property(connection, "RTTimeUSecMax", &retval)};
+    int err{rtkit_get_int_property(system_bus, "RTTimeUSecMax", &retval)};
     return err < 0 ? err : retval;
 }
 
-int rtkit_make_realtime(DBusConnection *connection, pid_t thread, int priority)
+int rtkit_make_realtime(DBusConnection *system_bus, pid_t thread, int priority)
 {
     if(thread == 0)
         thread = _gettid();
@@ -195,7 +195,7 @@ int rtkit_make_realtime(DBusConnection *connection, pid_t thread, int priority)
     if(!ready) return -ENOMEM;
 
     dbus::Error error;
-    dbus::MessagePtr r{dbus_connection_send_with_reply_and_block(connection, m.get(), -1,
+    dbus::MessagePtr r{dbus_connection_send_with_reply_and_block(system_bus, m.get(), -1,
         &error.get())};
     if(!r) return translate_error(error->name);
 
@@ -205,7 +205,7 @@ int rtkit_make_realtime(DBusConnection *connection, pid_t thread, int priority)
     return 0;
 }
 
-int rtkit_make_high_priority(DBusConnection *connection, pid_t thread, int nice_level)
+int rtkit_make_high_priority(DBusConnection *system_bus, pid_t thread, int nice_level)
 {
     if(thread == 0)
         thread = _gettid();
@@ -225,7 +225,7 @@ int rtkit_make_high_priority(DBusConnection *connection, pid_t thread, int nice_
     if(!ready) return -ENOMEM;
 
     dbus::Error error;
-    dbus::MessagePtr r{dbus_connection_send_with_reply_and_block(connection, m.get(), -1,
+    dbus::MessagePtr r{dbus_connection_send_with_reply_and_block(system_bus, m.get(), -1,
         &error.get())};
     if(!r) return translate_error(error->name);
 

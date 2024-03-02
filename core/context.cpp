@@ -27,43 +27,14 @@ ContextBase::ContextBase(DeviceBase *device) : mDevice{device}
 
 ContextBase::~ContextBase()
 {
-    size_t count{0};
-    ContextProps *cprops{mParams.ContextUpdate.exchange(nullptr, std::memory_order_relaxed)};
-    if(cprops)
-    {
-        ++count;
-        delete cprops;
-    }
-    cprops = mFreeContextProps.exchange(nullptr, std::memory_order_acquire);
-    while(cprops)
-    {
-        std::unique_ptr<ContextProps> old{cprops};
-        cprops = old->next.load(std::memory_order_relaxed);
-        ++count;
-    }
-    TRACE("Freed %zu context property object%s\n", count, (count==1)?"":"s");
-
-    count = 0;
-    EffectSlotProps *eprops{mFreeEffectslotProps.exchange(nullptr, std::memory_order_acquire)};
-    while(eprops)
-    {
-        std::unique_ptr<EffectSlotProps> old{eprops};
-        eprops = old->next.load(std::memory_order_relaxed);
-        ++count;
-    }
-    TRACE("Freed %zu AuxiliaryEffectSlot property object%s\n", count, (count==1)?"":"s");
-
-    if(EffectSlotArray *curarray{mActiveAuxSlots.exchange(nullptr, std::memory_order_relaxed)})
-    {
+    if(auto curarray = mActiveAuxSlots.exchange(nullptr, std::memory_order_relaxed))
         std::destroy_n(curarray->end(), curarray->size());
-        delete curarray;
-    }
 
-    delete mVoices.exchange(nullptr, std::memory_order_relaxed);
+    mVoices.store(nullptr, std::memory_order_relaxed);
 
     if(mAsyncEvents)
     {
-        count = 0;
+        size_t count{0};
         auto evt_vec = mAsyncEvents->getReadVector();
         if(evt_vec.first.len > 0)
         {
@@ -149,13 +120,30 @@ void ContextBase::allocVoices(size_t addcount)
         voice_iter = std::transform(cluster->begin(), cluster->end(), voice_iter,
             [](Voice &voice) noexcept -> Voice* { return &voice; });
 
-    if(auto *oldvoices = mVoices.exchange(newarray.release(), std::memory_order_acq_rel))
-    {
+    if(auto oldvoices = mVoices.exchange(std::move(newarray), std::memory_order_acq_rel))
         std::ignore = mDevice->waitForMix();
-        delete oldvoices;
-    }
 }
 
+
+void ContextBase::allocEffectSlotProps()
+{
+    static constexpr size_t clustersize{std::tuple_size_v<EffectSlotPropsCluster::element_type>};
+
+    TRACE("Increasing allocated effect slot properties to %zu\n",
+        (mEffectSlotPropClusters.size()+1) * clustersize);
+
+    auto clusterptr = std::make_unique<EffectSlotPropsCluster::element_type>();
+    auto cluster = al::span{*clusterptr};
+    for(size_t i{1};i < clustersize;++i)
+        cluster[i-1].next.store(std::addressof(cluster[i]), std::memory_order_relaxed);
+    auto *newcluster = mEffectSlotPropClusters.emplace_back(std::move(clusterptr)).get();
+
+    EffectSlotProps *oldhead{mFreeEffectSlotProps.load(std::memory_order_acquire)};
+    do {
+        newcluster->back().next.store(oldhead, std::memory_order_relaxed);
+    } while(mFreeEffectSlotProps.compare_exchange_weak(oldhead, newcluster->data(),
+        std::memory_order_acq_rel, std::memory_order_acquire) == false);
+}
 
 EffectSlot *ContextBase::getEffectSlot()
 {
@@ -175,4 +163,25 @@ EffectSlot *ContextBase::getEffectSlot()
 
     mEffectSlotClusters.emplace_back(std::move(clusterptr));
     return mEffectSlotClusters.back()->data();
+}
+
+
+void ContextBase::allocContextProps()
+{
+    static constexpr size_t clustersize{std::tuple_size_v<ContextPropsCluster::element_type>};
+
+    TRACE("Increasing allocated context properties to %zu\n",
+        (mContextPropClusters.size()+1) * clustersize);
+
+    auto clusterptr = std::make_unique<ContextPropsCluster::element_type>();
+    auto cluster = al::span{*clusterptr};
+    for(size_t i{1};i < clustersize;++i)
+        cluster[i-1].next.store(std::addressof(cluster[i]), std::memory_order_relaxed);
+    auto *newcluster = mContextPropClusters.emplace_back(std::move(clusterptr)).get();
+
+    ContextProps *oldhead{mFreeContextProps.load(std::memory_order_acquire)};
+    do {
+        newcluster->back().next.store(oldhead, std::memory_order_relaxed);
+    } while(mFreeContextProps.compare_exchange_weak(oldhead, newcluster->data(),
+        std::memory_order_acq_rel, std::memory_order_acquire) == false);
 }

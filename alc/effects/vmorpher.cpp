@@ -34,24 +34,25 @@
 
 #include <algorithm>
 #include <array>
+#include <cmath>
 #include <cstdlib>
 #include <functional>
-#include <iterator>
+#include <variant>
 
 #include "alc/effects/base.h"
-#include "almalloc.h"
 #include "alnumbers.h"
 #include "alnumeric.h"
 #include "alspan.h"
 #include "core/ambidefs.h"
 #include "core/bufferline.h"
 #include "core/context.h"
-#include "core/devformat.h"
 #include "core/device.h"
+#include "core/effects/base.h"
 #include "core/effectslot.h"
 #include "core/mixer.h"
 #include "intrusive_ptr.h"
 
+struct BufferStorage;
 
 namespace {
 
@@ -247,7 +248,7 @@ void VmorpherState::update(const ContextBase *context, const EffectSlot *slot,
     const DeviceBase *device{context->mDevice};
     const float frequency{static_cast<float>(device->Frequency)};
     const float step{props.Rate / frequency};
-    mStep = fastf2u(clampf(step*WaveformFracOne, 0.0f, float{WaveformFracOne}-1.0f));
+    mStep = fastf2u(std::clamp(step*WaveformFracOne, 0.0f, WaveformFracOne-1.0f));
 
     if(mStep == 0)
         mGetSamples = Oscillate<Half>;
@@ -287,13 +288,13 @@ void VmorpherState::process(const size_t samplesToDo, const al::span<const Float
      */
     for(size_t base{0u};base < samplesToDo;)
     {
-        const size_t td{minz(MaxUpdateSamples, samplesToDo-base)};
+        const size_t td{std::min(MaxUpdateSamples, samplesToDo-base)};
 
         mGetSamples(mLfo.data(), mIndex, mStep, td);
         mIndex += static_cast<uint>(mStep * td);
         mIndex &= WaveformFracMask;
 
-        auto chandata = std::begin(mChans);
+        auto chandata = mChans.begin();
         for(const auto &input : samplesIn)
         {
             const size_t outidx{chandata->mTargetChannel};
@@ -307,14 +308,14 @@ void VmorpherState::process(const size_t samplesToDo, const al::span<const Float
             const auto vowelB = al::span{chandata->mFormants[VowelBIndex]};
 
             /* Process first vowel. */
-            std::fill_n(std::begin(mSampleBufferA), td, 0.0f);
+            std::fill_n(mSampleBufferA.begin(), td, 0.0f);
             vowelA[0].process(&input[base], mSampleBufferA.data(), td);
             vowelA[1].process(&input[base], mSampleBufferA.data(), td);
             vowelA[2].process(&input[base], mSampleBufferA.data(), td);
             vowelA[3].process(&input[base], mSampleBufferA.data(), td);
 
             /* Process second vowel. */
-            std::fill_n(std::begin(mSampleBufferB), td, 0.0f);
+            std::fill_n(mSampleBufferB.begin(), td, 0.0f);
             vowelB[0].process(&input[base], mSampleBufferB.data(), td);
             vowelB[1].process(&input[base], mSampleBufferB.data(), td);
             vowelB[2].process(&input[base], mSampleBufferB.data(), td);

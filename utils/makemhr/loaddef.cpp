@@ -30,14 +30,18 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <filesystem>
+#include <fstream>
 #include <iterator>
 #include <limits>
 #include <memory>
 #include <optional>
+#include <string>
+#include <string_view>
 #include <vector>
 
 #include "albit.h"
-#include "alfstream.h"
+#include "almalloc.h"
 #include "alnumeric.h"
 #include "alspan.h"
 #include "alstring.h"
@@ -208,18 +212,18 @@ static int TrLoad(TokenReaderT *tr)
         // Load TRLoadSize (or less if at the end of the file) per read.
         toLoad = TRLoadSize;
 
-        const auto in = static_cast<uint>(tr->mIn&TRRingMask);
+        const auto in = tr->mIn&TRRingMask;
         std::streamsize count{TRRingSize - in};
         if(count < toLoad)
         {
-            istream.read(&tr->mRing[in], count);
+            istream.read(al::to_address(tr->mRing.begin() + in), count);
             tr->mIn += istream.gcount();
-            istream.read(&tr->mRing[0], toLoad-count);
+            istream.read(tr->mRing.data(), toLoad-count);
             tr->mIn += istream.gcount();
         }
         else
         {
-            istream.read(&tr->mRing[in], toLoad);
+            istream.read(al::to_address(tr->mRing.begin() + in), toLoad);
             tr->mIn += istream.gcount();
         }
 
@@ -246,21 +250,23 @@ static void TrErrorVA(const TokenReaderT *tr, uint line, uint column, const char
 // Used to display an error at a saved line/column.
 static void TrErrorAt(const TokenReaderT *tr, uint line, uint column, const char *format, ...)
 {
+    /* NOLINTBEGIN(*-array-to-pointer-decay) */
     va_list argPtr;
-
     va_start(argPtr, format);
     TrErrorVA(tr, line, column, format, argPtr);
     va_end(argPtr);
+    /* NOLINTEND(*-array-to-pointer-decay) */
 }
 
 // Used to display an error at the current line/column.
 static void TrError(const TokenReaderT *tr, const char *format, ...)
 {
+    /* NOLINTBEGIN(*-array-to-pointer-decay) */
     va_list argPtr;
-
     va_start(argPtr, format);
     TrErrorVA(tr, tr->mLine, tr->mColumn, format, argPtr);
     va_end(argPtr);
+    /* NOLINTEND(*-array-to-pointer-decay) */
 }
 
 // Skips to the next line.
@@ -913,7 +919,7 @@ static int ReadWaveList(std::istream &istream, const SourceRefT *src, const Byte
                 return 0;
             return 1;
         }
-        else if(fourCC == FOURCC_LIST)
+        if(fourCC == FOURCC_LIST)
         {
             if(!ReadBin4(istream, src->mPath.data(), BO_LITTLE, 4, &fourCC))
                 return 0;
@@ -1073,15 +1079,39 @@ static int LoadWaveSource(std::istream &istream, SourceRefT *src, const uint hri
 }
 
 
+namespace {
+
+struct SofaEasyDeleter {
+    void operator()(gsl::owner<MYSOFA_EASY*> sofa)
+    {
+        if(sofa->neighborhood) mysofa_neighborhood_free(sofa->neighborhood);
+        if(sofa->lookup) mysofa_lookup_free(sofa->lookup);
+        if(sofa->hrtf) mysofa_free(sofa->hrtf);
+        delete sofa;
+    }
+};
+using SofaEasyPtr = std::unique_ptr<MYSOFA_EASY,SofaEasyDeleter>;
+
+struct SofaCacheEntry {
+    std::string mName;
+    uint mSampleRate{};
+    SofaEasyPtr mSofa;
+};
+std::vector<SofaCacheEntry> gSofaCache;
+
+} // namespace
 
 // Load a Spatially Oriented Format for Accoustics (SOFA) file.
 static MYSOFA_EASY* LoadSofaFile(SourceRefT *src, const uint hrirRate, const uint n)
 {
-    MYSOFA_EASY *sofa{mysofa_cache_lookup(src->mPath.data(), static_cast<float>(hrirRate))};
-    if(sofa) return sofa;
+    const std::string_view srcname{src->mPath.data()};
+    auto iter = std::find_if(gSofaCache.begin(), gSofaCache.end(),
+        [srcname,hrirRate](SofaCacheEntry &entry) -> bool
+        { return entry.mName == srcname && entry.mSampleRate == hrirRate; });
+    if(iter != gSofaCache.end()) return iter->mSofa.get();
 
-    sofa = static_cast<MYSOFA_EASY*>(calloc(1, sizeof(*sofa)));
-    if(sofa == nullptr)
+    SofaEasyPtr sofa{new(std::nothrow) MYSOFA_EASY{}};
+    if(!sofa)
     {
         fprintf(stderr, "\nError:  Out of memory.\n");
         return nullptr;
@@ -1093,23 +1123,22 @@ static MYSOFA_EASY* LoadSofaFile(SourceRefT *src, const uint hrirRate, const uin
     sofa->hrtf = mysofa_load(src->mPath.data(), &err);
     if(!sofa->hrtf)
     {
-        mysofa_close(sofa);
-        fprintf(stderr, "\nError: Could not load source file '%s'.\n", src->mPath.data());
+        fprintf(stderr, "\nError: Could not load source file '%s' (error: %d).\n",
+            src->mPath.data(), err);
         return nullptr;
     }
     /* NOTE: Some valid SOFA files are failing this check. */
     err = mysofa_check(sofa->hrtf);
     if(err != MYSOFA_OK)
-        fprintf(stderr, "\nWarning: Supposedly malformed source file '%s'.\n", src->mPath.data());
+        fprintf(stderr, "\nWarning: Supposedly malformed source file '%s' (error: %d).\n",
+            src->mPath.data(), err);
     if((src->mOffset + n) > sofa->hrtf->N)
     {
-        mysofa_close(sofa);
         fprintf(stderr, "\nError: Not enough samples in SOFA file '%s'.\n", src->mPath.data());
         return nullptr;
     }
     if(src->mChannel >= sofa->hrtf->R)
     {
-        mysofa_close(sofa);
         fprintf(stderr, "\nError: Missing source receiver in SOFA file '%s'.\n",src->mPath.data());
         return nullptr;
     }
@@ -1117,11 +1146,11 @@ static MYSOFA_EASY* LoadSofaFile(SourceRefT *src, const uint hrirRate, const uin
     sofa->lookup = mysofa_lookup_init(sofa->hrtf);
     if(sofa->lookup == nullptr)
     {
-        mysofa_close(sofa);
         fprintf(stderr, "\nError:  Out of memory.\n");
         return nullptr;
     }
-    return mysofa_cache_store(sofa, src->mPath.data(), static_cast<float>(hrirRate));
+    gSofaCache.emplace_back(SofaCacheEntry{std::string{srcname}, hrirRate, std::move(sofa)});
+    return gSofaCache.back().mSofa.get();
 }
 
 // Copies the HRIR data from a particular SOFA measurement.
@@ -1179,13 +1208,14 @@ static int LoadSofaSource(SourceRefT *src, const uint hrirRate, const uint n, do
 // Load a source HRIR from a supported file type.
 static int LoadSource(SourceRefT *src, const uint hrirRate, const uint n, double *hrir)
 {
-    std::unique_ptr<al::ifstream> istream;
+    std::unique_ptr<std::istream> istream;
     if(src->mFormat != SF_SOFA)
     {
         if(src->mFormat == SF_ASCII)
-            istream = std::make_unique<al::ifstream>(src->mPath.data());
+            istream = std::make_unique<std::ifstream>(std::filesystem::u8path(src->mPath.data()));
         else
-            istream = std::make_unique<al::ifstream>(src->mPath.data(), std::ios::binary);
+            istream = std::make_unique<std::ifstream>(std::filesystem::u8path(src->mPath.data()),
+                std::ios::binary);
         if(!istream->good())
         {
             fprintf(stderr, "\nError: Could not open source file '%s'.\n", src->mPath.data());
@@ -1284,7 +1314,7 @@ static int ProcessMetrics(TokenReaderT *tr, const uint fftSize, const uint trunc
                 TrErrorAt(tr, line, col, "Expected a channel type.\n");
                 return 0;
             }
-            else if(hData->mChannelType == CT_STEREO)
+            if(hData->mChannelType == CT_STEREO)
             {
                 if(chanMode == CM_ForceMono)
                     hData->mChannelType = CT_MONO;
@@ -1718,7 +1748,7 @@ static constexpr int OnsetRateMultiple{10};
 static double AverageHrirOnset(PPhaseResampler &rs, al::span<double> upsampled, const uint rate,
     const uint n, const double *hrir, const double f, const double onset)
 {
-    rs.process(n, hrir, static_cast<uint>(upsampled.size()), upsampled.data());
+    rs.process({hrir, n}, upsampled);
 
     auto abs_lt = [](const double &lhs, const double &rhs) -> bool
     { return std::abs(lhs) < std::abs(rhs); };
@@ -1876,7 +1906,8 @@ static int ProcessSources(TokenReaderT *tr, HrirDataT *hData, const uint outRate
                 azd->mDelays[0] = AverageHrirOnset(onsetResampler, onsetSamples, hData->mIrRate,
                     hData->mIrPoints, hrir.data(), 1.0, azd->mDelays[0]);
                 if(resampler)
-                    resampler->process(hData->mIrPoints, hrir.data(), hData->mIrSize, hrir.data());
+                    resampler->process(al::span{hrir}.first(hData->mIrPoints),
+                        al::span{hrir}.first(hData->mIrSize));
                 AverageHrirMagnitude(irPoints, hData->mFftSize, hrir.data(), 1.0, azd->mIrs[0]);
 
                 if(src.mChannel == 1)
@@ -1886,8 +1917,8 @@ static int ProcessSources(TokenReaderT *tr, HrirDataT *hData, const uint outRate
                     azd->mDelays[1] = AverageHrirOnset(onsetResampler, onsetSamples,
                         hData->mIrRate, hData->mIrPoints, hrir.data(), 1.0, azd->mDelays[1]);
                     if(resampler)
-                        resampler->process(hData->mIrPoints, hrir.data(), hData->mIrSize,
-                            hrir.data());
+                        resampler->process(al::span{hrir}.first(hData->mIrPoints),
+                            al::span{hrir}.first(hData->mIrSize));
                     AverageHrirMagnitude(irPoints, hData->mFftSize, hrir.data(), 1.0,
                         azd->mIrs[1]);
                 }
@@ -1947,7 +1978,8 @@ static int ProcessSources(TokenReaderT *tr, HrirDataT *hData, const uint outRate
             azd->mDelays[ti] = AverageHrirOnset(onsetResampler, onsetSamples, hData->mIrRate,
                 hData->mIrPoints, hrir.data(), 1.0 / factor[ti], azd->mDelays[ti]);
             if(resampler)
-                resampler->process(hData->mIrPoints, hrir.data(), hData->mIrSize, hrir.data());
+                resampler->process(al::span{hrir}.first(hData->mIrPoints),
+                    al::span{hrir}.first(hData->mIrSize));
             AverageHrirMagnitude(irPoints, hData->mFftSize, hrir.data(), 1.0 / factor[ti],
                 azd->mIrs[ti]);
             factor[ti] += 1.0;
@@ -1962,7 +1994,7 @@ static int ProcessSources(TokenReaderT *tr, HrirDataT *hData, const uint outRate
                 TrErrorAt(tr, line, col, "Missing left ear source reference(s).\n");
                 return 0;
             }
-            else if(azd->mIrs[1] == nullptr)
+            if(azd->mIrs[1] == nullptr)
             {
                 TrErrorAt(tr, line, col, "Missing right ear source reference(s).\n");
                 return 0;
@@ -2027,12 +2059,12 @@ static int ProcessSources(TokenReaderT *tr, HrirDataT *hData, const uint outRate
     }
     if(!TrLoad(tr))
     {
-        mysofa_cache_release_all();
+        gSofaCache.clear();
         return 1;
     }
 
     TrError(tr, "Errant data at end of source list.\n");
-    mysofa_cache_release_all();
+    gSofaCache.clear();
     return 0;
 }
 

@@ -22,24 +22,24 @@
 
 #include <algorithm>
 #include <array>
+#include <cmath>
 #include <cstdlib>
 #include <functional>
-#include <iterator>
-#include <utility>
+#include <variant>
 
 #include "alc/effects/base.h"
-#include "almalloc.h"
 #include "alspan.h"
 #include "core/ambidefs.h"
 #include "core/bufferline.h"
 #include "core/context.h"
-#include "core/devformat.h"
 #include "core/device.h"
+#include "core/effects/base.h"
 #include "core/effectslot.h"
 #include "core/filters/biquad.h"
 #include "core/mixer.h"
 #include "intrusive_ptr.h"
 
+struct BufferStorage;
 
 namespace {
 
@@ -170,7 +170,7 @@ void EqualizerState::update(const ContextBase *context, const EffectSlot *slot,
 void EqualizerState::process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn, const al::span<FloatBufferLine> samplesOut)
 {
     const al::span<float> buffer{mSampleBuffer.data(), samplesToDo};
-    auto chan = std::begin(mChans);
+    auto chan = mChans.begin();
     for(const auto &input : samplesIn)
     {
         const size_t outidx{chan->mTargetChannel};

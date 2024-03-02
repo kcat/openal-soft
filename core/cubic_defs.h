@@ -8,8 +8,8 @@ constexpr unsigned int CubicPhaseBits{5};
 constexpr unsigned int CubicPhaseCount{1 << CubicPhaseBits};
 
 struct CubicCoefficients {
-    std::array<float,4> mCoeffs;
-    std::array<float,4> mDeltas;
+    alignas(16) std::array<float,4> mCoeffs;
+    alignas(16) std::array<float,4> mDeltas;
 };
 
 #endif /* CORE_CUBIC_DEFS_H */

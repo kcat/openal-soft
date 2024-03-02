@@ -3,12 +3,11 @@
 
 #include "dynload.h"
 
-#include "albit.h"
-#include "strutils.h"
-
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
+
+#include "strutils.h"
 
 void *LoadLib(const char *name)
 {
@@ -18,7 +17,7 @@ void *LoadLib(const char *name)
 void CloseLib(void *handle)
 { FreeLibrary(static_cast<HMODULE>(handle)); }
 void *GetSymbol(void *handle, const char *name)
-{ return al::bit_cast<void*>(GetProcAddress(static_cast<HMODULE>(handle), name)); }
+{ return reinterpret_cast<void*>(GetProcAddress(static_cast<HMODULE>(handle), name)); }
 
 #elif defined(HAVE_DLFCN_H)
 

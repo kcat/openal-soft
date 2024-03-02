@@ -40,6 +40,7 @@ const char *NameFromFormat(FmtChannels channels) noexcept
     case FmtUHJ3: return "UHJ3";
     case FmtUHJ4: return "UHJ4";
     case FmtSuperStereo: return "Super Stereo";
+    case FmtMonoDup: return "Mono (dup)";
     }
     return "<internal error>";
 }
@@ -78,6 +79,7 @@ uint ChannelsFromFmt(FmtChannels chans, uint ambiorder) noexcept
     case FmtUHJ3: return 3;
     case FmtUHJ4: return 4;
     case FmtSuperStereo: return 2;
+    case FmtMonoDup: return 1;
     }
     return 0;
 }

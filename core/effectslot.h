@@ -2,6 +2,7 @@
 #define CORE_EFFECTSLOT_H
 
 #include <atomic>
+#include <memory>
 
 #include "almalloc.h"
 #include "device.h"
@@ -80,7 +81,7 @@ struct EffectSlot {
     al::vector<FloatBufferLine,16> mWetBuffer;
 
 
-    static EffectSlotArray *CreatePtrArray(size_t count) noexcept;
+    static std::unique_ptr<EffectSlotArray> CreatePtrArray(size_t count);
 };
 
 #endif /* CORE_EFFECTSLOT_H */

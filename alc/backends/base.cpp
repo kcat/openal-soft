@@ -24,10 +24,12 @@ namespace al {
 
 backend_exception::backend_exception(backend_error code, const char *msg, ...) : mErrorCode{code}
 {
+    /* NOLINTBEGIN(*-array-to-pointer-decay) */
     std::va_list args;
     va_start(args, msg);
     setMessage(msg, args);
     va_end(args);
+    /* NOLINTEND(*-array-to-pointer-decay) */
 }
 backend_exception::~backend_exception() = default;
 
@@ -64,7 +66,7 @@ ClockLatency BackendBase::getClockLatency()
     return ret;
 }
 
-void BackendBase::setDefaultWFXChannelOrder()
+void BackendBase::setDefaultWFXChannelOrder() const
 {
     mDevice->RealOut.ChannelIndex.fill(InvalidChannelIndex);
 
@@ -139,7 +141,7 @@ void BackendBase::setDefaultWFXChannelOrder()
     }
 }
 
-void BackendBase::setDefaultChannelOrder()
+void BackendBase::setDefaultChannelOrder() const
 {
     mDevice->RealOut.ChannelIndex.fill(InvalidChannelIndex);
 

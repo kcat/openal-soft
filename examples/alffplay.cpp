@@ -237,7 +237,7 @@ public:
     void setFinished()
     {
         {
-            std::lock_guard<std::mutex> _{mPacketMutex};
+            std::lock_guard<std::mutex> packetlock{mPacketMutex};
             mFinished = true;
         }
         mPacketCond.notify_one();
@@ -246,7 +246,7 @@ public:
     void flush()
     {
         {
-            std::lock_guard<std::mutex> _{mPacketMutex};
+            std::lock_guard<std::mutex> packetlock{mPacketMutex};
             mFinished = true;
 
             mPackets.clear();
@@ -258,7 +258,7 @@ public:
     bool put(const AVPacket *pkt)
     {
         {
-            std::unique_lock<std::mutex> lock{mPacketMutex};
+            std::lock_guard<std::mutex> packet_lock{mPacketMutex};
             if(mTotalSize >= SizeLimit || mFinished)
                 return false;
 
@@ -410,7 +410,7 @@ struct VideoState {
 
     nanoseconds getClock();
 
-    void display(SDL_Window *screen, SDL_Renderer *renderer, AVFrame *frame);
+    void display(SDL_Window *screen, SDL_Renderer *renderer, AVFrame *frame) const;
     void updateVideo(SDL_Window *screen, SDL_Renderer *renderer, bool redraw);
     int handler();
 };
@@ -450,14 +450,12 @@ struct MovieState {
 
     static int decode_interrupt_cb(void *ctx);
     bool prepare();
-    void setTitle(SDL_Window *window);
+    void setTitle(SDL_Window *window) const;
     void stop();
 
-    nanoseconds getClock();
-
-    nanoseconds getMasterClock();
-
-    nanoseconds getDuration();
+    [[nodiscard]] nanoseconds getClock() const;
+    [[nodiscard]] nanoseconds getMasterClock();
+    [[nodiscard]] nanoseconds getDuration() const;
 
     int streamComponentOpen(unsigned int stream_index);
     int parse_handler();
@@ -684,9 +682,13 @@ int AudioState::decodeFrame()
             mDecodedFrame->nb_samples, mDstSampleFmt, 0);
         mSamplesMax = mDecodedFrame->nb_samples;
     }
+    /* Copy to a local to mark const. Don't know why this can't be implicit. */
+    using data_t = decltype(decltype(mDecodedFrame)::element_type::data);
+    std::array<const uint8_t*,std::extent_v<data_t>> cdata{};
+    std::copy(std::begin(mDecodedFrame->data), std::end(mDecodedFrame->data), cdata.begin());
     /* Return the amount of sample frames converted */
-    int data_size{swr_convert(mSwresCtx.get(), &mSamples, mDecodedFrame->nb_samples,
-        const_cast<const uint8_t**>(mDecodedFrame->data), mDecodedFrame->nb_samples)};
+    const int data_size{swr_convert(mSwresCtx.get(), &mSamples, mDecodedFrame->nb_samples,
+        cdata.data(), mDecodedFrame->nb_samples)};
 
     av_frame_unref(mDecodedFrame.get());
     return data_size;
@@ -696,7 +698,7 @@ int AudioState::decodeFrame()
  * multiple of the template type size.
  */
 template<typename T>
-static void sample_dup(uint8_t *out, const uint8_t *in, size_t count, size_t frame_size)
+void sample_dup(uint8_t *out, const uint8_t *in, size_t count, size_t frame_size)
 {
     auto *sample = reinterpret_cast<const T*>(in);
     auto *dst = reinterpret_cast<T*>(out);
@@ -712,7 +714,7 @@ static void sample_dup(uint8_t *out, const uint8_t *in, size_t count, size_t fra
     }
 }
 
-static void sample_dup(uint8_t *out, const uint8_t *in, size_t count, size_t frame_size)
+void sample_dup(uint8_t *out, const uint8_t *in, size_t count, size_t frame_size)
 {
     if((frame_size&7) == 0)
         sample_dup<uint64_t>(out, in, count, frame_size);
@@ -939,6 +941,7 @@ int AudioState::handler()
     ALsizei buffer_len{0};
 
     /* Find a suitable format for OpenAL. */
+    const auto layoutmask = mCodecCtx->ch_layout.u.mask; /* NOLINT(*-union-access) */
     mDstChanLayout = 0;
     mFormat = AL_NONE;
     if((mCodecCtx->sample_fmt == AV_SAMPLE_FMT_FLT || mCodecCtx->sample_fmt == AV_SAMPLE_FMT_FLTP
@@ -956,29 +959,28 @@ int AudioState::handler()
         {
             if(alIsExtensionPresent("AL_EXT_MCFORMATS"))
             {
-                if(mCodecCtx->ch_layout.u.mask == AV_CH_LAYOUT_7POINT1)
+                if(layoutmask == AV_CH_LAYOUT_7POINT1)
                 {
-                    mDstChanLayout = mCodecCtx->ch_layout.u.mask;
+                    mDstChanLayout = layoutmask;
                     mFrameSize *= 8;
                     mFormat = alGetEnumValue("AL_FORMAT_71CHN32");
                 }
-                if(mCodecCtx->ch_layout.u.mask == AV_CH_LAYOUT_5POINT1
-                    || mCodecCtx->ch_layout.u.mask == AV_CH_LAYOUT_5POINT1_BACK)
+                if(layoutmask == AV_CH_LAYOUT_5POINT1 || layoutmask == AV_CH_LAYOUT_5POINT1_BACK)
                 {
-                    mDstChanLayout = mCodecCtx->ch_layout.u.mask;
+                    mDstChanLayout = layoutmask;
                     mFrameSize *= 6;
                     mFormat = alGetEnumValue("AL_FORMAT_51CHN32");
                 }
-                if(mCodecCtx->ch_layout.u.mask == AV_CH_LAYOUT_QUAD)
+                if(layoutmask == AV_CH_LAYOUT_QUAD)
                 {
-                    mDstChanLayout = mCodecCtx->ch_layout.u.mask;
+                    mDstChanLayout = layoutmask;
                     mFrameSize *= 4;
                     mFormat = alGetEnumValue("AL_FORMAT_QUAD32");
                 }
             }
-            if(mCodecCtx->ch_layout.u.mask == AV_CH_LAYOUT_MONO)
+            if(layoutmask == AV_CH_LAYOUT_MONO)
             {
-                mDstChanLayout = mCodecCtx->ch_layout.u.mask;
+                mDstChanLayout = layoutmask;
                 mFrameSize *= 1;
                 mFormat = AL_FORMAT_MONO_FLOAT32;
             }
@@ -1018,29 +1020,28 @@ int AudioState::handler()
         {
             if(alIsExtensionPresent("AL_EXT_MCFORMATS"))
             {
-                if(mCodecCtx->ch_layout.u.mask == AV_CH_LAYOUT_7POINT1)
+                if(layoutmask == AV_CH_LAYOUT_7POINT1)
                 {
-                    mDstChanLayout = mCodecCtx->ch_layout.u.mask;
+                    mDstChanLayout = layoutmask;
                     mFrameSize *= 8;
                     mFormat = alGetEnumValue("AL_FORMAT_71CHN8");
                 }
-                if(mCodecCtx->ch_layout.u.mask == AV_CH_LAYOUT_5POINT1
-                    || mCodecCtx->ch_layout.u.mask == AV_CH_LAYOUT_5POINT1_BACK)
+                if(layoutmask == AV_CH_LAYOUT_5POINT1 || layoutmask == AV_CH_LAYOUT_5POINT1_BACK)
                 {
-                    mDstChanLayout = mCodecCtx->ch_layout.u.mask;
+                    mDstChanLayout = layoutmask;
                     mFrameSize *= 6;
                     mFormat = alGetEnumValue("AL_FORMAT_51CHN8");
                 }
-                if(mCodecCtx->ch_layout.u.mask == AV_CH_LAYOUT_QUAD)
+                if(layoutmask == AV_CH_LAYOUT_QUAD)
                 {
-                    mDstChanLayout = mCodecCtx->ch_layout.u.mask;
+                    mDstChanLayout = layoutmask;
                     mFrameSize *= 4;
                     mFormat = alGetEnumValue("AL_FORMAT_QUAD8");
                 }
             }
-            if(mCodecCtx->ch_layout.u.mask == AV_CH_LAYOUT_MONO)
+            if(layoutmask == AV_CH_LAYOUT_MONO)
             {
-                mDstChanLayout = mCodecCtx->ch_layout.u.mask;
+                mDstChanLayout = layoutmask;
                 mFrameSize *= 1;
                 mFormat = AL_FORMAT_MONO8;
             }
@@ -1072,29 +1073,28 @@ int AudioState::handler()
         {
             if(alIsExtensionPresent("AL_EXT_MCFORMATS"))
             {
-                if(mCodecCtx->ch_layout.u.mask == AV_CH_LAYOUT_7POINT1)
+                if(layoutmask == AV_CH_LAYOUT_7POINT1)
                 {
-                    mDstChanLayout = mCodecCtx->ch_layout.u.mask;
+                    mDstChanLayout = layoutmask;
                     mFrameSize *= 8;
                     mFormat = alGetEnumValue("AL_FORMAT_71CHN16");
                 }
-                if(mCodecCtx->ch_layout.u.mask == AV_CH_LAYOUT_5POINT1
-                    || mCodecCtx->ch_layout.u.mask == AV_CH_LAYOUT_5POINT1_BACK)
+                if(layoutmask == AV_CH_LAYOUT_5POINT1 || layoutmask == AV_CH_LAYOUT_5POINT1_BACK)
                 {
-                    mDstChanLayout = mCodecCtx->ch_layout.u.mask;
+                    mDstChanLayout = layoutmask;
                     mFrameSize *= 6;
                     mFormat = alGetEnumValue("AL_FORMAT_51CHN16");
                 }
-                if(mCodecCtx->ch_layout.u.mask == AV_CH_LAYOUT_QUAD)
+                if(layoutmask == AV_CH_LAYOUT_QUAD)
                 {
-                    mDstChanLayout = mCodecCtx->ch_layout.u.mask;
+                    mDstChanLayout = layoutmask;
                     mFrameSize *= 4;
                     mFormat = alGetEnumValue("AL_FORMAT_QUAD16");
                 }
             }
-            if(mCodecCtx->ch_layout.u.mask == AV_CH_LAYOUT_MONO)
+            if(layoutmask == AV_CH_LAYOUT_MONO)
             {
-                mDstChanLayout = mCodecCtx->ch_layout.u.mask;
+                mDstChanLayout = layoutmask;
                 mFrameSize *= 1;
                 mFormat = AL_FORMAT_MONO16;
             }
@@ -1390,7 +1390,7 @@ int AudioState::handler()
 nanoseconds VideoState::getClock()
 {
     /* NOTE: This returns incorrect times while not playing. */
-    std::lock_guard<std::mutex> _{mDispPtsMutex};
+    std::lock_guard<std::mutex> displock{mDispPtsMutex};
     if(mDisplayPtsTime == microseconds::min())
         return nanoseconds::zero();
     auto delta = get_avtime() - mDisplayPtsTime;
@@ -1398,7 +1398,7 @@ nanoseconds VideoState::getClock()
 }
 
 /* Called by VideoState::updateVideo to display the next video frame. */
-void VideoState::display(SDL_Window *screen, SDL_Renderer *renderer, AVFrame *frame)
+void VideoState::display(SDL_Window *screen, SDL_Renderer *renderer, AVFrame *frame) const
 {
     if(!mImage)
         return;
@@ -1543,15 +1543,15 @@ void VideoState::updateVideo(SDL_Window *screen, SDL_Renderer *renderer, bool re
                 }
 
                 /* point pict at the queue */
-                std::array<uint8_t*,3> pict_data;
-                pict_data[0] = static_cast<uint8_t*>(pixels);
-                pict_data[1] = pict_data[0] + ptrdiff_t{w}*h;
-                pict_data[2] = pict_data[1] + ptrdiff_t{w}*h/4;
+                const std::array pict_data{
+                    static_cast<uint8_t*>(pixels),
+                    static_cast<uint8_t*>(pixels) + ptrdiff_t{w}*h,
+                    static_cast<uint8_t*>(pixels) + ptrdiff_t{w}*h + ptrdiff_t{w}*h/4
+                };
+                const std::array pict_linesize{pitch, pitch/2, pitch/2};
 
-                std::array pict_linesize{pitch, pitch/2, pitch/2};
-
-                sws_scale(mSwscaleCtx.get(), reinterpret_cast<uint8_t**>(frame->data),
-                    frame->linesize, 0, h, pict_data.data(), pict_linesize.data());
+                sws_scale(mSwscaleCtx.get(), std::data(frame->data), std::data(frame->linesize),
+                    0, h, pict_data.data(), pict_linesize.data());
                 SDL_UnlockTexture(mImage);
             }
 
@@ -1569,7 +1569,7 @@ void VideoState::updateVideo(SDL_Window *screen, SDL_Renderer *renderer, bool re
     {
         auto disp_time = get_avtime();
 
-        std::lock_guard<std::mutex> _{mDispPtsMutex};
+        std::lock_guard<std::mutex> displock{mDispPtsMutex};
         mDisplayPts = vp->mPts;
         mDisplayPtsTime = disp_time;
     }
@@ -1602,7 +1602,7 @@ int VideoState::handler()
     auto sender = std::async(std::launch::async, packet_sender);
 
     {
-        std::lock_guard<std::mutex> _{mDispPtsMutex};
+        std::lock_guard<std::mutex> displock{mDispPtsMutex};
         mDisplayPtsTime = get_avtime();
     }
 
@@ -1701,7 +1701,7 @@ bool MovieState::prepare()
     return true;
 }
 
-void MovieState::setTitle(SDL_Window *window)
+void MovieState::setTitle(SDL_Window *window) const
 {
     auto pos1 = mFilename.rfind('/');
     auto pos2 = mFilename.rfind('\\');
@@ -1711,7 +1711,7 @@ void MovieState::setTitle(SDL_Window *window)
     SDL_SetWindowTitle(window, (mFilename.substr(fpos)+" - "+AppName).c_str());
 }
 
-nanoseconds MovieState::getClock()
+nanoseconds MovieState::getClock() const
 {
     if(mClockBase == microseconds::min())
         return nanoseconds::zero();
@@ -1727,7 +1727,7 @@ nanoseconds MovieState::getMasterClock()
     return getClock();
 }
 
-nanoseconds MovieState::getDuration()
+nanoseconds MovieState::getDuration() const
 { return std::chrono::duration<int64_t,std::ratio<1,AV_TIME_BASE>>(mFormatCtx->duration); }
 
 int MovieState::streamComponentOpen(unsigned int stream_index)

@@ -344,7 +344,7 @@ else()
         option(ALSOFT_STATIC_WINPTHREAD "Static link libwinpthread" OFF)
         if(ALSOFT_STATIC_WINPTHREAD)
             set(OLD_REQUIRED_LIBRARIES ${CMAKE_REQUIRED_LIBRARIES})
-            set(CMAKE_REQUIRED_LIBRARIES ${CMAKE_REQUIRED_LIBRARIES} "-Wl,--push-state,-Bstatic,-lwinpthread,--pop-state")
+            set(CMAKE_REQUIRED_LIBRARIES ${CMAKE_REQUIRED_LIBRARIES} "-Wl,--push-state,-Bstatic,-lstdc++,-lwinpthread,--pop-state")
             check_cxx_source_compiles("int main() { }" HAVE_STATIC_LIBWINPTHREAD_SWITCH)
             set(CMAKE_REQUIRED_LIBRARIES ${OLD_REQUIRED_LIBRARIES})
             unset(OLD_REQUIRED_LIBRARIES)
@@ -352,7 +352,7 @@ else()
             if(NOT HAVE_STATIC_LIBWINPTHREAD_SWITCH)
                 message(FATAL_ERROR "Cannot static link libwinpthread")
             endif()
-            set(LINKER_FLAGS ${LINKER_FLAGS} "-Wl,--push-state,-Bstatic,-lwinpthread,--pop-state")
+            set(LINKER_FLAGS ${LINKER_FLAGS} "-Wl,--push-state,-Bstatic,-lstdc++,-lwinpthread,--pop-state")
         endif()
     endif()
 endif()
@@ -420,7 +420,7 @@ if(ALSOFT_CPUEXT_SSE AND HAVE_XMMINTRIN_H)
     set(HAVE_SSE 1)
 endif()
 if(ALSOFT_REQUIRE_SSE AND NOT HAVE_SSE)
-    message(FATAL_ERROR "Failed to enabled required SSE CPU extensions")
+    message(FATAL_ERROR "Failed to enable required SSE CPU extensions")
 endif()
 
 option(ALSOFT_CPUEXT_SSE2 "Enable SSE2 support" ON)
@@ -465,7 +465,7 @@ if(ALSOFT_CPUEXT_NEON AND HAVE_ARM_NEON_H)
     endif()
 endif()
 if(ALSOFT_REQUIRE_NEON AND NOT HAVE_NEON)
-    message(FATAL_ERROR "Failed to enabled required ARM NEON CPU extensions")
+    message(FATAL_ERROR "Failed to enable required ARM NEON CPU extensions")
 endif()
 
 
@@ -565,8 +565,6 @@ if(HAVE_INTRIN_H)
         }" HAVE_CPUID_INTRINSIC)
 endif()
 
-check_symbol_exists(posix_memalign   stdlib.h HAVE_POSIX_MEMALIGN)
-check_symbol_exists(_aligned_malloc  malloc.h HAVE__ALIGNED_MALLOC)
 check_symbol_exists(proc_pidpath     libproc.h HAVE_PROC_PIDPATH)
 
 if(NOT WIN32)
@@ -610,9 +608,6 @@ set(COMMON_OBJS
     common/albit.h
     common/alcomplex.cpp
     common/alcomplex.h
-    common/alfstream.cpp
-    common/alfstream.h
-    common/almalloc.cpp
     common/almalloc.h
     common/alnumbers.h
     common/alnumeric.h
@@ -623,6 +618,7 @@ set(COMMON_OBJS
     common/alstring.h
     common/althrd_setname.cpp
     common/althrd_setname.h
+    common/althreads.h
     common/altraits.h
     common/atomic.h
     common/comptr.h
@@ -747,7 +743,7 @@ if(NOT WIN32)
     endif()
 endif()
 if(ALSOFT_REQUIRE_RTKIT AND NOT HAVE_RTKIT)
-    message(FATAL_ERROR "Failed to enabled required RTKit support")
+    message(FATAL_ERROR "Failed to enable required RTKit support")
 endif()
 
 # Default mixers, always available
@@ -925,7 +921,7 @@ if(ALSOFT_BACKEND_PIPEWIRE AND PkgConfig_FOUND)
     endif()
 endif()
 if(ALSOFT_REQUIRE_PIPEWIRE AND NOT HAVE_PIPEWIRE)
-    message(FATAL_ERROR "Failed to enabled required PipeWire backend")
+    message(FATAL_ERROR "Failed to enable required PipeWire backend")
 endif()
 
 # Check PulseAudio backend
@@ -942,7 +938,7 @@ if(ALSOFT_BACKEND_PULSEAUDIO)
     endif()
 endif()
 if(ALSOFT_REQUIRE_PULSEAUDIO AND NOT HAVE_PULSEAUDIO)
-    message(FATAL_ERROR "Failed to enabled required PulseAudio backend")
+    message(FATAL_ERROR "Failed to enable required PulseAudio backend")
 endif()
 
 if(NOT WIN32)
@@ -1004,16 +1000,16 @@ if(NOT WIN32)
     endif()
 endif()
 if(ALSOFT_REQUIRE_ALSA AND NOT HAVE_ALSA)
-    message(FATAL_ERROR "Failed to enabled required ALSA backend")
+    message(FATAL_ERROR "Failed to enable required ALSA backend")
 endif()
 if(ALSOFT_REQUIRE_OSS AND NOT HAVE_OSS)
-    message(FATAL_ERROR "Failed to enabled required OSS backend")
+    message(FATAL_ERROR "Failed to enable required OSS backend")
 endif()
 if(ALSOFT_REQUIRE_SOLARIS AND NOT HAVE_SOLARIS)
-    message(FATAL_ERROR "Failed to enabled required Solaris backend")
+    message(FATAL_ERROR "Failed to enable required Solaris backend")
 endif()
 if(ALSOFT_REQUIRE_SNDIO AND NOT HAVE_SNDIO)
-    message(FATAL_ERROR "Failed to enabled required SndIO backend")
+    message(FATAL_ERROR "Failed to enable required SndIO backend")
 endif()
 
 # Check Windows-only backends
@@ -1068,13 +1064,13 @@ if(WIN32)
     endif()
 endif()
 if(ALSOFT_REQUIRE_WINMM AND NOT HAVE_WINMM)
-    message(FATAL_ERROR "Failed to enabled required WinMM backend")
+    message(FATAL_ERROR "Failed to enable required WinMM backend")
 endif()
 if(ALSOFT_REQUIRE_DSOUND AND NOT HAVE_DSOUND)
-    message(FATAL_ERROR "Failed to enabled required DSound backend")
+    message(FATAL_ERROR "Failed to enable required DSound backend")
 endif()
 if(ALSOFT_REQUIRE_WASAPI AND NOT HAVE_WASAPI)
-    message(FATAL_ERROR "Failed to enabled required WASAPI backend")
+    message(FATAL_ERROR "Failed to enable required WASAPI backend")
 endif()
 
 # Check JACK backend
@@ -1091,7 +1087,7 @@ if(ALSOFT_BACKEND_JACK)
     endif()
 endif()
 if(ALSOFT_REQUIRE_JACK AND NOT HAVE_JACK)
-    message(FATAL_ERROR "Failed to enabled required JACK backend")
+    message(FATAL_ERROR "Failed to enable required JACK backend")
 endif()
 
 # Check CoreAudio backend
@@ -1126,7 +1122,7 @@ if(ALSOFT_BACKEND_COREAUDIO)
     endif()
 endif()
 if(ALSOFT_REQUIRE_COREAUDIO AND NOT HAVE_COREAUDIO)
-    message(FATAL_ERROR "Failed to enabled required CoreAudio backend")
+    message(FATAL_ERROR "Failed to enable required CoreAudio backend")
 endif()
 
 # Check for Oboe (Android) backend
@@ -1158,7 +1154,7 @@ if(ALSOFT_BACKEND_OBOE)
     endif()
 endif()
 if(ALSOFT_REQUIRE_OBOE AND NOT HAVE_OBOE)
-    message(FATAL_ERROR "Failed to enabled required Oboe backend")
+    message(FATAL_ERROR "Failed to enable required Oboe backend")
 endif()
 
 # Check for OpenSL (Android) backend
@@ -1175,7 +1171,7 @@ if(ALSOFT_BACKEND_OPENSL)
     endif()
 endif()
 if(ALSOFT_REQUIRE_OPENSL AND NOT HAVE_OPENSL)
-    message(FATAL_ERROR "Failed to enabled required OpenSL backend")
+    message(FATAL_ERROR "Failed to enable required OpenSL backend")
 endif()
 
 # Check PortAudio backend
@@ -1192,7 +1188,7 @@ if(ALSOFT_BACKEND_PORTAUDIO)
     endif()
 endif()
 if(ALSOFT_REQUIRE_PORTAUDIO AND NOT HAVE_PORTAUDIO)
-    message(FATAL_ERROR "Failed to enabled required PortAudio backend")
+    message(FATAL_ERROR "Failed to enable required PortAudio backend")
 endif()
 
 # Check for SDL2 backend
@@ -1210,7 +1206,7 @@ if(ALSOFT_BACKEND_SDL2)
     endif()
 endif()
 if(ALSOFT_REQUIRE_SDL2 AND NOT SDL2_FOUND)
-    message(FATAL_ERROR "Failed to enabled required SDL2 backend")
+    message(FATAL_ERROR "Failed to enable required SDL2 backend")
 endif()
 
 # Optionally enable the Wave Writer backend

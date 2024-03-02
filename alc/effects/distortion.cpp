@@ -22,24 +22,26 @@
 
 #include <algorithm>
 #include <array>
+#include <cmath>
 #include <cstdlib>
-#include <iterator>
+#include <variant>
 
 #include "alc/effects/base.h"
-#include "almalloc.h"
 #include "alnumbers.h"
 #include "alnumeric.h"
 #include "alspan.h"
+#include "core/ambidefs.h"
 #include "core/bufferline.h"
 #include "core/context.h"
-#include "core/devformat.h"
 #include "core/device.h"
+#include "core/effects/base.h"
 #include "core/effectslot.h"
 #include "core/filters/biquad.h"
 #include "core/mixer.h"
 #include "core/mixer/defs.h"
 #include "intrusive_ptr.h"
 
+struct BufferStorage;
 
 namespace {
 
@@ -76,8 +78,7 @@ void DistortionState::update(const ContextBase *context, const EffectSlot *slot,
     const DeviceBase *device{context->mDevice};
 
     /* Store waveshaper edge settings. */
-    const float edge{minf(std::sin(al::numbers::pi_v<float>*0.5f * props.Edge),
-        0.99f)};
+    const float edge{std::min(std::sin(al::numbers::pi_v<float>*0.5f * props.Edge), 0.99f)};
     mEdgeCoeff = 2.0f * edge / (1.0f-edge);
 
     float cutoff{props.LowpassCutoff};
@@ -110,7 +111,7 @@ void DistortionState::process(const size_t samplesToDo, const al::span<const Flo
          * bandpass filters using high frequencies, at which classic IIR
          * filters became unstable.
          */
-        size_t todo{minz(BufferLineSize, (samplesToDo-base) * 4)};
+        size_t todo{std::min(BufferLineSize, (samplesToDo-base) * 4_uz)};
 
         /* Fill oversample buffer using zero stuffing. Multiply the sample by
          * the amount of oversampling to maintain the signal's power.
@@ -132,9 +133,9 @@ void DistortionState::process(const size_t samplesToDo, const al::span<const Flo
          */
         auto proc_sample = [fc](float smp) -> float
         {
-            smp = (1.0f + fc) * smp/(1.0f + fc*std::abs(smp));
-            smp = (1.0f + fc) * smp/(1.0f + fc*std::abs(smp)) * -1.0f;
-            smp = (1.0f + fc) * smp/(1.0f + fc*std::abs(smp));
+            smp = (1.0f + fc) * smp/(1.0f + fc*std::fabs(smp));
+            smp = (1.0f + fc) * smp/(1.0f + fc*std::fabs(smp)) * -1.0f;
+            smp = (1.0f + fc) * smp/(1.0f + fc*std::fabs(smp));
             return smp;
         };
         std::transform(mBuffer[1].begin(), mBuffer[1].begin()+todo, mBuffer[0].begin(),

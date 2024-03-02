@@ -213,7 +213,7 @@ void UhjEncoder<N>::encode(float *LeftOut, float *RightOut,
     size_t curseg{mCurrentSegment};
     for(size_t base{0};base < SamplesToDo;)
     {
-        const size_t todo{minz(sSegmentSize-mFifoPos, SamplesToDo-base)};
+        const size_t todo{std::min(sSegmentSize-mFifoPos, SamplesToDo-base)};
 
         /* Copy out the samples that were previously processed by the FFT. */
         std::copy_n(mWXInOut.begin()+mFifoPos, todo, mD.begin()+base);

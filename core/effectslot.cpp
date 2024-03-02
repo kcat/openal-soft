@@ -9,12 +9,10 @@
 #include "context.h"
 
 
-EffectSlotArray *EffectSlot::CreatePtrArray(size_t count) noexcept
+std::unique_ptr<EffectSlotArray> EffectSlot::CreatePtrArray(size_t count)
 {
     /* Allocate space for twice as many pointers, so the mixer has scratch
      * space to store a sorted list during mixing.
      */
-    if(void *ptr{al_calloc(alignof(EffectSlotArray), EffectSlotArray::Sizeof(count*2))})
-        return al::construct_at(static_cast<EffectSlotArray*>(ptr), count);
-    return nullptr;
+    return std::unique_ptr<EffectSlotArray>{new(FamCount{count*2}) EffectSlotArray(count)};
 }

@@ -23,14 +23,18 @@
 #include "effect.h"
 
 #include <algorithm>
+#include <cstdarg>
 #include <cstdint>
 #include <cstring>
 #include <iterator>
 #include <memory>
 #include <mutex>
-#include <new>
 #include <numeric>
+#include <string>
+#include <type_traits>
+#include <unordered_map>
 #include <utility>
+#include <variant>
 #include <vector>
 
 #include "AL/al.h"
@@ -39,24 +43,20 @@
 #include "AL/efx-presets.h"
 #include "AL/efx.h"
 
+#include "al/effects/effects.h"
 #include "albit.h"
 #include "alc/context.h"
 #include "alc/device.h"
-#include "alc/effects/base.h"
 #include "alc/inprogext.h"
 #include "almalloc.h"
 #include "alnumeric.h"
+#include "alspan.h"
 #include "alstring.h"
-#include "core/except.h"
 #include "core/logging.h"
 #include "direct_defs.h"
+#include "intrusive_ptr.h"
 #include "opthelpers.h"
 
-#ifdef ALSOFT_EAX
-#include <cassert>
-
-#include "eax/exception.h"
-#endif // ALSOFT_EAX
 
 const std::array<EffectList,16> gEffectList{{
     { "eaxreverb",   EAXREVERB_EFFECT,   AL_EFFECT_EAXREVERB },
@@ -80,16 +80,20 @@ const std::array<EffectList,16> gEffectList{{
 
 effect_exception::effect_exception(ALenum code, const char *msg, ...) : mErrorCode{code}
 {
+    /* NOLINTBEGIN(*-array-to-pointer-decay) */
     std::va_list args;
     va_start(args, msg);
     setMessage(msg, args);
     va_end(args);
+    /* NOLINTEND(*-array-to-pointer-decay) */
 }
 effect_exception::~effect_exception() = default;
 
 namespace {
 
-auto GetDefaultProps(ALenum type) -> const EffectProps&
+using SubListAllocator = al::allocator<std::array<ALeffect,64>>;
+
+auto GetDefaultProps(ALenum type) noexcept -> const EffectProps&
 {
     switch(type)
     {
@@ -126,21 +130,21 @@ bool EnsureEffects(ALCdevice *device, size_t needed)
         [](size_t cur, const EffectSubList &sublist) noexcept -> size_t
         { return cur + static_cast<ALuint>(al::popcount(sublist.FreeMask)); })};
 
-    while(needed > count)
-    {
-        if(device->EffectList.size() >= 1<<25) UNLIKELY
-            return false;
-
-        device->EffectList.emplace_back();
-        auto sublist = device->EffectList.end() - 1;
-        sublist->FreeMask = ~0_u64;
-        sublist->Effects = static_cast<ALeffect*>(al_calloc(alignof(ALeffect), sizeof(ALeffect)*64));
-        if(!sublist->Effects) UNLIKELY
+    try {
+        while(needed > count)
         {
-            device->EffectList.pop_back();
-            return false;
+            if(device->EffectList.size() >= 1<<25) UNLIKELY
+                return false;
+
+            EffectSubList sublist{};
+            sublist.FreeMask = ~0_u64;
+            sublist.Effects = SubListAllocator{}.allocate(1);
+            device->EffectList.emplace_back(std::move(sublist));
+            count += std::tuple_size_v<SubListAllocator::value_type>;
         }
-        count += 64;
+    }
+    catch(...) {
+        return false;
     }
     return true;
 }
@@ -154,7 +158,7 @@ ALeffect *AllocEffect(ALCdevice *device)
     auto slidx = static_cast<ALuint>(al::countr_zero(sublist->FreeMask));
     ASSUME(slidx < 64);
 
-    ALeffect *effect{al::construct_at(sublist->Effects + slidx)};
+    ALeffect *effect{al::construct_at(al::to_address(sublist->Effects->begin() + slidx))};
     InitEffectParams(effect, AL_EFFECT_NULL);
 
     /* Add 1 to avoid effect ID 0. */
@@ -188,12 +192,12 @@ inline ALeffect *LookupEffect(ALCdevice *device, ALuint id)
     EffectSubList &sublist = device->EffectList[lidx];
     if(sublist.FreeMask & (1_u64 << slidx)) UNLIKELY
         return nullptr;
-    return sublist.Effects + slidx;
+    return al::to_address(sublist.Effects->begin() + slidx);
 }
 
 } // namespace
 
-AL_API DECL_FUNC2(void, alGenEffects, ALsizei, ALuint*)
+AL_API DECL_FUNC2(void, alGenEffects, ALsizei,n, ALuint*,effects)
 FORCE_ALIGN void AL_APIENTRY alGenEffectsDirect(ALCcontext *context, ALsizei n, ALuint *effects) noexcept
 {
     if(n < 0) UNLIKELY
@@ -201,7 +205,7 @@ FORCE_ALIGN void AL_APIENTRY alGenEffectsDirect(ALCcontext *context, ALsizei n, 
     if(n <= 0) UNLIKELY return;
 
     ALCdevice *device{context->mALDevice.get()};
-    std::lock_guard<std::mutex> _{device->EffectLock};
+    std::lock_guard<std::mutex> effectlock{device->EffectLock};
     if(!EnsureEffects(device, static_cast<ALuint>(n)))
     {
         context->setError(AL_OUT_OF_MEMORY, "Failed to allocate %d effect%s", n, (n==1)?"":"s");
@@ -211,8 +215,7 @@ FORCE_ALIGN void AL_APIENTRY alGenEffectsDirect(ALCcontext *context, ALsizei n, 
     if(n == 1) LIKELY
     {
         /* Special handling for the easy and normal case. */
-        ALeffect *effect{AllocEffect(device)};
-        effects[0] = effect->id;
+        *effects = AllocEffect(device)->id;
     }
     else
     {
@@ -225,11 +228,12 @@ FORCE_ALIGN void AL_APIENTRY alGenEffectsDirect(ALCcontext *context, ALsizei n, 
             ALeffect *effect{AllocEffect(device)};
             ids.emplace_back(effect->id);
         } while(--n);
-        std::copy(ids.cbegin(), ids.cend(), effects);
+        const al::span eids{effects, static_cast<ALuint>(n)};
+        std::copy(ids.cbegin(), ids.cend(), eids.begin());
     }
 }
 
-AL_API DECL_FUNC2(void, alDeleteEffects, ALsizei, const ALuint*)
+AL_API DECL_FUNC2(void, alDeleteEffects, ALsizei,n, const ALuint*,effects)
 FORCE_ALIGN void AL_APIENTRY alDeleteEffectsDirect(ALCcontext *context, ALsizei n,
     const ALuint *effects) noexcept
 {
@@ -238,15 +242,15 @@ FORCE_ALIGN void AL_APIENTRY alDeleteEffectsDirect(ALCcontext *context, ALsizei 
     if(n <= 0) UNLIKELY return;
 
     ALCdevice *device{context->mALDevice.get()};
-    std::lock_guard<std::mutex> _{device->EffectLock};
+    std::lock_guard<std::mutex> effectlock{device->EffectLock};
 
     /* First try to find any effects that are invalid. */
     auto validate_effect = [device](const ALuint eid) -> bool
     { return !eid || LookupEffect(device, eid) != nullptr; };
 
-    const ALuint *effects_end = effects + n;
-    auto inveffect = std::find_if_not(effects, effects_end, validate_effect);
-    if(inveffect != effects_end) UNLIKELY
+    const al::span eids{effects, static_cast<ALuint>(n)};
+    auto inveffect = std::find_if_not(eids.begin(), eids.end(), validate_effect);
+    if(inveffect != eids.end()) UNLIKELY
     {
         context->setError(AL_INVALID_NAME, "Invalid effect ID %u", *inveffect);
         return;
@@ -258,25 +262,25 @@ FORCE_ALIGN void AL_APIENTRY alDeleteEffectsDirect(ALCcontext *context, ALsizei 
         ALeffect *effect{eid ? LookupEffect(device, eid) : nullptr};
         if(effect) FreeEffect(device, effect);
     };
-    std::for_each(effects, effects_end, delete_effect);
+    std::for_each(eids.begin(), eids.end(), delete_effect);
 }
 
-AL_API DECL_FUNC1(ALboolean, alIsEffect, ALuint)
+AL_API DECL_FUNC1(ALboolean, alIsEffect, ALuint,effect)
 FORCE_ALIGN ALboolean AL_APIENTRY alIsEffectDirect(ALCcontext *context, ALuint effect) noexcept
 {
     ALCdevice *device{context->mALDevice.get()};
-    std::lock_guard<std::mutex> _{device->EffectLock};
+    std::lock_guard<std::mutex> effectlock{device->EffectLock};
     if(!effect || LookupEffect(device, effect))
         return AL_TRUE;
     return AL_FALSE;
 }
 
-AL_API DECL_FUNC3(void, alEffecti, ALuint, ALenum, ALint)
+AL_API DECL_FUNC3(void, alEffecti, ALuint,effect, ALenum,param, ALint,value)
 FORCE_ALIGN void AL_APIENTRY alEffectiDirect(ALCcontext *context, ALuint effect, ALenum param,
     ALint value) noexcept
 {
     ALCdevice *device{context->mALDevice.get()};
-    std::lock_guard<std::mutex> _{device->EffectLock};
+    std::lock_guard<std::mutex> effectlock{device->EffectLock};
 
     ALeffect *aleffect{LookupEffect(device, effect)};
     if(!aleffect) UNLIKELY
@@ -286,14 +290,9 @@ FORCE_ALIGN void AL_APIENTRY alEffectiDirect(ALCcontext *context, ALuint effect,
         bool isOk{value == AL_EFFECT_NULL};
         if(!isOk)
         {
-            for(const EffectList &effectitem : gEffectList)
-            {
-                if(value == effectitem.val && !DisabledEffects.test(effectitem.type))
-                {
-                    isOk = true;
-                    break;
-                }
-            }
+            auto check_effect = [value](const EffectList &item) -> bool
+            { return value == item.val && !DisabledEffects.test(item.type); };
+            isOk = std::any_of(gEffectList.cbegin(), gEffectList.cend(), check_effect);
         }
 
         if(isOk)
@@ -320,7 +319,7 @@ FORCE_ALIGN void AL_APIENTRY alEffectiDirect(ALCcontext *context, ALuint effect,
     }
 }
 
-AL_API DECL_FUNC3(void, alEffectiv, ALuint, ALenum, const ALint*)
+AL_API DECL_FUNC3(void, alEffectiv, ALuint,effect, ALenum,param, const ALint*,values)
 FORCE_ALIGN void AL_APIENTRY alEffectivDirect(ALCcontext *context, ALuint effect, ALenum param,
     const ALint *values) noexcept
 {
@@ -332,7 +331,7 @@ FORCE_ALIGN void AL_APIENTRY alEffectivDirect(ALCcontext *context, ALuint effect
     }
 
     ALCdevice *device{context->mALDevice.get()};
-    std::lock_guard<std::mutex> _{device->EffectLock};
+    std::lock_guard<std::mutex> effectlock{device->EffectLock};
 
     ALeffect *aleffect{LookupEffect(device, effect)};
     if(!aleffect) UNLIKELY
@@ -356,12 +355,12 @@ FORCE_ALIGN void AL_APIENTRY alEffectivDirect(ALCcontext *context, ALuint effect
     }
 }
 
-AL_API DECL_FUNC3(void, alEffectf, ALuint, ALenum, ALfloat)
+AL_API DECL_FUNC3(void, alEffectf, ALuint,effect, ALenum,param, ALfloat,value)
 FORCE_ALIGN void AL_APIENTRY alEffectfDirect(ALCcontext *context, ALuint effect, ALenum param,
     ALfloat value) noexcept
 {
     ALCdevice *device{context->mALDevice.get()};
-    std::lock_guard<std::mutex> _{device->EffectLock};
+    std::lock_guard<std::mutex> effectlock{device->EffectLock};
 
     ALeffect *aleffect{LookupEffect(device, effect)};
     if(!aleffect) UNLIKELY
@@ -385,12 +384,12 @@ FORCE_ALIGN void AL_APIENTRY alEffectfDirect(ALCcontext *context, ALuint effect,
     }
 }
 
-AL_API DECL_FUNC3(void, alEffectfv, ALuint, ALenum, const ALfloat*)
+AL_API DECL_FUNC3(void, alEffectfv, ALuint,effect, ALenum,param, const ALfloat*,values)
 FORCE_ALIGN void AL_APIENTRY alEffectfvDirect(ALCcontext *context, ALuint effect, ALenum param,
     const ALfloat *values) noexcept
 {
     ALCdevice *device{context->mALDevice.get()};
-    std::lock_guard<std::mutex> _{device->EffectLock};
+    std::lock_guard<std::mutex> effectlock{device->EffectLock};
 
     ALeffect *aleffect{LookupEffect(device, effect)};
     if(!aleffect) UNLIKELY
@@ -414,12 +413,12 @@ FORCE_ALIGN void AL_APIENTRY alEffectfvDirect(ALCcontext *context, ALuint effect
     }
 }
 
-AL_API DECL_FUNC3(void, alGetEffecti, ALuint, ALenum, ALint*)
+AL_API DECL_FUNC3(void, alGetEffecti, ALuint,effect, ALenum,param, ALint*,value)
 FORCE_ALIGN void AL_APIENTRY alGetEffectiDirect(ALCcontext *context, ALuint effect, ALenum param,
     ALint *value) noexcept
 {
     ALCdevice *device{context->mALDevice.get()};
-    std::lock_guard<std::mutex> _{device->EffectLock};
+    std::lock_guard<std::mutex> effectlock{device->EffectLock};
 
     const ALeffect *aleffect{LookupEffect(device, effect)};
     if(!aleffect) UNLIKELY
@@ -445,7 +444,7 @@ FORCE_ALIGN void AL_APIENTRY alGetEffectiDirect(ALCcontext *context, ALuint effe
     }
 }
 
-AL_API DECL_FUNC3(void, alGetEffectiv, ALuint, ALenum, ALint*)
+AL_API DECL_FUNC3(void, alGetEffectiv, ALuint,effect, ALenum,param, ALint*,values)
 FORCE_ALIGN void AL_APIENTRY alGetEffectivDirect(ALCcontext *context, ALuint effect, ALenum param,
     ALint *values) noexcept
 {
@@ -457,7 +456,7 @@ FORCE_ALIGN void AL_APIENTRY alGetEffectivDirect(ALCcontext *context, ALuint eff
     }
 
     ALCdevice *device{context->mALDevice.get()};
-    std::lock_guard<std::mutex> _{device->EffectLock};
+    std::lock_guard<std::mutex> effectlock{device->EffectLock};
 
     const ALeffect *aleffect{LookupEffect(device, effect)};
     if(!aleffect) UNLIKELY
@@ -481,12 +480,12 @@ FORCE_ALIGN void AL_APIENTRY alGetEffectivDirect(ALCcontext *context, ALuint eff
     }
 }
 
-AL_API DECL_FUNC3(void, alGetEffectf, ALuint, ALenum, ALfloat*)
+AL_API DECL_FUNC3(void, alGetEffectf, ALuint,effect, ALenum,param, ALfloat*,value)
 FORCE_ALIGN void AL_APIENTRY alGetEffectfDirect(ALCcontext *context, ALuint effect, ALenum param,
     ALfloat *value) noexcept
 {
     ALCdevice *device{context->mALDevice.get()};
-    std::lock_guard<std::mutex> _{device->EffectLock};
+    std::lock_guard<std::mutex> effectlock{device->EffectLock};
 
     const ALeffect *aleffect{LookupEffect(device, effect)};
     if(!aleffect) UNLIKELY
@@ -510,12 +509,12 @@ FORCE_ALIGN void AL_APIENTRY alGetEffectfDirect(ALCcontext *context, ALuint effe
     }
 }
 
-AL_API DECL_FUNC3(void, alGetEffectfv, ALuint, ALenum, ALfloat*)
+AL_API DECL_FUNC3(void, alGetEffectfv, ALuint,effect, ALenum,param, ALfloat*,values)
 FORCE_ALIGN void AL_APIENTRY alGetEffectfvDirect(ALCcontext *context, ALuint effect, ALenum param,
     ALfloat *values) noexcept
 {
     ALCdevice *device{context->mALDevice.get()};
-    std::lock_guard<std::mutex> _{device->EffectLock};
+    std::lock_guard<std::mutex> effectlock{device->EffectLock};
 
     const ALeffect *aleffect{LookupEffect(device, effect)};
     if(!aleffect) UNLIKELY
@@ -548,7 +547,7 @@ void InitEffect(ALeffect *effect)
 void ALeffect::SetName(ALCcontext* context, ALuint id, std::string_view name)
 {
     ALCdevice *device{context->mALDevice.get()};
-    std::lock_guard<std::mutex> _{device->EffectLock};
+    std::lock_guard<std::mutex> effectlock{device->EffectLock};
 
     auto effect = LookupEffect(device, id);
     if(!effect) UNLIKELY
@@ -567,11 +566,11 @@ EffectSubList::~EffectSubList()
     while(usemask)
     {
         const int idx{al::countr_zero(usemask)};
-        std::destroy_at(Effects+idx);
+        std::destroy_at(al::to_address(Effects->begin()+idx));
         usemask &= ~(1_u64 << idx);
     }
     FreeMask = ~usemask;
-    al_free(Effects);
+    SubListAllocator{}.deallocate(Effects, 1);
     Effects = nullptr;
 }
 
@@ -711,9 +710,11 @@ static constexpr std::array reverblist{
 };
 #undef DECL
 
-void LoadReverbPreset(const char *name, ALeffect *effect)
+void LoadReverbPreset(const std::string_view name, ALeffect *effect)
 {
-    if(al::strcasecmp(name, "NONE") == 0)
+    using namespace std::string_view_literals;
+
+    if(al::case_compare(name, "NONE"sv) == 0)
     {
         InitEffectParams(effect, AL_EFFECT_NULL);
         TRACE("Loading reverb '%s'\n", "NONE");
@@ -728,10 +729,10 @@ void LoadReverbPreset(const char *name, ALeffect *effect)
         InitEffectParams(effect, AL_EFFECT_NULL);
     for(const auto &reverbitem : reverblist)
     {
-        if(al::strcasecmp(name, reverbitem.name) != 0)
+        if(al::case_compare(name, std::data(reverbitem.name)) != 0)
             continue;
 
-        TRACE("Loading reverb '%s'\n", reverbitem.name);
+        TRACE("Loading reverb '%s'\n", std::data(reverbitem.name));
         const auto &props = reverbitem.props;
         auto &dst = std::get<ReverbProps>(effect->Props);
         dst.Density   = props.flDensity;
@@ -764,7 +765,7 @@ void LoadReverbPreset(const char *name, ALeffect *effect)
         return;
     }
 
-    WARN("Reverb preset '%s' not found\n", name);
+    WARN("Reverb preset '%.*s' not found\n", al::sizei(name), name.data());
 }
 
 bool IsValidEffectType(ALenum type) noexcept
@@ -772,10 +773,7 @@ bool IsValidEffectType(ALenum type) noexcept
     if(type == AL_EFFECT_NULL)
         return true;
 
-    for(const auto &effect_item : gEffectList)
-    {
-        if(type == effect_item.val && !DisabledEffects.test(effect_item.type))
-            return true;
-    }
-    return false;
+    auto check_effect = [type](const EffectList &item) noexcept -> bool
+    { return type == item.val && !DisabledEffects.test(item.type); };
+    return std::any_of(gEffectList.cbegin(), gEffectList.cend(), check_effect);
 }

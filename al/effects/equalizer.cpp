@@ -16,7 +16,7 @@
 
 namespace {
 
-EffectProps genDefaultProps() noexcept
+constexpr EffectProps genDefaultProps() noexcept
 {
     EqualizerProps props{};
     props.LowCutoff = AL_EQUALIZER_DEFAULT_LOW_CUTOFF;

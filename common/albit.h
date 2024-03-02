@@ -2,7 +2,9 @@
 #define AL_BIT_H
 
 #include <array>
+#ifndef __GNUC__
 #include <cstdint>
+#endif
 #include <cstring>
 #include <limits>
 #include <new>

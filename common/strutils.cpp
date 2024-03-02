@@ -5,21 +5,22 @@
 
 #include <cstdlib>
 
-
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
+
+#include "alstring.h"
 
 std::string wstr_to_utf8(std::wstring_view wstr)
 {
     std::string ret;
 
-    int len{WideCharToMultiByte(CP_UTF8, 0, wstr.data(), static_cast<int>(wstr.length()), nullptr,
-        0, nullptr, nullptr)};
+    const int len{WideCharToMultiByte(CP_UTF8, 0, wstr.data(), al::sizei(wstr), nullptr, 0,
+        nullptr, nullptr)};
     if(len > 0)
     {
-        ret.resize(len);
-        WideCharToMultiByte(CP_UTF8, 0, wstr.data(), static_cast<int>(wstr.length()), &ret[0], len,
+        ret.resize(static_cast<size_t>(len));
+        WideCharToMultiByte(CP_UTF8, 0, wstr.data(), al::sizei(wstr), ret.data(), len,
             nullptr, nullptr);
     }
 
@@ -30,12 +31,11 @@ std::wstring utf8_to_wstr(std::string_view str)
 {
     std::wstring ret;
 
-    int len{MultiByteToWideChar(CP_UTF8, 0, str.data(), static_cast<int>(str.length()), nullptr,
-        0)};
+    const int len{MultiByteToWideChar(CP_UTF8, 0, str.data(), al::sizei(str), nullptr, 0)};
     if(len > 0)
     {
-        ret.resize(len);
-        MultiByteToWideChar(CP_UTF8, 0, str.data(), static_cast<int>(str.length()), &ret[0], len);
+        ret.resize(static_cast<size_t>(len));
+        MultiByteToWideChar(CP_UTF8, 0, str.data(), al::sizei(str), ret.data(), len);
     }
 
     return ret;

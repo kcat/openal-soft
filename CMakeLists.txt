@@ -697,6 +697,8 @@ set(CORE_OBJS
     core/mixer.cpp
     core/mixer.h
     core/resampler_limits.h
+    core/storage_formats.cpp
+    core/storage_formats.h
     core/uhjfilter.cpp
     core/uhjfilter.h
     core/uiddefs.cpp

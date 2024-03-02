@@ -2,16 +2,15 @@
 #define CORE_FMT_TRAITS_H
 
 #include <array>
-#include <cstddef>
-#include <stdint.h>
+#include <cstdint>
 
-#include "buffer_storage.h"
+#include "storage_formats.h"
 
 
 namespace al {
 
-extern const std::array<int16_t,256> muLawDecompressionTable;
-extern const std::array<int16_t,256> aLawDecompressionTable;
+extern const std::array<std::int16_t,256> muLawDecompressionTable;
+extern const std::array<std::int16_t,256> aLawDecompressionTable;
 
 
 template<FmtType T>
@@ -19,21 +18,21 @@ struct FmtTypeTraits { };
 
 template<>
 struct FmtTypeTraits<FmtUByte> {
-    using Type = uint8_t;
+    using Type = std::uint8_t;
 
     constexpr float operator()(const Type val) const noexcept
     { return float(val)*(1.0f/128.0f) - 1.0f; }
 };
 template<>
 struct FmtTypeTraits<FmtShort> {
-    using Type = int16_t;
+    using Type = std::int16_t;
 
     constexpr float operator()(const Type val) const noexcept
     { return float(val) * (1.0f/32768.0f); }
 };
 template<>
 struct FmtTypeTraits<FmtInt> {
-    using Type = int32_t;
+    using Type = std::int32_t;
 
     constexpr float operator()(const Type val) const noexcept
     { return static_cast<float>(val)*(1.0f/2147483648.0f); }
@@ -52,14 +51,14 @@ struct FmtTypeTraits<FmtDouble> {
 };
 template<>
 struct FmtTypeTraits<FmtMulaw> {
-    using Type = uint8_t;
+    using Type = std::uint8_t;
 
     constexpr float operator()(const Type val) const noexcept
     { return float(muLawDecompressionTable[val]) * (1.0f/32768.0f); }
 };
 template<>
 struct FmtTypeTraits<FmtAlaw> {
-    using Type = uint8_t;
+    using Type = std::uint8_t;
 
     constexpr float operator()(const Type val) const noexcept
     { return float(aLawDecompressionTable[val]) * (1.0f/32768.0f); }

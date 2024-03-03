@@ -156,7 +156,7 @@ void UpdateSourceProps(const ALsource *source, Voice *voice, ALCcontext *context
 
     props->Radius = source->Radius;
     props->EnhWidth = source->EnhWidth;
-    props->Panning = 0.0f;
+    props->Panning = source->mPanningEnabled ? source->mPan : 0.0f;
 
     props->Direct.Gain = source->Direct.Gain;
     props->Direct.GainHF = source->Direct.GainHF;
@@ -530,9 +530,12 @@ void InitVoice(Voice *voice, ALsource *source, ALbufferQueueItem *BufferList, AL
 
     ALbuffer *buffer{BufferList->mBuffer};
     voice->mFrequency = buffer->mSampleRate;
-    voice->mFmtChannels =
-        (buffer->mChannels == FmtStereo && source->mStereoMode == SourceStereo::Enhanced) ?
-        FmtSuperStereo : buffer->mChannels;
+    if(buffer->mChannels == FmtMono && source->mPanningEnabled)
+        voice->mFmtChannels = FmtMonoDup;
+    else if(buffer->mChannels == FmtStereo && source->mStereoMode == SourceStereo::Enhanced)
+        voice->mFmtChannels = FmtSuperStereo;
+    else
+        voice->mFmtChannels = buffer->mChannels;
     voice->mFmtType = buffer->mType;
     voice->mFrameStep = buffer->channelsFromFmt();
     voice->mBytesPerBlock = buffer->blockSizeFromFmt();
@@ -1016,6 +1019,10 @@ enum SourceProp : ALenum {
     /* AL_SOFT_buffer_sub_data */
     srcByteRWOffsetsSOFT = AL_BYTE_RW_OFFSETS_SOFT,
     srcSampleRWOffsetsSOFT = AL_SAMPLE_RW_OFFSETS_SOFT,
+
+    /* AL_SOFT_source_panning */
+    srcPanningEnabledSOFT = AL_PANNING_ENABLED_SOFT,
+    srcPanSOFT = AL_PAN_SOFT,
 };
 
 
@@ -1043,6 +1050,8 @@ constexpr ALuint IntValsByProp(ALenum prop)
     case AL_SOURCE_RESAMPLER_SOFT:
     case AL_SOURCE_SPATIALIZE_SOFT:
     case AL_STEREO_MODE_SOFT:
+    case AL_PANNING_ENABLED_SOFT:
+    case AL_PAN_SOFT:
         return 1;
 
     case AL_SOURCE_RADIUS: /*AL_BYTE_RW_OFFSETS_SOFT:*/
@@ -1120,6 +1129,8 @@ constexpr ALuint Int64ValsByProp(ALenum prop)
     case AL_SOURCE_RESAMPLER_SOFT:
     case AL_SOURCE_SPATIALIZE_SOFT:
     case AL_STEREO_MODE_SOFT:
+    case AL_PANNING_ENABLED_SOFT:
+    case AL_PAN_SOFT:
         return 1;
 
     case AL_SOURCE_RADIUS: /*AL_BYTE_RW_OFFSETS_SOFT:*/
@@ -1213,6 +1224,8 @@ constexpr ALuint FloatValsByProp(ALenum prop)
     case AL_SEC_LENGTH_SOFT:
     case AL_STEREO_MODE_SOFT:
     case AL_SUPER_STEREO_WIDTH_SOFT:
+    case AL_PANNING_ENABLED_SOFT:
+    case AL_PAN_SOFT:
         return 1;
 
     case AL_SOURCE_RADIUS: /*AL_BYTE_RW_OFFSETS_SOFT:*/
@@ -1286,6 +1299,8 @@ constexpr ALuint DoubleValsByProp(ALenum prop)
     case AL_SEC_LENGTH_SOFT:
     case AL_STEREO_MODE_SOFT:
     case AL_SUPER_STEREO_WIDTH_SOFT:
+    case AL_PANNING_ENABLED_SOFT:
+    case AL_PAN_SOFT:
         return 1;
 
     case AL_SOURCE_RADIUS: /*AL_BYTE_RW_OFFSETS_SOFT:*/
@@ -1712,6 +1727,26 @@ NOINLINE void SetProperty(ALsource *const Source, ALCcontext *const Context, con
         CheckValue(values[0] >= T{0} && values[0] <= T{1});
 
         Source->EnhWidth = static_cast<float>(values[0]);
+        return UpdateSourceProps(Source, Context);
+
+    case AL_PANNING_ENABLED_SOFT:
+        CheckSize(1);
+        {
+            const ALenum state{GetSourceState(Source, GetSourceVoice(Source, Context))};
+            if(state == AL_PLAYING || state == AL_PAUSED)
+                return Context->setError(AL_INVALID_OPERATION,
+                    "Modifying panning enabled on playing or paused source %u", Source->id);
+        }
+        CheckValue(values[0] == AL_FALSE || values[0] == AL_TRUE);
+
+        Source->mPanningEnabled = values[0] != AL_FALSE;
+        return UpdateSourceProps(Source, Context);
+
+    case AL_PAN_SOFT:
+        CheckSize(1);
+        CheckValue(values[0] >= T{-1} && values[0] <= T{1});
+
+        Source->mPan = static_cast<float>(values[0]);
         return UpdateSourceProps(Source, Context);
 
     case AL_STEREO_ANGLES:
@@ -2154,6 +2189,16 @@ bool GetProperty(ALsource *const Source, ALCcontext *const Context, const Source
     case AL_SEC_LENGTH_SOFT:
         CheckSize(1);
         values[0] = GetSourceLength<T>(Source, prop);
+        return true;
+
+    case AL_PANNING_ENABLED_SOFT:
+        CheckSize(1);
+        values[0] = Source->mPanningEnabled;
+        return true;
+
+    case AL_PAN_SOFT:
+        CheckSize(1);
+        values[0] = static_cast<T>(Source->mPan);
         return true;
 
     case AL_STEREO_ANGLES:

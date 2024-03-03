@@ -80,9 +80,9 @@ AL_API void AL_APIENTRY alAuxiliaryEffectSlotStopvSOFT(ALsizei n, const ALuint *
 #define AL_FORMAT_71CHN_I32                      0x19E3
 #define AL_FORMAT_71CHN_FLOAT32                  0x19E4
 
-#define AL_FORMAT_UHJ2CHN_I32                    0x19E5
-#define AL_FORMAT_UHJ3CHN_I32                    0x19E6
-#define AL_FORMAT_UHJ4CHN_I32                    0x19E7
+#define AL_FORMAT_UHJ2CHN_I32_SOFT               0x19E5
+#define AL_FORMAT_UHJ3CHN_I32_SOFT               0x19E6
+#define AL_FORMAT_UHJ4CHN_I32_SOFT               0x19E7
 #endif
 
 /* Non-standard exports. Not part of any extension. */

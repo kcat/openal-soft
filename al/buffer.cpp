@@ -629,7 +629,7 @@ std::optional<DecompResult> DecomposeUserFormat(ALenum format)
 
         FormatMap{AL_FORMAT_UHJ2CHN8_SOFT,        FmtUHJ2, FmtUByte  },
         FormatMap{AL_FORMAT_UHJ2CHN16_SOFT,       FmtUHJ2, FmtShort  },
-        FormatMap{AL_FORMAT_UHJ2CHN_I32,          FmtUHJ2, FmtInt    },
+        FormatMap{AL_FORMAT_UHJ2CHN_I32_SOFT,     FmtUHJ2, FmtInt    },
         FormatMap{AL_FORMAT_UHJ2CHN_FLOAT32_SOFT, FmtUHJ2, FmtFloat  },
         FormatMap{AL_FORMAT_UHJ2CHN_MULAW_SOFT,   FmtUHJ2, FmtMulaw  },
         FormatMap{AL_FORMAT_UHJ2CHN_ALAW_SOFT,    FmtUHJ2, FmtAlaw   },
@@ -638,14 +638,14 @@ std::optional<DecompResult> DecomposeUserFormat(ALenum format)
 
         FormatMap{AL_FORMAT_UHJ3CHN8_SOFT,        FmtUHJ3, FmtUByte},
         FormatMap{AL_FORMAT_UHJ3CHN16_SOFT,       FmtUHJ3, FmtShort},
-        FormatMap{AL_FORMAT_UHJ3CHN_I32,          FmtUHJ3, FmtInt  },
+        FormatMap{AL_FORMAT_UHJ3CHN_I32_SOFT,     FmtUHJ3, FmtInt  },
         FormatMap{AL_FORMAT_UHJ3CHN_FLOAT32_SOFT, FmtUHJ3, FmtFloat},
         FormatMap{AL_FORMAT_UHJ3CHN_MULAW_SOFT,   FmtUHJ3, FmtMulaw},
         FormatMap{AL_FORMAT_UHJ3CHN_ALAW_SOFT,    FmtUHJ3, FmtAlaw },
 
         FormatMap{AL_FORMAT_UHJ4CHN8_SOFT,        FmtUHJ4, FmtUByte},
         FormatMap{AL_FORMAT_UHJ4CHN16_SOFT,       FmtUHJ4, FmtShort},
-        FormatMap{AL_FORMAT_UHJ4CHN_I32,          FmtUHJ4, FmtInt  },
+        FormatMap{AL_FORMAT_UHJ4CHN_I32_SOFT,     FmtUHJ4, FmtInt  },
         FormatMap{AL_FORMAT_UHJ4CHN_FLOAT32_SOFT, FmtUHJ4, FmtFloat},
         FormatMap{AL_FORMAT_UHJ4CHN_MULAW_SOFT,   FmtUHJ4, FmtMulaw},
         FormatMap{AL_FORMAT_UHJ4CHN_ALAW_SOFT,    FmtUHJ4, FmtAlaw },

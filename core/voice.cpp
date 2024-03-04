@@ -1207,13 +1207,13 @@ void Voice::prepare(DeviceBase *device)
     /* Even if storing really high order ambisonics, we only mix channels for
      * orders up to the device order. The rest are simply dropped.
      */
-    uint num_channels{(mFmtChannels == FmtUHJ2 || mFmtChannels == FmtSuperStereo) ? 3 :
-        (mFmtChannels == FmtMonoDup) ? 2 :
-        ChannelsFromFmt(mFmtChannels, std::min(mAmbiOrder, device->mAmbiOrder))};
+    uint num_channels{(mFmtChannels == FmtMonoDup) ? 2
+        : (mFmtChannels == FmtUHJ2 || mFmtChannels == FmtSuperStereo) ? 3
+        : ChannelsFromFmt(mFmtChannels, std::min(mAmbiOrder, device->mAmbiOrder))};
     if(num_channels > device->MixerChannelsMax) UNLIKELY
     {
-        ERR("Unexpected channel count: %u (limit: %zu, %d:%d)\n", num_channels,
-            device->MixerChannelsMax, mFmtChannels, mAmbiOrder);
+        ERR("Unexpected channel count: %u (limit: %zu, %s : %d)\n", num_channels,
+            device->MixerChannelsMax, NameFromFormat(mFmtChannels), mAmbiOrder);
         num_channels = device->MixerChannelsMax;
     }
     if(mChans.capacity() > 2 && num_channels < mChans.capacity())
@@ -1307,8 +1307,10 @@ void Voice::prepare(DeviceBase *device)
      */
     else if(mAmbiOrder && device->mAmbiOrder > mAmbiOrder)
     {
-        const uint8_t *OrderFromChan{Is2DAmbisonic(mFmtChannels) ?
-            AmbiIndex::OrderFrom2DChannel.data() : AmbiIndex::OrderFromChannel.data()};
+        auto OrdersSpan = Is2DAmbisonic(mFmtChannels)
+            ? al::span<const uint8_t>{AmbiIndex::OrderFrom2DChannel}
+            : al::span<const uint8_t>{AmbiIndex::OrderFromChannel};
+        auto OrderFromChan = OrdersSpan.cbegin();
         const auto scales = AmbiScale::GetHFOrderScales(mAmbiOrder, device->mAmbiOrder,
             device->m2DMixing);
 

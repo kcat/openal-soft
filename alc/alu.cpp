@@ -856,6 +856,7 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
             return {DirectMode::Off, al::span{MonoMap}};
 
         case FmtStereo:
+        case FmtMonoDup:
             if(props->DirectChannels == DirectMode::Off)
             {
                 for(size_t i{0};i < 2;++i)
@@ -866,9 +867,8 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
                     StereoMap[i].pos[2] = -std::cos(a);
                 }
             }
-            [[fallthrough]];
-        case FmtMonoDup:
             return {props->DirectChannels, al::span{StereoMap}};
+
         case FmtRear: return {props->DirectChannels, al::span{RearMap}};
         case FmtQuad: return {props->DirectChannels, al::span{QuadMap}};
         case FmtX51: return {props->DirectChannels, al::span{X51Map}};
@@ -891,34 +891,34 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
     if(auto *decoder{voice->mDecoder.get()})
         decoder->mWidthControl = std::min(props->EnhWidth, 0.7f);
 
-    const float lpan{std::min(1.0f-props->Panning, 1.0f)};
-    const float rpan{std::min(1.0f+props->Panning, 1.0f)};
-    const float minpan{std::min(lpan, rpan)};
-    auto SelectChannelPan = [lpan,rpan,minpan](const Channel chan) noexcept
+    const float lgain{std::min(1.0f-props->Panning, 1.0f)};
+    const float rgain{std::min(1.0f+props->Panning, 1.0f)};
+    const float mingain{std::min(lgain, rgain)};
+    auto SelectChannelGain = [lgain,rgain,mingain](const Channel chan) noexcept
     {
         switch(chan)
         {
-        case FrontLeft: return lpan;
-        case FrontRight: return rpan;
+        case FrontLeft: return lgain;
+        case FrontRight: return rgain;
         case FrontCenter: break;
         case LFE: break;
-        case BackLeft: return lpan;
-        case BackRight: return rpan;
+        case BackLeft: return lgain;
+        case BackRight: return rgain;
         case BackCenter: break;
-        case SideLeft: return lpan;
-        case SideRight: return rpan;
+        case SideLeft: return lgain;
+        case SideRight: return rgain;
         case TopCenter: break;
-        case TopFrontLeft: return lpan;
+        case TopFrontLeft: return lgain;
         case TopFrontCenter: break;
-        case TopFrontRight: return rpan;
-        case TopBackLeft: return lpan;
+        case TopFrontRight: return rgain;
+        case TopBackLeft: return lgain;
         case TopBackCenter: break;
-        case TopBackRight: return rpan;
+        case TopBackRight: return rgain;
         case Aux0: case Aux1: case Aux2: case Aux3: case Aux4: case Aux5: case Aux6: case Aux7:
         case Aux8: case Aux9: case Aux10: case Aux11: case Aux12: case Aux13: case Aux14:
         case Aux15: case MaxChannels: break;
         }
-        return minpan;
+        return mingain;
     };
 
     if(IsAmbisonic(voice->mFmtChannels))
@@ -1103,7 +1103,7 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
 
         for(size_t c{0};c < num_channels;c++)
         {
-            const float pangain{SelectChannelPan(chans[c].channel)};
+            const float pangain{SelectChannelGain(chans[c].channel)};
             if(uint idx{Device->channelIdxByName(chans[c].channel)}; idx != InvalidChannelIndex)
                 voice->mChans[c].mDryParams.Gains.Target[idx] = DryGain.Base * pangain;
             else if(DirectChannels == DirectMode::RemixMismatch)
@@ -1134,7 +1134,7 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
             if(chans[c].channel == LFE)
                 continue;
 
-            const float pangain{SelectChannelPan(chans[c].channel)};
+            const float pangain{SelectChannelGain(chans[c].channel)};
             const auto coeffs = CalcDirectionCoeffs(chans[c].pos, 0.0f);
 
             for(uint i{0};i < NumSends;i++)
@@ -1178,7 +1178,7 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
 
                 /* Skip LFE */
                 if(chans[c].channel == LFE) continue;
-                const float pangain{SelectChannelPan(chans[c].channel)};
+                const float pangain{SelectChannelGain(chans[c].channel)};
 
                 /* Warp the channel position toward the source position as the
                  * source spread decreases. With no spread, all channels are at
@@ -1232,7 +1232,7 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
                 /* Skip LFE */
                 if(chans[c].channel == LFE)
                     continue;
-                const float pangain{SelectChannelPan(chans[c].channel)};
+                const float pangain{SelectChannelGain(chans[c].channel)};
 
                 /* Get the HRIR coefficients and delays for this channel
                  * position.
@@ -1307,7 +1307,7 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
 
                 for(size_t c{0};c < num_channels;c++)
                 {
-                    const float pangain{SelectChannelPan(chans[c].channel)};
+                    const float pangain{SelectChannelGain(chans[c].channel)};
 
                     /* Special-case LFE */
                     if(chans[c].channel == LFE)
@@ -1376,7 +1376,7 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
             const float spread{Spread * float(voice->mFmtChannels == FmtMono)};
             for(size_t c{0};c < num_channels;c++)
             {
-                const float pangain{SelectChannelPan(chans[c].channel)};
+                const float pangain{SelectChannelGain(chans[c].channel)};
 
                 /* Special-case LFE */
                 if(chans[c].channel == LFE)

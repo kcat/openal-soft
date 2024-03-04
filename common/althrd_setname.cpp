@@ -14,13 +14,14 @@ void althrd_setname(const char *name [[maybe_unused]])
 
 #define MS_VC_EXCEPTION 0x406D1388
 #pragma pack(push,8)
-    struct {
+    struct InfoStruct {
         DWORD dwType;     // Must be 0x1000.
         LPCSTR szName;    // Pointer to name (in user addr space).
         DWORD dwThreadID; // Thread ID (-1=caller thread).
         DWORD dwFlags;    // Reserved for future use, must be zero.
-    } info;
+    };
 #pragma pack(pop)
+    InfoStruct info{};
     info.dwType = 0x1000;
     info.szName = name;
     info.dwThreadID = ~DWORD{0};

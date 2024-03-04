@@ -68,10 +68,10 @@ struct AutowahState final : public EffectState {
     struct ChannelData {
         uint mTargetChannel{InvalidChannelIndex};
 
-        /* Effect filters' history. */
-        struct {
+        struct FilterHistory {
             float z1{}, z2{};
-        } mFilter;
+        };
+        FilterHistory mFilter;
 
         /* Effect gains for each output channel */
         float mCurrentGain{};

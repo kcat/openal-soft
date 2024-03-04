@@ -50,12 +50,13 @@ struct ALeffectslot {
     ALeffectslot *Target{nullptr};
     ALbuffer *Buffer{nullptr};
 
-    struct {
+    struct EffectData {
         EffectSlotType Type{EffectSlotType::None};
         EffectProps Props{};
 
         al::intrusive_ptr<EffectState> State;
-    } Effect;
+    };
+    EffectData Effect;
 
     bool mPropsDirty{true};
 

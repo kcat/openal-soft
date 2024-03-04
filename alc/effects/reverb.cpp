@@ -540,7 +540,7 @@ struct ReverbState final : public EffectState {
      */
     al::vector<float,16> mSampleBuffer;
 
-    struct {
+    struct Params {
         /* Calculated parameters which indicate if cross-fading is needed after
          * an update.
          */
@@ -553,7 +553,8 @@ struct ReverbState final : public EffectState {
         float ModulationDepth{0.0f};
         float HFReference{5000.0f};
         float LFReference{250.0f};
-    } mParams;
+    };
+    Params mParams;
 
     enum PipelineState : uint8_t {
         DeviceClear,

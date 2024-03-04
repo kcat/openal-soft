@@ -65,26 +65,29 @@ struct DirectParams {
 
     NfcFilter NFCtrlFilter;
 
-    struct {
+    struct HrtfParams {
         HrtfFilter Old{};
         HrtfFilter Target{};
         alignas(16) std::array<float,HrtfHistoryLength> History{};
-    } Hrtf;
+    };
+    HrtfParams Hrtf;
 
-    struct {
+    struct GainParams {
         std::array<float,MaxOutputChannels> Current{};
         std::array<float,MaxOutputChannels> Target{};
-    } Gains;
+    };
+    GainParams Gains;
 };
 
 struct SendParams {
     BiquadFilter LowPass;
     BiquadFilter HighPass;
 
-    struct {
+    struct GainParams {
         std::array<float,MaxAmbiChannels> Current{};
         std::array<float,MaxAmbiChannels> Target{};
-    } Gains;
+    };
+    GainParams Gains;
 };
 
 
@@ -141,13 +144,15 @@ struct VoiceProps {
     float Panning;
 
     /** Direct filter and auxiliary send info. */
-    struct {
+    struct DirectData {
         float Gain;
         float GainHF;
         float HFReference;
         float GainLF;
         float LFReference;
-    } Direct;
+    };
+    DirectData Direct;
+
     struct SendData {
         EffectSlot *Slot;
         float Gain;

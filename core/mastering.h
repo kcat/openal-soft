@@ -28,13 +28,14 @@ using uint = unsigned int;
 class Compressor {
     size_t mNumChans{0u};
 
-    struct {
+    struct AutoFlags {
         bool Knee : 1;
         bool Attack : 1;
         bool Release : 1;
         bool PostGain : 1;
         bool Declip : 1;
-    } mAuto{};
+    };
+    AutoFlags mAuto{};
 
     uint mLookAhead{0};
 

@@ -59,15 +59,10 @@ int EventThread(ALCcontext *context)
         }
 
         std::lock_guard<std::mutex> eventlock{context->mEventCbLock};
-        do {
-            auto *evt_ptr = std::launder(reinterpret_cast<AsyncEvent*>(evt_data.buf));
-            evt_data.buf += sizeof(AsyncEvent);
-            evt_data.len -= 1;
-
-            AsyncEvent event{std::move(*evt_ptr)};
-            std::destroy_at(evt_ptr);
-            ring->readAdvance(1);
-
+        auto evt_span = al::span{std::launder(reinterpret_cast<AsyncEvent*>(evt_data.buf)),
+            evt_data.len};
+        for(auto &event : evt_span)
+        {
             quitnow = std::holds_alternative<AsyncKillThread>(event);
             if(quitnow) UNLIKELY break;
 
@@ -136,7 +131,9 @@ int EventThread(ALCcontext *context)
 
             std::visit(overloaded{proc_srcstate, proc_buffercomp, proc_release, proc_disconnect,
                 proc_killthread}, event);
-        } while(evt_data.len != 0);
+        }
+        std::destroy(evt_span.begin(), evt_span.end());
+        ring->readAdvance(evt_span.size());
     }
     return 0;
 }

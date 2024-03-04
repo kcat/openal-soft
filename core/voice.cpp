@@ -794,7 +794,7 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
     const al::span<float*> MixingSamples{SamplePointers.data(), mChans.size()};
     {
         const uint channelStep{(samplesToLoad+3u)&~3u};
-        auto base = Device->mSampleData.end() - mChans.size()*channelStep;
+        auto base = Device->mSampleData.end() - MixingSamples.size()*channelStep;
         std::generate(MixingSamples.begin(), MixingSamples.end(), [&base,channelStep]
         {
             const auto ret = base;
@@ -816,7 +816,7 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
 
         const al::span prevSamples{mPrevSamples[chan]};
         std::copy(prevSamples.cbegin(), prevSamples.cend(), Device->mResampleData.begin());
-        const auto resampleBuffer = al::span{Device->mResampleData}.subspan(MaxResamplerEdge);
+        const auto resampleBuffer = al::span{Device->mResampleData}.subspan<MaxResamplerEdge>();
         int intPos{DataPosInt};
         uint fracPos{DataPosFrac};
 
@@ -908,8 +908,10 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
             else if(mFlags.test(VoiceIsStatic))
             {
                 const auto uintPos = static_cast<uint>(std::max(intPos, 0));
+                const auto bufferSamples = resampleBuffer.subspan(srcSampleDelay,
+                    srcBufferSize-srcSampleDelay);
                 LoadBufferStatic(BufferListItem, BufferLoopItem, uintPos, mFmtType, chan,
-                    mFrameStep, resampleBuffer.subspan(srcSampleDelay, srcBufferSize));
+                    mFrameStep, bufferSamples);
             }
             else if(mFlags.test(VoiceIsCallback))
             {
@@ -936,14 +938,18 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
                         mNumCallbackBlocks = static_cast<uint>(needBlocks);
                 }
                 const size_t numSamples{size_t{mNumCallbackBlocks} * mSamplesPerBlock};
+                const auto bufferSamples = resampleBuffer.subspan(srcSampleDelay,
+                    srcBufferSize-srcSampleDelay);
                 LoadBufferCallback(BufferListItem, bufferOffset, numSamples, mFmtType, chan,
-                    mFrameStep, resampleBuffer.subspan(srcSampleDelay, srcBufferSize));
+                    mFrameStep, bufferSamples);
             }
             else
             {
                 const auto uintPos = static_cast<uint>(std::max(intPos, 0));
+                const auto bufferSamples = resampleBuffer.subspan(srcSampleDelay,
+                    srcBufferSize-srcSampleDelay);
                 LoadBufferQueue(BufferListItem, BufferLoopItem, uintPos, mFmtType, chan,
-                    mFrameStep, resampleBuffer.subspan(srcSampleDelay, srcBufferSize));
+                    mFrameStep, bufferSamples);
             }
 
             /* If there's a matching sample step and no phase offset, use a

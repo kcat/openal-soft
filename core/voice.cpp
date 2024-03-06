@@ -235,7 +235,7 @@ void SendSourceStoppedEvent(ContextBase *context, uint id)
 }
 
 
-const float *DoFilters(BiquadFilter &lpfilter, BiquadFilter &hpfilter, float *dst,
+const al::span<const float> DoFilters(BiquadFilter &lpfilter, BiquadFilter &hpfilter, float *dst,
     const al::span<const float> src, int type)
 {
     switch(type)
@@ -248,17 +248,17 @@ const float *DoFilters(BiquadFilter &lpfilter, BiquadFilter &hpfilter, float *ds
     case AF_LowPass:
         lpfilter.process(src, dst);
         hpfilter.clear();
-        return dst;
+        return {dst, src.size()};
     case AF_HighPass:
         lpfilter.clear();
         hpfilter.process(src, dst);
-        return dst;
+        return {dst, src.size()};
 
     case AF_BandPass:
         DualBiquad{lpfilter, hpfilter}.process(src, dst);
-        return dst;
+        return {dst, src.size()};
     }
-    return src.data();
+    return src;
 }
 
 
@@ -606,9 +606,8 @@ void LoadBufferQueue(VoiceBufferItem *buffer, VoiceBufferItem *bufferLoopItem,
 }
 
 
-void DoHrtfMix(const float *samples, const uint DstBufferSize, DirectParams &parms,
-    const float TargetGain, const uint Counter, uint OutPos, const bool IsPlaying,
-    DeviceBase *Device)
+void DoHrtfMix(const al::span<const float> samples, DirectParams &parms, const float TargetGain,
+    const size_t Counter, uint OutPos, const bool IsPlaying, DeviceBase *Device)
 {
     const uint IrSize{Device->mIrSize};
     const auto HrtfSamples = al::span{Device->ExtraSampleData};
@@ -617,17 +616,17 @@ void DoHrtfMix(const float *samples, const uint DstBufferSize, DirectParams &par
     /* Copy the HRTF history and new input samples into a temp buffer. */
     auto src_iter = std::copy(parms.Hrtf.History.begin(), parms.Hrtf.History.end(),
         HrtfSamples.begin());
-    std::copy_n(samples, DstBufferSize, src_iter);
+    std::copy_n(samples.begin(), samples.size(), src_iter);
     /* Copy the last used samples back into the history buffer for later. */
     if(IsPlaying) LIKELY
-        std::copy_n(HrtfSamples.begin() + DstBufferSize, parms.Hrtf.History.size(),
+        std::copy_n(HrtfSamples.begin() + samples.size(), parms.Hrtf.History.size(),
             parms.Hrtf.History.begin());
 
     /* If fading and this is the first mixing pass, fade between the IRs. */
-    uint fademix{0u};
+    size_t fademix{0};
     if(Counter && OutPos == 0)
     {
-        fademix = std::min(DstBufferSize, Counter);
+        fademix = std::min(samples.size(), Counter);
 
         float gain{TargetGain};
 
@@ -655,15 +654,15 @@ void DoHrtfMix(const float *samples, const uint DstBufferSize, DirectParams &par
         OutPos += fademix;
     }
 
-    if(fademix < DstBufferSize)
+    if(fademix < samples.size())
     {
-        const uint todo{DstBufferSize - fademix};
+        const size_t todo{samples.size() - fademix};
         float gain{TargetGain};
 
         /* Interpolate the target gain if the gain fading lasts longer than
          * this mix.
          */
-        if(Counter > DstBufferSize)
+        if(Counter > samples.size())
         {
             const float a{static_cast<float>(todo) / static_cast<float>(Counter-fademix)};
             gain = lerpf(parms.Hrtf.Old.Gain, TargetGain, a);
@@ -682,16 +681,18 @@ void DoHrtfMix(const float *samples, const uint DstBufferSize, DirectParams &par
     }
 }
 
-void DoNfcMix(const al::span<const float> samples, FloatBufferLine *OutBuffer, DirectParams &parms,
-    const float *TargetGains, const uint Counter, const uint OutPos, DeviceBase *Device)
+void DoNfcMix(const al::span<const float> samples, al::span<FloatBufferLine> OutBuffer,
+    DirectParams &parms, const float *TargetGains, const uint Counter, const uint OutPos,
+    DeviceBase *Device)
 {
     using FilterProc = void (NfcFilter::*)(const al::span<const float>, float*);
     static constexpr std::array<FilterProc,MaxAmbiOrder+1> NfcProcess{{
         nullptr, &NfcFilter::process1, &NfcFilter::process2, &NfcFilter::process3}};
 
-    float *CurrentGains{parms.Gains.Current.data()};
-    MixSamples(samples, {OutBuffer, 1u}, CurrentGains, TargetGains, Counter, OutPos);
-    ++OutBuffer;
+    auto CurrentGains = parms.Gains.Current.begin();
+    MixSamples(samples, OutBuffer.first<1>(), al::to_address(CurrentGains), TargetGains, Counter,
+        OutPos);
+    OutBuffer = OutBuffer.subspan<1>();
     ++CurrentGains;
     ++TargetGains;
 
@@ -700,8 +701,9 @@ void DoNfcMix(const al::span<const float> samples, FloatBufferLine *OutBuffer, D
     while(const size_t chancount{Device->NumChannelsPerOrder[order]})
     {
         (parms.NFCtrlFilter.*NfcProcess[order])(samples, nfcsamples.data());
-        MixSamples(nfcsamples, {OutBuffer, chancount}, CurrentGains, TargetGains, Counter, OutPos);
-        OutBuffer += chancount;
+        MixSamples(nfcsamples, OutBuffer.first(chancount), al::to_address(CurrentGains),
+            TargetGains, Counter, OutPos);
+        OutBuffer = OutBuffer.subspan(chancount);
         CurrentGains += chancount;
         TargetGains += chancount;
         if(++order == MaxAmbiOrder+1)
@@ -807,8 +809,9 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
      * (3rd channel is generated from decoding). MonoDup only has 1 buffer
      * channel, but 2 mixing channels (2nd channel is just duplicated).
      */
-    const size_t realChannels{(mFmtChannels == FmtUHJ2 || mFmtChannels == FmtSuperStereo) ? 2u
-        : (mFmtChannels == FmtMonoDup) ? 1u : MixingSamples.size()};
+    const size_t realChannels{(mFmtChannels == FmtMonoDup) ? 1u
+        : (mFmtChannels == FmtUHJ2 || mFmtChannels == FmtSuperStereo) ? 2u
+        : MixingSamples.size()};
     for(size_t chan{0};chan < realChannels;++chan)
     {
         static constexpr uint ResBufSize{std::tuple_size_v<decltype(DeviceBase::mResampleData)>};
@@ -1052,25 +1055,24 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
         const al::span<float,BufferLineSize> FilterBuf{Device->FilteredData};
         {
             DirectParams &parms = chandata.mDryParams;
-            const float *samples{DoFilters(parms.LowPass, parms.HighPass, FilterBuf.data(),
-                {*voiceSamples, samplesToMix}, mDirect.FilterType)};
+            const auto samples = DoFilters(parms.LowPass, parms.HighPass, FilterBuf.data(),
+                {*voiceSamples, samplesToMix}, mDirect.FilterType);
 
             if(mFlags.test(VoiceHasHrtf))
             {
                 const float TargetGain{parms.Hrtf.Target.Gain * float(vstate == Playing)};
-                DoHrtfMix(samples, samplesToMix, parms, TargetGain, Counter, OutPos,
-                    (vstate == Playing), Device);
+                DoHrtfMix(samples, parms, TargetGain, Counter, OutPos, (vstate == Playing),
+                    Device);
             }
             else
             {
                 const float *TargetGains{(vstate == Playing) ? parms.Gains.Target.data()
                     : SilentTarget.data()};
                 if(mFlags.test(VoiceHasNfc))
-                    DoNfcMix({samples, samplesToMix}, mDirect.Buffer.data(), parms,
-                        TargetGains, Counter, OutPos, Device);
+                    DoNfcMix(samples, mDirect.Buffer, parms, TargetGains, Counter, OutPos, Device);
                 else
-                    MixSamples({samples, samplesToMix}, mDirect.Buffer,
-                        parms.Gains.Current.data(), TargetGains, Counter, OutPos);
+                    MixSamples(samples, mDirect.Buffer, parms.Gains.Current.data(), TargetGains,
+                        Counter, OutPos);
             }
         }
 
@@ -1080,13 +1082,13 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
                 continue;
 
             SendParams &parms = chandata.mWetParams[send];
-            const float *samples{DoFilters(parms.LowPass, parms.HighPass, FilterBuf.data(),
-                {*voiceSamples, samplesToMix}, mSend[send].FilterType)};
+            const auto samples = DoFilters(parms.LowPass, parms.HighPass, FilterBuf.data(),
+                {*voiceSamples, samplesToMix}, mSend[send].FilterType);
 
             const float *TargetGains{(vstate == Playing) ? parms.Gains.Target.data()
                 : SilentTarget.data()};
-            MixSamples({samples, samplesToMix}, mSend[send].Buffer,
-                parms.Gains.Current.data(), TargetGains, Counter, OutPos);
+            MixSamples(samples, mSend[send].Buffer, parms.Gains.Current.data(), TargetGains,
+                Counter, OutPos);
         }
 
         ++voiceSamples;
@@ -1107,7 +1109,7 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
     DataPosFrac &= MixerFracMask;
 
     uint buffers_done{0u};
-    if(BufferListItem && DataPosInt >= 0) LIKELY
+    if(BufferListItem && DataPosInt > 0) LIKELY
     {
         if(mFlags.test(VoiceIsStatic))
         {

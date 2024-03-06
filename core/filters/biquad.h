@@ -114,9 +114,10 @@ public:
         mA2 = other.mA2;
     }
 
-    void process(const al::span<const Real> src, Real *dst);
+    void process(const al::span<const Real> src, const al::span<Real> dst);
     /** Processes this filter and the other at the same time. */
-    void dualProcess(BiquadFilterR &other, const al::span<const Real> src, Real *dst);
+    void dualProcess(BiquadFilterR &other, const al::span<const Real> src,
+        const al::span<Real> dst);
 
     /* Rather hacky. It's just here to support "manual" processing. */
     [[nodiscard]] auto getComponents() const noexcept -> std::pair<Real,Real> { return {mZ1, mZ2}; }
@@ -134,7 +135,7 @@ template<typename Real>
 struct DualBiquadR {
     BiquadFilterR<Real> &f0, &f1;
 
-    void process(const al::span<const Real> src, Real *dst)
+    void process(const al::span<const Real> src, const al::span<Real> dst)
     { f0.dualProcess(f1, src, dst); }
 };
 

@@ -410,7 +410,8 @@ void MixHrtfBlend_<NEONTag>(const float *InSamples, float2 *AccumSamples, const 
 template<>
 void MixDirectHrtf_<NEONTag>(const FloatBufferSpan LeftOut, const FloatBufferSpan RightOut,
     const al::span<const FloatBufferLine> InSamples, float2 *AccumSamples,
-    float *TempBuf, HrtfChannelState *ChanState, const size_t IrSize, const size_t BufferSize)
+    const al::span<float,BufferLineSize> TempBuf, HrtfChannelState *ChanState, const size_t IrSize,
+    const size_t BufferSize)
 {
     MixDirectHrtfBase<ApplyCoeffs>(LeftOut, RightOut, InSamples, AccumSamples, TempBuf, ChanState,
         IrSize, BufferSize);

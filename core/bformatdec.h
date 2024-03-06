@@ -7,14 +7,12 @@
 #include <variant>
 #include <vector>
 
-#include "almalloc.h"
 #include "alspan.h"
 #include "ambidefs.h"
 #include "bufferline.h"
 #include "devformat.h"
 #include "filters/splitter.h"
-
-struct FrontStablizer;
+#include "front_stablizer.h"
 
 
 using ChannelDec = std::array<float,MaxAmbiChannels>;

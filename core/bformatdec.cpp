@@ -6,11 +6,13 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <functional>
 #include <utility>
 
-#include "almalloc.h"
 #include "alnumbers.h"
+#include "bufferline.h"
 #include "filters/splitter.h"
+#include "flexarray.h"
 #include "front_stablizer.h"
 #include "mixer.h"
 #include "opthelpers.h"
@@ -74,8 +76,7 @@ void BFormatDec::process(const al::span<FloatBufferLine> OutBuffer,
         const al::span<float> lfSamples{mSamples[sLFBand].data(), SamplesToDo};
         for(auto &chandec : decoder)
         {
-            chandec.mXOver.process({input->data(), SamplesToDo}, hfSamples.data(),
-                lfSamples.data());
+            chandec.mXOver.process({input->data(), SamplesToDo}, hfSamples, lfSamples);
             MixSamples(hfSamples, OutBuffer, chandec.mGains[sHFBand].data(),
                 chandec.mGains[sHFBand].data(), 0, 0);
             MixSamples(lfSamples, OutBuffer, chandec.mGains[sLFBand].data(),
@@ -125,11 +126,10 @@ void BFormatDec::processStablize(const al::span<FloatBufferLine> OutBuffer,
 
     /* Get the decoded mid signal and band-split it. */
     std::transform(OutBuffer[lidx].cbegin(), OutBuffer[lidx].cbegin()+SamplesToDo,
-        OutBuffer[ridx].cbegin(), mStablizer->Temp.begin(),
-        [](const float l, const float r) noexcept { return l + r; });
+        OutBuffer[ridx].cbegin(), mStablizer->Temp.begin(), std::plus<>{});
 
-    mStablizer->MidFilter.process({mStablizer->Temp.data(), SamplesToDo}, mStablizer->MidHF.data(),
-        mStablizer->MidLF.data());
+    mStablizer->MidFilter.process(al::span{mStablizer->Temp}.first(SamplesToDo), mStablizer->MidHF,
+        mStablizer->MidLF);
 
     /* Apply an all-pass to all channels to match the band-splitter's phase
      * shift. This is to keep the phase synchronized between the existing

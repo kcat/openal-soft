@@ -135,8 +135,9 @@ float NfcScale{1.0f};
 
 
 using HrtfDirectMixerFunc = void(*)(const FloatBufferSpan LeftOut, const FloatBufferSpan RightOut,
-    const al::span<const FloatBufferLine> InSamples, float2 *AccumSamples, float *TempBuf,
-    HrtfChannelState *ChanState, const size_t IrSize, const size_t BufferSize);
+    const al::span<const FloatBufferLine> InSamples, float2 *AccumSamples,
+    const al::span<float,BufferLineSize> TempBuf, HrtfChannelState *ChanState, const size_t IrSize,
+    const size_t BufferSize);
 
 HrtfDirectMixerFunc MixDirectHrtf{MixDirectHrtf_<CTag>};
 
@@ -290,7 +291,7 @@ void DeviceBase::ProcessHrtf(const size_t SamplesToDo)
     const size_t ridx{RealOut.ChannelIndex[FrontRight]};
 
     MixDirectHrtf(RealOut.Buffer[lidx], RealOut.Buffer[ridx], Dry.Buffer, HrtfAccumData.data(),
-        mHrtfState->mTemp.data(), mHrtfState->mChannels.data(), mHrtfState->mIrSize, SamplesToDo);
+        mHrtfState->mTemp, mHrtfState->mChannels.data(), mHrtfState->mIrSize, SamplesToDo);
 }
 
 void DeviceBase::ProcessAmbiDec(const size_t SamplesToDo)

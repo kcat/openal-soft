@@ -25,6 +25,7 @@
 #include <cmath>
 #include <cstdint>
 #include <cstdlib>
+#include <functional>
 #include <variant>
 
 #include "alc/effects/base.h"
@@ -200,9 +201,9 @@ void ModulatorState::process(const size_t samplesToDo, const al::span<const Floa
         const size_t outidx{chandata->mTargetChannel};
         if(outidx != InvalidChannelIndex)
         {
-            chandata->mFilter.process({input.data(), samplesToDo}, mBuffer.data());
-            for(size_t i{0u};i < samplesToDo;++i)
-                mBuffer[i] *= mModSamples[i];
+            chandata->mFilter.process({input.data(), samplesToDo}, mBuffer);
+            std::transform(mBuffer.cbegin(), mBuffer.cbegin()+samplesToDo, mModSamples.cbegin(),
+                mBuffer.begin(), std::multiplies<>{});
 
             MixSamples({mBuffer.data(), samplesToDo}, samplesOut[outidx].data(),
                 chandata->mCurrentGain, chandata->mTargetGain, std::min(samplesToDo, 64_uz));

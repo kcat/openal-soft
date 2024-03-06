@@ -86,7 +86,8 @@ inline void MixHrtfBlendBase(const float *InSamples, float2 *RESTRICT AccumSampl
 template<ApplyCoeffsT ApplyCoeffs>
 inline void MixDirectHrtfBase(const FloatBufferSpan LeftOut, const FloatBufferSpan RightOut,
     const al::span<const FloatBufferLine> InSamples, float2 *RESTRICT AccumSamples,
-    float *TempBuf, HrtfChannelState *ChanState, const size_t IrSize, const size_t BufferSize)
+    const al::span<float,BufferLineSize> TempBuf, HrtfChannelState *ChanState, const size_t IrSize,
+    const size_t BufferSize)
 {
     ASSUME(BufferSize > 0);
 
@@ -100,7 +101,7 @@ inline void MixDirectHrtfBase(const FloatBufferSpan LeftOut, const FloatBufferSp
             ChanState->mHfScale);
 
         /* Now apply the HRIR coefficients to this channel. */
-        const float *RESTRICT tempbuf{al::assume_aligned<16>(TempBuf)};
+        const float *RESTRICT tempbuf{al::assume_aligned<16>(TempBuf.data())};
         const ConstHrirSpan Coeffs{ChanState->mCoeffs};
         for(size_t i{0u};i < BufferSize;++i)
         {

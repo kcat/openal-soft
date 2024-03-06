@@ -22,9 +22,11 @@ public:
 
     void init(Real f0norm);
     void clear() noexcept { mLpZ1 = mLpZ2 = mApZ1 = 0.0f; }
-    void process(const al::span<const Real> input, Real *hpout, Real *lpout);
+    void process(const al::span<const Real> input, const al::span<Real> hpout,
+        const al::span<Real> lpout);
 
-    void processHfScale(const al::span<const Real> input, Real *output, const Real hfscale);
+    void processHfScale(const al::span<const Real> input, const al::span<Real> output,
+        const Real hfscale);
 
     void processHfScale(const al::span<Real> samples, const Real hfscale);
     void processScale(const al::span<Real> samples, const Real hfscale, const Real lfscale);

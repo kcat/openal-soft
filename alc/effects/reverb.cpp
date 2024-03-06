@@ -394,7 +394,7 @@ struct T60Filter {
 
     /* Applies the two T60 damping filter sections. */
     void process(const al::span<float> samples)
-    { DualBiquad{HFFilter, LFFilter}.process(samples, samples.data()); }
+    { DualBiquad{HFFilter, LFFilter}.process(samples, samples); }
 
     void clear() noexcept { HFFilter.clear(); LFFilter.clear(); }
 };
@@ -1553,7 +1553,7 @@ void ReverbPipeline::processEarly(const DelayLineU &main_delay, size_t offset,
 
             /* Band-pass the incoming samples. */
             auto&& filter = DualBiquad{mFilter[j].Lp, mFilter[j].Hp};
-            filter.process({tempSamples[j].data(), todo}, tempSamples[j].data());
+            filter.process({tempSamples[j].cbegin(), todo}, tempSamples[j]);
         }
 
         /* Apply an all-pass, to help color the initial reflections. */

@@ -4,6 +4,7 @@
 #include "splitter.h"
 
 #include <algorithm>
+#include <cassert>
 #include <cmath>
 #include <limits>
 
@@ -27,14 +28,17 @@ void BandSplitterR<Real>::init(Real f0norm)
 }
 
 template<typename Real>
-void BandSplitterR<Real>::process(const al::span<const Real> input, Real *hpout, Real *lpout)
+void BandSplitterR<Real>::process(const al::span<const Real> input, const al::span<Real> hpout,
+    const al::span<Real> lpout)
 {
     const Real ap_coeff{mCoeff};
     const Real lp_coeff{mCoeff*0.5f + 0.5f};
     Real lp_z1{mLpZ1};
     Real lp_z2{mLpZ2};
     Real ap_z1{mApZ1};
-    auto proc_sample = [ap_coeff,lp_coeff,&lp_z1,&lp_z2,&ap_z1,&lpout](const Real in) noexcept -> Real
+    assert(lpout.size() <= input.size());
+    auto lpiter = lpout.begin();
+    auto proc_sample = [ap_coeff,lp_coeff,&lp_z1,&lp_z2,&ap_z1,&lpiter](const Real in) noexcept -> Real
     {
         /* Low-pass sample processing. */
         Real d{(in - lp_z1) * lp_coeff};
@@ -45,7 +49,7 @@ void BandSplitterR<Real>::process(const al::span<const Real> input, Real *hpout,
         lp_y = lp_z2 + d;
         lp_z2 = lp_y + d;
 
-        *(lpout++) = lp_y;
+        *(lpiter++) = lp_y;
 
         /* All-pass sample processing. */
         Real ap_y{in*ap_coeff + ap_z1};
@@ -54,15 +58,15 @@ void BandSplitterR<Real>::process(const al::span<const Real> input, Real *hpout,
         /* High-pass generated from removing low-passed output. */
         return ap_y - lp_y;
     };
-    std::transform(input.cbegin(), input.cend(), hpout, proc_sample);
+    std::transform(input.cbegin(), input.cend(), hpout.begin(), proc_sample);
     mLpZ1 = lp_z1;
     mLpZ2 = lp_z2;
     mApZ1 = ap_z1;
 }
 
 template<typename Real>
-void BandSplitterR<Real>::processHfScale(const al::span<const Real> input, Real *RESTRICT output,
-    const Real hfscale)
+void BandSplitterR<Real>::processHfScale(const al::span<const Real> input,
+    const al::span<Real> output, const Real hfscale)
 {
     const Real ap_coeff{mCoeff};
     const Real lp_coeff{mCoeff*0.5f + 0.5f};
@@ -89,7 +93,7 @@ void BandSplitterR<Real>::processHfScale(const al::span<const Real> input, Real 
          */
         return (ap_y-lp_y)*hfscale + lp_y;
     };
-    std::transform(input.begin(), input.end(), output, proc_sample);
+    std::transform(input.cbegin(), input.cend(), output.begin(), proc_sample);
     mLpZ1 = lp_z1;
     mLpZ2 = lp_z2;
     mApZ1 = ap_z1;

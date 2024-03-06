@@ -235,8 +235,8 @@ void SendSourceStoppedEvent(ContextBase *context, uint id)
 }
 
 
-const al::span<const float> DoFilters(BiquadFilter &lpfilter, BiquadFilter &hpfilter, float *dst,
-    const al::span<const float> src, int type)
+const al::span<const float> DoFilters(BiquadFilter &lpfilter, BiquadFilter &hpfilter,
+    const al::span<float,BufferLineSize> dst, const al::span<const float> src, int type)
 {
     switch(type)
     {
@@ -248,15 +248,15 @@ const al::span<const float> DoFilters(BiquadFilter &lpfilter, BiquadFilter &hpfi
     case AF_LowPass:
         lpfilter.process(src, dst);
         hpfilter.clear();
-        return {dst, src.size()};
+        return dst.first(src.size());
     case AF_HighPass:
         lpfilter.clear();
         hpfilter.process(src, dst);
-        return {dst, src.size()};
+        return dst.first(src.size());
 
     case AF_BandPass:
         DualBiquad{lpfilter, hpfilter}.process(src, dst);
-        return {dst, src.size()};
+        return dst.first(src.size());
     }
     return src;
 }
@@ -685,7 +685,7 @@ void DoNfcMix(const al::span<const float> samples, al::span<FloatBufferLine> Out
     DirectParams &parms, const float *TargetGains, const uint Counter, const uint OutPos,
     DeviceBase *Device)
 {
-    using FilterProc = void (NfcFilter::*)(const al::span<const float>, float*);
+    using FilterProc = void (NfcFilter::*)(const al::span<const float>, const al::span<float>);
     static constexpr std::array<FilterProc,MaxAmbiOrder+1> NfcProcess{{
         nullptr, &NfcFilter::process1, &NfcFilter::process2, &NfcFilter::process3}};
 
@@ -700,7 +700,7 @@ void DoNfcMix(const al::span<const float> samples, al::span<FloatBufferLine> Out
     size_t order{1};
     while(const size_t chancount{Device->NumChannelsPerOrder[order]})
     {
-        (parms.NFCtrlFilter.*NfcProcess[order])(samples, nfcsamples.data());
+        (parms.NFCtrlFilter.*NfcProcess[order])(samples, nfcsamples);
         MixSamples(nfcsamples, OutBuffer.first(chancount), al::to_address(CurrentGains),
             TargetGains, Counter, OutPos);
         OutBuffer = OutBuffer.subspan(chancount);
@@ -1055,7 +1055,7 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
         const al::span<float,BufferLineSize> FilterBuf{Device->FilteredData};
         {
             DirectParams &parms = chandata.mDryParams;
-            const auto samples = DoFilters(parms.LowPass, parms.HighPass, FilterBuf.data(),
+            const auto samples = DoFilters(parms.LowPass, parms.HighPass, FilterBuf,
                 {*voiceSamples, samplesToMix}, mDirect.FilterType);
 
             if(mFlags.test(VoiceHasHrtf))
@@ -1082,7 +1082,7 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
                 continue;
 
             SendParams &parms = chandata.mWetParams[send];
-            const auto samples = DoFilters(parms.LowPass, parms.HighPass, FilterBuf.data(),
+            const auto samples = DoFilters(parms.LowPass, parms.HighPass, FilterBuf,
                 {*voiceSamples, samplesToMix}, mSend[send].FilterType);
 
             const float *TargetGains{(vstate == Playing) ? parms.Gains.Target.data()

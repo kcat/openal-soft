@@ -26,6 +26,7 @@
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
+#include <functional>
 #include <iterator>
 #include <memory>
 #include <mutex>
@@ -150,7 +151,7 @@ void AddActiveEffectSlots(const al::span<ALeffectslot*> auxslots, ALCcontext *co
      */
     auto newarray = EffectSlot::CreatePtrArray(newcount);
     auto slotiter = std::transform(auxslots.begin(), auxslots.end(), newarray->begin(),
-        [](ALeffectslot *auxslot) noexcept { return auxslot->mSlot; });
+        std::mem_fn(&ALeffectslot::mSlot));
     std::copy(curarray->begin(), curarray->end(), slotiter);
 
     /* Remove any duplicates (first instance of each will be kept). */

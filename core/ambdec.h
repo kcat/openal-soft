@@ -7,6 +7,7 @@
 #include <string>
 #include <vector>
 
+#include "alspan.h"
 #include "core/ambidefs.h"
 
 /* Helpers to read .ambdec configuration files. */
@@ -42,10 +43,10 @@ struct AmbDecConf {
 
     /* Unused when FreqBands == 1 */
     std::array<float,MaxAmbiOrder+1> LFOrderGain{};
-    CoeffArray *LFMatrix;
+    al::span<CoeffArray> LFMatrix;
 
     std::array<float,MaxAmbiOrder+1> HFOrderGain{};
-    CoeffArray *HFMatrix;
+    al::span<CoeffArray> HFMatrix;
 
     ~AmbDecConf();
 

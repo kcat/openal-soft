@@ -235,7 +235,7 @@ void SendSourceStoppedEvent(ContextBase *context, uint id)
 }
 
 
-const al::span<const float> DoFilters(BiquadFilter &lpfilter, BiquadFilter &hpfilter,
+al::span<const float> DoFilters(BiquadFilter &lpfilter, BiquadFilter &hpfilter,
     const al::span<float,BufferLineSize> dst, const al::span<const float> src, int type)
 {
     switch(type)

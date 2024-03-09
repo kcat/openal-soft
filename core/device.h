@@ -80,9 +80,8 @@ struct DistanceComp {
     static constexpr uint MaxDelay{1024};
 
     struct ChanData {
+        al::span<float> Buffer{}; /* Valid size is [0...MaxDelay). */
         float Gain{1.0f};
-        uint Length{0u}; /* Valid range is [0...MaxDelay). */
-        float *Buffer{nullptr};
     };
 
     std::array<ChanData,MaxOutputChannels> mChannels;

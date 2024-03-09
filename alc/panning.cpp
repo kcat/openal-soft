@@ -266,8 +266,11 @@ void InitDistanceComp(ALCdevice *device, const al::span<const Channel> channels,
         return;
 
     const auto distSampleScale = static_cast<float>(device->Frequency) / SpeedOfSoundMetersPerSec;
-    std::vector<DistanceComp::ChanData> ChanDelay;
+
+    struct DistCoeffs { uint Length{}; float Gain{}; };
+    std::vector<DistCoeffs> ChanDelay;
     ChanDelay.reserve(device->RealOut.Buffer.size());
+
     size_t total{0u};
     for(size_t chidx{0};chidx < channels.size();++chidx)
     {
@@ -309,11 +312,12 @@ void InitDistanceComp(ALCdevice *device, const al::span<const Channel> channels,
         auto chandelays = DistanceComp::Create(total);
         auto chanbuffer = chandelays->mSamples.begin();
 
-        auto set_bufptr = [&chanbuffer](const DistanceComp::ChanData &data)
+        auto set_bufptr = [&chanbuffer](const DistCoeffs &data)
         {
-            DistanceComp::ChanData ret{data};
-            ret.Buffer = al::to_address(chanbuffer);
-            chanbuffer += RoundUp(ret.Length, 4);
+            DistanceComp::ChanData ret{};
+            ret.Buffer = al::span{chanbuffer, data.Length};
+            ret.Gain = data.Gain;
+            chanbuffer += RoundUp(data.Length, 4);
             return ret;
         };
         std::transform(ChanDelay.begin(), ChanDelay.end(), chandelays->mChannels.begin(),

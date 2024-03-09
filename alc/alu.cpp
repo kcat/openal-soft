@@ -2057,26 +2057,26 @@ void ApplyDistanceComp(const al::span<FloatBufferLine> Samples, const size_t Sam
     for(auto &chanbuffer : Samples)
     {
         const float gain{distcomp->Gain};
-        const size_t base{distcomp->Length};
-        float *distbuf{al::assume_aligned<16>(distcomp->Buffer)};
+        auto distbuf = al::span{al::assume_aligned<16>(distcomp->Buffer.data()),
+            distcomp->Buffer.size()};
         ++distcomp;
 
-        if(base < 1)
-            continue;
+        const size_t base{distbuf.size()};
+        if(base < 1) continue;
 
-        float *inout{al::assume_aligned<16>(chanbuffer.data())};
-        auto inout_end = inout + SamplesToDo;
+        const auto inout = al::span{al::assume_aligned<16>(chanbuffer.data()), SamplesToDo};
         if(SamplesToDo >= base) LIKELY
         {
-            auto delay_end = std::rotate(inout, inout_end - base, inout_end);
-            std::swap_ranges(inout, delay_end, distbuf);
+            auto delay_end = std::rotate(inout.begin(), inout.end() - base, inout.end());
+            std::swap_ranges(inout.begin(), delay_end, distbuf.begin());
         }
         else
         {
-            auto delay_start = std::swap_ranges(inout, inout_end, distbuf);
-            std::rotate(distbuf, delay_start, distbuf + base);
+            auto delay_start = std::swap_ranges(inout.begin(), inout.end(), distbuf.begin());
+            std::rotate(distbuf.begin(), delay_start, distbuf.begin() + base);
         }
-        std::transform(inout, inout_end, inout, [gain](float s) { return s * gain; });
+        std::transform(inout.begin(), inout.end(), inout.begin(),
+            [gain](float s) { return s*gain; });
     }
 }
 

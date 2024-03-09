@@ -24,11 +24,16 @@ struct alignas(std::max(alignment, alignof(al::span<T>))) FlexArrayStorage : al:
      */
     static constexpr size_t Sizeof(size_t count, size_t base=0u) noexcept
     { return sizeof(FlexArrayStorage) + sizeof(T)*count + base; }
-    /* NOLINTEND(bugprone-sizeof-expression)  */
+    /* NOLINTEND(bugprone-sizeof-expression) */
 
+    /* NOLINTBEGIN(cppcoreguidelines-pro-bounds-pointer-arithmetic) Flexible
+     * arrays store their payloads after the end of the object, which must be
+     * the last in the whole parent chain.
+     */
     FlexArrayStorage(size_t size) noexcept(std::is_nothrow_constructible_v<T>)
         : al::span<T>{::new(static_cast<void*>(this+1)) T[size], size}
     { }
+    /* NOLINTEND(cppcoreguidelines-pro-bounds-pointer-arithmetic) */
     ~FlexArrayStorage() = default;
 
     FlexArrayStorage(const FlexArrayStorage&) = delete;
@@ -40,9 +45,11 @@ struct alignas(std::max(alignment, alignof(al::span<T>))) FlexArrayStorage<T,ali
     static constexpr size_t Sizeof(size_t count, size_t base=0u) noexcept
     { return sizeof(FlexArrayStorage) + sizeof(T)*count + base; }
 
+    /* NOLINTBEGIN(cppcoreguidelines-pro-bounds-pointer-arithmetic) */
     FlexArrayStorage(size_t size) noexcept(std::is_nothrow_constructible_v<T>)
         : al::span<T>{::new(static_cast<void*>(this+1)) T[size], size}
     { }
+    /* NOLINTEND(cppcoreguidelines-pro-bounds-pointer-arithmetic) */
     ~FlexArrayStorage() { std::destroy(this->begin(), this->end()); }
 
     FlexArrayStorage(const FlexArrayStorage&) = delete;
@@ -66,13 +73,12 @@ struct FlexArray {
     using reference = T&;
     using const_reference = const T&;
 
-    using iterator = pointer;
-    using const_iterator = const_pointer;
-    using reverse_iterator = std::reverse_iterator<iterator>;
-    using const_reverse_iterator = std::reverse_iterator<const_iterator>;
+    using Storage_t_ = FlexArrayStorage<element_type, std::max(alignof(T), Align)>;
 
-    static constexpr size_t alignment{std::max(alignof(T), Align)};
-    using Storage_t_ = FlexArrayStorage<element_type,alignment>;
+    using iterator = typename Storage_t_::iterator;
+    using const_iterator = typename Storage_t_::const_iterator;
+    using reverse_iterator = typename Storage_t_::reverse_iterator;
+    using const_reverse_iterator = typename Storage_t_::const_reverse_iterator;
 
     const Storage_t_ mStore;
 
@@ -108,12 +114,12 @@ struct FlexArray {
     [[nodiscard]] auto end() const noexcept -> const_iterator { return mStore.cend(); }
     [[nodiscard]] auto cend() const noexcept -> const_iterator { return mStore.cend(); }
 
-    [[nodiscard]] auto rbegin() noexcept -> reverse_iterator { return end(); }
-    [[nodiscard]] auto rbegin() const noexcept -> const_reverse_iterator { return cend(); }
-    [[nodiscard]] auto crbegin() const noexcept -> const_reverse_iterator { return cend(); }
-    [[nodiscard]] auto rend() noexcept -> reverse_iterator { return begin(); }
-    [[nodiscard]] auto rend() const noexcept -> const_reverse_iterator { return cbegin(); }
-    [[nodiscard]] auto crend() const noexcept -> const_reverse_iterator { return cbegin(); }
+    [[nodiscard]] auto rbegin() noexcept -> reverse_iterator { return mStore.rbegin(); }
+    [[nodiscard]] auto rbegin() const noexcept -> const_reverse_iterator { return mStore.crbegin(); }
+    [[nodiscard]] auto crbegin() const noexcept -> const_reverse_iterator { return mStore.crbegin(); }
+    [[nodiscard]] auto rend() noexcept -> reverse_iterator { return mStore.rend(); }
+    [[nodiscard]] auto rend() const noexcept -> const_reverse_iterator { return mStore.crend(); }
+    [[nodiscard]] auto crend() const noexcept -> const_reverse_iterator { return mStore.crend(); }
 
     gsl::owner<void*> operator new(size_t, FamCount count)
     { return ::operator new[](Sizeof(count), std::align_val_t{alignof(FlexArray)}); }

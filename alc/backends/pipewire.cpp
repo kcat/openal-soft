@@ -1943,11 +1943,11 @@ void PipeWireCapture::inputCallback() noexcept
     if(!pw_buf) UNLIKELY return;
 
     spa_data *bufdata{pw_buf->buffer->datas};
-    const uint offset{std::min(bufdata->chunk->offset, bufdata->maxsize)};
-    const uint size{std::min(bufdata->chunk->size, bufdata->maxsize - offset)};
+    const uint offset{bufdata->chunk->offset % bufdata->maxsize};
+    const auto input = al::span{static_cast<const char*>(bufdata->data), bufdata->maxsize}
+        .subspan(offset, std::min(bufdata->chunk->size, bufdata->maxsize - offset));
 
-    std::ignore = mRing->write(static_cast<char*>(bufdata->data) + offset,
-        size / mRing->getElemSize());
+    std::ignore = mRing->write(input.data(), input.size() / mRing->getElemSize());
 
     pw_stream_queue_buffer(mStream.get(), pw_buf);
 }

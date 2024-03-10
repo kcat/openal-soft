@@ -118,7 +118,7 @@ auto GetDefaultProps(ALenum type) noexcept -> const EffectProps&
     return NullEffectProps;
 }
 
-void InitEffectParams(ALeffect *effect, ALenum type)
+void InitEffectParams(ALeffect *effect, ALenum type) noexcept
 {
     effect->Props = GetDefaultProps(type);
     effect->type = type;
@@ -149,7 +149,7 @@ bool EnsureEffects(ALCdevice *device, size_t needed)
     return true;
 }
 
-ALeffect *AllocEffect(ALCdevice *device)
+ALeffect *AllocEffect(ALCdevice *device) noexcept
 {
     auto sublist = std::find_if(device->EffectList.begin(), device->EffectList.end(),
         [](const EffectSubList &entry) noexcept -> bool
@@ -212,25 +212,8 @@ FORCE_ALIGN void AL_APIENTRY alGenEffectsDirect(ALCcontext *context, ALsizei n, 
         return;
     }
 
-    if(n == 1) LIKELY
-    {
-        /* Special handling for the easy and normal case. */
-        *effects = AllocEffect(device)->id;
-    }
-    else
-    {
-        /* Store the allocated buffer IDs in a separate local list, to avoid
-         * modifying the user storage in case of failure.
-         */
-        std::vector<ALuint> ids;
-        ids.reserve(static_cast<ALuint>(n));
-        do {
-            ALeffect *effect{AllocEffect(device)};
-            ids.emplace_back(effect->id);
-        } while(--n);
-        const al::span eids{effects, static_cast<ALuint>(n)};
-        std::copy(ids.cbegin(), ids.cend(), eids.begin());
-    }
+    const al::span eids{effects, static_cast<ALuint>(n)};
+    std::generate(eids.begin(), eids.end(), [device]{ return AllocEffect(device)->id; });
 }
 
 AL_API DECL_FUNC2(void, alDeleteEffects, ALsizei,n, const ALuint*,effects)
@@ -259,8 +242,8 @@ FORCE_ALIGN void AL_APIENTRY alDeleteEffectsDirect(ALCcontext *context, ALsizei 
     /* All good. Delete non-0 effect IDs. */
     auto delete_effect = [device](ALuint eid) -> void
     {
-        ALeffect *effect{eid ? LookupEffect(device, eid) : nullptr};
-        if(effect) FreeEffect(device, effect);
+        if(ALeffect *effect{eid ? LookupEffect(device, eid) : nullptr})
+            FreeEffect(device, effect);
     };
     std::for_each(eids.begin(), eids.end(), delete_effect);
 }

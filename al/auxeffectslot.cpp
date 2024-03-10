@@ -344,22 +344,31 @@ FORCE_ALIGN void AL_APIENTRY alGenAuxiliaryEffectSlotsDirect(ALCcontext *context
         return;
     }
 
-    if(n == 1)
-    {
-        /* Special handling for the easy and normal case. */
-        *effectslots = AllocEffectSlot(context)->id;
+    std::vector<ALeffectslot*> slots;
+    try {
+        if(n == 1)
+        {
+            /* Special handling for the easy and normal case. */
+            *effectslots = AllocEffectSlot(context)->id;
+        }
+        else
+        {
+            slots.reserve(static_cast<ALuint>(n));
+            std::generate_n(std::back_inserter(slots), static_cast<ALuint>(n),
+                [context]{ return AllocEffectSlot(context); });
+
+            const al::span eids{effectslots, static_cast<ALuint>(n)};
+            std::transform(slots.cbegin(), slots.cend(), eids.begin(),
+                [](ALeffectslot *slot) -> ALuint { return slot->id; });
+        }
     }
-    else
-    {
-        std::vector<ALuint> ids;
-        ALsizei count{n};
-        ids.reserve(static_cast<ALuint>(count));
-        do {
-            ALeffectslot *slot{AllocEffectSlot(context)};
-            ids.emplace_back(slot->id);
-        } while(--count);
-        const al::span eids{effectslots, static_cast<ALuint>(n)};
-        std::copy(ids.cbegin(), ids.cend(), eids.begin());
+    catch(std::exception& e) {
+        ERR("Exception allocating effectslot %zu of %d: %s\n", slots.size()+1, n, e.what());
+        auto delete_effectslot = [context](ALeffectslot *slot) -> void
+        { FreeEffectSlot(context, slot); };
+        std::for_each(slots.begin(), slots.end(), delete_effectslot);
+        context->setError(AL_INVALID_OPERATION, "Exception allocating %d effectslots: %s", n,
+            e.what());
     }
 }
 

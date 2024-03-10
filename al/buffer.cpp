@@ -201,7 +201,7 @@ bool EnsureBuffers(ALCdevice *device, size_t needed)
     return true;
 }
 
-ALbuffer *AllocBuffer(ALCdevice *device)
+ALbuffer *AllocBuffer(ALCdevice *device) noexcept
 {
     auto sublist = std::find_if(device->BufferList.begin(), device->BufferList.end(),
         [](const BufferSubList &entry) noexcept -> bool
@@ -677,25 +677,8 @@ FORCE_ALIGN void AL_APIENTRY alGenBuffersDirect(ALCcontext *context, ALsizei n, 
         return;
     }
 
-    if(n == 1) LIKELY
-    {
-        /* Special handling for the easy and normal case. */
-        *buffers = AllocBuffer(device)->id;
-    }
-    else
-    {
-        /* Store the allocated buffer IDs in a separate local list, to avoid
-         * modifying the user storage in case of failure.
-         */
-        std::vector<ALuint> ids;
-        ids.reserve(static_cast<ALuint>(n));
-        do {
-            ALbuffer *buffer{AllocBuffer(device)};
-            ids.emplace_back(buffer->id);
-        } while(--n);
-        const al::span bids{buffers, static_cast<ALuint>(n)};
-        std::copy(ids.cbegin(), ids.cend(), bids.begin());
-    }
+    const al::span bids{buffers, static_cast<ALuint>(n)};
+    std::generate(bids.begin(), bids.end(), [device]{ return AllocBuffer(device)->id; });
 }
 
 AL_API DECL_FUNC2(void, alDeleteBuffers, ALsizei,n, const ALuint*,buffers)
@@ -710,7 +693,7 @@ FORCE_ALIGN void AL_APIENTRY alDeleteBuffersDirect(ALCcontext *context, ALsizei 
     std::lock_guard<std::mutex> buflock{device->BufferLock};
 
     /* First try to find any buffers that are invalid or in-use. */
-    auto validate_buffer = [device, &context](const ALuint bid) -> bool
+    auto validate_buffer = [device,context](const ALuint bid) -> bool
     {
         if(!bid) return true;
         ALbuffer *ALBuf{LookupBuffer(device, bid)};
@@ -734,8 +717,8 @@ FORCE_ALIGN void AL_APIENTRY alDeleteBuffersDirect(ALCcontext *context, ALsizei 
     /* All good. Delete non-0 buffer IDs. */
     auto delete_buffer = [device](const ALuint bid) -> void
     {
-        ALbuffer *buffer{bid ? LookupBuffer(device, bid) : nullptr};
-        if(buffer) FreeBuffer(device, buffer);
+        if(ALbuffer *buffer{bid ? LookupBuffer(device, bid) : nullptr})
+            FreeBuffer(device, buffer);
     };
     std::for_each(bids.begin(), bids.end(), delete_buffer);
 }

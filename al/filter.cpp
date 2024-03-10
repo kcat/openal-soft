@@ -149,7 +149,7 @@ bool EnsureFilters(ALCdevice *device, size_t needed)
 }
 
 
-ALfilter *AllocFilter(ALCdevice *device)
+ALfilter *AllocFilter(ALCdevice *device) noexcept
 {
     auto sublist = std::find_if(device->FilterList.begin(), device->FilterList.end(),
         [](const FilterSubList &entry) noexcept -> bool
@@ -406,25 +406,8 @@ FORCE_ALIGN void AL_APIENTRY alGenFiltersDirect(ALCcontext *context, ALsizei n, 
         return;
     }
 
-    if(n == 1) LIKELY
-    {
-        /* Special handling for the easy and normal case. */
-        *filters = AllocFilter(device)->id;
-    }
-    else
-    {
-        /* Store the allocated buffer IDs in a separate local list, to avoid
-         * modifying the user storage in case of failure.
-         */
-        std::vector<ALuint> ids;
-        ids.reserve(static_cast<ALuint>(n));
-        do {
-            ALfilter *filter{AllocFilter(device)};
-            ids.emplace_back(filter->id);
-        } while(--n);
-        const al::span fids{filters, static_cast<ALuint>(n)};
-        std::copy(ids.begin(), ids.end(), fids.begin());
-    }
+    const al::span fids{filters, static_cast<ALuint>(n)};
+    std::generate(fids.begin(), fids.end(), [device]{ return AllocFilter(device)->id; });
 }
 
 AL_API DECL_FUNC2(void, alDeleteFilters, ALsizei,n, const ALuint*,filters)
@@ -453,8 +436,8 @@ FORCE_ALIGN void AL_APIENTRY alDeleteFiltersDirect(ALCcontext *context, ALsizei 
     /* All good. Delete non-0 filter IDs. */
     auto delete_filter = [device](const ALuint fid) -> void
     {
-        ALfilter *filter{fid ? LookupFilter(device, fid) : nullptr};
-        if(filter) FreeFilter(device, filter);
+        if(ALfilter *filter{fid ? LookupFilter(device, fid) : nullptr})
+            FreeFilter(device, filter);
     };
     std::for_each(fids.begin(), fids.end(), delete_filter);
 }

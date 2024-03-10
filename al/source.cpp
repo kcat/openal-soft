@@ -747,7 +747,7 @@ bool EnsureSources(ALCcontext *context, size_t needed)
     return true;
 }
 
-ALsource *AllocSource(ALCcontext *context)
+ALsource *AllocSource(ALCcontext *context) noexcept
 {
     auto sublist = std::find_if(context->mSourceList.begin(), context->mSourceList.end(),
         [](const SourceSubList &entry) noexcept -> bool
@@ -2705,22 +2705,8 @@ FORCE_ALIGN void AL_APIENTRY alGenSourcesDirect(ALCcontext *context, ALsizei n, 
         return;
     }
 
-    if(n == 1)
-    {
-        /* Special handling for the easy and normal case. */
-        *sources = AllocSource(context)->id;
-    }
-    else
-    {
-        std::vector<ALuint> ids;
-        ids.reserve(static_cast<ALuint>(n));
-        do {
-            ALsource *source{AllocSource(context)};
-            ids.emplace_back(source->id);
-        } while(--n);
-        const al::span sids{sources, static_cast<ALuint>(n)};
-        std::copy(ids.cbegin(), ids.cend(), sids.begin());
-    }
+    const al::span sids{sources, static_cast<ALuint>(n)};
+    std::generate(sids.begin(), sids.end(), [context]{ return AllocSource(context)->id; });
 }
 
 AL_API DECL_FUNC2(void, alDeleteSources, ALsizei,n, const ALuint*,sources)
@@ -2745,8 +2731,8 @@ FORCE_ALIGN void AL_APIENTRY alDeleteSourcesDirect(ALCcontext *context, ALsizei 
     /* All good. Delete source IDs. */
     auto delete_source = [&context](const ALuint sid) -> void
     {
-        ALsource *src{LookupSource(context, sid)};
-        if(src) FreeSource(context, src);
+        if(ALsource *src{LookupSource(context, sid)})
+            FreeSource(context, src);
     };
     std::for_each(sids.begin(), sids.end(), delete_source);
 }
@@ -3613,7 +3599,7 @@ AL_API void AL_APIENTRY alSourceQueueBufferLayersSOFT(ALuint, ALsizei, const ALu
 }
 
 
-ALsource::ALsource()
+ALsource::ALsource() noexcept
 {
     Direct.Gain = 1.0f;
     Direct.GainHF = 1.0f;

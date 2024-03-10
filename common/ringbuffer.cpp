@@ -46,7 +46,7 @@ auto RingBuffer::Create(std::size_t sz, std::size_t elem_sz, bool limit_writes) 
             power_of_two |= power_of_two>>32;
     }
     ++power_of_two;
-    if(power_of_two <= sz || power_of_two > std::numeric_limits<std::size_t>::max()>>1
+    if(power_of_two < sz || power_of_two > std::numeric_limits<std::size_t>::max()>>1
         || power_of_two > std::numeric_limits<std::size_t>::max()/elem_sz)
         throw std::overflow_error{"Ring buffer size overflow"};
 

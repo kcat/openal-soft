@@ -966,6 +966,7 @@ void DeviceNode::parseChannelCount(const spa_pod *value, bool force_update) noex
 
 
 [[nodiscard]] constexpr auto GetMonitorPrefix() noexcept { return "Monitor of "sv; }
+[[nodiscard]] constexpr auto GetMonitorSuffix() noexcept { return ".monitor"sv; }
 [[nodiscard]] constexpr auto GetAudioSinkClassName() noexcept { return "Audio/Sink"sv; }
 [[nodiscard]] constexpr auto GetAudioSourceClassName() noexcept { return "Audio/Source"sv; }
 [[nodiscard]] constexpr auto GetAudioDuplexClassName() noexcept { return "Audio/Duplex"sv; }
@@ -1547,7 +1548,7 @@ void PipeWirePlayback::open(std::string_view name)
         auto&& devlist = DeviceNode::GetList();
 
         auto match_name = [name](const DeviceNode &n) -> bool
-        { return n.mType != NodeType::Source && n.mName == name; };
+        { return n.mType != NodeType::Source && (n.mName == name || n.mDevName == name); };
         auto match = std::find_if(devlist.cbegin(), devlist.cend(), match_name);
         if(match == devlist.cend())
             throw al::backend_exception{al::backend_error::NoDevice,
@@ -1995,6 +1996,7 @@ void PipeWireCapture::open(std::string_view name)
         EventWatcherLockGuard evtlock{gEventHandler};
         auto&& devlist = DeviceNode::GetList();
         const std::string_view prefix{GetMonitorPrefix()};
+        const std::string_view suffix{GetMonitorSuffix()};
 
         auto match_name = [name](const DeviceNode &n) -> bool
         { return n.mType != NodeType::Sink && n.mName == name; };
@@ -2006,12 +2008,20 @@ void PipeWireCapture::open(std::string_view name)
             { return n.mType == NodeType::Sink && n.mName == sinkname; };
             match = std::find_if(devlist.cbegin(), devlist.cend(), match_sinkname);
         }
+        else if(match == devlist.cend() && al::ends_with(name, suffix))
+        {
+            const std::string_view sinkname{name.substr(0, name.size()-suffix.size())};
+            auto match_sinkname = [sinkname](const DeviceNode &n) -> bool
+            { return n.mType == NodeType::Sink && n.mDevName == sinkname; };
+            match = std::find_if(devlist.cbegin(), devlist.cend(), match_sinkname);
+        }
         if(match == devlist.cend())
             throw al::backend_exception{al::backend_error::NoDevice,
                 "Device name \"%.*s\" not found", al::sizei(name), name.data()};
 
         targetid = match->mSerial;
-        devname = name;
+        if(match->mType != NodeType::Sink) devname = match->mName;
+        else devname = std::string{GetMonitorPrefix()}+match->mName;
     }
 
     if(!mLoop)

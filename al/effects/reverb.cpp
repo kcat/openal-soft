@@ -9,13 +9,13 @@
 #include "AL/al.h"
 #include "AL/efx.h"
 
+#include "alnumeric.h"
 #include "alspan.h"
 #include "core/effects/base.h"
 #include "effects.h"
 
 #ifdef ALSOFT_EAX
 #include <cassert>
-#include "alnumeric.h"
 #include "al/eax/api.h"
 #include "al/eax/call.h"
 #include "al/eax/effect.h"

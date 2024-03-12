@@ -1097,30 +1097,32 @@ FORCE_ALIGN void AL_APIENTRY alBufferivDirect(ALCcontext *context, ALuint buffer
     case AL_AMBISONIC_LAYOUT_SOFT:
     case AL_AMBISONIC_SCALING_SOFT:
     case AL_UNPACK_AMBISONIC_ORDER_SOFT:
-        alBufferiDirect(context, buffer, param, values[0]);
+        alBufferiDirect(context, buffer, param, *values);
         return;
     }
 
     ALCdevice *device{context->mALDevice.get()};
     std::lock_guard<std::mutex> buflock{device->BufferLock};
 
-    ALbuffer *albuf = LookupBuffer(device, buffer);
+    al::span<const ALint> vals;
+    ALbuffer *albuf{LookupBuffer(device, buffer)};
     if(!albuf) UNLIKELY
         context->setError(AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
     else switch(param)
     {
     case AL_LOOP_POINTS_SOFT:
+        vals = {values, 2_uz};
         if(albuf->ref.load(std::memory_order_relaxed) != 0) UNLIKELY
             context->setError(AL_INVALID_OPERATION, "Modifying in-use buffer %u's loop points",
                 buffer);
-        else if(values[0] < 0 || values[0] >= values[1]
-            || static_cast<ALuint>(values[1]) > albuf->mSampleLen) UNLIKELY
+        else if(vals[0] < 0 || vals[0] >= vals[1]
+            || static_cast<ALuint>(vals[1]) > albuf->mSampleLen) UNLIKELY
             context->setError(AL_INVALID_VALUE, "Invalid loop point range %d -> %d on buffer %u",
-                values[0], values[1], buffer);
+                vals[0], vals[1], buffer);
         else
         {
-            albuf->mLoopStart = static_cast<ALuint>(values[0]);
-            albuf->mLoopEnd = static_cast<ALuint>(values[1]);
+            albuf->mLoopStart = static_cast<ALuint>(vals[0]);
+            albuf->mLoopEnd = static_cast<ALuint>(vals[1]);
         }
         break;
 
@@ -1303,6 +1305,8 @@ FORCE_ALIGN void AL_APIENTRY alGetBufferivDirect(ALCcontext *context, ALuint buf
 
     ALCdevice *device{context->mALDevice.get()};
     std::lock_guard<std::mutex> buflock{device->BufferLock};
+
+    al::span<ALint> vals;
     ALbuffer *albuf{LookupBuffer(device, buffer)};
     if(!albuf) UNLIKELY
         context->setError(AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
@@ -1311,8 +1315,9 @@ FORCE_ALIGN void AL_APIENTRY alGetBufferivDirect(ALCcontext *context, ALuint buf
     else switch(param)
     {
     case AL_LOOP_POINTS_SOFT:
-        values[0] = static_cast<ALint>(albuf->mLoopStart);
-        values[1] = static_cast<ALint>(albuf->mLoopEnd);
+        vals = {values, 2_uz};
+        vals[0] = static_cast<ALint>(albuf->mLoopStart);
+        vals[1] = static_cast<ALint>(albuf->mLoopEnd);
         break;
 
     default:
@@ -1524,7 +1529,7 @@ FORCE_ALIGN ALboolean AL_APIENTRY EAXSetBufferModeDirect(ALCcontext *context, AL
     /* Special-case setting a single buffer, to avoid extraneous allocations. */
     if(n == 1)
     {
-        const auto bufid = buffers[0];
+        const auto bufid = *buffers;
         if(bufid == AL_NONE)
             return AL_TRUE;
 
@@ -1560,9 +1565,8 @@ FORCE_ALIGN ALboolean AL_APIENTRY EAXSetBufferModeDirect(ALCcontext *context, AL
 
     /* Validate the buffers. */
     std::unordered_set<ALbuffer*> buflist;
-    for(auto i = 0;i < n;++i)
+    for(const ALuint bufid : al::span{buffers, static_cast<ALuint>(n)})
     {
-        const auto bufid = buffers[i];
         if(bufid == AL_NONE)
             continue;
 

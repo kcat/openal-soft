@@ -309,7 +309,7 @@ FORCE_ALIGN void AL_APIENTRY alEffectivDirect(ALCcontext *context, ALuint effect
     switch(param)
     {
     case AL_EFFECT_TYPE:
-        alEffectiDirect(context, effect, param, values[0]);
+        alEffectiDirect(context, effect, param, *values);
         return;
     }
 

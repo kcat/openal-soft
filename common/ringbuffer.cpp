@@ -79,8 +79,9 @@ auto RingBuffer::read(void *dest, std::size_t count) noexcept -> std::size_t
     const auto [n1, n2] = (rdend <= mSizeMask+1) ? std::make_tuple(to_read, 0_uz)
         : std::make_tuple(mSizeMask+1 - read_idx, rdend&mSizeMask);
 
+    auto dstbytes = al::span{static_cast<std::byte*>(dest), count*mElemSize};
     auto outiter = std::copy_n(mBuffer.begin() + read_idx*mElemSize, n1*mElemSize,
-        static_cast<std::byte*>(dest));
+        dstbytes.begin());
     if(n2 > 0)
         std::copy_n(mBuffer.begin(), n2*mElemSize, outiter);
     mReadCount.store(r+n1+n2, std::memory_order_release);
@@ -101,8 +102,9 @@ auto RingBuffer::peek(void *dest, std::size_t count) const noexcept -> std::size
     const auto [n1, n2] = (rdend <= mSizeMask+1) ? std::make_tuple(to_read, 0_uz)
         : std::make_tuple(mSizeMask+1 - read_idx, rdend&mSizeMask);
 
+    auto dstbytes = al::span{static_cast<std::byte*>(dest), count*mElemSize};
     auto outiter = std::copy_n(mBuffer.begin() + read_idx*mElemSize, n1*mElemSize,
-        static_cast<std::byte*>(dest));
+        dstbytes.begin());
     if(n2 > 0)
         std::copy_n(mBuffer.begin(), n2*mElemSize, outiter);
     return to_read;
@@ -122,10 +124,10 @@ auto RingBuffer::write(const void *src, std::size_t count) noexcept -> std::size
     const auto [n1, n2] = (wrend <= mSizeMask+1) ? std::make_tuple(to_write, 0_uz)
         : std::make_tuple(mSizeMask+1 - write_idx, wrend&mSizeMask);
 
-    auto srcbytes = static_cast<const std::byte*>(src);
-    std::copy_n(srcbytes, n1*mElemSize, mBuffer.begin() + write_idx*mElemSize);
+    auto srcbytes = al::span{static_cast<const std::byte*>(src), count*mElemSize};
+    std::copy_n(srcbytes.cbegin(), n1*mElemSize, mBuffer.begin() + write_idx*mElemSize);
     if(n2 > 0)
-        std::copy_n(srcbytes + n1*mElemSize, n2*mElemSize, mBuffer.begin());
+        std::copy_n(srcbytes.cbegin() + n1*mElemSize, n2*mElemSize, mBuffer.begin());
     mWriteCount.store(w+n1+n2, std::memory_order_release);
     return to_write;
 }

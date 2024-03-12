@@ -96,7 +96,7 @@ void EffectHandler::SetParami(ChorusProps &props, ALenum param, int val)
     }
 }
 void EffectHandler::SetParamiv(ChorusProps &props, ALenum param, const int *vals)
-{ SetParami(props, param, vals[0]); }
+{ SetParami(props, param, *vals); }
 void EffectHandler::SetParamf(ChorusProps &props, ALenum param, float val)
 {
     switch(param)
@@ -130,7 +130,7 @@ void EffectHandler::SetParamf(ChorusProps &props, ALenum param, float val)
     }
 }
 void EffectHandler::SetParamfv(ChorusProps &props, ALenum param, const float *vals)
-{ SetParamf(props, param, vals[0]); }
+{ SetParamf(props, param, *vals); }
 
 void EffectHandler::GetParami(const ChorusProps &props, ALenum param, int *val)
 {
@@ -186,7 +186,7 @@ void EffectHandler::SetParami(FlangerProps &props, ALenum param, int val)
     }
 }
 void EffectHandler::SetParamiv(FlangerProps &props, ALenum param, const int *vals)
-{ SetParami(props, param, vals[0]); }
+{ SetParami(props, param, *vals); }
 void EffectHandler::SetParamf(FlangerProps &props, ALenum param, float val)
 {
     switch(param)
@@ -220,7 +220,7 @@ void EffectHandler::SetParamf(FlangerProps &props, ALenum param, float val)
     }
 }
 void EffectHandler::SetParamfv(FlangerProps &props, ALenum param, const float *vals)
-{ SetParamf(props, param, vals[0]); }
+{ SetParamf(props, param, *vals); }
 
 void EffectHandler::GetParami(const FlangerProps &props, ALenum param, int *val)
 {

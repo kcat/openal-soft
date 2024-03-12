@@ -20,7 +20,7 @@ constexpr EffectProps genDefaultProps() noexcept
 {
     PshifterProps props{};
     props.CoarseTune = AL_PITCH_SHIFTER_DEFAULT_COARSE_TUNE;
-    props.FineTune   = AL_PITCH_SHIFTER_DEFAULT_FINE_TUNE;
+    props.FineTune = AL_PITCH_SHIFTER_DEFAULT_FINE_TUNE;
     return props;
 }
 
@@ -50,7 +50,7 @@ void EffectHandler::SetParami(PshifterProps &props, ALenum param, int val)
     }
 }
 void EffectHandler::SetParamiv(PshifterProps &props, ALenum param, const int *vals)
-{ SetParami(props, param, vals[0]); }
+{ SetParami(props, param, *vals); }
 
 void EffectHandler::SetParamf(PshifterProps&, ALenum param, float)
 { throw effect_exception{AL_INVALID_ENUM, "Invalid pitch shifter float property 0x%04x", param}; }

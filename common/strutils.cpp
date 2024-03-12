@@ -51,7 +51,7 @@ std::optional<std::string> getenv(const char *envname)
 #else
     const char *str{std::getenv(envname)};
 #endif
-    if(str && str[0] != '\0')
+    if(str && *str != '\0')
         return str;
     return std::nullopt;
 }
@@ -60,7 +60,7 @@ std::optional<std::string> getenv(const char *envname)
 std::optional<std::wstring> getenv(const WCHAR *envname)
 {
     const WCHAR *str{_wgetenv(envname)};
-    if(str && str[0] != L'\0')
+    if(str && *str != L'\0')
         return str;
     return std::nullopt;
 }

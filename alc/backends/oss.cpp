@@ -312,12 +312,12 @@ int OSSPlayback::mixerProc()
             continue;
         }
 
-        std::byte *write_ptr{mMixData.data()};
-        size_t to_write{mMixData.size()};
-        mDevice->renderSamples(write_ptr, static_cast<uint>(to_write/frame_size), frame_step);
-        while(to_write > 0 && !mKillNow.load(std::memory_order_acquire))
+        al::span write_buf{mMixData};
+        mDevice->renderSamples(write_buf.data(), static_cast<uint>(write_buf.size()/frame_size),
+            frame_step);
+        while(!write_buf.empty() && !mKillNow.load(std::memory_order_acquire))
         {
-            ssize_t wrote{write(mFd, write_ptr, to_write)};
+            ssize_t wrote{write(mFd, write_buf.data(), write_buf.size())};
             if(wrote < 0)
             {
                 if(errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR)
@@ -328,8 +328,7 @@ int OSSPlayback::mixerProc()
                 break;
             }
 
-            to_write -= static_cast<size_t>(wrote);
-            write_ptr += wrote;
+            write_buf = write_buf.subspan(static_cast<size_t>(wrote));
         }
     }
 

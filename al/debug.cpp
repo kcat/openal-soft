@@ -456,9 +456,14 @@ FORCE_ALIGN ALuint AL_APIENTRY alGetDebugMessageLogDirectEXT(ALCcontext *context
         context->setError(AL_INVALID_VALUE, "Negative debug log buffer size");
         return 0;
     }
+    auto sourcesOut = al::span{sources, sources ? count : 0u};
+    auto typesOut = al::span{types, types ? count : 0u};
+    auto idsOut = al::span{ids, ids ? count : 0u};
+    auto severitiesOut = al::span{severities, severities ? count : 0u};
+    auto lengthsOut = al::span{lengths, lengths ? count : 0u};
+    auto logOut = al::span{logBuf, logBuf ? static_cast<ALuint>(logBufSize) : 0u};
 
     std::lock_guard<std::mutex> debuglock{context->mDebugCbLock};
-    ALsizei logBufWritten{0};
     for(ALuint i{0};i < count;++i)
     {
         if(context->mDebugLog.empty())
@@ -466,20 +471,40 @@ FORCE_ALIGN ALuint AL_APIENTRY alGetDebugMessageLogDirectEXT(ALCcontext *context
 
         auto &entry = context->mDebugLog.front();
         const size_t tocopy{entry.mMessage.size() + 1};
-        if(logBuf)
+        if(logOut.data() != nullptr)
         {
-            const size_t avail{static_cast<ALuint>(logBufSize - logBufWritten)};
-            if(avail < tocopy)
+            if(logOut.size() < tocopy)
                 return i;
-            std::copy_n(entry.mMessage.data(), tocopy, logBuf+logBufWritten);
-            logBufWritten += static_cast<ALsizei>(tocopy);
+            std::copy(entry.mMessage.cbegin(), entry.mMessage.cend(), logOut.begin());
+            logOut[entry.mMessage.size()] = '\0';
+            logOut = logOut.subspan(tocopy);
         }
 
-        if(sources) sources[i] = GetDebugSourceEnum(entry.mSource);
-        if(types) types[i] = GetDebugTypeEnum(entry.mType);
-        if(ids) ids[i] = entry.mId;
-        if(severities) severities[i] = GetDebugSeverityEnum(entry.mSeverity);
-        if(lengths) lengths[i] = static_cast<ALsizei>(tocopy);
+        if(!sourcesOut.empty())
+        {
+            sourcesOut.front() = GetDebugSourceEnum(entry.mSource);
+            sourcesOut = sourcesOut.subspan<1>();
+        }
+        if(!typesOut.empty())
+        {
+            typesOut.front() = GetDebugTypeEnum(entry.mType);
+            typesOut = typesOut.subspan<1>();
+        }
+        if(!idsOut.empty())
+        {
+            idsOut.front() = entry.mId;
+            idsOut = idsOut.subspan<1>();
+        }
+        if(!severitiesOut.empty())
+        {
+            severitiesOut.front() = GetDebugSeverityEnum(entry.mSeverity);
+            severitiesOut = severitiesOut.subspan<1>();
+        }
+        if(!lengthsOut.empty())
+        {
+            lengthsOut.front() = static_cast<ALsizei>(tocopy);
+            lengthsOut = lengthsOut.subspan<1>();
+        }
 
         context->mDebugLog.pop_front();
     }
@@ -526,7 +551,8 @@ FORCE_ALIGN void AL_APIENTRY alGetObjectLabelDirectEXT(ALCcontext *context, ALen
     if(label && bufSize == 0) UNLIKELY
         return context->setError(AL_INVALID_VALUE, "Zero label bufSize");
 
-    auto copy_name = [name,bufSize,length,label](std::unordered_map<ALuint,std::string> &names)
+    const auto labelOut = al::span{label, label ? static_cast<ALuint>(bufSize) : 0u};
+    auto copy_name = [name,length,labelOut](std::unordered_map<ALuint,std::string> &names)
     {
         std::string_view objname;
 
@@ -534,13 +560,13 @@ FORCE_ALIGN void AL_APIENTRY alGetObjectLabelDirectEXT(ALCcontext *context, ALen
         if(iter != names.end())
             objname = iter->second;
 
-        if(!label)
+        if(labelOut.empty())
             *length = static_cast<ALsizei>(objname.length());
         else
         {
-            const size_t tocopy{std::min(objname.size(), static_cast<uint>(bufSize)-1_uz)};
-            std::memcpy(label, objname.data(), tocopy);
-            label[tocopy] = '\0';
+            const size_t tocopy{std::min(objname.size(), labelOut.size()-1_uz)};
+            std::copy_n(objname.cbegin(), tocopy, labelOut.begin());
+            labelOut[tocopy] = '\0';
             if(length)
                 *length = static_cast<ALsizei>(tocopy);
         }

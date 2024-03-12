@@ -29,6 +29,7 @@
 #include <stdexcept>
 
 #include "alnumbers.h"
+#include "alspan.h"
 #include "bs2b.h"
 
 namespace {
@@ -125,7 +126,7 @@ void bs2b::clear()
     history.fill(bs2b::t_last_sample{});
 }
 
-void bs2b::cross_feed(float *RESTRICT Left, float *RESTRICT Right, size_t SamplesToDo)
+void bs2b::cross_feed(float *Left, float *Right, size_t SamplesToDo)
 {
     const float a0lo{a0_lo};
     const float b1lo{b1_lo};
@@ -133,51 +134,54 @@ void bs2b::cross_feed(float *RESTRICT Left, float *RESTRICT Right, size_t Sample
     const float a1hi{a1_hi};
     const float b1hi{b1_hi};
     std::array<std::array<float,2>,128> samples;
+    al::span<float> lsamples{Left, SamplesToDo};
+    al::span<float> rsamples{Right, SamplesToDo};
 
-    for(size_t base{0};base < SamplesToDo;)
+    while(!lsamples.empty())
     {
-        const size_t todo{std::min(samples.size(), SamplesToDo-base)};
+        const size_t todo{std::min(samples.size(), lsamples.size())};
 
         /* Process left input */
         float z_lo{history[0].lo};
         float z_hi{history[0].hi};
-        for(size_t i{0};i < todo;i++)
-        {
-            const float x{Left[i]};
-            float y{a0hi*x + z_hi};
-            z_hi = a1hi*x + b1hi*y;
-            samples[i][0] = y;
+        std::transform(lsamples.cbegin(), lsamples.cbegin()+todo, samples.begin(),
+            [a0hi,a1hi,b1hi,a0lo,b1lo,&z_lo,&z_hi](const float x) -> std::array<float,2>
+            {
+                float y0{a0hi*x + z_hi};
+                z_hi = a1hi*x + b1hi*y0;
 
-            y = a0lo*x + z_lo;
-            z_lo = b1lo*y;
-            samples[i][1] = y;
-        }
+                float y1{a0lo*x + z_lo};
+                z_lo = b1lo*y1;
+
+                return {y0, y1};
+            });
         history[0].lo = z_lo;
         history[0].hi = z_hi;
 
         /* Process right input */
         z_lo = history[1].lo;
         z_hi = history[1].hi;
-        for(size_t i{0};i < todo;i++)
-        {
-            const float x{Right[i]};
-            float y{a0lo*x + z_lo};
-            z_lo = b1lo*y;
-            samples[i][0] += y;
+        std::transform(rsamples.cbegin(), rsamples.cbegin()+todo, samples.begin(), samples.begin(),
+            [a0hi,a1hi,b1hi,a0lo,b1lo,&z_lo,&z_hi](const float x, const std::array<float,2> out) -> std::array<float,2>
+            {
+                float y0{a0lo*x + z_lo};
+                z_lo = b1lo*y0;
 
-            y = a0hi*x + z_hi;
-            z_hi = a1hi*x + b1hi*y;
-            samples[i][1] += y;
-        }
+                float y1{a0hi*x + z_hi};
+                z_hi = a1hi*x + b1hi*y1;
+
+                return {out[0]+y0, out[1]+y1};
+            });
         history[1].lo = z_lo;
         history[1].hi = z_hi;
 
-        for(size_t i{0};i < todo;i++)
-            *(Left++) = samples[i][0];
-        for(size_t i{0};i < todo;i++)
-            *(Right++) = samples[i][1];
+        auto iter = std::transform(samples.cbegin(), samples.cbegin()+todo, lsamples.begin(),
+            [](const std::array<float,2> &in) { return in[0]; });
+        lsamples = {iter, lsamples.end()};
 
-        base += todo;
+        iter = std::transform(samples.cbegin(), samples.cbegin()+todo, rsamples.begin(),
+            [](const std::array<float,2> &in) { return in[1]; });
+        rsamples = {iter, rsamples.end()};
     }
 }
 

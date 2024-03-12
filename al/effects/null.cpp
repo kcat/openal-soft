@@ -16,8 +16,7 @@ namespace {
 
 constexpr EffectProps genDefaultProps() noexcept
 {
-    EffectProps props{};
-    return props;
+    return std::monostate{};
 }
 
 } // namespace
@@ -38,7 +37,7 @@ void EffectHandler::SetParamiv(std::monostate &props, ALenum param, const int *v
     switch(param)
     {
     default:
-        SetParami(props, param, vals[0]);
+        SetParami(props, param, *vals);
     }
 }
 void EffectHandler::SetParamf(std::monostate& /*props*/, ALenum param, float /*val*/)
@@ -55,7 +54,7 @@ void EffectHandler::SetParamfv(std::monostate &props, ALenum param, const float 
     switch(param)
     {
     default:
-        SetParamf(props, param, vals[0]);
+        SetParamf(props, param, *vals);
     }
 }
 

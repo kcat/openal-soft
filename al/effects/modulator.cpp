@@ -77,7 +77,7 @@ void EffectHandler::SetParami(ModulatorProps &props, ALenum param, int val)
     }
 }
 void EffectHandler::SetParamiv(ModulatorProps &props, ALenum param, const int *vals)
-{ SetParami(props, param, vals[0]); }
+{ SetParami(props, param, *vals); }
 
 void EffectHandler::SetParamf(ModulatorProps &props, ALenum param, float val)
 {
@@ -100,7 +100,7 @@ void EffectHandler::SetParamf(ModulatorProps &props, ALenum param, float val)
     }
 }
 void EffectHandler::SetParamfv(ModulatorProps &props, ALenum param, const float *vals)
-{ SetParamf(props, param, vals[0]); }
+{ SetParamf(props, param, *vals); }
 
 void EffectHandler::GetParami(const ModulatorProps &props, ALenum param, int *val)
 {

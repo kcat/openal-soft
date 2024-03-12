@@ -201,7 +201,7 @@ void EffectHandler::SetParamf(VmorpherProps &props, ALenum param, float val)
     }
 }
 void EffectHandler::SetParamfv(VmorpherProps &props, ALenum param, const float *vals)
-{ SetParamf(props, param, vals[0]); }
+{ SetParamf(props, param, *vals); }
 
 void EffectHandler::GetParami(const VmorpherProps &props, ALenum param, int* val)
 {

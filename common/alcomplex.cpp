@@ -202,8 +202,6 @@ void complex_fft(const al::span<std::complex<double>> buffer, const double sign)
 
 void complex_hilbert(const al::span<std::complex<double>> buffer)
 {
-    using namespace std::placeholders;
-
     inverse_fft(buffer);
 
     const double inverse_size = 1.0/static_cast<double>(buffer.size());

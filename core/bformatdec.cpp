@@ -38,9 +38,8 @@ BFormatDec::BFormatDec(const size_t inchans, const al::span<const ChannelDec> co
         auto &decoder = mChannelDec.emplace<std::vector<ChannelDecoderSingle>>(inchans);
         for(size_t j{0};j < decoder.size();++j)
         {
-            float *outcoeffs{decoder[j].mGains.data()};
-            for(const ChannelDec &incoeffs : coeffs)
-                *(outcoeffs++) = incoeffs[j];
+            std::transform(coeffs.cbegin(), coeffs.cend(), decoder[j].mGains.begin(),
+                [j](const ChannelDec &incoeffs) { return incoeffs[j]; });
         }
     }
     else
@@ -52,13 +51,11 @@ BFormatDec::BFormatDec(const size_t inchans, const al::span<const ChannelDec> co
 
         for(size_t j{0};j < decoder.size();++j)
         {
-            float *outcoeffs{decoder[j].mGains[sHFBand].data()};
-            for(const ChannelDec &incoeffs : coeffs)
-                *(outcoeffs++) = incoeffs[j];
+            std::transform(coeffs.cbegin(), coeffs.cend(), decoder[j].mGains[sHFBand].begin(),
+                [j](const ChannelDec &incoeffs) { return incoeffs[j]; });
 
-            outcoeffs = decoder[j].mGains[sLFBand].data();
-            for(const ChannelDec &incoeffs : coeffslf)
-                *(outcoeffs++) = incoeffs[j];
+            std::transform(coeffslf.cbegin(), coeffslf.cend(), decoder[j].mGains[sLFBand].begin(),
+                [j](const ChannelDec &incoeffs) { return incoeffs[j]; });
         }
     }
 }

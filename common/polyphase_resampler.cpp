@@ -184,7 +184,7 @@ void PPhaseResampler::process(const al::span<const double> in, const al::span<do
 
     // Resample the input.
     const uint p{mP}, q{mQ}, m{mM}, l{mL};
-    const double *f{mF.data()};
+    const al::span<const double> f{mF};
     for(uint i{0};i < out.size();i++)
     {
         // Input starts at l to compensate for the filter delay.  This will

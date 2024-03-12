@@ -323,7 +323,8 @@ force_inline constexpr v4sf ld_ps1(float a) noexcept { return a; }
 
 #else
 
-inline bool valigned(const float *ptr) noexcept
+[[maybe_unused]] inline
+auto valigned(const float *ptr) noexcept -> bool
 {
     static constexpr uintptr_t alignmask{SimdSize*sizeof(float) - 1};
     return (reinterpret_cast<uintptr_t>(ptr) & alignmask) == 0;

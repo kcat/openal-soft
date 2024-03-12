@@ -1,14 +1,12 @@
 #ifndef AL_EFFECTS_EFFECTS_H
 #define AL_EFFECTS_EFFECTS_H
 
+#include <variant>
+
 #include "AL/al.h"
 
 #include "core/effects/base.h"
 #include "core/except.h"
-
-#ifdef ALSOFT_EAX
-#include "al/eax/effect.h"
-#endif // ALSOFT_EAX
 
 
 struct EffectHandler {

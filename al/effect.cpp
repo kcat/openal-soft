@@ -23,7 +23,6 @@
 #include "effect.h"
 
 #include <algorithm>
-#include <cstdarg>
 #include <cstdint>
 #include <cstring>
 #include <iterator>
@@ -77,17 +76,6 @@ const std::array<EffectList,16> gEffectList{{
     { "convolution", CONVOLUTION_EFFECT, AL_EFFECT_CONVOLUTION_SOFT },
 }};
 
-
-effect_exception::effect_exception(ALenum code, const char *msg, ...) : mErrorCode{code}
-{
-    /* NOLINTBEGIN(*-array-to-pointer-decay) */
-    std::va_list args;
-    va_start(args, msg);
-    setMessage(msg, args);
-    va_end(args);
-    /* NOLINTEND(*-array-to-pointer-decay) */
-}
-effect_exception::~effect_exception() = default;
 
 namespace {
 

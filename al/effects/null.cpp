@@ -8,6 +8,7 @@
 #include "effects.h"
 
 #ifdef ALSOFT_EAX
+#include "al/eax/effect.h"
 #include "al/eax/exception.h"
 #endif // ALSOFT_EAX
 

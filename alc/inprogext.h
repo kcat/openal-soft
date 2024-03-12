@@ -67,28 +67,28 @@ AL_API void AL_APIENTRY alAuxiliaryEffectSlotStopvSOFT(ALsizei n, const ALuint *
 
 #ifndef AL_EXT_32bit_formats
 #define AL_EXT_32bit_formats
-#define AL_FORMAT_MONO_I32                       0x1202 /* Same as AL_FORMAT_MONO32 */
-#define AL_FORMAT_STEREO_I32                     0x1203 /* Same as AL_FORMAT_STEREO32 */
-#define AL_FORMAT_REAR_I32                       0x19DB
-#define AL_FORMAT_REAR_FLOAT32                   0x19DC
-#define AL_FORMAT_QUAD_I32                       0x19DD
-#define AL_FORMAT_QUAD_FLOAT32                   0x19DE
-#define AL_FORMAT_51CHN_I32                      0x19DF
-#define AL_FORMAT_51CHN_FLOAT32                  0x19E0
-#define AL_FORMAT_61CHN_I32                      0x19E1
-#define AL_FORMAT_61CHN_FLOAT32                  0x19E2
-#define AL_FORMAT_71CHN_I32                      0x19E3
-#define AL_FORMAT_71CHN_FLOAT32                  0x19E4
+#define AL_FORMAT_MONO_I32                       0x19DB
+#define AL_FORMAT_STEREO_I32                     0x19DC
+#define AL_FORMAT_REAR_I32                       0x19DD
+#define AL_FORMAT_REAR_FLOAT32                   0x19DE
+#define AL_FORMAT_QUAD_I32                       0x19DF
+#define AL_FORMAT_QUAD_FLOAT32                   0x19E0
+#define AL_FORMAT_51CHN_I32                      0x19E1
+#define AL_FORMAT_51CHN_FLOAT32                  0x19E2
+#define AL_FORMAT_61CHN_I32                      0x19E3
+#define AL_FORMAT_61CHN_FLOAT32                  0x19E4
+#define AL_FORMAT_71CHN_I32                      0x19E5
+#define AL_FORMAT_71CHN_FLOAT32                  0x19E6
 
-#define AL_FORMAT_UHJ2CHN_I32_SOFT               0x19E5
-#define AL_FORMAT_UHJ3CHN_I32_SOFT               0x19E6
-#define AL_FORMAT_UHJ4CHN_I32_SOFT               0x19E7
+#define AL_FORMAT_UHJ2CHN_I32_SOFT               0x19E7
+#define AL_FORMAT_UHJ3CHN_I32_SOFT               0x19E8
+#define AL_FORMAT_UHJ4CHN_I32_SOFT               0x19E9
 #endif
 
 #ifndef AL_SOFT_source_panning
 #define AL_SOFT_source_panning
-#define AL_PANNING_ENABLED_SOFT                  0x19E8
-#define AL_PAN_SOFT                              0x19E9
+#define AL_PANNING_ENABLED_SOFT                  0x19EA
+#define AL_PAN_SOFT                              0x19EB
 #endif
 
 /* Non-standard exports. Not part of any extension. */
@@ -105,6 +105,12 @@ AL_API ALint64SOFT AL_APIENTRY alGetInteger64SOFT(ALenum pname) AL_API_NOEXCEPT;
 AL_API void AL_APIENTRY alGetInteger64vSOFT(ALenum pname, ALint64SOFT *values) AL_API_NOEXCEPT;
 ALint64SOFT AL_APIENTRY alGetInteger64DirectSOFT(ALCcontext *context, ALenum pname) AL_API_NOEXCEPT;
 void AL_APIENTRY alGetInteger64vDirectSOFT(ALCcontext *context, ALenum pname, ALint64SOFT *values) AL_API_NOEXCEPT;
+
+/* Not included in the public headers or export list, as a precaution for apps
+ * that check these to determine the behavior of the multi-channel *32 formats.
+ */
+#define AL_FORMAT_MONO32                         0x1202
+#define AL_FORMAT_STEREO32                       0x1203
 
 #ifdef __cplusplus
 } /* extern "C" */

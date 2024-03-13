@@ -783,6 +783,7 @@ set(OPENAL_OBJS
     al/effects/reverb.cpp
     al/effects/vmorpher.cpp
     al/error.cpp
+    al/error.h
     al/event.cpp
     al/event.h
     al/extension.cpp

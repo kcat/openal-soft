@@ -145,7 +145,7 @@ void DistortionState::process(const size_t samplesToDo, const al::span<const Flo
         mBandpass.process({mBuffer[0].data(), todo}, mBuffer[1]);
 
         todo >>= 2;
-        const float *outgains{mGain.data()};
+        auto outgains = mGain.cbegin();
         for(FloatBufferLine &RESTRICT output : samplesOut)
         {
             /* Fourth step, final, do attenuation and perform decimation,

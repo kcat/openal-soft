@@ -220,24 +220,26 @@ void FshifterState::process(const size_t samplesToDo, const al::span<const Float
     }
 
     /* Process frequency shifter using the analytic signal obtained. */
-    float *RESTRICT BufferOut{al::assume_aligned<16>(mBufferOut.data())};
     for(size_t c{0};c < 2;++c)
     {
+        const double sign{mSign[c]};
         const uint phase_step{mPhaseStep[c]};
         uint phase_idx{mPhase[c]};
-        for(size_t k{0};k < samplesToDo;++k)
-        {
-            const double phase{phase_idx * (al::numbers::pi*2.0 / MixerFracOne)};
-            BufferOut[k] = static_cast<float>(mOutdata[k].real()*std::cos(phase) +
-                mOutdata[k].imag()*std::sin(phase)*mSign[c]);
+        std::transform(mOutdata.cbegin(), mOutdata.cbegin()+samplesToDo, mBufferOut.begin(),
+            [&phase_idx,phase_step,sign](const complex_d &in) -> float
+            {
+                const double phase{phase_idx * (al::numbers::pi*2.0 / MixerFracOne)};
+                const auto out = static_cast<float>(in.real()*std::cos(phase) +
+                    in.imag()*std::sin(phase)*sign);
 
-            phase_idx += phase_step;
-            phase_idx &= MixerFracMask;
-        }
+                phase_idx += phase_step;
+                phase_idx &= MixerFracMask;
+                return out;
+            });
         mPhase[c] = phase_idx;
 
         /* Now, mix the processed sound data to the output. */
-        MixSamples({BufferOut, samplesToDo}, samplesOut, mGains[c].Current.data(),
+        MixSamples({mBufferOut.data(), samplesToDo}, samplesOut, mGains[c].Current.data(),
             mGains[c].Target.data(), std::max(samplesToDo, 512_uz), 0);
     }
 }

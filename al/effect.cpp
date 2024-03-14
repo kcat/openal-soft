@@ -53,6 +53,7 @@
 #include "alstring.h"
 #include "core/logging.h"
 #include "direct_defs.h"
+#include "error.h"
 #include "intrusive_ptr.h"
 #include "opthelpers.h"
 
@@ -81,7 +82,7 @@ namespace {
 
 using SubListAllocator = al::allocator<std::array<ALeffect,64>>;
 
-auto GetDefaultProps(ALenum type) noexcept -> const EffectProps&
+constexpr auto GetDefaultProps(ALenum type) noexcept -> const EffectProps&
 {
     switch(type)
     {
@@ -112,29 +113,27 @@ void InitEffectParams(ALeffect *effect, ALenum type) noexcept
     effect->type = type;
 }
 
-bool EnsureEffects(ALCdevice *device, size_t needed)
-{
+auto EnsureEffects(ALCdevice *device, size_t needed) noexcept -> bool
+try {
     size_t count{std::accumulate(device->EffectList.cbegin(), device->EffectList.cend(), 0_uz,
         [](size_t cur, const EffectSubList &sublist) noexcept -> size_t
         { return cur + static_cast<ALuint>(al::popcount(sublist.FreeMask)); })};
 
-    try {
-        while(needed > count)
-        {
-            if(device->EffectList.size() >= 1<<25) UNLIKELY
-                return false;
+    while(needed > count)
+    {
+        if(device->EffectList.size() >= 1<<25) UNLIKELY
+            return false;
 
-            EffectSubList sublist{};
-            sublist.FreeMask = ~0_u64;
-            sublist.Effects = SubListAllocator{}.allocate(1);
-            device->EffectList.emplace_back(std::move(sublist));
-            count += std::tuple_size_v<SubListAllocator::value_type>;
-        }
-    }
-    catch(...) {
-        return false;
+        EffectSubList sublist{};
+        sublist.FreeMask = ~0_u64;
+        sublist.Effects = SubListAllocator{}.allocate(1);
+        device->EffectList.emplace_back(std::move(sublist));
+        count += std::tuple_size_v<SubListAllocator::value_type>;
     }
     return true;
+}
+catch(...) {
+    return false;
 }
 
 ALeffect *AllocEffect(ALCdevice *device) noexcept
@@ -170,7 +169,7 @@ void FreeEffect(ALCdevice *device, ALeffect *effect)
     device->EffectList[lidx].FreeMask |= 1_u64 << slidx;
 }
 
-inline ALeffect *LookupEffect(ALCdevice *device, ALuint id)
+inline auto LookupEffect(ALCdevice *device, ALuint id) noexcept -> ALeffect*
 {
     const size_t lidx{(id-1) >> 6};
     const ALuint slidx{(id-1) & 0x3f};
@@ -187,29 +186,31 @@ inline ALeffect *LookupEffect(ALCdevice *device, ALuint id)
 
 AL_API DECL_FUNC2(void, alGenEffects, ALsizei,n, ALuint*,effects)
 FORCE_ALIGN void AL_APIENTRY alGenEffectsDirect(ALCcontext *context, ALsizei n, ALuint *effects) noexcept
-{
-    if(n < 0) UNLIKELY
-        context->setError(AL_INVALID_VALUE, "Generating %d effects", n);
+try {
+    if(n < 0)
+        throw al::context_error{AL_INVALID_VALUE, "Generating %d effects", n};
     if(n <= 0) UNLIKELY return;
 
     ALCdevice *device{context->mALDevice.get()};
     std::lock_guard<std::mutex> effectlock{device->EffectLock};
-    if(!EnsureEffects(device, static_cast<ALuint>(n)))
-    {
-        context->setError(AL_OUT_OF_MEMORY, "Failed to allocate %d effect%s", n, (n==1)?"":"s");
-        return;
-    }
 
     const al::span eids{effects, static_cast<ALuint>(n)};
+    if(!EnsureEffects(device, eids.size()))
+        throw al::context_error{AL_OUT_OF_MEMORY, "Failed to allocate %d effect%s", n,
+            (n == 1) ? "" : "s"};
+
     std::generate(eids.begin(), eids.end(), [device]{ return AllocEffect(device)->id; });
+}
+catch(al::context_error& e) {
+    context->setError(e.errorCode(), "%s", e.what());
 }
 
 AL_API DECL_FUNC2(void, alDeleteEffects, ALsizei,n, const ALuint*,effects)
 FORCE_ALIGN void AL_APIENTRY alDeleteEffectsDirect(ALCcontext *context, ALsizei n,
     const ALuint *effects) noexcept
-{
-    if(n < 0) UNLIKELY
-        context->setError(AL_INVALID_VALUE, "Deleting %d effects", n);
+try {
+    if(n < 0)
+        throw al::context_error{AL_INVALID_VALUE, "Deleting %d effects", n};
     if(n <= 0) UNLIKELY return;
 
     ALCdevice *device{context->mALDevice.get()};
@@ -221,11 +222,8 @@ FORCE_ALIGN void AL_APIENTRY alDeleteEffectsDirect(ALCcontext *context, ALsizei 
 
     const al::span eids{effects, static_cast<ALuint>(n)};
     auto inveffect = std::find_if_not(eids.begin(), eids.end(), validate_effect);
-    if(inveffect != eids.end()) UNLIKELY
-    {
-        context->setError(AL_INVALID_NAME, "Invalid effect ID %u", *inveffect);
-        return;
-    }
+    if(inveffect != eids.end())
+        throw al::context_error{AL_INVALID_NAME, "Invalid effect ID %u", *inveffect};
 
     /* All good. Delete non-0 effect IDs. */
     auto delete_effect = [device](ALuint eid) -> void
@@ -234,6 +232,9 @@ FORCE_ALIGN void AL_APIENTRY alDeleteEffectsDirect(ALCcontext *context, ALsizei 
             FreeEffect(device, effect);
     };
     std::for_each(eids.begin(), eids.end(), delete_effect);
+}
+catch(al::context_error& e) {
+    context->setError(e.errorCode(), "%s", e.what());
 }
 
 AL_API DECL_FUNC1(ALboolean, alIsEffect, ALuint,effect)
@@ -249,51 +250,50 @@ FORCE_ALIGN ALboolean AL_APIENTRY alIsEffectDirect(ALCcontext *context, ALuint e
 AL_API DECL_FUNC3(void, alEffecti, ALuint,effect, ALenum,param, ALint,value)
 FORCE_ALIGN void AL_APIENTRY alEffectiDirect(ALCcontext *context, ALuint effect, ALenum param,
     ALint value) noexcept
-{
+try {
     ALCdevice *device{context->mALDevice.get()};
     std::lock_guard<std::mutex> effectlock{device->EffectLock};
 
     ALeffect *aleffect{LookupEffect(device, effect)};
-    if(!aleffect) UNLIKELY
-        context->setError(AL_INVALID_NAME, "Invalid effect ID %u", effect);
-    else if(param == AL_EFFECT_TYPE)
+    if(!aleffect)
+        throw al::context_error{AL_INVALID_NAME, "Invalid effect ID %u", effect};
+
+    switch(param)
     {
-        bool isOk{value == AL_EFFECT_NULL};
-        if(!isOk)
+    case AL_EFFECT_TYPE:
+        if(value != AL_EFFECT_NULL)
         {
             auto check_effect = [value](const EffectList &item) -> bool
             { return value == item.val && !DisabledEffects.test(item.type); };
-            isOk = std::any_of(gEffectList.cbegin(), gEffectList.cend(), check_effect);
+            if(!std::any_of(gEffectList.cbegin(), gEffectList.cend(), check_effect))
+                throw al::context_error{AL_INVALID_VALUE, "Effect type 0x%04x not supported",
+                    value};
         }
 
-        if(isOk)
-            InitEffectParams(aleffect, value);
-        else
-            context->setError(AL_INVALID_VALUE, "Effect type 0x%04x not supported", value);
+        InitEffectParams(aleffect, value);
+        return;
     }
-    else try
+
+    /* Call the appropriate handler */
+    std::visit([aleffect,param,value](auto &arg)
     {
-        /* Call the appropriate handler */
-        std::visit([aleffect,param,value](auto &arg)
+        using Type = std::remove_cv_t<std::remove_reference_t<decltype(arg)>>;
+        if constexpr(std::is_same_v<Type,ReverbProps>)
         {
-            using Type = std::remove_cv_t<std::remove_reference_t<decltype(arg)>>;
-            if constexpr(std::is_same_v<Type,ReverbProps>)
-            {
-                if(aleffect->type == AL_EFFECT_REVERB)
-                    return EffectHandler::StdReverbSetParami(arg, param, value);
-            }
-            return EffectHandler::SetParami(arg, param, value);
-        }, aleffect->Props);
-    }
-    catch(effect_exception &e) {
-        context->setError(e.errorCode(), "%s", e.what());
-    }
+            if(aleffect->type == AL_EFFECT_REVERB)
+                return EffectHandler::StdReverbSetParami(arg, param, value);
+        }
+        return EffectHandler::SetParami(arg, param, value);
+    }, aleffect->Props);
+}
+catch(al::context_error& e) {
+    context->setError(e.errorCode(), "%s", e.what());
 }
 
 AL_API DECL_FUNC3(void, alEffectiv, ALuint,effect, ALenum,param, const ALint*,values)
 FORCE_ALIGN void AL_APIENTRY alEffectivDirect(ALCcontext *context, ALuint effect, ALenum param,
     const ALint *values) noexcept
-{
+try {
     switch(param)
     {
     case AL_EFFECT_TYPE:
@@ -305,120 +305,117 @@ FORCE_ALIGN void AL_APIENTRY alEffectivDirect(ALCcontext *context, ALuint effect
     std::lock_guard<std::mutex> effectlock{device->EffectLock};
 
     ALeffect *aleffect{LookupEffect(device, effect)};
-    if(!aleffect) UNLIKELY
-        context->setError(AL_INVALID_NAME, "Invalid effect ID %u", effect);
-    else try
+    if(!aleffect)
+        throw al::context_error{AL_INVALID_NAME, "Invalid effect ID %u", effect};
+
+    /* Call the appropriate handler */
+    std::visit([aleffect,param,values](auto &arg)
     {
-        /* Call the appropriate handler */
-        std::visit([aleffect,param,values](auto &arg)
+        using Type = std::remove_cv_t<std::remove_reference_t<decltype(arg)>>;
+        if constexpr(std::is_same_v<Type,ReverbProps>)
         {
-            using Type = std::remove_cv_t<std::remove_reference_t<decltype(arg)>>;
-            if constexpr(std::is_same_v<Type,ReverbProps>)
-            {
-                if(aleffect->type == AL_EFFECT_REVERB)
-                    return EffectHandler::StdReverbSetParamiv(arg, param, values);
-            }
-            return EffectHandler::SetParamiv(arg, param, values);
-        }, aleffect->Props);
-    }
-    catch(effect_exception &e) {
-        context->setError(e.errorCode(), "%s", e.what());
-    }
+            if(aleffect->type == AL_EFFECT_REVERB)
+                return EffectHandler::StdReverbSetParamiv(arg, param, values);
+        }
+        return EffectHandler::SetParamiv(arg, param, values);
+    }, aleffect->Props);
+}
+catch(al::context_error& e) {
+    context->setError(e.errorCode(), "%s", e.what());
 }
 
 AL_API DECL_FUNC3(void, alEffectf, ALuint,effect, ALenum,param, ALfloat,value)
 FORCE_ALIGN void AL_APIENTRY alEffectfDirect(ALCcontext *context, ALuint effect, ALenum param,
     ALfloat value) noexcept
-{
+try {
     ALCdevice *device{context->mALDevice.get()};
     std::lock_guard<std::mutex> effectlock{device->EffectLock};
 
     ALeffect *aleffect{LookupEffect(device, effect)};
     if(!aleffect) UNLIKELY
-        context->setError(AL_INVALID_NAME, "Invalid effect ID %u", effect);
-    else try
+        throw al::context_error{AL_INVALID_NAME, "Invalid effect ID %u", effect};
+
+    /* Call the appropriate handler */
+    std::visit([aleffect,param,value](auto &arg)
     {
-        /* Call the appropriate handler */
-        std::visit([aleffect,param,value](auto &arg)
+        using Type = std::remove_cv_t<std::remove_reference_t<decltype(arg)>>;
+        if constexpr(std::is_same_v<Type,ReverbProps>)
         {
-            using Type = std::remove_cv_t<std::remove_reference_t<decltype(arg)>>;
-            if constexpr(std::is_same_v<Type,ReverbProps>)
-            {
-                if(aleffect->type == AL_EFFECT_REVERB)
-                    return EffectHandler::StdReverbSetParamf(arg, param, value);
-            }
-            return EffectHandler::SetParamf(arg, param, value);
-        }, aleffect->Props);
-    }
-    catch(effect_exception &e) {
-        context->setError(e.errorCode(), "%s", e.what());
-    }
+            if(aleffect->type == AL_EFFECT_REVERB)
+                return EffectHandler::StdReverbSetParamf(arg, param, value);
+        }
+        return EffectHandler::SetParamf(arg, param, value);
+    }, aleffect->Props);
+}
+catch(al::context_error& e) {
+    context->setError(e.errorCode(), "%s", e.what());
 }
 
 AL_API DECL_FUNC3(void, alEffectfv, ALuint,effect, ALenum,param, const ALfloat*,values)
 FORCE_ALIGN void AL_APIENTRY alEffectfvDirect(ALCcontext *context, ALuint effect, ALenum param,
     const ALfloat *values) noexcept
-{
+try {
     ALCdevice *device{context->mALDevice.get()};
     std::lock_guard<std::mutex> effectlock{device->EffectLock};
 
     ALeffect *aleffect{LookupEffect(device, effect)};
-    if(!aleffect) UNLIKELY
-        context->setError(AL_INVALID_NAME, "Invalid effect ID %u", effect);
-    else try
+    if(!aleffect)
+        throw al::context_error{AL_INVALID_NAME, "Invalid effect ID %u", effect};
+
+    /* Call the appropriate handler */
+    std::visit([aleffect,param,values](auto &arg)
     {
-        /* Call the appropriate handler */
-        std::visit([aleffect,param,values](auto &arg)
+        using Type = std::remove_cv_t<std::remove_reference_t<decltype(arg)>>;
+        if constexpr(std::is_same_v<Type,ReverbProps>)
         {
-            using Type = std::remove_cv_t<std::remove_reference_t<decltype(arg)>>;
-            if constexpr(std::is_same_v<Type,ReverbProps>)
-            {
-                if(aleffect->type == AL_EFFECT_REVERB)
-                    return EffectHandler::StdReverbSetParamfv(arg, param, values);
-            }
-            return EffectHandler::SetParamfv(arg, param, values);
-        }, aleffect->Props);
-    }
-    catch(effect_exception &e) {
-        context->setError(e.errorCode(), "%s", e.what());
-    }
+            if(aleffect->type == AL_EFFECT_REVERB)
+                return EffectHandler::StdReverbSetParamfv(arg, param, values);
+        }
+        return EffectHandler::SetParamfv(arg, param, values);
+    }, aleffect->Props);
+}
+catch(al::context_error& e) {
+    context->setError(e.errorCode(), "%s", e.what());
 }
 
 AL_API DECL_FUNC3(void, alGetEffecti, ALuint,effect, ALenum,param, ALint*,value)
 FORCE_ALIGN void AL_APIENTRY alGetEffectiDirect(ALCcontext *context, ALuint effect, ALenum param,
     ALint *value) noexcept
-{
+try {
     ALCdevice *device{context->mALDevice.get()};
     std::lock_guard<std::mutex> effectlock{device->EffectLock};
 
     const ALeffect *aleffect{LookupEffect(device, effect)};
-    if(!aleffect) UNLIKELY
-        context->setError(AL_INVALID_NAME, "Invalid effect ID %u", effect);
-    else if(param == AL_EFFECT_TYPE)
-        *value = aleffect->type;
-    else try
+    if(!aleffect)
+        throw al::context_error{AL_INVALID_NAME, "Invalid effect ID %u", effect};
+
+    switch(param)
     {
-        /* Call the appropriate handler */
-        std::visit([aleffect,param,value](auto &arg)
+    case AL_EFFECT_TYPE:
+        *value = aleffect->type;
+        return;
+    }
+
+    /* Call the appropriate handler */
+    std::visit([aleffect,param,value](auto &arg)
+    {
+        using Type = std::remove_cv_t<std::remove_reference_t<decltype(arg)>>;
+        if constexpr(std::is_same_v<Type,ReverbProps>)
         {
-            using Type = std::remove_cv_t<std::remove_reference_t<decltype(arg)>>;
-            if constexpr(std::is_same_v<Type,ReverbProps>)
-            {
-                if(aleffect->type == AL_EFFECT_REVERB)
-                    return EffectHandler::StdReverbGetParami(arg, param, value);
-            }
-            return EffectHandler::GetParami(arg, param, value);
-        }, aleffect->Props);
-    }
-    catch(effect_exception &e) {
-        context->setError(e.errorCode(), "%s", e.what());
-    }
+            if(aleffect->type == AL_EFFECT_REVERB)
+                return EffectHandler::StdReverbGetParami(arg, param, value);
+        }
+        return EffectHandler::GetParami(arg, param, value);
+    }, aleffect->Props);
+}
+catch(al::context_error& e) {
+    context->setError(e.errorCode(), "%s", e.what());
 }
 
 AL_API DECL_FUNC3(void, alGetEffectiv, ALuint,effect, ALenum,param, ALint*,values)
 FORCE_ALIGN void AL_APIENTRY alGetEffectivDirect(ALCcontext *context, ALuint effect, ALenum param,
     ALint *values) noexcept
-{
+try {
     switch(param)
     {
     case AL_EFFECT_TYPE:
@@ -430,83 +427,77 @@ FORCE_ALIGN void AL_APIENTRY alGetEffectivDirect(ALCcontext *context, ALuint eff
     std::lock_guard<std::mutex> effectlock{device->EffectLock};
 
     const ALeffect *aleffect{LookupEffect(device, effect)};
-    if(!aleffect) UNLIKELY
-        context->setError(AL_INVALID_NAME, "Invalid effect ID %u", effect);
-    else try
+    if(!aleffect)
+        throw al::context_error{AL_INVALID_NAME, "Invalid effect ID %u", effect};
+
+    /* Call the appropriate handler */
+    std::visit([aleffect,param,values](auto &arg)
     {
-        /* Call the appropriate handler */
-        std::visit([aleffect,param,values](auto &arg)
+        using Type = std::remove_cv_t<std::remove_reference_t<decltype(arg)>>;
+        if constexpr(std::is_same_v<Type,ReverbProps>)
         {
-            using Type = std::remove_cv_t<std::remove_reference_t<decltype(arg)>>;
-            if constexpr(std::is_same_v<Type,ReverbProps>)
-            {
-                if(aleffect->type == AL_EFFECT_REVERB)
-                    return EffectHandler::StdReverbGetParamiv(arg, param, values);
-            }
-            return EffectHandler::GetParamiv(arg, param, values);
-        }, aleffect->Props);
-    }
-    catch(effect_exception &e) {
-        context->setError(e.errorCode(), "%s", e.what());
-    }
+            if(aleffect->type == AL_EFFECT_REVERB)
+                return EffectHandler::StdReverbGetParamiv(arg, param, values);
+        }
+        return EffectHandler::GetParamiv(arg, param, values);
+    }, aleffect->Props);
+}
+catch(al::context_error& e) {
+    context->setError(e.errorCode(), "%s", e.what());
 }
 
 AL_API DECL_FUNC3(void, alGetEffectf, ALuint,effect, ALenum,param, ALfloat*,value)
 FORCE_ALIGN void AL_APIENTRY alGetEffectfDirect(ALCcontext *context, ALuint effect, ALenum param,
     ALfloat *value) noexcept
-{
+try {
     ALCdevice *device{context->mALDevice.get()};
     std::lock_guard<std::mutex> effectlock{device->EffectLock};
 
     const ALeffect *aleffect{LookupEffect(device, effect)};
-    if(!aleffect) UNLIKELY
-        context->setError(AL_INVALID_NAME, "Invalid effect ID %u", effect);
-    else try
+    if(!aleffect)
+        throw al::context_error{AL_INVALID_NAME, "Invalid effect ID %u", effect};
+
+    /* Call the appropriate handler */
+    std::visit([aleffect,param,value](auto &arg)
     {
-        /* Call the appropriate handler */
-        std::visit([aleffect,param,value](auto &arg)
+        using Type = std::remove_cv_t<std::remove_reference_t<decltype(arg)>>;
+        if constexpr(std::is_same_v<Type,ReverbProps>)
         {
-            using Type = std::remove_cv_t<std::remove_reference_t<decltype(arg)>>;
-            if constexpr(std::is_same_v<Type,ReverbProps>)
-            {
-                if(aleffect->type == AL_EFFECT_REVERB)
-                    return EffectHandler::StdReverbGetParamf(arg, param, value);
-            }
-            return EffectHandler::GetParamf(arg, param, value);
-        }, aleffect->Props);
-    }
-    catch(effect_exception &e) {
-        context->setError(e.errorCode(), "%s", e.what());
-    }
+            if(aleffect->type == AL_EFFECT_REVERB)
+                return EffectHandler::StdReverbGetParamf(arg, param, value);
+        }
+        return EffectHandler::GetParamf(arg, param, value);
+    }, aleffect->Props);
+}
+catch(al::context_error& e) {
+    context->setError(e.errorCode(), "%s", e.what());
 }
 
 AL_API DECL_FUNC3(void, alGetEffectfv, ALuint,effect, ALenum,param, ALfloat*,values)
 FORCE_ALIGN void AL_APIENTRY alGetEffectfvDirect(ALCcontext *context, ALuint effect, ALenum param,
     ALfloat *values) noexcept
-{
+try {
     ALCdevice *device{context->mALDevice.get()};
     std::lock_guard<std::mutex> effectlock{device->EffectLock};
 
     const ALeffect *aleffect{LookupEffect(device, effect)};
-    if(!aleffect) UNLIKELY
-        context->setError(AL_INVALID_NAME, "Invalid effect ID %u", effect);
-    else try
+    if(!aleffect)
+        throw al::context_error{AL_INVALID_NAME, "Invalid effect ID %u", effect};
+
+    /* Call the appropriate handler */
+    std::visit([aleffect,param,values](auto &arg)
     {
-        /* Call the appropriate handler */
-        std::visit([aleffect,param,values](auto &arg)
+        using Type = std::remove_cv_t<std::remove_reference_t<decltype(arg)>>;
+        if constexpr(std::is_same_v<Type,ReverbProps>)
         {
-            using Type = std::remove_cv_t<std::remove_reference_t<decltype(arg)>>;
-            if constexpr(std::is_same_v<Type,ReverbProps>)
-            {
-                if(aleffect->type == AL_EFFECT_REVERB)
-                    return EffectHandler::StdReverbGetParamfv(arg, param, values);
-            }
-            return EffectHandler::GetParamfv(arg, param, values);
-        }, aleffect->Props);
-    }
-    catch(effect_exception &e) {
-        context->setError(e.errorCode(), "%s", e.what());
-    }
+            if(aleffect->type == AL_EFFECT_REVERB)
+                return EffectHandler::StdReverbGetParamfv(arg, param, values);
+        }
+        return EffectHandler::GetParamfv(arg, param, values);
+    }, aleffect->Props);
+}
+catch(al::context_error& e) {
+    context->setError(e.errorCode(), "%s", e.what());
 }
 
 
@@ -521,8 +512,8 @@ void ALeffect::SetName(ALCcontext* context, ALuint id, std::string_view name)
     std::lock_guard<std::mutex> effectlock{device->EffectLock};
 
     auto effect = LookupEffect(device, id);
-    if(!effect) UNLIKELY
-        return context->setError(AL_INVALID_NAME, "Invalid effect ID %u", id);
+    if(!effect)
+        throw al::context_error{AL_INVALID_NAME, "Invalid effect ID %u", id};
 
     device->mEffectNames.insert_or_assign(id, name);
 }

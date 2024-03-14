@@ -47,7 +47,7 @@ LogState gLogState{LogState::FirstRun};
 LogCallbackFunc gLogCallback{};
 void *gLogCallbackPtr{};
 
-constexpr std::optional<char> GetLevelCode(LogLevel level)
+constexpr auto GetLevelCode(LogLevel level) noexcept -> std::optional<char>
 {
     switch(level)
     {
@@ -76,8 +76,8 @@ void al_set_log_callback(LogCallbackFunc callback, void *userptr)
     }
 }
 
-void al_print(LogLevel level, const char *fmt, ...)
-{
+void al_print(LogLevel level, const char *fmt, ...) noexcept
+try {
     /* Kind of ugly since string literals are const char arrays with a size
      * that includes the null terminator, which we want to exclude from the
      * span.
@@ -169,4 +169,7 @@ void al_print(LogLevel level, const char *fmt, ...)
                 gLogState = LogState::Disable;
         }
     }
+}
+catch(...) {
+    /* Swallow any exceptions */
 }

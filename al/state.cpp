@@ -44,6 +44,7 @@
 #include "alnumeric.h"
 #include "atomic.h"
 #include "core/context.h"
+#include "core/logging.h"
 #include "core/mixer/defs.h"
 #include "core/voice.h"
 #include "direct_defs.h"
@@ -110,7 +111,7 @@ const ALchar *GetResamplerName(const Resampler rtype)
     throw std::runtime_error{"Unexpected resampler index"};
 }
 
-std::optional<DistanceModel> DistanceModelFromALenum(ALenum model)
+constexpr auto DistanceModelFromALenum(ALenum model) noexcept -> std::optional<DistanceModel>
 {
     switch(model)
     {
@@ -124,7 +125,7 @@ std::optional<DistanceModel> DistanceModelFromALenum(ALenum model)
     }
     return std::nullopt;
 }
-ALenum ALenumFromDistanceModel(DistanceModel model)
+constexpr auto ALenumFromDistanceModel(DistanceModel model) -> ALenum
 {
     switch(model)
     {
@@ -256,8 +257,7 @@ void GetValue(ALCcontext *context, ALenum pname, T *values)
         return;
 
 #ifdef ALSOFT_EAX
-
-#define EAX_ERROR "[alGetInteger] EAX not enabled."
+#define EAX_ERROR "[alGetInteger] EAX not enabled"
 
     case AL_EAX_RAM_SIZE:
         if(eax_g_is_enabled)
@@ -265,8 +265,8 @@ void GetValue(ALCcontext *context, ALenum pname, T *values)
             *values = cast_value(eax_x_ram_max_size);
             return;
         }
-        context->setError(AL_INVALID_ENUM, EAX_ERROR);
-        return;
+        ERR(EAX_ERROR "\n");
+        break;
 
     case AL_EAX_RAM_FREE:
         if(eax_g_is_enabled)
@@ -276,11 +276,10 @@ void GetValue(ALCcontext *context, ALenum pname, T *values)
             *values = cast_value(device->eax_x_ram_free_size);
             return;
         }
-        context->setError(AL_INVALID_ENUM, EAX_ERROR);
-        return;
+        ERR(EAX_ERROR "\n");
+        break;
 
 #undef EAX_ERROR
-
 #endif // ALSOFT_EAX
     }
     context->setError(AL_INVALID_ENUM, "Invalid context property 0x%04x", pname);
@@ -319,19 +318,17 @@ FORCE_ALIGN void AL_APIENTRY alEnableDirect(ALCcontext *context, ALenum capabili
             context->mSourceDistanceModel = true;
             UpdateProps(context);
         }
-        break;
+        return;
 
     case AL_DEBUG_OUTPUT_EXT:
         context->mDebugEnabled.store(true);
-        break;
+        return;
 
     case AL_STOP_SOURCES_ON_DISCONNECT_SOFT:
         context->setError(AL_INVALID_OPERATION, "Re-enabling AL_STOP_SOURCES_ON_DISCONNECT_SOFT not yet supported");
-        break;
-
-    default:
-        context->setError(AL_INVALID_VALUE, "Invalid enable property 0x%04x", capability);
+        return;
     }
+    context->setError(AL_INVALID_VALUE, "Invalid enable property 0x%04x", capability);
 }
 
 AL_API DECL_FUNC1(void, alDisable, ALenum,capability)
@@ -345,45 +342,32 @@ FORCE_ALIGN void AL_APIENTRY alDisableDirect(ALCcontext *context, ALenum capabil
             context->mSourceDistanceModel = false;
             UpdateProps(context);
         }
-        break;
+        return;
 
     case AL_DEBUG_OUTPUT_EXT:
         context->mDebugEnabled.store(false);
-        break;
+        return;
 
     case AL_STOP_SOURCES_ON_DISCONNECT_SOFT:
         context->mStopVoicesOnDisconnect.store(false);
-        break;
-
-    default:
-        context->setError(AL_INVALID_VALUE, "Invalid disable property 0x%04x", capability);
+        return;
     }
+    context->setError(AL_INVALID_VALUE, "Invalid disable property 0x%04x", capability);
 }
 
 AL_API DECL_FUNC1(ALboolean, alIsEnabled, ALenum,capability)
 FORCE_ALIGN ALboolean AL_APIENTRY alIsEnabledDirect(ALCcontext *context, ALenum capability) noexcept
 {
     std::lock_guard<std::mutex> proplock{context->mPropLock};
-    ALboolean value{AL_FALSE};
     switch(capability)
     {
-    case AL_SOURCE_DISTANCE_MODEL:
-        value = context->mSourceDistanceModel ? AL_TRUE : AL_FALSE;
-        break;
-
-    case AL_DEBUG_OUTPUT_EXT:
-        value = context->mDebugEnabled ? AL_TRUE : AL_FALSE;
-        break;
-
+    case AL_SOURCE_DISTANCE_MODEL: return context->mSourceDistanceModel ? AL_TRUE : AL_FALSE;
+    case AL_DEBUG_OUTPUT_EXT: return context->mDebugEnabled ? AL_TRUE : AL_FALSE;
     case AL_STOP_SOURCES_ON_DISCONNECT_SOFT:
-        value = context->mStopVoicesOnDisconnect.load() ? AL_TRUE : AL_FALSE;
-        break;
-
-    default:
-        context->setError(AL_INVALID_VALUE, "Invalid is enabled property 0x%04x", capability);
+        return context->mStopVoicesOnDisconnect.load() ? AL_TRUE : AL_FALSE;
     }
-
-    return value;
+    context->setError(AL_INVALID_VALUE, "Invalid is enabled property 0x%04x", capability);
+    return AL_FALSE;
 }
 
 #define DECL_GETFUNC(R, Name, Ext)                                            \
@@ -463,47 +447,43 @@ FORCE_ALIGN void AL_APIENTRY alGetPointervDirectSOFT(ALCcontext *context, ALenum
     {
     case AL_EVENT_CALLBACK_FUNCTION_SOFT:
         *values = reinterpret_cast<void*>(context->mEventCb);
-        break;
+        return;
 
     case AL_EVENT_CALLBACK_USER_PARAM_SOFT:
         *values = context->mEventParam;
-        break;
+        return;
 
     case AL_DEBUG_CALLBACK_FUNCTION_EXT:
         *values = reinterpret_cast<void*>(context->mDebugCb);
-        break;
+        return;
 
     case AL_DEBUG_CALLBACK_USER_PARAM_EXT:
         *values = context->mDebugParam;
-        break;
-
-    default:
-        context->setError(AL_INVALID_ENUM, "Invalid context pointer property 0x%04x", pname);
+        return;
     }
+    context->setError(AL_INVALID_ENUM, "Invalid context pointer property 0x%04x", pname);
 }
 
 AL_API DECL_FUNC1(const ALchar*, alGetString, ALenum,pname)
 FORCE_ALIGN const ALchar* AL_APIENTRY alGetStringDirect(ALCcontext *context, ALenum pname) noexcept
 {
-    const ALchar *value{nullptr};
     switch(pname)
     {
-    case AL_VENDOR: value = GetVendorString(); break;
-    case AL_VERSION: value = GetVersionString(); break;
-    case AL_RENDERER: value = GetRendererString(); break;
-    case AL_EXTENSIONS: value = context->mExtensionsString.c_str(); break;
-    case AL_NO_ERROR: value = GetNoErrorString(); break;
-    case AL_INVALID_NAME: value = GetInvalidNameString(); break;
-    case AL_INVALID_ENUM: value = GetInvalidEnumString(); break;
-    case AL_INVALID_VALUE: value = GetInvalidValueString(); break;
-    case AL_INVALID_OPERATION: value = GetInvalidOperationString(); break;
-    case AL_OUT_OF_MEMORY: value = GetOutOfMemoryString(); break;
-    case AL_STACK_OVERFLOW_EXT: value = GetStackOverflowString(); break;
-    case AL_STACK_UNDERFLOW_EXT: value = GetStackUnderflowString(); break;
-    default:
-        context->setError(AL_INVALID_VALUE, "Invalid string property 0x%04x", pname);
+    case AL_VENDOR: return GetVendorString();
+    case AL_VERSION: return GetVersionString();
+    case AL_RENDERER: return GetRendererString();
+    case AL_EXTENSIONS: return context->mExtensionsString.c_str();
+    case AL_NO_ERROR: return GetNoErrorString();
+    case AL_INVALID_NAME: return GetInvalidNameString();
+    case AL_INVALID_ENUM: return GetInvalidEnumString();
+    case AL_INVALID_VALUE: return GetInvalidValueString();
+    case AL_INVALID_OPERATION: return GetInvalidOperationString();
+    case AL_OUT_OF_MEMORY: return GetOutOfMemoryString();
+    case AL_STACK_OVERFLOW_EXT: return GetStackOverflowString();
+    case AL_STACK_UNDERFLOW_EXT: return GetStackUnderflowString();
     }
-    return value;
+    context->setError(AL_INVALID_VALUE, "Invalid string property 0x%04x", pname);
+    return nullptr;
 }
 
 AL_API DECL_FUNC1(void, alDopplerFactor, ALfloat,value)
@@ -565,20 +545,16 @@ FORCE_ALIGN void AL_APIENTRY alProcessUpdatesDirectSOFT(ALCcontext *context) noe
 AL_API DECL_FUNCEXT2(const ALchar*, alGetStringi,SOFT, ALenum,pname, ALsizei,index)
 FORCE_ALIGN const ALchar* AL_APIENTRY alGetStringiDirectSOFT(ALCcontext *context, ALenum pname, ALsizei index) noexcept
 {
-    const ALchar *value{nullptr};
     switch(pname)
     {
     case AL_RESAMPLER_NAME_SOFT:
-        if(index < 0 || index > static_cast<ALint>(Resampler::Max))
-            context->setError(AL_INVALID_VALUE, "Resampler name index %d out of range", index);
-        else
-            value = GetResamplerName(static_cast<Resampler>(index));
-        break;
-
-    default:
-        context->setError(AL_INVALID_VALUE, "Invalid string indexed property");
+        if(index >= 0 && index <= static_cast<ALint>(Resampler::Max))
+            return GetResamplerName(static_cast<Resampler>(index));
+        context->setError(AL_INVALID_VALUE, "Resampler name index %d out of range", index);
+        return nullptr;
     }
-    return value;
+    context->setError(AL_INVALID_VALUE, "Invalid string indexed property");
+    return nullptr;
 }
 
 

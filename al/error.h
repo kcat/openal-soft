@@ -17,7 +17,7 @@ public:
     [[gnu::format(printf, 3, 4)]]
 #endif
     context_error(ALenum code, const char *msg, ...);
-    ~context_error() override;
+    ~context_error() final;
 
     [[nodiscard]] auto errorCode() const noexcept -> ALenum { return mErrorCode; }
 };

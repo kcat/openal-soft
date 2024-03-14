@@ -27,7 +27,7 @@ void al_set_log_callback(LogCallbackFunc callback, void *userptr);
 #else
 [[gnu::format(printf,2,3)]]
 #endif
-void al_print(LogLevel level, const char *fmt, ...);
+void al_print(LogLevel level, const char *fmt, ...) noexcept;
 
 #define TRACE(...) al_print(LogLevel::Trace, __VA_ARGS__)
 

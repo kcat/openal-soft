@@ -101,7 +101,7 @@ EffectStateFactory *getFactoryByType(EffectSlotType type)
 }
 
 
-inline ALeffectslot *LookupEffectSlot(ALCcontext *context, ALuint id) noexcept
+inline auto LookupEffectSlot(ALCcontext *context, ALuint id) noexcept -> ALeffectslot*
 {
     const size_t lidx{(id-1) >> 6};
     const ALuint slidx{(id-1) & 0x3f};
@@ -114,7 +114,7 @@ inline ALeffectslot *LookupEffectSlot(ALCcontext *context, ALuint id) noexcept
     return al::to_address(sublist.EffectSlots->begin() + slidx);
 }
 
-inline ALeffect *LookupEffect(ALCdevice *device, ALuint id) noexcept
+inline auto LookupEffect(ALCdevice *device, ALuint id) noexcept -> ALeffect*
 {
     const size_t lidx{(id-1) >> 6};
     const ALuint slidx{(id-1) & 0x3f};
@@ -127,7 +127,7 @@ inline ALeffect *LookupEffect(ALCdevice *device, ALuint id) noexcept
     return al::to_address(sublist.Effects->begin() + slidx);
 }
 
-inline ALbuffer *LookupBuffer(ALCdevice *device, ALuint id) noexcept
+inline auto LookupBuffer(ALCdevice *device, ALuint id) noexcept -> ALbuffer*
 {
     const size_t lidx{(id-1) >> 6};
     const ALuint slidx{(id-1) & 0x3f};
@@ -220,7 +220,7 @@ void RemoveActiveEffectSlots(const al::span<ALeffectslot*> auxslots, ALCcontext 
 }
 
 
-EffectSlotType EffectSlotTypeFromEnum(ALenum type)
+constexpr auto EffectSlotTypeFromEnum(ALenum type) noexcept -> EffectSlotType
 {
     switch(type)
     {
@@ -246,30 +246,28 @@ EffectSlotType EffectSlotTypeFromEnum(ALenum type)
     return EffectSlotType::None;
 }
 
-bool EnsureEffectSlots(ALCcontext *context, size_t needed)
-{
+auto EnsureEffectSlots(ALCcontext *context, size_t needed) noexcept -> bool
+try {
     size_t count{std::accumulate(context->mEffectSlotList.cbegin(),
         context->mEffectSlotList.cend(), 0_uz,
         [](size_t cur, const EffectSlotSubList &sublist) noexcept -> size_t
         { return cur + static_cast<ALuint>(al::popcount(sublist.FreeMask)); })};
 
-    try {
-        while(needed > count)
-        {
-            if(context->mEffectSlotList.size() >= 1<<25) UNLIKELY
-                return false;
+    while(needed > count)
+    {
+        if(context->mEffectSlotList.size() >= 1<<25) UNLIKELY
+            return false;
 
-            EffectSlotSubList sublist{};
-            sublist.FreeMask = ~0_u64;
-            sublist.EffectSlots = SubListAllocator{}.allocate(1);
-            context->mEffectSlotList.emplace_back(std::move(sublist));
-            count += std::tuple_size_v<SubListAllocator::value_type>;
-        }
-    }
-    catch(...) {
-        return false;
+        EffectSlotSubList sublist{};
+        sublist.FreeMask = ~0_u64;
+        sublist.EffectSlots = SubListAllocator{}.allocate(1);
+        context->mEffectSlotList.emplace_back(std::move(sublist));
+        count += std::tuple_size_v<SubListAllocator::value_type>;
     }
     return true;
+}
+catch(...) {
+    return false;
 }
 
 ALeffectslot *AllocEffectSlot(ALCcontext *context)
@@ -332,28 +330,29 @@ try {
 
     std::lock_guard<std::mutex> slotlock{context->mEffectSlotLock};
     ALCdevice *device{context->mALDevice.get()};
-    if(static_cast<ALuint>(n) > device->AuxiliaryEffectSlotMax-context->mNumEffectSlots)
+
+    const al::span eids{effectslots, static_cast<ALuint>(n)};
+    if(eids.size() > device->AuxiliaryEffectSlotMax-context->mNumEffectSlots)
         throw al::context_error{AL_OUT_OF_MEMORY, "Exceeding %u effect slot limit (%u + %d)",
             device->AuxiliaryEffectSlotMax, context->mNumEffectSlots, n};
 
-    if(!EnsureEffectSlots(context, static_cast<ALuint>(n)))
+    if(!EnsureEffectSlots(context, eids.size()))
         throw al::context_error{AL_OUT_OF_MEMORY, "Failed to allocate %d effectslot%s", n,
-            (n==1) ? "" : "s"};
+            (n == 1) ? "" : "s"};
 
     std::vector<ALeffectslot*> slots;
     try {
-        if(n == 1)
+        if(eids.size() == 1)
         {
             /* Special handling for the easy and normal case. */
-            *effectslots = AllocEffectSlot(context)->id;
+            eids[0] = AllocEffectSlot(context)->id;
         }
         else
         {
-            slots.reserve(static_cast<ALuint>(n));
-            std::generate_n(std::back_inserter(slots), static_cast<ALuint>(n),
+            slots.reserve(eids.size());
+            std::generate_n(std::back_inserter(slots), eids.size(),
                 [context]{ return AllocEffectSlot(context); });
 
-            const al::span eids{effectslots, static_cast<ALuint>(n)};
             std::transform(slots.cbegin(), slots.cend(), eids.begin(),
                 [](ALeffectslot *slot) -> ALuint { return slot->id; });
         }
@@ -1006,8 +1005,8 @@ void ALeffectslot::SetName(ALCcontext* context, ALuint id, std::string_view name
     std::lock_guard<std::mutex> slotlock{context->mEffectSlotLock};
 
     auto slot = LookupEffectSlot(context, id);
-    if(!slot) UNLIKELY
-        return context->setError(AL_INVALID_NAME, "Invalid effect slot ID %u", id);
+    if(!slot)
+        throw al::context_error{AL_INVALID_NAME, "Invalid effect slot ID %u", id};
 
     context->mEffectSlotNames.insert_or_assign(id, name);
 }

@@ -5,8 +5,8 @@
 
 #include "AL/al.h"
 
+#include "al/error.h"
 #include "core/effects/base.h"
-#include "core/except.h"
 
 
 struct EffectHandler {
@@ -48,20 +48,7 @@ struct EffectHandler {
     static void StdReverbGetParamfv(const ReverbProps &props, ALenum param, float *vals);
 };
 
-class effect_exception final : public al::base_exception {
-    ALenum mErrorCode;
-
-public:
-#ifdef __MINGW32__
-    [[gnu::format(__MINGW_PRINTF_FORMAT, 3, 4)]]
-#else
-    [[gnu::format(printf, 3, 4)]]
-#endif
-    effect_exception(ALenum code, const char *msg, ...);
-    ~effect_exception() override;
-
-    [[nodiscard]] auto errorCode() const noexcept -> ALenum { return mErrorCode; }
-};
+using effect_exception = al::context_error;
 
 
 /* Default properties for the given effect types. */

@@ -73,7 +73,7 @@ namespace {
 
 using SubListAllocator = al::allocator<std::array<ALbuffer,64>>;
 
-std::optional<AmbiLayout> AmbiLayoutFromEnum(ALenum layout) noexcept
+constexpr auto AmbiLayoutFromEnum(ALenum layout) noexcept -> std::optional<AmbiLayout>
 {
     switch(layout)
     {
@@ -82,7 +82,7 @@ std::optional<AmbiLayout> AmbiLayoutFromEnum(ALenum layout) noexcept
     }
     return std::nullopt;
 }
-ALenum EnumFromAmbiLayout(AmbiLayout layout)
+constexpr auto EnumFromAmbiLayout(AmbiLayout layout) -> ALenum
 {
     switch(layout)
     {
@@ -92,7 +92,7 @@ ALenum EnumFromAmbiLayout(AmbiLayout layout)
     throw std::runtime_error{"Invalid AmbiLayout: "+std::to_string(int(layout))};
 }
 
-std::optional<AmbiScaling> AmbiScalingFromEnum(ALenum scale) noexcept
+constexpr auto AmbiScalingFromEnum(ALenum scale) noexcept -> std::optional<AmbiScaling>
 {
     switch(scale)
     {
@@ -102,7 +102,7 @@ std::optional<AmbiScaling> AmbiScalingFromEnum(ALenum scale) noexcept
     }
     return std::nullopt;
 }
-ALenum EnumFromAmbiScaling(AmbiScaling scale)
+constexpr auto EnumFromAmbiScaling(AmbiScaling scale) -> ALenum
 {
     switch(scale)
     {
@@ -115,7 +115,7 @@ ALenum EnumFromAmbiScaling(AmbiScaling scale)
 }
 
 #ifdef ALSOFT_EAX
-std::optional<EaxStorage> EaxStorageFromEnum(ALenum scale) noexcept
+constexpr auto EaxStorageFromEnum(ALenum scale) noexcept -> std::optional<EaxStorage>
 {
     switch(scale)
     {
@@ -125,7 +125,7 @@ std::optional<EaxStorage> EaxStorageFromEnum(ALenum scale) noexcept
     }
     return std::nullopt;
 }
-ALenum EnumFromEaxStorage(EaxStorage storage)
+constexpr auto EnumFromEaxStorage(EaxStorage storage) -> ALenum
 {
     switch(storage)
     {
@@ -177,29 +177,27 @@ constexpr ALbitfieldSOFT INVALID_MAP_FLAGS{~unsigned(AL_MAP_READ_BIT_SOFT | AL_M
     AL_MAP_PERSISTENT_BIT_SOFT)};
 
 
-bool EnsureBuffers(ALCdevice *device, size_t needed)
-{
+auto EnsureBuffers(ALCdevice *device, size_t needed) noexcept -> bool
+try {
     size_t count{std::accumulate(device->BufferList.cbegin(), device->BufferList.cend(), 0_uz,
         [](size_t cur, const BufferSubList &sublist) noexcept -> size_t
         { return cur + static_cast<ALuint>(al::popcount(sublist.FreeMask)); })};
 
-    try {
-        while(needed > count)
-        {
-            if(device->BufferList.size() >= 1<<25) UNLIKELY
-                return false;
+    while(needed > count)
+    {
+        if(device->BufferList.size() >= 1<<25) UNLIKELY
+            return false;
 
-            BufferSubList sublist{};
-            sublist.FreeMask = ~0_u64;
-            sublist.Buffers = SubListAllocator{}.allocate(1);
-            device->BufferList.emplace_back(std::move(sublist));
-            count += std::tuple_size_v<SubListAllocator::value_type>;
-        }
-    }
-    catch(...) {
-        return false;
+        BufferSubList sublist{};
+        sublist.FreeMask = ~0_u64;
+        sublist.Buffers = SubListAllocator{}.allocate(1);
+        device->BufferList.emplace_back(std::move(sublist));
+        count += std::tuple_size_v<SubListAllocator::value_type>;
     }
     return true;
+}
+catch(...) {
+    return false;
 }
 
 ALbuffer *AllocBuffer(ALCdevice *device) noexcept
@@ -238,7 +236,7 @@ void FreeBuffer(ALCdevice *device, ALbuffer *buffer)
     device->BufferList[lidx].FreeMask |= 1_u64 << slidx;
 }
 
-inline ALbuffer *LookupBuffer(ALCdevice *device, ALuint id)
+inline auto LookupBuffer(ALCdevice *device, ALuint id) noexcept -> ALbuffer*
 {
     const size_t lidx{(id-1) >> 6};
     const ALuint slidx{(id-1) & 0x3f};
@@ -252,7 +250,7 @@ inline ALbuffer *LookupBuffer(ALCdevice *device, ALuint id)
 }
 
 
-ALuint SanitizeAlignment(FmtType type, ALuint align)
+constexpr auto SanitizeAlignment(FmtType type, ALuint align) noexcept -> ALuint
 {
     if(align == 0)
     {
@@ -552,7 +550,7 @@ void PrepareUserPtr(ALCcontext *context, ALbuffer *ALBuf, ALsizei freq,
 
 
 struct DecompResult { FmtChannels channels; FmtType type; };
-std::optional<DecompResult> DecomposeUserFormat(ALenum format)
+auto DecomposeUserFormat(ALenum format) noexcept -> std::optional<DecompResult>
 {
     struct FormatMap {
         ALenum format;
@@ -1507,8 +1505,8 @@ void ALbuffer::SetName(ALCcontext *context, ALuint id, std::string_view name)
     std::lock_guard<std::mutex> buflock{device->BufferLock};
 
     auto buffer = LookupBuffer(device, id);
-    if(!buffer) UNLIKELY
-        return context->setError(AL_INVALID_NAME, "Invalid buffer ID %u", id);
+    if(!buffer)
+        throw al::context_error{AL_INVALID_NAME, "Invalid buffer ID %u", id};
 
     device->mBufferNames.insert_or_assign(id, name);
 }

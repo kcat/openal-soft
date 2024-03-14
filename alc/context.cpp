@@ -1012,25 +1012,20 @@ void ALCcontext::eaxCommit()
 }
 
 
-FORCE_ALIGN ALenum AL_APIENTRY EAXSet(const GUID *a, ALuint b, ALuint c, ALvoid *d, ALuint e) noexcept
+FORCE_ALIGN auto AL_APIENTRY EAXSet(const GUID *property_set_id, ALuint property_id,
+    ALuint source_id, ALvoid *value, ALuint value_size) noexcept -> ALenum
 {
     auto context = GetContextRef();
     if(!context) UNLIKELY return AL_INVALID_OPERATION;
-    return EAXSetDirect(context.get(), a, b, c, d, e);
+    return EAXSetDirect(context.get(), property_set_id, property_id, source_id, value, value_size);
 }
 
-FORCE_ALIGN ALenum AL_APIENTRY EAXSetDirect(ALCcontext *context, const GUID *property_set_id,
-    ALuint property_id, ALuint property_source_id, ALvoid *property_value,
-    ALuint property_value_size) noexcept
+FORCE_ALIGN auto AL_APIENTRY EAXSetDirect(ALCcontext *context, const GUID *property_set_id,
+    ALuint property_id, ALuint source_id, ALvoid *value, ALuint value_size) noexcept -> ALenum
 try
 {
     std::lock_guard<std::mutex> prop_lock{context->mPropLock};
-    return context->eax_eax_set(
-        property_set_id,
-        property_id,
-        property_source_id,
-        property_value,
-        property_value_size);
+    return context->eax_eax_set(property_set_id, property_id, source_id, value, value_size);
 }
 catch(...)
 {
@@ -1040,25 +1035,20 @@ catch(...)
 }
 
 
-FORCE_ALIGN ALenum AL_APIENTRY EAXGet(const GUID *a, ALuint b, ALuint c, ALvoid *d, ALuint e) noexcept
+FORCE_ALIGN auto AL_APIENTRY EAXGet(const GUID *property_set_id, ALuint property_id,
+    ALuint source_id, ALvoid *value, ALuint value_size) noexcept -> ALenum
 {
     auto context = GetContextRef();
     if(!context) UNLIKELY return AL_INVALID_OPERATION;
-    return EAXGetDirect(context.get(), a, b, c, d, e);
+    return EAXGetDirect(context.get(), property_set_id, property_id, source_id, value, value_size);
 }
 
-FORCE_ALIGN ALenum AL_APIENTRY EAXGetDirect(ALCcontext *context, const GUID *property_set_id,
-    ALuint property_id, ALuint property_source_id, ALvoid *property_value,
-    ALuint property_value_size) noexcept
+FORCE_ALIGN auto AL_APIENTRY EAXGetDirect(ALCcontext *context, const GUID *property_set_id,
+    ALuint property_id, ALuint source_id, ALvoid *value, ALuint value_size) noexcept -> ALenum
 try
 {
     std::lock_guard<std::mutex> prop_lock{context->mPropLock};
-    return context->eax_eax_get(
-        property_set_id,
-        property_id,
-        property_source_id,
-        property_value,
-        property_value_size);
+    return context->eax_eax_get(property_set_id, property_id, source_id, value, value_size);
 }
 catch(...)
 {

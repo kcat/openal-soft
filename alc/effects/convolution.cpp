@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cassert>
 #include <cmath>
 #include <complex>
 #include <cstddef>
@@ -83,21 +84,27 @@ namespace {
 
 template<FmtType SrcType>
 inline void LoadSampleArray(const al::span<float> dst, const std::byte *src,
-    const std::size_t srcstep) noexcept
+    const std::size_t channel, const std::size_t srcstep) noexcept
 {
     using TypeTraits = al::FmtTypeTraits<SrcType>;
     using SampleType = typename TypeTraits::Type;
-    auto converter = TypeTraits{};
+    const auto converter = TypeTraits{};
+    assert(channel < srcstep);
 
-    const SampleType *RESTRICT ssrc{reinterpret_cast<const SampleType*>(src)};
-    for(std::size_t i{0u};i < dst.size();i++)
-        dst[i] = converter(ssrc[i*srcstep]);
+    const auto srcspan = al::span{reinterpret_cast<const SampleType*>(src), dst.size()*srcstep};
+    auto ssrc = srcspan.cbegin();
+    std::generate(dst.begin(), dst.end(), [converter,channel,srcstep,&ssrc]
+    {
+        const auto ret = converter(ssrc[channel]);
+        ssrc += srcstep;
+        return ret;
+    });
 }
 
-void LoadSamples(const al::span<float> dst, const std::byte *src, const size_t srcstep,
-    const FmtType srctype) noexcept
+void LoadSamples(const al::span<float> dst, const std::byte *src, const size_t channel,
+    const size_t srcstep, const FmtType srctype) noexcept
 {
-#define HANDLE_FMT(T)  case T: LoadSampleArray<T>(dst, src, srcstep); break
+#define HANDLE_FMT(T)  case T: LoadSampleArray<T>(dst, src, channel, srcstep); break
     switch(srctype)
     {
     HANDLE_FMT(FmtUByte);
@@ -303,7 +310,6 @@ void ConvolutionState::deviceUpdate(const DeviceBase *device, const BufferStorag
     mAmbiScaling = IsUHJ(mChannels) ? AmbiScaling::UHJ : buffer->mAmbiScaling;
     mAmbiOrder = std::min(buffer->mAmbiOrder, MaxConvolveAmbiOrder);
 
-    const auto bytesPerSample = BytesFromFmt(buffer->mType);
     const auto realChannels = buffer->channelsFromFmt();
     const auto numChannels = (mChannels == FmtUHJ2) ? 3u : ChannelsFromFmt(mChannels, mAmbiOrder);
 
@@ -345,7 +351,7 @@ void ConvolutionState::deviceUpdate(const DeviceBase *device, const BufferStorag
     std::fill(srcsamples.begin(), srcsamples.end(), 0.0f);
     for(size_t c{0};c < numChannels && c < realChannels;++c)
         LoadSamples(al::span{srcsamples}.subspan(srclinelength*c, buffer->mSampleLen),
-            buffer->mData.data() + bytesPerSample*c, realChannels, buffer->mType);
+            buffer->mData.data(), c, realChannels, buffer->mType);
 
     if(IsUHJ(mChannels))
     {
@@ -522,9 +528,9 @@ void ConvolutionState::update(const ContextBase *context, const EffectSlot *slot
         };
 
         const auto scales = GetAmbiScales(mAmbiScaling);
-        const uint8_t *index_map{Is2DAmbisonic(mChannels) ?
-            GetAmbi2DLayout(mAmbiLayout).data() :
-            GetAmbiLayout(mAmbiLayout).data()};
+        const auto index_map = Is2DAmbisonic(mChannels) ?
+            al::span{GetAmbi2DLayout(mAmbiLayout)}.subspan(0) :
+            al::span{GetAmbiLayout(mAmbiLayout)}.subspan(0);
 
         std::array<float,MaxAmbiChannels> coeffs{};
         for(size_t c{0u};c < mChans.size();++c)
@@ -532,8 +538,8 @@ void ConvolutionState::update(const ContextBase *context, const EffectSlot *slot
             const size_t acn{index_map[c]};
             const float scale{scales[acn]};
 
-            for(size_t x{0};x < 4;++x)
-                coeffs[x] = mixmatrix[acn][x] * scale;
+            std::transform(mixmatrix[acn].cbegin(), mixmatrix[acn].cend(), coeffs.begin(),
+                [scale](const float in) noexcept -> float { return in * scale; });
 
             ComputePanGains(target.Main, coeffs, gain, mChans[c].Target);
         }

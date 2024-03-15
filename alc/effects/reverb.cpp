@@ -1755,7 +1755,7 @@ void ReverbState::process(const size_t samplesToDo, const al::span<const FloatBu
             std::transform(tmpspan.begin(), tmpspan.end(), input, tmpspan.begin(), mix_sample);
         }
 
-        mMainDelay.write(offset, c, tmpspan.cbegin(), samplesToDo);
+        mMainDelay.write(offset, c, tmpspan.data(), samplesToDo);
     }
 
     if(mPipelineState < Fading)

@@ -51,8 +51,6 @@
 #include "strutils.h"
 
 
-bool TrapALError{false};
-
 namespace al {
 context_error::context_error(ALenum code, const char *msg, ...) : mErrorCode{code}
 {

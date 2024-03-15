@@ -542,7 +542,7 @@ ContextRef GetContextRef() noexcept;
 void UpdateContextProps(ALCcontext *context);
 
 
-extern bool TrapALError;
+inline bool TrapALError{false};
 
 
 #ifdef ALSOFT_EAX

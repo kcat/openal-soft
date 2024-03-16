@@ -96,7 +96,7 @@ inline void LoadSampleArray(const al::span<float> dst, const std::byte *src,
     std::generate(dst.begin(), dst.end(), [converter,channel,srcstep,&ssrc]
     {
         const auto ret = converter(ssrc[channel]);
-        ssrc += srcstep;
+        ssrc += ptrdiff_t(srcstep);
         return ret;
     });
 }

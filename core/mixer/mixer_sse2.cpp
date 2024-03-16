@@ -99,7 +99,7 @@ void Resample_<LerpTag,SSE2Tag>(const InterpState*, const float *src, uint frac,
         src += static_cast<uint>(_mm_cvtsi128_si32(pos4));
         frac = static_cast<uint>(_mm_cvtsi128_si32(frac4));
 
-        std::generate(dst.end()-todo, dst.end(), [&src,&frac,increment]() noexcept -> float
+        std::generate(dst.end()-ptrdiff_t(todo), dst.end(), [&src,&frac,increment]()
         {
             const float out{lerpf(src[0], src[1], static_cast<float>(frac) * (1.0f/MixerFracOne))};
 
@@ -186,7 +186,7 @@ void Resample_<CubicTag,SSE2Tag>(const InterpState *state, const float *src, uin
         src += static_cast<uint>(_mm_cvtsi128_si32(pos4));
         frac = static_cast<uint>(_mm_cvtsi128_si32(frac4));
 
-        std::generate(dst.end()-todo, dst.end(), [&src,&frac,increment,filter]() -> float
+        std::generate(dst.end()-ptrdiff_t(todo), dst.end(), [&src,&frac,increment,filter]
         {
             const uint pi{frac >> CubicPhaseDiffBits}; ASSUME(pi < CubicPhaseCount);
             const float pf{static_cast<float>(frac&CubicPhaseDiffMask) * (1.0f/CubicPhaseDiffOne)};

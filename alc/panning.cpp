@@ -317,7 +317,7 @@ void InitDistanceComp(ALCdevice *device, const al::span<const Channel> channels,
             DistanceComp::ChanData ret{};
             ret.Buffer = al::span{chanbuffer, data.Length};
             ret.Gain = data.Gain;
-            chanbuffer += RoundUp(data.Length, 4);
+            chanbuffer += ptrdiff_t(RoundUp(data.Length, 4));
             return ret;
         };
         std::transform(ChanDelay.begin(), ChanDelay.end(), chandelays->mChannels.begin(),

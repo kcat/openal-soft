@@ -200,7 +200,7 @@ void Resample_<LerpTag,NEONTag>(const InterpState*, const float *src, uint frac,
         src += vgetq_lane_u32(pos4, 0);
         frac = vgetq_lane_u32(frac4, 0);
 
-        std::generate(dst.end()-todo, dst.end(), [&src,&frac,increment]() noexcept -> float
+        std::generate(dst.end()-ptrdiff_t(todo), dst.end(), [&src,&frac,increment]
         {
             const float out{lerpf(src[0], src[1], static_cast<float>(frac) * (1.0f/MixerFracOne))};
 
@@ -279,7 +279,7 @@ void Resample_<CubicTag,NEONTag>(const InterpState *state, const float *src, uin
         src += vgetq_lane_u32(pos4, 0);
         frac = vgetq_lane_u32(frac4, 0);
 
-        std::generate(dst.end()-todo, dst.end(), [&src,&frac,increment,filter]() -> float
+        std::generate(dst.end()-ptrdiff_t(todo), dst.end(), [&src,&frac,increment,filter]
         {
             const uint pi{frac >> CubicPhaseDiffBits}; ASSUME(pi < CubicPhaseCount);
             const float pf{static_cast<float>(frac&CubicPhaseDiffMask) * (1.0f/CubicPhaseDiffOne)};

@@ -14,6 +14,92 @@
 
 namespace al {
 
+/* This is here primarily to help ensure proper behavior for span's iterators,
+ * being an actual object with member functions instead of a raw pointer (which
+ * has requirements like + and - working with ptrdiff_t). This also helps
+ * silence clang-tidy's pointer arithmetic warnings for span and FlexArray
+ * iterators. It otherwise behaves like a plain pointer and should optimize
+ * accordingly.
+ *
+ * Shouldn't be needed once we use std::span in C++20.
+ */
+template<typename T>
+class ptr_wrapper {
+    static_assert(std::is_pointer_v<T>);
+    T mPointer{};
+
+public:
+    using value_type = std::remove_pointer_t<T>;
+    using size_type = std::size_t;
+    using difference_type = std::ptrdiff_t;
+    using pointer = value_type*;
+    using reference = value_type&;
+    using iterator_category = std::random_access_iterator_tag;
+
+    explicit constexpr ptr_wrapper(T ptr) : mPointer{ptr} { }
+
+    /* NOLINTBEGIN(cppcoreguidelines-pro-bounds-pointer-arithmetic) */
+    constexpr auto operator++() noexcept -> ptr_wrapper& { ++mPointer; return *this; }
+    constexpr auto operator--() noexcept -> ptr_wrapper& { --mPointer; return *this; }
+    constexpr auto operator++(int) noexcept -> ptr_wrapper
+    {
+        auto temp = *this;
+        ++*this;
+        return temp;
+    }
+    constexpr auto operator--(int) noexcept -> ptr_wrapper
+    {
+        auto temp = *this;
+        --*this;
+        return temp;
+    }
+
+    constexpr
+    auto operator+=(std::ptrdiff_t n) noexcept -> ptr_wrapper& { mPointer += n; return *this; }
+    constexpr
+    auto operator-=(std::ptrdiff_t n) noexcept -> ptr_wrapper& { mPointer -= n; return *this; }
+
+    [[nodiscard]] constexpr auto operator*() const noexcept -> value_type& { return *mPointer; }
+    [[nodiscard]] constexpr auto operator->() const noexcept -> value_type* { return mPointer; }
+    [[nodiscard]] constexpr
+    auto operator[](std::size_t idx) const noexcept -> value_type& {return mPointer[idx];}
+
+    [[nodiscard]] friend constexpr
+    auto operator+(const ptr_wrapper &lhs, std::ptrdiff_t n) noexcept -> ptr_wrapper
+    { return ptr_wrapper{lhs.mPointer + n}; }
+    [[nodiscard]] friend constexpr
+    auto operator+(std::ptrdiff_t n, const ptr_wrapper &rhs) noexcept -> ptr_wrapper
+    { return ptr_wrapper{n + rhs.mPointer}; }
+    [[nodiscard]] friend constexpr
+    auto operator-(const ptr_wrapper &lhs, std::ptrdiff_t n) noexcept -> ptr_wrapper
+    { return ptr_wrapper{lhs.mPointer - n}; }
+
+    [[nodiscard]] friend constexpr
+    auto operator-(const ptr_wrapper &lhs, const ptr_wrapper &rhs)noexcept->std::ptrdiff_t
+    { return lhs.mPointer - rhs.mPointer; }
+
+    [[nodiscard]] friend constexpr
+    auto operator==(const ptr_wrapper &lhs, const ptr_wrapper &rhs) noexcept -> bool
+    { return lhs.mPointer == rhs.mPointer; }
+    [[nodiscard]] friend constexpr
+    auto operator!=(const ptr_wrapper &lhs, const ptr_wrapper &rhs) noexcept -> bool
+    { return lhs.mPointer != rhs.mPointer; }
+    [[nodiscard]] friend constexpr
+    auto operator<=(const ptr_wrapper &lhs, const ptr_wrapper &rhs) noexcept -> bool
+    { return lhs.mPointer <= rhs.mPointer; }
+    [[nodiscard]] friend constexpr
+    auto operator>=(const ptr_wrapper &lhs, const ptr_wrapper &rhs) noexcept -> bool
+    { return lhs.mPointer >= rhs.mPointer; }
+    [[nodiscard]] friend constexpr
+    auto operator<(const ptr_wrapper &lhs, const ptr_wrapper &rhs) noexcept -> bool
+    { return lhs.mPointer < rhs.mPointer; }
+    [[nodiscard]] friend constexpr
+    auto operator>(const ptr_wrapper &lhs, const ptr_wrapper &rhs) noexcept -> bool
+    { return lhs.mPointer > rhs.mPointer; }
+    /* NOLINTEND(cppcoreguidelines-pro-bounds-pointer-arithmetic) */
+};
+
+
 inline constexpr std::size_t dynamic_extent{static_cast<std::size_t>(-1)};
 
 template<typename T, std::size_t E=dynamic_extent>
@@ -61,15 +147,15 @@ public:
     using element_type = T;
     using value_type = std::remove_cv_t<T>;
     using size_type = std::size_t;
-    using difference_type = ptrdiff_t;
+    using difference_type = std::ptrdiff_t;
 
     using pointer = T*;
     using const_pointer = const T*;
     using reference = T&;
     using const_reference = const T&;
 
-    using iterator = pointer;
-    using const_iterator = const_pointer;
+    using iterator = ptr_wrapper<pointer>;
+    using const_iterator = ptr_wrapper<const_pointer>;
     using reverse_iterator = std::reverse_iterator<iterator>;
     using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
@@ -119,17 +205,19 @@ public:
     [[nodiscard]] constexpr auto size_bytes() const noexcept -> size_type { return E * sizeof(value_type); }
     [[nodiscard]] constexpr auto empty() const noexcept -> bool { return E == 0; }
 
-    [[nodiscard]] constexpr auto begin() const noexcept -> iterator { return mData; }
-    [[nodiscard]] constexpr auto end() const noexcept -> iterator { return mData+E; }
-    [[nodiscard]] constexpr auto cbegin() const noexcept -> const_iterator { return mData; }
-    [[nodiscard]] constexpr auto cend() const noexcept -> const_iterator { return mData+E; }
+    [[nodiscard]] constexpr auto begin() const noexcept -> iterator { return iterator{mData}; }
+    [[nodiscard]] constexpr auto end() const noexcept -> iterator { return iterator{mData+E}; }
+    [[nodiscard]] constexpr
+    auto cbegin() const noexcept -> const_iterator { return const_iterator{mData}; }
+    [[nodiscard]] constexpr
+    auto cend() const noexcept -> const_iterator { return const_iterator{mData+E}; }
 
-    [[nodiscard]] constexpr auto rbegin() const noexcept -> reverse_iterator { return reverse_iterator{end()}; }
-    [[nodiscard]] constexpr auto rend() const noexcept -> reverse_iterator { return reverse_iterator{begin()}; }
-    [[nodiscard]] constexpr auto crbegin() const noexcept -> const_reverse_iterator
-    { return const_reverse_iterator{cend()}; }
-    [[nodiscard]] constexpr auto crend() const noexcept -> const_reverse_iterator
-    { return const_reverse_iterator{cbegin()}; }
+    [[nodiscard]] constexpr auto rbegin() const noexcept -> reverse_iterator { return end(); }
+    [[nodiscard]] constexpr auto rend() const noexcept -> reverse_iterator { return begin(); }
+    [[nodiscard]] constexpr
+    auto crbegin() const noexcept -> const_reverse_iterator { return cend(); }
+    [[nodiscard]] constexpr
+    auto crend() const noexcept -> const_reverse_iterator { return cbegin(); }
 
     template<std::size_t C>
     [[nodiscard]] constexpr auto first() const -> span<element_type,C>
@@ -190,8 +278,8 @@ public:
     using reference = T&;
     using const_reference = const T&;
 
-    using iterator = pointer;
-    using const_iterator = const_pointer;
+    using iterator = ptr_wrapper<pointer>;
+    using const_iterator = ptr_wrapper<const_pointer>;
     using reverse_iterator = std::reverse_iterator<iterator>;
     using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
@@ -231,24 +319,28 @@ public:
 
     [[nodiscard]] constexpr auto front() const -> reference { return mData[0]; }
     [[nodiscard]] constexpr auto back() const -> reference { return mData[mDataLength-1]; }
-    [[nodiscard]] constexpr auto operator[](size_type idx) const -> reference { return mData[idx]; }
+    [[nodiscard]] constexpr auto operator[](size_type idx) const -> reference {return mData[idx];}
     [[nodiscard]] constexpr auto data() const noexcept -> pointer { return mData; }
 
     [[nodiscard]] constexpr auto size() const noexcept -> size_type { return mDataLength; }
-    [[nodiscard]] constexpr auto size_bytes() const noexcept -> size_type { return mDataLength * sizeof(value_type); }
+    [[nodiscard]] constexpr
+    auto size_bytes() const noexcept -> size_type { return mDataLength * sizeof(value_type); }
     [[nodiscard]] constexpr auto empty() const noexcept -> bool { return mDataLength == 0; }
 
-    [[nodiscard]] constexpr auto begin() const noexcept -> iterator { return mData; }
-    [[nodiscard]] constexpr auto end() const noexcept -> iterator { return mData+mDataLength; }
-    [[nodiscard]] constexpr auto cbegin() const noexcept -> const_iterator { return mData; }
-    [[nodiscard]] constexpr auto cend() const noexcept -> const_iterator { return mData+mDataLength; }
+    [[nodiscard]] constexpr auto begin() const noexcept -> iterator { return iterator{mData}; }
+    [[nodiscard]] constexpr
+    auto end() const noexcept -> iterator { return iterator{mData+mDataLength}; }
+    [[nodiscard]] constexpr
+    auto cbegin() const noexcept -> const_iterator { return const_iterator{mData}; }
+    [[nodiscard]] constexpr
+    auto cend() const noexcept -> const_iterator { return const_iterator{mData+mDataLength}; }
 
-    [[nodiscard]] constexpr auto rbegin() const noexcept -> reverse_iterator { return reverse_iterator{end()}; }
-    [[nodiscard]] constexpr auto rend() const noexcept -> reverse_iterator { return reverse_iterator{begin()}; }
-    [[nodiscard]] constexpr auto crbegin() const noexcept -> const_reverse_iterator
-    { return const_reverse_iterator{cend()}; }
-    [[nodiscard]] constexpr auto crend() const noexcept -> const_reverse_iterator
-    { return const_reverse_iterator{cbegin()}; }
+    [[nodiscard]] constexpr auto rbegin() const noexcept -> reverse_iterator { return end(); }
+    [[nodiscard]] constexpr auto rend() const noexcept -> reverse_iterator { return begin(); }
+    [[nodiscard]] constexpr
+    auto crbegin() const noexcept -> const_reverse_iterator { return cend(); }
+    [[nodiscard]] constexpr
+    auto crend() const noexcept -> const_reverse_iterator { return cbegin(); }
 
     template<std::size_t C>
     [[nodiscard]] constexpr auto first() const -> span<element_type,C>

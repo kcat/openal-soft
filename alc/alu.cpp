@@ -2067,13 +2067,13 @@ void ApplyDistanceComp(const al::span<FloatBufferLine> Samples, const size_t Sam
         const auto inout = al::span{al::assume_aligned<16>(chanbuffer.data()), SamplesToDo};
         if(SamplesToDo >= base) LIKELY
         {
-            auto delay_end = std::rotate(inout.begin(), inout.end() - base, inout.end());
+            auto delay_end = std::rotate(inout.begin(), inout.end()-ptrdiff_t(base), inout.end());
             std::swap_ranges(inout.begin(), delay_end, distbuf.begin());
         }
         else
         {
             auto delay_start = std::swap_ranges(inout.begin(), inout.end(), distbuf.begin());
-            std::rotate(distbuf.begin(), delay_start, distbuf.begin() + base);
+            std::rotate(distbuf.begin(), delay_start, distbuf.begin()+ptrdiff_t(base));
         }
         std::transform(inout.begin(), inout.end(), inout.begin(),
             [gain](float s) { return s*gain; });

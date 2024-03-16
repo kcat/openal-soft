@@ -275,11 +275,11 @@ inline void LoadSamples(const al::span<float> dstSamples, const al::span<const s
 
     al::span<const SampleType> src{reinterpret_cast<const SampleType*>(srcData.data()),
         srcData.size()/sampleSize};
-    auto ssrc = src.cbegin() + srcOffset*srcStep;
+    auto ssrc = src.cbegin() + ptrdiff_t(srcOffset*srcStep);
     std::generate(dstSamples.begin(), dstSamples.end(), [&ssrc,srcChan,srcStep,converter]
     {
         auto ret = converter(ssrc[srcChan]);
-        ssrc += srcStep;
+        ssrc += ptrdiff_t(srcStep);
         return ret;
     });
 }
@@ -312,7 +312,7 @@ inline void LoadSamples<FmtIMA4>(al::span<float> dstSamples, al::span<const std:
          */
         int sample{int(nibbleData[srcChan*4]) | (int(nibbleData[srcChan*4 + 1]) << 8)};
         int index{int(nibbleData[srcChan*4 + 2]) | (int(nibbleData[srcChan*4 + 3]) << 8)};
-        nibbleData += (srcStep+srcChan)*4;
+        nibbleData += ptrdiff_t((srcStep+srcChan)*4);
 
         sample = (sample^0x8000) - 32768;
         index = std::clamp((index^0x8000) - 32768, 0, MaxStepIndex);
@@ -361,7 +361,7 @@ inline void LoadSamples<FmtIMA4>(al::span<float> dstSamples, al::span<const std:
          * the end of the block or the end of output.
          */
         const size_t todo{std::min(samplesPerBlock-startOffset, dstSamples.size())};
-        std::generate(dstSamples.begin(), dstSamples.begin()+todo, [&]
+        std::generate_n(dstSamples.begin(), todo, [&]
         {
             const size_t byteShift{(nibbleOffset&1) * 4};
             const size_t wordOffset{(nibbleOffset>>1) & ~3_uz};
@@ -400,15 +400,15 @@ inline void LoadSamples<FmtMSADPCM>(al::span<float> dstSamples, al::span<const s
          * sample history values.
          */
         const uint8_t blockpred{std::min(uint8_t(input[srcChan]), uint8_t{6})};
-        input += srcStep;
+        input += ptrdiff_t(srcStep);
         int delta{int(input[2*srcChan + 0]) | (int(input[2*srcChan + 1]) << 8)};
-        input += srcStep*2;
+        input += ptrdiff_t(srcStep*2);
 
         std::array<int,2> sampleHistory{};
         sampleHistory[0] = int(input[2*srcChan + 0]) | (int(input[2*srcChan + 1])<<8);
-        input += srcStep*2;
+        input += ptrdiff_t(srcStep*2);
         sampleHistory[1] = int(input[2*srcChan + 0]) | (int(input[2*srcChan + 1])<<8);
-        input += srcStep*2;
+        input += ptrdiff_t(srcStep*2);
 
         const al::span coeffs{MSADPCMAdaptionCoeff[blockpred]};
         delta = (delta^0x8000) - 32768;
@@ -470,7 +470,7 @@ inline void LoadSamples<FmtMSADPCM>(al::span<float> dstSamples, al::span<const s
          * dst buffer is filled.
          */
         const size_t todo{std::min(samplesPerBlock-startOffset, dstSamples.size())};
-        std::generate(dstSamples.begin(), dstSamples.begin()+todo, [&]
+        std::generate_n(dstSamples.begin(), todo, [&]
         {
             const size_t byteOffset{nibbleOffset>>1};
             const size_t byteShift{((nibbleOffset&1)^1) * 4};
@@ -619,7 +619,7 @@ void DoHrtfMix(const al::span<const float> samples, DirectParams &parms, const f
     std::copy_n(samples.begin(), samples.size(), src_iter);
     /* Copy the last used samples back into the history buffer for later. */
     if(IsPlaying) LIKELY
-        std::copy_n(HrtfSamples.begin() + samples.size(), parms.Hrtf.History.size(),
+        std::copy_n(HrtfSamples.begin() + ptrdiff_t(samples.size()), parms.Hrtf.History.size(),
             parms.Hrtf.History.begin());
 
     /* If fading and this is the first mixing pass, fade between the IRs. */
@@ -904,9 +904,9 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
                 auto abs_lt = [](const float lhs, const float rhs) noexcept -> bool
                 { return std::abs(lhs) < std::abs(rhs); };
                 auto srciter = std::min_element(resampleBuffer.begin(),
-                    resampleBuffer.begin()+avail, abs_lt);
+                    resampleBuffer.begin()+ptrdiff_t(avail), abs_lt);
 
-                std::fill(srciter+1, resampleBuffer.begin()+tofill, *srciter);
+                std::fill(srciter+1, resampleBuffer.begin()+ptrdiff_t(tofill), *srciter);
             }
             else if(mFlags.test(VoiceIsStatic))
             {
@@ -1143,7 +1143,8 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
                 const size_t byteOffset{blocksDone*size_t{mBytesPerBlock}};
                 const size_t byteEnd{mNumCallbackBlocks*size_t{mBytesPerBlock}};
                 const al::span data{BufferListItem->mSamples};
-                std::copy(data.cbegin()+byteOffset, data.cbegin()+byteEnd, data.begin());
+                std::copy(data.cbegin()+ptrdiff_t(byteOffset), data.cbegin()+ptrdiff_t(byteEnd),
+                    data.begin());
                 mNumCallbackBlocks -= blocksDone;
                 mCallbackBlockBase += blocksDone;
             }

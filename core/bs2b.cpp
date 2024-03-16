@@ -144,7 +144,7 @@ void bs2b::cross_feed(float *Left, float *Right, size_t SamplesToDo)
         /* Process left input */
         float z_lo{history[0].lo};
         float z_hi{history[0].hi};
-        std::transform(lsamples.cbegin(), lsamples.cbegin()+todo, samples.begin(),
+        std::transform(lsamples.cbegin(), lsamples.cbegin()+ptrdiff_t(todo), samples.begin(),
             [a0hi,a1hi,b1hi,a0lo,b1lo,&z_lo,&z_hi](const float x) -> std::array<float,2>
             {
                 float y0{a0hi*x + z_hi};
@@ -161,7 +161,8 @@ void bs2b::cross_feed(float *Left, float *Right, size_t SamplesToDo)
         /* Process right input */
         z_lo = history[1].lo;
         z_hi = history[1].hi;
-        std::transform(rsamples.cbegin(), rsamples.cbegin()+todo, samples.begin(), samples.begin(),
+        std::transform(rsamples.cbegin(), rsamples.cbegin()+ptrdiff_t(todo), samples.begin(),
+            samples.begin(),
             [a0hi,a1hi,b1hi,a0lo,b1lo,&z_lo,&z_hi](const float x, const std::array<float,2> out) -> std::array<float,2>
             {
                 float y0{a0lo*x + z_lo};

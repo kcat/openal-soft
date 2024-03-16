@@ -20,7 +20,7 @@
 
 struct RingBuffer {
 private:
-#ifdef __cpp_lib_hardware_interference_size
+#if defined(__cpp_lib_hardware_interference_size) && !defined(_LIBCPP_VERSION)
     static constexpr std::size_t sCacheAlignment{std::hardware_destructive_interference_size};
 #else
     /* Assume a 64-byte cache line, the most common/likely value. */

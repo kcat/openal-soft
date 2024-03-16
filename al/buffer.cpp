@@ -285,7 +285,7 @@ constexpr auto SanitizeAlignment(FmtType type, ALuint align) noexcept -> ALuint
 
 
 /** Loads the specified data into the buffer, using the specified format. */
-void LoadData(ALCcontext *context, ALbuffer *ALBuf, ALsizei freq, ALuint size,
+void LoadData(ALCcontext *context [[maybe_unused]], ALbuffer *ALBuf, ALsizei freq, ALuint size,
     const FmtChannels DstChannels, const FmtType DstType, const std::byte *SrcData,
     ALbitfieldSOFT access)
 {
@@ -392,7 +392,7 @@ void LoadData(ALCcontext *context, ALbuffer *ALBuf, ALsizei freq, ALuint size,
 }
 
 /** Prepares the buffer to use the specified callback, using the specified format. */
-void PrepareCallback(ALCcontext *context, ALbuffer *ALBuf, ALsizei freq,
+void PrepareCallback(ALCcontext *context [[maybe_unused]], ALbuffer *ALBuf, ALsizei freq,
     const FmtChannels DstChannels, const FmtType DstType, ALBUFFERCALLBACKTYPESOFT callback,
     void *userptr)
 {
@@ -449,7 +449,7 @@ void PrepareCallback(ALCcontext *context, ALbuffer *ALBuf, ALsizei freq,
 }
 
 /** Prepares the buffer to use caller-specified storage. */
-void PrepareUserPtr(ALCcontext *context, ALbuffer *ALBuf, ALsizei freq,
+void PrepareUserPtr(ALCcontext *context [[maybe_unused]], ALbuffer *ALBuf, ALsizei freq,
     const FmtChannels DstChannels, const FmtType DstType, std::byte *sdata, const ALuint sdatalen)
 {
     if(ALBuf->ref.load(std::memory_order_relaxed) != 0 || ALBuf->MappedAccess != 0)

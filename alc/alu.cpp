@@ -356,16 +356,17 @@ inline uint dither_rng(uint *seed) noexcept
 void UpsampleBFormatTransform(
     const al::span<std::array<float,MaxAmbiChannels>,MaxAmbiChannels> output,
     const al::span<const std::array<float,MaxAmbiChannels>> upsampler,
-    const al::span<std::array<float,MaxAmbiChannels>,MaxAmbiChannels> rotator, size_t coeffs_order)
+    const al::span<const std::array<float,MaxAmbiChannels>,MaxAmbiChannels> rotator,
+    size_t ambi_order)
 {
-    const size_t num_chans{AmbiChannelsFromOrder(coeffs_order)};
+    const size_t num_chans{AmbiChannelsFromOrder(ambi_order)};
     for(size_t i{0};i < upsampler.size();++i)
         output[i].fill(0.0f);
     for(size_t i{0};i < upsampler.size();++i)
     {
+        float *RESTRICT out{output[i].data()};
         for(size_t k{0};k < num_chans;++k)
         {
-            float *RESTRICT out{output[i].data()};
             /* Write the full number of channels. The compiler will have an
              * easier time optimizing if it has a fixed length.
              */

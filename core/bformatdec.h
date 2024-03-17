@@ -45,13 +45,13 @@ public:
     [[nodiscard]] auto hasStablizer() const noexcept -> bool { return mStablizer != nullptr; }
 
     /* Decodes the ambisonic input to the given output channels. */
-    void process(const al::span<FloatBufferLine> OutBuffer, const FloatBufferLine *InSamples,
-        const size_t SamplesToDo);
+    void process(const al::span<FloatBufferLine> OutBuffer,
+        const al::span<const FloatBufferLine> InSamples, const size_t SamplesToDo);
 
     /* Decodes the ambisonic input to the given output channels with stablization. */
     void processStablize(const al::span<FloatBufferLine> OutBuffer,
-        const FloatBufferLine *InSamples, const size_t lidx, const size_t ridx, const size_t cidx,
-        const size_t SamplesToDo);
+        const al::span<const FloatBufferLine> InSamples, const size_t lidx, const size_t ridx,
+        const size_t cidx, const size_t SamplesToDo);
 
     static std::unique_ptr<BFormatDec> Create(const size_t inchans,
         const al::span<const ChannelDec> coeffs, const al::span<const ChannelDec> coeffslf,

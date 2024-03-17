@@ -62,15 +62,15 @@ BFormatDec::BFormatDec(const size_t inchans, const al::span<const ChannelDec> co
 
 
 void BFormatDec::process(const al::span<FloatBufferLine> OutBuffer,
-    const FloatBufferLine *InSamples, const size_t SamplesToDo)
+    const al::span<const FloatBufferLine> InSamples, const size_t SamplesToDo)
 {
     ASSUME(SamplesToDo > 0);
 
     auto decode_dualband = [=](std::vector<ChannelDecoderDual> &decoder)
     {
-        auto *input = InSamples;
-        const al::span<float> hfSamples{mSamples[sHFBand].data(), SamplesToDo};
-        const al::span<float> lfSamples{mSamples[sLFBand].data(), SamplesToDo};
+        auto input = InSamples.cbegin();
+        const auto hfSamples = al::span<float>{mSamples[sHFBand]}.first(SamplesToDo);
+        const auto lfSamples = al::span<float>{mSamples[sLFBand]}.first(SamplesToDo);
         for(auto &chandec : decoder)
         {
             chandec.mXOver.process({input->data(), SamplesToDo}, hfSamples, lfSamples);
@@ -83,10 +83,10 @@ void BFormatDec::process(const al::span<FloatBufferLine> OutBuffer,
     };
     auto decode_singleband = [=](std::vector<ChannelDecoderSingle> &decoder)
     {
-        auto *input = InSamples;
+        auto input = InSamples.cbegin();
         for(auto &chandec : decoder)
         {
-            MixSamples({input->data(), SamplesToDo}, OutBuffer, chandec.mGains.data(),
+            MixSamples(al::span{*input}.first(SamplesToDo), OutBuffer, chandec.mGains.data(),
                 chandec.mGains.data(), 0, 0);
             ++input;
         }
@@ -96,37 +96,36 @@ void BFormatDec::process(const al::span<FloatBufferLine> OutBuffer,
 }
 
 void BFormatDec::processStablize(const al::span<FloatBufferLine> OutBuffer,
-    const FloatBufferLine *InSamples, const size_t lidx, const size_t ridx, const size_t cidx,
-    const size_t SamplesToDo)
+    const al::span<const FloatBufferLine> InSamples, const size_t lidx, const size_t ridx,
+    const size_t cidx, const size_t SamplesToDo)
 {
     ASSUME(SamplesToDo > 0);
 
     /* Move the existing direct L/R signal out so it doesn't get processed by
      * the stablizer.
      */
-    float *RESTRICT mid{al::assume_aligned<16>(mStablizer->MidDirect.data())};
-    float *RESTRICT side{al::assume_aligned<16>(mStablizer->Side.data())};
-    for(size_t i{0};i < SamplesToDo;++i)
-    {
-        mid[i] = OutBuffer[lidx][i] + OutBuffer[ridx][i];
-        side[i] = OutBuffer[lidx][i] - OutBuffer[ridx][i];
-    }
-    std::fill_n(OutBuffer[lidx].begin(), SamplesToDo, 0.0f);
-    std::fill_n(OutBuffer[ridx].begin(), SamplesToDo, 0.0f);
+    const auto leftout = al::span<float>{OutBuffer[lidx]}.first(SamplesToDo);
+    const auto rightout = al::span<float>{OutBuffer[ridx]}.first(SamplesToDo);
+    const al::span<float> mid{al::assume_aligned<16>(mStablizer->MidDirect.data()), SamplesToDo};
+    const al::span<float> side{al::assume_aligned<16>(mStablizer->Side.data()), SamplesToDo};
+    std::transform(leftout.cbegin(), leftout.cend(), rightout.cbegin(), mid.begin(),std::plus{});
+    std::transform(leftout.cbegin(), leftout.cend(), rightout.cbegin(), side.begin(),std::minus{});
+    std::fill_n(leftout.begin(), leftout.size(), 0.0f);
+    std::fill_n(rightout.begin(), rightout.size(), 0.0f);
 
     /* Decode the B-Format input to OutBuffer. */
     process(OutBuffer, InSamples, SamplesToDo);
 
     /* Include the decoded side signal with the direct side signal. */
     for(size_t i{0};i < SamplesToDo;++i)
-        side[i] += OutBuffer[lidx][i] - OutBuffer[ridx][i];
+        side[i] += leftout[i] - rightout[i];
 
     /* Get the decoded mid signal and band-split it. */
-    std::transform(OutBuffer[lidx].cbegin(), OutBuffer[lidx].cbegin()+SamplesToDo,
-        OutBuffer[ridx].cbegin(), mStablizer->Temp.begin(), std::plus<>{});
+    const auto tmpsamples = al::span{mStablizer->Temp}.first(SamplesToDo);
+    std::transform(leftout.cbegin(), leftout.cend(), rightout.cbegin(), tmpsamples.begin(),
+        std::plus{});
 
-    mStablizer->MidFilter.process(al::span{mStablizer->Temp}.first(SamplesToDo), mStablizer->MidHF,
-        mStablizer->MidLF);
+    mStablizer->MidFilter.process(tmpsamples, mStablizer->MidHF, mStablizer->MidLF);
 
     /* Apply an all-pass to all channels to match the band-splitter's phase
      * shift. This is to keep the phase synchronized between the existing
@@ -139,9 +138,9 @@ void BFormatDec::processStablize(const al::span<FloatBufferLine> OutBuffer,
          * and substitute the direct mid signal and direct+decoded side signal.
          */
         if(i == lidx)
-            mStablizer->ChannelFilters[i].processAllPass({mid, SamplesToDo});
+            mStablizer->ChannelFilters[i].processAllPass(mid);
         else if(i == ridx)
-            mStablizer->ChannelFilters[i].processAllPass({side, SamplesToDo});
+            mStablizer->ChannelFilters[i].processAllPass(side);
         else
             mStablizer->ChannelFilters[i].processAllPass({OutBuffer[i].data(), SamplesToDo});
     }
@@ -155,6 +154,7 @@ void BFormatDec::processStablize(const al::span<FloatBufferLine> OutBuffer,
     const float cos_hf{std::cos(1.0f/4.0f * (al::numbers::pi_v<float>*0.5f))};
     const float sin_lf{std::sin(1.0f/3.0f * (al::numbers::pi_v<float>*0.5f))};
     const float sin_hf{std::sin(1.0f/4.0f * (al::numbers::pi_v<float>*0.5f))};
+    const auto centerout = al::span<float>{OutBuffer[cidx]}.first(SamplesToDo);
     for(size_t i{0};i < SamplesToDo;i++)
     {
         /* Add the direct mid signal to the processed mid signal so it can be
@@ -167,9 +167,9 @@ void BFormatDec::processStablize(const al::span<FloatBufferLine> OutBuffer,
         /* The generated center channel signal adds to the existing signal,
          * while the modified left and right channels replace.
          */
-        OutBuffer[lidx][i] = (m + s) * 0.5f;
-        OutBuffer[ridx][i] = (m - s) * 0.5f;
-        OutBuffer[cidx][i] += c * 0.5f;
+        leftout[i] = (m + s) * 0.5f;
+        rightout[i] = (m - s) * 0.5f;
+        centerout[i] += c * 0.5f;
     }
 }
 

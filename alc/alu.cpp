@@ -296,7 +296,7 @@ void DeviceBase::ProcessHrtf(const size_t SamplesToDo)
 
 void DeviceBase::ProcessAmbiDec(const size_t SamplesToDo)
 {
-    AmbiDecoder->process(RealOut.Buffer, Dry.Buffer.data(), SamplesToDo);
+    AmbiDecoder->process(RealOut.Buffer, Dry.Buffer, SamplesToDo);
 }
 
 void DeviceBase::ProcessAmbiDecStablized(const size_t SamplesToDo)
@@ -306,8 +306,7 @@ void DeviceBase::ProcessAmbiDecStablized(const size_t SamplesToDo)
     const size_t ridx{RealOut.ChannelIndex[FrontRight]};
     const size_t cidx{RealOut.ChannelIndex[FrontCenter]};
 
-    AmbiDecoder->processStablize(RealOut.Buffer, Dry.Buffer.data(), lidx, ridx, cidx,
-        SamplesToDo);
+    AmbiDecoder->processStablize(RealOut.Buffer, Dry.Buffer, lidx, ridx, cidx, SamplesToDo);
 }
 
 void DeviceBase::ProcessUhj(const size_t SamplesToDo)
@@ -324,7 +323,7 @@ void DeviceBase::ProcessUhj(const size_t SamplesToDo)
 void DeviceBase::ProcessBs2b(const size_t SamplesToDo)
 {
     /* First, decode the ambisonic mix to the "real" output. */
-    AmbiDecoder->process(RealOut.Buffer, Dry.Buffer.data(), SamplesToDo);
+    AmbiDecoder->process(RealOut.Buffer, Dry.Buffer, SamplesToDo);
 
     /* BS2B is stereo output only. */
     const size_t lidx{RealOut.ChannelIndex[FrontLeft]};
@@ -1059,9 +1058,9 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
             /* Convert the rotation matrix for input ordering and scaling, and
              * whether input is 2D or 3D.
              */
-            const uint8_t *index_map{Is2DAmbisonic(voice->mFmtChannels) ?
-                GetAmbi2DLayout(voice->mAmbiLayout).data() :
-                GetAmbiLayout(voice->mAmbiLayout).data()};
+            const auto index_map = Is2DAmbisonic(voice->mFmtChannels) ?
+                GetAmbi2DLayout(voice->mAmbiLayout).subspan(0) :
+                GetAmbiLayout(voice->mAmbiLayout).subspan(0);
 
             /* Scale the panned W signal inversely to coverage (full coverage
              * means no panned signal), and according to the channel scaling.
@@ -1078,8 +1077,9 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
                  * to the coverage amount) with the directional pan. For all
                  * other channels, use just the (scaled) B-Format signal.
                  */
-                for(size_t x{0};x < MaxAmbiChannels;++x)
-                    coeffs[x] += mixmatrix[acn][x] * scale;
+                std::transform(mixmatrix[acn].cbegin(), mixmatrix[acn].cend(), coeffs.begin(),
+                    coeffs.begin(), [scale](const float in, const float coeff) noexcept
+                    { return in*scale + coeff; });
 
                 ComputePanGains(&Device->Dry, coeffs, DryGain.Base,
                     voice->mChans[c].mDryParams.Gains.Target);

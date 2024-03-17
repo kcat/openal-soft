@@ -364,14 +364,14 @@ void UpsampleBFormatTransform(
         output[i].fill(0.0f);
     for(size_t i{0};i < upsampler.size();++i)
     {
-        float *RESTRICT out{output[i].data()};
         for(size_t k{0};k < num_chans;++k)
         {
+            const float a{upsampler[i][k]};
             /* Write the full number of channels. The compiler will have an
              * easier time optimizing if it has a fixed length.
              */
-            for(size_t j{0};j < MaxAmbiChannels;++j)
-                out[j] += upsampler[i][k] * rotator[k][j];
+            std::transform(rotator[k].cbegin(), rotator[k].cend(), output[i].cbegin(),
+                output[i].begin(), [a](float rot, float dst) noexcept { return rot*a + dst; });
         }
     }
 }

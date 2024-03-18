@@ -556,6 +556,7 @@ int AlsaPlayback::mixerProc()
                 break;
             }
 
+            /* NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic) */
             char *WritePtr{static_cast<char*>(areas->addr) + (offset * areas->step / 8)};
             mDevice->renderSamples(WritePtr, static_cast<uint>(frames), mFrameStep);
 
@@ -621,13 +622,13 @@ int AlsaPlayback::mixerNoMMapProc()
             continue;
         }
 
-        std::byte *WritePtr{mBuffer.data()};
+        auto WritePtr = mBuffer.begin();
         avail = snd_pcm_bytes_to_frames(mPcmHandle, static_cast<ssize_t>(mBuffer.size()));
         std::lock_guard<std::mutex> dlock{mMutex};
-        mDevice->renderSamples(WritePtr, static_cast<uint>(avail), mFrameStep);
+        mDevice->renderSamples(al::to_address(WritePtr), static_cast<uint>(avail), mFrameStep);
         while(avail > 0)
         {
-            snd_pcm_sframes_t ret{snd_pcm_writei(mPcmHandle, WritePtr,
+            snd_pcm_sframes_t ret{snd_pcm_writei(mPcmHandle, al::to_address(WritePtr),
                 static_cast<snd_pcm_uframes_t>(avail))};
             switch(ret)
             {
@@ -1074,6 +1075,9 @@ void AlsaCapture::captureSamples(std::byte *buffer, uint samples)
         return;
     }
 
+    const auto outspan = al::span{buffer,
+        static_cast<size_t>(snd_pcm_frames_to_bytes(mPcmHandle, samples))};
+    auto outiter = outspan.begin();
     mLastAvail -= samples;
     while(mDevice->Connected.load(std::memory_order_acquire) && samples > 0)
     {
@@ -1086,13 +1090,13 @@ void AlsaCapture::captureSamples(std::byte *buffer, uint samples)
             if(static_cast<snd_pcm_uframes_t>(amt) > samples) amt = samples;
 
             amt = snd_pcm_frames_to_bytes(mPcmHandle, amt);
-            std::copy_n(mBuffer.begin(), amt, buffer);
+            std::copy_n(mBuffer.begin(), amt, outiter);
 
             mBuffer.erase(mBuffer.begin(), mBuffer.begin()+amt);
             amt = snd_pcm_bytes_to_frames(mPcmHandle, amt);
         }
         else if(mDoCapture)
-            amt = snd_pcm_readi(mPcmHandle, buffer, samples);
+            amt = snd_pcm_readi(mPcmHandle, al::to_address(outiter), samples);
         if(amt < 0)
         {
             ERR("read error: %s\n", snd_strerror(static_cast<int>(amt)));
@@ -1120,11 +1124,11 @@ void AlsaCapture::captureSamples(std::byte *buffer, uint samples)
             continue;
         }
 
-        buffer = buffer + amt;
+        outiter += amt;
         samples -= static_cast<uint>(amt);
     }
     if(samples > 0)
-        std::fill_n(buffer, snd_pcm_frames_to_bytes(mPcmHandle, samples),
+        std::fill_n(outiter, snd_pcm_frames_to_bytes(mPcmHandle, samples),
             std::byte((mDevice->FmtType == DevFmtUByte) ? 0x80 : 0));
 }
 

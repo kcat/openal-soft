@@ -215,31 +215,25 @@ void EnumerateDevices(jack_client_t *client, std::vector<DeviceEntry> &list)
                 continue;
             }
 
-            const al::span<const char> name{listopt->data()+strpos, seppos-strpos};
-            const al::span<const char> pattern{listopt->data()+(seppos+1),
-                std::min(nextpos, listopt->size())-(seppos+1)};
+            const auto name = std::string_view{*listopt}.substr(strpos, seppos-strpos);
+            const auto pattern = std::string_view{*listopt}.substr(seppos+1,
+                std::min(nextpos, listopt->size())-(seppos+1));
 
             /* Check if this custom pattern already exists in the list. */
             auto check_pattern = [pattern](const DeviceEntry &entry) -> bool
-            {
-                const size_t len{pattern.size()};
-                return entry.mPattern.length() == len
-                    && entry.mPattern.compare(0, len, pattern.data(), len) == 0;
-            };
+            { return entry.mPattern == pattern; };
             auto itemmatch = std::find_if(list.begin(), list.end(), check_pattern);
             if(itemmatch != list.end())
             {
                 /* If so, replace the name with this custom one. */
-                itemmatch->mName.assign(name.data(), name.size());
+                itemmatch->mName = name;
                 TRACE("Customized device name: %s = %s\n", itemmatch->mName.c_str(),
                     itemmatch->mPattern.c_str());
             }
             else
             {
                 /* Otherwise, add a new device entry. */
-                list.emplace_back(std::string{name.data(), name.size()},
-                    std::string{pattern.data(), pattern.size()});
-                const auto &entry = list.back();
+                const auto &entry = list.emplace_back(name, pattern);
                 TRACE("Got custom device: %s = %s\n", entry.mName.c_str(), entry.mPattern.c_str());
             }
 
@@ -352,12 +346,12 @@ int JackPlayback::processRt(jack_nframes_t numframes) noexcept
 
 int JackPlayback::process(jack_nframes_t numframes) noexcept
 {
-    std::array<jack_default_audio_sample_t*,MaxOutputChannels> out;
+    std::array<al::span<float>,MaxOutputChannels> out;
     size_t numchans{0};
     for(auto port : mPort)
     {
         if(!port) break;
-        out[numchans++] = static_cast<float*>(jack_port_get_buffer(port, numframes));
+        out[numchans++] = {static_cast<float*>(jack_port_get_buffer(port, numframes)), numframes};
     }
 
     jack_nframes_t total{0};
@@ -365,39 +359,37 @@ int JackPlayback::process(jack_nframes_t numframes) noexcept
     {
         auto data = mRing->getReadVector();
         jack_nframes_t todo{std::min(numframes, static_cast<jack_nframes_t>(data.first.len))};
-        auto write_first = [&data,numchans,todo](float *outbuf) -> float*
+        auto firstin = al::span{reinterpret_cast<const float*>(data.first.buf), todo};
+        for(size_t c{0};c < numchans;++c)
         {
-            const auto *RESTRICT in = reinterpret_cast<const float*>(data.first.buf);
-            auto deinterlace_input = [&in,numchans]() noexcept -> float
+            auto in = firstin.cbegin();
+            auto deinterlace_input = [&in,c,numchans]() noexcept -> float
             {
-                float ret{*in};
-                in += numchans;
+                const float ret{in[c]};
+                in += ptrdiff_t(numchans);
                 return ret;
             };
-            std::generate_n(outbuf, todo, deinterlace_input);
-            data.first.buf += sizeof(float);
-            return outbuf + todo;
-        };
-        std::transform(out.begin(), out.begin()+numchans, out.begin(), write_first);
+            std::generate_n(out[c].begin(), todo, deinterlace_input);
+            out[c] = out[c].subspan(todo);
+        }
         total += todo;
 
         todo = std::min(numframes-total, static_cast<jack_nframes_t>(data.second.len));
         if(todo > 0)
         {
-            auto write_second = [&data,numchans,todo](float *outbuf) -> float*
+            auto secondin = al::span{reinterpret_cast<const float*>(data.second.buf), todo};
+            for(size_t c{0};c < numchans;++c)
             {
-                const auto *RESTRICT in = reinterpret_cast<const float*>(data.second.buf);
-                auto deinterlace_input = [&in,numchans]() noexcept -> float
+                auto in = secondin.cbegin();
+                auto deinterlace_input = [&in,c,numchans]() noexcept -> float
                 {
-                    float ret{*in};
-                    in += numchans;
+                    float ret{in[c]};
+                    in += ptrdiff_t(numchans);
                     return ret;
                 };
-                std::generate_n(outbuf, todo, deinterlace_input);
-                data.second.buf += sizeof(float);
-                return outbuf + todo;
-            };
-            std::transform(out.begin(), out.begin()+numchans, out.begin(), write_second);
+                std::generate_n(out[c].begin(), todo, deinterlace_input);
+                out[c] = out[c].subspan(todo);
+            }
             total += todo;
         }
 
@@ -407,8 +399,8 @@ int JackPlayback::process(jack_nframes_t numframes) noexcept
 
     if(numframes > total)
     {
-        const jack_nframes_t todo{numframes - total};
-        auto clear_buf = [todo](float *outbuf) -> void { std::fill_n(outbuf, todo, 0.0f); };
+        auto clear_buf = [](const al::span<float> outbuf) -> void
+        { std::fill(outbuf.begin(), outbuf.end(), 0.0f); };
         std::for_each(out.begin(), out.begin()+numchans, clear_buf);
     }
 

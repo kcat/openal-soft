@@ -60,7 +60,7 @@ using uint = unsigned int;
 
 constexpr size_t MaxUpdateSamples{256};
 constexpr size_t NumFormants{4};
-constexpr float QFactor{5.0f};
+constexpr float RcpQFactor{1.0f / 5.0f};
 enum : size_t {
     VowelAIndex,
     VowelBIndex,
@@ -86,14 +86,14 @@ inline float Triangle(uint index)
 inline float Half(uint) { return 0.5f; }
 
 template<float (&func)(uint)>
-void Oscillate(float *RESTRICT dst, uint index, const uint step, size_t todo)
+void Oscillate(const al::span<float> dst, uint index, const uint step)
 {
-    for(size_t i{0u};i < todo;i++)
+    std::generate(dst.begin(), dst.end(), [&index,step]
     {
         index += step;
         index &= WaveformFracMask;
-        dst[i] = func(index);
-    }
+        return func(index);
+    });
 }
 
 struct FormantFilter {
@@ -114,23 +114,26 @@ struct FormantFilter {
          */
         const float g{mCoeff};
         const float gain{mGain};
-        const float h{1.0f / (1.0f + (g/QFactor) + (g*g))};
-        const float coeff{1.0f/QFactor + g};
+        const float h{1.0f / (1.0f + (g*RcpQFactor) + (g*g))};
+        const float coeff{RcpQFactor + g};
         float s1{mS1};
         float s2{mS2};
 
-        for(size_t i{0u};i < numInput;i++)
-        {
-            const float H{(samplesIn[i] - coeff*s1 - s2)*h};
-            const float B{g*H + s1};
-            const float L{g*B + s2};
+        const auto input = al::span{samplesIn, numInput};
+        const auto output = al::span{samplesOut, numInput};
+        std::transform(input.cbegin(), input.cend(), output.cbegin(), output.begin(),
+            [g,gain,h,coeff,&s1,&s2](const float in, const float out) noexcept -> float
+            {
+                const float H{(in - coeff*s1 - s2)*h};
+                const float B{g*H + s1};
+                const float L{g*B + s2};
 
-            s1 = g*H + B;
-            s2 = g*B + L;
+                s1 = g*H + B;
+                s2 = g*B + L;
 
-            // Apply peak and accumulate samples.
-            samplesOut[i] += B * gain;
-        }
+                // Apply peak and accumulate samples.
+                return out + B*gain;
+            });
         mS1 = s1;
         mS2 = s2;
     }
@@ -156,7 +159,7 @@ struct VmorpherState final : public EffectState {
     };
     std::array<OutParams,MaxAmbiChannels> mChans;
 
-    void (*mGetSamples)(float*RESTRICT, uint, const uint, size_t){};
+    void (*mGetSamples)(const al::span<float> dst, uint index, const uint step){};
 
     uint mIndex{0};
     uint mStep{1};
@@ -290,7 +293,7 @@ void VmorpherState::process(const size_t samplesToDo, const al::span<const Float
     {
         const size_t td{std::min(MaxUpdateSamples, samplesToDo-base)};
 
-        mGetSamples(mLfo.data(), mIndex, mStep, td);
+        mGetSamples(al::span{mLfo}.first(td), mIndex, mStep);
         mIndex += static_cast<uint>(mStep * td);
         mIndex &= WaveformFracMask;
 

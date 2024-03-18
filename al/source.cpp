@@ -3500,15 +3500,16 @@ try {
     }
 
     std::unique_lock<std::mutex> buflock{device->BufferLock};
+    const auto bids = al::span{buffers, static_cast<ALuint>(nb)};
     const size_t NewListStart{source->mQueue.size()};
     try {
         ALbufferQueueItem *BufferList{nullptr};
-        for(ALsizei i{0};i < nb;i++)
+        std::for_each(bids.cbegin(), bids.cend(),
+        [source,device,&BufferFmt,&BufferList](const ALuint bid)
         {
-            ALbuffer *buffer{buffers[i] ? LookupBuffer(device, buffers[i]) : nullptr};
-            if(buffers[i] && !buffer)
-                throw al::context_error{AL_INVALID_NAME, "Queueing invalid buffer ID %u",
-                    buffers[i]};
+            ALbuffer *buffer{bid ? LookupBuffer(device, bid) : nullptr};
+            if(bid && !buffer)
+                throw al::context_error{AL_INVALID_NAME, "Queueing invalid buffer ID %u", bid};
 
             if(buffer)
             {
@@ -3534,7 +3535,7 @@ try {
                 BufferList->mNext.store(&item, std::memory_order_relaxed);
                 BufferList = &item;
             }
-            if(!buffer) continue;
+            if(!buffer) return;
             BufferList->mBlockAlign = buffer->mBlockAlign;
             BufferList->mSampleLen = buffer->mSampleLen;
             BufferList->mLoopEnd = buffer->mSampleLen;
@@ -3564,7 +3565,7 @@ try {
                     NameFromFormat(BufferFmt->mType), NameFromFormat(BufferFmt->mChannels),
                     buffer->mSampleRate, NameFromFormat(buffer->mType),
                     NameFromFormat(buffer->mChannels)};
-        }
+        });
     }
     catch(...) {
         /* A buffer failed (invalid ID or format), or there was some other

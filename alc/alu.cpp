@@ -2137,34 +2137,32 @@ template<> inline uint16_t SampleConv(float val) noexcept
 template<> inline uint8_t SampleConv(float val) noexcept
 { return static_cast<uint8_t>(SampleConv<int8_t>(val) + 128); }
 
-template<DevFmtType T>
+template<typename T>
 void Write(const al::span<const FloatBufferLine> InBuffer, void *OutBuffer, const size_t Offset,
     const size_t SamplesToDo, const size_t FrameStep)
 {
     ASSUME(FrameStep > 0);
     ASSUME(SamplesToDo > 0);
 
-    DevFmtType_t<T> *outbase{static_cast<DevFmtType_t<T>*>(OutBuffer) + Offset*FrameStep};
+    const auto output = al::span{static_cast<T*>(OutBuffer), (Offset+SamplesToDo)*FrameStep}
+        .subspan(Offset*FrameStep);
     size_t c{0};
     for(const FloatBufferLine &inbuf : InBuffer)
     {
-        DevFmtType_t<T> *out{outbase++};
-        auto conv_sample = [FrameStep,&out](const float s) noexcept -> void
+        auto out = output.begin();
+        auto conv_sample = [FrameStep,c,&out](const float s) noexcept
         {
-            *out = SampleConv<DevFmtType_t<T>>(s);
-            out += FrameStep;
+            out[c] = SampleConv<T>(s);
+            out += ptrdiff_t(FrameStep);
         };
-        std::for_each(inbuf.begin(), inbuf.begin()+SamplesToDo, conv_sample);
+        std::for_each_n(inbuf.cbegin(), SamplesToDo, conv_sample);
         ++c;
     }
     if(const size_t extra{FrameStep - c})
     {
-        const auto silence = SampleConv<DevFmtType_t<T>>(0.0f);
+        const auto silence = SampleConv<T>(0.0f);
         for(size_t i{0};i < SamplesToDo;++i)
-        {
-            std::fill_n(outbase, extra, silence);
-            outbase += FrameStep;
-        }
+            std::fill_n(&output[i*FrameStep + c], extra, silence);
     }
 }
 
@@ -2224,10 +2222,11 @@ void DeviceBase::renderSamples(const al::span<float*> outBuffers, const uint num
     {
         const uint samplesToDo{renderSamples(todo)};
 
-        auto *srcbuf = RealOut.Buffer.data();
+        auto srcbuf = RealOut.Buffer.cbegin();
         for(auto *dstbuf : outBuffers)
         {
-            std::copy_n(srcbuf->data(), samplesToDo, dstbuf + total);
+            const auto dst = al::span{dstbuf, numSamples}.subspan(total);
+            std::copy_n(srcbuf->cbegin(), samplesToDo, dst.begin());
             ++srcbuf;
         }
 
@@ -2251,7 +2250,7 @@ void DeviceBase::renderSamples(void *outBuffer, const uint numSamples, const siz
             switch(FmtType)
             {
 #define HANDLE_WRITE(T) case T:                                               \
-    Write<T>(RealOut.Buffer, outBuffer, total, samplesToDo, frameStep); break;
+    Write<DevFmtType_t<T>>(RealOut.Buffer, outBuffer, total, samplesToDo, frameStep); break;
             HANDLE_WRITE(DevFmtByte)
             HANDLE_WRITE(DevFmtUByte)
             HANDLE_WRITE(DevFmtShort)

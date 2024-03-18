@@ -168,7 +168,7 @@ void CompressorState::process(const size_t samplesToDo,
             const size_t outidx{chan->mTarget};
             if(outidx != InvalidChannelIndex)
             {
-                const float *RESTRICT src{input.data() + base};
+                const auto src = al::span{input}.subspan(base);
                 float *RESTRICT dst{samplesOut[outidx].data() + base};
                 const float gain{chan->mGain};
                 if(!(std::fabs(gain) > GainSilenceThreshold))

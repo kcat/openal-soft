@@ -168,10 +168,11 @@ constexpr size_t ConvolveUpdateSize{256};
 constexpr size_t ConvolveUpdateSamples{ConvolveUpdateSize / 2};
 
 
-void apply_fir(al::span<float> dst, const float *RESTRICT src, const float *RESTRICT filter)
+void apply_fir(al::span<float> dst, const al::span<const float> input, const al::span<const float,ConvolveUpdateSamples> filter)
 {
+    auto src = input.begin();
 #ifdef HAVE_SSE_INTRINSICS
-    for(float &output : dst)
+    std::generate(dst.begin(), dst.end(), [&src,filter]
     {
         __m128 r4{_mm_setzero_ps()};
         for(size_t j{0};j < ConvolveUpdateSamples;j+=4)
@@ -181,36 +182,36 @@ void apply_fir(al::span<float> dst, const float *RESTRICT src, const float *REST
 
             r4 = _mm_add_ps(r4, _mm_mul_ps(s, coeffs));
         }
+        ++src;
+
         r4 = _mm_add_ps(r4, _mm_shuffle_ps(r4, r4, _MM_SHUFFLE(0, 1, 2, 3)));
         r4 = _mm_add_ps(r4, _mm_movehl_ps(r4, r4));
-        output = _mm_cvtss_f32(r4);
-
-        ++src;
-    }
+        return _mm_cvtss_f32(r4);
+    });
 
 #elif defined(HAVE_NEON)
 
-    for(float &output : dst)
+    std::generate(dst.begin(), dst.end(), [&src,filter]
     {
         float32x4_t r4{vdupq_n_f32(0.0f)};
         for(size_t j{0};j < ConvolveUpdateSamples;j+=4)
             r4 = vmlaq_f32(r4, vld1q_f32(&src[j]), vld1q_f32(&filter[j]));
-        r4 = vaddq_f32(r4, vrev64q_f32(r4));
-        output = vget_lane_f32(vadd_f32(vget_low_f32(r4), vget_high_f32(r4)), 0);
-
         ++src;
-    }
+
+        r4 = vaddq_f32(r4, vrev64q_f32(r4));
+        return vget_lane_f32(vadd_f32(vget_low_f32(r4), vget_high_f32(r4)), 0);
+    });
 
 #else
 
-    for(float &output : dst)
+    std::generate(dst.begin(), dst.end(), [&src,filter]
     {
         float ret{0.0f};
         for(size_t j{0};j < ConvolveUpdateSamples;++j)
             ret += src[j] * filter[j];
-        output = ret;
         ++src;
-    }
+        return ret;
+    });
 #endif
 }
 
@@ -358,7 +359,7 @@ void ConvolutionState::deviceUpdate(const DeviceBase *device, const BufferStorag
         auto decoder = std::make_unique<UhjDecoderType>();
         std::array<float*,4> samples{};
         for(size_t c{0};c < numChannels;++c)
-            samples[c] = srcsamples.data() + srclinelength*c;
+            samples[c] = al::to_address(srcsamples.begin() + ptrdiff_t(srclinelength*c));
         decoder->decode({samples.data(), numChannels}, buffer->mSampleLen, buffer->mSampleLen);
     }
 
@@ -366,37 +367,38 @@ void ConvolutionState::deviceUpdate(const DeviceBase *device, const BufferStorag
     auto ffttmp = al::vector<float,16>(ConvolveUpdateSize);
     auto fftbuffer = std::vector<std::complex<double>>(ConvolveUpdateSize);
 
-    float *filteriter = mComplexData.data() + mNumConvolveSegs*ConvolveUpdateSize;
+    auto filteriter = mComplexData.begin() + ptrdiff_t(mNumConvolveSegs*ConvolveUpdateSize);
     for(size_t c{0};c < numChannels;++c)
     {
+        auto bufsamples = al::span{srcsamples}.subspan(srclinelength*c, buffer->mSampleLen);
         /* Resample to match the device. */
         if(resampler)
         {
-            std::copy_n(srcsamples.data() + srclinelength*c, buffer->mSampleLen,
-                ressamples.data() + resampledCount);
-            resampler.process(al::span{ressamples}.subspan(resampledCount, buffer->mSampleLen),
-                al::span{ressamples}.first(resampledCount));
+            auto restmp = al::span{ressamples}.subspan(resampledCount, buffer->mSampleLen);
+            std::copy(bufsamples.cbegin(), bufsamples.cend(), restmp.begin());
+            resampler.process(restmp, al::span{ressamples}.first(resampledCount));
         }
         else
-            std::copy_n(srcsamples.data() + srclinelength*c, buffer->mSampleLen,
-                ressamples.data());
+            std::copy(bufsamples.cbegin(), bufsamples.cend(), ressamples.begin());
 
         /* Store the first segment's samples in reverse in the time-domain, to
          * apply as a FIR filter.
          */
         const size_t first_size{std::min(size_t{resampledCount}, ConvolveUpdateSamples)};
-        std::transform(ressamples.data(), ressamples.data()+first_size, mFilter[c].rbegin(),
+        auto sampleseg = al::span{ressamples.cbegin(), first_size};
+        std::transform(sampleseg.cbegin(), sampleseg.cend(), mFilter[c].rbegin(),
             [](const double d) noexcept -> float { return static_cast<float>(d); });
 
         size_t done{first_size};
         for(size_t s{0};s < mNumConvolveSegs;++s)
         {
             const size_t todo{std::min(resampledCount-done, ConvolveUpdateSamples)};
+            sampleseg = al::span{ressamples}.subspan(done, todo);
 
             /* Apply a double-precision forward FFT for more precise frequency
              * measurements.
              */
-            auto iter = std::copy_n(&ressamples[done], todo, fftbuffer.begin());
+            auto iter = std::copy(sampleseg.cbegin(), sampleseg.cend(), fftbuffer.begin());
             done += todo;
             std::fill(iter, fftbuffer.end(), std::complex<double>{});
             forward_fft(al::span{fftbuffer});
@@ -635,19 +637,20 @@ void ConvolutionState::process(const size_t samplesToDo,
     {
         const size_t todo{std::min(ConvolveUpdateSamples-mFifoPos, samplesToDo-base)};
 
-        std::copy_n(samplesIn[0].begin() + base, todo,
-            mInput.begin()+ConvolveUpdateSamples+mFifoPos);
+        std::copy_n(samplesIn[0].begin() + ptrdiff_t(base), todo,
+            mInput.begin()+ptrdiff_t(ConvolveUpdateSamples+mFifoPos));
 
         /* Apply the FIR for the newly retrieved input samples, and combine it
          * with the inverse FFT'd output samples.
          */
         for(size_t c{0};c < mChans.size();++c)
         {
-            auto buf_iter = mChans[c].mBuffer.begin() + base;
-            apply_fir({buf_iter, todo}, mInput.data()+1 + mFifoPos, mFilter[c].data());
+            auto outspan = al::span{mChans[c].mBuffer}.subspan(base, todo);
+            apply_fir(outspan, al::span{mInput}.subspan(1+mFifoPos), mFilter[c]);
 
-            auto fifo_iter = mOutput[c].begin() + mFifoPos;
-            std::transform(fifo_iter, fifo_iter+todo, buf_iter, buf_iter, std::plus<>{});
+            auto fifospan = al::span{mOutput[c]}.subspan(mFifoPos, todo);
+            std::transform(fifospan.cbegin(), fifospan.cend(), outspan.cbegin(), outspan.begin(),
+                std::plus{});
         }
 
         mFifoPos += todo;
@@ -664,27 +667,29 @@ void ConvolutionState::process(const size_t samplesToDo,
         /* Calculate the frequency-domain response and add the relevant
          * frequency bins to the FFT history.
          */
-        mFft.transform(mInput.data(), mComplexData.data() + curseg*ConvolveUpdateSize,
+        mFft.transform(mInput.data(), &mComplexData[curseg*ConvolveUpdateSize],
             mFftWorkBuffer.data(), PFFFT_FORWARD);
 
-        const float *filter{mComplexData.data() + mNumConvolveSegs*ConvolveUpdateSize};
+        auto filter = mComplexData.cbegin() + ptrdiff_t(mNumConvolveSegs*ConvolveUpdateSize);
         for(size_t c{0};c < mChans.size();++c)
         {
             /* Convolve each input segment with its IR filter counterpart
              * (aligned in time).
              */
             mFftBuffer.fill(0.0f);
-            const float *input{&mComplexData[curseg*ConvolveUpdateSize]};
+            auto input = mComplexData.cbegin() + ptrdiff_t(curseg*ConvolveUpdateSize);
             for(size_t s{curseg};s < mNumConvolveSegs;++s)
             {
-                mFft.zconvolve_accumulate(input, filter, mFftBuffer.data());
+                mFft.zconvolve_accumulate(al::to_address(input), al::to_address(filter),
+                    mFftBuffer.data());
                 input += ConvolveUpdateSize;
                 filter += ConvolveUpdateSize;
             }
-            input = mComplexData.data();
+            input = mComplexData.cbegin();
             for(size_t s{0};s < curseg;++s)
             {
-                mFft.zconvolve_accumulate(input, filter, mFftBuffer.data());
+                mFft.zconvolve_accumulate(al::to_address(input), al::to_address(filter),
+                    mFftBuffer.data());
                 input += ConvolveUpdateSize;
                 filter += ConvolveUpdateSize;
             }
@@ -698,10 +703,10 @@ void ConvolutionState::process(const size_t samplesToDo,
                 PFFFT_BACKWARD);
 
             /* The filter was attenuated, so the response is already scaled. */
-            for(size_t i{0};i < ConvolveUpdateSamples;++i)
-                mOutput[c][i] = mFftBuffer[i] + mOutput[c][ConvolveUpdateSamples+i];
-            for(size_t i{0};i < ConvolveUpdateSamples;++i)
-                mOutput[c][ConvolveUpdateSamples+i] = mFftBuffer[ConvolveUpdateSamples+i];
+            std::transform(mFftBuffer.cbegin(), mFftBuffer.cbegin()+ConvolveUpdateSamples,
+                mOutput[c].cbegin()+ConvolveUpdateSamples, mOutput[c].begin(), std::plus{});
+            std::copy(mFftBuffer.cbegin()+ConvolveUpdateSamples, mFftBuffer.cend(),
+                mOutput[c].begin()+ConvolveUpdateSamples);
         }
 
         /* Shift the input history. */

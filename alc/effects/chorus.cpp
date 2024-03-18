@@ -281,10 +281,10 @@ void ChorusState::calcSinusoidDelays(const size_t todo)
 
 void ChorusState::process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn, const al::span<FloatBufferLine> samplesOut)
 {
-    const size_t bufmask{mDelayBuffer.size()-1};
+    const auto delaybuf = al::span{mDelayBuffer};
+    const size_t bufmask{delaybuf.size()-1};
     const float feedback{mFeedback};
     const uint avgdelay{(static_cast<uint>(mDelay) + MixerFracHalf) >> MixerFracBits};
-    float *RESTRICT delaybuf{mDelayBuffer.data()};
     uint offset{mOffset};
 
     if(mWaveform == ChorusWaveform::Sinusoid)
@@ -292,10 +292,10 @@ void ChorusState::process(const size_t samplesToDo, const al::span<const FloatBu
     else /*if(mWaveform == ChorusWaveform::Triangle)*/
         calcTriangleDelays(samplesToDo);
 
-    const uint *RESTRICT ldelays{mModDelays[0].data()};
-    const uint *RESTRICT rdelays{mModDelays[1].data()};
-    float *RESTRICT lbuffer{al::assume_aligned<16>(mBuffer[0].data())};
-    float *RESTRICT rbuffer{al::assume_aligned<16>(mBuffer[1].data())};
+    const auto ldelays = al::span{mModDelays[0]};
+    const auto rdelays = al::span{mModDelays[1]};
+    const auto lbuffer = al::span{mBuffer[0]};
+    const auto rbuffer = al::span{mBuffer[1]};
     for(size_t i{0u};i < samplesToDo;++i)
     {
         // Feed the buffer's input first (necessary for delays < 1).
@@ -322,9 +322,9 @@ void ChorusState::process(const size_t samplesToDo, const al::span<const FloatBu
         ++offset;
     }
 
-    MixSamples({lbuffer, samplesToDo}, samplesOut, mGains[0].Current.data(),
+    MixSamples(lbuffer.first(samplesToDo), samplesOut, mGains[0].Current.data(),
         mGains[0].Target.data(), samplesToDo, 0);
-    MixSamples({rbuffer, samplesToDo}, samplesOut, mGains[1].Current.data(),
+    MixSamples(rbuffer.first(samplesToDo), samplesOut, mGains[1].Current.data(),
         mGains[1].Target.data(), samplesToDo, 0);
 
     mOffset = offset;

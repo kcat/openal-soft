@@ -176,7 +176,7 @@ inline void BsincPrepare(const uint increment, BsincState *state, const BSincTab
     state->sf = sf;
     state->m = table->m[si];
     state->l = (state->m/2) - 1;
-    state->filter = table->Tab + table->filterOffset[si];
+    state->filter = table->Tab.subspan(table->filterOffset[si]);
 }
 
 inline ResamplerFunc SelectResampler(Resampler resampler, uint increment)

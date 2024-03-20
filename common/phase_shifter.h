@@ -66,7 +66,7 @@ struct PhaseShifterT {
             fftBuffer[i] = std::conj(fftBuffer[fft_size - i]);
         inverse_fft(al::span{fftBuffer});
 
-        auto fftiter = fftBuffer.data() + fft_size - 1;
+        auto fftiter = fftBuffer.begin() + fft_size - 1;
         for(float &coeff : mCoeffs)
         {
             coeff = static_cast<float>(fftiter->real() / double{fft_size});

@@ -434,6 +434,13 @@ constexpr auto make_float_array(std::integer_sequence<T,N...>)
 constexpr auto V4sfAlignment = size_t(64);
 constexpr auto V4sfAlignVal = std::align_val_t(V4sfAlignment);
 
+/* NOLINTBEGIN(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+ * FIXME: Converting this from raw pointers to spans or something will probably
+ * need significant work to maintain performance, given non-sequential range-
+ * checked accesses and lack of 'restrict' to indicate non-aliased memory. At
+ * least, some tests should be done to check the impact of using range-checked
+ * spans here before blindly switching.
+ */
 /*
   passf2 and passb2 has been merged here, fsign = -1 for passf2, +1 for passb2
 */
@@ -2296,4 +2303,5 @@ void pffft_transform_ordered(const PFFFT_Setup *setup, const float *input, float
     pffft_transform_internal(setup, input, output, work, direction, true);
 }
 
-#endif // defined(PFFFT_SIMD_DISABLE)
+#endif /* defined(PFFFT_SIMD_DISABLE) */
+/* NOLINTEND(cppcoreguidelines-pro-bounds-pointer-arithmetic) */

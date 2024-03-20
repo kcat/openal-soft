@@ -51,7 +51,7 @@ struct BsincState {
      * delta coefficients. Starting at phase index 0, each subsequent phase
      * index follows contiguously.
      */
-    const float *filter;
+    al::span<const float> filter;
 };
 
 struct CubicState {

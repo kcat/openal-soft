@@ -63,7 +63,7 @@ auto do_bsinc(const BsincState &istate, const float *vals, const uint frac) noex
     const uint pi{frac >> BsincPhaseDiffBits};
     const float pf{static_cast<float>(frac&BsincPhaseDiffMask) * (1.0f/BsincPhaseDiffOne)};
 
-    const float *fil{istate.filter + m*pi*2_uz};
+    const float *fil{istate.filter.data() + m*pi*2_uz};
     const float *phd{fil + m};
     const float *scd{fil + BSincPhaseCount*2_uz*m};
     const float *spd{scd + m};
@@ -84,7 +84,7 @@ auto do_fastbsinc(const BsincState &istate, const float *vals, const uint frac) 
     const uint pi{frac >> BsincPhaseDiffBits};
     const float pf{static_cast<float>(frac&BsincPhaseDiffMask) * (1.0f/BsincPhaseDiffOne)};
 
-    const float *fil{istate.filter + m*pi*2_uz};
+    const float *fil{istate.filter.data() + m*pi*2_uz};
     const float *phd{fil + m};
 
     /* Apply the phase interpolated filter. */

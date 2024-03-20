@@ -305,7 +305,7 @@ void Resample_<BSincTag,NEONTag>(const InterpState *state, const float *src, uin
     const uint increment, const al::span<float> dst)
 {
     const auto &bsinc = std::get<BsincState>(*state);
-    const float *const filter{bsinc.filter};
+    const float *const filter{bsinc.filter.data()};
     const float32x4_t sf4{vdupq_n_f32(bsinc.sf)};
     const size_t m{bsinc.m};
     ASSUME(m > 0);
@@ -354,7 +354,7 @@ void Resample_<FastBSincTag,NEONTag>(const InterpState *state, const float *src,
     uint frac, const uint increment, const al::span<float> dst)
 {
     const auto &bsinc = std::get<BsincState>(*state);
-    const float *const filter{bsinc.filter};
+    const float *const filter{bsinc.filter.data()};
     const size_t m{bsinc.m};
     ASSUME(m > 0);
     ASSUME(frac < MixerFracOne);

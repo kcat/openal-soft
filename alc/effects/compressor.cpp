@@ -74,6 +74,7 @@ struct CompressorState final : public EffectState {
     float mAttackMult{1.0f};
     float mReleaseMult{1.0f};
     float mEnvFollower{1.0f};
+    alignas(16) FloatBufferLine mGains;
 
 
     void deviceUpdate(const DeviceBase *device, const BufferStorage *buffer) override;
@@ -115,72 +116,62 @@ void CompressorState::update(const ContextBase*, const EffectSlot *slot,
 void CompressorState::process(const size_t samplesToDo,
     const al::span<const FloatBufferLine> samplesIn, const al::span<FloatBufferLine> samplesOut)
 {
-    for(size_t base{0u};base < samplesToDo;)
+    /* Generate the per-sample gains from the signal envelope. */
+    float env{mEnvFollower};
+    if(mEnabled)
     {
-        std::array<float,256> gains;
-        const size_t td{std::min(gains.size(), samplesToDo-base)};
-
-        /* Generate the per-sample gains from the signal envelope. */
-        float env{mEnvFollower};
-        if(mEnabled)
+        for(size_t i{0u};i < samplesToDo;++i)
         {
-            for(size_t i{0u};i < td;++i)
-            {
-                /* Clamp the absolute amplitude to the defined envelope limits,
-                 * then attack or release the envelope to reach it.
-                 */
-                const float amplitude{std::clamp(std::fabs(samplesIn[0][base+i]), AmpEnvelopeMin,
-                    AmpEnvelopeMax)};
-                if(amplitude > env)
-                    env = std::min(env*mAttackMult, amplitude);
-                else if(amplitude < env)
-                    env = std::max(env*mReleaseMult, amplitude);
-
-                /* Apply the reciprocal of the envelope to normalize the volume
-                 * (compress the dynamic range).
-                 */
-                gains[i] = 1.0f / env;
-            }
-        }
-        else
-        {
-            /* Same as above, except the amplitude is forced to 1. This helps
-             * ensure smooth gain changes when the compressor is turned on and
-             * off.
+            /* Clamp the absolute amplitude to the defined envelope limits,
+             * then attack or release the envelope to reach it.
              */
-            for(size_t i{0u};i < td;++i)
-            {
-                const float amplitude{1.0f};
-                if(amplitude > env)
-                    env = std::min(env*mAttackMult, amplitude);
-                else if(amplitude < env)
-                    env = std::max(env*mReleaseMult, amplitude);
+            const float amplitude{std::clamp(std::fabs(samplesIn[0][i]), AmpEnvelopeMin,
+                AmpEnvelopeMax)};
+            if(amplitude > env)
+                env = std::min(env*mAttackMult, amplitude);
+            else if(amplitude < env)
+                env = std::max(env*mReleaseMult, amplitude);
 
-                gains[i] = 1.0f / env;
-            }
+            /* Apply the reciprocal of the envelope to normalize the volume
+             * (compress the dynamic range).
+             */
+            mGains[i] = 1.0f / env;
         }
-        mEnvFollower = env;
-
-        /* Now compress the signal amplitude to output. */
-        auto chan = mChans.cbegin();
-        for(const auto &input : samplesIn)
+    }
+    else
+    {
+        /* Same as above, except the amplitude is forced to 1. This helps
+         * ensure smooth gain changes when the compressor is turned on and off.
+         */
+        for(size_t i{0u};i < samplesToDo;++i)
         {
-            const size_t outidx{chan->mTarget};
-            if(outidx != InvalidChannelIndex)
-            {
-                const auto src = al::span{input}.subspan(base);
-                float *RESTRICT dst{samplesOut[outidx].data() + base};
-                const float gain{chan->mGain};
-                if(!(std::fabs(gain) > GainSilenceThreshold))
-                {
-                    for(size_t i{0u};i < td;i++)
-                        dst[i] += src[i] * gains[i] * gain;
-                }
-            }
-            ++chan;
-        }
+            const float amplitude{1.0f};
+            if(amplitude > env)
+                env = std::min(env*mAttackMult, amplitude);
+            else if(amplitude < env)
+                env = std::max(env*mReleaseMult, amplitude);
 
-        base += td;
+            mGains[i] = 1.0f / env;
+        }
+    }
+    mEnvFollower = env;
+
+    /* Now compress the signal amplitude to output. */
+    auto chan = mChans.cbegin();
+    for(const auto &input : samplesIn)
+    {
+        const size_t outidx{chan->mTarget};
+        if(outidx != InvalidChannelIndex)
+        {
+            const auto dst = al::span{samplesOut[outidx]};
+            const float gain{chan->mGain};
+            if(!(std::fabs(gain) > GainSilenceThreshold))
+            {
+                for(size_t i{0u};i < samplesToDo;++i)
+                    dst[i] += input[i] * mGains[i] * gain;
+            }
+        }
+        ++chan;
     }
 }
 

@@ -89,12 +89,12 @@ struct SegmentedFilter {
          */
         auto fftBuffer2 = std::vector<complex_d>(sFftLength);
         auto fftTmp = al::vector<float,16>(sFftLength);
-        float *filter{mFilterData.data()};
+        auto filter = mFilterData.begin();
         for(size_t s{0};s < sNumSegments;++s)
         {
             for(size_t i{0};i < sSampleLength;++i)
                 fftBuffer2[i] = fftBuffer[sSampleLength*s + i].real() / double{fft_size};
-            std::fill_n(fftBuffer2.data()+sSampleLength, sSampleLength, complex_d{});
+            std::fill_n(fftBuffer2.begin()+sSampleLength, sSampleLength, complex_d{});
             forward_fft(al::span{fftBuffer2});
 
             /* Convert to zdomain data for PFFFT, scaled by the FFT length so
@@ -106,7 +106,7 @@ struct SegmentedFilter {
                 fftTmp[i*2 + 1] = static_cast<float>((i == 0) ? fftBuffer2[sSampleLength].real()
                     : fftBuffer2[i].imag()) / float{sFftLength};
             }
-            mFft.zreorder(fftTmp.data(), filter, PFFFT_BACKWARD);
+            mFft.zreorder(fftTmp.data(), al::to_address(filter), PFFFT_BACKWARD);
             filter += sFftLength;
         }
     }

@@ -25,14 +25,18 @@
 /* This file contains a streaming audio player using a callback buffer. */
 
 
+#include <algorithm>
 #include <atomic>
+#include <cassert>
 #include <chrono>
-#include <cstring>
+#include <cstddef>
 #include <cstdlib>
 #include <cstdio>
+#include <cstring>
 #include <memory>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <thread>
 #include <vector>
 
@@ -42,6 +46,8 @@
 #include "AL/alc.h"
 #include "AL/alext.h"
 
+#include "alspan.h"
+#include "alstring.h"
 #include "common/alhelpers.h"
 
 #include "win_main_utf8.h"
@@ -58,7 +64,7 @@ struct StreamPlayer {
     /* A lockless ring-buffer (supports single-provider, single-consumer
      * operation).
      */
-    std::vector<ALbyte> mBufferData;
+    std::vector<std::byte> mBufferData;
     std::atomic<size_t> mReadPos{0};
     std::atomic<size_t> mWritePos{0};
     size_t mSamplesPerBlock{1};
@@ -115,15 +121,16 @@ struct StreamPlayer {
         }
     }
 
-    bool open(const char *filename)
+    bool open(const std::string &filename)
     {
         close();
 
         /* Open the file and figure out the OpenAL format. */
-        mSndfile = sf_open(filename, SFM_READ, &mSfInfo);
+        mSndfile = sf_open(filename.c_str(), SFM_READ, &mSfInfo);
         if(!mSndfile)
         {
-            fprintf(stderr, "Could not open audio in %s: %s\n", filename, sf_strerror(mSndfile));
+            fprintf(stderr, "Could not open audio in %s: %s\n", filename.c_str(),
+                sf_strerror(mSndfile));
             return false;
         }
 
@@ -280,6 +287,7 @@ struct StreamPlayer {
     { return static_cast<StreamPlayer*>(userptr)->bufferCallback(data, size); }
     ALsizei bufferCallback(void *data, ALsizei size) noexcept
     {
+        auto dst = al::span{static_cast<std::byte*>(data), static_cast<ALuint>(size)};
         /* NOTE: The callback *MUST* be real-time safe! That means no blocking,
          * no allocations or deallocations, no I/O, no page faults, or calls to
          * functions that could do these things (this includes calling to
@@ -290,7 +298,7 @@ struct StreamPlayer {
         ALsizei got{0};
 
         size_t roffset{mReadPos.load(std::memory_order_acquire)};
-        while(got < size)
+        while(!dst.empty())
         {
             /* If the write offset == read offset, there's nothing left in the
              * ring-buffer. Break from the loop and give what has been written.
@@ -304,14 +312,14 @@ struct StreamPlayer {
              * amount to copy given how much is remaining to write.
              */
             size_t todo{((woffset < roffset) ? mBufferData.size() : woffset) - roffset};
-            todo = std::min<size_t>(todo, static_cast<ALuint>(size-got));
+            todo = std::min(todo, dst.size());
 
             /* Copy from the ring buffer to the provided output buffer. Wrap
              * the resulting read offset if it reached the end of the ring-
              * buffer.
              */
-            memcpy(data, &mBufferData[roffset], todo);
-            data = static_cast<ALbyte*>(data) + todo;
+            std::copy_n(mBufferData.cbegin()+ptrdiff_t(roffset), todo, dst.begin());
+            dst = dst.subspan(todo);
             got += static_cast<ALsizei>(todo);
 
             roffset += todo;
@@ -476,29 +484,28 @@ struct StreamPlayer {
     }
 };
 
-} // namespace
-
-int main(int argc, char **argv)
+int main(al::span<std::string_view> args)
 {
     /* A simple RAII container for OpenAL startup and shutdown. */
     struct AudioManager {
-        AudioManager(char ***argv_, int *argc_)
+        AudioManager(al::span<std::string_view> &args_)
         {
-            if(InitAL(argv_, argc_) != 0)
+            if(InitAL(args_) != 0)
                 throw std::runtime_error{"Failed to initialize OpenAL"};
         }
         ~AudioManager() { CloseAL(); }
     };
 
     /* Print out usage if no arguments were specified */
-    if(argc < 2)
+    if(args.size() < 2)
     {
-        fprintf(stderr, "Usage: %s [-device <name>] <filenames...>\n", argv[0]);
+        fprintf(stderr, "Usage: %.*s [-device <name>] <filenames...>\n", al::sizei(args[0]),
+            args[0].data());
         return 1;
     }
 
-    argv++; argc--;
-    AudioManager almgr{&argv, &argc};
+    args = args.subspan(1);
+    AudioManager almgr{args};
 
     if(!alIsExtensionPresent("AL_SOFT_callback_buffer"))
     {
@@ -512,24 +519,23 @@ int main(int argc, char **argv)
     ALCint refresh{25};
     alcGetIntegerv(alcGetContextsDevice(alcGetCurrentContext()), ALC_REFRESH, 1, &refresh);
 
-    std::unique_ptr<StreamPlayer> player{new StreamPlayer{}};
+    auto player = std::make_unique<StreamPlayer>();
 
     /* Play each file listed on the command line */
-    for(int i{0};i < argc;++i)
+    for(size_t i{0};i < args.size();++i)
     {
-        if(!player->open(argv[i]))
+        if(!player->open(std::string{args[i]}))
             continue;
 
         /* Get the name portion, without the path, for display. */
-        const char *namepart{strrchr(argv[i], '/')};
-        if(!namepart) namepart = strrchr(argv[i], '\\');
-        if(namepart)
-            ++namepart;
-        else
-            namepart = argv[i];
+        auto namepart = args[i];
+        if(auto sep = namepart.rfind('/'); sep < namepart.size())
+            namepart = namepart.substr(sep+1);
+        else if(sep = namepart.rfind('\\'); sep < namepart.size())
+            namepart = namepart.substr(sep+1);
 
-        printf("Playing: %s (%s, %dhz)\n", namepart, FormatName(player->mFormat),
-            player->mSfInfo.samplerate);
+        printf("Playing: %.*s (%s, %dhz)\n", al::sizei(namepart), namepart.data(),
+            FormatName(player->mFormat), player->mSfInfo.samplerate);
         fflush(stdout);
 
         if(!player->prepare())
@@ -549,4 +555,14 @@ int main(int argc, char **argv)
     printf("Done.\n");
 
     return 0;
+}
+
+} // namespace
+
+int main(int argc, char *argv[])
+{
+    assert(argc >= 0);
+    auto args = std::vector<std::string_view>(static_cast<unsigned int>(argc));
+    std::copy_n(argv, args.size(), args.begin());
+    return main(al::span{args});
 }

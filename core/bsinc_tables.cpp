@@ -12,6 +12,7 @@
 
 #include "alnumbers.h"
 #include "alnumeric.h"
+#include "alspan.h"
 #include "bsinc_defs.h"
 #include "resampler_limits.h"
 
@@ -279,7 +280,7 @@ struct BSincFilterArray {
     }
 
     [[nodiscard]] constexpr auto getHeader() const noexcept -> const BSincHeader& { return hdr; }
-    [[nodiscard]] constexpr auto getTable() const noexcept -> const float* { return mTable.data(); }
+    [[nodiscard]] constexpr auto getTable() const noexcept { return al::span{mTable}; }
 };
 
 const BSincFilterArray<bsinc12_hdr> bsinc12_filter{};

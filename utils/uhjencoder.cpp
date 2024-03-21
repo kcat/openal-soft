@@ -24,18 +24,21 @@
 
 #include "config.h"
 
+#include <algorithm>
 #include <array>
+#include <cassert>
 #include <cinttypes>
+#include <cmath>
 #include <cstddef>
-#include <cstring>
+#include <cstdio>
 #include <memory>
 #include <string>
-#include <utility>
+#include <string_view>
 #include <vector>
 
 #include "alnumbers.h"
 #include "alspan.h"
-#include "opthelpers.h"
+#include "alstring.h"
 #include "phase_shifter.h"
 #include "vector.h"
 
@@ -80,7 +83,7 @@ struct UhjEncoder {
     alignas(16) std::array<float,BufferLineSize + sFilterDelay*2> mTemp{};
 
     void encode(const al::span<FloatBufferLine> OutSamples,
-        const al::span<FloatBufferLine,4> InSamples, const size_t SamplesToDo);
+        const al::span<const FloatBufferLine,4> InSamples, const size_t SamplesToDo);
 };
 
 const PhaseShifterT<UhjEncoder::sFilterDelay*2> PShift{};
@@ -100,18 +103,18 @@ const PhaseShifterT<UhjEncoder::sFilterDelay*2> PShift{};
  * output, and Q is excluded from 2- and 3-channel output.
  */
 void UhjEncoder::encode(const al::span<FloatBufferLine> OutSamples,
-    const al::span<FloatBufferLine,4> InSamples, const size_t SamplesToDo)
+    const al::span<const FloatBufferLine,4> InSamples, const size_t SamplesToDo)
 {
-    const float *RESTRICT winput{al::assume_aligned<16>(InSamples[0].data())};
-    const float *RESTRICT xinput{al::assume_aligned<16>(InSamples[1].data())};
-    const float *RESTRICT yinput{al::assume_aligned<16>(InSamples[2].data())};
-    const float *RESTRICT zinput{al::assume_aligned<16>(InSamples[3].data())};
+    const auto winput = al::span{InSamples[0]};
+    const auto xinput = al::span{InSamples[1]};
+    const auto yinput = al::span{InSamples[2]};
+    const auto zinput = al::span{InSamples[3]};
 
     /* Combine the previously delayed input signal with the new input. */
-    std::copy_n(winput, SamplesToDo, mW.begin()+sFilterDelay);
-    std::copy_n(xinput, SamplesToDo, mX.begin()+sFilterDelay);
-    std::copy_n(yinput, SamplesToDo, mY.begin()+sFilterDelay);
-    std::copy_n(zinput, SamplesToDo, mZ.begin()+sFilterDelay);
+    std::copy_n(winput.begin(), SamplesToDo, mW.begin()+sFilterDelay);
+    std::copy_n(xinput.begin(), SamplesToDo, mX.begin()+sFilterDelay);
+    std::copy_n(yinput.begin(), SamplesToDo, mY.begin()+sFilterDelay);
+    std::copy_n(zinput.begin(), SamplesToDo, mZ.begin()+sFilterDelay);
 
     /* S = 0.9396926*W + 0.1855740*X */
     for(size_t i{0};i < SamplesToDo;++i)
@@ -119,7 +122,7 @@ void UhjEncoder::encode(const al::span<FloatBufferLine> OutSamples,
 
     /* Precompute j(-0.3420201*W + 0.5098604*X) and store in mD. */
     auto tmpiter = std::copy(mWXHistory1.cbegin(), mWXHistory1.cend(), mTemp.begin());
-    std::transform(winput, winput+SamplesToDo, xinput, tmpiter,
+    std::transform(winput.begin(), winput.begin()+ptrdiff_t(SamplesToDo), xinput.begin(), tmpiter,
         [](const float w, const float x) noexcept -> float
         { return -0.3420201f*w + 0.5098604f*x; });
     std::copy_n(mTemp.cbegin()+SamplesToDo, mWXHistory1.size(), mWXHistory1.begin());
@@ -130,11 +133,11 @@ void UhjEncoder::encode(const al::span<FloatBufferLine> OutSamples,
         mD[i] = mD[i] + 0.6554516f*mY[i];
 
     /* Left = (S + D)/2.0 */
-    float *RESTRICT left{al::assume_aligned<16>(OutSamples[0].data())};
+    auto left = al::span{OutSamples[0]};
     for(size_t i{0};i < SamplesToDo;i++)
         left[i] = (mS[i] + mD[i]) * 0.5f;
     /* Right = (S - D)/2.0 */
-    float *RESTRICT right{al::assume_aligned<16>(OutSamples[1].data())};
+    auto right = al::span{OutSamples[1]};
     for(size_t i{0};i < SamplesToDo;i++)
         right[i] = (mS[i] - mD[i]) * 0.5f;
 
@@ -142,21 +145,21 @@ void UhjEncoder::encode(const al::span<FloatBufferLine> OutSamples,
     {
         /* Precompute j(-0.1432*W + 0.6512*X) and store in mT. */
         tmpiter = std::copy(mWXHistory2.cbegin(), mWXHistory2.cend(), mTemp.begin());
-        std::transform(winput, winput+SamplesToDo, xinput, tmpiter,
-            [](const float w, const float x) noexcept -> float
+        std::transform(winput.begin(), winput.begin()+ptrdiff_t(SamplesToDo), xinput.begin(),
+            tmpiter, [](const float w, const float x) noexcept -> float
             { return -0.1432f*w + 0.6512f*x; });
         std::copy_n(mTemp.cbegin()+SamplesToDo, mWXHistory2.size(), mWXHistory2.begin());
         PShift.process({mT.data(), SamplesToDo}, mTemp.data());
 
         /* T = j(-0.1432*W + 0.6512*X) - 0.7071068*Y */
-        float *RESTRICT t{al::assume_aligned<16>(OutSamples[2].data())};
+        auto t = al::span{OutSamples[2]};
         for(size_t i{0};i < SamplesToDo;i++)
             t[i] = mT[i] - 0.7071068f*mY[i];
     }
     if(OutSamples.size() > 3)
     {
         /* Q = 0.9772*Z */
-        float *RESTRICT q{al::assume_aligned<16>(OutSamples[3].data())};
+        auto q = al::span{OutSamples[3]};
         for(size_t i{0};i < SamplesToDo;i++)
             q[i] = 0.9772f*mZ[i];
     }
@@ -238,39 +241,37 @@ constexpr auto GenCoeffs(double x /*+front*/, double y /*+left*/, double z /*+up
     }};
 }
 
-} // namespace
 
-
-int main(int argc, char **argv)
+int main(al::span<std::string_view> args)
 {
-    if(argc < 2 || std::strcmp(argv[1], "-h") == 0 || std::strcmp(argv[1], "--help") == 0)
+    if(args.size() < 2 || args[1] == "-h" || args[1] == "--help")
     {
-        printf("Usage: %s <infile...>\n\n", argv[0]);
+        printf("Usage: %.*s <infile...>\n\n", al::sizei(args[0]), args[0].data());
         return 1;
     }
 
     uint uhjchans{2};
     size_t num_files{0}, num_encoded{0};
-    for(int fidx{1};fidx < argc;++fidx)
+    for(size_t fidx{1};fidx < args.size();++fidx)
     {
-        if(strcmp(argv[fidx], "-bhj") == 0)
+        if(args[fidx] == "-bhj")
         {
             uhjchans = 2;
             continue;
         }
-        if(strcmp(argv[fidx], "-thj") == 0)
+        if(args[fidx] == "-thj")
         {
             uhjchans = 3;
             continue;
         }
-        if(strcmp(argv[fidx], "-phj") == 0)
+        if(args[fidx] == "-phj")
         {
             uhjchans = 4;
             continue;
         }
         ++num_files;
 
-        std::string outname{argv[fidx]};
+        std::string outname{args[fidx]};
         size_t lastslash{outname.find_last_of('/')};
         if(lastslash != std::string::npos)
             outname.erase(0, lastslash+1);
@@ -280,13 +281,14 @@ int main(int argc, char **argv)
         outname += ".uhj.flac";
 
         SF_INFO ininfo{};
-        SndFilePtr infile{sf_open(argv[fidx], SFM_READ, &ininfo)};
+        SndFilePtr infile{sf_open(std::string{args[fidx]}.c_str(), SFM_READ, &ininfo)};
         if(!infile)
         {
-            fprintf(stderr, "Failed to open %s\n", argv[fidx]);
+            fprintf(stderr, "Failed to open %.*s\n", al::sizei(args[fidx]), args[fidx].data());
             continue;
         }
-        printf("Converting %s to %s...\n", argv[fidx], outname.c_str());
+        printf("Converting %.*s to %s...\n", al::sizei(args[fidx]), args[fidx].data(),
+            outname.c_str());
 
         /* Work out the channel map, preferably using the actual channel map
          * from the file/format, but falling back to assuming WFX order.
@@ -412,11 +414,15 @@ int main(int argc, char **argv)
         }
 
         auto encoder = std::make_unique<UhjEncoder>();
-        auto splbuf = al::vector<FloatBufferLine, 16>(static_cast<uint>(ininfo.channels)+9+size_t{uhjchans});
+        auto splbuf = al::vector<FloatBufferLine, 16>(9);
         auto ambmem = al::span{splbuf}.subspan<0,4>();
         auto encmem = al::span{splbuf}.subspan<4,4>();
         auto srcmem = al::span{splbuf[8]};
-        auto outmem = al::span<float>{splbuf[9].data(), size_t{BufferLineSize}*uhjchans};
+        auto membuf = al::vector<float,16>((static_cast<uint>(ininfo.channels)+size_t{uhjchans})
+            * BufferLineSize);
+        auto outmem = al::span{membuf}.first(size_t{BufferLineSize}*uhjchans);
+        auto inmem = al::span{membuf}.last(size_t{BufferLineSize}
+            * static_cast<uint>(ininfo.channels));
 
         /* A number of initial samples need to be skipped to cut the lead-in
          * from the all-pass filter delay. The same number of samples need to
@@ -428,14 +434,13 @@ int main(int argc, char **argv)
         sf_count_t LeadOut{UhjEncoder::sFilterDelay};
         while(LeadIn > 0 || LeadOut > 0)
         {
-            auto inmem = outmem.data() + outmem.size();
-            auto sgot = sf_readf_float(infile.get(), inmem, BufferLineSize);
+            auto sgot = sf_readf_float(infile.get(), inmem.data(), BufferLineSize);
 
             sgot = std::max<sf_count_t>(sgot, 0);
             if(sgot < BufferLineSize)
             {
                 const sf_count_t remaining{std::min(BufferLineSize - sgot, LeadOut)};
-                std::fill_n(inmem + sgot*ininfo.channels, remaining*ininfo.channels, 0.0f);
+                std::fill_n(inmem.begin() + sgot*ininfo.channels, remaining*ininfo.channels, 0.0f);
                 sgot += remaining;
                 LeadOut -= remaining;
             }
@@ -454,18 +459,15 @@ int main(int argc, char **argv)
                 for(size_t c{0};c < chans;++c)
                 {
                     for(size_t i{0};i < got;++i)
-                        ambmem[c][i] = inmem[i*static_cast<uint>(ininfo.channels)] * scale;
-                    ++inmem;
+                        ambmem[c][i] = inmem[i*static_cast<uint>(ininfo.channels) + c] * scale;
                 }
             }
-            else for(const int chanid : chanmap)
+            else for(size_t idx{0};idx < chanmap.size();++idx)
             {
+                const int chanid{chanmap[idx]};
                 /* Skip LFE. Or mix directly into W? Or W+X? */
                 if(chanid == SF_CHANNEL_MAP_LFE)
-                {
-                    ++inmem;
                     continue;
-                }
 
                 const auto spkr = std::find_if(spkrs.cbegin(), spkrs.cend(),
                     [chanid](const SpeakerPos &pos){return pos.mChannelID == chanid;});
@@ -476,8 +478,7 @@ int main(int argc, char **argv)
                 }
 
                 for(size_t i{0};i < got;++i)
-                    srcmem[i] = inmem[i * static_cast<uint>(ininfo.channels)];
-                ++inmem;
+                    srcmem[i] = inmem[i*static_cast<uint>(ininfo.channels) + idx];
 
                 static constexpr auto Deg2Rad = al::numbers::pi / 180.0;
                 const auto coeffs = GenCoeffs(
@@ -525,4 +526,14 @@ int main(int argc, char **argv)
         printf("Encoded %s%zu file%s\n", (num_encoded > 1) ? "all " : "", num_encoded,
             (num_encoded == 1) ? "" : "s");
     return 0;
+}
+
+} /* namespace */
+
+int main(int argc, char *argv[])
+{
+    assert(argc >= 0);
+    auto args = std::vector<std::string_view>(static_cast<unsigned int>(argc));
+    std::copy_n(argv, args.size(), args.begin());
+    return main(al::span{args});
 }

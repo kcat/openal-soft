@@ -189,7 +189,7 @@ force_inline v4sf vswaphl(v4sf a, v4sf b) noexcept
 /*
  * ARM NEON support macros
  */
-#elif defined(__ARM_NEON) || defined(__aarch64__) || defined(__arm64)
+#elif defined(__ARM_NEON) || defined(__aarch64__) || defined(__arm64) || defined(_M_ARM64)
 
 #include <arm_neon.h>
 using v4sf = float32x4_t;

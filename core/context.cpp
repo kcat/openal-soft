@@ -27,9 +27,7 @@ ContextBase::ContextBase(DeviceBase *device) : mDevice{device}
 
 ContextBase::~ContextBase()
 {
-    if(auto curarray = mActiveAuxSlots.exchange(nullptr, std::memory_order_relaxed))
-        std::destroy_n(curarray->end(), curarray->size());
-
+    mActiveAuxSlots.store(nullptr, std::memory_order_relaxed);
     mVoices.store(nullptr, std::memory_order_relaxed);
 
     if(mAsyncEvents)

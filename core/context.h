@@ -130,6 +130,10 @@ struct ContextBase {
 
 
     using EffectSlotArray = al::FlexArray<EffectSlot*>;
+    /* This array is split in half. The front half is the list of activated
+     * effect slots as set by the app, and the back half is the same list but
+     * sorted to ensure later effect slots are fed by earlier ones.
+     */
     al::atomic_unique_ptr<EffectSlotArray> mActiveAuxSlots;
 
     std::thread mEventThread;

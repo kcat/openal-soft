@@ -1929,7 +1929,7 @@ void ProcessVoiceChanges(ContextBase *ctx)
 }
 
 void ProcessParamUpdates(ContextBase *ctx, const al::span<EffectSlot*> slots,
-    const al::span<Voice*> voices)
+    const al::span<EffectSlot*> sorted_slots, const al::span<Voice*> voices)
 {
     ProcessVoiceChanges(ctx);
 
@@ -1937,9 +1937,9 @@ void ProcessParamUpdates(ContextBase *ctx, const al::span<EffectSlot*> slots,
     if(!ctx->mHoldUpdates.load(std::memory_order_acquire)) LIKELY
     {
         bool force{CalcContextParams(ctx)};
-        auto sorted_slots = al::to_address(slots.end());
+        auto sorted_slot_base = al::to_address(sorted_slots.begin());
         for(EffectSlot *slot : slots)
-            force |= CalcEffectSlotParams(slot, sorted_slots, ctx);
+            force |= CalcEffectSlotParams(slot, sorted_slot_base, ctx);
 
         for(Voice *voice : voices)
         {
@@ -1961,11 +1961,13 @@ void ProcessContexts(DeviceBase *device, const uint SamplesToDo)
 
     for(ContextBase *ctx : *device->mContexts.load(std::memory_order_acquire))
     {
-        auto auxslots = al::span{*ctx->mActiveAuxSlots.load(std::memory_order_acquire)};
+        const auto auxslotspan = al::span{*ctx->mActiveAuxSlots.load(std::memory_order_acquire)};
+        const auto auxslots = auxslotspan.first(auxslotspan.size()>>1);
+        const auto sorted_slots = auxslotspan.last(auxslotspan.size()>>1);
         const al::span<Voice*> voices{ctx->getVoicesSpanAcquired()};
 
         /* Process pending property updates for objects on the context. */
-        ProcessParamUpdates(ctx, auxslots, voices);
+        ProcessParamUpdates(ctx, auxslots, sorted_slots, voices);
 
         /* Clear auxiliary effect slot mixing buffers. */
         for(EffectSlot *slot : auxslots)
@@ -1986,10 +1988,9 @@ void ProcessContexts(DeviceBase *device, const uint SamplesToDo)
         if(!auxslots.empty())
         {
             /* Sort the slots into extra storage, so that effect slots come
-             * before their effect slot target (or their targets' target).
+             * before their effect slot target (or their targets' target). Skip
+             * sorting if it has already been done.
              */
-            const al::span sorted_slots{al::to_address(auxslots.end()), auxslots.size()};
-            /* Skip sorting if it has already been done. */
             if(!sorted_slots[0])
             {
                 /* First, copy the slots to the sorted list, then partition the

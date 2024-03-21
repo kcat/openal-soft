@@ -1682,7 +1682,7 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const al::span<const int> attrList
         }
 
         if(EffectSlotArray *curarray{context->mActiveAuxSlots.load(std::memory_order_relaxed)})
-            std::fill_n(curarray->end(), curarray->size(), nullptr);
+            std::fill(curarray->begin()+ptrdiff_t(curarray->size()>>1), curarray->end(), nullptr);
         for(auto &sublist : context->mEffectSlotList)
         {
             uint64_t usemask{~sublist.FreeMask};

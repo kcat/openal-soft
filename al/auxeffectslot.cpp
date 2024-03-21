@@ -145,42 +145,44 @@ void AddActiveEffectSlots(const al::span<ALeffectslot*> auxslots, ALCcontext *co
 {
     if(auxslots.empty()) return;
     EffectSlotArray *curarray{context->mActiveAuxSlots.load(std::memory_order_acquire)};
-    size_t newcount{curarray->size() + auxslots.size()};
+    if((curarray->size()>>1) > std::numeric_limits<size_t>::max()-auxslots.size())
+        throw std::runtime_error{"Too many active effect slots"};
 
-    /* Insert the new effect slots into the head of the array, followed by the
-     * existing ones.
+    size_t newcount{(curarray->size()>>1) + auxslots.size()};
+    if(newcount > std::numeric_limits<size_t>::max()>>1)
+        throw std::runtime_error{"Too many active effect slots"};
+
+    /* Insert the new effect slots into the head of the new array, followed by
+     * the existing ones.
      */
-    auto newarray = EffectSlot::CreatePtrArray(newcount);
-    auto slotiter = std::transform(auxslots.begin(), auxslots.end(), newarray->begin(),
+    auto newarray = EffectSlot::CreatePtrArray(newcount<<1);
+    auto new_end = std::transform(auxslots.begin(), auxslots.end(), newarray->begin(),
         std::mem_fn(&ALeffectslot::mSlot));
-    std::copy(curarray->begin(), curarray->end(), slotiter);
+    new_end = std::copy_n(curarray->begin(), curarray->size()>>1, new_end);
 
     /* Remove any duplicates (first instance of each will be kept). */
-    auto last = newarray->end();
     for(auto start=newarray->begin()+1;;)
     {
-        last = std::remove(start, last, *(start-1));
-        if(start == last) break;
+        new_end = std::remove(start, new_end, *(start-1));
+        if(start == new_end) break;
         ++start;
     }
-    newcount = static_cast<size_t>(std::distance(newarray->begin(), last));
+    newcount = static_cast<size_t>(std::distance(newarray->begin(), new_end));
 
     /* Reallocate newarray if the new size ended up smaller from duplicate
      * removal.
      */
-    if(newcount < newarray->size()) UNLIKELY
+    if(newcount < newarray->size()>>1) UNLIKELY
     {
         auto oldarray = std::move(newarray);
-        newarray = EffectSlot::CreatePtrArray(newcount);
-        std::copy_n(oldarray->begin(), newcount, newarray->begin());
+        newarray = EffectSlot::CreatePtrArray(newcount<<1);
+        new_end = std::copy_n(oldarray->begin(), newcount, newarray->begin());
     }
-    std::uninitialized_fill_n(newarray->end(), newcount, nullptr);
+    std::fill(new_end, newarray->end(), nullptr);
 
     auto oldarray = context->mActiveAuxSlots.exchange(std::move(newarray),
         std::memory_order_acq_rel);
     std::ignore = context->mDevice->waitForMix();
-
-    std::destroy_n(oldarray->end(), oldarray->size());
 }
 
 void RemoveActiveEffectSlots(const al::span<ALeffectslot*> auxslots, ALCcontext *context)
@@ -193,7 +195,7 @@ void RemoveActiveEffectSlots(const al::span<ALeffectslot*> auxslots, ALCcontext 
      */
     auto newarray = EffectSlot::CreatePtrArray(curarray->size());
 
-    auto new_end = std::copy(curarray->begin(), curarray->end(), newarray->begin());
+    auto new_end = std::copy_n(curarray->begin(), curarray->size()>>1, newarray->begin());
     /* Remove elements from newarray that match any ID in slotids. */
     for(const ALeffectslot *auxslot : auxslots)
     {
@@ -204,19 +206,17 @@ void RemoveActiveEffectSlots(const al::span<ALeffectslot*> auxslots, ALCcontext 
 
     /* Reallocate with the new size. */
     auto newsize = static_cast<size_t>(std::distance(newarray->begin(), new_end));
-    if(newsize != newarray->size()) LIKELY
+    if(newsize < newarray->size()>>1) LIKELY
     {
         auto oldarray = std::move(newarray);
-        newarray = EffectSlot::CreatePtrArray(newsize);
-        std::copy_n(oldarray->begin(), newsize, newarray->begin());
+        newarray = EffectSlot::CreatePtrArray(newsize<<1);
+        new_end = std::copy_n(oldarray->begin(), newsize, newarray->begin());
     }
-    std::uninitialized_fill_n(newarray->end(), newsize, nullptr);
+    std::fill(new_end, newarray->end(), nullptr);
 
     auto oldarray = context->mActiveAuxSlots.exchange(std::move(newarray),
         std::memory_order_acq_rel);
     std::ignore = context->mDevice->waitForMix();
-
-    std::destroy_n(curarray->end(), curarray->size());
 }
 
 

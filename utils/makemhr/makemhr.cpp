@@ -85,12 +85,6 @@
 #include <utility>
 #include <vector>
 
-#ifdef HAVE_GETOPT
-#include <unistd.h>
-#else
-#include "../getopt.h"
-#endif
-
 #include "alcomplex.h"
 #include "alnumbers.h"
 #include "alnumeric.h"

@@ -599,8 +599,6 @@ if(NOT WIN32)
     endif()
 endif()
 
-check_symbol_exists(getopt unistd.h HAVE_GETOPT)
-
 
 # Common sources used by both the OpenAL implementation library, the OpenAL
 # router, and certain tools and examples.
@@ -1661,9 +1659,6 @@ if(ALSOFT_UTILS)
             utils/makemhr/loadsofa.h
             utils/makemhr/makemhr.cpp
             utils/makemhr/makemhr.h)
-        if(NOT HAVE_GETOPT)
-            set(MAKEMHR_SRCS  ${MAKEMHR_SRCS} utils/getopt.c utils/getopt.h)
-        endif()
         add_executable(makemhr ${MAKEMHR_SRCS})
         target_compile_definitions(makemhr PRIVATE ${CPP_DEFS})
         target_include_directories(makemhr

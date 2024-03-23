@@ -607,7 +607,7 @@ void LoadBufferQueue(VoiceBufferItem *buffer, VoiceBufferItem *bufferLoopItem,
 
 
 void DoHrtfMix(const al::span<const float> samples, DirectParams &parms, const float TargetGain,
-    const size_t Counter, uint OutPos, const bool IsPlaying, DeviceBase *Device)
+    const size_t Counter, size_t OutPos, const bool IsPlaying, DeviceBase *Device)
 {
     const uint IrSize{Device->mIrSize};
     const auto HrtfSamples = al::span{Device->ExtraSampleData};

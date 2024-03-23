@@ -23,7 +23,13 @@
 
 #include <cstdio>
 #include <memory>
+#include <string>
+#include <string_view>
 #include <vector>
+
+#include "alnumeric.h"
+#include "alspan.h"
+#include "alstring.h"
 
 #include "sofa-support.h"
 
@@ -31,9 +37,11 @@
 
 #include "win_main_utf8.h"
 
+namespace {
+
 using uint = unsigned int;
 
-static void PrintSofaAttributes(const char *prefix, struct MYSOFA_ATTRIBUTE *attribute)
+void PrintSofaAttributes(const char *prefix, MYSOFA_ATTRIBUTE *attribute)
 {
     while(attribute)
     {
@@ -42,11 +50,17 @@ static void PrintSofaAttributes(const char *prefix, struct MYSOFA_ATTRIBUTE *att
     }
 }
 
-static void PrintSofaArray(const char *prefix, struct MYSOFA_ARRAY *array)
+void PrintSofaArray(const char *prefix, MYSOFA_ARRAY *array, bool showValues=true)
 {
     PrintSofaAttributes(prefix, array->attributes);
-    for(uint i{0u};i < array->elements;i++)
-        fprintf(stdout, "%s[%u]: %.6f\n", prefix, i, array->values[i]);
+    if(showValues)
+    {
+        const auto values = al::span{array->values, array->elements};
+        for(size_t i{0u};i < values.size();++i)
+            fprintf(stdout, "%s[%zu]: %.6f\n", prefix, i, values[i]);
+    }
+    else
+        fprintf(stdout, "%s[...]: <%u values suppressed>\n", prefix, array->elements);
 }
 
 /* Attempts to produce a compatible layout.  Most data sets tend to be
@@ -55,11 +69,11 @@ static void PrintSofaArray(const char *prefix, struct MYSOFA_ARRAY *array)
  * possible.  Those sets that contain purely random measurements or use
  * different major axes will fail.
  */
-static void PrintCompatibleLayout(const uint m, const float *xyzs)
+void PrintCompatibleLayout(const al::span<const float> xyzs)
 {
     fputc('\n', stdout);
 
-    auto fds = GetCompatibleLayout(m, xyzs);
+    auto fds = GetCompatibleLayout(xyzs);
     if(fds.empty())
     {
         fprintf(stdout, "No compatible field layouts in SOFA file.\n");
@@ -73,8 +87,8 @@ static void PrintCompatibleLayout(const uint m, const float *xyzs)
             used_elems += fds[fi].mAzCounts[ei];
     }
 
-    fprintf(stdout, "Compatible Layout (%u of %u measurements):\n\ndistance = %.3f", used_elems, m,
-        fds[0].mDistance);
+    fprintf(stdout, "Compatible Layout (%u of %zu measurements):\n\ndistance = %.3f", used_elems,
+        xyzs.size()/3, fds[0].mDistance);
     for(size_t fi{1u};fi < fds.size();fi++)
         fprintf(stdout, ", %.3f", fds[fi].mDistance);
 
@@ -91,13 +105,13 @@ static void PrintCompatibleLayout(const uint m, const float *xyzs)
 }
 
 // Load and inspect the given SOFA file.
-static void SofaInfo(const char *filename)
+void SofaInfo(const std::string filename)
 {
     int err;
-    MySofaHrtfPtr sofa{mysofa_load(filename, &err)};
+    MySofaHrtfPtr sofa{mysofa_load(filename.c_str(), &err)};
     if(!sofa)
     {
-        fprintf(stdout, "Error: Could not load source file '%s' (%s).\n", filename,
+        fprintf(stdout, "Error: Could not load source file '%s' (%s).\n", filename.c_str(),
             SofaErrorStr(err));
         return;
     }
@@ -105,7 +119,7 @@ static void SofaInfo(const char *filename)
     /* NOTE: Some valid SOFA files are failing this check. */
     err = mysofa_check(sofa.get());
     if(err != MYSOFA_OK)
-        fprintf(stdout, "Warning: Supposedly malformed source file '%s' (%s).\n", filename,
+        fprintf(stdout, "Warning: Supposedly malformed source file '%s' (%s).\n", filename.c_str(),
             SofaErrorStr(err));
 
     mysofa_tocartesian(sofa.get());
@@ -119,20 +133,30 @@ static void SofaInfo(const char *filename)
 
     PrintSofaArray("SampleRate", &sofa->DataSamplingRate);
     PrintSofaArray("DataDelay", &sofa->DataDelay);
+    PrintSofaArray("SourcePosition", &sofa->SourcePosition, false);
 
-    PrintCompatibleLayout(sofa->M, sofa->SourcePosition.values);
+    PrintCompatibleLayout(al::span{sofa->SourcePosition.values, sofa->M*3_uz});
 }
 
-int main(int argc, char *argv[])
+int main(al::span<std::string_view> args)
 {
-    if(argc != 2)
+    if(args.size() != 2)
     {
-        fprintf(stdout, "Usage: %s <sofa-file>\n", argv[0]);
+        fprintf(stdout, "Usage: %.*s <sofa-file>\n", al::sizei(args[0]), args[0].data());
         return 0;
     }
 
-    SofaInfo(argv[1]);
+    SofaInfo(std::string{args[1]});
 
     return 0;
 }
 
+} /* namespace */
+
+int main(int argc, char *argv[])
+{
+    assert(argc >= 0);
+    auto args = std::vector<std::string_view>(static_cast<unsigned int>(argc));
+    std::copy_n(argv, args.size(), args.begin());
+    return main(al::span{args});
+}

@@ -178,10 +178,10 @@ const char *SofaErrorStr(int err)
     return "Unknown";
 }
 
-std::vector<SofaField> GetCompatibleLayout(const size_t m, const float *xyzs)
+auto GetCompatibleLayout(const al::span<const float> xyzs) -> std::vector<SofaField>
 {
-    auto aers = std::vector<double3>(m, double3{});
-    for(size_t i{0u};i < m;++i)
+    auto aers = std::vector<double3>(xyzs.size()/3, double3{});
+    for(size_t i{0u};i < aers.size();++i)
     {
         std::array vals{xyzs[i*3], xyzs[i*3 + 1], xyzs[i*3 + 2]};
         mysofa_c2s(vals.data());

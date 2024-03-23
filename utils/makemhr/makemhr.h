@@ -1,11 +1,13 @@
 #ifndef MAKEMHR_H
 #define MAKEMHR_H
 
+#include <algorithm>
 #include <array>
 #include <complex>
 #include <vector>
 
 #include "alcomplex.h"
+#include "alspan.h"
 #include "polyphase_resampler.h"
 
 
@@ -78,7 +80,7 @@ struct HrirAzT {
     double mAzimuth{0.0};
     uint mIndex{0u};
     std::array<double,2> mDelays{};
-    std::array<double*,2> mIrs{};
+    std::array<al::span<double>,2> mIrs{};
 };
 
 struct HrirEvT {
@@ -118,19 +120,31 @@ struct HrirDataT {
 bool PrepareHrirData(const al::span<const double> distances,
     const al::span<const uint,MAX_FD_COUNT> evCounts,
     const al::span<const std::array<uint,MAX_EV_COUNT>,MAX_FD_COUNT> azCounts, HrirDataT *hData);
-void MagnitudeResponse(const uint n, const complex_d *in, double *out);
+
+/* Calculate the magnitude response of the given input.  This is used in
+ * place of phase decomposition, since the phase residuals are discarded for
+ * minimum phase reconstruction.  The mirrored half of the response is also
+ * discarded.
+ */
+inline void MagnitudeResponse(const al::span<const complex_d> in, const al::span<double> out)
+{
+    static constexpr double Epsilon{1e-9};
+    for(size_t i{0};i < out.size();++i)
+        out[i] = std::max(std::abs(in[i]), Epsilon);
+}
 
 // Performs a forward FFT.
 inline void FftForward(const uint n, complex_d *inout)
 { forward_fft(al::span{inout, n}); }
 
-// Performs an inverse FFT.
+// Performs an inverse FFT, scaling the result by the number of elements.
 inline void FftInverse(const uint n, complex_d *inout)
 {
-    inverse_fft(al::span{inout, n});
-    double f{1.0 / n};
-    for(uint i{0};i < n;i++)
-        inout[i] *= f;
+    const auto values = al::span{inout, n};
+    inverse_fft(values);
+
+    const double f{1.0 / n};
+    std::for_each(values.begin(), values.end(), [f](complex_d &value) { value *= f; });
 }
 
 // Performs linear interpolation.

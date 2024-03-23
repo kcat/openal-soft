@@ -169,29 +169,28 @@ enum ChannelIndex : uint {
  * pattern string are replaced with the replacement string.  The result is
  * truncated if necessary.
  */
-std::string StrSubst(al::span<const char> in, const al::span<const char> pat,
-    const al::span<const char> rep)
+auto StrSubst(std::string_view in, const std::string_view pat, const std::string_view rep) -> std::string
 {
     std::string ret;
     ret.reserve(in.size() + pat.size());
 
     while(in.size() >= pat.size())
     {
-        if(al::strncasecmp(in.data(), pat.data(), pat.size()) == 0)
+        if(al::starts_with(in, pat))
         {
-            in = in.subspan(pat.size());
-            ret.append(rep.data(), rep.size());
+            in = in.substr(pat.size());
+            ret += rep;
         }
         else
         {
             size_t endpos{1};
-            while(endpos < in.size() && in[endpos] != pat.front())
+            while(endpos < in.size() && std::toupper(in[endpos]) != std::toupper(pat.front()))
                 ++endpos;
-            ret.append(in.data(), endpos);
-            in = in.subspan(endpos);
+            ret += in.substr(0, endpos);
+            in = in.substr(endpos);
         }
     }
-    ret.append(in.data(), in.size());
+    ret += in;
 
     return ret;
 }
@@ -215,73 +214,44 @@ inline uint dither_rng(uint *seed)
 
 // Performs a triangular probability density function dither. The input samples
 // should be normalized (-1 to +1).
-void TpdfDither(double *RESTRICT out, const double *RESTRICT in, const double scale,
-    const uint count, const uint step, uint *seed)
+void TpdfDither(const al::span<double> out, const al::span<const double> in, const double scale,
+    const size_t channel, const size_t step, uint *seed)
 {
     static constexpr double PRNG_SCALE = 1.0 / std::numeric_limits<uint>::max();
+    assert(channel < step);
 
-    for(uint i{0};i < count;i++)
+    for(size_t i{0};i < in.size();++i)
     {
         uint prn0{dither_rng(seed)};
         uint prn1{dither_rng(seed)};
-        *out = std::round(*(in++)*scale + (prn0*PRNG_SCALE - prn1*PRNG_SCALE));
-        out += step;
+        out[i*step + channel] = std::round(in[i]*scale + (prn0*PRNG_SCALE - prn1*PRNG_SCALE));
     }
 }
-
-
-/* Calculate the complex helical sequence (or discrete-time analytical signal)
- * of the given input using the Hilbert transform. Given the natural logarithm
- * of a signal's magnitude response, the imaginary components can be used as
- * the angles for minimum-phase reconstruction.
- */
-inline void Hilbert(const uint n, complex_d *inout)
-{ complex_hilbert({inout, n}); }
-
-} // namespace
-
-/* Calculate the magnitude response of the given input.  This is used in
- * place of phase decomposition, since the phase residuals are discarded for
- * minimum phase reconstruction.  The mirrored half of the response is also
- * discarded.
- */
-void MagnitudeResponse(const uint n, const complex_d *in, double *out)
-{
-    const uint m = 1 + (n / 2);
-    uint i;
-    for(i = 0;i < m;i++)
-        out[i] = std::max(std::abs(in[i]), Epsilon);
-}
-
-namespace {
 
 /* Apply a range limit (in dB) to the given magnitude response.  This is used
  * to adjust the effects of the diffuse-field average on the equalization
  * process.
  */
-void LimitMagnitudeResponse(const uint n, const uint m, const double limit, const double *in, double *out)
+void LimitMagnitudeResponse(const uint n, const uint m, const double limit,
+    const al::span<double> inout)
 {
-    double halfLim;
-    uint i, lower, upper;
-    double ave;
-
-    halfLim = limit / 2.0;
+    const double halfLim{limit / 2.0};
     // Convert the response to dB.
-    for(i = 0;i < m;i++)
-        out[i] = 20.0 * std::log10(in[i]);
+    for(uint i{0};i < m;++i)
+        inout[i] = 20.0 * std::log10(inout[i]);
     // Use six octaves to calculate the average magnitude of the signal.
-    lower = (static_cast<uint>(std::ceil(n / std::pow(2.0, 8.0)))) - 1;
-    upper = (static_cast<uint>(std::floor(n / std::pow(2.0, 2.0)))) - 1;
-    ave = 0.0;
-    for(i = lower;i <= upper;i++)
-        ave += out[i];
+    const auto lower = (static_cast<uint>(std::ceil(n / std::pow(2.0, 8.0)))) - 1;
+    const auto upper = (static_cast<uint>(std::floor(n / std::pow(2.0, 2.0)))) - 1;
+    double ave{0.0};
+    for(uint i{lower};i <= upper;++i)
+        ave += inout[i];
     ave /= upper - lower + 1;
     // Keep the response within range of the average magnitude.
-    for(i = 0;i < m;i++)
-        out[i] = Clamp(out[i], ave - halfLim, ave + halfLim);
+    for(uint i{0};i < m;++i)
+        inout[i] = Clamp(inout[i], ave - halfLim, ave + halfLim);
     // Convert the response back to linear magnitude.
-    for(i = 0;i < m;i++)
-        out[i] = std::pow(10.0, out[i] / 20.0);
+    for(uint i{0};i < m;++i)
+        inout[i] = std::pow(10.0, inout[i] / 20.0);
 }
 
 /* Reconstructs the minimum-phase component for the given magnitude response
@@ -289,22 +259,23 @@ void LimitMagnitudeResponse(const uint n, const uint m, const double limit, cons
  * residuals (which were discarded).  The mirrored half of the response is
  * reconstructed.
  */
-void MinimumPhase(const uint n, double *mags, complex_d *out)
+void MinimumPhase(const al::span<double> mags, const al::span<complex_d> out)
 {
-    const uint m{(n/2) + 1};
+    assert(mags.size() == out.size());
+    const size_t m{(mags.size()/2) + 1};
 
-    uint i;
+    size_t i;
     for(i = 0;i < m;i++)
         out[i] = std::log(mags[i]);
-    for(;i < n;i++)
+    for(;i < mags.size();++i)
     {
-        mags[i] = mags[n - i];
-        out[i] = out[n - i];
+        mags[i] = mags[mags.size() - i];
+        out[i] = out[mags.size() - i];
     }
-    Hilbert(n, out);
+    complex_hilbert(out);
     // Remove any DC offset the filter has.
     mags[0] = Epsilon;
-    for(i = 0;i < n;i++)
+    for(i = 0;i < mags.size();++i)
         out[i] = std::polar(mags[i], out[i].imag());
 }
 
@@ -314,11 +285,12 @@ void MinimumPhase(const uint n, double *mags, complex_d *out)
  ***************************/
 
 // Write an ASCII string to a file.
-int WriteAscii(const std::string_view out, FILE *fp, const char *filename)
+auto WriteAscii(const std::string_view out, std::ostream &ostream, const std::string_view filename) -> int
 {
-    if(fwrite(out.data(), 1, out.size(), fp) != out.size())
+    if(!ostream.write(out.data(), std::streamsize(out.size())) || ostream.bad())
     {
-        fprintf(stderr, "\nError: Bad write to file '%s'.\n", filename);
+        fprintf(stderr, "\nError: Bad write to file '%.*s'.\n", al::sizei(filename),
+            filename.data());
         return 0;
     }
     return 1;
@@ -326,54 +298,57 @@ int WriteAscii(const std::string_view out, FILE *fp, const char *filename)
 
 // Write a binary value of the given byte order and byte size to a file,
 // loading it from a 32-bit unsigned integer.
-int WriteBin4(const uint bytes, const uint32_t in, FILE *fp, const char *filename)
+auto WriteBin4(const uint bytes, const uint32_t in, std::ostream &ostream,
+    const std::string_view filename) -> int
 {
-    std::array<uint8_t,4> out{};
+    std::array<char,4> out{};
     for(uint i{0};i < bytes;i++)
-        out[i] = (in>>(i*8)) & 0x000000FF;
+        out[i] = static_cast<char>((in>>(i*8)) & 0x000000FF);
 
-    if(fwrite(out.data(), 1, bytes, fp) != bytes)
+    if(!ostream.write(out.data(), std::streamsize(bytes)) || ostream.bad())
     {
-        fprintf(stderr, "\nError: Bad write to file '%s'.\n", filename);
+        fprintf(stderr, "\nError: Bad write to file '%.*s'.\n", al::sizei(filename),
+            filename.data());
         return 0;
     }
     return 1;
 }
 
 // Store the OpenAL Soft HRTF data set.
-bool StoreMhr(const HrirDataT *hData, const char *filename)
+auto StoreMhr(const HrirDataT *hData, const std::string_view filename) -> bool
 {
     const uint channels{(hData->mChannelType == CT_STEREO) ? 2u : 1u};
     const uint n{hData->mIrPoints};
     uint dither_seed{22222};
 
-    FilePtr fp{fopen(filename, "wb")};
-    if(!fp)
+    std::ofstream ostream{std::filesystem::u8path(filename)};
+    if(!ostream.is_open())
     {
-        fprintf(stderr, "\nError: Could not open MHR file '%s'.\n", filename);
+        fprintf(stderr, "\nError: Could not open MHR file '%.*s'.\n", al::sizei(filename),
+            filename.data());
         return false;
     }
-    if(!WriteAscii(GetMHRMarker(), fp.get(), filename))
+    if(!WriteAscii(GetMHRMarker(), ostream, filename))
         return false;
-    if(!WriteBin4(4, hData->mIrRate, fp.get(), filename))
+    if(!WriteBin4(4, hData->mIrRate, ostream, filename))
         return false;
-    if(!WriteBin4(1, static_cast<uint32_t>(hData->mChannelType), fp.get(), filename))
+    if(!WriteBin4(1, static_cast<uint32_t>(hData->mChannelType), ostream, filename))
         return false;
-    if(!WriteBin4(1, hData->mIrPoints, fp.get(), filename))
+    if(!WriteBin4(1, hData->mIrPoints, ostream, filename))
         return false;
-    if(!WriteBin4(1, static_cast<uint>(hData->mFds.size()), fp.get(), filename))
+    if(!WriteBin4(1, static_cast<uint>(hData->mFds.size()), ostream, filename))
         return false;
     for(size_t fi{hData->mFds.size()-1};fi < hData->mFds.size();--fi)
     {
         auto fdist = static_cast<uint32_t>(std::round(1000.0 * hData->mFds[fi].mDistance));
-        if(!WriteBin4(2, fdist, fp.get(), filename))
+        if(!WriteBin4(2, fdist, ostream, filename))
             return false;
-        if(!WriteBin4(1, static_cast<uint32_t>(hData->mFds[fi].mEvs.size()), fp.get(), filename))
+        if(!WriteBin4(1, static_cast<uint32_t>(hData->mFds[fi].mEvs.size()), ostream, filename))
             return false;
         for(size_t ei{0};ei < hData->mFds[fi].mEvs.size();++ei)
         {
             const auto &elev = hData->mFds[fi].mEvs[ei];
-            if(!WriteBin4(1, static_cast<uint32_t>(elev.mAzs.size()), fp.get(), filename))
+            if(!WriteBin4(1, static_cast<uint32_t>(elev.mAzs.size()), ostream, filename))
                 return false;
         }
     }
@@ -389,14 +364,14 @@ bool StoreMhr(const HrirDataT *hData, const char *filename)
             {
                 std::array<double,MaxTruncSize*2_uz> out{};
 
-                TpdfDither(out.data(), azd.mIrs[0], scale, n, channels, &dither_seed);
+                TpdfDither(out, azd.mIrs[0].first(n), scale, 0, channels, &dither_seed);
                 if(hData->mChannelType == CT_STEREO)
-                    TpdfDither(out.data()+1, azd.mIrs[1], scale, n, channels, &dither_seed);
+                    TpdfDither(out, azd.mIrs[1].first(n), scale, 1, channels, &dither_seed);
                 const size_t numsamples{size_t{channels} * n};
                 for(size_t i{0};i < numsamples;i++)
                 {
                     const auto v = static_cast<int>(Clamp(out[i], -scale-1.0, scale));
-                    if(!WriteBin4(bps, static_cast<uint32_t>(v), fp.get(), filename))
+                    if(!WriteBin4(bps, static_cast<uint32_t>(v), ostream, filename))
                         return false;
                 }
             }
@@ -411,11 +386,11 @@ bool StoreMhr(const HrirDataT *hData, const char *filename)
             for(const auto &azd : evd.mAzs)
             {
                 auto v = static_cast<uint>(std::round(azd.mDelays[0]*DelayPrecScale));
-                if(!WriteBin4(1, v, fp.get(), filename)) return false;
+                if(!WriteBin4(1, v, ostream, filename)) return false;
                 if(hData->mChannelType == CT_STEREO)
                 {
                     v = static_cast<uint>(std::round(azd.mDelays[1]*DelayPrecScale));
-                    if(!WriteBin4(1, v, fp.get(), filename)) return false;
+                    if(!WriteBin4(1, v, ostream, filename)) return false;
                 }
             }
         }
@@ -476,7 +451,7 @@ void BalanceFieldMagnitudes(const HrirDataT *hData, const uint channels, const u
  * on its coverage volume.  All volumes are centered at the spherical HRIR
  * coordinates and measured by extruded solid angle.
  */
-void CalculateDfWeights(const HrirDataT *hData, double *weights)
+void CalculateDfWeights(const HrirDataT *hData, const al::span<double> weights)
 {
     double sum, innerRa, outerRa, evs, ev, upperEv, lowerEv;
     double solidAngle, solidVolume;
@@ -533,7 +508,7 @@ void CalculateDfWeights(const HrirDataT *hData, double *weights)
  * specified magnitude range (in positive dB; 0.0 to skip).
  */
 void CalculateDiffuseFieldAverage(const HrirDataT *hData, const uint channels, const uint m,
-    const bool weighted, const double limit, double *dfa)
+    const bool weighted, const double limit, const al::span<double> dfa)
 {
     std::vector<double> weights(hData->mFds.size() * MAX_EV_COUNT);
     uint count;
@@ -541,7 +516,7 @@ void CalculateDiffuseFieldAverage(const HrirDataT *hData, const uint channels, c
     if(weighted)
     {
         // Use coverage weighting to calculate the average.
-        CalculateDfWeights(hData, weights.data());
+        CalculateDfWeights(hData, weights);
     }
     else
     {
@@ -589,13 +564,14 @@ void CalculateDiffuseFieldAverage(const HrirDataT *hData, const uint channels, c
         // Apply a limit to the magnitude range of the diffuse-field average
         // if desired.
         if(limit > 0.0)
-            LimitMagnitudeResponse(hData->mFftSize, m, limit, &dfa[ti * m], &dfa[ti * m]);
+            LimitMagnitudeResponse(hData->mFftSize, m, limit, dfa.subspan(ti * m));
     }
 }
 
 // Perform diffuse-field equalization on the magnitude responses of the HRIR
 // set using the given average response.
-void DiffuseFieldEqualize(const uint channels, const uint m, const double *dfa, const HrirDataT *hData)
+void DiffuseFieldEqualize(const uint channels, const uint m, const al::span<const double> dfa,
+    const HrirDataT *hData)
 {
     for(size_t fi{0};fi < hData->mFds.size();++fi)
     {
@@ -872,7 +848,7 @@ void SynthesizeHrirs(HrirDataT *hData)
  * or more threads (sharing the same reconstructor object).
  */
 struct HrirReconstructor {
-    std::vector<double*> mIrs;
+    std::vector<al::span<double>> mIrs;
     std::atomic<size_t> mCurrent{};
     std::atomic<size_t> mDone{};
     uint mFftSize{};
@@ -904,7 +880,7 @@ struct HrirReconstructor {
              */
             for(size_t i{0};i < m;++i)
                 mags[i] = std::max(mIrs[idx][i], Epsilon);
-            MinimumPhase(mFftSize, mags.data(), h.data());
+            MinimumPhase(mags, h);
             FftInverse(mFftSize, h.data());
             for(uint i{0u};i < mIrPoints;++i)
                 mIrs[idx][i] = h[i].real();
@@ -973,10 +949,11 @@ void NormalizeHrirs(HrirDataT *hData)
 
     /* Find the maximum amplitude and RMS out of all the IRs. */
     struct LevelPair { double amp, rms; };
-    auto mesasure_channel = [irSize](const LevelPair levels, const double *ir)
+    auto mesasure_channel = [irSize](const LevelPair levels, al::span<const double> ir)
     {
         /* Calculate the peak amplitude and RMS of this IR. */
-        auto current = std::accumulate(ir, ir+irSize, LevelPair{0.0, 0.0},
+        ir = ir.first(irSize);
+        auto current = std::accumulate(ir.cbegin(), ir.cend(), LevelPair{0.0, 0.0},
             [](const LevelPair cur, const double impulse)
             {
                 return LevelPair{std::max(std::abs(impulse), cur.amp), cur.rms + impulse*impulse};
@@ -1011,8 +988,12 @@ void NormalizeHrirs(HrirDataT *hData)
     factor = std::min(factor, 0.99/maxlev.amp);
 
     /* Now scale all IRs by the given factor. */
-    auto proc_channel = [irSize,factor](double *ir)
-    { std::transform(ir, ir+irSize, ir, [factor](double s){ return s * factor; }); };
+    auto proc_channel = [irSize,factor](al::span<double> ir)
+    {
+        ir = ir.first(irSize);
+        std::transform(ir.cbegin(), ir.cend(), ir.begin(),
+            [factor](double s) { return s * factor; });
+    };
     auto proc_azi = [channels,proc_channel](HrirAzT &azi)
     { std::for_each(azi.mIrs.begin(), azi.mIrs.begin()+channels, proc_channel); };
     auto proc_elev = [proc_azi](HrirEvT &elev)
@@ -1145,7 +1126,7 @@ bool PrepareHrirData(const al::span<const double> distances,
     {
         hData->mFds[fi].mDistance = distances[fi];
         hData->mFds[fi].mEvStart = 0;
-        hData->mFds[fi].mEvs = {&hData->mEvsBase[evTotal], evCounts[fi]};
+        hData->mFds[fi].mEvs = al::span{hData->mEvsBase}.subspan(evTotal, evCounts[fi]);
         evTotal += evCounts[fi];
         for(uint ei{0};ei < evCounts[fi];++ei)
         {
@@ -1153,15 +1134,15 @@ bool PrepareHrirData(const al::span<const double> distances,
 
             hData->mFds[fi].mEvs[ei].mElevation = -al::numbers::pi / 2.0 + al::numbers::pi * ei /
                 (evCounts[fi] - 1);
-            hData->mFds[fi].mEvs[ei].mAzs = {&hData->mAzsBase[azTotal], azCount};
+            hData->mFds[fi].mEvs[ei].mAzs = al::span{hData->mAzsBase}.subspan(azTotal, azCount);
             for(uint ai{0};ai < azCount;ai++)
             {
                 hData->mFds[fi].mEvs[ei].mAzs[ai].mAzimuth = 2.0 * al::numbers::pi * ai / azCount;
                 hData->mFds[fi].mEvs[ei].mAzs[ai].mIndex = azTotal + ai;
                 hData->mFds[fi].mEvs[ei].mAzs[ai].mDelays[0] = 0.0;
                 hData->mFds[fi].mEvs[ei].mAzs[ai].mDelays[1] = 0.0;
-                hData->mFds[fi].mEvs[ei].mAzs[ai].mIrs[0] = nullptr;
-                hData->mFds[fi].mEvs[ei].mAzs[ai].mIrs[1] = nullptr;
+                hData->mFds[fi].mEvs[ei].mAzs[ai].mIrs[0] = {};
+                hData->mFds[fi].mEvs[ei].mAzs[ai].mIrs[1] = {};
             }
             azTotal += azCount;
         }
@@ -1176,19 +1157,20 @@ namespace {
  * resulting data set as desired.  If the input name is NULL it will read
  * from standard input.
  */
-bool ProcessDefinition(const char *inName, const uint outRate, const ChannelModeT chanMode,
+bool ProcessDefinition(std::string_view inName, const uint outRate, const ChannelModeT chanMode,
     const bool farfield, const uint numThreads, const uint fftSize, const bool equalize,
     const bool surface, const double limit, const uint truncSize, const HeadModelT model,
-    const double radius, const char *outName)
+    const double radius, const std::string_view outName)
 {
     HrirDataT hData;
 
     fprintf(stdout, "Using %u thread%s.\n", numThreads, (numThreads==1)?"":"s");
-    if(!inName)
+    if(inName.empty() || inName == "-"sv)
     {
-        inName = "stdin";
-        fprintf(stdout, "Reading HRIR definition from %s...\n", inName);
-        if(!LoadDefInput(std::cin, nullptr, 0, inName, fftSize, truncSize, outRate, chanMode, &hData))
+        inName = "stdin"sv;
+        fprintf(stdout, "Reading HRIR definition from %.*s...\n", al::sizei(inName),
+            inName.data());
+        if(!LoadDefInput(std::cin, {}, inName, fftSize, truncSize, outRate, chanMode, &hData))
             return false;
     }
     else
@@ -1196,16 +1178,17 @@ bool ProcessDefinition(const char *inName, const uint outRate, const ChannelMode
         auto input = std::make_unique<std::ifstream>(std::filesystem::u8path(inName));
         if(!input->is_open())
         {
-            fprintf(stderr, "Error: Could not open input file '%s'\n", inName);
+            fprintf(stderr, "Error: Could not open input file '%.*s'\n", al::sizei(inName),
+                inName.data());
             return false;
         }
 
         std::array<char,4> startbytes{};
         input->read(startbytes.data(), startbytes.size());
-        std::streamsize startbytecount{input->gcount()};
-        if(startbytecount != startbytes.size() || !input->good())
+        if(input->gcount() != startbytes.size() || !input->good())
         {
-            fprintf(stderr, "Error: Could not read input file '%s'\n", inName);
+            fprintf(stderr, "Error: Could not read input file '%.*s'\n", al::sizei(inName),
+                inName.data());
             return false;
         }
 
@@ -1213,15 +1196,17 @@ bool ProcessDefinition(const char *inName, const uint outRate, const ChannelMode
             && startbytes[3] == 'F')
         {
             input = nullptr;
-            fprintf(stdout, "Reading HRTF data from %s...\n", inName);
+            fprintf(stdout, "Reading HRTF data from %.*s...\n", al::sizei(inName),
+                inName.data());
             if(!LoadSofaFile(inName, numThreads, fftSize, truncSize, outRate, chanMode, &hData))
                 return false;
         }
         else
         {
-            fprintf(stdout, "Reading HRIR definition from %s...\n", inName);
-            if(!LoadDefInput(*input, startbytes.data(), startbytecount, inName, fftSize, truncSize,
-                outRate, chanMode, &hData))
+            fprintf(stdout, "Reading HRIR definition from %.*s...\n", al::sizei(inName),
+                inName.data());
+            if(!LoadDefInput(*input, startbytes, inName, fftSize, truncSize, outRate, chanMode,
+                &hData))
                 return false;
         }
     }
@@ -1238,9 +1223,9 @@ bool ProcessDefinition(const char *inName, const uint outRate, const ChannelMode
             BalanceFieldMagnitudes(&hData, c, m);
         }
         fprintf(stdout, "Calculating diffuse-field average...\n");
-        CalculateDiffuseFieldAverage(&hData, c, m, surface, limit, dfa.data());
+        CalculateDiffuseFieldAverage(&hData, c, m, surface, limit, dfa);
         fprintf(stdout, "Performing diffuse-field equalization...\n");
-        DiffuseFieldEqualize(c, m, dfa.data(), &hData);
+        DiffuseFieldEqualize(c, m, dfa, &hData);
     }
     if(hData.mFds.size() > 1)
     {
@@ -1269,15 +1254,14 @@ bool ProcessDefinition(const char *inName, const uint outRate, const ChannelMode
     CalculateHrtds(model, (radius > DefaultCustomRadius) ? radius : hData.mRadius, &hData);
 
     const auto rateStr = std::to_string(hData.mIrRate);
-    const auto expName = StrSubst({outName, strlen(outName)}, {"%r", 2},
-        {rateStr.data(), rateStr.size()});
+    const auto expName = StrSubst(outName, "%r"sv, rateStr);
     fprintf(stdout, "Creating MHR data set %s...\n", expName.c_str());
-    return StoreMhr(&hData, expName.c_str());
+    return StoreMhr(&hData, expName);
 }
 
-void PrintHelp(const char *argv0, FILE *ofile)
+void PrintHelp(const std::string_view argv0, FILE *ofile)
 {
-    fprintf(ofile, "Usage:  %s [<option>...]\n\n", argv0);
+    fprintf(ofile, "Usage:  %.*s [<option>...]\n\n", al::sizei(argv0), argv0.data());
     fprintf(ofile, "Options:\n");
     fprintf(ofile, " -r <rate>       Change the data set sample rate to the specified value and\n");
     fprintf(ofile, "                 resample the HRIRs accordingly.\n");
@@ -1300,19 +1284,17 @@ void PrintHelp(const char *argv0, FILE *ofile)
     fprintf(ofile, "                 the data set sample rate.\n");
 }
 
-} // namespace
-
 // Standard command line dispatch.
-int main(int argc, char *argv[])
+int main(al::span<std::string_view> args)
 {
-    if(argc < 2)
+    if(args.size() < 2)
     {
         fprintf(stdout, "HRTF Processing and Composition Utility\n\n");
-        PrintHelp(argv[0], stdout);
+        PrintHelp(args[0], stdout);
         exit(EXIT_SUCCESS);
     }
 
-    const char *outName{"./oalsoft_hrtf_%r.mhr"};
+    std::string_view outName{"./oalsoft_hrtf_%r.mhr"sv};
     uint outRate{0};
     ChannelModeT chanMode{CM_AllowStereo};
     uint fftSize{DefaultFftSize};
@@ -1324,19 +1306,72 @@ int main(int argc, char *argv[])
     HeadModelT model{HM_Default};
     double radius{DefaultCustomRadius};
     bool farfield{false};
+    std::string_view inName;
 
-    const char *inName{};
-    int opt;
-    while((opt=getopt(argc, argv, "r:maj:f:e:s:l:w:d:c:e:i:o:h")) != -1)
+    const std::string_view optlist{"r:maj:f:e:s:l:w:d:c:e:i:o:h"sv};
+    const auto arg0 = args[0];
+    args = args.subspan(1);
+    std::string_view optarg;
+    size_t argplace{0};
+
+    auto getarg = [&args,&argplace,&optarg,optlist]
     {
-        char *end{};
+        while(!args.empty() && argplace >= args[0].size())
+        {
+            argplace = 0;
+            args = args.subspan(1);
+        }
+        if(args.empty())
+            return 0;
+
+        if(argplace == 0)
+        {
+            if(args[0] == "--"sv)
+                return 0;
+
+            if(args[0][0] != '-' || args[0].size() == 1)
+            {
+                fprintf(stderr, "Invalid argument: %.*s\n", al::sizei(args[0]), args[0].data());
+                return -1;
+            }
+            ++argplace;
+        }
+
+        const char nextopt{args[0][argplace]};
+        const auto listidx = optlist.find(nextopt);
+        if(listidx >= optlist.size())
+        {
+            fprintf(stderr, "Unknown argument: -%c\n", nextopt);
+            return -1;
+        }
+        const bool needsarg{listidx+1 < optlist.size() && optlist[listidx+1] == ':'};
+        if(needsarg && (argplace+1 < args[0].size() || args.size() < 2))
+        {
+            fprintf(stderr, "Missing parameter for argument: -%c\n", nextopt);
+            return -1;
+        }
+        if(++argplace == args[0].size())
+        {
+            if(needsarg)
+                optarg = args[1];
+            argplace = 0;
+            args = args.subspan(1u + needsarg);
+        }
+
+        return int{nextopt};
+    };
+
+    while(auto opt = getarg())
+    {
+        std::size_t endpos{};
         switch(opt)
         {
         case 'r':
-            outRate = static_cast<uint>(strtoul(optarg, &end, 10));
-            if(end[0] != '\0' || outRate < MIN_RATE || outRate > MAX_RATE)
+            outRate = static_cast<uint>(std::stoul(std::string{optarg}, &endpos, 10));
+            if(endpos != optarg.size() || outRate < MIN_RATE || outRate > MAX_RATE)
             {
-                fprintf(stderr, "\nError: Got unexpected value \"%s\" for option -%c, expected between %u to %u.\n", optarg, opt, MIN_RATE, MAX_RATE);
+                fprintf(stderr, "\nError: Got unexpected value \"%.*s\" for option -%c, expected between %u to %u.\n",
+                    al::sizei(optarg), optarg.data(), opt, MIN_RATE, MAX_RATE);
                 exit(EXIT_FAILURE);
             }
             break;
@@ -1350,10 +1385,11 @@ int main(int argc, char *argv[])
             break;
 
         case 'j':
-            numThreads = static_cast<uint>(strtoul(optarg, &end, 10));
-            if(end[0] != '\0' || numThreads > 64)
+            numThreads = static_cast<uint>(std::stoul(std::string{optarg}, &endpos, 10));
+            if(endpos != optarg.size() || numThreads > 64)
             {
-                fprintf(stderr, "\nError: Got unexpected value \"%s\" for option -%c, expected between %u to %u.\n", optarg, opt, 0, 64);
+                fprintf(stderr, "\nError: Got unexpected value \"%.*s\" for option -%c, expected between %u to %u.\n",
+                    al::sizei(optarg), optarg.data(), opt, 0, 64);
                 exit(EXIT_FAILURE);
             }
             if(numThreads == 0)
@@ -1361,78 +1397,86 @@ int main(int argc, char *argv[])
             break;
 
         case 'f':
-            fftSize = static_cast<uint>(strtoul(optarg, &end, 10));
-            if(end[0] != '\0' || (fftSize&(fftSize-1)) || fftSize < MinFftSize || fftSize > MaxFftSize)
+            fftSize = static_cast<uint>(std::stoul(std::string{optarg}, &endpos, 10));
+            if(endpos != optarg.size() || (fftSize&(fftSize-1)) || fftSize < MinFftSize
+                || fftSize > MaxFftSize)
             {
-                fprintf(stderr, "\nError: Got unexpected value \"%s\" for option -%c, expected a power-of-two between %u to %u.\n", optarg, opt, MinFftSize, MaxFftSize);
+                fprintf(stderr, "\nError: Got unexpected value \"%.*s\" for option -%c, expected a power-of-two between %u to %u.\n",
+                    al::sizei(optarg), optarg.data(), opt, MinFftSize, MaxFftSize);
                 exit(EXIT_FAILURE);
             }
             break;
 
         case 'e':
-            if(strcmp(optarg, "on") == 0)
+            if(optarg == "on"sv)
                 equalize = true;
-            else if(strcmp(optarg, "off") == 0)
+            else if(optarg == "off"sv)
                 equalize = false;
             else
             {
-                fprintf(stderr, "\nError: Got unexpected value \"%s\" for option -%c, expected on or off.\n", optarg, opt);
+                fprintf(stderr, "\nError: Got unexpected value \"%.*s\" for option -%c, expected on or off.\n",
+                    al::sizei(optarg), optarg.data(), opt);
                 exit(EXIT_FAILURE);
             }
             break;
 
         case 's':
-            if(strcmp(optarg, "on") == 0)
+            if(optarg == "on"sv)
                 surface = true;
-            else if(strcmp(optarg, "off") == 0)
+            else if(optarg == "off"sv)
                 surface = false;
             else
             {
-                fprintf(stderr, "\nError: Got unexpected value \"%s\" for option -%c, expected on or off.\n", optarg, opt);
+                fprintf(stderr, "\nError: Got unexpected value \"%.*s\" for option -%c, expected on or off.\n",
+                    al::sizei(optarg), optarg.data(), opt);
                 exit(EXIT_FAILURE);
             }
             break;
 
         case 'l':
-            if(strcmp(optarg, "none") == 0)
+            if(optarg == "none"sv)
                 limit = 0.0;
             else
             {
-                limit = strtod(optarg, &end);
-                if(end[0] != '\0' || limit < MinLimit || limit > MaxLimit)
+                limit = std::stod(std::string{optarg}, &endpos);
+                if(endpos != optarg.size() || limit < MinLimit || limit > MaxLimit)
                 {
-                    fprintf(stderr, "\nError: Got unexpected value \"%s\" for option -%c, expected between %.0f to %.0f.\n", optarg, opt, MinLimit, MaxLimit);
+                    fprintf(stderr, "\nError: Got unexpected value \"%.*s\" for option -%c, expected between %.0f to %.0f.\n",
+                        al::sizei(optarg), optarg.data(), opt, MinLimit, MaxLimit);
                     exit(EXIT_FAILURE);
                 }
             }
             break;
 
         case 'w':
-            truncSize = static_cast<uint>(strtoul(optarg, &end, 10));
-            if(end[0] != '\0' || truncSize < MinTruncSize || truncSize > MaxTruncSize)
+            truncSize = static_cast<uint>(std::stoul(std::string{optarg}, &endpos, 10));
+            if(endpos != optarg.size() || truncSize < MinTruncSize || truncSize > MaxTruncSize)
             {
-                fprintf(stderr, "\nError: Got unexpected value \"%s\" for option -%c, expected between %u to %u.\n", optarg, opt, MinTruncSize, MaxTruncSize);
+                fprintf(stderr, "\nError: Got unexpected value \"%.*s\" for option -%c, expected between %u to %u.\n",
+                    al::sizei(optarg), optarg.data(), opt, MinTruncSize, MaxTruncSize);
                 exit(EXIT_FAILURE);
             }
             break;
 
         case 'd':
-            if(strcmp(optarg, "dataset") == 0)
+            if(optarg == "dataset"sv)
                 model = HM_Dataset;
-            else if(strcmp(optarg, "sphere") == 0)
+            else if(optarg == "sphere"sv)
                 model = HM_Sphere;
             else
             {
-                fprintf(stderr, "\nError: Got unexpected value \"%s\" for option -%c, expected dataset or sphere.\n", optarg, opt);
+                fprintf(stderr, "\nError: Got unexpected value \"%.*s\" for option -%c, expected dataset or sphere.\n",
+                    al::sizei(optarg), optarg.data(), opt);
                 exit(EXIT_FAILURE);
             }
             break;
 
         case 'c':
-            radius = strtod(optarg, &end);
-            if(end[0] != '\0' || radius < MinCustomRadius || radius > MaxCustomRadius)
+            radius = std::stod(std::string{optarg}, &endpos);
+            if(endpos != optarg.size() || radius < MinCustomRadius || radius > MaxCustomRadius)
             {
-                fprintf(stderr, "\nError: Got unexpected value \"%s\" for option -%c, expected between %.2f to %.2f.\n", optarg, opt, MinCustomRadius, MaxCustomRadius);
+                fprintf(stderr, "\nError: Got unexpected value \"%.*s\" for option -%c, expected between %.2f to %.2f.\n",
+                    al::sizei(optarg), optarg.data(), opt, MinCustomRadius, MaxCustomRadius);
                 exit(EXIT_FAILURE);
             }
             break;
@@ -1446,11 +1490,11 @@ int main(int argc, char *argv[])
             break;
 
         case 'h':
-            PrintHelp(argv[0], stdout);
+            PrintHelp(arg0, stdout);
             exit(EXIT_SUCCESS);
 
         default: /* '?' */
-            PrintHelp(argv[0], stderr);
+            PrintHelp(arg0, stderr);
             exit(EXIT_FAILURE);
         }
     }
@@ -1461,4 +1505,14 @@ int main(int argc, char *argv[])
     fprintf(stdout, "Operation completed.\n");
 
     return EXIT_SUCCESS;
+}
+
+} /* namespace */
+
+int main(int argc, char *argv[])
+{
+    assert(argc >= 0);
+    auto args = std::vector<std::string_view>(static_cast<unsigned int>(argc));
+    std::copy_n(argv, args.size(), args.begin());
+    return main(al::span{args});
 }

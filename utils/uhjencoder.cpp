@@ -368,16 +368,16 @@ int main(al::span<std::string_view> args)
         {
             fprintf(stderr, " ... assuming WFX order stereo\n");
             spkrs = StereoMap;
-            chanmap[0] = SF_CHANNEL_MAP_FRONT_LEFT;
-            chanmap[1] = SF_CHANNEL_MAP_FRONT_RIGHT;
+            chanmap[0] = SF_CHANNEL_MAP_LEFT;
+            chanmap[1] = SF_CHANNEL_MAP_RIGHT;
         }
         else if(ininfo.channels == 6)
         {
             fprintf(stderr, " ... assuming WFX order 5.1\n");
             spkrs = X51Map;
-            chanmap[0] = SF_CHANNEL_MAP_FRONT_LEFT;
-            chanmap[1] = SF_CHANNEL_MAP_FRONT_RIGHT;
-            chanmap[2] = SF_CHANNEL_MAP_FRONT_CENTER;
+            chanmap[0] = SF_CHANNEL_MAP_LEFT;
+            chanmap[1] = SF_CHANNEL_MAP_RIGHT;
+            chanmap[2] = SF_CHANNEL_MAP_CENTER;
             chanmap[3] = SF_CHANNEL_MAP_LFE;
             chanmap[4] = SF_CHANNEL_MAP_SIDE_LEFT;
             chanmap[5] = SF_CHANNEL_MAP_SIDE_RIGHT;
@@ -386,9 +386,9 @@ int main(al::span<std::string_view> args)
         {
             fprintf(stderr, " ... assuming WFX order 7.1\n");
             spkrs = X71Map;
-            chanmap[0] = SF_CHANNEL_MAP_FRONT_LEFT;
-            chanmap[1] = SF_CHANNEL_MAP_FRONT_RIGHT;
-            chanmap[2] = SF_CHANNEL_MAP_FRONT_CENTER;
+            chanmap[0] = SF_CHANNEL_MAP_LEFT;
+            chanmap[1] = SF_CHANNEL_MAP_RIGHT;
+            chanmap[2] = SF_CHANNEL_MAP_CENTER;
             chanmap[3] = SF_CHANNEL_MAP_LFE;
             chanmap[4] = SF_CHANNEL_MAP_REAR_LEFT;
             chanmap[5] = SF_CHANNEL_MAP_REAR_RIGHT;

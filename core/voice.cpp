@@ -682,16 +682,17 @@ void DoHrtfMix(const al::span<const float> samples, DirectParams &parms, const f
 }
 
 void DoNfcMix(const al::span<const float> samples, al::span<FloatBufferLine> OutBuffer,
-    DirectParams &parms, const float *TargetGains, const uint Counter, const uint OutPos,
-    DeviceBase *Device)
+    DirectParams &parms, const al::span<const float,MaxOutputChannels> OutGains,
+    const uint Counter, const uint OutPos, DeviceBase *Device)
 {
     using FilterProc = void (NfcFilter::*)(const al::span<const float>, const al::span<float>);
     static constexpr std::array<FilterProc,MaxAmbiOrder+1> NfcProcess{{
         nullptr, &NfcFilter::process1, &NfcFilter::process2, &NfcFilter::process3}};
 
     auto CurrentGains = parms.Gains.Current.begin();
-    MixSamples(samples, OutBuffer.first<1>(), al::to_address(CurrentGains), TargetGains, Counter,
-        OutPos);
+    auto TargetGains = OutGains.cbegin();
+    MixSamples(samples, OutBuffer.first<1>(), al::to_address(CurrentGains),
+        al::to_address(TargetGains), Counter, OutPos);
     OutBuffer = OutBuffer.subspan<1>();
     ++CurrentGains;
     ++TargetGains;
@@ -702,10 +703,10 @@ void DoNfcMix(const al::span<const float> samples, al::span<FloatBufferLine> Out
     {
         (parms.NFCtrlFilter.*NfcProcess[order])(samples, nfcsamples);
         MixSamples(nfcsamples, OutBuffer.first(chancount), al::to_address(CurrentGains),
-            TargetGains, Counter, OutPos);
+            al::to_address(TargetGains), Counter, OutPos);
         OutBuffer = OutBuffer.subspan(chancount);
-        CurrentGains += chancount;
-        TargetGains += chancount;
+        CurrentGains += ptrdiff_t(chancount);
+        TargetGains += ptrdiff_t(chancount);
         if(++order == MaxAmbiOrder+1)
             break;
     }
@@ -1066,13 +1067,13 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
             }
             else
             {
-                const float *TargetGains{(vstate == Playing) ? parms.Gains.Target.data()
-                    : SilentTarget.data()};
+                const auto TargetGains = (vstate == Playing) ? al::span{parms.Gains.Target}
+                    : al::span{SilentTarget};
                 if(mFlags.test(VoiceHasNfc))
                     DoNfcMix(samples, mDirect.Buffer, parms, TargetGains, Counter, OutPos, Device);
                 else
-                    MixSamples(samples, mDirect.Buffer, parms.Gains.Current.data(), TargetGains,
-                        Counter, OutPos);
+                    MixSamples(samples, mDirect.Buffer, parms.Gains.Current.data(),
+                        TargetGains.data(), Counter, OutPos);
             }
         }
 

@@ -8,12 +8,10 @@
 #endif
 
 #include <array>
-#include <complex>
+#include <cmath>
 #include <cstddef>
-#include <limits>
-#include <vector>
 
-#include "alcomplex.h"
+#include "alnumbers.h"
 #include "alspan.h"
 
 
@@ -30,47 +28,25 @@ struct PhaseShifterT {
 
     alignas(16) std::array<float,FilterSize/2> mCoeffs{};
 
-    /* Some notes on this filter construction.
-     *
-     * A wide-band phase-shift filter needs a delay to maintain linearity. A
-     * dirac impulse in the center of a time-domain buffer represents a filter
-     * passing all frequencies through as-is with a pure delay. Converting that
-     * to the frequency domain, adjusting the phase of each frequency bin by
-     * +90 degrees, then converting back to the time domain, results in a FIR
-     * filter that applies a +90 degree wide-band phase-shift.
-     *
-     * A particularly notable aspect of the time-domain filter response is that
-     * every other coefficient is 0. This allows doubling the effective size of
-     * the filter, by storing only the non-0 coefficients and double-stepping
-     * over the input to apply it.
-     *
-     * Additionally, the resulting filter is independent of the sample rate.
-     * The same filter can be applied regardless of the device's sample rate
-     * and achieve the same effect.
-     */
     PhaseShifterT()
     {
-        using complex_d = std::complex<double>;
-        constexpr std::size_t fft_size{FilterSize};
-        constexpr std::size_t half_size{fft_size / 2};
-
-        auto fftBuffer = std::vector<complex_d>(fft_size, complex_d{});
-        fftBuffer[half_size] = 1.0;
-
-        forward_fft(al::span{fftBuffer});
-        fftBuffer[0] *= std::numeric_limits<double>::epsilon();
-        for(std::size_t i{1};i < half_size;++i)
-            fftBuffer[i] = complex_d{-fftBuffer[i].imag(), fftBuffer[i].real()};
-        fftBuffer[half_size] *= std::numeric_limits<double>::epsilon();
-        for(std::size_t i{half_size+1};i < fft_size;++i)
-            fftBuffer[i] = std::conj(fftBuffer[fft_size - i]);
-        inverse_fft(al::span{fftBuffer});
-
-        auto fftiter = fftBuffer.begin() + fft_size - 1;
-        for(float &coeff : mCoeffs)
+        /* Every other coefficient is 0, so we only need to calculate and store
+         * the non-0 terms and double-step over the input to apply it. The
+         * calculated coefficients are in reverse to make applying in the time-
+         * domain more efficient.
+         */
+        for(std::size_t i{0};i < FilterSize/2;++i)
         {
-            coeff = static_cast<float>(fftiter->real() / double{fft_size});
-            fftiter -= 2;
+            const int k{static_cast<int>(i*2 + 1) - int{FilterSize/2}};
+
+            /* Calculate the Blackman window value for this coefficient. */
+            const double w{2.0*al::numbers::pi * static_cast<double>(i*2 + 1)
+                / double{FilterSize}};
+            const double window{0.3635819 - 0.4891775*std::cos(w) + 0.1365995*std::cos(2.0*w)
+                - 0.0106411*std::cos(3.0*w)};
+
+            const double pk{al::numbers::pi * static_cast<double>(k)};
+            mCoeffs[i] = static_cast<float>(window * (1.0-std::cos(pk)) / pk);
         }
     }
 

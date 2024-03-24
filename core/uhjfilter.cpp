@@ -58,53 +58,47 @@ struct SegmentedFilter {
 
     SegmentedFilter() : mFft{sFftLength, PFFFT_REAL}
     {
-        using complex_d = std::complex<double>;
-        constexpr size_t fft_size{N};
-        constexpr size_t half_size{fft_size / 2};
+        static constexpr size_t fft_size{N};
 
-        /* To set up the filter, we need to generate the desired response.
-         * Start with a pure delay that passes all frequencies through.
+        /* To set up the filter, we first need to generate the desired
+         * response (not reversed).
          */
-        auto fftBuffer = std::vector<complex_d>(fft_size, complex_d{});
-        fftBuffer[half_size] = 1.0;
+        auto tmpBuffer = std::vector<double>(fft_size, 0.0);
+        for(std::size_t i{0};i < fft_size/2;++i)
+        {
+            const int k{int{fft_size/2} - static_cast<int>(i*2 + 1)};
 
-        /* Convert to the frequency domain, shift the phase of each bin by +90
-         * degrees, then convert back to the time domain.
-         *
-         * NOTE: The 0- and half-frequency are always real for a real signal.
-         * To maintain that and their phase (0 or pi), they're heavily
-         * attenuated instead of shifted like the others.
-         */
-        forward_fft(al::span{fftBuffer});
-        fftBuffer[0] *= std::numeric_limits<double>::epsilon();
-        for(size_t i{1};i < half_size;++i)
-            fftBuffer[i] = complex_d{-fftBuffer[i].imag(), fftBuffer[i].real()};
-        fftBuffer[half_size] *= std::numeric_limits<double>::epsilon();
-        for(size_t i{half_size+1};i < fft_size;++i)
-            fftBuffer[i] = std::conj(fftBuffer[fft_size - i]);
-        inverse_fft(al::span{fftBuffer});
+            const double w{2.0*al::numbers::pi * static_cast<double>(i*2 + 1)
+                / double{fft_size}};
+            const double window{0.3635819 - 0.4891775*std::cos(w) + 0.1365995*std::cos(2.0*w)
+                - 0.0106411*std::cos(3.0*w)};
+
+            const double pk{al::numbers::pi * static_cast<double>(k)};
+            tmpBuffer[i*2 + 1] = window * (1.0-std::cos(pk)) / pk;
+        }
 
         /* The segments of the filter are converted back to the frequency
          * domain, each on their own (0 stuffed).
          */
-        auto fftBuffer2 = std::vector<complex_d>(sFftLength);
+        using complex_d = std::complex<double>;
+        auto fftBuffer = std::vector<complex_d>(sFftLength);
         auto fftTmp = al::vector<float,16>(sFftLength);
         auto filter = mFilterData.begin();
         for(size_t s{0};s < sNumSegments;++s)
         {
-            for(size_t i{0};i < sSampleLength;++i)
-                fftBuffer2[i] = fftBuffer[sSampleLength*s + i].real() / double{fft_size};
-            std::fill_n(fftBuffer2.begin()+sSampleLength, sSampleLength, complex_d{});
-            forward_fft(al::span{fftBuffer2});
+            const auto tmpspan = al::span{tmpBuffer}.subspan(sSampleLength*s, sSampleLength);
+            auto iter = std::copy_n(tmpspan.cbegin(), tmpspan.size(), fftBuffer.begin());
+            std::fill(iter, fftBuffer.end(), complex_d{});
+            forward_fft(fftBuffer);
 
             /* Convert to zdomain data for PFFFT, scaled by the FFT length so
              * the iFFT result will be normalized.
              */
             for(size_t i{0};i < sSampleLength;++i)
             {
-                fftTmp[i*2 + 0] = static_cast<float>(fftBuffer2[i].real()) / float{sFftLength};
-                fftTmp[i*2 + 1] = static_cast<float>((i == 0) ? fftBuffer2[sSampleLength].real()
-                    : fftBuffer2[i].imag()) / float{sFftLength};
+                fftTmp[i*2 + 0] = static_cast<float>(fftBuffer[i].real()) / float{sFftLength};
+                fftTmp[i*2 + 1] = static_cast<float>((i == 0) ? fftBuffer[sSampleLength].real()
+                    : fftBuffer[i].imag()) / float{sFftLength};
             }
             mFft.zreorder(fftTmp.data(), al::to_address(filter), PFFFT_BACKWARD);
             filter += sFftLength;

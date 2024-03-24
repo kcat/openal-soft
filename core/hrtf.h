@@ -38,12 +38,12 @@ struct alignas(16) HrtfStore {
         ushort azCount;
         ushort irOffset;
     };
-    Elevation *mElev;
-    const HrirArray *mCoeffs;
-    const ubyte2 *mDelays;
+    al::span<Elevation> mElev;
+    al::span<const HrirArray> mCoeffs;
+    al::span<const ubyte2> mDelays;
 
-    void getCoeffs(float elevation, float azimuth, float distance, float spread, HrirArray &coeffs,
-        const al::span<uint,2> delays) const;
+    void getCoeffs(float elevation, float azimuth, float distance, float spread,
+        const HrirSpan coeffs, const al::span<uint,2> delays) const;
 
     void add_ref();
     void dec_ref();

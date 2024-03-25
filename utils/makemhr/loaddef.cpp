@@ -377,7 +377,7 @@ auto TrReadIdent(TokenReaderT *tr, const al::span<char> ident) -> int
                 ch = tr->mRing[tr->mOut&TRRingMask];
             } while(ch == '_' || isdigit(ch) || isalpha(ch));
 
-            tr->mColumn += len;
+            tr->mColumn += static_cast<uint>(len);
             if(len < maxLen)
             {
                 ident[len] = '\0';
@@ -568,11 +568,11 @@ auto TrReadString(TokenReaderT *tr, const al::span<char> text) -> int
             }
             if(ch != '\"')
             {
-                tr->mColumn += 1 + len;
+                tr->mColumn += static_cast<uint>(1 + len);
                 TrErrorAt(tr, tr->mLine, col, "Unterminated string at end of input.\n");
                 return 0;
             }
-            tr->mColumn += 2 + len;
+            tr->mColumn += static_cast<uint>(2 + len);
             if(len > maxLen)
             {
                 TrErrorAt(tr, tr->mLine, col, "String is too long.\n");
@@ -601,7 +601,7 @@ auto TrReadOperator(TokenReaderT *tr, const std::string_view op) -> int
             ++len;
             tr->mOut += 1;
         }
-        tr->mColumn += len;
+        tr->mColumn += static_cast<uint>(len);
         if(len == op.size())
             return 1;
     }

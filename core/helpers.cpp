@@ -60,10 +60,18 @@ void DirectorySearch(const std::filesystem::path &path, const std::string_view e
         ERR("Exception enumerating files: %s\n", e.what());
     }
 
-    const al::span newlist{results->begin()+base, results->end()};
-    std::sort(newlist.begin(), newlist.end());
-    for(const auto &name : newlist)
-        TRACE(" got %s\n", name.c_str());
+    /* HACK: Without the size check this trips up range-checked iterators, as
+     * al::span uses al::to_address to get the first iterator's data pointer,
+     * which relies on operator->(), which can assert on end iterators. The
+     * check shouldn't be needed with C++20's std::span.
+     */
+    if(static_cast<size_t>(base) < results->size())
+    {
+        const al::span newlist{results->begin()+base, results->end()};
+        std::sort(newlist.begin(), newlist.end());
+        for(const auto &name : newlist)
+            TRACE(" got %s\n", name.c_str());
+    }
 }
 
 } // namespace

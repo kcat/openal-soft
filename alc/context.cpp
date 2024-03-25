@@ -182,12 +182,12 @@ void ALCcontext::init()
 
     if(sBufferSubDataCompat)
     {
-        auto iter = std::find(mExtensions.begin(), mExtensions.end(), "AL_EXT_SOURCE_RADIUS");
+        auto iter = std::find(mExtensions.begin(), mExtensions.end(), "AL_EXT_SOURCE_RADIUS"sv);
         if(iter != mExtensions.end()) mExtensions.erase(iter);
         /* TODO: Would be nice to sort this alphabetically. Needs case-
          * insensitive searching.
          */
-        mExtensions.emplace_back("AL_SOFT_buffer_sub_data");
+        mExtensions.emplace_back("AL_SOFT_buffer_sub_data"sv);
     }
 
 #ifdef ALSOFT_EAX

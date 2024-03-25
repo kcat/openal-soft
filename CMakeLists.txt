@@ -295,6 +295,11 @@ else()
         endif()
     endif()
 
+    check_cxx_compiler_flag(-Wno-interference-size HAVE_WNO_INTERFERENCE_SIZE)
+    if(HAVE_WNO_INTERFERENCE_SIZE)
+        set(C_FLAGS ${C_FLAGS} $<$<COMPILE_LANGUAGE:CXX>:-Wno-interference-size>)
+    endif()
+
     if(ALSOFT_WERROR)
         set(C_FLAGS ${C_FLAGS} -Werror)
     endif()

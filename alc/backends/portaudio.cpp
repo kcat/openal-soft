@@ -419,7 +419,7 @@ auto PortBackendFactory::enumerate(BackendType type) -> std::vector<std::string>
     case BackendType::Capture:
         return std::vector{std::string{GetDefaultName()}};
     }
-    return std::vector<std::string>();
+    return {};
 }
 
 BackendPtr PortBackendFactory::createBackend(DeviceBase *device, BackendType type)

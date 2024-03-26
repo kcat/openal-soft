@@ -287,7 +287,7 @@ auto SolarisBackendFactory::enumerate(BackendType type) -> std::vector<std::stri
     case BackendType::Capture:
         break;
     }
-    return std::vector<std::string>();
+    return {};
 }
 
 BackendPtr SolarisBackendFactory::createBackend(DeviceBase *device, BackendType type)

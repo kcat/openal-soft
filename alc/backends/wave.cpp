@@ -385,7 +385,7 @@ auto WaveBackendFactory::enumerate(BackendType type) -> std::vector<std::string>
     case BackendType::Capture:
         break;
     }
-    return std::vector<std::string>();
+    return {};
 }
 
 BackendPtr WaveBackendFactory::createBackend(DeviceBase *device, BackendType type)

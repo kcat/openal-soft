@@ -916,7 +916,7 @@ auto OSLBackendFactory::enumerate(BackendType type) -> std::vector<std::string>
     case BackendType::Capture:
         return std::vector{std::string{GetDeviceName()}};
     }
-    return std::vector<std::string>();
+    return {};
 }
 
 BackendPtr OSLBackendFactory::createBackend(DeviceBase *device, BackendType type)

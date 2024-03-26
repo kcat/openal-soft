@@ -160,7 +160,7 @@ auto NullBackendFactory::enumerate(BackendType type) -> std::vector<std::string>
     case BackendType::Capture:
         break;
     }
-    return std::vector<std::string>();
+    return {};
 }
 
 BackendPtr NullBackendFactory::createBackend(DeviceBase *device, BackendType type)

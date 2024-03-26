@@ -528,7 +528,7 @@ auto SndIOBackendFactory::enumerate(BackendType type) -> std::vector<std::string
     case BackendType::Capture:
         return std::vector{std::string{GetDefaultName()}};
     }
-    return std::vector<std::string>();
+    return {};
 }
 
 BackendPtr SndIOBackendFactory::createBackend(DeviceBase *device, BackendType type)

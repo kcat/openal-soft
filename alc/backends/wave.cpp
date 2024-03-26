@@ -376,17 +376,16 @@ bool WaveBackendFactory::init()
 bool WaveBackendFactory::querySupport(BackendType type)
 { return type == BackendType::Playback; }
 
-std::string WaveBackendFactory::probe(BackendType type)
+auto WaveBackendFactory::enumerate(BackendType type) -> std::vector<std::string>
 {
     switch(type)
     {
     case BackendType::Playback:
-        /* Include null char. */
-        return std::string{GetDeviceName()} + '\0';
+        return std::vector{std::string{GetDeviceName()}};
     case BackendType::Capture:
         break;
     }
-    return std::string{};
+    return std::vector<std::string>();
 }
 
 BackendPtr WaveBackendFactory::createBackend(DeviceBase *device, BackendType type)

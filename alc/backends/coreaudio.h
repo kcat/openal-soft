@@ -5,17 +5,17 @@
 
 struct CoreAudioBackendFactory final : public BackendFactory {
 public:
-    bool init() override;
+    auto init() -> bool final;
 
-    bool querySupport(BackendType type) override;
+    auto querySupport(BackendType type) -> bool final;
 
-    alc::EventSupport queryEventSupport(alc::EventType eventType, BackendType type) override;
+    auto queryEventSupport(alc::EventType eventType, BackendType type) -> alc::EventSupport final;
 
-    std::string probe(BackendType type) override;
+    auto enumerate(BackendType type) -> std::vector<std::string> final;
 
-    BackendPtr createBackend(DeviceBase *device, BackendType type) override;
+    auto createBackend(DeviceBase *device, BackendType type) -> BackendPtr final;
 
-    static BackendFactory &getFactory();
+    static auto getFactory() -> BackendFactory&;
 };
 
 #endif /* BACKENDS_COREAUDIO_H */

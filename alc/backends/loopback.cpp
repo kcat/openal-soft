@@ -63,8 +63,8 @@ bool LoopbackBackendFactory::init()
 bool LoopbackBackendFactory::querySupport(BackendType)
 { return true; }
 
-std::string LoopbackBackendFactory::probe(BackendType)
-{ return std::string{}; }
+auto LoopbackBackendFactory::enumerate(BackendType) -> std::vector<std::string>
+{ return std::vector<std::string>(); }
 
 BackendPtr LoopbackBackendFactory::createBackend(DeviceBase *device, BackendType)
 { return BackendPtr{new LoopbackBackend{device}}; }

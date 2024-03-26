@@ -8,6 +8,7 @@
 #include <ratio>
 #include <string>
 #include <string_view>
+#include <vector>
 
 #include "core/device.h"
 #include "core/except.h"
@@ -66,16 +67,16 @@ inline ClockLatency GetClockLatency(DeviceBase *device, BackendBase *backend)
 struct BackendFactory {
     virtual ~BackendFactory() = default;
 
-    virtual bool init() = 0;
+    virtual auto init() -> bool = 0;
 
-    virtual bool querySupport(BackendType type) = 0;
+    virtual auto querySupport(BackendType type) -> bool = 0;
 
-    virtual alc::EventSupport queryEventSupport(alc::EventType, BackendType)
+    virtual auto queryEventSupport(alc::EventType, BackendType) -> alc::EventSupport
     { return alc::EventSupport::NoSupport; }
 
-    virtual std::string probe(BackendType type) = 0;
+    virtual auto enumerate(BackendType type) -> std::vector<std::string> = 0;
 
-    virtual BackendPtr createBackend(DeviceBase *device, BackendType type) = 0;
+    virtual auto createBackend(DeviceBase *device, BackendType type) -> BackendPtr = 0;
 };
 
 namespace al {

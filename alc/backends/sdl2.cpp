@@ -209,26 +209,27 @@ bool SDL2BackendFactory::init()
 bool SDL2BackendFactory::querySupport(BackendType type)
 { return type == BackendType::Playback; }
 
-std::string SDL2BackendFactory::probe(BackendType type)
+auto SDL2BackendFactory::enumerate(BackendType type) -> std::vector<std::string>
 {
-    std::string outnames;
+    std::vector<std::string> outnames;
 
     if(type != BackendType::Playback)
         return outnames;
 
     int num_devices{SDL_GetNumAudioDevices(SDL_FALSE)};
+    if(num_devices <= 0)
+        return outnames;
 
-    /* Includes null char. */
-    outnames += getDefaultDeviceName();
-    outnames += '\0';
+    outnames.reserve(static_cast<unsigned int>(num_devices));
+    outnames.emplace_back(getDefaultDeviceName());
     for(int i{0};i < num_devices;++i)
     {
-        outnames += getDevicePrefix();
+        std::string outname{getDevicePrefix()};
         if(const char *name = SDL_GetAudioDeviceName(i, SDL_FALSE))
-            outnames += name;
+            outname += name;
         else
-            outnames += "Unknown Device Name #"+std::to_string(i);
-        outnames += '\0';
+            outname += "Unknown Device Name #"+std::to_string(i);
+        outnames.emplace_back(std::move(outname));
     }
     return outnames;
 }

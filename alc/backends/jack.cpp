@@ -684,14 +684,11 @@ bool JackBackendFactory::init()
 bool JackBackendFactory::querySupport(BackendType type)
 { return (type == BackendType::Playback); }
 
-std::string JackBackendFactory::probe(BackendType type)
+auto JackBackendFactory::enumerate(BackendType type) -> std::vector<std::string>
 {
-    std::string outnames;
+    std::vector<std::string> outnames;
     auto append_name = [&outnames](const DeviceEntry &entry) -> void
-    {
-        /* Includes null char. */
-        outnames.append(entry.mName.c_str(), entry.mName.length()+1);
-    };
+    { outnames.emplace_back(entry.mName); };
 
     const PathNamePair &binname = GetProcBinary();
     const char *client_name{binname.fname.empty() ? "alsoft" : binname.fname.c_str()};
@@ -706,6 +703,7 @@ std::string JackBackendFactory::probe(BackendType type)
         }
         else
             WARN("jack_client_open() failed, 0x%02x\n", status);
+        outnames.reserve(PlaybackList.size());
         std::for_each(PlaybackList.cbegin(), PlaybackList.cend(), append_name);
         break;
     case BackendType::Capture:

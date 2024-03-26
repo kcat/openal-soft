@@ -966,23 +966,23 @@ bool CoreAudioBackendFactory::init()
 bool CoreAudioBackendFactory::querySupport(BackendType type)
 { return type == BackendType::Playback || type == BackendType::Capture; }
 
-std::string CoreAudioBackendFactory::probe(BackendType type)
+auto CoreAudioBackendFactory::enumerate(BackendType type) -> std::vector<std::string>
 {
-    std::string outnames;
+    std::vector<std::string> outnames;
 #if CAN_ENUMERATE
     auto append_name = [&outnames](const DeviceEntry &entry) -> void
-    {
-        /* Includes null char. */
-        outnames.append(entry.mName.c_str(), entry.mName.length()+1);
-    };
+    { outnames.emplace_back(entry.mName); };
+
     switch(type)
     {
     case BackendType::Playback:
         EnumerateDevices(PlaybackList, false);
+        outnames.reserve(PlaybackList.size());
         std::for_each(PlaybackList.cbegin(), PlaybackList.cend(), append_name);
         break;
     case BackendType::Capture:
         EnumerateDevices(CaptureList, true);
+        outnames.reserve(CaptureList.size());
         std::for_each(CaptureList.cbegin(), CaptureList.cend(), append_name);
         break;
     }
@@ -993,8 +993,7 @@ std::string CoreAudioBackendFactory::probe(BackendType type)
     {
     case BackendType::Playback:
     case BackendType::Capture:
-        /* Includes null char. */
-        outnames.append(ca_device, sizeof(ca_device));
+        outnames.emplace_back(ca_device);
         break;
     }
 #endif

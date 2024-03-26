@@ -270,6 +270,8 @@ BackendFactory *CaptureFactory{};
  ************************************************/
 
 /* Enumerated device names */
+std::vector<std::string> alcAllDevicesArray;
+std::vector<std::string> alcCaptureDeviceArray;
 std::string alcAllDevicesList;
 std::string alcCaptureDeviceList;
 
@@ -710,12 +712,18 @@ void ProbeAllDevicesList()
 
     std::lock_guard<std::recursive_mutex> listlock{ListLock};
     if(!PlaybackFactory)
+    {
+        decltype(alcAllDevicesArray){}.swap(alcAllDevicesArray);
         decltype(alcAllDevicesList){}.swap(alcAllDevicesList);
+    }
     else
     {
-        std::string names{PlaybackFactory->probe(BackendType::Playback)};
-        if(names.empty()) names += '\0';
-        names.swap(alcAllDevicesList);
+        alcAllDevicesArray = PlaybackFactory->enumerate(BackendType::Playback);
+        decltype(alcAllDevicesList){}.swap(alcAllDevicesList);
+        if(alcAllDevicesArray.empty())
+            alcAllDevicesList += '\0';
+        else for(auto &devname : alcAllDevicesArray)
+            alcAllDevicesList.append(devname) += '\0';
     }
 }
 void ProbeCaptureDeviceList()
@@ -724,12 +732,18 @@ void ProbeCaptureDeviceList()
 
     std::lock_guard<std::recursive_mutex> listlock{ListLock};
     if(!CaptureFactory)
+    {
+        decltype(alcCaptureDeviceArray){}.swap(alcCaptureDeviceArray);
         decltype(alcCaptureDeviceList){}.swap(alcCaptureDeviceList);
+    }
     else
     {
-        std::string names{CaptureFactory->probe(BackendType::Capture)};
-        if(names.empty()) names += '\0';
-        names.swap(alcCaptureDeviceList);
+        alcCaptureDeviceArray = CaptureFactory->enumerate(BackendType::Capture);
+        decltype(alcCaptureDeviceList){}.swap(alcCaptureDeviceList);
+        if(alcCaptureDeviceArray.empty())
+            alcCaptureDeviceList += '\0';
+        else for(auto &devname : alcCaptureDeviceArray)
+            alcCaptureDeviceList.append(devname) += '\0';
     }
 }
 
@@ -2042,8 +2056,13 @@ ALC_API const ALCchar* ALC_APIENTRY alcGetString(ALCdevice *Device, ALCenum para
             ProbeAllDevicesList();
 
         /* Copy first entry as default. */
-        alcDefaultAllDevicesSpecifier = alcAllDevicesList.substr(0, alcAllDevicesList.find('\0'));
-        value = alcDefaultAllDevicesSpecifier.c_str();
+        if(alcAllDevicesArray.empty())
+            value = GetDefaultName();
+        else
+        {
+            alcDefaultAllDevicesSpecifier = alcAllDevicesArray.front();
+            value = alcDefaultAllDevicesSpecifier.c_str();
+        }
         break;
 
     case ALC_CAPTURE_DEFAULT_DEVICE_SPECIFIER:
@@ -2051,9 +2070,13 @@ ALC_API const ALCchar* ALC_APIENTRY alcGetString(ALCdevice *Device, ALCenum para
             ProbeCaptureDeviceList();
 
         /* Copy first entry as default. */
-        alcCaptureDefaultDeviceSpecifier = alcCaptureDeviceList.substr(0,
-            alcCaptureDeviceList.find('\0'));
-        value = alcCaptureDefaultDeviceSpecifier.c_str();
+        if(alcCaptureDeviceArray.empty())
+            value = GetDefaultName();
+        else
+        {
+            alcCaptureDefaultDeviceSpecifier = alcCaptureDeviceArray.front();
+            value = alcCaptureDefaultDeviceSpecifier.c_str();
+        }
         break;
 
     case ALC_EXTENSIONS:

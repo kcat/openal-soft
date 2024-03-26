@@ -2675,9 +2675,9 @@ bool WasapiBackendFactory::init()
 bool WasapiBackendFactory::querySupport(BackendType type)
 { return type == BackendType::Playback || type == BackendType::Capture; }
 
-std::string WasapiBackendFactory::probe(BackendType type)
+auto WasapiBackendFactory::enumerate(BackendType type) -> std::vector<std::string>
 {
-    std::string outnames;
+    std::vector<std::string> outnames;
 
     auto devlock = DeviceListLock{gDeviceList};
     switch(type)
@@ -2689,16 +2689,11 @@ std::string WasapiBackendFactory::probe(BackendType type)
             {
                 if(entry.devid != defaultId)
                 {
-                    /* +1 to also append the null char (to ensure a null-
-                     * separated list and double-null terminated list).
-                     */
-                    outnames.append(GetDevicePrefix()).append(entry.name.c_str(),
-                        entry.name.length()+1);
+                    outnames.emplace_back(std::string{GetDevicePrefix()}+entry.name);
                     continue;
                 }
                 /* Default device goes first. */
-                std::string name{std::string{GetDevicePrefix()} + entry.name};
-                outnames.insert(0, name.c_str(), name.length()+1);
+                outnames.emplace(outnames.cbegin(), std::string{GetDevicePrefix()}+entry.name);
             }
         }
         break;
@@ -2710,12 +2705,10 @@ std::string WasapiBackendFactory::probe(BackendType type)
             {
                 if(entry.devid != defaultId)
                 {
-                    outnames.append(GetDevicePrefix()).append(entry.name.c_str(),
-                        entry.name.length()+1);
+                    outnames.emplace_back(std::string{GetDevicePrefix()}+entry.name);
                     continue;
                 }
-                std::string name{std::string{GetDevicePrefix()} + entry.name};
-                outnames.insert(0, name.c_str(), name.length()+1);
+                outnames.emplace(outnames.cbegin(), std::string{GetDevicePrefix()}+entry.name);
             }
         }
         break;

@@ -275,19 +275,19 @@ bool SolarisBackendFactory::init()
 bool SolarisBackendFactory::querySupport(BackendType type)
 { return type == BackendType::Playback; }
 
-std::string SolarisBackendFactory::probe(BackendType type)
+auto SolarisBackendFactory::enumerate(BackendType type) -> std::vector<std::string>
 {
     switch(type)
     {
     case BackendType::Playback:
         if(struct stat buf{}; stat(solaris_driver.c_str(), &buf) == 0)
-            return std::string{GetDefaultName()} + '\0';
+            return std::vector{std::string{GetDefaultName()}};
         break;
 
     case BackendType::Capture:
         break;
     }
-    return std::string{};
+    return std::vector<std::string>();
 }
 
 BackendPtr SolarisBackendFactory::createBackend(DeviceBase *device, BackendType type)

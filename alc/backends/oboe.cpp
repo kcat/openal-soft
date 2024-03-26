@@ -345,16 +345,15 @@ bool OboeBackendFactory::init() { return true; }
 bool OboeBackendFactory::querySupport(BackendType type)
 { return type == BackendType::Playback || type == BackendType::Capture; }
 
-std::string OboeBackendFactory::probe(BackendType type)
+auto OboeBackendFactory::enumerate(BackendType type) -> std::vector<std::string>
 {
     switch(type)
     {
     case BackendType::Playback:
     case BackendType::Capture:
-        /* Include null char. */
-        return std::string{GetDeviceName()} + '\0';
+        return std::vector{std::string{GetDeviceName()}};
     }
-    return std::string{};
+    return std::vector<std::string>();
 }
 
 BackendPtr OboeBackendFactory::createBackend(DeviceBase *device, BackendType type)

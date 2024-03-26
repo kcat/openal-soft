@@ -908,16 +908,15 @@ bool OSLBackendFactory::init() { return true; }
 bool OSLBackendFactory::querySupport(BackendType type)
 { return (type == BackendType::Playback || type == BackendType::Capture); }
 
-std::string OSLBackendFactory::probe(BackendType type)
+auto OSLBackendFactory::enumerate(BackendType type) -> std::vector<std::string>
 {
     switch(type)
     {
     case BackendType::Playback:
     case BackendType::Capture:
-        /* Include null char. */
-        return std::string{GetDeviceName()} + '\0';
+        return std::vector{std::string{GetDeviceName()}};
     }
-    return std::string{};
+    return std::vector<std::string>();
 }
 
 BackendPtr OSLBackendFactory::createBackend(DeviceBase *device, BackendType type)

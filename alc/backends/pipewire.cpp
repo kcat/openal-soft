@@ -2218,9 +2218,9 @@ bool PipeWireBackendFactory::init()
 bool PipeWireBackendFactory::querySupport(BackendType type)
 { return type == BackendType::Playback || type == BackendType::Capture; }
 
-std::string PipeWireBackendFactory::probe(BackendType type)
+auto PipeWireBackendFactory::enumerate(BackendType type) -> std::vector<std::string>
 {
-    std::string outnames;
+    std::vector<std::string> outnames;
 
     gEventHandler.waitForInit();
     EventWatcherLockGuard evtlock{gEventHandler};
@@ -2241,31 +2241,31 @@ std::string PipeWireBackendFactory::probe(BackendType type)
     case BackendType::Playback:
         defmatch = std::find_if(defmatch, devlist.cend(), match_defsink);
         if(defmatch != devlist.cend())
-        {
-            /* Includes null char. */
-            outnames.append(defmatch->mName.c_str(), defmatch->mName.length()+1);
-        }
+            outnames.emplace_back(defmatch->mName);
         for(auto iter = devlist.cbegin();iter != devlist.cend();++iter)
         {
             if(iter != defmatch && iter->mType != NodeType::Source)
-                outnames.append(iter->mName.c_str(), iter->mName.length()+1);
+                outnames.emplace_back(iter->mName);
         }
         break;
     case BackendType::Capture:
+        outnames.reserve(devlist.size());
         defmatch = std::find_if(defmatch, devlist.cend(), match_defsource);
         if(defmatch != devlist.cend())
         {
             if(defmatch->mType == NodeType::Sink)
-                outnames.append(GetMonitorPrefix());
-            outnames.append(defmatch->mName.c_str(), defmatch->mName.length()+1);
+                outnames.emplace_back(std::string{GetMonitorPrefix()}+defmatch->mName);
+            else
+                outnames.emplace_back(defmatch->mName);
         }
         for(auto iter = devlist.cbegin();iter != devlist.cend();++iter)
         {
             if(iter != defmatch)
             {
                 if(iter->mType == NodeType::Sink)
-                    outnames.append(GetMonitorPrefix());
-                outnames.append(iter->mName.c_str(), iter->mName.length()+1);
+                    outnames.emplace_back(std::string{GetMonitorPrefix()}+iter->mName);
+                else
+                    outnames.emplace_back(iter->mName);
             }
         }
         break;
@@ -2273,6 +2273,7 @@ std::string PipeWireBackendFactory::probe(BackendType type)
 
     return outnames;
 }
+
 
 BackendPtr PipeWireBackendFactory::createBackend(DeviceBase *device, BackendType type)
 {

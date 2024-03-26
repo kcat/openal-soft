@@ -582,26 +582,23 @@ bool WinMMBackendFactory::init()
 bool WinMMBackendFactory::querySupport(BackendType type)
 { return type == BackendType::Playback || type == BackendType::Capture; }
 
-std::string WinMMBackendFactory::probe(BackendType type)
+auto WinMMBackendFactory::enumerate(BackendType type) -> std::vector<std::string>
 {
-    std::string outnames;
+    std::vector<std::string> outnames;
     auto add_device = [&outnames](const std::string &dname) -> void
-    {
-        /* +1 to also append the null char (to ensure a null-separated list and
-         * double-null terminated list).
-         */
-        if(!dname.empty())
-            outnames.append(dname.c_str(), dname.length()+1);
-    };
+    { if(!dname.empty()) outnames.emplace_back(dname); };
+
     switch(type)
     {
     case BackendType::Playback:
         ProbePlaybackDevices();
+        outnames.reserve(PlaybackDevices.size());
         std::for_each(PlaybackDevices.cbegin(), PlaybackDevices.cend(), add_device);
         break;
 
     case BackendType::Capture:
         ProbeCaptureDevices();
+        outnames.reserve(CaptureDevices.size());
         std::for_each(CaptureDevices.cbegin(), CaptureDevices.cend(), add_device);
         break;
     }

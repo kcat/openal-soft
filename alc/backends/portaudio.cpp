@@ -411,16 +411,15 @@ bool PortBackendFactory::init()
 bool PortBackendFactory::querySupport(BackendType type)
 { return (type == BackendType::Playback || type == BackendType::Capture); }
 
-std::string PortBackendFactory::probe(BackendType type)
+auto PortBackendFactory::enumerate(BackendType type) -> std::vector<std::string>
 {
     switch(type)
     {
     case BackendType::Playback:
     case BackendType::Capture:
-        /* Include null char. */
-        return std::string{GetDefaultName()} + '\0';
+        return std::vector{std::string{GetDefaultName()}};
     }
-    return std::string{};
+    return std::vector<std::string>();
 }
 
 BackendPtr PortBackendFactory::createBackend(DeviceBase *device, BackendType type)

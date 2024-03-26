@@ -189,6 +189,8 @@ struct PFFFTSetup {
     PFFFTSetup& operator=(const PFFFTSetup&) = delete;
     PFFFTSetup& operator=(PFFFTSetup&& rhs) noexcept = default;
 
+    [[nodiscard]] explicit operator bool() const noexcept { return mSetup != nullptr; }
+
     void transform(const float *input, float *output, float *work, pffft_direction_t direction) const
     { pffft_transform(mSetup.get(), input, output, work, direction); }
 
@@ -205,8 +207,6 @@ struct PFFFTSetup {
 
     void zconvolve_accumulate(const float *dft_a, const float *dft_b, float *dft_ab) const
     { pffft_zconvolve_accumulate(mSetup.get(), dft_a, dft_b, dft_ab); }
-
-    [[nodiscard]] operator bool() const noexcept { return mSetup != nullptr; }
 };
 
 #endif // PFFFT_H

@@ -70,6 +70,17 @@ private:
         ret = vsetq_lane_f32(d, ret, 3);
         return ret;
     }
+    static void vtranspose4(float32x4_t &x0, float32x4_t &x1, float32x4_t &x2, float32x4_t &x3)
+    {
+        float32x4x2_t t0_{vzipq_f32(x0, x2)};
+        float32x4x2_t t1_{vzipq_f32(x1, x3)};
+        float32x4x2_t u0_{vzipq_f32(t0_.val[0], t1_.val[0])};
+        float32x4x2_t u1_{vzipq_f32(t0_.val[1], t1_.val[1])};
+        x0 = u0_.val[0];
+        x1 = u0_.val[1];
+        x2 = u1_.val[0];
+        x3 = u1_.val[1];
+    }
 #endif
 };
 
@@ -136,42 +147,52 @@ void PhaseShifterT<S>::process(const al::span<float> dst, const al::span<const f
 
 #elif defined(HAVE_NEON)
 
-    std::size_t pos{0};
-    if(std::size_t todo{dst.size()>>1})
+    if(const std::size_t todo{dst.size()>>2})
     {
-        do {
-            float32x4_t r04{vdupq_n_f32(0.0f)};
-            float32x4_t r14{vdupq_n_f32(0.0f)};
+        auto out = al::span{reinterpret_cast<float32x4_t*>(dst.data()), todo};
+        std::generate(out.begin(), out.end(), [&in,this]
+        {
+            float32x4_t r0{vdupq_n_f32(0.0f)};
+            float32x4_t r1{vdupq_n_f32(0.0f)};
+            float32x4_t r2{vdupq_n_f32(0.0f)};
+            float32x4_t r3{vdupq_n_f32(0.0f)};
             for(std::size_t j{0};j < mCoeffs.size();j+=4)
             {
                 const float32x4_t coeffs{vld1q_f32(&mCoeffs[j])};
                 const float32x4_t s0{vld1q_f32(&in[j*2])};
                 const float32x4_t s1{vld1q_f32(&in[j*2 + 4])};
-                const float32x4x2_t values{vuzpq_f32(s0, s1)};
+                const float32x4_t s2{vcombine_f32(vget_high_f32(s0), vget_low_f32(s1))};
+                const float32x4_t s3{vcombine_f32(vget_high_f32(s1), vld1_f32(&in[j*2 + 8]))};
+                const float32x4x2_t values0{vuzpq_f32(s0, s1)};
+                const float32x4x2_t values1{vuzpq_f32(s2, s3)};
 
-                r04 = vmlaq_f32(r04, values.val[0], coeffs);
-                r14 = vmlaq_f32(r14, values.val[1], coeffs);
+                r0 = vmlaq_f32(r0, values0.val[0], coeffs);
+                r1 = vmlaq_f32(r1, values0.val[1], coeffs);
+                r2 = vmlaq_f32(r2, values1.val[0], coeffs);
+                r3 = vmlaq_f32(r3, values1.val[1], coeffs);
             }
-            in += 2;
+            in += 4;
 
-            float32x4_t r4{vaddq_f32(unpackhi(r04, r14), unpacklo(r04, r14))};
-            float32x2_t r2{vadd_f32(vget_low_f32(r4), vget_high_f32(r4))};
-
-            vst1_f32(&dst[pos], r2);
-            pos += 2;
-        } while(--todo);
+            vtranspose4(r0, r1, r2, r3);
+            return vaddq_f32(vaddq_f32(r0, r1), vaddq_f32(r2, r3));
+        });
     }
-    if((dst.size()&1))
+    if(const std::size_t todo{dst.size()&3})
     {
-        float32x4_t r4{vdupq_n_f32(0.0f)};
-        for(std::size_t j{0};j < mCoeffs.size();j+=4)
+        auto out = dst.last(todo);
+        std::generate(out.begin(), out.end(), [&in,this]
         {
-            const float32x4_t coeffs{vld1q_f32(&mCoeffs[j])};
-            const float32x4_t s{load4(in[j*2], in[j*2 + 2], in[j*2 + 4], in[j*2 + 6])};
-            r4 = vmlaq_f32(r4, s, coeffs);
-        }
-        r4 = vaddq_f32(r4, vrev64q_f32(r4));
-        dst[pos] = vget_lane_f32(vadd_f32(vget_low_f32(r4), vget_high_f32(r4)), 0);
+            float32x4_t r4{vdupq_n_f32(0.0f)};
+            for(std::size_t j{0};j < mCoeffs.size();j+=4)
+            {
+                const float32x4_t coeffs{vld1q_f32(&mCoeffs[j])};
+                const float32x4_t s{load4(in[j*2], in[j*2 + 2], in[j*2 + 4], in[j*2 + 6])};
+                r4 = vmlaq_f32(r4, s, coeffs);
+            }
+            ++in;
+            r4 = vaddq_f32(r4, vrev64q_f32(r4));
+            return vget_lane_f32(vadd_f32(vget_low_f32(r4), vget_high_f32(r4)), 0);
+        });
     }
 
 #else

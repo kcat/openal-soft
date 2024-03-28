@@ -105,16 +105,16 @@ const PhaseShifterT<UhjEncoder::sFilterDelay*2> PShift{};
 void UhjEncoder::encode(const al::span<FloatBufferLine> OutSamples,
     const al::span<const FloatBufferLine,4> InSamples, const size_t SamplesToDo)
 {
-    const auto winput = al::span{InSamples[0]};
-    const auto xinput = al::span{InSamples[1]};
-    const auto yinput = al::span{InSamples[2]};
-    const auto zinput = al::span{InSamples[3]};
+    const auto winput = al::span{InSamples[0]}.first(SamplesToDo);
+    const auto xinput = al::span{InSamples[1]}.first(SamplesToDo);
+    const auto yinput = al::span{InSamples[2]}.first(SamplesToDo);
+    const auto zinput = al::span{InSamples[3]}.first(SamplesToDo);
 
     /* Combine the previously delayed input signal with the new input. */
-    std::copy_n(winput.begin(), SamplesToDo, mW.begin()+sFilterDelay);
-    std::copy_n(xinput.begin(), SamplesToDo, mX.begin()+sFilterDelay);
-    std::copy_n(yinput.begin(), SamplesToDo, mY.begin()+sFilterDelay);
-    std::copy_n(zinput.begin(), SamplesToDo, mZ.begin()+sFilterDelay);
+    std::copy(winput.begin(), winput.end(), mW.begin()+sFilterDelay);
+    std::copy(xinput.begin(), xinput.end(), mX.begin()+sFilterDelay);
+    std::copy(yinput.begin(), yinput.end(), mY.begin()+sFilterDelay);
+    std::copy(zinput.begin(), zinput.end(), mZ.begin()+sFilterDelay);
 
     /* S = 0.9396926*W + 0.1855740*X */
     for(size_t i{0};i < SamplesToDo;++i)
@@ -122,11 +122,11 @@ void UhjEncoder::encode(const al::span<FloatBufferLine> OutSamples,
 
     /* Precompute j(-0.3420201*W + 0.5098604*X) and store in mD. */
     auto tmpiter = std::copy(mWXHistory1.cbegin(), mWXHistory1.cend(), mTemp.begin());
-    std::transform(winput.begin(), winput.begin()+ptrdiff_t(SamplesToDo), xinput.begin(), tmpiter,
+    std::transform(winput.begin(), winput.end(), xinput.begin(), tmpiter,
         [](const float w, const float x) noexcept -> float
         { return -0.3420201f*w + 0.5098604f*x; });
     std::copy_n(mTemp.cbegin()+SamplesToDo, mWXHistory1.size(), mWXHistory1.begin());
-    PShift.process({mD.data(), SamplesToDo}, mTemp.data());
+    PShift.process(al::span{mD}.first(SamplesToDo), mTemp.data());
 
     /* D = j(-0.3420201*W + 0.5098604*X) + 0.6554516*Y */
     for(size_t i{0};i < SamplesToDo;++i)
@@ -145,11 +145,11 @@ void UhjEncoder::encode(const al::span<FloatBufferLine> OutSamples,
     {
         /* Precompute j(-0.1432*W + 0.6512*X) and store in mT. */
         tmpiter = std::copy(mWXHistory2.cbegin(), mWXHistory2.cend(), mTemp.begin());
-        std::transform(winput.begin(), winput.begin()+ptrdiff_t(SamplesToDo), xinput.begin(),
-            tmpiter, [](const float w, const float x) noexcept -> float
+        std::transform(winput.begin(), winput.end(), xinput.begin(), tmpiter,
+            [](const float w, const float x) noexcept -> float
             { return -0.1432f*w + 0.6512f*x; });
         std::copy_n(mTemp.cbegin()+SamplesToDo, mWXHistory2.size(), mWXHistory2.begin());
-        PShift.process({mT.data(), SamplesToDo}, mTemp.data());
+        PShift.process(al::span{mT}.first(SamplesToDo), mTemp.data());
 
         /* T = j(-0.1432*W + 0.6512*X) - 0.7071068*Y */
         auto t = al::span{OutSamples[2]};

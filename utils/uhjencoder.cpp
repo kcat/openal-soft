@@ -179,6 +179,9 @@ struct SpeakerPos {
 };
 
 /* Azimuth is counter-clockwise. */
+constexpr std::array MonoMap{
+    SpeakerPos{SF_CHANNEL_MAP_CENTER, 0.0f, 0.0f},
+};
 constexpr std::array StereoMap{
     SpeakerPos{SF_CHANNEL_MAP_LEFT,   30.0f, 0.0f},
     SpeakerPos{SF_CHANNEL_MAP_RIGHT, -30.0f, 0.0f},
@@ -298,6 +301,7 @@ int main(al::span<std::string_view> args)
         if(sf_command(infile.get(), SFC_GET_CHANNEL_MAP_INFO, chanmap.data(),
             ininfo.channels*int{sizeof(int)}) == SF_TRUE)
         {
+            static const std::array<int,1> monomap{{SF_CHANNEL_MAP_CENTER}};
             static const std::array<int,2> stereomap{{SF_CHANNEL_MAP_LEFT, SF_CHANNEL_MAP_RIGHT}};
             static const std::array<int,4> quadmap{{SF_CHANNEL_MAP_LEFT, SF_CHANNEL_MAP_RIGHT,
                 SF_CHANNEL_MAP_REAR_LEFT, SF_CHANNEL_MAP_REAR_RIGHT}};
@@ -331,7 +335,9 @@ int main(al::span<std::string_view> args)
                 { return std::find(b.begin(), b.end(), id) != b.end(); };
                 return std::all_of(a.cbegin(), a.cend(), find_channel);
             };
-            if(match_chanmap(chanmap, stereomap))
+            if(match_chanmap(chanmap, monomap))
+                spkrs = MonoMap;
+            else if(match_chanmap(chanmap, stereomap))
                 spkrs = StereoMap;
             else if(match_chanmap(chanmap, quadmap))
                 spkrs = QuadMap;
@@ -363,6 +369,12 @@ int main(al::span<std::string_view> args)
                     mapstr.c_str());
                 continue;
             }
+        }
+        else if(ininfo.channels == 1)
+        {
+            fprintf(stderr, " ... assuming front-center\n");
+            spkrs = MonoMap;
+            chanmap[0] = SF_CHANNEL_MAP_CENTER;
         }
         else if(ininfo.channels == 2)
         {

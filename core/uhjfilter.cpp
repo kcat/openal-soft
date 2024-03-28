@@ -427,7 +427,7 @@ void UhjDecoder<N>::decode(const al::span<float*> samples, const size_t samplesT
         [](const float d, const float t) noexcept { return 0.828331f*d + 0.767820f*t; });
     if(updateState) LIKELY
         std::copy_n(mTemp.cbegin()+samplesToDo, mDTHistory.size(), mDTHistory.begin());
-    PShift.process({xoutput, samplesToDo}, mTemp.data());
+    PShift.process({xoutput, samplesToDo}, mTemp);
 
     /* W = 0.981532*S + 0.197484*j(0.828331*D + 0.767820*T) */
     for(size_t i{0};i < samplesToDo;++i)
@@ -441,7 +441,7 @@ void UhjDecoder<N>::decode(const al::span<float*> samples, const size_t samplesT
     std::copy_n(mS.cbegin(), samplesToDo+sInputPadding, tmpiter);
     if(updateState) LIKELY
         std::copy_n(mTemp.cbegin()+samplesToDo, mSHistory.size(), mSHistory.begin());
-    PShift.process({youtput, samplesToDo}, mTemp.data());
+    PShift.process({youtput, samplesToDo}, mTemp);
 
     /* Y = 0.795968*D - 0.676392*T + j(0.186633*S) */
     for(size_t i{0};i < samplesToDo;++i)
@@ -591,7 +591,7 @@ void UhjStereoDecoder<N>::decode(const al::span<float*> samples, const size_t sa
     std::copy_n(mD.cbegin(), samplesToDo+sInputPadding, tmpiter);
     if(updateState) LIKELY
         std::copy_n(mTemp.cbegin()+samplesToDo, mDTHistory.size(), mDTHistory.begin());
-    PShift.process({xoutput, samplesToDo}, mTemp.data());
+    PShift.process({xoutput, samplesToDo}, mTemp);
 
     /* W = 0.6098637*S - 0.6896511*j*w*D */
     for(size_t i{0};i < samplesToDo;++i)
@@ -605,7 +605,7 @@ void UhjStereoDecoder<N>::decode(const al::span<float*> samples, const size_t sa
     std::copy_n(mS.cbegin(), samplesToDo+sInputPadding, tmpiter);
     if(updateState) LIKELY
         std::copy_n(mTemp.cbegin()+samplesToDo, mSHistory.size(), mSHistory.begin());
-    PShift.process({youtput, samplesToDo}, mTemp.data());
+    PShift.process({youtput, samplesToDo}, mTemp);
 
     /* Y = 1.6822415*w*D - 0.2156194*j*S */
     for(size_t i{0};i < samplesToDo;++i)

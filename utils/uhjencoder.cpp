@@ -126,7 +126,7 @@ void UhjEncoder::encode(const al::span<FloatBufferLine> OutSamples,
         [](const float w, const float x) noexcept -> float
         { return -0.3420201f*w + 0.5098604f*x; });
     std::copy_n(mTemp.cbegin()+SamplesToDo, mWXHistory1.size(), mWXHistory1.begin());
-    PShift.process(al::span{mD}.first(SamplesToDo), mTemp.data());
+    PShift.process(al::span{mD}.first(SamplesToDo), mTemp);
 
     /* D = j(-0.3420201*W + 0.5098604*X) + 0.6554516*Y */
     for(size_t i{0};i < SamplesToDo;++i)
@@ -149,7 +149,7 @@ void UhjEncoder::encode(const al::span<FloatBufferLine> OutSamples,
             [](const float w, const float x) noexcept -> float
             { return -0.1432f*w + 0.6512f*x; });
         std::copy_n(mTemp.cbegin()+SamplesToDo, mWXHistory2.size(), mWXHistory2.begin());
-        PShift.process(al::span{mT}.first(SamplesToDo), mTemp.data());
+        PShift.process(al::span{mT}.first(SamplesToDo), mTemp);
 
         /* T = j(-0.1432*W + 0.6512*X) - 0.7071068*Y */
         auto t = al::span{OutSamples[2]};

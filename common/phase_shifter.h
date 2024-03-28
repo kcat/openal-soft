@@ -48,7 +48,7 @@ struct PhaseShifterT {
         }
     }
 
-    void process(al::span<float> dst, const float *RESTRICT src) const;
+    void process(const al::span<float> dst, const al::span<const float> src) const;
 
 private:
 #if defined(HAVE_NEON)
@@ -74,49 +74,64 @@ private:
 };
 
 template<std::size_t S>
-inline void PhaseShifterT<S>::process(al::span<float> dst, const float *RESTRICT src) const
+inline
+void PhaseShifterT<S>::process(const al::span<float> dst, const al::span<const float> src) const
 {
+    auto in = src.begin();
 #ifdef HAVE_SSE_INTRINSICS
-    if(std::size_t todo{dst.size()>>1})
+    if(const std::size_t todo{dst.size()>>2})
     {
-        auto *out = reinterpret_cast<__m64*>(dst.data());
-        do {
-            __m128 r04{_mm_setzero_ps()};
-            __m128 r14{_mm_setzero_ps()};
+        auto out = al::span{reinterpret_cast<__m128*>(dst.data()), todo};
+        std::generate(out.begin(), out.end(), [&in,this]
+        {
+            __m128 r0{_mm_setzero_ps()};
+            __m128 r1{_mm_setzero_ps()};
+            __m128 r2{_mm_setzero_ps()};
+            __m128 r3{_mm_setzero_ps()};
             for(std::size_t j{0};j < mCoeffs.size();j+=4)
             {
                 const __m128 coeffs{_mm_load_ps(&mCoeffs[j])};
-                const __m128 s0{_mm_loadu_ps(&src[j*2])};
-                const __m128 s1{_mm_loadu_ps(&src[j*2 + 4])};
+                const __m128 s0{_mm_loadu_ps(&in[j*2])};
+                const __m128 s1{_mm_loadu_ps(&in[j*2 + 4])};
+                const __m128 s2{_mm_movehl_ps(_mm_movelh_ps(s1, s1), s0)};
+                const __m128 s3{_mm_loadh_pi(_mm_movehl_ps(s1, s1),
+                    reinterpret_cast<const __m64*>(&in[j*2 + 8]))};
 
                 __m128 s{_mm_shuffle_ps(s0, s1, _MM_SHUFFLE(2, 0, 2, 0))};
-                r04 = _mm_add_ps(r04, _mm_mul_ps(s, coeffs));
+                r0 = _mm_add_ps(r0, _mm_mul_ps(s, coeffs));
 
                 s = _mm_shuffle_ps(s0, s1, _MM_SHUFFLE(3, 1, 3, 1));
-                r14 = _mm_add_ps(r14, _mm_mul_ps(s, coeffs));
+                r1 = _mm_add_ps(r1, _mm_mul_ps(s, coeffs));
+
+                s = _mm_shuffle_ps(s2, s3, _MM_SHUFFLE(2, 0, 2, 0));
+                r2 = _mm_add_ps(r2, _mm_mul_ps(s, coeffs));
+
+                s = _mm_shuffle_ps(s2, s3, _MM_SHUFFLE(3, 1, 3, 1));
+                r3 = _mm_add_ps(r3, _mm_mul_ps(s, coeffs));
             }
-            src += 2;
+            in += 4;
 
-            __m128 r4{_mm_add_ps(_mm_unpackhi_ps(r04, r14), _mm_unpacklo_ps(r04, r14))};
-            r4 = _mm_add_ps(r4, _mm_movehl_ps(r4, r4));
-
-            _mm_storel_pi(out, r4);
-            ++out;
-        } while(--todo);
+            _MM_TRANSPOSE4_PS(r0, r1, r2, r3);
+            return _mm_add_ps(_mm_add_ps(r0, r1), _mm_add_ps(r2, r3));
+        });
     }
-    if((dst.size()&1))
+    if(const std::size_t todo{dst.size()&3})
     {
-        __m128 r4{_mm_setzero_ps()};
-        for(std::size_t j{0};j < mCoeffs.size();j+=4)
+        auto out = dst.last(todo);
+        std::generate(out.begin(), out.end(), [&in,this]
         {
-            const __m128 coeffs{_mm_load_ps(&mCoeffs[j])};
-            const __m128 s{_mm_setr_ps(src[j*2], src[j*2 + 2], src[j*2 + 4], src[j*2 + 6])};
-            r4 = _mm_add_ps(r4, _mm_mul_ps(s, coeffs));
-        }
-        r4 = _mm_add_ps(r4, _mm_shuffle_ps(r4, r4, _MM_SHUFFLE(0, 1, 2, 3)));
-        r4 = _mm_add_ps(r4, _mm_movehl_ps(r4, r4));
-
-        dst.back() = _mm_cvtss_f32(r4);
+            __m128 r4{_mm_setzero_ps()};
+            for(std::size_t j{0};j < mCoeffs.size();j+=4)
+            {
+                const __m128 coeffs{_mm_load_ps(&mCoeffs[j])};
+                const __m128 s{_mm_setr_ps(in[j*2], in[j*2 + 2], in[j*2 + 4], in[j*2 + 6])};
+                r4 = _mm_add_ps(r4, _mm_mul_ps(s, coeffs));
+            }
+            ++in;
+            r4 = _mm_add_ps(r4, _mm_shuffle_ps(r4, r4, _MM_SHUFFLE(0, 1, 2, 3)));
+            r4 = _mm_add_ps(r4, _mm_movehl_ps(r4, r4));
+            return _mm_cvtss_f32(r4);
+        });
     }
 
 #elif defined(HAVE_NEON)
@@ -130,14 +145,14 @@ inline void PhaseShifterT<S>::process(al::span<float> dst, const float *RESTRICT
             for(std::size_t j{0};j < mCoeffs.size();j+=4)
             {
                 const float32x4_t coeffs{vld1q_f32(&mCoeffs[j])};
-                const float32x4_t s0{vld1q_f32(&src[j*2])};
-                const float32x4_t s1{vld1q_f32(&src[j*2 + 4])};
+                const float32x4_t s0{vld1q_f32(&in[j*2])};
+                const float32x4_t s1{vld1q_f32(&in[j*2 + 4])};
                 const float32x4x2_t values{vuzpq_f32(s0, s1)};
 
                 r04 = vmlaq_f32(r04, values.val[0], coeffs);
                 r14 = vmlaq_f32(r14, values.val[1], coeffs);
             }
-            src += 2;
+            in += 2;
 
             float32x4_t r4{vaddq_f32(unpackhi(r04, r14), unpacklo(r04, r14))};
             float32x2_t r2{vadd_f32(vget_low_f32(r4), vget_high_f32(r4))};
@@ -152,7 +167,7 @@ inline void PhaseShifterT<S>::process(al::span<float> dst, const float *RESTRICT
         for(std::size_t j{0};j < mCoeffs.size();j+=4)
         {
             const float32x4_t coeffs{vld1q_f32(&mCoeffs[j])};
-            const float32x4_t s{load4(src[j*2], src[j*2 + 2], src[j*2 + 4], src[j*2 + 6])};
+            const float32x4_t s{load4(in[j*2], in[j*2 + 2], in[j*2 + 4], in[j*2 + 6])};
             r4 = vmlaq_f32(r4, s, coeffs);
         }
         r4 = vaddq_f32(r4, vrev64q_f32(r4));
@@ -161,15 +176,14 @@ inline void PhaseShifterT<S>::process(al::span<float> dst, const float *RESTRICT
 
 #else
 
-    for(float &output : dst)
+    std::generate(dst.begin(), dst.end(), [&in,this]
     {
         float ret{0.0f};
         for(std::size_t j{0};j < mCoeffs.size();++j)
-            ret += src[j*2] * mCoeffs[j];
-
-        output = ret;
-        ++src;
-    }
+            ret += in[j*2] * mCoeffs[j];
+        ++in;
+        return ret;
+    });
 #endif
 }
 

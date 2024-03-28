@@ -246,7 +246,7 @@ void UhjDecoder::decode(const al::span<const float> InSamples, const std::size_t
     std::transform(mD.cbegin(), mD.cbegin()+SamplesToDo+sFilterDelay, mT.cbegin(), tmpiter,
         [](const float d, const float t) noexcept { return 0.828331f*d + 0.767820f*t; });
     std::copy_n(mTemp.cbegin()+SamplesToDo, mDTHistory.size(), mDTHistory.begin());
-    PShift.process(xoutput.first(SamplesToDo), mTemp.data());
+    PShift.process(xoutput.first(SamplesToDo), mTemp);
 
     for(std::size_t i{0};i < SamplesToDo;++i)
     {
@@ -260,7 +260,7 @@ void UhjDecoder::decode(const al::span<const float> InSamples, const std::size_t
     tmpiter = std::copy(mSHistory.cbegin(), mSHistory.cend(), mTemp.begin());
     std::copy_n(mS.cbegin(), SamplesToDo+sFilterDelay, tmpiter);
     std::copy_n(mTemp.cbegin()+SamplesToDo, mSHistory.size(), mSHistory.begin());
-    PShift.process(youtput.first(SamplesToDo), mTemp.data());
+    PShift.process(youtput.first(SamplesToDo), mTemp);
 
     for(std::size_t i{0};i < SamplesToDo;++i)
     {
@@ -322,7 +322,7 @@ void UhjDecoder::decode2(const al::span<const float> InSamples,
     auto tmpiter = std::copy(mDTHistory.cbegin(), mDTHistory.cend(), mTemp.begin());
     std::copy_n(mD.cbegin(), SamplesToDo+sFilterDelay, tmpiter);
     std::copy_n(mTemp.cbegin()+SamplesToDo, mDTHistory.size(), mDTHistory.begin());
-    PShift.process(xoutput.first(SamplesToDo), mTemp.data());
+    PShift.process(xoutput.first(SamplesToDo), mTemp);
 
     for(std::size_t i{0};i < SamplesToDo;++i)
     {
@@ -336,7 +336,7 @@ void UhjDecoder::decode2(const al::span<const float> InSamples,
     tmpiter = std::copy(mSHistory.cbegin(), mSHistory.cend(), mTemp.begin());
     std::copy_n(mS.cbegin(), SamplesToDo+sFilterDelay, tmpiter);
     std::copy_n(mTemp.cbegin()+SamplesToDo, mSHistory.size(), mSHistory.begin());
-    PShift.process(youtput.first(SamplesToDo), mTemp.data());
+    PShift.process(youtput.first(SamplesToDo), mTemp);
 
     for(std::size_t i{0};i < SamplesToDo;++i)
     {

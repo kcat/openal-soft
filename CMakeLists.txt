@@ -1753,6 +1753,11 @@ if(ALSOFT_EXAMPLES)
             ${UNICODE_FLAG})
         set_target_properties(alstreamcb PROPERTIES ${DEFAULT_TARGET_PROPS})
 
+        add_executable(aldirect examples/aldirect.cpp)
+        target_link_libraries(aldirect PRIVATE ${LINKER_FLAGS} SndFile::SndFile al-excommon
+            ${UNICODE_FLAG})
+        set_target_properties(aldirect PROPERTIES ${DEFAULT_TARGET_PROPS})
+
         add_executable(alconvolve examples/alconvolve.c)
         target_link_libraries(alconvolve PRIVATE ${LINKER_FLAGS} alcommon SndFile::SndFile
             al-excommon ${UNICODE_FLAG})
@@ -1760,7 +1765,7 @@ if(ALSOFT_EXAMPLES)
 
         if(ALSOFT_INSTALL_EXAMPLES)
             set(EXTRA_INSTALLS ${EXTRA_INSTALLS} alplay alstream alreverb almultireverb allatency
-                alhrtf)
+                alhrtf aldirect)
         endif()
 
         message(STATUS "Building SndFile example programs")

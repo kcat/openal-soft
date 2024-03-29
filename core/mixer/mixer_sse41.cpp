@@ -74,8 +74,8 @@ void Resample_<LerpTag,SSE4Tag>(const InterpState*, const float *src, uint frac,
     __m128i pos4{_mm_setr_epi32(static_cast<int>(pos_[0]), static_cast<int>(pos_[1]),
         static_cast<int>(pos_[2]), static_cast<int>(pos_[3]))};
 
-    auto vecout = al::span<__m128>{reinterpret_cast<__m128*>(dst.data()), dst.size()/4};
-    std::generate(vecout.begin(), vecout.end(), [=,&pos4,&frac4]() -> __m128
+    auto vecout = al::span{reinterpret_cast<__m128*>(dst.data()), dst.size()/4};
+    std::generate(vecout.begin(), vecout.end(), [=,&pos4,&frac4]
     {
         const auto pos0 = static_cast<uint>(_mm_extract_epi32(pos4, 0));
         const auto pos1 = static_cast<uint>(_mm_extract_epi32(pos4, 1));
@@ -104,7 +104,8 @@ void Resample_<LerpTag,SSE4Tag>(const InterpState*, const float *src, uint frac,
         src += static_cast<uint>(_mm_cvtsi128_si32(pos4));
         frac = static_cast<uint>(_mm_cvtsi128_si32(frac4));
 
-        std::generate(dst.end()-ptrdiff_t(todo), dst.end(), [&src,&frac,increment]
+        auto out = dst.last(todo);
+        std::generate(out.begin(), out.end(), [&src,&frac,increment]
         {
             const float out{lerpf(src[0], src[1], static_cast<float>(frac) * (1.0f/MixerFracOne))};
 
@@ -137,8 +138,8 @@ void Resample_<CubicTag,SSE4Tag>(const InterpState *state, const float *src, uin
         static_cast<int>(pos_[2]), static_cast<int>(pos_[3]))};
 
     src -= 1;
-    auto vecout = al::span<__m128>{reinterpret_cast<__m128*>(dst.data()), dst.size()/4};
-    std::generate(vecout.begin(), vecout.end(), [=,&pos4,&frac4]() -> __m128
+    auto vecout = al::span{reinterpret_cast<__m128*>(dst.data()), dst.size()/4};
+    std::generate(vecout.begin(), vecout.end(), [=,&pos4,&frac4]
     {
         const auto pos0 = static_cast<uint>(_mm_extract_epi32(pos4, 0));
         const auto pos1 = static_cast<uint>(_mm_extract_epi32(pos4, 1));
@@ -191,7 +192,8 @@ void Resample_<CubicTag,SSE4Tag>(const InterpState *state, const float *src, uin
         src += static_cast<uint>(_mm_cvtsi128_si32(pos4));
         frac = static_cast<uint>(_mm_cvtsi128_si32(frac4));
 
-        std::generate(dst.end()-ptrdiff_t(todo), dst.end(), [&src,&frac,increment,filter]
+        auto out = dst.last(todo);
+        std::generate(out.begin(), out.end(), [&src,&frac,increment,filter]
         {
             const uint pi{frac >> CubicPhaseDiffBits}; ASSUME(pi < CubicPhaseCount);
             const float pf{static_cast<float>(frac&CubicPhaseDiffMask) * (1.0f/CubicPhaseDiffOne)};

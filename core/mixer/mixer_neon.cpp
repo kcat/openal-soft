@@ -231,8 +231,8 @@ void Resample_<CubicTag,NEONTag>(const InterpState *state, const float *src, uin
     uint32x4_t pos4{vld1q_u32(pos_.data())};
 
     src -= 1;
-    auto vecout = al::span<float32x4_t>{reinterpret_cast<float32x4_t*>(dst.data()), dst.size()/4};
-    std::generate(vecout.begin(), vecout.end(), [=,&pos4,&frac4]() -> float32x4_t
+    auto vecout = al::span{reinterpret_cast<float32x4_t*>(dst.data()), dst.size()/4};
+    std::generate(vecout.begin(), vecout.end(), [=,&pos4,&frac4]
     {
         const uint pos0{vgetq_lane_u32(pos4, 0)};
         const uint pos1{vgetq_lane_u32(pos4, 1)};
@@ -279,7 +279,8 @@ void Resample_<CubicTag,NEONTag>(const InterpState *state, const float *src, uin
         src += vgetq_lane_u32(pos4, 0);
         frac = vgetq_lane_u32(frac4, 0);
 
-        std::generate(dst.end()-ptrdiff_t(todo), dst.end(), [&src,&frac,increment,filter]
+        auto out = dst.last(todo);
+        std::generate(out.begin(), out.end(), [&src,&frac,increment,filter]
         {
             const uint pi{frac >> CubicPhaseDiffBits}; ASSUME(pi < CubicPhaseCount);
             const float pf{static_cast<float>(frac&CubicPhaseDiffMask) * (1.0f/CubicPhaseDiffOne)};

@@ -73,7 +73,7 @@ void Resample_<LerpTag,SSE2Tag>(const InterpState*, const float *src, uint frac,
     __m128i pos4{_mm_setr_epi32(static_cast<int>(pos_[0]), static_cast<int>(pos_[1]),
         static_cast<int>(pos_[2]), static_cast<int>(pos_[3]))};
 
-    auto vecout = al::span<__m128>{reinterpret_cast<__m128*>(dst.data()), dst.size()/4};
+    auto vecout = al::span{reinterpret_cast<__m128*>(dst.data()), dst.size()/4};
     std::generate(vecout.begin(), vecout.end(), [=,&pos4,&frac4]() -> __m128
     {
         const auto pos0 = static_cast<uint>(_mm_cvtsi128_si32(pos4));
@@ -99,14 +99,15 @@ void Resample_<LerpTag,SSE2Tag>(const InterpState*, const float *src, uint frac,
         src += static_cast<uint>(_mm_cvtsi128_si32(pos4));
         frac = static_cast<uint>(_mm_cvtsi128_si32(frac4));
 
-        std::generate(dst.end()-ptrdiff_t(todo), dst.end(), [&src,&frac,increment]()
+        const auto out = dst.last(todo);
+        std::generate(out.begin(), out.end(), [&src,&frac,increment]()
         {
-            const float out{lerpf(src[0], src[1], static_cast<float>(frac) * (1.0f/MixerFracOne))};
+            const float smp{lerpf(src[0], src[1], static_cast<float>(frac) * (1.0f/MixerFracOne))};
 
             frac += increment;
             src  += frac>>MixerFracBits;
             frac &= MixerFracMask;
-            return out;
+            return smp;
         });
     }
 }

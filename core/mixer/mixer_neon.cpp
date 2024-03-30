@@ -171,7 +171,7 @@ void Resample_<LerpTag,NEONTag>(const InterpState*, const float *src, uint frac,
     uint32x4_t frac4 = vld1q_u32(frac_.data());
     uint32x4_t pos4 = vld1q_u32(pos_.data());
 
-    auto vecout = al::span<float32x4_t>{reinterpret_cast<float32x4_t*>(dst.data()), dst.size()/4};
+    auto vecout = al::span{reinterpret_cast<float32x4_t*>(dst.data()), dst.size()/4};
     std::generate(vecout.begin(), vecout.end(), [=,&pos4,&frac4]() -> float32x4_t
     {
         const uint pos0{vgetq_lane_u32(pos4, 0)};

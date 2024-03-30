@@ -107,12 +107,12 @@ void Resample_<LerpTag,SSE4Tag>(const InterpState*, const float *src, uint frac,
         auto out = dst.last(todo);
         std::generate(out.begin(), out.end(), [&src,&frac,increment]
         {
-            const float out{lerpf(src[0], src[1], static_cast<float>(frac) * (1.0f/MixerFracOne))};
+            const float smp{lerpf(src[0], src[1], static_cast<float>(frac) * (1.0f/MixerFracOne))};
 
             frac += increment;
             src  += frac>>MixerFracBits;
             frac &= MixerFracMask;
-            return out;
+            return smp;
         });
     }
 }

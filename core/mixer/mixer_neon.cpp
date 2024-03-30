@@ -85,18 +85,16 @@ inline void ApplyCoeffs(float2 *Values, const size_t IrSize, const ConstHrirSpan
     }
 }
 
-force_inline void MixLine(const al::span<const float> InSamples, float *RESTRICT dst,
+force_inline void MixLine(const al::span<const float> InSamples, const al::span<float> dst,
     float &CurrentGain, const float TargetGain, const float delta, const size_t min_len,
     const size_t aligned_len, size_t Counter)
 {
-    float gain{CurrentGain};
-    const float step{(TargetGain-gain) * delta};
+    const float step{(TargetGain-TargetGain) * delta};
 
     size_t pos{0};
-    if(!(std::abs(step) > std::numeric_limits<float>::epsilon()))
-        gain = TargetGain;
-    else
+    if(std::abs(step) > std::numeric_limits<float>::epsilon())
     {
+        const float gain{CurrentGain};
         float step_count{0.0f};
         /* Mix with applying gain steps in aligned multiples of 4. */
         if(size_t todo{min_len >> 2})
@@ -129,22 +127,23 @@ force_inline void MixLine(const al::span<const float> InSamples, float *RESTRICT
             dst[pos] += InSamples[pos] * (gain + step*step_count);
             step_count += 1.0f;
         }
-        if(pos == Counter)
-            gain = TargetGain;
-        else
-            gain += step*step_count;
+        if(pos < Counter)
+        {
+            CurrentGain = gain + step*step_count;
+            return;
+        }
 
         /* Mix until pos is aligned with 4 or the mix is done. */
         for(size_t leftover{aligned_len&3};leftover;++pos,--leftover)
-            dst[pos] += InSamples[pos] * gain;
+            dst[pos] += InSamples[pos] * TargetGain;
     }
-    CurrentGain = gain;
+    CurrentGain = TargetGain;
 
-    if(!(std::abs(gain) > GainSilenceThreshold))
+    if(!(std::abs(TargetGain) > GainSilenceThreshold))
         return;
     if(size_t todo{(InSamples.size()-pos) >> 2})
     {
-        const float32x4_t gain4 = vdupq_n_f32(gain);
+        const float32x4_t gain4 = vdupq_n_f32(TargetGain);
         do {
             const float32x4_t val4 = vld1q_f32(&InSamples[pos]);
             float32x4_t dry4 = vld1q_f32(&dst[pos]);
@@ -153,8 +152,8 @@ force_inline void MixLine(const al::span<const float> InSamples, float *RESTRICT
             pos += 4;
         } while(--todo);
     }
-    for(size_t leftover{(InSamples.size()-pos)&3};leftover;++pos,--leftover)
-        dst[pos] += InSamples[pos] * gain;
+    for(size_t leftover{InSamples.size()&3};leftover;++pos,--leftover)
+        dst[pos] += InSamples[pos] * TargetGain;
 }
 
 } // namespace
@@ -420,26 +419,28 @@ void MixDirectHrtf_<NEONTag>(const FloatBufferSpan LeftOut, const FloatBufferSpa
 
 
 template<>
-void Mix_<NEONTag>(const al::span<const float> InSamples, const al::span<FloatBufferLine> OutBuffer,
-    float *CurrentGains, const float *TargetGains, const size_t Counter, const size_t OutPos)
+void Mix_<NEONTag>(const al::span<const float> InSamples,const al::span<FloatBufferLine> OutBuffer,
+    const al::span<float> CurrentGains, const al::span<const float> TargetGains,
+    const size_t Counter, const size_t OutPos)
 {
     const float delta{(Counter > 0) ? 1.0f / static_cast<float>(Counter) : 0.0f};
     const auto min_len = std::min(Counter, InSamples.size());
     const auto aligned_len = std::min((min_len+3_uz) & ~3_uz, InSamples.size()) - min_len;
 
+    auto curgains = CurrentGains.begin();
+    auto targetgains = TargetGains.cbegin();
     for(FloatBufferLine &output : OutBuffer)
-        MixLine(InSamples, al::assume_aligned<16>(output.data()+OutPos), *CurrentGains++,
-            *TargetGains++, delta, min_len, aligned_len, Counter);
+        MixLine(InSamples, al::span{output}.subspan(OutPos), *curgains++, *targetgains++, delta,
+            min_len, aligned_len, Counter);
 }
 
 template<>
-void Mix_<NEONTag>(const al::span<const float> InSamples, float *OutBuffer, float &CurrentGain,
-    const float TargetGain, const size_t Counter)
+void Mix_<NEONTag>(const al::span<const float> InSamples, const al::span<float> OutBuffer,
+    float &CurrentGain, const float TargetGain, const size_t Counter)
 {
     const float delta{(Counter > 0) ? 1.0f / static_cast<float>(Counter) : 0.0f};
     const auto min_len = std::min(Counter, InSamples.size());
     const auto aligned_len = std::min((min_len+3_uz) & ~3_uz, InSamples.size()) - min_len;
 
-    MixLine(InSamples, al::assume_aligned<16>(OutBuffer), CurrentGain, TargetGain, delta, min_len,
-        aligned_len, Counter);
+    MixLine(InSamples, OutBuffer, CurrentGain, TargetGain, delta, min_len, aligned_len, Counter);
 }

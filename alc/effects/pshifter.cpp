@@ -306,8 +306,8 @@ void PshifterState::process(const size_t samplesToDo,
     }
 
     /* Now, mix the processed sound data to the output. */
-    MixSamples({mBufferOut.data(), samplesToDo}, samplesOut, mCurrentGains.data(),
-        mTargetGains.data(), std::max(samplesToDo, 512_uz), 0);
+    MixSamples(al::span{mBufferOut}.first(samplesToDo), samplesOut, mCurrentGains, mTargetGains,
+        std::max(samplesToDo, 512_uz), 0);
 }
 
 

@@ -214,7 +214,7 @@ void AutowahState::process(const size_t samplesToDo,
         chandata->mFilter.z2 = z2;
 
         /* Now, mix the processed sound data to the output. */
-        MixSamples({mBufferOut.data(), samplesToDo}, samplesOut[outidx].data(),
+        MixSamples(al::span{mBufferOut}.first(samplesToDo), samplesOut[outidx],
             chandata->mCurrentGain, chandata->mTargetGain, samplesToDo);
         ++chandata;
     }

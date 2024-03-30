@@ -73,12 +73,9 @@ void BFormatDec::process(const al::span<FloatBufferLine> OutBuffer,
         const auto lfSamples = al::span<float>{mSamples[sLFBand]}.first(SamplesToDo);
         for(auto &chandec : decoder)
         {
-            chandec.mXOver.process({input->data(), SamplesToDo}, hfSamples, lfSamples);
-            MixSamples(hfSamples, OutBuffer, chandec.mGains[sHFBand].data(),
-                chandec.mGains[sHFBand].data(), 0, 0);
-            MixSamples(lfSamples, OutBuffer, chandec.mGains[sLFBand].data(),
-                chandec.mGains[sLFBand].data(), 0, 0);
-            ++input;
+            chandec.mXOver.process(al::span{*input++}.first(SamplesToDo), hfSamples, lfSamples);
+            MixSamples(hfSamples, OutBuffer, chandec.mGains[sHFBand], chandec.mGains[sHFBand],0,0);
+            MixSamples(lfSamples, OutBuffer, chandec.mGains[sLFBand], chandec.mGains[sLFBand],0,0);
         }
     };
     auto decode_singleband = [=](std::vector<ChannelDecoderSingle> &decoder)
@@ -86,9 +83,8 @@ void BFormatDec::process(const al::span<FloatBufferLine> OutBuffer,
         auto input = InSamples.cbegin();
         for(auto &chandec : decoder)
         {
-            MixSamples(al::span{*input}.first(SamplesToDo), OutBuffer, chandec.mGains.data(),
-                chandec.mGains.data(), 0, 0);
-            ++input;
+            MixSamples(al::span{*input++}.first(SamplesToDo), OutBuffer, chandec.mGains,
+                chandec.mGains, 0, 0);
         }
     };
 

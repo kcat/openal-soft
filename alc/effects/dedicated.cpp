@@ -112,8 +112,8 @@ void DedicatedLfeState::update(const ContextBase*, const EffectSlot *slot,
 
 void DedicatedState::process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn, const al::span<FloatBufferLine> samplesOut)
 {
-    MixSamples({samplesIn[0].data(), samplesToDo}, samplesOut, mCurrentGains.data(),
-        mTargetGains.data(), samplesToDo, 0);
+    MixSamples(al::span{samplesIn[0]}.first(samplesToDo), samplesOut, mCurrentGains, mTargetGains,
+        samplesToDo, 0);
 }
 
 

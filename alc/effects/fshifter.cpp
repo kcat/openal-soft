@@ -239,8 +239,8 @@ void FshifterState::process(const size_t samplesToDo, const al::span<const Float
         mPhase[c] = phase_idx;
 
         /* Now, mix the processed sound data to the output. */
-        MixSamples({mBufferOut.data(), samplesToDo}, samplesOut, mGains[c].Current.data(),
-            mGains[c].Target.data(), std::max(samplesToDo, 512_uz), 0);
+        MixSamples(al::span{mBufferOut}.first(samplesToDo), samplesOut, mGains[c].Current,
+            mGains[c].Target, std::max(samplesToDo, 512_uz), 0);
     }
 }
 

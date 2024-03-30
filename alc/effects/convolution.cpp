@@ -264,8 +264,8 @@ void ConvolutionState::NormalMix(const al::span<FloatBufferLine> samplesOut,
     const size_t samplesToDo)
 {
     for(auto &chan : mChans)
-        MixSamples({chan.mBuffer.data(), samplesToDo}, samplesOut, chan.Current.data(),
-            chan.Target.data(), samplesToDo, 0);
+        MixSamples(al::span{chan.mBuffer}.first(samplesToDo), samplesOut, chan.Current,
+            chan.Target, samplesToDo, 0);
 }
 
 void ConvolutionState::UpsampleMix(const al::span<FloatBufferLine> samplesOut,
@@ -273,9 +273,9 @@ void ConvolutionState::UpsampleMix(const al::span<FloatBufferLine> samplesOut,
 {
     for(auto &chan : mChans)
     {
-        const al::span<float> src{chan.mBuffer.data(), samplesToDo};
+        const auto src = al::span{chan.mBuffer}.first(samplesToDo);
         chan.mFilter.processScale(src, chan.mHfScale, chan.mLfScale);
-        MixSamples(src, samplesOut, chan.Current.data(), chan.Target.data(), samplesToDo, 0);
+        MixSamples(src, samplesOut, chan.Current, chan.Target, samplesToDo, 0);
     }
 }
 

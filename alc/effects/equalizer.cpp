@@ -169,18 +169,17 @@ void EqualizerState::update(const ContextBase *context, const EffectSlot *slot,
 
 void EqualizerState::process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn, const al::span<FloatBufferLine> samplesOut)
 {
-    const al::span<float> buffer{mSampleBuffer.data(), samplesToDo};
+    const auto buffer = al::span{mSampleBuffer}.first(samplesToDo);
     auto chan = mChans.begin();
     for(const auto &input : samplesIn)
     {
-        const size_t outidx{chan->mTargetChannel};
-        if(outidx != InvalidChannelIndex)
+        if(const size_t outidx{chan->mTargetChannel}; outidx != InvalidChannelIndex)
         {
-            const al::span<const float> inbuf{input.data(), samplesToDo};
+            const auto inbuf = al::span{input}.first(samplesToDo);
             DualBiquad{chan->mFilter[0], chan->mFilter[1]}.process(inbuf, buffer);
             DualBiquad{chan->mFilter[2], chan->mFilter[3]}.process(buffer, buffer);
 
-            MixSamples(buffer, samplesOut[outidx].data(), chan->mCurrentGain, chan->mTargetGain,
+            MixSamples(buffer, samplesOut[outidx], chan->mCurrentGain, chan->mTargetGain,
                 samplesToDo);
         }
         ++chan;

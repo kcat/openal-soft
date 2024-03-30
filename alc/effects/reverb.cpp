@@ -597,16 +597,14 @@ struct ReverbState final : public EffectState {
         auto inBuffer = mEarlySamples.cbegin();
         for(auto &gains : pipeline.mEarly.Gains)
         {
-            MixSamples(al::span{inBuffer->cbegin(), todo}, samplesOut, gains.Current.data(),
-                gains.Target.data(), todo, 0);
-            ++inBuffer;
+            MixSamples(al::span{*inBuffer++}.first(todo), samplesOut, gains.Current, gains.Target,
+                todo, 0);
         }
         inBuffer = mLateSamples.cbegin();
         for(auto &gains : pipeline.mLate.Gains)
         {
-            MixSamples(al::span{inBuffer->cbegin(), todo}, samplesOut, gains.Current.data(),
-                gains.Target.data(), todo, 0);
-            ++inBuffer;
+            MixSamples(al::span{*inBuffer++}.first(todo), samplesOut, gains.Current, gains.Target,
+                todo, 0);
         }
     }
 
@@ -622,16 +620,14 @@ struct ReverbState final : public EffectState {
             std::fill(OutBuffer.begin(), OutBuffer.end(), 0.0f);
             for(const float gain : Gains)
             {
-                const float *RESTRICT input{al::assume_aligned<16>(inBuffer->data())};
+                if(std::fabs(gain) > GainSilenceThreshold)
+                {
+                    auto mix_sample = [gain](const float sample, const float in) noexcept -> float
+                    { return sample + in*gain; };
+                    std::transform(OutBuffer.begin(), OutBuffer.end(), inBuffer->cbegin(),
+                        OutBuffer.begin(), mix_sample);
+                }
                 ++inBuffer;
-
-                if(!(std::fabs(gain) > GainSilenceThreshold))
-                    continue;
-
-                auto mix_sample = [gain](const float sample, const float in) noexcept -> float
-                { return sample + in*gain; };
-                std::transform(OutBuffer.begin(), OutBuffer.end(), input, OutBuffer.begin(),
-                    mix_sample);
             }
         };
 
@@ -650,10 +646,10 @@ struct ReverbState final : public EffectState {
             /* Apply scaling to the B-Format's HF response to "upsample" it to
              * higher-order output.
              */
-            splitter->processHfScale(tmpspan, hfscale);
-            ++splitter; hfscale = mOrderScales[1];
+            (splitter++)->processHfScale(tmpspan, hfscale);
+            hfscale = mOrderScales[1];
 
-            MixSamples(tmpspan, samplesOut, gains.Current.data(), gains.Target.data(), todo, 0);
+            MixSamples(tmpspan, samplesOut, gains.Current, gains.Target, todo, 0);
         }
         hfscale = mOrderScales[0];
         splitter = pipeline.mAmbiSplitter[1].begin();
@@ -662,10 +658,10 @@ struct ReverbState final : public EffectState {
         {
             DoMixRow(tmpspan, *(a2bcoeffs++), mLateSamples);
 
-            splitter->processHfScale(tmpspan, hfscale);
-            ++splitter; hfscale = mOrderScales[1];
+            (splitter++)->processHfScale(tmpspan, hfscale);
+            hfscale = mOrderScales[1];
 
-            MixSamples(tmpspan, samplesOut, gains.Current.data(), gains.Target.data(), todo, 0);
+            MixSamples(tmpspan, samplesOut, gains.Current, gains.Target, todo, 0);
         }
     }
 

@@ -198,14 +198,13 @@ void ModulatorState::process(const size_t samplesToDo, const al::span<const Floa
     auto chandata = mChans.begin();
     for(const auto &input : samplesIn)
     {
-        const size_t outidx{chandata->mTargetChannel};
-        if(outidx != InvalidChannelIndex)
+        if(const size_t outidx{chandata->mTargetChannel}; outidx != InvalidChannelIndex)
         {
-            chandata->mFilter.process({input.data(), samplesToDo}, mBuffer);
+            chandata->mFilter.process(al::span{input}.first(samplesToDo), mBuffer);
             std::transform(mBuffer.cbegin(), mBuffer.cbegin()+samplesToDo, mModSamples.cbegin(),
                 mBuffer.begin(), std::multiplies<>{});
 
-            MixSamples({mBuffer.data(), samplesToDo}, samplesOut[outidx].data(),
+            MixSamples(al::span{mBuffer}.first(samplesToDo), samplesOut[outidx],
                 chandata->mCurrentGain, chandata->mTargetGain, std::min(samplesToDo, 64_uz));
         }
         ++chandata;

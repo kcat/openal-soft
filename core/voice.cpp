@@ -689,24 +689,23 @@ void DoNfcMix(const al::span<const float> samples, al::span<FloatBufferLine> Out
     static constexpr std::array<FilterProc,MaxAmbiOrder+1> NfcProcess{{
         nullptr, &NfcFilter::process1, &NfcFilter::process2, &NfcFilter::process3}};
 
-    auto CurrentGains = parms.Gains.Current.begin();
-    auto TargetGains = OutGains.cbegin();
-    MixSamples(samples, OutBuffer.first<1>(), al::to_address(CurrentGains),
-        al::to_address(TargetGains), Counter, OutPos);
-    OutBuffer = OutBuffer.subspan<1>();
-    ++CurrentGains;
-    ++TargetGains;
+    auto CurrentGains = al::span{parms.Gains.Current}.subspan(0);
+    auto TargetGains = OutGains.subspan(0);
+    MixSamples(samples, OutBuffer.first(1), CurrentGains, TargetGains, Counter, OutPos);
+    OutBuffer = OutBuffer.subspan(1);
+    CurrentGains = CurrentGains.subspan(1);
+    TargetGains = TargetGains.subspan(1);
 
-    const auto nfcsamples = al::span{Device->ExtraSampleData.begin(), samples.size()};
+    const auto nfcsamples = al::span{Device->ExtraSampleData}.subspan(samples.size());
     size_t order{1};
     while(const size_t chancount{Device->NumChannelsPerOrder[order]})
     {
         (parms.NFCtrlFilter.*NfcProcess[order])(samples, nfcsamples);
-        MixSamples(nfcsamples, OutBuffer.first(chancount), al::to_address(CurrentGains),
-            al::to_address(TargetGains), Counter, OutPos);
+        MixSamples(nfcsamples, OutBuffer.first(chancount), CurrentGains, TargetGains, Counter,
+            OutPos);
         OutBuffer = OutBuffer.subspan(chancount);
-        CurrentGains += ptrdiff_t(chancount);
-        TargetGains += ptrdiff_t(chancount);
+        CurrentGains = CurrentGains.subspan(chancount);
+        TargetGains = TargetGains.subspan(chancount);
         if(++order == MaxAmbiOrder+1)
             break;
     }
@@ -1072,8 +1071,8 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
                 if(mFlags.test(VoiceHasNfc))
                     DoNfcMix(samples, mDirect.Buffer, parms, TargetGains, Counter, OutPos, Device);
                 else
-                    MixSamples(samples, mDirect.Buffer, parms.Gains.Current.data(),
-                        TargetGains.data(), Counter, OutPos);
+                    MixSamples(samples, mDirect.Buffer, parms.Gains.Current, TargetGains, Counter,
+                        OutPos);
             }
         }
 
@@ -1086,10 +1085,10 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
             const auto samples = DoFilters(parms.LowPass, parms.HighPass, FilterBuf,
                 {*voiceSamples, samplesToMix}, mSend[send].FilterType);
 
-            const float *TargetGains{(vstate == Playing) ? parms.Gains.Target.data()
-                : SilentTarget.data()};
-            MixSamples(samples, mSend[send].Buffer, parms.Gains.Current.data(), TargetGains,
-                Counter, OutPos);
+            const auto TargetGains = (vstate == Playing) ? al::span{parms.Gains.Target}
+                : al::span{SilentTarget};
+            MixSamples(samples, mSend[send].Buffer, parms.Gains.Current, TargetGains, Counter,
+                OutPos);
         }
 
         ++voiceSamples;

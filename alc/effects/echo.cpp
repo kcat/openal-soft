@@ -160,8 +160,8 @@ void EchoState::process(const size_t samplesToDo, const al::span<const FloatBuff
     mOffset = offset;
 
     for(size_t c{0};c < 2;c++)
-        MixSamples({mTempBuffer[c].data(), samplesToDo}, samplesOut, mGains[c].Current.data(),
-            mGains[c].Target.data(), samplesToDo, 0);
+        MixSamples(al::span{mTempBuffer[c]}.first(samplesToDo), samplesOut, mGains[c].Current,
+            mGains[c].Target, samplesToDo, 0);
 }
 
 

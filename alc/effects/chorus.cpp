@@ -322,10 +322,10 @@ void ChorusState::process(const size_t samplesToDo, const al::span<const FloatBu
         ++offset;
     }
 
-    MixSamples(lbuffer.first(samplesToDo), samplesOut, mGains[0].Current.data(),
-        mGains[0].Target.data(), samplesToDo, 0);
-    MixSamples(rbuffer.first(samplesToDo), samplesOut, mGains[1].Current.data(),
-        mGains[1].Target.data(), samplesToDo, 0);
+    MixSamples(lbuffer.first(samplesToDo), samplesOut, mGains[0].Current, mGains[0].Target,
+        samplesToDo, 0);
+    MixSamples(rbuffer.first(samplesToDo), samplesOut, mGains[1].Current, mGains[1].Target,
+        samplesToDo, 0);
 
     mOffset = offset;
 }

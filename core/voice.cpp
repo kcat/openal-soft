@@ -57,8 +57,6 @@ static_assert((BufferLineSize-1)/MaxPitch > 0, "MaxPitch is too large for Buffer
 static_assert((INT_MAX>>MixerFracBits)/MaxPitch > BufferLineSize,
     "MaxPitch and/or BufferLineSize are too large for MixerFracBits!");
 
-Resampler ResamplerDefault{Resampler::Cubic};
-
 namespace {
 
 using uint = unsigned int;

@@ -19,8 +19,8 @@ enum class UhjQualityType : std::uint8_t {
     Default = IIR
 };
 
-extern UhjQualityType UhjDecodeQuality;
-extern UhjQualityType UhjEncodeQuality;
+inline UhjQualityType UhjDecodeQuality{UhjQualityType::Default};
+inline UhjQualityType UhjEncodeQuality{UhjQualityType::Default};
 
 
 struct UhjAllPassFilter {

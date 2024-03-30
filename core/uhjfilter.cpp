@@ -15,10 +15,6 @@
 #include "vector.h"
 
 
-UhjQualityType UhjDecodeQuality{UhjQualityType::Default};
-UhjQualityType UhjEncodeQuality{UhjQualityType::Default};
-
-
 namespace {
 
 /* Convolution is implemented using a segmented overlap-add method. The filter

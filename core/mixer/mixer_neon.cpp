@@ -63,26 +63,24 @@ inline float32x4_t set_f4(float l0, float l1, float l2, float l3)
     return ret;
 }
 
-inline void ApplyCoeffs(float2 *Values, const size_t IrSize, const ConstHrirSpan Coeffs,
-    const float left, const float right)
+inline void ApplyCoeffs(const al::span<float2> Values, const size_t IrSize,
+    const ConstHrirSpan Coeffs, const float left, const float right)
 {
-    auto dup_samples = [left,right]
+    ASSUME(IrSize >= MinIrLength);
+    ASSUME(IrSize <= HrirLength);
+
+    auto dup_samples = [left,right]() -> float32x4_t
     {
         float32x2_t leftright2{vset_lane_f32(right, vmov_n_f32(left), 1)};
         return vcombine_f32(leftright2, leftright2);
     };
-    const float32x4_t leftright4{dup_samples()};
+    const auto leftright4 = dup_samples();
 
-    ASSUME(IrSize >= MinIrLength);
-    for(size_t c{0};c < IrSize;c += 2)
-    {
-        float32x4_t vals = vld1q_f32(&Values[c][0]);
-        float32x4_t coefs = vld1q_f32(&Coeffs[c][0]);
-
-        vals = vmlaq_f32(vals, coefs, leftright4);
-
-        vst1q_f32(&Values[c][0], vals);
-    }
+    const auto vals4 = al::span{reinterpret_cast<float32x4_t*>(Values[0].data()), IrSize/2};
+    const auto coeffs4=al::span{reinterpret_cast<const float32x4_t*>(Coeffs[0].data()), IrSize/2};
+    std::transform(vals4.cbegin(), vals4.cend(), coeffs4.cbegin(), vals4.begin(),
+        [leftright4](const float32x4_t &val, const float32x4_t &coeff) -> float32x4_t
+        { return vmlaq_f32(val, coeff, leftright4); });
 }
 
 force_inline void MixLine(const al::span<const float> InSamples, const al::span<float> dst,
@@ -395,26 +393,27 @@ void Resample_<FastBSincTag,NEONTag>(const InterpState *state, const float *src,
 
 
 template<>
-void MixHrtf_<NEONTag>(const float *InSamples, float2 *AccumSamples, const uint IrSize,
-    const MixHrtfFilter *hrtfparams, const size_t BufferSize)
-{ MixHrtfBase<ApplyCoeffs>(InSamples, AccumSamples, IrSize, hrtfparams, BufferSize); }
+void MixHrtf_<NEONTag>(const al::span<const float> InSamples, const al::span<float2> AccumSamples,
+    const uint IrSize, const MixHrtfFilter *hrtfparams, const size_t SamplesToDo)
+{ MixHrtfBase<ApplyCoeffs>(InSamples, AccumSamples, IrSize, hrtfparams, SamplesToDo); }
 
 template<>
-void MixHrtfBlend_<NEONTag>(const float *InSamples, float2 *AccumSamples, const uint IrSize,
-    const HrtfFilter *oldparams, const MixHrtfFilter *newparams, const size_t BufferSize)
+void MixHrtfBlend_<NEONTag>(const al::span<const float> InSamples,
+    const al::span<float2> AccumSamples, const uint IrSize, const HrtfFilter *oldparams,
+    const MixHrtfFilter *newparams, const size_t SamplesToDo)
 {
     MixHrtfBlendBase<ApplyCoeffs>(InSamples, AccumSamples, IrSize, oldparams, newparams,
-        BufferSize);
+        SamplesToDo);
 }
 
 template<>
 void MixDirectHrtf_<NEONTag>(const FloatBufferSpan LeftOut, const FloatBufferSpan RightOut,
-    const al::span<const FloatBufferLine> InSamples, float2 *AccumSamples,
-    const al::span<float,BufferLineSize> TempBuf, HrtfChannelState *ChanState, const size_t IrSize,
-    const size_t BufferSize)
+    const al::span<const FloatBufferLine> InSamples, const al::span<float2> AccumSamples,
+    const al::span<float,BufferLineSize> TempBuf, const al::span<HrtfChannelState> ChanState,
+    const size_t IrSize, const size_t SamplesToDo)
 {
     MixDirectHrtfBase<ApplyCoeffs>(LeftOut, RightOut, InSamples, AccumSamples, TempBuf, ChanState,
-        IrSize, BufferSize);
+        IrSize, SamplesToDo);
 }
 
 

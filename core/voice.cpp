@@ -65,11 +65,12 @@ using uint = unsigned int;
 using namespace std::chrono;
 using namespace std::string_view_literals;
 
-using HrtfMixerFunc = void(*)(const float *InSamples, float2 *AccumSamples, const uint IrSize,
-    const MixHrtfFilter *hrtfparams, const size_t BufferSize);
-using HrtfMixerBlendFunc = void(*)(const float *InSamples, float2 *AccumSamples,
-    const uint IrSize, const HrtfFilter *oldparams, const MixHrtfFilter *newparams,
-    const size_t BufferSize);
+using HrtfMixerFunc = void(*)(const al::span<const float> InSamples,
+    const al::span<float2> AccumSamples, const uint IrSize, const MixHrtfFilter *hrtfparams,
+    const size_t SamplesToDo);
+using HrtfMixerBlendFunc = void(*)(const al::span<const float> InSamples,
+    const al::span<float2> AccumSamples, const uint IrSize, const HrtfFilter *oldparams,
+    const MixHrtfFilter *newparams, const size_t SamplesToDo);
 
 HrtfMixerFunc MixHrtfSamples{MixHrtf_<CTag>};
 HrtfMixerBlendFunc MixHrtfBlendSamples{MixHrtfBlend_<CTag>};
@@ -619,8 +620,10 @@ void DoHrtfMix(const al::span<const float> samples, DirectParams &parms, const f
     std::copy_n(samples.begin(), samples.size(), src_iter);
     /* Copy the last used samples back into the history buffer for later. */
     if(IsPlaying) LIKELY
-        std::copy_n(HrtfSamples.begin() + ptrdiff_t(samples.size()), parms.Hrtf.History.size(),
-            parms.Hrtf.History.begin());
+    {
+        const auto endsamples = HrtfSamples.subspan(samples.size(), parms.Hrtf.History.size());
+        std::copy_n(endsamples.cbegin(), endsamples.size(), parms.Hrtf.History.begin());
+    }
 
     /* If fading and this is the first mixing pass, fade between the IRs. */
     size_t fademix{0};
@@ -645,8 +648,8 @@ void DoHrtfMix(const al::span<const float> samples, DirectParams &parms, const f
             parms.Hrtf.Target.Coeffs,
             parms.Hrtf.Target.Delay,
             0.0f, gain / static_cast<float>(fademix)};
-        MixHrtfBlendSamples(HrtfSamples.data(), AccumSamples.data()+OutPos, IrSize,
-            &parms.Hrtf.Old, &hrtfparams, fademix);
+        MixHrtfBlendSamples(HrtfSamples, AccumSamples.subspan(OutPos), IrSize, &parms.Hrtf.Old,
+            &hrtfparams, fademix);
 
         /* Update the old parameters with the result. */
         parms.Hrtf.Old = parms.Hrtf.Target;
@@ -673,8 +676,8 @@ void DoHrtfMix(const al::span<const float> samples, DirectParams &parms, const f
             parms.Hrtf.Target.Delay,
             parms.Hrtf.Old.Gain,
             (gain - parms.Hrtf.Old.Gain) / static_cast<float>(todo)};
-        MixHrtfSamples(HrtfSamples.data()+fademix, AccumSamples.data()+OutPos, IrSize, &hrtfparams,
-            todo);
+        MixHrtfSamples(HrtfSamples.subspan(fademix), AccumSamples.subspan(OutPos), IrSize,
+            &hrtfparams, todo);
 
         /* Store the now-current gain for next time. */
         parms.Hrtf.Old.Gain = gain;

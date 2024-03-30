@@ -83,16 +83,17 @@ void Mix_(const al::span<const float> InSamples, const al::span<float> OutBuffer
     float &CurrentGain, const float TargetGain, const size_t Counter);
 
 template<typename InstTag>
-void MixHrtf_(const float *InSamples, float2 *AccumSamples, const uint IrSize,
-    const MixHrtfFilter *hrtfparams, const size_t BufferSize);
+void MixHrtf_(const al::span<const float> InSamples, const al::span<float2> AccumSamples,
+    const uint IrSize, const MixHrtfFilter *hrtfparams, const size_t SamplesToDo);
 template<typename InstTag>
-void MixHrtfBlend_(const float *InSamples, float2 *AccumSamples, const uint IrSize,
-    const HrtfFilter *oldparams, const MixHrtfFilter *newparams, const size_t BufferSize);
+void MixHrtfBlend_(const al::span<const float> InSamples, const al::span<float2> AccumSamples,
+    const uint IrSize, const HrtfFilter *oldparams, const MixHrtfFilter *newparams,
+    const size_t SamplesToDo);
 template<typename InstTag>
 void MixDirectHrtf_(const FloatBufferSpan LeftOut, const FloatBufferSpan RightOut,
-    const al::span<const FloatBufferLine> InSamples, float2 *AccumSamples,
-    const al::span<float,BufferLineSize> TempBuf, HrtfChannelState *ChanState, const size_t IrSize,
-    const size_t BufferSize);
+    const al::span<const FloatBufferLine> InSamples, const al::span<float2> AccumSamples,
+    const al::span<float,BufferLineSize> TempBuf, const al::span<HrtfChannelState> ChanState,
+    const size_t IrSize, const size_t SamplesToDo);
 
 /* Vectorized resampler helpers */
 template<size_t N>

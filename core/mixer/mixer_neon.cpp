@@ -63,7 +63,7 @@ inline float32x4_t set_f4(float l0, float l1, float l2, float l3)
     return ret;
 }
 
-inline void ApplyCoeffs(float2 *RESTRICT Values, const size_t IrSize, const ConstHrirSpan Coeffs,
+inline void ApplyCoeffs(float2 *Values, const size_t IrSize, const ConstHrirSpan Coeffs,
     const float left, const float right)
 {
     auto dup_samples = [left,right]

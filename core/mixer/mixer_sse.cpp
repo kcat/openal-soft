@@ -43,7 +43,7 @@ constexpr uint CubicPhaseDiffMask{CubicPhaseDiffOne - 1u};
 force_inline __m128 vmadd(const __m128 x, const __m128 y, const __m128 z) noexcept
 { return _mm_add_ps(x, _mm_mul_ps(y, z)); }
 
-inline void ApplyCoeffs(float2 *RESTRICT Values, const size_t IrSize, const ConstHrirSpan Coeffs,
+inline void ApplyCoeffs(float2 *Values, const size_t IrSize, const ConstHrirSpan Coeffs,
     const float left, const float right)
 {
     const __m128 lrlr{_mm_setr_ps(left, right, left, right)};

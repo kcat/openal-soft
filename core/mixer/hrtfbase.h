@@ -11,11 +11,11 @@
 
 using uint = unsigned int;
 
-using ApplyCoeffsT = void(&)(float2 *RESTRICT Values, const size_t irSize,
-    const ConstHrirSpan Coeffs, const float left, const float right);
+using ApplyCoeffsT = void(&)(float2 *Values, const size_t irSize, const ConstHrirSpan Coeffs,
+    const float left, const float right);
 
 template<ApplyCoeffsT ApplyCoeffs>
-inline void MixHrtfBase(const float *InSamples, float2 *RESTRICT AccumSamples, const size_t IrSize,
+inline void MixHrtfBase(const float *InSamples, float2 *AccumSamples, const size_t IrSize,
     const MixHrtfFilter *hrtfparams, const size_t BufferSize)
 {
     ASSUME(BufferSize > 0);
@@ -39,9 +39,8 @@ inline void MixHrtfBase(const float *InSamples, float2 *RESTRICT AccumSamples, c
 }
 
 template<ApplyCoeffsT ApplyCoeffs>
-inline void MixHrtfBlendBase(const float *InSamples, float2 *RESTRICT AccumSamples,
-    const size_t IrSize, const HrtfFilter *oldparams, const MixHrtfFilter *newparams,
-    const size_t BufferSize)
+inline void MixHrtfBlendBase(const float *InSamples, float2 *AccumSamples, const size_t IrSize,
+    const HrtfFilter *oldparams, const MixHrtfFilter *newparams, const size_t BufferSize)
 {
     ASSUME(BufferSize > 0);
 
@@ -85,7 +84,7 @@ inline void MixHrtfBlendBase(const float *InSamples, float2 *RESTRICT AccumSampl
 
 template<ApplyCoeffsT ApplyCoeffs>
 inline void MixDirectHrtfBase(const FloatBufferSpan LeftOut, const FloatBufferSpan RightOut,
-    const al::span<const FloatBufferLine> InSamples, float2 *RESTRICT AccumSamples,
+    const al::span<const FloatBufferLine> InSamples, float2 *AccumSamples,
     const al::span<float,BufferLineSize> TempBuf, HrtfChannelState *ChanState, const size_t IrSize,
     const size_t BufferSize)
 {
@@ -113,17 +112,20 @@ inline void MixDirectHrtfBase(const FloatBufferSpan LeftOut, const FloatBufferSp
     }
 
     /* Add the HRTF signal to the existing "direct" signal. */
-    float *RESTRICT left{al::assume_aligned<16>(LeftOut.data())};
-    float *RESTRICT right{al::assume_aligned<16>(RightOut.data())};
-    for(size_t i{0u};i < BufferSize;++i)
-        left[i]  += AccumSamples[i][0];
-    for(size_t i{0u};i < BufferSize;++i)
-        right[i] += AccumSamples[i][1];
+    const auto left = al::assume_aligned<16>(LeftOut.data());
+    std::transform(left, left+BufferSize, AccumSamples, left,
+        [](const float sample, const float2 &accum) noexcept -> float
+        { return sample + accum[0]; });
+    const auto right = al::assume_aligned<16>(RightOut.data());
+    std::transform(right, right+BufferSize, AccumSamples, right,
+        [](const float sample, const float2 &accum) noexcept -> float
+        { return sample + accum[1]; });
 
     /* Copy the new in-progress accumulation values to the front and clear the
      * following samples for the next mix.
      */
-    auto accum_iter = std::copy_n(AccumSamples+BufferSize, HrirLength, AccumSamples);
+    const auto accum_inprog = AccumSamples + BufferSize;
+    auto accum_iter = std::copy(accum_inprog, accum_inprog+HrirLength, AccumSamples);
     std::fill_n(accum_iter, BufferSize, float2{});
 }
 

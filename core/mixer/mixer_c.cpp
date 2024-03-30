@@ -123,15 +123,13 @@ void DoResample(const U istate, const float *src, uint frac, const uint incremen
     });
 }
 
-constexpr void ApplyCoeffs(float2 *RESTRICT Values, const size_t IrSize,
-    const ConstHrirSpan Coeffs, const float left, const float right) noexcept
+inline void ApplyCoeffs(float2 *Values, const size_t IrSize, const ConstHrirSpan Coeffs,
+    const float left, const float right) noexcept
 {
     ASSUME(IrSize >= MinIrLength);
-    for(size_t c{0};c < IrSize;++c)
-    {
-        Values[c][0] += Coeffs[c][0] * left;
-        Values[c][1] += Coeffs[c][1] * right;
-    }
+    std::transform(Values, Values+IrSize, Coeffs.cbegin(), Values,
+        [left,right](const float2 &value, const float2 &coeff) noexcept -> float2
+        { return float2{{value[0] + coeff[0]*left, value[1] + coeff[1]*right}}; });
 }
 
 force_inline void MixLine(const al::span<const float> InSamples, float *RESTRICT dst,

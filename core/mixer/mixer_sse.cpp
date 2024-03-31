@@ -49,6 +49,12 @@ inline void ApplyCoeffs(const al::span<float2> Values, const size_t IrSize,
     ASSUME(IrSize >= MinIrLength);
     ASSUME(IrSize <= HrirLength);
     const auto lrlr = _mm_setr_ps(left, right, left, right);
+    /* Round up the IR size to a multiple of 2 for SIMD (2 IRs for 2 channels
+     * is 4 floats), to avoid cutting the last sample for odd IR counts. The
+     * underlying HRIR is a fixed-size multiple of 2, any extra samples are
+     * either 0 (silence) or more IR samples that get applied for "free".
+     */
+    const auto count4 = size_t{(IrSize+1) >> 1};
 
     /* This isn't technically correct to test alignment, but it's true for
      * systems that support SSE, which is the only one that needs to know the
@@ -56,8 +62,9 @@ inline void ApplyCoeffs(const al::span<float2> Values, const size_t IrSize,
      */
     if(!(reinterpret_cast<uintptr_t>(Values.data())&15))
     {
-        const auto vals4 = al::span{reinterpret_cast<__m128*>(Values[0].data()), IrSize/2};
-        const auto coeffs4 = al::span{reinterpret_cast<const __m128*>(Coeffs[0].data()), IrSize/2};
+        const auto vals4 = al::span{reinterpret_cast<__m128*>(Values[0].data()), count4};
+        const auto coeffs4 = al::span{reinterpret_cast<const __m128*>(Coeffs[0].data()), count4};
+
         std::transform(vals4.cbegin(), vals4.cend(), coeffs4.cbegin(), vals4.begin(),
             [lrlr](const __m128 &val, const __m128 &coeff) -> __m128
             { return vmadd(val, coeff, lrlr); });
@@ -69,7 +76,7 @@ inline void ApplyCoeffs(const al::span<float2> Values, const size_t IrSize,
         auto imp0 = _mm_mul_ps(lrlr, coeffs);
         vals = _mm_add_ps(imp0, vals);
         _mm_storel_pi(reinterpret_cast<__m64*>(Values[0].data()), vals);
-        size_t td{((IrSize+1)>>1) - 1};
+        size_t td{count4 - 1};
         size_t i{1};
         do {
             coeffs = _mm_load_ps(Coeffs[i+1].data());

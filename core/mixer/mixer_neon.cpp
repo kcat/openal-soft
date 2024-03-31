@@ -75,9 +75,10 @@ inline void ApplyCoeffs(const al::span<float2> Values, const size_t IrSize,
         return vcombine_f32(leftright2, leftright2);
     };
     const auto leftright4 = dup_samples();
+    const auto count4 = size_t{(IrSize+1) >> 1};
 
-    const auto vals4 = al::span{reinterpret_cast<float32x4_t*>(Values[0].data()), IrSize/2};
-    const auto coeffs4=al::span{reinterpret_cast<const float32x4_t*>(Coeffs[0].data()), IrSize/2};
+    const auto vals4 = al::span{reinterpret_cast<float32x4_t*>(Values[0].data()), count4};
+    const auto coeffs4 = al::span{reinterpret_cast<const float32x4_t*>(Coeffs[0].data()), count4};
     std::transform(vals4.cbegin(), vals4.cend(), coeffs4.cbegin(), vals4.begin(),
         [leftright4](const float32x4_t &val, const float32x4_t &coeff) -> float32x4_t
         { return vmlaq_f32(val, coeff, leftright4); });

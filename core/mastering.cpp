@@ -31,7 +31,9 @@ struct SlidingHold {
 
 namespace {
 
-using namespace std::placeholders;
+template<std::size_t A, typename T, std::size_t N>
+constexpr auto assume_aligned_span(const al::span<T,N> s) noexcept -> al::span<T,N>
+{ return al::span<T,N>{al::assume_aligned<A>(s.data()), s.size()}; }
 
 /* This sliding hold follows the input level with an instant attack and a
  * fixed duration hold before an instant release to the next highest level.
@@ -101,21 +103,24 @@ void ShiftSlidingHold(SlidingHold *Hold, const uint n)
 /* Multichannel compression is linked via the absolute maximum of all
  * channels.
  */
-void Compressor::linkChannels(const uint SamplesToDo, const FloatBufferLine *OutBuffer)
+void Compressor::linkChannels(const uint SamplesToDo,
+    const al::span<const FloatBufferLine> OutBuffer)
 {
     ASSUME(SamplesToDo > 0);
+    ASSUME(SamplesToDo <= BufferLineSize);
 
-    const auto side_begin = mSideChain.begin() + mLookAhead;
-    std::fill(side_begin, side_begin+SamplesToDo, 0.0f);
+    const auto sideChain = al::span{mSideChain}.subspan(mLookAhead, SamplesToDo);
+    std::fill_n(sideChain.begin(), sideChain.size(), 0.0f);
 
-    auto fill_max = [SamplesToDo,side_begin](const FloatBufferLine &input) -> void
+    auto fill_max = [sideChain](const FloatBufferLine &input) -> void
     {
-        const float *RESTRICT buffer{al::assume_aligned<16>(input.data())};
+        const auto buffer = assume_aligned_span<16>(al::span{input});
         auto max_abs = [](const float s0, const float s1) noexcept -> float
         { return std::max(s0, std::fabs(s1)); };
-        std::transform(side_begin, side_begin+SamplesToDo, buffer, side_begin, max_abs);
+        std::transform(sideChain.begin(), sideChain.end(), buffer.begin(), sideChain.begin(),
+            max_abs);
     };
-    std::for_each(OutBuffer, OutBuffer+mNumChans, fill_max);
+    std::for_each(OutBuffer.begin(), OutBuffer.end(), fill_max);
 }
 
 /* This calculates the squared crest factor of the control signal for the
@@ -130,6 +135,7 @@ void Compressor::crestDetector(const uint SamplesToDo)
     float y2_rms{mLastRmsSq};
 
     ASSUME(SamplesToDo > 0);
+    ASSUME(SamplesToDo <= BufferLineSize);
 
     auto calc_crest = [&y2_rms,&y2_peak,a_crest](const float x_abs) noexcept -> float
     {
@@ -139,8 +145,8 @@ void Compressor::crestDetector(const uint SamplesToDo)
         y2_rms = lerpf(x2, y2_rms, a_crest);
         return y2_peak / y2_rms;
     };
-    const auto side_begin = mSideChain.begin() + mLookAhead;
-    std::transform(side_begin, side_begin+SamplesToDo, mCrestFactor.begin(), calc_crest);
+    const auto sideChain = al::span{mSideChain}.subspan(mLookAhead, SamplesToDo);
+    std::transform(sideChain.cbegin(), sideChain.cend(), mCrestFactor.begin(), calc_crest);
 
     mLastPeakSq = y2_peak;
     mLastRmsSq = y2_rms;
@@ -153,10 +159,11 @@ void Compressor::crestDetector(const uint SamplesToDo)
 void Compressor::peakDetector(const uint SamplesToDo)
 {
     ASSUME(SamplesToDo > 0);
+    ASSUME(SamplesToDo <= BufferLineSize);
 
     /* Clamp the minimum amplitude to near-zero and convert to logarithmic. */
-    const auto side_begin = mSideChain.begin() + mLookAhead;
-    std::transform(side_begin, side_begin+SamplesToDo, side_begin,
+    const auto sideChain = al::span{mSideChain}.subspan(mLookAhead, SamplesToDo);
+    std::transform(sideChain.cbegin(), sideChain.cend(), sideChain.begin(),
         [](float s) { return std::log(std::max(0.000001f, s)); });
 }
 
@@ -167,6 +174,7 @@ void Compressor::peakDetector(const uint SamplesToDo)
 void Compressor::peakHoldDetector(const uint SamplesToDo)
 {
     ASSUME(SamplesToDo > 0);
+    ASSUME(SamplesToDo <= BufferLineSize);
 
     SlidingHold *hold{mHold.get()};
     uint i{0};
@@ -175,8 +183,8 @@ void Compressor::peakHoldDetector(const uint SamplesToDo)
         const float x_G{std::log(std::max(0.000001f, x_abs))};
         return UpdateSlidingHold(hold, i++, x_G);
     };
-    auto side_begin = mSideChain.begin() + mLookAhead;
-    std::transform(side_begin, side_begin+SamplesToDo, side_begin, detect_peak);
+    auto sideChain = al::span{mSideChain}.subspan(mLookAhead, SamplesToDo);
+    std::transform(sideChain.cbegin(), sideChain.cend(), sideChain.begin(), detect_peak);
 
     ShiftSlidingHold(hold, SamplesToDo);
 }
@@ -284,30 +292,31 @@ void Compressor::gainCompressor(const uint SamplesToDo)
  * reaching the offending impulse.  This is best used when operating as a
  * limiter.
  */
-void Compressor::signalDelay(const uint SamplesToDo, FloatBufferLine *OutBuffer)
+void Compressor::signalDelay(const uint SamplesToDo, const al::span<FloatBufferLine> OutBuffer)
 {
     const size_t numChans{mNumChans};
     const uint lookAhead{mLookAhead};
 
     ASSUME(SamplesToDo > 0);
-    ASSUME(numChans > 0);
+    ASSUME(SamplesToDo <= BufferLineSize);
     ASSUME(lookAhead > 0);
+    ASSUME(lookAhead < BufferLineSize);
+    ASSUME(numChans > 0);
 
     for(size_t c{0};c < numChans;c++)
     {
-        float *inout{al::assume_aligned<16>(OutBuffer[c].data())};
-        float *delaybuf{al::assume_aligned<16>(mDelay[c].data())};
+        const auto inout = al::span{OutBuffer[c]}.first(SamplesToDo);
+        const auto delaybuf = al::span{mDelay[c]};
 
-        auto inout_end = inout + SamplesToDo;
         if(SamplesToDo >= lookAhead) LIKELY
         {
-            auto delay_end = std::rotate(inout, inout_end - lookAhead, inout_end);
-            std::swap_ranges(inout, delay_end, delaybuf);
+            auto delay_end = std::rotate(inout.begin(), inout.end() - lookAhead, inout.end());
+            std::swap_ranges(inout.begin(), delay_end, delaybuf.begin());
         }
         else
         {
-            auto delay_start = std::swap_ranges(inout, inout_end, delaybuf);
-            std::rotate(delaybuf, delay_start, delaybuf + lookAhead);
+            auto delay_start = std::swap_ranges(inout.begin(), inout.end(), delaybuf.begin());
+            std::rotate(delaybuf.begin(), delay_start, delaybuf.begin() + lookAhead);
         }
     }
 }
@@ -378,21 +387,23 @@ void Compressor::process(const uint SamplesToDo, FloatBufferLine *OutBuffer)
     const size_t numChans{mNumChans};
 
     ASSUME(SamplesToDo > 0);
+    ASSUME(SamplesToDo <= BufferLineSize);
     ASSUME(numChans > 0);
 
+    const auto output = al::span{OutBuffer, numChans};
     const float preGain{mPreGain};
     if(preGain != 1.0f)
     {
         auto apply_gain = [SamplesToDo,preGain](FloatBufferLine &input) noexcept -> void
         {
-            float *buffer{al::assume_aligned<16>(input.data())};
-            std::transform(buffer, buffer+SamplesToDo, buffer,
+            const auto buffer = assume_aligned_span<16>(al::span{input}.first(SamplesToDo));
+            std::transform(buffer.cbegin(), buffer.cend(), buffer.begin(),
                 [preGain](const float s) noexcept { return s * preGain; });
         };
-        std::for_each(OutBuffer, OutBuffer+numChans, apply_gain);
+        std::for_each(output.begin(), output.end(), apply_gain);
     }
 
-    linkChannels(SamplesToDo, OutBuffer);
+    linkChannels(SamplesToDo, output);
 
     if(mAuto.Attack || mAuto.Release)
         crestDetector(SamplesToDo);
@@ -405,18 +416,17 @@ void Compressor::process(const uint SamplesToDo, FloatBufferLine *OutBuffer)
     gainCompressor(SamplesToDo);
 
     if(!mDelay.empty())
-        signalDelay(SamplesToDo, OutBuffer);
+        signalDelay(SamplesToDo, output);
 
-    const auto sideChain = al::span{mSideChain};
-    auto apply_comp = [SamplesToDo,sideChain](FloatBufferLine &input) noexcept -> void
+    const auto gains = assume_aligned_span<16>(al::span{mSideChain}.first(SamplesToDo));
+    auto apply_comp = [gains](const FloatBufferSpan input) noexcept -> void
     {
-        float *buffer{al::assume_aligned<16>(input.data())};
-        const float *gains{al::assume_aligned<16>(sideChain.data())};
-        std::transform(gains, gains+SamplesToDo, buffer, buffer,
-            [](const float g, const float s) noexcept { return g * s; });
+        const auto buffer = assume_aligned_span<16>(input);
+        std::transform(gains.cbegin(), gains.cend(), buffer.cbegin(), buffer.begin(),
+            std::multiplies{});
     };
-    std::for_each(OutBuffer, OutBuffer+numChans, apply_comp);
+    std::for_each(output.begin(), output.end(), apply_comp);
 
-    auto side_begin = mSideChain.begin() + SamplesToDo;
-    std::copy(side_begin, side_begin+mLookAhead, mSideChain.begin());
+    const auto delayedGains = al::span{mSideChain}.subspan(SamplesToDo, mLookAhead);
+    std::copy(delayedGains.begin(), delayedGains.end(), mSideChain.begin());
 }

@@ -67,12 +67,12 @@ class Compressor {
 
     Compressor() = default;
 
-    void linkChannels(const uint SamplesToDo, const FloatBufferLine *OutBuffer);
+    void linkChannels(const uint SamplesToDo, const al::span<const FloatBufferLine> OutBuffer);
     void crestDetector(const uint SamplesToDo);
     void peakDetector(const uint SamplesToDo);
     void peakHoldDetector(const uint SamplesToDo);
     void gainCompressor(const uint SamplesToDo);
-    void signalDelay(const uint SamplesToDo, FloatBufferLine *OutBuffer);
+    void signalDelay(const uint SamplesToDo, const al::span<FloatBufferLine> OutBuffer);
 
 public:
     ~Compressor();

@@ -26,10 +26,10 @@
 #include <cassert>
 #include <chrono>
 #include <cmath>
+#include <cstddef>
 #include <cstdio>
 #include <cstdint>
 #include <functional>
-#include <iterator>
 #include <memory>
 #include <numeric>
 #include <optional>
@@ -42,7 +42,6 @@
 #include "AL/alext.h"
 
 #include "alc/context.h"
-#include "almalloc.h"
 #include "alnumbers.h"
 #include "alnumeric.h"
 #include "alspan.h"
@@ -372,7 +371,7 @@ DecoderView MakeDecoderView(ALCdevice *device, const AmbDecConf *conf,
     const auto lfmatrix = conf->LFMatrix;
 
     uint chan_count{0};
-    for(auto &speaker : al::span<const AmbDecConf::SpeakerConf>{conf->Speakers})
+    for(auto &speaker : al::span{std::as_const(conf->Speakers)})
     {
         /* NOTE: AmbDec does not define any standard speaker names, however
          * for this to work we have to by able to find the output channel
@@ -673,8 +672,8 @@ void InitPanning(ALCdevice *device, const bool hqdec=false, const bool stablize=
     device->mAmbiOrder = decoder.mOrder;
     device->m2DMixing = !decoder.mIs3D;
 
-    const al::span<const uint8_t> acnmap{decoder.mIs3D ? AmbiIndex::FromACN.data() :
-        AmbiIndex::FromACN2D.data(), ambicount};
+    const auto acnmap = decoder.mIs3D ? al::span{AmbiIndex::FromACN}.first(ambicount)
+        : al::span{AmbiIndex::FromACN2D}.first(ambicount);
     const auto coeffscale = GetAmbiScales(decoder.mScaling);
     std::transform(acnmap.begin(), acnmap.end(), device->Dry.AmbiMap.begin(),
         [coeffscale](const uint8_t &acn) noexcept
@@ -1012,7 +1011,8 @@ void aluInitRenderer(ALCdevice *device, int hrtf_id, std::optional<StereoEncodin
             decoder_store = std::make_unique<DecoderConfig<DualBand,MaxOutputChannels>>();
             decoder = MakeDecoderView(device, &conf, *decoder_store);
 
-            const auto confspeakers = al::span{conf.Speakers.cbegin(), decoder.mChannels.size()};
+            const auto confspeakers = al::span{std::as_const(conf.Speakers)}
+                .first(decoder.mChannels.size());
             std::transform(confspeakers.cbegin(), confspeakers.cend(), speakerdists.begin(),
                 std::mem_fn(&AmbDecConf::SpeakerConf::Distance));
             return true;

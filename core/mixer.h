@@ -4,12 +4,10 @@
 #include <array>
 #include <cmath>
 #include <stddef.h>
-#include <type_traits>
 
 #include "alspan.h"
 #include "ambidefs.h"
 #include "bufferline.h"
-#include "devformat.h"
 
 struct MixParams;
 

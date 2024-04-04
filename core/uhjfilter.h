@@ -32,7 +32,7 @@ struct UhjAllPassFilter {
 
     void processOne(const al::span<const float,4> coeffs, float x);
     void process(const al::span<const float,4> coeffs, const al::span<const float> src,
-        const bool update, float *RESTRICT dst);
+        const bool update, const al::span<float> dst);
 };
 
 

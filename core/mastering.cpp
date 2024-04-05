@@ -294,29 +294,29 @@ void Compressor::gainCompressor(const uint SamplesToDo)
  */
 void Compressor::signalDelay(const uint SamplesToDo, const al::span<FloatBufferLine> OutBuffer)
 {
-    const size_t numChans{mNumChans};
-    const uint lookAhead{mLookAhead};
+    const auto lookAhead = mLookAhead;
 
     ASSUME(SamplesToDo > 0);
     ASSUME(SamplesToDo <= BufferLineSize);
     ASSUME(lookAhead > 0);
     ASSUME(lookAhead < BufferLineSize);
-    ASSUME(numChans > 0);
 
-    for(size_t c{0};c < numChans;c++)
+    auto delays = mDelay.begin();
+    for(auto &buffer : OutBuffer)
     {
-        const auto inout = al::span{OutBuffer[c]}.first(SamplesToDo);
-        const auto delaybuf = al::span{mDelay[c]};
+        const auto inout = al::span{buffer}.first(SamplesToDo);
+        const auto delaybuf = al::span{*(delays++)}.first(lookAhead);
 
-        if(SamplesToDo >= lookAhead) LIKELY
+        if(SamplesToDo >= delaybuf.size()) LIKELY
         {
-            auto delay_end = std::rotate(inout.begin(), inout.end() - lookAhead, inout.end());
+            const auto inout_start = inout.end() - ptrdiff_t(delaybuf.size());
+            const auto delay_end = std::rotate(inout.begin(), inout_start, inout.end());
             std::swap_ranges(inout.begin(), delay_end, delaybuf.begin());
         }
         else
         {
             auto delay_start = std::swap_ranges(inout.begin(), inout.end(), delaybuf.begin());
-            std::rotate(delaybuf.begin(), delay_start, delaybuf.begin() + lookAhead);
+            std::rotate(delaybuf.begin(), delay_start, delaybuf.end());
         }
     }
 }

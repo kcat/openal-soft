@@ -14,6 +14,7 @@
 #include "core/bufferline.h"
 #include "core/cubic_defs.h"
 #include "core/mixer/hrtfdefs.h"
+#include "core/resampler_limits.h"
 #include "defs.h"
 #include "hrtfbase.h"
 #include "opthelpers.h"
@@ -158,7 +159,7 @@ force_inline void MixLine(const al::span<const float> InSamples, const al::span<
 } // namespace
 
 template<>
-void Resample_<LerpTag,NEONTag>(const InterpState*, const float *src, uint frac,
+void Resample_<LerpTag,NEONTag>(const InterpState*, const al::span<const float> src, uint frac,
     const uint increment, const al::span<float> dst)
 {
     ASSUME(frac < MixerFracOne);
@@ -168,7 +169,7 @@ void Resample_<LerpTag,NEONTag>(const InterpState*, const float *src, uint frac,
     const uint32x4_t fracMask4 = vdupq_n_u32(MixerFracMask);
 
     alignas(16) std::array<uint,4> pos_, frac_;
-    InitPosArrays(frac, increment, al::span{frac_}, al::span{pos_});
+    InitPosArrays(MaxResamplerEdge, frac, increment, al::span{frac_}, al::span{pos_});
     uint32x4_t frac4 = vld1q_u32(frac_.data());
     uint32x4_t pos4 = vld1q_u32(pos_.data());
 
@@ -179,6 +180,7 @@ void Resample_<LerpTag,NEONTag>(const InterpState*, const float *src, uint frac,
         const uint pos1{vgetq_lane_u32(pos4, 1)};
         const uint pos2{vgetq_lane_u32(pos4, 2)};
         const uint pos3{vgetq_lane_u32(pos4, 3)};
+        ASSUME(pos0 <= pos1); ASSUME(pos1 <= pos2); ASSUME(pos2 <= pos3);
         const float32x4_t val1{set_f4(src[pos0], src[pos1], src[pos2], src[pos3])};
         const float32x4_t val2{set_f4(src[pos0+1_uz], src[pos1+1_uz], src[pos2+1_uz], src[pos3+1_uz])};
 
@@ -195,24 +197,26 @@ void Resample_<LerpTag,NEONTag>(const InterpState*, const float *src, uint frac,
 
     if(size_t todo{dst.size()&3})
     {
-        src += vgetq_lane_u32(pos4, 0);
+        auto pos = size_t{vgetq_lane_u32(pos4, 0)};
         frac = vgetq_lane_u32(frac4, 0);
 
-        std::generate(dst.end()-ptrdiff_t(todo), dst.end(), [&src,&frac,increment]
+        const auto out = dst.last(todo);
+        std::generate(out.begin(), out.end(), [&pos,&frac,src,increment]
         {
-            const float out{lerpf(src[0], src[1], static_cast<float>(frac) * (1.0f/MixerFracOne))};
+            const float output{lerpf(src[pos+0], src[pos+1],
+                static_cast<float>(frac) * (1.0f/MixerFracOne))};
 
             frac += increment;
-            src  += frac>>MixerFracBits;
+            pos  += frac>>MixerFracBits;
             frac &= MixerFracMask;
-            return out;
+            return output;
         });
     }
 }
 
 template<>
-void Resample_<CubicTag,NEONTag>(const InterpState *state, const float *src, uint frac,
-    const uint increment, const al::span<float> dst)
+void Resample_<CubicTag,NEONTag>(const InterpState *state, const al::span<const float> src,
+    uint frac, const uint increment, const al::span<float> dst)
 {
     ASSUME(frac < MixerFracOne);
 
@@ -224,11 +228,10 @@ void Resample_<CubicTag,NEONTag>(const InterpState *state, const float *src, uin
     const uint32x4_t fracDiffMask4{vdupq_n_u32(CubicPhaseDiffMask)};
 
     alignas(16) std::array<uint,4> pos_, frac_;
-    InitPosArrays(frac, increment, al::span{frac_}, al::span{pos_});
+    InitPosArrays(MaxResamplerEdge-1, frac, increment, al::span{frac_}, al::span{pos_});
     uint32x4_t frac4{vld1q_u32(frac_.data())};
     uint32x4_t pos4{vld1q_u32(pos_.data())};
 
-    src -= 1;
     auto vecout = al::span{reinterpret_cast<float32x4_t*>(dst.data()), dst.size()/4};
     std::generate(vecout.begin(), vecout.end(), [=,&pos4,&frac4]
     {
@@ -236,10 +239,11 @@ void Resample_<CubicTag,NEONTag>(const InterpState *state, const float *src, uin
         const uint pos1{vgetq_lane_u32(pos4, 1)};
         const uint pos2{vgetq_lane_u32(pos4, 2)};
         const uint pos3{vgetq_lane_u32(pos4, 3)};
-        const float32x4_t val0{vld1q_f32(src+pos0)};
-        const float32x4_t val1{vld1q_f32(src+pos1)};
-        const float32x4_t val2{vld1q_f32(src+pos2)};
-        const float32x4_t val3{vld1q_f32(src+pos3)};
+        ASSUME(pos0 <= pos1); ASSUME(pos1 <= pos2); ASSUME(pos2 <= pos3);
+        const float32x4_t val0{vld1q_f32(&src[pos0])};
+        const float32x4_t val1{vld1q_f32(&src[pos1])};
+        const float32x4_t val2{vld1q_f32(&src[pos2])};
+        const float32x4_t val3{vld1q_f32(&src[pos3])};
 
         const uint32x4_t pi4{vshrq_n_u32(frac4, CubicPhaseDiffBits)};
         const uint pi0{vgetq_lane_u32(pi4, 0)}; ASSUME(pi0 < CubicPhaseCount);
@@ -274,11 +278,11 @@ void Resample_<CubicTag,NEONTag>(const InterpState *state, const float *src, uin
 
     if(const size_t todo{dst.size()&3})
     {
-        src += vgetq_lane_u32(pos4, 0);
+        auto pos = size_t{vgetq_lane_u32(pos4, 0)};
         frac = vgetq_lane_u32(frac4, 0);
 
         auto out = dst.last(todo);
-        std::generate(out.begin(), out.end(), [&src,&frac,increment,filter]
+        std::generate(out.begin(), out.end(), [&pos,&frac,src,increment,filter]
         {
             const uint pi{frac >> CubicPhaseDiffBits}; ASSUME(pi < CubicPhaseCount);
             const float pf{static_cast<float>(frac&CubicPhaseDiffMask) * (1.0f/CubicPhaseDiffOne)};
@@ -286,13 +290,13 @@ void Resample_<CubicTag,NEONTag>(const InterpState *state, const float *src, uin
 
             const float32x4_t f4{vmlaq_f32(vld1q_f32(filter[pi].mCoeffs.data()), pf4,
                 vld1q_f32(filter[pi].mDeltas.data()))};
-            float32x4_t r4{vmulq_f32(f4, vld1q_f32(src))};
+            float32x4_t r4{vmulq_f32(f4, vld1q_f32(&src[pos]))};
 
             r4 = vaddq_f32(r4, vrev64q_f32(r4));
             const float output{vget_lane_f32(vadd_f32(vget_low_f32(r4), vget_high_f32(r4)), 0)};
 
             frac += increment;
-            src  += frac>>MixerFracBits;
+            pos  += frac>>MixerFracBits;
             frac &= MixerFracMask;
             return output;
         });
@@ -300,31 +304,34 @@ void Resample_<CubicTag,NEONTag>(const InterpState *state, const float *src, uin
 }
 
 template<>
-void Resample_<BSincTag,NEONTag>(const InterpState *state, const float *src, uint frac,
-    const uint increment, const al::span<float> dst)
+void Resample_<BSincTag,NEONTag>(const InterpState *state, const al::span<const float> src,
+    uint frac, const uint increment, const al::span<float> dst)
 {
     const auto &bsinc = std::get<BsincState>(*state);
-    const float *const filter{bsinc.filter.data()};
-    const float32x4_t sf4{vdupq_n_f32(bsinc.sf)};
-    const size_t m{bsinc.m};
+    const auto sf4 = vdupq_n_f32(bsinc.sf);
+    const auto m = size_t{bsinc.m};
     ASSUME(m > 0);
+    ASSUME(m <= MaxResamplerPadding);
     ASSUME(frac < MixerFracOne);
 
-    src -= bsinc.l;
-    std::generate(dst.begin(), dst.end(), [&src,&frac,increment,filter,sf4,m]() -> float
+    const auto filter = bsinc.filter.first(4_uz*BSincPhaseCount*m);
+
+    ASSUME(bsinc.l <= MaxResamplerEdge);
+    auto pos = size_t{MaxResamplerEdge-bsinc.l};
+    std::generate(dst.begin(), dst.end(), [&pos,&frac,src,increment,sf4,m,filter]() -> float
     {
         // Calculate the phase index and factor.
-        const uint pi{frac >> BSincPhaseDiffBits};
+        const uint pi{frac >> BSincPhaseDiffBits}; ASSUME(pi < BSincPhaseCount);
         const float pf{static_cast<float>(frac&BSincPhaseDiffMask) * (1.0f/BSincPhaseDiffOne)};
 
         // Apply the scale and phase interpolated filter.
         float32x4_t r4{vdupq_n_f32(0.0f)};
         {
             const float32x4_t pf4{vdupq_n_f32(pf)};
-            const float *fil{filter + m*pi*2_uz};
-            const float *phd{fil + m};
-            const float *scd{fil + BSincPhaseCount*2_uz*m};
-            const float *spd{scd + m};
+            const auto fil = filter.subspan(2_uz*pi*m);
+            const auto phd = fil.subspan(m);
+            const auto scd = fil.subspan(2_uz*BSincPhaseCount*m);
+            const auto spd = scd.subspan(m);
             size_t td{m >> 2};
             size_t j{0u};
 
@@ -334,7 +341,7 @@ void Resample_<BSincTag,NEONTag>(const InterpState *state, const float *src, uin
                     vmlaq_f32(vld1q_f32(&fil[j]), sf4, vld1q_f32(&scd[j])),
                     pf4, vmlaq_f32(vld1q_f32(&phd[j]), sf4, vld1q_f32(&spd[j])));
                 /* r += f*src */
-                r4 = vmlaq_f32(r4, f4, vld1q_f32(&src[j]));
+                r4 = vmlaq_f32(r4, f4, vld1q_f32(&src[pos+j]));
                 j += 4;
             } while(--td);
         }
@@ -342,35 +349,38 @@ void Resample_<BSincTag,NEONTag>(const InterpState *state, const float *src, uin
         const float output{vget_lane_f32(vadd_f32(vget_low_f32(r4), vget_high_f32(r4)), 0)};
 
         frac += increment;
-        src  += frac>>MixerFracBits;
+        pos  += frac>>MixerFracBits;
         frac &= MixerFracMask;
         return output;
     });
 }
 
 template<>
-void Resample_<FastBSincTag,NEONTag>(const InterpState *state, const float *src,
+void Resample_<FastBSincTag,NEONTag>(const InterpState *state, const al::span<const float> src,
     uint frac, const uint increment, const al::span<float> dst)
 {
     const auto &bsinc = std::get<BsincState>(*state);
-    const float *const filter{bsinc.filter.data()};
-    const size_t m{bsinc.m};
+    const auto m = size_t{bsinc.m};
     ASSUME(m > 0);
+    ASSUME(m <= MaxResamplerPadding);
     ASSUME(frac < MixerFracOne);
 
-    src -= bsinc.l;
-    std::generate(dst.begin(), dst.end(), [&src,&frac,increment,filter,m]() -> float
+    const auto filter = bsinc.filter.first(2_uz*BSincPhaseCount*m);
+
+    ASSUME(bsinc.l <= MaxResamplerEdge);
+    auto pos = size_t{MaxResamplerEdge-bsinc.l};
+    std::generate(dst.begin(), dst.end(), [&pos,&frac,src,increment,m,filter]() -> float
     {
         // Calculate the phase index and factor.
-        const uint pi{frac >> BSincPhaseDiffBits};
+        const uint pi{frac >> BSincPhaseDiffBits}; ASSUME(pi < BSincPhaseCount);
         const float pf{static_cast<float>(frac&BSincPhaseDiffMask) * (1.0f/BSincPhaseDiffOne)};
 
         // Apply the phase interpolated filter.
         float32x4_t r4{vdupq_n_f32(0.0f)};
         {
             const float32x4_t pf4{vdupq_n_f32(pf)};
-            const float *fil{filter + m*pi*2_uz};
-            const float *phd{fil + m};
+            const auto fil = filter.subspan(2_uz*pi*m);
+            const auto phd = fil.subspan(m);
             size_t td{m >> 2};
             size_t j{0u};
 
@@ -378,7 +388,7 @@ void Resample_<FastBSincTag,NEONTag>(const InterpState *state, const float *src,
                 /* f = fil + pf*phd */
                 const float32x4_t f4 = vmlaq_f32(vld1q_f32(&fil[j]), pf4, vld1q_f32(&phd[j]));
                 /* r += f*src */
-                r4 = vmlaq_f32(r4, f4, vld1q_f32(&src[j]));
+                r4 = vmlaq_f32(r4, f4, vld1q_f32(&src[pos+j]));
                 j += 4;
             } while(--td);
         }
@@ -386,7 +396,7 @@ void Resample_<FastBSincTag,NEONTag>(const InterpState *state, const float *src,
         const float output{vget_lane_f32(vadd_f32(vget_low_f32(r4), vget_high_f32(r4)), 0)};
 
         frac += increment;
-        src  += frac>>MixerFracBits;
+        pos  += frac>>MixerFracBits;
         frac &= MixerFracMask;
         return output;
     });

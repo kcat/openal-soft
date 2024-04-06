@@ -963,7 +963,7 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
                 std::copy_n(resampleBuffer.cbegin(), dstBufferSize,
                     MixingSamples[chan]+samplesLoaded);
             else
-                mResampler(&mResampleState, resampleBuffer.data(), fracPos, increment,
+                mResampler(&mResampleState, Device->mResampleData, fracPos, increment,
                     {MixingSamples[chan]+samplesLoaded, dstBufferSize});
 
             /* Store the last source samples used for next time. */

@@ -189,8 +189,11 @@ SampleConverterPtr SampleConverter::Create(DevFmtType srcType, DevFmtType dstTyp
         MaxPitch*double{MixerFracOne});
     converter->mIncrement = std::max(static_cast<uint>(step), 1u);
     if(converter->mIncrement == MixerFracOne)
-        converter->mResample = [](const InterpState*, const float *RESTRICT src, uint, const uint,
-            const al::span<float> dst) { std::copy_n(src, dst.size(), dst.begin()); };
+    {
+        converter->mResample = [](const InterpState*, const al::span<const float> src, uint,
+            const uint, const al::span<float> dst)
+        { std::copy_n(src.begin()+MaxResamplerEdge, dst.size(), dst.begin()); };
+    }
     else
         converter->mResample = PrepareResampler(resampler, converter->mIncrement,
             &converter->mState);
@@ -291,8 +294,7 @@ uint SampleConverter::convert(const void **src, uint *srcframes, void *dst, uint
             std::fill(previter, mChan[chan].PrevSamples.end(), 0.0f);
 
             /* Now resample, and store the result in the output buffer. */
-            mResample(&mState, al::to_address(SrcData.begin()+MaxResamplerEdge), DataPosFrac,
-                increment, DstData.first(DstSize));
+            mResample(&mState, SrcData, DataPosFrac, increment, DstData.first(DstSize));
 
             StoreSamples(SamplesOut.data(), DstData.first(DstSize), chan, mChan.size(), mDstType);
         }
@@ -387,8 +389,7 @@ uint SampleConverter::convertPlanar(const void **src, uint *srcframes, void *con
             std::fill(previter, mChan[chan].PrevSamples.end(), 0.0f);
 
             /* Now resample, and store the result in the output buffer. */
-            mResample(&mState, al::to_address(SrcData.begin()+MaxResamplerEdge), DataPosFrac,
-                increment, DstData.first(DstSize));
+            mResample(&mState, SrcData, DataPosFrac, increment, DstData.first(DstSize));
 
             auto DstSamples = al::span{static_cast<std::byte*>(dsts[chan]),
                 size_t{mDstTypeSize}*dstframes}.subspan(pos*size_t{mDstTypeSize});

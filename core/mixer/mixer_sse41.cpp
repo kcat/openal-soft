@@ -32,6 +32,7 @@
 #include "alnumeric.h"
 #include "alspan.h"
 #include "core/cubic_defs.h"
+#include "core/resampler_limits.h"
 #include "defs.h"
 #include "opthelpers.h"
 
@@ -58,7 +59,7 @@ force_inline __m128 vmadd(const __m128 x, const __m128 y, const __m128 z) noexce
 } // namespace
 
 template<>
-void Resample_<LerpTag,SSE4Tag>(const InterpState*, const float *src, uint frac,
+void Resample_<LerpTag,SSE4Tag>(const InterpState*, const al::span<const float> src, uint frac,
     const uint increment, const al::span<float> dst)
 {
     ASSUME(frac < MixerFracOne);
@@ -68,7 +69,7 @@ void Resample_<LerpTag,SSE4Tag>(const InterpState*, const float *src, uint frac,
     const __m128i fracMask4{_mm_set1_epi32(MixerFracMask)};
 
     alignas(16) std::array<uint,4> pos_, frac_;
-    InitPosArrays(frac, increment, al::span{frac_}, al::span{pos_});
+    InitPosArrays(MaxResamplerEdge, frac, increment, al::span{frac_}, al::span{pos_});
     __m128i frac4{_mm_setr_epi32(static_cast<int>(frac_[0]), static_cast<int>(frac_[1]),
         static_cast<int>(frac_[2]), static_cast<int>(frac_[3]))};
     __m128i pos4{_mm_setr_epi32(static_cast<int>(pos_[0]), static_cast<int>(pos_[1]),
@@ -81,6 +82,7 @@ void Resample_<LerpTag,SSE4Tag>(const InterpState*, const float *src, uint frac,
         const auto pos1 = static_cast<uint>(_mm_extract_epi32(pos4, 1));
         const auto pos2 = static_cast<uint>(_mm_extract_epi32(pos4, 2));
         const auto pos3 = static_cast<uint>(_mm_extract_epi32(pos4, 3));
+        ASSUME(pos0 <= pos1); ASSUME(pos1 <= pos2); ASSUME(pos2 <= pos3);
         const __m128 val1{_mm_setr_ps(src[pos0], src[pos1], src[pos2], src[pos3])};
         const __m128 val2{_mm_setr_ps(src[pos0+1_uz], src[pos1+1_uz], src[pos2+1_uz], src[pos3+1_uz])};
 
@@ -101,16 +103,17 @@ void Resample_<LerpTag,SSE4Tag>(const InterpState*, const float *src, uint frac,
          * four samples, so the lowest element is the next position to
          * resample.
          */
-        src += static_cast<uint>(_mm_cvtsi128_si32(pos4));
+        auto pos = size_t{static_cast<uint>(_mm_cvtsi128_si32(pos4))};
         frac = static_cast<uint>(_mm_cvtsi128_si32(frac4));
 
         auto out = dst.last(todo);
-        std::generate(out.begin(), out.end(), [&src,&frac,increment]
+        std::generate(out.begin(), out.end(), [&pos,&frac,src,increment]
         {
-            const float smp{lerpf(src[0], src[1], static_cast<float>(frac) * (1.0f/MixerFracOne))};
+            const float smp{lerpf(src[pos+0], src[pos+1],
+                static_cast<float>(frac) * (1.0f/MixerFracOne))};
 
             frac += increment;
-            src  += frac>>MixerFracBits;
+            pos  += frac>>MixerFracBits;
             frac &= MixerFracMask;
             return smp;
         });
@@ -118,8 +121,8 @@ void Resample_<LerpTag,SSE4Tag>(const InterpState*, const float *src, uint frac,
 }
 
 template<>
-void Resample_<CubicTag,SSE4Tag>(const InterpState *state, const float *src, uint frac,
-    const uint increment, const al::span<float> dst)
+void Resample_<CubicTag,SSE4Tag>(const InterpState *state, const al::span<const float> src,
+    uint frac, const uint increment, const al::span<float> dst)
 {
     ASSUME(frac < MixerFracOne);
 
@@ -131,13 +134,12 @@ void Resample_<CubicTag,SSE4Tag>(const InterpState *state, const float *src, uin
     const __m128i fracDiffMask4{_mm_set1_epi32(CubicPhaseDiffMask)};
 
     alignas(16) std::array<uint,4> pos_, frac_;
-    InitPosArrays(frac, increment, al::span{frac_}, al::span{pos_});
+    InitPosArrays(MaxResamplerEdge-1, frac, increment, al::span{frac_}, al::span{pos_});
     __m128i frac4{_mm_setr_epi32(static_cast<int>(frac_[0]), static_cast<int>(frac_[1]),
         static_cast<int>(frac_[2]), static_cast<int>(frac_[3]))};
     __m128i pos4{_mm_setr_epi32(static_cast<int>(pos_[0]), static_cast<int>(pos_[1]),
         static_cast<int>(pos_[2]), static_cast<int>(pos_[3]))};
 
-    src -= 1;
     auto vecout = al::span{reinterpret_cast<__m128*>(dst.data()), dst.size()/4};
     std::generate(vecout.begin(), vecout.end(), [=,&pos4,&frac4]
     {
@@ -145,10 +147,11 @@ void Resample_<CubicTag,SSE4Tag>(const InterpState *state, const float *src, uin
         const auto pos1 = static_cast<uint>(_mm_extract_epi32(pos4, 1));
         const auto pos2 = static_cast<uint>(_mm_extract_epi32(pos4, 2));
         const auto pos3 = static_cast<uint>(_mm_extract_epi32(pos4, 3));
-        const __m128 val0{_mm_loadu_ps(src+pos0)};
-        const __m128 val1{_mm_loadu_ps(src+pos1)};
-        const __m128 val2{_mm_loadu_ps(src+pos2)};
-        const __m128 val3{_mm_loadu_ps(src+pos3)};
+        ASSUME(pos0 <= pos1); ASSUME(pos1 <= pos2); ASSUME(pos2 <= pos3);
+        const __m128 val0{_mm_loadu_ps(&src[pos0])};
+        const __m128 val1{_mm_loadu_ps(&src[pos1])};
+        const __m128 val2{_mm_loadu_ps(&src[pos2])};
+        const __m128 val3{_mm_loadu_ps(&src[pos3])};
 
         const __m128i pi4{_mm_srli_epi32(frac4, CubicPhaseDiffBits)};
         const auto pi0 = static_cast<uint>(_mm_extract_epi32(pi4, 0));
@@ -189,11 +192,11 @@ void Resample_<CubicTag,SSE4Tag>(const InterpState *state, const float *src, uin
 
     if(const size_t todo{dst.size()&3})
     {
-        src += static_cast<uint>(_mm_cvtsi128_si32(pos4));
+        auto pos = size_t{static_cast<uint>(_mm_cvtsi128_si32(pos4))};
         frac = static_cast<uint>(_mm_cvtsi128_si32(frac4));
 
         auto out = dst.last(todo);
-        std::generate(out.begin(), out.end(), [&src,&frac,increment,filter]
+        std::generate(out.begin(), out.end(), [&pos,&frac,src,increment,filter]
         {
             const uint pi{frac >> CubicPhaseDiffBits}; ASSUME(pi < CubicPhaseCount);
             const float pf{static_cast<float>(frac&CubicPhaseDiffMask) * (1.0f/CubicPhaseDiffOne)};
@@ -201,14 +204,14 @@ void Resample_<CubicTag,SSE4Tag>(const InterpState *state, const float *src, uin
 
             const __m128 f4 = vmadd(_mm_load_ps(filter[pi].mCoeffs.data()), pf4,
                 _mm_load_ps(filter[pi].mDeltas.data()));
-            __m128 r4{_mm_mul_ps(f4, _mm_loadu_ps(src))};
+            __m128 r4{_mm_mul_ps(f4, _mm_loadu_ps(&src[pos]))};
 
             r4 = _mm_add_ps(r4, _mm_shuffle_ps(r4, r4, _MM_SHUFFLE(0, 1, 2, 3)));
             r4 = _mm_add_ps(r4, _mm_movehl_ps(r4, r4));
             const float output{_mm_cvtss_f32(r4)};
 
             frac += increment;
-            src  += frac>>MixerFracBits;
+            pos  += frac>>MixerFracBits;
             frac &= MixerFracMask;
             return output;
         });

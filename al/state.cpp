@@ -82,6 +82,8 @@ template<> struct ResamplerName<Resampler::Point>
 { static constexpr const ALchar *Get() noexcept { return "Nearest"; } };
 template<> struct ResamplerName<Resampler::Linear>
 { static constexpr const ALchar *Get() noexcept { return "Linear"; } };
+template<> struct ResamplerName<Resampler::Spline>
+{ static constexpr const ALchar *Get() noexcept { return "Cubic Spline"; } };
 template<> struct ResamplerName<Resampler::Gaussian>
 { static constexpr const ALchar *Get() noexcept { return "4-point Gaussian"; } };
 template<> struct ResamplerName<Resampler::FastBSinc12>
@@ -100,6 +102,7 @@ const ALchar *GetResamplerName(const Resampler rtype)
     {
     HANDLE_RESAMPLER(Resampler::Point);
     HANDLE_RESAMPLER(Resampler::Linear);
+    HANDLE_RESAMPLER(Resampler::Spline);
     HANDLE_RESAMPLER(Resampler::Gaussian);
     HANDLE_RESAMPLER(Resampler::FastBSinc12);
     HANDLE_RESAMPLER(Resampler::BSinc12);

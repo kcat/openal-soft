@@ -9,16 +9,15 @@
 #include "alnumeric.h"
 #include "cubic_defs.h"
 
-/* These filter tables are inspired by the gaussian-like filter found in the
- * SNES. This is based on the public domain code developed by Near, with the
- * help of Ryphecha and nocash, from the nesdev.org forums.
+/* These gaussian filter tables are inspired by the gaussian-like filter found
+ * in the SNES. This is based on the public domain code developed by Near, with
+ * the help of Ryphecha and nocash, from the nesdev.org forums.
  *
  * <https://forums.nesdev.org/viewtopic.php?p=251534#p251534>
  *
  * Additional changes were made here, the most obvious being that is has full
  * floating-point precision instead of 11-bit fixed-point, but also an offset
- * adjustment for the phase coefficients to more cleanly transition from the
- * end of one sample set to the start of the next.
+ * adjustment for the coefficients to better preserve phase.
  */
 namespace {
 
@@ -68,6 +67,37 @@ GaussianTable::GaussianTable()
     mTable[pi].mDeltas[2] = mTable[0].mCoeffs[1] - mTable[pi].mCoeffs[2];
     mTable[pi].mDeltas[3] = mTable[0].mCoeffs[2] - mTable[pi].mCoeffs[3];
 }
+
+SplineTable::SplineTable()
+{
+    /* This filter table is based on a Catmull-Rom spline. It retains more of
+     * the original high-frequency content, at the cost of increased harmonics.
+     */
+    for(std::size_t pi{0};pi < CubicPhaseCount;++pi)
+    {
+        const double mu{static_cast<double>(pi) / double{CubicPhaseCount}};
+        const double mu2{mu*mu}, mu3{mu2*mu};
+        mTable[pi].mCoeffs[0] = static_cast<float>(-0.5*mu3 +      mu2 + -0.5*mu);
+        mTable[pi].mCoeffs[1] = static_cast<float>( 1.5*mu3 + -2.5*mu2           + 1.0);
+        mTable[pi].mCoeffs[2] = static_cast<float>(-1.5*mu3 +  2.0*mu2 +  0.5*mu);
+        mTable[pi].mCoeffs[3] = static_cast<float>( 0.5*mu3 + -0.5*mu2);
+    }
+
+    for(std::size_t pi{0};pi < CubicPhaseCount-1;++pi)
+    {
+        mTable[pi].mDeltas[0] = mTable[pi+1].mCoeffs[0] - mTable[pi].mCoeffs[0];
+        mTable[pi].mDeltas[1] = mTable[pi+1].mCoeffs[1] - mTable[pi].mCoeffs[1];
+        mTable[pi].mDeltas[2] = mTable[pi+1].mCoeffs[2] - mTable[pi].mCoeffs[2];
+        mTable[pi].mDeltas[3] = mTable[pi+1].mCoeffs[3] - mTable[pi].mCoeffs[3];
+    }
+
+    const std::size_t pi{CubicPhaseCount - 1};
+    mTable[pi].mDeltas[0] =                 0.0f - mTable[pi].mCoeffs[0];
+    mTable[pi].mDeltas[1] = mTable[0].mCoeffs[0] - mTable[pi].mCoeffs[1];
+    mTable[pi].mDeltas[2] = mTable[0].mCoeffs[1] - mTable[pi].mCoeffs[2];
+    mTable[pi].mDeltas[3] = mTable[0].mCoeffs[2] - mTable[pi].mCoeffs[3];
+}
+
 
 CubicFilter::CubicFilter()
 {

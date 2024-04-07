@@ -111,6 +111,7 @@ constexpr std::array sampleTypeList{
 constexpr std::array resamplerList{
     NameValuePair{ "Point", "point" },
     NameValuePair{ "Linear", "linear" },
+    NameValuePair{ "Cubic Spline", "spline" },
     NameValuePair{ "4-point Gaussian", "gaussian" },
     NameValuePair{ "Default (4-point Gaussian)", "" },
     NameValuePair{ "11th order Sinc (fast)", "fast_bsinc12" },

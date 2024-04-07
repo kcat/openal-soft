@@ -14,6 +14,9 @@ struct CubicTable {
 struct GaussianTable : CubicTable { GaussianTable(); };
 inline const GaussianTable gGaussianFilter;
 
+struct SplineTable : CubicTable { SplineTable(); };
+inline const SplineTable gSplineFilter;
+
 
 struct CubicFilter {
     static constexpr std::size_t sTableBits{8};

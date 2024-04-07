@@ -139,6 +139,7 @@ void Voice::InitMixer(std::optional<std::string> resopt)
             ResamplerEntry{"none"sv, Resampler::Point},
             ResamplerEntry{"point"sv, Resampler::Point},
             ResamplerEntry{"linear"sv, Resampler::Linear},
+            ResamplerEntry{"spline"sv, Resampler::Spline},
             ResamplerEntry{"gaussian"sv, Resampler::Gaussian},
             ResamplerEntry{"bsinc12"sv, Resampler::BSinc12},
             ResamplerEntry{"fast_bsinc12"sv, Resampler::FastBSinc12},

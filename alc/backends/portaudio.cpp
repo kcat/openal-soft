@@ -89,6 +89,8 @@ struct PortPlayback final : public BackendBase {
 
     PaStream *mStream{nullptr};
     PaStreamParameters mParams{};
+    DevFmtChannels mChannelConfig{};
+    uint mAmbiOrder{};
     uint mUpdateSize{0u};
 };
 
@@ -125,7 +127,9 @@ void PortPlayback::open(std::string_view name)
     params.suggestedLatency = mDevice->BufferSize / static_cast<double>(mDevice->Frequency);
     params.hostApiSpecificStreamInfo = nullptr;
 
-    params.channelCount = ((mDevice->FmtChans == DevFmtMono) ? 1 : 2);
+    mChannelConfig = mDevice->FmtChans;
+    mAmbiOrder = mDevice->mAmbiOrder;
+    params.channelCount = static_cast<int>(mDevice->channelsFromFmt());
 
     switch(mDevice->FmtType)
     {
@@ -179,7 +183,18 @@ bool PortPlayback::reset()
 {
     const PaStreamInfo *streamInfo{Pa_GetStreamInfo(mStream)};
     mDevice->Frequency = static_cast<uint>(streamInfo->sampleRate);
+    mDevice->FmtChans = mChannelConfig;
+    mDevice->mAmbiOrder = mAmbiOrder;
     mDevice->UpdateSize = mUpdateSize;
+    mDevice->BufferSize = mUpdateSize * 2;
+    if(streamInfo->outputLatency > 0.0f)
+    {
+        const double sampleLatency{streamInfo->outputLatency * streamInfo->sampleRate};
+        TRACE("Reported stream latency: %f sec (%f samples)\n", streamInfo->outputLatency,
+            sampleLatency);
+        mDevice->BufferSize = static_cast<uint>(std::clamp(sampleLatency,
+            double(mDevice->BufferSize), double{std::numeric_limits<int>::max()}));
+    }
 
     if(mParams.sampleFormat == paInt8)
         mDevice->FmtType = DevFmtByte;
@@ -197,15 +212,6 @@ bool PortPlayback::reset()
         return false;
     }
 
-    if(mParams.channelCount >= 2)
-        mDevice->FmtChans = DevFmtStereo;
-    else if(mParams.channelCount == 1)
-        mDevice->FmtChans = DevFmtMono;
-    else
-    {
-        ERR("Unexpected channel count: %u\n", mParams.channelCount);
-        return false;
-    }
     setDefaultChannelOrder();
 
     return true;

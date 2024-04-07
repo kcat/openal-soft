@@ -82,8 +82,8 @@ template<> struct ResamplerName<Resampler::Point>
 { static constexpr const ALchar *Get() noexcept { return "Nearest"; } };
 template<> struct ResamplerName<Resampler::Linear>
 { static constexpr const ALchar *Get() noexcept { return "Linear"; } };
-template<> struct ResamplerName<Resampler::Cubic>
-{ static constexpr const ALchar *Get() noexcept { return "Cubic"; } };
+template<> struct ResamplerName<Resampler::Gaussian>
+{ static constexpr const ALchar *Get() noexcept { return "4-point Gaussian"; } };
 template<> struct ResamplerName<Resampler::FastBSinc12>
 { static constexpr const ALchar *Get() noexcept { return "11th order Sinc (fast)"; } };
 template<> struct ResamplerName<Resampler::BSinc12>
@@ -100,7 +100,7 @@ const ALchar *GetResamplerName(const Resampler rtype)
     {
     HANDLE_RESAMPLER(Resampler::Point);
     HANDLE_RESAMPLER(Resampler::Linear);
-    HANDLE_RESAMPLER(Resampler::Cubic);
+    HANDLE_RESAMPLER(Resampler::Gaussian);
     HANDLE_RESAMPLER(Resampler::FastBSinc12);
     HANDLE_RESAMPLER(Resampler::BSinc12);
     HANDLE_RESAMPLER(Resampler::FastBSinc24);

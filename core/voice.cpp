@@ -139,7 +139,7 @@ void Voice::InitMixer(std::optional<std::string> resopt)
             ResamplerEntry{"none"sv, Resampler::Point},
             ResamplerEntry{"point"sv, Resampler::Point},
             ResamplerEntry{"linear"sv, Resampler::Linear},
-            ResamplerEntry{"cubic"sv, Resampler::Cubic},
+            ResamplerEntry{"gaussian"sv, Resampler::Gaussian},
             ResamplerEntry{"bsinc12"sv, Resampler::BSinc12},
             ResamplerEntry{"fast_bsinc12"sv, Resampler::FastBSinc12},
             ResamplerEntry{"bsinc24"sv, Resampler::BSinc24},
@@ -147,16 +147,17 @@ void Voice::InitMixer(std::optional<std::string> resopt)
         };
 
         std::string_view resampler{*resopt};
-        if(al::case_compare(resampler, "bsinc"sv) == 0)
+        if(al::case_compare(resampler, "cubic"sv) == 0
+            || al::case_compare(resampler, "sinc4"sv) == 0
+            || al::case_compare(resampler, "sinc8"sv) == 0)
+        {
+            WARN("Resampler option \"%s\" is deprecated, using gaussian\n", resopt->c_str());
+            resampler = "gaussian"sv;
+        }
+        else if(al::case_compare(resampler, "bsinc"sv) == 0)
         {
             WARN("Resampler option \"%s\" is deprecated, using bsinc12\n", resopt->c_str());
             resampler = "bsinc12"sv;
-        }
-        else if(al::case_compare(resampler, "sinc4"sv) == 0
-            || al::case_compare(resampler, "sinc8"sv) == 0)
-        {
-            WARN("Resampler option \"%s\" is deprecated, using cubic\n", resopt->c_str());
-            resampler = "cubic"sv;
         }
 
         auto iter = std::find_if(ResamplerList.begin(), ResamplerList.end(),

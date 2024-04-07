@@ -30,7 +30,7 @@ inline constexpr float GainSilenceThreshold{0.00001f}; /* -100dB */
 enum class Resampler : std::uint8_t {
     Point,
     Linear,
-    Cubic,
+    Gaussian,
     FastBSinc12,
     BSinc12,
     FastBSinc24,

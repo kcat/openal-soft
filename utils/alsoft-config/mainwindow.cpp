@@ -111,8 +111,8 @@ constexpr std::array sampleTypeList{
 constexpr std::array resamplerList{
     NameValuePair{ "Point", "point" },
     NameValuePair{ "Linear", "linear" },
-    NameValuePair{ "Cubic Spline", "cubic" },
-    NameValuePair{ "Default (Cubic Spline)", "" },
+    NameValuePair{ "4-point Gaussian", "gaussian" },
+    NameValuePair{ "Default (4-point Gaussian)", "" },
     NameValuePair{ "11th order Sinc (fast)", "fast_bsinc12" },
     NameValuePair{ "11th order Sinc", "bsinc12" },
     NameValuePair{ "23rd order Sinc (fast)", "fast_bsinc24" },
@@ -664,11 +664,11 @@ void MainWindow::loadConfig(const QString &fname)
     QString resampler = settings.value("resampler").toString().trimmed();
     ui->resamplerSlider->setValue(2);
     ui->resamplerLabel->setText(std::data(resamplerList[2].name));
-    /* The "sinc4" and "sinc8" resamplers are no longer supported. Use "cubic"
-     * as a fallback.
+    /* "Cubic" is an alias for the 4-point gaussian resampler. The "sinc4" and
+     * "sinc8" resamplers are unsupported, use "gaussian" as a fallback.
      */
-    if(resampler == "sinc4" || resampler == "sinc8")
-        resampler = "cubic";
+    if(resampler == "cubic" || resampler == "sinc4" || resampler == "sinc8")
+        resampler = "gaussian";
     /* The "bsinc" resampler name is an alias for "bsinc12". */
     else if(resampler == "bsinc")
         resampler = "bsinc12";

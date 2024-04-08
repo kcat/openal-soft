@@ -12,7 +12,7 @@
 
 namespace gsl {
 template<typename T> using owner = T;
-};
+}
 
 
 #define DISABLE_ALLOC                                                         \

@@ -598,7 +598,7 @@ std::unique_ptr<HrtfStore> LoadHrtf00(std::istream &data)
     auto delays = std::vector<ubyte2>(irCount);
     for(auto &hrir : coeffs)
     {
-        for(auto &val : al::span<float2>{hrir.data(), irSize})
+        for(auto &val : al::span{hrir}.first(irSize))
             val[0] = float(readle<int16_t>(data)) / 32768.0f;
     }
     for(auto &val : delays)
@@ -669,7 +669,7 @@ std::unique_ptr<HrtfStore> LoadHrtf01(std::istream &data)
     auto delays = std::vector<ubyte2>(irCount);
     for(auto &hrir : coeffs)
     {
-        for(auto &val : al::span<float2>{hrir.data(), irSize})
+        for(auto &val : al::span{hrir}.first(irSize))
             val[0] = float(readle<int16_t>(data)) / 32768.0f;
     }
     for(auto &val : delays)
@@ -765,7 +765,7 @@ std::unique_ptr<HrtfStore> LoadHrtf02(std::istream &data)
 
         const size_t ebase{elevs.size()};
         elevs.resize(ebase + evCount);
-        for(auto &elev : al::span<HrtfStore::Elevation>{elevs}.subspan(ebase, evCount))
+        for(auto &elev : al::span{elevs}.subspan(ebase, evCount))
             elev.azCount = readle<uint8_t>(data);
         if(!data || data.eof())
             throw std::runtime_error{"Premature end of file"};
@@ -799,7 +799,7 @@ std::unique_ptr<HrtfStore> LoadHrtf02(std::istream &data)
         {
             for(auto &hrir : coeffs)
             {
-                for(auto &val : al::span<float2>{hrir.data(), irSize})
+                for(auto &val : al::span{hrir}.first(irSize))
                     val[0] = float(readle<int16_t>(data)) / 32768.0f;
             }
         }
@@ -807,7 +807,7 @@ std::unique_ptr<HrtfStore> LoadHrtf02(std::istream &data)
         {
             for(auto &hrir : coeffs)
             {
-                for(auto &val : al::span<float2>{hrir.data(), irSize})
+                for(auto &val : al::span{hrir}.first(irSize))
                     val[0] = static_cast<float>(readle<int,24>(data)) / 8388608.0f;
             }
         }
@@ -835,7 +835,7 @@ std::unique_ptr<HrtfStore> LoadHrtf02(std::istream &data)
         {
             for(auto &hrir : coeffs)
             {
-                for(auto &val : al::span<float2>{hrir.data(), irSize})
+                for(auto &val : al::span{hrir}.first(irSize))
                 {
                     val[0] = float(readle<int16_t>(data)) / 32768.0f;
                     val[1] = float(readle<int16_t>(data)) / 32768.0f;
@@ -846,7 +846,7 @@ std::unique_ptr<HrtfStore> LoadHrtf02(std::istream &data)
         {
             for(auto &hrir : coeffs)
             {
-                for(auto &val : al::span<float2>{hrir.data(), irSize})
+                for(auto &val : al::span{hrir}.first(irSize))
                 {
                     val[0] = static_cast<float>(readle<int,24>(data)) / 8388608.0f;
                     val[1] = static_cast<float>(readle<int,24>(data)) / 8388608.0f;
@@ -1012,7 +1012,7 @@ std::unique_ptr<HrtfStore> LoadHrtf03(std::istream &data)
 
         const size_t ebase{elevs.size()};
         elevs.resize(ebase + evCount);
-        for(auto &elev : al::span<HrtfStore::Elevation>{elevs}.subspan(ebase, evCount))
+        for(auto &elev : al::span{elevs}.subspan(ebase, evCount))
             elev.azCount = readle<uint8_t>(data);
         if(!data || data.eof())
             throw std::runtime_error{"Premature end of file"};
@@ -1044,7 +1044,7 @@ std::unique_ptr<HrtfStore> LoadHrtf03(std::istream &data)
     {
         for(auto &hrir : coeffs)
         {
-            for(auto &val : al::span<float2>{hrir.data(), irSize})
+            for(auto &val : al::span{hrir}.first(irSize))
                 val[0] = static_cast<float>(readle<int,24>(data)) / 8388608.0f;
         }
         for(auto &val : delays)
@@ -1069,7 +1069,7 @@ std::unique_ptr<HrtfStore> LoadHrtf03(std::istream &data)
     {
         for(auto &hrir : coeffs)
         {
-            for(auto &val : al::span<float2>{hrir.data(), irSize})
+            for(auto &val : al::span{hrir}.first(irSize))
             {
                 val[0] = static_cast<float>(readle<int,24>(data)) / 8388608.0f;
                 val[1] = static_cast<float>(readle<int,24>(data)) / 8388608.0f;

@@ -534,16 +534,14 @@ try {
         throw al::context_error{AL_INVALID_VALUE, "Object label length too long (%zu >= %d)",
             objname.size(), MaxObjectLabelLength};
 
-    if(identifier == AL_SOURCE_EXT)
-        return ALsource::SetName(context, name, objname);
-    if(identifier == AL_BUFFER)
-        return ALbuffer::SetName(context, name, objname);
-    if(identifier == AL_FILTER_EXT)
-        return ALfilter::SetName(context, name, objname);
-    if(identifier == AL_EFFECT_EXT)
-        return ALeffect::SetName(context, name, objname);
-    if(identifier == AL_AUXILIARY_EFFECT_SLOT_EXT)
-        return ALeffectslot::SetName(context, name, objname);
+    switch(identifier)
+    {
+    case AL_SOURCE_EXT: ALsource::SetName(context, name, objname); return;
+    case AL_BUFFER: ALbuffer::SetName(context, name, objname); return;
+    case AL_FILTER_EXT: ALfilter::SetName(context, name, objname); return;
+    case AL_EFFECT_EXT: ALeffect::SetName(context, name, objname); return;
+    case AL_AUXILIARY_EFFECT_SLOT_EXT: ALeffectslot::SetName(context, name, objname); return;
+    }
 
     throw al::context_error{AL_INVALID_ENUM, "Invalid name identifier 0x%04x", identifier};
 }

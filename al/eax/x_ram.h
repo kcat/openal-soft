@@ -24,12 +24,7 @@ constexpr auto AL_STORAGE_AUTOMATIC_NAME = "AL_STORAGE_AUTOMATIC";
 constexpr auto AL_STORAGE_HARDWARE_NAME = "AL_STORAGE_HARDWARE";
 constexpr auto AL_STORAGE_ACCESSIBLE_NAME = "AL_STORAGE_ACCESSIBLE";
 
-/* NOLINTBEGIN(readability-inconsistent-declaration-parameter-name)
- * These functions are defined using macros to forward them in a generic way to
- * implementation functions, which gives the parameters generic names.
- */
 ALboolean AL_APIENTRY EAXSetBufferMode(ALsizei n, const ALuint *buffers, ALint value) noexcept;
 ALenum AL_APIENTRY EAXGetBufferMode(ALuint buffer, ALint *pReserved) noexcept;
-/* NOLINTEND(readability-inconsistent-declaration-parameter-name) */
 
 #endif // !EAX_X_RAM_INCLUDED

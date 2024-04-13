@@ -77,15 +77,6 @@ struct DeviceEntry {
     std::string mName;
     bool mIsPlayback{};
     bool mIsCapture{};
-
-    template<typename T>
-    DeviceEntry(T&& name) : mName{std::forward<T>(name)} { }
-    DeviceEntry(DeviceEntry&&) = default;
-    DeviceEntry(const DeviceEntry&) = default;
-    ~DeviceEntry() = default;
-
-    DeviceEntry& operator=(DeviceEntry&&) = default;
-    DeviceEntry& operator=(const DeviceEntry&) = default;
 };
 std::vector<DeviceEntry> DeviceNames;
 
@@ -98,25 +89,23 @@ void EnumerateDevices()
         return;
     }
 
-    std::vector<DeviceEntry>{}.swap(DeviceNames);
-    DeviceNames.reserve(static_cast<uint>(devcount));
-    for(PaDeviceIndex i{0};i < devcount;++i)
+    std::vector<DeviceEntry>(static_cast<uint>(devcount)).swap(DeviceNames);
+    PaDeviceIndex idx{0};
+    for(auto &entry : DeviceNames)
     {
-        if(auto info = Pa_GetDeviceInfo(i); info && info->name)
+        if(auto info = Pa_GetDeviceInfo(idx); info && info->name)
         {
-            const std::string_view name{info->name};
 #ifdef _WIN32
-            auto &entry = DeviceNames.emplace_back("OpenAL Soft on "+std::string{name});
+            entry.mName = "OpenAL Soft on "+std::string{info->name};
 #else
-            auto &entry = DeviceNames.emplace_back(name);
+            entry.mName = info->name;
 #endif
             entry.mIsPlayback = (info->maxOutputChannels > 0);
             entry.mIsCapture = (info->maxInputChannels > 0);
-            TRACE("Device %d \"%.*s\": %d playback, %d capture channels\n", i, al::sizei(name),
-                name.data(), info->maxOutputChannels, info->maxInputChannels);
+            TRACE("Device %d \"%s\": %d playback, %d capture channels\n", idx, entry.mName.c_str(),
+                info->maxOutputChannels, info->maxInputChannels);
         }
-        else
-            DeviceNames.emplace_back(std::string_view{});
+        ++idx;
     }
 }
 

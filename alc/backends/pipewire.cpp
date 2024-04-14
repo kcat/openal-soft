@@ -1081,8 +1081,9 @@ void NodeProxy::paramCallback(int, uint32_t id, uint32_t, uint32_t, const spa_po
         DeviceNode *node{DeviceNode::Find(mId)};
         if(!node) UNLIKELY return;
 
-        TRACE("Device ID %" PRIu64 " %s format:\n", node->mSerial,
-            (id == SPA_PARAM_EnumFormat) ? "enumerable" : "current");
+        TRACE("Device ID %" PRIu64 " %s format%s:\n", node->mSerial,
+            (id == SPA_PARAM_EnumFormat) ? "available" : "current",
+            (id == SPA_PARAM_EnumFormat) ? "s" : "");
 
         const bool force_update{id == SPA_PARAM_Format};
         if(const spa_pod_prop *prop{spa_pod_find_prop(param, nullptr, SPA_FORMAT_AUDIO_rate)})

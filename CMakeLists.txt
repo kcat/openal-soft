@@ -608,6 +608,8 @@ endif()
 # Common sources used by both the OpenAL implementation library, the OpenAL
 # router, and certain tools and examples.
 set(COMMON_OBJS
+    common/alassert.cpp
+    common/alassert.h
     common/albit.h
     common/alcomplex.cpp
     common/alcomplex.h

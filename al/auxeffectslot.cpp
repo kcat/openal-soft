@@ -23,7 +23,6 @@
 #include "auxeffectslot.h"
 
 #include <algorithm>
-#include <cassert>
 #include <cstddef>
 #include <cstdint>
 #include <functional>
@@ -1528,7 +1527,6 @@ void ALeffectslot::eax_set_efx_slot_gain(ALfloat gain)
 
 void ALeffectslot::EaxDeleter::operator()(ALeffectslot* effect_slot)
 {
-    assert(effect_slot);
     eax_delete_al_effect_slot(*effect_slot->eax_al_context_, *effect_slot);
 }
 

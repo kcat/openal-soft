@@ -889,7 +889,7 @@ private:
         }
     }
 
-    static void eax_get_active_fx_slot_id(const EaxCall& call, const GUID* ids, size_t max_count);
+    static void eax_get_active_fx_slot_id(const EaxCall& call, const al::span<const GUID> src_ids);
     static void eax1_get(const EaxCall& call, const Eax1Props& props);
     static void eax2_get(const EaxCall& call, const Eax2Props& props);
     static void eax3_get_obstruction(const EaxCall& call, const Eax3Props& props);

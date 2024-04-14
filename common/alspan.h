@@ -9,6 +9,7 @@
 #include <type_traits>
 #include <utility>
 
+#include "alassert.h"
 #include "almalloc.h"
 #include "altraits.h"
 
@@ -164,12 +165,11 @@ public:
     template<bool is0=(extent == 0), REQUIRES(is0)>
     constexpr span() noexcept { }
     template<typename U>
-    constexpr explicit span(U iter, size_type size_ [[maybe_unused]])
-        : mData{::al::to_address(iter)}
-    { assert(size_ == extent); }
+    constexpr explicit span(U iter, size_type size_) : mData{::al::to_address(iter)}
+    { alassert(size_ == extent); }
     template<typename U, typename V, REQUIRES(!std::is_convertible<V,std::size_t>::value)>
-    constexpr explicit span(U first, V last [[maybe_unused]]) : mData{::al::to_address(first)}
-    { assert(static_cast<std::size_t>(last-first) == extent); }
+    constexpr explicit span(U first, V last) : mData{::al::to_address(first)}
+    { alassert(static_cast<std::size_t>(last-first) == extent); }
 
     template<std::size_t N>
     constexpr span(type_identity_t<element_type> (&arr)[N]) noexcept /* NOLINT(*-avoid-c-arrays) */
@@ -188,7 +188,7 @@ public:
     template<typename U, std::size_t N, REQUIRES(!std::is_same<element_type,U>::value
         && detail_::is_array_compatible<U,element_type> && N == dynamic_extent)>
     constexpr explicit span(const span<U,N> &span_) noexcept : mData{std::data(span_)}
-    { assert(std::size(span_) == extent); }
+    { alassert(std::size(span_) == extent); }
     template<typename U, std::size_t N, REQUIRES(!std::is_same<element_type,U>::value
         && detail_::is_array_compatible<U,element_type> && N == extent)>
     constexpr span(const span<U,N> &span_) noexcept : mData{std::data(span_)} { }

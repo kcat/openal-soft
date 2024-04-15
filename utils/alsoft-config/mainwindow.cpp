@@ -54,7 +54,7 @@ constexpr std::array backendList{
     BackendNamePair{ "solaris", "Solaris" },
 #endif
 #ifdef HAVE_SNDIO
-    BackendNamePair{ "sndio", "SoundIO" },
+    BackendNamePair{ "sndio", "SndIO" },
 #endif
 #ifdef HAVE_WASAPI
     BackendNamePair{ "wasapi", "WASAPI" },

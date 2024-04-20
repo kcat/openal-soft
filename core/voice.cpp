@@ -899,17 +899,16 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
             {
                 const uint avail{std::min(srcBufferSize, MaxResamplerEdge)};
                 const uint tofill{std::max(srcBufferSize, MaxResamplerEdge)};
+                const auto srcbuf = resampleBuffer.first(tofill);
 
                 /* When loading from a voice that ended prematurely, only take
                  * the samples that get closest to 0 amplitude. This helps
                  * certain sounds fade out better.
                  */
-                auto abs_lt = [](const float lhs, const float rhs) noexcept -> bool
-                { return std::abs(lhs) < std::abs(rhs); };
-                auto srciter = std::min_element(resampleBuffer.begin(),
-                    resampleBuffer.begin()+ptrdiff_t(avail), abs_lt);
+                auto srciter = std::min_element(srcbuf.begin(), srcbuf.begin()+ptrdiff_t(avail),
+                    [](const float l, const float r) { return std::abs(l) < std::abs(r); });
 
-                std::fill(srciter+1, resampleBuffer.begin()+ptrdiff_t(tofill), *srciter);
+                std::fill(srciter+1, srcbuf.end(), *srciter);
             }
             else if(mFlags.test(VoiceIsStatic))
             {

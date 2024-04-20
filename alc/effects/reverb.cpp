@@ -1558,39 +1558,47 @@ void ReverbPipeline::processEarly(const DelayLineU &main_delay, size_t offset,
 
             /* Band-pass the incoming samples. */
             auto&& filter = DualBiquad{mFilter[j].Lp, mFilter[j].Hp};
-            filter.process({tempSamples[j].cbegin(), todo}, tempSamples[j]);
+            filter.process(al::span{tempSamples[j]}.first(todo), tempSamples[j]);
         }
 
         /* Apply an all-pass, to help color the initial reflections. */
         mEarly.VecAp.process(tempSamples, offset, todo);
 
-        /* Apply a delay and bounce to generate secondary reflections, combine
-         * with the primary reflections and write out the result for mixing.
-         */
+        /* Apply a delay and bounce to generate secondary reflections. */
         early_delay.writeReflected(offset, tempSamples, todo);
         for(size_t j{0u};j < NUM_LINES;j++)
         {
             const auto input = early_delay.get(j);
             size_t feedb_tap{offset - mEarly.Offset[j]};
             const float feedb_coeff{mEarly.Coeff[j]};
-            float *RESTRICT out{al::assume_aligned<16>(outSamples[j].data() + base)};
+            auto out = outSamples[j].begin() + base;
+            auto tmp = tempSamples[j].begin();
 
             for(size_t i{0u};i < todo;)
             {
                 feedb_tap &= input.size()-1;
-                size_t td{std::min(input.size() - feedb_tap, todo - i)};
-                do {
-                    float sample{input[feedb_tap++]};
-                    out[i] = tempSamples[j][i] + sample*feedb_coeff;
-                    tempSamples[j][i] = sample;
-                    ++i;
-                } while(--td);
+
+                const size_t td{std::min(input.size() - feedb_tap, todo - i)};
+                const auto delaySrc = input.subspan(feedb_tap, td);
+
+                /* Combine the main input with the attenuated delayed echo for
+                 * the early output.
+                 */
+                out = std::transform(delaySrc.begin(), delaySrc.end(), tmp, out,
+                    [feedb_coeff](const float delayspl, const float mainspl) noexcept -> float
+                    { return mainspl + delayspl*feedb_coeff; });
+
+                /* Move the (non-attenuated) delayed echo to the temp buffer
+                 * for feeding the late reverb.
+                 */
+                tmp = std::copy_n(delaySrc.begin(), delaySrc.size(), tmp);
+                feedb_tap += td;
+                i += td;
             }
         }
 
-        /* Finally, write the result to the late delay line input for the late
-         * reverb stage to pick up at the appropriate time, applying a scatter
-         * and bounce to improve the initial diffusion in the late reverb.
+        /* Finally, apply a scatter and bounce to improve the initial diffusion
+         * in the late reverb, writing the result to the late delay line input.
          */
         VectorScatterRev(mixX, mixY, tempSamples, todo);
         for(size_t j{0u};j < NUM_LINES;j++)

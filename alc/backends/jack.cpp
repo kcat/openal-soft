@@ -529,9 +529,9 @@ bool JackPlayback::reset()
     mDevice->FmtType = DevFmtFloat;
 
     int port_num{0};
-    auto ports_end = mPort.begin() + mDevice->channelsFromFmt();
-    auto bad_port = mPort.begin();
-    while(bad_port != ports_end)
+    auto ports = al::span{mPort}.first(mDevice->channelsFromFmt());
+    auto bad_port = ports.begin();
+    while(bad_port != ports.end())
     {
         std::string name{"channel_" + std::to_string(++port_num)};
         *bad_port = jack_port_register(mClient, name.c_str(), JACK_DEFAULT_AUDIO_TYPE,
@@ -539,17 +539,17 @@ bool JackPlayback::reset()
         if(!*bad_port) break;
         ++bad_port;
     }
-    if(bad_port != ports_end)
+    if(bad_port != ports.end())
     {
         ERR("Failed to register enough JACK ports for %s output\n",
             DevFmtChannelsString(mDevice->FmtChans));
-        if(bad_port == mPort.begin()) return false;
+        if(bad_port == ports.begin()) return false;
 
-        if(bad_port == mPort.begin()+1)
+        if(bad_port == ports.begin()+1)
             mDevice->FmtChans = DevFmtMono;
         else
         {
-            ports_end = mPort.begin()+2;
+            const auto ports_end = ports.begin()+2;
             while(bad_port != ports_end)
             {
                 jack_port_unregister(mClient, *(--bad_port));

@@ -181,7 +181,7 @@ void EnumerateDevices(jack_client_t *client, std::vector<DeviceEntry> &list)
             if(seppos == 0 || seppos >= portname.size())
                 continue;
 
-            const std::string_view portdev{ports[i], seppos};
+            const auto portdev = portname.substr(0, seppos);
             auto check_name = [portdev](const DeviceEntry &entry) -> bool
             { return entry.mName == portdev; };
             if(std::find_if(list.cbegin(), list.cend(), check_name) != list.cend())
@@ -208,8 +208,8 @@ void EnumerateDevices(jack_client_t *client, std::vector<DeviceEntry> &list)
             size_t seppos{listopt->find('=', strpos)};
             if(seppos >= nextpos || seppos == strpos)
             {
-                const std::string entry{listopt->substr(strpos, nextpos-strpos)};
-                ERR("Invalid device entry: \"%s\"\n", entry.c_str());
+                const auto entry = std::string_view{*listopt}.substr(strpos, nextpos-strpos);
+                ERR("Invalid device entry: \"%.*s\"\n", al::sizei(entry), entry.data());
                 if(nextpos != std::string::npos) ++nextpos;
                 strpos = nextpos;
                 continue;
@@ -322,22 +322,22 @@ JackPlayback::~JackPlayback()
 
 int JackPlayback::processRt(jack_nframes_t numframes) noexcept
 {
-    std::array<jack_default_audio_sample_t*,MaxOutputChannels> out;
-    size_t numchans{0};
+    auto outptrs = std::array<jack_default_audio_sample_t*,MaxOutputChannels>{};
+    auto numchans = size_t{0};
     for(auto port : mPort)
     {
         if(!port || numchans == mDevice->RealOut.Buffer.size())
             break;
-        out[numchans++] = static_cast<float*>(jack_port_get_buffer(port, numframes));
+        outptrs[numchans++] = static_cast<float*>(jack_port_get_buffer(port, numframes));
     }
 
+    const auto dst = al::span{outptrs}.first(numchans);
     if(mPlaying.load(std::memory_order_acquire)) LIKELY
-        mDevice->renderSamples({out.data(), numchans}, static_cast<uint>(numframes));
+        mDevice->renderSamples(dst, static_cast<uint>(numframes));
     else
     {
-        auto clear_buf = [numframes](float *outbuf) -> void
-        { std::fill_n(outbuf, numframes, 0.0f); };
-        std::for_each(out.begin(), out.begin()+numchans, clear_buf);
+        std::for_each(dst.begin(), dst.end(), [numframes](float *outbuf) -> void
+        { std::fill_n(outbuf, numframes, 0.0f); });
     }
 
     return 0;
@@ -358,39 +358,34 @@ int JackPlayback::process(jack_nframes_t numframes) noexcept
     if(mPlaying.load(std::memory_order_acquire)) LIKELY
     {
         auto data = mRing->getReadVector();
-        jack_nframes_t todo{std::min(numframes, static_cast<jack_nframes_t>(data.first.len))};
-        auto firstin = al::span{reinterpret_cast<const float*>(data.first.buf), todo};
-        for(size_t c{0};c < numchans;++c)
-        {
-            auto in = firstin.cbegin();
-            auto deinterlace_input = [&in,c,numchans]() noexcept -> float
-            {
-                const float ret{in[c]};
-                in += ptrdiff_t(numchans);
-                return ret;
-            };
-            std::generate_n(out[c].begin(), todo, deinterlace_input);
-            out[c] = out[c].subspan(todo);
-        }
-        total += todo;
+        const auto update_size = size_t{mDevice->UpdateSize};
 
-        todo = std::min(numframes-total, static_cast<jack_nframes_t>(data.second.len));
-        if(todo > 0)
+        const auto outlen = size_t{numframes / update_size};
+        const auto len1 = size_t{std::min(data.first.len/update_size, outlen)};
+        const auto len2 = size_t{std::min(data.second.len/update_size, outlen-len1)};
+
+        auto src = al::span{reinterpret_cast<float*>(data.first.buf), update_size*len1*numchans};
+        for(size_t i{0};i < len1;++i)
         {
-            auto secondin = al::span{reinterpret_cast<const float*>(data.second.buf), todo};
             for(size_t c{0};c < numchans;++c)
             {
-                auto in = secondin.cbegin();
-                auto deinterlace_input = [&in,c,numchans]() noexcept -> float
-                {
-                    float ret{in[c]};
-                    in += ptrdiff_t(numchans);
-                    return ret;
-                };
-                std::generate_n(out[c].begin(), todo, deinterlace_input);
-                out[c] = out[c].subspan(todo);
+                const auto iter = std::copy_n(src.begin(), update_size, out[c].begin());
+                out[c] = {iter, out[c].end()};
+                src = src.subspan(update_size);
             }
-            total += todo;
+            total += update_size;
+        }
+
+        src = al::span{reinterpret_cast<float*>(data.second.buf), update_size*len2*numchans};
+        for(size_t i{0};i < len2;++i)
+        {
+            for(size_t c{0};c < numchans;++c)
+            {
+                const auto iter = std::copy_n(src.begin(), update_size, out[c].begin());
+                out[c] = {iter, out[c].end()};
+                src = src.subspan(update_size);
+            }
+            total += update_size;
         }
 
         mRing->readAdvance(total);
@@ -412,29 +407,44 @@ int JackPlayback::mixerProc()
     SetRTPriority();
     althrd_setname(GetMixerThreadName());
 
-    const size_t frame_step{mDevice->channelsFromFmt()};
+    auto outptrs = std::array<float*,MaxOutputChannels>{};
+    const auto update_size = uint{mDevice->UpdateSize};
+    const auto num_channels = size_t{mDevice->channelsFromFmt()};
+    assert(num_channels <= outptrs.size());
 
     while(!mKillNow.load(std::memory_order_acquire)
         && mDevice->Connected.load(std::memory_order_acquire))
     {
-        if(mRing->writeSpace() < mDevice->UpdateSize)
+        if(mRing->writeSpace() < update_size)
         {
             mSem.wait();
             continue;
         }
 
         auto data = mRing->getWriteVector();
-        size_t todo{data.first.len + data.second.len};
-        todo -= todo%mDevice->UpdateSize;
-
-        const auto len1 = static_cast<uint>(std::min(data.first.len, todo));
-        const auto len2 = static_cast<uint>(std::min(data.second.len, todo-len1));
+        const auto len1 = size_t{data.first.len / update_size};
+        const auto len2 = size_t{data.second.len / update_size};
 
         std::lock_guard<std::mutex> dlock{mMutex};
-        mDevice->renderSamples(data.first.buf, len1, frame_step);
-        if(len2 > 0)
-            mDevice->renderSamples(data.second.buf, len2, frame_step);
-        mRing->writeAdvance(todo);
+        for(size_t i{0};i < len1;++i)
+        {
+            for(size_t j{0};j < num_channels;++j)
+            {
+                const auto offset = size_t{(i*num_channels + j)*update_size};
+                outptrs[j] = reinterpret_cast<float*>(data.first.buf) + offset;
+            }
+            mDevice->renderSamples(al::span{outptrs}.first(num_channels), update_size);
+        }
+        for(size_t i{0};i < len2;++i)
+        {
+            for(size_t j{0};j < num_channels;++j)
+            {
+                const auto offset = size_t{(i*num_channels + j)*update_size};
+                outptrs[j] = reinterpret_cast<float*>(data.second.buf) + offset;
+            }
+            mDevice->renderSamples(al::span{outptrs}.first(num_channels), update_size);
+        }
+        mRing->writeAdvance((len1+len2) * update_size);
     }
 
     return 0;

@@ -597,6 +597,8 @@ void PulseMainloop::probePlaybackDevices()
     PlaybackDevices.clear();
     try {
         MainloopUniqueLock plock{*this};
+        plock.connectContext();
+
         auto sink_callback = [](pa_context *ctx, const pa_sink_info *info, int eol, void *pdata) noexcept
         { return static_cast<PulseMainloop*>(pdata)->deviceSinkCallback(ctx, info, eol); };
 
@@ -616,6 +618,8 @@ void PulseMainloop::probeCaptureDevices()
     CaptureDevices.clear();
     try {
         MainloopUniqueLock plock{*this};
+        plock.connectContext();
+
         auto src_callback = [](pa_context *ctx, const pa_source_info *info, int eol, void *pdata) noexcept
         { return static_cast<PulseMainloop*>(pdata)->deviceSourceCallback(ctx, info, eol); };
 

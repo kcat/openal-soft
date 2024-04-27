@@ -145,28 +145,29 @@ inline void ApplyCoeffs(const al::span<float2> Values, const size_t IrSize,
         Values.begin(), mix_impulse);
 }
 
-force_inline void MixLine(const al::span<const float> InSamples, const al::span<float> dst,
-    float &CurrentGain, const float TargetGain, const float delta, const size_t min_len,
+force_inline void MixLine(al::span<const float> InSamples, const al::span<float> dst,
+    float &CurrentGain, const float TargetGain, const float delta, const size_t fade_len,
     size_t Counter)
 {
     const float step{(TargetGain-CurrentGain) * delta};
 
     auto output = dst.begin();
-    auto input = InSamples.cbegin();
     if(std::abs(step) > std::numeric_limits<float>::epsilon())
     {
+        auto input = InSamples.first(fade_len);
+        InSamples = InSamples.subspan(fade_len);
+
         const float gain{CurrentGain};
         float step_count{0.0f};
-        output = std::transform(output, output+ptrdiff_t(min_len), input, output,
-            [gain,step,&step_count](float out, const float in) noexcept -> float
+        output = std::transform(input.begin(), input.end(), output, output,
+            [gain,step,&step_count](const float in, float out) noexcept -> float
             {
                 out += in * (gain + step*step_count);
                 step_count += 1.0f;
                 return out;
             });
-        input += ptrdiff_t(min_len);
 
-        if(min_len < Counter)
+        if(fade_len < Counter)
         {
             CurrentGain = gain + step*step_count;
             return;
@@ -177,8 +178,8 @@ force_inline void MixLine(const al::span<const float> InSamples, const al::span<
     if(!(std::abs(TargetGain) > GainSilenceThreshold))
         return;
 
-    std::transform(output, dst.end(), input, output,
-        [TargetGain](float out, const float in) noexcept -> float
+    std::transform(InSamples.begin(), InSamples.end(), output, output,
+        [TargetGain](const float in, const float out) noexcept -> float
         { return out + in*TargetGain; });
 }
 
@@ -254,13 +255,13 @@ void Mix_<CTag>(const al::span<const float> InSamples, const al::span<FloatBuffe
     const size_t Counter, const size_t OutPos)
 {
     const float delta{(Counter > 0) ? 1.0f / static_cast<float>(Counter) : 0.0f};
-    const auto min_len = std::min(Counter, InSamples.size());
+    const auto fade_len = std::min(Counter, InSamples.size());
 
     auto curgains = CurrentGains.begin();
     auto targetgains = TargetGains.cbegin();
     for(FloatBufferLine &output : OutBuffer)
         MixLine(InSamples, al::span{output}.subspan(OutPos), *curgains++, *targetgains++, delta,
-            min_len, Counter);
+            fade_len, Counter);
 }
 
 template<>
@@ -268,7 +269,7 @@ void Mix_<CTag>(const al::span<const float> InSamples, const al::span<float> Out
     float &CurrentGain, const float TargetGain, const size_t Counter)
 {
     const float delta{(Counter > 0) ? 1.0f / static_cast<float>(Counter) : 0.0f};
-    const auto min_len = std::min(Counter, InSamples.size());
+    const auto fade_len = std::min(Counter, InSamples.size());
 
-    MixLine(InSamples, OutBuffer, CurrentGain, TargetGain, delta, min_len, Counter);
+    MixLine(InSamples, OutBuffer, CurrentGain, TargetGain, delta, fade_len, Counter);
 }

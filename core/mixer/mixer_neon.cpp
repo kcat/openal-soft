@@ -86,35 +86,37 @@ inline void ApplyCoeffs(const al::span<float2> Values, const size_t IrSize,
 }
 
 force_inline void MixLine(const al::span<const float> InSamples, const al::span<float> dst,
-    float &CurrentGain, const float TargetGain, const float delta, const size_t min_len,
-    const size_t aligned_len, size_t Counter)
+    float &CurrentGain, const float TargetGain, const float delta, const size_t fade_len,
+    const size_t realign_len, size_t Counter)
 {
-    const float step{(TargetGain-TargetGain) * delta};
+    const auto step = float{(TargetGain-CurrentGain) * delta};
 
-    size_t pos{0};
+    auto pos = size_t{0};
     if(std::abs(step) > std::numeric_limits<float>::epsilon())
     {
-        const float gain{CurrentGain};
-        float step_count{0.0f};
+        const auto gain = float{CurrentGain};
+        auto step_count = float{0.0f};
         /* Mix with applying gain steps in aligned multiples of 4. */
-        if(size_t todo{min_len >> 2})
+        if(const size_t todo{fade_len >> 2})
         {
-            const float32x4_t four4{vdupq_n_f32(4.0f)};
-            const float32x4_t step4{vdupq_n_f32(step)};
-            const float32x4_t gain4{vdupq_n_f32(gain)};
-            float32x4_t step_count4{vdupq_n_f32(0.0f)};
-            step_count4 = vsetq_lane_f32(1.0f, step_count4, 1);
-            step_count4 = vsetq_lane_f32(2.0f, step_count4, 2);
-            step_count4 = vsetq_lane_f32(3.0f, step_count4, 3);
+            const auto four4 = vdupq_n_f32(4.0f);
+            const auto step4 = vdupq_n_f32(step);
+            const auto gain4 = vdupq_n_f32(gain);
+            auto step_count4 = set_f4(0.0f, 1.0f, 2.0f, 3.0f);
 
-            do {
-                const float32x4_t val4 = vld1q_f32(&InSamples[pos]);
-                float32x4_t dry4 = vld1q_f32(&dst[pos]);
-                dry4 = vmlaq_f32(dry4, val4, vmlaq_f32(gain4, step4, step_count4));
-                step_count4 = vaddq_f32(step_count4, four4);
-                vst1q_f32(&dst[pos], dry4);
-                pos += 4;
-            } while(--todo);
+            const auto in4 = al::span{reinterpret_cast<const float32x4_t*>(InSamples.data()),
+                InSamples.size()/4}.first(todo);
+            const auto out4 = al::span{reinterpret_cast<float32x4_t*>(dst.data()), dst.size()/4};
+            std::transform(in4.begin(), in4.end(), out4.begin(), out4.begin(),
+                [gain4,step4,four4,&step_count4](const float32x4_t val4, float32x4_t dry4)
+                {
+                    /* dry += val * (gain + step*step_count) */
+                    dry4 = vmlaq_f32(dry4, val4, vmlaq_f32(gain4, step4, step_count4));
+                    step_count4 = vaddq_f32(step_count4, four4);
+                    return dry4;
+                });
+            pos += in4.size()*4;
+
             /* NOTE: step_count4 now represents the next four counts after the
              * last four mixed samples, so the lowest element represents the
              * next step count to apply.
@@ -122,10 +124,19 @@ force_inline void MixLine(const al::span<const float> InSamples, const al::span<
             step_count = vgetq_lane_f32(step_count4, 0);
         }
         /* Mix with applying left over gain steps that aren't aligned multiples of 4. */
-        for(size_t leftover{min_len&3};leftover;++pos,--leftover)
+        if(const size_t leftover{fade_len&3})
         {
-            dst[pos] += InSamples[pos] * (gain + step*step_count);
-            step_count += 1.0f;
+            const auto in = InSamples.subspan(pos, leftover);
+            const auto out = dst.subspan(pos);
+
+            std::transform(in.begin(), in.end(), out.begin(), out.begin(),
+                [gain,step,&step_count](const float val, float dry) noexcept -> float
+                {
+                    dry += val * (gain + step*step_count);
+                    step_count += 1.0f;
+                    return dry;
+                });
+            pos += leftover;
         }
         if(pos < Counter)
         {
@@ -134,26 +145,43 @@ force_inline void MixLine(const al::span<const float> InSamples, const al::span<
         }
 
         /* Mix until pos is aligned with 4 or the mix is done. */
-        for(size_t leftover{aligned_len&3};leftover;++pos,--leftover)
-            dst[pos] += InSamples[pos] * TargetGain;
+        if(const size_t leftover{realign_len&3})
+        {
+            const auto in = InSamples.subspan(pos, leftover);
+            const auto out = dst.subspan(pos);
+
+            std::transform(in.begin(), in.end(), out.begin(), out.begin(),
+                [TargetGain](const float val, const float dry) noexcept -> float
+                { return dry + val*TargetGain; });
+            pos += leftover;
+        }
     }
     CurrentGain = TargetGain;
 
     if(!(std::abs(TargetGain) > GainSilenceThreshold))
         return;
-    if(size_t todo{(InSamples.size()-pos) >> 2})
+    if(const size_t todo{(InSamples.size()-pos) >> 2})
     {
-        const float32x4_t gain4 = vdupq_n_f32(TargetGain);
-        do {
-            const float32x4_t val4 = vld1q_f32(&InSamples[pos]);
-            float32x4_t dry4 = vld1q_f32(&dst[pos]);
-            dry4 = vmlaq_f32(dry4, val4, gain4);
-            vst1q_f32(&dst[pos], dry4);
-            pos += 4;
-        } while(--todo);
+        const auto in4 = al::span{reinterpret_cast<const float32x4_t*>(InSamples.data()),
+            InSamples.size()/4}.last(todo);
+        const auto out = dst.subspan(pos);
+        const auto out4 = al::span{reinterpret_cast<float32x4_t*>(out.data()), out.size()/4};
+
+        const auto gain4 = vdupq_n_f32(TargetGain);
+        std::transform(in4.begin(), in4.end(), out4.begin(), out4.begin(),
+            [gain4](const float32x4_t val4, const float32x4_t dry4) -> float32x4_t
+            { return vmlaq_f32(dry4, val4, gain4); });
+        pos += in4.size()*4;
     }
-    for(size_t leftover{InSamples.size()&3};leftover;++pos,--leftover)
-        dst[pos] += InSamples[pos] * TargetGain;
+    if(const size_t leftover{(InSamples.size()-pos)&3})
+    {
+        const auto in = InSamples.last(leftover);
+        const auto out = dst.subspan(pos);
+
+        std::transform(in.begin(), in.end(), out.begin(), out.begin(),
+            [TargetGain](const float val, const float dry) noexcept -> float
+            { return dry + val*TargetGain; });
+    }
 }
 
 } // namespace
@@ -434,14 +462,14 @@ void Mix_<NEONTag>(const al::span<const float> InSamples,const al::span<FloatBuf
     const size_t Counter, const size_t OutPos)
 {
     const float delta{(Counter > 0) ? 1.0f / static_cast<float>(Counter) : 0.0f};
-    const auto min_len = std::min(Counter, InSamples.size());
-    const auto aligned_len = std::min((min_len+3_uz) & ~3_uz, InSamples.size()) - min_len;
+    const auto fade_len = std::min(Counter, InSamples.size());
+    const auto realign_len = std::min((fade_len+3_uz) & ~3_uz, InSamples.size()) - fade_len;
 
     auto curgains = CurrentGains.begin();
     auto targetgains = TargetGains.cbegin();
     for(FloatBufferLine &output : OutBuffer)
         MixLine(InSamples, al::span{output}.subspan(OutPos), *curgains++, *targetgains++, delta,
-            min_len, aligned_len, Counter);
+            fade_len, realign_len, Counter);
 }
 
 template<>
@@ -449,8 +477,8 @@ void Mix_<NEONTag>(const al::span<const float> InSamples, const al::span<float> 
     float &CurrentGain, const float TargetGain, const size_t Counter)
 {
     const float delta{(Counter > 0) ? 1.0f / static_cast<float>(Counter) : 0.0f};
-    const auto min_len = std::min(Counter, InSamples.size());
-    const auto aligned_len = std::min((min_len+3_uz) & ~3_uz, InSamples.size()) - min_len;
+    const auto fade_len = std::min(Counter, InSamples.size());
+    const auto realign_len = std::min((fade_len+3_uz) & ~3_uz, InSamples.size()) - fade_len;
 
-    MixLine(InSamples, OutBuffer, CurrentGain, TargetGain, delta, min_len, aligned_len, Counter);
+    MixLine(InSamples, OutBuffer, CurrentGain, TargetGain, delta, fade_len, realign_len, Counter);
 }

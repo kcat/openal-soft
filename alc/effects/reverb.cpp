@@ -1415,10 +1415,10 @@ void VectorScatterRev(const float xCoeff, const float yCoeff,
  * element with a scattering matrix (like the one above) and a diagonal
  * matrix of delay elements.
  */
-void VecAllpass::process(const al::span<ReverbUpdateLine,NUM_LINES> samples, size_t offset,
+void VecAllpass::process(const al::span<ReverbUpdateLine,NUM_LINES> samples, size_t main_offset,
     const float xCoeff, const float yCoeff, const size_t todo) noexcept
 {
-    const auto stride = size_t{Delay.mLine.size()/NUM_LINES};
+    const auto linelen = size_t{Delay.mLine.size()/NUM_LINES};
     const float feedCoeff{Coeff};
 
     ASSUME(todo > 0);
@@ -1426,18 +1426,18 @@ void VecAllpass::process(const al::span<ReverbUpdateLine,NUM_LINES> samples, siz
     for(size_t i{0u};i < todo;)
     {
         std::array<size_t,NUM_LINES> vap_offset;
-        for(size_t j{0u};j < NUM_LINES;j++)
-            vap_offset[j] = (offset-Offset[j]) & (stride-1);
-        offset &= stride-1;
+        std::transform(Offset.cbegin(), Offset.cend(), vap_offset.begin(),
+            [main_offset,mask=linelen-1](const size_t delay) noexcept -> size_t
+            { return (main_offset-delay) & mask; });
+        main_offset &= linelen-1;
 
-        size_t maxoff{offset};
-        for(size_t j{0u};j < NUM_LINES;j++)
-            maxoff = std::max(maxoff, vap_offset[j]);
-        size_t td{std::min(stride - maxoff, todo - i)};
+        const auto maxoff = std::accumulate(vap_offset.cbegin(), vap_offset.cend(), main_offset,
+            [](const size_t offset, const size_t apoffset) { return std::max(offset, apoffset); });
+        size_t td{std::min(linelen - maxoff, todo - i)};
 
         auto delayIn = Delay.mLine.begin();
-        auto delayOut = Delay.mLine.begin() + ptrdiff_t(offset*NUM_LINES);
-        offset += td;
+        auto delayOut = Delay.mLine.begin() + ptrdiff_t(main_offset*NUM_LINES);
+        main_offset += td;
 
         do {
             std::array<float,NUM_LINES> f;

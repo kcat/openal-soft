@@ -1540,7 +1540,6 @@ void ReverbPipeline::processEarly(const DelayLineU &main_delay, size_t offset,
             const float coeff0{mEarlyDelayCoeff[j][0]};
             const float coeff1{mEarlyDelayCoeff[j][1]};
             mEarlyDelayCoeff[j][0] = mEarlyDelayCoeff[j][1];
-            const float coeffStep{(coeff1-coeff0)*fadeStep};
             float fadeCount{0.0f};
 
             for(size_t i{0u};i < todo;)
@@ -1551,7 +1550,7 @@ void ReverbPipeline::processEarly(const DelayLineU &main_delay, size_t offset,
                 size_t td{std::min(input.size() - max_tap, todo-i)};
                 do {
                     tempSamples[j][i++] = lerpf(input[early_delay_tap0++]*coeff0,
-                        input[early_delay_tap1++]*coeff1, coeffStep*fadeCount);
+                        input[early_delay_tap1++]*coeff1, fadeStep*fadeCount);
                     fadeCount += 1.0f;
                 } while(--td);
             }

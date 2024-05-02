@@ -9,6 +9,7 @@
 #include <cstring>
 #include <string>
 #include <string_view>
+#include <vector>
 
 #include "AL/alc.h"
 #include "AL/al.h"
@@ -24,7 +25,12 @@ enum LogLevel LogLevel = LogLevel_Error;
 FILE *LogFile;
 
 namespace {
+
+std::vector<std::wstring> gAcceptList;
+std::vector<std::wstring> gRejectList;
+
 void LoadDriverList();
+
 } // namespace
 
 
@@ -90,6 +96,30 @@ void AddModule(HMODULE module, const std::wstring_view name)
         if(drv->Name == name)
         {
             TRACE("Skipping similarly-named module %.*ls\n", al::sizei(name), name.data());
+            FreeLibrary(module);
+            return;
+        }
+    }
+    if(!gAcceptList.empty())
+    {
+        auto iter = std::find_if(gAcceptList.cbegin(), gAcceptList.cend(),
+            [name](const std::wstring_view accept)
+            { return al::case_compare(name, accept) == 0; });
+        if(iter == gAcceptList.cend())
+        {
+            TRACE("%.*ls not found in ALROUTER_ACCEPT, skipping\n", al::sizei(name), name.data());
+            FreeLibrary(module);
+            return;
+        }
+    }
+    if(!gRejectList.empty())
+    {
+        auto iter = std::find_if(gRejectList.cbegin(), gRejectList.cend(),
+            [name](const std::wstring_view accept)
+            { return al::case_compare(name, accept) == 0; });
+        if(iter != gRejectList.cend())
+        {
+            TRACE("%.*ls found in ALROUTER_REJECT, skipping\n", al::sizei(name), name.data());
             FreeLibrary(module);
             return;
         }
@@ -320,6 +350,33 @@ bool GetLoadedModuleDirectory(const WCHAR *name, std::wstring *moddir)
 
 void LoadDriverList()
 {
+    if(auto list = al::getenv(L"ALROUTER_ACCEPT"))
+    {
+        std::wstring_view namelist{*list};
+        while(!namelist.empty())
+        {
+            auto seppos = namelist.find(',');
+            gAcceptList.emplace_back(namelist.substr(0, seppos));
+            if(seppos < namelist.size())
+                namelist.remove_prefix(seppos+1);
+            else
+                namelist.remove_prefix(namelist.size());
+        }
+    }
+    if(auto list = al::getenv(L"ALROUTER_REJECT"))
+    {
+        std::wstring_view namelist{*list};
+        while(!namelist.empty())
+        {
+            auto seppos = namelist.find(',');
+            gRejectList.emplace_back(namelist.substr(0, seppos));
+            if(seppos < namelist.size())
+                namelist.remove_prefix(seppos+1);
+            else
+                namelist.remove_prefix(namelist.size());
+        }
+    }
+
     std::wstring dll_path;
     if(GetLoadedModuleDirectory(L"OpenAL32.dll", &dll_path))
         TRACE("Got DLL path %ls\n", dll_path.c_str());

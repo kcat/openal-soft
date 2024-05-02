@@ -31,6 +31,9 @@ constexpr bool ends_with(const std::string_view str0, const std::string_view str
 int case_compare(const std::string_view str0, const std::string_view str1) noexcept;
 
 [[nodiscard]]
+int case_compare(const std::wstring_view str0, const std::wstring_view str1) noexcept;
+
+[[nodiscard]]
 int strcasecmp(const char *str0, const char *str1) noexcept;
 [[nodiscard]]
 int strncasecmp(const char *str0, const char *str1, std::size_t len) noexcept;

@@ -1,27 +1,31 @@
 
 #include "config.h"
 
-#include <stddef.h>
-#include <stdlib.h>
-#include <string.h>
-#include <stdio.h>
-
 #include <algorithm>
 #include <array>
+#include <cstddef>
+#include <cstdlib>
+#include <cstring>
+#include <cstdio>
 #include <mutex>
+#include <string_view>
 #include <tuple>
 
 #include "AL/alc.h"
+
+#include "almalloc.h"
 #include "alstring.h"
 #include "router.h"
 
 
-#define DECL(x) { #x, reinterpret_cast<void*>(x) }
+namespace {
+
 struct FuncExportEntry {
     const char *funcName;
     void *address;
 };
-static const std::array<FuncExportEntry,128> alcFunctions{{
+#define DECL(x) FuncExportEntry{ #x, reinterpret_cast<void*>(x) }
+const std::array alcFunctions{
     DECL(alcCreateContext),
     DECL(alcMakeContextCurrent),
     DECL(alcProcessContext),
@@ -154,15 +158,15 @@ static const std::array<FuncExportEntry,128> alcFunctions{{
     DECL(alGetAuxiliaryEffectSlotfv),
     DECL(alGetAuxiliaryEffectSloti),
     DECL(alGetAuxiliaryEffectSlotiv),
-}};
+};
 #undef DECL
 
-#define DECL(x) { #x, (x) }
 struct EnumExportEntry {
     const ALCchar *enumName;
     ALCenum value;
 };
-static const std::array<EnumExportEntry,92> alcEnumerations{{
+#define DECL(x) EnumExportEntry{ #x, (x) }
+const std::array alcEnumerations{
     DECL(ALC_INVALID),
     DECL(ALC_FALSE),
     DECL(ALC_TRUE),
@@ -268,32 +272,32 @@ static const std::array<EnumExportEntry,92> alcEnumerations{{
     DECL(AL_LINEAR_DISTANCE_CLAMPED),
     DECL(AL_EXPONENT_DISTANCE),
     DECL(AL_EXPONENT_DISTANCE_CLAMPED),
-}};
+};
 #undef DECL
 
-static const ALCchar alcNoError[] = "No Error";
-static const ALCchar alcErrInvalidDevice[] = "Invalid Device";
-static const ALCchar alcErrInvalidContext[] = "Invalid Context";
-static const ALCchar alcErrInvalidEnum[] = "Invalid Enum";
-static const ALCchar alcErrInvalidValue[] = "Invalid Value";
-static const ALCchar alcErrOutOfMemory[] = "Out of Memory";
-static const ALCchar alcExtensionList[] =
+constexpr ALCchar alcNoError[] = "No Error";
+constexpr ALCchar alcErrInvalidDevice[] = "Invalid Device";
+constexpr ALCchar alcErrInvalidContext[] = "Invalid Context";
+constexpr ALCchar alcErrInvalidEnum[] = "Invalid Enum";
+constexpr ALCchar alcErrInvalidValue[] = "Invalid Value";
+constexpr ALCchar alcErrOutOfMemory[] = "Out of Memory";
+constexpr ALCchar alcExtensionList[] =
     "ALC_ENUMERATE_ALL_EXT ALC_ENUMERATION_EXT ALC_EXT_CAPTURE "
     "ALC_EXT_thread_local_context";
 
-static const ALCint alcMajorVersion = 1;
-static const ALCint alcMinorVersion = 1;
+constexpr ALCint alcMajorVersion = 1;
+constexpr ALCint alcMinorVersion = 1;
 
 
-static std::recursive_mutex EnumerationLock;
-static std::mutex ContextSwitchLock;
+std::recursive_mutex EnumerationLock;
+std::mutex ContextSwitchLock;
 
-static std::atomic<ALCenum> LastError{ALC_NO_ERROR};
-static PtrIntMap DeviceIfaceMap;
-static PtrIntMap ContextIfaceMap;
+std::atomic<ALCenum> LastError{ALC_NO_ERROR};
+PtrIntMap DeviceIfaceMap;
+PtrIntMap ContextIfaceMap;
 
 
-typedef struct EnumeratedList {
+struct EnumeratedList {
     std::vector<ALCchar> Names;
     std::vector<ALCint> Indicies;
 
@@ -302,12 +306,15 @@ typedef struct EnumeratedList {
         Names.clear();
         Indicies.clear();
     }
-} EnumeratedList;
-static EnumeratedList DevicesList;
-static EnumeratedList AllDevicesList;
-static EnumeratedList CaptureDevicesList;
 
-static void AppendDeviceList(EnumeratedList *list, const ALCchar *names, ALint idx)
+    void AppendDeviceList(const ALCchar *names, ALint idx);
+    ALint GetDriverIndexForName(const std::string_view name) const;
+};
+EnumeratedList DevicesList;
+EnumeratedList AllDevicesList;
+EnumeratedList CaptureDevicesList;
+
+void EnumeratedList::AppendDeviceList(const ALCchar* names, ALint idx)
 {
     const ALCchar *name_end = names;
     if(!name_end) return;
@@ -322,30 +329,30 @@ static void AppendDeviceList(EnumeratedList *list, const ALCchar *names, ALint i
     if(names == name_end)
         return;
 
-    list->Names.reserve(list->Names.size() + (name_end - names) + 1);
-    list->Names.insert(list->Names.cend(), names, name_end);
+    Names.reserve(Names.size() + (name_end - names) + 1);
+    Names.insert(Names.cend(), names, name_end);
 
-    list->Indicies.reserve(list->Indicies.size() + count);
-    list->Indicies.insert(list->Indicies.cend(), count, idx);
+    Indicies.reserve(Indicies.size() + count);
+    Indicies.insert(Indicies.cend(), count, idx);
 }
 
-static ALint GetDriverIndexForName(const EnumeratedList *list, const ALCchar *name)
+ALint EnumeratedList::GetDriverIndexForName(const std::string_view name) const
 {
-    const ALCchar *devnames = list->Names.data();
-    const ALCint *index = list->Indicies.data();
+    auto devnames = Names.cbegin();
+    auto index = Indicies.cbegin();
 
-    while(devnames && *devnames)
+    while(devnames != Names.cend() && *devnames)
     {
-        if(strcmp(name, devnames) == 0)
+        if(name == al::to_address(devnames))
             return *index;
-        devnames += strlen(devnames)+1;
-        index++;
+        devnames += strlen(al::to_address(devnames))+1;
+        ++index;
     }
     return -1;
 }
 
 
-static void InitCtxFuncs(DriverIface &iface)
+void InitCtxFuncs(DriverIface &iface)
 {
     ALCdevice *device{iface.alcGetContextsDevice(iface.alcGetCurrentContext())};
 
@@ -394,11 +401,13 @@ static void InitCtxFuncs(DriverIface &iface)
 #undef LOAD_PROC
 }
 
+} /* namespace */
+
 
 ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *devicename) noexcept
 {
-    ALCdevice *device = nullptr;
-    ALint idx = 0;
+    ALCdevice *device{nullptr};
+    ALint idx{0};
 
     /* Prior to the enumeration extension, apps would hardcode these names as a
      * quality hint for the wrapper driver. Ignore them since there's no sane
@@ -415,12 +424,12 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *devicename) noexcep
             std::lock_guard<std::recursive_mutex> enumlock{EnumerationLock};
             if(DevicesList.Names.empty())
                 std::ignore = alcGetString(nullptr, ALC_DEVICE_SPECIFIER);
-            idx = GetDriverIndexForName(&DevicesList, devicename);
+            idx = DevicesList.GetDriverIndexForName(devicename);
             if(idx < 0)
             {
                 if(AllDevicesList.Names.empty())
                     std::ignore = alcGetString(nullptr, ALC_ALL_DEVICES_SPECIFIER);
-                idx = GetDriverIndexForName(&AllDevicesList, devicename);
+                idx = AllDevicesList.GetDriverIndexForName(devicename);
             }
         }
 
@@ -462,9 +471,8 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *devicename) noexcep
 
 ALC_API ALCboolean ALC_APIENTRY alcCloseDevice(ALCdevice *device) noexcept
 {
-    ALint idx;
-
-    if(!device || (idx=DeviceIfaceMap.lookupByKey(device)) < 0)
+    const ALint idx{device ? DeviceIfaceMap.lookupByKey(device) : -1};
+    if(idx < 0)
     {
         LastError.store(ALC_INVALID_DEVICE);
         return ALC_FALSE;
@@ -478,15 +486,14 @@ ALC_API ALCboolean ALC_APIENTRY alcCloseDevice(ALCdevice *device) noexcept
 
 ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCint *attrlist) noexcept
 {
-    ALCcontext *context;
-    ALint idx;
-
-    if(!device || (idx=DeviceIfaceMap.lookupByKey(device)) < 0)
+    const ALint idx{device ? DeviceIfaceMap.lookupByKey(device) : -1};
+    if(idx < 0)
     {
         LastError.store(ALC_INVALID_DEVICE);
         return nullptr;
     }
-    context = DriverList[idx]->alcCreateContext(device, attrlist);
+
+    ALCcontext *context{DriverList[idx]->alcCreateContext(device, attrlist)};
     if(context)
     {
         if(ContextIfaceMap.insert(context, idx) != ALC_NO_ERROR)
@@ -501,9 +508,9 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
 
 ALC_API ALCboolean ALC_APIENTRY alcMakeContextCurrent(ALCcontext *context) noexcept
 {
-    ALint idx = -1;
-
     std::lock_guard<std::mutex> ctxlock{ContextSwitchLock};
+
+    ALint idx{-1};
     if(context)
     {
         idx = ContextIfaceMap.lookupByKey(context);
@@ -515,8 +522,7 @@ ALC_API ALCboolean ALC_APIENTRY alcMakeContextCurrent(ALCcontext *context) noexc
         if(!DriverList[idx]->alcMakeContextCurrent(context))
             return ALC_FALSE;
 
-        auto do_init = [idx]() { InitCtxFuncs(*DriverList[idx]); };
-        std::call_once(DriverList[idx]->InitOnceCtx, do_init);
+        std::call_once(DriverList[idx]->InitOnceCtx, [idx]{ InitCtxFuncs(*DriverList[idx]); });
     }
 
     /* Unset the context from the old driver if it's different from the new
@@ -524,14 +530,14 @@ ALC_API ALCboolean ALC_APIENTRY alcMakeContextCurrent(ALCcontext *context) noexc
      */
     if(idx < 0)
     {
-        DriverIface *oldiface = GetThreadDriver();
+        DriverIface *oldiface{GetThreadDriver()};
         if(oldiface) oldiface->alcSetThreadContext(nullptr);
         oldiface = CurrentCtxDriver.exchange(nullptr);
         if(oldiface) oldiface->alcMakeContextCurrent(nullptr);
     }
     else
     {
-        DriverIface *oldiface = GetThreadDriver();
+        DriverIface *oldiface{GetThreadDriver()};
         if(oldiface && oldiface != DriverList[idx].get())
             oldiface->alcSetThreadContext(nullptr);
         oldiface = CurrentCtxDriver.exchange(DriverList[idx].get());
@@ -547,8 +553,7 @@ ALC_API void ALC_APIENTRY alcProcessContext(ALCcontext *context) noexcept
 {
     if(context)
     {
-        ALint idx = ContextIfaceMap.lookupByKey(context);
-        if(idx >= 0)
+        if(const ALint idx{ContextIfaceMap.lookupByKey(context)}; idx >= 0)
             return DriverList[idx]->alcProcessContext(context);
     }
     LastError.store(ALC_INVALID_CONTEXT);
@@ -558,8 +563,7 @@ ALC_API void ALC_APIENTRY alcSuspendContext(ALCcontext *context) noexcept
 {
     if(context)
     {
-        ALint idx = ContextIfaceMap.lookupByKey(context);
-        if(idx >= 0)
+        if(const ALint idx{ContextIfaceMap.lookupByKey(context)}; idx >= 0)
             return DriverList[idx]->alcSuspendContext(context);
     }
     LastError.store(ALC_INVALID_CONTEXT);
@@ -567,9 +571,8 @@ ALC_API void ALC_APIENTRY alcSuspendContext(ALCcontext *context) noexcept
 
 ALC_API void ALC_APIENTRY alcDestroyContext(ALCcontext *context) noexcept
 {
-    ALint idx;
-
-    if(!context || (idx=ContextIfaceMap.lookupByKey(context)) < 0)
+    const ALint idx{context ? ContextIfaceMap.lookupByKey(context) : -1};
+    if(idx < 0)
     {
         LastError.store(ALC_INVALID_CONTEXT);
         return;
@@ -581,7 +584,7 @@ ALC_API void ALC_APIENTRY alcDestroyContext(ALCcontext *context) noexcept
 
 ALC_API ALCcontext* ALC_APIENTRY alcGetCurrentContext() noexcept
 {
-    DriverIface *iface = GetThreadDriver();
+    DriverIface *iface{GetThreadDriver()};
     if(!iface) iface = CurrentCtxDriver.load();
     return iface ? iface->alcGetCurrentContext() : nullptr;
 }
@@ -590,8 +593,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcGetContextsDevice(ALCcontext *context) noexce
 {
     if(context)
     {
-        ALint idx = ContextIfaceMap.lookupByKey(context);
-        if(idx >= 0)
+        if(const ALint idx{ContextIfaceMap.lookupByKey(context)}; idx >= 0)
             return DriverList[idx]->alcGetContextsDevice(context);
     }
     LastError.store(ALC_INVALID_CONTEXT);
@@ -603,7 +605,7 @@ ALC_API ALCenum ALC_APIENTRY alcGetError(ALCdevice *device) noexcept
 {
     if(device)
     {
-        ALint idx = DeviceIfaceMap.lookupByKey(device);
+        const ALint idx{DeviceIfaceMap.lookupByKey(device)};
         if(idx < 0) return ALC_INVALID_DEVICE;
         return DriverList[idx]->alcGetError(device);
     }
@@ -612,12 +614,9 @@ ALC_API ALCenum ALC_APIENTRY alcGetError(ALCdevice *device) noexcept
 
 ALC_API ALCboolean ALC_APIENTRY alcIsExtensionPresent(ALCdevice *device, const ALCchar *extname) noexcept
 {
-    const char *ptr;
-    size_t len;
-
     if(device)
     {
-        ALint idx = DeviceIfaceMap.lookupByKey(device);
+        const ALint idx{DeviceIfaceMap.lookupByKey(device)};
         if(idx < 0)
         {
             LastError.store(ALC_INVALID_DEVICE);
@@ -626,8 +625,8 @@ ALC_API ALCboolean ALC_APIENTRY alcIsExtensionPresent(ALCdevice *device, const A
         return DriverList[idx]->alcIsExtensionPresent(device, extname);
     }
 
-    len = strlen(extname);
-    ptr = alcExtensionList;
+    const size_t len{strlen(extname)};
+    const char *ptr{alcExtensionList};
     while(ptr && *ptr)
     {
         if(al::strncasecmp(ptr, extname, len) == 0 && (ptr[len] == '\0' || isspace(ptr[len])))
@@ -686,7 +685,7 @@ ALC_API const ALCchar* ALC_APIENTRY alcGetString(ALCdevice *device, ALCenum para
 {
     if(device)
     {
-        ALint idx = DeviceIfaceMap.lookupByKey(device);
+        const ALint idx{DeviceIfaceMap.lookupByKey(device)};
         if(idx < 0)
         {
             LastError.store(ALC_INVALID_DEVICE);
@@ -697,20 +696,13 @@ ALC_API const ALCchar* ALC_APIENTRY alcGetString(ALCdevice *device, ALCenum para
 
     switch(param)
     {
-    case ALC_NO_ERROR:
-        return alcNoError;
-    case ALC_INVALID_ENUM:
-        return alcErrInvalidEnum;
-    case ALC_INVALID_VALUE:
-        return alcErrInvalidValue;
-    case ALC_INVALID_DEVICE:
-        return alcErrInvalidDevice;
-    case ALC_INVALID_CONTEXT:
-        return alcErrInvalidContext;
-    case ALC_OUT_OF_MEMORY:
-        return alcErrOutOfMemory;
-    case ALC_EXTENSIONS:
-        return alcExtensionList;
+    case ALC_NO_ERROR: return alcNoError;
+    case ALC_INVALID_ENUM: return alcErrInvalidEnum;
+    case ALC_INVALID_VALUE: return alcErrInvalidValue;
+    case ALC_INVALID_DEVICE: return alcErrInvalidDevice;
+    case ALC_INVALID_CONTEXT: return alcErrInvalidContext;
+    case ALC_OUT_OF_MEMORY: return alcErrOutOfMemory;
+    case ALC_EXTENSIONS: return alcExtensionList;
 
     case ALC_DEVICE_SPECIFIER:
     {
@@ -722,8 +714,7 @@ ALC_API const ALCchar* ALC_APIENTRY alcGetString(ALCdevice *device, ALCenum para
             /* Only enumerate names from drivers that support it. */
             if(drv->ALCVer >= MAKE_ALC_VER(1, 1)
                 || drv->alcIsExtensionPresent(nullptr, "ALC_ENUMERATION_EXT"))
-                AppendDeviceList(&DevicesList,
-                    drv->alcGetString(nullptr, ALC_DEVICE_SPECIFIER), idx);
+                DevicesList.AppendDeviceList(drv->alcGetString(nullptr,ALC_DEVICE_SPECIFIER), idx);
             ++idx;
         }
         /* Ensure the list is double-null termianted. */
@@ -744,11 +735,11 @@ ALC_API const ALCchar* ALC_APIENTRY alcGetString(ALCdevice *device, ALCenum para
              * standard enumeration.
              */
             if(drv->alcIsExtensionPresent(nullptr, "ALC_ENUMERATE_ALL_EXT"))
-                AppendDeviceList(&AllDevicesList,
+                AllDevicesList.AppendDeviceList(
                     drv->alcGetString(nullptr, ALC_ALL_DEVICES_SPECIFIER), idx);
             else if(drv->ALCVer >= MAKE_ALC_VER(1, 1)
                 || drv->alcIsExtensionPresent(nullptr, "ALC_ENUMERATION_EXT"))
-                AppendDeviceList(&AllDevicesList,
+                AllDevicesList.AppendDeviceList(
                     drv->alcGetString(nullptr, ALC_DEVICE_SPECIFIER), idx);
             ++idx;
         }
@@ -768,7 +759,7 @@ ALC_API const ALCchar* ALC_APIENTRY alcGetString(ALCdevice *device, ALCenum para
         {
             if(drv->ALCVer >= MAKE_ALC_VER(1, 1)
                 || drv->alcIsExtensionPresent(nullptr, "ALC_EXT_CAPTURE"))
-                AppendDeviceList(&CaptureDevicesList,
+                CaptureDevicesList.AppendDeviceList(
                     drv->alcGetString(nullptr, ALC_CAPTURE_DEVICE_SPECIFIER), idx);
             ++idx;
         }
@@ -822,7 +813,7 @@ ALC_API void ALC_APIENTRY alcGetIntegerv(ALCdevice *device, ALCenum param, ALCsi
 {
     if(device)
     {
-        ALint idx = DeviceIfaceMap.lookupByKey(device);
+        const ALint idx{DeviceIfaceMap.lookupByKey(device)};
         if(idx < 0)
         {
             LastError.store(ALC_INVALID_DEVICE);
@@ -873,10 +864,11 @@ ALC_API void ALC_APIENTRY alcGetIntegerv(ALCdevice *device, ALCenum param, ALCsi
 }
 
 
-ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *devicename, ALCuint frequency, ALCenum format, ALCsizei buffersize) noexcept
+ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *devicename, ALCuint frequency,
+    ALCenum format, ALCsizei buffersize) noexcept
 {
-    ALCdevice *device = nullptr;
-    ALint idx = 0;
+    ALCdevice *device{nullptr};
+    ALint idx{0};
 
     if(devicename && devicename[0] == '\0')
         devicename = nullptr;
@@ -886,7 +878,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *devicename, 
             std::lock_guard<std::recursive_mutex> enumlock{EnumerationLock};
             if(CaptureDevicesList.Names.empty())
                 std::ignore = alcGetString(nullptr, ALC_CAPTURE_DEVICE_SPECIFIER);
-            idx = GetDriverIndexForName(&CaptureDevicesList, devicename);
+            idx = CaptureDevicesList.GetDriverIndexForName(devicename);
         }
 
         if(idx < 0)
@@ -927,9 +919,8 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *devicename, 
 
 ALC_API ALCboolean ALC_APIENTRY alcCaptureCloseDevice(ALCdevice *device) noexcept
 {
-    ALint idx;
-
-    if(!device || (idx=DeviceIfaceMap.lookupByKey(device)) < 0)
+    const ALint idx{device ? DeviceIfaceMap.lookupByKey(device) : -1};
+    if(idx < 0)
     {
         LastError.store(ALC_INVALID_DEVICE);
         return ALC_FALSE;
@@ -944,8 +935,7 @@ ALC_API void ALC_APIENTRY alcCaptureStart(ALCdevice *device) noexcept
 {
     if(device)
     {
-        ALint idx = DeviceIfaceMap.lookupByKey(device);
-        if(idx >= 0)
+        if(const ALint idx{DeviceIfaceMap.lookupByKey(device)}; idx >= 0)
             return DriverList[idx]->alcCaptureStart(device);
     }
     LastError.store(ALC_INVALID_DEVICE);
@@ -955,8 +945,7 @@ ALC_API void ALC_APIENTRY alcCaptureStop(ALCdevice *device) noexcept
 {
     if(device)
     {
-        ALint idx = DeviceIfaceMap.lookupByKey(device);
-        if(idx >= 0)
+        if(const ALint idx{DeviceIfaceMap.lookupByKey(device)}; idx >= 0)
             return DriverList[idx]->alcCaptureStop(device);
     }
     LastError.store(ALC_INVALID_DEVICE);
@@ -966,8 +955,7 @@ ALC_API void ALC_APIENTRY alcCaptureSamples(ALCdevice *device, ALCvoid *buffer, 
 {
     if(device)
     {
-        ALint idx = DeviceIfaceMap.lookupByKey(device);
-        if(idx >= 0)
+        if(const ALint idx{DeviceIfaceMap.lookupByKey(device)}; idx >= 0)
             return DriverList[idx]->alcCaptureSamples(device, buffer, samples);
     }
     LastError.store(ALC_INVALID_DEVICE);
@@ -976,27 +964,23 @@ ALC_API void ALC_APIENTRY alcCaptureSamples(ALCdevice *device, ALCvoid *buffer, 
 
 ALC_API ALCboolean ALC_APIENTRY alcSetThreadContext(ALCcontext *context) noexcept
 {
-    ALCenum err = ALC_INVALID_CONTEXT;
-    ALint idx;
-
     if(!context)
     {
-        DriverIface *oldiface = GetThreadDriver();
+        DriverIface *oldiface{GetThreadDriver()};
         if(oldiface && !oldiface->alcSetThreadContext(nullptr))
             return ALC_FALSE;
         SetThreadDriver(nullptr);
         return ALC_TRUE;
     }
 
-    idx = ContextIfaceMap.lookupByKey(context);
-    if(idx >= 0)
+    ALCenum err{ALC_INVALID_CONTEXT};
+    if(ALint idx{ContextIfaceMap.lookupByKey(context)}; idx >= 0)
     {
         if(DriverList[idx]->alcSetThreadContext(context))
         {
-            auto do_init = [idx]() { InitCtxFuncs(*DriverList[idx]); };
-            std::call_once(DriverList[idx]->InitOnceCtx, do_init);
+            std::call_once(DriverList[idx]->InitOnceCtx, [idx]{ InitCtxFuncs(*DriverList[idx]); });
 
-            DriverIface *oldiface = GetThreadDriver();
+            DriverIface *oldiface{GetThreadDriver()};
             if(oldiface != DriverList[idx].get())
             {
                 SetThreadDriver(DriverList[idx].get());
@@ -1012,7 +996,7 @@ ALC_API ALCboolean ALC_APIENTRY alcSetThreadContext(ALCcontext *context) noexcep
 
 ALC_API ALCcontext* ALC_APIENTRY alcGetThreadContext() noexcept
 {
-    DriverIface *iface = GetThreadDriver();
-    if(iface) return iface->alcGetThreadContext();
+    if(DriverIface *iface{GetThreadDriver()})
+        return iface->alcGetThreadContext();
     return nullptr;
 }

@@ -296,14 +296,12 @@ void SearchDrivers(const std::wstring_view path)
     if(srchHdl != INVALID_HANDLE_VALUE)
     {
         do {
-            HMODULE mod;
-
             srchPath = path;
             srchPath += L"\\";
             srchPath += fdata.cFileName;
             TRACE("Found %ls\n", srchPath.c_str());
 
-            mod = LoadLibraryW(srchPath.c_str());
+            HMODULE mod{LoadLibraryW(srchPath.c_str())};
             if(!mod)
                 WARN("Could not load %ls\n", srchPath.c_str());
             else

@@ -16,11 +16,12 @@
 #include "AL/alc.h"
 
 #include "almalloc.h"
-#include "alstring.h"
 #include "router.h"
 
 
 namespace {
+
+using namespace std::string_view_literals;
 
 struct FuncExportEntry {
     const char *funcName;
@@ -277,15 +278,18 @@ const std::array alcEnumerations{
 };
 #undef DECL
 
-constexpr ALCchar alcNoError[] = "No Error";
-constexpr ALCchar alcErrInvalidDevice[] = "Invalid Device";
-constexpr ALCchar alcErrInvalidContext[] = "Invalid Context";
-constexpr ALCchar alcErrInvalidEnum[] = "Invalid Enum";
-constexpr ALCchar alcErrInvalidValue[] = "Invalid Value";
-constexpr ALCchar alcErrOutOfMemory[] = "Out of Memory";
-constexpr ALCchar alcExtensionList[] =
-    "ALC_ENUMERATE_ALL_EXT ALC_ENUMERATION_EXT ALC_EXT_CAPTURE "
-    "ALC_EXT_thread_local_context";
+[[nodiscard]] constexpr auto GetNoErrorString() noexcept { return "No Error"; }
+[[nodiscard]] constexpr auto GetInvalidDeviceString() noexcept { return "Invalid Device"; }
+[[nodiscard]] constexpr auto GetInvalidContextString() noexcept { return "Invalid Context"; }
+[[nodiscard]] constexpr auto GetInvalidEnumString() noexcept { return "Invalid Enum"; }
+[[nodiscard]] constexpr auto GetInvalidValueString() noexcept { return "Invalid Value"; }
+[[nodiscard]] constexpr auto GetOutOfMemoryString() noexcept { return "Out of Memory"; }
+
+[[nodiscard]] constexpr auto GetExtensionList() noexcept -> std::string_view
+{
+    return "ALC_ENUMERATE_ALL_EXT ALC_ENUMERATION_EXT ALC_EXT_CAPTURE "
+        "ALC_EXT_thread_local_context"sv;
+}
 
 constexpr ALCint alcMajorVersion = 1;
 constexpr ALCint alcMinorVersion = 1;
@@ -318,7 +322,8 @@ struct EnumeratedList {
     }
 
     void AppendDeviceList(const ALCchar *names, ALint idx);
-    ALint GetDriverIndexForName(const std::string_view name) const;
+    [[nodiscard]]
+    auto GetDriverIndexForName(const std::string_view name) const -> ALint;
 };
 EnumeratedList DevicesList;
 EnumeratedList AllDevicesList;
@@ -329,24 +334,24 @@ void EnumeratedList::AppendDeviceList(const ALCchar* names, ALint idx)
     const ALCchar *name_end = names;
     if(!name_end) return;
 
-    ALCsizei count = 0;
+    size_t count{0};
     while(*name_end)
     {
         TRACE("Enumerated \"%s\", driver %d\n", name_end, idx);
         ++count;
-        name_end += strlen(name_end)+1;
+        name_end += strlen(name_end)+1; /* NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic) */
     }
     if(names == name_end)
         return;
 
-    Names.reserve(Names.size() + (name_end - names) + 1);
+    Names.reserve(Names.size() + static_cast<size_t>(name_end - names) + 1);
     Names.insert(Names.cend(), names, name_end);
 
     Indicies.reserve(Indicies.size() + count);
     Indicies.insert(Indicies.cend(), count, idx);
 }
 
-ALint EnumeratedList::GetDriverIndexForName(const std::string_view name) const
+auto EnumeratedList::GetDriverIndexForName(const std::string_view name) const -> ALint
 {
     auto devnames = Names.cbegin();
     auto index = Indicies.cbegin();
@@ -355,7 +360,7 @@ ALint EnumeratedList::GetDriverIndexForName(const std::string_view name) const
     {
         if(name == al::to_address(devnames))
             return *index;
-        devnames += strlen(al::to_address(devnames))+1;
+        devnames += ptrdiff_t(strlen(al::to_address(devnames))+1);
         ++index;
     }
     return -1;
@@ -423,10 +428,8 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *devicename) noexcep
      * quality hint for the wrapper driver. Ignore them since there's no sane
      * way to map them.
      */
-    if(devicename && (devicename[0] == '\0' ||
-                      strcmp(devicename, "DirectSound3D") == 0 ||
-                      strcmp(devicename, "DirectSound") == 0 ||
-                      strcmp(devicename, "MMSYSTEM") == 0))
+    if(devicename && (*devicename == '\0' || devicename == "DirectSound3D"sv
+            || devicename == "DirectSound"sv || devicename == "MMSYSTEM"sv))
         devicename = nullptr;
     if(devicename)
     {
@@ -629,18 +632,16 @@ ALC_API ALCboolean ALC_APIENTRY alcIsExtensionPresent(ALCdevice *device, const A
         return ALC_FALSE;
     }
 
-    const size_t len{strlen(extname)};
-    const char *ptr{alcExtensionList};
-    while(ptr && *ptr)
+    const auto tofind = std::string_view{extname};
+    const auto extlist = GetExtensionList();
+    auto matchpos = extlist.find(tofind);
+    while(matchpos != std::string_view::npos)
     {
-        if(al::strncasecmp(ptr, extname, len) == 0 && (ptr[len] == '\0' || isspace(ptr[len])))
+        const auto endpos = matchpos + tofind.size();
+        if((matchpos == 0 || std::isspace(extlist[matchpos-1]))
+            && (endpos == extlist.size() || std::isspace(extlist[endpos])))
             return ALC_TRUE;
-        if((ptr=strchr(ptr, ' ')) != nullptr)
-        {
-            do {
-                ++ptr;
-            } while(isspace(*ptr));
-        }
+        matchpos = extlist.find(tofind, matchpos+1);
     }
     return ALC_FALSE;
 }
@@ -694,13 +695,13 @@ ALC_API const ALCchar* ALC_APIENTRY alcGetString(ALCdevice *device, ALCenum para
 
     switch(param)
     {
-    case ALC_NO_ERROR: return alcNoError;
-    case ALC_INVALID_ENUM: return alcErrInvalidEnum;
-    case ALC_INVALID_VALUE: return alcErrInvalidValue;
-    case ALC_INVALID_DEVICE: return alcErrInvalidDevice;
-    case ALC_INVALID_CONTEXT: return alcErrInvalidContext;
-    case ALC_OUT_OF_MEMORY: return alcErrOutOfMemory;
-    case ALC_EXTENSIONS: return alcExtensionList;
+    case ALC_NO_ERROR: return GetNoErrorString();
+    case ALC_INVALID_ENUM: return GetInvalidEnumString();
+    case ALC_INVALID_VALUE: return GetInvalidValueString();
+    case ALC_INVALID_DEVICE: return GetInvalidDeviceString();
+    case ALC_INVALID_CONTEXT: return GetInvalidContextString();
+    case ALC_OUT_OF_MEMORY: return GetOutOfMemoryString();
+    case ALC_EXTENSIONS: return GetExtensionList().data();
 
     case ALC_DEVICE_SPECIFIER:
     {
@@ -829,14 +830,14 @@ ALC_API void ALC_APIENTRY alcGetIntegerv(ALCdevice *device, ALCenum param, ALCsi
         case ALC_MAJOR_VERSION:
             if(size >= 1)
             {
-                values[0] = alcMajorVersion;
+                *values = alcMajorVersion;
                 return;
             }
             /*fall-through*/
         case ALC_MINOR_VERSION:
             if(size >= 1)
             {
-                values[0] = alcMinorVersion;
+                *values = alcMinorVersion;
                 return;
             }
             LastError.store(ALC_INVALID_VALUE);
@@ -866,7 +867,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *devicename, 
     ALCdevice *device{nullptr};
     ALint idx{0};
 
-    if(devicename && devicename[0] == '\0')
+    if(devicename && *devicename == '\0')
         devicename = nullptr;
     if(devicename)
     {

@@ -4,6 +4,7 @@
 #include "router.h"
 
 #include <algorithm>
+#include <array>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -14,15 +15,15 @@
 #include "AL/alc.h"
 #include "AL/al.h"
 
-#include "almalloc.h"
 #include "alstring.h"
+#include "opthelpers.h"
 #include "strutils.h"
 
 #include "version.h"
 
 
-enum LogLevel LogLevel = LogLevel_Error;
-FILE *LogFile;
+eLogLevel LogLevel{eLogLevel::Error};
+gsl::owner<std::FILE*> LogFile;
 
 namespace {
 
@@ -170,7 +171,7 @@ void AddModule(HMODULE module, const std::wstring_view name)
     LOAD_PROC(alDistanceModel);
     if(!err)
     {
-        ALCint alc_ver[2] = { 0, 0 };
+        std::array<ALCint,2> alc_ver{0, 0};
         newdrv.alcGetIntegerv(nullptr, ALC_MAJOR_VERSION, 1, &alc_ver[0]);
         newdrv.alcGetIntegerv(nullptr, ALC_MINOR_VERSION, 1, &alc_ver[1]);
         if(newdrv.alcGetError(nullptr) == ALC_NO_ERROR)
@@ -240,22 +241,21 @@ void SearchDrivers(const std::wstring_view path)
 
     WIN32_FIND_DATAW fdata{};
     HANDLE srchHdl{FindFirstFileW(srchPath.c_str(), &fdata)};
-    if(srchHdl != INVALID_HANDLE_VALUE)
-    {
-        do {
-            srchPath = path;
-            srchPath += L"\\";
-            srchPath += fdata.cFileName;
-            TRACE("Found %ls\n", srchPath.c_str());
+    if(srchHdl == INVALID_HANDLE_VALUE) return;
 
-            HMODULE mod{LoadLibraryW(srchPath.c_str())};
-            if(!mod)
-                WARN("Could not load %ls\n", srchPath.c_str());
-            else
-                AddModule(mod, fdata.cFileName);
-        } while(FindNextFileW(srchHdl, &fdata));
-        FindClose(srchHdl);
-    }
+    do {
+        srchPath = path;
+        srchPath += L"\\";
+        srchPath += std::data(fdata.cFileName);
+        TRACE("Found %ls\n", srchPath.c_str());
+
+        HMODULE mod{LoadLibraryW(srchPath.c_str())};
+        if(!mod)
+            WARN("Could not load %ls\n", srchPath.c_str());
+        else
+            AddModule(mod, std::data(fdata.cFileName));
+    } while(FindNextFileW(srchHdl, &fdata));
+    FindClose(srchHdl);
 }
 
 bool GetLoadedModuleDirectory(const WCHAR *name, std::wstring *moddir)
@@ -265,7 +265,7 @@ bool GetLoadedModuleDirectory(const WCHAR *name, std::wstring *moddir)
     if(name)
     {
         module = GetModuleHandleW(name);
-        if(!module) return 0;
+        if(!module) return false;
     }
 
     moddir->assign(256, '\0');
@@ -384,10 +384,9 @@ BOOL APIENTRY DllMain(HINSTANCE, DWORD reason, void*)
     switch(reason)
     {
     case DLL_PROCESS_ATTACH:
-        LogFile = stderr;
         if(auto logfname = al::getenv("ALROUTER_LOGFILE"))
         {
-            FILE *f = fopen(logfname->c_str(), "w");
+            gsl::owner<std::FILE*> f{fopen(logfname->c_str(), "w")};
             if(f == nullptr)
                 ERR("Could not open log file: %s\n", logfname->c_str());
             else
@@ -396,13 +395,14 @@ BOOL APIENTRY DllMain(HINSTANCE, DWORD reason, void*)
         if(auto loglev = al::getenv("ALROUTER_LOGLEVEL"))
         {
             char *end = nullptr;
-            long l = strtol(loglev->c_str(), &end, 0);
+            long l{strtol(loglev->c_str(), &end, 0)};
             if(!end || *end != '\0')
                 ERR("Invalid log level value: %s\n", loglev->c_str());
-            else if(l < LogLevel_None || l > LogLevel_Trace)
+            else if(l < al::to_underlying(eLogLevel::None)
+                || l > al::to_underlying(eLogLevel::Trace))
                 ERR("Log level out of range: %s\n", loglev->c_str());
             else
-                LogLevel = static_cast<enum LogLevel>(l);
+                LogLevel = static_cast<eLogLevel>(l);
         }
         TRACE("Initializing router v0.1-%s %s\n", ALSOFT_GIT_COMMIT_HASH, ALSOFT_GIT_BRANCH);
         LoadDriverList();
@@ -417,7 +417,7 @@ BOOL APIENTRY DllMain(HINSTANCE, DWORD reason, void*)
     case DLL_PROCESS_DETACH:
         DriverList.clear();
 
-        if(LogFile && LogFile != stderr)
+        if(LogFile)
             fclose(LogFile);
         LogFile = nullptr;
 

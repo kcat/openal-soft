@@ -364,18 +364,18 @@ void LoadDriverList()
      * directory, app's path, or system path (don't want to do duplicate
      * searches, or increase the priority of the app or system path).
      */
-    if(dll_path[0] &&
-       (!cwd_path[0] || dll_path != cwd_path) &&
-       (!proc_path[0] || dll_path != proc_path) &&
-       (!sys_path[0] || dll_path != sys_path))
+    if(!dll_path.empty() &&
+       (cwd_path.empty() || dll_path != cwd_path) &&
+       (proc_path.empty() || dll_path != proc_path) &&
+       (sys_path.empty() || dll_path != sys_path))
         SearchDrivers(dll_path);
-    if(cwd_path[0] &&
-       (!proc_path[0] || cwd_path != proc_path) &&
-       (!sys_path[0] || cwd_path != sys_path))
+    if(!cwd_path.empty() &&
+       (proc_path.empty() || cwd_path != proc_path) &&
+       (sys_path.empty() || cwd_path != sys_path))
         SearchDrivers(cwd_path);
-    if(proc_path[0] && (!sys_path[0] || proc_path != sys_path))
+    if(!proc_path.empty() && (sys_path.empty() || proc_path != sys_path))
         SearchDrivers(proc_path);
-    if(sys_path[0])
+    if(!sys_path.empty())
         SearchDrivers(sys_path);
 }
 

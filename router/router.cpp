@@ -301,7 +301,8 @@ void LoadDriverList()
         while(!namelist.empty())
         {
             auto seppos = namelist.find(',');
-            gAcceptList.emplace_back(namelist.substr(0, seppos));
+            if(seppos > 0)
+                gAcceptList.emplace_back(namelist.substr(0, seppos));
             if(seppos < namelist.size())
                 namelist.remove_prefix(seppos+1);
             else
@@ -314,7 +315,8 @@ void LoadDriverList()
         while(!namelist.empty())
         {
             auto seppos = namelist.find(',');
-            gRejectList.emplace_back(namelist.substr(0, seppos));
+            if(seppos > 0)
+                gRejectList.emplace_back(namelist.substr(0, seppos));
             if(seppos < namelist.size())
                 namelist.remove_prefix(seppos+1);
             else

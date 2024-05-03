@@ -29,59 +29,6 @@ namespace {
 std::vector<std::wstring> gAcceptList;
 std::vector<std::wstring> gRejectList;
 
-void LoadDriverList();
-
-} // namespace
-
-
-BOOL APIENTRY DllMain(HINSTANCE, DWORD reason, void*)
-{
-    switch(reason)
-    {
-    case DLL_PROCESS_ATTACH:
-        LogFile = stderr;
-        if(auto logfname = al::getenv("ALROUTER_LOGFILE"))
-        {
-            FILE *f = fopen(logfname->c_str(), "w");
-            if(f == nullptr)
-                ERR("Could not open log file: %s\n", logfname->c_str());
-            else
-                LogFile = f;
-        }
-        if(auto loglev = al::getenv("ALROUTER_LOGLEVEL"))
-        {
-            char *end = nullptr;
-            long l = strtol(loglev->c_str(), &end, 0);
-            if(!end || *end != '\0')
-                ERR("Invalid log level value: %s\n", loglev->c_str());
-            else if(l < LogLevel_None || l > LogLevel_Trace)
-                ERR("Log level out of range: %s\n", loglev->c_str());
-            else
-                LogLevel = static_cast<enum LogLevel>(l);
-        }
-        TRACE("Initializing router v0.1-%s %s\n", ALSOFT_GIT_COMMIT_HASH, ALSOFT_GIT_BRANCH);
-        LoadDriverList();
-
-        break;
-
-    case DLL_THREAD_ATTACH:
-        break;
-    case DLL_THREAD_DETACH:
-        break;
-
-    case DLL_PROCESS_DETACH:
-        DriverList.clear();
-
-        if(LogFile && LogFile != stderr)
-            fclose(LogFile);
-        LogFile = nullptr;
-
-        break;
-    }
-    return TRUE;
-}
-
-namespace {
 
 void AddModule(HMODULE module, const std::wstring_view name)
 {
@@ -432,90 +379,49 @@ void LoadDriverList()
 
 } // namespace
 
-
-PtrIntMap::~PtrIntMap()
+BOOL APIENTRY DllMain(HINSTANCE, DWORD reason, void*)
 {
-    std::lock_guard<std::mutex> maplock{mLock};
-    free(mKeys);
-    mKeys = nullptr;
-    mValues = nullptr;
-    mSize = 0;
-    mCapacity = 0;
-}
-
-ALenum PtrIntMap::insert(void *key, int value)
-{
-    std::lock_guard<std::mutex> maplock{mLock};
-    auto iter = std::lower_bound(mKeys, mKeys+mSize, key);
-    auto pos = static_cast<ALsizei>(std::distance(mKeys, iter));
-
-    if(pos == mSize || mKeys[pos] != key)
+    switch(reason)
     {
-        if(mSize == mCapacity)
+    case DLL_PROCESS_ATTACH:
+        LogFile = stderr;
+        if(auto logfname = al::getenv("ALROUTER_LOGFILE"))
         {
-            void **newkeys{nullptr};
-            ALsizei newcap{mCapacity ? (mCapacity<<1) : 4};
-            if(newcap > mCapacity)
-                newkeys = static_cast<void**>(
-                    calloc(newcap, sizeof(mKeys[0])+sizeof(mValues[0])));
-            if(!newkeys)
-                return AL_OUT_OF_MEMORY;
-            auto newvalues = reinterpret_cast<int*>(&newkeys[newcap]);
-
-            if(mKeys)
-            {
-                std::copy_n(mKeys, mSize, newkeys);
-                std::copy_n(mValues, mSize, newvalues);
-            }
-            free(mKeys);
-            mKeys = newkeys;
-            mValues = newvalues;
-            mCapacity = newcap;
+            FILE *f = fopen(logfname->c_str(), "w");
+            if(f == nullptr)
+                ERR("Could not open log file: %s\n", logfname->c_str());
+            else
+                LogFile = f;
         }
-
-        if(pos < mSize)
+        if(auto loglev = al::getenv("ALROUTER_LOGLEVEL"))
         {
-            std::copy_backward(mKeys+pos, mKeys+mSize, mKeys+mSize+1);
-            std::copy_backward(mValues+pos, mValues+mSize, mValues+mSize+1);
+            char *end = nullptr;
+            long l = strtol(loglev->c_str(), &end, 0);
+            if(!end || *end != '\0')
+                ERR("Invalid log level value: %s\n", loglev->c_str());
+            else if(l < LogLevel_None || l > LogLevel_Trace)
+                ERR("Log level out of range: %s\n", loglev->c_str());
+            else
+                LogLevel = static_cast<enum LogLevel>(l);
         }
-        mSize++;
+        TRACE("Initializing router v0.1-%s %s\n", ALSOFT_GIT_COMMIT_HASH, ALSOFT_GIT_BRANCH);
+        LoadDriverList();
+
+        break;
+
+    case DLL_THREAD_ATTACH:
+        break;
+    case DLL_THREAD_DETACH:
+        break;
+
+    case DLL_PROCESS_DETACH:
+        DriverList.clear();
+
+        if(LogFile && LogFile != stderr)
+            fclose(LogFile);
+        LogFile = nullptr;
+
+        break;
     }
-    mKeys[pos] = key;
-    mValues[pos] = value;
-
-    return AL_NO_ERROR;
-}
-
-int PtrIntMap::removeByKey(void *key)
-{
-    int ret = -1;
-
-    std::lock_guard<std::mutex> maplock{mLock};
-    auto iter = std::lower_bound(mKeys, mKeys+mSize, key);
-    auto pos = static_cast<ALsizei>(std::distance(mKeys, iter));
-    if(pos < mSize && mKeys[pos] == key)
-    {
-        ret = mValues[pos];
-        if(pos+1 < mSize)
-        {
-            std::copy(mKeys+pos+1, mKeys+mSize, mKeys+pos);
-            std::copy(mValues+pos+1, mValues+mSize, mValues+pos);
-        }
-        mSize--;
-    }
-
-    return ret;
-}
-
-int PtrIntMap::lookupByKey(void *key)
-{
-    int ret = -1;
-
-    std::lock_guard<std::mutex> maplock{mLock};
-    auto iter = std::lower_bound(mKeys, mKeys+mSize, key);
-    auto pos = static_cast<ALsizei>(std::distance(mKeys, iter));
-    if(pos < mSize && mKeys[pos] == key)
-        ret = mValues[pos];
-
-    return ret;
+    return TRUE;
 }

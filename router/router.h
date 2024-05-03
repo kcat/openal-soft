@@ -182,25 +182,6 @@ inline DriverIface *GetThreadDriver() noexcept { return ThreadCtxDriver; }
 inline void SetThreadDriver(DriverIface *driver) noexcept { ThreadCtxDriver = driver; }
 
 
-class PtrIntMap {
-    void **mKeys{nullptr};
-    /* Shares memory with keys. */
-    int *mValues{nullptr};
-
-    ALsizei mSize{0};
-    ALsizei mCapacity{0};
-    std::mutex mLock;
-
-public:
-    PtrIntMap() = default;
-    ~PtrIntMap();
-
-    ALenum insert(void *key, int value);
-    int removeByKey(void *key);
-    int lookupByKey(void *key);
-};
-
-
 enum LogLevel {
     LogLevel_None  = 0,
     LogLevel_Error = 1,

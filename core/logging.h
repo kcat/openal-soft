@@ -1,9 +1,7 @@
 #ifndef CORE_LOGGING_H
 #define CORE_LOGGING_H
 
-#include <stdio.h>
-
-#include "opthelpers.h"
+#include <cstdio>
 
 
 enum class LogLevel {

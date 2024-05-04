@@ -5,9 +5,9 @@
 #include <atomic>
 #include <bitset>
 #include <chrono>
+#include <cstddef>
+#include <cstdint>
 #include <memory>
-#include <stddef.h>
-#include <stdint.h>
 #include <string>
 
 #include "almalloc.h"
@@ -37,28 +37,28 @@ struct HrtfStore;
 using uint = unsigned int;
 
 
-inline constexpr size_t MinOutputRate{8000};
-inline constexpr size_t MaxOutputRate{192000};
-inline constexpr size_t DefaultOutputRate{48000};
+inline constexpr std::size_t MinOutputRate{8000};
+inline constexpr std::size_t MaxOutputRate{192000};
+inline constexpr std::size_t DefaultOutputRate{48000};
 
-inline constexpr size_t DefaultUpdateSize{960}; /* 20ms */
-inline constexpr size_t DefaultNumUpdates{3};
+inline constexpr std::size_t DefaultUpdateSize{960}; /* 20ms */
+inline constexpr std::size_t DefaultNumUpdates{3};
 
 
-enum class DeviceType : uint8_t {
+enum class DeviceType : std::uint8_t {
     Playback,
     Capture,
     Loopback
 };
 
 
-enum class RenderMode : uint8_t {
+enum class RenderMode : std::uint8_t {
     Normal,
     Pairwise,
     Hrtf
 };
 
-enum class StereoEncoding : uint8_t {
+enum class StereoEncoding : std::uint8_t {
     Basic,
     Uhj,
     Hrtf,
@@ -87,16 +87,16 @@ struct DistanceComp {
     std::array<ChanData,MaxOutputChannels> mChannels;
     al::FlexArray<float,16> mSamples;
 
-    DistanceComp(size_t count) : mSamples{count} { }
+    DistanceComp(std::size_t count) : mSamples{count} { }
 
-    static std::unique_ptr<DistanceComp> Create(size_t numsamples)
+    static std::unique_ptr<DistanceComp> Create(std::size_t numsamples)
     { return std::unique_ptr<DistanceComp>{new(FamCount(numsamples)) DistanceComp{numsamples}}; }
 
     DEF_FAM_NEWDEL(DistanceComp, mSamples)
 };
 
 
-constexpr uint8_t InvalidChannelIndex{static_cast<uint8_t>(~0u)};
+constexpr auto InvalidChannelIndex = static_cast<std::uint8_t>(~0u);
 
 struct BFChannelConfig {
     float Scale;
@@ -120,18 +120,18 @@ struct MixParams {
     template<typename F>
     void setAmbiMixParams(const MixParams &inmix, const float gainbase, F func) const
     {
-        const size_t numIn{inmix.Buffer.size()};
-        const size_t numOut{Buffer.size()};
-        for(size_t i{0};i < numIn;++i)
+        const std::size_t numIn{inmix.Buffer.size()};
+        const std::size_t numOut{Buffer.size()};
+        for(std::size_t i{0};i < numIn;++i)
         {
-            uint8_t idx{InvalidChannelIndex};
+            std::uint8_t idx{InvalidChannelIndex};
             float gain{0.0f};
 
-            for(size_t j{0};j < numOut;++j)
+            for(std::size_t j{0};j < numOut;++j)
             {
                 if(AmbiMap[j].Index == inmix.AmbiMap[i].Index)
                 {
-                    idx = static_cast<uint8_t>(j);
+                    idx = static_cast<std::uint8_t>(j);
                     gain = AmbiMap[j].Scale * gainbase;
                     break;
                 }
@@ -143,7 +143,7 @@ struct MixParams {
 
 struct RealMixParams {
     al::span<const InputRemixMap> RemixMap;
-    std::array<uint8_t,MaxChannels> ChannelIndex{};
+    std::array<std::uint8_t,MaxChannels> ChannelIndex{};
 
     al::span<FloatBufferLine> Buffer;
 };
@@ -173,7 +173,7 @@ enum {
     DeviceFlagsCount
 };
 
-enum class DeviceState : uint8_t {
+enum class DeviceState : std::uint8_t {
     Unprepared,
     Configured,
     Playing
@@ -228,8 +228,8 @@ struct DeviceBase {
     AmbiRotateMatrix mAmbiRotateMatrix2{};
 
     /* Temp storage used for mixer processing. */
-    static constexpr size_t MixerLineSize{BufferLineSize + DecoderBase::sMaxPadding};
-    static constexpr size_t MixerChannelsMax{16};
+    static constexpr std::size_t MixerLineSize{BufferLineSize + DecoderBase::sMaxPadding};
+    static constexpr std::size_t MixerChannelsMax{16};
     alignas(16) std::array<float,MixerLineSize*MixerChannelsMax> mSampleData{};
     alignas(16) std::array<float,MixerLineSize+MaxResamplerPadding> mResampleData{};
 
@@ -341,17 +341,17 @@ struct DeviceBase {
         return mClockBase.load(std::memory_order_relaxed) + ns;
     }
 
-    void ProcessHrtf(const size_t SamplesToDo);
-    void ProcessAmbiDec(const size_t SamplesToDo);
-    void ProcessAmbiDecStablized(const size_t SamplesToDo);
-    void ProcessUhj(const size_t SamplesToDo);
-    void ProcessBs2b(const size_t SamplesToDo);
+    void ProcessHrtf(const std::size_t SamplesToDo);
+    void ProcessAmbiDec(const std::size_t SamplesToDo);
+    void ProcessAmbiDecStablized(const std::size_t SamplesToDo);
+    void ProcessUhj(const std::size_t SamplesToDo);
+    void ProcessBs2b(const std::size_t SamplesToDo);
 
-    inline void postProcess(const size_t SamplesToDo)
+    inline void postProcess(const std::size_t SamplesToDo)
     { if(PostProcess) LIKELY (this->*PostProcess)(SamplesToDo); }
 
     void renderSamples(const al::span<float*> outBuffers, const uint numSamples);
-    void renderSamples(void *outBuffer, const uint numSamples, const size_t frameStep);
+    void renderSamples(void *outBuffer, const uint numSamples, const std::size_t frameStep);
 
     /* Caller must lock the device state, and the mixer must not be running. */
 #ifdef __MINGW32__
@@ -365,7 +365,7 @@ struct DeviceBase {
      * Returns the index for the given channel name (e.g. FrontCenter), or
      * InvalidChannelIndex if it doesn't exist.
      */
-    [[nodiscard]] auto channelIdxByName(Channel chan) const noexcept -> uint8_t
+    [[nodiscard]] auto channelIdxByName(Channel chan) const noexcept -> std::uint8_t
     { return RealOut.ChannelIndex[chan]; }
 
 private:

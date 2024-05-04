@@ -33,6 +33,7 @@ struct ComWrapper {
     }
     ComWrapper& operator=(const ComWrapper&) = delete;
 
+    [[nodiscard]]
     HRESULT status() const noexcept { return mStatus; }
     explicit operator bool() const noexcept { return SUCCEEDED(status()); }
 
@@ -60,6 +61,7 @@ struct ComPtr {
     explicit ComPtr(T *ptr) noexcept : mPtr{ptr} { }
     ~ComPtr() { if(mPtr) mPtr->Release(); }
 
+    /* NOLINTNEXTLINE(bugprone-unhandled-self-assignment) Yes it is. */
     ComPtr& operator=(const ComPtr &rhs) noexcept(RefIsNoexcept)
     {
         if constexpr(RefIsNoexcept)

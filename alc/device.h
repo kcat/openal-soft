@@ -1,34 +1,27 @@
 #ifndef ALC_DEVICE_H
 #define ALC_DEVICE_H
 
-#include <array>
 #include <atomic>
 #include <memory>
 #include <mutex>
 #include <optional>
-#include <stdint.h>
 #include <string>
 #include <unordered_map>
-#include <utility>
+#include <string_view>
 #include <vector>
 
+#include "AL/al.h"
 #include "AL/alc.h"
 #include "AL/alext.h"
 
 #include "alconfig.h"
-#include "almalloc.h"
-#include "alnumeric.h"
 #include "core/device.h"
-#include "inprogext.h"
 #include "intrusive_ptr.h"
 
 #ifdef ALSOFT_EAX
 #include "al/eax/x_ram.h"
 #endif // ALSOFT_EAX
 
-struct ALbuffer;
-struct ALeffect;
-struct ALfilter;
 struct BackendBase;
 struct BufferSubList;
 struct EffectSubList;

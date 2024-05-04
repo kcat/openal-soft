@@ -2,20 +2,20 @@
 #define ALU_H
 
 #include <bitset>
+#include <cstdint>
 #include <optional>
-#include <stdint.h>
 
 struct ALCcontext;
 struct ALCdevice;
 struct EffectSlot;
 
-enum class StereoEncoding : uint8_t;
+enum class StereoEncoding : std::uint8_t;
 
 
 constexpr float GainMixMax{1000.0f}; /* +60dB */
 
 
-enum CompatFlags : uint8_t {
+enum CompatFlags : std::uint8_t {
     ReverseX,
     ReverseY,
     ReverseZ,

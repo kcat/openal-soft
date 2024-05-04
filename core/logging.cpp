@@ -14,6 +14,7 @@
 #include <vector>
 
 #include "alspan.h"
+#include "opthelpers.h"
 #include "strutils.h"
 
 

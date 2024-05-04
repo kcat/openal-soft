@@ -2,8 +2,8 @@
 #define CORE_AMBIDEFS_H
 
 #include <array>
-#include <stddef.h>
-#include <stdint.h>
+#include <cstddef>
+#include <cstdint>
 
 #include "alnumbers.h"
 
@@ -14,10 +14,10 @@ using uint = unsigned int;
  * needed will be (o+1)**2, thus zero-order has 1, first-order has 4, second-
  * order has 9, third-order has 16, and fourth-order has 25.
  */
-inline constexpr uint8_t MaxAmbiOrder{3};
-constexpr inline size_t AmbiChannelsFromOrder(size_t order) noexcept
+inline constexpr auto MaxAmbiOrder = std::uint8_t{3};
+inline constexpr auto AmbiChannelsFromOrder(std::size_t order) noexcept -> std::size_t
 { return (order+1) * (order+1); }
-inline constexpr size_t MaxAmbiChannels{AmbiChannelsFromOrder(MaxAmbiOrder)};
+inline constexpr auto MaxAmbiChannels = size_t{AmbiChannelsFromOrder(MaxAmbiOrder)};
 
 /* A bitmask of ambisonic channels for 0 to 4th order. This only specifies up
  * to 4th order, which is the highest order a 32-bit mask value can specify (a
@@ -39,9 +39,9 @@ inline constexpr uint AmbiPeriphonicMask{0xfe7ce4};
  * representation. This is 2 per each order above zero-order, plus 1 for zero-
  * order. Or simply, o*2 + 1.
  */
-constexpr inline size_t Ambi2DChannelsFromOrder(size_t order) noexcept
+inline constexpr auto Ambi2DChannelsFromOrder(std::size_t order) noexcept -> std::size_t
 { return order*2 + 1; }
-inline constexpr size_t MaxAmbi2DChannels{Ambi2DChannelsFromOrder(MaxAmbiOrder)};
+inline constexpr auto MaxAmbi2DChannels = std::size_t{Ambi2DChannelsFromOrder(MaxAmbiOrder)};
 
 
 /* NOTE: These are scale factors as applied to Ambisonics content. Decoder
@@ -111,7 +111,7 @@ struct AmbiScale {
 };
 
 struct AmbiIndex {
-    static inline constexpr std::array<uint8_t,MaxAmbiChannels> FromFuMa{{
+    static inline constexpr std::array<std::uint8_t,MaxAmbiChannels> FromFuMa{{
         0,  /* W */
         3,  /* X */
         1,  /* Y */
@@ -129,7 +129,7 @@ struct AmbiIndex {
         15, /* P */
         9,  /* Q */
     }};
-    static inline constexpr std::array<uint8_t,MaxAmbi2DChannels> FromFuMa2D{{
+    static inline constexpr std::array<std::uint8_t,MaxAmbi2DChannels> FromFuMa2D{{
         0,  /* W */
         3,  /* X */
         1,  /* Y */
@@ -139,19 +139,19 @@ struct AmbiIndex {
         9,  /* Q */
     }};
 
-    static inline constexpr std::array<uint8_t,MaxAmbiChannels> FromACN{{
+    static inline constexpr std::array<std::uint8_t,MaxAmbiChannels> FromACN{{
         0,  1,  2,  3,  4,  5,  6,  7,
         8,  9, 10, 11, 12, 13, 14, 15
     }};
-    static inline constexpr std::array<uint8_t,MaxAmbi2DChannels> FromACN2D{{
+    static inline constexpr std::array<std::uint8_t,MaxAmbi2DChannels> FromACN2D{{
         0, 1,3, 4,8, 9,15
     }};
 
 
-    static inline constexpr std::array<uint8_t,MaxAmbiChannels> OrderFromChannel{{
+    static inline constexpr std::array<std::uint8_t,MaxAmbiChannels> OrderFromChannel{{
         0, 1,1,1, 2,2,2,2,2, 3,3,3,3,3,3,3,
     }};
-    static inline constexpr std::array<uint8_t,MaxAmbi2DChannels> OrderFrom2DChannel{{
+    static inline constexpr std::array<std::uint8_t,MaxAmbi2DChannels> OrderFrom2DChannel{{
         0, 1,1, 2,2, 3,3,
     }};
 };

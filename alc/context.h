@@ -3,10 +3,10 @@
 
 #include <array>
 #include <atomic>
+#include <cstdint>
 #include <deque>
 #include <memory>
 #include <mutex>
-#include <stdint.h>
 #include <string>
 #include <string_view>
 #include <unordered_map>
@@ -41,9 +41,9 @@ struct DebugGroup;
 struct EffectSlotSubList;
 struct SourceSubList;
 
-enum class DebugSource : uint8_t;
-enum class DebugType : uint8_t;
-enum class DebugSeverity : uint8_t;
+enum class DebugSource : std::uint8_t;
+enum class DebugType : std::uint8_t;
+enum class DebugSeverity : std::uint8_t;
 
 using uint = unsigned int;
 

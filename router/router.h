@@ -23,11 +23,6 @@
 #define MAKE_ALC_VER(major, minor) (((major)<<8) | (minor))
 
 struct DriverIface {
-    std::wstring Name;
-    HMODULE Module{nullptr};
-    int ALCVer{0};
-    std::once_flag InitOnceCtx{};
-
     LPALCCREATECONTEXT alcCreateContext{nullptr};
     LPALCMAKECONTEXTCURRENT alcMakeContextCurrent{nullptr};
     LPALCPROCESSCONTEXT alcProcessContext{nullptr};
@@ -161,16 +156,19 @@ struct DriverIface {
     LPALGETAUXILIARYEFFECTSLOTI alGetAuxiliaryEffectSloti{nullptr};
     LPALGETAUXILIARYEFFECTSLOTIV alGetAuxiliaryEffectSlotiv{nullptr};
 
+    std::wstring Name;
+    HMODULE Module{nullptr};
+    int ALCVer{0};
+    std::once_flag InitOnceCtx{};
+
     template<typename T>
-    DriverIface(T&& name, HMODULE mod)
-      : Name(std::forward<T>(name)), Module(mod)
-    { }
-    ~DriverIface()
-    {
-        if(Module)
-            FreeLibrary(Module);
-        Module = nullptr;
-    }
+    DriverIface(T&& name, HMODULE mod) : Name(std::forward<T>(name)), Module(mod) { }
+    ~DriverIface() { if(Module) FreeLibrary(Module); }
+
+    DriverIface(const DriverIface&) = delete;
+    DriverIface(DriverIface&&) = delete;
+    DriverIface& operator=(const DriverIface&) = delete;
+    DriverIface& operator=(DriverIface&&) = delete;
 };
 using DriverIfacePtr = std::unique_ptr<DriverIface>;
 

@@ -44,8 +44,6 @@
 #include <thread>
 #include <vector>
 
-#include "albit.h"
-#include "alnumeric.h"
 #include "alspan.h"
 #include "alstring.h"
 #include "althrd_setname.h"
@@ -428,45 +426,47 @@ bool DSoundPlayback::reset()
     case DevFmtX3D71: OutputType.dwChannelMask = X7DOT1; break;
     }
 
-retry_open:
-    hr = S_OK;
-    OutputType.Format.wFormatTag = WAVE_FORMAT_PCM;
-    OutputType.Format.nChannels = static_cast<WORD>(mDevice->channelsFromFmt());
-    OutputType.Format.wBitsPerSample = static_cast<WORD>(mDevice->bytesFromFmt() * 8);
-    OutputType.Format.nBlockAlign = static_cast<WORD>(OutputType.Format.nChannels *
-        OutputType.Format.wBitsPerSample / 8);
-    OutputType.Format.nSamplesPerSec = mDevice->Frequency;
-    OutputType.Format.nAvgBytesPerSec = OutputType.Format.nSamplesPerSec *
-        OutputType.Format.nBlockAlign;
-    OutputType.Format.cbSize = 0;
+    do {
+        hr = S_OK;
+        OutputType.Format.wFormatTag = WAVE_FORMAT_PCM;
+        OutputType.Format.nChannels = static_cast<WORD>(mDevice->channelsFromFmt());
+        OutputType.Format.wBitsPerSample = static_cast<WORD>(mDevice->bytesFromFmt() * 8);
+        OutputType.Format.nBlockAlign = static_cast<WORD>(OutputType.Format.nChannels *
+            OutputType.Format.wBitsPerSample / 8);
+        OutputType.Format.nSamplesPerSec = mDevice->Frequency;
+        OutputType.Format.nAvgBytesPerSec = OutputType.Format.nSamplesPerSec *
+            OutputType.Format.nBlockAlign;
+        OutputType.Format.cbSize = 0;
 
-    if(OutputType.Format.nChannels > 2 || mDevice->FmtType == DevFmtFloat)
-    {
-        OutputType.Format.wFormatTag = WAVE_FORMAT_EXTENSIBLE;
-        OutputType.Samples.wValidBitsPerSample = OutputType.Format.wBitsPerSample;
-        OutputType.Format.cbSize = sizeof(WAVEFORMATEXTENSIBLE) - sizeof(WAVEFORMATEX);
-        if(mDevice->FmtType == DevFmtFloat)
-            OutputType.SubFormat = KSDATAFORMAT_SUBTYPE_IEEE_FLOAT;
-        else
-            OutputType.SubFormat = KSDATAFORMAT_SUBTYPE_PCM;
-
-        mPrimaryBuffer = nullptr;
-    }
-    else
-    {
-        if(SUCCEEDED(hr) && !mPrimaryBuffer)
+        if(OutputType.Format.nChannels > 2 || mDevice->FmtType == DevFmtFloat)
         {
-            DSBUFFERDESC DSBDescription{};
-            DSBDescription.dwSize = sizeof(DSBDescription);
-            DSBDescription.dwFlags = DSBCAPS_PRIMARYBUFFER;
-            hr = mDS->CreateSoundBuffer(&DSBDescription, al::out_ptr(mPrimaryBuffer), nullptr);
-        }
-        if(SUCCEEDED(hr))
-            hr = mPrimaryBuffer->SetFormat(&OutputType.Format);
-    }
+            OutputType.Format.wFormatTag = WAVE_FORMAT_EXTENSIBLE;
+            /* NOLINTNEXTLINE(cppcoreguidelines-pro-type-union-access) */
+            OutputType.Samples.wValidBitsPerSample = OutputType.Format.wBitsPerSample;
+            OutputType.Format.cbSize = sizeof(WAVEFORMATEXTENSIBLE) - sizeof(WAVEFORMATEX);
+            if(mDevice->FmtType == DevFmtFloat)
+                OutputType.SubFormat = KSDATAFORMAT_SUBTYPE_IEEE_FLOAT;
+            else
+                OutputType.SubFormat = KSDATAFORMAT_SUBTYPE_PCM;
 
-    if(SUCCEEDED(hr))
-    {
+            mPrimaryBuffer = nullptr;
+        }
+        else
+        {
+            if(SUCCEEDED(hr) && !mPrimaryBuffer)
+            {
+                DSBUFFERDESC DSBDescription{};
+                DSBDescription.dwSize = sizeof(DSBDescription);
+                DSBDescription.dwFlags = DSBCAPS_PRIMARYBUFFER;
+                hr = mDS->CreateSoundBuffer(&DSBDescription, al::out_ptr(mPrimaryBuffer), nullptr);
+            }
+            if(SUCCEEDED(hr))
+                hr = mPrimaryBuffer->SetFormat(&OutputType.Format);
+        }
+
+        if(FAILED(hr))
+            break;
+
         uint num_updates{mDevice->BufferSize / mDevice->UpdateSize};
         if(num_updates > MAX_UPDATES)
             num_updates = MAX_UPDATES;
@@ -480,12 +480,10 @@ retry_open:
         DSBDescription.lpwfxFormat = &OutputType.Format;
 
         hr = mDS->CreateSoundBuffer(&DSBDescription, al::out_ptr(mBuffer), nullptr);
-        if(FAILED(hr) && mDevice->FmtType == DevFmtFloat)
-        {
-            mDevice->FmtType = DevFmtShort;
-            goto retry_open;
-        }
-    }
+        if(SUCCEEDED(hr) || mDevice->FmtType != DevFmtFloat)
+            break;
+        mDevice->FmtType = DevFmtShort;
+    } while(FAILED(hr));
 
     if(SUCCEEDED(hr))
     {
@@ -649,6 +647,7 @@ void DSoundCapture::open(std::string_view name)
     InputType.Format.nAvgBytesPerSec = InputType.Format.nSamplesPerSec *
         InputType.Format.nBlockAlign;
     InputType.Format.cbSize = 0;
+    /* NOLINTNEXTLINE(cppcoreguidelines-pro-type-union-access) */
     InputType.Samples.wValidBitsPerSample = InputType.Format.wBitsPerSample;
     if(mDevice->FmtType == DevFmtFloat)
         InputType.SubFormat = KSDATAFORMAT_SUBTYPE_IEEE_FLOAT;

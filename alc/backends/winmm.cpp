@@ -38,7 +38,6 @@
 #include <algorithm>
 #include <functional>
 
-#include "alnumeric.h"
 #include "alsem.h"
 #include "alstring.h"
 #include "althrd_setname.h"
@@ -77,7 +76,7 @@ void ProbePlaybackDevices()
         WAVEOUTCAPSW WaveCaps{};
         if(waveOutGetDevCapsW(i, &WaveCaps, sizeof(WaveCaps)) == MMSYSERR_NOERROR)
         {
-            const std::string basename{DEVNAME_HEAD + wstr_to_utf8(WaveCaps.szPname)};
+            const std::string basename{DEVNAME_HEAD + wstr_to_utf8(std::data(WaveCaps.szPname))};
 
             int count{1};
             std::string newname{basename};
@@ -108,7 +107,7 @@ void ProbeCaptureDevices()
         WAVEINCAPSW WaveCaps{};
         if(waveInGetDevCapsW(i, &WaveCaps, sizeof(WaveCaps)) == MMSYSERR_NOERROR)
         {
-            const std::string basename{DEVNAME_HEAD + wstr_to_utf8(WaveCaps.szPname)};
+            const std::string basename{DEVNAME_HEAD + wstr_to_utf8(std::data(WaveCaps.szPname))};
 
             int count{1};
             std::string newname{basename};
@@ -221,44 +220,40 @@ void WinMMPlayback::open(std::string_view name)
     auto DeviceID = static_cast<UINT>(std::distance(PlaybackDevices.cbegin(), iter));
 
     DevFmtType fmttype{mDevice->FmtType};
-retry_open:
     WAVEFORMATEX format{};
-    if(fmttype == DevFmtFloat)
-    {
-        format.wFormatTag = WAVE_FORMAT_IEEE_FLOAT;
-        format.wBitsPerSample = 32;
-    }
-    else
-    {
-        format.wFormatTag = WAVE_FORMAT_PCM;
-        if(fmttype == DevFmtUByte || fmttype == DevFmtByte)
-            format.wBitsPerSample = 8;
-        else
-            format.wBitsPerSample = 16;
-    }
-    format.nChannels = ((mDevice->FmtChans == DevFmtMono) ? 1 : 2);
-    format.nBlockAlign = static_cast<WORD>(format.wBitsPerSample * format.nChannels / 8);
-    format.nSamplesPerSec = mDevice->Frequency;
-    format.nAvgBytesPerSec = format.nSamplesPerSec * format.nBlockAlign;
-    format.cbSize = 0;
-
-    HWAVEOUT outHandle{};
-    MMRESULT res{waveOutOpen(&outHandle, DeviceID, &format,
-        reinterpret_cast<DWORD_PTR>(&WinMMPlayback::waveOutProcC),
-        reinterpret_cast<DWORD_PTR>(this), CALLBACK_FUNCTION)};
-    if(res != MMSYSERR_NOERROR)
-    {
+    do {
+        format = WAVEFORMATEX{};
         if(fmttype == DevFmtFloat)
         {
-            fmttype = DevFmtShort;
-            goto retry_open;
+            format.wFormatTag = WAVE_FORMAT_IEEE_FLOAT;
+            format.wBitsPerSample = 32;
         }
-        throw al::backend_exception{al::backend_error::DeviceError, "waveOutOpen failed: %u", res};
-    }
+        else
+        {
+            format.wFormatTag = WAVE_FORMAT_PCM;
+            if(fmttype == DevFmtUByte || fmttype == DevFmtByte)
+                format.wBitsPerSample = 8;
+            else
+                format.wBitsPerSample = 16;
+        }
+        format.nChannels = ((mDevice->FmtChans == DevFmtMono) ? 1 : 2);
+        format.nBlockAlign = static_cast<WORD>(format.wBitsPerSample * format.nChannels / 8);
+        format.nSamplesPerSec = mDevice->Frequency;
+        format.nAvgBytesPerSec = format.nSamplesPerSec * format.nBlockAlign;
+        format.cbSize = 0;
 
-    if(mOutHdl)
-        waveOutClose(mOutHdl);
-    mOutHdl = outHandle;
+        MMRESULT res{waveOutOpen(&mOutHdl, DeviceID, &format,
+            reinterpret_cast<DWORD_PTR>(&WinMMPlayback::waveOutProcC),
+            reinterpret_cast<DWORD_PTR>(this), CALLBACK_FUNCTION)};
+        if(res == MMSYSERR_NOERROR) break;
+
+        if(fmttype != DevFmtFloat)
+            throw al::backend_exception{al::backend_error::DeviceError, "waveOutOpen failed: %u",
+                res};
+
+        fmttype = DevFmtShort;
+    } while(true);
+
     mFormat = format;
 
     mDevice->DeviceName = PlaybackDevices[DeviceID];

@@ -365,7 +365,7 @@ struct VecAllpass {
     std::array<size_t,NUM_LINES> Offset{};
 
     void process(const al::span<ReverbUpdateLine,NUM_LINES> samples, size_t offset,
-        const float xCoeff, const float yCoeff, const size_t todo) noexcept;
+        const float xCoeff, const float yCoeff, const size_t todo) const noexcept;
 };
 
 struct Allpass4 {
@@ -374,7 +374,7 @@ struct Allpass4 {
     std::array<size_t,NUM_LINES> Offset{};
 
     void process(const al::span<ReverbUpdateLine,NUM_LINES> samples, const size_t offset,
-        const size_t todo) noexcept;
+        const size_t todo) const noexcept;
 };
 
 struct T60Filter {
@@ -1397,7 +1397,7 @@ void VectorScatterRev(const float xCoeff, const float yCoeff,
  * matrix of delay elements.
  */
 void VecAllpass::process(const al::span<ReverbUpdateLine,NUM_LINES> samples, size_t main_offset,
-    const float xCoeff, const float yCoeff, const size_t todo) noexcept
+    const float xCoeff, const float yCoeff, const size_t todo) const noexcept
 {
     const auto linelen = size_t{Delay.mLine.size()/NUM_LINES};
     const float feedCoeff{Coeff};
@@ -1443,7 +1443,7 @@ void VecAllpass::process(const al::span<ReverbUpdateLine,NUM_LINES> samples, siz
  * matrix.
  */
 void Allpass4::process(const al::span<ReverbUpdateLine,NUM_LINES> samples, const size_t offset,
-    const size_t todo) noexcept
+    const size_t todo) const noexcept
 {
     const DelayLineU delay{Delay};
     const float feedCoeff{Coeff};

@@ -4,7 +4,7 @@
 #include <algorithm>
 #include <cmath>
 
-#include "almalloc.h"
+#include "defs.h"
 #include "hrtfdefs.h"
 #include "opthelpers.h"
 

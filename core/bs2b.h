@@ -25,6 +25,7 @@
 #define CORE_BS2B_H
 
 #include <array>
+#include <cstddef>
 
 namespace Bs2b {
 
@@ -80,7 +81,7 @@ struct bs2b {
     /* Clear buffer */
     void clear();
 
-    void cross_feed(float *Left, float *Right, size_t SamplesToDo);
+    void cross_feed(float *Left, float *Right, std::size_t SamplesToDo);
 };
 
 } // namespace Bs2b

@@ -6,13 +6,10 @@
 
 #include "al/auxeffectslot.h"
 
-#include "api.h"
-#include "call.h"
 #include "fx_slot_index.h"
 
 
-class EaxFxSlots
-{
+class EaxFxSlots {
 public:
     void initialize(ALCcontext& al_context);
 

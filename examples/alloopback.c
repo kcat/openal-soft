@@ -29,6 +29,7 @@
 #include <assert.h>
 #include <math.h>
 #include <stdio.h>
+#include <string.h>
 
 #define SDL_MAIN_HANDLED
 #include "SDL.h"

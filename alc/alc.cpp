@@ -1228,7 +1228,7 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const al::span<const int> attrList
 
             case ATTRIBUTE(ALC_MAX_AUXILIARY_SENDS)
                 numSends = static_cast<uint>(attrList[attrIdx + 1]);
-                if(numSends > std::numeric_limits<int>::max()) numSends = 0;
+                if(numSends > uint{std::numeric_limits<int>::max()}) numSends = 0;
                 else numSends = std::min(numSends, uint{MaxSendCount});
                 break;
 
@@ -3441,7 +3441,7 @@ FORCE_ALIGN ALCboolean ALC_APIENTRY alcReopenDeviceSOFT(ALCdevice *device,
     std::string_view devname{deviceName ? deviceName : ""};
     if(!devname.empty())
     {
-        if(devname.length() >= std::numeric_limits<int>::max())
+        if(devname.length() >= size_t{std::numeric_limits<int>::max()})
         {
             ERR("Device name too long (%zu >= %d)\n", devname.length(),
                 std::numeric_limits<int>::max());

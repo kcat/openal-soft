@@ -257,7 +257,7 @@ void LoadConfigFromFile(std::istream &f)
         }
         fullKey += keypart;
 
-        if(valpart.size() > std::numeric_limits<int>::max())
+        if(valpart.size() > size_t{std::numeric_limits<int>::max()})
         {
             ERR(" config parse error: value too long in line \"%s\"\n", buffer.c_str());
             continue;

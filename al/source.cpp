@@ -419,7 +419,7 @@ NOINLINE T GetSourceLength(const ALsource *source, ALenum name)
             return static_cast<T>(length);
         else
         {
-            if(length > std::numeric_limits<T>::max())
+            if(length > uint64_t{std::numeric_limits<T>::max()})
                 return RoundDown(std::numeric_limits<T>::max(), static_cast<T>(BlockSize));
             return static_cast<T>(length);
         }

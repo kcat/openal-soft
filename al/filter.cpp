@@ -155,7 +155,7 @@ void FreeFilter(ALCdevice *device, ALfilter *filter)
 }
 
 
-inline auto LookupFilter(ALCdevice *device, ALuint id) noexcept -> ALfilter*
+auto LookupFilter(ALCdevice *device, ALuint id) noexcept -> ALfilter*
 {
     const size_t lidx{(id-1) >> 6};
     const ALuint slidx{(id-1) & 0x3f};

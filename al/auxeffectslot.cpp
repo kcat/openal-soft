@@ -100,7 +100,7 @@ EffectStateFactory *getFactoryByType(EffectSlotType type)
 }
 
 
-inline auto LookupEffectSlot(ALCcontext *context, ALuint id) noexcept -> ALeffectslot*
+auto LookupEffectSlot(ALCcontext *context, ALuint id) noexcept -> ALeffectslot*
 {
     const size_t lidx{(id-1) >> 6};
     const ALuint slidx{(id-1) & 0x3f};

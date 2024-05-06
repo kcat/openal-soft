@@ -80,6 +80,12 @@ using uint = unsigned int;
 
 namespace {
 
+#if defined(__GNUC__) || defined(_MSC_VER)
+#define RESTRICT __restrict
+#else
+#define RESTRICT
+#endif
+
 /* Vector support macros: the rest of the code is independent of
  * SSE/Altivec/NEON -- adding support for other platforms with 4-element
  * vectors should be limited to these macros

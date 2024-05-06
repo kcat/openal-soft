@@ -203,15 +203,6 @@ if(NOT HAVE_STDC_FORMAT_MACROS)
     set(CPP_DEFS ${CPP_DEFS} __STDC_FORMAT_MACROS)
 endif()
 
-# C99 has restrict, but C++ does not, so we can only utilize __restrict.
-check_cxx_source_compiles("int *__restrict foo;
-int main() { return 0; }" HAVE___RESTRICT)
-if(HAVE___RESTRICT)
-    set(CPP_DEFS ${CPP_DEFS} RESTRICT=__restrict)
-else()
-    set(CPP_DEFS ${CPP_DEFS} "RESTRICT=")
-endif()
-
 # Some systems may need libatomic for atomic functions to work
 set(OLD_REQUIRED_LIBRARIES ${CMAKE_REQUIRED_LIBRARIES})
 set(CMAKE_REQUIRED_LIBRARIES ${OLD_REQUIRED_LIBRARIES} atomic)

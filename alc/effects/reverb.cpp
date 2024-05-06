@@ -1358,8 +1358,8 @@ void ReverbState::update(const ContextBase *Context, const EffectSlot *Slot,
  * Where D is a diagonal matrix (of x), and S is a triangular matrix (of y)
  * whose combination of signs are being iterated.
  */
-inline auto VectorPartialScatter(const std::array<float,NUM_LINES> &RESTRICT in,
-    const float xCoeff, const float yCoeff) noexcept
+inline auto VectorPartialScatter(const std::array<float,NUM_LINES> &in, const float xCoeff,
+    const float yCoeff) noexcept -> std::array<float,NUM_LINES>
 {
     return std::array{
         xCoeff*in[0] + yCoeff*(          in[1] + -in[2] + in[3]),

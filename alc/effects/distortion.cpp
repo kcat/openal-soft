@@ -146,18 +146,26 @@ void DistortionState::process(const size_t samplesToDo, const al::span<const Flo
 
         todo >>= 2;
         auto outgains = mGain.cbegin();
-        for(FloatBufferLine &RESTRICT output : samplesOut)
+        auto proc_bufline = [this,base,todo,&outgains](FloatBufferSpan output)
         {
             /* Fourth step, final, do attenuation and perform decimation,
              * storing only one sample out of four.
              */
             const float gain{*(outgains++)};
             if(!(std::fabs(gain) > GainSilenceThreshold))
-                continue;
+                return;
 
-            for(size_t i{0u};i < todo;i++)
-                output[base+i] += gain * mBuffer[1][i*4];
-        }
+            auto src = mBuffer[1].cbegin();
+            const auto dst = al::span{output}.subspan(base, todo);
+            auto dec_sample = [gain,&src](float sample) noexcept -> float
+            {
+                sample += *src * gain;
+                src += 4;
+                return sample;
+            };
+            std::transform(dst.begin(), dst.end(), dst.begin(), dec_sample);
+        };
+        std::for_each(samplesOut.begin(), samplesOut.end(), proc_bufline);
 
         base += todo;
     }

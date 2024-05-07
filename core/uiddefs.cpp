@@ -4,14 +4,10 @@
 
 #ifndef AL_NO_UID_DEFS
 
-#if defined(HAVE_GUIDDEF_H) || defined(HAVE_INITGUID_H)
+#if defined(HAVE_GUIDDEF_H)
 #define INITGUID
 #include <windows.h>
-#ifdef HAVE_GUIDDEF_H
 #include <guiddef.h>
-#else
-#include <initguid.h>
-#endif
 
 DEFINE_GUID(KSDATAFORMAT_SUBTYPE_PCM,        0x00000001, 0x0000, 0x0010, 0x80,0x00, 0x00,0xaa,0x00,0x38,0x9b,0x71);
 DEFINE_GUID(KSDATAFORMAT_SUBTYPE_IEEE_FLOAT, 0x00000003, 0x0000, 0x0010, 0x80,0x00, 0x00,0xaa,0x00,0x38,0x9b,0x71);

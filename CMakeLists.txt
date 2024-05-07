@@ -495,9 +495,6 @@ endif()
 check_include_file(cpuid.h HAVE_CPUID_H)
 check_include_file(intrin.h HAVE_INTRIN_H)
 check_include_file(guiddef.h HAVE_GUIDDEF_H)
-if(NOT HAVE_GUIDDEF_H)
-    check_include_file(initguid.h HAVE_INITGUID_H)
-endif()
 
 # Some systems need libm for some math functions to work
 set(MATH_LIB )

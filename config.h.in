@@ -10,9 +10,6 @@
 /* Define if we have the proc_pidpath function */
 #cmakedefine HAVE_PROC_PIDPATH
 
-/* Define if we have the getopt function */
-#cmakedefine HAVE_GETOPT
-
 /* Define if we have DBus/RTKit */
 #cmakedefine HAVE_RTKIT
 

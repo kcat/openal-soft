@@ -120,13 +120,12 @@ force_inline float vextract0(v4sf v) noexcept { return vec_extract(v, 0); }
 
 force_inline void interleave2(v4sf in1, v4sf in2, v4sf &out1, v4sf &out2) noexcept
 {
-    v4sf tmp{vec_mergeh(in1, in2)};
+    out1 = vec_mergeh(in1, in2);
     out2 = vec_mergel(in1, in2);
-    out1 = tmp;
 }
 force_inline void uninterleave2(v4sf in1, v4sf in2, v4sf &out1, v4sf &out2) noexcept
 {
-    v4sf tmp{vec_perm(in1, in2, (vector unsigned char){0,1,2,3,8,9,10,11,16,17,18,19,24,25,26,27})};
+    out1 = vec_perm(in1, in2, (vector unsigned char){0,1,2,3,8,9,10,11,16,17,18,19,24,25,26,27});
     out2 = vec_perm(in1, in2, (vector unsigned char){4,5,6,7,12,13,14,15,20,21,22,23,28,29,30,31});
     out1 = tmp;
 }
@@ -175,15 +174,13 @@ force_inline float vextract0(v4sf v) noexcept
 
 force_inline void interleave2(const v4sf in1, const v4sf in2, v4sf &out1, v4sf &out2) noexcept
 {
-    v4sf tmp{_mm_unpacklo_ps(in1, in2)};
+    out1 = _mm_unpacklo_ps(in1, in2);
     out2 = _mm_unpackhi_ps(in1, in2);
-    out1 = tmp;
 }
 force_inline void uninterleave2(v4sf in1, v4sf in2, v4sf &out1, v4sf &out2) noexcept
 {
-    v4sf tmp{_mm_shuffle_ps(in1, in2, _MM_SHUFFLE(2,0,2,0))};
+    out1 = _mm_shuffle_ps(in1, in2, _MM_SHUFFLE(2,0,2,0));
     out2 = _mm_shuffle_ps(in1, in2, _MM_SHUFFLE(3,1,3,1));
-    out1 = tmp;
 }
 
 force_inline void vtranspose4(v4sf &x0, v4sf &x1, v4sf &x2, v4sf &x3) noexcept
@@ -283,15 +280,13 @@ force_inline v4sf unpackhi(v4sf a, v4sf b) noexcept
 
 force_inline void interleave2(v4sf in1, v4sf in2, v4sf &out1, v4sf &out2) noexcept
 {
-    v4sf tmp{unpacklo(in1, in2)};
+    out1 = unpacklo(in1, in2);
     out2 = unpackhi(in1, in2);
-    out1 = tmp;
 }
 force_inline void uninterleave2(v4sf in1, v4sf in2, v4sf &out1, v4sf &out2) noexcept
 {
-    v4sf tmp{in1[0], in1[2], in2[0], in2[2]};
+    out1 = v4sf{in1[0], in1[2], in2[0], in2[2]};
     out2 = v4sf{in1[1], in1[3], in2[1], in2[3]};
-    out1 = tmp;
 }
 
 force_inline void vtranspose4(v4sf &x0, v4sf &x1, v4sf &x2, v4sf &x3) noexcept

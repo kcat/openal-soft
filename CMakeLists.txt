@@ -492,7 +492,6 @@ if(HAVE_SSE2)
 endif()
 
 
-check_include_file(malloc.h HAVE_MALLOC_H)
 check_include_file(cpuid.h HAVE_CPUID_H)
 check_include_file(intrin.h HAVE_INTRIN_H)
 check_include_file(guiddef.h HAVE_GUIDDEF_H)

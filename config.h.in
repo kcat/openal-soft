@@ -76,9 +76,6 @@
 /* Define if we have pthread_np.h */
 #cmakedefine HAVE_PTHREAD_NP_H
 
-/* Define if we have malloc.h */
-#cmakedefine HAVE_MALLOC_H
-
 /* Define if we have cpuid.h */
 #cmakedefine HAVE_CPUID_H
 

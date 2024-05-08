@@ -32,7 +32,6 @@
 #include <variant>
 
 #include "alc/effects/base.h"
-#include "almalloc.h"
 #include "alnumbers.h"
 #include "alnumeric.h"
 #include "alspan.h"

@@ -11,7 +11,6 @@
 #include <limits>
 #include <new>
 
-#include "almalloc.h"
 #include "alnumeric.h"
 #include "alspan.h"
 #include "opthelpers.h"

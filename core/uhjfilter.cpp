@@ -4,11 +4,15 @@
 #include "uhjfilter.h"
 
 #include <algorithm>
-#include <iterator>
+#include <cmath>
+#include <complex>
+#include <functional>
 #include <vector>
 
 #include "alcomplex.h"
-#include "alnumeric.h"
+#include "almalloc.h"
+#include "alnumbers.h"
+#include "core/bufferline.h"
 #include "opthelpers.h"
 #include "pffft.h"
 #include "phase_shifter.h"

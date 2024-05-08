@@ -2,9 +2,9 @@
 #define CORE_UHJFILTER_H
 
 #include <array>
+#include <cstddef>
 #include <cstdint>
 
-#include "almalloc.h"
 #include "alspan.h"
 #include "bufferline.h"
 

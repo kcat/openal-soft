@@ -7,8 +7,8 @@
 #include <cmath>
 #include <cstddef>
 #include <limits>
-#include <memory>
 #include <stdexcept>
+#include <vector>
 
 #include "alnumbers.h"
 #include "alnumeric.h"
@@ -162,8 +162,7 @@ struct BSincFilterArray {
         static_assert(BSincPointsMax <= MaxResamplerPadding, "MaxResamplerPadding is too small");
 
         using filter_type = std::array<std::array<double,BSincPointsMax>,BSincPhaseCount>;
-        auto filterptr = std::make_unique<std::array<filter_type,BSincScaleCount>>();
-        const auto filter = filterptr->begin();
+        auto filter = std::vector<filter_type>(BSincScaleCount);
 
         const double besseli_0_beta{cyl_bessel_i(0, hdr.beta)};
 

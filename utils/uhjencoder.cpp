@@ -542,7 +542,7 @@ int main(al::span<std::string_view> args)
 
 } /* namespace */
 
-int main(int argc, char *argv[])
+int main(int argc, char **argv)
 {
     assert(argc >= 0);
     auto args = std::vector<std::string_view>(static_cast<unsigned int>(argc));

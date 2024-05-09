@@ -13,6 +13,7 @@
 
 #include "alnumbers.h"
 #include "alspan.h"
+#include "opthelpers.h"
 
 
 /* Implements a wide-band +90 degree phase-shift. Note that this should be
@@ -85,7 +86,7 @@ private:
 };
 
 template<std::size_t S>
-inline
+NOINLINE inline
 void PhaseShifterT<S>::process(const al::span<float> dst, const al::span<const float> src) const
 {
     auto in = src.begin();

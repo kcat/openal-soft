@@ -13,7 +13,7 @@ class MainWindow;
 class MainWindow : public QMainWindow {
     Q_OBJECT
 
-private slots:
+private Q_SLOTS:
     void cancelCloseAction();
 
     void saveCurrentConfig();

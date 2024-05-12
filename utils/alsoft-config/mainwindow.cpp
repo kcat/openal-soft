@@ -487,7 +487,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow{parent}
     {
         QList<QListWidgetItem*> items = ui->backendListWidget->findItems(
             std::data(backendList[i].full_string), Qt::MatchFixedString);
-        foreach(QListWidgetItem *item, items)
+        Q_FOREACH(QListWidgetItem *item, items)
             item->setHidden(false);
     }
 
@@ -538,7 +538,7 @@ QStringList MainWindow::collectHrtfs()
     {
         QDir dir(ui->hrtfFileList->item(i)->text());
         QStringList fnames = dir.entryList(QDir::Files | QDir::Readable, QDir::Name);
-        foreach(const QString &fname, fnames)
+        Q_FOREACH(const QString &fname, fnames)
         {
             if(!fname.endsWith(QStringLiteral(".mhr"), Qt::CaseInsensitive))
                 continue;
@@ -569,11 +569,11 @@ QStringList MainWindow::collectHrtfs()
     if(ui->defaultHrtfPathsCheckBox->isChecked())
     {
         QStringList paths = getAllDataPaths(QStringLiteral("/openal/hrtf"));
-        foreach(const QString &name, paths)
+        Q_FOREACH(const QString &name, paths)
         {
             QDir dir{name};
             QStringList fnames{dir.entryList(QDir::Files | QDir::Readable, QDir::Name)};
-            foreach(const QString &fname, fnames)
+            Q_FOREACH(const QString &fname, fnames)
             {
                 if(!fname.endsWith(QStringLiteral(".mhr"), Qt::CaseInsensitive))
                     continue;
@@ -800,7 +800,7 @@ void MainWindow::loadConfig(const QString &fname)
     if(ui->defaultHrtfPathsCheckBox->isChecked())
     {
         QStringList hrtfs{collectHrtfs()};
-        foreach(const QString &name, hrtfs)
+        Q_FOREACH(const QString &name, hrtfs)
             ui->preferredHrtfComboBox->addItem(name);
     }
 
@@ -842,7 +842,7 @@ void MainWindow::loadConfig(const QString &fname)
         }
 
         bool lastWasEmpty{false};
-        foreach(const QString &backend, drivers)
+        Q_FOREACH(const QString &backend, drivers)
         {
             lastWasEmpty = backend.isEmpty();
             if(lastWasEmpty) continue;
@@ -971,7 +971,7 @@ void MainWindow::saveConfig(const QString &fname) const
 
     /* HACK: Compound any stringlist values into a comma-separated string. */
     QStringList allkeys{settings.allKeys()};
-    foreach(const QString &key, allkeys)
+    Q_FOREACH(const QString &key, allkeys)
     {
         QStringList vals{settings.value(key).toStringList()};
         if(vals.size() > 1)
@@ -1155,7 +1155,7 @@ void MainWindow::saveConfig(const QString &fname) const
      * FIXME: Should only remove keys whose value matches the globally-specified value.
      */
     allkeys = settings.allKeys();
-    foreach(const QString &key, allkeys)
+    Q_FOREACH(const QString &key, allkeys)
     {
         QString str{settings.value(key).toString()};
         if(str.isEmpty())

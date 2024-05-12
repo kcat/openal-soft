@@ -47,7 +47,7 @@ using double3 = std::array<double,3>;
  * equality of unique elements.
  */
 std::vector<double> GetUniquelySortedElems(const std::vector<double3> &aers, const uint axis,
-    const std::array<const double*,3> filters, const std::array<double,3> epsilons)
+    const std::array<const double*,3> &filters, const std::array<double,3> &epsilons)
 {
     std::vector<double> elems;
     for(const double3 &aer : aers)

@@ -482,7 +482,7 @@ int main(al::span<std::string_view> args)
                     continue;
 
                 const auto spkr = std::find_if(spkrs.cbegin(), spkrs.cend(),
-                    [chanid](const SpeakerPos &pos){return pos.mChannelID == chanid;});
+                    [chanid](const SpeakerPos pos){return pos.mChannelID == chanid;});
                 if(spkr == spkrs.cend())
                 {
                     fprintf(stderr, " ... failed to find channel ID %d\n", chanid);

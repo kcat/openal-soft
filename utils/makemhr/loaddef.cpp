@@ -1725,7 +1725,7 @@ auto AverageHrirOnset(PPhaseResampler &rs, al::span<double> upsampled, const uin
 {
     rs.process(hrir, upsampled);
 
-    auto abs_lt = [](const double &lhs, const double &rhs) -> bool
+    auto abs_lt = [](const double lhs, const double rhs) -> bool
     { return std::abs(lhs) < std::abs(rhs); };
     auto iter = std::max_element(upsampled.cbegin(), upsampled.cend(), abs_lt);
     return Lerp(onset, static_cast<double>(std::distance(upsampled.cbegin(), iter))/(10*rate), f);

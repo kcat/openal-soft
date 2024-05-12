@@ -105,7 +105,7 @@ void PrintCompatibleLayout(const al::span<const float> xyzs)
 }
 
 // Load and inspect the given SOFA file.
-void SofaInfo(const std::string filename)
+void SofaInfo(const std::string &filename)
 {
     int err;
     MySofaHrtfPtr sofa{mysofa_load(filename.c_str(), &err)};

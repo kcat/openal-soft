@@ -105,7 +105,7 @@ CubicFilter::CubicFilter()
     /* Only half the coefficients need to be iterated here, since Coeff2 and
      * Coeff3 are just Coeff1 and Coeff0 in reverse respectively.
      */
-    for(size_t i{0};i < sTableSteps/2;++i)
+    for(size_t i{0};i < sTableSteps/2 + 1;++i)
     {
         const double coeff0{GetCoeff(static_cast<double>(sTableSteps + i)*IndexScale)};
         const double coeff1{GetCoeff(static_cast<double>(i)*IndexScale)};

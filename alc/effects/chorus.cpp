@@ -188,9 +188,6 @@ void ChorusState::calcTriangleDelays(const size_t todo)
     const float depth{mDepth};
     const int delay{mDelay};
 
-    ASSUME(lfo_range > 0);
-    ASSUME(todo > 0);
-
     auto gen_lfo = [lfo_scale,depth,delay](const uint offset) -> uint
     {
         const float offset_norm{static_cast<float>(offset) * lfo_scale};
@@ -198,25 +195,24 @@ void ChorusState::calcTriangleDelays(const size_t todo)
     };
 
     uint offset{mLfoOffset};
+    ASSUME(lfo_range > offset);
+    auto ldelays = mModDelays[0].begin();
     for(size_t i{0};i < todo;)
     {
-        size_t rem{std::min(todo-i, size_t{lfo_range-offset})};
-        do {
-            mModDelays[0][i++] = gen_lfo(offset++);
-        } while(--rem);
-        if(offset == lfo_range)
-            offset = 0;
+        const size_t rem{std::min(todo-i, size_t{lfo_range-offset})};
+        ldelays = std::generate_n(ldelays, rem, [&offset,gen_lfo] { return gen_lfo(offset++); });
+        if(offset == lfo_range) offset = 0;
+        i += rem;
     }
 
     offset = (mLfoOffset+mLfoDisp) % lfo_range;
+    auto rdelays = mModDelays[1].begin();
     for(size_t i{0};i < todo;)
     {
-        size_t rem{std::min(todo-i, size_t{lfo_range-offset})};
-        do {
-            mModDelays[1][i++] = gen_lfo(offset++);
-        } while(--rem);
-        if(offset == lfo_range)
-            offset = 0;
+        const size_t rem{std::min(todo-i, size_t{lfo_range-offset})};
+        rdelays = std::generate_n(rdelays, rem, [&offset,gen_lfo] { return gen_lfo(offset++); });
+        if(offset == lfo_range) offset = 0;
+        i += rem;
     }
 
     mLfoOffset = static_cast<uint>(mLfoOffset+todo) % lfo_range;
@@ -229,9 +225,6 @@ void ChorusState::calcSinusoidDelays(const size_t todo)
     const float depth{mDepth};
     const int delay{mDelay};
 
-    ASSUME(lfo_range > 0);
-    ASSUME(todo > 0);
-
     auto gen_lfo = [lfo_scale,depth,delay](const uint offset) -> uint
     {
         const float offset_norm{static_cast<float>(offset) * lfo_scale};
@@ -239,25 +232,24 @@ void ChorusState::calcSinusoidDelays(const size_t todo)
     };
 
     uint offset{mLfoOffset};
+    ASSUME(lfo_range > offset);
+    auto ldelays = mModDelays[0].begin();
     for(size_t i{0};i < todo;)
     {
-        size_t rem{std::min(todo-i, size_t{lfo_range-offset})};
-        do {
-            mModDelays[0][i++] = gen_lfo(offset++);
-        } while(--rem);
-        if(offset == lfo_range)
-            offset = 0;
+        const size_t rem{std::min(todo-i, size_t{lfo_range-offset})};
+        ldelays = std::generate_n(ldelays, rem, [&offset,gen_lfo] { return gen_lfo(offset++); });
+        if(offset == lfo_range) offset = 0;
+        i += rem;
     }
 
     offset = (mLfoOffset+mLfoDisp) % lfo_range;
+    auto rdelays = mModDelays[1].begin();
     for(size_t i{0};i < todo;)
     {
-        size_t rem{std::min(todo-i, size_t{lfo_range-offset})};
-        do {
-            mModDelays[1][i++] = gen_lfo(offset++);
-        } while(--rem);
-        if(offset == lfo_range)
-            offset = 0;
+        const size_t rem{std::min(todo-i, size_t{lfo_range-offset})};
+        rdelays = std::generate_n(rdelays, rem, [&offset,gen_lfo] { return gen_lfo(offset++); });
+        if(offset == lfo_range) offset = 0;
+        i += rem;
     }
 
     mLfoOffset = static_cast<uint>(mLfoOffset+todo) % lfo_range;

@@ -138,7 +138,7 @@ constexpr EffectProps genDefaultProps() noexcept
 
 const EffectProps VmorpherEffectProps{genDefaultProps()};
 
-void EffectHandler::SetParami(VmorpherProps &props, ALenum param, int val)
+void VmorpherEffectHandler::SetParami(VmorpherProps &props, ALenum param, int val)
 {
     switch(param)
     {
@@ -180,12 +180,12 @@ void EffectHandler::SetParami(VmorpherProps &props, ALenum param, int val)
             param};
     }
 }
-void EffectHandler::SetParamiv(VmorpherProps&, ALenum param, const int*)
+void VmorpherEffectHandler::SetParamiv(VmorpherProps&, ALenum param, const int*)
 {
     throw effect_exception{AL_INVALID_ENUM, "Invalid vocal morpher integer-vector property 0x%04x",
         param};
 }
-void EffectHandler::SetParamf(VmorpherProps &props, ALenum param, float val)
+void VmorpherEffectHandler::SetParamf(VmorpherProps &props, ALenum param, float val)
 {
     switch(param)
     {
@@ -200,10 +200,10 @@ void EffectHandler::SetParamf(VmorpherProps &props, ALenum param, float val)
             param};
     }
 }
-void EffectHandler::SetParamfv(VmorpherProps &props, ALenum param, const float *vals)
+void VmorpherEffectHandler::SetParamfv(VmorpherProps &props, ALenum param, const float *vals)
 { SetParamf(props, param, *vals); }
 
-void EffectHandler::GetParami(const VmorpherProps &props, ALenum param, int* val)
+void VmorpherEffectHandler::GetParami(const VmorpherProps &props, ALenum param, int* val)
 {
     switch(param)
     {
@@ -218,12 +218,12 @@ void EffectHandler::GetParami(const VmorpherProps &props, ALenum param, int* val
             param};
     }
 }
-void EffectHandler::GetParamiv(const VmorpherProps&, ALenum param, int*)
+void VmorpherEffectHandler::GetParamiv(const VmorpherProps&, ALenum param, int*)
 {
     throw effect_exception{AL_INVALID_ENUM, "Invalid vocal morpher integer-vector property 0x%04x",
         param};
 }
-void EffectHandler::GetParamf(const VmorpherProps &props, ALenum param, float *val)
+void VmorpherEffectHandler::GetParamf(const VmorpherProps &props, ALenum param, float *val)
 {
     switch(param)
     {
@@ -236,7 +236,7 @@ void EffectHandler::GetParamf(const VmorpherProps &props, ALenum param, float *v
             param};
     }
 }
-void EffectHandler::GetParamfv(const VmorpherProps &props, ALenum param, float *vals)
+void VmorpherEffectHandler::GetParamfv(const VmorpherProps &props, ALenum param, float *vals)
 { GetParamf(props, param, vals); }
 
 

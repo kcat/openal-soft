@@ -28,7 +28,7 @@ constexpr EffectProps genDefaultProps() noexcept
 
 const EffectProps ConvolutionEffectProps{genDefaultProps()};
 
-void EffectHandler::SetParami(ConvolutionProps& /*props*/, ALenum param, int /*val*/)
+void ConvolutionEffectHandler::SetParami(ConvolutionProps& /*props*/, ALenum param, int /*val*/)
 {
     switch(param)
     {
@@ -37,7 +37,7 @@ void EffectHandler::SetParami(ConvolutionProps& /*props*/, ALenum param, int /*v
             param};
     }
 }
-void EffectHandler::SetParamiv(ConvolutionProps &props, ALenum param, const int *vals)
+void ConvolutionEffectHandler::SetParamiv(ConvolutionProps &props, ALenum param, const int *vals)
 {
     switch(param)
     {
@@ -45,7 +45,7 @@ void EffectHandler::SetParamiv(ConvolutionProps &props, ALenum param, const int 
         SetParami(props, param, *vals);
     }
 }
-void EffectHandler::SetParamf(ConvolutionProps& /*props*/, ALenum param, float /*val*/)
+void ConvolutionEffectHandler::SetParamf(ConvolutionProps& /*props*/, ALenum param, float /*val*/)
 {
     switch(param)
     {
@@ -54,7 +54,7 @@ void EffectHandler::SetParamf(ConvolutionProps& /*props*/, ALenum param, float /
             param};
     }
 }
-void EffectHandler::SetParamfv(ConvolutionProps &props, ALenum param, const float *values)
+void ConvolutionEffectHandler::SetParamfv(ConvolutionProps &props, ALenum param, const float *values)
 {
     static constexpr auto finite_checker = [](float val) -> bool { return std::isfinite(val); };
     al::span<const float> vals;
@@ -74,7 +74,7 @@ void EffectHandler::SetParamfv(ConvolutionProps &props, ALenum param, const floa
     }
 }
 
-void EffectHandler::GetParami(const ConvolutionProps& /*props*/, ALenum param, int* /*val*/)
+void ConvolutionEffectHandler::GetParami(const ConvolutionProps& /*props*/, ALenum param, int* /*val*/)
 {
     switch(param)
     {
@@ -83,7 +83,7 @@ void EffectHandler::GetParami(const ConvolutionProps& /*props*/, ALenum param, i
             param};
     }
 }
-void EffectHandler::GetParamiv(const ConvolutionProps &props, ALenum param, int *vals)
+void ConvolutionEffectHandler::GetParamiv(const ConvolutionProps &props, ALenum param, int *vals)
 {
     switch(param)
     {
@@ -91,7 +91,7 @@ void EffectHandler::GetParamiv(const ConvolutionProps &props, ALenum param, int 
         GetParami(props, param, vals);
     }
 }
-void EffectHandler::GetParamf(const ConvolutionProps& /*props*/, ALenum param, float* /*val*/)
+void ConvolutionEffectHandler::GetParamf(const ConvolutionProps& /*props*/, ALenum param, float* /*val*/)
 {
     switch(param)
     {
@@ -100,7 +100,7 @@ void EffectHandler::GetParamf(const ConvolutionProps& /*props*/, ALenum param, f
             param};
     }
 }
-void EffectHandler::GetParamfv(const ConvolutionProps &props, ALenum param, float *values)
+void ConvolutionEffectHandler::GetParamfv(const ConvolutionProps &props, ALenum param, float *values)
 {
     al::span<float> vals;
     switch(param)

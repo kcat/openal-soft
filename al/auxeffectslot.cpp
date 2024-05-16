@@ -87,13 +87,13 @@ EffectStateFactory *getFactoryByType(EffectSlotType type)
     case EffectSlotType::Distortion: return DistortionStateFactory_getFactory();
     case EffectSlotType::Echo: return EchoStateFactory_getFactory();
     case EffectSlotType::Equalizer: return EqualizerStateFactory_getFactory();
-    case EffectSlotType::Flanger: return FlangerStateFactory_getFactory();
+    case EffectSlotType::Flanger: return ChorusStateFactory_getFactory();
     case EffectSlotType::FrequencyShifter: return FshifterStateFactory_getFactory();
     case EffectSlotType::RingModulator: return ModulatorStateFactory_getFactory();
     case EffectSlotType::PitchShifter: return PshifterStateFactory_getFactory();
     case EffectSlotType::VocalMorpher: return VmorpherStateFactory_getFactory();
-    case EffectSlotType::DedicatedDialog: return DedicatedDialogStateFactory_getFactory();
-    case EffectSlotType::DedicatedLFE: return DedicatedLfeStateFactory_getFactory();
+    case EffectSlotType::DedicatedDialog: return DedicatedStateFactory_getFactory();
+    case EffectSlotType::DedicatedLFE: return DedicatedStateFactory_getFactory();
     case EffectSlotType::Convolution: return ConvolutionStateFactory_getFactory();
     }
     return nullptr;

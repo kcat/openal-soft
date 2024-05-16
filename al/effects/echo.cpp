@@ -35,11 +35,11 @@ constexpr EffectProps genDefaultProps() noexcept
 
 const EffectProps EchoEffectProps{genDefaultProps()};
 
-void EffectHandler::SetParami(EchoProps&, ALenum param, int)
+void EchoEffectHandler::SetParami(EchoProps&, ALenum param, int)
 { throw effect_exception{AL_INVALID_ENUM, "Invalid echo integer property 0x%04x", param}; }
-void EffectHandler::SetParamiv(EchoProps&, ALenum param, const int*)
+void EchoEffectHandler::SetParamiv(EchoProps&, ALenum param, const int*)
 { throw effect_exception{AL_INVALID_ENUM, "Invalid echo integer-vector property 0x%04x", param}; }
-void EffectHandler::SetParamf(EchoProps &props, ALenum param, float val)
+void EchoEffectHandler::SetParamf(EchoProps &props, ALenum param, float val)
 {
     switch(param)
     {
@@ -77,14 +77,14 @@ void EffectHandler::SetParamf(EchoProps &props, ALenum param, float val)
         throw effect_exception{AL_INVALID_ENUM, "Invalid echo float property 0x%04x", param};
     }
 }
-void EffectHandler::SetParamfv(EchoProps &props, ALenum param, const float *vals)
+void EchoEffectHandler::SetParamfv(EchoProps &props, ALenum param, const float *vals)
 { SetParamf(props, param, *vals); }
 
-void EffectHandler::GetParami(const EchoProps&, ALenum param, int*)
+void EchoEffectHandler::GetParami(const EchoProps&, ALenum param, int*)
 { throw effect_exception{AL_INVALID_ENUM, "Invalid echo integer property 0x%04x", param}; }
-void EffectHandler::GetParamiv(const EchoProps&, ALenum param, int*)
+void EchoEffectHandler::GetParamiv(const EchoProps&, ALenum param, int*)
 { throw effect_exception{AL_INVALID_ENUM, "Invalid echo integer-vector property 0x%04x", param}; }
-void EffectHandler::GetParamf(const EchoProps &props, ALenum param, float *val)
+void EchoEffectHandler::GetParamf(const EchoProps &props, ALenum param, float *val)
 {
     switch(param)
     {
@@ -98,7 +98,7 @@ void EffectHandler::GetParamf(const EchoProps &props, ALenum param, float *val)
         throw effect_exception{AL_INVALID_ENUM, "Invalid echo float property 0x%04x", param};
     }
 }
-void EffectHandler::GetParamfv(const EchoProps &props, ALenum param, float *vals)
+void EchoEffectHandler::GetParamfv(const EchoProps &props, ALenum param, float *vals)
 { GetParamf(props, param, vals); }
 
 

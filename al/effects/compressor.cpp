@@ -28,7 +28,7 @@ constexpr EffectProps genDefaultProps() noexcept
 
 const EffectProps CompressorEffectProps{genDefaultProps()};
 
-void EffectHandler::SetParami(CompressorProps &props, ALenum param, int val)
+void CompressorEffectHandler::SetParami(CompressorProps &props, ALenum param, int val)
 {
     switch(param)
     {
@@ -43,34 +43,31 @@ void EffectHandler::SetParami(CompressorProps &props, ALenum param, int val)
             param};
     }
 }
-void EffectHandler::SetParamiv(CompressorProps &props, ALenum param, const int *vals)
+void CompressorEffectHandler::SetParamiv(CompressorProps &props, ALenum param, const int *vals)
 { SetParami(props, param, *vals); }
-void EffectHandler::SetParamf(CompressorProps&, ALenum param, float)
+void CompressorEffectHandler::SetParamf(CompressorProps&, ALenum param, float)
 { throw effect_exception{AL_INVALID_ENUM, "Invalid compressor float property 0x%04x", param}; }
-void EffectHandler::SetParamfv(CompressorProps&, ALenum param, const float*)
+void CompressorEffectHandler::SetParamfv(CompressorProps&, ALenum param, const float*)
 {
     throw effect_exception{AL_INVALID_ENUM, "Invalid compressor float-vector property 0x%04x",
         param};
 }
 
-void EffectHandler::GetParami(const CompressorProps &props, ALenum param, int *val)
+void CompressorEffectHandler::GetParami(const CompressorProps &props, ALenum param, int *val)
 { 
     switch(param)
     {
-    case AL_COMPRESSOR_ONOFF:
-        *val = props.OnOff;
-        break;
-
+    case AL_COMPRESSOR_ONOFF: *val = props.OnOff; break;
     default:
         throw effect_exception{AL_INVALID_ENUM, "Invalid compressor integer property 0x%04x",
             param};
     }
 }
-void EffectHandler::GetParamiv(const CompressorProps &props, ALenum param, int *vals)
+void CompressorEffectHandler::GetParamiv(const CompressorProps &props, ALenum param, int *vals)
 { GetParami(props, param, vals); }
-void EffectHandler::GetParamf(const CompressorProps&, ALenum param, float*)
+void CompressorEffectHandler::GetParamf(const CompressorProps&, ALenum param, float*)
 { throw effect_exception{AL_INVALID_ENUM, "Invalid compressor float property 0x%04x", param}; }
-void EffectHandler::GetParamfv(const CompressorProps&, ALenum param, float*)
+void CompressorEffectHandler::GetParamfv(const CompressorProps&, ALenum param, float*)
 {
     throw effect_exception{AL_INVALID_ENUM, "Invalid compressor float-vector property 0x%04x",
         param};

@@ -32,14 +32,14 @@ constexpr EffectProps genDefaultProps() noexcept
 
 const EffectProps DistortionEffectProps{genDefaultProps()};
 
-void EffectHandler::SetParami(DistortionProps&, ALenum param, int)
+void DistortionEffectHandler::SetParami(DistortionProps&, ALenum param, int)
 { throw effect_exception{AL_INVALID_ENUM, "Invalid distortion integer property 0x%04x", param}; }
-void EffectHandler::SetParamiv(DistortionProps&, ALenum param, const int*)
+void DistortionEffectHandler::SetParamiv(DistortionProps&, ALenum param, const int*)
 {
     throw effect_exception{AL_INVALID_ENUM, "Invalid distortion integer-vector property 0x%04x",
         param};
 }
-void EffectHandler::SetParamf(DistortionProps &props, ALenum param, float val)
+void DistortionEffectHandler::SetParamf(DistortionProps &props, ALenum param, float val)
 {
     switch(param)
     {
@@ -77,17 +77,17 @@ void EffectHandler::SetParamf(DistortionProps &props, ALenum param, float val)
         throw effect_exception{AL_INVALID_ENUM, "Invalid distortion float property 0x%04x", param};
     }
 }
-void EffectHandler::SetParamfv(DistortionProps &props, ALenum param, const float *vals)
+void DistortionEffectHandler::SetParamfv(DistortionProps &props, ALenum param, const float *vals)
 { SetParamf(props, param, *vals); }
 
-void EffectHandler::GetParami(const DistortionProps&, ALenum param, int*)
+void DistortionEffectHandler::GetParami(const DistortionProps&, ALenum param, int*)
 { throw effect_exception{AL_INVALID_ENUM, "Invalid distortion integer property 0x%04x", param}; }
-void EffectHandler::GetParamiv(const DistortionProps&, ALenum param, int*)
+void DistortionEffectHandler::GetParamiv(const DistortionProps&, ALenum param, int*)
 {
     throw effect_exception{AL_INVALID_ENUM, "Invalid distortion integer-vector property 0x%04x",
         param};
 }
-void EffectHandler::GetParamf(const DistortionProps &props, ALenum param, float *val)
+void DistortionEffectHandler::GetParamf(const DistortionProps &props, ALenum param, float *val)
 {
     switch(param)
     {
@@ -101,7 +101,7 @@ void EffectHandler::GetParamf(const DistortionProps &props, ALenum param, float 
         throw effect_exception{AL_INVALID_ENUM, "Invalid distortion float property 0x%04x", param};
     }
 }
-void EffectHandler::GetParamfv(const DistortionProps &props, ALenum param, float *vals)
+void DistortionEffectHandler::GetParamfv(const DistortionProps &props, ALenum param, float *vals)
 { GetParamf(props, param, vals); }
 
 

@@ -109,6 +109,32 @@ constexpr auto GetDefaultProps(ALenum type) noexcept -> const EffectProps&
 
 void InitEffectParams(ALeffect *effect, ALenum type) noexcept
 {
+    switch(type)
+    {
+    case AL_EFFECT_NULL: effect->PropsVariant.emplace<NullEffectHandler>(); break;
+    case AL_EFFECT_EAXREVERB: effect->PropsVariant.emplace<ReverbEffectHandler>(); break;
+    case AL_EFFECT_REVERB: effect->PropsVariant.emplace<StdReverbEffectHandler>(); break;
+    case AL_EFFECT_AUTOWAH: effect->PropsVariant.emplace<AutowahEffectHandler>(); break;
+    case AL_EFFECT_CHORUS: effect->PropsVariant.emplace<ChorusEffectHandler>(); break;
+    case AL_EFFECT_COMPRESSOR: effect->PropsVariant.emplace<CompressorEffectHandler>(); break;
+    case AL_EFFECT_DISTORTION: effect->PropsVariant.emplace<DistortionEffectHandler>(); break;
+    case AL_EFFECT_ECHO: effect->PropsVariant.emplace<EchoEffectHandler>(); break;
+    case AL_EFFECT_EQUALIZER: effect->PropsVariant.emplace<EqualizerEffectHandler>(); break;
+    case AL_EFFECT_FLANGER: effect->PropsVariant.emplace<ChorusEffectHandler>(); break;
+    case AL_EFFECT_FREQUENCY_SHIFTER: effect->PropsVariant.emplace<FshifterEffectHandler>(); break;
+    case AL_EFFECT_RING_MODULATOR: effect->PropsVariant.emplace<ModulatorEffectHandler>(); break;
+    case AL_EFFECT_PITCH_SHIFTER: effect->PropsVariant.emplace<PshifterEffectHandler>(); break;
+    case AL_EFFECT_VOCAL_MORPHER: effect->PropsVariant.emplace<VmorpherEffectHandler>(); break;
+    case AL_EFFECT_DEDICATED_DIALOGUE:
+        effect->PropsVariant.emplace<DedicatedDialogEffectHandler>();
+        break;
+    case AL_EFFECT_DEDICATED_LOW_FREQUENCY_EFFECT:
+        effect->PropsVariant.emplace<DedicatedLfeEffectHandler>();
+        break;
+    case AL_EFFECT_CONVOLUTION_SOFT:
+        effect->PropsVariant.emplace<ConvolutionEffectHandler>();
+        break;
+    }
     effect->Props = GetDefaultProps(type);
     effect->type = type;
 }
@@ -278,13 +304,9 @@ try {
     std::visit([aleffect,param,value](auto &arg)
     {
         using Type = std::remove_cv_t<std::remove_reference_t<decltype(arg)>>;
-        if constexpr(std::is_same_v<Type,ReverbProps>)
-        {
-            if(aleffect->type == AL_EFFECT_REVERB)
-                return EffectHandler::StdReverbSetParami(arg, param, value);
-        }
-        return EffectHandler::SetParami(arg, param, value);
-    }, aleffect->Props);
+        using PropType = typename Type::prop_type;
+        return arg.SetParami(std::get<PropType>(aleffect->Props), param, value);
+    }, aleffect->PropsVariant);
 }
 catch(al::context_error& e) {
     context->setError(e.errorCode(), "%s", e.what());
@@ -312,13 +334,9 @@ try {
     std::visit([aleffect,param,values](auto &arg)
     {
         using Type = std::remove_cv_t<std::remove_reference_t<decltype(arg)>>;
-        if constexpr(std::is_same_v<Type,ReverbProps>)
-        {
-            if(aleffect->type == AL_EFFECT_REVERB)
-                return EffectHandler::StdReverbSetParamiv(arg, param, values);
-        }
-        return EffectHandler::SetParamiv(arg, param, values);
-    }, aleffect->Props);
+        using PropType = typename Type::prop_type;
+        return arg.SetParamiv(std::get<PropType>(aleffect->Props), param, values);
+    }, aleffect->PropsVariant);
 }
 catch(al::context_error& e) {
     context->setError(e.errorCode(), "%s", e.what());
@@ -339,13 +357,9 @@ try {
     std::visit([aleffect,param,value](auto &arg)
     {
         using Type = std::remove_cv_t<std::remove_reference_t<decltype(arg)>>;
-        if constexpr(std::is_same_v<Type,ReverbProps>)
-        {
-            if(aleffect->type == AL_EFFECT_REVERB)
-                return EffectHandler::StdReverbSetParamf(arg, param, value);
-        }
-        return EffectHandler::SetParamf(arg, param, value);
-    }, aleffect->Props);
+        using PropType = typename Type::prop_type;
+        return arg.SetParamf(std::get<PropType>(aleffect->Props), param, value);
+    }, aleffect->PropsVariant);
 }
 catch(al::context_error& e) {
     context->setError(e.errorCode(), "%s", e.what());
@@ -366,13 +380,9 @@ try {
     std::visit([aleffect,param,values](auto &arg)
     {
         using Type = std::remove_cv_t<std::remove_reference_t<decltype(arg)>>;
-        if constexpr(std::is_same_v<Type,ReverbProps>)
-        {
-            if(aleffect->type == AL_EFFECT_REVERB)
-                return EffectHandler::StdReverbSetParamfv(arg, param, values);
-        }
-        return EffectHandler::SetParamfv(arg, param, values);
-    }, aleffect->Props);
+        using PropType = typename Type::prop_type;
+        return arg.SetParamfv(std::get<PropType>(aleffect->Props), param, values);
+    }, aleffect->PropsVariant);
 }
 catch(al::context_error& e) {
     context->setError(e.errorCode(), "%s", e.what());
@@ -400,13 +410,9 @@ try {
     std::visit([aleffect,param,value](auto &arg)
     {
         using Type = std::remove_cv_t<std::remove_reference_t<decltype(arg)>>;
-        if constexpr(std::is_same_v<Type,ReverbProps>)
-        {
-            if(aleffect->type == AL_EFFECT_REVERB)
-                return EffectHandler::StdReverbGetParami(arg, param, value);
-        }
-        return EffectHandler::GetParami(arg, param, value);
-    }, aleffect->Props);
+        using PropType = typename Type::prop_type;
+        return arg.GetParami(std::get<PropType>(aleffect->Props), param, value);
+    }, aleffect->PropsVariant);
 }
 catch(al::context_error& e) {
     context->setError(e.errorCode(), "%s", e.what());
@@ -434,13 +440,9 @@ try {
     std::visit([aleffect,param,values](auto &arg)
     {
         using Type = std::remove_cv_t<std::remove_reference_t<decltype(arg)>>;
-        if constexpr(std::is_same_v<Type,ReverbProps>)
-        {
-            if(aleffect->type == AL_EFFECT_REVERB)
-                return EffectHandler::StdReverbGetParamiv(arg, param, values);
-        }
-        return EffectHandler::GetParamiv(arg, param, values);
-    }, aleffect->Props);
+        using PropType = typename Type::prop_type;
+        return arg.GetParamiv(std::get<PropType>(aleffect->Props), param, values);
+    }, aleffect->PropsVariant);
 }
 catch(al::context_error& e) {
     context->setError(e.errorCode(), "%s", e.what());
@@ -461,13 +463,9 @@ try {
     std::visit([aleffect,param,value](auto &arg)
     {
         using Type = std::remove_cv_t<std::remove_reference_t<decltype(arg)>>;
-        if constexpr(std::is_same_v<Type,ReverbProps>)
-        {
-            if(aleffect->type == AL_EFFECT_REVERB)
-                return EffectHandler::StdReverbGetParamf(arg, param, value);
-        }
-        return EffectHandler::GetParamf(arg, param, value);
-    }, aleffect->Props);
+        using PropType = typename Type::prop_type;
+        return arg.GetParamf(std::get<PropType>(aleffect->Props), param, value);
+    }, aleffect->PropsVariant);
 }
 catch(al::context_error& e) {
     context->setError(e.errorCode(), "%s", e.what());
@@ -488,13 +486,9 @@ try {
     std::visit([aleffect,param,values](auto &arg)
     {
         using Type = std::remove_cv_t<std::remove_reference_t<decltype(arg)>>;
-        if constexpr(std::is_same_v<Type,ReverbProps>)
-        {
-            if(aleffect->type == AL_EFFECT_REVERB)
-                return EffectHandler::StdReverbGetParamfv(arg, param, values);
-        }
-        return EffectHandler::GetParamfv(arg, param, values);
-    }, aleffect->Props);
+        using PropType = typename Type::prop_type;
+        return arg.GetParamfv(std::get<PropType>(aleffect->Props), param, values);
+    }, aleffect->PropsVariant);
 }
 catch(al::context_error& e) {
     context->setError(e.errorCode(), "%s", e.what());

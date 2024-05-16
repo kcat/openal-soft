@@ -19,14 +19,12 @@ EffectStateFactory *CompressorStateFactory_getFactory();
 EffectStateFactory *DistortionStateFactory_getFactory();
 EffectStateFactory *EchoStateFactory_getFactory();
 EffectStateFactory *EqualizerStateFactory_getFactory();
-EffectStateFactory *FlangerStateFactory_getFactory();
 EffectStateFactory *FshifterStateFactory_getFactory();
 EffectStateFactory *ModulatorStateFactory_getFactory();
 EffectStateFactory *PshifterStateFactory_getFactory();
 EffectStateFactory* VmorpherStateFactory_getFactory();
 
-EffectStateFactory *DedicatedDialogStateFactory_getFactory();
-EffectStateFactory *DedicatedLfeStateFactory_getFactory();
+EffectStateFactory *DedicatedStateFactory_getFactory();
 
 EffectStateFactory *ConvolutionStateFactory_getFactory();
 

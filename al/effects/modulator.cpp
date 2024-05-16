@@ -56,7 +56,7 @@ constexpr EffectProps genDefaultProps() noexcept
 
 const EffectProps ModulatorEffectProps{genDefaultProps()};
 
-void EffectHandler::SetParami(ModulatorProps &props, ALenum param, int val)
+void ModulatorEffectHandler::SetParami(ModulatorProps &props, ALenum param, int val)
 {
     switch(param)
     {
@@ -77,10 +77,10 @@ void EffectHandler::SetParami(ModulatorProps &props, ALenum param, int val)
             param};
     }
 }
-void EffectHandler::SetParamiv(ModulatorProps &props, ALenum param, const int *vals)
+void ModulatorEffectHandler::SetParamiv(ModulatorProps &props, ALenum param, const int *vals)
 { SetParami(props, param, *vals); }
 
-void EffectHandler::SetParamf(ModulatorProps &props, ALenum param, float val)
+void ModulatorEffectHandler::SetParamf(ModulatorProps &props, ALenum param, float val)
 {
     switch(param)
     {
@@ -100,10 +100,10 @@ void EffectHandler::SetParamf(ModulatorProps &props, ALenum param, float val)
         throw effect_exception{AL_INVALID_ENUM, "Invalid modulator float property 0x%04x", param};
     }
 }
-void EffectHandler::SetParamfv(ModulatorProps &props, ALenum param, const float *vals)
+void ModulatorEffectHandler::SetParamfv(ModulatorProps &props, ALenum param, const float *vals)
 { SetParamf(props, param, *vals); }
 
-void EffectHandler::GetParami(const ModulatorProps &props, ALenum param, int *val)
+void ModulatorEffectHandler::GetParami(const ModulatorProps &props, ALenum param, int *val)
 {
     switch(param)
     {
@@ -116,9 +116,9 @@ void EffectHandler::GetParami(const ModulatorProps &props, ALenum param, int *va
             param};
     }
 }
-void EffectHandler::GetParamiv(const ModulatorProps &props, ALenum param, int *vals)
+void ModulatorEffectHandler::GetParamiv(const ModulatorProps &props, ALenum param, int *vals)
 { GetParami(props, param, vals); }
-void EffectHandler::GetParamf(const ModulatorProps &props, ALenum param, float *val)
+void ModulatorEffectHandler::GetParamf(const ModulatorProps &props, ALenum param, float *val)
 {
     switch(param)
     {
@@ -129,7 +129,7 @@ void EffectHandler::GetParamf(const ModulatorProps &props, ALenum param, float *
         throw effect_exception{AL_INVALID_ENUM, "Invalid modulator float property 0x%04x", param};
     }
 }
-void EffectHandler::GetParamfv(const ModulatorProps &props, ALenum param, float *vals)
+void ModulatorEffectHandler::GetParamfv(const ModulatorProps &props, ALenum param, float *vals)
 { GetParamf(props, param, vals); }
 
 

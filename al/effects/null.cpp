@@ -24,7 +24,7 @@ constexpr EffectProps genDefaultProps() noexcept
 
 const EffectProps NullEffectProps{genDefaultProps()};
 
-void EffectHandler::SetParami(std::monostate& /*props*/, ALenum param, int /*val*/)
+void NullEffectHandler::SetParami(std::monostate& /*props*/, ALenum param, int /*val*/)
 {
     switch(param)
     {
@@ -33,7 +33,7 @@ void EffectHandler::SetParami(std::monostate& /*props*/, ALenum param, int /*val
             param};
     }
 }
-void EffectHandler::SetParamiv(std::monostate &props, ALenum param, const int *vals)
+void NullEffectHandler::SetParamiv(std::monostate &props, ALenum param, const int *vals)
 {
     switch(param)
     {
@@ -41,7 +41,7 @@ void EffectHandler::SetParamiv(std::monostate &props, ALenum param, const int *v
         SetParami(props, param, *vals);
     }
 }
-void EffectHandler::SetParamf(std::monostate& /*props*/, ALenum param, float /*val*/)
+void NullEffectHandler::SetParamf(std::monostate& /*props*/, ALenum param, float /*val*/)
 {
     switch(param)
     {
@@ -50,7 +50,7 @@ void EffectHandler::SetParamf(std::monostate& /*props*/, ALenum param, float /*v
             param};
     }
 }
-void EffectHandler::SetParamfv(std::monostate &props, ALenum param, const float *vals)
+void NullEffectHandler::SetParamfv(std::monostate &props, ALenum param, const float *vals)
 {
     switch(param)
     {
@@ -59,7 +59,7 @@ void EffectHandler::SetParamfv(std::monostate &props, ALenum param, const float 
     }
 }
 
-void EffectHandler::GetParami(const std::monostate& /*props*/, ALenum param, int* /*val*/)
+void NullEffectHandler::GetParami(const std::monostate& /*props*/, ALenum param, int* /*val*/)
 {
     switch(param)
     {
@@ -68,7 +68,7 @@ void EffectHandler::GetParami(const std::monostate& /*props*/, ALenum param, int
             param};
     }
 }
-void EffectHandler::GetParamiv(const std::monostate &props, ALenum param, int *vals)
+void NullEffectHandler::GetParamiv(const std::monostate &props, ALenum param, int *vals)
 {
     switch(param)
     {
@@ -76,7 +76,7 @@ void EffectHandler::GetParamiv(const std::monostate &props, ALenum param, int *v
         GetParami(props, param, vals);
     }
 }
-void EffectHandler::GetParamf(const std::monostate& /*props*/, ALenum param, float* /*val*/)
+void NullEffectHandler::GetParamf(const std::monostate& /*props*/, ALenum param, float* /*val*/)
 {
     switch(param)
     {
@@ -85,7 +85,7 @@ void EffectHandler::GetParamf(const std::monostate& /*props*/, ALenum param, flo
             param};
     }
 }
-void EffectHandler::GetParamfv(const std::monostate &props, ALenum param, float *vals)
+void NullEffectHandler::GetParamfv(const std::monostate &props, ALenum param, float *vals)
 {
     switch(param)
     {

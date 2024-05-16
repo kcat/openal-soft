@@ -7,13 +7,10 @@
 #include "AL/al.h"
 #include "AL/efx.h"
 
-#include "alc/effects/base.h"
-#include "core/logging.h"
 #include "effects.h"
 
 #ifdef ALSOFT_EAX
 #include <cassert>
-#include "alnumeric.h"
 #include "al/eax/effect.h"
 #include "al/eax/exception.h"
 #include "al/eax/utils.h"
@@ -61,7 +58,7 @@ constexpr EffectProps genDefaultChorusProps() noexcept
 
 constexpr EffectProps genDefaultFlangerProps() noexcept
 {
-    FlangerProps props{};
+    ChorusProps props{};
     props.Waveform = WaveformFromEnum(AL_FLANGER_DEFAULT_WAVEFORM).value();
     props.Phase = AL_FLANGER_DEFAULT_PHASE;
     props.Rate = AL_FLANGER_DEFAULT_RATE;
@@ -75,7 +72,7 @@ constexpr EffectProps genDefaultFlangerProps() noexcept
 
 const EffectProps ChorusEffectProps{genDefaultChorusProps()};
 
-void EffectHandler::SetParami(ChorusProps &props, ALenum param, int val)
+void ChorusEffectHandler::SetParami(ChorusProps &props, ALenum param, int val)
 {
     switch(param)
     {
@@ -96,9 +93,9 @@ void EffectHandler::SetParami(ChorusProps &props, ALenum param, int val)
         throw effect_exception{AL_INVALID_ENUM, "Invalid chorus integer property 0x%04x", param};
     }
 }
-void EffectHandler::SetParamiv(ChorusProps &props, ALenum param, const int *vals)
+void ChorusEffectHandler::SetParamiv(ChorusProps &props, ALenum param, const int *vals)
 { SetParami(props, param, *vals); }
-void EffectHandler::SetParamf(ChorusProps &props, ALenum param, float val)
+void ChorusEffectHandler::SetParamf(ChorusProps &props, ALenum param, float val)
 {
     switch(param)
     {
@@ -130,10 +127,10 @@ void EffectHandler::SetParamf(ChorusProps &props, ALenum param, float val)
         throw effect_exception{AL_INVALID_ENUM, "Invalid chorus float property 0x%04x", param};
     }
 }
-void EffectHandler::SetParamfv(ChorusProps &props, ALenum param, const float *vals)
+void ChorusEffectHandler::SetParamfv(ChorusProps &props, ALenum param, const float *vals)
 { SetParamf(props, param, *vals); }
 
-void EffectHandler::GetParami(const ChorusProps &props, ALenum param, int *val)
+void ChorusEffectHandler::GetParami(const ChorusProps &props, ALenum param, int *val)
 {
     switch(param)
     {
@@ -144,9 +141,9 @@ void EffectHandler::GetParami(const ChorusProps &props, ALenum param, int *val)
         throw effect_exception{AL_INVALID_ENUM, "Invalid chorus integer property 0x%04x", param};
     }
 }
-void EffectHandler::GetParamiv(const ChorusProps &props, ALenum param, int *vals)
+void ChorusEffectHandler::GetParamiv(const ChorusProps &props, ALenum param, int *vals)
 { GetParami(props, param, vals); }
-void EffectHandler::GetParamf(const ChorusProps &props, ALenum param, float *val)
+void ChorusEffectHandler::GetParamf(const ChorusProps &props, ALenum param, float *val)
 {
     switch(param)
     {
@@ -159,13 +156,13 @@ void EffectHandler::GetParamf(const ChorusProps &props, ALenum param, float *val
         throw effect_exception{AL_INVALID_ENUM, "Invalid chorus float property 0x%04x", param};
     }
 }
-void EffectHandler::GetParamfv(const ChorusProps &props, ALenum param, float *vals)
+void ChorusEffectHandler::GetParamfv(const ChorusProps &props, ALenum param, float *vals)
 { GetParamf(props, param, vals); }
 
 
 const EffectProps FlangerEffectProps{genDefaultFlangerProps()};
 
-void EffectHandler::SetParami(FlangerProps &props, ALenum param, int val)
+void FlangerEffectHandler::SetParami(ChorusProps &props, ALenum param, int val)
 {
     switch(param)
     {
@@ -186,9 +183,9 @@ void EffectHandler::SetParami(FlangerProps &props, ALenum param, int val)
         throw effect_exception{AL_INVALID_ENUM, "Invalid flanger integer property 0x%04x", param};
     }
 }
-void EffectHandler::SetParamiv(FlangerProps &props, ALenum param, const int *vals)
+void FlangerEffectHandler::SetParamiv(ChorusProps &props, ALenum param, const int *vals)
 { SetParami(props, param, *vals); }
-void EffectHandler::SetParamf(FlangerProps &props, ALenum param, float val)
+void FlangerEffectHandler::SetParamf(ChorusProps &props, ALenum param, float val)
 {
     switch(param)
     {
@@ -220,10 +217,10 @@ void EffectHandler::SetParamf(FlangerProps &props, ALenum param, float val)
         throw effect_exception{AL_INVALID_ENUM, "Invalid flanger float property 0x%04x", param};
     }
 }
-void EffectHandler::SetParamfv(FlangerProps &props, ALenum param, const float *vals)
+void FlangerEffectHandler::SetParamfv(ChorusProps &props, ALenum param, const float *vals)
 { SetParamf(props, param, *vals); }
 
-void EffectHandler::GetParami(const FlangerProps &props, ALenum param, int *val)
+void FlangerEffectHandler::GetParami(const ChorusProps &props, ALenum param, int *val)
 {
     switch(param)
     {
@@ -234,9 +231,9 @@ void EffectHandler::GetParami(const FlangerProps &props, ALenum param, int *val)
         throw effect_exception{AL_INVALID_ENUM, "Invalid flanger integer property 0x%04x", param};
     }
 }
-void EffectHandler::GetParamiv(const FlangerProps &props, ALenum param, int *vals)
+void FlangerEffectHandler::GetParamiv(const ChorusProps &props, ALenum param, int *vals)
 { GetParami(props, param, vals); }
-void EffectHandler::GetParamf(const FlangerProps &props, ALenum param, float *val)
+void FlangerEffectHandler::GetParamf(const ChorusProps &props, ALenum param, float *val)
 {
     switch(param)
     {
@@ -249,7 +246,7 @@ void EffectHandler::GetParamf(const FlangerProps &props, ALenum param, float *va
         throw effect_exception{AL_INVALID_ENUM, "Invalid flanger float property 0x%04x", param};
     }
 }
-void EffectHandler::GetParamfv(const FlangerProps &props, ALenum param, float *vals)
+void FlangerEffectHandler::GetParamfv(const ChorusProps &props, ALenum param, float *vals)
 { GetParamf(props, param, vals); }
 
 
@@ -259,7 +256,6 @@ namespace {
 struct EaxChorusTraits {
     using EaxProps = EAXCHORUSPROPERTIES;
     using Committer = EaxChorusCommitter;
-    using AlProps = ChorusProps;
 
     static constexpr auto efx_effect() { return AL_EFFECT_CHORUS; }
 
@@ -325,7 +321,6 @@ struct EaxChorusTraits {
 struct EaxFlangerTraits {
     using EaxProps = EAXFLANGERPROPERTIES;
     using Committer = EaxFlangerCommitter;
-    using AlProps = FlangerProps;
 
     static constexpr auto efx_effect() { return AL_EFFECT_FLANGER; }
 
@@ -393,7 +388,6 @@ struct ChorusFlangerEffect {
     using Traits = TTraits;
     using EaxProps = typename Traits::EaxProps;
     using Committer = typename Traits::Committer;
-    using AlProps = typename Traits::AlProps;
     using Exception = typename Committer::Exception;
 
     struct WaveformValidator {
@@ -551,7 +545,7 @@ public:
         }
     }
 
-    static bool Commit(const EaxProps &props, EaxEffectProps &props_, AlProps &al_props_)
+    static bool Commit(const EaxProps &props, EaxEffectProps &props_, ChorusProps &al_props_)
     {
         if(auto *cur = std::get_if<EaxProps>(&props_); cur && *cur == props)
             return false;
@@ -628,7 +622,7 @@ template<>
 bool EaxFlangerCommitter::commit(const EAXFLANGERPROPERTIES &props)
 {
     using Committer = ChorusFlangerEffect<EaxFlangerTraits>;
-    return Committer::Commit(props, mEaxProps, mAlProps.emplace<FlangerProps>());
+    return Committer::Commit(props, mEaxProps, mAlProps.emplace<ChorusProps>());
 }
 
 void EaxFlangerCommitter::SetDefaults(EaxEffectProps &props)

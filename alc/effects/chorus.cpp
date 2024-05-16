@@ -132,8 +132,10 @@ void ChorusState::update(const ContextBase *context, const EffectSlot *slot,
 
     mWaveform = props.Waveform;
 
-    mDelay = std::max(float2int(std::round(props.Delay*frequency*gCubicTable.sTableSteps)), mindelay);
-    mDepth = std::min(static_cast<float>(mDelay)*props.Depth, static_cast<float>(mDelay-mindelay));
+    const auto stepscale = float{frequency * gCubicTable.sTableSteps};
+    mDelay = std::max(float2int(std::round(props.Delay * stepscale)), mindelay);
+    mDepth = std::min(static_cast<float>(mDelay) * props.Depth,
+        static_cast<float>(mDelay - mindelay));
 
     mFeedback = props.Feedback;
 
@@ -159,7 +161,8 @@ void ChorusState::update(const ContextBase *context, const EffectSlot *slot,
          * max range to avoid overflow when calculating the displacement.
          */
         static constexpr int range_limit{std::numeric_limits<int>::max()/360 - 180};
-        const uint lfo_range{float2uint(std::min(std::round(frequency/props.Rate), float{range_limit}))};
+        const auto range = std::round(frequency / props.Rate);
+        const uint lfo_range{float2uint(std::min(range, float{range_limit}))};
 
         mLfoOffset = mLfoOffset * lfo_range / mLfoRange;
         mLfoRange = lfo_range;

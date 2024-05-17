@@ -144,9 +144,13 @@ void ChorusState::update(const ContextBase *context, const EffectSlot *slot,
     const auto lcoeffs = (!ispairwise) ? al::span{lcoeffs_nrml} : al::span{lcoeffs_pw};
     const auto rcoeffs = (!ispairwise) ? al::span{rcoeffs_nrml} : al::span{rcoeffs_pw};
 
+    /* Attenuate the outputs by -3dB, since we duplicate a single mono input to
+     * separate left/right outputs.
+     */
+    const auto gain = slot->Gain * (1.0f/al::numbers::sqrt2_v<float>);
     mOutTarget = target.Main->Buffer;
-    ComputePanGains(target.Main, lcoeffs, slot->Gain, mGains[0].Target);
-    ComputePanGains(target.Main, rcoeffs, slot->Gain, mGains[1].Target);
+    ComputePanGains(target.Main, lcoeffs, gain, mGains[0].Target);
+    ComputePanGains(target.Main, rcoeffs, gain, mGains[1].Target);
 
     if(!(props.Rate > 0.0f))
     {

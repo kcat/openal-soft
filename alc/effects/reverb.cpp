@@ -1821,21 +1821,10 @@ struct ReverbStateFactory final : public EffectStateFactory {
     { return al::intrusive_ptr<EffectState>{new ReverbState{}}; }
 };
 
-struct StdReverbStateFactory final : public EffectStateFactory {
-    al::intrusive_ptr<EffectState> create() override
-    { return al::intrusive_ptr<EffectState>{new ReverbState{}}; }
-};
-
 } // namespace
 
 EffectStateFactory *ReverbStateFactory_getFactory()
 {
     static ReverbStateFactory ReverbFactory{};
-    return &ReverbFactory;
-}
-
-EffectStateFactory *StdReverbStateFactory_getFactory()
-{
-    static StdReverbStateFactory ReverbFactory{};
     return &ReverbFactory;
 }

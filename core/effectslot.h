@@ -4,7 +4,6 @@
 #include <atomic>
 #include <memory>
 
-#include "almalloc.h"
 #include "device.h"
 #include "effects/base.h"
 #include "flexarray.h"
@@ -20,20 +19,18 @@ enum class EffectSlotType : unsigned char {
     None,
     Reverb,
     Chorus,
-    Distortion,
-    Echo,
-    Flanger,
-    FrequencyShifter,
-    VocalMorpher,
-    PitchShifter,
-    RingModulator,
     Autowah,
     Compressor,
+    Convolution,
+    Dedicated,
+    Distortion,
+    Echo,
     Equalizer,
-    EAXReverb,
-    DedicatedLFE,
-    DedicatedDialog,
-    Convolution
+    Flanger,
+    FrequencyShifter,
+    PitchShifter,
+    RingModulator,
+    VocalMorpher,
 };
 
 struct EffectSlotProps {

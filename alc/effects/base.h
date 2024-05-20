@@ -12,9 +12,8 @@ inline float ReverbBoost{1.0f};
 
 EffectStateFactory *NullStateFactory_getFactory();
 EffectStateFactory *ReverbStateFactory_getFactory();
-EffectStateFactory *StdReverbStateFactory_getFactory();
-EffectStateFactory *AutowahStateFactory_getFactory();
 EffectStateFactory *ChorusStateFactory_getFactory();
+EffectStateFactory *AutowahStateFactory_getFactory();
 EffectStateFactory *CompressorStateFactory_getFactory();
 EffectStateFactory *DistortionStateFactory_getFactory();
 EffectStateFactory *EchoStateFactory_getFactory();

@@ -285,7 +285,10 @@ struct DelayLineU {
     al::span<float> mLine;
 
     void realizeLineOffset(al::span<float> sampleBuffer) noexcept
-    { mLine = sampleBuffer; }
+    {
+        assert(sampleBuffer.size() > 4 && !(sampleBuffer.size() & (sampleBuffer.size()-1)));
+        mLine = sampleBuffer;
+    }
 
     static
     auto calcLineLength(const float length, const float frequency, const uint extra) -> size_t
@@ -333,7 +336,6 @@ struct DelayLineU {
         const size_t count) const noexcept
     {
         const size_t stride{mLine.size() / NUM_LINES};
-        ASSUME(count > 0);
         for(size_t i{0u};i < count;)
         {
             offset &= stride-1;
@@ -599,8 +601,6 @@ struct ReverbState final : public EffectState {
     void MixOutPlain(ReverbPipeline &pipeline, const al::span<FloatBufferLine> samplesOut,
         const size_t todo) const
     {
-        ASSUME(todo > 0);
-
         /* When not upsampling, the panning gains convert to B-Format and pan
          * at the same time.
          */
@@ -621,8 +621,6 @@ struct ReverbState final : public EffectState {
     void MixOutAmbiUp(ReverbPipeline &pipeline, const al::span<FloatBufferLine> samplesOut,
         const size_t todo)
     {
-        ASSUME(todo > 0);
-
         auto DoMixRow = [](const al::span<float> OutBuffer, const al::span<const float,4> Gains,
             const al::span<const FloatBufferLine,4> InSamples)
         {
@@ -645,8 +643,8 @@ struct ReverbState final : public EffectState {
          * so the proper HF scaling can be applied to each B-Format channel.
          * The panning gains then pan and upsample the B-Format channels.
          */
-        const al::span<float> tmpspan{al::assume_aligned<16>(mTempLine.data()), todo};
-        float hfscale{mOrderScales[0]};
+        const auto tmpspan = al::span{mTempLine}.first(todo);
+        auto hfscale = float{mOrderScales[0]};
         auto splitter = pipeline.mAmbiSplitter[0].begin();
         auto a2bcoeffs = EarlyA2B.cbegin();
         for(auto &gains : pipeline.mEarly.Gains)
@@ -1500,7 +1498,6 @@ void ReverbPipeline::processEarly(const DelayLineU &main_delay, size_t offset,
     const float mixX{mMixX};
     const float mixY{mMixY};
 
-    ASSUME(samplesToDo > 0);
     ASSUME(samplesToDo <= BufferLineSize);
 
     for(size_t base{0};base < samplesToDo;)
@@ -1641,7 +1638,6 @@ void ReverbPipeline::processLate(size_t offset, const size_t samplesToDo,
     const float mixX{mMixX};
     const float mixY{mMixY};
 
-    ASSUME(samplesToDo > 0);
     ASSUME(samplesToDo <= BufferLineSize);
 
     for(size_t base{0};base < samplesToDo;)
@@ -1746,7 +1742,6 @@ void ReverbState::process(const size_t samplesToDo, const al::span<const FloatBu
 {
     const size_t offset{mOffset};
 
-    ASSUME(samplesToDo > 0);
     ASSUME(samplesToDo <= BufferLineSize);
 
     auto &oldpipeline = mPipelines[!mCurrentPipeline];

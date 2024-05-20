@@ -435,7 +435,7 @@ struct Modulation {
 
     void updateModulator(float modTime, float modDepth, float frequency);
 
-    void calcDelays(size_t todo);
+    auto calcDelays(size_t todo) -> al::span<const uint>;
 
     void clear() noexcept
     {
@@ -1598,7 +1598,7 @@ void ReverbPipeline::processEarly(const DelayLineU &main_delay, size_t offset,
     }
 }
 
-void Modulation::calcDelays(size_t todo)
+auto Modulation::calcDelays(size_t todo) -> al::span<const uint>
 {
     auto idx = uint{Index};
     const auto step = uint{Step};
@@ -1617,6 +1617,7 @@ void Modulation::calcDelays(size_t todo)
         return float2uint((lfo+1.0f) * depth);
     });
     Index = idx;
+    return delays;
 }
 
 
@@ -1650,7 +1651,7 @@ void ReverbPipeline::processLate(size_t offset, const size_t samplesToDo,
         ASSUME(todo > 0);
 
         /* First, calculate the modulated delays for the late feedback. */
-        mLate.Mod.calcDelays(todo);
+        const auto delays = mLate.Mod.calcDelays(todo);
 
         /* Now load samples from the feedback delay lines. Filter the signal to
          * apply its frequency-dependent decay.
@@ -1660,7 +1661,6 @@ void ReverbPipeline::processLate(size_t offset, const size_t samplesToDo,
             const auto input = late_delay.get(j);
             const auto midGain = float{mLate.T60[j].MidGain};
             auto late_feedb_tap = size_t{offset - mLate.Offset[j]};
-            const auto delays = al::span{mLate.Mod.ModDelays}.first(todo);
 
             auto proc_sample = [input,midGain,&late_feedb_tap](const size_t idelay) -> float
             {
@@ -1671,7 +1671,9 @@ void ReverbPipeline::processLate(size_t offset, const size_t samplesToDo,
                 const auto delayoffset = size_t{idelay & gCubicTable.sTableMask};
                 ++late_feedb_tap;
 
-                /* Get the samples around the delayed offset. */
+                /* Get the samples around the delayed offset, interpolated for
+                 * output.
+                 */
                 const auto out0 = float{input[(delay  ) & (input.size()-1)]};
                 const auto out1 = float{input[(delay-1) & (input.size()-1)]};
                 const auto out2 = float{input[(delay-2) & (input.size()-1)]};

@@ -77,15 +77,16 @@ static ALuint LoadEffect(const EFXEAXREVERBPROPERTIES *reverb)
     ALuint effect = 0;
     ALenum err;
 
+    /* Clear error state. */
+    alGetError();
+
     /* Create the effect object and check if we can do EAX reverb. */
     alGenEffects(1, &effect);
-    if(alGetEnumValue("AL_EFFECT_EAXREVERB") != 0)
+    alEffecti(effect, AL_EFFECT_TYPE, AL_EFFECT_EAXREVERB);
+    err = alGetError();
+    if(err == AL_NO_ERROR)
     {
         printf("Using EAX Reverb\n");
-
-        /* EAX Reverb is available. Set the EAX effect type then load the
-         * reverb properties. */
-        alEffecti(effect, AL_EFFECT_TYPE, AL_EFFECT_EAXREVERB);
 
         alEffectf(effect, AL_EAXREVERB_DENSITY, reverb->flDensity);
         alEffectf(effect, AL_EAXREVERB_DIFFUSION, reverb->flDiffusion);
@@ -116,7 +117,8 @@ static ALuint LoadEffect(const EFXEAXREVERBPROPERTIES *reverb)
         printf("Using Standard Reverb\n");
 
         /* No EAX Reverb. Set the standard reverb effect type then load the
-         * available reverb properties. */
+         * available reverb properties.
+         */
         alEffecti(effect, AL_EFFECT_TYPE, AL_EFFECT_REVERB);
 
         alEffectf(effect, AL_REVERB_DENSITY, reverb->flDensity);

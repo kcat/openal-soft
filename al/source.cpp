@@ -87,6 +87,10 @@ namespace {
 using SubListAllocator = al::allocator<std::array<ALsource,64>>;
 using std::chrono::nanoseconds;
 using seconds_d = std::chrono::duration<double>;
+using source_store_array = std::array<ALsource*,3>;
+using source_store_vector = std::vector<ALsource*>;
+using source_store_variant = std::variant<std::monostate,source_store_array,source_store_vector>;
+
 
 Voice *GetSourceVoice(ALsource *source, ALCcontext *context)
 {
@@ -3204,25 +3208,22 @@ try {
     if(n <= 0) UNLIKELY return;
 
     al::span sids{sources, static_cast<ALuint>(n)};
-    std::vector<ALsource*> extra_sources;
-    std::array<ALsource*,8> source_storage;
-    al::span<ALsource*> srchandles;
-    if(sids.size() <= source_storage.size()) LIKELY
-        srchandles = al::span{source_storage}.first(sids.size());
-    else
+    source_store_variant source_store;
+    const auto srchandles = [&source_store](size_t count) -> al::span<ALsource*>
     {
-        extra_sources.resize(sids.size());
-        srchandles = extra_sources;
-    }
+        if(count > std::tuple_size_v<source_store_array>)
+            return al::span{source_store.emplace<source_store_vector>(count)};
+        return al::span{source_store.emplace<source_store_array>()}.first(count);
+    }(sids.size());
 
     std::lock_guard<std::mutex> sourcelock{context->mSourceLock};
-    std::transform(sids.cbegin(), sids.cend(), srchandles.begin(),
-        [context](const ALuint sid) -> ALsource*
-        {
-            if(ALsource *src{LookupSource(context, sid)})
-                return src;
-            throw al::context_error{AL_INVALID_NAME, "Invalid source ID %u", sid};
-        });
+    auto lookup_src = [context](const ALuint sid) -> ALsource*
+    {
+        if(ALsource *src{LookupSource(context, sid)})
+            return src;
+        throw al::context_error{AL_INVALID_NAME, "Invalid source ID %u", sid};
+    };
+    std::transform(sids.cbegin(), sids.cend(), srchandles.begin(), lookup_src);
 
     StartSources(context, srchandles);
 }
@@ -3242,25 +3243,22 @@ try {
         throw al::context_error{AL_INVALID_VALUE, "Invalid time point %" PRId64, start_time};
 
     al::span sids{sources, static_cast<ALuint>(n)};
-    std::vector<ALsource*> extra_sources;
-    std::array<ALsource*,8> source_storage;
-    al::span<ALsource*> srchandles;
-    if(sids.size() <= source_storage.size()) LIKELY
-        srchandles = al::span{source_storage}.first(sids.size());
-    else
+    source_store_variant source_store;
+    const auto srchandles = [&source_store](size_t count) -> al::span<ALsource*>
     {
-        extra_sources.resize(sids.size());
-        srchandles = extra_sources;
-    }
+        if(count > std::tuple_size_v<source_store_array>)
+            return al::span{source_store.emplace<source_store_vector>(count)};
+        return al::span{source_store.emplace<source_store_array>()}.first(count);
+    }(sids.size());
 
     std::lock_guard<std::mutex> sourcelock{context->mSourceLock};
-    std::transform(sids.cbegin(), sids.cend(), srchandles.begin(),
-        [context](const ALuint sid) -> ALsource*
-        {
-            if(ALsource *src{LookupSource(context, sid)})
-                return src;
-            throw al::context_error{AL_INVALID_NAME, "Invalid source ID %u", sid};
-        });
+    auto lookup_src = [context](const ALuint sid) -> ALsource*
+    {
+        if(ALsource *src{LookupSource(context, sid)})
+            return src;
+        throw al::context_error{AL_INVALID_NAME, "Invalid source ID %u", sid};
+    };
+    std::transform(sids.cbegin(), sids.cend(), srchandles.begin(), lookup_src);
 
     StartSources(context, srchandles, nanoseconds{start_time});
 }
@@ -3282,25 +3280,22 @@ try {
     if(n <= 0) UNLIKELY return;
 
     al::span sids{sources, static_cast<ALuint>(n)};
-    std::vector<ALsource*> extra_sources;
-    std::array<ALsource*,8> source_storage;
-    al::span<ALsource*> srchandles;
-    if(sids.size() <= source_storage.size()) LIKELY
-        srchandles = al::span{source_storage}.first(sids.size());
-    else
+    source_store_variant source_store;
+    const auto srchandles = [&source_store](size_t count) -> al::span<ALsource*>
     {
-        extra_sources.resize(sids.size());
-        srchandles = extra_sources;
-    }
+        if(count > std::tuple_size_v<source_store_array>)
+            return al::span{source_store.emplace<source_store_vector>(count)};
+        return al::span{source_store.emplace<source_store_array>()}.first(count);
+    }(sids.size());
 
     std::lock_guard<std::mutex> sourcelock{context->mSourceLock};
-    std::transform(sids.cbegin(), sids.cend(), srchandles.begin(),
-        [context](const ALuint sid) -> ALsource*
-        {
-            if(ALsource *src{LookupSource(context, sid)})
-                return src;
-            throw al::context_error{AL_INVALID_NAME, "Invalid source ID %u", sid};
-        });
+    auto lookup_src = [context](const ALuint sid) -> ALsource*
+    {
+        if(ALsource *src{LookupSource(context, sid)})
+            return src;
+        throw al::context_error{AL_INVALID_NAME, "Invalid source ID %u", sid};
+    };
+    std::transform(sids.cbegin(), sids.cend(), srchandles.begin(), lookup_src);
 
     /* Pausing has to be done in two steps. First, for each source that's
      * detected to be playing, chamge the voice (asynchronously) to
@@ -3358,25 +3353,22 @@ try {
     if(n <= 0) UNLIKELY return;
 
     al::span sids{sources, static_cast<ALuint>(n)};
-    std::vector<ALsource*> extra_sources;
-    std::array<ALsource*,8> source_storage;
-    al::span<ALsource*> srchandles;
-    if(sids.size() <= source_storage.size()) LIKELY
-        srchandles = al::span{source_storage}.first(sids.size());
-    else
+    source_store_variant source_store;
+    const auto srchandles = [&source_store](size_t count) -> al::span<ALsource*>
     {
-        extra_sources.resize(sids.size());
-        srchandles = extra_sources;
-    }
+        if(count > std::tuple_size_v<source_store_array>)
+            return al::span{source_store.emplace<source_store_vector>(count)};
+        return al::span{source_store.emplace<source_store_array>()}.first(count);
+    }(sids.size());
 
     std::lock_guard<std::mutex> sourcelock{context->mSourceLock};
-    std::transform(sids.cbegin(), sids.cend(), srchandles.begin(),
-        [context](const ALuint sid) -> ALsource*
-        {
-            if(ALsource *src{LookupSource(context, sid)})
-                return src;
-            throw al::context_error{AL_INVALID_NAME, "Invalid source ID %u", sid};
-        });
+    auto lookup_src = [context](const ALuint sid) -> ALsource*
+    {
+        if(ALsource *src{LookupSource(context, sid)})
+            return src;
+        throw al::context_error{AL_INVALID_NAME, "Invalid source ID %u", sid};
+    };
+    std::transform(sids.cbegin(), sids.cend(), srchandles.begin(), lookup_src);
 
     VoiceChange *tail{}, *cur{};
     for(ALsource *source : srchandles)
@@ -3421,25 +3413,22 @@ try {
     if(n <= 0) UNLIKELY return;
 
     al::span sids{sources, static_cast<ALuint>(n)};
-    std::vector<ALsource*> extra_sources;
-    std::array<ALsource*,8> source_storage;
-    al::span<ALsource*> srchandles;
-    if(sids.size() <= source_storage.size()) LIKELY
-        srchandles = al::span{source_storage}.first(sids.size());
-    else
+    source_store_variant source_store;
+    const auto srchandles = [&source_store](size_t count) -> al::span<ALsource*>
     {
-        extra_sources.resize(sids.size());
-        srchandles = extra_sources;
-    }
+        if(count > std::tuple_size_v<source_store_array>)
+            return al::span{source_store.emplace<source_store_vector>(count)};
+        return al::span{source_store.emplace<source_store_array>()}.first(count);
+    }(sids.size());
 
     std::lock_guard<std::mutex> sourcelock{context->mSourceLock};
-    std::transform(sids.cbegin(), sids.cend(), srchandles.begin(),
-        [context](const ALuint sid) -> ALsource*
-        {
-            if(ALsource *src{LookupSource(context, sid)})
-                return src;
-            throw al::context_error{AL_INVALID_NAME, "Invalid source ID %u", sid};
-        });
+    auto lookup_src = [context](const ALuint sid) -> ALsource*
+    {
+        if(ALsource *src{LookupSource(context, sid)})
+            return src;
+        throw al::context_error{AL_INVALID_NAME, "Invalid source ID %u", sid};
+    };
+    std::transform(sids.cbegin(), sids.cend(), srchandles.begin(), lookup_src);
 
     VoiceChange *tail{}, *cur{};
     for(ALsource *source : srchandles)

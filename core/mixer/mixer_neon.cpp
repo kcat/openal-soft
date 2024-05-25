@@ -196,7 +196,7 @@ void Resample_<LerpTag,NEONTag>(const InterpState*, const al::span<const float> 
     const float32x4_t fracOne4 = vdupq_n_f32(1.0f/MixerFracOne);
     const uint32x4_t fracMask4 = vdupq_n_u32(MixerFracMask);
 
-    alignas(16) std::array<uint,4> pos_, frac_;
+    alignas(16) std::array<uint,4> pos_{}, frac_{};
     InitPosArrays(MaxResamplerEdge, frac, increment, al::span{frac_}, al::span{pos_});
     uint32x4_t frac4 = vld1q_u32(frac_.data());
     uint32x4_t pos4 = vld1q_u32(pos_.data());
@@ -255,7 +255,7 @@ void Resample_<CubicTag,NEONTag>(const InterpState *state, const al::span<const 
     const float32x4_t fracDiffOne4{vdupq_n_f32(1.0f/CubicPhaseDiffOne)};
     const uint32x4_t fracDiffMask4{vdupq_n_u32(CubicPhaseDiffMask)};
 
-    alignas(16) std::array<uint,4> pos_, frac_;
+    alignas(16) std::array<uint,4> pos_{}, frac_{};
     InitPosArrays(MaxResamplerEdge-1, frac, increment, al::span{frac_}, al::span{pos_});
     uint32x4_t frac4{vld1q_u32(frac_.data())};
     uint32x4_t pos4{vld1q_u32(pos_.data())};

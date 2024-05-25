@@ -1034,7 +1034,7 @@ void PulsePlayback::stop()
 
 ClockLatency PulsePlayback::getClockLatency()
 {
-    ClockLatency ret;
+    ClockLatency ret{};
     pa_usec_t latency{};
     int neg{}, err{};
 
@@ -1363,7 +1363,7 @@ uint PulseCapture::availableSamples()
 
 ClockLatency PulseCapture::getClockLatency()
 {
-    ClockLatency ret;
+    ClockLatency ret{};
     pa_usec_t latency{};
     int neg{}, err{};
 

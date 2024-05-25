@@ -67,7 +67,7 @@ void Resample_<LerpTag,SSE2Tag>(const InterpState*, const al::span<const float> 
     const __m128 fracOne4{_mm_set1_ps(1.0f/MixerFracOne)};
     const __m128i fracMask4{_mm_set1_epi32(MixerFracMask)};
 
-    alignas(16) std::array<uint,4> pos_, frac_;
+    std::array<uint,4> pos_{}, frac_{};
     InitPosArrays(MaxResamplerEdge, frac, increment, al::span{frac_}, al::span{pos_});
     __m128i frac4{_mm_setr_epi32(static_cast<int>(frac_[0]), static_cast<int>(frac_[1]),
         static_cast<int>(frac_[2]), static_cast<int>(frac_[3]))};
@@ -128,7 +128,7 @@ void Resample_<CubicTag,SSE2Tag>(const InterpState *state, const al::span<const 
     const __m128 fracDiffOne4{_mm_set1_ps(1.0f/CubicPhaseDiffOne)};
     const __m128i fracDiffMask4{_mm_set1_epi32(CubicPhaseDiffMask)};
 
-    alignas(16) std::array<uint,4> pos_, frac_;
+    std::array<uint,4> pos_{}, frac_{};
     InitPosArrays(MaxResamplerEdge-1, frac, increment, al::span{frac_}, al::span{pos_});
     __m128i frac4{_mm_setr_epi32(static_cast<int>(frac_[0]), static_cast<int>(frac_[1]),
         static_cast<int>(frac_[2]), static_cast<int>(frac_[3]))};

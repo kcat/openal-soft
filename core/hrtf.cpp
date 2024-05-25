@@ -1362,7 +1362,7 @@ try {
         const size_t irCount{size_t{hrtf->mElev[lastEv].irOffset} + hrtf->mElev[lastEv].azCount};
 
         /* Resample all the IRs. */
-        std::array<std::array<double,HrirLength>,2> inout;
+        std::array<std::array<double,HrirLength>,2> inout{};
         PPhaseResampler rs;
         rs.init(hrtf->mSampleRate, devrate);
         for(size_t i{0};i < irCount;++i)

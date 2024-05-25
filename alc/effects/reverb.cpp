@@ -1080,14 +1080,14 @@ std::array<std::array<float,4>,4> GetTransformFromVector(const al::span<const fl
      * rest of OpenAL which use right-handed. This is fixed by negating Z,
      * which cancels out with the B-Format Z negation.
      */
-    std::array<float,3> norm;
+    std::array<float,3> norm{{vec[0], vec[1], vec[2]}};
     float mag{std::sqrt(vec[0]*vec[0] + vec[1]*vec[1] + vec[2]*vec[2])};
     if(mag > 1.0f)
     {
         const float scale{al::numbers::sqrt3_v<float> / mag};
-        norm[0] = vec[0] * -scale;
-        norm[1] = vec[1] * scale;
-        norm[2] = vec[2] * scale;
+        norm[0] *= -scale;
+        norm[1] *= scale;
+        norm[2] *= scale;
         mag = 1.0f;
     }
     else
@@ -1096,9 +1096,9 @@ std::array<std::array<float,4>,4> GetTransformFromVector(const al::span<const fl
          * term. There's no need to renormalize the magnitude since it would
          * just be reapplied in the matrix.
          */
-        norm[0] = vec[0] * -al::numbers::sqrt3_v<float>;
-        norm[1] = vec[1] * al::numbers::sqrt3_v<float>;
-        norm[2] = vec[2] * al::numbers::sqrt3_v<float>;
+        norm[0] *= -al::numbers::sqrt3_v<float>;
+        norm[1] *= al::numbers::sqrt3_v<float>;
+        norm[2] *= al::numbers::sqrt3_v<float>;
     }
 
     return std::array<std::array<float,4>,4>{{
@@ -1403,7 +1403,7 @@ void VecAllpass::process(const al::span<ReverbUpdateLine,NUM_LINES> samples, siz
 
     for(size_t i{0u};i < todo;)
     {
-        std::array<size_t,NUM_LINES> vap_offset;
+        std::array<size_t,NUM_LINES> vap_offset{};
         std::transform(Offset.cbegin(), Offset.cend(), vap_offset.begin(),
             [main_offset,mask=linelen-1](const size_t delay) noexcept -> size_t
             { return (main_offset-delay) & mask; });
@@ -1418,7 +1418,7 @@ void VecAllpass::process(const al::span<ReverbUpdateLine,NUM_LINES> samples, siz
         main_offset += td;
 
         do {
-            std::array<float,NUM_LINES> f;
+            std::array<float,NUM_LINES> f{};
             for(size_t j{0u};j < NUM_LINES;j++)
             {
                 const float input{samples[j][i]};

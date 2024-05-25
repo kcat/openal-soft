@@ -512,14 +512,13 @@ bool CalcEffectSlotParams(EffectSlot *slot, EffectSlot **sorted_slots, ContextBa
 
     AtomicReplaceHead(context->mFreeEffectSlotProps, props);
 
-    EffectTarget output;
-    if(EffectSlot *target{slot->Target})
-        output = EffectTarget{&target->Wet, nullptr};
-    else
+    const auto output = [slot,context]() -> EffectTarget
     {
+        if(EffectSlot *target{slot->Target})
+            return EffectTarget{&target->Wet, nullptr};
         DeviceBase *device{context->mDevice};
-        output = EffectTarget{&device->Dry, &device->RealOut};
-    }
+        return EffectTarget{&device->Dry, &device->RealOut};
+    }();
     state->update(context, slot, &slot->mEffectProps, output);
     return true;
 }
@@ -1453,7 +1452,7 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
 void CalcNonAttnSourceParams(Voice *voice, const VoiceProps *props, const ContextBase *context)
 {
     DeviceBase *Device{context->mDevice};
-    std::array<EffectSlot*,MaxSendCount> SendSlots;
+    std::array<EffectSlot*,MaxSendCount> SendSlots{};
 
     voice->mDirect.Buffer = Device->Dry.Buffer;
     for(uint i{0};i < Device->NumAuxSends;i++)
@@ -1478,13 +1477,13 @@ void CalcNonAttnSourceParams(Voice *voice, const VoiceProps *props, const Contex
     voice->mResampler = PrepareResampler(props->mResampler, voice->mStep, &voice->mResampleState);
 
     /* Calculate gains */
-    GainTriplet DryGain;
-    DryGain.Base  = std::min(std::clamp(props->Gain, props->MinGain, props->MaxGain) *
+    GainTriplet DryGain{};
+    DryGain.Base = std::min(std::clamp(props->Gain, props->MinGain, props->MaxGain) *
         props->Direct.Gain * context->mParams.Gain, GainMixMax);
     DryGain.HF = props->Direct.GainHF;
     DryGain.LF = props->Direct.GainLF;
 
-    std::array<GainTriplet,MaxSendCount> WetGain;
+    std::array<GainTriplet,MaxSendCount> WetGain{};
     for(uint i{0};i < Device->NumAuxSends;i++)
     {
         WetGain[i].Base = std::min(std::clamp(props->Gain, props->MinGain, props->MaxGain) *

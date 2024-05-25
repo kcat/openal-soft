@@ -1818,7 +1818,7 @@ NOINLINE void pffft_real_preprocess(const size_t Ncvec, const v4sf *in, v4sf *RE
     const size_t dk{Ncvec/SimdSize}; // number of 4x4 matrix blocks
     /* fftpack order is f0r f1r f1i f2r f2i ... f(n-1)r f(n-1)i f(n)r */
 
-    std::array<float,SimdSize> Xr, Xi;
+    std::array<float,SimdSize> Xr{}, Xi{};
     for(size_t k{0};k < SimdSize;++k)
     {
         Xr[k] = vextract0(in[2*k]);

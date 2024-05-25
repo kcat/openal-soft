@@ -133,7 +133,7 @@ void bs2b::cross_feed(float *Left, float *Right, size_t SamplesToDo)
     const float a0hi{a0_hi};
     const float a1hi{a1_hi};
     const float b1hi{b1_hi};
-    std::array<std::array<float,2>,128> samples;
+    std::array<std::array<float,2>,128> samples{};
     al::span<float> lsamples{Left, SamplesToDo};
     al::span<float> rsamples{Right, SamplesToDo};
 

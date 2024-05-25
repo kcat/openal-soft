@@ -74,7 +74,7 @@ struct CompressorState final : public EffectState {
     float mAttackMult{1.0f};
     float mReleaseMult{1.0f};
     float mEnvFollower{1.0f};
-    alignas(16) FloatBufferLine mGains;
+    alignas(16) FloatBufferLine mGains{};
 
 
     void deviceUpdate(const DeviceBase *device, const BufferStorage *buffer) override;

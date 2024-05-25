@@ -286,6 +286,8 @@ void VmorpherState::update(const ContextBase *context, const EffectSlot *slot,
 
 void VmorpherState::process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn, const al::span<FloatBufferLine> samplesOut)
 {
+    alignas(16) std::array<float,MaxUpdateSamples> blended{};
+
     /* Following the EFX specification for a conformant implementation which describes
      * the effect as a pair of 4-band formant filters blended together using an LFO.
      */
@@ -324,7 +326,6 @@ void VmorpherState::process(const size_t samplesToDo, const al::span<const Float
             vowelB[2].process(&input[base], mSampleBufferB.data(), td);
             vowelB[3].process(&input[base], mSampleBufferB.data(), td);
 
-            alignas(16) std::array<float,MaxUpdateSamples> blended;
             for(size_t i{0u};i < td;i++)
                 blended[i] = lerpf(mSampleBufferA[i], mSampleBufferB[i], mLfo[i]);
 

@@ -795,8 +795,8 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
     /* Get a span of pointers to hold the floating point, deinterlaced,
      * resampled buffer data to be mixed.
      */
-    std::array<float*,DeviceBase::MixerChannelsMax> SamplePointers;
-    const al::span<float*> MixingSamples{SamplePointers.data(), mChans.size()};
+    auto SamplePointers = std::array<float*,DeviceBase::MixerChannelsMax>{};
+    const auto MixingSamples = al::span{SamplePointers}.first(mChans.size());
     {
         const uint channelStep{(samplesToLoad+3u)&~3u};
         auto base = Device->mSampleData.end() - MixingSamples.size()*channelStep;

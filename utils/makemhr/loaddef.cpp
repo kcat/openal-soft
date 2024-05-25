@@ -1238,14 +1238,14 @@ auto ProcessMetrics(TokenReaderT *tr, const uint fftSize, const uint truncSize,
 {
     int hasRate = 0, hasType = 0, hasPoints = 0, hasRadius = 0;
     int hasDistance = 0, hasAzimuths = 0;
-    std::array<char,MaxIdentLen+1> ident;
+    std::array<char,MaxIdentLen+1> ident{};
     uint line, col;
     double fpVal;
     uint points;
     int intVal;
-    std::array<double,MAX_FD_COUNT> distances;
+    std::array<double,MAX_FD_COUNT> distances{};
     uint fdCount = 0;
-    std::array<uint,MAX_FD_COUNT> evCounts;
+    std::array<uint,MAX_FD_COUNT> evCounts{};
     auto azCounts = std::vector<std::array<uint,MAX_EV_COUNT>>(MAX_FD_COUNT);
     for(auto &azs : azCounts) azs.fill(0u);
 
@@ -1271,7 +1271,7 @@ auto ProcessMetrics(TokenReaderT *tr, const uint fftSize, const uint truncSize,
         }
         else if(al::strcasecmp(ident.data(), "type") == 0)
         {
-            std::array<char,MaxIdentLen+1> type;
+            std::array<char,MaxIdentLen+1> type{};
 
             if(hasType)
             {
@@ -1524,7 +1524,7 @@ auto MatchElementType(const char *ident) -> ElementTypeT
 // Parse and validate a source reference from the data set definition.
 auto ReadSourceRef(TokenReaderT *tr, SourceRefT *src) -> int
 {
-    std::array<char,MaxIdentLen+1> ident;
+    std::array<char,MaxIdentLen+1> ident{};
     uint line, col;
     double fpVal;
     int intVal;
@@ -1671,7 +1671,7 @@ auto ReadSourceRef(TokenReaderT *tr, SourceRefT *src) -> int
 // Parse and validate a SOFA source reference from the data set definition.
 auto ReadSofaRef(TokenReaderT *tr, SourceRefT *src) -> int
 {
-    std::array<char,MaxIdentLen+1> ident;
+    std::array<char,MaxIdentLen+1> ident{};
     uint line, col;
     int intVal;
 

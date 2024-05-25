@@ -32,7 +32,6 @@
 #include <functional>
 #include <vector>
 
-#include "albit.h"
 #include "alc/alconfig.h"
 #include "alnumeric.h"
 #include "alsem.h"
@@ -159,11 +158,19 @@ struct DeviceEntry {
     std::string mName;
     std::string mPattern;
 
+    DeviceEntry() = default;
+    DeviceEntry(const DeviceEntry&) = default;
+    DeviceEntry(DeviceEntry&&) = default;
     template<typename T, typename U>
     DeviceEntry(T&& name, U&& pattern)
         : mName{std::forward<T>(name)}, mPattern{std::forward<U>(pattern)}
     { }
+    ~DeviceEntry();
+
+    DeviceEntry& operator=(const DeviceEntry&) = default;
+    DeviceEntry& operator=(DeviceEntry&&) = default;
 };
+DeviceEntry::~DeviceEntry() = default;
 
 std::vector<DeviceEntry> PlaybackList;
 
@@ -354,7 +361,7 @@ int JackPlayback::process(jack_nframes_t numframes) noexcept
         out[numchans++] = {static_cast<float*>(jack_port_get_buffer(port, numframes)), numframes};
     }
 
-    jack_nframes_t total{0};
+    size_t total{0};
     if(mPlaying.load(std::memory_order_acquire)) LIKELY
     {
         auto data = mRing->getReadVector();
@@ -407,10 +414,9 @@ int JackPlayback::mixerProc()
     SetRTPriority();
     althrd_setname(GetMixerThreadName());
 
-    auto outptrs = std::array<float*,MaxOutputChannels>{};
     const auto update_size = uint{mDevice->UpdateSize};
     const auto num_channels = size_t{mDevice->channelsFromFmt()};
-    assert(num_channels <= outptrs.size());
+    auto outptrs = std::vector<float*>(num_channels);
 
     while(!mKillNow.load(std::memory_order_acquire)
         && mDevice->Connected.load(std::memory_order_acquire))
@@ -426,23 +432,34 @@ int JackPlayback::mixerProc()
         const auto len2 = size_t{data.second.len / update_size};
 
         std::lock_guard<std::mutex> dlock{mMutex};
+        auto buffer = al::span{reinterpret_cast<float*>(data.first.buf),
+            data.first.len*num_channels};
+        auto bufiter = buffer.begin();
         for(size_t i{0};i < len1;++i)
         {
-            for(size_t j{0};j < num_channels;++j)
+            std::generate_n(outptrs.begin(), outptrs.size(), [&bufiter,update_size]
             {
-                const auto offset = size_t{(i*num_channels + j)*update_size};
-                outptrs[j] = reinterpret_cast<float*>(data.first.buf) + offset;
-            }
-            mDevice->renderSamples(al::span{outptrs}.first(num_channels), update_size);
+                auto ret = al::to_address(bufiter);
+                bufiter += ptrdiff_t(update_size);
+                return ret;
+            });
+            mDevice->renderSamples(outptrs, update_size);
         }
-        for(size_t i{0};i < len2;++i)
+        if(len2 > 0)
         {
-            for(size_t j{0};j < num_channels;++j)
+            buffer = al::span{reinterpret_cast<float*>(data.second.buf),
+                data.second.len*num_channels};
+            bufiter = buffer.begin();
+            for(size_t i{0};i < len2;++i)
             {
-                const auto offset = size_t{(i*num_channels + j)*update_size};
-                outptrs[j] = reinterpret_cast<float*>(data.second.buf) + offset;
+                std::generate_n(outptrs.begin(), outptrs.size(), [&bufiter,update_size]
+                {
+                    auto ret = al::to_address(bufiter);
+                    bufiter += ptrdiff_t(update_size);
+                    return ret;
+                });
+                mDevice->renderSamples(outptrs, update_size);
             }
-            mDevice->renderSamples(al::span{outptrs}.first(num_channels), update_size);
         }
         mRing->writeAdvance((len1+len2) * update_size);
     }
@@ -645,9 +662,8 @@ void JackPlayback::stop()
 
 ClockLatency JackPlayback::getClockLatency()
 {
-    ClockLatency ret;
-
     std::lock_guard<std::mutex> dlock{mMutex};
+    ClockLatency ret{};
     ret.ClockTime = mDevice->getClockTime();
     ret.Latency  = std::chrono::seconds{mRing ? mRing->readSpace() : mDevice->UpdateSize};
     ret.Latency /= mDevice->Frequency;

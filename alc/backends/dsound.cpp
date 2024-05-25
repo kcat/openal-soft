@@ -493,7 +493,7 @@ bool DSoundPlayback::reset()
             uint num_updates{mDevice->BufferSize / mDevice->UpdateSize};
             assert(num_updates <= MAX_UPDATES);
 
-            std::array<DSBPOSITIONNOTIFY,MAX_UPDATES> nots;
+            std::array<DSBPOSITIONNOTIFY,MAX_UPDATES> nots{};
             for(uint i{0};i < num_updates;++i)
             {
                 nots[i].dwOffset = i * mDevice->UpdateSize * OutputType.Format.nBlockAlign;

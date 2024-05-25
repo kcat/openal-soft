@@ -199,7 +199,7 @@ constexpr uint RefTime2Samples(const ReferenceTime &val, T srate) noexcept
 
 
 class GuidPrinter {
-    std::array<char,64> mMsg;
+    std::array<char,64> mMsg{};
 
 public:
     GuidPrinter(const GUID &guid)
@@ -212,7 +212,7 @@ public:
 };
 
 struct PropVariant {
-    PROPVARIANT mProp;
+    PROPVARIANT mProp{};
 
 public:
     PropVariant() { PropVariantInit(&mProp); }
@@ -2104,9 +2104,8 @@ void WasapiPlayback::stopProxy()
 
 ClockLatency WasapiPlayback::getClockLatency()
 {
-    ClockLatency ret;
-
     std::lock_guard<std::mutex> dlock{mMutex};
+    ClockLatency ret{};
     ret.ClockTime = mDevice->getClockTime();
     ret.Latency  = seconds{mPadding.load(std::memory_order_relaxed)};
     ret.Latency /= mFormat.Format.nSamplesPerSec;

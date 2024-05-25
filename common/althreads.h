@@ -55,7 +55,7 @@ class tss {
     }
 
 #ifdef _WIN32
-    DWORD mTss;
+    DWORD mTss{TLS_OUT_OF_INDEXES};
 
 public:
     tss() : mTss{TlsAlloc()}
@@ -81,7 +81,7 @@ public:
 
 #elif defined(__APPLE__)
 
-    pthread_key_t mTss;
+    pthread_key_t mTss{};
 
 public:
     tss()
@@ -107,7 +107,7 @@ public:
 
 #else
 
-    tss_t mTss;
+    tss_t mTss{};
 
 public:
     tss()

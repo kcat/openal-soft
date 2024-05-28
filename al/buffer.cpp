@@ -53,7 +53,6 @@
 #include "alnumeric.h"
 #include "alspan.h"
 #include "core/device.h"
-#include "core/logging.h"
 #include "core/resampler_limits.h"
 #include "core/voice.h"
 #include "direct_defs.h"

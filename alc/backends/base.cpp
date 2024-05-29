@@ -7,16 +7,6 @@
 #include <array>
 #include <atomic>
 
-#ifdef _WIN32
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
-#include <mmreg.h>
-
-#include "albit.h"
-#include "core/logging.h"
-#endif
-
-#include "atomic.h"
 #include "core/devformat.h"
 
 

@@ -76,7 +76,7 @@ using namespace std::string_view_literals;
 using std::chrono::seconds;
 using std::chrono::nanoseconds;
 
-inline const char *GetLabelFromChannel(Channel channel)
+const char *GetLabelFromChannel(Channel channel)
 {
     switch(channel)
     {
@@ -97,6 +97,11 @@ inline const char *GetLabelFromChannel(Channel channel)
         case TopBackLeft: return "top-back-left";
         case TopBackCenter: return "top-back-center";
         case TopBackRight: return "top-back-right";
+
+        case BottomFrontLeft: return "bottom-front-left";
+        case BottomFrontRight: return "bottom-front-right";
+        case BottomBackLeft: return "bottom-back-left";
+        case BottomBackRight: return "bottom-back-right";
 
         case Aux0: return "Aux0";
         case Aux1: return "Aux1";
@@ -390,36 +395,48 @@ DecoderView MakeDecoderView(ALCdevice *device, const AmbDecConf *conf,
          * RFT = Top front right
          * LBT = Top back left
          * RBT = Top back right
+         * LFB = Bottom front left
+         * RFB = Bottom front right
+         * LBB = Bottom back left
+         * RBB = Bottom back right
          *
          * Additionally, surround51 will acknowledge back speakers for side
          * channels, to avoid issues with an ambdec expecting 5.1 to use the
          * back channels.
          */
         Channel ch{};
-        if(speaker.Name == "LF")
+        if(speaker.Name == "LF"sv)
             ch = FrontLeft;
-        else if(speaker.Name == "RF")
+        else if(speaker.Name == "RF"sv)
             ch = FrontRight;
-        else if(speaker.Name == "CE")
+        else if(speaker.Name == "CE"sv)
             ch = FrontCenter;
-        else if(speaker.Name == "LS")
+        else if(speaker.Name == "LS"sv)
             ch = SideLeft;
-        else if(speaker.Name == "RS")
+        else if(speaker.Name == "RS"sv)
             ch = SideRight;
-        else if(speaker.Name == "LB")
+        else if(speaker.Name == "LB"sv)
             ch = (device->FmtChans == DevFmtX51) ? SideLeft : BackLeft;
-        else if(speaker.Name == "RB")
+        else if(speaker.Name == "RB"sv)
             ch = (device->FmtChans == DevFmtX51) ? SideRight : BackRight;
-        else if(speaker.Name == "CB")
+        else if(speaker.Name == "CB"sv)
             ch = BackCenter;
-        else if(speaker.Name == "LFT")
+        else if(speaker.Name == "LFT"sv)
             ch = TopFrontLeft;
-        else if(speaker.Name == "RFT")
+        else if(speaker.Name == "RFT"sv)
             ch = TopFrontRight;
-        else if(speaker.Name == "LBT")
+        else if(speaker.Name == "LBT"sv)
             ch = TopBackLeft;
-        else if(speaker.Name == "RBT")
+        else if(speaker.Name == "RBT"sv)
             ch = TopBackRight;
+        else if(speaker.Name == "LFB"sv)
+            ch = BottomFrontLeft;
+        else if(speaker.Name == "RFB"sv)
+            ch = BottomFrontRight;
+        else if(speaker.Name == "LBB"sv)
+            ch = BottomBackLeft;
+        else if(speaker.Name == "RBB"sv)
+            ch = BottomBackRight;
         else
         {
             int idx{};

@@ -918,6 +918,10 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
         case TopBackLeft: return lgain;
         case TopBackCenter: break;
         case TopBackRight: return rgain;
+        case BottomFrontLeft: return lgain;
+        case BottomFrontRight: return rgain;
+        case BottomBackLeft: return lgain;
+        case BottomBackRight: return rgain;
         case Aux0: case Aux1: case Aux2: case Aux3: case Aux4: case Aux5: case Aux6: case Aux7:
         case Aux8: case Aux9: case Aux10: case Aux11: case Aux12: case Aux13: case Aux14:
         case Aux15: case MaxChannels: break;

@@ -26,6 +26,11 @@ enum Channel : unsigned char {
     TopBackCenter,
     TopBackRight,
 
+    BottomFrontLeft,
+    BottomFrontRight,
+    BottomBackLeft,
+    BottomBackRight,
+
     Aux0,
     Aux1,
     Aux2,
@@ -72,7 +77,7 @@ enum DevFmtChannels : unsigned char {
 
     DevFmtChannelsDefault = DevFmtStereo
 };
-inline constexpr size_t MaxOutputChannels{16};
+inline constexpr std::size_t MaxOutputChannels{16};
 
 /* DevFmtType traits, providing the type, etc given a DevFmtType. */
 template<DevFmtType T>

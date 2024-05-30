@@ -72,6 +72,7 @@ enum DevFmtChannels : unsigned char {
     DevFmtX61,
     DevFmtX71,
     DevFmtX714,
+    DevFmtX7144,
     DevFmtX3D71,
     DevFmtAmbi3D,
 

@@ -23,25 +23,30 @@
 #include "pipewire.h"
 
 #include <algorithm>
+#include <array>
 #include <atomic>
+#include <bitset>
+#include <cinttypes>
+#include <cmath>
 #include <cstddef>
+#include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <cerrno>
 #include <chrono>
-#include <cstdint>
 #include <ctime>
-#include <list>
+#include <iterator>
 #include <memory>
 #include <mutex>
 #include <optional>
+#include <string_view>
 #include <thread>
-#include <type_traits>
+#include <tuple>
 #include <utility>
 
-#include "albit.h"
 #include "alc/alconfig.h"
+#include "alc/backends/base.h"
 #include "almalloc.h"
-#include "alnumeric.h"
 #include "alspan.h"
 #include "alstring.h"
 #include "core/devformat.h"
@@ -70,8 +75,9 @@ _Pragma("GCC diagnostic ignored \"-Weverything\"")
 #include "pipewire/pipewire.h"
 #include "pipewire/extensions/metadata.h"
 #include "spa/buffer/buffer.h"
-#include "spa/param/audio/format-utils.h"
 #include "spa/param/audio/raw.h"
+#include "spa/param/audio/raw-utils.h"
+#include "spa/param/format.h"
 #include "spa/param/param.h"
 #include "spa/pod/builder.h"
 #include "spa/utils/json.h"
@@ -1392,6 +1398,7 @@ spa_audio_info_raw make_spa_info(DeviceBase *device, bool is51rear, use_f32p_e u
     case DevFmtX71: map = X71Map; break;
     case DevFmtX714: map = X714Map; break;
     case DevFmtX3D71: map = X71Map; break;
+    case DevFmtX7144:
     case DevFmtAmbi3D:
         info.flags |= SPA_AUDIO_FLAG_UNPOSITIONED;
         info.channels = device->channelsFromFmt();

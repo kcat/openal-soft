@@ -822,6 +822,7 @@ void CoreAudioCapture::open(std::string_view name)
     case DevFmtX61:
     case DevFmtX71:
     case DevFmtX714:
+    case DevFmtX7144:
     case DevFmtX3D71:
     case DevFmtAmbi3D:
         throw al::backend_exception{al::backend_error::DeviceError, "%s not supported",

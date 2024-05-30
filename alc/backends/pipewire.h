@@ -2,7 +2,9 @@
 #define BACKENDS_PIPEWIRE_H
 
 #include <string>
+#include <vector>
 
+#include "alc/events.h"
 #include "base.h"
 
 struct DeviceBase;

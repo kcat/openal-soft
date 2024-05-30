@@ -85,6 +85,7 @@ constexpr SLuint32 GetChannelMask(DevFmtChannels chans) noexcept
         SL_SPEAKER_BACK_RIGHT | SL_SPEAKER_SIDE_LEFT | SL_SPEAKER_SIDE_RIGHT |
         SL_SPEAKER_TOP_FRONT_LEFT | SL_SPEAKER_TOP_FRONT_RIGHT | SL_SPEAKER_TOP_BACK_LEFT |
         SL_SPEAKER_TOP_BACK_RIGHT;
+    case DevFmtX7144:
     case DevFmtAmbi3D:
         break;
     }

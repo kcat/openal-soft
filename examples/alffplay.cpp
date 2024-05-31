@@ -173,7 +173,11 @@ using SwsContextPtr = std::unique_ptr<SwsContext,SwsContextDeleter>;
 
 struct ChannelLayout : public AVChannelLayout {
     ChannelLayout() : AVChannelLayout{} { }
+    ChannelLayout(const ChannelLayout &rhs) : AVChannelLayout{}
+    { av_channel_layout_copy(this, &rhs); }
     ~ChannelLayout() { av_channel_layout_uninit(this); }
+
+    void operator=(const ChannelLayout &rhs) { av_channel_layout_copy(this, &rhs); }
 };
 
 

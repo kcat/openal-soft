@@ -223,7 +223,12 @@ struct PropVariant {
 
 public:
     PropVariant() { PropVariantInit(&mProp); }
+    PropVariant(const PropVariant &rhs) : PropVariant{} { PropVariantCopy(&mProp, &rhs.mProp); }
+    PropVariant(PropVariant&& rhs) : PropVariant{} { PropVariantCopy(&mProp, &rhs.mProp); }
     ~PropVariant() { clear(); }
+
+    void operator=(const PropVariant &rhs) { PropVariantCopy(&mProp, &rhs.mProp); }
+    void operator=(PropVariant&& rhs) { PropVariantCopy(&mProp, &rhs.mProp); }
 
     void clear() { PropVariantClear(&mProp); }
 
@@ -933,7 +938,13 @@ constexpr const char *GetMessageTypeName(MsgType type) noexcept
 
 /* Proxy interface used by the message handler. */
 struct WasapiProxy {
+    WasapiProxy() = default;
+    WasapiProxy(const WasapiProxy&) = delete;
+    WasapiProxy(WasapiProxy&&) = delete;
     virtual ~WasapiProxy() = default;
+
+    void operator=(const WasapiProxy&) = delete;
+    void operator=(WasapiProxy&&) = delete;
 
     virtual HRESULT openProxy(std::string_view name) = 0;
     virtual void closeProxy() = 0;

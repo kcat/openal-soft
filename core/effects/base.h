@@ -208,7 +208,13 @@ struct EffectState : public al::intrusive_ref<EffectState> {
 
 
 struct EffectStateFactory {
+    EffectStateFactory() = default;
+    EffectStateFactory(const EffectStateFactory&) = delete;
+    EffectStateFactory(EffectStateFactory&&) = delete;
     virtual ~EffectStateFactory() = default;
+
+    void operator=(const EffectStateFactory&) = delete;
+    void operator=(EffectStateFactory&&) = delete;
 
     virtual al::intrusive_ptr<EffectState> create() = 0;
 };

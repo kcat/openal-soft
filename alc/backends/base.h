@@ -36,8 +36,14 @@ struct BackendBase {
 
     DeviceBase *const mDevice;
 
+    BackendBase() = delete;
+    BackendBase(const BackendBase&) = delete;
+    BackendBase(BackendBase&&) = delete;
     BackendBase(DeviceBase *device) noexcept : mDevice{device} { }
     virtual ~BackendBase() = default;
+
+    void operator=(const BackendBase&) = delete;
+    void operator=(BackendBase&&) = delete;
 
 protected:
     /** Sets the default channel order used by most non-WaveFormatEx-based APIs. */
@@ -65,7 +71,13 @@ inline ClockLatency GetClockLatency(DeviceBase *device, BackendBase *backend)
 
 
 struct BackendFactory {
+    BackendFactory() = default;
+    BackendFactory(const BackendFactory&) = delete;
+    BackendFactory(BackendFactory&&) = delete;
     virtual ~BackendFactory() = default;
+
+    void operator=(const BackendFactory&) = delete;
+    void operator=(BackendFactory&&) = delete;
 
     virtual auto init() -> bool = 0;
 

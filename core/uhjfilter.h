@@ -37,7 +37,13 @@ struct UhjAllPassFilter {
 
 
 struct UhjEncoderBase {
+    UhjEncoderBase() = default;
+    UhjEncoderBase(const UhjEncoderBase&) = delete;
+    UhjEncoderBase(UhjEncoderBase&&) = delete;
     virtual ~UhjEncoderBase() = default;
+
+    void operator=(const UhjEncoderBase&) = delete;
+    void operator=(UhjEncoderBase&&) = delete;
 
     virtual std::size_t getDelay() noexcept = 0;
 
@@ -82,7 +88,7 @@ struct UhjEncoder final : public UhjEncoderBase {
      * with an additional +3dB boost).
      */
     void encode(float *LeftOut, float *RightOut, const al::span<const float*const,3> InSamples,
-        const std::size_t SamplesToDo) override;
+        const std::size_t SamplesToDo) final;
 };
 
 struct UhjEncoderIIR final : public UhjEncoderBase {
@@ -110,7 +116,7 @@ struct UhjEncoderIIR final : public UhjEncoderBase {
      * with an additional +3dB boost).
      */
     void encode(float *LeftOut, float *RightOut, const al::span<const float*const,3> InSamples,
-        const std::size_t SamplesToDo) override;
+        const std::size_t SamplesToDo) final;
 };
 
 
@@ -121,7 +127,13 @@ struct DecoderBase {
     static constexpr float sWLFScale{0.661f};
     static constexpr float sXYLFScale{1.293f};
 
+    DecoderBase() = default;
+    DecoderBase(const DecoderBase&) = delete;
+    DecoderBase(DecoderBase&&) = delete;
     virtual ~DecoderBase() = default;
+
+    void operator=(const DecoderBase&) = delete;
+    void operator=(DecoderBase&&) = delete;
 
     virtual void decode(const al::span<float*> samples, const std::size_t samplesToDo,
         const bool updateState) = 0;
@@ -156,7 +168,7 @@ struct UhjDecoder final : public DecoderBase {
      * B-Format decoder, as it needs different shelf filters.
      */
     void decode(const al::span<float*> samples, const std::size_t samplesToDo,
-        const bool updateState) override;
+        const bool updateState) final;
 };
 
 struct UhjDecoderIIR final : public DecoderBase {
@@ -180,7 +192,7 @@ struct UhjDecoderIIR final : public DecoderBase {
     UhjAllPassFilter mFilter1Q;
 
     void decode(const al::span<float*> samples, const std::size_t samplesToDo,
-        const bool updateState) override;
+        const bool updateState) final;
 };
 
 template<std::size_t N>
@@ -204,7 +216,7 @@ struct UhjStereoDecoder final : public DecoderBase {
      * channels, and the third left empty.
      */
     void decode(const al::span<float*> samples, const std::size_t samplesToDo,
-        const bool updateState) override;
+        const bool updateState) final;
 };
 
 struct UhjStereoDecoderIIR final : public DecoderBase {
@@ -223,7 +235,7 @@ struct UhjStereoDecoderIIR final : public DecoderBase {
     UhjAllPassFilter mFilter2S;
 
     void decode(const al::span<float*> samples, const std::size_t samplesToDo,
-        const bool updateState) override;
+        const bool updateState) final;
 };
 
 #endif /* CORE_UHJFILTER_H */

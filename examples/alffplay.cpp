@@ -69,17 +69,13 @@ _Pragma("GCC diagnostic pop")
 #include "AL/al.h"
 #include "AL/alext.h"
 
+#include "alnumbers.h"
+#include "alnumeric.h"
 #include "alspan.h"
 #include "common/alhelpers.h"
 
 
 namespace {
-
-inline constexpr int64_t operator "" _i64(unsigned long long int n) noexcept { return static_cast<int64_t>(n); }
-
-#ifndef M_PI
-#define M_PI (3.14159265358979323846)
-#endif
 
 using fixed32 = std::chrono::duration<int64_t,std::ratio<1,(1_i64<<32)>>;
 using nanoseconds = std::chrono::nanoseconds;
@@ -181,8 +177,8 @@ struct ChannelLayout : public AVChannelLayout {
 };
 
 
-template<size_t SizeLimit>
 class DataQueue {
+    const size_t mSizeLimit;
     std::mutex mPacketMutex, mFrameMutex;
     std::condition_variable mPacketCond;
     std::condition_variable mInFrameCond, mOutFrameCond;
@@ -206,6 +202,8 @@ class DataQueue {
     }
 
 public:
+    DataQueue(size_t size_limit) : mSizeLimit{size_limit} { }
+
     int sendPacket(AVCodecContext *codecctx)
     {
         AVPacketPtr packet{getPacket()};
@@ -266,7 +264,7 @@ public:
     {
         {
             std::lock_guard<std::mutex> packet_lock{mPacketMutex};
-            if(mTotalSize >= SizeLimit || mFinished)
+            if(mTotalSize >= mSizeLimit || mFinished)
                 return false;
 
             mPackets.push_back(AVPacketPtr{av_packet_alloc()});
@@ -292,7 +290,7 @@ struct AudioState {
     AVStream *mStream{nullptr};
     AVCodecCtxPtr mCodecCtx;
 
-    DataQueue<size_t{2}*1024*1024> mQueue;
+    DataQueue mQueue{2_uz*1024_uz*1024_uz};
 
     /* Used for clock difference average computation */
     seconds_d64 mClockDiffAvg{0};
@@ -378,7 +376,7 @@ struct VideoState {
     AVStream *mStream{nullptr};
     AVCodecCtxPtr mCodecCtx;
 
-    DataQueue<size_t{14}*1024*1024> mQueue;
+    DataQueue mQueue{14_uz*1024_uz*1024_uz};
 
     /* The pts of the currently displayed frame, and the time (av_gettime) it
      * was last updated - used to have running video pts
@@ -1175,7 +1173,7 @@ int AudioState::handler()
              * ordering and normalization, so a custom matrix is needed to
              * scale and reorder the source from AmbiX.
              */
-            std::vector<double> mtx(size_t{64}*64, 0.0);
+            std::vector<double> mtx(64_uz*64_uz, 0.0);
             mtx[0 + 0*64] = std::sqrt(0.5);
             mtx[3 + 1*64] = 1.0;
             mtx[1 + 2*64] = 1.0;
@@ -1215,7 +1213,8 @@ int AudioState::handler()
         alSourcei(mSource, AL_DIRECT_CHANNELS_SOFT, DirectOutMode);
     if(EnableWideStereo)
     {
-        const std::array angles{static_cast<float>(M_PI / 3.0), static_cast<float>(-M_PI / 3.0)};
+        static constexpr std::array angles{static_cast<float>(al::numbers::pi / 3.0),
+            static_cast<float>(-al::numbers::pi / 3.0)};
         alSourcefv(mSource, AL_STEREO_ANGLES, angles.data());
     }
     if(has_bfmt_ex)

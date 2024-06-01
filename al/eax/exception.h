@@ -11,13 +11,13 @@ class EaxException : public std::runtime_error {
 
 public:
     EaxException() = delete;
-    EaxException(const EaxException&) = delete;
-    EaxException(EaxException&&) = delete;
+    EaxException(const EaxException&) = default;
+    EaxException(EaxException&&) = default;
     EaxException(std::string_view context, std::string_view message);
     ~EaxException() override;
 
-    void operator=(const EaxException&) = delete;
-    void operator=(EaxException&&) = delete;
+    auto operator=(const EaxException&) -> EaxException& = default;
+    auto operator=(EaxException&&) -> EaxException& = default;
 };
 
 #endif /* EAX_EXCEPTION_INCLUDED */

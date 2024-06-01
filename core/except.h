@@ -17,12 +17,12 @@ protected:
 
 public:
     base_exception() = default;
-    base_exception(const base_exception&) = delete;
-    base_exception(base_exception&&) = delete;
+    base_exception(const base_exception&) = default;
+    base_exception(base_exception&&) = default;
     ~base_exception() override;
 
-    void operator=(const base_exception&) = delete;
-    void operator=(base_exception&&) = delete;
+    auto operator=(const base_exception&) -> base_exception& = default;
+    auto operator=(base_exception&&) -> base_exception& = default;
 
     [[nodiscard]] auto what() const noexcept -> const char* override { return mMessage.c_str(); }
 };

@@ -202,11 +202,6 @@ inline const FuncExport alcFunctions[]{
     DECL(alGetBuffer3PtrSOFT),
     DECL(alGetBufferPtrvSOFT),
 
-    DECL(alAuxiliaryEffectSlotPlaySOFT),
-    DECL(alAuxiliaryEffectSlotPlayvSOFT),
-    DECL(alAuxiliaryEffectSlotStopSOFT),
-    DECL(alAuxiliaryEffectSlotStopvSOFT),
-
     DECL(alSourcePlayAtTimeSOFT),
     DECL(alSourcePlayAtTimevSOFT),
 

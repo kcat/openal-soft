@@ -47,16 +47,6 @@ void AL_APIENTRY alFlushMappedBufferDirectSOFT(ALCcontext *context, ALuint buffe
 #define AL_EFFECT_CONVOLUTION_SOFT               0xA000
 #define AL_CONVOLUTION_ORIENTATION_SOFT          0x100F /* same as AL_ORIENTATION */
 #define AL_EFFECTSLOT_STATE_SOFT                 0x199E
-typedef void (AL_APIENTRY*LPALAUXILIARYEFFECTSLOTPLAYSOFT)(ALuint slotid) AL_API_NOEXCEPT17;
-typedef void (AL_APIENTRY*LPALAUXILIARYEFFECTSLOTPLAYVSOFT)(ALsizei n, const ALuint *slotids) AL_API_NOEXCEPT17;
-typedef void (AL_APIENTRY*LPALAUXILIARYEFFECTSLOTSTOPSOFT)(ALuint slotid) AL_API_NOEXCEPT17;
-typedef void (AL_APIENTRY*LPALAUXILIARYEFFECTSLOTSTOPVSOFT)(ALsizei n, const ALuint *slotids) AL_API_NOEXCEPT17;
-#ifdef AL_ALEXT_PROTOTYPES
-AL_API void AL_APIENTRY alAuxiliaryEffectSlotPlaySOFT(ALuint slotid) AL_API_NOEXCEPT;
-AL_API void AL_APIENTRY alAuxiliaryEffectSlotPlayvSOFT(ALsizei n, const ALuint *slotids) AL_API_NOEXCEPT;
-AL_API void AL_APIENTRY alAuxiliaryEffectSlotStopSOFT(ALuint slotid) AL_API_NOEXCEPT;
-AL_API void AL_APIENTRY alAuxiliaryEffectSlotStopvSOFT(ALsizei n, const ALuint *slotids) AL_API_NOEXCEPT;
-#endif
 #endif
 
 #ifndef AL_SOFT_hold_on_disconnect

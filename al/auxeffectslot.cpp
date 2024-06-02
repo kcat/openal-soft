@@ -432,114 +432,36 @@ FORCE_ALIGN ALboolean AL_APIENTRY alIsAuxiliaryEffectSlotDirect(ALCcontext *cont
 }
 
 
-AL_API void AL_APIENTRY alAuxiliaryEffectSlotPlaySOFT(ALuint slotid) noexcept
+AL_API void AL_APIENTRY alAuxiliaryEffectSlotPlaySOFT(ALuint) noexcept
 {
     ContextRef context{GetContextRef()};
     if(!context) UNLIKELY return;
 
-    std::lock_guard<std::mutex> slotlock{context->mEffectSlotLock};
-    ALeffectslot *slot{LookupEffectSlot(context.get(), slotid)};
-    if(!slot) UNLIKELY
-    {
-        context->setError(AL_INVALID_NAME, "Invalid effect slot ID %u", slotid);
-        return;
-    }
-    if(slot->mState == SlotState::Playing)
-        return;
-
-    slot->mPropsDirty = false;
-    slot->updateProps(context.get());
-
-    AddActiveEffectSlots({&slot, 1}, context.get());
-    slot->mState = SlotState::Playing;
+    context->setError(AL_INVALID_OPERATION, "alAuxiliaryEffectSlotPlaySOFT not supported");
 }
 
-AL_API void AL_APIENTRY alAuxiliaryEffectSlotPlayvSOFT(ALsizei n, const ALuint *slotids) noexcept
+AL_API void AL_APIENTRY alAuxiliaryEffectSlotPlayvSOFT(ALsizei, const ALuint*) noexcept
 {
     ContextRef context{GetContextRef()};
     if(!context) UNLIKELY return;
 
-    try {
-        if(n < 0)
-            throw al::context_error{AL_INVALID_VALUE, "Playing %d effect slots", n};
-        if(n <= 0) UNLIKELY return;
-
-        auto ids = al::span{slotids, static_cast<ALuint>(n)};
-        auto slots = std::vector<ALeffectslot*>(ids.size());
-        std::lock_guard<std::mutex> slotlock{context->mEffectSlotLock};
-
-        auto lookupslot = [&context](const ALuint id) -> ALeffectslot*
-        {
-            ALeffectslot *slot{LookupEffectSlot(context.get(), id)};
-            if(!slot)
-                throw al::context_error{AL_INVALID_NAME, "Invalid effect slot ID %u", id};
-
-            if(slot->mState != SlotState::Playing)
-            {
-                slot->mPropsDirty = false;
-                slot->updateProps(context.get());
-            }
-            return slot;
-        };
-        std::transform(ids.cbegin(), ids.cend(), slots.begin(), lookupslot);
-
-        AddActiveEffectSlots(slots, context.get());
-        for(auto slot : slots)
-            slot->mState = SlotState::Playing;
-    }
-    catch(al::context_error& e) {
-        context->setError(e.errorCode(), "%s", e.what());
-        return;
-    }
+    context->setError(AL_INVALID_OPERATION, "alAuxiliaryEffectSlotPlayvSOFT not supported");
 }
 
-AL_API void AL_APIENTRY alAuxiliaryEffectSlotStopSOFT(ALuint slotid) noexcept
+AL_API void AL_APIENTRY alAuxiliaryEffectSlotStopSOFT(ALuint) noexcept
 {
     ContextRef context{GetContextRef()};
     if(!context) UNLIKELY return;
 
-    std::lock_guard<std::mutex> slotlock{context->mEffectSlotLock};
-    ALeffectslot *slot{LookupEffectSlot(context.get(), slotid)};
-    if(!slot) UNLIKELY
-    {
-        context->setError(AL_INVALID_NAME, "Invalid effect slot ID %u", slotid);
-        return;
-    }
-
-    RemoveActiveEffectSlots({&slot, 1}, context.get());
-    slot->mState = SlotState::Stopped;
+    context->setError(AL_INVALID_OPERATION, "alAuxiliaryEffectSlotStopSOFT not supported");
 }
 
-AL_API void AL_APIENTRY alAuxiliaryEffectSlotStopvSOFT(ALsizei n, const ALuint *slotids) noexcept
+AL_API void AL_APIENTRY alAuxiliaryEffectSlotStopvSOFT(ALsizei, const ALuint*) noexcept
 {
     ContextRef context{GetContextRef()};
     if(!context) UNLIKELY return;
 
-    try {
-        if(n < 0)
-            throw al::context_error{AL_INVALID_VALUE, "Stopping %d effect slots", n};
-        if(n <= 0) UNLIKELY return;
-
-        auto ids = al::span{slotids, static_cast<ALuint>(n)};
-        auto slots = std::vector<ALeffectslot*>(ids.size());
-        std::lock_guard<std::mutex> slotlock{context->mEffectSlotLock};
-
-        auto lookupslot = [&context](const ALuint id) -> ALeffectslot*
-        {
-            if(ALeffectslot *slot{LookupEffectSlot(context.get(), id)})
-                return slot;
-            throw al::context_error{AL_INVALID_NAME, "Invalid effect slot ID %u", id};
-        };
-        std::transform(ids.cbegin(), ids.cend(), slots.begin(), lookupslot);
-
-        RemoveActiveEffectSlots(slots, context.get());
-        for(auto slot : slots)
-            slot->mState = SlotState::Stopped;
-    }
-    catch(al::context_error& e) {
-        context->setError(e.errorCode(), "%s", e.what());
-        return;
-    }
+    context->setError(AL_INVALID_OPERATION, "alAuxiliaryEffectSlotStopvSOFT not supported");
 }
 
 
@@ -1063,7 +985,7 @@ void UpdateAllEffectSlotProps(ALCcontext *context)
             usemask &= ~(1_u64 << idx);
             auto &slot = (*sublist.EffectSlots)[idx];
 
-            if(slot.mState != SlotState::Stopped && std::exchange(slot.mPropsDirty, false))
+            if(std::exchange(slot.mPropsDirty, false))
                 slot.updateProps(context);
         }
     }

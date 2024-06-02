@@ -37,10 +37,8 @@ public:
 };
 #endif // ALSOFT_EAX
 
-enum class SlotState : ALenum {
-    Initial = AL_INITIAL,
-    Playing = AL_PLAYING,
-    Stopped = AL_STOPPED,
+enum class SlotState : bool {
+    Initial, Playing,
 };
 
 struct ALeffectslot {

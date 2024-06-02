@@ -1,7 +1,13 @@
 #ifndef BACKENDS_PULSEAUDIO_H
 #define BACKENDS_PULSEAUDIO_H
 
+#include <string>
+#include <vector>
+
+#include "alc/events.h"
 #include "base.h"
+
+struct DeviceBase;
 
 class PulseBackendFactory final : public BackendFactory {
 public:

@@ -173,7 +173,8 @@ struct ChannelLayout : public AVChannelLayout {
     { av_channel_layout_copy(this, &rhs); }
     ~ChannelLayout() { av_channel_layout_uninit(this); }
 
-    void operator=(const ChannelLayout &rhs) { av_channel_layout_copy(this, &rhs); }
+    auto operator=(const ChannelLayout &rhs) -> ChannelLayout&
+    { av_channel_layout_copy(this, &rhs); return *this; }
 };
 
 

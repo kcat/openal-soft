@@ -633,21 +633,22 @@ try {
         return;
 
     case AL_BUFFER:
-        if(slot->mState == SlotState::Playing)
-            throw al::context_error{AL_INVALID_OPERATION,
-                "Setting buffer on playing effect slot %u", slot->id};
-
         if(ALbuffer *buffer{slot->Buffer})
         {
-            if(buffer->id == static_cast<ALuint>(value)) UNLIKELY
+            if(buffer->id == static_cast<ALuint>(value))
                 return;
         }
-        else if(value == 0) UNLIKELY
+        else if(value == 0)
             return;
 
+        if(slot->mState == SlotState::Playing)
         {
+            EffectStateFactory *factory{getFactoryByType(slot->Effect.Type)};
+            assert(factory);
+            al::intrusive_ptr<EffectState> state{factory->create()};
+
             ALCdevice *device{context->mALDevice.get()};
-            std::lock_guard<std::mutex> bufferlock{device->BufferLock};
+            auto bufferlock = std::unique_lock{device->BufferLock};
             ALbuffer *buffer{};
             if(value)
             {
@@ -661,15 +662,55 @@ try {
                 IncrementRef(buffer->ref);
             }
 
+            /* Stop the effect slot from processing while we switch buffers. */
+            RemoveActiveEffectSlots({&slot, 1}, context);
+
             if(ALbuffer *oldbuffer{slot->Buffer})
                 DecrementRef(oldbuffer->ref);
             slot->Buffer = buffer;
+            bufferlock.unlock();
 
+            auto statelock = std::unique_lock{device->StateLock};
+            state->mOutTarget = device->Dry.Buffer;
+            {
+                FPUCtl mixer_mode{};
+                state->deviceUpdate(device, buffer);
+            }
+            slot->Effect.State = std::move(state);
+            statelock.unlock();
+
+            slot->mPropsDirty = false;
+            slot->updateProps(context);
+            AddActiveEffectSlots({&slot, 1}, context);
+        }
+        else
+        {
+            ALCdevice *device{context->mALDevice.get()};
+            auto bufferlock = std::unique_lock{device->BufferLock};
+            ALbuffer *buffer{};
+            if(value)
+            {
+                buffer = LookupBuffer(device, static_cast<ALuint>(value));
+                if(!buffer)
+                    throw al::context_error{AL_INVALID_VALUE, "Invalid buffer ID %u", value};
+                if(buffer->mCallback)
+                    throw al::context_error{AL_INVALID_OPERATION,
+                                            "Callback buffer not valid for effects"};
+
+                IncrementRef(buffer->ref);
+            }
+
+            if(ALbuffer *oldbuffer{slot->Buffer})
+                DecrementRef(oldbuffer->ref);
+            slot->Buffer = buffer;
+            bufferlock.unlock();
+
+            auto statelock = std::unique_lock{device->StateLock};
             FPUCtl mixer_mode{};
             auto *state = slot->Effect.State.get();
             state->deviceUpdate(device, buffer);
+            slot->mPropsDirty = true;
         }
-        UpdateProps(slot, context);
         return;
 
     case AL_EFFECTSLOT_STATE_SOFT:

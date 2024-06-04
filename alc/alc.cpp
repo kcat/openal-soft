@@ -1648,7 +1648,7 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const al::span<const int> attrList
     TRACE("Fixed device latency: %" PRId64 "ns\n", int64_t{device->FixedLatency.count()});
 
     FPUCtl mixer_mode{};
-    for(ContextBase *ctxbase : *device->mContexts.load())
+    auto reset_context = [device](ContextBase *ctxbase)
     {
         auto *context = static_cast<ALCcontext*>(ctxbase);
 
@@ -1661,14 +1661,14 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const al::span<const int> attrList
             return std::none_of(clusterptr->begin(), clusterptr->end(),
                 std::mem_fn(&EffectSlot::InUse));
         };
-        auto slotcluster_iter = std::remove_if(context->mEffectSlotClusters.begin(),
+        auto slotcluster_end = std::remove_if(context->mEffectSlotClusters.begin(),
             context->mEffectSlotClusters.end(), slot_cluster_not_in_use);
-        context->mEffectSlotClusters.erase(slotcluster_iter, context->mEffectSlotClusters.end());
+        context->mEffectSlotClusters.erase(slotcluster_end, context->mEffectSlotClusters.end());
 
         /* Free all wet buffers. Any in use will be reallocated with an updated
          * configuration in aluInitEffectPanning.
          */
-        for(auto& clusterptr : context->mEffectSlotClusters)
+        auto clear_wetbuffers = [](ContextBase::EffectSlotCluster &clusterptr)
         {
             auto clear_buffer = [](EffectSlot &slot)
             {
@@ -1677,7 +1677,9 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const al::span<const int> attrList
                 slot.Wet.Buffer = {};
             };
             std::for_each(clusterptr->begin(), clusterptr->end(), clear_buffer);
-        }
+        };
+        std::for_each(context->mEffectSlotClusters.begin(), context->mEffectSlotClusters.end(),
+            clear_wetbuffers);
 
         if(ALeffectslot *slot{context->mDefaultSlot.get()})
         {
@@ -1695,7 +1697,7 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const al::span<const int> attrList
 
         if(EffectSlotArray *curarray{context->mActiveAuxSlots.load(std::memory_order_relaxed)})
             std::fill(curarray->begin()+ptrdiff_t(curarray->size()>>1), curarray->end(), nullptr);
-        for(auto &sublist : context->mEffectSlotList)
+        auto reset_slots = [device,context](EffectSlotSubList &sublist)
         {
             uint64_t usemask{~sublist.FreeMask};
             while(usemask)
@@ -1715,15 +1717,18 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const al::span<const int> attrList
                 state->deviceUpdate(device, slot.Buffer);
                 slot.mPropsDirty = true;
             }
-        }
+        };
+        std::for_each(context->mEffectSlotList.begin(), context->mEffectSlotList.end(),
+            reset_slots);
+
         /* Clear all effect slot props to let them get allocated again. */
         context->mEffectSlotPropClusters.clear();
         context->mFreeEffectSlotProps.store(nullptr, std::memory_order_relaxed);
         slotlock.unlock();
 
-        const uint num_sends{device->NumAuxSends};
         std::unique_lock<std::mutex> srclock{context->mSourceLock};
-        for(auto &sublist : context->mSourceList)
+        const uint num_sends{device->NumAuxSends};
+        auto reset_sources = [num_sends](SourceSubList &sublist)
         {
             uint64_t usemask{~sublist.FreeMask};
             while(usemask)
@@ -1743,25 +1748,27 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const al::span<const int> attrList
                     send.GainLF = 1.0f;
                     send.LFReference = HighPassFreqRef;
                 };
-                auto send_begin = source.Send.begin() + static_cast<ptrdiff_t>(num_sends);
-                std::for_each(send_begin, source.Send.end(), clear_send);
+                const auto sends = al::span{source.Send}.subspan(num_sends);
+                std::for_each(sends.begin(), sends.end(), clear_send);
 
                 source.mPropsDirty = true;
             }
-        }
+        };
+        std::for_each(context->mSourceList.begin(), context->mSourceList.end(), reset_sources);
 
-        for(Voice *voice : context->getVoicesSpan())
+        auto reset_voice = [device,num_sends,context](Voice *voice)
         {
             /* Clear extraneous property set sends. */
-            std::fill(std::begin(voice->mProps.Send)+num_sends, std::end(voice->mProps.Send),
-                VoiceProps::SendData{});
+            const auto sendparams = al::span{voice->mProps.Send}.subspan(num_sends);
+            std::fill(sendparams.begin(), sendparams.end(), VoiceProps::SendData{});
 
             std::fill(voice->mSend.begin()+num_sends, voice->mSend.end(), Voice::TargetData{});
-            for(auto &chandata : voice->mChans)
+            auto clear_wetparams = [num_sends](Voice::ChannelData &chandata)
             {
-                std::fill(chandata.mWetParams.begin()+num_sends, chandata.mWetParams.end(),
-                    SendParams{});
-            }
+                const auto wetparams = al::span{chandata.mWetParams}.subspan(num_sends);
+                std::fill(wetparams.begin(), wetparams.end(), SendParams{});
+            };
+            std::for_each(voice->mChans.begin(), voice->mChans.end(), clear_wetparams);
 
             if(VoicePropsItem *props{voice->mUpdate.exchange(nullptr, std::memory_order_relaxed)})
                 AtomicReplaceHead(context->mFreeVoiceProps, props);
@@ -1771,10 +1778,13 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const al::span<const int> attrList
             voice->mPlayState.compare_exchange_strong(vstate, Voice::Stopped,
                 std::memory_order_acquire, std::memory_order_acquire);
             if(voice->mSourceID.load(std::memory_order_relaxed) == 0u)
-                continue;
+                return;
 
             voice->prepare(device);
-        }
+        };
+        const auto voicespan = context->getVoicesSpan();
+        std::for_each(voicespan.begin(), voicespan.end(), reset_voice);
+
         /* Clear all voice props to let them get allocated again. */
         context->mVoicePropClusters.clear();
         context->mFreeVoiceProps.store(nullptr, std::memory_order_relaxed);
@@ -1784,7 +1794,9 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const al::span<const int> attrList
         UpdateContextProps(context);
         UpdateAllEffectSlotProps(context);
         UpdateAllSourceProps(context);
-    }
+    };
+    auto ctxspan = al::span{*device->mContexts.load()};
+    std::for_each(ctxspan.begin(), ctxspan.end(), reset_context);
     mixer_mode.leave();
 
     device->mDeviceState = DeviceState::Configured;

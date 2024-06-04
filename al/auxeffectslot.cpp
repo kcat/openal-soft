@@ -592,14 +592,12 @@ try {
             slot->Buffer = buffer;
             bufferlock.unlock();
 
-            auto statelock = std::unique_lock{device->StateLock};
             state->mOutTarget = device->Dry.Buffer;
             {
                 FPUCtl mixer_mode{};
                 state->deviceUpdate(device, buffer);
             }
             slot->Effect.State = std::move(state);
-            statelock.unlock();
 
             slot->mPropsDirty = false;
             slot->updateProps(context);
@@ -627,7 +625,6 @@ try {
             slot->Buffer = buffer;
             bufferlock.unlock();
 
-            auto statelock = std::unique_lock{device->StateLock};
             FPUCtl mixer_mode{};
             auto *state = slot->Effect.State.get();
             state->deviceUpdate(device, buffer);
@@ -899,7 +896,6 @@ ALenum ALeffectslot::initEffect(ALuint effectId, ALenum effectType, const Effect
         al::intrusive_ptr<EffectState> state{factory->create()};
 
         ALCdevice *device{context->mALDevice.get()};
-        std::unique_lock<std::mutex> statelock{device->StateLock};
         state->mOutTarget = device->Dry.Buffer;
         {
             FPUCtl mixer_mode{};

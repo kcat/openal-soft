@@ -39,10 +39,10 @@
 #include <cmath>
 #include <csignal>
 #include <cstddef>
-#include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <exception>
 #include <functional>
 #include <iterator>
 #include <limits>
@@ -52,7 +52,8 @@
 #include <optional>
 #include <stdexcept>
 #include <string>
-#include <type_traits>
+#include <string_view>
+#include <tuple>
 #include <utility>
 #include <vector>
 
@@ -66,12 +67,12 @@
 #include "al/debug.h"
 #include "al/effect.h"
 #include "al/filter.h"
-#include "al/listener.h"
 #include "al/source.h"
 #include "alc/events.h"
 #include "albit.h"
 #include "alconfig.h"
 #include "almalloc.h"
+#include "alnumbers.h"
 #include "alnumeric.h"
 #include "alspan.h"
 #include "alstring.h"
@@ -85,13 +86,12 @@
 #include "core/cpu_caps.h"
 #include "core/devformat.h"
 #include "core/device.h"
+#include "core/effects/base.h"
 #include "core/effectslot.h"
-#include "core/except.h"
+#include "core/filters/nfc.h"
 #include "core/helpers.h"
 #include "core/mastering.h"
-#include "core/mixer/hrtfdefs.h"
 #include "core/fpu_ctrl.h"
-#include "core/front_stablizer.h"
 #include "core/logging.h"
 #include "core/uhjfilter.h"
 #include "core/voice.h"
@@ -158,9 +158,9 @@
 #endif
 
 #ifdef ALSOFT_EAX
+#include "al/eax/api.h"
 #include "al/eax/globals.h"
-#include "al/eax/x_ram.h"
-#endif // ALSOFT_EAX
+#endif
 
 
 /************************************************

@@ -4502,8 +4502,11 @@ void ALsource::eax5_set(const EaxCall& call, Eax5Props& props)
         case EAXSOURCE_ROLLOFFFACTOR:
         case EAXSOURCE_ROOMROLLOFFFACTOR:
         case EAXSOURCE_AIRABSORPTIONFACTOR:
-        case EAXSOURCE_FLAGS:
             eax3_set(call, props.source);
+            break;
+
+        case EAXSOURCE_FLAGS:
+            eax_defer<Eax5SourceFlagsValidator>(call, props.source.ulFlags);
             break;
 
         case EAXSOURCE_SENDPARAMETERS:

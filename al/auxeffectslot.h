@@ -192,6 +192,17 @@ private:
         }
     };
 
+    struct Eax5FlagsValidator {
+        void operator()(unsigned long ulFlags) const
+        {
+            EaxRangeValidator{}(
+                "Flags",
+                ulFlags,
+                0UL,
+                ~EAX50FXSLOTFLAGS_RESERVED);
+        }
+    };
+
     struct Eax5OcclusionValidator {
         void operator()(long lOcclusion) const
         {
@@ -214,21 +225,13 @@ private:
         }
     };
 
-    struct Eax5FlagsValidator {
-        void operator()(unsigned long ulFlags) const
-        {
-            EaxRangeValidator{}(
-                "Flags",
-                ulFlags,
-                0UL,
-                ~EAX50FXSLOTFLAGS_RESERVED);
-        }
-    };
-
     struct Eax5AllValidator {
         void operator()(const EAX50FXSLOTPROPERTIES& all) const
         {
-            Eax4AllValidator{}(static_cast<const EAX40FXSLOTPROPERTIES&>(all));
+            Eax4GuidLoadEffectValidator{}(all.guidLoadEffect);
+            Eax4VolumeValidator{}(all.lVolume);
+            Eax4LockValidator{}(all.lLock);
+            Eax5FlagsValidator{}(all.ulFlags);
             Eax5OcclusionValidator{}(all.lOcclusion);
             Eax5OcclusionLfRatioValidator{}(all.flOcclusionLFRatio);
         }

@@ -542,7 +542,24 @@ private:
     struct Eax5SourceAllValidator {
         void operator()(const EAX50SOURCEPROPERTIES& props) const
         {
-            Eax3SourceAllValidator{}(static_cast<const Eax3Props&>(props));
+            Eax2SourceDirectValidator{}(props.lDirect);
+            Eax2SourceDirectHfValidator{}(props.lDirectHF);
+            Eax2SourceRoomValidator{}(props.lRoom);
+            Eax2SourceRoomHfValidator{}(props.lRoomHF);
+            Eax2SourceObstructionValidator{}(props.lObstruction);
+            Eax2SourceObstructionLfRatioValidator{}(props.flObstructionLFRatio);
+            Eax2SourceOcclusionValidator{}(props.lOcclusion);
+            Eax2SourceOcclusionLfRatioValidator{}(props.flOcclusionLFRatio);
+            Eax2SourceOcclusionRoomRatioValidator{}(props.flOcclusionRoomRatio);
+            Eax3SourceOcclusionDirectRatioValidator{}(props.flOcclusionDirectRatio);
+            Eax3SourceExclusionValidator{}(props.lExclusion);
+            Eax3SourceExclusionLfRatioValidator{}(props.flExclusionLFRatio);
+            Eax2SourceOutsideVolumeHfValidator{}(props.lOutsideVolumeHF);
+            Eax3SourceDopplerFactorValidator{}(props.flDopplerFactor);
+            Eax3SourceRolloffFactorValidator{}(props.flRolloffFactor);
+            Eax2SourceRoomRolloffFactorValidator{}(props.flRoomRolloffFactor);
+            Eax2SourceAirAbsorptionFactorValidator{}(props.flAirAbsorptionFactor);
+            Eax5SourceFlagsValidator{}(props.ulFlags);
             Eax5SourceMacroFXFactorValidator{}(props.flMacroFXFactor);
         }
     };

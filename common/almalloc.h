@@ -88,6 +88,9 @@ constexpr bool operator!=(const allocator<T,N>&, const allocator<U,M>&) noexcept
 { return allocator<T,N>::Alignment != allocator<U,M>::Alignment; }
 
 
+#ifdef __cpp_lib_to_address
+using std::to_address;
+#else
 template<typename T>
 constexpr T *to_address(T *p) noexcept
 {
@@ -100,7 +103,7 @@ constexpr auto to_address(const T &p) noexcept
 {
     return ::al::to_address(p.operator->());
 }
-
+#endif
 
 template<typename T, typename ...Args>
 constexpr T* construct_at(T *ptr, Args&& ...args)

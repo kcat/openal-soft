@@ -23,7 +23,6 @@
 #include "AL/alext.h"
 
 #include "alc/context.h"
-#include "alc/inprogext.h"
 #include "alsem.h"
 #include "alspan.h"
 #include "core/async_event.h"
@@ -118,15 +117,13 @@ int EventThread(ALCcontext *context)
             };
             auto proc_disconnect = [context,enabledevts](AsyncDisconnectEvent &evt)
             {
-                const std::string_view message{evt.msg.data()};
-
                 context->debugMessage(DebugSource::System, DebugType::Error, 0,
-                    DebugSeverity::High, message);
+                    DebugSeverity::High, evt.msg);
 
                 if(context->mEventCb
                     && enabledevts.test(al::to_underlying(AsyncEnableBits::Disconnected)))
                     context->mEventCb(AL_EVENT_TYPE_DISCONNECTED_SOFT, 0, 0,
-                        static_cast<ALsizei>(message.length()), message.data(),
+                        static_cast<ALsizei>(evt.msg.length()), evt.msg.c_str(),
                         context->mEventParam);
             };
 

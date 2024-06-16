@@ -3,6 +3,7 @@
 
 #include <array>
 #include <cstdint>
+#include <string>
 #include <variant>
 
 #include "almalloc.h"
@@ -40,7 +41,7 @@ struct AsyncBufferCompleteEvent {
 };
 
 struct AsyncDisconnectEvent {
-    std::array<char,244> msg;
+    std::string msg;
 };
 
 struct AsyncEffectReleaseEvent {

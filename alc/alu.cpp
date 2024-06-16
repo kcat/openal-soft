@@ -2284,14 +2284,22 @@ void DeviceBase::handleDisconnect(const char *msg, ...)
         auto &disconnect = std::get<AsyncDisconnectEvent>(evt);
 
         /* NOLINTBEGIN(*-array-to-pointer-decay) */
-        va_list args;
+        va_list args, args2;
         va_start(args, msg);
-        int msglen{vsnprintf(disconnect.msg.data(), disconnect.msg.size(), msg, args)};
+        va_copy(args2, args);
+        if(int msglen{vsnprintf(nullptr, 0, msg, args)}; msglen > 0)
+        {
+            disconnect.msg.resize(static_cast<uint>(msglen)+1_uz);
+            vsnprintf(disconnect.msg.data(), disconnect.msg.size(), msg, args2);
+        }
+        else
+            disconnect.msg = "<failed constructing message>";
+        va_end(args2);
         va_end(args);
         /* NOLINTEND(*-array-to-pointer-decay) */
 
-        if(msglen < 0 || static_cast<size_t>(msglen) >= disconnect.msg.size())
-            disconnect.msg[sizeof(disconnect.msg)-1] = 0;
+        while(!disconnect.msg.empty() && disconnect.msg.back() == '\0')
+            disconnect.msg.pop_back();
 
         for(ContextBase *ctx : *mContexts.load())
         {

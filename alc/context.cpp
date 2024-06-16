@@ -224,7 +224,7 @@ void ALCcontext::init()
     mParams.mDistanceModel = mDistanceModel;
 
 
-    mAsyncEvents = RingBuffer::Create(511, sizeof(AsyncEvent), false);
+    mAsyncEvents = RingBuffer::Create(1024, sizeof(AsyncEvent), false);
     StartEventThrd(this);
 
 

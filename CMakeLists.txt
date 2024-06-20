@@ -1328,6 +1328,19 @@ set_target_properties(alcommon PROPERTIES ${DEFAULT_TARGET_PROPS} POSITION_INDEP
 unset(HAS_ROUTER)
 set(IMPL_TARGET OpenAL) # Either OpenAL or soft_oal.
 
+
+set(NEED_ANALYZE_SOURCE_FILES "")
+foreach(obj ${CORE_OBJS} ${OPENAL_OBJS} ${ALC_OBJS} ${COMMON_OBJS})
+    IF (NOT ${obj} MATCHES "${CMAKE_BINARY_DIR}/default_hrtf.txt")
+        list(APPEND NEED_ANALYZE_SOURCE_FILES "${CMAKE_CURRENT_SOURCE_DIR}/${obj}")
+    endif()
+endforeach()
+IF (ALSOFT_UTILS)
+    list(APPEND NEED_ANALYZE_SOURCE_FILES "${CMAKE_SOURCE_DIR}/utils/openal-info.c")
+endif()
+add_custom_target(clang-tidy-check clang-tidy --fix --fix-errors -format-style=file -p ${CMAKE_BINARY_DIR}/compile_commands.json ${NEED_ANALYZE_SOURCE_FILES} DEPENDS ${NEED_ANALYZE_SOURCE_FILES})
+add_custom_target(check DEPENDS clang-tidy-check)
+
 # Build main library
 if(LIBTYPE STREQUAL "STATIC")
     add_library(${IMPL_TARGET} STATIC ${COMMON_OBJS} ${OPENAL_OBJS} ${ALC_OBJS} ${CORE_OBJS})

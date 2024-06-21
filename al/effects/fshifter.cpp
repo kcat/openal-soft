@@ -11,11 +11,11 @@
 #include "effects.h"
 
 #ifdef ALSOFT_EAX
-#include <cassert>
-#include "alnumeric.h"
 #include "al/eax/effect.h"
 #include "al/eax/exception.h"
 #include "al/eax/utils.h"
+#include "alnumeric.h"
+#include <cassert>
 #endif // ALSOFT_EAX
 
 

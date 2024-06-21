@@ -23,8 +23,8 @@
 #include "alconfig.h"
 
 #ifdef _WIN32
-#include <windows.h>
 #include <shlobj.h>
+#include <windows.h>
 #endif
 #ifdef __APPLE__
 #include <CoreFoundation/CoreFoundation.h>

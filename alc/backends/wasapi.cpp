@@ -29,17 +29,17 @@
 #include <cstdlib>
 #include <memory.h>
 
-#include <wtypes.h>
-#include <mmdeviceapi.h>
-#include <audiosessiontypes.h>
 #include <audioclient.h>
-#include <spatialaudioclient.h>
+#include <audiosessiontypes.h>
 #include <cguid.h>
-#include <devpropdef.h>
-#include <mmreg.h>
-#include <propsys.h>
-#include <propkey.h>
 #include <devpkey.h>
+#include <devpropdef.h>
+#include <mmdeviceapi.h>
+#include <mmreg.h>
+#include <propkey.h>
+#include <propsys.h>
+#include <spatialaudioclient.h>
+#include <wtypes.h>
 #ifndef _WAVEFORMATEXTENSIBLE_
 #include <ks.h>
 #include <ksmedia.h>
@@ -126,7 +126,7 @@ using ReferenceTime = std::chrono::duration<REFERENCE_TIME,std::ratio<1,10'000'0
 #define X7DOT1 (SPEAKER_FRONT_LEFT|SPEAKER_FRONT_RIGHT|SPEAKER_FRONT_CENTER|SPEAKER_LOW_FREQUENCY|SPEAKER_BACK_LEFT|SPEAKER_BACK_RIGHT|SPEAKER_SIDE_LEFT|SPEAKER_SIDE_RIGHT)
 #define X7DOT1DOT4 (SPEAKER_FRONT_LEFT|SPEAKER_FRONT_RIGHT|SPEAKER_FRONT_CENTER|SPEAKER_LOW_FREQUENCY|SPEAKER_BACK_LEFT|SPEAKER_BACK_RIGHT|SPEAKER_SIDE_LEFT|SPEAKER_SIDE_RIGHT|SPEAKER_TOP_FRONT_LEFT|SPEAKER_TOP_FRONT_RIGHT|SPEAKER_TOP_BACK_LEFT|SPEAKER_TOP_BACK_RIGHT)
 
-constexpr inline DWORD MaskFromTopBits(DWORD b) noexcept
+constexpr DWORD MaskFromTopBits(DWORD b) noexcept
 {
     b |= b>>1;
     b |= b>>2;
@@ -1120,7 +1120,7 @@ struct WasapiPlayback final : public BackendBase, WasapiProxy {
     HANDLE mNotifyEvent{nullptr};
 
     UINT32 mOrigBufferSize{}, mOrigUpdateSize{};
-    std::vector<char> mResampleBuffer{};
+    std::vector<char> mResampleBuffer;
     uint mBufferFilled{0};
     SampleConverterPtr mResampler;
 

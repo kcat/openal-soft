@@ -27,8 +27,8 @@
 #include <chrono>
 #include <cmath>
 #include <cstddef>
-#include <cstdio>
 #include <cstdint>
+#include <cstdio>
 #include <functional>
 #include <memory>
 #include <numeric>
@@ -50,8 +50,8 @@
 #include "core/ambdec.h"
 #include "core/ambidefs.h"
 #include "core/bformatdec.h"
-#include "core/bufferline.h"
 #include "core/bs2b.h"
+#include "core/bufferline.h"
 #include "core/context.h"
 #include "core/devformat.h"
 #include "core/device.h"

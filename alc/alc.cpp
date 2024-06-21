@@ -68,8 +68,8 @@
 #include "al/effect.h"
 #include "al/filter.h"
 #include "al/source.h"
-#include "alc/events.h"
 #include "albit.h"
+#include "alc/events.h"
 #include "alconfig.h"
 #include "almalloc.h"
 #include "alnumbers.h"
@@ -89,10 +89,10 @@
 #include "core/effects/base.h"
 #include "core/effectslot.h"
 #include "core/filters/nfc.h"
-#include "core/helpers.h"
-#include "core/mastering.h"
 #include "core/fpu_ctrl.h"
+#include "core/helpers.h"
 #include "core/logging.h"
+#include "core/mastering.h"
 #include "core/uhjfilter.h"
 #include "core/voice.h"
 #include "core/voice_change.h"
@@ -106,8 +106,8 @@
 #include "strutils.h"
 
 #include "backends/base.h"
-#include "backends/null.h"
 #include "backends/loopback.h"
+#include "backends/null.h"
 #ifdef HAVE_PIPEWIRE
 #include "backends/pipewire.h"
 #endif
@@ -1065,7 +1065,7 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const al::span<const int> attrList
         if(auto typeopt = device->configValue<std::string>({}, "sample-type"))
         {
             struct TypeMap {
-                std::string_view name;
+                std::string_view name{};
                 DevFmtType type;
             };
             constexpr std::array typelist{
@@ -1090,9 +1090,9 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const al::span<const int> attrList
         if(auto chanopt = device->configValue<std::string>({}, "channels"))
         {
             struct ChannelMap {
-                std::string_view name;
+                std::string_view name{};
                 DevFmtChannels chans;
-                uint8_t order;
+                uint8_t order{};
             };
             constexpr std::array chanlist{
                 ChannelMap{"mono"sv,       DevFmtMono,   0},

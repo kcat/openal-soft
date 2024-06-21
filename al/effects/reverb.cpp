@@ -15,12 +15,12 @@
 #include "effects.h"
 
 #ifdef ALSOFT_EAX
-#include <cassert>
 #include "al/eax/api.h"
 #include "al/eax/call.h"
 #include "al/eax/effect.h"
 #include "al/eax/exception.h"
 #include "al/eax/utils.h"
+#include <cassert>
 #endif // ALSOFT_EAX
 
 

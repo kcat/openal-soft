@@ -8,8 +8,8 @@
 #include <variant>
 
 #define WIN32_LEAN_AND_MEAN
-#include <windows.h>
 #include <objbase.h>
+#include <windows.h>
 
 struct ComWrapper {
     HRESULT mStatus{};
@@ -37,7 +37,7 @@ struct ComWrapper {
     HRESULT status() const noexcept { return mStatus; }
     explicit operator bool() const noexcept { return SUCCEEDED(status()); }
 
-    void uninit()
+    static void uninit()
     {
         if(SUCCEEDED(mStatus))
             CoUninitialize();

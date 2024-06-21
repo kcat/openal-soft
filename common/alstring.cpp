@@ -5,8 +5,8 @@
 
 #include <algorithm>
 #include <cctype>
-#include <cwctype>
 #include <cstring>
+#include <cwctype>
 #include <string>
 
 

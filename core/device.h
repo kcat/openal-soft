@@ -80,7 +80,7 @@ struct DistanceComp {
     static constexpr uint MaxDelay{1024};
 
     struct ChanData {
-        al::span<float> Buffer{}; /* Valid size is [0...MaxDelay). */
+        al::span<float> Buffer; /* Valid size is [0...MaxDelay). */
         float Gain{1.0f};
     };
 
@@ -202,7 +202,7 @@ struct DeviceBase {
     std::string DeviceName;
 
     // Device flags
-    std::bitset<DeviceFlagsCount> Flags{};
+    std::bitset<DeviceFlagsCount> Flags;
     DeviceState mDeviceState{DeviceState::Unprepared};
 
     uint NumAuxSends{};
@@ -347,7 +347,7 @@ struct DeviceBase {
     void ProcessUhj(const std::size_t SamplesToDo);
     void ProcessBs2b(const std::size_t SamplesToDo);
 
-    inline void postProcess(const std::size_t SamplesToDo)
+    void postProcess(const std::size_t SamplesToDo)
     { if(PostProcess) LIKELY (this->*PostProcess)(SamplesToDo); }
 
     void renderSamples(const al::span<float*> outBuffers, const uint numSamples);

@@ -10,9 +10,9 @@
 #include <string_view>
 #include <vector>
 
+#include "alc/events.h"
 #include "core/device.h"
 #include "core/except.h"
-#include "alc/events.h"
 
 
 using uint = unsigned int;

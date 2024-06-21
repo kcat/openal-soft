@@ -20,9 +20,9 @@
 
 #include "config.h"
 
-#include <xmmintrin.h>
 #include <emmintrin.h>
 #include <smmintrin.h>
+#include <xmmintrin.h>
 
 #include <algorithm>
 #include <array>

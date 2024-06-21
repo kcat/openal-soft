@@ -22,21 +22,24 @@
 
 #include "winmm.h"
 
-#include <cstdlib>
 #include <cstdio>
+#include <cstdlib>
 #include <memory.h>
 
+// NOLINTBEGIN
+// with clang-tidy ordering include problems
 #include <windows.h>
 #include <mmsystem.h>
 #include <mmreg.h>
+// NOLINTEND
 
+#include <algorithm>
 #include <array>
 #include <atomic>
+#include <functional>
+#include <string>
 #include <thread>
 #include <vector>
-#include <string>
-#include <algorithm>
-#include <functional>
 
 #include "alsem.h"
 #include "alstring.h"

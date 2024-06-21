@@ -12,8 +12,8 @@
 
 #include "almalloc.h"
 #include "alspan.h"
-#include "bufferline.h"
 #include "buffer_storage.h"
+#include "bufferline.h"
 #include "devformat.h"
 #include "filters/biquad.h"
 #include "filters/nfc.h"
@@ -102,7 +102,7 @@ struct VoiceBufferItem {
     uint mLoopStart{0u};
     uint mLoopEnd{0u};
 
-    al::span<std::byte> mSamples{};
+    al::span<std::byte> mSamples;
 };
 
 
@@ -233,9 +233,9 @@ struct Voice {
 
     ResamplerFunc mResampler{};
 
-    InterpState mResampleState{};
+    InterpState mResampleState;
 
-    std::bitset<VoiceFlagCount> mFlags{};
+    std::bitset<VoiceFlagCount> mFlags;
     uint mNumCallbackBlocks{0};
     uint mCallbackBlockBase{0};
 

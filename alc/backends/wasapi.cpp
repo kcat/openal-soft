@@ -224,11 +224,14 @@ struct PropVariant {
 public:
     PropVariant() { PropVariantInit(&mProp); }
     PropVariant(const PropVariant &rhs) : PropVariant{} { PropVariantCopy(&mProp, &rhs.mProp); }
-    PropVariant(PropVariant&& rhs) : PropVariant{} { PropVariantCopy(&mProp, &rhs.mProp); }
     ~PropVariant() { clear(); }
 
-    void operator=(const PropVariant &rhs) { PropVariantCopy(&mProp, &rhs.mProp); }
-    void operator=(PropVariant&& rhs) { PropVariantCopy(&mProp, &rhs.mProp); }
+    auto operator=(const PropVariant &rhs) -> PropVariant&
+    {
+        if(this != &rhs)
+            PropVariantCopy(&mProp, &rhs.mProp);
+        return *this;
+    }
 
     void clear() { PropVariantClear(&mProp); }
 

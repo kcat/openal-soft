@@ -269,17 +269,17 @@ constexpr auto SanitizeAlignment(FmtType type, ALuint align) noexcept -> ALuint
     if(type == FmtIMA4)
     {
         /* IMA4 block alignment must be a multiple of 8, plus 1. */
-        if((align&7) == 1) return static_cast<ALuint>(align);
+        if((align&7) == 1) return align;
         return 0;
     }
     if(type == FmtMSADPCM)
     {
         /* MSADPCM block alignment must be a multiple of 2. */
-        if((align&1) == 0) return static_cast<ALuint>(align);
+        if((align&1) == 0) return align;
         return 0;
     }
 
-    return static_cast<ALuint>(align);
+    return align;
 }
 
 
@@ -519,7 +519,7 @@ void PrepareUserPtr(ALCcontext *context [[maybe_unused]], ALbuffer *ALBuf, ALsiz
 #endif
 
     decltype(ALBuf->mDataStorage){}.swap(ALBuf->mDataStorage);
-    ALBuf->mData = {static_cast<std::byte*>(sdata), sdatalen};
+    ALBuf->mData = {sdata, sdatalen};
 
 #ifdef ALSOFT_EAX
     eax_x_ram_clear(*context->mALDevice, *ALBuf);

@@ -10,10 +10,10 @@
 #include "effects.h"
 
 #ifdef ALSOFT_EAX
-#include <cassert>
 #include "al/eax/effect.h"
 #include "al/eax/exception.h"
 #include "al/eax/utils.h"
+#include <cassert>
 #endif // ALSOFT_EAX
 
 

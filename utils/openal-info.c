@@ -28,8 +28,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "AL/alc.h"
 #include "AL/al.h"
+#include "AL/alc.h"
 #include "AL/alext.h"
 
 #include "win_main_utf8.h"

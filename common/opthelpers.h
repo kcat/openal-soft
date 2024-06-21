@@ -2,8 +2,8 @@
 #define OPTHELPERS_H
 
 #include <cstdint>
-#include <utility>
 #include <memory>
+#include <utility>
 
 #ifdef __has_builtin
 #define HAS_BUILTIN __has_builtin

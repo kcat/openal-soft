@@ -18,10 +18,10 @@
 
 #include "al/auxeffectslot.h"
 #include "al/debug.h"
-#include "al/source.h"
 #include "al/effect.h"
 #include "al/event.h"
 #include "al/listener.h"
+#include "al/source.h"
 #include "albit.h"
 #include "alc/alu.h"
 #include "alc/backends/base.h"

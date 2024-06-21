@@ -8,8 +8,10 @@
 #include <variant>
 
 #define WIN32_LEAN_AND_MEAN
+// NOLINTBEGIN
 #include <windows.h>
 #include <objbase.h>
+// NOLINTEND
 
 struct ComWrapper {
     HRESULT mStatus{};

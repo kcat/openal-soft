@@ -7,8 +7,8 @@
 
 #include "inprogext.h"
 #ifdef ALSOFT_EAX
-#include "context.h"
 #include "al/eax/x_ram.h"
+#include "context.h"
 #endif
 
 

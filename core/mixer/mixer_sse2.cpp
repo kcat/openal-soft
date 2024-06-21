@@ -20,8 +20,8 @@
 
 #include "config.h"
 
-#include <xmmintrin.h>
 #include <emmintrin.h>
+#include <xmmintrin.h>
 
 #include <algorithm>
 #include <array>

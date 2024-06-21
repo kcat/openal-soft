@@ -24,7 +24,7 @@ struct SampleConverter {
 
     uint mFracOffset{};
     uint mIncrement{};
-    InterpState mState{};
+    InterpState mState;
     ResamplerFunc mResample{};
 
     alignas(16) FloatBufferLine mSrcSamples{};

@@ -303,7 +303,7 @@ try {
     case AL_POSITION:
     case AL_VELOCITY:
         auto vals = al::span<ALfloat,3>{values, 3_uz};
-        alGetListener3fDirect(context, param, &vals[0], &vals[1], &vals[2]);
+        alGetListener3fDirect(context, param, vals.data(), &vals[1], &vals[2]);
         return;
     }
 
@@ -377,7 +377,7 @@ try {
     case AL_POSITION:
     case AL_VELOCITY:
         auto vals = al::span<ALint,3>{values, 3_uz};
-        alGetListener3iDirect(context, param, &vals[0], &vals[1], &vals[2]);
+        alGetListener3iDirect(context, param, vals.data(), &vals[1], &vals[2]);
         return;
     }
 

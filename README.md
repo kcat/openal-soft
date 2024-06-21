@@ -63,6 +63,11 @@ users and sysadmins to control information provided to applications, as well
 as application-agnostic behavior of the library. See alsoftrc.sample for
 available settings.
 
+Compatibility
+-------------
+
+For a list of games and applications tested/potentially compatible with OpenAL Soft, check out the [Binaural Audio database](https://airtable.com/shrFuXB7rQYET9H1J).  
+Submit new ones with [this form](https://airtable.com/shrDpNmekxxwpAyQ1?prefill_Type=Game&prefill_Platform=Windows&prefill_Status=Playable&prefill_Backend=OpenAL&prefill_Renderer=OpenAL+Soft&prefill_Configuration=Headphone+Spatial+Audio).
 
 Language Bindings
 -----------------

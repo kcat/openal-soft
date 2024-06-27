@@ -371,21 +371,19 @@ void UhjEncoderIIR::encode(float *LeftOut, float *RightOut,
     /* Apply the base filter to the existing output to align with the processed
      * signal.
      */
-    mFilter1Direct[0].process(Filter1Coeff, {LeftOut, SamplesToDo}, true,
-        al::span{mTemp}.subspan(1));
+    const auto left = al::span{al::assume_aligned<16>(LeftOut), SamplesToDo};
+    mFilter1Direct[0].process(Filter1Coeff, left, true, al::span{mTemp}.subspan(1));
     mTemp[0] = mDirectDelay[0]; mDirectDelay[0] = mTemp[SamplesToDo];
 
     /* Left = (S + D)/2.0 */
-    const auto left = al::span{al::assume_aligned<16>(LeftOut), SamplesToDo};
     for(size_t i{0};i < SamplesToDo;++i)
         left[i] = (mS[i] + mD[i])*0.5f + mTemp[i];
 
-    mFilter1Direct[1].process(Filter1Coeff, {RightOut, SamplesToDo}, true,
-        al::span{mTemp}.subspan(1));
+    const auto right = al::span{al::assume_aligned<16>(RightOut), SamplesToDo};
+    mFilter1Direct[1].process(Filter1Coeff, right, true, al::span{mTemp}.subspan(1));
     mTemp[0] = mDirectDelay[1]; mDirectDelay[1] = mTemp[SamplesToDo];
 
     /* Right = (S - D)/2.0 */
-    const auto right = al::span{al::assume_aligned<16>(RightOut), SamplesToDo};
     for(size_t i{0};i < SamplesToDo;++i)
         right[i] = (mS[i] - mD[i])*0.5f + mTemp[i];
 }

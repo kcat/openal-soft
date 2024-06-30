@@ -246,10 +246,11 @@ public:
     {
         if constexpr(std::is_same_v<T,uint>)
         {
-            alassert(mProp.vt == VT_UI4);
-            return mProp.uiVal;
+            alassert(mProp.vt == VT_UI4 || mProp.vt == VT_UINT);
+            return mProp.uintVal;
         }
-        else if constexpr(std::is_same_v<T,std::wstring_view> || std::is_same_v<T,std::wstring>)
+        else if constexpr(std::is_same_v<T,std::wstring_view> || std::is_same_v<T,std::wstring>
+            || std::is_same_v<T,LPWSTR> || std::is_same_v<T,LPCWSTR>)
         {
             alassert(mProp.vt == VT_LPWSTR);
             return mProp.pwszVal;

@@ -10,7 +10,6 @@
 #include <optional>
 #include <string>
 
-#include "almalloc.h"
 #include "alspan.h"
 #include "bufferline.h"
 #include "buffer_storage.h"
@@ -20,6 +19,7 @@
 #include "filters/splitter.h"
 #include "mixer/defs.h"
 #include "mixer/hrtfdefs.h"
+#include "opthelpers.h"
 #include "resampler_limits.h"
 #include "uhjfilter.h"
 #include "vector.h"
@@ -180,7 +180,7 @@ enum : uint {
     VoiceFlagCount
 };
 
-struct Voice {
+struct SIMDALIGN Voice {
     enum State {
         Stopped,
         Playing,

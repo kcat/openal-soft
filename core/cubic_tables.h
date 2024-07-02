@@ -5,9 +5,10 @@
 #include <cstddef>
 
 #include "cubic_defs.h"
+#include "opthelpers.h"
 
 
-struct CubicTable {
+struct SIMDALIGN CubicTable {
     std::array<CubicCoefficients,CubicPhaseCount> mTable{};
 };
 

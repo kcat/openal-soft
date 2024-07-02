@@ -4,10 +4,10 @@
 #include <array>
 #include <memory>
 
-#include "almalloc.h"
 #include "alnumeric.h"
 #include "alspan.h"
 #include "bufferline.h"
+#include "opthelpers.h"
 #include "vector.h"
 
 struct SlidingHold;
@@ -25,7 +25,7 @@ using uint = unsigned int;
  *
  *   http://c4dm.eecs.qmul.ac.uk/audioengineering/compressors/
  */
-class Compressor {
+class SIMDALIGN Compressor {
     size_t mNumChans{0u};
 
     struct AutoFlags {

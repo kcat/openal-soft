@@ -11,7 +11,6 @@
 
 #include "almalloc.h"
 #include "alspan.h"
-#include "atomic.h"
 #include "ambidefs.h"
 #include "bufferline.h"
 #include "flexarray.h"

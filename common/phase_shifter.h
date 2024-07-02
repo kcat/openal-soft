@@ -21,7 +21,7 @@
  * signal delay (FilterSize/2) to properly align.
  */
 template<std::size_t FilterSize>
-struct PhaseShifterT {
+struct SIMDALIGN PhaseShifterT {
     static_assert(FilterSize >= 16, "FilterSize needs to be at least 16");
     static_assert((FilterSize&(FilterSize-1)) == 0, "FilterSize needs to be power-of-two");
 

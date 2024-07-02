@@ -179,7 +179,7 @@ enum class DeviceState : std::uint8_t {
     Playing
 };
 
-struct DeviceBase {
+struct SIMDALIGN DeviceBase {
     std::atomic<bool> Connected{true};
     const DeviceType Type{};
 

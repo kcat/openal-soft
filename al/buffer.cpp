@@ -616,11 +616,13 @@ auto DecomposeUserFormat(ALenum format) noexcept -> std::optional<DecompResult>
 
         FormatMap{AL_FORMAT_BFORMAT2D_8,       {FmtBFormat2D, FmtUByte}},
         FormatMap{AL_FORMAT_BFORMAT2D_16,      {FmtBFormat2D, FmtShort}},
+        FormatMap{AL_FORMAT_BFORMAT2D_I32,     {FmtBFormat2D, FmtInt}  },
         FormatMap{AL_FORMAT_BFORMAT2D_FLOAT32, {FmtBFormat2D, FmtFloat}},
         FormatMap{AL_FORMAT_BFORMAT2D_MULAW,   {FmtBFormat2D, FmtMulaw}},
 
         FormatMap{AL_FORMAT_BFORMAT3D_8,       {FmtBFormat3D, FmtUByte}},
         FormatMap{AL_FORMAT_BFORMAT3D_16,      {FmtBFormat3D, FmtShort}},
+        FormatMap{AL_FORMAT_BFORMAT2D_I32,     {FmtBFormat3D, FmtInt}  },
         FormatMap{AL_FORMAT_BFORMAT3D_FLOAT32, {FmtBFormat3D, FmtFloat}},
         FormatMap{AL_FORMAT_BFORMAT3D_MULAW,   {FmtBFormat3D, FmtMulaw}},
 

@@ -70,15 +70,18 @@ void AL_APIENTRY alFlushMappedBufferDirectSOFT(ALCcontext *context, ALuint buffe
 #define AL_FORMAT_71CHN_I32                      0x19E5
 #define AL_FORMAT_71CHN_FLOAT32                  0x19E6
 
-#define AL_FORMAT_UHJ2CHN_I32_SOFT               0x19E7
-#define AL_FORMAT_UHJ3CHN_I32_SOFT               0x19E8
-#define AL_FORMAT_UHJ4CHN_I32_SOFT               0x19E9
+#define AL_FORMAT_BFORMAT2D_I32                  0x19E7
+#define AL_FORMAT_BFORMAT3D_I32                  0x19E8
+
+#define AL_FORMAT_UHJ2CHN_I32_SOFT               0x19E9
+#define AL_FORMAT_UHJ3CHN_I32_SOFT               0x19EA
+#define AL_FORMAT_UHJ4CHN_I32_SOFT               0x19EB
 #endif
 
 #ifndef AL_SOFT_source_panning
 #define AL_SOFT_source_panning
-#define AL_PANNING_ENABLED_SOFT                  0x19EA
-#define AL_PAN_SOFT                              0x19EB
+#define AL_PANNING_ENABLED_SOFT                  0x19EC
+#define AL_PAN_SOFT                              0x19ED
 #endif
 
 /* Non-standard exports. Not part of any extension. */

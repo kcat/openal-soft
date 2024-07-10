@@ -151,8 +151,8 @@ void Voice::InitMixer(std::optional<std::string> resopt)
 		
 		if (al::case_compare(resampler, "cubic"sv) == 0)
 		{
-			WARN("Resampler option \"%s\" is deprecated, using spline\n", resopt->c_str());
-			resampler = "spline"sv;
+            WARN("Resampler option \"%s\" is deprecated, using spline\n", resopt->c_str());
+            resampler = "spline"sv;
 		}
 		else if(al::case_compare(resampler, "sinc4"sv) == 0
             || al::case_compare(resampler, "sinc8"sv) == 0)

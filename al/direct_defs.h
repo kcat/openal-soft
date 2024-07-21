@@ -16,7 +16,7 @@ auto AL_APIENTRY Name() noexcept -> R                                         \
 {                                                                             \
     auto context = GetContextRef();                                           \
     if(!context) UNLIKELY return detail_::DefaultVal<R>();                    \
-    return Name##Direct(context.get());                                       \
+    return static_cast<R>(Name##Direct(context.get()));                       \
 }
 
 #define DECL_FUNC1(R, Name, T1,n1)                                            \
@@ -24,7 +24,7 @@ auto AL_APIENTRY Name(T1 n1) noexcept -> R                                    \
 {                                                                             \
     auto context = GetContextRef();                                           \
     if(!context) UNLIKELY return detail_::DefaultVal<R>();                    \
-    return Name##Direct(context.get(), n1);                                   \
+    return static_cast<R>(Name##Direct(context.get(), n1));                   \
 }
 
 #define DECL_FUNC2(R, Name, T1,n1, T2,n2)                                     \
@@ -32,7 +32,7 @@ auto AL_APIENTRY Name(T1 n1, T2 n2) noexcept -> R                             \
 {                                                                             \
     auto context = GetContextRef();                                           \
     if(!context) UNLIKELY return detail_::DefaultVal<R>();                    \
-    return Name##Direct(context.get(), n1, n2);                               \
+    return static_cast<R>(Name##Direct(context.get(), n1, n2));               \
 }
 
 #define DECL_FUNC3(R, Name, T1,n1, T2,n2, T3,n3)                              \
@@ -40,7 +40,7 @@ auto AL_APIENTRY Name(T1 n1, T2 n2, T3 n3) noexcept -> R                      \
 {                                                                             \
     auto context = GetContextRef();                                           \
     if(!context) UNLIKELY return detail_::DefaultVal<R>();                    \
-    return Name##Direct(context.get(), n1, n2, n3);                           \
+    return static_cast<R>(Name##Direct(context.get(), n1, n2, n3));           \
 }
 
 #define DECL_FUNC4(R, Name, T1,n1, T2,n2, T3,n3, T4,n4)                       \
@@ -48,7 +48,7 @@ auto AL_APIENTRY Name(T1 n1, T2 n2, T3 n3, T4 n4) noexcept -> R               \
 {                                                                             \
     auto context = GetContextRef();                                           \
     if(!context) UNLIKELY return detail_::DefaultVal<R>();                    \
-    return Name##Direct(context.get(), n1, n2, n3, n4);                       \
+    return static_cast<R>(Name##Direct(context.get(), n1, n2, n3, n4));       \
 }
 
 #define DECL_FUNC5(R, Name, T1,n1, T2,n2, T3,n3, T4,n4, T5,n5)                \
@@ -56,7 +56,7 @@ auto AL_APIENTRY Name(T1 n1, T2 n2, T3 n3, T4 n4, T5 n5) noexcept -> R        \
 {                                                                             \
     auto context = GetContextRef();                                           \
     if(!context) UNLIKELY return detail_::DefaultVal<R>();                    \
-    return Name##Direct(context.get(), n1, n2, n3, n4, n5);                   \
+    return static_cast<R>(Name##Direct(context.get(), n1, n2, n3, n4, n5));   \
 }
 
 
@@ -108,12 +108,12 @@ auto AL_APIENTRY Name##Ext(T1 n1, T2 n2, T3 n3, T4 n4, T5 n5) noexcept -> R   \
     return Name##Direct##Ext(context.get(), n1, n2, n3, n4, n5);              \
 }
 
-#define DECL_FUNCEXT6(R, Name,Ext, T1,n1, T2,n2, T3,n3, T4,n4, T5,n5, T6,n6)  \
-auto AL_APIENTRY Name##Ext(T1 n1, T2 n2, T3 n3, T4 n4, T5 n5, T6 n6) noexcept -> R \
-{                                                                             \
-    auto context = GetContextRef();                                           \
-    if(!context) UNLIKELY return detail_::DefaultVal<R>();                    \
-    return Name##Direct##Ext(context.get(), n1, n2, n3, n4, n5, n6);          \
+#define DECL_FUNCEXT6(R, Name,Ext, T1,n1, T2,n2, T3,n3, T4,n4, T5,n5, T6,n6)         \
+auto AL_APIENTRY Name##Ext(T1 n1, T2 n2, T3 n3, T4 n4, T5 n5, T6 n6) noexcept -> R   \
+{                                                                                    \
+    auto context = GetContextRef();                                                  \
+    if(!context) UNLIKELY return detail_::DefaultVal<R>();                           \
+    return static_cast<R>(Name##Direct##Ext(context.get(), n1, n2, n3, n4, n5, n6)); \
 }
 
 #define DECL_FUNCEXT8(R, Name,Ext, T1,n1, T2,n2, T3,n3, T4,n4, T5,n5, T6,n6, T7,n7, T8,n8) \

@@ -10,7 +10,6 @@ namespace {
 
 using AmbiChannelFloatArray = std::array<float,MaxAmbiChannels>;
 
-constexpr auto inv_sqrt2f = static_cast<float>(1.0/al::numbers::sqrt2);
 constexpr auto inv_sqrt3f = static_cast<float>(1.0/al::numbers::sqrt3);
 
 
@@ -76,16 +75,20 @@ static_assert(FirstOrderDecoder.size() == FirstOrderEncoder.size(), "First-order
  * content.
  */
 constexpr std::array FirstOrder2DDecoder{
-    std::array{2.500000000e-01f,  2.041241452e-01f, 0.0f,  2.041241452e-01f},
-    std::array{2.500000000e-01f,  2.041241452e-01f, 0.0f, -2.041241452e-01f},
-    std::array{2.500000000e-01f, -2.041241452e-01f, 0.0f,  2.041241452e-01f},
-    std::array{2.500000000e-01f, -2.041241452e-01f, 0.0f, -2.041241452e-01f},
+    std::array{1.666666667e-01f, -9.622504486e-02f, 0.0f,  1.666666667e-01f},
+    std::array{1.666666667e-01f, -1.924500897e-01f, 0.0f,  0.000000000e+00f},
+    std::array{1.666666667e-01f, -9.622504486e-02f, 0.0f, -1.666666667e-01f},
+    std::array{1.666666667e-01f,  9.622504486e-02f, 0.0f, -1.666666667e-01f},
+    std::array{1.666666667e-01f,  1.924500897e-01f, 0.0f,  0.000000000e+00f},
+    std::array{1.666666667e-01f,  9.622504486e-02f, 0.0f,  1.666666667e-01f},
 };
 constexpr std::array FirstOrder2DEncoder{
-    CalcAmbiCoeffs( inv_sqrt2f, 0.0f,  inv_sqrt2f),
-    CalcAmbiCoeffs( inv_sqrt2f, 0.0f, -inv_sqrt2f),
-    CalcAmbiCoeffs(-inv_sqrt2f, 0.0f,  inv_sqrt2f),
-    CalcAmbiCoeffs(-inv_sqrt2f, 0.0f, -inv_sqrt2f),
+    CalcAmbiCoeffs(-0.50000000000f, 0.0f,  0.86602540379f),
+    CalcAmbiCoeffs(-1.00000000000f, 0.0f,  0.00000000000f),
+    CalcAmbiCoeffs(-0.50000000000f, 0.0f, -0.86602540379f),
+    CalcAmbiCoeffs( 0.50000000000f, 0.0f, -0.86602540379f),
+    CalcAmbiCoeffs( 1.00000000000f, 0.0f,  0.00000000000f),
+    CalcAmbiCoeffs( 0.50000000000f, 0.0f,  0.86602540379f),
 };
 static_assert(FirstOrder2DDecoder.size() == FirstOrder2DEncoder.size(), "First-order 2D mismatch");
 

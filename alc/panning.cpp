@@ -125,6 +125,27 @@ const char *GetLabelFromChannel(Channel channel)
     return "(unknown)";
 }
 
+auto GetLayoutName(DevAmbiLayout layout) noexcept -> const char*
+{
+    switch(layout)
+    {
+    case DevAmbiLayout::FuMa: return "FuMa";
+    case DevAmbiLayout::ACN: return "ACN";
+    }
+    return "<unknown layout enum>";
+}
+
+auto GetScalingName(DevAmbiScaling scaling) noexcept -> const char*
+{
+    switch(scaling)
+    {
+    case DevAmbiScaling::FuMa: return "FuMa";
+    case DevAmbiScaling::SN3D: return "SN3D";
+    case DevAmbiScaling::N3D: return "N3D";
+    }
+    return "<unknown scaling enum>";
+}
+
 
 std::unique_ptr<FrontStablizer> CreateStablizer(const size_t outchans, const uint srate)
 {
@@ -686,6 +707,9 @@ void InitPanning(ALCdevice *device, const bool hqdec=false, const bool stablize=
                 avg_dist = *delayopt * SpeedOfSoundMetersPerSec;
             }
 
+            TRACE("%u%s order ambisonic output (%s layout, %s scaling)\n", device->mAmbiOrder,
+                  GetCounterSuffix(device->mAmbiOrder), GetLayoutName(device->mAmbiLayout),
+                  GetScalingName(device->mAmbiScale));
             InitNearFieldCtrl(device, avg_dist, device->mAmbiOrder, true);
             return;
         }

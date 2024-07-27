@@ -1688,8 +1688,12 @@ if(ALSOFT_EXAMPLES)
     target_link_libraries(alrecord PRIVATE ${LINKER_FLAGS} al-excommon ${UNICODE_FLAG})
     set_target_properties(alrecord PROPERTIES ${DEFAULT_TARGET_PROPS})
 
+    add_executable(allafplay examples/allafplay.cpp)
+    target_link_libraries(allafplay PRIVATE ${LINKER_FLAGS} alcommon al-excommon ${UNICODE_FLAG})
+    set_target_properties(allafplay PROPERTIES ${DEFAULT_TARGET_PROPS})
+
     if(ALSOFT_INSTALL_EXAMPLES)
-        set(EXTRA_INSTALLS ${EXTRA_INSTALLS} altonegen alrecord)
+        set(EXTRA_INSTALLS ${EXTRA_INSTALLS} altonegen alrecord allafplay)
     endif()
 
     message(STATUS "Building example programs")

@@ -32,8 +32,6 @@
  *   data in between. It shouldn't be hard to fix, but it's on the back-burner
  *   for now.
  *
- * - Little-endian only. It shouldn't be too hard to fix with byteswap helpers.
- *
  * - 256 track limit. Could be made higher, but making it too flexible would
  *   necessitate more micro-allocations.
  *
@@ -104,6 +102,7 @@
 #include <string>
 #include <string_view>
 #include <thread>
+#include <type_traits>
 #include <vector>
 
 #include "AL/alc.h"
@@ -179,6 +178,53 @@ auto FormatFromQuality(Quality quality) -> ALenum
 }
 
 
+/* Helper class for reading little-endian samples on big-endian targets. */
+template<Quality Q>
+struct SampleReader;
+
+template<>
+struct SampleReader<Quality::s8> {
+    using src_t = int8_t;
+    using dst_t = int8_t;
+
+    [[nodiscard]] static
+    auto read(const src_t &in) noexcept -> dst_t { return in; }
+};
+
+template<>
+struct SampleReader<Quality::s16> {
+    using src_t = int16_t;
+    using dst_t = int16_t;
+
+    [[nodiscard]] static
+    auto read(const src_t &in) noexcept -> dst_t
+    {
+        if constexpr(al::endian::native == al::endian::little)
+            return in;
+        else
+            return al::byteswap(in);
+    }
+};
+
+template<>
+struct SampleReader<Quality::f32> {
+    /* 32-bit float samples are read as 32-bit integer on big-endian systems,
+     * so that they can be byteswapped before being reinterpreted as float.
+     */
+    using src_t = std::conditional_t<al::endian::native==al::endian::little, float,uint32_t>;
+    using dst_t = float;
+
+    [[nodiscard]] static
+    auto read(const src_t &in) noexcept -> dst_t
+    {
+        if constexpr(al::endian::native == al::endian::little)
+            return in;
+        else
+            return al::bit_cast<dst_t>(al::byteswap(static_cast<uint32_t>(in)));
+    }
+};
+
+
 /* Each track with position data consists of a set of 3 samples per 16 audio
  * channels, resulting in a full set of positions being specified over 48
  * sample frames.
@@ -224,9 +270,9 @@ struct LafStream {
 
     Quality mQuality{};
     Mode mMode{};
+    uint32_t mNumTracks{};
     uint32_t mSampleRate{};
     uint64_t mSampleCount{};
-    uint32_t mNumTracks{};
 
     uint64_t mCurrentSample{};
 
@@ -248,7 +294,7 @@ struct LafStream {
 
     void convertPositions(const al::span<float> dst, const al::span<const char> src) const;
 
-    template<typename T>
+    template<Quality Q>
     void copySamples(char *dst, const char *src, size_t idx, size_t count) const;
 
     [[nodiscard]]
@@ -266,6 +312,7 @@ auto LafStream::readChunk() -> uint32_t
         [](const unsigned int val, const uint8_t in)
         { return val + unsigned(al::popcount(unsigned(in))); });
 
+    /* Make sure enable bits aren't set for non-existent tracks. */
     alassert(mEnabledTracks[((mNumTracks+7_uz)>>3) - 1] < (1u<<(mNumTracks&7)));
 
     /* Each chunk is exactly one second long, with samples interleaved for each
@@ -307,19 +354,23 @@ void LafStream::convertPositions(const al::span<float> dst, const al::span<const
     }
 }
 
-template<typename T>
+template<Quality Q>
 void LafStream::copySamples(char *dst, const char *src, const size_t idx, const size_t count) const
 {
+    using reader_t = SampleReader<Q>;
+    using src_t = typename reader_t::src_t;
+    using dst_t = typename reader_t::dst_t;
+
     const auto step = mNumEnabled;
     assert(idx < step);
 
-    auto input = al::span{reinterpret_cast<const T*>(src), count*step};
-    auto output = al::span{reinterpret_cast<T*>(dst), count};
+    auto input = al::span{reinterpret_cast<const src_t*>(src), count*step};
+    auto output = al::span{reinterpret_cast<dst_t*>(dst), count};
 
     auto inptr = input.begin();
     std::generate_n(output.begin(), output.size(), [&inptr,idx,step]
     {
-        auto ret = inptr[idx];
+        auto ret = reader_t::read(inptr[idx]);
         inptr += step;
         return ret;
     });
@@ -346,13 +397,13 @@ auto LafStream::prepareTrack(const size_t trackidx, const size_t count) -> al::s
         switch(mQuality)
         {
         case Quality::s8:
-            copySamples<int8_t>(mSampleLine.data(), mSampleChunk.data(), idx, todo);
+            copySamples<Quality::s8>(mSampleLine.data(), mSampleChunk.data(), idx, todo);
             break;
         case Quality::s16:
-            copySamples<int16_t>(mSampleLine.data(), mSampleChunk.data(), idx, todo);
+            copySamples<Quality::s16>(mSampleLine.data(), mSampleChunk.data(), idx, todo);
             break;
         case Quality::f32:
-            copySamples<float>(mSampleLine.data(), mSampleChunk.data(), idx, todo);
+            copySamples<Quality::f32>(mSampleLine.data(), mSampleChunk.data(), idx, todo);
             break;
         case Quality::s24:
             throw std::runtime_error{"24-bit samples not supported"};
@@ -361,8 +412,7 @@ auto LafStream::prepareTrack(const size_t trackidx, const size_t count) -> al::s
     else
     {
         /* If the track is disabled, provide silence. */
-        std::fill_n(mSampleLine.begin(), mSampleLine.size(),
-            (mQuality==Quality::s8) ? char(0x80) : char{});
+        std::fill_n(mSampleLine.begin(), mSampleLine.size(), char{});
     }
 
     return mSampleLine.first(todo * BytesFromQuality(mQuality));
@@ -397,9 +447,8 @@ auto LoadLAF(const fs::path &fname) -> std::unique_ptr<LafStream>
     }();
 
     laf->mNumTracks = [input=al::span{header}.subspan<6,4>()] {
-        auto data = std::array<char,4>{};
-        std::copy_n(input.begin(), input.size(), data.begin());
-        return al::bit_cast<uint32_t>(data);
+        return uint32_t{uint8_t(input[0]) | (uint32_t{uint8_t(input[1])}<<8)
+            | (uint32_t{uint8_t(input[2])}<<16) | (uint32_t{uint8_t(input[3])}<<24)};
     }();
 
     std::cout<< "Filename: "<<fname<<'\n';
@@ -407,6 +456,8 @@ auto LoadLAF(const fs::path &fname) -> std::unique_ptr<LafStream>
     std::cout<< " mode: "<<GetModeName(laf->mMode)<<'\n';
     std::cout<< " track count: "<<laf->mNumTracks<<'\n';
 
+    if(laf->mNumTracks == 0)
+        throw std::runtime_error{"No tracks"};
     if(laf->mNumTracks > 256)
         throw std::runtime_error{"Too many tracks: "+std::to_string(laf->mNumTracks)};
 
@@ -418,9 +469,9 @@ auto LoadLAF(const fs::path &fname) -> std::unique_ptr<LafStream>
     {
         static constexpr auto read_float = [](al::span<char,4> input)
         {
-            auto data = std::array<char,4>{};
-            std::copy_n(input.begin(), input.size(), data.begin());
-            return al::bit_cast<float>(data);
+            const auto value = uint32_t{uint8_t(input[0]) | (uint32_t{uint8_t(input[1])}<<8)
+                | (uint32_t{uint8_t(input[2])}<<16) | (uint32_t{uint8_t(input[3])}<<24)};
+            return al::bit_cast<float>(value);
         };
 
         auto chan = al::span{chandata}.subspan(i*9_uz, 9);
@@ -458,14 +509,14 @@ auto LoadLAF(const fs::path &fname) -> std::unique_ptr<LafStream>
     alassert(laf->mInFile.read(footer.data(), footer.size()));
 
     laf->mSampleRate = [input=al::span{footer}.first<4>()] {
-        auto data = std::array<char,4>{};
-        std::copy_n(input.begin(), input.size(), data.begin());
-        return al::bit_cast<uint32_t>(data);
+        return uint32_t{uint8_t(input[0]) | (uint32_t{uint8_t(input[1])}<<8)
+            | (uint32_t{uint8_t(input[2])}<<16) | (uint32_t{uint8_t(input[3])}<<24)};
     }();
     laf->mSampleCount = [input=al::span{footer}.last<8>()] {
-        auto data = std::array<char,8>{};
-        std::copy_n(input.begin(), input.size(), data.begin());
-        return al::bit_cast<uint64_t>(data);
+        return uint64_t{uint8_t(input[0]) | (uint64_t{uint8_t(input[1])}<<8)
+            | (uint64_t{uint8_t(input[2])}<<16) | (uint64_t{uint8_t(input[3])}<<24)
+            | (uint64_t{uint8_t(input[4])}<<32) | (uint64_t{uint8_t(input[5])}<<40)
+            | (uint64_t{uint8_t(input[6])}<<48) | (uint64_t{uint8_t(input[7])}<<56)};
     }();
     std::cout<< "Sample rate: "<<laf->mSampleRate<<'\n';
     std::cout<< "Length: "<<laf->mSampleCount<<" samples ("
@@ -500,15 +551,19 @@ void PlayLAF(std::string_view fname)
         alGenSources(1, &channel.mSource);
         alGenBuffers(ALsizei(channel.mBuffers.size()), channel.mBuffers.data());
 
+        /* Disable distance attenuation, and make sure the source stays locked
+         * relative to the listener.
+         */
+        alSourcef(channel.mSource, AL_ROLLOFF_FACTOR, 0.0f);
+        alSourcei(channel.mSource, AL_SOURCE_RELATIVE, AL_TRUE);
+
         /* FIXME: Is the Y rotation/azimuth clockwise or counter-clockwise?
-         * Does +azimuth move the sound right or left?
+         * Does +azimuth move a front sound right or left?
          */
         const auto x = std::sin(channel.mAzimuth) * std::cos(channel.mElevation);
         const auto y = std::sin(channel.mElevation);
         const auto z = -std::cos(channel.mAzimuth) * std::cos(channel.mElevation);
         alSource3f(channel.mSource, AL_POSITION, x, y, z);
-        alSourcef(channel.mSource, AL_ROLLOFF_FACTOR, 0.0f);
-        alSourcei(channel.mSource, AL_SOURCE_RELATIVE, AL_TRUE);
 
         /* Silence LFE channels since they may not be appropriate to play
          * normally. AL_EFFECT_DEDICATED_LOW_FREQUENCY_EFFECT could be used to

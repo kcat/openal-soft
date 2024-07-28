@@ -165,18 +165,6 @@ auto BytesFromQuality(Quality quality) noexcept -> size_t
     return 4;
 }
 
-auto FormatFromQuality(Quality quality) -> ALenum
-{
-    switch(quality)
-    {
-    case Quality::s8: return AL_FORMAT_MONO8;
-    case Quality::s16: return AL_FORMAT_MONO16;
-    case Quality::f32: return AL_FORMAT_MONO_FLOAT32;
-    case Quality::s24: throw std::runtime_error{"24-bit samples not supported"};
-    }
-    return AL_NONE;
-}
-
 
 /* Helper class for reading little-endian samples on big-endian targets. */
 template<Quality Q>
@@ -272,6 +260,7 @@ struct LafStream {
     Mode mMode{};
     uint32_t mNumTracks{};
     uint32_t mSampleRate{};
+    ALenum mALFormat{};
     uint64_t mSampleCount{};
 
     uint64_t mCurrentSample{};
@@ -426,7 +415,8 @@ auto LoadLAF(const fs::path &fname) -> std::unique_ptr<LafStream>
 
     auto marker = std::array<char,9>{};
     alassert(laf->mInFile.read(marker.data(), marker.size()));
-    alassert((std::string_view{marker.data(), marker.size()} == "LIMITLESS"sv));
+    if(std::string_view{marker.data(), marker.size()} != "LIMITLESS"sv)
+        throw std::runtime_error{"Not an LAF file"};
 
     auto header = std::array<char,10>{};
     alassert(laf->mInFile.read(header.data(), header.size()));
@@ -543,8 +533,26 @@ auto LoadLAF(const fs::path &fname) -> std::unique_ptr<LafStream>
 }
 
 void PlayLAF(std::string_view fname)
-{
+try {
     auto laf = LoadLAF(fs::u8path(fname));
+
+    switch(laf->mQuality)
+    {
+    case Quality::s8:
+        laf->mALFormat = AL_FORMAT_MONO8;
+        break;
+    case Quality::s16:
+        laf->mALFormat = AL_FORMAT_MONO16;
+        break;
+    case Quality::f32:
+        if(alIsExtensionPresent("AL_EXT_FLOAT32"))
+            laf->mALFormat = AL_FORMAT_MONO_FLOAT32;
+        break;
+    case Quality::s24:
+        throw std::runtime_error{"24-bit samples not supported"};
+    }
+    if(!laf->mALFormat)
+        throw std::runtime_error{"No supported format for "+std::string{GetQualityName(laf->mQuality)}+" samples"};
 
     auto alloc_channel = [](Channel &channel)
     {
@@ -623,8 +631,8 @@ void PlayLAF(std::string_view fname)
                     const auto samples = laf->prepareTrack(i, numsamples);
                     auto bufid = ALuint{};
                     alSourceUnqueueBuffers(laf->mChannels[i].mSource, 1, &bufid);
-                    alBufferData(bufid, FormatFromQuality(laf->mQuality), samples.data(),
-                        ALsizei(samples.size()), ALsizei(laf->mSampleRate));
+                    alBufferData(bufid, laf->mALFormat, samples.data(), ALsizei(samples.size()),
+                        ALsizei(laf->mSampleRate));
                     alSourceQueueBuffers(laf->mChannels[i].mSource, 1, &bufid);
                 }
                 for(size_t i{0};i < laf->mPosTracks.size();++i)
@@ -654,8 +662,8 @@ void PlayLAF(std::string_view fname)
             for(size_t i{0};i < laf->mChannels.size();++i)
             {
                 const auto samples = laf->prepareTrack(i, numsamples);
-                alBufferData(laf->mChannels[i].mBuffers[0], FormatFromQuality(laf->mQuality),
-                    samples.data(), ALsizei(samples.size()), ALsizei(laf->mSampleRate));
+                alBufferData(laf->mChannels[i].mBuffers[0], laf->mALFormat, samples.data(),
+                    ALsizei(samples.size()), ALsizei(laf->mSampleRate));
             }
             for(size_t i{0};i < laf->mPosTracks.size();++i)
             {
@@ -668,8 +676,8 @@ void PlayLAF(std::string_view fname)
             for(size_t i{0};i < laf->mChannels.size();++i)
             {
                 const auto samples = laf->prepareTrack(i, numsamples);
-                alBufferData(laf->mChannels[i].mBuffers[1], FormatFromQuality(laf->mQuality),
-                    samples.data(), ALsizei(samples.size()), ALsizei(laf->mSampleRate));
+                alBufferData(laf->mChannels[i].mBuffers[1], laf->mALFormat, samples.data(),
+                    ALsizei(samples.size()), ALsizei(laf->mSampleRate));
                 alSourceQueueBuffers(laf->mChannels[i].mSource,
                     ALsizei(laf->mChannels[i].mBuffers.size()), laf->mChannels[i].mBuffers.data());
                 sources[i] = laf->mChannels[i].mSource;
@@ -727,6 +735,9 @@ void PlayLAF(std::string_view fname)
         alGetSourcei(laf->mChannels.back().mSource, AL_SAMPLE_OFFSET, &offset);
         alGetSourcei(laf->mChannels.back().mSource, AL_SOURCE_STATE, &state);
     }
+}
+catch(std::exception& e) {
+    std::cerr<< "Error playing "<<fname<<":\n  "<<e.what()<<'\n';
 }
 
 auto main(al::span<std::string_view> args) -> int

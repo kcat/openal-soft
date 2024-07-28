@@ -1,6 +1,7 @@
 #ifndef AL_BIT_H
 #define AL_BIT_H
 
+#include <algorithm>
 #include <array>
 #ifndef __GNUC__
 #include <cstdint>
@@ -23,6 +24,16 @@ To> bit_cast(const From &src) noexcept
     alignas(To) std::array<char,sizeof(To)> dst;
     std::memcpy(dst.data(), &src, sizeof(To));
     return *std::launder(reinterpret_cast<To*>(dst.data()));
+}
+
+template<typename T>
+std::enable_if_t<std::is_integral_v<T>,
+T> byteswap(T value) noexcept
+{
+    static_assert(std::has_unique_object_representations_v<T>);
+    auto bytes = al::bit_cast<std::array<std::byte,sizeof(T)>>(value);
+    std::reverse(bytes.begin(), bytes.end());
+    return al::bit_cast<T>(bytes);
 }
 
 #ifdef __BYTE_ORDER__

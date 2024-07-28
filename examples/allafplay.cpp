@@ -266,7 +266,7 @@ auto LafStream::readChunk() -> uint32_t
         [](const unsigned int val, const uint8_t in)
         { return val + unsigned(al::popcount(unsigned(in))); });
 
-    alassert(mEnabledTracks[((mNumTracks+7_uz)>>3) - 1] < (1u<<(mNumEnabled&7)));
+    alassert(mEnabledTracks[((mNumTracks+7_uz)>>3) - 1] < (1u<<(mNumTracks&7)));
 
     /* Each chunk is exactly one second long, with samples interleaved for each
      * enabled track.

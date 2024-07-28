@@ -35,9 +35,6 @@
  * - 256 track limit. Could be made higher, but making it too flexible would
  *   necessitate more micro-allocations.
  *
- * - 24-bit samples are unsupported. Will need conversion to either 16-bit or
- *   float samples when buffering.
- *
  * - "Objects" mode only supports sample rates that are a multiple of 48. Since
  *   positions are specified as samples in extra channels/tracks, and 3*16
  *   samples are needed per track to specify the full set of positions, and
@@ -165,8 +162,23 @@ auto BytesFromQuality(Quality quality) noexcept -> size_t
     return 4;
 }
 
+auto BufferBytesFromQuality(Quality quality) noexcept -> size_t
+{
+    switch(quality)
+    {
+    case Quality::s8: return 1;
+    case Quality::s16: return 2;
+    case Quality::f32: return 4;
+    /* 24-bit samples are converted to 32-bit for OpenAL. */
+    case Quality::s24: return 4;
+    }
+    return 4;
+}
 
-/* Helper class for reading little-endian samples on big-endian targets. */
+
+/* Helper class for reading little-endian samples on big-endian targets, or
+ * convert 24-bit samples.
+ */
 template<Quality Q>
 struct SampleReader;
 
@@ -209,6 +221,20 @@ struct SampleReader<Quality::f32> {
             return in;
         else
             return al::bit_cast<dst_t>(al::byteswap(static_cast<uint32_t>(in)));
+    }
+};
+
+template<>
+struct SampleReader<Quality::s24> {
+    /* 24-bit samples are converted to 32-bit integer. */
+    using src_t = std::array<uint8_t,3>;
+    using dst_t = int32_t;
+
+    [[nodiscard]] static
+    auto read(const src_t &in) noexcept -> dst_t
+    {
+        return static_cast<int32_t>((uint32_t{in[0]}<<24) | (uint32_t{in[1]}<<16)
+            | (uint32_t{in[2]}<<8));
     }
 };
 
@@ -281,6 +307,8 @@ struct LafStream {
     [[nodiscard]]
     auto readChunk() -> uint32_t;
 
+    void convertSamples(const al::span<char> samples) const;
+
     void convertPositions(const al::span<float> dst, const al::span<const char> src) const;
 
     template<Quality Q>
@@ -315,6 +343,16 @@ auto LafStream::readChunk() -> uint32_t
     return static_cast<uint32_t>(numsamples);
 }
 
+void LafStream::convertSamples(const al::span<char> samples) const
+{
+    /* OpenAL uses unsigned 8-bit samples (0...255), so signed 8-bit samples
+     * (-128...+127) need conversion. The other formats are fine.
+     */
+    if(mQuality == Quality::s8)
+        std::transform(samples.begin(), samples.end(), samples.begin(),
+            [](const char sample) noexcept { return char(sample^0x80); });
+}
+
 void LafStream::convertPositions(const al::span<float> dst, const al::span<const char> src) const
 {
     switch(mQuality)
@@ -339,6 +377,13 @@ void LafStream::convertPositions(const al::span<float> dst, const al::span<const
         }
         break;
     case Quality::s24:
+        {
+            /* 24-bit samples are converted to 32-bit in copySamples. */
+            auto i32src = al::span{reinterpret_cast<const int32_t*>(src.data()),
+                src.size()/sizeof(int32_t)};
+            std::transform(i32src.begin(), i32src.end(), dst.begin(),
+                [](const int32_t in) { return float(in>>8) / 8388607.0f; });
+        }
         break;
     }
 }
@@ -379,7 +424,7 @@ auto LafStream::prepareTrack(const size_t trackidx, const size_t count) -> al::s
             const auto res = std::accumulate(bits.begin(), bits.end(), 0u,
                 [](const unsigned int val, const uint8_t in)
                 { return val + unsigned(al::popcount(unsigned(in))); });
-            return unsigned(al::popcount(mEnabledTracks[trackidx>>3] & ((1_uz<<(trackidx&7))-1)))
+            return unsigned(al::popcount(mEnabledTracks[trackidx>>3] & ((1u<<(trackidx&7))-1)))
                 + res;
         }();
 
@@ -395,7 +440,8 @@ auto LafStream::prepareTrack(const size_t trackidx, const size_t count) -> al::s
             copySamples<Quality::f32>(mSampleLine.data(), mSampleChunk.data(), idx, todo);
             break;
         case Quality::s24:
-            throw std::runtime_error{"24-bit samples not supported"};
+            copySamples<Quality::s24>(mSampleLine.data(), mSampleChunk.data(), idx, todo);
+            break;
         }
     }
     else
@@ -404,7 +450,7 @@ auto LafStream::prepareTrack(const size_t trackidx, const size_t count) -> al::s
         std::fill_n(mSampleLine.begin(), mSampleLine.size(), char{});
     }
 
-    return mSampleLine.first(todo * BytesFromQuality(mQuality));
+    return mSampleLine.first(todo * BufferBytesFromQuality(mQuality));
 }
 
 
@@ -524,10 +570,10 @@ auto LoadLAF(const fs::path &fname) -> std::unique_ptr<LafStream>
     for(size_t i{0};i < laf->mPosTracks.size();++i)
         laf->mPosTracks[i].resize(laf->mSampleRate*2_uz, 0.0f);
 
-    laf->mSampleChunk.resize(laf->mSampleRate * BytesFromQuality(laf->mQuality)
-        * (laf->mNumTracks+1));
+    laf->mSampleChunk.resize(laf->mSampleRate*BytesFromQuality(laf->mQuality)*laf->mNumTracks
+        + laf->mSampleRate*BufferBytesFromQuality(laf->mQuality));
     laf->mSampleLine = al::span{laf->mSampleChunk}.last(laf->mSampleRate
-        * BytesFromQuality(laf->mQuality));
+        * BufferBytesFromQuality(laf->mQuality));
 
     return laf;
 }
@@ -549,9 +595,12 @@ try {
             laf->mALFormat = AL_FORMAT_MONO_FLOAT32;
         break;
     case Quality::s24:
-        throw std::runtime_error{"24-bit samples not supported"};
+        laf->mALFormat = alGetEnumValue("AL_FORMAT_MONO32");
+        if(!laf->mALFormat || laf->mALFormat == -1)
+            laf->mALFormat = alGetEnumValue("AL_FORMAT_MONO_I32");
+        break;
     }
-    if(!laf->mALFormat)
+    if(!laf->mALFormat || laf->mALFormat == -1)
         throw std::runtime_error{"No supported format for "+std::string{GetQualityName(laf->mQuality)}+" samples"};
 
     auto alloc_channel = [](Channel &channel)
@@ -629,6 +678,8 @@ try {
                 for(size_t i{0};i < laf->mChannels.size();++i)
                 {
                     const auto samples = laf->prepareTrack(i, numsamples);
+                    laf->convertSamples(samples);
+
                     auto bufid = ALuint{};
                     alSourceUnqueueBuffers(laf->mChannels[i].mSource, 1, &bufid);
                     alBufferData(bufid, laf->mALFormat, samples.data(), ALsizei(samples.size()),
@@ -662,6 +713,7 @@ try {
             for(size_t i{0};i < laf->mChannels.size();++i)
             {
                 const auto samples = laf->prepareTrack(i, numsamples);
+                laf->convertSamples(samples);
                 alBufferData(laf->mChannels[i].mBuffers[0], laf->mALFormat, samples.data(),
                     ALsizei(samples.size()), ALsizei(laf->mSampleRate));
             }
@@ -676,6 +728,7 @@ try {
             for(size_t i{0};i < laf->mChannels.size();++i)
             {
                 const auto samples = laf->prepareTrack(i, numsamples);
+                laf->convertSamples(samples);
                 alBufferData(laf->mChannels[i].mBuffers[1], laf->mALFormat, samples.data(),
                     ALsizei(samples.size()), ALsizei(laf->mSampleRate));
                 alSourceQueueBuffers(laf->mChannels[i].mSource,

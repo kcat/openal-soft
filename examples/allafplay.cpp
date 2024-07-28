@@ -262,7 +262,7 @@ auto LafStream::readChunk() -> uint32_t
 {
     mEnabledTracks.fill(0);
     mInFile.read(reinterpret_cast<char*>(mEnabledTracks.data()), (mNumTracks+7_z)>>3);
-    mNumEnabled = std::reduce(mEnabledTracks.cbegin(), mEnabledTracks.cend(), 0u,
+    mNumEnabled = std::accumulate(mEnabledTracks.cbegin(), mEnabledTracks.cend(), 0u,
         [](const unsigned int val, const uint8_t in)
         { return val + unsigned(al::popcount(unsigned(in))); });
 
@@ -336,7 +336,7 @@ auto LafStream::prepareTrack(const size_t trackidx, const size_t count) -> al::s
         const auto idx = [this,trackidx]() -> unsigned int
         {
             const auto bits = al::span{mEnabledTracks}.first(trackidx>>3);
-            const auto res = std::reduce(bits.begin(), bits.end(), 0u,
+            const auto res = std::accumulate(bits.begin(), bits.end(), 0u,
                 [](const unsigned int val, const uint8_t in)
                 { return val + unsigned(al::popcount(unsigned(in))); });
             return unsigned(al::popcount(mEnabledTracks[trackidx>>3] & ((1_uz<<(trackidx&7))-1)))

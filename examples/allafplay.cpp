@@ -26,12 +26,6 @@
  *
  * Some current shortcomings:
  *
- * - There must be no space between the LIMITLESS and HEAD markers. Since the
- *   format doesn't specify the size with each section marker, it's not
- *   straight-forward to efficiently find the HEAD marker if there's extra
- *   data in between. It shouldn't be hard to fix, but it's on the back-burner
- *   for now.
- *
  * - 256 track limit. Could be made higher, but making it too flexible would
  *   necessitate more micro-allocations.
  *
@@ -108,6 +102,7 @@
 
 #include "alassert.h"
 #include "albit.h"
+#include "almalloc.h"
 #include "alnumeric.h"
 #include "alspan.h"
 #include "alstring.h"
@@ -466,7 +461,43 @@ auto LoadLAF(const fs::path &fname) -> std::unique_ptr<LafStream>
 
     auto header = std::array<char,10>{};
     alassert(laf->mInFile.read(header.data(), header.size()));
-    alassert((std::string_view{header.data(), 4} == "HEAD"sv));
+    while(std::string_view{header.data(), 4} != "HEAD"sv)
+    {
+        auto headview = std::string_view{header.data(), header.size()};
+        auto hpos = headview.find("HEAD"sv);
+        if(hpos < headview.size())
+        {
+            /* Found the HEAD marker. Copy what was read of the header to the
+             * front, fill in the rest of the header, and continue loading.
+             */
+            const auto hiter = std::copy(header.begin()+hpos, header.end(), header.begin());
+            alassert(laf->mInFile.read(al::to_address(hiter), std::streamsize(hpos)));
+            break;
+        }
+        if(al::ends_with(headview, "HEA"sv))
+        {
+            /* Found what might be the HEAD marker at the end. Copy it to the
+             * front, refill the header, and check again.
+             */
+            const auto hiter = std::copy_n(header.end()-3, 3, header.begin());
+            alassert(laf->mInFile.read(al::to_address(hiter), std::streamsize(header.size()-3)));
+        }
+        else if(al::ends_with(headview, "HE"sv))
+        {
+            const auto hiter = std::copy_n(header.end()-2, 2, header.begin());
+            alassert(laf->mInFile.read(al::to_address(hiter), std::streamsize(header.size()-2)));
+        }
+        else if(headview.back() == 'H')
+        {
+            const auto hiter = std::copy_n(header.end()-1, 1, header.begin());
+            alassert(laf->mInFile.read(al::to_address(hiter), std::streamsize(header.size()-1)));
+        }
+        else
+        {
+            /* The HEAD marker wasn't there. Load some more and check again. */
+            alassert(laf->mInFile.read(header.data(), header.size()));
+        }
+    }
 
     laf->mQuality = [stype=int{header[4]}] {
         if(stype == 0) return Quality::s8;

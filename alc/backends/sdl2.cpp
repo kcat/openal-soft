@@ -107,7 +107,8 @@ void Sdl2Backend::open(std::string_view name)
     const auto defaultDeviceName = getDefaultDeviceName();
     if(name.empty() || name == defaultDeviceName)
     {
-        mDeviceName = defaultDeviceName;
+        name = defaultDeviceName;
+        mDeviceName.clear();
         mDeviceID = SDL_OpenAudioDevice(nullptr, SDL_FALSE, &want, &have,
             SDL_AUDIO_ALLOW_ANY_CHANGE);
     }
@@ -175,7 +176,7 @@ bool Sdl2Backend::reset()
     want.userdata = this;
 
     auto have = SDL_AudioSpec{};
-    if(mDeviceName.empty() || mDeviceName == getDefaultDeviceName())
+    if(mDeviceName.empty())
     {
         mDeviceID = SDL_OpenAudioDevice(nullptr, SDL_FALSE, &want, &have,
             SDL_AUDIO_ALLOW_ANY_CHANGE);

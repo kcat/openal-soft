@@ -771,17 +771,9 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
         /* Get the number of samples ahead of the current time that output
          * should start at. Skip this update if it's beyond the output sample
          * count.
-         *
-         * Round the start position to a multiple of 4, which some mixers want.
-         * This makes the start time accurate to 4 samples. This could be made
-         * sample-accurate by forcing non-SIMD functions on the first run.
          */
-        seconds::rep sampleOffset{duration_cast<seconds>(diff * Device->Frequency).count()};
-        sampleOffset = (sampleOffset+2) & ~seconds::rep{3};
-        if(sampleOffset >= SamplesToDo)
-            return;
-
-        OutPos = static_cast<uint>(sampleOffset);
+        OutPos = static_cast<uint>(round<seconds>(diff * Device->Frequency).count());
+        if(OutPos >= SamplesToDo) return;
     }
 
     /* Calculate the number of samples to mix, and the number of (resampled)

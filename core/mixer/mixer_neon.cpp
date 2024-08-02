@@ -19,6 +19,7 @@
 #include "hrtfbase.h"
 #include "opthelpers.h"
 
+struct CTag;
 struct NEONTag;
 struct LerpTag;
 struct CubicTag;
@@ -461,6 +462,9 @@ void Mix_<NEONTag>(const al::span<const float> InSamples,const al::span<FloatBuf
     const al::span<float> CurrentGains, const al::span<const float> TargetGains,
     const size_t Counter, const size_t OutPos)
 {
+    if((OutPos&3) != 0) UNLIKELY
+        return Mix_<CTag>(InSamples, OutBuffer, CurrentGains, TargetGains, Counter, OutPos);
+
     const float delta{(Counter > 0) ? 1.0f / static_cast<float>(Counter) : 0.0f};
     const auto fade_len = std::min(Counter, InSamples.size());
     const auto realign_len = std::min((fade_len+3_uz) & ~3_uz, InSamples.size()) - fade_len;
@@ -476,6 +480,9 @@ template<>
 void Mix_<NEONTag>(const al::span<const float> InSamples, const al::span<float> OutBuffer,
     float &CurrentGain, const float TargetGain, const size_t Counter)
 {
+    if((reinterpret_cast<uintptr_t>(OutBuffer.data())&15) != 0) UNLIKELY
+        return Mix_<CTag>(InSamples, OutBuffer, CurrentGain, TargetGain, Counter);
+
     const float delta{(Counter > 0) ? 1.0f / static_cast<float>(Counter) : 0.0f};
     const auto fade_len = std::min(Counter, InSamples.size());
     const auto realign_len = std::min((fade_len+3_uz) & ~3_uz, InSamples.size()) - fade_len;

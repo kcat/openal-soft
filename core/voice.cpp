@@ -690,25 +690,24 @@ void DoNfcMix(const al::span<const float> samples, al::span<FloatBufferLine> Out
     static constexpr std::array<FilterProc,MaxAmbiOrder+1> NfcProcess{{
         nullptr, &NfcFilter::process1, &NfcFilter::process2, &NfcFilter::process3}};
 
-    auto CurrentGains = al::span{parms.Gains.Current}.subspan(0);
-    auto TargetGains = OutGains.subspan(0);
-    MixSamples(samples, OutBuffer.first(1), CurrentGains, TargetGains, Counter, OutPos);
+    MixSamples(samples, al::span{OutBuffer[0]}.subspan(OutPos), parms.Gains.Current[0],
+        OutGains[0], Counter);
     OutBuffer = OutBuffer.subspan(1);
-    CurrentGains = CurrentGains.subspan(1);
-    TargetGains = TargetGains.subspan(1);
+    auto CurrentGains = al::span{parms.Gains.Current}.subspan(1);
+    auto TargetGains = OutGains.subspan(1);
 
-    const auto nfcsamples = al::span{Device->ExtraSampleData}.subspan(samples.size());
+    const auto nfcsamples = al::span{Device->ExtraSampleData}.first(samples.size());
     size_t order{1};
     while(const size_t chancount{Device->NumChannelsPerOrder[order]})
     {
         (parms.NFCtrlFilter.*NfcProcess[order])(samples, nfcsamples);
         MixSamples(nfcsamples, OutBuffer.first(chancount), CurrentGains, TargetGains, Counter,
             OutPos);
+        if(++order == MaxAmbiOrder+1)
+            break;
         OutBuffer = OutBuffer.subspan(chancount);
         CurrentGains = CurrentGains.subspan(chancount);
         TargetGains = TargetGains.subspan(chancount);
-        if(++order == MaxAmbiOrder+1)
-            break;
     }
 }
 

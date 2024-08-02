@@ -119,7 +119,8 @@ void Compressor::linkChannels(const uint SamplesToDo,
         std::transform(sideChain.begin(), sideChain.end(), buffer.begin(), sideChain.begin(),
             max_abs);
     };
-    std::for_each(OutBuffer.begin(), OutBuffer.end(), fill_max);
+    for(const FloatBufferLine &input : OutBuffer)
+        fill_max(input);
 }
 
 /* This calculates the squared crest factor of the control signal for the
@@ -418,13 +419,14 @@ void Compressor::process(const uint SamplesToDo, FloatBufferLine *OutBuffer)
         signalDelay(SamplesToDo, output);
 
     const auto gains = assume_aligned_span<16>(al::span{mSideChain}.first(SamplesToDo));
-    auto apply_comp = [gains](const FloatBufferSpan input) noexcept -> void
+    auto apply_comp = [gains](const FloatBufferSpan inout) noexcept -> void
     {
-        const auto buffer = assume_aligned_span<16>(input);
+        const auto buffer = assume_aligned_span<16>(inout);
         std::transform(gains.cbegin(), gains.cend(), buffer.cbegin(), buffer.begin(),
             std::multiplies{});
     };
-    std::for_each(output.begin(), output.end(), apply_comp);
+    for(const FloatBufferSpan inout : output)
+        apply_comp(inout);
 
     const auto delayedGains = al::span{mSideChain}.subspan(SamplesToDo, mLookAhead);
     std::copy(delayedGains.begin(), delayedGains.end(), mSideChain.begin());

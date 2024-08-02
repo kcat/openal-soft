@@ -26,8 +26,6 @@ using uint = unsigned int;
  *   http://c4dm.eecs.qmul.ac.uk/audioengineering/compressors/
  */
 class SIMDALIGN Compressor {
-    size_t mNumChans{0u};
-
     struct AutoFlags {
         bool Knee : 1;
         bool Attack : 1;
@@ -76,7 +74,7 @@ class SIMDALIGN Compressor {
 
 public:
     ~Compressor();
-    void process(const uint SamplesToDo, FloatBufferLine *OutBuffer);
+    void process(const uint SamplesToDo, al::span<FloatBufferLine> InOut);
     [[nodiscard]] auto getLookAhead() const noexcept -> uint { return mLookAhead; }
 
     /**

@@ -390,7 +390,7 @@ void LafStream::copySamples(char *dst, const char *src, const size_t idx, const 
     using src_t = typename reader_t::src_t;
     using dst_t = typename reader_t::dst_t;
 
-    const auto step = mNumEnabled;
+    const auto step = size_t{mNumEnabled};
     assert(idx < step);
 
     auto input = al::span{reinterpret_cast<const src_t*>(src), count*step};
@@ -400,7 +400,7 @@ void LafStream::copySamples(char *dst, const char *src, const size_t idx, const 
     std::generate_n(output.begin(), output.size(), [&inptr,idx,step]
     {
         auto ret = reader_t::read(inptr[idx]);
-        inptr += step;
+        inptr += ptrdiff_t(step);
         return ret;
     });
 }
@@ -719,7 +719,7 @@ try {
                 }
                 for(size_t i{0};i < laf->mPosTracks.size();++i)
                 {
-                    std::copy(laf->mPosTracks[i].begin() + laf->mSampleRate,
+                    std::copy(laf->mPosTracks[i].begin() + ptrdiff_t(laf->mSampleRate),
                         laf->mPosTracks[i].end(), laf->mPosTracks[i].begin());
 
                     const auto positions = laf->prepareTrack(laf->mChannels.size()+i, numsamples);

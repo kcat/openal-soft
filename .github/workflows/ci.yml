@@ -109,7 +109,7 @@ jobs:
         - {
             name: "Android_armeabi-v7a-Release",
             os: ubuntu-latest,
-            cmake_opts: "-DCMAKE_TOOLCHAIN_FILE=/usr/local/lib/android/sdk/ndk/26.3.11579264/build/cmake/android.toolchain.cmake \
+            cmake_opts: "-DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake \
             -DALSOFT_EMBED_HRTF_DATA=TRUE \
             -DALSOFT_REQUIRE_OPENSL=ON",
             build_type: "Release"
@@ -119,7 +119,7 @@ jobs:
             os: ubuntu-latest,
             cmake_opts: "-DANDRIOD_ABI=arm64-v8a \
             -DANDROID_PLATFORM=25 \
-            -DCMAKE_TOOLCHAIN_FILE=/usr/local/lib/android/sdk/ndk/26.3.11579264/build/cmake/android.toolchain.cmake \
+            -DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake \
             -DALSOFT_EMBED_HRTF_DATA=TRUE \
             -DALSOFT_REQUIRE_OPENSL=ON",
             build_type: "Release"

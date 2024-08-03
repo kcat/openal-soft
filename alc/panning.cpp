@@ -1198,21 +1198,25 @@ void aluInitRenderer(ALCdevice *device, int hrtf_id, std::optional<StereoEncodin
 
     if(stereomode.value_or(StereoEncoding::Default) == StereoEncoding::Uhj)
     {
+        auto ftype = std::string_view{};
         switch(UhjEncodeQuality)
         {
         case UhjQualityType::IIR:
             device->mUhjEncoder = std::make_unique<UhjEncoderIIR>();
+            ftype = "IIR"sv;
             break;
         case UhjQualityType::FIR256:
             device->mUhjEncoder = std::make_unique<UhjEncoder<UhjLength256>>();
+            ftype = "FIR-256"sv;
             break;
         case UhjQualityType::FIR512:
             device->mUhjEncoder = std::make_unique<UhjEncoder<UhjLength512>>();
+            ftype = "FIR-512"sv;
             break;
         }
         assert(device->mUhjEncoder != nullptr);
 
-        TRACE("UHJ enabled\n");
+        TRACE("UHJ enabled (%.*s encoder)\n", al::sizei(ftype), ftype.data());
         InitUhjPanning(device);
         device->PostProcess = &ALCdevice::ProcessUhj;
         return;

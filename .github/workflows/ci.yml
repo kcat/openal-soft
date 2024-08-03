@@ -106,7 +106,24 @@ jobs:
               libdbus-1-dev",
             build_type: "Release"
           }
-
+        - {
+            name: "Android_armeabi-v7a-Release",
+            os: ubuntu-latest,
+            cmake_opts: "-DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake \
+            -DALSOFT_EMBED_HRTF_DATA=TRUE \
+            -DALSOFT_REQUIRE_OPENSL=ON",
+            build_type: "Release"
+          }
+        - {
+            name: "Android_arm64-v8a-Release",
+            os: ubuntu-latest,
+            cmake_opts: "-DANDRIOD_ABI=arm64-v8a \
+            -DANDROID_PLATFORM=25 \
+            -DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake \
+            -DALSOFT_EMBED_HRTF_DATA=TRUE \
+            -DALSOFT_REQUIRE_OPENSL=ON",
+            build_type: "Release"
+          }
     steps:
     - uses: actions/checkout@v4
 
@@ -133,8 +150,8 @@ jobs:
         cd build
         ctest
 
-    - name: Create Archive
-      if: ${{ matrix.config.os == 'windows-latest' }}
+    - name: Set up Windows artifacts
+      if: ${{ contains(matrix.config.name, 'Win') }}
       shell: bash
       run: |
         cd build
@@ -143,10 +160,17 @@ jobs:
         cp ${{matrix.config.build_type}}/soft_oal.dll archive
         cp ${{matrix.config.build_type}}/OpenAL32.dll archive/router
 
-    - name: Upload Archive
-      # Upload package as an artifact of this workflow.
+    - name: Set up Android artifacts
+      if: ${{ contains(matrix.config.name, 'Android') }}
+      shell: bash
+      run: |
+        cd build
+        mkdir archive
+        cp ${{github.workspace}}/build/libopenal.so archive/
+
+    - name: Upload build as a workflow artifact
       uses: actions/upload-artifact@v4
-      if: ${{ matrix.config.os == 'windows-latest' }}
+      if: ${{ contains(matrix.config.name, 'Win') || contains(matrix.config.name, 'Android') }}
       with:
         name: soft_oal-${{matrix.config.name}}
         path: build/archive

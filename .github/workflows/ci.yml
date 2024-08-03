@@ -112,14 +112,6 @@ jobs:
             cmake_opts: "-DCMAKE_TOOLCHAIN_FILE=/usr/local/lib/android/sdk/ndk/26.3.11579264/build/cmake/android.toolchain.cmake \
             -DALSOFT_EMBED_HRTF_DATA=TRUE \
             -DALSOFT_REQUIRE_OPENSL=ON",
-            deps_cmdline: "sudo apt update && sudo apt-get install -qq \
-              libpulse-dev \
-              portaudio19-dev \
-              libasound2-dev \
-              libjack-dev \
-              libpipewire-0.3-dev \
-              qtbase5-dev \
-              libdbus-1-dev",
             build_type: "Release"
           }
         - {
@@ -130,14 +122,6 @@ jobs:
             -DCMAKE_TOOLCHAIN_FILE=/usr/local/lib/android/sdk/ndk/26.3.11579264/build/cmake/android.toolchain.cmake \
             -DALSOFT_EMBED_HRTF_DATA=TRUE \
             -DALSOFT_REQUIRE_OPENSL=ON",
-            deps_cmdline: "sudo apt update && sudo apt-get install -qq \
-              libpulse-dev \
-              portaudio19-dev \
-              libasound2-dev \
-              libjack-dev \
-              libpipewire-0.3-dev \
-              qtbase5-dev \
-              libdbus-1-dev",
             build_type: "Release"
           }
     steps:

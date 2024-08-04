@@ -1955,7 +1955,7 @@ auto ProcessSources(TokenReaderT *tr, HrirDataT *hData, const uint outRate) -> i
                 hrirPoints, 1.0/factor[ti], azd->mDelays[ti]);
             if(resampler)
                 resampler->process(hrirPoints, hrir);
-            AverageHrirMagnitude(hData->mFftSize, al::span{hrir}.subspan(irPoints), 1.0/factor[ti],
+            AverageHrirMagnitude(hData->mFftSize, al::span{hrir}.first(irPoints), 1.0/factor[ti],
                 azd->mIrs[ti]);
             factor[ti] += 1.0;
             if(!TrIsOperator(tr, "+"))

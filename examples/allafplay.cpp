@@ -100,7 +100,6 @@
 #include "AL/al.h"
 #include "AL/alext.h"
 
-#include "alassert.h"
 #include "albit.h"
 #include "almalloc.h"
 #include "alnumeric.h"
@@ -114,6 +113,25 @@ namespace {
 
 namespace fs = std::filesystem;
 using namespace std::string_view_literals;
+
+[[noreturn]]
+void do_assert(const char *message, int linenum, const char *filename, const char *funcname)
+{
+    auto errstr = std::string{filename};
+    errstr += ':';
+    errstr += std::to_string(linenum);
+    errstr += ": ";
+    errstr += funcname;
+    errstr += ": ";
+    errstr += message;
+    throw std::runtime_error{errstr};
+}
+
+#define MyAssert(cond) do {                                                   \
+    if(!(cond)) UNLIKELY                                                      \
+        do_assert("Assertion '" #cond "' failed", __LINE__, __FILE__,         \
+            std::data(__func__));                                             \
+} while(0)
 
 
 enum class Quality : std::uint8_t {
@@ -325,15 +343,22 @@ auto LafStream::readChunk() -> uint32_t
         { return val + unsigned(al::popcount(unsigned(in))); });
 
     /* Make sure enable bits aren't set for non-existent tracks. */
-    alassert(mEnabledTracks[((mNumTracks+7_uz)>>3) - 1] < (1u<<(mNumTracks&7)));
+    if(mEnabledTracks[((mNumTracks+7_uz)>>3) - 1] >= (1u<<(mNumTracks&7)))
+        throw std::runtime_error{"Invalid channel enable bits"};
 
     /* Each chunk is exactly one second long, with samples interleaved for each
-     * enabled track.
+     * enabled track. The last chunk may be shorter if there isn't enough time
+     * remaining for a full second.
      */
-    const auto toread = std::streamsize(mSampleRate * BytesFromQuality(mQuality) * mNumEnabled);
-    mInFile.read(mSampleChunk.data(), toread);
-
     const auto numsamples = std::min(uint64_t{mSampleRate}, mSampleCount-mCurrentSample);
+
+    const auto toread = std::streamsize(numsamples * BytesFromQuality(mQuality) * mNumEnabled);
+    mInFile.read(mSampleChunk.data(), toread);
+    if(mInFile.gcount() != toread)
+        throw std::runtime_error{"Failed to read sample chunk"};
+
+    std::fill(mSampleChunk.begin()+toread, mSampleChunk.end(), char{});
+
     mCurrentSample += numsamples;
     return static_cast<uint32_t>(numsamples);
 }
@@ -452,15 +477,19 @@ auto LafStream::prepareTrack(const size_t trackidx, const size_t count) -> al::s
 auto LoadLAF(const fs::path &fname) -> std::unique_ptr<LafStream>
 {
     auto laf = std::make_unique<LafStream>();
-    laf->mInFile = std::ifstream{fname, std::ios_base::binary};
+    laf->mInFile.open(fname, std::ios_base::binary);
 
     auto marker = std::array<char,9>{};
-    alassert(laf->mInFile.read(marker.data(), marker.size()));
+    laf->mInFile.read(marker.data(), marker.size());
+    if(laf->mInFile.gcount() != marker.size())
+        throw std::runtime_error{"Failed to read file marker"};
     if(std::string_view{marker.data(), marker.size()} != "LIMITLESS"sv)
         throw std::runtime_error{"Not an LAF file"};
 
     auto header = std::array<char,10>{};
-    alassert(laf->mInFile.read(header.data(), header.size()));
+    laf->mInFile.read(header.data(), header.size());
+    if(laf->mInFile.gcount() != header.size())
+        throw std::runtime_error{"Failed to read header"};
     while(std::string_view{header.data(), 4} != "HEAD"sv)
     {
         auto headview = std::string_view{header.data(), header.size()};
@@ -471,7 +500,7 @@ auto LoadLAF(const fs::path &fname) -> std::unique_ptr<LafStream>
              * front, fill in the rest of the header, and continue loading.
              */
             const auto hiter = std::copy(header.begin()+hpos, header.end(), header.begin());
-            alassert(laf->mInFile.read(al::to_address(hiter), std::streamsize(hpos)));
+            MyAssert(laf->mInFile.read(al::to_address(hiter), std::streamsize(hpos)));
             break;
         }
         if(al::ends_with(headview, "HEA"sv))
@@ -480,22 +509,22 @@ auto LoadLAF(const fs::path &fname) -> std::unique_ptr<LafStream>
              * front, refill the header, and check again.
              */
             const auto hiter = std::copy_n(header.end()-3, 3, header.begin());
-            alassert(laf->mInFile.read(al::to_address(hiter), std::streamsize(header.size()-3)));
+            MyAssert(laf->mInFile.read(al::to_address(hiter), std::streamsize(header.size()-3)));
         }
         else if(al::ends_with(headview, "HE"sv))
         {
             const auto hiter = std::copy_n(header.end()-2, 2, header.begin());
-            alassert(laf->mInFile.read(al::to_address(hiter), std::streamsize(header.size()-2)));
+            MyAssert(laf->mInFile.read(al::to_address(hiter), std::streamsize(header.size()-2)));
         }
         else if(headview.back() == 'H')
         {
             const auto hiter = std::copy_n(header.end()-1, 1, header.begin());
-            alassert(laf->mInFile.read(al::to_address(hiter), std::streamsize(header.size()-1)));
+            MyAssert(laf->mInFile.read(al::to_address(hiter), std::streamsize(header.size()-1)));
         }
         else
         {
             /* The HEAD marker wasn't there. Load some more and check again. */
-            alassert(laf->mInFile.read(header.data(), header.size()));
+            MyAssert(laf->mInFile.read(header.data(), header.size()));
         }
     }
 
@@ -529,9 +558,28 @@ auto LoadLAF(const fs::path &fname) -> std::unique_ptr<LafStream>
         throw std::runtime_error{"Too many tracks: "+std::to_string(laf->mNumTracks)};
 
     auto chandata = std::vector<char>(laf->mNumTracks*9_uz);
-    assert(laf->mInFile.read(chandata.data(), std::streamsize(chandata.size())));
+    laf->mInFile.read(chandata.data(), std::streamsize(chandata.size()));
+    if(laf->mInFile.gcount() != std::streamsize(chandata.size()))
+        throw std::runtime_error{"Failed to read channel header data"};
 
-    laf->mChannels.reserve(laf->mNumTracks);
+    if(laf->mMode == Mode::Channels)
+        laf->mChannels.reserve(laf->mNumTracks);
+    else
+    {
+        if(laf->mNumTracks < 2)
+            throw std::runtime_error{"Not enough tracks"};
+
+        auto numchans = uint32_t{laf->mNumTracks - 1};
+        auto numpostracks = uint32_t{1};
+        while(numpostracks*16 < numchans)
+        {
+            --numchans;
+            ++numpostracks;
+        }
+        laf->mChannels.reserve(numchans);
+        laf->mPosTracks.reserve(numpostracks);
+    }
+
     for(uint32_t i{0};i < laf->mNumTracks;++i)
     {
         static constexpr auto read_float = [](al::span<char,4> input)
@@ -550,14 +598,14 @@ auto LoadLAF(const fs::path &fname) -> std::unique_ptr<LafStream>
 
         if(x_axis != x_axis && y_axis == 0.0)
         {
-            alassert(laf->mMode == Mode::Objects);
-            alassert(i != 0);
+            MyAssert(laf->mMode == Mode::Objects);
+            MyAssert(i != 0);
             laf->mPosTracks.emplace_back();
         }
         else
         {
-            alassert(laf->mPosTracks.empty());
-            alassert(std::isfinite(x_axis) && std::isfinite(y_axis));
+            MyAssert(laf->mPosTracks.empty());
+            MyAssert(std::isfinite(x_axis) && std::isfinite(y_axis));
             auto &channel = laf->mChannels.emplace_back();
             channel.mAzimuth = y_axis;
             channel.mElevation = x_axis;
@@ -570,10 +618,12 @@ auto LoadLAF(const fs::path &fname) -> std::unique_ptr<LafStream>
      * handle the audio channels.
      */
     if(laf->mMode == Mode::Objects)
-        alassert(((laf->mChannels.size()-1)>>4) == laf->mPosTracks.size()-1);
+        MyAssert(((laf->mChannels.size()-1)>>4) == laf->mPosTracks.size()-1);
 
     auto footer = std::array<char,12>{};
-    alassert(laf->mInFile.read(footer.data(), footer.size()));
+    laf->mInFile.read(footer.data(), footer.size());
+    if(laf->mInFile.gcount() != footer.size())
+        throw std::runtime_error{"Failed to read sample header data"};
 
     laf->mSampleRate = [input=al::span{footer}.first<4>()] {
         return uint32_t{uint8_t(input[0]) | (uint32_t{uint8_t(input[1])}<<8)
@@ -596,7 +646,7 @@ auto LoadLAF(const fs::path &fname) -> std::unique_ptr<LafStream>
      * full set of positions. Extra logic will be needed to manage the position
      * frame offset separate from each chunk.
      */
-    alassert(laf->mMode == Mode::Channels || (laf->mSampleRate%FramesPerPos) == 0);
+    MyAssert(laf->mMode == Mode::Channels || (laf->mSampleRate%FramesPerPos) == 0);
 
     for(size_t i{0};i < laf->mPosTracks.size();++i)
         laf->mPosTracks[i].resize(laf->mSampleRate*2_uz, 0.0f);
@@ -855,7 +905,7 @@ auto main(al::span<std::string_view> args) -> int
 
 int main(int argc, char **argv)
 {
-    alassert(argc >= 0);
+    MyAssert(argc >= 0);
     auto args = std::vector<std::string_view>(static_cast<unsigned int>(argc));
     std::copy_n(argv, args.size(), args.begin());
     return main(al::span{args});

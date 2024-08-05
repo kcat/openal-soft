@@ -493,39 +493,31 @@ auto LoadLAF(const fs::path &fname) -> std::unique_ptr<LafStream>
     while(std::string_view{header.data(), 4} != "HEAD"sv)
     {
         auto headview = std::string_view{header.data(), header.size()};
-        auto hpos = headview.find("HEAD"sv);
-        if(hpos < headview.size())
+        auto hiter = header.begin();
+        if(const auto hpos = std::min(headview.find("HEAD"sv), headview.size());
+            hpos < headview.size())
         {
             /* Found the HEAD marker. Copy what was read of the header to the
              * front, fill in the rest of the header, and continue loading.
              */
-            const auto hiter = std::copy(header.begin()+hpos, header.end(), header.begin());
-            MyAssert(laf->mInFile.read(al::to_address(hiter), std::streamsize(hpos)));
-            break;
+            hiter = std::copy(header.begin()+hpos, header.end(), hiter);
         }
-        if(al::ends_with(headview, "HEA"sv))
+        else if(al::ends_with(headview, "HEA"sv))
         {
             /* Found what might be the HEAD marker at the end. Copy it to the
              * front, refill the header, and check again.
              */
-            const auto hiter = std::copy_n(header.end()-3, 3, header.begin());
-            MyAssert(laf->mInFile.read(al::to_address(hiter), std::streamsize(header.size()-3)));
+            hiter = std::copy_n(header.end()-3, 3, hiter);
         }
         else if(al::ends_with(headview, "HE"sv))
-        {
-            const auto hiter = std::copy_n(header.end()-2, 2, header.begin());
-            MyAssert(laf->mInFile.read(al::to_address(hiter), std::streamsize(header.size()-2)));
-        }
+            hiter = std::copy_n(header.end()-2, 2, hiter);
         else if(headview.back() == 'H')
-        {
-            const auto hiter = std::copy_n(header.end()-1, 1, header.begin());
-            MyAssert(laf->mInFile.read(al::to_address(hiter), std::streamsize(header.size()-1)));
-        }
-        else
-        {
-            /* The HEAD marker wasn't there. Load some more and check again. */
-            MyAssert(laf->mInFile.read(header.data(), header.size()));
-        }
+            hiter = std::copy_n(header.end()-1, 1, hiter);
+
+        const auto toread = std::distance(hiter, header.end());
+        laf->mInFile.read(al::to_address(hiter), toread);
+        if(laf->mInFile.gcount() != toread)
+            throw std::runtime_error{"Failed to read header"};
     }
 
     laf->mQuality = [stype=int{header[4]}] {

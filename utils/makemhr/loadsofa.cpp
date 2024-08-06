@@ -422,16 +422,16 @@ bool LoadSofaFile(const std::string_view filename, const uint numThreads, const 
     MySofaHrtfPtr sofaHrtf{mysofa_load(std::string{filename}.c_str(), &err)};
     if(!sofaHrtf)
     {
-        fprintf(stdout, "Error: Could not load %.*s: %s\n", al::sizei(filename), filename.data(),
-            SofaErrorStr(err));
+        fprintf(stdout, "Error: Could not load %.*s: %s (%d)\n", al::sizei(filename),
+            filename.data(), SofaErrorStr(err), err);
         return false;
     }
 
     /* NOTE: Some valid SOFA files are failing this check. */
     err = mysofa_check(sofaHrtf.get());
     if(err != MYSOFA_OK)
-        fprintf(stderr, "Warning: Supposedly malformed source file '%.*s' (%s).\n",
-            al::sizei(filename), filename.data(), SofaErrorStr(err));
+        fprintf(stderr, "Warning: Supposedly malformed source file '%.*s': %s (%d)\n",
+            al::sizei(filename), filename.data(), SofaErrorStr(err), err);
 
     mysofa_tocartesian(sofaHrtf.get());
 

@@ -370,6 +370,30 @@ int main(al::span<std::string_view> args)
                 continue;
             }
         }
+        else if(sf_command(infile.get(), SFC_WAVEX_GET_AMBISONIC, nullptr,
+            0) == SF_AMBISONIC_B_FORMAT)
+        {
+            if(ininfo.channels == 4)
+            {
+                fprintf(stderr, " ... detected FuMa 3D B-Format\n");
+                chanmap[0] = SF_CHANNEL_MAP_AMBISONIC_B_W;
+                chanmap[1] = SF_CHANNEL_MAP_AMBISONIC_B_X;
+                chanmap[2] = SF_CHANNEL_MAP_AMBISONIC_B_Y;
+                chanmap[3] = SF_CHANNEL_MAP_AMBISONIC_B_Z;
+            }
+            else if(ininfo.channels == 3)
+            {
+                fprintf(stderr, " ... detected FuMa 2D B-Format\n");
+                chanmap[0] = SF_CHANNEL_MAP_AMBISONIC_B_W;
+                chanmap[1] = SF_CHANNEL_MAP_AMBISONIC_B_X;
+                chanmap[2] = SF_CHANNEL_MAP_AMBISONIC_B_Y;
+            }
+            else
+            {
+                fprintf(stderr, " ... unhandled %d-channel B-Format\n", ininfo.channels);
+                continue;
+            }
+        }
         else if(ininfo.channels == 1)
         {
             fprintf(stderr, " ... assuming front-center\n");

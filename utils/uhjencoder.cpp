@@ -249,7 +249,21 @@ int main(al::span<std::string_view> args)
 {
     if(args.size() < 2 || args[1] == "-h" || args[1] == "--help")
     {
-        printf("Usage: %.*s <infile...>\n\n", al::sizei(args[0]), args[0].data());
+        printf("Usage: %.*s <[options] infile...>\n\n"
+            "  Options:\n"
+            "    -bhj  Encode 2-channel UHJ, aka \"BJH\" (default).\n"
+            "    -thj  Encode 3-channel UHJ, aka \"TJH\".\n"
+            "    -phj  Encode 4-channel UHJ, aka \"PJH\".\n"
+            "\n"
+            "3-channel UHJ supplements 2-channel UHJ with an extra channel that allows full\n"
+            "reconstruction of first-order 2D ambisonics. 4-channel UHJ supplements 3-channel\n"
+            "UHJ with an extra channel carrying height information, providing for full\n"
+            "reconstruction of first-order 3D ambisonics.\n"
+            "\n"
+            "Note: The third and fourth channels should be ignored if they're not being\n"
+            "decoded. Unlike the first two channels, they are not designed for undecoded\n"
+            "playback, so the resulting files will not play correctly if this isn't handled.\n",
+            al::sizei(args[0]), args[0].data());
         return 1;
     }
 

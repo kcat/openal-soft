@@ -49,6 +49,8 @@
 
 namespace {
 
+using namespace std::string_view_literals;
+
 struct SndFileDeleter {
     void operator()(SNDFILE *sndfile) { sf_close(sndfile); }
 };
@@ -266,46 +268,46 @@ int main(al::span<std::string_view> args)
             al::sizei(args[0]), args[0].data());
         return 1;
     }
+    args = args.subspan(1);
 
     uint uhjchans{2};
     size_t num_files{0}, num_encoded{0};
-    for(size_t fidx{1};fidx < args.size();++fidx)
+    auto process_arg = [&uhjchans,&num_files,&num_encoded](std::string_view arg) -> void
     {
-        if(args[fidx] == "-bhj")
+        if(arg == "-bhj"sv)
         {
             uhjchans = 2;
-            continue;
+            return;
         }
-        if(args[fidx] == "-thj")
+        if(arg == "-thj"sv)
         {
             uhjchans = 3;
-            continue;
+            return;
         }
-        if(args[fidx] == "-phj")
+        if(arg == "-phj"sv)
         {
             uhjchans = 4;
-            continue;
+            return;
         }
         ++num_files;
 
-        std::string outname{args[fidx]};
-        size_t lastslash{outname.find_last_of('/')};
+        auto outname = std::string{arg};
+        const auto lastslash = outname.rfind('/');
         if(lastslash != std::string::npos)
             outname.erase(0, lastslash+1);
-        size_t extpos{outname.find_last_of('.')};
+        const auto extpos = outname.rfind('.');
         if(extpos != std::string::npos)
             outname.resize(extpos);
         outname += ".uhj.flac";
 
         SF_INFO ininfo{};
-        SndFilePtr infile{sf_open(std::string{args[fidx]}.c_str(), SFM_READ, &ininfo)};
+        SndFilePtr infile{sf_open(std::string{arg}.c_str(), SFM_READ, &ininfo)};
         if(!infile)
         {
-            fprintf(stderr, "Failed to open %.*s\n", al::sizei(args[fidx]), args[fidx].data());
-            continue;
+            fprintf(stderr, "Failed to open %.*s\n", al::sizei(arg), arg.data());
+            return;
         }
-        printf("Converting %.*s to %s...\n", al::sizei(args[fidx]), args[fidx].data(),
-            outname.c_str());
+        printf("Converting %.*s to %s...\n", al::sizei(arg), arg.data(), outname.c_str());
 
         /* Work out the channel map, preferably using the actual channel map
          * from the file/format, but falling back to assuming WFX order.
@@ -381,7 +383,7 @@ int main(al::span<std::string_view> args)
                 }
                 fprintf(stderr, " ... %zu channels not supported (map: %s)\n", chanmap.size(),
                     mapstr.c_str());
-                continue;
+                return;
             }
         }
         else if(sf_command(infile.get(), SFC_WAVEX_GET_AMBISONIC, nullptr,
@@ -405,7 +407,7 @@ int main(al::span<std::string_view> args)
             else
             {
                 fprintf(stderr, " ... unhandled %d-channel B-Format\n", ininfo.channels);
-                continue;
+                return;
             }
         }
         else if(ininfo.channels == 1)
@@ -448,7 +450,7 @@ int main(al::span<std::string_view> args)
         else
         {
             fprintf(stderr, " ... unmapped %d-channel audio not supported\n", ininfo.channels);
-            continue;
+            return;
         }
 
         SF_INFO outinfo{};
@@ -460,7 +462,7 @@ int main(al::span<std::string_view> args)
         if(!outfile)
         {
             fprintf(stderr, " ... failed to create %s\n", outname.c_str());
-            continue;
+            return;
         }
 
         auto encoder = std::make_unique<UhjEncoder>();
@@ -567,7 +569,9 @@ int main(al::span<std::string_view> args)
         }
         printf(" ... wrote %zu samples (%" PRId64 ").\n", total_wrote, int64_t{ininfo.frames});
         ++num_encoded;
-    }
+    };
+    std::for_each(args.begin(), args.end(), process_arg);
+
     if(num_encoded == 0)
         fprintf(stderr, "Failed to encode any input files\n");
     else if(num_encoded < num_files)

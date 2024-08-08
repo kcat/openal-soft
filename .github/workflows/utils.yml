@@ -10,6 +10,7 @@ on:
 
 env:
   BUILD_TYPE: Release
+  Branch: ${{github.ref_name}}
 
 jobs:
   Win64:
@@ -17,7 +18,7 @@ jobs:
 
     steps:
     - name: Clone repo and submodules
-      run: git clone https://github.com/${{github.repository}}.git .
+      run: git clone https://github.com/${{github.repository}}.git . --branch ${{env.Branch}}
 
     - name: Get current date, commit hash and count
       run: |

@@ -126,6 +126,15 @@ jobs:
           }
     steps:
     - uses: actions/checkout@v4
+      with:
+        fetch-depth: '0'
+
+    - name: Get current commit tag, short hash, count and date
+      run: |
+        echo "CommitTag=$(git describe --tags --abbrev=0 --match *.*.*)" >> $env:GITHUB_ENV
+        echo "CommitHashShort=$(git rev-parse --short=8 HEAD)" >> $env:GITHUB_ENV
+        echo "CommitCount=$(git rev-list --count $env:GITHUB_REF_NAME)" >> $env:GITHUB_ENV
+        echo "CommitDate=$(git show -s --date=iso-local --format=%cd)" >> $env:GITHUB_ENV
 
     - name: Install Dependencies
       shell: bash
@@ -174,3 +183,58 @@ jobs:
       with:
         name: soft_oal-${{matrix.config.name}}
         path: build/archive
+
+    outputs:
+      CommitTag: ${{env.CommitTag}}
+      CommitHashShort: ${{env.CommitHashShort}}
+      CommitCount: ${{env.CommitCount}}
+      CommitDate: ${{env.CommitDate}}
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+
+    - name: Download build artifacts
+      uses: actions/download-artifact@v4.1.7
+      with:
+        path: "build"
+        pattern: "*-Win??-Release"
+        github-token: "${{secrets.GITHUB_TOKEN}}"
+
+    - name: Set up build folders
+      run: |
+        mkdir -p build/release/OpenALSoft/Documentation
+        mkdir -p build/release/OpenALSoft/Win32
+        mkdir -p build/release/OpenALSoft/Win64
+        echo "${{github.repository}}" >>                                                                              "build/release/OpenALSoft/Documentation/Version.txt"
+        echo "v${{needs.build.outputs.CommitTag}}-${{needs.build.outputs.CommitHashShort}} ${{github.ref_name}}" >>   "build/release/OpenALSoft/Documentation/Version.txt"
+        echo "Commit #${{needs.build.outputs.CommitCount}}" >>                                                        "build/release/OpenALSoft/Documentation/Version.txt"
+        echo "${{needs.build.outputs.CommitDate}}" >>                                                                 "build/release/OpenALSoft/Documentation/Version.txt"
+        curl https://raw.githubusercontent.com/${{github.repository}}/${{github.ref_name}}/README.md               -o "build/release/OpenALSoft/Documentation/ReadMe.txt"
+        curl https://raw.githubusercontent.com/${{github.repository}}/${{github.ref_name}}/ChangeLog               -o "build/release/OpenALSoft/Documentation/ChangeLog.txt"
+        curl https://raw.githubusercontent.com/${{github.repository}}/${{github.ref_name}}/COPYING                 -o "build/release/OpenALSoft/Documentation/License.txt"
+        curl https://raw.githubusercontent.com/${{github.repository}}/${{github.ref_name}}/BSD-3Clause             -o "build/release/OpenALSoft/Documentation/License_BSD-3Clause.txt"
+        curl https://raw.githubusercontent.com/${{github.repository}}/${{github.ref_name}}/alsoftrc.sample         -o "build/release/OpenALSoft/Win32/alsoft.ini"
+        curl https://raw.githubusercontent.com/${{github.repository}}/${{github.ref_name}}/alsoftrc.sample         -o "build/release/OpenALSoft/Win64/alsoft.ini"
+        cp "build/soft_oal-Win32-Release/soft_oal.dll"                                                                "build/release/OpenALSoft/Win32/OpenAL32.dll"
+        cp "build/soft_oal-Win64-Release/soft_oal.dll"                                                                "build/release/OpenALSoft/Win64/OpenAL32.dll"
+        cp -r "build/release/OpenALSoft"                                                                              "build/release/OpenALSoft+HRTF"
+        cp "build/release/OpenALSoft+HRTF/Win32/alsoft.ini"                                                           "build/release/OpenALSoft+HRTF/Documentation/alsoft.ini"
+        curl https://raw.githubusercontent.com/${{github.repository}}/${{github.ref_name}}/configs/HRTF/alsoft.ini -o "build/release/OpenALSoft+HRTF/Win32/alsoft.ini"
+        cp "build/release/OpenALSoft+HRTF/Win32/alsoft.ini"                                                           "build/release/OpenALSoft+HRTF/Win64/alsoft.ini"
+
+    - name: Compress artifacts
+      run: |
+        cd build/release
+        7z a OpenALSoft.zip      ./OpenALSoft/*
+        7z a OpenALSoft+HRTF.zip ./OpenALSoft+HRTF/*
+
+    - name: GitHub pre-release
+      uses: "Sweeistaken/sweelease@v1.1"
+      with:
+        repo_token: "${{secrets.GITHUB_TOKEN}}"
+        automatic_release_tag: "latest"
+        prerelease: true
+        title: "OpenAL Soft v${{needs.build.outputs.CommitTag}}-v${{needs.build.outputs.CommitHashShort}}"
+        files: "build/release/*"

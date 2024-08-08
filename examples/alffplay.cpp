@@ -69,6 +69,7 @@ _Pragma("GCC diagnostic pop")
 #include "AL/al.h"
 #include "AL/alext.h"
 
+#include "almalloc.h"
 #include "alnumbers.h"
 #include "alnumeric.h"
 #include "alspan.h"
@@ -1156,10 +1157,9 @@ int AudioState::handler()
         ChannelLayout layout{};
         av_channel_layout_from_string(&layout, "ambisonic 1");
 
-        SwrContext *ps{};
-        int err{swr_alloc_set_opts2(&ps, &layout, mDstSampleFmt, mCodecCtx->sample_rate,
-            &mCodecCtx->ch_layout, mCodecCtx->sample_fmt, mCodecCtx->sample_rate, 0, nullptr)};
-        mSwresCtx.reset(ps);
+        int err{swr_alloc_set_opts2(al::out_ptr(mSwresCtx), &layout, mDstSampleFmt,
+            mCodecCtx->sample_rate, &mCodecCtx->ch_layout, mCodecCtx->sample_fmt,
+            mCodecCtx->sample_rate, 0, nullptr)};
         if(err != 0)
         {
             std::array<char,AV_ERROR_MAX_STRING_SIZE> errstr{};
@@ -1190,10 +1190,9 @@ int AudioState::handler()
         ChannelLayout layout{};
         av_channel_layout_from_mask(&layout, mDstChanLayout);
 
-        SwrContext *ps{};
-        int err{swr_alloc_set_opts2(&ps, &layout, mDstSampleFmt, mCodecCtx->sample_rate,
-            &mCodecCtx->ch_layout, mCodecCtx->sample_fmt, mCodecCtx->sample_rate, 0, nullptr)};
-        mSwresCtx.reset(ps);
+        int err{swr_alloc_set_opts2(al::out_ptr(mSwresCtx), &layout, mDstSampleFmt,
+            mCodecCtx->sample_rate, &mCodecCtx->ch_layout, mCodecCtx->sample_fmt,
+            mCodecCtx->sample_rate, 0, nullptr)};
         if(err != 0)
         {
             std::array<char,AV_ERROR_MAX_STRING_SIZE> errstr{};

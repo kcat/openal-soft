@@ -22,11 +22,11 @@
 
 #include "null.h"
 
-#include <exception>
 #include <atomic>
 #include <chrono>
 #include <cstdint>
 #include <cstring>
+#include <exception>
 #include <functional>
 #include <thread>
 

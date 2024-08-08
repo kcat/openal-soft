@@ -3,8 +3,8 @@
 
 #include "except.h"
 
-#include <cstdio>
 #include <cstdarg>
+#include <cstdio>
 
 #include "opthelpers.h"
 

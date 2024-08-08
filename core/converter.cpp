@@ -5,11 +5,11 @@
 
 #include <algorithm>
 #include <cassert>
+#include <climits>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <iterator>
-#include <climits>
 
 #include "albit.h"
 #include "alnumeric.h"

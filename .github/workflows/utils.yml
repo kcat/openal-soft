@@ -16,13 +16,14 @@ jobs:
     runs-on: windows-latest
 
     steps:
-    - uses: actions/checkout@v4
+    - name: Clone repo and submodules
+      run: git clone https://github.com/${{github.repository}}.git .
 
-    - name: Get current date
-      run: echo "CurrentDate=$(date +'%Y-%m-%d')" >> $env:GITHUB_ENV
-
-    - name: Get commit hash
-      run: echo "CommitHash=$(git rev-parse --short=7 HEAD)" >> $env:GITHUB_ENV
+    - name: Get current date, commit hash and count
+      run: |
+        echo "CommitDate=$(git show -s --date=format:'%Y-%m-%d' --format=%cd)" >> $env:GITHUB_ENV
+        echo "CommitHashShort=$(git rev-parse --short=7 HEAD)" >> $env:GITHUB_ENV
+        echo "CommitCount=$(git rev-list --count ${{env.Branch}})" >> $env:GITHUB_ENV
 
     - name: Clone libmysofa
       run: |
@@ -65,7 +66,7 @@ jobs:
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: utils
+        name: ${{env.CommitDate}}_utils-r${{env.CommitCount}}@${{env.CommitHashShort}}
         path: "Artifacts/"
 
     - name: Compress artifacts
@@ -80,5 +81,5 @@ jobs:
         repo_token: "${{secrets.GITHUB_TOKEN}}"
         automatic_release_tag: "utils"
         prerelease: true
-        title: "[${{env.CurrentDate}}] utils-${{env.CommitHash}}"
+        title: "[${{env.CommitDate}}] utils-r${{env.CommitCount}}@${{env.CommitHashShort}}"
         files: "Release/utils.zip"

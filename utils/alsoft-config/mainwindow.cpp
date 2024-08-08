@@ -665,11 +665,12 @@ void MainWindow::loadConfig(const QString &fname)
     QString resampler = settings.value(QStringLiteral("resampler")).toString().trimmed();
     ui->resamplerSlider->setValue(2);
     ui->resamplerLabel->setText(std::data(resamplerList[2].name));
-    /* "Cubic" is an alias for the 4-point gaussian resampler. The "sinc4" and
+    /* "Cubic" is an alias for the 4-point spline resampler. The "sinc4" and
      * "sinc8" resamplers are unsupported, use "gaussian" as a fallback.
      */
-    if(resampler == QLatin1String{"cubic"} || resampler == QLatin1String{"sinc4"}
-        || resampler == QLatin1String{"sinc8"})
+    if(resampler == QLatin1String{"cubic"})
+        resampler = QStringLiteral("spline");
+    else if(resampler == QLatin1String{"sinc4"} || resampler == QLatin1String{"sinc8"})
         resampler = QStringLiteral("gaussian");
     /* The "bsinc" resampler name is an alias for "bsinc12". */
     else if(resampler == QLatin1String{"bsinc"})

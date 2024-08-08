@@ -16,7 +16,7 @@ jobs:
     runs-on: windows-latest
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
     - name: Get current date
       run: echo "CurrentDate=$(date +'%Y-%m-%d')" >> $env:GITHUB_ENV
@@ -55,7 +55,7 @@ jobs:
         copy "libmysofa/windows/third-party/zlib-1.2.11/bin/zlib.dll" "Artifacts/zlib.dll"
 
     - name: Upload makemhr artifact
-      uses: actions/upload-artifact@v3.1.2
+      uses: actions/upload-artifact@v4
       with:
         name: makemhr
         path: "Artifacts/"

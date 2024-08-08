@@ -10,13 +10,6 @@ namespace al {
 [[noreturn]]
 void do_assert(const char *message, int linenum, const char *filename, const char *funcname) noexcept
 {
-    std::string errstr{filename};
-    errstr += ':';
-    errstr += std::to_string(linenum);
-    errstr += ": ";
-    errstr += funcname;
-    errstr += ": ";
-    errstr += message;
     /* Calling std::terminate in a catch block hopefully causes the system to
      * provide info about the caught exception in the error dialog. At least on
      * Linux, this results in the process printing
@@ -28,6 +21,13 @@ void do_assert(const char *message, int linenum, const char *filename, const cha
      * appropriate things with the message for an abnormal termination.
      */
     try {
+        std::string errstr{filename};
+        errstr += ':';
+        errstr += std::to_string(linenum);
+        errstr += ": ";
+        errstr += funcname;
+        errstr += ": ";
+        errstr += message;
         throw std::runtime_error{errstr};
     }
     catch(...) {

@@ -371,21 +371,19 @@ void UhjEncoderIIR::encode(float *LeftOut, float *RightOut,
     /* Apply the base filter to the existing output to align with the processed
      * signal.
      */
-    mFilter1Direct[0].process(Filter1Coeff, {LeftOut, SamplesToDo}, true,
-        al::span{mTemp}.subspan(1));
+    const auto left = al::span{al::assume_aligned<16>(LeftOut), SamplesToDo};
+    mFilter1Direct[0].process(Filter1Coeff, left, true, al::span{mTemp}.subspan(1));
     mTemp[0] = mDirectDelay[0]; mDirectDelay[0] = mTemp[SamplesToDo];
 
     /* Left = (S + D)/2.0 */
-    const auto left = al::span{al::assume_aligned<16>(LeftOut), SamplesToDo};
     for(size_t i{0};i < SamplesToDo;++i)
         left[i] = (mS[i] + mD[i])*0.5f + mTemp[i];
 
-    mFilter1Direct[1].process(Filter1Coeff, {RightOut, SamplesToDo}, true,
-        al::span{mTemp}.subspan(1));
+    const auto right = al::span{al::assume_aligned<16>(RightOut), SamplesToDo};
+    mFilter1Direct[1].process(Filter1Coeff, right, true, al::span{mTemp}.subspan(1));
     mTemp[0] = mDirectDelay[1]; mDirectDelay[1] = mTemp[SamplesToDo];
 
     /* Right = (S - D)/2.0 */
-    const auto right = al::span{al::assume_aligned<16>(RightOut), SamplesToDo};
     for(size_t i{0};i < SamplesToDo;++i)
         right[i] = (mS[i] - mD[i])*0.5f + mTemp[i];
 }
@@ -545,9 +543,9 @@ void UhjDecoderIIR::decode(const al::span<float*> samples, const size_t samplesT
  * S = Left + Right
  * D = Left - Right
  *
- * W = 0.6098637*S - 0.6896511*j*w*D
- * X = 0.8624776*S + 0.7626955*j*w*D
- * Y = 1.6822415*w*D - 0.2156194*j*S
+ * W = 0.6098637*S + 0.6896511*j*w*D
+ * X = 0.8624776*S - 0.7626955*j*w*D
+ * Y = 1.6822415*w*D + 0.2156194*j*S
  *
  * where j is a +90 degree phase shift. w is a variable control for the
  * resulting stereo width, with the range 0 <= w <= 0.7.
@@ -613,12 +611,12 @@ void UhjStereoDecoder<N>::decode(const al::span<float*> samples, const size_t sa
         std::copy_n(mTemp.cbegin()+samplesToDo, mDTHistory.size(), mDTHistory.begin());
     PShift.process(xoutput, mTemp);
 
-    /* W = 0.6098637*S - 0.6896511*j*w*D */
+    /* W = 0.6098637*S + 0.6896511*j*w*D */
     std::transform(mS.begin(), mS.begin()+samplesToDo, xoutput.begin(), woutput.begin(),
-        [](const float s, const float jd) noexcept { return 0.6098637f*s - 0.6896511f*jd; });
-    /* X = 0.8624776*S + 0.7626955*j*w*D */
+        [](const float s, const float jd) noexcept { return 0.6098637f*s + 0.6896511f*jd; });
+    /* X = 0.8624776*S - 0.7626955*j*w*D */
     std::transform(mS.begin(), mS.begin()+samplesToDo, xoutput.begin(), xoutput.begin(),
-        [](const float s, const float jd) noexcept { return 0.8624776f*s + 0.7626955f*jd; });
+        [](const float s, const float jd) noexcept { return 0.8624776f*s - 0.7626955f*jd; });
 
     /* Precompute j*S and store in youtput. */
     tmpiter = std::copy(mSHistory.cbegin(), mSHistory.cend(), mTemp.begin());
@@ -627,9 +625,9 @@ void UhjStereoDecoder<N>::decode(const al::span<float*> samples, const size_t sa
         std::copy_n(mTemp.cbegin()+samplesToDo, mSHistory.size(), mSHistory.begin());
     PShift.process(youtput, mTemp);
 
-    /* Y = 1.6822415*w*D - 0.2156194*j*S */
+    /* Y = 1.6822415*w*D + 0.2156194*j*S */
     std::transform(mD.begin(), mD.begin()+samplesToDo, youtput.begin(), youtput.begin(),
-        [](const float d, const float js) noexcept { return 1.6822415f*d - 0.2156194f*js; });
+        [](const float d, const float js) noexcept { return 1.6822415f*d + 0.2156194f*js; });
 }
 
 void UhjStereoDecoderIIR::decode(const al::span<float*> samples, const size_t samplesToDo,
@@ -691,12 +689,12 @@ void UhjStereoDecoderIIR::decode(const al::span<float*> samples, const size_t sa
     if(mFirstRun) mFilter2D.processOne(Filter2Coeff, mD[0]);
     mFilter2D.process(Filter2Coeff, al::span{mD}.subspan(1, samplesToDo), updateState, xoutput);
 
-    /* W = 0.6098637*S - 0.6896511*j*w*D */
+    /* W = 0.6098637*S + 0.6896511*j*w*D */
     std::transform(mTemp.begin(), mTemp.begin()+samplesToDo, xoutput.begin(), woutput.begin(),
-        [](const float s, const float jd) noexcept { return 0.6098637f*s - 0.6896511f*jd; });
-    /* X = 0.8624776*S + 0.7626955*j*w*D */
+        [](const float s, const float jd) noexcept { return 0.6098637f*s + 0.6896511f*jd; });
+    /* X = 0.8624776*S - 0.7626955*j*w*D */
     std::transform(mTemp.begin(), mTemp.begin()+samplesToDo, xoutput.begin(), xoutput.begin(),
-        [](const float s, const float jd) noexcept { return 0.8624776f*s + 0.7626955f*jd; });
+        [](const float s, const float jd) noexcept { return 0.8624776f*s - 0.7626955f*jd; });
 
     /* Precompute j*S and store in youtput. */
     if(mFirstRun) mFilter2S.processOne(Filter2Coeff, mS[0]);
@@ -705,9 +703,9 @@ void UhjStereoDecoderIIR::decode(const al::span<float*> samples, const size_t sa
     /* Apply filter1 to D and store in mTemp. */
     mFilter1D.process(Filter1Coeff, al::span{mD}.first(samplesToDo), updateState, mTemp);
 
-    /* Y = 1.6822415*w*D - 0.2156194*j*S */
+    /* Y = 1.6822415*w*D + 0.2156194*j*S */
     std::transform(mTemp.begin(), mTemp.begin()+samplesToDo, youtput.begin(), youtput.begin(),
-        [](const float d, const float js) noexcept { return 1.6822415f*d - 0.2156194f*js; });
+        [](const float d, const float js) noexcept { return 1.6822415f*d + 0.2156194f*js; });
 
     mFirstRun = false;
 }

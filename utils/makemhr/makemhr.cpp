@@ -315,7 +315,7 @@ auto StoreMhr(const HrirDataT *hData, const std::string_view filename) -> bool
     const uint n{hData->mIrPoints};
     uint dither_seed{22222};
 
-    std::ofstream ostream{std::filesystem::u8path(filename)};
+    auto ostream = std::ofstream{std::filesystem::u8path(filename), std::ios::binary};
     if(!ostream.is_open())
     {
         fprintf(stderr, "\nError: Could not open MHR file '%.*s'.\n", al::sizei(filename),

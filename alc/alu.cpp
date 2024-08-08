@@ -2207,7 +2207,7 @@ uint DeviceBase::renderSamples(const uint numSamples)
     postProcess(samplesToDo);
 
     /* Apply compression, limiting sample amplitude if needed or desired. */
-    if(Limiter) Limiter->process(samplesToDo, RealOut.Buffer.data());
+    if(Limiter) Limiter->process(samplesToDo, RealOut.Buffer);
 
     /* Apply delays and attenuation for mismatched speaker distances. */
     if(ChannelDelays)

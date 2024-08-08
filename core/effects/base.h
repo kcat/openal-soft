@@ -8,6 +8,7 @@
 #include "alspan.h"
 #include "core/bufferline.h"
 #include "intrusive_ptr.h"
+#include "opthelpers.h"
 
 struct BufferStorage;
 struct ContextBase;
@@ -193,7 +194,7 @@ struct EffectTarget {
     RealMixParams *RealOut;
 };
 
-struct EffectState : public al::intrusive_ref<EffectState> {
+struct SIMDALIGN EffectState : public al::intrusive_ref<EffectState> {
     al::span<FloatBufferLine> mOutTarget;
 
 

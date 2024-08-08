@@ -14,6 +14,7 @@
 #include "alnumeric.h"
 #include "alspan.h"
 #include "bsinc_defs.h"
+#include "opthelpers.h"
 #include "resampler_limits.h"
 
 
@@ -153,7 +154,7 @@ constexpr BSincHeader bsinc24_hdr{60, 23};
 
 
 template<const BSincHeader &hdr>
-struct BSincFilterArray {
+struct SIMDALIGN BSincFilterArray {
     alignas(16) std::array<float, hdr.total_size> mTable{};
 
     BSincFilterArray()

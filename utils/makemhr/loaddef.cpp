@@ -47,6 +47,7 @@
 #include "alstring.h"
 #include "makemhr.h"
 #include "polyphase_resampler.h"
+#include "sofa-support.h"
 
 #include "mysofa.h"
 
@@ -1105,15 +1106,15 @@ auto LoadSofaFile(SourceRefT *src, const uint hrirRate, const uint n) -> MYSOFA_
     sofa->hrtf = mysofa_load(src->mPath.data(), &err);
     if(!sofa->hrtf)
     {
-        fprintf(stderr, "\nError: Could not load source file '%s' (error: %d).\n",
-            src->mPath.data(), err);
+        fprintf(stderr, "\nError: Could not load source file '%s': %s (%d).\n",
+            src->mPath.data(), SofaErrorStr(err), err);
         return nullptr;
     }
     /* NOTE: Some valid SOFA files are failing this check. */
     err = mysofa_check(sofa->hrtf);
     if(err != MYSOFA_OK)
-        fprintf(stderr, "\nWarning: Supposedly malformed source file '%s' (error: %d).\n",
-            src->mPath.data(), err);
+        fprintf(stderr, "\nWarning: Supposedly malformed source file '%s': %s (%d).\n",
+            src->mPath.data(), SofaErrorStr(err), err);
     if((src->mOffset + n) > sofa->hrtf->N)
     {
         fprintf(stderr, "\nError: Not enough samples in SOFA file '%s'.\n", src->mPath.data());
@@ -1955,7 +1956,7 @@ auto ProcessSources(TokenReaderT *tr, HrirDataT *hData, const uint outRate) -> i
                 hrirPoints, 1.0/factor[ti], azd->mDelays[ti]);
             if(resampler)
                 resampler->process(hrirPoints, hrir);
-            AverageHrirMagnitude(hData->mFftSize, al::span{hrir}.subspan(irPoints), 1.0/factor[ti],
+            AverageHrirMagnitude(hData->mFftSize, al::span{hrir}.first(irPoints), 1.0/factor[ti],
                 azd->mIrs[ti]);
             factor[ti] += 1.0;
             if(!TrIsOperator(tr, "+"))

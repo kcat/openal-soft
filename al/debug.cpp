@@ -589,9 +589,8 @@ try {
     }
     else if(identifier == AL_BUFFER)
     {
-        ALCdevice *device{context->mALDevice.get()};
-        std::lock_guard buflock{device->BufferLock};
-        copy_name(device->mBufferNames);
+        std::lock_guard buflock{ALCdevice::BufferLock};
+        copy_name(ALCdevice::BufferNames);
     }
     else if(identifier == AL_FILTER_EXT)
     {

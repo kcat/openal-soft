@@ -69,8 +69,8 @@ struct ALCdevice : public al::intrusive_ref<ALCdevice>, DeviceBase {
     std::atomic<ALCenum> LastError{ALC_NO_ERROR};
 
     // Map of Buffers for this device
-    std::mutex BufferLock;
-    std::vector<BufferSubList> BufferList;
+    static std::mutex BufferLock;
+    static std::vector<BufferSubList> BufferList;
 
     // Map of Effects for this device
     std::mutex EffectLock;
@@ -85,7 +85,7 @@ struct ALCdevice : public al::intrusive_ref<ALCdevice>, DeviceBase {
 #endif // ALSOFT_EAX
 
 
-    std::unordered_map<ALuint,std::string> mBufferNames;
+    static std::unordered_map<ALuint,std::string> BufferNames;
     std::unordered_map<ALuint,std::string> mEffectNames;
     std::unordered_map<ALuint,std::string> mFilterNames;
 

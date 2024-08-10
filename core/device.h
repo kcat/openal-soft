@@ -350,7 +350,7 @@ struct SIMDALIGN DeviceBase {
     inline void postProcess(const std::size_t SamplesToDo)
     { if(PostProcess) LIKELY (this->*PostProcess)(SamplesToDo); }
 
-    void renderSamples(const al::span<float*> outBuffers, const uint numSamples);
+    void renderSamples(const al::span<void*> outBuffers, const uint numSamples);
     void renderSamples(void *outBuffer, const uint numSamples, const std::size_t frameStep);
 
     /* Caller must lock the device state, and the mixer must not be running. */

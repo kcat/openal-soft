@@ -329,13 +329,13 @@ JackPlayback::~JackPlayback()
 
 int JackPlayback::processRt(jack_nframes_t numframes) noexcept
 {
-    auto outptrs = std::array<jack_default_audio_sample_t*,MaxOutputChannels>{};
+    auto outptrs = std::array<void*,MaxOutputChannels>{};
     auto numchans = size_t{0};
     for(auto port : mPort)
     {
         if(!port || numchans == mDevice->RealOut.Buffer.size())
             break;
-        outptrs[numchans++] = static_cast<float*>(jack_port_get_buffer(port, numframes));
+        outptrs[numchans++] = jack_port_get_buffer(port, numframes);
     }
 
     const auto dst = al::span{outptrs}.first(numchans);
@@ -343,8 +343,8 @@ int JackPlayback::processRt(jack_nframes_t numframes) noexcept
         mDevice->renderSamples(dst, static_cast<uint>(numframes));
     else
     {
-        std::for_each(dst.begin(), dst.end(), [numframes](float *outbuf) -> void
-        { std::fill_n(outbuf, numframes, 0.0f); });
+        std::for_each(dst.begin(), dst.end(), [numframes](void *outbuf) -> void
+        { std::fill_n(static_cast<float*>(outbuf), numframes, 0.0f); });
     }
 
     return 0;
@@ -416,7 +416,7 @@ int JackPlayback::mixerProc()
 
     const auto update_size = uint{mDevice->UpdateSize};
     const auto num_channels = size_t{mDevice->channelsFromFmt()};
-    auto outptrs = std::vector<float*>(num_channels);
+    auto outptrs = std::vector<void*>(num_channels);
 
     while(!mKillNow.load(std::memory_order_acquire)
         && mDevice->Connected.load(std::memory_order_acquire))

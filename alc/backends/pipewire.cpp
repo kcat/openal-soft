@@ -1432,7 +1432,7 @@ class PipeWirePlayback final : public BackendBase {
     PwStreamPtr mStream;
     spa_hook mStreamListener{};
     spa_io_rate_match *mRateMatch{};
-    std::vector<float*> mChannelPtrs;
+    std::vector<void*> mChannelPtrs;
 
     static constexpr pw_stream_events CreateEvents()
     {
@@ -1503,7 +1503,7 @@ void PipeWirePlayback::outputCallback() noexcept
     for(const auto &data : datas)
     {
         length = std::min(length, data.maxsize/uint{sizeof(float)});
-        *chanptr_end = static_cast<float*>(data.data);
+        *chanptr_end = data.data;
         ++chanptr_end;
 
         data.chunk->offset = 0;

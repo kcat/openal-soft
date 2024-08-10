@@ -2174,6 +2174,22 @@ void Write(const al::span<const FloatBufferLine> InBuffer, void *OutBuffer, cons
     }
 }
 
+template<typename T>
+void Write(const al::span<const FloatBufferLine> InBuffer, al::span<void*> OutBuffers,
+    const size_t Offset, const size_t SamplesToDo)
+{
+    ASSUME(SamplesToDo > 0);
+
+    auto srcbuf = InBuffer.cbegin();
+    for(auto *dstbuf : OutBuffers)
+    {
+        const auto src = al::span{*srcbuf}.first(SamplesToDo);
+        const auto dst = al::span{static_cast<T*>(dstbuf), Offset+SamplesToDo}.subspan(Offset);
+        std::transform(src.cbegin(), src.end(), dst.begin(), SampleConv<T>);
+        ++srcbuf;
+    }
+}
+
 } // namespace
 
 uint DeviceBase::renderSamples(const uint numSamples)
@@ -2222,7 +2238,7 @@ uint DeviceBase::renderSamples(const uint numSamples)
     return samplesToDo;
 }
 
-void DeviceBase::renderSamples(const al::span<float*> outBuffers, const uint numSamples)
+void DeviceBase::renderSamples(const al::span<void*> outBuffers, const uint numSamples)
 {
     FPUCtl mixer_mode{};
     uint total{0};
@@ -2230,13 +2246,19 @@ void DeviceBase::renderSamples(const al::span<float*> outBuffers, const uint num
     {
         const uint samplesToDo{renderSamples(todo)};
 
-        auto srcbuf = RealOut.Buffer.cbegin();
-        for(auto *dstbuf : outBuffers)
+        switch(FmtType)
         {
-            const auto dst = al::span{dstbuf, numSamples}.subspan(total);
-            std::copy_n(srcbuf->cbegin(), samplesToDo, dst.begin());
-            ++srcbuf;
+#define HANDLE_WRITE(T) case T:                                               \
+    Write<DevFmtType_t<T>>(RealOut.Buffer, outBuffers, total, samplesToDo); break;
+        HANDLE_WRITE(DevFmtByte)
+        HANDLE_WRITE(DevFmtUByte)
+        HANDLE_WRITE(DevFmtShort)
+        HANDLE_WRITE(DevFmtUShort)
+        HANDLE_WRITE(DevFmtInt)
+        HANDLE_WRITE(DevFmtUInt)
+        HANDLE_WRITE(DevFmtFloat)
         }
+#undef HANDLE_WRITE
 
         total += samplesToDo;
     }

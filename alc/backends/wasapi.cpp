@@ -1253,8 +1253,8 @@ FORCE_ALIGN int WasapiPlayback::mixerSpatialProc()
     althrd_setname(GetMixerThreadName());
 
     std::vector<ComPtr<ISpatialAudioObject>> channels;
-    std::vector<float*> buffers;
-    std::vector<float*> resbuffers;
+    std::vector<void*> buffers;
+    std::vector<void*> resbuffers;
     std::vector<const void*> tmpbuffers;
 
     /* TODO: Set mPadding appropriately. There doesn't seem to be a way to
@@ -1304,7 +1304,7 @@ FORCE_ALIGN int WasapiPlayback::mixerSpatialProc()
                     auto bufptr = mResampleBuffer.begin();
                     for(size_t i{0};i < tmpbuffers.size();++i)
                     {
-                        resbuffers[i] = reinterpret_cast<float*>(al::to_address(bufptr));
+                        resbuffers[i] = al::to_address(bufptr);
                         bufptr += ptrdiff_t(mDevice->UpdateSize*sizeof(float));
                     }
                 }
@@ -1314,12 +1314,12 @@ FORCE_ALIGN int WasapiPlayback::mixerSpatialProc()
              * update, unfortunately.
              */
             std::transform(channels.cbegin(), channels.cend(), buffers.begin(),
-                [](const ComPtr<ISpatialAudioObject> &obj) -> float*
+                [](const ComPtr<ISpatialAudioObject> &obj) -> void*
                 {
-                    BYTE *buffer{};
-                    UINT32 size{};
+                    auto buffer = LPBYTE{};
+                    auto size = UINT32{};
                     obj->GetBuffer(&buffer, &size);
-                    return reinterpret_cast<float*>(buffer);
+                    return buffer;
                 });
 
             if(!mResampler)
@@ -1337,9 +1337,9 @@ FORCE_ALIGN int WasapiPlayback::mixerSpatialProc()
                     }
 
                     const uint got{mResampler->convertPlanar(tmpbuffers.data(), &mBufferFilled,
-                        reinterpret_cast<void*const*>(buffers.data()), framesToDo-pos)};
+                        buffers.data(), framesToDo-pos)};
                     for(auto &buf : buffers)
-                        buf += got; /* NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic) */
+                        buf = static_cast<float*>(buf) + got; /* NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic) */
                     pos += got;
                 }
             }

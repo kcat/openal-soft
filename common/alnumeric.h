@@ -39,9 +39,9 @@ constexpr auto GetCounterSuffix(size_t count) noexcept -> const char*
 }
 
 
-constexpr inline float lerpf(float val1, float val2, float mu) noexcept
+constexpr float lerpf(float val1, float val2, float mu) noexcept
 { return val1 + (val2-val1)*mu; }
-constexpr inline double lerpd(double val1, double val2, double mu) noexcept
+constexpr double lerpd(double val1, double val2, double mu) noexcept
 { return val1 + (val2-val1)*mu; }
 
 

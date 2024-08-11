@@ -1,8 +1,8 @@
 #ifndef CORE_DEVFORMAT_H
 #define CORE_DEVFORMAT_H
 
-#include <cstdint>
 #include <cstddef>
+#include <cstdint>
 
 
 using uint = unsigned int;

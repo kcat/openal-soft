@@ -56,7 +56,7 @@ struct ALeffect {
     ALenum type{AL_EFFECT_NULL};
 
     EffectHandlerVariant PropsVariant;
-    EffectProps Props{};
+    EffectProps Props;
 
     /* Self ID */
     ALuint id{0u};

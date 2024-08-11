@@ -6,8 +6,8 @@
 #include <mutex>
 #include <optional>
 #include <string>
-#include <unordered_map>
 #include <string_view>
+#include <unordered_map>
 #include <vector>
 
 #include "AL/al.h"
@@ -98,7 +98,7 @@ struct ALCdevice : public al::intrusive_ref<ALCdevice>, DeviceBase {
     { return GetConfigValueBool(DeviceName, block, key, def); }
 
     template<typename T>
-    inline std::optional<T> configValue(const std::string_view block, const std::string_view key) = delete;
+    std::optional<T> configValue(const std::string_view block, const std::string_view key) = delete;
 };
 
 template<>

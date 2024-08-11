@@ -24,6 +24,7 @@
 
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
+#include <winreg.h>
 
 #include <cstdio>
 #include <cstdlib>
@@ -62,6 +63,7 @@
 #include "core/device.h"
 #include "core/helpers.h"
 #include "core/logging.h"
+#include "strutils.h"
 
 namespace {
 
@@ -69,6 +71,102 @@ using namespace std::string_view_literals;
 using std::chrono::nanoseconds;
 using std::chrono::milliseconds;
 using std::chrono::seconds;
+
+
+struct DeviceEntry {
+    std::string mDrvName;
+    GUID mDrvGuid{};
+};
+
+std::vector<DeviceEntry> gDeviceList;
+
+
+struct KeyCloser {
+    void operator()(HKEY key) { RegCloseKey(key); }
+};
+using KeyPtr = std::unique_ptr<std::remove_pointer_t<HKEY>,KeyCloser>;
+
+void PopulateDeviceList()
+{
+    auto regbase = KeyPtr{};
+
+    auto res = RegOpenKeyExW(HKEY_LOCAL_MACHINE, L"Software\\ASIO", 0, KEY_READ,
+        al::out_ptr(regbase));
+    if(res != ERROR_SUCCESS)
+    {
+        ERR("Error opening HKLM\\Software\\ASIO: %ld\n", res);
+        return;
+    }
+
+    auto numkeys = DWORD{};
+    auto maxkeylen = DWORD{};
+    res = RegQueryInfoKeyW(regbase.get(), nullptr, nullptr, nullptr, &numkeys, &maxkeylen, nullptr,
+        nullptr, nullptr, nullptr, nullptr, nullptr);
+    if(res != ERROR_SUCCESS)
+    {
+        ERR("Error querying HKLM\\Software\\ASIO info: %ld\n", res);
+        return;
+    }
+
+    auto keyname = std::vector<WCHAR>(maxkeylen*2 + 1);
+    for(DWORD i{0};i < numkeys;++i)
+    {
+        auto namelen = static_cast<DWORD>(keyname.size());
+        res = RegEnumKeyExW(regbase.get(), i, keyname.data(), &namelen, nullptr, nullptr, nullptr,
+            nullptr);
+        if(res != ERROR_SUCCESS)
+        {
+            ERR("Error querying HKLM\\Software\\ASIO subkey %lu: %ld\n", i, res);
+            continue;
+        }
+        auto subkeyname = wstr_to_utf8({keyname.data(), namelen});
+
+        auto subkey = KeyPtr{};
+        res = RegOpenKeyExW(regbase.get(), keyname.data(), 0, KEY_READ, al::out_ptr(subkey));
+        if(res != ERROR_SUCCESS)
+        {
+            ERR("Error opening HKLM\\Software\\ASIO\\%s: %ld\n", subkeyname.c_str(), res);
+            continue;
+        }
+
+        auto idstr = std::array<WCHAR,64>{};
+        auto readsize = DWORD{idstr.size()*sizeof(WCHAR)};
+        res = RegGetValueW(subkey.get(), L"", L"CLSID", RRF_RT_REG_SZ, nullptr, idstr.data(),
+            &readsize);
+        if(res != ERROR_SUCCESS)
+        {
+            ERR("Failed to read HKLM\\Software\\ASIO\\%s\\CLSID: %ld\n", subkeyname.c_str(), res);
+            continue;
+        }
+        idstr.back() = 0;
+
+        auto guid = GUID{};
+        if(auto hr = CLSIDFromString(idstr.data(), &guid); FAILED(hr))
+        {
+            ERR("Failed to parse CLSID \"%s\": 0x%08lx\n", wstr_to_utf8(idstr.data()).c_str(), hr);
+            continue;
+        }
+
+        auto iface = ComPtr<IUnknown>{};
+        auto hr = CoCreateInstance(guid, nullptr, CLSCTX_INPROC_SERVER, guid, al::out_ptr(iface));
+        if(SUCCEEDED(hr))
+        {
+            auto &entry = gDeviceList.emplace_back();
+            entry.mDrvName = std::move(subkeyname);
+            entry.mDrvGuid = guid;
+
+            TRACE("Got driver name %s, GUID {%08lX-%04X-%04X-%02X%02X-%02X%02X%02X%02X%02X%02X}\n",
+                entry.mDrvName.c_str(), guid.Data1, guid.Data2, guid.Data3, guid.Data4[0],
+                guid.Data4[1], guid.Data4[2], guid.Data4[3], guid.Data4[4], guid.Data4[5],
+                guid.Data4[6], guid.Data4[7]);
+        }
+        else
+            ERR("Failed to create %s instance for CLSID {%08lX-%04X-%04X-%02X%02X-%02X%02X%02X%02X%02X%02X}: 0x%08lx\n",
+                subkeyname.c_str(), guid.Data1, guid.Data2, guid.Data3, guid.Data4[0],
+                guid.Data4[1], guid.Data4[2], guid.Data4[3], guid.Data4[4], guid.Data4[5],
+                guid.Data4[6], guid.Data4[7], hr);
+    }
+}
 
 
 enum class MsgType {
@@ -155,13 +253,15 @@ void OtherIOProxy::messageHandler(std::promise<HRESULT> *promise)
 {
     TRACE("Starting COM message thread\n");
 
-    auto com = ComWrapper{COINIT_MULTITHREADED};
+    auto com = ComWrapper{COINIT_APARTMENTTHREADED};
     if(!com)
     {
         WARN("Failed to initialize COM: 0x%08lx\n", com.status());
         promise->set_value(com.status());
         return;
     }
+
+    PopulateDeviceList();
 
     auto hr = HRESULT{S_OK};
     promise->set_value(hr);
@@ -278,18 +378,27 @@ void OtherIOPlayback::mixerProc()
 
 void OtherIOPlayback::open(std::string_view name)
 {
-    if(name.empty())
-        name = "OtherIO"sv;
-    else if(name != "OtherIO"sv)
-        throw al::backend_exception{al::backend_error::NoDevice, "Device name \"%.*s\" not found",
-            al::sizei(name), name.data()};
+    if(name.empty() && !gDeviceList.empty())
+        name = gDeviceList[0].mDrvName;
+    else
+    {
+        constexpr auto prefix = "OpenAL Soft on "sv;
+        if(al::starts_with(name, prefix))
+            name.remove_prefix(prefix.size());
+
+        auto iter = std::find_if(gDeviceList.cbegin(), gDeviceList.cend(),
+            [name](const DeviceEntry &entry) { return entry.mDrvName == name; });
+        if(iter == gDeviceList.cend())
+            throw al::backend_exception{al::backend_error::NoDevice,
+                "Device name \"%.*s\" not found", al::sizei(name), name.data()};
+    }
 
     mOpenStatus = pushMessage(MsgType::OpenDevice, name).get();
     if(FAILED(mOpenStatus))
         throw al::backend_exception{al::backend_error::DeviceError, "Failed to open \"%.*s\"",
             al::sizei(name), name.data()};
 
-    mDevice->DeviceName = name;
+    mDevice->DeviceName = "OpenAL Soft on "+std::string{name};
 }
 
 auto OtherIOPlayback::openProxy(std::string_view name [[maybe_unused]]) -> HRESULT
@@ -375,7 +484,9 @@ auto OtherIOBackendFactory::enumerate(BackendType type) -> std::vector<std::stri
     switch(type)
     {
     case BackendType::Playback:
-        outnames.emplace_back("OtherIO"sv);
+        std::for_each(gDeviceList.cbegin(), gDeviceList.cend(),
+            [&outnames](const DeviceEntry &entry)
+            { outnames.emplace_back("OpenAL Soft on "+entry.mDrvName); });
         break;
 
     case BackendType::Capture:

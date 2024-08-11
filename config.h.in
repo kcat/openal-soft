@@ -61,6 +61,9 @@
 /* Define if we have the Oboe backend */
 #cmakedefine HAVE_OBOE
 
+/* Define if we have the OtherIO backend */
+#cmakedefine HAVE_OTHERIO
+
 /* Define if we have the Wave Writer backend */
 #cmakedefine HAVE_WAVE
 

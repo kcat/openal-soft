@@ -153,6 +153,9 @@
 #ifdef HAVE_SDL2
 #include "backends/sdl2.h"
 #endif
+#ifdef HAVE_OTHERIO
+#include "backends/otherio.h"
+#endif
 #ifdef HAVE_WAVE
 #include "backends/wave.h"
 #endif
@@ -244,6 +247,9 @@ std::array BackendList{
 #endif
 #ifdef HAVE_SDL2
     BackendInfo{"sdl2", SDL2BackendFactory::getFactory},
+#endif
+#ifdef HAVE_OTHERIO
+    BackendInfo{"otherio", OtherIOBackendFactory::getFactory},
 #endif
 
     BackendInfo{"null", NullBackendFactory::getFactory},

@@ -75,7 +75,7 @@ using std::chrono::seconds;
 
 struct DeviceEntry {
     std::string mDrvName;
-    GUID mDrvGuid{};
+    CLSID mDrvGuid{};
 };
 
 std::vector<DeviceEntry> gDeviceList;
@@ -86,16 +86,16 @@ struct KeyCloser {
 };
 using KeyPtr = std::unique_ptr<std::remove_pointer_t<HKEY>,KeyCloser>;
 
-void PopulateDeviceList()
+[[nodiscard]]
+auto PopulateDeviceList() -> HRESULT
 {
     auto regbase = KeyPtr{};
-
     auto res = RegOpenKeyExW(HKEY_LOCAL_MACHINE, L"Software\\ASIO", 0, KEY_READ,
         al::out_ptr(regbase));
     if(res != ERROR_SUCCESS)
     {
         ERR("Error opening HKLM\\Software\\ASIO: %ld\n", res);
-        return;
+        return E_NOINTERFACE;
     }
 
     auto numkeys = DWORD{};
@@ -105,9 +105,13 @@ void PopulateDeviceList()
     if(res != ERROR_SUCCESS)
     {
         ERR("Error querying HKLM\\Software\\ASIO info: %ld\n", res);
-        return;
+        return E_FAIL;
     }
 
+    /* maxkeylen is the max number of unicode characters a subkey is. A unicode
+     * character can occupy two WCHARs, so ensure there's enough space for them
+     * and the null char.
+     */
     auto keyname = std::vector<WCHAR>(maxkeylen*2 + 1);
     for(DWORD i{0};i < numkeys;++i)
     {
@@ -117,6 +121,11 @@ void PopulateDeviceList()
         if(res != ERROR_SUCCESS)
         {
             ERR("Error querying HKLM\\Software\\ASIO subkey %lu: %ld\n", i, res);
+            continue;
+        }
+        if(namelen == 0)
+        {
+            ERR("HKLM\\Software\\ASIO subkey %lu is blank?\n", i);
             continue;
         }
         auto subkeyname = wstr_to_utf8({keyname.data(), namelen});
@@ -129,7 +138,7 @@ void PopulateDeviceList()
             continue;
         }
 
-        auto idstr = std::array<WCHAR,64>{};
+        auto idstr = std::array<WCHAR,48>{};
         auto readsize = DWORD{idstr.size()*sizeof(WCHAR)};
         res = RegGetValueW(subkey.get(), L"", L"CLSID", RRF_RT_REG_SZ, nullptr, idstr.data(),
             &readsize);
@@ -140,13 +149,14 @@ void PopulateDeviceList()
         }
         idstr.back() = 0;
 
-        auto guid = GUID{};
+        auto guid = CLSID{};
         if(auto hr = CLSIDFromString(idstr.data(), &guid); FAILED(hr))
         {
             ERR("Failed to parse CLSID \"%s\": 0x%08lx\n", wstr_to_utf8(idstr.data()).c_str(), hr);
             continue;
         }
 
+        /* The CLSID is also used for the IID. */
         auto iface = ComPtr<IUnknown>{};
         auto hr = CoCreateInstance(guid, nullptr, CLSCTX_INPROC_SERVER, guid, al::out_ptr(iface));
         if(SUCCEEDED(hr))
@@ -155,7 +165,7 @@ void PopulateDeviceList()
             entry.mDrvName = std::move(subkeyname);
             entry.mDrvGuid = guid;
 
-            TRACE("Got driver name %s, GUID {%08lX-%04X-%04X-%02X%02X-%02X%02X%02X%02X%02X%02X}\n",
+            TRACE("Got driver %s, CLSID {%08lX-%04X-%04X-%02X%02X-%02X%02X%02X%02X%02X%02X}\n",
                 entry.mDrvName.c_str(), guid.Data1, guid.Data2, guid.Data3, guid.Data4[0],
                 guid.Data4[1], guid.Data4[2], guid.Data4[3], guid.Data4[4], guid.Data4[5],
                 guid.Data4[6], guid.Data4[7]);
@@ -166,6 +176,8 @@ void PopulateDeviceList()
                 guid.Data4[1], guid.Data4[2], guid.Data4[3], guid.Data4[4], guid.Data4[5],
                 guid.Data4[6], guid.Data4[7], hr);
     }
+
+    return S_OK;
 }
 
 
@@ -261,10 +273,14 @@ void OtherIOProxy::messageHandler(std::promise<HRESULT> *promise)
         return;
     }
 
-    PopulateDeviceList();
+    auto hr = PopulateDeviceList();
+    if(FAILED(hr))
+    {
+        promise->set_value(hr);
+        return;
+    }
 
-    auto hr = HRESULT{S_OK};
-    promise->set_value(hr);
+    promise->set_value(S_OK);
     promise = nullptr;
 
     TRACE("Starting message loop\n");

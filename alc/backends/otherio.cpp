@@ -56,6 +56,7 @@
 #include <thread>
 #include <vector>
 
+#include "albit.h"
 #include "alstring.h"
 #include "althrd_setname.h"
 #include "comptr.h"
@@ -64,6 +65,166 @@
 #include "core/helpers.h"
 #include "core/logging.h"
 #include "strutils.h"
+
+
+/* A custom C++ interface that should be capable of interoperating with ASIO
+ * drivers.
+ */
+enum class ORIOError : LONG {
+    Okay = 0,
+    Success = 0x3f4847a0,
+    NotPresent = -1000,
+    HWMalfunction,
+    InvalidParameter,
+    InvalidMode,
+    SPNotAdvancing,
+    NoClock,
+    NoMemory,
+};
+
+/* A 64-bit integer or double, which has the most significant 32-bit word first. */
+struct ORIO64Bit {
+    uint32_t hi;
+    uint32_t lo;
+
+    template<typename T>
+    auto as() const -> T = delete;
+};
+
+template<> [[nodiscard]]
+auto ORIO64Bit::as() const -> uint64_t { return (uint64_t{hi}<<32) | lo; }
+template<> [[nodiscard]]
+auto ORIO64Bit::as() const -> int64_t { return static_cast<int64_t>(as<uint64_t>()); }
+template<> [[nodiscard]]
+auto ORIO64Bit::as() const -> double { return al::bit_cast<double>(as<uint64_t>()); }
+
+
+enum class ORIOSampleType : LONG {
+    Int16BE = 0,
+    Int24BE = 1,
+    Int32BE = 2,
+    Float32BE = 3,
+    Float64BE = 4,
+    Int32BE16 = 8,
+    Int32BE18 = 9,
+    Int32BE20 = 10,
+    Int32BE24 = 11,
+
+    Int16LE = 16,
+    Int24LE = 17,
+    Int32LE = 18,
+    Float32LE = 19,
+    Float64LE = 20,
+    Int32LE16 = 24,
+    Int32LE18 = 25,
+    Int32LE20 = 26,
+    Int32LE24 = 27,
+
+    DSDInt8LSB1 = 32,
+    DSDInt8MSB1 = 33,
+
+    DSDInt8 = 40,
+};
+
+struct ORIOClockSource {
+    LONG mIndex;
+    LONG mAssocChannel;
+    LONG mAssocGroup;
+    LONG mIsCurrent;
+    std::array<char,32> mName;
+};
+
+struct ORIOChannelInfo {
+    LONG mChannel;
+    LONG mIsInput;
+    LONG mIsActive;
+    LONG mGroup;
+    ORIOSampleType mSampleType;
+    std::array<char,32> mName;
+};
+
+struct ORIOBufferInfo {
+    LONG mIsInput;
+    LONG mChannelNum;
+    std::array<void*,2> mBuffers;
+};
+
+struct ORIOTime {
+    struct TimeInfo {
+        double mSpeed;
+        ORIO64Bit mSystemTime;
+        ORIO64Bit mSamplePosition;
+        double mSampleRate;
+        ULONG mFlags;
+        std::array<char,12> mReserved;
+    };
+    struct TimeCode {
+        double mSpeed;
+        ORIO64Bit mTimeCodeSamples;
+        ULONG mFlags;
+        std::array<char,64> mFuture;
+    };
+
+    std::array<LONG,4> mReserved;
+    TimeInfo mTimeInfo;
+    TimeCode mTimeCode;
+};
+
+#ifdef _WIN64
+#define ORIO_CALLBACK CALLBACK
+#else
+#define ORIO_CALLBACK
+#endif
+
+struct ORIOCallbacks {
+    void (ORIO_CALLBACK*BufferSwitch)(LONG bufferIndex, LONG directProcess) noexcept;
+    void (ORIO_CALLBACK*SampleRateDidChange)(double srate) noexcept;
+    auto (ORIO_CALLBACK*Message)(LONG selector, LONG value, void *message, double *opt) noexcept -> LONG;
+    auto (ORIO_CALLBACK*BufferSwitchTimeInfo)(ORIOTime *timeInfo, LONG bufferIndex, LONG directProcess) noexcept -> ORIOTime*;
+};
+
+/* COM interfaces don't include a virtual destructor in their pure-virtual
+ * classes, and we can't add one without breaking ABI.
+ */
+#ifdef __GNUC__
+_Pragma("GCC diagnostic push")
+_Pragma("GCC diagnostic ignored \"-Wnon-virtual-dtor\"")
+#endif
+/* NOLINTNEXTLINE(cppcoreguidelines-virtual-class-destructor) */
+struct ORIOiface : public IUnknown {
+    STDMETHOD_(LONG, Init)(void *sysHandle) = 0;
+    /* A fixed-length span should be passed exactly the same as one pointer.
+     * This ensures an appropriately-sized buffer for the driver.
+     */
+    STDMETHOD_(void, GetDriverName)(al::span<char,32> name) = 0;
+    STDMETHOD_(LONG, GetDriverVersion)() = 0;
+    STDMETHOD_(void, GetErrorMessage)(al::span<char,124> message) = 0;
+    STDMETHOD_(ORIOError, Start)() = 0;
+    STDMETHOD_(ORIOError, Stop)() = 0;
+    STDMETHOD_(ORIOError, GetChannels)(LONG *numInput, LONG *numOutput) = 0;
+    STDMETHOD_(ORIOError, GetLatencies)(LONG *inputLatency, LONG *outputLatency) = 0;
+    STDMETHOD_(ORIOError, GetBufferSize)(LONG *minSize, LONG *maxSize, LONG *preferredSize, LONG *granularity) = 0;
+    STDMETHOD_(ORIOError, CanSampleRate)(double srate) = 0;
+    STDMETHOD_(ORIOError, GetSampleRate)(double *srate) = 0;
+    STDMETHOD_(ORIOError, SetSampleRate)(double srate) = 0;
+    STDMETHOD_(ORIOError, GetClockSources)(ORIOClockSource *clocks, LONG *numSources) = 0;
+    STDMETHOD_(ORIOError, SetClockSource)(LONG index) = 0;
+    STDMETHOD_(ORIOError, GetSamplePosition)(ORIO64Bit *splPos, ORIO64Bit *tstampNS) = 0;
+    STDMETHOD_(ORIOError, GetChannelInfo)(ORIOChannelInfo *info) = 0;
+    STDMETHOD_(ORIOError, CreateBuffers)(ORIOBufferInfo *infos, LONG numInfos, LONG bufferSize, ORIOCallbacks *callbacks) = 0;
+    STDMETHOD_(ORIOError, DisposeBuffers)() = 0;
+    STDMETHOD_(ORIOError, ControlPanel)() = 0;
+    STDMETHOD_(ORIOError, Future)(LONG selector, void *opt) = 0;
+    STDMETHOD_(ORIOError, OutputReady)() = 0;
+
+    ORIOiface() = default;
+    ORIOiface(const ORIOiface&) = delete;
+    auto operator=(const ORIOiface&) -> ORIOiface& = delete;
+    ~ORIOiface() = delete;
+};
+#ifdef __GNUC__
+_Pragma("GCC diagnostic pop")
+#endif
 
 namespace {
 
@@ -157,16 +318,25 @@ auto PopulateDeviceList() -> HRESULT
         }
 
         /* The CLSID is also used for the IID. */
-        auto iface = ComPtr<IUnknown>{};
+        auto iface = ComPtr<ORIOiface>{};
         auto hr = CoCreateInstance(guid, nullptr, CLSCTX_INPROC_SERVER, guid, al::out_ptr(iface));
         if(SUCCEEDED(hr))
         {
+            if(!iface->Init(GetForegroundWindow()))
+            {
+                ERR("Failed to initialize %s\n", subkeyname.c_str());
+                continue;
+            }
+            auto drvname = std::array<char,32>{};
+            iface->GetDriverName(drvname);
+            auto drvver = iface->GetDriverVersion();
+
             auto &entry = gDeviceList.emplace_back();
-            entry.mDrvName = std::move(subkeyname);
+            entry.mDrvName = drvname.data();
             entry.mDrvGuid = guid;
 
-            TRACE("Got driver %s, CLSID {%08lX-%04X-%04X-%02X%02X-%02X%02X%02X%02X%02X%02X}\n",
-                entry.mDrvName.c_str(), guid.Data1, guid.Data2, guid.Data3, guid.Data4[0],
+            TRACE("Got %s v%ld, CLSID {%08lX-%04X-%04X-%02X%02X-%02X%02X%02X%02X%02X%02X}\n",
+                entry.mDrvName.c_str(), drvver, guid.Data1, guid.Data2, guid.Data3, guid.Data4[0],
                 guid.Data4[1], guid.Data4[2], guid.Data4[3], guid.Data4[4], guid.Data4[5],
                 guid.Data4[6], guid.Data4[7]);
         }
@@ -237,7 +407,7 @@ struct OtherIOProxy {
     static inline std::mutex mMsgQueueLock;
     static inline std::condition_variable mMsgQueueCond;
 
-    auto pushMessage(MsgType type, std::string_view param) -> std::future<HRESULT>
+    auto pushMessage(MsgType type, std::string_view param={}) -> std::future<HRESULT>
     {
         auto promise = std::promise<HRESULT>{};
         auto future = std::future<HRESULT>{promise.get_future()};
@@ -352,7 +522,7 @@ struct OtherIOPlayback final : public BackendBase, OtherIOProxy {
 OtherIOPlayback::~OtherIOPlayback()
 {
     if(SUCCEEDED(mOpenStatus))
-        pushMessage(MsgType::CloseDevice, {}).wait();
+        pushMessage(MsgType::CloseDevice).wait();
 }
 
 void OtherIOPlayback::mixerProc()
@@ -428,7 +598,7 @@ void OtherIOPlayback::closeProxy()
 
 auto OtherIOPlayback::reset() -> bool
 {
-    return SUCCEEDED(pushMessage(MsgType::ResetDevice, {}).get());
+    return SUCCEEDED(pushMessage(MsgType::ResetDevice).get());
 }
 
 auto OtherIOPlayback::resetProxy() -> HRESULT
@@ -439,7 +609,7 @@ auto OtherIOPlayback::resetProxy() -> HRESULT
 
 void OtherIOPlayback::start()
 {
-    auto hr = pushMessage(MsgType::StartDevice, {}).get();
+    auto hr = pushMessage(MsgType::StartDevice).get();
     if(FAILED(hr))
         throw al::backend_exception{al::backend_error::DeviceError,
             "Failed to start playback: 0x%08lx", hr};
@@ -460,7 +630,7 @@ auto OtherIOPlayback::startProxy() -> HRESULT
 
 void OtherIOPlayback::stop()
 {
-    pushMessage(MsgType::StopDevice, {}).wait();
+    pushMessage(MsgType::StopDevice).wait();
 }
 
 void OtherIOPlayback::stopProxy()

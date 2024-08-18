@@ -1047,7 +1047,7 @@ if(WIN32)
         endif()
     endif()
 
-    option(ALSOFT_BACKEND_OTHERIO "Enable OtherIO backend" ON)
+    option(ALSOFT_BACKEND_OTHERIO "Enable OtherIO backend" OFF)
     option(ALSOFT_REQUIRE_OTHERIO "Require OtherIO backend" OFF)
     if(ALSOFT_BACKEND_OTHERIO)
         set(HAVE_OTHERIO 1)

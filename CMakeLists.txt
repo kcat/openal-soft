@@ -1044,6 +1044,11 @@ if(WIN32)
             set(HAVE_WASAPI 1)
             set(BACKENDS  "${BACKENDS} WASAPI,")
             set(ALC_OBJS  ${ALC_OBJS} alc/backends/wasapi.cpp alc/backends/wasapi.h)
+
+            find_library(AVRT_LIBRARY NAMES avrt DOC "The AVRT library")
+            if(AVRT_LIBRARY)
+                set(EXTRA_LIBS ${AVRT_LIBRARY} ${EXTRA_LIBS})
+            endif()
         endif()
     endif()
 

@@ -29,6 +29,7 @@
 #include <cstdlib>
 #include <memory.h>
 
+#include <avrt.h>
 #include <wtypes.h>
 #include <mmdeviceapi.h>
 #include <audiosessiontypes.h>
@@ -318,6 +319,13 @@ struct DeviceListLock : public std::unique_lock<DeviceList> {
 
 DeviceList gDeviceList;
 
+
+#ifdef AVRTAPI
+struct AvrtHandleCloser {
+    void operator()(HANDLE handle) { AvRevertMmThreadCharacteristics(handle); }
+};
+using AvrtHandlePtr = std::unique_ptr<std::remove_pointer_t<HANDLE>,AvrtHandleCloser>;
+#endif
 
 #if defined(ALSOFT_UWP)
 enum EDataFlow {
@@ -968,6 +976,7 @@ struct WasapiProxy {
     static inline std::deque<Msg> mMsgQueue;
     static inline std::mutex mMsgQueueLock;
     static inline std::condition_variable mMsgQueueCond;
+    static inline DWORD sAvIndex{};
 
     static inline std::optional<DeviceHelper> sDeviceHelper;
 
@@ -1169,6 +1178,15 @@ FORCE_ALIGN int WasapiPlayback::mixerProc()
     const UINT32 buffer_len{mOrigBufferSize};
     const void *resbufferptr{};
 
+#ifdef AVRTAPI
+    /* TODO: "Audio" or "Pro Audio"? The suggestion is to use "Pro Audio" for
+     * device periods less than 10ms, and "Audio" for greater than or equal to
+     * 10ms.
+     */
+    auto taskname = (update_size < mFormat.Format.nSamplesPerSec/100) ? L"Pro Audio" : L"Audio";
+    auto avhandle = AvrtHandlePtr{AvSetMmThreadCharacteristicsW(taskname, &sAvIndex)};
+#endif
+
     mBufferFilled = 0;
     while(!mKillNow.load(std::memory_order_relaxed))
     {
@@ -1256,6 +1274,11 @@ FORCE_ALIGN int WasapiPlayback::mixerSpatialProc()
     std::vector<void*> buffers;
     std::vector<void*> resbuffers;
     std::vector<const void*> tmpbuffers;
+
+#ifdef AVRTAPI
+    auto taskname = (mOrigUpdateSize<mFormat.Format.nSamplesPerSec/100) ? L"Pro Audio" : L"Audio";
+    auto avhandle = AvrtHandlePtr{AvSetMmThreadCharacteristicsW(taskname, &sAvIndex)};
+#endif
 
     /* TODO: Set mPadding appropriately. There doesn't seem to be a way to
      * update it dynamically based on the stream, so a fixed size may be the

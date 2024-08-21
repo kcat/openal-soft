@@ -111,7 +111,9 @@ bool jack_load()
 #ifdef HAVE_DYNLOAD
     if(!jack_handle)
     {
-#ifdef _WIN32
+#if defined(_WIN64)
+#define JACKLIB "libjack64.dll"
+#elif defined(_WIN32)
 #define JACKLIB "libjack.dll"
 #else
 #define JACKLIB "libjack.so.0"

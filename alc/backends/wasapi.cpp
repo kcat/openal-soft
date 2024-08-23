@@ -1742,6 +1742,12 @@ auto WasapiPlayback::initSpatial() -> bool
     if(!MakeExtensible(&OutputType, preferredFormat))
         return false;
 
+    /* This seems to be the format of each "object", which should be mono. */
+    if(!(OutputType.Format.nChannels == 1
+        && (OutputType.dwChannelMask == MONO || !OutputType.dwChannelMask)))
+        ERR("Unhandled channel config: %d -- 0x%08lx\n", OutputType.Format.nChannels,
+            OutputType.dwChannelMask);
+
     /* Force 32-bit float. This is currently required for planar output. */
     if(OutputType.Format.wFormatTag != WAVE_FORMAT_EXTENSIBLE
         && OutputType.Format.wFormatTag != WAVE_FORMAT_IEEE_FLOAT)
@@ -1765,51 +1771,16 @@ auto WasapiPlayback::initSpatial() -> bool
     if(!mDevice->Flags.test(FrequencyRequest))
         mDevice->Frequency = OutputType.Format.nSamplesPerSec;
 
-    bool isRear51{false};
-    if(!mDevice->Flags.test(ChannelsRequest))
-    {
-        const uint32_t chancount{OutputType.Format.nChannels};
-        const DWORD chanmask{OutputType.dwChannelMask};
-        if(chancount >= 12 && (chanmask&X714Mask) == X7DOT1DOT4)
-            mDevice->FmtChans = DevFmtX714;
-        else if(chancount >= 8 && (chanmask&X71Mask) == X7DOT1)
-            mDevice->FmtChans = DevFmtX71;
-        else if(chancount >= 7 && (chanmask&X61Mask) == X6DOT1)
-            mDevice->FmtChans = DevFmtX61;
-        else if(chancount >= 6 && (chanmask&X51Mask) == X5DOT1)
-            mDevice->FmtChans = DevFmtX51;
-        else if(chancount >= 6 && (chanmask&X51RearMask) == X5DOT1REAR)
-        {
-            mDevice->FmtChans = DevFmtX51;
-            isRear51 = true;
-        }
-        else if(chancount >= 4 && (chanmask&QuadMask) == QUAD)
-            mDevice->FmtChans = DevFmtQuad;
-        else if(chancount >= 2 && ((chanmask&StereoMask) == STEREO || !chanmask))
-            mDevice->FmtChans = DevFmtStereo;
-        /* HACK: Don't autoselect mono. Wine returns this and makes the audio
-         * terrible.
-         */
-        else if(!(chancount >= 1 && ((chanmask&MonoMask) == MONO || !chanmask)))
-            ERR("Unhandled channel config: %d -- 0x%08lx\n", chancount, chanmask);
-    }
-    else
-    {
-        const uint32_t chancount{OutputType.Format.nChannels};
-        const DWORD chanmask{OutputType.dwChannelMask};
-        isRear51 = (chancount == 6 && (chanmask&X51RearMask) == X5DOT1REAR);
-    }
-
-    auto getTypeMask = [isRear51](DevFmtChannels chans) noexcept
+    auto getTypeMask = [](DevFmtChannels chans) noexcept
     {
         switch(chans)
         {
         case DevFmtMono: return ChannelMask_Mono;
         case DevFmtStereo: return ChannelMask_Stereo;
         case DevFmtQuad: return ChannelMask_Quad;
-        case DevFmtX51: return isRear51 ? ChannelMask_X51Rear : ChannelMask_X51;
+        case DevFmtX51: return ChannelMask_X51;
         case DevFmtX61: return ChannelMask_X61;
-        case DevFmtX3D71:
+        case DevFmtX3D71: [[fallthrough]];
         case DevFmtX71: return ChannelMask_X71;
         case DevFmtX714: return ChannelMask_X714;
         case DevFmtX7144: return ChannelMask_X7144;

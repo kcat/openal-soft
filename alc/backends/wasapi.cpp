@@ -1129,7 +1129,7 @@ struct WasapiPlayback final : public BackendBase, WasapiProxy {
         ComPtr<ISpatialAudioObjectRenderStream> mRender{nullptr};
         AudioObjectType mStaticMask{};
     };
-    std::variant<std::monostate,PlainDevice,SpatialDevice> mAudio;
+    std::variant<PlainDevice,SpatialDevice> mAudio{std::in_place_index_t<0>{}};
     HANDLE mNotifyEvent{nullptr};
 
     UINT32 mOrigBufferSize{}, mOrigUpdateSize{};
@@ -1445,7 +1445,7 @@ HRESULT WasapiPlayback::openProxy(std::string_view name)
 
 void WasapiPlayback::closeProxy()
 {
-    mAudio.emplace<std::monostate>();
+    mAudio.emplace<PlainDevice>();
     mMMDev = nullptr;
 }
 
@@ -2020,6 +2020,13 @@ HRESULT WasapiPlayback::resetProxy()
         return hr;
     }
 
+    hr = audio.mClient->GetService(__uuidof(IAudioRenderClient), al::out_ptr(audio.mRender));
+    if(FAILED(hr))
+    {
+        ERR("Failed to get IAudioRenderClient: 0x%08lx\n", hr);
+        return hr;
+    }
+
     /* Find the nearest multiple of the period size to the update size */
     if(min_per < per_time)
         min_per *= std::max<int64_t>((per_time + min_per/2) / min_per, 1_i64);
@@ -2067,8 +2074,6 @@ HRESULT WasapiPlayback::startProxy()
 {
     ResetEvent(mNotifyEvent);
 
-    auto mstate_fallback = [](std::monostate) -> HRESULT
-    { return E_FAIL; };
     auto start_plain = [&](PlainDevice &audio) -> HRESULT
     {
         HRESULT hr{audio.mClient->Start()};
@@ -2078,21 +2083,15 @@ HRESULT WasapiPlayback::startProxy()
             return hr;
         }
 
-        hr = audio.mClient->GetService(__uuidof(IAudioRenderClient), al::out_ptr(audio.mRender));
-        if(SUCCEEDED(hr))
-        {
-            try {
-                mKillNow.store(false, std::memory_order_release);
-                mThread = std::thread{std::mem_fn(&WasapiPlayback::mixerProc), this};
-            }
-            catch(...) {
-                audio.mRender = nullptr;
-                ERR("Failed to start thread\n");
-                hr = E_FAIL;
-            }
+        try {
+            mKillNow.store(false, std::memory_order_release);
+            mThread = std::thread{std::mem_fn(&WasapiPlayback::mixerProc), this};
         }
-        if(FAILED(hr))
+        catch(...) {
+            ERR("Failed to start thread\n");
             audio.mClient->Stop();
+            hr = E_FAIL;
+        }
         return hr;
     };
     auto start_spatial = [&](SpatialDevice &audio) -> HRESULT
@@ -2121,7 +2120,7 @@ HRESULT WasapiPlayback::startProxy()
         return hr;
     };
 
-    return std::visit(overloaded{mstate_fallback, start_plain, start_spatial}, mAudio);
+    return std::visit(overloaded{start_plain, start_spatial}, mAudio);
 }
 
 
@@ -2136,19 +2135,14 @@ void WasapiPlayback::stopProxy()
     mKillNow.store(true, std::memory_order_release);
     mThread.join();
 
-    auto mstate_fallback = [](std::monostate) -> void
-    { };
     auto stop_plain = [](PlainDevice &audio) -> void
-    {
-        audio.mRender = nullptr;
-        audio.mClient->Stop();
-    };
+    { audio.mClient->Stop(); };
     auto stop_spatial = [](SpatialDevice &audio) -> void
     {
         audio.mRender->Stop();
         audio.mRender->Reset();
     };
-    std::visit(overloaded{mstate_fallback, stop_plain, stop_spatial}, mAudio);
+    std::visit(overloaded{stop_plain, stop_spatial}, mAudio);
 }
 
 
@@ -2386,12 +2380,14 @@ HRESULT WasapiCapture::openProxy(std::string_view name)
 
 void WasapiCapture::closeProxy()
 {
+    mCapture = nullptr;
     mClient = nullptr;
     mMMDev = nullptr;
 }
 
 HRESULT WasapiCapture::resetProxy()
 {
+    mCapture = nullptr;
     mClient = nullptr;
 
     HRESULT hr{sDeviceHelper->activateAudioClient(mMMDev, __uuidof(IAudioClient),
@@ -2651,6 +2647,13 @@ HRESULT WasapiCapture::resetProxy()
         return hr;
     }
 
+    hr = mClient->GetService(__uuidof(IAudioCaptureClient), al::out_ptr(mCapture));
+    if(FAILED(hr))
+    {
+        ERR("Failed to get IAudioCaptureClient: 0x%08lx\n", hr);
+        return hr;
+    }
+
     UINT32 buffer_len{};
     ReferenceTime min_per{};
     hr = mClient->GetDevicePeriod(&reinterpret_cast<REFERENCE_TIME&>(min_per), nullptr);
@@ -2696,24 +2699,15 @@ HRESULT WasapiCapture::startProxy()
         return hr;
     }
 
-    hr = mClient->GetService(__uuidof(IAudioCaptureClient), al::out_ptr(mCapture));
-    if(SUCCEEDED(hr))
-    {
-        try {
-            mKillNow.store(false, std::memory_order_release);
-            mThread = std::thread{std::mem_fn(&WasapiCapture::recordProc), this};
-        }
-        catch(...) {
-            mCapture = nullptr;
-            ERR("Failed to start thread\n");
-            hr = E_FAIL;
-        }
+    try {
+        mKillNow.store(false, std::memory_order_release);
+        mThread = std::thread{std::mem_fn(&WasapiCapture::recordProc), this};
     }
-
-    if(FAILED(hr))
-    {
+    catch(...) {
+        ERR("Failed to start thread\n");
         mClient->Stop();
         mClient->Reset();
+        hr = E_FAIL;
     }
 
     return hr;
@@ -2725,13 +2719,12 @@ void WasapiCapture::stop()
 
 void WasapiCapture::stopProxy()
 {
-    if(!mCapture || !mThread.joinable())
+    if(!mThread.joinable())
         return;
 
     mKillNow.store(true, std::memory_order_release);
     mThread.join();
 
-    mCapture = nullptr;
     mClient->Stop();
     mClient->Reset();
 }

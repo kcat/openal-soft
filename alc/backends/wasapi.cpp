@@ -1132,7 +1132,7 @@ struct WasapiPlayback final : public BackendBase, WasapiProxy {
     std::variant<PlainDevice,SpatialDevice> mAudio{std::in_place_index_t<0>{}};
     HANDLE mNotifyEvent{nullptr};
 
-    UINT32 mOrigBufferSize{}, mOrigUpdateSize{};
+    UINT32 mOutBufferSize{}, mOutUpdateSize{};
     std::vector<char> mResampleBuffer{};
     uint mBufferFilled{0};
     SampleConverterPtr mResampler;
@@ -1174,8 +1174,8 @@ FORCE_ALIGN int WasapiPlayback::mixerProc()
     althrd_setname(GetMixerThreadName());
 
     const uint frame_size{mFormat.Format.nChannels * mFormat.Format.wBitsPerSample / 8u};
-    const uint update_size{mOrigUpdateSize};
-    const UINT32 buffer_len{mOrigBufferSize};
+    const uint update_size{mOutUpdateSize};
+    const UINT32 buffer_len{mOutBufferSize};
     const void *resbufferptr{};
 
 #ifdef AVRTAPI
@@ -1276,7 +1276,7 @@ FORCE_ALIGN int WasapiPlayback::mixerSpatialProc()
     std::vector<const void*> tmpbuffers;
 
 #ifdef AVRTAPI
-    auto taskname = (mOrigUpdateSize<mFormat.Format.nSamplesPerSec/100) ? L"Pro Audio" : L"Audio";
+    auto taskname = (mOutUpdateSize < mFormat.Format.nSamplesPerSec/100) ? L"Pro Audio" : L"Audio";
     auto avhandle = AvrtHandlePtr{AvSetMmThreadCharacteristicsW(taskname, &sAvIndex)};
 #endif
 
@@ -1284,7 +1284,7 @@ FORCE_ALIGN int WasapiPlayback::mixerSpatialProc()
      * update it dynamically based on the stream, so a fixed size may be the
      * best we can do.
      */
-    mPadding.store(mOrigBufferSize-mOrigUpdateSize, std::memory_order_release);
+    mPadding.store(mOutBufferSize-mOutUpdateSize, std::memory_order_release);
 
     mBufferFilled = 0;
     while(!mKillNow.load(std::memory_order_relaxed))
@@ -1832,8 +1832,8 @@ auto WasapiPlayback::initSpatial() -> bool
      * Unfortunately this won't get the buffer size of the
      * ISpatialAudioObjectRenderStream, so we only assume there's two periods.
      */
-    mOrigUpdateSize = mDevice->UpdateSize;
-    mOrigBufferSize = mOrigUpdateSize*2;
+    mOutUpdateSize = mDevice->UpdateSize;
+    mOutBufferSize = mOutUpdateSize*2;
     ReferenceTime per_time{ReferenceTime{seconds{mDevice->UpdateSize}} / mDevice->Frequency};
 
     ComPtr<IAudioClient> tmpClient;
@@ -1848,8 +1848,8 @@ auto WasapiPlayback::initSpatial() -> bool
             ERR("Failed to get device period: 0x%08lx\n", hr);
         else
         {
-            mOrigUpdateSize = RefTime2Samples(per_time, mFormat.Format.nSamplesPerSec);
-            mOrigBufferSize = mOrigUpdateSize*2;
+            mOutUpdateSize = RefTime2Samples(per_time, mFormat.Format.nSamplesPerSec);
+            mOutBufferSize = mOutUpdateSize*2;
         }
     }
     tmpClient = nullptr;
@@ -1872,7 +1872,7 @@ auto WasapiPlayback::initSpatial() -> bool
 
         TRACE("Created converter for %s/%s format, dst: %luhz (%u), src: %uhz (%u)\n",
             DevFmtChannelsString(mDevice->FmtChans), DevFmtTypeString(mDevice->FmtType),
-            mFormat.Format.nSamplesPerSec, mOrigUpdateSize, mDevice->Frequency,
+            mFormat.Format.nSamplesPerSec, mOutUpdateSize, mDevice->Frequency,
             mDevice->UpdateSize);
     }
 
@@ -2002,8 +2002,8 @@ HRESULT WasapiPlayback::resetProxy()
     if(min_per < per_time)
         min_per *= std::max<int64_t>((per_time + min_per/2) / min_per, 1_i64);
 
-    mOrigBufferSize = buffer_len;
-    mOrigUpdateSize = std::min(RefTime2Samples(min_per, mFormat.Format.nSamplesPerSec),
+    mOutBufferSize = buffer_len;
+    mOutUpdateSize = std::min(RefTime2Samples(min_per, mFormat.Format.nSamplesPerSec),
         buffer_len/2u);
 
     mDevice->BufferSize = static_cast<uint>(uint64_t{buffer_len} * mDevice->Frequency /
@@ -2025,7 +2025,7 @@ HRESULT WasapiPlayback::resetProxy()
 
         TRACE("Created converter for %s/%s format, dst: %luhz (%u), src: %uhz (%u)\n",
             DevFmtChannelsString(mDevice->FmtChans), DevFmtTypeString(mDevice->FmtType),
-            mFormat.Format.nSamplesPerSec, mOrigUpdateSize, mDevice->Frequency,
+            mFormat.Format.nSamplesPerSec, mOutUpdateSize, mDevice->Frequency,
             mDevice->UpdateSize);
     }
 

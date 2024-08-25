@@ -227,12 +227,18 @@ if(ANDROID)
 endif()
 
 if(MSVC)
-    set(CPP_DEFS ${CPP_DEFS} _CRT_SECURE_NO_WARNINGS)
+    # NOTE: _DISABLE_CONSTEXPR_MUTEX_CONSTRUCTOR is temporary. When building on
+    # VS 2022 17.10 or newer, but using an older runtime, mutexes can crash
+    # when locked. Ideally the runtime should be updated on the system, but
+    # until the update becomes more widespread, this helps avoid some pain
+    # points.
+    set(CPP_DEFS ${CPP_DEFS} _CRT_SECURE_NO_WARNINGS _DISABLE_CONSTEXPR_MUTEX_CONSTRUCTOR)
     check_cxx_compiler_flag(/permissive- HAVE_PERMISSIVE_SWITCH)
     if(HAVE_PERMISSIVE_SWITCH)
         set(C_FLAGS ${C_FLAGS} $<$<COMPILE_LANGUAGE:CXX>:/permissive->)
     endif()
-    set(C_FLAGS ${C_FLAGS} /W4 /w14640 /wd4065 /wd4127 /wd4268 /wd4324 /wd5030 /wd5051)
+    set(C_FLAGS ${C_FLAGS} /W4 /w14640 /wd4065 /wd4127 /wd4268 /wd4324 /wd5030 /wd5051
+        $<$<COMPILE_LANGUAGE:CXX>:/EHsc>)
 
     if(NOT DXSDK_DIR)
         string(REGEX REPLACE "\\\\" "/" DXSDK_DIR "$ENV{DXSDK_DIR}")

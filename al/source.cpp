@@ -4001,32 +4001,28 @@ void ALsource::eax4_translate(const Eax4Props& src, Eax5Props& dst) noexcept
 
     // Active FX slots.
     //
-    for(size_t i{0};i < EAX50_MAX_ACTIVE_FXSLOTS;++i)
+    auto translate_slotid = [](const GUID &src_id) -> GUID
     {
-        auto& dst_id = dst.active_fx_slots.guidActiveFXSlots[i];
-
-        if(i < EAX40_MAX_ACTIVE_FXSLOTS)
-        {
-            const auto& src_id = src.active_fx_slots.guidActiveFXSlots[i];
-
-            if(src_id == EAX_NULL_GUID)
-                dst_id = EAX_NULL_GUID;
-            else if(src_id == EAX_PrimaryFXSlotID)
-                dst_id = EAX_PrimaryFXSlotID;
-            else if(src_id == EAXPROPERTYID_EAX40_FXSlot0)
-                dst_id = EAXPROPERTYID_EAX50_FXSlot0;
-            else if(src_id == EAXPROPERTYID_EAX40_FXSlot1)
-                dst_id = EAXPROPERTYID_EAX50_FXSlot1;
-            else if(src_id == EAXPROPERTYID_EAX40_FXSlot2)
-                dst_id = EAXPROPERTYID_EAX50_FXSlot2;
-            else if(src_id == EAXPROPERTYID_EAX40_FXSlot3)
-                dst_id = EAXPROPERTYID_EAX50_FXSlot3;
-            else
-                assert(false && "Unknown active FX slot ID.");
-        }
-        else
-            dst_id = EAX_NULL_GUID;
-    }
+        if(src_id == EAX_NULL_GUID)
+            return EAX_NULL_GUID;
+        if(src_id == EAX_PrimaryFXSlotID)
+            return EAX_PrimaryFXSlotID;
+        if(src_id == EAXPROPERTYID_EAX40_FXSlot0)
+            return EAXPROPERTYID_EAX50_FXSlot0;
+        if(src_id == EAXPROPERTYID_EAX40_FXSlot1)
+            return EAXPROPERTYID_EAX50_FXSlot1;
+        if(src_id == EAXPROPERTYID_EAX40_FXSlot2)
+            return EAXPROPERTYID_EAX50_FXSlot2;
+        if(src_id == EAXPROPERTYID_EAX40_FXSlot3)
+            return EAXPROPERTYID_EAX50_FXSlot3;
+        assert(false && "Unknown active FX slot ID.");
+        return EAX_NULL_GUID;
+    };
+    const auto src_slots = al::span{src.active_fx_slots.guidActiveFXSlots};
+    const auto dst_slots = al::span{dst.active_fx_slots.guidActiveFXSlots};
+    auto dstiter = std::transform(src_slots.cbegin(), src_slots.cend(), dst_slots.begin(),
+        translate_slotid);
+    std::fill(dstiter, dst_slots.end(), EAX_NULL_GUID);
 
     // Speaker levels.
     //

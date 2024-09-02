@@ -4015,7 +4015,9 @@ void ALsource::eax4_translate(const Eax4Props& src, Eax5Props& dst) noexcept
             return EAXPROPERTYID_EAX50_FXSlot2;
         if(src_id == EAXPROPERTYID_EAX40_FXSlot3)
             return EAXPROPERTYID_EAX50_FXSlot3;
-        assert(false && "Unknown active FX slot ID.");
+
+        UNLIKELY
+        ERR("Unexpected active FX slot ID\n");
         return EAX_NULL_GUID;
     };
     const auto src_slots = al::span{src.active_fx_slots.guidActiveFXSlots};

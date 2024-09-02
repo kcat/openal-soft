@@ -241,7 +241,7 @@ inline float level_mb_to_gain(float x)
 // Converts gain to level (mB).
 inline float gain_to_level_mb(float x)
 {
-    if (x <= 0.0f)
+    if(x <= 1e-05f)
         return -10'000.0f;
     return std::max(std::log10(x) * 2'000.0f, -10'000.0f);
 }

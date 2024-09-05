@@ -130,7 +130,7 @@ void SndioPlayback::open(std::string_view name)
         sio_close(mSndHandle);
     mSndHandle = sndHandle;
 
-    mDevice->DeviceName = name;
+    mDeviceName = name;
 }
 
 bool SndioPlayback::reset()
@@ -471,7 +471,7 @@ void SndioCapture::open(std::string_view name)
 
     setDefaultChannelOrder();
 
-    mDevice->DeviceName = name;
+    mDeviceName = name;
 }
 
 void SndioCapture::start()

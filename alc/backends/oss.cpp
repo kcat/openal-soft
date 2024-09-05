@@ -365,7 +365,7 @@ void OSSPlayback::open(std::string_view name)
         ::close(mFd);
     mFd = fd;
 
-    mDevice->DeviceName = name;
+    mDeviceName = name;
 }
 
 bool OSSPlayback::reset()
@@ -615,7 +615,7 @@ void OSScapture::open(std::string_view name)
 
     mRing = RingBuffer::Create(mDevice->BufferSize, frameSize, false);
 
-    mDevice->DeviceName = name;
+    mDeviceName = name;
 }
 
 void OSScapture::start()

@@ -364,7 +364,7 @@ void OpenSLPlayback::open(std::string_view name)
             "Failed to initialize OpenSL device: 0x%08x", result};
     }
 
-    mDevice->DeviceName = name;
+    mDeviceName = name;
 }
 
 bool OpenSLPlayback::reset()
@@ -785,7 +785,7 @@ void OpenSLCapture::open(std::string_view name)
             "Failed to initialize OpenSL device: 0x%08x", result};
     }
 
-    mDevice->DeviceName = name;
+    mDeviceName = name;
 }
 
 void OpenSLCapture::start()

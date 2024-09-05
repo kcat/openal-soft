@@ -113,8 +113,6 @@ using std::chrono::nanoseconds;
 using std::chrono::milliseconds;
 using std::chrono::seconds;
 
-[[nodiscard]] constexpr auto GetDevicePrefix() noexcept { return "OpenAL Soft on "sv; }
-
 using ReferenceTime = std::chrono::duration<REFERENCE_TIME,std::ratio<1,10'000'000>>;
 
 
@@ -159,9 +157,6 @@ constexpr AudioObjectType ChannelMask_Quad{AudioObjectType_FrontLeft | AudioObje
 constexpr AudioObjectType ChannelMask_X51{AudioObjectType_FrontLeft | AudioObjectType_FrontRight
     | AudioObjectType_FrontCenter | AudioObjectType_LowFrequency | AudioObjectType_SideLeft
     | AudioObjectType_SideRight};
-constexpr AudioObjectType ChannelMask_X51Rear{AudioObjectType_FrontLeft
-    | AudioObjectType_FrontRight | AudioObjectType_FrontCenter | AudioObjectType_LowFrequency
-    | AudioObjectType_BackLeft | AudioObjectType_BackRight};
 constexpr AudioObjectType ChannelMask_X61{AudioObjectType_FrontLeft | AudioObjectType_FrontRight
     | AudioObjectType_FrontCenter | AudioObjectType_LowFrequency | AudioObjectType_SideLeft
     | AudioObjectType_SideRight | AudioObjectType_BackCenter};
@@ -1393,9 +1388,6 @@ void WasapiPlayback::open(std::string_view name)
             "Failed to create notify events"};
     }
 
-    if(const auto prefix = GetDevicePrefix(); al::starts_with(name, prefix))
-        name = name.substr(prefix.size());
-
     mOpenStatus = pushMessage(MsgType::OpenDevice, name).get();
     if(FAILED(mOpenStatus))
         throw al::backend_exception{al::backend_error::DeviceError, "Device init failed: 0x%08lx",
@@ -1436,9 +1428,9 @@ HRESULT WasapiPlayback::openProxy(std::string_view name)
         return hr;
     }
     if(!devname.empty())
-        mDevice->DeviceName = std::string{GetDevicePrefix()}+std::move(devname);
+        mDeviceName = std::move(devname);
     else
-        mDevice->DeviceName = std::string{GetDevicePrefix()}+GetDeviceNameAndGuid(mMMDev).first;
+        mDeviceName = GetDeviceNameAndGuid(mMMDev).first;
 
     return S_OK;
 }
@@ -1572,7 +1564,7 @@ void WasapiPlayback::prepareFormat(WAVEFORMATEXTENSIBLE &OutputType)
 
 void WasapiPlayback::finalizeFormat(WAVEFORMATEXTENSIBLE &OutputType)
 {
-    if(!GetConfigValueBool(mDevice->DeviceName, "wasapi", "allow-resampler", true))
+    if(!GetConfigValueBool(mDevice->mDeviceName, "wasapi", "allow-resampler", true))
         mDevice->Frequency = uint(OutputType.Format.nSamplesPerSec);
     else
         mDevice->Frequency = std::min(mDevice->Frequency, uint(OutputType.Format.nSamplesPerSec));
@@ -1814,7 +1806,7 @@ auto WasapiPlayback::initSpatial() -> bool
     mDevice->Flags.reset(DirectEar).set(Virtualization);
     if(streamParams.StaticObjectTypeMask == ChannelMask_Stereo)
         mDevice->FmtChans = DevFmtStereo;
-    if(!GetConfigValueBool(mDevice->DeviceName, "wasapi", "allow-resampler", true))
+    if(!GetConfigValueBool(mDevice->mDeviceName, "wasapi", "allow-resampler", true))
         mDevice->Frequency = uint(OutputType.Format.nSamplesPerSec);
     else
         mDevice->Frequency = std::min(mDevice->Frequency,
@@ -1889,7 +1881,7 @@ bool WasapiPlayback::reset()
 
 HRESULT WasapiPlayback::resetProxy()
 {
-    if(GetConfigValueBool(mDevice->DeviceName, "wasapi", "spatial-api", false))
+    if(GetConfigValueBool(mDevice->mDeviceName, "wasapi", "spatial-api", false))
     {
         if(initSpatial())
             return S_OK;
@@ -2290,9 +2282,6 @@ void WasapiCapture::open(std::string_view name)
             "Failed to create notify events"};
     }
 
-    if(const auto prefix = GetDevicePrefix(); al::starts_with(name, prefix))
-        name = name.substr(prefix.size());
-
     mOpenStatus = pushMessage(MsgType::OpenDevice, name).get();
     if(FAILED(mOpenStatus))
         throw al::backend_exception{al::backend_error::DeviceError, "Device init failed: 0x%08lx",
@@ -2342,9 +2331,9 @@ HRESULT WasapiCapture::openProxy(std::string_view name)
     }
     mClient = nullptr;
     if(!devname.empty())
-        mDevice->DeviceName = std::string{GetDevicePrefix()}+std::move(devname);
+        mDeviceName = std::move(devname);
     else
-        mDevice->DeviceName = std::string{GetDevicePrefix()}+GetDeviceNameAndGuid(mMMDev).first;
+        mDeviceName = GetDeviceNameAndGuid(mMMDev).first;
 
     return S_OK;
 }
@@ -2744,11 +2733,11 @@ auto WasapiBackendFactory::enumerate(BackendType type) -> std::vector<std::strin
             {
                 if(entry.devid != defaultId)
                 {
-                    outnames.emplace_back(std::string{GetDevicePrefix()}+entry.name);
+                    outnames.emplace_back(entry.name);
                     continue;
                 }
                 /* Default device goes first. */
-                outnames.emplace(outnames.cbegin(), std::string{GetDevicePrefix()}+entry.name);
+                outnames.emplace(outnames.cbegin(), entry.name);
             }
         }
         break;
@@ -2760,10 +2749,10 @@ auto WasapiBackendFactory::enumerate(BackendType type) -> std::vector<std::strin
             {
                 if(entry.devid != defaultId)
                 {
-                    outnames.emplace_back(std::string{GetDevicePrefix()}+entry.name);
+                    outnames.emplace_back(entry.name);
                     continue;
                 }
-                outnames.emplace(outnames.cbegin(), std::string{GetDevicePrefix()}+entry.name);
+                outnames.emplace(outnames.cbegin(), entry.name);
             }
         }
         break;

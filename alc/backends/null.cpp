@@ -30,7 +30,6 @@
 #include <functional>
 #include <thread>
 
-#include "almalloc.h"
 #include "alstring.h"
 #include "althrd_setname.h"
 #include "core/device.h"
@@ -113,7 +112,7 @@ void NullBackend::open(std::string_view name)
         throw al::backend_exception{al::backend_error::NoDevice, "Device name \"%.*s\" not found",
             al::sizei(name), name.data()};
 
-    mDevice->DeviceName = name;
+    mDeviceName = name;
 }
 
 bool NullBackend::reset()

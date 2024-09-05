@@ -271,6 +271,12 @@ BackendFactory *CaptureFactory{};
 
 [[nodiscard]] constexpr auto GetDefaultName() noexcept { return "OpenAL Soft\0"; }
 
+#ifdef _WIN32
+[[nodiscard]] constexpr auto GetDevicePrefix() noexcept { return "OpenAL Soft on "sv; }
+#else
+[[nodiscard]] constexpr auto GetDevicePrefix() noexcept { return std::string_view{}; }
+#endif
+
 /************************************************
  * Global variables
  ************************************************/
@@ -725,6 +731,10 @@ void ProbeAllDevicesList()
     else
     {
         alcAllDevicesArray = PlaybackFactory->enumerate(BackendType::Playback);
+        if(const auto prefix = GetDevicePrefix(); !prefix.empty())
+            std::for_each(alcAllDevicesArray.begin(), alcAllDevicesArray.end(),
+                [prefix](std::string &name) { name.insert(0, prefix); });
+
         decltype(alcAllDevicesList){}.swap(alcAllDevicesList);
         if(alcAllDevicesArray.empty())
             alcAllDevicesList += '\0';
@@ -745,6 +755,10 @@ void ProbeCaptureDeviceList()
     else
     {
         alcCaptureDeviceArray = CaptureFactory->enumerate(BackendType::Capture);
+        if(const auto prefix = GetDevicePrefix(); !prefix.empty())
+            std::for_each(alcCaptureDeviceArray.begin(), alcCaptureDeviceArray.end(),
+                [prefix](std::string &name) { name.insert(0, prefix); });
+
         decltype(alcCaptureDeviceList){}.swap(alcCaptureDeviceList);
         if(alcCaptureDeviceArray.empty())
             alcCaptureDeviceList += '\0';
@@ -2034,7 +2048,7 @@ ALC_API const ALCchar* ALC_APIENTRY alcGetString(ALCdevice *Device, ALCenum para
             else
             {
                 std::lock_guard<std::mutex> statelock{dev->StateLock};
-                value = dev->DeviceName.c_str();
+                value = dev->mDeviceName.c_str();
             }
         }
         else
@@ -2052,7 +2066,7 @@ ALC_API const ALCchar* ALC_APIENTRY alcGetString(ALCdevice *Device, ALCenum para
             else
             {
                 std::lock_guard<std::mutex> statelock{dev->StateLock};
-                value = dev->DeviceName.c_str();
+                value = dev->mDeviceName.c_str();
             }
         }
         else
@@ -2912,6 +2926,13 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName) noexcep
             || al::starts_with(devname, "'("sv)
             || al::case_compare(devname, "openal-soft"sv) == 0)
             devname = {};
+        else
+        {
+            const auto prefix = GetDevicePrefix();
+            if(!prefix.empty() && devname.size() > prefix.size()
+                && al::starts_with(devname, prefix))
+                devname = devname.substr(prefix.size());
+        }
     }
     else
         TRACE("Opening default playback device\n");
@@ -2948,6 +2969,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName) noexcep
         auto backend = PlaybackFactory->createBackend(device.get(), BackendType::Playback);
         std::lock_guard<std::recursive_mutex> listlock{ListLock};
         backend->open(devname);
+        device->mDeviceName = std::string{GetDevicePrefix()}+backend->mDeviceName;
         device->Backend = std::move(backend);
     }
     catch(al::backend_exception &e) {
@@ -2984,7 +3006,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName) noexcep
         DeviceList.emplace(iter, device.get());
     }
 
-    TRACE("Created device %p, \"%s\"\n", voidp{device.get()}, device->DeviceName.c_str());
+    TRACE("Created device %p, \"%s\"\n", voidp{device.get()}, device->mDeviceName.c_str());
     return device.release();
 }
 
@@ -3065,6 +3087,13 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, 
         if(al::case_compare(devname, GetDefaultName()) == 0
             || al::case_compare(devname, "openal-soft"sv) == 0)
             devname = {};
+        else
+        {
+            const auto prefix = GetDevicePrefix();
+            if(!prefix.empty() && devname.size() > prefix.size()
+                && al::starts_with(devname, prefix))
+                devname = devname.substr(prefix.size());
+        }
     }
     else
         TRACE("Opening default capture device\n");
@@ -3102,6 +3131,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, 
         auto backend = CaptureFactory->createBackend(device.get(), BackendType::Capture);
         std::lock_guard<std::recursive_mutex> listlock{ListLock};
         backend->open(devname);
+        device->mDeviceName = std::string{GetDevicePrefix()}+backend->mDeviceName;
         device->Backend = std::move(backend);
     }
     catch(al::backend_exception &e) {
@@ -3118,7 +3148,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, 
     }
     device->mDeviceState = DeviceState::Configured;
 
-    TRACE("Created capture device %p, \"%s\"\n", voidp{device.get()}, device->DeviceName.c_str());
+    TRACE("Created capture device %p, \"%s\"\n", voidp{device.get()}, device->mDeviceName.c_str());
     return device.release();
 }
 
@@ -3276,6 +3306,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(const ALCchar *deviceN
         auto backend = LoopbackBackendFactory::getFactory().createBackend(device.get(),
             BackendType::Playback);
         backend->open("Loopback");
+        device->mDeviceName = std::string{GetDevicePrefix()}+backend->mDeviceName;
         device->Backend = std::move(backend);
     }
     catch(al::backend_exception &e) {
@@ -3487,6 +3518,13 @@ FORCE_ALIGN ALCboolean ALC_APIENTRY alcReopenDeviceSOFT(ALCdevice *device,
         }
         if(al::case_compare(devname, GetDefaultName()) == 0)
             devname = {};
+        else
+        {
+            const auto prefix = GetDevicePrefix();
+            if(!prefix.empty() && devname.size() > prefix.size()
+                && al::starts_with(devname, prefix))
+                devname = devname.substr(prefix.size());
+        }
     }
 
     /* Force the backend device to stop first since we're opening another one. */
@@ -3525,9 +3563,10 @@ FORCE_ALIGN ALCboolean ALC_APIENTRY alcReopenDeviceSOFT(ALCdevice *device,
         return ALC_FALSE;
     }
     listlock.unlock();
+    dev->mDeviceName = std::string{GetDevicePrefix()}+newbackend->mDeviceName;
     dev->Backend = std::move(newbackend);
     dev->mDeviceState = DeviceState::Unprepared;
-    TRACE("Reopened device %p, \"%s\"\n", voidp{dev.get()}, dev->DeviceName.c_str());
+    TRACE("Reopened device %p, \"%s\"\n", voidp{dev.get()}, dev->mDeviceName.c_str());
 
     std::string{}.swap(dev->mVendorOverride);
     std::string{}.swap(dev->mVersionOverride);

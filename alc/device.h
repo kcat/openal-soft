@@ -99,7 +99,7 @@ struct ALCdevice : public al::intrusive_ref<ALCdevice>, DeviceBase {
     void enumerateHrtfs();
 
     bool getConfigValueBool(const std::string_view block, const std::string_view key, bool def)
-    { return GetConfigValueBool(DeviceName, block, key, def); }
+    { return GetConfigValueBool(mDeviceName, block, key, def); }
 
     template<typename T>
     inline std::optional<T> configValue(const std::string_view block, const std::string_view key) = delete;
@@ -107,19 +107,19 @@ struct ALCdevice : public al::intrusive_ref<ALCdevice>, DeviceBase {
 
 template<>
 inline std::optional<std::string> ALCdevice::configValue(const std::string_view block, const std::string_view key)
-{ return ConfigValueStr(DeviceName, block, key); }
+{ return ConfigValueStr(mDeviceName, block, key); }
 template<>
 inline std::optional<int> ALCdevice::configValue(const std::string_view block, const std::string_view key)
-{ return ConfigValueInt(DeviceName, block, key); }
+{ return ConfigValueInt(mDeviceName, block, key); }
 template<>
 inline std::optional<uint> ALCdevice::configValue(const std::string_view block, const std::string_view key)
-{ return ConfigValueUInt(DeviceName, block, key); }
+{ return ConfigValueUInt(mDeviceName, block, key); }
 template<>
 inline std::optional<float> ALCdevice::configValue(const std::string_view block, const std::string_view key)
-{ return ConfigValueFloat(DeviceName, block, key); }
+{ return ConfigValueFloat(mDeviceName, block, key); }
 template<>
 inline std::optional<bool> ALCdevice::configValue(const std::string_view block, const std::string_view key)
-{ return ConfigValueBool(DeviceName, block, key); }
+{ return ConfigValueBool(mDeviceName, block, key); }
 
 /** Stores the latest ALC device error. */
 void alcSetError(ALCdevice *device, ALCenum errorCode);

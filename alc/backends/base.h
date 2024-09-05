@@ -35,6 +35,7 @@ struct BackendBase {
     virtual ClockLatency getClockLatency();
 
     DeviceBase *const mDevice;
+    std::string mDeviceName;
 
     BackendBase() = delete;
     BackendBase(const BackendBase&) = delete;

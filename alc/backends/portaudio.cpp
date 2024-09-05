@@ -94,11 +94,7 @@ void EnumerateDevices()
     {
         if(auto info = Pa_GetDeviceInfo(idx); info && info->name)
         {
-#ifdef _WIN32
-            entry.mName = "OpenAL Soft on "+std::string{info->name};
-#else
             entry.mName = info->name;
-#endif
             entry.mPlaybackChannels = static_cast<uint>(std::max(info->maxOutputChannels, 0));
             entry.mCaptureChannels = static_cast<uint>(std::max(info->maxInputChannels, 0));
             TRACE("Device %d \"%s\": %d playback, %d capture channels\n", idx, entry.mName.c_str(),
@@ -225,7 +221,7 @@ void PortPlayback::open(std::string_view name)
     createStream(deviceid);
     mDeviceIdx = deviceid;
 
-    mDevice->DeviceName = name;
+    mDeviceName = name;
 }
 
 bool PortPlayback::reset()
@@ -401,7 +397,7 @@ void PortCapture::open(std::string_view name)
         throw al::backend_exception{al::backend_error::NoDevice, "Failed to open stream: %s",
             Pa_GetErrorText(err)};
 
-    mDevice->DeviceName = name;
+    mDeviceName = name;
 }
 
 

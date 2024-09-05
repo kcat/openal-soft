@@ -222,7 +222,7 @@ void WaveBackend::open(std::string_view name)
         throw al::backend_exception{al::backend_error::DeviceError, "Could not open file '%s': %s",
             fname->c_str(), std::generic_category().message(errno).c_str()};
 
-    mDevice->DeviceName = name;
+    mDeviceName = name;
 }
 
 bool WaveBackend::reset()

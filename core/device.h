@@ -183,6 +183,8 @@ struct SIMDALIGN DeviceBase {
     std::atomic<bool> Connected{true};
     const DeviceType Type{};
 
+    std::string mDeviceName;
+
     uint Frequency{};
     uint UpdateSize{};
     uint BufferSize{};
@@ -198,8 +200,6 @@ struct SIMDALIGN DeviceBase {
      */
     DevAmbiLayout mAmbiLayout{DevAmbiLayout::Default};
     DevAmbiScaling mAmbiScale{DevAmbiScaling::Default};
-
-    std::string DeviceName;
 
     // Device flags
     std::bitset<DeviceFlagsCount> Flags{};

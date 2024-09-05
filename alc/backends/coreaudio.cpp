@@ -435,7 +435,7 @@ void CoreAudioPlayback::open(std::string_view name)
 
 #if CAN_ENUMERATE
     if(!name.empty())
-        mDevice->DeviceName = name;
+        mDeviceName = name;
     else
     {
         UInt32 propSize{sizeof(audioDevice)};
@@ -444,8 +444,8 @@ void CoreAudioPlayback::open(std::string_view name)
             kAudioUnitScope_Global, OutputElement, &audioDevice, &propSize);
 
         std::string devname{GetDeviceName(audioDevice)};
-        if(!devname.empty()) mDevice->DeviceName = std::move(devname);
-        else mDevice->DeviceName = "Unknown Device Name";
+        if(!devname.empty()) mDeviceName = std::move(devname);
+        else mDeviceName = "Unknown Device Name";
     }
 
     if(audioDevice != kAudioDeviceUnknown)
@@ -463,7 +463,7 @@ void CoreAudioPlayback::open(std::string_view name)
     }
 
 #else
-    mDevice->DeviceName = name;
+    mDeviceName = name;
 #endif
 }
 
@@ -885,7 +885,7 @@ void CoreAudioCapture::open(std::string_view name)
 
 #if CAN_ENUMERATE
     if(!name.empty())
-        mDevice->DeviceName = name;
+        mDeviceName = name;
     else
     {
         UInt32 propSize{sizeof(audioDevice)};
@@ -894,11 +894,11 @@ void CoreAudioCapture::open(std::string_view name)
             kAudioUnitScope_Global, InputElement, &audioDevice, &propSize);
 
         std::string devname{GetDeviceName(audioDevice)};
-        if(!devname.empty()) mDevice->DeviceName = std::move(devname);
-        else mDevice->DeviceName = "Unknown Device Name";
+        if(!devname.empty()) mDeviceName = std::move(devname);
+        else mDeviceName = "Unknown Device Name";
     }
 #else
-    mDevice->DeviceName = name;
+    mDeviceName = name;
 #endif
 }
 

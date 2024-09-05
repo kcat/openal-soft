@@ -28,7 +28,7 @@
 #include <string>
 #include <string_view>
 
-#include "alstring.h"
+#include "alnumeric.h"
 #include "core/device.h"
 
 _Pragma("GCC diagnostic push")
@@ -39,15 +39,10 @@ _Pragma("GCC diagnostic pop")
 
 namespace {
 
-#ifdef _WIN32
-#define DEVNAME_PREFIX "OpenAL Soft on "
-#else
-#define DEVNAME_PREFIX ""
-#endif
+using namespace std::string_view_literals;
 
-constexpr auto getDevicePrefix() noexcept -> std::string_view { return DEVNAME_PREFIX; }
-constexpr auto getDefaultDeviceName() noexcept -> std::string_view
-{ return DEVNAME_PREFIX "Default Device"; }
+[[nodiscard]] constexpr auto getDefaultDeviceName() noexcept -> std::string_view
+{ return "Default Device"sv; }
 
 struct Sdl2Backend final : public BackendBase {
     Sdl2Backend(DeviceBase *device) noexcept : BackendBase{device} { }
@@ -60,7 +55,7 @@ struct Sdl2Backend final : public BackendBase {
     void start() override;
     void stop() override;
 
-    std::string mDeviceName;
+    std::string mSDLName;
     SDL_AudioDeviceID mDeviceID{0u};
     uint mFrameSize{0};
 };
@@ -108,25 +103,15 @@ void Sdl2Backend::open(std::string_view name)
     if(name.empty() || name == defaultDeviceName)
     {
         name = defaultDeviceName;
-        mDeviceName.clear();
+        mSDLName.clear();
         mDeviceID = SDL_OpenAudioDevice(nullptr, SDL_FALSE, &want, &have,
             SDL_AUDIO_ALLOW_ANY_CHANGE);
     }
     else
     {
-        const auto namePrefix = getDevicePrefix();
-        if(name.size() >= namePrefix.size() && al::starts_with(name, namePrefix))
-        {
-            mDeviceName = name.substr(namePrefix.size());
-            mDeviceID = SDL_OpenAudioDevice(mDeviceName.c_str(), SDL_FALSE, &want, &have,
-                SDL_AUDIO_ALLOW_ANY_CHANGE);
-        }
-        else
-        {
-            mDeviceName = name;
-            mDeviceID = SDL_OpenAudioDevice(mDeviceName.c_str(), SDL_FALSE, &want, &have,
-                SDL_AUDIO_ALLOW_ANY_CHANGE);
-        }
+        mSDLName = name;
+        mDeviceID = SDL_OpenAudioDevice(mSDLName.c_str(), SDL_FALSE, &want, &have,
+            SDL_AUDIO_ALLOW_ANY_CHANGE);
     }
     if(!mDeviceID)
         throw al::backend_exception{al::backend_error::NoDevice, "%s", SDL_GetError()};
@@ -147,7 +132,7 @@ void Sdl2Backend::open(std::string_view name)
 
     mFrameSize = BytesFromDevFmt(devtype) * have.channels;
 
-    mDevice->DeviceName = name;
+    mDeviceName = name;
 }
 
 bool Sdl2Backend::reset()
@@ -176,14 +161,14 @@ bool Sdl2Backend::reset()
     want.userdata = this;
 
     auto have = SDL_AudioSpec{};
-    if(mDeviceName.empty())
+    if(mSDLName.empty())
     {
         mDeviceID = SDL_OpenAudioDevice(nullptr, SDL_FALSE, &want, &have,
             SDL_AUDIO_ALLOW_ANY_CHANGE);
     }
     else
     {
-        mDeviceID = SDL_OpenAudioDevice(mDeviceName.c_str(), SDL_FALSE, &want, &have,
+        mDeviceID = SDL_OpenAudioDevice(mSDLName.c_str(), SDL_FALSE, &want, &have,
             SDL_AUDIO_ALLOW_ANY_CHANGE);
     }
     if(!mDeviceID)
@@ -260,16 +245,14 @@ auto SDL2BackendFactory::enumerate(BackendType type) -> std::vector<std::string>
     if(num_devices <= 0)
         return outnames;
 
-    outnames.reserve(static_cast<unsigned int>(num_devices));
+    outnames.reserve(static_cast<unsigned int>(num_devices)+1_uz);
     outnames.emplace_back(getDefaultDeviceName());
     for(int i{0};i < num_devices;++i)
     {
-        std::string outname{getDevicePrefix()};
         if(const char *name = SDL_GetAudioDeviceName(i, SDL_FALSE))
-            outname += name;
+            outnames.emplace_back(name);
         else
-            outname += "Unknown Device Name #"+std::to_string(i);
-        outnames.emplace_back(std::move(outname));
+            outnames.emplace_back("Unknown Device Name #"+std::to_string(i));
     }
     return outnames;
 }

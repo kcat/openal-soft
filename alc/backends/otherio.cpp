@@ -572,10 +572,6 @@ void OtherIOPlayback::open(std::string_view name)
         name = gDeviceList[0].mDrvName;
     else
     {
-        constexpr auto prefix = "OpenAL Soft on "sv;
-        if(al::starts_with(name, prefix))
-            name.remove_prefix(prefix.size());
-
         auto iter = std::find_if(gDeviceList.cbegin(), gDeviceList.cend(),
             [name](const DeviceEntry &entry) { return entry.mDrvName == name; });
         if(iter == gDeviceList.cend())
@@ -588,7 +584,7 @@ void OtherIOPlayback::open(std::string_view name)
         throw al::backend_exception{al::backend_error::DeviceError, "Failed to open \"%.*s\"",
             al::sizei(name), name.data()};
 
-    mDevice->DeviceName = "OpenAL Soft on "+std::string{name};
+    mDeviceName = name;
 }
 
 auto OtherIOPlayback::openProxy(std::string_view name [[maybe_unused]]) -> HRESULT
@@ -675,8 +671,7 @@ auto OtherIOBackendFactory::enumerate(BackendType type) -> std::vector<std::stri
     {
     case BackendType::Playback:
         std::for_each(gDeviceList.cbegin(), gDeviceList.cend(),
-            [&outnames](const DeviceEntry &entry)
-            { outnames.emplace_back("OpenAL Soft on "+entry.mDrvName); });
+            [&outnames](const DeviceEntry &entry) { outnames.emplace_back(entry.mDrvName); });
         break;
 
     case BackendType::Capture:

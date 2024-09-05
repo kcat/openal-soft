@@ -510,7 +510,7 @@ void JackPlayback::open(std::string_view name)
         mPortPattern = iter->mPattern;
     }
 
-    mDevice->DeviceName = name;
+    mDeviceName = name;
 }
 
 bool JackPlayback::reset()
@@ -520,7 +520,7 @@ bool JackPlayback::reset()
     std::for_each(mPort.begin(), mPort.end(), unregister_port);
     mPort.fill(nullptr);
 
-    mRTMixing = GetConfigValueBool(mDevice->DeviceName, "jack", "rt-mix", true);
+    mRTMixing = GetConfigValueBool(mDevice->mDeviceName, "jack", "rt-mix", true);
     jack_set_process_callback(mClient,
         mRTMixing ? &JackPlayback::processRtC : &JackPlayback::processC, this);
 
@@ -538,8 +538,9 @@ bool JackPlayback::reset()
     }
     else
     {
-        const std::string_view devname{mDevice->DeviceName};
-        uint bufsize{ConfigValueUInt(devname, "jack", "buffer-size").value_or(mDevice->UpdateSize)};
+        const auto devname = std::string_view{mDevice->mDeviceName};
+        auto bufsize = ConfigValueUInt(devname, "jack", "buffer-size")
+            .value_or(mDevice->UpdateSize);
         bufsize = std::max(NextPowerOf2(bufsize), mDevice->UpdateSize);
         mDevice->BufferSize = bufsize + mDevice->UpdateSize;
     }
@@ -588,7 +589,7 @@ void JackPlayback::start()
     if(jack_activate(mClient))
         throw al::backend_exception{al::backend_error::DeviceError, "Failed to activate client"};
 
-    const std::string_view devname{mDevice->DeviceName};
+    const auto devname = std::string_view{mDevice->mDeviceName};
     if(ConfigValueBool(devname, "jack", "connect-ports").value_or(true))
     {
         JackPortsPtr pnames{jack_get_ports(mClient, mPortPattern.c_str(), JACK_DEFAULT_AUDIO_TYPE,

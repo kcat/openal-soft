@@ -660,7 +660,7 @@ struct PulsePlayback final : public BackendBase {
 
     PulseMainloop mMainloop;
 
-    std::optional<std::string> mDeviceName{std::nullopt};
+    std::optional<std::string> mDeviceId{std::nullopt};
 
     bool mIs51Rear{false};
     pa_buffer_attr mAttr{};
@@ -775,13 +775,13 @@ void PulsePlayback::sinkNameCallback(pa_context*, const pa_sink_info *info, int 
         mMainloop.signal();
         return;
     }
-    mDevice->DeviceName = info->description;
+    mDeviceName = info->description;
 }
 
 void PulsePlayback::streamMovedCallback(pa_stream *stream) noexcept
 {
-    mDeviceName = pa_stream_get_device_name(stream);
-    TRACE("Stream moved to %s\n", mDeviceName->c_str());
+    mDeviceId = pa_stream_get_device_name(stream);
+    TRACE("Stream moved to %s\n", mDeviceId->c_str());
 }
 
 
@@ -837,8 +837,8 @@ void PulsePlayback::open(std::string_view name)
     pa_stream_set_moved_callback(mStream, move_callback, this);
     mFrameSize = static_cast<uint>(pa_frame_size(pa_stream_get_sample_spec(mStream)));
 
-    if(pulse_name) mDeviceName.emplace(pulse_name);
-    else mDeviceName.reset();
+    if(pulse_name) mDeviceId.emplace(pulse_name);
+    else mDeviceId.reset();
     if(display_name.empty())
     {
         auto name_callback = [](pa_context *context, const pa_sink_info *info, int eol, void *pdata) noexcept
@@ -848,13 +848,13 @@ void PulsePlayback::open(std::string_view name)
         plock.waitForOperation(op);
     }
     else
-        mDevice->DeviceName = display_name;
+        mDeviceName = display_name;
 }
 
 bool PulsePlayback::reset()
 {
     MainloopUniqueLock plock{mMainloop};
-    const auto deviceName = mDeviceName ? mDeviceName->c_str() : nullptr;
+    const auto deviceName = mDeviceId ? mDeviceId->c_str() : nullptr;
 
     if(mStream)
     {
@@ -877,7 +877,7 @@ bool PulsePlayback::reset()
         PA_STREAM_AUTO_TIMING_UPDATE | PA_STREAM_EARLY_REQUESTS};
     if(!GetConfigValueBool({}, "pulse", "allow-moves", true))
         flags |= PA_STREAM_DONT_MOVE;
-    if(GetConfigValueBool(mDevice->DeviceName, "pulse", "adjust-latency", false))
+    if(GetConfigValueBool(mDevice->mDeviceName, "pulse", "adjust-latency", false))
     {
         /* ADJUST_LATENCY can't be specified with EARLY_REQUESTS, for some
          * reason. So if the user wants to adjust the overall device latency,
@@ -886,7 +886,7 @@ bool PulsePlayback::reset()
         flags &= ~PA_STREAM_EARLY_REQUESTS;
         flags |= PA_STREAM_ADJUST_LATENCY;
     }
-    if(GetConfigValueBool(mDevice->DeviceName, "pulse", "fix-rate", false)
+    if(GetConfigValueBool(mDevice->mDeviceName, "pulse", "fix-rate", false)
         || !mDevice->Flags.test(FrequencyRequest))
         flags |= PA_STREAM_FIX_RATE;
 
@@ -1090,7 +1090,7 @@ struct PulseCapture final : public BackendBase {
 
     PulseMainloop mMainloop;
 
-    std::optional<std::string> mDeviceName{std::nullopt};
+    std::optional<std::string> mDeviceId{std::nullopt};
 
     al::span<const std::byte> mCapBuffer;
     size_t mHoleLength{0};
@@ -1126,13 +1126,13 @@ void PulseCapture::sourceNameCallback(pa_context*, const pa_source_info *info, i
         mMainloop.signal();
         return;
     }
-    mDevice->DeviceName = info->description;
+    mDeviceName = info->description;
 }
 
 void PulseCapture::streamMovedCallback(pa_stream *stream) noexcept
 {
-    mDeviceName = pa_stream_get_device_name(stream);
-    TRACE("Stream moved to %s\n", mDeviceName->c_str());
+    mDeviceId = pa_stream_get_device_name(stream);
+    TRACE("Stream moved to %s\n", mDeviceId->c_str());
 }
 
 
@@ -1160,7 +1160,7 @@ void PulseCapture::open(std::string_view name)
                 "Device name \"%.*s\" not found", al::sizei(name), name.data()};
 
         pulse_name = iter->device_name.c_str();
-        mDevice->DeviceName = iter->name;
+        mDeviceName = iter->name;
     }
 
     MainloopUniqueLock plock{mMainloop};
@@ -1234,9 +1234,9 @@ void PulseCapture::open(std::string_view name)
     { return static_cast<PulseCapture*>(pdata)->streamStateCallback(stream); };
     pa_stream_set_state_callback(mStream, state_callback, this);
 
-    if(pulse_name) mDeviceName.emplace(pulse_name);
-    else mDeviceName.reset();
-    if(mDevice->DeviceName.empty())
+    if(pulse_name) mDeviceId.emplace(pulse_name);
+    else mDeviceId.reset();
+    if(mDeviceName.empty())
     {
         constexpr auto name_callback = [](pa_context *context, const pa_source_info *info, int eol,
             void *pdata) noexcept

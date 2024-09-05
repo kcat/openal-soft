@@ -39,7 +39,7 @@ struct LoopbackBackend final : public BackendBase {
 
 void LoopbackBackend::open(std::string_view name)
 {
-    mDevice->DeviceName = name;
+    mDeviceName = name;
 }
 
 bool LoopbackBackend::reset()

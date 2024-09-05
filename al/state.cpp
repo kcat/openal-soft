@@ -40,6 +40,7 @@
 #include "al/listener.h"
 #include "alc/alu.h"
 #include "alc/context.h"
+#include "alc/device.h"
 #include "alc/inprogext.h"
 #include "alnumeric.h"
 #include "atomic.h"

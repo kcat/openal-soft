@@ -2963,11 +2963,20 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName) noexcep
         return device->configValue<std::string>("game_compat", optname);
     };
     if(auto overrideopt = checkopt("__ALSOFT_VENDOR_OVERRIDE", "vendor-override"sv))
-        device->mVendorOverride = *overrideopt;
+    {
+        device->mVendorOverride = std::move(*overrideopt);
+        TRACE("Overriding vendor string: \"%s\"\n", device->mVendorOverride.c_str());
+    }
     if(auto overrideopt = checkopt("__ALSOFT_VERSION_OVERRIDE", "version-override"sv))
-        device->mVersionOverride = *overrideopt;
+    {
+        device->mVersionOverride = std::move(*overrideopt);
+        TRACE("Overriding version string: \"%s\"\n", device->mVersionOverride.c_str());
+    }
     if(auto overrideopt = checkopt("__ALSOFT_RENDERER_OVERRIDE", "renderer-override"sv))
-        device->mRendererOverride = *overrideopt;
+    {
+        device->mRendererOverride = std::move(*overrideopt);
+        TRACE("Overriding renderer string: \"%s\"\n", device->mRendererOverride.c_str());
+    }
 
     {
         std::lock_guard<std::recursive_mutex> listlock{ListLock};
@@ -3520,20 +3529,29 @@ FORCE_ALIGN ALCboolean ALC_APIENTRY alcReopenDeviceSOFT(ALCdevice *device,
     dev->mDeviceState = DeviceState::Unprepared;
     TRACE("Reopened device %p, \"%s\"\n", voidp{dev.get()}, dev->DeviceName.c_str());
 
-    std::string{}.swap(device->mVendorOverride);
-    std::string{}.swap(device->mVersionOverride);
-    std::string{}.swap(device->mRendererOverride);
-    auto checkopt = [&device](const char *envname, const std::string_view optname)
+    std::string{}.swap(dev->mVendorOverride);
+    std::string{}.swap(dev->mVersionOverride);
+    std::string{}.swap(dev->mRendererOverride);
+    auto checkopt = [&dev](const char *envname, const std::string_view optname)
     {
         if(auto optval = al::getenv(envname)) return optval;
-        return device->configValue<std::string>("game_compat", optname);
+        return dev->configValue<std::string>("game_compat", optname);
     };
     if(auto overrideopt = checkopt("__ALSOFT_VENDOR_OVERRIDE", "vendor-override"sv))
-        device->mVendorOverride = *overrideopt;
+    {
+        dev->mVendorOverride = std::move(*overrideopt);
+        TRACE("Overriding vendor string: \"%s\"\n", dev->mVendorOverride.c_str());
+    }
     if(auto overrideopt = checkopt("__ALSOFT_VERSION_OVERRIDE", "version-override"sv))
-        device->mVersionOverride = *overrideopt;
+    {
+        dev->mVersionOverride = std::move(*overrideopt);
+        TRACE("Overriding version string: \"%s\"\n", dev->mVersionOverride.c_str());
+    }
     if(auto overrideopt = checkopt("__ALSOFT_RENDERER_OVERRIDE", "renderer-override"sv))
-        device->mRendererOverride = *overrideopt;
+    {
+        dev->mRendererOverride = std::move(*overrideopt);
+        TRACE("Overriding renderer string: \"%s\"\n", dev->mRendererOverride.c_str());
+    }
 
     /* Always return true even if resetting fails. It shouldn't fail, but this
      * is primarily to avoid confusion by the app seeing the function return

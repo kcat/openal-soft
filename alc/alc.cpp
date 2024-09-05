@@ -2957,6 +2957,18 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName) noexcep
         return nullptr;
     }
 
+    auto checkopt = [&device](const char *envname, const std::string_view optname)
+    {
+        if(auto optval = al::getenv(envname)) return optval;
+        return device->configValue<std::string>("game_compat", optname);
+    };
+    if(auto overrideopt = checkopt("__ALSOFT_VENDOR_OVERRIDE", "vendor-override"sv))
+        device->mVendorOverride = *overrideopt;
+    if(auto overrideopt = checkopt("__ALSOFT_VERSION_OVERRIDE", "version-override"sv))
+        device->mVersionOverride = *overrideopt;
+    if(auto overrideopt = checkopt("__ALSOFT_RENDERER_OVERRIDE", "renderer-override"sv))
+        device->mRendererOverride = *overrideopt;
+
     {
         std::lock_guard<std::recursive_mutex> listlock{ListLock};
         auto iter = std::lower_bound(DeviceList.cbegin(), DeviceList.cend(), device.get());
@@ -3507,6 +3519,21 @@ FORCE_ALIGN ALCboolean ALC_APIENTRY alcReopenDeviceSOFT(ALCdevice *device,
     dev->Backend = std::move(newbackend);
     dev->mDeviceState = DeviceState::Unprepared;
     TRACE("Reopened device %p, \"%s\"\n", voidp{dev.get()}, dev->DeviceName.c_str());
+
+    std::string{}.swap(device->mVendorOverride);
+    std::string{}.swap(device->mVersionOverride);
+    std::string{}.swap(device->mRendererOverride);
+    auto checkopt = [&device](const char *envname, const std::string_view optname)
+    {
+        if(auto optval = al::getenv(envname)) return optval;
+        return device->configValue<std::string>("game_compat", optname);
+    };
+    if(auto overrideopt = checkopt("__ALSOFT_VENDOR_OVERRIDE", "vendor-override"sv))
+        device->mVendorOverride = *overrideopt;
+    if(auto overrideopt = checkopt("__ALSOFT_VERSION_OVERRIDE", "version-override"sv))
+        device->mVersionOverride = *overrideopt;
+    if(auto overrideopt = checkopt("__ALSOFT_RENDERER_OVERRIDE", "renderer-override"sv))
+        device->mRendererOverride = *overrideopt;
 
     /* Always return true even if resetting fails. It shouldn't fail, but this
      * is primarily to avoid confusion by the app seeing the function return

@@ -472,9 +472,18 @@ FORCE_ALIGN const ALchar* AL_APIENTRY alGetStringDirect(ALCcontext *context, ALe
 {
     switch(pname)
     {
-    case AL_VENDOR: return GetVendorString();
-    case AL_VERSION: return GetVersionString();
-    case AL_RENDERER: return GetRendererString();
+    case AL_VENDOR:
+        if(auto device = context->mALDevice.get(); !device->mVendorOverride.empty())
+            return device->mVendorOverride.c_str();
+        return GetVendorString();
+    case AL_VERSION:
+        if(auto device = context->mALDevice.get(); !device->mVersionOverride.empty())
+            return device->mVersionOverride.c_str();
+        return GetVersionString();
+    case AL_RENDERER:
+        if(auto device = context->mALDevice.get(); !device->mRendererOverride.empty())
+            return device->mRendererOverride.c_str();
+        return GetRendererString();
     case AL_EXTENSIONS: return context->mExtensionsString.c_str();
     case AL_NO_ERROR: return GetNoErrorString();
     case AL_INVALID_NAME: return GetInvalidNameString();

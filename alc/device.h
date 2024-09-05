@@ -89,6 +89,10 @@ struct ALCdevice : public al::intrusive_ref<ALCdevice>, DeviceBase {
     std::unordered_map<ALuint,std::string> mEffectNames;
     std::unordered_map<ALuint,std::string> mFilterNames;
 
+    std::string mVendorOverride;
+    std::string mVersionOverride;
+    std::string mRendererOverride;
+
     ALCdevice(DeviceType type);
     ~ALCdevice();
 

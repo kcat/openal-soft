@@ -232,7 +232,11 @@ public:
 
     void eaxSetLastError() noexcept;
 
-    EaxFxSlotIndex eaxGetPrimaryFxSlotIndex() const noexcept
+    [[nodiscard]]
+    auto eaxGetDistanceFactor() const noexcept -> float { return mEax.flDistanceFactor; }
+
+    [[nodiscard]]
+    auto eaxGetPrimaryFxSlotIndex() const noexcept -> EaxFxSlotIndex
     { return mEaxPrimaryFxSlotIndex; }
 
     const ALeffectslot& eaxGetFxSlot(EaxFxSlotIndexValue fx_slot_index) const

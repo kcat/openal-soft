@@ -212,11 +212,19 @@ void ALCcontext::init()
         mExtensionsString = std::move(extensions);
     }
 
+#ifdef ALSOFT_EAX
+    eax_set_defaults();
+#endif
+
     mParams.Position = alu::Vector{0.0f, 0.0f, 0.0f, 1.0f};
     mParams.Matrix = alu::Matrix::Identity();
     mParams.Velocity = alu::Vector{};
     mParams.Gain = mListener.Gain;
-    mParams.MetersPerUnit = mListener.mMetersPerUnit;
+    mParams.MetersPerUnit = mListener.mMetersPerUnit
+#ifdef ALSOFT_EAX
+        * eaxGetDistanceFactor()
+#endif
+        ;
     mParams.AirAbsorptionGainHF = mAirAbsorptionGainHF;
     mParams.DopplerFactor = mDopplerFactor;
     mParams.SpeedOfSound = mSpeedOfSound * mDopplerVelocity;
@@ -746,10 +754,7 @@ void ALCcontext::eax_context_commit_primary_fx_slot_id()
 
 void ALCcontext::eax_context_commit_distance_factor()
 {
-    if(mListener.mMetersPerUnit == mEax.flDistanceFactor)
-        return;
-
-    mListener.mMetersPerUnit = mEax.flDistanceFactor;
+    /* mEax.flDistanceFactor was changed, so the context props are dirty. */
     mPropsDirty = true;
 }
 

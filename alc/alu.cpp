@@ -1687,11 +1687,24 @@ void CalcAttnSourceParams(Voice *voice, const VoiceProps *props, const ContextBa
     /* Distance-based air absorption and initial send decay. */
     if(Distance > props->RefDistance) LIKELY
     {
-        const float distance_base{(Distance-props->RefDistance) * props->RolloffFactor};
-        const float distance_meters{distance_base * context->mParams.MetersPerUnit};
-        const float dryabsorb{distance_meters * props->AirAbsorptionFactor};
-        if(dryabsorb > std::numeric_limits<float>::epsilon())
-            DryGain.HF *= std::pow(context->mParams.AirAbsorptionGainHF, dryabsorb);
+        /* FIXME: In keeping with EAX, the base air absorption gain should be
+         * taken from the reverb property in the "primary fx slot" when it has
+         * a reverb effect and the environment flag set, and be applied to the
+         * direct path and all environment sends, rather than each path using
+         * the air absorption gain associated with the given slot's effect. At
+         * this point in the mixer, and even in EFX itself, there's no concept
+         * of a "primary fx slot" so it's unclear which effect slot should be
+         * checked.
+         *
+         * The HF reference is also intended to be handled the same way, but
+         * again, there's no concept of a "primary fx slot" here and no way to
+         * know which effect slot to look at for the reference frequency.
+         */
+        const auto distance_units = float{(Distance-props->RefDistance) * props->RolloffFactor};
+        const auto distance_meters = float{distance_units * context->mParams.MetersPerUnit};
+        const auto absorb = float{distance_meters * props->AirAbsorptionFactor};
+        if(absorb > std::numeric_limits<float>::epsilon())
+            DryGain.HF *= std::pow(context->mParams.AirAbsorptionGainHF, absorb);
 
         /* If the source's Auxiliary Send Filter Gain Auto is off, no extra
          * adjustment is applied to the send gains.
@@ -1701,8 +1714,8 @@ void CalcAttnSourceParams(Voice *voice, const VoiceProps *props, const ContextBa
             if(!SendSlots[i] || !(SendSlots[i]->DecayTime > 0.0f))
                 continue;
 
-            if(distance_meters > std::numeric_limits<float>::epsilon())
-                WetGain[i].HF *= std::pow(SendSlots[i]->AirAbsorptionGainHF, distance_meters);
+            if(absorb > std::numeric_limits<float>::epsilon())
+                WetGain[i].HF *= std::pow(SendSlots[i]->AirAbsorptionGainHF, absorb);
 
             /* If this effect slot's Auxiliary Send Auto is off, don't apply
              * the automatic initial reverb decay.
@@ -1726,7 +1739,7 @@ void CalcAttnSourceParams(Voice *voice, const VoiceProps *props, const ContextBa
              * with the reverb and source rolloff parameters.
              */
             const float baseAttn{DryAttnBase};
-            const float fact{distance_base / DecayDistance};
+            const float fact{distance_meters / DecayDistance};
             const float gain{std::pow(ReverbDecayGain, fact)*(1.0f-baseAttn) + baseAttn};
             WetGain[i].Base *= gain;
         }

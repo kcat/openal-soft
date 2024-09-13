@@ -15,13 +15,8 @@ public:
 
 } // namespace
 
-EaxCall::EaxCall(
-    EaxCallType type,
-    const GUID& property_set_guid,
-    ALuint property_id,
-    ALuint property_source_id,
-    ALvoid* property_buffer,
-    ALuint property_size)
+EaxCall::EaxCall(EaxCallType type, const GUID &property_set_guid, ALuint property_id,
+    ALuint property_source_id, ALvoid *property_buffer, ALuint property_size)
     : mCallType{type}, mIsDeferred{(property_id & deferred_flag) != 0}
     , mPropertyId{property_id & ~deferred_flag}, mPropertySourceId{property_source_id}
     , mPropertyBuffer{property_buffer}, mPropertyBufferSize{property_size}
@@ -145,23 +140,34 @@ EaxCall::EaxCall(
         fail("Unsupported property set id.");
     }
 
-    switch(mPropertyId)
+    if(mPropertySetId == EaxCallPropertySetId::context)
     {
-    case EAXCONTEXT_LASTERROR:
-    case EAXCONTEXT_SPEAKERCONFIG:
-    case EAXCONTEXT_EAXSESSION:
-    case EAXFXSLOT_NONE:
-    case EAXFXSLOT_ALLPARAMETERS:
-    case EAXFXSLOT_LOADEFFECT:
-    case EAXFXSLOT_VOLUME:
-    case EAXFXSLOT_LOCK:
-    case EAXFXSLOT_FLAGS:
-    case EAXFXSLOT_OCCLUSION:
-    case EAXFXSLOT_OCCLUSIONLFRATIO:
-        // EAX allow to set "defer" flag on immediate-only properties.
-        // If we don't clear our flag then "applyAllUpdates" in EAX context won't be called.
-        mIsDeferred = false;
-        break;
+        switch(mPropertyId)
+        {
+        case EAXCONTEXT_LASTERROR:
+        case EAXCONTEXT_SPEAKERCONFIG:
+        case EAXCONTEXT_EAXSESSION:
+            // EAX allow to set "defer" flag on immediate-only properties.
+            // If we don't clear our flag then "applyAllUpdates" in EAX context won't be called.
+            mIsDeferred = false;
+            break;
+        }
+    }
+    else if(mPropertySetId == EaxCallPropertySetId::fx_slot)
+    {
+        switch(mPropertyId)
+        {
+        case EAXFXSLOT_NONE:
+        case EAXFXSLOT_ALLPARAMETERS:
+        case EAXFXSLOT_LOADEFFECT:
+        case EAXFXSLOT_VOLUME:
+        case EAXFXSLOT_LOCK:
+        case EAXFXSLOT_FLAGS:
+        case EAXFXSLOT_OCCLUSION:
+        case EAXFXSLOT_OCCLUSIONLFRATIO:
+            mIsDeferred = false;
+            break;
+        }
     }
 
     if(!mIsDeferred)

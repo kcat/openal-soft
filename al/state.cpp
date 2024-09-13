@@ -615,16 +615,15 @@ void UpdateContextProps(ALCcontext *context)
     props->OrientAt = listener.OrientAt;
     props->OrientUp = listener.OrientUp;
     props->Gain = listener.Gain;
-    props->MetersPerUnit = listener.mMetersPerUnit
-#ifdef ALSOFT_EAX
-        * context->eaxGetDistanceFactor()
-#endif
-        ;
+    props->MetersPerUnit = listener.mMetersPerUnit;
 
     props->AirAbsorptionGainHF = context->mAirAbsorptionGainHF;
     props->DopplerFactor = context->mDopplerFactor;
     props->DopplerVelocity = context->mDopplerVelocity;
     props->SpeedOfSound = context->mSpeedOfSound;
+#ifdef ALSOFT_EAX
+    props->DistanceFactor = context->eaxGetDistanceFactor();
+#endif
 
     props->SourceDistanceModel = context->mSourceDistanceModel;
     props->mDistanceModel = context->mDistanceModel;

@@ -434,11 +434,19 @@ bool CalcContextParams(ContextBase *ctx)
     ctx->mParams.Velocity = rot * vel;
 
     ctx->mParams.Gain = props->Gain * ctx->mGainBoost;
-    ctx->mParams.MetersPerUnit = props->MetersPerUnit;
+    ctx->mParams.MetersPerUnit = props->MetersPerUnit
+#ifdef ALSOFT_EAX
+        * props->DistanceFactor
+#endif
+        ;
     ctx->mParams.AirAbsorptionGainHF = props->AirAbsorptionGainHF;
 
     ctx->mParams.DopplerFactor = props->DopplerFactor;
-    ctx->mParams.SpeedOfSound = props->SpeedOfSound * props->DopplerVelocity;
+    ctx->mParams.SpeedOfSound = props->SpeedOfSound * props->DopplerVelocity
+#ifdef ALSOFT_EAX
+        / props->DistanceFactor
+#endif
+        ;
 
     ctx->mParams.SourceDistanceModel = props->SourceDistanceModel;
     ctx->mParams.mDistanceModel = props->mDistanceModel;

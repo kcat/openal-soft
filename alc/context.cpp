@@ -227,7 +227,11 @@ void ALCcontext::init()
         ;
     mParams.AirAbsorptionGainHF = mAirAbsorptionGainHF;
     mParams.DopplerFactor = mDopplerFactor;
-    mParams.SpeedOfSound = mSpeedOfSound * mDopplerVelocity;
+    mParams.SpeedOfSound = mSpeedOfSound * mDopplerVelocity
+#ifdef ALSOFT_EAX
+        / eaxGetDistanceFactor()
+#endif
+        ;
     mParams.SourceDistanceModel = mSourceDistanceModel;
     mParams.mDistanceModel = mDistanceModel;
 

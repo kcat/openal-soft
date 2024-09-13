@@ -9,7 +9,6 @@
 #include <thread>
 #include <vector>
 
-#include "almalloc.h"
 #include "alsem.h"
 #include "alspan.h"
 #include "async_event.h"
@@ -53,6 +52,9 @@ struct ContextProps {
     float DopplerFactor;
     float DopplerVelocity;
     float SpeedOfSound;
+#ifdef ALSOFT_EAX
+    float DistanceFactor;
+#endif
     bool SourceDistanceModel;
     DistanceModel mDistanceModel;
 

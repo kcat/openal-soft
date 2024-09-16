@@ -470,7 +470,15 @@ bool CalcEffectSlotParams(EffectSlot *slot, EffectSlot **sorted_slots, ContextBa
     slot->Target = props->Target;
     slot->EffectType = props->Type;
     slot->mEffectProps = props->Props;
-    if(auto *reverbprops = std::get_if<ReverbProps>(&props->Props))
+    /* If this effect slot's Auxiliary Send Auto is off, don't apply the
+     * automatic send adjustments based on source distance.
+     *
+     * NOTE: Generic Software applies the adjustments regardless of this
+     * setting. It doesn't seem to use the flag for anything, only the source's
+     * send filter gain auto flag affects this.
+     */
+    if(auto *reverbprops = std::get_if<ReverbProps>(&props->Props);
+        reverbprops && slot->AuxSendAuto)
     {
         slot->RoomRolloff = reverbprops->RoomRolloffFactor;
         slot->DecayTime = reverbprops->DecayTime;
@@ -1724,16 +1732,6 @@ void CalcAttnSourceParams(Voice *voice, const VoiceProps *props, const ContextBa
 
             if(absorb > std::numeric_limits<float>::epsilon())
                 WetGain[i].HF *= std::pow(SendSlots[i]->AirAbsorptionGainHF, absorb);
-
-            /* If this effect slot's Auxiliary Send Auto is off, don't apply
-             * the automatic initial reverb decay.
-             *
-             * NOTE: Generic Software applies the initial decay regardless of
-             * this setting. It doesn't seem to use it for anything, only the
-             * source's send filter gain auto flag affects this.
-             */
-            if(!SendSlots[i]->AuxSendAuto)
-                continue;
 
             const float DecayDistance{SendSlots[i]->DecayTime * SpeedOfSoundMetersPerSec};
 

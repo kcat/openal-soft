@@ -4047,10 +4047,7 @@ EaxAlLowPassParam ALsource::eax_create_direct_filter_param() const noexcept
 {
     const auto &source = mEax.source;
 
-    auto gain_mb = (static_cast<float>(source.lObstruction) * source.flObstructionLFRatio)
-        + eax_calculate_dst_occlusion_mb(source.lOcclusion, source.flOcclusionDirectRatio,
-            source.flOcclusionLFRatio);
-
+    auto gain_mb = static_cast<float>(source.lObstruction) * source.flObstructionLFRatio;
     auto gainhf_mb = static_cast<float>(source.lObstruction);
 
     for(size_t i{0};i < EAX_MAX_FXSLOTS;++i)

@@ -246,8 +246,8 @@ struct SampleReader<Quality::s24> {
     [[nodiscard]] static
     auto read(const src_t &in) noexcept -> dst_t
     {
-        return static_cast<int32_t>((uint32_t{in[0]}<<24) | (uint32_t{in[1]}<<16)
-            | (uint32_t{in[2]}<<8));
+        return static_cast<int32_t>((uint32_t{in[0]}<<8) | (uint32_t{in[1]}<<16)
+            | (uint32_t{in[2]}<<24));
     }
 };
 

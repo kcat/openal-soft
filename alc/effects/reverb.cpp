@@ -1120,7 +1120,8 @@ void ReverbPipeline::update3DPanning(const al::span<const float,3> ReflectionsPa
     const auto earlymat = GetTransformFromVector(ReflectionsPan);
     const auto latemat = GetTransformFromVector(LateReverbPan);
 
-    const auto [earlycoeffs, latecoeffs] = [&]{
+    const auto get_coeffs = [&]
+    {
         if(doUpmix)
         {
             /* When upsampling, combine the early and late transforms with the
@@ -1176,7 +1177,8 @@ void ReverbPipeline::update3DPanning(const al::span<const float,3> ReflectionsPa
             return res;
         };
         return std::array{mult_matrix(EarlyA2B, earlymat), mult_matrix(LateA2B, latemat)};
-    }();
+    };
+    const auto [earlycoeffs, latecoeffs] = get_coeffs();
 
     auto earlygains = mEarly.Gains.begin();
     for(auto &coeffs : earlycoeffs)

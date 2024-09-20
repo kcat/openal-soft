@@ -877,16 +877,11 @@ auto main(al::span<std::string_view> args) -> int
     }
     args = args.subspan(1);
 
-    /* A simple RAII container for OpenAL startup and shutdown. */
-    struct AudioManager {
-        AudioManager(al::span<std::string_view> &args_)
-        {
-            if(InitAL(args_) != 0)
-                throw std::runtime_error{"Failed to initialize OpenAL"};
-        }
-        ~AudioManager() { CloseAL(); }
-    };
-    AudioManager almgr{args};
+    if(InitAL(args) != 0)
+        throw std::runtime_error{"Failed to initialize OpenAL"};
+    /* A simple RAII container for automating OpenAL shutdown. */
+    struct AudioManager { ~AudioManager() { CloseAL(); } };
+    AudioManager almgr;
 
     std::for_each(args.begin(), args.end(), PlayLAF);
 

@@ -486,16 +486,6 @@ struct StreamPlayer {
 
 int main(al::span<std::string_view> args)
 {
-    /* A simple RAII container for OpenAL startup and shutdown. */
-    struct AudioManager {
-        AudioManager(al::span<std::string_view> &args_)
-        {
-            if(InitAL(args_) != 0)
-                throw std::runtime_error{"Failed to initialize OpenAL"};
-        }
-        ~AudioManager() { CloseAL(); }
-    };
-
     /* Print out usage if no arguments were specified */
     if(args.size() < 2)
     {
@@ -503,9 +493,13 @@ int main(al::span<std::string_view> args)
             args[0].data());
         return 1;
     }
-
     args = args.subspan(1);
-    AudioManager almgr{args};
+
+    if(InitAL(args) != 0)
+        throw std::runtime_error{"Failed to initialize OpenAL"};
+    /* A simple RAII container for automating OpenAL shutdown. */
+    struct AudioManager { ~AudioManager() { CloseAL(); } };
+    AudioManager almgr;
 
     if(!alIsExtensionPresent("AL_SOFT_callback_buffer"))
     {

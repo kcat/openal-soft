@@ -1148,7 +1148,7 @@ void ReverbPipeline::update3DPanning(const al::span<const float,3> ReflectionsPa
 
                 return res;
             };
-            return std::make_pair(mult_matrix(earlymat), mult_matrix(latemat));
+            return std::array{mult_matrix(earlymat), mult_matrix(latemat)};
         }
 
         /* When not upsampling, combine the early and late A-to-B-Format
@@ -1175,7 +1175,7 @@ void ReverbPipeline::update3DPanning(const al::span<const float,3> ReflectionsPa
 
             return res;
         };
-        return std::make_pair(mult_matrix(EarlyA2B, earlymat), mult_matrix(LateA2B, latemat));
+        return std::array{mult_matrix(EarlyA2B, earlymat), mult_matrix(LateA2B, latemat)};
     }();
 
     auto earlygains = mEarly.Gains.begin();

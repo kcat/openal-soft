@@ -470,31 +470,27 @@ bool CalcEffectSlotParams(EffectSlot *slot, EffectSlot **sorted_slots, ContextBa
     slot->Target = props->Target;
     slot->EffectType = props->Type;
     slot->mEffectProps = props->Props;
-    /* If this effect slot's Auxiliary Send Auto is off, don't apply the
-     * automatic send adjustments based on source distance.
-     *
-     * NOTE: Generic Software applies the adjustments regardless of this
-     * setting. It doesn't seem to use the flag for anything, only the source's
-     * send filter gain auto flag affects this.
-     */
-    if(auto *reverbprops = std::get_if<ReverbProps>(&props->Props);
-        reverbprops && slot->AuxSendAuto)
+
+    slot->RoomRolloff = 0.0f;
+    slot->DecayTime = 0.0f;
+    slot->DecayLFRatio = 0.0f;
+    slot->DecayHFRatio = 0.0f;
+    slot->DecayHFLimit = false;
+    slot->AirAbsorptionGainHF = 1.0f;
+    if(auto *reverbprops = std::get_if<ReverbProps>(&props->Props))
     {
         slot->RoomRolloff = reverbprops->RoomRolloffFactor;
-        slot->DecayTime = reverbprops->DecayTime;
-        slot->DecayLFRatio = reverbprops->DecayLFRatio;
-        slot->DecayHFRatio = reverbprops->DecayHFRatio;
-        slot->DecayHFLimit = reverbprops->DecayHFLimit;
         slot->AirAbsorptionGainHF = reverbprops->AirAbsorptionGainHF;
-    }
-    else
-    {
-        slot->RoomRolloff = 0.0f;
-        slot->DecayTime = 0.0f;
-        slot->DecayLFRatio = 0.0f;
-        slot->DecayHFRatio = 0.0f;
-        slot->DecayHFLimit = false;
-        slot->AirAbsorptionGainHF = 1.0f;
+        /* If this effect slot's Auxiliary Send Auto is off, don't apply the
+         * automatic send adjustments based on source distance.
+         */
+        if(slot->AuxSendAuto)
+        {
+            slot->DecayTime = reverbprops->DecayTime;
+            slot->DecayLFRatio = reverbprops->DecayLFRatio;
+            slot->DecayHFRatio = reverbprops->DecayHFRatio;
+            slot->DecayHFLimit = reverbprops->DecayHFLimit;
+        }
     }
 
     EffectState *state{props->State.release()};
@@ -1525,33 +1521,24 @@ void CalcAttnSourceParams(Voice *voice, const VoiceProps *props, const ContextBa
     voice->mDirect.Buffer = Device->Dry.Buffer;
     std::array<EffectSlot*,MaxSendCount> SendSlots{};
     std::array<float,MaxSendCount> RoomRolloff{};
-    std::bitset<MaxSendCount> UseDryAttnForRoom{0};
     for(uint i{0};i < NumSends;i++)
     {
         SendSlots[i] = props->Send[i].Slot;
         if(!SendSlots[i] || SendSlots[i]->EffectType == EffectSlotType::None)
+        {
             SendSlots[i] = nullptr;
-        else if(SendSlots[i]->AuxSendAuto)
+            voice->mSend[i].Buffer = {};
+        }
+        else
         {
             /* NOTE: Contrary to the EFX docs, the effect's room rolloff factor
              * applies to the selected distance model along with the source's
              * room rolloff factor, not necessarily the inverse distance model.
-             *
-             * Generic Software also applies these rolloff factors regardless
-             * of any setting. It doesn't seem to use the effect slot's send
-             * auto for anything, though as far as I understand, it's supposed
-             * to control whether the send gets the same gain/gainhf as the
-             * direct path (excluding the filter).
              */
             RoomRolloff[i] = props->RoomRolloffFactor + SendSlots[i]->RoomRolloff;
-        }
-        else
-            UseDryAttnForRoom.set(i);
 
-        if(!SendSlots[i])
-            voice->mSend[i].Buffer = {};
-        else
             voice->mSend[i].Buffer = SendSlots[i]->Wet.Buffer;
+        }
     }
 
     /* Transform source to listener space (convert to head relative) */
@@ -1686,17 +1673,10 @@ void CalcAttnSourceParams(Voice *voice, const VoiceProps *props, const ContextBa
     std::array<GainTriplet,MaxSendCount> WetGain{};
     for(uint i{0};i < NumSends;i++)
     {
-        WetGainBase[i] = std::clamp(WetGainBase[i]*WetCone, props->MinGain, props->MaxGain) *
+        const auto gain = std::clamp(WetGainBase[i]*WetCone, props->MinGain, props->MaxGain) *
             context->mParams.Gain;
-        /* If this effect slot's Auxiliary Send Auto is off, then use the dry
-         * path distance and cone attenuation, otherwise use the wet (room)
-         * path distance and cone attenuation. The send filter is used instead
-         * of the direct filter, regardless.
-         */
-        const bool use_room{!UseDryAttnForRoom.test(i)};
-        const float gain{use_room ? WetGainBase[i] : DryGainBase};
         WetGain[i].Base = std::min(gain * props->Send[i].Gain, GainMixMax);
-        WetGain[i].HF = (use_room ? WetConeHF : ConeHF) * props->Send[i].GainHF;
+        WetGain[i].HF = WetConeHF * props->Send[i].GainHF;
         WetGain[i].LF = props->Send[i].GainLF;
     }
 
@@ -1730,7 +1710,8 @@ void CalcAttnSourceParams(Voice *voice, const VoiceProps *props, const ContextBa
             if(!SendSlots[i] || !(SendSlots[i]->DecayTime > 0.0f))
                 continue;
 
-            if(absorb > std::numeric_limits<float>::epsilon())
+            if(SendSlots[i]->AirAbsorptionGainHF < 1.0f
+                && absorb > std::numeric_limits<float>::epsilon())
                 WetGain[i].HF *= std::pow(SendSlots[i]->AirAbsorptionGainHF, absorb);
 
             const float DecayDistance{SendSlots[i]->DecayTime * SpeedOfSoundMetersPerSec};

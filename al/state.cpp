@@ -54,8 +54,6 @@
 #include "strutils.h"
 
 #ifdef ALSOFT_EAX
-#include "alc/device.h"
-
 #include "eax/globals.h"
 #include "eax/x_ram.h"
 #endif // ALSOFT_EAX

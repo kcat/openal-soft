@@ -37,12 +37,14 @@ inline bool operator!=(const GUID& lhs, const GUID& rhs) noexcept
 { return !(lhs == rhs); }
 #endif // _WIN32
 
+/* TODO: This seems to create very inefficient comparisons. C++20 should allow
+ * creating default comparison operators, avoiding the need for this.
+ */
 #define DECL_EQOP(T, ...) \
 [[nodiscard]] auto get_members() const noexcept { return std::forward_as_tuple(__VA_ARGS__); } \
 [[nodiscard]] friend bool operator==(const T &lhs, const T &rhs) noexcept \
-{ return lhs.get_members() == rhs.get_members();  } \
-[[nodiscard]] friend bool operator!=(const T &lhs, const T &rhs) noexcept \
-{ return !(lhs == rhs);  }
+{ return lhs.get_members() == rhs.get_members(); } \
+[[nodiscard]] friend bool operator!=(const T &lhs, const T &rhs) noexcept { return !(lhs == rhs); }
 
 extern const GUID DSPROPSETID_EAX_ReverbProperties;
 
@@ -281,13 +283,11 @@ struct EAXVECTOR {
     float x;
     float y;
     float z;
-    [[nodiscard]]
-    auto get_members() const noexcept { return std::forward_as_tuple(x, y, z); }
-}; // EAXVECTOR
+};
 
 [[nodiscard]]
 inline bool operator==(const EAXVECTOR& lhs, const EAXVECTOR& rhs) noexcept
-{ return lhs.get_members() == rhs.get_members(); }
+{ return lhs.x == rhs.x && lhs.y == rhs.y && lhs.z == rhs.z; }
 
 [[nodiscard]]
 inline bool operator!=(const EAXVECTOR& lhs, const EAXVECTOR& rhs) noexcept

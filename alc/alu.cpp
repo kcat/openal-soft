@@ -1966,30 +1966,33 @@ void ProcessContexts(DeviceBase *device, const uint SamplesToDo)
         nanoseconds{seconds{device->mSamplesDone.load(std::memory_order_relaxed)}}/
         device->Frequency};
 
-    for(ContextBase *ctx : *device->mContexts.load(std::memory_order_acquire))
+    auto proc_context = [SamplesToDo,curtime](ContextBase *ctx)
     {
         const auto auxslotspan = al::span{*ctx->mActiveAuxSlots.load(std::memory_order_acquire)};
         const auto auxslots = auxslotspan.first(auxslotspan.size()>>1);
         const auto sorted_slots = auxslotspan.last(auxslotspan.size()>>1);
-        const al::span<Voice*> voices{ctx->getVoicesSpanAcquired()};
+        const auto voices = ctx->getVoicesSpanAcquired();
 
         /* Process pending property updates for objects on the context. */
         ProcessParamUpdates(ctx, auxslots, sorted_slots, voices);
 
         /* Clear auxiliary effect slot mixing buffers. */
-        for(EffectSlot *slot : auxslots)
+        auto clear_wetbuffers = [](EffectSlot *slot)
         {
-            for(auto &buffer : slot->Wet.Buffer)
-                buffer.fill(0.0f);
-        }
+            auto clear_buffer = [](const FloatBufferSpan buffer)
+            { std::fill(buffer.begin(), buffer.end(), 0.0f); };
+            std::for_each(slot->Wet.Buffer.begin(), slot->Wet.Buffer.end(), clear_buffer);
+        };
+        std::for_each(auxslots.begin(), auxslots.end(), clear_wetbuffers);
 
         /* Process voices that have a playing source. */
-        for(Voice *voice : voices)
+        auto proc_voice = [ctx,curtime,SamplesToDo](Voice *voice)
         {
             const Voice::State vstate{voice->mPlayState.load(std::memory_order_acquire)};
             if(vstate != Voice::Stopped && vstate != Voice::Pending)
                 voice->mix(vstate, ctx, curtime, SamplesToDo);
-        }
+        };
+        std::for_each(voices.begin(), voices.end(), proc_voice);
 
         /* Process effects. */
         if(!auxslots.empty())
@@ -2000,60 +2003,54 @@ void ProcessContexts(DeviceBase *device, const uint SamplesToDo)
              */
             if(!sorted_slots[0])
             {
-                /* First, copy the slots to the sorted list, then partition the
-                 * sorted list so that all slots without a target slot go to
-                 * the end.
+                /* First, copy the slots to the sorted list and partition them,
+                 * so that all slots without a target slot go to the end.
                  */
-                std::copy(auxslots.begin(), auxslots.end(), sorted_slots.begin());
-                auto split_point = std::partition(sorted_slots.begin(), sorted_slots.end(),
-                    [](const EffectSlot *slot) noexcept -> bool
-                    { return slot->Target != nullptr; });
+                auto has_target = [](const EffectSlot *slot) noexcept -> bool
+                { return slot->Target != nullptr; };
+                auto split_point = std::partition_copy(auxslots.rbegin(), auxslots.rend(),
+                    sorted_slots.begin(), sorted_slots.rbegin(), has_target).first;
                 /* There must be at least one slot without a slot target. */
                 assert(split_point != sorted_slots.end());
 
-                /* Simple case: no more than 1 slot has a target slot. Either
-                 * all slots go right to the output, or the remaining one must
-                 * target an already-partitioned slot.
+                /* Starting from the back of the sorted list, continue
+                 * partitioning the front of the list given each target until
+                 * all targets are accounted for. This ensures all slots
+                 * without a target go last, all slots directly targeting those
+                 * last slots go second-to-last, all slots directly targeting
+                 * those second-last slots go third-to-last, etc.
                  */
-                if(split_point - sorted_slots.begin() > 1)
+                auto next_target = sorted_slots.end();
+                while(std::distance(sorted_slots.begin(), split_point) > 1)
                 {
-                    /* At least two slots target other slots. Starting from the
-                     * back of the sorted list, continue partitioning the front
-                     * of the list given each target until all targets are
-                     * accounted for. This ensures all slots without a target
-                     * go last, all slots directly targeting those last slots
-                     * go second-to-last, all slots directly targeting those
-                     * second-last slots go third-to-last, etc.
+                    /* This shouldn't happen, but if there's unsorted slots
+                     * left that don't target any sorted slots, they can't
+                     * contribute to the output, so leave them.
                      */
-                    auto next_target = sorted_slots.end();
-                    do {
-                        /* This shouldn't happen, but if there's unsorted slots
-                         * left that don't target any sorted slots, they can't
-                         * contribute to the output, so leave them.
-                         */
-                        if(next_target == split_point) UNLIKELY
-                            break;
+                    if(next_target == split_point) UNLIKELY
+                        break;
 
-                        --next_target;
-                        split_point = std::partition(sorted_slots.begin(), split_point,
-                            [next_target](const EffectSlot *slot) noexcept -> bool
-                            { return slot->Target != *next_target; });
-                    } while(split_point - sorted_slots.begin() > 1);
+                    --next_target;
+                    auto not_next = [next_target](const EffectSlot *slot) noexcept -> bool
+                    { return slot->Target != *next_target; };
+                    split_point = std::partition(sorted_slots.begin(), split_point, not_next);
                 }
             }
 
-            for(const EffectSlot *slot : sorted_slots)
+            auto proc_slot = [SamplesToDo](const EffectSlot *slot)
             {
                 EffectState *state{slot->mEffectState.get()};
                 state->process(SamplesToDo, slot->Wet.Buffer, state->mOutTarget);
-            }
+            };
+            std::for_each(sorted_slots.begin(), sorted_slots.end(), proc_slot);
         }
 
         /* Signal the event handler if there are any events to read. */
-        RingBuffer *ring{ctx->mAsyncEvents.get()};
-        if(ring->readSpace() > 0)
+        if(RingBuffer *ring{ctx->mAsyncEvents.get()}; ring->readSpace() > 0)
             ctx->mEventSem.post();
-    }
+    };
+    const auto contexts = al::span{*device->mContexts.load(std::memory_order_acquire)};
+    std::for_each(contexts.begin(), contexts.end(), proc_context);
 }
 
 

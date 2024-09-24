@@ -212,8 +212,10 @@ public:
     [[nodiscard]] constexpr
     auto cend() const noexcept -> const_iterator { return const_iterator{mData+E}; }
 
-    [[nodiscard]] constexpr auto rbegin() const noexcept -> reverse_iterator { return end(); }
-    [[nodiscard]] constexpr auto rend() const noexcept -> reverse_iterator { return begin(); }
+    [[nodiscard]] constexpr
+    auto rbegin() const noexcept -> reverse_iterator { return reverse_iterator{end()}; }
+    [[nodiscard]] constexpr
+    auto rend() const noexcept -> reverse_iterator { return reverse_iterator{begin()}; }
     [[nodiscard]] constexpr
     auto crbegin() const noexcept -> const_reverse_iterator { return cend(); }
     [[nodiscard]] constexpr
@@ -336,8 +338,10 @@ public:
     [[nodiscard]] constexpr
     auto cend() const noexcept -> const_iterator { return const_iterator{mData+mDataLength}; }
 
-    [[nodiscard]] constexpr auto rbegin() const noexcept -> reverse_iterator { return end(); }
-    [[nodiscard]] constexpr auto rend() const noexcept -> reverse_iterator { return begin(); }
+    [[nodiscard]] constexpr
+    auto rbegin() const noexcept -> reverse_iterator { return reverse_iterator{end()}; }
+    [[nodiscard]] constexpr
+    auto rend() const noexcept -> reverse_iterator { return reverse_iterator{begin()}; }
     [[nodiscard]] constexpr
     auto crbegin() const noexcept -> const_reverse_iterator { return cend(); }
     [[nodiscard]] constexpr

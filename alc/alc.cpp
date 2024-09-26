@@ -3633,10 +3633,8 @@ FORCE_ALIGN ALCenum ALC_APIENTRY alcEventIsSupportedSOFT(ALCenum eventType, ALCe
         if(CaptureFactory)
             supported = CaptureFactory->queryEventSupport(*etype, BackendType::Capture);
         return al::to_underlying(supported);
-
-    default:
-        WARN("Invalid device type: 0x%04x\n", deviceType);
-        alcSetError(nullptr, ALC_INVALID_ENUM);
     }
+    WARN("Invalid device type: 0x%04x\n", deviceType);
+    alcSetError(nullptr, ALC_INVALID_ENUM);
     return ALC_FALSE;
 }

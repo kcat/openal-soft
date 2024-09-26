@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - 'utils/**'
+      - 'examples/**'
       - '.github/workflows/utils.yml'
 
   workflow_dispatch:

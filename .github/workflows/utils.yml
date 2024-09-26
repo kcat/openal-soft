@@ -28,9 +28,9 @@ jobs:
 
     - name: Clone libmysofa
       run: |
-        git clone https://github.com/ThreeDeeJay/libmysofa.git
+        git clone https://github.com/hoene/libmysofa.git
         cd libmysofa
-        git checkout 8642646ee6caca9085456bfa9d731200d68c25ca
+        git checkout 2297dd8224ccf42882a2546f2c7ee02e7ab0d1ba
 
     - name: Add MSBuild to PATH
       uses: microsoft/setup-msbuild@v1.1.3

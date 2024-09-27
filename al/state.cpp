@@ -575,7 +575,7 @@ AL_API void AL_APIENTRY alDopplerVelocity(ALfloat value) noexcept
     if(!context) UNLIKELY return;
 
     if(context->mContextFlags.test(ContextFlags::DebugBit)) UNLIKELY
-        context->debugMessage(DebugSource::API, DebugType::DeprecatedBehavior, 0,
+        context->debugMessage(DebugSource::API, DebugType::DeprecatedBehavior, 1,
             DebugSeverity::Medium,
             "alDopplerVelocity is deprecated in AL 1.1, use alSpeedOfSound; "
             "alDopplerVelocity(x) -> alSpeedOfSound(343.3f * x)");

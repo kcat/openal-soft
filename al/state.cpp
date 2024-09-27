@@ -61,6 +61,8 @@
 
 namespace {
 
+using ALvoidptr = ALvoid*;
+
 [[nodiscard]] constexpr auto GetVendorString() noexcept { return "OpenAL Community"; }
 [[nodiscard]] constexpr auto GetVersionString() noexcept { return "1.1 ALSOFT " ALSOFT_VERSION; }
 [[nodiscard]] constexpr auto GetRendererString() noexcept { return "OpenAL Soft"; }
@@ -373,9 +375,9 @@ FORCE_ALIGN ALboolean AL_APIENTRY alIsEnabledDirect(ALCcontext *context, ALenum 
 }
 
 #define DECL_GETFUNC(R, Name, Ext)                                            \
-AL_API auto AL_APIENTRY Name##Ext(ALenum pname) noexcept -> R                 \
+auto AL_APIENTRY Name##Ext(ALenum pname) noexcept -> R                        \
 {                                                                             \
-    R value{};                                                                \
+    auto value = R{};                                                         \
     auto context = GetContextRef();                                           \
     if(!context) UNLIKELY return value;                                       \
     Name##vDirect##Ext(GetContextRef().get(), pname, &value);                 \
@@ -383,18 +385,19 @@ AL_API auto AL_APIENTRY Name##Ext(ALenum pname) noexcept -> R                 \
 }                                                                             \
 FORCE_ALIGN auto AL_APIENTRY Name##Direct##Ext(ALCcontext *context, ALenum pname) noexcept -> R \
 {                                                                             \
-    R value{};                                                                \
+    auto value = R{};                                                         \
     Name##vDirect##Ext(context, pname, &value);                               \
     return value;                                                             \
 }
 
-DECL_GETFUNC(ALboolean, alGetBoolean,)
-DECL_GETFUNC(ALdouble, alGetDouble,)
-DECL_GETFUNC(ALfloat, alGetFloat,)
-DECL_GETFUNC(ALint, alGetInteger,)
+AL_API DECL_GETFUNC(ALboolean, alGetBoolean,)
+AL_API DECL_GETFUNC(ALdouble, alGetDouble,)
+AL_API DECL_GETFUNC(ALfloat, alGetFloat,)
+AL_API DECL_GETFUNC(ALint, alGetInteger,)
 
-DECL_GETFUNC(ALint64SOFT, alGetInteger64,SOFT)
-DECL_GETFUNC(ALvoid*, alGetPointer,SOFT)
+DECL_GETFUNC(ALvoidptr, alGetPointer,EXT)
+AL_API DECL_GETFUNC(ALint64SOFT, alGetInteger64,SOFT)
+AL_API DECL_GETFUNC(ALvoidptr, alGetPointer,SOFT)
 
 #undef DECL_GETFUNC
 
@@ -441,6 +444,10 @@ FORCE_ALIGN void AL_APIENTRY alGetInteger64vDirectSOFT(ALCcontext *context, ALen
 
 AL_API DECL_FUNCEXT2(void, alGetPointerv,SOFT, ALenum,pname, ALvoid**,values)
 FORCE_ALIGN void AL_APIENTRY alGetPointervDirectSOFT(ALCcontext *context, ALenum pname, ALvoid **values) noexcept
+{ return alGetPointervDirectEXT(context, pname, values); }
+
+FORCE_ALIGN DECL_FUNCEXT2(void, alGetPointerv,EXT, ALenum,pname, ALvoid**,values)
+FORCE_ALIGN void AL_APIENTRY alGetPointervDirectEXT(ALCcontext *context, ALenum pname, ALvoid **values) noexcept
 {
     if(!values) UNLIKELY
         return context->setError(AL_INVALID_VALUE, "NULL pointer");

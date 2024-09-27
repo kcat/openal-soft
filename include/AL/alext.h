@@ -704,6 +704,8 @@ typedef void (AL_APIENTRY*LPALPOPDEBUGGROUPEXT)(void) AL_API_NOEXCEPT17;
 typedef ALuint (AL_APIENTRY*LPALGETDEBUGMESSAGELOGEXT)(ALuint count, ALsizei logBufSize, ALenum *sources, ALenum *types, ALuint *ids, ALenum *severities, ALsizei *lengths, ALchar *logBuf) AL_API_NOEXCEPT17;
 typedef void (AL_APIENTRY*LPALOBJECTLABELEXT)(ALenum identifier, ALuint name, ALsizei length, const ALchar *label) AL_API_NOEXCEPT17;
 typedef void (AL_APIENTRY*LPALGETOBJECTLABELEXT)(ALenum identifier, ALuint name, ALsizei bufSize, ALsizei *length, ALchar *label) AL_API_NOEXCEPT17;
+typedef void* (AL_APIENTRY*LPALGETPOINTEREXT)(ALenum pname) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY*LPALGETPOINTERVEXT)(ALenum pname, void **values) AL_API_NOEXCEPT17;
 #ifdef AL_ALEXT_PROTOTYPES
 void AL_APIENTRY alDebugMessageCallbackEXT(ALDEBUGPROCEXT callback, void *userParam) AL_API_NOEXCEPT;
 void AL_APIENTRY alDebugMessageInsertEXT(ALenum source, ALenum type, ALuint id, ALenum severity, ALsizei length, const ALchar *message) AL_API_NOEXCEPT;
@@ -713,6 +715,8 @@ void AL_APIENTRY alPopDebugGroupEXT(void)  AL_API_NOEXCEPT;
 ALuint AL_APIENTRY alGetDebugMessageLogEXT(ALuint count, ALsizei logBufSize, ALenum *sources, ALenum *types, ALuint *ids, ALenum *severities, ALsizei *lengths, ALchar *logBuf)  AL_API_NOEXCEPT;
 void AL_APIENTRY alObjectLabelEXT(ALenum identifier, ALuint name, ALsizei length, const ALchar *label) AL_API_NOEXCEPT;
 void AL_APIENTRY alGetObjectLabelEXT(ALenum identifier, ALuint name, ALsizei bufSize, ALsizei *length, ALchar *label) AL_API_NOEXCEPT;
+void* AL_APIENTRY alGetPointerEXT(ALenum pname) AL_API_NOEXCEPT;
+void AL_APIENTRY alGetPointervEXT(ALenum pname, void **values) AL_API_NOEXCEPT;
 #endif
 #endif
 
@@ -858,6 +862,8 @@ typedef void (AL_APIENTRY*LPALPOPDEBUGGROUPDIRECTEXT)(ALCcontext *context) AL_AP
 typedef ALuint (AL_APIENTRY*LPALGETDEBUGMESSAGELOGDIRECTEXT)(ALCcontext *context, ALuint count, ALsizei logBufSize, ALenum *sources, ALenum *types, ALuint *ids, ALenum *severities, ALsizei *lengths, ALchar *logBuf) AL_API_NOEXCEPT17;
 typedef void (AL_APIENTRY*LPALOBJECTLABELDIRECTEXT)(ALCcontext *context, ALenum identifier, ALuint name, ALsizei length, const ALchar *label) AL_API_NOEXCEPT17;
 typedef void (AL_APIENTRY*LPALGETOBJECTLABELDIRECTEXT)(ALCcontext *context, ALenum identifier, ALuint name, ALsizei bufSize, ALsizei *length, ALchar *label) AL_API_NOEXCEPT17;
+typedef void* (AL_APIENTRY*LPALGETPOINTERDIRECTEXT)(ALCcontext *context, ALenum pname) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY*LPALGETPOINTERVDIRECTEXT)(ALCcontext *context, ALenum pname, void **values) AL_API_NOEXCEPT17;
 /* AL_EXT_FOLDBACK */
 typedef void (AL_APIENTRY *LPALREQUESTFOLDBACKSTARTDIRECT)(ALCcontext *context, ALenum mode, ALsizei count, ALsizei length, ALfloat *mem, LPALFOLDBACKCALLBACK callback) AL_API_NOEXCEPT17;
 typedef void (AL_APIENTRY *LPALREQUESTFOLDBACKSTOPDIRECT)(ALCcontext *context) AL_API_NOEXCEPT17;
@@ -1027,6 +1033,8 @@ void AL_APIENTRY alPopDebugGroupDirectEXT(ALCcontext *context) AL_API_NOEXCEPT;
 ALuint AL_APIENTRY alGetDebugMessageLogDirectEXT(ALCcontext *context, ALuint count, ALsizei logBufSize, ALenum *sources, ALenum *types, ALuint *ids, ALenum *severities, ALsizei *lengths, ALchar *logBuf) AL_API_NOEXCEPT;
 void AL_APIENTRY alObjectLabelDirectEXT(ALCcontext *context, ALenum identifier, ALuint name, ALsizei length, const ALchar *label) AL_API_NOEXCEPT;
 void AL_APIENTRY alGetObjectLabelDirectEXT(ALCcontext *context, ALenum identifier, ALuint name, ALsizei bufSize, ALsizei *length, ALchar *label) AL_API_NOEXCEPT;
+void* AL_APIENTRY alGetPointerDirectEXT(ALCcontext *context, ALenum pname) AL_API_NOEXCEPT;
+void AL_APIENTRY alGetPointervDirectEXT(ALCcontext *context, ALenum pname, void **values) AL_API_NOEXCEPT;
 
 void AL_APIENTRY alRequestFoldbackStartDirect(ALCcontext *context, ALenum mode, ALsizei count, ALsizei length, ALfloat *mem, LPALFOLDBACKCALLBACK callback) AL_API_NOEXCEPT;
 void AL_APIENTRY alRequestFoldbackStopDirect(ALCcontext *context) AL_API_NOEXCEPT;

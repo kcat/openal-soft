@@ -145,24 +145,24 @@ constexpr auto ALenumFromDistanceModel(DistanceModel model) -> ALenum
 }
 
 enum PropertyValue : ALenum {
-    DopplerFactor = AL_DOPPLER_FACTOR,
-    DopplerVelocity = AL_DOPPLER_VELOCITY,
-    DistanceModel = AL_DISTANCE_MODEL,
-    SpeedOfSound = AL_SPEED_OF_SOUND,
-    DeferredUpdates = AL_DEFERRED_UPDATES_SOFT,
-    GainLimit = AL_GAIN_LIMIT_SOFT,
-    NumResamplers = AL_NUM_RESAMPLERS_SOFT,
-    DefaultResampler = AL_DEFAULT_RESAMPLER_SOFT,
-    DebugLoggedMessages = AL_DEBUG_LOGGED_MESSAGES_EXT,
-    DebugNextLoggedMessageLength = AL_DEBUG_NEXT_LOGGED_MESSAGE_LENGTH_EXT,
-    MaxDebugMessageLength = AL_MAX_DEBUG_MESSAGE_LENGTH_EXT,
-    MaxDebugLoggedMessages = AL_MAX_DEBUG_LOGGED_MESSAGES_EXT,
-    MaxDebugGroupDepth = AL_MAX_DEBUG_GROUP_STACK_DEPTH_EXT,
-    MaxLabelLength = AL_MAX_LABEL_LENGTH_EXT,
-    ContextFlags = AL_CONTEXT_FLAGS_EXT,
+    DopplerFactorProp = AL_DOPPLER_FACTOR,
+    DopplerVelocityProp = AL_DOPPLER_VELOCITY,
+    DistanceModelProp = AL_DISTANCE_MODEL,
+    SpeedOfSoundProp = AL_SPEED_OF_SOUND,
+    DeferredUpdatesProp = AL_DEFERRED_UPDATES_SOFT,
+    GainLimitProp = AL_GAIN_LIMIT_SOFT,
+    NumResamplersProp = AL_NUM_RESAMPLERS_SOFT,
+    DefaultResamplerProp = AL_DEFAULT_RESAMPLER_SOFT,
+    DebugLoggedMessagesProp = AL_DEBUG_LOGGED_MESSAGES_EXT,
+    DebugNextLoggedMessageLengthProp = AL_DEBUG_NEXT_LOGGED_MESSAGE_LENGTH_EXT,
+    MaxDebugMessageLengthProp = AL_MAX_DEBUG_MESSAGE_LENGTH_EXT,
+    MaxDebugLoggedMessagesProp = AL_MAX_DEBUG_LOGGED_MESSAGES_EXT,
+    MaxDebugGroupDepthProp = AL_MAX_DEBUG_GROUP_STACK_DEPTH_EXT,
+    MaxLabelLengthProp = AL_MAX_LABEL_LENGTH_EXT,
+    ContextFlagsProp = AL_CONTEXT_FLAGS_EXT,
 #ifdef ALSOFT_EAX
-    EaxRamSize = AL_EAX_RAM_SIZE,
-    EaxRamFree = AL_EAX_RAM_FREE,
+    EaxRamSizeProp = AL_EAX_RAM_SIZE,
+    EaxRamFreeProp = AL_EAX_RAM_FREE,
 #endif
 };
 

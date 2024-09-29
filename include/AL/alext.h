@@ -906,7 +906,7 @@ typedef ALenum (AL_APIENTRY *LPEAXGETDIRECT)(ALCcontext *context, const struct _
 typedef ALboolean (AL_APIENTRY *LPEAXSETBUFFERMODEDIRECT)(ALCcontext *context, ALsizei n, const ALuint *buffers, ALint value) AL_API_NOEXCEPT17;
 typedef ALenum (AL_APIENTRY *LPEAXGETBUFFERMODEDIRECT)(ALCcontext *context, ALuint buffer, ALint *pReserved) AL_API_NOEXCEPT17;
 #ifdef AL_ALEXT_PROTOTYPES
-ALCvoid* AL_APIENTRY alcGetProcAddress2(ALCdevice *device, const ALchar *funcName) AL_API_NOEXCEPT;
+ALCvoid* ALC_APIENTRY alcGetProcAddress2(ALCdevice *device, const ALchar *funcName) AL_API_NOEXCEPT;
 
 void AL_APIENTRY alEnableDirect(ALCcontext *context, ALenum capability) AL_API_NOEXCEPT;
 void AL_APIENTRY alDisableDirect(ALCcontext *context, ALenum capability) AL_API_NOEXCEPT;

@@ -125,9 +125,7 @@ ALCcontext::ALCcontext(al::intrusive_ptr<ALCdevice> device, ContextFlagBitset fl
     mDebugGroups.emplace_back(DebugSource::Other, 0, std::string{});
     mDebugEnabled.store(mContextFlags.test(ContextFlags::DebugBit), std::memory_order_relaxed);
 
-    /* Notification and low-severity debug messages are disabled by default. */
-    alDebugMessageControlDirectEXT(this, AL_DONT_CARE_EXT, AL_DONT_CARE_EXT,
-        AL_DEBUG_SEVERITY_NOTIFICATION_EXT, 0, nullptr, AL_FALSE);
+    /* Low-severity debug messages are disabled by default. */
     alDebugMessageControlDirectEXT(this, AL_DONT_CARE_EXT, AL_DONT_CARE_EXT,
         AL_DEBUG_SEVERITY_LOW_EXT, 0, nullptr, AL_FALSE);
 }

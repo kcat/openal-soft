@@ -176,11 +176,7 @@ int main(al::span<std::string_view> args)
         return 1;
     }
 
-    /* Enable notification and low-severity debug messages, which are disabled
-     * by default.
-     */
-    alDebugMessageControlEXT(AL_DONT_CARE_EXT, AL_DONT_CARE_EXT,
-        AL_DEBUG_SEVERITY_NOTIFICATION_EXT, 0, nullptr, AL_TRUE);
+    /* Enable low-severity debug messages, which are disabled by default. */
     alDebugMessageControlEXT(AL_DONT_CARE_EXT, AL_DONT_CARE_EXT, AL_DEBUG_SEVERITY_LOW_EXT, 0,
         nullptr, AL_TRUE);
 

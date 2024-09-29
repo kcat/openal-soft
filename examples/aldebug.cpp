@@ -39,6 +39,7 @@
 #include "AL/alext.h"
 
 #include "alspan.h"
+#include "alstring.h"
 
 #include "win_main_utf8.h"
 
@@ -114,7 +115,7 @@ int main(al::span<std::string_view> args)
     /* Print out usage if -h was specified */
     if(args.size() > 1 && (args[1] == "-h" || args[1] == "--help"))
     {
-        std::cerr<< "Usage: "<<args[0]<<" [-device <name>]\n";
+        std::cerr<< "Usage: "<<args[0]<<" [-device <name>] [-nodebug]\n";
         return 1;
     }
 
@@ -157,11 +158,13 @@ int main(al::span<std::string_view> args)
     LOAD_PROC(alGetPointervEXT);
 #undef LOAD_PROC
 
+    /* Create a debug context and set it as current. If -nodebug was specified,
+     * create a non-debug context (to see how debug messages react).
+     */
     auto flags = ALCint{ALC_CONTEXT_DEBUG_BIT_EXT};
     if(!args.empty() && args[0] == "-nodebug")
         flags &= ~ALC_CONTEXT_DEBUG_BIT_EXT;
 
-    /* Create a debug context and set it as current. */
     const auto attribs = std::array<ALCint,3>{{
         ALC_CONTEXT_FLAGS_EXT, flags,
         0 /* end-of-list */
@@ -172,6 +175,14 @@ int main(al::span<std::string_view> args)
         std::cerr<< "Could not create and set a context!\n";
         return 1;
     }
+
+    /* Enable notification and low-severity debug messages, which are disabled
+     * by default.
+     */
+    alDebugMessageControlEXT(AL_DONT_CARE_EXT, AL_DONT_CARE_EXT,
+        AL_DEBUG_SEVERITY_NOTIFICATION_EXT, 0, nullptr, AL_TRUE);
+    alDebugMessageControlEXT(AL_DONT_CARE_EXT, AL_DONT_CARE_EXT, AL_DEBUG_SEVERITY_LOW_EXT, 0,
+        nullptr, AL_TRUE);
 
     printf("Context flags: 0x%08x\n", alGetInteger(AL_CONTEXT_FLAGS_EXT));
 
@@ -184,7 +195,8 @@ int main(al::span<std::string_view> args)
     alEnable(AL_DEBUG_OUTPUT_EXT);
 
     /* The max debug message length property will allow us to define message
-     * storage of sufficient length.
+     * storage of sufficient length. This includes space for the null
+     * terminator.
      */
     const auto maxloglength = alGetInteger(AL_MAX_DEBUG_MESSAGE_LENGTH_EXT);
     printf("Max debug message length: %d\n", maxloglength);
@@ -192,21 +204,22 @@ int main(al::span<std::string_view> args)
     fputs("\n", stdout);
 
     /* Doppler Velocity is deprecated since AL 1.1, so this should generate a
-     * deprecation debug message.
+     * deprecation debug message. We'll first handle debug messages through the
+     * message log, meaning we'll query for and read it afterward.
      */
     printf("Calling alDopplerVelocity(0.5f)...\n");
     alDopplerVelocity(0.5f);
 
-    auto numlogs = alGetInteger(AL_DEBUG_LOGGED_MESSAGES_EXT);
-    while(numlogs > 0)
+    for(auto numlogs = alGetInteger(AL_DEBUG_LOGGED_MESSAGES_EXT);numlogs > 0;--numlogs)
     {
-        auto message = std::vector<char>(static_cast<unsigned int>(maxloglength), '\0');
+        auto message = std::vector<char>(static_cast<ALuint>(maxloglength), '\0');
         auto source = ALenum{};
         auto type = ALenum{};
         auto id = ALuint{};
         auto severity = ALenum{};
         auto msglength = ALsizei{};
 
+        /* Getting the message removes it from the log. */
         const auto read = alGetDebugMessageLogEXT(1, maxloglength, &source, &type, &id, &severity,
             &msglength, message.data());
         if(read != 1)
@@ -215,35 +228,45 @@ int main(al::span<std::string_view> args)
             break;
         }
 
-        printf("Got message log:\n"
+        /* The message lengths returned by alGetDebugMessageLogEXT include the
+         * null terminator, so subtract one for the string_view length. If we
+         * read more than one message at a time, the length could be used as
+         * the offset to the next message.
+         */
+        const auto msgstr = std::string_view{message.data(),
+            static_cast<ALuint>(msglength ? msglength-1 : 0)};
+        printf("Got message from log:\n"
             "  Source: %s\n"
             "  Type: %s\n"
             "  ID: %u\n"
             "  Severity: %s\n"
-            "  Message: \"%s\"\n", GetDebugSourceName(source), GetDebugTypeName(type), id,
-            GetDebugSeverityName(severity), message.data());
-
-        --numlogs;
+            "  Message: \"%.*s\"\n", GetDebugSourceName(source), GetDebugTypeName(type), id,
+            GetDebugSeverityName(severity), al::sizei(msgstr), msgstr.data());
     }
     fputs("\n", stdout);
 
-    /* Now set up a callback. */
-    auto debug_callback = [](ALenum source, ALenum type, ALuint id, ALenum severity,
-        ALsizei length [[maybe_unused]], const ALchar *message, void *userParam [[maybe_unused]])
+    /* Now set up a callback function. This lets us print the debug messages as
+     * they happen without having to explicitly query and get them.
+     */
+    static constexpr auto debug_callback = [](ALenum source, ALenum type, ALuint id,
+        ALenum severity, ALsizei length, const ALchar *message, void *userParam [[maybe_unused]])
         noexcept -> void
     {
-        printf("Got message callback:\n"
+        /* The message length provided to the callback does not include the
+         * null terminator.
+         */
+        const auto msgstr = std::string_view{message, static_cast<ALuint>(length)};
+        printf("Got message from callback:\n"
             "  Source: %s\n"
             "  Type: %s\n"
             "  ID: %u\n"
             "  Severity: %s\n"
-            "  Message: \"%s\"\n", GetDebugSourceName(source), GetDebugTypeName(type), id,
-            GetDebugSeverityName(severity), message);
+            "  Message: \"%.*s\"\n", GetDebugSourceName(source), GetDebugTypeName(type), id,
+            GetDebugSeverityName(severity), al::sizei(msgstr), msgstr.data());
     };
     alDebugMessageCallbackEXT(debug_callback, nullptr);
 
-    numlogs = alGetInteger(AL_DEBUG_LOGGED_MESSAGES_EXT);
-    if(numlogs != 0)
+    if(const auto numlogs = alGetInteger(AL_DEBUG_LOGGED_MESSAGES_EXT))
         fprintf(stderr, "%d left over logged message%s!\n", numlogs, (numlogs==1)?"":"s");
 
     /* This should also generate a deprecation debug message, which will now go
@@ -254,20 +277,12 @@ int main(al::span<std::string_view> args)
     fputs("\n", stdout);
 
     /* These functions are notoriously unreliable for their behavior, they will
-     * likely generate debug messages.
+     * likely generate portability debug messages.
      */
     printf("Calling alcSuspendContext and alcProcessContext...\n");
     alcSuspendContext(context.get());
     alcProcessContext(context.get());
     fputs("\n", stdout);
-
-    /* Enable notification and low-severity debug messages, which are disabled
-     * by default.
-     */
-    alDebugMessageControlEXT(AL_DONT_CARE_EXT, AL_DONT_CARE_EXT,
-        AL_DEBUG_SEVERITY_NOTIFICATION_EXT, 0, nullptr, AL_TRUE);
-    alDebugMessageControlEXT(AL_DONT_CARE_EXT, AL_DONT_CARE_EXT, AL_DEBUG_SEVERITY_LOW_EXT, 0,
-        nullptr, AL_TRUE);
 
     printf("Pushing a debug group, making some invalid calls, and popping the debug group...\n");
     alPushDebugGroupEXT(AL_DEBUG_SOURCE_APPLICATION_EXT, 0, -1, "Error test group");
@@ -277,9 +292,11 @@ int main(al::span<std::string_view> args)
     alPopDebugGroupEXT();
     fputs("\n", stdout);
 
-    /* All done, unset the callback, the context and device will clean
-     * themselves up.
+    /* All done, insert a custom message and unset the callback. The context
+     * and device will clean themselves up.
      */
+    alDebugMessageInsertEXT(AL_DEBUG_SOURCE_APPLICATION_EXT, AL_DEBUG_TYPE_MARKER_EXT, 0,
+        AL_DEBUG_SEVERITY_NOTIFICATION_EXT, -1, "End of run, cleaning up");
     alDebugMessageCallbackEXT(nullptr, nullptr);
 
     return 0;

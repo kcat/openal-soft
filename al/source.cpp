@@ -1409,11 +1409,10 @@ struct HexPrinter {
  * Returns a pair of lambdas to check the following setter.
  *
  * The first lambda checks the size of the span is valid for the required size,
- * setting the proper context error and throwing a check_size_exception if it
- * fails.
+ * throwing a context error if it fails.
  *
- * The second lambda tests the validity of the value check, setting the proper
- * context error and throwing a check_value_exception if it failed.
+ * The second lambda tests the validity of the value check, throwing a context
+ * error if it failed.
  */
 template<typename T, size_t N>
 auto GetCheckers(const SourceProp prop, const al::span<T,N> values)

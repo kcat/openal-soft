@@ -257,7 +257,8 @@ void ALCcontext::deinit()
     {
         WARN("%p released while current on thread\n", voidp{this});
         sThreadContext.set(nullptr);
-        dec_ref();
+        const auto rc [[maybe_unused]] = dec_ref();
+        assert(rc > 0);
     }
 
     ALCcontext *origctx{this};
@@ -268,7 +269,8 @@ void ALCcontext::deinit()
              * trying to increment its refcount.
              */
         }
-        dec_ref();
+        const auto rc [[maybe_unused]] = dec_ref();
+        assert(rc > 0);
     }
 
     bool stopPlayback{};

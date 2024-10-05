@@ -1670,7 +1670,9 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const al::span<const int> attrList
     FPUCtl mixer_mode{};
     auto reset_context = [device](ContextBase *ctxbase)
     {
-        auto *context = static_cast<ALCcontext*>(ctxbase);
+        auto *context = dynamic_cast<ALCcontext*>(ctxbase);
+        assert(context != nullptr);
+        if(!context) return;
 
         std::unique_lock<std::mutex> proplock{context->mPropLock};
         std::unique_lock<std::mutex> slotlock{context->mEffectSlotLock};
@@ -1854,8 +1856,9 @@ bool ResetDeviceParams(ALCdevice *device, const al::span<const int> attrList)
 
         for(ContextBase *ctxbase : *device->mContexts.load(std::memory_order_acquire))
         {
-            auto *ctx = static_cast<ALCcontext*>(ctxbase);
-            if(!ctx->mStopVoicesOnDisconnect.load(std::memory_order_acquire))
+            auto *ctx = dynamic_cast<ALCcontext*>(ctxbase);
+            assert(ctx != nullptr);
+            if(!ctx || !ctx->mStopVoicesOnDisconnect.load(std::memory_order_acquire))
                 continue;
 
             /* Clear any pending voice changes and reallocate voices to get a

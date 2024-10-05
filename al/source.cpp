@@ -2348,7 +2348,7 @@ NOINLINE void GetProperty(ALsource *const Source, ALCcontext *const Context, con
         if constexpr(std::is_integral_v<T>)
         {
             CheckSize(1);
-            ALbufferQueueItem *BufferList{};
+            const ALbufferQueueItem *BufferList{};
             /* HACK: This query should technically only return the buffer set
              * on a static source. However, some apps had used it to detect
              * when a streaming source changed buffers, so report the current
@@ -2362,7 +2362,10 @@ NOINLINE void GetProperty(ALsource *const Source, ALCcontext *const Context, con
             else if(Voice *voice{GetSourceVoice(Source, Context)})
             {
                 VoiceBufferItem *Current{voice->mCurrentBuffer.load(std::memory_order_relaxed)};
-                BufferList = static_cast<ALbufferQueueItem*>(Current);
+                const auto iter = std::find_if(Source->mQueue.cbegin(), Source->mQueue.cend(),
+                    [Current](const ALbufferQueueItem &item) noexcept -> bool
+                    { return &item == Current; });
+                BufferList = (iter != Source->mQueue.cend()) ? al::to_address(iter) : nullptr;
             }
             ALbuffer *buffer{BufferList ? BufferList->mBuffer : nullptr};
             values[0] = buffer ? static_cast<T>(buffer->id) : T{0};

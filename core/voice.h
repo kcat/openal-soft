@@ -103,6 +103,9 @@ struct VoiceBufferItem {
     uint mLoopEnd{0u};
 
     al::span<std::byte> mSamples{};
+
+protected:
+    ~VoiceBufferItem() = default;
 };
 
 

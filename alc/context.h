@@ -70,7 +70,7 @@ struct DebugLogEntry {
 };
 
 
-struct ALCcontext : public al::intrusive_ref<ALCcontext>, ContextBase {
+struct ALCcontext final : public al::intrusive_ref<ALCcontext>, ContextBase {
     const al::intrusive_ptr<ALCdevice> mALDevice;
 
 
@@ -124,7 +124,7 @@ struct ALCcontext : public al::intrusive_ref<ALCcontext>, ContextBase {
     ALCcontext(al::intrusive_ptr<ALCdevice> device, ContextFlagBitset flags);
     ALCcontext(const ALCcontext&) = delete;
     ALCcontext& operator=(const ALCcontext&) = delete;
-    ~ALCcontext();
+    ~ALCcontext() final;
 
     void init();
     /**

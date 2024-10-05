@@ -52,7 +52,7 @@ int EventThread(ALCcontext *context)
     bool quitnow{false};
     while(!quitnow)
     {
-        auto evt_data = ring->getReadVector().first;
+        auto evt_data = ring->getReadVector()[0];
         if(evt_data.len == 0)
         {
             context->mEventSem.wait();
@@ -165,12 +165,12 @@ void StartEventThrd(ALCcontext *ctx)
 void StopEventThrd(ALCcontext *ctx)
 {
     RingBuffer *ring{ctx->mAsyncEvents.get()};
-    auto evt_data = ring->getWriteVector().first;
+    auto evt_data = ring->getWriteVector()[0];
     if(evt_data.len == 0)
     {
         do {
             std::this_thread::yield();
-            evt_data = ring->getWriteVector().first;
+            evt_data = ring->getWriteVector()[0];
         } while(evt_data.len == 0);
     }
     std::ignore = InitAsyncEvent<AsyncKillThread>(evt_data.buf);

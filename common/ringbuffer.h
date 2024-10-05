@@ -5,7 +5,6 @@
 #include <cassert>
 #include <cstddef>
 #include <memory>
-#include <new>
 #include <utility>
 
 #include "almalloc.h"
@@ -40,7 +39,7 @@ public:
         std::byte *buf;
         std::size_t len;
     };
-    using DataPair = std::pair<Data,Data>;
+    using DataPair = std::array<Data,2>;
 
     RingBuffer(const std::size_t writesize, const std::size_t mask, const std::size_t elemsize,
         const std::size_t numbytes)

@@ -20,7 +20,7 @@
 namespace {
 
 using ushort = unsigned short;
-using ushort2 = std::pair<ushort,ushort>;
+using ushort2 = std::array<ushort,2>;
 using complex_d = std::complex<double>;
 
 constexpr std::size_t BitReverseCounter(std::size_t log2_size) noexcept
@@ -56,8 +56,8 @@ struct BitReverser {
 
             if(idx < revidx)
             {
-                mData[ret_i].first  = static_cast<ushort>(idx);
-                mData[ret_i].second = static_cast<ushort>(revidx);
+                mData[ret_i][0]  = static_cast<ushort>(idx);
+                mData[ret_i][1] = static_cast<ushort>(revidx);
                 ++ret_i;
             }
         }
@@ -122,7 +122,7 @@ void complex_fft(const al::span<std::complex<double>> buffer, const double sign)
     if(log2_size < gBitReverses.size()) LIKELY
     {
         for(auto &rev : gBitReverses[log2_size])
-            std::swap(buffer[rev.first], buffer[rev.second]);
+            std::swap(buffer[rev[0]], buffer[rev[1]]);
 
         /* Iterative form of Danielson-Lanczos lemma */
         for(std::size_t i{0};i < log2_size;++i)

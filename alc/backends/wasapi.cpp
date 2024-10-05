@@ -2218,30 +2218,30 @@ FORCE_ALIGN int WasapiCapture::recordProc()
                     const void *srcdata{rdata};
                     uint srcframes{numsamples};
 
-                    dstframes = mSampleConv->convert(&srcdata, &srcframes, data.first.buf,
-                        static_cast<uint>(std::min(data.first.len, lenlimit)));
-                    if(srcframes > 0 && dstframes == data.first.len && data.second.len > 0)
+                    dstframes = mSampleConv->convert(&srcdata, &srcframes, data[0].buf,
+                        static_cast<uint>(std::min(data[0].len, lenlimit)));
+                    if(srcframes > 0 && dstframes == data[0].len && data[1].len > 0)
                     {
                         /* If some source samples remain, all of the first dest
                          * block was filled, and there's space in the second
                          * dest block, do another run for the second block.
                          */
-                        dstframes += mSampleConv->convert(&srcdata, &srcframes, data.second.buf,
-                            static_cast<uint>(std::min(data.second.len, lenlimit)));
+                        dstframes += mSampleConv->convert(&srcdata, &srcframes, data[1].buf,
+                            static_cast<uint>(std::min(data[1].len, lenlimit)));
                     }
                 }
                 else
                 {
                     const uint framesize{mDevice->frameSizeFromFmt()};
                     auto dst = al::span{rdata, size_t{numsamples}*framesize};
-                    size_t len1{std::min(data.first.len, size_t{numsamples})};
-                    size_t len2{std::min(data.second.len, numsamples-len1)};
+                    size_t len1{std::min(data[0].len, size_t{numsamples})};
+                    size_t len2{std::min(data[1].len, numsamples-len1)};
 
-                    memcpy(data.first.buf, dst.data(), len1*framesize);
+                    memcpy(data[0].buf, dst.data(), len1*framesize);
                     if(len2 > 0)
                     {
                         dst = dst.subspan(len1*framesize);
-                        memcpy(data.second.buf, dst.data(), len2*framesize);
+                        memcpy(data[1].buf, dst.data(), len2*framesize);
                     }
                     dstframes = len1 + len2;
                 }

@@ -353,7 +353,7 @@ int SndioCapture::recordProc()
             continue;
 
         auto data = mRing->getWriteVector();
-        al::span<std::byte> buffer{data.first.buf, data.first.len*frameSize};
+        al::span<std::byte> buffer{data[0].buf, data[0].len*frameSize};
         while(!buffer.empty())
         {
             size_t got{sio_read(mSndHandle, buffer.data(), buffer.size())};
@@ -371,7 +371,7 @@ int SndioCapture::recordProc()
             if(buffer.empty())
             {
                 data = mRing->getWriteVector();
-                buffer = {data.first.buf, data.first.len*frameSize};
+                buffer = {data[0].buf, data[0].len*frameSize};
             }
         }
         if(buffer.empty())

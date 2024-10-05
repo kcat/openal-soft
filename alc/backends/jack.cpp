@@ -370,10 +370,10 @@ int JackPlayback::process(jack_nframes_t numframes) noexcept
         const auto update_size = size_t{mDevice->UpdateSize};
 
         const auto outlen = size_t{numframes / update_size};
-        const auto len1 = size_t{std::min(data.first.len/update_size, outlen)};
-        const auto len2 = size_t{std::min(data.second.len/update_size, outlen-len1)};
+        const auto len1 = size_t{std::min(data[0].len/update_size, outlen)};
+        const auto len2 = size_t{std::min(data[1].len/update_size, outlen-len1)};
 
-        auto src = al::span{reinterpret_cast<float*>(data.first.buf), update_size*len1*numchans};
+        auto src = al::span{reinterpret_cast<float*>(data[0].buf), update_size*len1*numchans};
         for(size_t i{0};i < len1;++i)
         {
             for(size_t c{0};c < numchans;++c)
@@ -385,7 +385,7 @@ int JackPlayback::process(jack_nframes_t numframes) noexcept
             total += update_size;
         }
 
-        src = al::span{reinterpret_cast<float*>(data.second.buf), update_size*len2*numchans};
+        src = al::span{reinterpret_cast<float*>(data[1].buf), update_size*len2*numchans};
         for(size_t i{0};i < len2;++i)
         {
             for(size_t c{0};c < numchans;++c)
@@ -430,12 +430,11 @@ int JackPlayback::mixerProc()
         }
 
         auto data = mRing->getWriteVector();
-        const auto len1 = size_t{data.first.len / update_size};
-        const auto len2 = size_t{data.second.len / update_size};
+        const auto len1 = size_t{data[0].len / update_size};
+        const auto len2 = size_t{data[1].len / update_size};
 
         std::lock_guard<std::mutex> dlock{mMutex};
-        auto buffer = al::span{reinterpret_cast<float*>(data.first.buf),
-            data.first.len*num_channels};
+        auto buffer = al::span{reinterpret_cast<float*>(data[0].buf), data[0].len*num_channels};
         auto bufiter = buffer.begin();
         for(size_t i{0};i < len1;++i)
         {
@@ -449,8 +448,7 @@ int JackPlayback::mixerProc()
         }
         if(len2 > 0)
         {
-            buffer = al::span{reinterpret_cast<float*>(data.second.buf),
-                data.second.len*num_channels};
+            buffer = al::span{reinterpret_cast<float*>(data[1].buf), data[1].len*num_channels};
             bufiter = buffer.begin();
             for(size_t i{0};i < len2;++i)
             {

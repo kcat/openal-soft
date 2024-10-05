@@ -33,18 +33,13 @@ ContextBase::~ContextBase()
     if(mAsyncEvents)
     {
         size_t count{0};
-        auto evt_vec = mAsyncEvents->getReadVector();
-        if(evt_vec.first.len > 0)
+        for(auto &evt : mAsyncEvents->getReadVector())
         {
-            std::destroy_n(std::launder(reinterpret_cast<AsyncEvent*>(evt_vec.first.buf)),
-                evt_vec.first.len);
-            count += evt_vec.first.len;
-        }
-        if(evt_vec.second.len > 0)
-        {
-            std::destroy_n(std::launder(reinterpret_cast<AsyncEvent*>(evt_vec.second.buf)),
-                evt_vec.second.len);
-            count += evt_vec.second.len;
+            if(evt.len > 0)
+            {
+                std::destroy_n(std::launder(reinterpret_cast<AsyncEvent*>(evt.buf)), evt.len);
+                count += evt.len;
+            }
         }
         if(count > 0)
             TRACE("Destructed %zu orphaned event%s\n", count, (count==1)?"":"s");

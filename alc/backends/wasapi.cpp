@@ -339,8 +339,8 @@ using DeviceHandle = ComPtr<IMMDevice>;
 #endif
 
 
-using NameGUIDPair = std::pair<std::string,std::string>;
-NameGUIDPair GetDeviceNameAndGuid(const DeviceHandle &device)
+struct NameGUIDPair { std::string mName; std::string mGuid; };
+auto GetDeviceNameAndGuid(const DeviceHandle &device) -> NameGUIDPair
 {
     constexpr auto UnknownName = "Unknown Device Name"sv;
     constexpr auto UnknownGuid = "Unknown Device GUID"sv;
@@ -795,14 +795,14 @@ private:
 
         auto name_guid = GetDeviceNameAndGuid(device);
         int count{1};
-        std::string newname{name_guid.first};
+        std::string newname{name_guid.mName};
         while(checkName(list, newname))
         {
-            newname = name_guid.first;
+            newname = name_guid.mName;
             newname += " #";
             newname += std::to_string(++count);
         }
-        list.emplace_back(std::move(newname), std::move(name_guid.second), devid);
+        list.emplace_back(std::move(newname), std::move(name_guid.mGuid), devid);
         const DevMap &newentry = list.back();
 
         TRACE("Got device \"%s\", \"%s\", \"%ls\"\n", newentry.name.c_str(),
@@ -1430,7 +1430,7 @@ HRESULT WasapiPlayback::openProxy(std::string_view name)
     if(!devname.empty())
         mDeviceName = std::move(devname);
     else
-        mDeviceName = GetDeviceNameAndGuid(mMMDev).first;
+        mDeviceName = GetDeviceNameAndGuid(mMMDev).mName;
 
     return S_OK;
 }
@@ -2333,7 +2333,7 @@ HRESULT WasapiCapture::openProxy(std::string_view name)
     if(!devname.empty())
         mDeviceName = std::move(devname);
     else
-        mDeviceName = GetDeviceNameAndGuid(mMMDev).first;
+        mDeviceName = GetDeviceNameAndGuid(mMMDev).mName;
 
     return S_OK;
 }

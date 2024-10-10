@@ -137,7 +137,22 @@ struct CoTaskMemDeleter {
 
 } // namespace
 
-std::vector<std::string> SearchDataFiles(const std::string_view ext, const std::string_view subdir)
+auto SearchDataFiles(const std::string_view ext) -> std::vector<std::string>
+{
+    auto srchlock = std::lock_guard{gSearchLock};
+
+    /* Search the app-local directory. */
+    auto results = std::vector<std::string>{};
+    if(auto localpath = al::getenv(L"ALSOFT_LOCAL_PATH"))
+        DirectorySearch(*localpath, ext, &results);
+    else if(auto curpath = std::filesystem::current_path(); !curpath.empty())
+        DirectorySearch(curpath, ext, &results);
+
+    return results;
+}
+
+auto SearchDataFiles(const std::string_view ext, const std::string_view subdir)
+    -> std::vector<std::string>
 {
     std::lock_guard<std::mutex> srchlock{gSearchLock};
 
@@ -149,12 +164,6 @@ std::vector<std::string> SearchDataFiles(const std::string_view ext, const std::
         DirectorySearch(path, ext, &results);
         return results;
     }
-
-    /* Search the app-local directory. */
-    if(auto localpath = al::getenv(L"ALSOFT_LOCAL_PATH"))
-        DirectorySearch(*localpath, ext, &results);
-    else if(auto curpath = std::filesystem::current_path(); !curpath.empty())
-        DirectorySearch(curpath, ext, &results);
 
 #if !defined(ALSOFT_UWP) && !defined(_GAMING_XBOX)
     /* Search the local and global data dirs. */
@@ -295,7 +304,22 @@ const PathNamePair &GetProcBinary()
     return procbin;
 }
 
-std::vector<std::string> SearchDataFiles(const std::string_view ext, const std::string_view subdir)
+auto SearchDataFiles(const std::string_view ext) -> std::vector<std::string>
+{
+    auto srchlock = std::lock_guard{gSearchLock};
+
+    /* Search the app-local directory. */
+    auto results = std::vector<std::string>{};
+    if(auto localpath = al::getenv("ALSOFT_LOCAL_PATH"))
+        DirectorySearch(*localpath, ext, &results);
+    else if(auto curpath = std::filesystem::current_path(); !curpath.empty())
+        DirectorySearch(curpath, ext, &results);
+
+    return results;
+}
+
+auto SearchDataFiles(const std::string_view ext, const std::string_view subdir)
+    -> std::vector<std::string>
 {
     std::lock_guard<std::mutex> srchlock{gSearchLock};
 
@@ -306,12 +330,6 @@ std::vector<std::string> SearchDataFiles(const std::string_view ext, const std::
         DirectorySearch(path, ext, &results);
         return results;
     }
-
-    /* Search the app-local directory. */
-    if(auto localpath = al::getenv("ALSOFT_LOCAL_PATH"))
-        DirectorySearch(*localpath, ext, &results);
-    else if(auto curpath = std::filesystem::current_path(); !curpath.empty())
-        DirectorySearch(curpath, ext, &results);
 
     /* Search local data dir */
     if(auto datapath = al::getenv("XDG_DATA_HOME"))

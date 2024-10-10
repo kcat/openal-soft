@@ -1210,6 +1210,9 @@ std::vector<std::string> EnumerateHrtf(std::optional<std::string> pathopt)
     std::lock_guard<std::mutex> enumlock{EnumeratedHrtfLock};
     EnumeratedHrtfs.clear();
 
+    for(const auto &fname : SearchDataFiles(".mhr"sv))
+        AddFileEntry(fname);
+
     bool usedefaults{true};
     if(pathopt)
     {

@@ -285,14 +285,6 @@ else()
         set(C_FLAGS ${C_FLAGS} -Werror)
     endif()
 
-    # We want RelWithDebInfo to actually include debug stuff (define _DEBUG
-    # instead of NDEBUG)
-    foreach(flag_var  CMAKE_C_FLAGS_RELWITHDEBINFO CMAKE_CXX_FLAGS_RELWITHDEBINFO)
-        if(${flag_var} MATCHES "-DNDEBUG")
-            string(REGEX REPLACE "-DNDEBUG" "-D_DEBUG" ${flag_var} "${${flag_var}}")
-        endif()
-    endforeach()
-
     check_c_compiler_flag(-fno-math-errno HAVE_FNO_MATH_ERRNO)
     if(HAVE_FNO_MATH_ERRNO)
         set(C_FLAGS ${C_FLAGS} -fno-math-errno)

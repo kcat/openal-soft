@@ -1195,8 +1195,6 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
             }
             else for(size_t c{0};c < num_channels;c++)
             {
-                using namespace al::numbers;
-
                 /* Skip LFE */
                 if(chans[c].channel == LFE) continue;
                 const float pangain{SelectChannelGain(chans[c].channel)};
@@ -1206,7 +1204,7 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
                  * the source position, at full spread (pi*2), each channel is
                  * left unchanged.
                  */
-                const float a{1.0f - (inv_pi_v<float>/2.0f)*Spread};
+                const float a{1.0f - (al::numbers::inv_pi_v<float>/2.0f)*Spread};
                 std::array pos{
                     lerpf(chans[c].pos[0], xpos, a),
                     lerpf(chans[c].pos[1], ypos, a),
@@ -1322,57 +1320,51 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
                             voice->mChans[0].mWetParams[i].Gains.Target);
                 }
             }
-            else
+            else for(size_t c{0};c < num_channels;c++)
             {
-                using namespace al::numbers;
+                const auto pangain = SelectChannelGain(chans[c].channel);
 
-                for(size_t c{0};c < num_channels;c++)
+                /* Special-case LFE */
+                if(chans[c].channel == LFE)
                 {
-                    const float pangain{SelectChannelGain(chans[c].channel)};
-
-                    /* Special-case LFE */
-                    if(chans[c].channel == LFE)
+                    if(Device->Dry.Buffer.data() == Device->RealOut.Buffer.data())
                     {
-                        if(Device->Dry.Buffer.data() == Device->RealOut.Buffer.data())
-                        {
-                            const uint idx{Device->channelIdxByName(chans[c].channel)};
-                            if(idx != InvalidChannelIndex)
-                                voice->mChans[c].mDryParams.Gains.Target[idx] = DryGain.Base
-                                    * pangain;
-                        }
-                        continue;
+                        const auto idx = uint{Device->channelIdxByName(chans[c].channel)};
+                        if(idx != InvalidChannelIndex)
+                            voice->mChans[c].mDryParams.Gains.Target[idx] = DryGain.Base * pangain;
                     }
+                    continue;
+                }
 
-                    /* Warp the channel position toward the source position as
-                     * the spread decreases. With no spread, all channels are
-                     * at the source position, at full spread (pi*2), each
-                     * channel position is left unchanged.
-                     */
-                    const float a{1.0f - (inv_pi_v<float>/2.0f)*Spread};
-                    std::array pos{
-                        lerpf(chans[c].pos[0], xpos, a),
-                        lerpf(chans[c].pos[1], ypos, a),
-                        lerpf(chans[c].pos[2], zpos, a)};
-                    const float len{std::sqrt(pos[0]*pos[0] + pos[1]*pos[1] + pos[2]*pos[2])};
-                    if(len < 1.0f)
-                    {
-                        pos[0] /= len;
-                        pos[1] /= len;
-                        pos[2] /= len;
-                    }
+                /* Warp the channel position toward the source position as the
+                 * spread decreases. With no spread, all channels are at the
+                 * source position, at full spread (pi*2), each channel
+                 * position is left unchanged.
+                 */
+                const auto a = 1.0f - (al::numbers::inv_pi_v<float>/2.0f)*Spread;
+                auto pos = std::array{
+                    lerpf(chans[c].pos[0], xpos, a),
+                    lerpf(chans[c].pos[1], ypos, a),
+                    lerpf(chans[c].pos[2], zpos, a)};
+                const auto len = std::sqrt(pos[0]*pos[0] + pos[1]*pos[1] + pos[2]*pos[2]);
+                if(len < 1.0f)
+                {
+                    pos[0] /= len;
+                    pos[1] /= len;
+                    pos[2] /= len;
+                }
 
-                    if(Device->mRenderMode == RenderMode::Pairwise)
-                        pos = ScaleAzimuthFront3(pos);
-                    const auto coeffs = CalcDirectionCoeffs(pos, 0.0f);
+                if(Device->mRenderMode == RenderMode::Pairwise)
+                    pos = ScaleAzimuthFront3(pos);
+                const auto coeffs = CalcDirectionCoeffs(pos, 0.0f);
 
-                    ComputePanGains(&Device->Dry, coeffs, DryGain.Base * pangain,
-                        voice->mChans[c].mDryParams.Gains.Target);
-                    for(uint i{0};i < NumSends;i++)
-                    {
-                        if(const EffectSlot *Slot{SendSlots[i]})
-                            ComputePanGains(&Slot->Wet, coeffs, WetGain[i].Base * pangain,
-                                voice->mChans[c].mWetParams[i].Gains.Target);
-                    }
+                ComputePanGains(&Device->Dry, coeffs, DryGain.Base * pangain,
+                    voice->mChans[c].mDryParams.Gains.Target);
+                for(uint i{0};i < NumSends;i++)
+                {
+                    if(const EffectSlot *Slot{SendSlots[i]})
+                        ComputePanGains(&Slot->Wet, coeffs, WetGain[i].Base * pangain,
+                            voice->mChans[c].mWetParams[i].Gains.Target);
                 }
             }
         }

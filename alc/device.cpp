@@ -27,6 +27,9 @@ using voidp = void*;
 
 } // namespace
 
+std::mutex ALCdevice::BufferLock;
+std::vector<BufferSubList> ALCdevice::BufferList;
+std::unordered_map<ALuint,std::string> ALCdevice::BufferNames;
 
 ALCdevice::ALCdevice(DeviceType type) : DeviceBase{type}
 { }

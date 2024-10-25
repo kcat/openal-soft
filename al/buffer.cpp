@@ -519,7 +519,7 @@ void PrepareUserPtr(ALCcontext *context [[maybe_unused]], ALbuffer *ALBuf, ALsiz
 #endif
 
     decltype(ALBuf->mDataStorage){}.swap(ALBuf->mDataStorage);
-    ALBuf->mData = {static_cast<std::byte*>(sdata), sdatalen};
+    ALBuf->mData = al::span{sdata, sdatalen};
 
 #ifdef ALSOFT_EAX
     eax_x_ram_clear(*context->mALDevice, *ALBuf);

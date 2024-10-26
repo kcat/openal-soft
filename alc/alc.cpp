@@ -194,6 +194,15 @@ using voidp = void*;
 using float2 = std::array<float,2>;
 
 
+auto gProcessRunning = true;
+struct ProcessWatcher {
+    ProcessWatcher() = default;
+    ProcessWatcher(const ProcessWatcher&) = default;
+    ProcessWatcher& operator=(const ProcessWatcher&) = default;
+    ~ProcessWatcher() { gProcessRunning = false; }
+};
+ProcessWatcher gProcessWatcher;
+
 /************************************************
  * Backends
  ************************************************/
@@ -1971,6 +1980,9 @@ void alcSetError(ALCdevice *device, ALCenum errorCode)
 
 ALC_API ALCenum ALC_APIENTRY alcGetError(ALCdevice *device) noexcept
 {
+    if(!gProcessRunning)
+        return ALC_INVALID_DEVICE;
+
     DeviceRef dev{VerifyDevice(device)};
     if(dev) return dev->LastError.exchange(ALC_NO_ERROR);
     return LastNullDeviceError.exchange(ALC_NO_ERROR);
@@ -2796,6 +2808,9 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
 
 ALC_API void ALC_APIENTRY alcDestroyContext(ALCcontext *context) noexcept
 {
+    if(!gProcessRunning)
+        return;
+
     std::unique_lock<std::recursive_mutex> listlock{ListLock};
     auto iter = std::lower_bound(ContextList.begin(), ContextList.end(), context);
     if(iter == ContextList.end() || *iter != context)
@@ -3015,6 +3030,9 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName) noexcep
 
 ALC_API ALCboolean ALC_APIENTRY alcCloseDevice(ALCdevice *device) noexcept
 {
+    if(!gProcessRunning)
+        return ALC_FALSE;
+
     std::unique_lock<std::recursive_mutex> listlock{ListLock};
     auto iter = std::lower_bound(DeviceList.begin(), DeviceList.end(), device);
     if(iter == DeviceList.end() || *iter != device)
@@ -3157,6 +3175,9 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, 
 
 ALC_API ALCboolean ALC_APIENTRY alcCaptureCloseDevice(ALCdevice *device) noexcept
 {
+    if(!gProcessRunning)
+        return ALC_FALSE;
+
     std::unique_lock<std::recursive_mutex> listlock{ListLock};
     auto iter = std::lower_bound(DeviceList.begin(), DeviceList.end(), device);
     if(iter == DeviceList.end() || *iter != device)

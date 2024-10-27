@@ -177,7 +177,7 @@ struct ContextBase {
     ContextBase(DeviceBase *device);
     ContextBase(const ContextBase&) = delete;
     ContextBase& operator=(const ContextBase&) = delete;
-    ~ContextBase();
+    virtual ~ContextBase();
 };
 
 #endif /* CORE_CONTEXT_H */

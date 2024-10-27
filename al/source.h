@@ -45,8 +45,6 @@ inline bool sBufferSubDataCompat{false};
 
 struct ALbufferQueueItem : public VoiceBufferItem {
     ALbuffer *mBuffer{nullptr};
-
-    DISABLE_ALLOC
 };
 
 

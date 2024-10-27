@@ -194,6 +194,15 @@ using voidp = void*;
 using float2 = std::array<float,2>;
 
 
+auto gProcessRunning = true;
+struct ProcessWatcher {
+    ProcessWatcher() = default;
+    ProcessWatcher(const ProcessWatcher&) = default;
+    ProcessWatcher& operator=(const ProcessWatcher&) = default;
+    ~ProcessWatcher() { gProcessRunning = false; }
+};
+ProcessWatcher gProcessWatcher;
+
 /************************************************
  * Backends
  ************************************************/
@@ -1670,7 +1679,9 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const al::span<const int> attrList
     FPUCtl mixer_mode{};
     auto reset_context = [device](ContextBase *ctxbase)
     {
-        auto *context = static_cast<ALCcontext*>(ctxbase);
+        auto *context = dynamic_cast<ALCcontext*>(ctxbase);
+        assert(context != nullptr);
+        if(!context) return;
 
         std::unique_lock<std::mutex> proplock{context->mPropLock};
         std::unique_lock<std::mutex> slotlock{context->mEffectSlotLock};
@@ -1854,8 +1865,9 @@ bool ResetDeviceParams(ALCdevice *device, const al::span<const int> attrList)
 
         for(ContextBase *ctxbase : *device->mContexts.load(std::memory_order_acquire))
         {
-            auto *ctx = static_cast<ALCcontext*>(ctxbase);
-            if(!ctx->mStopVoicesOnDisconnect.load(std::memory_order_acquire))
+            auto *ctx = dynamic_cast<ALCcontext*>(ctxbase);
+            assert(ctx != nullptr);
+            if(!ctx || !ctx->mStopVoicesOnDisconnect.load(std::memory_order_acquire))
                 continue;
 
             /* Clear any pending voice changes and reallocate voices to get a
@@ -1968,6 +1980,9 @@ void alcSetError(ALCdevice *device, ALCenum errorCode)
 
 ALC_API ALCenum ALC_APIENTRY alcGetError(ALCdevice *device) noexcept
 {
+    if(!gProcessRunning)
+        return ALC_INVALID_DEVICE;
+
     DeviceRef dev{VerifyDevice(device)};
     if(dev) return dev->LastError.exchange(ALC_NO_ERROR);
     return LastNullDeviceError.exchange(ALC_NO_ERROR);
@@ -1983,7 +1998,7 @@ ALC_API void ALC_APIENTRY alcSuspendContext(ALCcontext *context) noexcept
         return;
     }
 
-    if(context->mContextFlags.test(ContextFlags::DebugBit)) UNLIKELY
+    if(ctx->mContextFlags.test(ContextFlags::DebugBit)) UNLIKELY
         ctx->debugMessage(DebugSource::API, DebugType::Portability, 0, DebugSeverity::Medium,
             "alcSuspendContext behavior is not portable -- some implementations suspend all "
             "rendering, some only defer property changes, and some are completely no-op; consider "
@@ -2006,8 +2021,8 @@ ALC_API void ALC_APIENTRY alcProcessContext(ALCcontext *context) noexcept
         return;
     }
 
-    if(context->mContextFlags.test(ContextFlags::DebugBit)) UNLIKELY
-        ctx->debugMessage(DebugSource::API, DebugType::Portability, 0, DebugSeverity::Medium,
+    if(ctx->mContextFlags.test(ContextFlags::DebugBit)) UNLIKELY
+        ctx->debugMessage(DebugSource::API, DebugType::Portability, 1, DebugSeverity::Medium,
             "alcProcessContext behavior is not portable -- some implementations resume rendering, "
             "some apply deferred property changes, and some are completely no-op; consider using "
             "alcDeviceResumeSOFT to resume rendering, or alProcessUpdatesSOFT to apply deferred "
@@ -2793,6 +2808,9 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
 
 ALC_API void ALC_APIENTRY alcDestroyContext(ALCcontext *context) noexcept
 {
+    if(!gProcessRunning)
+        return;
+
     std::unique_lock<std::recursive_mutex> listlock{ListLock};
     auto iter = std::lower_bound(ContextList.begin(), ContextList.end(), context);
     if(iter == ContextList.end() || *iter != context)
@@ -3012,6 +3030,9 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName) noexcep
 
 ALC_API ALCboolean ALC_APIENTRY alcCloseDevice(ALCdevice *device) noexcept
 {
+    if(!gProcessRunning)
+        return ALC_FALSE;
+
     std::unique_lock<std::recursive_mutex> listlock{ListLock};
     auto iter = std::lower_bound(DeviceList.begin(), DeviceList.end(), device);
     if(iter == DeviceList.end() || *iter != device)
@@ -3154,6 +3175,9 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, 
 
 ALC_API ALCboolean ALC_APIENTRY alcCaptureCloseDevice(ALCdevice *device) noexcept
 {
+    if(!gProcessRunning)
+        return ALC_FALSE;
+
     std::unique_lock<std::recursive_mutex> listlock{ListLock};
     auto iter = std::lower_bound(DeviceList.begin(), DeviceList.end(), device);
     if(iter == DeviceList.end() || *iter != device)
@@ -3633,10 +3657,8 @@ FORCE_ALIGN ALCenum ALC_APIENTRY alcEventIsSupportedSOFT(ALCenum eventType, ALCe
         if(CaptureFactory)
             supported = CaptureFactory->queryEventSupport(*etype, BackendType::Capture);
         return al::to_underlying(supported);
-
-    default:
-        WARN("Invalid device type: 0x%04x\n", deviceType);
-        alcSetError(nullptr, ALC_INVALID_ENUM);
     }
+    WARN("Invalid device type: 0x%04x\n", deviceType);
+    alcSetError(nullptr, ALC_INVALID_ENUM);
     return ALC_FALSE;
 }

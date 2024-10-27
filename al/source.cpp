@@ -1409,11 +1409,10 @@ struct HexPrinter {
  * Returns a pair of lambdas to check the following setter.
  *
  * The first lambda checks the size of the span is valid for the required size,
- * setting the proper context error and throwing a check_size_exception if it
- * fails.
+ * throwing a context error if it fails.
  *
- * The second lambda tests the validity of the value check, setting the proper
- * context error and throwing a check_value_exception if it failed.
+ * The second lambda tests the validity of the value check, throwing a context
+ * error if it failed.
  */
 template<typename T, size_t N>
 auto GetCheckers(const SourceProp prop, const al::span<T,N> values)
@@ -1467,7 +1466,10 @@ NOINLINE void SetProperty(ALsource *const Source, ALCcontext *const Context, con
 
     case AL_PITCH:
         CheckSize(1);
-        CheckValue(values[0] >= T{0});
+        if constexpr(std::is_floating_point_v<T>)
+            CheckValue(values[0] >= T{0} && std::isfinite(static_cast<float>(values[0])));
+        else
+            CheckValue(values[0] >= T{0});
 
         Source->Pitch = static_cast<float>(values[0]);
         return UpdateSourceProps(Source, Context);
@@ -1488,42 +1490,60 @@ NOINLINE void SetProperty(ALsource *const Source, ALCcontext *const Context, con
 
     case AL_GAIN:
         CheckSize(1);
-        CheckValue(values[0] >= T{0});
+        if constexpr(std::is_floating_point_v<T>)
+            CheckValue(values[0] >= T{0} && std::isfinite(static_cast<float>(values[0])));
+        else
+            CheckValue(values[0] >= T{0});
 
         Source->Gain = static_cast<float>(values[0]);
         return UpdateSourceProps(Source, Context);
 
     case AL_MAX_DISTANCE:
         CheckSize(1);
-        CheckValue(values[0] >= T{0});
+        if constexpr(std::is_floating_point_v<T>)
+            CheckValue(values[0] >= T{0} && std::isfinite(static_cast<float>(values[0])));
+        else
+            CheckValue(values[0] >= T{0});
 
         Source->MaxDistance = static_cast<float>(values[0]);
         return CommitAndUpdateSourceProps(Source, Context);
 
     case AL_ROLLOFF_FACTOR:
         CheckSize(1);
-        CheckValue(values[0] >= T{0});
+        if constexpr(std::is_floating_point_v<T>)
+            CheckValue(values[0] >= T{0} && std::isfinite(static_cast<float>(values[0])));
+        else
+            CheckValue(values[0] >= T{0});
 
         Source->RolloffFactor = static_cast<float>(values[0]);
         return CommitAndUpdateSourceProps(Source, Context);
 
     case AL_REFERENCE_DISTANCE:
         CheckSize(1);
-        CheckValue(values[0] >= T{0});
+        if constexpr(std::is_floating_point_v<T>)
+            CheckValue(values[0] >= T{0} && std::isfinite(static_cast<float>(values[0])));
+        else
+            CheckValue(values[0] >= T{0});
 
         Source->RefDistance = static_cast<float>(values[0]);
         return CommitAndUpdateSourceProps(Source, Context);
 
     case AL_MIN_GAIN:
         CheckSize(1);
-        CheckValue(values[0] >= T{0});
+        if constexpr(std::is_floating_point_v<T>)
+            CheckValue(values[0] >= T{0} && std::isfinite(static_cast<float>(values[0])));
+        else
+            CheckValue(values[0] >= T{0});
 
         Source->MinGain = static_cast<float>(values[0]);
         return UpdateSourceProps(Source, Context);
 
     case AL_MAX_GAIN:
         CheckSize(1);
-        CheckValue(values[0] >= T{0});
+        if constexpr(std::is_floating_point_v<T>)
+            CheckValue(values[0] >= T{0} && std::isfinite(static_cast<float>(values[0])));
+        else
+            CheckValue(values[0] >= T{0});
 
         Source->MaxGain = static_cast<float>(values[0]);
         return UpdateSourceProps(Source, Context);
@@ -2328,7 +2348,7 @@ NOINLINE void GetProperty(ALsource *const Source, ALCcontext *const Context, con
         if constexpr(std::is_integral_v<T>)
         {
             CheckSize(1);
-            ALbufferQueueItem *BufferList{};
+            const ALbufferQueueItem *BufferList{};
             /* HACK: This query should technically only return the buffer set
              * on a static source. However, some apps had used it to detect
              * when a streaming source changed buffers, so report the current
@@ -2342,7 +2362,10 @@ NOINLINE void GetProperty(ALsource *const Source, ALCcontext *const Context, con
             else if(Voice *voice{GetSourceVoice(Source, Context)})
             {
                 VoiceBufferItem *Current{voice->mCurrentBuffer.load(std::memory_order_relaxed)};
-                BufferList = static_cast<ALbufferQueueItem*>(Current);
+                const auto iter = std::find_if(Source->mQueue.cbegin(), Source->mQueue.cend(),
+                    [Current](const ALbufferQueueItem &item) noexcept -> bool
+                    { return &item == Current; });
+                BufferList = (iter != Source->mQueue.cend()) ? al::to_address(iter) : nullptr;
             }
             ALbuffer *buffer{BufferList ? BufferList->mBuffer : nullptr};
             values[0] = buffer ? static_cast<T>(buffer->id) : T{0};

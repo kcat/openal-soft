@@ -1178,10 +1178,10 @@ uint AlsaCapture::availableSamples()
     while(avail > 0)
     {
         auto vec = mRing->getWriteVector();
-        if(vec.first.len == 0) break;
+        if(vec[0].len == 0) break;
 
-        snd_pcm_sframes_t amt{std::min(static_cast<snd_pcm_sframes_t>(vec.first.len), avail)};
-        amt = snd_pcm_readi(mPcmHandle, vec.first.buf, static_cast<snd_pcm_uframes_t>(amt));
+        snd_pcm_sframes_t amt{std::min(static_cast<snd_pcm_sframes_t>(vec[0].len), avail)};
+        amt = snd_pcm_readi(mPcmHandle, vec[0].buf, static_cast<snd_pcm_uframes_t>(amt));
         if(amt < 0)
         {
             ERR("read error: %s\n", snd_strerror(static_cast<int>(amt)));

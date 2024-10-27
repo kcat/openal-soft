@@ -6,12 +6,12 @@
 #include <algorithm>
 #include <array>
 #include <cstddef>
-#include <cstring>
 #include <functional>
-#include <limits>
+#include <iterator>
 #include <numeric>
-#include <stdexcept>
+#include <optional>
 #include <string_view>
+#include <tuple>
 #include <utility>
 
 #include "AL/efx.h"
@@ -25,12 +25,14 @@
 #include "albit.h"
 #include "alc/alu.h"
 #include "alc/backends/base.h"
+#include "alnumeric.h"
 #include "alspan.h"
+#include "atomic.h"
 #include "core/async_event.h"
+#include "core/devformat.h"
 #include "core/device.h"
 #include "core/effectslot.h"
 #include "core/logging.h"
-#include "core/voice.h"
 #include "core/voice_change.h"
 #include "device.h"
 #include "flexarray.h"
@@ -38,6 +40,7 @@
 #include "vecmat.h"
 
 #ifdef ALSOFT_EAX
+#include "al/eax/call.h"
 #include "al/eax/globals.h"
 #endif // ALSOFT_EAX
 
@@ -121,6 +124,10 @@ ALCcontext::ALCcontext(al::intrusive_ptr<ALCdevice> device, ContextFlagBitset fl
 {
     mDebugGroups.emplace_back(DebugSource::Other, 0, std::string{});
     mDebugEnabled.store(mContextFlags.test(ContextFlags::DebugBit), std::memory_order_relaxed);
+
+    /* Low-severity debug messages are disabled by default. */
+    alDebugMessageControlDirectEXT(this, AL_DONT_CARE_EXT, AL_DONT_CARE_EXT,
+        AL_DEBUG_SEVERITY_LOW_EXT, 0, nullptr, AL_FALSE);
 }
 
 ALCcontext::~ALCcontext()
@@ -250,7 +257,8 @@ void ALCcontext::deinit()
     {
         WARN("%p released while current on thread\n", voidp{this});
         sThreadContext.set(nullptr);
-        dec_ref();
+        const auto rc [[maybe_unused]] = dec_ref();
+        assert(rc > 0);
     }
 
     ALCcontext *origctx{this};
@@ -261,7 +269,8 @@ void ALCcontext::deinit()
              * trying to increment its refcount.
              */
         }
-        dec_ref();
+        const auto rc [[maybe_unused]] = dec_ref();
+        assert(rc > 0);
     }
 
     bool stopPlayback{};

@@ -927,16 +927,16 @@ void CoreAudioCapture::captureSamples(std::byte *buffer, uint samples)
     }
 
     auto rec_vec = mRing->getReadVector();
-    const void *src0{rec_vec.first.buf};
-    auto src0len = static_cast<uint>(rec_vec.first.len);
+    const void *src0{rec_vec[0].buf};
+    auto src0len = static_cast<uint>(rec_vec[0].len);
     uint got{mConverter->convert(&src0, &src0len, buffer, samples)};
-    size_t total_read{rec_vec.first.len - src0len};
-    if(got < samples && !src0len && rec_vec.second.len > 0)
+    size_t total_read{rec_vec[0].len - src0len};
+    if(got < samples && !src0len && rec_vec[1].len > 0)
     {
-        const void *src1{rec_vec.second.buf};
-        auto src1len = static_cast<uint>(rec_vec.second.len);
+        const void *src1{rec_vec[1].buf};
+        auto src1len = static_cast<uint>(rec_vec[1].len);
         got += mConverter->convert(&src1, &src1len, buffer + got*mFrameSize, samples-got);
-        total_read += rec_vec.second.len - src1len;
+        total_read += rec_vec[1].len - src1len;
     }
 
     mRing->readAdvance(total_read);

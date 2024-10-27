@@ -61,6 +61,8 @@
 
 namespace {
 
+using ALvoidptr = ALvoid*;
+
 [[nodiscard]] constexpr auto GetVendorString() noexcept { return "OpenAL Community"; }
 [[nodiscard]] constexpr auto GetVersionString() noexcept { return "1.1 ALSOFT " ALSOFT_VERSION; }
 [[nodiscard]] constexpr auto GetRendererString() noexcept { return "OpenAL Soft"; }
@@ -143,24 +145,24 @@ constexpr auto ALenumFromDistanceModel(DistanceModel model) -> ALenum
 }
 
 enum PropertyValue : ALenum {
-    DopplerFactor = AL_DOPPLER_FACTOR,
-    DopplerVelocity = AL_DOPPLER_VELOCITY,
-    DistanceModel = AL_DISTANCE_MODEL,
-    SpeedOfSound = AL_SPEED_OF_SOUND,
-    DeferredUpdates = AL_DEFERRED_UPDATES_SOFT,
-    GainLimit = AL_GAIN_LIMIT_SOFT,
-    NumResamplers = AL_NUM_RESAMPLERS_SOFT,
-    DefaultResampler = AL_DEFAULT_RESAMPLER_SOFT,
-    DebugLoggedMessages = AL_DEBUG_LOGGED_MESSAGES_EXT,
-    DebugNextLoggedMessageLength = AL_DEBUG_NEXT_LOGGED_MESSAGE_LENGTH_EXT,
-    MaxDebugMessageLength = AL_MAX_DEBUG_MESSAGE_LENGTH_EXT,
-    MaxDebugLoggedMessages = AL_MAX_DEBUG_LOGGED_MESSAGES_EXT,
-    MaxDebugGroupDepth = AL_MAX_DEBUG_GROUP_STACK_DEPTH_EXT,
-    MaxLabelLength = AL_MAX_LABEL_LENGTH_EXT,
-    ContextFlags = AL_CONTEXT_FLAGS_EXT,
+    DopplerFactorProp = AL_DOPPLER_FACTOR,
+    DopplerVelocityProp = AL_DOPPLER_VELOCITY,
+    DistanceModelProp = AL_DISTANCE_MODEL,
+    SpeedOfSoundProp = AL_SPEED_OF_SOUND,
+    DeferredUpdatesProp = AL_DEFERRED_UPDATES_SOFT,
+    GainLimitProp = AL_GAIN_LIMIT_SOFT,
+    NumResamplersProp = AL_NUM_RESAMPLERS_SOFT,
+    DefaultResamplerProp = AL_DEFAULT_RESAMPLER_SOFT,
+    DebugLoggedMessagesProp = AL_DEBUG_LOGGED_MESSAGES_EXT,
+    DebugNextLoggedMessageLengthProp = AL_DEBUG_NEXT_LOGGED_MESSAGE_LENGTH_EXT,
+    MaxDebugMessageLengthProp = AL_MAX_DEBUG_MESSAGE_LENGTH_EXT,
+    MaxDebugLoggedMessagesProp = AL_MAX_DEBUG_LOGGED_MESSAGES_EXT,
+    MaxDebugGroupDepthProp = AL_MAX_DEBUG_GROUP_STACK_DEPTH_EXT,
+    MaxLabelLengthProp = AL_MAX_LABEL_LENGTH_EXT,
+    ContextFlagsProp = AL_CONTEXT_FLAGS_EXT,
 #ifdef ALSOFT_EAX
-    EaxRamSize = AL_EAX_RAM_SIZE,
-    EaxRamFree = AL_EAX_RAM_FREE,
+    EaxRamSizeProp = AL_EAX_RAM_SIZE,
+    EaxRamFreeProp = AL_EAX_RAM_FREE,
 #endif
 };
 
@@ -373,9 +375,9 @@ FORCE_ALIGN ALboolean AL_APIENTRY alIsEnabledDirect(ALCcontext *context, ALenum 
 }
 
 #define DECL_GETFUNC(R, Name, Ext)                                            \
-AL_API auto AL_APIENTRY Name##Ext(ALenum pname) noexcept -> R                 \
+auto AL_APIENTRY Name##Ext(ALenum pname) noexcept -> R                        \
 {                                                                             \
-    R value{};                                                                \
+    auto value = R{};                                                         \
     auto context = GetContextRef();                                           \
     if(!context) UNLIKELY return value;                                       \
     Name##vDirect##Ext(GetContextRef().get(), pname, &value);                 \
@@ -383,18 +385,19 @@ AL_API auto AL_APIENTRY Name##Ext(ALenum pname) noexcept -> R                 \
 }                                                                             \
 FORCE_ALIGN auto AL_APIENTRY Name##Direct##Ext(ALCcontext *context, ALenum pname) noexcept -> R \
 {                                                                             \
-    R value{};                                                                \
+    auto value = R{};                                                         \
     Name##vDirect##Ext(context, pname, &value);                               \
     return value;                                                             \
 }
 
-DECL_GETFUNC(ALboolean, alGetBoolean,)
-DECL_GETFUNC(ALdouble, alGetDouble,)
-DECL_GETFUNC(ALfloat, alGetFloat,)
-DECL_GETFUNC(ALint, alGetInteger,)
+AL_API DECL_GETFUNC(ALboolean, alGetBoolean,)
+AL_API DECL_GETFUNC(ALdouble, alGetDouble,)
+AL_API DECL_GETFUNC(ALfloat, alGetFloat,)
+AL_API DECL_GETFUNC(ALint, alGetInteger,)
 
-DECL_GETFUNC(ALint64SOFT, alGetInteger64,SOFT)
-DECL_GETFUNC(ALvoid*, alGetPointer,SOFT)
+DECL_GETFUNC(ALvoidptr, alGetPointer,EXT)
+AL_API DECL_GETFUNC(ALint64SOFT, alGetInteger64,SOFT)
+AL_API DECL_GETFUNC(ALvoidptr, alGetPointer,SOFT)
 
 #undef DECL_GETFUNC
 
@@ -441,6 +444,10 @@ FORCE_ALIGN void AL_APIENTRY alGetInteger64vDirectSOFT(ALCcontext *context, ALen
 
 AL_API DECL_FUNCEXT2(void, alGetPointerv,SOFT, ALenum,pname, ALvoid**,values)
 FORCE_ALIGN void AL_APIENTRY alGetPointervDirectSOFT(ALCcontext *context, ALenum pname, ALvoid **values) noexcept
+{ return alGetPointervDirectEXT(context, pname, values); }
+
+FORCE_ALIGN DECL_FUNCEXT2(void, alGetPointerv,EXT, ALenum,pname, ALvoid**,values)
+FORCE_ALIGN void AL_APIENTRY alGetPointervDirectEXT(ALCcontext *context, ALenum pname, ALvoid **values) noexcept
 {
     if(!values) UNLIKELY
         return context->setError(AL_INVALID_VALUE, "NULL pointer");
@@ -575,7 +582,7 @@ AL_API void AL_APIENTRY alDopplerVelocity(ALfloat value) noexcept
     if(!context) UNLIKELY return;
 
     if(context->mContextFlags.test(ContextFlags::DebugBit)) UNLIKELY
-        context->debugMessage(DebugSource::API, DebugType::DeprecatedBehavior, 0,
+        context->debugMessage(DebugSource::API, DebugType::DeprecatedBehavior, 1,
             DebugSeverity::Medium,
             "alDopplerVelocity is deprecated in AL 1.1, use alSpeedOfSound; "
             "alDopplerVelocity(x) -> alSpeedOfSound(343.3f * x)");

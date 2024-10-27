@@ -215,6 +215,10 @@ inline const FuncExport alcFunctions[]{
     DECL(alPushDebugGroupEXT),
     DECL(alPopDebugGroupEXT),
     DECL(alGetDebugMessageLogEXT),
+    DECL(alObjectLabelEXT),
+    DECL(alGetObjectLabelEXT),
+    DECL(alGetPointerEXT),
+    DECL(alGetPointervEXT),
 
     /* Direct Context functions */
     DECL(alcGetProcAddress2),
@@ -365,10 +369,10 @@ inline const FuncExport alcFunctions[]{
     DECL(alPushDebugGroupDirectEXT),
     DECL(alPopDebugGroupDirectEXT),
     DECL(alGetDebugMessageLogDirectEXT),
-    DECL(alObjectLabelEXT),
     DECL(alObjectLabelDirectEXT),
-    DECL(alGetObjectLabelEXT),
     DECL(alGetObjectLabelDirectEXT),
+    DECL(alGetPointerDirectEXT),
+    DECL(alGetPointervDirectEXT),
 
     /* Extra functions */
     DECL(alsoft_set_log_callback),

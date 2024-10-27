@@ -231,9 +231,9 @@ void SendSourceStoppedEvent(ContextBase *context, uint id)
 {
     RingBuffer *ring{context->mAsyncEvents.get()};
     auto evt_vec = ring->getWriteVector();
-    if(evt_vec.first.len < 1) return;
+    if(evt_vec[0].len < 1) return;
 
-    auto &evt = InitAsyncEvent<AsyncSourceStateEvent>(evt_vec.first.buf);
+    auto &evt = InitAsyncEvent<AsyncSourceStateEvent>(evt_vec[0].buf);
     evt.mId = id;
     evt.mState = AsyncSrcState::Stop;
 
@@ -843,7 +843,7 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
                 dataSize64 += ext + MaxResamplerEdge;
 
                 if(dataSize64 <= srcSizeMax)
-                    return std::make_pair(dstBufferSize, static_cast<uint>(dataSize64));
+                    return std::array{dstBufferSize, static_cast<uint>(dataSize64)};
 
                 /* If the source size got saturated, we can't fill the desired
                  * dst size. Figure out how many dst samples we can fill.
@@ -858,7 +858,7 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
                      */
                     dstBufferSize = static_cast<uint>(dataSize64) & ~3u;
                 }
-                return std::make_pair(dstBufferSize, srcSizeMax);
+                return std::array{dstBufferSize, srcSizeMax};
             };
             const auto [dstBufferSize, srcBufferSize] = calc_buffer_sizes(
                 samplesToLoad - samplesLoaded);
@@ -1182,9 +1182,9 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
     {
         RingBuffer *ring{Context->mAsyncEvents.get()};
         auto evt_vec = ring->getWriteVector();
-        if(evt_vec.first.len > 0)
+        if(evt_vec[0].len > 0)
         {
-            auto &evt = InitAsyncEvent<AsyncBufferCompleteEvent>(evt_vec.first.buf);
+            auto &evt = InitAsyncEvent<AsyncBufferCompleteEvent>(evt_vec[0].buf);
             evt.mId = SourceID;
             evt.mCount = buffers_done;
             ring->writeAdvance(1);

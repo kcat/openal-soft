@@ -10,10 +10,16 @@
 
 namespace al {
 
-template<typename T, typename Traits>
+template<typename ...Ts>
 [[nodiscard]] constexpr
-auto sizei(const std::basic_string_view<T,Traits> str) noexcept -> int
+auto sizei(const std::basic_string_view<Ts...> str) noexcept -> int
 { return static_cast<int>(std::min<std::size_t>(str.size(), std::numeric_limits<int>::max())); }
+
+template<typename ...Ts>
+[[nodiscard]] constexpr
+auto sizei(const std::basic_string<Ts...> &str) noexcept -> int
+{ return static_cast<int>(std::min<std::size_t>(str.size(), std::numeric_limits<int>::max())); }
+
 
 [[nodiscard]]
 constexpr bool contains(const std::string_view str0, const std::string_view str1) noexcept

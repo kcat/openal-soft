@@ -120,7 +120,7 @@ public:
         const al::span<Real> dst);
 
     /* Rather hacky. It's just here to support "manual" processing. */
-    [[nodiscard]] auto getComponents() const noexcept -> std::pair<Real,Real> { return {mZ1, mZ2}; }
+    [[nodiscard]] auto getComponents() const noexcept -> std::array<Real,2> { return {{mZ1,mZ2}}; }
     void setComponents(Real z1, Real z2) noexcept { mZ1 = z1; mZ2 = z2; }
     [[nodiscard]] auto processOne(const Real in, Real &z1, Real &z2) const noexcept -> Real
     {

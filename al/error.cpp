@@ -106,8 +106,8 @@ void ALCcontext::setError(ALenum errorCode, const char *msg, ...)
     if(mLastThreadError.get() == AL_NO_ERROR)
         mLastThreadError.set(errorCode);
 
-    debugMessage(DebugSource::API, DebugType::Error, 0, DebugSeverity::High,
-        {msg, static_cast<uint>(msglen)});
+    debugMessage(DebugSource::API, DebugType::Error, static_cast<ALuint>(errorCode),
+        DebugSeverity::High, {msg, static_cast<uint>(msglen)});
 }
 
 /* Special-case alGetError since it (potentially) raises a debug signal and

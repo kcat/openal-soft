@@ -285,7 +285,7 @@ constexpr auto SanitizeAlignment(FmtType type, ALuint align) noexcept -> ALuint
 
 /** Loads the specified data into the buffer, using the specified format. */
 void LoadData(ALCcontext *context [[maybe_unused]], ALbuffer *ALBuf, ALsizei freq, ALuint size,
-    const FmtChannels DstChannels, const FmtType DstType, const std::byte *SrcData,
+    const FmtChannels DstChannels, const FmtType DstType, const al::span<const std::byte> SrcData,
     ALbitfieldSOFT access)
 {
     if(ALBuf->ref.load(std::memory_order_relaxed) != 0 || ALBuf->MappedAccess != 0)
@@ -364,8 +364,8 @@ void LoadData(ALCcontext *context [[maybe_unused]], ALbuffer *ALBuf, ALsizei fre
     eax_x_ram_clear(*context->mALDevice, *ALBuf);
 #endif
 
-    if(SrcData != nullptr && !ALBuf->mData.empty())
-        std::copy_n(SrcData, blocks*BlockSize, ALBuf->mData.begin());
+    if(!SrcData.empty() && !ALBuf->mData.empty())
+        std::copy_n(SrcData.begin(), blocks*BlockSize, ALBuf->mData.begin());
     ALBuf->mBlockAlign = (DstType == FmtIMA4 || DstType == FmtMSADPCM) ? align : 1;
 
     ALBuf->OriginalSize = size;
@@ -519,7 +519,7 @@ void PrepareUserPtr(ALCcontext *context [[maybe_unused]], ALbuffer *ALBuf, ALsiz
 #endif
 
     decltype(ALBuf->mDataStorage){}.swap(ALBuf->mDataStorage);
-    ALBuf->mData = {static_cast<std::byte*>(sdata), sdatalen};
+    ALBuf->mData = al::span{sdata, sdatalen};
 
 #ifdef ALSOFT_EAX
     eax_x_ram_clear(*context->mALDevice, *ALBuf);
@@ -764,8 +764,9 @@ try {
     if(!usrfmt)
         throw al::context_error{AL_INVALID_ENUM, "Invalid format 0x%04x", format};
 
+    auto bdata = static_cast<const std::byte*>(data);
     LoadData(context, albuf, freq, static_cast<ALuint>(size), usrfmt->channels, usrfmt->type,
-        static_cast<const std::byte*>(data), flags);
+        al::span{bdata, bdata ? static_cast<ALuint>(size) : 0u}, flags);
 }
 catch(al::context_error& e) {
     context->setError(e.errorCode(), "%s", e.what());

@@ -1,8 +1,8 @@
 #ifndef ALC_CONTEXT_H
 #define ALC_CONTEXT_H
 
-#include <array>
 #include <atomic>
+#include <bitset>
 #include <cstdint>
 #include <deque>
 #include <memory>
@@ -18,25 +18,23 @@
 #include "AL/alext.h"
 
 #include "al/listener.h"
-#include "almalloc.h"
-#include "alnumeric.h"
 #include "althreads.h"
-#include "atomic.h"
 #include "core/context.h"
-#include "inprogext.h"
 #include "intrusive_ptr.h"
+#include "opthelpers.h"
 
 #ifdef ALSOFT_EAX
-#include "al/eax/call.h"
+#include "al/eax/api.h"
 #include "al/eax/exception.h"
 #include "al/eax/fx_slot_index.h"
 #include "al/eax/fx_slots.h"
 #include "al/eax/utils.h"
+
+class EaxCall;
 #endif // ALSOFT_EAX
 
 struct ALeffect;
 struct ALeffectslot;
-struct ALsource;
 struct DebugGroup;
 struct EffectSlotSubList;
 struct SourceSubList;
@@ -72,7 +70,7 @@ struct DebugLogEntry {
 };
 
 
-struct ALCcontext : public al::intrusive_ref<ALCcontext>, ContextBase {
+struct ALCcontext final : public al::intrusive_ref<ALCcontext>, ContextBase {
     const al::intrusive_ptr<ALCdevice> mALDevice;
 
 
@@ -126,7 +124,7 @@ struct ALCcontext : public al::intrusive_ref<ALCcontext>, ContextBase {
     ALCcontext(al::intrusive_ptr<ALCdevice> device, ContextFlagBitset flags);
     ALCcontext(const ALCcontext&) = delete;
     ALCcontext& operator=(const ALCcontext&) = delete;
-    ~ALCcontext();
+    ~ALCcontext() final;
 
     void init();
     /**

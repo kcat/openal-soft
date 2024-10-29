@@ -1202,7 +1202,7 @@ if(ALSOFT_BACKEND_SDL2)
         message(STATUS "Could NOT find SDL2")
     endif()
 endif()
-if(ALSOFT_REQUIRE_SDL2 AND NOT SDL2_FOUND)
+if(ALSOFT_REQUIRE_SDL2 AND NOT HAVE_SDL2)
     message(FATAL_ERROR "Failed to enable required SDL2 backend")
 endif()
 

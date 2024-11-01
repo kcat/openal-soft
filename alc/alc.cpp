@@ -320,7 +320,7 @@ constexpr uint DitherRNGSeed{22222u};
 /************************************************
  * ALC information
  ************************************************/
-[[nodiscard]] constexpr auto GetNoDeviceExtList() noexcept -> std::string_view
+[[nodiscard]] constexpr auto GetNoDeviceExtList() noexcept -> const char*
 {
     return  "ALC_ENUMERATE_ALL_EXT "
         "ALC_ENUMERATION_EXT "
@@ -331,9 +331,9 @@ constexpr uint DitherRNGSeed{22222u};
         "ALC_SOFT_loopback "
         "ALC_SOFT_loopback_bformat "
         "ALC_SOFT_reopen_device "
-        "ALC_SOFT_system_events"sv;
+        "ALC_SOFT_system_events";
 }
-[[nodiscard]] constexpr auto GetExtensionList() noexcept -> std::string_view
+[[nodiscard]] constexpr auto GetExtensionList() noexcept -> const char*
 {
     return "ALC_ENUMERATE_ALL_EXT "
         "ALC_ENUMERATION_EXT "
@@ -352,7 +352,7 @@ constexpr uint DitherRNGSeed{22222u};
         "ALC_SOFT_output_mode "
         "ALC_SOFT_pause_device "
         "ALC_SOFT_reopen_device "
-        "ALC_SOFT_system_events"sv;
+        "ALC_SOFT_system_events";
 }
 
 constexpr int alcMajorVersion{1};
@@ -2036,65 +2036,55 @@ ALC_API void ALC_APIENTRY alcProcessContext(ALCcontext *context) noexcept
 }
 
 
-ALC_API const ALCchar* ALC_APIENTRY alcGetString(ALCdevice *Device, ALCenum param) noexcept
+ALC_API auto ALC_APIENTRY alcGetString(ALCdevice *Device, ALCenum param) noexcept -> const ALCchar*
 {
-    const ALCchar *value{nullptr};
-
     switch(param)
     {
-    case ALC_NO_ERROR: value = GetNoErrorString(); break;
-    case ALC_INVALID_ENUM: value = GetInvalidEnumString(); break;
-    case ALC_INVALID_VALUE: value = GetInvalidValueString(); break;
-    case ALC_INVALID_DEVICE: value = GetInvalidDeviceString(); break;
-    case ALC_INVALID_CONTEXT: value = GetInvalidContextString(); break;
-    case ALC_OUT_OF_MEMORY: value = GetOutOfMemoryString(); break;
+    case ALC_NO_ERROR: return GetNoErrorString();
+    case ALC_INVALID_ENUM: return GetInvalidEnumString();
+    case ALC_INVALID_VALUE: return GetInvalidValueString();
+    case ALC_INVALID_DEVICE: return GetInvalidDeviceString();
+    case ALC_INVALID_CONTEXT: return GetInvalidContextString();
+    case ALC_OUT_OF_MEMORY: return GetOutOfMemoryString();
 
     case ALC_DEVICE_SPECIFIER:
-        value = GetDefaultName();
-        break;
+        return GetDefaultName();
 
     case ALC_ALL_DEVICES_SPECIFIER:
         if(DeviceRef dev{VerifyDevice(Device)})
         {
             if(dev->Type == DeviceType::Capture)
-                alcSetError(dev.get(), ALC_INVALID_ENUM);
-            else if(dev->Type == DeviceType::Loopback)
-                value = GetDefaultName();
-            else
             {
-                std::lock_guard<std::mutex> statelock{dev->StateLock};
-                value = dev->mDeviceName.c_str();
+                alcSetError(dev.get(), ALC_INVALID_ENUM);
+                return nullptr;
             }
+            if(dev->Type == DeviceType::Loopback)
+                return GetDefaultName();
+
+            auto statelock = std::lock_guard{dev->StateLock};
+            return dev->mDeviceName.c_str();
         }
-        else
-        {
-            ProbeAllDevicesList();
-            value = alcAllDevicesList.c_str();
-        }
-        break;
+        ProbeAllDevicesList();
+        return alcAllDevicesList.c_str();
 
     case ALC_CAPTURE_DEVICE_SPECIFIER:
         if(DeviceRef dev{VerifyDevice(Device)})
         {
             if(dev->Type != DeviceType::Capture)
-                alcSetError(dev.get(), ALC_INVALID_ENUM);
-            else
             {
-                std::lock_guard<std::mutex> statelock{dev->StateLock};
-                value = dev->mDeviceName.c_str();
+                alcSetError(dev.get(), ALC_INVALID_ENUM);
+                return nullptr;
             }
+
+            auto statelock = std::lock_guard{dev->StateLock};
+            return dev->mDeviceName.c_str();
         }
-        else
-        {
-            ProbeCaptureDeviceList();
-            value = alcCaptureDeviceList.c_str();
-        }
-        break;
+        ProbeCaptureDeviceList();
+        return alcCaptureDeviceList.c_str();
 
     /* Default devices are always first in the list */
     case ALC_DEFAULT_DEVICE_SPECIFIER:
-        value = GetDefaultName();
-        break;
+        return GetDefaultName();
 
     case ALC_DEFAULT_ALL_DEVICES_SPECIFIER:
         if(alcAllDevicesList.empty())
@@ -2102,13 +2092,10 @@ ALC_API const ALCchar* ALC_APIENTRY alcGetString(ALCdevice *Device, ALCenum para
 
         /* Copy first entry as default. */
         if(alcAllDevicesArray.empty())
-            value = GetDefaultName();
-        else
-        {
-            alcDefaultAllDevicesSpecifier = alcAllDevicesArray.front();
-            value = alcDefaultAllDevicesSpecifier.c_str();
-        }
-        break;
+            return GetDefaultName();
+
+        alcDefaultAllDevicesSpecifier = alcAllDevicesArray.front();
+        return alcDefaultAllDevicesSpecifier.c_str();
 
     case ALC_CAPTURE_DEFAULT_DEVICE_SPECIFIER:
         if(alcCaptureDeviceList.empty())
@@ -2116,37 +2103,30 @@ ALC_API const ALCchar* ALC_APIENTRY alcGetString(ALCdevice *Device, ALCenum para
 
         /* Copy first entry as default. */
         if(alcCaptureDeviceArray.empty())
-            value = GetDefaultName();
-        else
-        {
-            alcCaptureDefaultDeviceSpecifier = alcCaptureDeviceArray.front();
-            value = alcCaptureDefaultDeviceSpecifier.c_str();
-        }
-        break;
+            return GetDefaultName();
+
+        alcCaptureDefaultDeviceSpecifier = alcCaptureDeviceArray.front();
+        return alcCaptureDefaultDeviceSpecifier.c_str();
 
     case ALC_EXTENSIONS:
         if(VerifyDevice(Device))
-            value = GetExtensionList().data();
-        else
-            value = GetNoDeviceExtList().data();
-        break;
+            return GetExtensionList();
+        return GetNoDeviceExtList();
 
     case ALC_HRTF_SPECIFIER_SOFT:
         if(DeviceRef dev{VerifyDevice(Device)})
         {
             std::lock_guard<std::mutex> statelock{dev->StateLock};
-            value = (dev->mHrtf ? dev->mHrtfName.c_str() : "");
+            return dev->mHrtf ? dev->mHrtfName.c_str() : "";
         }
-        else
-            alcSetError(nullptr, ALC_INVALID_DEVICE);
-        break;
+        alcSetError(nullptr, ALC_INVALID_DEVICE);
+        return nullptr;
 
     default:
         alcSetError(VerifyDevice(Device).get(), ALC_INVALID_ENUM);
-        break;
     }
 
-    return value;
+    return nullptr;
 }
 
 
@@ -2628,7 +2608,8 @@ ALC_API ALCboolean ALC_APIENTRY alcIsExtensionPresent(ALCdevice *device, const A
     }
 
     const std::string_view tofind{extName};
-    const auto extlist = dev ? GetExtensionList() : GetNoDeviceExtList();
+    const auto extlist = dev ? std::string_view{GetExtensionList()}
+        : std::string_view{GetNoDeviceExtList()};
     auto matchpos = extlist.find(tofind);
     while(matchpos != std::string_view::npos)
     {

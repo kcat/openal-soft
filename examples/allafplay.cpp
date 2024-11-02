@@ -576,8 +576,8 @@ auto LoadLAF(const fs::path &fname) -> std::unique_ptr<LafStream>
     {
         static constexpr auto read_float = [](al::span<char,4> input)
         {
-            const auto value = uint32_t{uint8_t(input[0]) | (uint32_t{uint8_t(input[1])}<<8)
-                | (uint32_t{uint8_t(input[2])}<<16) | (uint32_t{uint8_t(input[3])}<<24)};
+            const auto value = uint32_t{uint8_t(input[0])} | (uint32_t{uint8_t(input[1])}<<8u)
+                | (uint32_t{uint8_t(input[2])}<<16u) | (uint32_t{uint8_t(input[3])}<<24u);
             return al::bit_cast<float>(value);
         };
 
@@ -618,14 +618,14 @@ auto LoadLAF(const fs::path &fname) -> std::unique_ptr<LafStream>
         throw std::runtime_error{"Failed to read sample header data"};
 
     laf->mSampleRate = [input=al::span{footer}.first<4>()] {
-        return uint32_t{uint8_t(input[0]) | (uint32_t{uint8_t(input[1])}<<8)
-            | (uint32_t{uint8_t(input[2])}<<16) | (uint32_t{uint8_t(input[3])}<<24)};
+        return uint32_t{uint8_t(input[0])} | (uint32_t{uint8_t(input[1])}<<8u)
+            | (uint32_t{uint8_t(input[2])}<<16u) | (uint32_t{uint8_t(input[3])}<<24u);
     }();
     laf->mSampleCount = [input=al::span{footer}.last<8>()] {
-        return uint64_t{uint8_t(input[0]) | (uint64_t{uint8_t(input[1])}<<8)
-            | (uint64_t{uint8_t(input[2])}<<16) | (uint64_t{uint8_t(input[3])}<<24)
-            | (uint64_t{uint8_t(input[4])}<<32) | (uint64_t{uint8_t(input[5])}<<40)
-            | (uint64_t{uint8_t(input[6])}<<48) | (uint64_t{uint8_t(input[7])}<<56)};
+        return uint64_t{uint8_t(input[0])} | (uint64_t{uint8_t(input[1])}<<8)
+            | (uint64_t{uint8_t(input[2])}<<16u) | (uint64_t{uint8_t(input[3])}<<24u)
+            | (uint64_t{uint8_t(input[4])}<<32u) | (uint64_t{uint8_t(input[5])}<<40u)
+            | (uint64_t{uint8_t(input[6])}<<48u) | (uint64_t{uint8_t(input[7])}<<56u);
     }();
     std::cout<< "Sample rate: "<<laf->mSampleRate<<'\n';
     std::cout<< "Length: "<<laf->mSampleCount<<" samples ("

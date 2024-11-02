@@ -204,7 +204,7 @@ auto TrLoad(TokenReaderT *tr) -> int
 {
     std::istream &istream = tr->mIStream;
 
-    std::streamsize toLoad{TRRingSize - static_cast<std::streamsize>(tr->mIn - tr->mOut)};
+    auto toLoad = std::streamsize{std::streamsize{TRRingSize} - (tr->mIn - tr->mOut)};
     if(toLoad >= TRLoadSize && istream.good())
     {
         // Load TRLoadSize (or less if at the end of the file) per read.

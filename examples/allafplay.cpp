@@ -47,12 +47,6 @@
  *   to render with and control the number of samples rendered between updates
  *   (with a second device to do the actual playback).
  *
- * - LFE channels are silenced. Since LFE signals can really contain anything,
- *   and may expect to be low-pass filtered for/by the subwoofer it's sent to,
- *   it's best to not play them raw. This can be fixed with AL_EXT_DEDICATED's
- *   AL_EFFECT_DEDICATED_LOW_FREQUENCY_EFFECT to silence the direct output and
- *   send the signal to the LFE output if it exists.
- *
  * - The LAF documentation doesn't prohibit object position tracks from being
  *   separated with audio tracks in between, or from being the first tracks
  *   followed by the audio tracks. It's not known if this is intended to be
@@ -81,10 +75,8 @@
 
 #include <algorithm>
 #include <array>
-#include <bitset>
 #include <cassert>
 #include <cstdint>
-#include <deque>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -110,6 +102,51 @@
 #include "win_main_utf8.h"
 
 namespace {
+
+/* Filter object functions */
+auto alGenFilters = LPALGENFILTERS{};
+auto alDeleteFilters = LPALDELETEFILTERS{};
+auto alIsFilter = LPALISFILTER{};
+auto alFilteri = LPALFILTERI{};
+auto alFilteriv = LPALFILTERIV{};
+auto alFilterf = LPALFILTERF{};
+auto alFilterfv = LPALFILTERFV{};
+auto alGetFilteri = LPALGETFILTERI{};
+auto alGetFilteriv = LPALGETFILTERIV{};
+auto alGetFilterf = LPALGETFILTERF{};
+auto alGetFilterfv = LPALGETFILTERFV{};
+
+/* Effect object functions */
+auto alGenEffects = LPALGENEFFECTS{};
+auto alDeleteEffects = LPALDELETEEFFECTS{};
+auto alIsEffect = LPALISEFFECT{};
+auto alEffecti = LPALEFFECTI{};
+auto alEffectiv = LPALEFFECTIV{};
+auto alEffectf = LPALEFFECTF{};
+auto alEffectfv = LPALEFFECTFV{};
+auto alGetEffecti = LPALGETEFFECTI{};
+auto alGetEffectiv = LPALGETEFFECTIV{};
+auto alGetEffectf = LPALGETEFFECTF{};
+auto alGetEffectfv = LPALGETEFFECTFV{};
+
+/* Auxiliary Effect Slot object functions */
+auto alGenAuxiliaryEffectSlots = LPALGENAUXILIARYEFFECTSLOTS{};
+auto alDeleteAuxiliaryEffectSlots = LPALDELETEAUXILIARYEFFECTSLOTS{};
+auto alIsAuxiliaryEffectSlot = LPALISAUXILIARYEFFECTSLOT{};
+auto alAuxiliaryEffectSloti = LPALAUXILIARYEFFECTSLOTI{};
+auto alAuxiliaryEffectSlotiv = LPALAUXILIARYEFFECTSLOTIV{};
+auto alAuxiliaryEffectSlotf = LPALAUXILIARYEFFECTSLOTF{};
+auto alAuxiliaryEffectSlotfv = LPALAUXILIARYEFFECTSLOTFV{};
+auto alGetAuxiliaryEffectSloti = LPALGETAUXILIARYEFFECTSLOTI{};
+auto alGetAuxiliaryEffectSlotiv = LPALGETAUXILIARYEFFECTSLOTIV{};
+auto alGetAuxiliaryEffectSlotf = LPALGETAUXILIARYEFFECTSLOTF{};
+auto alGetAuxiliaryEffectSlotfv = LPALGETAUXILIARYEFFECTSLOTFV{};
+
+
+auto MuteFilterID = ALuint{};
+auto LowFrequencyEffectID = ALuint{};
+auto LfeSlotID = ALuint{};
+
 
 namespace fs = std::filesystem;
 using namespace std::string_view_literals;
@@ -535,8 +572,8 @@ auto LoadLAF(const fs::path &fname) -> std::unique_ptr<LafStream>
     }();
 
     laf->mNumTracks = [input=al::span{header}.subspan<6,4>()] {
-        return uint32_t{uint8_t(input[0]) | (uint32_t{uint8_t(input[1])}<<8)
-            | (uint32_t{uint8_t(input[2])}<<16) | (uint32_t{uint8_t(input[3])}<<24)};
+        return uint32_t{uint8_t(input[0])} | (uint32_t{uint8_t(input[1])}<<8u)
+            | (uint32_t{uint8_t(input[2])}<<16u) | (uint32_t{uint8_t(input[3])}<<24u);
     }();
 
     std::cout<< "Filename: "<<fname<<'\n';
@@ -695,12 +732,26 @@ try {
         const auto z = -std::cos(channel.mAzimuth) * std::cos(channel.mElevation);
         alSource3f(channel.mSource, AL_POSITION, x, y, z);
 
-        /* Silence LFE channels since they may not be appropriate to play
-         * normally. AL_EFFECT_DEDICATED_LOW_FREQUENCY_EFFECT could be used to
-         * send them to the proper output.
-         */
         if(channel.mIsLfe)
-            alSourcef(channel.mSource, AL_GAIN, 0.0f);
+        {
+            if(LfeSlotID)
+            {
+                /* For LFE, silence the direct/dry path and connect the LFE aux
+                 * slot on send 0.
+                 */
+                alSourcei(channel.mSource, AL_DIRECT_FILTER, ALint(MuteFilterID));
+                alSource3i(channel.mSource, AL_AUXILIARY_SEND_FILTER, ALint(LfeSlotID), 0,
+                    AL_FILTER_NULL);
+            }
+            else
+            {
+                /* If AL_EFFECT_DEDICATED_LOW_FREQUENCY_EFFECT isn't available,
+                 * silence LFE channels since they may not be appropriate to
+                 * play normally.
+                 */
+                alSourcef(channel.mSource, AL_GAIN, 0.0f);
+            }
+        }
 
         if(auto err=alGetError())
             throw std::runtime_error{std::string{"OpenAL error: "} + alGetString(err)};
@@ -880,8 +931,76 @@ auto main(al::span<std::string_view> args) -> int
     if(InitAL(args) != 0)
         throw std::runtime_error{"Failed to initialize OpenAL"};
     /* A simple RAII container for automating OpenAL shutdown. */
-    struct AudioManager { ~AudioManager() { CloseAL(); } };
+    struct AudioManager {
+        ~AudioManager()
+        {
+            if(LfeSlotID)
+            {
+                alDeleteAuxiliaryEffectSlots(1, &LfeSlotID);
+                alDeleteEffects(1, &LowFrequencyEffectID);
+                alDeleteFilters(1, &MuteFilterID);
+            }
+            CloseAL();
+        }
+    };
     AudioManager almgr;
+
+    if(auto *device = alcGetContextsDevice(alcGetCurrentContext());
+        alcIsExtensionPresent(device, "ALC_EXT_EFX")
+        && alcIsExtensionPresent(device, "ALC_EXT_DEDICATED"))
+    {
+#define LOAD_PROC(x) do {                                                     \
+        x = reinterpret_cast<decltype(x)>(alGetProcAddress(#x));              \
+        if(!x) fprintf(stderr, "Failed to find function '%s'\n", #x);         \
+    } while(0)
+        LOAD_PROC(alGenFilters);
+        LOAD_PROC(alDeleteFilters);
+        LOAD_PROC(alIsFilter);
+        LOAD_PROC(alFilterf);
+        LOAD_PROC(alFilterfv);
+        LOAD_PROC(alFilteri);
+        LOAD_PROC(alFilteriv);
+        LOAD_PROC(alGetFilterf);
+        LOAD_PROC(alGetFilterfv);
+        LOAD_PROC(alGetFilteri);
+        LOAD_PROC(alGetFilteriv);
+        LOAD_PROC(alGenEffects);
+        LOAD_PROC(alDeleteEffects);
+        LOAD_PROC(alIsEffect);
+        LOAD_PROC(alEffectf);
+        LOAD_PROC(alEffectfv);
+        LOAD_PROC(alEffecti);
+        LOAD_PROC(alEffectiv);
+        LOAD_PROC(alGetEffectf);
+        LOAD_PROC(alGetEffectfv);
+        LOAD_PROC(alGetEffecti);
+        LOAD_PROC(alGetEffectiv);
+        LOAD_PROC(alGenAuxiliaryEffectSlots);
+        LOAD_PROC(alDeleteAuxiliaryEffectSlots);
+        LOAD_PROC(alIsAuxiliaryEffectSlot);
+        LOAD_PROC(alAuxiliaryEffectSlotf);
+        LOAD_PROC(alAuxiliaryEffectSlotfv);
+        LOAD_PROC(alAuxiliaryEffectSloti);
+        LOAD_PROC(alAuxiliaryEffectSlotiv);
+        LOAD_PROC(alGetAuxiliaryEffectSlotf);
+        LOAD_PROC(alGetAuxiliaryEffectSlotfv);
+        LOAD_PROC(alGetAuxiliaryEffectSloti);
+        LOAD_PROC(alGetAuxiliaryEffectSlotiv);
+#undef LOAD_PROC
+
+        alGenFilters(1, &MuteFilterID);
+        alFilteri(MuteFilterID, AL_FILTER_TYPE, AL_FILTER_LOWPASS);
+        alFilterf(MuteFilterID, AL_LOWPASS_GAIN, 0.0f);
+        MyAssert(alGetError() == AL_NO_ERROR);
+
+        alGenEffects(1, &LowFrequencyEffectID);
+        alEffecti(LowFrequencyEffectID, AL_EFFECT_TYPE, AL_EFFECT_DEDICATED_LOW_FREQUENCY_EFFECT);
+        MyAssert(alGetError() == AL_NO_ERROR);
+
+        alGenAuxiliaryEffectSlots(1, &LfeSlotID);
+        alAuxiliaryEffectSloti(LfeSlotID, AL_EFFECTSLOT_EFFECT, ALint(LowFrequencyEffectID));
+        MyAssert(alGetError() == AL_NO_ERROR);
+    }
 
     std::for_each(args.begin(), args.end(), PlayLAF);
 

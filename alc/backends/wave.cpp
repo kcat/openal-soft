@@ -286,9 +286,14 @@ bool WaveBackend::reset()
     channels = mDevice->channelsFromFmt();
 
     rewind(mFile.get());
+    if(auto errcode = errno; errno != 0 && errno != ENOENT)
+    {
+        ERR("Failed to reset file offset: %s (%d)\n",
+            std::generic_category().message(errcode).c_str(), errcode);
+    }
 
     fputs("RIFF", mFile.get());
-    fwrite32le(0xFFFFFFFF, mFile.get()); // 'RIFF' header len; filled in at close
+    fwrite32le(0xFFFFFFFF, mFile.get()); // 'RIFF' header len; filled in at stop
 
     fputs("WAVE", mFile.get());
 
@@ -319,7 +324,7 @@ bool WaveBackend::reset()
         (isbformat ? SUBTYPE_BFORMAT_PCM.data() : SUBTYPE_PCM.data()), 1, 16, mFile.get());
 
     fputs("data", mFile.get());
-    fwrite32le(0xFFFFFFFF, mFile.get()); // 'data' header len; filled in at close
+    fwrite32le(0xFFFFFFFF, mFile.get()); // 'data' header len; filled in at stop
 
     if(ferror(mFile.get()))
     {

@@ -1076,7 +1076,7 @@ void CalculateHrtds(const HeadModelT model, const double radius, HrirDataT *hDat
     }
     if(maxHrtd > MaxHrtd)
     {
-        fprintf(stdout, "  Scaling for max delay of %f samples to %f\n...\n", maxHrtd, MaxHrtd);
+        printf("  Scaling for max delay of %f samples to %f\n...\n", maxHrtd, MaxHrtd);
         const double scale{MaxHrtd / maxHrtd};
         for(auto &field : hData->mFds)
         {
@@ -1158,12 +1158,11 @@ bool ProcessDefinition(std::string_view inName, const uint outRate, const Channe
 {
     HrirDataT hData;
 
-    fprintf(stdout, "Using %u thread%s.\n", numThreads, (numThreads==1)?"":"s");
+    printf("Using %u thread%s.\n", numThreads, (numThreads==1)?"":"s");
     if(inName.empty() || inName == "-"sv)
     {
         inName = "stdin"sv;
-        fprintf(stdout, "Reading HRIR definition from %.*s...\n", al::sizei(inName),
-            inName.data());
+        printf("Reading HRIR definition from %.*s...\n", al::sizei(inName), inName.data());
         if(!LoadDefInput(std::cin, {}, inName, fftSize, truncSize, outRate, chanMode, &hData))
             return false;
     }
@@ -1190,15 +1189,13 @@ bool ProcessDefinition(std::string_view inName, const uint outRate, const Channe
             && startbytes[3] == 'F')
         {
             input = nullptr;
-            fprintf(stdout, "Reading HRTF data from %.*s...\n", al::sizei(inName),
-                inName.data());
+            printf("Reading HRTF data from %.*s...\n", al::sizei(inName), inName.data());
             if(!LoadSofaFile(inName, numThreads, fftSize, truncSize, outRate, chanMode, &hData))
                 return false;
         }
         else
         {
-            fprintf(stdout, "Reading HRIR definition from %.*s...\n", al::sizei(inName),
-                inName.data());
+            printf("Reading HRIR definition from %.*s...\n", al::sizei(inName), inName.data());
             if(!LoadDefInput(*input, startbytes, inName, fftSize, truncSize, outRate, chanMode,
                 &hData))
                 return false;
@@ -1213,43 +1210,43 @@ bool ProcessDefinition(std::string_view inName, const uint outRate, const Channe
 
         if(hData.mFds.size() > 1)
         {
-            fprintf(stdout, "Balancing field magnitudes...\n");
+            fputs("Balancing field magnitudes...\n", stdout);
             BalanceFieldMagnitudes(&hData, c, m);
         }
-        fprintf(stdout, "Calculating diffuse-field average...\n");
+        fputs("Calculating diffuse-field average...\n", stdout);
         CalculateDiffuseFieldAverage(&hData, c, m, surface, limit, dfa);
-        fprintf(stdout, "Performing diffuse-field equalization...\n");
+        fputs("Performing diffuse-field equalization...\n", stdout);
         DiffuseFieldEqualize(c, m, dfa, &hData);
     }
     if(hData.mFds.size() > 1)
     {
-        fprintf(stdout, "Sorting %zu fields...\n", hData.mFds.size());
+        printf("Sorting %zu fields...\n", hData.mFds.size());
         std::sort(hData.mFds.begin(), hData.mFds.end(),
             [](const HrirFdT &lhs, const HrirFdT &rhs) noexcept
             { return lhs.mDistance < rhs.mDistance; });
         if(farfield)
         {
-            fprintf(stdout, "Clearing %zu near field%s...\n", hData.mFds.size()-1,
+            printf("Clearing %zu near field%s...\n", hData.mFds.size()-1,
                 (hData.mFds.size()-1 != 1) ? "s" : "");
             hData.mFds.erase(hData.mFds.cbegin(), hData.mFds.cend()-1);
         }
     }
-    fprintf(stdout, "Synthesizing missing elevations...\n");
+    fputs("Synthesizing missing elevations...\n", stdout);
     if(model == HM_Dataset)
         SynthesizeOnsets(&hData);
     SynthesizeHrirs(&hData);
-    fprintf(stdout, "Performing minimum phase reconstruction...\n");
+    fputs("Performing minimum phase reconstruction...\n", stdout);
     ReconstructHrirs(&hData, numThreads);
-    fprintf(stdout, "Truncating minimum-phase HRIRs...\n");
+    fputs("Truncating minimum-phase HRIRs...\n", stdout);
     hData.mIrPoints = truncSize;
-    fprintf(stdout, "Normalizing final HRIRs...\n");
+    fputs("Normalizing final HRIRs...\n", stdout);
     NormalizeHrirs(&hData);
-    fprintf(stdout, "Calculating impulse delays...\n");
+    fputs("Calculating impulse delays...\n", stdout);
     CalculateHrtds(model, (radius > DefaultCustomRadius) ? radius : hData.mRadius, &hData);
 
     const auto rateStr = std::to_string(hData.mIrRate);
     const auto expName = StrSubst(outName, "%r"sv, rateStr);
-    fprintf(stdout, "Creating MHR data set %s...\n", expName.c_str());
+    printf("Creating MHR data set %s...\n", expName.c_str());
     return StoreMhr(&hData, expName);
 }
 
@@ -1283,7 +1280,7 @@ int main(al::span<std::string_view> args)
 {
     if(args.size() < 2)
     {
-        fprintf(stdout, "HRTF Processing and Composition Utility\n\n");
+        fputs("HRTF Processing and Composition Utility\n\n", stdout);
         PrintHelp(args[0], stdout);
         exit(EXIT_SUCCESS);
     }
@@ -1496,7 +1493,7 @@ int main(al::span<std::string_view> args)
     const int ret{ProcessDefinition(inName, outRate, chanMode, farfield, numThreads, fftSize,
         equalize, surface, limit, truncSize, model, radius, outName)};
     if(!ret) return -1;
-    fprintf(stdout, "Operation completed.\n");
+    fputs("Operation completed.\n", stdout);
 
     return EXIT_SUCCESS;
 }

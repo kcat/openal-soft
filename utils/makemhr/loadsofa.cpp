@@ -62,12 +62,12 @@ using uint = unsigned int;
  */
 auto PrepareLayout(const al::span<const float> xyzs, HrirDataT *hData) -> bool
 {
-    fprintf(stdout, "Detecting compatible layout...\n");
+    fputs("Detecting compatible layout...\n", stdout);
 
     auto fds = GetCompatibleLayout(xyzs);
     if(fds.size() > MAX_FD_COUNT)
     {
-        fprintf(stdout, "Incompatible layout (inumerable radii).\n");
+        fputs("Incompatible layout (inumerable radii).\n", stdout);
         return false;
     }
 
@@ -92,7 +92,7 @@ auto PrepareLayout(const al::span<const float> xyzs, HrirDataT *hData) -> bool
 
         ++fi;
     }
-    fprintf(stdout, "Using %u of %zu IRs.\n", ir_total, xyzs.size()/3);
+    printf("Using %u of %zu IRs.\n", ir_total, xyzs.size()/3);
     const auto azs = al::span{azCounts}.first<MAX_FD_COUNT>();
     return PrepareHrirData(al::span{distances}.first(fi), evCounts, azs, hData);
 }
@@ -422,8 +422,8 @@ bool LoadSofaFile(const std::string_view filename, const uint numThreads, const 
     MySofaHrtfPtr sofaHrtf{mysofa_load(std::string{filename}.c_str(), &err)};
     if(!sofaHrtf)
     {
-        fprintf(stdout, "Error: Could not load %.*s: %s (%d)\n", al::sizei(filename),
-            filename.data(), SofaErrorStr(err), err);
+        printf("Error: Could not load %.*s: %s (%d)\n", al::sizei(filename), filename.data(),
+            SofaErrorStr(err), err);
         return false;
     }
 

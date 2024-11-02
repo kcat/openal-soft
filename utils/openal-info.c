@@ -55,7 +55,7 @@ static void printList(const char *list, char separator)
 
     if(!list || *list == '\0')
     {
-        fprintf(stdout, "\n%s!!! none !!!\n", indent);
+        printf("\n%s!!! none !!!\n", indent);
         return;
     }
 
@@ -73,7 +73,7 @@ static void printList(const char *list, char separator)
 
         if(len + col + 2 >= MaxWidth)
         {
-            fprintf(stdout, "\n%s", indent);
+            printf("\n%s", indent);
             col = strlen(indent);
         }
         else

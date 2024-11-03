@@ -51,7 +51,4 @@ int case_compare(const std::wstring_view str0, const std::wstring_view str1) noe
     return 0;
 }
 
-int strcasecmp(const char *str0, const char *str1) noexcept
-{ return case_compare(str0, str1); }
-
 } // namespace al

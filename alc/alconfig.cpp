@@ -291,11 +291,12 @@ void LoadConfigFromFile(std::istream &f)
     ConfOpts.shrink_to_fit();
 }
 
-const char *GetConfigValue(const std::string_view devName, const std::string_view blockName,
-    const std::string_view keyName)
+auto GetConfigValue(const std::string_view devName, const std::string_view blockName,
+    const std::string_view keyName) -> const std::string&
 {
+    static const auto emptyString = std::string{};
     if(keyName.empty())
-        return nullptr;
+        return emptyString;
 
     std::string key;
     if(!blockName.empty() && al::case_compare(blockName, "general"sv) != 0)
@@ -316,12 +317,12 @@ const char *GetConfigValue(const std::string_view devName, const std::string_vie
     {
         TRACE("Found option %s = \"%s\"\n", key.c_str(), iter->value.c_str());
         if(!iter->value.empty())
-            return iter->value.c_str();
-        return nullptr;
+            return iter->value;
+        return emptyString;
     }
 
     if(devName.empty())
-        return nullptr;
+        return emptyString;
     return GetConfigValue({}, blockName, keyName);
 }
 
@@ -489,7 +490,7 @@ void ReadALConfig()
 std::optional<std::string> ConfigValueStr(const std::string_view devName,
     const std::string_view blockName, const std::string_view keyName)
 {
-    if(const char *val{GetConfigValue(devName, blockName, keyName)})
+    if(auto&& val = GetConfigValue(devName, blockName, keyName); !val.empty())
         return val;
     return std::nullopt;
 }
@@ -497,41 +498,41 @@ std::optional<std::string> ConfigValueStr(const std::string_view devName,
 std::optional<int> ConfigValueInt(const std::string_view devName, const std::string_view blockName,
     const std::string_view keyName)
 {
-    if(const char *val{GetConfigValue(devName, blockName, keyName)})
-        return static_cast<int>(std::strtol(val, nullptr, 0));
+    if(auto&& val = GetConfigValue(devName, blockName, keyName); !val.empty())
+        return static_cast<int>(std::stol(val, nullptr, 0));
     return std::nullopt;
 }
 
 std::optional<unsigned int> ConfigValueUInt(const std::string_view devName,
     const std::string_view blockName, const std::string_view keyName)
 {
-    if(const char *val{GetConfigValue(devName, blockName, keyName)})
-        return static_cast<unsigned int>(std::strtoul(val, nullptr, 0));
+    if(auto&& val = GetConfigValue(devName, blockName, keyName); !val.empty())
+        return static_cast<unsigned int>(std::stoul(val, nullptr, 0));
     return std::nullopt;
 }
 
 std::optional<float> ConfigValueFloat(const std::string_view devName,
     const std::string_view blockName, const std::string_view keyName)
 {
-    if(const char *val{GetConfigValue(devName, blockName, keyName)})
-        return std::strtof(val, nullptr);
+    if(auto&& val = GetConfigValue(devName, blockName, keyName); !val.empty())
+        return std::stof(val);
     return std::nullopt;
 }
 
 std::optional<bool> ConfigValueBool(const std::string_view devName,
     const std::string_view blockName, const std::string_view keyName)
 {
-    if(const char *val{GetConfigValue(devName, blockName, keyName)})
-        return al::strcasecmp(val, "on") == 0 || al::strcasecmp(val, "yes") == 0
-            || al::strcasecmp(val, "true") == 0 || atoi(val) != 0;
+    if(auto&& val = GetConfigValue(devName, blockName, keyName); !val.empty())
+        return al::case_compare(val, "on"sv) == 0 || al::case_compare(val, "yes"sv) == 0
+            || al::case_compare(val, "true"sv) == 0 || std::stoll(val) != 0;
     return std::nullopt;
 }
 
 bool GetConfigValueBool(const std::string_view devName, const std::string_view blockName,
     const std::string_view keyName, bool def)
 {
-    if(const char *val{GetConfigValue(devName, blockName, keyName)})
-        return al::strcasecmp(val, "on") == 0 || al::strcasecmp(val, "yes") == 0
-            || al::strcasecmp(val, "true") == 0 || atoi(val) != 0;
+    if(auto&& val = GetConfigValue(devName, blockName, keyName); !val.empty())
+        return al::case_compare(val, "on") == 0 || al::case_compare(val, "yes") == 0
+            || al::case_compare(val, "true") == 0 || std::stoll(val) != 0;
     return def;
 }

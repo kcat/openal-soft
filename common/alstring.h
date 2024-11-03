@@ -39,9 +39,6 @@ int case_compare(const std::string_view str0, const std::string_view str1) noexc
 [[nodiscard]]
 int case_compare(const std::wstring_view str0, const std::wstring_view str1) noexcept;
 
-[[nodiscard]]
-int strcasecmp(const char *str0, const char *str1) noexcept;
-
 } // namespace al
 
 #endif /* AL_STRING_H */

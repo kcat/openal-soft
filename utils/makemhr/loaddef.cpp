@@ -53,6 +53,8 @@
 
 namespace {
 
+using namespace std::string_view_literals;
+
 // Constants for accessing the token reader's ring buffer.
 constexpr uint TRRingBits{16};
 constexpr uint TRRingSize{1 << TRRingBits};
@@ -75,10 +77,6 @@ struct TokenReaderT {
     TokenReaderT(const TokenReaderT&) = default;
 };
 
-
-// The maximum identifier length used when processing the data set
-// definition.
-constexpr uint MaxIdentLen{16};
 
 // The limits for the listener's head 'radius' in the data set definition.
 constexpr double MinRadius{0.05};
@@ -356,40 +354,31 @@ auto TrIsOperator(TokenReaderT *tr, const std::string_view op) -> int
  */
 
 // Reads and validates an identifier token.
-auto TrReadIdent(TokenReaderT *tr, const al::span<char> ident) -> int
+auto TrReadIdent(TokenReaderT *tr) -> std::string
 {
-    assert(!ident.empty());
-    const size_t maxLen{ident.size()-1};
-    uint col{tr->mColumn};
+    auto ret = std::string{};
+    auto col = tr->mColumn;
     if(TrSkipWhitespace(tr))
     {
         col = tr->mColumn;
-        char ch{tr->mRing[tr->mOut&TRRingMask]};
+        auto ch = char{tr->mRing[tr->mOut&TRRingMask]};
         if(ch == '_' || isalpha(ch))
         {
-            size_t len{0};
             do {
-                if(len < maxLen)
-                    ident[len] = ch;
-                ++len;
-                tr->mOut++;
+                ret += ch;
+                tr->mColumn += 1;
+                tr->mOut += 1;
                 if(!TrLoad(tr))
                     break;
                 ch = tr->mRing[tr->mOut&TRRingMask];
-            } while(ch == '_' || isdigit(ch) || isalpha(ch));
+            } while(ch == '_' || std::isdigit(ch) || std::isalpha(ch));
 
-            tr->mColumn += static_cast<uint>(len);
-            if(len < maxLen)
-            {
-                ident[len] = '\0';
-                return 1;
-            }
-            TrErrorAt(tr, tr->mLine, col, "Identifier is too long.\n");
-            return 0;
+            return ret;
         }
     }
     TrErrorAt(tr, tr->mLine, col, "Expected an identifier.\n");
-    return 0;
+    ret.clear();
+    return ret;
 }
 
 // Reads and validates (including bounds) an integer token.
@@ -1223,11 +1212,11 @@ auto LoadSource(SourceRefT *src, const uint hrirRate, const al::span<double> hri
 
 
 // Match the channel type from a given identifier.
-auto MatchChannelType(const char *ident) -> ChannelTypeT
+auto MatchChannelType(const std::string_view ident) -> ChannelTypeT
 {
-    if(al::strcasecmp(ident, "mono") == 0)
+    if(al::case_compare(ident, "mono"sv) == 0)
         return CT_MONO;
-    if(al::strcasecmp(ident, "stereo") == 0)
+    if(al::case_compare(ident, "stereo"sv) == 0)
         return CT_STEREO;
     return CT_NONE;
 }
@@ -1239,7 +1228,6 @@ auto ProcessMetrics(TokenReaderT *tr, const uint fftSize, const uint truncSize,
 {
     int hasRate = 0, hasType = 0, hasPoints = 0, hasRadius = 0;
     int hasDistance = 0, hasAzimuths = 0;
-    std::array<char,MaxIdentLen+1> ident{};
     uint line, col;
     double fpVal;
     uint points;
@@ -1254,9 +1242,10 @@ auto ProcessMetrics(TokenReaderT *tr, const uint fftSize, const uint truncSize,
     while(TrIsIdent(tr))
     {
         TrIndication(tr, &line, &col);
-        if(!TrReadIdent(tr, ident))
+        const auto ident = TrReadIdent(tr);
+        if(ident.empty())
             return 0;
-        if(al::strcasecmp(ident.data(), "rate") == 0)
+        if(al::case_compare(ident, "rate"sv) == 0)
         {
             if(hasRate)
             {
@@ -1270,10 +1259,8 @@ auto ProcessMetrics(TokenReaderT *tr, const uint fftSize, const uint truncSize,
             hData->mIrRate = static_cast<uint>(intVal);
             hasRate = 1;
         }
-        else if(al::strcasecmp(ident.data(), "type") == 0)
+        else if(al::case_compare(ident, "type"sv) == 0)
         {
-            std::array<char,MaxIdentLen+1> type{};
-
             if(hasType)
             {
                 TrErrorAt(tr, line, col, "Redefinition of 'type'.\n");
@@ -1282,9 +1269,10 @@ auto ProcessMetrics(TokenReaderT *tr, const uint fftSize, const uint truncSize,
             if(!TrReadOperator(tr, "="))
                 return 0;
 
-            if(!TrReadIdent(tr, type))
+            const auto type = TrReadIdent(tr);
+            if(type.empty())
                 return 0;
-            hData->mChannelType = MatchChannelType(type.data());
+            hData->mChannelType = MatchChannelType(type);
             if(hData->mChannelType == CT_NONE)
             {
                 TrErrorAt(tr, line, col, "Expected a channel type.\n");
@@ -1297,7 +1285,7 @@ auto ProcessMetrics(TokenReaderT *tr, const uint fftSize, const uint truncSize,
             }
             hasType = 1;
         }
-        else if(al::strcasecmp(ident.data(), "points") == 0)
+        else if(al::case_compare(ident, "points"sv) == 0)
         {
             if(hasPoints)
             {
@@ -1327,7 +1315,7 @@ auto ProcessMetrics(TokenReaderT *tr, const uint fftSize, const uint truncSize,
                 hData->mIrSize = points;
             hasPoints = 1;
         }
-        else if(al::strcasecmp(ident.data(), "radius") == 0)
+        else if(al::case_compare(ident, "radius"sv) == 0)
         {
             if(hasRadius)
             {
@@ -1341,9 +1329,9 @@ auto ProcessMetrics(TokenReaderT *tr, const uint fftSize, const uint truncSize,
             hData->mRadius = fpVal;
             hasRadius = 1;
         }
-        else if(al::strcasecmp(ident.data(), "distance") == 0)
+        else if(al::case_compare(ident, "distance"sv) == 0)
         {
-            uint count = 0;
+            auto count = uint{0};
 
             if(hasDistance)
             {
@@ -1380,9 +1368,9 @@ auto ProcessMetrics(TokenReaderT *tr, const uint fftSize, const uint truncSize,
             fdCount = count;
             hasDistance = 1;
         }
-        else if(al::strcasecmp(ident.data(), "azimuths") == 0)
+        else if(al::case_compare(ident, "azimuths"sv) == 0)
         {
-            uint count = 0;
+            auto count = uint{0};
 
             if(hasAzimuths)
             {
@@ -1497,27 +1485,27 @@ auto ReadIndexTriplet(TokenReaderT *tr, const HrirDataT *hData, uint *fi, uint *
 }
 
 // Match the source format from a given identifier.
-auto MatchSourceFormat(const char *ident) -> SourceFormatT
+auto MatchSourceFormat(const std::string_view ident) -> SourceFormatT
 {
-    if(al::strcasecmp(ident, "ascii") == 0)
+    if(al::case_compare(ident, "ascii"sv) == 0)
         return SF_ASCII;
-    if(al::strcasecmp(ident, "bin_le") == 0)
+    if(al::case_compare(ident, "bin_le"sv) == 0)
         return SF_BIN_LE;
-    if(al::strcasecmp(ident, "bin_be") == 0)
+    if(al::case_compare(ident, "bin_be"sv) == 0)
         return SF_BIN_BE;
-    if(al::strcasecmp(ident, "wave") == 0)
+    if(al::case_compare(ident, "wave"sv) == 0)
         return SF_WAVE;
-    if(al::strcasecmp(ident, "sofa") == 0)
+    if(al::case_compare(ident, "sofa"sv) == 0)
         return SF_SOFA;
     return SF_NONE;
 }
 
 // Match the source element type from a given identifier.
-auto MatchElementType(const char *ident) -> ElementTypeT
+auto MatchElementType(const std::string_view ident) -> ElementTypeT
 {
-    if(al::strcasecmp(ident, "int") == 0)
+    if(al::case_compare(ident, "int"sv) == 0)
         return ET_INT;
-    if(al::strcasecmp(ident, "fp") == 0)
+    if(al::case_compare(ident, "fp"sv) == 0)
         return ET_FP;
     return ET_NONE;
 }
@@ -1525,15 +1513,15 @@ auto MatchElementType(const char *ident) -> ElementTypeT
 // Parse and validate a source reference from the data set definition.
 auto ReadSourceRef(TokenReaderT *tr, SourceRefT *src) -> int
 {
-    std::array<char,MaxIdentLen+1> ident{};
     uint line, col;
     double fpVal;
     int intVal;
 
     TrIndication(tr, &line, &col);
-    if(!TrReadIdent(tr, ident))
+    auto ident = TrReadIdent(tr);
+    if(ident.empty())
         return 0;
-    src->mFormat = MatchSourceFormat(ident.data());
+    src->mFormat = MatchSourceFormat(ident);
     if(src->mFormat == SF_NONE)
     {
         TrErrorAt(tr, line, col, "Expected a source format.\n");
@@ -1579,9 +1567,10 @@ auto ReadSourceRef(TokenReaderT *tr, SourceRefT *src) -> int
     else
     {
         TrIndication(tr, &line, &col);
-        if(!TrReadIdent(tr, ident))
+        ident = TrReadIdent(tr);
+        if(ident.empty())
             return 0;
-        src->mType = MatchElementType(ident.data());
+        src->mType = MatchElementType(ident);
         if(src->mType == ET_NONE)
         {
             TrErrorAt(tr, line, col, "Expected a source element type.\n");
@@ -1672,14 +1661,14 @@ auto ReadSourceRef(TokenReaderT *tr, SourceRefT *src) -> int
 // Parse and validate a SOFA source reference from the data set definition.
 auto ReadSofaRef(TokenReaderT *tr, SourceRefT *src) -> int
 {
-    std::array<char,MaxIdentLen+1> ident{};
     uint line, col;
     int intVal;
 
     TrIndication(tr, &line, &col);
-    if(!TrReadIdent(tr, ident))
+    const auto ident = TrReadIdent(tr);
+    if(ident.empty())
         return 0;
-    src->mFormat = MatchSourceFormat(ident.data());
+    src->mFormat = MatchSourceFormat(ident);
     if(src->mFormat != SF_SOFA)
     {
         TrErrorAt(tr, line, col, "Expected the SOFA source format.\n");
@@ -1709,13 +1698,13 @@ auto ReadSofaRef(TokenReaderT *tr, SourceRefT *src) -> int
 }
 
 // Match the target ear (index) from a given identifier.
-auto MatchTargetEar(const char *ident) -> int
+auto MatchTargetEar(const std::string_view ident) -> std::optional<uint8_t>
 {
-    if(al::strcasecmp(ident, "left") == 0)
-        return 0;
-    if(al::strcasecmp(ident, "right") == 0)
-        return 1;
-    return -1;
+    if(al::case_compare(ident, "left"sv) == 0)
+        return 0u;
+    if(al::case_compare(ident, "right"sv) == 0)
+        return 1u;
+    return std::nullopt;
 }
 
 // Calculate the onset time of an HRIR and average it with any existing
@@ -1793,13 +1782,11 @@ auto ProcessSources(TokenReaderT *tr, HrirDataT *hData, const uint outRate) -> i
 
             if(hData->mChannelType == CT_STEREO)
             {
-                std::array<char,MaxIdentLen+1> type{};
-
-                if(!TrReadIdent(tr, type))
+                const auto type = TrReadIdent(tr);
+                if(type.empty())
                     return 0;
 
-                const ChannelTypeT channelType{MatchChannelType(type.data())};
-                switch(channelType)
+                switch(MatchChannelType(type))
                 {
                 case CT_NONE:
                     TrErrorAt(tr, line, col, "Expected a channel type.\n");
@@ -1814,12 +1801,11 @@ auto ProcessSources(TokenReaderT *tr, HrirDataT *hData, const uint outRate) -> i
             }
             else
             {
-                std::array<char,MaxIdentLen+1> type{};
-                if(!TrReadIdent(tr, type))
+                const auto type = TrReadIdent(tr);
+                if(type.empty())
                     return 0;
 
-                ChannelTypeT channelType{MatchChannelType(type.data())};
-                if(channelType != CT_MONO)
+                if(MatchChannelType(type) != CT_MONO)
                 {
                     TrErrorAt(tr, line, col, "Expected a mono channel type.\n");
                     return 0;
@@ -1936,14 +1922,16 @@ auto ProcessSources(TokenReaderT *tr, HrirDataT *hData, const uint outRate) -> i
             if(!LoadSource(&src, hData->mIrRate, al::span{hrir}.first(hData->mIrPoints)))
                 return 0;
 
-            uint ti{0};
+            auto ti = uint{0};
             if(hData->mChannelType == CT_STEREO)
             {
-                std::array<char,MaxIdentLen+1> ident{};
-                if(!TrReadIdent(tr, ident))
+                const auto ident = TrReadIdent(tr);
+                if(ident.empty())
                     return 0;
-                ti = static_cast<uint>(MatchTargetEar(ident.data()));
-                if(static_cast<int>(ti) < 0)
+
+                if(auto earopt = MatchTargetEar(ident))
+                    ti = *earopt;
+                else
                 {
                     TrErrorAt(tr, line, col, "Expected a target ear.\n");
                     return 0;

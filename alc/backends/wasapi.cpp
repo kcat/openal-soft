@@ -472,6 +472,9 @@ struct DeviceHelper final : private IMMNotificationClient
 #endif
     }
 
+    template<typename T>
+    auto as() noexcept -> T { return T{this}; }
+
     /** -------------------------- IUnknown ----------------------------- */
     std::atomic<ULONG> mRefCount{1};
     STDMETHODIMP_(ULONG) AddRef() noexcept override { return mRefCount.fetch_add(1u) + 1u; }
@@ -499,21 +502,21 @@ struct DeviceHelper final : private IMMNotificationClient
 #if defined(ALSOFT_UWP)
         if(IId == __uuidof(IActivateAudioInterfaceCompletionHandler))
         {
-            *UnknownPtrPtr = static_cast<IActivateAudioInterfaceCompletionHandler*>(this);
+            *UnknownPtrPtr = as<IActivateAudioInterfaceCompletionHandler*>();
             AddRef();
             return S_OK;
         }
 #else
         if(IId == __uuidof(IMMNotificationClient))
         {
-            *UnknownPtrPtr = static_cast<IMMNotificationClient*>(this);
+            *UnknownPtrPtr = as<IMMNotificationClient*>();
             AddRef();
             return S_OK;
         }
 #endif
         else if(IId == __uuidof(IAgileObject) || IId == __uuidof(IUnknown))
         {
-            *UnknownPtrPtr = static_cast<IUnknown*>(this);
+            *UnknownPtrPtr = as<IUnknown*>();
             AddRef();
             return S_OK;
         }
@@ -601,6 +604,7 @@ struct DeviceHelper final : private IMMNotificationClient
         return S_OK;
     }
 
+    /* NOLINTNEXTLINE(clazy-function-args-by-ref) */
     STDMETHODIMP OnPropertyValueChanged(LPCWSTR /*pwstrDeviceId*/, const PROPERTYKEY /*key*/) noexcept override { return S_OK; }
 
     STDMETHODIMP OnDefaultDeviceChanged(EDataFlow flow, ERole role, LPCWSTR pwstrDefaultDeviceId) noexcept override
@@ -1024,6 +1028,9 @@ int WasapiProxy::messageHandler(std::promise<HRESULT> *promise)
     }
 
     struct HelperResetter {
+        HelperResetter() = default;
+        HelperResetter(const HelperResetter&) = delete;
+        auto operator=(const HelperResetter&) -> HelperResetter& = delete;
         ~HelperResetter() { sDeviceHelper.reset(); }
     };
     HelperResetter scoped_watcher;

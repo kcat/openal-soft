@@ -498,7 +498,12 @@ int main(al::span<std::string_view> args)
     if(InitAL(args) != 0)
         throw std::runtime_error{"Failed to initialize OpenAL"};
     /* A simple RAII container for automating OpenAL shutdown. */
-    struct AudioManager { ~AudioManager() { CloseAL(); } };
+    struct AudioManager {
+        AudioManager() = default;
+        AudioManager(const AudioManager&) = delete;
+        auto operator=(const AudioManager&) -> AudioManager& = delete;
+        ~AudioManager() { CloseAL(); }
+    };
     AudioManager almgr;
 
     if(!alIsExtensionPresent("AL_SOFT_callback_buffer"))

@@ -197,8 +197,8 @@ using float2 = std::array<float,2>;
 auto gProcessRunning = true;
 struct ProcessWatcher {
     ProcessWatcher() = default;
-    ProcessWatcher(const ProcessWatcher&) = default;
-    ProcessWatcher& operator=(const ProcessWatcher&) = default;
+    ProcessWatcher(const ProcessWatcher&) = delete;
+    ProcessWatcher& operator=(const ProcessWatcher&) = delete;
     ~ProcessWatcher() { gProcessRunning = false; }
 };
 ProcessWatcher gProcessWatcher;

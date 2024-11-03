@@ -46,7 +46,7 @@ struct ComWrapper {
 };
 
 
-template<typename T>
+template<typename T> /* NOLINTNEXTLINE(clazy-rule-of-three) False positive */
 struct ComPtr {
     using element_type = T;
 

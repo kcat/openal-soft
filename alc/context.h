@@ -189,6 +189,10 @@ private:
      */
     class ThreadCtx {
     public:
+        ThreadCtx() = default;
+        ThreadCtx(const ThreadCtx&) = delete;
+        auto operator=(const ThreadCtx&) -> ThreadCtx& = delete;
+
         ~ThreadCtx();
         /* NOLINTBEGIN(readability-convert-member-functions-to-static)
          * This should be non-static to invoke construction of the thread-local
@@ -269,12 +273,11 @@ private:
         Eax5Props d; // Deferred.
     };
 
-    class ContextException : public EaxException
-    {
+    class ContextException final : public EaxException {
     public:
-        explicit ContextException(const char* message)
+        explicit ContextException(const char *message)
             : EaxException{"EAX_CONTEXT", message}
-        {}
+        { }
     };
 
     struct Eax4PrimaryFxSlotIdValidator {

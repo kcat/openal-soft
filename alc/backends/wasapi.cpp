@@ -382,7 +382,8 @@ auto GetDeviceNameAndGuid(const DeviceHandle &device) -> NameGUIDPair
         devIdStart += 2;  // L"}."
         if(auto devIdStartEnd = wcschr(devIdStart, L'#'))
         {
-            ret.mGuid = wstr_to_utf8(std::wstring_view{devIdStart, devIdStartEnd});
+            ret.mGuid = wstr_to_utf8(std::wstring_view{devIdStart,
+                static_cast<size_t>(devIdStartEnd - devIdStart)});
             std::transform(ret.mGuid.begin(), ret.mGuid.end(), ret.mGuid.begin(),
                 [](char ch) { return static_cast<char>(std::toupper(ch)); });
         }

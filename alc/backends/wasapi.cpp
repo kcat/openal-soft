@@ -445,7 +445,7 @@ struct DeviceHelper final : private IMMNotificationClient
         mRenderDeviceChangedToken = MediaDevice::DefaultAudioRenderDeviceChanged(playback_cb);
 
         static constexpr auto capture_cb = [](const IInspectable &sender [[maybe_unused]],
-            const DefaultAudioRenderDeviceChangedEventArgs &args)
+            const DefaultAudioCaptureDeviceChangedEventArgs &args)
         {
             if(args.Role() == AudioDeviceRole::Default)
             {

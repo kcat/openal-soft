@@ -431,25 +431,29 @@ struct DeviceHelper final : private IMMNotificationClient
          */
         mActiveClientEvent = CreateEventW(nullptr, FALSE, FALSE, nullptr);
 
-        mRenderDeviceChangedToken = MediaDevice::DefaultAudioRenderDeviceChanged([this](const IInspectable& /*sender*/, const DefaultAudioRenderDeviceChangedEventArgs& args) {
-            if (args.Role() == AudioDeviceRole::Default)
+        static constexpr auto playback_cb = [](const IInspectable &sender [[maybe_unused]],
+            const DefaultAudioRenderDeviceChangedEventArgs &args)
+        {
+            if(args.Role() == AudioDeviceRole::Default)
             {
-                const std::string msg{ "Default playback device changed: " +
+                const auto msg = std::string{"Default playback device changed: " +
                     wstr_to_utf8(args.Id())};
-                alc::Event(alc::EventType::DefaultDeviceChanged, alc::DeviceType::Playback,
-                    msg);
+                alc::Event(alc::EventType::DefaultDeviceChanged, alc::DeviceType::Playback, msg);
             }
-            });
+        };
+        mRenderDeviceChangedToken = MediaDevice::DefaultAudioRenderDeviceChanged(playback_cb);
 
-        mCaptureDeviceChangedToken = MediaDevice::DefaultAudioCaptureDeviceChanged([this](const IInspectable& /*sender*/, const DefaultAudioCaptureDeviceChangedEventArgs& args) {
-            if (args.Role() == AudioDeviceRole::Default)
+        static constexpr auto capture_cb = [](const IInspectable &sender [[maybe_unused]],
+            const DefaultAudioRenderDeviceChangedEventArgs &args)
+        {
+            if(args.Role() == AudioDeviceRole::Default)
             {
-                const std::string msg{ "Default capture device changed: " +
-                    wstr_to_utf8(args.Id()) };
-                alc::Event(alc::EventType::DefaultDeviceChanged, alc::DeviceType::Capture,
-                    msg);
+                const auto msg = std::string{"Default capture device changed: " +
+                    wstr_to_utf8(args.Id())};
+                alc::Event(alc::EventType::DefaultDeviceChanged, alc::DeviceType::Capture, msg);
             }
-            });
+        };
+        mCaptureDeviceChangedToken = MediaDevice::DefaultAudioCaptureDeviceChanged(capture_cb);
     }
 #else
     DeviceHelper() = default;

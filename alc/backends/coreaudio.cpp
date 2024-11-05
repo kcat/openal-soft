@@ -56,29 +56,30 @@ namespace {
 constexpr auto OutputElement = 0;
 constexpr auto InputElement = 1;
 
-std::vector<AudioChannelLabel> MonoChanMap { kAudioChannelLabel_Mono };
-std::vector<AudioChannelLabel>  StereoChanMap { kAudioChannelLabel_Left, kAudioChannelLabel_Right};
-std::vector<AudioChannelLabel>  QuadChanMap {
+// These following arrays should always be defined in ascending AudioChannelLabel value order
+static constexpr std::array<AudioChannelLabel, 1> MonoChanMap { kAudioChannelLabel_Mono };
+static constexpr std::array<AudioChannelLabel, 2> StereoChanMap { kAudioChannelLabel_Left, kAudioChannelLabel_Right};
+static constexpr std::array<AudioChannelLabel, 4> QuadChanMap {
         kAudioChannelLabel_Left, kAudioChannelLabel_Right,
         kAudioChannelLabel_LeftSurround, kAudioChannelLabel_RightSurround
 };
-std::vector<AudioChannelLabel>  X51ChanMap {
+static constexpr std::array<AudioChannelLabel, 6> X51ChanMap {
         kAudioChannelLabel_Left, kAudioChannelLabel_Right,
         kAudioChannelLabel_Center, kAudioChannelLabel_LFEScreen,
         kAudioChannelLabel_LeftSurround, kAudioChannelLabel_RightSurround
 };
-std::vector<AudioChannelLabel>  X51RearChanMap {
+static constexpr std::array<AudioChannelLabel, 6> X51RearChanMap {
         kAudioChannelLabel_Left, kAudioChannelLabel_Right,
         kAudioChannelLabel_Center, kAudioChannelLabel_LFEScreen,
         kAudioChannelLabel_RearSurroundRight, kAudioChannelLabel_RearSurroundLeft
 };
-std::vector<AudioChannelLabel>  X61ChanMap {
+static constexpr std::array<AudioChannelLabel, 7> X61ChanMap {
         kAudioChannelLabel_Left, kAudioChannelLabel_Right,
         kAudioChannelLabel_Center, kAudioChannelLabel_LFEScreen,
         kAudioChannelLabel_CenterSurround,
         kAudioChannelLabel_RearSurroundRight, kAudioChannelLabel_RearSurroundLeft
 };
-std::vector<AudioChannelLabel>  X71ChanMap {
+static constexpr std::array<AudioChannelLabel, 8> X71ChanMap {
         kAudioChannelLabel_Left, kAudioChannelLabel_Right,
         kAudioChannelLabel_Center, kAudioChannelLabel_LFEScreen,
         kAudioChannelLabel_LeftSurround, kAudioChannelLabel_RightSurround,
@@ -532,11 +533,11 @@ bool CoreAudioPlayback::reset()
 
     struct ChannelMap {
         DevFmtChannels fmt;
-        std::vector<AudioChannelLabel> map;
+        al::span<const AudioChannelLabel> map;
         bool is_51rear;
     };
     
-    static std::array<ChannelMap,7> chanmaps{{
+    static constexpr std::array<ChannelMap,7> chanmaps{{
         { DevFmtX71, X71ChanMap, false },
         { DevFmtX61, X61ChanMap, false },
         { DevFmtX51, X51ChanMap, false },
@@ -604,24 +605,25 @@ bool CoreAudioPlayback::reset()
                                        OutputElement,
                                        &propSize,
                                        &writable);
-        AudioChannelLayout *layout = new AudioChannelLayout[propSize]();
+        auto layout = std::make_unique<AudioChannelLayout[]>(propSize);
         
         if(err == noErr)
         {
-            err = AudioUnitGetProperty(mAudioUnit, kAudioDevicePropertyPreferredChannelLayout, kAudioUnitScope_Output, OutputElement, layout, &propSize);
+            err = AudioUnitGetProperty(mAudioUnit, kAudioDevicePropertyPreferredChannelLayout, kAudioUnitScope_Output, OutputElement, layout.get(), &propSize);
             
-            std::vector tagsArray = std::vector<AudioChannelLayoutTag>(layout->mNumberChannelDescriptions);
+            std::vector labels = std::vector<AudioChannelLayoutTag>(layout.get()->mNumberChannelDescriptions);
             
-            for(UInt32 i=0; i<layout->mNumberChannelDescriptions; i++) {
-                tagsArray[i] = layout->mChannelDescriptions[i].mChannelLabel;
+            for(UInt32 i=0; i<layout.get()->mNumberChannelDescriptions; i++) {
+                labels[i] = layout.get()->mChannelDescriptions[i].mChannelLabel;
             }
+            sort(labels.begin(), labels.end(), std::less<int>());
             
             if(err == noErr)
             {
                 auto chaniter = std::find_if(chanmaps.cbegin(), chanmaps.cend(),
-                                             [&tagsArray](const ChannelMap &chanmap) -> bool
+                                             [&labels](const ChannelMap &chanmap) -> bool
                                              {
-                    return std::includes(tagsArray.begin(), tagsArray.end(), chanmap.map.begin(), chanmap.map.end());
+                    return std::includes(labels.begin(), labels.end(), chanmap.map.begin(), chanmap.map.end());
                 }
                                              );
                 if(chaniter != chanmaps.cend())

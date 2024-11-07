@@ -287,7 +287,9 @@ struct StreamPlayer {
     { return static_cast<StreamPlayer*>(userptr)->bufferCallback(data, size); }
     ALsizei bufferCallback(void *data, ALsizei size) noexcept
     {
-        auto dst = al::span{static_cast<std::byte*>(data), static_cast<ALuint>(size)};
+        const auto output = al::span{static_cast<std::byte*>(data), static_cast<ALuint>(size)};
+        auto dst = output.begin();
+
         /* NOTE: The callback *MUST* be real-time safe! That means no blocking,
          * no allocations or deallocations, no I/O, no page faults, or calls to
          * functions that could do these things (this includes calling to
@@ -295,10 +297,9 @@ struct StreamPlayer {
          * unexpectedly stall this call since the audio has to get to the
          * device on time.
          */
-        ALsizei got{0};
 
         size_t roffset{mReadPos.load(std::memory_order_acquire)};
-        while(!dst.empty())
+        while(const auto remaining = static_cast<size_t>(std::distance(dst, output.end())))
         {
             /* If the write offset == read offset, there's nothing left in the
              * ring-buffer. Break from the loop and give what has been written.
@@ -312,15 +313,14 @@ struct StreamPlayer {
              * amount to copy given how much is remaining to write.
              */
             size_t todo{((woffset < roffset) ? mBufferData.size() : woffset) - roffset};
-            todo = std::min(todo, dst.size());
+            todo = std::min(todo, remaining);
 
             /* Copy from the ring buffer to the provided output buffer. Wrap
              * the resulting read offset if it reached the end of the ring-
              * buffer.
              */
-            std::copy_n(mBufferData.cbegin()+ptrdiff_t(roffset), todo, dst.begin());
-            dst = dst.subspan(todo);
-            got += static_cast<ALsizei>(todo);
+            const auto input = al::span{mBufferData}.subspan(roffset, todo);
+            dst = std::copy_n(input.begin(), input.size(), dst);
 
             roffset += todo;
             if(roffset == mBufferData.size())
@@ -331,7 +331,7 @@ struct StreamPlayer {
          */
         mReadPos.store(roffset, std::memory_order_release);
 
-        return got;
+        return static_cast<ALsizei>(std::distance(output.begin(), dst));
     }
 
     bool prepare()
@@ -366,11 +366,12 @@ struct StreamPlayer {
              * For a playing/paused source, it's the source's offset including
              * the playback offset the source was started with.
              */
-            const size_t curtime{((state == AL_STOPPED)
+            const auto curtime = ((state == AL_STOPPED)
                 ? (mDecoderOffset-readable) / mBytesPerBlock * mSamplesPerBlock
-                : (static_cast<ALuint>(pos) + mStartOffset/mBytesPerBlock*mSamplesPerBlock))
-                / static_cast<ALuint>(mSfInfo.samplerate)};
-            printf("\r%3zus (%3zu%% full)", curtime, readable * 100 / mBufferData.size());
+                : (size_t{static_cast<ALuint>(pos)} + mStartOffset))
+                / static_cast<ALuint>(mSfInfo.samplerate);
+            printf("\r %zum%02zus (%3zu%% full)", curtime/60, curtime%60,
+                readable * 100 / mBufferData.size());
         }
         else
             fputs("Starting...", stdout);
@@ -378,83 +379,59 @@ struct StreamPlayer {
 
         while(!sf_error(mSndfile))
         {
-            size_t read_bytes;
-            const size_t roffset{mReadPos.load(std::memory_order_relaxed)};
-            if(roffset > woffset)
+            const auto roffset = mReadPos.load(std::memory_order_relaxed);
+            auto get_writable = [this,roffset,woffset]() noexcept -> size_t
             {
-                /* Note that the ring buffer's writable space is one byte less
-                 * than the available area because the write offset ending up
-                 * at the read offset would be interpreted as being empty
-                 * instead of full.
-                 */
-                const size_t writable{(roffset-woffset-1) / mBytesPerBlock};
-                if(!writable) break;
-
-                if(mSampleFormat == SampleType::Int16)
+                if(roffset > woffset)
                 {
-                    sf_count_t num_frames{sf_readf_short(mSndfile,
-                        reinterpret_cast<short*>(&mBufferData[woffset]),
-                        static_cast<sf_count_t>(writable*mSamplesPerBlock))};
-                    if(num_frames < 1) break;
-                    read_bytes = static_cast<size_t>(num_frames) * mBytesPerBlock;
-                }
-                else if(mSampleFormat == SampleType::Float)
-                {
-                    sf_count_t num_frames{sf_readf_float(mSndfile,
-                        reinterpret_cast<float*>(&mBufferData[woffset]),
-                        static_cast<sf_count_t>(writable*mSamplesPerBlock))};
-                    if(num_frames < 1) break;
-                    read_bytes = static_cast<size_t>(num_frames) * mBytesPerBlock;
-                }
-                else
-                {
-                    sf_count_t numbytes{sf_read_raw(mSndfile, &mBufferData[woffset],
-                        static_cast<sf_count_t>(writable*mBytesPerBlock))};
-                    if(numbytes < 1) break;
-                    read_bytes = static_cast<size_t>(numbytes);
+                    /* Note that the ring buffer's writable space is one byte
+                     * less than the available area because the write offset
+                     * ending up at the read offset would be interpreted as
+                     * being empty instead of full.
+                     */
+                    return roffset - woffset - 1;
                 }
 
-                woffset += read_bytes;
-            }
-            else
-            {
                 /* If the read offset is at or behind the write offset, the
                  * writeable area (might) wrap around. Make sure the sample
                  * data can fit, and calculate how much can go in front before
                  * wrapping.
                  */
-                const size_t writable{(!roffset ? mBufferData.size()-woffset-1 :
-                    (mBufferData.size()-woffset)) / mBytesPerBlock};
-                if(!writable) break;
+                return mBufferData.size() - (!roffset ? woffset+1 : woffset);
+            };
 
-                if(mSampleFormat == SampleType::Int16)
-                {
-                    sf_count_t num_frames{sf_readf_short(mSndfile,
-                        reinterpret_cast<short*>(&mBufferData[woffset]),
-                        static_cast<sf_count_t>(writable*mSamplesPerBlock))};
-                    if(num_frames < 1) break;
-                    read_bytes = static_cast<size_t>(num_frames) * mBytesPerBlock;
-                }
-                else if(mSampleFormat == SampleType::Float)
-                {
-                    sf_count_t num_frames{sf_readf_float(mSndfile,
-                        reinterpret_cast<float*>(&mBufferData[woffset]),
-                        static_cast<sf_count_t>(writable*mSamplesPerBlock))};
-                    if(num_frames < 1) break;
-                    read_bytes = static_cast<size_t>(num_frames) * mBytesPerBlock;
-                }
-                else
-                {
-                    sf_count_t numbytes{sf_read_raw(mSndfile, &mBufferData[woffset],
-                        static_cast<sf_count_t>(writable*mBytesPerBlock))};
-                    if(numbytes < 1) break;
-                    read_bytes = static_cast<size_t>(numbytes);
-                }
+            const auto writable = get_writable() / mBytesPerBlock;
+            if(!writable) break;
 
-                woffset += read_bytes;
-                if(woffset == mBufferData.size())
-                    woffset = 0;
+            auto read_bytes = size_t{};
+            if(mSampleFormat == SampleType::Int16)
+            {
+                const auto num_frames = sf_readf_short(mSndfile,
+                    reinterpret_cast<short*>(&mBufferData[woffset]),
+                    static_cast<sf_count_t>(writable*mSamplesPerBlock));
+                if(num_frames < 1) break;
+                read_bytes = static_cast<size_t>(num_frames) * mBytesPerBlock;
             }
+            else if(mSampleFormat == SampleType::Float)
+            {
+                const auto num_frames = sf_readf_float(mSndfile,
+                    reinterpret_cast<float*>(&mBufferData[woffset]),
+                    static_cast<sf_count_t>(writable*mSamplesPerBlock));
+                if(num_frames < 1) break;
+                read_bytes = static_cast<size_t>(num_frames) * mBytesPerBlock;
+            }
+            else
+            {
+                const auto numbytes = sf_read_raw(mSndfile, &mBufferData[woffset],
+                    static_cast<sf_count_t>(writable*mBytesPerBlock));
+                if(numbytes < 1) break;
+                read_bytes = static_cast<size_t>(numbytes);
+            }
+
+            woffset += read_bytes;
+            if(woffset == mBufferData.size())
+                woffset = 0;
+
             mWritePos.store(woffset, std::memory_order_release);
             mDecoderOffset += read_bytes;
         }
@@ -466,16 +443,16 @@ struct StreamPlayer {
              * ring buffer is empty, it's done, otherwise play the source with
              * what's available.
              */
-            const size_t roffset{mReadPos.load(std::memory_order_relaxed)};
-            const size_t readable{((woffset >= roffset) ? woffset : (mBufferData.size()+woffset)) -
-                roffset};
+            const auto roffset = mReadPos.load(std::memory_order_relaxed);
+            const auto readable = ((woffset < roffset) ? mBufferData.size()+woffset : woffset) -
+                roffset;
             if(readable == 0)
                 return false;
 
             /* Store the playback offset that the source will start reading
              * from, so it can be tracked during playback.
              */
-            mStartOffset = mDecoderOffset - readable;
+            mStartOffset = (mDecoderOffset-readable) / mBytesPerBlock * mSamplesPerBlock;
             alSourcePlay(mSource);
             if(alGetError() != AL_NO_ERROR)
                 return false;

@@ -698,8 +698,8 @@ void AmbiRotator(AmbiRotateMatrix &matrix, const int order)
     /* Don't do anything for < 2nd order. */
     if(order < 2) return;
 
-    auto P = [](const int i, const int l, const int a, const int n, const size_t last_band,
-        const AmbiRotateMatrix &R)
+    static constexpr auto P = [](const int i, const int l, const int a, const int n,
+        const size_t last_band, const AmbiRotateMatrix &R)
     {
         const float ri1{ R[ 1+2][static_cast<size_t>(i+2_z)]};
         const float rim1{R[-1+2][static_cast<size_t>(i+2_z)]};
@@ -713,12 +713,12 @@ void AmbiRotator(AmbiRotateMatrix &matrix, const int order)
         return ri0*R[last_band + static_cast<size_t>(l-1_z+n)][y];
     };
 
-    auto U = [P](const int l, const int m, const int n, const size_t last_band,
+    static constexpr auto U = [](const int l, const int m, const int n, const size_t last_band,
         const AmbiRotateMatrix &R)
     {
         return P(0, l, m, n, last_band, R);
     };
-    auto V = [P](const int l, const int m, const int n, const size_t last_band,
+    static constexpr auto V = [](const int l, const int m, const int n, const size_t last_band,
         const AmbiRotateMatrix &R)
     {
         using namespace al::numbers;
@@ -734,7 +734,7 @@ void AmbiRotator(AmbiRotateMatrix &matrix, const int order)
         const float p1{P(-1, l, -m-1, n, last_band, R)};
         return d ? p1*sqrt2_v<float> : (p0 + p1);
     };
-    auto W = [P](const int l, const int m, const int n, const size_t last_band,
+    static constexpr auto W = [](const int l, const int m, const int n, const size_t last_band,
         const AmbiRotateMatrix &R)
     {
         assert(m != 0);

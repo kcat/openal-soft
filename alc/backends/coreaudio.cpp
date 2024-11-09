@@ -57,29 +57,29 @@ constexpr auto OutputElement = 0;
 constexpr auto InputElement = 1;
 
 // These following arrays should always be defined in ascending AudioChannelLabel value order
-static constexpr std::array<AudioChannelLabel, 1> MonoChanMap { kAudioChannelLabel_Mono };
-static constexpr std::array<AudioChannelLabel, 2> StereoChanMap { kAudioChannelLabel_Left, kAudioChannelLabel_Right};
-static constexpr std::array<AudioChannelLabel, 4> QuadChanMap {
+constexpr std::array<AudioChannelLabel, 1> MonoChanMap { kAudioChannelLabel_Mono };
+constexpr std::array<AudioChannelLabel, 2> StereoChanMap { kAudioChannelLabel_Left, kAudioChannelLabel_Right};
+constexpr std::array<AudioChannelLabel, 4> QuadChanMap {
         kAudioChannelLabel_Left, kAudioChannelLabel_Right,
         kAudioChannelLabel_LeftSurround, kAudioChannelLabel_RightSurround
 };
-static constexpr std::array<AudioChannelLabel, 6> X51ChanMap {
+constexpr std::array<AudioChannelLabel, 6> X51ChanMap {
         kAudioChannelLabel_Left, kAudioChannelLabel_Right,
         kAudioChannelLabel_Center, kAudioChannelLabel_LFEScreen,
         kAudioChannelLabel_LeftSurround, kAudioChannelLabel_RightSurround
 };
-static constexpr std::array<AudioChannelLabel, 6> X51RearChanMap {
+constexpr std::array<AudioChannelLabel, 6> X51RearChanMap {
         kAudioChannelLabel_Left, kAudioChannelLabel_Right,
         kAudioChannelLabel_Center, kAudioChannelLabel_LFEScreen,
         kAudioChannelLabel_RearSurroundRight, kAudioChannelLabel_RearSurroundLeft
 };
-static constexpr std::array<AudioChannelLabel, 7> X61ChanMap {
+constexpr std::array<AudioChannelLabel, 7> X61ChanMap {
         kAudioChannelLabel_Left, kAudioChannelLabel_Right,
         kAudioChannelLabel_Center, kAudioChannelLabel_LFEScreen,
         kAudioChannelLabel_CenterSurround,
         kAudioChannelLabel_RearSurroundRight, kAudioChannelLabel_RearSurroundLeft
 };
-static constexpr std::array<AudioChannelLabel, 8> X71ChanMap {
+constexpr std::array<AudioChannelLabel, 8> X71ChanMap {
         kAudioChannelLabel_Left, kAudioChannelLabel_Right,
         kAudioChannelLabel_Center, kAudioChannelLabel_LFEScreen,
         kAudioChannelLabel_LeftSurround, kAudioChannelLabel_RightSurround,

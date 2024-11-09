@@ -189,7 +189,7 @@ std::string GetDeviceName(AudioDeviceID devId)
     /* Clear extraneous nul chars that may have been written with the name
      * string, and return it.
      */
-    while(!devname.back())
+    while(!devname.empty() && !devname.back())
         devname.pop_back();
     return devname;
 }

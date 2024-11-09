@@ -197,7 +197,7 @@ std::string GetDeviceName(AudioDeviceID devId)
 UInt32 GetDeviceChannelCount(AudioDeviceID devId, bool isCapture)
 {
     UInt32 propSize{};
-    auto err = GetDevPropertySize(devId, kAudioDevicePropertyPreferredChannelLayout, isCapture, 0,
+    auto err = GetDevPropertySize(devId, kAudioUnitProperty_AudioChannelLayout, isCapture, 0,
         &propSize);
     if(err)
     {
@@ -209,7 +209,7 @@ UInt32 GetDeviceChannelCount(AudioDeviceID devId, bool isCapture)
     auto channel_data = std::make_unique<char[]>(propSize);
     auto *channel_layout = reinterpret_cast<AudioChannelLayout*>(channel_data.get());
 
-    err = GetDevProperty(devId, kAudioDevicePropertyPreferredChannelLayout, isCapture, 0, propSize,
+    err = GetDevProperty(devId, kAudioUnitProperty_AudioChannelLayout, isCapture, 0, propSize,
         channel_layout);
     if(err)
     {
@@ -609,7 +609,7 @@ bool CoreAudioPlayback::reset()
         
         if(err == noErr)
         {
-            err = AudioUnitGetProperty(mAudioUnit, kAudioDevicePropertyPreferredChannelLayout, kAudioUnitScope_Output, OutputElement, layout.get(), &propSize);
+            err = AudioUnitGetProperty(mAudioUnit, kAudioUnitProperty_AudioChannelLayout, kAudioUnitScope_Output, OutputElement, layout.get(), &propSize);
             
             std::vector labels = std::vector<AudioChannelLayoutTag>(layout.get()->mNumberChannelDescriptions);
             

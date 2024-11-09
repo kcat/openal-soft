@@ -24,7 +24,9 @@
 
 #include <cinttypes>
 #include <cmath>
+#include <functional>
 #include <memory>
+#include <optional>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -32,7 +34,6 @@
 #include <string.h>
 #include <unistd.h>
 #include <vector>
-#include <optional>
 
 #include "alnumeric.h"
 #include "alstring.h"

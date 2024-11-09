@@ -536,7 +536,7 @@ bool CoreAudioPlayback::reset()
         al::span<const AudioChannelLabel> map;
         bool is_51rear;
     };
-    
+
     static constexpr std::array<ChannelMap,7> chanmaps{{
         { DevFmtX71, X71ChanMap, false },
         { DevFmtX61, X61ChanMap, false },
@@ -546,7 +546,7 @@ bool CoreAudioPlayback::reset()
         { DevFmtStereo, StereoChanMap, false },
         { DevFmtMono, MonoChanMap, false }
     }};
-    
+
     /* FIXME: How to tell what channels are what in the output device, and how
      * to specify what we're giving? e.g. 6.0 vs 5.1
      */
@@ -594,42 +594,39 @@ bool CoreAudioPlayback::reset()
             err);
         return false;
     }
-    
+
     if(!mDevice->Flags.test(ChannelsRequest))
     {
-        UInt32 propSize{};
-        Boolean writable;
-        err = AudioUnitGetPropertyInfo(mAudioUnit,
-                                       kAudioUnitProperty_AudioChannelLayout,
-                                       kAudioUnitScope_Output,
-                                       OutputElement,
-                                       &propSize,
-                                       &writable);
-        auto layout = std::make_unique<AudioChannelLayout[]>(propSize);
-        
+        auto propSize = UInt32{};
+        auto writable = Boolean{};
+
+        err = AudioUnitGetPropertyInfo(mAudioUnit, kAudioUnitProperty_AudioChannelLayout,
+            kAudioUnitScope_Output, OutputElement, &propSize, &writable);
         if(err == noErr)
         {
-            err = AudioUnitGetProperty(mAudioUnit, kAudioUnitProperty_AudioChannelLayout, kAudioUnitScope_Output, OutputElement, layout.get(), &propSize);
-            
-            std::vector labels = std::vector<AudioChannelLayoutTag>(layout.get()->mNumberChannelDescriptions);
-            
-            for(UInt32 i=0; i<layout.get()->mNumberChannelDescriptions; i++) {
-                labels[i] = layout.get()->mChannelDescriptions[i].mChannelLabel;
-            }
-            sort(labels.begin(), labels.end(), std::less<int>());
-            
+            auto layout_data = std::make_unique<char[]>(propSize);
+            auto *layout = reinterpret_cast<AudioChannelLayout*>(layout_data.get());
+
+            err = AudioUnitGetProperty(mAudioUnit, kAudioUnitProperty_AudioChannelLayout,
+                kAudioUnitScope_Output, OutputElement, layout, &propSize);
             if(err == noErr)
             {
+                auto descs = al::span{std::data(layout->mChannelDescriptions),
+                    layout->mNumberChannelDescriptions};
+                auto labels = std::vector<AudioChannelLayoutTag>(descs.size());
+
+                std::transform(descs.begin(), descs.end(), labels.begin(),
+                    std::mem_fn(&AudioChannelDescription::mChannelLabel));
+                sort(labels.begin(), labels.end());
+
                 auto chaniter = std::find_if(chanmaps.cbegin(), chanmaps.cend(),
-                                             [&labels](const ChannelMap &chanmap) -> bool
-                                             {
-                    return std::includes(labels.begin(), labels.end(), chanmap.map.begin(), chanmap.map.end());
-                }
-                                             );
+                    [&labels](const ChannelMap &chanmap) -> bool
+                    {
+                        return std::includes(labels.begin(), labels.end(), chanmap.map.begin(),
+                            chanmap.map.end());
+                    });
                 if(chaniter != chanmaps.cend())
-                {
                     mDevice->FmtChans = chaniter->fmt;
-                }
             }
         }
     }

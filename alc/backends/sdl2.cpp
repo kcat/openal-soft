@@ -176,13 +176,22 @@ bool Sdl2Backend::reset()
 
     if(have.channels != mDevice->channelsFromFmt())
     {
-        if(have.channels < 1)
-            throw al::backend_exception{al::backend_error::DeviceError,
-                "Unhandled SDL channel count: %d", int{have.channels}};
-        if(have.channels == 1)
+        /* SDL guarantees these layouts for the given channel count. */
+        if(have.channels == 8)
+            mDevice->FmtChans = DevFmtX71;
+        else if(have.channels == 7)
+            mDevice->FmtChans = DevFmtX61;
+        else if(have.channels == 6)
+            mDevice->FmtChans = DevFmtX51;
+        else if(have.channels == 4)
+            mDevice->FmtChans = DevFmtQuad;
+        else if(have.channels >= 2)
+            mDevice->FmtChans = DevFmtStereo;
+        else if(have.channels == 1)
             mDevice->FmtChans = DevFmtMono;
         else
-            mDevice->FmtChans = DevFmtStereo;
+            throw al::backend_exception{al::backend_error::DeviceError,
+                "Unhandled SDL channel count: %d", int{have.channels}};
         mDevice->mAmbiOrder = 0;
     }
 

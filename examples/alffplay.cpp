@@ -342,7 +342,7 @@ struct AudioState {
         if(mBuffers[0])
             alDeleteBuffers(static_cast<ALsizei>(mBuffers.size()), mBuffers.data());
 
-        av_freep(mSamples.data());
+        av_freep(static_cast<void*>(mSamples.data()));
     }
 
     static void AL_APIENTRY eventCallbackC(ALenum eventType, ALuint object, ALuint param,
@@ -682,7 +682,7 @@ int AudioState::decodeFrame()
 
     if(mDecodedFrame->nb_samples > mSamplesMax)
     {
-        av_freep(mSamples.data());
+        av_freep(static_cast<void*>(mSamples.data()));
         av_samples_alloc(mSamples.data(), nullptr, mCodecCtx->ch_layout.nb_channels,
             mDecodedFrame->nb_samples, mDstSampleFmt, 0);
         mSamplesMax = mDecodedFrame->nb_samples;
@@ -1276,7 +1276,7 @@ int AudioState::handler()
             if(ret == AVErrorEOF) break;
         }
     };
-    auto sender = std::async(std::launch::async, packet_sender);
+    auto sender [[maybe_unused]] = std::async(std::launch::async, packet_sender);
 
     srclock.lock();
     if(alcGetInteger64vSOFT)
@@ -1613,7 +1613,7 @@ int VideoState::handler()
             if(ret == AVErrorEOF) break;
         }
     };
-    auto sender = std::async(std::launch::async, packet_sender);
+    auto sender [[maybe_unused]] = std::async(std::launch::async, packet_sender);
 
     {
         std::lock_guard<std::mutex> displock{mDispPtsMutex};

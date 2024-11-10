@@ -132,6 +132,9 @@ _Pragma("GCC diagnostic pop")
 
 namespace {
 
+template<typename T> [[nodiscard]] constexpr
+auto as_const_ptr(T *ptr) noexcept -> std::add_const_t<T>* { return ptr; }
+
 struct PodDynamicBuilder {
 private:
     std::vector<std::byte> mStorage;
@@ -152,7 +155,7 @@ private:
     }
 
 public:
-    PodDynamicBuilder(uint32_t initSize=0) : mStorage(initSize)
+    PodDynamicBuilder(uint32_t initSize=1024) : mStorage(initSize)
         , mPod{make_pod_builder(mStorage.data(), initSize)}
     {
         static constexpr auto callbacks{[]
@@ -411,9 +414,10 @@ struct PwStreamDeleter {
 };
 using PwStreamPtr = std::unique_ptr<pw_stream,PwStreamDeleter>;
 
-/* Enums for bitflags... again... *sigh* */
+/* NOLINTBEGIN(*EnumCastOutOfRange) Enums for bitflags... again... *sigh* */
 constexpr pw_stream_flags operator|(pw_stream_flags lhs, pw_stream_flags rhs) noexcept
 { return static_cast<pw_stream_flags>(lhs | al::to_underlying(rhs)); }
+/* NOLINTEND(*EnumCastOutOfRange) */
 
 constexpr pw_stream_flags& operator|=(pw_stream_flags &lhs, pw_stream_flags rhs) noexcept
 { lhs = lhs | rhs; return lhs; }
@@ -1652,12 +1656,10 @@ bool PipeWirePlayback::reset()
     /* Force planar 32-bit float output for playback. This is what PipeWire
      * handles internally, and it's easier for us too.
      */
-    spa_audio_info_raw info{make_spa_info(mDevice, is51rear, ForceF32Planar)};
+    auto info = spa_audio_info_raw{make_spa_info(mDevice, is51rear, ForceF32Planar)};
 
-    static constexpr uint32_t pod_buffer_size{1024};
-    PodDynamicBuilder b(pod_buffer_size);
-
-    const spa_pod *params{spa_format_audio_raw_build(b.get(), SPA_PARAM_EnumFormat, &info)};
+    auto b = PodDynamicBuilder{};
+    auto params = as_const_ptr(spa_format_audio_raw_build(b.get(), SPA_PARAM_EnumFormat, &info));
     if(!params)
         throw al::backend_exception{al::backend_error::DeviceError,
             "Failed to set PipeWire audio format parameters"};
@@ -1666,7 +1668,7 @@ bool PipeWirePlayback::reset()
      * be useful?
      */
     auto&& binary = GetProcBinary();
-    const char *appname{binary.fname.length() ? binary.fname.c_str() : "OpenAL Soft"};
+    const char *appname{!binary.fname.empty() ? binary.fname.c_str() : "OpenAL Soft"};
     pw_properties *props{pw_properties_new(PW_KEY_NODE_NAME, appname,
         PW_KEY_NODE_DESCRIPTION, appname,
         PW_KEY_MEDIA_TYPE, "Audio",
@@ -2083,19 +2085,16 @@ void PipeWireCapture::open(std::string_view name)
         if(match != devlist.cend())
             is51rear = match->mIs51Rear;
     }
-    spa_audio_info_raw info{make_spa_info(mDevice, is51rear, UseDevType)};
+    auto info = spa_audio_info_raw{make_spa_info(mDevice, is51rear, UseDevType)};
 
-    static constexpr uint32_t pod_buffer_size{1024};
-    PodDynamicBuilder b(pod_buffer_size);
-
-    std::array params{static_cast<const spa_pod*>(spa_format_audio_raw_build(b.get(),
-        SPA_PARAM_EnumFormat, &info))};
-    if(!params[0])
+    auto b = PodDynamicBuilder{};
+    auto params = as_const_ptr(spa_format_audio_raw_build(b.get(), SPA_PARAM_EnumFormat, &info));
+    if(!params)
         throw al::backend_exception{al::backend_error::DeviceError,
             "Failed to set PipeWire audio format parameters"};
 
     auto&& binary = GetProcBinary();
-    const char *appname{binary.fname.length() ? binary.fname.c_str() : "OpenAL Soft"};
+    const char *appname{!binary.fname.empty() ? binary.fname.c_str() : "OpenAL Soft"};
     pw_properties *props{pw_properties_new(
         PW_KEY_NODE_NAME, appname,
         PW_KEY_NODE_DESCRIPTION, appname,
@@ -2131,7 +2130,7 @@ void PipeWireCapture::open(std::string_view name)
 
     constexpr pw_stream_flags Flags{PW_STREAM_FLAG_AUTOCONNECT | PW_STREAM_FLAG_INACTIVE
         | PW_STREAM_FLAG_MAP_BUFFERS | PW_STREAM_FLAG_RT_PROCESS};
-    if(int res{pw_stream_connect(mStream.get(), PW_DIRECTION_INPUT, PwIdAny, Flags, params.data(), 1)})
+    if(int res{pw_stream_connect(mStream.get(), PW_DIRECTION_INPUT, PwIdAny, Flags, &params, 1)})
         throw al::backend_exception{al::backend_error::DeviceError,
             "Error connecting PipeWire stream (res: %d)", res};
 

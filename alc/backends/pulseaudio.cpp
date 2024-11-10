@@ -252,7 +252,7 @@ constexpr pa_channel_map MonoChanMap{
 };
 
 
-/* *grumble* Don't use enums for bitflags. */
+/* NOLINTBEGIN(*EnumCastOutOfRange) *grumble* Don't use enums for bitflags. */
 constexpr pa_stream_flags_t operator|(pa_stream_flags_t lhs, pa_stream_flags_t rhs)
 { return pa_stream_flags_t(lhs | al::to_underlying(rhs)); }
 constexpr pa_stream_flags_t& operator|=(pa_stream_flags_t &lhs, pa_stream_flags_t rhs)
@@ -278,6 +278,7 @@ constexpr pa_context_flags_t& operator|=(pa_context_flags_t &lhs, pa_context_fla
 
 constexpr pa_subscription_mask_t operator|(pa_subscription_mask_t lhs, pa_subscription_mask_t rhs)
 { return pa_subscription_mask_t(lhs | al::to_underlying(rhs)); }
+/* NOLINTEND(*EnumCastOutOfRange) */
 
 
 struct DevMap {

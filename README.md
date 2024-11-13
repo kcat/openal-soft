@@ -87,6 +87,10 @@ Python Bindings:
 * [PyOpenAL](https://pypi.org/project/PyOpenAL/). Also includes methods to play
 wave files and, with PyOgg, also Vorbis, Opus, and FLAC.
 
+FreePascal/Lazarus Bindings:
+* [ALSound](https://github.com/Lulu04/ALSound). Also includes a higher level
+API and libsndfile support to simplify loading and playing sounds.
+
 Other bindings for these and other languages also exist. This list will grow as
 more bindings are found.
 

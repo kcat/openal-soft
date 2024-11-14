@@ -27,23 +27,25 @@
 #include <array>
 #include <atomic>
 #include <cassert>
-#include <chrono>
-#include <climits>
+#include <cmath>
 #include <cstdarg>
+#include <cstddef>
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
-#include <functional>
 #include <iterator>
 #include <limits>
 #include <memory>
-#include <new>
 #include <optional>
+#include <string>
+#include <string_view>
 #include <utility>
+#include <variant>
 
 #include "almalloc.h"
 #include "alnumbers.h"
 #include "alnumeric.h"
+#include "alsem.h"
 #include "alspan.h"
 #include "alstring.h"
 #include "atomic.h"
@@ -71,6 +73,7 @@
 #include "core/mixer/defs.h"
 #include "core/mixer/hrtfdefs.h"
 #include "core/resampler_limits.h"
+#include "core/storage_formats.h"
 #include "core/uhjfilter.h"
 #include "core/voice.h"
 #include "core/voice_change.h"
@@ -79,7 +82,6 @@
 #include "ringbuffer.h"
 #include "strutils.h"
 #include "vecmat.h"
-#include "vector.h"
 
 struct CTag;
 #if HAVE_SSE

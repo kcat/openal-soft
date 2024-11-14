@@ -10,66 +10,6 @@
 /* Define if we have DBus/RTKit */
 #cmakedefine HAVE_RTKIT
 
-/* Define if we have SSE CPU extensions */
-#cmakedefine HAVE_SSE
-#cmakedefine HAVE_SSE2
-#cmakedefine HAVE_SSE3
-#cmakedefine HAVE_SSE4_1
-
-/* Define if we have ARM Neon CPU extensions */
-#cmakedefine HAVE_NEON
-
-/* Define if we have the ALSA backend */
-#cmakedefine HAVE_ALSA
-
-/* Define if we have the OSS backend */
-#cmakedefine HAVE_OSS
-
-/* Define if we have the PipeWire backend */
-#cmakedefine HAVE_PIPEWIRE
-
-/* Define if we have the Solaris backend */
-#cmakedefine HAVE_SOLARIS
-
-/* Define if we have the SndIO backend */
-#cmakedefine HAVE_SNDIO
-
-/* Define if we have the WASAPI backend */
-#cmakedefine HAVE_WASAPI
-
-/* Define if we have the DSound backend */
-#cmakedefine HAVE_DSOUND
-
-/* Define if we have the Windows Multimedia backend */
-#cmakedefine HAVE_WINMM
-
-/* Define if we have the PortAudio backend */
-#cmakedefine HAVE_PORTAUDIO
-
-/* Define if we have the PulseAudio backend */
-#cmakedefine HAVE_PULSEAUDIO
-
-/* Define if we have the JACK backend */
-#cmakedefine HAVE_JACK
-
-/* Define if we have the CoreAudio backend */
-#cmakedefine HAVE_COREAUDIO
-
-/* Define if we have the OpenSL backend */
-#cmakedefine HAVE_OPENSL
-
-/* Define if we have the Oboe backend */
-#cmakedefine HAVE_OBOE
-
-/* Define if we have the OtherIO backend */
-#cmakedefine HAVE_OTHERIO
-
-/* Define if we have the Wave Writer backend */
-#cmakedefine HAVE_WAVE
-
-/* Define if we have the SDL2 backend */
-#cmakedefine HAVE_SDL2
-
 /* Define if we have dlfcn.h */
 #cmakedefine HAVE_DLFCN_H
 
@@ -90,9 +30,6 @@
 
 /* Define if we have the __cpuid() intrinsic */
 #cmakedefine HAVE_CPUID_INTRINSIC
-
-/* Define if we have SSE intrinsics */
-#cmakedefine HAVE_SSE_INTRINSICS
 
 /* Define if we have pthread_setschedparam() */
 #cmakedefine HAVE_PTHREAD_SETSCHEDPARAM

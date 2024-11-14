@@ -19,6 +19,8 @@
  */
 
 #include "config.h"
+#include "config_backends.h"
+#include "config_simd.h"
 
 #include "version.h"
 
@@ -108,55 +110,55 @@
 #include "backends/base.h"
 #include "backends/null.h"
 #include "backends/loopback.h"
-#ifdef HAVE_PIPEWIRE
+#if HAVE_PIPEWIRE
 #include "backends/pipewire.h"
 #endif
-#ifdef HAVE_JACK
+#if HAVE_JACK
 #include "backends/jack.h"
 #endif
-#ifdef HAVE_PULSEAUDIO
+#if HAVE_PULSEAUDIO
 #include "backends/pulseaudio.h"
 #endif
-#ifdef HAVE_ALSA
+#if HAVE_ALSA
 #include "backends/alsa.h"
 #endif
-#ifdef HAVE_WASAPI
+#if HAVE_WASAPI
 #include "backends/wasapi.h"
 #endif
-#ifdef HAVE_COREAUDIO
+#if HAVE_COREAUDIO
 #include "backends/coreaudio.h"
 #endif
-#ifdef HAVE_OPENSL
+#if HAVE_OPENSL
 #include "backends/opensl.h"
 #endif
-#ifdef HAVE_OBOE
+#if HAVE_OBOE
 #include "backends/oboe.h"
 #endif
-#ifdef HAVE_SOLARIS
+#if HAVE_SOLARIS
 #include "backends/solaris.h"
 #endif
-#ifdef HAVE_SNDIO
+#if HAVE_SNDIO
 #include "backends/sndio.h"
 #endif
-#ifdef HAVE_OSS
+#if HAVE_OSS
 #include "backends/oss.h"
 #endif
-#ifdef HAVE_DSOUND
+#if HAVE_DSOUND
 #include "backends/dsound.h"
 #endif
-#ifdef HAVE_WINMM
+#if HAVE_WINMM
 #include "backends/winmm.h"
 #endif
-#ifdef HAVE_PORTAUDIO
+#if HAVE_PORTAUDIO
 #include "backends/portaudio.h"
 #endif
-#ifdef HAVE_SDL2
+#if HAVE_SDL2
 #include "backends/sdl2.h"
 #endif
-#ifdef HAVE_OTHERIO
+#if HAVE_OTHERIO
 #include "backends/otherio.h"
 #endif
-#ifdef HAVE_WAVE
+#if HAVE_WAVE
 #include "backends/wave.h"
 #endif
 
@@ -212,57 +214,57 @@ struct BackendInfo {
 };
 
 std::array BackendList{
-#ifdef HAVE_PIPEWIRE
+#if HAVE_PIPEWIRE
     BackendInfo{"pipewire", PipeWireBackendFactory::getFactory},
 #endif
-#ifdef HAVE_PULSEAUDIO
+#if HAVE_PULSEAUDIO
     BackendInfo{"pulse", PulseBackendFactory::getFactory},
 #endif
-#ifdef HAVE_WASAPI
+#if HAVE_WASAPI
     BackendInfo{"wasapi", WasapiBackendFactory::getFactory},
 #endif
-#ifdef HAVE_COREAUDIO
+#if HAVE_COREAUDIO
     BackendInfo{"core", CoreAudioBackendFactory::getFactory},
 #endif
-#ifdef HAVE_OBOE
+#if HAVE_OBOE
     BackendInfo{"oboe", OboeBackendFactory::getFactory},
 #endif
-#ifdef HAVE_OPENSL
+#if HAVE_OPENSL
     BackendInfo{"opensl", OSLBackendFactory::getFactory},
 #endif
-#ifdef HAVE_ALSA
+#if HAVE_ALSA
     BackendInfo{"alsa", AlsaBackendFactory::getFactory},
 #endif
-#ifdef HAVE_SOLARIS
+#if HAVE_SOLARIS
     BackendInfo{"solaris", SolarisBackendFactory::getFactory},
 #endif
-#ifdef HAVE_SNDIO
+#if HAVE_SNDIO
     BackendInfo{"sndio", SndIOBackendFactory::getFactory},
 #endif
-#ifdef HAVE_OSS
+#if HAVE_OSS
     BackendInfo{"oss", OSSBackendFactory::getFactory},
 #endif
-#ifdef HAVE_JACK
+#if HAVE_JACK
     BackendInfo{"jack", JackBackendFactory::getFactory},
 #endif
-#ifdef HAVE_DSOUND
+#if HAVE_DSOUND
     BackendInfo{"dsound", DSoundBackendFactory::getFactory},
 #endif
-#ifdef HAVE_WINMM
+#if HAVE_WINMM
     BackendInfo{"winmm", WinMMBackendFactory::getFactory},
 #endif
-#ifdef HAVE_PORTAUDIO
+#if HAVE_PORTAUDIO
     BackendInfo{"port", PortBackendFactory::getFactory},
 #endif
-#ifdef HAVE_SDL2
+#if HAVE_SDL2
     BackendInfo{"sdl2", SDL2BackendFactory::getFactory},
 #endif
-#ifdef HAVE_OTHERIO
+#if HAVE_OTHERIO
     BackendInfo{"otherio", OtherIOBackendFactory::getFactory},
 #endif
 
     BackendInfo{"null", NullBackendFactory::getFactory},
-#ifdef HAVE_WAVE
+#if HAVE_WAVE
     BackendInfo{"wave", WaveBackendFactory::getFactory},
 #endif
 };
@@ -439,16 +441,16 @@ void alc_initconfig()
     }
 
     int capfilter{0};
-#if defined(HAVE_SSE4_1)
+#if HAVE_SSE4_1
     capfilter |= CPU_CAP_SSE | CPU_CAP_SSE2 | CPU_CAP_SSE3 | CPU_CAP_SSE4_1;
-#elif defined(HAVE_SSE3)
+#elif HAVE_SSE3
     capfilter |= CPU_CAP_SSE | CPU_CAP_SSE2 | CPU_CAP_SSE3;
-#elif defined(HAVE_SSE2)
+#elif HAVE_SSE2
     capfilter |= CPU_CAP_SSE | CPU_CAP_SSE2;
-#elif defined(HAVE_SSE)
+#elif HAVE_SSE
     capfilter |= CPU_CAP_SSE;
 #endif
-#ifdef HAVE_NEON
+#if HAVE_NEON
     capfilter |= CPU_CAP_NEON;
 #endif
     if(auto cpuopt = ConfigValueStr({}, {}, "disable-cpu-exts"sv))

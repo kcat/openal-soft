@@ -19,6 +19,7 @@
  */
 
 #include "config.h"
+#include "config_simd.h"
 
 #include "alu.h"
 
@@ -81,16 +82,16 @@
 #include "vector.h"
 
 struct CTag;
-#ifdef HAVE_SSE
+#if HAVE_SSE
 struct SSETag;
 #endif
-#ifdef HAVE_SSE2
+#if HAVE_SSE2
 struct SSE2Tag;
 #endif
-#ifdef HAVE_SSE4_1
+#if HAVE_SSE4_1
 struct SSE4Tag;
 #endif
-#ifdef HAVE_NEON
+#if HAVE_NEON
 struct NEONTag;
 #endif
 struct PointTag;
@@ -143,11 +144,11 @@ HrtfDirectMixerFunc MixDirectHrtf{MixDirectHrtf_<CTag>};
 
 inline HrtfDirectMixerFunc SelectHrtfMixer()
 {
-#ifdef HAVE_NEON
+#if HAVE_NEON
     if((CPUCapFlags&CPU_CAP_NEON))
         return MixDirectHrtf_<NEONTag>;
 #endif
-#ifdef HAVE_SSE
+#if HAVE_SSE
     if((CPUCapFlags&CPU_CAP_SSE))
         return MixDirectHrtf_<SSETag>;
 #endif
@@ -186,34 +187,34 @@ inline ResamplerFunc SelectResampler(Resampler resampler, uint increment)
     case Resampler::Point:
         return Resample_<PointTag,CTag>;
     case Resampler::Linear:
-#ifdef HAVE_NEON
+#if HAVE_NEON
         if((CPUCapFlags&CPU_CAP_NEON))
             return Resample_<LerpTag,NEONTag>;
 #endif
-#ifdef HAVE_SSE4_1
+#if HAVE_SSE4_1
         if((CPUCapFlags&CPU_CAP_SSE4_1))
             return Resample_<LerpTag,SSE4Tag>;
 #endif
-#ifdef HAVE_SSE2
+#if HAVE_SSE2
         if((CPUCapFlags&CPU_CAP_SSE2))
             return Resample_<LerpTag,SSE2Tag>;
 #endif
         return Resample_<LerpTag,CTag>;
     case Resampler::Spline:
     case Resampler::Gaussian:
-#ifdef HAVE_NEON
+#if HAVE_NEON
         if((CPUCapFlags&CPU_CAP_NEON))
             return Resample_<CubicTag,NEONTag>;
 #endif
-#ifdef HAVE_SSE4_1
+#if HAVE_SSE4_1
         if((CPUCapFlags&CPU_CAP_SSE4_1))
             return Resample_<CubicTag,SSE4Tag>;
 #endif
-#ifdef HAVE_SSE2
+#if HAVE_SSE2
         if((CPUCapFlags&CPU_CAP_SSE2))
             return Resample_<CubicTag,SSE2Tag>;
 #endif
-#ifdef HAVE_SSE
+#if HAVE_SSE
         if((CPUCapFlags&CPU_CAP_SSE))
             return Resample_<CubicTag,SSETag>;
 #endif
@@ -222,11 +223,11 @@ inline ResamplerFunc SelectResampler(Resampler resampler, uint increment)
     case Resampler::BSinc24:
         if(increment > MixerFracOne)
         {
-#ifdef HAVE_NEON
+#if HAVE_NEON
             if((CPUCapFlags&CPU_CAP_NEON))
                 return Resample_<BSincTag,NEONTag>;
 #endif
-#ifdef HAVE_SSE
+#if HAVE_SSE
             if((CPUCapFlags&CPU_CAP_SSE))
                 return Resample_<BSincTag,SSETag>;
 #endif
@@ -235,11 +236,11 @@ inline ResamplerFunc SelectResampler(Resampler resampler, uint increment)
         /* fall-through */
     case Resampler::FastBSinc12:
     case Resampler::FastBSinc24:
-#ifdef HAVE_NEON
+#if HAVE_NEON
         if((CPUCapFlags&CPU_CAP_NEON))
             return Resample_<FastBSincTag,NEONTag>;
 #endif
-#ifdef HAVE_SSE
+#if HAVE_SSE
         if((CPUCapFlags&CPU_CAP_SSE))
             return Resample_<FastBSincTag,SSETag>;
 #endif

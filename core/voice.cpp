@@ -1,5 +1,6 @@
 
 #include "config.h"
+#include "config_simd.h"
 
 #include "voice.h"
 
@@ -42,10 +43,10 @@
 #include "voice_change.h"
 
 struct CTag;
-#ifdef HAVE_SSE
+#if HAVE_SSE
 struct SSETag;
 #endif
-#ifdef HAVE_NEON
+#if HAVE_NEON
 struct NEONTag;
 #endif
 
@@ -75,11 +76,11 @@ HrtfMixerBlendFunc MixHrtfBlendSamples{MixHrtfBlend_<CTag>};
 
 inline MixerOutFunc SelectMixer()
 {
-#ifdef HAVE_NEON
+#if HAVE_NEON
     if((CPUCapFlags&CPU_CAP_NEON))
         return Mix_<NEONTag>;
 #endif
-#ifdef HAVE_SSE
+#if HAVE_SSE
     if((CPUCapFlags&CPU_CAP_SSE))
         return Mix_<SSETag>;
 #endif
@@ -88,11 +89,11 @@ inline MixerOutFunc SelectMixer()
 
 inline MixerOneFunc SelectMixerOne()
 {
-#ifdef HAVE_NEON
+#if HAVE_NEON
     if((CPUCapFlags&CPU_CAP_NEON))
         return Mix_<NEONTag>;
 #endif
-#ifdef HAVE_SSE
+#if HAVE_SSE
     if((CPUCapFlags&CPU_CAP_SSE))
         return Mix_<SSETag>;
 #endif
@@ -101,11 +102,11 @@ inline MixerOneFunc SelectMixerOne()
 
 inline HrtfMixerFunc SelectHrtfMixer()
 {
-#ifdef HAVE_NEON
+#if HAVE_NEON
     if((CPUCapFlags&CPU_CAP_NEON))
         return MixHrtf_<NEONTag>;
 #endif
-#ifdef HAVE_SSE
+#if HAVE_SSE
     if((CPUCapFlags&CPU_CAP_SSE))
         return MixHrtf_<SSETag>;
 #endif
@@ -114,11 +115,11 @@ inline HrtfMixerFunc SelectHrtfMixer()
 
 inline HrtfMixerBlendFunc SelectHrtfBlendMixer()
 {
-#ifdef HAVE_NEON
+#if HAVE_NEON
     if((CPUCapFlags&CPU_CAP_NEON))
         return MixHrtfBlend_<NEONTag>;
 #endif
-#ifdef HAVE_SSE
+#if HAVE_SSE
     if((CPUCapFlags&CPU_CAP_SSE))
         return MixHrtfBlend_<SSETag>;
 #endif

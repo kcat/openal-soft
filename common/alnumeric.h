@@ -1,6 +1,8 @@
 #ifndef AL_NUMERIC_H
 #define AL_NUMERIC_H
 
+#include "config_simd.h"
+
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -11,7 +13,7 @@
 #ifdef HAVE_INTRIN_H
 #include <intrin.h>
 #endif
-#ifdef HAVE_SSE_INTRINSICS
+#if HAVE_SSE_INTRINSICS
 #include <xmmintrin.h>
 #endif
 
@@ -84,7 +86,7 @@ constexpr T RoundUp(T value, al::type_identity_t<T> r) noexcept
  */
 inline int fastf2i(float f) noexcept
 {
-#if defined(HAVE_SSE_INTRINSICS)
+#if HAVE_SSE_INTRINSICS
     return _mm_cvt_ss2si(_mm_set_ss(f));
 
 #elif defined(_MSC_VER) && defined(_M_IX86_FP) && _M_IX86_FP == 0
@@ -112,7 +114,7 @@ inline unsigned int fastf2u(float f) noexcept
 /** Converts float-to-int using standard behavior (truncation). */
 inline int float2int(float f) noexcept
 {
-#if defined(HAVE_SSE_INTRINSICS)
+#if HAVE_SSE_INTRINSICS
     return _mm_cvtt_ss2si(_mm_set_ss(f));
 
 #elif (defined(_MSC_VER) && defined(_M_IX86_FP) && _M_IX86_FP == 0) \
@@ -143,7 +145,7 @@ inline unsigned int float2uint(float f) noexcept
 /** Converts double-to-int using standard behavior (truncation). */
 inline int double2int(double d) noexcept
 {
-#if defined(HAVE_SSE_INTRINSICS)
+#if HAVE_SSE_INTRINSICS
     return _mm_cvttsd_si32(_mm_set_sd(d));
 
 #elif (defined(_MSC_VER) && defined(_M_IX86_FP) && _M_IX86_FP < 2) \

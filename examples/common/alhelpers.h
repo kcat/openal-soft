@@ -24,7 +24,7 @@ void al_nssleep(unsigned long nsec);
  * still needs to use a normal cast and live with the warning (C++ is fine with
  * a regular reinterpret_cast).
  */
-#if __STDC_VERSION__ >= 199901L
+#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L
 #define FUNCTION_CAST(T, ptr) (union{void *p; T f;}){ptr}.f
 #elif defined(__cplusplus)
 #define FUNCTION_CAST(T, ptr) reinterpret_cast<T>(ptr)

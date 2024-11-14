@@ -1,9 +1,11 @@
 #ifndef PHASE_SHIFTER_H
 #define PHASE_SHIFTER_H
 
-#ifdef HAVE_SSE_INTRINSICS
+#include "config_simd.h"
+
+#if HAVE_SSE_INTRINSICS
 #include <xmmintrin.h>
-#elif defined(HAVE_NEON)
+#elif HAVE_NEON
 #include <arm_neon.h>
 #endif
 
@@ -52,7 +54,7 @@ struct SIMDALIGN PhaseShifterT {
     void process(const al::span<float> dst, const al::span<const float> src) const;
 
 private:
-#if defined(HAVE_NEON)
+#if HAVE_NEON
     static auto unpacklo(float32x4_t a, float32x4_t b)
     {
         float32x2x2_t result{vzip_f32(vget_low_f32(a), vget_low_f32(b))};
@@ -90,7 +92,7 @@ NOINLINE inline
 void PhaseShifterT<S>::process(const al::span<float> dst, const al::span<const float> src) const
 {
     auto in = src.begin();
-#ifdef HAVE_SSE_INTRINSICS
+#if HAVE_SSE_INTRINSICS
     if(const std::size_t todo{dst.size()>>2})
     {
         auto out = al::span{reinterpret_cast<__m128*>(dst.data()), todo};
@@ -146,7 +148,7 @@ void PhaseShifterT<S>::process(const al::span<float> dst, const al::span<const f
         });
     }
 
-#elif defined(HAVE_NEON)
+#elif HAVE_NEON
 
     if(const std::size_t todo{dst.size()>>2})
     {

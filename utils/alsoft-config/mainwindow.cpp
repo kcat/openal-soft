@@ -1,11 +1,12 @@
 
 #include "config.h"
+#include "config_backends.h"
+#include "config_simd.h"
 
 #include "mainwindow.h"
 
 #include <array>
 #include <cmath>
-#include <iostream>
 
 #include <QFileDialog>
 #include <QMessageBox>
@@ -32,48 +33,48 @@ struct BackendNamePair {
     /* NOLINTEND(*-avoid-c-arrays) */
 };
 constexpr std::array backendList{
-#ifdef HAVE_PIPEWIRE
+#if HAVE_PIPEWIRE
     BackendNamePair{ "pipewire", "PipeWire" },
 #endif
-#ifdef HAVE_PULSEAUDIO
+#if HAVE_PULSEAUDIO
     BackendNamePair{ "pulse", "PulseAudio" },
 #endif
-#ifdef HAVE_ALSA
+#if HAVE_ALSA
     BackendNamePair{ "alsa", "ALSA" },
 #endif
-#ifdef HAVE_JACK
+#if HAVE_JACK
     BackendNamePair{ "jack", "JACK" },
 #endif
-#ifdef HAVE_COREAUDIO
+#if HAVE_COREAUDIO
     BackendNamePair{ "core", "CoreAudio" },
 #endif
-#ifdef HAVE_OSS
+#if HAVE_OSS
     BackendNamePair{ "oss", "OSS" },
 #endif
-#ifdef HAVE_SOLARIS
+#if HAVE_SOLARIS
     BackendNamePair{ "solaris", "Solaris" },
 #endif
-#ifdef HAVE_SNDIO
+#if HAVE_SNDIO
     BackendNamePair{ "sndio", "SndIO" },
 #endif
-#ifdef HAVE_WASAPI
+#if HAVE_WASAPI
     BackendNamePair{ "wasapi", "WASAPI" },
 #endif
-#ifdef HAVE_DSOUND
+#if HAVE_DSOUND
     BackendNamePair{ "dsound", "DirectSound" },
 #endif
-#ifdef HAVE_WINMM
+#if HAVE_WINMM
     BackendNamePair{ "winmm", "Windows Multimedia" },
 #endif
-#ifdef HAVE_PORTAUDIO
+#if HAVE_PORTAUDIO
     BackendNamePair{ "port", "PortAudio" },
 #endif
-#ifdef HAVE_OPENSL
+#if HAVE_OPENSL
     BackendNamePair{ "opensl", "OpenSL" },
 #endif
 
     BackendNamePair{ "null", "Null Output" },
-#ifdef HAVE_WAVE
+#if HAVE_WAVE
     BackendNamePair{ "wave", "Wave Writer" },
 #endif
 };
@@ -297,18 +298,18 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow{parent}
     ui->resamplerSlider->setRange(0, resamplerList.size()-1);
     ui->hrtfmodeSlider->setRange(0, hrtfModeList.size()-1);
 
-#if !defined(HAVE_NEON) && !defined(HAVE_SSE)
+#if !HAVE_NEON && !HAVE_SSE
     ui->cpuExtDisabledLabel->move(ui->cpuExtDisabledLabel->x(), ui->cpuExtDisabledLabel->y() - 60);
 #else
     ui->cpuExtDisabledLabel->setVisible(false);
 #endif
 
-#ifndef HAVE_NEON
+#if !HAVE_NEON
 
-#ifndef HAVE_SSE4_1
-#ifndef HAVE_SSE3
-#ifndef HAVE_SSE2
-#ifndef HAVE_SSE
+#if !HAVE_SSE4_1
+#if !HAVE_SSE3
+#if !HAVE_SSE2
+#if !HAVE_SSE
     ui->enableSSECheckBox->setVisible(false);
 #endif /* !SSE */
     ui->enableSSE2CheckBox->setVisible(false);
@@ -321,10 +322,10 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow{parent}
 
 #else /* !Neon */
 
-#ifndef HAVE_SSE4_1
-#ifndef HAVE_SSE3
-#ifndef HAVE_SSE2
-#ifndef HAVE_SSE
+#if !HAVE_SSE4_1
+#if !HAVE_SSE3
+#if !HAVE_SSE2
+#if !HAVE_SSE
     ui->enableNeonCheckBox->move(ui->enableNeonCheckBox->x(), ui->enableNeonCheckBox->y() - 30);
     ui->enableSSECheckBox->setVisible(false);
 #endif /* !SSE */

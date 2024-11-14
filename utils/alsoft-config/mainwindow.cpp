@@ -338,7 +338,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow{parent}
 
 #endif
 
-#ifndef ALSOFT_EAX
+#if !ALSOFT_EAX
     ui->enableEaxCheck->setChecked(Qt::Unchecked);
     ui->enableEaxCheck->setEnabled(false);
     ui->enableEaxCheck->setVisible(false);

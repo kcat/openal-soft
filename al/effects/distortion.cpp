@@ -7,7 +7,7 @@
 #include "alc/effects/base.h"
 #include "effects.h"
 
-#ifdef ALSOFT_EAX
+#if ALSOFT_EAX
 #include "alnumeric.h"
 #include "al/eax/effect.h"
 #include "al/eax/exception.h"
@@ -105,7 +105,7 @@ void DistortionEffectHandler::GetParamfv(const DistortionProps &props, ALenum pa
 { GetParamf(props, param, vals); }
 
 
-#ifdef ALSOFT_EAX
+#if ALSOFT_EAX
 namespace {
 
 using DistortionCommitter = EaxCommitter<EaxDistortionCommitter>;

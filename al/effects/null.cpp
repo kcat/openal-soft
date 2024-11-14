@@ -7,7 +7,7 @@
 #include "alc/effects/base.h"
 #include "effects.h"
 
-#ifdef ALSOFT_EAX
+#if ALSOFT_EAX
 #include "al/eax/effect.h"
 #include "al/eax/exception.h"
 #endif // ALSOFT_EAX
@@ -95,7 +95,7 @@ void NullEffectHandler::GetParamfv(const std::monostate &props, ALenum param, fl
 }
 
 
-#ifdef ALSOFT_EAX
+#if ALSOFT_EAX
 namespace {
 
 using NullCommitter = EaxCommitter<EaxNullCommitter>;

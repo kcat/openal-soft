@@ -75,7 +75,7 @@
 #include "intrusive_ptr.h"
 #include "opthelpers.h"
 
-#ifdef ALSOFT_EAX
+#if ALSOFT_EAX
 #include "eax/api.h"
 #include "eax/call.h"
 #include "eax/fx_slot_index.h"
@@ -133,7 +133,7 @@ void UpdateSourceProps(const ALsource *source, Voice *voice, ALCcontext *context
     props->RefDistance = source->RefDistance;
     props->MaxDistance = source->MaxDistance;
     props->RolloffFactor = source->RolloffFactor
-#ifdef ALSOFT_EAX
+#if ALSOFT_EAX
         + source->RolloffFactor2
 #endif
     ;
@@ -762,7 +762,7 @@ ALsource *AllocSource(ALCcontext *context) noexcept
     ASSUME(slidx < 64);
 
     ALsource *source{al::construct_at(al::to_address(sublist->Sources->begin() + slidx))};
-#ifdef ALSOFT_EAX
+#if ALSOFT_EAX
     source->eaxInitialize(context);
 #endif // ALSOFT_EAX
 
@@ -1352,7 +1352,7 @@ void UpdateSourceProps(ALsource *source, ALCcontext *context)
     }
     source->mPropsDirty = true;
 }
-#ifdef ALSOFT_EAX
+#if ALSOFT_EAX
 void CommitAndUpdateSourceProps(ALsource *source, ALCcontext *context)
 {
     if(!context->mDeferUpdates)
@@ -2607,7 +2607,7 @@ void StartSources(ALCcontext *const context, const al::span<ALsource*> srchandle
             cur->mSourceID = source->id;
             cur->mState = VChangeState::Play;
             source->state = AL_PLAYING;
-#ifdef ALSOFT_EAX
+#if ALSOFT_EAX
             if(context->hasEax())
                 source->eaxCommit();
 #endif // ALSOFT_EAX
@@ -2627,7 +2627,7 @@ void StartSources(ALCcontext *const context, const al::span<ALsource*> srchandle
         default:
             assert(voice == nullptr);
             cur->mOldVoice = nullptr;
-#ifdef ALSOFT_EAX
+#if ALSOFT_EAX
             if(context->hasEax())
                 source->eaxCommit();
 #endif // ALSOFT_EAX
@@ -3751,7 +3751,7 @@ SourceSubList::~SourceSubList()
 }
 
 
-#ifdef ALSOFT_EAX
+#if ALSOFT_EAX
 void ALsource::eaxInitialize(ALCcontext *context) noexcept
 {
     assert(context != nullptr);

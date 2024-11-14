@@ -74,7 +74,7 @@
 #include "ringbuffer.h"
 #include "strutils.h"
 
-#if defined(ALSOFT_UWP)
+#if ALSOFT_UWP
 
 #include <winrt/Windows.Media.Core.h> // !!This is important!!
 #include <winrt/Windows.Foundation.Collections.h>
@@ -100,7 +100,7 @@ DEFINE_GUID(KSDATAFORMAT_SUBTYPE_PCM, 0x00000001, 0x0000, 0x0010, 0x80, 0x00, 0x
 #ifndef KSDATAFORMAT_SUBTYPE_IEEE_FLOAT
 DEFINE_GUID(KSDATAFORMAT_SUBTYPE_IEEE_FLOAT, 0x00000003, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71);
 #endif
-#if !defined(ALSOFT_UWP)
+#if !ALSOFT_UWP
 DEFINE_DEVPROPKEY(DEVPKEY_Device_FriendlyName, 0xa45c254e, 0xdf1c, 0x4efd, 0x80,0x20, 0x67,0xd1,0x46,0xa8,0x50,0xe0, 14);
 DEFINE_PROPERTYKEY(PKEY_AudioEndpoint_FormFactor, 0x1da5d803, 0xd492, 0x4edd, 0x8c,0x23, 0xe0,0xc0,0xff,0xee,0x7f,0x0e, 0);
 DEFINE_PROPERTYKEY(PKEY_AudioEndpoint_GUID, 0x1da5d803, 0xd492, 0x4edd, 0x8c, 0x23,0xe0, 0xc0,0xff,0xee,0x7f,0x0e, 4 );
@@ -322,7 +322,7 @@ struct AvrtHandleCloser {
 using AvrtHandlePtr = std::unique_ptr<std::remove_pointer_t<HANDLE>,AvrtHandleCloser>;
 #endif
 
-#if defined(ALSOFT_UWP)
+#if ALSOFT_UWP
 enum EDataFlow {
     eRender              = 0,
     eCapture             = (eRender + 1),
@@ -331,7 +331,7 @@ enum EDataFlow {
 };
 #endif
 
-#if defined(ALSOFT_UWP)
+#if ALSOFT_UWP
 using DeviceHandle = Windows::Devices::Enumeration::DeviceInformation;
 using EventRegistrationToken = winrt::event_token;
 #else
@@ -345,7 +345,7 @@ auto GetDeviceNameAndGuid(const DeviceHandle &device) -> NameGUIDPair
     constexpr auto UnknownName = "Unknown Device Name"sv;
     constexpr auto UnknownGuid = "Unknown Device GUID"sv;
 
-#if !defined(ALSOFT_UWP)
+#if !ALSOFT_UWP
     auto ps = ComPtr<IPropertyStore>{};
     auto hr = device->OpenPropertyStore(STGM_READ, al::out_ptr(ps));
     if(FAILED(hr))
@@ -393,7 +393,7 @@ auto GetDeviceNameAndGuid(const DeviceHandle &device) -> NameGUIDPair
     if(ret.mGuid.empty()) ret.mGuid = UnknownGuid;
     return ret;
 }
-#if !defined(ALSOFT_UWP)
+#if !ALSOFT_UWP
 EndpointFormFactor GetDeviceFormfactor(IMMDevice *device)
 {
     ComPtr<IPropertyStore> ps;
@@ -418,13 +418,13 @@ EndpointFormFactor GetDeviceFormfactor(IMMDevice *device)
 #endif
 
 
-#if defined(ALSOFT_UWP)
+#if ALSOFT_UWP
 struct DeviceHelper final : public IActivateAudioInterfaceCompletionHandler
 #else
 struct DeviceHelper final : private IMMNotificationClient
 #endif
 {
-#if defined(ALSOFT_UWP)
+#if ALSOFT_UWP
     DeviceHelper()
     {
         /* TODO: UWP also needs to watch for device added/removed events and
@@ -461,7 +461,7 @@ struct DeviceHelper final : private IMMNotificationClient
 #endif
     ~DeviceHelper()
     {
-#if defined(ALSOFT_UWP)
+#if ALSOFT_UWP
         MediaDevice::DefaultAudioRenderDeviceChanged(mRenderDeviceChangedToken);
         MediaDevice::DefaultAudioCaptureDeviceChanged(mCaptureDeviceChangedToken);
 
@@ -502,7 +502,7 @@ struct DeviceHelper final : private IMMNotificationClient
         // that, from the client's point of view, has a reference count of one. If the client then calls AddRef on the
         // interface pointer, the reference count becomes two. The client must call Release twice on the interface
         // pointer to drop all of its references to the object.
-#if defined(ALSOFT_UWP)
+#if ALSOFT_UWP
         if(IId == __uuidof(IActivateAudioInterfaceCompletionHandler))
         {
             *UnknownPtrPtr = as<IActivateAudioInterfaceCompletionHandler*>();
@@ -529,7 +529,7 @@ struct DeviceHelper final : private IMMNotificationClient
         return E_NOINTERFACE;
     }
 
-#if defined(ALSOFT_UWP)
+#if ALSOFT_UWP
     /** ----------------------- IActivateAudioInterfaceCompletionHandler ------------ */
     HRESULT ActivateCompleted(IActivateAudioInterfaceAsyncOperation*) override
     {
@@ -636,7 +636,7 @@ struct DeviceHelper final : private IMMNotificationClient
     /** -------------------------- DeviceHelper ----------------------------- */
     HRESULT init()
     {
-#if !defined(ALSOFT_UWP)
+#if !ALSOFT_UWP
         HRESULT hr{CoCreateInstance(CLSID_MMDeviceEnumerator, nullptr, CLSCTX_INPROC_SERVER,
             __uuidof(IMMDeviceEnumerator), al::out_ptr(mEnumerator))};
         if(SUCCEEDED(hr))
@@ -651,7 +651,7 @@ struct DeviceHelper final : private IMMNotificationClient
 
     HRESULT openDevice(std::wstring_view devid, EDataFlow flow, DeviceHandle& device)
     {
-#if !defined(ALSOFT_UWP)
+#if !ALSOFT_UWP
         HRESULT hr{E_FAIL};
         if(mEnumerator)
         {
@@ -677,7 +677,7 @@ struct DeviceHelper final : private IMMNotificationClient
 #endif
     }
 
-#if !defined(ALSOFT_UWP)
+#if !ALSOFT_UWP
     static HRESULT activateAudioClient(_In_ DeviceHandle &device, REFIID iid, void **ppv)
     { return device->Activate(iid, CLSCTX_INPROC_SERVER, nullptr, ppv); }
 #else
@@ -715,7 +715,7 @@ struct DeviceHelper final : private IMMNotificationClient
         std::wstring defaultId;
         std::vector<DevMap>{}.swap(list);
 
-#if !defined(ALSOFT_UWP)
+#if !ALSOFT_UWP
         ComPtr<IMMDeviceCollection> coll;
         HRESULT hr{mEnumerator->EnumAudioEndpoints(flowdir, DEVICE_STATE_ACTIVE,
             al::out_ptr(coll))};
@@ -817,7 +817,7 @@ private:
         return true;
     }
 
-#if !defined(ALSOFT_UWP)
+#if !ALSOFT_UWP
     static WCHAR *GetDeviceId(IMMDevice *device)
     {
         WCHAR *devid;
@@ -1959,7 +1959,7 @@ HRESULT WasapiPlayback::resetProxy()
     }
     mFormat = OutputType;
 
-#if !defined(ALSOFT_UWP)
+#if !ALSOFT_UWP
     const EndpointFormFactor formfactor{GetDeviceFormfactor(mMMDev.get())};
     mDevice->Flags.set(DirectEar, (formfactor == Headphones || formfactor == Headset));
 #else
@@ -2795,7 +2795,7 @@ alc::EventSupport WasapiBackendFactory::queryEventSupport(alc::EventType eventTy
 
     case alc::EventType::DeviceAdded:
     case alc::EventType::DeviceRemoved:
-#if !defined(ALSOFT_UWP)
+#if !ALSOFT_UWP
         return alc::EventSupport::FullSupport;
 #endif
 

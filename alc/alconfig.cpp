@@ -49,7 +49,7 @@
 #include "core/logging.h"
 #include "strutils.h"
 
-#if defined(ALSOFT_UWP)
+#if ALSOFT_UWP
 #include <winrt/Windows.Media.Core.h> // !!This is important!!
 #include <winrt/Windows.Storage.h>
 #include <winrt/Windows.Foundation.h>
@@ -61,7 +61,7 @@ namespace {
 
 using namespace std::string_view_literals;
 
-#if defined(_WIN32) && !defined(_GAMING_XBOX) && !defined(ALSOFT_UWP)
+#if defined(_WIN32) && !defined(_GAMING_XBOX) && !ALSOFT_UWP
 struct CoTaskMemDeleter {
     void operator()(void *mem) const { CoTaskMemFree(mem); }
 };
@@ -337,7 +337,7 @@ void ReadALConfig()
 
 #if !defined(_GAMING_XBOX)
     {
-#if !defined(ALSOFT_UWP)
+#if !ALSOFT_UWP
         std::unique_ptr<WCHAR,CoTaskMemDeleter> bufstore;
         const HRESULT hr{SHGetKnownFolderPath(FOLDERID_RoamingAppData, KF_FLAG_DONT_UNEXPAND,
             nullptr, al::out_ptr(bufstore))};

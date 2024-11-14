@@ -10,9 +10,9 @@
 #include "alc/effects/base.h"
 #include "effects.h"
 
-#ifdef ALSOFT_EAX
+#if ALSOFT_EAX
 #include <cassert>
-#include "alnumeric.h"
+
 #include "al/eax/effect.h"
 #include "al/eax/exception.h"
 #include "al/eax/utils.h"
@@ -137,7 +137,7 @@ void FshifterEffectHandler::GetParamfv(const FshifterProps &props, ALenum param,
 { GetParamf(props, param, vals); }
 
 
-#ifdef ALSOFT_EAX
+#if ALSOFT_EAX
 namespace {
 
 using FrequencyShifterCommitter = EaxCommitter<EaxFrequencyShifterCommitter>;

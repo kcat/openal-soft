@@ -1,6 +1,8 @@
 #ifndef CORE_CONTEXT_H
 #define CORE_CONTEXT_H
 
+#include "config.h"
+
 #include <array>
 #include <atomic>
 #include <bitset>
@@ -52,7 +54,7 @@ struct ContextProps {
     float DopplerFactor;
     float DopplerVelocity;
     float SpeedOfSound;
-#ifdef ALSOFT_EAX
+#if ALSOFT_EAX
     float DistanceFactor;
 #endif
     bool SourceDistanceModel;

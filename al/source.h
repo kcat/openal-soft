@@ -1,6 +1,8 @@
 #ifndef AL_SOURCE_H
 #define AL_SOURCE_H
 
+#include "config.h"
+
 #include <array>
 #include <cstddef>
 #include <cstdint>
@@ -20,7 +22,7 @@
 #include "core/context.h"
 #include "core/voice.h"
 
-#ifdef ALSOFT_EAX
+#if ALSOFT_EAX
 #include "eax/api.h"
 #include "eax/call.h"
 #include "eax/exception.h"
@@ -48,7 +50,7 @@ struct ALbufferQueueItem : public VoiceBufferItem {
 };
 
 
-#ifdef ALSOFT_EAX
+#if ALSOFT_EAX
 class EaxSourceException : public EaxException {
 public:
     explicit EaxSourceException(const char* message)
@@ -69,7 +71,7 @@ struct ALsource {
     float RefDistance{1.0f};
     float MaxDistance{std::numeric_limits<float>::max()};
     float RolloffFactor{1.0f};
-#ifdef ALSOFT_EAX
+#if ALSOFT_EAX
     // For EAXSOURCE_ROLLOFFFACTOR, which is distinct from and added to
     // AL_ROLLOFF_FACTOR
     float RolloffFactor2{0.0f};
@@ -163,7 +165,7 @@ struct ALsource {
 
     DISABLE_ALLOC
 
-#ifdef ALSOFT_EAX
+#if ALSOFT_EAX
 public:
     void eaxInitialize(ALCcontext *context) noexcept;
     void eaxDispatch(const EaxCall& call);

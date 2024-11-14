@@ -7,9 +7,6 @@
 /* Define if we have the proc_pidpath function */
 #cmakedefine HAVE_PROC_PIDPATH
 
-/* Define if we have DBus/RTKit */
-#cmakedefine HAVE_RTKIT
-
 /* Define if we have dlfcn.h */
 #cmakedefine HAVE_DLFCN_H
 
@@ -43,5 +40,11 @@
 /* Define the installation data directory */
 #cmakedefine ALSOFT_INSTALL_DATADIR "@ALSOFT_INSTALL_DATADIR@"
 
-/* Define whether build alsoft for winuwp */
-#cmakedefine ALSOFT_UWP
+/* Define to 1 if we have DBus/RTKit, else 0 */
+#cmakedefine01 HAVE_RTKIT
+
+/* Define to 1 if building for winuwp, else 0 */
+#cmakedefine01 ALSOFT_UWP
+
+/* Define to 1 if building with legacy EAX API support, else 0 */
+#cmakedefine01 ALSOFT_EAX

@@ -1,6 +1,8 @@
 #ifndef ALC_DEVICE_H
 #define ALC_DEVICE_H
 
+#include "config.h"
+
 #include <atomic>
 #include <memory>
 #include <mutex>
@@ -18,7 +20,7 @@
 #include "core/device.h"
 #include "intrusive_ptr.h"
 
-#ifdef ALSOFT_EAX
+#if ALSOFT_EAX
 #include "al/eax/x_ram.h"
 #endif // ALSOFT_EAX
 
@@ -80,7 +82,7 @@ struct ALCdevice : public al::intrusive_ref<ALCdevice>, DeviceBase {
     std::mutex FilterLock;
     std::vector<FilterSubList> FilterList;
 
-#ifdef ALSOFT_EAX
+#if ALSOFT_EAX
     ALuint eax_x_ram_free_size{eax_x_ram_max_size};
 #endif // ALSOFT_EAX
 

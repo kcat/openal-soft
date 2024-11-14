@@ -162,7 +162,7 @@
 #include "backends/wave.h"
 #endif
 
-#ifdef ALSOFT_EAX
+#if ALSOFT_EAX
 #include "al/eax/api.h"
 #include "al/eax/globals.h"
 #endif
@@ -698,7 +698,7 @@ void alc_initconfig()
     if(!defrevopt) defrevopt = ConfigValueStr({}, {}, "default-reverb"sv);
     if(defrevopt) LoadReverbPreset(*defrevopt, &ALCcontext::sDefaultEffect);
 
-#ifdef ALSOFT_EAX
+#if ALSOFT_EAX
     {
         if(const auto eax_enable_opt = ConfigValueBool({}, "eax", "enable"))
         {
@@ -2637,7 +2637,7 @@ ALC_API ALCvoid* ALC_APIENTRY alcGetProcAddress(ALCdevice *device, const ALCchar
         return nullptr;
     }
 
-#ifdef ALSOFT_EAX
+#if ALSOFT_EAX
     if(eax_g_is_enabled)
     {
         for(const auto &func : eaxFunctions)
@@ -2665,7 +2665,7 @@ ALC_API ALCenum ALC_APIENTRY alcGetEnumValue(ALCdevice *device, const ALCchar *e
         return 0;
     }
 
-#ifdef ALSOFT_EAX
+#if ALSOFT_EAX
     if(eax_g_is_enabled)
     {
         for(const auto &enm : eaxEnumerations)
@@ -2939,7 +2939,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName) noexcep
         TRACE("Opening default playback device\n");
 
     const uint DefaultSends{
-#ifdef ALSOFT_EAX
+#if ALSOFT_EAX
         eax_g_is_enabled ? uint{EAX_MAX_FXSLOTS} :
 #endif // ALSOFT_EAX
         uint{DefaultSendCount}
@@ -3280,7 +3280,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(const ALCchar *deviceN
     }
 
     const uint DefaultSends{
-#ifdef ALSOFT_EAX
+#if ALSOFT_EAX
         eax_g_is_enabled ? uint{EAX_MAX_FXSLOTS} :
 #endif // ALSOFT_EAX
         uint{DefaultSendCount}

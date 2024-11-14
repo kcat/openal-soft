@@ -11,7 +11,7 @@
 #include "alc/effects/base.h"
 #include "effects.h"
 
-#ifdef ALSOFT_EAX
+#if ALSOFT_EAX
 #include "alnumeric.h"
 #include "al/eax/effect.h"
 #include "al/eax/exception.h"
@@ -103,7 +103,7 @@ void AutowahEffectHandler::GetParamf(const AutowahProps &props, ALenum param, fl
 void AutowahEffectHandler::GetParamfv(const AutowahProps &props, ALenum param, float *vals)
 { GetParamf(props, param, vals); }
 
-#ifdef ALSOFT_EAX
+#if ALSOFT_EAX
 namespace {
 
 using AutowahCommitter = EaxCommitter<EaxAutowahCommitter>;

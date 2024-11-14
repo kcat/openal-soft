@@ -10,7 +10,7 @@
 #include "core/effects/base.h"
 #include "effects.h"
 
-#ifdef ALSOFT_EAX
+#if ALSOFT_EAX
 #include <cassert>
 #include "al/eax/effect.h"
 #include "al/eax/exception.h"
@@ -240,7 +240,7 @@ void VmorpherEffectHandler::GetParamfv(const VmorpherProps &props, ALenum param,
 { GetParamf(props, param, vals); }
 
 
-#ifdef ALSOFT_EAX
+#if ALSOFT_EAX
 namespace {
 
 using VocalMorpherCommitter = EaxCommitter<EaxVocalMorpherCommitter>;

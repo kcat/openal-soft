@@ -77,7 +77,7 @@ const PathNamePair &GetProcBinary()
 {
     auto get_procbin = []
     {
-#if !defined(ALSOFT_UWP)
+#if !ALSOFT_UWP
         DWORD pathlen{256};
         auto fullpath = std::wstring(pathlen, L'\0');
         DWORD len{GetModuleFileNameW(nullptr, fullpath.data(), pathlen)};
@@ -129,7 +129,7 @@ const PathNamePair &GetProcBinary()
 
 namespace {
 
-#if !defined(ALSOFT_UWP) && !defined(_GAMING_XBOX)
+#if !ALSOFT_UWP && !defined(_GAMING_XBOX)
 struct CoTaskMemDeleter {
     void operator()(void *mem) const { CoTaskMemFree(mem); }
 };
@@ -165,7 +165,7 @@ auto SearchDataFiles(const std::string_view ext, const std::string_view subdir)
         return results;
     }
 
-#if !defined(ALSOFT_UWP) && !defined(_GAMING_XBOX)
+#if !ALSOFT_UWP && !defined(_GAMING_XBOX)
     /* Search the local and global data dirs. */
     for(const auto &folderid : std::array{FOLDERID_RoamingAppData, FOLDERID_ProgramData})
     {
@@ -184,7 +184,7 @@ auto SearchDataFiles(const std::string_view ext, const std::string_view subdir)
 
 void SetRTPriority()
 {
-#if !defined(ALSOFT_UWP)
+#if !ALSOFT_UWP
     if(RTPrioLevel > 0)
     {
         if(!SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL))
@@ -211,7 +211,7 @@ void SetRTPriority()
 #include <pthread.h>
 #include <sched.h>
 #endif
-#ifdef HAVE_RTKIT
+#if HAVE_RTKIT
 #include <sys/resource.h>
 
 #include "dbus_wrap.h"
@@ -393,7 +393,7 @@ bool SetRTPriorityPthread(int prio [[maybe_unused]])
 
 bool SetRTPriorityRTKit(int prio [[maybe_unused]])
 {
-#ifdef HAVE_RTKIT
+#if HAVE_RTKIT
     if(!HasDBus())
     {
         WARN("D-Bus not available\n");

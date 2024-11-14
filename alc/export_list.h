@@ -1,12 +1,14 @@
 #ifndef ALC_EXPORT_LIST_H
 #define ALC_EXPORT_LIST_H
 
+#include "config.h"
+
 #include "AL/alc.h"
 #include "AL/al.h"
 #include "AL/alext.h"
 
 #include "inprogext.h"
-#ifdef ALSOFT_EAX
+#if ALSOFT_EAX
 #include "context.h"
 #include "al/eax/x_ram.h"
 #endif
@@ -377,7 +379,7 @@ inline const FuncExport alcFunctions[]{
     /* Extra functions */
     DECL(alsoft_set_log_callback),
 };
-#ifdef ALSOFT_EAX
+#if ALSOFT_EAX
 inline const std::array eaxFunctions{
     DECL(EAXGet),
     DECL(EAXSet),
@@ -909,7 +911,7 @@ inline const EnumExport alcEnumerations[]{
 
     DECL(AL_STOP_SOURCES_ON_DISCONNECT_SOFT),
 };
-#ifdef ALSOFT_EAX
+#if ALSOFT_EAX
 inline const std::array eaxEnumerations{
     DECL(AL_EAX_RAM_SIZE),
     DECL(AL_EAX_RAM_FREE),
@@ -917,7 +919,7 @@ inline const std::array eaxEnumerations{
     DECL(AL_STORAGE_HARDWARE),
     DECL(AL_STORAGE_ACCESSIBLE),
 };
-#endif // ALSOFT_EAX
+#endif
 #undef DECL
 
 #endif /* ALC_EXPORT_LIST_H */

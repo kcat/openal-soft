@@ -60,7 +60,7 @@
 #include "intrusive_ptr.h"
 #include "opthelpers.h"
 
-#ifdef ALSOFT_EAX
+#if ALSOFT_EAX
 #include <unordered_set>
 
 #include "eax/globals.h"
@@ -113,7 +113,7 @@ constexpr auto EnumFromAmbiScaling(AmbiScaling scale) -> ALenum
     throw std::runtime_error{"Invalid AmbiScaling: "+std::to_string(int(scale))};
 }
 
-#ifdef ALSOFT_EAX
+#if ALSOFT_EAX
 constexpr auto EaxStorageFromEnum(ALenum scale) noexcept -> std::optional<EaxStorage>
 {
     switch(scale)
@@ -220,7 +220,7 @@ ALbuffer *AllocBuffer(ALCdevice *device) noexcept
 
 void FreeBuffer(ALCdevice *device, ALbuffer *buffer)
 {
-#ifdef ALSOFT_EAX
+#if ALSOFT_EAX
     eax_x_ram_clear(*device, *buffer);
 #endif // ALSOFT_EAX
 
@@ -333,7 +333,7 @@ void LoadData(ALCcontext *context [[maybe_unused]], ALbuffer *ALBuf, ALsizei fre
 
     const size_t newsize{static_cast<size_t>(blocks) * BlockSize};
 
-#ifdef ALSOFT_EAX
+#if ALSOFT_EAX
     if(ALBuf->eax_x_ram_mode == EaxStorage::Hardware)
     {
         ALCdevice &device = *context->mALDevice;
@@ -360,7 +360,7 @@ void LoadData(ALCcontext *context [[maybe_unused]], ALbuffer *ALBuf, ALsizei fre
         newdata.swap(ALBuf->mDataStorage);
     }
     ALBuf->mData = ALBuf->mDataStorage;
-#ifdef ALSOFT_EAX
+#if ALSOFT_EAX
     eax_x_ram_clear(*context->mALDevice, *ALBuf);
 #endif
 
@@ -384,7 +384,7 @@ void LoadData(ALCcontext *context [[maybe_unused]], ALbuffer *ALBuf, ALsizei fre
     ALBuf->mLoopStart = 0;
     ALBuf->mLoopEnd = ALBuf->mSampleLen;
 
-#ifdef ALSOFT_EAX
+#if ALSOFT_EAX
     if(eax_g_is_enabled && ALBuf->eax_x_ram_mode == EaxStorage::Hardware)
         eax_x_ram_apply(*context->mALDevice, *ALBuf);
 #endif
@@ -426,7 +426,7 @@ void PrepareCallback(ALCcontext *context [[maybe_unused]], ALbuffer *ALBuf, ALsi
     BufferVectorType(line_blocks*BlockSize).swap(ALBuf->mDataStorage);
     ALBuf->mData = ALBuf->mDataStorage;
 
-#ifdef ALSOFT_EAX
+#if ALSOFT_EAX
     eax_x_ram_clear(*context->mALDevice, *ALBuf);
 #endif
 
@@ -507,7 +507,7 @@ void PrepareUserPtr(ALCcontext *context [[maybe_unused]], ALbuffer *ALBuf, ALsiz
         throw al::context_error{AL_OUT_OF_MEMORY,
             "Buffer size overflow, %d frames x %d bytes per frame", blocks, BlockSize};
 
-#ifdef ALSOFT_EAX
+#if ALSOFT_EAX
     if(ALBuf->eax_x_ram_mode == EaxStorage::Hardware)
     {
         ALCdevice &device = *context->mALDevice;
@@ -521,7 +521,7 @@ void PrepareUserPtr(ALCcontext *context [[maybe_unused]], ALbuffer *ALBuf, ALsiz
     decltype(ALBuf->mDataStorage){}.swap(ALBuf->mDataStorage);
     ALBuf->mData = al::span{sdata, sdatalen};
 
-#ifdef ALSOFT_EAX
+#if ALSOFT_EAX
     eax_x_ram_clear(*context->mALDevice, *ALBuf);
 #endif
 
@@ -541,7 +541,7 @@ void PrepareUserPtr(ALCcontext *context [[maybe_unused]], ALbuffer *ALBuf, ALsiz
     ALBuf->mLoopStart = 0;
     ALBuf->mLoopEnd = ALBuf->mSampleLen;
 
-#ifdef ALSOFT_EAX
+#if ALSOFT_EAX
     if(ALBuf->eax_x_ram_mode == EaxStorage::Hardware)
         eax_x_ram_apply(*context->mALDevice, *ALBuf);
 #endif
@@ -1532,7 +1532,7 @@ BufferSubList::~BufferSubList()
 }
 
 
-#ifdef ALSOFT_EAX
+#if ALSOFT_EAX
 FORCE_ALIGN DECL_FUNC3(ALboolean, EAXSetBufferMode, ALsizei,n, const ALuint*,buffers, ALint,value)
 FORCE_ALIGN ALboolean AL_APIENTRY EAXSetBufferModeDirect(ALCcontext *context, ALsizei n,
     const ALuint *buffers, ALint value) noexcept

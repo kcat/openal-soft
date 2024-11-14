@@ -1,6 +1,8 @@
 #ifndef AL_BUFFER_H
 #define AL_BUFFER_H
 
+#include "config.h"
+
 #include <array>
 #include <atomic>
 #include <cstddef>
@@ -17,7 +19,7 @@
 #include "core/buffer_storage.h"
 #include "vector.h"
 
-#ifdef ALSOFT_EAX
+#if ALSOFT_EAX
 enum class EaxStorage : uint8_t {
     Automatic,
     Accessible,
@@ -54,7 +56,7 @@ struct ALbuffer : public BufferStorage {
 
     DISABLE_ALLOC
 
-#ifdef ALSOFT_EAX
+#if ALSOFT_EAX
     EaxStorage eax_x_ram_mode{EaxStorage::Automatic};
     bool eax_x_ram_is_hardware{};
 #endif // ALSOFT_EAX

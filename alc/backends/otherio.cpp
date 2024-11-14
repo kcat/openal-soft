@@ -322,7 +322,7 @@ auto PopulateDeviceList() -> HRESULT
         auto hr = CoCreateInstance(guid, nullptr, CLSCTX_INPROC_SERVER, guid, al::out_ptr(iface));
         if(SUCCEEDED(hr))
         {
-#ifndef ALSOFT_UWP
+#if !ALSOFT_UWP
             if(!iface->Init(GetForegroundWindow()))
 #else
             if(!iface->Init(nullptr))

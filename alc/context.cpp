@@ -39,7 +39,7 @@
 #include "ringbuffer.h"
 #include "vecmat.h"
 
-#ifdef ALSOFT_EAX
+#if ALSOFT_EAX
 #include "al/eax/call.h"
 #include "al/eax/globals.h"
 #endif // ALSOFT_EAX
@@ -142,7 +142,7 @@ ALCcontext::~ALCcontext()
     mSourceList.clear();
     mNumSources = 0;
 
-#ifdef ALSOFT_EAX
+#if ALSOFT_EAX
     eaxUninitialize();
 #endif // ALSOFT_EAX
 
@@ -196,7 +196,7 @@ void ALCcontext::init()
         mExtensions.emplace_back("AL_SOFT_buffer_sub_data"sv);
     }
 
-#ifdef ALSOFT_EAX
+#if ALSOFT_EAX
     eax_initialize_extensions();
 #endif // ALSOFT_EAX
 
@@ -219,7 +219,7 @@ void ALCcontext::init()
         mExtensionsString = std::move(extensions);
     }
 
-#ifdef ALSOFT_EAX
+#if ALSOFT_EAX
     eax_set_defaults();
 #endif
 
@@ -228,14 +228,14 @@ void ALCcontext::init()
     mParams.Velocity = alu::Vector{};
     mParams.Gain = mListener.Gain;
     mParams.MetersPerUnit = mListener.mMetersPerUnit
-#ifdef ALSOFT_EAX
+#if ALSOFT_EAX
         * eaxGetDistanceFactor()
 #endif
         ;
     mParams.AirAbsorptionGainHF = mAirAbsorptionGainHF;
     mParams.DopplerFactor = mDopplerFactor;
     mParams.SpeedOfSound = mSpeedOfSound * mDopplerVelocity
-#ifdef ALSOFT_EAX
+#if ALSOFT_EAX
         / eaxGetDistanceFactor()
 #endif
         ;
@@ -318,7 +318,7 @@ void ALCcontext::applyAllUpdates()
         /* busy-wait */
     }
 
-#ifdef ALSOFT_EAX
+#if ALSOFT_EAX
     if(mEaxNeedsCommit)
         eaxCommit();
 #endif
@@ -335,7 +335,7 @@ void ALCcontext::applyAllUpdates()
 }
 
 
-#ifdef ALSOFT_EAX
+#if ALSOFT_EAX
 namespace {
 
 template<typename F>

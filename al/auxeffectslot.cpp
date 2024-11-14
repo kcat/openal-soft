@@ -62,7 +62,7 @@
 #include "flexarray.h"
 #include "opthelpers.h"
 
-#ifdef ALSOFT_EAX
+#if ALSOFT_EAX
 #include "eax/api.h"
 #include "eax/call.h"
 #include "eax/effect.h"
@@ -1004,7 +1004,7 @@ EffectSlotSubList::~EffectSlotSubList()
     EffectSlots = nullptr;
 }
 
-#ifdef ALSOFT_EAX
+#if ALSOFT_EAX
 void ALeffectslot::eax_initialize(ALCcontext& al_context, EaxFxSlotIndexValue index)
 {
     if(index >= EAX_MAX_FXSLOTS)

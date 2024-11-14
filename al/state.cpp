@@ -53,7 +53,7 @@
 #include "opthelpers.h"
 #include "strutils.h"
 
-#ifdef ALSOFT_EAX
+#if ALSOFT_EAX
 #include "eax/globals.h"
 #include "eax/x_ram.h"
 #endif // ALSOFT_EAX
@@ -160,7 +160,7 @@ enum PropertyValue : ALenum {
     MaxDebugGroupDepthProp = AL_MAX_DEBUG_GROUP_STACK_DEPTH_EXT,
     MaxLabelLengthProp = AL_MAX_LABEL_LENGTH_EXT,
     ContextFlagsProp = AL_CONTEXT_FLAGS_EXT,
-#ifdef ALSOFT_EAX
+#if ALSOFT_EAX
     EaxRamSizeProp = AL_EAX_RAM_SIZE,
     EaxRamFreeProp = AL_EAX_RAM_FREE,
 #endif
@@ -260,7 +260,7 @@ void GetValue(ALCcontext *context, ALenum pname, T *values)
         *values = cast_value(context->mContextFlags.to_ulong());
         return;
 
-#ifdef ALSOFT_EAX
+#if ALSOFT_EAX
 #define EAX_ERROR "[alGetInteger] EAX not enabled"
 
     case AL_EAX_RAM_SIZE:
@@ -626,7 +626,7 @@ void UpdateContextProps(ALCcontext *context)
     props->DopplerFactor = context->mDopplerFactor;
     props->DopplerVelocity = context->mDopplerVelocity;
     props->SpeedOfSound = context->mSpeedOfSound;
-#ifdef ALSOFT_EAX
+#if ALSOFT_EAX
     props->DistanceFactor = context->eaxGetDistanceFactor();
 #endif
 

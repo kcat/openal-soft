@@ -1,6 +1,8 @@
 #ifndef ALC_CONTEXT_H
 #define ALC_CONTEXT_H
 
+#include "config.h"
+
 #include <atomic>
 #include <bitset>
 #include <cstdint>
@@ -23,7 +25,7 @@
 #include "intrusive_ptr.h"
 #include "opthelpers.h"
 
-#ifdef ALSOFT_EAX
+#if ALSOFT_EAX
 #include "al/eax/api.h"
 #include "al/eax/exception.h"
 #include "al/eax/fx_slot_index.h"
@@ -212,7 +214,7 @@ public:
     /* Default effect that applies to sources that don't have an effect on send 0. */
     static ALeffect sDefaultEffect;
 
-#ifdef ALSOFT_EAX
+#if ALSOFT_EAX
     bool hasEax() const noexcept { return mEaxIsInitialized; }
     bool eaxIsCapable() const noexcept;
 
@@ -550,7 +552,7 @@ void UpdateContextProps(ALCcontext *context);
 inline bool TrapALError{false};
 
 
-#ifdef ALSOFT_EAX
+#if ALSOFT_EAX
 auto AL_APIENTRY EAXSet(const GUID *property_set_id, ALuint property_id,
     ALuint source_id, ALvoid *value, ALuint value_size) noexcept -> ALenum;
 

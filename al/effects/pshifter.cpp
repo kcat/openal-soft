@@ -7,8 +7,7 @@
 #include "alc/effects/base.h"
 #include "effects.h"
 
-#ifdef ALSOFT_EAX
-#include "alnumeric.h"
+#if ALSOFT_EAX
 #include "al/eax/effect.h"
 #include "al/eax/exception.h"
 #include "al/eax/utils.h"
@@ -85,7 +84,7 @@ void PshifterEffectHandler::GetParamfv(const PshifterProps&, ALenum param, float
 }
 
 
-#ifdef ALSOFT_EAX
+#if ALSOFT_EAX
 namespace {
 
 using PitchShifterCommitter = EaxCommitter<EaxPitchShifterCommitter>;

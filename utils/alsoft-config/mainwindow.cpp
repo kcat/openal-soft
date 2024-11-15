@@ -7,6 +7,7 @@
 
 #include <array>
 #include <cmath>
+#include <memory>
 
 #include <QFileDialog>
 #include <QMessageBox>
@@ -146,19 +147,25 @@ constexpr std::array hrtfModeList{
     NameValuePair{ "Full", "full" },
 };
 
+#ifdef Q_OS_WIN32
+struct CoTaskMemDeleter {
+    void operator()(void *buffer) { CoTaskMemFree(buffer); }
+};
+/* NOLINTNEXTLINE(*-avoid-c-arrays) */
+using WCharBufferPtr = std::unique_ptr<WCHAR[],CoTaskMemDeleter>;
+#endif
+
 QString getDefaultConfigName()
 {
 #ifdef Q_OS_WIN32
     const char *fname{"alsoft.ini"};
-    auto get_appdata_path = []() noexcept -> QString
+    static constexpr auto get_appdata_path = []() -> QString
     {
-        QString ret;
-        WCHAR *buffer{};
+        auto buffer = WCharBufferPtr{};
         if(const HRESULT hr{SHGetKnownFolderPath(FOLDERID_RoamingAppData, KF_FLAG_DONT_UNEXPAND,
-            nullptr, &buffer)}; SUCCEEDED(hr))
-            ret = QString::fromWCharArray(buffer);
-        CoTaskMemFree(buffer);
-        return ret;
+            nullptr, al::out_ptr(buffer))}; SUCCEEDED(hr))
+            return QString::fromWCharArray(buffer.get());
+        return QString{};
     };
     QString base = get_appdata_path();
 #else
@@ -179,15 +186,13 @@ QString getDefaultConfigName()
 QString getBaseDataPath()
 {
 #ifdef Q_OS_WIN32
-    auto get_appdata_path = []() noexcept -> QString
+    static constexpr auto get_appdata_path = []() -> QString
     {
-        QString ret;
-        WCHAR *buffer{};
+        auto buffer = WCharBufferPtr{};
         if(const HRESULT hr{SHGetKnownFolderPath(FOLDERID_RoamingAppData, KF_FLAG_DONT_UNEXPAND,
-            nullptr, &buffer)}; SUCCEEDED(hr))
-            ret = QString::fromWCharArray(buffer);
-        CoTaskMemFree(buffer);
-        return ret;
+            nullptr, al::out_ptr(buffer))}; SUCCEEDED(hr))
+            return QString::fromWCharArray(buffer.get());
+        return QString{};
     };
     QString base = get_appdata_path();
 #else

@@ -244,9 +244,6 @@ std::array BackendList{
 #if HAVE_OSS
     BackendInfo{"oss", OSSBackendFactory::getFactory},
 #endif
-#if HAVE_JACK
-    BackendInfo{"jack", JackBackendFactory::getFactory},
-#endif
 #if HAVE_DSOUND
     BackendInfo{"dsound", DSoundBackendFactory::getFactory},
 #endif
@@ -258,6 +255,9 @@ std::array BackendList{
 #endif
 #if HAVE_SDL2
     BackendInfo{"sdl2", SDL2BackendFactory::getFactory},
+#endif
+#if HAVE_JACK
+    BackendInfo{"jack", JackBackendFactory::getFactory},
 #endif
 #if HAVE_OTHERIO
     BackendInfo{"otherio", OtherIOBackendFactory::getFactory},

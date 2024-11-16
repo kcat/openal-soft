@@ -40,17 +40,17 @@ constexpr std::array backendList{
 #if HAVE_PULSEAUDIO
     BackendNamePair{ "pulse", "PulseAudio" },
 #endif
-#if HAVE_ALSA
-    BackendNamePair{ "alsa", "ALSA" },
-#endif
-#if HAVE_JACK
-    BackendNamePair{ "jack", "JACK" },
+#if HAVE_WASAPI
+    BackendNamePair{ "wasapi", "WASAPI" },
 #endif
 #if HAVE_COREAUDIO
     BackendNamePair{ "core", "CoreAudio" },
 #endif
-#if HAVE_OSS
-    BackendNamePair{ "oss", "OSS" },
+#if HAVE_OPENSL
+    BackendNamePair{ "opensl", "OpenSL" },
+#endif
+#if HAVE_ALSA
+    BackendNamePair{ "alsa", "ALSA" },
 #endif
 #if HAVE_SOLARIS
     BackendNamePair{ "solaris", "Solaris" },
@@ -58,8 +58,8 @@ constexpr std::array backendList{
 #if HAVE_SNDIO
     BackendNamePair{ "sndio", "SndIO" },
 #endif
-#if HAVE_WASAPI
-    BackendNamePair{ "wasapi", "WASAPI" },
+#if HAVE_OSS
+    BackendNamePair{ "oss", "OSS" },
 #endif
 #if HAVE_DSOUND
     BackendNamePair{ "dsound", "DirectSound" },
@@ -70,8 +70,8 @@ constexpr std::array backendList{
 #if HAVE_PORTAUDIO
     BackendNamePair{ "port", "PortAudio" },
 #endif
-#if HAVE_OPENSL
-    BackendNamePair{ "opensl", "OpenSL" },
+#if HAVE_JACK
+    BackendNamePair{ "jack", "JACK" },
 #endif
 
     BackendNamePair{ "null", "Null Output" },

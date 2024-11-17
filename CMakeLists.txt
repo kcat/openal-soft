@@ -100,6 +100,7 @@ include(GNUInstallDirs)
 find_package(PkgConfig)
 find_package(SDL2 QUIET)
 
+add_subdirectory(fmt-11.0.2)
 
 option(ALSOFT_DLOPEN  "Check for the dlopen API for loading optional libs"  ON)
 

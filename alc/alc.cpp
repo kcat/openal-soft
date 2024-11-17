@@ -2234,20 +2234,20 @@ static size_t GetIntegerv(ALCdevice *device, ALCenum param, const al::span<int> 
     }
 
     /* render device */
-    auto NumAttrsForDevice = [](const ALCdevice *aldev) noexcept -> uint8_t
+    auto NumAttrsForDevice = [device]() noexcept -> uint8_t
     {
-        if(aldev->Type == DeviceType::Loopback && aldev->FmtChans == DevFmtAmbi3D)
+        if(device->Type == DeviceType::Loopback && device->FmtChans == DevFmtAmbi3D)
             return 37;
         return 31;
     };
     switch(param)
     {
     case ALC_ATTRIBUTES_SIZE:
-        values[0] = NumAttrsForDevice(device);
+        values[0] = NumAttrsForDevice();
         return 1;
 
     case ALC_ALL_ATTRIBUTES:
-        if(values.size() >= NumAttrsForDevice(device))
+        if(values.size() >= NumAttrsForDevice())
         {
             size_t i{0};
             values[i++] = ALC_MAJOR_VERSION;
@@ -2555,7 +2555,7 @@ ALC_API void ALC_APIENTRY alcGetInteger64vSOFT(ALCdevice *device, ALCenum pname,
             valuespan[i++] = clock.Latency.count();
 
             valuespan[i++] = ALC_OUTPUT_MODE_SOFT;
-            valuespan[i++] = al::to_underlying(device->getOutputMode1());
+            valuespan[i++] = al::to_underlying(dev->getOutputMode1());
 
             valuespan[i++] = 0;
         }
@@ -2751,7 +2751,7 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
         /* Allocate a new context array, which holds 1 more than the current/
          * old array.
          */
-        auto *oldarray = device->mContexts.load();
+        auto *oldarray = dev->mContexts.load();
         auto newarray = ContextArray::Create(oldarray->size() + 1);
 
         /* Copy the current/old context handles to the new array, appending the
@@ -2809,8 +2809,7 @@ ALC_API void ALC_APIENTRY alcDestroyContext(ALCcontext *context) noexcept
     ContextRef ctx{*iter};
     ContextList.erase(iter);
 
-    ALCdevice *Device{ctx->mALDevice.get()};
-
+    auto *Device = ctx->mALDevice.get();
     std::lock_guard<std::mutex> statelock{Device->StateLock};
     ctx->deinit();
 }

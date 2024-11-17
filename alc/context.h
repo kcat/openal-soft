@@ -75,7 +75,6 @@ struct DebugLogEntry {
 struct ALCcontext final : public al::intrusive_ref<ALCcontext>, ContextBase {
     const al::intrusive_ptr<ALCdevice> mALDevice;
 
-
     bool mPropsDirty{true};
     bool mDeferUpdates{false};
 

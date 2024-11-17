@@ -3,7 +3,6 @@
 
 #include "event.h"
 
-#include <array>
 #include <atomic>
 #include <bitset>
 #include <exception>
@@ -12,10 +11,8 @@
 #include <new>
 #include <optional>
 #include <string>
-#include <string_view>
 #include <thread>
 #include <tuple>
-#include <utility>
 #include <variant>
 
 #include "AL/al.h"

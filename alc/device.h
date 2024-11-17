@@ -32,7 +32,7 @@ struct FilterSubList;
 using uint = unsigned int;
 
 
-struct ALCdevice : public al::intrusive_ref<ALCdevice>, DeviceBase {
+struct ALCdevice final : public al::intrusive_ref<ALCdevice>, DeviceBase {
     /* This lock protects the device state (format, update size, etc) from
      * being from being changed in multiple threads, or being accessed while
      * being changed. It's also used to serialize calls to the backend.

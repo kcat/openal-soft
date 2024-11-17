@@ -2315,7 +2315,7 @@ static size_t GetIntegerv(ALCdevice *device, ALCenum param, const al::span<int> 
             values[i++] = static_cast<ALCenum>(device->getOutputMode1());
 
             values[i++] = 0;
-            assert(i == NumAttrsForDevice(device));
+            assert(i == NumAttrsForDevice());
             return i;
         }
         alcSetError(device, ALC_INVALID_VALUE);

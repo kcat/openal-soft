@@ -79,7 +79,6 @@
 #include <cstdint>
 #include <filesystem>
 #include <fstream>
-#include <iostream>
 #include <memory>
 #include <numeric>
 #include <string>
@@ -98,6 +97,7 @@
 #include "alspan.h"
 #include "alstring.h"
 #include "common/alhelpers.h"
+#include "fmt/core.h"
 
 #include "win_main_utf8.h"
 
@@ -576,10 +576,10 @@ auto LoadLAF(const fs::path &fname) -> std::unique_ptr<LafStream>
             | (uint32_t{uint8_t(input[2])}<<16u) | (uint32_t{uint8_t(input[3])}<<24u);
     }();
 
-    std::cout<< "Filename: "<<fname<<'\n';
-    std::cout<< " quality: "<<GetQualityName(laf->mQuality)<<'\n';
-    std::cout<< " mode: "<<GetModeName(laf->mMode)<<'\n';
-    std::cout<< " track count: "<<laf->mNumTracks<<'\n';
+    fmt::println("Filename: {}", fname.string());
+    fmt::println(" quality: {}", GetQualityName(laf->mQuality));
+    fmt::println(" mode: {}", GetModeName(laf->mMode));
+    fmt::println(" track count: {}", laf->mNumTracks);
 
     if(laf->mNumTracks == 0)
         throw std::runtime_error{"No tracks"};
@@ -623,7 +623,7 @@ auto LoadLAF(const fs::path &fname) -> std::unique_ptr<LafStream>
         auto y_axis = read_float(chan.subspan<4,4>());
         auto lfe_flag = int{chan[8]};
 
-        std::cout<< "Track "<<i<<": E="<<x_axis<<", A="<<y_axis<<" (LFE: "<<lfe_flag<<")\n";
+        fmt::println("Track {}: E={:f}, A={:f} (LFE: {})", i, x_axis, y_axis, lfe_flag);
 
         if(x_axis != x_axis && y_axis == 0.0)
         {
@@ -641,7 +641,7 @@ auto LoadLAF(const fs::path &fname) -> std::unique_ptr<LafStream>
             channel.mIsLfe = lfe_flag != 0;
         }
     }
-    std::cout<< "Channels: "<<laf->mChannels.size()<<'\n';
+    fmt::println("Channels: {}", laf->mChannels.size());
 
     /* For "objects" mode, ensure there's enough tracks with position data to
      * handle the audio channels.
@@ -664,9 +664,9 @@ auto LoadLAF(const fs::path &fname) -> std::unique_ptr<LafStream>
             | (uint64_t{uint8_t(input[4])}<<32u) | (uint64_t{uint8_t(input[5])}<<40u)
             | (uint64_t{uint8_t(input[6])}<<48u) | (uint64_t{uint8_t(input[7])}<<56u);
     }();
-    std::cout<< "Sample rate: "<<laf->mSampleRate<<'\n';
-    std::cout<< "Length: "<<laf->mSampleCount<<" samples ("
-        <<(static_cast<double>(laf->mSampleCount)/static_cast<double>(laf->mSampleRate))<<" sec)\n";
+    fmt::println("Sample rate: {}", laf->mSampleRate);
+    fmt::println("Length: {} samples ({:.2f} sec)", laf->mSampleCount,
+        static_cast<double>(laf->mSampleCount)/static_cast<double>(laf->mSampleRate));
 
     /* Position vectors get split across the PCM chunks if the sample rate
      * isn't a multiple of 48. Each PCM chunk is exactly one second (the sample
@@ -914,7 +914,7 @@ try {
     }
 }
 catch(std::exception& e) {
-    std::cerr<< "Error playing "<<fname<<":\n  "<<e.what()<<'\n';
+    fmt::println(stderr, "Error playing {}:\n  {}", fname, e.what());
 }
 
 auto main(al::span<std::string_view> args) -> int
@@ -922,8 +922,7 @@ auto main(al::span<std::string_view> args) -> int
     /* Print out usage if no arguments were specified */
     if(args.size() < 2)
     {
-        fprintf(stderr, "Usage: %.*s [-device <name>] <filenames...>\n", al::sizei(args[0]),
-            args[0].data());
+        fmt::println(stderr, "Usage: {} [-device <name>] <filenames...>\n", args[0]);
         return 1;
     }
     args = args.subspan(1);
@@ -954,7 +953,7 @@ auto main(al::span<std::string_view> args) -> int
     {
 #define LOAD_PROC(x) do {                                                     \
         x = reinterpret_cast<decltype(x)>(alGetProcAddress(#x));              \
-        if(!x) fprintf(stderr, "Failed to find function '%s'\n", #x);         \
+        if(!x) fmt::println(stderr, "Failed to find function '{}'\n", #x##sv);\
     } while(0)
         LOAD_PROC(alGenFilters);
         LOAD_PROC(alDeleteFilters);

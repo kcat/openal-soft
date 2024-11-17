@@ -47,8 +47,8 @@
 #include "AL/alext.h"
 
 #include "alspan.h"
-#include "alstring.h"
 #include "common/alhelpers.h"
+#include "fmt/core.h"
 
 #include "win_main_utf8.h"
 
@@ -129,7 +129,7 @@ struct StreamPlayer {
         mSndfile = sf_open(filename.c_str(), SFM_READ, &mSfInfo);
         if(!mSndfile)
         {
-            fprintf(stderr, "Could not open audio in %s: %s\n", filename.c_str(),
+            fmt::println(stderr, "Could not open audio in {}: {}", filename,
                 sf_strerror(mSndfile));
             return false;
         }
@@ -342,7 +342,7 @@ struct StreamPlayer {
         alSourcei(mSource, AL_BUFFER, static_cast<ALint>(mBuffer));
         if(ALenum err{alGetError()})
         {
-            fprintf(stderr, "Failed to set callback: %s (0x%04x)\n", alGetString(err), err);
+            fmt::println(stderr, "Failed to set callback: {} (0x{:04x})", alGetString(err), err);
             return false;
         }
         return true;
@@ -370,11 +370,11 @@ struct StreamPlayer {
                 ? (mDecoderOffset-readable) / mBytesPerBlock * mSamplesPerBlock
                 : (size_t{static_cast<ALuint>(pos)} + mStartOffset))
                 / static_cast<ALuint>(mSfInfo.samplerate);
-            printf("\r %zum%02zus (%3zu%% full)", curtime/60, curtime%60,
+            fmt::print("\r {}m{:02}s ({:3}% full)", curtime/60, curtime%60,
                 readable * 100 / mBufferData.size());
         }
         else
-            fputs("Starting...", stdout);
+            fmt::println("Starting...");
         fflush(stdout);
 
         while(!sf_error(mSndfile))
@@ -466,8 +466,7 @@ int main(al::span<std::string_view> args)
     /* Print out usage if no arguments were specified */
     if(args.size() < 2)
     {
-        fprintf(stderr, "Usage: %.*s [-device <name>] <filenames...>\n", al::sizei(args[0]),
-            args[0].data());
+        fmt::println(stderr, "Usage: {} [-device <name>] <filenames...>", args[0]);
         return 1;
     }
     args = args.subspan(1);
@@ -485,7 +484,7 @@ int main(al::span<std::string_view> args)
 
     if(!alIsExtensionPresent("AL_SOFT_callback_buffer"))
     {
-        fprintf(stderr, "AL_SOFT_callback_buffer extension not available\n");
+        fmt::println(stderr, "AL_SOFT_callback_buffer extension not available");
         return 1;
     }
 
@@ -510,8 +509,8 @@ int main(al::span<std::string_view> args)
         else if(sep = namepart.rfind('\\'); sep < namepart.size())
             namepart = namepart.substr(sep+1);
 
-        printf("Playing: %.*s (%s, %dhz)\n", al::sizei(namepart), namepart.data(),
-            FormatName(player->mFormat), player->mSfInfo.samplerate);
+        fmt::println("Playing: {} ({}, {}hz)", namepart, FormatName(player->mFormat),
+            player->mSfInfo.samplerate);
         fflush(stdout);
 
         if(!player->prepare())
@@ -528,7 +527,7 @@ int main(al::span<std::string_view> args)
         player->close();
     }
     /* All done. */
-    printf("Done.\n");
+    fmt::println("Done.");
 
     return 0;
 }

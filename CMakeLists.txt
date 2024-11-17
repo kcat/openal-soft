@@ -1716,12 +1716,12 @@ if(ALSOFT_EXAMPLES)
     set_target_properties(alrecord PROPERTIES ${DEFAULT_TARGET_PROPS})
 
     add_executable(aldebug examples/aldebug.cpp)
-    target_link_libraries(aldebug PRIVATE ${LINKER_FLAGS} alsoft.excommon ${UNICODE_FLAG})
+    target_link_libraries(aldebug PRIVATE ${LINKER_FLAGS} alsoft.excommon ${UNICODE_FLAG} fmt::fmt)
     set_target_properties(aldebug PROPERTIES ${DEFAULT_TARGET_PROPS})
 
     add_executable(allafplay examples/allafplay.cpp)
     target_link_libraries(allafplay PRIVATE ${LINKER_FLAGS} alsoft.common alsoft.excommon
-        ${UNICODE_FLAG})
+        ${UNICODE_FLAG} fmt::fmt)
     set_target_properties(allafplay PROPERTIES ${DEFAULT_TARGET_PROPS})
 
     if(ALSOFT_INSTALL_EXAMPLES)
@@ -1763,12 +1763,12 @@ if(ALSOFT_EXAMPLES)
 
         add_executable(alstreamcb examples/alstreamcb.cpp)
         target_link_libraries(alstreamcb PRIVATE ${LINKER_FLAGS} SndFile::SndFile alsoft.excommon
-            ${UNICODE_FLAG})
+            ${UNICODE_FLAG} fmt::fmt)
         set_target_properties(alstreamcb PROPERTIES ${DEFAULT_TARGET_PROPS})
 
         add_executable(aldirect examples/aldirect.cpp)
         target_link_libraries(aldirect PRIVATE ${LINKER_FLAGS} SndFile::SndFile alsoft.excommon
-            ${UNICODE_FLAG})
+            ${UNICODE_FLAG} fmt::fmt)
         set_target_properties(aldirect PROPERTIES ${DEFAULT_TARGET_PROPS})
 
         add_executable(alconvolve examples/alconvolve.c)
@@ -1824,7 +1824,7 @@ if(ALSOFT_EXAMPLES)
             add_executable(alffplay examples/alffplay.cpp)
             target_include_directories(alffplay PRIVATE ${FFMPEG_INCLUDE_DIRS})
             target_link_libraries(alffplay
-                PRIVATE ${LINKER_FLAGS} SDL2::SDL2 ${FFMPEG_LIBRARIES} alsoft.excommon)
+                PRIVATE ${LINKER_FLAGS} SDL2::SDL2 ${FFMPEG_LIBRARIES} alsoft.excommon fmt::fmt)
             set_target_properties(alffplay PROPERTIES ${DEFAULT_TARGET_PROPS})
 
             if(ALSOFT_INSTALL_EXAMPLES)

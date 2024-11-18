@@ -161,7 +161,7 @@ std::unique_ptr<FrontStablizer> CreateStablizer(const size_t outchans, const uin
     return stablizer;
 }
 
-void AllocChannels(ALCdevice *device, const size_t main_chans, const size_t real_chans)
+void AllocChannels(al::Device *device, const size_t main_chans, const size_t real_chans)
 {
     TRACE("Channel config, Main: %zu, Real: %zu\n", main_chans, real_chans);
 
@@ -260,7 +260,8 @@ struct DecoderConfig<DualBand, 0> {
 using DecoderView = DecoderConfig<DualBand, 0>;
 
 
-void InitNearFieldCtrl(ALCdevice *device, const float ctrl_dist, const uint order, const bool is3d)
+void InitNearFieldCtrl(al::Device *device, const float ctrl_dist, const uint order,
+    const bool is3d)
 {
     static const std::array<uint,MaxAmbiOrder+1> chans_per_order2d{{1, 2, 2, 2}};
     static const std::array<uint,MaxAmbiOrder+1> chans_per_order3d{{1, 3, 5, 7}};
@@ -281,7 +282,7 @@ void InitNearFieldCtrl(ALCdevice *device, const float ctrl_dist, const uint orde
     std::fill(iter, device->NumChannelsPerOrder.end(), 0u);
 }
 
-void InitDistanceComp(ALCdevice *device, const al::span<const Channel> channels,
+void InitDistanceComp(al::Device *device, const al::span<const Channel> channels,
     const al::span<const float,MaxOutputChannels> dists)
 {
     const float maxdist{std::accumulate(dists.begin(), dists.end(), 0.0f,
@@ -366,8 +367,8 @@ constexpr auto GetAmbiLayout(DevAmbiLayout layouttype) noexcept
 }
 
 
-DecoderView MakeDecoderView(ALCdevice *device, const AmbDecConf *conf,
-    DecoderConfig<DualBand,MaxOutputChannels> &decoder)
+auto MakeDecoderView(al::Device *device, const AmbDecConf *conf,
+    DecoderConfig<DualBand,MaxOutputChannels> &decoder) -> DecoderView
 {
     DecoderView ret{};
 
@@ -670,7 +671,7 @@ constexpr DecoderConfig<DualBand, 14> X7144Config{
     }}
 };
 
-void InitPanning(ALCdevice *device, const bool hqdec=false, const bool stablize=false,
+void InitPanning(al::Device *device, const bool hqdec=false, const bool stablize=false,
     DecoderView decoder={})
 {
     if(!decoder)
@@ -795,7 +796,7 @@ void InitPanning(ALCdevice *device, const bool hqdec=false, const bool stablize=
         device->mXOverFreq/static_cast<float>(device->Frequency), std::move(stablizer));
 }
 
-void InitHrtfPanning(ALCdevice *device)
+void InitHrtfPanning(al::Device *device)
 {
     static constexpr float Deg180{al::numbers::pi_v<float>};
     static constexpr float Deg_90{Deg180 / 2.0f /* 90 degrees*/};
@@ -1007,7 +1008,7 @@ void InitHrtfPanning(ALCdevice *device)
     InitNearFieldCtrl(device, Hrtf->mFields[0].distance, ambi_order, true);
 }
 
-void InitUhjPanning(ALCdevice *device)
+void InitUhjPanning(al::Device *device)
 {
     /* UHJ is always 2D first-order. */
     static constexpr size_t count{Ambi2DChannelsFromOrder(1)};
@@ -1024,7 +1025,7 @@ void InitUhjPanning(ALCdevice *device)
 
 } // namespace
 
-void aluInitRenderer(ALCdevice *device, int hrtf_id, std::optional<StereoEncoding> stereomode)
+void aluInitRenderer(al::Device *device, int hrtf_id, std::optional<StereoEncoding> stereomode)
 {
     /* Hold the HRTF the device last used, in case it's used again. */
     HrtfStorePtr old_hrtf{std::move(device->mHrtf)};
@@ -1137,8 +1138,8 @@ void aluInitRenderer(ALCdevice *device, int hrtf_id, std::optional<StereoEncodin
         }
         if(auto *ambidec{device->AmbiDecoder.get()})
         {
-            device->PostProcess = ambidec->hasStablizer() ? &ALCdevice::ProcessAmbiDecStablized
-                : &ALCdevice::ProcessAmbiDec;
+            device->PostProcess = ambidec->hasStablizer() ? &al::Device::ProcessAmbiDecStablized
+                : &al::Device::ProcessAmbiDec;
         }
         return;
     }
@@ -1189,7 +1190,7 @@ void aluInitRenderer(ALCdevice *device, int hrtf_id, std::optional<StereoEncodin
             }
 
             InitHrtfPanning(device);
-            device->PostProcess = &ALCdevice::ProcessHrtf;
+            device->PostProcess = &al::Device::ProcessHrtf;
             device->mHrtfStatus = ALC_HRTF_ENABLED_SOFT;
             return;
         }
@@ -1218,7 +1219,7 @@ void aluInitRenderer(ALCdevice *device, int hrtf_id, std::optional<StereoEncodin
 
         TRACE("UHJ enabled (%.*s encoder)\n", al::sizei(ftype), ftype.data());
         InitUhjPanning(device);
-        device->PostProcess = &ALCdevice::ProcessUhj;
+        device->PostProcess = &al::Device::ProcessUhj;
         return;
     }
 
@@ -1234,7 +1235,7 @@ void aluInitRenderer(ALCdevice *device, int hrtf_id, std::optional<StereoEncodin
                 device->Bs2b = std::move(bs2b);
                 TRACE("BS2B enabled\n");
                 InitPanning(device);
-                device->PostProcess = &ALCdevice::ProcessBs2b;
+                device->PostProcess = &al::Device::ProcessBs2b;
                 return;
             }
         }
@@ -1242,7 +1243,7 @@ void aluInitRenderer(ALCdevice *device, int hrtf_id, std::optional<StereoEncodin
 
     TRACE("Stereo rendering\n");
     InitPanning(device);
-    device->PostProcess = &ALCdevice::ProcessAmbiDec;
+    device->PostProcess = &al::Device::ProcessAmbiDec;
 }
 
 

@@ -579,20 +579,20 @@ try {
     }
     else if(identifier == AL_BUFFER)
     {
-        ALCdevice *device{context->mALDevice.get()};
-        std::lock_guard buflock{device->BufferLock};
+        auto *device = context->mALDevice.get();
+        auto buflock = std::lock_guard{device->BufferLock};
         copy_name(device->mBufferNames);
     }
     else if(identifier == AL_FILTER_EXT)
     {
-        ALCdevice *device{context->mALDevice.get()};
-        std::lock_guard filterlock{device->FilterLock};
+        auto *device = context->mALDevice.get();
+        auto buflock = std::lock_guard{device->FilterLock};
         copy_name(device->mFilterNames);
     }
     else if(identifier == AL_EFFECT_EXT)
     {
-        ALCdevice *device{context->mALDevice.get()};
-        std::lock_guard effectlock{device->EffectLock};
+        auto *device = context->mALDevice.get();
+        auto buflock = std::lock_guard{device->EffectLock};
         copy_name(device->mEffectNames);
     }
     else if(identifier == AL_AUXILIARY_EFFECT_SLOT_EXT)

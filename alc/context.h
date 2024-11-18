@@ -72,8 +72,12 @@ struct DebugLogEntry {
 };
 
 
+namespace al {
+struct Device;
+} // namespace al
+
 struct ALCcontext final : public al::intrusive_ref<ALCcontext>, ContextBase {
-    const al::intrusive_ptr<ALCdevice> mALDevice;
+    const al::intrusive_ptr<al::Device> mALDevice;
 
     bool mPropsDirty{true};
     bool mDeferUpdates{false};
@@ -122,7 +126,7 @@ struct ALCcontext final : public al::intrusive_ref<ALCcontext>, ContextBase {
     std::unordered_map<ALuint,std::string> mSourceNames;
     std::unordered_map<ALuint,std::string> mEffectSlotNames;
 
-    ALCcontext(al::intrusive_ptr<ALCdevice> device, ContextFlagBitset flags);
+    ALCcontext(al::intrusive_ptr<al::Device> device, ContextFlagBitset flags);
     ALCcontext(const ALCcontext&) = delete;
     ALCcontext& operator=(const ALCcontext&) = delete;
     ~ALCcontext() final;

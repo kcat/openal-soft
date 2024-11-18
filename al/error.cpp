@@ -27,7 +27,6 @@
 #include <windows.h>
 #endif
 
-#include <atomic>
 #include <csignal>
 #include <cstdarg>
 #include <cstdio>
@@ -45,7 +44,6 @@
 #include "al/debug.h"
 #include "alc/alconfig.h"
 #include "alc/context.h"
-#include "alc/inprogext.h"
 #include "core/logging.h"
 #include "opthelpers.h"
 #include "strutils.h"

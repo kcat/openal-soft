@@ -139,7 +139,7 @@ void InitEffectParams(ALeffect *effect, ALenum type) noexcept
     effect->type = type;
 }
 
-auto EnsureEffects(ALCdevice *device, size_t needed) noexcept -> bool
+auto EnsureEffects(al::Device *device, size_t needed) noexcept -> bool
 try {
     size_t count{std::accumulate(device->EffectList.cbegin(), device->EffectList.cend(), 0_uz,
         [](size_t cur, const EffectSubList &sublist) noexcept -> size_t
@@ -162,7 +162,7 @@ catch(...) {
     return false;
 }
 
-ALeffect *AllocEffect(ALCdevice *device) noexcept
+auto AllocEffect(al::Device *device) noexcept -> ALeffect*
 {
     auto sublist = std::find_if(device->EffectList.begin(), device->EffectList.end(),
         [](const EffectSubList &entry) noexcept -> bool
@@ -182,7 +182,7 @@ ALeffect *AllocEffect(ALCdevice *device) noexcept
     return effect;
 }
 
-void FreeEffect(ALCdevice *device, ALeffect *effect)
+void FreeEffect(al::Device *device, ALeffect *effect)
 {
     device->mEffectNames.erase(effect->id);
 
@@ -195,7 +195,7 @@ void FreeEffect(ALCdevice *device, ALeffect *effect)
     device->EffectList[lidx].FreeMask |= 1_u64 << slidx;
 }
 
-inline auto LookupEffect(ALCdevice *device, ALuint id) noexcept -> ALeffect*
+inline auto LookupEffect(al::Device *device, ALuint id) noexcept -> ALeffect*
 {
     const size_t lidx{(id-1) >> 6};
     const ALuint slidx{(id-1) & 0x3f};
@@ -217,8 +217,8 @@ try {
         throw al::context_error{AL_INVALID_VALUE, "Generating %d effects", n};
     if(n <= 0) UNLIKELY return;
 
-    ALCdevice *device{context->mALDevice.get()};
-    std::lock_guard<std::mutex> effectlock{device->EffectLock};
+    auto *device = context->mALDevice.get();
+    auto effectlock = std::lock_guard{device->EffectLock};
 
     const al::span eids{effects, static_cast<ALuint>(n)};
     if(!EnsureEffects(device, eids.size()))
@@ -239,8 +239,8 @@ try {
         throw al::context_error{AL_INVALID_VALUE, "Deleting %d effects", n};
     if(n <= 0) UNLIKELY return;
 
-    ALCdevice *device{context->mALDevice.get()};
-    std::lock_guard<std::mutex> effectlock{device->EffectLock};
+    auto *device = context->mALDevice.get();
+    auto effectlock = std::lock_guard{device->EffectLock};
 
     /* First try to find any effects that are invalid. */
     auto validate_effect = [device](const ALuint eid) -> bool
@@ -266,8 +266,8 @@ catch(al::context_error& e) {
 AL_API DECL_FUNC1(ALboolean, alIsEffect, ALuint,effect)
 FORCE_ALIGN ALboolean AL_APIENTRY alIsEffectDirect(ALCcontext *context, ALuint effect) noexcept
 {
-    ALCdevice *device{context->mALDevice.get()};
-    std::lock_guard<std::mutex> effectlock{device->EffectLock};
+    auto *device = context->mALDevice.get();
+    auto effectlock = std::lock_guard{device->EffectLock};
     if(!effect || LookupEffect(device, effect))
         return AL_TRUE;
     return AL_FALSE;
@@ -277,8 +277,8 @@ AL_API DECL_FUNC3(void, alEffecti, ALuint,effect, ALenum,param, ALint,value)
 FORCE_ALIGN void AL_APIENTRY alEffectiDirect(ALCcontext *context, ALuint effect, ALenum param,
     ALint value) noexcept
 try {
-    ALCdevice *device{context->mALDevice.get()};
-    std::lock_guard<std::mutex> effectlock{device->EffectLock};
+    auto *device = context->mALDevice.get();
+    auto effectlock = std::lock_guard{device->EffectLock};
 
     ALeffect *aleffect{LookupEffect(device, effect)};
     if(!aleffect)
@@ -323,8 +323,8 @@ try {
         return;
     }
 
-    ALCdevice *device{context->mALDevice.get()};
-    std::lock_guard<std::mutex> effectlock{device->EffectLock};
+    auto *device = context->mALDevice.get();
+    auto effectlock = std::lock_guard{device->EffectLock};
 
     ALeffect *aleffect{LookupEffect(device, effect)};
     if(!aleffect)
@@ -346,8 +346,8 @@ AL_API DECL_FUNC3(void, alEffectf, ALuint,effect, ALenum,param, ALfloat,value)
 FORCE_ALIGN void AL_APIENTRY alEffectfDirect(ALCcontext *context, ALuint effect, ALenum param,
     ALfloat value) noexcept
 try {
-    ALCdevice *device{context->mALDevice.get()};
-    std::lock_guard<std::mutex> effectlock{device->EffectLock};
+    auto *device = context->mALDevice.get();
+    auto effectlock = std::lock_guard{device->EffectLock};
 
     ALeffect *aleffect{LookupEffect(device, effect)};
     if(!aleffect) UNLIKELY
@@ -369,8 +369,8 @@ AL_API DECL_FUNC3(void, alEffectfv, ALuint,effect, ALenum,param, const ALfloat*,
 FORCE_ALIGN void AL_APIENTRY alEffectfvDirect(ALCcontext *context, ALuint effect, ALenum param,
     const ALfloat *values) noexcept
 try {
-    ALCdevice *device{context->mALDevice.get()};
-    std::lock_guard<std::mutex> effectlock{device->EffectLock};
+    auto *device = context->mALDevice.get();
+    auto effectlock = std::lock_guard{device->EffectLock};
 
     ALeffect *aleffect{LookupEffect(device, effect)};
     if(!aleffect)
@@ -392,8 +392,8 @@ AL_API DECL_FUNC3(void, alGetEffecti, ALuint,effect, ALenum,param, ALint*,value)
 FORCE_ALIGN void AL_APIENTRY alGetEffectiDirect(ALCcontext *context, ALuint effect, ALenum param,
     ALint *value) noexcept
 try {
-    ALCdevice *device{context->mALDevice.get()};
-    std::lock_guard<std::mutex> effectlock{device->EffectLock};
+    auto *device = context->mALDevice.get();
+    auto effectlock = std::lock_guard{device->EffectLock};
 
     const ALeffect *aleffect{LookupEffect(device, effect)};
     if(!aleffect)
@@ -429,8 +429,8 @@ try {
         return;
     }
 
-    ALCdevice *device{context->mALDevice.get()};
-    std::lock_guard<std::mutex> effectlock{device->EffectLock};
+    auto *device = context->mALDevice.get();
+    auto effectlock = std::lock_guard{device->EffectLock};
 
     const ALeffect *aleffect{LookupEffect(device, effect)};
     if(!aleffect)
@@ -452,8 +452,8 @@ AL_API DECL_FUNC3(void, alGetEffectf, ALuint,effect, ALenum,param, ALfloat*,valu
 FORCE_ALIGN void AL_APIENTRY alGetEffectfDirect(ALCcontext *context, ALuint effect, ALenum param,
     ALfloat *value) noexcept
 try {
-    ALCdevice *device{context->mALDevice.get()};
-    std::lock_guard<std::mutex> effectlock{device->EffectLock};
+    auto *device = context->mALDevice.get();
+    auto effectlock = std::lock_guard{device->EffectLock};
 
     const ALeffect *aleffect{LookupEffect(device, effect)};
     if(!aleffect)
@@ -475,8 +475,8 @@ AL_API DECL_FUNC3(void, alGetEffectfv, ALuint,effect, ALenum,param, ALfloat*,val
 FORCE_ALIGN void AL_APIENTRY alGetEffectfvDirect(ALCcontext *context, ALuint effect, ALenum param,
     ALfloat *values) noexcept
 try {
-    ALCdevice *device{context->mALDevice.get()};
-    std::lock_guard<std::mutex> effectlock{device->EffectLock};
+    auto *device = context->mALDevice.get();
+    auto effectlock = std::lock_guard{device->EffectLock};
 
     const ALeffect *aleffect{LookupEffect(device, effect)};
     if(!aleffect)
@@ -502,8 +502,8 @@ void InitEffect(ALeffect *effect)
 
 void ALeffect::SetName(ALCcontext* context, ALuint id, std::string_view name)
 {
-    ALCdevice *device{context->mALDevice.get()};
-    std::lock_guard<std::mutex> effectlock{device->EffectLock};
+    auto *device = context->mALDevice.get();
+    auto effectlock = std::lock_guard{device->EffectLock};
 
     auto effect = LookupEffect(device, id);
     if(!effect)

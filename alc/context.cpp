@@ -119,7 +119,7 @@ thread_local ALCcontext::ThreadCtx ALCcontext::sThreadContext;
 ALeffect ALCcontext::sDefaultEffect;
 
 
-ALCcontext::ALCcontext(al::intrusive_ptr<ALCdevice> device, ContextFlagBitset flags)
+ALCcontext::ALCcontext(al::intrusive_ptr<al::Device> device, ContextFlagBitset flags)
     : ContextBase{device.get()}, mALDevice{std::move(device)}, mContextFlags{flags}
 {
     mDebugGroups.emplace_back(DebugSource::Other, 0, std::string{});

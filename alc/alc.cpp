@@ -364,13 +364,13 @@ constexpr int alcEFXMajorVersion{1};
 constexpr int alcEFXMinorVersion{0};
 
 
-using DeviceRef = al::intrusive_ptr<ALCdevice>;
+using DeviceRef = al::intrusive_ptr<al::Device>;
 
 
 /************************************************
  * Device lists
  ************************************************/
-std::vector<ALCdevice*> DeviceList;
+std::vector<al::Device*> DeviceList;
 std::vector<ALCcontext*> ContextList;
 
 std::recursive_mutex ListLock;
@@ -1008,7 +1008,8 @@ constexpr std::array X71Downmix{
 };
 
 
-std::unique_ptr<Compressor> CreateDeviceLimiter(const ALCdevice *device, const float threshold)
+auto CreateDeviceLimiter(const al::Device *device, const float threshold)
+    -> std::unique_ptr<Compressor>
 {
     static constexpr bool AutoKnee{true};
     static constexpr bool AutoAttack{true};
@@ -1035,7 +1036,7 @@ std::unique_ptr<Compressor> CreateDeviceLimiter(const ALCdevice *device, const f
  * to jump forward or back. Must not be called while the device is running/
  * mixing.
  */
-inline void UpdateClockBase(ALCdevice *device)
+inline void UpdateClockBase(al::Device *device)
 {
     const auto mixLock = device->getWriteMixLock();
 
@@ -1051,7 +1052,7 @@ inline void UpdateClockBase(ALCdevice *device)
  * Updates device parameters according to the attribute list (caller is
  * responsible for holding the list lock).
  */
-ALCenum UpdateDeviceParams(ALCdevice *device, const al::span<const int> attrList)
+auto UpdateDeviceParams(al::Device *device, const al::span<const int> attrList) -> ALCenum
 {
     if(attrList.empty() && device->Type == DeviceType::Loopback)
     {
@@ -1353,7 +1354,7 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const al::span<const int> attrList
 
             if(outmode != ALC_ANY_SOFT)
             {
-                using OutputMode = ALCdevice::OutputMode;
+                using OutputMode = al::Device::OutputMode;
                 switch(OutputMode(outmode))
                 {
                 case OutputMode::Any: break;
@@ -1857,7 +1858,7 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const al::span<const int> attrList
  * Updates device parameters as above, and also first clears the disconnected
  * status, if set.
  */
-bool ResetDeviceParams(ALCdevice *device, const al::span<const int> attrList)
+auto ResetDeviceParams(al::Device *device, const al::span<const int> attrList) -> bool
 {
     /* If the device was disconnected, reset it since we're opened anew. */
     if(!device->Connected.load(std::memory_order_relaxed)) UNLIKELY
@@ -1956,7 +1957,7 @@ ContextRef GetContextRef() noexcept
     return ContextRef{context};
 }
 
-void alcSetError(ALCdevice *device, ALCenum errorCode)
+void alcSetError(al::Device *device, ALCenum errorCode)
 {
     WARN("Error generated on device %p, code 0x%04x\n", voidp{device}, errorCode);
     if(TrapALCError)
@@ -2131,8 +2132,8 @@ ALC_API auto ALC_APIENTRY alcGetString(ALCdevice *Device, ALCenum param) noexcep
     return nullptr;
 }
 
-
-static size_t GetIntegerv(ALCdevice *device, ALCenum param, const al::span<int> values)
+namespace {
+auto GetIntegerv(al::Device *device, ALCenum param, const al::span<int> values) -> size_t
 {
     if(values.empty())
     {
@@ -2451,6 +2452,7 @@ static size_t GetIntegerv(ALCdevice *device, ALCenum param, const al::span<int> 
     }
     return 0;
 }
+} // namespace
 
 ALC_API void ALC_APIENTRY alcGetIntegerv(ALCdevice *device, ALCenum param, ALCsizei size, ALCint *values) noexcept
 {
@@ -2478,7 +2480,7 @@ ALC_API void ALC_APIENTRY alcGetInteger64vSOFT(ALCdevice *device, ALCenum pname,
         return;
     }
     /* render device */
-    auto NumAttrsForDevice = [](ALCdevice *aldev) noexcept -> size_t
+    auto NumAttrsForDevice = [](al::Device *aldev) noexcept -> size_t
     {
         if(aldev->Type == DeviceType::Loopback && aldev->FmtChans == DevFmtAmbi3D)
             return 41;
@@ -2944,7 +2946,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName) noexcep
         uint{DefaultSendCount}
     };
 
-    DeviceRef device{new(std::nothrow) ALCdevice{DeviceType::Playback}};
+    auto device = DeviceRef{new(std::nothrow) al::Device{DeviceType::Playback}};
     if(!device)
     {
         WARN("Failed to create playback device handle\n");
@@ -3101,7 +3103,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, 
     else
         TRACE("Opening default capture device\n");
 
-    DeviceRef device{new(std::nothrow) ALCdevice{DeviceType::Capture}};
+    auto device = DeviceRef{new(std::nothrow) al::Device{DeviceType::Capture}};
     if(!device)
     {
         WARN("Failed to create capture device handle\n");
@@ -3285,7 +3287,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(const ALCchar *deviceN
         uint{DefaultSendCount}
     };
 
-    DeviceRef device{new(std::nothrow) ALCdevice{DeviceType::Loopback}};
+    auto device = DeviceRef{new(std::nothrow) al::Device{DeviceType::Loopback}};
     if(!device)
     {
         WARN("Failed to create loopback device handle\n");
@@ -3364,12 +3366,15 @@ ALC_API ALCboolean ALC_APIENTRY alcIsRenderFormatSupportedSOFT(ALCdevice *device
 #endif
 ALC_API void ALC_APIENTRY alcRenderSamplesSOFT(ALCdevice *device, ALCvoid *buffer, ALCsizei samples) noexcept
 {
-    if(!device || device->Type != DeviceType::Loopback) UNLIKELY
-        alcSetError(device, ALC_INVALID_DEVICE);
+    if(!device) UNLIKELY
+        return alcSetError(nullptr, ALC_INVALID_DEVICE);
+    auto aldev = static_cast<al::Device*>(device);
+    if(aldev->Type != DeviceType::Loopback) UNLIKELY
+        alcSetError(aldev, ALC_INVALID_DEVICE);
     else if(samples < 0 || (samples > 0 && buffer == nullptr)) UNLIKELY
-        alcSetError(device, ALC_INVALID_VALUE);
+        alcSetError(aldev, ALC_INVALID_VALUE);
     else
-        device->renderSamples(buffer, static_cast<uint>(samples), device->channelsFromFmt());
+        aldev->renderSamples(buffer, static_cast<uint>(samples), aldev->channelsFromFmt());
 }
 
 

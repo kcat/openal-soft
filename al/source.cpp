@@ -32,14 +32,12 @@
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
-#include <exception>
 #include <iterator>
 #include <limits>
 #include <memory>
 #include <mutex>
 #include <numeric>
 #include <optional>
-#include <ratio>
 #include <stdexcept>
 #include <string>
 #include <tuple>
@@ -203,7 +201,7 @@ void UpdateSourceProps(const ALsource *source, Voice *voice, ALCcontext *context
  */
 int64_t GetSourceSampleOffset(ALsource *Source, ALCcontext *context, nanoseconds *clocktime)
 {
-    ALCdevice *device{context->mALDevice.get()};
+    auto *device = context->mALDevice.get();
     const VoiceBufferItem *Current{};
     int64_t readPos{};
     uint refcount{};
@@ -243,7 +241,7 @@ int64_t GetSourceSampleOffset(ALsource *Source, ALCcontext *context, nanoseconds
  */
 double GetSourceSecOffset(ALsource *Source, ALCcontext *context, nanoseconds *clocktime)
 {
-    ALCdevice *device{context->mALDevice.get()};
+    auto *device = context->mALDevice.get();
     const VoiceBufferItem *Current{};
     int64_t readPos{};
     uint refcount{};
@@ -293,7 +291,7 @@ double GetSourceSecOffset(ALsource *Source, ALCcontext *context, nanoseconds *cl
 template<typename T>
 NOINLINE T GetSourceOffset(ALsource *Source, ALenum name, ALCcontext *context)
 {
-    ALCdevice *device{context->mALDevice.get()};
+    auto *device = context->mALDevice.get();
     const VoiceBufferItem *Current{};
     int64_t readPos{};
     uint readPosFrac{};
@@ -528,7 +526,7 @@ std::optional<VoicePos> GetSampleOffset(std::deque<ALbufferQueueItem> &BufferLis
 
 
 void InitVoice(Voice *voice, ALsource *source, ALbufferQueueItem *BufferList, ALCcontext *context,
-    ALCdevice *device)
+    al::Device *device)
 {
     voice->mLoopBuffer.store(source->Looping ? &source->mQueue.front() : nullptr,
         std::memory_order_relaxed);
@@ -579,7 +577,7 @@ VoiceChange *GetVoiceChanger(ALCcontext *ctx)
 
 void SendVoiceChanges(ALCcontext *ctx, VoiceChange *tail)
 {
-    ALCdevice *device{ctx->mALDevice.get()};
+    auto *device = ctx->mALDevice.get();
 
     VoiceChange *oldhead{ctx->mCurrentVoiceChange.load(std::memory_order_acquire)};
     while(VoiceChange *next{oldhead->mNext.load(std::memory_order_relaxed)})
@@ -608,8 +606,8 @@ void SendVoiceChanges(ALCcontext *ctx, VoiceChange *tail)
 }
 
 
-bool SetVoiceOffset(Voice *oldvoice, const VoicePos &vpos, ALsource *source, ALCcontext *context,
-    ALCdevice *device)
+auto SetVoiceOffset(Voice *oldvoice, const VoicePos &vpos, ALsource *source, ALCcontext *context,
+    al::Device *device) -> bool
 {
     /* First, get a free voice to start at the new offset. */
     auto voicelist = context->getVoicesSpan();
@@ -815,7 +813,7 @@ inline ALsource *LookupSource(ALCcontext *context, ALuint id) noexcept
     return al::to_address(sublist.Sources->begin() + slidx);
 }
 
-auto LookupBuffer = [](ALCdevice *device, auto id) noexcept -> ALbuffer*
+auto LookupBuffer = [](al::Device *device, auto id) noexcept -> ALbuffer*
 {
     const auto lidx{(id-1) >> 6};
     const auto slidx{(id-1) & 0x3f};
@@ -828,7 +826,7 @@ auto LookupBuffer = [](ALCdevice *device, auto id) noexcept -> ALbuffer*
     return al::to_address(sublist.Buffers->begin() + static_cast<size_t>(slidx));
 };
 
-auto LookupFilter = [](ALCdevice *device, auto id) noexcept -> ALfilter*
+auto LookupFilter = [](al::Device *device, auto id) noexcept -> ALfilter*
 {
     const auto lidx{(id-1) >> 6};
     const auto slidx{(id-1) & 0x3f};
@@ -1437,7 +1435,7 @@ NOINLINE void SetProperty(ALsource *const Source, ALCcontext *const Context, con
     const al::span<const T> values)
 {
     auto [CheckSize, CheckValue] = GetCheckers(prop, values);
-    ALCdevice *device{Context->mALDevice.get()};
+    auto *device = Context->mALDevice.get();
 
     switch(prop)
     {
@@ -2059,7 +2057,7 @@ NOINLINE void GetProperty(ALsource *const Source, ALCcontext *const Context, con
 {
     using std::chrono::duration_cast;
     auto CheckSize = GetSizeChecker(prop, values);
-    ALCdevice *device{Context->mALDevice.get()};
+    auto *device = Context->mALDevice.get();
 
     switch(prop)
     {
@@ -2518,7 +2516,7 @@ NOINLINE void GetProperty(ALsource *const Source, ALCcontext *const Context, con
 void StartSources(ALCcontext *const context, const al::span<ALsource*> srchandles,
     const nanoseconds start_time=nanoseconds::min())
 {
-    ALCdevice *device{context->mALDevice.get()};
+    auto *device = context->mALDevice.get();
     /* If the device is disconnected, and voices stop on disconnect, go right
      * to stopped.
      */
@@ -2693,8 +2691,8 @@ try {
         throw al::context_error{AL_INVALID_VALUE, "Generating %d sources", n};
     if(n <= 0) UNLIKELY return;
 
-    std::unique_lock<std::mutex> srclock{context->mSourceLock};
-    ALCdevice *device{context->mALDevice.get()};
+    auto srclock = std::unique_lock{context->mSourceLock};
+    auto *device = context->mALDevice.get();
 
     const al::span sids{sources, static_cast<ALuint>(n)};
     if(sids.size() > device->SourcesMax-context->mNumSources)
@@ -3503,7 +3501,7 @@ try {
         throw al::context_error{AL_INVALID_OPERATION, "Queueing onto static source %u", src};
 
     /* Check for a valid Buffer, for its frequency and format */
-    ALCdevice *device{context->mALDevice.get()};
+    auto *device = context->mALDevice.get();
     ALbuffer *BufferFmt{nullptr};
     for(auto &item : source->mQueue)
     {

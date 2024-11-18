@@ -30,7 +30,6 @@
 #include <memory>
 #include <mutex>
 #include <numeric>
-#include <string>
 #include <unordered_map>
 #include <vector>
 
@@ -41,7 +40,6 @@
 #include "albit.h"
 #include "alc/context.h"
 #include "alc/device.h"
-#include "alc/inprogext.h"
 #include "almalloc.h"
 #include "alnumeric.h"
 #include "alspan.h"
@@ -97,7 +95,7 @@ void InitFilterParams(ALfilter *filter, ALenum type)
     filter->type = type;
 }
 
-auto EnsureFilters(ALCdevice *device, size_t needed) noexcept -> bool
+auto EnsureFilters(al::Device *device, size_t needed) noexcept -> bool
 try {
     size_t count{std::accumulate(device->FilterList.cbegin(), device->FilterList.cend(), 0_uz,
         [](size_t cur, const FilterSubList &sublist) noexcept -> size_t
@@ -121,7 +119,7 @@ catch(...) {
 }
 
 
-ALfilter *AllocFilter(ALCdevice *device) noexcept
+auto AllocFilter(al::Device *device) noexcept -> ALfilter*
 {
     auto sublist = std::find_if(device->FilterList.begin(), device->FilterList.end(),
         [](const FilterSubList &entry) noexcept -> bool
@@ -141,7 +139,7 @@ ALfilter *AllocFilter(ALCdevice *device) noexcept
     return filter;
 }
 
-void FreeFilter(ALCdevice *device, ALfilter *filter)
+void FreeFilter(al::Device *device, ALfilter *filter)
 {
     device->mFilterNames.erase(filter->id);
 
@@ -155,7 +153,7 @@ void FreeFilter(ALCdevice *device, ALfilter *filter)
 }
 
 
-auto LookupFilter(ALCdevice *device, ALuint id) noexcept -> ALfilter*
+auto LookupFilter(al::Device *device, ALuint id) noexcept -> ALfilter*
 {
     const size_t lidx{(id-1) >> 6};
     const ALuint slidx{(id-1) & 0x3f};
@@ -358,8 +356,8 @@ try {
         throw al::context_error{AL_INVALID_VALUE, "Generating %d filters", n};
     if(n <= 0) UNLIKELY return;
 
-    ALCdevice *device{context->mALDevice.get()};
-    std::lock_guard<std::mutex> filterlock{device->FilterLock};
+    auto *device = context->mALDevice.get();
+    auto filterlock = std::lock_guard{device->FilterLock};
 
     const al::span fids{filters, static_cast<ALuint>(n)};
     if(!EnsureFilters(device, fids.size()))
@@ -380,8 +378,8 @@ try {
         throw al::context_error{AL_INVALID_VALUE, "Deleting %d filters", n};
     if(n <= 0) UNLIKELY return;
 
-    ALCdevice *device{context->mALDevice.get()};
-    std::lock_guard<std::mutex> filterlock{device->FilterLock};
+    auto *device = context->mALDevice.get();
+    auto filterlock = std::lock_guard{device->FilterLock};
 
     /* First try to find any filters that are invalid. */
     auto validate_filter = [device](const ALuint fid) -> bool
@@ -407,8 +405,8 @@ catch(al::context_error& e) {
 AL_API DECL_FUNC1(ALboolean, alIsFilter, ALuint,filter)
 FORCE_ALIGN ALboolean AL_APIENTRY alIsFilterDirect(ALCcontext *context, ALuint filter) noexcept
 {
-    ALCdevice *device{context->mALDevice.get()};
-    std::lock_guard<std::mutex> filterlock{device->FilterLock};
+    auto *device = context->mALDevice.get();
+    auto filterlock = std::lock_guard{device->FilterLock};
     if(!filter || LookupFilter(device, filter))
         return AL_TRUE;
     return AL_FALSE;
@@ -419,8 +417,8 @@ AL_API DECL_FUNC3(void, alFilteri, ALuint,filter, ALenum,param, ALint,value)
 FORCE_ALIGN void AL_APIENTRY alFilteriDirect(ALCcontext *context, ALuint filter, ALenum param,
     ALint value) noexcept
 try {
-    ALCdevice *device{context->mALDevice.get()};
-    std::lock_guard<std::mutex> filterlock{device->FilterLock};
+    auto *device = context->mALDevice.get();
+    auto filterlock = std::lock_guard{device->FilterLock};
 
     ALfilter *alfilt{LookupFilter(device, filter)};
     if(!alfilt)
@@ -455,8 +453,8 @@ try {
         return;
     }
 
-    ALCdevice *device{context->mALDevice.get()};
-    std::lock_guard<std::mutex> filterlock{device->FilterLock};
+    auto *device = context->mALDevice.get();
+    auto filterlock = std::lock_guard{device->FilterLock};
 
     ALfilter *alfilt{LookupFilter(device, filter)};
     if(!alfilt)
@@ -474,8 +472,8 @@ AL_API DECL_FUNC3(void, alFilterf, ALuint,filter, ALenum,param, ALfloat,value)
 FORCE_ALIGN void AL_APIENTRY alFilterfDirect(ALCcontext *context, ALuint filter, ALenum param,
     ALfloat value) noexcept
 try {
-    ALCdevice *device{context->mALDevice.get()};
-    std::lock_guard<std::mutex> filterlock{device->FilterLock};
+    auto *device = context->mALDevice.get();
+    auto filterlock = std::lock_guard{device->FilterLock};
 
     ALfilter *alfilt{LookupFilter(device, filter)};
     if(!alfilt)
@@ -493,8 +491,8 @@ AL_API DECL_FUNC3(void, alFilterfv, ALuint,filter, ALenum,param, const ALfloat*,
 FORCE_ALIGN void AL_APIENTRY alFilterfvDirect(ALCcontext *context, ALuint filter, ALenum param,
     const ALfloat *values) noexcept
 try {
-    ALCdevice *device{context->mALDevice.get()};
-    std::lock_guard<std::mutex> filterlock{device->FilterLock};
+    auto *device = context->mALDevice.get();
+    auto filterlock = std::lock_guard{device->FilterLock};
 
     ALfilter *alfilt{LookupFilter(device, filter)};
     if(!alfilt)
@@ -512,8 +510,8 @@ AL_API DECL_FUNC3(void, alGetFilteri, ALuint,filter, ALenum,param, ALint*,value)
 FORCE_ALIGN void AL_APIENTRY alGetFilteriDirect(ALCcontext *context, ALuint filter, ALenum param,
     ALint *value) noexcept
 try {
-    ALCdevice *device{context->mALDevice.get()};
-    std::lock_guard<std::mutex> filterlock{device->FilterLock};
+    auto *device = context->mALDevice.get();
+    auto filterlock = std::lock_guard{device->FilterLock};
 
     const ALfilter *alfilt{LookupFilter(device, filter)};
     if(!alfilt)
@@ -545,8 +543,8 @@ try {
         return;
     }
 
-    ALCdevice *device{context->mALDevice.get()};
-    std::lock_guard<std::mutex> filterlock{device->FilterLock};
+    auto *device = context->mALDevice.get();
+    auto filterlock = std::lock_guard{device->FilterLock};
 
     const ALfilter *alfilt{LookupFilter(device, filter)};
     if(!alfilt)
@@ -564,8 +562,8 @@ AL_API DECL_FUNC3(void, alGetFilterf, ALuint,filter, ALenum,param, ALfloat*,valu
 FORCE_ALIGN void AL_APIENTRY alGetFilterfDirect(ALCcontext *context, ALuint filter, ALenum param,
     ALfloat *value) noexcept
 try {
-    ALCdevice *device{context->mALDevice.get()};
-    std::lock_guard<std::mutex> filterlock{device->FilterLock};
+    auto *device = context->mALDevice.get();
+    auto filterlock = std::lock_guard{device->FilterLock};
 
     const ALfilter *alfilt{LookupFilter(device, filter)};
     if(!alfilt) UNLIKELY
@@ -583,8 +581,8 @@ AL_API DECL_FUNC3(void, alGetFilterfv, ALuint,filter, ALenum,param, ALfloat*,val
 FORCE_ALIGN void AL_APIENTRY alGetFilterfvDirect(ALCcontext *context, ALuint filter, ALenum param,
     ALfloat *values) noexcept
 try {
-    ALCdevice *device{context->mALDevice.get()};
-    std::lock_guard<std::mutex> filterlock{device->FilterLock};
+    auto *device = context->mALDevice.get();
+    auto filterlock = std::lock_guard{device->FilterLock};
 
     const ALfilter *alfilt{LookupFilter(device, filter)};
     if(!alfilt) UNLIKELY
@@ -601,8 +599,8 @@ catch(al::context_error& e) {
 
 void ALfilter::SetName(ALCcontext *context, ALuint id, std::string_view name)
 {
-    ALCdevice *device{context->mALDevice.get()};
-    std::lock_guard<std::mutex> filterlock{device->FilterLock};
+    auto *device = context->mALDevice.get();
+    auto filterlock = std::lock_guard{device->FilterLock};
 
     auto filter = LookupFilter(device, id);
     if(!filter)

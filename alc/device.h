@@ -32,7 +32,11 @@ struct FilterSubList;
 using uint = unsigned int;
 
 
-struct ALCdevice final : public al::intrusive_ref<ALCdevice>, DeviceBase {
+struct ALCdevice { };
+
+namespace al {
+
+struct Device final : public ALCdevice, al::intrusive_ref<al::Device>, DeviceBase {
     /* This lock protects the device state (format, update size, etc) from
      * being from being changed in multiple threads, or being accessed while
      * being changed. It's also used to serialize calls to the backend.
@@ -95,35 +99,37 @@ struct ALCdevice final : public al::intrusive_ref<ALCdevice>, DeviceBase {
     std::string mVersionOverride;
     std::string mRendererOverride;
 
-    ALCdevice(DeviceType type);
-    ~ALCdevice();
+    Device(DeviceType type);
+    ~Device();
 
     void enumerateHrtfs();
 
     bool getConfigValueBool(const std::string_view block, const std::string_view key, bool def)
     { return GetConfigValueBool(mDeviceName, block, key, def); }
 
-    template<typename T>
-    inline std::optional<T> configValue(const std::string_view block, const std::string_view key) = delete;
+    template<typename T> inline
+    auto configValue(const std::string_view block, const std::string_view key) -> std::optional<T> = delete;
 };
 
-template<>
-inline std::optional<std::string> ALCdevice::configValue(const std::string_view block, const std::string_view key)
+template<> inline
+auto Device::configValue(const std::string_view block, const std::string_view key) -> std::optional<std::string>
 { return ConfigValueStr(mDeviceName, block, key); }
-template<>
-inline std::optional<int> ALCdevice::configValue(const std::string_view block, const std::string_view key)
+template<> inline
+auto Device::configValue(const std::string_view block, const std::string_view key) -> std::optional<int>
 { return ConfigValueInt(mDeviceName, block, key); }
-template<>
-inline std::optional<uint> ALCdevice::configValue(const std::string_view block, const std::string_view key)
+template<> inline
+auto Device::configValue(const std::string_view block, const std::string_view key) -> std::optional<uint>
 { return ConfigValueUInt(mDeviceName, block, key); }
-template<>
-inline std::optional<float> ALCdevice::configValue(const std::string_view block, const std::string_view key)
+template<> inline
+auto Device::configValue(const std::string_view block, const std::string_view key) -> std::optional<float>
 { return ConfigValueFloat(mDeviceName, block, key); }
-template<>
-inline std::optional<bool> ALCdevice::configValue(const std::string_view block, const std::string_view key)
+template<> inline
+auto Device::configValue(const std::string_view block, const std::string_view key) -> std::optional<bool>
 { return ConfigValueBool(mDeviceName, block, key); }
 
+} // namespace al
+
 /** Stores the latest ALC device error. */
-void alcSetError(ALCdevice *device, ALCenum errorCode);
+void alcSetError(al::Device *device, ALCenum errorCode);
 
 #endif

@@ -27,11 +27,12 @@ using voidp = void*;
 
 } // namespace
 
+namespace al {
 
-ALCdevice::ALCdevice(DeviceType type) : DeviceBase{type}
+Device::Device(DeviceType type) : DeviceBase{type}
 { }
 
-ALCdevice::~ALCdevice()
+Device::~Device()
 {
     TRACE("Freeing device %p\n", voidp{this});
 
@@ -56,7 +57,7 @@ ALCdevice::~ALCdevice()
         WARN("%zu Filter%s not deleted\n", count, (count==1)?"":"s");
 }
 
-void ALCdevice::enumerateHrtfs()
+void Device::enumerateHrtfs()
 {
     mHrtfList = EnumerateHrtf(configValue<std::string>({}, "hrtf-paths"));
     if(auto defhrtfopt = configValue<std::string>({}, "default-hrtf"))
@@ -69,7 +70,7 @@ void ALCdevice::enumerateHrtfs()
     }
 }
 
-auto ALCdevice::getOutputMode1() const noexcept -> OutputMode1
+auto Device::getOutputMode1() const noexcept -> OutputMode1
 {
     if(mContexts.load(std::memory_order_relaxed)->empty())
         return OutputMode1::Any;
@@ -95,3 +96,5 @@ auto ALCdevice::getOutputMode1() const noexcept -> OutputMode1
     }
     return OutputMode1::Any;
 }
+
+} // namespace al

@@ -2695,7 +2695,8 @@ try {
     auto *device = context->mALDevice.get();
 
     const al::span sids{sources, static_cast<ALuint>(n)};
-    if(sids.size() > device->SourcesMax-context->mNumSources)
+    if(context->mNumSources > device->SourcesMax
+        || sids.size() > device->SourcesMax-context->mNumSources)
         throw al::context_error{AL_OUT_OF_MEMORY, "Exceeding %u source limit (%u + %d)",
             device->SourcesMax, context->mNumSources, n};
     if(!EnsureSources(context, sids.size()))

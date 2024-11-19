@@ -328,7 +328,8 @@ try {
     auto *device = context->mALDevice.get();
 
     const al::span eids{effectslots, static_cast<ALuint>(n)};
-    if(eids.size() > device->AuxiliaryEffectSlotMax-context->mNumEffectSlots)
+    if(context->mNumEffectSlots > device->AuxiliaryEffectSlotMax
+        || eids.size() > device->AuxiliaryEffectSlotMax-context->mNumEffectSlots)
         throw al::context_error{AL_OUT_OF_MEMORY, "Exceeding %u effect slot limit (%u + %d)",
             device->AuxiliaryEffectSlotMax, context->mNumEffectSlots, n};
 

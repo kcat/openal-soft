@@ -127,7 +127,6 @@ force_inline void uninterleave2(v4sf in1, v4sf in2, v4sf &out1, v4sf &out2) noex
 {
     out1 = vec_perm(in1, in2, (vector unsigned char){0,1,2,3,8,9,10,11,16,17,18,19,24,25,26,27});
     out2 = vec_perm(in1, in2, (vector unsigned char){4,5,6,7,12,13,14,15,20,21,22,23,28,29,30,31});
-    out1 = tmp;
 }
 
 force_inline void vtranspose4(v4sf &x0, v4sf &x1, v4sf &x2, v4sf &x3) noexcept

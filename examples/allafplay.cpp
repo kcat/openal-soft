@@ -154,13 +154,7 @@ using namespace std::string_view_literals;
 [[noreturn]]
 void do_assert(const char *message, int linenum, const char *filename, const char *funcname)
 {
-    auto errstr = std::string{filename};
-    errstr += ':';
-    errstr += std::to_string(linenum);
-    errstr += ": ";
-    errstr += funcname;
-    errstr += ": ";
-    errstr += message;
+    auto errstr = fmt::format("{}:{}: {}: {}", filename, linenum, funcname, message);
     throw std::runtime_error{errstr};
 }
 
@@ -562,13 +556,13 @@ auto LoadLAF(const fs::path &fname) -> std::unique_ptr<LafStream>
         if(stype == 1) return Quality::s16;
         if(stype == 2) return Quality::f32;
         if(stype == 3) return Quality::s24;
-        throw std::runtime_error{"Invalid quality type: "+std::to_string(stype)};
+        throw std::runtime_error{fmt::format("Invalid quality type: {}", stype)};
     }();
 
     laf->mMode = [mode=int{header[5]}] {
         if(mode == 0) return Mode::Channels;
         if(mode == 1) return Mode::Objects;
-        throw std::runtime_error{"Invalid mode: "+std::to_string(mode)};
+        throw std::runtime_error{fmt::format("Invalid mode: {}", mode)};
     }();
 
     laf->mNumTracks = [input=al::span{header}.subspan<6,4>()] {
@@ -584,7 +578,7 @@ auto LoadLAF(const fs::path &fname) -> std::unique_ptr<LafStream>
     if(laf->mNumTracks == 0)
         throw std::runtime_error{"No tracks"};
     if(laf->mNumTracks > 256)
-        throw std::runtime_error{"Too many tracks: "+std::to_string(laf->mNumTracks)};
+        throw std::runtime_error{fmt::format("Too many tracks: {}", laf->mNumTracks)};
 
     auto chandata = std::vector<char>(laf->mNumTracks*9_uz);
     laf->mInFile.read(chandata.data(), std::streamsize(chandata.size()));
@@ -711,9 +705,10 @@ try {
         break;
     }
     if(!laf->mALFormat || laf->mALFormat == -1)
-        throw std::runtime_error{"No supported format for "+std::string{GetQualityName(laf->mQuality)}+" samples"};
+        throw std::runtime_error{fmt::format("No supported format for {} samples",
+            GetQualityName(laf->mQuality))};
 
-    auto alloc_channel = [](Channel &channel)
+    static constexpr auto alloc_channel = [](Channel &channel)
     {
         alGenSources(1, &channel.mSource);
         alGenBuffers(ALsizei(channel.mBuffers.size()), channel.mBuffers.data());
@@ -754,7 +749,7 @@ try {
         }
 
         if(auto err=alGetError())
-            throw std::runtime_error{std::string{"OpenAL error: "} + alGetString(err)};
+            throw std::runtime_error{fmt::format("OpenAL error: {}", alGetString(err))};
     };
     std::for_each(laf->mChannels.begin(), laf->mChannels.end(), alloc_channel);
 

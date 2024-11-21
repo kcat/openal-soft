@@ -314,9 +314,8 @@ struct SIMDALIGN DeviceBase {
         /* Increment the mix count at the start of mixing and writing clock
          * info (lsb should be 1).
          */
-        auto mixCount = mMixCount.load(std::memory_order_relaxed);
-        mMixCount.store(++mixCount, std::memory_order_release);
-        return MixLock{this, ++mixCount};
+        const auto oldCount = mMixCount.fetch_add(1u, std::memory_order_acq_rel);
+        return MixLock{this, oldCount+2};
     }
 
     /** Waits for the mixer to not be mixing or updating the clock. */

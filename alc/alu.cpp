@@ -1957,9 +1957,7 @@ void ProcessContexts(DeviceBase *device, const uint SamplesToDo)
 {
     ASSUME(SamplesToDo > 0);
 
-    const nanoseconds curtime{device->mClockBase.load(std::memory_order_relaxed) +
-        nanoseconds{seconds{device->mSamplesDone.load(std::memory_order_relaxed)}}/
-        device->Frequency};
+    const auto curtime = device->getClockTime();
 
     auto proc_context = [SamplesToDo,curtime](ContextBase *ctx)
     {
@@ -2203,10 +2201,10 @@ uint DeviceBase::renderSamples(const uint numSamples)
          * also guarantees a stable conversion.
          */
         auto samplesDone = mSamplesDone.load(std::memory_order_relaxed) + samplesToDo;
-        auto clockBase = mClockBase.load(std::memory_order_relaxed) +
-            std::chrono::seconds{samplesDone/Frequency};
+        auto clockBaseSec = mClockBaseSec.load(std::memory_order_relaxed) +
+            seconds32{samplesDone/Frequency};
         mSamplesDone.store(samplesDone%Frequency, std::memory_order_relaxed);
-        mClockBase.store(clockBase, std::memory_order_relaxed);
+        mClockBaseSec.store(clockBaseSec, std::memory_order_relaxed);
     }
 
     /* Apply any needed post-process for finalizing the Dry mix to the RealOut

@@ -220,8 +220,13 @@ struct SIMDALIGN DeviceBase {
      */
     NfcFilter mNFCtrlFilter{};
 
+    using seconds32 = std::chrono::duration<int32_t>;
+    using nanoseconds32 = std::chrono::duration<int32_t, std::nano>;
+
     std::atomic<uint> mSamplesDone{0u};
-    std::atomic<std::chrono::nanoseconds> mClockBase{std::chrono::nanoseconds{}};
+    /* Split the clock to avoid a 64-bit atomic for certain 32-bit targets. */
+    std::atomic<seconds32> mClockBaseSec{seconds32{}};
+    std::atomic<nanoseconds32> mClockBaseNSec{nanoseconds32{}};
     std::chrono::nanoseconds FixedLatency{0};
 
     AmbiRotateMatrix mAmbiRotateMatrix{};
@@ -337,7 +342,8 @@ struct SIMDALIGN DeviceBase {
         using std::chrono::nanoseconds;
 
         auto ns = nanoseconds{seconds{mSamplesDone.load(std::memory_order_relaxed)}} / Frequency;
-        return mClockBase.load(std::memory_order_relaxed) + ns;
+        return nanoseconds{mClockBaseNSec.load(std::memory_order_relaxed)}
+            + mClockBaseSec.load(std::memory_order_relaxed) + ns;
     }
 
     void ProcessHrtf(const std::size_t SamplesToDo);

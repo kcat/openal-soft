@@ -1038,13 +1038,21 @@ auto CreateDeviceLimiter(const al::Device *device, const float threshold)
  */
 inline void UpdateClockBase(al::Device *device)
 {
+    using std::chrono::duration_cast;
+
     const auto mixLock = device->getWriteMixLock();
 
-    auto samplesDone = device->mSamplesDone.load(std::memory_order_relaxed);
-    auto clockBase = device->mClockBase.load(std::memory_order_relaxed);
+    auto clockBaseSec = device->mClockBaseSec.load(std::memory_order_relaxed);
+    auto clockBaseNSec = nanoseconds{device->mClockBaseNSec.load(std::memory_order_relaxed)};
+    clockBaseNSec += nanoseconds{seconds{device->mSamplesDone.load(std::memory_order_relaxed)}}
+        / device->Frequency;
 
-    clockBase += nanoseconds{seconds{samplesDone}} / device->Frequency;
-    device->mClockBase.store(clockBase, std::memory_order_relaxed);
+    clockBaseSec += duration_cast<DeviceBase::seconds32>(clockBaseNSec);
+    clockBaseNSec %= seconds{1};
+
+    device->mClockBaseSec.store(clockBaseSec, std::memory_order_relaxed);
+    device->mClockBaseNSec.store(duration_cast<DeviceBase::nanoseconds32>(clockBaseNSec),
+        std::memory_order_relaxed);
     device->mSamplesDone.store(0, std::memory_order_relaxed);
 }
 
@@ -2566,15 +2574,18 @@ ALC_API void ALC_APIENTRY alcGetInteger64vSOFT(ALCdevice *device, ALCenum pname,
     case ALC_DEVICE_CLOCK_SOFT:
         {
             uint samplecount, refcount;
-            nanoseconds basecount;
+            seconds clocksec;
+            nanoseconds clocknsec;
             do {
                 refcount = dev->waitForMix();
-                basecount = dev->mClockBase.load(std::memory_order_relaxed);
                 samplecount = dev->mSamplesDone.load(std::memory_order_relaxed);
+                clocksec = dev->mClockBaseSec.load(std::memory_order_relaxed);
+                clocknsec = dev->mClockBaseNSec.load(std::memory_order_relaxed);
                 std::atomic_thread_fence(std::memory_order_acquire);
             } while(refcount != dev->mMixCount.load(std::memory_order_relaxed));
-            basecount += nanoseconds{seconds{samplecount}} / dev->Frequency;
-            valuespan[0] = basecount.count();
+
+            valuespan[0] = nanoseconds{clocksec + clocknsec
+                + nanoseconds{seconds{samplecount}}/dev->Frequency}.count();
         }
         break;
 

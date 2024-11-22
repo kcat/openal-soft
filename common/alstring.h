@@ -39,6 +39,21 @@ int case_compare(const std::string_view str0, const std::string_view str1) noexc
 [[nodiscard]]
 int case_compare(const std::wstring_view str0, const std::wstring_view str1) noexcept;
 
+/* C++20 changes path::u8string() to return a string using a new/distinct
+ * char8_t type for UTF-8 strings. However, support for this with standard
+ * string functions is totally inadequate, and we already hold UTF-8 with plain
+ * char strings. So this function is used to reinterpret a char8_t string as a
+ * char string_view.
+ */
+#if defined(__cpp_lib_char8_t) && __cpp_lib_char8_t >= 201907L
+inline auto u8_as_char(const std::u8string_view str) -> std::string_view
+#else
+inline auto u8_as_char(const std::string_view str) -> std::string_view
+#endif
+{
+    return std::string_view{reinterpret_cast<const char*>(str.data()), str.size()};
+}
+
 } // namespace al
 
 #endif /* AL_STRING_H */

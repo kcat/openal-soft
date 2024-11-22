@@ -353,7 +353,8 @@ void ReadALConfig()
             path = fs::path{buffer};
             path /= L"alsoft.ini";
 
-            TRACE("Loading config %s...\n", path.u8string().c_str());
+            TRACE("Loading config %s...\n",
+                reinterpret_cast<const char*>(path.u8string().c_str()));
             if(std::ifstream f{path}; f.is_open())
                 LoadConfigFromFile(f);
         }
@@ -364,7 +365,7 @@ void ReadALConfig()
     if(!path.empty())
     {
         path /= L"alsoft.ini";
-        TRACE("Loading config %s...\n", path.u8string().c_str());
+        TRACE("Loading config %s...\n", reinterpret_cast<const char*>(path.u8string().c_str()));
         if(std::ifstream f{path}; f.is_open())
             LoadConfigFromFile(f);
     }
@@ -372,7 +373,7 @@ void ReadALConfig()
     if(auto confpath = al::getenv(L"ALSOFT_CONF"))
     {
         path = *confpath;
-        TRACE("Loading config %s...\n", path.u8string().c_str());
+        TRACE("Loading config %s...\n", reinterpret_cast<const char*>(path.u8string().c_str()));
         if(std::ifstream f{path}; f.is_open())
             LoadConfigFromFile(f);
     }
@@ -385,7 +386,7 @@ void ReadALConfig()
     namespace fs = std::filesystem;
     fs::path path{"/etc/openal/alsoft.conf"};
 
-    TRACE("Loading config %s...\n", path.u8string().c_str());
+    TRACE("Loading config %s...\n", reinterpret_cast<const char*>(path.u8string().c_str()));
     if(std::ifstream f{path}; f.is_open())
         LoadConfigFromFile(f);
 
@@ -410,12 +411,14 @@ void ReadALConfig()
         }
 
         if(!path.is_absolute())
-            WARN("Ignoring XDG config dir: %s\n", path.u8string().c_str());
+            WARN("Ignoring XDG config dir: %s\n",
+                reinterpret_cast<const char*>(path.u8string().c_str()));
         else
         {
             path /= "alsoft.conf";
 
-            TRACE("Loading config %s...\n", path.u8string().c_str());
+            TRACE("Loading config %s...\n",
+                reinterpret_cast<const char*>(path.u8string().c_str()));
             if(std::ifstream f{path}; f.is_open())
                 LoadConfigFromFile(f);
         }
@@ -442,7 +445,7 @@ void ReadALConfig()
         path = *homedir;
         path /= ".alsoftrc";
 
-        TRACE("Loading config %s...\n", path.u8string().c_str());
+        TRACE("Loading config %s...\n", reinterpret_cast<const char*>(path.u8string().c_str()));
         if(std::ifstream f{path}; f.is_open())
             LoadConfigFromFile(f);
     }
@@ -463,7 +466,7 @@ void ReadALConfig()
     }
     if(!path.empty())
     {
-        TRACE("Loading config %s...\n", path.u8string().c_str());
+        TRACE("Loading config %s...\n", reinterpret_cast<const char*>(path.u8string().c_str()));
         if(std::ifstream f{path}; f.is_open())
             LoadConfigFromFile(f);
     }
@@ -473,7 +476,7 @@ void ReadALConfig()
     {
         path /= "alsoft.conf";
 
-        TRACE("Loading config %s...\n", path.u8string().c_str());
+        TRACE("Loading config %s...\n", reinterpret_cast<const char*>(path.u8string().c_str()));
         if(std::ifstream f{path}; f.is_open())
             LoadConfigFromFile(f);
     }

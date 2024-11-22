@@ -16,6 +16,7 @@
 #include <mutex>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <system_error>
 
 #include "almalloc.h"
@@ -44,16 +45,19 @@ void DirectorySearch(const std::filesystem::path &path, const std::string_view e
         if(!fs::exists(fpath))
             return;
 
-        TRACE("Searching %s for *%.*s\n", fpath.u8string().c_str(), al::sizei(ext), ext.data());
+        TRACE("Searching %s for *%.*s\n", reinterpret_cast<const char*>(fpath.u8string().c_str()),
+            al::sizei(ext), ext.data());
         for(auto&& dirent : fs::directory_iterator{fpath})
         {
             auto&& entrypath = dirent.path();
             if(!entrypath.has_extension())
                 continue;
 
-            if(fs::status(entrypath).type() == fs::file_type::regular
-                && al::case_compare(entrypath.extension().u8string(), ext) == 0)
-                results->emplace_back(entrypath.u8string());
+            if(fs::status(entrypath).type() != fs::file_type::regular)
+                continue;
+            const auto u8ext = entrypath.extension().u8string();
+            if(al::case_compare(al::u8_as_char(u8ext), ext) == 0)
+                results->emplace_back(al::u8_as_char(entrypath.u8string()));
         }
     }
     catch(std::exception& e) {
@@ -276,7 +280,7 @@ const PathNamePair &GetProcBinary()
                         continue;
                     if(auto path = std::filesystem::read_symlink(name); !path.empty())
                     {
-                        pathname = path.u8string();
+                        pathname = al::u8_as_char(path.u8string());
                         break;
                     }
                 }

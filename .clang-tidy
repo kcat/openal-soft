@@ -71,7 +71,6 @@
                     cppcoreguidelines-slicing,
                     cppcoreguidelines-virtual-class-destructor,
                     google-build-explicit-make-pair,
-                    llvm-include-order,
                     misc-homoglyph,
                     misc-misleading-identifier,
                     modernize-avoid-*,

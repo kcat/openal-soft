@@ -82,7 +82,6 @@
 #include <numeric>
 #include <string_view>
 #include <thread>
-#include <utility>
 #include <vector>
 
 #include "alcomplex.h"
@@ -90,6 +89,7 @@
 #include "alnumeric.h"
 #include "alspan.h"
 #include "alstring.h"
+#include "fmt/core.h"
 #include "loaddef.h"
 #include "loadsofa.h"
 
@@ -283,8 +283,7 @@ auto WriteAscii(const std::string_view out, std::ostream &ostream, const std::st
 {
     if(!ostream.write(out.data(), std::streamsize(out.size())) || ostream.bad())
     {
-        fprintf(stderr, "\nError: Bad write to file '%.*s'.\n", al::sizei(filename),
-            filename.data());
+        fmt::println(stderr, "\nError: Bad write to file '{}'.", filename);
         return 0;
     }
     return 1;
@@ -301,8 +300,7 @@ auto WriteBin4(const uint bytes, const uint32_t in, std::ostream &ostream,
 
     if(!ostream.write(out.data(), std::streamsize(bytes)) || ostream.bad())
     {
-        fprintf(stderr, "\nError: Bad write to file '%.*s'.\n", al::sizei(filename),
-            filename.data());
+        fmt::println(stderr, "\nError: Bad write to file '{}'.", filename);
         return 0;
     }
     return 1;
@@ -318,8 +316,7 @@ auto StoreMhr(const HrirDataT *hData, const std::string_view filename) -> bool
     auto ostream = std::ofstream{std::filesystem::u8path(filename), std::ios::binary};
     if(!ostream.is_open())
     {
-        fprintf(stderr, "\nError: Could not open MHR file '%.*s'.\n", al::sizei(filename),
-            filename.data());
+        fmt::println(stderr, "\nError: Could not open MHR file '{}'.", filename);
         return false;
     }
     if(!WriteAscii(GetMHRMarker(), ostream, filename))
@@ -923,10 +920,10 @@ void ReconstructHrirs(const HrirDataT *hData, const uint numThreads)
         count = reconstructor.mDone.load();
         size_t pcdone{count * 100 / reconstructor.mIrs.size()};
 
-        printf("\r%3zu%% done (%zu of %zu)", pcdone, count, reconstructor.mIrs.size());
+        fmt::print("\r{:3}% done ({} of {})", pcdone, count, reconstructor.mIrs.size());
         fflush(stdout);
     } while(count < reconstructor.mIrs.size());
-    fputc('\n', stdout);
+    fmt::println("");
 
     for(auto &thrd : thrds)
     {
@@ -1076,7 +1073,7 @@ void CalculateHrtds(const HeadModelT model, const double radius, HrirDataT *hDat
     }
     if(maxHrtd > MaxHrtd)
     {
-        printf("  Scaling for max delay of %f samples to %f\n...\n", maxHrtd, MaxHrtd);
+        fmt::println("  Scaling for max delay of {:f} samples to {:f}\n...", maxHrtd, MaxHrtd);
         const double scale{MaxHrtd / maxHrtd};
         for(auto &field : hData->mFds)
         {
@@ -1158,11 +1155,11 @@ bool ProcessDefinition(std::string_view inName, const uint outRate, const Channe
 {
     HrirDataT hData;
 
-    printf("Using %u thread%s.\n", numThreads, (numThreads==1)?"":"s");
+    fmt::println("Using {} thread{}.", numThreads, (numThreads==1)?"":"s");
     if(inName.empty() || inName == "-"sv)
     {
         inName = "stdin"sv;
-        printf("Reading HRIR definition from %.*s...\n", al::sizei(inName), inName.data());
+        fmt::println("Reading HRIR definition from {}...", inName);
         if(!LoadDefInput(std::cin, {}, inName, fftSize, truncSize, outRate, chanMode, &hData))
             return false;
     }
@@ -1171,8 +1168,7 @@ bool ProcessDefinition(std::string_view inName, const uint outRate, const Channe
         auto input = std::make_unique<std::ifstream>(std::filesystem::u8path(inName));
         if(!input->is_open())
         {
-            fprintf(stderr, "Error: Could not open input file '%.*s'\n", al::sizei(inName),
-                inName.data());
+            fmt::println(stderr, "Error: Could not open input file '{}'", inName);
             return false;
         }
 
@@ -1180,8 +1176,7 @@ bool ProcessDefinition(std::string_view inName, const uint outRate, const Channe
         input->read(startbytes.data(), startbytes.size());
         if(input->gcount() != startbytes.size() || !input->good())
         {
-            fprintf(stderr, "Error: Could not read input file '%.*s'\n", al::sizei(inName),
-                inName.data());
+            fmt::println(stderr, "Error: Could not read input file '{}'", inName);
             return false;
         }
 
@@ -1189,13 +1184,13 @@ bool ProcessDefinition(std::string_view inName, const uint outRate, const Channe
             && startbytes[3] == 'F')
         {
             input = nullptr;
-            printf("Reading HRTF data from %.*s...\n", al::sizei(inName), inName.data());
+            fmt::println("Reading HRTF data from {}...", inName);
             if(!LoadSofaFile(inName, numThreads, fftSize, truncSize, outRate, chanMode, &hData))
                 return false;
         }
         else
         {
-            printf("Reading HRIR definition from %.*s...\n", al::sizei(inName), inName.data());
+            fmt::println("Reading HRIR definition from {}...", inName);
             if(!LoadDefInput(*input, startbytes, inName, fftSize, truncSize, outRate, chanMode,
                 &hData))
                 return false;
@@ -1210,69 +1205,69 @@ bool ProcessDefinition(std::string_view inName, const uint outRate, const Channe
 
         if(hData.mFds.size() > 1)
         {
-            fputs("Balancing field magnitudes...\n", stdout);
+            fmt::println("Balancing field magnitudes...");
             BalanceFieldMagnitudes(&hData, c, m);
         }
-        fputs("Calculating diffuse-field average...\n", stdout);
+        fmt::println("Calculating diffuse-field average...");
         CalculateDiffuseFieldAverage(&hData, c, m, surface, limit, dfa);
-        fputs("Performing diffuse-field equalization...\n", stdout);
+        fmt::println("Performing diffuse-field equalization...");
         DiffuseFieldEqualize(c, m, dfa, &hData);
     }
     if(hData.mFds.size() > 1)
     {
-        printf("Sorting %zu fields...\n", hData.mFds.size());
+        fmt::println("Sorting {} fields...", hData.mFds.size());
         std::sort(hData.mFds.begin(), hData.mFds.end(),
             [](const HrirFdT &lhs, const HrirFdT &rhs) noexcept
             { return lhs.mDistance < rhs.mDistance; });
         if(farfield)
         {
-            printf("Clearing %zu near field%s...\n", hData.mFds.size()-1,
+            fmt::println("Clearing {} near field{}...", hData.mFds.size()-1,
                 (hData.mFds.size()-1 != 1) ? "s" : "");
             hData.mFds.erase(hData.mFds.cbegin(), hData.mFds.cend()-1);
         }
     }
-    fputs("Synthesizing missing elevations...\n", stdout);
+    fmt::println("Synthesizing missing elevations...");
     if(model == HM_Dataset)
         SynthesizeOnsets(&hData);
     SynthesizeHrirs(&hData);
-    fputs("Performing minimum phase reconstruction...\n", stdout);
+    fmt::println("Performing minimum phase reconstruction...");
     ReconstructHrirs(&hData, numThreads);
-    fputs("Truncating minimum-phase HRIRs...\n", stdout);
+    fmt::println("Truncating minimum-phase HRIRs...");
     hData.mIrPoints = truncSize;
-    fputs("Normalizing final HRIRs...\n", stdout);
+    fmt::println("Normalizing final HRIRs...");
     NormalizeHrirs(&hData);
-    fputs("Calculating impulse delays...\n", stdout);
+    fmt::println("Calculating impulse delays...");
     CalculateHrtds(model, (radius > DefaultCustomRadius) ? radius : hData.mRadius, &hData);
 
     const auto rateStr = std::to_string(hData.mIrRate);
     const auto expName = StrSubst(outName, "%r"sv, rateStr);
-    printf("Creating MHR data set %s...\n", expName.c_str());
+    fmt::println("Creating MHR data set {}...", expName);
     return StoreMhr(&hData, expName);
 }
 
 void PrintHelp(const std::string_view argv0, FILE *ofile)
 {
-    fprintf(ofile, "Usage:  %.*s [<option>...]\n\n", al::sizei(argv0), argv0.data());
-    fprintf(ofile, "Options:\n");
-    fprintf(ofile, " -r <rate>       Change the data set sample rate to the specified value and\n");
-    fprintf(ofile, "                 resample the HRIRs accordingly.\n");
-    fprintf(ofile, " -m              Change the data set to mono, mirroring the left ear for the\n");
-    fprintf(ofile, "                 right ear.\n");
-    fprintf(ofile, " -a              Change the data set to single field, using the farthest field.\n");
-    fprintf(ofile, " -j <threads>    Number of threads used to process HRIRs (default: 2).\n");
-    fprintf(ofile, " -f <points>     Override the FFT window size (default: %u).\n", DefaultFftSize);
-    fprintf(ofile, " -e {on|off}     Toggle diffuse-field equalization (default: %s).\n", (DefaultEqualize ? "on" : "off"));
-    fprintf(ofile, " -s {on|off}     Toggle surface-weighted diffuse-field average (default: %s).\n", (DefaultSurface ? "on" : "off"));
-    fprintf(ofile, " -l {<dB>|none}  Specify a limit to the magnitude range of the diffuse-field\n");
-    fprintf(ofile, "                 average (default: %.2f).\n", DefaultLimit);
-    fprintf(ofile, " -w <points>     Specify the size of the truncation window that's applied\n");
-    fprintf(ofile, "                 after minimum-phase reconstruction (default: %u).\n", DefaultTruncSize);
-    fprintf(ofile, " -d {dataset|    Specify the model used for calculating the head-delay timing\n");
-    fprintf(ofile, "     sphere}     values (default: %s).\n", ((HM_Default == HM_Dataset) ? "dataset" : "sphere"));
-    fprintf(ofile, " -c <radius>     Use a customized head radius measured to-ear in meters.\n");
-    fprintf(ofile, " -i <filename>   Specify an HRIR definition file to use (defaults to stdin).\n");
-    fprintf(ofile, " -o <filename>   Specify an output file. Use of '%%r' will be substituted with\n");
-    fprintf(ofile, "                 the data set sample rate.\n");
+    fmt::println(ofile, "Usage:  {} [<option>...]\n", argv0);
+    fmt::println(ofile, "Options:");
+    fmt::println(ofile, " -r <rate>       Change the data set sample rate to the specified value and");
+    fmt::println(ofile, "                 resample the HRIRs accordingly.");
+    fmt::println(ofile, " -m              Change the data set to mono, mirroring the left ear for the");
+    fmt::println(ofile, "                 right ear.");
+    fmt::println(ofile, " -a              Change the data set to single field, using the farthest field.");
+    fmt::println(ofile, " -j <threads>    Number of threads used to process HRIRs (default: 2).");
+    fmt::println(ofile, " -f <points>     Override the FFT window size (default: {}).", DefaultFftSize);
+    fmt::println(ofile, " -e {{on|off}}     Toggle diffuse-field equalization (default: {}).", (DefaultEqualize ? "on" : "off"));
+    fmt::println(ofile, " -s {{on|off}}     Toggle surface-weighted diffuse-field average (default: {}).", (DefaultSurface ? "on" : "off"));
+    fmt::println(ofile, " -l {{<dB>|none}}  Specify a limit to the magnitude range of the diffuse-field");
+    fmt::println(ofile, "                 average (default: {:.2f}).", DefaultLimit);
+    fmt::println(ofile, " -w <points>     Specify the size of the truncation window that's applied");
+    fmt::println(ofile, "                 after minimum-phase reconstruction (default: {}).", DefaultTruncSize);
+    fmt::println(ofile, " -d {{dataset|    Specify the model used for calculating the head-delay timing");
+    fmt::println(ofile, "     sphere}}     values (default: {}).", ((HM_Default == HM_Dataset) ? "dataset" : "sphere"));
+    fmt::println(ofile, " -c <radius>     Use a customized head radius measured to-ear in meters.");
+    fmt::println(ofile, " -i <filename>   Specify an HRIR definition file to use (defaults to stdin).");
+    fmt::println(ofile, " -o <filename>   Specify an output file. Use of '%r' will be substituted with");
+    fmt::println(ofile, "                 the data set sample rate.");
 }
 
 // Standard command line dispatch.
@@ -1280,7 +1275,7 @@ int main(al::span<std::string_view> args)
 {
     if(args.size() < 2)
     {
-        fputs("HRTF Processing and Composition Utility\n\n", stdout);
+        fmt::println("HRTF Processing and Composition Utility\n");
         PrintHelp(args[0], stdout);
         exit(EXIT_SUCCESS);
     }
@@ -1322,7 +1317,7 @@ int main(al::span<std::string_view> args)
 
             if(args[0][0] != '-' || args[0].size() == 1)
             {
-                fprintf(stderr, "Invalid argument: %.*s\n", al::sizei(args[0]), args[0].data());
+                fmt::println(stderr, "Invalid argument: {}", args[0]);
                 return -1;
             }
             ++argplace;
@@ -1332,13 +1327,13 @@ int main(al::span<std::string_view> args)
         const auto listidx = optlist.find(nextopt);
         if(listidx >= optlist.size())
         {
-            fprintf(stderr, "Unknown argument: -%c\n", nextopt);
+            fmt::println(stderr, "Unknown argument: -{:c}", nextopt);
             return -1;
         }
         const bool needsarg{listidx+1 < optlist.size() && optlist[listidx+1] == ':'};
         if(needsarg && (argplace+1 < args[0].size() || args.size() < 2))
         {
-            fprintf(stderr, "Missing parameter for argument: -%c\n", nextopt);
+            fmt::println(stderr, "Missing parameter for argument: -{:c}", nextopt);
             return -1;
         }
         if(++argplace == args[0].size())
@@ -1361,8 +1356,9 @@ int main(al::span<std::string_view> args)
             outRate = static_cast<uint>(std::stoul(std::string{optarg}, &endpos, 10));
             if(endpos != optarg.size() || outRate < MIN_RATE || outRate > MAX_RATE)
             {
-                fprintf(stderr, "\nError: Got unexpected value \"%.*s\" for option -%c, expected between %u to %u.\n",
-                    al::sizei(optarg), optarg.data(), opt, MIN_RATE, MAX_RATE);
+                fmt::println(stderr,
+                    "\nError: Got unexpected value \"{}\" for option -{:c}, expected between {} to {}.",
+                    optarg, opt, MIN_RATE, MAX_RATE);
                 exit(EXIT_FAILURE);
             }
             break;
@@ -1379,8 +1375,9 @@ int main(al::span<std::string_view> args)
             numThreads = static_cast<uint>(std::stoul(std::string{optarg}, &endpos, 10));
             if(endpos != optarg.size() || numThreads > 64)
             {
-                fprintf(stderr, "\nError: Got unexpected value \"%.*s\" for option -%c, expected between %u to %u.\n",
-                    al::sizei(optarg), optarg.data(), opt, 0, 64);
+                fmt::println(stderr,
+                    "\nError: Got unexpected value \"{}\" for option -{:c}, expected between {} to {}.",
+                    optarg, opt, 0, 64);
                 exit(EXIT_FAILURE);
             }
             if(numThreads == 0)
@@ -1392,8 +1389,9 @@ int main(al::span<std::string_view> args)
             if(endpos != optarg.size() || (fftSize&(fftSize-1)) || fftSize < MinFftSize
                 || fftSize > MaxFftSize)
             {
-                fprintf(stderr, "\nError: Got unexpected value \"%.*s\" for option -%c, expected a power-of-two between %u to %u.\n",
-                    al::sizei(optarg), optarg.data(), opt, MinFftSize, MaxFftSize);
+                fmt::println(stderr,
+                    "\nError: Got unexpected value \"{}\" for option -{:c}, expected a power-of-two between {} to {}.",
+                    optarg, opt, MinFftSize, MaxFftSize);
                 exit(EXIT_FAILURE);
             }
             break;
@@ -1405,8 +1403,9 @@ int main(al::span<std::string_view> args)
                 equalize = false;
             else
             {
-                fprintf(stderr, "\nError: Got unexpected value \"%.*s\" for option -%c, expected on or off.\n",
-                    al::sizei(optarg), optarg.data(), opt);
+                fmt::println(stderr,
+                    "\nError: Got unexpected value \"{}\" for option -{:c}, expected on or off.",
+                    optarg, opt);
                 exit(EXIT_FAILURE);
             }
             break;
@@ -1418,8 +1417,9 @@ int main(al::span<std::string_view> args)
                 surface = false;
             else
             {
-                fprintf(stderr, "\nError: Got unexpected value \"%.*s\" for option -%c, expected on or off.\n",
-                    al::sizei(optarg), optarg.data(), opt);
+                fmt::println(stderr,
+                    "\nError: Got unexpected value \"{}\" for option -{:c}, expected on or off.",
+                    optarg, opt);
                 exit(EXIT_FAILURE);
             }
             break;
@@ -1432,8 +1432,9 @@ int main(al::span<std::string_view> args)
                 limit = std::stod(std::string{optarg}, &endpos);
                 if(endpos != optarg.size() || limit < MinLimit || limit > MaxLimit)
                 {
-                    fprintf(stderr, "\nError: Got unexpected value \"%.*s\" for option -%c, expected between %.0f to %.0f.\n",
-                        al::sizei(optarg), optarg.data(), opt, MinLimit, MaxLimit);
+                    fmt::println(stderr,
+                        "\nError: Got unexpected value \"{}\" for option -{:c}, expected between {:.0f} to {:.0f}.",
+                        optarg, opt, MinLimit, MaxLimit);
                     exit(EXIT_FAILURE);
                 }
             }
@@ -1443,8 +1444,9 @@ int main(al::span<std::string_view> args)
             truncSize = static_cast<uint>(std::stoul(std::string{optarg}, &endpos, 10));
             if(endpos != optarg.size() || truncSize < MinTruncSize || truncSize > MaxTruncSize)
             {
-                fprintf(stderr, "\nError: Got unexpected value \"%.*s\" for option -%c, expected between %u to %u.\n",
-                    al::sizei(optarg), optarg.data(), opt, MinTruncSize, MaxTruncSize);
+                fmt::println(stderr,
+                    "\nError: Got unexpected value \"{}\" for option -{:c}, expected between {} to {}.",
+                    optarg, opt, MinTruncSize, MaxTruncSize);
                 exit(EXIT_FAILURE);
             }
             break;
@@ -1456,8 +1458,9 @@ int main(al::span<std::string_view> args)
                 model = HM_Sphere;
             else
             {
-                fprintf(stderr, "\nError: Got unexpected value \"%.*s\" for option -%c, expected dataset or sphere.\n",
-                    al::sizei(optarg), optarg.data(), opt);
+                fmt::println(stderr,
+                    "\nError: Got unexpected value \"{}\" for option -{:c}, expected dataset or sphere.",
+                    optarg, opt);
                 exit(EXIT_FAILURE);
             }
             break;
@@ -1466,8 +1469,9 @@ int main(al::span<std::string_view> args)
             radius = std::stod(std::string{optarg}, &endpos);
             if(endpos != optarg.size() || radius < MinCustomRadius || radius > MaxCustomRadius)
             {
-                fprintf(stderr, "\nError: Got unexpected value \"%.*s\" for option -%c, expected between %.2f to %.2f.\n",
-                    al::sizei(optarg), optarg.data(), opt, MinCustomRadius, MaxCustomRadius);
+                fmt::println(stderr,
+                    "\nError: Got unexpected value \"{}\" for option -{:c}, expected between {:.2f} to {:.2f}.",
+                    optarg, opt, MinCustomRadius, MaxCustomRadius);
                 exit(EXIT_FAILURE);
             }
             break;
@@ -1493,7 +1497,7 @@ int main(al::span<std::string_view> args)
     const int ret{ProcessDefinition(inName, outRate, chanMode, farfield, numThreads, fftSize,
         equalize, surface, limit, truncSize, model, radius, outName)};
     if(!ret) return -1;
-    fputs("Operation completed.\n", stdout);
+    fmt::println("Operation completed.");
 
     return EXIT_SUCCESS;
 }

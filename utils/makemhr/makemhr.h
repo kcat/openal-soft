@@ -12,43 +12,35 @@
 
 
 // The maximum path length used when processing filenames.
-enum { MAX_PATH_LEN = 256u };
+inline constexpr auto MAX_PATH_LEN = 256u;
 
 // The limit to the number of 'distances' listed in the data set definition.
 // Must be less than 256
-enum { MAX_FD_COUNT = 16u };
+inline constexpr auto MAX_FD_COUNT = 16u;
 
 // The limits to the number of 'elevations' listed in the data set definition.
 // Must be less than 256.
-enum {
-    MIN_EV_COUNT = 5u,
-    MAX_EV_COUNT = 181u
-};
+inline constexpr auto MIN_EV_COUNT = 5u;
+inline constexpr auto MAX_EV_COUNT = 181u;
 
 // The limits for each of the 'azimuths' listed in the data set definition.
 // Must be less than 256.
-enum {
-    MIN_AZ_COUNT = 1u,
-    MAX_AZ_COUNT = 255u
-};
+inline constexpr auto MIN_AZ_COUNT = 1u;
+inline constexpr auto MAX_AZ_COUNT = 255u;
 
 // The limits for the 'distance' from source to listener for each field in
 // the definition file.
-inline constexpr double MIN_DISTANCE{0.05};
-inline constexpr double MAX_DISTANCE{2.50};
+inline constexpr auto MIN_DISTANCE = 0.05;
+inline constexpr auto MAX_DISTANCE = 2.50;
 
 // The limits for the sample 'rate' metric in the data set definition and for
 // resampling.
-enum {
-    MIN_RATE = 32000u,
-    MAX_RATE = 96000u
-};
+inline constexpr auto MIN_RATE = 32000u;
+inline constexpr auto MAX_RATE = 96000u;
 
 // The limits for the HRIR 'points' metric in the data set definition.
-enum {
-    MIN_POINTS = 16u,
-    MAX_POINTS = 8192u
-};
+inline constexpr auto MIN_POINTS = 16u;
+inline constexpr auto MAX_POINTS = 8192u;
 
 
 using uint = unsigned int;

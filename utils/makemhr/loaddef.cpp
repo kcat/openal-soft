@@ -45,6 +45,7 @@
 #include "alnumeric.h"
 #include "alspan.h"
 #include "alstring.h"
+#include "fmt/core.h"
 #include "makemhr.h"
 #include "polyphase_resampler.h"
 #include "sofa-support.h"
@@ -235,34 +236,22 @@ auto TrLoad(TokenReaderT *tr) -> int
 }
 
 // Error display routine.  Only displays when the base name is not NULL.
-void TrErrorVA(const TokenReaderT *tr, uint line, uint column, const char *format, va_list argPtr)
+// Used to display an error at a saved line/column.
+template<typename ...Args>
+void TrErrorAt(const TokenReaderT *tr, uint line, uint column, fmt::format_string<Args...> fmt,
+    Args&& ...args)
 {
     if(tr->mName.empty())
         return;
-    fprintf(stderr, "\nError (%s:%u:%u): ", tr->mName.c_str(), line, column);
-    vfprintf(stderr, format, argPtr);
-}
-
-// Used to display an error at a saved line/column.
-void TrErrorAt(const TokenReaderT *tr, uint line, uint column, const char *format, ...)
-{
-    /* NOLINTBEGIN(*-array-to-pointer-decay) */
-    va_list argPtr;
-    va_start(argPtr, format);
-    TrErrorVA(tr, line, column, format, argPtr);
-    va_end(argPtr);
-    /* NOLINTEND(*-array-to-pointer-decay) */
+    fmt::print(stderr, "\nError ({}:{}:{}): ", tr->mName, line, column);
+    fmt::println(stderr, fmt, std::forward<Args>(args)...);
 }
 
 // Used to display an error at the current line/column.
-void TrError(const TokenReaderT *tr, const char *format, ...)
+template<typename ...Args>
+void TrError(const TokenReaderT *tr, fmt::format_string<Args...> fmt, Args&& ...args)
 {
-    /* NOLINTBEGIN(*-array-to-pointer-decay) */
-    va_list argPtr;
-    va_start(argPtr, format);
-    TrErrorVA(tr, tr->mLine, tr->mColumn, format, argPtr);
-    va_end(argPtr);
-    /* NOLINTEND(*-array-to-pointer-decay) */
+    TrErrorAt(tr, tr->mLine, tr->mColumn, fmt, std::forward<Args>(args)...);
 }
 
 // Skips to the next line.
@@ -376,7 +365,7 @@ auto TrReadIdent(TokenReaderT *tr) -> std::string
             return ret;
         }
     }
-    TrErrorAt(tr, tr->mLine, col, "Expected an identifier.\n");
+    TrErrorAt(tr, tr->mLine, col, "Expected an identifier.");
     ret.clear();
     return ret;
 }
@@ -420,13 +409,13 @@ auto TrReadInt(TokenReaderT *tr, const int loBound, const int hiBound, int *valu
             *value = static_cast<int>(strtol(temp.data(), nullptr, 10));
             if(*value < loBound || *value > hiBound)
             {
-                TrErrorAt(tr, tr->mLine, col, "Expected a value from %d to %d.\n", loBound, hiBound);
+                TrErrorAt(tr, tr->mLine, col, "Expected a value from {} to {}.", loBound, hiBound);
                 return 0;
             }
             return 1;
         }
     }
-    TrErrorAt(tr, tr->mLine, col, "Expected an integer.\n");
+    TrErrorAt(tr, tr->mLine, col, "Expected an integer.");
     return 0;
 }
 
@@ -514,7 +503,8 @@ auto TrReadFloat(TokenReaderT *tr, const double loBound, const double hiBound, d
                 *value = strtod(temp.data(), nullptr);
                 if(*value < loBound || *value > hiBound)
                 {
-                    TrErrorAt(tr, tr->mLine, col, "Expected a value from %f to %f.\n", loBound, hiBound);
+                    TrErrorAt(tr, tr->mLine, col, "Expected a value from {:f} to {:f}.", loBound,
+                        hiBound);
                     return 0;
                 }
                 return 1;
@@ -523,7 +513,7 @@ auto TrReadFloat(TokenReaderT *tr, const double loBound, const double hiBound, d
         else
             tr->mColumn += len;
     }
-    TrErrorAt(tr, tr->mLine, col, "Expected a float.\n");
+    TrErrorAt(tr, tr->mLine, col, "Expected a float.");
     return 0;
 }
 
@@ -549,7 +539,7 @@ auto TrReadString(TokenReaderT *tr, const al::span<char> text) -> int
                     break;
                 if(ch == '\n')
                 {
-                    TrErrorAt(tr, tr->mLine, col, "Unterminated string at end of line.\n");
+                    TrErrorAt(tr, tr->mLine, col, "Unterminated string at end of line.");
                     return 0;
                 }
                 if(len < maxLen)
@@ -559,20 +549,20 @@ auto TrReadString(TokenReaderT *tr, const al::span<char> text) -> int
             if(ch != '\"')
             {
                 tr->mColumn += static_cast<uint>(1 + len);
-                TrErrorAt(tr, tr->mLine, col, "Unterminated string at end of input.\n");
+                TrErrorAt(tr, tr->mLine, col, "Unterminated string at end of input.");
                 return 0;
             }
             tr->mColumn += static_cast<uint>(2 + len);
             if(len > maxLen)
             {
-                TrErrorAt(tr, tr->mLine, col, "String is too long.\n");
+                TrErrorAt(tr, tr->mLine, col, "String is too long.");
                 return 0;
             }
             text[len] = '\0';
             return 1;
         }
     }
-    TrErrorAt(tr, tr->mLine, col, "Expected a string.\n");
+    TrErrorAt(tr, tr->mLine, col, "Expected a string.");
     return 0;
 }
 
@@ -595,7 +585,7 @@ auto TrReadOperator(TokenReaderT *tr, const std::string_view op) -> int
         if(len == op.size())
             return 1;
     }
-    TrErrorAt(tr, tr->mLine, col, "Expected '%s' operator.\n", op);
+    TrErrorAt(tr, tr->mLine, col, "Expected '{}' operator.", op);
     return 0;
 }
 
@@ -613,7 +603,7 @@ auto ReadBin4(std::istream &istream, const char *filename, const ByteOrderT orde
     istream.read(reinterpret_cast<char*>(in.data()), static_cast<int>(bytes));
     if(istream.gcount() != bytes)
     {
-        fprintf(stderr, "\nError: Bad read from file '%s'.\n", filename);
+        fmt::println(stderr, "\nError: Bad read from file '{}'.", filename);
         return 0;
     }
     uint32_t accum{0};
@@ -642,7 +632,7 @@ auto ReadBin8(std::istream &istream, const char *filename, const ByteOrderT orde
     istream.read(reinterpret_cast<char*>(in.data()), 8);
     if(istream.gcount() != 8)
     {
-        fprintf(stderr, "\nError: Bad read from file '%s'.\n", filename);
+        fmt::println(stderr, "\nError: Bad read from file '{}'.", filename);
         return 0;
     }
 
@@ -726,7 +716,7 @@ auto ReadAsciiAsDouble(TokenReaderT *tr, const char *filename, const ElementType
         if(!TrReadFloat(tr, -std::numeric_limits<double>::infinity(),
             std::numeric_limits<double>::infinity(), out))
         {
-            fprintf(stderr, "\nError: Bad read from file '%s'.\n", filename);
+            fmt::println(stderr, "\nError: Bad read from file '{}'.", filename);
             return 0;
         }
     }
@@ -735,7 +725,7 @@ auto ReadAsciiAsDouble(TokenReaderT *tr, const char *filename, const ElementType
         int v;
         if(!TrReadInt(tr, -(1<<(bits-1)), (1<<(bits-1))-1, &v))
         {
-            fprintf(stderr, "\nError: Bad read from file '%s'.\n", filename);
+            fmt::println(stderr, "\nError: Bad read from file '{}'.", filename);
             return 0;
         }
         *out = v / static_cast<double>((1<<(bits-1))-1);
@@ -798,17 +788,18 @@ auto ReadWaveFormat(std::istream &istream, const ByteOrderT order, const uint hr
     }
     if(format != WAVE_FORMAT_PCM && format != WAVE_FORMAT_IEEE_FLOAT)
     {
-        fprintf(stderr, "\nError: Unsupported WAVE format in file '%s'.\n", src->mPath.data());
+        fmt::println(stderr, "\nError: Unsupported WAVE format in file '{}'.", src->mPath.data());
         return 0;
     }
     if(src->mChannel >= channels)
     {
-        fprintf(stderr, "\nError: Missing source channel in WAVE file '%s'.\n", src->mPath.data());
+        fmt::println(stderr, "\nError: Missing source channel in WAVE file '{}'.",
+            src->mPath.data());
         return 0;
     }
     if(rate != hrirRate)
     {
-        fprintf(stderr, "\nError: Mismatched source sample rate in WAVE file '%s'.\n",
+        fmt::println(stderr, "\nError: Mismatched source sample rate in WAVE file '{}'.",
             src->mPath.data());
         return 0;
     }
@@ -816,13 +807,13 @@ auto ReadWaveFormat(std::istream &istream, const ByteOrderT order, const uint hr
     {
         if(size < 2 || size > 4)
         {
-            fprintf(stderr, "\nError: Unsupported sample size in WAVE file '%s'.\n",
+            fmt::println(stderr, "\nError: Unsupported sample size in WAVE file '{}'.",
                 src->mPath.data());
             return 0;
         }
         if(bits < 16 || bits > (8*size))
         {
-            fprintf(stderr, "\nError: Bad significant bits in WAVE file '%s'.\n",
+            fmt::println(stderr, "\nError: Bad significant bits in WAVE file '{}'.",
                 src->mPath.data());
             return 0;
         }
@@ -832,7 +823,7 @@ auto ReadWaveFormat(std::istream &istream, const ByteOrderT order, const uint hr
     {
         if(size != 4 && size != 8)
         {
-            fprintf(stderr, "\nError: Unsupported sample size in WAVE file '%s'.\n",
+            fmt::println(stderr, "\nError: Unsupported sample size in WAVE file '{}'.",
                 src->mPath.data());
             return 0;
         }
@@ -887,7 +878,7 @@ auto ReadWaveList(std::istream &istream, const SourceRefT *src, const ByteOrderT
             count = chunkSize / block;
             if(count < (src->mOffset + hrir.size()))
             {
-                fprintf(stderr, "\nError: Bad read from file '%s'.\n", src->mPath.data());
+                fmt::println(stderr, "\nError: Bad read from file '{}'.", src->mPath.data());
                 return 0;
             }
             using off_type = std::istream::off_type;
@@ -968,7 +959,7 @@ auto ReadWaveList(std::istream &istream, const SourceRefT *src, const ByteOrderT
     }
     if(offset < hrir.size())
     {
-        fprintf(stderr, "\nError: Bad read from file '%s'.\n", src->mPath.data());
+        fmt::println(stderr, "\nError: Bad read from file '{}'.", src->mPath.data());
         return 0;
     }
     return 1;
@@ -1036,7 +1027,7 @@ auto LoadWaveSource(std::istream &istream, SourceRefT *src, const uint hrirRate,
         order = BO_BIG;
     else
     {
-        fprintf(stderr, "\nError: No RIFF/RIFX chunk in file '%s'.\n", src->mPath.data());
+        fmt::println(stderr, "\nError: No RIFF/RIFX chunk in file '{}'.", src->mPath.data());
         return 0;
     }
 
@@ -1044,7 +1035,7 @@ auto LoadWaveSource(std::istream &istream, SourceRefT *src, const uint hrirRate,
         return 0;
     if(fourCC != FOURCC_WAVE)
     {
-        fprintf(stderr, "\nError: Not a RIFF/RIFX WAVE file '%s'.\n", src->mPath.data());
+        fmt::println(stderr, "\nError: Not a RIFF/RIFX WAVE file '{}'.", src->mPath.data());
         return 0;
     }
     if(!ReadWaveFormat(istream, order, hrirRate, src))
@@ -1085,7 +1076,7 @@ auto LoadSofaFile(SourceRefT *src, const uint hrirRate, const uint n) -> MYSOFA_
     SofaEasyPtr sofa{new(std::nothrow) MYSOFA_EASY{}};
     if(!sofa)
     {
-        fprintf(stderr, "\nError:  Out of memory.\n");
+        fmt::println(stderr, "\nError:  Out of memory.");
         return nullptr;
     }
     sofa->lookup = nullptr;
@@ -1095,30 +1086,31 @@ auto LoadSofaFile(SourceRefT *src, const uint hrirRate, const uint n) -> MYSOFA_
     sofa->hrtf = mysofa_load(src->mPath.data(), &err);
     if(!sofa->hrtf)
     {
-        fprintf(stderr, "\nError: Could not load source file '%s': %s (%d).\n",
+        fmt::println(stderr, "\nError: Could not load source file '{}': {} ({}).",
             src->mPath.data(), SofaErrorStr(err), err);
         return nullptr;
     }
     /* NOTE: Some valid SOFA files are failing this check. */
     err = mysofa_check(sofa->hrtf);
     if(err != MYSOFA_OK)
-        fprintf(stderr, "\nWarning: Supposedly malformed source file '%s': %s (%d).\n",
+        fmt::println(stderr, "\nWarning: Supposedly malformed source file '{}': {} ({}).",
             src->mPath.data(), SofaErrorStr(err), err);
     if((src->mOffset + n) > sofa->hrtf->N)
     {
-        fprintf(stderr, "\nError: Not enough samples in SOFA file '%s'.\n", src->mPath.data());
+        fmt::println(stderr, "\nError: Not enough samples in SOFA file '{}'.", src->mPath.data());
         return nullptr;
     }
     if(src->mChannel >= sofa->hrtf->R)
     {
-        fprintf(stderr, "\nError: Missing source receiver in SOFA file '%s'.\n",src->mPath.data());
+        fmt::println(stderr, "\nError: Missing source receiver in SOFA file '{}'.",
+            src->mPath.data());
         return nullptr;
     }
     mysofa_tocartesian(sofa->hrtf);
     sofa->lookup = mysofa_lookup_init(sofa->hrtf);
     if(sofa->lookup == nullptr)
     {
-        fprintf(stderr, "\nError:  Out of memory.\n");
+        fmt::println(stderr, "\nError:  Out of memory.");
         return nullptr;
     }
     gSofaCache.emplace_back(SofaCacheEntry{std::string{srcname}, hrirRate, std::move(sofa)});
@@ -1155,7 +1147,7 @@ auto LoadSofaSource(SourceRefT *src, const uint hrirRate, const al::span<double>
     int nearest{mysofa_lookup(sofa->lookup, target.data())};
     if(nearest < 0)
     {
-        fprintf(stderr, "\nError: Lookup failed in source file '%s'.\n", src->mPath.data());
+        fmt::println(stderr, "\nError: Lookup failed in source file '{}'.", src->mPath.data());
         return 0;
     }
 
@@ -1164,14 +1156,15 @@ auto LoadSofaSource(SourceRefT *src, const uint hrirRate, const al::span<double>
     if(std::abs(coords[0] - target[0]) > 0.001 || std::abs(coords[1] - target[1]) > 0.001
         || std::abs(coords[2] - target[2]) > 0.001)
     {
-        fprintf(stderr, "\nError: No impulse response at coordinates (%.3fr, %.1fev, %.1faz) in file '%s'.\n",
+        fmt::println(stderr,
+            "\nError: No impulse response at coordinates ({:.3f}r, {:.1f}ev, {:.1f}az) in file '{}'.",
             src->mRadius, src->mElevation, src->mAzimuth, src->mPath.data());
         target[0] = coords[0];
         target[1] = coords[1];
         target[2] = coords[2];
         mysofa_c2s(target.data());
-        fprintf(stderr, "       Nearest candidate at (%.3fr, %.1fev, %.1faz).\n", target[2],
-            target[1], target[0]);
+        fmt::println(stderr, "       Nearest candidate at ({:.3f}r, {:.1f}ev, {:.1f}az).",
+            target[2], target[1], target[0]);
         return 0;
     }
 
@@ -1193,7 +1186,7 @@ auto LoadSource(SourceRefT *src, const uint hrirRate, const al::span<double> hri
                 std::ios::binary);
         if(!istream->good())
         {
-            fprintf(stderr, "\nError: Could not open source file '%s'.\n", src->mPath.data());
+            fmt::println(stderr, "\nError: Could not open source file '{}'.", src->mPath.data());
             return 0;
         }
     }
@@ -1249,7 +1242,7 @@ auto ProcessMetrics(TokenReaderT *tr, const uint fftSize, const uint truncSize,
         {
             if(hasRate)
             {
-                TrErrorAt(tr, line, col, "Redefinition of 'rate'.\n");
+                TrErrorAt(tr, line, col, "Redefinition of 'rate'.");
                 return 0;
             }
             if(!TrReadOperator(tr, "="))
@@ -1263,7 +1256,7 @@ auto ProcessMetrics(TokenReaderT *tr, const uint fftSize, const uint truncSize,
         {
             if(hasType)
             {
-                TrErrorAt(tr, line, col, "Redefinition of 'type'.\n");
+                TrErrorAt(tr, line, col, "Redefinition of 'type'.");
                 return 0;
             }
             if(!TrReadOperator(tr, "="))
@@ -1275,7 +1268,7 @@ auto ProcessMetrics(TokenReaderT *tr, const uint fftSize, const uint truncSize,
             hData->mChannelType = MatchChannelType(type);
             if(hData->mChannelType == CT_NONE)
             {
-                TrErrorAt(tr, line, col, "Expected a channel type.\n");
+                TrErrorAt(tr, line, col, "Expected a channel type.");
                 return 0;
             }
             if(hData->mChannelType == CT_STEREO)
@@ -1289,7 +1282,7 @@ auto ProcessMetrics(TokenReaderT *tr, const uint fftSize, const uint truncSize,
         {
             if(hasPoints)
             {
-                TrErrorAt(tr, line, col, "Redefinition of 'points'.\n");
+                TrErrorAt(tr, line, col, "Redefinition of 'points'.");
                 return 0;
             }
             if(!TrReadOperator(tr, "="))
@@ -1300,12 +1293,12 @@ auto ProcessMetrics(TokenReaderT *tr, const uint fftSize, const uint truncSize,
             points = static_cast<uint>(intVal);
             if(fftSize > 0 && points > fftSize)
             {
-                TrErrorAt(tr, line, col, "Value exceeds the overridden FFT size.\n");
+                TrErrorAt(tr, line, col, "Value exceeds the overridden FFT size.");
                 return 0;
             }
             if(points < truncSize)
             {
-                TrErrorAt(tr, line, col, "Value is below the truncation size.\n");
+                TrErrorAt(tr, line, col, "Value is below the truncation size.");
                 return 0;
             }
             hData->mIrPoints = points;
@@ -1319,7 +1312,7 @@ auto ProcessMetrics(TokenReaderT *tr, const uint fftSize, const uint truncSize,
         {
             if(hasRadius)
             {
-                TrErrorAt(tr, line, col, "Redefinition of 'radius'.\n");
+                TrErrorAt(tr, line, col, "Redefinition of 'radius'.");
                 return 0;
             }
             if(!TrReadOperator(tr, "="))
@@ -1335,7 +1328,7 @@ auto ProcessMetrics(TokenReaderT *tr, const uint fftSize, const uint truncSize,
 
             if(hasDistance)
             {
-                TrErrorAt(tr, line, col, "Redefinition of 'distance'.\n");
+                TrErrorAt(tr, line, col, "Redefinition of 'distance'.");
                 return 0;
             }
             if(!TrReadOperator(tr, "="))
@@ -1347,7 +1340,7 @@ auto ProcessMetrics(TokenReaderT *tr, const uint fftSize, const uint truncSize,
                     return 0;
                 if(count > 0 && fpVal <= distances[count - 1])
                 {
-                    TrError(tr, "Distances are not ascending.\n");
+                    TrError(tr, "Distances are not ascending.");
                     return 0;
                 }
                 distances[count++] = fpVal;
@@ -1355,14 +1348,14 @@ auto ProcessMetrics(TokenReaderT *tr, const uint fftSize, const uint truncSize,
                     break;
                 if(count >= MAX_FD_COUNT)
                 {
-                    TrError(tr, "Exceeded the maximum of %d fields.\n", MAX_FD_COUNT);
+                    TrError(tr, "Exceeded the maximum of {} fields.", MAX_FD_COUNT);
                     return 0;
                 }
                 TrReadOperator(tr, ",");
             }
             if(fdCount != 0 && count != fdCount)
             {
-                TrError(tr, "Did not match the specified number of %d fields.\n", fdCount);
+                TrError(tr, "Did not match the specified number of {} fields.", fdCount);
                 return 0;
             }
             fdCount = count;
@@ -1374,7 +1367,7 @@ auto ProcessMetrics(TokenReaderT *tr, const uint fftSize, const uint truncSize,
 
             if(hasAzimuths)
             {
-                TrErrorAt(tr, line, col, "Redefinition of 'azimuths'.\n");
+                TrErrorAt(tr, line, col, "Redefinition of 'azimuths'.");
                 return 0;
             }
             if(!TrReadOperator(tr, "="))
@@ -1390,7 +1383,7 @@ auto ProcessMetrics(TokenReaderT *tr, const uint fftSize, const uint truncSize,
                 {
                     if(evCounts[count] >= MAX_EV_COUNT)
                     {
-                        TrError(tr, "Exceeded the maximum of %d elevations.\n", MAX_EV_COUNT);
+                        TrError(tr, "Exceeded the maximum of {} elevations.", MAX_EV_COUNT);
                         return 0;
                     }
                     TrReadOperator(tr, ",");
@@ -1399,12 +1392,13 @@ auto ProcessMetrics(TokenReaderT *tr, const uint fftSize, const uint truncSize,
                 {
                     if(evCounts[count] < MIN_EV_COUNT)
                     {
-                        TrErrorAt(tr, line, col, "Did not reach the minimum of %d azimuth counts.\n", MIN_EV_COUNT);
+                        TrErrorAt(tr, line, col, "Did not reach the minimum of {} azimuth counts.",
+                            MIN_EV_COUNT);
                         return 0;
                     }
                     if(azCounts[count][0] != 1 || azCounts[count][evCounts[count] - 1] != 1)
                     {
-                        TrError(tr, "Poles are not singular for field %d.\n", count - 1);
+                        TrError(tr, "Poles are not singular for field {}.", count - 1);
                         return 0;
                     }
                     count++;
@@ -1413,7 +1407,7 @@ auto ProcessMetrics(TokenReaderT *tr, const uint fftSize, const uint truncSize,
 
                     if(count >= MAX_FD_COUNT)
                     {
-                        TrError(tr, "Exceeded the maximum number of %d fields.\n", MAX_FD_COUNT);
+                        TrError(tr, "Exceeded the maximum number of %d fields.", MAX_FD_COUNT);
                         return 0;
                     }
                     evCounts[count] = 0;
@@ -1422,7 +1416,7 @@ auto ProcessMetrics(TokenReaderT *tr, const uint fftSize, const uint truncSize,
             }
             if(fdCount != 0 && count != fdCount)
             {
-                TrError(tr, "Did not match the specified number of %d fields.\n", fdCount);
+                TrError(tr, "Did not match the specified number of %d fields.", fdCount);
                 return 0;
             }
             fdCount = count;
@@ -1430,19 +1424,19 @@ auto ProcessMetrics(TokenReaderT *tr, const uint fftSize, const uint truncSize,
         }
         else
         {
-            TrErrorAt(tr, line, col, "Expected a metric name.\n");
+            TrErrorAt(tr, line, col, "Expected a metric name.");
             return 0;
         }
         TrSkipWhitespace(tr);
     }
     if(!(hasRate && hasPoints && hasRadius && hasDistance && hasAzimuths))
     {
-        TrErrorAt(tr, line, col, "Expected a metric name.\n");
+        TrErrorAt(tr, line, col, "Expected a metric name.");
         return 0;
     }
     if(distances[0] < hData->mRadius)
     {
-        TrError(tr, "Distance cannot start below head radius.\n");
+        TrError(tr, "Distance cannot start below head radius.");
         return 0;
     }
     if(hData->mChannelType == CT_NONE)
@@ -1450,7 +1444,7 @@ auto ProcessMetrics(TokenReaderT *tr, const uint fftSize, const uint truncSize,
     const auto azs = al::span{azCounts}.first<MAX_FD_COUNT>();
     if(!PrepareHrirData(al::span{distances}.first(fdCount), evCounts, azs, hData))
     {
-        fprintf(stderr, "Error:  Out of memory.\n");
+        fmt::println(stderr, "Error:  Out of memory.");
         exit(-1);
     }
     return 1;
@@ -1524,7 +1518,7 @@ auto ReadSourceRef(TokenReaderT *tr, SourceRefT *src) -> int
     src->mFormat = MatchSourceFormat(ident);
     if(src->mFormat == SF_NONE)
     {
-        TrErrorAt(tr, line, col, "Expected a source format.\n");
+        TrErrorAt(tr, line, col, "Expected a source format.");
         return 0;
     }
     if(!TrReadOperator(tr, "("))
@@ -1573,7 +1567,7 @@ auto ReadSourceRef(TokenReaderT *tr, SourceRefT *src) -> int
         src->mType = MatchElementType(ident);
         if(src->mType == ET_NONE)
         {
-            TrErrorAt(tr, line, col, "Expected a source element type.\n");
+            TrErrorAt(tr, line, col, "Expected a source element type.");
             return 0;
         }
         if(src->mFormat == SF_BIN_LE || src->mFormat == SF_BIN_BE)
@@ -1595,7 +1589,7 @@ auto ReadSourceRef(TokenReaderT *tr, SourceRefT *src) -> int
                         return 0;
                     if(std::abs(intVal) < int{MinBinSize}*8 || static_cast<uint>(std::abs(intVal)) > (8*src->mSize))
                     {
-                        TrErrorAt(tr, line, col, "Expected a value of (+/-) %d to %d.\n", MinBinSize*8, 8*src->mSize);
+                        TrErrorAt(tr, line, col, "Expected a value of (+/-) {} to {}.", MinBinSize*8, 8*src->mSize);
                         return 0;
                     }
                     src->mBits = intVal;
@@ -1608,7 +1602,7 @@ auto ReadSourceRef(TokenReaderT *tr, SourceRefT *src) -> int
                     return 0;
                 if(intVal != 4 && intVal != 8)
                 {
-                    TrErrorAt(tr, line, col, "Expected a value of 4 or 8.\n");
+                    TrErrorAt(tr, line, col, "Expected a value of 4 or 8.");
                     return 0;
                 }
                 src->mSize = static_cast<uint>(intVal);
@@ -1671,7 +1665,7 @@ auto ReadSofaRef(TokenReaderT *tr, SourceRefT *src) -> int
     src->mFormat = MatchSourceFormat(ident);
     if(src->mFormat != SF_SOFA)
     {
-        TrErrorAt(tr, line, col, "Expected the SOFA source format.\n");
+        TrErrorAt(tr, line, col, "Expected the SOFA source format.");
         return 0;
     }
 
@@ -1759,7 +1753,7 @@ auto ProcessSources(TokenReaderT *tr, HrirDataT *hData, const uint outRate) -> i
         ? std::min(static_cast<uint>(std::ceil(hData->mIrPoints*rateScale)), hData->mIrPoints)
         : hData->mIrPoints};
 
-    printf("Loading sources...");
+    fmt::print("Loading sources...");
     fflush(stdout);
     int count{0};
     while(TrIsOperator(tr, "["))
@@ -1789,7 +1783,7 @@ auto ProcessSources(TokenReaderT *tr, HrirDataT *hData, const uint outRate) -> i
                 switch(MatchChannelType(type))
                 {
                 case CT_NONE:
-                    TrErrorAt(tr, line, col, "Expected a channel type.\n");
+                    TrErrorAt(tr, line, col, "Expected a channel type.");
                     return 0;
                 case CT_MONO:
                     src.mChannel = 0;
@@ -1807,7 +1801,7 @@ auto ProcessSources(TokenReaderT *tr, HrirDataT *hData, const uint outRate) -> i
 
                 if(MatchChannelType(type) != CT_MONO)
                 {
-                    TrErrorAt(tr, line, col, "Expected a mono channel type.\n");
+                    TrErrorAt(tr, line, col, "Expected a mono channel type.");
                     return 0;
                 }
                 src.mChannel = 0;
@@ -1820,7 +1814,7 @@ auto ProcessSources(TokenReaderT *tr, HrirDataT *hData, const uint outRate) -> i
                 sofa->hrtf->M*3_uz};
             for(uint si{0};si < sofa->hrtf->M;++si)
             {
-                printf("\rLoading sources... %d of %d", si+1, sofa->hrtf->M);
+                fmt::print("\rLoading sources... {} of {}", si+1, sofa->hrtf->M);
                 fflush(stdout);
 
                 std::array aer{srcPosValues[3_uz*si], srcPosValues[3_uz*si + 1],
@@ -1857,7 +1851,7 @@ auto ProcessSources(TokenReaderT *tr, HrirDataT *hData, const uint outRate) -> i
                 HrirAzT *azd = &field->mEvs[ei].mAzs[ai];
                 if(!azd->mIrs[0].empty())
                 {
-                    TrErrorAt(tr, line, col, "Redefinition of source [ %d, %d, %d ].\n", fi, ei, ai);
+                    TrErrorAt(tr, line, col, "Redefinition of source [ {}, {}, {} ].", fi, ei, ai);
                     return 0;
                 }
 
@@ -1900,7 +1894,7 @@ auto ProcessSources(TokenReaderT *tr, HrirDataT *hData, const uint outRate) -> i
 
         if(!azd->mIrs[0].empty())
         {
-            TrErrorAt(tr, line, col, "Redefinition of source.\n");
+            TrErrorAt(tr, line, col, "Redefinition of source.");
             return 0;
         }
         if(!TrReadOperator(tr, "="))
@@ -1916,7 +1910,7 @@ auto ProcessSources(TokenReaderT *tr, HrirDataT *hData, const uint outRate) -> i
             // require preparing the source refs first to get a total count
             // before loading them.
             ++count;
-            printf("\rLoading sources... %d file%s", count, (count==1)?"":"s");
+            fmt::print("\rLoading sources... {} file{}", count, (count==1)?"":"s");
             fflush(stdout);
 
             if(!LoadSource(&src, hData->mIrRate, al::span{hrir}.first(hData->mIrPoints)))
@@ -1933,7 +1927,7 @@ auto ProcessSources(TokenReaderT *tr, HrirDataT *hData, const uint outRate) -> i
                     ti = *earopt;
                 else
                 {
-                    TrErrorAt(tr, line, col, "Expected a target ear.\n");
+                    TrErrorAt(tr, line, col, "Expected a target ear.");
                     return 0;
                 }
             }
@@ -1955,17 +1949,17 @@ auto ProcessSources(TokenReaderT *tr, HrirDataT *hData, const uint outRate) -> i
         {
             if(azd->mIrs[0].empty())
             {
-                TrErrorAt(tr, line, col, "Missing left ear source reference(s).\n");
+                TrErrorAt(tr, line, col, "Missing left ear source reference(s).");
                 return 0;
             }
             if(azd->mIrs[1].empty())
             {
-                TrErrorAt(tr, line, col, "Missing right ear source reference(s).\n");
+                TrErrorAt(tr, line, col, "Missing right ear source reference(s).");
                 return 0;
             }
         }
     }
-    printf("\n");
+    fmt::println("");
     hrir.clear();
     if(resampler)
     {
@@ -1988,7 +1982,7 @@ auto ProcessSources(TokenReaderT *tr, HrirDataT *hData, const uint outRate) -> i
         }
         if(ei >= hData->mFds[fi].mEvs.size())
         {
-            TrError(tr, "Missing source references [ %d, *, * ].\n", fi);
+            TrError(tr, "Missing source references [ {}, *, * ].", fi);
             return 0;
         }
         hData->mFds[fi].mEvStart = ei;
@@ -2000,7 +1994,7 @@ auto ProcessSources(TokenReaderT *tr, HrirDataT *hData, const uint outRate) -> i
 
                 if(azd->mIrs[0].empty())
                 {
-                    TrError(tr, "Missing source reference [ %d, %d, %d ].\n", fi, ei, ai);
+                    TrError(tr, "Missing source reference [ {}, {}, {} ].", fi, ei, ai);
                     return 0;
                 }
             }
@@ -2028,7 +2022,7 @@ auto ProcessSources(TokenReaderT *tr, HrirDataT *hData, const uint outRate) -> i
         return 1;
     }
 
-    TrError(tr, "Errant data at end of source list.\n");
+    TrError(tr, "Errant data at end of source list.");
     gSofaCache.clear();
     return 0;
 }

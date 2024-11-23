@@ -1656,7 +1656,7 @@ if(ALSOFT_UTILS)
         target_include_directories(alsoft.sofa-support PUBLIC ${OpenAL_SOURCE_DIR}/common)
         target_compile_options(alsoft.sofa-support PRIVATE ${C_FLAGS})
         target_link_libraries(alsoft.sofa-support PUBLIC alsoft.common MySOFA::MySOFA
-            PRIVATE ${LINKER_FLAGS})
+            PRIVATE ${LINKER_FLAGS} fmt::fmt)
         set_target_properties(alsoft.sofa-support PROPERTIES ${DEFAULT_TARGET_PROPS})
 
         set(MAKEMHR_SRCS
@@ -1683,7 +1683,7 @@ if(ALSOFT_UTILS)
         target_include_directories(sofa-info PRIVATE ${OpenAL_SOURCE_DIR}/utils)
         target_compile_options(sofa-info PRIVATE ${C_FLAGS})
         target_link_libraries(sofa-info PRIVATE ${LINKER_FLAGS} alsoft.sofa-support
-            ${UNICODE_FLAG})
+            ${UNICODE_FLAG} fmt::fmt)
         set_target_properties(sofa-info PROPERTIES ${DEFAULT_TARGET_PROPS})
     endif()
     message(STATUS "Building utility programs")

@@ -32,6 +32,7 @@
 #include <utility>
 #include <vector>
 
+#include "fmt/core.h"
 #include "mysofa.h"
 
 
@@ -213,14 +214,14 @@ auto GetCompatibleLayout(const al::span<const float> xyzs) -> std::vector<SofaFi
         if(step <= 0.0)
         {
             if(elevs.empty())
-                printf("No usable elevations on field distance %f.\n", dist);
+                fmt::println("No usable elevations on field distance {:f}.", dist);
             else
             {
-                printf("Non-uniform elevations on field distance %.3f.\nGot: %+.2f", dist,
+                fmt::print("Non-uniform elevations on field distance {:.3f}.\nGot: {:+.2f}", dist,
                     elevs[0]);
                 for(size_t ei{1u};ei < elevs.size();++ei)
-                    printf(", %+.2f", elevs[ei]);
-                fputc('\n', stdout);
+                    fmt::print(", {:+.2f}", elevs[ei]);
+                fmt::println("");
             }
             continue;
         }
@@ -230,7 +231,7 @@ auto GetCompatibleLayout(const al::span<const float> xyzs) -> std::vector<SofaFi
         {
             if(!(elevs[ei] < 0.0))
             {
-                printf("Too many missing elevations on field distance %f.\n", dist);
+                fmt::println("Too many missing elevations on field distance {:f}.", dist);
                 return fds;
             }
 
@@ -247,7 +248,7 @@ auto GetCompatibleLayout(const al::span<const float> xyzs) -> std::vector<SofaFi
         const auto evCount = static_cast<uint>(std::round(180.0 / step)) + 1;
         if(evCount < 5)
         {
-            printf("Too few uniform elevations on field distance %f.\n", dist);
+            fmt::println("Too few uniform elevations on field distance {:f}.", dist);
             continue;
         }
 
@@ -267,7 +268,7 @@ auto GetCompatibleLayout(const al::span<const float> xyzs) -> std::vector<SofaFi
             {
                 if(azims.size() != 1)
                 {
-                    printf("Non-singular poles on field distance %f.\n", dist);
+                    fmt::println("Non-singular poles on field distance {:f}.", dist);
                     return fds;
                 }
                 azCounts[ei] = 1;
@@ -277,7 +278,8 @@ auto GetCompatibleLayout(const al::span<const float> xyzs) -> std::vector<SofaFi
                 step = GetUniformAzimStep(0.1, azims);
                 if(step <= 0.0)
                 {
-                    printf("Non-uniform azimuths on elevation %f, field distance %f.\n", ev, dist);
+                    fmt::println("Non-uniform azimuths on elevation {:f}, field distance {:f}.",
+                        ev, dist);
                     return fds;
                 }
                 azCounts[ei] = static_cast<uint>(std::round(360.0f / step));

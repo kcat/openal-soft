@@ -18,7 +18,6 @@
                     misc-misleading-identifier,
                     misc-homoglyph,
                     readability-const-return-type,
-                    readability-container-data-pointer,
                     readability-duplicate-include,
                     performance-faster-string-find,
                     performance-for-range-copy,

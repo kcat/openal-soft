@@ -1339,7 +1339,6 @@ IF (ALSOFT_UTILS)
     list(APPEND NEED_ANALYZE_SOURCE_FILES "${CMAKE_SOURCE_DIR}/utils/openal-info.c")
 endif()
 add_custom_target(clang-tidy-check clang-tidy --fix --fix-errors -format-style=file -p ${CMAKE_BINARY_DIR}/compile_commands.json ${NEED_ANALYZE_SOURCE_FILES} DEPENDS ${NEED_ANALYZE_SOURCE_FILES})
-add_custom_target(check DEPENDS clang-tidy-check)
 
 # Build main library
 if(LIBTYPE STREQUAL "STATIC")

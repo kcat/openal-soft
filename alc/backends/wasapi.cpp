@@ -1631,8 +1631,6 @@ void WasapiPlayback::prepareFormat(WAVEFORMATEXTENSIBLE &OutputType)
 
 void WasapiPlayback::finalizeFormat(WAVEFORMATEXTENSIBLE &OutputType)
 {
-    mMonoUpsample = false;
-
     if(!GetConfigValueBool(mDevice->mDeviceName, "wasapi", "allow-resampler", true))
         mDevice->Frequency = uint(OutputType.Format.nSamplesPerSec);
     else
@@ -1963,6 +1961,7 @@ HRESULT WasapiPlayback::resetProxy()
     }
 
     mDevice->Flags.reset(Virtualization);
+    mMonoUpsample = false;
 
     auto &audio = mAudio.emplace<PlainDevice>();
     HRESULT hr{sDeviceHelper->activateAudioClient(mMMDev, __uuidof(IAudioClient),

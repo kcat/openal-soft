@@ -156,7 +156,7 @@ struct SourceRefT {
     double mRadius;
     uint mSkip;
     uint mOffset;
-    std::array<char,MAX_PATH_LEN+1> mPath;
+    std::string mPath;
 };
 
 
@@ -518,12 +518,11 @@ auto TrReadFloat(TokenReaderT *tr, const double loBound, const double hiBound, d
 }
 
 // Reads and validates a string token.
-auto TrReadString(TokenReaderT *tr, const al::span<char> text) -> int
+auto TrReadString(TokenReaderT *tr) -> std::optional<std::string>
 {
-    assert(!text.empty());
-    const size_t maxLen{text.size()-1};
+    auto ret = std::string{};
 
-    uint col{tr->mColumn};
+    auto col = tr->mColumn;
     if(TrSkipWhitespace(tr))
     {
         col = tr->mColumn;
@@ -540,30 +539,24 @@ auto TrReadString(TokenReaderT *tr, const al::span<char> text) -> int
                 if(ch == '\n')
                 {
                     TrErrorAt(tr, tr->mLine, col, "Unterminated string at end of line.");
-                    return 0;
+                    return std::nullopt;
                 }
-                if(len < maxLen)
-                    text[len] = ch;
+                ret += ch;
                 len++;
             }
             if(ch != '\"')
             {
                 tr->mColumn += static_cast<uint>(1 + len);
                 TrErrorAt(tr, tr->mLine, col, "Unterminated string at end of input.");
-                return 0;
+                return std::nullopt;
             }
             tr->mColumn += static_cast<uint>(2 + len);
-            if(len > maxLen)
-            {
-                TrErrorAt(tr, tr->mLine, col, "String is too long.");
-                return 0;
-            }
-            text[len] = '\0';
-            return 1;
+
+            return std::optional{std::move(ret)};
         }
     }
     TrErrorAt(tr, tr->mLine, col, "Expected a string.");
-    return 0;
+    return std::nullopt;
 }
 
 // Reads and validates the given operator.
@@ -596,7 +589,7 @@ auto TrReadOperator(TokenReaderT *tr, const std::string_view op) -> int
 
 // Read a binary value of the specified byte order and byte size from a file,
 // storing it as a 32-bit unsigned integer.
-auto ReadBin4(std::istream &istream, const char *filename, const ByteOrderT order,
+auto ReadBin4(std::istream &istream, const std::string_view filename, const ByteOrderT order,
     const uint bytes, uint32_t *out) -> int
 {
     std::array<uint8_t,4> in{};
@@ -626,7 +619,8 @@ auto ReadBin4(std::istream &istream, const char *filename, const ByteOrderT orde
 
 // Read a binary value of the specified byte order from a file, storing it as
 // a 64-bit unsigned integer.
-auto ReadBin8(std::istream &istream, const char *filename, const ByteOrderT order, uint64_t *out) -> int
+auto ReadBin8(std::istream &istream, const std::string_view filename, const ByteOrderT order,
+    uint64_t *out) -> int
 {
     std::array<uint8_t,8> in{};
     istream.read(reinterpret_cast<char*>(in.data()), 8);
@@ -660,8 +654,9 @@ auto ReadBin8(std::istream &istream, const char *filename, const ByteOrderT orde
  * whether they are padded toward the MSB (negative) or LSB (positive).
  * Floating-point types are not normalized.
  */
-auto ReadBinAsDouble(std::istream &istream, const char *filename, const ByteOrderT order,
-    const ElementTypeT type, const uint bytes, const int bits, double *out) -> int
+auto ReadBinAsDouble(std::istream &istream, const std::string_view filename,
+    const ByteOrderT order, const ElementTypeT type, const uint bytes, const int bits, double *out)
+    -> int
 {
     *out = 0.0;
     if(bytes > 4)
@@ -699,7 +694,7 @@ auto ReadBinAsDouble(std::istream &istream, const char *filename, const ByteOrde
  * result.  The sign of the bits should always be positive.  This also skips
  * up to one separator character before the element itself.
  */
-auto ReadAsciiAsDouble(TokenReaderT *tr, const char *filename, const ElementTypeT type,
+auto ReadAsciiAsDouble(TokenReaderT *tr, const std::string_view filename, const ElementTypeT type,
     const uint bits, double *out) -> int
 {
     if(TrIsOperator(tr, ","))
@@ -745,20 +740,20 @@ auto ReadWaveFormat(std::istream &istream, const ByteOrderT order, const uint hr
     do {
         if(chunkSize > 0)
             istream.seekg(static_cast<int>(chunkSize), std::ios::cur);
-        if(!ReadBin4(istream, src->mPath.data(), BO_LITTLE, 4, &fourCC)
-            || !ReadBin4(istream, src->mPath.data(), order, 4, &chunkSize))
+        if(!ReadBin4(istream, src->mPath, BO_LITTLE, 4, &fourCC)
+            || !ReadBin4(istream, src->mPath, order, 4, &chunkSize))
             return 0;
     } while(fourCC != FOURCC_FMT);
-    if(!ReadBin4(istream, src->mPath.data(), order, 2, &format)
-        || !ReadBin4(istream, src->mPath.data(), order, 2, &channels)
-        || !ReadBin4(istream, src->mPath.data(), order, 4, &rate)
-        || !ReadBin4(istream, src->mPath.data(), order, 4, &dummy)
-        || !ReadBin4(istream, src->mPath.data(), order, 2, &block))
+    if(!ReadBin4(istream, src->mPath, order, 2, &format)
+        || !ReadBin4(istream, src->mPath, order, 2, &channels)
+        || !ReadBin4(istream, src->mPath, order, 4, &rate)
+        || !ReadBin4(istream, src->mPath, order, 4, &dummy)
+        || !ReadBin4(istream, src->mPath, order, 2, &block))
         return 0;
     block /= channels;
     if(chunkSize > 14)
     {
-        if(!ReadBin4(istream, src->mPath.data(), order, 2, &size))
+        if(!ReadBin4(istream, src->mPath, order, 2, &size))
             return 0;
         size /= 8;
         if(block > size)
@@ -769,12 +764,12 @@ auto ReadWaveFormat(std::istream &istream, const ByteOrderT order, const uint hr
     if(format == WAVE_FORMAT_EXTENSIBLE)
     {
         istream.seekg(2, std::ios::cur);
-        if(!ReadBin4(istream, src->mPath.data(), order, 2, &bits))
+        if(!ReadBin4(istream, src->mPath, order, 2, &bits))
             return 0;
         if(bits == 0)
             bits = 8 * size;
         istream.seekg(4, std::ios::cur);
-        if(!ReadBin4(istream, src->mPath.data(), order, 2, &format))
+        if(!ReadBin4(istream, src->mPath, order, 2, &format))
             return 0;
         istream.seekg(static_cast<int>(chunkSize - 26), std::ios::cur);
     }
@@ -788,19 +783,18 @@ auto ReadWaveFormat(std::istream &istream, const ByteOrderT order, const uint hr
     }
     if(format != WAVE_FORMAT_PCM && format != WAVE_FORMAT_IEEE_FLOAT)
     {
-        fmt::println(stderr, "\nError: Unsupported WAVE format in file '{}'.", src->mPath.data());
+        fmt::println(stderr, "\nError: Unsupported WAVE format in file '{}'.", src->mPath);
         return 0;
     }
     if(src->mChannel >= channels)
     {
-        fmt::println(stderr, "\nError: Missing source channel in WAVE file '{}'.",
-            src->mPath.data());
+        fmt::println(stderr, "\nError: Missing source channel in WAVE file '{}'.", src->mPath);
         return 0;
     }
     if(rate != hrirRate)
     {
         fmt::println(stderr, "\nError: Mismatched source sample rate in WAVE file '{}'.",
-            src->mPath.data());
+            src->mPath);
         return 0;
     }
     if(format == WAVE_FORMAT_PCM)
@@ -808,13 +802,13 @@ auto ReadWaveFormat(std::istream &istream, const ByteOrderT order, const uint hr
         if(size < 2 || size > 4)
         {
             fmt::println(stderr, "\nError: Unsupported sample size in WAVE file '{}'.",
-                src->mPath.data());
+                src->mPath);
             return 0;
         }
         if(bits < 16 || bits > (8*size))
         {
             fmt::println(stderr, "\nError: Bad significant bits in WAVE file '{}'.",
-                src->mPath.data());
+                src->mPath);
             return 0;
         }
         src->mType = ET_INT;
@@ -824,7 +818,7 @@ auto ReadWaveFormat(std::istream &istream, const ByteOrderT order, const uint hr
         if(size != 4 && size != 8)
         {
             fmt::println(stderr, "\nError: Unsupported sample size in WAVE file '{}'.",
-                src->mPath.data());
+                src->mPath);
             return 0;
         }
         src->mType = ET_FP;
@@ -847,7 +841,7 @@ auto ReadWaveData(std::istream &istream, const SourceRefT *src, const ByteOrderT
         skip += pre;
         if(skip > 0)
             istream.seekg(skip, std::ios::cur);
-        if(!ReadBinAsDouble(istream, src->mPath.data(), order, src->mType, src->mSize, src->mBits,
+        if(!ReadBinAsDouble(istream, src->mPath, order, src->mType, src->mSize, src->mBits,
             &hrir[i]))
             return 0;
         skip = post;
@@ -868,8 +862,8 @@ auto ReadWaveList(std::istream &istream, const SourceRefT *src, const ByteOrderT
 
     for(;;)
     {
-        if(!ReadBin4(istream, src->mPath.data(), BO_LITTLE, 4, &fourCC)
-            || !ReadBin4(istream, src->mPath.data(), order, 4, &chunkSize))
+        if(!ReadBin4(istream, src->mPath, BO_LITTLE, 4, &fourCC)
+            || !ReadBin4(istream, src->mPath, order, 4, &chunkSize))
             return 0;
 
         if(fourCC == FOURCC_DATA)
@@ -878,7 +872,7 @@ auto ReadWaveList(std::istream &istream, const SourceRefT *src, const ByteOrderT
             count = chunkSize / block;
             if(count < (src->mOffset + hrir.size()))
             {
-                fmt::println(stderr, "\nError: Bad read from file '{}'.", src->mPath.data());
+                fmt::println(stderr, "\nError: Bad read from file '{}'.", src->mPath);
                 return 0;
             }
             using off_type = std::istream::off_type;
@@ -889,7 +883,7 @@ auto ReadWaveList(std::istream &istream, const SourceRefT *src, const ByteOrderT
         }
         if(fourCC == FOURCC_LIST)
         {
-            if(!ReadBin4(istream, src->mPath.data(), BO_LITTLE, 4, &fourCC))
+            if(!ReadBin4(istream, src->mPath, BO_LITTLE, 4, &fourCC))
                 return 0;
             chunkSize -= 4;
             if(fourCC == FOURCC_WAVL)
@@ -905,8 +899,8 @@ auto ReadWaveList(std::istream &istream, const SourceRefT *src, const ByteOrderT
     lastSample = 0.0;
     while(offset < hrir.size() && listSize > 8)
     {
-        if(!ReadBin4(istream, src->mPath.data(), BO_LITTLE, 4, &fourCC)
-            || !ReadBin4(istream, src->mPath.data(), order, 4, &chunkSize))
+        if(!ReadBin4(istream, src->mPath, BO_LITTLE, 4, &fourCC)
+            || !ReadBin4(istream, src->mPath, order, 4, &chunkSize))
             return 0;
         listSize -= 8 + chunkSize;
         if(fourCC == FOURCC_DATA)
@@ -935,7 +929,7 @@ auto ReadWaveList(std::istream &istream, const SourceRefT *src, const ByteOrderT
         }
         else if(fourCC == FOURCC_SLNT)
         {
-            if(!ReadBin4(istream, src->mPath.data(), order, 4, &count))
+            if(!ReadBin4(istream, src->mPath, order, 4, &count))
                 return 0;
             chunkSize -= 4;
             if(count > skip)
@@ -959,7 +953,7 @@ auto ReadWaveList(std::istream &istream, const SourceRefT *src, const ByteOrderT
     }
     if(offset < hrir.size())
     {
-        fmt::println(stderr, "\nError: Bad read from file '{}'.", src->mPath.data());
+        fmt::println(stderr, "\nError: Bad read from file '{}'.", src->mPath);
         return 0;
     }
     return 1;
@@ -975,20 +969,19 @@ auto LoadAsciiSource(std::istream &istream, const SourceRefT *src, const al::spa
     for(uint i{0};i < src->mOffset;++i)
     {
         double dummy{};
-        if(!ReadAsciiAsDouble(&tr, src->mPath.data(), src->mType, static_cast<uint>(src->mBits),
-            &dummy))
+        if(!ReadAsciiAsDouble(&tr, src->mPath, src->mType, static_cast<uint>(src->mBits), &dummy))
             return 0;
     }
     for(size_t i{0};i < hrir.size();++i)
     {
-        if(!ReadAsciiAsDouble(&tr, src->mPath.data(), src->mType, static_cast<uint>(src->mBits),
+        if(!ReadAsciiAsDouble(&tr, src->mPath, src->mType, static_cast<uint>(src->mBits),
             &hrir[i]))
             return 0;
         for(uint j{0};j < src->mSkip;++j)
         {
             double dummy{};
-            if(!ReadAsciiAsDouble(&tr, src->mPath.data(), src->mType,
-                static_cast<uint>(src->mBits), &dummy))
+            if(!ReadAsciiAsDouble(&tr, src->mPath, src->mType, static_cast<uint>(src->mBits),
+                &dummy))
                 return 0;
         }
     }
@@ -1002,7 +995,7 @@ auto LoadBinarySource(std::istream &istream, const SourceRefT *src, const ByteOr
     istream.seekg(static_cast<long>(src->mOffset), std::ios::beg);
     for(size_t i{0};i < hrir.size();++i)
     {
-        if(!ReadBinAsDouble(istream, src->mPath.data(), order, src->mType, src->mSize, src->mBits,
+        if(!ReadBinAsDouble(istream, src->mPath, order, src->mType, src->mSize, src->mBits,
             &hrir[i]))
             return 0;
         if(src->mSkip > 0)
@@ -1018,8 +1011,8 @@ auto LoadWaveSource(std::istream &istream, SourceRefT *src, const uint hrirRate,
     uint32_t fourCC, dummy;
     ByteOrderT order;
 
-    if(!ReadBin4(istream, src->mPath.data(), BO_LITTLE, 4, &fourCC)
-        || !ReadBin4(istream, src->mPath.data(), BO_LITTLE, 4, &dummy))
+    if(!ReadBin4(istream, src->mPath, BO_LITTLE, 4, &fourCC)
+        || !ReadBin4(istream, src->mPath, BO_LITTLE, 4, &dummy))
         return 0;
     if(fourCC == FOURCC_RIFF)
         order = BO_LITTLE;
@@ -1027,15 +1020,15 @@ auto LoadWaveSource(std::istream &istream, SourceRefT *src, const uint hrirRate,
         order = BO_BIG;
     else
     {
-        fmt::println(stderr, "\nError: No RIFF/RIFX chunk in file '{}'.", src->mPath.data());
+        fmt::println(stderr, "\nError: No RIFF/RIFX chunk in file '{}'.", src->mPath);
         return 0;
     }
 
-    if(!ReadBin4(istream, src->mPath.data(), BO_LITTLE, 4, &fourCC))
+    if(!ReadBin4(istream, src->mPath, BO_LITTLE, 4, &fourCC))
         return 0;
     if(fourCC != FOURCC_WAVE)
     {
-        fmt::println(stderr, "\nError: Not a RIFF/RIFX WAVE file '{}'.", src->mPath.data());
+        fmt::println(stderr, "\nError: Not a RIFF/RIFX WAVE file '{}'.", src->mPath);
         return 0;
     }
     if(!ReadWaveFormat(istream, order, hrirRate, src))
@@ -1067,7 +1060,7 @@ std::vector<SofaCacheEntry> gSofaCache;
 // Load a Spatially Oriented Format for Accoustics (SOFA) file.
 auto LoadSofaFile(SourceRefT *src, const uint hrirRate, const uint n) -> MYSOFA_EASY*
 {
-    const std::string_view srcname{src->mPath.data()};
+    const std::string_view srcname{src->mPath};
     auto iter = std::find_if(gSofaCache.begin(), gSofaCache.end(),
         [srcname,hrirRate](SofaCacheEntry &entry) -> bool
         { return entry.mName == srcname && entry.mSampleRate == hrirRate; });
@@ -1083,27 +1076,26 @@ auto LoadSofaFile(SourceRefT *src, const uint hrirRate, const uint n) -> MYSOFA_
     sofa->neighborhood = nullptr;
 
     int err;
-    sofa->hrtf = mysofa_load(src->mPath.data(), &err);
+    sofa->hrtf = mysofa_load(src->mPath.c_str(), &err);
     if(!sofa->hrtf)
     {
-        fmt::println(stderr, "\nError: Could not load source file '{}': {} ({}).",
-            src->mPath.data(), SofaErrorStr(err), err);
+        fmt::println(stderr, "\nError: Could not load source file '{}': {} ({}).", src->mPath,
+            SofaErrorStr(err), err);
         return nullptr;
     }
     /* NOTE: Some valid SOFA files are failing this check. */
     err = mysofa_check(sofa->hrtf);
     if(err != MYSOFA_OK)
         fmt::println(stderr, "\nWarning: Supposedly malformed source file '{}': {} ({}).",
-            src->mPath.data(), SofaErrorStr(err), err);
+            src->mPath, SofaErrorStr(err), err);
     if((src->mOffset + n) > sofa->hrtf->N)
     {
-        fmt::println(stderr, "\nError: Not enough samples in SOFA file '{}'.", src->mPath.data());
+        fmt::println(stderr, "\nError: Not enough samples in SOFA file '{}'.", src->mPath);
         return nullptr;
     }
     if(src->mChannel >= sofa->hrtf->R)
     {
-        fmt::println(stderr, "\nError: Missing source receiver in SOFA file '{}'.",
-            src->mPath.data());
+        fmt::println(stderr, "\nError: Missing source receiver in SOFA file '{}'.", src->mPath);
         return nullptr;
     }
     mysofa_tocartesian(sofa->hrtf);
@@ -1147,7 +1139,7 @@ auto LoadSofaSource(SourceRefT *src, const uint hrirRate, const al::span<double>
     int nearest{mysofa_lookup(sofa->lookup, target.data())};
     if(nearest < 0)
     {
-        fmt::println(stderr, "\nError: Lookup failed in source file '{}'.", src->mPath.data());
+        fmt::println(stderr, "\nError: Lookup failed in source file '{}'.", src->mPath);
         return 0;
     }
 
@@ -1158,7 +1150,7 @@ auto LoadSofaSource(SourceRefT *src, const uint hrirRate, const al::span<double>
     {
         fmt::println(stderr,
             "\nError: No impulse response at coordinates ({:.3f}r, {:.1f}ev, {:.1f}az) in file '{}'.",
-            src->mRadius, src->mElevation, src->mAzimuth, src->mPath.data());
+            src->mRadius, src->mElevation, src->mAzimuth, src->mPath);
         target[0] = coords[0];
         target[1] = coords[1];
         target[2] = coords[2];
@@ -1176,27 +1168,26 @@ auto LoadSofaSource(SourceRefT *src, const uint hrirRate, const al::span<double>
 // Load a source HRIR from a supported file type.
 auto LoadSource(SourceRefT *src, const uint hrirRate, const al::span<double> hrir) -> int
 {
-    std::unique_ptr<std::istream> istream;
+    auto istream = std::ifstream{};
     if(src->mFormat != SF_SOFA)
     {
         if(src->mFormat == SF_ASCII)
-            istream = std::make_unique<std::ifstream>(std::filesystem::u8path(src->mPath.data()));
+            istream.open(std::filesystem::u8path(src->mPath));
         else
-            istream = std::make_unique<std::ifstream>(std::filesystem::u8path(src->mPath.data()),
-                std::ios::binary);
-        if(!istream->good())
+            istream.open(std::filesystem::u8path(src->mPath), std::ios::binary);
+        if(!istream.good())
         {
-            fmt::println(stderr, "\nError: Could not open source file '{}'.", src->mPath.data());
+            fmt::println(stderr, "\nError: Could not open source file '{}'.", src->mPath);
             return 0;
         }
     }
 
     switch(src->mFormat)
     {
-        case SF_ASCII: return LoadAsciiSource(*istream, src, hrir);
-        case SF_BIN_LE: return LoadBinarySource(*istream, src, BO_LITTLE, hrir);
-        case SF_BIN_BE: return LoadBinarySource(*istream, src, BO_BIG, hrir);
-        case SF_WAVE: return LoadWaveSource(*istream, src, hrirRate, hrir);
+        case SF_ASCII: return LoadAsciiSource(istream, src, hrir);
+        case SF_BIN_LE: return LoadBinarySource(istream, src, BO_LITTLE, hrir);
+        case SF_BIN_BE: return LoadBinarySource(istream, src, BO_BIG, hrir);
+        case SF_WAVE: return LoadWaveSource(istream, src, hrirRate, hrir);
         case SF_SOFA: return LoadSofaSource(src, hrirRate, hrir);
         case SF_NONE: break;
     }
@@ -1647,8 +1638,11 @@ auto ReadSourceRef(TokenReaderT *tr, SourceRefT *src) -> int
         src->mOffset = 0;
     if(!TrReadOperator(tr, ":"))
         return 0;
-    if(!TrReadString(tr, src->mPath))
+
+    auto srcpath = TrReadString(tr);
+    if(!srcpath)
         return 0;
+    src->mPath = std::move(*srcpath);
     return 1;
 }
 
@@ -1686,8 +1680,11 @@ auto ReadSofaRef(TokenReaderT *tr, SourceRefT *src) -> int
         src->mOffset = 0;
     if(!TrReadOperator(tr, ":"))
         return 0;
-    if(!TrReadString(tr, src->mPath))
+
+    auto srcpath = TrReadString(tr);
+    if(!srcpath)
         return 0;
+    src->mPath = std::move(*srcpath);
     return 1;
 }
 

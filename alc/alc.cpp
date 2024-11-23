@@ -1225,16 +1225,17 @@ auto UpdateDeviceParams(al::Device *device, const al::span<const int> attrList) 
         int freqAttr{};
 
 #define ATTRIBUTE(a) a: TRACE("%s = %d\n", #a, attrList[attrIdx + 1]);
+#define ATTRIBUTE_HEX(a) a: TRACE("%s = 0x%x\n", #a, attrList[attrIdx + 1]);
         for(size_t attrIdx{0};attrIdx < attrList.size();attrIdx+=2)
         {
             switch(attrList[attrIdx])
             {
-            case ATTRIBUTE(ALC_FORMAT_CHANNELS_SOFT)
+            case ATTRIBUTE_HEX(ALC_FORMAT_CHANNELS_SOFT)
                 if(device->Type == DeviceType::Loopback)
                     optchans = DevFmtChannelsFromEnum(attrList[attrIdx + 1]);
                 break;
 
-            case ATTRIBUTE(ALC_FORMAT_TYPE_SOFT)
+            case ATTRIBUTE_HEX(ALC_FORMAT_TYPE_SOFT)
                 if(device->Type == DeviceType::Loopback)
                     opttype = DevFmtTypeFromEnum(attrList[attrIdx + 1]);
                 break;
@@ -1243,12 +1244,12 @@ auto UpdateDeviceParams(al::Device *device, const al::span<const int> attrList) 
                 freqAttr = attrList[attrIdx + 1];
                 break;
 
-            case ATTRIBUTE(ALC_AMBISONIC_LAYOUT_SOFT)
+            case ATTRIBUTE_HEX(ALC_AMBISONIC_LAYOUT_SOFT)
                 if(device->Type == DeviceType::Loopback)
                     optlayout = DevAmbiLayoutFromEnum(attrList[attrIdx + 1]);
                 break;
 
-            case ATTRIBUTE(ALC_AMBISONIC_SCALING_SOFT)
+            case ATTRIBUTE_HEX(ALC_AMBISONIC_SCALING_SOFT)
                 if(device->Type == DeviceType::Loopback)
                     optscale = DevAmbiScalingFromEnum(attrList[attrIdx + 1]);
                 break;
@@ -1296,8 +1297,11 @@ auto UpdateDeviceParams(al::Device *device, const al::span<const int> attrList) 
                     optlimit = std::nullopt;
                 break;
 
-            case ATTRIBUTE(ALC_OUTPUT_MODE_SOFT)
+            case ATTRIBUTE_HEX(ALC_OUTPUT_MODE_SOFT)
                 outmode = attrList[attrIdx + 1];
+                break;
+
+            case ATTRIBUTE_HEX(ALC_CONTEXT_FLAGS_EXT)
                 break;
 
             default:
@@ -1306,6 +1310,7 @@ auto UpdateDeviceParams(al::Device *device, const al::span<const int> attrList) 
                 break;
             }
         }
+#undef ATTRIBUTE_HEX
 #undef ATTRIBUTE
 
         if(device->Type == DeviceType::Loopback)

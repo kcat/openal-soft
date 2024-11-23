@@ -1,11 +1,13 @@
 
 #include "config.h"
+#include "config_backends.h"
+#include "config_simd.h"
 
 #include "mainwindow.h"
 
 #include <array>
 #include <cmath>
-#include <iostream>
+#include <memory>
 
 #include <QFileDialog>
 #include <QMessageBox>
@@ -32,48 +34,48 @@ struct BackendNamePair {
     /* NOLINTEND(*-avoid-c-arrays) */
 };
 constexpr std::array backendList{
-#ifdef HAVE_PIPEWIRE
+#if HAVE_PIPEWIRE
     BackendNamePair{ "pipewire", "PipeWire" },
 #endif
-#ifdef HAVE_PULSEAUDIO
+#if HAVE_PULSEAUDIO
     BackendNamePair{ "pulse", "PulseAudio" },
 #endif
-#ifdef HAVE_ALSA
-    BackendNamePair{ "alsa", "ALSA" },
-#endif
-#ifdef HAVE_JACK
-    BackendNamePair{ "jack", "JACK" },
-#endif
-#ifdef HAVE_COREAUDIO
-    BackendNamePair{ "core", "CoreAudio" },
-#endif
-#ifdef HAVE_OSS
-    BackendNamePair{ "oss", "OSS" },
-#endif
-#ifdef HAVE_SOLARIS
-    BackendNamePair{ "solaris", "Solaris" },
-#endif
-#ifdef HAVE_SNDIO
-    BackendNamePair{ "sndio", "SndIO" },
-#endif
-#ifdef HAVE_WASAPI
+#if HAVE_WASAPI
     BackendNamePair{ "wasapi", "WASAPI" },
 #endif
-#ifdef HAVE_DSOUND
+#if HAVE_COREAUDIO
+    BackendNamePair{ "core", "CoreAudio" },
+#endif
+#if HAVE_OPENSL
+    BackendNamePair{ "opensl", "OpenSL" },
+#endif
+#if HAVE_ALSA
+    BackendNamePair{ "alsa", "ALSA" },
+#endif
+#if HAVE_SOLARIS
+    BackendNamePair{ "solaris", "Solaris" },
+#endif
+#if HAVE_SNDIO
+    BackendNamePair{ "sndio", "SndIO" },
+#endif
+#if HAVE_OSS
+    BackendNamePair{ "oss", "OSS" },
+#endif
+#if HAVE_DSOUND
     BackendNamePair{ "dsound", "DirectSound" },
 #endif
-#ifdef HAVE_WINMM
+#if HAVE_WINMM
     BackendNamePair{ "winmm", "Windows Multimedia" },
 #endif
-#ifdef HAVE_PORTAUDIO
+#if HAVE_PORTAUDIO
     BackendNamePair{ "port", "PortAudio" },
 #endif
-#ifdef HAVE_OPENSL
-    BackendNamePair{ "opensl", "OpenSL" },
+#if HAVE_JACK
+    BackendNamePair{ "jack", "JACK" },
 #endif
 
     BackendNamePair{ "null", "Null Output" },
-#ifdef HAVE_WAVE
+#if HAVE_WAVE
     BackendNamePair{ "wave", "Wave Writer" },
 #endif
 };
@@ -145,19 +147,25 @@ constexpr std::array hrtfModeList{
     NameValuePair{ "Full", "full" },
 };
 
+#ifdef Q_OS_WIN32
+struct CoTaskMemDeleter {
+    void operator()(void *buffer) { CoTaskMemFree(buffer); }
+};
+/* NOLINTNEXTLINE(*-avoid-c-arrays) */
+using WCharBufferPtr = std::unique_ptr<WCHAR[],CoTaskMemDeleter>;
+#endif
+
 QString getDefaultConfigName()
 {
 #ifdef Q_OS_WIN32
     const char *fname{"alsoft.ini"};
-    auto get_appdata_path = []() noexcept -> QString
+    static constexpr auto get_appdata_path = []() -> QString
     {
-        QString ret;
-        WCHAR *buffer{};
+        auto buffer = WCharBufferPtr{};
         if(const HRESULT hr{SHGetKnownFolderPath(FOLDERID_RoamingAppData, KF_FLAG_DONT_UNEXPAND,
-            nullptr, &buffer)}; SUCCEEDED(hr))
-            ret = QString::fromWCharArray(buffer);
-        CoTaskMemFree(buffer);
-        return ret;
+            nullptr, al::out_ptr(buffer))}; SUCCEEDED(hr))
+            return QString::fromWCharArray(buffer.get());
+        return QString{};
     };
     QString base = get_appdata_path();
 #else
@@ -178,15 +186,13 @@ QString getDefaultConfigName()
 QString getBaseDataPath()
 {
 #ifdef Q_OS_WIN32
-    auto get_appdata_path = []() noexcept -> QString
+    static constexpr auto get_appdata_path = []() -> QString
     {
-        QString ret;
-        WCHAR *buffer{};
+        auto buffer = WCharBufferPtr{};
         if(const HRESULT hr{SHGetKnownFolderPath(FOLDERID_RoamingAppData, KF_FLAG_DONT_UNEXPAND,
-            nullptr, &buffer)}; SUCCEEDED(hr))
-            ret = QString::fromWCharArray(buffer);
-        CoTaskMemFree(buffer);
-        return ret;
+            nullptr, al::out_ptr(buffer))}; SUCCEEDED(hr))
+            return QString::fromWCharArray(buffer.get());
+        return QString{};
     };
     QString base = get_appdata_path();
 #else
@@ -297,18 +303,18 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow{parent}
     ui->resamplerSlider->setRange(0, resamplerList.size()-1);
     ui->hrtfmodeSlider->setRange(0, hrtfModeList.size()-1);
 
-#if !defined(HAVE_NEON) && !defined(HAVE_SSE)
+#if !HAVE_NEON && !HAVE_SSE
     ui->cpuExtDisabledLabel->move(ui->cpuExtDisabledLabel->x(), ui->cpuExtDisabledLabel->y() - 60);
 #else
     ui->cpuExtDisabledLabel->setVisible(false);
 #endif
 
-#ifndef HAVE_NEON
+#if !HAVE_NEON
 
-#ifndef HAVE_SSE4_1
-#ifndef HAVE_SSE3
-#ifndef HAVE_SSE2
-#ifndef HAVE_SSE
+#if !HAVE_SSE4_1
+#if !HAVE_SSE3
+#if !HAVE_SSE2
+#if !HAVE_SSE
     ui->enableSSECheckBox->setVisible(false);
 #endif /* !SSE */
     ui->enableSSE2CheckBox->setVisible(false);
@@ -321,10 +327,10 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow{parent}
 
 #else /* !Neon */
 
-#ifndef HAVE_SSE4_1
-#ifndef HAVE_SSE3
-#ifndef HAVE_SSE2
-#ifndef HAVE_SSE
+#if !HAVE_SSE4_1
+#if !HAVE_SSE3
+#if !HAVE_SSE2
+#if !HAVE_SSE
     ui->enableNeonCheckBox->move(ui->enableNeonCheckBox->x(), ui->enableNeonCheckBox->y() - 30);
     ui->enableSSECheckBox->setVisible(false);
 #endif /* !SSE */
@@ -337,7 +343,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow{parent}
 
 #endif
 
-#ifndef ALSOFT_EAX
+#if !ALSOFT_EAX
     ui->enableEaxCheck->setChecked(Qt::Unchecked);
     ui->enableEaxCheck->setEnabled(false);
     ui->enableEaxCheck->setVisible(false);
@@ -665,11 +671,12 @@ void MainWindow::loadConfig(const QString &fname)
     QString resampler = settings.value(QStringLiteral("resampler")).toString().trimmed();
     ui->resamplerSlider->setValue(2);
     ui->resamplerLabel->setText(std::data(resamplerList[2].name));
-    /* "Cubic" is an alias for the 4-point gaussian resampler. The "sinc4" and
+    /* "Cubic" is an alias for the 4-point spline resampler. The "sinc4" and
      * "sinc8" resamplers are unsupported, use "gaussian" as a fallback.
      */
-    if(resampler == QLatin1String{"cubic"} || resampler == QLatin1String{"sinc4"}
-        || resampler == QLatin1String{"sinc8"})
+    if(resampler == QLatin1String{"cubic"})
+        resampler = QStringLiteral("spline");
+    else if(resampler == QLatin1String{"sinc4"} || resampler == QLatin1String{"sinc8"})
         resampler = QStringLiteral("gaussian");
     /* The "bsinc" resampler name is an alias for "bsinc12". */
     else if(resampler == QLatin1String{"bsinc"})

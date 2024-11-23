@@ -1,5 +1,6 @@
 
 #include "config.h"
+#include "config_simd.h"
 
 #include "cpu_caps.h"
 
@@ -111,22 +112,22 @@ std::optional<CPUInfo> GetCPUInfo()
 #else
 
     /* Assume support for whatever's supported if we can't check for it */
-#if defined(HAVE_SSE4_1)
+#if HAVE_SSE4_1
 #warning "Assuming SSE 4.1 run-time support!"
     ret.mCaps |= CPU_CAP_SSE | CPU_CAP_SSE2 | CPU_CAP_SSE3 | CPU_CAP_SSE4_1;
-#elif defined(HAVE_SSE3)
+#elif HAVE_SSE3
 #warning "Assuming SSE 3 run-time support!"
     ret.mCaps |= CPU_CAP_SSE | CPU_CAP_SSE2 | CPU_CAP_SSE3;
-#elif defined(HAVE_SSE2)
+#elif HAVE_SSE2
 #warning "Assuming SSE 2 run-time support!"
     ret.mCaps |= CPU_CAP_SSE | CPU_CAP_SSE2;
-#elif defined(HAVE_SSE)
+#elif HAVE_SSE
 #warning "Assuming SSE run-time support!"
     ret.mCaps |= CPU_CAP_SSE;
 #endif
 #endif /* CAN_GET_CPUID */
 
-#ifdef HAVE_NEON
+#if HAVE_NEON
 #ifdef __ARM_NEON
     ret.mCaps |= CPU_CAP_NEON;
 #elif defined(_WIN32) && (defined(_M_ARM) || defined(_M_ARM64))

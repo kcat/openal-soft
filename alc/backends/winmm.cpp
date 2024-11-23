@@ -54,9 +54,6 @@
 
 namespace {
 
-#define DEVNAME_HEAD "OpenAL Soft on "
-
-
 std::vector<std::string> PlaybackDevices;
 std::vector<std::string> CaptureDevices;
 
@@ -76,7 +73,7 @@ void ProbePlaybackDevices()
         WAVEOUTCAPSW WaveCaps{};
         if(waveOutGetDevCapsW(i, &WaveCaps, sizeof(WaveCaps)) == MMSYSERR_NOERROR)
         {
-            const std::string basename{DEVNAME_HEAD + wstr_to_utf8(std::data(WaveCaps.szPname))};
+            const auto basename = wstr_to_utf8(std::data(WaveCaps.szPname));
 
             int count{1};
             std::string newname{basename};
@@ -107,7 +104,7 @@ void ProbeCaptureDevices()
         WAVEINCAPSW WaveCaps{};
         if(waveInGetDevCapsW(i, &WaveCaps, sizeof(WaveCaps)) == MMSYSERR_NOERROR)
         {
-            const std::string basename{DEVNAME_HEAD + wstr_to_utf8(std::data(WaveCaps.szPname))};
+            const auto basename = wstr_to_utf8(std::data(WaveCaps.szPname));
 
             int count{1};
             std::string newname{basename};
@@ -256,7 +253,7 @@ void WinMMPlayback::open(std::string_view name)
 
     mFormat = format;
 
-    mDevice->DeviceName = PlaybackDevices[DeviceID];
+    mDeviceName = PlaybackDevices[DeviceID];
 }
 
 bool WinMMPlayback::reset()
@@ -521,7 +518,7 @@ void WinMMCapture::open(std::string_view name)
         mWaveBuffer[i].dwBufferLength = mWaveBuffer[i-1].dwBufferLength;
     }
 
-    mDevice->DeviceName = CaptureDevices[DeviceID];
+    mDeviceName = CaptureDevices[DeviceID];
 }
 
 void WinMMCapture::start()

@@ -45,11 +45,10 @@ public:
             mVals[2] - rhs.mVals[2], mVals[3] - rhs.mVals[3]};
     }
 
-    constexpr auto normalize(float limit = std::numeric_limits<float>::epsilon()) -> float
+    constexpr auto normalize() -> float
     {
-        limit = std::max(limit, std::numeric_limits<float>::epsilon());
         const auto length_sqr = float{mVals[0]*mVals[0] + mVals[1]*mVals[1] + mVals[2]*mVals[2]};
-        if(length_sqr > limit*limit)
+        if(length_sqr > std::numeric_limits<float>::epsilon())
         {
             const auto length = float{std::sqrt(length_sqr)};
             auto inv_length = float{1.0f / length};

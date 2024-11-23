@@ -15,6 +15,7 @@
 #include "AL/alc.h"
 #include "AL/al.h"
 
+#include "albit.h"
 #include "alstring.h"
 #include "opthelpers.h"
 #include "strutils.h"
@@ -88,7 +89,7 @@ void AddModule(HMODULE module, const std::wstring_view name)
             return false;
         }
 
-        func = reinterpret_cast<func_t>(reinterpret_cast<void*>(ptr));
+        func = al::bit_cast<func_t>(ptr);
         return true;
     };
 #define LOAD_PROC(x) loadok &= do_load(newdrv.x, #x)
@@ -197,7 +198,7 @@ void AddModule(HMODULE module, const std::wstring_view name)
                 WARN("Failed to find optional entry point for %s in %.*ls\n", fname,
                     al::sizei(name), name.data());
             else
-                func = reinterpret_cast<func_t>(reinterpret_cast<void*>(ptr));
+                func = al::bit_cast<func_t>(ptr);
         };
 #define LOAD_PROC(x) do_load2(newdrv.x, #x)
         LOAD_PROC(alBufferf);

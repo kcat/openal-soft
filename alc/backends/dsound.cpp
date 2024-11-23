@@ -90,9 +90,6 @@ DEFINE_GUID(KSDATAFORMAT_SUBTYPE_IEEE_FLOAT, 0x00000003, 0x0000, 0x0010, 0x80, 0
 
 namespace {
 
-#define DEVNAME_HEAD "OpenAL Soft on "
-
-
 #ifdef HAVE_DYNLOAD
 void *ds_handle;
 HRESULT (WINAPI *pDirectSoundCreate)(const GUID *pcGuidDevice, IDirectSound **ppDS, IUnknown *pUnkOuter);
@@ -146,7 +143,7 @@ BOOL CALLBACK DSoundEnumDevices(GUID *guid, const WCHAR *desc, const WCHAR*, voi
         return TRUE;
 
     auto& devices = *static_cast<std::vector<DevMap>*>(data);
-    const std::string basename{DEVNAME_HEAD + wstr_to_utf8(desc)};
+    const auto basename = wstr_to_utf8(desc);
 
     int count{1};
     std::string newname{basename};
@@ -356,7 +353,7 @@ void DSoundPlayback::open(std::string_view name)
     mPrimaryBuffer = nullptr;
     mDS = std::move(ds);
 
-    mDevice->DeviceName = name;
+    mDeviceName = name;
 }
 
 bool DSoundPlayback::reset()
@@ -691,7 +688,7 @@ void DSoundCapture::open(std::string_view name)
     mBufferBytes = DSCBDescription.dwBufferBytes;
     setDefaultWFXChannelOrder();
 
-    mDevice->DeviceName = name;
+    mDeviceName = name;
 }
 
 void DSoundCapture::start()

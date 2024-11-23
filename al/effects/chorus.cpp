@@ -9,7 +9,7 @@
 
 #include "effects.h"
 
-#ifdef ALSOFT_EAX
+#if ALSOFT_EAX
 #include <cassert>
 #include "al/eax/effect.h"
 #include "al/eax/exception.h"
@@ -250,7 +250,7 @@ void FlangerEffectHandler::GetParamfv(const ChorusProps &props, ALenum param, fl
 { GetParamf(props, param, vals); }
 
 
-#ifdef ALSOFT_EAX
+#if ALSOFT_EAX
 namespace {
 
 struct EaxChorusTraits {

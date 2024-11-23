@@ -19,8 +19,6 @@
 #include <deque>
 #include <functional>
 #include <future>
-#include <iomanip>
-#include <iostream>
 #include <memory>
 #include <mutex>
 #include <ratio>
@@ -69,14 +67,18 @@ _Pragma("GCC diagnostic pop")
 #include "AL/al.h"
 #include "AL/alext.h"
 
+#include "almalloc.h"
 #include "alnumbers.h"
 #include "alnumeric.h"
 #include "alspan.h"
 #include "common/alhelpers.h"
+#include "fmt/core.h"
+#include "fmt/format.h"
 
 
 namespace {
 
+using voidp = void*;
 using fixed32 = std::chrono::duration<int64_t,std::ratio<1,(1_i64<<32)>>;
 using nanoseconds = std::chrono::nanoseconds;
 using microseconds = std::chrono::microseconds;
@@ -220,11 +222,11 @@ public:
         if(!packet)
         {
             if(!ret) return AVErrorEOF;
-            std::cerr<< "Failed to send flush packet: "<<ret <<std::endl;
+            fmt::println(stderr, "Failed to send flush packet: {}", ret);
             return ret;
         }
         if(ret < 0)
-            std::cerr<< "Failed to send packet: "<<ret <<std::endl;
+            fmt::println(stderr, "Failed to send packet: {}", ret);
         return ret;
     }
 
@@ -341,7 +343,7 @@ struct AudioState {
         if(mBuffers[0])
             alDeleteBuffers(static_cast<ALsizei>(mBuffers.size()), mBuffers.data());
 
-        av_freep(mSamples.data());
+        av_freep(static_cast<void*>(mSamples.data()));
     }
 
     static void AL_APIENTRY eventCallbackC(ALenum eventType, ALuint object, ALuint param,
@@ -670,7 +672,7 @@ int AudioState::decodeFrame()
         while(int ret{mQueue.receiveFrame(mCodecCtx.get(), mDecodedFrame.get())})
         {
             if(ret == AVErrorEOF) return 0;
-            std::cerr<< "Failed to receive frame: "<<ret <<std::endl;
+            fmt::println(stderr, "Failed to receive frame: {}", ret);
         }
     } while(mDecodedFrame->nb_samples <= 0);
 
@@ -681,7 +683,7 @@ int AudioState::decodeFrame()
 
     if(mDecodedFrame->nb_samples > mSamplesMax)
     {
-        av_freep(mSamples.data());
+        av_freep(static_cast<void*>(mSamples.data()));
         av_samples_alloc(mSamples.data(), nullptr, mCodecCtx->ch_layout.nb_channels,
             mDecodedFrame->nb_samples, mDstSampleFmt, 0);
         mSamplesMax = mDecodedFrame->nb_samples;
@@ -860,21 +862,19 @@ void AL_APIENTRY AudioState::eventCallback(ALenum eventType, ALuint object, ALui
         return;
     }
 
-    std::cout<< "\n---- AL Event on AudioState "<<this<<" ----\nEvent: ";
+    fmt::print("\n---- AL Event on AudioState {:p} ----\nEvent: ", voidp{this});
     switch(eventType)
     {
-    case AL_EVENT_TYPE_BUFFER_COMPLETED_SOFT: std::cout<< "Buffer completed"; break;
-    case AL_EVENT_TYPE_SOURCE_STATE_CHANGED_SOFT: std::cout<< "Source state changed"; break;
-    case AL_EVENT_TYPE_DISCONNECTED_SOFT: std::cout<< "Disconnected"; break;
-    default:
-        std::cout<< "0x"<<std::hex<<std::setw(4)<<std::setfill('0')<<eventType<<std::dec<<
-            std::setw(0)<<std::setfill(' '); break;
+    case AL_EVENT_TYPE_BUFFER_COMPLETED_SOFT: fmt::print("Buffer completed"); break;
+    case AL_EVENT_TYPE_SOURCE_STATE_CHANGED_SOFT: fmt::print("Source state changed"); break;
+    case AL_EVENT_TYPE_DISCONNECTED_SOFT: fmt::print("Disconnected"); break;
+    default: fmt::print("0x{:04x}", eventType); break;
     }
-    std::cout<< "\n"
-        "Object ID: "<<object<<"\n"
-        "Parameter: "<<param<<"\n"
-        "Message: "<<std::string{message, static_cast<ALuint>(length)}<<"\n----"<<
-        std::endl;
+    fmt::println("\n"
+        "Object ID: {}\n"
+        "Parameter: {}\n"
+        "Message: {}\n----",
+        object, param, std::string_view{message, static_cast<ALuint>(length)});
 
     if(eventType == AL_EVENT_TYPE_DISCONNECTED_SOFT)
     {
@@ -983,7 +983,8 @@ int AudioState::handler()
                 {
                     mDstChanLayout = layoutmask;
                     mFrameSize *= 4;
-                    mFormat = alGetEnumValue("AL_FORMAT_QUAD32");
+                    mFormat = EnableUhj ? AL_FORMAT_UHJ4CHN_FLOAT32_SOFT
+                        : alGetEnumValue("AL_FORMAT_QUAD32");
                 }
             }
             if(layoutmask == AV_CH_LAYOUT_MONO)
@@ -1044,7 +1045,8 @@ int AudioState::handler()
                 {
                     mDstChanLayout = layoutmask;
                     mFrameSize *= 4;
-                    mFormat = alGetEnumValue("AL_FORMAT_QUAD8");
+                    mFormat = EnableUhj ? AL_FORMAT_UHJ4CHN8_SOFT
+                        : alGetEnumValue("AL_FORMAT_QUAD8");
                 }
             }
             if(layoutmask == AV_CH_LAYOUT_MONO)
@@ -1097,7 +1099,8 @@ int AudioState::handler()
                 {
                     mDstChanLayout = layoutmask;
                     mFrameSize *= 4;
-                    mFormat = alGetEnumValue("AL_FORMAT_QUAD16");
+                    mFormat = EnableUhj ? AL_FORMAT_UHJ4CHN16_SOFT
+                        : alGetEnumValue("AL_FORMAT_QUAD16");
                 }
             }
             if(layoutmask == AV_CH_LAYOUT_MONO)
@@ -1136,7 +1139,7 @@ int AudioState::handler()
     mDecodedFrame.reset(av_frame_alloc());
     if(!mDecodedFrame)
     {
-        std::cerr<< "Failed to allocate audio frame" <<std::endl;
+        fmt::println(stderr, "Failed to allocate audio frame");
         return 0;
     }
 
@@ -1153,23 +1156,22 @@ int AudioState::handler()
         ChannelLayout layout{};
         av_channel_layout_from_string(&layout, "ambisonic 1");
 
-        SwrContext *ps{};
-        int err{swr_alloc_set_opts2(&ps, &layout, mDstSampleFmt, mCodecCtx->sample_rate,
-            &mCodecCtx->ch_layout, mCodecCtx->sample_fmt, mCodecCtx->sample_rate, 0, nullptr)};
-        mSwresCtx.reset(ps);
+        int err{swr_alloc_set_opts2(al::out_ptr(mSwresCtx), &layout, mDstSampleFmt,
+            mCodecCtx->sample_rate, &mCodecCtx->ch_layout, mCodecCtx->sample_fmt,
+            mCodecCtx->sample_rate, 0, nullptr)};
         if(err != 0)
         {
             std::array<char,AV_ERROR_MAX_STRING_SIZE> errstr{};
-            std::cerr<< "Failed to allocate SwrContext: "
-                <<av_make_error_string(errstr.data(), AV_ERROR_MAX_STRING_SIZE, err) <<std::endl;
+            fmt::println(stderr, "Failed to allocate SwrContext: {}",
+                av_make_error_string(errstr.data(), AV_ERROR_MAX_STRING_SIZE, err));
             return 0;
         }
 
         if(has_bfmt_ex)
-            std::cout<< "Found AL_SOFT_bformat_ex" <<std::endl;
+            fmt::println("Found AL_SOFT_bformat_ex");
         else
         {
-            std::cout<< "Found AL_EXT_BFORMAT" <<std::endl;
+            fmt::println("Found AL_EXT_BFORMAT");
             /* Without AL_SOFT_bformat_ex, OpenAL only supports FuMa channel
              * ordering and normalization, so a custom matrix is needed to
              * scale and reorder the source from AmbiX.
@@ -1187,23 +1189,22 @@ int AudioState::handler()
         ChannelLayout layout{};
         av_channel_layout_from_mask(&layout, mDstChanLayout);
 
-        SwrContext *ps{};
-        int err{swr_alloc_set_opts2(&ps, &layout, mDstSampleFmt, mCodecCtx->sample_rate,
-            &mCodecCtx->ch_layout, mCodecCtx->sample_fmt, mCodecCtx->sample_rate, 0, nullptr)};
-        mSwresCtx.reset(ps);
+        int err{swr_alloc_set_opts2(al::out_ptr(mSwresCtx), &layout, mDstSampleFmt,
+            mCodecCtx->sample_rate, &mCodecCtx->ch_layout, mCodecCtx->sample_fmt,
+            mCodecCtx->sample_rate, 0, nullptr)};
         if(err != 0)
         {
             std::array<char,AV_ERROR_MAX_STRING_SIZE> errstr{};
-            std::cerr<< "Failed to allocate SwrContext: "
-                <<av_make_error_string(errstr.data(), AV_ERROR_MAX_STRING_SIZE, err) <<std::endl;
+            fmt::println(stderr, "Failed to allocate SwrContext: {}",
+                av_make_error_string(errstr.data(), AV_ERROR_MAX_STRING_SIZE, err));
             return 0;
         }
     }
     if(int err{swr_init(mSwresCtx.get())})
     {
         std::array<char,AV_ERROR_MAX_STRING_SIZE> errstr{};
-        std::cerr<< "Failed to initialize audio converter: "
-            <<av_make_error_string(errstr.data(), AV_ERROR_MAX_STRING_SIZE, err) <<std::endl;
+        fmt::println(stderr, "Failed to initialize audio converter: {}",
+            av_make_error_string(errstr.data(), AV_ERROR_MAX_STRING_SIZE, err));
         return 0;
     }
 
@@ -1241,7 +1242,7 @@ int AudioState::handler()
         alSourcei(mSource, AL_BUFFER, static_cast<ALint>(mBuffers[0]));
         if(alGetError() != AL_NO_ERROR)
         {
-            fprintf(stderr, "Failed to set buffer callback\n");
+            fmt::println(stderr, "Failed to set buffer callback");
             alSourcei(mSource, AL_BUFFER, 0);
         }
         else
@@ -1274,7 +1275,7 @@ int AudioState::handler()
             if(ret == AVErrorEOF) break;
         }
     };
-    auto sender = std::async(std::launch::async, packet_sender);
+    auto sender [[maybe_unused]] = std::async(std::launch::async, packet_sender);
 
     srclock.lock();
     if(alcGetInteger64vSOFT)
@@ -1383,8 +1384,7 @@ int AudioState::handler()
                 break;
         }
         if(ALenum err{alGetError()})
-            std::cerr<< "Got AL error: 0x"<<std::hex<<err<<std::dec
-                << " ("<<alGetString(err)<<")" <<std::endl;
+            fmt::println(stderr, "Got AL error: 0x{:04x} ({})", err, alGetString(err));
 
         mSrcCond.wait_for(srclock, sleep_time);
     }
@@ -1502,7 +1502,7 @@ void VideoState::updateVideo(SDL_Window *screen, SDL_Renderer *renderer, bool re
             mImage = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_IYUV, SDL_TEXTUREACCESS_STREAMING,
                 frame->width, frame->height);
             if(!mImage)
-                std::cerr<< "Failed to create YV12 texture!" <<std::endl;
+                fmt::println(stderr, "Failed to create YV12 texture!");
             mWidth = frame->width;
             mHeight = frame->height;
         }
@@ -1537,7 +1537,7 @@ void VideoState::updateVideo(SDL_Window *screen, SDL_Renderer *renderer, bool re
                     frame->data[2], frame->linesize[2]
                 );
             else if(SDL_LockTexture(mImage, nullptr, &pixels, &pitch) != 0)
-                std::cerr<< "Failed to lock texture" <<std::endl;
+                fmt::println(stderr, "Failed to lock texture");
             else
             {
                 // Convert the image into YUV format that SDL uses
@@ -1611,7 +1611,7 @@ int VideoState::handler()
             if(ret == AVErrorEOF) break;
         }
     };
-    auto sender = std::async(std::launch::async, packet_sender);
+    auto sender [[maybe_unused]] = std::async(std::launch::async, packet_sender);
 
     {
         std::lock_guard<std::mutex> displock{mDispPtsMutex};
@@ -1629,7 +1629,7 @@ int VideoState::handler()
         while(int ret{mQueue.receiveFrame(mCodecCtx.get(), decoded_frame)})
         {
             if(ret == AVErrorEOF) goto finish;
-            std::cerr<< "Failed to receive frame: "<<ret <<std::endl;
+            fmt::println(stderr, "Failed to receive frame: {}", ret);
         }
 
         /* Get the PTS for this frame. */
@@ -1678,7 +1678,7 @@ bool MovieState::prepare()
     AVIOInterruptCB intcb{decode_interrupt_cb, this};
     if(avio_open2(&avioctx, mFilename.c_str(), AVIO_FLAG_READ, &intcb, nullptr))
     {
-        std::cerr<< "Failed to open "<<mFilename <<std::endl;
+        fmt::println(stderr, "Failed to open {}", mFilename);
         return false;
     }
     mIOContext.reset(avioctx);
@@ -1691,7 +1691,7 @@ bool MovieState::prepare()
     fmtctx->interrupt_callback = intcb;
     if(avformat_open_input(&fmtctx, mFilename.c_str(), nullptr, nullptr) != 0)
     {
-        std::cerr<< "Failed to open "<<mFilename <<std::endl;
+        fmt::println(stderr, "Failed to open {}", mFilename);
         return false;
     }
     mFormatCtx.reset(fmtctx);
@@ -1699,7 +1699,7 @@ bool MovieState::prepare()
     /* Retrieve stream information */
     if(avformat_find_stream_info(mFormatCtx.get(), nullptr) < 0)
     {
-        std::cerr<< mFilename<<": failed to find stream info" <<std::endl;
+        fmt::println(stderr, "{}: failed to find stream info", mFilename);
         return false;
     }
 
@@ -1756,8 +1756,8 @@ bool MovieState::streamComponentOpen(AVStream *stream)
     const AVCodec *codec{avcodec_find_decoder(avctx->codec_id)};
     if(!codec || avcodec_open2(avctx.get(), codec, nullptr) < 0)
     {
-        std::cerr<< "Unsupported codec: "<<avcodec_get_name(avctx->codec_id)
-            << " (0x"<<std::hex<<avctx->codec_id<<std::dec<<")" <<std::endl;
+        fmt::println(stderr, "Unsupported codec: {} (0x{:x})", avcodec_get_name(avctx->codec_id),
+            int{avctx->codec_id});
         return false;
     }
 
@@ -1810,7 +1810,7 @@ int MovieState::parse_handler()
 
     if(video_index < 0 && audio_index < 0)
     {
-        std::cerr<< mFilename<<": could not open codecs" <<std::endl;
+        fmt::println(stderr, "{}: could not open codecs", mFilename);
         mQuit = true;
     }
 
@@ -1874,33 +1874,21 @@ void MovieState::stop()
 }
 
 
-// Helper class+method to print the time with human-readable formatting.
-struct PrettyTime {
-    seconds mTime;
-};
-std::ostream &operator<<(std::ostream &os, const PrettyTime &rhs)
+// Helper method to print the time with human-readable formatting.
+auto PrettyTime(seconds t) -> std::string
 {
     using hours = std::chrono::hours;
     using minutes = std::chrono::minutes;
 
-    seconds t{rhs.mTime};
     if(t.count() < 0)
-    {
-        os << '-';
-        t *= -1;
-    }
+        return "0s";
 
     // Only handle up to hour formatting
     if(t >= hours{1})
-        os << duration_cast<hours>(t).count() << 'h' << std::setfill('0') << std::setw(2)
-           << (duration_cast<minutes>(t).count() % 60) << 'm';
-    else
-        os << duration_cast<minutes>(t).count() << 'm' << std::setfill('0');
-    os << std::setw(2) << (duration_cast<seconds>(t).count() % 60) << 's' << std::setw(0)
-       << std::setfill(' ');
-    return os;
+        return fmt::format("{}h{:02}m{:02}s", duration_cast<hours>(t).count(),
+            duration_cast<minutes>(t).count()%60, t.count()%60);
+    return fmt::format("{}m{:02}s", duration_cast<minutes>(t).count(), t.count()%60);
 }
-
 
 int main(al::span<std::string_view> args)
 {
@@ -1910,7 +1898,7 @@ int main(al::span<std::string_view> args)
 
     if(args.size() < 2)
     {
-        std::cerr<< "Usage: "<<args[0]<<" [-device <device name>] [-direct] <files...>" <<std::endl;
+        fmt::println(stderr, "Usage: {} [-device <device name>] [-direct] <files...>", args[0]);
         return 1;
     }
     /* Register all formats and codecs */
@@ -1922,7 +1910,7 @@ int main(al::span<std::string_view> args)
 
     if(SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS))
     {
-        std::cerr<< "Could not initialize SDL - <<"<<SDL_GetError() <<std::endl;
+        fmt::println(stderr, "Could not initialize SDL - {}", SDL_GetError());
         return 1;
     }
 
@@ -1930,7 +1918,7 @@ int main(al::span<std::string_view> args)
     SDL_Window *screen{SDL_CreateWindow(AppName.c_str(), 0, 0, 640, 480, SDL_WINDOW_RESIZABLE)};
     if(!screen)
     {
-        std::cerr<< "SDL: could not set video mode - exiting" <<std::endl;
+        fmt::println(stderr, "SDL: could not set video mode - exiting");
         return 1;
     }
     /* Make a renderer to handle the texture image surface and rendering. */
@@ -1950,7 +1938,8 @@ int main(al::span<std::string_view> args)
         }
         if(!ok)
         {
-            std::cerr<< "IYUV pixelformat textures not supported on renderer "<<rinf.name <<std::endl;
+            fmt::println(stderr, "IYUV pixelformat textures not supported on renderer {}",
+                rinf.name);
             SDL_DestroyRenderer(renderer);
             renderer = nullptr;
         }
@@ -1962,7 +1951,7 @@ int main(al::span<std::string_view> args)
     }
     if(!renderer)
     {
-        std::cerr<< "SDL: could not create renderer - exiting" <<std::endl;
+        fmt::println(stderr, "SDL: could not create renderer - exiting");
         return 1;
     }
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
@@ -1978,7 +1967,7 @@ int main(al::span<std::string_view> args)
         ALCdevice *device{alcGetContextsDevice(alcGetCurrentContext())};
         if(alcIsExtensionPresent(device,"ALC_SOFT_device_clock"))
         {
-            std::cout<< "Found ALC_SOFT_device_clock" <<std::endl;
+            fmt::println("Found ALC_SOFT_device_clock");
             alcGetInteger64vSOFT = reinterpret_cast<LPALCGETINTEGER64VSOFT>(
                 alcGetProcAddress(device, "alcGetInteger64vSOFT"));
         }
@@ -1986,13 +1975,13 @@ int main(al::span<std::string_view> args)
 
     if(alIsExtensionPresent("AL_SOFT_source_latency"))
     {
-        std::cout<< "Found AL_SOFT_source_latency" <<std::endl;
+        fmt::println("Found AL_SOFT_source_latency");
         alGetSourcei64vSOFT = reinterpret_cast<LPALGETSOURCEI64VSOFT>(
             alGetProcAddress("alGetSourcei64vSOFT"));
     }
     if(alIsExtensionPresent("AL_SOFT_events"))
     {
-        std::cout<< "Found AL_SOFT_events" <<std::endl;
+        fmt::println("Found AL_SOFT_events");
         alEventControlSOFT = reinterpret_cast<LPALEVENTCONTROLSOFT>(
             alGetProcAddress("alEventControlSOFT"));
         alEventCallbackSOFT = reinterpret_cast<LPALEVENTCALLBACKSOFT>(
@@ -2000,7 +1989,7 @@ int main(al::span<std::string_view> args)
     }
     if(alIsExtensionPresent("AL_SOFT_callback_buffer"))
     {
-        std::cout<< "Found AL_SOFT_callback_buffer" <<std::endl;
+        fmt::println("Found AL_SOFT_callback_buffer");
         alBufferCallbackSOFT = reinterpret_cast<LPALBUFFERCALLBACKSOFT>(
             alGetProcAddress("alBufferCallbackSOFT"));
     }
@@ -2012,44 +2001,44 @@ int main(al::span<std::string_view> args)
         {
             if(alIsExtensionPresent("AL_SOFT_direct_channels_remix"))
             {
-                std::cout<< "Found AL_SOFT_direct_channels_remix" <<std::endl;
+                fmt::println("Found AL_SOFT_direct_channels_remix");
                 DirectOutMode = AL_REMIX_UNMATCHED_SOFT;
             }
             else if(alIsExtensionPresent("AL_SOFT_direct_channels"))
             {
-                std::cout<< "Found AL_SOFT_direct_channels" <<std::endl;
+                fmt::println("Found AL_SOFT_direct_channels");
                 DirectOutMode = AL_DROP_UNMATCHED_SOFT;
             }
             else
-                std::cerr<< "AL_SOFT_direct_channels not supported for direct output" <<std::endl;
+                fmt::println(stderr, "AL_SOFT_direct_channels not supported for direct output");
         }
         else if(args[fileidx] == "-wide")
         {
             if(!alIsExtensionPresent("AL_EXT_STEREO_ANGLES"))
-                std::cerr<< "AL_EXT_STEREO_ANGLES not supported for wide stereo" <<std::endl;
+                fmt::println(stderr, "AL_EXT_STEREO_ANGLES not supported for wide stereo");
             else
             {
-                std::cout<< "Found AL_EXT_STEREO_ANGLES" <<std::endl;
+                fmt::println("Found AL_EXT_STEREO_ANGLES");
                 EnableWideStereo = true;
             }
         }
         else if(args[fileidx] == "-uhj")
         {
             if(!alIsExtensionPresent("AL_SOFT_UHJ"))
-                std::cerr<< "AL_SOFT_UHJ not supported for UHJ decoding" <<std::endl;
+                fmt::println(stderr, "AL_SOFT_UHJ not supported for UHJ decoding");
             else
             {
-                std::cout<< "Found AL_SOFT_UHJ" <<std::endl;
+                fmt::println("Found AL_SOFT_UHJ");
                 EnableUhj = true;
             }
         }
         else if(args[fileidx] == "-superstereo")
         {
             if(!alIsExtensionPresent("AL_SOFT_UHJ"))
-                std::cerr<< "AL_SOFT_UHJ not supported for Super Stereo decoding" <<std::endl;
+                fmt::println(stderr, "AL_SOFT_UHJ not supported for Super Stereo decoding");
             else
             {
-                std::cout<< "Found AL_SOFT_UHJ (Super Stereo)" <<std::endl;
+                fmt::println("Found AL_SOFT_UHJ (Super Stereo)");
                 EnableSuperStereo = true;
             }
         }
@@ -2066,7 +2055,7 @@ int main(al::span<std::string_view> args)
     }
     if(!movState)
     {
-        std::cerr<< "Could not start a video" <<std::endl;
+        fmt::println(stderr, "Could not start a video");
         return 1;
     }
     movState->setTitle(screen);
@@ -2085,7 +2074,8 @@ int main(al::span<std::string_view> args)
         if(cur_time != last_time)
         {
             auto end_time = std::chrono::duration_cast<seconds>(movState->getDuration());
-            std::cout<< "    \r "<<PrettyTime{cur_time}<<" / "<<PrettyTime{end_time} <<std::flush;
+            fmt::print("    \r {} / {}", PrettyTime(cur_time), PrettyTime(end_time));
+            fflush(stdout);
             last_time = cur_time;
         }
 
@@ -2175,7 +2165,7 @@ int main(al::span<std::string_view> args)
         movState->mVideo.updateVideo(screen, renderer, force_redraw);
     }
 
-    std::cerr<< "SDL_WaitEvent error - "<<SDL_GetError() <<std::endl;
+    fmt::println(stderr, "SDL_WaitEvent error - {}", SDL_GetError());
     return 1;
 }
 

@@ -14,7 +14,7 @@
 #include "core/effects/base.h"
 #include "effects.h"
 
-#ifdef ALSOFT_EAX
+#if ALSOFT_EAX
 #include <cassert>
 #include "al/eax/api.h"
 #include "al/eax/call.h"
@@ -463,7 +463,7 @@ void StdReverbEffectHandler::GetParamfv(const ReverbProps &props, ALenum param, 
 { GetParamf(props, param, vals); }
 
 
-#ifdef ALSOFT_EAX
+#if ALSOFT_EAX
 namespace {
 
 class EaxReverbEffectException : public EaxException

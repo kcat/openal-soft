@@ -21,7 +21,6 @@
 
 #include "alc/context.h"
 #include "alc/device.h"
-#include "alc/inprogext.h"
 #include "alnumeric.h"
 #include "alspan.h"
 #include "alstring.h"
@@ -458,58 +457,49 @@ FORCE_ALIGN ALuint AL_APIENTRY alGetDebugMessageLogDirectEXT(ALCcontext *context
     ALsizei logBufSize, ALenum *sources, ALenum *types, ALuint *ids, ALenum *severities,
     ALsizei *lengths, ALchar *logBuf) noexcept
 try {
-    if(logBufSize < 0)
+    if(logBuf && logBufSize < 0)
         throw al::context_error{AL_INVALID_VALUE, "Negative debug log buffer size"};
 
-    auto sourcesOut = al::span{sources, sources ? count : 0u};
-    auto typesOut = al::span{types, types ? count : 0u};
-    auto idsOut = al::span{ids, ids ? count : 0u};
-    auto severitiesOut = al::span{severities, severities ? count : 0u};
-    auto lengthsOut = al::span{lengths, lengths ? count : 0u};
-    auto logOut = al::span{logBuf, logBuf ? static_cast<ALuint>(logBufSize) : 0u};
+    const auto sourcesSpan = al::span{sources, sources ? count : 0u};
+    const auto typesSpan = al::span{types, types ? count : 0u};
+    const auto idsSpan = al::span{ids, ids ? count : 0u};
+    const auto severitiesSpan = al::span{severities, severities ? count : 0u};
+    const auto lengthsSpan = al::span{lengths, lengths ? count : 0u};
+    const auto logSpan = al::span{logBuf, logBuf ? static_cast<ALuint>(logBufSize) : 0u};
 
-    std::lock_guard<std::mutex> debuglock{context->mDebugCbLock};
+    auto sourceiter = sourcesSpan.begin();
+    auto typeiter = typesSpan.begin();
+    auto iditer = idsSpan.begin();
+    auto severityiter = severitiesSpan.begin();
+    auto lengthiter = lengthsSpan.begin();
+    auto logiter = logSpan.begin();
+
+    auto debuglock = std::lock_guard{context->mDebugCbLock};
     for(ALuint i{0};i < count;++i)
     {
         if(context->mDebugLog.empty())
             return i;
 
         auto &entry = context->mDebugLog.front();
-        const size_t tocopy{entry.mMessage.size() + 1};
-        if(logOut.data() != nullptr)
+        const auto tocopy = size_t{entry.mMessage.size() + 1};
+        if(al::to_address(logiter) != nullptr)
         {
-            if(logOut.size() < tocopy)
+            if(static_cast<size_t>(std::distance(logiter, logSpan.end())) < tocopy)
                 return i;
-            auto oiter = std::copy(entry.mMessage.cbegin(), entry.mMessage.cend(), logOut.begin());
-            *oiter = '\0';
-            logOut = {oiter+1, logOut.end()};
+            logiter = std::copy(entry.mMessage.cbegin(), entry.mMessage.cend(), logiter);
+            *(logiter++) = '\0';
         }
 
-        if(!sourcesOut.empty())
-        {
-            sourcesOut.front() = GetDebugSourceEnum(entry.mSource);
-            sourcesOut = sourcesOut.subspan<1>();
-        }
-        if(!typesOut.empty())
-        {
-            typesOut.front() = GetDebugTypeEnum(entry.mType);
-            typesOut = typesOut.subspan<1>();
-        }
-        if(!idsOut.empty())
-        {
-            idsOut.front() = entry.mId;
-            idsOut = idsOut.subspan<1>();
-        }
-        if(!severitiesOut.empty())
-        {
-            severitiesOut.front() = GetDebugSeverityEnum(entry.mSeverity);
-            severitiesOut = severitiesOut.subspan<1>();
-        }
-        if(!lengthsOut.empty())
-        {
-            lengthsOut.front() = static_cast<ALsizei>(tocopy);
-            lengthsOut = lengthsOut.subspan<1>();
-        }
+        if(al::to_address(sourceiter) != nullptr)
+            *(sourceiter++) = GetDebugSourceEnum(entry.mSource);
+        if(al::to_address(typeiter) != nullptr)
+            *(typeiter++) = GetDebugTypeEnum(entry.mType);
+        if(al::to_address(iditer) != nullptr)
+            *(iditer++) = entry.mId;
+        if(al::to_address(severityiter) != nullptr)
+            *(severityiter++) = GetDebugSeverityEnum(entry.mSeverity);
+        if(al::to_address(lengthiter) != nullptr)
+            *(lengthiter++) = static_cast<ALsizei>(tocopy);
 
         context->mDebugLog.pop_front();
     }
@@ -589,20 +579,20 @@ try {
     }
     else if(identifier == AL_BUFFER)
     {
-        ALCdevice *device{context->mALDevice.get()};
-        std::lock_guard buflock{device->BufferLock};
+        auto *device = context->mALDevice.get();
+        auto buflock = std::lock_guard{device->BufferLock};
         copy_name(device->mBufferNames);
     }
     else if(identifier == AL_FILTER_EXT)
     {
-        ALCdevice *device{context->mALDevice.get()};
-        std::lock_guard filterlock{device->FilterLock};
+        auto *device = context->mALDevice.get();
+        auto buflock = std::lock_guard{device->FilterLock};
         copy_name(device->mFilterNames);
     }
     else if(identifier == AL_EFFECT_EXT)
     {
-        ALCdevice *device{context->mALDevice.get()};
-        std::lock_guard effectlock{device->EffectLock};
+        auto *device = context->mALDevice.get();
+        auto buflock = std::lock_guard{device->EffectLock};
         copy_name(device->mEffectNames);
     }
     else if(identifier == AL_AUXILIARY_EFFECT_SLOT_EXT)

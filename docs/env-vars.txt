@@ -78,6 +78,18 @@ Same as for __ALSOFT_REVERSE_Z, but for Y (up/down) panning.
 __ALSOFT_REVERSE_X
 Same as for __ALSOFT_REVERSE_Z, but for X (left/right) panning.
 
+__ALSOFT_VENDOR_OVERRIDE
+Overrides the value returned by alGetString(AL_VENDOR), for apps that misbehave
+without particular values.
+
+__ALSOFT_VERSION_OVERRIDE
+Overrides the value returned by alGetString(AL_VERSION), for apps that
+misbehave without particular values.
+
+__ALSOFT_RENDERER_OVERRIDE
+Overrides the value returned by alGetString(AL_RENDERER), for apps that
+misbehave without particular values.
+
 __ALSOFT_DEFAULT_ERROR
 Applications that erroneously call alGetError prior to setting a context as
 current may not like that OpenAL Soft returns 0xA004 (AL_INVALID_OPERATION),

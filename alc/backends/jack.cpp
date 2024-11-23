@@ -111,7 +111,9 @@ bool jack_load()
 #ifdef HAVE_DYNLOAD
     if(!jack_handle)
     {
-#ifdef _WIN32
+#if defined(_WIN64)
+#define JACKLIB "libjack64.dll"
+#elif defined(_WIN32)
 #define JACKLIB "libjack.dll"
 #else
 #define JACKLIB "libjack.so.0"
@@ -329,13 +331,13 @@ JackPlayback::~JackPlayback()
 
 int JackPlayback::processRt(jack_nframes_t numframes) noexcept
 {
-    auto outptrs = std::array<jack_default_audio_sample_t*,MaxOutputChannels>{};
+    auto outptrs = std::array<void*,MaxOutputChannels>{};
     auto numchans = size_t{0};
     for(auto port : mPort)
     {
         if(!port || numchans == mDevice->RealOut.Buffer.size())
             break;
-        outptrs[numchans++] = static_cast<float*>(jack_port_get_buffer(port, numframes));
+        outptrs[numchans++] = jack_port_get_buffer(port, numframes);
     }
 
     const auto dst = al::span{outptrs}.first(numchans);
@@ -343,8 +345,8 @@ int JackPlayback::processRt(jack_nframes_t numframes) noexcept
         mDevice->renderSamples(dst, static_cast<uint>(numframes));
     else
     {
-        std::for_each(dst.begin(), dst.end(), [numframes](float *outbuf) -> void
-        { std::fill_n(outbuf, numframes, 0.0f); });
+        std::for_each(dst.begin(), dst.end(), [numframes](void *outbuf) -> void
+        { std::fill_n(static_cast<float*>(outbuf), numframes, 0.0f); });
     }
 
     return 0;
@@ -368,10 +370,10 @@ int JackPlayback::process(jack_nframes_t numframes) noexcept
         const auto update_size = size_t{mDevice->UpdateSize};
 
         const auto outlen = size_t{numframes / update_size};
-        const auto len1 = size_t{std::min(data.first.len/update_size, outlen)};
-        const auto len2 = size_t{std::min(data.second.len/update_size, outlen-len1)};
+        const auto len1 = size_t{std::min(data[0].len/update_size, outlen)};
+        const auto len2 = size_t{std::min(data[1].len/update_size, outlen-len1)};
 
-        auto src = al::span{reinterpret_cast<float*>(data.first.buf), update_size*len1*numchans};
+        auto src = al::span{reinterpret_cast<float*>(data[0].buf), update_size*len1*numchans};
         for(size_t i{0};i < len1;++i)
         {
             for(size_t c{0};c < numchans;++c)
@@ -383,7 +385,7 @@ int JackPlayback::process(jack_nframes_t numframes) noexcept
             total += update_size;
         }
 
-        src = al::span{reinterpret_cast<float*>(data.second.buf), update_size*len2*numchans};
+        src = al::span{reinterpret_cast<float*>(data[1].buf), update_size*len2*numchans};
         for(size_t i{0};i < len2;++i)
         {
             for(size_t c{0};c < numchans;++c)
@@ -416,7 +418,7 @@ int JackPlayback::mixerProc()
 
     const auto update_size = uint{mDevice->UpdateSize};
     const auto num_channels = size_t{mDevice->channelsFromFmt()};
-    auto outptrs = std::vector<float*>(num_channels);
+    auto outptrs = std::vector<void*>(num_channels);
 
     while(!mKillNow.load(std::memory_order_acquire)
         && mDevice->Connected.load(std::memory_order_acquire))
@@ -428,12 +430,11 @@ int JackPlayback::mixerProc()
         }
 
         auto data = mRing->getWriteVector();
-        const auto len1 = size_t{data.first.len / update_size};
-        const auto len2 = size_t{data.second.len / update_size};
+        const auto len1 = size_t{data[0].len / update_size};
+        const auto len2 = size_t{data[1].len / update_size};
 
         std::lock_guard<std::mutex> dlock{mMutex};
-        auto buffer = al::span{reinterpret_cast<float*>(data.first.buf),
-            data.first.len*num_channels};
+        auto buffer = al::span{reinterpret_cast<float*>(data[0].buf), data[0].len*num_channels};
         auto bufiter = buffer.begin();
         for(size_t i{0};i < len1;++i)
         {
@@ -447,8 +448,7 @@ int JackPlayback::mixerProc()
         }
         if(len2 > 0)
         {
-            buffer = al::span{reinterpret_cast<float*>(data.second.buf),
-                data.second.len*num_channels};
+            buffer = al::span{reinterpret_cast<float*>(data[1].buf), data[1].len*num_channels};
             bufiter = buffer.begin();
             for(size_t i{0};i < len2;++i)
             {
@@ -508,7 +508,7 @@ void JackPlayback::open(std::string_view name)
         mPortPattern = iter->mPattern;
     }
 
-    mDevice->DeviceName = name;
+    mDeviceName = name;
 }
 
 bool JackPlayback::reset()
@@ -518,7 +518,7 @@ bool JackPlayback::reset()
     std::for_each(mPort.begin(), mPort.end(), unregister_port);
     mPort.fill(nullptr);
 
-    mRTMixing = GetConfigValueBool(mDevice->DeviceName, "jack", "rt-mix", true);
+    mRTMixing = GetConfigValueBool(mDevice->mDeviceName, "jack", "rt-mix", true);
     jack_set_process_callback(mClient,
         mRTMixing ? &JackPlayback::processRtC : &JackPlayback::processC, this);
 
@@ -536,8 +536,9 @@ bool JackPlayback::reset()
     }
     else
     {
-        const std::string_view devname{mDevice->DeviceName};
-        uint bufsize{ConfigValueUInt(devname, "jack", "buffer-size").value_or(mDevice->UpdateSize)};
+        const auto devname = std::string_view{mDevice->mDeviceName};
+        auto bufsize = ConfigValueUInt(devname, "jack", "buffer-size")
+            .value_or(mDevice->UpdateSize);
         bufsize = std::max(NextPowerOf2(bufsize), mDevice->UpdateSize);
         mDevice->BufferSize = bufsize + mDevice->UpdateSize;
     }
@@ -586,7 +587,7 @@ void JackPlayback::start()
     if(jack_activate(mClient))
         throw al::backend_exception{al::backend_error::DeviceError, "Failed to activate client"};
 
-    const std::string_view devname{mDevice->DeviceName};
+    const auto devname = std::string_view{mDevice->mDeviceName};
     if(ConfigValueBool(devname, "jack", "connect-ports").value_or(true))
     {
         JackPortsPtr pnames{jack_get_ports(mClient, mPortPattern.c_str(), JACK_DEFAULT_AUDIO_TYPE,

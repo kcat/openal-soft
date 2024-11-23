@@ -75,7 +75,7 @@ void OboePlayback::open(std::string_view name)
         throw al::backend_exception{al::backend_error::DeviceError, "Failed to create stream: %s",
             oboe::convertToText(result)};
 
-    mDevice->DeviceName = name;
+    mDeviceName = name;
 }
 
 bool OboePlayback::reset()
@@ -315,7 +315,7 @@ void OboeCapture::open(std::string_view name)
     mRing = RingBuffer::Create(std::max(mDevice->BufferSize, mDevice->Frequency/10u),
         static_cast<uint32_t>(mStream->getBytesPerFrame()), false);
 
-    mDevice->DeviceName = name;
+    mDeviceName = name;
 }
 
 void OboeCapture::start()

@@ -10,9 +10,9 @@
 #include "alc/effects/base.h"
 #include "effects.h"
 
-#ifdef ALSOFT_EAX
+#if ALSOFT_EAX
 #include <cassert>
-#include "alnumeric.h"
+
 #include "al/eax/effect.h"
 #include "al/eax/exception.h"
 #include "al/eax/utils.h"
@@ -133,7 +133,7 @@ void ModulatorEffectHandler::GetParamfv(const ModulatorProps &props, ALenum para
 { GetParamf(props, param, vals); }
 
 
-#ifdef ALSOFT_EAX
+#if ALSOFT_EAX
 namespace {
 
 using ModulatorCommitter = EaxCommitter<EaxModulatorCommitter>;

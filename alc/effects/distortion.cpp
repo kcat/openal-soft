@@ -124,7 +124,7 @@ void DistortionState::process(const size_t samplesToDo, const al::span<const Flo
          * (which is fortunately first step of distortion). So combine three
          * operations into the one.
          */
-        mLowpass.process({mBuffer[0].data(), todo}, mBuffer[1]);
+        mLowpass.process(al::span{mBuffer[0]}.first(todo), mBuffer[1]);
 
         /* Second step, do distortion using waveshaper function to emulate
          * signal processing during tube overdriving. Three steps of
@@ -142,7 +142,7 @@ void DistortionState::process(const size_t samplesToDo, const al::span<const Flo
             proc_sample);
 
         /* Third step, do bandpass filtering of distorted signal. */
-        mBandpass.process({mBuffer[0].data(), todo}, mBuffer[1]);
+        mBandpass.process(al::span{mBuffer[0]}.first(todo), mBuffer[1]);
 
         todo >>= 2;
         auto outgains = mGain.cbegin();

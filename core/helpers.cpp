@@ -16,6 +16,7 @@
 #include <mutex>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <system_error>
 
 #include "almalloc.h"
@@ -44,16 +45,19 @@ void DirectorySearch(const std::filesystem::path &path, const std::string_view e
         if(!fs::exists(fpath))
             return;
 
-        TRACE("Searching %s for *%.*s\n", fpath.u8string().c_str(), al::sizei(ext), ext.data());
+        TRACE("Searching %s for *%.*s\n", reinterpret_cast<const char*>(fpath.u8string().c_str()),
+            al::sizei(ext), ext.data());
         for(auto&& dirent : fs::directory_iterator{fpath})
         {
             auto&& entrypath = dirent.path();
             if(!entrypath.has_extension())
                 continue;
 
-            if(fs::status(entrypath).type() == fs::file_type::regular
-                && al::case_compare(entrypath.extension().u8string(), ext) == 0)
-                results->emplace_back(entrypath.u8string());
+            if(fs::status(entrypath).type() != fs::file_type::regular)
+                continue;
+            const auto u8ext = entrypath.extension().u8string();
+            if(al::case_compare(al::u8_as_char(u8ext), ext) == 0)
+                results->emplace_back(al::u8_as_char(entrypath.u8string()));
         }
     }
     catch(std::exception& e) {
@@ -77,7 +81,7 @@ const PathNamePair &GetProcBinary()
 {
     auto get_procbin = []
     {
-#if !defined(ALSOFT_UWP)
+#if !ALSOFT_UWP
         DWORD pathlen{256};
         auto fullpath = std::wstring(pathlen, L'\0');
         DWORD len{GetModuleFileNameW(nullptr, fullpath.data(), pathlen)};
@@ -129,7 +133,7 @@ const PathNamePair &GetProcBinary()
 
 namespace {
 
-#if !defined(ALSOFT_UWP) && !defined(_GAMING_XBOX)
+#if !ALSOFT_UWP && !defined(_GAMING_XBOX)
 struct CoTaskMemDeleter {
     void operator()(void *mem) const { CoTaskMemFree(mem); }
 };
@@ -137,7 +141,22 @@ struct CoTaskMemDeleter {
 
 } // namespace
 
-std::vector<std::string> SearchDataFiles(const std::string_view ext, const std::string_view subdir)
+auto SearchDataFiles(const std::string_view ext) -> std::vector<std::string>
+{
+    auto srchlock = std::lock_guard{gSearchLock};
+
+    /* Search the app-local directory. */
+    auto results = std::vector<std::string>{};
+    if(auto localpath = al::getenv(L"ALSOFT_LOCAL_PATH"))
+        DirectorySearch(*localpath, ext, &results);
+    else if(auto curpath = std::filesystem::current_path(); !curpath.empty())
+        DirectorySearch(curpath, ext, &results);
+
+    return results;
+}
+
+auto SearchDataFiles(const std::string_view ext, const std::string_view subdir)
+    -> std::vector<std::string>
 {
     std::lock_guard<std::mutex> srchlock{gSearchLock};
 
@@ -150,13 +169,7 @@ std::vector<std::string> SearchDataFiles(const std::string_view ext, const std::
         return results;
     }
 
-    /* Search the app-local directory. */
-    if(auto localpath = al::getenv(L"ALSOFT_LOCAL_PATH"))
-        DirectorySearch(*localpath, ext, &results);
-    else if(auto curpath = std::filesystem::current_path(); !curpath.empty())
-        DirectorySearch(curpath, ext, &results);
-
-#if !defined(ALSOFT_UWP) && !defined(_GAMING_XBOX)
+#if !ALSOFT_UWP && !defined(_GAMING_XBOX)
     /* Search the local and global data dirs. */
     for(const auto &folderid : std::array{FOLDERID_RoamingAppData, FOLDERID_ProgramData})
     {
@@ -175,7 +188,7 @@ std::vector<std::string> SearchDataFiles(const std::string_view ext, const std::
 
 void SetRTPriority()
 {
-#if !defined(ALSOFT_UWP)
+#if !ALSOFT_UWP
     if(RTPrioLevel > 0)
     {
         if(!SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL))
@@ -202,7 +215,7 @@ void SetRTPriority()
 #include <pthread.h>
 #include <sched.h>
 #endif
-#ifdef HAVE_RTKIT
+#if HAVE_RTKIT
 #include <sys/resource.h>
 
 #include "dbus_wrap.h"
@@ -267,7 +280,7 @@ const PathNamePair &GetProcBinary()
                         continue;
                     if(auto path = std::filesystem::read_symlink(name); !path.empty())
                     {
-                        pathname = path.u8string();
+                        pathname = al::u8_as_char(path.u8string());
                         break;
                     }
                 }
@@ -295,7 +308,22 @@ const PathNamePair &GetProcBinary()
     return procbin;
 }
 
-std::vector<std::string> SearchDataFiles(const std::string_view ext, const std::string_view subdir)
+auto SearchDataFiles(const std::string_view ext) -> std::vector<std::string>
+{
+    auto srchlock = std::lock_guard{gSearchLock};
+
+    /* Search the app-local directory. */
+    auto results = std::vector<std::string>{};
+    if(auto localpath = al::getenv("ALSOFT_LOCAL_PATH"))
+        DirectorySearch(*localpath, ext, &results);
+    else if(auto curpath = std::filesystem::current_path(); !curpath.empty())
+        DirectorySearch(curpath, ext, &results);
+
+    return results;
+}
+
+auto SearchDataFiles(const std::string_view ext, const std::string_view subdir)
+    -> std::vector<std::string>
 {
     std::lock_guard<std::mutex> srchlock{gSearchLock};
 
@@ -306,12 +334,6 @@ std::vector<std::string> SearchDataFiles(const std::string_view ext, const std::
         DirectorySearch(path, ext, &results);
         return results;
     }
-
-    /* Search the app-local directory. */
-    if(auto localpath = al::getenv("ALSOFT_LOCAL_PATH"))
-        DirectorySearch(*localpath, ext, &results);
-    else if(auto curpath = std::filesystem::current_path(); !curpath.empty())
-        DirectorySearch(curpath, ext, &results);
 
     /* Search local data dir */
     if(auto datapath = al::getenv("XDG_DATA_HOME"))
@@ -375,7 +397,7 @@ bool SetRTPriorityPthread(int prio [[maybe_unused]])
 
 bool SetRTPriorityRTKit(int prio [[maybe_unused]])
 {
-#ifdef HAVE_RTKIT
+#if HAVE_RTKIT
     if(!HasDBus())
     {
         WARN("D-Bus not available\n");

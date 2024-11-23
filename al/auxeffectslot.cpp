@@ -31,7 +31,6 @@
 #include <mutex>
 #include <numeric>
 #include <stdexcept>
-#include <string>
 #include <tuple>
 #include <unordered_map>
 #include <vector>
@@ -62,7 +61,7 @@
 #include "flexarray.h"
 #include "opthelpers.h"
 
-#ifdef ALSOFT_EAX
+#if ALSOFT_EAX
 #include "eax/api.h"
 #include "eax/call.h"
 #include "eax/effect.h"
@@ -111,7 +110,7 @@ auto LookupEffectSlot(ALCcontext *context, ALuint id) noexcept -> ALeffectslot*
     return al::to_address(sublist.EffectSlots->begin() + slidx);
 }
 
-inline auto LookupEffect(ALCdevice *device, ALuint id) noexcept -> ALeffect*
+inline auto LookupEffect(al::Device *device, ALuint id) noexcept -> ALeffect*
 {
     const size_t lidx{(id-1) >> 6};
     const ALuint slidx{(id-1) & 0x3f};
@@ -124,7 +123,7 @@ inline auto LookupEffect(ALCdevice *device, ALuint id) noexcept -> ALeffect*
     return al::to_address(sublist.Effects->begin() + slidx);
 }
 
-inline auto LookupBuffer(ALCdevice *device, ALuint id) noexcept -> ALbuffer*
+inline auto LookupBuffer(al::Device *device, ALuint id) noexcept -> ALbuffer*
 {
     const size_t lidx{(id-1) >> 6};
     const ALuint slidx{(id-1) & 0x3f};
@@ -325,11 +324,12 @@ try {
         throw al::context_error{AL_INVALID_VALUE, "Generating %d effect slots", n};
     if(n <= 0) UNLIKELY return;
 
-    std::lock_guard<std::mutex> slotlock{context->mEffectSlotLock};
-    ALCdevice *device{context->mALDevice.get()};
+    auto slotlock = std::lock_guard{context->mEffectSlotLock};
+    auto *device = context->mALDevice.get();
 
     const al::span eids{effectslots, static_cast<ALuint>(n)};
-    if(eids.size() > device->AuxiliaryEffectSlotMax-context->mNumEffectSlots)
+    if(context->mNumEffectSlots > device->AuxiliaryEffectSlotMax
+        || eids.size() > device->AuxiliaryEffectSlotMax-context->mNumEffectSlots)
         throw al::context_error{AL_OUT_OF_MEMORY, "Exceeding %u effect slot limit (%u + %d)",
             device->AuxiliaryEffectSlotMax, context->mNumEffectSlots, n};
 
@@ -482,9 +482,9 @@ try {
     {
     case AL_EFFECTSLOT_EFFECT:
         {
-            ALCdevice *device{context->mALDevice.get()};
-            std::lock_guard<std::mutex> effectlock{device->EffectLock};
-            ALeffect *effect{value ? LookupEffect(device, static_cast<ALuint>(value)) : nullptr};
+            auto *device = context->mALDevice.get();
+            auto effectlock = std::lock_guard{device->EffectLock};
+            auto *effect = value ? LookupEffect(device, static_cast<ALuint>(value)) : nullptr;
             if(effect)
                 err = slot->initEffect(effect->id, effect->type, effect->Props, context);
             else
@@ -569,7 +569,7 @@ try {
             assert(factory);
             al::intrusive_ptr<EffectState> state{factory->create()};
 
-            ALCdevice *device{context->mALDevice.get()};
+            auto *device = context->mALDevice.get();
             auto bufferlock = std::unique_lock{device->BufferLock};
             ALbuffer *buffer{};
             if(value)
@@ -605,7 +605,7 @@ try {
         }
         else
         {
-            ALCdevice *device{context->mALDevice.get()};
+            auto *device = context->mALDevice.get();
             auto bufferlock = std::unique_lock{device->BufferLock};
             ALbuffer *buffer{};
             if(value)
@@ -895,7 +895,7 @@ ALenum ALeffectslot::initEffect(ALuint effectId, ALenum effectType, const Effect
         }
         al::intrusive_ptr<EffectState> state{factory->create()};
 
-        ALCdevice *device{context->mALDevice.get()};
+        auto *device = context->mALDevice.get();
         state->mOutTarget = device->Dry.Buffer;
         {
             FPUCtl mixer_mode{};
@@ -1004,7 +1004,7 @@ EffectSlotSubList::~EffectSlotSubList()
     EffectSlots = nullptr;
 }
 
-#ifdef ALSOFT_EAX
+#if ALSOFT_EAX
 void ALeffectslot::eax_initialize(ALCcontext& al_context, EaxFxSlotIndexValue index)
 {
     if(index >= EAX_MAX_FXSLOTS)

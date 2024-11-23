@@ -29,6 +29,10 @@ struct FilterTable {
     static void getParamiv(const struct ALfilter*, ALenum, int*);
     static void getParamf(const struct ALfilter*, ALenum, float*);
     static void getParamfv(const struct ALfilter*, ALenum, float*);
+
+private:
+    FilterTable() = default;
+    friend T;
 };
 
 struct NullFilterTable : public FilterTable<NullFilterTable> { };

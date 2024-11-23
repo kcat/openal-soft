@@ -6,12 +6,12 @@
 #include <algorithm>
 #include <array>
 #include <cstddef>
-#include <cstring>
 #include <functional>
-#include <limits>
+#include <iterator>
 #include <numeric>
-#include <stdexcept>
+#include <optional>
 #include <string_view>
+#include <tuple>
 #include <utility>
 
 #include "AL/efx.h"
@@ -25,19 +25,22 @@
 #include "albit.h"
 #include "alc/alu.h"
 #include "alc/backends/base.h"
+#include "alnumeric.h"
 #include "alspan.h"
+#include "atomic.h"
 #include "core/async_event.h"
+#include "core/devformat.h"
 #include "core/device.h"
 #include "core/effectslot.h"
 #include "core/logging.h"
-#include "core/voice.h"
 #include "core/voice_change.h"
 #include "device.h"
 #include "flexarray.h"
 #include "ringbuffer.h"
 #include "vecmat.h"
 
-#ifdef ALSOFT_EAX
+#if ALSOFT_EAX
+#include "al/eax/call.h"
 #include "al/eax/globals.h"
 #endif // ALSOFT_EAX
 
@@ -116,11 +119,15 @@ thread_local ALCcontext::ThreadCtx ALCcontext::sThreadContext;
 ALeffect ALCcontext::sDefaultEffect;
 
 
-ALCcontext::ALCcontext(al::intrusive_ptr<ALCdevice> device, ContextFlagBitset flags)
+ALCcontext::ALCcontext(al::intrusive_ptr<al::Device> device, ContextFlagBitset flags)
     : ContextBase{device.get()}, mALDevice{std::move(device)}, mContextFlags{flags}
 {
     mDebugGroups.emplace_back(DebugSource::Other, 0, std::string{});
     mDebugEnabled.store(mContextFlags.test(ContextFlags::DebugBit), std::memory_order_relaxed);
+
+    /* Low-severity debug messages are disabled by default. */
+    alDebugMessageControlDirectEXT(this, AL_DONT_CARE_EXT, AL_DONT_CARE_EXT,
+        AL_DEBUG_SEVERITY_LOW_EXT, 0, nullptr, AL_FALSE);
 }
 
 ALCcontext::~ALCcontext()
@@ -135,7 +142,7 @@ ALCcontext::~ALCcontext()
     mSourceList.clear();
     mNumSources = 0;
 
-#ifdef ALSOFT_EAX
+#if ALSOFT_EAX
     eaxUninitialize();
 #endif // ALSOFT_EAX
 
@@ -189,7 +196,7 @@ void ALCcontext::init()
         mExtensions.emplace_back("AL_SOFT_buffer_sub_data"sv);
     }
 
-#ifdef ALSOFT_EAX
+#if ALSOFT_EAX
     eax_initialize_extensions();
 #endif // ALSOFT_EAX
 
@@ -212,14 +219,26 @@ void ALCcontext::init()
         mExtensionsString = std::move(extensions);
     }
 
+#if ALSOFT_EAX
+    eax_set_defaults();
+#endif
+
     mParams.Position = alu::Vector{0.0f, 0.0f, 0.0f, 1.0f};
     mParams.Matrix = alu::Matrix::Identity();
     mParams.Velocity = alu::Vector{};
     mParams.Gain = mListener.Gain;
-    mParams.MetersPerUnit = mListener.mMetersPerUnit;
+    mParams.MetersPerUnit = mListener.mMetersPerUnit
+#if ALSOFT_EAX
+        * eaxGetDistanceFactor()
+#endif
+        ;
     mParams.AirAbsorptionGainHF = mAirAbsorptionGainHF;
     mParams.DopplerFactor = mDopplerFactor;
-    mParams.SpeedOfSound = mSpeedOfSound * mDopplerVelocity;
+    mParams.SpeedOfSound = mSpeedOfSound * mDopplerVelocity
+#if ALSOFT_EAX
+        / eaxGetDistanceFactor()
+#endif
+        ;
     mParams.SourceDistanceModel = mSourceDistanceModel;
     mParams.mDistanceModel = mDistanceModel;
 
@@ -238,7 +257,8 @@ void ALCcontext::deinit()
     {
         WARN("%p released while current on thread\n", voidp{this});
         sThreadContext.set(nullptr);
-        dec_ref();
+        const auto rc [[maybe_unused]] = dec_ref();
+        assert(rc > 0);
     }
 
     ALCcontext *origctx{this};
@@ -249,7 +269,8 @@ void ALCcontext::deinit()
              * trying to increment its refcount.
              */
         }
-        dec_ref();
+        const auto rc [[maybe_unused]] = dec_ref();
+        assert(rc > 0);
     }
 
     bool stopPlayback{};
@@ -297,7 +318,7 @@ void ALCcontext::applyAllUpdates()
         /* busy-wait */
     }
 
-#ifdef ALSOFT_EAX
+#if ALSOFT_EAX
     if(mEaxNeedsCommit)
         eaxCommit();
 #endif
@@ -314,7 +335,7 @@ void ALCcontext::applyAllUpdates()
 }
 
 
-#ifdef ALSOFT_EAX
+#if ALSOFT_EAX
 namespace {
 
 template<typename F>
@@ -746,10 +767,7 @@ void ALCcontext::eax_context_commit_primary_fx_slot_id()
 
 void ALCcontext::eax_context_commit_distance_factor()
 {
-    if(mListener.mMetersPerUnit == mEax.flDistanceFactor)
-        return;
-
-    mListener.mMetersPerUnit = mEax.flDistanceFactor;
+    /* mEax.flDistanceFactor was changed, so the context props are dirty. */
     mPropsDirty = true;
 }
 

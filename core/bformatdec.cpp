@@ -102,8 +102,8 @@ void BFormatDec::processStablize(const al::span<FloatBufferLine> OutBuffer,
      */
     const auto leftout = al::span<float>{OutBuffer[lidx]}.first(SamplesToDo);
     const auto rightout = al::span<float>{OutBuffer[ridx]}.first(SamplesToDo);
-    const al::span<float> mid{al::assume_aligned<16>(mStablizer->MidDirect.data()), SamplesToDo};
-    const al::span<float> side{al::assume_aligned<16>(mStablizer->Side.data()), SamplesToDo};
+    const auto mid = al::span{mStablizer->MidDirect}.first(SamplesToDo);
+    const auto side = al::span{mStablizer->Side}.first(SamplesToDo);
     std::transform(leftout.cbegin(), leftout.cend(), rightout.cbegin(), mid.begin(),std::plus{});
     std::transform(leftout.cbegin(), leftout.cend(), rightout.cbegin(), side.begin(),std::minus{});
     std::fill_n(leftout.begin(), leftout.size(), 0.0f);

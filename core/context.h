@@ -1,6 +1,8 @@
 #ifndef CORE_CONTEXT_H
 #define CORE_CONTEXT_H
 
+#include "config.h"
+
 #include <array>
 #include <atomic>
 #include <bitset>
@@ -9,7 +11,6 @@
 #include <thread>
 #include <vector>
 
-#include "almalloc.h"
 #include "alsem.h"
 #include "alspan.h"
 #include "async_event.h"
@@ -53,6 +54,9 @@ struct ContextProps {
     float DopplerFactor;
     float DopplerVelocity;
     float SpeedOfSound;
+#if ALSOFT_EAX
+    float DistanceFactor;
+#endif
     bool SourceDistanceModel;
     DistanceModel mDistanceModel;
 
@@ -175,7 +179,7 @@ struct ContextBase {
     ContextBase(DeviceBase *device);
     ContextBase(const ContextBase&) = delete;
     ContextBase& operator=(const ContextBase&) = delete;
-    ~ContextBase();
+    virtual ~ContextBase();
 };
 
 #endif /* CORE_CONTEXT_H */

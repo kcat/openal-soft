@@ -156,7 +156,7 @@ void SolarisBackend::open(std::string_view name)
         ::close(mFd);
     mFd = fd;
 
-    mDevice->DeviceName = name;
+    mDeviceName = name;
 }
 
 bool SolarisBackend::reset()

@@ -1,8 +1,10 @@
 #ifndef ALC_CONTEXT_H
 #define ALC_CONTEXT_H
 
-#include <array>
+#include "config.h"
+
 #include <atomic>
+#include <bitset>
 #include <cstdint>
 #include <deque>
 #include <memory>
@@ -18,25 +20,23 @@
 #include "AL/alext.h"
 
 #include "al/listener.h"
-#include "almalloc.h"
-#include "alnumeric.h"
 #include "althreads.h"
-#include "atomic.h"
 #include "core/context.h"
-#include "inprogext.h"
 #include "intrusive_ptr.h"
+#include "opthelpers.h"
 
-#ifdef ALSOFT_EAX
-#include "al/eax/call.h"
+#if ALSOFT_EAX
+#include "al/eax/api.h"
 #include "al/eax/exception.h"
 #include "al/eax/fx_slot_index.h"
 #include "al/eax/fx_slots.h"
 #include "al/eax/utils.h"
+
+class EaxCall;
 #endif // ALSOFT_EAX
 
 struct ALeffect;
 struct ALeffectslot;
-struct ALsource;
 struct DebugGroup;
 struct EffectSlotSubList;
 struct SourceSubList;
@@ -72,9 +72,12 @@ struct DebugLogEntry {
 };
 
 
-struct ALCcontext : public al::intrusive_ref<ALCcontext>, ContextBase {
-    const al::intrusive_ptr<ALCdevice> mALDevice;
+namespace al {
+struct Device;
+} // namespace al
 
+struct ALCcontext final : public al::intrusive_ref<ALCcontext>, ContextBase {
+    const al::intrusive_ptr<al::Device> mALDevice;
 
     bool mPropsDirty{true};
     bool mDeferUpdates{false};
@@ -123,10 +126,10 @@ struct ALCcontext : public al::intrusive_ref<ALCcontext>, ContextBase {
     std::unordered_map<ALuint,std::string> mSourceNames;
     std::unordered_map<ALuint,std::string> mEffectSlotNames;
 
-    ALCcontext(al::intrusive_ptr<ALCdevice> device, ContextFlagBitset flags);
+    ALCcontext(al::intrusive_ptr<al::Device> device, ContextFlagBitset flags);
     ALCcontext(const ALCcontext&) = delete;
     ALCcontext& operator=(const ALCcontext&) = delete;
-    ~ALCcontext();
+    ~ALCcontext() final;
 
     void init();
     /**
@@ -191,6 +194,10 @@ private:
      */
     class ThreadCtx {
     public:
+        ThreadCtx() = default;
+        ThreadCtx(const ThreadCtx&) = delete;
+        auto operator=(const ThreadCtx&) -> ThreadCtx& = delete;
+
         ~ThreadCtx();
         /* NOLINTBEGIN(readability-convert-member-functions-to-static)
          * This should be non-static to invoke construction of the thread-local
@@ -210,7 +217,7 @@ public:
     /* Default effect that applies to sources that don't have an effect on send 0. */
     static ALeffect sDefaultEffect;
 
-#ifdef ALSOFT_EAX
+#if ALSOFT_EAX
     bool hasEax() const noexcept { return mEaxIsInitialized; }
     bool eaxIsCapable() const noexcept;
 
@@ -232,7 +239,11 @@ public:
 
     void eaxSetLastError() noexcept;
 
-    EaxFxSlotIndex eaxGetPrimaryFxSlotIndex() const noexcept
+    [[nodiscard]]
+    auto eaxGetDistanceFactor() const noexcept -> float { return mEax.flDistanceFactor; }
+
+    [[nodiscard]]
+    auto eaxGetPrimaryFxSlotIndex() const noexcept -> EaxFxSlotIndex
     { return mEaxPrimaryFxSlotIndex; }
 
     const ALeffectslot& eaxGetFxSlot(EaxFxSlotIndexValue fx_slot_index) const
@@ -267,12 +278,11 @@ private:
         Eax5Props d; // Deferred.
     };
 
-    class ContextException : public EaxException
-    {
+    class ContextException final : public EaxException {
     public:
-        explicit ContextException(const char* message)
+        explicit ContextException(const char *message)
             : EaxException{"EAX_CONTEXT", message}
-        {}
+        { }
     };
 
     struct Eax4PrimaryFxSlotIdValidator {
@@ -545,7 +555,7 @@ void UpdateContextProps(ALCcontext *context);
 inline bool TrapALError{false};
 
 
-#ifdef ALSOFT_EAX
+#if ALSOFT_EAX
 auto AL_APIENTRY EAXSet(const GUID *property_set_id, ALuint property_id,
     ALuint source_id, ALvoid *value, ALuint value_size) noexcept -> ALenum;
 

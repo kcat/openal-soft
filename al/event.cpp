@@ -3,7 +3,6 @@
 
 #include "event.h"
 
-#include <array>
 #include <atomic>
 #include <bitset>
 #include <exception>
@@ -12,10 +11,8 @@
 #include <new>
 #include <optional>
 #include <string>
-#include <string_view>
 #include <thread>
 #include <tuple>
-#include <utility>
 #include <variant>
 
 #include "AL/al.h"
@@ -25,6 +22,7 @@
 #include "alc/context.h"
 #include "alsem.h"
 #include "alspan.h"
+#include "alstring.h"
 #include "core/async_event.h"
 #include "core/context.h"
 #include "core/effects/base.h"
@@ -51,14 +49,15 @@ int EventThread(ALCcontext *context)
     bool quitnow{false};
     while(!quitnow)
     {
-        auto evt_data = ring->getReadVector().first;
+        auto evt_data = ring->getReadVector()[0];
         if(evt_data.len == 0)
         {
             context->mEventSem.wait();
             continue;
         }
 
-        std::lock_guard<std::mutex> eventlock{context->mEventCbLock};
+        auto eventlock = std::lock_guard{context->mEventCbLock};
+        const auto enabledevts = context->mEnabledEvts.load(std::memory_order_acquire);
         auto evt_span = al::span{std::launder(reinterpret_cast<AsyncEvent*>(evt_data.buf)),
             evt_data.len};
         for(auto &event : evt_span)
@@ -66,7 +65,6 @@ int EventThread(ALCcontext *context)
             quitnow = std::holds_alternative<AsyncKillThread>(event);
             if(quitnow) UNLIKELY break;
 
-            auto enabledevts = context->mEnabledEvts.load(std::memory_order_acquire);
             auto proc_killthread = [](AsyncKillThread&) { };
             auto proc_release = [](AsyncEffectReleaseEvent &evt)
             {
@@ -101,7 +99,7 @@ int EventThread(ALCcontext *context)
                     break;
                 }
                 context->mEventCb(AL_EVENT_TYPE_SOURCE_STATE_CHANGED_SOFT, evt.mId, state,
-                    static_cast<ALsizei>(msg.length()), msg.c_str(), context->mEventParam);
+                    al::sizei(msg), msg.c_str(), context->mEventParam);
             };
             auto proc_buffercomp = [context,enabledevts](AsyncBufferCompleteEvent &evt)
             {
@@ -113,18 +111,16 @@ int EventThread(ALCcontext *context)
                 if(evt.mCount == 1) msg += " buffer completed";
                 else msg += " buffers completed";
                 context->mEventCb(AL_EVENT_TYPE_BUFFER_COMPLETED_SOFT, evt.mId, evt.mCount,
-                    static_cast<ALsizei>(msg.length()), msg.c_str(), context->mEventParam);
+                    al::sizei(msg), msg.c_str(), context->mEventParam);
             };
             auto proc_disconnect = [context,enabledevts](AsyncDisconnectEvent &evt)
             {
-                context->debugMessage(DebugSource::System, DebugType::Error, 0,
-                    DebugSeverity::High, evt.msg);
+                if(!context->mEventCb
+                    || !enabledevts.test(al::to_underlying(AsyncEnableBits::Disconnected)))
+                    return;
 
-                if(context->mEventCb
-                    && enabledevts.test(al::to_underlying(AsyncEnableBits::Disconnected)))
-                    context->mEventCb(AL_EVENT_TYPE_DISCONNECTED_SOFT, 0, 0,
-                        static_cast<ALsizei>(evt.msg.length()), evt.msg.c_str(),
-                        context->mEventParam);
+                context->mEventCb(AL_EVENT_TYPE_DISCONNECTED_SOFT, 0, 0, al::sizei(evt.msg),
+                    evt.msg.c_str(), context->mEventParam);
             };
 
             std::visit(overloaded{proc_srcstate, proc_buffercomp, proc_release, proc_disconnect,
@@ -166,12 +162,12 @@ void StartEventThrd(ALCcontext *ctx)
 void StopEventThrd(ALCcontext *ctx)
 {
     RingBuffer *ring{ctx->mAsyncEvents.get()};
-    auto evt_data = ring->getWriteVector().first;
+    auto evt_data = ring->getWriteVector()[0];
     if(evt_data.len == 0)
     {
         do {
             std::this_thread::yield();
-            evt_data = ring->getWriteVector().first;
+            evt_data = ring->getWriteVector()[0];
         } while(evt_data.len == 0);
     }
     std::ignore = InitAsyncEvent<AsyncKillThread>(evt_data.buf);

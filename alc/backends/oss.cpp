@@ -365,7 +365,7 @@ void OSSPlayback::open(std::string_view name)
         ::close(mFd);
     mFd = fd;
 
-    mDevice->DeviceName = name;
+    mDeviceName = name;
 }
 
 bool OSSPlayback::reset()
@@ -518,9 +518,9 @@ int OSScapture::recordProc()
         }
 
         auto vec = mRing->getWriteVector();
-        if(vec.first.len > 0)
+        if(vec[0].len > 0)
         {
-            ssize_t amt{read(mFd, vec.first.buf, vec.first.len*frame_size)};
+            ssize_t amt{read(mFd, vec[0].buf, vec[0].len*frame_size)};
             if(amt < 0)
             {
                 const auto errstr = std::generic_category().message(errno);
@@ -615,7 +615,7 @@ void OSScapture::open(std::string_view name)
 
     mRing = RingBuffer::Create(mDevice->BufferSize, frameSize, false);
 
-    mDevice->DeviceName = name;
+    mDeviceName = name;
 }
 
 void OSScapture::start()

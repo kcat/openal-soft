@@ -48,7 +48,7 @@ public:
 };
 
 
-template<typename T>
+template<typename T> /* NOLINTNEXTLINE(clazy-rule-of-three) False positive */
 class intrusive_ptr {
     T *mPtr{nullptr};
 

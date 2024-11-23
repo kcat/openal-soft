@@ -19,6 +19,7 @@
 #include "hrtfbase.h"
 #include "opthelpers.h"
 
+struct CTag;
 struct NEONTag;
 struct LerpTag;
 struct CubicTag;
@@ -76,13 +77,16 @@ inline void ApplyCoeffs(const al::span<float2> Values, const size_t IrSize,
         return vcombine_f32(leftright2, leftright2);
     };
     const auto leftright4 = dup_samples();
-    const auto count4 = size_t{(IrSize+1) >> 1};
 
-    const auto vals4 = al::span{reinterpret_cast<float32x4_t*>(Values[0].data()), count4};
-    const auto coeffs4 = al::span{reinterpret_cast<const float32x4_t*>(Coeffs[0].data()), count4};
-    std::transform(vals4.cbegin(), vals4.cend(), coeffs4.cbegin(), vals4.begin(),
-        [leftright4](const float32x4_t &val, const float32x4_t &coeff) -> float32x4_t
-        { return vmlaq_f32(val, coeff, leftright4); });
+    /* Using a loop here instead of std::transform since some builds seem to
+     * have an issue with accessing an array/span of float32x4_t.
+     */
+    for(size_t c{0};c < IrSize;c += 2)
+    {
+        auto vals = vld1q_f32(&Values[c][0]);
+        vals = vmlaq_f32(vals, vld1q_f32(&Coeffs[c][0]), leftright4);
+        vst1q_f32(&Values[c][0], vals);
+    }
 }
 
 force_inline void MixLine(const al::span<const float> InSamples, const al::span<float> dst,
@@ -461,6 +465,9 @@ void Mix_<NEONTag>(const al::span<const float> InSamples,const al::span<FloatBuf
     const al::span<float> CurrentGains, const al::span<const float> TargetGains,
     const size_t Counter, const size_t OutPos)
 {
+    if((OutPos&3) != 0) UNLIKELY
+        return Mix_<CTag>(InSamples, OutBuffer, CurrentGains, TargetGains, Counter, OutPos);
+
     const float delta{(Counter > 0) ? 1.0f / static_cast<float>(Counter) : 0.0f};
     const auto fade_len = std::min(Counter, InSamples.size());
     const auto realign_len = std::min((fade_len+3_uz) & ~3_uz, InSamples.size()) - fade_len;
@@ -476,6 +483,9 @@ template<>
 void Mix_<NEONTag>(const al::span<const float> InSamples, const al::span<float> OutBuffer,
     float &CurrentGain, const float TargetGain, const size_t Counter)
 {
+    if((reinterpret_cast<uintptr_t>(OutBuffer.data())&15) != 0) UNLIKELY
+        return Mix_<CTag>(InSamples, OutBuffer, CurrentGain, TargetGain, Counter);
+
     const float delta{(Counter > 0) ? 1.0f / static_cast<float>(Counter) : 0.0f};
     const auto fade_len = std::min(Counter, InSamples.size());
     const auto realign_len = std::min((fade_len+3_uz) & ~3_uz, InSamples.size()) - fade_len;

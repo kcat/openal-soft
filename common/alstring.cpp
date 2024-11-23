@@ -7,7 +7,6 @@
 #include <cctype>
 #include <cwctype>
 #include <cstring>
-#include <string>
 
 
 namespace al {
@@ -50,15 +49,6 @@ int case_compare(const std::wstring_view str0, const std::wstring_view str1) noe
     if(str0.size() < str1.size()) return -1;
     if(str0.size() > str1.size()) return 1;
     return 0;
-}
-
-int strcasecmp(const char *str0, const char *str1) noexcept
-{ return case_compare(str0, str1); }
-
-int strncasecmp(const char *str0, const char *str1, std::size_t len) noexcept
-{
-    return case_compare(std::string_view{str0, std::min(std::strlen(str0), len)},
-        std::string_view{str1, std::min(std::strlen(str1), len)});
 }
 
 } // namespace al

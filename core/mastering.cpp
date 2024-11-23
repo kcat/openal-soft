@@ -19,7 +19,7 @@
 /* These structures assume BufferLineSize is a power of 2. */
 static_assert((BufferLineSize & (BufferLineSize-1)) == 0, "BufferLineSize is not a power of 2");
 
-struct SlidingHold {
+struct SIMDALIGN SlidingHold {
     alignas(16) FloatBufferLine mValues;
     std::array<uint,BufferLineSize> mExpiries;
     uint mLowerIndex;
@@ -119,7 +119,8 @@ void Compressor::linkChannels(const uint SamplesToDo,
         std::transform(sideChain.begin(), sideChain.end(), buffer.begin(), sideChain.begin(),
             max_abs);
     };
-    std::for_each(OutBuffer.begin(), OutBuffer.end(), fill_max);
+    for(const FloatBufferLine &input : OutBuffer)
+        fill_max(input);
 }
 
 /* This calculates the squared crest factor of the control signal for the
@@ -333,7 +334,6 @@ std::unique_ptr<Compressor> Compressor::Create(const size_t NumChans, const floa
         BufferLineSize-1.0f));
 
     auto Comp = CompressorPtr{new Compressor{}};
-    Comp->mNumChans = NumChans;
     Comp->mAuto.Knee = AutoKnee;
     Comp->mAuto.Attack = AutoAttack;
     Comp->mAuto.Release = AutoRelease;
@@ -381,15 +381,11 @@ std::unique_ptr<Compressor> Compressor::Create(const size_t NumChans, const floa
 Compressor::~Compressor() = default;
 
 
-void Compressor::process(const uint SamplesToDo, FloatBufferLine *OutBuffer)
+void Compressor::process(const uint SamplesToDo, const al::span<FloatBufferLine> InOut)
 {
-    const size_t numChans{mNumChans};
-
     ASSUME(SamplesToDo > 0);
     ASSUME(SamplesToDo <= BufferLineSize);
-    ASSUME(numChans > 0);
 
-    const auto output = al::span{OutBuffer, numChans};
     const float preGain{mPreGain};
     if(preGain != 1.0f)
     {
@@ -399,10 +395,10 @@ void Compressor::process(const uint SamplesToDo, FloatBufferLine *OutBuffer)
             std::transform(buffer.cbegin(), buffer.cend(), buffer.begin(),
                 [preGain](const float s) noexcept { return s * preGain; });
         };
-        std::for_each(output.begin(), output.end(), apply_gain);
+        std::for_each(InOut.begin(), InOut.end(), apply_gain);
     }
 
-    linkChannels(SamplesToDo, output);
+    linkChannels(SamplesToDo, InOut);
 
     if(mAuto.Attack || mAuto.Release)
         crestDetector(SamplesToDo);
@@ -415,16 +411,17 @@ void Compressor::process(const uint SamplesToDo, FloatBufferLine *OutBuffer)
     gainCompressor(SamplesToDo);
 
     if(!mDelay.empty())
-        signalDelay(SamplesToDo, output);
+        signalDelay(SamplesToDo, InOut);
 
     const auto gains = assume_aligned_span<16>(al::span{mSideChain}.first(SamplesToDo));
-    auto apply_comp = [gains](const FloatBufferSpan input) noexcept -> void
+    auto apply_comp = [gains](const FloatBufferSpan inout) noexcept -> void
     {
-        const auto buffer = assume_aligned_span<16>(input);
+        const auto buffer = assume_aligned_span<16>(inout);
         std::transform(gains.cbegin(), gains.cend(), buffer.cbegin(), buffer.begin(),
             std::multiplies{});
     };
-    std::for_each(output.begin(), output.end(), apply_comp);
+    for(const FloatBufferSpan inout : InOut)
+        apply_comp(inout);
 
     const auto delayedGains = al::span{mSideChain}.subspan(SamplesToDo, mLookAhead);
     std::copy(delayedGains.begin(), delayedGains.end(), mSideChain.begin());

@@ -30,7 +30,6 @@
 #include <cassert>
 #include <cstddef>
 #include <cstdio>
-#include <iostream>
 #include <limits>
 #include <memory>
 #include <string>
@@ -45,6 +44,7 @@
 
 #include "alspan.h"
 #include "common/alhelpers.h"
+#include "fmt/core.h"
 
 #include "win_main_utf8.h"
 
@@ -102,12 +102,13 @@ ALuint LoadSound(ALCcontext *context, const std::string_view filename)
     SndFilePtr sndfile{sf_open(std::string{filename}.c_str(), SFM_READ, &sfinfo)};
     if(!sndfile)
     {
-        std::cerr<< "Could not open audio in "<<filename<<": "<<sf_strerror(sndfile.get())<<"\n";
+        fmt::println(stderr, "Could not open audio in {}: {}", filename,
+            sf_strerror(sndfile.get()));
         return 0;
     }
     if(sfinfo.frames < 1)
     {
-        std::cerr<< "Bad sample count in "<<filename<<" ("<<sfinfo.frames<<")\n";
+        fmt::println(stderr, "Bad sample count in {} ({})", filename, sfinfo.frames);
         return 0;
     }
 
@@ -255,13 +256,13 @@ ALuint LoadSound(ALCcontext *context, const std::string_view filename)
     }
     if(!format)
     {
-        std::cerr<< "Unsupported channel count: "<<sfinfo.channels<<"\n";
+        fmt::println(stderr, "Unsupported channel count: {}", sfinfo.channels);
         return 0;
     }
 
     if(sfinfo.frames/splblockalign > sf_count_t{std::numeric_limits<int>::max()}/byteblockalign)
     {
-        std::cerr<< "Too many sample frames in "<<filename<<" ("<<sfinfo.frames<<")\n";
+        fmt::println(stderr, "Too many sample frames in {} ({})", filename, sfinfo.frames);
         return 0;
     }
 
@@ -285,14 +286,13 @@ ALuint LoadSound(ALCcontext *context, const std::string_view filename)
     }
     if(num_frames < 1)
     {
-        std::cerr<< "Failed to read samples in "<<filename<<" ("<<num_frames<<")\n";
+        fmt::println(stderr, "Failed to read samples in {} ({})", filename, num_frames);
         return 0;
     }
 
     const auto num_bytes = static_cast<ALsizei>(num_frames / splblockalign * byteblockalign);
 
-    std::cout<< "Loading: "<<filename<<" ("<<FormatName(format)<<", "<<sfinfo.samplerate<<"hz)\n"
-        <<std::flush;
+    fmt::println("Loading: {} ({}, {}hz)", filename, FormatName(format), sfinfo.samplerate);
 
     ALuint buffer{};
     alGenBuffersDirect(context, 1, &buffer);
@@ -303,7 +303,7 @@ ALuint LoadSound(ALCcontext *context, const std::string_view filename)
     /* Check if an error occurred, and clean up if so. */
     if(ALenum err{alGetErrorDirect(context)}; err != AL_NO_ERROR)
     {
-        std::cerr<< "OpenAL Error: "<<alGetStringDirect(context, err)<<"\n";
+        fmt::println(stderr, "OpenAL Error: {}", alGetStringDirect(context, err));
         if(buffer && alIsBufferDirect(context, buffer))
             alDeleteBuffersDirect(context, 1, &buffer);
         return 0;
@@ -318,7 +318,7 @@ int main(al::span<std::string_view> args)
     /* Print out usage if no arguments were specified */
     if(args.size() < 2)
     {
-        std::cerr<< "Usage: "<<args[0]<<" [-device <name>] <filename>\n";
+        fmt::println(stderr, "Usage: {} [-device <name>] <filename>", args[0]);
         return 1;
     }
 
@@ -330,20 +330,20 @@ int main(al::span<std::string_view> args)
     {
         device = p_alcOpenDevice(std::string{args[1]}.c_str());
         if(!device)
-            std::cerr<< "Failed to open \""<<args[1]<<"\", trying default\n";
+            fmt::println(stderr, "Failed to open \"{}\", trying default", args[1]);
         args = args.subspan(2);
     }
     if(!device)
         device = p_alcOpenDevice(nullptr);
     if(!device)
     {
-        std::cerr<< "Could not open a device!\n";
+        fmt::println(stderr, "Could not open a device!");
         return 1;
     }
 
     if(!p_alcIsExtensionPresent(device, "ALC_EXT_direct_context"))
     {
-        std::cerr<< "ALC_EXT_direct_context not supported on device\n";
+        fmt::println(stderr, "ALC_EXT_direct_context not supported on device");
         p_alcCloseDevice(device);
         return 1;
     }
@@ -417,7 +417,7 @@ int main(al::span<std::string_view> args)
     if(!context)
     {
         p_alcCloseDevice(device);
-        std::cerr<< "Could not create a context!\n";
+        fmt::println(stderr, "Could not create a context!");
         return 1;
     }
 
@@ -446,7 +446,7 @@ int main(al::span<std::string_view> args)
         /* Get the source offset. */
         ALfloat offset{};
         alGetSourcefDirect(context, source, AL_SEC_OFFSET, &offset);
-        printf("\rOffset: %f  ", offset);
+        fmt::print("  \rOffset: {:.02f}", offset);
         fflush(stdout);
     } while(alGetErrorDirect(context) == AL_NO_ERROR && state == AL_PLAYING);
     printf("\n");

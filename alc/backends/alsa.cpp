@@ -709,7 +709,7 @@ void AlsaPlayback::open(std::string_view name)
     /* Free alsa's global config tree. Otherwise valgrind reports a ton of leaks. */
     snd_config_update_free_global();
 
-    mDevice->DeviceName = name;
+    mDeviceName = name;
 }
 
 bool AlsaPlayback::reset()
@@ -740,7 +740,7 @@ bool AlsaPlayback::reset()
         break;
     }
 
-    bool allowmmap{GetConfigValueBool(mDevice->DeviceName, "alsa"sv, "mmap"sv, true)};
+    bool allowmmap{GetConfigValueBool(mDevice->mDeviceName, "alsa"sv, "mmap"sv, true)};
     uint periodLen{static_cast<uint>(mDevice->UpdateSize * 1000000_u64 / mDevice->Frequency)};
     uint bufferLen{static_cast<uint>(mDevice->BufferSize * 1000000_u64 / mDevice->Frequency)};
     uint rate{mDevice->Frequency};
@@ -798,7 +798,7 @@ bool AlsaPlayback::reset()
         else mDevice->FmtChans = DevFmtStereo;
     }
     /* set rate (implicitly constrains period/buffer parameters) */
-    if(!GetConfigValueBool(mDevice->DeviceName, "alsa", "allow-resampler", false)
+    if(!GetConfigValueBool(mDevice->mDeviceName, "alsa", "allow-resampler", false)
         || !mDevice->Flags.test(FrequencyRequest))
     {
         if(snd_pcm_hw_params_set_rate_resample(mPcmHandle, hp.get(), 0) < 0)
@@ -1038,7 +1038,7 @@ void AlsaCapture::open(std::string_view name)
     if(needring)
         mRing = RingBuffer::Create(mDevice->BufferSize, mDevice->frameSizeFromFmt(), false);
 
-    mDevice->DeviceName = name;
+    mDeviceName = name;
 }
 
 
@@ -1178,10 +1178,10 @@ uint AlsaCapture::availableSamples()
     while(avail > 0)
     {
         auto vec = mRing->getWriteVector();
-        if(vec.first.len == 0) break;
+        if(vec[0].len == 0) break;
 
-        snd_pcm_sframes_t amt{std::min(static_cast<snd_pcm_sframes_t>(vec.first.len), avail)};
-        amt = snd_pcm_readi(mPcmHandle, vec.first.buf, static_cast<snd_pcm_uframes_t>(amt));
+        snd_pcm_sframes_t amt{std::min(static_cast<snd_pcm_sframes_t>(vec[0].len), avail)};
+        amt = snd_pcm_readi(mPcmHandle, vec[0].buf, static_cast<snd_pcm_uframes_t>(amt));
         if(amt < 0)
         {
             ERR("read error: %s\n", snd_strerror(static_cast<int>(amt)));

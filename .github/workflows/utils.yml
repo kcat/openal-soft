@@ -1,31 +1,35 @@
-name: makemhr
+name: utils
 
 on:
   push:
     paths:
-      - 'utils/makemhr/**'
-      - '.github/workflows/makemhr.yml'
+      - 'utils/**'
+      - 'examples/**'
+      - '.github/workflows/utils.yml'
 
   workflow_dispatch:
 
 env:
   BUILD_TYPE: Release
+  Branch: ${{github.ref_name}}
 
 jobs:
   Win64:
     runs-on: windows-latest
 
     steps:
-    - uses: actions/checkout@v3
+    - name: Clone repo and submodules
+      run: git clone https://github.com/${{github.repository}}.git . --branch ${{env.Branch}}
 
-    - name: Get current date
-      run: echo "CurrentDate=$(date +'%Y-%m-%d')" >> $env:GITHUB_ENV
-
-    - name: Get commit hash
-      run: echo "CommitHash=$(git rev-parse --short=7 HEAD)" >> $env:GITHUB_ENV
+    - name: Get current date, commit hash and count
+      run: |
+        echo "CommitDate=$(git show -s --date=format:'%Y-%m-%d' --format=%cd)" >> $env:GITHUB_ENV
+        echo "CommitHashShort=$(git rev-parse --short=7 HEAD)" >> $env:GITHUB_ENV
+        echo "CommitCount=$(git rev-list --count ${{env.Branch}} --)" >> $env:GITHUB_ENV
 
     - name: Clone libmysofa
-      run: git clone --depth 1 --branch v1.3.1 https://github.com/hoene/libmysofa.git libmysofa
+      run: |
+        git clone https://github.com/hoene/libmysofa.git --branch v1.3.3
 
     - name: Add MSBuild to PATH
       uses: microsoft/setup-msbuild@v1.1.3
@@ -52,25 +56,30 @@ jobs:
     - name: Collect artifacts
       run: |
         copy "build/Release/makemhr.exe" "Artifacts/makemhr.exe"
+        copy "build/Release/sofa-info.exe" "Artifacts/sofa-info.exe"
+        copy "build/Release/alrecord.exe" "Artifacts/alrecord.exe"
+        copy "build/Release/altonegen.exe" "Artifacts/altonegen.exe"
+        copy "build/Release/openal-info.exe" "Artifacts/openal-info.exe"
+        copy "build/Release/allafplay.exe" "Artifacts/allafplay.exe"
         copy "libmysofa/windows/third-party/zlib-1.2.11/bin/zlib.dll" "Artifacts/zlib.dll"
 
-    - name: Upload makemhr artifact
-      uses: actions/upload-artifact@v3.1.2
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
       with:
-        name: makemhr
+        name: ${{env.CommitDate}}_utils-r${{env.CommitCount}}@${{env.CommitHashShort}}
         path: "Artifacts/"
 
     - name: Compress artifacts
       uses: papeloto/action-zip@v1
       with:
         files: Artifacts/
-        dest: "Release/makemhr.zip"
+        dest: "Release/utils.zip"
 
     - name: GitHub pre-release
       uses: "marvinpinto/action-automatic-releases@latest"
       with:
         repo_token: "${{secrets.GITHUB_TOKEN}}"
-        automatic_release_tag: "makemhr"
+        automatic_release_tag: "utils"
         prerelease: true
-        title: "[${{env.CurrentDate}}] makemhr-${{env.CommitHash}}"
-        files: "Release/makemhr.zip"
+        title: "[${{env.CommitDate}}] utils-r${{env.CommitCount}}@${{env.CommitHashShort}}"
+        files: "Release/utils.zip"

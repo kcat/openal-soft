@@ -23,12 +23,13 @@
 #include "ringbuffer.h"
 
 #include <algorithm>
+#include <array>
 #include <cstdint>
 #include <limits>
 #include <stdexcept>
-#include <tuple>
 
 #include "alnumeric.h"
+#include "alspan.h"
 
 
 auto RingBuffer::Create(std::size_t sz, std::size_t elem_sz, bool limit_writes) -> RingBufferPtr
@@ -76,8 +77,8 @@ auto RingBuffer::read(void *dest, std::size_t count) noexcept -> std::size_t
     const std::size_t read_idx{r & mSizeMask};
 
     const std::size_t rdend{read_idx + to_read};
-    const auto [n1, n2] = (rdend <= mSizeMask+1) ? std::make_tuple(to_read, 0_uz)
-        : std::make_tuple(mSizeMask+1 - read_idx, rdend&mSizeMask);
+    const auto [n1, n2] = (rdend <= mSizeMask+1) ? std::array{to_read, 0_uz}
+        : std::array{mSizeMask+1 - read_idx, rdend&mSizeMask};
 
     auto dstbytes = al::span{static_cast<std::byte*>(dest), count*mElemSize};
     auto outiter = std::copy_n(mBuffer.begin() + ptrdiff_t(read_idx*mElemSize), n1*mElemSize,
@@ -99,8 +100,8 @@ auto RingBuffer::peek(void *dest, std::size_t count) const noexcept -> std::size
     const std::size_t read_idx{r & mSizeMask};
 
     const std::size_t rdend{read_idx + to_read};
-    const auto [n1, n2] = (rdend <= mSizeMask+1) ? std::make_tuple(to_read, 0_uz)
-        : std::make_tuple(mSizeMask+1 - read_idx, rdend&mSizeMask);
+    const auto [n1, n2] = (rdend <= mSizeMask+1) ? std::array{to_read, 0_uz}
+        : std::array{mSizeMask+1 - read_idx, rdend&mSizeMask};
 
     auto dstbytes = al::span{static_cast<std::byte*>(dest), count*mElemSize};
     auto outiter = std::copy_n(mBuffer.begin() + ptrdiff_t(read_idx*mElemSize), n1*mElemSize,
@@ -121,8 +122,8 @@ auto RingBuffer::write(const void *src, std::size_t count) noexcept -> std::size
     const std::size_t write_idx{w & mSizeMask};
 
     const std::size_t wrend{write_idx + to_write};
-    const auto [n1, n2] = (wrend <= mSizeMask+1) ? std::make_tuple(to_write, 0_uz)
-        : std::make_tuple(mSizeMask+1 - write_idx, wrend&mSizeMask);
+    const auto [n1, n2] = (wrend <= mSizeMask+1) ? std::array{to_write, 0_uz}
+        : std::array{mSizeMask+1 - write_idx, wrend&mSizeMask};
 
     auto srcbytes = al::span{static_cast<const std::byte*>(src), count*mElemSize};
     std::copy_n(srcbytes.cbegin(), n1*mElemSize, mBuffer.begin() + ptrdiff_t(write_idx*mElemSize));
@@ -146,10 +147,10 @@ auto RingBuffer::getReadVector() noexcept -> DataPair
         /* Two part vector: the rest of the buffer after the current read ptr,
          * plus some from the start of the buffer.
          */
-        return DataPair{{mBuffer.data() + read_idx*mElemSize, mSizeMask+1 - read_idx},
-            {mBuffer.data(), rdend&mSizeMask}};
+        return DataPair{{{mBuffer.data() + read_idx*mElemSize, mSizeMask+1 - read_idx},
+            {mBuffer.data(), rdend&mSizeMask}}};
     }
-    return DataPair{{mBuffer.data() + read_idx*mElemSize, readable}, {}};
+    return DataPair{{{mBuffer.data() + read_idx*mElemSize, readable}, {}}};
 }
 
 auto RingBuffer::getWriteVector() noexcept -> DataPair
@@ -165,8 +166,8 @@ auto RingBuffer::getWriteVector() noexcept -> DataPair
         /* Two part vector: the rest of the buffer after the current write ptr,
          * plus some from the start of the buffer.
          */
-        return DataPair{{mBuffer.data() + write_idx*mElemSize, mSizeMask+1 - write_idx},
-            {mBuffer.data(), wrend&mSizeMask}};
+        return DataPair{{{mBuffer.data() + write_idx*mElemSize, mSizeMask+1 - write_idx},
+            {mBuffer.data(), wrend&mSizeMask}}};
     }
-    return DataPair{{mBuffer.data() + write_idx*mElemSize, writable}, {}};
+    return DataPair{{{mBuffer.data() + write_idx*mElemSize, writable}, {}}};
 }

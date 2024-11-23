@@ -31,11 +31,10 @@
 #include "AL/efx.h"
 
 #include "alc/context.h"
-#include "alc/inprogext.h"
+#include "alnumeric.h"
 #include "alspan.h"
 #include "direct_defs.h"
 #include "error.h"
-#include "opthelpers.h"
 
 
 namespace {
@@ -54,7 +53,7 @@ inline void CommitAndUpdateProps(ALCcontext *context)
 {
     if(!context->mDeferUpdates)
     {
-#ifdef ALSOFT_EAX
+#if ALSOFT_EAX
         if(context->eaxNeedsCommit())
         {
             context->mPropsDirty = true;

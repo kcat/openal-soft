@@ -14,6 +14,7 @@
 #include "alnumeric.h"
 #include "alspan.h"
 #include "bsinc_defs.h"
+#include "opthelpers.h"
 #include "resampler_limits.h"
 
 
@@ -21,10 +22,6 @@ namespace {
 
 using uint = unsigned int;
 
-#if __cpp_lib_math_special_functions >= 201603L
-using std::cyl_bessel_i;
-
-#else
 
 /* The zero-order modified Bessel function of the first kind, used for the
  * Kaiser window.
@@ -37,7 +34,7 @@ using std::cyl_bessel_i;
  * compounding the rounding and precision error), but it's good enough.
  */
 template<typename T, typename U>
-U cyl_bessel_i(T nu, U x)
+constexpr auto cyl_bessel_i(T nu, U x) -> U
 {
     if(nu != T{0})
         throw std::runtime_error{"cyl_bessel_i: nu != 0"};
@@ -61,7 +58,6 @@ U cyl_bessel_i(T nu, U x)
     } while(sum != last_sum);
     return static_cast<U>(sum);
 }
-#endif
 
 /* This is the normalized cardinal sine (sinc) function.
  *
@@ -94,7 +90,7 @@ constexpr double Kaiser(const double beta, const double k, const double besseli_
 {
     if(!(k >= -1.0 && k <= 1.0))
         return 0.0;
-    return cyl_bessel_i(0, beta * std::sqrt(1.0 - k*k)) / besseli_0_beta;
+    return ::cyl_bessel_i(0, beta * std::sqrt(1.0 - k*k)) / besseli_0_beta;
 }
 
 /* Calculates the (normalized frequency) transition width of the Kaiser window.
@@ -153,7 +149,7 @@ constexpr BSincHeader bsinc24_hdr{60, 23};
 
 
 template<const BSincHeader &hdr>
-struct BSincFilterArray {
+struct SIMDALIGN BSincFilterArray {
     alignas(16) std::array<float, hdr.total_size> mTable{};
 
     BSincFilterArray()
@@ -164,7 +160,7 @@ struct BSincFilterArray {
         using filter_type = std::array<std::array<double,BSincPointsMax>,BSincPhaseCount>;
         auto filter = std::vector<filter_type>(BSincScaleCount);
 
-        const double besseli_0_beta{cyl_bessel_i(0, hdr.beta)};
+        const double besseli_0_beta{::cyl_bessel_i(0, hdr.beta)};
 
         /* Calculate the Kaiser-windowed Sinc filter coefficients for each
          * scale and phase index.

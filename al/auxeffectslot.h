@@ -1,6 +1,8 @@
 #ifndef AL_AUXEFFECTSLOT_H
 #define AL_AUXEFFECTSLOT_H
 
+#include "config.h"
+
 #include <array>
 #include <atomic>
 #include <cstdint>
@@ -16,7 +18,7 @@
 #include "core/effectslot.h"
 #include "intrusive_ptr.h"
 
-#ifdef ALSOFT_EAX
+#if ALSOFT_EAX
 #include <memory>
 #include "eax/api.h"
 #include "eax/call.h"
@@ -28,7 +30,7 @@
 
 struct ALbuffer;
 
-#ifdef ALSOFT_EAX
+#if ALSOFT_EAX
 class EaxFxSlotException : public EaxException {
 public:
 	explicit EaxFxSlotException(const char* message)
@@ -79,7 +81,7 @@ struct ALeffectslot {
     static void SetName(ALCcontext *context, ALuint id, std::string_view name);
 
 
-#ifdef ALSOFT_EAX
+#if ALSOFT_EAX
 public:
     void eax_initialize(ALCcontext& al_context, EaxFxSlotIndexValue index);
 
@@ -360,7 +362,7 @@ public:
 
 void UpdateAllEffectSlotProps(ALCcontext *context);
 
-#ifdef ALSOFT_EAX
+#if ALSOFT_EAX
 using EaxAlEffectSlotUPtr = std::unique_ptr<ALeffectslot, ALeffectslot::EaxDeleter>;
 
 EaxAlEffectSlotUPtr eax_create_al_effect_slot(ALCcontext& context);

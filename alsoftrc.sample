@@ -686,3 +686,15 @@
 ## reverse-z: (global)
 #  Reverses the local Z (front-back) position of 3D sound sources.
 #reverse-z = false
+
+## vendor-override:
+#  Overrides the string returned by alGetString(AL_VENDOR).
+#vendor-override =
+
+## version-override:
+#  Overrides the string returned by alGetString(AL_VERSION).
+#version-override =
+
+## renderer-override:
+#  Overrides the string returned by alGetString(AL_RENDERER).
+#renderer-override =

@@ -75,7 +75,6 @@
 #include "strutils.h"
 
 #if ALSOFT_UWP
-
 #include <winrt/Windows.Media.Core.h> // !!This is important!!
 #include <winrt/Windows.Foundation.Collections.h>
 #include <winrt/Windows.Devices.h>
@@ -925,6 +924,56 @@ void TraceFormat(const char *msg, const WAVEFORMATEX *format)
 }
 
 
+/* Duplicates the first sample of each sample frame to the second sample, at
+ * half volume. Essentially converting mono to stereo.
+ */
+template<typename T>
+void DuplicateSamples(al::span<BYTE> insamples, size_t step)
+{
+    auto samples = al::span{reinterpret_cast<T*>(insamples.data()), insamples.size()/sizeof(T)};
+    if constexpr(std::is_floating_point_v<T>)
+    {
+        for(size_t i{0};i < samples.size();i+=step)
+        {
+            const auto s = samples[i] * T{0.5};
+            samples[i+1] = samples[i] = s;
+        }
+    }
+    else if constexpr(std::is_signed_v<T>)
+    {
+        for(size_t i{0};i < samples.size();i+=step)
+        {
+            const auto s = samples[i] / 2;
+            samples[i+1] = samples[i] = T(s);
+        }
+    }
+    else
+    {
+        using ST = std::make_signed_t<T>;
+        static constexpr auto SignBit = T{1u << (sizeof(T)*8 - 1)};
+        for(size_t i{0};i < samples.size();i+=step)
+        {
+            const auto s = static_cast<ST>(samples[i]^SignBit) / 2;
+            samples[i+1] = samples[i] = T(s)^SignBit;
+        }
+    }
+}
+
+void DuplicateSamples(al::span<BYTE> insamples, DevFmtType sampletype, size_t step)
+{
+    switch(sampletype)
+    {
+    case DevFmtByte: return DuplicateSamples<char>(insamples, step);
+    case DevFmtUByte: return DuplicateSamples<unsigned char>(insamples, step);
+    case DevFmtShort: return DuplicateSamples<short>(insamples, step);
+    case DevFmtUShort: return DuplicateSamples<unsigned short>(insamples, step);
+    case DevFmtInt: return DuplicateSamples<int>(insamples, step);
+    case DevFmtUInt: return DuplicateSamples<unsigned int>(insamples, step);
+    case DevFmtFloat: return DuplicateSamples<float>(insamples, step);
+    }
+}
+
+
 enum class MsgType {
     OpenDevice,
     ResetDevice,
@@ -1141,6 +1190,7 @@ struct WasapiPlayback final : public BackendBase, WasapiProxy {
     std::vector<char> mResampleBuffer{};
     uint mBufferFilled{0};
     SampleConverterPtr mResampler;
+    bool mMonoUpsample{false};
 
     WAVEFORMATEXTENSIBLE mFormat{};
     std::atomic<UINT32> mPadding{0u};
@@ -1246,6 +1296,13 @@ FORCE_ALIGN int WasapiPlayback::mixerProc()
                 mDevice->renderSamples(buffer, len, mFormat.Format.nChannels);
                 mPadding.store(written + len, std::memory_order_relaxed);
             }
+
+            if(mMonoUpsample)
+            {
+                DuplicateSamples(al::span{buffer, size_t{len}*frame_size}, mDevice->FmtType,
+                    mFormat.Format.nChannels);
+            }
+
             hr = audio.mRender->ReleaseBuffer(len, 0);
         }
         if(FAILED(hr))
@@ -1574,6 +1631,8 @@ void WasapiPlayback::prepareFormat(WAVEFORMATEXTENSIBLE &OutputType)
 
 void WasapiPlayback::finalizeFormat(WAVEFORMATEXTENSIBLE &OutputType)
 {
+    mMonoUpsample = false;
+
     if(!GetConfigValueBool(mDevice->mDeviceName, "wasapi", "allow-resampler", true))
         mDevice->Frequency = uint(OutputType.Format.nSamplesPerSec);
     else
@@ -1595,6 +1654,12 @@ void WasapiPlayback::finalizeFormat(WAVEFORMATEXTENSIBLE &OutputType)
         {
         case DevFmtMono:
             chansok = (chancount >= 1 && ((chanmask&MonoMask) == MONO || !chanmask));
+            if(!chansok && chancount >= 2 && (chanmask&StereoMask) == STEREO)
+            {
+                /* Mono rendering with stereo+ output is handled specially. */
+                chansok = true;
+                mMonoUpsample = true;
+            }
             break;
         case DevFmtStereo:
             chansok = (chancount >= 2 && ((chanmask&StereoMask) == STEREO || !chanmask));

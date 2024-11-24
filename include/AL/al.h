@@ -5,9 +5,19 @@
 #ifdef __cplusplus
 extern "C" {
 
+#ifdef _MSVC_LANG
+#define AL_CPLUSPLUS _MSVC_LANG
+#else
+#define AL_CPLUSPLUS __cplusplus
+#endif
+
 #ifndef AL_DISABLE_NOEXCEPT
+#if AL_CPLUSPLUS >= 201103L
 #define AL_API_NOEXCEPT noexcept
-#if __cplusplus >= 201703L
+#else
+#define AL_API_NOEXCEPT
+#endif
+#if AL_CPLUSPLUS >= 201703L
 #define AL_API_NOEXCEPT17 noexcept
 #else
 #define AL_API_NOEXCEPT17
@@ -18,6 +28,8 @@ extern "C" {
 #define AL_API_NOEXCEPT
 #define AL_API_NOEXCEPT17
 #endif
+
+#undef AL_CPLUSPLUS
 
 #else /* __cplusplus */
 

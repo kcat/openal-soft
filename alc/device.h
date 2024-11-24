@@ -32,7 +32,7 @@ struct FilterSubList;
 using uint = unsigned int;
 
 
-struct ALCdevice { };
+struct ALCdevice { virtual ~ALCdevice() = default; };
 
 namespace al {
 
@@ -100,7 +100,7 @@ struct Device final : public ALCdevice, al::intrusive_ref<al::Device>, DeviceBas
     std::string mRendererOverride;
 
     Device(DeviceType type);
-    ~Device();
+    ~Device() final;
 
     void enumerateHrtfs();
 

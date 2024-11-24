@@ -15,6 +15,9 @@ template<typename T>
 class intrusive_ref {
     std::atomic<unsigned int> mRef{1u};
 
+protected:
+    ~intrusive_ref() = default;
+
 public:
     unsigned int add_ref() noexcept { return IncrementRef(mRef); }
     unsigned int dec_ref() noexcept

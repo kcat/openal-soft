@@ -3382,10 +3382,8 @@ ALC_API ALCboolean ALC_APIENTRY alcIsRenderFormatSupportedSOFT(ALCdevice *device
 #endif
 ALC_API void ALC_APIENTRY alcRenderSamplesSOFT(ALCdevice *device, ALCvoid *buffer, ALCsizei samples) noexcept
 {
-    if(!device) UNLIKELY
-        return alcSetError(nullptr, ALC_INVALID_DEVICE);
-    auto aldev = static_cast<al::Device*>(device);
-    if(aldev->Type != DeviceType::Loopback) UNLIKELY
+    auto aldev = dynamic_cast<al::Device*>(device);
+    if(!aldev || aldev->Type != DeviceType::Loopback) UNLIKELY
         alcSetError(aldev, ALC_INVALID_DEVICE);
     else if(samples < 0 || (samples > 0 && buffer == nullptr)) UNLIKELY
         alcSetError(aldev, ALC_INVALID_VALUE);

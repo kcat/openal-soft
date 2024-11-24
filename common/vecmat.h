@@ -50,7 +50,7 @@ public:
         const auto length_sqr = float{mVals[0]*mVals[0] + mVals[1]*mVals[1] + mVals[2]*mVals[2]};
         if(length_sqr > std::numeric_limits<float>::epsilon())
         {
-            const auto length = float{std::sqrt(length_sqr)};
+            const auto length = std::sqrt(length_sqr);
             auto inv_length = float{1.0f / length};
             mVals[0] *= inv_length;
             mVals[1] *= inv_length;

@@ -106,8 +106,8 @@ force_inline void MixLine(const al::span<const float> InSamples, const al::span<
     size_t pos{0};
     if(std::abs(step) > std::numeric_limits<float>::epsilon())
     {
-        const auto gain = float{CurrentGain};
-        auto step_count = float{0.0f};
+        const auto gain = CurrentGain;
+        auto step_count = 0.0f;
         /* Mix with applying gain steps in aligned multiples of 4. */
         if(const size_t todo{fade_len >> 2})
         {

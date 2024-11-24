@@ -1509,7 +1509,7 @@ void ReverbPipeline::processEarly(const DelayLineU &main_delay, size_t offset,
         /* First, load decorrelated samples from the main delay line as the
          * primary reflections.
          */
-        const auto fadeStep = float{1.0f / static_cast<float>(todo)};
+        const auto fadeStep = 1.0f / static_cast<float>(todo);
         for(size_t j{0_uz};j < NUM_LINES;j++)
         {
             const auto input = in_delay.get(j);
@@ -1519,7 +1519,7 @@ void ReverbPipeline::processEarly(const DelayLineU &main_delay, size_t offset,
             const auto coeff0 = float{mEarlyDelayCoeff[j][0]};
             const auto coeff1 = float{mEarlyDelayCoeff[j][1]};
             mEarlyDelayCoeff[j][0] = mEarlyDelayCoeff[j][1];
-            auto fadeCount = float{0.0f};
+            auto fadeCount = 0.0f;
 
             auto tmp = tempSamples[j].begin();
             for(size_t i{0_uz};i < todo;)
@@ -1599,20 +1599,20 @@ void ReverbPipeline::processEarly(const DelayLineU &main_delay, size_t offset,
 
 auto Modulation::calcDelays(size_t todo) -> al::span<const uint>
 {
-    auto idx = uint{Index};
-    const auto step = uint{Step};
-    const auto depth = float{Depth * float{gCubicTable.sTableSteps}};
+    auto idx = Index;
+    const auto step = Step;
+    const auto depth = Depth * float{gCubicTable.sTableSteps};
     const auto delays = al::span{ModDelays}.first(todo);
     std::generate(delays.begin(), delays.end(), [step,depth,&idx]
     {
         idx += step;
-        const auto x = float{static_cast<float>(idx&MOD_FRACMASK) * (1.0f/MOD_FRACONE)};
+        const auto x = static_cast<float>(idx&MOD_FRACMASK) * (1.0f/MOD_FRACONE);
         /* Approximate sin(x*2pi). As long as it roughly fits a sinusoid shape
          * and stays within [-1...+1], it needn't be perfect.
          */
-        const auto lfo = float{!(idx&(MOD_FRACONE>>1))
+        const auto lfo = !(idx&(MOD_FRACONE>>1))
             ? ((-16.0f * x * x) + (8.0f * x))
-            : ((16.0f * x * x) + (-8.0f * x) + (-16.0f * x) + 8.0f)};
+            : ((16.0f * x * x) + (-8.0f * x) + (-16.0f * x) + 8.0f);
         return float2uint((lfo+1.0f) * depth);
     });
     Index = idx;
@@ -1657,7 +1657,7 @@ void ReverbPipeline::processLate(size_t offset, const size_t samplesToDo,
         for(size_t j{0_uz};j < NUM_LINES;++j)
         {
             const auto input = late_delay.get(j);
-            const auto midGain = float{mLate.T60[j].MidGain};
+            const auto midGain = mLate.T60[j].MidGain;
             auto late_feedb_tap = size_t{offset - mLate.Offset[j]};
 
             auto proc_sample = [input,midGain,&late_feedb_tap](const size_t idelay) -> float
@@ -1665,7 +1665,7 @@ void ReverbPipeline::processLate(size_t offset, const size_t samplesToDo,
                 /* Calculate the read sample offset and sub-sample offset
                  * between it and the next sample.
                  */
-                const auto delay = size_t{late_feedb_tap - (idelay>>gCubicTable.sTableBits)};
+                const auto delay = late_feedb_tap - (idelay>>gCubicTable.sTableBits);
                 const auto delayoffset = size_t{idelay & gCubicTable.sTableMask};
                 ++late_feedb_tap;
 
@@ -1677,10 +1677,10 @@ void ReverbPipeline::processLate(size_t offset, const size_t samplesToDo,
                 const auto out2 = float{input[(delay-2) & (input.size()-1)]};
                 const auto out3 = float{input[(delay-3) & (input.size()-1)]};
 
-                const auto out = float{out0*gCubicTable.getCoeff0(delayoffset)
+                const auto out = out0*gCubicTable.getCoeff0(delayoffset)
                     + out1*gCubicTable.getCoeff1(delayoffset)
                     + out2*gCubicTable.getCoeff2(delayoffset)
-                    + out3*gCubicTable.getCoeff3(delayoffset)};
+                    + out3*gCubicTable.getCoeff3(delayoffset);
                 return out * midGain;
             };
             std::transform(delays.begin(), delays.end(), tempSamples[j].begin(), proc_sample);
@@ -1696,10 +1696,10 @@ void ReverbPipeline::processLate(size_t offset, const size_t samplesToDo,
             auto late_delay_tap0 = size_t{offset - mLateDelayTap[j][0]};
             auto late_delay_tap1 = size_t{offset - mLateDelayTap[j][1]};
             mLateDelayTap[j][0] = mLateDelayTap[j][1];
-            const auto densityGain = float{mLate.DensityGain};
-            const auto densityStep = float{late_delay_tap0 != late_delay_tap1
-                ? densityGain*fadeStep : 0.0f};
-            auto fadeCount = float{0.0f};
+            const auto densityGain = mLate.DensityGain;
+            const auto densityStep = late_delay_tap0 != late_delay_tap1
+                ? densityGain*fadeStep : 0.0f;
+            auto fadeCount = 0.0f;
 
             auto samples = tempSamples[j].begin();
             for(size_t i{0u};i < todo;)

@@ -41,7 +41,7 @@ inline constexpr uint AmbiPeriphonicMask{0xfe7ce4};
  */
 inline constexpr auto Ambi2DChannelsFromOrder(std::size_t order) noexcept -> std::size_t
 { return order*2 + 1; }
-inline constexpr auto MaxAmbi2DChannels = std::size_t{Ambi2DChannelsFromOrder(MaxAmbiOrder)};
+inline constexpr auto MaxAmbi2DChannels = Ambi2DChannelsFromOrder(MaxAmbiOrder);
 
 
 /* NOTE: These are scale factors as applied to Ambisonics content. Decoder

@@ -1650,7 +1650,7 @@ if(ALSOFT_UTILS)
             PRIVATE ${OpenAL_BINARY_DIR} ${OpenAL_SOURCE_DIR}/common)
         target_compile_options(uhjdecoder PRIVATE ${C_FLAGS})
         target_link_libraries(uhjdecoder PUBLIC alsoft.common
-            PRIVATE ${LINKER_FLAGS} SndFile::SndFile ${UNICODE_FLAG})
+            PRIVATE ${LINKER_FLAGS} SndFile::SndFile ${UNICODE_FLAG} fmt::fmt)
         set_target_properties(uhjdecoder PROPERTIES ${DEFAULT_TARGET_PROPS})
 
         add_executable(uhjencoder utils/uhjencoder.cpp)
@@ -1659,7 +1659,7 @@ if(ALSOFT_UTILS)
             PRIVATE ${OpenAL_BINARY_DIR} ${OpenAL_SOURCE_DIR}/common)
         target_compile_options(uhjencoder PRIVATE ${C_FLAGS})
         target_link_libraries(uhjencoder PUBLIC alsoft.common
-            PRIVATE ${LINKER_FLAGS} SndFile::SndFile ${UNICODE_FLAG})
+            PRIVATE ${LINKER_FLAGS} SndFile::SndFile ${UNICODE_FLAG} fmt::fmt)
         set_target_properties(uhjencoder PROPERTIES ${DEFAULT_TARGET_PROPS})
     endif()
 

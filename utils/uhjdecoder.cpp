@@ -43,7 +43,7 @@
 #include "almalloc.h"
 #include "alnumbers.h"
 #include "alspan.h"
-#include "alstring.h"
+#include "fmt/core.h"
 #include "vector.h"
 #include "opthelpers.h"
 #include "phase_shifter.h"
@@ -352,7 +352,7 @@ int main(al::span<std::string_view> args)
 {
     if(args.size() < 2 || args[1] == "-h" || args[1] == "--help")
     {
-        printf("Usage: %.*s <[options] filename.wav...>\n\n"
+        fmt::println("Usage: {} <[options] filename.wav...>\n\n"
             "  Options:\n"
             "    --general      Use the general equations for 2-channel UHJ (default).\n"
             "    --alternative  Use the alternative equations for 2-channel UHJ.\n"
@@ -360,7 +360,7 @@ int main(al::span<std::string_view> args)
             "Note: When decoding 2-channel UHJ to an .amb file, the result should not use\n"
             "the normal B-Format shelf filters! Only 3- and 4-channel UHJ can accurately\n"
             "reconstruct the original B-Format signal.",
-            al::sizei(args[0]), args[0].data());
+            args[0]);
         return 1;
     }
 
@@ -383,13 +383,12 @@ int main(al::span<std::string_view> args)
         SndFilePtr infile{sf_open(std::string{args[fidx]}.c_str(), SFM_READ, &ininfo)};
         if(!infile)
         {
-            fprintf(stderr, "Failed to open %.*s\n", al::sizei(args[fidx]), args[fidx].data());
+            fmt::println(stderr, "Failed to open {}", args[fidx]);
             continue;
         }
         if(sf_command(infile.get(), SFC_WAVEX_GET_AMBISONIC, nullptr, 0) == SF_AMBISONIC_B_FORMAT)
         {
-            fprintf(stderr, "%.*s is already B-Format\n", al::sizei(args[fidx]),
-                args[fidx].data());
+            fmt::println(stderr, "{} is already B-Format", args[fidx]);
             continue;
         }
         uint outchans{};
@@ -399,12 +398,10 @@ int main(al::span<std::string_view> args)
             outchans = static_cast<uint>(ininfo.channels);
         else
         {
-            fprintf(stderr, "%.*s is not a 2-, 3-, or 4-channel file\n", al::sizei(args[fidx]),
-                args[fidx].data());
+            fmt::println(stderr, "{} is not a 2-, 3-, or 4-channel file", args[fidx]);
             continue;
         }
-        printf("Converting %.*s from %d-channel UHJ%s...\n", al::sizei(args[fidx]),
-            args[fidx].data(), ininfo.channels,
+        fmt::println("Converting {} from {}-channel UHJ%s...\n", args[fidx], ininfo.channels,
             (ininfo.channels == 2) ? use_general ? " (general)" : " (alternative)" : "");
 
         std::string outname{args[fidx]};
@@ -419,7 +416,7 @@ int main(al::span<std::string_view> args)
         FilePtr outfile{fopen(outname.c_str(), "wb")};
         if(!outfile)
         {
-            fprintf(stderr, "Failed to create %s\n", outname.c_str());
+            fmt::println(stderr, "Failed to create {}", outname);
             continue;
         }
 
@@ -456,8 +453,8 @@ int main(al::span<std::string_view> args)
         fwrite32le(0xFFFFFFFF, outfile.get()); // 'data' header len; filled in at close
         if(ferror(outfile.get()))
         {
-            fprintf(stderr, "Error writing wave file header: %s (%d)\n",
-                std::generic_category().message(errno).c_str(), errno);
+            fmt::println(stderr, "Error writing wave file header: {} ({})",
+                std::generic_category().message(errno), errno);
             continue;
         }
 
@@ -511,8 +508,8 @@ int main(al::span<std::string_view> args)
             std::size_t wrote{fwrite(outmem.data(), sizeof(byte4)*outchans, got, outfile.get())};
             if(wrote < got)
             {
-                fprintf(stderr, "Error writing wave data: %s (%d)\n",
-                    std::generic_category().message(errno).c_str(), errno);
+                fmt::println(stderr, "Error writing wave data: {} ({})",
+                    std::generic_category().message(errno), errno);
                 break;
             }
         }
@@ -530,11 +527,11 @@ int main(al::span<std::string_view> args)
         ++num_decoded;
     }
     if(num_decoded == 0)
-        fprintf(stderr, "Failed to decode any input files\n");
+        fmt::println(stderr, "Failed to decode any input files");
     else if(num_decoded < num_files)
-        fprintf(stderr, "Decoded %zu of %zu files\n", num_decoded, num_files);
+        fmt::println(stderr, "Decoded {} of {} files", num_decoded, num_files);
     else
-        printf("Decoded %zu file%s\n", num_decoded, (num_decoded==1)?"":"s");
+        fmt::println("Decoded {} file{}", num_decoded, (num_decoded==1)?"":"s");
     return 0;
 }
 

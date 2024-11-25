@@ -27,7 +27,6 @@
 #include <algorithm>
 #include <array>
 #include <cassert>
-#include <cinttypes>
 #include <cmath>
 #include <cstddef>
 #include <cstdio>
@@ -38,7 +37,7 @@
 
 #include "alnumbers.h"
 #include "alspan.h"
-#include "alstring.h"
+#include "fmt/core.h"
 #include "phase_shifter.h"
 #include "vector.h"
 
@@ -251,7 +250,7 @@ int main(al::span<std::string_view> args)
 {
     if(args.size() < 2 || args[1] == "-h" || args[1] == "--help")
     {
-        printf("Usage: %.*s <[options] infile...>\n\n"
+        fmt::println("Usage: {} <[options] infile...>\n\n"
             "  Options:\n"
             "    -bhj  Encode 2-channel UHJ, aka \"BJH\" (default).\n"
             "    -thj  Encode 3-channel UHJ, aka \"TJH\".\n"
@@ -264,8 +263,8 @@ int main(al::span<std::string_view> args)
             "\n"
             "Note: The third and fourth channels should be ignored if they're not being\n"
             "decoded. Unlike the first two channels, they are not designed for undecoded\n"
-            "playback, so the resulting files will not play correctly if this isn't handled.\n",
-            al::sizei(args[0]), args[0].data());
+            "playback, so the resulting files will not play correctly if this isn't handled.",
+            args[0]);
         return 1;
     }
     args = args.subspan(1);
@@ -304,10 +303,10 @@ int main(al::span<std::string_view> args)
         SndFilePtr infile{sf_open(std::string{arg}.c_str(), SFM_READ, &ininfo)};
         if(!infile)
         {
-            fprintf(stderr, "Failed to open %.*s\n", al::sizei(arg), arg.data());
+            fmt::println(stderr, "Failed to open {}", arg);
             return;
         }
-        printf("Converting %.*s to %s...\n", al::sizei(arg), arg.data(), outname.c_str());
+        fmt::println("Converting {} to {}...", arg, outname);
 
         /* Work out the channel map, preferably using the actual channel map
          * from the file/format, but falling back to assuming WFX order.
@@ -381,8 +380,8 @@ int main(al::span<std::string_view> args)
                         mapstr += std::to_string(idx);
                     }
                 }
-                fprintf(stderr, " ... %zu channels not supported (map: %s)\n", chanmap.size(),
-                    mapstr.c_str());
+                fmt::println(stderr, " ... {} channels not supported (map: {})", chanmap.size(),
+                    mapstr);
                 return;
             }
         }
@@ -391,7 +390,7 @@ int main(al::span<std::string_view> args)
         {
             if(ininfo.channels == 4)
             {
-                fprintf(stderr, " ... detected FuMa 3D B-Format\n");
+                fmt::println(stderr, " ... detected FuMa 3D B-Format");
                 chanmap[0] = SF_CHANNEL_MAP_AMBISONIC_B_W;
                 chanmap[1] = SF_CHANNEL_MAP_AMBISONIC_B_X;
                 chanmap[2] = SF_CHANNEL_MAP_AMBISONIC_B_Y;
@@ -399,33 +398,33 @@ int main(al::span<std::string_view> args)
             }
             else if(ininfo.channels == 3)
             {
-                fprintf(stderr, " ... detected FuMa 2D B-Format\n");
+                fmt::println(stderr, " ... detected FuMa 2D B-Format");
                 chanmap[0] = SF_CHANNEL_MAP_AMBISONIC_B_W;
                 chanmap[1] = SF_CHANNEL_MAP_AMBISONIC_B_X;
                 chanmap[2] = SF_CHANNEL_MAP_AMBISONIC_B_Y;
             }
             else
             {
-                fprintf(stderr, " ... unhandled %d-channel B-Format\n", ininfo.channels);
+                fmt::println(stderr, " ... unhandled {}-channel B-Format", ininfo.channels);
                 return;
             }
         }
         else if(ininfo.channels == 1)
         {
-            fprintf(stderr, " ... assuming front-center\n");
+            fmt::println(stderr, " ... assuming front-center");
             spkrs = MonoMap;
             chanmap[0] = SF_CHANNEL_MAP_CENTER;
         }
         else if(ininfo.channels == 2)
         {
-            fprintf(stderr, " ... assuming WFX order stereo\n");
+            fmt::println(stderr, " ... assuming WFX order stereo");
             spkrs = StereoMap;
             chanmap[0] = SF_CHANNEL_MAP_LEFT;
             chanmap[1] = SF_CHANNEL_MAP_RIGHT;
         }
         else if(ininfo.channels == 6)
         {
-            fprintf(stderr, " ... assuming WFX order 5.1\n");
+            fmt::println(stderr, " ... assuming WFX order 5.1");
             spkrs = X51Map;
             chanmap[0] = SF_CHANNEL_MAP_LEFT;
             chanmap[1] = SF_CHANNEL_MAP_RIGHT;
@@ -436,7 +435,7 @@ int main(al::span<std::string_view> args)
         }
         else if(ininfo.channels == 8)
         {
-            fprintf(stderr, " ... assuming WFX order 7.1\n");
+            fmt::println(stderr, " ... assuming WFX order 7.1");
             spkrs = X71Map;
             chanmap[0] = SF_CHANNEL_MAP_LEFT;
             chanmap[1] = SF_CHANNEL_MAP_RIGHT;
@@ -449,7 +448,7 @@ int main(al::span<std::string_view> args)
         }
         else
         {
-            fprintf(stderr, " ... unmapped %d-channel audio not supported\n", ininfo.channels);
+            fmt::println(stderr, " ... unmapped {}-channel audio not supported", ininfo.channels);
             return;
         }
 
@@ -461,7 +460,7 @@ int main(al::span<std::string_view> args)
         SndFilePtr outfile{sf_open(outname.c_str(), SFM_WRITE, &outinfo)};
         if(!outfile)
         {
-            fprintf(stderr, " ... failed to create %s\n", outname.c_str());
+            fmt::println(stderr, " ... failed to create {}", outname);
             return;
         }
 
@@ -525,7 +524,7 @@ int main(al::span<std::string_view> args)
                     [chanid](const SpeakerPos pos){return pos.mChannelID == chanid;});
                 if(spkr == spkrs.cend())
                 {
-                    fprintf(stderr, " ... failed to find channel ID %d\n", chanid);
+                    fmt::println(stderr, " ... failed to find channel ID {}", chanid);
                     continue;
                 }
 
@@ -563,21 +562,21 @@ int main(al::span<std::string_view> args)
             sf_count_t wrote{sf_writef_float(outfile.get(), outmem.data(),
                 static_cast<sf_count_t>(got))};
             if(wrote < 0)
-                fprintf(stderr, " ... failed to write samples: %d\n", sf_error(outfile.get()));
+                fmt::println(stderr, " ... failed to write samples: {}", sf_error(outfile.get()));
             else
                 total_wrote += static_cast<size_t>(wrote);
         }
-        printf(" ... wrote %zu samples (%" PRId64 ").\n", total_wrote, int64_t{ininfo.frames});
+        fmt::println(" ... wrote {} samples ({}).", total_wrote, ininfo.frames);
         ++num_encoded;
     };
     std::for_each(args.begin(), args.end(), process_arg);
 
     if(num_encoded == 0)
-        fprintf(stderr, "Failed to encode any input files\n");
+        fmt::println(stderr, "Failed to encode any input files");
     else if(num_encoded < num_files)
-        fprintf(stderr, "Encoded %zu of %zu files\n", num_encoded, num_files);
+        fmt::println(stderr, "Encoded {} of {} files", num_encoded, num_files);
     else
-        printf("Encoded %s%zu file%s\n", (num_encoded > 1) ? "all " : "", num_encoded,
+        fmt::println("Encoded {}{} file{}", (num_encoded > 1) ? "all " : "", num_encoded,
             (num_encoded == 1) ? "" : "s");
     return 0;
 }

@@ -107,7 +107,7 @@ struct Device final : public ALCdevice, al::intrusive_ref<al::Device>, DeviceBas
     bool getConfigValueBool(const std::string_view block, const std::string_view key, bool def)
     { return GetConfigValueBool(mDeviceName, block, key, def); }
 
-    template<typename T> inline
+    template<typename T>
     auto configValue(const std::string_view block, const std::string_view key) -> std::optional<T> = delete;
 };
 

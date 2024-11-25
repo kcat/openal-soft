@@ -589,8 +589,8 @@ struct EventManager {
     auto lock() const { return mLoop.lock(); }
     auto unlock() const { return mLoop.unlock(); }
 
-    [[nodiscard]] inline
-    bool initIsDone(std::memory_order m=std::memory_order_seq_cst) const noexcept
+    [[nodiscard]]
+    auto initIsDone(std::memory_order m=std::memory_order_seq_cst) const noexcept -> bool
     { return mInitDone.load(m); }
 
     /**

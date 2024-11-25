@@ -14,9 +14,9 @@ using uint = unsigned int;
  * needed will be (o+1)**2, thus zero-order has 1, first-order has 4, second-
  * order has 9, third-order has 16, and fourth-order has 25.
  */
-inline constexpr auto MaxAmbiOrder = std::uint8_t{3};
-inline constexpr auto AmbiChannelsFromOrder(std::size_t order) noexcept -> std::size_t
+constexpr auto AmbiChannelsFromOrder(std::size_t order) noexcept -> std::size_t
 { return (order+1) * (order+1); }
+inline constexpr auto MaxAmbiOrder = std::uint8_t{3};
 inline constexpr auto MaxAmbiChannels = size_t{AmbiChannelsFromOrder(MaxAmbiOrder)};
 
 /* A bitmask of ambisonic channels for 0 to 4th order. This only specifies up
@@ -39,7 +39,7 @@ inline constexpr uint AmbiPeriphonicMask{0xfe7ce4};
  * representation. This is 2 per each order above zero-order, plus 1 for zero-
  * order. Or simply, o*2 + 1.
  */
-inline constexpr auto Ambi2DChannelsFromOrder(std::size_t order) noexcept -> std::size_t
+constexpr auto Ambi2DChannelsFromOrder(std::size_t order) noexcept -> std::size_t
 { return order*2 + 1; }
 inline constexpr auto MaxAmbi2DChannels = Ambi2DChannelsFromOrder(MaxAmbiOrder);
 
@@ -48,11 +48,11 @@ inline constexpr auto MaxAmbi2DChannels = Ambi2DChannelsFromOrder(MaxAmbiOrder);
  * coefficients should be divided by these values to get proper scalings.
  */
 struct AmbiScale {
-    static inline constexpr std::array<float,MaxAmbiChannels> FromN3D{{
+    static constexpr auto FromN3D = std::array<float,MaxAmbiChannels>{
         1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f,
         1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f
-    }};
-    static inline constexpr std::array<float,MaxAmbiChannels> FromSN3D{{
+    };
+    static constexpr auto FromSN3D = std::array<float,MaxAmbiChannels>{
         1.000000000f, /* ACN  0, sqrt(1) */
         1.732050808f, /* ACN  1, sqrt(3) */
         1.732050808f, /* ACN  2, sqrt(3) */
@@ -69,8 +69,8 @@ struct AmbiScale {
         2.645751311f, /* ACN 13, sqrt(7) */
         2.645751311f, /* ACN 14, sqrt(7) */
         2.645751311f, /* ACN 15, sqrt(7) */
-    }};
-    static inline constexpr std::array<float,MaxAmbiChannels> FromFuMa{{
+    };
+    static constexpr auto FromFuMa =  std::array<float,MaxAmbiChannels>{
         1.414213562f, /* ACN  0 (W), sqrt(2) */
         1.732050808f, /* ACN  1 (Y), sqrt(3) */
         1.732050808f, /* ACN  2 (Z), sqrt(3) */
@@ -87,15 +87,15 @@ struct AmbiScale {
         2.231093404f, /* ACN 13 (L), sqrt(224/45) */
         1.972026594f, /* ACN 14 (N), sqrt(35)/3 */
         2.091650066f, /* ACN 15 (P), sqrt(35/8) */
-    }};
-    static inline constexpr std::array<float,MaxAmbiChannels> FromUHJ{{
+    };
+    static constexpr auto FromUHJ =  std::array<float,MaxAmbiChannels>{
         1.000000000f, /* ACN  0 (W), sqrt(1) */
         1.224744871f, /* ACN  1 (Y), sqrt(3/2) */
         1.224744871f, /* ACN  2 (Z), sqrt(3/2) */
         1.224744871f, /* ACN  3 (X), sqrt(3/2) */
         /* Higher orders not relevant for UHJ. */
         1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f,
-    }};
+    };
 
     /* Retrieves per-order HF scaling factors for "upsampling" ambisonic data. */
     static std::array<float,MaxAmbiOrder+1> GetHFOrderScales(const uint src_order,
@@ -111,7 +111,7 @@ struct AmbiScale {
 };
 
 struct AmbiIndex {
-    static inline constexpr std::array<std::uint8_t,MaxAmbiChannels> FromFuMa{{
+    static constexpr auto FromFuMa =  std::array<std::uint8_t,MaxAmbiChannels>{
         0,  /* W */
         3,  /* X */
         1,  /* Y */
@@ -128,8 +128,8 @@ struct AmbiIndex {
         10, /* O */
         15, /* P */
         9,  /* Q */
-    }};
-    static inline constexpr std::array<std::uint8_t,MaxAmbi2DChannels> FromFuMa2D{{
+    };
+    static constexpr auto FromFuMa2D =  std::array<std::uint8_t,MaxAmbi2DChannels>{
         0,  /* W */
         3,  /* X */
         1,  /* Y */
@@ -137,23 +137,23 @@ struct AmbiIndex {
         4,  /* V */
         15, /* P */
         9,  /* Q */
-    }};
+    };
 
-    static inline constexpr std::array<std::uint8_t,MaxAmbiChannels> FromACN{{
+    static constexpr auto FromACN =  std::array<std::uint8_t,MaxAmbiChannels>{
         0,  1,  2,  3,  4,  5,  6,  7,
         8,  9, 10, 11, 12, 13, 14, 15
-    }};
-    static inline constexpr std::array<std::uint8_t,MaxAmbi2DChannels> FromACN2D{{
+    };
+    static constexpr auto FromACN2D =  std::array<std::uint8_t,MaxAmbi2DChannels>{
         0, 1,3, 4,8, 9,15
-    }};
+    };
 
 
-    static inline constexpr std::array<std::uint8_t,MaxAmbiChannels> OrderFromChannel{{
+    static constexpr auto OrderFromChannel = std::array<std::uint8_t,MaxAmbiChannels>{
         0, 1,1,1, 2,2,2,2,2, 3,3,3,3,3,3,3,
-    }};
-    static inline constexpr std::array<std::uint8_t,MaxAmbi2DChannels> OrderFrom2DChannel{{
+    };
+    static constexpr auto OrderFrom2DChannel =  std::array<std::uint8_t,MaxAmbi2DChannels>{
         0, 1,1, 2,2, 3,3,
-    }};
+    };
 };
 
 

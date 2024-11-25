@@ -347,7 +347,7 @@ struct SIMDALIGN DeviceBase {
     void ProcessUhj(const std::size_t SamplesToDo);
     void ProcessBs2b(const std::size_t SamplesToDo);
 
-    inline void postProcess(const std::size_t SamplesToDo)
+    void postProcess(const std::size_t SamplesToDo)
     { if(PostProcess) LIKELY (this->*PostProcess)(SamplesToDo); }
 
     void renderSamples(const al::span<void*> outBuffers, const uint numSamples);

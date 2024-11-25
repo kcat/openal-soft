@@ -48,7 +48,6 @@
                     bugprone-unused-*,
                     bugprone-use-after-move,
                     bugprone-virtual-near-miss,
-                    bugprone-switch-missing-default-case,
                     clang-*,
                     -clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling,
                     concurrency-thread-canceltype-asynchronous,

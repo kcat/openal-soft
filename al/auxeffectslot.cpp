@@ -664,6 +664,8 @@ try {
 
     switch(param)
     {
+    default:
+        break;
     }
     throw al::context_error{AL_INVALID_ENUM, "Invalid effect slot integer-vector property 0x%04x",
         param};
@@ -720,6 +722,8 @@ try {
 
     switch(param)
     {
+    default:
+        break;
     }
     throw al::context_error{AL_INVALID_ENUM, "Invalid effect slot float-vector property 0x%04x",
         param};
@@ -795,6 +799,8 @@ try {
 
     switch(param)
     {
+    default:
+        break;
     }
     throw al::context_error{AL_INVALID_ENUM, "Invalid effect slot integer-vector property 0x%04x",
             param};
@@ -814,9 +820,7 @@ try {
 
     switch(param)
     {
-    case AL_EFFECTSLOT_GAIN:
-        *value = slot->Gain;
-        return;
+    case AL_EFFECTSLOT_GAIN: *value = slot->Gain; return;
     }
 
     throw al::context_error{AL_INVALID_ENUM, "Invalid effect slot float property 0x%04x", param};
@@ -843,6 +847,8 @@ try {
 
     switch(param)
     {
+    default:
+        break;
     }
     throw al::context_error{AL_INVALID_ENUM, "Invalid effect slot float-vector property 0x%04x",
         param};

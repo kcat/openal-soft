@@ -966,6 +966,8 @@ try {
 
     switch(param)
     {
+    default:
+        break;
     }
     throw al::context_error{AL_INVALID_ENUM, "Invalid buffer float property 0x%04x", param};
 }
@@ -986,6 +988,8 @@ try {
 
     switch(param)
     {
+    default:
+        break;
     }
     throw al::context_error{AL_INVALID_ENUM, "Invalid buffer 3-float property 0x%04x", param};
 }
@@ -1007,6 +1011,8 @@ try {
 
     switch(param)
     {
+    default:
+        break;
     }
     throw al::context_error{AL_INVALID_ENUM, "Invalid buffer float-vector property 0x%04x", param};
 }
@@ -1087,6 +1093,8 @@ try {
 
     switch(param)
     {
+    default:
+        break;
     }
     throw al::context_error{AL_INVALID_ENUM, "Invalid buffer 3-integer property 0x%04x", param};
 }
@@ -1184,6 +1192,8 @@ try {
 
     switch(param)
     {
+    default:
+        break;
     }
     throw al::context_error{AL_INVALID_ENUM, "Invalid buffer 3-float property 0x%04x", param};
 }
@@ -1212,6 +1222,8 @@ try {
 
     switch(param)
     {
+    default:
+        break;
     }
     throw al::context_error{AL_INVALID_ENUM, "Invalid buffer float-vector property 0x%04x", param};
 }
@@ -1302,6 +1314,8 @@ try {
 
     switch(param)
     {
+    default:
+        break;
     }
     throw al::context_error{AL_INVALID_ENUM, "Invalid buffer 3-integer property 0x%04x", param};
 }
@@ -1425,6 +1439,8 @@ try {
 
     switch(param)
     {
+    default:
+        break;
     }
     throw al::context_error{AL_INVALID_ENUM, "Invalid buffer 3-pointer property 0x%04x", param};
 }
@@ -1454,6 +1470,8 @@ try {
 
     switch(param)
     {
+    default:
+        break;
     }
     throw al::context_error{AL_INVALID_ENUM, "Invalid buffer pointer-vector property 0x%04x",
         param};

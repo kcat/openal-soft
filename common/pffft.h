@@ -175,7 +175,7 @@ void pffft_zconvolve_accumulate(const PFFFT_Setup *setup, const float *dft_a, co
 
 
 struct PFFFTSetup {
-    PFFFTSetupPtr mSetup{};
+    PFFFTSetupPtr mSetup;
 
     PFFFTSetup() = default;
     PFFFTSetup(const PFFFTSetup&) = delete;

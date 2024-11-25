@@ -314,7 +314,7 @@ struct AudioState {
 
     /* Storage of converted samples */
     std::array<uint8_t*,1> mSamples{};
-    al::span<uint8_t> mSamplesSpan{};
+    al::span<uint8_t> mSamplesSpan;
     int mSamplesLen{0}; /* In samples */
     int mSamplesPos{0};
     int mSamplesMax{0};
@@ -392,7 +392,7 @@ struct VideoState {
     SwsContextPtr mSwscaleCtx;
 
     struct Picture {
-        AVFramePtr mFrame{};
+        AVFramePtr mFrame;
         nanoseconds mPts{nanoseconds::min()};
     };
     std::array<Picture,VIDEO_PICTURE_QUEUE_SIZE> mPictQ;

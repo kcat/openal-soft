@@ -121,7 +121,7 @@ struct ALCcontext final : public al::intrusive_ref<ALCcontext>, ContextBase {
     std::unique_ptr<ALeffectslot> mDefaultSlot;
 
     std::vector<std::string_view> mExtensions;
-    std::string mExtensionsString{};
+    std::string mExtensionsString;
 
     std::unordered_map<ALuint,std::string> mSourceNames;
     std::unordered_map<ALuint,std::string> mEffectSlotNames;

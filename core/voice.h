@@ -102,7 +102,7 @@ struct VoiceBufferItem {
     uint mLoopStart{0u};
     uint mLoopEnd{0u};
 
-    al::span<std::byte> mSamples{};
+    al::span<std::byte> mSamples;
 
 protected:
     ~VoiceBufferItem() = default;
@@ -236,9 +236,9 @@ struct SIMDALIGN Voice {
 
     ResamplerFunc mResampler{};
 
-    InterpState mResampleState{};
+    InterpState mResampleState;
 
-    std::bitset<VoiceFlagCount> mFlags{};
+    std::bitset<VoiceFlagCount> mFlags;
     uint mNumCallbackBlocks{0};
     uint mCallbackBlockBase{0};
 

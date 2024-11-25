@@ -292,7 +292,7 @@ public:
     ~EaxEffect() = default;
 
     ALenum al_effect_type_{AL_EFFECT_NULL};
-    EffectProps al_effect_props_{};
+    EffectProps al_effect_props_;
 
     using Props1 = EAX_REVERBPROPERTIES;
     using Props2 = EAX20LISTENERPROPERTIES;
@@ -321,7 +321,7 @@ public:
 
     int version_{};
     bool changed_{};
-    Props4 props_{};
+    Props4 props_;
     State1 state1_{};
     State2 state2_{};
     State3 state3_{};

@@ -501,7 +501,7 @@ struct NodeProxy {
 
     uint32_t mId{};
 
-    PwNodePtr mNode{};
+    PwNodePtr mNode;
     spa_hook mListener{};
 
     NodeProxy(uint32_t id, PwNodePtr node)
@@ -536,7 +536,7 @@ struct MetadataProxy {
 
     uint32_t mId{};
 
-    PwMetadataPtr mMetadata{};
+    PwMetadataPtr mMetadata;
     spa_hook mListener{};
 
     MetadataProxy(uint32_t id, PwMetadataPtr mdata)
@@ -557,10 +557,10 @@ struct MetadataProxy {
  * to objects being added to or removed from the registry.
  */
 struct EventManager {
-    ThreadMainloop mLoop{};
-    PwContextPtr mContext{};
-    PwCorePtr mCore{};
-    PwRegistryPtr mRegistry{};
+    ThreadMainloop mLoop;
+    PwContextPtr mContext;
+    PwCorePtr mCore;
+    PwRegistryPtr mRegistry;
     spa_hook mRegistryListener{};
     spa_hook mCoreListener{};
 
@@ -1926,7 +1926,7 @@ class PipeWireCapture final : public BackendBase {
     PwStreamPtr mStream;
     spa_hook mStreamListener{};
 
-    RingBufferPtr mRing{};
+    RingBufferPtr mRing;
 
     static constexpr pw_stream_events CreateEvents()
     {

@@ -381,9 +381,12 @@ bool LoadResponses(MYSOFA_HRTF *sofaHrtf, HrirDataT *hData, const DelayType dela
 struct MagCalculator {
     const uint mFftSize{};
     const uint mIrPoints{};
-    std::vector<al::span<double>> mIrs{};
+    std::vector<al::span<double>> mIrs;
     std::atomic<size_t> mCurrent{};
     std::atomic<size_t> mDone{};
+
+    MagCalculator(const uint fftsize, const uint irpoints) : mFftSize{fftsize}, mIrPoints{irpoints}
+    { }
 
     void Worker()
     {

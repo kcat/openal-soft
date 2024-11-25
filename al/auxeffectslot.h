@@ -52,7 +52,7 @@ struct ALeffectslot {
 
     struct EffectData {
         EffectSlotType Type{EffectSlotType::None};
-        EffectProps Props{};
+        EffectProps Props;
 
         al::intrusive_ptr<EffectState> State;
     };
@@ -243,7 +243,7 @@ private:
     EaxFxSlotIndexValue eax_fx_slot_index_{};
     int eax_version_{}; // Current EAX version.
     EaxDirtyFlags eax_df_{}; // Dirty flags for the current EAX version.
-    EaxEffectUPtr eax_effect_{};
+    EaxEffectUPtr eax_effect_;
     Eax5State eax123_{}; // EAX1/EAX2/EAX3 state.
     Eax4State eax4_{}; // EAX4 state.
     Eax5State eax5_{}; // EAX5 state.

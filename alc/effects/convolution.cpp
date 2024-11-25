@@ -227,7 +227,7 @@ struct ConvolutionState final : public EffectState {
     al::vector<std::array<float,ConvolveUpdateSamples>,16> mFilter;
     al::vector<std::array<float,ConvolveUpdateSamples*2>,16> mOutput;
 
-    PFFFTSetup mFft{};
+    PFFFTSetup mFft;
     alignas(16) std::array<float,ConvolveUpdateSize> mFftBuffer{};
     alignas(16) std::array<float,ConvolveUpdateSize> mFftWorkBuffer{};
 
@@ -237,7 +237,7 @@ struct ConvolutionState final : public EffectState {
     struct ChannelData {
         alignas(16) FloatBufferLine mBuffer{};
         float mHfScale{}, mLfScale{};
-        BandSplitter mFilter{};
+        BandSplitter mFilter;
         std::array<float,MaxOutputChannels> Current{};
         std::array<float,MaxOutputChannels> Target{};
     };

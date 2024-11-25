@@ -67,7 +67,7 @@ constexpr uint TRLoadSize{TRRingSize >> 2};
 // Token reader state for parsing the data set definition.
 struct TokenReaderT {
     std::istream &mIStream;
-    std::string mName{};
+    std::string mName;
     uint        mLine{};
     uint        mColumn{};
     std::array<char,TRRingSize> mRing{};

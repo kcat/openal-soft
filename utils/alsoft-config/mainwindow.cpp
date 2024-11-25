@@ -1199,11 +1199,7 @@ void MainWindow::updatePeriodSizeSlider()
 {
     int pos = ui->periodSizeEdit->text().toInt();
     if(pos >= 64)
-    {
-        if(pos > 8192)
-            pos = 8192;
-        ui->periodSizeSlider->setSliderPosition(pos);
-    }
+        ui->periodSizeSlider->setSliderPosition(std::min(pos, 8192));
     enableApplyButton();
 }
 

@@ -745,8 +745,7 @@ bool AudioState::readAudio(al::span<uint8_t> samples, unsigned int length, int &
         unsigned int rem{length - audio_size};
         if(mSamplesPos >= 0)
         {
-            const auto len = static_cast<unsigned int>(mSamplesLen - mSamplesPos);
-            if(rem > len) rem = len;
+            rem = std::min(rem, static_cast<unsigned int>(mSamplesLen - mSamplesPos));
             const size_t boffset{static_cast<ALuint>(mSamplesPos) * size_t{mFrameSize}};
             std::copy_n(mSamplesSpan.cbegin()+ptrdiff_t(boffset), rem*size_t{mFrameSize},
                 samples.begin());

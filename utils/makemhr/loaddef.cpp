@@ -755,9 +755,7 @@ auto ReadWaveFormat(std::istream &istream, const ByteOrderT order, const uint hr
     {
         if(!ReadBin4(istream, src->mPath, order, 2, &size))
             return 0;
-        size /= 8;
-        if(block > size)
-            size = block;
+        size = std::max(size/8, block);
     }
     else
         size = block;
@@ -1294,9 +1292,7 @@ auto ProcessMetrics(TokenReaderT *tr, const uint fftSize, const uint truncSize,
             }
             hData->mIrPoints = points;
             hData->mFftSize = fftSize;
-            hData->mIrSize = 1 + (fftSize / 2);
-            if(points > hData->mIrSize)
-                hData->mIrSize = points;
+            hData->mIrSize = std::max(points, 1u + (fftSize/2u));
             hasPoints = 1;
         }
         else if(al::case_compare(ident, "radius"sv) == 0)

@@ -1768,8 +1768,7 @@ void ReverbState::process(const size_t samplesToDo, const al::span<const FloatBu
         mMainDelay.write(offset, c, tmpspan);
     }
 
-    if(mPipelineState < Fading)
-        mPipelineState = Fading;
+    mPipelineState = std::max(Fading, mPipelineState);
 
     /* Process reverb for these samples. and mix them to the output. */
     pipeline.processEarly(mMainDelay, offset, samplesToDo, mTempSamples, mEarlySamples);

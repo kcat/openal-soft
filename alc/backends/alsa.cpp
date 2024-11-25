@@ -1169,9 +1169,9 @@ uint AlsaCapture::availableSamples()
 
     if(!mRing)
     {
-        if(avail < 0) avail = 0;
+        avail = std::max<snd_pcm_sframes_t>(avail, 0);
         avail += snd_pcm_bytes_to_frames(mPcmHandle, static_cast<ssize_t>(mBuffer.size()));
-        if(avail > mLastAvail) mLastAvail = avail;
+        mLastAvail = std::max(mLastAvail, avail);
         return static_cast<uint>(mLastAvail);
     }
 

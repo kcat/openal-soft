@@ -1,6 +1,7 @@
 #ifndef COMMON_COMPTR_H
 #define COMMON_COMPTR_H
 
+#ifdef _WIN32
 #include <cstddef>
 #include <memory>
 #include <type_traits>
@@ -109,5 +110,6 @@ struct ComPtr {
 private:
     T *mPtr{nullptr};
 };
+#endif /* _WIN32 */
 
 #endif

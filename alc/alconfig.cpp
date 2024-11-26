@@ -504,7 +504,7 @@ auto ConfigValueInt(const std::string_view devName, const std::string_view block
     if(auto&& val = GetConfigValue(devName, blockName, keyName); !val.empty()) try {
         return static_cast<int>(std::stol(val, nullptr, 0));
     }
-    catch(std::exception &e) {
+    catch(std::exception&) {
         WARN("Option is not an int: %.*s = %s\n", al::sizei(keyName), keyName.data(), val.c_str());
     }
 
@@ -517,7 +517,7 @@ auto ConfigValueUInt(const std::string_view devName, const std::string_view bloc
     if(auto&& val = GetConfigValue(devName, blockName, keyName); !val.empty()) try {
         return static_cast<unsigned int>(std::stoul(val, nullptr, 0));
     }
-    catch(std::exception &e) {
+    catch(std::exception&) {
         WARN("Option is not an unsigned int: %.*s = %s\n", al::sizei(keyName), keyName.data(),
             val.c_str());
     }
@@ -530,7 +530,7 @@ auto ConfigValueFloat(const std::string_view devName, const std::string_view blo
     if(auto&& val = GetConfigValue(devName, blockName, keyName); !val.empty()) try {
         return std::stof(val);
     }
-    catch(std::exception &e) {
+    catch(std::exception&) {
         WARN("Option is not a float: %.*s = %s\n", al::sizei(keyName), keyName.data(),
             val.c_str());
     }
@@ -550,7 +550,7 @@ auto ConfigValueBool(const std::string_view devName, const std::string_view bloc
          */
         return true;
     }
-    catch(std::exception &e) {
+    catch(std::exception&) {
         /* If stoll fails to convert for any other reason, it's some other word
          * that's treated as false.
          */
@@ -569,7 +569,7 @@ auto GetConfigValueBool(const std::string_view devName, const std::string_view b
     catch(std::out_of_range&) {
         return true;
     }
-    catch(std::exception &e) {
+    catch(std::exception&) {
         return false;
     }
     return def;

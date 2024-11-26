@@ -1650,7 +1650,7 @@ if(ALSOFT_UTILS)
             PRIVATE ${OpenAL_BINARY_DIR} ${OpenAL_SOURCE_DIR}/common)
         target_compile_options(uhjdecoder PRIVATE ${C_FLAGS})
         target_link_libraries(uhjdecoder PUBLIC alsoft.common
-            PRIVATE ${LINKER_FLAGS} SndFile::SndFile ${UNICODE_FLAG} fmt::fmt)
+            PRIVATE ${LINKER_FLAGS} SndFile::SndFile ${UNICODE_FLAG} alsoft::fmt)
         set_target_properties(uhjdecoder PROPERTIES ${DEFAULT_TARGET_PROPS})
 
         add_executable(uhjencoder utils/uhjencoder.cpp)
@@ -1659,7 +1659,7 @@ if(ALSOFT_UTILS)
             PRIVATE ${OpenAL_BINARY_DIR} ${OpenAL_SOURCE_DIR}/common)
         target_compile_options(uhjencoder PRIVATE ${C_FLAGS})
         target_link_libraries(uhjencoder PUBLIC alsoft.common
-            PRIVATE ${LINKER_FLAGS} SndFile::SndFile ${UNICODE_FLAG} fmt::fmt)
+            PRIVATE ${LINKER_FLAGS} SndFile::SndFile ${UNICODE_FLAG} alsoft::fmt)
         set_target_properties(uhjencoder PROPERTIES ${DEFAULT_TARGET_PROPS})
     endif()
 
@@ -1672,7 +1672,7 @@ if(ALSOFT_UTILS)
         target_include_directories(alsoft.sofa-support PUBLIC ${OpenAL_SOURCE_DIR}/common)
         target_compile_options(alsoft.sofa-support PRIVATE ${C_FLAGS})
         target_link_libraries(alsoft.sofa-support PUBLIC alsoft.common MySOFA::MySOFA
-            PRIVATE ${LINKER_FLAGS} fmt::fmt)
+            PRIVATE ${LINKER_FLAGS} alsoft::fmt)
         set_target_properties(alsoft.sofa-support PROPERTIES ${DEFAULT_TARGET_PROPS})
 
         set(MAKEMHR_SRCS
@@ -1688,7 +1688,7 @@ if(ALSOFT_UTILS)
             PRIVATE ${OpenAL_BINARY_DIR} ${OpenAL_SOURCE_DIR}/utils)
         target_compile_options(makemhr PRIVATE ${C_FLAGS})
         target_link_libraries(makemhr PRIVATE ${LINKER_FLAGS} alsoft.sofa-support ${UNICODE_FLAG}
-            fmt::fmt)
+            alsoft::fmt)
         set_target_properties(makemhr PROPERTIES ${DEFAULT_TARGET_PROPS})
         if(ALSOFT_INSTALL_EXAMPLES)
             set(EXTRA_INSTALLS ${EXTRA_INSTALLS} makemhr)
@@ -1700,7 +1700,7 @@ if(ALSOFT_UTILS)
         target_include_directories(sofa-info PRIVATE ${OpenAL_SOURCE_DIR}/utils)
         target_compile_options(sofa-info PRIVATE ${C_FLAGS})
         target_link_libraries(sofa-info PRIVATE ${LINKER_FLAGS} alsoft.sofa-support
-            ${UNICODE_FLAG} fmt::fmt)
+            ${UNICODE_FLAG} alsoft::fmt)
         set_target_properties(sofa-info PROPERTIES ${DEFAULT_TARGET_PROPS})
     endif()
     message(STATUS "Building utility programs")
@@ -1733,12 +1733,13 @@ if(ALSOFT_EXAMPLES)
     set_target_properties(alrecord PROPERTIES ${DEFAULT_TARGET_PROPS})
 
     add_executable(aldebug examples/aldebug.cpp)
-    target_link_libraries(aldebug PRIVATE ${LINKER_FLAGS} alsoft.excommon ${UNICODE_FLAG} fmt::fmt)
+    target_link_libraries(aldebug PRIVATE ${LINKER_FLAGS} alsoft.excommon ${UNICODE_FLAG}
+        alsoft::fmt)
     set_target_properties(aldebug PROPERTIES ${DEFAULT_TARGET_PROPS})
 
     add_executable(allafplay examples/allafplay.cpp)
     target_link_libraries(allafplay PRIVATE ${LINKER_FLAGS} alsoft.common alsoft.excommon
-        ${UNICODE_FLAG} fmt::fmt)
+        ${UNICODE_FLAG} alsoft::fmt)
     set_target_properties(allafplay PROPERTIES ${DEFAULT_TARGET_PROPS})
 
     if(ALSOFT_INSTALL_EXAMPLES)
@@ -1780,12 +1781,12 @@ if(ALSOFT_EXAMPLES)
 
         add_executable(alstreamcb examples/alstreamcb.cpp)
         target_link_libraries(alstreamcb PRIVATE ${LINKER_FLAGS} SndFile::SndFile alsoft.excommon
-            ${UNICODE_FLAG} fmt::fmt)
+            ${UNICODE_FLAG} alsoft::fmt)
         set_target_properties(alstreamcb PROPERTIES ${DEFAULT_TARGET_PROPS})
 
         add_executable(aldirect examples/aldirect.cpp)
         target_link_libraries(aldirect PRIVATE ${LINKER_FLAGS} SndFile::SndFile alsoft.excommon
-            ${UNICODE_FLAG} fmt::fmt)
+            ${UNICODE_FLAG} alsoft::fmt)
         set_target_properties(aldirect PROPERTIES ${DEFAULT_TARGET_PROPS})
 
         add_executable(alconvolve examples/alconvolve.c)
@@ -1841,7 +1842,7 @@ if(ALSOFT_EXAMPLES)
             add_executable(alffplay examples/alffplay.cpp)
             target_include_directories(alffplay PRIVATE ${FFMPEG_INCLUDE_DIRS})
             target_link_libraries(alffplay
-                PRIVATE ${LINKER_FLAGS} SDL2::SDL2 ${FFMPEG_LIBRARIES} alsoft.excommon fmt::fmt)
+                PRIVATE ${LINKER_FLAGS} SDL2::SDL2 ${FFMPEG_LIBRARIES} alsoft.excommon alsoft::fmt)
             set_target_properties(alffplay PROPERTIES ${DEFAULT_TARGET_PROPS})
 
             if(ALSOFT_INSTALL_EXAMPLES)

@@ -1414,21 +1414,26 @@ else()
         ${MATH_LIB})
 
     if(ALSOFT_UWP)
-        set(ALSOFT_CPPWINRT_VERSION "2.0.230706.1" CACHE STRING "The soft-oal default cppwinrt version")
-        
-        find_program(NUGET_EXE NAMES nuget)
-        if(NOT NUGET_EXE)
-            message("NUGET.EXE not found.")
-            message(FATAL_ERROR "Please install this executable, and run CMake again.")
+        find_package(cppwinrt CONFIG)
+        if (TARGET Microsoft::CppWinRT)
+            target_link_libraries(${IMPL_TARGET} PRIVATE Microsoft::CppWinRT)
+        else()
+            set(ALSOFT_CPPWINRT_VERSION "2.0.230706.1" CACHE STRING "The soft-oal default cppwinrt version")
+
+            find_program(NUGET_EXE NAMES nuget)
+            if(NOT NUGET_EXE)
+                message("NUGET.EXE not found.")
+                message(FATAL_ERROR "Please install this executable, and run CMake again.")
+            endif()
+
+            exec_program(${NUGET_EXE}
+                ARGS install "Microsoft.Windows.CppWinRT" -Version ${ALSOFT_CPPWINRT_VERSION} -ExcludeVersion -OutputDirectory "\"${CMAKE_BINARY_DIR}/packages\"")
+
+            set_target_properties(${IMPL_TARGET} PROPERTIES
+                VS_PROJECT_IMPORT ${CMAKE_BINARY_DIR}/packages/Microsoft.Windows.CppWinRT/build/native/Microsoft.Windows.CppWinRT.props
+            )
+            target_link_libraries(${IMPL_TARGET} PRIVATE ${CMAKE_BINARY_DIR}/packages/Microsoft.Windows.CppWinRT/build/native/Microsoft.Windows.CppWinRT.targets)
         endif()
-
-        exec_program(${NUGET_EXE}
-            ARGS install "Microsoft.Windows.CppWinRT" -Version ${ALSOFT_CPPWINRT_VERSION} -ExcludeVersion -OutputDirectory "\"${CMAKE_BINARY_DIR}/packages\"")
-
-        set_target_properties(${IMPL_TARGET} PROPERTIES
-            VS_PROJECT_IMPORT ${CMAKE_BINARY_DIR}/packages/Microsoft.Windows.CppWinRT/build/native/Microsoft.Windows.CppWinRT.props
-        )
-        target_link_libraries(${IMPL_TARGET} PRIVATE ${CMAKE_BINARY_DIR}/packages/Microsoft.Windows.CppWinRT/build/native/Microsoft.Windows.CppWinRT.targets)
     endif()
 
     if(NOT WIN32 AND NOT APPLE)

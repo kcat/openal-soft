@@ -256,36 +256,33 @@ void ALCcontext::deinit()
     if(sLocalContext == this)
     {
         WARN("%p released while current on thread\n", voidp{this});
+        auto _ = ContextRef{sLocalContext};
         sThreadContext.set(nullptr);
-        const auto rc [[maybe_unused]] = dec_ref();
-        assert(rc > 0);
     }
 
-    ALCcontext *origctx{this};
-    if(sGlobalContext.compare_exchange_strong(origctx, nullptr))
+    if(ALCcontext *origctx{this}; sGlobalContext.compare_exchange_strong(origctx, nullptr))
     {
+        auto _ = ContextRef{origctx};
         while(sGlobalContextLock.load()) {
             /* Wait to make sure another thread didn't get the context and is
              * trying to increment its refcount.
              */
         }
-        const auto rc [[maybe_unused]] = dec_ref();
-        assert(rc > 0);
     }
 
     bool stopPlayback{};
     /* First make sure this context exists in the device's list. */
-    auto *oldarray = mDevice->mContexts.load(std::memory_order_acquire);
-    if(auto toremove = static_cast<size_t>(std::count(oldarray->begin(), oldarray->end(), this)))
+    auto oldarray = al::span{*mDevice->mContexts.load(std::memory_order_acquire)};
+    if(auto toremove = static_cast<size_t>(std::count(oldarray.begin(), oldarray.end(), this)))
     {
         using ContextArray = al::FlexArray<ContextBase*>;
-        const size_t newsize{oldarray->size() - toremove};
+        const auto newsize = size_t{oldarray.size() - toremove};
         auto newarray = ContextArray::Create(newsize);
 
         /* Copy the current/old context handles to the new array, excluding the
          * given context.
          */
-        std::copy_if(oldarray->begin(), oldarray->end(), newarray->begin(),
+        std::copy_if(oldarray.begin(), oldarray.end(), newarray->begin(),
             [this](ContextBase *ctx) { return ctx != this; });
 
         /* Store the new context array in the device. Wait for any current mix
@@ -297,7 +294,7 @@ void ALCcontext::deinit()
         stopPlayback = (newsize == 0);
     }
     else
-        stopPlayback = oldarray->empty();
+        stopPlayback = oldarray.empty();
 
     StopEventThrd(this);
 

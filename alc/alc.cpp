@@ -1011,11 +1011,6 @@ constexpr std::array X71Downmix{
 auto CreateDeviceLimiter(const al::Device *device, const float threshold)
     -> std::unique_ptr<Compressor>
 {
-    static constexpr bool AutoKnee{true};
-    static constexpr bool AutoAttack{true};
-    static constexpr bool AutoRelease{true};
-    static constexpr bool AutoPostGain{true};
-    static constexpr bool AutoDeclip{true};
     static constexpr float LookAheadTime{0.001f};
     static constexpr float HoldTime{0.002f};
     static constexpr float PreGainDb{0.0f};
@@ -1025,9 +1020,12 @@ auto CreateDeviceLimiter(const al::Device *device, const float threshold)
     static constexpr float AttackTime{0.02f};
     static constexpr float ReleaseTime{0.2f};
 
+    const auto flags = Compressor::FlagBits{}.set(Compressor::AutoKnee).set(Compressor::AutoAttack)
+        .set(Compressor::AutoRelease).set(Compressor::AutoPostGain).set(Compressor::AutoDeclip);
+
     return Compressor::Create(device->RealOut.Buffer.size(), static_cast<float>(device->Frequency),
-        AutoKnee, AutoAttack, AutoRelease, AutoPostGain, AutoDeclip, LookAheadTime, HoldTime,
-        PreGainDb, PostGainDb, threshold, Ratio, KneeDb, AttackTime, ReleaseTime);
+        flags, LookAheadTime, HoldTime, PreGainDb, PostGainDb, threshold, Ratio, KneeDb,
+        AttackTime, ReleaseTime);
 }
 
 /**

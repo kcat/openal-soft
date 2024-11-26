@@ -2,6 +2,7 @@
 #define CORE_MASTERING_H
 
 #include <array>
+#include <bitset>
 #include <memory>
 
 #include "alnumeric.h"
@@ -73,6 +74,11 @@ class SIMDALIGN Compressor {
     void signalDelay(const uint SamplesToDo, const al::span<FloatBufferLine> OutBuffer);
 
 public:
+    enum {
+        AutoKnee, AutoAttack, AutoRelease, AutoPostGain, AutoDeclip, FlagsCount
+    };
+    using FlagBits = std::bitset<FlagsCount>;
+
     ~Compressor();
     void process(const uint SamplesToDo, al::span<FloatBufferLine> InOut);
     [[nodiscard]] auto getLookAhead() const noexcept -> uint { return mLookAhead; }
@@ -104,11 +110,9 @@ public:
      *        automating release time.
      */
     static std::unique_ptr<Compressor> Create(const size_t NumChans, const float SampleRate,
-        const bool AutoKnee, const bool AutoAttack, const bool AutoRelease,
-        const bool AutoPostGain, const bool AutoDeclip, const float LookAheadTime,
-        const float HoldTime, const float PreGainDb, const float PostGainDb,
-        const float ThresholdDb, const float Ratio, const float KneeDb, const float AttackTime,
-        const float ReleaseTime);
+        const FlagBits autoflags, const float LookAheadTime, const float HoldTime,
+        const float PreGainDb, const float PostGainDb, const float ThresholdDb, const float Ratio,
+        const float KneeDb, const float AttackTime, const float ReleaseTime);
 };
 using CompressorPtr = std::unique_ptr<Compressor>;
 

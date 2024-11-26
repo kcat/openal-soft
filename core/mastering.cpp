@@ -323,10 +323,9 @@ void Compressor::signalDelay(const uint SamplesToDo, const al::span<FloatBufferL
 
 
 std::unique_ptr<Compressor> Compressor::Create(const size_t NumChans, const float SampleRate,
-    const bool AutoKnee, const bool AutoAttack, const bool AutoRelease, const bool AutoPostGain,
-    const bool AutoDeclip, const float LookAheadTime, const float HoldTime, const float PreGainDb,
-    const float PostGainDb, const float ThresholdDb, const float Ratio, const float KneeDb,
-    const float AttackTime, const float ReleaseTime)
+    const FlagBits autoflags, const float LookAheadTime, const float HoldTime,
+    const float PreGainDb, const float PostGainDb, const float ThresholdDb, const float Ratio,
+    const float KneeDb, const float AttackTime, const float ReleaseTime)
 {
     const auto lookAhead = static_cast<uint>(std::clamp(std::round(LookAheadTime*SampleRate), 0.0f,
         BufferLineSize-1.0f));
@@ -334,11 +333,11 @@ std::unique_ptr<Compressor> Compressor::Create(const size_t NumChans, const floa
         BufferLineSize-1.0f));
 
     auto Comp = CompressorPtr{new Compressor{}};
-    Comp->mAuto.Knee = AutoKnee;
-    Comp->mAuto.Attack = AutoAttack;
-    Comp->mAuto.Release = AutoRelease;
-    Comp->mAuto.PostGain = AutoPostGain;
-    Comp->mAuto.Declip = AutoPostGain && AutoDeclip;
+    Comp->mAuto.Knee = autoflags.test(AutoKnee);
+    Comp->mAuto.Attack = autoflags.test(AutoAttack);
+    Comp->mAuto.Release = autoflags.test(AutoRelease);
+    Comp->mAuto.PostGain = autoflags.test(AutoPostGain);
+    Comp->mAuto.Declip = autoflags.test(AutoPostGain) && autoflags.test(AutoDeclip);
     Comp->mLookAhead = lookAhead;
     Comp->mPreGain = std::pow(10.0f, PreGainDb / 20.0f);
     Comp->mPostGain = std::log(10.0f)/20.0f * PostGainDb;

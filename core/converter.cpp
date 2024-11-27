@@ -169,10 +169,11 @@ void Multi2Mono(uint chanmask, const size_t step, const float scale, const al::s
 SampleConverterPtr SampleConverter::Create(DevFmtType srcType, DevFmtType dstType, size_t numchans,
     uint srcRate, uint dstRate, Resampler resampler)
 {
+    SampleConverterPtr converter;
     if(numchans < 1 || srcRate < 1 || dstRate < 1)
-        return nullptr;
+        return converter;
 
-    SampleConverterPtr converter{new(FamCount(numchans)) SampleConverter{numchans}};
+    converter = SampleConverterPtr{new(FamCount(numchans)) SampleConverter{numchans}};
     converter->mSrcType = srcType;
     converter->mDstType = dstType;
     converter->mSrcTypeSize = BytesFromDevFmt(srcType);

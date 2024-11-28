@@ -66,7 +66,7 @@ add_headers(FMT_HEADERS args.h base.h chrono.h color.h compile.h core.h format.h
                         xchar.h)
 set(FMT_SOURCES src/format.cc src/os.cc)
 
-add_library(alsoft.fmt ${FMT_SOURCES} ${FMT_HEADERS} README.md ChangeLog.md)
+add_library(alsoft.fmt STATIC ${FMT_SOURCES} ${FMT_HEADERS} README.md ChangeLog.md)
 add_library(alsoft::fmt ALIAS alsoft.fmt)
 
 if (cxx_std_11 IN_LIST CMAKE_CXX_COMPILE_FEATURES)

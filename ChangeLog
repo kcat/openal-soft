@@ -1,3 +1,19 @@
+openal-soft-1.24.1:
+
+    Fixed compilation on PowerPC.
+
+    Fixed compilation on some targets that lack lock-free 64-bit atomics.
+
+    Fixed a crash when parsing certain option values.
+
+    Fixed applying noexcept in the public headers with MSVC.
+
+    Fixed building for UWP with vcpkg.
+
+    Improved compatibility when compiling as C++20 or later.
+
+    Integrated fmtlib for some examples and utilities.
+
 openal-soft-1.24.0:
 
     Updated library codebase to C++17.

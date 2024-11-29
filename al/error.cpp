@@ -62,6 +62,31 @@ context_error::context_error(ALenum code, const char *msg, ...) : mErrorCode{cod
 context_error::~context_error() = default;
 } /* namespace al */
 
+
+void ALCcontext::throw_error(ALenum errorCode, const std::string &msg)
+{
+    WARN("Error generated on context %p, code 0x%04x, \"%s\"\n",
+        decltype(std::declval<void*>()){this}, errorCode, msg.c_str());
+    if(TrapALError)
+    {
+#ifdef _WIN32
+        /* DebugBreak will cause an exception if there is no debugger */
+        if(IsDebuggerPresent())
+            DebugBreak();
+#elif defined(SIGTRAP)
+        raise(SIGTRAP);
+#endif
+    }
+
+    if(mLastThreadError.get() == AL_NO_ERROR)
+        mLastThreadError.set(errorCode);
+
+    debugMessage(DebugSource::API, DebugType::Error, static_cast<ALuint>(errorCode),
+        DebugSeverity::High, msg);
+
+    throw al::base_exception{};
+}
+
 void ALCcontext::setError(ALenum errorCode, const char *msg, ...)
 {
     auto message = std::vector<char>(256);

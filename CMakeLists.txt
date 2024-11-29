@@ -1371,7 +1371,7 @@ add_custom_target(clang-tidy-check ${CLANG_TIDY_EXECUTABLE} -format-style=file -
 if(LIBTYPE STREQUAL "STATIC")
     add_library(${IMPL_TARGET} STATIC ${COMMON_OBJS} ${OPENAL_OBJS} ${ALC_OBJS} ${CORE_OBJS})
     target_compile_definitions(${IMPL_TARGET} PUBLIC AL_LIBTYPE_STATIC)
-    target_link_libraries(${IMPL_TARGET} PRIVATE ${LINKER_FLAGS} ${EXTRA_LIBS} ${MATH_LIB})
+    target_link_libraries(${IMPL_TARGET} PRIVATE ${LINKER_FLAGS} ${EXTRA_LIBS} ${MATH_LIB} alsoft::fmt-header-only)
 
     if(WIN32)
         # This option is for static linking OpenAL Soft into another project
@@ -1428,7 +1428,7 @@ else()
         set_target_properties(${IMPL_TARGET} PROPERTIES PREFIX "")
     endif()
     target_link_libraries(${IMPL_TARGET} PRIVATE alsoft.common ${LINKER_FLAGS} ${EXTRA_LIBS}
-        ${MATH_LIB})
+        ${MATH_LIB} alsoft::fmt)
 
     if(ALSOFT_UWP)
         find_package(cppwinrt CONFIG)

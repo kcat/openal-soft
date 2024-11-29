@@ -3726,7 +3726,7 @@ void ALsource::SetName(ALCcontext *context, ALuint id, std::string_view name)
 
     auto source = LookupSource(context, id);
     if(!source)
-        throw al::context_error{AL_INVALID_NAME, "Invalid source ID %u", id};
+        context->throw_error(AL_INVALID_NAME, "Invalid source ID {}", id);
 
     context->mSourceNames.insert_or_assign(id, name);
 }

@@ -1578,7 +1578,7 @@ void ALbuffer::SetName(ALCcontext *context, ALuint id, std::string_view name)
 
     auto buffer = LookupBuffer(device, id);
     if(!buffer)
-        throw al::context_error{AL_INVALID_NAME, "Invalid buffer ID %u", id};
+        context->throw_error(AL_INVALID_NAME, "Invalid buffer ID {}", id);
 
     device->mBufferNames.insert_or_assign(id, name);
 }

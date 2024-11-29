@@ -604,7 +604,7 @@ void ALfilter::SetName(ALCcontext *context, ALuint id, std::string_view name)
 
     auto filter = LookupFilter(device, id);
     if(!filter)
-        throw al::context_error{AL_INVALID_NAME, "Invalid filter ID %u", id};
+        context->throw_error(AL_INVALID_NAME, "Invalid filter ID {}", id);
 
     device->mFilterNames.insert_or_assign(id, name);
 }

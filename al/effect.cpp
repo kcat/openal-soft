@@ -507,7 +507,7 @@ void ALeffect::SetName(ALCcontext* context, ALuint id, std::string_view name)
 
     auto effect = LookupEffect(device, id);
     if(!effect)
-        throw al::context_error{AL_INVALID_NAME, "Invalid effect ID %u", id};
+        context->throw_error(AL_INVALID_NAME, "Invalid effect ID {}", id);
 
     device->mEffectNames.insert_or_assign(id, name);
 }

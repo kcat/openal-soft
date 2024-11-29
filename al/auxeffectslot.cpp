@@ -73,7 +73,8 @@ namespace {
 
 using SubListAllocator = al::allocator<std::array<ALeffectslot,64>>;
 
-EffectStateFactory *getFactoryByType(EffectSlotType type)
+[[nodiscard]]
+auto getFactoryByType(EffectSlotType type) -> EffectStateFactory*
 {
     switch(type)
     {
@@ -97,6 +98,7 @@ EffectStateFactory *getFactoryByType(EffectSlotType type)
 }
 
 
+[[nodiscard]]
 auto LookupEffectSlot(ALCcontext *context, ALuint id) noexcept -> ALeffectslot*
 {
     const size_t lidx{(id-1) >> 6};
@@ -110,6 +112,7 @@ auto LookupEffectSlot(ALCcontext *context, ALuint id) noexcept -> ALeffectslot*
     return al::to_address(sublist.EffectSlots->begin() + slidx);
 }
 
+[[nodiscard]]
 inline auto LookupEffect(al::Device *device, ALuint id) noexcept -> ALeffect*
 {
     const size_t lidx{(id-1) >> 6};
@@ -123,6 +126,7 @@ inline auto LookupEffect(al::Device *device, ALuint id) noexcept -> ALeffect*
     return al::to_address(sublist.Effects->begin() + slidx);
 }
 
+[[nodiscard]]
 inline auto LookupBuffer(al::Device *device, ALuint id) noexcept -> ALbuffer*
 {
     const size_t lidx{(id-1) >> 6};
@@ -216,6 +220,7 @@ void RemoveActiveEffectSlots(const al::span<ALeffectslot*> auxslots, ALCcontext 
 }
 
 
+[[nodiscard]]
 constexpr auto EffectSlotTypeFromEnum(ALenum type) noexcept -> EffectSlotType
 {
     switch(type)
@@ -242,6 +247,7 @@ constexpr auto EffectSlotTypeFromEnum(ALenum type) noexcept -> EffectSlotType
     return EffectSlotType::None;
 }
 
+[[nodiscard]]
 auto EnsureEffectSlots(ALCcontext *context, size_t needed) noexcept -> bool
 try {
     size_t count{std::accumulate(context->mEffectSlotList.cbegin(),
@@ -266,7 +272,8 @@ catch(...) {
     return false;
 }
 
-ALeffectslot *AllocEffectSlot(ALCcontext *context)
+[[nodiscard]]
+auto AllocEffectSlot(ALCcontext *context) -> ALeffectslot*
 {
     auto sublist = std::find_if(context->mEffectSlotList.begin(), context->mEffectSlotList.end(),
         [](const EffectSlotSubList &entry) noexcept -> bool
@@ -321,7 +328,7 @@ FORCE_ALIGN void AL_APIENTRY alGenAuxiliaryEffectSlotsDirect(ALCcontext *context
     ALuint *effectslots) noexcept
 try {
     if(n < 0)
-        throw al::context_error{AL_INVALID_VALUE, "Generating %d effect slots", n};
+        context->throw_error(AL_INVALID_VALUE, "Generating {} effect slots", n);
     if(n <= 0) UNLIKELY return;
 
     auto slotlock = std::lock_guard{context->mEffectSlotLock};
@@ -330,12 +337,12 @@ try {
     const al::span eids{effectslots, static_cast<ALuint>(n)};
     if(context->mNumEffectSlots > device->AuxiliaryEffectSlotMax
         || eids.size() > device->AuxiliaryEffectSlotMax-context->mNumEffectSlots)
-        throw al::context_error{AL_OUT_OF_MEMORY, "Exceeding %u effect slot limit (%u + %d)",
-            device->AuxiliaryEffectSlotMax, context->mNumEffectSlots, n};
+        context->throw_error(AL_OUT_OF_MEMORY, "Exceeding {} effect slot limit ({} + {})",
+            device->AuxiliaryEffectSlotMax, context->mNumEffectSlots, n);
 
     if(!EnsureEffectSlots(context, eids.size()))
-        throw al::context_error{AL_OUT_OF_MEMORY, "Failed to allocate %d effectslot%s", n,
-            (n == 1) ? "" : "s"};
+        context->throw_error(AL_OUT_OF_MEMORY, "Failed to allocate {} effectslot{}", n,
+            (n==1) ? "" : "s");
 
     std::vector<ALeffectslot*> slots;
     try {
@@ -359,12 +366,14 @@ try {
         auto delete_effectslot = [context](ALeffectslot *slot) -> void
         { FreeEffectSlot(context, slot); };
         std::for_each(slots.begin(), slots.end(), delete_effectslot);
-        throw al::context_error{AL_INVALID_OPERATION, "Exception allocating %d effectslots: %s", n,
-            e.what()};
+        context->throw_error(AL_INVALID_OPERATION, "Exception allocating {} effectslots: {}", n,
+            e.what());
     }
 }
-catch(al::context_error& e) {
-    context->setError(e.errorCode(), "%s", e.what());
+catch(al::base_exception&) {
+}
+catch(std::exception &e) {
+    ERR("Caught exception: %s\n", e.what());
 }
 
 AL_API DECL_FUNC2(void, alDeleteAuxiliaryEffectSlots, ALsizei,n, const ALuint*,effectslots)
@@ -372,7 +381,7 @@ FORCE_ALIGN void AL_APIENTRY alDeleteAuxiliaryEffectSlotsDirect(ALCcontext *cont
     const ALuint *effectslots) noexcept
 try {
     if(n < 0) UNLIKELY
-        throw al::context_error{AL_INVALID_VALUE, "Deleting %d effect slots", n};
+        context->throw_error(AL_INVALID_VALUE, "Deleting {} effect slots", n);
     if(n <= 0) UNLIKELY return;
 
     std::lock_guard<std::mutex> slotlock{context->mEffectSlotLock};
@@ -380,10 +389,10 @@ try {
     {
         ALeffectslot *slot{LookupEffectSlot(context, *effectslots)};
         if(!slot)
-            throw al::context_error{AL_INVALID_NAME, "Invalid effect slot ID %u", *effectslots};
+            context->throw_error(AL_INVALID_NAME, "Invalid effect slot ID {}", *effectslots);
         if(slot->ref.load(std::memory_order_relaxed) != 0)
-            throw al::context_error{AL_INVALID_OPERATION, "Deleting in-use effect slot %u",
-                *effectslots};
+            context->throw_error(AL_INVALID_OPERATION, "Deleting in-use effect slot {}",
+                *effectslots);
 
         RemoveActiveEffectSlots({&slot, 1u}, context);
         FreeEffectSlot(context, slot);
@@ -398,10 +407,9 @@ try {
         {
             ALeffectslot *slot{LookupEffectSlot(context, eid)};
             if(!slot)
-                throw al::context_error{AL_INVALID_NAME, "Invalid effect slot ID %u", eid};
+                context->throw_error(AL_INVALID_NAME, "Invalid effect slot ID {}", eid);
             if(slot->ref.load(std::memory_order_relaxed) != 0)
-                throw al::context_error{AL_INVALID_OPERATION, "Deleting in-use effect slot %u",
-                    eid};
+                context->throw_error(AL_INVALID_OPERATION, "Deleting in-use effect slot {}", eid);
             return slot;
         };
         std::transform(eids.cbegin(), eids.cend(), std::back_inserter(slots), lookupslot);
@@ -417,8 +425,10 @@ try {
         std::for_each(eids.begin(), eids.end(), delete_effectslot);
     }
 }
-catch(al::context_error& e) {
-    context->setError(e.errorCode(), "%s", e.what());
+catch(al::base_exception&) {
+}
+catch(std::exception &e) {
+    ERR("Caught exception: %s\n", e.what());
 }
 
 AL_API DECL_FUNC1(ALboolean, alIsAuxiliaryEffectSlot, ALuint,effectslot)
@@ -436,7 +446,6 @@ AL_API void AL_APIENTRY alAuxiliaryEffectSlotPlaySOFT(ALuint) noexcept
 {
     ContextRef context{GetContextRef()};
     if(!context) UNLIKELY return;
-
     context->setError(AL_INVALID_OPERATION, "alAuxiliaryEffectSlotPlaySOFT not supported");
 }
 
@@ -444,7 +453,6 @@ AL_API void AL_APIENTRY alAuxiliaryEffectSlotPlayvSOFT(ALsizei, const ALuint*) n
 {
     ContextRef context{GetContextRef()};
     if(!context) UNLIKELY return;
-
     context->setError(AL_INVALID_OPERATION, "alAuxiliaryEffectSlotPlayvSOFT not supported");
 }
 
@@ -452,7 +460,6 @@ AL_API void AL_APIENTRY alAuxiliaryEffectSlotStopSOFT(ALuint) noexcept
 {
     ContextRef context{GetContextRef()};
     if(!context) UNLIKELY return;
-
     context->setError(AL_INVALID_OPERATION, "alAuxiliaryEffectSlotStopSOFT not supported");
 }
 
@@ -460,7 +467,6 @@ AL_API void AL_APIENTRY alAuxiliaryEffectSlotStopvSOFT(ALsizei, const ALuint*) n
 {
     ContextRef context{GetContextRef()};
     if(!context) UNLIKELY return;
-
     context->setError(AL_INVALID_OPERATION, "alAuxiliaryEffectSlotStopvSOFT not supported");
 }
 
@@ -474,7 +480,7 @@ try {
 
     ALeffectslot *slot{LookupEffectSlot(context, effectslot)};
     if(!slot) UNLIKELY
-        throw al::context_error{AL_INVALID_NAME, "Invalid effect slot ID %u", effectslot};
+        context->throw_error(AL_INVALID_NAME, "Invalid effect slot ID {}", effectslot);
 
     ALeffectslot *target{};
     ALenum err{};
@@ -490,12 +496,12 @@ try {
             else
             {
                 if(value != 0)
-                    throw al::context_error{AL_INVALID_VALUE, "Invalid effect ID %u", value};
+                    context->throw_error(AL_INVALID_VALUE, "Invalid effect ID {}", value);
                 err = slot->initEffect(0, AL_EFFECT_NULL, EffectProps{}, context);
             }
         }
         if(err != AL_NO_ERROR)
-            throw al::context_error{err, "Effect initialization failed"};
+            context->throw_error(err, "Effect initialization failed");
 
         if(slot->mState == SlotState::Initial) UNLIKELY
         {
@@ -511,8 +517,7 @@ try {
 
     case AL_EFFECTSLOT_AUXILIARY_SEND_AUTO:
         if(!(value == AL_TRUE || value == AL_FALSE))
-            throw al::context_error{AL_INVALID_VALUE,
-                "Effect slot auxiliary send auto out of range"};
+            context->throw_error(AL_INVALID_VALUE, "Effect slot auxiliary send auto out of range");
         if(!(slot->AuxSendAuto == !!value)) LIKELY
         {
             slot->AuxSendAuto = !!value;
@@ -523,7 +528,7 @@ try {
     case AL_EFFECTSLOT_TARGET_SOFT:
         target = LookupEffectSlot(context, static_cast<ALuint>(value));
         if(value && !target)
-            throw al::context_error{AL_INVALID_VALUE, "Invalid effect slot target ID"};
+            context->throw_error(AL_INVALID_VALUE, "Invalid effect slot target ID {}", value);
         if(slot->Target == target) UNLIKELY
             return;
         if(target)
@@ -532,9 +537,9 @@ try {
             while(checker && checker != slot)
                 checker = checker->Target;
             if(checker)
-                throw al::context_error{AL_INVALID_OPERATION,
-                    "Setting target of effect slot ID %u to %u creates circular chain", slot->id,
-                    target->id};
+                context->throw_error(AL_INVALID_OPERATION,
+                    "Setting target of effect slot ID {} to {} creates circular chain", slot->id,
+                    target->id);
         }
 
         if(ALeffectslot *oldtarget{slot->Target})
@@ -576,10 +581,10 @@ try {
             {
                 buffer = LookupBuffer(device, static_cast<ALuint>(value));
                 if(!buffer)
-                    throw al::context_error{AL_INVALID_VALUE, "Invalid buffer ID %u", value};
+                    context->throw_error(AL_INVALID_VALUE, "Invalid buffer ID {}", value);
                 if(buffer->mCallback)
-                    throw al::context_error{AL_INVALID_OPERATION,
-                        "Callback buffer not valid for effects"};
+                    context->throw_error(AL_INVALID_OPERATION,
+                        "Callback buffer not valid for effects");
 
                 IncrementRef(buffer->ref);
             }
@@ -612,10 +617,10 @@ try {
             {
                 buffer = LookupBuffer(device, static_cast<ALuint>(value));
                 if(!buffer)
-                    throw al::context_error{AL_INVALID_VALUE, "Invalid buffer ID %u", value};
+                    context->throw_error(AL_INVALID_VALUE, "Invalid buffer ID {}", value);
                 if(buffer->mCallback)
-                    throw al::context_error{AL_INVALID_OPERATION,
-                                            "Callback buffer not valid for effects"};
+                    context->throw_error(AL_INVALID_OPERATION,
+                        "Callback buffer not valid for effects");
 
                 IncrementRef(buffer->ref);
             }
@@ -633,13 +638,15 @@ try {
         return;
 
     case AL_EFFECTSLOT_STATE_SOFT:
-        throw al::context_error{AL_INVALID_OPERATION, "AL_EFFECTSLOT_STATE_SOFT is read-only"};
+        context->throw_error(AL_INVALID_OPERATION, "AL_EFFECTSLOT_STATE_SOFT is read-only");
     }
 
-    throw al::context_error{AL_INVALID_ENUM, "Invalid effect slot integer property 0x%04x", param};
+    context->throw_error(AL_INVALID_ENUM, "Invalid effect slot integer property 0x{:04x}", param);
 }
-catch(al::context_error& e) {
-    context->setError(e.errorCode(), "%s", e.what());
+catch(al::base_exception&) {
+}
+catch(std::exception &e) {
+    ERR("Caught exception: %s\n", e.what());
 }
 
 AL_API DECL_FUNC3(void, alAuxiliaryEffectSlotiv, ALuint,effectslot, ALenum,param, const ALint*,values)
@@ -660,18 +667,20 @@ try {
     std::lock_guard<std::mutex> slotlock{context->mEffectSlotLock};
     ALeffectslot *slot{LookupEffectSlot(context, effectslot)};
     if(!slot)
-        throw al::context_error{AL_INVALID_NAME, "Invalid effect slot ID %u", effectslot};
+        context->throw_error(AL_INVALID_NAME, "Invalid effect slot ID {}", effectslot);
 
     switch(param)
     {
     default:
         break;
     }
-    throw al::context_error{AL_INVALID_ENUM, "Invalid effect slot integer-vector property 0x%04x",
-        param};
+    context->throw_error(AL_INVALID_ENUM, "Invalid effect slot integer-vector property 0x{:04x}",
+        param);
 }
-catch(al::context_error& e) {
-    context->setError(e.errorCode(), "%s", e.what());
+catch(al::base_exception&) {
+}
+catch(std::exception &e) {
+    ERR("Caught exception: %s\n", e.what());
 }
 
 AL_API DECL_FUNC3(void, alAuxiliaryEffectSlotf, ALuint,effectslot, ALenum,param, ALfloat,value)
@@ -683,13 +692,13 @@ try {
 
     ALeffectslot *slot{LookupEffectSlot(context, effectslot)};
     if(!slot)
-        throw al::context_error{AL_INVALID_NAME, "Invalid effect slot ID %u", effectslot};
+        context->throw_error(AL_INVALID_NAME, "Invalid effect slot ID {}", effectslot);
 
     switch(param)
     {
     case AL_EFFECTSLOT_GAIN:
         if(!(value >= 0.0f && value <= 1.0f))
-            throw al::context_error{AL_INVALID_VALUE, "Effect slot gain out of range"};
+            context->throw_error(AL_INVALID_VALUE, "Effect slot gain {} out of range", value);
         if(!(slot->Gain == value)) LIKELY
         {
             slot->Gain = value;
@@ -698,10 +707,12 @@ try {
         return;
     }
 
-    throw al::context_error{AL_INVALID_ENUM, "Invalid effect slot float property 0x%04x", param};
+    context->throw_error(AL_INVALID_ENUM, "Invalid effect slot float property 0x{:04x}", param);
 }
-catch(al::context_error& e) {
-    context->setError(e.errorCode(), "%s", e.what());
+catch(al::base_exception&) {
+}
+catch(std::exception &e) {
+    ERR("Caught exception: %s\n", e.what());
 }
 
 AL_API DECL_FUNC3(void, alAuxiliaryEffectSlotfv, ALuint,effectslot, ALenum,param, const ALfloat*,values)
@@ -718,18 +729,20 @@ try {
     std::lock_guard<std::mutex> slotlock{context->mEffectSlotLock};
     ALeffectslot *slot{LookupEffectSlot(context, effectslot)};
     if(!slot)
-        throw al::context_error{AL_INVALID_NAME, "Invalid effect slot ID %u", effectslot};
+        context->throw_error(AL_INVALID_NAME, "Invalid effect slot ID {}", effectslot);
 
     switch(param)
     {
     default:
         break;
     }
-    throw al::context_error{AL_INVALID_ENUM, "Invalid effect slot float-vector property 0x%04x",
-        param};
+    context->throw_error(AL_INVALID_ENUM, "Invalid effect slot float-vector property 0x{:04x}",
+        param);
 }
-catch(al::context_error& e) {
-    context->setError(e.errorCode(), "%s", e.what());
+catch(al::base_exception&) {
+}
+catch(std::exception &e) {
+    ERR("Caught exception: %s\n", e.what());
 }
 
 
@@ -740,7 +753,7 @@ try {
     std::lock_guard<std::mutex> slotlock{context->mEffectSlotLock};
     ALeffectslot *slot{LookupEffectSlot(context, effectslot)};
     if(!slot)
-        throw al::context_error{AL_INVALID_NAME, "Invalid effect slot ID %u", effectslot};
+        context->throw_error(AL_INVALID_NAME, "Invalid effect slot ID {}", effectslot);
 
     switch(param)
     {
@@ -771,10 +784,12 @@ try {
         return;
     }
 
-    throw al::context_error{AL_INVALID_ENUM, "Invalid effect slot integer property 0x%04x", param};
+    context->throw_error(AL_INVALID_ENUM, "Invalid effect slot integer property 0x{:04x}", param);
 }
-catch(al::context_error& e) {
-    context->setError(e.errorCode(), "%s", e.what());
+catch(al::base_exception&) {
+}
+catch(std::exception &e) {
+    ERR("Caught exception: %s\n", e.what());
 }
 
 AL_API DECL_FUNC3(void, alGetAuxiliaryEffectSlotiv, ALuint,effectslot, ALenum,param, ALint*,values)
@@ -795,18 +810,20 @@ try {
     std::lock_guard<std::mutex> slotlock{context->mEffectSlotLock};
     ALeffectslot *slot = LookupEffectSlot(context, effectslot);
     if(!slot)
-        throw al::context_error{AL_INVALID_NAME, "Invalid effect slot ID %u", effectslot};
+        context->throw_error(AL_INVALID_NAME, "Invalid effect slot ID {}", effectslot);
 
     switch(param)
     {
     default:
         break;
     }
-    throw al::context_error{AL_INVALID_ENUM, "Invalid effect slot integer-vector property 0x%04x",
-            param};
+    context->throw_error(AL_INVALID_ENUM, "Invalid effect slot integer-vector property 0x{:04x}",
+        param);
 }
-catch(al::context_error& e) {
-    context->setError(e.errorCode(), "%s", e.what());
+catch(al::base_exception&) {
+}
+catch(std::exception &e) {
+    ERR("Caught exception: %s\n", e.what());
 }
 
 AL_API DECL_FUNC3(void, alGetAuxiliaryEffectSlotf, ALuint,effectslot, ALenum,param, ALfloat*,value)
@@ -816,17 +833,19 @@ try {
     std::lock_guard<std::mutex> slotlock{context->mEffectSlotLock};
     ALeffectslot *slot{LookupEffectSlot(context, effectslot)};
     if(!slot)
-        throw al::context_error{AL_INVALID_NAME, "Invalid effect slot ID %u", effectslot};
+        context->throw_error(AL_INVALID_NAME, "Invalid effect slot ID {}", effectslot);
 
     switch(param)
     {
     case AL_EFFECTSLOT_GAIN: *value = slot->Gain; return;
     }
 
-    throw al::context_error{AL_INVALID_ENUM, "Invalid effect slot float property 0x%04x", param};
+    context->throw_error(AL_INVALID_ENUM, "Invalid effect slot float property 0x{:04x}", param);
 }
-catch(al::context_error& e) {
-    context->setError(e.errorCode(), "%s", e.what());
+catch(al::base_exception&) {
+}
+catch(std::exception &e) {
+    ERR("Caught exception: %s\n", e.what());
 }
 
 AL_API DECL_FUNC3(void, alGetAuxiliaryEffectSlotfv, ALuint,effectslot, ALenum,param, ALfloat*,values)
@@ -843,18 +862,20 @@ try {
     std::lock_guard<std::mutex> slotlock{context->mEffectSlotLock};
     ALeffectslot *slot{LookupEffectSlot(context, effectslot)};
     if(!slot)
-        throw al::context_error{AL_INVALID_NAME, "Invalid effect slot ID %u", effectslot};
+        context->throw_error(AL_INVALID_NAME, "Invalid effect slot ID {}", effectslot);
 
     switch(param)
     {
     default:
         break;
     }
-    throw al::context_error{AL_INVALID_ENUM, "Invalid effect slot float-vector property 0x%04x",
-        param};
+    context->throw_error(AL_INVALID_ENUM, "Invalid effect slot float-vector property 0x{:04x}",
+        param);
 }
-catch(al::context_error& e) {
-    context->setError(e.errorCode(), "%s", e.what());
+catch(al::base_exception&) {
+}
+catch(std::exception &e) {
+    ERR("Caught exception: %s\n", e.what());
 }
 
 
@@ -970,7 +991,7 @@ void ALeffectslot::SetName(ALCcontext* context, ALuint id, std::string_view name
 
     auto slot = LookupEffectSlot(context, id);
     if(!slot)
-        throw al::context_error{AL_INVALID_NAME, "Invalid effect slot ID %u", id};
+        context->throw_error(AL_INVALID_NAME, "Invalid effect slot ID {}", id);
 
     context->mEffectSlotNames.insert_or_assign(id, name);
 }

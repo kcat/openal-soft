@@ -4,7 +4,6 @@
 #include <cstdarg>
 #include <exception>
 #include <string>
-#include <utility>
 
 
 namespace al {

@@ -17,6 +17,7 @@
 
 #include "almalloc.h"
 #include "router.h"
+#include "strutils.h"
 
 
 namespace {
@@ -337,7 +338,7 @@ void EnumeratedList::AppendDeviceList(const ALCchar* names, ALCuint idx)
     size_t count{0};
     while(*name_end)
     {
-        TRACE("Enumerated \"%s\", driver %u\n", name_end, idx);
+        TRACE("Enumerated \"{}\", driver {}", name_end, idx);
         ++count;
         name_end += strlen(name_end)+1; /* NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic) */
     }
@@ -375,8 +376,8 @@ void InitCtxFuncs(DriverIface &iface)
 #define LOAD_PROC(x) do {                                                     \
     iface.x = reinterpret_cast<decltype(iface.x)>(iface.alGetProcAddress(#x));\
     if(!iface.x)                                                              \
-        ERR("Failed to find entry point for %s in %ls\n", #x,                 \
-            iface.Name.c_str());                                              \
+        ERR("Failed to find entry point for {} in {}", #x,                    \
+            wstr_to_acp(iface.Name));                                         \
 } while(0)
     if(iface.alcIsExtensionPresent(device, "ALC_EXT_EFX"))
     {
@@ -448,10 +449,10 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *devicename) noexcep
         if(!idx)
         {
             LastError.store(ALC_INVALID_VALUE);
-            TRACE("Failed to find driver for name \"%s\"\n", devicename);
+            TRACE("Failed to find driver for name \"{}\"", devicename);
             return nullptr;
         }
-        TRACE("Found driver %u for name \"%s\"\n", *idx, devicename);
+        TRACE("Found driver {} for name \"{}\"", *idx, devicename);
         device = DriverList[*idx]->alcOpenDevice(devicename);
     }
     else
@@ -462,7 +463,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *devicename) noexcep
             if(drv->ALCVer >= MAKE_ALC_VER(1, 1)
                 || drv->alcIsExtensionPresent(nullptr, "ALC_ENUMERATION_EXT"))
             {
-                TRACE("Using default device from driver %u\n", drvidx);
+                TRACE("Using default device from driver {}", drvidx);
                 device = drv->alcOpenDevice(nullptr);
                 idx = drvidx;
                 break;
@@ -881,10 +882,10 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *devicename, 
         if(!idx)
         {
             LastError.store(ALC_INVALID_VALUE);
-            TRACE("Failed to find driver for name \"%s\"\n", devicename);
+            TRACE("Failed to find driver for name \"{}\"", devicename);
             return nullptr;
         }
-        TRACE("Found driver %u for name \"%s\"\n", *idx, devicename);
+        TRACE("Found driver {} for name \"{}\"", *idx, devicename);
         device = DriverList[*idx]->alcCaptureOpenDevice(devicename, frequency, format, buffersize);
     }
     else
@@ -895,7 +896,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *devicename, 
             if(drv->ALCVer >= MAKE_ALC_VER(1, 1)
                 || drv->alcIsExtensionPresent(nullptr, "ALC_EXT_CAPTURE"))
             {
-                TRACE("Using default capture device from driver %u\n", drvidx);
+                TRACE("Using default capture device from driver {}", drvidx);
                 device = drv->alcCaptureOpenDevice(nullptr, frequency, format, buffersize);
                 idx = drvidx;
                 break;

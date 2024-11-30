@@ -18,6 +18,7 @@
 #include "AL/alext.h"
 
 #include "almalloc.h"
+#include "fmt/core.h"
 
 
 #define MAKE_ALC_VER(major, minor) (((major)<<8) | (minor))
@@ -159,7 +160,7 @@ struct DriverIface {
     std::wstring Name;
     HMODULE Module{nullptr};
     int ALCVer{0};
-    std::once_flag InitOnceCtx{};
+    std::once_flag InitOnceCtx;
 
     template<typename T>
     DriverIface(T&& name, HMODULE mod) : Name(std::forward<T>(name)), Module(mod) { }
@@ -190,29 +191,29 @@ enum class eLogLevel {
 extern eLogLevel LogLevel;
 extern gsl::owner<std::FILE*> LogFile;
 
-#define TRACE(...) do {                                   \
-    if(LogLevel >= eLogLevel::Trace)                      \
-    {                                                     \
-        std::FILE *file{LogFile ? LogFile : stderr};      \
-        fprintf(file, "AL Router (II): " __VA_ARGS__);    \
-        fflush(file);                                     \
-    }                                                     \
+#define TRACE(...) do {                                     \
+    if(LogLevel >= eLogLevel::Trace)                        \
+    {                                                       \
+        std::FILE *file{LogFile ? LogFile : stderr};        \
+        fmt::println(file, "AL Router (II): " __VA_ARGS__); \
+        fflush(file);                                       \
+    }                                                       \
 } while(0)
-#define WARN(...) do {                                    \
-    if(LogLevel >= eLogLevel::Warn)                       \
-    {                                                     \
-        std::FILE *file{LogFile ? LogFile : stderr};      \
-        fprintf(file, "AL Router (WW): " __VA_ARGS__);    \
-        fflush(file);                                     \
-    }                                                     \
+#define WARN(...) do {                                      \
+    if(LogLevel >= eLogLevel::Warn)                         \
+    {                                                       \
+        std::FILE *file{LogFile ? LogFile : stderr};        \
+        fmt::println(file, "AL Router (WW): " __VA_ARGS__); \
+        fflush(file);                                       \
+    }                                                       \
 } while(0)
-#define ERR(...) do {                                     \
-    if(LogLevel >= eLogLevel::Error)                      \
-    {                                                     \
-        std::FILE *file{LogFile ? LogFile : stderr};      \
-        fprintf(file, "AL Router (EE): " __VA_ARGS__);    \
-        fflush(file);                                     \
-    }                                                     \
+#define ERR(...) do {                                       \
+    if(LogLevel >= eLogLevel::Error)                        \
+    {                                                       \
+        std::FILE *file{LogFile ? LogFile : stderr};        \
+        fmt::println(file, "AL Router (EE): " __VA_ARGS__); \
+        fflush(file);                                       \
+    }                                                       \
 } while(0)
 
 #endif /* ROUTER_ROUTER_H */

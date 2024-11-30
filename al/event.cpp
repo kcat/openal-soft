@@ -26,10 +26,10 @@
 #include "core/async_event.h"
 #include "core/context.h"
 #include "core/effects/base.h"
+#include "core/except.h"
 #include "core/logging.h"
 #include "debug.h"
 #include "direct_defs.h"
-#include "error.h"
 #include "intrusive_ptr.h"
 #include "opthelpers.h"
 #include "ringbuffer.h"
@@ -183,18 +183,18 @@ FORCE_ALIGN void AL_APIENTRY alEventControlDirectSOFT(ALCcontext *context, ALsiz
     const ALenum *types, ALboolean enable) noexcept
 try {
     if(count < 0)
-        throw al::context_error{AL_INVALID_VALUE, "Controlling %d events", count};
+        context->throw_error(AL_INVALID_VALUE, "Controlling {} events", count);
     if(count <= 0) UNLIKELY return;
 
     if(!types)
-        throw al::context_error{AL_INVALID_VALUE, "NULL pointer"};
+        context->throw_error(AL_INVALID_VALUE, "NULL pointer");
 
     ContextBase::AsyncEventBitset flags{};
     for(ALenum evttype : al::span{types, static_cast<uint>(count)})
     {
         auto etype = GetEventType(evttype);
         if(!etype)
-            throw al::context_error{AL_INVALID_ENUM, "Invalid event type 0x%04x", evttype};
+            context->throw_error(AL_INVALID_ENUM, "Invalid event type 0x{:04x}", evttype);
         flags.set(al::to_underlying(*etype));
     }
 
@@ -222,15 +222,22 @@ try {
         std::lock_guard<std::mutex> eventlock{context->mEventCbLock};
     }
 }
-catch(al::context_error& e) {
-    context->setError(e.errorCode(), "%s", e.what());
+catch(al::base_exception&) {
+}
+catch(std::exception &e) {
+    ERR("Caught exception: %s\n", e.what());
 }
 
 AL_API DECL_FUNCEXT2(void, alEventCallback,SOFT, ALEVENTPROCSOFT,callback, void*,userParam)
 FORCE_ALIGN void AL_APIENTRY alEventCallbackDirectSOFT(ALCcontext *context,
     ALEVENTPROCSOFT callback, void *userParam) noexcept
-{
+try {
     std::lock_guard<std::mutex> eventlock{context->mEventCbLock};
     context->mEventCb = callback;
     context->mEventParam = userParam;
+}
+catch(al::base_exception&) {
+}
+catch(std::exception &e) {
+    ERR("Caught exception: %s\n", e.what());
 }

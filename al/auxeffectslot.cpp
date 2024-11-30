@@ -669,11 +669,6 @@ try {
     if(!slot)
         context->throw_error(AL_INVALID_NAME, "Invalid effect slot ID {}", effectslot);
 
-    switch(param)
-    {
-    default:
-        break;
-    }
     context->throw_error(AL_INVALID_ENUM, "Invalid effect slot integer-vector property 0x{:04x}",
         param);
 }
@@ -731,11 +726,6 @@ try {
     if(!slot)
         context->throw_error(AL_INVALID_NAME, "Invalid effect slot ID {}", effectslot);
 
-    switch(param)
-    {
-    default:
-        break;
-    }
     context->throw_error(AL_INVALID_ENUM, "Invalid effect slot float-vector property 0x{:04x}",
         param);
 }
@@ -812,11 +802,6 @@ try {
     if(!slot)
         context->throw_error(AL_INVALID_NAME, "Invalid effect slot ID {}", effectslot);
 
-    switch(param)
-    {
-    default:
-        break;
-    }
     context->throw_error(AL_INVALID_ENUM, "Invalid effect slot integer-vector property 0x{:04x}",
         param);
 }
@@ -864,11 +849,6 @@ try {
     if(!slot)
         context->throw_error(AL_INVALID_NAME, "Invalid effect slot ID {}", effectslot);
 
-    switch(param)
-    {
-    default:
-        break;
-    }
     context->throw_error(AL_INVALID_ENUM, "Invalid effect slot float-vector property 0x{:04x}",
         param);
 }

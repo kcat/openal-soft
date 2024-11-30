@@ -53,11 +53,11 @@
 #include "alnumeric.h"
 #include "alspan.h"
 #include "core/device.h"
+#include "core/except.h"
 #include "core/logging.h"
 #include "core/resampler_limits.h"
 #include "core/voice.h"
 #include "direct_defs.h"
-#include "error.h"
 #include "intrusive_ptr.h"
 #include "opthelpers.h"
 
@@ -985,11 +985,6 @@ try {
     if(LookupBuffer(device, buffer) == nullptr)
         context->throw_error(AL_INVALID_NAME, "Invalid buffer ID {}", buffer);
 
-    switch(param)
-    {
-    default:
-        break;
-    }
     context->throw_error(AL_INVALID_ENUM, "Invalid buffer float property 0x{:04x}", param);
 }
 catch(al::base_exception&) {
@@ -1009,11 +1004,6 @@ try {
     if(LookupBuffer(device, buffer) == nullptr)
         context->throw_error(AL_INVALID_NAME, "Invalid buffer ID {}", buffer);
 
-    switch(param)
-    {
-    default:
-        break;
-    }
     context->throw_error(AL_INVALID_ENUM, "Invalid buffer 3-float property 0x{:04x}", param);
 }
 catch(al::base_exception&) {
@@ -1034,11 +1024,6 @@ try {
     if(!values)
         context->throw_error(AL_INVALID_VALUE, "NULL pointer");
 
-    switch(param)
-    {
-    default:
-        break;
-    }
     context->throw_error(AL_INVALID_ENUM, "Invalid buffer float-vector property 0x{:04x}", param);
 }
 catch(al::base_exception&) {
@@ -1120,11 +1105,6 @@ try {
     if(LookupBuffer(device, buffer) == nullptr)
         context->throw_error(AL_INVALID_NAME, "Invalid buffer ID {}", buffer);
 
-    switch(param)
-    {
-    default:
-        break;
-    }
     context->throw_error(AL_INVALID_ENUM, "Invalid buffer 3-integer property 0x{:04x}", param);
 }
 catch(al::base_exception&) {
@@ -1225,11 +1205,6 @@ try {
     if(!value1 || !value2 || !value3)
         context->throw_error(AL_INVALID_VALUE, "NULL pointer");
 
-    switch(param)
-    {
-    default:
-        break;
-    }
     context->throw_error(AL_INVALID_ENUM, "Invalid buffer 3-float property 0x{:04x}", param);
 }
 catch(al::base_exception&) {
@@ -1257,11 +1232,6 @@ try {
     if(!values)
         context->throw_error(AL_INVALID_VALUE, "NULL pointer");
 
-    switch(param)
-    {
-    default:
-        break;
-    }
     context->throw_error(AL_INVALID_ENUM, "Invalid buffer float-vector property 0x{:04x}", param);
 }
 catch(al::base_exception&) {
@@ -1353,11 +1323,6 @@ try {
     if(!value1 || !value2 || !value3)
         context->throw_error(AL_INVALID_VALUE, "NULL pointer");
 
-    switch(param)
-    {
-    default:
-        break;
-    }
     context->throw_error(AL_INVALID_ENUM, "Invalid buffer 3-integer property 0x{:04x}", param);
 }
 catch(al::base_exception&) {
@@ -1486,11 +1451,6 @@ try {
     if(!value1 || !value2 || !value3)
         context->throw_error(AL_INVALID_VALUE, "NULL pointer");
 
-    switch(param)
-    {
-    default:
-        break;
-    }
     context->throw_error(AL_INVALID_ENUM, "Invalid buffer 3-pointer property 0x{:04x}", param);
 }
 catch(al::base_exception&) {
@@ -1519,11 +1479,6 @@ try {
     if(!values)
         context->throw_error(AL_INVALID_VALUE, "NULL pointer");
 
-    switch(param)
-    {
-    default:
-        break;
-    }
     context->throw_error(AL_INVALID_ENUM, "Invalid buffer pointer-vector property 0x{:04x}", param);
 }
 catch(al::base_exception&) {

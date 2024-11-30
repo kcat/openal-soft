@@ -14,21 +14,23 @@
 #include "almalloc.h"
 #include "alnumeric.h"
 
+struct ALfilter;
+
 
 inline constexpr float LowPassFreqRef{5000.0f};
 inline constexpr float HighPassFreqRef{250.0f};
 
 template<typename T>
 struct FilterTable {
-    static void setParami(struct ALfilter*, ALenum, int);
-    static void setParamiv(struct ALfilter*, ALenum, const int*);
-    static void setParamf(struct ALfilter*, ALenum, float);
-    static void setParamfv(struct ALfilter*, ALenum, const float*);
+    static void setParami(ALCcontext*, ALfilter*, ALenum, int);
+    static void setParamiv(ALCcontext*, ALfilter*, ALenum, const int*);
+    static void setParamf(ALCcontext*, ALfilter*, ALenum, float);
+    static void setParamfv(ALCcontext*, ALfilter*, ALenum, const float*);
 
-    static void getParami(const struct ALfilter*, ALenum, int*);
-    static void getParamiv(const struct ALfilter*, ALenum, int*);
-    static void getParamf(const struct ALfilter*, ALenum, float*);
-    static void getParamfv(const struct ALfilter*, ALenum, float*);
+    static void getParami(ALCcontext*, const ALfilter*, ALenum, int*);
+    static void getParamiv(ALCcontext*, const ALfilter*, ALenum, int*);
+    static void getParamf(ALCcontext*, const ALfilter*, ALenum, float*);
+    static void getParamfv(ALCcontext*, const ALfilter*, ALenum, float*);
 
 private:
     FilterTable() = default;

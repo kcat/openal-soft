@@ -20,8 +20,6 @@
 
 #include "config.h"
 
-#include "error.h"
-
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
@@ -44,23 +42,10 @@
 #include "al/debug.h"
 #include "alc/alconfig.h"
 #include "alc/context.h"
+#include "core/except.h"
 #include "core/logging.h"
 #include "opthelpers.h"
 #include "strutils.h"
-
-
-namespace al {
-context_error::context_error(ALenum code, const char *msg, ...) : mErrorCode{code}
-{
-    /* NOLINTBEGIN(*-array-to-pointer-decay) */
-    std::va_list args;
-    va_start(args, msg);
-    setMessage(msg, args);
-    va_end(args);
-    /* NOLINTEND(*-array-to-pointer-decay) */
-}
-context_error::~context_error() = default;
-} /* namespace al */
 
 
 void ALCcontext::throw_error(ALenum errorCode, const std::string &msg)

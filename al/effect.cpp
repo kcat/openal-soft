@@ -51,9 +51,9 @@
 #include "alnumeric.h"
 #include "alspan.h"
 #include "alstring.h"
+#include "core/except.h"
 #include "core/logging.h"
 #include "direct_defs.h"
-#include "error.h"
 #include "intrusive_ptr.h"
 #include "opthelpers.h"
 
@@ -139,6 +139,7 @@ void InitEffectParams(ALeffect *effect, ALenum type) noexcept
     effect->type = type;
 }
 
+[[nodiscard]]
 auto EnsureEffects(al::Device *device, size_t needed) noexcept -> bool
 try {
     size_t count{std::accumulate(device->EffectList.cbegin(), device->EffectList.cend(), 0_uz,
@@ -162,6 +163,7 @@ catch(...) {
     return false;
 }
 
+[[nodiscard]]
 auto AllocEffect(al::Device *device) noexcept -> ALeffect*
 {
     auto sublist = std::find_if(device->EffectList.begin(), device->EffectList.end(),
@@ -195,7 +197,8 @@ void FreeEffect(al::Device *device, ALeffect *effect)
     device->EffectList[lidx].FreeMask |= 1_u64 << slidx;
 }
 
-inline auto LookupEffect(al::Device *device, ALuint id) noexcept -> ALeffect*
+[[nodiscard]] inline
+auto LookupEffect(al::Device *device, ALuint id) noexcept -> ALeffect*
 {
     const size_t lidx{(id-1) >> 6};
     const ALuint slidx{(id-1) & 0x3f};
@@ -214,7 +217,7 @@ AL_API DECL_FUNC2(void, alGenEffects, ALsizei,n, ALuint*,effects)
 FORCE_ALIGN void AL_APIENTRY alGenEffectsDirect(ALCcontext *context, ALsizei n, ALuint *effects) noexcept
 try {
     if(n < 0)
-        throw al::context_error{AL_INVALID_VALUE, "Generating %d effects", n};
+        context->throw_error(AL_INVALID_VALUE, "Generating {} effects", n);
     if(n <= 0) UNLIKELY return;
 
     auto *device = context->mALDevice.get();
@@ -222,13 +225,15 @@ try {
 
     const al::span eids{effects, static_cast<ALuint>(n)};
     if(!EnsureEffects(device, eids.size()))
-        throw al::context_error{AL_OUT_OF_MEMORY, "Failed to allocate %d effect%s", n,
-            (n == 1) ? "" : "s"};
+        context->throw_error(AL_OUT_OF_MEMORY, "Failed to allocate {} effect{}", n,
+            (n==1) ? "" : "s");
 
     std::generate(eids.begin(), eids.end(), [device]{ return AllocEffect(device)->id; });
 }
-catch(al::context_error& e) {
-    context->setError(e.errorCode(), "%s", e.what());
+catch(al::base_exception&) {
+}
+catch(std::exception &e) {
+    ERR("Caught exception: %s\n", e.what());
 }
 
 AL_API DECL_FUNC2(void, alDeleteEffects, ALsizei,n, const ALuint*,effects)
@@ -236,7 +241,7 @@ FORCE_ALIGN void AL_APIENTRY alDeleteEffectsDirect(ALCcontext *context, ALsizei 
     const ALuint *effects) noexcept
 try {
     if(n < 0)
-        throw al::context_error{AL_INVALID_VALUE, "Deleting %d effects", n};
+        context->throw_error(AL_INVALID_VALUE, "Deleting {} effects", n);
     if(n <= 0) UNLIKELY return;
 
     auto *device = context->mALDevice.get();
@@ -249,7 +254,7 @@ try {
     const al::span eids{effects, static_cast<ALuint>(n)};
     auto inveffect = std::find_if_not(eids.begin(), eids.end(), validate_effect);
     if(inveffect != eids.end())
-        throw al::context_error{AL_INVALID_NAME, "Invalid effect ID %u", *inveffect};
+        context->throw_error(AL_INVALID_NAME, "Invalid effect ID {}", *inveffect);
 
     /* All good. Delete non-0 effect IDs. */
     auto delete_effect = [device](ALuint eid) -> void
@@ -259,8 +264,10 @@ try {
     };
     std::for_each(eids.begin(), eids.end(), delete_effect);
 }
-catch(al::context_error& e) {
-    context->setError(e.errorCode(), "%s", e.what());
+catch(al::base_exception&) {
+}
+catch(std::exception &e) {
+    ERR("Caught exception: %s\n", e.what());
 }
 
 AL_API DECL_FUNC1(ALboolean, alIsEffect, ALuint,effect)
@@ -282,7 +289,7 @@ try {
 
     ALeffect *aleffect{LookupEffect(device, effect)};
     if(!aleffect)
-        throw al::context_error{AL_INVALID_NAME, "Invalid effect ID %u", effect};
+        context->throw_error(AL_INVALID_NAME, "Invalid effect ID {}", effect);
 
     switch(param)
     {
@@ -292,8 +299,8 @@ try {
             auto check_effect = [value](const EffectList &item) -> bool
             { return value == item.val && !DisabledEffects.test(item.type); };
             if(!std::any_of(gEffectList.cbegin(), gEffectList.cend(), check_effect))
-                throw al::context_error{AL_INVALID_VALUE, "Effect type 0x%04x not supported",
-                    value};
+                context->throw_error(AL_INVALID_VALUE, "Effect type 0x{:04x} not supported",
+                    value);
         }
 
         InitEffectParams(aleffect, value);
@@ -301,15 +308,17 @@ try {
     }
 
     /* Call the appropriate handler */
-    std::visit([aleffect,param,value](auto &arg)
+    std::visit([context,aleffect,param,value](auto &arg)
     {
         using Type = std::remove_cv_t<std::remove_reference_t<decltype(arg)>>;
         using PropType = typename Type::prop_type;
-        return arg.SetParami(std::get<PropType>(aleffect->Props), param, value);
+        return arg.SetParami(context, std::get<PropType>(aleffect->Props), param, value);
     }, aleffect->PropsVariant);
 }
-catch(al::context_error& e) {
-    context->setError(e.errorCode(), "%s", e.what());
+catch(al::base_exception&) {
+}
+catch(std::exception &e) {
+    ERR("Caught exception: %s\n", e.what());
 }
 
 AL_API DECL_FUNC3(void, alEffectiv, ALuint,effect, ALenum,param, const ALint*,values)
@@ -328,18 +337,20 @@ try {
 
     ALeffect *aleffect{LookupEffect(device, effect)};
     if(!aleffect)
-        throw al::context_error{AL_INVALID_NAME, "Invalid effect ID %u", effect};
+        context->throw_error(AL_INVALID_NAME, "Invalid effect ID {}", effect);
 
     /* Call the appropriate handler */
-    std::visit([aleffect,param,values](auto &arg)
+    std::visit([context,aleffect,param,values](auto &arg)
     {
         using Type = std::remove_cv_t<std::remove_reference_t<decltype(arg)>>;
         using PropType = typename Type::prop_type;
-        return arg.SetParamiv(std::get<PropType>(aleffect->Props), param, values);
+        return arg.SetParamiv(context, std::get<PropType>(aleffect->Props), param, values);
     }, aleffect->PropsVariant);
 }
-catch(al::context_error& e) {
-    context->setError(e.errorCode(), "%s", e.what());
+catch(al::base_exception&) {
+}
+catch(std::exception &e) {
+    ERR("Caught exception: %s\n", e.what());
 }
 
 AL_API DECL_FUNC3(void, alEffectf, ALuint,effect, ALenum,param, ALfloat,value)
@@ -350,19 +361,21 @@ try {
     auto effectlock = std::lock_guard{device->EffectLock};
 
     ALeffect *aleffect{LookupEffect(device, effect)};
-    if(!aleffect) UNLIKELY
-        throw al::context_error{AL_INVALID_NAME, "Invalid effect ID %u", effect};
+    if(!aleffect)
+        context->throw_error(AL_INVALID_NAME, "Invalid effect ID {}", effect);
 
     /* Call the appropriate handler */
-    std::visit([aleffect,param,value](auto &arg)
+    std::visit([context,aleffect,param,value](auto &arg)
     {
         using Type = std::remove_cv_t<std::remove_reference_t<decltype(arg)>>;
         using PropType = typename Type::prop_type;
-        return arg.SetParamf(std::get<PropType>(aleffect->Props), param, value);
+        return arg.SetParamf(context, std::get<PropType>(aleffect->Props), param, value);
     }, aleffect->PropsVariant);
 }
-catch(al::context_error& e) {
-    context->setError(e.errorCode(), "%s", e.what());
+catch(al::base_exception&) {
+}
+catch(std::exception &e) {
+    ERR("Caught exception: %s\n", e.what());
 }
 
 AL_API DECL_FUNC3(void, alEffectfv, ALuint,effect, ALenum,param, const ALfloat*,values)
@@ -374,18 +387,20 @@ try {
 
     ALeffect *aleffect{LookupEffect(device, effect)};
     if(!aleffect)
-        throw al::context_error{AL_INVALID_NAME, "Invalid effect ID %u", effect};
+        context->throw_error(AL_INVALID_NAME, "Invalid effect ID {}", effect);
 
     /* Call the appropriate handler */
-    std::visit([aleffect,param,values](auto &arg)
+    std::visit([context,aleffect,param,values](auto &arg)
     {
         using Type = std::remove_cv_t<std::remove_reference_t<decltype(arg)>>;
         using PropType = typename Type::prop_type;
-        return arg.SetParamfv(std::get<PropType>(aleffect->Props), param, values);
+        return arg.SetParamfv(context, std::get<PropType>(aleffect->Props), param, values);
     }, aleffect->PropsVariant);
 }
-catch(al::context_error& e) {
-    context->setError(e.errorCode(), "%s", e.what());
+catch(al::base_exception&) {
+}
+catch(std::exception &e) {
+    ERR("Caught exception: %s\n", e.what());
 }
 
 AL_API DECL_FUNC3(void, alGetEffecti, ALuint,effect, ALenum,param, ALint*,value)
@@ -397,7 +412,7 @@ try {
 
     const ALeffect *aleffect{LookupEffect(device, effect)};
     if(!aleffect)
-        throw al::context_error{AL_INVALID_NAME, "Invalid effect ID %u", effect};
+        context->throw_error(AL_INVALID_NAME, "Invalid effect ID {}", effect);
 
     switch(param)
     {
@@ -407,15 +422,17 @@ try {
     }
 
     /* Call the appropriate handler */
-    std::visit([aleffect,param,value](auto &arg)
+    std::visit([context,aleffect,param,value](auto &arg)
     {
         using Type = std::remove_cv_t<std::remove_reference_t<decltype(arg)>>;
         using PropType = typename Type::prop_type;
-        return arg.GetParami(std::get<PropType>(aleffect->Props), param, value);
+        return arg.GetParami(context, std::get<PropType>(aleffect->Props), param, value);
     }, aleffect->PropsVariant);
 }
-catch(al::context_error& e) {
-    context->setError(e.errorCode(), "%s", e.what());
+catch(al::base_exception&) {
+}
+catch(std::exception &e) {
+    ERR("Caught exception: %s\n", e.what());
 }
 
 AL_API DECL_FUNC3(void, alGetEffectiv, ALuint,effect, ALenum,param, ALint*,values)
@@ -434,18 +451,20 @@ try {
 
     const ALeffect *aleffect{LookupEffect(device, effect)};
     if(!aleffect)
-        throw al::context_error{AL_INVALID_NAME, "Invalid effect ID %u", effect};
+        context->throw_error(AL_INVALID_NAME, "Invalid effect ID {}", effect);
 
     /* Call the appropriate handler */
-    std::visit([aleffect,param,values](auto &arg)
+    std::visit([context,aleffect,param,values](auto &arg)
     {
         using Type = std::remove_cv_t<std::remove_reference_t<decltype(arg)>>;
         using PropType = typename Type::prop_type;
-        return arg.GetParamiv(std::get<PropType>(aleffect->Props), param, values);
+        return arg.GetParamiv(context, std::get<PropType>(aleffect->Props), param, values);
     }, aleffect->PropsVariant);
 }
-catch(al::context_error& e) {
-    context->setError(e.errorCode(), "%s", e.what());
+catch(al::base_exception&) {
+}
+catch(std::exception &e) {
+    ERR("Caught exception: %s\n", e.what());
 }
 
 AL_API DECL_FUNC3(void, alGetEffectf, ALuint,effect, ALenum,param, ALfloat*,value)
@@ -457,18 +476,20 @@ try {
 
     const ALeffect *aleffect{LookupEffect(device, effect)};
     if(!aleffect)
-        throw al::context_error{AL_INVALID_NAME, "Invalid effect ID %u", effect};
+        context->throw_error(AL_INVALID_NAME, "Invalid effect ID {}", effect);
 
     /* Call the appropriate handler */
-    std::visit([aleffect,param,value](auto &arg)
+    std::visit([context,aleffect,param,value](auto &arg)
     {
         using Type = std::remove_cv_t<std::remove_reference_t<decltype(arg)>>;
         using PropType = typename Type::prop_type;
-        return arg.GetParamf(std::get<PropType>(aleffect->Props), param, value);
+        return arg.GetParamf(context, std::get<PropType>(aleffect->Props), param, value);
     }, aleffect->PropsVariant);
 }
-catch(al::context_error& e) {
-    context->setError(e.errorCode(), "%s", e.what());
+catch(al::base_exception&) {
+}
+catch(std::exception &e) {
+    ERR("Caught exception: %s\n", e.what());
 }
 
 AL_API DECL_FUNC3(void, alGetEffectfv, ALuint,effect, ALenum,param, ALfloat*,values)
@@ -480,18 +501,20 @@ try {
 
     const ALeffect *aleffect{LookupEffect(device, effect)};
     if(!aleffect)
-        throw al::context_error{AL_INVALID_NAME, "Invalid effect ID %u", effect};
+        context->throw_error(AL_INVALID_NAME, "Invalid effect ID {}", effect);
 
     /* Call the appropriate handler */
-    std::visit([aleffect,param,values](auto &arg)
+    std::visit([context,aleffect,param,values](auto &arg)
     {
         using Type = std::remove_cv_t<std::remove_reference_t<decltype(arg)>>;
         using PropType = typename Type::prop_type;
-        return arg.GetParamfv(std::get<PropType>(aleffect->Props), param, values);
+        return arg.GetParamfv(context, std::get<PropType>(aleffect->Props), param, values);
     }, aleffect->PropsVariant);
 }
-catch(al::context_error& e) {
-    context->setError(e.errorCode(), "%s", e.what());
+catch(al::base_exception&) {
+}
+catch(std::exception &e) {
+    ERR("Caught exception: %s\n", e.what());
 }
 
 

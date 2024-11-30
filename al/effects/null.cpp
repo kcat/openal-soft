@@ -4,7 +4,7 @@
 #include "AL/al.h"
 #include "AL/efx.h"
 
-#include "alc/effects/base.h"
+#include "alc/context.h"
 #include "effects.h"
 
 #if ALSOFT_EAX
@@ -24,74 +24,38 @@ constexpr EffectProps genDefaultProps() noexcept
 
 const EffectProps NullEffectProps{genDefaultProps()};
 
-void NullEffectHandler::SetParami(std::monostate& /*props*/, ALenum param, int /*val*/)
+void NullEffectHandler::SetParami(ALCcontext *context, std::monostate& /*props*/, ALenum param, int /*val*/)
 {
-    switch(param)
-    {
-    default:
-        throw effect_exception{AL_INVALID_ENUM, "Invalid null effect integer property 0x%04x",
-            param};
-    }
+    context->throw_error(AL_INVALID_ENUM, "Invalid null effect integer property 0x{:04x}", param);
 }
-void NullEffectHandler::SetParamiv(std::monostate &props, ALenum param, const int *vals)
+void NullEffectHandler::SetParamiv(ALCcontext *context, std::monostate &props, ALenum param, const int *vals)
 {
-    switch(param)
-    {
-    default:
-        SetParami(props, param, *vals);
-    }
+    SetParami(context, props, param, *vals);
 }
-void NullEffectHandler::SetParamf(std::monostate& /*props*/, ALenum param, float /*val*/)
+void NullEffectHandler::SetParamf(ALCcontext *context, std::monostate& /*props*/, ALenum param, float /*val*/)
 {
-    switch(param)
-    {
-    default:
-        throw effect_exception{AL_INVALID_ENUM, "Invalid null effect float property 0x%04x",
-            param};
-    }
+    context->throw_error(AL_INVALID_ENUM, "Invalid null effect float property 0x{:04x}", param);
 }
-void NullEffectHandler::SetParamfv(std::monostate &props, ALenum param, const float *vals)
+void NullEffectHandler::SetParamfv(ALCcontext *context, std::monostate &props, ALenum param, const float *vals)
 {
-    switch(param)
-    {
-    default:
-        SetParamf(props, param, *vals);
-    }
+    SetParamf(context, props, param, *vals);
 }
 
-void NullEffectHandler::GetParami(const std::monostate& /*props*/, ALenum param, int* /*val*/)
+void NullEffectHandler::GetParami(ALCcontext *context, const std::monostate& /*props*/, ALenum param, int* /*val*/)
 {
-    switch(param)
-    {
-    default:
-        throw effect_exception{AL_INVALID_ENUM, "Invalid null effect integer property 0x%04x",
-            param};
-    }
+    context->throw_error(AL_INVALID_ENUM, "Invalid null effect integer property 0x{:04x}", param);
 }
-void NullEffectHandler::GetParamiv(const std::monostate &props, ALenum param, int *vals)
+void NullEffectHandler::GetParamiv(ALCcontext *context, const std::monostate &props, ALenum param, int *vals)
 {
-    switch(param)
-    {
-    default:
-        GetParami(props, param, vals);
-    }
+    GetParami(context, props, param, vals);
 }
-void NullEffectHandler::GetParamf(const std::monostate& /*props*/, ALenum param, float* /*val*/)
+void NullEffectHandler::GetParamf(ALCcontext *context, const std::monostate& /*props*/, ALenum param, float* /*val*/)
 {
-    switch(param)
-    {
-    default:
-        throw effect_exception{AL_INVALID_ENUM, "Invalid null effect float property 0x%04x",
-            param};
-    }
+    context->throw_error(AL_INVALID_ENUM, "Invalid null effect float property 0x{:04x}", param);
 }
-void NullEffectHandler::GetParamfv(const std::monostate &props, ALenum param, float *vals)
+void NullEffectHandler::GetParamfv(ALCcontext *context, const std::monostate &props, ALenum param, float *vals)
 {
-    switch(param)
-    {
-    default:
-        GetParamf(props, param, vals);
-    }
+    GetParamf(context, props, param, vals);
 }
 
 

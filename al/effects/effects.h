@@ -3,23 +3,23 @@
 
 #include <variant>
 
+#include "AL/alc.h"
 #include "AL/al.h"
 
-#include "al/error.h"
 #include "core/effects/base.h"
 
 #define DECL_HANDLER(N, T)                                                    \
 struct N {                                                                    \
     using prop_type = T;                                                      \
                                                                               \
-    static void SetParami(prop_type &props, ALenum param, int val);           \
-    static void SetParamiv(prop_type &props, ALenum param, const int *vals);  \
-    static void SetParamf(prop_type &props, ALenum param, float val);         \
-    static void SetParamfv(prop_type &props, ALenum param, const float *vals);\
-    static void GetParami(const prop_type &props, ALenum param, int *val);    \
-    static void GetParamiv(const prop_type &props, ALenum param, int *vals);  \
-    static void GetParamf(const prop_type &props, ALenum param, float *val);  \
-    static void GetParamfv(const prop_type &props, ALenum param, float *vals);\
+    static void SetParami(ALCcontext *context, prop_type &props, ALenum param, int val);           \
+    static void SetParamiv(ALCcontext *context, prop_type &props, ALenum param, const int *vals);  \
+    static void SetParamf(ALCcontext *context, prop_type &props, ALenum param, float val);         \
+    static void SetParamfv(ALCcontext *context, prop_type &props, ALenum param, const float *vals);\
+    static void GetParami(ALCcontext *context, const prop_type &props, ALenum param, int *val);    \
+    static void GetParamiv(ALCcontext *context, const prop_type &props, ALenum param, int *vals);  \
+    static void GetParamf(ALCcontext *context, const prop_type &props, ALenum param, float *val);  \
+    static void GetParamfv(ALCcontext *context, const prop_type &props, ALenum param, float *vals);\
 };
 DECL_HANDLER(NullEffectHandler, std::monostate)
 DECL_HANDLER(ReverbEffectHandler, ReverbProps)
@@ -39,9 +39,6 @@ DECL_HANDLER(DedicatedDialogEffectHandler, DedicatedProps)
 DECL_HANDLER(DedicatedLfeEffectHandler, DedicatedProps)
 DECL_HANDLER(ConvolutionEffectHandler, ConvolutionProps)
 #undef DECL_HANDLER
-
-
-using effect_exception = al::context_error;
 
 
 /* Default properties for the given effect types. */

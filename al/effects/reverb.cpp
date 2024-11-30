@@ -9,9 +9,9 @@
 #include "AL/al.h"
 #include "AL/efx.h"
 
+#include "alc/context.h"
 #include "alnumeric.h"
 #include "alspan.h"
-#include "core/effects/base.h"
 #include "effects.h"
 
 #if ALSOFT_EAX
@@ -92,152 +92,147 @@ constexpr EffectProps genDefaultStdProps() noexcept
 
 const EffectProps ReverbEffectProps{genDefaultProps()};
 
-void ReverbEffectHandler::SetParami(ReverbProps &props, ALenum param, int val)
+void ReverbEffectHandler::SetParami(ALCcontext *context, ReverbProps &props, ALenum param, int val)
 {
     switch(param)
     {
     case AL_EAXREVERB_DECAY_HFLIMIT:
         if(!(val >= AL_EAXREVERB_MIN_DECAY_HFLIMIT && val <= AL_EAXREVERB_MAX_DECAY_HFLIMIT))
-            throw effect_exception{AL_INVALID_VALUE, "EAX Reverb decay hflimit out of range"};
+            context->throw_error(AL_INVALID_VALUE, "EAX Reverb decay hflimit out of range");
         props.DecayHFLimit = val != AL_FALSE;
-        break;
-
-    default:
-        throw effect_exception{AL_INVALID_ENUM, "Invalid EAX reverb integer property 0x%04x",
-            param};
+        return;
     }
+    context->throw_error(AL_INVALID_ENUM, "Invalid EAX reverb integer property 0x{:04x}", param);
 }
-void ReverbEffectHandler::SetParamiv(ReverbProps &props, ALenum param, const int *vals)
-{ SetParami(props, param, *vals); }
-void ReverbEffectHandler::SetParamf(ReverbProps &props, ALenum param, float val)
+void ReverbEffectHandler::SetParamiv(ALCcontext *context, ReverbProps &props, ALenum param, const int *vals)
+{ SetParami(context, props, param, *vals); }
+void ReverbEffectHandler::SetParamf(ALCcontext *context, ReverbProps &props, ALenum param, float val)
 {
     switch(param)
     {
     case AL_EAXREVERB_DENSITY:
         if(!(val >= AL_EAXREVERB_MIN_DENSITY && val <= AL_EAXREVERB_MAX_DENSITY))
-            throw effect_exception{AL_INVALID_VALUE, "EAX Reverb density out of range"};
+            context->throw_error(AL_INVALID_VALUE, "EAX Reverb density out of range");
         props.Density = val;
-        break;
+        return;
 
     case AL_EAXREVERB_DIFFUSION:
         if(!(val >= AL_EAXREVERB_MIN_DIFFUSION && val <= AL_EAXREVERB_MAX_DIFFUSION))
-            throw effect_exception{AL_INVALID_VALUE, "EAX Reverb diffusion out of range"};
+            context->throw_error(AL_INVALID_VALUE, "EAX Reverb diffusion out of range");
         props.Diffusion = val;
-        break;
+        return;
 
     case AL_EAXREVERB_GAIN:
         if(!(val >= AL_EAXREVERB_MIN_GAIN && val <= AL_EAXREVERB_MAX_GAIN))
-            throw effect_exception{AL_INVALID_VALUE, "EAX Reverb gain out of range"};
+            context->throw_error(AL_INVALID_VALUE, "EAX Reverb gain out of range");
         props.Gain = val;
-        break;
+        return;
 
     case AL_EAXREVERB_GAINHF:
         if(!(val >= AL_EAXREVERB_MIN_GAINHF && val <= AL_EAXREVERB_MAX_GAINHF))
-            throw effect_exception{AL_INVALID_VALUE, "EAX Reverb gainhf out of range"};
+            context->throw_error(AL_INVALID_VALUE, "EAX Reverb gainhf out of range");
         props.GainHF = val;
-        break;
+        return;
 
     case AL_EAXREVERB_GAINLF:
         if(!(val >= AL_EAXREVERB_MIN_GAINLF && val <= AL_EAXREVERB_MAX_GAINLF))
-            throw effect_exception{AL_INVALID_VALUE, "EAX Reverb gainlf out of range"};
+            context->throw_error(AL_INVALID_VALUE, "EAX Reverb gainlf out of range");
         props.GainLF = val;
-        break;
+        return;
 
     case AL_EAXREVERB_DECAY_TIME:
         if(!(val >= AL_EAXREVERB_MIN_DECAY_TIME && val <= AL_EAXREVERB_MAX_DECAY_TIME))
-            throw effect_exception{AL_INVALID_VALUE, "EAX Reverb decay time out of range"};
+            context->throw_error(AL_INVALID_VALUE, "EAX Reverb decay time out of range");
         props.DecayTime = val;
-        break;
+        return;
 
     case AL_EAXREVERB_DECAY_HFRATIO:
         if(!(val >= AL_EAXREVERB_MIN_DECAY_HFRATIO && val <= AL_EAXREVERB_MAX_DECAY_HFRATIO))
-            throw effect_exception{AL_INVALID_VALUE, "EAX Reverb decay hfratio out of range"};
+            context->throw_error(AL_INVALID_VALUE, "EAX Reverb decay hfratio out of range");
         props.DecayHFRatio = val;
-        break;
+        return;
 
     case AL_EAXREVERB_DECAY_LFRATIO:
         if(!(val >= AL_EAXREVERB_MIN_DECAY_LFRATIO && val <= AL_EAXREVERB_MAX_DECAY_LFRATIO))
-            throw effect_exception{AL_INVALID_VALUE, "EAX Reverb decay lfratio out of range"};
+            context->throw_error(AL_INVALID_VALUE, "EAX Reverb decay lfratio out of range");
         props.DecayLFRatio = val;
-        break;
+        return;
 
     case AL_EAXREVERB_REFLECTIONS_GAIN:
         if(!(val >= AL_EAXREVERB_MIN_REFLECTIONS_GAIN && val <= AL_EAXREVERB_MAX_REFLECTIONS_GAIN))
-            throw effect_exception{AL_INVALID_VALUE, "EAX Reverb reflections gain out of range"};
+            context->throw_error(AL_INVALID_VALUE, "EAX Reverb reflections gain out of range");
         props.ReflectionsGain = val;
-        break;
+        return;
 
     case AL_EAXREVERB_REFLECTIONS_DELAY:
         if(!(val >= AL_EAXREVERB_MIN_REFLECTIONS_DELAY && val <= AL_EAXREVERB_MAX_REFLECTIONS_DELAY))
-            throw effect_exception{AL_INVALID_VALUE, "EAX Reverb reflections delay out of range"};
+            context->throw_error(AL_INVALID_VALUE, "EAX Reverb reflections delay out of range");
         props.ReflectionsDelay = val;
-        break;
+        return;
 
     case AL_EAXREVERB_LATE_REVERB_GAIN:
         if(!(val >= AL_EAXREVERB_MIN_LATE_REVERB_GAIN && val <= AL_EAXREVERB_MAX_LATE_REVERB_GAIN))
-            throw effect_exception{AL_INVALID_VALUE, "EAX Reverb late reverb gain out of range"};
+            context->throw_error(AL_INVALID_VALUE, "EAX Reverb late reverb gain out of range");
         props.LateReverbGain = val;
-        break;
+        return;
 
     case AL_EAXREVERB_LATE_REVERB_DELAY:
         if(!(val >= AL_EAXREVERB_MIN_LATE_REVERB_DELAY && val <= AL_EAXREVERB_MAX_LATE_REVERB_DELAY))
-            throw effect_exception{AL_INVALID_VALUE, "EAX Reverb late reverb delay out of range"};
+            context->throw_error(AL_INVALID_VALUE, "EAX Reverb late reverb delay out of range");
         props.LateReverbDelay = val;
-        break;
+        return;
 
     case AL_EAXREVERB_ECHO_TIME:
         if(!(val >= AL_EAXREVERB_MIN_ECHO_TIME && val <= AL_EAXREVERB_MAX_ECHO_TIME))
-            throw effect_exception{AL_INVALID_VALUE, "EAX Reverb echo time out of range"};
+            context->throw_error(AL_INVALID_VALUE, "EAX Reverb echo time out of range");
         props.EchoTime = val;
-        break;
+        return;
 
     case AL_EAXREVERB_ECHO_DEPTH:
         if(!(val >= AL_EAXREVERB_MIN_ECHO_DEPTH && val <= AL_EAXREVERB_MAX_ECHO_DEPTH))
-            throw effect_exception{AL_INVALID_VALUE, "EAX Reverb echo depth out of range"};
+            context->throw_error(AL_INVALID_VALUE, "EAX Reverb echo depth out of range");
         props.EchoDepth = val;
-        break;
+        return;
 
     case AL_EAXREVERB_MODULATION_TIME:
         if(!(val >= AL_EAXREVERB_MIN_MODULATION_TIME && val <= AL_EAXREVERB_MAX_MODULATION_TIME))
-            throw effect_exception{AL_INVALID_VALUE, "EAX Reverb modulation time out of range"};
+            context->throw_error(AL_INVALID_VALUE, "EAX Reverb modulation time out of range");
         props.ModulationTime = val;
-        break;
+        return;
 
     case AL_EAXREVERB_MODULATION_DEPTH:
         if(!(val >= AL_EAXREVERB_MIN_MODULATION_DEPTH && val <= AL_EAXREVERB_MAX_MODULATION_DEPTH))
-            throw effect_exception{AL_INVALID_VALUE, "EAX Reverb modulation depth out of range"};
+            context->throw_error(AL_INVALID_VALUE, "EAX Reverb modulation depth out of range");
         props.ModulationDepth = val;
-        break;
+        return;
 
     case AL_EAXREVERB_AIR_ABSORPTION_GAINHF:
         if(!(val >= AL_EAXREVERB_MIN_AIR_ABSORPTION_GAINHF && val <= AL_EAXREVERB_MAX_AIR_ABSORPTION_GAINHF))
-            throw effect_exception{AL_INVALID_VALUE, "EAX Reverb air absorption gainhf out of range"};
+            context->throw_error(AL_INVALID_VALUE, "EAX Reverb air absorption gainhf out of range");
         props.AirAbsorptionGainHF = val;
-        break;
+        return;
 
     case AL_EAXREVERB_HFREFERENCE:
         if(!(val >= AL_EAXREVERB_MIN_HFREFERENCE && val <= AL_EAXREVERB_MAX_HFREFERENCE))
-            throw effect_exception{AL_INVALID_VALUE, "EAX Reverb hfreference out of range"};
+            context->throw_error(AL_INVALID_VALUE, "EAX Reverb hfreference out of range");
         props.HFReference = val;
-        break;
+        return;
 
     case AL_EAXREVERB_LFREFERENCE:
         if(!(val >= AL_EAXREVERB_MIN_LFREFERENCE && val <= AL_EAXREVERB_MAX_LFREFERENCE))
-            throw effect_exception{AL_INVALID_VALUE, "EAX Reverb lfreference out of range"};
+            context->throw_error(AL_INVALID_VALUE, "EAX Reverb lfreference out of range");
         props.LFReference = val;
-        break;
+        return;
 
     case AL_EAXREVERB_ROOM_ROLLOFF_FACTOR:
         if(!(val >= AL_EAXREVERB_MIN_ROOM_ROLLOFF_FACTOR && val <= AL_EAXREVERB_MAX_ROOM_ROLLOFF_FACTOR))
-            throw effect_exception{AL_INVALID_VALUE, "EAX Reverb room rolloff factor out of range"};
+            context->throw_error(AL_INVALID_VALUE, "EAX Reverb room rolloff factor out of range");
         props.RoomRolloffFactor = val;
-        break;
-
-    default:
-        throw effect_exception{AL_INVALID_ENUM, "Invalid EAX reverb float property 0x%04x", param};
+        return;
     }
+    context->throw_error(AL_INVALID_ENUM, "Invalid EAX reverb float property 0x{:04x}", param);
 }
-void ReverbEffectHandler::SetParamfv(ReverbProps &props, ALenum param, const float *vals)
+void ReverbEffectHandler::SetParamfv(ALCcontext *context, ReverbProps &props, ALenum param, const float *vals)
 {
     static constexpr auto finite_checker = [](float f) -> bool { return std::isfinite(f); };
     al::span<const float> values;
@@ -246,64 +241,58 @@ void ReverbEffectHandler::SetParamfv(ReverbProps &props, ALenum param, const flo
     case AL_EAXREVERB_REFLECTIONS_PAN:
         values = {vals, 3_uz};
         if(!std::all_of(values.cbegin(), values.cend(), finite_checker))
-            throw effect_exception{AL_INVALID_VALUE, "EAX Reverb reflections pan out of range"};
+            context->throw_error(AL_INVALID_VALUE, "EAX Reverb reflections pan out of range");
         std::copy(values.cbegin(), values.cend(), props.ReflectionsPan.begin());
-        break;
+        return;
     case AL_EAXREVERB_LATE_REVERB_PAN:
         values = {vals, 3_uz};
         if(!std::all_of(values.cbegin(), values.cend(), finite_checker))
-            throw effect_exception{AL_INVALID_VALUE, "EAX Reverb late reverb pan out of range"};
+            context->throw_error(AL_INVALID_VALUE, "EAX Reverb late reverb pan out of range");
         std::copy(values.cbegin(), values.cend(), props.LateReverbPan.begin());
-        break;
-
-    default:
-        SetParamf(props, param, *vals);
-        break;
+        return;
     }
+    SetParamf(context, props, param, *vals);
 }
 
-void ReverbEffectHandler::GetParami(const ReverbProps &props, ALenum param, int *val)
+void ReverbEffectHandler::GetParami(ALCcontext *context, const ReverbProps &props, ALenum param, int *val)
 {
     switch(param)
     {
-    case AL_EAXREVERB_DECAY_HFLIMIT: *val = props.DecayHFLimit; break;
-    default:
-        throw effect_exception{AL_INVALID_ENUM, "Invalid EAX reverb integer property 0x%04x",
-            param};
+    case AL_EAXREVERB_DECAY_HFLIMIT: *val = props.DecayHFLimit; return;
     }
+    context->throw_error(AL_INVALID_ENUM, "Invalid EAX reverb integer property 0x{:04x}", param);
 }
-void ReverbEffectHandler::GetParamiv(const ReverbProps &props, ALenum param, int *vals)
-{ GetParami(props, param, vals); }
-void ReverbEffectHandler::GetParamf(const ReverbProps &props, ALenum param, float *val)
+void ReverbEffectHandler::GetParamiv(ALCcontext *context, const ReverbProps &props, ALenum param, int *vals)
+{ GetParami(context, props, param, vals); }
+void ReverbEffectHandler::GetParamf(ALCcontext *context, const ReverbProps &props, ALenum param, float *val)
 {
     switch(param)
     {
-    case AL_EAXREVERB_DENSITY: *val = props.Density; break;
-    case AL_EAXREVERB_DIFFUSION: *val = props.Diffusion; break;
-    case AL_EAXREVERB_GAIN: *val = props.Gain; break;
-    case AL_EAXREVERB_GAINHF: *val = props.GainHF; break;
-    case AL_EAXREVERB_GAINLF: *val = props.GainLF; break;
-    case AL_EAXREVERB_DECAY_TIME: *val = props.DecayTime; break;
-    case AL_EAXREVERB_DECAY_HFRATIO: *val = props.DecayHFRatio; break;
-    case AL_EAXREVERB_DECAY_LFRATIO: *val = props.DecayLFRatio; break;
-    case AL_EAXREVERB_REFLECTIONS_GAIN: *val = props.ReflectionsGain; break;
-    case AL_EAXREVERB_REFLECTIONS_DELAY: *val = props.ReflectionsDelay; break;
-    case AL_EAXREVERB_LATE_REVERB_GAIN: *val = props.LateReverbGain; break;
-    case AL_EAXREVERB_LATE_REVERB_DELAY: *val = props.LateReverbDelay; break;
-    case AL_EAXREVERB_ECHO_TIME: *val = props.EchoTime; break;
-    case AL_EAXREVERB_ECHO_DEPTH: *val = props.EchoDepth; break;
-    case AL_EAXREVERB_MODULATION_TIME: *val = props.ModulationTime; break;
-    case AL_EAXREVERB_MODULATION_DEPTH: *val = props.ModulationDepth; break;
-    case AL_EAXREVERB_AIR_ABSORPTION_GAINHF: *val = props.AirAbsorptionGainHF; break;
-    case AL_EAXREVERB_HFREFERENCE: *val = props.HFReference; break;
-    case AL_EAXREVERB_LFREFERENCE: *val = props.LFReference; break;
-    case AL_EAXREVERB_ROOM_ROLLOFF_FACTOR: *val = props.RoomRolloffFactor; break;
-
-    default:
-        throw effect_exception{AL_INVALID_ENUM, "Invalid EAX reverb float property 0x%04x", param};
+    case AL_EAXREVERB_DENSITY: *val = props.Density; return;
+    case AL_EAXREVERB_DIFFUSION: *val = props.Diffusion; return;
+    case AL_EAXREVERB_GAIN: *val = props.Gain; return;
+    case AL_EAXREVERB_GAINHF: *val = props.GainHF; return;
+    case AL_EAXREVERB_GAINLF: *val = props.GainLF; return;
+    case AL_EAXREVERB_DECAY_TIME: *val = props.DecayTime; return;
+    case AL_EAXREVERB_DECAY_HFRATIO: *val = props.DecayHFRatio; return;
+    case AL_EAXREVERB_DECAY_LFRATIO: *val = props.DecayLFRatio; return;
+    case AL_EAXREVERB_REFLECTIONS_GAIN: *val = props.ReflectionsGain; return;
+    case AL_EAXREVERB_REFLECTIONS_DELAY: *val = props.ReflectionsDelay; return;
+    case AL_EAXREVERB_LATE_REVERB_GAIN: *val = props.LateReverbGain; return;
+    case AL_EAXREVERB_LATE_REVERB_DELAY: *val = props.LateReverbDelay; return;
+    case AL_EAXREVERB_ECHO_TIME: *val = props.EchoTime; return;
+    case AL_EAXREVERB_ECHO_DEPTH: *val = props.EchoDepth; return;
+    case AL_EAXREVERB_MODULATION_TIME: *val = props.ModulationTime; return;
+    case AL_EAXREVERB_MODULATION_DEPTH: *val = props.ModulationDepth; return;
+    case AL_EAXREVERB_AIR_ABSORPTION_GAINHF: *val = props.AirAbsorptionGainHF; return;
+    case AL_EAXREVERB_HFREFERENCE: *val = props.HFReference; return;
+    case AL_EAXREVERB_LFREFERENCE: *val = props.LFReference; return;
+    case AL_EAXREVERB_ROOM_ROLLOFF_FACTOR: *val = props.RoomRolloffFactor; return;
     }
+
+    context->throw_error(AL_INVALID_ENUM, "Invalid EAX reverb float property 0x{:04x}", param);
 }
-void ReverbEffectHandler::GetParamfv(const ReverbProps &props, ALenum param, float *vals)
+void ReverbEffectHandler::GetParamfv(ALCcontext *context, const ReverbProps &props, ALenum param, float *vals)
 {
     al::span<float> values;
     switch(param)
@@ -311,156 +300,148 @@ void ReverbEffectHandler::GetParamfv(const ReverbProps &props, ALenum param, flo
     case AL_EAXREVERB_REFLECTIONS_PAN:
         values = {vals, 3_uz};
         std::copy(props.ReflectionsPan.cbegin(), props.ReflectionsPan.cend(), values.begin());
-        break;
+        return;
     case AL_EAXREVERB_LATE_REVERB_PAN:
         values = {vals, 3_uz};
         std::copy(props.LateReverbPan.cbegin(), props.LateReverbPan.cend(), values.begin());
-        break;
-
-    default:
-        GetParamf(props, param, vals);
-        break;
+        return;
     }
+
+    GetParamf(context, props, param, vals);
 }
 
 
 const EffectProps StdReverbEffectProps{genDefaultStdProps()};
 
-void StdReverbEffectHandler::SetParami(ReverbProps &props, ALenum param, int val)
+void StdReverbEffectHandler::SetParami(ALCcontext *context, ReverbProps &props, ALenum param, int val)
 {
     switch(param)
     {
     case AL_REVERB_DECAY_HFLIMIT:
         if(!(val >= AL_REVERB_MIN_DECAY_HFLIMIT && val <= AL_REVERB_MAX_DECAY_HFLIMIT))
-            throw effect_exception{AL_INVALID_VALUE, "EAX Reverb decay hflimit out of range"};
+            context->throw_error(AL_INVALID_VALUE, "EAX Reverb decay hflimit out of range");
         props.DecayHFLimit = val != AL_FALSE;
-        break;
-
-    default:
-        throw effect_exception{AL_INVALID_ENUM, "Invalid EAX reverb integer property 0x%04x",
-            param};
+        return;
     }
+
+    context->throw_error(AL_INVALID_ENUM, "Invalid EAX reverb integer property 0x{:04x}", param);
 }
-void StdReverbEffectHandler::SetParamiv(ReverbProps &props, ALenum param, const int *vals)
-{ SetParami(props, param, *vals); }
-void StdReverbEffectHandler::SetParamf(ReverbProps &props, ALenum param, float val)
+void StdReverbEffectHandler::SetParamiv(ALCcontext *context, ReverbProps &props, ALenum param, const int *vals)
+{ SetParami(context, props, param, *vals); }
+void StdReverbEffectHandler::SetParamf(ALCcontext *context, ReverbProps &props, ALenum param, float val)
 {
     switch(param)
     {
     case AL_REVERB_DENSITY:
         if(!(val >= AL_REVERB_MIN_DENSITY && val <= AL_REVERB_MAX_DENSITY))
-            throw effect_exception{AL_INVALID_VALUE, "EAX Reverb density out of range"};
+            context->throw_error(AL_INVALID_VALUE, "EAX Reverb density out of range");
         props.Density = val;
-        break;
+        return;
 
     case AL_REVERB_DIFFUSION:
         if(!(val >= AL_REVERB_MIN_DIFFUSION && val <= AL_REVERB_MAX_DIFFUSION))
-            throw effect_exception{AL_INVALID_VALUE, "EAX Reverb diffusion out of range"};
+            context->throw_error(AL_INVALID_VALUE, "EAX Reverb diffusion out of range");
         props.Diffusion = val;
-        break;
+        return;
 
     case AL_REVERB_GAIN:
         if(!(val >= AL_REVERB_MIN_GAIN && val <= AL_REVERB_MAX_GAIN))
-            throw effect_exception{AL_INVALID_VALUE, "EAX Reverb gain out of range"};
+            context->throw_error(AL_INVALID_VALUE, "EAX Reverb gain out of range");
         props.Gain = val;
-        break;
+        return;
 
     case AL_REVERB_GAINHF:
         if(!(val >= AL_REVERB_MIN_GAINHF && val <= AL_REVERB_MAX_GAINHF))
-            throw effect_exception{AL_INVALID_VALUE, "EAX Reverb gainhf out of range"};
+            context->throw_error(AL_INVALID_VALUE, "EAX Reverb gainhf out of range");
         props.GainHF = val;
-        break;
+        return;
 
     case AL_REVERB_DECAY_TIME:
         if(!(val >= AL_REVERB_MIN_DECAY_TIME && val <= AL_REVERB_MAX_DECAY_TIME))
-            throw effect_exception{AL_INVALID_VALUE, "EAX Reverb decay time out of range"};
+            context->throw_error(AL_INVALID_VALUE, "EAX Reverb decay time out of range");
         props.DecayTime = val;
-        break;
+        return;
 
     case AL_REVERB_DECAY_HFRATIO:
         if(!(val >= AL_REVERB_MIN_DECAY_HFRATIO && val <= AL_REVERB_MAX_DECAY_HFRATIO))
-            throw effect_exception{AL_INVALID_VALUE, "EAX Reverb decay hfratio out of range"};
+            context->throw_error(AL_INVALID_VALUE, "EAX Reverb decay hfratio out of range");
         props.DecayHFRatio = val;
-        break;
+        return;
 
     case AL_REVERB_REFLECTIONS_GAIN:
         if(!(val >= AL_REVERB_MIN_REFLECTIONS_GAIN && val <= AL_REVERB_MAX_REFLECTIONS_GAIN))
-            throw effect_exception{AL_INVALID_VALUE, "EAX Reverb reflections gain out of range"};
+            context->throw_error(AL_INVALID_VALUE, "EAX Reverb reflections gain out of range");
         props.ReflectionsGain = val;
-        break;
+        return;
 
     case AL_REVERB_REFLECTIONS_DELAY:
         if(!(val >= AL_REVERB_MIN_REFLECTIONS_DELAY && val <= AL_REVERB_MAX_REFLECTIONS_DELAY))
-            throw effect_exception{AL_INVALID_VALUE, "EAX Reverb reflections delay out of range"};
+            context->throw_error(AL_INVALID_VALUE, "EAX Reverb reflections delay out of range");
         props.ReflectionsDelay = val;
-        break;
+        return;
 
     case AL_REVERB_LATE_REVERB_GAIN:
         if(!(val >= AL_REVERB_MIN_LATE_REVERB_GAIN && val <= AL_REVERB_MAX_LATE_REVERB_GAIN))
-            throw effect_exception{AL_INVALID_VALUE, "EAX Reverb late reverb gain out of range"};
+            context->throw_error(AL_INVALID_VALUE, "EAX Reverb late reverb gain out of range");
         props.LateReverbGain = val;
-        break;
+        return;
 
     case AL_REVERB_LATE_REVERB_DELAY:
         if(!(val >= AL_REVERB_MIN_LATE_REVERB_DELAY && val <= AL_REVERB_MAX_LATE_REVERB_DELAY))
-            throw effect_exception{AL_INVALID_VALUE, "EAX Reverb late reverb delay out of range"};
+            context->throw_error(AL_INVALID_VALUE, "EAX Reverb late reverb delay out of range");
         props.LateReverbDelay = val;
-        break;
+        return;
 
     case AL_REVERB_AIR_ABSORPTION_GAINHF:
         if(!(val >= AL_REVERB_MIN_AIR_ABSORPTION_GAINHF && val <= AL_REVERB_MAX_AIR_ABSORPTION_GAINHF))
-            throw effect_exception{AL_INVALID_VALUE, "EAX Reverb air absorption gainhf out of range"};
+            context->throw_error(AL_INVALID_VALUE, "EAX Reverb air absorption gainhf out of range");
         props.AirAbsorptionGainHF = val;
-        break;
+        return;
 
     case AL_REVERB_ROOM_ROLLOFF_FACTOR:
         if(!(val >= AL_REVERB_MIN_ROOM_ROLLOFF_FACTOR && val <= AL_REVERB_MAX_ROOM_ROLLOFF_FACTOR))
-            throw effect_exception{AL_INVALID_VALUE, "EAX Reverb room rolloff factor out of range"};
+            context->throw_error(AL_INVALID_VALUE, "EAX Reverb room rolloff factor out of range");
         props.RoomRolloffFactor = val;
-        break;
-
-    default:
-        throw effect_exception{AL_INVALID_ENUM, "Invalid EAX reverb float property 0x%04x", param};
+        return;
     }
-}
-void StdReverbEffectHandler::SetParamfv(ReverbProps &props, ALenum param, const float *vals)
-{ SetParamf(props, param, *vals); }
 
-void StdReverbEffectHandler::GetParami(const ReverbProps &props, ALenum param, int *val)
+    context->throw_error(AL_INVALID_ENUM, "Invalid EAX reverb float property 0x{:04x}", param);
+}
+void StdReverbEffectHandler::SetParamfv(ALCcontext *context, ReverbProps &props, ALenum param, const float *vals)
+{ SetParamf(context, props, param, *vals); }
+
+void StdReverbEffectHandler::GetParami(ALCcontext *context, const ReverbProps &props, ALenum param, int *val)
 {
     switch(param)
     {
-    case AL_REVERB_DECAY_HFLIMIT: *val = props.DecayHFLimit; break;
-    default:
-        throw effect_exception{AL_INVALID_ENUM, "Invalid EAX reverb integer property 0x%04x",
-            param};
+    case AL_REVERB_DECAY_HFLIMIT: *val = props.DecayHFLimit; return;
     }
+    context->throw_error(AL_INVALID_ENUM, "Invalid EAX reverb integer property 0x{:04x}", param);
 }
-void StdReverbEffectHandler::GetParamiv(const ReverbProps &props, ALenum param, int *vals)
-{ GetParami(props, param, vals); }
-void StdReverbEffectHandler::GetParamf(const ReverbProps &props, ALenum param, float *val)
+void StdReverbEffectHandler::GetParamiv(ALCcontext *context, const ReverbProps &props, ALenum param, int *vals)
+{ GetParami(context, props, param, vals); }
+void StdReverbEffectHandler::GetParamf(ALCcontext *context, const ReverbProps &props, ALenum param, float *val)
 {
     switch(param)
     {
-    case AL_REVERB_DENSITY: *val = props.Density; break;
-    case AL_REVERB_DIFFUSION: *val = props.Diffusion; break;
-    case AL_REVERB_GAIN: *val = props.Gain; break;
-    case AL_REVERB_GAINHF: *val = props.GainHF; break;
-    case AL_REVERB_DECAY_TIME: *val = props.DecayTime; break;
-    case AL_REVERB_DECAY_HFRATIO: *val = props.DecayHFRatio; break;
-    case AL_REVERB_REFLECTIONS_GAIN: *val = props.ReflectionsGain; break;
-    case AL_REVERB_REFLECTIONS_DELAY: *val = props.ReflectionsDelay; break;
-    case AL_REVERB_LATE_REVERB_GAIN: *val = props.LateReverbGain; break;
-    case AL_REVERB_LATE_REVERB_DELAY: *val = props.LateReverbDelay; break;
-    case AL_REVERB_AIR_ABSORPTION_GAINHF: *val = props.AirAbsorptionGainHF; break;
-    case AL_REVERB_ROOM_ROLLOFF_FACTOR: *val = props.RoomRolloffFactor; break;
-
-    default:
-        throw effect_exception{AL_INVALID_ENUM, "Invalid EAX reverb float property 0x%04x", param};
+    case AL_REVERB_DENSITY: *val = props.Density; return;
+    case AL_REVERB_DIFFUSION: *val = props.Diffusion; return;
+    case AL_REVERB_GAIN: *val = props.Gain; return;
+    case AL_REVERB_GAINHF: *val = props.GainHF; return;
+    case AL_REVERB_DECAY_TIME: *val = props.DecayTime; return;
+    case AL_REVERB_DECAY_HFRATIO: *val = props.DecayHFRatio; return;
+    case AL_REVERB_REFLECTIONS_GAIN: *val = props.ReflectionsGain; return;
+    case AL_REVERB_REFLECTIONS_DELAY: *val = props.ReflectionsDelay; return;
+    case AL_REVERB_LATE_REVERB_GAIN: *val = props.LateReverbGain; return;
+    case AL_REVERB_LATE_REVERB_DELAY: *val = props.LateReverbDelay; return;
+    case AL_REVERB_AIR_ABSORPTION_GAINHF: *val = props.AirAbsorptionGainHF; return;
+    case AL_REVERB_ROOM_ROLLOFF_FACTOR: *val = props.RoomRolloffFactor; return;
     }
+
+    context->throw_error(AL_INVALID_ENUM, "Invalid EAX reverb float property 0x{:04x}", param);
 }
-void StdReverbEffectHandler::GetParamfv(const ReverbProps &props, ALenum param, float *vals)
-{ GetParamf(props, param, vals); }
+void StdReverbEffectHandler::GetParamfv(ALCcontext *context, const ReverbProps &props, ALenum param, float *vals)
+{ GetParamf(context, props, param, vals); }
 
 
 #if ALSOFT_EAX

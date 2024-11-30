@@ -7,7 +7,7 @@
 #include "AL/al.h"
 #include "AL/efx.h"
 
-#include "alc/effects/base.h"
+#include "alc/context.h"
 #include "effects.h"
 
 #if ALSOFT_EAX
@@ -39,8 +39,8 @@ constexpr ALenum EnumFromWaveform(ModulatorWaveform type)
     case ModulatorWaveform::Sawtooth: return AL_RING_MODULATOR_SAWTOOTH;
     case ModulatorWaveform::Square: return AL_RING_MODULATOR_SQUARE;
     }
-    throw std::runtime_error{"Invalid modulator waveform: " +
-        std::to_string(static_cast<int>(type))};
+    throw std::runtime_error{fmt::format("Invalid modulator waveform: {}",
+        int{al::to_underlying(type)})};
 }
 
 constexpr EffectProps genDefaultProps() noexcept
@@ -56,81 +56,76 @@ constexpr EffectProps genDefaultProps() noexcept
 
 const EffectProps ModulatorEffectProps{genDefaultProps()};
 
-void ModulatorEffectHandler::SetParami(ModulatorProps &props, ALenum param, int val)
+void ModulatorEffectHandler::SetParami(ALCcontext *context, ModulatorProps &props, ALenum param, int val)
 {
     switch(param)
     {
     case AL_RING_MODULATOR_FREQUENCY:
     case AL_RING_MODULATOR_HIGHPASS_CUTOFF:
-        SetParamf(props, param, static_cast<float>(val));
-        break;
+        SetParamf(context, props, param, static_cast<float>(val));
+        return;
 
     case AL_RING_MODULATOR_WAVEFORM:
         if(auto formopt = WaveformFromEmum(val))
             props.Waveform = *formopt;
         else
-            throw effect_exception{AL_INVALID_VALUE, "Invalid modulator waveform: 0x%04x", val};
-        break;
-
-    default:
-        throw effect_exception{AL_INVALID_ENUM, "Invalid modulator integer property 0x%04x",
-            param};
+            context->throw_error(AL_INVALID_VALUE, "Invalid modulator waveform: 0x{:04x}", val);
+        return;
     }
-}
-void ModulatorEffectHandler::SetParamiv(ModulatorProps &props, ALenum param, const int *vals)
-{ SetParami(props, param, *vals); }
 
-void ModulatorEffectHandler::SetParamf(ModulatorProps &props, ALenum param, float val)
+    context->throw_error(AL_INVALID_ENUM, "Invalid modulator integer property 0x{:04x}", param);
+}
+void ModulatorEffectHandler::SetParamiv(ALCcontext *context, ModulatorProps &props, ALenum param, const int *vals)
+{ SetParami(context, props, param, *vals); }
+
+void ModulatorEffectHandler::SetParamf(ALCcontext *context, ModulatorProps &props, ALenum param, float val)
 {
     switch(param)
     {
     case AL_RING_MODULATOR_FREQUENCY:
         if(!(val >= AL_RING_MODULATOR_MIN_FREQUENCY && val <= AL_RING_MODULATOR_MAX_FREQUENCY))
-            throw effect_exception{AL_INVALID_VALUE, "Modulator frequency out of range: %f", val};
+            context->throw_error(AL_INVALID_VALUE, "Modulator frequency out of range: {:f}", val);
         props.Frequency = val;
-        break;
+        return;
 
     case AL_RING_MODULATOR_HIGHPASS_CUTOFF:
         if(!(val >= AL_RING_MODULATOR_MIN_HIGHPASS_CUTOFF && val <= AL_RING_MODULATOR_MAX_HIGHPASS_CUTOFF))
-            throw effect_exception{AL_INVALID_VALUE, "Modulator high-pass cutoff out of range: %f", val};
+            context->throw_error(AL_INVALID_VALUE, "Modulator high-pass cutoff out of range: {:f}",
+                val);
         props.HighPassCutoff = val;
-        break;
-
-    default:
-        throw effect_exception{AL_INVALID_ENUM, "Invalid modulator float property 0x%04x", param};
+        return;
     }
-}
-void ModulatorEffectHandler::SetParamfv(ModulatorProps &props, ALenum param, const float *vals)
-{ SetParamf(props, param, *vals); }
 
-void ModulatorEffectHandler::GetParami(const ModulatorProps &props, ALenum param, int *val)
+    context->throw_error(AL_INVALID_ENUM, "Invalid modulator float property 0x{:04x}", param);
+}
+void ModulatorEffectHandler::SetParamfv(ALCcontext *context, ModulatorProps &props, ALenum param, const float *vals)
+{ SetParamf(context, props, param, *vals); }
+
+void ModulatorEffectHandler::GetParami(ALCcontext *context, const ModulatorProps &props, ALenum param, int *val)
 {
     switch(param)
     {
-    case AL_RING_MODULATOR_FREQUENCY: *val = static_cast<int>(props.Frequency); break;
-    case AL_RING_MODULATOR_HIGHPASS_CUTOFF: *val = static_cast<int>(props.HighPassCutoff); break;
-    case AL_RING_MODULATOR_WAVEFORM: *val = EnumFromWaveform(props.Waveform); break;
-
-    default:
-        throw effect_exception{AL_INVALID_ENUM, "Invalid modulator integer property 0x%04x",
-            param};
+    case AL_RING_MODULATOR_FREQUENCY: *val = static_cast<int>(props.Frequency); return;
+    case AL_RING_MODULATOR_HIGHPASS_CUTOFF: *val = static_cast<int>(props.HighPassCutoff); return;
+    case AL_RING_MODULATOR_WAVEFORM: *val = EnumFromWaveform(props.Waveform); return;
     }
+
+    context->throw_error(AL_INVALID_ENUM, "Invalid modulator integer property 0x{:04x}", param);
 }
-void ModulatorEffectHandler::GetParamiv(const ModulatorProps &props, ALenum param, int *vals)
-{ GetParami(props, param, vals); }
-void ModulatorEffectHandler::GetParamf(const ModulatorProps &props, ALenum param, float *val)
+void ModulatorEffectHandler::GetParamiv(ALCcontext *context, const ModulatorProps &props, ALenum param, int *vals)
+{ GetParami(context, props, param, vals); }
+void ModulatorEffectHandler::GetParamf(ALCcontext *context, const ModulatorProps &props, ALenum param, float *val)
 {
     switch(param)
     {
-    case AL_RING_MODULATOR_FREQUENCY: *val = props.Frequency; break;
-    case AL_RING_MODULATOR_HIGHPASS_CUTOFF: *val = props.HighPassCutoff; break;
-
-    default:
-        throw effect_exception{AL_INVALID_ENUM, "Invalid modulator float property 0x%04x", param};
+    case AL_RING_MODULATOR_FREQUENCY: *val = props.Frequency; return;
+    case AL_RING_MODULATOR_HIGHPASS_CUTOFF: *val = props.HighPassCutoff; return;
     }
+
+    context->throw_error(AL_INVALID_ENUM, "Invalid modulator float property 0x{:04x}", param);
 }
-void ModulatorEffectHandler::GetParamfv(const ModulatorProps &props, ALenum param, float *vals)
-{ GetParamf(props, param, vals); }
+void ModulatorEffectHandler::GetParamfv(ALCcontext *context, const ModulatorProps &props, ALenum param, float *vals)
+{ GetParamf(context, props, param, vals); }
 
 
 #if ALSOFT_EAX

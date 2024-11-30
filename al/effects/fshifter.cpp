@@ -7,7 +7,7 @@
 #include "AL/al.h"
 #include "AL/efx.h"
 
-#include "alc/effects/base.h"
+#include "alc/context.h"
 #include "effects.h"
 
 #if ALSOFT_EAX
@@ -39,7 +39,7 @@ constexpr ALenum EnumFromDirection(FShifterDirection dir)
     case FShifterDirection::Up: return AL_FREQUENCY_SHIFTER_DIRECTION_UP;
     case FShifterDirection::Off: return AL_FREQUENCY_SHIFTER_DIRECTION_OFF;
     }
-    throw std::runtime_error{"Invalid direction: "+std::to_string(static_cast<int>(dir))};
+    throw std::runtime_error{fmt::format("Invalid direction: {}", int{al::to_underlying(dir)})};
 }
 
 constexpr EffectProps genDefaultProps() noexcept
@@ -55,7 +55,7 @@ constexpr EffectProps genDefaultProps() noexcept
 
 const EffectProps FshifterEffectProps{genDefaultProps()};
 
-void FshifterEffectHandler::SetParami(FshifterProps &props, ALenum param, int val)
+void FshifterEffectHandler::SetParami(ALCcontext *context, FshifterProps &props, ALenum param, int val)
 {
     switch(param)
     {
@@ -63,78 +63,72 @@ void FshifterEffectHandler::SetParami(FshifterProps &props, ALenum param, int va
         if(auto diropt = DirectionFromEmum(val))
             props.LeftDirection = *diropt;
         else
-            throw effect_exception{AL_INVALID_VALUE,
-                "Unsupported frequency shifter left direction: 0x%04x", val};
-        break;
+            context->throw_error(AL_INVALID_VALUE,
+                "Unsupported frequency shifter left direction: 0x{:04x}", val);
+        return;
 
     case AL_FREQUENCY_SHIFTER_RIGHT_DIRECTION:
         if(auto diropt = DirectionFromEmum(val))
             props.RightDirection = *diropt;
         else
-            throw effect_exception{AL_INVALID_VALUE,
-                "Unsupported frequency shifter right direction: 0x%04x", val};
-        break;
-
-    default:
-        throw effect_exception{AL_INVALID_ENUM,
-            "Invalid frequency shifter integer property 0x%04x", param};
+            context->throw_error(AL_INVALID_VALUE,
+                "Unsupported frequency shifter right direction: 0x{:04x}", val);
+        return;
     }
-}
-void FshifterEffectHandler::SetParamiv(FshifterProps &props, ALenum param, const int *vals)
-{ SetParami(props, param, *vals); }
 
-void FshifterEffectHandler::SetParamf(FshifterProps &props, ALenum param, float val)
+    context->throw_error(AL_INVALID_ENUM, "Invalid frequency shifter integer property 0x{:04x}",
+        param);
+}
+void FshifterEffectHandler::SetParamiv(ALCcontext *context, FshifterProps &props, ALenum param, const int *vals)
+{ SetParami(context, props, param, *vals); }
+
+void FshifterEffectHandler::SetParamf(ALCcontext *context, FshifterProps &props, ALenum param, float val)
 {
     switch(param)
     {
     case AL_FREQUENCY_SHIFTER_FREQUENCY:
         if(!(val >= AL_FREQUENCY_SHIFTER_MIN_FREQUENCY && val <= AL_FREQUENCY_SHIFTER_MAX_FREQUENCY))
-            throw effect_exception{AL_INVALID_VALUE, "Frequency shifter frequency out of range"};
+            context->throw_error(AL_INVALID_VALUE, "Frequency shifter frequency out of range");
         props.Frequency = val;
-        break;
-
-    default:
-        throw effect_exception{AL_INVALID_ENUM, "Invalid frequency shifter float property 0x%04x",
-            param};
+        return;
     }
-}
-void FshifterEffectHandler::SetParamfv(FshifterProps &props, ALenum param, const float *vals)
-{ SetParamf(props, param, *vals); }
 
-void FshifterEffectHandler::GetParami(const FshifterProps &props, ALenum param, int *val)
+    context->throw_error(AL_INVALID_ENUM, "Invalid frequency shifter float property 0x{:04x}",
+        param);
+}
+void FshifterEffectHandler::SetParamfv(ALCcontext *context, FshifterProps &props, ALenum param, const float *vals)
+{ SetParamf(context, props, param, *vals); }
+
+void FshifterEffectHandler::GetParami(ALCcontext *context, const FshifterProps &props, ALenum param, int *val)
 {
     switch(param)
     {
     case AL_FREQUENCY_SHIFTER_LEFT_DIRECTION:
         *val = EnumFromDirection(props.LeftDirection);
-        break;
+        return;
     case AL_FREQUENCY_SHIFTER_RIGHT_DIRECTION:
         *val = EnumFromDirection(props.RightDirection);
-        break;
-
-    default:
-        throw effect_exception{AL_INVALID_ENUM,
-            "Invalid frequency shifter integer property 0x%04x", param};
+        return;
     }
-}
-void FshifterEffectHandler::GetParamiv(const FshifterProps &props, ALenum param, int *vals)
-{ GetParami(props, param, vals); }
 
-void FshifterEffectHandler::GetParamf(const FshifterProps &props, ALenum param, float *val)
+    context->throw_error(AL_INVALID_ENUM, "Invalid frequency shifter integer property 0x{:04x}",
+        param);
+}
+void FshifterEffectHandler::GetParamiv(ALCcontext *context, const FshifterProps &props, ALenum param, int *vals)
+{ GetParami(context, props, param, vals); }
+
+void FshifterEffectHandler::GetParamf(ALCcontext *context, const FshifterProps &props, ALenum param, float *val)
 {
     switch(param)
     {
-    case AL_FREQUENCY_SHIFTER_FREQUENCY:
-        *val = props.Frequency;
-        break;
-
-    default:
-        throw effect_exception{AL_INVALID_ENUM, "Invalid frequency shifter float property 0x%04x",
-            param};
+    case AL_FREQUENCY_SHIFTER_FREQUENCY: *val = props.Frequency; return;
     }
+
+    context->throw_error(AL_INVALID_ENUM, "Invalid frequency shifter float property 0x{:04x}",
+        param);
 }
-void FshifterEffectHandler::GetParamfv(const FshifterProps &props, ALenum param, float *vals)
-{ GetParamf(props, param, vals); }
+void FshifterEffectHandler::GetParamfv(ALCcontext *context, const FshifterProps &props, ALenum param, float *vals)
+{ GetParamf(context, props, param, vals); }
 
 
 #if ALSOFT_EAX

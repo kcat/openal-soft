@@ -4,11 +4,9 @@
 #include <cmath>
 #include <cstdlib>
 
-#include <algorithm>
-
 #include "AL/efx.h"
 
-#include "alc/effects/base.h"
+#include "alc/context.h"
 #include "effects.h"
 
 #if ALSOFT_EAX
@@ -35,73 +33,64 @@ constexpr EffectProps genDefaultProps() noexcept
 
 const EffectProps AutowahEffectProps{genDefaultProps()};
 
-void AutowahEffectHandler::SetParami(AutowahProps&, ALenum param, int)
-{ throw effect_exception{AL_INVALID_ENUM, "Invalid autowah integer property 0x%04x", param}; }
-void AutowahEffectHandler::SetParamiv(AutowahProps&, ALenum param, const int*)
-{
-    throw effect_exception{AL_INVALID_ENUM, "Invalid autowah integer vector property 0x%04x",
-        param};
-}
+void AutowahEffectHandler::SetParami(ALCcontext *context, AutowahProps&, ALenum param, int)
+{ context->throw_error(AL_INVALID_ENUM, "Invalid autowah integer property 0x{:04x}", param); }
+void AutowahEffectHandler::SetParamiv(ALCcontext *context, AutowahProps&, ALenum param, const int*)
+{ context->throw_error(AL_INVALID_ENUM, "Invalid autowah integer vector property 0x{:04x}", param); }
 
-void AutowahEffectHandler::SetParamf(AutowahProps &props, ALenum param, float val)
+void AutowahEffectHandler::SetParamf(ALCcontext *context, AutowahProps &props, ALenum param, float val)
 {
     switch(param)
     {
     case AL_AUTOWAH_ATTACK_TIME:
         if(!(val >= AL_AUTOWAH_MIN_ATTACK_TIME && val <= AL_AUTOWAH_MAX_ATTACK_TIME))
-            throw effect_exception{AL_INVALID_VALUE, "Autowah attack time out of range"};
+            context->throw_error(AL_INVALID_VALUE, "Autowah attack time out of range");
         props.AttackTime = val;
-        break;
+        return;
 
     case AL_AUTOWAH_RELEASE_TIME:
         if(!(val >= AL_AUTOWAH_MIN_RELEASE_TIME && val <= AL_AUTOWAH_MAX_RELEASE_TIME))
-            throw effect_exception{AL_INVALID_VALUE, "Autowah release time out of range"};
+            context->throw_error(AL_INVALID_VALUE, "Autowah release time out of range");
         props.ReleaseTime = val;
-        break;
+        return;
 
     case AL_AUTOWAH_RESONANCE:
         if(!(val >= AL_AUTOWAH_MIN_RESONANCE && val <= AL_AUTOWAH_MAX_RESONANCE))
-            throw effect_exception{AL_INVALID_VALUE, "Autowah resonance out of range"};
+            context->throw_error(AL_INVALID_VALUE, "Autowah resonance out of range");
         props.Resonance = val;
-        break;
+        return;
 
     case AL_AUTOWAH_PEAK_GAIN:
         if(!(val >= AL_AUTOWAH_MIN_PEAK_GAIN && val <= AL_AUTOWAH_MAX_PEAK_GAIN))
-            throw effect_exception{AL_INVALID_VALUE, "Autowah peak gain out of range"};
+            context->throw_error(AL_INVALID_VALUE, "Autowah peak gain out of range");
         props.PeakGain = val;
-        break;
-
-    default:
-        throw effect_exception{AL_INVALID_ENUM, "Invalid autowah float property 0x%04x", param};
+        return;
     }
-}
-void AutowahEffectHandler::SetParamfv(AutowahProps &props,  ALenum param, const float *vals)
-{ SetParamf(props, param, *vals); }
 
-void AutowahEffectHandler::GetParami(const AutowahProps&, ALenum param, int*)
-{ throw effect_exception{AL_INVALID_ENUM, "Invalid autowah integer property 0x%04x", param}; }
-void AutowahEffectHandler::GetParamiv(const AutowahProps&, ALenum param, int*)
-{
-    throw effect_exception{AL_INVALID_ENUM, "Invalid autowah integer vector property 0x%04x",
-        param};
+    context->throw_error(AL_INVALID_ENUM, "Invalid autowah float property 0x{:04x}", param);
 }
+void AutowahEffectHandler::SetParamfv(ALCcontext *context, AutowahProps &props,  ALenum param, const float *vals)
+{ SetParamf(context, props, param, *vals); }
 
-void AutowahEffectHandler::GetParamf(const AutowahProps &props, ALenum param, float *val)
+void AutowahEffectHandler::GetParami(ALCcontext *context, const AutowahProps&, ALenum param, int*)
+{ context->throw_error(AL_INVALID_ENUM, "Invalid autowah integer property 0x{:04x}", param); }
+void AutowahEffectHandler::GetParamiv(ALCcontext *context, const AutowahProps&, ALenum param, int*)
+{ context->throw_error(AL_INVALID_ENUM, "Invalid autowah integer vector property 0x{:04x}", param); }
+
+void AutowahEffectHandler::GetParamf(ALCcontext *context, const AutowahProps &props, ALenum param, float *val)
 {
     switch(param)
     {
-    case AL_AUTOWAH_ATTACK_TIME: *val = props.AttackTime; break;
-    case AL_AUTOWAH_RELEASE_TIME: *val = props.ReleaseTime; break;
-    case AL_AUTOWAH_RESONANCE: *val = props.Resonance; break;
-    case AL_AUTOWAH_PEAK_GAIN: *val = props.PeakGain; break;
-
-    default:
-        throw effect_exception{AL_INVALID_ENUM, "Invalid autowah float property 0x%04x", param};
+    case AL_AUTOWAH_ATTACK_TIME: *val = props.AttackTime; return;
+    case AL_AUTOWAH_RELEASE_TIME: *val = props.ReleaseTime; return;
+    case AL_AUTOWAH_RESONANCE: *val = props.Resonance; return;
+    case AL_AUTOWAH_PEAK_GAIN: *val = props.PeakGain; return;
     }
 
+    context->throw_error(AL_INVALID_ENUM, "Invalid autowah float property 0x{:04x}", param);
 }
-void AutowahEffectHandler::GetParamfv(const AutowahProps &props, ALenum param, float *vals)
-{ GetParamf(props, param, vals); }
+void AutowahEffectHandler::GetParamfv(ALCcontext *context, const AutowahProps &props, ALenum param, float *vals)
+{ GetParamf(context, props, param, vals); }
 
 #if ALSOFT_EAX
 namespace {

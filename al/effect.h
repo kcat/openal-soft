@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <string_view>
 #include <utility>
+#include <variant>
 
 #include "AL/al.h"
 #include "AL/alc.h"

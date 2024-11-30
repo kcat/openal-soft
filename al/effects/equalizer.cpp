@@ -4,7 +4,7 @@
 #include "AL/al.h"
 #include "AL/efx.h"
 
-#include "alc/effects/base.h"
+#include "alc/context.h"
 #include "effects.h"
 
 #if ALSOFT_EAX
@@ -37,112 +37,104 @@ constexpr EffectProps genDefaultProps() noexcept
 
 const EffectProps EqualizerEffectProps{genDefaultProps()};
 
-void EqualizerEffectHandler::SetParami(EqualizerProps&, ALenum param, int)
-{ throw effect_exception{AL_INVALID_ENUM, "Invalid equalizer integer property 0x%04x", param}; }
-void EqualizerEffectHandler::SetParamiv(EqualizerProps&, ALenum param, const int*)
-{
-    throw effect_exception{AL_INVALID_ENUM, "Invalid equalizer integer-vector property 0x%04x",
-        param};
-}
-void EqualizerEffectHandler::SetParamf(EqualizerProps &props, ALenum param, float val)
+void EqualizerEffectHandler::SetParami(ALCcontext *context, EqualizerProps&, ALenum param, int)
+{ context->throw_error(AL_INVALID_ENUM, "Invalid equalizer integer property 0x{:04x}", param); }
+void EqualizerEffectHandler::SetParamiv(ALCcontext *context, EqualizerProps&, ALenum param, const int*)
+{ context->throw_error(AL_INVALID_ENUM, "Invalid equalizer integer-vector property 0x{:04x}", param); }
+void EqualizerEffectHandler::SetParamf(ALCcontext *context, EqualizerProps &props, ALenum param, float val)
 {
     switch(param)
     {
     case AL_EQUALIZER_LOW_GAIN:
         if(!(val >= AL_EQUALIZER_MIN_LOW_GAIN && val <= AL_EQUALIZER_MAX_LOW_GAIN))
-            throw effect_exception{AL_INVALID_VALUE, "Equalizer low-band gain out of range"};
+            context->throw_error(AL_INVALID_VALUE, "Equalizer low-band gain out of range");
         props.LowGain = val;
-        break;
+        return;
 
     case AL_EQUALIZER_LOW_CUTOFF:
         if(!(val >= AL_EQUALIZER_MIN_LOW_CUTOFF && val <= AL_EQUALIZER_MAX_LOW_CUTOFF))
-            throw effect_exception{AL_INVALID_VALUE, "Equalizer low-band cutoff out of range"};
+            context->throw_error(AL_INVALID_VALUE, "Equalizer low-band cutoff out of range");
         props.LowCutoff = val;
-        break;
+        return;
 
     case AL_EQUALIZER_MID1_GAIN:
         if(!(val >= AL_EQUALIZER_MIN_MID1_GAIN && val <= AL_EQUALIZER_MAX_MID1_GAIN))
-            throw effect_exception{AL_INVALID_VALUE, "Equalizer mid1-band gain out of range"};
+            context->throw_error(AL_INVALID_VALUE, "Equalizer mid1-band gain out of range");
         props.Mid1Gain = val;
-        break;
+        return;
 
     case AL_EQUALIZER_MID1_CENTER:
         if(!(val >= AL_EQUALIZER_MIN_MID1_CENTER && val <= AL_EQUALIZER_MAX_MID1_CENTER))
-            throw effect_exception{AL_INVALID_VALUE, "Equalizer mid1-band center out of range"};
+            context->throw_error(AL_INVALID_VALUE, "Equalizer mid1-band center out of range");
         props.Mid1Center = val;
-        break;
+        return;
 
     case AL_EQUALIZER_MID1_WIDTH:
         if(!(val >= AL_EQUALIZER_MIN_MID1_WIDTH && val <= AL_EQUALIZER_MAX_MID1_WIDTH))
-            throw effect_exception{AL_INVALID_VALUE, "Equalizer mid1-band width out of range"};
+            context->throw_error(AL_INVALID_VALUE, "Equalizer mid1-band width out of range");
         props.Mid1Width = val;
-        break;
+        return;
 
     case AL_EQUALIZER_MID2_GAIN:
         if(!(val >= AL_EQUALIZER_MIN_MID2_GAIN && val <= AL_EQUALIZER_MAX_MID2_GAIN))
-            throw effect_exception{AL_INVALID_VALUE, "Equalizer mid2-band gain out of range"};
+            context->throw_error(AL_INVALID_VALUE, "Equalizer mid2-band gain out of range");
         props.Mid2Gain = val;
-        break;
+        return;
 
     case AL_EQUALIZER_MID2_CENTER:
         if(!(val >= AL_EQUALIZER_MIN_MID2_CENTER && val <= AL_EQUALIZER_MAX_MID2_CENTER))
-            throw effect_exception{AL_INVALID_VALUE, "Equalizer mid2-band center out of range"};
+            context->throw_error(AL_INVALID_VALUE, "Equalizer mid2-band center out of range");
         props.Mid2Center = val;
-        break;
+        return;
 
     case AL_EQUALIZER_MID2_WIDTH:
         if(!(val >= AL_EQUALIZER_MIN_MID2_WIDTH && val <= AL_EQUALIZER_MAX_MID2_WIDTH))
-            throw effect_exception{AL_INVALID_VALUE, "Equalizer mid2-band width out of range"};
+            context->throw_error(AL_INVALID_VALUE, "Equalizer mid2-band width out of range");
         props.Mid2Width = val;
-        break;
+        return;
 
     case AL_EQUALIZER_HIGH_GAIN:
         if(!(val >= AL_EQUALIZER_MIN_HIGH_GAIN && val <= AL_EQUALIZER_MAX_HIGH_GAIN))
-            throw effect_exception{AL_INVALID_VALUE, "Equalizer high-band gain out of range"};
+            context->throw_error(AL_INVALID_VALUE, "Equalizer high-band gain out of range");
         props.HighGain = val;
-        break;
+        return;
 
     case AL_EQUALIZER_HIGH_CUTOFF:
         if(!(val >= AL_EQUALIZER_MIN_HIGH_CUTOFF && val <= AL_EQUALIZER_MAX_HIGH_CUTOFF))
-            throw effect_exception{AL_INVALID_VALUE, "Equalizer high-band cutoff out of range"};
+            context->throw_error(AL_INVALID_VALUE, "Equalizer high-band cutoff out of range");
         props.HighCutoff = val;
-        break;
-
-    default:
-        throw effect_exception{AL_INVALID_ENUM, "Invalid equalizer float property 0x%04x", param};
+        return;
     }
-}
-void EqualizerEffectHandler::SetParamfv(EqualizerProps &props, ALenum param, const float *vals)
-{ SetParamf(props, param, *vals); }
 
-void EqualizerEffectHandler::GetParami(const EqualizerProps&, ALenum param, int*)
-{ throw effect_exception{AL_INVALID_ENUM, "Invalid equalizer integer property 0x%04x", param}; }
-void EqualizerEffectHandler::GetParamiv(const EqualizerProps&, ALenum param, int*)
-{
-    throw effect_exception{AL_INVALID_ENUM, "Invalid equalizer integer-vector property 0x%04x",
-        param};
+    context->throw_error(AL_INVALID_ENUM, "Invalid equalizer float property 0x{:04x}", param);
 }
-void EqualizerEffectHandler::GetParamf(const EqualizerProps &props, ALenum param, float *val)
+void EqualizerEffectHandler::SetParamfv(ALCcontext *context, EqualizerProps &props, ALenum param, const float *vals)
+{ SetParamf(context, props, param, *vals); }
+
+void EqualizerEffectHandler::GetParami(ALCcontext *context, const EqualizerProps&, ALenum param, int*)
+{ context->throw_error(AL_INVALID_ENUM, "Invalid equalizer integer property 0x{:04x}", param); }
+void EqualizerEffectHandler::GetParamiv(ALCcontext *context, const EqualizerProps&, ALenum param, int*)
+{ context->throw_error(AL_INVALID_ENUM, "Invalid equalizer integer-vector property 0x{:04x}", param); }
+void EqualizerEffectHandler::GetParamf(ALCcontext *context, const EqualizerProps &props, ALenum param, float *val)
 {
     switch(param)
     {
-    case AL_EQUALIZER_LOW_GAIN: *val = props.LowGain; break;
-    case AL_EQUALIZER_LOW_CUTOFF: *val = props.LowCutoff; break;
-    case AL_EQUALIZER_MID1_GAIN: *val = props.Mid1Gain; break;
-    case AL_EQUALIZER_MID1_CENTER: *val = props.Mid1Center; break;
-    case AL_EQUALIZER_MID1_WIDTH: *val = props.Mid1Width; break;
-    case AL_EQUALIZER_MID2_GAIN: *val = props.Mid2Gain; break;
-    case AL_EQUALIZER_MID2_CENTER: *val = props.Mid2Center; break;
-    case AL_EQUALIZER_MID2_WIDTH: *val = props.Mid2Width; break;
-    case AL_EQUALIZER_HIGH_GAIN: *val = props.HighGain; break;
-    case AL_EQUALIZER_HIGH_CUTOFF: *val = props.HighCutoff; break;
-
-    default:
-        throw effect_exception{AL_INVALID_ENUM, "Invalid equalizer float property 0x%04x", param};
+    case AL_EQUALIZER_LOW_GAIN: *val = props.LowGain; return;
+    case AL_EQUALIZER_LOW_CUTOFF: *val = props.LowCutoff; return;
+    case AL_EQUALIZER_MID1_GAIN: *val = props.Mid1Gain; return;
+    case AL_EQUALIZER_MID1_CENTER: *val = props.Mid1Center; return;
+    case AL_EQUALIZER_MID1_WIDTH: *val = props.Mid1Width; return;
+    case AL_EQUALIZER_MID2_GAIN: *val = props.Mid2Gain; return;
+    case AL_EQUALIZER_MID2_CENTER: *val = props.Mid2Center; return;
+    case AL_EQUALIZER_MID2_WIDTH: *val = props.Mid2Width; return;
+    case AL_EQUALIZER_HIGH_GAIN: *val = props.HighGain; return;
+    case AL_EQUALIZER_HIGH_CUTOFF: *val = props.HighCutoff; return;
     }
+
+    context->throw_error(AL_INVALID_ENUM, "Invalid equalizer float property 0x{:04x}", param);
 }
-void EqualizerEffectHandler::GetParamfv(const EqualizerProps &props, ALenum param, float *vals)
-{ GetParamf(props, param, vals); }
+void EqualizerEffectHandler::GetParamfv(ALCcontext *context, const EqualizerProps &props, ALenum param, float *vals)
+{ GetParamf(context, props, param, vals); }
 
 
 #if ALSOFT_EAX

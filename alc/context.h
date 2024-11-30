@@ -163,19 +163,18 @@ struct ALCcontext final : public al::intrusive_ref<ALCcontext>, ContextBase {
      */
     void applyAllUpdates();
 
+    void setErrorImpl(ALenum errorCode, const std::string &msg);
+
+    template<typename ...Args>
+    void setError(ALenum errorCode, fmt::format_string<Args...> msg, Args&& ...args)
+    { setErrorImpl(errorCode, fmt::format(std::move(msg), std::forward<Args>(args)...)); }
+
     [[noreturn]]
-    void throw_error(ALenum errorCode, const std::string &msg);
+    void throw_error_impl(ALenum errorCode, const std::string &msg);
 
     template<typename ...Args> [[noreturn]]
     void throw_error(ALenum errorCode, fmt::format_string<Args...> fmt, Args&&... args)
-    { throw_error(errorCode, fmt::format(std::move(fmt), std::forward<Args>(args)...)); }
-
-#ifdef __MINGW32__
-    [[gnu::format(__MINGW_PRINTF_FORMAT, 3, 4)]]
-#else
-    [[gnu::format(printf, 3, 4)]]
-#endif
-    void setError(ALenum errorCode, const char *msg, ...);
+    { throw_error_impl(errorCode, fmt::format(std::move(fmt), std::forward<Args>(args)...)); }
 
     void sendDebugMessage(std::unique_lock<std::mutex> &debuglock, DebugSource source,
         DebugType type, ALuint id, DebugSeverity severity, std::string_view message);

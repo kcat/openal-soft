@@ -34,7 +34,6 @@
 #include <optional>
 #include <string>
 #include <utility>
-#include <vector>
 
 #include "AL/al.h"
 #include "AL/alc.h"
@@ -48,7 +47,7 @@
 #include "strutils.h"
 
 
-void ALCcontext::throw_error(ALenum errorCode, const std::string &msg)
+void ALCcontext::setErrorImpl(ALenum errorCode, const std::string &msg)
 {
     WARN("Error generated on context %p, code 0x%04x, \"%s\"\n",
         decltype(std::declval<void*>()){this}, errorCode, msg.c_str());
@@ -68,55 +67,14 @@ void ALCcontext::throw_error(ALenum errorCode, const std::string &msg)
 
     debugMessage(DebugSource::API, DebugType::Error, static_cast<ALuint>(errorCode),
         DebugSeverity::High, msg);
+}
 
+void ALCcontext::throw_error_impl(ALenum errorCode, const std::string &msg)
+{
+    setErrorImpl(errorCode, msg);
     throw al::base_exception{};
 }
 
-void ALCcontext::setError(ALenum errorCode, const char *msg, ...)
-{
-    auto message = std::vector<char>(256);
-
-    /* NOLINTBEGIN(*-array-to-pointer-decay) */
-    std::va_list args, args2;
-    va_start(args, msg);
-    va_copy(args2, args);
-    int msglen{std::vsnprintf(message.data(), message.size(), msg, args)};
-    if(msglen >= 0 && static_cast<size_t>(msglen) >= message.size())
-    {
-        message.resize(static_cast<size_t>(msglen) + 1u);
-        msglen = std::vsnprintf(message.data(), message.size(), msg, args2);
-    }
-    va_end(args2);
-    va_end(args);
-    /* NOLINTEND(*-array-to-pointer-decay) */
-
-    if(msglen >= 0)
-        msg = message.data();
-    else
-    {
-        msg = "<internal error constructing message>";
-        msglen = static_cast<int>(strlen(msg));
-    }
-
-    WARN("Error generated on context %p, code 0x%04x, \"%s\"\n",
-        decltype(std::declval<void*>()){this}, errorCode, msg);
-    if(TrapALError)
-    {
-#ifdef _WIN32
-        /* DebugBreak will cause an exception if there is no debugger */
-        if(IsDebuggerPresent())
-            DebugBreak();
-#elif defined(SIGTRAP)
-        raise(SIGTRAP);
-#endif
-    }
-
-    if(mLastThreadError.get() == AL_NO_ERROR)
-        mLastThreadError.set(errorCode);
-
-    debugMessage(DebugSource::API, DebugType::Error, static_cast<ALuint>(errorCode),
-        DebugSeverity::High, {msg, static_cast<uint>(msglen)});
-}
 
 /* Special-case alGetError since it (potentially) raises a debug signal and
  * returns a non-default value for a null context.

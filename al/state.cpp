@@ -286,7 +286,7 @@ void GetValue(ALCcontext *context, ALenum pname, T *values)
 #undef EAX_ERROR
 #endif // ALSOFT_EAX
     }
-    context->setError(AL_INVALID_ENUM, "Invalid context property 0x%04x", pname);
+    context->setError(AL_INVALID_ENUM, "Invalid context property 0x{:04x}", pname);
 }
 
 
@@ -332,7 +332,7 @@ FORCE_ALIGN void AL_APIENTRY alEnableDirect(ALCcontext *context, ALenum capabili
         context->setError(AL_INVALID_OPERATION, "Re-enabling AL_STOP_SOURCES_ON_DISCONNECT_SOFT not yet supported");
         return;
     }
-    context->setError(AL_INVALID_VALUE, "Invalid enable property 0x%04x", capability);
+    context->setError(AL_INVALID_VALUE, "Invalid enable property 0x{:04x}", capability);
 }
 
 AL_API DECL_FUNC1(void, alDisable, ALenum,capability)
@@ -356,7 +356,7 @@ FORCE_ALIGN void AL_APIENTRY alDisableDirect(ALCcontext *context, ALenum capabil
         context->mStopVoicesOnDisconnect.store(false);
         return;
     }
-    context->setError(AL_INVALID_VALUE, "Invalid disable property 0x%04x", capability);
+    context->setError(AL_INVALID_VALUE, "Invalid disable property 0x{:04x}", capability);
 }
 
 AL_API DECL_FUNC1(ALboolean, alIsEnabled, ALenum,capability)
@@ -370,7 +370,7 @@ FORCE_ALIGN ALboolean AL_APIENTRY alIsEnabledDirect(ALCcontext *context, ALenum 
     case AL_STOP_SOURCES_ON_DISCONNECT_SOFT:
         return context->mStopVoicesOnDisconnect.load() ? AL_TRUE : AL_FALSE;
     }
-    context->setError(AL_INVALID_VALUE, "Invalid is enabled property 0x%04x", capability);
+    context->setError(AL_INVALID_VALUE, "Invalid is enabled property 0x{:04x}", capability);
     return AL_FALSE;
 }
 
@@ -470,7 +470,7 @@ FORCE_ALIGN void AL_APIENTRY alGetPointervDirectEXT(ALCcontext *context, ALenum 
         *values = context->mDebugParam;
         return;
     }
-    context->setError(AL_INVALID_ENUM, "Invalid context pointer property 0x%04x", pname);
+    context->setError(AL_INVALID_ENUM, "Invalid context pointer property 0x{:04x}", pname);
 }
 
 AL_API DECL_FUNC1(const ALchar*, alGetString, ALenum,pname)
@@ -500,7 +500,7 @@ FORCE_ALIGN const ALchar* AL_APIENTRY alGetStringDirect(ALCcontext *context, ALe
     case AL_STACK_OVERFLOW_EXT: return GetStackOverflowString();
     case AL_STACK_UNDERFLOW_EXT: return GetStackUnderflowString();
     }
-    context->setError(AL_INVALID_VALUE, "Invalid string property 0x%04x", pname);
+    context->setError(AL_INVALID_VALUE, "Invalid string property 0x{:04x}", pname);
     return nullptr;
 }
 
@@ -508,7 +508,7 @@ AL_API DECL_FUNC1(void, alDopplerFactor, ALfloat,value)
 FORCE_ALIGN void AL_APIENTRY alDopplerFactorDirect(ALCcontext *context, ALfloat value) noexcept
 {
     if(!(value >= 0.0f && std::isfinite(value)))
-        context->setError(AL_INVALID_VALUE, "Doppler factor %f out of range", value);
+        context->setError(AL_INVALID_VALUE, "Doppler factor {:f} out of range", value);
     else
     {
         std::lock_guard<std::mutex> proplock{context->mPropLock};
@@ -521,7 +521,7 @@ AL_API DECL_FUNC1(void, alSpeedOfSound, ALfloat,value)
 FORCE_ALIGN void AL_APIENTRY alSpeedOfSoundDirect(ALCcontext *context, ALfloat value) noexcept
 {
     if(!(value > 0.0f && std::isfinite(value)))
-        context->setError(AL_INVALID_VALUE, "Speed of sound %f out of range", value);
+        context->setError(AL_INVALID_VALUE, "Speed of sound {:f} out of range", value);
     else
     {
         std::lock_guard<std::mutex> proplock{context->mPropLock};
@@ -541,7 +541,7 @@ FORCE_ALIGN void AL_APIENTRY alDistanceModelDirect(ALCcontext *context, ALenum v
             UpdateProps(context);
     }
     else
-        context->setError(AL_INVALID_VALUE, "Distance model 0x%04x out of range", value);
+        context->setError(AL_INVALID_VALUE, "Distance model 0x{:04x} out of range", value);
 }
 
 
@@ -568,10 +568,10 @@ FORCE_ALIGN const ALchar* AL_APIENTRY alGetStringiDirectSOFT(ALCcontext *context
     case AL_RESAMPLER_NAME_SOFT:
         if(index >= 0 && index <= static_cast<ALint>(Resampler::Max))
             return GetResamplerName(static_cast<Resampler>(index));
-        context->setError(AL_INVALID_VALUE, "Resampler name index %d out of range", index);
+        context->setError(AL_INVALID_VALUE, "Resampler name index {} out of range", index);
         return nullptr;
     }
-    context->setError(AL_INVALID_VALUE, "Invalid string indexed property");
+    context->setError(AL_INVALID_VALUE, "Invalid string indexed property 0x{:04x}", pname);
     return nullptr;
 }
 
@@ -588,7 +588,7 @@ AL_API void AL_APIENTRY alDopplerVelocity(ALfloat value) noexcept
             "alDopplerVelocity(x) -> alSpeedOfSound(343.3f * x)");
 
     if(!(value >= 0.0f && std::isfinite(value)))
-        context->setError(AL_INVALID_VALUE, "Doppler velocity %f out of range", value);
+        context->setError(AL_INVALID_VALUE, "Doppler velocity {:f} out of range", value);
     else
     {
         std::lock_guard<std::mutex> proplock{context->mPropLock};

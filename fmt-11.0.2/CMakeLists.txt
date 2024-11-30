@@ -80,7 +80,7 @@ target_include_directories(alsoft.fmt PUBLIC
 
 set(ALSOFT_FMT_DEBUG_POSTFIX d CACHE STRING "Debug library postfix.")
 
-set_target_properties(alsoft.fmt PROPERTIES
+set_target_properties(alsoft.fmt PROPERTIES ${ALSOFT_STD_VERSION_PROPS}
   VERSION ${FMT_VERSION} SOVERSION ${CPACK_PACKAGE_VERSION_MAJOR}
   PUBLIC_HEADER "${FMT_HEADERS}"
   DEBUG_POSTFIX "${ALSOFT_FMT_DEBUG_POSTFIX}"

@@ -11,6 +11,7 @@
 
 #include "alstring.h"
 
+/* NOLINTBEGIN(bugprone-suspicious-stringview-data-usage) */
 std::string wstr_to_utf8(std::wstring_view wstr)
 {
     std::string ret;
@@ -40,6 +41,37 @@ std::wstring utf8_to_wstr(std::string_view str)
 
     return ret;
 }
+
+std::string wstr_to_acp(std::wstring_view wstr)
+{
+    std::string ret;
+
+    const auto len = WideCharToMultiByte(CP_ACP, 0, wstr.data(), al::sizei(wstr), nullptr, 0,
+        nullptr, nullptr);
+    if(len > 0)
+    {
+        ret.resize(static_cast<size_t>(len));
+        WideCharToMultiByte(CP_ACP, 0, wstr.data(), al::sizei(wstr), ret.data(), len, nullptr,
+            nullptr);
+    }
+
+    return ret;
+}
+
+std::wstring acp_to_wstr(std::string_view str)
+{
+    std::wstring ret;
+
+    const auto len = MultiByteToWideChar(CP_ACP, 0, str.data(), al::sizei(str), nullptr, 0);
+    if(len > 0)
+    {
+        ret.resize(static_cast<size_t>(len));
+        MultiByteToWideChar(CP_ACP, 0, str.data(), al::sizei(str), ret.data(), len);
+    }
+
+    return ret;
+}
+/* NOLINTEND(bugprone-suspicious-stringview-data-usage) */
 #endif
 
 namespace al {

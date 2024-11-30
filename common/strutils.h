@@ -10,6 +10,9 @@
 
 std::string wstr_to_utf8(std::wstring_view wstr);
 std::wstring utf8_to_wstr(std::string_view str);
+
+std::string wstr_to_acp(std::wstring_view wstr);
+std::wstring acp_to_wstr(std::string_view str);
 #endif
 
 namespace al {

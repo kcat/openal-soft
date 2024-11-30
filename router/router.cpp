@@ -400,11 +400,11 @@ BOOL APIENTRY DllMain(HINSTANCE, DWORD reason, void*)
     switch(reason)
     {
     case DLL_PROCESS_ATTACH:
-        if(auto logfname = al::getenv("ALROUTER_LOGFILE"))
+        if(auto logfname = al::getenv(L"ALROUTER_LOGFILE"))
         {
-            gsl::owner<std::FILE*> f{fopen(logfname->c_str(), "w")};
+            gsl::owner<std::FILE*> f{_wfopen(logfname->c_str(), L"w")};
             if(f == nullptr)
-                ERR("Could not open log file: %s\n", logfname->c_str());
+                ERR("Could not open log file: %s\n", wstr_to_acp(*logfname).c_str());
             else
                 LogFile = f;
         }

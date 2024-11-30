@@ -53,11 +53,11 @@
 #include "buffer.h"
 #include "core/buffer_storage.h"
 #include "core/device.h"
+#include "core/except.h"
 #include "core/fpu_ctrl.h"
 #include "core/logging.h"
 #include "direct_defs.h"
 #include "effect.h"
-#include "error.h"
 #include "flexarray.h"
 #include "opthelpers.h"
 

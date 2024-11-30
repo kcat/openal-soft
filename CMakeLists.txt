@@ -79,8 +79,8 @@ set(ALSOFT_STD_VERSION_PROPS
     # Require C++17.
     CXX_STANDARD 17
     CXX_STANDARD_REQUIRED TRUE
-    # Prefer C11, but support C99 and earlier when possible.
-    C_STANDARD 11)
+    # Prefer C17, but support earlier when necessary.
+    C_STANDARD 17)
 
 set(CMAKE_MODULE_PATH "${OpenAL_SOURCE_DIR}/cmake")
 

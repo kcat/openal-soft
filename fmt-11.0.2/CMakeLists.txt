@@ -84,6 +84,7 @@ set_target_properties(alsoft.fmt PROPERTIES ${ALSOFT_STD_VERSION_PROPS}
   VERSION ${FMT_VERSION} SOVERSION ${CPACK_PACKAGE_VERSION_MAJOR}
   PUBLIC_HEADER "${FMT_HEADERS}"
   DEBUG_POSTFIX "${ALSOFT_FMT_DEBUG_POSTFIX}"
+  POSITION_INDEPENDENT_CODE TRUE
 
   # Workaround for Visual Studio 2017:
   # Ensure the .pdb is created with the same name and in the same directory

@@ -5,14 +5,14 @@
 #include <cstdarg>
 #include <cstddef>
 #include <memory>
-#include <ratio>
 #include <string>
 #include <string_view>
 #include <vector>
 
+#include "alc/events.h"
 #include "core/device.h"
 #include "core/except.h"
-#include "alc/events.h"
+#include "fmt/core.h"
 
 
 using uint = unsigned int;
@@ -104,13 +104,17 @@ class backend_exception final : public base_exception {
     backend_error mErrorCode;
 
 public:
-#ifdef __MINGW32__
-    [[gnu::format(__MINGW_PRINTF_FORMAT, 3, 4)]]
-#else
-    [[gnu::format(printf, 3, 4)]]
-#endif
-    backend_exception(backend_error code, const char *msg, ...);
+    template<typename ...Args>
+    backend_exception(backend_error code, fmt::format_string<Args...> fmt, Args&& ...args)
+        : base_exception{fmt::format(std::move(fmt), std::forward<Args>(args)...)}
+        , mErrorCode{code}
+    { }
+    backend_exception(const backend_exception&) = default;
+    backend_exception(backend_exception&&) = default;
     ~backend_exception() override;
+
+    backend_exception& operator=(const backend_exception&) = default;
+    backend_exception& operator=(backend_exception&&) = default;
 
     [[nodiscard]] auto errorCode() const noexcept -> backend_error { return mErrorCode; }
 };

@@ -479,7 +479,7 @@ void JackPlayback::open(std::string_view name)
         mClient = jack_client_open(client_name, ClientOptions, &status, nullptr);
         if(mClient == nullptr)
             throw al::backend_exception{al::backend_error::DeviceError,
-                "Failed to open client connection: 0x%02x", status};
+                "Failed to open client connection: 0x{:02x}", al::to_underlying(status)};
         if((status&JackServerStarted))
             TRACE("JACK server started\n");
         if((status&JackNameNotUnique))
@@ -504,7 +504,7 @@ void JackPlayback::open(std::string_view name)
         auto iter = std::find_if(PlaybackList.cbegin(), PlaybackList.cend(), check_name);
         if(iter == PlaybackList.cend())
             throw al::backend_exception{al::backend_error::NoDevice,
-                "Device name \"%.*s\" not found", al::sizei(name), name.data()};
+                "Device name \"{}\" not found", name};
         mPortPattern = iter->mPattern;
     }
 
@@ -639,7 +639,7 @@ void JackPlayback::start()
             jack_deactivate(mClient);
             mPlaying.store(false, std::memory_order_release);
             throw al::backend_exception{al::backend_error::DeviceError,
-                "Failed to start mixing thread: %s", e.what()};
+                "Failed to start mixing thread: {}", e.what()};
         }
     }
 }

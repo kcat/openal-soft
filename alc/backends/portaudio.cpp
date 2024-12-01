@@ -186,7 +186,7 @@ void PortPlayback::createStream(PaDeviceIndex deviceid)
         else if(params.channelCount != 2)
             params.channelCount = 2;
         else
-            throw al::backend_exception{al::backend_error::NoDevice, "Failed to open stream: %s",
+            throw al::backend_exception{al::backend_error::NoDevice, "Failed to open stream: {}",
                 Pa_GetErrorText(err)};
     }
 
@@ -214,7 +214,7 @@ void PortPlayback::open(std::string_view name)
             { return entry.mPlaybackChannels > 0 && name == entry.mName; });
         if(iter == DeviceNames.cend())
             throw al::backend_exception{al::backend_error::NoDevice,
-                "Device name \"%.*s\" not found", al::sizei(name), name.data()};
+                "Device name \"{}\" not found", name};
         deviceid = static_cast<int>(std::distance(DeviceNames.cbegin(), iter));
     }
 
@@ -245,7 +245,7 @@ bool PortPlayback::reset()
     case paUInt8: mDevice->FmtType = DevFmtUByte; break;
     default:
         ERR("Unexpected PortAudio sample format: %lu\n", mParams.sampleFormat);
-        throw al::backend_exception{al::backend_error::NoDevice, "Invalid sample format: %lu",
+        throw al::backend_exception{al::backend_error::NoDevice, "Invalid sample format: {}",
             mParams.sampleFormat};
     }
 
@@ -279,7 +279,7 @@ bool PortPlayback::reset()
 void PortPlayback::start()
 {
     if(const PaError err{Pa_StartStream(mStream)}; err != paNoError)
-        throw al::backend_exception{al::backend_error::DeviceError, "Failed to start playback: %s",
+        throw al::backend_exception{al::backend_error::DeviceError, "Failed to start playback: {}",
             Pa_GetErrorText(err)};
 }
 
@@ -347,7 +347,7 @@ void PortCapture::open(std::string_view name)
             { return entry.mCaptureChannels > 0 && name == entry.mName; });
         if(iter == DeviceNames.cend())
             throw al::backend_exception{al::backend_error::NoDevice,
-                "Device name \"%.*s\" not found", al::sizei(name), name.data()};
+                "Device name \"{}\" not found", name};
         deviceid = static_cast<int>(std::distance(DeviceNames.cbegin(), iter));
     }
 
@@ -379,7 +379,7 @@ void PortCapture::open(std::string_view name)
         break;
     case DevFmtUInt:
     case DevFmtUShort:
-        throw al::backend_exception{al::backend_error::DeviceError, "%s samples not supported",
+        throw al::backend_exception{al::backend_error::DeviceError, "{} samples not supported",
             DevFmtTypeString(mDevice->FmtType)};
     }
     mParams.channelCount = static_cast<int>(mDevice->channelsFromFmt());
@@ -394,7 +394,7 @@ void PortCapture::open(std::string_view name)
     PaError err{Pa_OpenStream(&mStream, &mParams, nullptr, mDevice->Frequency,
         paFramesPerBufferUnspecified, paNoFlag, readCallback, this)};
     if(err != paNoError)
-        throw al::backend_exception{al::backend_error::NoDevice, "Failed to open stream: %s",
+        throw al::backend_exception{al::backend_error::NoDevice, "Failed to open stream: {}",
             Pa_GetErrorText(err)};
 
     mDeviceName = name;
@@ -405,7 +405,7 @@ void PortCapture::start()
 {
     if(const PaError err{Pa_StartStream(mStream)}; err != paNoError)
         throw al::backend_exception{al::backend_error::DeviceError,
-            "Failed to start recording: %s", Pa_GetErrorText(err)};
+            "Failed to start recording: {}", Pa_GetErrorText(err)};
 }
 
 void PortCapture::stop()

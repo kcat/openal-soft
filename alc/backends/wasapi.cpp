@@ -1457,7 +1457,7 @@ void WasapiPlayback::open(std::string_view name)
 
     mOpenStatus = pushMessage(MsgType::OpenDevice, name).get();
     if(FAILED(mOpenStatus))
-        throw al::backend_exception{al::backend_error::DeviceError, "Device init failed: 0x%08lx",
+        throw al::backend_exception{al::backend_error::DeviceError, "Device init failed: 0x{:x}",
             mOpenStatus};
 }
 
@@ -1481,7 +1481,7 @@ HRESULT WasapiPlayback::openProxy(std::string_view name)
         }
         if(iter == list.cend())
         {
-            WARN("Failed to find device name matching \"%.*s\"\n", al::sizei(name), name.data());
+            WARNFMT("Failed to find device name matching \"{}\"", name);
             return E_FAIL;
         }
         devname = iter->name;
@@ -1948,7 +1948,7 @@ bool WasapiPlayback::reset()
 {
     HRESULT hr{pushMessage(MsgType::ResetDevice).get()};
     if(FAILED(hr))
-        throw al::backend_exception{al::backend_error::DeviceError, "0x%08lx", hr};
+        throw al::backend_exception{al::backend_error::DeviceError, "0x{:x}", hr};
     return true;
 }
 
@@ -2104,7 +2104,7 @@ void WasapiPlayback::start()
     const HRESULT hr{pushMessage(MsgType::StartDevice).get()};
     if(FAILED(hr))
         throw al::backend_exception{al::backend_error::DeviceError,
-            "Failed to start playback: 0x%lx", hr};
+            "Failed to start playback: 0x{:x}", hr};
 }
 
 HRESULT WasapiPlayback::startProxy()
@@ -2358,7 +2358,7 @@ void WasapiCapture::open(std::string_view name)
 
     mOpenStatus = pushMessage(MsgType::OpenDevice, name).get();
     if(FAILED(mOpenStatus))
-        throw al::backend_exception{al::backend_error::DeviceError, "Device init failed: 0x%08lx",
+        throw al::backend_exception{al::backend_error::DeviceError, "Device init failed: 0x{:x}",
             mOpenStatus};
 
     HRESULT hr{pushMessage(MsgType::ResetDevice).get()};
@@ -2719,7 +2719,7 @@ void WasapiCapture::start()
     const HRESULT hr{pushMessage(MsgType::StartDevice).get()};
     if(FAILED(hr))
         throw al::backend_exception{al::backend_error::DeviceError,
-            "Failed to start recording: 0x%lx", hr};
+            "Failed to start recording: 0x{:x}", hr};
 }
 
 HRESULT WasapiCapture::startProxy()

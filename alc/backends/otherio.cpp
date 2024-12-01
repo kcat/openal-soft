@@ -576,13 +576,12 @@ void OtherIOPlayback::open(std::string_view name)
             [name](const DeviceEntry &entry) { return entry.mDrvName == name; });
         if(iter == gDeviceList.cend())
             throw al::backend_exception{al::backend_error::NoDevice,
-                "Device name \"%.*s\" not found", al::sizei(name), name.data()};
+                "Device name \"{}\" not found", name};
     }
 
     mOpenStatus = pushMessage(MsgType::OpenDevice, name).get();
     if(FAILED(mOpenStatus))
-        throw al::backend_exception{al::backend_error::DeviceError, "Failed to open \"%.*s\"",
-            al::sizei(name), name.data()};
+        throw al::backend_exception{al::backend_error::DeviceError, "Failed to open \"{}\"", name};
 
     mDeviceName = name;
 }
@@ -612,7 +611,7 @@ void OtherIOPlayback::start()
     auto hr = pushMessage(MsgType::StartDevice).get();
     if(FAILED(hr))
         throw al::backend_exception{al::backend_error::DeviceError,
-            "Failed to start playback: 0x%08lx", hr};
+            "Failed to start playback: 0x{:x}", hr};
 }
 
 auto OtherIOPlayback::startProxy() -> HRESULT

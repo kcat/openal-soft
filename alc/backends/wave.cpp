@@ -204,8 +204,8 @@ void WaveBackend::open(std::string_view name)
     if(name.empty())
         name = GetDeviceName();
     else if(name != GetDeviceName())
-        throw al::backend_exception{al::backend_error::NoDevice, "Device name \"%.*s\" not found",
-            al::sizei(name), name.data()};
+        throw al::backend_exception{al::backend_error::NoDevice, "Device name \"{}\" not found",
+            name};
 
     /* There's only one "device", so if it's already open, we're done. */
     if(mFile) return;
@@ -219,8 +219,8 @@ void WaveBackend::open(std::string_view name)
     mFile = FilePtr{fopen(fname->c_str(), "wb")};
 #endif
     if(!mFile)
-        throw al::backend_exception{al::backend_error::DeviceError, "Could not open file '%s': %s",
-            fname->c_str(), std::generic_category().message(errno).c_str()};
+        throw al::backend_exception{al::backend_error::DeviceError, "Could not open file '{}': {}",
+            *fname, std::generic_category().message(errno)};
 
     mDeviceName = name;
 }
@@ -351,7 +351,7 @@ void WaveBackend::start()
     }
     catch(std::exception& e) {
         throw al::backend_exception{al::backend_error::DeviceError,
-            "Failed to start mixing thread: %s", e.what()};
+            "Failed to start mixing thread: {}", e.what()};
     }
 }
 

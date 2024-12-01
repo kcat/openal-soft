@@ -16,6 +16,7 @@ protected:
 
 public:
     base_exception() = default;
+    base_exception(std::string msg) : mMessage{std::move(msg)} { }
     base_exception(const base_exception&) = default;
     base_exception(base_exception&&) = default;
     ~base_exception() override;

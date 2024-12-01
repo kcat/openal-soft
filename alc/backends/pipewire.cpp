@@ -1564,7 +1564,7 @@ void PipeWirePlayback::open(std::string_view name)
         auto match = std::find_if(devlist.cbegin(), devlist.cend(), match_name);
         if(match == devlist.cend())
             throw al::backend_exception{al::backend_error::NoDevice,
-                "Device name \"%.*s\" not found", al::sizei(name), name.data()};
+                "Device name \"{}\" not found", name};
 
         targetid = match->mSerial;
         devname = match->mName;
@@ -1577,10 +1577,10 @@ void PipeWirePlayback::open(std::string_view name)
         mLoop = ThreadMainloop::Create(thread_name.c_str());
         if(!mLoop)
             throw al::backend_exception{al::backend_error::DeviceError,
-                "Failed to create PipeWire mainloop (errno: %d)", errno};
+                "Failed to create PipeWire mainloop (errno: {})", errno};
         if(int res{mLoop.start()})
             throw al::backend_exception{al::backend_error::DeviceError,
-                "Failed to start PipeWire mainloop (res: %d)", res};
+                "Failed to start PipeWire mainloop (res: {})", res};
     }
     MainloopUniqueLock mlock{mLoop};
     if(!mContext)
@@ -1589,14 +1589,14 @@ void PipeWirePlayback::open(std::string_view name)
         mContext = mLoop.newContext(cprops);
         if(!mContext)
             throw al::backend_exception{al::backend_error::DeviceError,
-                "Failed to create PipeWire event context (errno: %d)\n", errno};
+                "Failed to create PipeWire event context (errno: {})\n", errno};
     }
     if(!mCore)
     {
         mCore = PwCorePtr{pw_context_connect(mContext.get(), nullptr, 0)};
         if(!mCore)
             throw al::backend_exception{al::backend_error::DeviceError,
-                "Failed to connect PipeWire event context (errno: %d)\n", errno};
+                "Failed to connect PipeWire event context (errno: {})\n", errno};
     }
     mlock.unlock();
 
@@ -1678,7 +1678,7 @@ bool PipeWirePlayback::reset()
         nullptr)};
     if(!props)
         throw al::backend_exception{al::backend_error::DeviceError,
-            "Failed to create PipeWire stream properties (errno: %d)", errno};
+            "Failed to create PipeWire stream properties (errno: {})", errno};
 
     pw_properties_setf(props, PW_KEY_NODE_LATENCY, "%u/%u", mDevice->UpdateSize,
         mDevice->Frequency);
@@ -1694,7 +1694,7 @@ bool PipeWirePlayback::reset()
     mStream = PwStreamPtr{pw_stream_new(mCore.get(), "Playback Stream", props)};
     if(!mStream)
         throw al::backend_exception{al::backend_error::NoDevice,
-            "Failed to create PipeWire stream (errno: %d)", errno};
+            "Failed to create PipeWire stream (errno: {})", errno};
     static constexpr pw_stream_events streamEvents{CreateEvents()};
     pw_stream_add_listener(mStream.get(), &mStreamListener, &streamEvents, this);
 
@@ -1704,7 +1704,7 @@ bool PipeWirePlayback::reset()
         flags |= PW_STREAM_FLAG_RT_PROCESS;
     if(int res{pw_stream_connect(mStream.get(), PW_DIRECTION_OUTPUT, PwIdAny, flags, &params, 1)})
         throw al::backend_exception{al::backend_error::DeviceError,
-            "Error connecting PipeWire stream (res: %d)", res};
+            "Error connecting PipeWire stream (res: {})", res};
 
     /* Wait for the stream to become paused (ready to start streaming). */
     plock.wait([stream=mStream.get()]()
@@ -1713,7 +1713,7 @@ bool PipeWirePlayback::reset()
         pw_stream_state state{pw_stream_get_state(stream, &error)};
         if(state == PW_STREAM_STATE_ERROR)
             throw al::backend_exception{al::backend_error::DeviceError,
-                "Error connecting PipeWire stream: \"%s\"", error};
+                "Error connecting PipeWire stream: \"{}\"", error};
         return state == PW_STREAM_STATE_PAUSED;
     });
 
@@ -1737,7 +1737,7 @@ void PipeWirePlayback::start()
     MainloopUniqueLock plock{mLoop};
     if(int res{pw_stream_set_active(mStream.get(), true)})
         throw al::backend_exception{al::backend_error::DeviceError,
-            "Failed to start PipeWire stream (res: %d)", res};
+            "Failed to start PipeWire stream (res: {})", res};
 
     /* Wait for the stream to start playing (would be nice to not, but we need
      * the actual update size which is only available after starting).
@@ -1748,7 +1748,7 @@ void PipeWirePlayback::start()
         pw_stream_state state{pw_stream_get_state(stream, &error)};
         if(state == PW_STREAM_STATE_ERROR)
             throw al::backend_exception{al::backend_error::DeviceError,
-                "PipeWire stream error: %s", error ? error : "(unknown)"};
+                "PipeWire stream error: {}", error ? error : "(unknown)"};
         return state == PW_STREAM_STATE_STREAMING;
     });
 
@@ -2027,7 +2027,7 @@ void PipeWireCapture::open(std::string_view name)
         }
         if(match == devlist.cend())
             throw al::backend_exception{al::backend_error::NoDevice,
-                "Device name \"%.*s\" not found", al::sizei(name), name.data()};
+                "Device name \"{}\" not found", name};
 
         targetid = match->mSerial;
         if(match->mType != NodeType::Sink) devname = match->mName;
@@ -2041,10 +2041,10 @@ void PipeWireCapture::open(std::string_view name)
         mLoop = ThreadMainloop::Create(thread_name.c_str());
         if(!mLoop)
             throw al::backend_exception{al::backend_error::DeviceError,
-                "Failed to create PipeWire mainloop (errno: %d)", errno};
+                "Failed to create PipeWire mainloop (errno: {})", errno};
         if(int res{mLoop.start()})
             throw al::backend_exception{al::backend_error::DeviceError,
-                "Failed to start PipeWire mainloop (res: %d)", res};
+                "Failed to start PipeWire mainloop (res: {})", res};
     }
     MainloopUniqueLock mlock{mLoop};
     if(!mContext)
@@ -2053,14 +2053,14 @@ void PipeWireCapture::open(std::string_view name)
         mContext = mLoop.newContext(cprops);
         if(!mContext)
             throw al::backend_exception{al::backend_error::DeviceError,
-                "Failed to create PipeWire event context (errno: %d)\n", errno};
+                "Failed to create PipeWire event context (errno: {})\n", errno};
     }
     if(!mCore)
     {
         mCore = PwCorePtr{pw_context_connect(mContext.get(), nullptr, 0)};
         if(!mCore)
             throw al::backend_exception{al::backend_error::DeviceError,
-                "Failed to connect PipeWire event context (errno: %d)\n", errno};
+                "Failed to connect PipeWire event context (errno: {})\n", errno};
     }
     mlock.unlock();
 
@@ -2105,7 +2105,7 @@ void PipeWireCapture::open(std::string_view name)
         nullptr)};
     if(!props)
         throw al::backend_exception{al::backend_error::DeviceError,
-            "Failed to create PipeWire stream properties (errno: %d)", errno};
+            "Failed to create PipeWire stream properties (errno: {})", errno};
 
     /* We don't actually care what the latency/update size is, as long as it's
      * reasonable. Unfortunately, when unspecified PipeWire seems to default to
@@ -2124,7 +2124,7 @@ void PipeWireCapture::open(std::string_view name)
     mStream = PwStreamPtr{pw_stream_new(mCore.get(), "Capture Stream", props)};
     if(!mStream)
         throw al::backend_exception{al::backend_error::NoDevice,
-            "Failed to create PipeWire stream (errno: %d)", errno};
+            "Failed to create PipeWire stream (errno: {})", errno};
     static constexpr pw_stream_events streamEvents{CreateEvents()};
     pw_stream_add_listener(mStream.get(), &mStreamListener, &streamEvents, this);
 
@@ -2132,7 +2132,7 @@ void PipeWireCapture::open(std::string_view name)
         | PW_STREAM_FLAG_MAP_BUFFERS | PW_STREAM_FLAG_RT_PROCESS};
     if(int res{pw_stream_connect(mStream.get(), PW_DIRECTION_INPUT, PwIdAny, Flags, &params, 1)})
         throw al::backend_exception{al::backend_error::DeviceError,
-            "Error connecting PipeWire stream (res: %d)", res};
+            "Error connecting PipeWire stream (res: {})", res};
 
     /* Wait for the stream to become paused (ready to start streaming). */
     plock.wait([stream=mStream.get()]()
@@ -2141,7 +2141,7 @@ void PipeWireCapture::open(std::string_view name)
         pw_stream_state state{pw_stream_get_state(stream, &error)};
         if(state == PW_STREAM_STATE_ERROR)
             throw al::backend_exception{al::backend_error::DeviceError,
-                "Error connecting PipeWire stream: \"%s\"", error};
+                "Error connecting PipeWire stream: \"{}\"", error};
         return state == PW_STREAM_STATE_PAUSED;
     });
     plock.unlock();
@@ -2159,7 +2159,7 @@ void PipeWireCapture::start()
     MainloopUniqueLock plock{mLoop};
     if(int res{pw_stream_set_active(mStream.get(), true)})
         throw al::backend_exception{al::backend_error::DeviceError,
-            "Failed to start PipeWire stream (res: %d)", res};
+            "Failed to start PipeWire stream (res: {})", res};
 
     plock.wait([stream=mStream.get()]()
     {
@@ -2167,7 +2167,7 @@ void PipeWireCapture::start()
         pw_stream_state state{pw_stream_get_state(stream, &error)};
         if(state == PW_STREAM_STATE_ERROR)
             throw al::backend_exception{al::backend_error::DeviceError,
-                "PipeWire stream error: %s", error ? error : "(unknown)"};
+                "PipeWire stream error: {}", error ? error : "(unknown)"};
         return state == PW_STREAM_STATE_STREAMING;
     });
 }

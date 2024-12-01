@@ -404,7 +404,7 @@ void CoreAudioPlayback::open(std::string_view name)
         auto devmatch = std::find_if(PlaybackList.cbegin(), PlaybackList.cend(), find_name);
         if(devmatch == PlaybackList.cend())
             throw al::backend_exception{al::backend_error::NoDevice,
-                "Device name \"%.*s\" not found", al::sizei(name), name.data()};
+                "Device name \"{}\" not found", name};
 
         audioDevice = devmatch->mId;
     }
@@ -412,8 +412,8 @@ void CoreAudioPlayback::open(std::string_view name)
     if(name.empty())
         name = ca_device;
     else if(name != ca_device)
-        throw al::backend_exception{al::backend_error::NoDevice, "Device name \"%.*s\" not found",
-            al::sizei(name), name.data()};
+        throw al::backend_exception{al::backend_error::NoDevice, "Device name \"{}\" not found",
+            name};
 #endif
 
     /* open the default output unit */
@@ -437,7 +437,7 @@ void CoreAudioPlayback::open(std::string_view name)
     OSStatus err{AudioComponentInstanceNew(comp, &audioUnit)};
     if(err != noErr)
         throw al::backend_exception{al::backend_error::NoDevice,
-            "Could not create component instance: '%s' (%u)", FourCCPrinter{err}.c_str(), err};
+            "Could not create component instance: '{}' ({})", FourCCPrinter{err}.c_str(), err};
 
 #if CAN_ENUMERATE
     if(audioDevice != kAudioDeviceUnknown)
@@ -448,7 +448,7 @@ void CoreAudioPlayback::open(std::string_view name)
     err = AudioUnitInitialize(audioUnit);
     if(err != noErr)
         throw al::backend_exception{al::backend_error::DeviceError,
-            "Could not initialize audio unit: '%s' (%u)", FourCCPrinter{err}.c_str(), err};
+            "Could not initialize audio unit: '{}' ({})", FourCCPrinter{err}.c_str(), err};
 
     /* WARNING: I don't know if "valid" audio unit values are guaranteed to be
      * non-0. If not, this logic is broken.
@@ -666,14 +666,14 @@ void CoreAudioPlayback::start()
     const OSStatus err{AudioOutputUnitStart(mAudioUnit)};
     if(err != noErr)
         throw al::backend_exception{al::backend_error::DeviceError,
-            "AudioOutputUnitStart failed: '%s' (%u)", FourCCPrinter{err}.c_str(), err};
+            "AudioOutputUnitStart failed: '{}' ({})", FourCCPrinter{err}.c_str(), err};
 }
 
 void CoreAudioPlayback::stop()
 {
     OSStatus err{AudioOutputUnitStop(mAudioUnit)};
     if(err != noErr)
-        ERR("AudioOutputUnitStop failed: '%s' (%u)\n", FourCCPrinter{err}.c_str(), err);
+        ERRFMT("AudioOutputUnitStop failed: '{}' ({})", FourCCPrinter{err}.c_str(), err);
 }
 
 
@@ -755,7 +755,7 @@ void CoreAudioCapture::open(std::string_view name)
         auto devmatch = std::find_if(CaptureList.cbegin(), CaptureList.cend(), find_name);
         if(devmatch == CaptureList.cend())
             throw al::backend_exception{al::backend_error::NoDevice,
-                "Device name \"%.*s\" not found", al::sizei(name), name.data()};
+                "Device name \"{}\" not found", name};
 
         audioDevice = devmatch->mId;
     }
@@ -763,8 +763,8 @@ void CoreAudioCapture::open(std::string_view name)
     if(name.empty())
         name = ca_device;
     else if(name != ca_device)
-        throw al::backend_exception{al::backend_error::NoDevice, "Device name \"%.*s\" not found",
-            al::sizei(name), name.data()};
+        throw al::backend_exception{al::backend_error::NoDevice, "Device name \"{}\" not found",
+            name};
 #endif
 
     AudioComponentDescription desc{};
@@ -788,7 +788,7 @@ void CoreAudioCapture::open(std::string_view name)
     OSStatus err{AudioComponentInstanceNew(comp, &mAudioUnit)};
     if(err != noErr)
         throw al::backend_exception{al::backend_error::NoDevice,
-            "Could not create component instance: '%s' (%u)", FourCCPrinter{err}.c_str(), err};
+            "Could not create component instance: '{}' ({})", FourCCPrinter{err}.c_str(), err};
 
     // Turn off AudioUnit output
     UInt32 enableIO{0};
@@ -796,7 +796,7 @@ void CoreAudioCapture::open(std::string_view name)
         kAudioUnitScope_Output, OutputElement, &enableIO, sizeof(enableIO));
     if(err != noErr)
         throw al::backend_exception{al::backend_error::DeviceError,
-            "Could not disable audio unit output property: '%s' (%u)", FourCCPrinter{err}.c_str(),
+            "Could not disable audio unit output property: '{}' ({})", FourCCPrinter{err}.c_str(),
             err};
 
     // Turn on AudioUnit input
@@ -805,7 +805,7 @@ void CoreAudioCapture::open(std::string_view name)
         kAudioUnitScope_Input, InputElement, &enableIO, sizeof(enableIO));
     if(err != noErr)
         throw al::backend_exception{al::backend_error::DeviceError,
-            "Could not enable audio unit input property: '%s' (%u)", FourCCPrinter{err}.c_str(),
+            "Could not enable audio unit input property: '{}' ({})", FourCCPrinter{err}.c_str(),
             err};
 
 #if CAN_ENUMERATE
@@ -824,7 +824,7 @@ void CoreAudioCapture::open(std::string_view name)
         kAudioUnitScope_Global, InputElement, &input, sizeof(AURenderCallbackStruct));
     if(err != noErr)
         throw al::backend_exception{al::backend_error::DeviceError,
-            "Could not set capture callback: '%s' (%u)", FourCCPrinter{err}.c_str(), err};
+            "Could not set capture callback: '{}' ({})", FourCCPrinter{err}.c_str(), err};
 
     // Disable buffer allocation for capture
     UInt32 flag{0};
@@ -832,14 +832,14 @@ void CoreAudioCapture::open(std::string_view name)
         kAudioUnitScope_Output, InputElement, &flag, sizeof(flag));
     if(err != noErr)
         throw al::backend_exception{al::backend_error::DeviceError,
-            "Could not disable buffer allocation property: '%s' (%u)", FourCCPrinter{err}.c_str(),
+            "Could not disable buffer allocation property: '{}' ({})", FourCCPrinter{err}.c_str(),
             err};
 
     // Initialize the device
     err = AudioUnitInitialize(mAudioUnit);
     if(err != noErr)
         throw al::backend_exception{al::backend_error::DeviceError,
-            "Could not initialize audio unit: '%s' (%u)", FourCCPrinter{err}.c_str(), err};
+            "Could not initialize audio unit: '{}' ({})", FourCCPrinter{err}.c_str(), err};
 
     // Get the hardware format
     AudioStreamBasicDescription hardwareFormat{};
@@ -848,7 +848,7 @@ void CoreAudioCapture::open(std::string_view name)
         InputElement, &hardwareFormat, &propertySize);
     if(err != noErr || propertySize != sizeof(hardwareFormat))
         throw al::backend_exception{al::backend_error::DeviceError,
-            "Could not get input format: '%s' (%u)", FourCCPrinter{err}.c_str(), err};
+            "Could not get input format: '{}' ({})", FourCCPrinter{err}.c_str(), err};
 
     // Set up the requested format description
     AudioStreamBasicDescription requestedFormat{};
@@ -904,7 +904,7 @@ void CoreAudioCapture::open(std::string_view name)
     case DevFmtX7144:
     case DevFmtX3D71:
     case DevFmtAmbi3D:
-        throw al::backend_exception{al::backend_error::DeviceError, "%s not supported",
+        throw al::backend_exception{al::backend_error::DeviceError, "{} not supported",
             DevFmtChannelsString(mDevice->FmtChans)};
     }
 
@@ -930,7 +930,7 @@ void CoreAudioCapture::open(std::string_view name)
         InputElement, &outputFormat, sizeof(outputFormat));
     if(err != noErr)
         throw al::backend_exception{al::backend_error::DeviceError,
-            "Could not set input format: '%s' (%u)", FourCCPrinter{err}.c_str(), err};
+            "Could not set input format: '{}' ({})", FourCCPrinter{err}.c_str(), err};
 
     /* Calculate the minimum AudioUnit output format frame count for the pre-
      * conversion ring buffer. Ensure at least 100ms for the total buffer.
@@ -941,7 +941,7 @@ void CoreAudioCapture::open(std::string_view name)
     FrameCount64 += MaxResamplerPadding;
     if(FrameCount64 > std::numeric_limits<int32_t>::max())
         throw al::backend_exception{al::backend_error::DeviceError,
-            "Calculated frame count is too large: %" PRIu64, FrameCount64};
+            "Calculated frame count is too large: {}", FrameCount64};
 
     UInt32 outputFrameCount{};
     propertySize = sizeof(outputFrameCount);
@@ -949,7 +949,7 @@ void CoreAudioCapture::open(std::string_view name)
         kAudioUnitScope_Global, OutputElement, &outputFrameCount, &propertySize);
     if(err != noErr || propertySize != sizeof(outputFrameCount))
         throw al::backend_exception{al::backend_error::DeviceError,
-            "Could not get input frame count: '%s' (%u)", FourCCPrinter{err}.c_str(), err};
+            "Could not get input frame count: '{}' ({})", FourCCPrinter{err}.c_str(), err};
 
     mCaptureData.resize(outputFrameCount * mFrameSize);
 
@@ -987,14 +987,14 @@ void CoreAudioCapture::start()
     OSStatus err{AudioOutputUnitStart(mAudioUnit)};
     if(err != noErr)
         throw al::backend_exception{al::backend_error::DeviceError,
-            "AudioOutputUnitStart failed: '%s' (%u)", FourCCPrinter{err}.c_str(), err};
+            "AudioOutputUnitStart failed: '{}' ({})", FourCCPrinter{err}.c_str(), err};
 }
 
 void CoreAudioCapture::stop()
 {
     OSStatus err{AudioOutputUnitStop(mAudioUnit)};
     if(err != noErr)
-        ERR("AudioOutputUnitStop failed: '%s' (%u)\n", FourCCPrinter{err}.c_str(), err);
+        ERRFMT("AudioOutputUnitStop failed: '{}' ({})", FourCCPrinter{err}.c_str(), err);
 }
 
 void CoreAudioCapture::captureSamples(std::byte *buffer, uint samples)

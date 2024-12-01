@@ -514,8 +514,8 @@ int AlsaPlayback::mixerProc()
         int state{verify_state(mPcmHandle)};
         if(state < 0)
         {
-            ERR("Invalid state detected: %s\n", snd_strerror(state));
-            mDevice->handleDisconnect("Bad state: %s", snd_strerror(state));
+            ERRFMT("Invalid state detected: {}", snd_strerror(state));
+            mDevice->handleDisconnect("Bad state: {}", snd_strerror(state));
             break;
         }
 
@@ -598,8 +598,8 @@ int AlsaPlayback::mixerNoMMapProc()
         int state{verify_state(mPcmHandle)};
         if(state < 0)
         {
-            ERR("Invalid state detected: %s\n", snd_strerror(state));
-            mDevice->handleDisconnect("Bad state: %s", snd_strerror(state));
+            ERRFMT("Invalid state detected: {}", snd_strerror(state));
+            mDevice->handleDisconnect("Bad state: {}", snd_strerror(state));
             break;
         }
 
@@ -1123,8 +1123,8 @@ void AlsaCapture::captureSamples(std::byte *buffer, uint samples)
             if(amt < 0)
             {
                 const char *err{snd_strerror(static_cast<int>(amt))};
-                ERR("restore error: %s\n", err);
-                mDevice->handleDisconnect("Capture recovery failure: %s", err);
+                ERRFMT("restore error: {}", err);
+                mDevice->handleDisconnect("Capture recovery failure: {}", err);
                 break;
             }
             /* If the amount available is less than what's asked, we lost it
@@ -1162,8 +1162,8 @@ uint AlsaCapture::availableSamples()
         if(avail < 0)
         {
             const char *err{snd_strerror(static_cast<int>(avail))};
-            ERR("restore error: %s\n", err);
-            mDevice->handleDisconnect("Capture recovery failure: %s", err);
+            ERRFMT("restore error: {}", err);
+            mDevice->handleDisconnect("Capture recovery failure: {}", err);
         }
     }
 
@@ -1199,8 +1199,8 @@ uint AlsaCapture::availableSamples()
             if(amt < 0)
             {
                 const char *err{snd_strerror(static_cast<int>(amt))};
-                ERR("restore error: %s\n", err);
-                mDevice->handleDisconnect("Capture recovery failure: %s", err);
+                ERRFMT("restore error: {}", err);
+                mDevice->handleDisconnect("Capture recovery failure: {}", err);
                 break;
             }
             avail = amt;

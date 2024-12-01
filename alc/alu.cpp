@@ -2286,7 +2286,7 @@ void DeviceBase::renderSamples(void *outBuffer, const uint numSamples, const siz
     }
 }
 
-void DeviceBase::handleDisconnect(const char *msg, ...)
+void DeviceBase::doDisconnect(std::string msg)
 {
     const auto mixLock = getWriteMixLock();
 
@@ -2294,24 +2294,7 @@ void DeviceBase::handleDisconnect(const char *msg, ...)
     {
         AsyncEvent evt{std::in_place_type<AsyncDisconnectEvent>};
         auto &disconnect = std::get<AsyncDisconnectEvent>(evt);
-
-        /* NOLINTBEGIN(*-array-to-pointer-decay) */
-        va_list args, args2;
-        va_start(args, msg);
-        va_copy(args2, args);
-        if(int msglen{vsnprintf(nullptr, 0, msg, args)}; msglen > 0)
-        {
-            disconnect.msg.resize(static_cast<uint>(msglen)+1_uz);
-            vsnprintf(disconnect.msg.data(), disconnect.msg.size(), msg, args2);
-        }
-        else
-            disconnect.msg = "<failed constructing message>";
-        va_end(args2);
-        va_end(args);
-        /* NOLINTEND(*-array-to-pointer-decay) */
-
-        while(!disconnect.msg.empty() && disconnect.msg.back() == '\0')
-            disconnect.msg.pop_back();
+        disconnect.msg = std::move(msg);
 
         for(ContextBase *ctx : *mContexts.load())
         {

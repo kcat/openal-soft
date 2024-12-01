@@ -691,7 +691,7 @@ void PulsePlayback::streamStateCallback(pa_stream *stream) noexcept
 {
     if(pa_stream_get_state(stream) == PA_STREAM_FAILED)
     {
-        ERR("Received stream failure!\n");
+        ERRFMT("Received stream failure!");
         mDevice->handleDisconnect("Playback stream failure");
     }
     mMainloop.signal();
@@ -1114,7 +1114,7 @@ void PulseCapture::streamStateCallback(pa_stream *stream) noexcept
 {
     if(pa_stream_get_state(stream) == PA_STREAM_FAILED)
     {
-        ERR("Received stream failure!\n");
+        ERRFMT("Received stream failure!");
         mDevice->handleDisconnect("Capture stream failure");
     }
     mMainloop.signal();
@@ -1306,7 +1306,7 @@ void PulseCapture::captureSamples(std::byte *buffer, uint samples)
         const pa_stream_state_t state{pa_stream_get_state(mStream)};
         if(!PA_STREAM_IS_GOOD(state)) UNLIKELY
         {
-            mDevice->handleDisconnect("Bad capture state: %u", state);
+            mDevice->handleDisconnect("Bad capture state: {}", al::to_underlying(state));
             break;
         }
 
@@ -1314,7 +1314,7 @@ void PulseCapture::captureSamples(std::byte *buffer, uint samples)
         size_t caplen{};
         if(pa_stream_peek(mStream, &capbuf, &caplen) < 0) UNLIKELY
         {
-            mDevice->handleDisconnect("Failed retrieving capture samples: %s",
+            mDevice->handleDisconnect("Failed retrieving capture samples: {}",
                 pa_strerror(pa_context_errno(mMainloop.getContext())));
             break;
         }
@@ -1342,8 +1342,8 @@ uint PulseCapture::availableSamples()
         if(static_cast<ssize_t>(got) < 0) UNLIKELY
         {
             const char *err{pa_strerror(static_cast<int>(got))};
-            ERR("pa_stream_readable_size() failed: %s\n", err);
-            mDevice->handleDisconnect("Failed getting readable size: %s", err);
+            ERRFMT("pa_stream_readable_size() failed: {}", err);
+            mDevice->handleDisconnect("Failed getting readable size: {}", err);
         }
         else
         {

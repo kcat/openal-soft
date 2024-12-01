@@ -302,8 +302,8 @@ int OSSPlayback::mixerProc()
             if(errno == EINTR || errno == EAGAIN)
                 continue;
             const auto errstr = std::generic_category().message(errno);
-            ERR("poll failed: %s\n", errstr.c_str());
-            mDevice->handleDisconnect("Failed waiting for playback buffer: %s", errstr.c_str());
+            ERRFMT("poll failed: {}", errstr);
+            mDevice->handleDisconnect("Failed waiting for playback buffer: {}", errstr);
             break;
         }
         else if(pret == 0) /* NOLINT(*-else-after-return) 'pret' is local to the if/else blocks */
@@ -323,8 +323,8 @@ int OSSPlayback::mixerProc()
                 if(errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR)
                     continue;
                 const auto errstr = std::generic_category().message(errno);
-                ERR("write failed: %s\n", errstr.c_str());
-                mDevice->handleDisconnect("Failed writing playback samples: %s", errstr.c_str());
+                ERRFMT("write failed: {}", errstr);
+                mDevice->handleDisconnect("Failed writing playback samples: {}", errstr);
                 break;
             }
 
@@ -507,8 +507,8 @@ int OSScapture::recordProc()
             if(errno == EINTR || errno == EAGAIN)
                 continue;
             const auto errstr = std::generic_category().message(errno);
-            ERR("poll failed: %s\n", errstr.c_str());
-            mDevice->handleDisconnect("Failed to check capture samples: %s", errstr.c_str());
+            ERRFMT("poll failed: {}", errstr);
+            mDevice->handleDisconnect("Failed to check capture samples: {}", errstr);
             break;
         }
         else if(pret == 0) /* NOLINT(*-else-after-return) 'pret' is local to the if/else blocks */
@@ -524,8 +524,8 @@ int OSScapture::recordProc()
             if(amt < 0)
             {
                 const auto errstr = std::generic_category().message(errno);
-                ERR("read failed: %s\n", errstr.c_str());
-                mDevice->handleDisconnect("Failed reading capture samples: %s", errstr.c_str());
+                ERRFMT("read failed: {}", errstr);
+                mDevice->handleDisconnect("Failed reading capture samples: {}", errstr);
                 break;
             }
             mRing->writeAdvance(static_cast<size_t>(amt)/frame_size);

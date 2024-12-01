@@ -1510,7 +1510,7 @@ auto UpdateDeviceParams(al::Device *device, const al::span<const int> attrList) 
     }
     catch(std::exception &e) {
         ERRFMT("Device error: {}", e.what());
-        device->handleDisconnect("%s", e.what());
+        device->handleDisconnect("{}", e.what());
         return ALC_INVALID_DEVICE;
     }
 
@@ -1856,7 +1856,7 @@ auto UpdateDeviceParams(al::Device *device, const al::span<const int> attrList) 
         }
         catch(al::backend_exception& e) {
             ERRFMT("{}", e.what());
-            device->handleDisconnect("%s", e.what());
+            device->handleDisconnect("{}", e.what());
             return ALC_INVALID_DEVICE;
         }
         TRACEFMT("Post-start: {}, {}, {}hz, {} / {} buffer",
@@ -3227,7 +3227,7 @@ ALC_API void ALC_APIENTRY alcCaptureStart(ALCdevice *device) noexcept
         }
         catch(al::backend_exception& e) {
             ERRFMT("{}", e.what());
-            dev->handleDisconnect("%s", e.what());
+            dev->handleDisconnect("{}", e.what());
             alcSetError(dev.get(), ALC_INVALID_DEVICE);
         }
     }
@@ -3450,7 +3450,7 @@ ALC_API void ALC_APIENTRY alcDeviceResumeSOFT(ALCdevice *device) noexcept
     }
     catch(al::backend_exception& e) {
         ERRFMT("{}", e.what());
-        dev->handleDisconnect("%s", e.what());
+        dev->handleDisconnect("{}", e.what());
         alcSetError(dev.get(), ALC_INVALID_DEVICE);
         return;
     }
@@ -3582,7 +3582,7 @@ FORCE_ALIGN ALCboolean ALC_APIENTRY alcReopenDeviceSOFT(ALCdevice *device,
             }
             catch(al::backend_exception &be) {
                 ERRFMT("{}", be.what());
-                dev->handleDisconnect("%s", be.what());
+                dev->handleDisconnect("{}", be.what());
             }
         }
         return ALC_FALSE;

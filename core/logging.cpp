@@ -201,7 +201,7 @@ void al_printfmt_impl(LogLevel level, const std::string &msg)
      * informational, warning, or error debug messages. So only print them for
      * non-Release builds.
      */
-    OutputDebugStringW(utf8_to_wstr(fmt::format(logfile, "{}{}\n", prefix, msg)).c_str());
+    OutputDebugStringW(utf8_to_wstr(fmt::format("{}{}\n", prefix, msg)).c_str());
 #elif defined(__ANDROID__)
     auto android_severity = [](LogLevel l) noexcept
     {
@@ -217,7 +217,7 @@ void al_printfmt_impl(LogLevel level, const std::string &msg)
         return ANDROID_LOG_ERROR;
     };
     __android_log_print(android_severity(level), "openal", "%s",
-        fmt::format(logfile, "{}{}\n", prefix, msg).c_str());
+        fmt::format("{}{}\n", prefix, msg).c_str());
 #endif
 
     auto cblock = std::lock_guard{LogCallbackMutex};

@@ -173,7 +173,7 @@ int WaveBackend::mixerProc()
             const size_t fs{fwrite(mBuffer.data(), frameSize, mDevice->UpdateSize, mFile.get())};
             if(fs < mDevice->UpdateSize || ferror(mFile.get()))
             {
-                ERR("Error writing to file\n");
+                ERRFMT("Error writing to file");
                 mDevice->handleDisconnect("Failed to write playback samples");
                 break;
             }

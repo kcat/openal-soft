@@ -106,8 +106,8 @@ int SolarisBackend::mixerProc()
         {
             if(errno == EINTR || errno == EAGAIN)
                 continue;
-            ERR("poll failed: %s\n", strerror(errno));
-            mDevice->handleDisconnect("Failed to wait for playback buffer: %s", strerror(errno));
+            ERRFMT("poll failed: {}", strerror(errno));
+            mDevice->handleDisconnect("Failed to wait for playback buffer: {}", strerror(errno));
             break;
         }
         else if(pret == 0)
@@ -126,8 +126,8 @@ int SolarisBackend::mixerProc()
             {
                 if(errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR)
                     continue;
-                ERR("write failed: %s\n", strerror(errno));
-                mDevice->handleDisconnect("Failed to write playback samples: %s", strerror(errno));
+                ERRFMT("write failed: {}", strerror(errno));
+                mDevice->handleDisconnect("Failed to write playback samples: {}", strerror(errno));
                 break;
             }
 

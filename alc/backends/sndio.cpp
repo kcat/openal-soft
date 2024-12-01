@@ -102,7 +102,7 @@ int SndioPlayback::mixerProc()
             size_t wrote{sio_write(mSndHandle, buffer.data(), buffer.size())};
             if(wrote > buffer.size() || wrote == 0)
             {
-                ERR("sio_write failed: 0x%" PRIx64 "\n", wrote);
+                ERRFMT("sio_write failed: 0x{:x}", wrote);
                 mDevice->handleDisconnect("Failed to write playback samples");
                 break;
             }
@@ -316,7 +316,7 @@ int SndioCapture::recordProc()
     int nfds_pre{sio_nfds(mSndHandle)};
     if(nfds_pre <= 0)
     {
-        mDevice->handleDisconnect("Incorrect return value from sio_nfds(): %d", nfds_pre);
+        mDevice->handleDisconnect("Incorrect return value from sio_nfds(): {}", nfds_pre);
         return 1;
     }
 
@@ -329,15 +329,14 @@ int SndioCapture::recordProc()
         const int nfds{sio_pollfd(mSndHandle, fds.data(), POLLIN)};
         if(nfds <= 0)
         {
-            mDevice->handleDisconnect("Failed to get polling fds: %d", nfds);
+            mDevice->handleDisconnect("Failed to get polling fds: {}", nfds);
             break;
         }
         int pollres{::poll(fds.data(), fds.size(), 2000)};
         if(pollres < 0)
         {
             if(errno == EINTR) continue;
-            mDevice->handleDisconnect("Poll error: %s",
-                std::generic_category().message(errno).c_str());
+            mDevice->handleDisconnect("Poll error: {}", std::generic_category().message(errno));
             break;
         }
         if(pollres == 0)
@@ -361,8 +360,8 @@ int SndioCapture::recordProc()
                 break;
             if(got > buffer.size())
             {
-                ERR("sio_read failed: 0x%" PRIx64 "\n", got);
-                mDevice->handleDisconnect("sio_read failed: 0x%" PRIx64, got);
+                ERRFMT("sio_read failed: 0x{:x}", got);
+                mDevice->handleDisconnect("sio_read failed: 0x{:x}", got);
                 break;
             }
 

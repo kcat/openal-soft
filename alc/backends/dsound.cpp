@@ -212,8 +212,8 @@ FORCE_ALIGN int DSoundPlayback::mixerProc()
     HRESULT err{mBuffer->GetCaps(&DSBCaps)};
     if(FAILED(err))
     {
-        ERR("Failed to get buffer caps: 0x%lx\n", err);
-        mDevice->handleDisconnect("Failure retrieving playback buffer info: 0x%lx", err);
+        ERRFMT("Failed to get buffer caps: 0x{:x}", err);
+        mDevice->handleDisconnect("Failure retrieving playback buffer info: 0x{:x}", err);
         return 1;
     }
 
@@ -239,8 +239,8 @@ FORCE_ALIGN int DSoundPlayback::mixerProc()
                 err = mBuffer->Play(0, 0, DSBPLAY_LOOPING);
                 if(FAILED(err))
                 {
-                    ERR("Failed to play buffer: 0x%lx\n", err);
-                    mDevice->handleDisconnect("Failure starting playback: 0x%lx", err);
+                    ERRFMT("Failed to play buffer: 0x{:x}", err);
+                    mDevice->handleDisconnect("Failure starting playback: 0x{:x}", err);
                     return 1;
                 }
                 Playing = true;
@@ -282,8 +282,8 @@ FORCE_ALIGN int DSoundPlayback::mixerProc()
         }
         else
         {
-            ERR("Buffer lock error: %#lx\n", err);
-            mDevice->handleDisconnect("Failed to lock output buffer: 0x%lx", err);
+            ERRFMT("Buffer lock error: 0x{:x}", err);
+            mDevice->handleDisconnect("Failed to lock output buffer: 0x{:x}", err);
             return 1;
         }
 
@@ -704,8 +704,8 @@ void DSoundCapture::stop()
     HRESULT hr{mDSCbuffer->Stop()};
     if(FAILED(hr))
     {
-        ERR("stop failed: 0x%08lx\n", hr);
-        mDevice->handleDisconnect("Failure stopping capture: 0x%lx", hr);
+        ERRFMT("stop failed: 0x{:x}", hr);
+        mDevice->handleDisconnect("Failure stopping capture: 0x{:x}", hr);
     }
 }
 
@@ -742,8 +742,8 @@ uint DSoundCapture::availableSamples()
 
     if(FAILED(hr))
     {
-        ERR("update failed: 0x%08lx\n", hr);
-        mDevice->handleDisconnect("Failure retrieving capture data: 0x%lx", hr);
+        ERRFMT("update failed: 0x{:x}", hr);
+        mDevice->handleDisconnect("Failure retrieving capture data: 0x{:x}", hr);
     }
 
     return static_cast<uint>(mRing->readSpace());

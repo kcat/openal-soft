@@ -247,7 +247,7 @@ int OpenSLPlayback::mixerProc()
     const size_t frame_step{mDevice->channelsFromFmt()};
 
     if(SL_RESULT_SUCCESS != result)
-        mDevice->handleDisconnect("Failed to get playback buffer: 0x%08x", result);
+        mDevice->handleDisconnect("Failed to get playback buffer: 0x{:08x}", result);
 
     while(SL_RESULT_SUCCESS == result && !mKillNow.load(std::memory_order_acquire)
         && mDevice->Connected.load(std::memory_order_acquire))
@@ -265,7 +265,7 @@ int OpenSLPlayback::mixerProc()
             }
             if(SL_RESULT_SUCCESS != result)
             {
-                mDevice->handleDisconnect("Failed to start playback: 0x%08x", result);
+                mDevice->handleDisconnect("Failed to start playback: 0x{:08x}", result);
                 break;
             }
 
@@ -301,7 +301,7 @@ int OpenSLPlayback::mixerProc()
             PrintErr(result, "bufferQueue->Enqueue");
             if(SL_RESULT_SUCCESS != result)
             {
-                mDevice->handleDisconnect("Failed to queue audio: 0x%08x", result);
+                mDevice->handleDisconnect("Failed to queue audio: 0x{:08x}", result);
                 break;
             }
 
@@ -858,7 +858,7 @@ void OpenSLCapture::captureSamples(std::byte *buffer, uint samples)
         PrintErr(result, "recordObj->GetInterface");
         if(SL_RESULT_SUCCESS != result) UNLIKELY
         {
-            mDevice->handleDisconnect("Failed to get capture buffer queue: 0x%08x", result);
+            mDevice->handleDisconnect("Failed to get capture buffer queue: 0x{:08x}", result);
             bufferQueue = nullptr;
         }
     }

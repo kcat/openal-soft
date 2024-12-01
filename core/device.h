@@ -18,6 +18,7 @@
 #include "devformat.h"
 #include "filters/nfc.h"
 #include "flexarray.h"
+#include "fmt/core.h"
 #include "intrusive_ptr.h"
 #include "mixer/hrtfdefs.h"
 #include "opthelpers.h"
@@ -354,12 +355,11 @@ struct SIMDALIGN DeviceBase {
     void renderSamples(void *outBuffer, const uint numSamples, const std::size_t frameStep);
 
     /* Caller must lock the device state, and the mixer must not be running. */
-#ifdef __MINGW32__
-    [[gnu::format(__MINGW_PRINTF_FORMAT,2,3)]]
-#else
-    [[gnu::format(printf,2,3)]]
-#endif
-    void handleDisconnect(const char *msg, ...);
+    void doDisconnect(std::string msg);
+
+    template<typename ...Args>
+    void handleDisconnect(fmt::format_string<Args...> fmt, Args&& ...args)
+    { doDisconnect(fmt::format(std::move(fmt), std::forward<Args>(args)...)); }
 
     /**
      * Returns the index for the given channel name (e.g. FrontCenter), or

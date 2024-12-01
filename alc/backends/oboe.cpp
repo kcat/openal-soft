@@ -54,8 +54,9 @@ oboe::DataCallbackResult OboePlayback::onAudioReady(oboe::AudioStream *oboeStrea
 void OboePlayback::onErrorAfterClose(oboe::AudioStream*, oboe::Result error)
 {
     if(error == oboe::Result::ErrorDisconnected)
-        mDevice->handleDisconnect("Oboe AudioStream was disconnected: %s", oboe::convertToText(error));
-    TRACE("Error was %s", oboe::convertToText(error));
+        mDevice->handleDisconnect("Oboe AudioStream was disconnected: {}",
+            oboe::convertToText(error));
+    TRACEFMT("Error was {}", oboe::convertToText(error));
 }
 
 void OboePlayback::open(std::string_view name)

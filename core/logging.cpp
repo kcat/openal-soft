@@ -11,9 +11,11 @@
 #include <mutex>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include "alspan.h"
+#include "alstring.h"
 #include "opthelpers.h"
 #include "strutils.h"
 
@@ -35,6 +37,8 @@ LogLevel gLogLevel{LogLevel::Error};
 
 
 namespace {
+
+using namespace std::string_view_literals;
 
 enum class LogState : uint8_t {
     FirstRun,
@@ -173,4 +177,58 @@ try {
 }
 catch(...) {
     /* Swallow any exceptions */
+}
+
+void al_printfmt_impl(LogLevel level, const std::string &msg)
+{
+    auto prefix = "[ALSOFT] (--) "sv;
+    switch(level)
+    {
+    case LogLevel::Disable: break;
+    case LogLevel::Error: prefix = "[ALSOFT] (EE) "sv; break;
+    case LogLevel::Warning: prefix = "[ALSOFT] (WW) "sv; break;
+    case LogLevel::Trace: prefix = "[ALSOFT] (II) "sv; break;
+    }
+
+    if(gLogLevel >= level)
+    {
+        auto logfile = gLogFile;
+        fmt::println(logfile, "{}{}", prefix, msg);
+        fflush(logfile);
+    }
+#if defined(_WIN32) && !defined(NDEBUG)
+    /* OutputDebugStringW has no 'level' property to distinguish between
+     * informational, warning, or error debug messages. So only print them for
+     * non-Release builds.
+     */
+    OutputDebugStringW(utf8_to_wstr(fmt::format(logfile, "{}{}\n", prefix, msg)).c_str());
+#elif defined(__ANDROID__)
+    auto android_severity = [](LogLevel l) noexcept
+    {
+        switch(l)
+        {
+        case LogLevel::Trace: return ANDROID_LOG_DEBUG;
+        case LogLevel::Warning: return ANDROID_LOG_WARN;
+        case LogLevel::Error: return ANDROID_LOG_ERROR;
+        /* Should not happen. */
+        case LogLevel::Disable:
+            break;
+        }
+        return ANDROID_LOG_ERROR;
+    };
+    __android_log_print(android_severity(level), "openal", "%s",
+        fmt::format(logfile, "{}{}\n", prefix, msg).c_str());
+#endif
+
+    auto cblock = std::lock_guard{LogCallbackMutex};
+    if(gLogState != LogState::Disable)
+    {
+        if(auto logcode = GetLevelCode(level))
+        {
+            if(gLogCallback)
+                gLogCallback(gLogCallbackPtr, *logcode, msg.data(), al::sizei(msg));
+            else if(gLogState == LogState::FirstRun)
+                gLogState = LogState::Disable;
+        }
+    }
 }

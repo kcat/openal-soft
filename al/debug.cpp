@@ -23,7 +23,6 @@
 #include "alc/device.h"
 #include "alnumeric.h"
 #include "alspan.h"
-#include "alstring.h"
 #include "auxeffectslot.h"
 #include "buffer.h"
 #include "core/except.h"
@@ -44,6 +43,8 @@
 DebugGroup::~DebugGroup() = default;
 
 namespace {
+
+using namespace std::string_view_literals;
 
 static_assert(DebugSeverityBase+DebugSeverityCount <= 32, "Too many debug bits");
 
@@ -145,46 +146,46 @@ constexpr auto GetDebugSeverityEnum(DebugSeverity severity) -> ALenum
 }
 
 
-constexpr auto GetDebugSourceName(DebugSource source) noexcept -> const char*
+constexpr auto GetDebugSourceName(DebugSource source) noexcept -> std::string_view
 {
     switch(source)
     {
-    case DebugSource::API: return "API";
-    case DebugSource::System: return "Audio System";
-    case DebugSource::ThirdParty: return "Third Party";
-    case DebugSource::Application: return "Application";
-    case DebugSource::Other: return "Other";
+    case DebugSource::API: return "API"sv;
+    case DebugSource::System: return "Audio System"sv;
+    case DebugSource::ThirdParty: return "Third Party"sv;
+    case DebugSource::Application: return "Application"sv;
+    case DebugSource::Other: return "Other"sv;
     }
-    return "<invalid source>";
+    return "<invalid source>"sv;
 }
 
-constexpr auto GetDebugTypeName(DebugType type) noexcept -> const char*
+constexpr auto GetDebugTypeName(DebugType type) noexcept -> std::string_view
 {
     switch(type)
     {
-    case DebugType::Error: return "Error";
-    case DebugType::DeprecatedBehavior: return "Deprecated Behavior";
-    case DebugType::UndefinedBehavior: return "Undefined Behavior";
-    case DebugType::Portability: return "Portability";
-    case DebugType::Performance: return "Performance";
-    case DebugType::Marker: return "Marker";
-    case DebugType::PushGroup: return "Push Group";
-    case DebugType::PopGroup: return "Pop Group";
-    case DebugType::Other: return "Other";
+    case DebugType::Error: return "Error"sv;
+    case DebugType::DeprecatedBehavior: return "Deprecated Behavior"sv;
+    case DebugType::UndefinedBehavior: return "Undefined Behavior"sv;
+    case DebugType::Portability: return "Portability"sv;
+    case DebugType::Performance: return "Performance"sv;
+    case DebugType::Marker: return "Marker"sv;
+    case DebugType::PushGroup: return "Push Group"sv;
+    case DebugType::PopGroup: return "Pop Group"sv;
+    case DebugType::Other: return "Other"sv;
     }
-    return "<invalid type>";
+    return "<invalid type>"sv;
 }
 
-constexpr auto GetDebugSeverityName(DebugSeverity severity) noexcept -> const char*
+constexpr auto GetDebugSeverityName(DebugSeverity severity) noexcept -> std::string_view
 {
     switch(severity)
     {
-    case DebugSeverity::High: return "High";
-    case DebugSeverity::Medium: return "Medium";
-    case DebugSeverity::Low: return "Low";
-    case DebugSeverity::Notification: return "Notification";
+    case DebugSeverity::High: return "High"sv;
+    case DebugSeverity::Medium: return "Medium"sv;
+    case DebugSeverity::Low: return "Low"sv;
+    case DebugSeverity::Notification: return "Notification"sv;
     }
-    return "<invalid severity>";
+    return "<invalid severity>"sv;
 }
 
 } // namespace
@@ -198,8 +199,8 @@ void ALCcontext::sendDebugMessage(std::unique_lock<std::mutex> &debuglock, Debug
 
     if(message.length() >= MaxDebugMessageLength) UNLIKELY
     {
-        ERR("Debug message too long (%zu >= %d):\n-> %.*s\n", message.length(),
-            MaxDebugMessageLength, al::sizei(message), message.data());
+        ERRFMT("Debug message too long ({} >= {}):\n-> {}", message.length(),
+            MaxDebugMessageLength, message);
         return;
     }
 
@@ -233,14 +234,14 @@ void ALCcontext::sendDebugMessage(std::unique_lock<std::mutex> &debuglock, Debug
         if(mDebugLog.size() < MaxDebugLoggedMessages)
             mDebugLog.emplace_back(source, type, id, severity, message);
         else UNLIKELY
-            ERR("Debug message log overflow. Lost message:\n"
-                "  Source: %s\n"
-                "  Type: %s\n"
-                "  ID: %u\n"
-                "  Severity: %s\n"
-                "  Message: \"%.*s\"\n",
+            ERRFMT("Debug message log overflow. Lost message:\n"
+                "  Source: {}\n"
+                "  Type: {}\n"
+                "  ID: {}\n"
+                "  Severity: {}\n"
+                "  Message: \"{}\"",
                 GetDebugSourceName(source), GetDebugTypeName(type), id,
-                GetDebugSeverityName(severity), al::sizei(message), message.data());
+                GetDebugSeverityName(severity), message);
     }
 }
 
@@ -290,7 +291,7 @@ try {
 catch(al::base_exception&) {
 }
 catch(std::exception &e) {
-    ERR("Caught exception: %s\n", e.what());
+    ERRFMT("Caught exception: {}", e.what());
 }
 
 
@@ -391,7 +392,7 @@ try {
 catch(al::base_exception&) {
 }
 catch(std::exception &e) {
-    ERR("Caught exception: %s\n", e.what());
+    ERRFMT("Caught exception: {}", e.what());
 }
 
 
@@ -436,7 +437,7 @@ try {
 catch(al::base_exception&) {
 }
 catch(std::exception &e) {
-    ERR("Caught exception: %s\n", e.what());
+    ERRFMT("Caught exception: {}", e.what());
 }
 
 FORCE_ALIGN DECL_FUNCEXT(void, alPopDebugGroup,EXT)
@@ -459,7 +460,7 @@ try {
 catch(al::base_exception&) {
 }
 catch(std::exception &e) {
-    ERR("Caught exception: %s\n", e.what());
+    ERRFMT("Caught exception: {}", e.what());
 }
 
 
@@ -521,7 +522,7 @@ catch(al::base_exception&) {
     return 0;
 }
 catch(std::exception &e) {
-    ERR("Caught exception: %s\n", e.what());
+    ERRFMT("Caught exception: {}", e.what());
     return 0;
 }
 
@@ -552,7 +553,7 @@ try {
 catch(al::base_exception&) {
 }
 catch(std::exception &e) {
-    ERR("Caught exception: %s\n", e.what());
+    ERRFMT("Caught exception: {}", e.what());
 }
 
 FORCE_ALIGN DECL_FUNCEXT5(void, alGetObjectLabel,EXT, ALenum,identifier, ALuint,name, ALsizei,bufSize, ALsizei*,length, ALchar*,label)
@@ -622,5 +623,5 @@ try {
 catch(al::base_exception&) {
 }
 catch(std::exception &e) {
-    ERR("Caught exception: %s\n", e.what());
+    ERRFMT("Caught exception: {}", e.what());
 }

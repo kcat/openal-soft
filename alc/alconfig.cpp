@@ -153,7 +153,7 @@ void LoadConfigFromFile(std::istream &f)
             auto endpos = buffer.find(']', 1);
             if(endpos == 1 || endpos == std::string::npos)
             {
-                ERR(" config parse error: bad line \"%s\"\n", buffer.c_str());
+                ERRFMT(" config parse error: bad line \"{}\"", buffer);
                 continue;
             }
             if(buffer[endpos+1] != '\0')
@@ -164,7 +164,7 @@ void LoadConfigFromFile(std::istream &f)
 
                 if(last < buffer.size() && buffer[last] != '#')
                 {
-                    ERR(" config parse error: bad line \"%s\"\n", buffer.c_str());
+                    ERRFMT(" config parse error: bad line \"{}\"", buffer);
                     continue;
                 }
             }
@@ -234,7 +234,7 @@ void LoadConfigFromFile(std::istream &f)
         auto sep = buffer.find('=');
         if(sep == std::string::npos)
         {
-            ERR(" config parse error: malformed option line: \"%s\"\n", buffer.c_str());
+            ERRFMT(" config parse error: malformed option line: \"{}\"", buffer);
             continue;
         }
         auto keypart = std::string_view{buffer}.substr(0, sep++);
@@ -242,7 +242,7 @@ void LoadConfigFromFile(std::istream &f)
             keypart.remove_suffix(1);
         if(keypart.empty())
         {
-            ERR(" config parse error: malformed option line: \"%s\"\n", buffer.c_str());
+            ERRFMT(" config parse error: malformed option line: \"{}\"", buffer);
             continue;
         }
         auto valpart = std::string_view{buffer}.substr(sep);
@@ -259,7 +259,7 @@ void LoadConfigFromFile(std::istream &f)
 
         if(valpart.size() > size_t{std::numeric_limits<int>::max()})
         {
-            ERR(" config parse error: value too long in line \"%s\"\n", buffer.c_str());
+            ERRFMT(" config parse error: value too long in line \"{}\"", buffer);
             continue;
         }
         if(valpart.size() > 1)
@@ -272,7 +272,7 @@ void LoadConfigFromFile(std::istream &f)
             }
         }
 
-        TRACE(" setting '%s' = '%.*s'\n", fullKey.c_str(), al::sizei(valpart), valpart.data());
+        TRACEFMT(" setting '{}' = '{}'", fullKey, valpart);
 
         /* Check if we already have this option set */
         auto find_key = [&fullKey](const ConfigEntry &entry) -> bool
@@ -315,7 +315,7 @@ auto GetConfigValue(const std::string_view devName, const std::string_view block
         [&key](const ConfigEntry &entry) -> bool { return entry.key == key; });
     if(iter != ConfOpts.cend())
     {
-        TRACE("Found option %s = \"%s\"\n", key.c_str(), iter->value.c_str());
+        TRACEFMT("Found option {} = \"{}\"", key, iter->value);
         if(!iter->value.empty())
             return iter->value;
         return emptyString;
@@ -353,8 +353,7 @@ void ReadALConfig()
             path = fs::path{buffer};
             path /= L"alsoft.ini";
 
-            TRACE("Loading config %s...\n",
-                reinterpret_cast<const char*>(path.u8string().c_str()));
+            TRACEFMT("Loading config {}...", al::u8_as_char(path.u8string()));
             if(std::ifstream f{path}; f.is_open())
                 LoadConfigFromFile(f);
         }
@@ -365,7 +364,7 @@ void ReadALConfig()
     if(!path.empty())
     {
         path /= L"alsoft.ini";
-        TRACE("Loading config %s...\n", reinterpret_cast<const char*>(path.u8string().c_str()));
+        TRACEFMT("Loading config {}...", al::u8_as_char(path.u8string()));
         if(std::ifstream f{path}; f.is_open())
             LoadConfigFromFile(f);
     }
@@ -373,7 +372,7 @@ void ReadALConfig()
     if(auto confpath = al::getenv(L"ALSOFT_CONF"))
     {
         path = *confpath;
-        TRACE("Loading config %s...\n", reinterpret_cast<const char*>(path.u8string().c_str()));
+        TRACEFMT("Loading config {}...", al::u8_as_char(path.u8string()));
         if(std::ifstream f{path}; f.is_open())
             LoadConfigFromFile(f);
     }
@@ -386,7 +385,7 @@ void ReadALConfig()
     namespace fs = std::filesystem;
     fs::path path{"/etc/openal/alsoft.conf"};
 
-    TRACE("Loading config %s...\n", reinterpret_cast<const char*>(path.u8string().c_str()));
+    TRACEFMT("Loading config {}...", al::u8_as_char(path.u8string()));
     if(std::ifstream f{path}; f.is_open())
         LoadConfigFromFile(f);
 
@@ -411,14 +410,12 @@ void ReadALConfig()
         }
 
         if(!path.is_absolute())
-            WARN("Ignoring XDG config dir: %s\n",
-                reinterpret_cast<const char*>(path.u8string().c_str()));
+            WARNFMT("Ignoring XDG config dir: {}", al::u8_as_char(path.u8string()));
         else
         {
             path /= "alsoft.conf";
 
-            TRACE("Loading config %s...\n",
-                reinterpret_cast<const char*>(path.u8string().c_str()));
+            TRACEFMT("Loading config {}...", al::u8_as_char(path.u8string()));
             if(std::ifstream f{path}; f.is_open())
                 LoadConfigFromFile(f);
         }
@@ -445,7 +442,7 @@ void ReadALConfig()
         path = *homedir;
         path /= ".alsoftrc";
 
-        TRACE("Loading config %s...\n", reinterpret_cast<const char*>(path.u8string().c_str()));
+        TRACEFMT("Loading config {}...", al::u8_as_char(path.u8string()));
         if(std::ifstream f{path}; f.is_open())
             LoadConfigFromFile(f);
     }
@@ -466,7 +463,7 @@ void ReadALConfig()
     }
     if(!path.empty())
     {
-        TRACE("Loading config %s...\n", reinterpret_cast<const char*>(path.u8string().c_str()));
+        TRACEFMT("Loading config {}...", al::u8_as_char(path.u8string()));
         if(std::ifstream f{path}; f.is_open())
             LoadConfigFromFile(f);
     }
@@ -476,14 +473,14 @@ void ReadALConfig()
     {
         path /= "alsoft.conf";
 
-        TRACE("Loading config %s...\n", reinterpret_cast<const char*>(path.u8string().c_str()));
+        TRACEFMT("Loading config {}...", al::u8_as_char(path.u8string()));
         if(std::ifstream f{path}; f.is_open())
             LoadConfigFromFile(f);
     }
 
     if(auto confname = al::getenv("ALSOFT_CONF"))
     {
-        TRACE("Loading config %s...\n", confname->c_str());
+        TRACEFMT("Loading config {}...", *confname);
         if(std::ifstream f{*confname}; f.is_open())
             LoadConfigFromFile(f);
     }
@@ -505,7 +502,7 @@ auto ConfigValueInt(const std::string_view devName, const std::string_view block
         return static_cast<int>(std::stol(val, nullptr, 0));
     }
     catch(std::exception&) {
-        WARN("Option is not an int: %.*s = %s\n", al::sizei(keyName), keyName.data(), val.c_str());
+        WARNFMT("Option is not an int: {} = {}", keyName, val);
     }
 
     return std::nullopt;
@@ -518,8 +515,7 @@ auto ConfigValueUInt(const std::string_view devName, const std::string_view bloc
         return static_cast<unsigned int>(std::stoul(val, nullptr, 0));
     }
     catch(std::exception&) {
-        WARN("Option is not an unsigned int: %.*s = %s\n", al::sizei(keyName), keyName.data(),
-            val.c_str());
+        WARNFMT("Option is not an unsigned int: {} = {}", keyName, val);
     }
     return std::nullopt;
 }
@@ -531,8 +527,7 @@ auto ConfigValueFloat(const std::string_view devName, const std::string_view blo
         return std::stof(val);
     }
     catch(std::exception&) {
-        WARN("Option is not a float: %.*s = %s\n", al::sizei(keyName), keyName.data(),
-            val.c_str());
+        WARNFMT("Option is not a float: {} = {}", keyName, val);
     }
     return std::nullopt;
 }

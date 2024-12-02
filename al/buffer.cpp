@@ -686,7 +686,7 @@ try {
 catch(al::base_exception&) {
 }
 catch(std::exception &e) {
-    ERRFMT("Caught exception: {}", e.what());
+    ERR("Caught exception: {}", e.what());
 }
 
 AL_API DECL_FUNC2(void, alDeleteBuffers, ALsizei,n, const ALuint*,buffers)
@@ -725,7 +725,7 @@ try {
 catch(al::base_exception&) {
 }
 catch(std::exception &e) {
-    ERRFMT("Caught exception: {}", e.what());
+    ERR("Caught exception: {}", e.what());
 }
 
 AL_API DECL_FUNC1(ALboolean, alIsBuffer, ALuint,buffer)
@@ -781,7 +781,7 @@ try {
 catch(al::base_exception&) {
 }
 catch(std::exception &e) {
-    ERRFMT("Caught exception: {}", e.what());
+    ERR("Caught exception: {}", e.what());
 }
 
 FORCE_ALIGN DECL_FUNC5(void, alBufferDataStatic, ALuint,buffer, ALenum,format, ALvoid*,data, ALsizei,size, ALsizei,freq)
@@ -809,7 +809,7 @@ try {
 catch(al::base_exception&) {
 }
 catch(std::exception &e) {
-    ERRFMT("Caught exception: {}", e.what());
+    ERR("Caught exception: {}", e.what());
 }
 
 AL_API DECL_FUNCEXT4(void*, alMapBuffer,SOFT, ALuint,buffer, ALsizei,offset, ALsizei,length, ALbitfieldSOFT,access)
@@ -859,7 +859,7 @@ catch(al::base_exception&) {
     return nullptr;
 }
 catch(std::exception &e) {
-    ERRFMT("Caught exception: {}", e.what());
+    ERR("Caught exception: {}", e.what());
     return nullptr;
 }
 
@@ -882,7 +882,7 @@ try {
 catch(al::base_exception&) {
 }
 catch(std::exception &e) {
-    ERRFMT("Caught exception: {}", e.what());
+    ERR("Caught exception: {}", e.what());
 }
 
 AL_API DECL_FUNCEXT3(void, alFlushMappedBuffer,SOFT, ALuint,buffer, ALsizei,offset, ALsizei,length)
@@ -914,7 +914,7 @@ try {
 catch(al::base_exception&) {
 }
 catch(std::exception &e) {
-    ERRFMT("Caught exception: {}", e.what());
+    ERR("Caught exception: {}", e.what());
 }
 
 AL_API DECL_FUNCEXT5(void, alBufferSubData,SOFT, ALuint,buffer, ALenum,format, const ALvoid*,data, ALsizei,offset, ALsizei,length)
@@ -971,7 +971,7 @@ try {
 catch(al::base_exception&) {
 }
 catch(std::exception &e) {
-    ERRFMT("Caught exception: {}", e.what());
+    ERR("Caught exception: {}", e.what());
 }
 
 
@@ -990,7 +990,7 @@ try {
 catch(al::base_exception&) {
 }
 catch(std::exception &e) {
-    ERRFMT("Caught exception: {}", e.what());
+    ERR("Caught exception: {}", e.what());
 }
 
 AL_API DECL_FUNC5(void, alBuffer3f, ALuint,buffer, ALenum,param, ALfloat,value1, ALfloat,value2, ALfloat,value3)
@@ -1009,7 +1009,7 @@ try {
 catch(al::base_exception&) {
 }
 catch(std::exception &e) {
-    ERRFMT("Caught exception: {}", e.what());
+    ERR("Caught exception: {}", e.what());
 }
 
 AL_API DECL_FUNC3(void, alBufferfv, ALuint,buffer, ALenum,param, const ALfloat*,values)
@@ -1029,7 +1029,7 @@ try {
 catch(al::base_exception&) {
 }
 catch(std::exception &e) {
-    ERRFMT("Caught exception: {}", e.what());
+    ERR("Caught exception: {}", e.what());
 }
 
 
@@ -1092,7 +1092,7 @@ try {
 catch(al::base_exception&) {
 }
 catch(std::exception &e) {
-    ERRFMT("Caught exception: {}", e.what());
+    ERR("Caught exception: {}", e.what());
 }
 
 AL_API DECL_FUNC5(void, alBuffer3i, ALuint,buffer, ALenum,param, ALint,value1, ALint,value2, ALint,value3)
@@ -1110,7 +1110,7 @@ try {
 catch(al::base_exception&) {
 }
 catch(std::exception &e) {
-    ERRFMT("Caught exception: {}", e.what());
+    ERR("Caught exception: {}", e.what());
 }
 
 AL_API DECL_FUNC3(void, alBufferiv, ALuint,buffer, ALenum,param, const ALint*,values)
@@ -1160,7 +1160,7 @@ try {
 catch(al::base_exception&) {
 }
 catch(std::exception &e) {
-    ERRFMT("Caught exception: {}", e.what());
+    ERR("Caught exception: {}", e.what());
 }
 
 
@@ -1190,7 +1190,7 @@ try {
 catch(al::base_exception&) {
 }
 catch(std::exception &e) {
-    ERRFMT("Caught exception: {}", e.what());
+    ERR("Caught exception: {}", e.what());
 }
 
 AL_API DECL_FUNC5(void, alGetBuffer3f, ALuint,buffer, ALenum,param, ALfloat*,value1, ALfloat*,value2, ALfloat*,value3)
@@ -1210,7 +1210,7 @@ try {
 catch(al::base_exception&) {
 }
 catch(std::exception &e) {
-    ERRFMT("Caught exception: {}", e.what());
+    ERR("Caught exception: {}", e.what());
 }
 
 AL_API DECL_FUNC3(void, alGetBufferfv, ALuint,buffer, ALenum,param, ALfloat*,values)
@@ -1237,7 +1237,7 @@ try {
 catch(al::base_exception&) {
 }
 catch(std::exception &e) {
-    ERRFMT("Caught exception: {}", e.what());
+    ERR("Caught exception: {}", e.what());
 }
 
 
@@ -1308,7 +1308,7 @@ try {
 catch(al::base_exception&) {
 }
 catch(std::exception &e) {
-    ERRFMT("Caught exception: {}", e.what());
+    ERR("Caught exception: {}", e.what());
 }
 
 AL_API DECL_FUNC5(void, alGetBuffer3i, ALuint,buffer, ALenum,param, ALint*,value1, ALint*,value2, ALint*,value3)
@@ -1328,7 +1328,7 @@ try {
 catch(al::base_exception&) {
 }
 catch(std::exception &e) {
-    ERRFMT("Caught exception: {}", e.what());
+    ERR("Caught exception: {}", e.what());
 }
 
 AL_API DECL_FUNC3(void, alGetBufferiv, ALuint,buffer, ALenum,param, ALint*,values)
@@ -1377,7 +1377,7 @@ try {
 catch(al::base_exception&) {
 }
 catch(std::exception &e) {
-    ERRFMT("Caught exception: {}", e.what());
+    ERR("Caught exception: {}", e.what());
 }
 
 
@@ -1405,7 +1405,7 @@ try {
 catch(al::base_exception&) {
 }
 catch(std::exception &e) {
-    ERRFMT("Caught exception: {}", e.what());
+    ERR("Caught exception: {}", e.what());
 }
 
 AL_API DECL_FUNCEXT3(void, alGetBufferPtr,SOFT, ALuint,buffer, ALenum,param, ALvoid**,value)
@@ -1436,7 +1436,7 @@ try {
 catch(al::base_exception&) {
 }
 catch(std::exception &e) {
-    ERRFMT("Caught exception: {}", e.what());
+    ERR("Caught exception: {}", e.what());
 }
 
 AL_API DECL_FUNCEXT5(void, alGetBuffer3Ptr,SOFT, ALuint,buffer, ALenum,param, ALvoid**,value1, ALvoid**,value2, ALvoid**,value3)
@@ -1456,7 +1456,7 @@ try {
 catch(al::base_exception&) {
 }
 catch(std::exception &e) {
-    ERRFMT("Caught exception: {}", e.what());
+    ERR("Caught exception: {}", e.what());
 }
 
 AL_API DECL_FUNCEXT3(void, alGetBufferPtrv,SOFT, ALuint,buffer, ALenum,param, ALvoid**,values)
@@ -1484,7 +1484,7 @@ try {
 catch(al::base_exception&) {
 }
 catch(std::exception &e) {
-    ERRFMT("Caught exception: {}", e.what());
+    ERR("Caught exception: {}", e.what());
 }
 
 
@@ -1664,7 +1664,7 @@ catch(al::base_exception&) {
     return AL_FALSE;
 }
 catch(std::exception &e) {
-    ERRFMT("Caught exception: {}", e.what());
+    ERR("Caught exception: {}", e.what());
     return AL_FALSE;
 }
 
@@ -1691,7 +1691,7 @@ catch(al::base_exception&) {
     return AL_NONE;
 }
 catch(std::exception &e) {
-    ERRFMT("Caught exception: {}", e.what());
+    ERR("Caught exception: {}", e.what());
     return AL_NONE;
 }
 

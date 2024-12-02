@@ -17,9 +17,9 @@ void eax_log_exception(std::string_view message) noexcept
         std::rethrow_exception(exception_ptr);
     }
     catch(const std::exception& ex) {
-        ERRFMT("{} {}", message, ex.what());
+        ERR("{} {}", message, ex.what());
     }
     catch(...) {
-        ERRFMT("{} {}", message, "Generic exception.");
+        ERR("{} {}", message, "Generic exception.");
     }
 }

@@ -243,7 +243,7 @@ constexpr auto EffectSlotTypeFromEnum(ALenum type) noexcept -> EffectSlotType
     case AL_EFFECT_DEDICATED_DIALOGUE: return EffectSlotType::Dedicated;
     case AL_EFFECT_CONVOLUTION_SOFT: return EffectSlotType::Convolution;
     }
-    ERRFMT("Unhandled effect enum: 0x{:04x}", type);
+    ERR("Unhandled effect enum: 0x{:04x}", type);
     return EffectSlotType::None;
 }
 
@@ -362,7 +362,7 @@ try {
         }
     }
     catch(std::exception& e) {
-        ERRFMT("Exception allocating effectslot {} of {}: {}", slots.size()+1, n, e.what());
+        ERR("Exception allocating effectslot {} of {}: {}", slots.size()+1, n, e.what());
         auto delete_effectslot = [context](ALeffectslot *slot) -> void
         { FreeEffectSlot(context, slot); };
         std::for_each(slots.begin(), slots.end(), delete_effectslot);
@@ -373,7 +373,7 @@ try {
 catch(al::base_exception&) {
 }
 catch(std::exception &e) {
-    ERRFMT("Caught exception: {}", e.what());
+    ERR("Caught exception: {}", e.what());
 }
 
 AL_API DECL_FUNC2(void, alDeleteAuxiliaryEffectSlots, ALsizei,n, const ALuint*,effectslots)
@@ -428,7 +428,7 @@ try {
 catch(al::base_exception&) {
 }
 catch(std::exception &e) {
-    ERRFMT("Caught exception: {}", e.what());
+    ERR("Caught exception: {}", e.what());
 }
 
 AL_API DECL_FUNC1(ALboolean, alIsAuxiliaryEffectSlot, ALuint,effectslot)
@@ -646,7 +646,7 @@ try {
 catch(al::base_exception&) {
 }
 catch(std::exception &e) {
-    ERRFMT("Caught exception: {}", e.what());
+    ERR("Caught exception: {}", e.what());
 }
 
 AL_API DECL_FUNC3(void, alAuxiliaryEffectSlotiv, ALuint,effectslot, ALenum,param, const ALint*,values)
@@ -675,7 +675,7 @@ try {
 catch(al::base_exception&) {
 }
 catch(std::exception &e) {
-    ERRFMT("Caught exception: {}", e.what());
+    ERR("Caught exception: {}", e.what());
 }
 
 AL_API DECL_FUNC3(void, alAuxiliaryEffectSlotf, ALuint,effectslot, ALenum,param, ALfloat,value)
@@ -707,7 +707,7 @@ try {
 catch(al::base_exception&) {
 }
 catch(std::exception &e) {
-    ERRFMT("Caught exception: {}", e.what());
+    ERR("Caught exception: {}", e.what());
 }
 
 AL_API DECL_FUNC3(void, alAuxiliaryEffectSlotfv, ALuint,effectslot, ALenum,param, const ALfloat*,values)
@@ -732,7 +732,7 @@ try {
 catch(al::base_exception&) {
 }
 catch(std::exception &e) {
-    ERRFMT("Caught exception: {}", e.what());
+    ERR("Caught exception: {}", e.what());
 }
 
 
@@ -779,7 +779,7 @@ try {
 catch(al::base_exception&) {
 }
 catch(std::exception &e) {
-    ERRFMT("Caught exception: {}", e.what());
+    ERR("Caught exception: {}", e.what());
 }
 
 AL_API DECL_FUNC3(void, alGetAuxiliaryEffectSlotiv, ALuint,effectslot, ALenum,param, ALint*,values)
@@ -808,7 +808,7 @@ try {
 catch(al::base_exception&) {
 }
 catch(std::exception &e) {
-    ERRFMT("Caught exception: {}", e.what());
+    ERR("Caught exception: {}", e.what());
 }
 
 AL_API DECL_FUNC3(void, alGetAuxiliaryEffectSlotf, ALuint,effectslot, ALenum,param, ALfloat*,value)
@@ -830,7 +830,7 @@ try {
 catch(al::base_exception&) {
 }
 catch(std::exception &e) {
-    ERRFMT("Caught exception: {}", e.what());
+    ERR("Caught exception: {}", e.what());
 }
 
 AL_API DECL_FUNC3(void, alGetAuxiliaryEffectSlotfv, ALuint,effectslot, ALenum,param, ALfloat*,values)
@@ -855,7 +855,7 @@ try {
 catch(al::base_exception&) {
 }
 catch(std::exception &e) {
-    ERRFMT("Caught exception: {}", e.what());
+    ERR("Caught exception: {}", e.what());
 }
 
 
@@ -897,7 +897,7 @@ ALenum ALeffectslot::initEffect(ALuint effectId, ALenum effectType, const Effect
         EffectStateFactory *factory{getFactoryByType(newtype)};
         if(!factory)
         {
-            ERRFMT("Failed to find factory for effect slot type {}",
+            ERR("Failed to find factory for effect slot type {}",
                 int{al::to_underlying(newtype)});
             return AL_INVALID_ENUM;
         }
@@ -1449,7 +1449,7 @@ void ALeffectslot::eax_set_efx_slot_effect(EaxEffect &effect)
 
     if(error != AL_NO_ERROR)
     {
-        ERRFMT(EAX_PREFIX "Failed to initialize an effect.");
+        ERR(EAX_PREFIX "Failed to initialize an effect.");
         return;
     }
 
@@ -1483,7 +1483,7 @@ void ALeffectslot::eax_set_efx_slot_gain(ALfloat gain)
     if(gain == Gain)
         return;
     if(gain < 0.0f || gain > 1.0f)
-        ERRFMT(EAX_PREFIX "Slot gain out of range ({:f})", gain);
+        ERR(EAX_PREFIX "Slot gain out of range ({:f})", gain);
 
     Gain = std::clamp(gain, 0.0f, 1.0f);
     mPropsDirty = true;
@@ -1505,13 +1505,13 @@ EaxAlEffectSlotUPtr eax_create_al_effect_slot(ALCcontext& context)
 
     if(context.mNumEffectSlots == device.AuxiliaryEffectSlotMax)
     {
-        ERRFMT(EAX_PREFIX "Out of memory.");
+        ERR(EAX_PREFIX "Out of memory.");
         return nullptr;
     }
 
     if(!EnsureEffectSlots(&context, 1))
     {
-        ERRFMT(EAX_PREFIX "Failed to ensure.");
+        ERR(EAX_PREFIX "Failed to ensure.");
         return nullptr;
     }
 
@@ -1528,7 +1528,7 @@ void eax_delete_al_effect_slot(ALCcontext& context, ALeffectslot& effect_slot)
 
     if(effect_slot.ref.load(std::memory_order_relaxed) != 0)
     {
-        ERRFMT(EAX_PREFIX "Deleting in-use effect slot {}.", effect_slot.id);
+        ERR(EAX_PREFIX "Deleting in-use effect slot {}.", effect_slot.id);
         return;
     }
 

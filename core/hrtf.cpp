@@ -348,7 +348,7 @@ void DirectHrtfState::build(const HrtfStore *Hrtf, const uint irSize, const bool
     auto hrir_delay_round = [](const uint d) noexcept -> uint
     { return (d+HrirDelayFracHalf) >> HrirDelayFracBits; };
 
-    TRACEFMT("Min delay: {:.2f}, max delay: {:.2f}, FIR length: {}",
+    TRACE("Min delay: {:.2f}, max delay: {:.2f}, FIR length: {}",
         min_delay/double{HrirDelayFracOne}, max_delay/double{HrirDelayFracOne}, irSize);
 
     auto tmpres = std::vector<std::array<double2,HrirLength>>(mChannels.size());
@@ -389,7 +389,7 @@ void DirectHrtfState::build(const HrtfStore *Hrtf, const uint irSize, const bool
     tmpres.clear();
 
     const uint max_length{std::min(hrir_delay_round(max_delay) + irSize, HrirLength)};
-    TRACEFMT("New max delay: {:.2f}, FIR length: {}", max_delay/double{HrirDelayFracOne},
+    TRACE("New max delay: {:.2f}, FIR length: {}", max_delay/double{HrirDelayFracOne},
         max_length);
     mIrSize = max_length;
 }
@@ -544,12 +544,12 @@ std::unique_ptr<HrtfStore> LoadHrtf00(std::istream &data)
 
     if(irSize < MinIrLength || irSize > HrirLength)
     {
-        ERRFMT("Unsupported HRIR size, irSize={} ({} to {})", irSize, MinIrLength, HrirLength);
+        ERR("Unsupported HRIR size, irSize={} ({} to {})", irSize, MinIrLength, HrirLength);
         return nullptr;
     }
     if(evCount < MinEvCount || evCount > MaxEvCount)
     {
-        ERRFMT("Unsupported elevation count: evCount={} ({} to {})", evCount, MinEvCount,
+        ERR("Unsupported elevation count: evCount={} ({} to {})", evCount, MinEvCount,
             MaxEvCount);
         return nullptr;
     }
@@ -564,14 +564,14 @@ std::unique_ptr<HrtfStore> LoadHrtf00(std::istream &data)
     {
         if(elevs[i].irOffset <= elevs[i-1].irOffset)
         {
-            ERRFMT("Invalid evOffset: evOffset[{}]={} (last={})", i, elevs[i].irOffset,
+            ERR("Invalid evOffset: evOffset[{}]={} (last={})", i, elevs[i].irOffset,
                 elevs[i-1].irOffset);
             return nullptr;
         }
     }
     if(irCount <= elevs.back().irOffset)
     {
-        ERRFMT("Invalid evOffset: evOffset[{}]={} (irCount={})", elevs.size()-1,
+        ERR("Invalid evOffset: evOffset[{}]={} (irCount={})", elevs.size()-1,
             elevs.back().irOffset, irCount);
         return nullptr;
     }
@@ -581,7 +581,7 @@ std::unique_ptr<HrtfStore> LoadHrtf00(std::istream &data)
         elevs[i-1].azCount = static_cast<ushort>(elevs[i].irOffset - elevs[i-1].irOffset);
         if(elevs[i-1].azCount < MinAzCount || elevs[i-1].azCount > MaxAzCount)
         {
-            ERRFMT("Unsupported azimuth count: azCount[{}]={} ({} to {})", i-1, elevs[i-1].azCount,
+            ERR("Unsupported azimuth count: azCount[{}]={} ({} to {})", i-1, elevs[i-1].azCount,
                 MinAzCount, MaxAzCount);
             return nullptr;
         }
@@ -589,7 +589,7 @@ std::unique_ptr<HrtfStore> LoadHrtf00(std::istream &data)
     elevs.back().azCount = static_cast<ushort>(irCount - elevs.back().irOffset);
     if(elevs.back().azCount < MinAzCount || elevs.back().azCount > MaxAzCount)
     {
-        ERRFMT("Unsupported azimuth count: azCount[{}]={} ({} to {})", elevs.size()-1,
+        ERR("Unsupported azimuth count: azCount[{}]={} ({} to {})", elevs.size()-1,
             elevs.back().azCount, MinAzCount, MaxAzCount);
         return nullptr;
     }
@@ -610,7 +610,7 @@ std::unique_ptr<HrtfStore> LoadHrtf00(std::istream &data)
     {
         if(delays[i][0] > MaxHrirDelay)
         {
-            ERRFMT("Invalid delays[{}]: {} ({})", i, delays[i][0], MaxHrirDelay);
+            ERR("Invalid delays[{}]: {} ({})", i, delays[i][0], MaxHrirDelay);
             return nullptr;
         }
         delays[i][0] <<= HrirDelayFracBits;
@@ -634,12 +634,12 @@ std::unique_ptr<HrtfStore> LoadHrtf01(std::istream &data)
 
     if(irSize < MinIrLength || irSize > HrirLength)
     {
-        ERRFMT("Unsupported HRIR size, irSize={} ({} to {})", irSize, MinIrLength, HrirLength);
+        ERR("Unsupported HRIR size, irSize={} ({} to {})", irSize, MinIrLength, HrirLength);
         return nullptr;
     }
     if(evCount < MinEvCount || evCount > MaxEvCount)
     {
-        ERRFMT("Unsupported elevation count: evCount={} ({} to {})", evCount, MinEvCount,
+        ERR("Unsupported elevation count: evCount={} ({} to {})", evCount, MinEvCount,
             MaxEvCount);
         return nullptr;
     }
@@ -654,7 +654,7 @@ std::unique_ptr<HrtfStore> LoadHrtf01(std::istream &data)
     {
         if(elevs[i].azCount < MinAzCount || elevs[i].azCount > MaxAzCount)
         {
-            ERRFMT("Unsupported azimuth count: azCount[{}]={} ({} to {})", i, elevs[i].azCount,
+            ERR("Unsupported azimuth count: azCount[{}]={} ({} to {})", i, elevs[i].azCount,
                 MinAzCount, MaxAzCount);
             return nullptr;
         }
@@ -681,7 +681,7 @@ std::unique_ptr<HrtfStore> LoadHrtf01(std::istream &data)
     {
         if(delays[i][0] > MaxHrirDelay)
         {
-            ERRFMT("Invalid delays[{}]: {} ({})", i, delays[i][0], MaxHrirDelay);
+            ERR("Invalid delays[{}]: {} ({})", i, delays[i][0], MaxHrirDelay);
             return nullptr;
         }
         delays[i][0] <<= HrirDelayFracBits;
@@ -711,23 +711,23 @@ std::unique_ptr<HrtfStore> LoadHrtf02(std::istream &data)
 
     if(sampleType > SampleType_S24)
     {
-        ERRFMT("Unsupported sample type: {}", sampleType);
+        ERR("Unsupported sample type: {}", sampleType);
         return nullptr;
     }
     if(channelType > ChanType_LeftRight)
     {
-        ERRFMT("Unsupported channel type: {}", channelType);
+        ERR("Unsupported channel type: {}", channelType);
         return nullptr;
     }
 
     if(irSize < MinIrLength || irSize > HrirLength)
     {
-        ERRFMT("Unsupported HRIR size, irSize={} ({} to {})", irSize, MinIrLength, HrirLength);
+        ERR("Unsupported HRIR size, irSize={} ({} to {})", irSize, MinIrLength, HrirLength);
         return nullptr;
     }
     if(fdCount < 1 || fdCount > MaxFdCount)
     {
-        ERRFMT("Unsupported number of field-depths: fdCount={} ({} to {})", fdCount, MinFdCount,
+        ERR("Unsupported number of field-depths: fdCount={} ({} to {})", fdCount, MinFdCount,
             MaxFdCount);
         return nullptr;
     }
@@ -743,13 +743,13 @@ std::unique_ptr<HrtfStore> LoadHrtf02(std::istream &data)
 
         if(distance < MinFdDistance || distance > MaxFdDistance)
         {
-            ERRFMT("Unsupported field distance[{}]={} ({} to {} millimeters)", f, distance,
+            ERR("Unsupported field distance[{}]={} ({} to {} millimeters)", f, distance,
                 MinFdDistance, MaxFdDistance);
             return nullptr;
         }
         if(evCount < MinEvCount || evCount > MaxEvCount)
         {
-            ERRFMT("Unsupported elevation count: evCount[{}]={} ({} to {})", f, evCount,
+            ERR("Unsupported elevation count: evCount[{}]={} ({} to {})", f, evCount,
                 MinEvCount, MaxEvCount);
             return nullptr;
         }
@@ -758,7 +758,7 @@ std::unique_ptr<HrtfStore> LoadHrtf02(std::istream &data)
         fields[f].evCount = evCount;
         if(f > 0 && fields[f].distance <= fields[f-1].distance)
         {
-            ERRFMT("Field distance[{}] is not after previous ({:f} > {:f})", f, fields[f].distance,
+            ERR("Field distance[{}] is not after previous ({:f} > {:f})", f, fields[f].distance,
                 fields[f-1].distance);
             return nullptr;
         }
@@ -774,7 +774,7 @@ std::unique_ptr<HrtfStore> LoadHrtf02(std::istream &data)
         {
             if(elevs[ebase+e].azCount < MinAzCount || elevs[ebase+e].azCount > MaxAzCount)
             {
-                ERRFMT("Unsupported azimuth count: azCount[{}][{}]={} ({} to {})", f, e,
+                ERR("Unsupported azimuth count: azCount[{}][{}]={} ({} to {})", f, e,
                     elevs[ebase+e].azCount, MinAzCount, MaxAzCount);
                 return nullptr;
             }
@@ -820,7 +820,7 @@ std::unique_ptr<HrtfStore> LoadHrtf02(std::istream &data)
         {
             if(delays[i][0] > MaxHrirDelay)
             {
-                ERRFMT("Invalid delays[{}][0]: {} ({})", i, delays[i][0], MaxHrirDelay);
+                ERR("Invalid delays[{}][0]: {} ({})", i, delays[i][0], MaxHrirDelay);
                 return nullptr;
             }
             delays[i][0] <<= HrirDelayFracBits;
@@ -865,12 +865,12 @@ std::unique_ptr<HrtfStore> LoadHrtf02(std::istream &data)
         {
             if(delays[i][0] > MaxHrirDelay)
             {
-                ERRFMT("Invalid delays[{}][0]: {} ({})", i, delays[i][0], MaxHrirDelay);
+                ERR("Invalid delays[{}][0]: {} ({})", i, delays[i][0], MaxHrirDelay);
                 return nullptr;
             }
             if(delays[i][1] > MaxHrirDelay)
             {
-                ERRFMT("Invalid delays[{}][1]: {} ({})", i, delays[i][1], MaxHrirDelay);
+                ERR("Invalid delays[{}][1]: {} ({})", i, delays[i][1], MaxHrirDelay);
                 return nullptr;
             }
             delays[i][0] <<= HrirDelayFracBits;
@@ -963,18 +963,18 @@ std::unique_ptr<HrtfStore> LoadHrtf03(std::istream &data)
 
     if(channelType > ChanType_LeftRight)
     {
-        ERRFMT("Unsupported channel type: {}", channelType);
+        ERR("Unsupported channel type: {}", channelType);
         return nullptr;
     }
 
     if(irSize < MinIrLength || irSize > HrirLength)
     {
-        ERRFMT("Unsupported HRIR size, irSize={} ({} to {})", irSize, MinIrLength, HrirLength);
+        ERR("Unsupported HRIR size, irSize={} ({} to {})", irSize, MinIrLength, HrirLength);
         return nullptr;
     }
     if(fdCount < 1 || fdCount > MaxFdCount)
     {
-        ERRFMT("Unsupported number of field-depths: fdCount={} ({} to {})", fdCount, MinFdCount,
+        ERR("Unsupported number of field-depths: fdCount={} ({} to {})", fdCount, MinFdCount,
             MaxFdCount);
         return nullptr;
     }
@@ -990,13 +990,13 @@ std::unique_ptr<HrtfStore> LoadHrtf03(std::istream &data)
 
         if(distance < MinFdDistance || distance > MaxFdDistance)
         {
-            ERRFMT("Unsupported field distance[{}]={} ({} to {} millimeters)", f, distance,
+            ERR("Unsupported field distance[{}]={} ({} to {} millimeters)", f, distance,
                 MinFdDistance, MaxFdDistance);
             return nullptr;
         }
         if(evCount < MinEvCount || evCount > MaxEvCount)
         {
-            ERRFMT("Unsupported elevation count: evCount[{}]={} ({} to {})", f, evCount,
+            ERR("Unsupported elevation count: evCount[{}]={} ({} to {})", f, evCount,
                 MinEvCount, MaxEvCount);
             return nullptr;
         }
@@ -1005,7 +1005,7 @@ std::unique_ptr<HrtfStore> LoadHrtf03(std::istream &data)
         fields[f].evCount = evCount;
         if(f > 0 && fields[f].distance > fields[f-1].distance)
         {
-            ERRFMT("Field distance[{}] is not before previous ({:f} <= {:f})", f,
+            ERR("Field distance[{}] is not before previous ({:f} <= {:f})", f,
                 fields[f].distance, fields[f-1].distance);
             return nullptr;
         }
@@ -1021,7 +1021,7 @@ std::unique_ptr<HrtfStore> LoadHrtf03(std::istream &data)
         {
             if(elevs[ebase+e].azCount < MinAzCount || elevs[ebase+e].azCount > MaxAzCount)
             {
-                ERRFMT("Unsupported azimuth count: azCount[{}][{}]={} ({} to {})", f, e,
+                ERR("Unsupported azimuth count: azCount[{}][{}]={} ({} to {})", f, e,
                     elevs[ebase+e].azCount, MinAzCount, MaxAzCount);
                 return nullptr;
             }
@@ -1056,7 +1056,7 @@ std::unique_ptr<HrtfStore> LoadHrtf03(std::istream &data)
         {
             if(delays[i][0] > MaxHrirDelay<<HrirDelayFracBits)
             {
-                ERRFMT("Invalid delays[{}][0]: {:f} ({})", i, delays[i][0]/float{HrirDelayFracOne},
+                ERR("Invalid delays[{}][0]: {:f} ({})", i, delays[i][0]/float{HrirDelayFracOne},
                     MaxHrirDelay);
                 return nullptr;
             }
@@ -1087,13 +1087,13 @@ std::unique_ptr<HrtfStore> LoadHrtf03(std::istream &data)
         {
             if(delays[i][0] > MaxHrirDelay<<HrirDelayFracBits)
             {
-                ERRFMT("Invalid delays[{}][0]: {:f} ({})", i, delays[i][0]/float{HrirDelayFracOne},
+                ERR("Invalid delays[{}][0]: {:f} ({})", i, delays[i][0]/float{HrirDelayFracOne},
                     MaxHrirDelay);
                 return nullptr;
             }
             if(delays[i][1] > MaxHrirDelay<<HrirDelayFracBits)
             {
-                ERRFMT("Invalid delays[{}][1]: {:f} ({})", i, delays[i][1]/float{HrirDelayFracOne},
+                ERR("Invalid delays[{}][1]: {:f} ({})", i, delays[i][1]/float{HrirDelayFracOne},
                     MaxHrirDelay);
                 return nullptr;
             }
@@ -1119,7 +1119,7 @@ void AddFileEntry(const std::string_view filename)
         { return entry.mFilename == filename; });
     if(enum_iter != EnumeratedHrtfs.cend())
     {
-        TRACEFMT("Skipping duplicate file entry {}", filename);
+        TRACE("Skipping duplicate file entry {}", filename);
         return;
     }
 
@@ -1143,7 +1143,7 @@ void AddFileEntry(const std::string_view filename)
     }
     const HrtfEntry &entry = EnumeratedHrtfs.emplace_back(newname, filename);
 
-    TRACEFMT("Adding file entry \"{}\"", entry.mFilename);
+    TRACE("Adding file entry \"{}\"", entry.mFilename);
 }
 
 /* Unfortunate that we have to duplicate AddFileEntry to take a memory buffer
@@ -1159,7 +1159,7 @@ void AddBuiltInEntry(const std::string_view dispname, uint residx)
         { return entry.mFilename == filename; });
     if(enum_iter != EnumeratedHrtfs.cend())
     {
-        TRACEFMT("Skipping duplicate file entry {}", filename);
+        TRACE("Skipping duplicate file entry {}", filename);
         return;
     }
 
@@ -1176,7 +1176,7 @@ void AddBuiltInEntry(const std::string_view dispname, uint residx)
     }
     const HrtfEntry &entry = EnumeratedHrtfs.emplace_back(std::move(newname), std::move(filename));
 
-    TRACEFMT("Adding built-in entry \"{}\"", entry.mFilename);
+    TRACE("Adding built-in entry \"{}\"", entry.mFilename);
 }
 
 
@@ -1265,7 +1265,7 @@ HrtfStorePtr GetLoadedHrtf(const std::string_view name, const uint devrate)
 try {
     if(devrate > MaxSampleRate)
     {
-        WARNFMT("Device sample rate too large for HRTF ({}hz > {}hz)", devrate, MaxSampleRate);
+        WARN("Device sample rate too large for HRTF ({}hz > {}hz)", devrate, MaxSampleRate);
         return nullptr;
     }
     std::lock_guard<std::mutex> enumlock{EnumeratedHrtfLock};
@@ -1297,11 +1297,11 @@ try {
     char ch{};
     if(sscanf(fname.c_str(), "!%d%c", &residx, &ch) == 2 && ch == '_')
     {
-        TRACEFMT("Loading {}...", fname);
+        TRACE("Loading {}...", fname);
         al::span<const char> res{GetResource(residx)};
         if(res.empty())
         {
-            ERRFMT("Could not get resource {}, {}", residx, name);
+            ERR("Could not get resource {}, {}", residx, name);
             return nullptr;
         }
         /* NOLINTNEXTLINE(*-const-cast) */
@@ -1309,12 +1309,12 @@ try {
     }
     else
     {
-        TRACEFMT("Loading {}...", fname);
+        TRACE("Loading {}...", fname);
         auto fstr = std::make_unique<std::ifstream>(std::filesystem::u8path(fname),
             std::ios::binary);
         if(!fstr->is_open())
         {
-            ERRFMT("Could not open {}", fname);
+            ERR("Could not open {}", fname);
             return nullptr;
         }
         stream = std::move(fstr);
@@ -1324,29 +1324,29 @@ try {
     std::array<char,GetMarker03Name().size()> magic{};
     stream->read(magic.data(), magic.size());
     if(stream->gcount() < static_cast<std::streamsize>(GetMarker03Name().size()))
-        ERRFMT("{} data is too short ({} bytes)", name, stream->gcount());
+        ERR("{} data is too short ({} bytes)", name, stream->gcount());
     else if(GetMarker03Name() == std::string_view{magic.data(), magic.size()})
     {
-        TRACEFMT("Detected data set format v3");
+        TRACE("Detected data set format v3");
         hrtf = LoadHrtf03(*stream);
     }
     else if(GetMarker02Name() == std::string_view{magic.data(), magic.size()})
     {
-        TRACEFMT("Detected data set format v2");
+        TRACE("Detected data set format v2");
         hrtf = LoadHrtf02(*stream);
     }
     else if(GetMarker01Name() == std::string_view{magic.data(), magic.size()})
     {
-        TRACEFMT("Detected data set format v1");
+        TRACE("Detected data set format v1");
         hrtf = LoadHrtf01(*stream);
     }
     else if(GetMarker00Name() == std::string_view{magic.data(), magic.size()})
     {
-        TRACEFMT("Detected data set format v0");
+        TRACE("Detected data set format v0");
         hrtf = LoadHrtf00(*stream);
     }
     else
-        ERRFMT("Invalid header in {}: \"{:.8s}\"", name, magic.data());
+        ERR("Invalid header in {}: \"{:.8s}\"", name, magic.data());
     stream.reset();
 
     if(!hrtf)
@@ -1354,7 +1354,7 @@ try {
 
     if(hrtf->mSampleRate != devrate)
     {
-        TRACEFMT("Resampling HRTF {} ({}hz -> {}hz)", name, uint{hrtf->mSampleRate}, devrate);
+        TRACE("Resampling HRTF {} ({}hz -> {}hz)", name, uint{hrtf->mSampleRate}, devrate);
 
         /* Calculate the last elevation's index and get the total IR count. */
         const size_t lastEv{std::accumulate(hrtf->mFields.begin(), hrtf->mFields.end(), 0_uz,
@@ -1404,7 +1404,7 @@ try {
         float delay_scale{HrirDelayFracOne};
         if(max_delay > MaxHrirDelay)
         {
-            WARNFMT("Resampled delay exceeds max ({:.2f} > {})", max_delay, MaxHrirDelay);
+            WARN("Resampled delay exceeds max ({:.2f} > {})", max_delay, MaxHrirDelay);
             delay_scale *= float{MaxHrirDelay} / max_delay;
         }
 
@@ -1426,13 +1426,13 @@ try {
     }
 
     handle = LoadedHrtfs.emplace(handle, fname, devrate, std::move(hrtf));
-    TRACEFMT("Loaded HRTF {} for sample rate {}hz, {}-sample filter", name,
+    TRACE("Loaded HRTF {} for sample rate {}hz, {}-sample filter", name,
         uint{handle->mEntry->mSampleRate}, uint{handle->mEntry->mIrSize});
 
     return HrtfStorePtr{handle->mEntry.get()};
 }
 catch(std::exception& e) {
-    ERRFMT("Failed to load {}: {}", name, e.what());
+    ERR("Failed to load {}: {}", name, e.what());
     return nullptr;
 }
 
@@ -1440,13 +1440,13 @@ catch(std::exception& e) {
 void HrtfStore::add_ref()
 {
     auto ref = IncrementRef(mRef);
-    TRACEFMT("HrtfStore {} increasing refcount to {}", decltype(std::declval<void*>()){this}, ref);
+    TRACE("HrtfStore {} increasing refcount to {}", decltype(std::declval<void*>()){this}, ref);
 }
 
 void HrtfStore::dec_ref()
 {
     auto ref = DecrementRef(mRef);
-    TRACEFMT("HrtfStore {} decreasing refcount to {}", decltype(std::declval<void*>()){this}, ref);
+    TRACE("HrtfStore {} decreasing refcount to {}", decltype(std::declval<void*>()){this}, ref);
     if(ref == 0)
     {
         std::lock_guard<std::mutex> loadlock{LoadedHrtfLock};
@@ -1457,7 +1457,7 @@ void HrtfStore::dec_ref()
             HrtfStore *entry{hrtf.mEntry.get()};
             if(entry && entry->mRef.load() == 0)
             {
-                TRACEFMT("Unloading unused HRTF {}", hrtf.mFilename);
+                TRACE("Unloading unused HRTF {}", hrtf.mFilename);
                 hrtf.mEntry = nullptr;
                 return true;
             }

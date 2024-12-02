@@ -373,7 +373,7 @@ try {
 catch(al::base_exception&) {
 }
 catch(std::exception &e) {
-    ERRFMT("Caught exception: {}", e.what());
+    ERR("Caught exception: {}", e.what());
 }
 
 AL_API DECL_FUNC2(void, alDeleteFilters, ALsizei,n, const ALuint*,filters)
@@ -407,7 +407,7 @@ try {
 catch(al::base_exception&) {
 }
 catch(std::exception &e) {
-    ERRFMT("Caught exception: {}", e.what());
+    ERR("Caught exception: {}", e.what());
 }
 
 AL_API DECL_FUNC1(ALboolean, alIsFilter, ALuint,filter)
@@ -449,7 +449,7 @@ try {
 catch(al::base_exception&) {
 }
 catch(std::exception &e) {
-    ERRFMT("Caught exception: {}", e.what());
+    ERR("Caught exception: {}", e.what());
 }
 
 AL_API DECL_FUNC3(void, alFilteriv, ALuint,filter, ALenum,param, const ALint*,values)
@@ -477,7 +477,7 @@ try {
 catch(al::base_exception&) {
 }
 catch(std::exception &e) {
-    ERRFMT("Caught exception: {}", e.what());
+    ERR("Caught exception: {}", e.what());
 }
 
 AL_API DECL_FUNC3(void, alFilterf, ALuint,filter, ALenum,param, ALfloat,value)
@@ -498,7 +498,7 @@ try {
 catch(al::base_exception&) {
 }
 catch(std::exception &e) {
-    ERRFMT("Caught exception: {}", e.what());
+    ERR("Caught exception: {}", e.what());
 }
 
 AL_API DECL_FUNC3(void, alFilterfv, ALuint,filter, ALenum,param, const ALfloat*,values)
@@ -519,7 +519,7 @@ try {
 catch(al::base_exception&) {
 }
 catch(std::exception &e) {
-    ERRFMT("Caught exception: {}", e.what());
+    ERR("Caught exception: {}", e.what());
 }
 
 AL_API DECL_FUNC3(void, alGetFilteri, ALuint,filter, ALenum,param, ALint*,value)
@@ -545,7 +545,7 @@ try {
 catch(al::base_exception&) {
 }
 catch(std::exception &e) {
-    ERRFMT("Caught exception: {}", e.what());
+    ERR("Caught exception: {}", e.what());
 }
 
 AL_API DECL_FUNC3(void, alGetFilteriv, ALuint,filter, ALenum,param, ALint*,values)
@@ -573,7 +573,7 @@ try {
 catch(al::base_exception&) {
 }
 catch(std::exception &e) {
-    ERRFMT("Caught exception: {}", e.what());
+    ERR("Caught exception: {}", e.what());
 }
 
 AL_API DECL_FUNC3(void, alGetFilterf, ALuint,filter, ALenum,param, ALfloat*,value)
@@ -594,7 +594,7 @@ try {
 catch(al::base_exception&) {
 }
 catch(std::exception &e) {
-    ERRFMT("Caught exception: {}", e.what());
+    ERR("Caught exception: {}", e.what());
 }
 
 AL_API DECL_FUNC3(void, alGetFilterfv, ALuint,filter, ALenum,param, ALfloat*,values)
@@ -615,7 +615,7 @@ try {
 catch(al::base_exception&) {
 }
 catch(std::exception &e) {
-    ERRFMT("Caught exception: {}", e.what());
+    ERR("Caught exception: {}", e.what());
 }
 
 

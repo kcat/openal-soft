@@ -84,7 +84,7 @@ void ProbePlaybackDevices()
             }
             dname = std::move(newname);
 
-            TRACEFMT("Got device \"{}\", ID {}", dname, i);
+            TRACE("Got device \"{}\", ID {}", dname, i);
         }
         PlaybackDevices.emplace_back(std::move(dname));
     }
@@ -115,7 +115,7 @@ void ProbeCaptureDevices()
             }
             dname = std::move(newname);
 
-            TRACEFMT("Got device \"{}\", ID {}", dname, i);
+            TRACE("Got device \"{}\", ID {}", dname, i);
         }
         CaptureDevices.emplace_back(std::move(dname));
     }
@@ -269,7 +269,7 @@ bool WinMMPlayback::reset()
             mDevice->FmtType = DevFmtFloat;
         else
         {
-            ERRFMT("Unhandled IEEE float sample depth: {}", mFormat.wBitsPerSample);
+            ERR("Unhandled IEEE float sample depth: {}", mFormat.wBitsPerSample);
             return false;
         }
     }
@@ -281,13 +281,13 @@ bool WinMMPlayback::reset()
             mDevice->FmtType = DevFmtUByte;
         else
         {
-            ERRFMT("Unhandled PCM sample depth: {}", mFormat.wBitsPerSample);
+            ERR("Unhandled PCM sample depth: {}", mFormat.wBitsPerSample);
             return false;
         }
     }
     else
     {
-        ERRFMT("Unhandled format tag: 0x{:04x}", mFormat.wFormatTag);
+        ERR("Unhandled format tag: 0x{:04x}", mFormat.wFormatTag);
         return false;
     }
 
@@ -297,7 +297,7 @@ bool WinMMPlayback::reset()
         mDevice->FmtChans = DevFmtMono;
     else
     {
-        ERRFMT("Unhandled channel count: {}", mFormat.nChannels);
+        ERR("Unhandled channel count: {}", mFormat.nChannels);
         return false;
     }
     setDefaultWFXChannelOrder();

@@ -56,7 +56,7 @@ void OboePlayback::onErrorAfterClose(oboe::AudioStream*, oboe::Result error)
     if(error == oboe::Result::ErrorDisconnected)
         mDevice->handleDisconnect("Oboe AudioStream was disconnected: {}",
             oboe::convertToText(error));
-    TRACEFMT("Error was {}", oboe::convertToText(error));
+    TRACE("Error was {}", oboe::convertToText(error));
 }
 
 void OboePlayback::open(std::string_view name)
@@ -150,7 +150,7 @@ bool OboePlayback::reset()
             oboe::convertToText(result)};
     mStream->setBufferSizeInFrames(std::min(static_cast<int32_t>(mDevice->BufferSize),
         mStream->getBufferCapacityInFrames()));
-    TRACEFMT("Got stream with properties:\n{}", oboe::convertToText(mStream.get()));
+    TRACE("Got stream with properties:\n{}", oboe::convertToText(mStream.get()));
 
     if(static_cast<uint>(mStream->getChannelCount()) != mDevice->channelsFromFmt())
     {
@@ -213,7 +213,7 @@ void OboePlayback::stop()
 {
     oboe::Result result{mStream->stop()};
     if(result != oboe::Result::OK)
-        ERRFMT("Failed to stop stream: {}", oboe::convertToText(result));
+        ERR("Failed to stop stream: {}", oboe::convertToText(result));
 }
 
 
@@ -310,7 +310,7 @@ void OboeCapture::open(std::string_view name)
         throw al::backend_exception{al::backend_error::DeviceError, "Failed to create stream: {}",
             oboe::convertToText(result)};
 
-    TRACEFMT("Got stream with properties:\n{}", oboe::convertToText(mStream.get()));
+    TRACE("Got stream with properties:\n{}", oboe::convertToText(mStream.get()));
 
     /* Ensure a minimum ringbuffer size of 100ms. */
     mRing = RingBuffer::Create(std::max(mDevice->BufferSize, mDevice->Frequency/10u),
@@ -331,7 +331,7 @@ void OboeCapture::stop()
 {
     const oboe::Result result{mStream->stop()};
     if(result != oboe::Result::OK)
-        ERRFMT("Failed to stop stream: {}", oboe::convertToText(result));
+        ERR("Failed to stop stream: {}", oboe::convertToText(result));
 }
 
 uint OboeCapture::availableSamples()

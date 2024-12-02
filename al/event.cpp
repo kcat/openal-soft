@@ -152,10 +152,10 @@ void StartEventThrd(ALCcontext *ctx)
         ctx->mEventThread = std::thread{EventThread, ctx};
     }
     catch(std::exception& e) {
-        ERRFMT("Failed to start event thread: {}", e.what());
+        ERR("Failed to start event thread: {}", e.what());
     }
     catch(...) {
-        ERRFMT("Failed to start event thread! Expect problems.");
+        ERR("Failed to start event thread! Expect problems.");
     }
 }
 
@@ -225,7 +225,7 @@ try {
 catch(al::base_exception&) {
 }
 catch(std::exception &e) {
-    ERRFMT("Caught exception: {}", e.what());
+    ERR("Caught exception: {}", e.what());
 }
 
 AL_API DECL_FUNCEXT2(void, alEventCallback,SOFT, ALEVENTPROCSOFT,callback, void*,userParam)
@@ -239,5 +239,5 @@ try {
 catch(al::base_exception&) {
 }
 catch(std::exception &e) {
-    ERRFMT("Caught exception: {}", e.what());
+    ERR("Caught exception: {}", e.what());
 }

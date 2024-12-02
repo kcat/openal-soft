@@ -83,7 +83,7 @@ void EnumerateDevices()
     const auto devcount = Pa_GetDeviceCount();
     if(devcount < 0)
     {
-        ERRFMT("Error getting device count: {}", Pa_GetErrorText(devcount));
+        ERR("Error getting device count: {}", Pa_GetErrorText(devcount));
         return;
     }
 
@@ -96,7 +96,7 @@ void EnumerateDevices()
             entry.mName = info->name;
             entry.mPlaybackChannels = static_cast<uint>(std::max(info->maxOutputChannels, 0));
             entry.mCaptureChannels = static_cast<uint>(std::max(info->maxInputChannels, 0));
-            TRACEFMT("Device {} \"{}\": {} playback, {} capture channels", idx, entry.mName,
+            TRACE("Device {} \"{}\": {} playback, {} capture channels", idx, entry.mName,
                 info->maxOutputChannels, info->maxInputChannels);
         }
         ++idx;
@@ -128,7 +128,7 @@ PortPlayback::~PortPlayback()
 {
     PaError err{mStream ? Pa_CloseStream(mStream) : paNoError};
     if(err != paNoError)
-        ERRFMT("Error closing stream: {}", Pa_GetErrorText(err));
+        ERR("Error closing stream: {}", Pa_GetErrorText(err));
     mStream = nullptr;
 }
 
@@ -229,7 +229,7 @@ bool PortPlayback::reset()
     {
         auto err = Pa_CloseStream(mStream);
         if(err != paNoError)
-            ERRFMT("Error closing stream: {}", Pa_GetErrorText(err));
+            ERR("Error closing stream: {}", Pa_GetErrorText(err));
         mStream = nullptr;
     }
 
@@ -243,7 +243,7 @@ bool PortPlayback::reset()
     case paInt8: mDevice->FmtType = DevFmtByte; break;
     case paUInt8: mDevice->FmtType = DevFmtUByte; break;
     default:
-        ERRFMT("Unexpected PortAudio sample format: {}", mParams.sampleFormat);
+        ERR("Unexpected PortAudio sample format: {}", mParams.sampleFormat);
         throw al::backend_exception{al::backend_error::NoDevice, "Invalid sample format: {}",
             mParams.sampleFormat};
     }
@@ -264,7 +264,7 @@ bool PortPlayback::reset()
     if(streamInfo->outputLatency > 0.0f)
     {
         const double sampleLatency{streamInfo->outputLatency * streamInfo->sampleRate};
-        TRACEFMT("Reported stream latency: {:f} sec ({:f} samples)", streamInfo->outputLatency,
+        TRACE("Reported stream latency: {:f} sec ({:f} samples)", streamInfo->outputLatency,
             sampleLatency);
         mDevice->BufferSize = static_cast<uint>(std::clamp(sampleLatency,
             double(mDevice->BufferSize), double{std::numeric_limits<int>::max()}));
@@ -285,7 +285,7 @@ void PortPlayback::start()
 void PortPlayback::stop()
 {
     if(PaError err{Pa_StopStream(mStream)}; err != paNoError)
-        ERRFMT("Error stopping stream: {}", Pa_GetErrorText(err));
+        ERR("Error stopping stream: {}", Pa_GetErrorText(err));
 }
 
 
@@ -312,7 +312,7 @@ PortCapture::~PortCapture()
 {
     PaError err{mStream ? Pa_CloseStream(mStream) : paNoError};
     if(err != paNoError)
-        ERRFMT("Error closing stream: {}", Pa_GetErrorText(err));
+        ERR("Error closing stream: {}", Pa_GetErrorText(err));
     mStream = nullptr;
 }
 
@@ -410,7 +410,7 @@ void PortCapture::start()
 void PortCapture::stop()
 {
     if(PaError err{Pa_StopStream(mStream)}; err != paNoError)
-        ERRFMT("Error stopping stream: {}", Pa_GetErrorText(err));
+        ERR("Error stopping stream: {}", Pa_GetErrorText(err));
 }
 
 
@@ -468,7 +468,7 @@ bool PortBackendFactory::init()
         const PaError err{Pa_Initialize()};
         if(err != paNoError)
         {
-            ERRFMT("Pa_Initialize() returned an error: {}", Pa_GetErrorText(err));
+            ERR("Pa_Initialize() returned an error: {}", Pa_GetErrorText(err));
             CloseLib(pa_handle);
             pa_handle = nullptr;
             return false;
@@ -478,7 +478,7 @@ bool PortBackendFactory::init()
     const PaError err{Pa_Initialize()};
     if(err != paNoError)
     {
-        ERRFMT("Pa_Initialize() returned an error: {}", Pa_GetErrorText(err));
+        ERR("Pa_Initialize() returned an error: {}", Pa_GetErrorText(err));
         return false;
     }
 #endif

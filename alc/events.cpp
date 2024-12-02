@@ -75,7 +75,7 @@ FORCE_ALIGN ALCboolean ALC_APIENTRY alcEventControlSOFT(ALCsizei count, const AL
         auto etype = alc::GetEventType(type);
         if(!etype)
         {
-            WARN("Invalid event type: 0x%04x\n", type);
+            WARN("Invalid event type: 0x{:04x}", type);
             alcSetError(nullptr, ALC_INVALID_ENUM);
             return ALC_FALSE;
         }

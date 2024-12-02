@@ -177,7 +177,7 @@ void ALCossListAppend(std::vector<DevMap> &list, std::string_view handle, std::s
 
     const DevMap &entry = list.emplace_back(std::move(newname), path);
 
-    TRACEFMT("Got device \"{}\", \"{}\"", entry.name, entry.device_name);
+    TRACE("Got device \"{}\", \"{}\"", entry.name, entry.device_name);
 }
 
 void ALCossListPopulate(std::vector<DevMap> &devlist, int type_flag)
@@ -186,13 +186,13 @@ void ALCossListPopulate(std::vector<DevMap> &devlist, int type_flag)
     FileHandle file;
     if(!file.open("/dev/mixer", O_RDONLY))
     {
-        TRACEFMT("Could not open /dev/mixer: {}", std::generic_category().message(errno));
+        TRACE("Could not open /dev/mixer: {}", std::generic_category().message(errno));
         goto done;
     }
 
     if(ioctl(file.get(), SNDCTL_SYSINFO, &si) == -1)
     {
-        TRACEFMT("SNDCTL_SYSINFO failed: {}", std::generic_category().message(errno));
+        TRACE("SNDCTL_SYSINFO failed: {}", std::generic_category().message(errno));
         goto done;
     }
 
@@ -202,7 +202,7 @@ void ALCossListPopulate(std::vector<DevMap> &devlist, int type_flag)
         ai.dev = i;
         if(ioctl(file.get(), SNDCTL_AUDIOINFO, &ai) == -1)
         {
-            ERRFMT("SNDCTL_AUDIOINFO ({}) failed: {}", i, std::generic_category().message(errno));
+            ERR("SNDCTL_AUDIOINFO ({}) failed: {}", i, std::generic_category().message(errno));
             continue;
         }
         if(!(ai.caps&type_flag) || ai.devnode[0] == '\0')
@@ -298,13 +298,13 @@ int OSSPlayback::mixerProc()
             if(errno == EINTR || errno == EAGAIN)
                 continue;
             const auto errstr = std::generic_category().message(errno);
-            ERRFMT("poll failed: {}", errstr);
+            ERR("poll failed: {}", errstr);
             mDevice->handleDisconnect("Failed waiting for playback buffer: {}", errstr);
             break;
         }
         else if(pret == 0) /* NOLINT(*-else-after-return) 'pret' is local to the if/else blocks */
         {
-            WARNFMT("poll timeout");
+            WARN("poll timeout");
             continue;
         }
 
@@ -319,7 +319,7 @@ int OSSPlayback::mixerProc()
                 if(errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR)
                     continue;
                 const auto errstr = std::generic_category().message(errno);
-                ERRFMT("write failed: {}", errstr);
+                ERR("write failed: {}", errstr);
                 mDevice->handleDisconnect("Failed writing playback samples: {}", errstr);
                 break;
             }
@@ -410,7 +410,7 @@ bool OSSPlayback::reset()
 
     if(mDevice->channelsFromFmt() != numChannels)
     {
-        ERRFMT("Failed to set {}, got {} channels instead", DevFmtChannelsString(mDevice->FmtChans),
+        ERR("Failed to set {}, got {} channels instead", DevFmtChannelsString(mDevice->FmtChans),
             numChannels);
         return false;
     }
@@ -419,7 +419,7 @@ bool OSSPlayback::reset()
          (ossFormat == AFMT_U8 && mDevice->FmtType == DevFmtUByte) ||
          (ossFormat == AFMT_S16_NE && mDevice->FmtType == DevFmtShort)))
     {
-        ERRFMT("Failed to set {} samples, got OSS format 0x{:x}", DevFmtTypeString(mDevice->FmtType),
+        ERR("Failed to set {} samples, got OSS format 0x{:x}", DevFmtTypeString(mDevice->FmtType),
             ossFormat);
         return false;
     }
@@ -454,7 +454,7 @@ void OSSPlayback::stop()
     mThread.join();
 
     if(ioctl(mFd, SNDCTL_DSP_RESET) != 0)
-        ERRFMT("Error resetting device: {}", std::generic_category().message(errno));
+        ERR("Error resetting device: {}", std::generic_category().message(errno));
 }
 
 
@@ -503,13 +503,13 @@ int OSScapture::recordProc()
             if(errno == EINTR || errno == EAGAIN)
                 continue;
             const auto errstr = std::generic_category().message(errno);
-            ERRFMT("poll failed: {}", errstr);
+            ERR("poll failed: {}", errstr);
             mDevice->handleDisconnect("Failed to check capture samples: {}", errstr);
             break;
         }
         else if(pret == 0) /* NOLINT(*-else-after-return) 'pret' is local to the if/else blocks */
         {
-            WARNFMT("poll timeout");
+            WARN("poll timeout");
             continue;
         }
 
@@ -520,7 +520,7 @@ int OSScapture::recordProc()
             if(amt < 0)
             {
                 const auto errstr = std::generic_category().message(errno);
-                ERRFMT("read failed: {}", errstr);
+                ERR("read failed: {}", errstr);
                 mDevice->handleDisconnect("Failed reading capture samples: {}", errstr);
                 break;
             }
@@ -633,7 +633,7 @@ void OSScapture::stop()
     mThread.join();
 
     if(ioctl(mFd, SNDCTL_DSP_RESET) != 0)
-        ERRFMT("Error resetting device: {}", std::generic_category().message(errno));
+        ERR("Error resetting device: {}", std::generic_category().message(errno));
 }
 
 void OSScapture::captureSamples(std::byte *buffer, uint samples)

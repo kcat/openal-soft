@@ -45,7 +45,7 @@ void DirectorySearch(const std::filesystem::path &path, const std::string_view e
         if(!fs::exists(fpath))
             return;
 
-        TRACEFMT("Searching {} for *{}", al::u8_as_char(fpath.u8string()), ext);
+        TRACE("Searching {} for *{}", al::u8_as_char(fpath.u8string()), ext);
         for(auto&& dirent : fs::directory_iterator{fpath})
         {
             auto&& entrypath = dirent.path();
@@ -60,13 +60,13 @@ void DirectorySearch(const std::filesystem::path &path, const std::string_view e
         }
     }
     catch(std::exception& e) {
-        ERRFMT("Exception enumerating files: {}", e.what());
+        ERR("Exception enumerating files: {}", e.what());
     }
 
     const auto newlist = al::span{*results}.subspan(base);
     std::sort(newlist.begin(), newlist.end());
     for(const auto &name : newlist)
-        TRACEFMT(" got {}", name);
+        TRACE(" got {}", name);
 }
 
 } // namespace
@@ -98,7 +98,7 @@ const PathNamePair &GetProcBinary()
         }
         if(len == 0)
         {
-            ERRFMT("Failed to get process name: error {}", GetLastError());
+            ERR("Failed to get process name: error {}", GetLastError());
             return PathNamePair{};
         }
 
@@ -107,7 +107,7 @@ const PathNamePair &GetProcBinary()
         const WCHAR *exePath{__wargv[0]};
         if(!exePath)
         {
-            ERRFMT("Failed to get process name: __wargv[0] == nullptr");
+            ERR("Failed to get process name: __wargv[0] == nullptr");
             return PathNamePair{};
         }
         std::wstring fullpath{exePath};
@@ -123,7 +123,7 @@ const PathNamePair &GetProcBinary()
         else
             res.fname = wstr_to_utf8(fullpath);
 
-        TRACEFMT("Got binary: {}, {}", res.path, res.fname);
+        TRACE("Got binary: {}, {}", res.path, res.fname);
         return res;
     };
     static const PathNamePair procbin{get_procbin()};
@@ -191,7 +191,7 @@ void SetRTPriority()
     if(RTPrioLevel > 0)
     {
         if(!SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL))
-            ERRFMT("Failed to set priority level for thread");
+            ERR("Failed to set priority level for thread");
     }
 #endif
 }
@@ -233,7 +233,7 @@ const PathNamePair &GetProcBinary()
         size_t pathlen{};
         std::array<int,4> mib{{CTL_KERN, KERN_PROC, KERN_PROC_PATHNAME, -1}};
         if(sysctl(mib.data(), mib.size(), nullptr, &pathlen, nullptr, 0) == -1)
-            WARNFMT("Failed to sysctl kern.proc.pathname: {}",
+            WARN("Failed to sysctl kern.proc.pathname: {}",
                 std::generic_category().message(errno));
         else
         {
@@ -248,7 +248,7 @@ const PathNamePair &GetProcBinary()
             std::array<char,PROC_PIDPATHINFO_MAXSIZE> procpath{};
             const pid_t pid{getpid()};
             if(proc_pidpath(pid, procpath.data(), procpath.size()) < 1)
-                ERRFMT("proc_pidpath({}, ...) failed: {}", pid,
+                ERR("proc_pidpath({}, ...) failed: {}", pid,
                     std::generic_category().message(errno));
             else
                 pathname = procpath.data();
@@ -284,7 +284,7 @@ const PathNamePair &GetProcBinary()
                     }
                 }
                 catch(std::exception& e) {
-                    WARNFMT("Exception getting symlink {}: {}", name, e.what());
+                    WARN("Exception getting symlink {}: {}", name, e.what());
                 }
             }
         }
@@ -299,7 +299,7 @@ const PathNamePair &GetProcBinary()
         else
             res.fname = pathname;
 
-        TRACEFMT("Got binary: \"{}\", \"{}\"", res.path, res.fname);
+        TRACE("Got binary: \"{}\", \"{}\"", res.path, res.fname);
         return res;
     };
     static const PathNamePair procbin{get_procbin()};
@@ -388,7 +388,7 @@ bool SetRTPriorityPthread(int prio [[maybe_unused]])
         err = pthread_setschedparam(pthread_self(), SCHED_RR, &param);
     if(err == 0) return true;
 #endif
-    WARNFMT("pthread_setschedparam failed: {} ({})", std::generic_category().message(err), err);
+    WARN("pthread_setschedparam failed: {} ({})", std::generic_category().message(err), err);
     return false;
 }
 
@@ -397,14 +397,14 @@ bool SetRTPriorityRTKit(int prio [[maybe_unused]])
 #if HAVE_RTKIT
     if(!HasDBus())
     {
-        WARNFMT("D-Bus not available");
+        WARN("D-Bus not available");
         return false;
     }
     dbus::Error error;
     dbus::ConnectionPtr conn{dbus_bus_get(DBUS_BUS_SYSTEM, &error.get())};
     if(!conn)
     {
-        WARNFMT("D-Bus connection failed with {}: {}", error->name, error->message);
+        WARN("D-Bus connection failed with {}: {}", error->name, error->message);
         return false;
     }
 
@@ -416,11 +416,11 @@ bool SetRTPriorityRTKit(int prio [[maybe_unused]])
     if(err == -ENOENT)
     {
         err = std::abs(err);
-        ERRFMT("Could not query RTKit: {} ({})", std::generic_category().message(err), err);
+        ERR("Could not query RTKit: {} ({})", std::generic_category().message(err), err);
         return false;
     }
     int rtmax{rtkit_get_max_realtime_priority(conn.get())};
-    TRACEFMT("Maximum real-time priority: {}, minimum niceness: {}", rtmax, nicemin);
+    TRACE("Maximum real-time priority: {}, minimum niceness: {}", rtmax, nicemin);
 
     auto limit_rttime = [](DBusConnection *c) -> int
     {
@@ -433,7 +433,7 @@ bool SetRTPriorityRTKit(int prio [[maybe_unused]])
         if(getrlimit(RLIMIT_RTTIME, &rlim) != 0)
             return errno;
 
-        TRACEFMT("RTTime max: {} (hard: {}, soft: {})", umaxtime, rlim.rlim_max, rlim.rlim_cur);
+        TRACE("RTTime max: {} (hard: {}, soft: {})", umaxtime, rlim.rlim_max, rlim.rlim_cur);
         if(rlim.rlim_max > umaxtime)
         {
             rlim.rlim_max = static_cast<rlim_t>(std::min<ulonglong>(umaxtime,
@@ -450,7 +450,7 @@ bool SetRTPriorityRTKit(int prio [[maybe_unused]])
         {
             err = limit_rttime(conn.get());
             if(err != 0)
-                WARNFMT("Failed to set RLIMIT_RTTIME for RTKit: {} ({})",
+                WARN("Failed to set RLIMIT_RTTIME for RTKit: {} ({})",
                     std::generic_category().message(err), err);
         }
 
@@ -458,12 +458,12 @@ bool SetRTPriorityRTKit(int prio [[maybe_unused]])
         rtmax = (rtmax+1)/2;
         prio = std::clamp(prio, 1, rtmax);
 
-        TRACEFMT("Making real-time with priority {} (max: {})", prio, rtmax);
+        TRACE("Making real-time with priority {} (max: {})", prio, rtmax);
         err = rtkit_make_realtime(conn.get(), 0, prio);
         if(err == 0) return true;
 
         err = std::abs(err);
-        WARNFMT("Failed to set real-time priority: {} ({})",
+        WARN("Failed to set real-time priority: {} ({})",
             std::generic_category().message(err), err);
     }
     /* Don't try to set the niceness for non-Linux systems. Standard POSIX has
@@ -474,18 +474,18 @@ bool SetRTPriorityRTKit(int prio [[maybe_unused]])
 #ifdef __linux__
     if(nicemin < 0)
     {
-        TRACEFMT("Making high priority with niceness {}", nicemin);
+        TRACE("Making high priority with niceness {}", nicemin);
         err = rtkit_make_high_priority(conn.get(), 0, nicemin);
         if(err == 0) return true;
 
         err = std::abs(err);
-        WARNFMT("Failed to set high priority: {} ({})", std::generic_category().message(err), err);
+        WARN("Failed to set high priority: {} ({})", std::generic_category().message(err), err);
     }
 #endif /* __linux__ */
 
 #else
 
-    WARNFMT("D-Bus not supported");
+    WARN("D-Bus not supported");
 #endif
     return false;
 }

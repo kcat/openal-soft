@@ -170,7 +170,7 @@ int WaveBackend::mixerProc()
             const size_t fs{fwrite(mBuffer.data(), frameSize, mDevice->UpdateSize, mFile.get())};
             if(fs < mDevice->UpdateSize || ferror(mFile.get()))
             {
-                ERRFMT("Error writing to file");
+                ERR("Error writing to file");
                 mDevice->handleDisconnect("Failed to write playback samples");
                 break;
             }
@@ -285,7 +285,7 @@ bool WaveBackend::reset()
     rewind(mFile.get());
     if(auto errcode = errno; errno != 0 && errno != ENOENT)
     {
-        ERRFMT("Failed to reset file offset: {} ({})", std::generic_category().message(errcode),
+        ERR("Failed to reset file offset: {} ({})", std::generic_category().message(errcode),
             errcode);
     }
 
@@ -325,7 +325,7 @@ bool WaveBackend::reset()
 
     if(ferror(mFile.get()))
     {
-        ERRFMT("Error writing header: {}", std::generic_category().message(errno));
+        ERR("Error writing header: {}", std::generic_category().message(errno));
         return false;
     }
     mDataStart = ftell(mFile.get());
@@ -341,7 +341,7 @@ bool WaveBackend::reset()
 void WaveBackend::start()
 {
     if(mDataStart > 0 && fseek(mFile.get(), 0, SEEK_END) != 0)
-        WARNFMT("Failed to seek on output file");
+        WARN("Failed to seek on output file");
     try {
         mKillNow.store(false, std::memory_order_release);
         mThread = std::thread{std::mem_fn(&WaveBackend::mixerProc), this};

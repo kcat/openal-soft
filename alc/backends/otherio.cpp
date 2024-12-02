@@ -255,7 +255,7 @@ auto PopulateDeviceList() -> HRESULT
         al::out_ptr(regbase));
     if(res != ERROR_SUCCESS)
     {
-        ERRFMT("Error opening HKLM\\Software\\ASIO: {}", res);
+        ERR("Error opening HKLM\\Software\\ASIO: {}", res);
         return E_NOINTERFACE;
     }
 
@@ -265,7 +265,7 @@ auto PopulateDeviceList() -> HRESULT
         nullptr, nullptr, nullptr, nullptr, nullptr);
     if(res != ERROR_SUCCESS)
     {
-        ERRFMT("Error querying HKLM\\Software\\ASIO info: {}", res);
+        ERR("Error querying HKLM\\Software\\ASIO info: {}", res);
         return E_FAIL;
     }
 
@@ -281,12 +281,12 @@ auto PopulateDeviceList() -> HRESULT
             nullptr);
         if(res != ERROR_SUCCESS)
         {
-            ERRFMT("Error querying HKLM\\Software\\ASIO subkey {}: {}", i, res);
+            ERR("Error querying HKLM\\Software\\ASIO subkey {}: {}", i, res);
             continue;
         }
         if(namelen == 0)
         {
-            ERRFMT("HKLM\\Software\\ASIO subkey {} is blank?", i);
+            ERR("HKLM\\Software\\ASIO subkey {} is blank?", i);
             continue;
         }
         auto subkeyname = wstr_to_utf8({keyname.data(), namelen});
@@ -295,7 +295,7 @@ auto PopulateDeviceList() -> HRESULT
         res = RegOpenKeyExW(regbase.get(), keyname.data(), 0, KEY_READ, al::out_ptr(subkey));
         if(res != ERROR_SUCCESS)
         {
-            ERRFMT("Error opening HKLM\\Software\\ASIO\\{}: {}", subkeyname, res);
+            ERR("Error opening HKLM\\Software\\ASIO\\{}: {}", subkeyname, res);
             continue;
         }
 
@@ -305,7 +305,7 @@ auto PopulateDeviceList() -> HRESULT
             &readsize);
         if(res != ERROR_SUCCESS)
         {
-            ERRFMT("Failed to read HKLM\\Software\\ASIO\\{}\\CLSID: {}", subkeyname, res);
+            ERR("Failed to read HKLM\\Software\\ASIO\\{}\\CLSID: {}", subkeyname, res);
             continue;
         }
         idstr.back() = 0;
@@ -313,7 +313,7 @@ auto PopulateDeviceList() -> HRESULT
         auto guid = CLSID{};
         if(auto hr = CLSIDFromString(idstr.data(), &guid); FAILED(hr))
         {
-            ERRFMT("Failed to parse CLSID \"{}\": 0x{:x}", wstr_to_utf8(idstr.data()), hr);
+            ERR("Failed to parse CLSID \"{}\": 0x{:x}", wstr_to_utf8(idstr.data()), hr);
             continue;
         }
 
@@ -328,7 +328,7 @@ auto PopulateDeviceList() -> HRESULT
             if(!iface->Init(nullptr))
 #endif
             {
-                ERRFMT("Failed to initialize {}", subkeyname);
+                ERR("Failed to initialize {}", subkeyname);
                 continue;
             }
             auto drvname = std::array<char,32>{};
@@ -339,13 +339,13 @@ auto PopulateDeviceList() -> HRESULT
             entry.mDrvName = drvname.data();
             entry.mDrvGuid = guid;
 
-            TRACEFMT("Got {} v{}, CLSID {{{:08X}-{:04X}-{:04X}-{:02X}{:02X}-{:02X}{:02X}{:02X}{:02X}{:02X}{:02X}}}",
+            TRACE("Got {} v{}, CLSID {{{:08X}-{:04X}-{:04X}-{:02X}{:02X}-{:02X}{:02X}{:02X}{:02X}{:02X}{:02X}}}",
                 entry.mDrvName, drvver, guid.Data1, guid.Data2, guid.Data3, guid.Data4[0],
                 guid.Data4[1], guid.Data4[2], guid.Data4[3], guid.Data4[4], guid.Data4[5],
                 guid.Data4[6], guid.Data4[7]);
         }
         else
-            ERRFMT("Failed to create {} instance for CLSID {{{:08X}-{:04X}-{:04X}-{:02X}{:02X}-{:02X}{:02X}{:02X}{:02X}{:02X}{:02X}}}: 0x{:x}",
+            ERR("Failed to create {} instance for CLSID {{{:08X}-{:04X}-{:04X}-{:02X}{:02X}-{:02X}{:02X}{:02X}{:02X}{:02X}{:02X}}}: 0x{:x}",
                 subkeyname.c_str(), guid.Data1, guid.Data2, guid.Data3, guid.Data4[0],
                 guid.Data4[1], guid.Data4[2], guid.Data4[3], guid.Data4[4], guid.Data4[5],
                 guid.Data4[6], guid.Data4[7], hr);
@@ -437,12 +437,12 @@ struct OtherIOProxy {
 
 void OtherIOProxy::messageHandler(std::promise<HRESULT> *promise)
 {
-    TRACEFMT("Starting COM message thread");
+    TRACE("Starting COM message thread");
 
     auto com = ComWrapper{COINIT_APARTMENTTHREADED};
     if(!com)
     {
-        WARNFMT("Failed to initialize COM: 0x{:x}", com.status());
+        WARN("Failed to initialize COM: 0x{:x}", com.status());
         promise->set_value(com.status());
         return;
     }
@@ -457,10 +457,10 @@ void OtherIOProxy::messageHandler(std::promise<HRESULT> *promise)
     promise->set_value(S_OK);
     promise = nullptr;
 
-    TRACEFMT("Starting message loop");
+    TRACE("Starting message loop");
     while(Msg msg{popMessage()})
     {
-        TRACEFMT("Got message \"{}\" (0x{:04x}, this={}, param=\"{}\")",
+        TRACE("Got message \"{}\" (0x{:04x}, this={}, param=\"{}\")",
             GetMessageTypeName(msg.mType), static_cast<uint>(msg.mType),
             static_cast<void*>(msg.mProxy), msg.mParam);
 
@@ -494,10 +494,10 @@ void OtherIOProxy::messageHandler(std::promise<HRESULT> *promise)
         case MsgType::QuitThread:
             break;
         }
-        ERRFMT("Unexpected message: {}", int{al::to_underlying(msg.mType)});
+        ERR("Unexpected message: {}", int{al::to_underlying(msg.mType)});
         msg.mPromise.set_value(E_FAIL);
     }
-    TRACEFMT("Message loop finished");
+    TRACE("Message loop finished");
 }
 
 
@@ -622,7 +622,7 @@ auto OtherIOPlayback::startProxy() -> HRESULT
         return S_OK;
     }
     catch(std::exception& e) {
-        ERRFMT("Failed to start mixing thread: {}", e.what());
+        ERR("Failed to start mixing thread: {}", e.what());
     }
     return E_FAIL;
 }

@@ -156,7 +156,7 @@ constexpr const char *res_str(SLresult result) noexcept
 inline void PrintErr(SLresult res, const char *str)
 {
     if(res != SL_RESULT_SUCCESS) UNLIKELY
-        ERRFMT("{}: {}", str, res_str(res));
+        ERR("{}: {}", str, res_str(res));
 }
 
 

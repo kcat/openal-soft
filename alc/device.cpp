@@ -34,7 +34,7 @@ Device::Device(DeviceType type) : DeviceBase{type}
 
 Device::~Device()
 {
-    TRACEFMT("Freeing device {}", voidp{this});
+    TRACE("Freeing device {}", voidp{this});
 
     Backend = nullptr;
 
@@ -42,19 +42,19 @@ Device::~Device()
         [](size_t cur, const BufferSubList &sublist) noexcept -> size_t
         { return cur + static_cast<uint>(al::popcount(~sublist.FreeMask)); })};
     if(count > 0)
-        WARNFMT("{} Buffer{} not deleted", count, (count==1)?"":"s");
+        WARN("{} Buffer{} not deleted", count, (count==1)?"":"s");
 
     count = std::accumulate(EffectList.cbegin(), EffectList.cend(), 0_uz,
         [](size_t cur, const EffectSubList &sublist) noexcept -> size_t
         { return cur + static_cast<uint>(al::popcount(~sublist.FreeMask)); });
     if(count > 0)
-        WARNFMT("{} Effect{} not deleted", count, (count==1)?"":"s");
+        WARN("{} Effect{} not deleted", count, (count==1)?"":"s");
 
     count = std::accumulate(FilterList.cbegin(), FilterList.cend(), 0_uz,
         [](size_t cur, const FilterSubList &sublist) noexcept -> size_t
         { return cur + static_cast<uint>(al::popcount(~sublist.FreeMask)); });
     if(count > 0)
-        WARNFMT("{} Filter{} not deleted", count, (count==1)?"":"s");
+        WARN("{} Filter{} not deleted", count, (count==1)?"":"s");
 }
 
 void Device::enumerateHrtfs()
@@ -64,7 +64,7 @@ void Device::enumerateHrtfs()
     {
         auto iter = std::find(mHrtfList.begin(), mHrtfList.end(), *defhrtfopt);
         if(iter == mHrtfList.end())
-            WARNFMT("Failed to find default HRTF \"{}\"", *defhrtfopt);
+            WARN("Failed to find default HRTF \"{}\"", *defhrtfopt);
         else if(iter != mHrtfList.begin())
             std::rotate(mHrtfList.begin(), iter, iter+1);
     }

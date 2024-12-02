@@ -99,7 +99,7 @@ int SndioPlayback::mixerProc()
             size_t wrote{sio_write(mSndHandle, buffer.data(), buffer.size())};
             if(wrote > buffer.size() || wrote == 0)
             {
-                ERRFMT("sio_write failed: 0x{:x}", wrote);
+                ERR("sio_write failed: 0x{:x}", wrote);
                 mDevice->handleDisconnect("Failed to write playback samples");
                 break;
             }
@@ -219,7 +219,7 @@ bool SndioPlayback::reset()
     mFrameStep = par.pchan;
     if(par.pchan != mDevice->channelsFromFmt())
     {
-        WARNFMT("Got {} channel{} for {}", par.pchan, (par.pchan==1)?"":"s",
+        WARN("Got {} channel{} for {}", par.pchan, (par.pchan==1)?"":"s",
             DevFmtChannelsString(mDevice->FmtChans));
         if(par.pchan < 2) mDevice->FmtChans = DevFmtMono;
         else mDevice->FmtChans = DevFmtStereo;
@@ -267,7 +267,7 @@ void SndioPlayback::stop()
     mThread.join();
 
     if(!sio_stop(mSndHandle))
-        ERRFMT("Error stopping device");
+        ERR("Error stopping device");
 }
 
 
@@ -357,7 +357,7 @@ int SndioCapture::recordProc()
                 break;
             if(got > buffer.size())
             {
-                ERRFMT("sio_read failed: 0x{:x}", got);
+                ERR("sio_read failed: 0x{:x}", got);
                 mDevice->handleDisconnect("sio_read failed: 0x{:x}", got);
                 break;
             }
@@ -493,7 +493,7 @@ void SndioCapture::stop()
     mThread.join();
 
     if(!sio_stop(mSndHandle))
-        ERRFMT("Error stopping device");
+        ERR("Error stopping device");
 }
 
 void SndioCapture::captureSamples(std::byte *buffer, uint samples)

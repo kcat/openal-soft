@@ -30,7 +30,6 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include <limits>
 #include <optional>
 #include <string>
 #include <utility>
@@ -41,6 +40,7 @@
 #include "al/debug.h"
 #include "alc/alconfig.h"
 #include "alc/context.h"
+#include "alnumeric.h"
 #include "core/except.h"
 #include "core/logging.h"
 #include "opthelpers.h"
@@ -49,7 +49,7 @@
 
 void ALCcontext::setErrorImpl(ALenum errorCode, const std::string &msg)
 {
-    WARNFMT("Error generated on context {}, code 0x{:04x}, \"{}\"",
+    WARN("Error generated on context {}, code 0x{:04x}, \"{}\"",
         decltype(std::declval<void*>()){this}, errorCode, msg);
     if(TrapALError)
     {
@@ -91,17 +91,20 @@ AL_API auto AL_APIENTRY alGetError() noexcept -> ALenum
             optstr = ConfigValueStr({}, "game_compat", optname);
         if(optstr)
         {
-            char *end{};
-            auto value = std::strtoul(optstr->c_str(), &end, 0);
-            if(end && *end == '\0' && value <= std::numeric_limits<ALenum>::max())
-                return static_cast<ALenum>(value);
-            ERRFMT("Invalid default error value: \"{}\"", *optstr);
+            try {
+                auto idx = 0_uz;
+                auto value = std::stoi(*optstr, &idx, 0);
+                if(idx >= optstr->size() || std::isspace(optstr->at(idx)))
+                    return static_cast<ALenum>(value);
+            } catch(...) {
+            }
+            ERR("Invalid default error value: \"{}\"", *optstr);
         }
         return AL_INVALID_OPERATION;
     };
     static const ALenum deferror{get_value("__ALSOFT_DEFAULT_ERROR", "default-error")};
 
-    WARNFMT("Querying error state on null context (implicitly 0x{:04x})", deferror);
+    WARN("Querying error state on null context (implicitly 0x{:04x})", deferror);
     if(TrapALError)
     {
 #ifdef _WIN32

@@ -199,7 +199,7 @@ void ALCcontext::sendDebugMessage(std::unique_lock<std::mutex> &debuglock, Debug
 
     if(message.length() >= MaxDebugMessageLength) UNLIKELY
     {
-        ERRFMT("Debug message too long ({} >= {}):\n-> {}", message.length(),
+        ERR("Debug message too long ({} >= {}):\n-> {}", message.length(),
             MaxDebugMessageLength, message);
         return;
     }
@@ -234,7 +234,7 @@ void ALCcontext::sendDebugMessage(std::unique_lock<std::mutex> &debuglock, Debug
         if(mDebugLog.size() < MaxDebugLoggedMessages)
             mDebugLog.emplace_back(source, type, id, severity, message);
         else UNLIKELY
-            ERRFMT("Debug message log overflow. Lost message:\n"
+            ERR("Debug message log overflow. Lost message:\n"
                 "  Source: {}\n"
                 "  Type: {}\n"
                 "  ID: {}\n"
@@ -291,7 +291,7 @@ try {
 catch(al::base_exception&) {
 }
 catch(std::exception &e) {
-    ERRFMT("Caught exception: {}", e.what());
+    ERR("Caught exception: {}", e.what());
 }
 
 
@@ -392,7 +392,7 @@ try {
 catch(al::base_exception&) {
 }
 catch(std::exception &e) {
-    ERRFMT("Caught exception: {}", e.what());
+    ERR("Caught exception: {}", e.what());
 }
 
 
@@ -437,7 +437,7 @@ try {
 catch(al::base_exception&) {
 }
 catch(std::exception &e) {
-    ERRFMT("Caught exception: {}", e.what());
+    ERR("Caught exception: {}", e.what());
 }
 
 FORCE_ALIGN DECL_FUNCEXT(void, alPopDebugGroup,EXT)
@@ -460,7 +460,7 @@ try {
 catch(al::base_exception&) {
 }
 catch(std::exception &e) {
-    ERRFMT("Caught exception: {}", e.what());
+    ERR("Caught exception: {}", e.what());
 }
 
 
@@ -522,7 +522,7 @@ catch(al::base_exception&) {
     return 0;
 }
 catch(std::exception &e) {
-    ERRFMT("Caught exception: {}", e.what());
+    ERR("Caught exception: {}", e.what());
     return 0;
 }
 
@@ -553,7 +553,7 @@ try {
 catch(al::base_exception&) {
 }
 catch(std::exception &e) {
-    ERRFMT("Caught exception: {}", e.what());
+    ERR("Caught exception: {}", e.what());
 }
 
 FORCE_ALIGN DECL_FUNCEXT5(void, alGetObjectLabel,EXT, ALenum,identifier, ALuint,name, ALsizei,bufSize, ALsizei*,length, ALchar*,label)
@@ -623,5 +623,5 @@ try {
 catch(al::base_exception&) {
 }
 catch(std::exception &e) {
-    ERRFMT("Caught exception: {}", e.what());
+    ERR("Caught exception: {}", e.what());
 }

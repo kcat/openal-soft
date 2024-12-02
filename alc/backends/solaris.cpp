@@ -106,13 +106,13 @@ int SolarisBackend::mixerProc()
         {
             if(errno == EINTR || errno == EAGAIN)
                 continue;
-            ERRFMT("poll failed: {}", strerror(errno));
+            ERR("poll failed: {}", strerror(errno));
             mDevice->handleDisconnect("Failed to wait for playback buffer: {}", strerror(errno));
             break;
         }
         else if(pret == 0)
         {
-            WARNFMT("poll timeout");
+            WARN("poll timeout");
             continue;
         }
 
@@ -126,7 +126,7 @@ int SolarisBackend::mixerProc()
             {
                 if(errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR)
                     continue;
-                ERRFMT("write failed: {}", strerror(errno));
+                ERR("write failed: {}", strerror(errno));
                 mDevice->handleDisconnect("Failed to write playback samples: {}", strerror(errno));
                 break;
             }
@@ -191,7 +191,7 @@ bool SolarisBackend::reset()
 
     if(ioctl(mFd, AUDIO_SETINFO, &info) < 0)
     {
-        ERRFMT("ioctl failed: {}", strerror(errno));
+        ERR("ioctl failed: {}", strerror(errno));
         return false;
     }
 
@@ -216,7 +216,7 @@ bool SolarisBackend::reset()
         mDevice->FmtType = DevFmtInt;
     else
     {
-        ERRFMT("Got unhandled sample type: {} (0x{:x})", info.play.precision, info.play.encoding);
+        ERR("Got unhandled sample type: {} (0x{:x})", info.play.precision, info.play.encoding);
         return false;
     }
 
@@ -254,7 +254,7 @@ void SolarisBackend::stop()
     mThread.join();
 
     if(ioctl(mFd, AUDIO_DRAIN) < 0)
-        ERRFMT("Error draining device: {}", strerror(errno));
+        ERR("Error draining device: {}", strerror(errno));
 }
 
 } // namespace

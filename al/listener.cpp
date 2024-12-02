@@ -97,7 +97,7 @@ try {
 catch(al::base_exception&) {
 }
 catch(std::exception &e) {
-    ERRFMT("Caught exception: {}", e.what());
+    ERR("Caught exception: {}", e.what());
 }
 
 AL_API DECL_FUNC4(void, alListener3f, ALenum,param, ALfloat,value1, ALfloat,value2, ALfloat,value3)
@@ -131,7 +131,7 @@ try {
 catch(al::base_exception&) {
 }
 catch(std::exception &e) {
-    ERRFMT("Caught exception: {}", e.what());
+    ERR("Caught exception: {}", e.what());
 }
 
 AL_API DECL_FUNC2(void, alListenerfv, ALenum,param, const ALfloat*,values)
@@ -175,7 +175,7 @@ try {
 catch(al::base_exception&) {
 }
 catch(std::exception &e) {
-    ERRFMT("Caught exception: {}", e.what());
+    ERR("Caught exception: {}", e.what());
 }
 
 
@@ -188,7 +188,7 @@ try {
 catch(al::base_exception&) {
 }
 catch(std::exception &e) {
-    ERRFMT("Caught exception: {}", e.what());
+    ERR("Caught exception: {}", e.what());
 }
 
 AL_API DECL_FUNC4(void, alListener3i, ALenum,param, ALint,value1, ALint,value2, ALint,value3)
@@ -210,7 +210,7 @@ try {
 catch(al::base_exception&) {
 }
 catch(std::exception &e) {
-    ERRFMT("Caught exception: {}", e.what());
+    ERR("Caught exception: {}", e.what());
 }
 
 AL_API DECL_FUNC2(void, alListeneriv, ALenum,param, const ALint*,values)
@@ -247,7 +247,7 @@ try {
 catch(al::base_exception&) {
 }
 catch(std::exception &e) {
-    ERRFMT("Caught exception: {}", e.what());
+    ERR("Caught exception: {}", e.what());
 }
 
 
@@ -270,7 +270,7 @@ try {
 catch(al::base_exception&) {
 }
 catch(std::exception &e) {
-    ERRFMT("Caught exception: {}", e.what());
+    ERR("Caught exception: {}", e.what());
 }
 
 AL_API DECL_FUNC4(void, alGetListener3f, ALenum,param, ALfloat*,value1, ALfloat*,value2, ALfloat*,value3)
@@ -301,7 +301,7 @@ try {
 catch(al::base_exception&) {
 }
 catch(std::exception &e) {
-    ERRFMT("Caught exception: {}", e.what());
+    ERR("Caught exception: {}", e.what());
 }
 
 AL_API DECL_FUNC2(void, alGetListenerfv, ALenum,param, ALfloat*,values)
@@ -342,7 +342,7 @@ try {
 catch(al::base_exception&) {
 }
 catch(std::exception &e) {
-    ERRFMT("Caught exception: {}", e.what());
+    ERR("Caught exception: {}", e.what());
 }
 
 
@@ -356,7 +356,7 @@ try {
 catch(al::base_exception&) {
 }
 catch(std::exception &e) {
-    ERRFMT("Caught exception: {}", e.what());
+    ERR("Caught exception: {}", e.what());
 }
 
 AL_API DECL_FUNC4(void, alGetListener3i, ALenum,param, ALint*,value1, ALint*,value2, ALint*,value3)
@@ -387,7 +387,7 @@ try {
 catch(al::base_exception&) {
 }
 catch(std::exception &e) {
-    ERRFMT("Caught exception: {}", e.what());
+    ERR("Caught exception: {}", e.what());
 }
 
 AL_API DECL_FUNC2(void, alGetListeneriv, ALenum,param, ALint*,values)
@@ -425,5 +425,5 @@ try {
 catch(al::base_exception&) {
 }
 catch(std::exception &e) {
-    ERRFMT("Caught exception: {}", e.what());
+    ERR("Caught exception: {}", e.what());
 }

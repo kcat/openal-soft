@@ -158,7 +158,7 @@ BOOL CALLBACK DSoundEnumDevices(GUID *guid, const WCHAR *desc, const WCHAR*, voi
     HRESULT hr{StringFromCLSID(*guid, &guidstr)};
     if(SUCCEEDED(hr))
     {
-        TRACEFMT("Got device \"{}\", GUID \"{}\"", newentry.name, wstr_to_utf8(guidstr));
+        TRACE("Got device \"{}\", GUID \"{}\"", newentry.name, wstr_to_utf8(guidstr));
         CoTaskMemFree(guidstr);
     }
 
@@ -210,7 +210,7 @@ FORCE_ALIGN int DSoundPlayback::mixerProc()
     HRESULT err{mBuffer->GetCaps(&DSBCaps)};
     if(FAILED(err))
     {
-        ERRFMT("Failed to get buffer caps: 0x{:x}", err);
+        ERR("Failed to get buffer caps: 0x{:x}", err);
         mDevice->handleDisconnect("Failure retrieving playback buffer info: 0x{:x}", err);
         return 1;
     }
@@ -237,7 +237,7 @@ FORCE_ALIGN int DSoundPlayback::mixerProc()
                 err = mBuffer->Play(0, 0, DSBPLAY_LOOPING);
                 if(FAILED(err))
                 {
-                    ERRFMT("Failed to play buffer: 0x{:x}", err);
+                    ERR("Failed to play buffer: 0x{:x}", err);
                     mDevice->handleDisconnect("Failure starting playback: 0x{:x}", err);
                     return 1;
                 }
@@ -246,7 +246,7 @@ FORCE_ALIGN int DSoundPlayback::mixerProc()
 
             avail = WaitForSingleObjectEx(mNotifyEvent, 2000, FALSE);
             if(avail != WAIT_OBJECT_0)
-                ERRFMT("WaitForSingleObjectEx error: 0x{:x}", avail);
+                ERR("WaitForSingleObjectEx error: 0x{:x}", avail);
             continue;
         }
         avail -= avail%FragSize;
@@ -259,7 +259,7 @@ FORCE_ALIGN int DSoundPlayback::mixerProc()
         // If the buffer is lost, restore it and lock
         if(err == DSERR_BUFFERLOST)
         {
-            WARNFMT("Buffer lost, restoring...");
+            WARN("Buffer lost, restoring...");
             err = mBuffer->Restore();
             if(SUCCEEDED(err))
             {
@@ -280,7 +280,7 @@ FORCE_ALIGN int DSoundPlayback::mixerProc()
         }
         else
         {
-            ERRFMT("Buffer lock error: 0x{:x}", err);
+            ERR("Buffer lock error: 0x{:x}", err);
             mDevice->handleDisconnect("Failed to lock output buffer: 0x{:x}", err);
             return 1;
         }
@@ -302,7 +302,7 @@ void DSoundPlayback::open(std::string_view name)
         ComWrapper com{};
         hr = DirectSoundEnumerateW(DSoundEnumDevices, &PlaybackDevices);
         if(FAILED(hr))
-            ERRFMT("Error enumerating DirectSound devices (0x{:x})!", hr);
+            ERR("Error enumerating DirectSound devices (0x{:x})!", hr);
     }
 
     const GUID *guid{nullptr};
@@ -402,7 +402,7 @@ bool DSoundPlayback::reset()
         else if(speakers == DSSPEAKER_7POINT1 || speakers == DSSPEAKER_7POINT1_SURROUND)
             mDevice->FmtChans = DevFmtX71;
         else
-            ERRFMT("Unknown system speaker config: 0x{:x}", speakers);
+            ERR("Unknown system speaker config: 0x{:x}", speakers);
     }
     mDevice->Flags.set(DirectEar, (speakers == DSSPEAKER_HEADPHONE));
     const bool isRear51{speakers == DSSPEAKER_5POINT1_BACK};
@@ -575,7 +575,7 @@ void DSoundCapture::open(std::string_view name)
         ComWrapper com{};
         hr = DirectSoundCaptureEnumerateW(DSoundEnumDevices, &CaptureDevices);
         if(FAILED(hr))
-            ERRFMT("Error enumerating DirectSound devices (0x{:x})!", hr);
+            ERR("Error enumerating DirectSound devices (0x{:x})!", hr);
     }
 
     const GUID *guid{nullptr};
@@ -607,7 +607,7 @@ void DSoundCapture::open(std::string_view name)
     case DevFmtByte:
     case DevFmtUShort:
     case DevFmtUInt:
-        WARNFMT("{} capture samples not supported", DevFmtTypeString(mDevice->FmtType));
+        WARN("{} capture samples not supported", DevFmtTypeString(mDevice->FmtType));
         throw al::backend_exception{al::backend_error::DeviceError,
             "{} capture samples not supported", DevFmtTypeString(mDevice->FmtType)};
 
@@ -631,7 +631,7 @@ void DSoundCapture::open(std::string_view name)
     case DevFmtX7144:
     case DevFmtX3D71:
     case DevFmtAmbi3D:
-        WARNFMT("{} capture not supported", DevFmtChannelsString(mDevice->FmtChans));
+        WARN("{} capture not supported", DevFmtChannelsString(mDevice->FmtChans));
         throw al::backend_exception{al::backend_error::DeviceError, "{} capture not supported",
             DevFmtChannelsString(mDevice->FmtChans)};
     }
@@ -702,7 +702,7 @@ void DSoundCapture::stop()
     HRESULT hr{mDSCbuffer->Stop()};
     if(FAILED(hr))
     {
-        ERRFMT("stop failed: 0x{:x}", hr);
+        ERR("stop failed: 0x{:x}", hr);
         mDevice->handleDisconnect("Failure stopping capture: 0x{:x}", hr);
     }
 }
@@ -740,7 +740,7 @@ uint DSoundCapture::availableSamples()
 
     if(FAILED(hr))
     {
-        ERRFMT("update failed: 0x{:x}", hr);
+        ERR("update failed: 0x{:x}", hr);
         mDevice->handleDisconnect("Failure retrieving capture data: 0x{:x}", hr);
     }
 
@@ -764,7 +764,7 @@ bool DSoundBackendFactory::init()
         ds_handle = LoadLib("dsound.dll");
         if(!ds_handle)
         {
-            ERRFMT("Failed to load dsound.dll");
+            ERR("Failed to load dsound.dll");
             return false;
         }
 
@@ -803,7 +803,7 @@ auto DSoundBackendFactory::enumerate(BackendType type) -> std::vector<std::strin
     case BackendType::Playback:
         PlaybackDevices.clear();
         if(HRESULT hr{DirectSoundEnumerateW(DSoundEnumDevices, &PlaybackDevices)}; FAILED(hr))
-            ERRFMT("Error enumerating DirectSound playback devices (0x{:x})!", hr);
+            ERR("Error enumerating DirectSound playback devices (0x{:x})!", hr);
         outnames.reserve(PlaybackDevices.size());
         std::for_each(PlaybackDevices.cbegin(), PlaybackDevices.cend(), add_device);
         break;
@@ -811,7 +811,7 @@ auto DSoundBackendFactory::enumerate(BackendType type) -> std::vector<std::strin
     case BackendType::Capture:
         CaptureDevices.clear();
         if(HRESULT hr{DirectSoundCaptureEnumerateW(DSoundEnumDevices, &CaptureDevices)};FAILED(hr))
-            ERRFMT("Error enumerating DirectSound capture devices (0x{:x})!", hr);
+            ERR("Error enumerating DirectSound capture devices (0x{:x})!", hr);
         outnames.reserve(CaptureDevices.size());
         std::for_each(CaptureDevices.cbegin(), CaptureDevices.cend(), add_device);
         break;

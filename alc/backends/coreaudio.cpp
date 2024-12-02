@@ -202,7 +202,7 @@ UInt32 GetDeviceChannelCount(AudioDeviceID devId, bool isCapture)
         &propSize);
     if(err)
     {
-        ERRFMT("kAudioDevicePropertyStreamConfiguration size query failed: '{}' ({})",
+        ERR("kAudioDevicePropertyStreamConfiguration size query failed: '{}' ({})",
             FourCCPrinter{err}.c_str(), err);
         return 0;
     }
@@ -214,7 +214,7 @@ UInt32 GetDeviceChannelCount(AudioDeviceID devId, bool isCapture)
         channel_layout);
     if(err)
     {
-        ERRFMT("kAudioDevicePropertyStreamConfiguration query failed: '{}' ({})",
+        ERR("kAudioDevicePropertyStreamConfiguration query failed: '{}' ({})",
             FourCCPrinter{err}.c_str(), err);
         return 0;
     }
@@ -228,14 +228,14 @@ void EnumerateDevices(std::vector<DeviceEntry> &list, bool isCapture)
     UInt32 propSize{};
     if(auto err = GetHwPropertySize(kAudioHardwarePropertyDevices, &propSize))
     {
-        ERRFMT("Failed to get device list size: {}", err);
+        ERR("Failed to get device list size: {}", err);
         return;
     }
 
     auto devIds = std::vector<AudioDeviceID>(propSize/sizeof(AudioDeviceID), kAudioDeviceUnknown);
     if(auto err = GetHwProperty(kAudioHardwarePropertyDevices, propSize, devIds.data()))
     {
-        ERRFMT("Failed to get device list: '{}' ({})", FourCCPrinter{err}.c_str(), err);
+        ERR("Failed to get device list: '{}' ({})", FourCCPrinter{err}.c_str(), err);
         return;
     }
 
@@ -250,7 +250,7 @@ void EnumerateDevices(std::vector<DeviceEntry> &list, bool isCapture)
     {
         newdevs.emplace_back(DeviceEntry{defaultId, GetDeviceName(defaultId)});
         const auto &entry = newdevs.back();
-        TRACEFMT("Got device: {} = ID {}", entry.mName, entry.mId);
+        TRACE("Got device: {} = ID {}", entry.mName, entry.mId);
     }
     for(const AudioDeviceID devId : devIds)
     {
@@ -267,7 +267,7 @@ void EnumerateDevices(std::vector<DeviceEntry> &list, bool isCapture)
         {
             newdevs.emplace_back(DeviceEntry{devId, GetDeviceName(devId)});
             const auto &entry = newdevs.back();
-            TRACEFMT("Got device: {} = ID {}", entry.mName, entry.mId);
+            TRACE("Got device: {} = ID {}", entry.mName, entry.mId);
         }
     }
 
@@ -307,7 +307,7 @@ struct DeviceHelper {
             kAudioObjectPropertyScopeGlobal, kAudioObjectPropertyElementMaster};
         OSStatus status = AudioObjectAddPropertyListener(kAudioObjectSystemObject, &addr, DeviceListenerProc, nil);
         if (status != noErr)
-            ERRFMT("AudioObjectAddPropertyListener fail: {}", status);
+            ERR("AudioObjectAddPropertyListener fail: {}", status);
     }
     ~DeviceHelper()
     {
@@ -315,7 +315,7 @@ struct DeviceHelper {
             kAudioObjectPropertyScopeGlobal, kAudioObjectPropertyElementMaster};
         OSStatus status = AudioObjectRemovePropertyListener(kAudioObjectSystemObject, &addr, DeviceListenerProc, nil);
         if (status != noErr)
-            ERRFMT("AudioObjectRemovePropertyListener fail: {}", status);
+            ERR("AudioObjectRemovePropertyListener fail: {}", status);
     }
 
     static OSStatus DeviceListenerProc(AudioObjectID /*inObjectID*/, UInt32 inNumberAddresses,
@@ -481,10 +481,10 @@ void CoreAudioPlayback::open(std::string_view name)
         err = GetDevProperty(audioDevice, kAudioDevicePropertyDataSource, false,
             kAudioObjectPropertyElementMaster, sizeof(type), &type);
         if(err != noErr)
-            ERRFMT("Failed to get audio device type: {}", err);
+            ERR("Failed to get audio device type: {}", err);
         else
         {
-            TRACEFMT("Got device type '{}'", FourCCPrinter{type}.c_str());
+            TRACE("Got device type '{}'", FourCCPrinter{type}.c_str());
             mDevice->Flags.set(DirectEar, (type == kIOAudioOutputPortSubTypeHeadphones));
         }
     }
@@ -498,7 +498,7 @@ bool CoreAudioPlayback::reset()
 {
     OSStatus err{AudioUnitUninitialize(mAudioUnit)};
     if(err != noErr)
-        ERRFMT("AudioUnitUninitialize failed: '{}' ({})", FourCCPrinter{err}.c_str(), err);
+        ERR("AudioUnitUninitialize failed: '{}' ({})", FourCCPrinter{err}.c_str(), err);
 
     /* retrieve default output unit's properties (output side) */
     AudioStreamBasicDescription streamFormat{};
@@ -507,7 +507,7 @@ bool CoreAudioPlayback::reset()
         OutputElement, &streamFormat, &size);
     if(err != noErr || size != sizeof(streamFormat))
     {
-        ERRFMT("AudioUnitGetProperty(StreamFormat) failed: '{}' ({})", FourCCPrinter{err}.c_str(),
+        ERR("AudioUnitGetProperty(StreamFormat) failed: '{}' ({})", FourCCPrinter{err}.c_str(),
             err);
         return false;
     }
@@ -581,7 +581,7 @@ bool CoreAudioPlayback::reset()
         OutputElement, &streamFormat, sizeof(streamFormat));
     if(err != noErr)
     {
-        ERRFMT("AudioUnitSetProperty(StreamFormat) failed: '{}' ({})", FourCCPrinter{err}.c_str(),
+        ERR("AudioUnitSetProperty(StreamFormat) failed: '{}' ({})", FourCCPrinter{err}.c_str(),
             err);
         return false;
     }
@@ -635,7 +635,7 @@ bool CoreAudioPlayback::reset()
         kAudioUnitScope_Input, OutputElement, &input, sizeof(AURenderCallbackStruct));
     if(err != noErr)
     {
-        ERRFMT("AudioUnitSetProperty(SetRenderCallback) failed: '{}' ({})",
+        ERR("AudioUnitSetProperty(SetRenderCallback) failed: '{}' ({})",
             FourCCPrinter{err}.c_str(), err);
         return false;
     }
@@ -644,7 +644,7 @@ bool CoreAudioPlayback::reset()
     err = AudioUnitInitialize(mAudioUnit);
     if(err != noErr)
     {
-        ERRFMT("AudioUnitInitialize failed: '{}' ({})", FourCCPrinter{err}.c_str(), err);
+        ERR("AudioUnitInitialize failed: '{}' ({})", FourCCPrinter{err}.c_str(), err);
         return false;
     }
 
@@ -663,7 +663,7 @@ void CoreAudioPlayback::stop()
 {
     OSStatus err{AudioOutputUnitStop(mAudioUnit)};
     if(err != noErr)
-        ERRFMT("AudioOutputUnitStop failed: '{}' ({})", FourCCPrinter{err}.c_str(), err);
+        ERR("AudioOutputUnitStop failed: '{}' ({})", FourCCPrinter{err}.c_str(), err);
 }
 
 
@@ -719,7 +719,7 @@ OSStatus CoreAudioCapture::RecordProc(AudioUnitRenderActionFlags *ioActionFlags,
         inNumberFrames, &audiobuf.list)};
     if(err != noErr)
     {
-        ERRFMT("AudioUnitRender capture error: '{}' ({})", FourCCPrinter{err}.c_str(), err);
+        ERR("AudioUnitRender capture error: '{}' ({})", FourCCPrinter{err}.c_str(), err);
         return err;
     }
 
@@ -984,7 +984,7 @@ void CoreAudioCapture::stop()
 {
     OSStatus err{AudioOutputUnitStop(mAudioUnit)};
     if(err != noErr)
-        ERRFMT("AudioOutputUnitStop failed: '{}' ({})", FourCCPrinter{err}.c_str(), err);
+        ERR("AudioOutputUnitStop failed: '{}' ({})", FourCCPrinter{err}.c_str(), err);
 }
 
 void CoreAudioCapture::captureSamples(std::byte *buffer, uint samples)

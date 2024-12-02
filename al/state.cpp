@@ -269,7 +269,7 @@ void GetValue(ALCcontext *context, ALenum pname, T *values)
             *values = cast_value(eax_x_ram_max_size);
             return;
         }
-        ERRFMT(EAX_ERROR);
+        ERR(EAX_ERROR);
         break;
 
     case AL_EAX_RAM_FREE:
@@ -280,7 +280,7 @@ void GetValue(ALCcontext *context, ALenum pname, T *values)
             *values = cast_value(device->eax_x_ram_free_size);
             return;
         }
-        ERRFMT(EAX_ERROR);
+        ERR(EAX_ERROR);
         break;
 
 #undef EAX_ERROR

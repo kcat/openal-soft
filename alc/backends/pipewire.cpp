@@ -146,7 +146,7 @@ private:
             mStorage.resize(size);
         }
         catch(...) {
-            ERR("Failed to resize POD storage\n");
+            ERRFMT("Failed to resize POD storage");
             return -ENOMEM;
         }
         mPod.data = mStorage.data();
@@ -254,7 +254,7 @@ bool pwire_load()
     pwire_handle = LoadLib(pwire_library);
     if(!pwire_handle)
     {
-        WARN("Failed to load %s\n", pwire_library);
+        WARNFMT("Failed to load {}", pwire_library);
         return false;
     }
 
@@ -268,7 +268,7 @@ bool pwire_load()
 
     if(!missing_funcs.empty())
     {
-        WARN("Missing expected functions:%s\n", missing_funcs.c_str());
+        WARNFMT("Missing expected functions:{}", missing_funcs);
         CloseLib(pwire_handle);
         pwire_handle = nullptr;
         return false;
@@ -763,7 +763,7 @@ void DeviceNode::Remove(uint32_t id)
     {
         if(n.mId != id)
             return false;
-        TRACE("Removing device \"%s\"\n", n.mDevName.c_str());
+        TRACEFMT("Removing device \"{}\"", n.mDevName);
         if(gEventHandler.initIsDone(std::memory_order_relaxed))
         {
             const std::string msg{"Device removed: "+n.mName};
@@ -832,7 +832,7 @@ void DeviceNode::parseSampleRate(const spa_pod *value, bool force_update) noexce
     const uint podType{get_pod_type(value)};
     if(podType != SPA_TYPE_Int)
     {
-        WARN("  Unhandled sample rate POD type: %u\n", podType);
+        WARNFMT("  Unhandled sample rate POD type: {}", podType);
         return;
     }
 
@@ -840,13 +840,13 @@ void DeviceNode::parseSampleRate(const spa_pod *value, bool force_update) noexce
     {
         if(nvals != 3)
         {
-            WARN("  Unexpected SPA_CHOICE_Range count: %u\n", nvals);
+            WARNFMT("  Unexpected SPA_CHOICE_Range count: {}", nvals);
             return;
         }
         auto srates = get_pod_body<int32_t,3>(value);
 
         /* [0] is the default, [1] is the min, and [2] is the max. */
-        TRACE("  sample rate: %d (range: %d -> %d)\n", srates[0], srates[1], srates[2]);
+        TRACEFMT("  sample rate: {} (range: {} -> {})", srates[0], srates[1], srates[2]);
         if(!mSampleRate || force_update)
             mSampleRate = static_cast<uint>(std::clamp<int>(srates[0], MinOutputRate,
                 MaxOutputRate));
@@ -857,7 +857,7 @@ void DeviceNode::parseSampleRate(const spa_pod *value, bool force_update) noexce
     {
         if(nvals == 0)
         {
-            WARN("  Unexpected SPA_CHOICE_Enum count: %u\n", nvals);
+            WARNFMT("  Unexpected SPA_CHOICE_Enum count: {}", nvals);
             return;
         }
         auto srates = get_pod_body<int32_t>(value, nvals);
@@ -869,7 +869,7 @@ void DeviceNode::parseSampleRate(const spa_pod *value, bool force_update) noexce
             others += ", ";
             others += std::to_string(srates[i]);
         }
-        TRACE("  sample rate: %d (%s)\n", srates[0], others.c_str());
+        TRACEFMT("  sample rate: {} ({})", srates[0], others);
         /* Pick the first rate listed that's within the allowed range (default
          * rate if possible).
          */
@@ -889,19 +889,19 @@ void DeviceNode::parseSampleRate(const spa_pod *value, bool force_update) noexce
     {
         if(nvals != 1)
         {
-            WARN("  Unexpected SPA_CHOICE_None count: %u\n", nvals);
+            WARNFMT("  Unexpected SPA_CHOICE_None count: {}", nvals);
             return;
         }
         auto srates = get_pod_body<int32_t,1>(value);
 
-        TRACE("  sample rate: %d\n", srates[0]);
+        TRACEFMT("  sample rate: {}", srates[0]);
         if(!mSampleRate || force_update)
             mSampleRate = static_cast<uint>(std::clamp<int>(srates[0], MinOutputRate,
                 MaxOutputRate));
         return;
     }
 
-    WARN("  Unhandled sample rate choice type: %u\n", choiceType);
+    WARNFMT("  Unhandled sample rate choice type: {}", choiceType);
 }
 
 void DeviceNode::parsePositions(const spa_pod *value, bool force_update) noexcept
@@ -911,7 +911,7 @@ void DeviceNode::parsePositions(const spa_pod *value, bool force_update) noexcep
 
     if(choiceType != SPA_CHOICE_None || choiceCount != 1)
     {
-        ERR("  Unexpected positions choice: type=%u, count=%u\n", choiceType, choiceCount);
+        ERRFMT("  Unexpected positions choice: type={}, count={}", choiceType, choiceCount);
         return;
     }
 
@@ -942,7 +942,7 @@ void DeviceNode::parsePositions(const spa_pod *value, bool force_update) noexcep
         else
             mChannels = DevFmtMono;
     }
-    TRACE("  %zu position%s for %s%s\n", chanmap.size(), (chanmap.size()==1)?"":"s",
+    TRACEFMT("  {} position{} for {}{}", chanmap.size(), (chanmap.size()==1)?"":"s",
         DevFmtChannelsString(mChannels), mIs51Rear?"(rear)":"");
 }
 
@@ -954,7 +954,7 @@ void DeviceNode::parseChannelCount(const spa_pod *value, bool force_update) noex
 
     if(choiceType != SPA_CHOICE_None || choiceCount != 1)
     {
-        ERR("  Unexpected positions choice: type=%u, count=%u\n", choiceType, choiceCount);
+        ERRFMT("  Unexpected positions choice: type={}, count={}", choiceType, choiceCount);
         return;
     }
 
@@ -970,7 +970,7 @@ void DeviceNode::parseChannelCount(const spa_pod *value, bool force_update) noex
         else if(*chancount >= 1)
             mChannels = DevFmtMono;
     }
-    TRACE("  %d channel%s for %s\n", *chancount, (*chancount==1)?"":"s",
+    TRACEFMT("  {} channel{} for {}", *chancount, (*chancount==1)?"":"s",
         DevFmtChannelsString(mChannels));
 }
 
@@ -1009,7 +1009,7 @@ void NodeProxy::infoCallback(void*, const pw_node_info *info) noexcept
             ntype = NodeType::Duplex;
         else
         {
-            TRACE("Dropping device node %u which became type \"%s\"\n", info->id, media_class);
+            TRACEFMT("Dropping device node {} which became type \"{}\"", info->id, media_class);
             DeviceNode::Remove(info->id);
             return;
         }
@@ -1028,7 +1028,7 @@ void NodeProxy::infoCallback(void*, const pw_node_info *info) noexcept
             serial_id = std::strtoull(serial_str, &serial_end, 0);
             if(*serial_end != '\0' || errno == ERANGE)
             {
-                ERR("Unexpected object serial: %s\n", serial_str);
+                ERRFMT("Unexpected object serial: {}", serial_str);
                 serial_id = info->id;
             }
         }
@@ -1039,9 +1039,9 @@ void NodeProxy::infoCallback(void*, const pw_node_info *info) noexcept
         else name = "PipeWire node #"+std::to_string(info->id);
 
         const char *form_factor{spa_dict_lookup(info->props, PW_KEY_DEVICE_FORM_FACTOR)};
-        TRACE("Got %s device \"%s\"%s%s%s\n", AsString(ntype), devName ? devName : "(nil)",
+        TRACEFMT("Got {} device \"{}\"{}{}{}", AsString(ntype), devName ? devName : "(nil)",
             form_factor?" (":"", form_factor?form_factor:"", form_factor?")":"");
-        TRACE("  \"%s\" = ID %" PRIu64 "\n", name.c_str(), serial_id);
+        TRACEFMT("  \"{}\" = ID {}", name, serial_id);
 
         DeviceNode &node = DeviceNode::Add(info->id);
         node.mSerial = serial_id;
@@ -1091,7 +1091,7 @@ void NodeProxy::paramCallback(int, uint32_t id, uint32_t, uint32_t, const spa_po
         DeviceNode *node{DeviceNode::Find(mId)};
         if(!node) UNLIKELY return;
 
-        TRACE("Device ID %" PRIu64 " %s format%s:\n", node->mSerial,
+        TRACEFMT("Device ID {} {} format{}:", node->mSerial,
             (id == SPA_PARAM_EnumFormat) ? "available" : "current",
             (id == SPA_PARAM_EnumFormat) ? "s" : "");
 
@@ -1126,14 +1126,14 @@ auto MetadataProxy::propertyCallback(void*, uint32_t id, const char *key, const 
 
     if(!type)
     {
-        TRACE("Default %s device cleared\n", isCapture ? "capture" : "playback");
+        TRACEFMT("Default {} device cleared", isCapture ? "capture" : "playback");
         if(!isCapture) DefaultSinkDevice.clear();
         else DefaultSourceDevice.clear();
         return 0;
     }
     if("Spa:String:JSON"sv != type)
     {
-        ERR("Unexpected %s property type: %s\n", key, type);
+        ERRFMT("Unexpected {} property type: {}", key, type);
         return 0;
     }
 
@@ -1164,8 +1164,8 @@ auto MetadataProxy::propertyCallback(void*, uint32_t id, const char *key, const 
             auto propValue = get_json_string(&std::get<1>(it));
             if(!propValue) break;
 
-            TRACE("Got default %s device \"%s\"\n", isCapture ? "capture" : "playback",
-                propValue->c_str());
+            TRACEFMT("Got default {} device \"{}\"", isCapture ? "capture" : "playback",
+                *propValue);
             if(!isCapture && DefaultSinkDevice != *propValue)
             {
                 if(gEventHandler.mInitDone.load(std::memory_order_relaxed))
@@ -1207,28 +1207,28 @@ bool EventManager::init()
     mLoop = ThreadMainloop::Create("PWEventThread");
     if(!mLoop)
     {
-        ERR("Failed to create PipeWire event thread loop (errno: %d)\n", errno);
+        ERRFMT("Failed to create PipeWire event thread loop (errno: {})", errno);
         return false;
     }
 
     mContext = mLoop.newContext();
     if(!mContext)
     {
-        ERR("Failed to create PipeWire event context (errno: %d)\n", errno);
+        ERRFMT("Failed to create PipeWire event context (errno: {})", errno);
         return false;
     }
 
     mCore = PwCorePtr{pw_context_connect(mContext.get(), nullptr, 0)};
     if(!mCore)
     {
-        ERR("Failed to connect PipeWire event context (errno: %d)\n", errno);
+        ERRFMT("Failed to connect PipeWire event context (errno: {})", errno);
         return false;
     }
 
     mRegistry = PwRegistryPtr{pw_core_get_registry(mCore.get(), PW_VERSION_REGISTRY, 0)};
     if(!mRegistry)
     {
-        ERR("Failed to get PipeWire event registry (errno: %d)\n", errno);
+        ERRFMT("Failed to get PipeWire event registry (errno: {})", errno);
         return false;
     }
 
@@ -1245,7 +1245,7 @@ bool EventManager::init()
 
     if(int res{mLoop.start()})
     {
-        ERR("Failed to start PipeWire event thread loop (res: %d)\n", res);
+        ERRFMT("Failed to start PipeWire event thread loop (res: {})", res);
         return false;
     }
 
@@ -1283,7 +1283,7 @@ void EventManager::addCallback(uint32_t id, uint32_t, const char *type, uint32_t
         if(!isGood)
         {
             if(!al::contains(className, "/Video"sv) && !al::starts_with(className, "Stream/"sv))
-                TRACE("Ignoring node class %s\n", media_class);
+                TRACEFMT("Ignoring node class {}", media_class);
             return;
         }
 
@@ -1292,7 +1292,7 @@ void EventManager::addCallback(uint32_t id, uint32_t, const char *type, uint32_t
             version, 0))};
         if(!node)
         {
-            ERR("Failed to create node proxy object (errno: %d)\n", errno);
+            ERRFMT("Failed to create node proxy object (errno: {})", errno);
             return;
         }
 
@@ -1315,13 +1315,13 @@ void EventManager::addCallback(uint32_t id, uint32_t, const char *type, uint32_t
 
         if("default"sv != data_class)
         {
-            TRACE("Ignoring metadata \"%s\"\n", data_class);
+            TRACEFMT("Ignoring metadata \"{}\"", data_class);
             return;
         }
 
         if(mDefaultMetadata)
         {
-            ERR("Duplicate default metadata\n");
+            ERRFMT("Duplicate default metadata");
             return;
         }
 
@@ -1329,7 +1329,7 @@ void EventManager::addCallback(uint32_t id, uint32_t, const char *type, uint32_t
             type, version, 0))};
         if(!mdata)
         {
-            ERR("Failed to create metadata proxy object (errno: %d)\n", errno);
+            ERRFMT("Failed to create metadata proxy object (errno: {})", errno);
             return;
         }
 
@@ -1763,7 +1763,7 @@ void PipeWirePlayback::start()
         pw_time ptime{};
         if(int res{pw_stream_get_time_n(mStream.get(), &ptime, sizeof(ptime))})
         {
-            ERR("Failed to get PipeWire stream time (res: %d)\n", res);
+            ERRFMT("Failed to get PipeWire stream time (res: {})", res);
             break;
         }
 
@@ -1803,7 +1803,7 @@ void PipeWirePlayback::start()
 #endif
         if(!--wait_count)
         {
-            ERR("Timeout getting PipeWire stream buffering info\n");
+            ERRFMT("Timeout getting PipeWire stream buffering info");
             break;
         }
 
@@ -1817,7 +1817,7 @@ void PipeWirePlayback::stop()
 {
     MainloopUniqueLock plock{mLoop};
     if(int res{pw_stream_set_active(mStream.get(), false)})
-        ERR("Failed to stop PipeWire stream (res: %d)\n", res);
+        ERRFMT("Failed to stop PipeWire stream (res: {})", res);
 
     /* Wait for the stream to stop playing. */
     plock.wait([stream=mStream.get()]()
@@ -1838,7 +1838,7 @@ ClockLatency PipeWirePlayback::getClockLatency()
     {
         MainloopLockGuard looplock{mLoop};
         if(int res{pw_stream_get_time_n(mStream.get(), &ptime, sizeof(ptime))})
-            ERR("Failed to get PipeWire stream time (res: %d)\n", res);
+            ERRFMT("Failed to get PipeWire stream time (res: {})", res);
     }
 
     /* Now get the mixer time and the CLOCK_MONOTONIC time atomically (i.e. the
@@ -2176,7 +2176,7 @@ void PipeWireCapture::stop()
 {
     MainloopUniqueLock plock{mLoop};
     if(int res{pw_stream_set_active(mStream.get(), false)})
-        ERR("Failed to stop PipeWire stream (res: %d)\n", res);
+        ERRFMT("Failed to stop PipeWire stream (res: {})", res);
 
     plock.wait([stream=mStream.get()]()
     { return pw_stream_get_state(stream, nullptr) != PW_STREAM_STATE_STREAMING; });
@@ -2199,11 +2199,11 @@ bool PipeWireBackendFactory::init()
     const char *version{pw_get_library_version()};
     if(!check_version(version))
     {
-        WARN("PipeWire version \"%s\" too old (%s or newer required)\n", version,
+        WARNFMT("PipeWire version \"{}\" too old ({} or newer required)", version,
             pw_get_headers_version());
         return false;
     }
-    TRACE("Found PipeWire version \"%s\" (%s or newer)\n", version, pw_get_headers_version());
+    TRACEFMT("Found PipeWire version \"{}\" ({} or newer)", version, pw_get_headers_version());
 
     pw_init(nullptr, nullptr);
     if(!gEventHandler.init())
@@ -2216,7 +2216,7 @@ bool PipeWireBackendFactory::init()
         /* TODO: Temporary warning, until PipeWire gets a proper way to report
          * audio support.
          */
-        WARN("No audio support detected in PipeWire. See the PipeWire options in alsoftrc.sample if this is wrong.\n");
+        WARNFMT("No audio support detected in PipeWire. See the PipeWire options in alsoftrc.sample if this is wrong.");
         return false;
     }
     return true;

@@ -39,7 +39,6 @@
 #include <functional>
 
 #include "alsem.h"
-#include "alstring.h"
 #include "althrd_setname.h"
 #include "core/device.h"
 #include "core/helpers.h"
@@ -85,7 +84,7 @@ void ProbePlaybackDevices()
             }
             dname = std::move(newname);
 
-            TRACE("Got device \"%s\", ID %u\n", dname.c_str(), i);
+            TRACEFMT("Got device \"{}\", ID {}", dname, i);
         }
         PlaybackDevices.emplace_back(std::move(dname));
     }
@@ -116,7 +115,7 @@ void ProbeCaptureDevices()
             }
             dname = std::move(newname);
 
-            TRACE("Got device \"%s\", ID %u\n", dname.c_str(), i);
+            TRACEFMT("Got device \"{}\", ID {}", dname, i);
         }
         CaptureDevices.emplace_back(std::move(dname));
     }
@@ -270,7 +269,7 @@ bool WinMMPlayback::reset()
             mDevice->FmtType = DevFmtFloat;
         else
         {
-            ERR("Unhandled IEEE float sample depth: %d\n", mFormat.wBitsPerSample);
+            ERRFMT("Unhandled IEEE float sample depth: {}", mFormat.wBitsPerSample);
             return false;
         }
     }
@@ -282,13 +281,13 @@ bool WinMMPlayback::reset()
             mDevice->FmtType = DevFmtUByte;
         else
         {
-            ERR("Unhandled PCM sample depth: %d\n", mFormat.wBitsPerSample);
+            ERRFMT("Unhandled PCM sample depth: {}", mFormat.wBitsPerSample);
             return false;
         }
     }
     else
     {
-        ERR("Unhandled format tag: 0x%04x\n", mFormat.wFormatTag);
+        ERRFMT("Unhandled format tag: 0x{:04x}", mFormat.wFormatTag);
         return false;
     }
 
@@ -298,7 +297,7 @@ bool WinMMPlayback::reset()
         mDevice->FmtChans = DevFmtMono;
     else
     {
-        ERR("Unhandled channel count: %d\n", mFormat.nChannels);
+        ERRFMT("Unhandled channel count: {}", mFormat.nChannels);
         return false;
     }
     setDefaultWFXChannelOrder();

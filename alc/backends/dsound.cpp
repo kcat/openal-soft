@@ -39,13 +39,11 @@
 #include <cstdlib>
 #include <functional>
 #include <memory.h>
-#include <mutex>
 #include <string>
 #include <thread>
 #include <vector>
 
 #include "alspan.h"
-#include "alstring.h"
 #include "althrd_setname.h"
 #include "comptr.h"
 #include "core/device.h"
@@ -160,7 +158,7 @@ BOOL CALLBACK DSoundEnumDevices(GUID *guid, const WCHAR *desc, const WCHAR*, voi
     HRESULT hr{StringFromCLSID(*guid, &guidstr)};
     if(SUCCEEDED(hr))
     {
-        TRACE("Got device \"%s\", GUID \"%ls\"\n", newentry.name.c_str(), guidstr);
+        TRACEFMT("Got device \"{}\", GUID \"{}\"", newentry.name, wstr_to_utf8(guidstr));
         CoTaskMemFree(guidstr);
     }
 
@@ -248,7 +246,7 @@ FORCE_ALIGN int DSoundPlayback::mixerProc()
 
             avail = WaitForSingleObjectEx(mNotifyEvent, 2000, FALSE);
             if(avail != WAIT_OBJECT_0)
-                ERR("WaitForSingleObjectEx error: 0x%lx\n", avail);
+                ERRFMT("WaitForSingleObjectEx error: 0x{:x}", avail);
             continue;
         }
         avail -= avail%FragSize;
@@ -261,7 +259,7 @@ FORCE_ALIGN int DSoundPlayback::mixerProc()
         // If the buffer is lost, restore it and lock
         if(err == DSERR_BUFFERLOST)
         {
-            WARN("Buffer lost, restoring...\n");
+            WARNFMT("Buffer lost, restoring...");
             err = mBuffer->Restore();
             if(SUCCEEDED(err))
             {
@@ -304,7 +302,7 @@ void DSoundPlayback::open(std::string_view name)
         ComWrapper com{};
         hr = DirectSoundEnumerateW(DSoundEnumDevices, &PlaybackDevices);
         if(FAILED(hr))
-            ERR("Error enumerating DirectSound devices (0x%lx)!\n", hr);
+            ERRFMT("Error enumerating DirectSound devices (0x{:x})!", hr);
     }
 
     const GUID *guid{nullptr};
@@ -404,7 +402,7 @@ bool DSoundPlayback::reset()
         else if(speakers == DSSPEAKER_7POINT1 || speakers == DSSPEAKER_7POINT1_SURROUND)
             mDevice->FmtChans = DevFmtX71;
         else
-            ERR("Unknown system speaker config: 0x%lx\n", speakers);
+            ERRFMT("Unknown system speaker config: 0x{:x}", speakers);
     }
     mDevice->Flags.set(DirectEar, (speakers == DSSPEAKER_HEADPHONE));
     const bool isRear51{speakers == DSSPEAKER_5POINT1_BACK};
@@ -577,7 +575,7 @@ void DSoundCapture::open(std::string_view name)
         ComWrapper com{};
         hr = DirectSoundCaptureEnumerateW(DSoundEnumDevices, &CaptureDevices);
         if(FAILED(hr))
-            ERR("Error enumerating DirectSound devices (0x%lx)!\n", hr);
+            ERRFMT("Error enumerating DirectSound devices (0x{:x})!", hr);
     }
 
     const GUID *guid{nullptr};
@@ -766,7 +764,7 @@ bool DSoundBackendFactory::init()
         ds_handle = LoadLib("dsound.dll");
         if(!ds_handle)
         {
-            ERR("Failed to load dsound.dll\n");
+            ERRFMT("Failed to load dsound.dll");
             return false;
         }
 
@@ -805,7 +803,7 @@ auto DSoundBackendFactory::enumerate(BackendType type) -> std::vector<std::strin
     case BackendType::Playback:
         PlaybackDevices.clear();
         if(HRESULT hr{DirectSoundEnumerateW(DSoundEnumDevices, &PlaybackDevices)}; FAILED(hr))
-            ERR("Error enumerating DirectSound playback devices (0x%lx)!\n", hr);
+            ERRFMT("Error enumerating DirectSound playback devices (0x{:x})!", hr);
         outnames.reserve(PlaybackDevices.size());
         std::for_each(PlaybackDevices.cbegin(), PlaybackDevices.cend(), add_device);
         break;
@@ -813,7 +811,7 @@ auto DSoundBackendFactory::enumerate(BackendType type) -> std::vector<std::strin
     case BackendType::Capture:
         CaptureDevices.clear();
         if(HRESULT hr{DirectSoundCaptureEnumerateW(DSoundEnumDevices, &CaptureDevices)};FAILED(hr))
-            ERR("Error enumerating DirectSound capture devices (0x%lx)!\n", hr);
+            ERRFMT("Error enumerating DirectSound capture devices (0x{:x})!", hr);
         outnames.reserve(CaptureDevices.size());
         std::for_each(CaptureDevices.cbegin(), CaptureDevices.cend(), add_device);
         break;

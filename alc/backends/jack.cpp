@@ -35,7 +35,6 @@
 #include "alc/alconfig.h"
 #include "alnumeric.h"
 #include "alsem.h"
-#include "alstring.h"
 #include "althrd_setname.h"
 #include "core/device.h"
 #include "core/helpers.h"
@@ -121,7 +120,7 @@ bool jack_load()
         jack_handle = LoadLib(JACKLIB);
         if(!jack_handle)
         {
-            WARN("Failed to load %s\n", JACKLIB);
+            WARNFMT("Failed to load {}", JACKLIB);
             return false;
         }
 
@@ -139,7 +138,7 @@ bool jack_load()
 
         if(!missing_funcs.empty())
         {
-            WARN("Missing expected functions:%s\n", missing_funcs.c_str());
+            WARNFMT("Missing expected functions:{}", missing_funcs);
             CloseLib(jack_handle);
             jack_handle = nullptr;
             return false;
@@ -197,14 +196,14 @@ void EnumerateDevices(jack_client_t *client, std::vector<DeviceEntry> &list)
                 continue;
 
             const auto &entry = list.emplace_back(portdev, std::string{portdev}+":");
-            TRACE("Got device: %s = %s\n", entry.mName.c_str(), entry.mPattern.c_str());
+            TRACEFMT("Got device: {} = {}", entry.mName, entry.mPattern);
         }
         /* There are ports but couldn't get device names from them. Add a
          * generic entry.
          */
         if(ports[0] && list.empty())
         {
-            WARN("No device names found in available ports, adding a generic name.\n");
+            WARNFMT("No device names found in available ports, adding a generic name.");
             list.emplace_back("JACK"sv, ""sv);
         }
     }
@@ -218,7 +217,7 @@ void EnumerateDevices(jack_client_t *client, std::vector<DeviceEntry> &list)
             if(seppos >= nextpos || seppos == strpos)
             {
                 const auto entry = std::string_view{*listopt}.substr(strpos, nextpos-strpos);
-                ERR("Invalid device entry: \"%.*s\"\n", al::sizei(entry), entry.data());
+                ERRFMT("Invalid device entry: \"{}\"", entry);
                 if(nextpos != std::string::npos) ++nextpos;
                 strpos = nextpos;
                 continue;
@@ -236,14 +235,13 @@ void EnumerateDevices(jack_client_t *client, std::vector<DeviceEntry> &list)
             {
                 /* If so, replace the name with this custom one. */
                 itemmatch->mName = name;
-                TRACE("Customized device name: %s = %s\n", itemmatch->mName.c_str(),
-                    itemmatch->mPattern.c_str());
+                TRACEFMT("Customized device name: {} = {}", itemmatch->mName, itemmatch->mPattern);
             }
             else
             {
                 /* Otherwise, add a new device entry. */
                 const auto &entry = list.emplace_back(name, pattern);
-                TRACE("Got custom device: %s = %s\n", entry.mName.c_str(), entry.mPattern.c_str());
+                TRACEFMT("Got custom device: {} = {}", entry.mName, entry.mPattern);
             }
 
             if(nextpos != std::string::npos) ++nextpos;
@@ -481,11 +479,11 @@ void JackPlayback::open(std::string_view name)
             throw al::backend_exception{al::backend_error::DeviceError,
                 "Failed to open client connection: 0x{:02x}", al::to_underlying(status)};
         if((status&JackServerStarted))
-            TRACE("JACK server started\n");
+            TRACEFMT("JACK server started");
         if((status&JackNameNotUnique))
         {
             client_name = jack_get_client_name(mClient);
-            TRACE("Client name not unique, got '%s' instead\n", client_name);
+            TRACEFMT("Client name not unique, got '{}' instead", client_name);
         }
     }
 
@@ -559,7 +557,7 @@ bool JackPlayback::reset()
     }
     if(bad_port != ports.end())
     {
-        ERR("Failed to register enough JACK ports for %s output\n",
+        ERRFMT("Failed to register enough JACK ports for {} output",
             DevFmtChannelsString(mDevice->FmtChans));
         if(bad_port == ports.begin()) return false;
 
@@ -602,11 +600,11 @@ void JackPlayback::start()
         {
             if(!pnames[i])
             {
-                ERR("No physical playback port for \"%s\"\n", jack_port_name(mPort[i]));
+                ERRFMT("No physical playback port for \"{}\"", jack_port_name(mPort[i]));
                 break;
             }
             if(jack_connect(mClient, jack_port_name(mPort[i]), pnames[i]))
-                ERR("Failed to connect output port \"%s\" to \"%s\"\n", jack_port_name(mPort[i]),
+                ERRFMT("Failed to connect output port \"{}\" to \"{}\"", jack_port_name(mPort[i]),
                     pnames[i]);
         }
     }
@@ -675,7 +673,7 @@ ClockLatency JackPlayback::getClockLatency()
 
 void jack_msg_handler(const char *message)
 {
-    WARN("%s\n", message);
+    WARNFMT("{}", message);
 }
 
 } // namespace
@@ -698,9 +696,9 @@ bool JackBackendFactory::init()
     jack_set_error_function(old_error_cb);
     if(!client)
     {
-        WARN("jack_client_open() failed, 0x%02x\n", status);
+        WARNFMT("jack_client_open() failed, 0x{:02x}", al::to_underlying(status));
         if((status&JackServerFailed) && !(ClientOptions&JackNoStartServer))
-            ERR("Unable to connect to JACK server\n");
+            ERRFMT("Unable to connect to JACK server");
         return false;
     }
 
@@ -729,7 +727,7 @@ auto JackBackendFactory::enumerate(BackendType type) -> std::vector<std::string>
             jack_client_close(client);
         }
         else
-            WARN("jack_client_open() failed, 0x%02x\n", status);
+            WARNFMT("jack_client_open() failed, 0x{:02x}", al::to_underlying(status));
         outnames.reserve(PlaybackList.size());
         std::for_each(PlaybackList.cbegin(), PlaybackList.cend(), append_name);
         break;

@@ -43,9 +43,6 @@
 #include <vector>
 
 #include "alc/alconfig.h"
-#include "almalloc.h"
-#include "alnumeric.h"
-#include "alstring.h"
 #include "althrd_setname.h"
 #include "core/device.h"
 #include "core/helpers.h"
@@ -180,7 +177,7 @@ void ALCossListAppend(std::vector<DevMap> &list, std::string_view handle, std::s
 
     const DevMap &entry = list.emplace_back(std::move(newname), path);
 
-    TRACE("Got device \"%s\", \"%s\"\n", entry.name.c_str(), entry.device_name.c_str());
+    TRACEFMT("Got device \"{}\", \"{}\"", entry.name, entry.device_name);
 }
 
 void ALCossListPopulate(std::vector<DevMap> &devlist, int type_flag)
@@ -189,13 +186,13 @@ void ALCossListPopulate(std::vector<DevMap> &devlist, int type_flag)
     FileHandle file;
     if(!file.open("/dev/mixer", O_RDONLY))
     {
-        TRACE("Could not open /dev/mixer: %s\n", std::generic_category().message(errno).c_str());
+        TRACEFMT("Could not open /dev/mixer: {}", std::generic_category().message(errno));
         goto done;
     }
 
     if(ioctl(file.get(), SNDCTL_SYSINFO, &si) == -1)
     {
-        TRACE("SNDCTL_SYSINFO failed: %s\n", std::generic_category().message(errno).c_str());
+        TRACEFMT("SNDCTL_SYSINFO failed: {}", std::generic_category().message(errno));
         goto done;
     }
 
@@ -205,8 +202,7 @@ void ALCossListPopulate(std::vector<DevMap> &devlist, int type_flag)
         ai.dev = i;
         if(ioctl(file.get(), SNDCTL_AUDIOINFO, &ai) == -1)
         {
-            ERR("SNDCTL_AUDIOINFO (%d) failed: %s\n", i,
-                std::generic_category().message(errno).c_str());
+            ERRFMT("SNDCTL_AUDIOINFO ({}) failed: {}", i, std::generic_category().message(errno));
             continue;
         }
         if(!(ai.caps&type_flag) || ai.devnode[0] == '\0')
@@ -308,7 +304,7 @@ int OSSPlayback::mixerProc()
         }
         else if(pret == 0) /* NOLINT(*-else-after-return) 'pret' is local to the if/else blocks */
         {
-            WARN("poll timeout\n");
+            WARNFMT("poll timeout");
             continue;
         }
 
@@ -414,7 +410,7 @@ bool OSSPlayback::reset()
 
     if(mDevice->channelsFromFmt() != numChannels)
     {
-        ERR("Failed to set %s, got %d channels instead\n", DevFmtChannelsString(mDevice->FmtChans),
+        ERRFMT("Failed to set {}, got {} channels instead", DevFmtChannelsString(mDevice->FmtChans),
             numChannels);
         return false;
     }
@@ -423,7 +419,7 @@ bool OSSPlayback::reset()
          (ossFormat == AFMT_U8 && mDevice->FmtType == DevFmtUByte) ||
          (ossFormat == AFMT_S16_NE && mDevice->FmtType == DevFmtShort)))
     {
-        ERR("Failed to set %s samples, got OSS format %#x\n", DevFmtTypeString(mDevice->FmtType),
+        ERRFMT("Failed to set {} samples, got OSS format 0x{:x}", DevFmtTypeString(mDevice->FmtType),
             ossFormat);
         return false;
     }
@@ -513,7 +509,7 @@ int OSScapture::recordProc()
         }
         else if(pret == 0) /* NOLINT(*-else-after-return) 'pret' is local to the if/else blocks */
         {
-            WARN("poll timeout\n");
+            WARNFMT("poll timeout");
             continue;
         }
 

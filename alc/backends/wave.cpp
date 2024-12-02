@@ -39,12 +39,9 @@
 #include "alc/alconfig.h"
 #include "almalloc.h"
 #include "alnumeric.h"
-#include "alstring.h"
 #include "althrd_setname.h"
 #include "core/device.h"
-#include "core/helpers.h"
 #include "core/logging.h"
-#include "opthelpers.h"
 #include "strutils.h"
 
 
@@ -288,8 +285,8 @@ bool WaveBackend::reset()
     rewind(mFile.get());
     if(auto errcode = errno; errno != 0 && errno != ENOENT)
     {
-        ERR("Failed to reset file offset: %s (%d)\n",
-            std::generic_category().message(errcode).c_str(), errcode);
+        ERRFMT("Failed to reset file offset: {} ({})", std::generic_category().message(errcode),
+            errcode);
     }
 
     fputs("RIFF", mFile.get());
@@ -328,7 +325,7 @@ bool WaveBackend::reset()
 
     if(ferror(mFile.get()))
     {
-        ERR("Error writing header: %s\n", std::generic_category().message(errno).c_str());
+        ERRFMT("Error writing header: {}", std::generic_category().message(errno));
         return false;
     }
     mDataStart = ftell(mFile.get());
@@ -344,7 +341,7 @@ bool WaveBackend::reset()
 void WaveBackend::start()
 {
     if(mDataStart > 0 && fseek(mFile.get(), 0, SEEK_END) != 0)
-        WARN("Failed to seek on output file\n");
+        WARNFMT("Failed to seek on output file");
     try {
         mKillNow.store(false, std::memory_order_release);
         mThread = std::thread{std::mem_fn(&WaveBackend::mixerProc), this};

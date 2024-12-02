@@ -30,7 +30,6 @@
 #include <functional>
 #include <thread>
 
-#include "alstring.h"
 #include "althrd_setname.h"
 #include "core/device.h"
 #include "core/helpers.h"

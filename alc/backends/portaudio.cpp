@@ -28,7 +28,6 @@
 #include <cstring>
 
 #include "alc/alconfig.h"
-#include "alstring.h"
 #include "core/device.h"
 #include "core/logging.h"
 #include "dynload.h"
@@ -84,7 +83,7 @@ void EnumerateDevices()
     const auto devcount = Pa_GetDeviceCount();
     if(devcount < 0)
     {
-        ERR("Error getting device count: %s\n", Pa_GetErrorText(devcount));
+        ERRFMT("Error getting device count: {}", Pa_GetErrorText(devcount));
         return;
     }
 
@@ -97,7 +96,7 @@ void EnumerateDevices()
             entry.mName = info->name;
             entry.mPlaybackChannels = static_cast<uint>(std::max(info->maxOutputChannels, 0));
             entry.mCaptureChannels = static_cast<uint>(std::max(info->maxInputChannels, 0));
-            TRACE("Device %d \"%s\": %d playback, %d capture channels\n", idx, entry.mName.c_str(),
+            TRACEFMT("Device {} \"{}\": {} playback, {} capture channels", idx, entry.mName,
                 info->maxOutputChannels, info->maxInputChannels);
         }
         ++idx;
@@ -129,7 +128,7 @@ PortPlayback::~PortPlayback()
 {
     PaError err{mStream ? Pa_CloseStream(mStream) : paNoError};
     if(err != paNoError)
-        ERR("Error closing stream: %s\n", Pa_GetErrorText(err));
+        ERRFMT("Error closing stream: {}", Pa_GetErrorText(err));
     mStream = nullptr;
 }
 
@@ -230,7 +229,7 @@ bool PortPlayback::reset()
     {
         auto err = Pa_CloseStream(mStream);
         if(err != paNoError)
-            ERR("Error closing stream: %s\n", Pa_GetErrorText(err));
+            ERRFMT("Error closing stream: {}", Pa_GetErrorText(err));
         mStream = nullptr;
     }
 
@@ -244,7 +243,7 @@ bool PortPlayback::reset()
     case paInt8: mDevice->FmtType = DevFmtByte; break;
     case paUInt8: mDevice->FmtType = DevFmtUByte; break;
     default:
-        ERR("Unexpected PortAudio sample format: %lu\n", mParams.sampleFormat);
+        ERRFMT("Unexpected PortAudio sample format: {}", mParams.sampleFormat);
         throw al::backend_exception{al::backend_error::NoDevice, "Invalid sample format: {}",
             mParams.sampleFormat};
     }
@@ -265,7 +264,7 @@ bool PortPlayback::reset()
     if(streamInfo->outputLatency > 0.0f)
     {
         const double sampleLatency{streamInfo->outputLatency * streamInfo->sampleRate};
-        TRACE("Reported stream latency: %f sec (%f samples)\n", streamInfo->outputLatency,
+        TRACEFMT("Reported stream latency: {:f} sec ({:f} samples)", streamInfo->outputLatency,
             sampleLatency);
         mDevice->BufferSize = static_cast<uint>(std::clamp(sampleLatency,
             double(mDevice->BufferSize), double{std::numeric_limits<int>::max()}));
@@ -286,7 +285,7 @@ void PortPlayback::start()
 void PortPlayback::stop()
 {
     if(PaError err{Pa_StopStream(mStream)}; err != paNoError)
-        ERR("Error stopping stream: %s\n", Pa_GetErrorText(err));
+        ERRFMT("Error stopping stream: {}", Pa_GetErrorText(err));
 }
 
 
@@ -313,7 +312,7 @@ PortCapture::~PortCapture()
 {
     PaError err{mStream ? Pa_CloseStream(mStream) : paNoError};
     if(err != paNoError)
-        ERR("Error closing stream: %s\n", Pa_GetErrorText(err));
+        ERRFMT("Error closing stream: {}", Pa_GetErrorText(err));
     mStream = nullptr;
 }
 
@@ -411,7 +410,7 @@ void PortCapture::start()
 void PortCapture::stop()
 {
     if(PaError err{Pa_StopStream(mStream)}; err != paNoError)
-        ERR("Error stopping stream: %s\n", Pa_GetErrorText(err));
+        ERRFMT("Error stopping stream: {}", Pa_GetErrorText(err));
 }
 
 
@@ -469,7 +468,7 @@ bool PortBackendFactory::init()
         const PaError err{Pa_Initialize()};
         if(err != paNoError)
         {
-            ERR("Pa_Initialize() returned an error: %s\n", Pa_GetErrorText(err));
+            ERRFMT("Pa_Initialize() returned an error: {}", Pa_GetErrorText(err));
             CloseLib(pa_handle);
             pa_handle = nullptr;
             return false;
@@ -479,7 +478,7 @@ bool PortBackendFactory::init()
     const PaError err{Pa_Initialize()};
     if(err != paNoError)
     {
-        ERR("Pa_Initialize() returned an error: %s\n", Pa_GetErrorText(err));
+        ERRFMT("Pa_Initialize() returned an error: {}", Pa_GetErrorText(err));
         return false;
     }
 #endif

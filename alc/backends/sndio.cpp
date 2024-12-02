@@ -22,7 +22,6 @@
 
 #include "sndio.h"
 
-#include <cinttypes>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -32,8 +31,6 @@
 #include <thread>
 #include <vector>
 
-#include "alnumeric.h"
-#include "alstring.h"
 #include "althrd_setname.h"
 #include "core/device.h"
 #include "core/helpers.h"
@@ -270,7 +267,7 @@ void SndioPlayback::stop()
     mThread.join();
 
     if(!sio_stop(mSndHandle))
-        ERR("Error stopping device\n");
+        ERRFMT("Error stopping device");
 }
 
 
@@ -496,7 +493,7 @@ void SndioCapture::stop()
     mThread.join();
 
     if(!sio_stop(mSndHandle))
-        ERR("Error stopping device\n");
+        ERRFMT("Error stopping device");
 }
 
 void SndioCapture::captureSamples(std::byte *buffer, uint samples)

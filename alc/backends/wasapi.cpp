@@ -349,7 +349,7 @@ auto GetDeviceNameAndGuid(const DeviceHandle &device) -> NameGUIDPair
     auto hr = device->OpenPropertyStore(STGM_READ, al::out_ptr(ps));
     if(FAILED(hr))
     {
-        WARN("OpenPropertyStore failed: 0x%08lx\n", hr);
+        WARNFMT("OpenPropertyStore failed: 0x{:x}", hr);
         return NameGUIDPair{std::string{UnknownName}, std::string{UnknownGuid}};
     }
 
@@ -357,20 +357,20 @@ auto GetDeviceNameAndGuid(const DeviceHandle &device) -> NameGUIDPair
     auto pvprop = PropVariant{};
     hr = ps->GetValue(al::bit_cast<PROPERTYKEY>(DEVPKEY_Device_FriendlyName), pvprop.get());
     if(FAILED(hr))
-        WARN("GetValue Device_FriendlyName failed: 0x%08lx\n", hr);
+        WARNFMT("GetValue Device_FriendlyName failed: 0x{:x}", hr);
     else if(pvprop.type() == VT_LPWSTR)
         ret.mName = wstr_to_utf8(pvprop.value<std::wstring_view>());
     else
-        WARN("Unexpected Device_FriendlyName PROPVARIANT type: 0x%04x\n", pvprop.type());
+        WARNFMT("Unexpected Device_FriendlyName PROPVARIANT type: 0x{:04x}", pvprop.type());
 
     pvprop.clear();
     hr = ps->GetValue(al::bit_cast<PROPERTYKEY>(PKEY_AudioEndpoint_GUID), pvprop.get());
     if(FAILED(hr))
-        WARN("GetValue AudioEndpoint_GUID failed: 0x%08lx\n", hr);
+        WARNFMT("GetValue AudioEndpoint_GUID failed: 0x{:x}", hr);
     else if(pvprop.type() == VT_LPWSTR)
         ret.mGuid = wstr_to_utf8(pvprop.value<std::wstring_view>());
     else
-        WARN("Unexpected AudioEndpoint_GUID PROPVARIANT type: 0x%04x\n", pvprop.type());
+        WARNFMT("Unexpected AudioEndpoint_GUID PROPVARIANT type: 0x{:04x}", pvprop.type());
 #else
     auto ret = NameGUIDPair{wstr_to_utf8(device.Name()), {}};
 
@@ -399,7 +399,7 @@ EndpointFormFactor GetDeviceFormfactor(IMMDevice *device)
     HRESULT hr{device->OpenPropertyStore(STGM_READ, al::out_ptr(ps))};
     if(FAILED(hr))
     {
-        WARN("OpenPropertyStore failed: 0x%08lx\n", hr);
+        WARNFMT("OpenPropertyStore failed: 0x{:x}", hr);
         return UnknownFormFactor;
     }
 
@@ -407,11 +407,11 @@ EndpointFormFactor GetDeviceFormfactor(IMMDevice *device)
     PropVariant pvform;
     hr = ps->GetValue(PKEY_AudioEndpoint_FormFactor, pvform.get());
     if(FAILED(hr))
-        WARN("GetValue AudioEndpoint_FormFactor failed: 0x%08lx\n", hr);
+        WARNFMT("GetValue AudioEndpoint_FormFactor failed: 0x{:x}", hr);
     else if(pvform.type() == VT_UI4)
         formfactor = static_cast<EndpointFormFactor>(pvform.value<uint>());
     else if(pvform.type() != VT_EMPTY)
-        WARN("Unexpected PROPVARIANT type: 0x%04x\n", pvform.type());
+        WARNFMT("Unexpected PROPVARIANT type: 0x{:04x}", pvform.type());
     return formfactor;
 }
 #endif
@@ -547,7 +547,7 @@ struct DeviceHelper final : private IMMNotificationClient
         HRESULT hr{mEnumerator->GetDevice(pwstrDeviceId, al::out_ptr(device))};
         if(FAILED(hr))
         {
-            ERR("Failed to get device: 0x%08lx\n", hr);
+            ERRFMT("Failed to get device: 0x{:x}", hr);
             return S_OK;
         }
 
@@ -555,7 +555,7 @@ struct DeviceHelper final : private IMMNotificationClient
         hr = device->QueryInterface(__uuidof(IMMEndpoint), al::out_ptr(endpoint));
         if(FAILED(hr))
         {
-            ERR("Failed to get device endpoint: 0x%08lx\n", hr);
+            ERRFMT("Failed to get device endpoint: 0x{:x}", hr);
             return S_OK;
         }
 
@@ -563,7 +563,7 @@ struct DeviceHelper final : private IMMNotificationClient
         hr = endpoint->GetDataFlow(&flowdir);
         if(FAILED(hr))
         {
-            ERR("Failed to get endpoint data flow: 0x%08lx\n", hr);
+            ERRFMT("Failed to get endpoint data flow: 0x{:x}", hr);
             return S_OK;
         }
 
@@ -595,8 +595,8 @@ struct DeviceHelper final : private IMMNotificationClient
                 { return pwstrDeviceId == entry.devid; });
             if(iter == list.end()) continue;
 
-            TRACE("Removing device \"%s\", \"%s\", \"%ls\"\n", iter->name.c_str(),
-                iter->endpoint_guid.c_str(), iter->devid.c_str());
+            TRACEFMT("Removing device \"{}\", \"{}\", \"{}\"", iter->name, iter->endpoint_guid,
+                wstr_to_utf8(iter->devid));
 
             std::string msg{"Device removed: "+std::move(iter->name)};
             list.erase(iter);
@@ -641,7 +641,7 @@ struct DeviceHelper final : private IMMNotificationClient
         if(SUCCEEDED(hr))
             mEnumerator->RegisterEndpointNotificationCallback(this);
         else
-            WARN("Failed to create IMMDeviceEnumerator instance: 0x%08lx\n", hr);
+            WARNFMT("Failed to create IMMDeviceEnumerator instance: 0x{:x}", hr);
         return hr;
 #else
         return S_OK;
@@ -695,7 +695,7 @@ struct DeviceHelper final : private IMMNotificationClient
         DWORD res{WaitForSingleObjectEx(mActiveClientEvent, INFINITE, FALSE)};
         if(res != WAIT_OBJECT_0)
         {
-            ERR("WaitForSingleObjectEx error: 0x%lx\n", res);
+            ERRFMT("WaitForSingleObjectEx error: 0x{:x}", res);
             return E_FAIL;
         }
 
@@ -720,7 +720,7 @@ struct DeviceHelper final : private IMMNotificationClient
             al::out_ptr(coll))};
         if(FAILED(hr))
         {
-            ERR("Failed to enumerate audio endpoints: 0x%08lx\n", hr);
+            ERRFMT("Failed to enumerate audio endpoints: 0x{:x}", hr);
             return defaultId;
         }
 
@@ -811,8 +811,8 @@ private:
         list.emplace_back(std::move(newname), std::move(name_guid.mGuid), devid);
         const DevMap &newentry = list.back();
 
-        TRACE("Got device \"%s\", \"%s\", \"%ls\"\n", newentry.name.c_str(),
-            newentry.endpoint_guid.c_str(), newentry.devid.c_str());
+        TRACEFMT("Got device \"{}\", \"{}\", \"{}\"", newentry.name, newentry.endpoint_guid,
+            wstr_to_utf8(newentry.devid));
         return true;
     }
 
@@ -824,7 +824,7 @@ private:
         const HRESULT hr{device->GetId(&devid)};
         if(FAILED(hr))
         {
-            ERR("Failed to get device id: %lx\n", hr);
+            ERRFMT("Failed to get device id: {:x}", hr);
             return nullptr;
         }
 
@@ -860,7 +860,7 @@ bool MakeExtensible(WAVEFORMATEXTENSIBLE *out, const WAVEFORMATEX *in)
         else if(out->Format.nChannels == 2)
             out->dwChannelMask = STEREO;
         else
-            ERR("Unhandled PCM channel count: %d\n", out->Format.nChannels);
+            ERRFMT("Unhandled PCM channel count: {}", out->Format.nChannels);
         out->SubFormat = KSDATAFORMAT_SUBTYPE_PCM;
     }
     else if(in->wFormatTag == WAVE_FORMAT_IEEE_FLOAT)
@@ -874,18 +874,18 @@ bool MakeExtensible(WAVEFORMATEXTENSIBLE *out, const WAVEFORMATEX *in)
         else if(out->Format.nChannels == 2)
             out->dwChannelMask = STEREO;
         else
-            ERR("Unhandled IEEE float channel count: %d\n", out->Format.nChannels);
+            ERRFMT("Unhandled IEEE float channel count: {}", out->Format.nChannels);
         out->SubFormat = KSDATAFORMAT_SUBTYPE_IEEE_FLOAT;
     }
     else
     {
-        ERR("Unhandled format tag: 0x%04x\n", in->wFormatTag);
+        ERRFMT("Unhandled format tag: 0x{:04x}", in->wFormatTag);
         return false;
     }
     return true;
 }
 
-void TraceFormat(const char *msg, const WAVEFORMATEX *format)
+void TraceFormat(const std::string_view msg, const WAVEFORMATEX *format)
 {
     constexpr size_t fmtex_extra_size{sizeof(WAVEFORMATEXTENSIBLE)-sizeof(WAVEFORMATEX)};
     if(format->wFormatTag == WAVE_FORMAT_EXTENSIBLE && format->cbSize >= fmtex_extra_size)
@@ -893,17 +893,17 @@ void TraceFormat(const char *msg, const WAVEFORMATEX *format)
         const WAVEFORMATEXTENSIBLE *fmtex{
             CONTAINING_RECORD(format, const WAVEFORMATEXTENSIBLE, Format)};
         /* NOLINTBEGIN(cppcoreguidelines-pro-type-union-access) */
-        TRACE("%s:\n"
-            "    FormatTag      = 0x%04x\n"
-            "    Channels       = %d\n"
-            "    SamplesPerSec  = %lu\n"
-            "    AvgBytesPerSec = %lu\n"
-            "    BlockAlign     = %d\n"
-            "    BitsPerSample  = %d\n"
-            "    Size           = %d\n"
-            "    Samples        = %d\n"
-            "    ChannelMask    = 0x%lx\n"
-            "    SubFormat      = %s\n",
+        TRACEFMT("{}:\n"
+            "    FormatTag      = 0x{:04x}\n"
+            "    Channels       = {}\n"
+            "    SamplesPerSec  = {}\n"
+            "    AvgBytesPerSec = {}\n"
+            "    BlockAlign     = {}\n"
+            "    BitsPerSample  = {}\n"
+            "    Size           = {}\n"
+            "    Samples        = {}\n"
+            "    ChannelMask    = 0x{:x}\n"
+            "    SubFormat      = {}",
             msg, fmtex->Format.wFormatTag, fmtex->Format.nChannels, fmtex->Format.nSamplesPerSec,
             fmtex->Format.nAvgBytesPerSec, fmtex->Format.nBlockAlign, fmtex->Format.wBitsPerSample,
             fmtex->Format.cbSize, fmtex->Samples.wReserved, fmtex->dwChannelMask,
@@ -911,14 +911,14 @@ void TraceFormat(const char *msg, const WAVEFORMATEX *format)
         /* NOLINTEND(cppcoreguidelines-pro-type-union-access) */
     }
     else
-        TRACE("%s:\n"
-            "    FormatTag      = 0x%04x\n"
-            "    Channels       = %d\n"
-            "    SamplesPerSec  = %lu\n"
-            "    AvgBytesPerSec = %lu\n"
-            "    BlockAlign     = %d\n"
-            "    BitsPerSample  = %d\n"
-            "    Size           = %d\n",
+        TRACEFMT("{}:\n"
+            "    FormatTag      = 0x{:04x}\n"
+            "    Channels       = {}\n"
+            "    SamplesPerSec  = {}\n"
+            "    AvgBytesPerSec = {}\n"
+            "    BlockAlign     = {}\n"
+            "    BitsPerSample  = {}\n"
+            "    Size           = {}",
             msg, format->wFormatTag, format->nChannels, format->nSamplesPerSec,
             format->nAvgBytesPerSec, format->nBlockAlign, format->wBitsPerSample, format->cbSize);
 }
@@ -1069,12 +1069,12 @@ struct WasapiProxy {
 
 int WasapiProxy::messageHandler(std::promise<HRESULT> *promise)
 {
-    TRACE("Starting message thread\n");
+    TRACEFMT("Starting message thread");
 
     ComWrapper com{COINIT_MULTITHREADED};
     if(!com)
     {
-        WARN("Failed to initialize COM: 0x%08lx\n", com.status());
+        WARNFMT("Failed to initialize COM: 0x{:x}", com.status());
         promise->set_value(com.status());
         return 0;
     }
@@ -1101,12 +1101,12 @@ int WasapiProxy::messageHandler(std::promise<HRESULT> *promise)
         if(!defaultId.empty()) devlock.setCaptureDefaultId(defaultId);
     }
 
-    TRACE("Starting message loop\n");
+    TRACEFMT("Starting message loop");
     while(Msg msg{popMessage()})
     {
-        TRACE("Got message \"%s\" (0x%04x, this=%p, param=\"%.*s\")\n",
+        TRACEFMT("Got message \"{}\" (0x{:04x}, this={}, param=\"{}\")",
             GetMessageTypeName(msg.mType), static_cast<uint>(msg.mType),
-            static_cast<void*>(msg.mProxy), al::sizei(msg.mParam), msg.mParam.data());
+            static_cast<void*>(msg.mProxy), msg.mParam);
 
         switch(msg.mType)
         {
@@ -1138,10 +1138,10 @@ int WasapiProxy::messageHandler(std::promise<HRESULT> *promise)
         case MsgType::QuitThread:
             break;
         }
-        ERR("Unexpected message: %u\n", static_cast<uint>(msg.mType));
+        ERRFMT("Unexpected message: {}", static_cast<uint>(msg.mType));
         msg.mPromise.set_value(E_FAIL);
     }
-    TRACE("Message loop finished\n");
+    TRACEFMT("Message loop finished");
 
     return 0;
 }
@@ -1260,7 +1260,7 @@ FORCE_ALIGN int WasapiPlayback::mixerProc()
         {
             DWORD res{WaitForSingleObjectEx(mNotifyEvent, 2000, FALSE)};
             if(res != WAIT_OBJECT_0)
-                ERR("WaitForSingleObjectEx error: 0x%lx\n", res);
+                ERRFMT("WaitForSingleObjectEx error: 0x{:x}", res);
             continue;
         }
 
@@ -1353,7 +1353,7 @@ FORCE_ALIGN int WasapiPlayback::mixerSpatialProc()
     {
         if(DWORD res{WaitForSingleObjectEx(mNotifyEvent, 1000, FALSE)}; res != WAIT_OBJECT_0)
         {
-            ERR("WaitForSingleObjectEx error: 0x%lx\n", res);
+            ERRFMT("WaitForSingleObjectEx error: 0x{:x}", res);
 
             HRESULT hr{audio.mRender->Reset()};
             if(FAILED(hr))
@@ -1433,7 +1433,7 @@ FORCE_ALIGN int WasapiPlayback::mixerSpatialProc()
         }
 
         if(FAILED(hr))
-            ERR("Failed to update playback objects: 0x%08lx\n", hr);
+            ERRFMT("Failed to update playback objects: 0x{:x}", hr);
     }
     mPadding.store(0u, std::memory_order_release);
 
@@ -1450,7 +1450,7 @@ void WasapiPlayback::open(std::string_view name)
     mNotifyEvent = CreateEventW(nullptr, FALSE, FALSE, nullptr);
     if(mNotifyEvent == nullptr)
     {
-        ERR("Failed to create notify events: %lu\n", GetLastError());
+        ERRFMT("Failed to create notify events: {}", GetLastError());
         throw al::backend_exception{al::backend_error::DeviceError,
             "Failed to create notify events"};
     }
@@ -1491,7 +1491,8 @@ HRESULT WasapiPlayback::openProxy(std::string_view name)
     HRESULT hr{sDeviceHelper->openDevice(devid, eRender, mMMDev)};
     if(FAILED(hr))
     {
-        WARN("Failed to open device \"%s\"\n", devname.empty() ? "(default)" : devname.c_str());
+        WARNFMT("Failed to open device \"{}\"", devname.empty()
+            ? "(default)"sv : std::string_view{devname});
         return hr;
     }
     if(!devname.empty())
@@ -1543,7 +1544,7 @@ void WasapiPlayback::prepareFormat(WAVEFORMATEXTENSIBLE &OutputType)
         else if(chancount >= 1 && ((chanmask&MonoMask) == MONO || !chanmask))
             mDevice->FmtChans = DevFmtMono;
         else
-            ERR("Unhandled channel config: %d -- 0x%08lx\n", chancount, chanmask);
+            ERRFMT("Unhandled channel config: {} -- 0x{:08x}", chancount, chanmask);
     }
     else
     {
@@ -1702,7 +1703,7 @@ void WasapiPlayback::finalizeFormat(WAVEFORMATEXTENSIBLE &OutputType)
             mDevice->FmtChans = DevFmtMono;
         else
         {
-            ERR("Unhandled extensible channels: %d -- 0x%08lx\n", OutputType.Format.nChannels,
+            ERRFMT("Unhandled extensible channels: {} -- 0x{:08x}", OutputType.Format.nChannels,
                 OutputType.dwChannelMask);
             mDevice->FmtChans = DevFmtStereo;
             OutputType.Format.nChannels = 2;
@@ -1731,7 +1732,7 @@ void WasapiPlayback::finalizeFormat(WAVEFORMATEXTENSIBLE &OutputType)
     }
     else
     {
-        ERR("Unhandled format sub-type: %s\n", GuidPrinter{OutputType.SubFormat}.c_str());
+        ERRFMT("Unhandled format sub-type: {}", GuidPrinter{OutputType.SubFormat}.c_str());
         mDevice->FmtType = DevFmtShort;
         if(OutputType.Format.wFormatTag != WAVE_FORMAT_EXTENSIBLE)
             OutputType.Format.wFormatTag = WAVE_FORMAT_PCM;
@@ -1750,7 +1751,7 @@ auto WasapiPlayback::initSpatial() -> bool
         al::out_ptr(audio.mClient))};
     if(FAILED(hr))
     {
-        ERR("Failed to activate spatial audio client: 0x%08lx\n", hr);
+        ERRFMT("Failed to activate spatial audio client: 0x{:x}", hr);
         return false;
     }
 
@@ -1758,7 +1759,7 @@ auto WasapiPlayback::initSpatial() -> bool
     hr = audio.mClient->GetSupportedAudioObjectFormatEnumerator(al::out_ptr(fmtenum));
     if(FAILED(hr))
     {
-        ERR("Failed to get format enumerator: 0x%08lx\n", hr);
+        ERRFMT("Failed to get format enumerator: 0x{:x}", hr);
         return false;
     }
 
@@ -1766,7 +1767,7 @@ auto WasapiPlayback::initSpatial() -> bool
     hr = fmtenum->GetCount(&fmtcount);
     if(FAILED(hr) || fmtcount == 0)
     {
-        ERR("Failed to get format count: 0x%08lx\n", hr);
+        ERRFMT("Failed to get format count: 0x{:08x}", hr);
         return false;
     }
 
@@ -1774,7 +1775,7 @@ auto WasapiPlayback::initSpatial() -> bool
     hr = fmtenum->GetFormat(0, &preferredFormat);
     if(FAILED(hr))
     {
-        ERR("Failed to get preferred format: 0x%08lx\n", hr);
+        ERRFMT("Failed to get preferred format: 0x{:x}", hr);
         return false;
     }
     TraceFormat("Preferred mix format", preferredFormat);
@@ -1782,24 +1783,24 @@ auto WasapiPlayback::initSpatial() -> bool
     UINT32 maxFrames{};
     hr = audio.mClient->GetMaxFrameCount(preferredFormat, &maxFrames);
     if(FAILED(hr))
-        ERR("Failed to get max frames: 0x%08lx\n", hr);
+        ERRFMT("Failed to get max frames: 0x{:x}", hr);
     else
-        TRACE("Max sample frames: %u\n", maxFrames);
+        TRACEFMT("Max sample frames: {}", maxFrames);
     for(UINT32 i{1};i < fmtcount;++i)
     {
         WAVEFORMATEX *otherFormat{};
         hr = fmtenum->GetFormat(i, &otherFormat);
         if(FAILED(hr))
-            ERR("Failed to format %u: 0x%08lx\n", i+1, hr);
+            ERRFMT("Failed to get format {}: 0x{:x}", i+1, hr);
         else
         {
             TraceFormat("Other mix format", otherFormat);
             UINT32 otherMaxFrames{};
             hr = audio.mClient->GetMaxFrameCount(otherFormat, &otherMaxFrames);
             if(FAILED(hr))
-                ERR("Failed to get max frames: 0x%08lx\n", hr);
+                ERRFMT("Failed to get max frames: 0x{:x}", hr);
             else
-                TRACE("Max sample frames: %u\n", otherMaxFrames);
+                TRACEFMT("Max sample frames: {}", otherMaxFrames);
         }
     }
 
@@ -1810,7 +1811,7 @@ auto WasapiPlayback::initSpatial() -> bool
     /* This seems to be the format of each "object", which should be mono. */
     if(!(OutputType.Format.nChannels == 1
         && (OutputType.dwChannelMask == MONO || !OutputType.dwChannelMask)))
-        ERR("Unhandled channel config: %d -- 0x%08lx\n", OutputType.Format.nChannels,
+        ERRFMT("Unhandled channel config: {} -- 0x{:08x}", OutputType.Format.nChannels,
             OutputType.dwChannelMask);
 
     /* Force 32-bit float. This is currently required for planar output. */
@@ -1868,7 +1869,7 @@ auto WasapiPlayback::initSpatial() -> bool
         __uuidof(ISpatialAudioObjectRenderStream), al::out_ptr(audio.mRender));
     if(FAILED(hr))
     {
-        ERR("Failed to activate spatial audio stream: 0x%08lx\n", hr);
+        ERRFMT("Failed to activate spatial audio stream: 0x{:x}", hr);
         return false;
     }
 
@@ -1905,12 +1906,12 @@ auto WasapiPlayback::initSpatial() -> bool
     hr = sDeviceHelper->activateAudioClient(mMMDev, __uuidof(IAudioClient),
         al::out_ptr(tmpClient));
     if(FAILED(hr))
-        ERR("Failed to activate audio client: 0x%08lx\n", hr);
+        ERRFMT("Failed to activate audio client: 0x{:x}", hr);
     else
     {
         hr = tmpClient->GetDevicePeriod(&reinterpret_cast<REFERENCE_TIME&>(per_time), nullptr);
         if(FAILED(hr))
-            ERR("Failed to get device period: 0x%08lx\n", hr);
+            ERRFMT("Failed to get device period: 0x{:x}", hr);
         else
         {
             mOutUpdateSize = RefTime2Samples(per_time, mFormat.Format.nSamplesPerSec);
@@ -1935,7 +1936,7 @@ auto WasapiPlayback::initSpatial() -> bool
         mResampleBuffer.resize(size_t{mDevice->UpdateSize} * channelCount *
             mFormat.Format.wBitsPerSample / 8);
 
-        TRACE("Created converter for %s/%s format, dst: %luhz (%u), src: %uhz (%u)\n",
+        TRACEFMT("Created converter for {}/{} format, dst: {}hz ({}), src: {}hz ({})",
             DevFmtChannelsString(mDevice->FmtChans), DevFmtTypeString(mDevice->FmtType),
             mFormat.Format.nSamplesPerSec, mOutUpdateSize, mDevice->Frequency,
             mDevice->UpdateSize);
@@ -1968,7 +1969,7 @@ HRESULT WasapiPlayback::resetProxy()
         al::out_ptr(audio.mClient))};
     if(FAILED(hr))
     {
-        ERR("Failed to reactivate audio client: 0x%08lx\n", hr);
+        ERRFMT("Failed to reactivate audio client: 0x{:x}", hr);
         return hr;
     }
 
@@ -1976,7 +1977,7 @@ HRESULT WasapiPlayback::resetProxy()
     hr = audio.mClient->GetMixFormat(&wfx);
     if(FAILED(hr))
     {
-        ERR("Failed to get mix format: 0x%08lx\n", hr);
+        ERRFMT("Failed to get mix format: 0x{:x}", hr);
         return hr;
     }
     TraceFormat("Device mix format", wfx);
@@ -1999,12 +2000,12 @@ HRESULT WasapiPlayback::resetProxy()
     hr = audio.mClient->IsFormatSupported(AUDCLNT_SHAREMODE_SHARED, &OutputType.Format, &wfx);
     if(FAILED(hr))
     {
-        WARN("Failed to check format support: 0x%08lx\n", hr);
+        WARNFMT("Failed to check format support: 0x{:x}", hr);
         hr = audio.mClient->GetMixFormat(&wfx);
     }
     if(FAILED(hr))
     {
-        ERR("Failed to find a supported format: 0x%08lx\n", hr);
+        ERRFMT("Failed to find a supported format: 0x{:x}", hr);
         return hr;
     }
 
@@ -2035,7 +2036,7 @@ HRESULT WasapiPlayback::resetProxy()
         buf_time.count(), 0, &OutputType.Format, nullptr);
     if(FAILED(hr))
     {
-        ERR("Failed to initialize audio client: 0x%08lx\n", hr);
+        ERRFMT("Failed to initialize audio client: 0x{:x}", hr);
         return hr;
     }
 
@@ -2046,21 +2047,21 @@ HRESULT WasapiPlayback::resetProxy()
         hr = audio.mClient->GetBufferSize(&buffer_len);
     if(FAILED(hr))
     {
-        ERR("Failed to get audio buffer info: 0x%08lx\n", hr);
+        ERRFMT("Failed to get audio buffer info: 0x{:x}", hr);
         return hr;
     }
 
     hr = audio.mClient->SetEventHandle(mNotifyEvent);
     if(FAILED(hr))
     {
-        ERR("Failed to set event handle: 0x%08lx\n", hr);
+        ERRFMT("Failed to set event handle: 0x{:x}", hr);
         return hr;
     }
 
     hr = audio.mClient->GetService(__uuidof(IAudioRenderClient), al::out_ptr(audio.mRender));
     if(FAILED(hr))
     {
-        ERR("Failed to get IAudioRenderClient: 0x%08lx\n", hr);
+        ERRFMT("Failed to get IAudioRenderClient: 0x{:x}", hr);
         return hr;
     }
 
@@ -2089,7 +2090,7 @@ HRESULT WasapiPlayback::resetProxy()
         mResampleBuffer.resize(size_t{mDevice->UpdateSize} * mFormat.Format.nChannels *
             mFormat.Format.wBitsPerSample / 8);
 
-        TRACE("Created converter for %s/%s format, dst: %luhz (%u), src: %uhz (%u)\n",
+        TRACEFMT("Created converter for {}/{} format, dst: {}hz ({}), src: {}hz ({})",
             DevFmtChannelsString(mDevice->FmtChans), DevFmtTypeString(mDevice->FmtType),
             mFormat.Format.nSamplesPerSec, mOutUpdateSize, mDevice->Frequency,
             mDevice->UpdateSize);
@@ -2116,7 +2117,7 @@ HRESULT WasapiPlayback::startProxy()
         HRESULT hr{audio.mClient->Start()};
         if(FAILED(hr))
         {
-            ERR("Failed to start audio client: 0x%08lx\n", hr);
+            ERRFMT("Failed to start audio client: 0x{:x}", hr);
             return hr;
         }
 
@@ -2125,7 +2126,7 @@ HRESULT WasapiPlayback::startProxy()
             mThread = std::thread{std::mem_fn(&WasapiPlayback::mixerProc), this};
         }
         catch(...) {
-            ERR("Failed to start thread\n");
+            ERRFMT("Failed to start thread");
             audio.mClient->Stop();
             hr = E_FAIL;
         }
@@ -2136,7 +2137,7 @@ HRESULT WasapiPlayback::startProxy()
         HRESULT hr{audio.mRender->Start()};
         if(FAILED(hr))
         {
-            ERR("Failed to start spatial audio stream: 0x%08lx\n", hr);
+            ERRFMT("Failed to start spatial audio stream: 0x{:x}", hr);
             return hr;
         }
 
@@ -2145,7 +2146,7 @@ HRESULT WasapiPlayback::startProxy()
             mThread = std::thread{std::mem_fn(&WasapiPlayback::mixerSpatialProc), this};
         }
         catch(...) {
-            ERR("Failed to start thread\n");
+            ERRFMT("Failed to start thread");
             hr = E_FAIL;
         }
 
@@ -2264,7 +2265,7 @@ FORCE_ALIGN int WasapiCapture::recordProc()
         UINT32 avail;
         HRESULT hr{mCapture->GetNextPacketSize(&avail)};
         if(FAILED(hr))
-            ERR("Failed to get next packet size: 0x%08lx\n", hr);
+            ERRFMT("Failed to get next packet size: 0x{:x}", hr);
         else if(avail > 0)
         {
             UINT32 numsamples;
@@ -2273,7 +2274,7 @@ FORCE_ALIGN int WasapiCapture::recordProc()
 
             hr = mCapture->GetBuffer(&rdata, &numsamples, &flags, nullptr, nullptr);
             if(FAILED(hr))
-                ERR("Failed to get capture buffer: 0x%08lx\n", hr);
+                ERRFMT("Failed to get capture buffer: 0x{:x}", hr);
             else
             {
                 if(mChannelConv.is_active())
@@ -2323,7 +2324,7 @@ FORCE_ALIGN int WasapiCapture::recordProc()
                 mRing->writeAdvance(dstframes);
 
                 hr = mCapture->ReleaseBuffer(numsamples);
-                if(FAILED(hr)) ERR("Failed to release capture buffer: 0x%08lx\n", hr);
+                if(FAILED(hr)) ERRFMT("Failed to release capture buffer: 0x{:x}", hr);
             }
         }
 
@@ -2351,7 +2352,7 @@ void WasapiCapture::open(std::string_view name)
     mNotifyEvent = CreateEventW(nullptr, FALSE, FALSE, nullptr);
     if(mNotifyEvent == nullptr)
     {
-        ERR("Failed to create notify events: %lu\n", GetLastError());
+        ERRFMT("Failed to create notify events: {}", GetLastError());
         throw al::backend_exception{al::backend_error::DeviceError,
             "Failed to create notify events"};
     }
@@ -2390,7 +2391,7 @@ HRESULT WasapiCapture::openProxy(std::string_view name)
         }
         if(iter == devlist.cend())
         {
-            WARN("Failed to find device name matching \"%.*s\"\n", al::sizei(name), name.data());
+            WARNFMT("Failed to find device name matching \"{}\"", name);
             return E_FAIL;
         }
         devname = iter->name;
@@ -2400,7 +2401,8 @@ HRESULT WasapiCapture::openProxy(std::string_view name)
     HRESULT hr{sDeviceHelper->openDevice(devid, eCapture, mMMDev)};
     if(FAILED(hr))
     {
-        WARN("Failed to open device \"%s\"\n", devname.empty() ? "(default)" : devname.c_str());
+        WARNFMT("Failed to open device \"{}\"", devname.empty()
+            ? "(default)"sv : std::string_view{devname});
         return hr;
     }
     mClient = nullptr;
@@ -2428,7 +2430,7 @@ HRESULT WasapiCapture::resetProxy()
         al::out_ptr(mClient))};
     if(FAILED(hr))
     {
-        ERR("Failed to reactivate audio client: 0x%08lx\n", hr);
+        ERRFMT("Failed to reactivate audio client: 0x{:x}", hr);
         return hr;
     }
 
@@ -2436,7 +2438,7 @@ HRESULT WasapiCapture::resetProxy()
     hr = mClient->GetMixFormat(&wfx);
     if(FAILED(hr))
     {
-        ERR("Failed to get capture format: 0x%08lx\n", hr);
+        ERRFMT("Failed to get capture format: 0x{:x}", hr);
         return hr;
     }
     TraceFormat("Device capture format", wfx);
@@ -2532,12 +2534,12 @@ HRESULT WasapiCapture::resetProxy()
     hr = mClient->IsFormatSupported(AUDCLNT_SHAREMODE_SHARED, &InputType.Format, &wfx);
     if(FAILED(hr))
     {
-        WARN("Failed to check capture format support: 0x%08lx\n", hr);
+        WARNFMT("Failed to check capture format support: 0x{:x}", hr);
         hr = mClient->GetMixFormat(&wfx);
     }
     if(FAILED(hr))
     {
-        ERR("Failed to find a supported capture format: 0x%08lx\n", hr);
+        ERRFMT("Failed to find a supported capture format: 0x{:x}", hr);
         return hr;
     }
 
@@ -2590,7 +2592,7 @@ HRESULT WasapiCapture::resetProxy()
         };
         if(!validate_fmt(mDevice, InputType.Format.nChannels, InputType.dwChannelMask))
         {
-            ERR("Failed to match format, wanted: %s %s %uhz, got: 0x%08lx mask %d channel%s %d-bit %luhz\n",
+            ERRFMT("Failed to match format, wanted: {} {} {}hz, got: 0x{:08x} mask {} channel{} {}-bit {}hz",
                 DevFmtChannelsString(mDevice->FmtChans), DevFmtTypeString(mDevice->FmtType),
                 mDevice->Frequency, InputType.dwChannelMask, InputType.Format.nChannels,
                 (InputType.Format.nChannels==1)?"":"s", InputType.Format.wBitsPerSample,
@@ -2610,7 +2612,7 @@ HRESULT WasapiCapture::resetProxy()
             srcType = DevFmtInt;
         else
         {
-            ERR("Unhandled integer bit depth: %d\n", InputType.Format.wBitsPerSample);
+            ERRFMT("Unhandled integer bit depth: {}", InputType.Format.wBitsPerSample);
             return E_FAIL;
         }
     }
@@ -2620,13 +2622,13 @@ HRESULT WasapiCapture::resetProxy()
             srcType = DevFmtFloat;
         else
         {
-            ERR("Unhandled float bit depth: %d\n", InputType.Format.wBitsPerSample);
+            ERRFMT("Unhandled float bit depth: {}", InputType.Format.wBitsPerSample);
             return E_FAIL;
         }
     }
     else
     {
-        ERR("Unhandled format sub-type: %s\n", GuidPrinter{InputType.SubFormat}.c_str());
+        ERRFMT("Unhandled format sub-type: {}", GuidPrinter{InputType.SubFormat}.c_str());
         return E_FAIL;
     }
 
@@ -2643,7 +2645,7 @@ HRESULT WasapiCapture::resetProxy()
 
         mChannelConv = ChannelConverter{srcType, InputType.Format.nChannels, chanmask,
             mDevice->FmtChans};
-        TRACE("Created %s multichannel-to-mono converter\n", DevFmtTypeString(srcType));
+        TRACEFMT("Created {} multichannel-to-mono converter", DevFmtTypeString(srcType));
         /* The channel converter always outputs float, so change the input type
          * for the resampler/type-converter.
          */
@@ -2652,7 +2654,7 @@ HRESULT WasapiCapture::resetProxy()
     else if(mDevice->FmtChans == DevFmtStereo && InputType.Format.nChannels == 1)
     {
         mChannelConv = ChannelConverter{srcType, 1, 0x1, mDevice->FmtChans};
-        TRACE("Created %s mono-to-stereo converter\n", DevFmtTypeString(srcType));
+        TRACEFMT("Created {} mono-to-stereo converter", DevFmtTypeString(srcType));
         srcType = DevFmtFloat;
     }
 
@@ -2663,12 +2665,12 @@ HRESULT WasapiCapture::resetProxy()
             Resampler::FastBSinc24);
         if(!mSampleConv)
         {
-            ERR("Failed to create converter for %s format, dst: %s %uhz, src: %s %luhz\n",
+            ERRFMT("Failed to create converter for {} format, dst: {} {}hz, src: {} {}hz",
                 DevFmtChannelsString(mDevice->FmtChans), DevFmtTypeString(mDevice->FmtType),
                 mDevice->Frequency, DevFmtTypeString(srcType), InputType.Format.nSamplesPerSec);
             return E_FAIL;
         }
-        TRACE("Created converter for %s format, dst: %s %uhz, src: %s %luhz\n",
+        TRACEFMT("Created converter for {} format, dst: {} {}hz, src: {} {}hz",
             DevFmtChannelsString(mDevice->FmtChans), DevFmtTypeString(mDevice->FmtType),
             mDevice->Frequency, DevFmtTypeString(srcType), InputType.Format.nSamplesPerSec);
     }
@@ -2677,14 +2679,14 @@ HRESULT WasapiCapture::resetProxy()
         buf_time.count(), 0, &InputType.Format, nullptr);
     if(FAILED(hr))
     {
-        ERR("Failed to initialize audio client: 0x%08lx\n", hr);
+        ERRFMT("Failed to initialize audio client: 0x{:x}", hr);
         return hr;
     }
 
     hr = mClient->GetService(__uuidof(IAudioCaptureClient), al::out_ptr(mCapture));
     if(FAILED(hr))
     {
-        ERR("Failed to get IAudioCaptureClient: 0x%08lx\n", hr);
+        ERRFMT("Failed to get IAudioCaptureClient: 0x{:x}", hr);
         return hr;
     }
 
@@ -2695,7 +2697,7 @@ HRESULT WasapiCapture::resetProxy()
         hr = mClient->GetBufferSize(&buffer_len);
     if(FAILED(hr))
     {
-        ERR("Failed to get buffer size: 0x%08lx\n", hr);
+        ERRFMT("Failed to get buffer size: 0x{:x}", hr);
         return hr;
     }
     mDevice->UpdateSize = RefTime2Samples(min_per, mDevice->Frequency);
@@ -2706,7 +2708,7 @@ HRESULT WasapiCapture::resetProxy()
     hr = mClient->SetEventHandle(mNotifyEvent);
     if(FAILED(hr))
     {
-        ERR("Failed to set event handle: 0x%08lx\n", hr);
+        ERRFMT("Failed to set event handle: 0x{:x}", hr);
         return hr;
     }
 
@@ -2729,7 +2731,7 @@ HRESULT WasapiCapture::startProxy()
     HRESULT hr{mClient->Start()};
     if(FAILED(hr))
     {
-        ERR("Failed to start audio client: 0x%08lx\n", hr);
+        ERRFMT("Failed to start audio client: 0x{:x}", hr);
         return hr;
     }
 
@@ -2738,7 +2740,7 @@ HRESULT WasapiCapture::startProxy()
         mThread = std::thread{std::mem_fn(&WasapiCapture::recordProc), this};
     }
     catch(...) {
-        ERR("Failed to start thread\n");
+        ERRFMT("Failed to start thread");
         mClient->Stop();
         mClient->Reset();
         hr = E_FAIL;

@@ -2691,7 +2691,7 @@ try {
 catch(al::base_exception&) {
 }
 catch(std::exception &e) {
-    ERR("Caught exception: %s\n", e.what());
+    ERRFMT("Caught exception: {}", e.what());
 }
 
 AL_API DECL_FUNC2(void, alDeleteSources, ALsizei,n, const ALuint*,sources)
@@ -2724,7 +2724,7 @@ try {
 catch(al::base_exception&) {
 }
 catch(std::exception &e) {
-    ERR("Caught exception: %s\n", e.what());
+    ERRFMT("Caught exception: {}", e.what());
 }
 
 AL_API DECL_FUNC1(ALboolean, alIsSource, ALuint,source)
@@ -2752,7 +2752,7 @@ try {
 catch(al::base_exception&) {
 }
 catch(std::exception &e) {
-    ERR("Caught exception: %s\n", e.what());
+    ERRFMT("Caught exception: {}", e.what());
 }
 
 AL_API DECL_FUNC5(void, alSource3f, ALuint,source, ALenum,param, ALfloat,value1, ALfloat,value2, ALfloat,value3)
@@ -2771,7 +2771,7 @@ try {
 catch(al::base_exception&) {
 }
 catch(std::exception &e) {
-    ERR("Caught exception: %s\n", e.what());
+    ERRFMT("Caught exception: {}", e.what());
 }
 
 AL_API DECL_FUNC3(void, alSourcefv, ALuint,source, ALenum,param, const ALfloat*,values)
@@ -2792,7 +2792,7 @@ try {
 catch(al::base_exception&) {
 }
 catch(std::exception &e) {
-    ERR("Caught exception: %s\n", e.what());
+    ERRFMT("Caught exception: {}", e.what());
 }
 
 
@@ -2811,7 +2811,7 @@ try {
 catch(al::base_exception&) {
 }
 catch(std::exception &e) {
-    ERR("Caught exception: %s\n", e.what());
+    ERRFMT("Caught exception: {}", e.what());
 }
 
 AL_API DECL_FUNCEXT5(void, alSource3d,SOFT, ALuint,source, ALenum,param, ALdouble,value1, ALdouble,value2, ALdouble,value3)
@@ -2830,7 +2830,7 @@ try {
 catch(al::base_exception&) {
 }
 catch(std::exception &e) {
-    ERR("Caught exception: %s\n", e.what());
+    ERRFMT("Caught exception: {}", e.what());
 }
 
 AL_API DECL_FUNCEXT3(void, alSourcedv,SOFT, ALuint,source, ALenum,param, const ALdouble*,values)
@@ -2851,7 +2851,7 @@ try {
 catch(al::base_exception&) {
 }
 catch(std::exception &e) {
-    ERR("Caught exception: %s\n", e.what());
+    ERRFMT("Caught exception: {}", e.what());
 }
 
 
@@ -2870,7 +2870,7 @@ try {
 catch(al::base_exception&) {
 }
 catch(std::exception &e) {
-    ERR("Caught exception: %s\n", e.what());
+    ERRFMT("Caught exception: {}", e.what());
 }
 
 AL_API DECL_FUNC5(void, alSource3i, ALuint,buffer, ALenum,param, ALint,value1, ALint,value2, ALint,value3)
@@ -2889,7 +2889,7 @@ try {
 catch(al::base_exception&) {
 }
 catch(std::exception &e) {
-    ERR("Caught exception: %s\n", e.what());
+    ERRFMT("Caught exception: {}", e.what());
 }
 
 AL_API DECL_FUNC3(void, alSourceiv, ALuint,source, ALenum,param, const ALint*,values)
@@ -2910,7 +2910,7 @@ try {
 catch(al::base_exception&) {
 }
 catch(std::exception &e) {
-    ERR("Caught exception: %s\n", e.what());
+    ERRFMT("Caught exception: {}", e.what());
 }
 
 
@@ -2929,7 +2929,7 @@ try {
 catch(al::base_exception&) {
 }
 catch(std::exception &e) {
-    ERR("Caught exception: %s\n", e.what());
+    ERRFMT("Caught exception: {}", e.what());
 }
 
 AL_API DECL_FUNCEXT5(void, alSource3i64,SOFT, ALuint,source, ALenum,param, ALint64SOFT,value1, ALint64SOFT,value2, ALint64SOFT,value3)
@@ -2948,7 +2948,7 @@ try {
 catch(al::base_exception&) {
 }
 catch(std::exception &e) {
-    ERR("Caught exception: %s\n", e.what());
+    ERRFMT("Caught exception: {}", e.what());
 }
 
 AL_API DECL_FUNCEXT3(void, alSourcei64v,SOFT, ALuint,source, ALenum,param, const ALint64SOFT*,values)
@@ -2969,7 +2969,7 @@ try {
 catch(al::base_exception&) {
 }
 catch(std::exception &e) {
-    ERR("Caught exception: %s\n", e.what());
+    ERRFMT("Caught exception: {}", e.what());
 }
 
 
@@ -2989,7 +2989,7 @@ try {
 catch(al::base_exception&) {
 }
 catch(std::exception &e) {
-    ERR("Caught exception: %s\n", e.what());
+    ERRFMT("Caught exception: {}", e.what());
 }
 
 AL_API DECL_FUNC5(void, alGetSource3f, ALuint,source, ALenum,param, ALfloat*,value1, ALfloat*,value2, ALfloat*,value3)
@@ -3012,7 +3012,7 @@ try {
 catch(al::base_exception&) {
 }
 catch(std::exception &e) {
-    ERR("Caught exception: %s\n", e.what());
+    ERRFMT("Caught exception: {}", e.what());
 }
 
 AL_API DECL_FUNC3(void, alGetSourcefv, ALuint,source, ALenum,param, ALfloat*,values)
@@ -3032,7 +3032,7 @@ try {
 catch(al::base_exception&) {
 }
 catch(std::exception &e) {
-    ERR("Caught exception: %s\n", e.what());
+    ERRFMT("Caught exception: {}", e.what());
 }
 
 
@@ -3052,7 +3052,7 @@ try {
 catch(al::base_exception&) {
 }
 catch(std::exception &e) {
-    ERR("Caught exception: %s\n", e.what());
+    ERRFMT("Caught exception: {}", e.what());
 }
 
 AL_API DECL_FUNCEXT5(void, alGetSource3d,SOFT, ALuint,source, ALenum,param, ALdouble*,value1, ALdouble*,value2, ALdouble*,value3)
@@ -3075,7 +3075,7 @@ try {
 catch(al::base_exception&) {
 }
 catch(std::exception &e) {
-    ERR("Caught exception: %s\n", e.what());
+    ERRFMT("Caught exception: {}", e.what());
 }
 
 AL_API DECL_FUNCEXT3(void, alGetSourcedv,SOFT, ALuint,source, ALenum,param, ALdouble*,values)
@@ -3095,7 +3095,7 @@ try {
 catch(al::base_exception&) {
 }
 catch(std::exception &e) {
-    ERR("Caught exception: %s\n", e.what());
+    ERRFMT("Caught exception: {}", e.what());
 }
 
 
@@ -3115,7 +3115,7 @@ try {
 catch(al::base_exception&) {
 }
 catch(std::exception &e) {
-    ERR("Caught exception: %s\n", e.what());
+    ERRFMT("Caught exception: {}", e.what());
 }
 
 AL_API DECL_FUNC5(void, alGetSource3i, ALuint,source, ALenum,param, ALint*,value1, ALint*,value2, ALint*,value3)
@@ -3138,7 +3138,7 @@ try {
 catch(al::base_exception&) {
 }
 catch(std::exception &e) {
-    ERR("Caught exception: %s\n", e.what());
+    ERRFMT("Caught exception: {}", e.what());
 }
 
 AL_API DECL_FUNC3(void, alGetSourceiv, ALuint,source, ALenum,param, ALint*,values)
@@ -3158,7 +3158,7 @@ try {
 catch(al::base_exception&) {
 }
 catch(std::exception &e) {
-    ERR("Caught exception: %s\n", e.what());
+    ERRFMT("Caught exception: {}", e.what());
 }
 
 
@@ -3177,7 +3177,7 @@ try {
 catch(al::base_exception&) {
 }
 catch(std::exception &e) {
-    ERR("Caught exception: %s\n", e.what());
+    ERRFMT("Caught exception: {}", e.what());
 }
 
 AL_API DECL_FUNCEXT5(void, alGetSource3i64,SOFT, ALuint,source, ALenum,param, ALint64SOFT*,value1, ALint64SOFT*,value2, ALint64SOFT*,value3)
@@ -3200,7 +3200,7 @@ try {
 catch(al::base_exception&) {
 }
 catch(std::exception &e) {
-    ERR("Caught exception: %s\n", e.what());
+    ERRFMT("Caught exception: {}", e.what());
 }
 
 AL_API DECL_FUNCEXT3(void, alGetSourcei64v,SOFT, ALuint,source, ALenum,param, ALint64SOFT*,values)
@@ -3220,7 +3220,7 @@ try {
 catch(al::base_exception&) {
 }
 catch(std::exception &e) {
-    ERR("Caught exception: %s\n", e.what());
+    ERRFMT("Caught exception: {}", e.what());
 }
 
 
@@ -3237,7 +3237,7 @@ try {
 catch(al::base_exception&) {
 }
 catch(std::exception &e) {
-    ERR("Caught exception: %s\n", e.what());
+    ERRFMT("Caught exception: {}", e.what());
 }
 
 FORCE_ALIGN DECL_FUNCEXT2(void, alSourcePlayAtTime,SOFT, ALuint,source, ALint64SOFT,start_time)
@@ -3257,7 +3257,7 @@ try {
 catch(al::base_exception&) {
 }
 catch(std::exception &e) {
-    ERR("Caught exception: %s\n", e.what());
+    ERRFMT("Caught exception: {}", e.what());
 }
 
 AL_API DECL_FUNC2(void, alSourcePlayv, ALsizei,n, const ALuint*,sources)
@@ -3291,7 +3291,7 @@ try {
 catch(al::base_exception&) {
 }
 catch(std::exception &e) {
-    ERR("Caught exception: %s\n", e.what());
+    ERRFMT("Caught exception: {}", e.what());
 }
 
 FORCE_ALIGN DECL_FUNCEXT3(void, alSourcePlayAtTimev,SOFT, ALsizei,n, const ALuint*,sources, ALint64SOFT,start_time)
@@ -3328,7 +3328,7 @@ try {
 catch(al::base_exception&) {
 }
 catch(std::exception &e) {
-    ERR("Caught exception: %s\n", e.what());
+    ERRFMT("Caught exception: {}", e.what());
 }
 
 
@@ -3403,7 +3403,7 @@ try {
 catch(al::base_exception&) {
 }
 catch(std::exception &e) {
-    ERR("Caught exception: %s\n", e.what());
+    ERRFMT("Caught exception: {}", e.what());
 }
 
 
@@ -3465,7 +3465,7 @@ try {
 catch(al::base_exception&) {
 }
 catch(std::exception &e) {
-    ERR("Caught exception: %s\n", e.what());
+    ERRFMT("Caught exception: {}", e.what());
 }
 
 
@@ -3529,7 +3529,7 @@ try {
 catch(al::base_exception&) {
 }
 catch(std::exception &e) {
-    ERR("Caught exception: %s\n", e.what());
+    ERRFMT("Caught exception: {}", e.what());
 }
 
 
@@ -3655,7 +3655,7 @@ try {
 catch(al::base_exception&) {
 }
 catch(std::exception &e) {
-    ERR("Caught exception: %s\n", e.what());
+    ERRFMT("Caught exception: {}", e.what());
 }
 
 AL_API DECL_FUNC3(void, alSourceUnqueueBuffers, ALuint,source, ALsizei,nb, ALuint*,buffers)
@@ -3711,7 +3711,7 @@ try {
 catch(al::base_exception&) {
 }
 catch(std::exception &e) {
-    ERR("Caught exception: %s\n", e.what());
+    ERRFMT("Caught exception: {}", e.what());
 }
 
 
@@ -4092,7 +4092,7 @@ void ALsource::eax4_translate(const Eax4Props& src, Eax5Props& dst) noexcept
             return EAXPROPERTYID_EAX50_FXSlot3;
 
         UNLIKELY
-        ERR("Unexpected active FX slot ID\n");
+        ERRFMT("Unexpected active FX slot ID");
         return EAX_NULL_GUID;
     };
     const auto src_slots = al::span{src.active_fx_slots.guidActiveFXSlots};

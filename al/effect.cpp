@@ -233,7 +233,7 @@ try {
 catch(al::base_exception&) {
 }
 catch(std::exception &e) {
-    ERR("Caught exception: %s\n", e.what());
+    ERRFMT("Caught exception: {}", e.what());
 }
 
 AL_API DECL_FUNC2(void, alDeleteEffects, ALsizei,n, const ALuint*,effects)
@@ -267,7 +267,7 @@ try {
 catch(al::base_exception&) {
 }
 catch(std::exception &e) {
-    ERR("Caught exception: %s\n", e.what());
+    ERRFMT("Caught exception: {}", e.what());
 }
 
 AL_API DECL_FUNC1(ALboolean, alIsEffect, ALuint,effect)
@@ -318,7 +318,7 @@ try {
 catch(al::base_exception&) {
 }
 catch(std::exception &e) {
-    ERR("Caught exception: %s\n", e.what());
+    ERRFMT("Caught exception: {}", e.what());
 }
 
 AL_API DECL_FUNC3(void, alEffectiv, ALuint,effect, ALenum,param, const ALint*,values)
@@ -350,7 +350,7 @@ try {
 catch(al::base_exception&) {
 }
 catch(std::exception &e) {
-    ERR("Caught exception: %s\n", e.what());
+    ERRFMT("Caught exception: {}", e.what());
 }
 
 AL_API DECL_FUNC3(void, alEffectf, ALuint,effect, ALenum,param, ALfloat,value)
@@ -375,7 +375,7 @@ try {
 catch(al::base_exception&) {
 }
 catch(std::exception &e) {
-    ERR("Caught exception: %s\n", e.what());
+    ERRFMT("Caught exception: {}", e.what());
 }
 
 AL_API DECL_FUNC3(void, alEffectfv, ALuint,effect, ALenum,param, const ALfloat*,values)
@@ -400,7 +400,7 @@ try {
 catch(al::base_exception&) {
 }
 catch(std::exception &e) {
-    ERR("Caught exception: %s\n", e.what());
+    ERRFMT("Caught exception: {}", e.what());
 }
 
 AL_API DECL_FUNC3(void, alGetEffecti, ALuint,effect, ALenum,param, ALint*,value)
@@ -432,7 +432,7 @@ try {
 catch(al::base_exception&) {
 }
 catch(std::exception &e) {
-    ERR("Caught exception: %s\n", e.what());
+    ERRFMT("Caught exception: {}", e.what());
 }
 
 AL_API DECL_FUNC3(void, alGetEffectiv, ALuint,effect, ALenum,param, ALint*,values)
@@ -464,7 +464,7 @@ try {
 catch(al::base_exception&) {
 }
 catch(std::exception &e) {
-    ERR("Caught exception: %s\n", e.what());
+    ERRFMT("Caught exception: {}", e.what());
 }
 
 AL_API DECL_FUNC3(void, alGetEffectf, ALuint,effect, ALenum,param, ALfloat*,value)
@@ -489,7 +489,7 @@ try {
 catch(al::base_exception&) {
 }
 catch(std::exception &e) {
-    ERR("Caught exception: %s\n", e.what());
+    ERRFMT("Caught exception: {}", e.what());
 }
 
 AL_API DECL_FUNC3(void, alGetEffectfv, ALuint,effect, ALenum,param, ALfloat*,values)
@@ -514,7 +514,7 @@ try {
 catch(al::base_exception&) {
 }
 catch(std::exception &e) {
-    ERR("Caught exception: %s\n", e.what());
+    ERRFMT("Caught exception: {}", e.what());
 }
 
 
@@ -696,7 +696,7 @@ void LoadReverbPreset(const std::string_view name, ALeffect *effect)
     if(al::case_compare(name, "NONE"sv) == 0)
     {
         InitEffectParams(effect, AL_EFFECT_NULL);
-        TRACE("Loading reverb '%s'\n", "NONE");
+        TRACEFMT("Loading reverb '{}'", "NONE");
         return;
     }
 
@@ -711,7 +711,7 @@ void LoadReverbPreset(const std::string_view name, ALeffect *effect)
         if(al::case_compare(name, std::data(reverbitem.name)) != 0)
             continue;
 
-        TRACE("Loading reverb '%s'\n", std::data(reverbitem.name));
+        TRACEFMT("Loading reverb '{}'", std::data(reverbitem.name));
         const auto &props = reverbitem.props;
         auto &dst = std::get<ReverbProps>(effect->Props);
         dst.Density   = props.flDensity;
@@ -744,7 +744,7 @@ void LoadReverbPreset(const std::string_view name, ALeffect *effect)
         return;
     }
 
-    WARN("Reverb preset '%.*s' not found\n", al::sizei(name), name.data());
+    WARNFMT("Reverb preset '{}' not found", name);
 }
 
 bool IsValidEffectType(ALenum type) noexcept

@@ -239,7 +239,7 @@ if(MSVC)
         set(C_FLAGS ${C_FLAGS} $<$<COMPILE_LANGUAGE:CXX>:/permissive->)
     endif()
     set(C_FLAGS ${C_FLAGS} /W4 /w14640 /wd4065 /wd4127 /wd4268 /wd4324 /wd5030 /wd5051
-        $<$<COMPILE_LANGUAGE:CXX>:/EHsc>)
+        $<$<COMPILE_LANGUAGE:CXX>:/EHsc> /utf-8)
 
     if(NOT DXSDK_DIR)
         string(REGEX REPLACE "\\\\" "/" DXSDK_DIR "$ENV{DXSDK_DIR}")

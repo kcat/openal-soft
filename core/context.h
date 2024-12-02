@@ -60,7 +60,7 @@ struct ContextProps {
     bool SourceDistanceModel;
     DistanceModel mDistanceModel;
 
-    std::atomic<ContextProps*> next;
+    std::atomic<ContextProps*> next{};
 };
 
 struct ContextParams {

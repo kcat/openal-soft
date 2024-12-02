@@ -6,6 +6,7 @@
 #include "alspan.h"
 #include "core/logging.h"
 #include "device.h"
+#include "fmt/core.h"
 
 
 namespace {
@@ -19,7 +20,7 @@ ALCenum EnumFromEventType(const alc::EventType type)
     case alc::EventType::DeviceRemoved: return ALC_EVENT_TYPE_DEVICE_REMOVED_SOFT;
     case alc::EventType::Count: break;
     }
-    throw std::runtime_error{"Invalid EventType: "+std::to_string(al::to_underlying(type))};
+    throw std::runtime_error{fmt::format("Invalid EventType: {}", int{al::to_underlying(type)})};
 }
 
 } // namespace

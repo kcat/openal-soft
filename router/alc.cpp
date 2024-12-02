@@ -377,7 +377,7 @@ void InitCtxFuncs(DriverIface &iface)
     iface.x = reinterpret_cast<decltype(iface.x)>(iface.alGetProcAddress(#x));\
     if(!iface.x)                                                              \
         ERR("Failed to find entry point for {} in {}", #x,                    \
-            wstr_to_acp(iface.Name));                                         \
+            wstr_to_utf8(iface.Name));                                        \
 } while(0)
     if(iface.alcIsExtensionPresent(device, "ALC_EXT_EFX"))
     {

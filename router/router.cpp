@@ -44,7 +44,7 @@ void AddModule(HMODULE module, const std::wstring_view name)
         }
         if(drv->Name == name)
         {
-            TRACE("Skipping similarly-named module {}", wstr_to_acp(name));
+            TRACE("Skipping similarly-named module {}", wstr_to_utf8(name));
             FreeLibrary(module);
             return;
         }
@@ -56,7 +56,7 @@ void AddModule(HMODULE module, const std::wstring_view name)
             { return al::case_compare(name, accept) == 0; });
         if(iter == gAcceptList.cend())
         {
-            TRACE("{} not found in ALROUTER_ACCEPT, skipping", wstr_to_acp(name));
+            TRACE("{} not found in ALROUTER_ACCEPT, skipping", wstr_to_utf8(name));
             FreeLibrary(module);
             return;
         }
@@ -68,7 +68,7 @@ void AddModule(HMODULE module, const std::wstring_view name)
             { return al::case_compare(name, accept) == 0; });
         if(iter != gRejectList.cend())
         {
-            TRACE("{} found in ALROUTER_REJECT, skipping", wstr_to_acp(name));
+            TRACE("{} found in ALROUTER_REJECT, skipping", wstr_to_utf8(name));
             FreeLibrary(module);
             return;
         }
@@ -84,7 +84,7 @@ void AddModule(HMODULE module, const std::wstring_view name)
         auto ptr = GetProcAddress(module, fname);
         if(!ptr)
         {
-            ERR("Failed to find entry point for {} in {}", fname, wstr_to_acp(name));
+            ERR("Failed to find entry point for {} in {}", fname, wstr_to_utf8(name));
             return false;
         }
 
@@ -184,7 +184,7 @@ void AddModule(HMODULE module, const std::wstring_view name)
             newdrv.ALCVer = MAKE_ALC_VER(alc_ver[0], alc_ver[1]);
         else
         {
-            WARN("Failed to query ALC version for {}, assuming 1.0", wstr_to_acp(name));
+            WARN("Failed to query ALC version for {}, assuming 1.0", wstr_to_utf8(name));
             newdrv.ALCVer = MAKE_ALC_VER(1, 0);
         }
 
@@ -194,7 +194,7 @@ void AddModule(HMODULE module, const std::wstring_view name)
             auto ptr = GetProcAddress(module, fname);
             if(!ptr)
                 WARN("Failed to find optional entry point for {} in {}", fname,
-                    wstr_to_acp(name));
+                    wstr_to_utf8(name));
             else
                 func = al::bit_cast<func_t>(ptr);
         };
@@ -219,7 +219,7 @@ void AddModule(HMODULE module, const std::wstring_view name)
             auto ptr = newdrv.alcGetProcAddress(nullptr, fname);
             if(!ptr)
             {
-                ERR("Failed to find entry point for {} in {}", fname, wstr_to_acp(name));
+                ERR("Failed to find entry point for {} in {}", fname, wstr_to_utf8(name));
                 return false;
             }
 
@@ -241,12 +241,12 @@ void AddModule(HMODULE module, const std::wstring_view name)
         return;
     }
     TRACE("Loaded module {}, {}, ALC {}.{}", decltype(std::declval<void*>()){module},
-        wstr_to_acp(name), newdrv.ALCVer>>8, newdrv.ALCVer&255);
+        wstr_to_utf8(name), newdrv.ALCVer>>8, newdrv.ALCVer&255);
 }
 
 void SearchDrivers(const std::wstring_view path)
 {
-    TRACE("Searching for drivers in {}...", wstr_to_acp(path));
+    TRACE("Searching for drivers in {}...", wstr_to_utf8(path));
     std::wstring srchPath{path};
     srchPath += L"\\*oal.dll";
 
@@ -258,11 +258,11 @@ void SearchDrivers(const std::wstring_view path)
         srchPath = path;
         srchPath += L"\\";
         srchPath += std::data(fdata.cFileName);
-        TRACE("Found {}", wstr_to_acp(srchPath));
+        TRACE("Found {}", wstr_to_utf8(srchPath));
 
         HMODULE mod{LoadLibraryW(srchPath.c_str())};
         if(!mod)
-            WARN("Could not load {}", wstr_to_acp(srchPath));
+            WARN("Could not load {}", wstr_to_utf8(srchPath));
         else
             AddModule(mod, std::data(fdata.cFileName));
     } while(FindNextFileW(srchHdl, &fdata));
@@ -337,7 +337,7 @@ void LoadDriverList()
 
     std::wstring dll_path;
     if(GetLoadedModuleDirectory(L"OpenAL32.dll", &dll_path))
-        TRACE("Got DLL path {}", wstr_to_acp(dll_path));
+        TRACE("Got DLL path {}", wstr_to_utf8(dll_path));
 
     std::wstring cwd_path;
     if(DWORD pathlen{GetCurrentDirectoryW(0, nullptr)})
@@ -351,11 +351,11 @@ void LoadDriverList()
     if(!cwd_path.empty() && (cwd_path.back() == '\\' || cwd_path.back() == '/'))
         cwd_path.pop_back();
     if(!cwd_path.empty())
-        TRACE("Got current working directory {}", wstr_to_acp(cwd_path));
+        TRACE("Got current working directory {}", wstr_to_utf8(cwd_path));
 
     std::wstring proc_path;
     if(GetLoadedModuleDirectory(nullptr, &proc_path))
-        TRACE("Got proc path {}", wstr_to_acp(proc_path));
+        TRACE("Got proc path {}", wstr_to_utf8(proc_path));
 
     std::wstring sys_path;
     if(UINT pathlen{GetSystemDirectoryW(nullptr, 0)})
@@ -369,7 +369,7 @@ void LoadDriverList()
     if(!sys_path.empty() && (sys_path.back() == '\\' || sys_path.back() == '/'))
         sys_path.pop_back();
     if(!sys_path.empty())
-        TRACE("Got system path {}", wstr_to_acp(sys_path));
+        TRACE("Got system path {}", wstr_to_utf8(sys_path));
 
     /* Don't search the DLL's path if it is the same as the current working
      * directory, app's path, or system path (don't want to do duplicate
@@ -401,7 +401,7 @@ BOOL APIENTRY DllMain(HINSTANCE, DWORD reason, void*)
         {
             gsl::owner<std::FILE*> f{_wfopen(logfname->c_str(), L"w")};
             if(f == nullptr)
-                ERR("Could not open log file: {}", wstr_to_acp(*logfname));
+                ERR("Could not open log file: {}", wstr_to_utf8(*logfname));
             else
                 LogFile = f;
         }

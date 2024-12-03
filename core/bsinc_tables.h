@@ -5,7 +5,7 @@
 
 #include "alspan.h"
 #include "bsinc_defs.h"
-
+#include "opthelpers.h"
 
 struct BSincTable {
     float scaleBase, scaleRange;
@@ -14,7 +14,7 @@ struct BSincTable {
     al::span<const float> Tab;
 };
 
-extern const BSincTable gBSinc12;
-extern const BSincTable gBSinc24;
+DECL_HIDDEN extern const BSincTable gBSinc12;
+DECL_HIDDEN extern const BSincTable gBSinc24;
 
 #endif /* CORE_BSINC_TABLES_H */

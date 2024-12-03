@@ -4,6 +4,7 @@
 #include <cstdio>
 
 #include "fmt/core.h"
+#include "opthelpers.h"
 
 
 enum class LogLevel {
@@ -12,9 +13,9 @@ enum class LogLevel {
     Warning,
     Trace
 };
-extern LogLevel gLogLevel;
+DECL_HIDDEN extern LogLevel gLogLevel;
 
-extern FILE *gLogFile;
+DECL_HIDDEN extern FILE *gLogFile;
 
 
 using LogCallbackFunc = void(*)(void *userptr, char level, const char *message, int length) noexcept;

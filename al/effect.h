@@ -44,7 +44,7 @@ struct EffectList {
     ALuint type;
     ALenum val;
 };
-extern const std::array<EffectList,16> gEffectList;
+DECL_HIDDEN extern const std::array<EffectList,16> gEffectList;
 
 using EffectHandlerVariant = std::variant<NullEffectHandler,ReverbEffectHandler,
     StdReverbEffectHandler,AutowahEffectHandler,ChorusEffectHandler,CompressorEffectHandler,

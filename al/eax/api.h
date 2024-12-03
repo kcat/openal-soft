@@ -21,6 +21,8 @@
 
 #include "AL/al.h"
 
+#include "opthelpers.h"
+
 
 #ifndef _WIN32
 using GUID = struct _GUID { /* NOLINT(*-reserved-identifier) */
@@ -46,7 +48,7 @@ inline bool operator!=(const GUID& lhs, const GUID& rhs) noexcept
 { return lhs.get_members() == rhs.get_members(); } \
 [[nodiscard]] friend bool operator!=(const T &lhs, const T &rhs) noexcept { return !(lhs == rhs); }
 
-extern const GUID DSPROPSETID_EAX_ReverbProperties;
+DECL_HIDDEN extern const GUID DSPROPSETID_EAX_ReverbProperties;
 
 enum DSPROPERTY_EAX_REVERBPROPERTY : unsigned int {
     DSPROPERTY_EAX_ALL,
@@ -64,7 +66,7 @@ struct EAX_REVERBPROPERTIES {
 }; // EAX_REVERBPROPERTIES
 
 
-extern const GUID DSPROPSETID_EAXBUFFER_ReverbProperties;
+DECL_HIDDEN extern const GUID DSPROPSETID_EAXBUFFER_ReverbProperties;
 
 enum DSPROPERTY_EAXBUFFER_REVERBPROPERTY : unsigned int {
     DSPROPERTY_EAXBUFFER_ALL,
@@ -80,7 +82,7 @@ constexpr auto EAX_BUFFER_MAXREVERBMIX = 1.0F;
 constexpr auto EAX_REVERBMIX_USEDISTANCE = -1.0F;
 
 
-extern const GUID DSPROPSETID_EAX20_ListenerProperties;
+DECL_HIDDEN extern const GUID DSPROPSETID_EAX20_ListenerProperties;
 
 enum DSPROPERTY_EAX20_LISTENERPROPERTY : unsigned int {
     DSPROPERTY_EAX20LISTENER_NONE,
@@ -218,7 +220,7 @@ constexpr auto EAX2LISTENER_DEFAULTFLAGS =
     EAX2LISTENERFLAGS_DECAYHFLIMIT;
 
 
-extern const GUID DSPROPSETID_EAX20_BufferProperties;
+DECL_HIDDEN extern const GUID DSPROPSETID_EAX20_BufferProperties;
 
 enum DSPROPERTY_EAX20_BUFFERPROPERTY : unsigned int {
     DSPROPERTY_EAX20BUFFER_NONE,
@@ -254,9 +256,9 @@ struct EAX20BUFFERPROPERTIES {
     unsigned long dwFlags; // modifies the behavior of properties
 }; // EAX20BUFFERPROPERTIES
 
-extern const GUID DSPROPSETID_EAX30_ListenerProperties;
+DECL_HIDDEN extern const GUID DSPROPSETID_EAX30_ListenerProperties;
 
-extern const GUID DSPROPSETID_EAX30_BufferProperties;
+DECL_HIDDEN extern const GUID DSPROPSETID_EAX30_BufferProperties;
 
 
 constexpr auto EAX_MAX_FXSLOTS = 4;
@@ -274,9 +276,9 @@ constexpr auto EAXERR_INCOMPATIBLE_SOURCE_TYPE = -5L;
 constexpr auto EAXERR_INCOMPATIBLE_EAX_VERSION = -6L;
 
 
-extern const GUID EAX_NULL_GUID;
+DECL_HIDDEN extern const GUID EAX_NULL_GUID;
 
-extern const GUID EAX_PrimaryFXSlotID;
+DECL_HIDDEN extern const GUID EAX_PrimaryFXSlotID;
 
 
 struct EAXVECTOR {
@@ -294,9 +296,9 @@ inline bool operator!=(const EAXVECTOR& lhs, const EAXVECTOR& rhs) noexcept
 { return !(lhs == rhs); }
 
 
-extern const GUID EAXPROPERTYID_EAX40_Context;
+DECL_HIDDEN extern const GUID EAXPROPERTYID_EAX40_Context;
 
-extern const GUID EAXPROPERTYID_EAX50_Context;
+DECL_HIDDEN extern const GUID EAXPROPERTYID_EAX50_Context;
 
 // EAX50
 constexpr auto HEADPHONES = 0UL;
@@ -372,17 +374,17 @@ constexpr auto EAXCONTEXT_DEFAULTMACROFXFACTOR = 0.0F;
 
 constexpr auto EAXCONTEXT_DEFAULTLASTERROR = EAX_OK;
 
-extern const GUID EAXPROPERTYID_EAX40_FXSlot0;
-extern const GUID EAXPROPERTYID_EAX50_FXSlot0;
-extern const GUID EAXPROPERTYID_EAX40_FXSlot1;
-extern const GUID EAXPROPERTYID_EAX50_FXSlot1;
-extern const GUID EAXPROPERTYID_EAX40_FXSlot2;
-extern const GUID EAXPROPERTYID_EAX50_FXSlot2;
-extern const GUID EAXPROPERTYID_EAX40_FXSlot3;
-extern const GUID EAXPROPERTYID_EAX50_FXSlot3;
+DECL_HIDDEN extern const GUID EAXPROPERTYID_EAX40_FXSlot0;
+DECL_HIDDEN extern const GUID EAXPROPERTYID_EAX50_FXSlot0;
+DECL_HIDDEN extern const GUID EAXPROPERTYID_EAX40_FXSlot1;
+DECL_HIDDEN extern const GUID EAXPROPERTYID_EAX50_FXSlot1;
+DECL_HIDDEN extern const GUID EAXPROPERTYID_EAX40_FXSlot2;
+DECL_HIDDEN extern const GUID EAXPROPERTYID_EAX50_FXSlot2;
+DECL_HIDDEN extern const GUID EAXPROPERTYID_EAX40_FXSlot3;
+DECL_HIDDEN extern const GUID EAXPROPERTYID_EAX50_FXSlot3;
 
-extern const GUID EAX40CONTEXT_DEFAULTPRIMARYFXSLOTID;
-extern const GUID EAX50CONTEXT_DEFAULTPRIMARYFXSLOTID;
+DECL_HIDDEN extern const GUID EAX40CONTEXT_DEFAULTPRIMARYFXSLOTID;
+DECL_HIDDEN extern const GUID EAX50CONTEXT_DEFAULTPRIMARYFXSLOTID;
 
 enum EAXFXSLOT_PROPERTY : unsigned int {
     EAXFXSLOT_PARAMETER = 0,
@@ -445,8 +447,8 @@ struct EAX50FXSLOTPROPERTIES : public EAX40FXSLOTPROPERTIES {
     float flOcclusionLFRatio;
 }; // EAX50FXSLOTPROPERTIES
 
-extern const GUID EAXPROPERTYID_EAX40_Source;
-extern const GUID EAXPROPERTYID_EAX50_Source;
+DECL_HIDDEN extern const GUID EAXPROPERTYID_EAX40_Source;
+DECL_HIDDEN extern const GUID EAXPROPERTYID_EAX50_Source;
 
 // Source object properties
 enum EAXSOURCE_PROPERTY : unsigned int {
@@ -713,16 +715,16 @@ struct EAXSOURCEEXCLUSIONSENDPROPERTIES {
     float flExclusionLFRatio;
 }; // EAXSOURCEEXCLUSIONSENDPROPERTIES
 
-extern const EAX40ACTIVEFXSLOTS EAX40SOURCE_DEFAULTACTIVEFXSLOTID;
+DECL_HIDDEN extern const EAX40ACTIVEFXSLOTS EAX40SOURCE_DEFAULTACTIVEFXSLOTID;
 
-extern const EAX50ACTIVEFXSLOTS EAX50SOURCE_3DDEFAULTACTIVEFXSLOTID;
+DECL_HIDDEN extern const EAX50ACTIVEFXSLOTS EAX50SOURCE_3DDEFAULTACTIVEFXSLOTID;
 
-extern const EAX50ACTIVEFXSLOTS EAX50SOURCE_2DDEFAULTACTIVEFXSLOTID;
+DECL_HIDDEN extern const EAX50ACTIVEFXSLOTS EAX50SOURCE_2DDEFAULTACTIVEFXSLOTID;
 
 
 // EAX Reverb Effect
 
-extern const GUID EAX_REVERB_EFFECT;
+DECL_HIDDEN extern const GUID EAX_REVERB_EFFECT;
 
 // Reverb effect properties
 enum EAXREVERB_PROPERTY : unsigned int {
@@ -959,18 +961,18 @@ constexpr auto EAXREVERB_DEFAULTFLAGS =
 
 
 using Eax1ReverbPresets = std::array<EAX_REVERBPROPERTIES, EAX1_ENVIRONMENT_COUNT>;
-extern const Eax1ReverbPresets EAX1REVERB_PRESETS;
+DECL_HIDDEN extern const Eax1ReverbPresets EAX1REVERB_PRESETS;
 
 using Eax2ReverbPresets = std::array<EAX20LISTENERPROPERTIES, EAX2_ENVIRONMENT_COUNT>;
-extern const Eax2ReverbPresets EAX2REVERB_PRESETS;
+DECL_HIDDEN extern const Eax2ReverbPresets EAX2REVERB_PRESETS;
 
 using EaxReverbPresets = std::array<EAXREVERBPROPERTIES, EAX1_ENVIRONMENT_COUNT>;
-extern const EaxReverbPresets EAXREVERB_PRESETS;
+DECL_HIDDEN extern const EaxReverbPresets EAXREVERB_PRESETS;
 
 
 // AGC Compressor Effect
 
-extern const GUID EAX_AGCCOMPRESSOR_EFFECT;
+DECL_HIDDEN extern const GUID EAX_AGCCOMPRESSOR_EFFECT;
 
 enum EAXAGCCOMPRESSOR_PROPERTY : unsigned int {
     EAXAGCCOMPRESSOR_NONE,
@@ -991,7 +993,7 @@ constexpr auto EAXAGCCOMPRESSOR_DEFAULTONOFF = EAXAGCCOMPRESSOR_MAXONOFF;
 
 // Autowah Effect
 
-extern const GUID EAX_AUTOWAH_EFFECT;
+DECL_HIDDEN extern const GUID EAX_AUTOWAH_EFFECT;
 
 enum EAXAUTOWAH_PROPERTY : unsigned int {
     EAXAUTOWAH_NONE,
@@ -1030,7 +1032,7 @@ constexpr auto EAXAUTOWAH_DEFAULTPEAKLEVEL = 2100L;
 
 // Chorus Effect
 
-extern const GUID EAX_CHORUS_EFFECT;
+DECL_HIDDEN extern const GUID EAX_CHORUS_EFFECT;
 
 enum EAXCHORUS_PROPERTY : unsigned int {
     EAXCHORUS_NONE,
@@ -1086,7 +1088,7 @@ constexpr auto EAXCHORUS_DEFAULTDELAY = 0.016F;
 
 // Distortion Effect
 
-extern const GUID EAX_DISTORTION_EFFECT;
+DECL_HIDDEN extern const GUID EAX_DISTORTION_EFFECT;
 
 enum EAXDISTORTION_PROPERTY : unsigned int {
     EAXDISTORTION_NONE,
@@ -1131,7 +1133,7 @@ constexpr auto EAXDISTORTION_DEFAULTEQBANDWIDTH = 3600.0F;
 
 // Echo Effect
 
-extern const GUID EAX_ECHO_EFFECT;
+DECL_HIDDEN extern const GUID EAX_ECHO_EFFECT;
 
 enum EAXECHO_PROPERTY : unsigned int {
     EAXECHO_NONE,
@@ -1176,7 +1178,7 @@ constexpr auto EAXECHO_DEFAULTSPREAD = -1.0F;
 
 // Equalizer Effect
 
-extern const GUID EAX_EQUALIZER_EFFECT;
+DECL_HIDDEN extern const GUID EAX_EQUALIZER_EFFECT;
 
 enum EAXEQUALIZER_PROPERTY : unsigned int {
     EAXEQUALIZER_NONE,
@@ -1252,7 +1254,7 @@ constexpr auto EAXEQUALIZER_DEFAULTHIGHCUTOFF = 6000.0F;
 
 // Flanger Effect
 
-extern const GUID EAX_FLANGER_EFFECT;
+DECL_HIDDEN extern const GUID EAX_FLANGER_EFFECT;
 
 enum EAXFLANGER_PROPERTY : unsigned int {
     EAXFLANGER_NONE,
@@ -1308,7 +1310,7 @@ constexpr auto EAXFLANGER_DEFAULTDELAY = 0.002F;
 
 // Frequency Shifter Effect
 
-extern const GUID EAX_FREQUENCYSHIFTER_EFFECT;
+DECL_HIDDEN extern const GUID EAX_FREQUENCYSHIFTER_EFFECT;
 
 enum EAXFREQUENCYSHIFTER_PROPERTY : unsigned int {
     EAXFREQUENCYSHIFTER_NONE,
@@ -1347,7 +1349,7 @@ constexpr auto EAXFREQUENCYSHIFTER_DEFAULTRIGHTDIRECTION = EAXFREQUENCYSHIFTER_M
 
 // Vocal Morpher Effect
 
-extern const GUID EAX_VOCALMORPHER_EFFECT;
+DECL_HIDDEN extern const GUID EAX_VOCALMORPHER_EFFECT;
 
 enum EAXVOCALMORPHER_PROPERTY : unsigned int {
     EAXVOCALMORPHER_NONE,
@@ -1439,7 +1441,7 @@ constexpr auto EAXVOCALMORPHER_DEFAULTRATE = 1.41F;
 
 // Pitch Shifter Effect
 
-extern const GUID EAX_PITCHSHIFTER_EFFECT;
+DECL_HIDDEN extern const GUID EAX_PITCHSHIFTER_EFFECT;
 
 enum EAXPITCHSHIFTER_PROPERTY : unsigned int {
     EAXPITCHSHIFTER_NONE,
@@ -1466,7 +1468,7 @@ constexpr auto EAXPITCHSHIFTER_DEFAULTFINETUNE = 0L;
 
 // Ring Modulator Effect
 
-extern const GUID EAX_RINGMODULATOR_EFFECT;
+DECL_HIDDEN extern const GUID EAX_RINGMODULATOR_EFFECT;
 
 enum EAXRINGMODULATOR_PROPERTY : unsigned int {
     EAXRINGMODULATOR_NONE,

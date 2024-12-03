@@ -658,7 +658,6 @@ set(CORE_OBJS
     core/filters/nfc.h
     core/filters/splitter.cpp
     core/filters/splitter.h
-    core/fmt_traits.cpp
     core/fmt_traits.h
     core/fpu_ctrl.cpp
     core/fpu_ctrl.h

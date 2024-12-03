@@ -24,8 +24,6 @@
 #include <string>
 
 
-int CPUCapFlags{0};
-
 namespace {
 
 #if defined(HAVE_GCC_GET_CPUID) \

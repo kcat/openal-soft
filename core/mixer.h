@@ -8,6 +8,7 @@
 #include "alspan.h"
 #include "ambidefs.h"
 #include "bufferline.h"
+#include "opthelpers.h"
 
 struct MixParams;
 
@@ -16,7 +17,7 @@ using MixerOutFunc = void(*)(const al::span<const float> InSamples,
     const al::span<FloatBufferLine> OutBuffer, const al::span<float> CurrentGains,
     const al::span<const float> TargetGains, const std::size_t Counter, const std::size_t OutPos);
 
-extern MixerOutFunc MixSamplesOut;
+DECL_HIDDEN extern MixerOutFunc MixSamplesOut;
 inline void MixSamples(const al::span<const float> InSamples,
     const al::span<FloatBufferLine> OutBuffer, const al::span<float> CurrentGains,
     const al::span<const float> TargetGains, const std::size_t Counter, const std::size_t OutPos)
@@ -26,7 +27,7 @@ inline void MixSamples(const al::span<const float> InSamples,
 using MixerOneFunc = void(*)(const al::span<const float> InSamples,const al::span<float> OutBuffer,
     float &CurrentGain, const float TargetGain, const std::size_t Counter);
 
-extern MixerOneFunc MixSamplesOne;
+DECL_HIDDEN extern MixerOneFunc MixSamplesOne;
 inline void MixSamples(const al::span<const float> InSamples, const al::span<float> OutBuffer,
     float &CurrentGain, const float TargetGain, const std::size_t Counter)
 { MixSamplesOne(InSamples, OutBuffer, CurrentGain, TargetGain, Counter); }

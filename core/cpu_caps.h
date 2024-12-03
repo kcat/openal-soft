@@ -5,7 +5,7 @@
 #include <string>
 
 
-extern int CPUCapFlags;
+inline int CPUCapFlags{0};
 enum {
     CPU_CAP_SSE    = 1<<0,
     CPU_CAP_SSE2   = 1<<1,

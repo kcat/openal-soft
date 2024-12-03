@@ -74,6 +74,12 @@
 #define UNLIKELY
 #endif
 
+#if !defined(_WIN32) && HAS_ATTRIBUTE(gnu::visibility)
+#define DECL_HIDDEN [[gnu::visibility("hidden")]]
+#else
+#define DECL_HIDDEN
+#endif
+
 namespace al {
 
 template<typename T>

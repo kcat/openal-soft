@@ -94,10 +94,6 @@ set_target_properties(alsoft.fmt PROPERTIES ${ALSOFT_STD_VERSION_PROPS}
   COMPILE_PDB_NAME "fmt"
   COMPILE_PDB_NAME_DEBUG "fmt${ALSOFT_FMT_DEBUG_POSTFIX}")
 
-if (BUILD_SHARED_LIBS)
-  target_compile_definitions(alsoft.fmt PRIVATE FMT_LIB_EXPORT INTERFACE FMT_SHARED)
-endif ()
-
 add_library(alsoft.fmt-header-only INTERFACE)
 add_library(alsoft::fmt-header-only ALIAS alsoft.fmt-header-only)
 

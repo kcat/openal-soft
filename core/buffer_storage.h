@@ -1,10 +1,8 @@
 #ifndef CORE_BUFFER_STORAGE_H
 #define CORE_BUFFER_STORAGE_H
 
-#include <atomic>
 #include <cstddef>
 
-#include "alnumeric.h"
 #include "alspan.h"
 #include "ambidefs.h"
 #include "storage_formats.h"
@@ -34,7 +32,7 @@ constexpr bool Is2DAmbisonic(FmtChannels chans) noexcept
 }
 
 
-using CallbackType = int(*)(void*, void*, int);
+using CallbackType = int(*)(void*, void*, int) noexcept;
 
 struct BufferStorage {
     CallbackType mCallback{nullptr};

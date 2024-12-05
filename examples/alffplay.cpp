@@ -51,9 +51,6 @@ extern "C" {
 #include "libswscale/swscale.h"
 #include "libswresample/swresample.h"
 
-constexpr auto AVNoPtsValue = AV_NOPTS_VALUE;
-constexpr auto AVErrorEOF = AVERROR_EOF;
-
 struct SwsContext;
 }
 
@@ -86,6 +83,16 @@ using milliseconds = std::chrono::milliseconds;
 using seconds = std::chrono::seconds;
 using seconds_d64 = std::chrono::duration<double>;
 using std::chrono::duration_cast;
+
+#ifdef __GNUC__
+_Pragma("GCC diagnostic push")
+_Pragma("GCC diagnostic ignored \"-Wold-style-cast\"")
+#endif
+constexpr auto AVNoPtsValue = AV_NOPTS_VALUE;
+constexpr auto AVErrorEOF = AVERROR_EOF;
+#ifdef __GNUC__
+_Pragma("GCC diagnostic pop")
+#endif
 
 const std::string AppName{"alffplay"};
 
@@ -689,13 +696,9 @@ int AudioState::decodeFrame()
         mSamplesMax = mDecodedFrame->nb_samples;
         mSamplesSpan = {mSamples[0], static_cast<size_t>(mSamplesMax)*mFrameSize};
     }
-    /* Copy to a local to mark const. Don't know why this can't be implicit. */
-    using data_t = decltype(decltype(mDecodedFrame)::element_type::data);
-    std::array<const uint8_t*,std::extent_v<data_t>> cdata{};
-    std::copy(std::begin(mDecodedFrame->data), std::end(mDecodedFrame->data), cdata.begin());
     /* Return the amount of sample frames converted */
     const int data_size{swr_convert(mSwresCtx.get(), mSamples.data(), mDecodedFrame->nb_samples,
-        cdata.data(), mDecodedFrame->nb_samples)};
+        mDecodedFrame->extended_data, mDecodedFrame->nb_samples)};
 
     av_frame_unref(mDecodedFrame.get());
     return data_size;
@@ -947,6 +950,18 @@ int AudioState::handler()
     std::vector<uint8_t> samples;
     ALsizei buffer_len{0};
 
+    /* Note that ffmpeg assumes AmbiX (ACN layout, SN3D normalization). Only
+     * support HOA when OpenAL can take AmbiX natively (if AmbiX -> FuMa
+     * conversion is needed, we don't bother with higher order channels).
+     */
+    const auto has_bfmt = bool{alIsExtensionPresent("AL_EXT_BFORMAT") != AL_FALSE};
+    const auto has_bfmt_ex = bool{alIsExtensionPresent("AL_SOFT_bformat_ex") != AL_FALSE};
+    const auto has_bfmt_hoa = bool{has_bfmt_ex
+        && alIsExtensionPresent("AL_SOFT_bformat_hoa") != AL_FALSE};
+    /* AL_SOFT_bformat_hoa supports up to 14th order (225 channels). */
+    static constexpr auto max_ambi_order = 14;
+    auto ambi_order = 0;
+
     /* Find a suitable format for OpenAL. */
     const auto layoutmask = mCodecCtx->ch_layout.u.mask; /* NOLINT(*-union-access) */
     mDstChanLayout = 0;
@@ -993,8 +1008,7 @@ int AudioState::handler()
                 mFormat = AL_FORMAT_MONO_FLOAT32;
             }
         }
-        else if(mCodecCtx->ch_layout.order == AV_CHANNEL_ORDER_AMBISONIC
-            && alIsExtensionPresent("AL_EXT_BFORMAT"))
+        else if(mCodecCtx->ch_layout.order == AV_CHANNEL_ORDER_AMBISONIC && has_bfmt)
         {
             /* Calculate what should be the ambisonic order from the number of
              * channels, and confirm that's the number of channels. Opus allows
@@ -1002,14 +1016,16 @@ int AudioState::handler()
              * which we can ignore, so check for that too.
              */
             auto order = static_cast<int>(std::sqrt(mCodecCtx->ch_layout.nb_channels)) - 1;
-            int channels{(order+1) * (order+1)};
-            if(channels == mCodecCtx->ch_layout.nb_channels
-                || channels+2 == mCodecCtx->ch_layout.nb_channels)
+            auto channels = ALuint(order+1) * ALuint(order+1);
+            if(channels == ALuint(mCodecCtx->ch_layout.nb_channels)
+                || channels+2 == ALuint(mCodecCtx->ch_layout.nb_channels))
             {
                 /* OpenAL only supports first-order with AL_EXT_BFORMAT, which
-                 * is 4 channels for 3D buffers.
+                 * is 4 channels for 3D buffers, unless AL_SOFT_bformat_hoa is
+                 * also supported.
                  */
-                mFrameSize *= 4;
+                ambi_order = has_bfmt_hoa ? std::min(order, max_ambi_order) : 1;
+                mFrameSize *= ALuint(ambi_order+1) * ALuint(ambi_order+1);
                 mFormat = alGetEnumValue("AL_FORMAT_BFORMAT3D_FLOAT32");
             }
         }
@@ -1055,15 +1071,15 @@ int AudioState::handler()
                 mFormat = AL_FORMAT_MONO8;
             }
         }
-        else if(mCodecCtx->ch_layout.order == AV_CHANNEL_ORDER_AMBISONIC
-            && alIsExtensionPresent("AL_EXT_BFORMAT"))
+        else if(mCodecCtx->ch_layout.order == AV_CHANNEL_ORDER_AMBISONIC && has_bfmt)
         {
             auto order = static_cast<int>(std::sqrt(mCodecCtx->ch_layout.nb_channels)) - 1;
-            int channels{(order+1) * (order+1)};
+            auto channels = (order+1) * (order+1);
             if(channels == mCodecCtx->ch_layout.nb_channels
                 || channels+2 == mCodecCtx->ch_layout.nb_channels)
             {
-                mFrameSize *= 4;
+                ambi_order = has_bfmt_hoa ? std::min(order, max_ambi_order) : 1;
+                mFrameSize *= ALuint(ambi_order+1) * ALuint(ambi_order+1);
                 mFormat = alGetEnumValue("AL_FORMAT_BFORMAT3D_8");
             }
         }
@@ -1109,15 +1125,15 @@ int AudioState::handler()
                 mFormat = AL_FORMAT_MONO16;
             }
         }
-        else if(mCodecCtx->ch_layout.order == AV_CHANNEL_ORDER_AMBISONIC
-            && alIsExtensionPresent("AL_EXT_BFORMAT"))
+        else if(mCodecCtx->ch_layout.order == AV_CHANNEL_ORDER_AMBISONIC && has_bfmt)
         {
             auto order = static_cast<int>(std::sqrt(mCodecCtx->ch_layout.nb_channels)) - 1;
-            int channels{(order+1) * (order+1)};
+            auto channels = (order+1) * (order+1);
             if(channels == mCodecCtx->ch_layout.nb_channels
                 || channels+2 == mCodecCtx->ch_layout.nb_channels)
             {
-                mFrameSize *= 4;
+                ambi_order = has_bfmt_hoa ? std::min(order, max_ambi_order) : 1;
+                mFrameSize *= ALuint(ambi_order+1) * ALuint(ambi_order+1);
                 mFormat = alGetEnumValue("AL_FORMAT_BFORMAT3D_16");
             }
         }
@@ -1142,22 +1158,14 @@ int AudioState::handler()
         return 0;
     }
 
-    /* Note that ffmpeg assumes AmbiX (ACN layout, SN3D normalization). */
-    const bool has_bfmt_ex{alIsExtensionPresent("AL_SOFT_bformat_ex") != AL_FALSE};
-    const ALenum ambi_layout{AL_ACN_SOFT};
-    const ALenum ambi_scale{AL_SN3D_SOFT};
-
     if(!mDstChanLayout)
     {
-        /* OpenAL only supports first-order ambisonics with AL_EXT_BFORMAT, so
-         * we have to drop any extra channels.
-         */
-        ChannelLayout layout{};
-        av_channel_layout_from_string(&layout, "ambisonic 1");
+        auto layout = ChannelLayout{};
+        av_channel_layout_from_string(&layout, fmt::format("ambisonic {}", ambi_order).c_str());
 
-        int err{swr_alloc_set_opts2(al::out_ptr(mSwresCtx), &layout, mDstSampleFmt,
+        const auto err = swr_alloc_set_opts2(al::out_ptr(mSwresCtx), &layout, mDstSampleFmt,
             mCodecCtx->sample_rate, &mCodecCtx->ch_layout, mCodecCtx->sample_fmt,
-            mCodecCtx->sample_rate, 0, nullptr)};
+            mCodecCtx->sample_rate, 0, nullptr);
         if(err != 0)
         {
             std::array<char,AV_ERROR_MAX_STRING_SIZE> errstr{};
@@ -1166,7 +1174,9 @@ int AudioState::handler()
             return 0;
         }
 
-        if(has_bfmt_ex)
+        if(has_bfmt_hoa && ambi_order > 1)
+            fmt::println("Found AL_SOFT_bformat_hoa (order {})", ambi_order);
+        else if(has_bfmt_ex)
             fmt::println("Found AL_SOFT_bformat_ex");
         else
         {
@@ -1222,9 +1232,14 @@ int AudioState::handler()
     {
         for(ALuint bufid : mBuffers)
         {
-            alBufferi(bufid, AL_AMBISONIC_LAYOUT_SOFT, ambi_layout);
-            alBufferi(bufid, AL_AMBISONIC_SCALING_SOFT, ambi_scale);
+            alBufferi(bufid, AL_AMBISONIC_LAYOUT_SOFT, AL_ACN_SOFT);
+            alBufferi(bufid, AL_AMBISONIC_SCALING_SOFT, AL_SN3D_SOFT);
         }
+    }
+    if(ambi_order > 1)
+    {
+        for(ALuint bufid : mBuffers)
+            alBufferi(bufid, AL_UNPACK_AMBISONIC_ORDER_SOFT, ambi_order);
     }
 #ifdef AL_SOFT_UHJ
     if(EnableSuperStereo)

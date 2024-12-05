@@ -15,7 +15,7 @@
  *
  * <https://forums.nesdev.org/viewtopic.php?p=251534#p251534>
  *
- * Additional changes were made here, the most obvious being that is has full
+ * Additional changes were made here, the most obvious being that it has full
  * floating-point precision instead of 11-bit fixed-point, but also an offset
  * adjustment for the coefficients to better preserve phase.
  */
@@ -26,9 +26,9 @@ auto GetCoeff(double idx) noexcept -> double
 {
     const double k{0.5 + idx};
     if(k > 512.0) return 0.0;
-    const double s{ std::sin(al::numbers::pi*1.280/1024 * k)};
-    const double t{(std::cos(al::numbers::pi*2.000/1023 * k) - 1.0) * 0.50};
-    const double u{(std::cos(al::numbers::pi*4.000/1023 * k) - 1.0) * 0.08};
+    const double s{ std::sin(al::numbers::pi*1.280/1024.0 * k)};
+    const double t{(std::cos(al::numbers::pi*2.000/1023.0 * k) - 1.0) * 0.50};
+    const double u{(std::cos(al::numbers::pi*4.000/1023.0 * k) - 1.0) * 0.08};
     return s * (t + u + 1.0) / k;
 }
 

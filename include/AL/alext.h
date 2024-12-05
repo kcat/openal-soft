@@ -1079,6 +1079,11 @@ ALenum AL_APIENTRY EAXGetBufferModeDirect(ALCcontext *context, ALuint buffer, AL
 #endif
 #endif
 
+#ifndef AL_SOFT_bformat_hoa
+#define AL_SOFT_bformat_hoa
+#define AL_UNPACK_AMBISONIC_ORDER_SOFT           0x199D
+#endif
+
 #ifdef __cplusplus
 }
 #endif

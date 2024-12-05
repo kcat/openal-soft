@@ -37,11 +37,6 @@ void AL_APIENTRY alFlushMappedBufferDirectSOFT(ALCcontext *context, ALuint buffe
 #endif
 #endif
 
-#ifndef AL_SOFT_bformat_hoa
-#define AL_SOFT_bformat_hoa
-#define AL_UNPACK_AMBISONIC_ORDER_SOFT           0x199D
-#endif
-
 #ifndef AL_SOFT_convolution_effect
 #define AL_SOFT_convolution_effect
 #define AL_EFFECT_CONVOLUTION_SOFT               0xA000

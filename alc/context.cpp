@@ -73,7 +73,7 @@ std::vector<std::string_view> getContextExtensions() noexcept
         "AL_EXT_STEREO_ANGLES"sv,
         "AL_LOKI_quadriphonic"sv,
         "AL_SOFT_bformat_ex"sv,
-        "AL_SOFTX_bformat_hoa"sv,
+        "AL_SOFT_bformat_hoa"sv,
         "AL_SOFT_block_alignment"sv,
         "AL_SOFT_buffer_length_query"sv,
         "AL_SOFT_callback_buffer"sv,

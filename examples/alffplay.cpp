@@ -1892,8 +1892,8 @@ void MovieState::stop()
 // Helper method to print the time with human-readable formatting.
 auto PrettyTime(seconds t) -> std::string
 {
-    using hours = std::chrono::hours;
     using minutes = std::chrono::minutes;
+    using hours = std::chrono::hours;
 
     if(t.count() < 0)
         return "0s";
@@ -2058,10 +2058,10 @@ int main(al::span<std::string_view> args)
         auto event = SDL_Event{};
         auto have_event = SDL_WaitEventTimeout(&event, 10);
 
-        const auto cur_time = std::chrono::duration_cast<seconds>(movState->getMasterClock());
+        const auto cur_time = duration_cast<seconds>(movState->getMasterClock());
         if(cur_time != last_time)
         {
-            auto end_time = std::chrono::duration_cast<seconds>(movState->getDuration());
+            const auto end_time = duration_cast<seconds>(movState->getDuration());
             fmt::print("    \r {} / {}", PrettyTime(cur_time), PrettyTime(end_time));
             fflush(stdout);
             last_time = cur_time;

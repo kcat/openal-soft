@@ -1551,8 +1551,8 @@ void VideoState::updateVideo(SDL_Window *screen, SDL_Renderer *renderer, bool re
                     frame->data[1], frame->linesize[1],
                     frame->data[2], frame->linesize[2]
                 );
-            else if(SDL_LockTexture(mImage, nullptr, &pixels, &pitch) != 0)
-                fmt::println(stderr, "Failed to lock texture");
+            else if(!SDL_LockTexture(mImage, nullptr, &pixels, &pitch))
+                fmt::println(stderr, "Failed to lock texture: {}", SDL_GetError());
             else
             {
                 // Convert the image into YUV format that SDL uses
@@ -1730,12 +1730,12 @@ bool MovieState::prepare()
 
 void MovieState::setTitle(SDL_Window *window) const
 {
-    auto pos1 = mFilename.rfind('/');
-    auto pos2 = mFilename.rfind('\\');
-    auto fpos = ((pos1 == std::string::npos) ? pos2 :
-                 (pos2 == std::string::npos) ? pos1 :
-                 std::max(pos1, pos2)) + 1;
-    SDL_SetWindowTitle(window, (mFilename.substr(fpos)+" - "+AppName).c_str());
+    /* rfind returns npos if the char isn't found, and npos+1==0, which will
+     * give the desired result for finding the filename portion.
+     */
+    const auto fpos = std::max(mFilename.rfind('/')+1, mFilename.rfind('\\')+1);
+    const auto title = fmt::format("{} - {}", std::string_view{mFilename}.substr(fpos), AppName);
+    SDL_SetWindowTitle(window, title.c_str());
 }
 
 nanoseconds MovieState::getClock() const

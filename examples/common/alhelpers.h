@@ -36,11 +36,11 @@ void al_nssleep(unsigned long nsec);
 } // extern "C"
 
 #include <cstdio>
-#include <iostream>
 #include <string>
 #include <string_view>
 
 #include "alspan.h"
+#include "fmt/core.h"
 
 int InitAL(al::span<std::string_view> &args)
 {
@@ -51,14 +51,14 @@ int InitAL(al::span<std::string_view> &args)
     {
         device = alcOpenDevice(std::string{args[1]}.c_str());
         if(!device)
-            std::cerr<< "Failed to open \""<<args[1]<<"\", trying default\n";
+            fmt::println(stderr, "Failed to open \"{}\", trying default", args[1]);
         args = args.subspan(2);
     }
     if(!device)
         device = alcOpenDevice(nullptr);
     if(!device)
     {
-        std::fprintf(stderr, "Could not open a device!\n");
+        fmt::println(stderr, "Could not open a device!");
         return 1;
     }
 
@@ -68,7 +68,7 @@ int InitAL(al::span<std::string_view> &args)
         if(ctx)
             alcDestroyContext(ctx);
         alcCloseDevice(device);
-        std::fprintf(stderr, "Could not set a context!\n");
+        fmt::println(stderr, "Could not set a context!");
         return 1;
     }
 
@@ -77,7 +77,7 @@ int InitAL(al::span<std::string_view> &args)
         name = alcGetString(device, ALC_ALL_DEVICES_SPECIFIER);
     if(!name || alcGetError(device) != AL_NO_ERROR)
         name = alcGetString(device, ALC_DEVICE_SPECIFIER);
-    std::printf("Opened \"%s\"\n", name);
+    fmt::println("Opened \"{}\"", name);
 
     return 0;
 }

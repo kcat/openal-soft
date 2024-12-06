@@ -449,7 +449,7 @@ int main(al::span<std::string_view> args)
         fmt::print("  \rOffset: {:.02f}", offset);
         fflush(stdout);
     } while(alGetErrorDirect(context) == AL_NO_ERROR && state == AL_PLAYING);
-    printf("\n");
+    fmt::println("");
 
     /* All done. Delete resources, and close down OpenAL. */
     alDeleteSourcesDirect(context, 1, &source);

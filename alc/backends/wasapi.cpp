@@ -201,16 +201,16 @@ constexpr uint RefTime2Samples(const ReferenceTime &val, T srate) noexcept
 
 
 class GuidPrinter {
-    std::array<char,64> mMsg{};
+    std::string mMsg;
 
 public:
     GuidPrinter(const GUID &guid)
-    {
-        std::snprintf(mMsg.data(), mMsg.size(), "{%08lx-%04x-%04x-%02x%02x-%02x%02x%02x%02x%02x%02x}",
-            DWORD{guid.Data1}, guid.Data2, guid.Data3, guid.Data4[0], guid.Data4[1], guid.Data4[2],
-            guid.Data4[3], guid.Data4[4], guid.Data4[5], guid.Data4[6], guid.Data4[7]);
-    }
-    [[nodiscard]] auto c_str() const -> const char* { return mMsg.data(); }
+        : mMsg{fmt::format(
+            "{{{:08x}-{:04x}-{:04x}-{:02x}{:02x}-{:02x}{:02x}{:02x}{:02x}{:02x}{:02x}}}",
+            guid.Data1, guid.Data2, guid.Data3, guid.Data4[0], guid.Data4[1], guid.Data4[2],
+            guid.Data4[3], guid.Data4[4], guid.Data4[5], guid.Data4[6], guid.Data4[7])}
+    { }
+    [[nodiscard]] auto str() const noexcept -> const std::string& { return mMsg; }
 };
 
 struct PropVariant {
@@ -907,7 +907,7 @@ void TraceFormat(const std::string_view msg, const WAVEFORMATEX *format)
             msg, fmtex->Format.wFormatTag, fmtex->Format.nChannels, fmtex->Format.nSamplesPerSec,
             fmtex->Format.nAvgBytesPerSec, fmtex->Format.nBlockAlign, fmtex->Format.wBitsPerSample,
             fmtex->Format.cbSize, fmtex->Samples.wReserved, fmtex->dwChannelMask,
-            GuidPrinter{fmtex->SubFormat}.c_str());
+            GuidPrinter{fmtex->SubFormat}.str());
         /* NOLINTEND(cppcoreguidelines-pro-type-union-access) */
     }
     else
@@ -1732,7 +1732,7 @@ void WasapiPlayback::finalizeFormat(WAVEFORMATEXTENSIBLE &OutputType)
     }
     else
     {
-        ERR("Unhandled format sub-type: {}", GuidPrinter{OutputType.SubFormat}.c_str());
+        ERR("Unhandled format sub-type: {}", GuidPrinter{OutputType.SubFormat}.str());
         mDevice->FmtType = DevFmtShort;
         if(OutputType.Format.wFormatTag != WAVE_FORMAT_EXTENSIBLE)
             OutputType.Format.wFormatTag = WAVE_FORMAT_PCM;
@@ -2628,7 +2628,7 @@ HRESULT WasapiCapture::resetProxy()
     }
     else
     {
-        ERR("Unhandled format sub-type: {}", GuidPrinter{InputType.SubFormat}.c_str());
+        ERR("Unhandled format sub-type: {}", GuidPrinter{InputType.SubFormat}.str());
         return E_FAIL;
     }
 

@@ -2141,7 +2141,7 @@ int main(al::span<std::string_view> args)
                 break;
 
             case FF_MOVIE_DONE_EVENT:
-                std::cout<<'\n';
+                fmt::println("");
                 last_time = seconds::min();
                 if(eom_action != EomAction::Quit)
                 {

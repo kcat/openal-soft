@@ -260,7 +260,7 @@ struct StreamPlayer {
         }
         if(!mFormat)
         {
-            fprintf(stderr, "Unsupported channel count: %d\n", mSfInfo.channels);
+            fmt::println(stderr, "Unsupported channel count: {}", mSfInfo.channels);
             sf_close(mSndfile);
             mSndfile = nullptr;
 

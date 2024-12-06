@@ -1343,6 +1343,7 @@ target_include_directories(alsoft.common PRIVATE ${OpenAL_SOURCE_DIR}/include
     PUBLIC ${OpenAL_BINARY_DIR} ${OpenAL_SOURCE_DIR}/common)
 target_compile_definitions(alsoft.common PRIVATE ${CPP_DEFS})
 target_compile_options(alsoft.common PRIVATE ${C_FLAGS})
+target_link_libraries(alsoft.common PRIVATE alsoft::fmt)
 set_target_properties(alsoft.common PROPERTIES ${ALSOFT_STD_VERSION_PROPS}
     POSITION_INDEPENDENT_CODE TRUE)
 

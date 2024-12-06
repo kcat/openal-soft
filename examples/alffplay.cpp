@@ -37,7 +37,6 @@ extern "C" {
 #include "libavcodec/avcodec.h"
 #include "libavformat/avformat.h"
 #include "libavformat/avio.h"
-#include "libavformat/version.h"
 #include "libavutil/avutil.h"
 #include "libavutil/error.h"
 #include "libavutil/frame.h"
@@ -46,7 +45,6 @@ extern "C" {
 #include "libavutil/rational.h"
 #include "libavutil/samplefmt.h"
 #include "libavutil/time.h"
-#include "libavutil/version.h"
 #include "libavutil/channel_layout.h"
 #include "libswscale/swscale.h"
 #include "libswresample/swresample.h"
@@ -55,7 +53,10 @@ struct SwsContext;
 }
 
 #define SDL_MAIN_HANDLED
-#include "SDL.h"
+#include "SDL3/SDL_events.h"
+#include "SDL3/SDL_main.h"
+#include "SDL3/SDL_render.h"
+#include "SDL3/SDL_video.h"
 #ifdef __GNUC__
 _Pragma("GCC diagnostic pop")
 #endif
@@ -124,7 +125,7 @@ constexpr milliseconds AudioBufferTotalTime{800};
 constexpr auto AudioBufferCount = AudioBufferTotalTime / AudioBufferTime;
 
 enum {
-    FF_MOVIE_DONE_EVENT = SDL_USEREVENT
+    FF_MOVIE_DONE_EVENT = SDL_EVENT_USER
 };
 
 enum class SyncMaster {
@@ -1427,15 +1428,11 @@ void VideoState::display(SDL_Window *screen, SDL_Renderer *renderer, AVFrame *fr
     if(!mImage)
         return;
 
-    double aspect_ratio;
-    int win_w, win_h;
-    int w, h, x, y;
-
     int frame_width{frame->width - static_cast<int>(frame->crop_left + frame->crop_right)};
     int frame_height{frame->height - static_cast<int>(frame->crop_top + frame->crop_bottom)};
-    if(frame->sample_aspect_ratio.num == 0)
-        aspect_ratio = 0.0;
-    else
+
+    auto aspect_ratio = 0.0;
+    if(frame->sample_aspect_ratio.num != 0)
     {
         aspect_ratio = av_q2d(frame->sample_aspect_ratio) * frame_width /
             frame_height;
@@ -1443,21 +1440,25 @@ void VideoState::display(SDL_Window *screen, SDL_Renderer *renderer, AVFrame *fr
     if(aspect_ratio <= 0.0)
         aspect_ratio = static_cast<double>(frame_width) / frame_height;
 
+    auto win_w = int{};
+    auto win_h = int{};
     SDL_GetWindowSize(screen, &win_w, &win_h);
-    h = win_h;
-    w = (static_cast<int>(std::rint(h * aspect_ratio)) + 3) & ~3;
-    if(w > win_w)
-    {
-        w = win_w;
-        h = (static_cast<int>(std::rint(w / aspect_ratio)) + 3) & ~3;
-    }
-    x = (win_w - w) / 2;
-    y = (win_h - h) / 2;
 
-    SDL_Rect src_rect{ static_cast<int>(frame->crop_left), static_cast<int>(frame->crop_top),
-        frame_width, frame_height };
-    SDL_Rect dst_rect{ x, y, w, h };
-    SDL_RenderCopy(renderer, mImage, &src_rect, &dst_rect);
+    auto h = static_cast<float>(win_h);
+    auto w = static_cast<float>(std::round(h * aspect_ratio));
+    if(w > static_cast<float>(win_w))
+    {
+        w = static_cast<float>(win_w);
+        h = static_cast<float>(std::round(w / aspect_ratio));
+    }
+    const auto x = (static_cast<float>(win_w) - w) / 2.0f;
+    const auto y = (static_cast<float>(win_h) - h) / 2.0f;
+
+    const auto src_rect = SDL_FRect{ static_cast<float>(frame->crop_left),
+        static_cast<float>(frame->crop_top), static_cast<float>(frame_width),
+        static_cast<float>(frame_height) };
+    const auto dst_rect = SDL_FRect{ x, y, w, h };
+    SDL_RenderTexture(renderer, mImage, &src_rect, &dst_rect);
     SDL_RenderPresent(renderer);
 }
 
@@ -1908,66 +1909,38 @@ int main(al::span<std::string_view> args)
 {
     SDL_SetMainReady();
 
-    std::unique_ptr<MovieState> movState;
-
     if(args.size() < 2)
     {
         fmt::println(stderr, "Usage: {} [-device <device name>] [-direct] <files...>", args[0]);
         return 1;
     }
-    /* Register all formats and codecs */
-#if !(LIBAVFORMAT_VERSION_INT >= AV_VERSION_INT(58, 9, 100))
-    av_register_all();
-#endif
+
     /* Initialize networking protocols */
     avformat_network_init();
 
-    if(SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS))
+    if(!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS))
     {
         fmt::println(stderr, "Could not initialize SDL - {}", SDL_GetError());
         return 1;
     }
 
     /* Make a window to put our video */
-    SDL_Window *screen{SDL_CreateWindow(AppName.c_str(), 0, 0, 640, 480, SDL_WINDOW_RESIZABLE)};
+    auto *screen = SDL_CreateWindow(AppName.c_str(), 640, 480, SDL_WINDOW_RESIZABLE);
     if(!screen)
     {
         fmt::println(stderr, "SDL: could not set video mode - exiting");
         return 1;
     }
-    /* Make a renderer to handle the texture image surface and rendering. */
-    Uint32 render_flags{SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC};
-    SDL_Renderer *renderer{SDL_CreateRenderer(screen, -1, render_flags)};
-    if(renderer)
-    {
-        SDL_RendererInfo rinf{};
-        bool ok{false};
+    SDL_SetWindowSurfaceVSync(screen, 1);
 
-        /* Make sure the renderer supports IYUV textures. If not, fallback to a
-         * software renderer. */
-        if(SDL_GetRendererInfo(renderer, &rinf) == 0)
-        {
-            for(Uint32 i{0u};!ok && i < rinf.num_texture_formats;i++)
-                ok = (rinf.texture_formats[i] == SDL_PIXELFORMAT_IYUV);
-        }
-        if(!ok)
-        {
-            fmt::println(stderr, "IYUV pixelformat textures not supported on renderer {}",
-                rinf.name);
-            SDL_DestroyRenderer(renderer);
-            renderer = nullptr;
-        }
-    }
-    if(!renderer)
-    {
-        render_flags = SDL_RENDERER_SOFTWARE | SDL_RENDERER_PRESENTVSYNC;
-        renderer = SDL_CreateRenderer(screen, -1, render_flags);
-    }
+    /* Make a renderer to handle the texture image surface and rendering. */
+    auto *renderer = SDL_CreateRenderer(screen, nullptr);
     if(!renderer)
     {
         fmt::println(stderr, "SDL: could not create renderer - exiting");
         return 1;
     }
+
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
     SDL_RenderFillRect(renderer, nullptr);
     SDL_RenderPresent(renderer);
@@ -2062,6 +2035,7 @@ int main(al::span<std::string_view> args)
             break;
     }
 
+    auto movState = std::unique_ptr<MovieState>{};
     while(fileidx < args.size() && !movState)
     {
         movState = std::make_unique<MovieState>(args[fileidx++]);
@@ -2081,10 +2055,10 @@ int main(al::span<std::string_view> args)
     seconds last_time{seconds::min()};
     while(true)
     {
-        /* SDL_WaitEventTimeout is broken, just force a 10ms sleep. */
-        std::this_thread::sleep_for(milliseconds{10});
+        auto event = SDL_Event{};
+        auto have_event = SDL_WaitEventTimeout(&event, 10);
 
-        auto cur_time = std::chrono::duration_cast<seconds>(movState->getMasterClock());
+        const auto cur_time = std::chrono::duration_cast<seconds>(movState->getMasterClock());
         if(cur_time != last_time)
         {
             auto end_time = std::chrono::duration_cast<seconds>(movState->getDuration());
@@ -2093,21 +2067,20 @@ int main(al::span<std::string_view> args)
             last_time = cur_time;
         }
 
-        bool force_redraw{false};
-        SDL_Event event{};
-        while(SDL_PollEvent(&event) != 0)
+        auto force_redraw = false;
+        while(have_event)
         {
             switch(event.type)
             {
-            case SDL_KEYDOWN:
-                switch(event.key.keysym.sym)
+            case SDL_EVENT_KEY_DOWN:
+                switch(event.key.key)
                 {
                 case SDLK_ESCAPE:
                     movState->stop();
                     eom_action = EomAction::Quit;
                     break;
 
-                case SDLK_n:
+                case SDLK_N:
                     movState->stop();
                     eom_action = EomAction::Next;
                     break;
@@ -2117,25 +2090,17 @@ int main(al::span<std::string_view> args)
                 }
                 break;
 
-            case SDL_WINDOWEVENT:
-                switch(event.window.event)
-                {
-                case SDL_WINDOWEVENT_RESIZED:
-                    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
-                    SDL_RenderFillRect(renderer, nullptr);
-                    force_redraw = true;
-                    break;
-
-                case SDL_WINDOWEVENT_EXPOSED:
-                    force_redraw = true;
-                    break;
-
-                default:
-                    break;
-                }
+            case SDL_EVENT_WINDOW_RESIZED:
+                SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+                SDL_RenderFillRect(renderer, nullptr);
+                force_redraw = true;
                 break;
 
-            case SDL_QUIT:
+            case SDL_EVENT_WINDOW_EXPOSED:
+                force_redraw = true;
+                break;
+
+            case SDL_EVENT_QUIT:
                 movState->stop();
                 eom_action = EomAction::Quit;
                 break;
@@ -2168,12 +2133,13 @@ int main(al::span<std::string_view> args)
                 SDL_DestroyWindow(screen);
                 screen = nullptr;
 
-                SDL_Quit();
+                SDL_QuitSubSystem(SDL_INIT_VIDEO | SDL_INIT_EVENTS);
                 exit(0);
 
             default:
                 break;
             }
+            have_event = SDL_PollEvent(&event);
         }
 
         movState->mVideo.updateVideo(screen, renderer, force_redraw);

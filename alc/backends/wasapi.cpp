@@ -124,7 +124,7 @@ using ReferenceTime = std::chrono::duration<REFERENCE_TIME,std::ratio<1,10'000'0
 #define X7DOT1 (SPEAKER_FRONT_LEFT|SPEAKER_FRONT_RIGHT|SPEAKER_FRONT_CENTER|SPEAKER_LOW_FREQUENCY|SPEAKER_BACK_LEFT|SPEAKER_BACK_RIGHT|SPEAKER_SIDE_LEFT|SPEAKER_SIDE_RIGHT)
 #define X7DOT1DOT4 (SPEAKER_FRONT_LEFT|SPEAKER_FRONT_RIGHT|SPEAKER_FRONT_CENTER|SPEAKER_LOW_FREQUENCY|SPEAKER_BACK_LEFT|SPEAKER_BACK_RIGHT|SPEAKER_SIDE_LEFT|SPEAKER_SIDE_RIGHT|SPEAKER_TOP_FRONT_LEFT|SPEAKER_TOP_FRONT_RIGHT|SPEAKER_TOP_BACK_LEFT|SPEAKER_TOP_BACK_RIGHT)
 
-constexpr inline DWORD MaskFromTopBits(DWORD b) noexcept
+constexpr auto MaskFromTopBits(DWORD b) noexcept -> DWORD
 {
     b |= b>>1;
     b |= b>>2;
@@ -648,7 +648,7 @@ struct DeviceHelper final : private IMMNotificationClient
 #endif
     }
 
-    HRESULT openDevice(std::wstring_view devid, EDataFlow flow, DeviceHandle& device)
+    auto openDevice(const std::wstring &devid, EDataFlow flow, DeviceHandle &device) -> HRESULT
     {
 #if !ALSOFT_UWP
         HRESULT hr{E_FAIL};
@@ -657,14 +657,14 @@ struct DeviceHelper final : private IMMNotificationClient
             if(devid.empty())
                 hr = mEnumerator->GetDefaultAudioEndpoint(flow, eMultimedia, al::out_ptr(device));
             else
-                hr = mEnumerator->GetDevice(devid.data(), al::out_ptr(device));
+                hr = mEnumerator->GetDevice(devid.c_str(), al::out_ptr(device));
         }
         return hr;
 #else
         const auto deviceRole = Windows::Media::Devices::AudioDeviceRole::Default;
         auto devIfPath =
             devid.empty() ? (flow == eRender ? MediaDevice::GetDefaultAudioRenderId(deviceRole) : MediaDevice::GetDefaultAudioCaptureId(deviceRole))
-            : winrt::hstring(devid.data());
+                : winrt::hstring(devid.c_str());
         if (devIfPath.empty())
             return E_POINTER;
 
@@ -1187,7 +1187,7 @@ struct WasapiPlayback final : public BackendBase, WasapiProxy {
     HANDLE mNotifyEvent{nullptr};
 
     UINT32 mOutBufferSize{}, mOutUpdateSize{};
-    std::vector<char> mResampleBuffer{};
+    std::vector<char> mResampleBuffer;
     uint mBufferFilled{0};
     SampleConverterPtr mResampler;
     bool mMonoUpsample{false};

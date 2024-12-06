@@ -98,6 +98,7 @@ include(CMakePackageConfigHelpers)
 include(GNUInstallDirs)
 
 find_package(PkgConfig)
+find_package(SDL3 QUIET)
 find_package(SDL2 QUIET)
 
 add_subdirectory(fmt-11.0.2 EXCLUDE_FROM_ALL)
@@ -1816,17 +1817,21 @@ if(ALSOFT_EXAMPLES)
         message(STATUS "Building SndFile example programs")
     endif()
 
-    if(SDL2_FOUND)
+    # Can't safely use SDL3 and SDL2 together
+    if(SDL3_FOUND AND NOT HAVE_SDL2)
+        message(STATUS "Building SDL3 example programs")
+
         add_executable(alloopback examples/alloopback.c)
         target_link_libraries(alloopback
-            PRIVATE ${LINKER_FLAGS} SDL2::SDL2 alsoft.excommon ${MATH_LIB})
+            PRIVATE ${LINKER_FLAGS} SDL3::SDL3 alsoft.excommon ${MATH_LIB})
         set_target_properties(alloopback PROPERTIES ${ALSOFT_STD_VERSION_PROPS})
 
         if(ALSOFT_INSTALL_EXAMPLES)
             set(EXTRA_INSTALLS ${EXTRA_INSTALLS} alloopback)
         endif()
-
-        message(STATUS "Building SDL example programs")
+    endif()
+    if(SDL2_FOUND)
+        message(STATUS "Building SDL2 example programs")
 
         set(FFVER_OK FALSE)
         if(FFMPEG_FOUND)
@@ -1862,7 +1867,7 @@ if(ALSOFT_EXAMPLES)
             if(ALSOFT_INSTALL_EXAMPLES)
                 set(EXTRA_INSTALLS ${EXTRA_INSTALLS} alffplay)
             endif()
-            message(STATUS "Building SDL+FFmpeg example programs")
+            message(STATUS "Building SDL2+FFmpeg example programs")
         endif()
     endif()
     message(STATUS "")

@@ -425,7 +425,7 @@ struct VideoState {
 
     nanoseconds getClock();
 
-    void display(SDL_Window *screen, SDL_Renderer *renderer, AVFrame *frame) const;
+    void display(SDL_Renderer *renderer, AVFrame *frame) const;
     void updateVideo(SDL_Window *screen, SDL_Renderer *renderer, bool redraw);
     int handler();
 };
@@ -1423,42 +1423,19 @@ nanoseconds VideoState::getClock()
 }
 
 /* Called by VideoState::updateVideo to display the next video frame. */
-void VideoState::display(SDL_Window *screen, SDL_Renderer *renderer, AVFrame *frame) const
+void VideoState::display(SDL_Renderer *renderer, AVFrame *frame) const
 {
     if(!mImage)
         return;
 
-    int frame_width{frame->width - static_cast<int>(frame->crop_left + frame->crop_right)};
-    int frame_height{frame->height - static_cast<int>(frame->crop_top + frame->crop_bottom)};
-
-    auto aspect_ratio = 0.0;
-    if(frame->sample_aspect_ratio.num != 0)
-    {
-        aspect_ratio = av_q2d(frame->sample_aspect_ratio) * frame_width /
-            frame_height;
-    }
-    if(aspect_ratio <= 0.0)
-        aspect_ratio = static_cast<double>(frame_width) / frame_height;
-
-    auto win_w = int{};
-    auto win_h = int{};
-    SDL_GetWindowSize(screen, &win_w, &win_h);
-
-    auto h = static_cast<float>(win_h);
-    auto w = static_cast<float>(std::round(h * aspect_ratio));
-    if(w > static_cast<float>(win_w))
-    {
-        w = static_cast<float>(win_w);
-        h = static_cast<float>(std::round(w / aspect_ratio));
-    }
-    const auto x = (static_cast<float>(win_w) - w) / 2.0f;
-    const auto y = (static_cast<float>(win_h) - h) / 2.0f;
+    auto frame_width = frame->width - static_cast<int>(frame->crop_left + frame->crop_right);
+    auto frame_height = frame->height - static_cast<int>(frame->crop_top + frame->crop_bottom);
 
     const auto src_rect = SDL_FRect{ static_cast<float>(frame->crop_left),
         static_cast<float>(frame->crop_top), static_cast<float>(frame_width),
         static_cast<float>(frame_height) };
-    const auto dst_rect = SDL_FRect{ x, y, w, h };
-    SDL_RenderTexture(renderer, mImage, &src_rect, &dst_rect);
+
+    SDL_RenderTexture(renderer, mImage, &src_rect, nullptr);
     SDL_RenderPresent(renderer);
 }
 
@@ -1537,7 +1514,10 @@ void VideoState::updateVideo(SDL_Window *screen, SDL_Renderer *renderer, bool re
                 else if(aspect_ratio > 0.0)
                     frame_height = static_cast<int>(std::lround(frame_height / aspect_ratio));
             }
-            SDL_SetWindowSize(screen, frame_width, frame_height);
+            if(SDL_SetWindowSize(screen, frame_width, frame_height))
+                SDL_SyncWindow(screen);
+            SDL_SetRenderLogicalPresentation(renderer, frame_width, frame_height,
+                SDL_LOGICAL_PRESENTATION_LETTERBOX);
         }
 
         if(mImage)
@@ -1589,7 +1569,7 @@ void VideoState::updateVideo(SDL_Window *screen, SDL_Renderer *renderer, bool re
     if(redraw)
     {
         /* Show the picture! */
-        display(screen, renderer, frame);
+        display(renderer, frame);
     }
 
     if(updated)
@@ -2090,13 +2070,14 @@ int main(al::span<std::string_view> args)
                 }
                 break;
 
+            case SDL_EVENT_WINDOW_SHOWN:
+            case SDL_EVENT_WINDOW_EXPOSED:
             case SDL_EVENT_WINDOW_RESIZED:
+            case SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED:
+            case SDL_EVENT_WINDOW_SAFE_AREA_CHANGED:
+            case SDL_EVENT_RENDER_TARGETS_RESET:
                 SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
                 SDL_RenderFillRect(renderer, nullptr);
-                force_redraw = true;
-                break;
-
-            case SDL_EVENT_WINDOW_EXPOSED:
                 force_redraw = true;
                 break;
 

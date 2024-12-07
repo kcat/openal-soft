@@ -2142,8 +2142,8 @@ void Write(const al::span<const FloatBufferLine> InBuffer, void *OutBuffer, cons
     ASSUME(FrameStep > 0);
     ASSUME(SamplesToDo > 0);
 
-    const auto output = al::span{static_cast<T*>(OutBuffer), (Offset+SamplesToDo)*FrameStep}
-        .subspan(Offset*FrameStep);
+    const auto outbuf = al::span{static_cast<T*>(OutBuffer), (Offset+SamplesToDo)*FrameStep};
+    const auto output = outbuf.subspan(Offset*FrameStep);
     size_t c{0};
     for(const FloatBufferLine &inbuf : InBuffer)
     {
@@ -2174,7 +2174,8 @@ void Write(const al::span<const FloatBufferLine> InBuffer, al::span<void*> OutBu
     for(auto *dstbuf : OutBuffers)
     {
         const auto src = al::span{*srcbuf}.first(SamplesToDo);
-        const auto dst = al::span{static_cast<T*>(dstbuf), Offset+SamplesToDo}.subspan(Offset);
+        const auto dstline = al::span{static_cast<T*>(dstbuf), Offset+SamplesToDo};
+        const auto dst = dstline.subspan(Offset);
         std::transform(src.cbegin(), src.end(), dst.begin(), SampleConv<T>);
         ++srcbuf;
     }

@@ -216,7 +216,9 @@ void UhjEncoder<N>::encode(float *LeftOut, float *RightOut,
         const size_t todo{std::min(sSegmentSize-mFifoPos, SamplesToDo-base)};
         auto wseg = winput.subspan(base, todo);
         auto xseg = xinput.subspan(base, todo);
-        auto wxio = al::span{mWXInOut}.subspan(mFifoPos, todo);
+        /* Some Clang versions don't like calling subspan on an rvalue here. */
+        const auto wxio_ = al::span{mWXInOut};
+        auto wxio = wxio_.subspan(mFifoPos, todo);
 
         /* Copy out the samples that were previously processed by the FFT. */
         dstore = std::copy_n(wxio.begin(), todo, dstore);

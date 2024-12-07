@@ -2142,8 +2142,9 @@ void Write(const al::span<const FloatBufferLine> InBuffer, void *OutBuffer, cons
     ASSUME(FrameStep > 0);
     ASSUME(SamplesToDo > 0);
 
-    const auto outbuf = al::span{static_cast<T*>(OutBuffer), (Offset+SamplesToDo)*FrameStep};
-    const auto output = outbuf.subspan(Offset*FrameStep);
+    /* Some Clang versions don't like calling subspan on an rvalue here. */
+    const auto output_ = al::span{static_cast<T*>(OutBuffer), (Offset+SamplesToDo)*FrameStep};
+    const auto output = output_.subspan(Offset*FrameStep);
     size_t c{0};
     for(const FloatBufferLine &inbuf : InBuffer)
     {
@@ -2174,8 +2175,9 @@ void Write(const al::span<const FloatBufferLine> InBuffer, al::span<void*> OutBu
     for(auto *dstbuf : OutBuffers)
     {
         const auto src = al::span{*srcbuf}.first(SamplesToDo);
-        const auto dstline = al::span{static_cast<T*>(dstbuf), Offset+SamplesToDo};
-        const auto dst = dstline.subspan(Offset);
+        /* Some Clang versions don't like calling subspan on an rvalue here. */
+        const auto dst_ = al::span{static_cast<T*>(dstbuf), Offset+SamplesToDo};
+        const auto dst = dst_.subspan(Offset);
         std::transform(src.cbegin(), src.end(), dst.begin(), SampleConv<T>);
         ++srcbuf;
     }

@@ -32,4 +32,6 @@
 
 #cmakedefine01 HAVE_WAVE
 
+#cmakedefine01 HAVE_SDL3
+
 #cmakedefine01 HAVE_SDL2

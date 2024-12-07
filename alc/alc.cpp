@@ -152,6 +152,9 @@
 #if HAVE_PORTAUDIO
 #include "backends/portaudio.h"
 #endif
+#if HAVE_SDL3
+#include "backends/sdl3.h"
+#endif
 #if HAVE_SDL2
 #include "backends/sdl2.h"
 #endif
@@ -253,6 +256,9 @@ std::array BackendList{
 #if HAVE_PORTAUDIO
     BackendInfo{"port", PortBackendFactory::getFactory},
 #endif
+#if HAVE_SDL3
+    BackendInfo{"sdl3", SDL3BackendFactory::getFactory},
+#endif
 #if HAVE_SDL2
     BackendInfo{"sdl2", SDL2BackendFactory::getFactory},
 #endif
@@ -324,7 +330,7 @@ constexpr uint DitherRNGSeed{22222u};
  ************************************************/
 [[nodiscard]] constexpr auto GetNoDeviceExtList() noexcept -> const char*
 {
-    return  "ALC_ENUMERATE_ALL_EXT "
+    return "ALC_ENUMERATE_ALL_EXT "
         "ALC_ENUMERATION_EXT "
         "ALC_EXT_CAPTURE "
         "ALC_EXT_direct_context "

@@ -187,7 +187,7 @@ int main(int argc, char *argv[])
         goto error;
     }
 
-    if(!SDL_GetAudioStreamFormat(stream, NULL, &obtained))
+    if(!SDL_GetAudioStreamFormat(stream, &obtained, NULL))
     {
         fprintf(stderr, "Failed to query SDL audio format: %s\n", SDL_GetError());
         goto error;

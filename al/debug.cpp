@@ -274,17 +274,19 @@ try {
 
     auto dsource = GetDebugSource(source);
     if(!dsource)
-        context->throw_error(AL_INVALID_ENUM, "Invalid debug source 0x{:04x}", source);
+        context->throw_error(AL_INVALID_ENUM, "Invalid debug source {:#04x}", as_unsigned(source));
     if(*dsource != DebugSource::ThirdParty && *dsource != DebugSource::Application)
-        context->throw_error(AL_INVALID_ENUM, "Debug source 0x{:04x} not allowed", source);
+        context->throw_error(AL_INVALID_ENUM, "Debug source {:#04x} not allowed",
+            as_unsigned(source));
 
     auto dtype = GetDebugType(type);
     if(!dtype)
-        context->throw_error(AL_INVALID_ENUM, "Invalid debug type 0x{:04x}", type);
+        context->throw_error(AL_INVALID_ENUM, "Invalid debug type {:#04x}", as_unsigned(type));
 
     auto dseverity = GetDebugSeverity(severity);
     if(!dseverity)
-        context->throw_error(AL_INVALID_ENUM, "Invalid debug severity 0x{:04x}", severity);
+        context->throw_error(AL_INVALID_ENUM, "Invalid debug severity {:#04x}",
+            as_unsigned(severity));
 
     context->debugMessage(*dsource, *dtype, id, *dseverity, msgview);
 }
@@ -325,7 +327,8 @@ try {
     {
         auto dsource = GetDebugSource(source);
         if(!dsource)
-            context->throw_error(AL_INVALID_ENUM, "Invalid debug source 0x{:04x}", source);
+            context->throw_error(AL_INVALID_ENUM, "Invalid debug source {:#04x}",
+                as_unsigned(source));
         srcIndices = srcIndices.subspan(al::to_underlying(*dsource), 1);
     }
 
@@ -334,7 +337,7 @@ try {
     {
         auto dtype = GetDebugType(type);
         if(!dtype)
-            context->throw_error(AL_INVALID_ENUM, "Invalid debug type 0x{:04x}", type);
+            context->throw_error(AL_INVALID_ENUM, "Invalid debug type {:#04x}", as_unsigned(type));
         typeIndices = typeIndices.subspan(al::to_underlying(*dtype), 1);
     }
 
@@ -343,7 +346,8 @@ try {
     {
         auto dseverity = GetDebugSeverity(severity);
         if(!dseverity)
-            context->throw_error(AL_INVALID_ENUM, "Invalid debug severity 0x{:04x}", severity);
+            context->throw_error(AL_INVALID_ENUM, "Invalid debug severity {:#04x}",
+                as_unsigned(severity));
         svrIndices = svrIndices.subspan(al::to_underlying(*dseverity), 1);
     }
 
@@ -414,9 +418,10 @@ try {
 
     auto dsource = GetDebugSource(source);
     if(!dsource)
-        context->throw_error(AL_INVALID_ENUM, "Invalid debug source 0x{:04x}", source);
+        context->throw_error(AL_INVALID_ENUM, "Invalid debug source {:#04x}", as_unsigned(source));
     if(*dsource != DebugSource::ThirdParty && *dsource != DebugSource::Application)
-        context->throw_error(AL_INVALID_ENUM, "Debug source 0x{:04x} not allowed", source);
+        context->throw_error(AL_INVALID_ENUM, "Debug source {:#04x} not allowed",
+            as_unsigned(source));
 
     std::unique_lock<std::mutex> debuglock{context->mDebugCbLock};
     if(context->mDebugGroups.size() >= MaxDebugGroupDepth)
@@ -548,7 +553,8 @@ try {
     case AL_AUXILIARY_EFFECT_SLOT_EXT: ALeffectslot::SetName(context, name, objname); return;
     }
 
-    context->throw_error(AL_INVALID_ENUM, "Invalid name identifier 0x{:04x}", identifier);
+    context->throw_error(AL_INVALID_ENUM, "Invalid name identifier {:#04x}",
+        as_unsigned(identifier));
 }
 catch(al::base_exception&) {
 }
@@ -618,7 +624,8 @@ try {
         copy_name(context->mEffectSlotNames);
     }
     else
-        context->throw_error(AL_INVALID_ENUM, "Invalid name identifier 0x{:04x}", identifier);
+        context->throw_error(AL_INVALID_ENUM, "Invalid name identifier {:#04x}",
+            as_unsigned(identifier));
 }
 catch(al::base_exception&) {
 }

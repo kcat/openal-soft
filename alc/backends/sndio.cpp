@@ -99,7 +99,7 @@ int SndioPlayback::mixerProc()
             size_t wrote{sio_write(mSndHandle, buffer.data(), buffer.size())};
             if(wrote > buffer.size() || wrote == 0)
             {
-                ERR("sio_write failed: 0x{:x}", wrote);
+                ERR("sio_write failed: {:#x}", wrote);
                 mDevice->handleDisconnect("Failed to write playback samples");
                 break;
             }
@@ -357,8 +357,8 @@ int SndioCapture::recordProc()
                 break;
             if(got > buffer.size())
             {
-                ERR("sio_read failed: 0x{:x}", got);
-                mDevice->handleDisconnect("sio_read failed: 0x{:x}", got);
+                ERR("sio_read failed: {:#x}", got);
+                mDevice->handleDisconnect("sio_read failed: {:#x}", got);
                 break;
             }
 

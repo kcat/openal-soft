@@ -38,6 +38,7 @@
 #include <algorithm>
 #include <functional>
 
+#include "alnumeric.h"
 #include "alsem.h"
 #include "althrd_setname.h"
 #include "core/device.h"
@@ -287,7 +288,7 @@ bool WinMMPlayback::reset()
     }
     else
     {
-        ERR("Unhandled format tag: 0x{:04x}", mFormat.wFormatTag);
+        ERR("Unhandled format tag: {:#04x}", as_unsigned(mFormat.wFormatTag));
         return false;
     }
 

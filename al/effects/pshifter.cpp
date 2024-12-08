@@ -5,6 +5,7 @@
 #include "AL/efx.h"
 
 #include "alc/context.h"
+#include "alnumeric.h"
 #include "effects.h"
 
 #if ALSOFT_EAX
@@ -45,14 +46,14 @@ void PshifterEffectHandler::SetParami(ALCcontext *context, PshifterProps &props,
         return;
     }
 
-    context->throw_error(AL_INVALID_ENUM, "Invalid pitch shifter integer property 0x{:04x}",
-        param);
+    context->throw_error(AL_INVALID_ENUM, "Invalid pitch shifter integer property {:#04x}",
+        as_unsigned(param));
 }
 void PshifterEffectHandler::SetParamiv(ALCcontext *context, PshifterProps &props, ALenum param, const int *vals)
 { SetParami(context, props, param, *vals); }
 
 void PshifterEffectHandler::SetParamf(ALCcontext *context, PshifterProps&, ALenum param, float)
-{ context->throw_error(AL_INVALID_ENUM, "Invalid pitch shifter float property 0x{:04x}", param); }
+{ context->throw_error(AL_INVALID_ENUM, "Invalid pitch shifter float property {:#04x}", as_unsigned(param)); }
 void PshifterEffectHandler::SetParamfv(ALCcontext *context, PshifterProps &props, ALenum param, const float *vals)
 { SetParamf(context, props, param, *vals); }
 
@@ -64,14 +65,14 @@ void PshifterEffectHandler::GetParami(ALCcontext *context, const PshifterProps &
     case AL_PITCH_SHIFTER_FINE_TUNE: *val = props.FineTune; return;
     }
 
-    context->throw_error(AL_INVALID_ENUM, "Invalid pitch shifter integer property 0x{:04x}",
-        param);
+    context->throw_error(AL_INVALID_ENUM, "Invalid pitch shifter integer property {:#04x}",
+        as_unsigned(param));
 }
 void PshifterEffectHandler::GetParamiv(ALCcontext *context, const PshifterProps &props, ALenum param, int *vals)
 { GetParami(context, props, param, vals); }
 
 void PshifterEffectHandler::GetParamf(ALCcontext *context, const PshifterProps&, ALenum param, float*)
-{ context->throw_error(AL_INVALID_ENUM, "Invalid pitch shifter float property 0x{:04x}", param); }
+{ context->throw_error(AL_INVALID_ENUM, "Invalid pitch shifter float property {:#04x}", as_unsigned(param)); }
 void PshifterEffectHandler::GetParamfv(ALCcontext *context, const PshifterProps &props, ALenum param, float *vals)
 { GetParamf(context, props, param, vals); }
 

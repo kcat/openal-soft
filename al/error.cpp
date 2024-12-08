@@ -49,8 +49,8 @@
 
 void ALCcontext::setErrorImpl(ALenum errorCode, const std::string &msg)
 {
-    WARN("Error generated on context {}, code 0x{:04x}, \"{}\"",
-        decltype(std::declval<void*>()){this}, errorCode, msg);
+    WARN("Error generated on context {}, code {:#04x}, \"{}\"",
+        decltype(std::declval<void*>()){this}, as_unsigned(errorCode), msg);
     if(TrapALError)
     {
 #ifdef _WIN32
@@ -104,7 +104,7 @@ AL_API auto AL_APIENTRY alGetError() noexcept -> ALenum
     };
     static const ALenum deferror{get_value("__ALSOFT_DEFAULT_ERROR", "default-error")};
 
-    WARN("Querying error state on null context (implicitly 0x{:04x})", deferror);
+    WARN("Querying error state on null context (implicitly {:#04x})", as_unsigned(deferror));
     if(TrapALError)
     {
 #ifdef _WIN32

@@ -871,7 +871,7 @@ void AL_APIENTRY AudioState::eventCallback(ALenum eventType, ALuint object, ALui
     case AL_EVENT_TYPE_BUFFER_COMPLETED_SOFT: fmt::print("Buffer completed"); break;
     case AL_EVENT_TYPE_SOURCE_STATE_CHANGED_SOFT: fmt::print("Source state changed"); break;
     case AL_EVENT_TYPE_DISCONNECTED_SOFT: fmt::print("Disconnected"); break;
-    default: fmt::print("0x{:04x}", eventType); break;
+    default: fmt::print("{:#04x}", as_unsigned(eventType)); break;
     }
     fmt::println("\n"
         "Object ID: {}\n"
@@ -1399,7 +1399,7 @@ int AudioState::handler()
                 break;
         }
         if(ALenum err{alGetError()})
-            fmt::println(stderr, "Got AL error: 0x{:04x} ({})", err, alGetString(err));
+            fmt::println(stderr, "Got AL error: {:#04x} ({})", as_unsigned(err), alGetString(err));
 
         mSrcCond.wait_for(srclock, sleep_time);
     }
@@ -1751,8 +1751,8 @@ bool MovieState::streamComponentOpen(AVStream *stream)
     const AVCodec *codec{avcodec_find_decoder(avctx->codec_id)};
     if(!codec || avcodec_open2(avctx.get(), codec, nullptr) < 0)
     {
-        fmt::println(stderr, "Unsupported codec: {} (0x{:x})", avcodec_get_name(avctx->codec_id),
-            int{avctx->codec_id});
+        fmt::println(stderr, "Unsupported codec: {} ({:#x})", avcodec_get_name(avctx->codec_id),
+            al::to_underlying(avctx->codec_id));
         return false;
     }
 

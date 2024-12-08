@@ -8,6 +8,7 @@
 #include "AL/efx.h"
 
 #include "alc/context.h"
+#include "alnumeric.h"
 #include "effects.h"
 
 #if ALSOFT_EAX
@@ -69,11 +70,13 @@ void ModulatorEffectHandler::SetParami(ALCcontext *context, ModulatorProps &prop
         if(auto formopt = WaveformFromEmum(val))
             props.Waveform = *formopt;
         else
-            context->throw_error(AL_INVALID_VALUE, "Invalid modulator waveform: 0x{:04x}", val);
+            context->throw_error(AL_INVALID_VALUE, "Invalid modulator waveform: {:#04x}",
+                as_unsigned(val));
         return;
     }
 
-    context->throw_error(AL_INVALID_ENUM, "Invalid modulator integer property 0x{:04x}", param);
+    context->throw_error(AL_INVALID_ENUM, "Invalid modulator integer property {:#04x}",
+        as_unsigned(param));
 }
 void ModulatorEffectHandler::SetParamiv(ALCcontext *context, ModulatorProps &props, ALenum param, const int *vals)
 { SetParami(context, props, param, *vals); }
@@ -96,7 +99,8 @@ void ModulatorEffectHandler::SetParamf(ALCcontext *context, ModulatorProps &prop
         return;
     }
 
-    context->throw_error(AL_INVALID_ENUM, "Invalid modulator float property 0x{:04x}", param);
+    context->throw_error(AL_INVALID_ENUM, "Invalid modulator float property {:#04x}",
+        as_unsigned(param));
 }
 void ModulatorEffectHandler::SetParamfv(ALCcontext *context, ModulatorProps &props, ALenum param, const float *vals)
 { SetParamf(context, props, param, *vals); }
@@ -110,7 +114,8 @@ void ModulatorEffectHandler::GetParami(ALCcontext *context, const ModulatorProps
     case AL_RING_MODULATOR_WAVEFORM: *val = EnumFromWaveform(props.Waveform); return;
     }
 
-    context->throw_error(AL_INVALID_ENUM, "Invalid modulator integer property 0x{:04x}", param);
+    context->throw_error(AL_INVALID_ENUM, "Invalid modulator integer property {:#04x}",
+        as_unsigned(param));
 }
 void ModulatorEffectHandler::GetParamiv(ALCcontext *context, const ModulatorProps &props, ALenum param, int *vals)
 { GetParami(context, props, param, vals); }
@@ -122,7 +127,8 @@ void ModulatorEffectHandler::GetParamf(ALCcontext *context, const ModulatorProps
     case AL_RING_MODULATOR_HIGHPASS_CUTOFF: *val = props.HighPassCutoff; return;
     }
 
-    context->throw_error(AL_INVALID_ENUM, "Invalid modulator float property 0x{:04x}", param);
+    context->throw_error(AL_INVALID_ENUM, "Invalid modulator float property {:#04x}",
+        as_unsigned(param));
 }
 void ModulatorEffectHandler::GetParamfv(ALCcontext *context, const ModulatorProps &props, ALenum param, float *vals)
 { GetParamf(context, props, param, vals); }

@@ -8,6 +8,7 @@
 #include "AL/efx.h"
 
 #include "alc/context.h"
+#include "alnumeric.h"
 #include "effects.h"
 
 #if ALSOFT_EAX
@@ -82,7 +83,8 @@ void ChorusEffectHandler::SetParami(ALCcontext *context, ChorusProps &props, ALe
         if(auto formopt = WaveformFromEnum(val))
             props.Waveform = *formopt;
         else
-            context->throw_error(AL_INVALID_VALUE, "Invalid chorus waveform: 0x{:04x}", val);
+            context->throw_error(AL_INVALID_VALUE, "Invalid chorus waveform: {:#04x}",
+                as_unsigned(val));
         return;
 
     case AL_CHORUS_PHASE:
@@ -92,7 +94,8 @@ void ChorusEffectHandler::SetParami(ALCcontext *context, ChorusProps &props, ALe
         return;
     }
 
-    context->throw_error(AL_INVALID_ENUM, "Invalid chorus integer property 0x{:04x}", param);
+    context->throw_error(AL_INVALID_ENUM, "Invalid chorus integer property {:#04x}",
+        as_unsigned(param));
 }
 void ChorusEffectHandler::SetParamiv(ALCcontext *context, ChorusProps &props, ALenum param, const int *vals)
 { SetParami(context, props, param, *vals); }
@@ -125,7 +128,8 @@ void ChorusEffectHandler::SetParamf(ALCcontext *context, ChorusProps &props, ALe
         return;
     }
 
-    context->throw_error(AL_INVALID_ENUM, "Invalid chorus float property 0x{:04x}", param);
+    context->throw_error(AL_INVALID_ENUM, "Invalid chorus float property {:#04x}",
+        as_unsigned(param));
 }
 void ChorusEffectHandler::SetParamfv(ALCcontext *context, ChorusProps &props, ALenum param, const float *vals)
 { SetParamf(context, props, param, *vals); }
@@ -138,7 +142,8 @@ void ChorusEffectHandler::GetParami(ALCcontext *context, const ChorusProps &prop
     case AL_CHORUS_PHASE: *val = props.Phase; return;
     }
 
-    context->throw_error(AL_INVALID_ENUM, "Invalid chorus integer property 0x{:04x}", param);
+    context->throw_error(AL_INVALID_ENUM, "Invalid chorus integer property {:#04x}",
+        as_unsigned(param));
 }
 void ChorusEffectHandler::GetParamiv(ALCcontext *context, const ChorusProps &props, ALenum param, int *vals)
 { GetParami(context, props, param, vals); }
@@ -152,7 +157,8 @@ void ChorusEffectHandler::GetParamf(ALCcontext *context, const ChorusProps &prop
     case AL_CHORUS_DELAY: *val = props.Delay; return;
     }
 
-    context->throw_error(AL_INVALID_ENUM, "Invalid chorus float property 0x{:04x}", param);
+    context->throw_error(AL_INVALID_ENUM, "Invalid chorus float property {:#04x}",
+        as_unsigned(param));
 }
 void ChorusEffectHandler::GetParamfv(ALCcontext *context, const ChorusProps &props, ALenum param, float *vals)
 { GetParamf(context, props, param, vals); }
@@ -168,7 +174,8 @@ void FlangerEffectHandler::SetParami(ALCcontext *context, ChorusProps &props, AL
         if(auto formopt = WaveformFromEnum(val))
             props.Waveform = *formopt;
         else
-            context->throw_error(AL_INVALID_VALUE, "Invalid flanger waveform: 0x{:04x}", val);
+            context->throw_error(AL_INVALID_VALUE, "Invalid flanger waveform: {:#04x}",
+                as_unsigned(val));
         return;
 
     case AL_FLANGER_PHASE:
@@ -178,7 +185,8 @@ void FlangerEffectHandler::SetParami(ALCcontext *context, ChorusProps &props, AL
         return;
     }
 
-    context->throw_error(AL_INVALID_ENUM, "Invalid flanger integer property 0x{:04x}", param);
+    context->throw_error(AL_INVALID_ENUM, "Invalid flanger integer property {:#04x}",
+        as_unsigned(param));
 }
 void FlangerEffectHandler::SetParamiv(ALCcontext *context, ChorusProps &props, ALenum param, const int *vals)
 { SetParami(context, props, param, *vals); }
@@ -211,7 +219,8 @@ void FlangerEffectHandler::SetParamf(ALCcontext *context, ChorusProps &props, AL
         return;
     }
 
-    context->throw_error(AL_INVALID_ENUM, "Invalid flanger float property 0x{:04x}", param);
+    context->throw_error(AL_INVALID_ENUM, "Invalid flanger float property {:#04x}",
+        as_unsigned(param));
 }
 void FlangerEffectHandler::SetParamfv(ALCcontext *context, ChorusProps &props, ALenum param, const float *vals)
 { SetParamf(context, props, param, *vals); }
@@ -224,7 +233,8 @@ void FlangerEffectHandler::GetParami(ALCcontext *context, const ChorusProps &pro
     case AL_FLANGER_PHASE: *val = props.Phase; return;
     }
 
-    context->throw_error(AL_INVALID_ENUM, "Invalid flanger integer property 0x{:04x}", param);
+    context->throw_error(AL_INVALID_ENUM, "Invalid flanger integer property {:#04x}",
+        as_unsigned(param));
 }
 void FlangerEffectHandler::GetParamiv(ALCcontext *context, const ChorusProps &props, ALenum param, int *vals)
 { GetParami(context, props, param, vals); }
@@ -238,7 +248,8 @@ void FlangerEffectHandler::GetParamf(ALCcontext *context, const ChorusProps &pro
     case AL_FLANGER_DELAY: *val = props.Delay; return;
     }
 
-    context->throw_error(AL_INVALID_ENUM, "Invalid flanger float property 0x{:04x}", param);
+    context->throw_error(AL_INVALID_ENUM, "Invalid flanger float property {:#04x}",
+        as_unsigned(param));
 }
 void FlangerEffectHandler::GetParamfv(ALCcontext *context, const ChorusProps &props, ALenum param, float *vals)
 { GetParamf(context, props, param, vals); }

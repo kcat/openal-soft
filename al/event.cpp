@@ -194,7 +194,8 @@ try {
     {
         auto etype = GetEventType(evttype);
         if(!etype)
-            context->throw_error(AL_INVALID_ENUM, "Invalid event type 0x{:04x}", evttype);
+            context->throw_error(AL_INVALID_ENUM, "Invalid event type {:#04x}",
+                as_unsigned(evttype));
         flags.set(al::to_underlying(*etype));
     }
 

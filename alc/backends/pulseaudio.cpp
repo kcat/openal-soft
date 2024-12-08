@@ -43,6 +43,7 @@
 #include <vector>
 
 #include "alc/alconfig.h"
+#include "alnumeric.h"
 #include "alspan.h"
 #include "base.h"
 #include "core/devformat.h"
@@ -1061,7 +1062,7 @@ ClockLatency PulsePlayback::getClockLatency()
          * server yet. Give a generic value since nothing better is available.
          */
         if(err != -PA_ERR_NODATA)
-            ERR("Failed to get stream latency: 0x{:x}", err);
+            ERR("Failed to get stream latency: {:#x}", as_unsigned(err));
         latency = mDevice->BufferSize - mDevice->UpdateSize;
         neg = 0;
     }
@@ -1377,7 +1378,7 @@ ClockLatency PulseCapture::getClockLatency()
 
     if(err != 0) UNLIKELY
     {
-        ERR("Failed to get stream latency: 0x{:x}", err);
+        ERR("Failed to get stream latency: {:#x}", as_unsigned(err));
         latency = 0;
         neg = 0;
     }

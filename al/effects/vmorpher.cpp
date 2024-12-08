@@ -8,6 +8,7 @@
 #include "AL/efx.h"
 
 #include "alc/context.h"
+#include "alnumeric.h"
 #include "effects.h"
 
 #if ALSOFT_EAX
@@ -147,7 +148,7 @@ void VmorpherEffectHandler::SetParami(ALCcontext *context, VmorpherProps &props,
             props.PhonemeA = *phenomeopt;
         else
             context->throw_error(AL_INVALID_VALUE,
-                "Vocal morpher phoneme-a out of range: 0x{:04x}", val);
+                "Vocal morpher phoneme-a out of range: {:#04x}", as_unsigned(val));
         return;
 
     case AL_VOCAL_MORPHER_PHONEMEA_COARSE_TUNING:
@@ -162,7 +163,7 @@ void VmorpherEffectHandler::SetParami(ALCcontext *context, VmorpherProps &props,
             props.PhonemeB = *phenomeopt;
         else
             context->throw_error(AL_INVALID_VALUE,
-                "Vocal morpher phoneme-b out of range: 0x{:04x}", val);
+                "Vocal morpher phoneme-b out of range: {:#04x}", as_unsigned(val));
         return;
 
     case AL_VOCAL_MORPHER_PHONEMEB_COARSE_TUNING:
@@ -176,13 +177,13 @@ void VmorpherEffectHandler::SetParami(ALCcontext *context, VmorpherProps &props,
         if(auto formopt = WaveformFromEmum(val))
             props.Waveform = *formopt;
         else
-            context->throw_error(AL_INVALID_VALUE, "Vocal morpher waveform out of range: 0x{:04x}",
-                val);
+            context->throw_error(AL_INVALID_VALUE, "Vocal morpher waveform out of range: {:#04x}",
+                as_unsigned(val));
         return;
     }
 
-    context->throw_error(AL_INVALID_ENUM, "Invalid vocal morpher integer property 0x{:04x}",
-        param);
+    context->throw_error(AL_INVALID_ENUM, "Invalid vocal morpher integer property {:#04x}",
+        as_unsigned(param));
 }
 void VmorpherEffectHandler::SetParamiv(ALCcontext *context, VmorpherProps &props, ALenum param, const int *vals)
 { SetParami(context, props, param, *vals); }
@@ -197,7 +198,8 @@ void VmorpherEffectHandler::SetParamf(ALCcontext *context, VmorpherProps &props,
         return;
     }
 
-    context->throw_error(AL_INVALID_ENUM, "Invalid vocal morpher float property 0x{:04x}", param);
+    context->throw_error(AL_INVALID_ENUM, "Invalid vocal morpher float property {:#04x}",
+        as_unsigned(param));
 }
 void VmorpherEffectHandler::SetParamfv(ALCcontext *context, VmorpherProps &props, ALenum param, const float *vals)
 { SetParamf(context, props, param, *vals); }
@@ -213,8 +215,8 @@ void VmorpherEffectHandler::GetParami(ALCcontext *context, const VmorpherProps &
     case AL_VOCAL_MORPHER_WAVEFORM: *val = EnumFromWaveform(props.Waveform); return;
     }
 
-    context->throw_error(AL_INVALID_ENUM, "Invalid vocal morpher integer property 0x{:04x}",
-        param);
+    context->throw_error(AL_INVALID_ENUM, "Invalid vocal morpher integer property {:#04x}",
+        as_unsigned(param));
 }
 void VmorpherEffectHandler::GetParamiv(ALCcontext *context, const VmorpherProps &props, ALenum param, int *vals)
 { GetParami(context, props, param, vals); }
@@ -225,7 +227,8 @@ void VmorpherEffectHandler::GetParamf(ALCcontext *context, const VmorpherProps &
     case AL_VOCAL_MORPHER_RATE: *val = props.Rate; return;
     }
 
-    context->throw_error(AL_INVALID_ENUM, "Invalid vocal morpher float property 0x{:04x}", param);
+    context->throw_error(AL_INVALID_ENUM, "Invalid vocal morpher float property {:#04x}",
+        as_unsigned(param));
 }
 void VmorpherEffectHandler::GetParamfv(ALCcontext *context, const VmorpherProps &props, ALenum param, float *vals)
 { GetParamf(context, props, param, vals); }

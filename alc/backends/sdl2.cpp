@@ -127,7 +127,7 @@ void Sdl2Backend::open(std::string_view name)
     case AUDIO_F32SYS: devtype = DevFmtFloat;  break;
     default:
         throw al::backend_exception{al::backend_error::DeviceError,
-            "Unhandled SDL format: 0x{:04x}", have.format};
+            "Unhandled SDL format: {:#04x}", have.format};
     }
 
     mFrameSize = BytesFromDevFmt(devtype) * have.channels;
@@ -205,7 +205,7 @@ bool Sdl2Backend::reset()
     case AUDIO_F32SYS: mDevice->FmtType = DevFmtFloat;  break;
     default:
         throw al::backend_exception{al::backend_error::DeviceError,
-            "Unhandled SDL format: 0x{:04x}", have.format};
+            "Unhandled SDL format: {:#04x}", have.format};
     }
 
     mFrameSize = BytesFromDevFmt(mDevice->FmtType) * have.channels;

@@ -477,7 +477,8 @@ void JackPlayback::open(std::string_view name)
         mClient = jack_client_open(client_name, ClientOptions, &status, nullptr);
         if(mClient == nullptr)
             throw al::backend_exception{al::backend_error::DeviceError,
-                "Failed to open client connection: 0x{:02x}", al::to_underlying(status)};
+                "Failed to open client connection: {:#02x}",
+                as_unsigned(al::to_underlying(status))};
         if((status&JackServerStarted))
             TRACE("JACK server started");
         if((status&JackNameNotUnique))
@@ -696,7 +697,7 @@ bool JackBackendFactory::init()
     jack_set_error_function(old_error_cb);
     if(!client)
     {
-        WARN("jack_client_open() failed, 0x{:02x}", al::to_underlying(status));
+        WARN("jack_client_open() failed, {:#02x}", as_unsigned(al::to_underlying(status)));
         if((status&JackServerFailed) && !(ClientOptions&JackNoStartServer))
             ERR("Unable to connect to JACK server");
         return false;
@@ -727,7 +728,7 @@ auto JackBackendFactory::enumerate(BackendType type) -> std::vector<std::string>
             jack_client_close(client);
         }
         else
-            WARN("jack_client_open() failed, 0x{:02x}", al::to_underlying(status));
+            WARN("jack_client_open() failed, {:#02x}", as_unsigned(al::to_underlying(status)));
         outnames.reserve(PlaybackList.size());
         std::for_each(PlaybackList.cbegin(), PlaybackList.cend(), append_name);
         break;

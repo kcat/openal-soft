@@ -102,7 +102,8 @@ void ReverbEffectHandler::SetParami(ALCcontext *context, ReverbProps &props, ALe
         props.DecayHFLimit = val != AL_FALSE;
         return;
     }
-    context->throw_error(AL_INVALID_ENUM, "Invalid EAX reverb integer property 0x{:04x}", param);
+    context->throw_error(AL_INVALID_ENUM, "Invalid EAX reverb integer property {:#04x}",
+        as_unsigned(param));
 }
 void ReverbEffectHandler::SetParamiv(ALCcontext *context, ReverbProps &props, ALenum param, const int *vals)
 { SetParami(context, props, param, *vals); }
@@ -230,7 +231,8 @@ void ReverbEffectHandler::SetParamf(ALCcontext *context, ReverbProps &props, ALe
         props.RoomRolloffFactor = val;
         return;
     }
-    context->throw_error(AL_INVALID_ENUM, "Invalid EAX reverb float property 0x{:04x}", param);
+    context->throw_error(AL_INVALID_ENUM, "Invalid EAX reverb float property {:#04x}",
+        as_unsigned(param));
 }
 void ReverbEffectHandler::SetParamfv(ALCcontext *context, ReverbProps &props, ALenum param, const float *vals)
 {
@@ -260,7 +262,8 @@ void ReverbEffectHandler::GetParami(ALCcontext *context, const ReverbProps &prop
     {
     case AL_EAXREVERB_DECAY_HFLIMIT: *val = props.DecayHFLimit; return;
     }
-    context->throw_error(AL_INVALID_ENUM, "Invalid EAX reverb integer property 0x{:04x}", param);
+    context->throw_error(AL_INVALID_ENUM, "Invalid EAX reverb integer property {:#04x}",
+        as_unsigned(param));
 }
 void ReverbEffectHandler::GetParamiv(ALCcontext *context, const ReverbProps &props, ALenum param, int *vals)
 { GetParami(context, props, param, vals); }
@@ -290,7 +293,8 @@ void ReverbEffectHandler::GetParamf(ALCcontext *context, const ReverbProps &prop
     case AL_EAXREVERB_ROOM_ROLLOFF_FACTOR: *val = props.RoomRolloffFactor; return;
     }
 
-    context->throw_error(AL_INVALID_ENUM, "Invalid EAX reverb float property 0x{:04x}", param);
+    context->throw_error(AL_INVALID_ENUM, "Invalid EAX reverb float property {:#04x}",
+        as_unsigned(param));
 }
 void ReverbEffectHandler::GetParamfv(ALCcontext *context, const ReverbProps &props, ALenum param, float *vals)
 {
@@ -324,7 +328,8 @@ void StdReverbEffectHandler::SetParami(ALCcontext *context, ReverbProps &props, 
         return;
     }
 
-    context->throw_error(AL_INVALID_ENUM, "Invalid EAX reverb integer property 0x{:04x}", param);
+    context->throw_error(AL_INVALID_ENUM, "Invalid EAX reverb integer property {:#04x}",
+        as_unsigned(param));
 }
 void StdReverbEffectHandler::SetParamiv(ALCcontext *context, ReverbProps &props, ALenum param, const int *vals)
 { SetParami(context, props, param, *vals); }
@@ -405,7 +410,8 @@ void StdReverbEffectHandler::SetParamf(ALCcontext *context, ReverbProps &props, 
         return;
     }
 
-    context->throw_error(AL_INVALID_ENUM, "Invalid EAX reverb float property 0x{:04x}", param);
+    context->throw_error(AL_INVALID_ENUM, "Invalid EAX reverb float property {:#04x}",
+        as_unsigned(param));
 }
 void StdReverbEffectHandler::SetParamfv(ALCcontext *context, ReverbProps &props, ALenum param, const float *vals)
 { SetParamf(context, props, param, *vals); }
@@ -416,7 +422,8 @@ void StdReverbEffectHandler::GetParami(ALCcontext *context, const ReverbProps &p
     {
     case AL_REVERB_DECAY_HFLIMIT: *val = props.DecayHFLimit; return;
     }
-    context->throw_error(AL_INVALID_ENUM, "Invalid EAX reverb integer property 0x{:04x}", param);
+    context->throw_error(AL_INVALID_ENUM, "Invalid EAX reverb integer property {:#04x}",
+        as_unsigned(param));
 }
 void StdReverbEffectHandler::GetParamiv(ALCcontext *context, const ReverbProps &props, ALenum param, int *vals)
 { GetParami(context, props, param, vals); }
@@ -438,7 +445,8 @@ void StdReverbEffectHandler::GetParamf(ALCcontext *context, const ReverbProps &p
     case AL_REVERB_ROOM_ROLLOFF_FACTOR: *val = props.RoomRolloffFactor; return;
     }
 
-    context->throw_error(AL_INVALID_ENUM, "Invalid EAX reverb float property 0x{:04x}", param);
+    context->throw_error(AL_INVALID_ENUM, "Invalid EAX reverb float property {:#04x}",
+        as_unsigned(param));
 }
 void StdReverbEffectHandler::GetParamfv(ALCcontext *context, const ReverbProps &props, ALenum param, float *vals)
 { GetParamf(context, props, param, vals); }

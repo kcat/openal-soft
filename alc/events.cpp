@@ -3,6 +3,7 @@
 
 #include "events.h"
 
+#include "alnumeric.h"
 #include "alspan.h"
 #include "core/logging.h"
 #include "device.h"
@@ -75,7 +76,7 @@ FORCE_ALIGN ALCboolean ALC_APIENTRY alcEventControlSOFT(ALCsizei count, const AL
         auto etype = alc::GetEventType(type);
         if(!etype)
         {
-            WARN("Invalid event type: 0x{:04x}", type);
+            WARN("Invalid event type: {:#04x}", as_unsigned(type));
             alcSetError(nullptr, ALC_INVALID_ENUM);
             return ALC_FALSE;
         }

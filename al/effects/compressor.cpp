@@ -5,6 +5,7 @@
 #include "AL/efx.h"
 
 #include "alc/context.h"
+#include "alnumeric.h"
 #include "effects.h"
 
 #if ALSOFT_EAX
@@ -38,14 +39,15 @@ void CompressorEffectHandler::SetParami(ALCcontext *context, CompressorProps &pr
         return;
     }
 
-    context->throw_error(AL_INVALID_ENUM, "Invalid compressor integer property 0x{:04x}", param);
+    context->throw_error(AL_INVALID_ENUM, "Invalid compressor integer property {:#04x}",
+        as_unsigned(param));
 }
 void CompressorEffectHandler::SetParamiv(ALCcontext *context, CompressorProps &props, ALenum param, const int *vals)
 { SetParami(context, props, param, *vals); }
 void CompressorEffectHandler::SetParamf(ALCcontext *context, CompressorProps&, ALenum param, float)
-{ context->throw_error(AL_INVALID_ENUM, "Invalid compressor float property 0x{:04x}", param); }
+{ context->throw_error(AL_INVALID_ENUM, "Invalid compressor float property {:#04x}", as_unsigned(param)); }
 void CompressorEffectHandler::SetParamfv(ALCcontext *context, CompressorProps&, ALenum param, const float*)
-{ context->throw_error(AL_INVALID_ENUM, "Invalid compressor float-vector property 0x{:04x}", param); }
+{ context->throw_error(AL_INVALID_ENUM, "Invalid compressor float-vector property {:#04x}", as_unsigned(param)); }
 
 void CompressorEffectHandler::GetParami(ALCcontext *context, const CompressorProps &props, ALenum param, int *val)
 { 
@@ -54,14 +56,15 @@ void CompressorEffectHandler::GetParami(ALCcontext *context, const CompressorPro
     case AL_COMPRESSOR_ONOFF: *val = props.OnOff; return;
     }
 
-    context->throw_error(AL_INVALID_ENUM, "Invalid compressor integer property 0x{:04x}", param);
+    context->throw_error(AL_INVALID_ENUM, "Invalid compressor integer property {:#04x}",
+        as_unsigned(param));
 }
 void CompressorEffectHandler::GetParamiv(ALCcontext *context, const CompressorProps &props, ALenum param, int *vals)
 { GetParami(context, props, param, vals); }
 void CompressorEffectHandler::GetParamf(ALCcontext *context, const CompressorProps&, ALenum param, float*)
-{ context->throw_error(AL_INVALID_ENUM, "Invalid compressor float property 0x{:04x}", param); }
+{ context->throw_error(AL_INVALID_ENUM, "Invalid compressor float property {:#04x}", as_unsigned(param)); }
 void CompressorEffectHandler::GetParamfv(ALCcontext *context, const CompressorProps&, ALenum param, float*)
-{ context->throw_error(AL_INVALID_ENUM, "Invalid compressor float-vector property 0x{:04x}", param); }
+{ context->throw_error(AL_INVALID_ENUM, "Invalid compressor float-vector property {:#04x}", as_unsigned(param)); }
 
 
 #if ALSOFT_EAX

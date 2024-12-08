@@ -216,7 +216,7 @@ bool SolarisBackend::reset()
         mDevice->FmtType = DevFmtInt;
     else
     {
-        ERR("Got unhandled sample type: {} (0x{:x})", info.play.precision, info.play.encoding);
+        ERR("Got unhandled sample type: {} ({:#x})", info.play.precision, info.play.encoding);
         return false;
     }
 

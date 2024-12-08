@@ -172,7 +172,7 @@ std::optional<std::string> AmbDecConf::load(const char *fname) noexcept
             istr >> std::hex >> ChanMask >> std::dec;
 
             if(!ChanMask || ChanMask > Ambi4OrderMask)
-                return make_error(linenum, "Invalid chan_mask: 0x{:x}", ChanMask);
+                return make_error(linenum, "Invalid chan_mask: {:#x}", ChanMask);
             if(ChanMask > Ambi3OrderMask && CoeffScale == AmbDecScale::FuMa)
                 return make_error(linenum, "FuMa not compatible with over third-order");
         }

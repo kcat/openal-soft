@@ -5,6 +5,7 @@
 #include "AL/efx.h"
 
 #include "alc/context.h"
+#include "alnumeric.h"
 #include "effects.h"
 
 #if ALSOFT_EAX
@@ -26,7 +27,8 @@ const EffectProps NullEffectProps{genDefaultProps()};
 
 void NullEffectHandler::SetParami(ALCcontext *context, std::monostate& /*props*/, ALenum param, int /*val*/)
 {
-    context->throw_error(AL_INVALID_ENUM, "Invalid null effect integer property 0x{:04x}", param);
+    context->throw_error(AL_INVALID_ENUM, "Invalid null effect integer property {:#04x}",
+        as_unsigned(param));
 }
 void NullEffectHandler::SetParamiv(ALCcontext *context, std::monostate &props, ALenum param, const int *vals)
 {
@@ -34,7 +36,8 @@ void NullEffectHandler::SetParamiv(ALCcontext *context, std::monostate &props, A
 }
 void NullEffectHandler::SetParamf(ALCcontext *context, std::monostate& /*props*/, ALenum param, float /*val*/)
 {
-    context->throw_error(AL_INVALID_ENUM, "Invalid null effect float property 0x{:04x}", param);
+    context->throw_error(AL_INVALID_ENUM, "Invalid null effect float property {:#04x}",
+        as_unsigned(param));
 }
 void NullEffectHandler::SetParamfv(ALCcontext *context, std::monostate &props, ALenum param, const float *vals)
 {
@@ -43,7 +46,8 @@ void NullEffectHandler::SetParamfv(ALCcontext *context, std::monostate &props, A
 
 void NullEffectHandler::GetParami(ALCcontext *context, const std::monostate& /*props*/, ALenum param, int* /*val*/)
 {
-    context->throw_error(AL_INVALID_ENUM, "Invalid null effect integer property 0x{:04x}", param);
+    context->throw_error(AL_INVALID_ENUM, "Invalid null effect integer property {:#04x}",
+        as_unsigned(param));
 }
 void NullEffectHandler::GetParamiv(ALCcontext *context, const std::monostate &props, ALenum param, int *vals)
 {
@@ -51,7 +55,8 @@ void NullEffectHandler::GetParamiv(ALCcontext *context, const std::monostate &pr
 }
 void NullEffectHandler::GetParamf(ALCcontext *context, const std::monostate& /*props*/, ALenum param, float* /*val*/)
 {
-    context->throw_error(AL_INVALID_ENUM, "Invalid null effect float property 0x{:04x}", param);
+    context->throw_error(AL_INVALID_ENUM, "Invalid null effect float property {:#04x}",
+        as_unsigned(param));
 }
 void NullEffectHandler::GetParamfv(ALCcontext *context, const std::monostate &props, ALenum param, float *vals)
 {

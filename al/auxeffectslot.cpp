@@ -243,7 +243,7 @@ constexpr auto EffectSlotTypeFromEnum(ALenum type) noexcept -> EffectSlotType
     case AL_EFFECT_DEDICATED_DIALOGUE: return EffectSlotType::Dedicated;
     case AL_EFFECT_CONVOLUTION_SOFT: return EffectSlotType::Convolution;
     }
-    ERR("Unhandled effect enum: 0x{:04x}", type);
+    ERR("Unhandled effect enum: {:#04x}", as_unsigned(type));
     return EffectSlotType::None;
 }
 
@@ -641,7 +641,8 @@ try {
         context->throw_error(AL_INVALID_OPERATION, "AL_EFFECTSLOT_STATE_SOFT is read-only");
     }
 
-    context->throw_error(AL_INVALID_ENUM, "Invalid effect slot integer property 0x{:04x}", param);
+    context->throw_error(AL_INVALID_ENUM, "Invalid effect slot integer property {:#04x}",
+        as_unsigned(param));
 }
 catch(al::base_exception&) {
 }
@@ -669,8 +670,8 @@ try {
     if(!slot)
         context->throw_error(AL_INVALID_NAME, "Invalid effect slot ID {}", effectslot);
 
-    context->throw_error(AL_INVALID_ENUM, "Invalid effect slot integer-vector property 0x{:04x}",
-        param);
+    context->throw_error(AL_INVALID_ENUM, "Invalid effect slot integer-vector property {:#04x}",
+        as_unsigned(param));
 }
 catch(al::base_exception&) {
 }
@@ -702,7 +703,8 @@ try {
         return;
     }
 
-    context->throw_error(AL_INVALID_ENUM, "Invalid effect slot float property 0x{:04x}", param);
+    context->throw_error(AL_INVALID_ENUM, "Invalid effect slot float property {:#04x}",
+        as_unsigned(param));
 }
 catch(al::base_exception&) {
 }
@@ -726,8 +728,8 @@ try {
     if(!slot)
         context->throw_error(AL_INVALID_NAME, "Invalid effect slot ID {}", effectslot);
 
-    context->throw_error(AL_INVALID_ENUM, "Invalid effect slot float-vector property 0x{:04x}",
-        param);
+    context->throw_error(AL_INVALID_ENUM, "Invalid effect slot float-vector property {:#04x}",
+        as_unsigned(param));
 }
 catch(al::base_exception&) {
 }
@@ -774,7 +776,8 @@ try {
         return;
     }
 
-    context->throw_error(AL_INVALID_ENUM, "Invalid effect slot integer property 0x{:04x}", param);
+    context->throw_error(AL_INVALID_ENUM, "Invalid effect slot integer property {:#04x}",
+        as_unsigned(param));
 }
 catch(al::base_exception&) {
 }
@@ -802,8 +805,8 @@ try {
     if(!slot)
         context->throw_error(AL_INVALID_NAME, "Invalid effect slot ID {}", effectslot);
 
-    context->throw_error(AL_INVALID_ENUM, "Invalid effect slot integer-vector property 0x{:04x}",
-        param);
+    context->throw_error(AL_INVALID_ENUM, "Invalid effect slot integer-vector property {:#04x}",
+        as_unsigned(param));
 }
 catch(al::base_exception&) {
 }
@@ -825,7 +828,8 @@ try {
     case AL_EFFECTSLOT_GAIN: *value = slot->Gain; return;
     }
 
-    context->throw_error(AL_INVALID_ENUM, "Invalid effect slot float property 0x{:04x}", param);
+    context->throw_error(AL_INVALID_ENUM, "Invalid effect slot float property {:#04x}",
+        as_unsigned(param));
 }
 catch(al::base_exception&) {
 }
@@ -849,8 +853,8 @@ try {
     if(!slot)
         context->throw_error(AL_INVALID_NAME, "Invalid effect slot ID {}", effectslot);
 
-    context->throw_error(AL_INVALID_ENUM, "Invalid effect slot float-vector property 0x{:04x}",
-        param);
+    context->throw_error(AL_INVALID_ENUM, "Invalid effect slot float-vector property {:#04x}",
+        as_unsigned(param));
 }
 catch(al::base_exception&) {
 }

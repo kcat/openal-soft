@@ -299,8 +299,8 @@ try {
             auto check_effect = [value](const EffectList &item) -> bool
             { return value == item.val && !DisabledEffects.test(item.type); };
             if(!std::any_of(gEffectList.cbegin(), gEffectList.cend(), check_effect))
-                context->throw_error(AL_INVALID_VALUE, "Effect type 0x{:04x} not supported",
-                    value);
+                context->throw_error(AL_INVALID_VALUE, "Effect type {:#04x} not supported",
+                    as_unsigned(value));
         }
 
         InitEffectParams(aleffect, value);

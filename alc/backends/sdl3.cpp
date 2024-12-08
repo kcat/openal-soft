@@ -317,7 +317,7 @@ auto Sdl3Backend::reset() -> bool
     case SDL_AUDIO_F32: mDevice->FmtType = DevFmtFloat; break;
     default:
         throw al::backend_exception{al::backend_error::DeviceError,
-            "Unhandled SDL format: 0x{:04x}", al::to_underlying(have.format)};
+            "Unhandled SDL format: {:#04x}", al::to_underlying(have.format)};
     }
 
     mFrameSize = mDevice->bytesFromFmt() * mNumChannels;

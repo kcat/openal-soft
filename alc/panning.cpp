@@ -1083,7 +1083,7 @@ void aluInitRenderer(al::Device *device, int hrtf_id, std::optional<StereoEncodi
             }
             if(conf.ChanMask > Ambi3OrderMask)
             {
-                ERR("Unsupported decoder channel mask 0x{:x} (max 0x{:x})", conf.ChanMask,
+                ERR("Unsupported decoder channel mask {:#x} (max {:#x})", conf.ChanMask,
                     Ambi3OrderMask);
                 return false;
             }

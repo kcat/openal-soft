@@ -46,6 +46,7 @@
 #include "AL/alc.h"
 #include "AL/alext.h"
 
+#include "alnumeric.h"
 #include "alspan.h"
 #include "common/alhelpers.h"
 #include "fmt/core.h"
@@ -342,7 +343,8 @@ struct StreamPlayer {
         alSourcei(mSource, AL_BUFFER, static_cast<ALint>(mBuffer));
         if(ALenum err{alGetError()})
         {
-            fmt::println(stderr, "Failed to set callback: {} (0x{:04x})", alGetString(err), err);
+            fmt::println(stderr, "Failed to set callback: {} ({:#04x})", alGetString(err),
+                as_unsigned(err));
             return false;
         }
         return true;

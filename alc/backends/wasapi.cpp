@@ -191,6 +191,14 @@ constexpr auto as_unsigned(T value) noexcept
 }
 
 
+template<typename T>
+struct CoTaskMemDeleter {
+    void operator()(T *ptr) const { CoTaskMemFree(ptr); }
+};
+template<typename T>
+using unique_coptr = std::unique_ptr<T,CoTaskMemDeleter<T>>;
+
+
 /* Scales the given reftime value, rounding the result. */
 template<typename T>
 constexpr uint RefTime2Samples(const ReferenceTime &val, T srate) noexcept
@@ -733,11 +741,9 @@ struct DeviceHelper final : private IMMNotificationClient
         hr = mEnumerator->GetDefaultAudioEndpoint(flowdir, eMultimedia, al::out_ptr(device));
         if(SUCCEEDED(hr))
         {
-            if(WCHAR *devid{GetDeviceId(device.get())})
-            {
-                defaultId = devid;
-                CoTaskMemFree(devid);
-            }
+            auto devid = unique_coptr<WCHAR>{};
+            if(auto hr2 = GetDeviceId(device.get(), al::out_ptr(devid)); SUCCEEDED(hr2))
+                defaultId = devid.get();
             device = nullptr;
         }
 
@@ -747,11 +753,9 @@ struct DeviceHelper final : private IMMNotificationClient
             if(FAILED(hr))
                 continue;
 
-            if(WCHAR *devid{GetDeviceId(device.get())})
-            {
-                std::ignore = AddDevice(device, devid, list);
-                CoTaskMemFree(devid);
-            }
+            auto devid = unique_coptr<WCHAR>{};
+            if(auto hr2 = GetDeviceId(device.get(), al::out_ptr(devid)); SUCCEEDED(hr2))
+                std::ignore = AddDevice(device, devid.get(), list);
             device = nullptr;
         }
 #else
@@ -817,18 +821,12 @@ private:
     }
 
 #if !ALSOFT_UWP
-    static WCHAR *GetDeviceId(IMMDevice *device)
+    static auto GetDeviceId(IMMDevice *device, WCHAR **devid) -> HRESULT
     {
-        WCHAR *devid;
-
-        const HRESULT hr{device->GetId(&devid)};
+        const auto hr = device->GetId(devid);
         if(FAILED(hr))
-        {
             ERR("Failed to get device id: {:x}", hr);
-            return nullptr;
-        }
-
-        return devid;
+        return hr;
     }
     ComPtr<IMMDeviceEnumerator> mEnumerator{nullptr};
 
@@ -1852,22 +1850,18 @@ HRESULT WasapiPlayback::resetProxy()
         return hr;
     }
 
-    WAVEFORMATEX *wfx;
-    hr = audio.mClient->GetMixFormat(&wfx);
+    auto wfx = unique_coptr<WAVEFORMATEX>{};
+    hr = audio.mClient->GetMixFormat(al::out_ptr(wfx));
     if(FAILED(hr))
     {
         ERR("Failed to get mix format: 0x{:x}", hr);
         return hr;
     }
-    TraceFormat("Device mix format", wfx);
+    TraceFormat("Device mix format", wfx.get());
 
-    WAVEFORMATEXTENSIBLE OutputType;
-    if(!MakeExtensible(&OutputType, wfx))
-    {
-        CoTaskMemFree(wfx);
+    auto OutputType = WAVEFORMATEXTENSIBLE{};
+    if(!MakeExtensible(&OutputType, wfx.get()))
         return E_FAIL;
-    }
-    CoTaskMemFree(wfx);
     wfx = nullptr;
 
     /* Get the buffer size as a ReferenceTime before potentially altering the
@@ -1993,11 +1987,12 @@ HRESULT WasapiPlayback::resetProxy()
         * OutputType.Format.nBlockAlign;
 
     TraceFormat("Requesting playback format", &OutputType.Format);
-    hr = audio.mClient->IsFormatSupported(AUDCLNT_SHAREMODE_SHARED, &OutputType.Format, &wfx);
+    hr = audio.mClient->IsFormatSupported(AUDCLNT_SHAREMODE_SHARED, &OutputType.Format,
+        al::out_ptr(wfx));
     if(FAILED(hr))
     {
         WARN("Failed to check format support: 0x{:x}", hr);
-        hr = audio.mClient->GetMixFormat(&wfx);
+        hr = audio.mClient->GetMixFormat(al::out_ptr(wfx));
     }
     if(FAILED(hr))
     {
@@ -2005,15 +2000,11 @@ HRESULT WasapiPlayback::resetProxy()
         return hr;
     }
 
-    if(wfx != nullptr)
+    if(wfx)
     {
-        TraceFormat("Got playback format", wfx);
-        if(!MakeExtensible(&OutputType, wfx))
-        {
-            CoTaskMemFree(wfx);
+        TraceFormat("Got playback format", wfx.get());
+        if(!MakeExtensible(&OutputType, wfx.get()))
             return E_FAIL;
-        }
-        CoTaskMemFree(wfx);
         wfx = nullptr;
 
         finalizeFormat(OutputType);
@@ -2426,22 +2417,18 @@ HRESULT WasapiCapture::resetProxy()
         return hr;
     }
 
-    WAVEFORMATEX *wfx;
-    hr = mClient->GetMixFormat(&wfx);
+    auto wfx = unique_coptr<WAVEFORMATEX>{};
+    hr = mClient->GetMixFormat(al::out_ptr(wfx));
     if(FAILED(hr))
     {
         ERR("Failed to get capture format: 0x{:x}", hr);
         return hr;
     }
-    TraceFormat("Device capture format", wfx);
+    TraceFormat("Device capture format", wfx.get());
 
-    WAVEFORMATEXTENSIBLE InputType{};
-    if(!MakeExtensible(&InputType, wfx))
-    {
-        CoTaskMemFree(wfx);
+    auto InputType = WAVEFORMATEXTENSIBLE{};
+    if(!MakeExtensible(&InputType, wfx.get()))
         return E_FAIL;
-    }
-    CoTaskMemFree(wfx);
     wfx = nullptr;
 
     const bool isRear51{InputType.Format.nChannels == 6
@@ -2523,11 +2510,11 @@ HRESULT WasapiCapture::resetProxy()
     InputType.Format.cbSize = sizeof(InputType) - sizeof(InputType.Format);
 
     TraceFormat("Requesting capture format", &InputType.Format);
-    hr = mClient->IsFormatSupported(AUDCLNT_SHAREMODE_SHARED, &InputType.Format, &wfx);
+    hr = mClient->IsFormatSupported(AUDCLNT_SHAREMODE_SHARED, &InputType.Format, al::out_ptr(wfx));
     if(FAILED(hr))
     {
         WARN("Failed to check capture format support: 0x{:x}", hr);
-        hr = mClient->GetMixFormat(&wfx);
+        hr = mClient->GetMixFormat(al::out_ptr(wfx));
     }
     if(FAILED(hr))
     {
@@ -2540,13 +2527,9 @@ HRESULT WasapiCapture::resetProxy()
 
     if(wfx != nullptr)
     {
-        TraceFormat("Got capture format", wfx);
-        if(!MakeExtensible(&InputType, wfx))
-        {
-            CoTaskMemFree(wfx);
+        TraceFormat("Got capture format", wfx.get());
+        if(!MakeExtensible(&InputType, wfx.get()))
             return E_FAIL;
-        }
-        CoTaskMemFree(wfx);
         wfx = nullptr;
 
         auto validate_fmt = [](DeviceBase *device, uint32_t chancount, DWORD chanmask) noexcept

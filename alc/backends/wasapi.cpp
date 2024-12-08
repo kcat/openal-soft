@@ -1166,7 +1166,6 @@ struct WasapiPlayback final : public BackendBase, WasapiProxy {
 
     ClockLatency getClockLatency() override;
 
-    void prepareFormat(WAVEFORMATEXTENSIBLE &OutputType);
     void finalizeFormat(WAVEFORMATEXTENSIBLE &OutputType);
 
     auto initSpatial() -> bool;
@@ -1509,126 +1508,6 @@ void WasapiPlayback::closeProxy()
     mMMDev = nullptr;
 }
 
-
-void WasapiPlayback::prepareFormat(WAVEFORMATEXTENSIBLE &OutputType)
-{
-    bool isRear51{false};
-
-    if(!mDevice->Flags.test(FrequencyRequest))
-        mDevice->Frequency = OutputType.Format.nSamplesPerSec;
-    if(!mDevice->Flags.test(ChannelsRequest))
-    {
-        /* If not requesting a channel configuration, auto-select given what
-         * fits the mask's lsb (to ensure no gaps in the output channels). If
-         * there's no mask, we can only assume mono or stereo.
-         */
-        const uint32_t chancount{OutputType.Format.nChannels};
-        const DWORD chanmask{OutputType.dwChannelMask};
-        if(chancount >= 12 && (chanmask&X714Mask) == X7DOT1DOT4)
-            mDevice->FmtChans = DevFmtX714;
-        else if(chancount >= 8 && (chanmask&X71Mask) == X7DOT1)
-            mDevice->FmtChans = DevFmtX71;
-        else if(chancount >= 7 && (chanmask&X61Mask) == X6DOT1)
-            mDevice->FmtChans = DevFmtX61;
-        else if(chancount >= 6 && (chanmask&X51Mask) == X5DOT1)
-            mDevice->FmtChans = DevFmtX51;
-        else if(chancount >= 6 && (chanmask&X51RearMask) == X5DOT1REAR)
-        {
-            mDevice->FmtChans = DevFmtX51;
-            isRear51 = true;
-        }
-        else if(chancount >= 4 && (chanmask&QuadMask) == QUAD)
-            mDevice->FmtChans = DevFmtQuad;
-        else if(chancount >= 2 && ((chanmask&StereoMask) == STEREO || !chanmask))
-            mDevice->FmtChans = DevFmtStereo;
-        else if(chancount >= 1 && ((chanmask&MonoMask) == MONO || !chanmask))
-            mDevice->FmtChans = DevFmtMono;
-        else
-            ERR("Unhandled channel config: {} -- 0x{:08x}", chancount, chanmask);
-    }
-    else
-    {
-        const uint32_t chancount{OutputType.Format.nChannels};
-        const DWORD chanmask{OutputType.dwChannelMask};
-        isRear51 = (chancount == 6 && (chanmask&X51RearMask) == X5DOT1REAR);
-    }
-
-    OutputType.Format.wFormatTag = WAVE_FORMAT_EXTENSIBLE;
-    switch(mDevice->FmtChans)
-    {
-    case DevFmtMono:
-        OutputType.Format.nChannels = 1;
-        OutputType.dwChannelMask = MONO;
-        break;
-    case DevFmtAmbi3D:
-        mDevice->FmtChans = DevFmtStereo;
-        /*fall-through*/
-    case DevFmtStereo:
-        OutputType.Format.nChannels = 2;
-        OutputType.dwChannelMask = STEREO;
-        break;
-    case DevFmtQuad:
-        OutputType.Format.nChannels = 4;
-        OutputType.dwChannelMask = QUAD;
-        break;
-    case DevFmtX51:
-        OutputType.Format.nChannels = 6;
-        OutputType.dwChannelMask = isRear51 ? X5DOT1REAR : X5DOT1;
-        break;
-    case DevFmtX61:
-        OutputType.Format.nChannels = 7;
-        OutputType.dwChannelMask = X6DOT1;
-        break;
-    case DevFmtX71:
-    case DevFmtX3D71:
-        OutputType.Format.nChannels = 8;
-        OutputType.dwChannelMask = X7DOT1;
-        break;
-    case DevFmtX7144:
-        mDevice->FmtChans = DevFmtX714;
-        /*fall-through*/
-    case DevFmtX714:
-        OutputType.Format.nChannels = 12;
-        OutputType.dwChannelMask = X7DOT1DOT4;
-        break;
-    }
-    switch(mDevice->FmtType)
-    {
-    case DevFmtByte:
-        mDevice->FmtType = DevFmtUByte;
-        /* fall-through */
-    case DevFmtUByte:
-        OutputType.Format.wBitsPerSample = 8;
-        OutputType.SubFormat = KSDATAFORMAT_SUBTYPE_PCM;
-        break;
-    case DevFmtUShort:
-        mDevice->FmtType = DevFmtShort;
-        /* fall-through */
-    case DevFmtShort:
-        OutputType.Format.wBitsPerSample = 16;
-        OutputType.SubFormat = KSDATAFORMAT_SUBTYPE_PCM;
-        break;
-    case DevFmtUInt:
-        mDevice->FmtType = DevFmtInt;
-        /* fall-through */
-    case DevFmtInt:
-        OutputType.Format.wBitsPerSample = 32;
-        OutputType.SubFormat = KSDATAFORMAT_SUBTYPE_PCM;
-        break;
-    case DevFmtFloat:
-        OutputType.Format.wBitsPerSample = 32;
-        OutputType.SubFormat = KSDATAFORMAT_SUBTYPE_IEEE_FLOAT;
-        break;
-    }
-    /* NOLINTNEXTLINE(cppcoreguidelines-pro-type-union-access) */
-    OutputType.Samples.wValidBitsPerSample = OutputType.Format.wBitsPerSample;
-    OutputType.Format.nSamplesPerSec = mDevice->Frequency;
-
-    OutputType.Format.nBlockAlign = static_cast<WORD>(OutputType.Format.nChannels *
-        OutputType.Format.wBitsPerSample / 8);
-    OutputType.Format.nAvgBytesPerSec = OutputType.Format.nSamplesPerSec *
-        OutputType.Format.nBlockAlign;
-}
 
 void WasapiPlayback::finalizeFormat(WAVEFORMATEXTENSIBLE &OutputType)
 {
@@ -1996,7 +1875,122 @@ HRESULT WasapiPlayback::resetProxy()
      */
     const auto buf_time = ReferenceTime{seconds{mDevice->BufferSize}} / mDevice->Frequency;
 
-    prepareFormat(OutputType);
+    /* Update the mDevice format for non-requested properties. */
+    bool isRear51{false};
+    if(!mDevice->Flags.test(FrequencyRequest))
+        mDevice->Frequency = OutputType.Format.nSamplesPerSec;
+    if(!mDevice->Flags.test(ChannelsRequest))
+    {
+        /* If not requesting a channel configuration, auto-select given what
+         * fits the mask's lsb (to ensure no gaps in the output channels). If
+         * there's no mask, we can only assume mono or stereo.
+         */
+        const uint32_t chancount{OutputType.Format.nChannels};
+        const DWORD chanmask{OutputType.dwChannelMask};
+        if(chancount >= 12 && (chanmask&X714Mask) == X7DOT1DOT4)
+            mDevice->FmtChans = DevFmtX714;
+        else if(chancount >= 8 && (chanmask&X71Mask) == X7DOT1)
+            mDevice->FmtChans = DevFmtX71;
+        else if(chancount >= 7 && (chanmask&X61Mask) == X6DOT1)
+            mDevice->FmtChans = DevFmtX61;
+        else if(chancount >= 6 && (chanmask&X51Mask) == X5DOT1)
+            mDevice->FmtChans = DevFmtX51;
+        else if(chancount >= 6 && (chanmask&X51RearMask) == X5DOT1REAR)
+        {
+            mDevice->FmtChans = DevFmtX51;
+            isRear51 = true;
+        }
+        else if(chancount >= 4 && (chanmask&QuadMask) == QUAD)
+            mDevice->FmtChans = DevFmtQuad;
+        else if(chancount >= 2 && ((chanmask&StereoMask) == STEREO || !chanmask))
+            mDevice->FmtChans = DevFmtStereo;
+        else if(chancount >= 1 && ((chanmask&MonoMask) == MONO || !chanmask))
+            mDevice->FmtChans = DevFmtMono;
+        else
+            ERR("Unhandled channel config: {} -- 0x{:08x}", chancount, chanmask);
+    }
+    else
+    {
+        const uint32_t chancount{OutputType.Format.nChannels};
+        const DWORD chanmask{OutputType.dwChannelMask};
+        isRear51 = (chancount == 6 && (chanmask&X51RearMask) == X5DOT1REAR);
+    }
+
+    /* Request a format matching the mDevice. */
+    OutputType.Format.wFormatTag = WAVE_FORMAT_EXTENSIBLE;
+    switch(mDevice->FmtChans)
+    {
+    case DevFmtMono:
+        OutputType.Format.nChannels = 1;
+        OutputType.dwChannelMask = MONO;
+        break;
+    case DevFmtAmbi3D:
+        mDevice->FmtChans = DevFmtStereo;
+        [[fallthrough]];
+    case DevFmtStereo:
+        OutputType.Format.nChannels = 2;
+        OutputType.dwChannelMask = STEREO;
+        break;
+    case DevFmtQuad:
+        OutputType.Format.nChannels = 4;
+        OutputType.dwChannelMask = QUAD;
+        break;
+    case DevFmtX51:
+        OutputType.Format.nChannels = 6;
+        OutputType.dwChannelMask = isRear51 ? X5DOT1REAR : X5DOT1;
+        break;
+    case DevFmtX61:
+        OutputType.Format.nChannels = 7;
+        OutputType.dwChannelMask = X6DOT1;
+        break;
+    case DevFmtX71:
+    case DevFmtX3D71:
+        OutputType.Format.nChannels = 8;
+        OutputType.dwChannelMask = X7DOT1;
+        break;
+    case DevFmtX7144:
+        mDevice->FmtChans = DevFmtX714;
+        [[fallthrough]];
+    case DevFmtX714:
+        OutputType.Format.nChannels = 12;
+        OutputType.dwChannelMask = X7DOT1DOT4;
+        break;
+    }
+    switch(mDevice->FmtType)
+    {
+    case DevFmtByte:
+        mDevice->FmtType = DevFmtUByte;
+        [[fallthrough]];
+    case DevFmtUByte:
+        OutputType.Format.wBitsPerSample = 8;
+        OutputType.SubFormat = KSDATAFORMAT_SUBTYPE_PCM;
+        break;
+    case DevFmtUShort:
+        mDevice->FmtType = DevFmtShort;
+        [[fallthrough]];
+    case DevFmtShort:
+        OutputType.Format.wBitsPerSample = 16;
+        OutputType.SubFormat = KSDATAFORMAT_SUBTYPE_PCM;
+        break;
+    case DevFmtUInt:
+        mDevice->FmtType = DevFmtInt;
+        [[fallthrough]];
+    case DevFmtInt:
+        OutputType.Format.wBitsPerSample = 32;
+        OutputType.SubFormat = KSDATAFORMAT_SUBTYPE_PCM;
+        break;
+    case DevFmtFloat:
+        OutputType.Format.wBitsPerSample = 32;
+        OutputType.SubFormat = KSDATAFORMAT_SUBTYPE_IEEE_FLOAT;
+        break;
+    }
+    /* NOLINTNEXTLINE(cppcoreguidelines-pro-type-union-access) */
+    OutputType.Samples.wValidBitsPerSample = OutputType.Format.wBitsPerSample;
+    OutputType.Format.nSamplesPerSec = mDevice->Frequency;
+    OutputType.Format.nBlockAlign = static_cast<WORD>(OutputType.Format.nChannels
+        * OutputType.Format.wBitsPerSample / 8);
+    OutputType.Format.nAvgBytesPerSec = OutputType.Format.nSamplesPerSec
+        * OutputType.Format.nBlockAlign;
 
     TraceFormat("Requesting playback format", &OutputType.Format);
     hr = audio.mClient->IsFormatSupported(AUDCLNT_SHAREMODE_SHARED, &OutputType.Format, &wfx);

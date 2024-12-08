@@ -1991,8 +1991,10 @@ HRESULT WasapiPlayback::resetProxy()
     CoTaskMemFree(wfx);
     wfx = nullptr;
 
-    const ReferenceTime per_time{ReferenceTime{seconds{mDevice->UpdateSize}} / mDevice->Frequency};
-    const ReferenceTime buf_time{ReferenceTime{seconds{mDevice->BufferSize}} / mDevice->Frequency};
+    /* Get the buffer size as a ReferenceTime before potentially altering the
+     * sample rate.
+     */
+    const auto buf_time = ReferenceTime{seconds{mDevice->BufferSize}} / mDevice->Frequency;
 
     prepareFormat(OutputType);
 
@@ -2040,9 +2042,9 @@ HRESULT WasapiPlayback::resetProxy()
         return hr;
     }
 
-    UINT32 buffer_len{};
-    ReferenceTime min_per{};
-    hr = audio.mClient->GetDevicePeriod(&reinterpret_cast<REFERENCE_TIME&>(min_per), nullptr);
+    auto buffer_len = UINT32{};
+    auto period_time = ReferenceTime{};
+    hr = audio.mClient->GetDevicePeriod(&reinterpret_cast<REFERENCE_TIME&>(period_time), nullptr);
     if(SUCCEEDED(hr))
         hr = audio.mClient->GetBufferSize(&buffer_len);
     if(FAILED(hr))
@@ -2065,17 +2067,13 @@ HRESULT WasapiPlayback::resetProxy()
         return hr;
     }
 
-    /* Find the nearest multiple of the period size to the update size */
-    if(min_per < per_time)
-        min_per *= std::max<int64_t>((per_time + min_per/2) / min_per, 1_i64);
-
     mOutBufferSize = buffer_len;
-    mOutUpdateSize = std::min(RefTime2Samples(min_per, mFormat.Format.nSamplesPerSec),
+    mOutUpdateSize = std::min(RefTime2Samples(period_time, mFormat.Format.nSamplesPerSec),
         buffer_len/2u);
 
     mDevice->BufferSize = static_cast<uint>(uint64_t{buffer_len} * mDevice->Frequency /
         mFormat.Format.nSamplesPerSec);
-    mDevice->UpdateSize = std::min(RefTime2Samples(min_per, mDevice->Frequency),
+    mDevice->UpdateSize = std::min(RefTime2Samples(period_time, mDevice->Frequency),
         mDevice->BufferSize/2u);
 
     mResampler = nullptr;

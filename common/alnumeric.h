@@ -31,6 +31,14 @@ constexpr auto operator "" _uz(unsigned long long n) noexcept { return static_ca
 constexpr auto operator "" _zu(unsigned long long n) noexcept { return static_cast<std::size_t>(n); }
 
 
+template<typename T, std::enable_if_t<std::is_integral_v<T>,bool> = true>
+constexpr auto as_unsigned(T value) noexcept
+{
+    using UT = std::make_unsigned_t<T>;
+    return static_cast<UT>(value);
+}
+
+
 constexpr auto GetCounterSuffix(size_t count) noexcept -> const char*
 {
     auto &suffix = (((count%100)/10) == 1) ? "th" :

@@ -863,7 +863,7 @@ std::optional<DevFmtType> DevFmtTypeFromEnum(ALCenum type)
     case ALC_UNSIGNED_INT_SOFT: return DevFmtUInt;
     case ALC_FLOAT_SOFT: return DevFmtFloat;
     }
-    WARN("Unsupported format type: 0x{:04x}", type);
+    WARN("Unsupported format type: {:#04x}", as_unsigned(type));
     return std::nullopt;
 }
 ALCenum EnumFromDevFmt(DevFmtType type)
@@ -893,7 +893,7 @@ std::optional<DevFmtChannels> DevFmtChannelsFromEnum(ALCenum channels)
     case ALC_7POINT1_SOFT: return DevFmtX71;
     case ALC_BFORMAT3D_SOFT: return DevFmtAmbi3D;
     }
-    WARN("Unsupported format channels: 0x{:04x}", channels);
+    WARN("Unsupported format channels: {:#04x}", as_unsigned(channels));
     return std::nullopt;
 }
 ALCenum EnumFromDevFmt(DevFmtChannels channels)
@@ -923,7 +923,7 @@ std::optional<DevAmbiLayout> DevAmbiLayoutFromEnum(ALCenum layout)
     case ALC_FUMA_SOFT: return DevAmbiLayout::FuMa;
     case ALC_ACN_SOFT: return DevAmbiLayout::ACN;
     }
-    WARN("Unsupported ambisonic layout: 0x{:04x}", layout);
+    WARN("Unsupported ambisonic layout: {:#04x}", as_unsigned(layout));
     return std::nullopt;
 }
 ALCenum EnumFromDevAmbi(DevAmbiLayout layout)
@@ -945,7 +945,7 @@ std::optional<DevAmbiScaling> DevAmbiScalingFromEnum(ALCenum scaling)
     case ALC_SN3D_SOFT: return DevAmbiScaling::SN3D;
     case ALC_N3D_SOFT: return DevAmbiScaling::N3D;
     }
-    WARN("Unsupported ambisonic scaling: 0x{:04x}", scaling);
+    WARN("Unsupported ambisonic scaling: {:#04x}", as_unsigned(scaling));
     return std::nullopt;
 }
 ALCenum EnumFromDevAmbi(DevAmbiScaling scaling)
@@ -1230,7 +1230,7 @@ auto UpdateDeviceParams(al::Device *device, const al::span<const int> attrList) 
         int freqAttr{};
 
 #define ATTRIBUTE(a) a: TRACE("{} = {}", #a, attrList[attrIdx + 1]);
-#define ATTRIBUTE_HEX(a) a: TRACE("{} = 0x{:x}", #a, attrList[attrIdx + 1]);
+#define ATTRIBUTE_HEX(a) a: TRACE("{} = {:#x}", #a, as_unsigned(attrList[attrIdx + 1]));
         for(size_t attrIdx{0};attrIdx < attrList.size();attrIdx+=2)
         {
             switch(attrList[attrIdx])
@@ -1310,8 +1310,8 @@ auto UpdateDeviceParams(al::Device *device, const al::span<const int> attrList) 
                 break;
 
             default:
-                TRACE("0x{:04x} = {} (0x{:x})", attrList[attrIdx],
-                    attrList[attrIdx + 1], attrList[attrIdx + 1]);
+                TRACE("{:#04x} = {} ({:#x})", as_unsigned(attrList[attrIdx]),
+                    attrList[attrIdx + 1], as_unsigned(attrList[attrIdx + 1]));
                 break;
             }
         }
@@ -1977,7 +1977,7 @@ ContextRef GetContextRef() noexcept
 
 void alcSetError(al::Device *device, ALCenum errorCode)
 {
-    WARN("Error generated on device {}, code 0x{:04x}", voidp{device}, errorCode);
+    WARN("Error generated on device {}, code {:#04x}", voidp{device}, as_unsigned(errorCode));
     if(TrapALCError)
     {
 #ifdef _WIN32
@@ -3646,7 +3646,7 @@ FORCE_ALIGN ALCenum ALC_APIENTRY alcEventIsSupportedSOFT(ALCenum eventType, ALCe
     auto etype = alc::GetEventType(eventType);
     if(!etype)
     {
-        WARN("Invalid event type: 0x{:04x}", eventType);
+        WARN("Invalid event type: {:#04x}", as_unsigned(eventType));
         alcSetError(nullptr, ALC_INVALID_ENUM);
         return ALC_FALSE;
     }
@@ -3664,7 +3664,7 @@ FORCE_ALIGN ALCenum ALC_APIENTRY alcEventIsSupportedSOFT(ALCenum eventType, ALCe
             supported = CaptureFactory->queryEventSupport(*etype, BackendType::Capture);
         return al::to_underlying(supported);
     }
-    WARN("Invalid device type: 0x{:04x}", deviceType);
+    WARN("Invalid device type: {:#04x}", as_unsigned(deviceType));
     alcSetError(nullptr, ALC_INVALID_ENUM);
     return ALC_FALSE;
 }

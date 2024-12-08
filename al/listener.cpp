@@ -92,7 +92,8 @@ try {
         UpdateProps(context);
         return;
     }
-    context->throw_error(AL_INVALID_ENUM, "Invalid listener float property 0x{:04x}", param);
+    context->throw_error(AL_INVALID_ENUM, "Invalid listener float property {:#04x}",
+        as_unsigned(param));
 }
 catch(al::base_exception&) {
 }
@@ -126,7 +127,8 @@ try {
         CommitAndUpdateProps(context);
         return;
     }
-    context->throw_error(AL_INVALID_ENUM, "Invalid listener 3-float property 0x{:04x}", param);
+    context->throw_error(AL_INVALID_ENUM, "Invalid listener 3-float property {:#04x}",
+        as_unsigned(param));
 }
 catch(al::base_exception&) {
 }
@@ -169,8 +171,8 @@ try {
         CommitAndUpdateProps(context);
         return;
     }
-    context->throw_error(AL_INVALID_ENUM, "Invalid listener float-vector property 0x{:04x}",
-        param);
+    context->throw_error(AL_INVALID_ENUM, "Invalid listener float-vector property {:#04x}",
+        as_unsigned(param));
 }
 catch(al::base_exception&) {
 }
@@ -183,7 +185,8 @@ AL_API DECL_FUNC2(void, alListeneri, ALenum,param, ALint,value)
 FORCE_ALIGN void AL_APIENTRY alListeneriDirect(ALCcontext *context, ALenum param, ALint /*value*/) noexcept
 try {
     std::lock_guard<std::mutex> proplock{context->mPropLock};
-    context->throw_error(AL_INVALID_ENUM, "Invalid listener integer property 0x{:04x}", param);
+    context->throw_error(AL_INVALID_ENUM, "Invalid listener integer property {:#04x}",
+        as_unsigned(param));
 }
 catch(al::base_exception&) {
 }
@@ -205,7 +208,8 @@ try {
     }
 
     std::lock_guard<std::mutex> proplock{context->mPropLock};
-    context->throw_error(AL_INVALID_ENUM, "Invalid listener 3-integer property 0x{:04x}", param);
+    context->throw_error(AL_INVALID_ENUM, "Invalid listener 3-integer property {:#04x}",
+        as_unsigned(param));
 }
 catch(al::base_exception&) {
 }
@@ -241,8 +245,8 @@ try {
     }
 
     std::lock_guard<std::mutex> proplock{context->mPropLock};
-    context->throw_error(AL_INVALID_ENUM, "Invalid listener integer-vector property 0x{:04x}",
-        param);
+    context->throw_error(AL_INVALID_ENUM, "Invalid listener integer-vector property {:#04x}",
+        as_unsigned(param));
 }
 catch(al::base_exception&) {
 }
@@ -265,7 +269,8 @@ try {
     case AL_GAIN: *value = listener.Gain; return;
     case AL_METERS_PER_UNIT: *value = listener.mMetersPerUnit; return;
     }
-    context->throw_error(AL_INVALID_ENUM, "Invalid listener float property 0x{:04x}", param);
+    context->throw_error(AL_INVALID_ENUM, "Invalid listener float property {:#04x}",
+        as_unsigned(param));
 }
 catch(al::base_exception&) {
 }
@@ -296,7 +301,8 @@ try {
         *value3 = listener.Velocity[2];
         return;
     }
-    context->throw_error(AL_INVALID_ENUM, "Invalid listener 3-float property 0x{:04x}", param);
+    context->throw_error(AL_INVALID_ENUM, "Invalid listener 3-float property {:#04x}",
+        as_unsigned(param));
 }
 catch(al::base_exception&) {
 }
@@ -336,8 +342,8 @@ try {
         std::copy_n(listener.OrientUp.cbegin(), 3, vals.begin()+3);
         return;
     }
-    context->throw_error(AL_INVALID_ENUM, "Invalid listener float-vector property 0x{:04x}",
-        param);
+    context->throw_error(AL_INVALID_ENUM, "Invalid listener float-vector property {:#04x}",
+        as_unsigned(param));
 }
 catch(al::base_exception&) {
 }
@@ -351,7 +357,8 @@ FORCE_ALIGN void AL_APIENTRY alGetListeneriDirect(ALCcontext *context, ALenum pa
 try {
     if(!value) context->throw_error(AL_INVALID_VALUE, "NULL pointer");
     std::lock_guard<std::mutex> proplock{context->mPropLock};
-    context->throw_error(AL_INVALID_ENUM, "Invalid listener integer property 0x{:04x}", param);
+    context->throw_error(AL_INVALID_ENUM, "Invalid listener integer property {:#04x}",
+        as_unsigned(param));
 }
 catch(al::base_exception&) {
 }
@@ -382,7 +389,8 @@ try {
         *value3 = static_cast<ALint>(listener.Velocity[2]);
         return;
     }
-    context->throw_error(AL_INVALID_ENUM, "Invalid listener 3-integer property 0x{:04x}", param);
+    context->throw_error(AL_INVALID_ENUM, "Invalid listener 3-integer property {:#04x}",
+        as_unsigned(param));
 }
 catch(al::base_exception&) {
 }
@@ -419,8 +427,8 @@ try {
         std::transform(listener.OrientUp.cbegin(), listener.OrientUp.cend(), vals.begin()+3, f2i);
         return;
     }
-    context->throw_error(AL_INVALID_ENUM, "Invalid listener integer-vector property 0x{:04x}",
-        param);
+    context->throw_error(AL_INVALID_ENUM, "Invalid listener integer-vector property {:#04x}",
+        as_unsigned(param));
 }
 catch(al::base_exception&) {
 }

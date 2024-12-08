@@ -175,33 +175,33 @@ auto LookupFilter(al::Device *device, ALuint id) noexcept -> ALfilter*
 /* Null filter parameter handlers */
 template<>
 void FilterTable<NullFilterTable>::setParami(ALCcontext *context, ALfilter*, ALenum param, int)
-{ context->throw_error(AL_INVALID_ENUM, "Invalid null filter property 0x{:04x}", param); }
+{ context->throw_error(AL_INVALID_ENUM, "Invalid null filter property {:#04x}", as_unsigned(param)); }
 template<>
 void FilterTable<NullFilterTable>::setParamiv(ALCcontext *context, ALfilter*, ALenum param, const int*)
-{ context->throw_error(AL_INVALID_ENUM, "Invalid null filter property 0x{:04x}", param); }
+{ context->throw_error(AL_INVALID_ENUM, "Invalid null filter property {:#04x}", as_unsigned(param)); }
 template<>
 void FilterTable<NullFilterTable>::setParamf(ALCcontext *context, ALfilter*, ALenum param, float)
-{ context->throw_error(AL_INVALID_ENUM, "Invalid null filter property 0x{:04x}", param); }
+{ context->throw_error(AL_INVALID_ENUM, "Invalid null filter property {:#04x}", as_unsigned(param)); }
 template<>
 void FilterTable<NullFilterTable>::setParamfv(ALCcontext *context, ALfilter*, ALenum param, const float*)
-{ context->throw_error(AL_INVALID_ENUM, "Invalid null filter property 0x{:04x}", param); }
+{ context->throw_error(AL_INVALID_ENUM, "Invalid null filter property {:#04x}", as_unsigned(param)); }
 template<>
 void FilterTable<NullFilterTable>::getParami(ALCcontext *context, const ALfilter*, ALenum param, int*)
-{ context->throw_error(AL_INVALID_ENUM, "Invalid null filter property 0x{:04x}", param); }
+{ context->throw_error(AL_INVALID_ENUM, "Invalid null filter property {:#04x}", as_unsigned(param)); }
 template<>
 void FilterTable<NullFilterTable>::getParamiv(ALCcontext *context, const ALfilter*, ALenum param, int*)
-{ context->throw_error(AL_INVALID_ENUM, "Invalid null filter property 0x{:04x}", param); }
+{ context->throw_error(AL_INVALID_ENUM, "Invalid null filter property {:#04x}", as_unsigned(param)); }
 template<>
 void FilterTable<NullFilterTable>::getParamf(ALCcontext *context, const ALfilter*, ALenum param, float*)
-{ context->throw_error(AL_INVALID_ENUM, "Invalid null filter property 0x{:04x}", param); }
+{ context->throw_error(AL_INVALID_ENUM, "Invalid null filter property {:#04x}", as_unsigned(param)); }
 template<>
 void FilterTable<NullFilterTable>::getParamfv(ALCcontext *context, const ALfilter*, ALenum param, float*)
-{ context->throw_error(AL_INVALID_ENUM, "Invalid null filter property 0x{:04x}", param); }
+{ context->throw_error(AL_INVALID_ENUM, "Invalid null filter property {:#04x}", as_unsigned(param)); }
 
 /* Lowpass parameter handlers */
 template<>
 void FilterTable<LowpassFilterTable>::setParami(ALCcontext *context, ALfilter*, ALenum param, int)
-{ context->throw_error(AL_INVALID_ENUM, "Invalid low-pass integer property 0x{:04x}", param); }
+{ context->throw_error(AL_INVALID_ENUM, "Invalid low-pass integer property {:#04x}", as_unsigned(param)); }
 template<>
 void FilterTable<LowpassFilterTable>::setParamiv(ALCcontext *context, ALfilter *filter, ALenum param, const int *values)
 { setParami(context, filter, param, *values); }
@@ -222,14 +222,15 @@ void FilterTable<LowpassFilterTable>::setParamf(ALCcontext *context, ALfilter *f
         filter->GainHF = val;
         return;
     }
-    context->throw_error(AL_INVALID_ENUM, "Invalid low-pass float property 0x{:04x}", param);
+    context->throw_error(AL_INVALID_ENUM, "Invalid low-pass float property {:#04x}",
+        as_unsigned(param));
 }
 template<>
 void FilterTable<LowpassFilterTable>::setParamfv(ALCcontext *context, ALfilter *filter, ALenum param, const float *vals)
 { setParamf(context, filter, param, *vals); }
 template<>
 void FilterTable<LowpassFilterTable>::getParami(ALCcontext *context, const ALfilter*, ALenum param, int*)
-{ context->throw_error(AL_INVALID_ENUM, "Invalid low-pass integer property 0x{:04x}", param); }
+{ context->throw_error(AL_INVALID_ENUM, "Invalid low-pass integer property {:#04x}", as_unsigned(param)); }
 template<>
 void FilterTable<LowpassFilterTable>::getParamiv(ALCcontext *context, const ALfilter *filter, ALenum param, int *values)
 { getParami(context, filter, param, values); }
@@ -241,7 +242,8 @@ void FilterTable<LowpassFilterTable>::getParamf(ALCcontext *context, const ALfil
     case AL_LOWPASS_GAIN: *val = filter->Gain; return;
     case AL_LOWPASS_GAINHF: *val = filter->GainHF; return;
     }
-    context->throw_error(AL_INVALID_ENUM, "Invalid low-pass float property 0x{:04x}", param);
+    context->throw_error(AL_INVALID_ENUM, "Invalid low-pass float property {:#04x}",
+        as_unsigned(param));
 }
 template<>
 void FilterTable<LowpassFilterTable>::getParamfv(ALCcontext *context, const ALfilter *filter, ALenum param, float *vals)
@@ -250,7 +252,7 @@ void FilterTable<LowpassFilterTable>::getParamfv(ALCcontext *context, const ALfi
 /* Highpass parameter handlers */
 template<>
 void FilterTable<HighpassFilterTable>::setParami(ALCcontext *context, ALfilter*, ALenum param, int)
-{ context->throw_error(AL_INVALID_ENUM, "Invalid high-pass integer property 0x{:04x}", param); }
+{ context->throw_error(AL_INVALID_ENUM, "Invalid high-pass integer property {:#04x}", as_unsigned(param)); }
 template<>
 void FilterTable<HighpassFilterTable>::setParamiv(ALCcontext *context, ALfilter *filter, ALenum param, const int *values)
 { setParami(context, filter, param, *values); }
@@ -271,14 +273,15 @@ void FilterTable<HighpassFilterTable>::setParamf(ALCcontext *context, ALfilter *
         filter->GainLF = val;
         return;
     }
-    context->throw_error(AL_INVALID_ENUM, "Invalid high-pass float property 0x{:04x}", param);
+    context->throw_error(AL_INVALID_ENUM, "Invalid high-pass float property {:#04x}",
+        as_unsigned(param));
 }
 template<>
 void FilterTable<HighpassFilterTable>::setParamfv(ALCcontext *context, ALfilter *filter, ALenum param, const float *vals)
 { setParamf(context, filter, param, *vals); }
 template<>
 void FilterTable<HighpassFilterTable>::getParami(ALCcontext *context, const ALfilter*, ALenum param, int*)
-{ context->throw_error(AL_INVALID_ENUM, "Invalid high-pass integer property 0x{:04x}", param); }
+{ context->throw_error(AL_INVALID_ENUM, "Invalid high-pass integer property {:#04x}", as_unsigned(param)); }
 template<>
 void FilterTable<HighpassFilterTable>::getParamiv(ALCcontext *context, const ALfilter *filter, ALenum param, int *values)
 { getParami(context, filter, param, values); }
@@ -290,7 +293,8 @@ void FilterTable<HighpassFilterTable>::getParamf(ALCcontext *context, const ALfi
     case AL_HIGHPASS_GAIN: *val = filter->Gain; return;
     case AL_HIGHPASS_GAINLF: *val = filter->GainLF; return;
     }
-    context->throw_error(AL_INVALID_ENUM, "Invalid high-pass float property 0x{:04x}", param);
+    context->throw_error(AL_INVALID_ENUM, "Invalid high-pass float property {:#04x}",
+        as_unsigned(param));
 }
 template<>
 void FilterTable<HighpassFilterTable>::getParamfv(ALCcontext *context, const ALfilter *filter, ALenum param, float *vals)
@@ -299,7 +303,7 @@ void FilterTable<HighpassFilterTable>::getParamfv(ALCcontext *context, const ALf
 /* Bandpass parameter handlers */
 template<>
 void FilterTable<BandpassFilterTable>::setParami(ALCcontext *context, ALfilter*, ALenum param, int)
-{ context->throw_error(AL_INVALID_ENUM, "Invalid band-pass integer property 0x{:04x}", param); }
+{ context->throw_error(AL_INVALID_ENUM, "Invalid band-pass integer property {:#04x}", as_unsigned(param)); }
 template<>
 void FilterTable<BandpassFilterTable>::setParamiv(ALCcontext *context, ALfilter *filter, ALenum param, const int *values)
 { setParami(context, filter, param, *values); }
@@ -326,14 +330,15 @@ void FilterTable<BandpassFilterTable>::setParamf(ALCcontext *context, ALfilter *
         filter->GainLF = val;
         return;
     }
-    context->throw_error(AL_INVALID_ENUM, "Invalid band-pass float property 0x{:04x}", param);
+    context->throw_error(AL_INVALID_ENUM, "Invalid band-pass float property {:#04x}",
+        as_unsigned(param));
 }
 template<>
 void FilterTable<BandpassFilterTable>::setParamfv(ALCcontext *context, ALfilter *filter, ALenum param, const float *vals)
 { setParamf(context, filter, param, *vals); }
 template<>
 void FilterTable<BandpassFilterTable>::getParami(ALCcontext *context, const ALfilter*, ALenum param, int*)
-{ context->throw_error(AL_INVALID_ENUM, "Invalid band-pass integer property 0x{:04x}", param); }
+{ context->throw_error(AL_INVALID_ENUM, "Invalid band-pass integer property {:#04x}", as_unsigned(param)); }
 template<>
 void FilterTable<BandpassFilterTable>::getParamiv(ALCcontext *context, const ALfilter *filter, ALenum param, int *values)
 { getParami(context, filter, param, values); }
@@ -346,7 +351,8 @@ void FilterTable<BandpassFilterTable>::getParamf(ALCcontext *context, const ALfi
     case AL_BANDPASS_GAINHF: *val = filter->GainHF; return;
     case AL_BANDPASS_GAINLF: *val = filter->GainLF; return;
     }
-    context->throw_error(AL_INVALID_ENUM, "Invalid band-pass float property 0x{:04x}", param);
+    context->throw_error(AL_INVALID_ENUM, "Invalid band-pass float property {:#04x}",
+        as_unsigned(param));
 }
 template<>
 void FilterTable<BandpassFilterTable>::getParamfv(ALCcontext *context, const ALfilter *filter, ALenum param, float *vals)
@@ -437,7 +443,8 @@ try {
     case AL_FILTER_TYPE:
         if(!(value == AL_FILTER_NULL || value == AL_FILTER_LOWPASS
             || value == AL_FILTER_HIGHPASS || value == AL_FILTER_BANDPASS))
-            context->throw_error(AL_INVALID_VALUE, "Invalid filter type 0x{:04x}", value);
+            context->throw_error(AL_INVALID_VALUE, "Invalid filter type {:#04x}",
+                as_unsigned(value));
         InitFilterParams(alfilt, value);
         return;
     }

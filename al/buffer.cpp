@@ -36,7 +36,6 @@
 #include <numeric>
 #include <optional>
 #include <stdexcept>
-#include <string>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -764,7 +763,7 @@ try {
     if(freq < 1)
         context->throw_error(AL_INVALID_VALUE, "Invalid sample rate {}", freq);
     if((flags&INVALID_STORAGE_MASK) != 0)
-        context->throw_error(AL_INVALID_VALUE, "Invalid storage flags 0x{:x}",
+        context->throw_error(AL_INVALID_VALUE, "Invalid storage flags {:#x}",
             flags&INVALID_STORAGE_MASK);
     if((flags&AL_MAP_PERSISTENT_BIT_SOFT) && !(flags&MAP_READ_WRITE_FLAGS))
         context->throw_error(AL_INVALID_VALUE,
@@ -772,7 +771,7 @@ try {
 
     auto usrfmt = DecomposeUserFormat(format);
     if(!usrfmt)
-        context->throw_error(AL_INVALID_ENUM, "Invalid format 0x{:04x}", format);
+        context->throw_error(AL_INVALID_ENUM, "Invalid format {:#04x}", as_unsigned(format));
 
     auto bdata = static_cast<const std::byte*>(data);
     LoadData(context, albuf, freq, static_cast<ALuint>(size), usrfmt->channels, usrfmt->type,
@@ -801,7 +800,7 @@ try {
 
     auto usrfmt = DecomposeUserFormat(format);
     if(!usrfmt)
-        context->throw_error(AL_INVALID_ENUM, "Invalid format 0x{:04x}", format);
+        context->throw_error(AL_INVALID_ENUM, "Invalid format {:#04x}", as_unsigned(format));
 
     PrepareUserPtr(context, albuf, freq, usrfmt->channels, usrfmt->type,
         static_cast<std::byte*>(data), static_cast<ALuint>(size));
@@ -823,7 +822,7 @@ try {
     if(!albuf)
         context->throw_error(AL_INVALID_NAME, "Invalid buffer ID {}", buffer);
     if((access&INVALID_MAP_FLAGS) != 0)
-        context->throw_error(AL_INVALID_VALUE, "Invalid map flags 0x{:x}",
+        context->throw_error(AL_INVALID_VALUE, "Invalid map flags {:#x}",
             access&INVALID_MAP_FLAGS);
     if(!(access&MAP_READ_WRITE_FLAGS))
         context->throw_error(AL_INVALID_VALUE, "Mapping buffer {} without read or write access",
@@ -930,7 +929,7 @@ try {
 
     auto usrfmt = DecomposeUserFormat(format);
     if(!usrfmt)
-        context->throw_error(AL_INVALID_ENUM, "Invalid format 0x{:04x}", format);
+        context->throw_error(AL_INVALID_ENUM, "Invalid format {:#04x}", as_unsigned(format));
 
     const ALuint unpack_align{albuf->UnpackAlign};
     const ALuint align{SanitizeAlignment(usrfmt->type, unpack_align)};
@@ -985,7 +984,8 @@ try {
     if(LookupBuffer(device, buffer) == nullptr)
         context->throw_error(AL_INVALID_NAME, "Invalid buffer ID {}", buffer);
 
-    context->throw_error(AL_INVALID_ENUM, "Invalid buffer float property 0x{:04x}", param);
+    context->throw_error(AL_INVALID_ENUM, "Invalid buffer float property {:#04x}",
+        as_unsigned(param));
 }
 catch(al::base_exception&) {
 }
@@ -1004,7 +1004,8 @@ try {
     if(LookupBuffer(device, buffer) == nullptr)
         context->throw_error(AL_INVALID_NAME, "Invalid buffer ID {}", buffer);
 
-    context->throw_error(AL_INVALID_ENUM, "Invalid buffer 3-float property 0x{:04x}", param);
+    context->throw_error(AL_INVALID_ENUM, "Invalid buffer 3-float property {:#04x}",
+        as_unsigned(param));
 }
 catch(al::base_exception&) {
 }
@@ -1024,7 +1025,8 @@ try {
     if(!values)
         context->throw_error(AL_INVALID_VALUE, "NULL pointer");
 
-    context->throw_error(AL_INVALID_ENUM, "Invalid buffer float-vector property 0x{:04x}", param);
+    context->throw_error(AL_INVALID_ENUM, "Invalid buffer float-vector property {:#04x}",
+        as_unsigned(param));
 }
 catch(al::base_exception&) {
 }
@@ -1067,7 +1069,8 @@ try {
             albuf->mAmbiLayout = layout.value();
             return;
         }
-        context->throw_error(AL_INVALID_VALUE, "Invalid unpack ambisonic layout 0x{:04x}", value);
+        context->throw_error(AL_INVALID_VALUE, "Invalid unpack ambisonic layout {:#04x}",
+            as_unsigned(value));
 
     case AL_AMBISONIC_SCALING_SOFT:
         if(albuf->ref.load(std::memory_order_relaxed) != 0)
@@ -1078,7 +1081,8 @@ try {
             albuf->mAmbiScaling = scaling.value();
             return;
         }
-        context->throw_error(AL_INVALID_VALUE, "Invalid unpack ambisonic scaling 0x{:04x}", value);
+        context->throw_error(AL_INVALID_VALUE, "Invalid unpack ambisonic scaling {:#04x}",
+            as_unsigned(value));
 
     case AL_UNPACK_AMBISONIC_ORDER_SOFT:
         if(value < 1 || value > 14)
@@ -1087,7 +1091,8 @@ try {
         return;
     }
 
-    context->throw_error(AL_INVALID_ENUM, "Invalid buffer integer property 0x{:04x}", param);
+    context->throw_error(AL_INVALID_ENUM, "Invalid buffer integer property {:#04x}",
+        as_unsigned(param));
 }
 catch(al::base_exception&) {
 }
@@ -1105,7 +1110,8 @@ try {
     if(LookupBuffer(device, buffer) == nullptr)
         context->throw_error(AL_INVALID_NAME, "Invalid buffer ID {}", buffer);
 
-    context->throw_error(AL_INVALID_ENUM, "Invalid buffer 3-integer property 0x{:04x}", param);
+    context->throw_error(AL_INVALID_ENUM, "Invalid buffer 3-integer property {:#04x}",
+        as_unsigned(param));
 }
 catch(al::base_exception&) {
 }
@@ -1154,8 +1160,8 @@ try {
         return;
     }
 
-    context->throw_error(AL_INVALID_ENUM, "Invalid buffer integer-vector property 0x{:04x}",
-        param);
+    context->throw_error(AL_INVALID_ENUM, "Invalid buffer integer-vector property {:#04x}",
+        as_unsigned(param));
 }
 catch(al::base_exception&) {
 }
@@ -1185,7 +1191,8 @@ try {
         return;
     }
 
-    context->throw_error(AL_INVALID_ENUM, "Invalid buffer float property 0x{:04x}", param);
+    context->throw_error(AL_INVALID_ENUM, "Invalid buffer float property {:#04x}",
+        as_unsigned(param));
 }
 catch(al::base_exception&) {
 }
@@ -1205,7 +1212,8 @@ try {
     if(!value1 || !value2 || !value3)
         context->throw_error(AL_INVALID_VALUE, "NULL pointer");
 
-    context->throw_error(AL_INVALID_ENUM, "Invalid buffer 3-float property 0x{:04x}", param);
+    context->throw_error(AL_INVALID_ENUM, "Invalid buffer 3-float property {:#04x}",
+        as_unsigned(param));
 }
 catch(al::base_exception&) {
 }
@@ -1232,7 +1240,8 @@ try {
     if(!values)
         context->throw_error(AL_INVALID_VALUE, "NULL pointer");
 
-    context->throw_error(AL_INVALID_ENUM, "Invalid buffer float-vector property 0x{:04x}", param);
+    context->throw_error(AL_INVALID_ENUM, "Invalid buffer float-vector property {:#04x}",
+        as_unsigned(param));
 }
 catch(al::base_exception&) {
 }
@@ -1303,7 +1312,8 @@ try {
         return;
     }
 
-    context->throw_error(AL_INVALID_ENUM, "Invalid buffer integer property 0x{:04x}", param);
+    context->throw_error(AL_INVALID_ENUM, "Invalid buffer integer property {:#04x}",
+        as_unsigned(param));
 }
 catch(al::base_exception&) {
 }
@@ -1323,7 +1333,8 @@ try {
     if(!value1 || !value2 || !value3)
         context->throw_error(AL_INVALID_VALUE, "NULL pointer");
 
-    context->throw_error(AL_INVALID_ENUM, "Invalid buffer 3-integer property 0x{:04x}", param);
+    context->throw_error(AL_INVALID_ENUM, "Invalid buffer 3-integer property {:#04x}",
+        as_unsigned(param));
 }
 catch(al::base_exception&) {
 }
@@ -1371,8 +1382,8 @@ try {
         return;
     }
 
-    context->throw_error(AL_INVALID_ENUM, "Invalid buffer integer-vector property 0x{:04x}",
-        param);
+    context->throw_error(AL_INVALID_ENUM, "Invalid buffer integer-vector property {:#04x}",
+        as_unsigned(param));
 }
 catch(al::base_exception&) {
 }
@@ -1398,7 +1409,7 @@ try {
 
     auto usrfmt = DecomposeUserFormat(format);
     if(!usrfmt)
-        context->throw_error(AL_INVALID_ENUM, "Invalid format 0x{:04x}", format);
+        context->throw_error(AL_INVALID_ENUM, "Invalid format {:#04x}", as_unsigned(format));
 
     PrepareCallback(context, albuf, freq, usrfmt->channels, usrfmt->type, callback, userptr);
 }
@@ -1431,7 +1442,8 @@ try {
         return;
     }
 
-    context->throw_error(AL_INVALID_ENUM, "Invalid buffer pointer property 0x{:04x}", param);
+    context->throw_error(AL_INVALID_ENUM, "Invalid buffer pointer property {:#04x}",
+        as_unsigned(param));
 }
 catch(al::base_exception&) {
 }
@@ -1451,7 +1463,8 @@ try {
     if(!value1 || !value2 || !value3)
         context->throw_error(AL_INVALID_VALUE, "NULL pointer");
 
-    context->throw_error(AL_INVALID_ENUM, "Invalid buffer 3-pointer property 0x{:04x}", param);
+    context->throw_error(AL_INVALID_ENUM, "Invalid buffer 3-pointer property {:#04x}",
+        as_unsigned(param));
 }
 catch(al::base_exception&) {
 }
@@ -1479,7 +1492,8 @@ try {
     if(!values)
         context->throw_error(AL_INVALID_VALUE, "NULL pointer");
 
-    context->throw_error(AL_INVALID_ENUM, "Invalid buffer pointer-vector property 0x{:04x}", param);
+    context->throw_error(AL_INVALID_ENUM, "Invalid buffer pointer-vector property {:#04x}",
+        as_unsigned(param));
 }
 catch(al::base_exception&) {
 }
@@ -1567,7 +1581,7 @@ try {
 
     const auto storage = EaxStorageFromEnum(value);
     if(!storage)
-        context->throw_error(AL_INVALID_ENUM, "Unsupported X-RAM mode 0x{:x}", value);
+        context->throw_error(AL_INVALID_ENUM, "Unsupported X-RAM mode {:#x}", as_unsigned(value));
 
     if(n == 0)
         return AL_TRUE;

@@ -579,8 +579,8 @@ unsigned long ALCcontext::eax_detect_speaker_configuration() const
      */
     case DevFmtAmbi3D: return SPEAKERS_7;
     }
-    ERR(EAX_PREFIX "Unexpected device channel format 0x{:x}.",
-        int{al::to_underlying(mDevice->FmtChans)});
+    ERR(EAX_PREFIX "Unexpected device channel format {:#x}.",
+        uint{al::to_underlying(mDevice->FmtChans)});
     return HEADPHONES;
 
 #undef EAX_PREFIX

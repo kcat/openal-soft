@@ -1410,9 +1410,9 @@ auto GetCheckers(ALCcontext *context, const SourceProp prop, const al::span<T,N>
         [=](size_t expect) -> void
         {
             if(values.size() == expect) return;
-            context->throw_error(AL_INVALID_ENUM,
-                "Property 0x{:04x} expects {} value{}, got {}", al::to_underlying(prop), expect,
-                (expect==1) ? "" : "s", values.size());
+            context->throw_error(AL_INVALID_ENUM, "Property {:#04x} expects {} value{}, got {}",
+                as_unsigned(al::to_underlying(prop)), expect, (expect==1) ? "" : "s",
+                values.size());
         },
         [context](bool passed) -> void
         {
@@ -1439,7 +1439,7 @@ NOINLINE void SetProperty(ALsource *const Source, ALCcontext *const Context, con
         {
             /* Query only */
             Context->throw_error(AL_INVALID_OPERATION,
-                "Setting read-only source property 0x{:04x}", al::to_underlying(prop));
+                "Setting read-only source property {:#04x}", as_unsigned(al::to_underlying(prop)));
         }
         break;
 
@@ -1451,8 +1451,8 @@ NOINLINE void SetProperty(ALsource *const Source, ALCcontext *const Context, con
     case AL_SAMPLE_OFFSET_CLOCK_SOFT:
     case AL_SEC_OFFSET_CLOCK_SOFT:
         /* Query only */
-        Context->throw_error(AL_INVALID_OPERATION, "Setting read-only source property 0x{:04x}",
-            al::to_underlying(prop));
+        Context->throw_error(AL_INVALID_OPERATION, "Setting read-only source property {:#04x}",
+            as_unsigned(al::to_underlying(prop)));
 
     case AL_PITCH:
         CheckSize(1);
@@ -1695,7 +1695,8 @@ NOINLINE void SetProperty(ALsource *const Source, ALCcontext *const Context, con
             {
                 /* Query only */
                 Context->throw_error(AL_INVALID_OPERATION,
-                    "Setting read-only source property 0x{:04x}", al::to_underlying(prop));
+                    "Setting read-only source property {:#04x}",
+                    as_unsigned(al::to_underlying(prop)));
             }
         }
         break;
@@ -1707,7 +1708,8 @@ NOINLINE void SetProperty(ALsource *const Source, ALCcontext *const Context, con
             {
                 /* Query only */
                 Context->throw_error(AL_INVALID_OPERATION,
-                    "Setting read-only source property 0x{:04x}", al::to_underlying(prop));
+                    "Setting read-only source property {:#04x}",
+                    as_unsigned(al::to_underlying(prop)));
             }
             break;
         }
@@ -1883,8 +1885,8 @@ NOINLINE void SetProperty(ALsource *const Source, ALCcontext *const Context, con
                 Source->DirectChannels = *mode;
                 return UpdateSourceProps(Source, Context);
             }
-            Context->throw_error(AL_INVALID_VALUE, "Invalid direct channels mode: 0x{:x}",
-                values[0]);
+            Context->throw_error(AL_INVALID_VALUE, "Invalid direct channels mode: {:#x}",
+                as_unsigned(values[0]));
         }
         break;
 
@@ -1899,7 +1901,8 @@ NOINLINE void SetProperty(ALsource *const Source, ALCcontext *const Context, con
                     UpdateSourceProps(Source, Context);
                 return;
             }
-            Context->throw_error(AL_INVALID_VALUE, "Invalid distance model: 0x{:x}", values[0]);
+            Context->throw_error(AL_INVALID_VALUE, "Invalid distance model: {:#x}",
+                as_unsigned(values[0]));
         }
         break;
 
@@ -1942,7 +1945,8 @@ NOINLINE void SetProperty(ALsource *const Source, ALCcontext *const Context, con
                 Source->mStereoMode = *mode;
                 return;
             }
-            Context->throw_error(AL_INVALID_VALUE, "Invalid stereo mode: 0x{:x}", values[0]);
+            Context->throw_error(AL_INVALID_VALUE, "Invalid stereo mode: {:#x}",
+                as_unsigned(values[0]));
         }
         break;
 
@@ -2019,8 +2023,8 @@ NOINLINE void SetProperty(ALsource *const Source, ALCcontext *const Context, con
         break;
     }
 
-    Context->throw_error(AL_INVALID_ENUM, "Invalid source {} property 0x{:04x}", PropTypeName<T>(),
-        al::to_underlying(prop));
+    Context->throw_error(AL_INVALID_ENUM, "Invalid source {} property {:#04x}", PropTypeName<T>(),
+        as_unsigned(al::to_underlying(prop)));
 }
 
 
@@ -2030,8 +2034,8 @@ auto GetSizeChecker(ALCcontext *context, const SourceProp prop, const al::span<T
     return [=](size_t expect) -> void
     {
         if(values.size() == expect) LIKELY return;
-        context->throw_error(AL_INVALID_ENUM, "Property 0x{:04x} expects {} value{}, got {}",
-            al::to_underlying(prop), expect, (expect==1) ? "" : "s", values.size());
+        context->throw_error(AL_INVALID_ENUM, "Property {:#04x} expects {} value{}, got {}",
+            as_unsigned(al::to_underlying(prop)), expect, (expect==1) ? "" : "s", values.size());
     };
 }
 
@@ -2491,8 +2495,8 @@ NOINLINE void GetProperty(ALsource *const Source, ALCcontext *const Context, con
         break;
     }
 
-    Context->throw_error(AL_INVALID_ENUM, "Invalid source {} query property 0x{:04x}",
-        PropTypeName<T>(), al::to_underlying(prop));
+    Context->throw_error(AL_INVALID_ENUM, "Invalid source {} query property {:#04x}",
+        PropTypeName<T>(), as_unsigned(al::to_underlying(prop)));
 }
 
 

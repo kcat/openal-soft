@@ -57,7 +57,7 @@
 #include <vector>
 
 #include "albit.h"
-#include "alstring.h"
+#include "alnumeric.h"
 #include "althrd_setname.h"
 #include "comptr.h"
 #include "core/converter.h"
@@ -313,7 +313,8 @@ auto PopulateDeviceList() -> HRESULT
         auto guid = CLSID{};
         if(auto hr = CLSIDFromString(idstr.data(), &guid); FAILED(hr))
         {
-            ERR("Failed to parse CLSID \"{}\": 0x{:x}", wstr_to_utf8(idstr.data()), hr);
+            ERR("Failed to parse CLSID \"{}\": {:#x}", wstr_to_utf8(idstr.data()),
+                as_unsigned(hr));
             continue;
         }
 
@@ -345,10 +346,10 @@ auto PopulateDeviceList() -> HRESULT
                 guid.Data4[6], guid.Data4[7]);
         }
         else
-            ERR("Failed to create {} instance for CLSID {{{:08X}-{:04X}-{:04X}-{:02X}{:02X}-{:02X}{:02X}{:02X}{:02X}{:02X}{:02X}}}: 0x{:x}",
+            ERR("Failed to create {} instance for CLSID {{{:08X}-{:04X}-{:04X}-{:02X}{:02X}-{:02X}{:02X}{:02X}{:02X}{:02X}{:02X}}}: {:#x}",
                 subkeyname.c_str(), guid.Data1, guid.Data2, guid.Data3, guid.Data4[0],
                 guid.Data4[1], guid.Data4[2], guid.Data4[3], guid.Data4[4], guid.Data4[5],
-                guid.Data4[6], guid.Data4[7], hr);
+                guid.Data4[6], guid.Data4[7], as_unsigned(hr));
     }
 
     return S_OK;
@@ -442,7 +443,7 @@ void OtherIOProxy::messageHandler(std::promise<HRESULT> *promise)
     auto com = ComWrapper{COINIT_APARTMENTTHREADED};
     if(!com)
     {
-        WARN("Failed to initialize COM: 0x{:x}", com.status());
+        WARN("Failed to initialize COM: {:#x}", as_unsigned(com.status()));
         promise->set_value(com.status());
         return;
     }
@@ -460,7 +461,7 @@ void OtherIOProxy::messageHandler(std::promise<HRESULT> *promise)
     TRACE("Starting message loop");
     while(Msg msg{popMessage()})
     {
-        TRACE("Got message \"{}\" (0x{:04x}, this={}, param=\"{}\")",
+        TRACE("Got message \"{}\" ({:#04x}, this={}, param=\"{}\")",
             GetMessageTypeName(msg.mType), static_cast<uint>(msg.mType),
             static_cast<void*>(msg.mProxy), msg.mParam);
 
@@ -611,7 +612,7 @@ void OtherIOPlayback::start()
     auto hr = pushMessage(MsgType::StartDevice).get();
     if(FAILED(hr))
         throw al::backend_exception{al::backend_error::DeviceError,
-            "Failed to start playback: 0x{:x}", hr};
+            "Failed to start playback: {:#x}", as_unsigned(hr)};
 }
 
 auto OtherIOPlayback::startProxy() -> HRESULT

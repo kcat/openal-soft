@@ -43,6 +43,7 @@
 #include <vector>
 
 #include "alc/alconfig.h"
+#include "alnumeric.h"
 #include "althrd_setname.h"
 #include "core/device.h"
 #include "core/helpers.h"
@@ -419,8 +420,8 @@ bool OSSPlayback::reset()
          (ossFormat == AFMT_U8 && mDevice->FmtType == DevFmtUByte) ||
          (ossFormat == AFMT_S16_NE && mDevice->FmtType == DevFmtShort)))
     {
-        ERR("Failed to set {} samples, got OSS format 0x{:x}", DevFmtTypeString(mDevice->FmtType),
-            ossFormat);
+        ERR("Failed to set {} samples, got OSS format {:#x}", DevFmtTypeString(mDevice->FmtType),
+            as_unsigned(ossFormat));
         return false;
     }
 
@@ -606,8 +607,8 @@ void OSScapture::open(std::string_view name)
         || (ossFormat == AFMT_U8 && mDevice->FmtType == DevFmtUByte)
         || (ossFormat == AFMT_S16_NE && mDevice->FmtType == DevFmtShort)))
         throw al::backend_exception{al::backend_error::DeviceError,
-            "Failed to set {} samples, got OSS format 0x{:x}", DevFmtTypeString(mDevice->FmtType),
-            ossFormat};
+            "Failed to set {} samples, got OSS format {:#x}", DevFmtTypeString(mDevice->FmtType),
+            as_unsigned(ossFormat)};
 
     mRing = RingBuffer::Create(mDevice->BufferSize, frameSize, false);
 

@@ -20,6 +20,7 @@
 #include "AL/alext.h"
 
 #include "alc/context.h"
+#include "alnumeric.h"
 #include "alsem.h"
 #include "alspan.h"
 #include "alstring.h"

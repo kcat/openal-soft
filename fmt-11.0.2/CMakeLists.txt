@@ -17,12 +17,6 @@ function(join result_var)
   set(${result_var} "${result}" PARENT_SCOPE)
 endfunction()
 
-set(FMT_USE_CMAKE_MODULES FALSE)
-if (CMAKE_VERSION VERSION_GREATER_EQUAL 3.28 AND
-    CMAKE_GENERATOR STREQUAL "Ninja")
-  set(FMT_USE_CMAKE_MODULES TRUE)
-endif ()
-
 include(CMakeParseArguments)
 
 project(ALSOFT_FMT CXX)
@@ -42,10 +36,6 @@ message(STATUS "{fmt} version: ${FMT_VERSION}")
 
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 
-if (NOT CMAKE_RUNTIME_OUTPUT_DIRECTORY)
-  set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/bin)
-endif ()
-
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH}
   "${CMAKE_CURRENT_SOURCE_DIR}/support/cmake")
 
@@ -59,6 +49,8 @@ function(add_headers VAR)
   endforeach()
   set(${VAR} ${headers} PARENT_SCOPE)
 endfunction()
+
+set(ALSOFT_FMT_DEBUG_POSTFIX d CACHE STRING "Debug library postfix.")
 
 # Define the fmt library, its includes and the needed defines.
 add_headers(FMT_HEADERS args.h base.h chrono.h color.h compile.h core.h format.h
@@ -78,15 +70,13 @@ endif ()
 target_include_directories(alsoft.fmt PUBLIC
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>)
 
-set(ALSOFT_FMT_DEBUG_POSTFIX d CACHE STRING "Debug library postfix.")
-
 set_target_properties(alsoft.fmt PROPERTIES ${ALSOFT_STD_VERSION_PROPS}
   VERSION ${FMT_VERSION} SOVERSION ${CPACK_PACKAGE_VERSION_MAJOR}
-  PUBLIC_HEADER "${FMT_HEADERS}"
   DEBUG_POSTFIX "${ALSOFT_FMT_DEBUG_POSTFIX}"
   POSITION_INDEPENDENT_CODE TRUE
   C_VISIBILITY_PRESET hidden
   CXX_VISIBILITY_PRESET hidden
+  EXCLUDE_FROM_ALL TRUE
 
   # Workaround for Visual Studio 2017:
   # Ensure the .pdb is created with the same name and in the same directory
@@ -96,12 +86,35 @@ set_target_properties(alsoft.fmt PROPERTIES ${ALSOFT_STD_VERSION_PROPS}
   COMPILE_PDB_NAME "fmt"
   COMPILE_PDB_NAME_DEBUG "fmt${ALSOFT_FMT_DEBUG_POSTFIX}")
 
-add_library(alsoft.fmt-header-only INTERFACE)
+
+
+add_library(alsoft.fmt-objects OBJECT ${FMT_SOURCES} ${FMT_HEADERS} README.md ChangeLog.md)
+add_library(alsoft::fmt-objects ALIAS alsoft.fmt-objects)
+
+if (cxx_std_11 IN_LIST CMAKE_CXX_COMPILE_FEATURES)
+  target_compile_features(alsoft.fmt-objects PUBLIC cxx_std_11)
+else ()
+  message(WARNING "Feature cxx_std_11 is unknown for the CXX compiler")
+endif ()
+
+target_include_directories(alsoft.fmt-objects PUBLIC
+  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>)
+
+set_target_properties(alsoft.fmt-objects PROPERTIES ${ALSOFT_STD_VERSION_PROPS}
+  POSITION_INDEPENDENT_CODE TRUE
+  C_VISIBILITY_PRESET hidden
+  CXX_VISIBILITY_PRESET hidden
+  EXCLUDE_FROM_ALL TRUE)
+
+
+
+add_library(alsoft.fmt-header-only INTERFACE EXCLUDE_FROM_ALL)
 add_library(alsoft::fmt-header-only ALIAS alsoft.fmt-header-only)
 
 if (MSVC)
   # Unicode support requires compiling with /utf-8.
   target_compile_options(alsoft.fmt PUBLIC $<$<COMPILE_LANGUAGE:CXX>:/utf-8>)
+  target_compile_options(alsoft.fmt-objects PUBLIC $<$<COMPILE_LANGUAGE:CXX>:/utf-8>)
   target_compile_options(alsoft.fmt-header-only INTERFACE $<$<COMPILE_LANGUAGE:CXX>:/utf-8>)
 endif ()
 

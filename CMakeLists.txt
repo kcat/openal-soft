@@ -1392,16 +1392,8 @@ add_custom_target(clang-tidy-check ${CLANG_TIDY_EXECUTABLE} -format-style=file -
 if(LIBTYPE STREQUAL "STATIC")
     add_library(${IMPL_TARGET} STATIC ${COMMON_OBJS} ${OPENAL_OBJS} ${ALC_OBJS} ${CORE_OBJS})
     target_compile_definitions(${IMPL_TARGET} PUBLIC AL_LIBTYPE_STATIC)
-    # Instead of "linking" with the fmt-header-only interface target, which
-    # puts an unwanted dependency on the target when exporting/installing, just
-    # copy the properties.
-    target_compile_definitions(${IMPL_TARGET} PRIVATE
-        $<TARGET_PROPERTY:alsoft::fmt-header-only,INTERFACE_COMPILE_DEFINITIONS>)
-    target_include_directories(${IMPL_TARGET} PRIVATE
-        $<TARGET_PROPERTY:alsoft::fmt-header-only,INTERFACE_INCLUDE_DIRECTORIES>)
-    target_compile_options(${IMPL_TARGET} PRIVATE
-        $<TARGET_PROPERTY:alsoft::fmt-header-only,INTERFACE_COMPILE_OPTIONS>)
-    target_link_libraries(${IMPL_TARGET} PRIVATE ${LINKER_FLAGS} ${EXTRA_LIBS} ${MATH_LIB})
+    target_link_libraries(${IMPL_TARGET} PRIVATE ${LINKER_FLAGS} ${EXTRA_LIBS} ${MATH_LIB}
+        $<BUILD_LOCAL_INTERFACE:alsoft::fmt-objects>)
 
     if(WIN32)
         # This option is for static linking OpenAL Soft into another project

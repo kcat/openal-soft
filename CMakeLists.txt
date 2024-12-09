@@ -1393,7 +1393,7 @@ if(LIBTYPE STREQUAL "STATIC")
     add_library(${IMPL_TARGET} STATIC ${COMMON_OBJS} ${OPENAL_OBJS} ${ALC_OBJS} ${CORE_OBJS})
     target_compile_definitions(${IMPL_TARGET} PUBLIC AL_LIBTYPE_STATIC)
     target_link_libraries(${IMPL_TARGET} PRIVATE ${LINKER_FLAGS} ${EXTRA_LIBS} ${MATH_LIB}
-        $<BUILD_LOCAL_INTERFACE:alsoft::fmt-objects>)
+        $<BUILD_LOCAL_INTERFACE:alsoft::fmt>)
 
     if(WIN32)
         # This option is for static linking OpenAL Soft into another project

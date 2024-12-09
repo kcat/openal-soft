@@ -58,7 +58,7 @@ add_headers(FMT_HEADERS args.h base.h chrono.h color.h compile.h core.h format.h
                         xchar.h)
 set(FMT_SOURCES src/format.cc src/os.cc)
 
-add_library(alsoft.fmt STATIC ${FMT_SOURCES} ${FMT_HEADERS} README.md ChangeLog.md)
+add_library(alsoft.fmt OBJECT ${FMT_SOURCES} ${FMT_HEADERS} README.md ChangeLog.md)
 add_library(alsoft::fmt ALIAS alsoft.fmt)
 
 if (cxx_std_11 IN_LIST CMAKE_CXX_COMPILE_FEATURES)
@@ -76,50 +76,9 @@ set_target_properties(alsoft.fmt PROPERTIES ${ALSOFT_STD_VERSION_PROPS}
   POSITION_INDEPENDENT_CODE TRUE
   C_VISIBILITY_PRESET hidden
   CXX_VISIBILITY_PRESET hidden
-  EXCLUDE_FROM_ALL TRUE
-
-  # Workaround for Visual Studio 2017:
-  # Ensure the .pdb is created with the same name and in the same directory
-  # as the .lib. Newer VS versions already do this by default, but there is no
-  # harm in setting it for those too. Ignored by other generators.
-  COMPILE_PDB_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}"
-  COMPILE_PDB_NAME "fmt"
-  COMPILE_PDB_NAME_DEBUG "fmt${ALSOFT_FMT_DEBUG_POSTFIX}")
-
-
-
-add_library(alsoft.fmt-objects OBJECT ${FMT_SOURCES} ${FMT_HEADERS} README.md ChangeLog.md)
-add_library(alsoft::fmt-objects ALIAS alsoft.fmt-objects)
-
-if (cxx_std_11 IN_LIST CMAKE_CXX_COMPILE_FEATURES)
-  target_compile_features(alsoft.fmt-objects PUBLIC cxx_std_11)
-else ()
-  message(WARNING "Feature cxx_std_11 is unknown for the CXX compiler")
-endif ()
-
-target_include_directories(alsoft.fmt-objects PUBLIC
-  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>)
-
-set_target_properties(alsoft.fmt-objects PROPERTIES ${ALSOFT_STD_VERSION_PROPS}
-  POSITION_INDEPENDENT_CODE TRUE
-  C_VISIBILITY_PRESET hidden
-  CXX_VISIBILITY_PRESET hidden
   EXCLUDE_FROM_ALL TRUE)
-
-
-
-add_library(alsoft.fmt-header-only INTERFACE EXCLUDE_FROM_ALL)
-add_library(alsoft::fmt-header-only ALIAS alsoft.fmt-header-only)
 
 if (MSVC)
   # Unicode support requires compiling with /utf-8.
   target_compile_options(alsoft.fmt PUBLIC $<$<COMPILE_LANGUAGE:CXX>:/utf-8>)
-  target_compile_options(alsoft.fmt-objects PUBLIC $<$<COMPILE_LANGUAGE:CXX>:/utf-8>)
-  target_compile_options(alsoft.fmt-header-only INTERFACE $<$<COMPILE_LANGUAGE:CXX>:/utf-8>)
 endif ()
-
-target_compile_definitions(alsoft.fmt-header-only INTERFACE FMT_HEADER_ONLY=1)
-target_compile_features(alsoft.fmt-header-only INTERFACE cxx_std_11)
-
-target_include_directories(alsoft.fmt-header-only INTERFACE
-  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>)

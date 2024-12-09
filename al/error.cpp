@@ -47,8 +47,10 @@
 #include "strutils.h"
 
 
-void ALCcontext::setErrorImpl(ALenum errorCode, const std::string &msg)
+void ALCcontext::setErrorImpl(ALenum errorCode, const fmt::string_view fmt, fmt::format_args args)
 {
+    const auto msg = fmt::vformat(fmt, std::move(args));
+
     WARN("Error generated on context {}, code {:#04x}, \"{}\"",
         decltype(std::declval<void*>()){this}, as_unsigned(errorCode), msg);
     if(TrapALError)
@@ -69,9 +71,10 @@ void ALCcontext::setErrorImpl(ALenum errorCode, const std::string &msg)
         DebugSeverity::High, msg);
 }
 
-void ALCcontext::throw_error_impl(ALenum errorCode, const std::string &msg)
+void ALCcontext::throw_error_impl(ALenum errorCode, const fmt::string_view fmt,
+    fmt::format_args args)
 {
-    setErrorImpl(errorCode, msg);
+    setErrorImpl(errorCode, fmt, std::move(args));
     throw al::base_exception{};
 }
 

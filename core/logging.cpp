@@ -11,6 +11,7 @@
 #include <optional>
 #include <string>
 #include <string_view>
+#include <utility>
 
 #include "alstring.h"
 #include "strutils.h"
@@ -77,8 +78,10 @@ void al_set_log_callback(LogCallbackFunc callback, void *userptr)
     }
 }
 
-void al_print_impl(LogLevel level, const std::string &msg)
+void al_print_impl(LogLevel level, const fmt::string_view fmt, fmt::format_args args)
 {
+    const auto msg = fmt::vformat(fmt, std::move(args));
+
     auto prefix = "[ALSOFT] (--) "sv;
     switch(level)
     {

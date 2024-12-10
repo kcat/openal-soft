@@ -401,7 +401,7 @@ struct EarlyReflections {
      */
     DelayLineU Delay;
     std::array<size_t,NUM_LINES> Offset{};
-    std::array<float,NUM_LINES> Coeff{};
+    float Coeff{};
 
     /* The gain for each output channel based on 3D panning. */
     struct OutGains {
@@ -926,10 +926,15 @@ void EarlyReflections::updateLines(const float density_mult, const float diffusi
         /* Calculate the delay length of each delay line. */
         length = EARLY_LINE_LENGTHS[i] * density_mult;
         Offset[i] = float2uint(length * frequency);
-
-        /* Calculate the gain (coefficient) for each line. */
-        Coeff[i] = CalcDecayCoeff(length, decayTime);
     }
+
+    /* Calculate the gain (coefficient) for the secondary reflections based on
+     * the average delay and decay time.
+     */
+    const auto length = std::reduce(EARLY_LINE_LENGTHS.begin(), EARLY_LINE_LENGTHS.end(), 0.0f)
+        / float{EARLY_LINE_LENGTHS.size()} * density_mult;
+    Coeff = CalcDecayCoeff(length, decayTime);
+
 }
 
 /* Update the EAX modulation step and depth. Keep in mind that this kind of
@@ -1551,11 +1556,11 @@ void ReverbPipeline::processEarly(const DelayLineU &main_delay, size_t offset,
 
         /* Apply a delay and bounce to generate secondary reflections. */
         early_delay.writeReflected(offset, tempSamples, todo);
+        const auto feedb_coeff = mEarly.Coeff;
         for(size_t j{0_uz};j < NUM_LINES;j++)
         {
             const auto input = early_delay.get(j);
             auto feedb_tap = size_t{offset - mEarly.Offset[j]};
-            const auto feedb_coeff = float{mEarly.Coeff[j]};
             auto out = outSamples[j].begin() + base;
             auto tmp = tempSamples[j].begin();
 

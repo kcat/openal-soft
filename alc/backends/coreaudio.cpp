@@ -104,7 +104,7 @@ struct FourCCPrinter {
             code >>= 8;
         }
     }
-    constexpr FourCCPrinter(int code) noexcept : FourCCPrinter{static_cast<UInt32>(code)} { }
+    constexpr FourCCPrinter(OSStatus code) noexcept : FourCCPrinter{static_cast<UInt32>(code)} { }
 
     constexpr const char *c_str() const noexcept { return mString; }
 };

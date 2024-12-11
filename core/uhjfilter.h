@@ -30,10 +30,6 @@ struct UhjAllPassFilter {
         std::array<float,2> z{};
     };
     std::array<AllPassState,4> mState;
-
-    void processOne(const al::span<const float,4> coeffs, float x);
-    void process(const al::span<const float,4> coeffs, const al::span<const float> src,
-        const bool update, const al::span<float> dst);
 };
 
 

@@ -78,10 +78,17 @@ API, including some extensions. It also includes utility libraries for math and
 linear algebra, which can be useful for 3D calculations.
 
 Java Bindings:
+* [LWJGL](https://github.com/LWJGL/lwjgl3), the Lightweight Java Game Library,
+includes Java bindings for the OpenAL API, usable with OpenAL Soft.
 * [JOAL](https://jogamp.org/joal/www/), part of the JogAmp project, includes
 Java bindings for the OpenAL API, usable with OpenAL Soft. It also includes a
 higher level Sound3D Toolkit API and utility functions to make easier use of
 OpenAL features and capabilities.
+
+Kotlin Bindings:
+* [Multiplatform OpenAL](https://git.karmakrafts.dev/kk/multiplatform-openal), developed for the Kleaver project,
+includes Kotlin/Native bindings for the OpenAL API, based on OpenAL Soft with support
+for Windows, Linux, macOS, iOS and Android.
 
 Python Bindings:
 * [PyOpenAL](https://pypi.org/project/PyOpenAL/). Also includes methods to play

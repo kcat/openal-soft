@@ -1,6 +1,8 @@
 #ifndef CORE_STORAGE_FORMATS_H
 #define CORE_STORAGE_FORMATS_H
 
+#include <string_view>
+
 using uint = unsigned int;
 
 /* Storable formats */
@@ -43,8 +45,8 @@ enum class AmbiScaling : unsigned char {
     UHJ,
 };
 
-const char *NameFromFormat(FmtType type) noexcept;
-const char *NameFromFormat(FmtChannels channels) noexcept;
+auto NameFromFormat(FmtType type) noexcept -> std::string_view;
+auto NameFromFormat(FmtChannels channels) noexcept -> std::string_view;
 
 uint BytesFromFmt(FmtType type) noexcept;
 uint ChannelsFromFmt(FmtChannels chans, uint ambiorder) noexcept;

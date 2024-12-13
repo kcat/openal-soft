@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include <cstddef>
+#include <string_view>
 
 
 using uint = unsigned int;
@@ -108,8 +109,8 @@ uint ChannelsFromDevFmt(DevFmtChannels chans, uint ambiorder) noexcept;
 inline uint FrameSizeFromDevFmt(DevFmtChannels chans, DevFmtType type, uint ambiorder) noexcept
 { return ChannelsFromDevFmt(chans, ambiorder) * BytesFromDevFmt(type); }
 
-const char *DevFmtTypeString(DevFmtType type) noexcept;
-const char *DevFmtChannelsString(DevFmtChannels chans) noexcept;
+auto DevFmtTypeString(DevFmtType type) noexcept -> std::string_view;
+auto DevFmtChannelsString(DevFmtChannels chans) noexcept -> std::string_view;
 
 enum class DevAmbiLayout : bool {
     FuMa,

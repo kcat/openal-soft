@@ -4,45 +4,49 @@
 #include "storage_formats.h"
 
 #include <cstdint>
+#include <string_view>
 
+namespace {
+using namespace std::string_view_literals;
+} // namespace
 
-const char *NameFromFormat(FmtType type) noexcept
+auto NameFromFormat(FmtType type) noexcept -> std::string_view
 {
     switch(type)
     {
-    case FmtUByte: return "UInt8";
-    case FmtShort: return "Int16";
-    case FmtInt: return "Int32";
-    case FmtFloat: return "Float";
-    case FmtDouble: return "Double";
-    case FmtMulaw: return "muLaw";
-    case FmtAlaw: return "aLaw";
-    case FmtIMA4: return "IMA4 ADPCM";
-    case FmtMSADPCM: return "MS ADPCM";
+    case FmtUByte: return "UInt8"sv;
+    case FmtShort: return "Int16"sv;
+    case FmtInt: return "Int32"sv;
+    case FmtFloat: return "Float"sv;
+    case FmtDouble: return "Double"sv;
+    case FmtMulaw: return "muLaw"sv;
+    case FmtAlaw: return "aLaw"sv;
+    case FmtIMA4: return "IMA4 ADPCM"sv;
+    case FmtMSADPCM: return "MS ADPCM"sv;
     }
-    return "<internal error>";
+    return "<internal error>"sv;
 }
 
-const char *NameFromFormat(FmtChannels channels) noexcept
+auto NameFromFormat(FmtChannels channels) noexcept -> std::string_view
 {
     switch(channels)
     {
-    case FmtMono: return "Mono";
-    case FmtStereo: return "Stereo";
-    case FmtRear: return "Rear";
-    case FmtQuad: return "Quadraphonic";
-    case FmtX51: return "Surround 5.1";
-    case FmtX61: return "Surround 6.1";
-    case FmtX71: return "Surround 7.1";
-    case FmtBFormat2D: return "B-Format 2D";
-    case FmtBFormat3D: return "B-Format 3D";
-    case FmtUHJ2: return "UHJ2";
-    case FmtUHJ3: return "UHJ3";
-    case FmtUHJ4: return "UHJ4";
-    case FmtSuperStereo: return "Super Stereo";
-    case FmtMonoDup: return "Mono (dup)";
+    case FmtMono: return "Mono"sv;
+    case FmtStereo: return "Stereo"sv;
+    case FmtRear: return "Rear"sv;
+    case FmtQuad: return "Quadraphonic"sv;
+    case FmtX51: return "Surround 5.1"sv;
+    case FmtX61: return "Surround 6.1"sv;
+    case FmtX71: return "Surround 7.1"sv;
+    case FmtBFormat2D: return "B-Format 2D"sv;
+    case FmtBFormat3D: return "B-Format 3D"sv;
+    case FmtUHJ2: return "UHJ2"sv;
+    case FmtUHJ3: return "UHJ3"sv;
+    case FmtUHJ4: return "UHJ4"sv;
+    case FmtSuperStereo: return "Super Stereo"sv;
+    case FmtMonoDup: return "Mono (dup)"sv;
     }
-    return "<internal error>";
+    return "<internal error>"sv;
 }
 
 uint BytesFromFmt(FmtType type) noexcept

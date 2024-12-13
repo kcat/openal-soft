@@ -88,7 +88,7 @@ OpenAL features and capabilities.
 Kotlin Bindings:
 * [Multiplatform OpenAL](https://git.karmakrafts.dev/kk/multiplatform-openal), developed for the Kleaver project,
 includes Kotlin/Native bindings for the OpenAL API, based on OpenAL Soft with support
-for Windows x64, Linux x64/arm64, macOS x64/arm64, iOS x64/arm64 and Android x64/arm64/arm32.
+for Windows, Linux, macOS, iOS and Android.
 
 Python Bindings:
 * [PyOpenAL](https://pypi.org/project/PyOpenAL/). Also includes methods to play

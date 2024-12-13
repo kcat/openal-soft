@@ -9,7 +9,7 @@
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 
-#elif defined(__APPLE__)
+#elif defined(__STDC_NO_THREADS__) || !__has_include(<threads.h>)
 
 #include <pthread.h>
 
@@ -79,7 +79,7 @@ public:
     [[nodiscard]]
     auto get() const noexcept -> T { return from_ptr(TlsGetValue(mTss)); }
 
-#elif defined(__APPLE__)
+#elif defined(__STDC_NO_THREADS__) || !__has_include(<threads.h>)
 
     pthread_key_t mTss{};
 

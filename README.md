@@ -85,6 +85,11 @@ Java bindings for the OpenAL API, usable with OpenAL Soft. It also includes a
 higher level Sound3D Toolkit API and utility functions to make easier use of
 OpenAL features and capabilities.
 
+Kotlin Bindings:
+* [Multiplatform OpenAL](https://git.karmakrafts.dev/kk/multiplatform-openal), developed for the Kleaver project,
+includes Kotlin/Native bindings for the OpenAL API, based on OpenAL Soft with support
+for Windows x64, Linux x64/arm64, macOS x64/arm64, iOS x64/arm64 and Android x64/arm64/arm32.
+
 Python Bindings:
 * [PyOpenAL](https://pypi.org/project/PyOpenAL/). Also includes methods to play
 wave files and, with PyOgg, also Vorbis, Opus, and FLAC.

@@ -587,6 +587,13 @@
 #  configurations. Very experimental.
 #spatial-api = false
 
+## exclusive-mode:
+#  Enables Exlusive mode for playback devices. This uses the device directly,
+#  allowing lower latencies but prevents the device from being used multiple
+#  times simultaneously. Ignores the periods setting when enabled, as WASAPI
+#  automatically sets a buffer size based on the period size.
+#exclusive-mode = false
+
 ## allow-resampler:
 #  Specifies whether to allow an extra resampler pass on the output. Enabling
 #  this will allow the playback device to be set to a different sample rate

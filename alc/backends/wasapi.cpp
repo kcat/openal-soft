@@ -1246,8 +1246,8 @@ FORCE_ALIGN int WasapiPlayback::mixerProc()
         }
         mPadding.store(written, std::memory_order_relaxed);
 
-        uint len{buffer_len - written};
-        if(len < update_size)
+        const auto len = uint{buffer_len - written};
+        if(len == 0)
         {
             DWORD res{WaitForSingleObjectEx(mNotifyEvent, 2000, FALSE)};
             if(res != WAIT_OBJECT_0)
@@ -1981,9 +1981,12 @@ HRESULT WasapiPlayback::resetProxy()
     OutputType.Format.nAvgBytesPerSec = OutputType.Format.nSamplesPerSec
         * OutputType.Format.nBlockAlign;
 
+    const auto sharemode =
+        GetConfigValueBool(mDevice->mDeviceName, "wasapi", "exclusive-mode", false)
+        ? AUDCLNT_SHAREMODE_EXCLUSIVE : AUDCLNT_SHAREMODE_SHARED;
+
     TraceFormat("Requesting playback format", &OutputType.Format);
-    hr = audio.mClient->IsFormatSupported(AUDCLNT_SHAREMODE_SHARED, &OutputType.Format,
-        al::out_ptr(wfx));
+    hr = audio.mClient->IsFormatSupported(sharemode, &OutputType.Format, al::out_ptr(wfx));
     if(FAILED(hr))
     {
         WARN("Failed to check format support: {:#x}", as_unsigned(hr));
@@ -2014,8 +2017,22 @@ HRESULT WasapiPlayback::resetProxy()
 #endif
     setDefaultWFXChannelOrder();
 
-    hr = audio.mClient->Initialize(AUDCLNT_SHAREMODE_SHARED, AUDCLNT_STREAMFLAGS_EVENTCALLBACK,
-        buf_time.count(), 0, &OutputType.Format, nullptr);
+    if(sharemode == AUDCLNT_SHAREMODE_EXCLUSIVE)
+    {
+        const auto per_time = ReferenceTime{seconds{mDevice->UpdateSize}} / mDevice->Frequency;
+        hr = audio.mClient->Initialize(sharemode, AUDCLNT_STREAMFLAGS_EVENTCALLBACK,
+            per_time.count(), per_time.count(), &OutputType.Format, nullptr);
+        if(hr == AUDCLNT_E_DEVICE_IN_USE)
+        {
+            ERR("Failed to initialize exclusive mode client: {:#x}", as_unsigned(hr));
+            hr = audio.mClient->Initialize(AUDCLNT_SHAREMODE_SHARED,
+                AUDCLNT_STREAMFLAGS_EVENTCALLBACK, buf_time.count(), 0, &OutputType.Format,
+                nullptr);
+        }
+    }
+    else
+        hr = audio.mClient->Initialize(AUDCLNT_SHAREMODE_SHARED, AUDCLNT_STREAMFLAGS_EVENTCALLBACK,
+            buf_time.count(), 0, &OutputType.Format, nullptr);
     if(FAILED(hr))
     {
         ERR("Failed to initialize audio client: {:#x}", as_unsigned(hr));

@@ -20,7 +20,7 @@
 
 #include "config.h"
 
-#include "sndio.h"
+#include "sndio.hpp"
 
 #include <cstdio>
 #include <cstdlib>
@@ -37,7 +37,7 @@
 #include "core/logging.h"
 #include "ringbuffer.h"
 
-#include <sndio.h> /* NOLINT(*-duplicate-include) Not the same header. */
+#include <sndio.h>
 
 
 namespace {

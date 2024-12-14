@@ -138,7 +138,7 @@
 #include "backends/solaris.h"
 #endif
 #if HAVE_SNDIO
-#include "backends/sndio.h"
+#include "backends/sndio.hpp"
 #endif
 #if HAVE_OSS
 #include "backends/oss.h"
@@ -150,7 +150,7 @@
 #include "backends/winmm.h"
 #endif
 #if HAVE_PORTAUDIO
-#include "backends/portaudio.h"
+#include "backends/portaudio.hpp"
 #endif
 #if HAVE_SDL3
 #include "backends/sdl3.h"

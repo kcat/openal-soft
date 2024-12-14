@@ -1,5 +1,5 @@
-#ifndef BACKENDS_SNDIO_H
-#define BACKENDS_SNDIO_H
+#ifndef BACKENDS_SNDIO_HPP
+#define BACKENDS_SNDIO_HPP
 
 #include "base.h"
 
@@ -16,4 +16,4 @@ public:
     static auto getFactory() -> BackendFactory&;
 };
 
-#endif /* BACKENDS_SNDIO_H */
+#endif /* BACKENDS_SNDIO_HPP */

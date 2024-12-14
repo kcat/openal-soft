@@ -20,7 +20,7 @@
 
 #include "config.h"
 
-#include "portaudio.h"
+#include "portaudio.hpp"
 
 #include <cmath>
 #include <cstdio>
@@ -33,7 +33,7 @@
 #include "dynload.h"
 #include "ringbuffer.h"
 
-#include <portaudio.h> /* NOLINT(*-duplicate-include) Not the same header. */
+#include <portaudio.h>
 
 
 namespace {

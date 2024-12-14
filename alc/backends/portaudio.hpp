@@ -1,5 +1,5 @@
-#ifndef BACKENDS_PORTAUDIO_H
-#define BACKENDS_PORTAUDIO_H
+#ifndef BACKENDS_PORTAUDIO_HPP
+#define BACKENDS_PORTAUDIO_HPP
 
 #include "base.h"
 
@@ -16,4 +16,4 @@ public:
     static auto getFactory() -> BackendFactory&;
 };
 
-#endif /* BACKENDS_PORTAUDIO_H */
+#endif /* BACKENDS_PORTAUDIO_HPP */

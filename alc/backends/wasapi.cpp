@@ -1232,28 +1232,49 @@ FORCE_ALIGN int WasapiPlayback::mixerProc()
     auto avhandle = AvrtHandlePtr{AvSetMmThreadCharacteristicsW(taskname, &sAvIndex)};
 #endif
 
+    const auto sharemode =
+        GetConfigValueBool(mDevice->mDeviceName, "wasapi", "exclusive-mode", false)
+        ? AUDCLNT_SHAREMODE_EXCLUSIVE : AUDCLNT_SHAREMODE_SHARED;
+
     mBufferFilled = 0;
     while(!mKillNow.load(std::memory_order_relaxed))
     {
+        DWORD res{ WaitForSingleObjectEx(mNotifyEvent, 2000, FALSE) };
+        if (res != WAIT_OBJECT_0)
+            ERR("WaitForSingleObjectEx error: {:#x}", res);
+
         UINT32 written;
-        HRESULT hr{audio.mClient->GetCurrentPadding(&written)};
-        if(FAILED(hr))
+        uint len = 0;
+        HRESULT hr = S_FALSE;
+        if(sharemode == AUDCLNT_SHAREMODE_EXCLUSIVE)
         {
-            ERR("Failed to get padding: {:#x}", as_unsigned(hr));
-            mDevice->handleDisconnect("Failed to retrieve buffer padding: {:#x}",
-                as_unsigned(hr));
-            break;
+            hr = audio.mClient->GetBufferSize(&written);
+            if(FAILED(hr))
+            {
+                ERR("Failed to get buffer size: {:#x}", as_unsigned(hr));
+                mDevice->handleDisconnect("Failed to retrieve buffer size: {:#x}",
+                    as_unsigned(hr));
+                break;
+            }
+            len = written;
+        }
+        else
+        {
+            hr = audio.mClient->GetCurrentPadding(&written);
+            if(FAILED(hr))
+            {
+                ERR("Failed to get padding: {:#x}", as_unsigned(hr));
+                mDevice->handleDisconnect("Failed to retrieve buffer padding: {:#x}",
+                    as_unsigned(hr));
+                break;
+            }
+            len = buffer_len - written;
+            if(len == 0)
+            {
+                continue;
+            }
         }
         mPadding.store(written, std::memory_order_relaxed);
-
-        const auto len = uint{buffer_len - written};
-        if(len == 0)
-        {
-            DWORD res{WaitForSingleObjectEx(mNotifyEvent, 2000, FALSE)};
-            if(res != WAIT_OBJECT_0)
-                ERR("WaitForSingleObjectEx error: {:#x}", res);
-            continue;
-        }
 
         BYTE *buffer;
         hr = audio.mRender->GetBuffer(len, &buffer);

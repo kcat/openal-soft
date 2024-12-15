@@ -1307,6 +1307,11 @@ auto UpdateDeviceParams(al::Device *device, const al::span<const int> attrList) 
                 break;
 
             case ATTRIBUTE_HEX(ALC_CONTEXT_FLAGS_EXT)
+                /* Handled in alcCreateContext */
+                break;
+
+            case ATTRIBUTE(ALC_SYNC)
+                /* Ignored attribute */
                 break;
 
             default:

@@ -1248,15 +1248,13 @@ FORCE_ALIGN int WasapiPlayback::mixerProc()
         HRESULT hr = S_FALSE;
         if(sharemode == AUDCLNT_SHAREMODE_EXCLUSIVE)
         {
-            hr = audio.mClient->GetBufferSize(&written);
-            if(FAILED(hr))
-            {
-                ERR("Failed to get buffer size: {:#x}", as_unsigned(hr));
-                mDevice->handleDisconnect("Failed to retrieve buffer size: {:#x}",
-                    as_unsigned(hr));
-                break;
-            }
-            len = written;
+            // When we receive a WASAPI Exclusive mode event, an entire buffer is available for writting
+            len = buffer_len;
+
+            // WASAPI in exclusive mode uses two buffers internally. We will fill a new buffer while there is a second being played,
+            // so we can ensure there will be at least buffer_len of padding, and a little more. In this instant we are sure only a single
+            // buffer is being played. Maybe this is a good approximation?
+            written = update_size;
         }
         else
         {

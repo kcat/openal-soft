@@ -288,6 +288,15 @@ else()
         set(C_FLAGS ${C_FLAGS} -Werror=undef)
     endif()
 
+    # NOTE: This essentially provides the equivalent of the C++26 feature to
+    # initialize all local variables with a non-0 bit pattern. Until C++26 is
+    # adopted, the [[gnu::uninitialized]] attribute will avoid the auto-
+    # initialization where necessary.
+    check_c_compiler_flag(-ftrivial-auto-var-init=pattern HAVE_FTRIVIAL_AUTO_VAR_INIT)
+    if(HAVE_FTRIVIAL_AUTO_VAR_INIT)
+        set(C_FLAGS ${C_FLAGS} -ftrivial-auto-var-init=pattern)
+    endif()
+
     check_c_compiler_flag(-fno-math-errno HAVE_FNO_MATH_ERRNO)
     if(HAVE_FNO_MATH_ERRNO)
         set(C_FLAGS ${C_FLAGS} -fno-math-errno)

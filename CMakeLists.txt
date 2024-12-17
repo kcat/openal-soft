@@ -1314,7 +1314,7 @@ if(ALSOFT_UTILS)
 endif()
 if(ALSOFT_UTILS OR ALSOFT_EXAMPLES)
     find_package(SndFile)
-    if(SDL2_FOUND)
+    if(SDL3_FOUND)
         find_package(FFmpeg COMPONENTS AVFORMAT AVCODEC AVUTIL SWSCALE SWRESAMPLE)
     endif()
 endif()
@@ -1338,8 +1338,8 @@ if(LIBTYPE STREQUAL "STATIC")
     set(PKG_CONFIG_CFLAGS -DAL_LIBTYPE_STATIC)
     foreach(FLAG  ${LINKER_FLAGS} ${EXTRA_LIBS} ${MATH_LIB})
         # If this is already a linker flag, or is a full path+file, add it
-        # as-is. If it's an SDL2 target, add the link flag for it. Otherwise,
-        # it's a name intended to be dressed as -lname.
+        # as-is. If it's an SDL2 or SDL3 target, add the link flag for it.
+        # Otherwise, it's a name intended to be dressed as -lname.
         if(FLAG MATCHES "^-.*" OR EXISTS "${FLAG}")
             set(PKG_CONFIG_PRIVATE_LIBS "${PKG_CONFIG_PRIVATE_LIBS} ${FLAG}")
         elseif(FLAG MATCHES "^SDL2::SDL2")

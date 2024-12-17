@@ -343,7 +343,7 @@ struct StreamPlayer {
         alSourcei(mSource, AL_BUFFER, static_cast<ALint>(mBuffer));
         if(ALenum err{alGetError()})
         {
-            fmt::println(stderr, "Failed to set callback: {} ({:#04x})", alGetString(err),
+            fmt::println(stderr, "Failed to set callback: {} ({:#x})", alGetString(err),
                 as_unsigned(err));
             return false;
         }

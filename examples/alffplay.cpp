@@ -871,7 +871,7 @@ void AL_APIENTRY AudioState::eventCallback(ALenum eventType, ALuint object, ALui
     case AL_EVENT_TYPE_BUFFER_COMPLETED_SOFT: fmt::print("Buffer completed"); break;
     case AL_EVENT_TYPE_SOURCE_STATE_CHANGED_SOFT: fmt::print("Source state changed"); break;
     case AL_EVENT_TYPE_DISCONNECTED_SOFT: fmt::print("Disconnected"); break;
-    default: fmt::print("{:#04x}", as_unsigned(eventType)); break;
+    default: fmt::print("{:#x}", as_unsigned(eventType)); break;
     }
     fmt::println("\n"
         "Object ID: {}\n"
@@ -1399,7 +1399,7 @@ int AudioState::handler()
                 break;
         }
         if(ALenum err{alGetError()})
-            fmt::println(stderr, "Got AL error: {:#04x} ({})", as_unsigned(err), alGetString(err));
+            fmt::println(stderr, "Got AL error: {:#x} ({})", as_unsigned(err), alGetString(err));
 
         mSrcCond.wait_for(srclock, sleep_time);
     }

@@ -182,7 +182,7 @@ int main(al::span<std::string_view> args)
     alDebugMessageControlEXT(AL_DONT_CARE_EXT, AL_DONT_CARE_EXT, AL_DEBUG_SEVERITY_LOW_EXT, 0,
         nullptr, AL_TRUE);
 
-    fmt::println("Context flags: {:#08x}", as_unsigned(alGetInteger(AL_CONTEXT_FLAGS_EXT)));
+    fmt::println("Context flags: {:#010x}", as_unsigned(alGetInteger(AL_CONTEXT_FLAGS_EXT)));
 
     /* A debug context has debug output enabled by default. But in case this
      * isn't a debug context, explicitly enable it (probably won't get much, if

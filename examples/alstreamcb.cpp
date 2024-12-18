@@ -505,11 +505,8 @@ int main(al::span<std::string_view> args)
             continue;
 
         /* Get the name portion, without the path, for display. */
-        auto namepart = args[i];
-        if(auto sep = namepart.rfind('/'); sep < namepart.size())
-            namepart = namepart.substr(sep+1);
-        else if(sep = namepart.rfind('\\'); sep < namepart.size())
-            namepart = namepart.substr(sep+1);
+        const auto fpos = std::max(args[i].rfind('/')+1, args[i].rfind('\\')+1);
+        const auto namepart = args[i].substr(fpos);
 
         fmt::println("Playing: {} ({}, {}hz)", namepart, FormatName(player->mFormat),
             player->mSfInfo.samplerate);

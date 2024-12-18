@@ -27,7 +27,6 @@
 #include <chrono>
 #include <cstdint>
 #include <cstring>
-#include <functional>
 #include <thread>
 
 #include "althrd_setname.h"
@@ -124,7 +123,7 @@ void NullBackend::start()
 {
     try {
         mKillNow.store(false, std::memory_order_release);
-        mThread = std::thread{std::mem_fn(&NullBackend::mixerProc), this};
+        mThread = std::thread{&NullBackend::mixerProc, this};
     }
     catch(std::exception& e) {
         throw al::backend_exception{al::backend_error::DeviceError,

@@ -1701,7 +1701,7 @@ bool MovieState::prepare()
     /* Dump information about file onto standard error */
     av_dump_format(mFormatCtx.get(), 0, mFilename.c_str(), 0);
 
-    mParseThread = std::thread{std::mem_fn(&MovieState::parse_handler), this};
+    mParseThread = std::thread{&MovieState::parse_handler, this};
 
     std::unique_lock<std::mutex> slock{mStartupMutex};
     while(!mStartupDone) mStartupCond.wait(slock);
@@ -1813,9 +1813,9 @@ int MovieState::parse_handler()
     mClockBase = get_avtime() + milliseconds{750};
 
     if(audio_index >= 0)
-        mAudioThread = std::thread{std::mem_fn(&AudioState::handler), &mAudio};
+        mAudioThread = std::thread{&AudioState::handler, &mAudio};
     if(video_index >= 0)
-        mVideoThread = std::thread{std::mem_fn(&VideoState::handler), &mVideo};
+        mVideoThread = std::thread{&VideoState::handler, &mVideo};
 
     /* Main packet reading/dispatching loop */
     AVPacketPtr packet{av_packet_alloc()};

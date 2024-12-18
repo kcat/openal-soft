@@ -509,7 +509,7 @@ void OpenSLPlayback::start()
 
     try {
         mKillNow.store(false, std::memory_order_release);
-        mThread = std::thread(std::mem_fn(&OpenSLPlayback::mixerProc), this);
+        mThread = std::thread(&OpenSLPlayback::mixerProc, this);
     }
     catch(std::exception& e) {
         throw al::backend_exception{al::backend_error::DeviceError,

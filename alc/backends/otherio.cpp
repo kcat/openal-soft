@@ -48,7 +48,6 @@
 #include <condition_variable>
 #include <cstring>
 #include <deque>
-#include <functional>
 #include <future>
 #include <mutex>
 #include <string>
@@ -619,7 +618,7 @@ auto OtherIOPlayback::startProxy() -> HRESULT
 {
     try {
         mKillNow.store(false, std::memory_order_release);
-        mThread = std::thread{std::mem_fn(&OtherIOPlayback::mixerProc), this};
+        mThread = std::thread{&OtherIOPlayback::mixerProc, this};
         return S_OK;
     }
     catch(std::exception& e) {

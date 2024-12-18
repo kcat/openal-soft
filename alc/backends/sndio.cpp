@@ -25,7 +25,6 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include <functional>
 #include <poll.h>
 #include <system_error>
 #include <thread>
@@ -251,7 +250,7 @@ void SndioPlayback::start()
 
     try {
         mKillNow.store(false, std::memory_order_release);
-        mThread = std::thread{std::mem_fn(&SndioPlayback::mixerProc), this};
+        mThread = std::thread{&SndioPlayback::mixerProc, this};
     }
     catch(std::exception& e) {
         sio_stop(mSndHandle);
@@ -477,7 +476,7 @@ void SndioCapture::start()
 
     try {
         mKillNow.store(false, std::memory_order_release);
-        mThread = std::thread{std::mem_fn(&SndioCapture::recordProc), this};
+        mThread = std::thread{&SndioCapture::recordProc, this};
     }
     catch(std::exception& e) {
         sio_stop(mSndHandle);

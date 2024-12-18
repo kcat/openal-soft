@@ -29,7 +29,6 @@
 #include <chrono>
 #include <cstring>
 #include <exception>
-#include <functional>
 #include <memory>
 #include <mutex>
 #include <string>
@@ -859,7 +858,7 @@ void AlsaPlayback::start()
 
     try {
         mKillNow.store(false, std::memory_order_release);
-        mThread = std::thread{std::mem_fn(thread_func), this};
+        mThread = std::thread{thread_func, this};
     }
     catch(std::exception& e) {
         throw al::backend_exception{al::backend_error::DeviceError,

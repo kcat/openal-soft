@@ -37,7 +37,6 @@
 #include <cassert>
 #include <cstdio>
 #include <cstdlib>
-#include <functional>
 #include <memory.h>
 #include <string>
 #include <thread>
@@ -519,7 +518,7 @@ void DSoundPlayback::start()
 {
     try {
         mKillNow.store(false, std::memory_order_release);
-        mThread = std::thread{std::mem_fn(&DSoundPlayback::mixerProc), this};
+        mThread = std::thread{&DSoundPlayback::mixerProc, this};
     }
     catch(std::exception& e) {
         throw al::backend_exception{al::backend_error::DeviceError,

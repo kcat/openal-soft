@@ -52,7 +52,6 @@
 #include <condition_variable>
 #include <cstring>
 #include <deque>
-#include <functional>
 #include <future>
 #include <mutex>
 #include <string>
@@ -64,7 +63,6 @@
 #include "alc/alconfig.h"
 #include "alnumeric.h"
 #include "alspan.h"
-#include "alstring.h"
 #include "althrd_setname.h"
 #include "comptr.h"
 #include "core/converter.h"
@@ -82,11 +80,7 @@
 #include <winrt/Windows.Devices.Enumeration.h>
 #include <winrt/Windows.Media.Devices.h>
 
-using namespace winrt;
-using namespace Windows::Foundation;
-using namespace Windows::Media::Devices;
-using namespace Windows::Devices::Enumeration;
-using namespace Windows::Media::Devices;
+#include "alstring.h"
 #endif
 
 /* Some headers seem to define these as macros for __uuidof, which is annoying
@@ -106,6 +100,14 @@ DEFINE_PROPERTYKEY(PKEY_AudioEndpoint_GUID, 0x1da5d803, 0xd492, 0x4edd, 0x8c, 0x
 #endif
 
 namespace {
+
+#if ALSOFT_UWP
+using namespace winrt;
+using namespace Windows::Foundation;
+using namespace Windows::Media::Devices;
+using namespace Windows::Devices::Enumeration;
+using namespace Windows::Media::Devices;
+#endif
 
 using namespace std::string_view_literals;
 using std::chrono::nanoseconds;
@@ -2118,7 +2120,7 @@ HRESULT WasapiPlayback::startProxy()
 
         try {
             mKillNow.store(false, std::memory_order_release);
-            mThread = std::thread{std::mem_fn(&WasapiPlayback::mixerProc), this};
+            mThread = std::thread{&WasapiPlayback::mixerProc, this};
         }
         catch(...) {
             ERR("Failed to start thread");
@@ -2138,7 +2140,7 @@ HRESULT WasapiPlayback::startProxy()
 
         try {
             mKillNow.store(false, std::memory_order_release);
-            mThread = std::thread{std::mem_fn(&WasapiPlayback::mixerSpatialProc), this};
+            mThread = std::thread{&WasapiPlayback::mixerSpatialProc, this};
         }
         catch(...) {
             ERR("Failed to start thread");
@@ -2725,7 +2727,7 @@ HRESULT WasapiCapture::startProxy()
 
     try {
         mKillNow.store(false, std::memory_order_release);
-        mThread = std::thread{std::mem_fn(&WasapiCapture::recordProc), this};
+        mThread = std::thread{&WasapiCapture::recordProc, this};
     }
     catch(...) {
         ERR("Failed to start thread");

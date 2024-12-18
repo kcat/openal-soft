@@ -328,7 +328,7 @@ void WinMMPlayback::start()
         mWritable.store(static_cast<uint>(mWaveBuffer.size()), std::memory_order_release);
 
         mKillNow.store(false, std::memory_order_release);
-        mThread = std::thread{std::mem_fn(&WinMMPlayback::mixerProc), this};
+        mThread = std::thread{&WinMMPlayback::mixerProc, this};
     }
     catch(std::exception& e) {
         throw al::backend_exception{al::backend_error::DeviceError,
@@ -531,7 +531,7 @@ void WinMMCapture::start()
         }
 
         mKillNow.store(false, std::memory_order_release);
-        mThread = std::thread{std::mem_fn(&WinMMCapture::captureProc), this};
+        mThread = std::thread{&WinMMCapture::captureProc, this};
 
         waveInStart(mInHdl);
     }

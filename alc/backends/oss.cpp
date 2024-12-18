@@ -33,7 +33,6 @@
 #include <cerrno>
 #include <cstring>
 #include <exception>
-#include <functional>
 #include <memory>
 #include <string>
 #include <string_view>
@@ -440,7 +439,7 @@ void OSSPlayback::start()
 {
     try {
         mKillNow.store(false, std::memory_order_release);
-        mThread = std::thread{std::mem_fn(&OSSPlayback::mixerProc), this};
+        mThread = std::thread{&OSSPlayback::mixerProc, this};
     }
     catch(std::exception& e) {
         throw al::backend_exception{al::backend_error::DeviceError,
@@ -619,7 +618,7 @@ void OSScapture::start()
 {
     try {
         mKillNow.store(false, std::memory_order_release);
-        mThread = std::thread{std::mem_fn(&OSScapture::recordProc), this};
+        mThread = std::thread{&OSScapture::recordProc, this};
     }
     catch(std::exception& e) {
         throw al::backend_exception{al::backend_error::DeviceError,

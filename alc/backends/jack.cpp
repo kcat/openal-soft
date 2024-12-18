@@ -29,7 +29,6 @@
 #include <memory.h>
 #include <mutex>
 #include <thread>
-#include <functional>
 #include <vector>
 
 #include "alc/alconfig.h"
@@ -633,7 +632,7 @@ void JackPlayback::start()
         try {
             mPlaying.store(true, std::memory_order_release);
             mKillNow.store(false, std::memory_order_release);
-            mThread = std::thread{std::mem_fn(&JackPlayback::mixerProc), this};
+            mThread = std::thread{&JackPlayback::mixerProc, this};
         }
         catch(std::exception& e) {
             jack_deactivate(mClient);

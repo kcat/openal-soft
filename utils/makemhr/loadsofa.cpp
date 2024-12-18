@@ -598,7 +598,7 @@ bool LoadSofaFile(const std::string_view filename, const uint numThreads, const 
     std::vector<std::thread> thrds;
     thrds.reserve(numThreads);
     for(size_t i{0};i < numThreads;++i)
-        thrds.emplace_back(std::mem_fn(&MagCalculator::Worker), &calculator);
+        thrds.emplace_back(&MagCalculator::Worker, &calculator);
     size_t count;
     do {
         std::this_thread::sleep_for(std::chrono::milliseconds{50});

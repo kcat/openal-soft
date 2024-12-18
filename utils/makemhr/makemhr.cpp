@@ -910,7 +910,7 @@ void ReconstructHrirs(const HrirDataT *hData, const uint numThreads)
     std::vector<std::thread> thrds;
     thrds.reserve(numThreads);
     for(size_t i{0};i < numThreads;++i)
-        thrds.emplace_back(std::mem_fn(&HrirReconstructor::Worker), &reconstructor);
+        thrds.emplace_back(&HrirReconstructor::Worker, &reconstructor);
 
     /* Keep track of the number of IRs done, periodically reporting it. */
     size_t count;

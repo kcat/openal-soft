@@ -30,7 +30,6 @@
 #include <cstdio>
 #include <cstring>
 #include <exception>
-#include <functional>
 #include <system_error>
 #include <thread>
 #include <vector>
@@ -344,7 +343,7 @@ void WaveBackend::start()
         WARN("Failed to seek on output file");
     try {
         mKillNow.store(false, std::memory_order_release);
-        mThread = std::thread{std::mem_fn(&WaveBackend::mixerProc), this};
+        mThread = std::thread{&WaveBackend::mixerProc, this};
     }
     catch(std::exception& e) {
         throw al::backend_exception{al::backend_error::DeviceError,

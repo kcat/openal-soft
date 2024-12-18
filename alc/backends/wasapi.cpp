@@ -1234,28 +1234,47 @@ FORCE_ALIGN int WasapiPlayback::mixerProc()
     auto avhandle = AvrtHandlePtr{AvSetMmThreadCharacteristicsW(taskname, &sAvIndex)};
 #endif
 
+    const auto sharemode =
+        GetConfigValueBool(mDevice->mDeviceName, "wasapi", "exclusive-mode", false)
+        ? AUDCLNT_SHAREMODE_EXCLUSIVE : AUDCLNT_SHAREMODE_SHARED;
+
     mBufferFilled = 0;
     while(!mKillNow.load(std::memory_order_relaxed))
     {
+        DWORD res{ WaitForSingleObjectEx(mNotifyEvent, 2000, FALSE) };
+        if (res != WAIT_OBJECT_0)
+            ERR("WaitForSingleObjectEx error: {:#x}", res);
+
         UINT32 written;
-        HRESULT hr{audio.mClient->GetCurrentPadding(&written)};
-        if(FAILED(hr))
+        uint len = 0;
+        HRESULT hr = S_FALSE;
+        if(sharemode == AUDCLNT_SHAREMODE_EXCLUSIVE)
         {
-            ERR("Failed to get padding: {:#x}", as_unsigned(hr));
-            mDevice->handleDisconnect("Failed to retrieve buffer padding: {:#x}",
-                as_unsigned(hr));
-            break;
+            // When we receive a WASAPI Exclusive mode event, an entire buffer is available for writting
+            len = buffer_len;
+
+            // WASAPI in exclusive mode uses two buffers internally. We will fill a new buffer while there is a second being played,
+            // so we can ensure there will be at least buffer_len of padding, and a little more. In this instant we are sure only a single
+            // buffer is being played. Maybe this is a good approximation?
+            written = update_size;
+        }
+        else
+        {
+            hr = audio.mClient->GetCurrentPadding(&written);
+            if(FAILED(hr))
+            {
+                ERR("Failed to get padding: {:#x}", as_unsigned(hr));
+                mDevice->handleDisconnect("Failed to retrieve buffer padding: {:#x}",
+                    as_unsigned(hr));
+                break;
+            }
+            len = buffer_len - written;
+            if(len == 0)
+            {
+                continue;
+            }
         }
         mPadding.store(written, std::memory_order_relaxed);
-
-        const auto len = uint{buffer_len - written};
-        if(len == 0)
-        {
-            DWORD res{WaitForSingleObjectEx(mNotifyEvent, 2000, FALSE)};
-            if(res != WAIT_OBJECT_0)
-                ERR("WaitForSingleObjectEx error: {:#x}", res);
-            continue;
-        }
 
         BYTE *buffer;
         hr = audio.mRender->GetBuffer(len, &buffer);

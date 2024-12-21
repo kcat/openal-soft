@@ -126,34 +126,36 @@ void bs2b::clear()
     history.fill(bs2b::t_last_sample{});
 }
 
-void bs2b::cross_feed(float *Left, float *Right, size_t SamplesToDo)
+void bs2b::cross_feed(const al::span<float> Left, const al::span<float> Right)
 {
-    const float a0lo{a0_lo};
-    const float b1lo{b1_lo};
-    const float a0hi{a0_hi};
-    const float a1hi{a1_hi};
-    const float b1hi{b1_hi};
-    std::array<std::array<float,2>,128> samples{};
-    al::span<float> lsamples{Left, SamplesToDo};
-    al::span<float> rsamples{Right, SamplesToDo};
+    const auto a0lo = a0_lo;
+    const auto b1lo = b1_lo;
+    const auto a0hi = a0_hi;
+    const auto a1hi = a1_hi;
+    const auto b1hi = b1_hi;
+    auto lsamples = Left.first(std::min(Left.size(), Right.size()));
+    auto rsamples = Right.first(lsamples.size());
+    auto samples = std::array<std::array<float,2>,128>{};
 
-    while(!lsamples.empty())
+    auto leftio = lsamples.begin();
+    auto rightio = rsamples.begin();
+    while(auto rem = std::distance(leftio, lsamples.end()))
     {
-        const size_t todo{std::min(samples.size(), lsamples.size())};
+        const auto todo = std::min<ptrdiff_t>(samples.size(), rem);
 
         /* Process left input */
-        float z_lo{history[0].lo};
-        float z_hi{history[0].hi};
-        std::transform(lsamples.cbegin(), lsamples.cbegin()+ptrdiff_t(todo), samples.begin(),
-            [a0hi,a1hi,b1hi,a0lo,b1lo,&z_lo,&z_hi](const float x) -> std::array<float,2>
+        auto z_lo = history[0].lo;
+        auto z_hi = history[0].hi;
+        std::transform(leftio, leftio+todo, samples.begin(),
+            [a0hi,a1hi,b1hi,a0lo,b1lo,&z_lo,&z_hi](const float x) noexcept
             {
-                float y0{a0hi*x + z_hi};
+                const auto y0 = a0hi*x + z_hi;
                 z_hi = a1hi*x + b1hi*y0;
 
-                float y1{a0lo*x + z_lo};
+                const auto y1 = a0lo*x + z_lo;
                 z_lo = b1lo*y1;
 
-                return {y0, y1};
+                return std::array{y0, y1};
             });
         history[0].lo = z_lo;
         history[0].hi = z_hi;
@@ -161,28 +163,24 @@ void bs2b::cross_feed(float *Left, float *Right, size_t SamplesToDo)
         /* Process right input */
         z_lo = history[1].lo;
         z_hi = history[1].hi;
-        std::transform(rsamples.cbegin(), rsamples.cbegin()+ptrdiff_t(todo), samples.begin(),
-            samples.begin(),
-            [a0hi,a1hi,b1hi,a0lo,b1lo,&z_lo,&z_hi](const float x, const std::array<float,2> out) -> std::array<float,2>
+        std::transform(rightio, rightio+todo, samples.cbegin(), samples.begin(),
+            [a0hi,a1hi,b1hi,a0lo,b1lo,&z_lo,&z_hi](const float x, const std::array<float,2> &out) noexcept
             {
-                float y0{a0lo*x + z_lo};
+                const auto y0 = a0lo*x + z_lo;
                 z_lo = b1lo*y0;
 
-                float y1{a0hi*x + z_hi};
+                const auto y1 = a0hi*x + z_hi;
                 z_hi = a1hi*x + b1hi*y1;
 
-                return {out[0]+y0, out[1]+y1};
+                return std::array{out[0]+y0, out[1]+y1};
             });
         history[1].lo = z_lo;
         history[1].hi = z_hi;
 
-        auto iter = std::transform(samples.cbegin(), samples.cbegin()+todo, lsamples.begin(),
+        leftio = std::transform(samples.cbegin(), samples.cbegin()+todo, leftio,
             [](const std::array<float,2> &in) { return in[0]; });
-        lsamples = {iter, lsamples.end()};
-
-        iter = std::transform(samples.cbegin(), samples.cbegin()+todo, rsamples.begin(),
+        rightio = std::transform(samples.cbegin(), samples.cbegin()+todo, rightio,
             [](const std::array<float,2> &in) { return in[1]; });
-        rsamples = {iter, rsamples.end()};
     }
 }
 

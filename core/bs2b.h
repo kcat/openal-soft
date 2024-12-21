@@ -27,6 +27,8 @@
 #include <array>
 #include <cstddef>
 
+#include "alspan.h"
+
 namespace Bs2b {
 
 enum {
@@ -81,7 +83,7 @@ struct bs2b {
     /* Clear buffer */
     void clear();
 
-    void cross_feed(float *Left, float *Right, std::size_t SamplesToDo);
+    void cross_feed(const al::span<float> Left, const al::span<float> Right);
 };
 
 } // namespace Bs2b

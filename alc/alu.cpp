@@ -337,7 +337,8 @@ void DeviceBase::ProcessBs2b(const size_t SamplesToDo)
     const size_t ridx{RealOut.ChannelIndex[FrontRight]};
 
     /* Now apply the BS2B binaural/crossfeed filter. */
-    Bs2b->cross_feed(RealOut.Buffer[lidx].data(), RealOut.Buffer[ridx].data(), SamplesToDo);
+    Bs2b->cross_feed(al::span{RealOut.Buffer[lidx]}.first(SamplesToDo),
+        al::span{RealOut.Buffer[ridx]}.first(SamplesToDo));
 }
 
 

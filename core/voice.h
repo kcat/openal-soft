@@ -280,6 +280,6 @@ struct SIMDALIGN Voice {
     static void InitMixer(std::optional<std::string> resopt);
 };
 
-inline Resampler ResamplerDefault{Resampler::Gaussian};
+inline Resampler ResamplerDefault{Resampler::Spline};
 
 #endif /* CORE_VOICE_H */

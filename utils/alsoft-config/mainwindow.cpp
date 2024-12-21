@@ -114,8 +114,8 @@ constexpr std::array resamplerList{
     NameValuePair{ "Point", "point" },
     NameValuePair{ "Linear", "linear" },
     NameValuePair{ "Cubic Spline", "spline" },
+    NameValuePair{ "Default (Cubic Spline)", "" },
     NameValuePair{ "4-point Gaussian", "gaussian" },
-    NameValuePair{ "Default (4-point Gaussian)", "" },
     NameValuePair{ "11th order Sinc (fast)", "fast_bsinc12" },
     NameValuePair{ "11th order Sinc", "bsinc12" },
     NameValuePair{ "23rd order Sinc (fast)", "fast_bsinc24" },
@@ -146,6 +146,16 @@ constexpr std::array hrtfModeList{
     NameValuePair{ "Default (Full)", "" },
     NameValuePair{ "Full", "full" },
 };
+
+constexpr auto GetDefaultIndex(const al::span<const NameValuePair> list) -> size_t
+{
+    for(size_t i{0};i < list.size();++i)
+    {
+        if(!list[i].value[0])
+            return i;
+    }
+    throw std::runtime_error{"Failed to find default entry"};
+}
 
 #ifdef Q_OS_WIN32
 struct CoTaskMemDeleter {
@@ -668,9 +678,10 @@ void MainWindow::loadConfig(const QString &fname)
     ui->srcSendLineEdit->clear();
     ui->srcSendLineEdit->insert(settings.value(QStringLiteral("sends")).toString());
 
-    QString resampler = settings.value(QStringLiteral("resampler")).toString().trimmed();
-    ui->resamplerSlider->setValue(2);
-    ui->resamplerLabel->setText(std::data(resamplerList[2].name));
+    auto resampler = settings.value(QStringLiteral("resampler")).toString().trimmed();
+    static constexpr auto defaultResamplerIndex = GetDefaultIndex(resamplerList);
+    ui->resamplerSlider->setValue(defaultResamplerIndex);
+    ui->resamplerLabel->setText(std::data(resamplerList[defaultResamplerIndex].name));
     /* "Cubic" is an alias for the 4-point spline resampler. The "sinc4" and
      * "sinc8" resamplers are unsupported, use "gaussian" as a fallback.
      */
@@ -769,9 +780,10 @@ void MainWindow::loadConfig(const QString &fname)
     ui->enableSSE41CheckBox->setChecked(!disabledCpuExts.contains(QStringLiteral("sse4.1"), Qt::CaseInsensitive));
     ui->enableNeonCheckBox->setChecked(!disabledCpuExts.contains(QStringLiteral("neon"), Qt::CaseInsensitive));
 
-    QString hrtfmode{settings.value(QStringLiteral("hrtf-mode")).toString().trimmed()};
-    ui->hrtfmodeSlider->setValue(2);
-    ui->hrtfmodeLabel->setText(std::data(hrtfModeList[3].name));
+    auto hrtfmode = settings.value(QStringLiteral("hrtf-mode")).toString().trimmed();
+    static constexpr auto defaultHrtfModeIndex = GetDefaultIndex(hrtfModeList);
+    ui->hrtfmodeSlider->setValue(defaultHrtfModeIndex);
+    ui->hrtfmodeLabel->setText(std::data(hrtfModeList[defaultHrtfModeIndex].name));
     /* The "basic" mode name is no longer supported. Use "ambi2" instead. */
     if(hrtfmode == QLatin1String{"basic"})
         hrtfmode = QStringLiteral("ambi2");

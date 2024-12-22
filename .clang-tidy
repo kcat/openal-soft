@@ -54,6 +54,7 @@
                     bugprone-undelegated-constructor,
                     bugprone-unhandled-*,
                     bugprone-unique-ptr-array-mismatch,
+                    bugprone-unsafe-functions,
                     bugprone-unused-*,
                     bugprone-use-after-move,
                     bugprone-virtual-near-miss,

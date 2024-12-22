@@ -281,12 +281,18 @@ bool WaveBackend::reset()
     bytes = mDevice->bytesFromFmt();
     channels = mDevice->channelsFromFmt();
 
-    rewind(mFile.get());
-    if(auto errcode = errno; errno != 0 && errno != ENOENT)
+    if(fseek(mFile.get(), 0, SEEK_CUR) != 0)
     {
-        ERR("Failed to reset file offset: {} ({})", std::generic_category().message(errcode),
-            errcode);
+        /* ESPIPE means the underlying file isn't seekable, which is fine for
+         * piped output.
+         */
+        if(auto errcode = errno; errcode != ESPIPE)
+        {
+            ERR("Failed to reset file offset: {} ({})", std::generic_category().message(errcode),
+                errcode);
+        }
     }
+    clearerr(mFile.get());
 
     fputs("RIFF", mFile.get());
     fwrite32le(0xFFFFFFFF, mFile.get()); // 'RIFF' header len; filled in at stop

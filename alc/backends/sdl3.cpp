@@ -98,7 +98,7 @@ void EnumeratePlaybackDevices()
 
 
 struct Sdl3Backend final : public BackendBase {
-    Sdl3Backend(DeviceBase *device) noexcept : BackendBase{device} { }
+    explicit Sdl3Backend(DeviceBase *device) noexcept : BackendBase{device} { }
     ~Sdl3Backend() final;
 
     void audioCallback(SDL_AudioStream *stream, int additional_amount, int total_amount) noexcept;

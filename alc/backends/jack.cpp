@@ -277,7 +277,7 @@ void EnumerateDevices(jack_client_t *client, std::vector<DeviceEntry> &list)
 
 
 struct JackPlayback final : public BackendBase {
-    JackPlayback(DeviceBase *device) noexcept : BackendBase{device} { }
+    explicit JackPlayback(DeviceBase *device) noexcept : BackendBase{device} { }
     ~JackPlayback() override;
 
     int processRt(jack_nframes_t numframes) noexcept;

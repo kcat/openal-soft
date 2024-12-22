@@ -17,7 +17,7 @@ class BandSplitterR {
 public:
     BandSplitterR() = default;
     BandSplitterR(const BandSplitterR&) = default;
-    BandSplitterR(Real f0norm) { init(f0norm); }
+    explicit BandSplitterR(Real f0norm) { init(f0norm); }
     BandSplitterR& operator=(const BandSplitterR&) = default;
 
     void init(Real f0norm);

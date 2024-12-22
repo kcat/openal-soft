@@ -40,7 +40,7 @@ struct BackendBase {
     BackendBase() = delete;
     BackendBase(const BackendBase&) = delete;
     BackendBase(BackendBase&&) = delete;
-    BackendBase(DeviceBase *device) noexcept : mDevice{device} { }
+    explicit BackendBase(DeviceBase *device) noexcept : mDevice{device} { }
     virtual ~BackendBase() = default;
 
     void operator=(const BackendBase&) = delete;

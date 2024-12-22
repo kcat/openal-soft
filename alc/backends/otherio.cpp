@@ -502,7 +502,7 @@ void OtherIOProxy::messageHandler(std::promise<HRESULT> *promise)
 
 
 struct OtherIOPlayback final : public BackendBase, OtherIOProxy {
-    OtherIOPlayback(DeviceBase *device) noexcept : BackendBase{device} { }
+    explicit OtherIOPlayback(DeviceBase *device) noexcept : BackendBase{device} { }
     ~OtherIOPlayback() final;
 
     void mixerProc();

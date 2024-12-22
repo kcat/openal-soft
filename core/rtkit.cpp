@@ -69,6 +69,7 @@ namespace {
 inline pid_t _gettid()
 {
 #ifdef __linux__
+    /* NOLINTNEXTLINE(cppcoreguidelines-pro-type-vararg) */
     return static_cast<pid_t>(syscall(SYS_gettid));
 #elif defined(__FreeBSD__)
     long pid{};

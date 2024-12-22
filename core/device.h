@@ -88,7 +88,7 @@ struct DistanceComp {
     std::array<ChanData,MaxOutputChannels> mChannels;
     al::FlexArray<float,16> mSamples;
 
-    DistanceComp(std::size_t count) : mSamples{count} { }
+    explicit DistanceComp(std::size_t count) : mSamples{count} { }
 
     static std::unique_ptr<DistanceComp> Create(std::size_t numsamples)
     { return std::unique_ptr<DistanceComp>{new(FamCount(numsamples)) DistanceComp{numsamples}}; }
@@ -372,7 +372,7 @@ private:
     uint renderSamples(const uint numSamples);
 
 protected:
-    DeviceBase(DeviceType type);
+    explicit DeviceBase(DeviceType type);
     ~DeviceBase();
 
 public:

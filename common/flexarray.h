@@ -30,7 +30,7 @@ struct alignas(alignment) FlexArrayStorage : al::span<T> {
      * arrays store their payloads after the end of the object, which must be
      * the last in the whole parent chain.
      */
-    FlexArrayStorage(size_t size) noexcept(std::is_nothrow_constructible_v<T>)
+    explicit FlexArrayStorage(size_t size) noexcept(std::is_nothrow_constructible_v<T>)
         : al::span<T>{::new(static_cast<void*>(this+1)) T[size], size}
     { }
     /* NOLINTEND(cppcoreguidelines-pro-bounds-pointer-arithmetic) */
@@ -46,7 +46,7 @@ struct alignas(alignment) FlexArrayStorage<T,alignment,false> : al::span<T> {
     { return sizeof(FlexArrayStorage) + sizeof(T)*count + base; }
 
     /* NOLINTBEGIN(cppcoreguidelines-pro-bounds-pointer-arithmetic) */
-    FlexArrayStorage(size_t size) noexcept(std::is_nothrow_constructible_v<T>)
+    explicit FlexArrayStorage(size_t size) noexcept(std::is_nothrow_constructible_v<T>)
         : al::span<T>{::new(static_cast<void*>(this+1)) T[size], size}
     { }
     /* NOLINTEND(cppcoreguidelines-pro-bounds-pointer-arithmetic) */
@@ -88,7 +88,8 @@ struct FlexArray {
     static std::unique_ptr<FlexArray> Create(index_type count)
     { return std::unique_ptr<FlexArray>{new(FamCount{count}) FlexArray{count}}; }
 
-    FlexArray(index_type size) noexcept(std::is_nothrow_constructible_v<Storage_t_,index_type>)
+    explicit FlexArray(index_type size)
+        noexcept(std::is_nothrow_constructible_v<Storage_t_,index_type>)
         : mStore{size}
     { }
     ~FlexArray() = default;

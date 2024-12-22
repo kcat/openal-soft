@@ -161,7 +161,7 @@ inline void PrintErr(SLresult res, const char *str)
 
 
 struct OpenSLPlayback final : public BackendBase {
-    OpenSLPlayback(DeviceBase *device) noexcept : BackendBase{device} { }
+    explicit OpenSLPlayback(DeviceBase *device) noexcept : BackendBase{device} { }
     ~OpenSLPlayback() override;
 
     void process(SLAndroidSimpleBufferQueueItf bq) noexcept;
@@ -574,7 +574,7 @@ ClockLatency OpenSLPlayback::getClockLatency()
 
 
 struct OpenSLCapture final : public BackendBase {
-    OpenSLCapture(DeviceBase *device) noexcept : BackendBase{device} { }
+    explicit OpenSLCapture(DeviceBase *device) noexcept : BackendBase{device} { }
     ~OpenSLCapture() override;
 
     void process(SLAndroidSimpleBufferQueueItf bq) noexcept;

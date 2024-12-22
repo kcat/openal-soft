@@ -126,7 +126,7 @@ class out_ptr_t {
     std::variant<PT,void*> mPtr{};
 
 public:
-    out_ptr_t(SP &res) : mRes{res} { }
+    explicit out_ptr_t(SP &res) : mRes{res} { }
     ~out_ptr_t()
     {
         auto set_res = [this](auto &ptr)
@@ -136,10 +136,10 @@ public:
     out_ptr_t(const out_ptr_t&) = delete;
     out_ptr_t& operator=(const out_ptr_t&) = delete;
 
-    operator PT*() noexcept
+    operator PT*() noexcept /* NOLINT(google-explicit-constructor) */
     { return &std::get<PT>(mPtr); }
 
-    operator void**() noexcept
+    operator void**() noexcept /* NOLINT(google-explicit-constructor) */
     { return &mPtr.template emplace<void*>(); }
 };
 

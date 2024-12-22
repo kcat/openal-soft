@@ -252,7 +252,7 @@ uint log2i(uint x)
 
 
 struct OSSPlayback final : public BackendBase {
-    OSSPlayback(DeviceBase *device) noexcept : BackendBase{device} { }
+    explicit OSSPlayback(DeviceBase *device) noexcept : BackendBase{device} { }
     ~OSSPlayback() override;
 
     int mixerProc();
@@ -352,7 +352,7 @@ void OSSPlayback::open(std::string_view name)
         devname = iter->device_name.c_str();
     }
 
-    int fd{::open(devname, O_WRONLY)};
+    const auto fd = ::open(devname, O_WRONLY); /* NOLINT(cppcoreguidelines-pro-type-vararg) */
     if(fd == -1)
         throw al::backend_exception{al::backend_error::NoDevice, "Could not open {}: {}", devname,
             std::generic_category().message(errno)};
@@ -401,11 +401,13 @@ bool OSSPlayback::reset()
 
     /* Don't fail if SETFRAGMENT fails. We can handle just about anything
      * that's reported back via GETOSPACE */
+    /* NOLINTBEGIN(cppcoreguidelines-pro-type-vararg) */
     ioctl(mFd, SNDCTL_DSP_SETFRAGMENT, &numFragmentsLogSize);
     CHECKERR(ioctl(mFd, SNDCTL_DSP_SETFMT, &ossFormat));
     CHECKERR(ioctl(mFd, SNDCTL_DSP_CHANNELS, &numChannels));
     CHECKERR(ioctl(mFd, SNDCTL_DSP_SPEED, &ossSpeed));
     CHECKERR(ioctl(mFd, SNDCTL_DSP_GETOSPACE, &info));
+    /* NOLINTEND(cppcoreguidelines-pro-type-vararg) */
 #undef CHECKERR
 
     if(mDevice->channelsFromFmt() != numChannels)
@@ -453,13 +455,13 @@ void OSSPlayback::stop()
         return;
     mThread.join();
 
-    if(ioctl(mFd, SNDCTL_DSP_RESET) != 0)
+    if(ioctl(mFd, SNDCTL_DSP_RESET) != 0) /* NOLINT(cppcoreguidelines-pro-type-vararg) */
         ERR("Error resetting device: {}", std::generic_category().message(errno));
 }
 
 
 struct OSScapture final : public BackendBase {
-    OSScapture(DeviceBase *device) noexcept : BackendBase{device} { }
+    explicit OSScapture(DeviceBase *device) noexcept : BackendBase{device} { }
     ~OSScapture() override;
 
     int recordProc();
@@ -552,7 +554,7 @@ void OSScapture::open(std::string_view name)
         devname = iter->device_name.c_str();
     }
 
-    mFd = ::open(devname, O_RDONLY);
+    mFd = ::open(devname, O_RDONLY); /* NOLINT(cppcoreguidelines-pro-type-vararg) */
     if(mFd == -1)
         throw al::backend_exception{al::backend_error::NoDevice, "Could not open {}: {}", devname,
             std::generic_category().message(errno)};
@@ -590,11 +592,13 @@ void OSScapture::open(std::string_view name)
     throw al::backend_exception{al::backend_error::DeviceError, #func " failed: {}", \
         std::generic_category().message(errno)};                              \
 }
+    /* NOLINTBEGIN(cppcoreguidelines-pro-type-vararg) */
     CHECKERR(ioctl(mFd, SNDCTL_DSP_SETFRAGMENT, &numFragmentsLogSize));
     CHECKERR(ioctl(mFd, SNDCTL_DSP_SETFMT, &ossFormat));
     CHECKERR(ioctl(mFd, SNDCTL_DSP_CHANNELS, &numChannels));
     CHECKERR(ioctl(mFd, SNDCTL_DSP_SPEED, &ossSpeed));
     CHECKERR(ioctl(mFd, SNDCTL_DSP_GETISPACE, &info));
+    /* NOLINTEND(cppcoreguidelines-pro-type-vararg) */
 #undef CHECKERR
 
     if(mDevice->channelsFromFmt() != numChannels)
@@ -632,7 +636,7 @@ void OSScapture::stop()
         return;
     mThread.join();
 
-    if(ioctl(mFd, SNDCTL_DSP_RESET) != 0)
+    if(ioctl(mFd, SNDCTL_DSP_RESET) != 0) /* NOLINT(cppcoreguidelines-pro-type-vararg) */
         ERR("Error resetting device: {}", std::generic_category().message(errno));
 }
 

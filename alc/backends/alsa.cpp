@@ -270,7 +270,7 @@ struct SndCtlCardInfo {
     SndCtlCardInfo& operator=(const SndCtlCardInfo&) = delete;
 
     [[nodiscard]]
-    operator snd_ctl_card_info_t*() const noexcept { return mInfo; }
+    operator snd_ctl_card_info_t*() const noexcept { return mInfo; } /* NOLINT(google-explicit-constructor) */
 };
 
 struct SndPcmInfo {
@@ -282,7 +282,7 @@ struct SndPcmInfo {
     SndPcmInfo& operator=(const SndPcmInfo&) = delete;
 
     [[nodiscard]]
-    operator snd_pcm_info_t*() const noexcept { return mInfo; }
+    operator snd_pcm_info_t*() const noexcept { return mInfo; } /* NOLINT(google-explicit-constructor) */
 };
 
 struct SndCtl {
@@ -297,7 +297,7 @@ struct SndCtl {
     auto open(const char *name, int mode) { return snd_ctl_open(&mHandle, name, mode); }
 
     [[nodiscard]]
-    operator snd_ctl_t*() const noexcept { return mHandle; }
+    operator snd_ctl_t*() const noexcept { return mHandle; } /* NOLINT(google-explicit-constructor) */
 };
 
 
@@ -454,7 +454,7 @@ int verify_state(snd_pcm_t *handle)
 
 
 struct AlsaPlayback final : public BackendBase {
-    AlsaPlayback(DeviceBase *device) noexcept : BackendBase{device} { }
+    explicit AlsaPlayback(DeviceBase *device) noexcept : BackendBase{device} { }
     ~AlsaPlayback() override;
 
     int mixerProc();
@@ -898,7 +898,7 @@ ClockLatency AlsaPlayback::getClockLatency()
 
 
 struct AlsaCapture final : public BackendBase {
-    AlsaCapture(DeviceBase *device) noexcept : BackendBase{device} { }
+    explicit AlsaCapture(DeviceBase *device) noexcept : BackendBase{device} { }
     ~AlsaCapture() override;
 
     void open(std::string_view name) override;

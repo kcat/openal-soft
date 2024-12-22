@@ -11,7 +11,7 @@
 
 
 struct FrontStablizer {
-    FrontStablizer(size_t numchans) : ChannelFilters{numchans} { }
+    explicit FrontStablizer(size_t numchans) : ChannelFilters{numchans} { }
 
     alignas(16) std::array<float,BufferLineSize> MidDirect{};
     alignas(16) std::array<float,BufferLineSize> Side{};

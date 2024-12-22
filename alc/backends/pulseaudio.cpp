@@ -643,7 +643,7 @@ PulseMainloop gGlobalMainloop;
 
 
 struct PulsePlayback final : public BackendBase {
-    PulsePlayback(DeviceBase *device) noexcept : BackendBase{device} { }
+    explicit PulsePlayback(DeviceBase *device) noexcept : BackendBase{device} { }
     ~PulsePlayback() override;
 
     void bufferAttrCallback(pa_stream *stream) noexcept;
@@ -1075,7 +1075,7 @@ ClockLatency PulsePlayback::getClockLatency()
 
 
 struct PulseCapture final : public BackendBase {
-    PulseCapture(DeviceBase *device) noexcept : BackendBase{device} { }
+    explicit PulseCapture(DeviceBase *device) noexcept : BackendBase{device} { }
     ~PulseCapture() override;
 
     void streamStateCallback(pa_stream *stream) noexcept;

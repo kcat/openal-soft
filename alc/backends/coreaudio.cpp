@@ -90,7 +90,7 @@ constexpr std::array<AudioChannelLabel, 8> X71ChanMap {
 struct FourCCPrinter {
     char mString[sizeof(UInt32) + 1]{};
 
-    constexpr FourCCPrinter(UInt32 code) noexcept
+    explicit constexpr FourCCPrinter(UInt32 code) noexcept
     {
         for(size_t i{0};i < sizeof(UInt32);++i)
         {
@@ -104,7 +104,7 @@ struct FourCCPrinter {
             code >>= 8;
         }
     }
-    constexpr FourCCPrinter(OSStatus code) noexcept : FourCCPrinter{static_cast<UInt32>(code)} { }
+    explicit constexpr FourCCPrinter(OSStatus code) noexcept : FourCCPrinter{static_cast<UInt32>(code)} { }
 
     constexpr const char *c_str() const noexcept { return mString; }
 };
@@ -349,7 +349,7 @@ static constexpr char ca_device[] = "CoreAudio Default";
 
 
 struct CoreAudioPlayback final : public BackendBase {
-    CoreAudioPlayback(DeviceBase *device) noexcept : BackendBase{device} { }
+    explicit CoreAudioPlayback(DeviceBase *device) noexcept : BackendBase{device} { }
     ~CoreAudioPlayback() override;
 
     OSStatus MixerProc(AudioUnitRenderActionFlags *ioActionFlags,
@@ -668,7 +668,7 @@ void CoreAudioPlayback::stop()
 
 
 struct CoreAudioCapture final : public BackendBase {
-    CoreAudioCapture(DeviceBase *device) noexcept : BackendBase{device} { }
+    explicit CoreAudioCapture(DeviceBase *device) noexcept : BackendBase{device} { }
     ~CoreAudioCapture() override;
 
     OSStatus RecordProc(AudioUnitRenderActionFlags *ioActionFlags,

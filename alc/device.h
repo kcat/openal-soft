@@ -99,7 +99,7 @@ struct Device final : public ALCdevice, al::intrusive_ref<al::Device>, DeviceBas
     std::string mVersionOverride;
     std::string mRendererOverride;
 
-    Device(DeviceType type);
+    explicit Device(DeviceType type);
     ~Device() final;
 
     void enumerateHrtfs();

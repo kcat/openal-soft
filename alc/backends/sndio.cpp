@@ -52,7 +52,7 @@ struct SioPar : public sio_par {
 };
 
 struct SndioPlayback final : public BackendBase {
-    SndioPlayback(DeviceBase *device) noexcept : BackendBase{device} { }
+    explicit SndioPlayback(DeviceBase *device) noexcept : BackendBase{device} { }
     ~SndioPlayback() override;
 
     int mixerProc();
@@ -276,7 +276,7 @@ void SndioPlayback::stop()
  * capture buffer sizes apps may request.
  */
 struct SndioCapture final : public BackendBase {
-    SndioCapture(DeviceBase *device) noexcept : BackendBase{device} { }
+    explicit SndioCapture(DeviceBase *device) noexcept : BackendBase{device} { }
     ~SndioCapture() override;
 
     int recordProc();

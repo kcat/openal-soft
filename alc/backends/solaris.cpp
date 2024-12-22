@@ -60,7 +60,7 @@ std::string solaris_driver{"/dev/audio"};
 
 
 struct SolarisBackend final : public BackendBase {
-    SolarisBackend(DeviceBase *device) noexcept : BackendBase{device} { }
+    explicit SolarisBackend(DeviceBase *device) noexcept : BackendBase{device} { }
     ~SolarisBackend() override;
 
     int mixerProc();

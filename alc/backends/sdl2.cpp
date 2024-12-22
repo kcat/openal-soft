@@ -45,7 +45,7 @@ using namespace std::string_view_literals;
 { return "Default Device"sv; }
 
 struct Sdl2Backend final : public BackendBase {
-    Sdl2Backend(DeviceBase *device) noexcept : BackendBase{device} { }
+    explicit Sdl2Backend(DeviceBase *device) noexcept : BackendBase{device} { }
     ~Sdl2Backend() override;
 
     void audioCallback(Uint8 *stream, int len) noexcept;

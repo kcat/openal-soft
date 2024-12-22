@@ -74,7 +74,7 @@ struct TokenReaderT {
     std::streamsize mIn{};
     std::streamsize mOut{};
 
-    TokenReaderT(std::istream &istream) noexcept : mIStream{istream} { }
+    explicit TokenReaderT(std::istream &istream) noexcept : mIStream{istream} { }
     TokenReaderT(const TokenReaderT&) = default;
 };
 

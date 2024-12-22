@@ -106,7 +106,7 @@ void EnumerateDevices()
 struct StreamParamsExt : public PaStreamParameters { uint updateSize; };
 
 struct PortPlayback final : public BackendBase {
-    PortPlayback(DeviceBase *device) noexcept : BackendBase{device} { }
+    explicit PortPlayback(DeviceBase *device) noexcept : BackendBase{device} { }
     ~PortPlayback() override;
 
     int writeCallback(const void *inputBuffer, void *outputBuffer, unsigned long framesPerBuffer,
@@ -290,7 +290,7 @@ void PortPlayback::stop()
 
 
 struct PortCapture final : public BackendBase {
-    PortCapture(DeviceBase *device) noexcept : BackendBase{device} { }
+    explicit PortCapture(DeviceBase *device) noexcept : BackendBase{device} { }
     ~PortCapture() override;
 
     int readCallback(const void *inputBuffer, void *outputBuffer, unsigned long framesPerBuffer,

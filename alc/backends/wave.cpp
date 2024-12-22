@@ -95,7 +95,7 @@ void fwrite32le(uint val, FILE *f)
 
 
 struct WaveBackend final : public BackendBase {
-    WaveBackend(DeviceBase *device) noexcept : BackendBase{device} { }
+    explicit WaveBackend(DeviceBase *device) noexcept : BackendBase{device} { }
     ~WaveBackend() override;
 
     int mixerProc();

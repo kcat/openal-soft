@@ -213,7 +213,7 @@ class DataQueue {
     }
 
 public:
-    DataQueue(size_t size_limit) : mSizeLimit{size_limit} { }
+    explicit DataQueue(size_t size_limit) : mSizeLimit{size_limit} { }
 
     int sendPacket(AVCodecContext *codecctx)
     {
@@ -342,7 +342,7 @@ struct AudioState {
     std::array<ALuint,AudioBufferCount> mBuffers{};
     ALuint mBufferIdx{0};
 
-    AudioState(MovieState &movie) : mMovie(movie)
+    explicit AudioState(MovieState &movie) : mMovie(movie)
     { mConnected.test_and_set(std::memory_order_relaxed); }
     ~AudioState()
     {
@@ -415,7 +415,7 @@ struct VideoState {
     std::atomic<bool> mEOS{false};
     std::atomic<bool> mFinalUpdate{false};
 
-    VideoState(MovieState &movie) : mMovie(movie) { }
+    explicit VideoState(MovieState &movie) : mMovie(movie) { }
     ~VideoState()
     {
         if(mImage)
@@ -453,7 +453,7 @@ struct MovieState {
 
     std::string mFilename;
 
-    MovieState(std::string_view fname) : mAudio{*this}, mVideo{*this}, mFilename{fname}
+    explicit MovieState(std::string_view fname) : mAudio{*this}, mVideo{*this}, mFilename{fname}
     { }
     ~MovieState()
     {
@@ -926,7 +926,7 @@ int AudioState::handler()
             AL_EVENT_TYPE_BUFFER_COMPLETED_SOFT, AL_EVENT_TYPE_SOURCE_STATE_CHANGED_SOFT,
             AL_EVENT_TYPE_DISCONNECTED_SOFT}};
 
-        EventControlManager(milliseconds &sleep_time)
+        explicit EventControlManager(milliseconds &sleep_time)
         {
             if(alEventControlSOFT)
             {

@@ -155,7 +155,7 @@ private:
     }
 
 public:
-    PodDynamicBuilder(uint32_t initSize=1024) : mStorage(initSize)
+    explicit PodDynamicBuilder(uint32_t initSize=1024) : mStorage(initSize)
         , mPod{make_pod_builder(mStorage.data(), initSize)}
     {
         static constexpr auto callbacks{[]
@@ -192,6 +192,7 @@ bool check_version(const char *version)
      * future.
      */
     int major{0}, minor{0}, revision{0};
+    /* NOLINTNEXTLINE(cppcoreguidelines-pro-type-vararg) */
     int ret{sscanf(version, "%d.%d.%d", &major, &minor, &revision)};
     return ret == 3 && (major > PW_MAJOR || (major == PW_MAJOR && minor > PW_MINOR)
         || (major == PW_MAJOR && minor == PW_MINOR && revision >= PW_MICRO));
@@ -1452,7 +1453,7 @@ class PipeWirePlayback final : public BackendBase {
     }
 
 public:
-    PipeWirePlayback(DeviceBase *device) noexcept : BackendBase{device} { }
+    explicit PipeWirePlayback(DeviceBase *device) noexcept : BackendBase{device} { }
     ~PipeWirePlayback() final
     {
         /* Stop the mainloop so the stream can be properly destroyed. */
@@ -1940,7 +1941,7 @@ class PipeWireCapture final : public BackendBase {
     }
 
 public:
-    PipeWireCapture(DeviceBase *device) noexcept : BackendBase{device} { }
+    explicit PipeWireCapture(DeviceBase *device) noexcept : BackendBase{device} { }
     ~PipeWireCapture() final { if(mLoop) mLoop.stop(); }
 };
 

@@ -27,7 +27,7 @@ class semaphore {
     native_type mSem{};
 
 public:
-    semaphore(unsigned int initial=0);
+    explicit semaphore(unsigned int initial=0);
     semaphore(const semaphore&) = delete;
     ~semaphore();
 

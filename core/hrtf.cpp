@@ -176,7 +176,7 @@ class databuf final : public std::streambuf {
     }
 
 public:
-    databuf(const al::span<char_type> data) noexcept
+    explicit databuf(const al::span<char_type> data) noexcept
     {
         setg(data.data(), data.data(), al::to_address(data.end()));
     }
@@ -187,7 +187,7 @@ class idstream final : public std::istream {
     databuf mStreamBuf;
 
 public:
-    idstream(const al::span<char_type> data) : std::istream{nullptr}, mStreamBuf{data}
+    explicit idstream(const al::span<char_type> data) : std::istream{nullptr}, mStreamBuf{data}
     { init(&mStreamBuf); }
 };
 
@@ -1295,6 +1295,7 @@ try {
     std::unique_ptr<std::istream> stream;
     int residx{};
     char ch{};
+    /* NOLINTNEXTLINE(cppcoreguidelines-pro-type-vararg) */
     if(sscanf(fname.c_str(), "!%d%c", &residx, &ch) == 2 && ch == '_')
     {
         TRACE("Loading {}...", fname);

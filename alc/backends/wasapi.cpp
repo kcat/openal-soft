@@ -206,7 +206,7 @@ class GuidPrinter {
     std::string mMsg;
 
 public:
-    GuidPrinter(const GUID &guid)
+    explicit GuidPrinter(const GUID &guid)
         : mMsg{fmt::format(
             "{{{:08x}-{:04x}-{:04x}-{:02x}{:02x}-{:02x}{:02x}{:02x}{:02x}{:02x}{:02x}}}",
             guid.Data1, guid.Data2, guid.Data3, guid.Data4[0], guid.Data4[1], guid.Data4[2],
@@ -1139,7 +1139,7 @@ int WasapiProxy::messageHandler(std::promise<HRESULT> *promise)
 }
 
 struct WasapiPlayback final : public BackendBase, WasapiProxy {
-    WasapiPlayback(DeviceBase *device) noexcept : BackendBase{device} { }
+    explicit WasapiPlayback(DeviceBase *device) noexcept : BackendBase{device} { }
     ~WasapiPlayback() override;
 
     int mixerProc();
@@ -2200,7 +2200,7 @@ ClockLatency WasapiPlayback::getClockLatency()
 
 
 struct WasapiCapture final : public BackendBase, WasapiProxy {
-    WasapiCapture(DeviceBase *device) noexcept : BackendBase{device} { }
+    explicit WasapiCapture(DeviceBase *device) noexcept : BackendBase{device} { }
     ~WasapiCapture() override;
 
     int recordProc();

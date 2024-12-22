@@ -142,6 +142,9 @@ namespace detail_ {
 
 #define REQUIRES(...) std::enable_if_t<(__VA_ARGS__),bool> = true
 
+/* NOLINTBEGIN(google-explicit-constructor) This largely follows std::span's
+ * constructor behavior, and should be replaced once C++20 is used.
+ */
 template<typename T, std::size_t E>
 class span {
 public:
@@ -436,7 +439,7 @@ auto span<T,E>::subspan(std::size_t offset, std::size_t count) const noexcept
     }
     return span<element_type>{mData+offset, size()-offset};
 }
-
+/* NOLINTEND(google-explicit-constructor) */
 
 template<typename T, typename EndOrSize>
 span(T, EndOrSize) -> span<std::remove_reference_t<decltype(*std::declval<T&>())>>;

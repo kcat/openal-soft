@@ -24,7 +24,7 @@ using namespace std::string_view_literals;
 
 
 struct OboePlayback final : public BackendBase, public oboe::AudioStreamCallback {
-    OboePlayback(DeviceBase *device) : BackendBase{device} { }
+    explicit OboePlayback(DeviceBase *device) : BackendBase{device} { }
 
     oboe::ManagedStream mStream;
 
@@ -218,7 +218,7 @@ void OboePlayback::stop()
 
 
 struct OboeCapture final : public BackendBase, public oboe::AudioStreamCallback {
-    OboeCapture(DeviceBase *device) : BackendBase{device} { }
+    explicit OboeCapture(DeviceBase *device) : BackendBase{device} { }
 
     oboe::ManagedStream mStream;
 

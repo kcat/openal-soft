@@ -74,7 +74,7 @@ struct DirectHrtfState {
     uint mIrSize{0};
     al::FlexArray<HrtfChannelState> mChannels;
 
-    DirectHrtfState(size_t numchans) : mChannels{numchans} { }
+    explicit DirectHrtfState(size_t numchans) : mChannels{numchans} { }
     /**
      * Produces HRTF filter coefficients for decoding B-Format, given a set of
      * virtual speaker positions, a matching decoding matrix, and per-order

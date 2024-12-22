@@ -45,7 +45,7 @@ using namespace std::string_view_literals;
 
 
 struct NullBackend final : public BackendBase {
-    NullBackend(DeviceBase *device) noexcept : BackendBase{device} { }
+    explicit NullBackend(DeviceBase *device) noexcept : BackendBase{device} { }
 
     int mixerProc();
 

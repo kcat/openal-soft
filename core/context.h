@@ -176,7 +176,7 @@ struct ContextBase {
     std::vector<ContextPropsCluster> mContextPropClusters;
 
 
-    ContextBase(DeviceBase *device);
+    explicit ContextBase(DeviceBase *device);
     ContextBase(const ContextBase&) = delete;
     ContextBase& operator=(const ContextBase&) = delete;
     virtual ~ContextBase();

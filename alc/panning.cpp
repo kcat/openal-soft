@@ -466,7 +466,7 @@ auto MakeDecoderView(al::Device *device, const AmbDecConf *conf,
         {
             int idx{};
             char c{};
-            /* NOLINTNEXTLINE(cppcoreguidelines-pro-type-vararg) */
+            /* NOLINTNEXTLINE(cert-err34-c,cppcoreguidelines-pro-type-vararg) */
             if(sscanf(speaker.Name.c_str(), "AUX%d%c", &idx, &c) != 1 || idx < 0
                 || idx >= MaxChannels-Aux0)
             {

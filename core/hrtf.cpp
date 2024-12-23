@@ -1295,7 +1295,7 @@ try {
     std::unique_ptr<std::istream> stream;
     int residx{};
     char ch{};
-    /* NOLINTNEXTLINE(cppcoreguidelines-pro-type-vararg) */
+    /* NOLINTNEXTLINE(cert-err34-c,cppcoreguidelines-pro-type-vararg) */
     if(sscanf(fname.c_str(), "!%d%c", &residx, &ch) == 2 && ch == '_')
     {
         TRACE("Loading {}...", fname);

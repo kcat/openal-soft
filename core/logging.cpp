@@ -117,8 +117,9 @@ void al_print_impl(LogLevel level, const fmt::string_view fmt, fmt::format_args 
         }
         return ANDROID_LOG_ERROR;
     };
-    __android_log_print(android_severity(level), "openal", "%s",
-        fmt::format("{}{}\n", prefix, msg).c_str());
+    /* NOLINTNEXTLINE(cppcoreguidelines-pro-type-vararg) */
+    __android_log_print(android_severity(level), "openal", "%.*s%s", al::sizei(prefix),
+        prefix.data(), msg.c_str());
 #endif
 
     auto cblock = std::lock_guard{LogCallbackMutex};

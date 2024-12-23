@@ -192,7 +192,7 @@ bool check_version(const char *version)
      * future.
      */
     int major{0}, minor{0}, revision{0};
-    /* NOLINTNEXTLINE(cppcoreguidelines-pro-type-vararg) */
+    /* NOLINTNEXTLINE(cert-err34-c,cppcoreguidelines-pro-type-vararg) */
     int ret{sscanf(version, "%d.%d.%d", &major, &minor, &revision)};
     return ret == 3 && (major > PW_MAJOR || (major == PW_MAJOR && minor > PW_MINOR)
         || (major == PW_MAJOR && minor == PW_MINOR && revision >= PW_MICRO));

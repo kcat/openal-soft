@@ -1598,15 +1598,14 @@ int VideoState::handler()
         { pict.mFrame = AVFramePtr{av_frame_alloc()}; });
 
     /* Prefill the codec buffer. */
-    auto packet_sender = [this]()
+    auto sender [[maybe_unused]] = std::async(std::launch::async, [this]()
     {
         while(true)
         {
             const int ret{mQueue.sendPacket(mCodecCtx.get())};
             if(ret == AVErrorEOF) break;
         }
-    };
-    auto sender [[maybe_unused]] = std::async(std::launch::async, packet_sender);
+    });
 
     {
         std::lock_guard<std::mutex> displock{mDispPtsMutex};
@@ -1620,12 +1619,17 @@ int VideoState::handler()
         Picture *vp{&mPictQ[write_idx]};
 
         /* Retrieve video frame. */
-        AVFrame *decoded_frame{vp->mFrame.get()};
-        while(int ret{mQueue.receiveFrame(mCodecCtx.get(), decoded_frame)})
+        auto get_frame = [this](AVFrame *frame) -> AVFrame*
         {
-            if(ret == AVErrorEOF) goto finish;
-            fmt::println(stderr, "Failed to receive frame: {}", ret);
-        }
+            while(int ret{mQueue.receiveFrame(mCodecCtx.get(), frame)})
+            {
+                if(ret == AVErrorEOF) return nullptr;
+                fmt::println(stderr, "Failed to receive frame: {}", ret);
+            }
+            return frame;
+        };
+        auto *decoded_frame = get_frame(vp->mFrame.get());
+        if(!decoded_frame) break;
 
         /* Get the PTS for this frame. */
         if(decoded_frame->best_effort_timestamp != AVNoPtsValue)
@@ -1652,7 +1656,7 @@ int VideoState::handler()
                 mPictQCond.wait(lock);
         }
     }
-finish:
+
     mEOS = true;
 
     std::unique_lock<std::mutex> lock{mPictQMutex};

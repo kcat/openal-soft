@@ -3,10 +3,7 @@
 
 #ifdef _WIN32
 #include <cstddef>
-#include <memory>
-#include <type_traits>
 #include <utility>
-#include <variant>
 
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>

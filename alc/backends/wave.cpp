@@ -223,12 +223,6 @@ void WaveBackend::open(std::string_view name)
 
 bool WaveBackend::reset()
 {
-    uint channels{0}, bytes{0}, chanmask{0};
-    bool isbformat{false};
-
-    fseek(mFile.get(), 0, SEEK_SET);
-    clearerr(mFile.get());
-
     if(GetConfigValueBool({}, "wave", "bformat", false))
     {
         mDevice->FmtChans = DevFmtAmbi3D;
@@ -252,6 +246,8 @@ bool WaveBackend::reset()
     case DevFmtFloat:
         break;
     }
+    auto chanmask = 0u;
+    auto isbformat = false;
     switch(mDevice->FmtChans)
     {
     case DevFmtMono:   chanmask = 0x04; break;
@@ -278,8 +274,8 @@ bool WaveBackend::reset()
         chanmask = 0;
         break;
     }
-    bytes = mDevice->bytesFromFmt();
-    channels = mDevice->channelsFromFmt();
+    const auto bytes = mDevice->bytesFromFmt();
+    const auto channels = mDevice->channelsFromFmt();
 
     if(fseek(mFile.get(), 0, SEEK_CUR) != 0)
     {

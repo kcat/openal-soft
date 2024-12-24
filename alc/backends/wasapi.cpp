@@ -1221,7 +1221,6 @@ FORCE_ALIGN int WasapiPlayback::mixerProc()
     althrd_setname(GetMixerThreadName());
 
     const uint frame_size{mFormat.Format.nChannels * mFormat.Format.wBitsPerSample / 8u};
-    const uint update_size{mOutUpdateSize};
     const UINT32 buffer_len{mOutBufferSize};
     const void *resbufferptr{};
 
@@ -1230,7 +1229,7 @@ FORCE_ALIGN int WasapiPlayback::mixerProc()
      * device periods less than 10ms, and "Audio" for greater than or equal to
      * 10ms.
      */
-    auto taskname = (update_size < mFormat.Format.nSamplesPerSec/100) ? L"Pro Audio" : L"Audio";
+    auto taskname = (mOutUpdateSize < mFormat.Format.nSamplesPerSec/100) ? L"Pro Audio" : L"Audio";
     auto avhandle = AvrtHandlePtr{AvSetMmThreadCharacteristicsW(taskname, &sAvIndex)};
 #endif
 
@@ -1862,10 +1861,11 @@ HRESULT WasapiPlayback::resetProxy()
         return E_FAIL;
     wfx = nullptr;
 
-    /* Get the buffer size as a ReferenceTime before potentially altering the
-     * sample rate.
+    /* Get the buffer and update sizes as a ReferenceTime before potentially
+     * altering the sample rate.
      */
     const auto buf_time = ReferenceTime{seconds{mDevice->mBufferSize}} / mDevice->mSampleRate;
+    const auto per_time = ReferenceTime{seconds{mDevice->mUpdateSize}} / mDevice->mSampleRate;
 
     /* Update the mDevice format for non-requested properties. */
     bool isRear51{false};
@@ -2022,15 +2022,19 @@ HRESULT WasapiPlayback::resetProxy()
 
     if(sharemode == AUDCLNT_SHAREMODE_EXCLUSIVE)
     {
-        const auto per_time = ReferenceTime{seconds{mDevice->mUpdateSize}} / mDevice->mSampleRate;
         hr = audio.mClient->Initialize(sharemode, AUDCLNT_STREAMFLAGS_EVENTCALLBACK,
             per_time.count(), per_time.count(), &OutputType.Format, nullptr);
-        if(hr == AUDCLNT_E_DEVICE_IN_USE)
+        if(hr == AUDCLNT_E_BUFFER_SIZE_NOT_ALIGNED)
         {
-            ERR("Failed to initialize exclusive mode client: {:#x}", as_unsigned(hr));
-            hr = audio.mClient->Initialize(AUDCLNT_SHAREMODE_SHARED,
-                AUDCLNT_STREAMFLAGS_EVENTCALLBACK, buf_time.count(), 0, &OutputType.Format,
-                nullptr);
+            auto newsize = UINT32{};
+            hr = audio.mClient->GetBufferSize(&newsize);
+            if(SUCCEEDED(hr))
+            {
+                const auto newper = ReferenceTime{seconds{newsize}}
+                    / OutputType.Format.nSamplesPerSec;
+                hr = audio.mClient->Initialize(sharemode, AUDCLNT_STREAMFLAGS_EVENTCALLBACK,
+                    newper.count(), newper.count(), &OutputType.Format, nullptr);
+            }
         }
     }
     else
@@ -2068,13 +2072,26 @@ HRESULT WasapiPlayback::resetProxy()
     }
 
     mOutBufferSize = buffer_len;
-    mOutUpdateSize = std::min(RefTime2Samples(period_time, mFormat.Format.nSamplesPerSec),
-        buffer_len/2u);
+    if(sharemode == AUDCLNT_SHAREMODE_EXCLUSIVE)
+    {
+        /* For exclusive mode, the buffer size is the update size, and there's
+         * implicitly two update periods on the device.
+         */
+        mOutUpdateSize = buffer_len;
+        mDevice->mUpdateSize = static_cast<uint>(uint64_t{buffer_len} * mDevice->mSampleRate /
+            mFormat.Format.nSamplesPerSec);
+        mDevice->mBufferSize = mDevice->mUpdateSize * 2;
+    }
+    else
+    {
+        mOutUpdateSize = std::min(RefTime2Samples(period_time, mFormat.Format.nSamplesPerSec),
+            buffer_len/2u);
 
-    mDevice->mBufferSize = static_cast<uint>(uint64_t{buffer_len} * mDevice->mSampleRate /
-        mFormat.Format.nSamplesPerSec);
-    mDevice->mUpdateSize = std::min(RefTime2Samples(period_time, mDevice->mSampleRate),
-        mDevice->mBufferSize/2u);
+        mDevice->mBufferSize = static_cast<uint>(uint64_t{buffer_len} * mDevice->mSampleRate /
+            mFormat.Format.nSamplesPerSec);
+        mDevice->mUpdateSize = std::min(RefTime2Samples(period_time, mDevice->mSampleRate),
+            mDevice->mBufferSize/2u);
+    }
 
     mResampler = nullptr;
     mResampleBuffer.clear();

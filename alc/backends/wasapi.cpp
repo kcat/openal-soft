@@ -106,6 +106,9 @@ using namespace Windows::Media::Devices;
 using namespace Windows::Devices::Enumeration;
 using namespace Windows::Media::Devices;
 #endif
+#ifndef E_NOTFOUND
+#define E_NOTFOUND E_NOINTERFACE
+#endif
 
 using namespace std::string_view_literals;
 using std::chrono::nanoseconds;
@@ -1476,7 +1479,7 @@ try {
 
     althrd_setname(GetMixerThreadName());
 
-    auto mmdev = DeviceHandle{};
+    auto mmdev = DeviceHandle{nullptr};
     auto audiodev = std::variant<PlainDevice,SpatialDevice>{std::in_place_index_t<0>{}};
 
     auto devname = std::string{};
@@ -2484,7 +2487,7 @@ try {
 
     althrd_setname(GetRecordThreadName());
 
-    auto mmdev = DeviceHandle{};
+    auto mmdev = DeviceHandle{nullptr};
     auto client = ComPtr<IAudioClient>{};
     auto capture = ComPtr<IAudioCaptureClient>{};
 

@@ -420,13 +420,13 @@ EndpointFormFactor GetDeviceFormfactor(IMMDevice *device)
 
 
 #if ALSOFT_UWP
-struct DeviceHelper final : public IActivateAudioInterfaceCompletionHandler
+struct DeviceEnumHelper final : public IActivateAudioInterfaceCompletionHandler
 #else
-struct DeviceHelper final : private IMMNotificationClient
+struct DeviceEnumHelper final : private IMMNotificationClient
 #endif
 {
 #if ALSOFT_UWP
-    DeviceHelper()
+    DeviceEnumHelper()
     {
         /* TODO: UWP also needs to watch for device added/removed events and
          * dynamically add/remove devices from the lists.
@@ -458,9 +458,9 @@ struct DeviceHelper final : private IMMNotificationClient
         mCaptureDeviceChangedToken = MediaDevice::DefaultAudioCaptureDeviceChanged(capture_cb);
     }
 #else
-    DeviceHelper() = default;
+    DeviceEnumHelper() = default;
 #endif
-    ~DeviceHelper()
+    ~DeviceEnumHelper()
     {
 #if ALSOFT_UWP
         MediaDevice::DefaultAudioRenderDeviceChanged(mRenderDeviceChangedToken);
@@ -634,7 +634,7 @@ struct DeviceHelper final : private IMMNotificationClient
     }
 #endif
 
-    /** -------------------------- DeviceHelper ----------------------------- */
+    /** ------------------------ DeviceEnumHelper -------------------------- */
     HRESULT init()
     {
 #if !ALSOFT_UWP
@@ -833,6 +833,166 @@ private:
 #endif
 };
 
+std::optional<DeviceEnumHelper> sDeviceHelper;
+
+
+#if ALSOFT_UWP
+struct DeviceHelper final : public IActivateAudioInterfaceCompletionHandler {
+    DeviceHelper()
+    {
+        mActiveClientEvent = CreateEventW(nullptr, FALSE, FALSE, nullptr);
+    }
+    ~DeviceHelper()
+    {
+        if(mActiveClientEvent != nullptr)
+            CloseHandle(mActiveClientEvent);
+        mActiveClientEvent = nullptr;
+    }
+
+    template<typename T>
+    auto as() noexcept -> T { return T{this}; }
+
+    /** -------------------------- IUnknown ----------------------------- */
+    std::atomic<ULONG> mRefCount{1};
+    STDMETHODIMP_(ULONG) AddRef() noexcept override { return mRefCount.fetch_add(1u) + 1u; }
+    STDMETHODIMP_(ULONG) Release() noexcept override { return mRefCount.fetch_sub(1u) - 1u; }
+
+    STDMETHODIMP QueryInterface(const IID& IId, void **UnknownPtrPtr) noexcept override
+    {
+        // Three rules of QueryInterface:
+        // https://docs.microsoft.com/en-us/windows/win32/com/rules-for-implementing-queryinterface
+        // 1. Objects must have identity.
+        // 2. The set of interfaces on an object instance must be static.
+        // 3. It must be possible to query successfully for any interface on an object from any other interface.
+
+        // If ppvObject(the address) is nullptr, then this method returns E_POINTER.
+        if(!UnknownPtrPtr)
+            return E_POINTER;
+
+        if(IId == __uuidof(IActivateAudioInterfaceCompletionHandler))
+        {
+            *UnknownPtrPtr = as<IActivateAudioInterfaceCompletionHandler*>();
+            AddRef();
+            return S_OK;
+        }
+        else if(IId == __uuidof(IAgileObject) || IId == __uuidof(IUnknown))
+        {
+            *UnknownPtrPtr = as<IUnknown*>();
+            AddRef();
+            return S_OK;
+        }
+
+        // This method returns S_OK if the interface is supported, and E_NOINTERFACE otherwise.
+        *UnknownPtrPtr = nullptr;
+        return E_NOINTERFACE;
+    }
+
+    /** ----------------------- IActivateAudioInterfaceCompletionHandler ------------ */
+    HRESULT ActivateCompleted(IActivateAudioInterfaceAsyncOperation*) override
+    {
+        SetEvent(mActiveClientEvent);
+
+        // Need to return S_OK
+        return S_OK;
+    }
+
+#else
+
+struct DeviceHelper {
+    DeviceHelper() = default;
+    ~DeviceHelper() = default;
+#endif
+
+    /** -------------------------- DeviceHelper ----------------------------- */
+    [[nodiscard]]
+    auto init() -> HRESULT
+    {
+#if !ALSOFT_UWP
+        HRESULT hr{CoCreateInstance(CLSID_MMDeviceEnumerator, nullptr, CLSCTX_INPROC_SERVER,
+            __uuidof(IMMDeviceEnumerator), al::out_ptr(mEnumerator))};
+        if(FAILED(hr))
+            WARN("Failed to create IMMDeviceEnumerator instance: {:#x}", as_unsigned(hr));
+        return hr;
+#else
+        return S_OK;
+#endif
+    }
+
+    [[nodiscard]]
+    auto openDevice(const std::wstring &devid, EDataFlow flow, DeviceHandle &device) -> HRESULT
+    {
+#if !ALSOFT_UWP
+        HRESULT hr{E_FAIL};
+        if(mEnumerator)
+        {
+            if(devid.empty())
+                hr = mEnumerator->GetDefaultAudioEndpoint(flow, eMultimedia, al::out_ptr(device));
+            else
+                hr = mEnumerator->GetDevice(devid.c_str(), al::out_ptr(device));
+        }
+        return hr;
+#else
+        const auto deviceRole = Windows::Media::Devices::AudioDeviceRole::Default;
+        auto devIfPath =
+            devid.empty() ? (flow == eRender ? MediaDevice::GetDefaultAudioRenderId(deviceRole)
+                                             : MediaDevice::GetDefaultAudioCaptureId(deviceRole))
+                          : winrt::hstring(devid.c_str());
+        if (devIfPath.empty())
+            return E_POINTER;
+
+        auto&& deviceInfo = DeviceInformation::CreateFromIdAsync(devIfPath, nullptr,
+            DeviceInformationKind::DeviceInterface).get();
+        if(!deviceInfo)
+            return E_NOINTERFACE;
+        device = deviceInfo;
+        return S_OK;
+#endif
+    }
+
+    [[nodiscard]]
+#if !ALSOFT_UWP
+    static auto activateAudioClient(_In_ DeviceHandle &device, REFIID iid, void **ppv) -> HRESULT
+    { return device->Activate(iid, CLSCTX_INPROC_SERVER, nullptr, ppv); }
+#else
+    auto activateAudioClient(_In_ DeviceHandle &device, _In_ REFIID iid, void **ppv) -> HRESULT
+    {
+        ComPtr<IActivateAudioInterfaceAsyncOperation> asyncOp;
+        HRESULT hr{ActivateAudioInterfaceAsync(device.Id().data(), iid, nullptr, this,
+                                               al::out_ptr(asyncOp))};
+        if(FAILED(hr))
+            return hr;
+
+        /* I don't like waiting for INFINITE time, but the activate operation
+         * can take an indefinite amount of time since it can require user
+         * input.
+         */
+        DWORD res{WaitForSingleObjectEx(mActiveClientEvent, INFINITE, FALSE)};
+        if(res != WAIT_OBJECT_0)
+        {
+            ERR("WaitForSingleObjectEx error: {:#x}", res);
+            return E_FAIL;
+        }
+
+        HRESULT hrActivateRes{E_FAIL};
+        ComPtr<IUnknown> punkAudioIface;
+        hr = asyncOp->GetActivateResult(&hrActivateRes, al::out_ptr(punkAudioIface));
+        if(SUCCEEDED(hr)) hr = hrActivateRes;
+        if(FAILED(hr)) return hr;
+
+        return punkAudioIface->QueryInterface(iid, ppv);
+    }
+#endif
+
+#if !ALSOFT_UWP
+    ComPtr<IMMDeviceEnumerator> mEnumerator{nullptr};
+
+#else
+
+    HANDLE mActiveClientEvent{nullptr};
+#endif
+};
+
+
 bool MakeExtensible(WAVEFORMATEXTENSIBLE *out, const WAVEFORMATEX *in)
 {
     *out = WAVEFORMATEXTENSIBLE{};
@@ -871,7 +1031,7 @@ bool MakeExtensible(WAVEFORMATEXTENSIBLE *out, const WAVEFORMATEX *in)
     }
     else
     {
-        ERR("Unhandled format tag: {:#04x}", in->wFormatTag);
+        ERR("Unhandled format tag: {:#06x}", in->wFormatTag);
         return false;
     }
     return true;
@@ -882,11 +1042,10 @@ void TraceFormat(const std::string_view msg, const WAVEFORMATEX *format)
     constexpr size_t fmtex_extra_size{sizeof(WAVEFORMATEXTENSIBLE)-sizeof(WAVEFORMATEX)};
     if(format->wFormatTag == WAVE_FORMAT_EXTENSIBLE && format->cbSize >= fmtex_extra_size)
     {
-        const WAVEFORMATEXTENSIBLE *fmtex{
-            CONTAINING_RECORD(format, const WAVEFORMATEXTENSIBLE, Format)};
+        const auto *fmtex = CONTAINING_RECORD(format, const WAVEFORMATEXTENSIBLE, Format);
         /* NOLINTBEGIN(cppcoreguidelines-pro-type-union-access) */
         TRACE("{}:\n"
-            "    FormatTag      = {:#04x}\n"
+            "    FormatTag      = {:#06x}\n"
             "    Channels       = {}\n"
             "    SamplesPerSec  = {}\n"
             "    AvgBytesPerSec = {}\n"
@@ -904,7 +1063,7 @@ void TraceFormat(const std::string_view msg, const WAVEFORMATEX *format)
     }
     else
         TRACE("{}:\n"
-            "    FormatTag      = {:#04x}\n"
+            "    FormatTag      = {:#06x}\n"
             "    Channels       = {}\n"
             "    SamplesPerSec  = {}\n"
             "    AvgBytesPerSec = {}\n"
@@ -1019,9 +1178,6 @@ struct WasapiProxy {
     static inline std::deque<Msg> mMsgQueue;
     static inline std::mutex mMsgQueueLock;
     static inline std::condition_variable mMsgQueueCond;
-    static inline DWORD sAvIndex{};
-
-    static inline std::optional<DeviceHelper> sDeviceHelper;
 
     std::future<HRESULT> pushMessage(MsgType type, std::string_view param={})
     {
@@ -1138,32 +1294,9 @@ int WasapiProxy::messageHandler(std::promise<HRESULT> *promise)
     return 0;
 }
 
-struct WasapiPlayback final : public BackendBase, WasapiProxy {
+struct WasapiPlayback final : public BackendBase {
     explicit WasapiPlayback(DeviceBase *device) noexcept : BackendBase{device} { }
     ~WasapiPlayback() override;
-
-    int mixerProc();
-    int mixerSpatialProc();
-
-    void open(std::string_view name) override;
-    HRESULT openProxy(std::string_view name) override;
-    void closeProxy() override;
-
-    bool reset() override;
-    HRESULT resetProxy() override;
-    void start() override;
-    HRESULT startProxy() override;
-    void stop() override;
-    void stopProxy() override;
-
-    ClockLatency getClockLatency() override;
-
-    void finalizeFormat(WAVEFORMATEXTENSIBLE &OutputType);
-
-    auto initSpatial() -> bool;
-
-    HRESULT mOpenStatus{E_FAIL};
-    DeviceHandle mMMDev{nullptr};
 
     struct PlainDevice {
         ComPtr<IAudioClient> mClient{nullptr};
@@ -1174,7 +1307,50 @@ struct WasapiPlayback final : public BackendBase, WasapiProxy {
         ComPtr<ISpatialAudioObjectRenderStream> mRender{nullptr};
         AudioObjectType mStaticMask{};
     };
-    std::variant<PlainDevice,SpatialDevice> mAudio{std::in_place_index_t<0>{}};
+
+    void mixerProc(PlainDevice &audio);
+    void mixerProc(SpatialDevice &audio);
+
+    void finalizeFormat(WAVEFORMATEXTENSIBLE &OutputType);
+    auto initSpatial(DeviceHelper &helper, DeviceHandle &mmdev, SpatialDevice &audio) -> bool;
+    auto resetProxy(DeviceHelper &helper, DeviceHandle &mmdev,
+        std::variant<PlainDevice,SpatialDevice> &audiodev) -> HRESULT;
+
+    void proc_thread(std::string&& name);
+
+
+    void open(std::string_view name) override;
+    bool reset() override;
+    void start() override;
+    void stop() override;
+
+    ClockLatency getClockLatency() override;
+
+
+    std::thread mProcThread;
+    std::mutex mProcMutex;
+    std::condition_variable mProcCond;
+    HRESULT mProcResult{E_FAIL};
+
+    enum class ThreadState : uint8_t {
+        Initializing,
+        Waiting,
+        Playing,
+        Done
+    };
+    ThreadState mState{ThreadState::Initializing};
+
+    enum class ThreadAction : uint8_t {
+        Nothing,
+        Configure,
+        Play,
+        Quit
+    };
+    ThreadAction mAction{ThreadAction::Nothing};
+
+
+    static inline DWORD sAvIndex{};
+
     HANDLE mNotifyEvent{nullptr};
 
     UINT32 mOutBufferSize{}, mOutUpdateSize{};
@@ -1187,16 +1363,21 @@ struct WasapiPlayback final : public BackendBase, WasapiProxy {
     std::atomic<UINT32> mPadding{0u};
 
     std::mutex mMutex;
-
     std::atomic<bool> mKillNow{true};
-    std::thread mThread;
 };
 
 WasapiPlayback::~WasapiPlayback()
 {
-    if(SUCCEEDED(mOpenStatus))
-        pushMessage(MsgType::CloseDevice).wait();
-    mOpenStatus = E_FAIL;
+    if(mProcThread.joinable())
+    {
+        {
+            auto plock = std::lock_guard{mProcMutex};
+            mKillNow = true;
+            mAction = ThreadAction::Quit;
+        }
+        mProcCond.notify_all();
+        mProcThread.join();
+    }
 
     if(mNotifyEvent != nullptr)
         CloseHandle(mNotifyEvent);
@@ -1204,21 +1385,21 @@ WasapiPlayback::~WasapiPlayback()
 }
 
 
-FORCE_ALIGN int WasapiPlayback::mixerProc()
+FORCE_ALIGN void WasapiPlayback::mixerProc(PlainDevice &audio)
 {
-    ComWrapper com{COINIT_MULTITHREADED};
-    if(!com)
-    {
-        const auto hr = as_unsigned(com.status());
-        ERR("CoInitializeEx(nullptr, COINIT_MULTITHREADED) failed: {:#x}", hr);
-        mDevice->handleDisconnect("COM init failed: {:#x}", hr);
-        return 1;
-    }
+    class PriorityControl {
+        const int mOldPriority;
 
-    auto &audio = std::get<PlainDevice>(mAudio);
-
-    SetRTPriority();
-    althrd_setname(GetMixerThreadName());
+    public:
+        PriorityControl() : mOldPriority{GetThreadPriority(GetCurrentThread())}
+        {
+            if(!SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL))
+                ERR("Failed to set priority level for thread");
+        }
+        ~PriorityControl()
+        { SetThreadPriority(GetCurrentThread(), mOldPriority); }
+    };
+    auto prioctrl = PriorityControl{};
 
     const uint frame_size{mFormat.Format.nChannels * mFormat.Format.wBitsPerSample / 8u};
     const UINT32 buffer_len{mOutBufferSize};
@@ -1233,10 +1414,11 @@ FORCE_ALIGN int WasapiPlayback::mixerProc()
     auto avhandle = AvrtHandlePtr{AvSetMmThreadCharacteristicsW(taskname, &sAvIndex)};
 #endif
 
+    auto prefilling = true;
     mBufferFilled = 0;
     while(!mKillNow.load(std::memory_order_relaxed))
     {
-        UINT32 written;
+        UINT32 written{};
         HRESULT hr{audio.mClient->GetCurrentPadding(&written)};
         if(FAILED(hr))
         {
@@ -1250,13 +1432,25 @@ FORCE_ALIGN int WasapiPlayback::mixerProc()
         const auto len = uint{buffer_len - written};
         if(len == 0)
         {
-            DWORD res{WaitForSingleObjectEx(mNotifyEvent, 2000, FALSE)};
-            if(res != WAIT_OBJECT_0)
+            if(prefilling)
+            {
+                prefilling = false;
+                hr = audio.mClient->Start();
+                if(FAILED(hr))
+                {
+                    ERR("Failed to start audio client: {:#x}", as_unsigned(hr));
+                    mDevice->handleDisconnect("Failed to start audio client: {:#x}",
+                        as_unsigned(hr));
+                    break;
+                }
+            }
+
+            if(DWORD res{WaitForSingleObjectEx(mNotifyEvent, 2000, FALSE)}; res != WAIT_OBJECT_0)
                 ERR("WaitForSingleObjectEx error: {:#x}", res);
             continue;
         }
 
-        BYTE *buffer;
+        BYTE *buffer{};
         hr = audio.mRender->GetBuffer(len, &buffer);
         if(SUCCEEDED(hr))
         {
@@ -1305,41 +1499,46 @@ FORCE_ALIGN int WasapiPlayback::mixerProc()
         }
     }
     mPadding.store(0u, std::memory_order_release);
-
-    return 0;
+    audio.mClient->Stop();
 }
 
-FORCE_ALIGN int WasapiPlayback::mixerSpatialProc()
+FORCE_ALIGN void WasapiPlayback::mixerProc(SpatialDevice &audio)
 {
-    ComWrapper com{COINIT_MULTITHREADED};
-    if(!com)
-    {
-        const auto hr = as_unsigned(com.status());
-        ERR("CoInitializeEx(nullptr, COINIT_MULTITHREADED) failed: {:#x}", hr);
-        mDevice->handleDisconnect("COM init failed: {:#x}", hr);
-        return 1;
-    }
-
-    auto &audio = std::get<SpatialDevice>(mAudio);
-
-    SetRTPriority();
-    althrd_setname(GetMixerThreadName());
-
-    std::vector<ComPtr<ISpatialAudioObject>> channels;
-    std::vector<void*> buffers;
-    std::vector<void*> resbuffers;
-    std::vector<const void*> tmpbuffers;
+    class PriorityControl {
+        int mOldPriority;
+    public:
+        PriorityControl() : mOldPriority{GetThreadPriority(GetCurrentThread())}
+        {
+            if(!SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL))
+                ERR("Failed to set priority level for thread");
+        }
+        ~PriorityControl()
+        { SetThreadPriority(GetCurrentThread(), mOldPriority); }
+    };
+    auto prioctrl = PriorityControl{};
 
 #ifdef AVRTAPI
     auto taskname = (mOutUpdateSize < mFormat.Format.nSamplesPerSec/100) ? L"Pro Audio" : L"Audio";
     auto avhandle = AvrtHandlePtr{AvSetMmThreadCharacteristicsW(taskname, &sAvIndex)};
 #endif
 
+    std::vector<ComPtr<ISpatialAudioObject>> channels;
+    std::vector<void*> buffers;
+    std::vector<void*> resbuffers;
+    std::vector<const void*> tmpbuffers;
+
     /* TODO: Set mPadding appropriately. There doesn't seem to be a way to
      * update it dynamically based on the stream, so a fixed size may be the
      * best we can do.
      */
     mPadding.store(mOutBufferSize-mOutUpdateSize, std::memory_order_release);
+
+    if(HRESULT hr{audio.mRender->Start()}; FAILED(hr))
+    {
+        ERR("Failed to start spatial audio stream: {:#x}", as_unsigned(hr));
+        mDevice->handleDisconnect("Failed to start spatial audio stream: {:#x}", as_unsigned(hr));
+        return;
+    }
 
     mBufferFilled = 0;
     while(!mKillNow.load(std::memory_order_relaxed))
@@ -1429,17 +1628,143 @@ FORCE_ALIGN int WasapiPlayback::mixerSpatialProc()
             ERR("Failed to update playback objects: {:#x}", as_unsigned(hr));
     }
     mPadding.store(0u, std::memory_order_release);
+    audio.mRender->Stop();
+    audio.mRender->Reset();
+}
 
-    return 0;
+
+void WasapiPlayback::proc_thread(std::string&& name)
+try {
+    auto com = ComWrapper{COINIT_MULTITHREADED};
+    if(!com)
+    {
+        const auto hr = as_unsigned(com.status());
+        ERR("CoInitializeEx(nullptr, COINIT_MULTITHREADED) failed: {:#x}", hr);
+        mDevice->handleDisconnect("COM init failed: {:#x}", hr);
+
+        auto plock = std::lock_guard{mProcMutex};
+        mProcResult = com.status();
+        mState = ThreadState::Done;
+        mProcCond.notify_all();
+        return;
+    }
+
+    auto helper = DeviceHelper{};
+    if(HRESULT hr{helper.init()}; FAILED(hr))
+    {
+        mDevice->handleDisconnect("Helper init failed: {:#x}", as_unsigned(hr));
+
+        auto plock = std::lock_guard{mProcMutex};
+        mProcResult = hr;
+        mState = ThreadState::Done;
+        mProcCond.notify_all();
+        return;
+    }
+
+    althrd_setname(GetMixerThreadName());
+
+    auto mmdev = DeviceHandle{};
+    auto audiodev = std::variant<PlainDevice,SpatialDevice>{std::in_place_index_t<0>{}};
+
+    auto devname = std::string{};
+    auto devid = std::wstring{};
+    if(!name.empty())
+    {
+        auto devlock = DeviceListLock{gDeviceList};
+        auto list = al::span{devlock.getPlaybackList()};
+        auto iter = std::find_if(list.cbegin(), list.cend(),
+            [&name](const DevMap &entry) -> bool
+            { return entry.name == name || entry.endpoint_guid == name; });
+        if(iter == list.cend())
+        {
+            const std::wstring wname{utf8_to_wstr(name)};
+            iter = std::find_if(list.cbegin(), list.cend(),
+                [&wname](const DevMap &entry) -> bool { return entry.devid == wname; });
+        }
+        if(iter == list.cend())
+        {
+            WARN("Failed to find device name matching \"{}\"", name);
+            auto plock = std::lock_guard{mProcMutex};
+            mProcResult = E_NOTFOUND;
+            mState = ThreadState::Done;
+            mProcCond.notify_all();
+            return;
+        }
+        devname = iter->name;
+        devid = iter->devid;
+    }
+
+    if(HRESULT hr{helper.openDevice(devid, eRender, mmdev)}; FAILED(hr))
+    {
+        WARN("Failed to open device \"{}\": {}", devname.empty()
+            ? "(default)"sv : std::string_view{devname}, as_unsigned(hr));
+        auto plock = std::lock_guard{mProcMutex};
+        mProcResult = hr;
+        mState = ThreadState::Done;
+        mProcCond.notify_all();
+        return;
+    }
+    if(!devname.empty())
+        mDeviceName = std::move(devname);
+    else
+        mDeviceName = GetDeviceNameAndGuid(mmdev).mName;
+
+    auto plock = std::unique_lock{mProcMutex};
+    mProcResult = S_OK;
+    while(mState != ThreadState::Done)
+    {
+        mState = ThreadState::Waiting;
+        mProcCond.notify_all();
+
+        mProcCond.wait(plock, [this]() noexcept { return mAction != ThreadAction::Nothing; });
+        const auto action = mAction;
+        plock.unlock();
+
+        if(action == ThreadAction::Quit)
+        {
+            plock.lock();
+            mAction = ThreadAction::Nothing;
+            mState = ThreadState::Done;
+            mProcCond.notify_all();
+            break;
+        }
+        if(action == ThreadAction::Configure)
+        {
+            const auto hr = resetProxy(helper, mmdev, audiodev);
+
+            plock.lock();
+            mAction = ThreadAction::Nothing;
+            mProcResult = hr;
+            continue;
+        }
+
+        /* action == Play */
+        ResetEvent(mNotifyEvent);
+        mKillNow.store(false, std::memory_order_release);
+
+        plock.lock();
+        mAction = ThreadAction::Nothing;
+        mState = ThreadState::Playing;
+        mProcResult = S_OK;
+        plock.unlock();
+        mProcCond.notify_all();
+
+        std::visit([&](auto &audio) -> void { mixerProc(audio); }, audiodev);
+
+        plock.lock();
+    }
+}
+catch(...) {
+    auto plock = std::lock_guard{mProcMutex};
+    mProcResult = E_FAIL;
+    mAction = ThreadAction::Nothing;
+    mState = ThreadState::Done;
+    mProcCond.notify_all();
 }
 
 
 void WasapiPlayback::open(std::string_view name)
 {
-    if(SUCCEEDED(mOpenStatus))
-        throw al::backend_exception{al::backend_error::DeviceError,
-            "Unexpected duplicate open call"};
-
     mNotifyEvent = CreateEventW(nullptr, FALSE, FALSE, nullptr);
     if(mNotifyEvent == nullptr)
     {
@@ -1448,58 +1773,16 @@ void WasapiPlayback::open(std::string_view name)
             "Failed to create notify events"};
     }
 
-    mOpenStatus = pushMessage(MsgType::OpenDevice, name).get();
-    if(FAILED(mOpenStatus))
+    mProcThread = std::thread{&WasapiPlayback::proc_thread, this, std::string{name}};
+
+    auto plock = std::unique_lock{mProcMutex};
+    mProcCond.wait(plock, [this]() noexcept { return mState != ThreadState::Initializing; });
+
+    if(mProcResult == E_NOTFOUND)
+        throw al::backend_exception{al::backend_error::NoDevice, "Device \"{}\" not found", name};
+    if(FAILED(mProcResult) || mState == ThreadState::Done)
         throw al::backend_exception{al::backend_error::DeviceError, "Device init failed: {:#x}",
-            as_unsigned(mOpenStatus)};
-}
-
-HRESULT WasapiPlayback::openProxy(std::string_view name)
-{
-    std::string devname;
-    std::wstring devid;
-    if(!name.empty())
-    {
-        auto devlock = DeviceListLock{gDeviceList};
-        auto list = al::span{devlock.getPlaybackList()};
-        auto iter = std::find_if(list.cbegin(), list.cend(),
-            [name](const DevMap &entry) -> bool
-            { return entry.name == name || entry.endpoint_guid == name; });
-        if(iter == list.cend())
-        {
-            const std::wstring wname{utf8_to_wstr(name)};
-            iter = std::find_if(list.cbegin(), list.cend(),
-                [&wname](const DevMap &entry) -> bool
-                { return entry.devid == wname; });
-        }
-        if(iter == list.cend())
-        {
-            WARN("Failed to find device name matching \"{}\"", name);
-            return E_FAIL;
-        }
-        devname = iter->name;
-        devid = iter->devid;
-    }
-
-    HRESULT hr{sDeviceHelper->openDevice(devid, eRender, mMMDev)};
-    if(FAILED(hr))
-    {
-        WARN("Failed to open device \"{}\"", devname.empty()
-            ? "(default)"sv : std::string_view{devname});
-        return hr;
-    }
-    if(!devname.empty())
-        mDeviceName = std::move(devname);
-    else
-        mDeviceName = GetDeviceNameAndGuid(mMMDev).mName;
-
-    return S_OK;
-}
-
-void WasapiPlayback::closeProxy()
-{
-    mAudio.emplace<PlainDevice>();
-    mMMDev = nullptr;
+            as_unsigned(mProcResult)};
 }
 
 
@@ -1618,10 +1901,10 @@ void WasapiPlayback::finalizeFormat(WAVEFORMATEXTENSIBLE &OutputType)
 }
 
 
-auto WasapiPlayback::initSpatial() -> bool
+auto WasapiPlayback::initSpatial(DeviceHelper &helper, DeviceHandle &mmdev, SpatialDevice &audio)
+    -> bool
 {
-    auto &audio = mAudio.emplace<SpatialDevice>();
-    HRESULT hr{sDeviceHelper->activateAudioClient(mMMDev, __uuidof(ISpatialAudioClient),
+    HRESULT hr{helper.activateAudioClient(mmdev, __uuidof(ISpatialAudioClient),
         al::out_ptr(audio.mClient))};
     if(FAILED(hr))
     {
@@ -1777,8 +2060,7 @@ auto WasapiPlayback::initSpatial() -> bool
     ReferenceTime per_time{ReferenceTime{seconds{mDevice->mUpdateSize}} / mDevice->mSampleRate};
 
     ComPtr<IAudioClient> tmpClient;
-    hr = sDeviceHelper->activateAudioClient(mMMDev, __uuidof(IAudioClient),
-        al::out_ptr(tmpClient));
+    hr = helper.activateAudioClient(mmdev, __uuidof(IAudioClient), al::out_ptr(tmpClient));
     if(FAILED(hr))
         ERR("Failed to activate audio client: {:#x}", as_unsigned(hr));
     else
@@ -1821,26 +2103,36 @@ auto WasapiPlayback::initSpatial() -> bool
 
 bool WasapiPlayback::reset()
 {
-    HRESULT hr{pushMessage(MsgType::ResetDevice).get()};
-    if(FAILED(hr))
-        throw al::backend_exception{al::backend_error::DeviceError, "{:#x}", as_unsigned(hr)};
+    auto plock = std::unique_lock{mProcMutex};
+    if(mState != ThreadState::Waiting)
+        throw al::backend_exception{al::backend_error::DeviceError, "Invalid state: {}",
+            unsigned{al::to_underlying(mState)}};
+
+    mAction = ThreadAction::Configure;
+    mProcCond.notify_all();
+    mProcCond.wait(plock, [this]() noexcept { return mAction != ThreadAction::Configure; });
+
+    if(FAILED(mProcResult) || mState != ThreadState::Waiting)
+        throw al::backend_exception{al::backend_error::DeviceError, "Device init failed: {:#x}",
+                                    as_unsigned(mProcResult)};
     return true;
 }
 
-HRESULT WasapiPlayback::resetProxy()
+auto WasapiPlayback::resetProxy(DeviceHelper &helper, DeviceHandle &mmdev,
+    std::variant<PlainDevice,SpatialDevice> &audiodev) -> HRESULT
 {
     if(GetConfigValueBool(mDevice->mDeviceName, "wasapi", "spatial-api", false))
     {
-        if(initSpatial())
+        if(initSpatial(helper, mmdev, audiodev.emplace<SpatialDevice>()))
             return S_OK;
     }
 
     mDevice->Flags.reset(Virtualization);
     mMonoUpsample = false;
 
-    auto &audio = mAudio.emplace<PlainDevice>();
-    HRESULT hr{sDeviceHelper->activateAudioClient(mMMDev, __uuidof(IAudioClient),
-        al::out_ptr(audio.mClient))};
+    auto &audio = audiodev.emplace<PlainDevice>();
+    auto hr = helper.activateAudioClient(mmdev, __uuidof(IAudioClient),
+        al::out_ptr(audio.mClient));
     if(FAILED(hr))
     {
         ERR("Failed to reactivate audio client: {:#x}", as_unsigned(hr));
@@ -2037,7 +2329,7 @@ HRESULT WasapiPlayback::resetProxy()
     mFormat = OutputType;
 
 #if !ALSOFT_UWP
-    const EndpointFormFactor formfactor{GetDeviceFormfactor(mMMDev.get())};
+    const EndpointFormFactor formfactor{GetDeviceFormfactor(mmdev.get())};
     mDevice->Flags.set(DirectEar, (formfactor == Headphones || formfactor == Headset));
 #else
     mDevice->Flags.set(DirectEar, false);
@@ -2141,85 +2433,28 @@ HRESULT WasapiPlayback::resetProxy()
 
 void WasapiPlayback::start()
 {
-    const HRESULT hr{pushMessage(MsgType::StartDevice).get()};
-    if(FAILED(hr))
-        throw al::backend_exception{al::backend_error::DeviceError,
-            "Failed to start playback: {:#x}", as_unsigned(hr)};
+    auto plock = std::unique_lock{mProcMutex};
+    if(mState != ThreadState::Waiting)
+        throw al::backend_exception{al::backend_error::DeviceError, "Invalid state: {}",
+            unsigned{al::to_underlying(mState)}};
+
+    mAction = ThreadAction::Play;
+    mProcCond.notify_all();
+    mProcCond.wait(plock, [this]() noexcept { return mAction != ThreadAction::Play; });
+
+    if(FAILED(mProcResult) || mState != ThreadState::Playing)
+        throw al::backend_exception{al::backend_error::DeviceError, "Device playback failed: {:#x}",
+            as_unsigned(mProcResult)};
 }
-
-HRESULT WasapiPlayback::startProxy()
-{
-    ResetEvent(mNotifyEvent);
-
-    auto start_plain = [&](PlainDevice &audio) -> HRESULT
-    {
-        HRESULT hr{audio.mClient->Start()};
-        if(FAILED(hr))
-        {
-            ERR("Failed to start audio client: {:#x}", as_unsigned(hr));
-            return hr;
-        }
-
-        try {
-            mKillNow.store(false, std::memory_order_release);
-            mThread = std::thread{&WasapiPlayback::mixerProc, this};
-        }
-        catch(...) {
-            ERR("Failed to start thread");
-            audio.mClient->Stop();
-            hr = E_FAIL;
-        }
-        return hr;
-    };
-    auto start_spatial = [&](SpatialDevice &audio) -> HRESULT
-    {
-        HRESULT hr{audio.mRender->Start()};
-        if(FAILED(hr))
-        {
-            ERR("Failed to start spatial audio stream: {:#x}", as_unsigned(hr));
-            return hr;
-        }
-
-        try {
-            mKillNow.store(false, std::memory_order_release);
-            mThread = std::thread{&WasapiPlayback::mixerSpatialProc, this};
-        }
-        catch(...) {
-            ERR("Failed to start thread");
-            hr = E_FAIL;
-        }
-
-        if(FAILED(hr))
-        {
-            audio.mRender->Stop();
-            audio.mRender->Reset();
-        }
-        return hr;
-    };
-
-    return std::visit(overloaded{start_plain, start_spatial}, mAudio);
-}
-
 
 void WasapiPlayback::stop()
-{ pushMessage(MsgType::StopDevice).wait(); }
-
-void WasapiPlayback::stopProxy()
 {
-    if(!mThread.joinable())
-        return;
-
-    mKillNow.store(true, std::memory_order_release);
-    mThread.join();
-
-    auto stop_plain = [](PlainDevice &audio) -> void
-    { audio.mClient->Stop(); };
-    auto stop_spatial = [](SpatialDevice &audio) -> void
+    auto plock = std::unique_lock{mProcMutex};
+    if(mState == ThreadState::Playing)
     {
-        audio.mRender->Stop();
-        audio.mRender->Reset();
-    };
-    std::visit(overloaded{stop_plain, stop_spatial}, mAudio);
+        mKillNow = true;
+        mProcCond.wait(plock, [this]() noexcept { return mState != ThreadState::Playing; });
+    }
 }
 
 

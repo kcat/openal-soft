@@ -180,6 +180,7 @@ enum class DeviceState : std::uint8_t {
     Playing
 };
 
+/* NOLINTNEXTLINE(clang-analyzer-optin.performance.Padding) */
 struct SIMDALIGN DeviceBase {
     std::atomic<bool> Connected{true};
     const DeviceType Type{};

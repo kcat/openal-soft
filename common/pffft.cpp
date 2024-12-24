@@ -74,6 +74,7 @@
 #include "alnumeric.h"
 #include "alspan.h"
 #include "fmt/core.h"
+#include "fmt/ranges.h"
 #include "opthelpers.h"
 
 
@@ -364,56 +365,54 @@ constexpr auto make_float_array(std::integer_sequence<T,N...>)
     using float4 = std::array<float,4>;
     static constexpr auto f = make_float_array(std::make_index_sequence<16>{});
 
-    v4sf a0_v{vset4(f[ 0], f[ 1], f[ 2], f[ 3])};
-    v4sf a1_v{vset4(f[ 4], f[ 5], f[ 6], f[ 7])};
-    v4sf a2_v{vset4(f[ 8], f[ 9], f[10], f[11])};
-    v4sf a3_v{vset4(f[12], f[13], f[14], f[15])};
-    v4sf u_v{};
+    auto a0_v = vset4(f[ 0], f[ 1], f[ 2], f[ 3]);
+    auto a1_v = vset4(f[ 4], f[ 5], f[ 6], f[ 7]);
+    auto a2_v = vset4(f[ 8], f[ 9], f[10], f[11]);
+    auto a3_v = vset4(f[12], f[13], f[14], f[15]);
 
     auto t_v = vzero();
     auto t_f = al::bit_cast<float4>(t_v);
-    fmt::println("VZERO=[{:2g} {:2g} {:2g} {:2g}]", t_f[0], t_f[1], t_f[2], t_f[3]);
+    fmt::println("VZERO={}", t_f);
     assertv4(t_f, 0, 0, 0, 0);
 
     t_v = vadd(a1_v, a2_v);
     t_f = al::bit_cast<float4>(t_v);
-    fmt::println("VADD(4:7,8:11)=[{:2g} {:2g} {:2g} {:2g}]", t_f[0], t_f[1], t_f[2], t_f[3]);
+    fmt::println("VADD(4:7,8:11)={}", t_f);
     assertv4(t_f, 12, 14, 16, 18);
 
     t_v = vmul(a1_v, a2_v);
     t_f = al::bit_cast<float4>(t_v);
-    fmt::println("VMUL(4:7,8:11)=[{:2g} {:2g} {:2g} {:2g}]", t_f[0], t_f[1], t_f[2], t_f[3]);
+    fmt::println("VMUL(4:7,8:11)={}", t_f);
     assertv4(t_f, 32, 45, 60, 77);
 
     t_v = vmadd(a1_v, a2_v, a0_v);
     t_f = al::bit_cast<float4>(t_v);
-    fmt::println("VMADD(4:7,8:11,0:3)=[{:2g} {:2g} {:2g} {:2g}]", t_f[0], t_f[1], t_f[2], t_f[3]);
+    fmt::println("VMADD(4:7,8:11,0:3)={}", t_f);
     assertv4(t_f, 32, 46, 62, 80);
 
+    auto u_v = v4sf{};
     interleave2(a1_v, a2_v, t_v, u_v);
     t_f = al::bit_cast<float4>(t_v);
     auto u_f = al::bit_cast<float4>(u_v);
-    fmt::println("INTERLEAVE2(4:7,8:11)=[{:2g} {:2g} {:2g} {:2g}] [{:2g} {:2g} {:2g} {:2g}]",
-        t_f[0], t_f[1], t_f[2], t_f[3], u_f[0], u_f[1], u_f[2], u_f[3]);
+    fmt::println("INTERLEAVE2(4:7,8:11)={} {}", t_f, u_f);
     assertv4(t_f, 4, 8, 5, 9);
     assertv4(u_f, 6, 10, 7, 11);
 
     uninterleave2(a1_v, a2_v, t_v, u_v);
     t_f = al::bit_cast<float4>(t_v);
     u_f = al::bit_cast<float4>(u_v);
-    fmt::println("UNINTERLEAVE2(4:7,8:11)=[{:2g} {:2g} {:2g} {:2g}] [{:2g} {:2g} {:2g} {:2g}]",
-        t_f[0], t_f[1], t_f[2], t_f[3], u_f[0], u_f[1], u_f[2], u_f[3]);
+    fmt::println("UNINTERLEAVE2(4:7,8:11)={} {}", t_f, u_f);
     assertv4(t_f, 4, 6, 8, 10);
     assertv4(u_f, 5, 7, 9, 11);
 
     t_v = ld_ps1(f[15]);
     t_f = al::bit_cast<float4>(t_v);
-    fmt::println("LD_PS1(15)=[{:2g} {:2g} {:2g} {:2g}]", t_f[0], t_f[1], t_f[2], t_f[3]);
+    fmt::println("LD_PS1(15)={}", t_f);
     assertv4(t_f, 15, 15, 15, 15);
 
     t_v = vswaphl(a1_v, a2_v);
     t_f = al::bit_cast<float4>(t_v);
-    fmt::println("VSWAPHL(4:7,8:11)=[{:2g} {:2g} {:2g} {:2g}]", t_f[0], t_f[1], t_f[2], t_f[3]);
+    fmt::println("VSWAPHL(4:7,8:11)={}", t_f);
     assertv4(t_f, 8, 9, 6, 7);
 
     vtranspose4(a0_v, a1_v, a2_v, a3_v);
@@ -421,10 +420,7 @@ constexpr auto make_float_array(std::integer_sequence<T,N...>)
     auto a1_f = al::bit_cast<float4>(a1_v);
     auto a2_f = al::bit_cast<float4>(a2_v);
     auto a3_f = al::bit_cast<float4>(a3_v);
-    fmt::println("VTRANSPOSE4(0:3,4:7,8:11,12:15)=[{:2g} {:2g} {:2g} {:2g}] "
-        "[{:2g} {:2g} {:2g} {:2g}] [{:2g} {:2g} {:2g} {:2g}] [{:2g} {:2g} {:2g} {:2g}]",
-        a0_f[0], a0_f[1], a0_f[2], a0_f[3], a1_f[0], a1_f[1], a1_f[2], a1_f[3],
-        a2_f[0], a2_f[1], a2_f[2], a2_f[3], a3_f[0], a3_f[1], a3_f[2], a3_f[3]);
+    fmt::println("VTRANSPOSE4(0:3,4:7,8:11,12:15)={} {} {} {}", a0_f, a1_f, a2_f, a3_f);
     assertv4(a0_f, 0, 4, 8, 12);
     assertv4(a1_f, 1, 5, 9, 13);
     assertv4(a2_f, 2, 6, 10, 14);

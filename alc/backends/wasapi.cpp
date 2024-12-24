@@ -1992,8 +1992,32 @@ HRESULT WasapiPlayback::resetProxy()
     hr = audio.mClient->IsFormatSupported(sharemode, &OutputType.Format, al::out_ptr(wfx));
     if(FAILED(hr))
     {
-        WARN("Failed to check format support: {:#x}", as_unsigned(hr));
-        hr = audio.mClient->GetMixFormat(al::out_ptr(wfx));
+        if(sharemode == AUDCLNT_SHAREMODE_EXCLUSIVE)
+        {
+            /* For exclusive mode, IAudioClient::IsFormatSupported won't give
+             * back a supported format. However, a common failure is an
+             * unsupported sample type, so try a fallback to 16-bit int.
+             */
+            if(hr == AUDCLNT_E_UNSUPPORTED_FORMAT && mDevice->FmtType != DevFmtShort)
+            {
+                OutputType.Format.wBitsPerSample = 16;
+                OutputType.SubFormat = KSDATAFORMAT_SUBTYPE_PCM;
+                /* NOLINTNEXTLINE(cppcoreguidelines-pro-type-union-access) */
+                OutputType.Samples.wValidBitsPerSample = OutputType.Format.wBitsPerSample;
+                OutputType.Format.nBlockAlign = static_cast<WORD>(OutputType.Format.nChannels
+                    * OutputType.Format.wBitsPerSample / 8);
+                OutputType.Format.nAvgBytesPerSec = OutputType.Format.nSamplesPerSec
+                    * OutputType.Format.nBlockAlign;
+
+                hr = audio.mClient->IsFormatSupported(sharemode, &OutputType.Format,
+                    al::out_ptr(wfx));
+            }
+        }
+        else
+        {
+            WARN("Failed to check format support: {:#x}", as_unsigned(hr));
+            hr = audio.mClient->GetMixFormat(al::out_ptr(wfx));
+        }
     }
     if(FAILED(hr))
     {

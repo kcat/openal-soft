@@ -279,10 +279,10 @@ int OpenSLPlayback::mixerProc()
         std::unique_lock<std::mutex> dlock{mMutex};
         auto data = mRing->getWriteVector();
         mDevice->renderSamples(data[0].buf,
-            static_cast<uint>(data[0].len)*mDevice->UpdateSize, frame_step);
+            static_cast<uint>(data[0].len)*mDevice->mUpdateSize, frame_step);
         if(data[1].len > 0)
             mDevice->renderSamples(data[1].buf,
-                static_cast<uint>(data[1].len)*mDevice->UpdateSize, frame_step);
+                static_cast<uint>(data[1].len)*mDevice->mUpdateSize, frame_step);
 
         const auto todo = size_t{data[0].len + data[1].len};
         mRing->writeAdvance(todo);
@@ -297,7 +297,7 @@ int OpenSLPlayback::mixerProc()
                 data[1].len = 0;
             }
 
-            result = VCALL(bufferQueue,Enqueue)(data[0].buf, mDevice->UpdateSize*mFrameSize);
+            result = VCALL(bufferQueue,Enqueue)(data[0].buf, mDevice->mUpdateSize*mFrameSize);
             PrintErr(result, "bufferQueue->Enqueue");
             if(SL_RESULT_SUCCESS != result)
             {
@@ -306,7 +306,7 @@ int OpenSLPlayback::mixerProc()
             }
 
             data[0].len--;
-            data[0].buf += mDevice->UpdateSize*mFrameSize;
+            data[0].buf += mDevice->mUpdateSize*mFrameSize;
         }
     }
 
@@ -397,14 +397,14 @@ bool OpenSLPlayback::reset()
 
     SLDataLocator_AndroidSimpleBufferQueue loc_bufq{};
     loc_bufq.locatorType = SL_DATALOCATOR_ANDROIDSIMPLEBUFFERQUEUE;
-    loc_bufq.numBuffers = mDevice->BufferSize / mDevice->UpdateSize;
+    loc_bufq.numBuffers = mDevice->mBufferSize / mDevice->mUpdateSize;
 
     SLDataSource audioSrc{};
 #ifdef SL_ANDROID_DATAFORMAT_PCM_EX
     SLAndroidDataFormat_PCM_EX format_pcm_ex{};
     format_pcm_ex.formatType = SL_ANDROID_DATAFORMAT_PCM_EX;
     format_pcm_ex.numChannels = mDevice->channelsFromFmt();
-    format_pcm_ex.sampleRate = mDevice->Frequency * 1000;
+    format_pcm_ex.sampleRate = mDevice->mSampleRate * 1000;
     format_pcm_ex.bitsPerSample = mDevice->bytesFromFmt() * 8;
     format_pcm_ex.containerSize = format_pcm_ex.bitsPerSample;
     format_pcm_ex.channelMask = GetChannelMask(mDevice->FmtChans);
@@ -435,7 +435,7 @@ bool OpenSLPlayback::reset()
         SLDataFormat_PCM format_pcm{};
         format_pcm.formatType = SL_DATAFORMAT_PCM;
         format_pcm.numChannels = mDevice->channelsFromFmt();
-        format_pcm.samplesPerSec = mDevice->Frequency * 1000;
+        format_pcm.samplesPerSec = mDevice->mSampleRate * 1000;
         format_pcm.bitsPerSample = mDevice->bytesFromFmt() * 8;
         format_pcm.containerSize = format_pcm.bitsPerSample;
         format_pcm.channelMask = GetChannelMask(mDevice->FmtChans);
@@ -472,8 +472,8 @@ bool OpenSLPlayback::reset()
     }
     if(SL_RESULT_SUCCESS == result)
     {
-        const uint num_updates{mDevice->BufferSize / mDevice->UpdateSize};
-        mRing = RingBuffer::Create(num_updates, mFrameSize*mDevice->UpdateSize, true);
+        const uint num_updates{mDevice->mBufferSize / mDevice->mUpdateSize};
+        mRing = RingBuffer::Create(num_updates, mFrameSize*mDevice->mUpdateSize, true);
     }
 
     if(SL_RESULT_SUCCESS != result)
@@ -566,8 +566,8 @@ ClockLatency OpenSLPlayback::getClockLatency()
 
     std::lock_guard<std::mutex> dlock{mMutex};
     ret.ClockTime = mDevice->getClockTime();
-    ret.Latency  = std::chrono::seconds{mRing->readSpace() * mDevice->UpdateSize};
-    ret.Latency /= mDevice->Frequency;
+    ret.Latency  = std::chrono::seconds{mRing->readSpace() * mDevice->mUpdateSize};
+    ret.Latency /= mDevice->mSampleRate;
 
     return ret;
 }
@@ -642,16 +642,16 @@ void OpenSLCapture::open(std::string_view name)
     {
         mFrameSize = mDevice->frameSizeFromFmt();
         /* Ensure the total length is at least 100ms */
-        uint length{std::max(mDevice->BufferSize, mDevice->Frequency/10u)};
+        uint length{std::max(mDevice->mBufferSize, mDevice->mSampleRate/10u)};
         /* Ensure the per-chunk length is at least 10ms, and no more than 50ms. */
-        uint update_len{std::clamp(mDevice->BufferSize/3u, mDevice->Frequency/100u,
-            mDevice->Frequency/100u*5u)};
+        uint update_len{std::clamp(mDevice->mBufferSize/3u, mDevice->mSampleRate/100u,
+            mDevice->mSampleRate/100u*5u)};
         uint num_updates{(length+update_len-1) / update_len};
 
         mRing = RingBuffer::Create(num_updates, update_len*mFrameSize, false);
 
-        mDevice->UpdateSize = update_len;
-        mDevice->BufferSize = static_cast<uint>(mRing->writeSpace() * update_len);
+        mDevice->mUpdateSize = update_len;
+        mDevice->mBufferSize = static_cast<uint>(mRing->writeSpace() * update_len);
     }
     if(SL_RESULT_SUCCESS == result)
     {
@@ -670,14 +670,14 @@ void OpenSLCapture::open(std::string_view name)
 
         SLDataLocator_AndroidSimpleBufferQueue loc_bq{};
         loc_bq.locatorType = SL_DATALOCATOR_ANDROIDSIMPLEBUFFERQUEUE;
-        loc_bq.numBuffers = mDevice->BufferSize / mDevice->UpdateSize;
+        loc_bq.numBuffers = mDevice->mBufferSize / mDevice->mUpdateSize;
 
         SLDataSink audioSnk{};
 #ifdef SL_ANDROID_DATAFORMAT_PCM_EX
         SLAndroidDataFormat_PCM_EX format_pcm_ex{};
         format_pcm_ex.formatType = SL_ANDROID_DATAFORMAT_PCM_EX;
         format_pcm_ex.numChannels = mDevice->channelsFromFmt();
-        format_pcm_ex.sampleRate = mDevice->Frequency * 1000;
+        format_pcm_ex.sampleRate = mDevice->mSampleRate * 1000;
         format_pcm_ex.bitsPerSample = mDevice->bytesFromFmt() * 8;
         format_pcm_ex.containerSize = format_pcm_ex.bitsPerSample;
         format_pcm_ex.channelMask = GetChannelMask(mDevice->FmtChans);
@@ -700,7 +700,7 @@ void OpenSLCapture::open(std::string_view name)
                 SLDataFormat_PCM format_pcm{};
                 format_pcm.formatType = SL_DATAFORMAT_PCM;
                 format_pcm.numChannels = mDevice->channelsFromFmt();
-                format_pcm.samplesPerSec = mDevice->Frequency * 1000;
+                format_pcm.samplesPerSec = mDevice->mSampleRate * 1000;
                 format_pcm.bitsPerSample = mDevice->bytesFromFmt() * 8;
                 format_pcm.containerSize = format_pcm.bitsPerSample;
                 format_pcm.channelMask = GetChannelMask(mDevice->FmtChans);
@@ -752,7 +752,7 @@ void OpenSLCapture::open(std::string_view name)
     }
     if(SL_RESULT_SUCCESS == result)
     {
-        const uint chunk_size{mDevice->UpdateSize * mFrameSize};
+        const uint chunk_size{mDevice->mUpdateSize * mFrameSize};
         const auto silence = (mDevice->FmtType == DevFmtUByte) ? std::byte{0x80} : std::byte{0};
 
         auto data = mRing->getWriteVector();
@@ -819,7 +819,7 @@ void OpenSLCapture::stop()
 
 void OpenSLCapture::captureSamples(std::byte *buffer, uint samples)
 {
-    const uint update_size{mDevice->UpdateSize};
+    const uint update_size{mDevice->mUpdateSize};
     const uint chunk_size{update_size * mFrameSize};
 
     /* Read the desired samples from the ring buffer then advance its read
@@ -900,7 +900,7 @@ void OpenSLCapture::captureSamples(std::byte *buffer, uint samples)
 }
 
 uint OpenSLCapture::availableSamples()
-{ return static_cast<uint>(mRing->readSpace()*mDevice->UpdateSize - mSplOffset); }
+{ return static_cast<uint>(mRing->readSpace()*mDevice->mUpdateSize - mSplOffset); }
 
 } // namespace
 

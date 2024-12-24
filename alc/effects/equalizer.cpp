@@ -123,7 +123,7 @@ void EqualizerState::update(const ContextBase *context, const EffectSlot *slot,
 {
     auto &props = std::get<EqualizerProps>(*props_);
     const DeviceBase *device{context->mDevice};
-    auto frequency = static_cast<float>(device->Frequency);
+    auto frequency = static_cast<float>(device->mSampleRate);
 
     /* Calculate coefficients for the each type of filter. Note that the shelf
      * and peaking filters' gain is for the centerpoint of the transition band,

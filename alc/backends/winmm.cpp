@@ -191,7 +191,7 @@ FORCE_ALIGN int WinMMPlayback::mixerProc()
             WAVEHDR &waveHdr = mWaveBuffer[widx];
             if(++widx == mWaveBuffer.size()) widx = 0;
 
-            mDevice->renderSamples(waveHdr.lpData, mDevice->UpdateSize, mFormat.nChannels);
+            mDevice->renderSamples(waveHdr.lpData, mDevice->mUpdateSize, mFormat.nChannels);
             mWritable.fetch_sub(1, std::memory_order_acq_rel);
             waveOutWrite(mOutHdl, &waveHdr, sizeof(WAVEHDR));
         } while(--todo);
@@ -235,7 +235,7 @@ void WinMMPlayback::open(std::string_view name)
         }
         format.nChannels = ((mDevice->FmtChans == DevFmtMono) ? 1 : 2);
         format.nBlockAlign = static_cast<WORD>(format.wBitsPerSample * format.nChannels / 8);
-        format.nSamplesPerSec = mDevice->Frequency;
+        format.nSamplesPerSec = mDevice->mSampleRate;
         format.nAvgBytesPerSec = format.nSamplesPerSec * format.nBlockAlign;
         format.cbSize = 0;
 
@@ -258,11 +258,11 @@ void WinMMPlayback::open(std::string_view name)
 
 bool WinMMPlayback::reset()
 {
-    mDevice->BufferSize = static_cast<uint>(uint64_t{mDevice->BufferSize} *
-        mFormat.nSamplesPerSec / mDevice->Frequency);
-    mDevice->BufferSize = (mDevice->BufferSize+3) & ~0x3u;
-    mDevice->UpdateSize = mDevice->BufferSize / 4;
-    mDevice->Frequency = mFormat.nSamplesPerSec;
+    mDevice->mBufferSize = static_cast<uint>(uint64_t{mDevice->mBufferSize} *
+        mFormat.nSamplesPerSec / mDevice->mSampleRate);
+    mDevice->mBufferSize = (mDevice->mBufferSize+3) & ~0x3u;
+    mDevice->mUpdateSize = mDevice->mBufferSize / 4;
+    mDevice->mSampleRate = mFormat.nSamplesPerSec;
 
     if(mFormat.wFormatTag == WAVE_FORMAT_IEEE_FLOAT)
     {
@@ -303,7 +303,7 @@ bool WinMMPlayback::reset()
     }
     setDefaultWFXChannelOrder();
 
-    const uint BufferSize{mDevice->UpdateSize * mFormat.nChannels * mDevice->bytesFromFmt()};
+    const uint BufferSize{mDevice->mUpdateSize * mFormat.nChannels * mDevice->bytesFromFmt()};
 
     decltype(mBuffer)(BufferSize*mWaveBuffer.size()).swap(mBuffer);
     mWaveBuffer[0] = WAVEHDR{};
@@ -486,7 +486,7 @@ void WinMMCapture::open(std::string_view name)
     mFormat.nChannels = static_cast<WORD>(mDevice->channelsFromFmt());
     mFormat.wBitsPerSample = static_cast<WORD>(mDevice->bytesFromFmt() * 8);
     mFormat.nBlockAlign = static_cast<WORD>(mFormat.wBitsPerSample * mFormat.nChannels / 8);
-    mFormat.nSamplesPerSec = mDevice->Frequency;
+    mFormat.nSamplesPerSec = mDevice->mSampleRate;
     mFormat.nAvgBytesPerSec = mFormat.nSamplesPerSec * mFormat.nBlockAlign;
     mFormat.cbSize = 0;
 
@@ -502,7 +502,7 @@ void WinMMCapture::open(std::string_view name)
 
     // Allocate circular memory buffer for the captured audio
     // Make sure circular buffer is at least 100ms in size
-    const auto CapturedDataSize = std::max<size_t>(mDevice->BufferSize,
+    const auto CapturedDataSize = std::max<size_t>(mDevice->mBufferSize,
         BufferSize*mWaveBuffer.size());
 
     mRing = RingBuffer::Create(CapturedDataSize, mFormat.nBlockAlign, false);

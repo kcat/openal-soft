@@ -168,12 +168,12 @@ bool SndioPlayback::reset()
         par.le = SIO_LE_NATIVE;
         par.msb = 1;
 
-        par.rate = mDevice->Frequency;
+        par.rate = mDevice->mSampleRate;
         par.pchan = mDevice->channelsFromFmt();
 
-        par.round = mDevice->UpdateSize;
-        par.appbufsz = mDevice->BufferSize - mDevice->UpdateSize;
-        if(!par.appbufsz) par.appbufsz = mDevice->UpdateSize;
+        par.round = mDevice->mUpdateSize;
+        par.appbufsz = mDevice->mBufferSize - mDevice->mUpdateSize;
+        if(!par.appbufsz) par.appbufsz = mDevice->mUpdateSize;
 
         try {
             if(!sio_setpar(mSndHandle, &par))
@@ -223,14 +223,14 @@ bool SndioPlayback::reset()
         if(par.pchan < 2) mDevice->FmtChans = DevFmtMono;
         else mDevice->FmtChans = DevFmtStereo;
     }
-    mDevice->Frequency = par.rate;
+    mDevice->mSampleRate = par.rate;
 
     setDefaultChannelOrder();
 
-    mDevice->UpdateSize = par.round;
-    mDevice->BufferSize = par.bufsz + par.round;
+    mDevice->mUpdateSize = par.round;
+    mDevice->mBufferSize = par.bufsz + par.round;
 
-    mBuffer.resize(size_t{mDevice->UpdateSize} * par.pchan*par.bps);
+    mBuffer.resize(size_t{mDevice->mUpdateSize} * par.pchan*par.bps);
     if(par.sig == 1)
         std::fill(mBuffer.begin(), mBuffer.end(), std::byte{});
     else if(par.bits == 8)
@@ -428,10 +428,10 @@ void SndioCapture::open(std::string_view name)
     par.le = SIO_LE_NATIVE;
     par.msb = 1;
     par.rchan = mDevice->channelsFromFmt();
-    par.rate = mDevice->Frequency;
+    par.rate = mDevice->mSampleRate;
 
-    par.appbufsz = std::max(mDevice->BufferSize, mDevice->Frequency/10u);
-    par.round = std::min(par.appbufsz/2u, mDevice->Frequency/40u);
+    par.appbufsz = std::max(mDevice->mBufferSize, mDevice->mSampleRate/10u);
+    par.round = std::min(par.appbufsz/2u, mDevice->mSampleRate/40u);
 
     if(!sio_setpar(mSndHandle, &par) || !sio_getpar(mSndHandle, &par))
         throw al::backend_exception{al::backend_error::DeviceError,
@@ -454,15 +454,15 @@ void SndioCapture::open(std::string_view name)
             || (fmttype == DevFmtUInt && p.bps == 4 && p.sig == 0);
     };
     if(!match_fmt(mDevice->FmtType, par) || mDevice->channelsFromFmt() != par.rchan
-        || mDevice->Frequency != par.rate)
+        || mDevice->mSampleRate != par.rate)
         throw al::backend_exception{al::backend_error::DeviceError,
             "Failed to set format {} {} {}hz, got {}{} {}-channel {}hz instead",
             DevFmtTypeString(mDevice->FmtType), DevFmtChannelsString(mDevice->FmtChans),
-            mDevice->Frequency, par.sig?'s':'u', par.bps*8, par.rchan, par.rate};
+            mDevice->mSampleRate, par.sig?'s':'u', par.bps*8, par.rchan, par.rate};
 
-    mRing = RingBuffer::Create(mDevice->BufferSize, size_t{par.bps}*par.rchan, false);
-    mDevice->BufferSize = static_cast<uint>(mRing->writeSpace());
-    mDevice->UpdateSize = par.round;
+    mRing = RingBuffer::Create(mDevice->mBufferSize, size_t{par.bps}*par.rchan, false);
+    mDevice->mBufferSize = static_cast<uint>(mRing->writeSpace());
+    mDevice->mUpdateSize = par.round;
 
     setDefaultChannelOrder();
 

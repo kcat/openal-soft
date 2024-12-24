@@ -491,8 +491,8 @@ int AlsaPlayback::mixerProc()
     SetRTPriority();
     althrd_setname(GetMixerThreadName());
 
-    const snd_pcm_uframes_t update_size{mDevice->UpdateSize};
-    const snd_pcm_uframes_t buffer_size{mDevice->BufferSize};
+    const snd_pcm_uframes_t update_size{mDevice->mUpdateSize};
+    const snd_pcm_uframes_t buffer_size{mDevice->mBufferSize};
     while(!mKillNow.load(std::memory_order_acquire))
     {
         int state{verify_state(mPcmHandle)};
@@ -575,8 +575,8 @@ int AlsaPlayback::mixerNoMMapProc()
     SetRTPriority();
     althrd_setname(GetMixerThreadName());
 
-    const snd_pcm_uframes_t update_size{mDevice->UpdateSize};
-    const snd_pcm_uframes_t buffer_size{mDevice->BufferSize};
+    const snd_pcm_uframes_t update_size{mDevice->mUpdateSize};
+    const snd_pcm_uframes_t buffer_size{mDevice->mBufferSize};
     while(!mKillNow.load(std::memory_order_acquire))
     {
         int state{verify_state(mPcmHandle)};
@@ -725,9 +725,9 @@ bool AlsaPlayback::reset()
     }
 
     bool allowmmap{GetConfigValueBool(mDevice->mDeviceName, "alsa"sv, "mmap"sv, true)};
-    uint periodLen{static_cast<uint>(mDevice->UpdateSize * 1000000_u64 / mDevice->Frequency)};
-    uint bufferLen{static_cast<uint>(mDevice->BufferSize * 1000000_u64 / mDevice->Frequency)};
-    uint rate{mDevice->Frequency};
+    uint periodLen{static_cast<uint>(mDevice->mUpdateSize * 1000000_u64 / mDevice->mSampleRate)};
+    uint bufferLen{static_cast<uint>(mDevice->mBufferSize * 1000000_u64 / mDevice->mSampleRate)};
+    uint rate{mDevice->mSampleRate};
 
     HwParamsPtr hp{CreateHwParams()};
 #define CHECK(x) do {                                                         \
@@ -819,9 +819,9 @@ bool AlsaPlayback::reset()
 #undef CHECK
     sp = nullptr;
 
-    mDevice->BufferSize = static_cast<uint>(bufferSizeInFrames);
-    mDevice->UpdateSize = static_cast<uint>(periodSizeInFrames);
-    mDevice->Frequency = rate;
+    mDevice->mBufferSize = static_cast<uint>(bufferSizeInFrames);
+    mDevice->mUpdateSize = static_cast<uint>(periodSizeInFrames);
+    mDevice->mSampleRate = rate;
 
     setDefaultChannelOrder();
 
@@ -845,7 +845,7 @@ void AlsaPlayback::start()
     int (AlsaPlayback::*thread_func)(){};
     if(access == SND_PCM_ACCESS_RW_INTERLEAVED)
     {
-        auto datalen = snd_pcm_frames_to_bytes(mPcmHandle, mDevice->UpdateSize);
+        auto datalen = snd_pcm_frames_to_bytes(mPcmHandle, mDevice->mUpdateSize);
         mBuffer.resize(static_cast<size_t>(datalen));
         thread_func = &AlsaPlayback::mixerNoMMapProc;
     }
@@ -891,7 +891,7 @@ ClockLatency AlsaPlayback::getClockLatency()
         delay = 0;
     }
     ret.Latency  = std::chrono::seconds{std::max<snd_pcm_sframes_t>(0, delay)};
-    ret.Latency /= mDevice->Frequency;
+    ret.Latency /= mDevice->mSampleRate;
 
     return ret;
 }
@@ -982,10 +982,10 @@ void AlsaCapture::open(std::string_view name)
         break;
     }
 
-    snd_pcm_uframes_t bufferSizeInFrames{std::max(mDevice->BufferSize,
-        100u*mDevice->Frequency/1000u)};
-    snd_pcm_uframes_t periodSizeInFrames{std::min(mDevice->BufferSize,
-        25u*mDevice->Frequency/1000u)};
+    snd_pcm_uframes_t bufferSizeInFrames{std::max(mDevice->mBufferSize,
+        100u*mDevice->mSampleRate/1000u)};
+    snd_pcm_uframes_t periodSizeInFrames{std::min(mDevice->mBufferSize,
+        25u*mDevice->mSampleRate/1000u)};
 
     bool needring{false};
     HwParamsPtr hp{CreateHwParams()};
@@ -1002,7 +1002,7 @@ void AlsaCapture::open(std::string_view name)
     /* set channels (implicitly sets frame bits) */
     CHECK(snd_pcm_hw_params_set_channels(mPcmHandle, hp.get(), mDevice->channelsFromFmt()));
     /* set rate (implicitly constrains period/buffer parameters) */
-    CHECK(snd_pcm_hw_params_set_rate(mPcmHandle, hp.get(), mDevice->Frequency, 0));
+    CHECK(snd_pcm_hw_params_set_rate(mPcmHandle, hp.get(), mDevice->mSampleRate, 0));
     /* set buffer size in frame units (implicitly sets period size/bytes/time and buffer time/bytes) */
     if(snd_pcm_hw_params_set_buffer_size_min(mPcmHandle, hp.get(), &bufferSizeInFrames) < 0)
     {
@@ -1020,7 +1020,7 @@ void AlsaCapture::open(std::string_view name)
     hp = nullptr;
 
     if(needring)
-        mRing = RingBuffer::Create(mDevice->BufferSize, mDevice->frameSizeFromFmt(), false);
+        mRing = RingBuffer::Create(mDevice->mBufferSize, mDevice->frameSizeFromFmt(), false);
 
     mDeviceName = name;
 }
@@ -1210,7 +1210,7 @@ ClockLatency AlsaCapture::getClockLatency()
         delay = 0;
     }
     ret.Latency  = std::chrono::seconds{std::max<snd_pcm_sframes_t>(0, delay)};
-    ret.Latency /= mDevice->Frequency;
+    ret.Latency /= mDevice->mSampleRate;
 
     return ret;
 }

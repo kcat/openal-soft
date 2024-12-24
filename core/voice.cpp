@@ -772,7 +772,7 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
          * should start at. Skip this update if it's beyond the output sample
          * count.
          */
-        OutPos = static_cast<uint>(round<seconds>(diff * Device->Frequency).count());
+        OutPos = static_cast<uint>(round<seconds>(diff * Device->mSampleRate).count());
         if(OutPos >= SamplesToDo) return;
     }
 
@@ -1288,7 +1288,7 @@ void Voice::prepare(DeviceBase *device)
          * Note this isn't needed with UHJ output (UHJ2->B-Format->UHJ2 is
          * identity, so don't mess with it).
          */
-        const BandSplitter splitter{device->mXOverFreq / static_cast<float>(device->Frequency)};
+        const BandSplitter splitter{device->mXOverFreq / static_cast<float>(device->mSampleRate)};
         for(auto &chandata : mChans)
         {
             chandata.mAmbiHFScale = 1.0f;
@@ -1315,7 +1315,7 @@ void Voice::prepare(DeviceBase *device)
         const auto scales = AmbiScale::GetHFOrderScales(mAmbiOrder, device->mAmbiOrder,
             device->m2DMixing);
 
-        const BandSplitter splitter{device->mXOverFreq / static_cast<float>(device->Frequency)};
+        const BandSplitter splitter{device->mXOverFreq / static_cast<float>(device->mSampleRate)};
         for(auto &chandata : mChans)
         {
             chandata.mAmbiHFScale = scales[*(OrderFromChan++)];

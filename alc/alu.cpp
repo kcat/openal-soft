@@ -852,7 +852,7 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
         ChanPosMap{FrontRight,  std::array{ sin30, 0.0f, -cos30}},
     };
 
-    const auto Frequency = static_cast<float>(Device->Frequency);
+    const auto Frequency = static_cast<float>(Device->mSampleRate);
     const uint NumSends{Device->NumAuxSends};
 
     const size_t num_channels{voice->mChans.size()};
@@ -1481,7 +1481,7 @@ void CalcNonAttnSourceParams(Voice *voice, const VoiceProps *props, const Contex
 
     /* Calculate the stepping value */
     const auto Pitch = static_cast<float>(voice->mFrequency) /
-        static_cast<float>(Device->Frequency) * props->Pitch;
+        static_cast<float>(Device->mSampleRate) * props->Pitch;
     if(Pitch > float{MaxPitch})
         voice->mStep = MaxPitch<<MixerFracBits;
     else
@@ -1767,7 +1767,7 @@ void CalcAttnSourceParams(Voice *voice, const VoiceProps *props, const ContextBa
     /* Adjust pitch based on the buffer and output frequencies, and calculate
      * fixed-point stepping value.
      */
-    Pitch *= static_cast<float>(voice->mFrequency) / static_cast<float>(Device->Frequency);
+    Pitch *= static_cast<float>(voice->mFrequency) / static_cast<float>(Device->mSampleRate);
     if(Pitch > float{MaxPitch})
         voice->mStep = MaxPitch<<MixerFracBits;
     else
@@ -2206,8 +2206,8 @@ uint DeviceBase::renderSamples(const uint numSamples)
          */
         auto samplesDone = mSamplesDone.load(std::memory_order_relaxed) + samplesToDo;
         auto clockBaseSec = mClockBaseSec.load(std::memory_order_relaxed) +
-            seconds32{samplesDone/Frequency};
-        mSamplesDone.store(samplesDone%Frequency, std::memory_order_relaxed);
+            seconds32{samplesDone/mSampleRate};
+        mSamplesDone.store(samplesDone%mSampleRate, std::memory_order_relaxed);
         mClockBaseSec.store(clockBaseSec, std::memory_order_relaxed);
     }
 

@@ -118,7 +118,7 @@ WaveBackend::~WaveBackend() = default;
 
 int WaveBackend::mixerProc()
 {
-    const milliseconds restTime{mDevice->UpdateSize*1000/mDevice->Frequency / 2};
+    const milliseconds restTime{mDevice->mUpdateSize*1000/mDevice->mSampleRate / 2};
 
     althrd_setname(GetMixerThreadName());
 
@@ -133,17 +133,17 @@ int WaveBackend::mixerProc()
         auto now = std::chrono::steady_clock::now();
 
         /* This converts from nanoseconds to nanosamples, then to samples. */
-        int64_t avail{std::chrono::duration_cast<seconds>((now-start) *
-            mDevice->Frequency).count()};
-        if(avail-done < mDevice->UpdateSize)
+        const auto avail = int64_t{std::chrono::duration_cast<seconds>((now-start) *
+            mDevice->mSampleRate).count()};
+        if(avail-done < mDevice->mUpdateSize)
         {
             std::this_thread::sleep_for(restTime);
             continue;
         }
-        while(avail-done >= mDevice->UpdateSize)
+        while(avail-done >= mDevice->mUpdateSize)
         {
-            mDevice->renderSamples(mBuffer.data(), mDevice->UpdateSize, frameStep);
-            done += mDevice->UpdateSize;
+            mDevice->renderSamples(mBuffer.data(), mDevice->mUpdateSize, frameStep);
+            done += mDevice->mUpdateSize;
 
             if(al::endian::native != al::endian::little)
             {
@@ -166,8 +166,8 @@ int WaveBackend::mixerProc()
                 }
             }
 
-            const size_t fs{fwrite(mBuffer.data(), frameSize, mDevice->UpdateSize, mFile.get())};
-            if(fs < mDevice->UpdateSize || ferror(mFile.get()))
+            const size_t fs{fwrite(mBuffer.data(), frameSize, mDevice->mUpdateSize, mFile.get())};
+            if(fs < mDevice->mUpdateSize || ferror(mFile.get()))
             {
                 ERR("Error writing to file");
                 mDevice->handleDisconnect("Failed to write playback samples");
@@ -180,10 +180,10 @@ int WaveBackend::mixerProc()
          * and current time from growing too large, while maintaining the
          * correct number of samples to render.
          */
-        if(done >= mDevice->Frequency)
+        if(done >= mDevice->mSampleRate)
         {
-            seconds s{done/mDevice->Frequency};
-            done %= mDevice->Frequency;
+            seconds s{done/mDevice->mSampleRate};
+            done %= mDevice->mSampleRate;
             start += s;
         }
     }
@@ -303,9 +303,9 @@ bool WaveBackend::reset()
     // 16-bit val, channel count
     fwrite16le(static_cast<ushort>(channels), mFile.get());
     // 32-bit val, frequency
-    fwrite32le(mDevice->Frequency, mFile.get());
+    fwrite32le(mDevice->mSampleRate, mFile.get());
     // 32-bit val, bytes per second
-    fwrite32le(mDevice->Frequency * channels * bytes, mFile.get());
+    fwrite32le(mDevice->mSampleRate * channels * bytes, mFile.get());
     // 16-bit val, frame size
     fwrite16le(static_cast<ushort>(channels * bytes), mFile.get());
     // 16-bit val, bits per sample
@@ -333,7 +333,7 @@ bool WaveBackend::reset()
 
     setDefaultWFXChannelOrder();
 
-    const uint bufsize{mDevice->frameSizeFromFmt() * mDevice->UpdateSize};
+    const uint bufsize{mDevice->frameSizeFromFmt() * mDevice->mUpdateSize};
     mBuffer.resize(bufsize);
 
     return true;

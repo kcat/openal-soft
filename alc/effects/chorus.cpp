@@ -105,7 +105,7 @@ struct ChorusState final : public EffectState {
 void ChorusState::deviceUpdate(const DeviceBase *Device, const BufferStorage*)
 {
     constexpr auto MaxDelay = std::max(ChorusMaxDelay, FlangerMaxDelay);
-    const auto frequency = static_cast<float>(Device->Frequency);
+    const auto frequency = static_cast<float>(Device->mSampleRate);
     const size_t maxlen{NextPowerOf2(float2uint(MaxDelay*2.0f*frequency) + 1u)};
     if(maxlen != mDelayBuffer.size())
         decltype(mDelayBuffer)(maxlen).swap(mDelayBuffer);
@@ -128,7 +128,7 @@ void ChorusState::update(const ContextBase *context, const EffectSlot *slot,
      * delay and depth to allow enough padding for resampling.
      */
     const DeviceBase *device{context->mDevice};
-    const auto frequency = static_cast<float>(device->Frequency);
+    const auto frequency = static_cast<float>(device->mSampleRate);
 
     mWaveform = props.Waveform;
 

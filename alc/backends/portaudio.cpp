@@ -148,7 +148,7 @@ void PortPlayback::createStream(PaDeviceIndex deviceid)
 
     auto params = StreamParamsExt{};
     params.device = deviceid;
-    params.suggestedLatency = mDevice->BufferSize / static_cast<double>(mDevice->Frequency);
+    params.suggestedLatency = mDevice->mBufferSize / static_cast<double>(mDevice->mSampleRate);
     params.hostApiSpecificStreamInfo = nullptr;
     params.channelCount = static_cast<int>(std::min(devinfo.mPlaybackChannels,
         mDevice->channelsFromFmt()));
@@ -162,9 +162,9 @@ void PortPlayback::createStream(PaDeviceIndex deviceid)
     case DevFmtInt: params.sampleFormat = paInt32; break;
     case DevFmtFloat: params.sampleFormat = paFloat32; break;
     }
-    params.updateSize = mDevice->UpdateSize;
+    params.updateSize = mDevice->mUpdateSize;
 
-    auto srate = uint{mDevice->Frequency};
+    auto srate = uint{mDevice->mSampleRate};
 
     static constexpr auto writeCallback = [](const void *inputBuffer, void *outputBuffer,
         unsigned long framesPerBuffer, const PaStreamCallbackTimeInfo *timeInfo,
@@ -258,16 +258,16 @@ bool PortPlayback::reset()
     }
 
     const PaStreamInfo *streamInfo{Pa_GetStreamInfo(mStream)};
-    mDevice->Frequency = static_cast<uint>(std::lround(streamInfo->sampleRate));
-    mDevice->UpdateSize = mParams.updateSize;
-    mDevice->BufferSize = mDevice->UpdateSize * 2;
+    mDevice->mSampleRate = static_cast<uint>(std::lround(streamInfo->sampleRate));
+    mDevice->mUpdateSize = mParams.updateSize;
+    mDevice->mBufferSize = mDevice->mUpdateSize * 2;
     if(streamInfo->outputLatency > 0.0f)
     {
         const double sampleLatency{streamInfo->outputLatency * streamInfo->sampleRate};
         TRACE("Reported stream latency: {:f} sec ({:f} samples)", streamInfo->outputLatency,
             sampleLatency);
-        mDevice->BufferSize = static_cast<uint>(std::clamp(sampleLatency,
-            double(mDevice->BufferSize), double{std::numeric_limits<int>::max()}));
+        mDevice->mBufferSize = static_cast<uint>(std::clamp(sampleLatency,
+            double(mDevice->mBufferSize), double{std::numeric_limits<int>::max()}));
     }
 
     setDefaultChannelOrder();
@@ -350,7 +350,7 @@ void PortCapture::open(std::string_view name)
         deviceid = static_cast<int>(std::distance(DeviceNames.cbegin(), iter));
     }
 
-    const uint samples{std::max(mDevice->BufferSize, mDevice->Frequency/10u)};
+    const uint samples{std::max(mDevice->mBufferSize, mDevice->mSampleRate/10u)};
     const uint frame_size{mDevice->frameSizeFromFmt()};
 
     mRing = RingBuffer::Create(samples, frame_size, false);
@@ -390,7 +390,7 @@ void PortCapture::open(std::string_view name)
         return static_cast<PortCapture*>(userData)->readCallback(inputBuffer, outputBuffer,
             framesPerBuffer, timeInfo, statusFlags);
     };
-    PaError err{Pa_OpenStream(&mStream, &mParams, nullptr, mDevice->Frequency,
+    PaError err{Pa_OpenStream(&mStream, &mParams, nullptr, mDevice->mSampleRate,
         paFramesPerBufferUnspecified, paNoFlag, readCallback, this)};
     if(err != paNoError)
         throw al::backend_exception{al::backend_error::NoDevice, "Failed to open stream: {}",

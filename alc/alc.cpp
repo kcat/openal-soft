@@ -1032,9 +1032,9 @@ auto CreateDeviceLimiter(const al::Device *device, const float threshold)
     const auto flags = Compressor::FlagBits{}.set(Compressor::AutoKnee).set(Compressor::AutoAttack)
         .set(Compressor::AutoRelease).set(Compressor::AutoPostGain).set(Compressor::AutoDeclip);
 
-    return Compressor::Create(device->RealOut.Buffer.size(), static_cast<float>(device->Frequency),
-        flags, LookAheadTime, HoldTime, PreGainDb, PostGainDb, threshold, Ratio, KneeDb,
-        AttackTime, ReleaseTime);
+    return Compressor::Create(device->RealOut.Buffer.size(),
+        static_cast<float>(device->mSampleRate), flags, LookAheadTime, HoldTime, PreGainDb,
+        PostGainDb, threshold, Ratio, KneeDb, AttackTime, ReleaseTime);
 }
 
 /**
@@ -1052,7 +1052,7 @@ inline void UpdateClockBase(al::Device *device)
     auto clockBaseSec = device->mClockBaseSec.load(std::memory_order_relaxed);
     auto clockBaseNSec = nanoseconds{device->mClockBaseNSec.load(std::memory_order_relaxed)};
     clockBaseNSec += nanoseconds{seconds{device->mSamplesDone.load(std::memory_order_relaxed)}}
-        / device->Frequency;
+        / device->mSampleRate;
 
     clockBaseSec += duration_cast<DeviceBase::seconds32>(clockBaseNSec);
     clockBaseNSec %= seconds{1};
@@ -1465,7 +1465,7 @@ auto UpdateDeviceParams(al::Device *device, const al::span<const int> attrList) 
 
     if(device->Type == DeviceType::Loopback)
     {
-        device->Frequency = *optsrate;
+        device->mSampleRate = *optsrate;
         device->FmtChans = *optchans;
         device->FmtType = *opttype;
         if(device->FmtChans == DevFmtAmbi3D)
@@ -1481,9 +1481,9 @@ auto UpdateDeviceParams(al::Device *device, const al::span<const int> attrList) 
         device->FmtType = opttype.value_or(DevFmtTypeDefault);
         device->FmtChans = optchans.value_or(DevFmtChannelsDefault);
         device->mAmbiOrder = 0;
-        device->BufferSize = buffer_size;
-        device->UpdateSize = period_size;
-        device->Frequency = optsrate.value_or(DefaultOutputRate);
+        device->mBufferSize = buffer_size;
+        device->mUpdateSize = period_size;
+        device->mSampleRate = optsrate.value_or(DefaultOutputRate);
         device->Flags.set(FrequencyRequest, optsrate.has_value())
             .set(ChannelsRequest, optchans.has_value())
             .set(SampleTypeRequest, opttype.has_value());
@@ -1507,10 +1507,10 @@ auto UpdateDeviceParams(al::Device *device, const al::span<const int> attrList) 
     TRACE("Pre-reset: {}{}, {}{}, {}{}hz, {} / {} buffer",
         device->Flags.test(ChannelsRequest)?"*":"", DevFmtChannelsString(device->FmtChans),
         device->Flags.test(SampleTypeRequest)?"*":"", DevFmtTypeString(device->FmtType),
-        device->Flags.test(FrequencyRequest)?"*":"", device->Frequency,
-        device->UpdateSize, device->BufferSize);
+        device->Flags.test(FrequencyRequest)?"*":"", device->mSampleRate,
+        device->mUpdateSize, device->mBufferSize);
 
-    const uint oldFreq{device->Frequency};
+    const uint oldFreq{device->mSampleRate};
     const DevFmtChannels oldChans{device->FmtChans};
     const DevFmtType oldType{device->FmtType};
     try {
@@ -1536,15 +1536,15 @@ auto UpdateDeviceParams(al::Device *device, const al::span<const int> attrList) 
             DevFmtTypeString(device->FmtType));
         device->Flags.reset(SampleTypeRequest);
     }
-    if(device->Frequency != oldFreq && device->Flags.test(FrequencyRequest))
+    if(device->mSampleRate != oldFreq && device->Flags.test(FrequencyRequest))
     {
-        WARN("Failed to set {}hz, got {}hz instead", oldFreq, device->Frequency);
+        WARN("Failed to set {}hz, got {}hz instead", oldFreq, device->mSampleRate);
         device->Flags.reset(FrequencyRequest);
     }
 
     TRACE("Post-reset: {}, {}, {}hz, {} / {} buffer",
         DevFmtChannelsString(device->FmtChans), DevFmtTypeString(device->FmtType),
-        device->Frequency, device->UpdateSize, device->BufferSize);
+        device->mSampleRate, device->mUpdateSize, device->mBufferSize);
 
     if(device->Type != DeviceType::Loopback)
     {
@@ -1699,7 +1699,7 @@ auto UpdateDeviceParams(al::Device *device, const al::span<const int> attrList) 
 
     /* Convert the sample delay from samples to nanosamples to nanoseconds. */
     sample_delay = std::min<size_t>(sample_delay, std::numeric_limits<int>::max());
-    device->FixedLatency += nanoseconds{seconds{sample_delay}} / device->Frequency;
+    device->FixedLatency += nanoseconds{seconds{sample_delay}} / device->mSampleRate;
     TRACE("Fixed device latency: {}ns", device->FixedLatency.count());
 
     FPUCtl mixer_mode{};
@@ -1871,7 +1871,7 @@ auto UpdateDeviceParams(al::Device *device, const al::span<const int> attrList) 
         }
         TRACE("Post-start: {}, {}, {}hz, {} / {} buffer",
             DevFmtChannelsString(device->FmtChans), DevFmtTypeString(device->FmtType),
-            device->Frequency, device->UpdateSize, device->BufferSize);
+            device->mSampleRate, device->mUpdateSize, device->mBufferSize);
     }
 
     return ALC_NO_ERROR;
@@ -2284,11 +2284,11 @@ auto GetIntegerv(al::Device *device, ALCenum param, const al::span<int> values) 
             values[i++] = alcEFXMinorVersion;
 
             values[i++] = ALC_FREQUENCY;
-            values[i++] = static_cast<int>(device->Frequency);
+            values[i++] = static_cast<int>(device->mSampleRate);
             if(device->Type != DeviceType::Loopback)
             {
                 values[i++] = ALC_REFRESH;
-                values[i++] = static_cast<int>(device->Frequency / device->UpdateSize);
+                values[i++] = static_cast<int>(device->mSampleRate / device->mUpdateSize);
 
                 values[i++] = ALC_SYNC;
                 values[i++] = ALC_FALSE;
@@ -2362,7 +2362,7 @@ auto GetIntegerv(al::Device *device, ALCenum param, const al::span<int> values) 
         return 1;
 
     case ALC_FREQUENCY:
-        values[0] = static_cast<int>(device->Frequency);
+        values[0] = static_cast<int>(device->mSampleRate);
         return 1;
 
     case ALC_REFRESH:
@@ -2371,7 +2371,7 @@ auto GetIntegerv(al::Device *device, ALCenum param, const al::span<int> values) 
             alcSetError(device, ALC_INVALID_DEVICE);
             return 0;
         }
-        values[0] = static_cast<int>(device->Frequency / device->UpdateSize);
+        values[0] = static_cast<int>(device->mSampleRate / device->mUpdateSize);
         return 1;
 
     case ALC_SYNC:
@@ -2523,12 +2523,12 @@ ALC_API void ALC_APIENTRY alcGetInteger64vSOFT(ALCdevice *device, ALCenum pname,
         {
             size_t i{0};
             valuespan[i++] = ALC_FREQUENCY;
-            valuespan[i++] = dev->Frequency;
+            valuespan[i++] = dev->mSampleRate;
 
             if(dev->Type != DeviceType::Loopback)
             {
                 valuespan[i++] = ALC_REFRESH;
-                valuespan[i++] = dev->Frequency / dev->UpdateSize;
+                valuespan[i++] = dev->mSampleRate / dev->mUpdateSize;
 
                 valuespan[i++] = ALC_SYNC;
                 valuespan[i++] = ALC_FALSE;
@@ -2600,7 +2600,7 @@ ALC_API void ALC_APIENTRY alcGetInteger64vSOFT(ALCdevice *device, ALCenum pname,
             } while(refcount != dev->mMixCount.load(std::memory_order_relaxed));
 
             valuespan[0] = nanoseconds{clocksec + nanoseconds{clocknsec}
-                + nanoseconds{seconds{samplecount}}/dev->Frequency}.count();
+                + nanoseconds{seconds{samplecount}}/dev->mSampleRate}.count();
         }
         break;
 
@@ -2983,9 +2983,9 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName) noexcep
     /* Set output format */
     device->FmtChans = DevFmtChannelsDefault;
     device->FmtType = DevFmtTypeDefault;
-    device->Frequency = DefaultOutputRate;
-    device->UpdateSize = DefaultUpdateSize;
-    device->BufferSize = DefaultUpdateSize * DefaultNumUpdates;
+    device->mSampleRate = DefaultOutputRate;
+    device->mUpdateSize = DefaultUpdateSize;
+    device->mBufferSize = DefaultUpdateSize * DefaultNumUpdates;
 
     device->SourcesMax = 256;
     device->NumStereoSources = 1;
@@ -3144,19 +3144,19 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, 
         return nullptr;
     }
 
-    device->Frequency = frequency;
+    device->mSampleRate = frequency;
     device->FmtChans = decompfmt->chans;
     device->FmtType = decompfmt->type;
     device->Flags.set(FrequencyRequest);
     device->Flags.set(ChannelsRequest);
     device->Flags.set(SampleTypeRequest);
 
-    device->UpdateSize = static_cast<uint>(samples);
-    device->BufferSize = static_cast<uint>(samples);
+    device->mUpdateSize = static_cast<uint>(samples);
+    device->mBufferSize = static_cast<uint>(samples);
 
     TRACE("Capture format: {}, {}, {}hz, {} / {} buffer",
         DevFmtChannelsString(device->FmtChans), DevFmtTypeString(device->FmtType),
-        device->Frequency, device->UpdateSize, device->BufferSize);
+        device->mSampleRate, device->mUpdateSize, device->mBufferSize);
 
     try {
         auto backend = CaptureFactory->createBackend(device.get(), BackendType::Capture);
@@ -3326,10 +3326,10 @@ ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(const ALCchar *deviceN
     device->NumAuxSends = DefaultSends;
 
     //Set output format
-    device->BufferSize = 0;
-    device->UpdateSize = 0;
+    device->mBufferSize = 0;
+    device->mUpdateSize = 0;
 
-    device->Frequency = DefaultOutputRate;
+    device->mSampleRate = DefaultOutputRate;
     device->FmtChans = DevFmtChannelsDefault;
     device->FmtType = DevFmtTypeDefault;
 
@@ -3466,7 +3466,7 @@ ALC_API void ALC_APIENTRY alcDeviceResumeSOFT(ALCdevice *device) noexcept
     }
     TRACE("Post-resume: {}, {}, {}hz, {} / {} buffer",
         DevFmtChannelsString(dev->FmtChans), DevFmtTypeString(dev->FmtType),
-        dev->Frequency, dev->UpdateSize, dev->BufferSize);
+        dev->mSampleRate, dev->mUpdateSize, dev->mBufferSize);
 }
 
 

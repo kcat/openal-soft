@@ -164,7 +164,7 @@ bool SolarisBackend::reset()
     audio_info_t info;
     AUDIO_INITINFO(&info);
 
-    info.play.sample_rate = mDevice->Frequency;
+    info.play.sample_rate = mDevice->mSampleRate;
     info.play.channels = mDevice->channelsFromFmt();
     switch(mDevice->FmtType)
     {
@@ -187,7 +187,7 @@ bool SolarisBackend::reset()
         info.play.encoding = AUDIO_ENCODING_LINEAR;
         break;
     }
-    info.play.buffer_size = mDevice->BufferSize * mDevice->frameSizeFromFmt();
+    info.play.buffer_size = mDevice->mBufferSize * mDevice->frameSizeFromFmt();
 
     if(ioctl(mFd, AUDIO_SETINFO, &info) < 0)
     {
@@ -222,14 +222,14 @@ bool SolarisBackend::reset()
 
     uint frame_size{mDevice->bytesFromFmt() * info.play.channels};
     mFrameStep = info.play.channels;
-    mDevice->Frequency = info.play.sample_rate;
-    mDevice->BufferSize = info.play.buffer_size / frame_size;
+    mDevice->mSampleRate = info.play.sample_rate;
+    mDevice->mBufferSize = info.play.buffer_size / frame_size;
     /* How to get the actual period size/count? */
-    mDevice->UpdateSize = mDevice->BufferSize / 2;
+    mDevice->mUpdateSize = mDevice->mBufferSize / 2;
 
     setDefaultChannelOrder();
 
-    mBuffer.resize(mDevice->UpdateSize * size_t{frame_size});
+    mBuffer.resize(mDevice->mUpdateSize * size_t{frame_size});
     std::fill(mBuffer.begin(), mBuffer.end(), std::byte{});
 
     return true;

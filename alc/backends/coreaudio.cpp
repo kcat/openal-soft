@@ -515,11 +515,11 @@ bool CoreAudioPlayback::reset()
     /* Use the sample rate from the output unit's current parameters, but reset
      * everything else.
      */
-    if(mDevice->Frequency != streamFormat.mSampleRate)
+    if(mDevice->mSampleRate != streamFormat.mSampleRate)
     {
-        mDevice->BufferSize = static_cast<uint>(mDevice->BufferSize*streamFormat.mSampleRate/
-            mDevice->Frequency + 0.5);
-        mDevice->Frequency = static_cast<uint>(streamFormat.mSampleRate);
+        mDevice->mBufferSize = static_cast<uint>(mDevice->mBufferSize*streamFormat.mSampleRate/
+            mDevice->mSampleRate + 0.5);
+        mDevice->mSampleRate = static_cast<uint>(streamFormat.mSampleRate);
     }
 
     struct ChannelMap {
@@ -900,7 +900,7 @@ void CoreAudioCapture::open(std::string_view name)
 
     requestedFormat.mBytesPerFrame = requestedFormat.mChannelsPerFrame * requestedFormat.mBitsPerChannel / 8;
     requestedFormat.mBytesPerPacket = requestedFormat.mBytesPerFrame;
-    requestedFormat.mSampleRate = mDevice->Frequency;
+    requestedFormat.mSampleRate = mDevice->mSampleRate;
     requestedFormat.mFormatID = kAudioFormatLinearPCM;
     requestedFormat.mReserved = 0;
     requestedFormat.mFramesPerPacket = 1;
@@ -925,8 +925,8 @@ void CoreAudioCapture::open(std::string_view name)
     /* Calculate the minimum AudioUnit output format frame count for the pre-
      * conversion ring buffer. Ensure at least 100ms for the total buffer.
      */
-    double srateScale{outputFormat.mSampleRate / mDevice->Frequency};
-    auto FrameCount64 = std::max(static_cast<uint64_t>(std::ceil(mDevice->BufferSize*srateScale)),
+    double srateScale{outputFormat.mSampleRate / mDevice->mSampleRate};
+    auto FrameCount64 = std::max(static_cast<uint64_t>(std::ceil(mDevice->mBufferSize*srateScale)),
         static_cast<UInt32>(outputFormat.mSampleRate)/10_u64);
     FrameCount64 += MaxResamplerPadding;
     if(FrameCount64 > std::numeric_limits<int32_t>::max())
@@ -947,10 +947,10 @@ void CoreAudioCapture::open(std::string_view name)
     mRing = RingBuffer::Create(outputFrameCount, mFrameSize, false);
 
     /* Set up sample converter if needed */
-    if(outputFormat.mSampleRate != mDevice->Frequency)
+    if(outputFormat.mSampleRate != mDevice->mSampleRate)
         mConverter = SampleConverter::Create(mDevice->FmtType, mDevice->FmtType,
             mFormat.mChannelsPerFrame, static_cast<uint>(hardwareFormat.mSampleRate),
-            mDevice->Frequency, Resampler::FastBSinc24);
+            mDevice->mSampleRate, Resampler::FastBSinc24);
 
 #if CAN_ENUMERATE
     if(!name.empty())

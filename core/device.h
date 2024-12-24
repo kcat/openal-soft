@@ -187,9 +187,9 @@ struct SIMDALIGN DeviceBase {
 
     std::string mDeviceName;
 
-    uint Frequency{};
-    uint UpdateSize{};
-    uint BufferSize{};
+    uint mSampleRate{};
+    uint mUpdateSize{};
+    uint mBufferSize{};
 
     DevFmtChannels FmtChans{};
     DevFmtType FmtType{};
@@ -338,7 +338,7 @@ struct SIMDALIGN DeviceBase {
         using std::chrono::seconds;
         using std::chrono::nanoseconds;
 
-        auto ns = nanoseconds{seconds{mSamplesDone.load(std::memory_order_relaxed)}} / Frequency;
+        auto ns = nanoseconds{seconds{mSamplesDone.load(std::memory_order_relaxed)}} / mSampleRate;
         return nanoseconds{mClockBaseNSec.load(std::memory_order_relaxed)}
             + mClockBaseSec.load(std::memory_order_relaxed) + ns;
     }

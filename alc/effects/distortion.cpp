@@ -87,7 +87,7 @@ void DistortionState::update(const ContextBase *context, const EffectSlot *slot,
     /* Divide normalized frequency by the amount of oversampling done during
      * processing.
      */
-    auto frequency = static_cast<float>(device->Frequency);
+    auto frequency = static_cast<float>(device->mSampleRate);
     mLowpass.setParamsFromBandwidth(BiquadType::LowPass, cutoff/frequency/4.0f, 1.0f, bandwidth);
 
     cutoff = props.EQCenter;

@@ -78,7 +78,7 @@ void Sdl2Backend::open(std::string_view name)
 {
     SDL_AudioSpec want{}, have{};
 
-    want.freq = static_cast<int>(mDevice->Frequency);
+    want.freq = static_cast<int>(mDevice->mSampleRate);
     switch(mDevice->FmtType)
     {
     case DevFmtUByte: want.format = AUDIO_U8; break;
@@ -91,7 +91,7 @@ void Sdl2Backend::open(std::string_view name)
     }
     want.channels = static_cast<Uint8>(std::min<uint>(mDevice->channelsFromFmt(),
         std::numeric_limits<Uint8>::max()));
-    want.samples = static_cast<Uint16>(std::min(mDevice->UpdateSize, 8192u));
+    want.samples = static_cast<Uint16>(std::min(mDevice->mUpdateSize, 8192u));
     want.callback = [](void *ptr, Uint8 *stream, int len) noexcept
     { return static_cast<Sdl2Backend*>(ptr)->audioCallback(stream, len); };
     want.userdata = this;
@@ -142,7 +142,7 @@ bool Sdl2Backend::reset()
     mDeviceID = 0;
 
     auto want = SDL_AudioSpec{};
-    want.freq = static_cast<int>(mDevice->Frequency);
+    want.freq = static_cast<int>(mDevice->mSampleRate);
     switch(mDevice->FmtType)
     {
     case DevFmtUByte: want.format = AUDIO_U8; break;
@@ -155,7 +155,7 @@ bool Sdl2Backend::reset()
     }
     want.channels = static_cast<Uint8>(std::min<uint>(mDevice->channelsFromFmt(),
         std::numeric_limits<Uint8>::max()));
-    want.samples = static_cast<Uint16>(std::min(mDevice->UpdateSize, 8192u));
+    want.samples = static_cast<Uint16>(std::min(mDevice->mUpdateSize, 8192u));
     want.callback = [](void *ptr, Uint8 *stream, int len) noexcept
     { return static_cast<Sdl2Backend*>(ptr)->audioCallback(stream, len); };
     want.userdata = this;
@@ -214,9 +214,9 @@ bool Sdl2Backend::reset()
         throw al::backend_exception{al::backend_error::DeviceError,
             "Unhandled SDL sample rate: {}", have.freq};
 
-    mDevice->Frequency = static_cast<uint>(have.freq);
-    mDevice->UpdateSize = have.samples;
-    mDevice->BufferSize = std::max(have.size/mFrameSize, mDevice->UpdateSize*2u);
+    mDevice->mSampleRate = static_cast<uint>(have.freq);
+    mDevice->mUpdateSize = have.samples;
+    mDevice->mBufferSize = std::max(have.size/mFrameSize, mDevice->mUpdateSize*2u);
 
     setDefaultWFXChannelOrder();
 

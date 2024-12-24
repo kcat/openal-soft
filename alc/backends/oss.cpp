@@ -386,12 +386,12 @@ bool OSSPlayback::reset()
             break;
     }
 
-    uint periods{mDevice->BufferSize / mDevice->UpdateSize};
+    uint periods{mDevice->mBufferSize / mDevice->mUpdateSize};
     uint numChannels{mDevice->channelsFromFmt()};
-    uint ossSpeed{mDevice->Frequency};
+    uint ossSpeed{mDevice->mSampleRate};
     uint frameSize{numChannels * mDevice->bytesFromFmt()};
     /* According to the OSS spec, 16 bytes (log2(16)) is the minimum. */
-    uint log2FragmentSize{std::max(log2i(mDevice->UpdateSize*frameSize), 4u)};
+    uint log2FragmentSize{std::max(log2i(mDevice->mUpdateSize*frameSize), 4u)};
     uint numFragmentsLogSize{(periods << 16) | log2FragmentSize};
 
     audio_buf_info info{};
@@ -426,13 +426,13 @@ bool OSSPlayback::reset()
         return false;
     }
 
-    mDevice->Frequency = ossSpeed;
-    mDevice->UpdateSize = static_cast<uint>(info.fragsize) / frameSize;
-    mDevice->BufferSize = static_cast<uint>(info.fragments) * mDevice->UpdateSize;
+    mDevice->mSampleRate = ossSpeed;
+    mDevice->mUpdateSize = static_cast<uint>(info.fragsize) / frameSize;
+    mDevice->mBufferSize = static_cast<uint>(info.fragments) * mDevice->mUpdateSize;
 
     setDefaultChannelOrder();
 
-    mMixData.resize(size_t{mDevice->UpdateSize} * mDevice->frameSizeFromFmt());
+    mMixData.resize(size_t{mDevice->mUpdateSize} * mDevice->frameSizeFromFmt());
 
     return true;
 }
@@ -582,9 +582,9 @@ void OSScapture::open(std::string_view name)
     uint periods{4};
     uint numChannels{mDevice->channelsFromFmt()};
     uint frameSize{numChannels * mDevice->bytesFromFmt()};
-    uint ossSpeed{mDevice->Frequency};
+    uint ossSpeed{mDevice->mSampleRate};
     /* according to the OSS spec, 16 bytes are the minimum */
-    uint log2FragmentSize{std::max(log2i(mDevice->BufferSize * frameSize / periods), 4u)};
+    uint log2FragmentSize{std::max(log2i(mDevice->mBufferSize * frameSize / periods), 4u)};
     uint numFragmentsLogSize{(periods << 16) | log2FragmentSize};
 
     audio_buf_info info{};
@@ -613,7 +613,7 @@ void OSScapture::open(std::string_view name)
             "Failed to set {} samples, got OSS format {:#x}", DevFmtTypeString(mDevice->FmtType),
             as_unsigned(ossFormat)};
 
-    mRing = RingBuffer::Create(mDevice->BufferSize, frameSize, false);
+    mRing = RingBuffer::Create(mDevice->mBufferSize, frameSize, false);
 
     mDeviceName = name;
 }

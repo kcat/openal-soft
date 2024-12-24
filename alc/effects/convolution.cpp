@@ -322,13 +322,13 @@ void ConvolutionState::deviceUpdate(const DeviceBase *device, const BufferStorag
      * called very infrequently, go ahead and use the polyphase resampler.
      */
     PPhaseResampler resampler;
-    if(device->Frequency != buffer->mSampleRate)
-        resampler.init(buffer->mSampleRate, device->Frequency);
+    if(device->mSampleRate != buffer->mSampleRate)
+        resampler.init(buffer->mSampleRate, device->mSampleRate);
     const auto resampledCount = static_cast<uint>(
-        (uint64_t{buffer->mSampleLen}*device->Frequency+(buffer->mSampleRate-1)) /
+        (uint64_t{buffer->mSampleLen}*device->mSampleRate+(buffer->mSampleRate-1)) /
         buffer->mSampleRate);
 
-    const BandSplitter splitter{device->mXOverFreq / static_cast<float>(device->Frequency)};
+    const BandSplitter splitter{device->mXOverFreq / static_cast<float>(device->mSampleRate)};
     for(auto &e : mChans)
         e.mFilter = splitter;
 

@@ -218,7 +218,7 @@ FORCE_ALIGN int DSoundPlayback::mixerProc()
 
     const size_t FrameStep{mDevice->channelsFromFmt()};
     uint FrameSize{mDevice->frameSizeFromFmt()};
-    DWORD FragSize{mDevice->UpdateSize * FrameSize};
+    DWORD FragSize{mDevice->mUpdateSize * FrameSize};
 
     bool Playing{false};
     DWORD LastCursor{0u};
@@ -429,7 +429,7 @@ bool DSoundPlayback::reset()
         OutputType.Format.wBitsPerSample = static_cast<WORD>(mDevice->bytesFromFmt() * 8);
         OutputType.Format.nBlockAlign = static_cast<WORD>(OutputType.Format.nChannels *
             OutputType.Format.wBitsPerSample / 8);
-        OutputType.Format.nSamplesPerSec = mDevice->Frequency;
+        OutputType.Format.nSamplesPerSec = mDevice->mSampleRate;
         OutputType.Format.nAvgBytesPerSec = OutputType.Format.nSamplesPerSec *
             OutputType.Format.nBlockAlign;
         OutputType.Format.cbSize = 0;
@@ -463,16 +463,16 @@ bool DSoundPlayback::reset()
         if(FAILED(hr))
             break;
 
-        uint num_updates{mDevice->BufferSize / mDevice->UpdateSize};
+        uint num_updates{mDevice->mBufferSize / mDevice->mUpdateSize};
         if(num_updates > MAX_UPDATES)
             num_updates = MAX_UPDATES;
-        mDevice->BufferSize = mDevice->UpdateSize * num_updates;
+        mDevice->mBufferSize = mDevice->mUpdateSize * num_updates;
 
         DSBUFFERDESC DSBDescription{};
         DSBDescription.dwSize = sizeof(DSBDescription);
         DSBDescription.dwFlags = DSBCAPS_CTRLPOSITIONNOTIFY | DSBCAPS_GETCURRENTPOSITION2
             | DSBCAPS_GLOBALFOCUS;
-        DSBDescription.dwBufferBytes = mDevice->BufferSize * OutputType.Format.nBlockAlign;
+        DSBDescription.dwBufferBytes = mDevice->mBufferSize * OutputType.Format.nBlockAlign;
         DSBDescription.lpwfxFormat = &OutputType.Format;
 
         hr = mDS->CreateSoundBuffer(&DSBDescription, al::out_ptr(mBuffer), nullptr);
@@ -486,13 +486,13 @@ bool DSoundPlayback::reset()
         hr = mBuffer->QueryInterface(IID_IDirectSoundNotify, al::out_ptr(mNotifies));
         if(SUCCEEDED(hr))
         {
-            uint num_updates{mDevice->BufferSize / mDevice->UpdateSize};
+            uint num_updates{mDevice->mBufferSize / mDevice->mUpdateSize};
             assert(num_updates <= MAX_UPDATES);
 
             std::array<DSBPOSITIONNOTIFY,MAX_UPDATES> nots{};
             for(uint i{0};i < num_updates;++i)
             {
-                nots[i].dwOffset = i * mDevice->UpdateSize * OutputType.Format.nBlockAlign;
+                nots[i].dwOffset = i * mDevice->mUpdateSize * OutputType.Format.nBlockAlign;
                 nots[i].hEventNotify = mNotifyEvent;
             }
             if(mNotifies->SetNotificationPositions(num_updates, nots.data()) != DS_OK)
@@ -640,7 +640,7 @@ void DSoundCapture::open(std::string_view name)
     InputType.Format.wBitsPerSample = static_cast<WORD>(mDevice->bytesFromFmt() * 8);
     InputType.Format.nBlockAlign = static_cast<WORD>(InputType.Format.nChannels *
         InputType.Format.wBitsPerSample / 8);
-    InputType.Format.nSamplesPerSec = mDevice->Frequency;
+    InputType.Format.nSamplesPerSec = mDevice->mSampleRate;
     InputType.Format.nAvgBytesPerSec = InputType.Format.nSamplesPerSec *
         InputType.Format.nBlockAlign;
     InputType.Format.cbSize = 0;
@@ -657,7 +657,7 @@ void DSoundCapture::open(std::string_view name)
         InputType.Format.cbSize = sizeof(WAVEFORMATEXTENSIBLE) - sizeof(WAVEFORMATEX);
     }
 
-    const uint samples{std::max(mDevice->BufferSize, mDevice->Frequency/10u)};
+    const uint samples{std::max(mDevice->mBufferSize, mDevice->mSampleRate/10u)};
 
     DSCBUFFERDESC DSCBDescription{};
     DSCBDescription.dwSize = sizeof(DSCBDescription);
@@ -670,7 +670,7 @@ void DSoundCapture::open(std::string_view name)
     if(SUCCEEDED(hr))
         mDSC->CreateCaptureBuffer(&DSCBDescription, al::out_ptr(mDSCbuffer), nullptr);
     if(SUCCEEDED(hr))
-         mRing = RingBuffer::Create(mDevice->BufferSize, InputType.Format.nBlockAlign, false);
+         mRing = RingBuffer::Create(mDevice->mBufferSize, InputType.Format.nBlockAlign, false);
 
     if(FAILED(hr))
     {

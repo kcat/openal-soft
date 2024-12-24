@@ -1387,7 +1387,7 @@ spa_audio_info_raw make_spa_info(DeviceBase *device, bool is51rear, use_f32p_e u
     case DevFmtFloat: info.format = SPA_AUDIO_FORMAT_F32; break;
     }
 
-    info.rate = device->Frequency;
+    info.rate = device->mSampleRate;
 
     al::span<const spa_audio_channel> map{};
     switch(device->FmtChans)
@@ -1497,7 +1497,7 @@ void PipeWirePlayback::outputCallback() noexcept
     uint length{mRateMatch ? mRateMatch->size : 0u};
 #endif
     /* If no length is specified, use the device's update size as a fallback. */
-    if(!length) UNLIKELY length = mDevice->UpdateSize;
+    if(!length) UNLIKELY length = mDevice->mUpdateSize;
 
     /* For planar formats, each datas[] seems to contain one channel, so store
      * the pointers in an array. Limit the render length in case the available
@@ -1639,13 +1639,13 @@ bool PipeWirePlayback::reset()
             if(!mDevice->Flags.test(FrequencyRequest) && match->mSampleRate > 0)
             {
                 /* Scale the update size if the sample rate changes. */
-                const double scale{static_cast<double>(match->mSampleRate) / mDevice->Frequency};
-                const double updatesize{std::round(mDevice->UpdateSize * scale)};
-                const double buffersize{std::round(mDevice->BufferSize * scale)};
+                const double scale{static_cast<double>(match->mSampleRate) / mDevice->mSampleRate};
+                const double updatesize{std::round(mDevice->mUpdateSize * scale)};
+                const double buffersize{std::round(mDevice->mBufferSize * scale)};
 
-                mDevice->Frequency = match->mSampleRate;
-                mDevice->UpdateSize = static_cast<uint>(std::clamp(updatesize, 64.0, 8192.0));
-                mDevice->BufferSize = static_cast<uint>(std::max(buffersize, 128.0));
+                mDevice->mSampleRate = match->mSampleRate;
+                mDevice->mUpdateSize = static_cast<uint>(std::clamp(updatesize, 64.0, 8192.0));
+                mDevice->mBufferSize = static_cast<uint>(std::max(buffersize, 128.0));
             }
             if(!mDevice->Flags.test(ChannelsRequest) && match->mChannels != InvalidChannelConfig)
                 mDevice->FmtChans = match->mChannels;
@@ -1681,9 +1681,9 @@ bool PipeWirePlayback::reset()
         throw al::backend_exception{al::backend_error::DeviceError,
             "Failed to create PipeWire stream properties (errno: {})", errno};
 
-    pw_properties_setf(props, PW_KEY_NODE_LATENCY, "%u/%u", mDevice->UpdateSize,
-        mDevice->Frequency);
-    pw_properties_setf(props, PW_KEY_NODE_RATE, "1/%u", mDevice->Frequency);
+    pw_properties_setf(props, PW_KEY_NODE_LATENCY, "%u/%u", mDevice->mUpdateSize,
+        mDevice->mSampleRate);
+    pw_properties_setf(props, PW_KEY_NODE_RATE, "1/%u", mDevice->mSampleRate);
 #ifdef PW_KEY_TARGET_OBJECT
     pw_properties_setf(props, PW_KEY_TARGET_OBJECT, "%" PRIu64, mTargetId);
 #else
@@ -1718,8 +1718,8 @@ bool PipeWirePlayback::reset()
         return state == PW_STREAM_STATE_PAUSED;
     });
 
-    /* TODO: Update mDevice->UpdateSize with the stream's quantum, and
-     * mDevice->BufferSize with the total known buffering delay from the head
+    /* TODO: Update mDevice->mUpdateSize with the stream's quantum, and
+     * mDevice->mBufferSize with the total known buffering delay from the head
      * of this playback stream to the tail of the device output.
      *
      * This info is apparently not available until after the stream starts.
@@ -1779,11 +1779,11 @@ void PipeWirePlayback::start()
             const uint totalbuffers{ptime.avail_buffers + ptime.queued_buffers};
 
             /* Ensure the delay is in sample frames. */
-            const uint64_t delay{static_cast<uint64_t>(ptime.delay) * mDevice->Frequency *
+            const uint64_t delay{static_cast<uint64_t>(ptime.delay) * mDevice->mSampleRate *
                 ptime.rate.num / ptime.rate.denom};
 
-            mDevice->UpdateSize = updatesize;
-            mDevice->BufferSize = static_cast<uint>(ptime.buffered + delay +
+            mDevice->mUpdateSize = updatesize;
+            mDevice->mBufferSize = static_cast<uint>(ptime.buffered + delay +
                 uint64_t{totalbuffers}*updatesize);
             break;
         }
@@ -1794,11 +1794,11 @@ void PipeWirePlayback::start()
         if(ptime.rate.denom > 0 && updatesize > 0)
         {
             /* Ensure the delay is in sample frames. */
-            const uint64_t delay{static_cast<uint64_t>(ptime.delay) * mDevice->Frequency *
+            const uint64_t delay{static_cast<uint64_t>(ptime.delay) * mDevice->mSampleRate *
                 ptime.rate.num / ptime.rate.denom};
 
-            mDevice->UpdateSize = updatesize;
-            mDevice->BufferSize = static_cast<uint>(delay + updatesize);
+            mDevice->mUpdateSize = updatesize;
+            mDevice->mBufferSize = static_cast<uint>(delay + updatesize);
             break;
         }
 #endif
@@ -1867,7 +1867,7 @@ ClockLatency PipeWirePlayback::getClockLatency()
          */
         ptime.now = monoclock.count();
         curtic = mixtime;
-        delay = nanoseconds{seconds{mDevice->BufferSize}} / mDevice->Frequency;
+        delay = nanoseconds{seconds{mDevice->mBufferSize}} / mDevice->mSampleRate;
     }
     else
     {
@@ -2112,9 +2112,9 @@ void PipeWireCapture::open(std::string_view name)
      * reasonable. Unfortunately, when unspecified PipeWire seems to default to
      * around 40ms, which isn't great. So request 20ms instead.
      */
-    pw_properties_setf(props, PW_KEY_NODE_LATENCY, "%u/%u", (mDevice->Frequency+25) / 50,
-        mDevice->Frequency);
-    pw_properties_setf(props, PW_KEY_NODE_RATE, "1/%u", mDevice->Frequency);
+    pw_properties_setf(props, PW_KEY_NODE_LATENCY, "%u/%u", (mDevice->mSampleRate+25) / 50,
+        mDevice->mSampleRate);
+    pw_properties_setf(props, PW_KEY_NODE_RATE, "1/%u", mDevice->mSampleRate);
 #ifdef PW_KEY_TARGET_OBJECT
     pw_properties_setf(props, PW_KEY_TARGET_OBJECT, "%" PRIu64, mTargetId);
 #else
@@ -2150,7 +2150,7 @@ void PipeWireCapture::open(std::string_view name)
     setDefaultWFXChannelOrder();
 
     /* Ensure at least a 100ms capture buffer. */
-    mRing = RingBuffer::Create(std::max(mDevice->Frequency/10u, mDevice->BufferSize),
+    mRing = RingBuffer::Create(std::max(mDevice->mSampleRate/10u, mDevice->mBufferSize),
         mDevice->frameSizeFromFmt(), false);
 }
 

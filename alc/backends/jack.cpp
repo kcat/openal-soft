@@ -365,7 +365,7 @@ int JackPlayback::process(jack_nframes_t numframes) noexcept
     if(mPlaying.load(std::memory_order_acquire)) LIKELY
     {
         auto data = mRing->getReadVector();
-        const auto update_size = size_t{mDevice->UpdateSize};
+        const auto update_size = size_t{mDevice->mUpdateSize};
 
         const auto outlen = size_t{numframes / update_size};
         const auto len1 = size_t{std::min(data[0].len/update_size, outlen)};
@@ -414,7 +414,7 @@ int JackPlayback::mixerProc()
     SetRTPriority();
     althrd_setname(GetMixerThreadName());
 
-    const auto update_size = uint{mDevice->UpdateSize};
+    const auto update_size = uint{mDevice->mUpdateSize};
     const auto num_channels = size_t{mDevice->channelsFromFmt()};
     auto outptrs = std::vector<void*>(num_channels);
 
@@ -524,22 +524,22 @@ bool JackPlayback::reset()
     /* Ignore the requested buffer metrics and just keep one JACK-sized buffer
      * ready for when requested.
      */
-    mDevice->Frequency = jack_get_sample_rate(mClient);
-    mDevice->UpdateSize = jack_get_buffer_size(mClient);
+    mDevice->mSampleRate = jack_get_sample_rate(mClient);
+    mDevice->mUpdateSize = jack_get_buffer_size(mClient);
     if(mRTMixing)
     {
         /* Assume only two periods when directly mixing. Should try to query
          * the total port latency when connected.
          */
-        mDevice->BufferSize = mDevice->UpdateSize * 2;
+        mDevice->mBufferSize = mDevice->mUpdateSize * 2;
     }
     else
     {
         const auto devname = std::string_view{mDevice->mDeviceName};
         auto bufsize = ConfigValueUInt(devname, "jack", "buffer-size")
-            .value_or(mDevice->UpdateSize);
-        bufsize = std::max(NextPowerOf2(bufsize), mDevice->UpdateSize);
-        mDevice->BufferSize = bufsize + mDevice->UpdateSize;
+            .value_or(mDevice->mUpdateSize);
+        bufsize = std::max(NextPowerOf2(bufsize), mDevice->mUpdateSize);
+        mDevice->mBufferSize = bufsize + mDevice->mUpdateSize;
     }
 
     /* Force 32-bit float output. */
@@ -614,18 +614,19 @@ void JackPlayback::start()
      * (it won't change again after jack_activate), then allocate the ring
      * buffer with the appropriate size.
      */
-    mDevice->Frequency = jack_get_sample_rate(mClient);
-    mDevice->UpdateSize = jack_get_buffer_size(mClient);
-    mDevice->BufferSize = mDevice->UpdateSize * 2;
+    mDevice->mSampleRate = jack_get_sample_rate(mClient);
+    mDevice->mUpdateSize = jack_get_buffer_size(mClient);
+    mDevice->mBufferSize = mDevice->mUpdateSize * 2;
 
     mRing = nullptr;
     if(mRTMixing)
         mPlaying.store(true, std::memory_order_release);
     else
     {
-        uint bufsize{ConfigValueUInt(devname, "jack", "buffer-size").value_or(mDevice->UpdateSize)};
-        bufsize = std::max(NextPowerOf2(bufsize), mDevice->UpdateSize);
-        mDevice->BufferSize = bufsize + mDevice->UpdateSize;
+        uint bufsize{ConfigValueUInt(devname, "jack", "buffer-size")
+            .value_or(mDevice->mUpdateSize)};
+        bufsize = std::max(NextPowerOf2(bufsize), mDevice->mUpdateSize);
+        mDevice->mBufferSize = bufsize + mDevice->mUpdateSize;
 
         mRing = RingBuffer::Create(bufsize, mDevice->frameSizeFromFmt(), true);
 
@@ -665,8 +666,8 @@ ClockLatency JackPlayback::getClockLatency()
     std::lock_guard<std::mutex> dlock{mMutex};
     ClockLatency ret{};
     ret.ClockTime = mDevice->getClockTime();
-    ret.Latency  = std::chrono::seconds{mRing ? mRing->readSpace() : mDevice->UpdateSize};
-    ret.Latency /= mDevice->Frequency;
+    ret.Latency  = std::chrono::seconds{mRing ? mRing->readSpace() : mDevice->mUpdateSize};
+    ret.Latency /= mDevice->mSampleRate;
 
     return ret;
 }

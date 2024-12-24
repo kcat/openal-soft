@@ -277,7 +277,7 @@ void InitNearFieldCtrl(al::Device *device, const float ctrl_dist, const uint ord
     TRACE("Using near-field reference distance: {:.2f} meters", device->AvgSpeakerDist);
 
     const float w1{SpeedOfSoundMetersPerSec /
-        (device->AvgSpeakerDist * static_cast<float>(device->Frequency))};
+        (device->AvgSpeakerDist * static_cast<float>(device->mSampleRate))};
     device->mNFCtrlFilter.init(w1);
 
     auto iter = std::copy_n(is3d ? chans_per_order3d.begin() : chans_per_order2d.begin(), order+1u,
@@ -294,7 +294,7 @@ void InitDistanceComp(al::Device *device, const al::span<const Channel> channels
     if(!device->getConfigValueBool("decoder", "distance-comp", true) || !(maxdist > 0.0f))
         return;
 
-    const auto distSampleScale = static_cast<float>(device->Frequency) / SpeedOfSoundMetersPerSec;
+    const auto distSampleScale = static_cast<float>(device->mSampleRate)/SpeedOfSoundMetersPerSec;
 
     struct DistCoeffs { uint Length{}; float Gain{}; };
     std::vector<DistCoeffs> ChanDelay;
@@ -785,7 +785,7 @@ void InitPanning(al::Device *device, const bool hqdec=false, const bool stablize
         }
         if(!hasfc)
         {
-            stablizer = CreateStablizer(device->channelsFromFmt(), device->Frequency);
+            stablizer = CreateStablizer(device->channelsFromFmt(), device->mSampleRate);
             TRACE("Front stablizer enabled");
         }
     }
@@ -796,7 +796,7 @@ void InitPanning(al::Device *device, const bool hqdec=false, const bool stablize
         (decoder.mOrder > 1) ? "second" : "first",
         decoder.mIs3D ? " periphonic" : "");
     device->AmbiDecoder = BFormatDec::Create(ambicount, chancoeffs, chancoeffslf,
-        device->mXOverFreq/static_cast<float>(device->Frequency), std::move(stablizer));
+        device->mXOverFreq/static_cast<float>(device->mSampleRate), std::move(stablizer));
 }
 
 void InitHrtfPanning(al::Device *device)
@@ -1160,7 +1160,7 @@ void aluInitRenderer(al::Device *device, int hrtf_id, std::optional<StereoEncodi
         if(hrtf_id >= 0 && static_cast<uint>(hrtf_id) < device->mHrtfList.size())
         {
             const std::string_view hrtfname{device->mHrtfList[static_cast<uint>(hrtf_id)]};
-            if(HrtfStorePtr hrtf{GetLoadedHrtf(hrtfname, device->Frequency)})
+            if(HrtfStorePtr hrtf{GetLoadedHrtf(hrtfname, device->mSampleRate)})
             {
                 device->mHrtf = std::move(hrtf);
                 device->mHrtfName = hrtfname;
@@ -1171,7 +1171,7 @@ void aluInitRenderer(al::Device *device, int hrtf_id, std::optional<StereoEncodi
         {
             for(const std::string_view hrtfname : device->mHrtfList)
             {
-                if(HrtfStorePtr hrtf{GetLoadedHrtf(hrtfname, device->Frequency)})
+                if(HrtfStorePtr hrtf{GetLoadedHrtf(hrtfname, device->mSampleRate)})
                 {
                     device->mHrtf = std::move(hrtf);
                     device->mHrtfName = hrtfname;
@@ -1234,7 +1234,7 @@ void aluInitRenderer(al::Device *device, int hrtf_id, std::optional<StereoEncodi
             if(*cflevopt > 0 && *cflevopt <= 6)
             {
                 auto bs2b = std::make_unique<Bs2b::bs2b>();
-                bs2b->set_params(*cflevopt, static_cast<int>(device->Frequency));
+                bs2b->set_params(*cflevopt, static_cast<int>(device->mSampleRate));
                 device->Bs2b = std::move(bs2b);
                 TRACE("BS2B enabled");
                 InitPanning(device);

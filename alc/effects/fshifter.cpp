@@ -134,7 +134,7 @@ void FshifterState::update(const ContextBase *context, const EffectSlot *slot,
     auto &props = std::get<FshifterProps>(*props_);
     const DeviceBase *device{context->mDevice};
 
-    const float step{props.Frequency / static_cast<float>(device->Frequency)};
+    const float step{props.Frequency / static_cast<float>(device->mSampleRate)};
     mPhaseStep[0] = mPhaseStep[1] = fastf2u(std::min(step, 1.0f) * MixerFracOne);
 
     switch(props.LeftDirection)

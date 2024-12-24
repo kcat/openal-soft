@@ -249,7 +249,7 @@ void VmorpherState::update(const ContextBase *context, const EffectSlot *slot,
 {
     auto &props = std::get<VmorpherProps>(*props_);
     const DeviceBase *device{context->mDevice};
-    const float frequency{static_cast<float>(device->Frequency)};
+    const float frequency{static_cast<float>(device->mSampleRate)};
     const float step{props.Rate / frequency};
     mStep = fastf2u(std::clamp(step*WaveformFracOne, 0.0f, WaveformFracOne-1.0f));
 

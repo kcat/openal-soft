@@ -78,7 +78,7 @@ struct EchoState final : public EffectState {
 
 void EchoState::deviceUpdate(const DeviceBase *Device, const BufferStorage*)
 {
-    const auto frequency = static_cast<float>(Device->Frequency);
+    const auto frequency = static_cast<float>(Device->mSampleRate);
 
     // Use the next power of 2 for the buffer length, so the tap offsets can be
     // wrapped using a mask instead of a modulo
@@ -100,7 +100,7 @@ void EchoState::update(const ContextBase *context, const EffectSlot *slot,
 {
     auto &props = std::get<EchoProps>(*props_);
     const DeviceBase *device{context->mDevice};
-    const auto frequency = static_cast<float>(device->Frequency);
+    const auto frequency = static_cast<float>(device->mSampleRate);
 
     mDelayTap[0] = std::max(float2uint(std::round(props.Delay*frequency)), 1u);
     mDelayTap[1] = float2uint(std::round(props.LRDelay*frequency)) + mDelayTap[0];

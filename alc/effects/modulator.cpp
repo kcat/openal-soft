@@ -122,10 +122,10 @@ void ModulatorState::update(const ContextBase *context, const EffectSlot *slot,
      * many iterations per sample.
      */
     const float samplesPerCycle{props.Frequency > 0.0f
-        ? static_cast<float>(device->Frequency)/props.Frequency + 0.5f
+        ? static_cast<float>(device->mSampleRate)/props.Frequency + 0.5f
         : 1.0f};
     const uint range{static_cast<uint>(std::clamp(samplesPerCycle, 1.0f,
-        static_cast<float>(device->Frequency)))};
+        static_cast<float>(device->mSampleRate)))};
     mIndex = static_cast<uint>(uint64_t{mIndex} * range / mRange);
     mRange = range;
 
@@ -155,7 +155,7 @@ void ModulatorState::update(const ContextBase *context, const EffectSlot *slot,
         mSampleGen.emplace<SquareFunc>();
     }
 
-    float f0norm{props.HighPassCutoff / static_cast<float>(device->Frequency)};
+    float f0norm{props.HighPassCutoff / static_cast<float>(device->mSampleRate)};
     f0norm = std::clamp(f0norm, 1.0f/512.0f, 0.49f);
     /* Bandwidth value is constant in octaves. */
     mChans[0].mFilter.setParamsFromBandwidth(BiquadType::HighPass, f0norm, 1.0f, 0.75f);

@@ -531,7 +531,7 @@ OtherIOPlayback::~OtherIOPlayback()
 
 void OtherIOPlayback::mixerProc()
 {
-    const auto restTime = milliseconds{mDevice->UpdateSize*1000/mDevice->Frequency / 2};
+    const auto restTime = milliseconds{mDevice->mUpdateSize*1000/mDevice->mSampleRate / 2};
 
     SetRTPriority();
     althrd_setname(GetMixerThreadName());
@@ -544,23 +544,24 @@ void OtherIOPlayback::mixerProc()
         auto now = std::chrono::steady_clock::now();
 
         /* This converts from nanoseconds to nanosamples, then to samples. */
-        auto avail = int64_t{std::chrono::duration_cast<seconds>((now-start) * mDevice->Frequency).count()};
-        if(avail-done < mDevice->UpdateSize)
+        const auto avail = int64_t{std::chrono::duration_cast<seconds>((now-start)
+            * mDevice->mSampleRate).count()};
+        if(avail-done < mDevice->mUpdateSize)
         {
             std::this_thread::sleep_for(restTime);
             continue;
         }
-        while(avail-done >= mDevice->UpdateSize)
+        while(avail-done >= mDevice->mUpdateSize)
         {
-            mDevice->renderSamples(nullptr, mDevice->UpdateSize, 0u);
-            done += mDevice->UpdateSize;
+            mDevice->renderSamples(nullptr, mDevice->mUpdateSize, 0u);
+            done += mDevice->mUpdateSize;
         }
 
-        if(done >= mDevice->Frequency)
+        if(done >= mDevice->mSampleRate)
         {
-            auto s = seconds{done/mDevice->Frequency};
+            auto s = seconds{done/mDevice->mSampleRate};
             start += s;
-            done -= mDevice->Frequency*s.count();
+            done -= mDevice->mSampleRate*s.count();
         }
     }
 }

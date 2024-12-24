@@ -790,7 +790,7 @@ void ReverbState::allocLines(const float frequency)
 
 void ReverbState::deviceUpdate(const DeviceBase *device, const BufferStorage*)
 {
-    const auto frequency = static_cast<float>(device->Frequency);
+    const auto frequency = static_cast<float>(device->mSampleRate);
 
     /* Allocate the delay lines. */
     allocLines(frequency);
@@ -1196,7 +1196,7 @@ void ReverbState::update(const ContextBase *Context, const EffectSlot *Slot,
 {
     auto &props = std::get<ReverbProps>(*props_);
     const DeviceBase *Device{Context->mDevice};
-    const auto frequency = static_cast<float>(Device->Frequency);
+    const auto frequency = static_cast<float>(Device->mSampleRate);
 
     /* If the HF limit parameter is flagged, calculate an appropriate limit
      * based on the air absorption parameter.

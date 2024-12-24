@@ -186,7 +186,7 @@ void Sdl3Backend::open(std::string_view name)
         mDevice->FmtType = devtype;
 
         if(have.freq >= int{MinOutputRate} && have.freq <= int{MaxOutputRate})
-            mDevice->Frequency = static_cast<uint>(have.freq);
+            mDevice->mSampleRate = static_cast<uint>(have.freq);
 
         /* SDL guarantees these layouts for the given channel count. */
         if(have.channels == 8)
@@ -211,8 +211,8 @@ void Sdl3Backend::open(std::string_view name)
             /* We have to assume the total buffer size is just twice the update
              * size. SDL doesn't tell us the full end-to-end buffer latency.
              */
-            mDevice->UpdateSize = static_cast<uint>(update_size);
-            mDevice->BufferSize = mDevice->UpdateSize*2u;
+            mDevice->mUpdateSize = static_cast<uint>(update_size);
+            mDevice->mBufferSize = mDevice->mUpdateSize*2u;
         }
         else
             ERR("Invalid update size from SDL stream: {}", update_size);
@@ -244,7 +244,7 @@ auto Sdl3Backend::reset() -> bool
         ERR("Failed to get device format: {}", SDL_GetError());
 
     if(mDevice->Flags.test(FrequencyRequest) || want.freq < int{MinOutputRate})
-        want.freq = static_cast<int>(mDevice->Frequency);
+        want.freq = static_cast<int>(mDevice->mSampleRate);
     if(mDevice->Flags.test(SampleTypeRequest)
         || !(want.format == SDL_AUDIO_U8 || want.format == SDL_AUDIO_S8
              || want.format == SDL_AUDIO_S16 || want.format == SDL_AUDIO_S32
@@ -325,14 +325,14 @@ auto Sdl3Backend::reset() -> bool
     if(have.freq < int{MinOutputRate})
         throw al::backend_exception{al::backend_error::DeviceError,
             "Unhandled SDL sample rate: {}", have.freq};
-    mDevice->Frequency = static_cast<uint>(have.freq);
+    mDevice->mSampleRate = static_cast<uint>(have.freq);
 
     if(update_size >= 64)
     {
-        mDevice->UpdateSize = static_cast<uint>(update_size);
-        mDevice->BufferSize = mDevice->UpdateSize*2u;
+        mDevice->mUpdateSize = static_cast<uint>(update_size);
+        mDevice->mBufferSize = mDevice->mUpdateSize*2u;
 
-        mBuffer.resize(size_t{mDevice->UpdateSize} * mFrameSize);
+        mBuffer.resize(size_t{mDevice->mUpdateSize} * mFrameSize);
         std::fill(mBuffer.begin(), mBuffer.end(), (mDevice->FmtType == DevFmtUByte)
             ? std::byte{0x80} : std::byte{});
     }

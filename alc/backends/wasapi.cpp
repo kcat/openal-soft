@@ -1269,10 +1269,10 @@ FORCE_ALIGN int WasapiPlayback::mixerProc()
                 {
                     if(mBufferFilled == 0)
                     {
-                        mDevice->renderSamples(mResampleBuffer.data(), mDevice->UpdateSize,
+                        mDevice->renderSamples(mResampleBuffer.data(), mDevice->mUpdateSize,
                             mFormat.Format.nChannels);
                         resbufferptr = mResampleBuffer.data();
-                        mBufferFilled = mDevice->UpdateSize;
+                        mBufferFilled = mDevice->mUpdateSize;
                     }
 
                     uint got{mResampler->convert(&resbufferptr, &mBufferFilled, dst.data(),
@@ -1384,7 +1384,7 @@ FORCE_ALIGN int WasapiPlayback::mixerSpatialProc()
                     for(size_t i{0};i < tmpbuffers.size();++i)
                     {
                         resbuffers[i] = al::to_address(bufptr);
-                        bufptr += ptrdiff_t(mDevice->UpdateSize*sizeof(float));
+                        bufptr += ptrdiff_t(mDevice->mUpdateSize*sizeof(float));
                     }
                 }
             }
@@ -1410,9 +1410,9 @@ FORCE_ALIGN int WasapiPlayback::mixerSpatialProc()
                 {
                     if(mBufferFilled == 0)
                     {
-                        mDevice->renderSamples(resbuffers, mDevice->UpdateSize);
+                        mDevice->renderSamples(resbuffers, mDevice->mUpdateSize);
                         std::copy(resbuffers.cbegin(), resbuffers.cend(), tmpbuffers.begin());
-                        mBufferFilled = mDevice->UpdateSize;
+                        mBufferFilled = mDevice->mUpdateSize;
                     }
 
                     const uint got{mResampler->convertPlanar(tmpbuffers.data(), &mBufferFilled,
@@ -1507,9 +1507,10 @@ void WasapiPlayback::closeProxy()
 void WasapiPlayback::finalizeFormat(WAVEFORMATEXTENSIBLE &OutputType)
 {
     if(!GetConfigValueBool(mDevice->mDeviceName, "wasapi", "allow-resampler", true))
-        mDevice->Frequency = uint(OutputType.Format.nSamplesPerSec);
+        mDevice->mSampleRate = uint(OutputType.Format.nSamplesPerSec);
     else
-        mDevice->Frequency = std::min(mDevice->Frequency, uint(OutputType.Format.nSamplesPerSec));
+        mDevice->mSampleRate = std::min(mDevice->mSampleRate,
+            uint(OutputType.Format.nSamplesPerSec));
 
     const uint32_t chancount{OutputType.Format.nChannels};
     const DWORD chanmask{OutputType.dwChannelMask};
@@ -1709,7 +1710,7 @@ auto WasapiPlayback::initSpatial() -> bool
 
     /* Match the output rate if not requesting anything specific. */
     if(!mDevice->Flags.test(FrequencyRequest))
-        mDevice->Frequency = OutputType.Format.nSamplesPerSec;
+        mDevice->mSampleRate = OutputType.Format.nSamplesPerSec;
 
     auto getTypeMask = [](DevFmtChannels chans) noexcept
     {
@@ -1755,9 +1756,9 @@ auto WasapiPlayback::initSpatial() -> bool
     if(streamParams.StaticObjectTypeMask == ChannelMask_Stereo)
         mDevice->FmtChans = DevFmtStereo;
     if(!GetConfigValueBool(mDevice->mDeviceName, "wasapi", "allow-resampler", true))
-        mDevice->Frequency = uint(OutputType.Format.nSamplesPerSec);
+        mDevice->mSampleRate = uint(OutputType.Format.nSamplesPerSec);
     else
-        mDevice->Frequency = std::min(mDevice->Frequency,
+        mDevice->mSampleRate = std::min(mDevice->mSampleRate,
             uint(OutputType.Format.nSamplesPerSec));
 
     setDefaultWFXChannelOrder();
@@ -1772,9 +1773,9 @@ auto WasapiPlayback::initSpatial() -> bool
      * Unfortunately this won't get the buffer size of the
      * ISpatialAudioObjectRenderStream, so we only assume there's two periods.
      */
-    mOutUpdateSize = mDevice->UpdateSize;
+    mOutUpdateSize = mDevice->mUpdateSize;
     mOutBufferSize = mOutUpdateSize*2;
-    ReferenceTime per_time{ReferenceTime{seconds{mDevice->UpdateSize}} / mDevice->Frequency};
+    ReferenceTime per_time{ReferenceTime{seconds{mDevice->mUpdateSize}} / mDevice->mSampleRate};
 
     ComPtr<IAudioClient> tmpClient;
     hr = sDeviceHelper->activateAudioClient(mMMDev, __uuidof(IAudioClient),
@@ -1794,26 +1795,26 @@ auto WasapiPlayback::initSpatial() -> bool
     }
     tmpClient = nullptr;
 
-    mDevice->UpdateSize = RefTime2Samples(per_time, mDevice->Frequency);
-    mDevice->BufferSize = mDevice->UpdateSize*2;
+    mDevice->mUpdateSize = RefTime2Samples(per_time, mDevice->mSampleRate);
+    mDevice->mBufferSize = mDevice->mUpdateSize*2;
 
     mResampler = nullptr;
     mResampleBuffer.clear();
     mResampleBuffer.shrink_to_fit();
     mBufferFilled = 0;
-    if(mDevice->Frequency != mFormat.Format.nSamplesPerSec)
+    if(mDevice->mSampleRate != mFormat.Format.nSamplesPerSec)
     {
         const auto flags = as_unsigned(al::to_underlying(streamParams.StaticObjectTypeMask));
         const auto channelCount = as_unsigned(al::popcount(flags));
         mResampler = SampleConverter::Create(mDevice->FmtType, mDevice->FmtType, channelCount,
-            mDevice->Frequency, mFormat.Format.nSamplesPerSec, Resampler::FastBSinc24);
-        mResampleBuffer.resize(size_t{mDevice->UpdateSize} * channelCount *
+            mDevice->mSampleRate, mFormat.Format.nSamplesPerSec, Resampler::FastBSinc24);
+        mResampleBuffer.resize(size_t{mDevice->mUpdateSize} * channelCount *
             mFormat.Format.wBitsPerSample / 8);
 
         TRACE("Created converter for {}/{} format, dst: {}hz ({}), src: {}hz ({})",
             DevFmtChannelsString(mDevice->FmtChans), DevFmtTypeString(mDevice->FmtType),
-            mFormat.Format.nSamplesPerSec, mOutUpdateSize, mDevice->Frequency,
-            mDevice->UpdateSize);
+            mFormat.Format.nSamplesPerSec, mOutUpdateSize, mDevice->mSampleRate,
+            mDevice->mUpdateSize);
     }
 
     return true;
@@ -1864,12 +1865,12 @@ HRESULT WasapiPlayback::resetProxy()
     /* Get the buffer size as a ReferenceTime before potentially altering the
      * sample rate.
      */
-    const auto buf_time = ReferenceTime{seconds{mDevice->BufferSize}} / mDevice->Frequency;
+    const auto buf_time = ReferenceTime{seconds{mDevice->mBufferSize}} / mDevice->mSampleRate;
 
     /* Update the mDevice format for non-requested properties. */
     bool isRear51{false};
     if(!mDevice->Flags.test(FrequencyRequest))
-        mDevice->Frequency = OutputType.Format.nSamplesPerSec;
+        mDevice->mSampleRate = OutputType.Format.nSamplesPerSec;
     if(!mDevice->Flags.test(ChannelsRequest))
     {
         /* If not requesting a channel configuration, auto-select given what
@@ -1977,7 +1978,7 @@ HRESULT WasapiPlayback::resetProxy()
     }
     /* NOLINTNEXTLINE(cppcoreguidelines-pro-type-union-access) */
     OutputType.Samples.wValidBitsPerSample = OutputType.Format.wBitsPerSample;
-    OutputType.Format.nSamplesPerSec = mDevice->Frequency;
+    OutputType.Format.nSamplesPerSec = mDevice->mSampleRate;
     OutputType.Format.nBlockAlign = static_cast<WORD>(OutputType.Format.nChannels
         * OutputType.Format.wBitsPerSample / 8);
     OutputType.Format.nAvgBytesPerSec = OutputType.Format.nSamplesPerSec
@@ -2021,7 +2022,7 @@ HRESULT WasapiPlayback::resetProxy()
 
     if(sharemode == AUDCLNT_SHAREMODE_EXCLUSIVE)
     {
-        const auto per_time = ReferenceTime{seconds{mDevice->UpdateSize}} / mDevice->Frequency;
+        const auto per_time = ReferenceTime{seconds{mDevice->mUpdateSize}} / mDevice->mSampleRate;
         hr = audio.mClient->Initialize(sharemode, AUDCLNT_STREAMFLAGS_EVENTCALLBACK,
             per_time.count(), per_time.count(), &OutputType.Format, nullptr);
         if(hr == AUDCLNT_E_DEVICE_IN_USE)
@@ -2070,27 +2071,27 @@ HRESULT WasapiPlayback::resetProxy()
     mOutUpdateSize = std::min(RefTime2Samples(period_time, mFormat.Format.nSamplesPerSec),
         buffer_len/2u);
 
-    mDevice->BufferSize = static_cast<uint>(uint64_t{buffer_len} * mDevice->Frequency /
+    mDevice->mBufferSize = static_cast<uint>(uint64_t{buffer_len} * mDevice->mSampleRate /
         mFormat.Format.nSamplesPerSec);
-    mDevice->UpdateSize = std::min(RefTime2Samples(period_time, mDevice->Frequency),
-        mDevice->BufferSize/2u);
+    mDevice->mUpdateSize = std::min(RefTime2Samples(period_time, mDevice->mSampleRate),
+        mDevice->mBufferSize/2u);
 
     mResampler = nullptr;
     mResampleBuffer.clear();
     mResampleBuffer.shrink_to_fit();
     mBufferFilled = 0;
-    if(mDevice->Frequency != mFormat.Format.nSamplesPerSec)
+    if(mDevice->mSampleRate != mFormat.Format.nSamplesPerSec)
     {
         mResampler = SampleConverter::Create(mDevice->FmtType, mDevice->FmtType,
-            mFormat.Format.nChannels, mDevice->Frequency, mFormat.Format.nSamplesPerSec,
+            mFormat.Format.nChannels, mDevice->mSampleRate, mFormat.Format.nSamplesPerSec,
             Resampler::FastBSinc24);
-        mResampleBuffer.resize(size_t{mDevice->UpdateSize} * mFormat.Format.nChannels *
+        mResampleBuffer.resize(size_t{mDevice->mUpdateSize} * mFormat.Format.nChannels *
             mFormat.Format.wBitsPerSample / 8);
 
         TRACE("Created converter for {}/{} format, dst: {}hz ({}), src: {}hz ({})",
             DevFmtChannelsString(mDevice->FmtChans), DevFmtTypeString(mDevice->FmtType),
-            mFormat.Format.nSamplesPerSec, mOutUpdateSize, mDevice->Frequency,
-            mDevice->UpdateSize);
+            mFormat.Format.nSamplesPerSec, mOutUpdateSize, mDevice->mSampleRate,
+            mDevice->mUpdateSize);
     }
 
     return hr;
@@ -2191,8 +2192,8 @@ ClockLatency WasapiPlayback::getClockLatency()
     if(mResampler)
     {
         auto extra = mResampler->currentInputDelay();
-        ret.Latency += std::chrono::duration_cast<nanoseconds>(extra) / mDevice->Frequency;
-        ret.Latency += nanoseconds{seconds{mBufferFilled}} / mDevice->Frequency;
+        ret.Latency += std::chrono::duration_cast<nanoseconds>(extra) / mDevice->mSampleRate;
+        ret.Latency += nanoseconds{seconds{mBufferFilled}} / mDevice->mSampleRate;
     }
 
     return ret;
@@ -2450,7 +2451,7 @@ HRESULT WasapiCapture::resetProxy()
         && (InputType.dwChannelMask&X51RearMask) == X5DOT1REAR};
 
     // Make sure buffer is at least 100ms in size
-    ReferenceTime buf_time{ReferenceTime{seconds{mDevice->BufferSize}} / mDevice->Frequency};
+    ReferenceTime buf_time{ReferenceTime{seconds{mDevice->mBufferSize}} / mDevice->mSampleRate};
     buf_time = std::max(buf_time, ReferenceTime{milliseconds{100}});
 
     InputType = {};
@@ -2516,7 +2517,7 @@ HRESULT WasapiCapture::resetProxy()
     }
     /* NOLINTNEXTLINE(cppcoreguidelines-pro-type-union-access) */
     InputType.Samples.wValidBitsPerSample = InputType.Format.wBitsPerSample;
-    InputType.Format.nSamplesPerSec = mDevice->Frequency;
+    InputType.Format.nSamplesPerSec = mDevice->mSampleRate;
 
     InputType.Format.nBlockAlign = static_cast<WORD>(InputType.Format.nChannels *
         InputType.Format.wBitsPerSample / 8);
@@ -2584,7 +2585,7 @@ HRESULT WasapiCapture::resetProxy()
         {
             ERR("Failed to match format, wanted: {} {} {}hz, got: {:#08x} mask {} channel{} {}-bit {}hz",
                 DevFmtChannelsString(mDevice->FmtChans), DevFmtTypeString(mDevice->FmtType),
-                mDevice->Frequency, InputType.dwChannelMask, InputType.Format.nChannels,
+                mDevice->mSampleRate, InputType.dwChannelMask, InputType.Format.nChannels,
                 (InputType.Format.nChannels==1)?"":"s", InputType.Format.wBitsPerSample,
                 InputType.Format.nSamplesPerSec);
             return E_FAIL;
@@ -2648,21 +2649,21 @@ HRESULT WasapiCapture::resetProxy()
         srcType = DevFmtFloat;
     }
 
-    if(mDevice->Frequency != InputType.Format.nSamplesPerSec || mDevice->FmtType != srcType)
+    if(mDevice->mSampleRate != InputType.Format.nSamplesPerSec || mDevice->FmtType != srcType)
     {
         mSampleConv = SampleConverter::Create(srcType, mDevice->FmtType,
-            mDevice->channelsFromFmt(), InputType.Format.nSamplesPerSec, mDevice->Frequency,
+            mDevice->channelsFromFmt(), InputType.Format.nSamplesPerSec, mDevice->mSampleRate,
             Resampler::FastBSinc24);
         if(!mSampleConv)
         {
             ERR("Failed to create converter for {} format, dst: {} {}hz, src: {} {}hz",
                 DevFmtChannelsString(mDevice->FmtChans), DevFmtTypeString(mDevice->FmtType),
-                mDevice->Frequency, DevFmtTypeString(srcType), InputType.Format.nSamplesPerSec);
+                mDevice->mSampleRate, DevFmtTypeString(srcType), InputType.Format.nSamplesPerSec);
             return E_FAIL;
         }
         TRACE("Created converter for {} format, dst: {} {}hz, src: {} {}hz",
             DevFmtChannelsString(mDevice->FmtChans), DevFmtTypeString(mDevice->FmtType),
-            mDevice->Frequency, DevFmtTypeString(srcType), InputType.Format.nSamplesPerSec);
+            mDevice->mSampleRate, DevFmtTypeString(srcType), InputType.Format.nSamplesPerSec);
     }
 
     hr = mClient->Initialize(AUDCLNT_SHAREMODE_SHARED, AUDCLNT_STREAMFLAGS_EVENTCALLBACK,
@@ -2690,8 +2691,8 @@ HRESULT WasapiCapture::resetProxy()
         ERR("Failed to get buffer size: {:#x}", as_unsigned(hr));
         return hr;
     }
-    mDevice->UpdateSize = RefTime2Samples(min_per, mDevice->Frequency);
-    mDevice->BufferSize = buffer_len;
+    mDevice->mUpdateSize = RefTime2Samples(min_per, mDevice->mSampleRate);
+    mDevice->mBufferSize = buffer_len;
 
     mRing = RingBuffer::Create(buffer_len, mDevice->frameSizeFromFmt(), false);
 

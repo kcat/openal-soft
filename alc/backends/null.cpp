@@ -60,7 +60,7 @@ struct NullBackend final : public BackendBase {
 
 int NullBackend::mixerProc()
 {
-    const milliseconds restTime{mDevice->UpdateSize*1000/mDevice->Frequency / 2};
+    const milliseconds restTime{mDevice->mUpdateSize*1000/mDevice->mSampleRate / 2};
 
     SetRTPriority();
     althrd_setname(GetMixerThreadName());
@@ -73,16 +73,17 @@ int NullBackend::mixerProc()
         auto now = std::chrono::steady_clock::now();
 
         /* This converts from nanoseconds to nanosamples, then to samples. */
-        int64_t avail{std::chrono::duration_cast<seconds>((now-start) * mDevice->Frequency).count()};
-        if(avail-done < mDevice->UpdateSize)
+        const auto avail = int64_t{std::chrono::duration_cast<seconds>((now-start)
+            * mDevice->mSampleRate).count()};
+        if(avail-done < mDevice->mUpdateSize)
         {
             std::this_thread::sleep_for(restTime);
             continue;
         }
-        while(avail-done >= mDevice->UpdateSize)
+        while(avail-done >= mDevice->mUpdateSize)
         {
-            mDevice->renderSamples(nullptr, mDevice->UpdateSize, 0u);
-            done += mDevice->UpdateSize;
+            mDevice->renderSamples(nullptr, mDevice->mUpdateSize, 0u);
+            done += mDevice->mUpdateSize;
         }
 
         /* For every completed second, increment the start time and reduce the
@@ -90,11 +91,11 @@ int NullBackend::mixerProc()
          * and current time from growing too large, while maintaining the
          * correct number of samples to render.
          */
-        if(done >= mDevice->Frequency)
+        if(done >= mDevice->mSampleRate)
         {
-            seconds s{done/mDevice->Frequency};
+            seconds s{done/mDevice->mSampleRate};
             start += s;
-            done -= mDevice->Frequency*s.count();
+            done -= mDevice->mSampleRate*s.count();
         }
     }
 

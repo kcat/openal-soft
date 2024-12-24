@@ -89,8 +89,8 @@ void CompressorState::deviceUpdate(const DeviceBase *device, const BufferStorage
     /* Number of samples to do a full attack and release (non-integer sample
      * counts are okay).
      */
-    const float attackCount{static_cast<float>(device->Frequency) * AttackTime};
-    const float releaseCount{static_cast<float>(device->Frequency) * ReleaseTime};
+    const float attackCount{static_cast<float>(device->mSampleRate) * AttackTime};
+    const float releaseCount{static_cast<float>(device->mSampleRate) * ReleaseTime};
 
     /* Calculate per-sample multipliers to attack and release at the desired
      * rates.

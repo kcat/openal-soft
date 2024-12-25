@@ -217,13 +217,16 @@ public:
 
     int sendPacket(AVCodecContext *codecctx)
     {
-        AVPacketPtr packet{getPacket()};
+        auto packet = AVPacketPtr{getPacket()};
 
-        int ret{};
+        auto ret = int{};
         {
-            std::unique_lock<std::mutex> flock{mFrameMutex};
-            while((ret=avcodec_send_packet(codecctx, packet.get())) == AVERROR(EAGAIN))
-                mInFrameCond.wait_for(flock, milliseconds{50});
+            auto flock = std::unique_lock{mFrameMutex};
+            mInFrameCond.wait(flock, [codecctx,pkt=packet.get(),&ret]()
+            {
+                ret = avcodec_send_packet(codecctx, pkt);
+                return ret != AVERROR(EAGAIN);
+            });
         }
         mOutFrameCond.notify_one();
 
@@ -240,11 +243,14 @@ public:
 
     int receiveFrame(AVCodecContext *codecctx, AVFrame *frame)
     {
-        int ret{};
+        auto ret = int{};
         {
-            std::unique_lock<std::mutex> flock{mFrameMutex};
-            while((ret=avcodec_receive_frame(codecctx, frame)) == AVERROR(EAGAIN))
-                mOutFrameCond.wait_for(flock, milliseconds{50});
+            auto flock = std::unique_lock{mFrameMutex};
+            mOutFrameCond.wait(flock, [codecctx,frame,&ret]()
+            {
+                ret = avcodec_receive_frame(codecctx, frame);
+                return ret != AVERROR(EAGAIN);
+            });
         }
         mInFrameCond.notify_one();
         return ret;
@@ -1651,16 +1657,16 @@ int VideoState::handler()
         if(write_idx == mPictQRead.load(std::memory_order_acquire))
         {
             /* Wait until we have space for a new pic */
-            std::unique_lock<std::mutex> lock{mPictQMutex};
-            while(write_idx == mPictQRead.load(std::memory_order_acquire))
-                mPictQCond.wait(lock);
+            auto lock = std::unique_lock{mPictQMutex};
+            mPictQCond.wait(lock, [write_idx,this]() noexcept
+                { return write_idx != mPictQRead.load(std::memory_order_acquire); });
         }
     }
 
     mEOS = true;
 
-    std::unique_lock<std::mutex> lock{mPictQMutex};
-    while(!mFinalUpdate) mPictQCond.wait(lock);
+    auto lock = std::unique_lock{mPictQMutex};
+    mPictQCond.wait(lock, [this]() noexcept { return mFinalUpdate.load(); });
 
     return 0;
 }

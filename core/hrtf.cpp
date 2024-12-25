@@ -1310,10 +1310,10 @@ try {
         stream = std::move(fstr);
     }
 
-    std::unique_ptr<HrtfStore> hrtf;
-    std::array<char,GetMarker03Name().size()> magic{};
+    auto hrtf = std::unique_ptr<HrtfStore>{};
+    auto magic = std::array<char,GetMarker03Name().size()>{};
     stream->read(magic.data(), magic.size());
-    if(stream->gcount() < static_cast<std::streamsize>(GetMarker03Name().size()))
+    if(stream->gcount() < std::streamsize{magic.size()})
         ERR("{} data is too short ({} bytes)", name, stream->gcount());
     else if(GetMarker03Name() == std::string_view{magic.data(), magic.size()})
     {
@@ -1336,7 +1336,7 @@ try {
         hrtf = LoadHrtf00(*stream);
     }
     else
-        ERR("Invalid header in {}: \"{:.8s}\"", name, magic.data());
+        ERR("Invalid header in {}: \"{}\"", name, std::string_view{magic.data(), magic.size()});
     stream.reset();
 
     if(!hrtf)

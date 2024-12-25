@@ -47,6 +47,7 @@
 #include "core/device.h"
 #include "core/helpers.h"
 #include "core/logging.h"
+#include "fmt/core.h"
 #include "ringbuffer.h"
 
 #include <sys/soundcard.h>
@@ -166,17 +167,12 @@ void ALCossListAppend(std::vector<DevMap> &list, std::string_view handle, std::s
         auto match_name = [name](const DevMap &entry) -> bool { return entry.name == name; };
         return std::find_if(list.cbegin(), list.cend(), match_name) != list.cend();
     };
-    int count{1};
-    std::string newname{handle};
+    auto count = 1;
+    auto newname = std::string{handle};
     while(checkName(newname))
-    {
-        newname = handle;
-        newname += " #";
-        newname += std::to_string(++count);
-    }
+        newname = fmt::format("{} #{}", handle, ++count);
 
-    const DevMap &entry = list.emplace_back(std::move(newname), path);
-
+    const auto &entry = list.emplace_back(std::move(newname), path);
     TRACE("Got device \"{}\", \"{}\"", entry.name, entry.device_name);
 }
 

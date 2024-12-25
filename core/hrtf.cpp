@@ -32,6 +32,7 @@
 #include "alstring.h"
 #include "ambidefs.h"
 #include "filters/splitter.h"
+#include "fmt/core.h"
 #include "helpers.h"
 #include "logging.h"
 #include "mixer/hrtfdefs.h"
@@ -1115,8 +1116,7 @@ void AddFileEntry(const std::string_view filename)
 {
     /* Check if this file has already been enumerated. */
     auto enum_iter = std::find_if(EnumeratedHrtfs.cbegin(), EnumeratedHrtfs.cend(),
-        [filename](const HrtfEntry &entry) -> bool
-        { return entry.mFilename == filename; });
+        [filename](const HrtfEntry &entry) -> bool { return entry.mFilename == filename; });
     if(enum_iter != EnumeratedHrtfs.cend())
     {
         TRACE("Skipping duplicate file entry {}", filename);
@@ -1124,25 +1124,20 @@ void AddFileEntry(const std::string_view filename)
     }
 
     /* TODO: Get a human-readable name from the HRTF data (possibly coming in a
-     * format update). */
-    size_t namepos{filename.rfind('/')+1};
-    if(!namepos) namepos = filename.rfind('\\')+1;
+     * format update).
+     */
+    const auto namepos = std::max(filename.rfind('/')+1, filename.rfind('\\')+1);
+    const auto extpos = filename.substr(namepos).rfind('.');
 
-    size_t extpos{filename.rfind('.')};
-    if(extpos <= namepos) extpos = std::string::npos;
+    const auto basename = (extpos == std::string::npos) ?
+        filename.substr(namepos) : filename.substr(namepos, extpos);
 
-    const std::string_view basename{(extpos == std::string::npos) ?
-        filename.substr(namepos) : filename.substr(namepos, extpos-namepos)};
-    std::string newname{basename};
-    int count{1};
+    auto count = 1;
+    auto newname = std::string{basename};
     while(checkName(newname))
-    {
-        newname = basename;
-        newname += " #";
-        newname += std::to_string(++count);
-    }
-    const HrtfEntry &entry = EnumeratedHrtfs.emplace_back(newname, filename);
+        newname = fmt::format("{} #{}", basename, ++count);
 
+    const auto &entry = EnumeratedHrtfs.emplace_back(newname, filename);
     TRACE("Adding file entry \"{}\"", entry.mFilename);
 }
 
@@ -1151,12 +1146,10 @@ void AddFileEntry(const std::string_view filename)
  */
 void AddBuiltInEntry(const std::string_view dispname, uint residx)
 {
-    std::string filename{'!'+std::to_string(residx)+'_'};
-    filename += dispname;
+    auto filename = fmt::format("!{}_{}", residx, dispname);
 
     auto enum_iter = std::find_if(EnumeratedHrtfs.cbegin(), EnumeratedHrtfs.cend(),
-        [&filename](const HrtfEntry &entry) -> bool
-        { return entry.mFilename == filename; });
+        [&filename](const HrtfEntry &entry) -> bool { return entry.mFilename == filename; });
     if(enum_iter != EnumeratedHrtfs.cend())
     {
         TRACE("Skipping duplicate file entry {}", filename);
@@ -1166,16 +1159,12 @@ void AddBuiltInEntry(const std::string_view dispname, uint residx)
     /* TODO: Get a human-readable name from the HRTF data (possibly coming in a
      * format update). */
 
-    std::string newname{dispname};
-    int count{1};
+    auto count = 1;
+    auto newname = std::string{dispname};
     while(checkName(newname))
-    {
-        newname = dispname;
-        newname += " #";
-        newname += std::to_string(++count);
-    }
-    const HrtfEntry &entry = EnumeratedHrtfs.emplace_back(std::move(newname), std::move(filename));
+        newname = fmt::format("{} #{}", dispname, ++count);
 
+    const auto &entry = EnumeratedHrtfs.emplace_back(std::move(newname), std::move(filename));
     TRACE("Adding built-in entry \"{}\"", entry.mFilename);
 }
 

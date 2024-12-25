@@ -50,6 +50,7 @@
 #include "core/device.h"
 #include "core/logging.h"
 #include "dynload.h"
+#include "fmt/core.h"
 #include "opthelpers.h"
 #include "strutils.h"
 
@@ -362,17 +363,13 @@ public:
         /* Make sure the display name (description) is unique. Append a number
          * counter as needed.
          */
-        int count{1};
-        std::string newname{info->description};
+        auto count = 1;
+        auto newname = std::string{info->description};
         while(checkName(PlaybackDevices, newname))
-        {
-            newname = info->description;
-            newname += " #";
-            newname += std::to_string(++count);
-        }
-        PlaybackDevices.emplace_back(DevMap{std::move(newname), info->name});
-        DevMap &newentry = PlaybackDevices.back();
+            newname = fmt::format("{} #{}", info->description, ++count);
 
+        const auto &newentry = PlaybackDevices.emplace_back(DevMap{std::move(newname),
+            info->name});
         TRACE("Got device \"{}\", \"{}\"", newentry.name, newentry.device_name);
     }
 
@@ -393,17 +390,12 @@ public:
         /* Make sure the display name (description) is unique. Append a number
          * counter as needed.
          */
-        int count{1};
-        std::string newname{info->description};
+        auto count = 1;
+        auto newname = std::string{info->description};
         while(checkName(CaptureDevices, newname))
-        {
-            newname = info->description;
-            newname += " #";
-            newname += std::to_string(++count);
-        }
-        CaptureDevices.emplace_back(DevMap{std::move(newname), info->name});
-        DevMap &newentry = CaptureDevices.back();
+            newname = fmt::format("{} #{}", info->description, ++count);
 
+        const auto &newentry = CaptureDevices.emplace_back(DevMap{std::move(newname), info->name});
         TRACE("Got device \"{}\", \"{}\"", newentry.name, newentry.device_name);
     }
 

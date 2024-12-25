@@ -50,6 +50,7 @@
 #include "core/helpers.h"
 #include "core/logging.h"
 #include "dynload.h"
+#include "fmt/core.h"
 #include "ringbuffer.h"
 #include "strutils.h"
 
@@ -143,16 +144,11 @@ BOOL CALLBACK DSoundEnumDevices(GUID *guid, const WCHAR *desc, const WCHAR*, voi
     auto& devices = *static_cast<std::vector<DevMap>*>(data);
     const auto basename = wstr_to_utf8(desc);
 
-    int count{1};
-    std::string newname{basename};
+    auto count = 1;
+    auto newname = basename;
     while(checkName(devices, newname))
-    {
-        newname = basename;
-        newname += " #";
-        newname += std::to_string(++count);
-    }
-    devices.emplace_back(std::move(newname), *guid);
-    const DevMap &newentry = devices.back();
+        newname = fmt::format("{} #{}", basename, ++count);
+    const DevMap &newentry = devices.emplace_back(std::move(newname), *guid);
 
     OLECHAR *guidstr{nullptr};
     HRESULT hr{StringFromCLSID(*guid, &guidstr)};

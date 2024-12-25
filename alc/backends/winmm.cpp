@@ -36,7 +36,6 @@
 #include <vector>
 #include <string>
 #include <algorithm>
-#include <functional>
 
 #include "alnumeric.h"
 #include "alsem.h"
@@ -44,6 +43,7 @@
 #include "core/device.h"
 #include "core/helpers.h"
 #include "core/logging.h"
+#include "fmt/core.h"
 #include "ringbuffer.h"
 #include "strutils.h"
 #include "vector.h"
@@ -75,14 +75,10 @@ void ProbePlaybackDevices()
         {
             const auto basename = wstr_to_utf8(std::data(WaveCaps.szPname));
 
-            int count{1};
-            std::string newname{basename};
+            auto count = 1;
+            auto newname = basename;
             while(checkName(PlaybackDevices, newname))
-            {
-                newname = basename;
-                newname += " #";
-                newname += std::to_string(++count);
-            }
+                newname = fmt::format("{} #{}", basename, ++count);
             dname = std::move(newname);
 
             TRACE("Got device \"{}\", ID {}", dname, i);
@@ -106,14 +102,10 @@ void ProbeCaptureDevices()
         {
             const auto basename = wstr_to_utf8(std::data(WaveCaps.szPname));
 
-            int count{1};
-            std::string newname{basename};
+            auto count = 1;
+            auto newname = basename;
             while(checkName(CaptureDevices, newname))
-            {
-                newname = basename;
-                newname += " #";
-                newname += std::to_string(++count);
-            }
+                newname = fmt::format("{} #{}", basename, ++count);
             dname = std::move(newname);
 
             TRACE("Got device \"{}\", ID {}", dname, i);

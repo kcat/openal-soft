@@ -67,6 +67,7 @@
 #include "core/converter.h"
 #include "core/device.h"
 #include "core/logging.h"
+#include "fmt/core.h"
 #include "ringbuffer.h"
 #include "strutils.h"
 
@@ -421,12 +422,7 @@ EndpointFormFactor GetDeviceFormfactor(IMMDevice *device)
 
 
 #if ALSOFT_UWP
-struct DeviceEnumHelper final : public IActivateAudioInterfaceCompletionHandler
-#else
-struct DeviceEnumHelper final : private IMMNotificationClient
-#endif
-{
-#if ALSOFT_UWP
+struct DeviceEnumHelper final : public IActivateAudioInterfaceCompletionHandler {
     DeviceEnumHelper()
     {
         /* TODO: UWP also needs to watch for device added/removed events and
@@ -458,24 +454,27 @@ struct DeviceEnumHelper final : private IMMNotificationClient
         };
         mCaptureDeviceChangedToken = MediaDevice::DefaultAudioCaptureDeviceChanged(capture_cb);
     }
-#else
-    DeviceEnumHelper() = default;
-#endif
+
     ~DeviceEnumHelper()
     {
-#if ALSOFT_UWP
         MediaDevice::DefaultAudioRenderDeviceChanged(mRenderDeviceChangedToken);
         MediaDevice::DefaultAudioCaptureDeviceChanged(mCaptureDeviceChangedToken);
 
         if(mActiveClientEvent != nullptr)
             CloseHandle(mActiveClientEvent);
         mActiveClientEvent = nullptr;
+    }
 #else
+
+struct DeviceEnumHelper final : private IMMNotificationClient {
+    DeviceEnumHelper() = default;
+    ~DeviceEnumHelper()
+    {
         if(mEnumerator)
             mEnumerator->UnregisterEndpointNotificationCallback(this);
         mEnumerator = nullptr;
-#endif
     }
+#endif
 
     template<typename T>
     auto as() noexcept -> T { return T{this}; }
@@ -676,8 +675,10 @@ struct DeviceEnumHelper final : private IMMNotificationClient
         if(SUCCEEDED(hr))
         {
             auto devid = unique_coptr<WCHAR>{};
-            if(auto hr2 = GetDeviceId(device.get(), al::out_ptr(devid)); SUCCEEDED(hr2))
+            if(auto hr2 = device->GetId(al::out_ptr(devid)); SUCCEEDED(hr2))
                 defaultId = devid.get();
+            else
+                ERR("Failed to get device id: {:#x}", as_unsigned(hr));
             device = nullptr;
         }
 
@@ -688,8 +689,10 @@ struct DeviceEnumHelper final : private IMMNotificationClient
                 continue;
 
             auto devid = unique_coptr<WCHAR>{};
-            if(auto hr2 = GetDeviceId(device.get(), al::out_ptr(devid)); SUCCEEDED(hr2))
+            if(auto hr2 = device->GetId(al::out_ptr(devid)); SUCCEEDED(hr2))
                 std::ignore = AddDevice(device, devid.get(), list);
+            else
+                ERR("Failed to get device id: {:#x}", as_unsigned(hr));
             device = nullptr;
         }
 #else
@@ -737,17 +740,12 @@ private:
                 return false;
         }
 
-        auto name_guid = GetDeviceNameAndGuid(device);
-        int count{1};
-        std::string newname{name_guid.mName};
+        auto [name, guid] = GetDeviceNameAndGuid(device);
+        auto count = 1;
+        auto newname = name;
         while(checkName(list, newname))
-        {
-            newname = name_guid.mName;
-            newname += " #";
-            newname += std::to_string(++count);
-        }
-        list.emplace_back(std::move(newname), std::move(name_guid.mGuid), devid);
-        const DevMap &newentry = list.back();
+            newname = fmt::format("{} #{}", name, ++count);
+        const auto &newentry = list.emplace_back(std::move(newname), std::move(guid), devid);
 
         TRACE("Got device \"{}\", \"{}\", \"{}\"", newentry.name, newentry.endpoint_guid,
             wstr_to_utf8(newentry.devid));
@@ -755,13 +753,6 @@ private:
     }
 
 #if !ALSOFT_UWP
-    static auto GetDeviceId(IMMDevice *device, WCHAR **devid) -> HRESULT
-    {
-        const auto hr = device->GetId(devid);
-        if(FAILED(hr))
-            ERR("Failed to get device id: {:#x}", as_unsigned(hr));
-        return hr;
-    }
     ComPtr<IMMDeviceEnumerator> mEnumerator{nullptr};
 
 #else

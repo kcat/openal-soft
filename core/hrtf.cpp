@@ -104,11 +104,16 @@ constexpr uint MaxSampleRate{0xff'ff'ff};
 static_assert(MaxHrirDelay*HrirDelayFracOne < 256, "MAX_HRIR_DELAY or DELAY_FRAC too large");
 
 
+constexpr auto HeaderMarkerSize = 8_uz;
 [[nodiscard]] constexpr auto GetMarker00Name() noexcept { return "MinPHR00"sv; }
 [[nodiscard]] constexpr auto GetMarker01Name() noexcept { return "MinPHR01"sv; }
 [[nodiscard]] constexpr auto GetMarker02Name() noexcept { return "MinPHR02"sv; }
 [[nodiscard]] constexpr auto GetMarker03Name() noexcept { return "MinPHR03"sv; }
 
+static_assert(GetMarker00Name().size() == HeaderMarkerSize);
+static_assert(GetMarker01Name().size() == HeaderMarkerSize);
+static_assert(GetMarker02Name().size() == HeaderMarkerSize);
+static_assert(GetMarker03Name().size() == HeaderMarkerSize);
 
 /* First value for pass-through coefficients (remaining are 0), used for omni-
  * directional sounds. */
@@ -1311,7 +1316,7 @@ try {
     }
 
     auto hrtf = std::unique_ptr<HrtfStore>{};
-    auto magic = std::array<char,GetMarker03Name().size()>{};
+    auto magic = std::array<char,HeaderMarkerSize>{};
     stream->read(magic.data(), magic.size());
     if(stream->gcount() < std::streamsize{magic.size()})
         ERR("{} data is too short ({} bytes)", name, stream->gcount());

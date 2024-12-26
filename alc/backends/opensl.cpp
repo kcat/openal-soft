@@ -41,6 +41,7 @@
 #include "core/device.h"
 #include "core/helpers.h"
 #include "core/logging.h"
+#include "dynload.h"
 #include "opthelpers.h"
 #include "ringbuffer.h"
 
@@ -69,12 +70,12 @@ SLES_SYMBOLS(MAKE_SYMBOL)
 #undef MAKE_SYMBOL
 
 #ifndef IN_IDE_PARSER
-#define slCreateEngine pslCreateEngine
-#define SL_IID_ANDROIDCONFIGURATION pSL_IID_ANDROIDCONFIGURATION
-#define SL_IID_ANDROIDSIMPLEBUFFERQUEUE pSL_IID_ANDROIDSIMPLEBUFFERQUEUE
-#define SL_IID_ENGINE pSL_IID_ENGINE
-#define SL_IID_PLAY pSL_IID_PLAY
-#define SL_IID_RECORD pSL_IID_RECORD
+#define slCreateEngine (*pslCreateEngine)
+#define SL_IID_ANDROIDCONFIGURATION (*pSL_IID_ANDROIDCONFIGURATION)
+#define SL_IID_ANDROIDSIMPLEBUFFERQUEUE (*pSL_IID_ANDROIDSIMPLEBUFFERQUEUE)
+#define SL_IID_ENGINE (*pSL_IID_ENGINE)
+#define SL_IID_PLAY (*pSL_IID_PLAY)
+#define SL_IID_RECORD (*pSL_IID_RECORD)
 #endif
 #endif
 

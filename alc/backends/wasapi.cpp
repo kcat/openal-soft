@@ -1117,6 +1117,8 @@ struct WasapiPlayback final : public BackendBase {
     void mixerProc(PlainDevice &audio);
     void mixerProc(SpatialDevice &audio);
 
+    auto openProxy(const std::string_view name, DeviceHelper &helper, DeviceHandle &mmdev)
+        -> HRESULT;
     void finalizeFormat(WAVEFORMATEXTENSIBLE &OutputType);
     auto initSpatial(DeviceHelper &helper, DeviceHandle &mmdev, SpatialDevice &audio) -> bool;
     auto resetProxy(DeviceHelper &helper, DeviceHandle &mmdev,
@@ -1471,50 +1473,16 @@ try {
     althrd_setname(GetMixerThreadName());
 
     auto mmdev = DeviceHandle{nullptr};
-    auto audiodev = std::variant<PlainDevice,SpatialDevice>{std::in_place_index_t<0>{}};
-
-    auto devname = std::string{};
-    auto devid = std::wstring{};
-    if(!name.empty())
+    if(auto hr = openProxy(name, helper, mmdev); FAILED(hr))
     {
-        auto devlock = DeviceListLock{gDeviceList};
-        auto list = al::span{devlock.getPlaybackList()};
-        auto iter = std::find_if(list.cbegin(), list.cend(),
-            [&name](const DevMap &entry) -> bool
-            { return entry.name == name || entry.endpoint_guid == name; });
-        if(iter == list.cend())
-        {
-            const std::wstring wname{utf8_to_wstr(name)};
-            iter = std::find_if(list.cbegin(), list.cend(),
-                [&wname](const DevMap &entry) -> bool { return entry.devid == wname; });
-        }
-        if(iter == list.cend())
-        {
-            WARN("Failed to find device name matching \"{}\"", name);
-            auto plock = std::lock_guard{mProcMutex};
-            mProcResult = E_NOTFOUND;
-            mState = ThreadState::Done;
-            mProcCond.notify_all();
-            return;
-        }
-        devname = iter->name;
-        devid = iter->devid;
-    }
-
-    if(HRESULT hr{helper.openDevice(devid, eRender, mmdev)}; FAILED(hr))
-    {
-        WARN("Failed to open device \"{}\": {}", devname.empty()
-            ? "(default)"sv : std::string_view{devname}, as_unsigned(hr));
         auto plock = std::lock_guard{mProcMutex};
         mProcResult = hr;
         mState = ThreadState::Done;
         mProcCond.notify_all();
         return;
     }
-    if(!devname.empty())
-        mDeviceName = std::move(devname);
-    else
-        mDeviceName = GetDeviceNameAndGuid(mmdev).mName;
+
+    auto audiodev = std::variant<PlainDevice,SpatialDevice>{std::in_place_index_t<0>{}};
 
     auto plock = std::unique_lock{mProcMutex};
     mProcResult = S_OK;
@@ -1590,6 +1558,47 @@ void WasapiPlayback::open(std::string_view name)
     if(FAILED(mProcResult) || mState == ThreadState::Done)
         throw al::backend_exception{al::backend_error::DeviceError, "Device init failed: {:#x}",
             as_unsigned(mProcResult)};
+}
+
+auto WasapiPlayback::openProxy(const std::string_view name, DeviceHelper &helper,
+    DeviceHandle &mmdev) -> HRESULT
+{
+    auto devname = std::string{};
+    auto devid = std::wstring{};
+    if(!name.empty())
+    {
+        auto devlock = DeviceListLock{gDeviceList};
+        auto list = al::span{devlock.getPlaybackList()};
+        auto iter = std::find_if(list.cbegin(), list.cend(),
+            [name](const DevMap &entry) -> bool
+            { return entry.name == name || entry.endpoint_guid == name; });
+        if(iter == list.cend())
+        {
+            const std::wstring wname{utf8_to_wstr(name)};
+            iter = std::find_if(list.cbegin(), list.cend(),
+                [&wname](const DevMap &entry) -> bool { return entry.devid == wname; });
+        }
+        if(iter == list.cend())
+        {
+            WARN("Failed to find device name matching \"{}\"", name);
+            return E_NOTFOUND;
+        }
+        devname = iter->name;
+        devid = iter->devid;
+    }
+
+    if(HRESULT hr{helper.openDevice(devid, eRender, mmdev)}; FAILED(hr))
+    {
+        WARN("Failed to open device \"{}\": {}", devname.empty()
+            ? "(default)"sv : std::string_view{devname}, as_unsigned(hr));
+        return hr;
+    }
+    if(!devname.empty())
+        mDeviceName = std::move(devname);
+    else
+        mDeviceName = GetDeviceNameAndGuid(mmdev).mName;
+
+    return S_OK;
 }
 
 
@@ -2291,6 +2300,8 @@ struct WasapiCapture final : public BackendBase {
 
     void proc_thread(std::string&& name);
 
+    auto openProxy(const std::string_view name, DeviceHelper &helper, DeviceHandle &mmdev)
+        -> HRESULT;
     auto resetProxy(DeviceHelper &helper, DeviceHandle &mmdev, ComPtr<IAudioClient> &client,
         ComPtr<IAudioCaptureClient> &capture) -> HRESULT;
     void closeProxy();
@@ -2298,7 +2309,6 @@ struct WasapiCapture final : public BackendBase {
     void stopProxy();
 
     void open(std::string_view name) override;
-
     void start() override;
     void stop() override;
     void captureSamples(std::byte *buffer, uint samples) override;
@@ -2480,55 +2490,18 @@ try {
     althrd_setname(GetRecordThreadName());
 
     auto mmdev = DeviceHandle{nullptr};
-    auto client = ComPtr<IAudioClient>{};
-    auto capture = ComPtr<IAudioCaptureClient>{};
-
-    auto devname = std::string{};
-    auto devid = std::wstring{};
-    if(!name.empty())
+    if(auto hr = openProxy(name, helper, mmdev); FAILED(hr))
     {
-        auto devlock = DeviceListLock{gDeviceList};
-        auto devlist = al::span{devlock.getCaptureList()};
-        auto iter = std::find_if(devlist.cbegin(), devlist.cend(),
-            [&name](const DevMap &entry) -> bool
-            { return entry.name == name || entry.endpoint_guid == name; });
-        if(iter == devlist.cend())
-        {
-            const std::wstring wname{utf8_to_wstr(name)};
-            iter = std::find_if(devlist.cbegin(), devlist.cend(),
-                [&wname](const DevMap &entry) -> bool { return entry.devid == wname; });
-        }
-        if(iter == devlist.cend())
-        {
-            WARN("Failed to find device name matching \"{}\"", name);
-            auto plock = std::lock_guard{mProcMutex};
-            mProcResult = E_NOTFOUND;
-            mState = ThreadState::Done;
-            mProcCond.notify_all();
-            return;
-        }
-        devname = iter->name;
-        devid = iter->devid;
-    }
-
-    auto hr = helper.openDevice(devid, eCapture, mmdev);
-    if(FAILED(hr))
-    {
-        WARN("Failed to open device \"{}\"", devname.empty()
-             ? "(default)"sv : std::string_view{devname});
         auto plock = std::lock_guard{mProcMutex};
         mProcResult = hr;
         mState = ThreadState::Done;
         mProcCond.notify_all();
         return;
     }
-    if(!devname.empty())
-        mDeviceName = std::move(devname);
-    else
-        mDeviceName = GetDeviceNameAndGuid(mmdev).mName;
 
-    hr = resetProxy(helper, mmdev, client, capture);
-    if(FAILED(hr))
+    auto client = ComPtr<IAudioClient>{};
+    auto capture = ComPtr<IAudioCaptureClient>{};
+    if(auto hr = resetProxy(helper, mmdev, client, capture); FAILED(hr))
     {
         auto plock = std::lock_guard{mProcMutex};
         mProcResult = hr;
@@ -2606,6 +2579,47 @@ void WasapiCapture::open(std::string_view name)
             as_unsigned(mProcResult)};
 }
 
+auto WasapiCapture::openProxy(const std::string_view name, DeviceHelper &helper,
+    DeviceHandle &mmdev) -> HRESULT
+{
+    auto devname = std::string{};
+    auto devid = std::wstring{};
+    if(!name.empty())
+    {
+        auto devlock = DeviceListLock{gDeviceList};
+        auto devlist = al::span{devlock.getCaptureList()};
+        auto iter = std::find_if(devlist.cbegin(), devlist.cend(),
+            [name](const DevMap &entry) -> bool
+            { return entry.name == name || entry.endpoint_guid == name; });
+        if(iter == devlist.cend())
+        {
+            const std::wstring wname{utf8_to_wstr(name)};
+            iter = std::find_if(devlist.cbegin(), devlist.cend(),
+                [&wname](const DevMap &entry) -> bool { return entry.devid == wname; });
+        }
+        if(iter == devlist.cend())
+        {
+            WARN("Failed to find device name matching \"{}\"", name);
+            return E_NOTFOUND;
+        }
+        devname = iter->name;
+        devid = iter->devid;
+    }
+
+    auto hr = helper.openDevice(devid, eCapture, mmdev);
+    if(FAILED(hr))
+    {
+        WARN("Failed to open device \"{}\"", devname.empty()
+            ? "(default)"sv : std::string_view{devname});
+        return hr;
+    }
+    if(!devname.empty())
+        mDeviceName = std::move(devname);
+    else
+        mDeviceName = GetDeviceNameAndGuid(mmdev).mName;
+
+    return S_OK;
+}
 
 auto WasapiCapture::resetProxy(DeviceHelper &helper, DeviceHandle &mmdev,
     ComPtr<IAudioClient> &client, ComPtr<IAudioCaptureClient> &capture) -> HRESULT

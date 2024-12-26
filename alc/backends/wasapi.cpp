@@ -2108,6 +2108,8 @@ auto WasapiPlayback::resetProxy(DeviceHelper &helper, DeviceHandle &mmdev,
              */
             if(hr == AUDCLNT_E_UNSUPPORTED_FORMAT && mDevice->FmtType != DevFmtShort)
             {
+                mDevice->FmtType = DevFmtShort;
+
                 OutputType.Format.wBitsPerSample = 16;
                 OutputType.SubFormat = KSDATAFORMAT_SUBTYPE_PCM;
                 /* NOLINTNEXTLINE(cppcoreguidelines-pro-type-union-access) */

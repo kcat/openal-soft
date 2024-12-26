@@ -1555,7 +1555,7 @@ try {
         plock.unlock();
         mProcCond.notify_all();
 
-        std::visit([&](auto &audio) -> void { mixerProc(audio); }, audiodev);
+        std::visit([this](auto &audio) -> void { mixerProc(audio); }, audiodev);
 
         plock.lock();
     }

@@ -647,6 +647,20 @@ void alc_initconfig()
         if(endlist)
             BackendListEnd = backendlist_cur;
     }
+    else
+    {
+        /* Exclude the null and wave writer backends from being considered by
+         * default. This ensures there will be no available devices if none of
+         * the normal backends are usable, rather than pretending there is a
+         * device but outputs nowhere.
+         */
+        while(BackendListEnd != BackendList.begin())
+        {
+            --BackendListEnd;
+            if(BackendListEnd->name == "null"sv)
+                break;
+        }
+    }
 
     auto init_backend = [](BackendInfo &backend) -> void
     {

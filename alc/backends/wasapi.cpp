@@ -1241,6 +1241,7 @@ FORCE_ALIGN void WasapiPlayback::mixerProc(PlainDevice &audio)
             if(prefilling)
             {
                 prefilling = false;
+                ResetEvent(mNotifyEvent);
                 hr = audio.mClient->Start();
                 if(FAILED(hr))
                 {
@@ -1278,9 +1279,8 @@ FORCE_ALIGN void WasapiPlayback::mixerProc(PlainDevice &audio)
                         len-done)};
                     dst = dst.subspan(size_t{got}*frame_size);
                     done += got;
-
-                    mPadding.store(written + done, std::memory_order_relaxed);
                 }
+                mPadding.store(written + len, std::memory_order_relaxed);
             }
             else
             {
@@ -1339,6 +1339,7 @@ FORCE_ALIGN void WasapiPlayback::mixerProc(SpatialDevice &audio)
      */
     mPadding.store(mOutBufferSize-mOutUpdateSize, std::memory_order_release);
 
+    ResetEvent(mNotifyEvent);
     if(HRESULT hr{audio.mRender->Start()}; FAILED(hr))
     {
         ERR("Failed to start spatial audio stream: {:#x}", as_unsigned(hr));
@@ -1519,45 +1520,45 @@ try {
     mProcResult = S_OK;
     while(mState != ThreadState::Done)
     {
+        mAction = ThreadAction::Nothing;
         mState = ThreadState::Waiting;
         mProcCond.notify_all();
 
         mProcCond.wait(plock, [this]() noexcept { return mAction != ThreadAction::Nothing; });
-        const auto action = mAction;
-        plock.unlock();
-
-        if(action == ThreadAction::Quit)
+        switch(mAction)
         {
+        case ThreadAction::Nothing:
+            break;
+
+        case ThreadAction::Configure:
+            {
+                plock.unlock();
+                const auto hr = resetProxy(helper, mmdev, audiodev);
+                plock.lock();
+                mProcResult = hr;
+            }
+            break;
+
+        case ThreadAction::Play:
+            mKillNow.store(false, std::memory_order_release);
+
+            mAction = ThreadAction::Nothing;
+            mState = ThreadState::Playing;
+            mProcResult = S_OK;
+            plock.unlock();
+            mProcCond.notify_all();
+
+            std::visit([this](auto &audio) -> void { mixerProc(audio); }, audiodev);
+
             plock.lock();
+            break;
+
+        case ThreadAction::Quit:
             mAction = ThreadAction::Nothing;
             mState = ThreadState::Done;
             mProcCond.notify_all();
             break;
         }
-        if(action == ThreadAction::Configure)
-        {
-            const auto hr = resetProxy(helper, mmdev, audiodev);
-
-            plock.lock();
-            mAction = ThreadAction::Nothing;
-            mProcResult = hr;
-            continue;
-        }
-
-        /* action == Play */
-        ResetEvent(mNotifyEvent);
-        mKillNow.store(false, std::memory_order_release);
-
-        plock.lock();
-        mAction = ThreadAction::Nothing;
-        mState = ThreadState::Playing;
-        mProcResult = S_OK;
-        plock.unlock();
-        mProcCond.notify_all();
-
-        std::visit([this](auto &audio) -> void { mixerProc(audio); }, audiodev);
-
-        plock.lock();
     }
 }
 catch(...) {
@@ -2356,6 +2357,7 @@ WasapiCapture::~WasapiCapture()
 
 FORCE_ALIGN void WasapiCapture::recordProc(IAudioClient *client, IAudioCaptureClient *capture)
 {
+    ResetEvent(mNotifyEvent);
     if(HRESULT hr{client->Start()}; FAILED(hr))
     {
         ERR("Failed to start audio client: {:#x}", as_unsigned(hr));
@@ -2539,32 +2541,36 @@ try {
     mProcResult = S_OK;
     while(mState != ThreadState::Done)
     {
+        mAction = ThreadAction::Nothing;
         mState = ThreadState::Waiting;
         mProcCond.notify_all();
 
         mProcCond.wait(plock, [this]() noexcept { return mAction != ThreadAction::Nothing; });
-        const auto action = mAction;
-        if(action == ThreadAction::Quit)
+        switch(mAction)
         {
+        case ThreadAction::Nothing:
+            break;
+
+        case ThreadAction::Record:
+            mKillNow.store(false, std::memory_order_release);
+
+            mAction = ThreadAction::Nothing;
+            mState = ThreadState::Recording;
+            mProcResult = S_OK;
+            plock.unlock();
+            mProcCond.notify_all();
+
+            recordProc(client.get(), capture.get());
+
+            plock.lock();
+            break;
+
+        case ThreadAction::Quit:
             mAction = ThreadAction::Nothing;
             mState = ThreadState::Done;
             mProcCond.notify_all();
             break;
         }
-
-        /* action == Record */
-        ResetEvent(mNotifyEvent);
-        mKillNow.store(false, std::memory_order_release);
-
-        mAction = ThreadAction::Nothing;
-        mState = ThreadState::Recording;
-        mProcResult = S_OK;
-        plock.unlock();
-        mProcCond.notify_all();
-
-        recordProc(client.get(), capture.get());
-
-        plock.lock();
     }
 }
 catch(...) {

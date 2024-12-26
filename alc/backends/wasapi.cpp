@@ -196,8 +196,7 @@ using unique_coptr = std::unique_ptr<T,CoTaskMemDeleter<T>>;
 
 
 /* Scales the given reftime value, rounding the result. */
-template<typename T>
-constexpr uint RefTime2Samples(const ReferenceTime &val, T srate) noexcept
+constexpr auto RefTime2Samples(const ReferenceTime &val, DWORD srate) noexcept -> uint
 {
     const auto retval = (val*srate + ReferenceTime{seconds{1}}/2) / seconds{1};
     return static_cast<uint>(std::min<decltype(retval)>(retval, std::numeric_limits<uint>::max()));

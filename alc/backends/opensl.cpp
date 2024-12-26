@@ -53,6 +53,32 @@ namespace {
 
 using namespace std::string_view_literals;
 
+
+#ifdef HAVE_DYNLOAD
+#define SLES_SYMBOLS(MAGIC)                 \
+    MAGIC(slCreateEngine);                  \
+    MAGIC(SL_IID_ANDROIDCONFIGURATION);     \
+    MAGIC(SL_IID_ANDROIDSIMPLEBUFFERQUEUE); \
+    MAGIC(SL_IID_ENGINE);                   \
+    MAGIC(SL_IID_PLAY);                     \
+    MAGIC(SL_IID_RECORD);
+
+void *sles_handle;
+#define MAKE_SYMBOL(f) decltype(f) * p##f
+SLES_SYMBOLS(MAKE_SYMBOL)
+#undef MAKE_SYMBOL
+
+#ifndef IN_IDE_PARSER
+#define slCreateEngine pslCreateEngine
+#define SL_IID_ANDROIDCONFIGURATION pSL_IID_ANDROIDCONFIGURATION
+#define SL_IID_ANDROIDSIMPLEBUFFERQUEUE pSL_IID_ANDROIDSIMPLEBUFFERQUEUE
+#define SL_IID_ENGINE pSL_IID_ENGINE
+#define SL_IID_PLAY pSL_IID_PLAY
+#define SL_IID_RECORD pSL_IID_RECORD
+#endif
+#endif
+
+
 /* Helper macros */
 #define EXTRACT_VCALL_ARGS(...)  __VA_ARGS__))
 #define VCALL(obj, func)  ((*(obj))->func((obj), EXTRACT_VCALL_ARGS
@@ -904,7 +930,39 @@ uint OpenSLCapture::availableSamples()
 
 } // namespace
 
-bool OSLBackendFactory::init() { return true; }
+bool OSLBackendFactory::init()
+{
+#ifdef HAVE_DYNLOAD
+    if(!sles_handle)
+    {
+#define SLES_LIBNAME "libOpenSLES.so"
+        sles_handle = LoadLib(SLES_LIBNAME);
+        if(!sles_handle)
+        {
+            WARN("Failed to load {}", SLES_LIBNAME);
+            return false;
+        }
+
+        std::string missing_syms;
+#define LOAD_SYMBOL(f) do {                                                   \
+    p##f = reinterpret_cast<decltype(p##f)>(GetSymbol(sles_handle, #f));      \
+    if(p##f == nullptr) missing_syms += "\n" #f;                              \
+} while(0)
+        SLES_SYMBOLS(LOAD_SYMBOL);
+#undef LOAD_SYMBOL
+
+        if(!missing_syms.empty())
+        {
+            WARN("Missing expected symbols:{}", missing_syms);
+            CloseLib(sles_handle);
+            sles_handle = nullptr;
+            return false;
+        }
+    }
+#endif
+
+    return true;
+}
 
 bool OSLBackendFactory::querySupport(BackendType type)
 { return (type == BackendType::Playback || type == BackendType::Capture); }

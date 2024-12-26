@@ -50,7 +50,7 @@ namespace {
 
 using namespace std::string_view_literals;
 
-#ifdef HAVE_DYNLOAD
+#if HAVE_DYNLOAD
 #define JACK_FUNCS(MAGIC)          \
     MAGIC(jack_client_open);       \
     MAGIC(jack_client_close);      \
@@ -107,7 +107,7 @@ jack_options_t ClientOptions = JackNullOption;
 
 bool jack_load()
 {
-#ifdef HAVE_DYNLOAD
+#if HAVE_DYNLOAD
     if(!jack_handle)
     {
 #if defined(_WIN64)

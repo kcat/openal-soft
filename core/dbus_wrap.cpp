@@ -3,7 +3,7 @@
 
 #include "dbus_wrap.h"
 
-#ifdef HAVE_DYNLOAD
+#if HAVE_DYNLOAD
 
 #include <mutex>
 #include <type_traits>

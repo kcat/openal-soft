@@ -89,7 +89,7 @@ DEFINE_GUID(KSDATAFORMAT_SUBTYPE_IEEE_FLOAT, 0x00000003, 0x0000, 0x0010, 0x80, 0
 
 namespace {
 
-#ifdef HAVE_DYNLOAD
+#if HAVE_DYNLOAD
 void *ds_handle;
 HRESULT (WINAPI *pDirectSoundCreate)(const GUID *pcGuidDevice, IDirectSound **ppDS, IUnknown *pUnkOuter);
 HRESULT (WINAPI *pDirectSoundEnumerateW)(LPDSENUMCALLBACKW pDSEnumCallback, void *pContext);
@@ -753,7 +753,7 @@ BackendFactory &DSoundBackendFactory::getFactory()
 
 bool DSoundBackendFactory::init()
 {
-#ifdef HAVE_DYNLOAD
+#if HAVE_DYNLOAD
     if(!ds_handle)
     {
         ds_handle = LoadLib("dsound.dll");

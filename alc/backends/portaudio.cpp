@@ -38,7 +38,7 @@
 
 namespace {
 
-#ifdef HAVE_DYNLOAD
+#if HAVE_DYNLOAD
 void *pa_handle;
 #define MAKE_FUNC(x) decltype(x) * p##x
 MAKE_FUNC(Pa_Initialize);
@@ -425,7 +425,7 @@ void PortCapture::captureSamples(std::byte *buffer, uint samples)
 
 bool PortBackendFactory::init()
 {
-#ifdef HAVE_DYNLOAD
+#if HAVE_DYNLOAD
     if(!pa_handle)
     {
 #ifdef _WIN32

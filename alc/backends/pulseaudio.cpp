@@ -61,7 +61,7 @@ namespace {
 
 using uint = unsigned int;
 
-#ifdef HAVE_DYNLOAD
+#if HAVE_DYNLOAD
 #define PULSE_FUNCS(MAGIC)                                                    \
     MAGIC(pa_context_new);                                                    \
     MAGIC(pa_context_unref);                                                  \
@@ -1386,7 +1386,7 @@ ClockLatency PulseCapture::getClockLatency()
 
 bool PulseBackendFactory::init()
 {
-#ifdef HAVE_DYNLOAD
+#if HAVE_DYNLOAD
     if(!pulse_handle)
     {
 #ifdef _WIN32
@@ -1419,7 +1419,7 @@ bool PulseBackendFactory::init()
             return false;
         }
     }
-#endif /* HAVE_DYNLOAD */
+#endif
 
     pulse_ctx_flags = PA_CONTEXT_NOFLAGS;
     if(!GetConfigValueBool({}, "pulse", "spawn-server", false))

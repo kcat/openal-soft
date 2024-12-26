@@ -55,7 +55,7 @@ namespace {
 using namespace std::string_view_literals;
 
 
-#ifdef HAVE_DYNLOAD
+#if HAVE_DYNLOAD
 #define SLES_SYMBOLS(MAGIC)                 \
     MAGIC(slCreateEngine);                  \
     MAGIC(SL_IID_ANDROIDCONFIGURATION);     \
@@ -933,7 +933,7 @@ uint OpenSLCapture::availableSamples()
 
 bool OSLBackendFactory::init()
 {
-#ifdef HAVE_DYNLOAD
+#if HAVE_DYNLOAD
     if(!sles_handle)
     {
 #define SLES_LIBNAME "libOpenSLES.so"

@@ -198,7 +198,7 @@ bool check_version(const char *version)
         || (major == PW_MAJOR && minor == PW_MINOR && revision >= PW_MICRO));
 }
 
-#ifdef HAVE_DYNLOAD
+#if HAVE_DYNLOAD
 #define PWIRE_FUNCS(MAGIC)                                                    \
     MAGIC(pw_context_connect)                                                 \
     MAGIC(pw_context_destroy)                                                 \

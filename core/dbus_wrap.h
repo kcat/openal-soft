@@ -7,7 +7,7 @@
 
 #include "dynload.h"
 
-#ifdef HAVE_DYNLOAD
+#if HAVE_DYNLOAD
 
 #include <mutex>
 
@@ -63,7 +63,7 @@ inline auto HasDBus()
 #else
 
 constexpr bool HasDBus() noexcept { return true; }
-#endif /* HAVE_DYNLOAD */
+#endif
 
 
 namespace dbus {

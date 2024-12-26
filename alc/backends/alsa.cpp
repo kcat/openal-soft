@@ -58,7 +58,7 @@ using namespace std::string_view_literals;
 [[nodiscard]] constexpr auto GetDefaultName() noexcept { return "ALSA Default"sv; }
 
 
-#ifdef HAVE_DYNLOAD
+#if HAVE_DYNLOAD
 #define ALSA_FUNCS(MAGIC)                                                     \
     MAGIC(snd_strerror);                                                      \
     MAGIC(snd_pcm_open);                                                      \
@@ -1220,7 +1220,7 @@ ClockLatency AlsaCapture::getClockLatency()
 
 bool AlsaBackendFactory::init()
 {
-#ifdef HAVE_DYNLOAD
+#if HAVE_DYNLOAD
     if(!alsa_handle)
     {
         alsa_handle = LoadLib("libasound.so.2");

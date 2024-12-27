@@ -2227,8 +2227,7 @@ auto WasapiPlayback::resetProxy(DeviceHelper &helper, DeviceHandle &mmdev,
     }
     else
     {
-        mOutUpdateSize = std::min(RefTime2Samples(period_time, mFormat.Format.nSamplesPerSec),
-            buffer_len/2u);
+        mOutUpdateSize = RefTime2Samples(period_time, mFormat.Format.nSamplesPerSec);
 
         mDevice->mBufferSize = static_cast<uint>(uint64_t{buffer_len} * mDevice->mSampleRate /
             mFormat.Format.nSamplesPerSec);

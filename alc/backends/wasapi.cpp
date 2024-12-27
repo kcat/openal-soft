@@ -2166,6 +2166,15 @@ auto WasapiPlayback::resetProxy(DeviceHelper &helper, DeviceHandle &mmdev,
             {
                 const auto newper = ReferenceTime{seconds{newsize}}
                     / OutputType.Format.nSamplesPerSec;
+
+                audio.mClient = nullptr;
+                hr = helper.activateAudioClient(mmdev, __uuidof(IAudioClient),
+                    al::out_ptr(audio.mClient));
+                if(FAILED(hr))
+                {
+                    ERR("Failed to reactivate audio client: {:#x}", as_unsigned(hr));
+                    return hr;
+                }
                 hr = audio.mClient->Initialize(sharemode, AUDCLNT_STREAMFLAGS_EVENTCALLBACK,
                     newper.count(), newper.count(), &OutputType.Format, nullptr);
             }

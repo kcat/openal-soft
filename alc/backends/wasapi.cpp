@@ -1940,7 +1940,7 @@ bool WasapiPlayback::reset()
 
     if(FAILED(mProcResult) || mState != ThreadState::Waiting)
         throw al::backend_exception{al::backend_error::DeviceError, "Device init failed: {:#x}",
-                                    as_unsigned(mProcResult)};
+            as_unsigned(mProcResult)};
     return true;
 }
 
@@ -2326,9 +2326,6 @@ struct WasapiCapture final : public BackendBase {
         -> HRESULT;
     auto resetProxy(DeviceHelper &helper, DeviceHandle &mmdev, ComPtr<IAudioClient> &client,
         ComPtr<IAudioCaptureClient> &capture) -> HRESULT;
-    void closeProxy();
-    HRESULT startProxy();
-    void stopProxy();
 
     void open(std::string_view name) override;
     void start() override;

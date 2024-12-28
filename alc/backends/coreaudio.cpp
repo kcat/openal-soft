@@ -195,10 +195,10 @@ std::string GetDeviceName(AudioDeviceID devId)
     return devname;
 }
 
-UInt32 GetDeviceChannelCount(AudioDeviceID devId, bool isCapture)
+auto GetDeviceChannelCount(AudioDeviceID devId, bool isCapture) -> UInt32
 {
-    UInt32 propSize{};
-    auto err = GetDevPropertySize(devId, kAudioDevicePropertyPreferredChannelLayout, isCapture, 0,
+    auto propSize = UInt32{};
+    auto err = GetDevPropertySize(devId, kAudioDevicePropertyStreamConfiguration, isCapture, 0,
         &propSize);
     if(err)
     {
@@ -207,11 +207,11 @@ UInt32 GetDeviceChannelCount(AudioDeviceID devId, bool isCapture)
         return 0;
     }
 
-    auto channel_data = std::make_unique<char[]>(propSize);
-    auto *channel_layout = reinterpret_cast<AudioChannelLayout*>(channel_data.get());
+    auto buflist_data = std::make_unique<char[]>(propSize);
+    auto *buflist = reinterpret_cast<AudioBufferList*>(buflist_data.get());
 
-    err = GetDevProperty(devId, kAudioDevicePropertyPreferredChannelLayout, isCapture, 0, propSize,
-        channel_layout);
+    err = GetDevProperty(devId, kAudioDevicePropertyStreamConfiguration, isCapture, 0, propSize,
+        buflist);
     if(err)
     {
         ERR("kAudioDevicePropertyStreamConfiguration query failed: '{}' ({})",
@@ -219,7 +219,10 @@ UInt32 GetDeviceChannelCount(AudioDeviceID devId, bool isCapture)
         return 0;
     }
 
-    return channel_layout->mNumberChannelDescriptions;
+    auto numChannels = UInt32{0};
+    for(size_t i{0};i < buflist->mNumberBuffers;++i)
+        numChannels += buflist->mBuffers[i].mNumberChannels;
+    return numChannels;
 }
 
 

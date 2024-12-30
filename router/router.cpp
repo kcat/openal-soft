@@ -392,8 +392,8 @@ void LoadDriverList()
     /* Sort drivers that can enumerate device names to the front. */
     static constexpr auto is_enumerable = [](DriverIfacePtr &drv)
     {
-        return drv->alcIsExtensionPresent(nullptr, "ALC_ENUMERATE_ALL_EXT")
-            || drv->ALCVer >= MAKE_ALC_VER(1, 1)
+        return drv->ALCVer >= MAKE_ALC_VER(1, 1)
+            || drv->alcIsExtensionPresent(nullptr, "ALC_ENUMERATE_ALL_EXT")
             || drv->alcIsExtensionPresent(nullptr, "ALC_ENUMERATION_EXT");
     };
     std::stable_partition(DriverList.begin(), DriverList.end(), is_enumerable);

@@ -98,6 +98,7 @@
 #include "alstring.h"
 #include "common/alhelpers.h"
 #include "fmt/core.h"
+#include "fmt/std.h"
 
 #include "win_main_utf8.h"
 
@@ -568,7 +569,7 @@ auto LoadLAF(const fs::path &fname) -> std::unique_ptr<LafStream>
             | (uint32_t{uint8_t(input[2])}<<16u) | (uint32_t{uint8_t(input[3])}<<24u);
     }();
 
-    fmt::println("Filename: {}", fname.string());
+    fmt::println("Filename: {}", fname);
     fmt::println(" quality: {}", GetQualityName(laf->mQuality));
     fmt::println(" mode: {}", GetModeName(laf->mMode));
     fmt::println(" track count: {}", laf->mNumTracks);

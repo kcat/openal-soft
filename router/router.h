@@ -21,7 +21,7 @@
 #include "fmt/core.h"
 
 
-#define MAKE_ALC_VER(major, minor) (((major)<<8) | (minor))
+constexpr auto MakeALCVer(int major, int minor) noexcept -> int { return (major<<8) | minor; }
 
 struct DriverIface {
     LPALCCREATECONTEXT alcCreateContext{nullptr};

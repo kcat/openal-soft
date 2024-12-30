@@ -181,11 +181,11 @@ void AddModule(HMODULE module, const std::wstring_view name)
         newdrv.alcGetIntegerv(nullptr, ALC_MAJOR_VERSION, 1, &alc_ver[0]);
         newdrv.alcGetIntegerv(nullptr, ALC_MINOR_VERSION, 1, &alc_ver[1]);
         if(newdrv.alcGetError(nullptr) == ALC_NO_ERROR)
-            newdrv.ALCVer = MAKE_ALC_VER(alc_ver[0], alc_ver[1]);
+            newdrv.ALCVer = MakeALCVer(alc_ver[0], alc_ver[1]);
         else
         {
             WARN("Failed to query ALC version for {}, assuming 1.0", wstr_to_utf8(name));
-            newdrv.ALCVer = MAKE_ALC_VER(1, 0);
+            newdrv.ALCVer = MakeALCVer(1, 0);
         }
 
         auto do_load2 = [module,name](auto &func, const char *fname) -> void
@@ -392,7 +392,7 @@ void LoadDriverList()
     /* Sort drivers that can enumerate device names to the front. */
     static constexpr auto is_enumerable = [](DriverIfacePtr &drv)
     {
-        return drv->ALCVer >= MAKE_ALC_VER(1, 1)
+        return drv->ALCVer >= MakeALCVer(1, 1)
             || drv->alcIsExtensionPresent(nullptr, "ALC_ENUMERATE_ALL_EXT")
             || drv->alcIsExtensionPresent(nullptr, "ALC_ENUMERATION_EXT");
     };

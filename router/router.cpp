@@ -388,6 +388,26 @@ void LoadDriverList()
         SearchDrivers(proc_path);
     if(!sys_path.empty())
         SearchDrivers(sys_path);
+
+    /* Sort drivers that can enumerate device names to the front. */
+    static constexpr auto is_enumerable = [](DriverIfacePtr &drv)
+    {
+        return drv->alcIsExtensionPresent(nullptr, "ALC_ENUMERATE_ALL_EXT")
+            || drv->ALCVer >= MAKE_ALC_VER(1, 1)
+            || drv->alcIsExtensionPresent(nullptr, "ALC_ENUMERATION_EXT");
+    };
+    std::stable_partition(DriverList.begin(), DriverList.end(), is_enumerable);
+
+    /* HACK: rapture3d_oal.dll isn't likely to work if it's one distributed for
+     * specific games licensed to use it. It will enumerate a Rapture3D device
+     * but fail to open. This isn't much of a problem, the device just won't
+     * work for users not allowed to use it. But if it's the first in the list
+     * where it gets used for the default device, the default device will fail
+     * to open. Move it down so it's not used for the default device.
+     */
+    if(DriverList.size() > 1
+        && al::case_compare(DriverList.front()->Name, L"rapture3d_oal.dll") == 0)
+        std::swap(*DriverList.begin(), *(DriverList.begin()+1));
 }
 
 } // namespace

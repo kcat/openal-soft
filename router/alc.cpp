@@ -24,6 +24,9 @@ namespace {
 
 using namespace std::string_view_literals;
 
+std::once_flag InitOnce;
+void LoadDrivers() { std::call_once(InitOnce, []{ LoadDriverList(); }); }
+
 struct FuncExportEntry {
     const char *funcName;
     void *address;
@@ -423,6 +426,8 @@ void InitCtxFuncs(DriverIface &iface)
 
 ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *devicename) noexcept
 {
+    LoadDrivers();
+
     ALCdevice *device{nullptr};
     std::optional<ALCuint> idx;
 
@@ -686,6 +691,8 @@ ALC_API ALCenum ALC_APIENTRY alcGetEnumValue(ALCdevice *device, const ALCchar *e
 
 ALC_API const ALCchar* ALC_APIENTRY alcGetString(ALCdevice *device, ALCenum param) noexcept
 {
+    LoadDrivers();
+
     if(device)
     {
         if(const auto idx = maybe_get(DeviceIfaceMap, device))
@@ -867,6 +874,8 @@ ALC_API void ALC_APIENTRY alcGetIntegerv(ALCdevice *device, ALCenum param, ALCsi
 ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *devicename, ALCuint frequency,
     ALCenum format, ALCsizei buffersize) noexcept
 {
+    LoadDrivers();
+
     ALCdevice *device{nullptr};
     std::optional<ALCuint> idx;
 

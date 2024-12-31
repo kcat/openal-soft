@@ -304,8 +304,12 @@ bool GetLoadedModuleDirectory(const WCHAR *name, std::wstring *moddir)
     return !moddir->empty();
 }
 
+} // namespace
+
 void LoadDriverList()
 {
+    TRACE("Initializing router v0.1-{} {}", ALSOFT_GIT_COMMIT_HASH, ALSOFT_GIT_BRANCH);
+
     if(auto list = al::getenv(L"ALROUTER_ACCEPT"))
     {
         std::wstring_view namelist{*list};
@@ -375,14 +379,12 @@ void LoadDriverList()
      * directory, app's path, or system path (don't want to do duplicate
      * searches, or increase the priority of the app or system path).
      */
-    if(!dll_path.empty() &&
-       (cwd_path.empty() || dll_path != cwd_path) &&
-       (proc_path.empty() || dll_path != proc_path) &&
-       (sys_path.empty() || dll_path != sys_path))
+    if(!dll_path.empty() && (cwd_path.empty() || dll_path != cwd_path)
+        && (proc_path.empty() || dll_path != proc_path)
+        && (sys_path.empty() || dll_path != sys_path))
         SearchDrivers(dll_path);
-    if(!cwd_path.empty() &&
-       (proc_path.empty() || cwd_path != proc_path) &&
-       (sys_path.empty() || cwd_path != sys_path))
+    if(!cwd_path.empty() && (proc_path.empty() || cwd_path != proc_path)
+        && (sys_path.empty() || cwd_path != sys_path))
         SearchDrivers(cwd_path);
     if(!proc_path.empty() && (sys_path.empty() || proc_path != sys_path))
         SearchDrivers(proc_path);
@@ -410,8 +412,6 @@ void LoadDriverList()
         std::swap(*DriverList.begin(), *(DriverList.begin()+1));
 }
 
-} // namespace
-
 BOOL APIENTRY DllMain(HINSTANCE, DWORD reason, void*)
 {
     switch(reason)
@@ -437,9 +437,6 @@ BOOL APIENTRY DllMain(HINSTANCE, DWORD reason, void*)
             else
                 LogLevel = static_cast<eLogLevel>(l);
         }
-        TRACE("Initializing router v0.1-{} {}", ALSOFT_GIT_COMMIT_HASH, ALSOFT_GIT_BRANCH);
-        LoadDriverList();
-
         break;
 
     case DLL_THREAD_ATTACH:

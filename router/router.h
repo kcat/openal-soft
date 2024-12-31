@@ -216,4 +216,7 @@ extern gsl::owner<std::FILE*> LogFile;
     }                                                       \
 } while(0)
 
+
+void LoadDriverList();
+
 #endif /* ROUTER_ROUTER_H */

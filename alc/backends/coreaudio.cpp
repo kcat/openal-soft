@@ -483,7 +483,7 @@ void CoreAudioPlayback::open(std::string_view name)
         err = GetDevProperty(audioDevice, kAudioDevicePropertyDataSource, false,
             kAudioObjectPropertyElementMaster, sizeof(type), &type);
         if(err != noErr)
-            ERR("Failed to get audio device type: {}", err);
+            WARN("Failed to get audio device type: '{}' ({})", FourCCPrinter{err}.c_str(), err);
         else
         {
             TRACE("Got device type '{}'", FourCCPrinter{type}.c_str());

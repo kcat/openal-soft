@@ -68,6 +68,7 @@
 #include "core/device.h"
 #include "core/logging.h"
 #include "fmt/core.h"
+#include "fmt/chrono.h"
 #include "ringbuffer.h"
 #include "strutils.h"
 
@@ -2168,16 +2169,29 @@ auto WasapiPlayback::resetProxy(DeviceHelper &helper, DeviceHandle &mmdev,
 
     if(sharemode == AUDCLNT_SHAREMODE_EXCLUSIVE)
     {
+        auto period_time = per_time;
+        auto min_period = ReferenceTime{};
+        hr = audio.mClient->GetDevicePeriod(nullptr,
+            &reinterpret_cast<REFERENCE_TIME&>(min_period));
+        if(FAILED(hr))
+            ERR("Failed to get minimum period time: {:#x}", as_unsigned(hr));
+        else if(min_period > period_time)
+        {
+            period_time = min_period;
+            WARN("Clamping to minimum period time, {}", nanoseconds{min_period});
+        }
+
         hr = audio.mClient->Initialize(sharemode, AUDCLNT_STREAMFLAGS_EVENTCALLBACK,
-            per_time.count(), per_time.count(), &OutputType.Format, nullptr);
+            period_time.count(), period_time.count(), &OutputType.Format, nullptr);
         if(hr == AUDCLNT_E_BUFFER_SIZE_NOT_ALIGNED)
         {
             auto newsize = UINT32{};
             hr = audio.mClient->GetBufferSize(&newsize);
             if(SUCCEEDED(hr))
             {
-                const auto newper = ReferenceTime{seconds{newsize}}
+                period_time = ReferenceTime{seconds{newsize}}
                     / OutputType.Format.nSamplesPerSec;
+                WARN("Adjusting to supported period time, {}", nanoseconds{period_time});
 
                 audio.mClient = nullptr;
                 hr = helper.activateAudioClient(mmdev, __uuidof(IAudioClient),
@@ -2188,7 +2202,7 @@ auto WasapiPlayback::resetProxy(DeviceHelper &helper, DeviceHandle &mmdev,
                     return hr;
                 }
                 hr = audio.mClient->Initialize(sharemode, AUDCLNT_STREAMFLAGS_EVENTCALLBACK,
-                    newper.count(), newper.count(), &OutputType.Format, nullptr);
+                    period_time.count(), period_time.count(), &OutputType.Format, nullptr);
             }
         }
     }

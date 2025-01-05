@@ -610,6 +610,8 @@ set(COMMON_OBJS
     common/comptr.h
     common/dynload.cpp
     common/dynload.h
+    common/filesystem.cpp
+    common/filesystem.h
     common/flexarray.h
     common/intrusive_ptr.h
     common/opthelpers.h

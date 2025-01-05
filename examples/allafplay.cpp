@@ -77,7 +77,6 @@
 #include <array>
 #include <cassert>
 #include <cstdint>
-#include <filesystem>
 #include <fstream>
 #include <memory>
 #include <numeric>
@@ -97,6 +96,7 @@
 #include "alspan.h"
 #include "alstring.h"
 #include "common/alhelpers.h"
+#include "filesystem.h"
 #include "fmt/core.h"
 #include "fmt/std.h"
 
@@ -149,7 +149,6 @@ auto LowFrequencyEffectID = ALuint{};
 auto LfeSlotID = ALuint{};
 
 
-namespace fs = std::filesystem;
 using namespace std::string_view_literals;
 
 [[noreturn]]
@@ -569,7 +568,7 @@ auto LoadLAF(const fs::path &fname) -> std::unique_ptr<LafStream>
             | (uint32_t{uint8_t(input[2])}<<16u) | (uint32_t{uint8_t(input[3])}<<24u);
     }();
 
-    fmt::println("Filename: {}", fname);
+    fmt::println("Filename: {}", fname.string());
     fmt::println(" quality: {}", GetQualityName(laf->mQuality));
     fmt::println(" mode: {}", GetModeName(laf->mMode));
     fmt::println(" track count: {}", laf->mNumTracks);

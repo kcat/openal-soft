@@ -34,7 +34,6 @@
 #include <array>
 #include <cctype>
 #include <cstdlib>
-#include <filesystem>
 #include <fstream>
 #include <istream>
 #include <limits>
@@ -47,6 +46,7 @@
 #include "alstring.h"
 #include "core/helpers.h"
 #include "core/logging.h"
+#include "filesystem.h"
 #include "strutils.h"
 
 #if ALSOFT_UWP
@@ -332,7 +332,6 @@ auto GetConfigValue(const std::string_view devName, const std::string_view block
 #ifdef _WIN32
 void ReadALConfig()
 {
-    namespace fs = std::filesystem;
     fs::path path;
 
 #if !defined(_GAMING_XBOX)
@@ -354,7 +353,7 @@ void ReadALConfig()
             path /= L"alsoft.ini";
 
             TRACE("Loading config {}...", al::u8_as_char(path.u8string()));
-            if(std::ifstream f{path}; f.is_open())
+            if(fs::ifstream f{path}; f.is_open())
                 LoadConfigFromFile(f);
         }
     }
@@ -365,7 +364,7 @@ void ReadALConfig()
     {
         path /= L"alsoft.ini";
         TRACE("Loading config {}...", al::u8_as_char(path.u8string()));
-        if(std::ifstream f{path}; f.is_open())
+        if(fs::ifstream f{path}; f.is_open())
             LoadConfigFromFile(f);
     }
 
@@ -373,7 +372,7 @@ void ReadALConfig()
     {
         path = *confpath;
         TRACE("Loading config {}...", al::u8_as_char(path.u8string()));
-        if(std::ifstream f{path}; f.is_open())
+        if(fs::ifstream f{path}; f.is_open())
             LoadConfigFromFile(f);
     }
 }
@@ -382,11 +381,10 @@ void ReadALConfig()
 
 void ReadALConfig()
 {
-    namespace fs = std::filesystem;
     fs::path path{"/etc/openal/alsoft.conf"};
 
     TRACE("Loading config {}...", al::u8_as_char(path.u8string()));
-    if(std::ifstream f{path}; f.is_open())
+    if(fs::ifstream f{path}; f.is_open())
         LoadConfigFromFile(f);
 
     std::string confpaths{al::getenv("XDG_CONFIG_DIRS").value_or("/etc/xdg")};
@@ -416,7 +414,7 @@ void ReadALConfig()
             path /= "alsoft.conf";
 
             TRACE("Loading config {}...", al::u8_as_char(path.u8string()));
-            if(std::ifstream f{path}; f.is_open())
+            if(fs::ifstream f{path}; f.is_open())
                 LoadConfigFromFile(f);
         }
     }

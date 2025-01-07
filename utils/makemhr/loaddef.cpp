@@ -30,7 +30,6 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include <filesystem>
 #include <fstream>
 #include <iterator>
 #include <limits>
@@ -45,6 +44,7 @@
 #include "alnumeric.h"
 #include "alspan.h"
 #include "alstring.h"
+#include "filesystem.h"
 #include "fmt/core.h"
 #include "makemhr.h"
 #include "polyphase_resampler.h"
@@ -1166,13 +1166,13 @@ auto LoadSofaSource(SourceRefT *src, const uint hrirRate, const al::span<double>
 // Load a source HRIR from a supported file type.
 auto LoadSource(SourceRefT *src, const uint hrirRate, const al::span<double> hrir) -> int
 {
-    auto istream = std::ifstream{};
+    auto istream = fs::ifstream{};
     if(src->mFormat != SF_SOFA)
     {
         if(src->mFormat == SF_ASCII)
-            istream.open(std::filesystem::u8path(src->mPath));
+            istream.open(fs::u8path(src->mPath));
         else
-            istream.open(std::filesystem::u8path(src->mPath), std::ios::binary);
+            istream.open(fs::u8path(src->mPath), std::ios::binary);
         if(!istream.good())
         {
             fmt::println(stderr, "\nError: Could not open source file '{}'.", src->mPath);

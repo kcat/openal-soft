@@ -73,7 +73,6 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include <filesystem>
 #include <fstream>
 #include <functional>
 #include <iostream>
@@ -89,6 +88,7 @@
 #include "alnumeric.h"
 #include "alspan.h"
 #include "alstring.h"
+#include "filesystem.h"
 #include "fmt/core.h"
 #include "loaddef.h"
 #include "loadsofa.h"
@@ -313,7 +313,7 @@ auto StoreMhr(const HrirDataT *hData, const std::string_view filename) -> bool
     const uint n{hData->mIrPoints};
     uint dither_seed{22222};
 
-    auto ostream = std::ofstream{std::filesystem::u8path(filename), std::ios::binary};
+    auto ostream = fs::ofstream{fs::u8path(filename), std::ios::binary};
     if(!ostream.is_open())
     {
         fmt::println(stderr, "\nError: Could not open MHR file '{}'.", filename);
@@ -1165,7 +1165,7 @@ bool ProcessDefinition(std::string_view inName, const uint outRate, const Channe
     }
     else
     {
-        auto input = std::make_unique<std::ifstream>(std::filesystem::u8path(inName));
+        auto input = std::make_unique<fs::ifstream>(fs::u8path(inName));
         if(!input->is_open())
         {
             fmt::println(stderr, "Error: Could not open input file '{}'", inName);

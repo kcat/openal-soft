@@ -11,7 +11,6 @@
 #include <algorithm>
 #include <cstdlib>
 #include <cstring>
-#include <filesystem>
 #include <limits>
 #include <mutex>
 #include <optional>
@@ -23,6 +22,7 @@
 #include "alnumeric.h"
 #include "alspan.h"
 #include "alstring.h"
+#include "filesystem.h"
 #include "logging.h"
 #include "strutils.h"
 
@@ -33,11 +33,9 @@ using namespace std::string_view_literals;
 
 std::mutex gSearchLock;
 
-void DirectorySearch(const std::filesystem::path &path, const std::string_view ext,
+void DirectorySearch(const fs::path &path, const std::string_view ext,
     std::vector<std::string> *const results)
 {
-    namespace fs = std::filesystem;
-
     const auto base = results->size();
 
     try {
@@ -148,7 +146,7 @@ auto SearchDataFiles(const std::string_view ext) -> std::vector<std::string>
     auto results = std::vector<std::string>{};
     if(auto localpath = al::getenv(L"ALSOFT_LOCAL_PATH"))
         DirectorySearch(*localpath, ext, &results);
-    else if(auto curpath = std::filesystem::current_path(); !curpath.empty())
+    else if(auto curpath = fs::current_path(); !curpath.empty())
         DirectorySearch(curpath, ext, &results);
 
     return results;
@@ -161,7 +159,7 @@ auto SearchDataFiles(const std::string_view ext, const std::string_view subdir)
 
     /* If the path is absolute, use it directly. */
     std::vector<std::string> results;
-    auto path = std::filesystem::u8path(subdir);
+    auto path = fs::u8path(subdir);
     if(path.is_absolute())
     {
         DirectorySearch(path, ext, &results);
@@ -178,7 +176,7 @@ auto SearchDataFiles(const std::string_view ext, const std::string_view subdir)
         if(FAILED(hr) || !buffer || !*buffer)
             continue;
 
-        DirectorySearch(std::filesystem::path{buffer.get()}/path, ext, &results);
+        DirectorySearch(fs::path{buffer.get()}/path, ext, &results);
     }
 #endif
 
@@ -275,9 +273,9 @@ const PathNamePair &GetProcBinary()
             for(const std::string_view name : SelfLinkNames)
             {
                 try {
-                    if(!std::filesystem::exists(name))
+                    if(!fs::exists(name))
                         continue;
-                    if(auto path = std::filesystem::read_symlink(name); !path.empty())
+                    if(auto path = fs::read_symlink(name); !path.empty())
                     {
                         pathname = al::u8_as_char(path.u8string());
                         break;
@@ -314,7 +312,7 @@ auto SearchDataFiles(const std::string_view ext) -> std::vector<std::string>
     auto results = std::vector<std::string>{};
     if(auto localpath = al::getenv("ALSOFT_LOCAL_PATH"))
         DirectorySearch(*localpath, ext, &results);
-    else if(auto curpath = std::filesystem::current_path(); !curpath.empty())
+    else if(auto curpath = fs::current_path(); !curpath.empty())
         DirectorySearch(curpath, ext, &results);
 
     return results;
@@ -326,7 +324,7 @@ auto SearchDataFiles(const std::string_view ext, const std::string_view subdir)
     std::lock_guard<std::mutex> srchlock{gSearchLock};
 
     std::vector<std::string> results;
-    auto path = std::filesystem::u8path(subdir);
+    auto path = fs::u8path(subdir);
     if(path.is_absolute())
     {
         DirectorySearch(path, ext, &results);
@@ -335,9 +333,9 @@ auto SearchDataFiles(const std::string_view ext, const std::string_view subdir)
 
     /* Search local data dir */
     if(auto datapath = al::getenv("XDG_DATA_HOME"))
-        DirectorySearch(std::filesystem::path{*datapath}/path, ext, &results);
+        DirectorySearch(fs::path{*datapath}/path, ext, &results);
     else if(auto homepath = al::getenv("HOME"))
-        DirectorySearch(std::filesystem::path{*homepath}/".local/share"/path, ext, &results);
+        DirectorySearch(fs::path{*homepath}/".local/share"/path, ext, &results);
 
     /* Search global data dirs */
     std::string datadirs{al::getenv("XDG_DATA_DIRS").value_or("/usr/local/share/:/usr/share/")};
@@ -353,12 +351,12 @@ auto SearchDataFiles(const std::string_view ext, const std::string_view subdir)
         curpos = nextpos;
 
         if(!pathname.empty())
-            DirectorySearch(std::filesystem::path{pathname}/path, ext, &results);
+            DirectorySearch(fs::path{pathname}/path, ext, &results);
     }
 
 #ifdef ALSOFT_INSTALL_DATADIR
     /* Search the installation data directory */
-    if(auto instpath = std::filesystem::path{ALSOFT_INSTALL_DATADIR}; !instpath.empty())
+    if(auto instpath = fs::path{ALSOFT_INSTALL_DATADIR}; !instpath.empty())
         DirectorySearch(instpath/path, ext, &results);
 #endif
 

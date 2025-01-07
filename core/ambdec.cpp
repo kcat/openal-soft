@@ -8,7 +8,6 @@
 #include <cstdarg>
 #include <cstddef>
 #include <cstdio>
-#include <filesystem>
 #include <fstream>
 #include <iterator>
 #include <sstream>
@@ -16,6 +15,7 @@
 
 #include "albit.h"
 #include "alspan.h"
+#include "filesystem.h"
 #include "fmt/core.h"
 
 
@@ -60,7 +60,7 @@ AmbDecConf::~AmbDecConf() = default;
 
 std::optional<std::string> AmbDecConf::load(const char *fname) noexcept
 {
-    std::ifstream f{std::filesystem::u8path(fname)};
+    fs::ifstream f{fs::u8path(fname)};
     if(!f.is_open())
         return std::string("Failed to open file \"")+fname+"\"";
 

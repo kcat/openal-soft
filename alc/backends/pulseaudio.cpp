@@ -32,7 +32,6 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
-#include <exception>
 #include <limits>
 #include <mutex>
 #include <optional>
@@ -59,6 +58,7 @@
 
 namespace {
 
+using namespace std::string_view_literals;
 using uint = unsigned int;
 
 #if HAVE_DYNLOAD
@@ -73,8 +73,10 @@ using uint = unsigned int;
     MAGIC(pa_context_errno);                                                  \
     MAGIC(pa_context_connect);                                                \
     MAGIC(pa_context_get_server_info);                                        \
+    MAGIC(pa_context_get_sink_info_by_index);                                 \
     MAGIC(pa_context_get_sink_info_by_name);                                  \
     MAGIC(pa_context_get_sink_info_list);                                     \
+    MAGIC(pa_context_get_source_info_by_index);                               \
     MAGIC(pa_context_get_source_info_by_name);                                \
     MAGIC(pa_context_get_source_info_list);                                   \
     MAGIC(pa_stream_new);                                                     \
@@ -146,8 +148,10 @@ PULSE_FUNCS(MAKE_FUNC)
 #define pa_context_errno ppa_context_errno
 #define pa_context_connect ppa_context_connect
 #define pa_context_get_server_info ppa_context_get_server_info
+#define pa_context_get_sink_info_by_index ppa_context_get_sink_info_by_index
 #define pa_context_get_sink_info_by_name ppa_context_get_sink_info_by_name
 #define pa_context_get_sink_info_list ppa_context_get_sink_info_list
+#define pa_context_get_source_info_by_index ppa_context_get_source_info_by_index
 #define pa_context_get_source_info_by_name ppa_context_get_source_info_by_name
 #define pa_context_get_source_info_list ppa_context_get_source_info_list
 #define pa_stream_new ppa_stream_new
@@ -285,6 +289,7 @@ constexpr pa_subscription_mask_t operator|(pa_subscription_mask_t lhs, pa_subscr
 struct DevMap {
     std::string name;
     std::string device_name;
+    uint32_t index{};
 };
 
 bool checkName(const al::span<const DevMap> list, const std::string &name)
@@ -295,6 +300,9 @@ bool checkName(const al::span<const DevMap> list, const std::string &name)
 
 std::vector<DevMap> PlaybackDevices;
 std::vector<DevMap> CaptureDevices;
+
+std::string DefaultPlaybackDevName;
+std::string DefaultCaptureDevName;
 
 
 /* Global flags and properties */
@@ -346,6 +354,32 @@ public:
     void close(pa_stream *stream=nullptr);
 
 
+    void updateDefaultDevice(pa_context*, const pa_server_info *info)
+    {
+        auto default_sink = info->default_sink_name ? std::string_view{info->default_sink_name}
+            : std::string_view{};
+        auto default_src = info->default_source_name ? std::string_view{info->default_source_name}
+            : std::string_view{};
+
+        if(default_sink != DefaultPlaybackDevName)
+        {
+            TRACE("Default playback device: {}", default_sink);
+            DefaultPlaybackDevName = default_sink;
+
+            const auto msg = fmt::format("Default playback device changed: {}", default_sink);
+            alc::Event(alc::EventType::DefaultDeviceChanged, alc::DeviceType::Playback, msg);
+        }
+        if(default_src != DefaultCaptureDevName)
+        {
+            TRACE("Default capture device: {}", default_src);
+            DefaultCaptureDevName = default_src;
+
+            const auto msg = fmt::format("Default capture device changed: {}", default_src);
+            alc::Event(alc::EventType::DefaultDeviceChanged, alc::DeviceType::Capture, msg);
+        }
+        signal();
+    }
+
     void deviceSinkCallback(pa_context*, const pa_sink_info *info, int eol) const noexcept
     {
         if(eol)
@@ -369,8 +403,12 @@ public:
             newname = fmt::format("{} #{}", info->description, ++count);
 
         const auto &newentry = PlaybackDevices.emplace_back(DevMap{std::move(newname),
-            info->name});
-        TRACE("Got device \"{}\", \"{}\"", newentry.name, newentry.device_name);
+            info->name, info->index});
+        TRACE("Got device \"{}\", \"{}\" ({})", newentry.name, newentry.device_name,
+            newentry.index);
+
+        const auto msg = fmt::format("Device added: {}", newentry.device_name);
+        alc::Event(alc::EventType::DeviceAdded, alc::DeviceType::Playback, msg);
     }
 
     void deviceSourceCallback(pa_context*, const pa_source_info *info, int eol) const noexcept
@@ -395,12 +433,72 @@ public:
         while(checkName(CaptureDevices, newname))
             newname = fmt::format("{} #{}", info->description, ++count);
 
-        const auto &newentry = CaptureDevices.emplace_back(DevMap{std::move(newname), info->name});
-        TRACE("Got device \"{}\", \"{}\"", newentry.name, newentry.device_name);
+        const auto &newentry = CaptureDevices.emplace_back(DevMap{std::move(newname), info->name,
+            info->index});
+        TRACE("Got device \"{}\", \"{}\" ({})", newentry.name, newentry.device_name,
+            newentry.index);
+
+        const auto msg = fmt::format("Device added: {}", newentry.device_name);
+        alc::Event(alc::EventType::DeviceAdded, alc::DeviceType::Capture, msg);
     }
 
-    void probePlaybackDevices();
-    void probeCaptureDevices();
+    void eventCallback(pa_context *context, pa_subscription_event_type_t t, uint32_t idx) noexcept
+    {
+        const auto eventFacility = (t & PA_SUBSCRIPTION_EVENT_FACILITY_MASK);
+        const auto eventType = (t & PA_SUBSCRIPTION_EVENT_TYPE_MASK);
+
+        if(eventFacility == PA_SUBSCRIPTION_EVENT_SERVER
+            && eventType == PA_SUBSCRIPTION_EVENT_CHANGE)
+        {
+            static constexpr auto server_cb = [](pa_context *ctx, const pa_server_info *info,
+                void *pdata) noexcept
+            { return static_cast<PulseMainloop*>(pdata)->updateDefaultDevice(ctx, info); };
+            auto *op = pa_context_get_server_info(context, server_cb, this);
+            if(op) pa_operation_unref(op);
+        }
+
+        if(eventFacility != PA_SUBSCRIPTION_EVENT_SINK
+            && eventFacility != PA_SUBSCRIPTION_EVENT_SOURCE)
+            return;
+
+        const auto devtype = (eventFacility == PA_SUBSCRIPTION_EVENT_SINK)
+            ? alc::DeviceType::Playback : alc::DeviceType::Capture;
+
+        if(eventType == PA_SUBSCRIPTION_EVENT_NEW)
+        {
+            if(eventFacility == PA_SUBSCRIPTION_EVENT_SINK)
+            {
+                static constexpr auto devcallback = [](pa_context *ctx, const pa_sink_info *info,
+                    int eol, void *pdata) noexcept
+                { return static_cast<PulseMainloop*>(pdata)->deviceSinkCallback(ctx, info, eol); };
+                auto *op = pa_context_get_sink_info_by_index(context, idx, devcallback, this);
+                if(op) pa_operation_unref(op);
+            }
+            else
+            {
+                static constexpr auto devcallback = [](pa_context *ctx, const pa_source_info *info,
+                    int eol, void *pdata) noexcept
+                { return static_cast<PulseMainloop*>(pdata)->deviceSourceCallback(ctx,info,eol); };
+                auto *op = pa_context_get_source_info_by_index(context, idx, devcallback, this);
+                if(op) pa_operation_unref(op);
+            }
+        }
+        else if(eventType == PA_SUBSCRIPTION_EVENT_REMOVE)
+        {
+            auto find_index = [idx](const DevMap &entry) noexcept { return entry.index == idx; };
+
+            auto &devlist = (eventFacility == PA_SUBSCRIPTION_EVENT_SINK)
+                ? PlaybackDevices : CaptureDevices;
+            auto iter = std::find_if(devlist.cbegin(), devlist.cend(), find_index);
+            if(iter != devlist.cend())
+            {
+                devlist.erase(iter);
+
+                const auto msg = fmt::format("Device removed: {}", idx);
+                alc::Event(alc::EventType::DeviceRemoved, devtype, msg);
+            }
+        }
+    }
 
     friend struct MainloopUniqueLock;
 };
@@ -427,36 +525,38 @@ struct MainloopUniqueLock : public std::unique_lock<PulseMainloop> {
 
     void setEventHandler()
     {
-        pa_operation *op{pa_context_subscribe(mutex()->mContext,
-            PA_SUBSCRIPTION_MASK_SINK | PA_SUBSCRIPTION_MASK_SOURCE,
-            [](pa_context*, int, void *pdata) noexcept
-            { static_cast<PulseMainloop*>(pdata)->signal(); },
-            mutex())};
+        auto *context = mutex()->mContext;
+
+        /* Watch for device added/removed and server changed events. */
+        static constexpr auto submask = PA_SUBSCRIPTION_MASK_SINK | PA_SUBSCRIPTION_MASK_SOURCE
+            | PA_SUBSCRIPTION_MASK_SERVER;
+        static constexpr auto do_signal = [](pa_context*, int, void *pdata) noexcept
+        { static_cast<PulseMainloop*>(pdata)->signal(); };
+        auto *op = pa_context_subscribe(context, submask, do_signal, mutex());
         waitForOperation(op);
 
-        /* Watch for device added/removed events.
-         *
-         * TODO: Also track the "default" device, in as much as PulseAudio has
-         * the concept of a default device (whatever device is opened when not
-         * specifying a specific sink or source name). There doesn't seem to be
-         * an event for this.
-         */
-        auto handler = [](pa_context*, pa_subscription_event_type_t t, uint32_t, void*) noexcept
-        {
-            const auto eventFacility = (t & PA_SUBSCRIPTION_EVENT_FACILITY_MASK);
-            if(eventFacility == PA_SUBSCRIPTION_EVENT_SINK
-                || eventFacility == PA_SUBSCRIPTION_EVENT_SOURCE)
-            {
-                const auto deviceType = (eventFacility == PA_SUBSCRIPTION_EVENT_SINK)
-                    ? alc::DeviceType::Playback : alc::DeviceType::Capture;
-                const auto eventType = (t & PA_SUBSCRIPTION_EVENT_TYPE_MASK);
-                if(eventType == PA_SUBSCRIPTION_EVENT_NEW)
-                    alc::Event(alc::EventType::DeviceAdded, deviceType, "Device added");
-                else if(eventType == PA_SUBSCRIPTION_EVENT_REMOVE)
-                    alc::Event(alc::EventType::DeviceRemoved, deviceType, "Device removed");
-            }
-        };
-        pa_context_set_subscribe_callback(mutex()->mContext, handler, nullptr);
+        static constexpr auto handler = [](pa_context *ctx, pa_subscription_event_type_t t,
+            uint32_t index, void *pdata) noexcept
+        { return static_cast<PulseMainloop*>(pdata)->eventCallback(ctx, t, index); };
+        pa_context_set_subscribe_callback(context, handler, mutex());
+
+        /* Fill in the initial device lists, and get the defaults. */
+        auto sink_callback = [](pa_context *ctx, const pa_sink_info *info, int eol, void *pdata) noexcept
+        { return static_cast<PulseMainloop*>(pdata)->deviceSinkCallback(ctx, info, eol); };
+
+        auto src_callback = [](pa_context *ctx, const pa_source_info *info, int eol, void *pdata) noexcept
+        { return static_cast<PulseMainloop*>(pdata)->deviceSourceCallback(ctx, info, eol); };
+
+        auto server_callback = [](pa_context *ctx, const pa_server_info *info, void *pdata) noexcept
+        { return static_cast<PulseMainloop*>(pdata)->updateDefaultDevice(ctx, info); };
+
+        auto *sinkop = pa_context_get_sink_info_list(context, sink_callback, mutex());
+        auto *srcop = pa_context_get_source_info_list(context, src_callback, mutex());
+        auto *serverop = pa_context_get_server_info(context, server_callback, mutex());
+
+        waitForOperation(sinkop);
+        waitForOperation(srcop);
+        waitForOperation(serverop);
     }
 
 
@@ -477,6 +577,13 @@ struct MainloopUniqueLock : public std::unique_lock<PulseMainloop> {
     void connectContext();
     pa_stream *connectStream(const char *device_name, pa_stream_flags_t flags,
         pa_buffer_attr *attr, pa_sample_spec *spec, pa_channel_map *chanmap, BackendType type);
+
+    pa_stream *connectStream(const std::string &device_name, pa_stream_flags_t flags,
+        pa_buffer_attr *attr, pa_sample_spec *spec, pa_channel_map *chanmap, BackendType type)
+    {
+        return connectStream(device_name.empty() ? nullptr : device_name.c_str(), flags, attr,
+            spec, chanmap, type);
+    }
 };
 using MainloopLockGuard = std::lock_guard<PulseMainloop>;
 
@@ -583,50 +690,6 @@ void PulseMainloop::close(pa_stream *stream)
     pa_stream_set_buffer_attr_callback(stream, nullptr, nullptr);
     pa_stream_disconnect(stream);
     pa_stream_unref(stream);
-}
-
-
-void PulseMainloop::probePlaybackDevices()
-{
-    PlaybackDevices.clear();
-    try {
-        MainloopUniqueLock plock{*this};
-        plock.connectContext();
-
-        auto sink_callback = [](pa_context *ctx, const pa_sink_info *info, int eol, void *pdata) noexcept
-        { return static_cast<PulseMainloop*>(pdata)->deviceSinkCallback(ctx, info, eol); };
-
-        pa_operation *op{pa_context_get_sink_info_by_name(mContext, nullptr, sink_callback, this)};
-        plock.waitForOperation(op);
-
-        op = pa_context_get_sink_info_list(mContext, sink_callback, this);
-        plock.waitForOperation(op);
-    }
-    catch(std::exception &e) {
-        ERR("Error enumerating devices: {}", e.what());
-    }
-}
-
-void PulseMainloop::probeCaptureDevices()
-{
-    CaptureDevices.clear();
-    try {
-        MainloopUniqueLock plock{*this};
-        plock.connectContext();
-
-        auto src_callback = [](pa_context *ctx, const pa_source_info *info, int eol, void *pdata) noexcept
-        { return static_cast<PulseMainloop*>(pdata)->deviceSourceCallback(ctx, info, eol); };
-
-        pa_operation *op{pa_context_get_source_info_by_name(mContext, nullptr, src_callback,
-            this)};
-        plock.waitForOperation(op);
-
-        op = pa_context_get_source_info_list(mContext, src_callback, this);
-        plock.waitForOperation(op);
-    }
-    catch(std::exception &e) {
-        ERR("Error enumerating devices: {}", e.what());
-    }
 }
 
 
@@ -785,22 +848,20 @@ void PulsePlayback::open(std::string_view name)
         throw al::backend_exception{al::backend_error::DeviceError,
             "Failed to start device mainloop"};
 
-    const char *pulse_name{nullptr};
-    std::string_view display_name;
+    auto pulse_name = std::string{};
     if(!name.empty())
     {
-        if(PlaybackDevices.empty())
-            mMainloop.probePlaybackDevices();
-
         auto match_name = [name](const DevMap &entry) -> bool
         { return entry.name == name || entry.device_name == name; };
+
+        auto plock = MainloopUniqueLock{gGlobalMainloop};
         auto iter = std::find_if(PlaybackDevices.cbegin(), PlaybackDevices.cend(), match_name);
         if(iter == PlaybackDevices.cend())
             throw al::backend_exception{al::backend_error::NoDevice,
                 "Device name \"{}\" not found", name};
 
-        pulse_name = iter->device_name.c_str();
-        display_name = iter->name;
+        pulse_name = iter->device_name;
+        mDeviceName = iter->name;
     }
 
     MainloopUniqueLock plock{mMainloop};
@@ -816,32 +877,32 @@ void PulsePlayback::open(std::string_view name)
     spec.rate = 44100;
     spec.channels = 2;
 
-    if(!pulse_name)
+    if(pulse_name.empty())
     {
         static const auto defname = al::getenv("ALSOFT_PULSE_DEFAULT");
         if(defname) pulse_name = defname->c_str();
     }
-    TRACE("Connecting to \"{}\"", pulse_name ? pulse_name : "(default)");
+    TRACE("Connecting to \"{}\"", pulse_name.empty() ? "(default)"sv:std::string_view{pulse_name});
     mStream = plock.connectStream(pulse_name, flags, nullptr, &spec, nullptr,
         BackendType::Playback);
 
-    constexpr auto move_callback = [](pa_stream *stream, void *pdata) noexcept
+    static constexpr auto move_callback = [](pa_stream *stream, void *pdata) noexcept
     { return static_cast<PulsePlayback*>(pdata)->streamMovedCallback(stream); };
     pa_stream_set_moved_callback(mStream, move_callback, this);
     mFrameSize = static_cast<uint>(pa_frame_size(pa_stream_get_sample_spec(mStream)));
 
-    if(pulse_name) mDeviceId.emplace(pulse_name);
-    else mDeviceId.reset();
-    if(display_name.empty())
+    if(!pulse_name.empty())
+        mDeviceId.emplace(std::move(pulse_name));
+
+    if(mDeviceName.empty())
     {
-        auto name_callback = [](pa_context *context, const pa_sink_info *info, int eol, void *pdata) noexcept
+        static constexpr auto name_callback = [](pa_context *context, const pa_sink_info *info,
+            int eol, void *pdata) noexcept
         { return static_cast<PulsePlayback*>(pdata)->sinkNameCallback(context, info, eol); };
         pa_operation *op{pa_context_get_sink_info_by_name(mMainloop.getContext(),
             pa_stream_get_device_name(mStream), name_callback, this)};
         plock.waitForOperation(op);
     }
-    else
-        mDeviceName = display_name;
 }
 
 bool PulsePlayback::reset()
@@ -1139,14 +1200,13 @@ void PulseCapture::open(std::string_view name)
                 "Failed to start device mainloop"};
     }
 
-    const char *pulse_name{nullptr};
+    auto pulse_name = std::string{};
     if(!name.empty())
     {
-        if(CaptureDevices.empty())
-            mMainloop.probeCaptureDevices();
-
         auto match_name = [name](const DevMap &entry) -> bool
         { return entry.name == name || entry.device_name == name; };
+
+        auto plock = MainloopUniqueLock{gGlobalMainloop};
         auto iter = std::find_if(CaptureDevices.cbegin(), CaptureDevices.cend(), match_name);
         if(iter == CaptureDevices.cend())
             throw al::backend_exception{al::backend_error::NoDevice,
@@ -1215,7 +1275,7 @@ void PulseCapture::open(std::string_view name)
     if(!GetConfigValueBool({}, "pulse", "allow-moves", true))
         flags |= PA_STREAM_DONT_MOVE;
 
-    TRACE("Connecting to \"{}\"", pulse_name ? pulse_name : "(default)");
+    TRACE("Connecting to \"{}\"", pulse_name.empty() ? "(default)"sv:std::string_view{pulse_name});
     mStream = plock.connectStream(pulse_name, flags, &mAttr, &mSpec, &chanmap,
         BackendType::Capture);
 
@@ -1227,8 +1287,9 @@ void PulseCapture::open(std::string_view name)
     { return static_cast<PulseCapture*>(pdata)->streamStateCallback(stream); };
     pa_stream_set_state_callback(mStream, state_callback, this);
 
-    if(pulse_name) mDeviceId.emplace(pulse_name);
-    else mDeviceId.reset();
+    if(!pulse_name.empty())
+        mDeviceId.emplace(std::move(pulse_name));
+
     if(mDeviceName.empty())
     {
         constexpr auto name_callback = [](pa_context *context, const pa_source_info *info, int eol,
@@ -1453,21 +1514,32 @@ auto PulseBackendFactory::enumerate(BackendType type) -> std::vector<std::string
 {
     std::vector<std::string> outnames;
 
-    auto add_device = [&outnames](const DevMap &entry) -> void
-    { outnames.push_back(entry.name); };
+    auto add_playback_device = [&outnames](const DevMap &entry) -> void
+    {
+        if(entry.device_name == DefaultPlaybackDevName)
+            outnames.emplace(outnames.cbegin(), entry.name);
+        else
+            outnames.push_back(entry.name);
+    };
+    auto add_capture_device = [&outnames](const DevMap &entry) -> void
+    {
+        if(entry.device_name == DefaultCaptureDevName)
+            outnames.emplace(outnames.cbegin(), entry.name);
+        else
+            outnames.push_back(entry.name);
+    };
 
+    auto plock = MainloopUniqueLock{gGlobalMainloop};
     switch(type)
     {
     case BackendType::Playback:
-        gGlobalMainloop.probePlaybackDevices();
         outnames.reserve(PlaybackDevices.size());
-        std::for_each(PlaybackDevices.cbegin(), PlaybackDevices.cend(), add_device);
+        std::for_each(PlaybackDevices.cbegin(), PlaybackDevices.cend(), add_playback_device);
         break;
 
     case BackendType::Capture:
-        gGlobalMainloop.probeCaptureDevices();
         outnames.reserve(CaptureDevices.size());
-        std::for_each(CaptureDevices.cbegin(), CaptureDevices.cend(), add_device);
+        std::for_each(CaptureDevices.cbegin(), CaptureDevices.cend(), add_capture_device);
         break;
     }
 
@@ -1495,9 +1567,9 @@ alc::EventSupport PulseBackendFactory::queryEventSupport(alc::EventType eventTyp
     {
     case alc::EventType::DeviceAdded:
     case alc::EventType::DeviceRemoved:
+    case alc::EventType::DefaultDeviceChanged:
         return alc::EventSupport::FullSupport;
 
-    case alc::EventType::DefaultDeviceChanged:
     case alc::EventType::Count:
         break;
     }

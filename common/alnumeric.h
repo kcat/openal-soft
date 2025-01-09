@@ -8,7 +8,7 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
-#include <iterator>
+#include <string_view>
 #include <type_traits>
 #ifdef HAVE_INTRIN_H
 #include <intrin.h>
@@ -39,13 +39,13 @@ constexpr auto as_unsigned(T value) noexcept
 }
 
 
-constexpr auto GetCounterSuffix(size_t count) noexcept -> const char*
+constexpr auto GetCounterSuffix(size_t count) noexcept -> std::string_view
 {
-    auto &suffix = (((count%100)/10) == 1) ? "th" :
-        ((count%10) == 1) ? "st" :
-        ((count%10) == 2) ? "nd" :
-        ((count%10) == 3) ? "rd" : "th";
-    return std::data(suffix);
+    using namespace std::string_view_literals;
+    return (((count%100)/10) == 1) ? "th"sv :
+        ((count%10) == 1) ? "st"sv :
+        ((count%10) == 2) ? "nd"sv :
+        ((count%10) == 3) ? "rd"sv : "th"sv;
 }
 
 

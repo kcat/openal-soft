@@ -306,6 +306,17 @@ void LoadData(ALCcontext *context, ALbuffer *ALBuf, ALsizei freq, ALuint size,
 
     const ALuint ambiorder{IsBFormat(DstChannels) ? ALBuf->UnpackAmbiOrder :
         (IsUHJ(DstChannels) ? 1 : 0)};
+    if(ambiorder > 3)
+    {
+        if(ALBuf->mAmbiLayout == AmbiLayout::FuMa)
+            context->throw_error(AL_INVALID_OPERATION,
+                "Cannot load {}{} order B-Format data with FuMa layout", ALBuf->mAmbiOrder,
+                GetCounterSuffix(ALBuf->mAmbiOrder));
+        if(ALBuf->mAmbiScaling == AmbiScaling::FuMa)
+            context->throw_error(AL_INVALID_OPERATION,
+                "Cannot load {}{} order B-Format data with FuMa scaling", ALBuf->mAmbiOrder,
+                GetCounterSuffix(ALBuf->mAmbiOrder));
+    }
 
     if((access&AL_PRESERVE_DATA_BIT_SOFT))
     {
@@ -1066,6 +1077,10 @@ try {
                 "Modifying in-use buffer {}'s ambisonic layout", buffer);
         if(const auto layout = AmbiLayoutFromEnum(value))
         {
+            if(layout.value() == AmbiLayout::FuMa && albuf->mAmbiOrder > 3)
+                context->throw_error(AL_INVALID_OPERATION,
+                    "Cannot set FuMa layout for {}{} order B-Format data", albuf->mAmbiOrder,
+                    GetCounterSuffix(albuf->mAmbiOrder));
             albuf->mAmbiLayout = layout.value();
             return;
         }
@@ -1078,6 +1093,10 @@ try {
                 "Modifying in-use buffer {}'s ambisonic scaling", buffer);
         if(const auto scaling = AmbiScalingFromEnum(value))
         {
+            if(scaling.value() == AmbiScaling::FuMa && albuf->mAmbiOrder > 3)
+                context->throw_error(AL_INVALID_OPERATION,
+                    "Cannot set FuMa scaling for {}{} order B-Format data", albuf->mAmbiOrder,
+                    GetCounterSuffix(albuf->mAmbiOrder));
             albuf->mAmbiScaling = scaling.value();
             return;
         }

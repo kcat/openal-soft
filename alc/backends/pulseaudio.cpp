@@ -354,7 +354,7 @@ public:
     void close(pa_stream *stream=nullptr);
 
 
-    void updateDefaultDevice(pa_context*, const pa_server_info *info)
+    void updateDefaultDevice(pa_context*, const pa_server_info *info) const
     {
         auto default_sink = info->default_sink_name ? std::string_view{info->default_sink_name}
             : std::string_view{};
@@ -880,7 +880,7 @@ void PulsePlayback::open(std::string_view name)
     if(pulse_name.empty())
     {
         static const auto defname = al::getenv("ALSOFT_PULSE_DEFAULT");
-        if(defname) pulse_name = defname->c_str();
+        if(defname) pulse_name = *defname;
     }
     TRACE("Connecting to \"{}\"", pulse_name.empty() ? "(default)"sv:std::string_view{pulse_name});
     mStream = plock.connectStream(pulse_name, flags, nullptr, &spec, nullptr,
@@ -1212,7 +1212,7 @@ void PulseCapture::open(std::string_view name)
             throw al::backend_exception{al::backend_error::NoDevice,
                 "Device name \"{}\" not found", name};
 
-        pulse_name = iter->device_name.c_str();
+        pulse_name = iter->device_name;
         mDeviceName = iter->name;
     }
 

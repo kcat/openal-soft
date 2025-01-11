@@ -1,3 +1,32 @@
+openal-soft-1.24.2:
+
+    Implemented the AL_SOFT_bformat_hoa extension.
+
+    Implemented default device change events for the PulseAudio backend.
+
+    Implemented an option for WASAPI exclusive mode playback.
+
+    Fixed reverb being too quiet for sounds from different directions.
+
+    Fixed compiling with certain versions of Clang.
+
+    Fixed compiling for some older macOS versions.
+
+    Fixed building alffplay on systems without pkg-config.
+
+    Improved output format detection for CoreAudio.
+
+    Changed the default resampler back to Cubic Spline.
+
+    Added an SDL3 playback backend. Disabled by default to avoid a runtime
+    dependency and for compatibility; a single process can't safely use SDL2
+    and SDL3 together on some OSs, so enable with care.
+
+    Converted examples from SDL2 to SDL3.
+
+    Integrated fmtlib into the main library and router for logging and string
+    formatting.
+
 openal-soft-1.24.1:
 
     Fixed compilation on PowerPC.

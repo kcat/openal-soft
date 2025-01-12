@@ -190,10 +190,12 @@ void ALCcontext::init()
     {
         auto iter = std::find(mExtensions.begin(), mExtensions.end(), "AL_EXT_SOURCE_RADIUS"sv);
         if(iter != mExtensions.end()) mExtensions.erase(iter);
-        /* TODO: Would be nice to sort this alphabetically. Needs case-
-         * insensitive searching.
+
+        /* Insert the AL_SOFT_buffer_sub_data extension string between
+         * AL_SOFT_buffer_length_query and AL_SOFT_callback_buffer.
          */
-        mExtensions.emplace_back("AL_SOFT_buffer_sub_data"sv);
+        iter = std::find(mExtensions.begin(), mExtensions.end(), "AL_SOFT_callback_buffer"sv);
+        mExtensions.emplace(iter, "AL_SOFT_buffer_sub_data"sv);
     }
 
 #if ALSOFT_EAX

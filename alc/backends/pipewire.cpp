@@ -54,6 +54,7 @@
 #include "core/helpers.h"
 #include "core/logging.h"
 #include "dynload.h"
+#include "fmt/ranges.h"
 #include "opthelpers.h"
 #include "ringbuffer.h"
 
@@ -847,7 +848,7 @@ void DeviceNode::parseSampleRate(const spa_pod *value, bool force_update) noexce
         auto srates = get_pod_body<int32_t,3>(value);
 
         /* [0] is the default, [1] is the min, and [2] is the max. */
-        TRACE("  sample rate: {} (range: {} -> {})", srates[0], srates[1], srates[2]);
+        TRACE("  sample rate: {}, range: {}", srates[0], srates.subspan<1>());
         if(!mSampleRate || force_update)
             mSampleRate = static_cast<uint>(std::clamp<int>(srates[0], MinOutputRate,
                 MaxOutputRate));
@@ -864,13 +865,7 @@ void DeviceNode::parseSampleRate(const spa_pod *value, bool force_update) noexce
         auto srates = get_pod_body<int32_t>(value, nvals);
 
         /* [0] is the default, [1...size()-1] are available selections. */
-        std::string others{(srates.size() > 1) ? std::to_string(srates[1]) : std::string{}};
-        for(size_t i{2};i < srates.size();++i)
-        {
-            others += ", ";
-            others += std::to_string(srates[i]);
-        }
-        TRACE("  sample rate: {} ({})", srates[0], others);
+        TRACE("  sample rate: {}, list: {}", srates[0], srates.subspan(1));
         /* Pick the first rate listed that's within the allowed range (default
          * rate if possible).
          */

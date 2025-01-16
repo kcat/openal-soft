@@ -35,6 +35,7 @@
 #include <cerrno>
 #include <chrono>
 #include <ctime>
+#include <functional>
 #include <iterator>
 #include <memory>
 #include <mutex>
@@ -54,6 +55,7 @@
 #include "core/helpers.h"
 #include "core/logging.h"
 #include "dynload.h"
+#include "fmt/core.h"
 #include "fmt/ranges.h"
 #include "opthelpers.h"
 #include "ringbuffer.h"
@@ -1030,9 +1032,12 @@ void NodeProxy::infoCallback(void*, const pw_node_info *info) noexcept
         }
 #endif
 
-        std::string name;
-        if(nodeName && *nodeName) name = nodeName;
-        else name = "PipeWire node #"+std::to_string(info->id);
+        auto name = std::invoke([nodeName,info]() -> std::string
+        {
+            if(nodeName && *nodeName)
+                return std::string{nodeName};
+            return fmt::format("PipeWire node #{}", info->id);
+        });
 
         const char *form_factor{spa_dict_lookup(info->props, PW_KEY_DEVICE_FORM_FACTOR)};
         TRACE("Got {} device \"{}\"{}{}{}", AsString(ntype), devName ? devName : "(nil)",
@@ -1568,8 +1573,8 @@ void PipeWirePlayback::open(std::string_view name)
 
     if(!mLoop)
     {
-        const uint count{OpenCount.fetch_add(1, std::memory_order_relaxed)};
-        const std::string thread_name{"ALSoftP" + std::to_string(count)};
+        const auto count = OpenCount.fetch_add(1u, std::memory_order_relaxed);
+        const auto thread_name = fmt::format("ALSoftP{}", count);
         mLoop = ThreadMainloop::Create(thread_name.c_str());
         if(!mLoop)
             throw al::backend_exception{al::backend_error::DeviceError,
@@ -2032,8 +2037,8 @@ void PipeWireCapture::open(std::string_view name)
 
     if(!mLoop)
     {
-        const uint count{OpenCount.fetch_add(1, std::memory_order_relaxed)};
-        const std::string thread_name{"ALSoftC" + std::to_string(count)};
+        const auto count = OpenCount.fetch_add(1u, std::memory_order_relaxed);
+        const auto thread_name = fmt::format("ALSoftC{}", count);
         mLoop = ThreadMainloop::Create(thread_name.c_str());
         if(!mLoop)
             throw al::backend_exception{al::backend_error::DeviceError,

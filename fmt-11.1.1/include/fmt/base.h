@@ -252,7 +252,7 @@
 #ifndef FMT_BEGIN_NAMESPACE
 #  define FMT_BEGIN_NAMESPACE \
     namespace fmt {           \
-    inline namespace v11 {
+    inline namespace v11_alsoft {
 #  define FMT_END_NAMESPACE \
     }                       \
     }

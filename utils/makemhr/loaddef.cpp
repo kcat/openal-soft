@@ -209,8 +209,8 @@ auto TrLoad(TokenReaderT *tr) -> int
         // Load TRLoadSize (or less if at the end of the file) per read.
         toLoad = TRLoadSize;
 
-        const auto in = tr->mIn&TRRingMask;
-        std::streamsize count{TRRingSize - in};
+        const auto in = tr->mIn & std::streamsize{TRRingMask};
+        const auto count = std::streamsize{TRRingSize} - in;
         if(count < toLoad)
         {
             istream.read(al::to_address(tr->mRing.begin() + in), count);

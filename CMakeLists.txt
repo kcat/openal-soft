@@ -100,8 +100,6 @@ include(GNUInstallDirs)
 find_package(PkgConfig)
 find_package(SDL3 QUIET)
 
-add_subdirectory(fmt-11.1.1 EXCLUDE_FROM_ALL)
-
 option(ALSOFT_DLOPEN  "Check for the dlopen API for loading optional libs"  ON)
 
 option(ALSOFT_WERROR  "Treat compile warnings as errors"      OFF)
@@ -144,6 +142,23 @@ endif()
 if(DEFINED ALSOFT_AMBDEC_PRESETS)
     message(WARNING "ALSOFT_AMBDEC_PRESETS is deprecated. Use ALSOFT_INSTALL_AMBDEC_PRESETS instead")
 endif()
+
+if(MSVC)
+    option(FORCE_STATIC_VCRT "Force /MT for static VC runtimes" OFF)
+    if(FORCE_STATIC_VCRT)
+        foreach(flag_var
+                CMAKE_C_FLAGS CMAKE_C_FLAGS_DEBUG CMAKE_C_FLAGS_RELEASE
+                CMAKE_C_FLAGS_MINSIZEREL CMAKE_C_FLAGS_RELWITHDEBINFO
+                CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS_DEBUG CMAKE_CXX_FLAGS_RELEASE
+                CMAKE_CXX_FLAGS_MINSIZEREL CMAKE_CXX_FLAGS_RELWITHDEBINFO)
+            if(${flag_var} MATCHES "/MD")
+                string(REGEX REPLACE "/MD" "/MT" ${flag_var} "${${flag_var}}")
+            endif()
+        endforeach(flag_var)
+    endif()
+endif()
+
+add_subdirectory(fmt-11.1.1 EXCLUDE_FROM_ALL)
 
 
 set(CPP_DEFS ) # C pre-processor, not C++
@@ -248,19 +263,6 @@ if(MSVC)
     endif()
     if(DXSDK_DIR)
         message(STATUS "Using DirectX SDK directory: ${DXSDK_DIR}")
-    endif()
-
-    option(FORCE_STATIC_VCRT "Force /MT for static VC runtimes" OFF)
-    if(FORCE_STATIC_VCRT)
-        foreach(flag_var
-                CMAKE_C_FLAGS CMAKE_C_FLAGS_DEBUG CMAKE_C_FLAGS_RELEASE
-                CMAKE_C_FLAGS_MINSIZEREL CMAKE_C_FLAGS_RELWITHDEBINFO
-                CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS_DEBUG CMAKE_CXX_FLAGS_RELEASE
-                CMAKE_CXX_FLAGS_MINSIZEREL CMAKE_CXX_FLAGS_RELWITHDEBINFO)
-            if(${flag_var} MATCHES "/MD")
-                string(REGEX REPLACE "/MD" "/MT" ${flag_var} "${${flag_var}}")
-            endif()
-        endforeach(flag_var)
     endif()
 else()
     set(C_FLAGS ${C_FLAGS} -Winline -Wunused -Wall -Wextra -Wshadow -Wconversion -Wcast-align

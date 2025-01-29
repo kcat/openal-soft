@@ -12,10 +12,14 @@
 #include "alc/context.h"
 #include "alnumeric.h"
 #include "alspan.h"
+#include "core/logging.h"
 #include "effects.h"
+#include "fmt/ranges.h"
+#include "opthelpers.h"
 
 #if ALSOFT_EAX
 #include <cassert>
+
 #include "al/eax/api.h"
 #include "al/eax/call.h"
 #include "al/eax/effect.h"
@@ -1053,6 +1057,38 @@ bool EaxReverbCommitter::commit(const EAXREVERBPROPERTIES &props)
         ret.LFReference = props.flLFReference;
         ret.RoomRolloffFactor = props.flRoomRolloffFactor;
         ret.DecayHFLimit = ((props.ulFlags & EAXREVERBFLAGS_DECAYHFLIMIT) != 0);
+        if(EaxTraceCommits) UNLIKELY
+        {
+            TRACE("Reverb commit:\n"
+                "  Density: {:f}\n"
+                "  Diffusion: {:f}\n"
+                "  Gain: {:f}\n"
+                "  GainHF: {:f}\n"
+                "  GainLF: {:f}\n"
+                "  DecayTime: {:f}\n"
+                "  DecayHFRatio: {:f}\n"
+                "  DecayLFRatio: {:f}\n"
+                "  ReflectionsGain: {:f}\n"
+                "  ReflectionsDelay: {:f}\n"
+                "  ReflectionsPan: {}\n"
+                "  LateReverbGain: {:f}\n"
+                "  LateReverbDelay: {:f}\n"
+                "  LateRevernPan: {}\n"
+                "  EchoTime: {:f}\n"
+                "  EchoDepth: {:f}\n"
+                "  ModulationTime: {:f}\n"
+                "  ModulationDepth: {:f}\n"
+                "  AirAbsorptionGainHF: {:f}\n"
+                "  HFReference: {:f}\n"
+                "  LFReference: {:f}\n"
+                "  RoomRolloffFactor: {:f}\n"
+                "  DecayHFLimit: {}", ret.Density, ret.Diffusion, ret.Gain, ret.GainHF, ret.GainLF,
+                ret.DecayTime, ret.DecayHFRatio, ret.DecayLFRatio, ret.ReflectionsGain,
+                ret.ReflectionsDelay, ret.ReflectionsPan, ret.LateReverbGain, ret.LateReverbDelay,
+                ret.LateReverbPan, ret.EchoTime, ret.EchoDepth, ret.ModulationTime,
+                ret.ModulationDepth, ret.AirAbsorptionGainHF, ret.HFReference, ret.LFReference,
+                ret.RoomRolloffFactor, ret.DecayHFLimit ? "true" : "false");
+        }
         return ret;
     }();
 

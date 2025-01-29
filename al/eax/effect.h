@@ -10,6 +10,8 @@
 #include "core/effects/base.h"
 #include "call.h"
 
+inline bool EaxTraceCommits{false};
+
 struct EaxEffectErrorMessages {
     static constexpr auto unknown_property_id() noexcept { return "Unknown property id."; }
     static constexpr auto unknown_version() noexcept { return "Unknown version."; }

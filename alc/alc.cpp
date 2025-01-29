@@ -719,26 +719,35 @@ void alc_initconfig()
     if(defrevopt) LoadReverbPreset(*defrevopt, &ALCcontext::sDefaultEffect);
 
 #if ALSOFT_EAX
+    if(const auto eax_enable_opt = ConfigValueBool({}, "eax", "enable"))
     {
-        if(const auto eax_enable_opt = ConfigValueBool({}, "eax", "enable"))
+        eax_g_is_enabled = *eax_enable_opt;
+        if(!eax_g_is_enabled)
+            TRACE("EAX disabled by a configuration.");
+    }
+    else
+        eax_g_is_enabled = true;
+
+    if((DisabledEffects.test(EAXREVERB_EFFECT) || DisabledEffects.test(CHORUS_EFFECT))
+        && eax_g_is_enabled)
+    {
+        eax_g_is_enabled = false;
+        TRACE("EAX disabled because {} disabled.",
+            (DisabledEffects.test(EAXREVERB_EFFECT) && DisabledEffects.test(CHORUS_EFFECT))
+                ? "EAXReverb and Chorus are"sv :
+            DisabledEffects.test(EAXREVERB_EFFECT) ? "EAXReverb is"sv :
+            DisabledEffects.test(CHORUS_EFFECT) ? "Chorus is"sv : ""sv);
+    }
+
+    if(eax_g_is_enabled)
+    {
+        if(auto optval = al::getenv("ALSOFT_EAX_TRACE_COMMITS"))
         {
-            eax_g_is_enabled = *eax_enable_opt;
-            if(!eax_g_is_enabled)
-                TRACE("EAX disabled by a configuration.");
+            EaxTraceCommits = al::case_compare(*optval, "true"sv) == 0
+                || strtol(optval->c_str(), nullptr, 0) == 1;
         }
         else
-            eax_g_is_enabled = true;
-
-        if((DisabledEffects.test(EAXREVERB_EFFECT) || DisabledEffects.test(CHORUS_EFFECT))
-            && eax_g_is_enabled)
-        {
-            eax_g_is_enabled = false;
-            TRACE("EAX disabled because {} disabled.",
-                (DisabledEffects.test(EAXREVERB_EFFECT) && DisabledEffects.test(CHORUS_EFFECT))
-                    ? "EAXReverb and Chorus are"sv :
-                DisabledEffects.test(EAXREVERB_EFFECT) ? "EAXReverb is"sv :
-                DisabledEffects.test(CHORUS_EFFECT) ? "Chorus is"sv : ""sv);
-        }
+            EaxTraceCommits = GetConfigValueBool({}, "eax"sv, "trace-commits"sv, false);
     }
 #endif // ALSOFT_EAX
 }

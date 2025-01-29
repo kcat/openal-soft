@@ -50,6 +50,10 @@ easier to track the cause.
 ALSOFT_TRAP_ERROR
 Set to "true" or "1" to force trapping both ALC and AL errors.
 
+ALSOFT_EAX_TRACE_COMMITS
+Overrides the EAX trace-commits config option. This specifies whether EAX
+property commits are logged with trace messages.
+
 *** Compatibility ***
 
 __ALSOFT_HALF_ANGLE_CONES

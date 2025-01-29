@@ -652,6 +652,11 @@
 #  Sets whether to enable EAX extensions or not.
 #enable = true
 
+## trace-commits: (global)
+#  Sets whether log EAX property commits with trace messages. This can
+#  significantly increase the amount of log messages for apps that use EAX.
+#trace-commits = false
+
 ##
 ## Per-game compatibility options (these should only be set in per-game config
 ## files, *NOT* system- or user-level!)

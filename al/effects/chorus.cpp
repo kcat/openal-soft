@@ -9,6 +9,7 @@
 
 #include "alc/context.h"
 #include "alnumeric.h"
+#include "core/logging.h"
 #include "effects.h"
 
 #if ALSOFT_EAX
@@ -563,6 +564,17 @@ public:
         al_props_.Depth = props.flDepth;
         al_props_.Feedback = props.flFeedback;
         al_props_.Delay = props.flDelay;
+        if(EaxTraceCommits) UNLIKELY
+        {
+            TRACE("Chorus/flanger commit:\n"
+                "  Waveform: {}\n"
+                "  Phase: {}\n"
+                "  Rate: {:f}\n"
+                "  Depth: {:f}\n"
+                "  Feedback: {:f}\n"
+                "  Delay: {:f}", al::to_underlying(al_props_.Waveform), al_props_.Phase,
+                al_props_.Rate, al_props_.Depth, al_props_.Feedback, al_props_.Delay);
+        }
 
         return true;
     }

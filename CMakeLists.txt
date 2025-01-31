@@ -1,6 +1,6 @@
 # CMake build file list for OpenAL
 
-cmake_minimum_required(VERSION 3.13)
+cmake_minimum_required(VERSION 3.26)
 enable_testing()
 
 if(APPLE)

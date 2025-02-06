@@ -1493,7 +1493,7 @@ try {
         return;
     }
 
-    auto audiodev = std::variant<PlainDevice,SpatialDevice>{std::in_place_index_t<0>{}};
+    auto audiodev = std::variant<PlainDevice,SpatialDevice>{};
 
     auto plock = std::unique_lock{mProcMutex};
     mProcResult = S_OK;

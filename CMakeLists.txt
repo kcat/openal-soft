@@ -180,15 +180,17 @@ if(WIN32)
         option(ALSOFT_BUILD_IMPORT_LIB "Build an import .lib using dlltool (requires sed)" ON)
     endif()
 
-    # Some systems may need NTDDI_VERSION defined to NTDDI_VISTA or later
-    check_cxx_source_compiles("#include <shlobj.h>
-        int main()
-        {
-            SHGetKnownFolderPath(FOLDERID_RoamingAppData, KF_FLAG_DONT_UNEXPAND, nullptr, nullptr);
-            return 0;
-        }" HAVE_SHGETKNOWNFOLDERPATH_NO_NTDDI)
-    if(NOT HAVE_SHGETKNOWNFOLDERPATH_NO_NTDDI)
-        set(CPP_DEFS ${CPP_DEFS} NTDDI_VERSION=NTDDI_VISTA)
+    if(NOT ALSOFT_UWP)
+        # Some systems may need NTDDI_VERSION defined to NTDDI_VISTA or later
+        check_c_source_compiles("#include <shlobj.h>
+            int main()
+            {
+                SHGetKnownFolderPath(FOLDERID_RoamingAppData, KF_FLAG_DONT_UNEXPAND, NULL, NULL);
+                return 0;
+            }" HAVE_SHGETKNOWNFOLDERPATH_NO_NTDDI)
+        if(NOT HAVE_SHGETKNOWNFOLDERPATH_NO_NTDDI)
+            set(CPP_DEFS ${CPP_DEFS} NTDDI_VERSION=NTDDI_VISTA)
+        endif()
     endif()
 elseif(APPLE)
     option(ALSOFT_OSX_FRAMEWORK "Build as macOS framework" OFF)

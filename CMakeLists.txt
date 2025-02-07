@@ -182,10 +182,12 @@ if(WIN32)
 
     if(NOT ALSOFT_UWP)
         # Some systems may need NTDDI_VERSION defined to NTDDI_VISTA or later
-        check_c_source_compiles("#include <shlobj.h>
+        check_c_source_compiles("#define INITGUID
+            #include <shlobj.h>
+            #include <knownfolders.h>
             int main()
             {
-                SHGetKnownFolderPath(FOLDERID_RoamingAppData, KF_FLAG_DONT_UNEXPAND, NULL, NULL);
+                SHGetKnownFolderPath(&FOLDERID_RoamingAppData, KF_FLAG_DONT_UNEXPAND, NULL, NULL);
                 return 0;
             }" HAVE_SHGETKNOWNFOLDERPATH_NO_NTDDI)
         if(NOT HAVE_SHGETKNOWNFOLDERPATH_NO_NTDDI)

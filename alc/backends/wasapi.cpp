@@ -962,7 +962,21 @@ struct DeviceHelper {
 
     [[nodiscard]]
     static auto activateAudioClient(_In_ DeviceHandle &device, REFIID iid, void **ppv) -> HRESULT
-    { return device->Activate(iid, CLSCTX_INPROC_SERVER, nullptr, ppv); }
+    {
+        if(iid == __uuidof(IAudioClient))
+        {
+            /* Always (try) to activate an IAudioClient3, even if giving back
+             * an IAudioClient iface. This may(?) offer more features even if
+             * not using its new methods.
+             */
+            auto ac3 = ComPtr<IAudioClient3>{};
+            const auto hr = device->Activate(__uuidof(IAudioClient3), CLSCTX_INPROC_SERVER,
+                nullptr, al::out_ptr(ac3));
+            if(SUCCEEDED(hr))
+                return ac3->QueryInterface(iid, ppv);
+        }
+        return device->Activate(iid, CLSCTX_INPROC_SERVER, nullptr, ppv);
+    }
 
     ComPtr<IMMDeviceEnumerator> mEnumerator{nullptr};
 };

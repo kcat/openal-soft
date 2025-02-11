@@ -316,6 +316,8 @@ struct DeviceListLock : public std::unique_lock<DeviceList> {
 };
 
 DeviceList gDeviceList;
+std::condition_variable_any gInitCV;
+std::atomic<bool> gInitDone{false};
 
 
 #ifdef AVRTAPI
@@ -792,22 +794,34 @@ void DeviceEnumHelper::messageHandler(std::promise<HRESULT> *promise)
         return;
     }
 
-    DeviceEnumHelper helper;
-    auto hr = helper.init();
-    promise->set_value(hr);
-    promise = nullptr;
-    if(FAILED(hr))
-        return;
-
-    {
+    auto helper = std::optional<DeviceEnumHelper>{};
+    try {
         auto devlock = DeviceListLock{gDeviceList};
-        auto defaultId = helper.probeDevices(eRender, devlock.getPlaybackList());
+
+        auto hr = helper.emplace().init();
+        promise->set_value(hr);
+        promise = nullptr;
+        if(FAILED(hr))
+            return;
+
+        auto defaultId = helper->probeDevices(eRender, devlock.getPlaybackList());
         if(!defaultId.empty()) devlock.setPlaybackDefaultId(defaultId);
-        defaultId = helper.probeDevices(eCapture, devlock.getCaptureList());
+
+        defaultId = helper->probeDevices(eCapture, devlock.getCaptureList());
         if(!defaultId.empty()) devlock.setCaptureDefaultId(defaultId);
+
+        gInitDone.store(true, std::memory_order_relaxed);
+    }
+    catch(std::exception &e) {
+        ERR("Exception probing devices: {}", e.what());
+        if(promise)
+            promise->set_value(E_FAIL);
+        return;
     }
 
     TRACE("Watcher thread started");
+    gInitCV.notify_all();
+
     while(!quit()) {
         /* Do nothing. */
     }
@@ -1481,6 +1495,12 @@ try {
         mState = ThreadState::Done;
         mProcCond.notify_all();
         return;
+    }
+
+    if(!gInitDone.load(std::memory_order_relaxed))
+    {
+        auto devlock = DeviceListLock{gDeviceList};
+        gInitCV.wait(devlock, []() -> bool { return gInitDone; });
     }
 
     auto helper = DeviceHelper{};
@@ -2520,6 +2540,12 @@ try {
         mState = ThreadState::Done;
         mProcCond.notify_all();
         return;
+    }
+
+    if(!gInitDone.load(std::memory_order_relaxed))
+    {
+        auto devlock = DeviceListLock{gDeviceList};
+        gInitCV.wait(devlock, []() -> bool { return gInitDone; });
     }
 
     auto helper = DeviceHelper{};

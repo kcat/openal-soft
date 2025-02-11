@@ -51,6 +51,7 @@
 #include <chrono>
 #include <condition_variable>
 #include <cstring>
+#include <functional>
 #include <future>
 #include <mutex>
 #include <string>
@@ -3047,15 +3048,19 @@ auto WasapiBackendFactory::enumerate(BackendType type) -> std::vector<std::strin
     case BackendType::Playback:
         {
             auto defaultId = devlock.getPlaybackDefaultId();
-            for(const DevMap &entry : devlock.getPlaybackList())
+            auto &devlist = devlock.getPlaybackList();
+
+            outnames.reserve(devlist.size());
+            std::transform(devlist.cbegin(), devlist.cend(), std::back_inserter(outnames),
+                std::mem_fn(&DevMap::name));
+
+            /* Default device goes first. */
+            const auto defiter = std::find_if(devlist.cbegin(), devlist.cend(),
+                [defaultId](const DevMap &entry) -> bool { return entry.devid == defaultId; });
+            if(defiter != devlist.cend())
             {
-                if(entry.devid != defaultId)
-                {
-                    outnames.emplace_back(entry.name);
-                    continue;
-                }
-                /* Default device goes first. */
-                outnames.emplace(outnames.cbegin(), entry.name);
+                const auto defname = outnames.begin() + std::distance(devlist.cbegin(), defiter);
+                std::rotate(outnames.begin(), defname, defname+1);
             }
         }
         break;
@@ -3063,14 +3068,19 @@ auto WasapiBackendFactory::enumerate(BackendType type) -> std::vector<std::strin
     case BackendType::Capture:
         {
             auto defaultId = devlock.getCaptureDefaultId();
-            for(const DevMap &entry : devlock.getCaptureList())
+            auto &devlist = devlock.getCaptureList();
+
+            outnames.reserve(devlist.size());
+            std::transform(devlist.cbegin(), devlist.cend(), std::back_inserter(outnames),
+                std::mem_fn(&DevMap::name));
+
+            /* Default device goes first. */
+            const auto defiter = std::find_if(devlist.cbegin(), devlist.cend(),
+                [defaultId](const DevMap &entry) -> bool { return entry.devid == defaultId; });
+            if(defiter != devlist.cend())
             {
-                if(entry.devid != defaultId)
-                {
-                    outnames.emplace_back(entry.name);
-                    continue;
-                }
-                outnames.emplace(outnames.cbegin(), entry.name);
+                const auto defname = outnames.begin() + std::distance(devlist.cbegin(), defiter);
+                std::rotate(outnames.begin(), defname, defname+1);
             }
         }
         break;

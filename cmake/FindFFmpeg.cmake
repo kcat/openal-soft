@@ -83,7 +83,7 @@ macro(find_component _component _pkgconfig _library _header)
     if(DEFINED ${PC_${_component}_VERSION})
         set(${_component}_VERSION ${PC_${_component}_VERSION} CACHE STRING
             "The ${_component} version number." FORCE)
-    else()
+    elseif(EXISTS "${${_component}_INCLUDE_DIRS}/${_pkgconfig}/version.h")
         if(EXISTS "${${_component}_INCLUDE_DIRS}/${_pkgconfig}/version_major.h")
             file(STRINGS "${${_component}_INCLUDE_DIRS}/${_pkgconfig}/version_major.h" majorver
                 REGEX "^#define[ \t]+LIB${_component}_VERSION_MAJOR[ \t]+[0-9]+$")

@@ -63,6 +63,7 @@
 #include "alc/alconfig.h"
 #include "alnumeric.h"
 #include "alspan.h"
+#include "alstring.h"
 #include "althrd_setname.h"
 #include "comptr.h"
 #include "core/converter.h"
@@ -1617,12 +1618,13 @@ auto WasapiPlayback::openProxy(const std::string_view name, DeviceHelper &helper
         auto list = al::span{devlock.getPlaybackList()};
         auto iter = std::find_if(list.cbegin(), list.cend(),
             [name](const DevMap &entry) -> bool
-            { return entry.name == name || entry.endpoint_guid == name; });
+            { return entry.name == name || al::case_compare(entry.endpoint_guid, name) == 0; });
         if(iter == list.cend())
         {
             const std::wstring wname{utf8_to_wstr(name)};
             iter = std::find_if(list.cbegin(), list.cend(),
-                [&wname](const DevMap &entry) -> bool { return entry.devid == wname; });
+                [&wname](const DevMap &entry) -> bool
+                { return al::case_compare(entry.devid, wname) == 0; });
         }
         if(iter == list.cend())
         {
@@ -2664,12 +2666,13 @@ auto WasapiCapture::openProxy(const std::string_view name, DeviceHelper &helper,
         auto devlist = al::span{devlock.getCaptureList()};
         auto iter = std::find_if(devlist.cbegin(), devlist.cend(),
             [name](const DevMap &entry) -> bool
-            { return entry.name == name || entry.endpoint_guid == name; });
+            { return entry.name == name || al::case_compare(entry.endpoint_guid, name) == 0; });
         if(iter == devlist.cend())
         {
             const std::wstring wname{utf8_to_wstr(name)};
             iter = std::find_if(devlist.cbegin(), devlist.cend(),
-                [&wname](const DevMap &entry) -> bool { return entry.devid == wname; });
+                [&wname](const DevMap &entry) -> bool
+                { return al::case_compare(entry.devid, wname) == 0; });
         }
         if(iter == devlist.cend())
         {

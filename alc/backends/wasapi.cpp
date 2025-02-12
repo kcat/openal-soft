@@ -1382,30 +1382,10 @@ FORCE_ALIGN void WasapiPlayback::mixerProc(SpatialDevice &audio)
      */
     mPadding.store(mOutBufferSize-mOutUpdateSize, std::memory_order_release);
 
-    ResetEvent(mNotifyEvent);
-    if(HRESULT hr{audio.mRender->Start()}; FAILED(hr))
-    {
-        ERR("Failed to start spatial audio stream: {:#x}", as_unsigned(hr));
-        mDevice->handleDisconnect("Failed to start spatial audio stream: {:#x}", as_unsigned(hr));
-        return;
-    }
-
     mBufferFilled = 0;
+    auto firstupdate = true;
     while(!mKillNow.load(std::memory_order_relaxed))
     {
-        if(DWORD res{WaitForSingleObjectEx(mNotifyEvent, 1000, FALSE)}; res != WAIT_OBJECT_0)
-        {
-            ERR("WaitForSingleObjectEx error: {:#x}", res);
-
-            HRESULT hr{audio.mRender->Reset()};
-            if(FAILED(hr))
-            {
-                ERR("ISpatialAudioObjectRenderStream::Reset failed: {:#x}", as_unsigned(hr));
-                mDevice->handleDisconnect("Device lost: {:#x}", as_unsigned(hr));
-                break;
-            }
-        }
-
         UINT32 dynamicCount{}, framesToDo{};
         HRESULT hr{audio.mRender->BeginUpdatingAudioObjects(&dynamicCount, &framesToDo)};
         if(SUCCEEDED(hr))
@@ -1472,6 +1452,34 @@ FORCE_ALIGN void WasapiPlayback::mixerProc(SpatialDevice &audio)
             }
 
             hr = audio.mRender->EndUpdatingAudioObjects();
+        }
+
+        if(firstupdate)
+        {
+            firstupdate = false;
+            ResetEvent(mNotifyEvent);
+            hr = audio.mRender->Start();
+            if(FAILED(hr))
+            {
+                ERR("Failed to start spatial audio stream: {:#x}", as_unsigned(hr));
+                mDevice->handleDisconnect("Failed to start spatial audio stream: {:#x}",
+                    as_unsigned(hr));
+                return;
+            }
+        }
+
+        if(DWORD res{WaitForSingleObjectEx(mNotifyEvent, 1000, FALSE)}; res != WAIT_OBJECT_0)
+        {
+            ERR("WaitForSingleObjectEx error: {:#x}", res);
+
+            hr = audio.mRender->Reset();
+            if(FAILED(hr))
+            {
+                ERR("ISpatialAudioObjectRenderStream::Reset failed: {:#x}", as_unsigned(hr));
+                mDevice->handleDisconnect("Device lost: {:#x}", as_unsigned(hr));
+                break;
+            }
+            firstupdate = true;
         }
 
         if(FAILED(hr))
@@ -1909,38 +1917,18 @@ auto WasapiPlayback::initSpatial(DeviceHelper &helper, DeviceHandle &mmdev, Spat
 
     setDefaultWFXChannelOrder();
 
-    /* FIXME: Get the real update and buffer size. Presumably the actual device
-     * is configured once ActivateSpatialAudioStream succeeds, and an
-     * IAudioClient from the same IMMDevice accesses the same device
-     * configuration. This isn't obviously correct, but for now assume
-     * IAudioClient::GetDevicePeriod returns the current device period time
-     * that ISpatialAudioObjectRenderStream will try to wake up at.
+    /* TODO: ISpatialAudioClient::GetMaxFrameCount returns the maximum number
+     * of frames per processing pass, which is ostensibly the period size. This
+     * should be checked on a real Windows system.
      *
-     * Unfortunately this won't get the buffer size of the
+     * In either case, this won't get the buffer size of the
      * ISpatialAudioObjectRenderStream, so we only assume there's two periods.
      */
-    mOutUpdateSize = mDevice->mUpdateSize;
+    mOutUpdateSize = maxFrames;
     mOutBufferSize = mOutUpdateSize*2;
-    ReferenceTime per_time{ReferenceTime{seconds{mDevice->mUpdateSize}} / mDevice->mSampleRate};
 
-    ComPtr<IAudioClient> tmpClient;
-    hr = helper.activateAudioClient(mmdev, __uuidof(IAudioClient), al::out_ptr(tmpClient));
-    if(FAILED(hr))
-        ERR("Failed to activate audio client: {:#x}", as_unsigned(hr));
-    else
-    {
-        hr = tmpClient->GetDevicePeriod(&reinterpret_cast<REFERENCE_TIME&>(per_time), nullptr);
-        if(FAILED(hr))
-            ERR("Failed to get device period: {:#x}", as_unsigned(hr));
-        else
-        {
-            mOutUpdateSize = RefTime2Samples(per_time, mFormat.Format.nSamplesPerSec);
-            mOutBufferSize = mOutUpdateSize*2;
-        }
-    }
-    tmpClient = nullptr;
-
-    mDevice->mUpdateSize = RefTime2Samples(per_time, mDevice->mSampleRate);
+    mDevice->mUpdateSize = static_cast<uint>((uint64_t{mOutUpdateSize}*mDevice->mSampleRate
+        + (mFormat.Format.nSamplesPerSec-1)) / mFormat.Format.nSamplesPerSec);
     mDevice->mBufferSize = mDevice->mUpdateSize*2;
 
     mResampler = nullptr;

@@ -102,6 +102,12 @@ const PathNamePair &GetProcBinary()
 
         fullpath.resize(len);
 #else
+        if(__argc < 1 || !__wargv)
+        {
+            ERR("Failed to get process name: __argc = {}, __wargv = {}", __argc,
+                static_cast<void*>(__wargv));
+            return PathNamePair{};
+        }
         const WCHAR *exePath{__wargv[0]};
         if(!exePath)
         {

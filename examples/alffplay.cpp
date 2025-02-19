@@ -177,6 +177,35 @@ struct SwsContextDeleter {
 using SwsContextPtr = std::unique_ptr<SwsContext,SwsContextDeleter>;
 
 
+struct TextureFormatEntry {
+    AVPixelFormat avformat;
+    SDL_PixelFormat sdlformat;
+};
+constexpr auto TextureFormatMap = std::array{
+    TextureFormatEntry{AV_PIX_FMT_RGB8,           SDL_PIXELFORMAT_RGB332},
+    TextureFormatEntry{AV_PIX_FMT_RGB444,         SDL_PIXELFORMAT_XRGB4444},
+    TextureFormatEntry{AV_PIX_FMT_RGB555,         SDL_PIXELFORMAT_XRGB1555},
+    TextureFormatEntry{AV_PIX_FMT_BGR555,         SDL_PIXELFORMAT_XBGR1555},
+    TextureFormatEntry{AV_PIX_FMT_RGB565,         SDL_PIXELFORMAT_RGB565},
+    TextureFormatEntry{AV_PIX_FMT_BGR565,         SDL_PIXELFORMAT_BGR565},
+    TextureFormatEntry{AV_PIX_FMT_RGB24,          SDL_PIXELFORMAT_RGB24},
+    TextureFormatEntry{AV_PIX_FMT_BGR24,          SDL_PIXELFORMAT_BGR24},
+    TextureFormatEntry{AV_PIX_FMT_0RGB32,         SDL_PIXELFORMAT_XRGB8888},
+    TextureFormatEntry{AV_PIX_FMT_0BGR32,         SDL_PIXELFORMAT_XBGR8888},
+    TextureFormatEntry{AV_PIX_FMT_NE(RGB0, 0BGR), SDL_PIXELFORMAT_RGBX8888},
+    TextureFormatEntry{AV_PIX_FMT_NE(BGR0, 0RGB), SDL_PIXELFORMAT_BGRX8888},
+    TextureFormatEntry{AV_PIX_FMT_RGB32,          SDL_PIXELFORMAT_ARGB8888},
+    TextureFormatEntry{AV_PIX_FMT_RGB32_1,        SDL_PIXELFORMAT_RGBA8888},
+    TextureFormatEntry{AV_PIX_FMT_BGR32,          SDL_PIXELFORMAT_ABGR8888},
+    TextureFormatEntry{AV_PIX_FMT_BGR32_1,        SDL_PIXELFORMAT_BGRA8888},
+    TextureFormatEntry{AV_PIX_FMT_YUV420P,        SDL_PIXELFORMAT_IYUV},
+    TextureFormatEntry{AV_PIX_FMT_YUYV422,        SDL_PIXELFORMAT_YUY2},
+    TextureFormatEntry{AV_PIX_FMT_UYVY422,        SDL_PIXELFORMAT_UYVY},
+    TextureFormatEntry{AV_PIX_FMT_NV12,           SDL_PIXELFORMAT_NV12},
+    TextureFormatEntry{AV_PIX_FMT_NV21,           SDL_PIXELFORMAT_NV21},
+};
+
+
 struct ChannelLayout : public AVChannelLayout {
     ChannelLayout() : AVChannelLayout{} { }
     ChannelLayout(const ChannelLayout &rhs) : AVChannelLayout{}
@@ -416,6 +445,8 @@ struct VideoState {
 
     SDL_Texture *mImage{nullptr};
     int mWidth{0}, mHeight{0}; /* Full texture size */
+    unsigned int mSDLFormat{SDL_PIXELFORMAT_UNKNOWN};
+    int mAVFormat{AV_PIX_FMT_NONE};
     bool mFirstUpdate{true};
 
     std::atomic<bool> mEOS{false};
@@ -1491,18 +1522,48 @@ void VideoState::updateVideo(SDL_Window *screen, SDL_Renderer *renderer, bool re
         mPictQCond.notify_one();
 
         /* allocate or resize the buffer! */
-        bool fmt_updated{false};
-        if(!mImage || mWidth != frame->width || mHeight != frame->height)
+        if(!mImage || mWidth != frame->width || mHeight != frame->height
+            || frame->format != mAVFormat)
         {
-            fmt_updated = true;
             if(mImage)
                 SDL_DestroyTexture(mImage);
-            mImage = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_IYUV, SDL_TEXTUREACCESS_STREAMING,
-                frame->width, frame->height);
-            if(!mImage)
-                fmt::println(stderr, "Failed to create YV12 texture!");
-            mWidth = frame->width;
-            mHeight = frame->height;
+            mImage = nullptr;
+            mSwscaleCtx = nullptr;
+
+            auto fmtiter = std::find_if(TextureFormatMap.begin(), TextureFormatMap.end(),
+                [frame](const TextureFormatEntry &entry) noexcept
+                { return frame->format == entry.avformat; });
+            if(fmtiter != TextureFormatMap.end())
+            {
+                mImage = SDL_CreateTexture(renderer, fmtiter->sdlformat,
+                    SDL_TEXTUREACCESS_STREAMING, frame->width, frame->height);
+                if(!mImage)
+                    fmt::println(stderr, "Failed to create texture!");
+                mWidth = frame->width;
+                mHeight = frame->height;
+                mSDLFormat = fmtiter->sdlformat;
+                mAVFormat = fmtiter->avformat;
+            }
+            else
+            {
+                /* If there's no matching format, convert to RGB24. */
+                fmt::println(stderr, "Could not find SDL texture format for pix_fmt {0:#x} ({0})",
+                    as_unsigned(frame->format));
+
+                mImage = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGB24,
+                    SDL_TEXTUREACCESS_STREAMING, frame->width, frame->height);
+                if(!mImage)
+                    fmt::println(stderr, "Failed to create texture!");
+                mWidth = frame->width;
+                mHeight = frame->height;
+                mSDLFormat = SDL_PIXELFORMAT_RGB24;
+                mAVFormat = frame->format;
+
+                mSwscaleCtx = SwsContextPtr{sws_getContext(
+                    frame->width, frame->height, static_cast<AVPixelFormat>(frame->format),
+                    frame->width, frame->height, AV_PIX_FMT_RGB24, 0,
+                    nullptr, nullptr, nullptr)};
+            }
         }
 
         int frame_width{frame->width - static_cast<int>(frame->crop_left + frame->crop_right)};
@@ -1528,45 +1589,39 @@ void VideoState::updateVideo(SDL_Window *screen, SDL_Renderer *renderer, bool re
 
         if(mImage)
         {
-            void *pixels{nullptr};
-            int pitch{0};
-
-            if(mCodecCtx->pix_fmt == AV_PIX_FMT_YUV420P)
+            if(mSDLFormat == SDL_PIXELFORMAT_IYUV || mSDLFormat == SDL_PIXELFORMAT_YV12)
                 SDL_UpdateYUVTexture(mImage, nullptr,
                     frame->data[0], frame->linesize[0],
                     frame->data[1], frame->linesize[1],
-                    frame->data[2], frame->linesize[2]
-                );
-            else if(!SDL_LockTexture(mImage, nullptr, &pixels, &pitch))
-                fmt::println(stderr, "Failed to lock texture: {}", SDL_GetError());
-            else
+                    frame->data[2], frame->linesize[2]);
+            else if(mSDLFormat == SDL_PIXELFORMAT_NV12 || mSDLFormat == SDL_PIXELFORMAT_NV21)
+                SDL_UpdateNVTexture(mImage, nullptr,
+                    frame->data[0], frame->linesize[0],
+                    frame->data[1], frame->linesize[1]);
+            else if(mSwscaleCtx)
             {
-                // Convert the image into YUV format that SDL uses
-                int w{frame->width};
-                int h{frame->height};
-                if(!mSwscaleCtx || fmt_updated)
+                auto pixels = voidp{};
+                auto pitch = int{};
+                if(!SDL_LockTexture(mImage, nullptr, &pixels, &pitch))
+                    fmt::println(stderr, "Failed to lock texture: {}", SDL_GetError());
+                else
                 {
-                    mSwscaleCtx.reset(sws_getContext(
-                        w, h, mCodecCtx->pix_fmt,
-                        w, h, AV_PIX_FMT_YUV420P, 0,
-                        nullptr, nullptr, nullptr
-                    ));
+                    /* Formats passing through mSwscaleCtx are converted to
+                     * 24-bit RGB (3bpp).
+                     */
+                    const auto framesize = static_cast<size_t>(frame->width)
+                        * static_cast<size_t>(frame->height);
+                    const auto pixelspan = al::span{static_cast<uint8_t*>(pixels), framesize*3};
+                    const auto pict_data = std::array{al::to_address(pixelspan.begin())};
+                    const auto pict_linesize = std::array{pitch};
+
+                    sws_scale(mSwscaleCtx.get(), std::data(frame->data), std::data(frame->linesize),
+                        0, frame->height, pict_data.data(), pict_linesize.data());
+                    SDL_UnlockTexture(mImage);
                 }
-
-                /* point pict at the queue */
-                const auto framesize = static_cast<size_t>(w)*static_cast<size_t>(h);
-                const auto pixelspan = al::span{static_cast<uint8_t*>(pixels), framesize*3/2};
-                const std::array pict_data{
-                    al::to_address(pixelspan.begin()),
-                    al::to_address(pixelspan.begin() + ptrdiff_t{w}*h),
-                    al::to_address(pixelspan.begin() + ptrdiff_t{w}*h + ptrdiff_t{w}*h/4)
-                };
-                const std::array pict_linesize{pitch, pitch/2, pitch/2};
-
-                sws_scale(mSwscaleCtx.get(), std::data(frame->data), std::data(frame->linesize),
-                    0, h, pict_data.data(), pict_linesize.data());
-                SDL_UnlockTexture(mImage);
             }
+            else
+                SDL_UpdateTexture(mImage, nullptr, frame->data[0], frame->linesize[0]);
 
             redraw = true;
         }

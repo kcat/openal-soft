@@ -57,6 +57,13 @@ struct SwsContext;
 #include "SDL3/SDL_main.h"
 #include "SDL3/SDL_render.h"
 #include "SDL3/SDL_video.h"
+
+constexpr auto DefineSDLColorspace(SDL_ColorType type, SDL_ColorRange range,
+    SDL_ColorPrimaries primaries, SDL_TransferCharacteristics transfer,
+    SDL_MatrixCoefficients matrix, SDL_ChromaLocation chromaloc) noexcept
+{
+    return SDL_DEFINE_COLORSPACE(type, range, primaries, transfer, matrix, chromaloc);
+}
 #ifdef __GNUC__
 _Pragma("GCC diagnostic pop")
 #endif
@@ -176,6 +183,27 @@ struct SwsContextDeleter {
 };
 using SwsContextPtr = std::unique_ptr<SwsContext,SwsContextDeleter>;
 
+
+struct SDLProps {
+    SDL_PropertiesID mProperties{};
+
+    SDLProps() { mProperties = SDL_CreateProperties(); }
+    ~SDLProps() { SDL_DestroyProperties(mProperties); }
+
+    SDLProps(const SDLProps&) = delete;
+    auto operator=(const SDLProps&) -> SDLProps& = delete;
+
+    auto getid() const noexcept -> SDL_PropertiesID { return mProperties; }
+
+    auto setPointer(const char *name, void *value) const
+    { return SDL_SetPointerProperty(mProperties, name, value); }
+
+    auto setString(const char *name, const char *value) const
+    { return SDL_SetStringProperty(mProperties, name, value); }
+
+    auto setInt(const char *name, Sint64 value) const
+    { return SDL_SetNumberProperty(mProperties, name, value); }
+};
 
 struct TextureFormatEntry {
     AVPixelFormat avformat;
@@ -1535,8 +1563,125 @@ void VideoState::updateVideo(SDL_Window *screen, SDL_Renderer *renderer, bool re
                 { return frame->format == entry.avformat; });
             if(fmtiter != TextureFormatMap.end())
             {
-                mImage = SDL_CreateTexture(renderer, fmtiter->sdlformat,
-                    SDL_TEXTUREACCESS_STREAMING, frame->width, frame->height);
+                auto props = SDLProps{};
+                props.setInt(SDL_PROP_TEXTURE_CREATE_FORMAT_NUMBER, fmtiter->sdlformat);
+                props.setInt(SDL_PROP_TEXTURE_CREATE_ACCESS_NUMBER, SDL_TEXTUREACCESS_STREAMING);
+                props.setInt(SDL_PROP_TEXTURE_CREATE_WIDTH_NUMBER, frame->width);
+                props.setInt(SDL_PROP_TEXTURE_CREATE_HEIGHT_NUMBER, frame->height);
+
+                /* Should be a better way to check YCbCr vs RGB. */
+                const auto ctype = (frame->format == AV_PIX_FMT_YUV420P
+                    || frame->format == AV_PIX_FMT_YUYV422
+                    || frame->format == AV_PIX_FMT_UYVY422 || frame->format == AV_PIX_FMT_NV12
+                    || frame->format == AV_PIX_FMT_NV21) ? SDL_COLOR_TYPE_YCBCR
+                    : SDL_COLOR_TYPE_RGB;
+                const auto crange = std::invoke([frame]
+                {
+                    switch(frame->color_range)
+                    {
+                    case AVCOL_RANGE_UNSPECIFIED: return SDL_COLOR_RANGE_UNKNOWN;
+                    case AVCOL_RANGE_MPEG: return SDL_COLOR_RANGE_LIMITED;
+                    case AVCOL_RANGE_JPEG: return SDL_COLOR_RANGE_FULL;
+                    case AVCOL_RANGE_NB: break;
+                    }
+                    return SDL_COLOR_RANGE_UNKNOWN;
+                });
+                const auto cprims = std::invoke([frame]
+                {
+                    switch(frame->color_primaries)
+                    {
+                    case AVCOL_PRI_RESERVED0: break;
+                    case AVCOL_PRI_BT709: return SDL_COLOR_PRIMARIES_BT709;
+                    case AVCOL_PRI_UNSPECIFIED: return SDL_COLOR_PRIMARIES_UNSPECIFIED;
+                    case AVCOL_PRI_RESERVED: break;
+                    case AVCOL_PRI_BT470M: return SDL_COLOR_PRIMARIES_BT470M;
+                    case AVCOL_PRI_BT470BG: return SDL_COLOR_PRIMARIES_BT470BG;
+                    case AVCOL_PRI_SMPTE170M: return SDL_COLOR_PRIMARIES_BT601;
+                    case AVCOL_PRI_SMPTE240M: return SDL_COLOR_PRIMARIES_SMPTE240;
+                    case AVCOL_PRI_FILM: return SDL_COLOR_PRIMARIES_GENERIC_FILM;
+                    case AVCOL_PRI_BT2020: return SDL_COLOR_PRIMARIES_BT2020;
+                    case AVCOL_PRI_SMPTE428: return SDL_COLOR_PRIMARIES_XYZ;
+                    case AVCOL_PRI_SMPTE431: return SDL_COLOR_PRIMARIES_SMPTE431;
+                    case AVCOL_PRI_SMPTE432: return SDL_COLOR_PRIMARIES_SMPTE432;
+                    case AVCOL_PRI_EBU3213: return SDL_COLOR_PRIMARIES_EBU3213;
+                    case AVCOL_PRI_NB: break;
+                    }
+                    return SDL_COLOR_PRIMARIES_UNKNOWN;
+                });
+                const auto ctransfer = std::invoke([frame]
+                {
+                    switch(frame->color_trc)
+                    {
+                    case AVCOL_TRC_RESERVED0: break;
+                    case AVCOL_TRC_BT709: return SDL_TRANSFER_CHARACTERISTICS_BT709;
+                    case AVCOL_TRC_UNSPECIFIED: return SDL_TRANSFER_CHARACTERISTICS_UNSPECIFIED;
+                    case AVCOL_TRC_RESERVED: break;
+                    case AVCOL_TRC_GAMMA22: return SDL_TRANSFER_CHARACTERISTICS_GAMMA22;
+                    case AVCOL_TRC_GAMMA28: return SDL_TRANSFER_CHARACTERISTICS_GAMMA28;
+                    case AVCOL_TRC_SMPTE170M: return SDL_TRANSFER_CHARACTERISTICS_BT601;
+                    case AVCOL_TRC_SMPTE240M: return SDL_TRANSFER_CHARACTERISTICS_SMPTE240;
+                    case AVCOL_TRC_LINEAR: return SDL_TRANSFER_CHARACTERISTICS_LINEAR;
+                    case AVCOL_TRC_LOG: return SDL_TRANSFER_CHARACTERISTICS_LOG100;
+                    case AVCOL_TRC_LOG_SQRT: return SDL_TRANSFER_CHARACTERISTICS_LOG100_SQRT10;
+                    case AVCOL_TRC_IEC61966_2_4: return SDL_TRANSFER_CHARACTERISTICS_IEC61966;
+                    case AVCOL_TRC_BT1361_ECG: return SDL_TRANSFER_CHARACTERISTICS_BT1361;
+                    case AVCOL_TRC_IEC61966_2_1: return SDL_TRANSFER_CHARACTERISTICS_SRGB;
+                    case AVCOL_TRC_BT2020_10: return SDL_TRANSFER_CHARACTERISTICS_BT2020_10BIT;
+                    case AVCOL_TRC_BT2020_12: return SDL_TRANSFER_CHARACTERISTICS_BT2020_12BIT;
+                    case AVCOL_TRC_SMPTE2084: return SDL_TRANSFER_CHARACTERISTICS_PQ;
+                    case AVCOL_TRC_SMPTE428: return SDL_TRANSFER_CHARACTERISTICS_SMPTE428;
+                    case AVCOL_TRC_ARIB_STD_B67: return SDL_TRANSFER_CHARACTERISTICS_HLG;
+                    case AVCOL_TRC_NB: break;
+                    }
+                    return SDL_TRANSFER_CHARACTERISTICS_UNKNOWN;
+                });
+                const auto cmatrix = std::invoke([frame]
+                {
+                    switch(frame->colorspace)
+                    {
+                    case AVCOL_SPC_RGB: return SDL_MATRIX_COEFFICIENTS_IDENTITY;
+                    case AVCOL_SPC_BT709: return SDL_MATRIX_COEFFICIENTS_BT709;
+                    case AVCOL_SPC_UNSPECIFIED: return SDL_MATRIX_COEFFICIENTS_UNSPECIFIED;
+                    case AVCOL_SPC_RESERVED: break;
+                    case AVCOL_SPC_FCC: return SDL_MATRIX_COEFFICIENTS_FCC;
+                    case AVCOL_SPC_BT470BG: return SDL_MATRIX_COEFFICIENTS_BT470BG;
+                    case AVCOL_SPC_SMPTE170M: return SDL_MATRIX_COEFFICIENTS_BT601;
+                    case AVCOL_SPC_SMPTE240M: return SDL_MATRIX_COEFFICIENTS_SMPTE240;
+                    case AVCOL_SPC_YCGCO: return SDL_MATRIX_COEFFICIENTS_YCGCO;
+                    case AVCOL_SPC_BT2020_NCL: return SDL_MATRIX_COEFFICIENTS_BT2020_NCL;
+                    case AVCOL_SPC_BT2020_CL: return SDL_MATRIX_COEFFICIENTS_BT2020_CL;
+                    case AVCOL_SPC_SMPTE2085: return SDL_MATRIX_COEFFICIENTS_SMPTE2085;
+                    case AVCOL_SPC_CHROMA_DERIVED_NCL: return SDL_MATRIX_COEFFICIENTS_CHROMA_DERIVED_NCL;
+                    case AVCOL_SPC_CHROMA_DERIVED_CL: return SDL_MATRIX_COEFFICIENTS_CHROMA_DERIVED_CL;
+                    case AVCOL_SPC_ICTCP: return SDL_MATRIX_COEFFICIENTS_ICTCP;
+                    case AVCOL_SPC_IPT_C2: break; // ???
+                    case AVCOL_SPC_YCGCO_RE: return SDL_MATRIX_COEFFICIENTS_YCGCO; // ???
+                    case AVCOL_SPC_YCGCO_RO: return SDL_MATRIX_COEFFICIENTS_YCGCO; // ???
+                    case AVCOL_SPC_NB: break;
+                    }
+                    return SDL_MATRIX_COEFFICIENTS_UNSPECIFIED;
+                });
+                const auto cchromaloc = std::invoke([frame]
+                {
+                    switch(frame->chroma_location)
+                    {
+                    case AVCHROMA_LOC_UNSPECIFIED: return SDL_CHROMA_LOCATION_NONE;
+                    case AVCHROMA_LOC_LEFT: return SDL_CHROMA_LOCATION_LEFT;
+                    case AVCHROMA_LOC_CENTER: return SDL_CHROMA_LOCATION_CENTER;
+                    case AVCHROMA_LOC_TOPLEFT: return SDL_CHROMA_LOCATION_TOPLEFT;
+                    case AVCHROMA_LOC_TOP: return SDL_CHROMA_LOCATION_TOPLEFT; // ???
+                    case AVCHROMA_LOC_BOTTOMLEFT: return SDL_CHROMA_LOCATION_LEFT; // ???
+                    case AVCHROMA_LOC_BOTTOM: return SDL_CHROMA_LOCATION_CENTER; // ???
+                    case AVCHROMA_LOC_NB: break;
+                    }
+                    return SDL_CHROMA_LOCATION_NONE;
+                });
+
+                const auto colorspace = DefineSDLColorspace(ctype, crange, cprims, ctransfer,
+                    cmatrix, cchromaloc);
+                props.setInt(SDL_PROP_TEXTURE_CREATE_COLORSPACE_NUMBER, colorspace);
+
+                mImage = SDL_CreateTextureWithProperties(renderer, props.getid());
                 if(!mImage)
                     fmt::println(stderr, "Failed to create texture!");
                 mWidth = frame->width;
@@ -1550,8 +1695,13 @@ void VideoState::updateVideo(SDL_Window *screen, SDL_Renderer *renderer, bool re
                 fmt::println(stderr, "Could not find SDL texture format for pix_fmt {0:#x} ({0})",
                     as_unsigned(frame->format));
 
-                mImage = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGB24,
-                    SDL_TEXTUREACCESS_STREAMING, frame->width, frame->height);
+                auto props = SDLProps{};
+                props.setInt(SDL_PROP_TEXTURE_CREATE_FORMAT_NUMBER, SDL_PIXELFORMAT_RGB24);
+                props.setInt(SDL_PROP_TEXTURE_CREATE_ACCESS_NUMBER, SDL_TEXTUREACCESS_STREAMING);
+                props.setInt(SDL_PROP_TEXTURE_CREATE_WIDTH_NUMBER, frame->width);
+                props.setInt(SDL_PROP_TEXTURE_CREATE_HEIGHT_NUMBER, frame->height);
+
+                mImage = SDL_CreateTextureWithProperties(renderer, props.getid());
                 if(!mImage)
                     fmt::println(stderr, "Failed to create texture!");
                 mWidth = frame->width;
@@ -1615,8 +1765,9 @@ void VideoState::updateVideo(SDL_Window *screen, SDL_Renderer *renderer, bool re
                     const auto pict_data = std::array{al::to_address(pixelspan.begin())};
                     const auto pict_linesize = std::array{pitch};
 
-                    sws_scale(mSwscaleCtx.get(), std::data(frame->data), std::data(frame->linesize),
-                        0, frame->height, pict_data.data(), pict_linesize.data());
+                    sws_scale(mSwscaleCtx.get(), std::data(frame->data),
+                        std::data(frame->linesize), 0, frame->height, pict_data.data(),
+                        pict_linesize.data());
                     SDL_UnlockTexture(mImage);
                 }
             }

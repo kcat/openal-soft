@@ -1713,6 +1713,10 @@ void VideoState::updateVideo(SDL_Window *screen, SDL_Renderer *renderer, bool re
                     frame->width, frame->height, static_cast<AVPixelFormat>(frame->format),
                     frame->width, frame->height, AV_PIX_FMT_RGB24, 0,
                     nullptr, nullptr, nullptr)};
+
+                sws_setColorspaceDetails(mSwscaleCtx.get(), sws_getCoefficients(frame->colorspace),
+                    (frame->color_range==AVCOL_RANGE_JPEG), sws_getCoefficients(SWS_CS_DEFAULT), 1,
+                    0<<16, 1<<16, 1<<16);
             }
         }
 

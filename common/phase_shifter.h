@@ -54,16 +54,6 @@ struct SIMDALIGN PhaseShifterT {
 
 private:
 #if HAVE_NEON
-    static auto unpacklo(float32x4_t a, float32x4_t b)
-    {
-        float32x2x2_t result{vzip_f32(vget_low_f32(a), vget_low_f32(b))};
-        return vcombine_f32(result.val[0], result.val[1]);
-    }
-    static auto unpackhi(float32x4_t a, float32x4_t b)
-    {
-        float32x2x2_t result{vzip_f32(vget_high_f32(a), vget_high_f32(b))};
-        return vcombine_f32(result.val[0], result.val[1]);
-    }
     static auto load4(float32_t a, float32_t b, float32_t c, float32_t d)
     {
         float32x4_t ret{vmovq_n_f32(a)};

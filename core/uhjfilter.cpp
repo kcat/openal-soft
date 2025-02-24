@@ -70,14 +70,13 @@ struct SegmentedFilter {
         auto tmpBuffer = std::vector<double>(fft_size, 0.0);
         for(std::size_t i{0};i < fft_size/2;++i)
         {
-            const int k{int{fft_size/2} - static_cast<int>(i*2 + 1)};
+            const auto k = int{fft_size/2} - static_cast<int>(i*2 + 1);
 
-            const double w{2.0*al::numbers::pi * static_cast<double>(i*2 + 1)
-                / double{fft_size}};
-            const double window{0.3635819 - 0.4891775*std::cos(w) + 0.1365995*std::cos(2.0*w)
-                - 0.0106411*std::cos(3.0*w)};
+            const auto w = 2.0*al::numbers::pi/double{fft_size} * static_cast<double>(i*2 + 1);
+            const auto window = 0.3635819 - 0.4891775*std::cos(w) + 0.1365995*std::cos(2.0*w)
+                - 0.0106411*std::cos(3.0*w);
 
-            const double pk{al::numbers::pi * static_cast<double>(k)};
+            const auto pk = al::numbers::pi * static_cast<double>(k);
             tmpBuffer[i*2 + 1] = window * (1.0-std::cos(pk)) / pk;
         }
 

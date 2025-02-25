@@ -1321,6 +1321,12 @@ if(ALSOFT_EMBED_HRTF_DATA)
     make_hrtf_header("Default HRTF.mhr" "default_hrtf")
 endif()
 
+# Set a 16KB page size for Android
+if(ANDROID)
+    set(CPP_DEFS ${CPP_DEFS} __BIONIC_NO_PAGE_SIZE_MACRO)
+    set(LINKER_FLAGS ${LINKER_FLAGS} "-Wl,-z,max-page-size=16384")
+endif()
+
 
 if(ALSOFT_UTILS)
     find_package(MySOFA)

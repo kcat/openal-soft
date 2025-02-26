@@ -1534,10 +1534,10 @@ PFFFTSetupPtr pffft_new_setup(unsigned int N, pffft_transform_t transform)
 }
 
 
-void pffft_destroy_setup(gsl::owner<PFFFT_Setup*> s) noexcept
+void PFFFTSetupDeleter::operator()(gsl::owner<PFFFT_Setup*> setup) const noexcept
 {
-    std::destroy_at(s);
-    ::operator delete[](gsl::owner<void*>{s}, V4sfAlignVal);
+    std::destroy_at(setup);
+    ::operator delete[](gsl::owner<void*>{setup}, V4sfAlignVal);
 }
 
 #if !defined(PFFFT_SIMD_DISABLE)

@@ -2,7 +2,6 @@
 #define ALCOMPLEX_H
 
 #include <complex>
-#include <type_traits>
 
 #include "alspan.h"
 
@@ -11,27 +10,21 @@
  * FFT and 1 is inverse FFT. Applies the Discrete Fourier Transform (DFT) to
  * the data supplied in the buffer, which MUST BE power of two.
  */
-template<typename Real>
-std::enable_if_t<std::is_floating_point<Real>::value>
-complex_fft(const al::span<std::complex<Real>> buffer, const al::type_identity_t<Real> sign);
+void complex_fft(const al::span<std::complex<double>> buffer, const double sign);
 
 /**
  * Calculate the frequency-domain response of the time-domain signal in the
  * provided buffer, which MUST BE power of two.
  */
-template<typename Real, size_t N>
-std::enable_if_t<std::is_floating_point<Real>::value>
-forward_fft(const al::span<std::complex<Real>,N> buffer)
-{ complex_fft(buffer.subspan(0), -1); }
+inline void forward_fft(const al::span<std::complex<double>> buffer)
+{ complex_fft(buffer, -1.0); }
 
 /**
  * Calculate the time-domain signal of the frequency-domain response in the
  * provided buffer, which MUST BE power of two.
  */
-template<typename Real, size_t N>
-std::enable_if_t<std::is_floating_point<Real>::value>
-inverse_fft(const al::span<std::complex<Real>,N> buffer)
-{ complex_fft(buffer.subspan(0), 1); }
+inline void inverse_fft(const al::span<std::complex<double>> buffer)
+{ complex_fft(buffer, +1.0); }
 
 /**
  * Calculate the complex helical sequence (discrete-time analytical signal) of

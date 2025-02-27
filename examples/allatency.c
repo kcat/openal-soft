@@ -37,6 +37,8 @@
 
 #include "common/alhelpers.h"
 
+#include "win_main_utf8.h"
+
 
 static LPALSOURCEDSOFT alSourcedSOFT;
 static LPALSOURCE3DSOFT alSource3dSOFT;
@@ -124,7 +126,7 @@ static ALuint LoadSound(const char *filename)
     free(membuf);
     sf_close(sndfile);
 
-    /* Check if an error occured, and clean up if so. */
+    /* Check if an error occurred, and clean up if so. */
     err = alGetError();
     if(err != AL_NO_ERROR)
     {

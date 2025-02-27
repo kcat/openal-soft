@@ -5,9 +5,8 @@
 #include <windows.h>
 #include <winnt.h>
 
-#include <stdio.h>
-
 #include <atomic>
+#include <cstdio>
 #include <memory>
 #include <mutex>
 #include <string>
@@ -18,15 +17,13 @@
 #include "AL/al.h"
 #include "AL/alext.h"
 
+#include "almalloc.h"
+#include "fmt/core.h"
 
-#define MAKE_ALC_VER(major, minor) (((major)<<8) | (minor))
+
+constexpr auto MakeALCVer(int major, int minor) noexcept -> int { return (major<<8) | minor; }
 
 struct DriverIface {
-    std::wstring Name;
-    HMODULE Module{nullptr};
-    int ALCVer{0};
-    std::once_flag InitOnceCtx{};
-
     LPALCCREATECONTEXT alcCreateContext{nullptr};
     LPALCMAKECONTEXTCURRENT alcMakeContextCurrent{nullptr};
     LPALCPROCESSCONTEXT alcProcessContext{nullptr};
@@ -160,84 +157,66 @@ struct DriverIface {
     LPALGETAUXILIARYEFFECTSLOTI alGetAuxiliaryEffectSloti{nullptr};
     LPALGETAUXILIARYEFFECTSLOTIV alGetAuxiliaryEffectSlotiv{nullptr};
 
+    std::wstring Name;
+    HMODULE Module{nullptr};
+    int ALCVer{0};
+    std::once_flag InitOnceCtx;
+
     template<typename T>
-    DriverIface(T&& name, HMODULE mod)
-      : Name(std::forward<T>(name)), Module(mod)
-    { }
-    ~DriverIface()
-    {
-        if(Module)
-            FreeLibrary(Module);
-        Module = nullptr;
-    }
+    DriverIface(T&& name, HMODULE mod) : Name(std::forward<T>(name)), Module(mod) { }
+    ~DriverIface() { if(Module) FreeLibrary(Module); }
+
+    DriverIface(const DriverIface&) = delete;
+    DriverIface(DriverIface&&) = delete;
+    DriverIface& operator=(const DriverIface&) = delete;
+    DriverIface& operator=(DriverIface&&) = delete;
 };
 using DriverIfacePtr = std::unique_ptr<DriverIface>;
 
-extern std::vector<DriverIfacePtr> DriverList;
+inline std::vector<DriverIfacePtr> DriverList;
 
-extern thread_local DriverIface *ThreadCtxDriver;
-extern std::atomic<DriverIface*> CurrentCtxDriver;
+inline thread_local DriverIface *ThreadCtxDriver{};
+inline std::atomic<DriverIface*> CurrentCtxDriver{};
 
-/* HACK: MinGW generates bad code when accessing an extern thread_local object.
- * Add a wrapper function for it that only accesses it where it's defined.
- */
-#ifdef __MINGW32__
-DriverIface *GetThreadDriver() noexcept;
-void SetThreadDriver(DriverIface *driver) noexcept;
-#else
 inline DriverIface *GetThreadDriver() noexcept { return ThreadCtxDriver; }
 inline void SetThreadDriver(DriverIface *driver) noexcept { ThreadCtxDriver = driver; }
-#endif
 
 
-class PtrIntMap {
-    void **mKeys{nullptr};
-    /* Shares memory with keys. */
-    int *mValues{nullptr};
-
-    ALsizei mSize{0};
-    ALsizei mCapacity{0};
-    std::mutex mLock;
-
-public:
-    PtrIntMap() = default;
-    ~PtrIntMap();
-
-    ALenum insert(void *key, int value);
-    int removeByKey(void *key);
-    int lookupByKey(void *key);
+enum class eLogLevel {
+    None  = 0,
+    Error = 1,
+    Warn  = 2,
+    Trace = 3,
 };
+extern eLogLevel LogLevel;
+extern gsl::owner<std::FILE*> LogFile;
+
+#define TRACE(...) do {                                     \
+    if(LogLevel >= eLogLevel::Trace)                        \
+    {                                                       \
+        std::FILE *file{LogFile ? LogFile : stderr};        \
+        fmt::println(file, "AL Router (II): " __VA_ARGS__); \
+        fflush(file);                                       \
+    }                                                       \
+} while(0)
+#define WARN(...) do {                                      \
+    if(LogLevel >= eLogLevel::Warn)                         \
+    {                                                       \
+        std::FILE *file{LogFile ? LogFile : stderr};        \
+        fmt::println(file, "AL Router (WW): " __VA_ARGS__); \
+        fflush(file);                                       \
+    }                                                       \
+} while(0)
+#define ERR(...) do {                                       \
+    if(LogLevel >= eLogLevel::Error)                        \
+    {                                                       \
+        std::FILE *file{LogFile ? LogFile : stderr};        \
+        fmt::println(file, "AL Router (EE): " __VA_ARGS__); \
+        fflush(file);                                       \
+    }                                                       \
+} while(0)
 
 
-enum LogLevel {
-    LogLevel_None  = 0,
-    LogLevel_Error = 1,
-    LogLevel_Warn  = 2,
-    LogLevel_Trace = 3,
-};
-extern enum LogLevel LogLevel;
-extern FILE *LogFile;
-
-#define TRACE(...) do {                                   \
-    if(LogLevel >= LogLevel_Trace)                        \
-    {                                                     \
-        fprintf(LogFile, "AL Router (II): " __VA_ARGS__); \
-        fflush(LogFile);                                  \
-    }                                                     \
-} while(0)
-#define WARN(...) do {                                    \
-    if(LogLevel >= LogLevel_Warn)                         \
-    {                                                     \
-        fprintf(LogFile, "AL Router (WW): " __VA_ARGS__); \
-        fflush(LogFile);                                  \
-    }                                                     \
-} while(0)
-#define ERR(...) do {                                     \
-    if(LogLevel >= LogLevel_Error)                        \
-    {                                                     \
-        fprintf(LogFile, "AL Router (EE): " __VA_ARGS__); \
-        fflush(LogFile);                                  \
-    }                                                     \
-} while(0)
+void LoadDriverList();
 
 #endif /* ROUTER_ROUTER_H */

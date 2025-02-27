@@ -1,43 +1,46 @@
 #ifndef MAKEMHR_H
 #define MAKEMHR_H
 
-#include <vector>
+#include <algorithm>
+#include <array>
 #include <complex>
+#include <vector>
 
 #include "alcomplex.h"
+#include "alspan.h"
 #include "polyphase_resampler.h"
 
 
 // The maximum path length used when processing filenames.
-#define MAX_PATH_LEN                 (256)
+inline constexpr auto MAX_PATH_LEN = 256u;
 
 // The limit to the number of 'distances' listed in the data set definition.
 // Must be less than 256
-#define MAX_FD_COUNT                 (16)
+inline constexpr auto MAX_FD_COUNT = 16u;
 
 // The limits to the number of 'elevations' listed in the data set definition.
 // Must be less than 256.
-#define MIN_EV_COUNT                 (5)
-#define MAX_EV_COUNT                 (181)
+inline constexpr auto MIN_EV_COUNT = 5u;
+inline constexpr auto MAX_EV_COUNT = 181u;
 
 // The limits for each of the 'azimuths' listed in the data set definition.
 // Must be less than 256.
-#define MIN_AZ_COUNT                 (1)
-#define MAX_AZ_COUNT                 (255)
+inline constexpr auto MIN_AZ_COUNT = 1u;
+inline constexpr auto MAX_AZ_COUNT = 255u;
 
 // The limits for the 'distance' from source to listener for each field in
 // the definition file.
-#define MIN_DISTANCE                 (0.05)
-#define MAX_DISTANCE                 (2.50)
+inline constexpr auto MIN_DISTANCE = 0.05;
+inline constexpr auto MAX_DISTANCE = 2.50;
 
 // The limits for the sample 'rate' metric in the data set definition and for
 // resampling.
-#define MIN_RATE                     (32000)
-#define MAX_RATE                     (96000)
+inline constexpr auto MIN_RATE = 32000u;
+inline constexpr auto MAX_RATE = 96000u;
 
 // The limits for the HRIR 'points' metric in the data set definition.
-#define MIN_POINTS                   (16)
-#define MAX_POINTS                   (8192)
+inline constexpr auto MIN_POINTS = 16u;
+inline constexpr auto MAX_POINTS = 8192u;
 
 
 using uint = unsigned int;
@@ -68,8 +71,8 @@ enum ChannelTypeT {
 struct HrirAzT {
     double mAzimuth{0.0};
     uint mIndex{0u};
-    double mDelays[2]{0.0, 0.0};
-    double *mIrs[2]{nullptr, nullptr};
+    std::array<double,2> mDelays{};
+    std::array<al::span<double>,2> mIrs{};
 };
 
 struct HrirEvT {
@@ -109,19 +112,31 @@ struct HrirDataT {
 bool PrepareHrirData(const al::span<const double> distances,
     const al::span<const uint,MAX_FD_COUNT> evCounts,
     const al::span<const std::array<uint,MAX_EV_COUNT>,MAX_FD_COUNT> azCounts, HrirDataT *hData);
-void MagnitudeResponse(const uint n, const complex_d *in, double *out);
+
+/* Calculate the magnitude response of the given input.  This is used in
+ * place of phase decomposition, since the phase residuals are discarded for
+ * minimum phase reconstruction.  The mirrored half of the response is also
+ * discarded.
+ */
+inline void MagnitudeResponse(const al::span<const complex_d> in, const al::span<double> out)
+{
+    static constexpr double Epsilon{1e-9};
+    for(size_t i{0};i < out.size();++i)
+        out[i] = std::max(std::abs(in[i]), Epsilon);
+}
 
 // Performs a forward FFT.
 inline void FftForward(const uint n, complex_d *inout)
-{ forward_fft(al::as_span(inout, n)); }
+{ forward_fft(al::span{inout, n}); }
 
-// Performs an inverse FFT.
+// Performs an inverse FFT, scaling the result by the number of elements.
 inline void FftInverse(const uint n, complex_d *inout)
 {
-    inverse_fft(al::as_span(inout, n));
-    double f{1.0 / n};
-    for(uint i{0};i < n;i++)
-        inout[i] *= f;
+    const auto values = al::span{inout, n};
+    inverse_fft(values);
+
+    const double f{1.0 / n};
+    std::for_each(values.begin(), values.end(), [f](complex_d &value) { value *= f; });
 }
 
 // Performs linear interpolation.

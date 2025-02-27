@@ -22,30 +22,32 @@
 
 #include <algorithm>
 #include <array>
+#include <cmath>
 #include <cstdlib>
-#include <iterator>
+#include <variant>
 
 #include "alc/effects/base.h"
-#include "almalloc.h"
 #include "alnumbers.h"
 #include "alnumeric.h"
 #include "alspan.h"
+#include "core/ambidefs.h"
 #include "core/bufferline.h"
 #include "core/context.h"
-#include "core/devformat.h"
 #include "core/device.h"
+#include "core/effects/base.h"
 #include "core/effectslot.h"
 #include "core/filters/biquad.h"
 #include "core/mixer.h"
 #include "core/mixer/defs.h"
 #include "intrusive_ptr.h"
 
+struct BufferStorage;
 
 namespace {
 
 struct DistortionState final : public EffectState {
     /* Effect gains for each channel */
-    float mGain[MaxAmbiChannels]{};
+    std::array<float,MaxAmbiChannels> mGain{};
 
     /* Effect parameters */
     BiquadFilter mLowpass;
@@ -53,52 +55,50 @@ struct DistortionState final : public EffectState {
     float mAttenuation{};
     float mEdgeCoeff{};
 
-    alignas(16) float mBuffer[2][BufferLineSize]{};
+    alignas(16) std::array<FloatBufferLine,2> mBuffer{};
 
 
-    void deviceUpdate(const DeviceBase *device, const Buffer &buffer) override;
+    void deviceUpdate(const DeviceBase *device, const BufferStorage *buffer) override;
     void update(const ContextBase *context, const EffectSlot *slot, const EffectProps *props,
         const EffectTarget target) override;
     void process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn,
         const al::span<FloatBufferLine> samplesOut) override;
-
-    DEF_NEWDEL(DistortionState)
 };
 
-void DistortionState::deviceUpdate(const DeviceBase*, const Buffer&)
+void DistortionState::deviceUpdate(const DeviceBase*, const BufferStorage*)
 {
     mLowpass.clear();
     mBandpass.clear();
 }
 
 void DistortionState::update(const ContextBase *context, const EffectSlot *slot,
-    const EffectProps *props, const EffectTarget target)
+    const EffectProps *props_, const EffectTarget target)
 {
+    auto &props = std::get<DistortionProps>(*props_);
     const DeviceBase *device{context->mDevice};
 
     /* Store waveshaper edge settings. */
-    const float edge{minf(std::sin(al::numbers::pi_v<float>*0.5f * props->Distortion.Edge),
-        0.99f)};
+    const float edge{std::min(std::sin(al::numbers::pi_v<float>*0.5f * props.Edge), 0.99f)};
     mEdgeCoeff = 2.0f * edge / (1.0f-edge);
 
-    float cutoff{props->Distortion.LowpassCutoff};
+    float cutoff{props.LowpassCutoff};
     /* Bandwidth value is constant in octaves. */
     float bandwidth{(cutoff / 2.0f) / (cutoff * 0.67f)};
     /* Divide normalized frequency by the amount of oversampling done during
      * processing.
      */
-    auto frequency = static_cast<float>(device->Frequency);
+    auto frequency = static_cast<float>(device->mSampleRate);
     mLowpass.setParamsFromBandwidth(BiquadType::LowPass, cutoff/frequency/4.0f, 1.0f, bandwidth);
 
-    cutoff = props->Distortion.EQCenter;
+    cutoff = props.EQCenter;
     /* Convert bandwidth in Hz to octaves. */
-    bandwidth = props->Distortion.EQBandwidth / (cutoff * 0.67f);
+    bandwidth = props.EQBandwidth / (cutoff * 0.67f);
     mBandpass.setParamsFromBandwidth(BiquadType::BandPass, cutoff/frequency/4.0f, 1.0f, bandwidth);
 
-    static constexpr auto coeffs = CalcDirectionCoeffs({0.0f, 0.0f, -1.0f});
+    static constexpr auto coeffs = CalcDirectionCoeffs(std::array{0.0f, 0.0f, -1.0f});
 
     mOutTarget = target.Main->Buffer;
-    ComputePanGains(target.Main, coeffs.data(), slot->Gain*props->Distortion.Gain, mGain);
+    ComputePanGains(target.Main, coeffs, slot->Gain*props.Gain, mGain);
 }
 
 void DistortionState::process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn, const al::span<FloatBufferLine> samplesOut)
@@ -111,7 +111,7 @@ void DistortionState::process(const size_t samplesToDo, const al::span<const Flo
          * bandpass filters using high frequencies, at which classic IIR
          * filters became unstable.
          */
-        size_t todo{minz(BufferLineSize, (samplesToDo-base) * 4)};
+        size_t todo{std::min(BufferLineSize, (samplesToDo-base) * 4_uz)};
 
         /* Fill oversample buffer using zero stuffing. Multiply the sample by
          * the amount of oversampling to maintain the signal's power.
@@ -124,7 +124,7 @@ void DistortionState::process(const size_t samplesToDo, const al::span<const Flo
          * (which is fortunately first step of distortion). So combine three
          * operations into the one.
          */
-        mLowpass.process({mBuffer[0], todo}, mBuffer[1]);
+        mLowpass.process(al::span{mBuffer[0]}.first(todo), mBuffer[1]);
 
         /* Second step, do distortion using waveshaper function to emulate
          * signal processing during tube overdriving. Three steps of
@@ -133,31 +133,39 @@ void DistortionState::process(const size_t samplesToDo, const al::span<const Flo
          */
         auto proc_sample = [fc](float smp) -> float
         {
-            smp = (1.0f + fc) * smp/(1.0f + fc*std::abs(smp));
-            smp = (1.0f + fc) * smp/(1.0f + fc*std::abs(smp)) * -1.0f;
-            smp = (1.0f + fc) * smp/(1.0f + fc*std::abs(smp));
+            smp = (1.0f + fc) * smp/(1.0f + fc*std::fabs(smp));
+            smp = (1.0f + fc) * smp/(1.0f + fc*std::fabs(smp)) * -1.0f;
+            smp = (1.0f + fc) * smp/(1.0f + fc*std::fabs(smp));
             return smp;
         };
-        std::transform(std::begin(mBuffer[1]), std::begin(mBuffer[1])+todo, std::begin(mBuffer[0]),
+        std::transform(mBuffer[1].begin(), mBuffer[1].begin()+todo, mBuffer[0].begin(),
             proc_sample);
 
         /* Third step, do bandpass filtering of distorted signal. */
-        mBandpass.process({mBuffer[0], todo}, mBuffer[1]);
+        mBandpass.process(al::span{mBuffer[0]}.first(todo), mBuffer[1]);
 
         todo >>= 2;
-        const float *outgains{mGain};
-        for(FloatBufferLine &output : samplesOut)
+        auto outgains = mGain.cbegin();
+        auto proc_bufline = [this,base,todo,&outgains](FloatBufferSpan output)
         {
             /* Fourth step, final, do attenuation and perform decimation,
              * storing only one sample out of four.
              */
             const float gain{*(outgains++)};
             if(!(std::fabs(gain) > GainSilenceThreshold))
-                continue;
+                return;
 
-            for(size_t i{0u};i < todo;i++)
-                output[base+i] += gain * mBuffer[1][i*4];
-        }
+            auto src = mBuffer[1].cbegin();
+            const auto dst = al::span{output}.subspan(base, todo);
+            auto dec_sample = [gain,&src](float sample) noexcept -> float
+            {
+                sample += *src * gain;
+                src += 4;
+                return sample;
+            };
+            std::transform(dst.begin(), dst.end(), dst.begin(), dec_sample);
+        };
+        std::for_each(samplesOut.begin(), samplesOut.end(), proc_bufline);
 
         base += todo;
     }

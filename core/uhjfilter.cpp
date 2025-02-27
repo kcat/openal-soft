@@ -4,56 +4,150 @@
 #include "uhjfilter.h"
 
 #include <algorithm>
-#include <iterator>
+#include <cmath>
+#include <complex>
+#include <functional>
+#include <vector>
 
 #include "alcomplex.h"
-#include "alnumeric.h"
+#include "almalloc.h"
+#include "alnumbers.h"
+#include "core/bufferline.h"
 #include "opthelpers.h"
+#include "pffft.h"
 #include "phase_shifter.h"
-
-
-UhjQualityType UhjDecodeQuality{UhjQualityType::Default};
-UhjQualityType UhjEncodeQuality{UhjQualityType::Default};
+#include "vector.h"
 
 
 namespace {
 
-const PhaseShifterT<UhjLength256> PShiftLq{};
-const PhaseShifterT<UhjLength512> PShiftHq{};
+template<std::size_t A, typename T, std::size_t N>
+constexpr auto assume_aligned_span(const al::span<T,N> s) noexcept -> al::span<T,N>
+{ return al::span<T,N>{al::assume_aligned<A>(s.data()), s.size()}; }
+
+/* Convolution is implemented using a segmented overlap-add method. The filter
+ * response is broken up into multiple segments of 128 samples, and each
+ * segment has an FFT applied with a 256-sample buffer (the latter half left
+ * silent) to get its frequency-domain response.
+ *
+ * Input samples are similarly broken up into 128-sample segments, with a 256-
+ * sample FFT applied to each new incoming segment to get its frequency-domain
+ * response. A history of FFT'd input segments is maintained, equal to the
+ * number of filter response segments.
+ *
+ * To apply the convolution, each filter response segment is convolved with its
+ * paired input segment (using complex multiplies, far cheaper than time-domain
+ * FIRs), accumulating into an FFT buffer. The input history is then shifted to
+ * align with later filter response segments for the next input segment.
+ *
+ * An inverse FFT is then applied to the accumulated FFT buffer to get a 256-
+ * sample time-domain response for output, which is split in two halves. The
+ * first half is the 128-sample output, and the second half is a 128-sample
+ * (really, 127) delayed extension, which gets added to the output next time.
+ * Convolving two time-domain responses of length N results in a time-domain
+ * signal of length N*2 - 1, and this holds true regardless of the convolution
+ * being applied in the frequency domain, so these "overflow" samples need to
+ * be accounted for.
+ */
+template<size_t N>
+struct SegmentedFilter {
+    static constexpr size_t sFftLength{256};
+    static constexpr size_t sSampleLength{sFftLength / 2};
+    static constexpr size_t sNumSegments{N/sSampleLength};
+    static_assert(N >= sFftLength);
+    static_assert((N % sSampleLength) == 0);
+
+    PFFFTSetup mFft;
+    alignas(16) std::array<float,sFftLength*sNumSegments> mFilterData;
+
+    SegmentedFilter() : mFft{sFftLength, PFFFT_REAL}
+    {
+        static constexpr size_t fft_size{N};
+
+        /* To set up the filter, we first need to generate the desired
+         * response (not reversed).
+         */
+        auto tmpBuffer = std::vector<double>(fft_size, 0.0);
+        for(std::size_t i{0};i < fft_size/2;++i)
+        {
+            const auto k = int{fft_size/2} - static_cast<int>(i*2 + 1);
+
+            const auto w = 2.0*al::numbers::pi/double{fft_size} * static_cast<double>(i*2 + 1);
+            const auto window = 0.3635819 - 0.4891775*std::cos(w) + 0.1365995*std::cos(2.0*w)
+                - 0.0106411*std::cos(3.0*w);
+
+            const auto pk = al::numbers::pi * static_cast<double>(k);
+            tmpBuffer[i*2 + 1] = window * (1.0-std::cos(pk)) / pk;
+        }
+
+        /* The segments of the filter are converted back to the frequency
+         * domain, each on their own (0 stuffed).
+         */
+        using complex_d = std::complex<double>;
+        auto fftBuffer = std::vector<complex_d>(sFftLength);
+        auto fftTmp = al::vector<float,16>(sFftLength);
+        auto filter = mFilterData.begin();
+        for(size_t s{0};s < sNumSegments;++s)
+        {
+            const auto tmpspan = al::span{tmpBuffer}.subspan(sSampleLength*s, sSampleLength);
+            auto iter = std::copy_n(tmpspan.cbegin(), tmpspan.size(), fftBuffer.begin());
+            std::fill(iter, fftBuffer.end(), complex_d{});
+            forward_fft(fftBuffer);
+
+            /* Convert to zdomain data for PFFFT, scaled by the FFT length so
+             * the iFFT result will be normalized.
+             */
+            for(size_t i{0};i < sSampleLength;++i)
+            {
+                fftTmp[i*2 + 0] = static_cast<float>(fftBuffer[i].real()) / float{sFftLength};
+                fftTmp[i*2 + 1] = static_cast<float>((i == 0) ? fftBuffer[sSampleLength].real()
+                    : fftBuffer[i].imag()) / float{sFftLength};
+            }
+            mFft.zreorder(fftTmp.data(), al::to_address(filter), PFFFT_BACKWARD);
+            filter += sFftLength;
+        }
+    }
+};
 
 template<size_t N>
-struct GetPhaseShifter;
-template<>
-struct GetPhaseShifter<UhjLength256> { static auto& Get() noexcept { return PShiftLq; } };
-template<>
-struct GetPhaseShifter<UhjLength512> { static auto& Get() noexcept { return PShiftHq; } };
+const SegmentedFilter<N> gSegmentedFilter;
 
+template<size_t N>
+const PhaseShifterT<N> PShifter;
 
-constexpr float square(float x) noexcept
-{ return x*x; }
 
 /* Filter coefficients for the 'base' all-pass IIR, which applies a frequency-
  * dependent phase-shift of N degrees. The output of the filter requires a 1-
  * sample delay.
  */
 constexpr std::array<float,4> Filter1Coeff{{
-    square(0.6923878f), square(0.9360654322959f), square(0.9882295226860f),
-    square(0.9987488452737f)
+    0.479400865589f, 0.876218493539f, 0.976597589508f, 0.997499255936f
 }};
 /* Filter coefficients for the offset all-pass IIR, which applies a frequency-
  * dependent phase-shift of N+90 degrees.
  */
 constexpr std::array<float,4> Filter2Coeff{{
-    square(0.4021921162426f), square(0.8561710882420f), square(0.9722909545651f),
-    square(0.9952884791278f)
+    0.161758498368f, 0.733028932341f, 0.945349700329f, 0.990599156684f
 }};
 
-} // namespace
 
-void UhjAllPassFilter::process(const al::span<const float,4> coeffs,
-    const al::span<const float> src, const bool updateState, float *RESTRICT dst)
+void processOne(UhjAllPassFilter &self, const al::span<const float, 4> coeffs, float x)
 {
-    auto state = mState;
+    auto state = self.mState;
+    for(size_t i{0};i < 4;++i)
+    {
+        const float y{x*coeffs[i] + state[i].z[0]};
+        state[i].z[0] = state[i].z[1];
+        state[i].z[1] = y*coeffs[i] - x;
+        x = y;
+    }
+    self.mState = state;
+}
+
+void process(UhjAllPassFilter &self, const al::span<const float,4> coeffs,
+    const al::span<const float> src, const bool updateState, const al::span<float> dst)
+{
+    auto state = self.mState;
 
     auto proc_sample = [&state,coeffs](float x) noexcept -> float
     {
@@ -66,10 +160,11 @@ void UhjAllPassFilter::process(const al::span<const float,4> coeffs,
         }
         return x;
     };
-    std::transform(src.begin(), src.end(), dst, proc_sample);
-    if(updateState) LIKELY mState = state;
+    std::transform(src.begin(), src.end(), dst.begin(), proc_sample);
+    if(updateState) LIKELY self.mState = state;
 }
 
+} // namespace
 
 /* Encoding UHJ from B-Format is done as:
  *
@@ -92,68 +187,140 @@ template<size_t N>
 void UhjEncoder<N>::encode(float *LeftOut, float *RightOut,
     const al::span<const float*const,3> InSamples, const size_t SamplesToDo)
 {
-    const auto &PShift = GetPhaseShifter<N>::Get();
+    static constexpr auto &Filter = gSegmentedFilter<N>;
+    static_assert(sFftLength == Filter.sFftLength);
+    static_assert(sSegmentSize == Filter.sSampleLength);
+    static_assert(sNumSegments == Filter.sNumSegments);
 
     ASSUME(SamplesToDo > 0);
+    ASSUME(SamplesToDo <= BufferLineSize);
 
-    const float *RESTRICT winput{al::assume_aligned<16>(InSamples[0])};
-    const float *RESTRICT xinput{al::assume_aligned<16>(InSamples[1])};
-    const float *RESTRICT yinput{al::assume_aligned<16>(InSamples[2])};
+    const auto winput = al::span{al::assume_aligned<16>(InSamples[0]), SamplesToDo};
+    const auto xinput = al::span{al::assume_aligned<16>(InSamples[1]), SamplesToDo};
+    const auto yinput = al::span{al::assume_aligned<16>(InSamples[2]), SamplesToDo};
 
-    std::copy_n(winput, SamplesToDo, mW.begin()+sFilterDelay);
-    std::copy_n(xinput, SamplesToDo, mX.begin()+sFilterDelay);
-    std::copy_n(yinput, SamplesToDo, mY.begin()+sFilterDelay);
+    std::copy_n(winput.begin(), SamplesToDo, mW.begin()+sFilterDelay);
+    std::copy_n(xinput.begin(), SamplesToDo, mX.begin()+sFilterDelay);
+    std::copy_n(yinput.begin(), SamplesToDo, mY.begin()+sFilterDelay);
 
     /* S = 0.9396926*W + 0.1855740*X */
-    for(size_t i{0};i < SamplesToDo;++i)
-        mS[i] = 0.9396926f*mW[i] + 0.1855740f*mX[i];
+    std::transform(mW.begin(), mW.begin()+SamplesToDo, mX.begin(), mS.begin(),
+        [](const float w, const float x) noexcept { return 0.9396926f*w + 0.1855740f*x; });
 
     /* Precompute j(-0.3420201*W + 0.5098604*X) and store in mD. */
-    std::transform(winput, winput+SamplesToDo, xinput, mWX.begin() + sWXInOffset,
-        [](const float w, const float x) noexcept -> float
-        { return -0.3420201f*w + 0.5098604f*x; });
-    PShift.process({mD.data(), SamplesToDo}, mWX.data());
+    auto dstore = mD.begin();
+    size_t curseg{mCurrentSegment};
+    for(size_t base{0};base < SamplesToDo;)
+    {
+        const size_t todo{std::min(sSegmentSize-mFifoPos, SamplesToDo-base)};
+        auto wseg = winput.subspan(base, todo);
+        auto xseg = xinput.subspan(base, todo);
+        /* Some Clang versions don't like calling subspan on an rvalue here. */
+        const auto wxio_ = al::span{mWXInOut};
+        auto wxio = wxio_.subspan(mFifoPos, todo);
+
+        /* Copy out the samples that were previously processed by the FFT. */
+        dstore = std::copy_n(wxio.begin(), todo, dstore);
+
+        /* Transform the non-delayed input and store in the front half of the
+         * filter input.
+         */
+        std::transform(wseg.begin(), wseg.end(), xseg.begin(), wxio.begin(),
+            [](const float w, const float x) noexcept -> float
+            { return -0.3420201f*w + 0.5098604f*x; });
+
+        mFifoPos += todo;
+        base += todo;
+
+        /* Check whether the input buffer is filled with new samples. */
+        if(mFifoPos < sSegmentSize) break;
+        mFifoPos = 0;
+
+        /* Copy the new input to the next history segment, clearing the back
+         * half of the segment, and convert to the frequency domain.
+         */
+        auto input = mWXHistory.begin() + curseg*sFftLength;
+        std::copy_n(mWXInOut.begin(), sSegmentSize, input);
+        std::fill_n(input+sSegmentSize, sSegmentSize, 0.0f);
+
+        Filter.mFft.transform(al::to_address(input), al::to_address(input), mWorkData.data(),
+            PFFFT_FORWARD);
+
+        /* Convolve each input segment with its IR filter counterpart (aligned
+         * in time, from newest to oldest).
+         */
+        mFftBuffer.fill(0.0f);
+        auto filter = Filter.mFilterData.begin();
+        for(size_t s{curseg};s < sNumSegments;++s)
+        {
+            Filter.mFft.zconvolve_accumulate(al::to_address(input), al::to_address(filter),
+                mFftBuffer.data());
+            input += sFftLength;
+            filter += sFftLength;
+        }
+        input = mWXHistory.begin();
+        for(size_t s{0};s < curseg;++s)
+        {
+            Filter.mFft.zconvolve_accumulate(al::to_address(input), al::to_address(filter),
+                mFftBuffer.data());
+            input += sFftLength;
+            filter += sFftLength;
+        }
+
+        /* Convert back to samples, writing to the output and storing the extra
+         * for next time.
+         */
+        Filter.mFft.transform(mFftBuffer.data(), mFftBuffer.data(), mWorkData.data(),
+            PFFFT_BACKWARD);
+
+        std::transform(mFftBuffer.begin(), mFftBuffer.begin()+sSegmentSize,
+            mWXInOut.begin()+sSegmentSize, mWXInOut.begin(), std::plus{});
+        std::copy_n(mFftBuffer.begin()+sSegmentSize, sSegmentSize, mWXInOut.begin()+sSegmentSize);
+
+        /* Shift the input history. */
+        curseg = curseg ? (curseg-1) : (sNumSegments-1);
+    }
+    mCurrentSegment = curseg;
 
     /* D = j(-0.3420201*W + 0.5098604*X) + 0.6554516*Y */
-    for(size_t i{0};i < SamplesToDo;++i)
-        mD[i] = mD[i] + 0.6554516f*mY[i];
+    std::transform(mD.begin(), mD.begin()+SamplesToDo, mY.begin(), mD.begin(),
+        [](const float jwx, const float y) noexcept { return jwx + 0.6554516f*y; });
 
     /* Copy the future samples to the front for next time. */
     std::copy(mW.cbegin()+SamplesToDo, mW.cbegin()+SamplesToDo+sFilterDelay, mW.begin());
     std::copy(mX.cbegin()+SamplesToDo, mX.cbegin()+SamplesToDo+sFilterDelay, mX.begin());
     std::copy(mY.cbegin()+SamplesToDo, mY.cbegin()+SamplesToDo+sFilterDelay, mY.begin());
-    std::copy(mWX.cbegin()+SamplesToDo, mWX.cbegin()+SamplesToDo+sWXInOffset, mWX.begin());
 
     /* Apply a delay to the existing output to align with the input delay. */
-    auto *delayBuffer = mDirectDelay.data();
+    auto delayBuffer = mDirectDelay.begin();
     for(float *buffer : {LeftOut, RightOut})
     {
-        float *distbuf{al::assume_aligned<16>(delayBuffer->data())};
+        const auto distbuf = assume_aligned_span<16>(al::span{*delayBuffer});
         ++delayBuffer;
 
-        float *inout{al::assume_aligned<16>(buffer)};
-        auto inout_end = inout + SamplesToDo;
-        if(SamplesToDo >= sFilterDelay) LIKELY
+        const auto inout = al::span{al::assume_aligned<16>(buffer), SamplesToDo};
+        if(SamplesToDo >= sFilterDelay)
         {
-            auto delay_end = std::rotate(inout, inout_end - sFilterDelay, inout_end);
-            std::swap_ranges(inout, delay_end, distbuf);
+            auto delay_end = std::rotate(inout.begin(), inout.end() - sFilterDelay, inout.end());
+            std::swap_ranges(inout.begin(), delay_end, distbuf.begin());
         }
         else
         {
-            auto delay_start = std::swap_ranges(inout, inout_end, distbuf);
-            std::rotate(distbuf, delay_start, distbuf + sFilterDelay);
+            auto delay_start = std::swap_ranges(inout.begin(), inout.end(), distbuf.begin());
+            std::rotate(distbuf.begin(), delay_start, distbuf.begin() + sFilterDelay);
         }
     }
 
     /* Combine the direct signal with the produced output. */
 
     /* Left = (S + D)/2.0 */
-    float *RESTRICT left{al::assume_aligned<16>(LeftOut)};
-    for(size_t i{0};i < SamplesToDo;i++)
+    const auto left = al::span{al::assume_aligned<16>(LeftOut), SamplesToDo};
+    for(size_t i{0};i < SamplesToDo;++i)
         left[i] += (mS[i] + mD[i]) * 0.5f;
+
     /* Right = (S - D)/2.0 */
-    float *RESTRICT right{al::assume_aligned<16>(RightOut)};
-    for(size_t i{0};i < SamplesToDo;i++)
+    const auto right = al::span{al::assume_aligned<16>(RightOut), SamplesToDo};
+    for(size_t i{0};i < SamplesToDo;++i)
         right[i] += (mS[i] - mD[i]) * 0.5f;
 }
 
@@ -176,47 +343,49 @@ void UhjEncoderIIR::encode(float *LeftOut, float *RightOut,
     const al::span<const float *const, 3> InSamples, const size_t SamplesToDo)
 {
     ASSUME(SamplesToDo > 0);
+    ASSUME(SamplesToDo <= BufferLineSize);
 
-    const float *RESTRICT winput{al::assume_aligned<16>(InSamples[0])};
-    const float *RESTRICT xinput{al::assume_aligned<16>(InSamples[1])};
-    const float *RESTRICT yinput{al::assume_aligned<16>(InSamples[2])};
+    const auto winput = al::span{al::assume_aligned<16>(InSamples[0]), SamplesToDo};
+    const auto xinput = al::span{al::assume_aligned<16>(InSamples[1]), SamplesToDo};
+    const auto yinput = al::span{al::assume_aligned<16>(InSamples[2]), SamplesToDo};
 
     /* S = 0.9396926*W + 0.1855740*X */
-    std::transform(winput, winput+SamplesToDo, xinput, mTemp.begin(),
+    std::transform(winput.begin(), winput.end(), xinput.begin(), mTemp.begin(),
         [](const float w, const float x) noexcept { return 0.9396926f*w + 0.1855740f*x; });
-    mFilter1WX.process(Filter1Coeff, {mTemp.data(), SamplesToDo}, true, mS.data()+1);
+    process(mFilter1WX, Filter1Coeff, al::span{mTemp}.first(SamplesToDo), true,
+        al::span{mS}.subspan(1));
     mS[0] = mDelayWX; mDelayWX = mS[SamplesToDo];
 
     /* Precompute j(-0.3420201*W + 0.5098604*X) and store in mWX. */
-    std::transform(winput, winput+SamplesToDo, xinput, mTemp.begin(),
+    std::transform(winput.begin(), winput.end(), xinput.begin(), mTemp.begin(),
         [](const float w, const float x) noexcept { return -0.3420201f*w + 0.5098604f*x; });
-    mFilter2WX.process(Filter2Coeff, {mTemp.data(), SamplesToDo}, true, mWX.data());
+    process(mFilter2WX, Filter2Coeff, al::span{mTemp}.first(SamplesToDo), true, mWX);
 
     /* Apply filter1 to Y and store in mD. */
-    mFilter1Y.process(Filter1Coeff, {yinput, SamplesToDo}, SamplesToDo, mD.data()+1);
+    process(mFilter1Y, Filter1Coeff, yinput, true, al::span{mD}.subspan(1));
     mD[0] = mDelayY; mDelayY = mD[SamplesToDo];
 
     /* D = j(-0.3420201*W + 0.5098604*X) + 0.6554516*Y */
-    for(size_t i{0};i < SamplesToDo;++i)
-        mD[i] = mWX[i] + 0.6554516f*mD[i];
+    std::transform(mWX.begin(), mWX.begin()+SamplesToDo, mD.begin(), mD.begin(),
+        [](const float jwx, const float y) noexcept { return jwx + 0.6554516f*y; });
 
     /* Apply the base filter to the existing output to align with the processed
      * signal.
      */
-    mFilter1Direct[0].process(Filter1Coeff, {LeftOut, SamplesToDo}, true, mTemp.data()+1);
+    const auto left = al::span{al::assume_aligned<16>(LeftOut), SamplesToDo};
+    process(mFilter1Direct[0], Filter1Coeff, left, true, al::span{mTemp}.subspan(1));
     mTemp[0] = mDirectDelay[0]; mDirectDelay[0] = mTemp[SamplesToDo];
 
     /* Left = (S + D)/2.0 */
-    float *RESTRICT left{al::assume_aligned<16>(LeftOut)};
-    for(size_t i{0};i < SamplesToDo;i++)
+    for(size_t i{0};i < SamplesToDo;++i)
         left[i] = (mS[i] + mD[i])*0.5f + mTemp[i];
 
-    mFilter1Direct[1].process(Filter1Coeff, {RightOut, SamplesToDo}, true, mTemp.data()+1);
+    const auto right = al::span{al::assume_aligned<16>(RightOut), SamplesToDo};
+    process(mFilter1Direct[1], Filter1Coeff, right, true, al::span{mTemp}.subspan(1));
     mTemp[0] = mDirectDelay[1]; mDirectDelay[1] = mTemp[SamplesToDo];
 
     /* Right = (S - D)/2.0 */
-    float *RESTRICT right{al::assume_aligned<16>(RightOut)};
-    for(size_t i{0};i < SamplesToDo;i++)
+    for(size_t i{0};i < SamplesToDo;++i)
         right[i] = (mS[i] - mD[i])*0.5f + mTemp[i];
 }
 
@@ -240,31 +409,29 @@ void UhjDecoder<N>::decode(const al::span<float*> samples, const size_t samplesT
 {
     static_assert(sInputPadding <= sMaxPadding, "Filter padding is too large");
 
-    const auto &PShift = GetPhaseShifter<N>::Get();
+    constexpr auto &PShift = PShifter<N>;
 
     ASSUME(samplesToDo > 0);
+    ASSUME(samplesToDo <= BufferLineSize);
 
     {
-        const float *RESTRICT left{al::assume_aligned<16>(samples[0])};
-        const float *RESTRICT right{al::assume_aligned<16>(samples[1])};
-        const float *RESTRICT t{al::assume_aligned<16>(samples[2])};
+        const auto left = al::span{al::assume_aligned<16>(samples[0]), samplesToDo+sInputPadding};
+        const auto right = al::span{al::assume_aligned<16>(samples[1]), samplesToDo+sInputPadding};
+        const auto t = al::span{al::assume_aligned<16>(samples[2]), samplesToDo+sInputPadding};
 
         /* S = Left + Right */
-        for(size_t i{0};i < samplesToDo+sInputPadding;++i)
-            mS[i] = left[i] + right[i];
+        std::transform(left.begin(), left.end(), right.begin(), mS.begin(), std::plus{});
 
         /* D = Left - Right */
-        for(size_t i{0};i < samplesToDo+sInputPadding;++i)
-            mD[i] = left[i] - right[i];
+        std::transform(left.begin(), left.end(), right.begin(), mD.begin(), std::minus{});
 
         /* T */
-        for(size_t i{0};i < samplesToDo+sInputPadding;++i)
-            mT[i] = t[i];
+        std::copy(t.begin(), t.end(), mT.begin());
     }
 
-    float *RESTRICT woutput{al::assume_aligned<16>(samples[0])};
-    float *RESTRICT xoutput{al::assume_aligned<16>(samples[1])};
-    float *RESTRICT youtput{al::assume_aligned<16>(samples[2])};
+    const auto woutput = al::span{al::assume_aligned<16>(samples[0]), samplesToDo};
+    const auto xoutput = al::span{al::assume_aligned<16>(samples[1]), samplesToDo};
+    const auto youtput = al::span{al::assume_aligned<16>(samples[2]), samplesToDo};
 
     /* Precompute j(0.828331*D + 0.767820*T) and store in xoutput. */
     auto tmpiter = std::copy(mDTHistory.cbegin(), mDTHistory.cend(), mTemp.begin());
@@ -272,21 +439,22 @@ void UhjDecoder<N>::decode(const al::span<float*> samples, const size_t samplesT
         [](const float d, const float t) noexcept { return 0.828331f*d + 0.767820f*t; });
     if(updateState) LIKELY
         std::copy_n(mTemp.cbegin()+samplesToDo, mDTHistory.size(), mDTHistory.begin());
-    PShift.process({xoutput, samplesToDo}, mTemp.data());
+    PShift.process(xoutput, mTemp);
 
     /* W = 0.981532*S + 0.197484*j(0.828331*D + 0.767820*T) */
-    for(size_t i{0};i < samplesToDo;++i)
-        woutput[i] = 0.981532f*mS[i] + 0.197484f*xoutput[i];
+    std::transform(mS.begin(), mS.begin()+samplesToDo, xoutput.begin(), woutput.begin(),
+        [](const float s, const float jdt) noexcept { return 0.981532f*s + 0.197484f*jdt; });
+
     /* X = 0.418496*S - j(0.828331*D + 0.767820*T) */
-    for(size_t i{0};i < samplesToDo;++i)
-        xoutput[i] = 0.418496f*mS[i] - xoutput[i];
+    std::transform(mS.begin(), mS.begin()+samplesToDo, xoutput.begin(), xoutput.begin(),
+        [](const float s, const float jdt) noexcept { return 0.418496f*s - jdt; });
 
     /* Precompute j*S and store in youtput. */
     tmpiter = std::copy(mSHistory.cbegin(), mSHistory.cend(), mTemp.begin());
     std::copy_n(mS.cbegin(), samplesToDo+sInputPadding, tmpiter);
     if(updateState) LIKELY
         std::copy_n(mTemp.cbegin()+samplesToDo, mSHistory.size(), mSHistory.begin());
-    PShift.process({youtput, samplesToDo}, mTemp.data());
+    PShift.process(youtput, mTemp);
 
     /* Y = 0.795968*D - 0.676392*T + j(0.186633*S) */
     for(size_t i{0};i < samplesToDo;++i)
@@ -294,10 +462,10 @@ void UhjDecoder<N>::decode(const al::span<float*> samples, const size_t samplesT
 
     if(samples.size() > 3)
     {
-        float *RESTRICT zoutput{al::assume_aligned<16>(samples[3])};
+        const auto zoutput = al::span{al::assume_aligned<16>(samples[3]), samplesToDo};
         /* Z = 1.023332*Q */
-        for(size_t i{0};i < samplesToDo;++i)
-            zoutput[i] = 1.023332f*zoutput[i];
+        std::transform(zoutput.begin(), zoutput.end(), zoutput.begin(),
+            [](const float q) noexcept { return 1.023332f*q; });
     }
 }
 
@@ -307,70 +475,68 @@ void UhjDecoderIIR::decode(const al::span<float*> samples, const size_t samplesT
     static_assert(sInputPadding <= sMaxPadding, "Filter padding is too large");
 
     ASSUME(samplesToDo > 0);
+    ASSUME(samplesToDo <= BufferLineSize);
 
     {
-        const float *RESTRICT left{al::assume_aligned<16>(samples[0])};
-        const float *RESTRICT right{al::assume_aligned<16>(samples[1])};
+        const auto left = al::span{al::assume_aligned<16>(samples[0]), samplesToDo+sInputPadding};
+        const auto right = al::span{al::assume_aligned<16>(samples[1]), samplesToDo+sInputPadding};
 
         /* S = Left + Right */
-        for(size_t i{0};i < samplesToDo;++i)
-            mS[i] = left[i] + right[i];
+        std::transform(left.begin(), left.end(), right.begin(), mS.begin(), std::plus{});
 
         /* D = Left - Right */
-        for(size_t i{0};i < samplesToDo;++i)
-            mD[i] = left[i] - right[i];
+        std::transform(left.begin(), left.end(), right.begin(), mD.begin(), std::minus{});
     }
 
-    float *RESTRICT woutput{al::assume_aligned<16>(samples[0])};
-    float *RESTRICT xoutput{al::assume_aligned<16>(samples[1])};
-    float *RESTRICT youtput{al::assume_aligned<16>(samples[2])};
+    const auto woutput = al::span{al::assume_aligned<16>(samples[0]), samplesToDo};
+    const auto xoutput = al::span{al::assume_aligned<16>(samples[1]), samplesToDo};
+    const auto youtput = al::span{al::assume_aligned<16>(samples[2]), samplesToDo+sInputPadding};
 
     /* Precompute j(0.828331*D + 0.767820*T) and store in xoutput. */
-    std::transform(mD.cbegin(), mD.cbegin()+samplesToDo, youtput, mTemp.begin(),
+    std::transform(mD.cbegin(), mD.cbegin()+sInputPadding+samplesToDo, youtput.begin(),
+        mTemp.begin(),
         [](const float d, const float t) noexcept { return 0.828331f*d + 0.767820f*t; });
-    mFilter2DT.process(Filter2Coeff, {mTemp.data(), samplesToDo}, updateState, xoutput);
+    if(mFirstRun) processOne(mFilter2DT, Filter2Coeff, mTemp[0]);
+    process(mFilter2DT, Filter2Coeff, al::span{mTemp}.subspan(1, samplesToDo), updateState,
+        xoutput);
 
     /* Apply filter1 to S and store in mTemp. */
-    mTemp[0] = mDelayS;
-    mFilter1S.process(Filter1Coeff, {mS.data(), samplesToDo}, updateState, mTemp.data()+1);
-    if(updateState) LIKELY mDelayS = mTemp[samplesToDo];
+    process(mFilter1S, Filter1Coeff, al::span{mS}.first(samplesToDo), updateState, mTemp);
 
     /* W = 0.981532*S + 0.197484*j(0.828331*D + 0.767820*T) */
-    for(size_t i{0};i < samplesToDo;++i)
-        woutput[i] = 0.981532f*mTemp[i] + 0.197484f*xoutput[i];
+    std::transform(mTemp.begin(), mTemp.begin()+samplesToDo, xoutput.begin(), woutput.begin(),
+        [](const float s, const float jdt) noexcept { return 0.981532f*s + 0.197484f*jdt; });
     /* X = 0.418496*S - j(0.828331*D + 0.767820*T) */
-    for(size_t i{0};i < samplesToDo;++i)
-        xoutput[i] = 0.418496f*mTemp[i] - xoutput[i];
+    std::transform(mTemp.begin(), mTemp.begin()+samplesToDo, xoutput.begin(), xoutput.begin(),
+        [](const float s, const float jdt) noexcept { return 0.418496f*s - jdt; });
 
 
     /* Apply filter1 to (0.795968*D - 0.676392*T) and store in mTemp. */
-    std::transform(mD.cbegin(), mD.cbegin()+samplesToDo, youtput, youtput,
+    std::transform(mD.cbegin(), mD.cbegin()+samplesToDo, youtput.begin(), youtput.begin(),
         [](const float d, const float t) noexcept { return 0.795968f*d - 0.676392f*t; });
-    mTemp[0] = mDelayDT;
-    mFilter1DT.process(Filter1Coeff, {youtput, samplesToDo}, updateState, mTemp.data()+1);
-    if(updateState) LIKELY mDelayDT = mTemp[samplesToDo];
+    process(mFilter1DT, Filter1Coeff, youtput.first(samplesToDo), updateState, mTemp);
 
     /* Precompute j*S and store in youtput. */
-    mFilter2S.process(Filter2Coeff, {mS.data(), samplesToDo}, updateState, youtput);
+    if(mFirstRun) processOne(mFilter2S, Filter2Coeff, mS[0]);
+    process(mFilter2S, Filter2Coeff, al::span{mS}.subspan(1, samplesToDo), updateState, youtput);
 
     /* Y = 0.795968*D - 0.676392*T + j(0.186633*S) */
-    for(size_t i{0};i < samplesToDo;++i)
-        youtput[i] = mTemp[i] + 0.186633f*youtput[i];
-
+    std::transform(mTemp.begin(), mTemp.begin()+samplesToDo, youtput.begin(), youtput.begin(),
+        [](const float dt, const float js) noexcept { return dt + 0.186633f*js; });
 
     if(samples.size() > 3)
     {
-        float *RESTRICT zoutput{al::assume_aligned<16>(samples[3])};
+        const auto zoutput = al::span{al::assume_aligned<16>(samples[3]), samplesToDo};
 
         /* Apply filter1 to Q and store in mTemp. */
-        mTemp[0] = mDelayQ;
-        mFilter1Q.process(Filter1Coeff, {zoutput, samplesToDo}, updateState, mTemp.data()+1);
-        if(updateState) LIKELY mDelayQ = mTemp[samplesToDo];
+        process(mFilter1Q, Filter1Coeff, zoutput, updateState, mTemp);
 
         /* Z = 1.023332*Q */
-        for(size_t i{0};i < samplesToDo;++i)
-            zoutput[i] = 1.023332f*mTemp[i];
+        std::transform(mTemp.begin(), mTemp.end(), zoutput.begin(),
+            [](const float q) noexcept { return 1.023332f*q; });
     }
+
+    mFirstRun = false;
 }
 
 
@@ -379,9 +545,9 @@ void UhjDecoderIIR::decode(const al::span<float*> samples, const size_t samplesT
  * S = Left + Right
  * D = Left - Right
  *
- * W = 0.6098637*S - 0.6896511*j*w*D
- * X = 0.8624776*S + 0.7626955*j*w*D
- * Y = 1.6822415*w*D - 0.2156194*j*S
+ * W = 0.6098637*S + 0.6896511*j*w*D
+ * X = 0.8624776*S - 0.7626955*j*w*D
+ * Y = 1.6822415*w*D + 0.2156194*j*S
  *
  * where j is a +90 degree phase shift. w is a variable control for the
  * resulting stereo width, with the range 0 <= w <= 0.7.
@@ -392,16 +558,16 @@ void UhjStereoDecoder<N>::decode(const al::span<float*> samples, const size_t sa
 {
     static_assert(sInputPadding <= sMaxPadding, "Filter padding is too large");
 
-    const auto &PShift = GetPhaseShifter<N>::Get();
+    constexpr auto &PShift = PShifter<N>;
 
     ASSUME(samplesToDo > 0);
+    ASSUME(samplesToDo <= BufferLineSize);
 
     {
-        const float *RESTRICT left{al::assume_aligned<16>(samples[0])};
-        const float *RESTRICT right{al::assume_aligned<16>(samples[1])};
+        const auto left = al::span{al::assume_aligned<16>(samples[0]), samplesToDo+sInputPadding};
+        const auto right = al::span{al::assume_aligned<16>(samples[1]), samplesToDo+sInputPadding};
 
-        for(size_t i{0};i < samplesToDo+sInputPadding;++i)
-            mS[i] = left[i] + right[i];
+        std::transform(left.begin(), left.end(), right.begin(), mS.begin(), std::plus{});
 
         /* Pre-apply the width factor to the difference signal D. Smoothly
          * interpolate when it changes.
@@ -410,53 +576,60 @@ void UhjStereoDecoder<N>::decode(const al::span<float*> samples, const size_t sa
         const float wcurrent{(mCurrentWidth < 0.0f) ? wtarget : mCurrentWidth};
         if(wtarget == wcurrent || !updateState)
         {
-            for(size_t i{0};i < samplesToDo+sInputPadding;++i)
-                mD[i] = (left[i] - right[i]) * wcurrent;
+            std::transform(left.begin(), left.end(), right.begin(), mD.begin(),
+                [wcurrent](const float l, const float r) noexcept { return (l-r) * wcurrent; });
             mCurrentWidth = wcurrent;
         }
         else
         {
             const float wstep{(wtarget - wcurrent) / static_cast<float>(samplesToDo)};
             float fi{0.0f};
-            for(size_t i{0};i < samplesToDo;++i)
-            {
-                mD[i] = (left[i] - right[i]) * (wcurrent + wstep*fi);
-                fi += 1.0f;
-            }
-            for(size_t i{samplesToDo};i < samplesToDo+sInputPadding;++i)
-                mD[i] = (left[i] - right[i]) * wtarget;
+
+            const auto lfade = left.first(samplesToDo);
+            auto dstore = std::transform(lfade.begin(), lfade.begin(), right.begin(), mD.begin(),
+                [wcurrent,wstep,&fi](const float l, const float r) noexcept
+                {
+                    const float ret{(l-r) * (wcurrent + wstep*fi)};
+                    fi += 1.0f;
+                    return ret;
+                });
+
+            const auto lend = left.subspan(samplesToDo);
+            const auto rend = right.subspan(samplesToDo);
+            std::transform(lend.begin(), lend.end(), rend.begin(), dstore,
+                [wtarget](const float l, const float r) noexcept { return (l-r) * wtarget; });
             mCurrentWidth = wtarget;
         }
     }
 
-    float *RESTRICT woutput{al::assume_aligned<16>(samples[0])};
-    float *RESTRICT xoutput{al::assume_aligned<16>(samples[1])};
-    float *RESTRICT youtput{al::assume_aligned<16>(samples[2])};
+    const auto woutput = al::span{al::assume_aligned<16>(samples[0]), samplesToDo};
+    const auto xoutput = al::span{al::assume_aligned<16>(samples[1]), samplesToDo};
+    const auto youtput = al::span{al::assume_aligned<16>(samples[2]), samplesToDo};
 
     /* Precompute j*D and store in xoutput. */
     auto tmpiter = std::copy(mDTHistory.cbegin(), mDTHistory.cend(), mTemp.begin());
     std::copy_n(mD.cbegin(), samplesToDo+sInputPadding, tmpiter);
     if(updateState) LIKELY
         std::copy_n(mTemp.cbegin()+samplesToDo, mDTHistory.size(), mDTHistory.begin());
-    PShift.process({xoutput, samplesToDo}, mTemp.data());
+    PShift.process(xoutput, mTemp);
 
-    /* W = 0.6098637*S - 0.6896511*j*w*D */
-    for(size_t i{0};i < samplesToDo;++i)
-        woutput[i] = 0.6098637f*mS[i] - 0.6896511f*xoutput[i];
-    /* X = 0.8624776*S + 0.7626955*j*w*D */
-    for(size_t i{0};i < samplesToDo;++i)
-        xoutput[i] = 0.8624776f*mS[i] + 0.7626955f*xoutput[i];
+    /* W = 0.6098637*S + 0.6896511*j*w*D */
+    std::transform(mS.begin(), mS.begin()+samplesToDo, xoutput.begin(), woutput.begin(),
+        [](const float s, const float jd) noexcept { return 0.6098637f*s + 0.6896511f*jd; });
+    /* X = 0.8624776*S - 0.7626955*j*w*D */
+    std::transform(mS.begin(), mS.begin()+samplesToDo, xoutput.begin(), xoutput.begin(),
+        [](const float s, const float jd) noexcept { return 0.8624776f*s - 0.7626955f*jd; });
 
     /* Precompute j*S and store in youtput. */
     tmpiter = std::copy(mSHistory.cbegin(), mSHistory.cend(), mTemp.begin());
     std::copy_n(mS.cbegin(), samplesToDo+sInputPadding, tmpiter);
     if(updateState) LIKELY
         std::copy_n(mTemp.cbegin()+samplesToDo, mSHistory.size(), mSHistory.begin());
-    PShift.process({youtput, samplesToDo}, mTemp.data());
+    PShift.process(youtput, mTemp);
 
-    /* Y = 1.6822415*w*D - 0.2156194*j*S */
-    for(size_t i{0};i < samplesToDo;++i)
-        youtput[i] = 1.6822415f*mD[i] - 0.2156194f*youtput[i];
+    /* Y = 1.6822415*w*D + 0.2156194*j*S */
+    std::transform(mD.begin(), mD.begin()+samplesToDo, youtput.begin(), youtput.begin(),
+        [](const float d, const float js) noexcept { return 1.6822415f*d + 0.2156194f*js; });
 }
 
 void UhjStereoDecoderIIR::decode(const al::span<float*> samples, const size_t samplesToDo,
@@ -465,13 +638,13 @@ void UhjStereoDecoderIIR::decode(const al::span<float*> samples, const size_t sa
     static_assert(sInputPadding <= sMaxPadding, "Filter padding is too large");
 
     ASSUME(samplesToDo > 0);
+    ASSUME(samplesToDo <= BufferLineSize);
 
     {
-        const float *RESTRICT left{al::assume_aligned<16>(samples[0])};
-        const float *RESTRICT right{al::assume_aligned<16>(samples[1])};
+        const auto left = al::span{al::assume_aligned<16>(samples[0]), samplesToDo+sInputPadding};
+        const auto right = al::span{al::assume_aligned<16>(samples[1]), samplesToDo+sInputPadding};
 
-        for(size_t i{0};i < samplesToDo;++i)
-            mS[i] = left[i] + right[i];
+        std::transform(left.begin(), left.end(), right.begin(), mS.begin(), std::plus{});
 
         /* Pre-apply the width factor to the difference signal D. Smoothly
          * interpolate when it changes.
@@ -480,53 +653,63 @@ void UhjStereoDecoderIIR::decode(const al::span<float*> samples, const size_t sa
         const float wcurrent{(mCurrentWidth < 0.0f) ? wtarget : mCurrentWidth};
         if(wtarget == wcurrent || !updateState)
         {
-            for(size_t i{0};i < samplesToDo;++i)
-                mD[i] = (left[i] - right[i]) * wcurrent;
+            std::transform(left.begin(), left.end(), right.begin(), mD.begin(),
+                [wcurrent](const float l, const float r) noexcept
+                { return (l-r) * wcurrent; });
             mCurrentWidth = wcurrent;
         }
         else
         {
             const float wstep{(wtarget - wcurrent) / static_cast<float>(samplesToDo)};
             float fi{0.0f};
-            for(size_t i{0};i < samplesToDo;++i)
-            {
-                mD[i] = (left[i] - right[i]) * (wcurrent + wstep*fi);
-                fi += 1.0f;
-            }
+
+            const auto lfade = left.first(samplesToDo);
+            auto dstore = std::transform(lfade.begin(), lfade.begin(), right.begin(), mD.begin(),
+                [wcurrent,wstep,&fi](const float l, const float r) noexcept
+                {
+                    const float ret{(l-r) * (wcurrent + wstep*fi)};
+                    fi += 1.0f;
+                    return ret;
+                });
+
+            const auto lend = left.subspan(samplesToDo);
+            const auto rend = right.subspan(samplesToDo);
+            std::transform(lend.begin(), lend.end(), rend.begin(), dstore,
+                [wtarget](const float l, const float r) noexcept { return (l-r) * wtarget; });
             mCurrentWidth = wtarget;
         }
     }
 
-    float *RESTRICT woutput{al::assume_aligned<16>(samples[0])};
-    float *RESTRICT xoutput{al::assume_aligned<16>(samples[1])};
-    float *RESTRICT youtput{al::assume_aligned<16>(samples[2])};
+    const auto woutput = al::span{al::assume_aligned<16>(samples[0]), samplesToDo};
+    const auto xoutput = al::span{al::assume_aligned<16>(samples[1]), samplesToDo};
+    const auto youtput = al::span{al::assume_aligned<16>(samples[2]), samplesToDo};
 
     /* Apply filter1 to S and store in mTemp. */
-    mTemp[0] = mDelayS;
-    mFilter1S.process(Filter1Coeff, {mS.data(), samplesToDo}, updateState, mTemp.data()+1);
-    if(updateState) LIKELY mDelayS = mTemp[samplesToDo];
+    process(mFilter1S, Filter1Coeff, al::span{mS}.first(samplesToDo), updateState, mTemp);
 
     /* Precompute j*D and store in xoutput. */
-    mFilter2D.process(Filter2Coeff, {mD.data(), samplesToDo}, updateState, xoutput);
+    if(mFirstRun) processOne(mFilter2D, Filter2Coeff, mD[0]);
+    process(mFilter2D, Filter2Coeff, al::span{mD}.subspan(1, samplesToDo), updateState, xoutput);
 
-    /* W = 0.6098637*S - 0.6896511*j*w*D */
-    for(size_t i{0};i < samplesToDo;++i)
-        woutput[i] = 0.6098637f*mTemp[i] - 0.6896511f*xoutput[i];
-    /* X = 0.8624776*S + 0.7626955*j*w*D */
-    for(size_t i{0};i < samplesToDo;++i)
-        xoutput[i] = 0.8624776f*mTemp[i] + 0.7626955f*xoutput[i];
+    /* W = 0.6098637*S + 0.6896511*j*w*D */
+    std::transform(mTemp.begin(), mTemp.begin()+samplesToDo, xoutput.begin(), woutput.begin(),
+        [](const float s, const float jd) noexcept { return 0.6098637f*s + 0.6896511f*jd; });
+    /* X = 0.8624776*S - 0.7626955*j*w*D */
+    std::transform(mTemp.begin(), mTemp.begin()+samplesToDo, xoutput.begin(), xoutput.begin(),
+        [](const float s, const float jd) noexcept { return 0.8624776f*s - 0.7626955f*jd; });
 
     /* Precompute j*S and store in youtput. */
-    mFilter2S.process(Filter2Coeff, {mS.data(), samplesToDo}, updateState, youtput);
+    if(mFirstRun) processOne(mFilter2S, Filter2Coeff, mS[0]);
+    process(mFilter2S, Filter2Coeff, al::span{mS}.subspan(1, samplesToDo), updateState, youtput);
 
     /* Apply filter1 to D and store in mTemp. */
-    mTemp[0] = mDelayD;
-    mFilter1D.process(Filter1Coeff, {mD.data(), samplesToDo}, updateState, mTemp.data()+1);
-    if(updateState) LIKELY mDelayD = mTemp[samplesToDo];
+    process(mFilter1D, Filter1Coeff, al::span{mD}.first(samplesToDo), updateState, mTemp);
 
-    /* Y = 1.6822415*w*D - 0.2156194*j*S */
-    for(size_t i{0};i < samplesToDo;++i)
-        youtput[i] = 1.6822415f*mTemp[i] - 0.2156194f*youtput[i];
+    /* Y = 1.6822415*w*D + 0.2156194*j*S */
+    std::transform(mTemp.begin(), mTemp.begin()+samplesToDo, youtput.begin(), youtput.begin(),
+        [](const float d, const float js) noexcept { return 1.6822415f*d + 0.2156194f*js; });
+
+    mFirstRun = false;
 }
 
 

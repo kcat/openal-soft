@@ -29,25 +29,20 @@
 #include <assert.h>
 #include <math.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #define SDL_MAIN_HANDLED
-#include "SDL.h"
-#include "SDL_audio.h"
-#include "SDL_error.h"
-#include "SDL_stdinc.h"
+#include "SDL3/SDL_audio.h"
+#include "SDL3/SDL_error.h"
+#include "SDL3/SDL_main.h"
+#include "SDL3/SDL_stdinc.h"
 
 #include "AL/al.h"
 #include "AL/alc.h"
 #include "AL/alext.h"
 
 #include "common/alhelpers.h"
-
-#ifndef SDL_AUDIO_MASK_BITSIZE
-#define SDL_AUDIO_MASK_BITSIZE (0xFF)
-#endif
-#ifndef SDL_AUDIO_BITSIZE
-#define SDL_AUDIO_BITSIZE(x) (x & SDL_AUDIO_MASK_BITSIZE)
-#endif
 
 #ifndef M_PI
 #define M_PI    (3.14159265358979323846)
@@ -58,6 +53,8 @@ typedef struct {
     ALCcontext *Context;
 
     ALCsizei FrameSize;
+    void *Buffer;
+    int BufferSize;
 } PlaybackInfo;
 
 static LPALCLOOPBACKOPENDEVICESOFT alcLoopbackOpenDeviceSOFT;
@@ -65,10 +62,26 @@ static LPALCISRENDERFORMATSUPPORTEDSOFT alcIsRenderFormatSupportedSOFT;
 static LPALCRENDERSAMPLESSOFT alcRenderSamplesSOFT;
 
 
-void SDLCALL RenderSDLSamples(void *userdata, Uint8 *stream, int len)
+void SDLCALL RenderSDLSamples(void *userdata, SDL_AudioStream *stream, int additional_amount,
+    int total_amount)
 {
     PlaybackInfo *playback = (PlaybackInfo*)userdata;
-    alcRenderSamplesSOFT(playback->Device, stream, len/playback->FrameSize);
+
+    if(additional_amount < 0)
+        additional_amount = total_amount;
+    if(additional_amount <= 0)
+        return;
+
+    if(additional_amount > playback->BufferSize)
+    {
+        free(playback->Buffer);
+        playback->Buffer = malloc((unsigned int)additional_amount);
+        playback->BufferSize = additional_amount;
+    }
+    alcRenderSamplesSOFT(playback->Device, playback->Buffer,
+        additional_amount/playback->FrameSize);
+
+    SDL_PutAudioStreamData(stream, playback->Buffer, additional_amount);
 }
 
 
@@ -118,7 +131,7 @@ static ALuint CreateSineWave(void)
     alGenBuffers(1, &buffer);
     alBufferData(buffer, AL_FORMAT_MONO16, data, sizeof(data), 44100);
 
-    /* Check if an error occured, and clean up if so. */
+    /* Check if an error occurred, and clean up if so. */
     err = alGetError();
     if(err != AL_NO_ERROR)
     {
@@ -134,8 +147,9 @@ static ALuint CreateSineWave(void)
 
 int main(int argc, char *argv[])
 {
-    PlaybackInfo playback = { NULL, NULL, 0 };
-    SDL_AudioSpec desired, obtained;
+    PlaybackInfo playback = { NULL, NULL, 0, NULL, 0 };
+    SDL_AudioStream *stream = NULL;
+    SDL_AudioSpec obtained;
     ALuint source, buffer;
     ALCint attrs[16];
     ALenum state;
@@ -158,25 +172,25 @@ int main(int argc, char *argv[])
     LOAD_PROC(LPALCRENDERSAMPLESSOFT, alcRenderSamplesSOFT);
 #undef LOAD_PROC
 
-    if(SDL_Init(SDL_INIT_AUDIO) == -1)
+    if(!SDL_Init(SDL_INIT_AUDIO))
     {
         fprintf(stderr, "Failed to init SDL audio: %s\n", SDL_GetError());
         return 1;
     }
 
-    /* Set up SDL audio with our requested format and callback. */
-    desired.channels = 2;
-    desired.format = AUDIO_S16SYS;
-    desired.freq = 44100;
-    desired.padding = 0;
-    desired.samples = 4096;
-    desired.callback = RenderSDLSamples;
-    desired.userdata = &playback;
-    if(SDL_OpenAudio(&desired, &obtained) != 0)
+    /* Set up SDL audio with our callback, and get the stream format. */
+    stream = SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, NULL, RenderSDLSamples,
+        &playback);
+    if(!stream)
     {
-        SDL_Quit();
         fprintf(stderr, "Failed to open SDL audio: %s\n", SDL_GetError());
-        return 1;
+        goto error;
+    }
+
+    if(!SDL_GetAudioStreamFormat(stream, &obtained, NULL))
+    {
+        fprintf(stderr, "Failed to query SDL audio format: %s\n", SDL_GetError());
+        goto error;
     }
 
     /* Set up our OpenAL attributes based on what we got from SDL. */
@@ -185,6 +199,14 @@ int main(int argc, char *argv[])
         attrs[1] = ALC_MONO_SOFT;
     else if(obtained.channels == 2)
         attrs[1] = ALC_STEREO_SOFT;
+    else if(obtained.channels == 4)
+        attrs[1] = ALC_QUAD_SOFT;
+    else if(obtained.channels == 6)
+        attrs[1] = ALC_5POINT1_SOFT;
+    else if(obtained.channels == 7)
+        attrs[1] = ALC_6POINT1_SOFT;
+    else if(obtained.channels == 8)
+        attrs[1] = ALC_7POINT1_SOFT;
     else
     {
         fprintf(stderr, "Unhandled SDL channel count: %d\n", obtained.channels);
@@ -192,17 +214,15 @@ int main(int argc, char *argv[])
     }
 
     attrs[2] = ALC_FORMAT_TYPE_SOFT;
-    if(obtained.format == AUDIO_U8)
+    if(obtained.format == SDL_AUDIO_U8)
         attrs[3] = ALC_UNSIGNED_BYTE_SOFT;
-    else if(obtained.format == AUDIO_S8)
+    else if(obtained.format == SDL_AUDIO_S8)
         attrs[3] = ALC_BYTE_SOFT;
-    else if(obtained.format == AUDIO_U16SYS)
-        attrs[3] = ALC_UNSIGNED_SHORT_SOFT;
-    else if(obtained.format == AUDIO_S16SYS)
+    else if(obtained.format == SDL_AUDIO_S16)
         attrs[3] = ALC_SHORT_SOFT;
-    else if(obtained.format == AUDIO_S32SYS)
+    else if(obtained.format == SDL_AUDIO_S32)
         attrs[3] = ALC_INT_SOFT;
-    else if(obtained.format == AUDIO_F32SYS)
+    else if(obtained.format == SDL_AUDIO_F32)
         attrs[3] = ALC_FLOAT_SOFT;
     else
     {
@@ -215,7 +235,7 @@ int main(int argc, char *argv[])
 
     attrs[6] = 0; /* end of list */
 
-    playback.FrameSize = obtained.channels * SDL_AUDIO_BITSIZE(obtained.format) / 8;
+    playback.FrameSize = obtained.channels * (int)SDL_AUDIO_BITSIZE(obtained.format) / 8;
 
     /* Initialize OpenAL loopback device, using our format attributes. */
     playback.Device = alcLoopbackOpenDeviceSOFT(NULL);
@@ -228,7 +248,7 @@ int main(int argc, char *argv[])
     if(alcIsRenderFormatSupportedSOFT(playback.Device, attrs[5], attrs[1], attrs[3]) == ALC_FALSE)
     {
         fprintf(stderr, "Render format not supported: %s, %s, %dhz\n",
-                        ChannelsName(attrs[1]), TypeName(attrs[3]), attrs[5]);
+            ChannelsName(attrs[1]), TypeName(attrs[3]), attrs[5]);
         goto error;
     }
     playback.Context = alcCreateContext(playback.Device, attrs);
@@ -238,20 +258,18 @@ int main(int argc, char *argv[])
         goto error;
     }
 
+    printf("Got render format from SDL stream: %s, %s, %dhz\n", ChannelsName(attrs[1]),
+        TypeName(attrs[3]), attrs[5]);
+
     /* Start SDL playing. Our callback (thus alcRenderSamplesSOFT) will now
-     * start being called regularly to update the AL playback state. */
-    SDL_PauseAudio(0);
+     * start being called regularly to update the AL playback state.
+     */
+    SDL_ResumeAudioStreamDevice(stream);
 
     /* Load the sound into a buffer. */
     buffer = CreateSineWave();
     if(!buffer)
-    {
-        SDL_CloseAudio();
-        alcDestroyContext(playback.Context);
-        alcCloseDevice(playback.Device);
-        SDL_Quit();
-        return 1;
-    }
+        goto error;
 
     /* Create the source to play the sound with. */
     source = 0;
@@ -271,23 +289,25 @@ int main(int argc, char *argv[])
     alDeleteBuffers(1, &buffer);
 
     /* Stop SDL playing. */
-    SDL_PauseAudio(1);
+    SDL_PauseAudioStreamDevice(stream);
 
     /* Close up OpenAL and SDL. */
-    SDL_CloseAudio();
+    SDL_DestroyAudioStream(stream);
     alcDestroyContext(playback.Context);
     alcCloseDevice(playback.Device);
-    SDL_Quit();
+
+    SDL_QuitSubSystem(SDL_INIT_AUDIO);
 
     return 0;
 
 error:
-    SDL_CloseAudio();
+    if(stream)
+        SDL_DestroyAudioStream(stream);
     if(playback.Context)
         alcDestroyContext(playback.Context);
     if(playback.Device)
         alcCloseDevice(playback.Device);
-    SDL_Quit();
+    SDL_QuitSubSystem(SDL_INIT_AUDIO);
 
     return 1;
 }

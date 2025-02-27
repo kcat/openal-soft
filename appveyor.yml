@@ -1,8 +1,8 @@
-version: 1.23.0.{build}
+version: 1.24.2.{build}
 
 environment:
-    APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
-    GEN: "Visual Studio 15 2017"
+    APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2022
+    GEN: "Visual Studio 17 2022"
     matrix:
       - ARCH: Win32
         CFG: Release

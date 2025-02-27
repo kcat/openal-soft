@@ -1,63 +1,59 @@
 #ifndef EAX_EFFECT_INCLUDED
 #define EAX_EFFECT_INCLUDED
 
-
 #include <cassert>
 #include <memory>
+#include <variant>
 
-#include "alnumeric.h"
 #include "AL/al.h"
+#include "AL/alext.h"
 #include "core/effects/base.h"
 #include "call.h"
 
-struct EaxEffectErrorMessages
-{
+inline bool EaxTraceCommits{false};
+
+struct EaxEffectErrorMessages {
     static constexpr auto unknown_property_id() noexcept { return "Unknown property id."; }
     static constexpr auto unknown_version() noexcept { return "Unknown version."; }
 }; // EaxEffectErrorMessages
 
-/* TODO: Use std::variant (C++17). */
-enum class EaxEffectType {
-    None, Reverb, Chorus, Autowah, Compressor, Distortion, Echo, Equalizer, Flanger,
-    FrequencyShifter, Modulator, PitchShifter, VocalMorpher
-};
-struct EaxEffectProps {
-    EaxEffectType mType;
-    union {
-        EAXREVERBPROPERTIES mReverb;
-        EAXCHORUSPROPERTIES mChorus;
-        EAXAUTOWAHPROPERTIES mAutowah;
-        EAXAGCCOMPRESSORPROPERTIES mCompressor;
-        EAXDISTORTIONPROPERTIES mDistortion;
-        EAXECHOPROPERTIES mEcho;
-        EAXEQUALIZERPROPERTIES mEqualizer;
-        EAXFLANGERPROPERTIES mFlanger;
-        EAXFREQUENCYSHIFTERPROPERTIES mFrequencyShifter;
-        EAXRINGMODULATORPROPERTIES mModulator;
-        EAXPITCHSHIFTERPROPERTIES mPitchShifter;
-        EAXVOCALMORPHERPROPERTIES mVocalMorpher;
-    };
-};
+using EaxEffectProps = std::variant<std::monostate,
+    EAXREVERBPROPERTIES,
+    EAXCHORUSPROPERTIES,
+    EAXAUTOWAHPROPERTIES,
+    EAXAGCCOMPRESSORPROPERTIES,
+    EAXDISTORTIONPROPERTIES,
+    EAXECHOPROPERTIES,
+    EAXEQUALIZERPROPERTIES,
+    EAXFLANGERPROPERTIES,
+    EAXFREQUENCYSHIFTERPROPERTIES,
+    EAXRINGMODULATORPROPERTIES,
+    EAXPITCHSHIFTERPROPERTIES,
+    EAXVOCALMORPHERPROPERTIES>;
+
+template<typename... Ts>
+struct overloaded : Ts... { using Ts::operator()...; };
+
+template<typename... Ts>
+overloaded(Ts...) -> overloaded<Ts...>;
 
 constexpr ALenum EnumFromEaxEffectType(const EaxEffectProps &props)
 {
-    switch(props.mType)
-    {
-    case EaxEffectType::None: break;
-    case EaxEffectType::Reverb: return AL_EFFECT_EAXREVERB;
-    case EaxEffectType::Chorus: return AL_EFFECT_CHORUS;
-    case EaxEffectType::Autowah: return AL_EFFECT_AUTOWAH;
-    case EaxEffectType::Compressor: return AL_EFFECT_COMPRESSOR;
-    case EaxEffectType::Distortion: return AL_EFFECT_DISTORTION;
-    case EaxEffectType::Echo: return AL_EFFECT_ECHO;
-    case EaxEffectType::Equalizer: return AL_EFFECT_EQUALIZER;
-    case EaxEffectType::Flanger: return AL_EFFECT_FLANGER;
-    case EaxEffectType::FrequencyShifter: return AL_EFFECT_FREQUENCY_SHIFTER;
-    case EaxEffectType::Modulator: return AL_EFFECT_RING_MODULATOR;
-    case EaxEffectType::PitchShifter: return AL_EFFECT_PITCH_SHIFTER;
-    case EaxEffectType::VocalMorpher: return AL_EFFECT_VOCAL_MORPHER;
-    }
-    return AL_EFFECT_NULL;
+    return std::visit(overloaded{
+        [](const std::monostate&) noexcept { return AL_EFFECT_NULL; },
+        [](const EAXREVERBPROPERTIES&) noexcept { return AL_EFFECT_EAXREVERB; },
+        [](const EAXCHORUSPROPERTIES&) noexcept { return AL_EFFECT_CHORUS; },
+        [](const EAXAUTOWAHPROPERTIES&) noexcept { return AL_EFFECT_AUTOWAH; },
+        [](const EAXAGCCOMPRESSORPROPERTIES&) noexcept { return AL_EFFECT_COMPRESSOR; },
+        [](const EAXDISTORTIONPROPERTIES&) noexcept { return AL_EFFECT_DISTORTION; },
+        [](const EAXECHOPROPERTIES&) noexcept { return AL_EFFECT_ECHO; },
+        [](const EAXEQUALIZERPROPERTIES&) noexcept { return AL_EFFECT_EQUALIZER; },
+        [](const EAXFLANGERPROPERTIES&) noexcept { return AL_EFFECT_FLANGER; },
+        [](const EAXFREQUENCYSHIFTERPROPERTIES&) noexcept { return AL_EFFECT_FREQUENCY_SHIFTER; },
+        [](const EAXRINGMODULATORPROPERTIES&) noexcept { return AL_EFFECT_RING_MODULATOR; },
+        [](const EAXPITCHSHIFTERPROPERTIES&) noexcept { return AL_EFFECT_PITCH_SHIFTER; },
+        [](const EAXVOCALMORPHERPROPERTIES&) noexcept { return AL_EFFECT_VOCAL_MORPHER; }
+    }, props);
 }
 
 struct EaxReverbCommitter {
@@ -105,7 +101,6 @@ struct EaxReverbCommitter {
     bool commit(const EAX_REVERBPROPERTIES &props);
     bool commit(const EAX20LISTENERPROPERTIES &props);
     bool commit(const EAXREVERBPROPERTIES &props);
-    bool commit(const EaxEffectProps &props);
 
     static void SetDefaults(EAX_REVERBPROPERTIES &props);
     static void SetDefaults(EAX20LISTENERPROPERTIES &props);
@@ -115,25 +110,18 @@ struct EaxReverbCommitter {
     static void Get(const EaxCall &call, const EAX_REVERBPROPERTIES &props);
     static void Get(const EaxCall &call, const EAX20LISTENERPROPERTIES &props);
     static void Get(const EaxCall &call, const EAXREVERBPROPERTIES &props);
-    static void Get(const EaxCall &call, const EaxEffectProps &props);
 
     static void Set(const EaxCall &call, EAX_REVERBPROPERTIES &props);
     static void Set(const EaxCall &call, EAX20LISTENERPROPERTIES &props);
     static void Set(const EaxCall &call, EAXREVERBPROPERTIES &props);
-    static void Set(const EaxCall &call, EaxEffectProps &props);
 
-    static void translate(const EAX_REVERBPROPERTIES& src, EaxEffectProps& dst) noexcept;
-    static void translate(const EAX20LISTENERPROPERTIES& src, EaxEffectProps& dst) noexcept;
-    static void translate(const EAXREVERBPROPERTIES& src, EaxEffectProps& dst) noexcept;
+    static void translate(const EAX_REVERBPROPERTIES& src, EAXREVERBPROPERTIES& dst) noexcept;
+    static void translate(const EAX20LISTENERPROPERTIES& src, EAXREVERBPROPERTIES& dst) noexcept;
 };
 
 template<typename T>
 struct EaxCommitter {
     struct Exception;
-
-    EaxCommitter(EaxEffectProps &eaxprops, EffectProps &alprops)
-        : mEaxProps{eaxprops}, mAlProps{alprops}
-    { }
 
     EaxEffectProps &mEaxProps;
     EffectProps &mAlProps;
@@ -150,49 +138,154 @@ struct EaxCommitter {
     [[noreturn]] static void fail_unknown_property_id()
     { fail(EaxEffectErrorMessages::unknown_property_id()); }
 
-    bool commit(const EaxEffectProps &props);
+private:
+    EaxCommitter(EaxEffectProps &eaxprops, EffectProps &alprops)
+        : mEaxProps{eaxprops}, mAlProps{alprops}
+    { }
 
-    static void SetDefaults(EaxEffectProps &props);
-    static void Get(const EaxCall &call, const EaxEffectProps &props);
-    static void Set(const EaxCall &call, EaxEffectProps &props);
+    friend T;
 };
 
 struct EaxAutowahCommitter : public EaxCommitter<EaxAutowahCommitter> {
-    using EaxCommitter<EaxAutowahCommitter>::EaxCommitter;
+    template<typename ...Args>
+    explicit EaxAutowahCommitter(Args&& ...args) : EaxCommitter{std::forward<Args>(args)...} { }
+
+    bool commit(const EAXAUTOWAHPROPERTIES &props);
+
+    static void SetDefaults(EaxEffectProps &props);
+    static void Get(const EaxCall &call, const EAXAUTOWAHPROPERTIES &props);
+    static void Set(const EaxCall &call, EAXAUTOWAHPROPERTIES &props);
 };
 struct EaxChorusCommitter : public EaxCommitter<EaxChorusCommitter> {
-    using EaxCommitter<EaxChorusCommitter>::EaxCommitter;
+    template<typename ...Args>
+    explicit EaxChorusCommitter(Args&& ...args) : EaxCommitter{std::forward<Args>(args)...} { }
+
+    bool commit(const EAXCHORUSPROPERTIES &props);
+
+    static void SetDefaults(EaxEffectProps &props);
+    static void Get(const EaxCall &call, const EAXCHORUSPROPERTIES &props);
+    static void Set(const EaxCall &call, EAXCHORUSPROPERTIES &props);
 };
 struct EaxCompressorCommitter : public EaxCommitter<EaxCompressorCommitter> {
-    using EaxCommitter<EaxCompressorCommitter>::EaxCommitter;
+    template<typename ...Args>
+    explicit EaxCompressorCommitter(Args&& ...args) : EaxCommitter{std::forward<Args>(args)...} { }
+
+    bool commit(const EAXAGCCOMPRESSORPROPERTIES &props);
+
+    static void SetDefaults(EaxEffectProps &props);
+    static void Get(const EaxCall &call, const EAXAGCCOMPRESSORPROPERTIES &props);
+    static void Set(const EaxCall &call, EAXAGCCOMPRESSORPROPERTIES &props);
 };
 struct EaxDistortionCommitter : public EaxCommitter<EaxDistortionCommitter> {
-    using EaxCommitter<EaxDistortionCommitter>::EaxCommitter;
+    template<typename ...Args>
+    explicit EaxDistortionCommitter(Args&& ...args) : EaxCommitter{std::forward<Args>(args)...} { }
+
+    bool commit(const EAXDISTORTIONPROPERTIES &props);
+
+    static void SetDefaults(EaxEffectProps &props);
+    static void Get(const EaxCall &call, const EAXDISTORTIONPROPERTIES &props);
+    static void Set(const EaxCall &call, EAXDISTORTIONPROPERTIES &props);
 };
 struct EaxEchoCommitter : public EaxCommitter<EaxEchoCommitter> {
-    using EaxCommitter<EaxEchoCommitter>::EaxCommitter;
+    template<typename ...Args>
+    explicit EaxEchoCommitter(Args&& ...args) : EaxCommitter{std::forward<Args>(args)...} { }
+
+    bool commit(const EAXECHOPROPERTIES &props);
+
+    static void SetDefaults(EaxEffectProps &props);
+    static void Get(const EaxCall &call, const EAXECHOPROPERTIES &props);
+    static void Set(const EaxCall &call, EAXECHOPROPERTIES &props);
 };
 struct EaxEqualizerCommitter : public EaxCommitter<EaxEqualizerCommitter> {
-    using EaxCommitter<EaxEqualizerCommitter>::EaxCommitter;
+    template<typename ...Args>
+    explicit EaxEqualizerCommitter(Args&& ...args) : EaxCommitter{std::forward<Args>(args)...} { }
+
+    bool commit(const EAXEQUALIZERPROPERTIES &props);
+
+    static void SetDefaults(EaxEffectProps &props);
+    static void Get(const EaxCall &call, const EAXEQUALIZERPROPERTIES &props);
+    static void Set(const EaxCall &call, EAXEQUALIZERPROPERTIES &props);
 };
 struct EaxFlangerCommitter : public EaxCommitter<EaxFlangerCommitter> {
-    using EaxCommitter<EaxFlangerCommitter>::EaxCommitter;
+    template<typename ...Args>
+    explicit EaxFlangerCommitter(Args&& ...args) : EaxCommitter{std::forward<Args>(args)...} { }
+
+    bool commit(const EAXFLANGERPROPERTIES &props);
+
+    static void SetDefaults(EaxEffectProps &props);
+    static void Get(const EaxCall &call, const EAXFLANGERPROPERTIES &props);
+    static void Set(const EaxCall &call, EAXFLANGERPROPERTIES &props);
 };
 struct EaxFrequencyShifterCommitter : public EaxCommitter<EaxFrequencyShifterCommitter> {
-    using EaxCommitter<EaxFrequencyShifterCommitter>::EaxCommitter;
+    template<typename ...Args>
+    explicit EaxFrequencyShifterCommitter(Args&& ...args) : EaxCommitter{std::forward<Args>(args)...} { }
+
+    bool commit(const EAXFREQUENCYSHIFTERPROPERTIES &props);
+
+    static void SetDefaults(EaxEffectProps &props);
+    static void Get(const EaxCall &call, const EAXFREQUENCYSHIFTERPROPERTIES &props);
+    static void Set(const EaxCall &call, EAXFREQUENCYSHIFTERPROPERTIES &props);
 };
 struct EaxModulatorCommitter : public EaxCommitter<EaxModulatorCommitter> {
-    using EaxCommitter<EaxModulatorCommitter>::EaxCommitter;
+    template<typename ...Args>
+    explicit EaxModulatorCommitter(Args&& ...args) : EaxCommitter{std::forward<Args>(args)...} { }
+
+    bool commit(const EAXRINGMODULATORPROPERTIES &props);
+
+    static void SetDefaults(EaxEffectProps &props);
+    static void Get(const EaxCall &call, const EAXRINGMODULATORPROPERTIES &props);
+    static void Set(const EaxCall &call, EAXRINGMODULATORPROPERTIES &props);
 };
 struct EaxPitchShifterCommitter : public EaxCommitter<EaxPitchShifterCommitter> {
-    using EaxCommitter<EaxPitchShifterCommitter>::EaxCommitter;
+    template<typename ...Args>
+    explicit EaxPitchShifterCommitter(Args&& ...args) : EaxCommitter{std::forward<Args>(args)...} { }
+
+    bool commit(const EAXPITCHSHIFTERPROPERTIES &props);
+
+    static void SetDefaults(EaxEffectProps &props);
+    static void Get(const EaxCall &call, const EAXPITCHSHIFTERPROPERTIES &props);
+    static void Set(const EaxCall &call, EAXPITCHSHIFTERPROPERTIES &props);
 };
 struct EaxVocalMorpherCommitter : public EaxCommitter<EaxVocalMorpherCommitter> {
-    using EaxCommitter<EaxVocalMorpherCommitter>::EaxCommitter;
+    template<typename ...Args>
+    explicit EaxVocalMorpherCommitter(Args&& ...args) : EaxCommitter{std::forward<Args>(args)...} { }
+
+    bool commit(const EAXVOCALMORPHERPROPERTIES &props);
+
+    static void SetDefaults(EaxEffectProps &props);
+    static void Get(const EaxCall &call, const EAXVOCALMORPHERPROPERTIES &props);
+    static void Set(const EaxCall &call, EAXVOCALMORPHERPROPERTIES &props);
 };
 struct EaxNullCommitter : public EaxCommitter<EaxNullCommitter> {
-    using EaxCommitter<EaxNullCommitter>::EaxCommitter;
+    template<typename ...Args>
+    explicit EaxNullCommitter(Args&& ...args) : EaxCommitter{std::forward<Args>(args)...} { }
+
+    bool commit(const std::monostate &props);
+
+    static void SetDefaults(EaxEffectProps &props);
+    static void Get(const EaxCall &call, const std::monostate &props);
+    static void Set(const EaxCall &call, std::monostate &props);
 };
+
+template<typename T>
+struct CommitterFromProps { };
+
+template<> struct CommitterFromProps<std::monostate> { using type = EaxNullCommitter; };
+template<> struct CommitterFromProps<EAXREVERBPROPERTIES> { using type = EaxReverbCommitter; };
+template<> struct CommitterFromProps<EAXCHORUSPROPERTIES> { using type = EaxChorusCommitter; };
+template<> struct CommitterFromProps<EAXAGCCOMPRESSORPROPERTIES> { using type = EaxCompressorCommitter; };
+template<> struct CommitterFromProps<EAXAUTOWAHPROPERTIES> { using type = EaxAutowahCommitter; };
+template<> struct CommitterFromProps<EAXDISTORTIONPROPERTIES> { using type = EaxDistortionCommitter; };
+template<> struct CommitterFromProps<EAXECHOPROPERTIES> { using type = EaxEchoCommitter; };
+template<> struct CommitterFromProps<EAXEQUALIZERPROPERTIES> { using type = EaxEqualizerCommitter; };
+template<> struct CommitterFromProps<EAXFLANGERPROPERTIES> { using type = EaxFlangerCommitter; };
+template<> struct CommitterFromProps<EAXFREQUENCYSHIFTERPROPERTIES> { using type = EaxFrequencyShifterCommitter; };
+template<> struct CommitterFromProps<EAXRINGMODULATORPROPERTIES> { using type = EaxModulatorCommitter; };
+template<> struct CommitterFromProps<EAXPITCHSHIFTERPROPERTIES> { using type = EaxPitchShifterCommitter; };
+template<> struct CommitterFromProps<EAXVOCALMORPHERPROPERTIES> { using type = EaxVocalMorpherCommitter; };
+
+template<typename T>
+using CommitterFor = typename CommitterFromProps<std::remove_cv_t<std::remove_reference_t<T>>>::type;
 
 
 class EaxEffect {
@@ -201,7 +294,7 @@ public:
     ~EaxEffect() = default;
 
     ALenum al_effect_type_{AL_EFFECT_NULL};
-    EffectProps al_effect_props_{};
+    EffectProps al_effect_props_;
 
     using Props1 = EAX_REVERBPROPERTIES;
     using Props2 = EAX20LISTENERPROPERTIES;
@@ -230,7 +323,7 @@ public:
 
     int version_{};
     bool changed_{};
-    Props4 props_{};
+    Props4 props_;
     State1 state1_{};
     State2 state2_{};
     State3 state3_{};
@@ -238,51 +331,39 @@ public:
     State4 state5_{};
 
 
-    template<typename T, typename ...Args>
-    void call_set_defaults(Args&& ...args)
-    { return T::SetDefaults(std::forward<Args>(args)...); }
-
-    void call_set_defaults(const ALenum altype, EaxEffectProps &props)
+    static void call_set_defaults(const ALenum altype, EaxEffectProps &props)
     {
-        if(altype == AL_EFFECT_EAXREVERB)
-            return call_set_defaults<EaxReverbCommitter>(props);
-        if(altype == AL_EFFECT_CHORUS)
-            return call_set_defaults<EaxChorusCommitter>(props);
-        if(altype == AL_EFFECT_AUTOWAH)
-            return call_set_defaults<EaxAutowahCommitter>(props);
-        if(altype == AL_EFFECT_COMPRESSOR)
-            return call_set_defaults<EaxCompressorCommitter>(props);
-        if(altype == AL_EFFECT_DISTORTION)
-            return call_set_defaults<EaxDistortionCommitter>(props);
-        if(altype == AL_EFFECT_ECHO)
-            return call_set_defaults<EaxEchoCommitter>(props);
-        if(altype == AL_EFFECT_EQUALIZER)
-            return call_set_defaults<EaxEqualizerCommitter>(props);
-        if(altype == AL_EFFECT_FLANGER)
-            return call_set_defaults<EaxFlangerCommitter>(props);
-        if(altype == AL_EFFECT_FREQUENCY_SHIFTER)
-            return call_set_defaults<EaxFrequencyShifterCommitter>(props);
-        if(altype == AL_EFFECT_RING_MODULATOR)
-            return call_set_defaults<EaxModulatorCommitter>(props);
-        if(altype == AL_EFFECT_PITCH_SHIFTER)
-            return call_set_defaults<EaxPitchShifterCommitter>(props);
-        if(altype == AL_EFFECT_VOCAL_MORPHER)
-            return call_set_defaults<EaxVocalMorpherCommitter>(props);
-        return call_set_defaults<EaxNullCommitter>(props);
+        switch(altype)
+        {
+        case AL_EFFECT_EAXREVERB: return EaxReverbCommitter::SetDefaults(props);
+        case AL_EFFECT_CHORUS: return EaxChorusCommitter::SetDefaults(props);
+        case AL_EFFECT_AUTOWAH: return EaxAutowahCommitter::SetDefaults(props);
+        case AL_EFFECT_COMPRESSOR: return EaxCompressorCommitter::SetDefaults(props);
+        case AL_EFFECT_DISTORTION: return EaxDistortionCommitter::SetDefaults(props);
+        case AL_EFFECT_ECHO: return EaxEchoCommitter::SetDefaults(props);
+        case AL_EFFECT_EQUALIZER: return EaxEqualizerCommitter::SetDefaults(props);
+        case AL_EFFECT_FLANGER: return EaxFlangerCommitter::SetDefaults(props);
+        case AL_EFFECT_FREQUENCY_SHIFTER: return EaxFrequencyShifterCommitter::SetDefaults(props);
+        case AL_EFFECT_RING_MODULATOR: return EaxModulatorCommitter::SetDefaults(props);
+        case AL_EFFECT_PITCH_SHIFTER: return EaxPitchShifterCommitter::SetDefaults(props);
+        case AL_EFFECT_VOCAL_MORPHER: return EaxVocalMorpherCommitter::SetDefaults(props);
+        case AL_EFFECT_NULL: break;
+        }
+        return EaxNullCommitter::SetDefaults(props);
     }
 
     template<typename T>
     void init()
     {
-        call_set_defaults<EaxReverbCommitter>(state1_.d);
+        EaxReverbCommitter::SetDefaults(state1_.d);
         state1_.i = state1_.d;
-        call_set_defaults<EaxReverbCommitter>(state2_.d);
+        EaxReverbCommitter::SetDefaults(state2_.d);
         state2_.i = state2_.d;
-        call_set_defaults<EaxReverbCommitter>(state3_.d);
+        EaxReverbCommitter::SetDefaults(state3_.d);
         state3_.i = state3_.d;
-        call_set_defaults<T>(state4_.d);
+        T::SetDefaults(state4_.d);
         state4_.i = state4_.d;
-        call_set_defaults<T>(state5_.d);
+        T::SetDefaults(state5_.d);
         state5_.i = state5_.d;
     }
 
@@ -290,9 +371,9 @@ public:
     {
         switch(eax_version)
         {
-        case 1: call_set_defaults<EaxReverbCommitter>(state1_.d); break;
-        case 2: call_set_defaults<EaxReverbCommitter>(state2_.d); break;
-        case 3: call_set_defaults<EaxReverbCommitter>(state3_.d); break;
+        case 1: EaxReverbCommitter::SetDefaults(state1_.d); break;
+        case 2: EaxReverbCommitter::SetDefaults(state2_.d); break;
+        case 3: EaxReverbCommitter::SetDefaults(state3_.d); break;
         case 4: call_set_defaults(altype, state4_.d); break;
         case 5: call_set_defaults(altype, state5_.d); break;
         }
@@ -300,47 +381,20 @@ public:
     }
 
 
-#define EAXCALL(T, Callable, ...)                                             \
-    if(T == EaxEffectType::Reverb)                                            \
-        return Callable<EaxReverbCommitter>(__VA_ARGS__);                     \
-    if(T == EaxEffectType::Chorus)                                            \
-        return Callable<EaxChorusCommitter>(__VA_ARGS__);                     \
-    if(T == EaxEffectType::Autowah)                                           \
-        return Callable<EaxAutowahCommitter>(__VA_ARGS__);                    \
-    if(T == EaxEffectType::Compressor)                                        \
-        return Callable<EaxCompressorCommitter>(__VA_ARGS__);                 \
-    if(T == EaxEffectType::Distortion)                                        \
-        return Callable<EaxDistortionCommitter>(__VA_ARGS__);                 \
-    if(T == EaxEffectType::Echo)                                              \
-        return Callable<EaxEchoCommitter>(__VA_ARGS__);                       \
-    if(T == EaxEffectType::Equalizer)                                         \
-        return Callable<EaxEqualizerCommitter>(__VA_ARGS__);                  \
-    if(T == EaxEffectType::Flanger)                                           \
-        return Callable<EaxFlangerCommitter>(__VA_ARGS__);                    \
-    if(T == EaxEffectType::FrequencyShifter)                                  \
-        return Callable<EaxFrequencyShifterCommitter>(__VA_ARGS__);           \
-    if(T == EaxEffectType::Modulator)                                         \
-        return Callable<EaxModulatorCommitter>(__VA_ARGS__);                  \
-    if(T == EaxEffectType::PitchShifter)                                      \
-        return Callable<EaxPitchShifterCommitter>(__VA_ARGS__);               \
-    if(T == EaxEffectType::VocalMorpher)                                      \
-        return Callable<EaxVocalMorpherCommitter>(__VA_ARGS__);               \
-    return Callable<EaxNullCommitter>(__VA_ARGS__)
-
-    template<typename T, typename ...Args>
-    static void call_set(Args&& ...args)
-    { return T::Set(std::forward<Args>(args)...); }
-
     static void call_set(const EaxCall &call, EaxEffectProps &props)
-    { EAXCALL(props.mType, call_set, call, props); }
+    {
+        return std::visit([&](auto &arg)
+        { return CommitterFor<decltype(arg)>::Set(call, arg); },
+        props);
+    }
 
     void set(const EaxCall &call)
     {
         switch(call.get_version())
         {
-        case 1: call_set<EaxReverbCommitter>(call, state1_.d); break;
-        case 2: call_set<EaxReverbCommitter>(call, state2_.d); break;
-        case 3: call_set<EaxReverbCommitter>(call, state3_.d); break;
+        case 1: EaxReverbCommitter::Set(call, state1_.d); break;
+        case 2: EaxReverbCommitter::Set(call, state2_.d); break;
+        case 3: EaxReverbCommitter::Set(call, state3_.d); break;
         case 4: call_set(call, state4_.d); break;
         case 5: call_set(call, state5_.d); break;
         }
@@ -348,32 +402,32 @@ public:
     }
 
 
-    template<typename T, typename ...Args>
-    static void call_get(Args&& ...args)
-    { return T::Get(std::forward<Args>(args)...); }
-
     static void call_get(const EaxCall &call, const EaxEffectProps &props)
-    { EAXCALL(props.mType, call_get, call, props); }
+    {
+        return std::visit([&](auto &arg)
+        { return CommitterFor<decltype(arg)>::Get(call, arg); },
+        props);
+    }
 
-    void get(const EaxCall &call)
+    void get(const EaxCall &call) const
     {
         switch(call.get_version())
         {
-        case 1: call_get<EaxReverbCommitter>(call, state1_.d); break;
-        case 2: call_get<EaxReverbCommitter>(call, state2_.d); break;
-        case 3: call_get<EaxReverbCommitter>(call, state3_.d); break;
+        case 1: EaxReverbCommitter::Get(call, state1_.d); break;
+        case 2: EaxReverbCommitter::Get(call, state2_.d); break;
+        case 3: EaxReverbCommitter::Get(call, state3_.d); break;
         case 4: call_get(call, state4_.d); break;
         case 5: call_get(call, state5_.d); break;
         }
     }
 
 
-    template<typename T, typename ...Args>
-    bool call_commit(Args&& ...args)
-    { return T{props_, al_effect_props_}.commit(std::forward<Args>(args)...); }
-
     bool call_commit(const EaxEffectProps &props)
-    { EAXCALL(props.mType, call_commit, props); }
+    {
+        return std::visit([&](auto &arg)
+        { return CommitterFor<decltype(arg)>{props_, al_effect_props_}.commit(arg); },
+        props);
+    }
 
     bool commit(int eax_version)
     {
@@ -388,15 +442,15 @@ public:
         {
         case 1:
             state1_.i = state1_.d;
-            ret |= call_commit<EaxReverbCommitter>(state1_.d);
+            ret |= EaxReverbCommitter{props_, al_effect_props_}.commit(state1_.d);
             break;
         case 2:
             state2_.i = state2_.d;
-            ret |= call_commit<EaxReverbCommitter>(state2_.d);
+            ret |= EaxReverbCommitter{props_, al_effect_props_}.commit(state2_.d);
             break;
         case 3:
             state3_.i = state3_.d;
-            ret |= call_commit<EaxReverbCommitter>(state3_.d);
+            ret |= EaxReverbCommitter{props_, al_effect_props_}.commit(state3_.d);
             break;
         case 4:
             state4_.i = state4_.d;

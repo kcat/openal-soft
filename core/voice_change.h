@@ -3,8 +3,6 @@
 
 #include <atomic>
 
-#include "almalloc.h"
-
 struct Voice;
 
 using uint = unsigned int;
@@ -24,8 +22,6 @@ struct VoiceChange {
     VChangeState mState{};
 
     std::atomic<VoiceChange*> mNext{nullptr};
-
-    DEF_NEWDEL(VoiceChange)
 };
 
 #endif /* VOICE_CHANGE_H */

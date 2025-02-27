@@ -7,7 +7,9 @@
 
 #include "almalloc.h"
 #include "devformat.h"
+#include "flexarray.h"
 #include "mixer/defs.h"
+#include "resampler_limits.h"
 
 using uint = unsigned int;
 
@@ -22,24 +24,25 @@ struct SampleConverter {
 
     uint mFracOffset{};
     uint mIncrement{};
-    InterpState mState{};
+    InterpState mState;
     ResamplerFunc mResample{};
 
-    alignas(16) float mSrcSamples[BufferLineSize]{};
-    alignas(16) float mDstSamples[BufferLineSize]{};
+    alignas(16) FloatBufferLine mSrcSamples{};
+    alignas(16) FloatBufferLine mDstSamples{};
 
     struct ChanSamples {
-        alignas(16) float PrevSamples[MaxResamplerPadding];
+        alignas(16) std::array<float,MaxResamplerPadding> PrevSamples;
     };
     al::FlexArray<ChanSamples> mChan;
 
-    SampleConverter(size_t numchans) : mChan{numchans} { }
+    explicit SampleConverter(size_t numchans) : mChan{numchans} { }
 
-    uint convert(const void **src, uint *srcframes, void *dst, uint dstframes);
-    uint availableOut(uint srcframes) const;
+    [[nodiscard]] auto convert(const void **src, uint *srcframes, void *dst, uint dstframes) -> uint;
+    [[nodiscard]] auto convertPlanar(const void **src, uint *srcframes, void *const*dst, uint dstframes) -> uint;
+    [[nodiscard]] auto availableOut(uint srcframes) const -> uint;
 
     using SampleOffset = std::chrono::duration<int64_t, std::ratio<1,MixerFracOne>>;
-    SampleOffset currentInputDelay() const noexcept
+    [[nodiscard]] auto currentInputDelay() const noexcept -> SampleOffset
     {
         const int64_t prep{int64_t{mSrcPrepCount} - MaxResamplerEdge};
         return SampleOffset{(prep<<MixerFracBits) + mFracOffset};
@@ -58,7 +61,7 @@ struct ChannelConverter {
     uint mChanMask{};
     DevFmtChannels mDstChans{};
 
-    bool is_active() const noexcept { return mChanMask != 0; }
+    [[nodiscard]] auto is_active() const noexcept -> bool { return mChanMask != 0; }
 
     void convert(const void *src, float *dst, uint frames) const;
 };

@@ -12,7 +12,7 @@ What Is It?
 
 Originally developed in the 1970s by Michael Gerzon and a team others,
 Ambisonics was created as a means of recording and playing back 3D sound.
-Taking advantage of the way sound waves propogate, it is possible to record a
+Taking advantage of the way sound waves propagate, it is possible to record a
 fully 3D soundfield using as few as 4 channels (or even just 3, if you don't
 mind dropping down to 2 dimensions like many surround sound systems are). This
 representation is called B-Format. It was designed to handle audio independent
@@ -63,7 +63,7 @@ remain correct over a larger area around the center of the speakers.
 In addition, Ambisonics can encode the near-field effect of sounds, effectively
 capturing the sound distance. The near-field effect is a subtle low-frequency
 boost as a result of wave-front curvature, and properly compensating for this
-occuring with the output speakers (as well as emulating it with a synthesized
+occurring with the output speakers (as well as emulating it with a synthesized
 soundfield) can create an improved sense of distance for sounds that move near
 or far.
 

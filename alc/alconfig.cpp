@@ -22,9 +22,6 @@
 
 #include "alconfig.h"
 
-#include <cstdlib>
-#include <cctype>
-#include <cstring>
 #ifdef _WIN32
 #include <windows.h>
 #include <shlobj.h>
@@ -34,25 +31,47 @@
 #endif
 
 #include <algorithm>
-#include <cstdio>
+#include <array>
+#include <cctype>
+#include <cstdlib>
+#include <fstream>
+#include <istream>
+#include <limits>
 #include <string>
+#include <string_view>
 #include <utility>
+#include <vector>
 
-#include "alfstream.h"
+#include "almalloc.h"
 #include "alstring.h"
 #include "core/helpers.h"
 #include "core/logging.h"
+#include "filesystem.h"
 #include "strutils.h"
-#include "vector.h"
 
+#if ALSOFT_UWP
+#include <winrt/Windows.Media.Core.h> // !!This is important!!
+#include <winrt/Windows.Storage.h>
+#include <winrt/Windows.Foundation.h>
+#include <winrt/Windows.Foundation.Collections.h>
+using namespace winrt;
+#endif
 
 namespace {
+
+using namespace std::string_view_literals;
+
+#if defined(_WIN32) && !defined(_GAMING_XBOX) && !ALSOFT_UWP
+struct CoTaskMemDeleter {
+    void operator()(void *mem) const { CoTaskMemFree(mem); }
+};
+#endif
 
 struct ConfigEntry {
     std::string key;
     std::string value;
 };
-al::vector<ConfigEntry> ConfOpts;
+std::vector<ConfigEntry> ConfOpts;
 
 
 std::string &lstrip(std::string &line)
@@ -72,57 +91,48 @@ bool readline(std::istream &f, std::string &output)
     return std::getline(f, output) && !output.empty();
 }
 
-std::string expdup(const char *str)
+std::string expdup(std::string_view str)
 {
     std::string output;
 
-    std::string envval;
-    while(*str != '\0')
+    while(!str.empty())
     {
-        const char *addstr;
-        size_t addstrlen;
-
-        if(str[0] != '$')
+        if(auto nextpos = str.find('$'))
         {
-            const char *next = std::strchr(str, '$');
-            addstr = str;
-            addstrlen = next ? static_cast<size_t>(next-str) : std::strlen(str);
+            output += str.substr(0, nextpos);
+            if(nextpos == std::string_view::npos)
+                break;
 
-            str += addstrlen;
+            str.remove_prefix(nextpos);
         }
-        else
+
+        str.remove_prefix(1);
+        if(str.empty())
         {
-            str++;
-            if(*str == '$')
-            {
-                const char *next = std::strchr(str+1, '$');
-                addstr = str;
-                addstrlen = next ? static_cast<size_t>(next-str) : std::strlen(str);
-
-                str += addstrlen;
-            }
-            else
-            {
-                const bool hasbraces{(*str == '{')};
-
-                if(hasbraces) str++;
-                const char *envstart = str;
-                while(std::isalnum(*str) || *str == '_')
-                    ++str;
-                if(hasbraces && *str != '}')
-                    continue;
-                const std::string envname{envstart, str};
-                if(hasbraces) str++;
-
-                envval = al::getenv(envname.c_str()).value_or(std::string{});
-                addstr = envval.data();
-                addstrlen = envval.length();
-            }
+            output += '$';
+            break;
         }
-        if(addstrlen == 0)
+        if(str.front() == '$')
+        {
+            output += '$';
+            str.remove_prefix(1);
             continue;
+        }
 
-        output.append(addstr, addstrlen);
+        const bool hasbraces{str.front() == '{'};
+        if(hasbraces) str.remove_prefix(1);
+
+        size_t envend{0};
+        while(envend < str.size() && (std::isalnum(str[envend]) || str[envend] == '_'))
+            ++envend;
+        if(hasbraces && (envend == str.size() || str[envend] != '}'))
+            continue;
+        const std::string envname{str.substr(0, envend)};
+        if(hasbraces) ++envend;
+        str.remove_prefix(envend);
+
+        if(auto envval = al::getenv(envname.c_str()))
+            output += *envval;
     }
 
     return output;
@@ -140,44 +150,43 @@ void LoadConfigFromFile(std::istream &f)
 
         if(buffer[0] == '[')
         {
-            auto line = const_cast<char*>(buffer.data());
-            char *section = line+1;
-            char *endsection;
-
-            endsection = std::strchr(section, ']');
-            if(!endsection || section == endsection)
+            auto endpos = buffer.find(']', 1);
+            if(endpos == 1 || endpos == std::string::npos)
             {
-                ERR(" config parse error: bad line \"%s\"\n", line);
+                ERR(" config parse error: bad line \"{}\"", buffer);
                 continue;
             }
-            if(endsection[1] != 0)
+            if(buffer[endpos+1] != '\0')
             {
-                char *end = endsection+1;
-                while(std::isspace(*end))
-                    ++end;
-                if(*end != 0 && *end != '#')
+                size_t last{endpos+1};
+                while(last < buffer.size() && std::isspace(buffer[last]))
+                    ++last;
+
+                if(last < buffer.size() && buffer[last] != '#')
                 {
-                    ERR(" config parse error: bad line \"%s\"\n", line);
+                    ERR(" config parse error: bad line \"{}\"", buffer);
                     continue;
                 }
             }
-            *endsection = 0;
+
+            auto section = std::string_view{buffer}.substr(1, endpos-1);
 
             curSection.clear();
-            if(al::strcasecmp(section, "general") != 0)
+            if(al::case_compare(section, "general"sv) != 0)
             {
                 do {
-                    char *nextp = std::strchr(section, '%');
-                    if(!nextp)
+                    auto nextp = section.find('%');
+                    if(nextp == std::string_view::npos)
                     {
                         curSection += section;
                         break;
                     }
 
-                    curSection.append(section, nextp);
-                    section = nextp;
+                    curSection += section.substr(0, nextp);
+                    section.remove_prefix(nextp);
 
-                    if(((section[1] >= '0' && section[1] <= '9') ||
+                    if(section.size() > 2 &&
+                       ((section[1] >= '0' && section[1] <= '9') ||
                         (section[1] >= 'a' && section[1] <= 'f') ||
                         (section[1] >= 'A' && section[1] <= 'F')) &&
                        ((section[2] >= '0' && section[2] <= '9') ||
@@ -198,19 +207,19 @@ void LoadConfigFromFile(std::istream &f)
                         else if(section[2] >= 'A' && section[2] <= 'F')
                             b |= (section[2]-'A'+0x0a);
                         curSection += static_cast<char>(b);
-                        section += 3;
+                        section.remove_prefix(3);
                     }
-                    else if(section[1] == '%')
+                    else if(section.size() > 1 && section[1] == '%')
                     {
                         curSection += '%';
-                        section += 2;
+                        section.remove_prefix(2);
                     }
                     else
                     {
                         curSection += '%';
-                        section += 1;
+                        section.remove_prefix(1);
                     }
-                } while(*section != 0);
+                } while(!section.empty());
             }
 
             continue;
@@ -225,19 +234,20 @@ void LoadConfigFromFile(std::istream &f)
         auto sep = buffer.find('=');
         if(sep == std::string::npos)
         {
-            ERR(" config parse error: malformed option line: \"%s\"\n", buffer.c_str());
+            ERR(" config parse error: malformed option line: \"{}\"", buffer);
             continue;
         }
-        auto keyend = sep++;
-        while(keyend > 0 && std::isspace(buffer[keyend-1]))
-            --keyend;
-        if(!keyend)
+        auto keypart = std::string_view{buffer}.substr(0, sep++);
+        while(!keypart.empty() && std::isspace(keypart.back()))
+            keypart.remove_suffix(1);
+        if(keypart.empty())
         {
-            ERR(" config parse error: malformed option line: \"%s\"\n", buffer.c_str());
+            ERR(" config parse error: malformed option line: \"{}\"", buffer);
             continue;
         }
-        while(sep < buffer.size() && std::isspace(buffer[sep]))
-            sep++;
+        auto valpart = std::string_view{buffer}.substr(sep);
+        while(!valpart.empty() && std::isspace(valpart.front()))
+            valpart.remove_prefix(1);
 
         std::string fullKey;
         if(!curSection.empty())
@@ -245,20 +255,24 @@ void LoadConfigFromFile(std::istream &f)
             fullKey += curSection;
             fullKey += '/';
         }
-        fullKey += buffer.substr(0u, keyend);
+        fullKey += keypart;
 
-        std::string value{(sep < buffer.size()) ? buffer.substr(sep) : std::string{}};
-        if(value.size() > 1)
+        if(valpart.size() > size_t{std::numeric_limits<int>::max()})
         {
-            if((value.front() == '"' && value.back() == '"')
-                || (value.front() == '\'' && value.back() == '\''))
+            ERR(" config parse error: value too long in line \"{}\"", buffer);
+            continue;
+        }
+        if(valpart.size() > 1)
+        {
+            if((valpart.front() == '"' && valpart.back() == '"')
+                || (valpart.front() == '\'' && valpart.back() == '\''))
             {
-                value.pop_back();
-                value.erase(value.begin());
+                valpart.remove_prefix(1);
+                valpart.remove_suffix(1);
             }
         }
 
-        TRACE(" found '%s' = '%s'\n", fullKey.c_str(), value.c_str());
+        TRACE(" setting '{}' = '{}'", fullKey, valpart);
 
         /* Check if we already have this option set */
         auto find_key = [&fullKey](const ConfigEntry &entry) -> bool
@@ -266,61 +280,50 @@ void LoadConfigFromFile(std::istream &f)
         auto ent = std::find_if(ConfOpts.begin(), ConfOpts.end(), find_key);
         if(ent != ConfOpts.end())
         {
-            if(!value.empty())
-                ent->value = expdup(value.c_str());
+            if(!valpart.empty())
+                ent->value = expdup(valpart);
             else
                 ConfOpts.erase(ent);
         }
-        else if(!value.empty())
-            ConfOpts.emplace_back(ConfigEntry{std::move(fullKey), expdup(value.c_str())});
+        else if(!valpart.empty())
+            ConfOpts.emplace_back(ConfigEntry{std::move(fullKey), expdup(valpart)});
     }
     ConfOpts.shrink_to_fit();
 }
 
-const char *GetConfigValue(const char *devName, const char *blockName, const char *keyName)
+auto GetConfigValue(const std::string_view devName, const std::string_view blockName,
+    const std::string_view keyName) -> const std::string&
 {
-    if(!keyName)
-        return nullptr;
+    static const auto emptyString = std::string{};
+    if(keyName.empty())
+        return emptyString;
 
     std::string key;
-    if(blockName && al::strcasecmp(blockName, "general") != 0)
+    if(!blockName.empty() && al::case_compare(blockName, "general"sv) != 0)
     {
         key = blockName;
-        if(devName)
-        {
-            key += '/';
-            key += devName;
-        }
         key += '/';
-        key += keyName;
     }
-    else
+    if(!devName.empty())
     {
-        if(devName)
-        {
-            key = devName;
-            key += '/';
-        }
-        key += keyName;
+        key += devName;
+        key += '/';
     }
+    key += keyName;
 
     auto iter = std::find_if(ConfOpts.cbegin(), ConfOpts.cend(),
-        [&key](const ConfigEntry &entry) -> bool
-        { return entry.key == key; });
+        [&key](const ConfigEntry &entry) -> bool { return entry.key == key; });
     if(iter != ConfOpts.cend())
     {
-        TRACE("Found %s = \"%s\"\n", key.c_str(), iter->value.c_str());
+        TRACE("Found option {} = \"{}\"", key, iter->value);
         if(!iter->value.empty())
-            return iter->value.c_str();
-        return nullptr;
+            return iter->value;
+        return emptyString;
     }
 
-    if(!devName)
-    {
-        TRACE("Key %s not found\n", key.c_str());
-        return nullptr;
-    }
-    return GetConfigValue(nullptr, blockName, keyName);
+    if(devName.empty())
+        return emptyString;
+    return GetConfigValue({}, blockName, keyName);
 }
 
 } // namespace
@@ -329,33 +332,47 @@ const char *GetConfigValue(const char *devName, const char *blockName, const cha
 #ifdef _WIN32
 void ReadALConfig()
 {
-    WCHAR buffer[MAX_PATH];
-    if(SHGetSpecialFolderPathW(nullptr, buffer, CSIDL_APPDATA, FALSE) != FALSE)
-    {
-        std::string filepath{wstr_to_utf8(buffer)};
-        filepath += "\\alsoft.ini";
+    fs::path path;
 
-        TRACE("Loading config %s...\n", filepath.c_str());
-        al::ifstream f{filepath};
-        if(f.is_open())
-            LoadConfigFromFile(f);
+#if !defined(_GAMING_XBOX)
+    {
+#if !ALSOFT_UWP
+        std::unique_ptr<WCHAR,CoTaskMemDeleter> bufstore;
+        const HRESULT hr{SHGetKnownFolderPath(FOLDERID_RoamingAppData, KF_FLAG_DONT_UNEXPAND,
+            nullptr, al::out_ptr(bufstore))};
+        if(SUCCEEDED(hr))
+        {
+            const std::wstring_view buffer{bufstore.get()};
+#else
+        winrt::Windows::Storage::ApplicationDataContainer localSettings = winrt::Windows::Storage::ApplicationData::Current().LocalSettings();
+        auto bufstore = Windows::Storage::ApplicationData::Current().RoamingFolder().Path();
+        std::wstring_view buffer{bufstore};
+        {
+#endif
+            path = fs::path{buffer};
+            path /= L"alsoft.ini";
+
+            TRACE("Loading config {}...", al::u8_as_char(path.u8string()));
+            if(fs::ifstream f{path}; f.is_open())
+                LoadConfigFromFile(f);
+        }
     }
+#endif
 
-    std::string ppath{GetProcBinary().path};
-    if(!ppath.empty())
+    path = fs::u8path(GetProcBinary().path);
+    if(!path.empty())
     {
-        ppath += "\\alsoft.ini";
-        TRACE("Loading config %s...\n", ppath.c_str());
-        al::ifstream f{ppath};
-        if(f.is_open())
+        path /= L"alsoft.ini";
+        TRACE("Loading config {}...", al::u8_as_char(path.u8string()));
+        if(fs::ifstream f{path}; f.is_open())
             LoadConfigFromFile(f);
     }
 
     if(auto confpath = al::getenv(L"ALSOFT_CONF"))
     {
-        TRACE("Loading config %s...\n", wstr_to_utf8(confpath->c_str()).c_str());
-        al::ifstream f{*confpath};
-        if(f.is_open())
+        path = *confpath;
+        TRACE("Loading config {}...", al::u8_as_char(path.u8string()));
+        if(fs::ifstream f{path}; f.is_open())
             LoadConfigFromFile(f);
     }
 }
@@ -364,13 +381,11 @@ void ReadALConfig()
 
 void ReadALConfig()
 {
-    const char *str{"/etc/openal/alsoft.conf"};
+    fs::path path{"/etc/openal/alsoft.conf"};
 
-    TRACE("Loading config %s...\n", str);
-    al::ifstream f{str};
-    if(f.is_open())
+    TRACE("Loading config {}...", al::u8_as_char(path.u8string()));
+    if(fs::ifstream f{path}; f.is_open())
         LoadConfigFromFile(f);
-    f.close();
 
     std::string confpaths{al::getenv("XDG_CONFIG_DIRS").value_or("/etc/xdg")};
     /* Go through the list in reverse, since "the order of base directories
@@ -378,48 +393,43 @@ void ReadALConfig()
      * important". Ergo, we need to load the settings from the later dirs
      * first so that the settings in the earlier dirs override them.
      */
-    std::string fname;
     while(!confpaths.empty())
     {
-        auto next = confpaths.find_last_of(':');
+        auto next = confpaths.rfind(':');
         if(next < confpaths.length())
         {
-            fname = confpaths.substr(next+1);
+            path = fs::path{std::string_view{confpaths}.substr(next+1)}.lexically_normal();
             confpaths.erase(next);
         }
         else
         {
-            fname = confpaths;
+            path = fs::path{confpaths}.lexically_normal();
             confpaths.clear();
         }
 
-        if(fname.empty() || fname.front() != '/')
-            WARN("Ignoring XDG config dir: %s\n", fname.c_str());
+        if(!path.is_absolute())
+            WARN("Ignoring XDG config dir: {}", al::u8_as_char(path.u8string()));
         else
         {
-            if(fname.back() != '/') fname += "/alsoft.conf";
-            else fname += "alsoft.conf";
+            path /= "alsoft.conf";
 
-            TRACE("Loading config %s...\n", fname.c_str());
-            f = al::ifstream{fname};
-            if(f.is_open())
+            TRACE("Loading config {}...", al::u8_as_char(path.u8string()));
+            if(fs::ifstream f{path}; f.is_open())
                 LoadConfigFromFile(f);
         }
-        fname.clear();
     }
 
 #ifdef __APPLE__
     CFBundleRef mainBundle = CFBundleGetMainBundle();
     if(mainBundle)
     {
-        unsigned char fileName[PATH_MAX];
-        CFURLRef configURL;
+        CFURLRef configURL{CFBundleCopyResourceURL(mainBundle, CFSTR(".alsoftrc"), CFSTR(""),
+            nullptr)};
 
-        if((configURL=CFBundleCopyResourceURL(mainBundle, CFSTR(".alsoftrc"), CFSTR(""), nullptr)) &&
-           CFURLGetFileSystemRepresentation(configURL, true, fileName, sizeof(fileName)))
+        std::array<unsigned char,PATH_MAX> fileName{};
+        if(configURL && CFURLGetFileSystemRepresentation(configURL, true, fileName.data(), fileName.size()))
         {
-            f = al::ifstream{reinterpret_cast<char*>(fileName)};
-            if(f.is_open())
+            if(std::ifstream f{reinterpret_cast<char*>(fileName.data())}; f.is_open())
                 LoadConfigFromFile(f);
         }
     }
@@ -427,102 +437,133 @@ void ReadALConfig()
 
     if(auto homedir = al::getenv("HOME"))
     {
-        fname = *homedir;
-        if(fname.back() != '/') fname += "/.alsoftrc";
-        else fname += ".alsoftrc";
+        path = *homedir;
+        path /= ".alsoftrc";
 
-        TRACE("Loading config %s...\n", fname.c_str());
-        f = al::ifstream{fname};
-        if(f.is_open())
+        TRACE("Loading config {}...", al::u8_as_char(path.u8string()));
+        if(std::ifstream f{path}; f.is_open())
             LoadConfigFromFile(f);
     }
 
     if(auto configdir = al::getenv("XDG_CONFIG_HOME"))
     {
-        fname = *configdir;
-        if(fname.back() != '/') fname += "/alsoft.conf";
-        else fname += "alsoft.conf";
+        path = *configdir;
+        path /= "alsoft.conf";
     }
     else
     {
-        fname.clear();
+        path.clear();
         if(auto homedir = al::getenv("HOME"))
         {
-            fname = *homedir;
-            if(fname.back() != '/') fname += "/.config/alsoft.conf";
-            else fname += ".config/alsoft.conf";
+            path = *homedir;
+            path /= ".config/alsoft.conf";
         }
     }
-    if(!fname.empty())
+    if(!path.empty())
     {
-        TRACE("Loading config %s...\n", fname.c_str());
-        f = al::ifstream{fname};
-        if(f.is_open())
+        TRACE("Loading config {}...", al::u8_as_char(path.u8string()));
+        if(std::ifstream f{path}; f.is_open())
             LoadConfigFromFile(f);
     }
 
-    std::string ppath{GetProcBinary().path};
-    if(!ppath.empty())
+    path = GetProcBinary().path;
+    if(!path.empty())
     {
-        if(ppath.back() != '/') ppath += "/alsoft.conf";
-        else ppath += "alsoft.conf";
+        path /= "alsoft.conf";
 
-        TRACE("Loading config %s...\n", ppath.c_str());
-        f = al::ifstream{ppath};
-        if(f.is_open())
+        TRACE("Loading config {}...", al::u8_as_char(path.u8string()));
+        if(std::ifstream f{path}; f.is_open())
             LoadConfigFromFile(f);
     }
 
     if(auto confname = al::getenv("ALSOFT_CONF"))
     {
-        TRACE("Loading config %s...\n", confname->c_str());
-        f = al::ifstream{*confname};
-        if(f.is_open())
+        TRACE("Loading config {}...", *confname);
+        if(std::ifstream f{*confname}; f.is_open())
             LoadConfigFromFile(f);
     }
 }
 #endif
 
-al::optional<std::string> ConfigValueStr(const char *devName, const char *blockName, const char *keyName)
+auto ConfigValueStr(const std::string_view devName, const std::string_view blockName,
+    const std::string_view keyName) -> std::optional<std::string>
 {
-    if(const char *val{GetConfigValue(devName, blockName, keyName)})
+    if(auto&& val = GetConfigValue(devName, blockName, keyName); !val.empty())
         return val;
-    return al::nullopt;
+    return std::nullopt;
 }
 
-al::optional<int> ConfigValueInt(const char *devName, const char *blockName, const char *keyName)
+auto ConfigValueInt(const std::string_view devName, const std::string_view blockName,
+    const std::string_view keyName) -> std::optional<int>
 {
-    if(const char *val{GetConfigValue(devName, blockName, keyName)})
-        return static_cast<int>(std::strtol(val, nullptr, 0));
-    return al::nullopt;
+    if(auto&& val = GetConfigValue(devName, blockName, keyName); !val.empty()) try {
+        return static_cast<int>(std::stol(val, nullptr, 0));
+    }
+    catch(std::exception&) {
+        WARN("Option is not an int: {} = {}", keyName, val);
+    }
+
+    return std::nullopt;
 }
 
-al::optional<unsigned int> ConfigValueUInt(const char *devName, const char *blockName, const char *keyName)
+auto ConfigValueUInt(const std::string_view devName, const std::string_view blockName,
+    const std::string_view keyName) -> std::optional<unsigned int>
 {
-    if(const char *val{GetConfigValue(devName, blockName, keyName)})
-        return static_cast<unsigned int>(std::strtoul(val, nullptr, 0));
-    return al::nullopt;
+    if(auto&& val = GetConfigValue(devName, blockName, keyName); !val.empty()) try {
+        return static_cast<unsigned int>(std::stoul(val, nullptr, 0));
+    }
+    catch(std::exception&) {
+        WARN("Option is not an unsigned int: {} = {}", keyName, val);
+    }
+    return std::nullopt;
 }
 
-al::optional<float> ConfigValueFloat(const char *devName, const char *blockName, const char *keyName)
+auto ConfigValueFloat(const std::string_view devName, const std::string_view blockName,
+    const std::string_view keyName) -> std::optional<float>
 {
-    if(const char *val{GetConfigValue(devName, blockName, keyName)})
-        return std::strtof(val, nullptr);
-    return al::nullopt;
+    if(auto&& val = GetConfigValue(devName, blockName, keyName); !val.empty()) try {
+        return std::stof(val);
+    }
+    catch(std::exception&) {
+        WARN("Option is not a float: {} = {}", keyName, val);
+    }
+    return std::nullopt;
 }
 
-al::optional<bool> ConfigValueBool(const char *devName, const char *blockName, const char *keyName)
+auto ConfigValueBool(const std::string_view devName, const std::string_view blockName,
+    const std::string_view keyName) -> std::optional<bool>
 {
-    if(const char *val{GetConfigValue(devName, blockName, keyName)})
-        return al::strcasecmp(val, "on") == 0 || al::strcasecmp(val, "yes") == 0
-            || al::strcasecmp(val, "true")==0 || atoi(val) != 0;
-    return al::nullopt;
+    if(auto&& val = GetConfigValue(devName, blockName, keyName); !val.empty()) try {
+        return al::case_compare(val, "on"sv) == 0 || al::case_compare(val, "yes"sv) == 0
+            || al::case_compare(val, "true"sv) == 0 || std::stoll(val) != 0;
+    }
+    catch(std::out_of_range&) {
+        /* If out of range, the value is some non-0 (true) value and it doesn't
+         * matter that it's too big or small.
+         */
+        return true;
+    }
+    catch(std::exception&) {
+        /* If stoll fails to convert for any other reason, it's some other word
+         * that's treated as false.
+         */
+        return false;
+    }
+    return std::nullopt;
 }
 
-bool GetConfigValueBool(const char *devName, const char *blockName, const char *keyName, bool def)
+auto GetConfigValueBool(const std::string_view devName, const std::string_view blockName,
+    const std::string_view keyName, bool def) -> bool
 {
-    if(const char *val{GetConfigValue(devName, blockName, keyName)})
-        return (al::strcasecmp(val, "on") == 0 || al::strcasecmp(val, "yes") == 0
-            || al::strcasecmp(val, "true") == 0 || atoi(val) != 0);
+    if(auto&& val = GetConfigValue(devName, blockName, keyName); !val.empty()) try {
+        return al::case_compare(val, "on"sv) == 0 || al::case_compare(val, "yes"sv) == 0
+            || al::case_compare(val, "true"sv) == 0 || std::stoll(val) != 0;
+    }
+    catch(std::out_of_range&) {
+        return true;
+    }
+    catch(std::exception&) {
+        return false;
+    }
     return def;
 }

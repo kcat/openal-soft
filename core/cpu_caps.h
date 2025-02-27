@@ -1,12 +1,11 @@
 #ifndef CORE_CPU_CAPS_H
 #define CORE_CPU_CAPS_H
 
+#include <optional>
 #include <string>
 
-#include "aloptional.h"
 
-
-extern int CPUCapFlags;
+inline int CPUCapFlags{0};
 enum {
     CPU_CAP_SSE    = 1<<0,
     CPU_CAP_SSE2   = 1<<1,
@@ -21,6 +20,6 @@ struct CPUInfo {
     int mCaps{0};
 };
 
-al::optional<CPUInfo> GetCPUInfo();
+std::optional<CPUInfo> GetCPUInfo();
 
 #endif /* CORE_CPU_CAPS_H */

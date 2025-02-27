@@ -4,15 +4,14 @@
 #include <cmath>
 #include <cstdlib>
 
-#include <algorithm>
-
 #include "AL/efx.h"
 
-#include "alc/effects/base.h"
+#include "alc/context.h"
+#include "alnumeric.h"
 #include "effects.h"
 
-#ifdef ALSOFT_EAX
-#include "alnumeric.h"
+#if ALSOFT_EAX
+#include "al/eax/effect.h"
 #include "al/eax/exception.h"
 #include "al/eax/utils.h"
 #endif // ALSOFT_EAX
@@ -20,102 +19,82 @@
 
 namespace {
 
-void Autowah_setParamf(EffectProps *props, ALenum param, float val)
+constexpr EffectProps genDefaultProps() noexcept
 {
-    switch(param)
-    {
-    case AL_AUTOWAH_ATTACK_TIME:
-        if(!(val >= AL_AUTOWAH_MIN_ATTACK_TIME && val <= AL_AUTOWAH_MAX_ATTACK_TIME))
-            throw effect_exception{AL_INVALID_VALUE, "Autowah attack time out of range"};
-        props->Autowah.AttackTime = val;
-        break;
-
-    case AL_AUTOWAH_RELEASE_TIME:
-        if(!(val >= AL_AUTOWAH_MIN_RELEASE_TIME && val <= AL_AUTOWAH_MAX_RELEASE_TIME))
-            throw effect_exception{AL_INVALID_VALUE, "Autowah release time out of range"};
-        props->Autowah.ReleaseTime = val;
-        break;
-
-    case AL_AUTOWAH_RESONANCE:
-        if(!(val >= AL_AUTOWAH_MIN_RESONANCE && val <= AL_AUTOWAH_MAX_RESONANCE))
-            throw effect_exception{AL_INVALID_VALUE, "Autowah resonance out of range"};
-        props->Autowah.Resonance = val;
-        break;
-
-    case AL_AUTOWAH_PEAK_GAIN:
-        if(!(val >= AL_AUTOWAH_MIN_PEAK_GAIN && val <= AL_AUTOWAH_MAX_PEAK_GAIN))
-            throw effect_exception{AL_INVALID_VALUE, "Autowah peak gain out of range"};
-        props->Autowah.PeakGain = val;
-        break;
-
-    default:
-        throw effect_exception{AL_INVALID_ENUM, "Invalid autowah float property 0x%04x", param};
-    }
-}
-void Autowah_setParamfv(EffectProps *props,  ALenum param, const float *vals)
-{ Autowah_setParamf(props, param, vals[0]); }
-
-void Autowah_setParami(EffectProps*, ALenum param, int)
-{ throw effect_exception{AL_INVALID_ENUM, "Invalid autowah integer property 0x%04x", param}; }
-void Autowah_setParamiv(EffectProps*, ALenum param, const int*)
-{
-    throw effect_exception{AL_INVALID_ENUM, "Invalid autowah integer vector property 0x%04x",
-        param};
-}
-
-void Autowah_getParamf(const EffectProps *props, ALenum param, float *val)
-{
-    switch(param)
-    {
-    case AL_AUTOWAH_ATTACK_TIME:
-        *val = props->Autowah.AttackTime;
-        break;
-
-    case AL_AUTOWAH_RELEASE_TIME:
-        *val = props->Autowah.ReleaseTime;
-        break;
-
-    case AL_AUTOWAH_RESONANCE:
-        *val = props->Autowah.Resonance;
-        break;
-
-    case AL_AUTOWAH_PEAK_GAIN:
-        *val = props->Autowah.PeakGain;
-        break;
-
-    default:
-        throw effect_exception{AL_INVALID_ENUM, "Invalid autowah float property 0x%04x", param};
-    }
-
-}
-void Autowah_getParamfv(const EffectProps *props, ALenum param, float *vals)
-{ Autowah_getParamf(props, param, vals); }
-
-void Autowah_getParami(const EffectProps*, ALenum param, int*)
-{ throw effect_exception{AL_INVALID_ENUM, "Invalid autowah integer property 0x%04x", param}; }
-void Autowah_getParamiv(const EffectProps*, ALenum param, int*)
-{
-    throw effect_exception{AL_INVALID_ENUM, "Invalid autowah integer vector property 0x%04x",
-        param};
-}
-
-EffectProps genDefaultProps() noexcept
-{
-    EffectProps props{};
-    props.Autowah.AttackTime = AL_AUTOWAH_DEFAULT_ATTACK_TIME;
-    props.Autowah.ReleaseTime = AL_AUTOWAH_DEFAULT_RELEASE_TIME;
-    props.Autowah.Resonance = AL_AUTOWAH_DEFAULT_RESONANCE;
-    props.Autowah.PeakGain = AL_AUTOWAH_DEFAULT_PEAK_GAIN;
+    AutowahProps props{};
+    props.AttackTime = AL_AUTOWAH_DEFAULT_ATTACK_TIME;
+    props.ReleaseTime = AL_AUTOWAH_DEFAULT_RELEASE_TIME;
+    props.Resonance = AL_AUTOWAH_DEFAULT_RESONANCE;
+    props.PeakGain = AL_AUTOWAH_DEFAULT_PEAK_GAIN;
     return props;
 }
 
 } // namespace
 
-DEFINE_ALEFFECT_VTABLE(Autowah);
-
 const EffectProps AutowahEffectProps{genDefaultProps()};
 
-#ifdef ALSOFT_EAX
+void AutowahEffectHandler::SetParami(ALCcontext *context, AutowahProps&, ALenum param, int)
+{ context->throw_error(AL_INVALID_ENUM, "Invalid autowah integer property {:#04x}", as_unsigned(param)); }
+void AutowahEffectHandler::SetParamiv(ALCcontext *context, AutowahProps&, ALenum param, const int*)
+{ context->throw_error(AL_INVALID_ENUM, "Invalid autowah integer vector property {:#04x}", as_unsigned(param)); }
+
+void AutowahEffectHandler::SetParamf(ALCcontext *context, AutowahProps &props, ALenum param, float val)
+{
+    switch(param)
+    {
+    case AL_AUTOWAH_ATTACK_TIME:
+        if(!(val >= AL_AUTOWAH_MIN_ATTACK_TIME && val <= AL_AUTOWAH_MAX_ATTACK_TIME))
+            context->throw_error(AL_INVALID_VALUE, "Autowah attack time out of range");
+        props.AttackTime = val;
+        return;
+
+    case AL_AUTOWAH_RELEASE_TIME:
+        if(!(val >= AL_AUTOWAH_MIN_RELEASE_TIME && val <= AL_AUTOWAH_MAX_RELEASE_TIME))
+            context->throw_error(AL_INVALID_VALUE, "Autowah release time out of range");
+        props.ReleaseTime = val;
+        return;
+
+    case AL_AUTOWAH_RESONANCE:
+        if(!(val >= AL_AUTOWAH_MIN_RESONANCE && val <= AL_AUTOWAH_MAX_RESONANCE))
+            context->throw_error(AL_INVALID_VALUE, "Autowah resonance out of range");
+        props.Resonance = val;
+        return;
+
+    case AL_AUTOWAH_PEAK_GAIN:
+        if(!(val >= AL_AUTOWAH_MIN_PEAK_GAIN && val <= AL_AUTOWAH_MAX_PEAK_GAIN))
+            context->throw_error(AL_INVALID_VALUE, "Autowah peak gain out of range");
+        props.PeakGain = val;
+        return;
+    }
+
+    context->throw_error(AL_INVALID_ENUM, "Invalid autowah float property {:#04x}",
+        as_unsigned(param));
+}
+void AutowahEffectHandler::SetParamfv(ALCcontext *context, AutowahProps &props,  ALenum param, const float *vals)
+{ SetParamf(context, props, param, *vals); }
+
+void AutowahEffectHandler::GetParami(ALCcontext *context, const AutowahProps&, ALenum param, int*)
+{ context->throw_error(AL_INVALID_ENUM, "Invalid autowah integer property {:#04x}", as_unsigned(param)); }
+void AutowahEffectHandler::GetParamiv(ALCcontext *context, const AutowahProps&, ALenum param, int*)
+{ context->throw_error(AL_INVALID_ENUM, "Invalid autowah integer vector property {:#04x}", as_unsigned(param)); }
+
+void AutowahEffectHandler::GetParamf(ALCcontext *context, const AutowahProps &props, ALenum param, float *val)
+{
+    switch(param)
+    {
+    case AL_AUTOWAH_ATTACK_TIME: *val = props.AttackTime; return;
+    case AL_AUTOWAH_RELEASE_TIME: *val = props.ReleaseTime; return;
+    case AL_AUTOWAH_RESONANCE: *val = props.Resonance; return;
+    case AL_AUTOWAH_PEAK_GAIN: *val = props.PeakGain; return;
+    }
+
+    context->throw_error(AL_INVALID_ENUM, "Invalid autowah float property {:#04x}",
+        as_unsigned(param));
+}
+void AutowahEffectHandler::GetParamfv(ALCcontext *context, const AutowahProps &props, ALenum param, float *vals)
+{ GetParamf(context, props, param, vals); }
+
+#if ALSOFT_EAX
 namespace {
 
 using AutowahCommitter = EaxCommitter<EaxAutowahCommitter>;
@@ -189,62 +168,62 @@ template<>
     throw Exception{message};
 }
 
-template<>
-bool AutowahCommitter::commit(const EaxEffectProps &props)
+bool EaxAutowahCommitter::commit(const EAXAUTOWAHPROPERTIES &props)
 {
-    if(props.mType == mEaxProps.mType
-        && mEaxProps.mAutowah.flAttackTime == props.mAutowah.flAttackTime
-        && mEaxProps.mAutowah.flReleaseTime == props.mAutowah.flReleaseTime
-        && mEaxProps.mAutowah.lResonance == props.mAutowah.lResonance
-        && mEaxProps.mAutowah.lPeakLevel == props.mAutowah.lPeakLevel)
+    if(auto *cur = std::get_if<EAXAUTOWAHPROPERTIES>(&mEaxProps); cur && *cur == props)
         return false;
 
     mEaxProps = props;
-
-    mAlProps.Autowah.AttackTime = props.mAutowah.flAttackTime;
-    mAlProps.Autowah.ReleaseTime = props.mAutowah.flReleaseTime;
-    mAlProps.Autowah.Resonance = level_mb_to_gain(static_cast<float>(props.mAutowah.lResonance));
-    mAlProps.Autowah.PeakGain = level_mb_to_gain(static_cast<float>(props.mAutowah.lPeakLevel));
+    mAlProps = [&]{
+        AutowahProps ret{};
+        ret.AttackTime = props.flAttackTime;
+        ret.ReleaseTime = props.flReleaseTime;
+        ret.Resonance = level_mb_to_gain(static_cast<float>(props.lResonance));
+        ret.PeakGain = level_mb_to_gain(static_cast<float>(props.lPeakLevel));
+        return ret;
+    }();
 
     return true;
 }
 
-template<>
-void AutowahCommitter::SetDefaults(EaxEffectProps &props)
+void EaxAutowahCommitter::SetDefaults(EaxEffectProps &props)
 {
-    props.mType = EaxEffectType::Autowah;
-    props.mAutowah.flAttackTime = EAXAUTOWAH_DEFAULTATTACKTIME;
-    props.mAutowah.flReleaseTime = EAXAUTOWAH_DEFAULTRELEASETIME;
-    props.mAutowah.lResonance = EAXAUTOWAH_DEFAULTRESONANCE;
-    props.mAutowah.lPeakLevel = EAXAUTOWAH_DEFAULTPEAKLEVEL;
+    static constexpr EAXAUTOWAHPROPERTIES defprops{[]
+    {
+        EAXAUTOWAHPROPERTIES ret{};
+        ret.flAttackTime = EAXAUTOWAH_DEFAULTATTACKTIME;
+        ret.flReleaseTime = EAXAUTOWAH_DEFAULTRELEASETIME;
+        ret.lResonance = EAXAUTOWAH_DEFAULTRESONANCE;
+        ret.lPeakLevel = EAXAUTOWAH_DEFAULTPEAKLEVEL;
+        return ret;
+    }()};
+    props = defprops;
 }
 
-template<>
-void AutowahCommitter::Get(const EaxCall &call, const EaxEffectProps &props)
+void EaxAutowahCommitter::Get(const EaxCall &call, const EAXAUTOWAHPROPERTIES &props)
 {
     switch(call.get_property_id())
     {
     case EAXAUTOWAH_NONE: break;
-    case EAXAUTOWAH_ALLPARAMETERS: call.set_value<Exception>(props.mAutowah); break;
-    case EAXAUTOWAH_ATTACKTIME: call.set_value<Exception>(props.mAutowah.flAttackTime); break;
-    case EAXAUTOWAH_RELEASETIME: call.set_value<Exception>(props.mAutowah.flReleaseTime); break;
-    case EAXAUTOWAH_RESONANCE: call.set_value<Exception>(props.mAutowah.lResonance); break;
-    case EAXAUTOWAH_PEAKLEVEL: call.set_value<Exception>(props.mAutowah.lPeakLevel); break;
+    case EAXAUTOWAH_ALLPARAMETERS: call.set_value<Exception>(props); break;
+    case EAXAUTOWAH_ATTACKTIME: call.set_value<Exception>(props.flAttackTime); break;
+    case EAXAUTOWAH_RELEASETIME: call.set_value<Exception>(props.flReleaseTime); break;
+    case EAXAUTOWAH_RESONANCE: call.set_value<Exception>(props.lResonance); break;
+    case EAXAUTOWAH_PEAKLEVEL: call.set_value<Exception>(props.lPeakLevel); break;
     default: fail_unknown_property_id();
     }
 }
 
-template<>
-void AutowahCommitter::Set(const EaxCall &call, EaxEffectProps &props)
+void EaxAutowahCommitter::Set(const EaxCall &call, EAXAUTOWAHPROPERTIES &props)
 {
     switch(call.get_property_id())
     {
     case EAXAUTOWAH_NONE: break;
-    case EAXAUTOWAH_ALLPARAMETERS: defer<AllValidator>(call, props.mAutowah); break;
-    case EAXAUTOWAH_ATTACKTIME: defer<AttackTimeValidator>(call, props.mAutowah.flAttackTime); break;
-    case EAXAUTOWAH_RELEASETIME: defer<ReleaseTimeValidator>(call, props.mAutowah.flReleaseTime); break;
-    case EAXAUTOWAH_RESONANCE: defer<ResonanceValidator>(call, props.mAutowah.lResonance); break;
-    case EAXAUTOWAH_PEAKLEVEL: defer<PeakLevelValidator>(call, props.mAutowah.lPeakLevel); break;
+    case EAXAUTOWAH_ALLPARAMETERS: defer<AllValidator>(call, props); break;
+    case EAXAUTOWAH_ATTACKTIME: defer<AttackTimeValidator>(call, props.flAttackTime); break;
+    case EAXAUTOWAH_RELEASETIME: defer<ReleaseTimeValidator>(call, props.flReleaseTime); break;
+    case EAXAUTOWAH_RESONANCE: defer<ResonanceValidator>(call, props.lResonance); break;
+    case EAXAUTOWAH_PEAKLEVEL: defer<PeakLevelValidator>(call, props.lPeakLevel); break;
     default: fail_unknown_property_id();
     }
 }

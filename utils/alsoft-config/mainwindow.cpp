@@ -1,10 +1,13 @@
 
 #include "config.h"
+#include "config_backends.h"
+#include "config_simd.h"
 
 #include "mainwindow.h"
 
-#include <iostream>
+#include <array>
 #include <cmath>
+#include <memory>
 
 #include <QFileDialog>
 #include <QMessageBox>
@@ -19,148 +22,165 @@
 #include <shlobj.h>
 #endif
 
+#include "almalloc.h"
+#include "alspan.h"
+
 namespace {
 
-const struct {
+struct BackendNamePair {
+    /* NOLINTBEGIN(*-avoid-c-arrays) */
     char backend_name[16];
     char full_string[32];
-} backendList[] = {
-#ifdef HAVE_JACK
-    { "jack", "JACK" },
+    /* NOLINTEND(*-avoid-c-arrays) */
+};
+constexpr std::array backendList{
+#if HAVE_PIPEWIRE
+    BackendNamePair{ "pipewire", "PipeWire" },
 #endif
-#ifdef HAVE_PIPEWIRE
-    { "pipewire", "PipeWire" },
+#if HAVE_PULSEAUDIO
+    BackendNamePair{ "pulse", "PulseAudio" },
 #endif
-#ifdef HAVE_PULSEAUDIO
-    { "pulse", "PulseAudio" },
+#if HAVE_WASAPI
+    BackendNamePair{ "wasapi", "WASAPI" },
 #endif
-#ifdef HAVE_ALSA
-    { "alsa", "ALSA" },
+#if HAVE_COREAUDIO
+    BackendNamePair{ "core", "CoreAudio" },
 #endif
-#ifdef HAVE_COREAUDIO
-    { "core", "CoreAudio" },
+#if HAVE_OPENSL
+    BackendNamePair{ "opensl", "OpenSL" },
 #endif
-#ifdef HAVE_OSS
-    { "oss", "OSS" },
+#if HAVE_ALSA
+    BackendNamePair{ "alsa", "ALSA" },
 #endif
-#ifdef HAVE_SOLARIS
-    { "solaris", "Solaris" },
+#if HAVE_SOLARIS
+    BackendNamePair{ "solaris", "Solaris" },
 #endif
-#ifdef HAVE_SNDIO
-    { "sndio", "SoundIO" },
+#if HAVE_SNDIO
+    BackendNamePair{ "sndio", "SndIO" },
 #endif
-#ifdef HAVE_QSA
-    { "qsa", "QSA" },
+#if HAVE_OSS
+    BackendNamePair{ "oss", "OSS" },
 #endif
-#ifdef HAVE_WASAPI
-    { "wasapi", "WASAPI" },
+#if HAVE_DSOUND
+    BackendNamePair{ "dsound", "DirectSound" },
 #endif
-#ifdef HAVE_DSOUND
-    { "dsound", "DirectSound" },
+#if HAVE_WINMM
+    BackendNamePair{ "winmm", "Windows Multimedia" },
 #endif
-#ifdef HAVE_WINMM
-    { "winmm", "Windows Multimedia" },
+#if HAVE_PORTAUDIO
+    BackendNamePair{ "port", "PortAudio" },
 #endif
-#ifdef HAVE_PORTAUDIO
-    { "port", "PortAudio" },
-#endif
-#ifdef HAVE_OPENSL
-    { "opensl", "OpenSL" },
+#if HAVE_JACK
+    BackendNamePair{ "jack", "JACK" },
 #endif
 
-    { "null", "Null Output" },
-#ifdef HAVE_WAVE
-    { "wave", "Wave Writer" },
+    BackendNamePair{ "null", "Null Output" },
+#if HAVE_WAVE
+    BackendNamePair{ "wave", "Wave Writer" },
 #endif
-    { "", "" }
 };
 
-const struct NameValuePair {
+struct NameValuePair {
+    /* NOLINTBEGIN(*-avoid-c-arrays) */
     const char name[64];
     const char value[16];
-} speakerModeList[] = {
-    { "Autodetect", "" },
-    { "Mono", "mono" },
-    { "Stereo", "stereo" },
-    { "Quadraphonic", "quad" },
-    { "5.1 Surround", "surround51" },
-    { "6.1 Surround", "surround61" },
-    { "7.1 Surround", "surround71" },
-    { "3D7.1 Surround", "surround3d71" },
-
-    { "Ambisonic, 1st Order", "ambi1" },
-    { "Ambisonic, 2nd Order", "ambi2" },
-    { "Ambisonic, 3rd Order", "ambi3" },
-
-    { "", "" }
-}, sampleTypeList[] = {
-    { "Autodetect", "" },
-    { "8-bit int", "int8" },
-    { "8-bit uint", "uint8" },
-    { "16-bit int", "int16" },
-    { "16-bit uint", "uint16" },
-    { "32-bit int", "int32" },
-    { "32-bit uint", "uint32" },
-    { "32-bit float", "float32" },
-
-    { "", "" }
-}, resamplerList[] = {
-    { "Point", "point" },
-    { "Linear", "linear" },
-    { "Cubic Spline", "cubic" },
-    { "Default (Cubic Spline)", "" },
-    { "11th order Sinc (fast)", "fast_bsinc12" },
-    { "11th order Sinc", "bsinc12" },
-    { "23rd order Sinc (fast)", "fast_bsinc24" },
-    { "23rd order Sinc", "bsinc24" },
-
-    { "", "" }
-}, stereoModeList[] = {
-    { "Autodetect", "" },
-    { "Speakers", "speakers" },
-    { "Headphones", "headphones" },
-
-    { "", "" }
-}, stereoEncList[] = {
-    { "Default", "" },
-    { "Basic", "panpot" },
-    { "UHJ", "uhj" },
-    { "Binaural", "hrtf" },
-
-    { "", "" }
-}, ambiFormatList[] = {
-    { "Default", "" },
-    { "AmbiX (ACN, SN3D)", "ambix" },
-    { "Furse-Malham", "fuma" },
-    { "ACN, N3D", "acn+n3d" },
-    { "ACN, FuMa", "acn+fuma" },
-
-    { "", "" }
-}, hrtfModeList[] = {
-    { "1st Order Ambisonic", "ambi1" },
-    { "2nd Order Ambisonic", "ambi2" },
-    { "3rd Order Ambisonic", "ambi3" },
-    { "Default (Full)", "" },
-    { "Full", "full" },
-
-    { "", "" }
+    /* NOLINTEND(*-avoid-c-arrays) */
 };
+constexpr std::array speakerModeList{
+    NameValuePair{ "Autodetect", "" },
+    NameValuePair{ "Mono", "mono" },
+    NameValuePair{ "Stereo", "stereo" },
+    NameValuePair{ "Quadraphonic", "quad" },
+    NameValuePair{ "5.1 Surround", "surround51" },
+    NameValuePair{ "6.1 Surround", "surround61" },
+    NameValuePair{ "7.1 Surround", "surround71" },
+    NameValuePair{ "3D7.1 Surround", "surround3d71" },
+
+    NameValuePair{ "Ambisonic, 1st Order", "ambi1" },
+    NameValuePair{ "Ambisonic, 2nd Order", "ambi2" },
+    NameValuePair{ "Ambisonic, 3rd Order", "ambi3" },
+};
+constexpr std::array sampleTypeList{
+    NameValuePair{ "Autodetect", "" },
+    NameValuePair{ "8-bit int", "int8" },
+    NameValuePair{ "8-bit uint", "uint8" },
+    NameValuePair{ "16-bit int", "int16" },
+    NameValuePair{ "16-bit uint", "uint16" },
+    NameValuePair{ "32-bit int", "int32" },
+    NameValuePair{ "32-bit uint", "uint32" },
+    NameValuePair{ "32-bit float", "float32" },
+};
+constexpr std::array resamplerList{
+    NameValuePair{ "Point", "point" },
+    NameValuePair{ "Linear", "linear" },
+    NameValuePair{ "Cubic Spline", "spline" },
+    NameValuePair{ "Default (Cubic Spline)", "" },
+    NameValuePair{ "4-point Gaussian", "gaussian" },
+    NameValuePair{ "11th order Sinc (fast)", "fast_bsinc12" },
+    NameValuePair{ "11th order Sinc", "bsinc12" },
+    NameValuePair{ "23rd order Sinc (fast)", "fast_bsinc24" },
+    NameValuePair{ "23rd order Sinc", "bsinc24" },
+};
+constexpr std::array stereoModeList{
+    NameValuePair{ "Autodetect", "" },
+    NameValuePair{ "Speakers", "speakers" },
+    NameValuePair{ "Headphones", "headphones" },
+};
+constexpr std::array stereoEncList{
+    NameValuePair{ "Default", "" },
+    NameValuePair{ "Basic", "panpot" },
+    NameValuePair{ "UHJ", "uhj" },
+    NameValuePair{ "Binaural", "hrtf" },
+};
+constexpr std::array ambiFormatList{
+    NameValuePair{ "Default", "" },
+    NameValuePair{ "AmbiX (ACN, SN3D)", "ambix" },
+    NameValuePair{ "Furse-Malham", "fuma" },
+    NameValuePair{ "ACN, N3D", "acn+n3d" },
+    NameValuePair{ "ACN, FuMa", "acn+fuma" },
+};
+constexpr std::array hrtfModeList{
+    NameValuePair{ "1st Order Ambisonic", "ambi1" },
+    NameValuePair{ "2nd Order Ambisonic", "ambi2" },
+    NameValuePair{ "3rd Order Ambisonic", "ambi3" },
+    NameValuePair{ "Default (Full)", "" },
+    NameValuePair{ "Full", "full" },
+};
+
+constexpr auto GetDefaultIndex(const al::span<const NameValuePair> list) -> size_t
+{
+    for(size_t i{0};i < list.size();++i)
+    {
+        if(!list[i].value[0])
+            return i;
+    }
+    throw std::runtime_error{"Failed to find default entry"};
+}
+
+#ifdef Q_OS_WIN32
+struct CoTaskMemDeleter {
+    void operator()(void *buffer) { CoTaskMemFree(buffer); }
+};
+/* NOLINTNEXTLINE(*-avoid-c-arrays) */
+using WCharBufferPtr = std::unique_ptr<WCHAR[],CoTaskMemDeleter>;
+#endif
 
 QString getDefaultConfigName()
 {
 #ifdef Q_OS_WIN32
-    static const char fname[] = "alsoft.ini";
-    auto get_appdata_path = []() noexcept -> QString
+    const char *fname{"alsoft.ini"};
+    static constexpr auto get_appdata_path = []() -> QString
     {
-        WCHAR buffer[MAX_PATH];
-        if(SHGetSpecialFolderPathW(nullptr, buffer, CSIDL_APPDATA, FALSE) != FALSE)
-            return QString::fromWCharArray(buffer);
-        return QString();
+        auto buffer = WCharBufferPtr{};
+        if(const HRESULT hr{SHGetKnownFolderPath(FOLDERID_RoamingAppData, KF_FLAG_DONT_UNEXPAND,
+            nullptr, al::out_ptr(buffer))}; SUCCEEDED(hr))
+            return QString::fromWCharArray(buffer.get());
+        return QString{};
     };
     QString base = get_appdata_path();
 #else
-    static const char fname[] = "alsoft.conf";
-    QByteArray base = qgetenv("XDG_CONFIG_HOME");
+    const char *fname{"alsoft.conf"};
+    QString base = qgetenv("XDG_CONFIG_HOME");
     if(base.isEmpty())
     {
         base = qgetenv("HOME");
@@ -176,16 +196,17 @@ QString getDefaultConfigName()
 QString getBaseDataPath()
 {
 #ifdef Q_OS_WIN32
-    auto get_appdata_path = []() noexcept -> QString
+    static constexpr auto get_appdata_path = []() -> QString
     {
-        WCHAR buffer[MAX_PATH];
-        if(SHGetSpecialFolderPathW(nullptr, buffer, CSIDL_APPDATA, FALSE) != FALSE)
-            return QString::fromWCharArray(buffer);
-        return QString();
+        auto buffer = WCharBufferPtr{};
+        if(const HRESULT hr{SHGetKnownFolderPath(FOLDERID_RoamingAppData, KF_FLAG_DONT_UNEXPAND,
+            nullptr, al::out_ptr(buffer))}; SUCCEEDED(hr))
+            return QString::fromWCharArray(buffer.get());
+        return QString{};
     };
     QString base = get_appdata_path();
 #else
-    QByteArray base = qgetenv("XDG_DATA_HOME");
+    QString base = qgetenv("XDG_DATA_HOME");
     if(base.isEmpty())
     {
         base = qgetenv("HOME");
@@ -226,24 +247,22 @@ QStringList getAllDataPaths(const QString &append)
     return list;
 }
 
-template<size_t N>
-QString getValueFromName(const NameValuePair (&list)[N], const QString &str)
+QString getValueFromName(const al::span<const NameValuePair> list, const QString &str)
 {
-    for(size_t i = 0;i < N-1;i++)
+    for(size_t i{0};i < list.size();++i)
     {
-        if(str == list[i].name)
-            return list[i].value;
+        if(str == std::data(list[i].name))
+            return std::data(list[i].value);
     }
     return QString{};
 }
 
-template<size_t N>
-QString getNameFromValue(const NameValuePair (&list)[N], const QString &str)
+QString getNameFromValue(const al::span<const NameValuePair> list, const QString &str)
 {
-    for(size_t i = 0;i < N-1;i++)
+    for(size_t i{0};i < list.size();++i)
     {
-        if(str == list[i].value)
-            return list[i].name;
+        if(str == std::data(list[i].value))
+            return std::data(list[i].name);
     }
     return QString{};
 }
@@ -262,65 +281,50 @@ QString getCheckValue(const QCheckBox *checkbox)
 {
     const Qt::CheckState state{checkbox->checkState()};
     if(state == Qt::Checked)
-        return QString{"true"};
+        return QStringLiteral("true");
     if(state == Qt::Unchecked)
-        return QString{"false"};
+        return QStringLiteral("false");
     return QString{};
 }
 
 }
 
-MainWindow::MainWindow(QWidget *parent) :
-    QMainWindow(parent),
-    ui(new Ui::MainWindow),
-    mPeriodSizeValidator(nullptr),
-    mPeriodCountValidator(nullptr),
-    mSourceCountValidator(nullptr),
-    mEffectSlotValidator(nullptr),
-    mSourceSendValidator(nullptr),
-    mSampleRateValidator(nullptr),
-    mJackBufferValidator(nullptr),
-    mNeedsSave(false)
+MainWindow::MainWindow(QWidget *parent) : QMainWindow{parent}
+    , ui{std::make_unique<Ui::MainWindow>()}
 {
     ui->setupUi(this);
 
-    for(int i = 0;speakerModeList[i].name[0];i++)
-        ui->channelConfigCombo->addItem(speakerModeList[i].name);
+    for(auto &item : speakerModeList)
+        ui->channelConfigCombo->addItem(std::data(item.name));
     ui->channelConfigCombo->adjustSize();
-    for(int i = 0;sampleTypeList[i].name[0];i++)
-        ui->sampleFormatCombo->addItem(sampleTypeList[i].name);
+    for(auto &item : sampleTypeList)
+        ui->sampleFormatCombo->addItem(std::data(item.name));
     ui->sampleFormatCombo->adjustSize();
-    for(int i = 0;stereoModeList[i].name[0];i++)
-        ui->stereoModeCombo->addItem(stereoModeList[i].name);
+    for(auto &item : stereoModeList)
+        ui->stereoModeCombo->addItem(std::data(item.name));
     ui->stereoModeCombo->adjustSize();
-    for(int i = 0;stereoEncList[i].name[0];i++)
-        ui->stereoEncodingComboBox->addItem(stereoEncList[i].name);
+    for(auto &item : stereoEncList)
+        ui->stereoEncodingComboBox->addItem(std::data(item.name));
     ui->stereoEncodingComboBox->adjustSize();
-    for(int i = 0;ambiFormatList[i].name[0];i++)
-        ui->ambiFormatComboBox->addItem(ambiFormatList[i].name);
+    for(auto &item : ambiFormatList)
+        ui->ambiFormatComboBox->addItem(std::data(item.name));
     ui->ambiFormatComboBox->adjustSize();
 
-    int count;
-    for(count = 0;resamplerList[count].name[0];count++) {
-    }
-    ui->resamplerSlider->setRange(0, count-1);
+    ui->resamplerSlider->setRange(0, resamplerList.size()-1);
+    ui->hrtfmodeSlider->setRange(0, hrtfModeList.size()-1);
 
-    for(count = 0;hrtfModeList[count].name[0];count++) {
-    }
-    ui->hrtfmodeSlider->setRange(0, count-1);
-
-#if !defined(HAVE_NEON) && !defined(HAVE_SSE)
+#if !HAVE_NEON && !HAVE_SSE
     ui->cpuExtDisabledLabel->move(ui->cpuExtDisabledLabel->x(), ui->cpuExtDisabledLabel->y() - 60);
 #else
     ui->cpuExtDisabledLabel->setVisible(false);
 #endif
 
-#ifndef HAVE_NEON
+#if !HAVE_NEON
 
-#ifndef HAVE_SSE4_1
-#ifndef HAVE_SSE3
-#ifndef HAVE_SSE2
-#ifndef HAVE_SSE
+#if !HAVE_SSE4_1
+#if !HAVE_SSE3
+#if !HAVE_SSE2
+#if !HAVE_SSE
     ui->enableSSECheckBox->setVisible(false);
 #endif /* !SSE */
     ui->enableSSE2CheckBox->setVisible(false);
@@ -333,10 +337,10 @@ MainWindow::MainWindow(QWidget *parent) :
 
 #else /* !Neon */
 
-#ifndef HAVE_SSE4_1
-#ifndef HAVE_SSE3
-#ifndef HAVE_SSE2
-#ifndef HAVE_SSE
+#if !HAVE_SSE4_1
+#if !HAVE_SSE3
+#if !HAVE_SSE2
+#if !HAVE_SSE
     ui->enableNeonCheckBox->move(ui->enableNeonCheckBox->x(), ui->enableNeonCheckBox->y() - 30);
     ui->enableSSECheckBox->setVisible(false);
 #endif /* !SSE */
@@ -349,28 +353,28 @@ MainWindow::MainWindow(QWidget *parent) :
 
 #endif
 
-#ifndef ALSOFT_EAX
+#if !ALSOFT_EAX
     ui->enableEaxCheck->setChecked(Qt::Unchecked);
     ui->enableEaxCheck->setEnabled(false);
     ui->enableEaxCheck->setVisible(false);
 #endif
 
-    mPeriodSizeValidator = new QIntValidator{64, 8192, this};
-    ui->periodSizeEdit->setValidator(mPeriodSizeValidator);
-    mPeriodCountValidator = new QIntValidator{2, 16, this};
-    ui->periodCountEdit->setValidator(mPeriodCountValidator);
+    mPeriodSizeValidator = std::make_unique<QIntValidator>(64, 8192, this);
+    ui->periodSizeEdit->setValidator(mPeriodSizeValidator.get());
+    mPeriodCountValidator = std::make_unique<QIntValidator>(2, 16, this);
+    ui->periodCountEdit->setValidator(mPeriodCountValidator.get());
 
-    mSourceCountValidator = new QIntValidator{0, 4096, this};
-    ui->srcCountLineEdit->setValidator(mSourceCountValidator);
-    mEffectSlotValidator = new QIntValidator{0, 64, this};
-    ui->effectSlotLineEdit->setValidator(mEffectSlotValidator);
-    mSourceSendValidator = new QIntValidator{0, 16, this};
-    ui->srcSendLineEdit->setValidator(mSourceSendValidator);
-    mSampleRateValidator = new QIntValidator{8000, 192000, this};
-    ui->sampleRateCombo->lineEdit()->setValidator(mSampleRateValidator);
+    mSourceCountValidator = std::make_unique<QIntValidator>(0, 4096, this);
+    ui->srcCountLineEdit->setValidator(mSourceCountValidator.get());
+    mEffectSlotValidator = std::make_unique<QIntValidator>(0, 64, this);
+    ui->effectSlotLineEdit->setValidator(mEffectSlotValidator.get());
+    mSourceSendValidator = std::make_unique<QIntValidator>(0, 16, this);
+    ui->srcSendLineEdit->setValidator(mSourceSendValidator.get());
+    mSampleRateValidator = std::make_unique<QIntValidator>(8000, 192000, this);
+    ui->sampleRateCombo->lineEdit()->setValidator(mSampleRateValidator.get());
 
-    mJackBufferValidator = new QIntValidator{0, 8192, this};
-    ui->jackBufferSizeLine->setValidator(mJackBufferValidator);
+    mJackBufferValidator = std::make_unique<QIntValidator>(0, 8192, this);
+    ui->jackBufferSizeLine->setValidator(mJackBufferValidator.get());
 
     connect(ui->actionLoad, &QAction::triggered, this, &MainWindow::loadConfigFromFile);
     connect(ui->actionSave_As, &QAction::triggered, this, &MainWindow::saveConfigAsFile);
@@ -495,28 +499,18 @@ MainWindow::MainWindow(QWidget *parent) :
 
     for(int i = 1;i < ui->backendListWidget->count();i++)
         ui->backendListWidget->setRowHidden(i, true);
-    for(int i = 0;backendList[i].backend_name[0];i++)
+    for(size_t i{0};i < backendList.size();++i)
     {
         QList<QListWidgetItem*> items = ui->backendListWidget->findItems(
-            backendList[i].full_string, Qt::MatchFixedString);
-        foreach(QListWidgetItem *item, items)
+            std::data(backendList[i].full_string), Qt::MatchFixedString);
+        Q_FOREACH(QListWidgetItem *item, items)
             item->setHidden(false);
     }
 
     loadConfig(getDefaultConfigName());
 }
 
-MainWindow::~MainWindow()
-{
-    delete ui;
-    delete mPeriodSizeValidator;
-    delete mPeriodCountValidator;
-    delete mSourceCountValidator;
-    delete mEffectSlotValidator;
-    delete mSourceSendValidator;
-    delete mSampleRateValidator;
-    delete mJackBufferValidator;
-}
+MainWindow::~MainWindow() = default;
 
 void MainWindow::closeEvent(QCloseEvent *event)
 {
@@ -560,9 +554,9 @@ QStringList MainWindow::collectHrtfs()
     {
         QDir dir(ui->hrtfFileList->item(i)->text());
         QStringList fnames = dir.entryList(QDir::Files | QDir::Readable, QDir::Name);
-        foreach(const QString &fname, fnames)
+        Q_FOREACH(const QString &fname, fnames)
         {
-            if(!fname.endsWith(".mhr", Qt::CaseInsensitive))
+            if(!fname.endsWith(QStringLiteral(".mhr"), Qt::CaseInsensitive))
                 continue;
             QString fullname{dir.absoluteFilePath(fname)};
             if(processed.contains(fullname))
@@ -583,21 +577,21 @@ QStringList MainWindow::collectHrtfs()
                         break;
                     }
                     ++i;
-                } while(1);
+                } while(true);
             }
         }
     }
 
     if(ui->defaultHrtfPathsCheckBox->isChecked())
     {
-        QStringList paths = getAllDataPaths("/openal/hrtf");
-        foreach(const QString &name, paths)
+        QStringList paths = getAllDataPaths(QStringLiteral("/openal/hrtf"));
+        Q_FOREACH(const QString &name, paths)
         {
             QDir dir{name};
             QStringList fnames{dir.entryList(QDir::Files | QDir::Readable, QDir::Name)};
-            foreach(const QString &fname, fnames)
+            Q_FOREACH(const QString &fname, fnames)
             {
-                if(!fname.endsWith(".mhr", Qt::CaseInsensitive))
+                if(!fname.endsWith(QStringLiteral(".mhr"), Qt::CaseInsensitive))
                     continue;
                 QString fullname{dir.absoluteFilePath(fname)};
                 if(processed.contains(fullname))
@@ -618,13 +612,13 @@ QStringList MainWindow::collectHrtfs()
                             break;
                         }
                         ++i;
-                    } while(1);
+                    } while(true);
                 }
             }
         }
 
 #ifdef ALSOFT_EMBED_HRTF_DATA
-        ret.push_back("Built-In HRTF");
+        ret.push_back(QStringLiteral("Built-In HRTF"));
 #endif
     }
     return ret;
@@ -642,7 +636,7 @@ void MainWindow::loadConfig(const QString &fname)
 {
     QSettings settings{fname, QSettings::IniFormat};
 
-    QString sampletype = settings.value("sample-type").toString();
+    QString sampletype{settings.value(QStringLiteral("sample-type")).toString()};
     ui->sampleFormatCombo->setCurrentIndex(0);
     if(sampletype.isEmpty() == false)
     {
@@ -654,12 +648,12 @@ void MainWindow::loadConfig(const QString &fname)
         }
     }
 
-    QString channelconfig{settings.value("channels").toString()};
+    QString channelconfig{settings.value(QStringLiteral("channels")).toString()};
     ui->channelConfigCombo->setCurrentIndex(0);
     if(channelconfig.isEmpty() == false)
     {
-        if(channelconfig == "surround51rear")
-            channelconfig = "surround51";
+        if(channelconfig == QStringLiteral("surround51rear"))
+            channelconfig = QStringLiteral("surround51");
         QString str{getNameFromValue(speakerModeList, channelconfig)};
         if(!str.isEmpty())
         {
@@ -668,7 +662,7 @@ void MainWindow::loadConfig(const QString &fname)
         }
     }
 
-    QString srate{settings.value("frequency").toString()};
+    QString srate{settings.value(QStringLiteral("frequency")).toString()};
     if(srate.isEmpty())
         ui->sampleRateCombo->setCurrentIndex(0);
     else
@@ -678,34 +672,37 @@ void MainWindow::loadConfig(const QString &fname)
     }
 
     ui->srcCountLineEdit->clear();
-    ui->srcCountLineEdit->insert(settings.value("sources").toString());
+    ui->srcCountLineEdit->insert(settings.value(QStringLiteral("sources")).toString());
     ui->effectSlotLineEdit->clear();
-    ui->effectSlotLineEdit->insert(settings.value("slots").toString());
+    ui->effectSlotLineEdit->insert(settings.value(QStringLiteral("slots")).toString());
     ui->srcSendLineEdit->clear();
-    ui->srcSendLineEdit->insert(settings.value("sends").toString());
+    ui->srcSendLineEdit->insert(settings.value(QStringLiteral("sends")).toString());
 
-    QString resampler = settings.value("resampler").toString().trimmed();
-    ui->resamplerSlider->setValue(2);
-    ui->resamplerLabel->setText(resamplerList[2].name);
-    /* The "sinc4" and "sinc8" resamplers are no longer supported. Use "cubic"
-     * as a fallback.
+    auto resampler = settings.value(QStringLiteral("resampler")).toString().trimmed();
+    static constexpr auto defaultResamplerIndex = GetDefaultIndex(resamplerList);
+    ui->resamplerSlider->setValue(defaultResamplerIndex);
+    ui->resamplerLabel->setText(std::data(resamplerList[defaultResamplerIndex].name));
+    /* "Cubic" is an alias for the 4-point spline resampler. The "sinc4" and
+     * "sinc8" resamplers are unsupported, use "gaussian" as a fallback.
      */
-    if(resampler == "sinc4" || resampler == "sinc8")
-        resampler = "cubic";
+    if(resampler == QLatin1String{"cubic"})
+        resampler = QStringLiteral("spline");
+    else if(resampler == QLatin1String{"sinc4"} || resampler == QLatin1String{"sinc8"})
+        resampler = QStringLiteral("gaussian");
     /* The "bsinc" resampler name is an alias for "bsinc12". */
-    else if(resampler == "bsinc")
-        resampler = "bsinc12";
+    else if(resampler == QLatin1String{"bsinc"})
+        resampler = QStringLiteral("bsinc12");
     for(int i = 0;resamplerList[i].name[0];i++)
     {
-        if(resampler == resamplerList[i].value)
+        if(resampler == std::data(resamplerList[i].value))
         {
             ui->resamplerSlider->setValue(i);
-            ui->resamplerLabel->setText(resamplerList[i].name);
+            ui->resamplerLabel->setText(std::data(resamplerList[i].name));
             break;
         }
     }
 
-    QString stereomode = settings.value("stereo-mode").toString().trimmed();
+    QString stereomode{settings.value(QStringLiteral("stereo-mode")).toString().trimmed()};
     ui->stereoModeCombo->setCurrentIndex(0);
     if(stereomode.isEmpty() == false)
     {
@@ -733,10 +730,10 @@ void MainWindow::loadConfig(const QString &fname)
         updatePeriodCountSlider();
     }
 
-    ui->outputLimiterCheckBox->setCheckState(getCheckState(settings.value("output-limiter")));
-    ui->outputDitherCheckBox->setCheckState(getCheckState(settings.value("dither")));
+    ui->outputLimiterCheckBox->setCheckState(getCheckState(settings.value(QStringLiteral("output-limiter"))));
+    ui->outputDitherCheckBox->setCheckState(getCheckState(settings.value(QStringLiteral("dither"))));
 
-    QString stereopan{settings.value("stereo-encoding").toString()};
+    QString stereopan{settings.value(QStringLiteral("stereo-encoding")).toString()};
     ui->stereoEncodingComboBox->setCurrentIndex(0);
     if(stereopan.isEmpty() == false)
     {
@@ -748,7 +745,7 @@ void MainWindow::loadConfig(const QString &fname)
         }
     }
 
-    QString ambiformat{settings.value("ambi-format").toString()};
+    QString ambiformat{settings.value(QStringLiteral("ambi-format")).toString()};
     ui->ambiFormatComboBox->setCurrentIndex(0);
     if(ambiformat.isEmpty() == false)
     {
@@ -760,46 +757,47 @@ void MainWindow::loadConfig(const QString &fname)
         }
     }
 
-    ui->decoderHQModeCheckBox->setChecked(getCheckState(settings.value("decoder/hq-mode")));
-    ui->decoderDistCompCheckBox->setCheckState(getCheckState(settings.value("decoder/distance-comp")));
-    ui->decoderNFEffectsCheckBox->setCheckState(getCheckState(settings.value("decoder/nfc")));
-    double speakerdist{settings.value("decoder/speaker-dist", 1.0).toDouble()};
+    ui->decoderHQModeCheckBox->setChecked(getCheckState(settings.value(QStringLiteral("decoder/hq-mode"))));
+    ui->decoderDistCompCheckBox->setCheckState(getCheckState(settings.value(QStringLiteral("decoder/distance-comp"))));
+    ui->decoderNFEffectsCheckBox->setCheckState(getCheckState(settings.value(QStringLiteral("decoder/nfc"))));
+    double speakerdist{settings.value(QStringLiteral("decoder/speaker-dist"), 1.0).toDouble()};
     ui->decoderSpeakerDistSpinBox->setValue(speakerdist);
 
-    ui->decoderQuadLineEdit->setText(settings.value("decoder/quad").toString());
-    ui->decoder51LineEdit->setText(settings.value("decoder/surround51").toString());
-    ui->decoder61LineEdit->setText(settings.value("decoder/surround61").toString());
-    ui->decoder71LineEdit->setText(settings.value("decoder/surround71").toString());
-    ui->decoder3D71LineEdit->setText(settings.value("decoder/surround3d71").toString());
+    ui->decoderQuadLineEdit->setText(settings.value(QStringLiteral("decoder/quad")).toString());
+    ui->decoder51LineEdit->setText(settings.value(QStringLiteral("decoder/surround51")).toString());
+    ui->decoder61LineEdit->setText(settings.value(QStringLiteral("decoder/surround61")).toString());
+    ui->decoder71LineEdit->setText(settings.value(QStringLiteral("decoder/surround71")).toString());
+    ui->decoder3D71LineEdit->setText(settings.value(QStringLiteral("decoder/surround3d71")).toString());
 
-    QStringList disabledCpuExts{settings.value("disable-cpu-exts").toStringList()};
+    QStringList disabledCpuExts{settings.value(QStringLiteral("disable-cpu-exts")).toStringList()};
     if(disabledCpuExts.size() == 1)
         disabledCpuExts = disabledCpuExts[0].split(QChar(','));
     for(QString &name : disabledCpuExts)
         name = name.trimmed();
-    ui->enableSSECheckBox->setChecked(!disabledCpuExts.contains("sse", Qt::CaseInsensitive));
-    ui->enableSSE2CheckBox->setChecked(!disabledCpuExts.contains("sse2", Qt::CaseInsensitive));
-    ui->enableSSE3CheckBox->setChecked(!disabledCpuExts.contains("sse3", Qt::CaseInsensitive));
-    ui->enableSSE41CheckBox->setChecked(!disabledCpuExts.contains("sse4.1", Qt::CaseInsensitive));
-    ui->enableNeonCheckBox->setChecked(!disabledCpuExts.contains("neon", Qt::CaseInsensitive));
+    ui->enableSSECheckBox->setChecked(!disabledCpuExts.contains(QStringLiteral("sse"), Qt::CaseInsensitive));
+    ui->enableSSE2CheckBox->setChecked(!disabledCpuExts.contains(QStringLiteral("sse2"), Qt::CaseInsensitive));
+    ui->enableSSE3CheckBox->setChecked(!disabledCpuExts.contains(QStringLiteral("sse3"), Qt::CaseInsensitive));
+    ui->enableSSE41CheckBox->setChecked(!disabledCpuExts.contains(QStringLiteral("sse4.1"), Qt::CaseInsensitive));
+    ui->enableNeonCheckBox->setChecked(!disabledCpuExts.contains(QStringLiteral("neon"), Qt::CaseInsensitive));
 
-    QString hrtfmode{settings.value("hrtf-mode").toString().trimmed()};
-    ui->hrtfmodeSlider->setValue(2);
-    ui->hrtfmodeLabel->setText(hrtfModeList[3].name);
+    auto hrtfmode = settings.value(QStringLiteral("hrtf-mode")).toString().trimmed();
+    static constexpr auto defaultHrtfModeIndex = GetDefaultIndex(hrtfModeList);
+    ui->hrtfmodeSlider->setValue(defaultHrtfModeIndex);
+    ui->hrtfmodeLabel->setText(std::data(hrtfModeList[defaultHrtfModeIndex].name));
     /* The "basic" mode name is no longer supported. Use "ambi2" instead. */
-    if(hrtfmode == "basic")
-        hrtfmode = "ambi2";
-    for(int i = 0;hrtfModeList[i].name[0];i++)
+    if(hrtfmode == QLatin1String{"basic"})
+        hrtfmode = QStringLiteral("ambi2");
+    for(size_t i{0};i < hrtfModeList.size();++i)
     {
-        if(hrtfmode == hrtfModeList[i].value)
+        if(hrtfmode == std::data(hrtfModeList[i].value))
         {
-            ui->hrtfmodeSlider->setValue(i);
-            ui->hrtfmodeLabel->setText(hrtfModeList[i].name);
+            ui->hrtfmodeSlider->setValue(static_cast<int>(i));
+            ui->hrtfmodeLabel->setText(std::data(hrtfModeList[i].name));
             break;
         }
     }
 
-    QStringList hrtf_paths{settings.value("hrtf-paths").toStringList()};
+    QStringList hrtf_paths{settings.value(QStringLiteral("hrtf-paths")).toStringList()};
     if(hrtf_paths.size() == 1)
         hrtf_paths = hrtf_paths[0].split(QChar(','));
     for(QString &name : hrtf_paths)
@@ -817,15 +815,15 @@ void MainWindow::loadConfig(const QString &fname)
     updateHrtfRemoveButton();
 
     ui->preferredHrtfComboBox->clear();
-    ui->preferredHrtfComboBox->addItem("- Any -");
+    ui->preferredHrtfComboBox->addItem(QStringLiteral("- Any -"));
     if(ui->defaultHrtfPathsCheckBox->isChecked())
     {
         QStringList hrtfs{collectHrtfs()};
-        foreach(const QString &name, hrtfs)
+        Q_FOREACH(const QString &name, hrtfs)
             ui->preferredHrtfComboBox->addItem(name);
     }
 
-    QString defaulthrtf{settings.value("default-hrtf").toString()};
+    QString defaulthrtf{settings.value(QStringLiteral("default-hrtf")).toString()};
     ui->preferredHrtfComboBox->setCurrentIndex(0);
     if(defaulthrtf.isEmpty() == false)
     {
@@ -843,7 +841,7 @@ void MainWindow::loadConfig(const QString &fname)
 
     ui->enabledBackendList->clear();
     ui->disabledBackendList->clear();
-    QStringList drivers{settings.value("drivers").toStringList()};
+    QStringList drivers{settings.value(QStringLiteral("drivers")).toStringList()};
     if(drivers.empty())
         ui->backendCheckBox->setChecked(true);
     else
@@ -856,35 +854,37 @@ void MainWindow::loadConfig(const QString &fname)
             /* Convert "mmdevapi" references to "wasapi" for backwards
              * compatibility.
              */
-            if(name == "-mmdevapi")
-                name = "-wasapi";
-            else if(name == "mmdevapi")
-                name = "wasapi";
+            if(name == QLatin1String{"-mmdevapi"})
+                name = QStringLiteral("-wasapi");
+            else if(name == QLatin1String{"mmdevapi"})
+                name = QStringLiteral("wasapi");
         }
 
-        bool lastWasEmpty = false;
-        foreach(const QString &backend, drivers)
+        bool lastWasEmpty{false};
+        Q_FOREACH(const QString &backend, drivers)
         {
             lastWasEmpty = backend.isEmpty();
             if(lastWasEmpty) continue;
 
             if(!backend.startsWith(QChar('-')))
-                for(int j = 0;backendList[j].backend_name[0];j++)
+            {
+                for(size_t j{0};j < backendList.size();++j)
                 {
-                    if(backend == backendList[j].backend_name)
+                    if(backend == std::data(backendList[j].backend_name))
                     {
-                        ui->enabledBackendList->addItem(backendList[j].full_string);
+                        ui->enabledBackendList->addItem(std::data(backendList[j].full_string));
                         break;
                     }
                 }
+            }
             else if(backend.size() > 1)
             {
                 QStringRef backendref{backend.rightRef(backend.size()-1)};
-                for(int j = 0;backendList[j].backend_name[0];j++)
+                for(size_t j{0};j < backendList.size();++j)
                 {
-                    if(backendref == backendList[j].backend_name)
+                    if(backendref == std::data(backendList[j].backend_name))
                     {
-                        ui->disabledBackendList->addItem(backendList[j].full_string);
+                        ui->disabledBackendList->addItem(std::data(backendList[j].full_string));
                         break;
                     }
                 }
@@ -893,7 +893,7 @@ void MainWindow::loadConfig(const QString &fname)
         ui->backendCheckBox->setChecked(lastWasEmpty);
     }
 
-    QString defaultreverb{settings.value("default-reverb").toString().toLower()};
+    QString defaultreverb{settings.value(QStringLiteral("default-reverb")).toString().toLower()};
     ui->defaultReverbComboBox->setCurrentIndex(0);
     if(defaultreverb.isEmpty() == false)
     {
@@ -907,56 +907,56 @@ void MainWindow::loadConfig(const QString &fname)
         }
     }
 
-    QStringList excludefx{settings.value("excludefx").toStringList()};
+    QStringList excludefx{settings.value(QStringLiteral("excludefx")).toStringList()};
     if(excludefx.size() == 1)
         excludefx = excludefx[0].split(QChar(','));
     for(QString &name : excludefx)
         name = name.trimmed();
-    ui->enableEaxReverbCheck->setChecked(!excludefx.contains("eaxreverb", Qt::CaseInsensitive));
-    ui->enableStdReverbCheck->setChecked(!excludefx.contains("reverb", Qt::CaseInsensitive));
-    ui->enableAutowahCheck->setChecked(!excludefx.contains("autowah", Qt::CaseInsensitive));
-    ui->enableChorusCheck->setChecked(!excludefx.contains("chorus", Qt::CaseInsensitive));
-    ui->enableCompressorCheck->setChecked(!excludefx.contains("compressor", Qt::CaseInsensitive));
-    ui->enableDistortionCheck->setChecked(!excludefx.contains("distortion", Qt::CaseInsensitive));
-    ui->enableEchoCheck->setChecked(!excludefx.contains("echo", Qt::CaseInsensitive));
-    ui->enableEqualizerCheck->setChecked(!excludefx.contains("equalizer", Qt::CaseInsensitive));
-    ui->enableFlangerCheck->setChecked(!excludefx.contains("flanger", Qt::CaseInsensitive));
-    ui->enableFrequencyShifterCheck->setChecked(!excludefx.contains("fshifter", Qt::CaseInsensitive));
-    ui->enableModulatorCheck->setChecked(!excludefx.contains("modulator", Qt::CaseInsensitive));
-    ui->enableDedicatedCheck->setChecked(!excludefx.contains("dedicated", Qt::CaseInsensitive));
-    ui->enablePitchShifterCheck->setChecked(!excludefx.contains("pshifter", Qt::CaseInsensitive));
-    ui->enableVocalMorpherCheck->setChecked(!excludefx.contains("vmorpher", Qt::CaseInsensitive));
+    ui->enableEaxReverbCheck->setChecked(!excludefx.contains(QStringLiteral("eaxreverb"), Qt::CaseInsensitive));
+    ui->enableStdReverbCheck->setChecked(!excludefx.contains(QStringLiteral("reverb"), Qt::CaseInsensitive));
+    ui->enableAutowahCheck->setChecked(!excludefx.contains(QStringLiteral("autowah"), Qt::CaseInsensitive));
+    ui->enableChorusCheck->setChecked(!excludefx.contains(QStringLiteral("chorus"), Qt::CaseInsensitive));
+    ui->enableCompressorCheck->setChecked(!excludefx.contains(QStringLiteral("compressor"), Qt::CaseInsensitive));
+    ui->enableDistortionCheck->setChecked(!excludefx.contains(QStringLiteral("distortion"), Qt::CaseInsensitive));
+    ui->enableEchoCheck->setChecked(!excludefx.contains(QStringLiteral("echo"), Qt::CaseInsensitive));
+    ui->enableEqualizerCheck->setChecked(!excludefx.contains(QStringLiteral("equalizer"), Qt::CaseInsensitive));
+    ui->enableFlangerCheck->setChecked(!excludefx.contains(QStringLiteral("flanger"), Qt::CaseInsensitive));
+    ui->enableFrequencyShifterCheck->setChecked(!excludefx.contains(QStringLiteral("fshifter"), Qt::CaseInsensitive));
+    ui->enableModulatorCheck->setChecked(!excludefx.contains(QStringLiteral("modulator"), Qt::CaseInsensitive));
+    ui->enableDedicatedCheck->setChecked(!excludefx.contains(QStringLiteral("dedicated"), Qt::CaseInsensitive));
+    ui->enablePitchShifterCheck->setChecked(!excludefx.contains(QStringLiteral("pshifter"), Qt::CaseInsensitive));
+    ui->enableVocalMorpherCheck->setChecked(!excludefx.contains(QStringLiteral("vmorpher"), Qt::CaseInsensitive));
     if(ui->enableEaxCheck->isEnabled())
-        ui->enableEaxCheck->setChecked(getCheckState(settings.value("eax/enable")) != Qt::Unchecked);
+        ui->enableEaxCheck->setChecked(getCheckState(settings.value(QStringLiteral("eax/enable"))) != Qt::Unchecked);
 
-    ui->pulseAutospawnCheckBox->setCheckState(getCheckState(settings.value("pulse/spawn-server")));
-    ui->pulseAllowMovesCheckBox->setCheckState(getCheckState(settings.value("pulse/allow-moves")));
-    ui->pulseFixRateCheckBox->setCheckState(getCheckState(settings.value("pulse/fix-rate")));
-    ui->pulseAdjLatencyCheckBox->setCheckState(getCheckState(settings.value("pulse/adjust-latency")));
+    ui->pulseAutospawnCheckBox->setCheckState(getCheckState(settings.value(QStringLiteral("pulse/spawn-server"))));
+    ui->pulseAllowMovesCheckBox->setCheckState(getCheckState(settings.value(QStringLiteral("pulse/allow-moves"))));
+    ui->pulseFixRateCheckBox->setCheckState(getCheckState(settings.value(QStringLiteral("pulse/fix-rate"))));
+    ui->pulseAdjLatencyCheckBox->setCheckState(getCheckState(settings.value(QStringLiteral("pulse/adjust-latency"))));
 
-    ui->pwireAssumeAudioCheckBox->setCheckState(getCheckState(settings.value("pipewire/assume-audio")));
-    ui->pwireRtMixCheckBox->setCheckState(getCheckState(settings.value("pipewire/rt-mix")));
+    ui->pwireAssumeAudioCheckBox->setCheckState(getCheckState(settings.value(QStringLiteral("pipewire/assume-audio"))));
+    ui->pwireRtMixCheckBox->setCheckState(getCheckState(settings.value(QStringLiteral("pipewire/rt-mix"))));
 
-    ui->wasapiResamplerCheckBox->setCheckState(getCheckState(settings.value("wasapi/allow-resampler")));
+    ui->wasapiResamplerCheckBox->setCheckState(getCheckState(settings.value(QStringLiteral("wasapi/allow-resampler"))));
 
-    ui->jackAutospawnCheckBox->setCheckState(getCheckState(settings.value("jack/spawn-server")));
-    ui->jackConnectPortsCheckBox->setCheckState(getCheckState(settings.value("jack/connect-ports")));
-    ui->jackRtMixCheckBox->setCheckState(getCheckState(settings.value("jack/rt-mix")));
-    ui->jackBufferSizeLine->setText(settings.value("jack/buffer-size", QString()).toString());
+    ui->jackAutospawnCheckBox->setCheckState(getCheckState(settings.value(QStringLiteral("jack/spawn-server"))));
+    ui->jackConnectPortsCheckBox->setCheckState(getCheckState(settings.value(QStringLiteral("jack/connect-ports"))));
+    ui->jackRtMixCheckBox->setCheckState(getCheckState(settings.value(QStringLiteral("jack/rt-mix"))));
+    ui->jackBufferSizeLine->setText(settings.value(QStringLiteral("jack/buffer-size"), QString()).toString());
     updateJackBufferSizeSlider();
 
-    ui->alsaDefaultDeviceLine->setText(settings.value("alsa/device", QString()).toString());
-    ui->alsaDefaultCaptureLine->setText(settings.value("alsa/capture", QString()).toString());
-    ui->alsaResamplerCheckBox->setCheckState(getCheckState(settings.value("alsa/allow-resampler")));
-    ui->alsaMmapCheckBox->setCheckState(getCheckState(settings.value("alsa/mmap")));
+    ui->alsaDefaultDeviceLine->setText(settings.value(QStringLiteral("alsa/device"), QString()).toString());
+    ui->alsaDefaultCaptureLine->setText(settings.value(QStringLiteral("alsa/capture"), QString()).toString());
+    ui->alsaResamplerCheckBox->setCheckState(getCheckState(settings.value(QStringLiteral("alsa/allow-resampler"))));
+    ui->alsaMmapCheckBox->setCheckState(getCheckState(settings.value(QStringLiteral("alsa/mmap"))));
 
-    ui->ossDefaultDeviceLine->setText(settings.value("oss/device", QString()).toString());
-    ui->ossDefaultCaptureLine->setText(settings.value("oss/capture", QString()).toString());
+    ui->ossDefaultDeviceLine->setText(settings.value(QStringLiteral("oss/device"), QString()).toString());
+    ui->ossDefaultCaptureLine->setText(settings.value(QStringLiteral("oss/capture"), QString()).toString());
 
-    ui->solarisDefaultDeviceLine->setText(settings.value("solaris/device", QString()).toString());
+    ui->solarisDefaultDeviceLine->setText(settings.value(QStringLiteral("solaris/device"), QString()).toString());
 
-    ui->waveOutputLine->setText(settings.value("wave/file", QString()).toString());
-    ui->waveBFormatCheckBox->setChecked(settings.value("wave/bformat", false).toBool());
+    ui->waveOutputLine->setText(settings.value(QStringLiteral("wave/file"), QString()).toString());
+    ui->waveBFormatCheckBox->setChecked(settings.value(QStringLiteral("wave/bformat"), false).toBool());
 
     ui->applyButton->setEnabled(false);
     ui->closeCancelButton->setText(tr("Close"));
@@ -990,72 +990,72 @@ void MainWindow::saveConfig(const QString &fname) const
 
     /* HACK: Compound any stringlist values into a comma-separated string. */
     QStringList allkeys{settings.allKeys()};
-    foreach(const QString &key, allkeys)
+    Q_FOREACH(const QString &key, allkeys)
     {
         QStringList vals{settings.value(key).toStringList()};
         if(vals.size() > 1)
             settings.setValue(key, vals.join(QChar(',')));
     }
 
-    settings.setValue("sample-type", getValueFromName(sampleTypeList, ui->sampleFormatCombo->currentText()));
-    settings.setValue("channels", getValueFromName(speakerModeList, ui->channelConfigCombo->currentText()));
+    settings.setValue(QStringLiteral("sample-type"), getValueFromName(sampleTypeList, ui->sampleFormatCombo->currentText()));
+    settings.setValue(QStringLiteral("channels"), getValueFromName(speakerModeList, ui->channelConfigCombo->currentText()));
 
     uint rate{ui->sampleRateCombo->currentText().toUInt()};
     if(rate <= 0)
-        settings.setValue("frequency", QString{});
+        settings.setValue(QStringLiteral("frequency"), QString{});
     else
-        settings.setValue("frequency", rate);
+        settings.setValue(QStringLiteral("frequency"), rate);
 
-    settings.setValue("period_size", ui->periodSizeEdit->text());
-    settings.setValue("periods", ui->periodCountEdit->text());
+    settings.setValue(QStringLiteral("period_size"), ui->periodSizeEdit->text());
+    settings.setValue(QStringLiteral("periods"), ui->periodCountEdit->text());
 
-    settings.setValue("sources", ui->srcCountLineEdit->text());
-    settings.setValue("slots", ui->effectSlotLineEdit->text());
+    settings.setValue(QStringLiteral("sources"), ui->srcCountLineEdit->text());
+    settings.setValue(QStringLiteral("slots"), ui->effectSlotLineEdit->text());
 
-    settings.setValue("resampler", resamplerList[ui->resamplerSlider->value()].value);
+    settings.setValue(QStringLiteral("resampler"), std::data(resamplerList[ui->resamplerSlider->value()].value));
 
-    settings.setValue("stereo-mode", getValueFromName(stereoModeList, ui->stereoModeCombo->currentText()));
-    settings.setValue("stereo-encoding", getValueFromName(stereoEncList, ui->stereoEncodingComboBox->currentText()));
-    settings.setValue("ambi-format", getValueFromName(ambiFormatList, ui->ambiFormatComboBox->currentText()));
+    settings.setValue(QStringLiteral("stereo-mode"), getValueFromName(stereoModeList, ui->stereoModeCombo->currentText()));
+    settings.setValue(QStringLiteral("stereo-encoding"), getValueFromName(stereoEncList, ui->stereoEncodingComboBox->currentText()));
+    settings.setValue(QStringLiteral("ambi-format"), getValueFromName(ambiFormatList, ui->ambiFormatComboBox->currentText()));
 
-    settings.setValue("output-limiter", getCheckValue(ui->outputLimiterCheckBox));
-    settings.setValue("dither", getCheckValue(ui->outputDitherCheckBox));
+    settings.setValue(QStringLiteral("output-limiter"), getCheckValue(ui->outputLimiterCheckBox));
+    settings.setValue(QStringLiteral("dither"), getCheckValue(ui->outputDitherCheckBox));
 
-    settings.setValue("decoder/hq-mode", getCheckValue(ui->decoderHQModeCheckBox));
-    settings.setValue("decoder/distance-comp", getCheckValue(ui->decoderDistCompCheckBox));
-    settings.setValue("decoder/nfc", getCheckValue(ui->decoderNFEffectsCheckBox));
+    settings.setValue(QStringLiteral("decoder/hq-mode"), getCheckValue(ui->decoderHQModeCheckBox));
+    settings.setValue(QStringLiteral("decoder/distance-comp"), getCheckValue(ui->decoderDistCompCheckBox));
+    settings.setValue(QStringLiteral("decoder/nfc"), getCheckValue(ui->decoderNFEffectsCheckBox));
     double speakerdist{ui->decoderSpeakerDistSpinBox->value()};
-    settings.setValue("decoder/speaker-dist",
+    settings.setValue(QStringLiteral("decoder/speaker-dist"),
         (speakerdist != 1.0) ? QString::number(speakerdist) : QString{}
     );
 
-    settings.setValue("decoder/quad", ui->decoderQuadLineEdit->text());
-    settings.setValue("decoder/surround51", ui->decoder51LineEdit->text());
-    settings.setValue("decoder/surround61", ui->decoder61LineEdit->text());
-    settings.setValue("decoder/surround71", ui->decoder71LineEdit->text());
-    settings.setValue("decoder/surround3d71", ui->decoder3D71LineEdit->text());
+    settings.setValue(QStringLiteral("decoder/quad"), ui->decoderQuadLineEdit->text());
+    settings.setValue(QStringLiteral("decoder/surround51"), ui->decoder51LineEdit->text());
+    settings.setValue(QStringLiteral("decoder/surround61"), ui->decoder61LineEdit->text());
+    settings.setValue(QStringLiteral("decoder/surround71"), ui->decoder71LineEdit->text());
+    settings.setValue(QStringLiteral("decoder/surround3d71"), ui->decoder3D71LineEdit->text());
 
     QStringList strlist;
     if(!ui->enableSSECheckBox->isChecked())
-        strlist.append("sse");
+        strlist.append(QStringLiteral("sse"));
     if(!ui->enableSSE2CheckBox->isChecked())
-        strlist.append("sse2");
+        strlist.append(QStringLiteral("sse2"));
     if(!ui->enableSSE3CheckBox->isChecked())
-        strlist.append("sse3");
+        strlist.append(QStringLiteral("sse3"));
     if(!ui->enableSSE41CheckBox->isChecked())
-        strlist.append("sse4.1");
+        strlist.append(QStringLiteral("sse4.1"));
     if(!ui->enableNeonCheckBox->isChecked())
-        strlist.append("neon");
-    settings.setValue("disable-cpu-exts", strlist.join(QChar(',')));
+        strlist.append(QStringLiteral("neon"));
+    settings.setValue(QStringLiteral("disable-cpu-exts"), strlist.join(QChar(',')));
 
-    settings.setValue("hrtf-mode", hrtfModeList[ui->hrtfmodeSlider->value()].value);
+    settings.setValue(QStringLiteral("hrtf-mode"), std::data(hrtfModeList[ui->hrtfmodeSlider->value()].value));
 
     if(ui->preferredHrtfComboBox->currentIndex() == 0)
-        settings.setValue("default-hrtf", QString{});
+        settings.setValue(QStringLiteral("default-hrtf"), QString{});
     else
     {
         QString str{ui->preferredHrtfComboBox->currentText()};
-        settings.setValue("default-hrtf", str);
+        settings.setValue(QStringLiteral("default-hrtf"), str);
     }
 
     strlist.clear();
@@ -1064,17 +1064,17 @@ void MainWindow::saveConfig(const QString &fname) const
         strlist.append(ui->hrtfFileList->item(i)->text());
     if(!strlist.empty() && ui->defaultHrtfPathsCheckBox->isChecked())
         strlist.append(QString{});
-    settings.setValue("hrtf-paths", strlist.join(QChar{','}));
+    settings.setValue(QStringLiteral("hrtf-paths"), strlist.join(QChar{','}));
 
     strlist.clear();
     for(int i = 0;i < ui->enabledBackendList->count();i++)
     {
         QString label{ui->enabledBackendList->item(i)->text()};
-        for(int j = 0;backendList[j].backend_name[0];j++)
+        for(size_t j{0};j < backendList.size();++j)
         {
-            if(label == backendList[j].full_string)
+            if(label == std::data(backendList[j].full_string))
             {
-                strlist.append(backendList[j].backend_name);
+                strlist.append(std::data(backendList[j].backend_name));
                 break;
             }
         }
@@ -1082,102 +1082,102 @@ void MainWindow::saveConfig(const QString &fname) const
     for(int i = 0;i < ui->disabledBackendList->count();i++)
     {
         QString label{ui->disabledBackendList->item(i)->text()};
-        for(int j = 0;backendList[j].backend_name[0];j++)
+        for(size_t j{0};j < backendList.size();++j)
         {
-            if(label == backendList[j].full_string)
+            if(label == std::data(backendList[j].full_string))
             {
-                strlist.append(QChar{'-'}+QString{backendList[j].backend_name});
+                strlist.append(QChar{'-'}+QString{std::data(backendList[j].backend_name)});
                 break;
             }
         }
     }
     if(strlist.empty() && !ui->backendCheckBox->isChecked())
-        strlist.append("-all");
+        strlist.append(QStringLiteral("-all"));
     else if(ui->backendCheckBox->isChecked())
         strlist.append(QString{});
-    settings.setValue("drivers", strlist.join(QChar(',')));
+    settings.setValue(QStringLiteral("drivers"), strlist.join(QChar(',')));
 
     // TODO: Remove check when we can properly match global values.
     if(ui->defaultReverbComboBox->currentIndex() == 0)
-        settings.setValue("default-reverb", QString{});
+        settings.setValue(QStringLiteral("default-reverb"), QString{});
     else
     {
         QString str{ui->defaultReverbComboBox->currentText().toLower()};
-        settings.setValue("default-reverb", str);
+        settings.setValue(QStringLiteral("default-reverb"), str);
     }
 
     strlist.clear();
     if(!ui->enableEaxReverbCheck->isChecked())
-        strlist.append("eaxreverb");
+        strlist.append(QStringLiteral("eaxreverb"));
     if(!ui->enableStdReverbCheck->isChecked())
-        strlist.append("reverb");
+        strlist.append(QStringLiteral("reverb"));
     if(!ui->enableAutowahCheck->isChecked())
-        strlist.append("autowah");
+        strlist.append(QStringLiteral("autowah"));
     if(!ui->enableChorusCheck->isChecked())
-        strlist.append("chorus");
+        strlist.append(QStringLiteral("chorus"));
     if(!ui->enableDistortionCheck->isChecked())
-        strlist.append("distortion");
+        strlist.append(QStringLiteral("distortion"));
     if(!ui->enableCompressorCheck->isChecked())
-        strlist.append("compressor");
+        strlist.append(QStringLiteral("compressor"));
     if(!ui->enableEchoCheck->isChecked())
-        strlist.append("echo");
+        strlist.append(QStringLiteral("echo"));
     if(!ui->enableEqualizerCheck->isChecked())
-        strlist.append("equalizer");
+        strlist.append(QStringLiteral("equalizer"));
     if(!ui->enableFlangerCheck->isChecked())
-        strlist.append("flanger");
+        strlist.append(QStringLiteral("flanger"));
     if(!ui->enableFrequencyShifterCheck->isChecked())
-        strlist.append("fshifter");
+        strlist.append(QStringLiteral("fshifter"));
     if(!ui->enableModulatorCheck->isChecked())
-        strlist.append("modulator");
+        strlist.append(QStringLiteral("modulator"));
     if(!ui->enableDedicatedCheck->isChecked())
-        strlist.append("dedicated");
+        strlist.append(QStringLiteral("dedicated"));
     if(!ui->enablePitchShifterCheck->isChecked())
-        strlist.append("pshifter");
+        strlist.append(QStringLiteral("pshifter"));
     if(!ui->enableVocalMorpherCheck->isChecked())
-        strlist.append("vmorpher");
-    settings.setValue("excludefx", strlist.join(QChar{','}));
-    settings.setValue("eax/enable",
+        strlist.append(QStringLiteral("vmorpher"));
+    settings.setValue(QStringLiteral("excludefx"), strlist.join(QChar{','}));
+    settings.setValue(QStringLiteral("eax/enable"),
         (!ui->enableEaxCheck->isEnabled() || ui->enableEaxCheck->isChecked())
-        ? QString{/*"true"*/} : QString{"false"});
+            ? QString{/*"true"*/} : QStringLiteral("false"));
 
-    settings.setValue("pipewire/assume-audio", getCheckValue(ui->pwireAssumeAudioCheckBox));
-    settings.setValue("pipewire/rt-mix", getCheckValue(ui->pwireRtMixCheckBox));
+    settings.setValue(QStringLiteral("pipewire/assume-audio"), getCheckValue(ui->pwireAssumeAudioCheckBox));
+    settings.setValue(QStringLiteral("pipewire/rt-mix"), getCheckValue(ui->pwireRtMixCheckBox));
 
-    settings.setValue("wasapi/allow-resampler", getCheckValue(ui->wasapiResamplerCheckBox));
+    settings.setValue(QStringLiteral("wasapi/allow-resampler"), getCheckValue(ui->wasapiResamplerCheckBox));
 
-    settings.setValue("pulse/spawn-server", getCheckValue(ui->pulseAutospawnCheckBox));
-    settings.setValue("pulse/allow-moves", getCheckValue(ui->pulseAllowMovesCheckBox));
-    settings.setValue("pulse/fix-rate", getCheckValue(ui->pulseFixRateCheckBox));
-    settings.setValue("pulse/adjust-latency", getCheckValue(ui->pulseAdjLatencyCheckBox));
+    settings.setValue(QStringLiteral("pulse/spawn-server"), getCheckValue(ui->pulseAutospawnCheckBox));
+    settings.setValue(QStringLiteral("pulse/allow-moves"), getCheckValue(ui->pulseAllowMovesCheckBox));
+    settings.setValue(QStringLiteral("pulse/fix-rate"), getCheckValue(ui->pulseFixRateCheckBox));
+    settings.setValue(QStringLiteral("pulse/adjust-latency"), getCheckValue(ui->pulseAdjLatencyCheckBox));
 
-    settings.setValue("jack/spawn-server", getCheckValue(ui->jackAutospawnCheckBox));
-    settings.setValue("jack/connect-ports", getCheckValue(ui->jackConnectPortsCheckBox));
-    settings.setValue("jack/rt-mix", getCheckValue(ui->jackRtMixCheckBox));
-    settings.setValue("jack/buffer-size", ui->jackBufferSizeLine->text());
+    settings.setValue(QStringLiteral("jack/spawn-server"), getCheckValue(ui->jackAutospawnCheckBox));
+    settings.setValue(QStringLiteral("jack/connect-ports"), getCheckValue(ui->jackConnectPortsCheckBox));
+    settings.setValue(QStringLiteral("jack/rt-mix"), getCheckValue(ui->jackRtMixCheckBox));
+    settings.setValue(QStringLiteral("jack/buffer-size"), ui->jackBufferSizeLine->text());
 
-    settings.setValue("alsa/device", ui->alsaDefaultDeviceLine->text());
-    settings.setValue("alsa/capture", ui->alsaDefaultCaptureLine->text());
-    settings.setValue("alsa/allow-resampler", getCheckValue(ui->alsaResamplerCheckBox));
-    settings.setValue("alsa/mmap", getCheckValue(ui->alsaMmapCheckBox));
+    settings.setValue(QStringLiteral("alsa/device"), ui->alsaDefaultDeviceLine->text());
+    settings.setValue(QStringLiteral("alsa/capture"), ui->alsaDefaultCaptureLine->text());
+    settings.setValue(QStringLiteral("alsa/allow-resampler"), getCheckValue(ui->alsaResamplerCheckBox));
+    settings.setValue(QStringLiteral("alsa/mmap"), getCheckValue(ui->alsaMmapCheckBox));
 
-    settings.setValue("oss/device", ui->ossDefaultDeviceLine->text());
-    settings.setValue("oss/capture", ui->ossDefaultCaptureLine->text());
+    settings.setValue(QStringLiteral("oss/device"), ui->ossDefaultDeviceLine->text());
+    settings.setValue(QStringLiteral("oss/capture"), ui->ossDefaultCaptureLine->text());
 
-    settings.setValue("solaris/device", ui->solarisDefaultDeviceLine->text());
+    settings.setValue(QStringLiteral("solaris/device"), ui->solarisDefaultDeviceLine->text());
 
-    settings.setValue("wave/file", ui->waveOutputLine->text());
-    settings.setValue("wave/bformat",
-        ui->waveBFormatCheckBox->isChecked() ? QString{"true"} : QString{/*"false"*/}
+    settings.setValue(QStringLiteral("wave/file"), ui->waveOutputLine->text());
+    settings.setValue(QStringLiteral("wave/bformat"),
+        ui->waveBFormatCheckBox->isChecked() ? QStringLiteral("true") : QString{/*"false"*/}
     );
 
     /* Remove empty keys
      * FIXME: Should only remove keys whose value matches the globally-specified value.
      */
     allkeys = settings.allKeys();
-    foreach(const QString &key, allkeys)
+    Q_FOREACH(const QString &key, allkeys)
     {
         QString str{settings.value(key).toString()};
-        if(str == QString{})
+        if(str.isEmpty())
             settings.remove(key);
     }
 }
@@ -1194,7 +1194,7 @@ void MainWindow::enableApplyButton()
 
 void MainWindow::updateResamplerLabel(int num)
 {
-    ui->resamplerLabel->setText(resamplerList[num].name);
+    ui->resamplerLabel->setText(std::data(resamplerList[num].name));
     enableApplyButton();
 }
 
@@ -1211,11 +1211,7 @@ void MainWindow::updatePeriodSizeSlider()
 {
     int pos = ui->periodSizeEdit->text().toInt();
     if(pos >= 64)
-    {
-        if(pos > 8192)
-            pos = 8192;
-        ui->periodSizeSlider->setSliderPosition(pos);
-    }
+        ui->periodSizeSlider->setSliderPosition(std::min(pos, 8192));
     enableApplyButton();
 }
 
@@ -1294,7 +1290,7 @@ void MainWindow::updateJackBufferSizeSlider()
 
 void MainWindow::updateHrtfModeLabel(int num)
 {
-    ui->hrtfmodeLabel->setText(hrtfModeList[num].name);
+    ui->hrtfmodeLabel->setText(std::data(hrtfModeList[static_cast<uint>(num)].name));
     enableApplyButton();
 }
 
@@ -1302,7 +1298,7 @@ void MainWindow::updateHrtfModeLabel(int num)
 void MainWindow::addHrtfFile()
 {
     QString path{QFileDialog::getExistingDirectory(this, tr("Select HRTF Path"))};
-    if(path.isEmpty() == false && !getAllDataPaths("/openal/hrtf").contains(path))
+    if(path.isEmpty() == false && !getAllDataPaths(QStringLiteral("/openal/hrtf")).contains(path))
     {
         ui->hrtfFileList->addItem(path);
         enableApplyButton();
@@ -1311,11 +1307,10 @@ void MainWindow::addHrtfFile()
 
 void MainWindow::removeHrtfFile()
 {
-    QList<QListWidgetItem*> selected{ui->hrtfFileList->selectedItems()};
+    QList<gsl::owner<QListWidgetItem*>> selected{ui->hrtfFileList->selectedItems()};
     if(!selected.isEmpty())
     {
-        foreach(QListWidgetItem *item, selected)
-            delete item;
+        std::for_each(selected.begin(), selected.end(), std::default_delete<QListWidgetItem>{});
         enableApplyButton();
     }
 }
@@ -1336,9 +1331,9 @@ void MainWindow::showEnabledBackendMenu(QPoint pt)
     if(ui->enabledBackendList->selectedItems().empty())
         removeAction->setEnabled(false);
     ctxmenu.addSeparator();
-    for(size_t i = 0;backendList[i].backend_name[0];i++)
+    for(size_t i{0};i < backendList.size();++i)
     {
-        QString backend{backendList[i].full_string};
+        QString backend{std::data(backendList[i].full_string)};
         QAction *action{ctxmenu.addAction(QString("Add ")+backend)};
         actionMap[action] = backend;
         if(!ui->enabledBackendList->findItems(backend, Qt::MatchFixedString).empty() ||
@@ -1349,9 +1344,8 @@ void MainWindow::showEnabledBackendMenu(QPoint pt)
     QAction *gotAction{ctxmenu.exec(pt)};
     if(gotAction == removeAction)
     {
-        QList<QListWidgetItem*> selected{ui->enabledBackendList->selectedItems()};
-        foreach(QListWidgetItem *item, selected)
-            delete item;
+        QList<gsl::owner<QListWidgetItem*>> selected{ui->enabledBackendList->selectedItems()};
+        std::for_each(selected.begin(), selected.end(), std::default_delete<QListWidgetItem>{});
         enableApplyButton();
     }
     else if(gotAction != nullptr)
@@ -1374,9 +1368,9 @@ void MainWindow::showDisabledBackendMenu(QPoint pt)
     if(ui->disabledBackendList->selectedItems().empty())
         removeAction->setEnabled(false);
     ctxmenu.addSeparator();
-    for(size_t i = 0;backendList[i].backend_name[0];i++)
+    for(size_t i{0};i < backendList.size();++i)
     {
-        QString backend{backendList[i].full_string};
+        QString backend{std::data(backendList[i].full_string)};
         QAction *action{ctxmenu.addAction(QString("Add ")+backend)};
         actionMap[action] = backend;
         if(!ui->disabledBackendList->findItems(backend, Qt::MatchFixedString).empty() ||
@@ -1387,9 +1381,8 @@ void MainWindow::showDisabledBackendMenu(QPoint pt)
     QAction *gotAction{ctxmenu.exec(pt)};
     if(gotAction == removeAction)
     {
-        QList<QListWidgetItem*> selected{ui->disabledBackendList->selectedItems()};
-        foreach(QListWidgetItem *item, selected)
-            delete item;
+        QList<gsl::owner<QListWidgetItem*>> selected{ui->disabledBackendList->selectedItems()};
+        std::for_each(selected.begin(), selected.end(), std::default_delete<QListWidgetItem>{});
         enableApplyButton();
     }
     else if(gotAction != nullptr)

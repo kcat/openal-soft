@@ -68,6 +68,44 @@ Compatibility
 
 For a list of games and applications tested/potentially compatible with OpenAL Soft, check out the [database](https://airtable.com/appayGNkn3nSuXkaz/shrZP6E5xqQjsvplj?SEv24=b%3AWzAsWyJ1YTJPdCIsNixbInNlbDBzb0xqREpMSGZiWDdPIl0sIjJZUTBPIl0sWyJMWmpwWCIsMTUsbnVsbCwic3hUa3oiXV0&eCzZW=recG4ZJJzBf6Xn2Yg). Anyone can submit new ones with [this form](https://airtable.com/shrDpNmekxxwpAyQ1?prefill_Type=Game&prefill_Platform=Windows&prefill_Status=Playable&prefill_Backend=OpenAL&prefill_Renderer=OpenAL+Soft&prefill_Configuration=Headphone+Spatial+Audio).
 
+Language Bindings
+-----------------
+
+As a C API, OpenAL Soft can be used directly by any language that can use
+functions with C linkage. For languages that can't directly use C-style
+headers, bindings may be developed to allow code written in that language to
+call into the library. Some bindings for some languages are listed here.
+
+C# Bindings:
+* [OpenTK](https://opentk.net/) includes low-level C# bindings for the OpenAL
+API, including some extensions. It also includes utility libraries for math and
+linear algebra, which can be useful for 3D calculations.
+
+Java Bindings:
+* [LWJGL](https://github.com/LWJGL/lwjgl3), the Lightweight Java Game Library,
+includes Java bindings for the OpenAL API, usable with OpenAL Soft.
+* [JOAL](https://jogamp.org/joal/www/), part of the JogAmp project, includes
+Java bindings for the OpenAL API, usable with OpenAL Soft. It also includes a
+higher level Sound3D Toolkit API and utility functions to make easier use of
+OpenAL features and capabilities.
+
+Kotlin Bindings:
+* [Multiplatform OpenAL](https://git.karmakrafts.dev/kk/multiplatform-openal), developed for the Kleaver project,
+includes Kotlin/Native bindings for the OpenAL API, based on OpenAL Soft with support
+for Windows, Linux, macOS, iOS and Android.
+
+Python Bindings:
+* [PyOpenAL](https://pypi.org/project/PyOpenAL/). Also includes methods to play
+wave files and, with PyOgg, also Vorbis, Opus, and FLAC.
+
+FreePascal/Lazarus Bindings:
+* [ALSound](https://github.com/Lulu04/ALSound). Also includes a higher level
+API and libsndfile support to simplify loading and playing sounds.
+
+Other bindings for these and other languages also exist. This list will grow as
+more bindings are found.
+
+
 Acknowledgements
 ----------------
 

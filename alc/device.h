@@ -1,83 +1,42 @@
 #ifndef ALC_DEVICE_H
 #define ALC_DEVICE_H
 
+#include "config.h"
+
 #include <atomic>
 #include <memory>
 #include <mutex>
-#include <stdint.h>
+#include <optional>
 #include <string>
-#include <utility>
+#include <unordered_map>
+#include <string_view>
+#include <vector>
 
+#include "AL/al.h"
 #include "AL/alc.h"
 #include "AL/alext.h"
 
 #include "alconfig.h"
-#include "almalloc.h"
-#include "alnumeric.h"
 #include "core/device.h"
-#include "inprogext.h"
 #include "intrusive_ptr.h"
-#include "vector.h"
 
-#ifdef ALSOFT_EAX
+#if ALSOFT_EAX
 #include "al/eax/x_ram.h"
 #endif // ALSOFT_EAX
 
-struct ALbuffer;
-struct ALeffect;
-struct ALfilter;
 struct BackendBase;
+struct BufferSubList;
+struct EffectSubList;
+struct FilterSubList;
 
 using uint = unsigned int;
 
 
-struct BufferSubList {
-    uint64_t FreeMask{~0_u64};
-    ALbuffer *Buffers{nullptr}; /* 64 */
+struct ALCdevice { virtual ~ALCdevice() = default; };
 
-    BufferSubList() noexcept = default;
-    BufferSubList(const BufferSubList&) = delete;
-    BufferSubList(BufferSubList&& rhs) noexcept : FreeMask{rhs.FreeMask}, Buffers{rhs.Buffers}
-    { rhs.FreeMask = ~0_u64; rhs.Buffers = nullptr; }
-    ~BufferSubList();
+namespace al {
 
-    BufferSubList& operator=(const BufferSubList&) = delete;
-    BufferSubList& operator=(BufferSubList&& rhs) noexcept
-    { std::swap(FreeMask, rhs.FreeMask); std::swap(Buffers, rhs.Buffers); return *this; }
-};
-
-struct EffectSubList {
-    uint64_t FreeMask{~0_u64};
-    ALeffect *Effects{nullptr}; /* 64 */
-
-    EffectSubList() noexcept = default;
-    EffectSubList(const EffectSubList&) = delete;
-    EffectSubList(EffectSubList&& rhs) noexcept : FreeMask{rhs.FreeMask}, Effects{rhs.Effects}
-    { rhs.FreeMask = ~0_u64; rhs.Effects = nullptr; }
-    ~EffectSubList();
-
-    EffectSubList& operator=(const EffectSubList&) = delete;
-    EffectSubList& operator=(EffectSubList&& rhs) noexcept
-    { std::swap(FreeMask, rhs.FreeMask); std::swap(Effects, rhs.Effects); return *this; }
-};
-
-struct FilterSubList {
-    uint64_t FreeMask{~0_u64};
-    ALfilter *Filters{nullptr}; /* 64 */
-
-    FilterSubList() noexcept = default;
-    FilterSubList(const FilterSubList&) = delete;
-    FilterSubList(FilterSubList&& rhs) noexcept : FreeMask{rhs.FreeMask}, Filters{rhs.Filters}
-    { rhs.FreeMask = ~0_u64; rhs.Filters = nullptr; }
-    ~FilterSubList();
-
-    FilterSubList& operator=(const FilterSubList&) = delete;
-    FilterSubList& operator=(FilterSubList&& rhs) noexcept
-    { std::swap(FreeMask, rhs.FreeMask); std::swap(Filters, rhs.Filters); return *this; }
-};
-
-
-struct ALCdevice : public al::intrusive_ref<ALCdevice>, DeviceBase {
+struct Device final : public ALCdevice, al::intrusive_ref<al::Device>, DeviceBase {
     /* This lock protects the device state (format, update size, etc) from
      * being from being changed in multiple threads, or being accessed while
      * being changed. It's also used to serialize calls to the backend.
@@ -94,7 +53,7 @@ struct ALCdevice : public al::intrusive_ref<ALCdevice>, DeviceBase {
     uint AuxiliaryEffectSlotMax{};
 
     std::string mHrtfName;
-    al::vector<std::string> mHrtfList;
+    std::vector<std::string> mHrtfList;
     ALCenum mHrtfStatus{ALC_FALSE};
 
     enum class OutputMode1 : ALCenum {
@@ -117,49 +76,60 @@ struct ALCdevice : public al::intrusive_ref<ALCdevice>, DeviceBase {
 
     // Map of Buffers for this device
     std::mutex BufferLock;
-    al::vector<BufferSubList> BufferList;
+    std::vector<BufferSubList> BufferList;
 
     // Map of Effects for this device
     std::mutex EffectLock;
-    al::vector<EffectSubList> EffectList;
+    std::vector<EffectSubList> EffectList;
 
     // Map of Filters for this device
     std::mutex FilterLock;
-    al::vector<FilterSubList> FilterList;
+    std::vector<FilterSubList> FilterList;
 
-#ifdef ALSOFT_EAX
+#if ALSOFT_EAX
     ALuint eax_x_ram_free_size{eax_x_ram_max_size};
 #endif // ALSOFT_EAX
 
 
-    ALCdevice(DeviceType type);
-    ~ALCdevice();
+    std::unordered_map<ALuint,std::string> mBufferNames;
+    std::unordered_map<ALuint,std::string> mEffectNames;
+    std::unordered_map<ALuint,std::string> mFilterNames;
+
+    std::string mVendorOverride;
+    std::string mVersionOverride;
+    std::string mRendererOverride;
+
+    explicit Device(DeviceType type);
+    ~Device() final;
 
     void enumerateHrtfs();
 
-    bool getConfigValueBool(const char *block, const char *key, bool def)
-    { return GetConfigValueBool(DeviceName.c_str(), block, key, def); }
+    bool getConfigValueBool(const std::string_view block, const std::string_view key, bool def)
+    { return GetConfigValueBool(mDeviceName, block, key, def); }
 
     template<typename T>
-    inline al::optional<T> configValue(const char *block, const char *key) = delete;
-
-    DEF_NEWDEL(ALCdevice)
+    auto configValue(const std::string_view block, const std::string_view key) -> std::optional<T> = delete;
 };
 
-template<>
-inline al::optional<std::string> ALCdevice::configValue(const char *block, const char *key)
-{ return ConfigValueStr(DeviceName.c_str(), block, key); }
-template<>
-inline al::optional<int> ALCdevice::configValue(const char *block, const char *key)
-{ return ConfigValueInt(DeviceName.c_str(), block, key); }
-template<>
-inline al::optional<uint> ALCdevice::configValue(const char *block, const char *key)
-{ return ConfigValueUInt(DeviceName.c_str(), block, key); }
-template<>
-inline al::optional<float> ALCdevice::configValue(const char *block, const char *key)
-{ return ConfigValueFloat(DeviceName.c_str(), block, key); }
-template<>
-inline al::optional<bool> ALCdevice::configValue(const char *block, const char *key)
-{ return ConfigValueBool(DeviceName.c_str(), block, key); }
+template<> inline
+auto Device::configValue(const std::string_view block, const std::string_view key) -> std::optional<std::string>
+{ return ConfigValueStr(mDeviceName, block, key); }
+template<> inline
+auto Device::configValue(const std::string_view block, const std::string_view key) -> std::optional<int>
+{ return ConfigValueInt(mDeviceName, block, key); }
+template<> inline
+auto Device::configValue(const std::string_view block, const std::string_view key) -> std::optional<uint>
+{ return ConfigValueUInt(mDeviceName, block, key); }
+template<> inline
+auto Device::configValue(const std::string_view block, const std::string_view key) -> std::optional<float>
+{ return ConfigValueFloat(mDeviceName, block, key); }
+template<> inline
+auto Device::configValue(const std::string_view block, const std::string_view key) -> std::optional<bool>
+{ return ConfigValueBool(mDeviceName, block, key); }
+
+} // namespace al
+
+/** Stores the latest ALC device error. */
+void alcSetError(al::Device *device, ALCenum errorCode);
 
 #endif

@@ -24,14 +24,15 @@
 
 #include "sofa-support.h"
 
-#include <stdio.h>
 
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <cstdio>
 #include <utility>
 #include <vector>
 
+#include "fmt/core.h"
 #include "mysofa.h"
 
 
@@ -47,7 +48,7 @@ using double3 = std::array<double,3>;
  * equality of unique elements.
  */
 std::vector<double> GetUniquelySortedElems(const std::vector<double3> &aers, const uint axis,
-    const double *const (&filters)[3], const double (&epsilons)[3])
+    const std::array<const double*,3> &filters, const std::array<double,3> &epsilons)
 {
     std::vector<double> elems;
     for(const double3 &aer : aers)
@@ -178,13 +179,13 @@ const char *SofaErrorStr(int err)
     return "Unknown";
 }
 
-std::vector<SofaField> GetCompatibleLayout(const size_t m, const float *xyzs)
+auto GetCompatibleLayout(const al::span<const float> xyzs) -> std::vector<SofaField>
 {
-    auto aers = std::vector<double3>(m, double3{});
-    for(size_t i{0u};i < m;++i)
+    auto aers = std::vector<double3>(xyzs.size()/3, double3{});
+    for(size_t i{0u};i < aers.size();++i)
     {
-        float vals[3]{xyzs[i*3], xyzs[i*3 + 1], xyzs[i*3 + 2]};
-        mysofa_c2s(&vals[0]);
+        std::array vals{xyzs[i*3], xyzs[i*3 + 1], xyzs[i*3 + 2]};
+        mysofa_c2s(vals.data());
         aers[i] = {vals[0], vals[1], vals[2]};
     }
 
@@ -213,14 +214,14 @@ std::vector<SofaField> GetCompatibleLayout(const size_t m, const float *xyzs)
         if(step <= 0.0)
         {
             if(elevs.empty())
-                fprintf(stdout, "No usable elevations on field distance %f.\n", dist);
+                fmt::println("No usable elevations on field distance {:f}.", dist);
             else
             {
-                fprintf(stdout, "Non-uniform elevations on field distance %.3f.\nGot: %+.2f", dist,
+                fmt::print("Non-uniform elevations on field distance {:.3f}.\nGot: {:+.2f}", dist,
                     elevs[0]);
                 for(size_t ei{1u};ei < elevs.size();++ei)
-                    fprintf(stdout, ", %+.2f", elevs[ei]);
-                fputc('\n', stdout);
+                    fmt::print(", {:+.2f}", elevs[ei]);
+                fmt::println("");
             }
             continue;
         }
@@ -230,7 +231,7 @@ std::vector<SofaField> GetCompatibleLayout(const size_t m, const float *xyzs)
         {
             if(!(elevs[ei] < 0.0))
             {
-                fprintf(stdout, "Too many missing elevations on field distance %f.\n", dist);
+                fmt::println("Too many missing elevations on field distance {:f}.", dist);
                 return fds;
             }
 
@@ -247,7 +248,7 @@ std::vector<SofaField> GetCompatibleLayout(const size_t m, const float *xyzs)
         const auto evCount = static_cast<uint>(std::round(180.0 / step)) + 1;
         if(evCount < 5)
         {
-            fprintf(stdout, "Too few uniform elevations on field distance %f.\n", dist);
+            fmt::println("Too few uniform elevations on field distance {:f}.", dist);
             continue;
         }
 
@@ -267,7 +268,7 @@ std::vector<SofaField> GetCompatibleLayout(const size_t m, const float *xyzs)
             {
                 if(azims.size() != 1)
                 {
-                    fprintf(stdout, "Non-singular poles on field distance %f.\n", dist);
+                    fmt::println("Non-singular poles on field distance {:f}.", dist);
                     return fds;
                 }
                 azCounts[ei] = 1;
@@ -277,7 +278,7 @@ std::vector<SofaField> GetCompatibleLayout(const size_t m, const float *xyzs)
                 step = GetUniformAzimStep(0.1, azims);
                 if(step <= 0.0)
                 {
-                    fprintf(stdout, "Non-uniform azimuths on elevation %f, field distance %f.\n",
+                    fmt::println("Non-uniform azimuths on elevation {:f}, field distance {:f}.",
                         ev, dist);
                     return fds;
                 }

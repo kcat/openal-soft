@@ -3,10 +3,12 @@
 
 #include "mixer.h"
 
+#include <algorithm>
 #include <cmath>
+#include <utility>
 
 #include "alnumbers.h"
-#include "devformat.h"
+#include "core/ambidefs.h"
 #include "device.h"
 #include "mixer/defs.h"
 
@@ -82,14 +84,13 @@ std::array<float,MaxAmbiChannels> CalcAmbiCoeffs(const float y, const float z, c
     return coeffs;
 }
 
-void ComputePanGains(const MixParams *mix, const float*RESTRICT coeffs, const float ingain,
-    const al::span<float,MaxAmbiChannels> gains)
+void ComputePanGains(const MixParams *mix, const al::span<const float,MaxAmbiChannels> coeffs,
+    const float ingain, const al::span<float,MaxAmbiChannels> gains)
 {
-    auto ambimap = mix->AmbiMap.cbegin();
+    auto ambimap = al::span{std::as_const(mix->AmbiMap)}.first(mix->Buffer.size());
 
-    auto iter = std::transform(ambimap, ambimap+mix->Buffer.size(), gains.begin(),
+    auto iter = std::transform(ambimap.begin(), ambimap.end(), gains.begin(),
         [coeffs,ingain](const BFChannelConfig &chanmap) noexcept -> float
-        { return chanmap.Scale * coeffs[chanmap.Index] * ingain; }
-    );
+        { return chanmap.Scale * coeffs[chanmap.Index] * ingain; });
     std::fill(iter, gains.end(), 0.0f);
 }

@@ -2,13 +2,14 @@
 #define ALHELPERS_H
 
 #include "AL/al.h"
+#include "AL/alc.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 /* Some helper functions to get the name from the format enums. */
-const char *FormatName(ALenum type);
+const char *FormatName(ALenum format);
 
 /* Easy device init/deinit functions. InitAL returns 0 on success. */
 int InitAL(char ***argv, int *argc);
@@ -23,7 +24,7 @@ void al_nssleep(unsigned long nsec);
  * still needs to use a normal cast and live with the warning (C++ is fine with
  * a regular reinterpret_cast).
  */
-#if __STDC_VERSION__ >= 199901L
+#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L
 #define FUNCTION_CAST(T, ptr) (union{void *p; T f;}){ptr}.f
 #elif defined(__cplusplus)
 #define FUNCTION_CAST(T, ptr) reinterpret_cast<T>(ptr)
@@ -33,6 +34,54 @@ void al_nssleep(unsigned long nsec);
 
 #ifdef __cplusplus
 } // extern "C"
+
+#include <cstdio>
+#include <string>
+#include <string_view>
+
+#include "alspan.h"
+#include "fmt/core.h"
+
+int InitAL(al::span<std::string_view> &args)
+{
+    ALCdevice *device{};
+
+    /* Open and initialize a device */
+    if(args.size() > 1 && args[0] == "-device")
+    {
+        device = alcOpenDevice(std::string{args[1]}.c_str());
+        if(!device)
+            fmt::println(stderr, "Failed to open \"{}\", trying default", args[1]);
+        args = args.subspan(2);
+    }
+    if(!device)
+        device = alcOpenDevice(nullptr);
+    if(!device)
+    {
+        fmt::println(stderr, "Could not open a device!");
+        return 1;
+    }
+
+    ALCcontext *ctx{alcCreateContext(device, nullptr)};
+    if(!ctx || alcMakeContextCurrent(ctx) == ALC_FALSE)
+    {
+        if(ctx)
+            alcDestroyContext(ctx);
+        alcCloseDevice(device);
+        fmt::println(stderr, "Could not set a context!");
+        return 1;
+    }
+
+    const ALCchar *name{};
+    if(alcIsExtensionPresent(device, "ALC_ENUMERATE_ALL_EXT"))
+        name = alcGetString(device, ALC_ALL_DEVICES_SPECIFIER);
+    if(!name || alcGetError(device) != AL_NO_ERROR)
+        name = alcGetString(device, ALC_DEVICE_SPECIFIER);
+    fmt::println("Opened \"{}\"", name);
+
+    return 0;
+}
+
 #endif
 
 #endif /* ALHELPERS_H */

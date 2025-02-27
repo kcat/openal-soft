@@ -3,8 +3,6 @@
 
 #include <array>
 
-#include "AL/al.h"
-#include "AL/alc.h"
 #include "AL/efx.h"
 
 #include "almalloc.h"
@@ -18,7 +16,7 @@ struct ALlistener {
     float Gain{1.0f};
     float mMetersPerUnit{AL_DEFAULT_METERS_PER_UNIT};
 
-    DISABLE_ALLOC()
+    DISABLE_ALLOC
 };
 
 #endif

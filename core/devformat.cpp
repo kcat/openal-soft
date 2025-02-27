@@ -3,6 +3,11 @@
 
 #include "devformat.h"
 
+#include <string_view>
+
+namespace {
+using namespace std::string_view_literals;
+} // namespace
 
 uint BytesFromDevFmt(DevFmtType type) noexcept
 {
@@ -29,39 +34,41 @@ uint ChannelsFromDevFmt(DevFmtChannels chans, uint ambiorder) noexcept
     case DevFmtX61: return 7;
     case DevFmtX71: return 8;
     case DevFmtX714: return 12;
+    case DevFmtX7144: return 16;
     case DevFmtX3D71: return 8;
     case DevFmtAmbi3D: return (ambiorder+1) * (ambiorder+1);
     }
     return 0;
 }
 
-const char *DevFmtTypeString(DevFmtType type) noexcept
+auto DevFmtTypeString(DevFmtType type) noexcept -> std::string_view
 {
     switch(type)
     {
-    case DevFmtByte: return "Int8";
-    case DevFmtUByte: return "UInt8";
-    case DevFmtShort: return "Int16";
-    case DevFmtUShort: return "UInt16";
-    case DevFmtInt: return "Int32";
-    case DevFmtUInt: return "UInt32";
-    case DevFmtFloat: return "Float32";
+    case DevFmtByte: return "Int8"sv;
+    case DevFmtUByte: return "UInt8"sv;
+    case DevFmtShort: return "Int16"sv;
+    case DevFmtUShort: return "UInt16"sv;
+    case DevFmtInt: return "Int32"sv;
+    case DevFmtUInt: return "UInt32"sv;
+    case DevFmtFloat: return "Float32"sv;
     }
-    return "(unknown type)";
+    return "(unknown type)"sv;
 }
-const char *DevFmtChannelsString(DevFmtChannels chans) noexcept
+auto DevFmtChannelsString(DevFmtChannels chans) noexcept -> std::string_view
 {
     switch(chans)
     {
-    case DevFmtMono: return "Mono";
-    case DevFmtStereo: return "Stereo";
-    case DevFmtQuad: return "Quadraphonic";
-    case DevFmtX51: return "5.1 Surround";
-    case DevFmtX61: return "6.1 Surround";
-    case DevFmtX71: return "7.1 Surround";
-    case DevFmtX714: return "7.1.4 Surround";
-    case DevFmtX3D71: return "3D7.1 Surround";
-    case DevFmtAmbi3D: return "Ambisonic 3D";
+    case DevFmtMono: return "Mono"sv;
+    case DevFmtStereo: return "Stereo"sv;
+    case DevFmtQuad: return "Quadraphonic"sv;
+    case DevFmtX51: return "5.1 Surround"sv;
+    case DevFmtX61: return "6.1 Surround"sv;
+    case DevFmtX71: return "7.1 Surround"sv;
+    case DevFmtX714: return "7.1.4 Surround"sv;
+    case DevFmtX7144: return "7.1.4.4 Surround"sv;
+    case DevFmtX3D71: return "3D7.1 Surround"sv;
+    case DevFmtAmbi3D: return "Ambisonic 3D"sv;
     }
-    return "(unknown channels)";
+    return "(unknown channels)"sv;
 }

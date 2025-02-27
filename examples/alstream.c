@@ -37,13 +37,15 @@
 
 #include "common/alhelpers.h"
 
+#include "win_main_utf8.h"
+
 
 /* Define the number of buffers and buffer size (in milliseconds) to use. 4
  * buffers at 200ms each gives a nice per-chunk size, and lets the queue last
  * for almost one second.
  */
-#define NUM_BUFFERS 4
-#define BUFFER_MILLISEC 200
+enum { NumBuffers = 4 };
+enum { BufferMillisec = 200 };
 
 typedef enum SampleType {
     Int16, Float, IMA4, MSADPCM
@@ -51,7 +53,7 @@ typedef enum SampleType {
 
 typedef struct StreamPlayer {
     /* These are the buffers and source to play out through OpenAL with. */
-    ALuint buffers[NUM_BUFFERS];
+    ALuint buffers[NumBuffers];
     ALuint source;
 
     /* Handle for the audio file */
@@ -88,7 +90,7 @@ static StreamPlayer *NewPlayer(void)
     assert(player != NULL);
 
     /* Generate the buffers and source */
-    alGenBuffers(NUM_BUFFERS, player->buffers);
+    alGenBuffers(NumBuffers, player->buffers);
     assert(alGetError() == AL_NO_ERROR && "Could not create buffers");
 
     alGenSources(1, &player->source);
@@ -111,11 +113,11 @@ static void DeletePlayer(StreamPlayer *player)
     ClosePlayerFile(player);
 
     alDeleteSources(1, &player->source);
-    alDeleteBuffers(NUM_BUFFERS, player->buffers);
+    alDeleteBuffers(NumBuffers, player->buffers);
     if(alGetError() != AL_NO_ERROR)
         fprintf(stderr, "Failed to delete object IDs\n");
 
-    memset(player, 0, sizeof(*player));
+    memset(player, 0, sizeof(*player)); /* NOLINT(clang-analyzer-security.insecureAPI.*) */
     free(player);
 }
 
@@ -291,8 +293,8 @@ static int OpenPlayerFile(StreamPlayer *player, const char *filename)
     }
 
     player->block_count = player->sfinfo.samplerate / player->sampleblockalign;
-    player->block_count = player->block_count * BUFFER_MILLISEC / 1000;
-    player->membuf = malloc((size_t)(player->block_count * player->byteblockalign));
+    player->block_count = player->block_count * BufferMillisec / 1000;
+    player->membuf = malloc((size_t)player->block_count * (size_t)player->byteblockalign);
 
     return 1;
 }
@@ -310,7 +312,7 @@ static void ClosePlayerFile(StreamPlayer *player)
     if(player->sampleblockalign > 1)
     {
         ALsizei i;
-        for(i = 0;i < NUM_BUFFERS;i++)
+        for(i = 0;i < NumBuffers;i++)
             alBufferi(player->buffers[i], AL_UNPACK_BLOCK_ALIGNMENT_SOFT, 0);
         player->sampleblockalign = 0;
         player->byteblockalign = 0;
@@ -328,7 +330,7 @@ static int StartPlayer(StreamPlayer *player)
     alSourcei(player->source, AL_BUFFER, 0);
 
     /* Fill the buffer queue */
-    for(i = 0;i < NUM_BUFFERS;i++)
+    for(i = 0;i < NumBuffers;i++)
     {
         sf_count_t slen;
 
@@ -336,21 +338,21 @@ static int StartPlayer(StreamPlayer *player)
         if(player->sample_type == Int16)
         {
             slen = sf_readf_short(player->sndfile, player->membuf,
-                player->block_count * player->sampleblockalign);
+                (sf_count_t)player->block_count * player->sampleblockalign);
             if(slen < 1) break;
             slen *= player->byteblockalign;
         }
         else if(player->sample_type == Float)
         {
             slen = sf_readf_float(player->sndfile, player->membuf,
-                player->block_count * player->sampleblockalign);
+                (sf_count_t)player->block_count * player->sampleblockalign);
             if(slen < 1) break;
             slen *= player->byteblockalign;
         }
         else
         {
             slen = sf_read_raw(player->sndfile, player->membuf,
-                player->block_count * player->byteblockalign);
+                (sf_count_t)player->block_count * player->byteblockalign);
             if(slen > 0) slen -= slen%player->byteblockalign;
             if(slen < 1) break;
         }
@@ -407,19 +409,19 @@ static int UpdatePlayer(StreamPlayer *player)
         if(player->sample_type == Int16)
         {
             slen = sf_readf_short(player->sndfile, player->membuf,
-                player->block_count * player->sampleblockalign);
+                (sf_count_t)player->block_count * player->sampleblockalign);
             if(slen > 0) slen *= player->byteblockalign;
         }
         else if(player->sample_type == Float)
         {
             slen = sf_readf_float(player->sndfile, player->membuf,
-                player->block_count * player->sampleblockalign);
+                (sf_count_t)player->block_count * player->sampleblockalign);
             if(slen > 0) slen *= player->byteblockalign;
         }
         else
         {
             slen = sf_read_raw(player->sndfile, player->membuf,
-                player->block_count * player->byteblockalign);
+                (sf_count_t)player->block_count * player->byteblockalign);
             if(slen > 0) slen -= slen%player->byteblockalign;
         }
 
@@ -486,10 +488,9 @@ int main(int argc, char **argv)
 
         /* Get the name portion, without the path, for display. */
         namepart = strrchr(argv[i], '/');
-        if(namepart || (namepart=strrchr(argv[i], '\\')))
-            namepart++;
-        else
-            namepart = argv[i];
+        if(!namepart) namepart = strrchr(argv[i], '\\');
+        if(!namepart) namepart = argv[i];
+        else namepart++;
 
         printf("Playing: %s (%s, %dhz)\n", namepart, FormatName(player->format),
             player->sfinfo.samplerate);

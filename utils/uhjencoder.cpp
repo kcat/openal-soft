@@ -24,19 +24,20 @@
 
 #include "config.h"
 
+#include <algorithm>
 #include <array>
-#include <cstring>
-#include <inttypes.h>
+#include <cassert>
+#include <cmath>
+#include <cstddef>
+#include <cstdio>
 #include <memory>
-#include <stddef.h>
 #include <string>
-#include <utility>
+#include <string_view>
 #include <vector>
 
-#include "almalloc.h"
 #include "alnumbers.h"
 #include "alspan.h"
-#include "opthelpers.h"
+#include "fmt/core.h"
 #include "phase_shifter.h"
 #include "vector.h"
 
@@ -46,6 +47,8 @@
 
 
 namespace {
+
+using namespace std::string_view_literals;
 
 struct SndFileDeleter {
     void operator()(SNDFILE *sndfile) { sf_close(sndfile); }
@@ -81,9 +84,7 @@ struct UhjEncoder {
     alignas(16) std::array<float,BufferLineSize + sFilterDelay*2> mTemp{};
 
     void encode(const al::span<FloatBufferLine> OutSamples,
-        const al::span<FloatBufferLine,4> InSamples, const size_t SamplesToDo);
-
-    DEF_NEWDEL(UhjEncoder)
+        const al::span<const FloatBufferLine,4> InSamples, const size_t SamplesToDo);
 };
 
 const PhaseShifterT<UhjEncoder::sFilterDelay*2> PShift{};
@@ -103,18 +104,18 @@ const PhaseShifterT<UhjEncoder::sFilterDelay*2> PShift{};
  * output, and Q is excluded from 2- and 3-channel output.
  */
 void UhjEncoder::encode(const al::span<FloatBufferLine> OutSamples,
-    const al::span<FloatBufferLine,4> InSamples, const size_t SamplesToDo)
+    const al::span<const FloatBufferLine,4> InSamples, const size_t SamplesToDo)
 {
-    const float *RESTRICT winput{al::assume_aligned<16>(InSamples[0].data())};
-    const float *RESTRICT xinput{al::assume_aligned<16>(InSamples[1].data())};
-    const float *RESTRICT yinput{al::assume_aligned<16>(InSamples[2].data())};
-    const float *RESTRICT zinput{al::assume_aligned<16>(InSamples[3].data())};
+    const auto winput = al::span{InSamples[0]}.first(SamplesToDo);
+    const auto xinput = al::span{InSamples[1]}.first(SamplesToDo);
+    const auto yinput = al::span{InSamples[2]}.first(SamplesToDo);
+    const auto zinput = al::span{InSamples[3]}.first(SamplesToDo);
 
     /* Combine the previously delayed input signal with the new input. */
-    std::copy_n(winput, SamplesToDo, mW.begin()+sFilterDelay);
-    std::copy_n(xinput, SamplesToDo, mX.begin()+sFilterDelay);
-    std::copy_n(yinput, SamplesToDo, mY.begin()+sFilterDelay);
-    std::copy_n(zinput, SamplesToDo, mZ.begin()+sFilterDelay);
+    std::copy(winput.begin(), winput.end(), mW.begin()+sFilterDelay);
+    std::copy(xinput.begin(), xinput.end(), mX.begin()+sFilterDelay);
+    std::copy(yinput.begin(), yinput.end(), mY.begin()+sFilterDelay);
+    std::copy(zinput.begin(), zinput.end(), mZ.begin()+sFilterDelay);
 
     /* S = 0.9396926*W + 0.1855740*X */
     for(size_t i{0};i < SamplesToDo;++i)
@@ -122,22 +123,22 @@ void UhjEncoder::encode(const al::span<FloatBufferLine> OutSamples,
 
     /* Precompute j(-0.3420201*W + 0.5098604*X) and store in mD. */
     auto tmpiter = std::copy(mWXHistory1.cbegin(), mWXHistory1.cend(), mTemp.begin());
-    std::transform(winput, winput+SamplesToDo, xinput, tmpiter,
+    std::transform(winput.begin(), winput.end(), xinput.begin(), tmpiter,
         [](const float w, const float x) noexcept -> float
         { return -0.3420201f*w + 0.5098604f*x; });
     std::copy_n(mTemp.cbegin()+SamplesToDo, mWXHistory1.size(), mWXHistory1.begin());
-    PShift.process({mD.data(), SamplesToDo}, mTemp.data());
+    PShift.process(al::span{mD}.first(SamplesToDo), mTemp);
 
     /* D = j(-0.3420201*W + 0.5098604*X) + 0.6554516*Y */
     for(size_t i{0};i < SamplesToDo;++i)
         mD[i] = mD[i] + 0.6554516f*mY[i];
 
     /* Left = (S + D)/2.0 */
-    float *RESTRICT left{al::assume_aligned<16>(OutSamples[0].data())};
+    auto left = al::span{OutSamples[0]};
     for(size_t i{0};i < SamplesToDo;i++)
         left[i] = (mS[i] + mD[i]) * 0.5f;
     /* Right = (S - D)/2.0 */
-    float *RESTRICT right{al::assume_aligned<16>(OutSamples[1].data())};
+    auto right = al::span{OutSamples[1]};
     for(size_t i{0};i < SamplesToDo;i++)
         right[i] = (mS[i] - mD[i]) * 0.5f;
 
@@ -145,21 +146,21 @@ void UhjEncoder::encode(const al::span<FloatBufferLine> OutSamples,
     {
         /* Precompute j(-0.1432*W + 0.6512*X) and store in mT. */
         tmpiter = std::copy(mWXHistory2.cbegin(), mWXHistory2.cend(), mTemp.begin());
-        std::transform(winput, winput+SamplesToDo, xinput, tmpiter,
+        std::transform(winput.begin(), winput.end(), xinput.begin(), tmpiter,
             [](const float w, const float x) noexcept -> float
             { return -0.1432f*w + 0.6512f*x; });
         std::copy_n(mTemp.cbegin()+SamplesToDo, mWXHistory2.size(), mWXHistory2.begin());
-        PShift.process({mT.data(), SamplesToDo}, mTemp.data());
+        PShift.process(al::span{mT}.first(SamplesToDo), mTemp);
 
         /* T = j(-0.1432*W + 0.6512*X) - 0.7071068*Y */
-        float *RESTRICT t{al::assume_aligned<16>(OutSamples[2].data())};
+        auto t = al::span{OutSamples[2]};
         for(size_t i{0};i < SamplesToDo;i++)
             t[i] = mT[i] - 0.7071068f*mY[i];
     }
     if(OutSamples.size() > 3)
     {
         /* Q = 0.9772*Z */
-        float *RESTRICT q{al::assume_aligned<16>(OutSamples[3].data())};
+        auto q = al::span{OutSamples[3]};
         for(size_t i{0};i < SamplesToDo;i++)
             q[i] = 0.9772f*mZ[i];
     }
@@ -179,50 +180,58 @@ struct SpeakerPos {
 };
 
 /* Azimuth is counter-clockwise. */
-constexpr SpeakerPos StereoMap[2]{
-    { SF_CHANNEL_MAP_LEFT,   30.0f, 0.0f },
-    { SF_CHANNEL_MAP_RIGHT, -30.0f, 0.0f },
-}, QuadMap[4]{
-    { SF_CHANNEL_MAP_LEFT,         45.0f, 0.0f },
-    { SF_CHANNEL_MAP_RIGHT,       -45.0f, 0.0f },
-    { SF_CHANNEL_MAP_REAR_LEFT,   135.0f, 0.0f },
-    { SF_CHANNEL_MAP_REAR_RIGHT, -135.0f, 0.0f },
-}, X51Map[6]{
-    { SF_CHANNEL_MAP_LEFT,         30.0f, 0.0f },
-    { SF_CHANNEL_MAP_RIGHT,       -30.0f, 0.0f },
-    { SF_CHANNEL_MAP_CENTER,        0.0f, 0.0f },
-    { SF_CHANNEL_MAP_LFE, 0.0f, 0.0f },
-    { SF_CHANNEL_MAP_SIDE_LEFT,   110.0f, 0.0f },
-    { SF_CHANNEL_MAP_SIDE_RIGHT, -110.0f, 0.0f },
-}, X51RearMap[6]{
-    { SF_CHANNEL_MAP_LEFT,         30.0f, 0.0f },
-    { SF_CHANNEL_MAP_RIGHT,       -30.0f, 0.0f },
-    { SF_CHANNEL_MAP_CENTER,        0.0f, 0.0f },
-    { SF_CHANNEL_MAP_LFE, 0.0f, 0.0f },
-    { SF_CHANNEL_MAP_REAR_LEFT,   110.0f, 0.0f },
-    { SF_CHANNEL_MAP_REAR_RIGHT, -110.0f, 0.0f },
-}, X71Map[8]{
-    { SF_CHANNEL_MAP_LEFT,         30.0f, 0.0f },
-    { SF_CHANNEL_MAP_RIGHT,       -30.0f, 0.0f },
-    { SF_CHANNEL_MAP_CENTER,        0.0f, 0.0f },
-    { SF_CHANNEL_MAP_LFE, 0.0f, 0.0f },
-    { SF_CHANNEL_MAP_REAR_LEFT,   150.0f, 0.0f },
-    { SF_CHANNEL_MAP_REAR_RIGHT, -150.0f, 0.0f },
-    { SF_CHANNEL_MAP_SIDE_LEFT,    90.0f, 0.0f },
-    { SF_CHANNEL_MAP_SIDE_RIGHT,  -90.0f, 0.0f },
-}, X714Map[12]{
-    { SF_CHANNEL_MAP_LEFT,         30.0f,  0.0f },
-    { SF_CHANNEL_MAP_RIGHT,       -30.0f,  0.0f },
-    { SF_CHANNEL_MAP_CENTER,        0.0f,  0.0f },
-    { SF_CHANNEL_MAP_LFE, 0.0f, 0.0f },
-    { SF_CHANNEL_MAP_REAR_LEFT,   150.0f,  0.0f },
-    { SF_CHANNEL_MAP_REAR_RIGHT, -150.0f,  0.0f },
-    { SF_CHANNEL_MAP_SIDE_LEFT,    90.0f,  0.0f },
-    { SF_CHANNEL_MAP_SIDE_RIGHT,  -90.0f,  0.0f },
-    { SF_CHANNEL_MAP_TOP_FRONT_LEFT,    45.0f, 35.0f },
-    { SF_CHANNEL_MAP_TOP_FRONT_RIGHT,  -45.0f, 35.0f },
-    { SF_CHANNEL_MAP_TOP_REAR_LEFT,    135.0f, 35.0f },
-    { SF_CHANNEL_MAP_TOP_REAR_RIGHT,  -135.0f, 35.0f },
+constexpr std::array MonoMap{
+    SpeakerPos{SF_CHANNEL_MAP_CENTER, 0.0f, 0.0f},
+};
+constexpr std::array StereoMap{
+    SpeakerPos{SF_CHANNEL_MAP_LEFT,   30.0f, 0.0f},
+    SpeakerPos{SF_CHANNEL_MAP_RIGHT, -30.0f, 0.0f},
+};
+constexpr std::array QuadMap{
+    SpeakerPos{SF_CHANNEL_MAP_LEFT,         45.0f, 0.0f},
+    SpeakerPos{SF_CHANNEL_MAP_RIGHT,       -45.0f, 0.0f},
+    SpeakerPos{SF_CHANNEL_MAP_REAR_LEFT,   135.0f, 0.0f},
+    SpeakerPos{SF_CHANNEL_MAP_REAR_RIGHT, -135.0f, 0.0f},
+};
+constexpr std::array X51Map{
+    SpeakerPos{SF_CHANNEL_MAP_LEFT,         30.0f, 0.0f},
+    SpeakerPos{SF_CHANNEL_MAP_RIGHT,       -30.0f, 0.0f},
+    SpeakerPos{SF_CHANNEL_MAP_CENTER,        0.0f, 0.0f},
+    SpeakerPos{SF_CHANNEL_MAP_LFE, 0.0f, 0.0f},
+    SpeakerPos{SF_CHANNEL_MAP_SIDE_LEFT,   110.0f, 0.0f},
+    SpeakerPos{SF_CHANNEL_MAP_SIDE_RIGHT, -110.0f, 0.0f},
+};
+constexpr std::array X51RearMap{
+    SpeakerPos{SF_CHANNEL_MAP_LEFT,         30.0f, 0.0f},
+    SpeakerPos{SF_CHANNEL_MAP_RIGHT,       -30.0f, 0.0f},
+    SpeakerPos{SF_CHANNEL_MAP_CENTER,        0.0f, 0.0f},
+    SpeakerPos{SF_CHANNEL_MAP_LFE, 0.0f, 0.0f},
+    SpeakerPos{SF_CHANNEL_MAP_REAR_LEFT,   110.0f, 0.0f},
+    SpeakerPos{SF_CHANNEL_MAP_REAR_RIGHT, -110.0f, 0.0f},
+};
+constexpr std::array X71Map{
+    SpeakerPos{SF_CHANNEL_MAP_LEFT,         30.0f, 0.0f},
+    SpeakerPos{SF_CHANNEL_MAP_RIGHT,       -30.0f, 0.0f},
+    SpeakerPos{SF_CHANNEL_MAP_CENTER,        0.0f, 0.0f},
+    SpeakerPos{SF_CHANNEL_MAP_LFE, 0.0f, 0.0f},
+    SpeakerPos{SF_CHANNEL_MAP_REAR_LEFT,   150.0f, 0.0f},
+    SpeakerPos{SF_CHANNEL_MAP_REAR_RIGHT, -150.0f, 0.0f},
+    SpeakerPos{SF_CHANNEL_MAP_SIDE_LEFT,    90.0f, 0.0f},
+    SpeakerPos{SF_CHANNEL_MAP_SIDE_RIGHT,  -90.0f, 0.0f},
+};
+constexpr std::array X714Map{
+    SpeakerPos{SF_CHANNEL_MAP_LEFT,         30.0f,  0.0f},
+    SpeakerPos{SF_CHANNEL_MAP_RIGHT,       -30.0f,  0.0f},
+    SpeakerPos{SF_CHANNEL_MAP_CENTER,        0.0f,  0.0f},
+    SpeakerPos{SF_CHANNEL_MAP_LFE, 0.0f, 0.0f},
+    SpeakerPos{SF_CHANNEL_MAP_REAR_LEFT,   150.0f,  0.0f},
+    SpeakerPos{SF_CHANNEL_MAP_REAR_RIGHT, -150.0f,  0.0f},
+    SpeakerPos{SF_CHANNEL_MAP_SIDE_LEFT,    90.0f,  0.0f},
+    SpeakerPos{SF_CHANNEL_MAP_SIDE_RIGHT,  -90.0f,  0.0f},
+    SpeakerPos{SF_CHANNEL_MAP_TOP_FRONT_LEFT,    45.0f, 35.0f},
+    SpeakerPos{SF_CHANNEL_MAP_TOP_FRONT_RIGHT,  -45.0f, 35.0f},
+    SpeakerPos{SF_CHANNEL_MAP_TOP_REAR_LEFT,    135.0f, 35.0f},
+    SpeakerPos{SF_CHANNEL_MAP_TOP_REAR_RIGHT,  -135.0f, 35.0f},
 };
 
 constexpr auto GenCoeffs(double x /*+front*/, double y /*+left*/, double z /*+up*/) noexcept
@@ -236,55 +245,68 @@ constexpr auto GenCoeffs(double x /*+front*/, double y /*+left*/, double z /*+up
     }};
 }
 
-} // namespace
 
-
-int main(int argc, char **argv)
+int main(al::span<std::string_view> args)
 {
-    if(argc < 2 || std::strcmp(argv[1], "-h") == 0 || std::strcmp(argv[1], "--help") == 0)
+    if(args.size() < 2 || args[1] == "-h" || args[1] == "--help")
     {
-        printf("Usage: %s <infile...>\n\n", argv[0]);
+        fmt::println("Usage: {} <[options] infile...>\n\n"
+            "  Options:\n"
+            "    -bhj  Encode 2-channel UHJ, aka \"BJH\" (default).\n"
+            "    -thj  Encode 3-channel UHJ, aka \"TJH\".\n"
+            "    -phj  Encode 4-channel UHJ, aka \"PJH\".\n"
+            "\n"
+            "3-channel UHJ supplements 2-channel UHJ with an extra channel that allows full\n"
+            "reconstruction of first-order 2D ambisonics. 4-channel UHJ supplements 3-channel\n"
+            "UHJ with an extra channel carrying height information, providing for full\n"
+            "reconstruction of first-order 3D ambisonics.\n"
+            "\n"
+            "Note: The third and fourth channels should be ignored if they're not being\n"
+            "decoded. Unlike the first two channels, they are not designed for undecoded\n"
+            "playback, so the resulting files will not play correctly if this isn't handled.",
+            args[0]);
         return 1;
     }
+    args = args.subspan(1);
 
     uint uhjchans{2};
     size_t num_files{0}, num_encoded{0};
-    for(int fidx{1};fidx < argc;++fidx)
+    auto process_arg = [&uhjchans,&num_files,&num_encoded](std::string_view arg) -> void
     {
-        if(strcmp(argv[fidx], "-bhj") == 0)
+        if(arg == "-bhj"sv)
         {
             uhjchans = 2;
-            continue;
+            return;
         }
-        if(strcmp(argv[fidx], "-thj") == 0)
+        if(arg == "-thj"sv)
         {
             uhjchans = 3;
-            continue;
+            return;
         }
-        if(strcmp(argv[fidx], "-phj") == 0)
+        if(arg == "-phj"sv)
         {
             uhjchans = 4;
-            continue;
+            return;
         }
         ++num_files;
 
-        std::string outname{argv[fidx]};
-        size_t lastslash{outname.find_last_of('/')};
+        auto outname = std::string{arg};
+        const auto lastslash = outname.rfind('/');
         if(lastslash != std::string::npos)
             outname.erase(0, lastslash+1);
-        size_t extpos{outname.find_last_of('.')};
+        const auto extpos = outname.rfind('.');
         if(extpos != std::string::npos)
             outname.resize(extpos);
         outname += ".uhj.flac";
 
         SF_INFO ininfo{};
-        SndFilePtr infile{sf_open(argv[fidx], SFM_READ, &ininfo)};
+        SndFilePtr infile{sf_open(std::string{arg}.c_str(), SFM_READ, &ininfo)};
         if(!infile)
         {
-            fprintf(stderr, "Failed to open %s\n", argv[fidx]);
-            continue;
+            fmt::println(stderr, "Failed to open {}", arg);
+            return;
         }
-        printf("Converting %s to %s...\n", argv[fidx], outname.c_str());
+        fmt::println("Converting {} to {}...", arg, outname);
 
         /* Work out the channel map, preferably using the actual channel map
          * from the file/format, but falling back to assuming WFX order.
@@ -294,6 +316,7 @@ int main(int argc, char **argv)
         if(sf_command(infile.get(), SFC_GET_CHANNEL_MAP_INFO, chanmap.data(),
             ininfo.channels*int{sizeof(int)}) == SF_TRUE)
         {
+            static const std::array<int,1> monomap{{SF_CHANNEL_MAP_CENTER}};
             static const std::array<int,2> stereomap{{SF_CHANNEL_MAP_LEFT, SF_CHANNEL_MAP_RIGHT}};
             static const std::array<int,4> quadmap{{SF_CHANNEL_MAP_LEFT, SF_CHANNEL_MAP_RIGHT,
                 SF_CHANNEL_MAP_REAR_LEFT, SF_CHANNEL_MAP_REAR_RIGHT}};
@@ -323,14 +346,13 @@ int main(int argc, char **argv)
             {
                 if(a.size() != b.size())
                     return false;
-                for(const int id : a)
-                {
-                    if(std::find(b.begin(), b.end(), id) != b.end())
-                        return false;
-                }
-                return true;
+                auto find_channel = [b](const int id) -> bool
+                { return std::find(b.begin(), b.end(), id) != b.end(); };
+                return std::all_of(a.cbegin(), a.cend(), find_channel);
             };
-            if(match_chanmap(chanmap, stereomap))
+            if(match_chanmap(chanmap, monomap))
+                spkrs = MonoMap;
+            else if(match_chanmap(chanmap, stereomap))
                 spkrs = StereoMap;
             else if(match_chanmap(chanmap, quadmap))
                 spkrs = QuadMap;
@@ -358,36 +380,66 @@ int main(int argc, char **argv)
                         mapstr += std::to_string(idx);
                     }
                 }
-                fprintf(stderr, " ... %zu channels not supported (map: %s)\n", chanmap.size(),
-                    mapstr.c_str());
-                continue;
+                fmt::println(stderr, " ... {} channels not supported (map: {})", chanmap.size(),
+                    mapstr);
+                return;
             }
+        }
+        else if(sf_command(infile.get(), SFC_WAVEX_GET_AMBISONIC, nullptr,
+            0) == SF_AMBISONIC_B_FORMAT)
+        {
+            if(ininfo.channels == 4)
+            {
+                fmt::println(stderr, " ... detected FuMa 3D B-Format");
+                chanmap[0] = SF_CHANNEL_MAP_AMBISONIC_B_W;
+                chanmap[1] = SF_CHANNEL_MAP_AMBISONIC_B_X;
+                chanmap[2] = SF_CHANNEL_MAP_AMBISONIC_B_Y;
+                chanmap[3] = SF_CHANNEL_MAP_AMBISONIC_B_Z;
+            }
+            else if(ininfo.channels == 3)
+            {
+                fmt::println(stderr, " ... detected FuMa 2D B-Format");
+                chanmap[0] = SF_CHANNEL_MAP_AMBISONIC_B_W;
+                chanmap[1] = SF_CHANNEL_MAP_AMBISONIC_B_X;
+                chanmap[2] = SF_CHANNEL_MAP_AMBISONIC_B_Y;
+            }
+            else
+            {
+                fmt::println(stderr, " ... unhandled {}-channel B-Format", ininfo.channels);
+                return;
+            }
+        }
+        else if(ininfo.channels == 1)
+        {
+            fmt::println(stderr, " ... assuming front-center");
+            spkrs = MonoMap;
+            chanmap[0] = SF_CHANNEL_MAP_CENTER;
         }
         else if(ininfo.channels == 2)
         {
-            fprintf(stderr, " ... assuming WFX order stereo\n");
+            fmt::println(stderr, " ... assuming WFX order stereo");
             spkrs = StereoMap;
-            chanmap[0] = SF_CHANNEL_MAP_FRONT_LEFT;
-            chanmap[1] = SF_CHANNEL_MAP_FRONT_RIGHT;
+            chanmap[0] = SF_CHANNEL_MAP_LEFT;
+            chanmap[1] = SF_CHANNEL_MAP_RIGHT;
         }
         else if(ininfo.channels == 6)
         {
-            fprintf(stderr, " ... assuming WFX order 5.1\n");
+            fmt::println(stderr, " ... assuming WFX order 5.1");
             spkrs = X51Map;
-            chanmap[0] = SF_CHANNEL_MAP_FRONT_LEFT;
-            chanmap[1] = SF_CHANNEL_MAP_FRONT_RIGHT;
-            chanmap[2] = SF_CHANNEL_MAP_FRONT_CENTER;
+            chanmap[0] = SF_CHANNEL_MAP_LEFT;
+            chanmap[1] = SF_CHANNEL_MAP_RIGHT;
+            chanmap[2] = SF_CHANNEL_MAP_CENTER;
             chanmap[3] = SF_CHANNEL_MAP_LFE;
             chanmap[4] = SF_CHANNEL_MAP_SIDE_LEFT;
             chanmap[5] = SF_CHANNEL_MAP_SIDE_RIGHT;
         }
         else if(ininfo.channels == 8)
         {
-            fprintf(stderr, " ... assuming WFX order 7.1\n");
+            fmt::println(stderr, " ... assuming WFX order 7.1");
             spkrs = X71Map;
-            chanmap[0] = SF_CHANNEL_MAP_FRONT_LEFT;
-            chanmap[1] = SF_CHANNEL_MAP_FRONT_RIGHT;
-            chanmap[2] = SF_CHANNEL_MAP_FRONT_CENTER;
+            chanmap[0] = SF_CHANNEL_MAP_LEFT;
+            chanmap[1] = SF_CHANNEL_MAP_RIGHT;
+            chanmap[2] = SF_CHANNEL_MAP_CENTER;
             chanmap[3] = SF_CHANNEL_MAP_LFE;
             chanmap[4] = SF_CHANNEL_MAP_REAR_LEFT;
             chanmap[5] = SF_CHANNEL_MAP_REAR_RIGHT;
@@ -396,8 +448,8 @@ int main(int argc, char **argv)
         }
         else
         {
-            fprintf(stderr, " ... unmapped %d-channel audio not supported\n", ininfo.channels);
-            continue;
+            fmt::println(stderr, " ... unmapped {}-channel audio not supported", ininfo.channels);
+            return;
         }
 
         SF_INFO outinfo{};
@@ -408,16 +460,20 @@ int main(int argc, char **argv)
         SndFilePtr outfile{sf_open(outname.c_str(), SFM_WRITE, &outinfo)};
         if(!outfile)
         {
-            fprintf(stderr, " ... failed to create %s\n", outname.c_str());
-            continue;
+            fmt::println(stderr, " ... failed to create {}", outname);
+            return;
         }
 
         auto encoder = std::make_unique<UhjEncoder>();
-        auto splbuf = al::vector<FloatBufferLine, 16>(static_cast<uint>(9+ininfo.channels)+uhjchans);
-        auto ambmem = al::span<FloatBufferLine,4>{splbuf.data(), 4};
-        auto encmem = al::span<FloatBufferLine,4>{&splbuf[4], 4};
-        auto srcmem = al::span<float,BufferLineSize>{splbuf[8].data(), BufferLineSize};
-        auto outmem = al::span<float>{splbuf[9].data(), BufferLineSize*uhjchans};
+        auto splbuf = al::vector<FloatBufferLine, 16>(9);
+        auto ambmem = al::span{splbuf}.subspan<0,4>();
+        auto encmem = al::span{splbuf}.subspan<4,4>();
+        auto srcmem = al::span{splbuf[8]};
+        auto membuf = al::vector<float,16>((static_cast<uint>(ininfo.channels)+size_t{uhjchans})
+            * BufferLineSize);
+        auto outmem = al::span{membuf}.first(size_t{BufferLineSize}*uhjchans);
+        auto inmem = al::span{membuf}.last(size_t{BufferLineSize}
+            * static_cast<uint>(ininfo.channels));
 
         /* A number of initial samples need to be skipped to cut the lead-in
          * from the all-pass filter delay. The same number of samples need to
@@ -429,14 +485,13 @@ int main(int argc, char **argv)
         sf_count_t LeadOut{UhjEncoder::sFilterDelay};
         while(LeadIn > 0 || LeadOut > 0)
         {
-            auto inmem = outmem.data() + outmem.size();
-            auto sgot = sf_readf_float(infile.get(), inmem, BufferLineSize);
+            auto sgot = sf_readf_float(infile.get(), inmem.data(), BufferLineSize);
 
             sgot = std::max<sf_count_t>(sgot, 0);
             if(sgot < BufferLineSize)
             {
                 const sf_count_t remaining{std::min(BufferLineSize - sgot, LeadOut)};
-                std::fill_n(inmem + sgot*ininfo.channels, remaining*ininfo.channels, 0.0f);
+                std::fill_n(inmem.begin() + sgot*ininfo.channels, remaining*ininfo.channels, 0.0f);
                 sgot += remaining;
                 LeadOut -= remaining;
             }
@@ -455,30 +510,26 @@ int main(int argc, char **argv)
                 for(size_t c{0};c < chans;++c)
                 {
                     for(size_t i{0};i < got;++i)
-                        ambmem[c][i] = inmem[i*static_cast<uint>(ininfo.channels)] * scale;
-                    ++inmem;
+                        ambmem[c][i] = inmem[i*static_cast<uint>(ininfo.channels) + c] * scale;
                 }
             }
-            else for(const int chanid : chanmap)
+            else for(size_t idx{0};idx < chanmap.size();++idx)
             {
+                const int chanid{chanmap[idx]};
                 /* Skip LFE. Or mix directly into W? Or W+X? */
                 if(chanid == SF_CHANNEL_MAP_LFE)
-                {
-                    ++inmem;
                     continue;
-                }
 
                 const auto spkr = std::find_if(spkrs.cbegin(), spkrs.cend(),
-                    [chanid](const SpeakerPos &pos){return pos.mChannelID == chanid;});
+                    [chanid](const SpeakerPos pos){return pos.mChannelID == chanid;});
                 if(spkr == spkrs.cend())
                 {
-                    fprintf(stderr, " ... failed to find channel ID %d\n", chanid);
+                    fmt::println(stderr, " ... failed to find channel ID {}", chanid);
                     continue;
                 }
 
                 for(size_t i{0};i < got;++i)
-                    srcmem[i] = inmem[i * static_cast<uint>(ininfo.channels)];
-                ++inmem;
+                    srcmem[i] = inmem[i*static_cast<uint>(ininfo.channels) + idx];
 
                 static constexpr auto Deg2Rad = al::numbers::pi / 180.0;
                 const auto coeffs = GenCoeffs(
@@ -502,30 +553,40 @@ int main(int argc, char **argv)
             got -= LeadIn;
             for(size_t c{0};c < uhjchans;++c)
             {
-                constexpr float max_val{8388607.0f / 8388608.0f};
-                auto clamp = [](float v, float mn, float mx) noexcept
-                { return std::min(std::max(v, mn), mx); };
+                static constexpr float max_val{8388607.0f / 8388608.0f};
                 for(size_t i{0};i < got;++i)
-                    outmem[i*uhjchans + c] = clamp(encmem[c][LeadIn+i], -1.0f, max_val);
+                    outmem[i*uhjchans + c] = std::clamp(encmem[c][LeadIn+i], -1.0f, max_val);
             }
             LeadIn = 0;
 
             sf_count_t wrote{sf_writef_float(outfile.get(), outmem.data(),
                 static_cast<sf_count_t>(got))};
             if(wrote < 0)
-                fprintf(stderr, " ... failed to write samples: %d\n", sf_error(outfile.get()));
+                fmt::println(stderr, " ... failed to write samples: {}", sf_error(outfile.get()));
             else
                 total_wrote += static_cast<size_t>(wrote);
         }
-        printf(" ... wrote %zu samples (%" PRId64 ").\n", total_wrote, int64_t{ininfo.frames});
+        fmt::println(" ... wrote {} samples ({}).", total_wrote, ininfo.frames);
         ++num_encoded;
-    }
+    };
+    std::for_each(args.begin(), args.end(), process_arg);
+
     if(num_encoded == 0)
-        fprintf(stderr, "Failed to encode any input files\n");
+        fmt::println(stderr, "Failed to encode any input files");
     else if(num_encoded < num_files)
-        fprintf(stderr, "Encoded %zu of %zu files\n", num_encoded, num_files);
+        fmt::println(stderr, "Encoded {} of {} files", num_encoded, num_files);
     else
-        printf("Encoded %s%zu file%s\n", (num_encoded > 1) ? "all " : "", num_encoded,
+        fmt::println("Encoded {}{} file{}", (num_encoded > 1) ? "all " : "", num_encoded,
             (num_encoded == 1) ? "" : "s");
     return 0;
+}
+
+} /* namespace */
+
+int main(int argc, char **argv)
+{
+    assert(argc >= 0);
+    auto args = std::vector<std::string_view>(static_cast<unsigned int>(argc));
+    std::copy_n(argv, args.size(), args.begin());
+    return main(al::span{args});
 }

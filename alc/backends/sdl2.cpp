@@ -26,11 +26,10 @@
 #include <cstdlib>
 #include <cstring>
 #include <string>
+#include <string_view>
 
-#include "almalloc.h"
 #include "alnumeric.h"
 #include "core/device.h"
-#include "core/logging.h"
 
 _Pragma("GCC diagnostic push")
 _Pragma("GCC diagnostic ignored \"-Wold-style-cast\"")
@@ -40,36 +39,25 @@ _Pragma("GCC diagnostic pop")
 
 namespace {
 
-#ifdef _WIN32
-#define DEVNAME_PREFIX "OpenAL Soft on "
-#else
-#define DEVNAME_PREFIX ""
-#endif
+using namespace std::string_view_literals;
 
-constexpr char defaultDeviceName[] = DEVNAME_PREFIX "Default Device";
+[[nodiscard]] constexpr auto getDefaultDeviceName() noexcept -> std::string_view
+{ return "Default Device"sv; }
 
 struct Sdl2Backend final : public BackendBase {
-    Sdl2Backend(DeviceBase *device) noexcept : BackendBase{device} { }
+    explicit Sdl2Backend(DeviceBase *device) noexcept : BackendBase{device} { }
     ~Sdl2Backend() override;
 
     void audioCallback(Uint8 *stream, int len) noexcept;
-    static void audioCallbackC(void *ptr, Uint8 *stream, int len) noexcept
-    { static_cast<Sdl2Backend*>(ptr)->audioCallback(stream, len); }
 
-    void open(const char *name) override;
+    void open(std::string_view name) override;
     bool reset() override;
     void start() override;
     void stop() override;
 
+    std::string mSDLName;
     SDL_AudioDeviceID mDeviceID{0u};
     uint mFrameSize{0};
-
-    uint mFrequency{0u};
-    DevFmtChannels mFmtChans{};
-    DevFmtType     mFmtType{};
-    uint mUpdateSize{0u};
-
-    DEF_NEWDEL(Sdl2Backend)
 };
 
 Sdl2Backend::~Sdl2Backend()
@@ -86,11 +74,11 @@ void Sdl2Backend::audioCallback(Uint8 *stream, int len) noexcept
     mDevice->renderSamples(stream, ulen / mFrameSize, mDevice->channelsFromFmt());
 }
 
-void Sdl2Backend::open(const char *name)
+void Sdl2Backend::open(std::string_view name)
 {
     SDL_AudioSpec want{}, have{};
 
-    want.freq = static_cast<int>(mDevice->Frequency);
+    want.freq = static_cast<int>(mDevice->mSampleRate);
     switch(mDevice->FmtType)
     {
     case DevFmtUByte: want.format = AUDIO_U8; break;
@@ -101,40 +89,32 @@ void Sdl2Backend::open(const char *name)
     case DevFmtInt: want.format = AUDIO_S32SYS; break;
     case DevFmtFloat: want.format = AUDIO_F32; break;
     }
-    want.channels = (mDevice->FmtChans == DevFmtMono) ? 1 : 2;
-    want.samples = static_cast<Uint16>(minu(mDevice->UpdateSize, 8192));
-    want.callback = &Sdl2Backend::audioCallbackC;
+    want.channels = static_cast<Uint8>(std::min<uint>(mDevice->channelsFromFmt(),
+        std::numeric_limits<Uint8>::max()));
+    want.samples = static_cast<Uint16>(std::min(mDevice->mUpdateSize, 8192u));
+    want.callback = [](void *ptr, Uint8 *stream, int len) noexcept
+    { return static_cast<Sdl2Backend*>(ptr)->audioCallback(stream, len); };
     want.userdata = this;
 
     /* Passing nullptr to SDL_OpenAudioDevice opens a default, which isn't
      * necessarily the first in the list.
      */
-    SDL_AudioDeviceID devid;
-    if(!name || strcmp(name, defaultDeviceName) == 0)
-        devid = SDL_OpenAudioDevice(nullptr, SDL_FALSE, &want, &have, SDL_AUDIO_ALLOW_ANY_CHANGE);
+    const auto defaultDeviceName = getDefaultDeviceName();
+    if(name.empty() || name == defaultDeviceName)
+    {
+        name = defaultDeviceName;
+        mSDLName.clear();
+        mDeviceID = SDL_OpenAudioDevice(nullptr, SDL_FALSE, &want, &have,
+            SDL_AUDIO_ALLOW_ANY_CHANGE);
+    }
     else
     {
-        const size_t prefix_len = strlen(DEVNAME_PREFIX);
-        if(strncmp(name, DEVNAME_PREFIX, prefix_len) == 0)
-            devid = SDL_OpenAudioDevice(name+prefix_len, SDL_FALSE, &want, &have,
-                SDL_AUDIO_ALLOW_ANY_CHANGE);
-        else
-            devid = SDL_OpenAudioDevice(name, SDL_FALSE, &want, &have, SDL_AUDIO_ALLOW_ANY_CHANGE);
+        mSDLName = name;
+        mDeviceID = SDL_OpenAudioDevice(mSDLName.c_str(), SDL_FALSE, &want, &have,
+            SDL_AUDIO_ALLOW_ANY_CHANGE);
     }
-    if(!devid)
-        throw al::backend_exception{al::backend_error::NoDevice, "%s", SDL_GetError()};
-
-    DevFmtChannels devchans{};
-    if(have.channels >= 2)
-        devchans = DevFmtStereo;
-    else if(have.channels == 1)
-        devchans = DevFmtMono;
-    else
-    {
-        SDL_CloseAudioDevice(devid);
-        throw al::backend_exception{al::backend_error::DeviceError,
-            "Unhandled SDL channel count: %d", int{have.channels}};
-    }
+    if(!mDeviceID)
+        throw al::backend_exception{al::backend_error::NoDevice, "{}", SDL_GetError()};
 
     DevFmtType devtype{};
     switch(have.format)
@@ -146,32 +126,100 @@ void Sdl2Backend::open(const char *name)
     case AUDIO_S32SYS: devtype = DevFmtInt;    break;
     case AUDIO_F32SYS: devtype = DevFmtFloat;  break;
     default:
-        SDL_CloseAudioDevice(devid);
-        throw al::backend_exception{al::backend_error::DeviceError, "Unhandled SDL format: 0x%04x",
-            have.format};
+        throw al::backend_exception{al::backend_error::DeviceError,
+            "Unhandled SDL format: {:#04x}", have.format};
     }
 
-    if(mDeviceID)
-        SDL_CloseAudioDevice(mDeviceID);
-    mDeviceID = devid;
-
     mFrameSize = BytesFromDevFmt(devtype) * have.channels;
-    mFrequency = static_cast<uint>(have.freq);
-    mFmtChans = devchans;
-    mFmtType = devtype;
-    mUpdateSize = have.samples;
 
-    mDevice->DeviceName = name ? name : defaultDeviceName;
+    mDeviceName = name;
 }
 
 bool Sdl2Backend::reset()
 {
-    mDevice->Frequency = mFrequency;
-    mDevice->FmtChans = mFmtChans;
-    mDevice->FmtType = mFmtType;
-    mDevice->UpdateSize = mUpdateSize;
-    mDevice->BufferSize = mUpdateSize * 2; /* SDL always (tries to) use two periods. */
+    if(mDeviceID)
+        SDL_CloseAudioDevice(mDeviceID);
+    mDeviceID = 0;
+
+    auto want = SDL_AudioSpec{};
+    want.freq = static_cast<int>(mDevice->mSampleRate);
+    switch(mDevice->FmtType)
+    {
+    case DevFmtUByte: want.format = AUDIO_U8; break;
+    case DevFmtByte: want.format = AUDIO_S8; break;
+    case DevFmtUShort: want.format = AUDIO_U16SYS; break;
+    case DevFmtShort: want.format = AUDIO_S16SYS; break;
+    case DevFmtUInt: [[fallthrough]];
+    case DevFmtInt: want.format = AUDIO_S32SYS; break;
+    case DevFmtFloat: want.format = AUDIO_F32; break;
+    }
+    want.channels = static_cast<Uint8>(std::min<uint>(mDevice->channelsFromFmt(),
+        std::numeric_limits<Uint8>::max()));
+    want.samples = static_cast<Uint16>(std::min(mDevice->mUpdateSize, 8192u));
+    want.callback = [](void *ptr, Uint8 *stream, int len) noexcept
+    { return static_cast<Sdl2Backend*>(ptr)->audioCallback(stream, len); };
+    want.userdata = this;
+
+    auto have = SDL_AudioSpec{};
+    if(mSDLName.empty())
+    {
+        mDeviceID = SDL_OpenAudioDevice(nullptr, SDL_FALSE, &want, &have,
+            SDL_AUDIO_ALLOW_ANY_CHANGE);
+    }
+    else
+    {
+        mDeviceID = SDL_OpenAudioDevice(mSDLName.c_str(), SDL_FALSE, &want, &have,
+            SDL_AUDIO_ALLOW_ANY_CHANGE);
+    }
+    if(!mDeviceID)
+        throw al::backend_exception{al::backend_error::NoDevice, "{}", SDL_GetError()};
+
+    if(have.channels != mDevice->channelsFromFmt())
+    {
+        /* SDL guarantees these layouts for the given channel count. */
+        if(have.channels == 8)
+            mDevice->FmtChans = DevFmtX71;
+        else if(have.channels == 7)
+            mDevice->FmtChans = DevFmtX61;
+        else if(have.channels == 6)
+            mDevice->FmtChans = DevFmtX51;
+        else if(have.channels == 4)
+            mDevice->FmtChans = DevFmtQuad;
+        else if(have.channels >= 2)
+            mDevice->FmtChans = DevFmtStereo;
+        else if(have.channels == 1)
+            mDevice->FmtChans = DevFmtMono;
+        else
+            throw al::backend_exception{al::backend_error::DeviceError,
+                "Unhandled SDL channel count: {}", int{have.channels}};
+        mDevice->mAmbiOrder = 0;
+    }
+
+    switch(have.format)
+    {
+    case AUDIO_U8:     mDevice->FmtType = DevFmtUByte;  break;
+    case AUDIO_S8:     mDevice->FmtType = DevFmtByte;   break;
+    case AUDIO_U16SYS: mDevice->FmtType = DevFmtUShort; break;
+    case AUDIO_S16SYS: mDevice->FmtType = DevFmtShort;  break;
+    case AUDIO_S32SYS: mDevice->FmtType = DevFmtInt;    break;
+    case AUDIO_F32SYS: mDevice->FmtType = DevFmtFloat;  break;
+    default:
+        throw al::backend_exception{al::backend_error::DeviceError,
+            "Unhandled SDL format: {:#04x}", have.format};
+    }
+
+    mFrameSize = BytesFromDevFmt(mDevice->FmtType) * have.channels;
+
+    if(have.freq < int{MinOutputRate})
+        throw al::backend_exception{al::backend_error::DeviceError,
+            "Unhandled SDL sample rate: {}", have.freq};
+
+    mDevice->mSampleRate = static_cast<uint>(have.freq);
+    mDevice->mUpdateSize = have.samples;
+    mDevice->mBufferSize = std::max(have.size/mFrameSize, mDevice->mUpdateSize*2u);
+
     setDefaultWFXChannelOrder();
+
     return true;
 }
 
@@ -195,23 +243,25 @@ bool SDL2BackendFactory::init()
 bool SDL2BackendFactory::querySupport(BackendType type)
 { return type == BackendType::Playback; }
 
-std::string SDL2BackendFactory::probe(BackendType type)
+auto SDL2BackendFactory::enumerate(BackendType type) -> std::vector<std::string>
 {
-    std::string outnames;
+    std::vector<std::string> outnames;
 
     if(type != BackendType::Playback)
         return outnames;
 
     int num_devices{SDL_GetNumAudioDevices(SDL_FALSE)};
+    if(num_devices <= 0)
+        return outnames;
 
-    /* Includes null char. */
-    outnames.append(defaultDeviceName, sizeof(defaultDeviceName));
+    outnames.reserve(static_cast<unsigned int>(num_devices)+1_uz);
+    outnames.emplace_back(getDefaultDeviceName());
     for(int i{0};i < num_devices;++i)
     {
-        std::string name{DEVNAME_PREFIX};
-        name += SDL_GetAudioDeviceName(i, SDL_FALSE);
-        if(!name.empty())
-            outnames.append(name.c_str(), name.length()+1);
+        if(const char *name = SDL_GetAudioDeviceName(i, SDL_FALSE))
+            outnames.emplace_back(name);
+        else
+            outnames.emplace_back("Unknown Device Name #"+std::to_string(i));
     }
     return outnames;
 }

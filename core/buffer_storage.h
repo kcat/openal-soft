@@ -1,57 +1,14 @@
 #ifndef CORE_BUFFER_STORAGE_H
 #define CORE_BUFFER_STORAGE_H
 
-#include <atomic>
+#include <cstddef>
 
-#include "albyte.h"
-#include "alnumeric.h"
+#include "alspan.h"
 #include "ambidefs.h"
+#include "storage_formats.h"
 
 
 using uint = unsigned int;
-
-/* Storable formats */
-enum FmtType : unsigned char {
-    FmtUByte,
-    FmtShort,
-    FmtFloat,
-    FmtDouble,
-    FmtMulaw,
-    FmtAlaw,
-    FmtIMA4,
-    FmtMSADPCM,
-};
-enum FmtChannels : unsigned char {
-    FmtMono,
-    FmtStereo,
-    FmtRear,
-    FmtQuad,
-    FmtX51, /* (WFX order) */
-    FmtX61, /* (WFX order) */
-    FmtX71, /* (WFX order) */
-    FmtBFormat2D,
-    FmtBFormat3D,
-    FmtUHJ2, /* 2-channel UHJ, aka "BHJ", stereo-compatible */
-    FmtUHJ3, /* 3-channel UHJ, aka "THJ" */
-    FmtUHJ4, /* 4-channel UHJ, aka "PHJ" */
-    FmtSuperStereo, /* Stereo processed with Super Stereo. */
-};
-
-enum class AmbiLayout : unsigned char {
-    FuMa,
-    ACN,
-};
-enum class AmbiScaling : unsigned char {
-    FuMa,
-    SN3D,
-    N3D,
-    UHJ,
-};
-
-uint BytesFromFmt(FmtType type) noexcept;
-uint ChannelsFromFmt(FmtChannels chans, uint ambiorder) noexcept;
-inline uint FrameSizeFromFmt(FmtChannels chans, FmtType type, uint ambiorder) noexcept
-{ return ChannelsFromFmt(chans, ambiorder) * BytesFromFmt(type); }
 
 constexpr bool IsBFormat(FmtChannels chans) noexcept
 { return chans == FmtBFormat2D || chans == FmtBFormat3D; }
@@ -75,11 +32,13 @@ constexpr bool Is2DAmbisonic(FmtChannels chans) noexcept
 }
 
 
-using CallbackType = int(*)(void*, void*, int);
+using CallbackType = int(*)(void*, void*, int) noexcept;
 
 struct BufferStorage {
     CallbackType mCallback{nullptr};
     void *mUserData{nullptr};
+
+    al::span<std::byte> mData;
 
     uint mSampleRate{0u};
     FmtChannels mChannels{FmtMono};
@@ -91,19 +50,20 @@ struct BufferStorage {
     AmbiScaling mAmbiScaling{AmbiScaling::FuMa};
     uint mAmbiOrder{0u};
 
-    inline uint bytesFromFmt() const noexcept { return BytesFromFmt(mType); }
-    inline uint channelsFromFmt() const noexcept
+    [[nodiscard]] auto bytesFromFmt() const noexcept -> uint { return BytesFromFmt(mType); }
+    [[nodiscard]] auto channelsFromFmt() const noexcept -> uint
     { return ChannelsFromFmt(mChannels, mAmbiOrder); }
-    inline uint frameSizeFromFmt() const noexcept { return channelsFromFmt() * bytesFromFmt(); }
+    [[nodiscard]] auto frameSizeFromFmt() const noexcept -> uint
+    { return channelsFromFmt() * bytesFromFmt(); }
 
-    inline uint blockSizeFromFmt() const noexcept
+    [[nodiscard]] auto blockSizeFromFmt() const noexcept -> uint
     {
         if(mType == FmtIMA4) return ((mBlockAlign-1)/2 + 4) * channelsFromFmt();
         if(mType == FmtMSADPCM) return ((mBlockAlign-2)/2 + 7) * channelsFromFmt();
         return frameSizeFromFmt();
     };
 
-    inline bool isBFormat() const noexcept { return IsBFormat(mChannels); }
+    [[nodiscard]] auto isBFormat() const noexcept -> bool { return IsBFormat(mChannels); }
 };
 
 #endif /* CORE_BUFFER_STORAGE_H */

@@ -56,10 +56,10 @@
 #  Sets the default output channel configuration. If left unspecified, one will
 #  try to be detected from the system, with a fallback to stereo. The available
 #  values are: mono, stereo, quad, surround51, surround61, surround71,
-#  surround3d71, ambi1, ambi2, ambi3. Note that the ambi* configurations output
-#  ambisonic channels of the given order (using ACN ordering and SN3D
-#  normalization by default), which need to be decoded to play correctly on
-#  speakers.
+#  surround714, surround3d71, ambi1, ambi2, ambi3. Note that the ambi*
+#  configurations output ambisonic channels of the given order (using ACN
+#  ordering and SN3D normalization by default), which need to be decoded to
+#  play correctly on speakers.
 #channels =
 
 ## sample-type:
@@ -179,7 +179,8 @@
 #  Selects the default resampler used when mixing sources. Valid values are:
 #  point - nearest sample, no interpolation
 #  linear - extrapolates samples using a linear slope between samples
-#  cubic - extrapolates samples using a Catmull-Rom spline
+#  spline - extrapolates samples using a Catmull-Rom spline
+#  gaussian - extrapolates samples using a 4-point Gaussian filter
 #  bsinc12 - extrapolates samples using a band-limited Sinc filter (varying
 #            between 12 and 24 points, with anti-aliasing)
 #  fast_bsinc12 - same as bsinc12, except without interpolation between down-
@@ -188,7 +189,7 @@
 #            between 24 and 48 points, with anti-aliasing)
 #  fast_bsinc24 - same as bsinc24, except without interpolation between down-
 #                 sampling scales
-#resampler = cubic
+#resampler = gaussian
 
 ## rt-prio: (global)
 #  Sets the real-time priority value for the mixing thread. Not all drivers may
@@ -232,14 +233,15 @@
 ## output-limiter:
 #  Applies a gain limiter on the final mixed output. This reduces the volume
 #  when the output samples would otherwise clamp, avoiding excessive clipping
-#  noise.
-#output-limiter = true
+#  noise. On by default for integer sample types, and off by default for
+#  floating-point.
+#output-limiter =
 
 ## dither:
-#  Applies dithering on the final mix, for 8- and 16-bit output by default.
-#  This replaces the distortion created by nearest-value quantization with low-
-#  level whitenoise.
-#dither = true
+#  Applies dithering on the final mix, enabled by default for 8- and 16-bit
+#  output. This replaces the distortion created by nearest-value quantization
+#  with low-level whitenoise.
+#dither =
 
 ## dither-depth:
 #  Quantization bit-depth for dithered output. A value of 0 (or less) will
@@ -343,6 +345,11 @@
 #  docs/ambdec.txt for a description of the file format.
 #surround71 =
 
+## surround714:
+#  Decoder configuration file for 7.1.4 Surround channel output. See
+#  docs/ambdec.txt for a description of the file format.
+#surround714 =
+
 ## surround3d71:
 #  Decoder configuration file for 3D7.1 Surround channel output. See
 #  docs/ambdec.txt for a description of the file format. See also
@@ -401,7 +408,7 @@
 #  Renders samples directly in the real-time processing callback. This allows
 #  for lower latency and less overall CPU utilization, but can increase the
 #  risk of underruns when increasing the amount of work the mixer needs to do.
-#rt-mix = true
+#rt-mix = false
 
 ##
 ## PulseAudio backend stuff
@@ -574,6 +581,19 @@
 ##
 [wasapi]
 
+## spatial-api:
+#  Specifies whether to use a Spatial Audio stream for playback. This may
+#  provide expanded capabilities for surround sound and with-height speaker
+#  configurations. Very experimental.
+#spatial-api = false
+
+## exclusive-mode:
+#  Enables Exlusive mode for playback devices. This uses the device directly,
+#  allowing lower latencies but prevents the device from being used multiple
+#  times simultaneously. Ignores the periods setting when enabled, as WASAPI
+#  automatically sets a buffer size based on the period size.
+#exclusive-mode = false
+
 ## allow-resampler:
 #  Specifies whether to allow an extra resampler pass on the output. Enabling
 #  this will allow the playback device to be set to a different sample rate
@@ -632,11 +652,25 @@
 #  Sets whether to enable EAX extensions or not.
 #enable = true
 
+## trace-commits: (global)
+#  Sets whether log EAX property commits with trace messages. This can
+#  significantly increase the amount of log messages for apps that use EAX.
+#trace-commits = false
+
 ##
 ## Per-game compatibility options (these should only be set in per-game config
 ## files, *NOT* system- or user-level!)
 ##
 [game_compat]
+
+## default-error: (global)
+#  An error value returned by alGetError when there's no current context. The
+#  default value is AL_INVALID_OPERATION, which lets the caller know the
+#  operation could not be executed. Some applications may erroneously call
+#  alGetError without a current context and expect 0 (AL_NO_ERROR), however
+#  that may cause other applications to think earlier AL calls succeeded when
+#  they actually failed.
+#default-error = 0xA004
 
 ## nfc-scale: (global)
 #  A meters-per-unit distance scale applied to NFC filters. If a game doesn't
@@ -645,6 +679,13 @@
 #  value of 0.3048 will correctly adjust the filters. Or if the game uses 1
 #  kilometer per unit, a value of 1000 will correctly adjust the filters.
 #nfc-scale = 1
+
+## enable-sub-data-ext: (global)
+#  Enables the AL_SOFT_buffer_sub_data extension, disabling the
+#  AL_EXT_SOURCE_RADIUS extension. These extensions are incompatible, so only
+#  one can be available. The latter extension is more commonly used, but this
+#  option can be enabled for older apps that want the former extension.
+#enable-sub-data-ext = false
 
 ## reverse-x: (global)
 #  Reverses the local X (left-right) position of 3D sound sources.
@@ -657,3 +698,15 @@
 ## reverse-z: (global)
 #  Reverses the local Z (front-back) position of 3D sound sources.
 #reverse-z = false
+
+## vendor-override:
+#  Overrides the string returned by alGetString(AL_VENDOR).
+#vendor-override =
+
+## version-override:
+#  Overrides the string returned by alGetString(AL_VERSION).
+#version-override =
+
+## renderer-override:
+#  Overrides the string returned by alGetString(AL_RENDERER).
+#renderer-override =

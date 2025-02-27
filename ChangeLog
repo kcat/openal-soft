@@ -1,3 +1,141 @@
+openal-soft-1.24.2:
+
+    Implemented the AL_SOFT_bformat_hoa extension.
+
+    Implemented default device change events for the PulseAudio backend.
+
+    Implemented an option for WASAPI exclusive mode playback.
+
+    Fixed reverb being too quiet for sounds from different directions.
+
+    Fixed compiling with certain versions of Clang.
+
+    Fixed compiling for some older macOS versions.
+
+    Fixed building alffplay on systems without pkg-config.
+
+    Improved output format detection for CoreAudio.
+
+    Changed the default resampler back to Cubic Spline.
+
+    Added an SDL3 playback backend. Disabled by default to avoid a runtime
+    dependency and for compatibility; a single process can't safely use SDL2
+    and SDL3 together on some OSs, so enable with care.
+
+    Converted examples from SDL2 to SDL3.
+
+    Integrated fmtlib into the main library and router for logging and string
+    formatting.
+
+openal-soft-1.24.1:
+
+    Fixed compilation on PowerPC.
+
+    Fixed compilation on some targets that lack lock-free 64-bit atomics.
+
+    Fixed a crash when parsing certain option values.
+
+    Fixed applying noexcept in the public headers with MSVC.
+
+    Fixed building for UWP with vcpkg.
+
+    Improved compatibility when compiling as C++20 or later.
+
+    Integrated fmtlib for some examples and utilities.
+
+openal-soft-1.24.0:
+
+    Updated library codebase to C++17.
+
+    Implemented the ALC_SOFT_system_events extension.
+
+    Implemented the AL_EXT_debug extension.
+
+    Implemented the AL_EXT_direct_context extension.
+
+    Implemented speaker configuration and headphones detection on CoreAudio.
+
+    Fixed a potential crash with some extension functions on 32-bit Windows.
+
+    Fixed a crash that can occur when stopping playback with the Oboe backend.
+
+    Fixed calculating the reverb room rolloff.
+
+    Fixed EAX occlusion, obstruction, and exclusion low-pass filter strength.
+
+    Fixed EAX distance factor calculations.
+
+    Fixed querying AL_EFFECTSLOT_EFFECT on auxiliary effect slots.
+
+    Fixed compilation on some macOS systems that lack libdispatch.
+
+    Fixed compilation as a subproject with MinGW.
+
+    Changed the context error state to be thread-local. This is technically out
+    of spec, but necessary to avoid race conditions with multi-threaded use.
+
+    Split the cubic resampler into 4-point spline and gaussian variants. The
+    latter prioritizing the suppression of aliasing distortion and harmonics,
+    the former not reducing high frequencies as much.
+
+    Improved timing precision of starting delayed sources.
+
+    Improved ring modulator quality.
+
+    Improved performance of convolution reverb.
+
+    Improved WASAPI device enumeration performance.
+
+    Added UWP support.
+
+    Added 'noexcept' to functions and function types when compiled as C++. As a
+    C API, OpenAL can't be expected to throw C++ exceptions, nor can it handle
+    them if they leave a callback.
+
+    Added an experimental config option for using WASAPI spatial audio output.
+
+    Added enumeration support to the PortAudio backend.
+
+    Added compatibility options to override the AL_VENDOR, AL_VERSION, and
+    AL_RENDERER strings.
+
+    Added an example to play LAF files.
+
+    Disabled real-time mixing by default for PipeWire playback.
+
+    Disabled the SndIO backend by default on non-BSD targets.
+
+openal-soft-1.23.1:
+
+    Implemented the AL_SOFT_UHJ_ex extension.
+
+    Implemented the AL_SOFT_buffer_length_query extension.
+
+    Implemented the AL_SOFT_source_start_delay extension.
+
+    Implemented the AL_EXT_STATIC_BUFFER extension.
+
+    Fixed compiling with certain older versions of GCC.
+
+    Fixed compiling as a submodule.
+
+    Fixed compiling with newer versions of Oboe.
+
+    Improved EAX effect version switching.
+
+    Improved the quality of the reverb modulator.
+
+    Improved performance of the cubic resampler.
+
+    Added a compatibility option to restore AL_SOFT_buffer_sub_data. The option
+    disables AL_EXT_SOURCE_RADIUS due to incompatibility.
+
+    Reduced CPU usage when EAX is initialized and FXSlot0 or FXSlot1 are not
+    used.
+
+    Reduced memory usage for ADPCM buffer formats. They're no longer converted
+    to 16-bit samples on load.
+
 openal-soft-1.23.0:
 
     Fixed CoreAudio capture support.

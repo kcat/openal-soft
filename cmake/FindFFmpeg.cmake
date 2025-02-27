@@ -80,8 +80,37 @@ macro(find_component _component _pkgconfig _library _header)
             ${PC_LIB${_component}_LIBRARY_DIRS}
     )
 
-    set(${_component}_VERSION     ${PC_${_component}_VERSION}      CACHE STRING "The ${_component} version number." FORCE)
-    set(${_component}_DEFINITIONS ${PC_${_component}_CFLAGS_OTHER} CACHE STRING "The ${_component} CFLAGS." FORCE)
+    if(DEFINED ${PC_${_component}_VERSION})
+        set(${_component}_VERSION ${PC_${_component}_VERSION} CACHE STRING
+            "The ${_component} version number." FORCE)
+    elseif(EXISTS "${${_component}_INCLUDE_DIRS}/${_pkgconfig}/version.h")
+        if(EXISTS "${${_component}_INCLUDE_DIRS}/${_pkgconfig}/version_major.h")
+            file(STRINGS "${${_component}_INCLUDE_DIRS}/${_pkgconfig}/version_major.h" majorver
+                REGEX "^#define[ \t]+LIB${_component}_VERSION_MAJOR[ \t]+[0-9]+$")
+        else()
+            file(STRINGS "${${_component}_INCLUDE_DIRS}/${_pkgconfig}/version.h" majorver
+                REGEX "^#define[ \t]+LIB${_component}_VERSION_MAJOR[ \t]+[0-9]+$")
+        endif()
+        file(STRINGS "${${_component}_INCLUDE_DIRS}/${_pkgconfig}/version.h" minorver
+            REGEX "^#define[ \t]+LIB${_component}_VERSION_MINOR[ \t]+[0-9]+$")
+        file(STRINGS "${${_component}_INCLUDE_DIRS}/${_pkgconfig}/version.h" microver
+            REGEX "^#define[ \t]+LIB${_component}_VERSION_MICRO[ \t]+[0-9]+$")
+
+        string(REGEX REPLACE "^#define[ \t]+LIB${_component}_VERSION_MAJOR[ \t]+([0-9]+)$" "\\1"
+            majorver "${majorver}")
+        string(REGEX REPLACE "^#define[ \t]+LIB${_component}_VERSION_MINOR[ \t]+([0-9]+)$" "\\1"
+            minorver "${minorver}")
+        string(REGEX REPLACE "^#define[ \t]+LIB${_component}_VERSION_MICRO[ \t]+([0-9]+)$" "\\1"
+            microver "${microver}")
+
+        set(${_component}_VERSION "${majorver}.${minorver}.${microver}" CACHE STRING
+            "The ${_component} version number." FORCE)
+        unset(microver)
+        unset(minorver)
+        unset(majorver)
+    endif()
+    set(${_component}_DEFINITIONS ${PC_${_component}_CFLAGS_OTHER} CACHE STRING
+        "The ${_component} CFLAGS." FORCE)
 
     set_component_found(${_component})
 

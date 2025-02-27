@@ -2,17 +2,25 @@
 #define CORE_HELPERS_H
 
 #include <string>
+#include <string_view>
+#include <vector>
 
-#include "vector.h"
 
+struct PathNamePair {
+    std::string path, fname;
+};
+const PathNamePair &GetProcBinary();
 
-struct PathNamePair { std::string path, fname; };
-const PathNamePair &GetProcBinary(void);
+/* Mixing thread priority level */
+inline int RTPrioLevel{1};
 
-extern int RTPrioLevel;
-extern bool AllowRTTimeLimit;
-void SetRTPriority(void);
+/* Allow reducing the process's RTTime limit for RTKit. */
+inline bool AllowRTTimeLimit{true};
 
-al::vector<std::string> SearchDataFiles(const char *match, const char *subdir);
+void SetRTPriority();
+
+auto SearchDataFiles(const std::string_view ext) -> std::vector<std::string>;
+auto SearchDataFiles(const std::string_view ext, const std::string_view subdir)
+    -> std::vector<std::string>;
 
 #endif /* CORE_HELPERS_H */

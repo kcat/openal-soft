@@ -5,8 +5,8 @@
  * Note that the padding is symmetric (half at the beginning and half at the
  * end)!
  */
-constexpr int MaxResamplerPadding{48};
+constexpr unsigned int MaxResamplerPadding{48};
 
-constexpr int MaxResamplerEdge{MaxResamplerPadding >> 1};
+constexpr unsigned int MaxResamplerEdge{MaxResamplerPadding >> 1};
 
 #endif /* CORE_RESAMPLER_LIMITS_H */

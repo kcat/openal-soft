@@ -50,6 +50,10 @@ easier to track the cause.
 ALSOFT_TRAP_ERROR
 Set to "true" or "1" to force trapping both ALC and AL errors.
 
+ALSOFT_EAX_TRACE_COMMITS
+Overrides the EAX trace-commits config option. This specifies whether EAX
+property commits are logged with trace messages.
+
 *** Compatibility ***
 
 __ALSOFT_HALF_ANGLE_CONES
@@ -57,6 +61,12 @@ Older versions of OpenAL Soft incorrectly calculated the cone angles to range
 between 0 and 180 degrees, instead of the expected range of 0 to 360 degrees.
 Setting this to "true" or "1" restores the old buggy behavior, for apps that
 were written to expect the incorrect range.
+
+__ALSOFT_ENABLE_SUB_DATA_EXT
+The more widely used AL_EXT_SOURCE_RADIUS extension is incompatible with the
+now-defunct AL_SOFT_buffer_sub_data extension. Setting this to "true" or "1"
+restores the AL_SOFT_buffer_sub_data extension for apps that require it,
+disabling AL_EXT_SOURCE_RADIUS.
 
 __ALSOFT_REVERSE_Z
 Applications that don't natively use OpenAL's coordinate system have to convert
@@ -71,6 +81,27 @@ Same as for __ALSOFT_REVERSE_Z, but for Y (up/down) panning.
 
 __ALSOFT_REVERSE_X
 Same as for __ALSOFT_REVERSE_Z, but for X (left/right) panning.
+
+__ALSOFT_VENDOR_OVERRIDE
+Overrides the value returned by alGetString(AL_VENDOR), for apps that misbehave
+without particular values.
+
+__ALSOFT_VERSION_OVERRIDE
+Overrides the value returned by alGetString(AL_VERSION), for apps that
+misbehave without particular values.
+
+__ALSOFT_RENDERER_OVERRIDE
+Overrides the value returned by alGetString(AL_RENDERER), for apps that
+misbehave without particular values.
+
+__ALSOFT_DEFAULT_ERROR
+Applications that erroneously call alGetError prior to setting a context as
+current may not like that OpenAL Soft returns 0xA004 (AL_INVALID_OPERATION),
+indicating that the call could not be executed as there's no context to get the
+error value from. This can be set to 0 (AL_NO_ERROR) to let such apps pass the
+check despite the problem. Other applications, however, may see AL_NO_ERROR
+returned and assume any previous AL calls succeeded when they actually failed,
+so this should only be set when necessary.
 
 __ALSOFT_SUSPEND_CONTEXT
 Due to the OpenAL spec not being very clear about them, behavior of the

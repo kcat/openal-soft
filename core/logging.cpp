@@ -3,13 +3,18 @@
 
 #include "logging.h"
 
+#include <cctype>
 #include <cstdarg>
 #include <cstdio>
+#include <cstring>
+#include <mutex>
+#include <optional>
 #include <string>
+#include <string_view>
+#include <utility>
 
-#include "alspan.h"
+#include "alstring.h"
 #include "strutils.h"
-#include "vector.h"
 
 
 #if defined(_WIN32)
@@ -19,48 +24,77 @@
 #include <android/log.h>
 #endif
 
-void al_print(LogLevel level, FILE *logfile, const char *fmt, ...)
+
+FILE *gLogFile{stderr};
+#ifdef _DEBUG
+LogLevel gLogLevel{LogLevel::Warning};
+#else
+LogLevel gLogLevel{LogLevel::Error};
+#endif
+
+
+namespace {
+
+using namespace std::string_view_literals;
+
+enum class LogState : uint8_t {
+    FirstRun,
+    Ready,
+    Disable
+};
+
+std::mutex LogCallbackMutex;
+LogState gLogState{LogState::FirstRun};
+
+LogCallbackFunc gLogCallback{};
+void *gLogCallbackPtr{};
+
+constexpr auto GetLevelCode(LogLevel level) noexcept -> std::optional<char>
 {
-    /* Kind of ugly since string literals are const char arrays with a size
-     * that includes the null terminator, which we want to exclude from the
-     * span.
-     */
-    auto prefix = al::as_span("[ALSOFT] (--) ").first<14>();
     switch(level)
     {
     case LogLevel::Disable: break;
-    case LogLevel::Error: prefix = al::as_span("[ALSOFT] (EE) ").first<14>(); break;
-    case LogLevel::Warning: prefix = al::as_span("[ALSOFT] (WW) ").first<14>(); break;
-    case LogLevel::Trace: prefix = al::as_span("[ALSOFT] (II) ").first<14>(); break;
+    case LogLevel::Error: return 'E';
+    case LogLevel::Warning: return 'W';
+    case LogLevel::Trace: return 'I';
     }
+    return std::nullopt;
+}
 
-    al::vector<char> dynmsg;
-    std::array<char,256> stcmsg{};
+} // namespace
 
-    char *str{stcmsg.data()};
-    auto prefend1 = std::copy_n(prefix.begin(), prefix.size(), stcmsg.begin());
-    al::span<char> msg{prefend1, stcmsg.end()};
-
-    std::va_list args, args2;
-    va_start(args, fmt);
-    va_copy(args2, args);
-    const int msglen{std::vsnprintf(msg.data(), msg.size(), fmt, args)};
-    if(msglen >= 0 && static_cast<size_t>(msglen) >= msg.size()) UNLIKELY
+void al_set_log_callback(LogCallbackFunc callback, void *userptr)
+{
+    auto cblock = std::lock_guard{LogCallbackMutex};
+    gLogCallback = callback;
+    gLogCallbackPtr = callback ? userptr : nullptr;
+    if(gLogState == LogState::FirstRun)
     {
-        dynmsg.resize(static_cast<size_t>(msglen)+prefix.size() + 1u);
-
-        str = dynmsg.data();
-        auto prefend2 = std::copy_n(prefix.begin(), prefix.size(), dynmsg.begin());
-        msg = {prefend2, dynmsg.end()};
-
-        std::vsnprintf(msg.data(), msg.size(), fmt, args2);
+        auto extlogopt = al::getenv("ALSOFT_DISABLE_LOG_CALLBACK");
+        if(!extlogopt || *extlogopt != "1")
+            gLogState = LogState::Ready;
+        else
+            gLogState = LogState::Disable;
     }
-    va_end(args2);
-    va_end(args);
+}
+
+void al_print_impl(LogLevel level, const fmt::string_view fmt, fmt::format_args args)
+{
+    const auto msg = fmt::vformat(fmt, std::move(args));
+
+    auto prefix = "[ALSOFT] (--) "sv;
+    switch(level)
+    {
+    case LogLevel::Disable: break;
+    case LogLevel::Error: prefix = "[ALSOFT] (EE) "sv; break;
+    case LogLevel::Warning: prefix = "[ALSOFT] (WW) "sv; break;
+    case LogLevel::Trace: prefix = "[ALSOFT] (II) "sv; break;
+    }
 
     if(gLogLevel >= level)
     {
-        fputs(str, logfile);
+        auto logfile = gLogFile;
+        fmt::println(logfile, "{}{}", prefix, msg);
         fflush(logfile);
     }
 #if defined(_WIN32) && !defined(NDEBUG)
@@ -68,8 +102,7 @@ void al_print(LogLevel level, FILE *logfile, const char *fmt, ...)
      * informational, warning, or error debug messages. So only print them for
      * non-Release builds.
      */
-    std::wstring wstr{utf8_to_wstr(str)};
-    OutputDebugStringW(wstr.c_str());
+    OutputDebugStringW(utf8_to_wstr(fmt::format("{}{}\n", prefix, msg)).c_str());
 #elif defined(__ANDROID__)
     auto android_severity = [](LogLevel l) noexcept
     {
@@ -84,6 +117,20 @@ void al_print(LogLevel level, FILE *logfile, const char *fmt, ...)
         }
         return ANDROID_LOG_ERROR;
     };
-    __android_log_print(android_severity(level), "openal", "%s", str);
+    /* NOLINTNEXTLINE(cppcoreguidelines-pro-type-vararg) */
+    __android_log_print(android_severity(level), "openal", "%.*s%s", al::sizei(prefix),
+        prefix.data(), msg.c_str());
 #endif
+
+    auto cblock = std::lock_guard{LogCallbackMutex};
+    if(gLogState != LogState::Disable)
+    {
+        if(auto logcode = GetLevelCode(level))
+        {
+            if(gLogCallback)
+                gLogCallback(gLogCallbackPtr, *logcode, msg.data(), al::sizei(msg));
+            else if(gLogState == LogState::FirstRun)
+                gLogState = LogState::Disable;
+        }
+    }
 }

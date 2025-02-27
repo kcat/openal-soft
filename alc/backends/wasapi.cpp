@@ -545,12 +545,19 @@ struct DeviceEnumHelper final : private IMMNotificationClient {
     }
 #else
     /** ----------------------- IMMNotificationClient ------------ */
-    STDMETHODIMP OnDeviceStateChanged(LPCWSTR /*pwstrDeviceId*/, DWORD /*dwNewState*/) noexcept override { return S_OK; }
-
-    STDMETHODIMP OnDeviceAdded(LPCWSTR pwstrDeviceId) noexcept override
+    STDMETHODIMP OnDeviceStateChanged(LPCWSTR deviceId, DWORD newState) noexcept override
     {
+        TRACE("OnDeviceStateChanged({}, {})", deviceId ? wstr_to_utf8(deviceId)
+            : std::string{"<null>"}, newState);
+        return S_OK;
+    }
+
+    STDMETHODIMP OnDeviceAdded(LPCWSTR deviceId) noexcept override
+    {
+        TRACE("OnDeviceAdded({})", deviceId ? wstr_to_utf8(deviceId) : std::string{"<null>"});
+
         ComPtr<IMMDevice> device;
-        HRESULT hr{mEnumerator->GetDevice(pwstrDeviceId, al::out_ptr(device))};
+        HRESULT hr{mEnumerator->GetDevice(deviceId, al::out_ptr(device))};
         if(FAILED(hr))
         {
             ERR("Failed to get device: {:#x}", as_unsigned(hr));
@@ -576,7 +583,7 @@ struct DeviceEnumHelper final : private IMMNotificationClient {
         auto devlock = DeviceListLock{gDeviceList};
         auto &list = (flowdir==eRender) ? devlock.getPlaybackList() : devlock.getCaptureList();
 
-        if(AddDevice(device, pwstrDeviceId, list))
+        if(AddDevice(device, deviceId, list))
         {
             const auto devtype = (flowdir==eRender) ? alc::DeviceType::Playback
                 : alc::DeviceType::Capture;
@@ -587,8 +594,10 @@ struct DeviceEnumHelper final : private IMMNotificationClient {
         return S_OK;
     }
 
-    STDMETHODIMP OnDeviceRemoved(LPCWSTR pwstrDeviceId) noexcept override
+    STDMETHODIMP OnDeviceRemoved(LPCWSTR deviceId) noexcept override
     {
+        TRACE("OnDeviceRemoved({})", deviceId ? wstr_to_utf8(deviceId) : std::string{"<null>"});
+
         auto devlock = DeviceListLock{gDeviceList};
         for(auto flowdir : std::array{eRender, eCapture})
         {
@@ -597,8 +606,7 @@ struct DeviceEnumHelper final : private IMMNotificationClient {
 
             /* Find the ID in the list to remove. */
             auto iter = std::find_if(list.begin(), list.end(),
-                [pwstrDeviceId](const DevMap &entry) noexcept
-                { return pwstrDeviceId == entry.devid; });
+                [deviceId](const DevMap &entry) noexcept { return deviceId == entry.devid; });
             if(iter == list.end()) continue;
 
             TRACE("Removing device \"{}\", \"{}\", \"{}\"", iter->name, iter->endpoint_guid,
@@ -615,13 +623,17 @@ struct DeviceEnumHelper final : private IMMNotificationClient {
     /* NOLINTNEXTLINE(clazy-function-args-by-ref) */
     STDMETHODIMP OnPropertyValueChanged(LPCWSTR /*pwstrDeviceId*/, const PROPERTYKEY /*key*/) noexcept override { return S_OK; }
 
-    STDMETHODIMP OnDefaultDeviceChanged(EDataFlow flow, ERole role, LPCWSTR pwstrDefaultDeviceId) noexcept override
+    STDMETHODIMP OnDefaultDeviceChanged(EDataFlow flow, ERole role, LPCWSTR defaultDeviceId) noexcept override
     {
+        TRACE("OnDefaultDeviceChanged({}, {}, {})", al::to_underlying(flow),
+            al::to_underlying(role), defaultDeviceId ? wstr_to_utf8(defaultDeviceId)
+            : std::string{"<null>"});
+
         if(role != eMultimedia)
             return S_OK;
 
-        const std::wstring_view devid{pwstrDefaultDeviceId ? pwstrDefaultDeviceId
-            : std::wstring_view{}};
+        const auto devid = defaultDeviceId ? std::wstring_view{defaultDeviceId}
+            : std::wstring_view{};
         if(flow == eRender)
         {
             DeviceListLock{gDeviceList}.setPlaybackDefaultId(devid);

@@ -187,12 +187,13 @@ using SwsContextPtr = std::unique_ptr<SwsContext,SwsContextDeleter>;
 struct SDLProps {
     SDL_PropertiesID mProperties{};
 
-    SDLProps() { mProperties = SDL_CreateProperties(); }
+    SDLProps() : mProperties{SDL_CreateProperties()} { }
     ~SDLProps() { SDL_DestroyProperties(mProperties); }
 
     SDLProps(const SDLProps&) = delete;
     auto operator=(const SDLProps&) -> SDLProps& = delete;
 
+    [[nodiscard]]
     auto getid() const noexcept -> SDL_PropertiesID { return mProperties; }
 
     auto setPointer(const char *name, void *value) const

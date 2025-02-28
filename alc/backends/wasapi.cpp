@@ -1432,9 +1432,8 @@ FORCE_ALIGN void WasapiPlayback::mixerProc(SpatialDevice &audio)
                     auto id = decltype(flags){1} << al::countr_zero(flags);
                     flags &= ~id;
 
-                    channels.emplace_back();
                     audio.mRender->ActivateSpatialAudioObject(static_cast<AudioObjectType>(id),
-                        al::out_ptr(channels.back()));
+                        al::out_ptr(channels.emplace_back()));
                 }
                 buffers.resize(channels.size());
                 if(mResampler)

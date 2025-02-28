@@ -726,6 +726,16 @@ private:
             return S_OK;
         }
 
+        auto state = DWORD{};
+        hr = device->GetState(&state);
+        if(FAILED(hr))
+        {
+            ERR("Failed to get device state: {:#x}", as_unsigned(hr));
+            return S_OK;
+        }
+        if(!(state&DEVICE_STATE_ACTIVE))
+            return S_OK;
+
         auto endpoint = ComPtr<IMMEndpoint>{};
         hr = device->QueryInterface(__uuidof(IMMEndpoint), al::out_ptr(endpoint));
         if(FAILED(hr))

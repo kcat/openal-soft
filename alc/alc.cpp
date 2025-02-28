@@ -2140,10 +2140,10 @@ ALC_API auto ALC_APIENTRY alcGetString(ALCdevice *Device, ALCenum param) noexcep
             ProbeAllDevicesList();
 
         /* Copy first entry as default. */
-        if(alcAllDevicesArray.empty())
-            return GetDefaultName();
-
-        alcDefaultAllDevicesSpecifier = alcAllDevicesArray.front();
+        if(!alcAllDevicesArray.empty())
+            alcDefaultAllDevicesSpecifier = alcAllDevicesArray.front();
+        else
+            alcDefaultAllDevicesSpecifier.clear();
         return alcDefaultAllDevicesSpecifier.c_str();
 
     case ALC_CAPTURE_DEFAULT_DEVICE_SPECIFIER:
@@ -2151,10 +2151,10 @@ ALC_API auto ALC_APIENTRY alcGetString(ALCdevice *Device, ALCenum param) noexcep
             ProbeCaptureDeviceList();
 
         /* Copy first entry as default. */
-        if(alcCaptureDeviceArray.empty())
-            return GetDefaultName();
-
-        alcCaptureDefaultDeviceSpecifier = alcCaptureDeviceArray.front();
+        if(!alcCaptureDeviceArray.empty())
+            alcCaptureDefaultDeviceSpecifier = alcCaptureDeviceArray.front();
+        else
+            alcCaptureDefaultDeviceSpecifier.clear();
         return alcCaptureDefaultDeviceSpecifier.c_str();
 
     case ALC_EXTENSIONS:

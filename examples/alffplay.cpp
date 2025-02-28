@@ -1762,12 +1762,9 @@ void VideoState::updateVideo(SDL_Window *screen, SDL_Renderer *renderer, bool re
                 else
                 {
                     /* Formats passing through mSwscaleCtx are converted to
-                     * 24-bit RGB (3bpp).
+                     * 24-bit RGB, which is interleaved/non-planar.
                      */
-                    const auto framesize = static_cast<size_t>(frame->width)
-                        * static_cast<size_t>(frame->height);
-                    const auto pixelspan = al::span{static_cast<uint8_t*>(pixels), framesize*3};
-                    const auto pict_data = std::array{al::to_address(pixelspan.begin())};
+                    const auto pict_data = std::array{static_cast<uint8_t*>(pixels)};
                     const auto pict_linesize = std::array{pitch};
 
                     sws_scale(mSwscaleCtx.get(), std::data(frame->data),

@@ -1678,7 +1678,7 @@ auto WasapiPlayback::openProxy(const std::string_view name, DeviceHelper &helper
 
     if(HRESULT hr{helper.openDevice(devid, eRender, mmdev)}; FAILED(hr))
     {
-        WARN("Failed to open device \"{}\": {}", devname.empty()
+        WARN("Failed to open device \"{}\": {:#x}", devname.empty()
             ? "(default)"sv : std::string_view{devname}, as_unsigned(hr));
         return hr;
     }
@@ -2707,8 +2707,8 @@ auto WasapiCapture::openProxy(const std::string_view name, DeviceHelper &helper,
     auto hr = helper.openDevice(devid, eCapture, mmdev);
     if(FAILED(hr))
     {
-        WARN("Failed to open device \"{}\"", devname.empty()
-            ? "(default)"sv : std::string_view{devname});
+        WARN("Failed to open device \"{}\": {:#x}", devname.empty()
+            ? "(default)"sv : std::string_view{devname}, as_unsigned(hr));
         return hr;
     }
     if(!devname.empty())

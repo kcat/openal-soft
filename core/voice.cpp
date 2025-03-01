@@ -276,18 +276,17 @@ inline void LoadSamples(const al::span<float> dstSamples, const al::span<const s
 {
     using TypeTraits = al::FmtTypeTraits<Type>;
     using SampleType = typename TypeTraits::Type;
-    static constexpr size_t sampleSize{sizeof(SampleType)};
     assert(srcChan < srcStep);
     auto converter = TypeTraits{};
 
     al::span<const SampleType> src{reinterpret_cast<const SampleType*>(srcData.data()),
-        srcData.size()/sampleSize};
-    auto ssrc = src.cbegin() + ptrdiff_t(srcOffset*srcStep);
-    std::generate(dstSamples.begin(), dstSamples.end(), [&ssrc,srcChan,srcStep,converter]
+        srcData.size()/sizeof(SampleType)};
+    auto ssrc = src.cbegin() + ptrdiff_t(srcOffset*srcStep + srcChan);
+    dstSamples.front() = converter(*ssrc);
+    std::generate(dstSamples.begin()+1, dstSamples.end(), [&ssrc,srcStep,converter]
     {
-        auto ret = converter(ssrc[srcChan]);
         ssrc += ptrdiff_t(srcStep);
-        return ret;
+        return converter(*ssrc);
     });
 }
 

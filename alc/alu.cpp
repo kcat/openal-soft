@@ -2146,23 +2146,26 @@ void Write(const al::span<const FloatBufferLine> InBuffer, void *OutBuffer, cons
     /* Some Clang versions don't like calling subspan on an rvalue here. */
     const auto output_ = al::span{static_cast<T*>(OutBuffer), (Offset+SamplesToDo)*FrameStep};
     const auto output = output_.subspan(Offset*FrameStep);
-    size_t c{0};
-    for(const FloatBufferLine &inbuf : InBuffer)
+
+    /* If there's extra channels in the interleaved output buffer to skip,
+     * clear the whole output buffer. This is simpler to ensure the extra
+     * channels are silent than trying to clear just the extra channels.
+     */
+    if(FrameStep > InBuffer.size())
+        std::fill(output.begin(), output.end(), SampleConv<T>(0.0f));
+
+    auto outbase = output.begin();
+    for(const auto &srcbuf : InBuffer)
     {
-        auto out = output.begin();
-        auto conv_sample = [FrameStep,c,&out](const float s) noexcept
+        const auto src = al::span{srcbuf}.first(SamplesToDo);
+        auto out = outbase++;
+
+        *out = SampleConv<T>(src.front());
+        std::for_each(src.begin()+1, src.end(), [FrameStep,&out](const float s) noexcept
         {
-            out[c] = SampleConv<T>(s);
             out += ptrdiff_t(FrameStep);
-        };
-        std::for_each_n(inbuf.cbegin(), SamplesToDo, conv_sample);
-        ++c;
-    }
-    if(const size_t extra{FrameStep - c})
-    {
-        const auto silence = SampleConv<T>(0.0f);
-        for(size_t i{0};i < SamplesToDo;++i)
-            std::fill_n(&output[i*FrameStep + c], extra, silence);
+            *out = SampleConv<T>(s);
+        });
     }
 }
 
@@ -2179,7 +2182,7 @@ void Write(const al::span<const FloatBufferLine> InBuffer, al::span<void*> OutBu
         /* Some Clang versions don't like calling subspan on an rvalue here. */
         const auto dst_ = al::span{static_cast<T*>(dstbuf), Offset+SamplesToDo};
         const auto dst = dst_.subspan(Offset);
-        std::transform(src.cbegin(), src.end(), dst.begin(), SampleConv<T>);
+        std::transform(src.begin(), src.end(), dst.begin(), SampleConv<T>);
         ++srcbuf;
     }
 }

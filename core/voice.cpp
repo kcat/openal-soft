@@ -205,7 +205,7 @@ constexpr std::array<int,16> IMA4Codeword{{
 }};
 
 /* IMA4 ADPCM Step index adjust decode table */
-constexpr std::array<int,16>IMA4Index_adjust{{
+constexpr std::array<int,16> IMA4Index_adjust{{
    -1,-1,-1,-1, 2, 4, 6, 8,
    -1,-1,-1,-1, 2, 4, 6, 8
 }};
@@ -311,71 +311,72 @@ inline void LoadSamples<FmtIMA4>(al::span<float> dstSamples, al::span<const std:
     auto dst = dstSamples.begin();
     while(dst != dstSamples.end())
     {
-        /* Each IMA4 block starts with a signed 16-bit sample, and a signed
+        /* Each IMA4 block starts with a signed 16-bit sample, and a signed(?)
          * 16-bit table index. The table index needs to be clamped.
          */
-        int sample{int(src[srcChan*4 + 0]) | (int(src[srcChan*4 + 1]) << 8)};
-        int index{int(src[srcChan*4 + 2]) | (int(src[srcChan*4 + 3]) << 8)};
-        auto nibbleData = src.subspan((srcStep+srcChan)*4);
+        auto prevSample = int(src[srcChan*4 + 0]) | (int(src[srcChan*4 + 1]) << 8);
+        auto prevIndex = int(src[srcChan*4 + 2]) | (int(src[srcChan*4 + 3]) << 8);
+        const auto nibbleData = src.subspan((srcStep+srcChan)*4);
         src = src.subspan(blockBytes);
 
-        sample = (sample^0x8000) - 32768;
-        index = std::clamp((index^0x8000) - 32768, 0, MaxStepIndex);
+        /* Sign-extend the 16-bit sample and index values. */
+        prevSample = (prevSample^0x8000) - 32768;
+        prevIndex = std::clamp((prevIndex^0x8000) - 32768, 0, MaxStepIndex);
 
         if(skip == 0)
         {
-            *dst = static_cast<float>(sample) / 32768.0f;
+            *dst = static_cast<float>(prevSample) / 32768.0f;
             if(++dst == dstSamples.end()) return;
         }
         else
             --skip;
 
-        auto decode_sample = [&sample,&index](const uint8_t nibble)
-        {
-            sample += IMA4Codeword[nibble] * IMAStep_size[static_cast<uint>(index)] / 8;
-            sample = std::clamp(sample, -32768, 32767);
-
-            index += IMA4Index_adjust[nibble];
-            index = std::clamp(index, 0, MaxStepIndex);
-
-            return sample;
-        };
-
         /* The rest of the block is arranged as a series of nibbles, contained
          * in 4 *bytes* per channel interleaved. So every 8 nibbles we need to
          * skip 4 bytes per channel to get the next nibbles for this channel.
-         *
-         * First, decode the samples that we need to skip in the block (will
+         */
+        auto decode_nibble = [&prevSample,&prevIndex,srcStep,nibbleData](const size_t nibbleOffset)
+            noexcept -> int
+        {
+            static constexpr auto NibbleMask = std::byte{0xf};
+            const auto byteShift = (nibbleOffset&1) * 4;
+            const auto wordOffset = (nibbleOffset>>1) & ~3_uz;
+            const auto byteOffset = wordOffset*srcStep + ((nibbleOffset>>1)&3);
+
+            const auto nibble = al::to_underlying((nibbleData[byteOffset]>>byteShift)&NibbleMask);
+
+            prevSample += IMA4Codeword[nibble] * IMAStep_size[static_cast<uint>(prevIndex)] / 8;
+            prevSample = std::clamp(prevSample, -32768, 32767);
+
+            prevIndex += IMA4Index_adjust[nibble];
+            prevIndex = std::clamp(prevIndex, 0, MaxStepIndex);
+
+            return prevSample;
+        };
+
+        /* First, decode the samples that we need to skip in the block (will
          * always be less than the block size). They need to be decoded despite
          * being ignored for proper state on the remaining samples.
          */
-        static constexpr auto NibbleMask = std::byte{0xf};
         size_t nibbleOffset{0};
         const size_t startOffset{skip + 1};
         for(;skip;--skip)
         {
-            const size_t byteShift{(nibbleOffset&1) * 4};
-            const size_t wordOffset{(nibbleOffset>>1) & ~3_uz};
-            const size_t byteOffset{wordOffset*srcStep + ((nibbleOffset>>1)&3u)};
+            std::ignore = decode_nibble(nibbleOffset);
             ++nibbleOffset;
-
-            const auto nval = (nibbleData[byteOffset]>>byteShift) & NibbleMask;
-            std::ignore = decode_sample(al::to_underlying(nval));
         }
 
         /* Second, decode the rest of the block and write to the output, until
          * the end of the block or the end of output.
          */
-        const size_t todo{std::min(samplesPerBlock-startOffset, size_t(dstSamples.end()-dst))};
+        const auto todo = std::min(samplesPerBlock - startOffset,
+            size_t(std::distance(dst, dstSamples.end())));
         dst = std::generate_n(dst, todo, [&]
         {
-            const size_t byteShift{(nibbleOffset&1) * 4};
-            const size_t wordOffset{(nibbleOffset>>1) & ~3_uz};
-            const size_t byteOffset{wordOffset*srcStep + ((nibbleOffset>>1)&3u)};
+            const auto sample = decode_nibble(nibbleOffset);
             ++nibbleOffset;
 
-            const auto nval = (nibbleData[byteOffset]>>byteShift) & NibbleMask;
-            return static_cast<float>(decode_sample(al::to_underlying(nval))) / 32768.0f;
+            return static_cast<float>(sample) / 32768.0f;
         });
     }
 }
@@ -398,21 +399,22 @@ inline void LoadSamples<FmtMSADPCM>(al::span<float> dstSamples, al::span<const s
     {
         /* Each MS ADPCM block starts with an 8-bit block predictor, used to
          * dictate how the two sample history values are mixed with the decoded
-         * sample, and an initial signed 16-bit delta value which scales the
+         * sample, and an initial signed 16-bit scaling value which scales the
          * nibble sample value. This is followed by the two initial 16-bit
          * sample history values.
          */
-        const uint8_t blockpred{std::min(uint8_t(src[srcChan]), uint8_t{6})};
-        int delta{int(src[srcStep + 2*srcChan + 0]) | (int(src[srcStep + 2*srcChan + 1]) << 8)};
+        const auto blockpred = std::min(uint8_t(src[srcChan]),
+            uint8_t{MSADPCMAdaptionCoeff.size()-1});
+        auto scale = int(src[srcStep + 2*srcChan + 0]) | (int(src[srcStep + 2*srcChan + 1]) << 8);
 
         auto sampleHistory = std::array{
             int(src[3*srcStep + 2*srcChan + 0]) | (int(src[3*srcStep + 2*srcChan + 1])<<8),
             int(src[5*srcStep + 2*srcChan + 0]) | (int(src[5*srcStep + 2*srcChan + 1])<<8)};
-        const auto input = src.subspan(7*srcStep);
+        const auto nibbleData = src.subspan(7*srcStep);
         src = src.subspan(blockBytes);
 
         const auto coeffs = al::span{MSADPCMAdaptionCoeff[blockpred]};
-        delta = (delta^0x8000) - 32768;
+        scale = (scale^0x8000) - 32768;
         sampleHistory[0] = (sampleHistory[0]^0x8000) - 32768;
         sampleHistory[1] = (sampleHistory[1]^0x8000) - 32768;
 
@@ -435,49 +437,51 @@ inline void LoadSamples<FmtMSADPCM>(al::span<float> dstSamples, al::span<const s
         else
             skip -= 2;
 
-        auto decode_sample = [&sampleHistory,&delta,coeffs](const uint8_t nibble)
+        /* The rest of the block is a series of nibbles, interleaved per-
+         * channel.
+         */
+        auto decode_nibble = [&sampleHistory,&scale,coeffs,nibbleData](const size_t nibbleOffset)
+            noexcept -> int
         {
-            int pred{(sampleHistory[0]*coeffs[0] + sampleHistory[1]*coeffs[1]) / 256};
-            pred += ((nibble^0x08) - 0x08) * delta;
-            pred  = std::clamp(pred, -32768, 32767);
+            static constexpr auto NibbleMask = std::byte{0xf};
+            const auto byteOffset = nibbleOffset>>1;
+            const auto byteShift = ((nibbleOffset&1)^1) * 4;
+
+            const auto nibble = al::to_underlying((nibbleData[byteOffset]>>byteShift)&NibbleMask);
+
+            const auto pred = ((nibble^0x08) - 0x08) * scale;
+            const auto diff = (sampleHistory[0]*coeffs[0] + sampleHistory[1]*coeffs[1]) / 256;
+            const auto sample = std::clamp(pred + diff, -32768, 32767);
 
             sampleHistory[1] = sampleHistory[0];
-            sampleHistory[0] = pred;
+            sampleHistory[0] = sample;
 
-            delta = (MSADPCMAdaption[nibble] * delta) / 256;
-            delta = std::max(16, delta);
+            scale = MSADPCMAdaption[nibble] * scale / 256;
+            scale = std::max(16, scale);
 
-            return pred;
+            return sample;
         };
 
-        /* The rest of the block is a series of nibbles, interleaved per-
-         * channel. First, skip samples.
-         */
-        static constexpr auto NibbleMask = std::byte{0xf};
+        /* First, skip samples. */
         const size_t startOffset{skip + 2};
         size_t nibbleOffset{srcChan};
         for(;skip;--skip)
         {
-            const size_t byteOffset{nibbleOffset>>1};
-            const size_t byteShift{((nibbleOffset&1)^1) * 4};
+            std::ignore = decode_nibble(nibbleOffset);
             nibbleOffset += srcStep;
-
-            const auto nval = (input[byteOffset]>>byteShift) & NibbleMask;
-            std::ignore = decode_sample(al::to_underlying(nval));
         }
 
         /* Now decode the rest of the block, until the end of the block or the
          * dst buffer is filled.
          */
-        const size_t todo{std::min(samplesPerBlock-startOffset, size_t(dstSamples.end()-dst))};
+        const auto todo = std::min(samplesPerBlock - startOffset,
+            size_t(std::distance(dst, dstSamples.end())));
         dst = std::generate_n(dst, todo, [&]
         {
-            const size_t byteOffset{nibbleOffset>>1};
-            const size_t byteShift{((nibbleOffset&1)^1) * 4};
+            const auto sample = decode_nibble(nibbleOffset);
             nibbleOffset += srcStep;
 
-            const auto nval = (input[byteOffset]>>byteShift) & NibbleMask;
-            return static_cast<float>(decode_sample(al::to_underlying(nval))) / 32768.0f;
+            return static_cast<float>(sample) / 32768.0f;
         });
     }
 }

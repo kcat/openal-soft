@@ -571,7 +571,7 @@ FORCE_ALIGN const ALchar* AL_APIENTRY alGetStringiDirectSOFT(ALCcontext *context
     switch(pname)
     {
     case AL_RESAMPLER_NAME_SOFT:
-        if(index >= 0 && index <= static_cast<ALint>(Resampler::Max))
+        if(index >= 0 && index <= al::to_underlying(Resampler::Max))
             return GetResamplerName(static_cast<Resampler>(index));
         context->setError(AL_INVALID_VALUE, "Resampler name index {} out of range", index);
         return nullptr;

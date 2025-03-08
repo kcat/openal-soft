@@ -1910,7 +1910,7 @@ NOINLINE void SetProperty(ALsource *const Source, ALCcontext *const Context, con
         if constexpr(std::is_integral_v<T>)
         {
             CheckSize(1);
-            CheckValue(values[0] >= 0 && values[0] <= static_cast<int>(Resampler::Max));
+            CheckValue(values[0] >= 0 && values[0] <= al::to_underlying(Resampler::Max));
 
             Source->mResampler = static_cast<Resampler>(values[0]);
             return UpdateSourceProps(Source, Context);

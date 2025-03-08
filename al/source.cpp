@@ -3568,8 +3568,7 @@ try {
     const size_t NewListStart{source->mQueue.size()};
     try {
         ALbufferQueueItem *BufferList{nullptr};
-        std::for_each(bids.cbegin(), bids.cend(),
-        [context,source,device,&BufferFmt,&BufferList](const ALuint bid)
+        auto append_buffer = [context,source,device,&BufferFmt,&BufferList](const ALuint bid)
         {
             ALbuffer *buffer{bid ? LookupBuffer(device, bid) : nullptr};
             if(bid && !buffer)
@@ -3607,11 +3606,11 @@ try {
             BufferList->mBuffer = buffer;
             IncrementRef(buffer->ref);
 
-            bool fmt_mismatch{false};
             if(BufferFmt == nullptr)
                 BufferFmt = buffer;
             else
             {
+                auto fmt_mismatch = false;
                 fmt_mismatch |= BufferFmt->mSampleRate != buffer->mSampleRate;
                 fmt_mismatch |= BufferFmt->mChannels != buffer->mChannels;
                 fmt_mismatch |= BufferFmt->mType != buffer->mType;
@@ -3621,15 +3620,16 @@ try {
                     fmt_mismatch |= BufferFmt->mAmbiScaling != buffer->mAmbiScaling;
                 }
                 fmt_mismatch |= BufferFmt->mAmbiOrder != buffer->mAmbiOrder;
+                if(fmt_mismatch)
+                    context->throw_error(AL_INVALID_OPERATION,
+                        "Queueing buffer with mismatched format\n"
+                        "  Expected: {}hz, {}, {} ; Got: {}hz, {}, {}\n", BufferFmt->mSampleRate,
+                        NameFromFormat(BufferFmt->mType), NameFromFormat(BufferFmt->mChannels),
+                        buffer->mSampleRate, NameFromFormat(buffer->mType),
+                        NameFromFormat(buffer->mChannels));
             }
-            if(fmt_mismatch)
-                context->throw_error(AL_INVALID_OPERATION,
-                    "Queueing buffer with mismatched format\n"
-                    "  Expected: {}hz, {}, {} ; Got: {}hz, {}, {}\n", BufferFmt->mSampleRate,
-                    NameFromFormat(BufferFmt->mType), NameFromFormat(BufferFmt->mChannels),
-                    buffer->mSampleRate, NameFromFormat(buffer->mType),
-                    NameFromFormat(buffer->mChannels));
-        });
+        };
+        std::for_each(bids.cbegin(), bids.cend(), append_buffer);
     }
     catch(...) {
         /* A buffer failed (invalid ID or format), or there was some other

@@ -265,11 +265,14 @@ public:
     { mEaxFxSlots.commit(); }
 
 private:
-    static constexpr auto eax_primary_fx_slot_id_dirty_bit = EaxDirtyFlags{1} << 0;
-    static constexpr auto eax_distance_factor_dirty_bit = EaxDirtyFlags{1} << 1;
-    static constexpr auto eax_air_absorption_hf_dirty_bit = EaxDirtyFlags{1} << 2;
-    static constexpr auto eax_hf_reference_dirty_bit = EaxDirtyFlags{1} << 3;
-    static constexpr auto eax_macro_fx_factor_dirty_bit = EaxDirtyFlags{1} << 4;
+    enum {
+        eax_primary_fx_slot_id_dirty_bit,
+        eax_distance_factor_dirty_bit,
+        eax_air_absorption_hf_dirty_bit,
+        eax_hf_reference_dirty_bit,
+        eax_macro_fx_factor_dirty_bit,
+        eax_dirty_bit_count
+    };
 
     using Eax4Props = EAX40CONTEXTPROPERTIES;
 
@@ -437,7 +440,7 @@ private:
 
     int mEaxVersion{}; // Current EAX version.
     bool mEaxNeedsCommit{};
-    EaxDirtyFlags mEaxDf{}; // Dirty flags for the current EAX version.
+    std::bitset<eax_dirty_bit_count> mEaxDf{}; // Dirty flags for the current EAX version.
     Eax5State mEax123{}; // EAX1/EAX2/EAX3 state.
     Eax4State mEax4{}; // EAX4 state.
     Eax5State mEax5{}; // EAX5 state.
@@ -467,7 +470,7 @@ private:
     // updates a dirty flag.
     template<
         typename TValidator,
-        EaxDirtyFlags TDirtyBit,
+        size_t DirtyBit,
         typename TMemberResult,
         typename TProps,
         typename TState>
@@ -480,20 +483,20 @@ private:
         dst_d = src;
 
         if(dst_i != dst_d)
-            mEaxDf |= TDirtyBit;
+            mEaxDf.set(DirtyBit);
     }
 
     template<
-        EaxDirtyFlags TDirtyBit,
+        size_t DirtyBit,
         typename TMemberResult,
         typename TProps,
         typename TState>
-    void eax_context_commit_property(TState& state, EaxDirtyFlags& dst_df,
+    void eax_context_commit_property(TState& state, std::bitset<eax_dirty_bit_count>& dst_df,
         TMemberResult TProps::*member) noexcept
     {
-        if((mEaxDf & TDirtyBit) != EaxDirtyFlags{})
+        if(mEaxDf.test(DirtyBit))
         {
-            dst_df |= TDirtyBit;
+            dst_df.set(DirtyBit);
             const auto& src_d = state.d.*member;
             state.i.*member = src_d;
             mEax.*member = src_d;
@@ -546,8 +549,8 @@ private:
     void eax5_defer(const EaxCall& call, Eax5State& state);
     void eax_set(const EaxCall& call);
 
-    void eax4_context_commit(Eax4State& state, EaxDirtyFlags& dst_df);
-    void eax5_context_commit(Eax5State& state, EaxDirtyFlags& dst_df);
+    void eax4_context_commit(Eax4State& state, std::bitset<eax_dirty_bit_count>& dst_df);
+    void eax5_context_commit(Eax5State& state, std::bitset<eax_dirty_bit_count>& dst_df);
     void eax_context_commit();
 #endif // ALSOFT_EAX
 };

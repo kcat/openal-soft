@@ -5,6 +5,7 @@
 
 #include <array>
 #include <atomic>
+#include <bitset>
 #include <cstdint>
 #include <string_view>
 #include <utility>
@@ -96,12 +97,15 @@ public:
     void eax_commit();
 
 private:
-    static constexpr auto eax_load_effect_dirty_bit = EaxDirtyFlags{1} << 0;
-    static constexpr auto eax_volume_dirty_bit = EaxDirtyFlags{1} << 1;
-    static constexpr auto eax_lock_dirty_bit = EaxDirtyFlags{1} << 2;
-    static constexpr auto eax_flags_dirty_bit = EaxDirtyFlags{1} << 3;
-    static constexpr auto eax_occlusion_dirty_bit = EaxDirtyFlags{1} << 4;
-    static constexpr auto eax_occlusion_lf_ratio_dirty_bit = EaxDirtyFlags{1} << 5;
+    enum {
+        eax_load_effect_dirty_bit,
+        eax_volume_dirty_bit,
+        eax_lock_dirty_bit,
+        eax_flags_dirty_bit,
+        eax_occlusion_dirty_bit,
+        eax_occlusion_lf_ratio_dirty_bit,
+        eax_dirty_bit_count
+    };
 
     using Exception = EaxFxSlotException;
 
@@ -242,7 +246,7 @@ private:
     ALCcontext* eax_al_context_{};
     EaxFxSlotIndexValue eax_fx_slot_index_{};
     int eax_version_{}; // Current EAX version.
-    EaxDirtyFlags eax_df_{}; // Dirty flags for the current EAX version.
+    std::bitset<eax_dirty_bit_count> eax_df_{}; // Dirty flags for the current EAX version.
     EaxEffectUPtr eax_effect_;
     Eax5State eax123_{}; // EAX1/EAX2/EAX3 state.
     Eax4State eax4_{}; // EAX4 state.
@@ -258,12 +262,14 @@ private:
     // validates it,
     // sets a dirty flag only if the new value differs form the old one,
     // and assigns the new value.
-    template<typename TValidator, EaxDirtyFlags TDirtyBit, typename TProperties>
-    static void eax_fx_slot_set(const EaxCall& call, TProperties& dst, EaxDirtyFlags& dirty_flags)
+    template<typename TValidator, size_t DirtyBit, typename TProperties>
+    static void eax_fx_slot_set(const EaxCall& call, TProperties& dst,
+        std::bitset<eax_dirty_bit_count>& dirty_flags)
     {
         const auto& src = call.get_value<Exception, const TProperties>();
         TValidator{}(src);
-        dirty_flags |= (dst != src ? TDirtyBit : EaxDirtyFlags{});
+        if(dst != src)
+            dirty_flags.set(DirtyBit);
         dst = src;
     }
 
@@ -271,13 +277,13 @@ private:
     // validates it,
     // sets a dirty flag without comparing the values,
     // and assigns the new value.
-    template<typename TValidator, EaxDirtyFlags TDirtyBit, typename TProperties>
+    template<typename TValidator, size_t DirtyBit, typename TProperties>
     static void eax_fx_slot_set_dirty(const EaxCall& call, TProperties& dst,
-        EaxDirtyFlags& dirty_flags)
+        std::bitset<eax_dirty_bit_count>& dirty_flags)
     {
         const auto& src = call.get_value<Exception, const TProperties>();
         TValidator{}(src);
-        dirty_flags |= TDirtyBit;
+        dirty_flags.set(DirtyBit);
         dst = src;
     }
 
@@ -323,25 +329,25 @@ private:
     bool eax_set(const EaxCall& call);
 
     template<
-        EaxDirtyFlags TDirtyBit,
+        size_t DirtyBit,
         typename TMemberResult,
         typename TProps,
         typename TState>
-    void eax_fx_slot_commit_property(TState& state, EaxDirtyFlags& dst_df,
+    void eax_fx_slot_commit_property(TState& state, std::bitset<eax_dirty_bit_count>& dst_df,
         TMemberResult TProps::*member) noexcept
     {
         auto& src_i = state.i;
         auto& dst_i = eax_;
 
-        if((eax_df_ & TDirtyBit) != EaxDirtyFlags{})
+        if(eax_df_.test(DirtyBit))
         {
-            dst_df |= TDirtyBit;
+            dst_df.set(DirtyBit);
             dst_i.*member = src_i.*member;
         }
     }
 
-    void eax4_fx_slot_commit(EaxDirtyFlags& dst_df);
-    void eax5_fx_slot_commit(Eax5State& state, EaxDirtyFlags& dst_df);
+    void eax4_fx_slot_commit(std::bitset<eax_dirty_bit_count>& dst_df);
+    void eax5_fx_slot_commit(Eax5State& state, std::bitset<eax_dirty_bit_count>& dst_df);
 
     // `alAuxiliaryEffectSloti(effect_slot, AL_EFFECTSLOT_EFFECT, effect)`
     void eax_set_efx_slot_effect(EaxEffect &effect);

@@ -6,7 +6,6 @@
 #include "fmt/core.h"
 #include "opthelpers.h"
 
-using EaxDirtyFlags = unsigned int;
 
 struct EaxAlLowPassParam {
     float gain;

@@ -1,9 +1,9 @@
 #ifndef EAX_UTILS_INCLUDED
 #define EAX_UTILS_INCLUDED
 
-#include <string>
 #include <string_view>
 
+#include "fmt/core.h"
 #include "opthelpers.h"
 
 using EaxDirtyFlags = unsigned int;
@@ -22,13 +22,8 @@ void eax_validate_range(std::string_view value_name, const TValue& value, const 
     if(value >= min_value && value <= max_value) LIKELY
         return;
 
-    const auto message =
-        std::string{value_name} +
-        " out of range (value: " +
-        std::to_string(value) + "; min: " +
-        std::to_string(min_value) + "; max: " +
-        std::to_string(max_value) + ").";
-
+    const auto message = fmt::format("{} out of range (value: {}; min: {}; max: {}).", value_name,
+        value, min_value, max_value);
     throw TException{message.c_str()};
 }
 

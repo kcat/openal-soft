@@ -168,7 +168,7 @@ struct ALsource {
 #if ALSOFT_EAX
 public:
     void eaxInitialize(ALCcontext *context) noexcept;
-    void eaxDispatch(const EaxCall& call);
+    void eaxDispatch(const EaxCall& call) { call.is_get() ? eax_get(call) : eax_set(call); }
     void eaxCommit();
     void eaxMarkAsChanged() noexcept { mEaxChanged = true; }
 

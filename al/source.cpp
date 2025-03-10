@@ -3821,11 +3821,6 @@ void ALsource::eaxInitialize(ALCcontext *context) noexcept
     mEaxChanged = true;
 }
 
-void ALsource::eaxDispatch(const EaxCall& call)
-{
-    call.is_get() ? eax_get(call) : eax_set(call);
-}
-
 ALsource* ALsource::EaxLookupSource(ALCcontext& al_context, ALuint source_id) noexcept
 {
     return LookupSource(&al_context, source_id);

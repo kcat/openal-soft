@@ -216,6 +216,7 @@ jobs:
         curl https://raw.githubusercontent.com/${{github.repository}}/${{github.ref_name}}/ChangeLog               -o "build/release/OpenALSoft/Documentation/ChangeLog.txt"
         curl https://raw.githubusercontent.com/${{github.repository}}/${{github.ref_name}}/COPYING                 -o "build/release/OpenALSoft/Documentation/License.txt"
         curl https://raw.githubusercontent.com/${{github.repository}}/${{github.ref_name}}/BSD-3Clause             -o "build/release/OpenALSoft/Documentation/License_BSD-3Clause.txt"
+        curl https://raw.githubusercontent.com/${{github.repository}}/${{github.ref_name}}/LICENSE-pffft           -o "build/release/OpenALSoft/Documentation/License_PFFFT.txt"
         curl https://raw.githubusercontent.com/${{github.repository}}/${{github.ref_name}}/alsoftrc.sample         -o "build/release/OpenALSoft/Win32/alsoft.ini"
         curl https://raw.githubusercontent.com/${{github.repository}}/${{github.ref_name}}/alsoftrc.sample         -o "build/release/OpenALSoft/Win64/alsoft.ini"
         cp "build/soft_oal-Win32-Release/soft_oal.dll"                                                                "build/release/OpenALSoft/Win32/OpenAL32.dll"

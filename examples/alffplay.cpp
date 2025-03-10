@@ -58,12 +58,14 @@ struct SwsContext;
 #include "SDL3/SDL_render.h"
 #include "SDL3/SDL_video.h"
 
+namespace {
 constexpr auto DefineSDLColorspace(SDL_ColorType type, SDL_ColorRange range,
     SDL_ColorPrimaries primaries, SDL_TransferCharacteristics transfer,
     SDL_MatrixCoefficients matrix, SDL_ChromaLocation chromaloc) noexcept
 {
     return SDL_DEFINE_COLORSPACE(type, range, primaries, transfer, matrix, chromaloc);
 }
+} // namespace
 #ifdef __GNUC__
 _Pragma("GCC diagnostic pop")
 #endif

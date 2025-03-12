@@ -440,7 +440,7 @@ private:
 
     int mEaxVersion{}; // Current EAX version.
     bool mEaxNeedsCommit{};
-    std::bitset<eax_dirty_bit_count> mEaxDf{}; // Dirty flags for the current EAX version.
+    std::bitset<eax_dirty_bit_count> mEaxDf; // Dirty flags for the current EAX version.
     Eax5State mEax123{}; // EAX1/EAX2/EAX3 state.
     Eax4State mEax4{}; // EAX4 state.
     Eax5State mEax5{}; // EAX5 state.

@@ -3868,7 +3868,7 @@ void ALsource::eax_set_sends_defaults(EaxSends& sends, const EaxFxSlotIds& ids) 
     }
 }
 
-void ALsource::eax1_set_defaults(Eax1Props& props) noexcept
+void ALsource::eax1_set_defaults(EAXBUFFER_REVERBPROPERTIES& props) noexcept
 {
     props.fMix = EAX_REVERBMIX_USEDISTANCE;
 }
@@ -3879,7 +3879,7 @@ void ALsource::eax1_set_defaults() noexcept
     mEax1.d = mEax1.i;
 }
 
-void ALsource::eax2_set_defaults(Eax2Props& props) noexcept
+void ALsource::eax2_set_defaults(EAX20BUFFERPROPERTIES& props) noexcept
 {
     props.lDirect = EAXSOURCE_DEFAULTDIRECT;
     props.lDirectHF = EAXSOURCE_DEFAULTDIRECTHF;
@@ -3902,7 +3902,7 @@ void ALsource::eax2_set_defaults() noexcept
     mEax2.d = mEax2.i;
 }
 
-void ALsource::eax3_set_defaults(Eax3Props& props) noexcept
+void ALsource::eax3_set_defaults(EAX30SOURCEPROPERTIES& props) noexcept
 {
     props.lDirect = EAXSOURCE_DEFAULTDIRECT;
     props.lDirectHF = EAXSOURCE_DEFAULTDIRECTHF;
@@ -3950,7 +3950,7 @@ void ALsource::eax4_set_defaults() noexcept
 
 void ALsource::eax5_set_source_defaults(EAX50SOURCEPROPERTIES& props) noexcept
 {
-    eax3_set_defaults(static_cast<Eax3Props&>(props));
+    eax3_set_defaults(static_cast<EAX30SOURCEPROPERTIES&>(props));
     props.flMacroFXFactor = EAXSOURCE_DEFAULTMACROFXFACTOR;
 }
 
@@ -3997,7 +3997,7 @@ void ALsource::eax_set_defaults() noexcept
     eax5_set_defaults();
 }
 
-void ALsource::eax1_translate(const Eax1Props& src, Eax5Props& dst) noexcept
+void ALsource::eax1_translate(const EAXBUFFER_REVERBPROPERTIES& src, Eax5Props& dst) noexcept
 {
     eax5_set_defaults(dst);
 
@@ -4014,7 +4014,7 @@ void ALsource::eax1_translate(const Eax1Props& src, Eax5Props& dst) noexcept
     }
 }
 
-void ALsource::eax2_translate(const Eax2Props& src, Eax5Props& dst) noexcept
+void ALsource::eax2_translate(const EAX20BUFFERPROPERTIES& src, Eax5Props& dst) noexcept
 {
     // Source.
     //
@@ -4045,11 +4045,11 @@ void ALsource::eax2_translate(const Eax2Props& src, Eax5Props& dst) noexcept
     eax5_set_speaker_levels_defaults(dst.speaker_levels);
 }
 
-void ALsource::eax3_translate(const Eax3Props& src, Eax5Props& dst) noexcept
+void ALsource::eax3_translate(const EAX30SOURCEPROPERTIES& src, Eax5Props& dst) noexcept
 {
     // Source.
     //
-    static_cast<Eax3Props&>(dst.source) = src;
+    static_cast<EAX30SOURCEPROPERTIES&>(dst.source) = src;
     dst.source.flMacroFXFactor = EAXSOURCE_DEFAULTMACROFXFACTOR;
 
     // Set everything else to defaults.
@@ -4063,7 +4063,7 @@ void ALsource::eax4_translate(const Eax4Props& src, Eax5Props& dst) noexcept
 {
     // Source.
     //
-    static_cast<Eax3Props&>(dst.source) = src.source;
+    static_cast<EAX30SOURCEPROPERTIES&>(dst.source) = src.source;
     dst.source.flMacroFXFactor = EAXSOURCE_DEFAULTMACROFXFACTOR;
 
     // Sends.
@@ -4279,7 +4279,7 @@ void ALsource::eax_set_efx_wet_gain_hf_auto()
     WetGainHFAuto = ((mEax.source.ulFlags & EAXSOURCEFLAGS_ROOMHFAUTO) != 0);
 }
 
-void ALsource::eax1_set(const EaxCall& call, Eax1Props& props)
+void ALsource::eax1_set(const EaxCall& call, EAXBUFFER_REVERBPROPERTIES& props)
 {
     switch (call.get_property_id()) {
         case DSPROPERTY_EAXBUFFER_ALL:
@@ -4295,7 +4295,7 @@ void ALsource::eax1_set(const EaxCall& call, Eax1Props& props)
     }
 }
 
-void ALsource::eax2_set(const EaxCall& call, Eax2Props& props)
+void ALsource::eax2_set(const EaxCall& call, EAX20BUFFERPROPERTIES& props)
 {
     switch (call.get_property_id()) {
         case DSPROPERTY_EAX20BUFFER_NONE:
@@ -4362,7 +4362,7 @@ void ALsource::eax2_set(const EaxCall& call, Eax2Props& props)
     }
 }
 
-void ALsource::eax3_set(const EaxCall& call, Eax3Props& props)
+void ALsource::eax3_set(const EaxCall& call, EAX30SOURCEPROPERTIES& props)
 {
     switch (call.get_property_id()) {
         case EAXSOURCE_NONE:
@@ -4634,7 +4634,7 @@ void ALsource::eax_get_active_fx_slot_id(const EaxCall& call, const al::span<con
     std::uninitialized_copy_n(src_ids.begin(), dst_ids.size(), dst_ids.begin());
 }
 
-void ALsource::eax1_get(const EaxCall& call, const Eax1Props& props)
+void ALsource::eax1_get(const EaxCall& call, const EAXBUFFER_REVERBPROPERTIES& props)
 {
     switch (call.get_property_id()) {
         case DSPROPERTY_EAXBUFFER_ALL:
@@ -4647,7 +4647,7 @@ void ALsource::eax1_get(const EaxCall& call, const Eax1Props& props)
     }
 }
 
-void ALsource::eax2_get(const EaxCall& call, const Eax2Props& props)
+void ALsource::eax2_get(const EaxCall& call, const EAX20BUFFERPROPERTIES& props)
 {
     switch (call.get_property_id()) {
         case DSPROPERTY_EAX20BUFFER_NONE:
@@ -4714,25 +4714,25 @@ void ALsource::eax2_get(const EaxCall& call, const Eax2Props& props)
     }
 }
 
-void ALsource::eax3_get_obstruction(const EaxCall& call, const Eax3Props& props)
+void ALsource::eax3_get_obstruction(const EaxCall& call, const EAX30SOURCEPROPERTIES& props)
 {
     const auto& subprops = reinterpret_cast<const EAXOBSTRUCTIONPROPERTIES&>(props.lObstruction);
     call.set_value<Exception>(subprops);
 }
 
-void ALsource::eax3_get_occlusion(const EaxCall& call, const Eax3Props& props)
+void ALsource::eax3_get_occlusion(const EaxCall& call, const EAX30SOURCEPROPERTIES& props)
 {
     const auto& subprops = reinterpret_cast<const EAXOCCLUSIONPROPERTIES&>(props.lOcclusion);
     call.set_value<Exception>(subprops);
 }
 
-void ALsource::eax3_get_exclusion(const EaxCall& call, const Eax3Props& props)
+void ALsource::eax3_get_exclusion(const EaxCall& call, const EAX30SOURCEPROPERTIES& props)
 {
     const auto& subprops = reinterpret_cast<const EAXEXCLUSIONPROPERTIES&>(props.lExclusion);
     call.set_value<Exception>(subprops);
 }
 
-void ALsource::eax3_get(const EaxCall& call, const Eax3Props& props)
+void ALsource::eax3_get(const EaxCall& call, const EAX30SOURCEPROPERTIES& props)
 {
     switch (call.get_property_id()) {
         case EAXSOURCE_NONE:

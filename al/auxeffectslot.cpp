@@ -66,7 +66,6 @@
 #include "eax/call.h"
 #include "eax/effect.h"
 #include "eax/fx_slot_index.h"
-#include "eax/utils.h"
 #endif
 
 namespace {
@@ -1136,7 +1135,7 @@ long ALeffectslot::eax_get_eax_default_lock() const noexcept
     return eax4_fx_slot_is_legacy() ? EAXFXSLOT_LOCKED : EAXFXSLOT_UNLOCKED;
 }
 
-void ALeffectslot::eax4_fx_slot_set_defaults(Eax4Props& props) noexcept
+void ALeffectslot::eax4_fx_slot_set_defaults(EAX40FXSLOTPROPERTIES& props) noexcept
 {
     props.guidLoadEffect = eax_get_eax_default_effect_guid();
     props.lVolume = EAXFXSLOT_DEFAULTVOLUME;
@@ -1144,7 +1143,7 @@ void ALeffectslot::eax4_fx_slot_set_defaults(Eax4Props& props) noexcept
     props.ulFlags = EAX40FXSLOT_DEFAULTFLAGS;
 }
 
-void ALeffectslot::eax5_fx_slot_set_defaults(Eax5Props& props) noexcept
+void ALeffectslot::eax5_fx_slot_set_defaults(EAX50FXSLOTPROPERTIES& props) noexcept
 {
     props.guidLoadEffect = eax_get_eax_default_effect_guid();
     props.lVolume = EAXFXSLOT_DEFAULTVOLUME;
@@ -1163,7 +1162,7 @@ void ALeffectslot::eax_fx_slot_set_defaults()
     mEaxDf.reset();
 }
 
-void ALeffectslot::eax4_fx_slot_get(const EaxCall& call, const Eax4Props& props)
+void ALeffectslot::eax4_fx_slot_get(const EaxCall& call, const EAX40FXSLOTPROPERTIES& props)
 {
     switch(call.get_property_id())
     {
@@ -1187,7 +1186,7 @@ void ALeffectslot::eax4_fx_slot_get(const EaxCall& call, const Eax4Props& props)
     }
 }
 
-void ALeffectslot::eax5_fx_slot_get(const EaxCall& call, const Eax5Props& props)
+void ALeffectslot::eax5_fx_slot_get(const EaxCall& call, const EAX50FXSLOTPROPERTIES& props)
 {
     switch(call.get_property_id())
     {

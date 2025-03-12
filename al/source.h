@@ -199,26 +199,23 @@ private:
     using EaxSpeakerLevels = std::array<EAXSPEAKERLEVELPROPERTIES, eax_max_speakers>;
     using EaxSends = std::array<EAXSOURCEALLSENDPROPERTIES, EAX_MAX_FXSLOTS>;
 
-    using Eax1Props = EAXBUFFER_REVERBPROPERTIES;
     struct Eax1State {
-        Eax1Props i; // Immediate.
-        Eax1Props d; // Deferred.
+        EAXBUFFER_REVERBPROPERTIES i; // Immediate.
+        EAXBUFFER_REVERBPROPERTIES d; // Deferred.
     };
 
-    using Eax2Props = EAX20BUFFERPROPERTIES;
     struct Eax2State {
-        Eax2Props i; // Immediate.
-        Eax2Props d; // Deferred.
+        EAX20BUFFERPROPERTIES i; // Immediate.
+        EAX20BUFFERPROPERTIES d; // Deferred.
     };
 
-    using Eax3Props = EAX30SOURCEPROPERTIES;
     struct Eax3State {
-        Eax3Props i; // Immediate.
-        Eax3Props d; // Deferred.
+        EAX30SOURCEPROPERTIES i; // Immediate.
+        EAX30SOURCEPROPERTIES d; // Deferred.
     };
 
     struct Eax4Props {
-        Eax3Props source;
+        EAX30SOURCEPROPERTIES source;
         EaxSends sends;
         EAX40ACTIVEFXSLOTS active_fx_slots;
     };
@@ -490,14 +487,14 @@ private:
     };
 
     struct Eax1SourceAllValidator {
-        void operator()(const Eax1Props& props) const
+        void operator()(const EAXBUFFER_REVERBPROPERTIES& props) const
         {
             Eax1SourceReverbMixValidator{}(props.fMix);
         }
     };
 
     struct Eax2SourceAllValidator {
-        void operator()(const Eax2Props& props) const
+        void operator()(const EAX20BUFFERPROPERTIES& props) const
         {
             Eax2SourceDirectValidator{}(props.lDirect);
             Eax2SourceDirectHfValidator{}(props.lDirectHF);
@@ -516,7 +513,7 @@ private:
     };
 
     struct Eax3SourceAllValidator {
-        void operator()(const Eax3Props& props) const
+        void operator()(const EAX30SOURCEPROPERTIES& props) const
         {
             Eax2SourceDirectValidator{}(props.lDirect);
             Eax2SourceDirectHfValidator{}(props.lDirectHF);
@@ -823,11 +820,11 @@ private:
     [[noreturn]] static void eax_fail_unknown_receiving_fx_slot_id();
 
     static void eax_set_sends_defaults(EaxSends& sends, const EaxFxSlotIds& ids) noexcept;
-    static void eax1_set_defaults(Eax1Props& props) noexcept;
+    static void eax1_set_defaults(EAXBUFFER_REVERBPROPERTIES& props) noexcept;
     void eax1_set_defaults() noexcept;
-    static void eax2_set_defaults(Eax2Props& props) noexcept;
+    static void eax2_set_defaults(EAX20BUFFERPROPERTIES& props) noexcept;
     void eax2_set_defaults() noexcept;
-    static void eax3_set_defaults(Eax3Props& props) noexcept;
+    static void eax3_set_defaults(EAX30SOURCEPROPERTIES& props) noexcept;
     void eax3_set_defaults() noexcept;
     static void eax4_set_sends_defaults(EaxSends& sends) noexcept;
     static void eax4_set_active_fx_slots_defaults(EAX40ACTIVEFXSLOTS& slots) noexcept;
@@ -840,9 +837,9 @@ private:
     void eax5_set_defaults() noexcept;
     void eax_set_defaults() noexcept;
 
-    static void eax1_translate(const Eax1Props& src, Eax5Props& dst) noexcept;
-    static void eax2_translate(const Eax2Props& src, Eax5Props& dst) noexcept;
-    static void eax3_translate(const Eax3Props& src, Eax5Props& dst) noexcept;
+    static void eax1_translate(const EAXBUFFER_REVERBPROPERTIES& src, Eax5Props& dst) noexcept;
+    static void eax2_translate(const EAX20BUFFERPROPERTIES& src, Eax5Props& dst) noexcept;
+    static void eax3_translate(const EAX30SOURCEPROPERTIES& src, Eax5Props& dst) noexcept;
     static void eax4_translate(const Eax4Props& src, Eax5Props& dst) noexcept;
 
     static float eax_calculate_dst_occlusion_mb(
@@ -907,12 +904,12 @@ private:
     }
 
     static void eax_get_active_fx_slot_id(const EaxCall& call, const al::span<const GUID> src_ids);
-    static void eax1_get(const EaxCall& call, const Eax1Props& props);
-    static void eax2_get(const EaxCall& call, const Eax2Props& props);
-    static void eax3_get_obstruction(const EaxCall& call, const Eax3Props& props);
-    static void eax3_get_occlusion(const EaxCall& call, const Eax3Props& props);
-    static void eax3_get_exclusion(const EaxCall& call, const Eax3Props& props);
-    static void eax3_get(const EaxCall& call, const Eax3Props& props);
+    static void eax1_get(const EaxCall& call, const EAXBUFFER_REVERBPROPERTIES& props);
+    static void eax2_get(const EaxCall& call, const EAX20BUFFERPROPERTIES& props);
+    static void eax3_get_obstruction(const EaxCall& call, const EAX30SOURCEPROPERTIES& props);
+    static void eax3_get_occlusion(const EaxCall& call, const EAX30SOURCEPROPERTIES& props);
+    static void eax3_get_exclusion(const EaxCall& call, const EAX30SOURCEPROPERTIES& props);
+    static void eax3_get(const EaxCall& call, const EAX30SOURCEPROPERTIES& props);
     void eax4_get(const EaxCall& call, const Eax4Props& props);
     static void eax5_get_all_2d(const EaxCall& call, const EAX50SOURCEPROPERTIES& props);
     static void eax5_get_speaker_levels(const EaxCall& call, const EaxSpeakerLevels& props);
@@ -1034,9 +1031,9 @@ private:
     void eax_set_efx_wet_gain_auto();
     void eax_set_efx_wet_gain_hf_auto();
 
-    static void eax1_set(const EaxCall& call, Eax1Props& props);
-    static void eax2_set(const EaxCall& call, Eax2Props& props);
-    void eax3_set(const EaxCall& call, Eax3Props& props);
+    static void eax1_set(const EaxCall& call, EAXBUFFER_REVERBPROPERTIES& props);
+    static void eax2_set(const EaxCall& call, EAX20BUFFERPROPERTIES& props);
+    void eax3_set(const EaxCall& call, EAX30SOURCEPROPERTIES& props);
     void eax4_set(const EaxCall& call, Eax4Props& props);
     static void eax5_defer_all_2d(const EaxCall& call, EAX50SOURCEPROPERTIES& props);
     static void eax5_defer_speaker_levels(const EaxCall& call, EaxSpeakerLevels& props);

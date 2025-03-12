@@ -110,16 +110,12 @@ private:
 
     using Exception = EaxFxSlotException;
 
-    using Eax4Props = EAX40FXSLOTPROPERTIES;
-
     struct Eax4State {
-        Eax4Props i; // Immediate.
+        EAX40FXSLOTPROPERTIES i; // Immediate.
     };
 
-    using Eax5Props = EAX50FXSLOTPROPERTIES;
-
     struct Eax5State {
-        Eax5Props i; // Immediate.
+        EAX50FXSLOTPROPERTIES i; // Immediate.
     };
 
     struct EaxRangeValidator {
@@ -252,7 +248,7 @@ private:
     Eax5State mEax123{}; // EAX1/EAX2/EAX3 state.
     Eax4State mEax4{}; // EAX4 state.
     Eax5State mEax5{}; // EAX5 state.
-    Eax5Props mEax{}; // Current EAX state.
+    EAX50FXSLOTPROPERTIES mEax{}; // Current EAX state.
 
     [[noreturn]] static void eax_fail(const char* message);
     [[noreturn]] static void eax_fail_unknown_effect_id();
@@ -297,15 +293,15 @@ private:
     [[nodiscard]] auto eax_get_eax_default_effect_guid() const noexcept -> const GUID&;
     [[nodiscard]] auto eax_get_eax_default_lock() const noexcept -> long;
 
-    void eax4_fx_slot_set_defaults(Eax4Props& props) noexcept;
-    void eax5_fx_slot_set_defaults(Eax5Props& props) noexcept;
-    void eax4_fx_slot_set_current_defaults(const Eax4Props& props) noexcept;
-    void eax5_fx_slot_set_current_defaults(const Eax5Props& props) noexcept;
+    void eax4_fx_slot_set_defaults(EAX40FXSLOTPROPERTIES& props) noexcept;
+    void eax5_fx_slot_set_defaults(EAX50FXSLOTPROPERTIES& props) noexcept;
+    void eax4_fx_slot_set_current_defaults(const EAX40FXSLOTPROPERTIES& props) noexcept;
+    void eax5_fx_slot_set_current_defaults(const EAX50FXSLOTPROPERTIES& props) noexcept;
     void eax_fx_slot_set_current_defaults();
     void eax_fx_slot_set_defaults();
 
-    static void eax4_fx_slot_get(const EaxCall& call, const Eax4Props& props);
-    static void eax5_fx_slot_get(const EaxCall& call, const Eax5Props& props);
+    static void eax4_fx_slot_get(const EaxCall& call, const EAX40FXSLOTPROPERTIES& props);
+    static void eax5_fx_slot_get(const EaxCall& call, const EAX50FXSLOTPROPERTIES& props);
     void eax_fx_slot_get(const EaxCall& call) const;
     // Returns `true` if all sources should be updated, or `false` otherwise.
     bool eax_get(const EaxCall& call);

@@ -32,6 +32,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <iterator>
+#include <functional>
 #include <limits>
 #include <memory>
 #include <mutex>
@@ -331,51 +332,45 @@ NOINLINE T GetSourceOffset(ALsource *Source, ALenum name, ALCcontext *context)
     }
     ASSUME(BufferFmt != nullptr);
 
-    T offset{};
     switch(name)
     {
     case AL_SEC_OFFSET:
         if constexpr(std::is_floating_point_v<T>)
         {
-            offset  = static_cast<T>(readPos) + static_cast<T>(readPosFrac)/T{MixerFracOne};
-            offset /= static_cast<T>(BufferFmt->mSampleRate);
+            auto offset = static_cast<T>(readPos) + static_cast<T>(readPosFrac)/T{MixerFracOne};
+            return offset / static_cast<T>(BufferFmt->mSampleRate);
         }
         else
         {
             readPos /= BufferFmt->mSampleRate;
-            offset = static_cast<T>(std::clamp<int64_t>(readPos, std::numeric_limits<T>::min(),
+            return static_cast<T>(std::clamp<int64_t>(readPos, std::numeric_limits<T>::min(),
                 std::numeric_limits<T>::max()));
         }
-        break;
 
     case AL_SAMPLE_OFFSET:
         if constexpr(std::is_floating_point_v<T>)
-            offset = static_cast<T>(readPos) + static_cast<T>(readPosFrac)/T{MixerFracOne};
+            return static_cast<T>(readPos) + static_cast<T>(readPosFrac)/T{MixerFracOne};
         else
-            offset = static_cast<T>(std::clamp<int64_t>(readPos, std::numeric_limits<T>::min(),
+            return static_cast<T>(std::clamp<int64_t>(readPos, std::numeric_limits<T>::min(),
                 std::numeric_limits<T>::max()));
-        break;
 
     case AL_BYTE_OFFSET:
-        const ALuint BlockSamples{BufferFmt->mBlockAlign};
-        const ALuint BlockSize{BufferFmt->blockSizeFromFmt()};
         /* Round down to the block boundary. */
-        readPos = readPos / BlockSamples * BlockSize;
+        const auto BlockSize = ALuint{BufferFmt->blockSizeFromFmt()};
+        readPos = readPos / BufferFmt->mBlockAlign * BlockSize;
 
         if constexpr(std::is_floating_point_v<T>)
-            offset = static_cast<T>(readPos);
+            return static_cast<T>(readPos);
         else
         {
             if(readPos > std::numeric_limits<T>::max())
-                offset = RoundDown(std::numeric_limits<T>::max(), static_cast<T>(BlockSize));
-            else if(readPos < std::numeric_limits<T>::min())
-                offset = RoundUp(std::numeric_limits<T>::min(), static_cast<T>(BlockSize));
-            else
-                offset = static_cast<T>(readPos);
+                return RoundDown(std::numeric_limits<T>::max(), static_cast<T>(BlockSize));
+            if(readPos < std::numeric_limits<T>::min())
+                return RoundUp(std::numeric_limits<T>::min(), static_cast<T>(BlockSize));
+            return static_cast<T>(readPos);
         }
-        break;
     }
-    return offset;
+    return T{0};
 }
 
 /* GetSourceLength
@@ -394,10 +389,9 @@ NOINLINE T GetSourceLength(const ALsource *source, ALenum name)
             BufferFmt = listitem.mBuffer;
         length += listitem.mSampleLen;
     }
-    if(length == 0)
+    if(length == 0 || !BufferFmt)
         return T{0};
 
-    ASSUME(BufferFmt != nullptr);
     switch(name)
     {
     case AL_SEC_LENGTH_SOFT:
@@ -414,10 +408,9 @@ NOINLINE T GetSourceLength(const ALsource *source, ALenum name)
             return static_cast<T>(std::min<uint64_t>(length, std::numeric_limits<T>::max()));
 
     case AL_BYTE_LENGTH_SOFT:
-        const ALuint BlockSamples{BufferFmt->mBlockAlign};
-        const ALuint BlockSize{BufferFmt->blockSizeFromFmt()};
         /* Round down to the block boundary. */
-        length = length / BlockSamples * BlockSize;
+        const auto BlockSize = ALuint{BufferFmt->blockSizeFromFmt()};
+        length = length / BufferFmt->mBlockAlign * BlockSize;
 
         if constexpr(std::is_floating_point_v<T>)
             return static_cast<T>(length);
@@ -459,44 +452,43 @@ std::optional<VoicePos> GetSampleOffset(std::deque<ALbufferQueueItem> &BufferLis
         return std::nullopt;
 
     /* Get sample frame offset */
-    int64_t offset{};
-    uint frac{};
-    double dbloff, dblfrac;
-    switch(OffsetType)
+    auto [offset, frac] = std::invoke([OffsetType,Offset,BufferFmt]() -> std::pair<int64_t,uint>
     {
-    case AL_SEC_OFFSET:
-        dblfrac = std::modf(Offset*BufferFmt->mSampleRate, &dbloff);
-        if(dblfrac < 0.0)
+        auto dbloff = double{};
+        auto dblfrac = double{};
+        switch(OffsetType)
         {
-            /* If there's a negative fraction, reduce the offset to "floor" it,
-             * and convert the fraction to a percentage to the next value (e.g.
-             * -2.75 -> -3 + 0.25).
-             */
-            dbloff -= 1.0;
-            dblfrac += 1.0;
-        }
-        offset = static_cast<int64_t>(dbloff);
-        frac = static_cast<uint>(std::min(dblfrac*MixerFracOne, MixerFracOne-1.0));
-        break;
+        case AL_SEC_OFFSET:
+            dblfrac = std::modf(Offset*BufferFmt->mSampleRate, &dbloff);
+            if(dblfrac < 0.0)
+            {
+                /* If there's a negative fraction, reduce the offset to "floor"
+                 * it, and convert the fraction to a percentage to the next
+                 * greater value (e.g. -2.75 -> -2 + -0.75 -> -3 + 0.25).
+                 */
+                dbloff -= 1.0;
+                dblfrac += 1.0;
+            }
+            return {static_cast<int64_t>(dbloff),
+                static_cast<uint>(std::min(dblfrac*MixerFracOne, MixerFracOne-1.0))};
 
-    case AL_SAMPLE_OFFSET:
-        dblfrac = std::modf(Offset, &dbloff);
-        if(dblfrac < 0.0)
-        {
-            dbloff -= 1.0;
-            dblfrac += 1.0;
-        }
-        offset = static_cast<int64_t>(dbloff);
-        frac = static_cast<uint>(std::min(dblfrac*MixerFracOne, MixerFracOne-1.0));
-        break;
+        case AL_SAMPLE_OFFSET:
+            dblfrac = std::modf(Offset, &dbloff);
+            if(dblfrac < 0.0)
+            {
+                dbloff -= 1.0;
+                dblfrac += 1.0;
+            }
+            return {static_cast<int64_t>(dbloff),
+                static_cast<uint>(std::min(dblfrac*MixerFracOne, MixerFracOne-1.0))};
 
-    case AL_BYTE_OFFSET:
-        /* Determine the ByteOffset (and ensure it is block aligned) */
-        Offset = std::floor(Offset / BufferFmt->blockSizeFromFmt());
-        offset = static_cast<int64_t>(Offset) * BufferFmt->mBlockAlign;
-        frac = 0;
-        break;
-    }
+        case AL_BYTE_OFFSET:
+            /* Determine the ByteOffset (and ensure it is block aligned) */
+            const auto blockoffset = std::floor(Offset / BufferFmt->blockSizeFromFmt());
+            return {static_cast<int64_t>(blockoffset) * BufferFmt->mBlockAlign, 0u};
+        }
+        return {0_i64, 0u};
+    });
 
     /* Find the bufferlist item this offset belongs to. */
     if(offset < 0)
@@ -509,17 +501,14 @@ std::optional<VoicePos> GetSampleOffset(std::deque<ALbufferQueueItem> &BufferLis
     if(BufferFmt->mCallback)
         return std::nullopt;
 
-    int64_t totalBufferLen{0};
     for(auto &item : BufferList)
     {
-        if(totalBufferLen > offset)
-            break;
-        if(item.mSampleLen > offset-totalBufferLen)
+        if(item.mSampleLen > offset)
         {
             /* Offset is in this buffer */
-            return VoicePos{static_cast<int>(offset-totalBufferLen), frac, &item};
+            return VoicePos{static_cast<int>(offset), frac, &item};
         }
-        totalBufferLen += item.mSampleLen;
+        offset -= item.mSampleLen;
     }
 
     /* Offset is out of range of the queue */

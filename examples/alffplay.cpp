@@ -258,11 +258,10 @@ class DataQueue {
     size_t mTotalSize{0};
     bool mFinished{false};
 
-    AVPacketPtr getPacket()
+    auto getPacket() -> AVPacketPtr
     {
-        std::unique_lock<std::mutex> plock{mPacketMutex};
-        while(mPackets.empty() && !mFinished)
-            mPacketCond.wait(plock);
+        auto plock = std::unique_lock{mPacketMutex};
+        mPacketCond.wait(plock, [this] { return !mPackets.empty() || mFinished; });
         if(mPackets.empty())
             return nullptr;
 
@@ -277,15 +276,17 @@ public:
 
     int sendPacket(AVCodecContext *codecctx)
     {
-        auto packet = AVPacketPtr{getPacket()};
+        auto packet = getPacket();
 
         auto ret = int{};
         {
             auto flock = std::unique_lock{mFrameMutex};
-            mInFrameCond.wait(flock, [codecctx,pkt=packet.get(),&ret]()
+            mInFrameCond.wait(flock, [this,codecctx,pkt=packet.get(),&ret]
             {
                 ret = avcodec_send_packet(codecctx, pkt);
-                return ret != AVERROR(EAGAIN);
+                if(ret != AVERROR(EAGAIN)) return true;
+                mOutFrameCond.notify_one();
+                return false;
             });
         }
         mOutFrameCond.notify_one();
@@ -306,10 +307,12 @@ public:
         auto ret = int{};
         {
             auto flock = std::unique_lock{mFrameMutex};
-            mOutFrameCond.wait(flock, [codecctx,frame,&ret]()
+            mOutFrameCond.wait(flock, [this,codecctx,frame,&ret]
             {
                 ret = avcodec_receive_frame(codecctx, frame);
-                return ret != AVERROR(EAGAIN);
+                if(ret != AVERROR(EAGAIN)) return true;
+                mInFrameCond.notify_one();
+                return false;
             });
         }
         mInFrameCond.notify_one();
@@ -319,7 +322,7 @@ public:
     void setFinished()
     {
         {
-            std::lock_guard<std::mutex> packetlock{mPacketMutex};
+            auto plock = std::lock_guard{mPacketMutex};
             mFinished = true;
         }
         mPacketCond.notify_one();
@@ -328,7 +331,7 @@ public:
     void flush()
     {
         {
-            std::lock_guard<std::mutex> packetlock{mPacketMutex};
+            auto plock = std::lock_guard{mPacketMutex};
             mFinished = true;
 
             mPackets.clear();
@@ -337,21 +340,18 @@ public:
         mPacketCond.notify_one();
     }
 
-    bool put(const AVPacket *pkt)
+    auto put(const AVPacket *pkt) -> bool
     {
         {
-            std::lock_guard<std::mutex> packet_lock{mPacketMutex};
+            auto plock = std::lock_guard{mPacketMutex};
             if(mTotalSize >= mSizeLimit || mFinished)
                 return false;
 
-            mPackets.push_back(AVPacketPtr{av_packet_alloc()});
-            if(av_packet_ref(mPackets.back().get(), pkt) != 0)
-            {
+            auto *newpkt = mPackets.emplace_back(AVPacketPtr{av_packet_alloc()}).get();
+            if(av_packet_ref(newpkt, pkt) == 0)
+                mTotalSize += static_cast<unsigned int>(newpkt->size);
+            else
                 mPackets.pop_back();
-                return true;
-            }
-
-            mTotalSize += static_cast<unsigned int>(mPackets.back()->size);
         }
         mPacketCond.notify_one();
         return true;

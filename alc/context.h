@@ -534,7 +534,7 @@ private:
 
     void eax_context_commit_primary_fx_slot_id();
     void eax_context_commit_distance_factor();
-    void eax_context_commit_air_absorbtion_hf();
+    void eax_context_commit_air_absorption_hf();
     void eax_context_commit_hf_reference();
     void eax_context_commit_macro_fx_factor();
 

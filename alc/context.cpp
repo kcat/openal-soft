@@ -512,7 +512,7 @@ void ALCcontext::eax_initialize()
 
     eax_ensure_compatibility();
     eax_set_defaults();
-    eax_context_commit_air_absorbtion_hf();
+    eax_context_commit_air_absorption_hf();
     eax_update_speaker_configuration();
     eax_initialize_fx_slots();
 
@@ -771,7 +771,7 @@ void ALCcontext::eax_context_commit_distance_factor()
     mPropsDirty = true;
 }
 
-void ALCcontext::eax_context_commit_air_absorbtion_hf()
+void ALCcontext::eax_context_commit_air_absorption_hf()
 {
     const auto new_value = level_mb_to_gain(mEax.flAirAbsorptionHF);
 
@@ -1009,7 +1009,7 @@ void ALCcontext::eax_context_commit()
         eax_context_commit_distance_factor();
 
     if(dst_df.test(eax_air_absorption_hf_dirty_bit))
-        eax_context_commit_air_absorbtion_hf();
+        eax_context_commit_air_absorption_hf();
 
     if(dst_df.test(eax_hf_reference_dirty_bit))
         eax_context_commit_hf_reference();

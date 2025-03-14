@@ -150,6 +150,39 @@ auto out_ptr(SP &res)
     return out_ptr_t<SP,ptype>{res};
 }
 
+
+template<typename SP, typename PT, typename ...Args>
+class inout_ptr_t {
+    static_assert(!std::is_same_v<PT,void*>);
+
+    SP &mRes;
+    std::variant<PT,void*> mPtr{};
+
+public:
+    explicit inout_ptr_t(SP &res) : mRes{res} { }
+    ~inout_ptr_t()
+    {
+        auto set_res = [this](auto &ptr)
+        { mRes.reset(static_cast<PT>(ptr)); };
+        std::visit(set_res, mPtr);
+    }
+    inout_ptr_t(const inout_ptr_t&) = delete;
+    inout_ptr_t& operator=(const inout_ptr_t&) = delete;
+
+    operator PT*() noexcept /* NOLINT(google-explicit-constructor) */
+    { return &mPtr.template emplace<PT>(mRes.release()); }
+
+    operator void**() noexcept /* NOLINT(google-explicit-constructor) */
+    { return &mPtr.template emplace<void*>(mRes.release()); }
+};
+
+template<typename T=void, typename SP, typename ...Args>
+auto inout_ptr(SP &res)
+{
+    using ptype = typename SP::element_type*;
+    return inout_ptr_t<SP,ptype>{res};
+}
+
 } // namespace al
 
 #endif /* AL_MALLOC_H */

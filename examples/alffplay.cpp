@@ -1889,27 +1889,24 @@ int MovieState::decode_interrupt_cb(void *ctx)
 
 bool MovieState::prepare()
 {
-    AVIOContext *avioctx{nullptr};
-    AVIOInterruptCB intcb{decode_interrupt_cb, this};
-    if(avio_open2(&avioctx, mFilename.c_str(), AVIO_FLAG_READ, &intcb, nullptr))
+    auto intcb = AVIOInterruptCB{decode_interrupt_cb, this};
+    if(avio_open2(al::out_ptr(mIOContext), mFilename.c_str(), AVIO_FLAG_READ, &intcb, nullptr) < 0)
     {
         fmt::println(stderr, "Failed to open {}", mFilename);
         return false;
     }
-    mIOContext.reset(avioctx);
 
     /* Open movie file. If avformat_open_input fails it will automatically free
-     * this context, so don't set it onto a smart pointer yet.
+     * this context.
      */
-    AVFormatContext *fmtctx{avformat_alloc_context()};
-    fmtctx->pb = mIOContext.get();
-    fmtctx->interrupt_callback = intcb;
-    if(avformat_open_input(&fmtctx, mFilename.c_str(), nullptr, nullptr) != 0)
+    mFormatCtx.reset(avformat_alloc_context());
+    mFormatCtx->pb = mIOContext.get();
+    mFormatCtx->interrupt_callback = intcb;
+    if(avformat_open_input(al::inout_ptr(mFormatCtx), mFilename.c_str(), nullptr, nullptr) < 0)
     {
         fmt::println(stderr, "Failed to open {}", mFilename);
         return false;
     }
-    mFormatCtx.reset(fmtctx);
 
     /* Retrieve stream information */
     if(avformat_find_stream_info(mFormatCtx.get(), nullptr) < 0)

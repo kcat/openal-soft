@@ -116,7 +116,6 @@ constexpr double CalcKaiserBeta(const double rejection)
 
 
 struct BSincHeader {
-    double width{};
     double beta{};
     double scaleBase{};
 
@@ -124,8 +123,7 @@ struct BSincHeader {
     uint total_size{};
 
     constexpr BSincHeader(uint Rejection, uint Order) noexcept
-        : width{CalcKaiserWidth(Rejection, Order)}, beta{CalcKaiserBeta(Rejection)}
-        , scaleBase{width / 2.0}
+        : beta{CalcKaiserBeta(Rejection)}, scaleBase{CalcKaiserWidth(Rejection, Order) / 2.0}
     {
         uint num_points{Order+1};
         for(uint si{0};si < BSincScaleCount;++si)

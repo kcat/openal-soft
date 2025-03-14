@@ -123,16 +123,13 @@ class out_ptr_t {
     static_assert(!std::is_same_v<PT,void*>);
 
     SP &mRes;
-    std::variant<PT,void*> mPtr{};
+    std::variant<PT,void*> mPtr;
 
 public:
     explicit out_ptr_t(SP &res) : mRes{res} { }
-    ~out_ptr_t()
-    {
-        auto set_res = [this](auto &ptr)
-        { mRes.reset(static_cast<PT>(ptr)); };
-        std::visit(set_res, mPtr);
-    }
+    ~out_ptr_t() { std::visit([this](auto &ptr) { mRes.reset(static_cast<PT>(ptr)); }, mPtr); }
+
+    out_ptr_t() = delete;
     out_ptr_t(const out_ptr_t&) = delete;
     out_ptr_t& operator=(const out_ptr_t&) = delete;
 
@@ -144,10 +141,16 @@ public:
 };
 
 template<typename T=void, typename SP, typename ...Args>
-auto out_ptr(SP &res)
+auto out_ptr(SP &res, Args&& ...args)
 {
-    using ptype = typename SP::element_type*;
-    return out_ptr_t<SP,ptype>{res};
+    static_assert(sizeof...(args) == 0);
+    if constexpr(std::is_same_v<T,void>)
+    {
+        using ptype = typename SP::element_type*;
+        return out_ptr_t<SP,ptype,Args...>{res};
+    }
+    else
+        return out_ptr_t<SP,T,Args...>{res};
 }
 
 
@@ -156,31 +159,38 @@ class inout_ptr_t {
     static_assert(!std::is_same_v<PT,void*>);
 
     SP &mRes;
-    std::variant<PT,void*> mPtr{};
+    std::variant<PT,void*> mPtr;
 
 public:
-    explicit inout_ptr_t(SP &res) : mRes{res} { }
+    explicit inout_ptr_t(SP &res) : mRes{res}, mPtr{res.get()} { }
     ~inout_ptr_t()
     {
-        auto set_res = [this](auto &ptr)
-        { mRes.reset(static_cast<PT>(ptr)); };
-        std::visit(set_res, mPtr);
+        mRes.release();
+        std::visit([this](auto &ptr) { mRes.reset(static_cast<PT>(ptr)); }, mPtr);
     }
+
+    inout_ptr_t() = delete;
     inout_ptr_t(const inout_ptr_t&) = delete;
     inout_ptr_t& operator=(const inout_ptr_t&) = delete;
 
     operator PT*() noexcept /* NOLINT(google-explicit-constructor) */
-    { return &mPtr.template emplace<PT>(mRes.release()); }
+    { return &std::get<PT>(mPtr); }
 
     operator void**() noexcept /* NOLINT(google-explicit-constructor) */
-    { return &mPtr.template emplace<void*>(mRes.release()); }
+    { return &mPtr.template emplace<void*>(mRes.get()); }
 };
 
 template<typename T=void, typename SP, typename ...Args>
-auto inout_ptr(SP &res)
+auto inout_ptr(SP &res, Args&& ...args)
 {
-    using ptype = typename SP::element_type*;
-    return inout_ptr_t<SP,ptype>{res};
+    static_assert(sizeof...(args) == 0);
+    if constexpr(std::is_same_v<T,void>)
+    {
+        using ptype = typename SP::element_type*;
+        return inout_ptr_t<SP,ptype,Args...>{res};
+    }
+    else
+        return inout_ptr_t<SP,T,Args...>{res};
 }
 
 } // namespace al

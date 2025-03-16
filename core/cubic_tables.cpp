@@ -70,17 +70,20 @@ GaussianTable::GaussianTable()
 
 SplineTable::SplineTable()
 {
+    static constexpr auto third = 1.0/3.0;
+    static constexpr auto sixth = 1.0/6.0;
     /* This filter table is based on a Catmull-Rom spline. It retains more of
      * the original high-frequency content, at the cost of increased harmonics.
      */
     for(std::size_t pi{0};pi < CubicPhaseCount;++pi)
     {
-        const double mu{static_cast<double>(pi) / double{CubicPhaseCount}};
-        const double mu2{mu*mu}, mu3{mu2*mu};
-        mTable[pi].mCoeffs[0] = static_cast<float>(-0.5*mu3 +      mu2 + -0.5*mu);
-        mTable[pi].mCoeffs[1] = static_cast<float>( 1.5*mu3 + -2.5*mu2           + 1.0);
-        mTable[pi].mCoeffs[2] = static_cast<float>(-1.5*mu3 +  2.0*mu2 +  0.5*mu);
-        mTable[pi].mCoeffs[3] = static_cast<float>( 0.5*mu3 + -0.5*mu2);
+        const auto mu = static_cast<double>(pi) / double{CubicPhaseCount};
+        const auto mu2 = mu*mu;
+        const auto mu3 = mu*mu2;
+        mTable[pi].mCoeffs[0] = static_cast<float>(      -third*mu + 0.5*mu2  - sixth*mu3);
+        mTable[pi].mCoeffs[1] = static_cast<float>(1.0 -    0.5*mu -     mu2  +   0.5*mu3);
+        mTable[pi].mCoeffs[2] = static_cast<float>(             mu + 0.5*mu2  -   0.5*mu3);
+        mTable[pi].mCoeffs[3] = static_cast<float>(      -sixth*mu            + sixth*mu3);
     }
 
     for(std::size_t pi{0};pi < CubicPhaseCount-1;++pi)
@@ -91,7 +94,7 @@ SplineTable::SplineTable()
         mTable[pi].mDeltas[3] = mTable[pi+1].mCoeffs[3] - mTable[pi].mCoeffs[3];
     }
 
-    const std::size_t pi{CubicPhaseCount - 1};
+    static constexpr auto pi = std::size_t{CubicPhaseCount - 1};
     mTable[pi].mDeltas[0] =                 0.0f - mTable[pi].mCoeffs[0];
     mTable[pi].mDeltas[1] = mTable[0].mCoeffs[0] - mTable[pi].mCoeffs[1];
     mTable[pi].mDeltas[2] = mTable[0].mCoeffs[1] - mTable[pi].mCoeffs[2];

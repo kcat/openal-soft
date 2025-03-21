@@ -116,12 +116,16 @@ constexpr double CalcKaiserBeta(const double rejection)
 
 /* TODO: These bsinc tables increase the number of taps when down-sampling, up
  * to double the taps when halving the rate, where it's able to keep the same
- * relative cutoff frequency and the stop band at nyquist. More extreme down-
- * sampling will reduce the cutoff frequency to maintain the stop band at
- * nyquist, which may not be ideal as it causes fairly severe attenuation in
- * the lower frequencies. It may be better to instead allow the stop band to
- * increase beyond nyquist, at least partially with a less reduced cutoff
- * frequency, and accept some aliasing to avoid overly-muffling the sound.
+ * relative cutoff frequency and the stop band at nyquist on the output. More
+ * extreme down-sampling will reduce the cutoff frequency to maintain the stop
+ * band at nyquist, which may not be ideal as it causes severe attenuation in
+ * the higher frequencies.
+ *
+ * It may be better to instead allow the stop band to increase beyond nyquist,
+ * at least partially with a less reduced cutoff frequency, and accept some
+ * aliasing to avoid overly-muffling the sound (for reference, the bsinc24
+ * filter at 48khz output, results in a 10khz cutoff at the maximum down-
+ * sampling scale, where bsinc12 gives a ~5.7khz cutoff).
  */
 struct BSincHeader {
     double beta{};
@@ -167,7 +171,7 @@ struct SIMDALIGN BSincFilterArray {
         using filter_type = std::array<std::array<double,BSincPointsMax>,BSincPhaseCount>;
         auto filter = std::vector<filter_type>(BSincScaleCount);
 
-        const double besseli_0_beta{::cyl_bessel_i(0, hdr.beta)};
+        static constexpr auto besseli_0_beta = ::cyl_bessel_i(0, hdr.beta);
 
         /* Calculate the Kaiser-windowed Sinc filter coefficients for each
          * scale and phase index.
@@ -176,7 +180,7 @@ struct SIMDALIGN BSincFilterArray {
         {
             const auto a = hdr.a[si];
             const auto m = hdr.m[si];
-            const auto l = static_cast<double>(m/2u - 1u); /* NOLINT(bugprone-integer-division) */
+            const auto l = std::floor(m/2.0) - 1.0;
             const auto o = size_t{BSincPointsMax-m} / 2u;
             const auto scale = lerpd(hdr.scaleBase, 1.0, (si+1) / double{BSincScaleCount});
             const auto cutoff2 = scale - (hdr.scaleBase * std::max(1.0, scale*2.0));
@@ -187,7 +191,7 @@ struct SIMDALIGN BSincFilterArray {
 
                 for(uint i{0};i < m;++i)
                 {
-                    const auto x = double(i) - phase;
+                    const auto x = static_cast<double>(i) - phase;
                     filter[si][pi][o+i] = Kaiser(hdr.beta, x/a, besseli_0_beta) * cutoff2 *
                         Sinc(cutoff2*x);
                 }

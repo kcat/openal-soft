@@ -114,26 +114,35 @@ constexpr double CalcKaiserBeta(const double rejection)
     return 0.0;
 }
 
-
+/* TODO: These bsinc tables increase the number of taps when down-sampling, up
+ * to double the taps when halving the rate, where it's able to keep the same
+ * relative cutoff frequency and the stop band at nyquist. More extreme down-
+ * sampling will reduce the cutoff frequency to maintain the stop band at
+ * nyquist, which may not be ideal as it causes fairly severe attenuation in
+ * the lower frequencies. It may be better to instead allow the stop band to
+ * increase beyond nyquist, at least partially with a less reduced cutoff
+ * frequency, and accept some aliasing to avoid overly-muffling the sound.
+ */
 struct BSincHeader {
     double beta{};
     double scaleBase{};
 
-    std::array<uint,BSincScaleCount> a{};
+    std::array<double,BSincScaleCount> a{};
+    std::array<uint,BSincScaleCount> m{};
     uint total_size{};
 
     constexpr BSincHeader(uint Rejection, uint Order) noexcept
         : beta{CalcKaiserBeta(Rejection)}, scaleBase{CalcKaiserWidth(Rejection, Order) / 2.0}
     {
-        uint num_points{Order+1};
+        const auto num_points = Order+1u;
         for(uint si{0};si < BSincScaleCount;++si)
         {
-            const double scale{lerpd(scaleBase, 1.0, (si+1) / double{BSincScaleCount})};
-            const uint a_{std::min(static_cast<uint>(num_points / 2.0 / scale), num_points)};
-            const uint m{2 * a_};
+            const auto scale = lerpd(scaleBase, 1.0, (si+1u) / double{BSincScaleCount});
+            a[si] = std::min<double>(num_points/2.0/scale, num_points);
+            /* Poor man's std::ceil(), which isn't constexpr until C++23. */
+            m[si] = static_cast<uint>(a[si] + 0.99999) * 2u;
 
-            a[si] = a_;
-            total_size += 4 * BSincPhaseCount * ((m+3) & ~3u);
+            total_size += 4u * BSincPhaseCount * ((m[si]+3u) & ~3u);
         }
     }
 };
@@ -152,7 +161,7 @@ struct SIMDALIGN BSincFilterArray {
 
     BSincFilterArray()
     {
-        static constexpr uint BSincPointsMax{(hdr.a[0]*2u + 3u) & ~3u};
+        static constexpr auto BSincPointsMax = (hdr.m[0]+3u) & ~3u;
         static_assert(BSincPointsMax <= MaxResamplerPadding, "MaxResamplerPadding is too small");
 
         using filter_type = std::array<std::array<double,BSincPointsMax>,BSincPhaseCount>;
@@ -165,22 +174,22 @@ struct SIMDALIGN BSincFilterArray {
          */
         for(uint si{0};si < BSincScaleCount;++si)
         {
-            const uint m{hdr.a[si] * 2};
-            const size_t o{(BSincPointsMax-m) / 2};
-            const double scale{lerpd(hdr.scaleBase, 1.0, (si+1) / double{BSincScaleCount})};
-            const double cutoff{scale - (hdr.scaleBase * std::max(1.0, scale*2.0))};
-            const auto a = static_cast<double>(hdr.a[si]);
-            const double l{a - 1.0/BSincPhaseCount};
+            const auto a = hdr.a[si];
+            const auto m = hdr.m[si];
+            const auto l = static_cast<double>(m/2u - 1u); /* NOLINT(bugprone-integer-division) */
+            const auto o = size_t{BSincPointsMax-m} / 2u;
+            const auto scale = lerpd(hdr.scaleBase, 1.0, (si+1) / double{BSincScaleCount});
+            const auto cutoff2 = scale - (hdr.scaleBase * std::max(1.0, scale*2.0));
 
             for(uint pi{0};pi < BSincPhaseCount;++pi)
             {
-                const double phase{std::floor(l) + (pi/double{BSincPhaseCount})};
+                const auto phase = l + (pi/double{BSincPhaseCount});
 
                 for(uint i{0};i < m;++i)
                 {
-                    const double x{i - phase};
-                    filter[si][pi][o+i] = Kaiser(hdr.beta, x/l, besseli_0_beta) * cutoff *
-                        Sinc(cutoff*x);
+                    const auto x = double(i) - phase;
+                    filter[si][pi][o+i] = Kaiser(hdr.beta, x/a, besseli_0_beta) * cutoff2 *
+                        Sinc(cutoff2*x);
                 }
             }
         }
@@ -188,8 +197,8 @@ struct SIMDALIGN BSincFilterArray {
         size_t idx{0};
         for(size_t si{0};si < BSincScaleCount;++si)
         {
-            const size_t m{((hdr.a[si]*2) + 3) & ~3u};
-            const size_t o{(BSincPointsMax-m) / 2};
+            const auto m = (hdr.m[si]+3_uz) & ~3_uz;
+            const auto o = size_t{BSincPointsMax-m} / 2u;
 
             /* Write out each phase index's filter and phase delta for this
              * quality scale.
@@ -287,7 +296,7 @@ constexpr BSincTable GenerateBSincTable(const T &filter)
     ret.scaleBase = static_cast<float>(hdr.scaleBase);
     ret.scaleRange = static_cast<float>(1.0 / (1.0 - hdr.scaleBase));
     for(size_t i{0};i < BSincScaleCount;++i)
-        ret.m[i] = ((hdr.a[i]*2) + 3) & ~3u;
+        ret.m[i] = (hdr.m[i]+3u) & ~3u;
     ret.filterOffset[0] = 0;
     for(size_t i{1};i < BSincScaleCount;++i)
         ret.filterOffset[i] = ret.filterOffset[i-1] + ret.m[i-1]*4*BSincPhaseCount;

@@ -37,7 +37,7 @@ using uint = unsigned int;
 
 struct PPhaseResampler {
     void init(const uint srcRate, const uint dstRate);
-    void process(const al::span<const double> in, const al::span<double> out);
+    void process(const al::span<const double> in, const al::span<double> out) const;
 
     explicit operator bool() const noexcept { return !mF.empty(); }
 

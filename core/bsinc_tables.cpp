@@ -114,19 +114,7 @@ constexpr double CalcKaiserBeta(const double rejection)
     return 0.0;
 }
 
-/* TODO: These bsinc tables increase the number of taps when down-sampling, up
- * to double the taps when halving the rate, where it's able to keep the same
- * relative cutoff frequency and the stop band at nyquist on the output. More
- * extreme down-sampling will reduce the cutoff frequency to maintain the stop
- * band at nyquist, which may not be ideal as it causes severe attenuation in
- * the higher frequencies.
- *
- * It may be better to instead allow the stop band to increase beyond nyquist,
- * at least partially with a less reduced cutoff frequency, and accept some
- * aliasing to avoid overly-muffling the sound (for reference, the bsinc24
- * filter at 48khz output, results in a 10khz cutoff at the maximum down-
- * sampling scale, where bsinc12 gives a ~5.7khz cutoff).
- */
+
 struct BSincHeader {
     double beta{};
     double scaleBase{};
@@ -180,10 +168,67 @@ struct SIMDALIGN BSincFilterArray {
         {
             const auto a = hdr.a[si];
             const auto m = hdr.m[si];
-            const auto l = std::floor(m/2.0) - 1.0;
+            const auto l = std::floor(m*0.5) - 1.0;
             const auto o = size_t{BSincPointsMax-m} / 2u;
             const auto scale = lerpd(hdr.scaleBase, 1.0, (si+1) / double{BSincScaleCount});
-            const auto cutoff2 = scale - (hdr.scaleBase * std::max(1.0, scale*2.0));
+
+            /* Calculate an appropriate cutoff frequency. An explanation may be
+             * in order here.
+             *
+             * When up-sampling, or down-sampling by no less than half (when
+             * the input rate is no more than double the output, scale >= 0.5),
+             * the filter order increases to double as the down-sampling factor
+             * reduces to half, enabling a consistent filter response output.
+             *
+             * When resampling a sound that's more than double the output rate,
+             * the filter order remains constant to avoid further increasing
+             * the processing cost, causing the transition width to increase.
+             * This would normally be compensated for by reducing the cutoff
+             * frequency, keeping the transition band under the nyquist
+             * frequency and avoid aliasing. However, this has the side-effect
+             * of attenuating more of the original high frequency content,
+             * which can be significant with more extreme down-sampling scales.
+             *
+             * To combat this, we can allow for some aliasing to keep the
+             * cutoff frequency higher than it would otherwise be. We can allow
+             * the transition band to "wrap around" the nyquist frequency, so
+             * the output would have some low-level aliasing that overlays with
+             * the attenuated frequencies in the transition band. This allows
+             * the cutoff frequency to remain fixed as the transition width
+             * increases, until the stop frequency aliases back to the cutoff
+             * frequency and the transition band becomes fully wrapped over
+             * itself, at which point the cutoff frequency will lower only as
+             * necessary to keep fully wrapped.
+             *
+             * This has an additional benefit when dealing with typical output
+             * rates like 44 or 48khz. Since human hearing maxes out at 20khz,
+             * and these rates handle frequencies up to 22 or 24khz, this lets
+             * some aliasing get masked. For example, the bsinc24 filter with
+             * 48khz output has a cutoff of 20khz when down-sampling, with a
+             * 4khz transition band. When down-sampling by more extreme scales,
+             * the cutoff frequency can stay at 20khz while the transition
+             * width doubles before any aliasing noise may become audible.
+             *
+             * This is what we do here.
+             *
+             * 'max_cutoff` is the upper bound normalized cutoff frequency for
+             * this scale factor, that aligns with the same absolute frequency
+             * as nominal resample factors. When up-sampling (scale == 1), the
+             * cutoff can't be raised further than this, or else would
+             * prematurely add more aliasing when down-sampling.
+             *
+             * 'width' is the normalized transition width for this scale
+             * factor.
+             *
+             * '(scale - width)*0.5' calculates the cutoff frequency necessary
+             * for the transition band to fully wrap on itself around the
+             * nyquist frequency. If this is larger than max_cutoff, the
+             * transition band is not fully wrapped at this scale and the
+             * cutoff doesn't need adjustment.
+             */
+            const auto max_cutoff = scale*0.5 - hdr.scaleBase*scale;
+            const auto width = hdr.scaleBase * std::max(0.5, scale);
+            const auto cutoff2 = std::min(max_cutoff, (scale - width)*0.5) * 2.0;
 
             for(uint pi{0};pi < BSincPhaseCount;++pi)
             {

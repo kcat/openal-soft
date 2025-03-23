@@ -131,8 +131,12 @@ struct BSincHeader {
         {
             const auto scale = lerpd(scaleBase, 1.0, (si+1u) / double{BSincScaleCount});
             a[si] = std::min<double>(num_points/2.0/scale, num_points);
-            /* Poor man's std::ceil(), which isn't constexpr until C++23. */
-            m[si] = static_cast<uint>(a[si] + 0.99999) * 2u;
+            /* std::ceil() isn't constexpr until C++23, this should behave the
+             * same.
+             */
+            auto a_ = static_cast<uint>(a[si]);
+            a_ += (static_cast<double>(a_) != a[si]);
+            m[si] = a_ * 2u;
 
             total_size += 4u * BSincPhaseCount * ((m[si]+3u) & ~3u);
         }

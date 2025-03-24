@@ -95,6 +95,10 @@ template<> struct ResamplerName<Resampler::FastBSinc24>
 { static constexpr const ALchar *Get() noexcept { return "23rd order Sinc (fast)"; } };
 template<> struct ResamplerName<Resampler::BSinc24>
 { static constexpr const ALchar *Get() noexcept { return "23rd order Sinc"; } };
+template<> struct ResamplerName<Resampler::FastBSinc48>
+{ static constexpr const ALchar *Get() noexcept { return "47th order Sinc (fast)"; } };
+template<> struct ResamplerName<Resampler::BSinc48>
+{ static constexpr const ALchar *Get() noexcept { return "47th order Sinc"; } };
 
 const ALchar *GetResamplerName(const Resampler rtype)
 {
@@ -109,6 +113,8 @@ const ALchar *GetResamplerName(const Resampler rtype)
     HANDLE_RESAMPLER(Resampler::BSinc12);
     HANDLE_RESAMPLER(Resampler::FastBSinc24);
     HANDLE_RESAMPLER(Resampler::BSinc24);
+    HANDLE_RESAMPLER(Resampler::FastBSinc48);
+    HANDLE_RESAMPLER(Resampler::BSinc48);
     }
 #undef HANDLE_RESAMPLER
     /* Should never get here. */

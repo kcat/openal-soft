@@ -223,6 +223,7 @@ inline ResamplerFunc SelectResampler(Resampler resampler, uint increment)
         return Resample_<CubicTag,CTag>;
     case Resampler::BSinc12:
     case Resampler::BSinc24:
+    case Resampler::BSinc48:
         if(increment > MixerFracOne)
         {
 #if HAVE_NEON
@@ -235,9 +236,10 @@ inline ResamplerFunc SelectResampler(Resampler resampler, uint increment)
 #endif
             return Resample_<BSincTag,CTag>;
         }
-        /* fall-through */
+        [[fallthrough]];
     case Resampler::FastBSinc12:
     case Resampler::FastBSinc24:
+    case Resampler::FastBSinc48:
 #if HAVE_NEON
         if((CPUCapFlags&CPU_CAP_NEON))
             return Resample_<FastBSincTag,NEONTag>;
@@ -285,6 +287,10 @@ ResamplerFunc PrepareResampler(Resampler resampler, uint increment, InterpState 
     case Resampler::FastBSinc24:
     case Resampler::BSinc24:
         BsincPrepare(increment, &state->emplace<BsincState>(), &gBSinc24);
+        break;
+    case Resampler::FastBSinc48:
+    case Resampler::BSinc48:
+        BsincPrepare(increment, &state->emplace<BsincState>(), &gBSinc48);
         break;
     }
     return SelectResampler(resampler, increment);

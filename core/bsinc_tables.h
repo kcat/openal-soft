@@ -16,5 +16,6 @@ struct BSincTable {
 
 DECL_HIDDEN extern const BSincTable gBSinc12;
 DECL_HIDDEN extern const BSincTable gBSinc24;
+DECL_HIDDEN extern const BSincTable gBSinc48;
 
 #endif /* CORE_BSINC_TABLES_H */

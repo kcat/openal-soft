@@ -118,19 +118,21 @@ constexpr double CalcKaiserBeta(const double rejection)
 struct BSincHeader {
     double beta{};
     double scaleBase{};
+    double scaleLimit{};
 
     std::array<double,BSincScaleCount> a{};
     std::array<uint,BSincScaleCount> m{};
     uint total_size{};
 
-    constexpr BSincHeader(uint Rejection, uint Order) noexcept
-        : beta{CalcKaiserBeta(Rejection)}, scaleBase{CalcKaiserWidth(Rejection, Order) / 2.0}
+    constexpr BSincHeader(uint rejection, uint order, uint maxScale) noexcept
+        : beta{CalcKaiserBeta(rejection)}, scaleBase{CalcKaiserWidth(rejection, order) / 2.0}
+        , scaleLimit{1.0 / maxScale}
     {
-        const auto num_points = Order+1u;
+        const auto base_a = (order+1.0) / 2.0;
         for(uint si{0};si < BSincScaleCount;++si)
         {
             const auto scale = lerpd(scaleBase, 1.0, (si+1u) / double{BSincScaleCount});
-            a[si] = std::min<double>(num_points/2.0/scale, num_points);
+            a[si] = std::min(base_a/scale, base_a*maxScale);
             /* std::ceil() isn't constexpr until C++23, this should behave the
              * same.
              */
@@ -144,11 +146,15 @@ struct BSincHeader {
 };
 
 /* 11th and 23rd order filters (12 and 24-point respectively) with a 60dB drop
- * at nyquist. Each filter will scale up the order when downsampling, to 23rd
- * and 47th order respectively.
+ * at nyquist. Each filter will scale up to double size when downsampling, to
+ * 23rd and 47th order respectively.
  */
-constexpr BSincHeader bsinc12_hdr{60, 11};
-constexpr BSincHeader bsinc24_hdr{60, 23};
+constexpr auto bsinc12_hdr = BSincHeader{60, 11, 2};
+constexpr auto bsinc24_hdr = BSincHeader{60, 23, 2};
+/* 47th order filter (48-point) with an 80dB drop at nyquist. The filter order
+ * doesn't increase when downsampling.
+ */
+constexpr auto bsinc48_hdr = BSincHeader{80, 47, 1};
 
 
 template<const BSincHeader &hdr>
@@ -174,24 +180,24 @@ struct SIMDALIGN BSincFilterArray {
             const auto m = hdr.m[si];
             const auto l = std::floor(m*0.5) - 1.0;
             const auto o = size_t{BSincPointsMax-m} / 2u;
-            const auto scale = lerpd(hdr.scaleBase, 1.0, (si+1) / double{BSincScaleCount});
+            const auto scale = lerpd(hdr.scaleBase, 1.0, (si+1u) / double{BSincScaleCount});
 
             /* Calculate an appropriate cutoff frequency. An explanation may be
              * in order here.
              *
-             * When up-sampling, or down-sampling by no less than half (when
-             * the input rate is no more than double the output, scale >= 0.5),
-             * the filter order increases to double as the down-sampling factor
-             * reduces to half, enabling a consistent filter response output.
+             * When up-sampling, or down-sampling by less than the max scaling
+             * factor (when scale >= scaleLimit), the filter order increases as
+             * the down-sampling factor is reduced, enabling a consistent
+             * filter response output.
              *
-             * When resampling a sound that's more than double the output rate,
-             * the filter order remains constant to avoid further increasing
-             * the processing cost, causing the transition width to increase.
-             * This would normally be compensated for by reducing the cutoff
-             * frequency, keeping the transition band under the nyquist
-             * frequency and avoid aliasing. However, this has the side-effect
-             * of attenuating more of the original high frequency content,
-             * which can be significant with more extreme down-sampling scales.
+             * When down-sampling by more than the max scale factor, the filter
+             * order stays constant to avoid further increasing the processing
+             * cost, causing the transition width to increase. This would
+             * normally be compensated for by reducing the cutoff frequency,
+             * to keep the transition band under the nyquist frequency and
+             * avoid aliasing. However, this has the side-effect of attenuating
+             * more of the original high frequency content, which can be
+             * significant with more extreme down-sampling scales.
              *
              * To combat this, we can allow for some aliasing to keep the
              * cutoff frequency higher than it would otherwise be. We can allow
@@ -201,14 +207,14 @@ struct SIMDALIGN BSincFilterArray {
              * the cutoff frequency to remain fixed as the transition width
              * increases, until the stop frequency aliases back to the cutoff
              * frequency and the transition band becomes fully wrapped over
-             * itself, at which point the cutoff frequency will lower only as
-             * necessary to keep fully wrapped.
+             * itself, at which point the cutoff frequency will lower at half
+             * the rate the transition width increases.
              *
              * This has an additional benefit when dealing with typical output
              * rates like 44 or 48khz. Since human hearing maxes out at 20khz,
              * and these rates handle frequencies up to 22 or 24khz, this lets
              * some aliasing get masked. For example, the bsinc24 filter with
-             * 48khz output has a cutoff of 20khz when down-sampling, with a
+             * 48khz output has a cutoff of 20khz when down-sampling, and a
              * 4khz transition band. When down-sampling by more extreme scales,
              * the cutoff frequency can stay at 20khz while the transition
              * width doubles before any aliasing noise may become audible.
@@ -218,8 +224,8 @@ struct SIMDALIGN BSincFilterArray {
              * 'max_cutoff` is the upper bound normalized cutoff frequency for
              * this scale factor, that aligns with the same absolute frequency
              * as nominal resample factors. When up-sampling (scale == 1), the
-             * cutoff can't be raised further than this, or else would
-             * prematurely add more aliasing when down-sampling.
+             * cutoff can't be raised further than this, or else it would
+             * prematurely add audible aliasing noise.
              *
              * 'width' is the normalized transition width for this scale
              * factor.
@@ -230,8 +236,8 @@ struct SIMDALIGN BSincFilterArray {
              * transition band is not fully wrapped at this scale and the
              * cutoff doesn't need adjustment.
              */
-            const auto max_cutoff = scale*0.5 - hdr.scaleBase*scale;
-            const auto width = hdr.scaleBase * std::max(0.5, scale);
+            const auto max_cutoff = (0.5 - hdr.scaleBase)*scale;
+            const auto width = hdr.scaleBase * std::max(hdr.scaleLimit, scale);
             const auto cutoff2 = std::min(max_cutoff, (scale - width)*0.5) * 2.0;
 
             for(uint pi{0};pi < BSincPhaseCount;++pi)
@@ -338,8 +344,9 @@ struct SIMDALIGN BSincFilterArray {
     [[nodiscard]] constexpr auto getTable() const noexcept { return al::span{mTable}; }
 };
 
-const BSincFilterArray<bsinc12_hdr> bsinc12_filter{};
-const BSincFilterArray<bsinc24_hdr> bsinc24_filter{};
+const auto bsinc12_filter = BSincFilterArray<bsinc12_hdr>{};
+const auto bsinc24_filter = BSincFilterArray<bsinc24_hdr>{};
+const auto bsinc48_filter = BSincFilterArray<bsinc48_hdr>{};
 
 template<typename T>
 constexpr BSincTable GenerateBSincTable(const T &filter)
@@ -359,5 +366,6 @@ constexpr BSincTable GenerateBSincTable(const T &filter)
 
 } // namespace
 
-const BSincTable gBSinc12{GenerateBSincTable(bsinc12_filter)};
-const BSincTable gBSinc24{GenerateBSincTable(bsinc24_filter)};
+const auto gBSinc12 = BSincTable{GenerateBSincTable(bsinc12_filter)};
+const auto gBSinc24 = BSincTable{GenerateBSincTable(bsinc24_filter)};
+const auto gBSinc48 = BSincTable{GenerateBSincTable(bsinc48_filter)};

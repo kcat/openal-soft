@@ -189,7 +189,11 @@
 #            between 24 and 48 points, with anti-aliasing)
 #  fast_bsinc24 - same as bsinc24, except without interpolation between down-
 #                 sampling scales
-#resampler = gaussian
+#  bsinc48 - extrapolates samples using a band-limited Sinc filter (48 points,
+#            with anti-aliasing)
+#  fast_bsinc48 - same as bsinc48, except without interpolation between down-
+#                 sampling scales
+#resampler = spline
 
 ## rt-prio: (global)
 #  Sets the real-time priority value for the mixing thread. Not all drivers may

@@ -36,8 +36,10 @@ enum class Resampler : std::uint8_t {
     BSinc12,
     FastBSinc24,
     BSinc24,
+    FastBSinc48,
+    BSinc48,
 
-    Max = BSinc24
+    Max = BSinc48
 };
 
 /* Interpolator state. Kind of a misnomer since the interpolator itself is

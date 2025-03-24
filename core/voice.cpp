@@ -146,6 +146,8 @@ void Voice::InitMixer(std::optional<std::string> resopt)
             ResamplerEntry{"fast_bsinc12"sv, Resampler::FastBSinc12},
             ResamplerEntry{"bsinc24"sv, Resampler::BSinc24},
             ResamplerEntry{"fast_bsinc24"sv, Resampler::FastBSinc24},
+            ResamplerEntry{"bsinc48"sv, Resampler::BSinc48},
+            ResamplerEntry{"fast_bsinc48"sv, Resampler::FastBSinc48},
         };
 
         std::string_view resampler{*resopt};

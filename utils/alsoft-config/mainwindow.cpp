@@ -120,6 +120,8 @@ constexpr std::array resamplerList{
     NameValuePair{ "11th order Sinc", "bsinc12" },
     NameValuePair{ "23rd order Sinc (fast)", "fast_bsinc24" },
     NameValuePair{ "23rd order Sinc", "bsinc24" },
+    NameValuePair{ "47th order Sinc (fast)", "fast_bsinc48" },
+    NameValuePair{ "47th order Sinc", "bsinc48" },
 };
 constexpr std::array stereoModeList{
     NameValuePair{ "Autodetect", "" },

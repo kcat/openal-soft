@@ -1024,6 +1024,16 @@ void InitUhjPanning(al::Device *device)
         [](const uint8_t &acn) noexcept -> BFChannelConfig
         { return BFChannelConfig{1.0f/AmbiScale::FromUHJ[acn], acn}; });
     AllocChannels(device, count, device->channelsFromFmt());
+
+    /* TODO: Should this default to something else? This is simply a regular
+     * (first-order) B-Format mixing which just happens to be UHJ-encoded. As I
+     * understand it, a proper first-order B-Format signal essentially has an
+     * infinite control distance, which we can't really do. However, from what
+     * I've read, 2 meters or so should be sufficient as the near-field
+     * reference becomes inconsequential beyond that.
+     */
+    const auto spkr_dist = ConfigValueFloat({}, "uhj"sv, "distance-ref"sv).value_or(2.0f);
+    InitNearFieldCtrl(device, spkr_dist, device->mAmbiOrder, !device->m2DMixing);
 }
 
 } // namespace

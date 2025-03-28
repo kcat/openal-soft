@@ -1028,7 +1028,7 @@ int AudioState::handler()
     const auto has_bfmt_hoa = bool{has_bfmt_ex
         && alIsExtensionPresent("AL_SOFT_bformat_hoa") != AL_FALSE};
     /* AL_SOFT_bformat_hoa supports up to 14th order (225 channels). */
-    static constexpr auto max_ambi_order = 14;
+    const auto max_ambi_order = has_bfmt_hoa ? 14 : 1;
     auto ambi_order = 0;
 
     /* Find a suitable format for OpenAL. */
@@ -1093,7 +1093,7 @@ int AudioState::handler()
                  * is 4 channels for 3D buffers, unless AL_SOFT_bformat_hoa is
                  * also supported.
                  */
-                ambi_order = has_bfmt_hoa ? std::min(order, max_ambi_order) : 1;
+                ambi_order = std::min(order, max_ambi_order);
                 mFrameSize *= ALuint(ambi_order+1) * ALuint(ambi_order+1);
                 mFormat = alGetEnumValue("AL_FORMAT_BFORMAT3D_FLOAT32");
             }
@@ -1147,7 +1147,7 @@ int AudioState::handler()
             if(channels == mCodecCtx->ch_layout.nb_channels
                 || channels+2 == mCodecCtx->ch_layout.nb_channels)
             {
-                ambi_order = has_bfmt_hoa ? std::min(order, max_ambi_order) : 1;
+                ambi_order = std::min(order, max_ambi_order);
                 mFrameSize *= ALuint(ambi_order+1) * ALuint(ambi_order+1);
                 mFormat = alGetEnumValue("AL_FORMAT_BFORMAT3D_8");
             }
@@ -1201,7 +1201,7 @@ int AudioState::handler()
             if(channels == mCodecCtx->ch_layout.nb_channels
                 || channels+2 == mCodecCtx->ch_layout.nb_channels)
             {
-                ambi_order = has_bfmt_hoa ? std::min(order, max_ambi_order) : 1;
+                ambi_order = std::min(order, max_ambi_order);
                 mFrameSize *= ALuint(ambi_order+1) * ALuint(ambi_order+1);
                 mFormat = alGetEnumValue("AL_FORMAT_BFORMAT3D_16");
             }

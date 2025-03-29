@@ -1,3 +1,30 @@
+openal-soft-1.24.3:
+
+    Fixed using as a static library when linked into another project that uses
+    fmtlib.
+
+    Fixed building with static VC runtimes.
+
+    Fixed building with Windows headers that default to older targets.
+
+    Fixed building on 32-bit targets that use 32-bit file offsets.
+
+    Fixed handling WASAPI enumerated device changes.
+
+    Fixed a crash with UWP builds when __wargv is null.
+
+    Fixed using AL_FORMAT_BFORMAT3D_I32.
+
+    Improved the bsinc resamplers' cutoff frequencies.
+
+    Slightly reduced the aliasing noise in the cubic spline resampler.
+
+    Added new bsinc48 and fast_bsinc48 resampler options.
+
+    Added support for 16KB page sizes on Android.
+
+    Added support for using NFC filters with UHJ output.
+
 openal-soft-1.24.2:
 
     Implemented the AL_SOFT_bformat_hoa extension.

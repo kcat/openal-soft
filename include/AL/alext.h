@@ -309,9 +309,9 @@ typedef ALCdevice* (ALC_APIENTRY*LPALCLOOPBACKOPENDEVICESOFT)(const ALCchar*) AL
 typedef ALCboolean (ALC_APIENTRY*LPALCISRENDERFORMATSUPPORTEDSOFT)(ALCdevice*,ALCsizei,ALCenum,ALCenum) ALC_API_NOEXCEPT17;
 typedef void (ALC_APIENTRY*LPALCRENDERSAMPLESSOFT)(ALCdevice*,ALCvoid*,ALCsizei) ALC_API_NOEXCEPT17;
 #ifdef AL_ALEXT_PROTOTYPES
-ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(const ALCchar *deviceName) AL_API_NOEXCEPT;
-ALC_API ALCboolean ALC_APIENTRY alcIsRenderFormatSupportedSOFT(ALCdevice *device, ALCsizei freq, ALCenum channels, ALCenum type) AL_API_NOEXCEPT;
-ALC_API void ALC_APIENTRY alcRenderSamplesSOFT(ALCdevice *device, ALCvoid *buffer, ALCsizei samples) AL_API_NOEXCEPT;
+ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(const ALCchar *deviceName) ALC_API_NOEXCEPT;
+ALC_API ALCboolean ALC_APIENTRY alcIsRenderFormatSupportedSOFT(ALCdevice *device, ALCsizei freq, ALCenum channels, ALCenum type) ALC_API_NOEXCEPT;
+ALC_API void ALC_APIENTRY alcRenderSamplesSOFT(ALCdevice *device, ALCvoid *buffer, ALCsizei samples) ALC_API_NOEXCEPT;
 #endif
 #endif
 
@@ -573,7 +573,7 @@ AL_API void AL_APIENTRY alGetPointervSOFT(ALenum pname, void **values) AL_API_NO
 typedef ALCboolean (ALC_APIENTRY*LPALCREOPENDEVICESOFT)(ALCdevice *device,
     const ALCchar *deviceName, const ALCint *attribs) ALC_API_NOEXCEPT17;
 #ifdef AL_ALEXT_PROTOTYPES
-ALCboolean ALC_APIENTRY alcReopenDeviceSOFT(ALCdevice *device, const ALCchar *deviceName,
+ALC_API ALCboolean ALC_APIENTRY alcReopenDeviceSOFT(ALCdevice *device, const ALCchar *deviceName,
     const ALCint *attribs) ALC_API_NOEXCEPT;
 #endif
 #endif
@@ -645,8 +645,8 @@ AL_API void AL_APIENTRY alGetBufferPtrvSOFT(ALuint buffer, ALenum param, ALvoid 
 typedef void (AL_APIENTRY*LPALSOURCEPLAYATTIMESOFT)(ALuint source, ALint64SOFT start_time) AL_API_NOEXCEPT17;
 typedef void (AL_APIENTRY*LPALSOURCEPLAYATTIMEVSOFT)(ALsizei n, const ALuint *sources, ALint64SOFT start_time) AL_API_NOEXCEPT17;
 #ifdef AL_ALEXT_PROTOTYPES
-void AL_APIENTRY alSourcePlayAtTimeSOFT(ALuint source, ALint64SOFT start_time) AL_API_NOEXCEPT;
-void AL_APIENTRY alSourcePlayAtTimevSOFT(ALsizei n, const ALuint *sources, ALint64SOFT start_time) AL_API_NOEXCEPT;
+AL_API void AL_APIENTRY alSourcePlayAtTimeSOFT(ALuint source, ALint64SOFT start_time) AL_API_NOEXCEPT;
+AL_API void AL_APIENTRY alSourcePlayAtTimevSOFT(ALsizei n, const ALuint *sources, ALint64SOFT start_time) AL_API_NOEXCEPT;
 #endif
 #endif
 
@@ -707,16 +707,16 @@ typedef void (AL_APIENTRY*LPALGETOBJECTLABELEXT)(ALenum identifier, ALuint name,
 typedef void* (AL_APIENTRY*LPALGETPOINTEREXT)(ALenum pname) AL_API_NOEXCEPT17;
 typedef void (AL_APIENTRY*LPALGETPOINTERVEXT)(ALenum pname, void **values) AL_API_NOEXCEPT17;
 #ifdef AL_ALEXT_PROTOTYPES
-void AL_APIENTRY alDebugMessageCallbackEXT(ALDEBUGPROCEXT callback, void *userParam) AL_API_NOEXCEPT;
-void AL_APIENTRY alDebugMessageInsertEXT(ALenum source, ALenum type, ALuint id, ALenum severity, ALsizei length, const ALchar *message) AL_API_NOEXCEPT;
-void AL_APIENTRY alDebugMessageControlEXT(ALenum source, ALenum type, ALenum severity, ALsizei count, const ALuint *ids, ALboolean enable) AL_API_NOEXCEPT;
-void AL_APIENTRY alPushDebugGroupEXT(ALenum source, ALuint id, ALsizei length, const ALchar *message) AL_API_NOEXCEPT;
-void AL_APIENTRY alPopDebugGroupEXT(void) AL_API_NOEXCEPT;
-ALuint AL_APIENTRY alGetDebugMessageLogEXT(ALuint count, ALsizei logBufSize, ALenum *sources, ALenum *types, ALuint *ids, ALenum *severities, ALsizei *lengths, ALchar *logBuf) AL_API_NOEXCEPT;
-void AL_APIENTRY alObjectLabelEXT(ALenum identifier, ALuint name, ALsizei length, const ALchar *label) AL_API_NOEXCEPT;
-void AL_APIENTRY alGetObjectLabelEXT(ALenum identifier, ALuint name, ALsizei bufSize, ALsizei *length, ALchar *label) AL_API_NOEXCEPT;
-void* AL_APIENTRY alGetPointerEXT(ALenum pname) AL_API_NOEXCEPT;
-void AL_APIENTRY alGetPointervEXT(ALenum pname, void **values) AL_API_NOEXCEPT;
+AL_API void AL_APIENTRY alDebugMessageCallbackEXT(ALDEBUGPROCEXT callback, void *userParam) AL_API_NOEXCEPT;
+AL_API void AL_APIENTRY alDebugMessageInsertEXT(ALenum source, ALenum type, ALuint id, ALenum severity, ALsizei length, const ALchar *message) AL_API_NOEXCEPT;
+AL_API void AL_APIENTRY alDebugMessageControlEXT(ALenum source, ALenum type, ALenum severity, ALsizei count, const ALuint *ids, ALboolean enable) AL_API_NOEXCEPT;
+AL_API void AL_APIENTRY alPushDebugGroupEXT(ALenum source, ALuint id, ALsizei length, const ALchar *message) AL_API_NOEXCEPT;
+AL_API void AL_APIENTRY alPopDebugGroupEXT(void) AL_API_NOEXCEPT;
+AL_API ALuint AL_APIENTRY alGetDebugMessageLogEXT(ALuint count, ALsizei logBufSize, ALenum *sources, ALenum *types, ALuint *ids, ALenum *severities, ALsizei *lengths, ALchar *logBuf) AL_API_NOEXCEPT;
+AL_API void AL_APIENTRY alObjectLabelEXT(ALenum identifier, ALuint name, ALsizei length, const ALchar *label) AL_API_NOEXCEPT;
+AL_API void AL_APIENTRY alGetObjectLabelEXT(ALenum identifier, ALuint name, ALsizei bufSize, ALsizei *length, ALchar *label) AL_API_NOEXCEPT;
+AL_API void* AL_APIENTRY alGetPointerEXT(ALenum pname) AL_API_NOEXCEPT;
+AL_API void AL_APIENTRY alGetPointervEXT(ALenum pname, void **values) AL_API_NOEXCEPT;
 #endif
 #endif
 
@@ -735,9 +735,9 @@ typedef ALCenum (ALC_APIENTRY*LPALCEVENTISSUPPORTEDSOFT)(ALCenum eventType, ALCe
 typedef ALCboolean (ALC_APIENTRY*LPALCEVENTCONTROLSOFT)(ALCsizei count, const ALCenum *events, ALCboolean enable) ALC_API_NOEXCEPT17;
 typedef void (ALC_APIENTRY*LPALCEVENTCALLBACKSOFT)(ALCEVENTPROCTYPESOFT callback, void *userParam) ALC_API_NOEXCEPT17;
 #ifdef AL_ALEXT_PROTOTYPES
-ALCenum ALC_APIENTRY alcEventIsSupportedSOFT(ALCenum eventType, ALCenum deviceType) ALC_API_NOEXCEPT;
-ALCboolean ALC_APIENTRY alcEventControlSOFT(ALCsizei count, const ALCenum *events, ALCboolean enable) ALC_API_NOEXCEPT;
-void ALC_APIENTRY alcEventCallbackSOFT(ALCEVENTPROCTYPESOFT callback, void *userParam) ALC_API_NOEXCEPT;
+ALC_API ALCenum ALC_APIENTRY alcEventIsSupportedSOFT(ALCenum eventType, ALCenum deviceType) ALC_API_NOEXCEPT;
+ALC_API ALCboolean ALC_APIENTRY alcEventControlSOFT(ALCsizei count, const ALCenum *events, ALCboolean enable) ALC_API_NOEXCEPT;
+ALC_API void ALC_APIENTRY alcEventCallbackSOFT(ALCEVENTPROCTYPESOFT callback, void *userParam) ALC_API_NOEXCEPT;
 #endif
 #endif
 

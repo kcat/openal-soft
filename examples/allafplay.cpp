@@ -78,6 +78,7 @@
 #include <cassert>
 #include <cstdint>
 #include <fstream>
+#include <functional>
 #include <memory>
 #include <numeric>
 #include <string>
@@ -452,12 +453,12 @@ void LafStream::copySamples(char *dst, const char *src, const size_t idx, const 
     auto input = al::span{reinterpret_cast<const src_t*>(src), count*step};
     auto output = al::span{reinterpret_cast<dst_t*>(dst), count};
 
-    auto inptr = input.begin();
-    std::generate_n(output.begin(), output.size(), [&inptr,idx,step]
+    auto inptr = input.begin() + ptrdiff_t(idx);
+    output.front() = reader_t::read(*inptr);
+    std::generate_n(output.begin()+1, output.size(), [&inptr,step]
     {
-        auto ret = reader_t::read(inptr[idx]);
         inptr += ptrdiff_t(step);
-        return ret;
+        return reader_t::read(*inptr);
     });
 }
 
@@ -469,7 +470,7 @@ auto LafStream::prepareTrack(const size_t trackidx, const size_t count) -> al::s
         /* If the track is enabled, get the real index (skipping disabled
          * tracks), and deinterlace it into the mono line.
          */
-        const auto idx = [this,trackidx]() -> unsigned int
+        const auto idx = std::invoke([this,trackidx]() -> unsigned int
         {
             const auto bits = al::span{mEnabledTracks}.first(trackidx>>3);
             const auto res = std::accumulate(bits.begin(), bits.end(), 0u,
@@ -477,7 +478,7 @@ auto LafStream::prepareTrack(const size_t trackidx, const size_t count) -> al::s
                 { return val + unsigned(al::popcount(unsigned(in))); });
             return unsigned(al::popcount(mEnabledTracks[trackidx>>3] & ((1u<<(trackidx&7))-1)))
                 + res;
-        }();
+        });
 
         switch(mQuality)
         {
@@ -524,8 +525,7 @@ auto LoadLAF(const fs::path &fname) -> std::unique_ptr<LafStream>
     {
         auto headview = std::string_view{header.data(), header.size()};
         auto hiter = header.begin();
-        if(const auto hpos = std::min(headview.find("HEAD"sv), headview.size());
-            hpos < headview.size())
+        if(const auto hpos = headview.find("HEAD"sv); hpos < headview.size())
         {
             /* Found the HEAD marker. Copy what was read of the header to the
              * front, fill in the rest of the header, and continue loading.
@@ -549,24 +549,27 @@ auto LoadLAF(const fs::path &fname) -> std::unique_ptr<LafStream>
             throw std::runtime_error{"Failed to read header"};
     }
 
-    laf->mQuality = [stype=int{header[4]}] {
+    laf->mQuality = std::invoke([stype=int{header[4]}]
+    {
         if(stype == 0) return Quality::s8;
         if(stype == 1) return Quality::s16;
         if(stype == 2) return Quality::f32;
         if(stype == 3) return Quality::s24;
         throw std::runtime_error{fmt::format("Invalid quality type: {}", stype)};
-    }();
+    });
 
-    laf->mMode = [mode=int{header[5]}] {
+    laf->mMode = std::invoke([mode=int{header[5]}]
+    {
         if(mode == 0) return Mode::Channels;
         if(mode == 1) return Mode::Objects;
         throw std::runtime_error{fmt::format("Invalid mode: {}", mode)};
-    }();
+    });
 
-    laf->mNumTracks = [input=al::span{header}.subspan<6,4>()] {
+    laf->mNumTracks = std::invoke([input=al::span{header}.subspan<6,4>()]
+    {
         return uint32_t{uint8_t(input[0])} | (uint32_t{uint8_t(input[1])}<<8u)
             | (uint32_t{uint8_t(input[2])}<<16u) | (uint32_t{uint8_t(input[3])}<<24u);
-    }();
+    });
 
     fmt::println("Filename: {}", fname.string());
     fmt::println(" quality: {}", GetQualityName(laf->mQuality));
@@ -645,16 +648,18 @@ auto LoadLAF(const fs::path &fname) -> std::unique_ptr<LafStream>
     if(laf->mInFile.sgetn(footer.data(), footer.size()) != footer.size())
         throw std::runtime_error{"Failed to read sample header data"};
 
-    laf->mSampleRate = [input=al::span{footer}.first<4>()] {
+    laf->mSampleRate = std::invoke([input=al::span{footer}.first<4>()]
+    {
         return uint32_t{uint8_t(input[0])} | (uint32_t{uint8_t(input[1])}<<8u)
             | (uint32_t{uint8_t(input[2])}<<16u) | (uint32_t{uint8_t(input[3])}<<24u);
-    }();
-    laf->mSampleCount = [input=al::span{footer}.last<8>()] {
+    });
+    laf->mSampleCount = std::invoke([input=al::span{footer}.last<8>()]
+    {
         return uint64_t{uint8_t(input[0])} | (uint64_t{uint8_t(input[1])}<<8)
             | (uint64_t{uint8_t(input[2])}<<16u) | (uint64_t{uint8_t(input[3])}<<24u)
             | (uint64_t{uint8_t(input[4])}<<32u) | (uint64_t{uint8_t(input[5])}<<40u)
             | (uint64_t{uint8_t(input[6])}<<48u) | (uint64_t{uint8_t(input[7])}<<56u);
-    }();
+    });
     fmt::println("Sample rate: {}", laf->mSampleRate);
     fmt::println("Length: {} samples ({:.2f} sec)", laf->mSampleCount,
         static_cast<double>(laf->mSampleCount)/static_cast<double>(laf->mSampleRate));
@@ -945,7 +950,7 @@ auto main(al::span<std::string_view> args) -> int
     {
 #define LOAD_PROC(x) do {                                                     \
         x = reinterpret_cast<decltype(x)>(alGetProcAddress(#x));              \
-        if(!x) fmt::println(stderr, "Failed to find function '{}'\n", #x##sv);\
+        if(!x) fmt::println(stderr, "Failed to find function '{}'", #x##sv);  \
     } while(0)
         LOAD_PROC(alGenFilters);
         LOAD_PROC(alDeleteFilters);

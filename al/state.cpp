@@ -388,11 +388,11 @@ auto AL_APIENTRY Name##Ext(ALenum pname) noexcept -> R                        \
 {                                                                             \
     auto value = R{};                                                         \
     auto context = GetContextRef();                                           \
-    if(!context) UNLIKELY return value;                                       \
-    Name##vDirect##Ext(GetContextRef().get(), pname, &value);                 \
+    if(context) LIKELY Name##vDirect##Ext(context.get(), pname, &value);      \
     return value;                                                             \
 }                                                                             \
-FORCE_ALIGN auto AL_APIENTRY Name##Direct##Ext(ALCcontext *context, ALenum pname) noexcept -> R \
+FORCE_ALIGN auto AL_APIENTRY Name##Direct##Ext(ALCcontext *context,           \
+    ALenum pname) noexcept -> R                                               \
 {                                                                             \
     auto value = R{};                                                         \
     Name##vDirect##Ext(context, pname, &value);                               \

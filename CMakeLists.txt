@@ -1413,7 +1413,9 @@ set(IMPL_TARGET OpenAL) # Either OpenAL or soft_oal.
 
 set(NEED_ANALYZE_SOURCE_FILES "")
 foreach(obj ${CORE_OBJS} ${OPENAL_OBJS} ${ALC_OBJS} ${COMMON_OBJS})
-    IF (NOT ${obj} MATCHES "${CMAKE_BINARY_DIR}/default_hrtf.txt")
+    # CMake 3.20+ can use cmake_path(COMPARE ...), or CMake 3.24+ can use
+    # PATH_EQUAL.
+    if(NOT obj STREQUAL "${CMAKE_BINARY_DIR}/default_hrtf.txt")
         list(APPEND NEED_ANALYZE_SOURCE_FILES "${CMAKE_CURRENT_SOURCE_DIR}/${obj}")
     endif()
 endforeach()

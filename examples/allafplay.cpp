@@ -455,7 +455,7 @@ void LafStream::copySamples(char *dst, const char *src, const size_t idx, const 
 
     auto inptr = input.begin() + ptrdiff_t(idx);
     output.front() = reader_t::read(*inptr);
-    std::generate_n(output.begin()+1, output.size(), [&inptr,step]
+    std::generate(output.begin()+1, output.end(), [&inptr,step]
     {
         inptr += ptrdiff_t(step);
         return reader_t::read(*inptr);

@@ -66,7 +66,7 @@ void BFormatDec::process(const al::span<FloatBufferLine> OutBuffer,
 {
     ASSUME(SamplesToDo > 0);
 
-    auto decode_dualband = [=](std::vector<ChannelDecoderDual> &decoder)
+    auto decode_dualband = [=,this](std::vector<ChannelDecoderDual> &decoder)
     {
         auto input = InSamples.cbegin();
         const auto hfSamples = al::span<float>{mSamples[sHFBand]}.first(SamplesToDo);

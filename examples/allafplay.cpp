@@ -686,7 +686,7 @@ auto LoadLAF(const fs::path &fname) -> std::unique_ptr<LafStream>
 
 void PlayLAF(std::string_view fname)
 try {
-    auto laf = LoadLAF(fs::u8path(fname));
+    auto laf = LoadLAF(fs::path(al::char_as_u8(fname)));
 
     switch(laf->mQuality)
     {

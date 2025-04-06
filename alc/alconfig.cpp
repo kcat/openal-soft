@@ -359,7 +359,7 @@ void ReadALConfig()
     }
 #endif
 
-    path = fs::u8path(GetProcBinary().path);
+    path = fs::path(al::char_as_u8(GetProcBinary().path));
     if(!path.empty())
     {
         path /= L"alsoft.ini";

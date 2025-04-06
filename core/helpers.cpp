@@ -165,7 +165,7 @@ auto SearchDataFiles(const std::string_view ext, const std::string_view subdir)
 
     /* If the path is absolute, use it directly. */
     std::vector<std::string> results;
-    auto path = fs::u8path(subdir);
+    auto path = fs::path(al::char_as_u8(subdir));
     if(path.is_absolute())
     {
         DirectorySearch(path, ext, &results);
@@ -330,7 +330,7 @@ auto SearchDataFiles(const std::string_view ext, const std::string_view subdir)
     std::lock_guard<std::mutex> srchlock{gSearchLock};
 
     std::vector<std::string> results;
-    auto path = fs::u8path(subdir);
+    auto path = fs::path(al::char_as_u8(subdir));
     if(path.is_absolute())
     {
         DirectorySearch(path, ext, &results);

@@ -1170,9 +1170,9 @@ auto LoadSource(SourceRefT *src, const uint hrirRate, const al::span<double> hri
     if(src->mFormat != SF_SOFA)
     {
         if(src->mFormat == SF_ASCII)
-            istream.open(fs::u8path(src->mPath));
+            istream.open(fs::path(al::char_as_u8(src->mPath)));
         else
-            istream.open(fs::u8path(src->mPath), std::ios::binary);
+            istream.open(fs::path(al::char_as_u8(src->mPath)), std::ios::binary);
         if(!istream.good())
         {
             fmt::println(stderr, "\nError: Could not open source file '{}'.", src->mPath);

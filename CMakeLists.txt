@@ -76,8 +76,8 @@ if(NOT CMAKE_DEBUG_POSTFIX)
 endif()
 
 set(ALSOFT_STD_VERSION_PROPS
-    # Require C++17.
-    CXX_STANDARD 17
+    # Require C++20.
+    CXX_STANDARD 20
     CXX_STANDARD_REQUIRED TRUE
     # Prefer C17, but support earlier when necessary.
     C_STANDARD 17)
@@ -284,16 +284,6 @@ else()
     set(C_FLAGS ${C_FLAGS} -Winline -Wunused -Wall -Wextra -Wshadow -Wconversion -Wcast-align
         -Wpedantic
         $<$<COMPILE_LANGUAGE:CXX>:-Wold-style-cast -Wnon-virtual-dtor -Woverloaded-virtual>)
-
-    check_cxx_compiler_flag(-Wno-c++20-attribute-extensions HAVE_WNO_CXX20_ATTR_EXT)
-    if(HAVE_WNO_CXX20_ATTR_EXT)
-        set(C_FLAGS ${C_FLAGS} $<$<COMPILE_LANGUAGE:CXX>:-Wno-c++20-attribute-extensions>)
-    else()
-        check_cxx_compiler_flag(-Wno-c++20-extensions HAVE_WNO_CXX20_EXT)
-        if(HAVE_WNO_CXX20_EXT)
-            set(C_FLAGS ${C_FLAGS} $<$<COMPILE_LANGUAGE:CXX>:-Wno-c++20-extensions>)
-        endif()
-    endif()
 
     check_cxx_compiler_flag(-Wno-interference-size HAVE_WNO_INTERFERENCE_SIZE)
     if(HAVE_WNO_INTERFERENCE_SIZE)

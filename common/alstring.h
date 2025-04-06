@@ -54,6 +54,16 @@ inline auto u8_as_char(const std::string_view str) -> std::string_view
     return std::string_view{reinterpret_cast<const char*>(str.data()), str.size()};
 }
 
+#if defined(__cpp_lib_char8_t) && __cpp_lib_char8_t >= 201907L
+inline auto char_as_u8(const std::string_view str) -> std::u8string_view
+{
+    return std::u8string_view{reinterpret_cast<const char8_t*>(str.data()), str.size()};
+}
+#else
+inline auto char_as_u8(const std::string_view str) -> std::string_view
+{ return str; }
+#endif
+
 } // namespace al
 
 #endif /* AL_STRING_H */

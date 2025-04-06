@@ -1303,7 +1303,7 @@ try {
     else
     {
         TRACE("Loading {}...", fname);
-        auto fstr = std::make_unique<fs::ifstream>(fs::u8path(fname),
+        auto fstr = std::make_unique<fs::ifstream>(fs::path(al::char_as_u8(fname)),
             std::ios::binary);
         if(!fstr->is_open())
         {

@@ -15,6 +15,7 @@
 
 #include "albit.h"
 #include "alspan.h"
+#include "alstring.h"
 #include "filesystem.h"
 #include "fmt/core.h"
 
@@ -60,9 +61,9 @@ AmbDecConf::~AmbDecConf() = default;
 
 std::optional<std::string> AmbDecConf::load(const char *fname) noexcept
 {
-    fs::ifstream f{fs::u8path(fname)};
+    auto f = fs::ifstream{fs::path(al::char_as_u8(fname))};
     if(!f.is_open())
-        return std::string("Failed to open file \"")+fname+"\"";
+        return fmt::format("Failed to open file \"{}\"", fname);
 
     ReaderScope scope{ReaderScope::Global};
     size_t speaker_pos{0};

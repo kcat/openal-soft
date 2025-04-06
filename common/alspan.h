@@ -11,7 +11,6 @@
 
 #include "alassert.h"
 #include "almalloc.h"
-#include "altraits.h"
 
 namespace al {
 
@@ -175,7 +174,7 @@ public:
     { alassert(static_cast<std::size_t>(last-first) == extent); }
 
     template<std::size_t N>
-    constexpr span(type_identity_t<element_type> (&arr)[N]) noexcept /* NOLINT(*-avoid-c-arrays) */
+    constexpr span(std::type_identity_t<element_type> (&arr)[N]) noexcept /* NOLINT(*-avoid-c-arrays) */
         : mData{std::data(arr)}
     { static_assert(N == extent); }
     template<std::size_t N>
@@ -301,7 +300,7 @@ public:
     { }
 
     template<std::size_t N>
-    constexpr span(type_identity_t<element_type> (&arr)[N]) noexcept /* NOLINT(*-avoid-c-arrays) */
+    constexpr span(std::type_identity_t<element_type> (&arr)[N]) noexcept /* NOLINT(*-avoid-c-arrays) */
         : mData{std::data(arr)}, mDataLength{std::size(arr)}
     { }
     template<std::size_t N>

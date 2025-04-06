@@ -18,7 +18,6 @@
 #endif
 
 #include "albit.h"
-#include "altraits.h"
 #include "opthelpers.h"
 
 
@@ -75,14 +74,14 @@ inline uint32_t NextPowerOf2(uint32_t value) noexcept
  * multiple.
  */
 template<typename T>
-constexpr T RoundDown(T value, al::type_identity_t<T> r) noexcept
+constexpr T RoundDown(T value, std::type_identity_t<T> r) noexcept
 { return value - (value%r); }
 
 /**
  * If the value is not already a multiple of r, round up to the next multiple.
  */
 template<typename T>
-constexpr T RoundUp(T value, al::type_identity_t<T> r) noexcept
+constexpr T RoundUp(T value, std::type_identity_t<T> r) noexcept
 { return RoundDown(value + r-1, r); }
 
 

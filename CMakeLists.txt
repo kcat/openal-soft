@@ -613,7 +613,6 @@ set(COMMON_OBJS
     common/althrd_setname.cpp
     common/althrd_setname.h
     common/althreads.h
-    common/altraits.h
     common/atomic.h
     common/comptr.h
     common/dynload.cpp

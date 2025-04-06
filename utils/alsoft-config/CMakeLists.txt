@@ -16,7 +16,7 @@ if(Qt5Widgets_FOUND)
     target_include_directories(alsoft-config PRIVATE "${alsoft-config_BINARY_DIR}"
         "${OpenAL_BINARY_DIR}")
     target_compile_definitions(alsoft-config PRIVATE QT_NO_KEYWORDS)
-    set_target_properties(alsoft-config PROPERTIES ${DEFAULT_TARGET_PROPS}
+    set_target_properties(alsoft-config PROPERTIES ${ALSOFT_STD_VERSION_PROPS}
         RUNTIME_OUTPUT_DIRECTORY ${OpenAL_BINARY_DIR})
     if(TARGET alsoft.build_version)
         add_dependencies(alsoft-config alsoft.build_version)

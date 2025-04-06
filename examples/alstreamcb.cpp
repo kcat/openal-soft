@@ -34,6 +34,7 @@
 #include <cstdio>
 #include <cstring>
 #include <memory>
+#include <span>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -47,7 +48,6 @@
 #include "AL/alext.h"
 
 #include "alnumeric.h"
-#include "alspan.h"
 #include "common/alhelpers.h"
 #include "fmt/core.h"
 
@@ -288,7 +288,7 @@ struct StreamPlayer {
     { return static_cast<StreamPlayer*>(userptr)->bufferCallback(data, size); }
     ALsizei bufferCallback(void *data, ALsizei size) noexcept
     {
-        const auto output = al::span{static_cast<std::byte*>(data), static_cast<ALuint>(size)};
+        const auto output = std::span{static_cast<std::byte*>(data), static_cast<ALuint>(size)};
         auto dst = output.begin();
 
         /* NOTE: The callback *MUST* be real-time safe! That means no blocking,
@@ -320,7 +320,7 @@ struct StreamPlayer {
              * the resulting read offset if it reached the end of the ring-
              * buffer.
              */
-            const auto input = al::span{mBufferData}.subspan(roffset, todo);
+            const auto input = std::span{mBufferData}.subspan(roffset, todo);
             dst = std::copy_n(input.begin(), input.size(), dst);
 
             roffset += todo;
@@ -463,7 +463,7 @@ struct StreamPlayer {
     }
 };
 
-int main(al::span<std::string_view> args)
+int main(std::span<std::string_view> args)
 {
     /* Print out usage if no arguments were specified */
     if(args.size() < 2)
@@ -538,5 +538,5 @@ int main(int argc, char **argv)
     assert(argc >= 0);
     auto args = std::vector<std::string_view>(static_cast<unsigned int>(argc));
     std::copy_n(argv, args.size(), args.begin());
-    return main(al::span{args});
+    return main(std::span{args});
 }

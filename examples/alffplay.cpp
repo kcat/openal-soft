@@ -23,6 +23,7 @@
 #include <mutex>
 #include <numbers>
 #include <ratio>
+#include <span>
 #include <string>
 #include <string_view>
 #include <thread>
@@ -77,7 +78,6 @@ _Pragma("GCC diagnostic pop")
 
 #include "almalloc.h"
 #include "alnumeric.h"
-#include "alspan.h"
 #include "common/alhelpers.h"
 #include "fmt/core.h"
 #include "fmt/format.h"
@@ -388,7 +388,7 @@ struct AudioState {
 
     /* Storage of converted samples */
     std::array<uint8_t*,1> mSamples{};
-    al::span<uint8_t> mSamplesSpan;
+    std::span<uint8_t> mSamplesSpan;
     int mSamplesLen{0}; /* In samples */
     int mSamplesPos{0};
     int mSamplesMax{0};
@@ -441,7 +441,7 @@ struct AudioState {
 
     int getSync();
     int decodeFrame();
-    bool readAudio(al::span<uint8_t> samples, unsigned int length, int &sample_skip);
+    bool readAudio(std::span<uint8_t> samples, unsigned int length, int &sample_skip);
     bool readAudio(int sample_skip);
 
     int handler();
@@ -777,10 +777,11 @@ int AudioState::decodeFrame()
  * multiple of the template type size.
  */
 template<typename T>
-void sample_dup(al::span<uint8_t> out, al::span<const uint8_t> in, size_t count, size_t frame_size)
+void sample_dup(std::span<uint8_t> out, std::span<const uint8_t> in, size_t count,
+    size_t frame_size)
 {
-    auto sample = al::span{reinterpret_cast<const T*>(in.data()), in.size()/sizeof(T)};
-    auto dst = al::span{reinterpret_cast<T*>(out.data()), out.size()/sizeof(T)};
+    auto sample = std::span{reinterpret_cast<const T*>(in.data()), in.size()/sizeof(T)};
+    auto dst = std::span{reinterpret_cast<T*>(out.data()), out.size()/sizeof(T)};
 
     /* NOTE: frame_size is a multiple of sizeof(T). */
     const size_t type_mult{frame_size / sizeof(T)};
@@ -793,7 +794,8 @@ void sample_dup(al::span<uint8_t> out, al::span<const uint8_t> in, size_t count,
     }
 }
 
-void sample_dup(al::span<uint8_t> out, al::span<const uint8_t> in, size_t count, size_t frame_size)
+void sample_dup(std::span<uint8_t> out, std::span<const uint8_t> in, size_t count,
+    size_t frame_size)
 {
     if((frame_size&7) == 0)
         sample_dup<uint64_t>(out, in, count, frame_size);
@@ -805,7 +807,7 @@ void sample_dup(al::span<uint8_t> out, al::span<const uint8_t> in, size_t count,
         sample_dup<uint8_t>(out, in, count, frame_size);
 }
 
-bool AudioState::readAudio(al::span<uint8_t> samples, unsigned int length, int &sample_skip)
+bool AudioState::readAudio(std::span<uint8_t> samples, unsigned int length, int &sample_skip)
 {
     unsigned int audio_size{0};
 
@@ -819,7 +821,7 @@ bool AudioState::readAudio(al::span<uint8_t> samples, unsigned int length, int &
         {
             rem = std::min(rem, static_cast<unsigned int>(mSamplesLen - mSamplesPos));
             const size_t boffset{static_cast<ALuint>(mSamplesPos) * size_t{mFrameSize}};
-            std::copy_n(mSamplesSpan.cbegin()+ptrdiff_t(boffset), rem*size_t{mFrameSize},
+            std::copy_n(mSamplesSpan.begin()+ptrdiff_t(boffset), rem*size_t{mFrameSize},
                 samples.begin());
         }
         else
@@ -879,7 +881,7 @@ bool AudioState::readAudio(int sample_skip)
         {
             const size_t rem{std::min<size_t>(nsamples, static_cast<ALuint>(-mSamplesPos))};
 
-            sample_dup(al::span{mBufferData}.subspan(woffset), mSamplesSpan, rem, mFrameSize);
+            sample_dup(std::span{mBufferData}.subspan(woffset), mSamplesSpan, rem, mFrameSize);
             woffset += rem * mFrameSize;
             if(woffset == mBufferData.size()) woffset = 0;
             mWritePos.store(woffset, std::memory_order_release);
@@ -893,7 +895,7 @@ bool AudioState::readAudio(int sample_skip)
         const size_t boffset{static_cast<ALuint>(mSamplesPos) * size_t{mFrameSize}};
         const size_t nbytes{rem * mFrameSize};
 
-        std::copy_n(mSamplesSpan.cbegin()+ptrdiff_t(boffset), nbytes,
+        std::copy_n(mSamplesSpan.begin()+ptrdiff_t(boffset), nbytes,
             mBufferData.begin()+ptrdiff_t(woffset));
         woffset += nbytes;
         if(woffset == mBufferData.size()) woffset = 0;
@@ -959,7 +961,7 @@ void AL_APIENTRY AudioState::eventCallback(ALenum eventType, ALuint object, ALui
 
 ALsizei AudioState::bufferCallback(void *data, ALsizei size) noexcept
 {
-    auto dst = al::span{static_cast<ALbyte*>(data), static_cast<ALuint>(size)};
+    auto dst = std::span{static_cast<ALbyte*>(data), static_cast<ALuint>(size)};
     ALsizei got{0};
 
     size_t roffset{mReadPos.load(std::memory_order_acquire)};
@@ -2002,7 +2004,7 @@ int MovieState::parse_handler()
     int audio_index{-1};
 
     /* Find the first video and audio streams */
-    const auto ctxstreams = al::span{mFormatCtx->streams, mFormatCtx->nb_streams};
+    const auto ctxstreams = std::span{mFormatCtx->streams, mFormatCtx->nb_streams};
     for(size_t i{0};i < ctxstreams.size();++i)
     {
         auto codecpar = ctxstreams[i]->codecpar;
@@ -2102,7 +2104,7 @@ auto PrettyTime(seconds t) -> std::string
     return fmt::format("{}m{:02}s", duration_cast<minutes>(t).count(), t.count()%60);
 }
 
-int main(al::span<std::string_view> args)
+int main(std::span<std::string_view> args)
 {
     SDL_SetMainReady();
 
@@ -2149,7 +2151,7 @@ int main(al::span<std::string_view> args)
 
     {
         ALCdevice *device{alcGetContextsDevice(alcGetCurrentContext())};
-        if(alcIsExtensionPresent(device,"ALC_SOFT_device_clock"))
+        if(alcIsExtensionPresent(device, "ALC_SOFT_device_clock"))
         {
             fmt::println("Found ALC_SOFT_device_clock");
             alcGetInteger64vSOFT = reinterpret_cast<LPALCGETINTEGER64VSOFT>(
@@ -2354,5 +2356,5 @@ int main(int argc, char *argv[])
     assert(argc >= 0);
     auto args = std::vector<std::string_view>(static_cast<unsigned int>(argc));
     std::copy_n(argv, args.size(), args.begin());
-    return main(al::span{args});
+    return main(std::span{args});
 }

@@ -32,6 +32,7 @@
 #include <cstdio>
 #include <limits>
 #include <memory>
+#include <span>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -42,7 +43,6 @@
 #include "AL/alc.h"
 #include "AL/alext.h"
 
-#include "alspan.h"
 #include "common/alhelpers.h"
 #include "fmt/core.h"
 
@@ -313,7 +313,7 @@ ALuint LoadSound(ALCcontext *context, const std::string_view filename)
 }
 
 
-int main(al::span<std::string_view> args)
+int main(std::span<std::string_view> args)
 {
     /* Print out usage if no arguments were specified */
     if(args.size() < 2)
@@ -468,5 +468,5 @@ int main(int argc, char **argv)
     assert(argc >= 0);
     auto args = std::vector<std::string_view>(static_cast<unsigned int>(argc));
     std::copy_n(argv, args.size(), args.begin());
-    return main(al::span{args});
+    return main(std::span{args});
 }

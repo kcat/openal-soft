@@ -8,6 +8,7 @@
 #include <array>
 #include <cmath>
 #include <memory>
+#include <span>
 
 #include <QFileDialog>
 #include <QMessageBox>
@@ -23,7 +24,6 @@
 #endif
 
 #include "almalloc.h"
-#include "alspan.h"
 
 namespace {
 
@@ -149,7 +149,7 @@ constexpr std::array hrtfModeList{
     NameValuePair{ "Full", "full" },
 };
 
-constexpr auto GetDefaultIndex(const al::span<const NameValuePair> list) -> size_t
+constexpr auto GetDefaultIndex(const std::span<const NameValuePair> list) -> size_t
 {
     for(size_t i{0};i < list.size();++i)
     {
@@ -249,7 +249,7 @@ QStringList getAllDataPaths(const QString &append)
     return list;
 }
 
-QString getValueFromName(const al::span<const NameValuePair> list, const QString &str)
+QString getValueFromName(const std::span<const NameValuePair> list, const QString &str)
 {
     for(size_t i{0};i < list.size();++i)
     {
@@ -259,7 +259,7 @@ QString getValueFromName(const al::span<const NameValuePair> list, const QString
     return QString{};
 }
 
-QString getNameFromValue(const al::span<const NameValuePair> list, const QString &str)
+QString getNameFromValue(const std::span<const NameValuePair> list, const QString &str)
 {
     for(size_t i{0};i < list.size();++i)
     {

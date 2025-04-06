@@ -32,11 +32,11 @@
 #include <cstdio>
 #include <memory>
 #include <numbers>
+#include <span>
 #include <string>
 #include <string_view>
 #include <vector>
 
-#include "alspan.h"
 #include "fmt/core.h"
 #include "phase_shifter.h"
 #include "vector.h"
@@ -61,7 +61,7 @@ using uint = unsigned int;
 constexpr uint BufferLineSize{1024};
 
 using FloatBufferLine = std::array<float,BufferLineSize>;
-using FloatBufferSpan = al::span<float,BufferLineSize>;
+using FloatBufferSpan = std::span<float,BufferLineSize>;
 
 
 struct UhjEncoder {
@@ -83,8 +83,8 @@ struct UhjEncoder {
 
     alignas(16) std::array<float,BufferLineSize + sFilterDelay*2> mTemp{};
 
-    void encode(const al::span<FloatBufferLine> OutSamples,
-        const al::span<const FloatBufferLine,4> InSamples, const size_t SamplesToDo);
+    void encode(const std::span<FloatBufferLine> OutSamples,
+        const std::span<const FloatBufferLine,4> InSamples, const size_t SamplesToDo);
 };
 
 const PhaseShifterT<UhjEncoder::sFilterDelay*2> PShift{};
@@ -103,13 +103,13 @@ const PhaseShifterT<UhjEncoder::sFilterDelay*2> PShift{};
  * where j is a wide-band +90 degree phase shift. T is excluded from 2-channel
  * output, and Q is excluded from 2- and 3-channel output.
  */
-void UhjEncoder::encode(const al::span<FloatBufferLine> OutSamples,
-    const al::span<const FloatBufferLine,4> InSamples, const size_t SamplesToDo)
+void UhjEncoder::encode(const std::span<FloatBufferLine> OutSamples,
+    const std::span<const FloatBufferLine,4> InSamples, const size_t SamplesToDo)
 {
-    const auto winput = al::span{InSamples[0]}.first(SamplesToDo);
-    const auto xinput = al::span{InSamples[1]}.first(SamplesToDo);
-    const auto yinput = al::span{InSamples[2]}.first(SamplesToDo);
-    const auto zinput = al::span{InSamples[3]}.first(SamplesToDo);
+    const auto winput = std::span{InSamples[0]}.first(SamplesToDo);
+    const auto xinput = std::span{InSamples[1]}.first(SamplesToDo);
+    const auto yinput = std::span{InSamples[2]}.first(SamplesToDo);
+    const auto zinput = std::span{InSamples[3]}.first(SamplesToDo);
 
     /* Combine the previously delayed input signal with the new input. */
     std::copy(winput.begin(), winput.end(), mW.begin()+sFilterDelay);
@@ -127,18 +127,18 @@ void UhjEncoder::encode(const al::span<FloatBufferLine> OutSamples,
         [](const float w, const float x) noexcept -> float
         { return -0.3420201f*w + 0.5098604f*x; });
     std::copy_n(mTemp.cbegin()+SamplesToDo, mWXHistory1.size(), mWXHistory1.begin());
-    PShift.process(al::span{mD}.first(SamplesToDo), mTemp);
+    PShift.process(std::span{mD}.first(SamplesToDo), mTemp);
 
     /* D = j(-0.3420201*W + 0.5098604*X) + 0.6554516*Y */
     for(size_t i{0};i < SamplesToDo;++i)
         mD[i] = mD[i] + 0.6554516f*mY[i];
 
     /* Left = (S + D)/2.0 */
-    auto left = al::span{OutSamples[0]};
+    auto left = std::span{OutSamples[0]};
     for(size_t i{0};i < SamplesToDo;i++)
         left[i] = (mS[i] + mD[i]) * 0.5f;
     /* Right = (S - D)/2.0 */
-    auto right = al::span{OutSamples[1]};
+    auto right = std::span{OutSamples[1]};
     for(size_t i{0};i < SamplesToDo;i++)
         right[i] = (mS[i] - mD[i]) * 0.5f;
 
@@ -150,17 +150,17 @@ void UhjEncoder::encode(const al::span<FloatBufferLine> OutSamples,
             [](const float w, const float x) noexcept -> float
             { return -0.1432f*w + 0.6512f*x; });
         std::copy_n(mTemp.cbegin()+SamplesToDo, mWXHistory2.size(), mWXHistory2.begin());
-        PShift.process(al::span{mT}.first(SamplesToDo), mTemp);
+        PShift.process(std::span{mT}.first(SamplesToDo), mTemp);
 
         /* T = j(-0.1432*W + 0.6512*X) - 0.7071068*Y */
-        auto t = al::span{OutSamples[2]};
+        auto t = std::span{OutSamples[2]};
         for(size_t i{0};i < SamplesToDo;i++)
             t[i] = mT[i] - 0.7071068f*mY[i];
     }
     if(OutSamples.size() > 3)
     {
         /* Q = 0.9772*Z */
-        auto q = al::span{OutSamples[3]};
+        auto q = std::span{OutSamples[3]};
         for(size_t i{0};i < SamplesToDo;i++)
             q[i] = 0.9772f*mZ[i];
     }
@@ -246,7 +246,7 @@ constexpr auto GenCoeffs(double x /*+front*/, double y /*+left*/, double z /*+up
 }
 
 
-int main(al::span<std::string_view> args)
+int main(std::span<std::string_view> args)
 {
     if(args.size() < 2 || args[1] == "-h" || args[1] == "--help")
     {
@@ -311,7 +311,7 @@ int main(al::span<std::string_view> args)
         /* Work out the channel map, preferably using the actual channel map
          * from the file/format, but falling back to assuming WFX order.
          */
-        al::span<const SpeakerPos> spkrs;
+        std::span<const SpeakerPos> spkrs;
         auto chanmap = std::vector<int>(static_cast<uint>(ininfo.channels), SF_CHANNEL_MAP_INVALID);
         if(sf_command(infile.get(), SFC_GET_CHANNEL_MAP_INFO, chanmap.data(),
             ininfo.channels*int{sizeof(int)}) == SF_TRUE)
@@ -342,13 +342,12 @@ int main(al::span<std::string_view> args)
                 SF_CHANNEL_MAP_AMBISONIC_B_X, SF_CHANNEL_MAP_AMBISONIC_B_Y,
                 SF_CHANNEL_MAP_AMBISONIC_B_Z}};
 
-            auto match_chanmap = [](const al::span<int> a, const al::span<const int> b) -> bool
+            auto match_chanmap = [](const std::span<int> a, const std::span<const int> b) -> bool
             {
                 if(a.size() != b.size())
                     return false;
-                auto find_channel = [b](const int id) -> bool
-                { return std::find(b.begin(), b.end(), id) != b.end(); };
-                return std::all_of(a.cbegin(), a.cend(), find_channel);
+                return std::all_of(a.begin(), a.end(), [b](const int id) -> bool
+                { return std::find(b.begin(), b.end(), id) != b.end(); });
             };
             if(match_chanmap(chanmap, monomap))
                 spkrs = MonoMap;
@@ -374,7 +373,7 @@ int main(al::span<std::string_view> args)
                 if(!chanmap.empty())
                 {
                     mapstr = std::to_string(chanmap[0]);
-                    for(int idx : al::span<int>{chanmap}.subspan<1>())
+                    for(int idx : std::span<int>{chanmap}.subspan<1>())
                     {
                         mapstr += ',';
                         mapstr += std::to_string(idx);
@@ -466,13 +465,13 @@ int main(al::span<std::string_view> args)
 
         auto encoder = std::make_unique<UhjEncoder>();
         auto splbuf = al::vector<FloatBufferLine, 16>(9);
-        auto ambmem = al::span{splbuf}.subspan<0,4>();
-        auto encmem = al::span{splbuf}.subspan<4,4>();
-        auto srcmem = al::span{splbuf[8]};
+        auto ambmem = std::span{splbuf}.subspan<0,4>();
+        auto encmem = std::span{splbuf}.subspan<4,4>();
+        auto srcmem = std::span{splbuf[8]};
         auto membuf = al::vector<float,16>((static_cast<uint>(ininfo.channels)+size_t{uhjchans})
             * BufferLineSize);
-        auto outmem = al::span{membuf}.first(size_t{BufferLineSize}*uhjchans);
-        auto inmem = al::span{membuf}.last(size_t{BufferLineSize}
+        auto outmem = std::span{membuf}.first(size_t{BufferLineSize}*uhjchans);
+        auto inmem = std::span{membuf}.last(size_t{BufferLineSize}
             * static_cast<uint>(ininfo.channels));
 
         /* A number of initial samples need to be skipped to cut the lead-in
@@ -520,9 +519,9 @@ int main(al::span<std::string_view> args)
                 if(chanid == SF_CHANNEL_MAP_LFE)
                     continue;
 
-                const auto spkr = std::find_if(spkrs.cbegin(), spkrs.cend(),
+                const auto spkr = std::find_if(spkrs.begin(), spkrs.end(),
                     [chanid](const SpeakerPos pos){return pos.mChannelID == chanid;});
-                if(spkr == spkrs.cend())
+                if(spkr == spkrs.end())
                 {
                     fmt::println(stderr, " ... failed to find channel ID {}", chanid);
                     continue;
@@ -588,5 +587,5 @@ int main(int argc, char **argv)
     assert(argc >= 0);
     auto args = std::vector<std::string_view>(static_cast<unsigned int>(argc));
     std::copy_n(argv, args.size(), args.begin());
-    return main(al::span{args});
+    return main(std::span{args});
 }

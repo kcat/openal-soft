@@ -33,12 +33,12 @@
 #include <iterator>
 #include <memory>
 #include <optional>
+#include <span>
 #include <string>
 #include <string_view>
 #include <thread>
 #include <vector>
 
-#include "alspan.h"
 #include "alnumeric.h"
 #include "fmt/core.h"
 #include "makemhr.h"
@@ -59,7 +59,7 @@ using uint = unsigned int;
  * possible.  Those sets that contain purely random measurements or use
  * different major axes will fail.
  */
-auto PrepareLayout(const al::span<const float> xyzs, HrirDataT *hData) -> bool
+auto PrepareLayout(const std::span<const float> xyzs, HrirDataT *hData) -> bool
 {
     fmt::println("Detecting compatible layout...");
 
@@ -92,8 +92,8 @@ auto PrepareLayout(const al::span<const float> xyzs, HrirDataT *hData) -> bool
         ++fi;
     }
     fmt::println("Using {} of {} IRs.", ir_total, xyzs.size()/3);
-    const auto azs = al::span{azCounts}.first<MAX_FD_COUNT>();
-    return PrepareHrirData(al::span{distances}.first(fi), evCounts, azs, hData);
+    const auto azs = std::span{azCounts}.first<MAX_FD_COUNT>();
+    return PrepareHrirData(std::span{distances}.first(fi), evCounts, azs, hData);
 }
 
 float GetSampleRate(MYSOFA_HRTF *sofaHrtf)
@@ -148,7 +148,7 @@ float GetSampleRate(MYSOFA_HRTF *sofaHrtf)
         return 0.0f;
     }
     /* I dimensions guarantees 1 element, so just extract it. */
-    const auto values = al::span{srate_array->values, sofaHrtf->I};
+    const auto values = std::span{srate_array->values, sofaHrtf->I};
     if(values[0] < float{MIN_RATE} || values[0] > float{MAX_RATE})
     {
         fmt::println(stderr, "Sample rate out of range: {:f} (expected {} to {})", values[0],
@@ -235,22 +235,22 @@ bool CheckIrData(MYSOFA_HRTF *sofaHrtf)
 
 /* Calculate the onset time of a HRIR. */
 constexpr int OnsetRateMultiple{10};
-auto CalcHrirOnset(PPhaseResampler &rs, const uint rate, al::span<double> upsampled,
-    const al::span<const double> hrir) -> double
+auto CalcHrirOnset(PPhaseResampler &rs, const uint rate, std::span<double> upsampled,
+    const std::span<const double> hrir) -> double
 {
     rs.process(hrir, upsampled);
 
     auto abs_lt = [](const double lhs, const double rhs) -> bool
     { return std::abs(lhs) < std::abs(rhs); };
-    auto iter = std::max_element(upsampled.cbegin(), upsampled.cend(), abs_lt);
-    return static_cast<double>(std::distance(upsampled.cbegin(), iter)) /
+    auto iter = std::max_element(upsampled.begin(), upsampled.end(), abs_lt);
+    return static_cast<double>(std::distance(upsampled.begin(), iter)) /
         (double{OnsetRateMultiple}*rate);
 }
 
 /* Calculate the magnitude response of a HRIR. */
-void CalcHrirMagnitude(const uint points, al::span<complex_d> h, const al::span<double> hrir)
+void CalcHrirMagnitude(const uint points, std::span<complex_d> h, const std::span<double> hrir)
 {
-    auto iter = std::copy_n(hrir.cbegin(), points, h.begin());
+    auto iter = std::copy_n(hrir.begin(), points, h.begin());
     std::fill(iter, h.end(), complex_d{0.0, 0.0});
 
     forward_fft(h);
@@ -266,7 +266,7 @@ bool LoadResponses(MYSOFA_HRTF *sofaHrtf, HrirDataT *hData, const DelayType dela
     {
         const uint channels{(hData->mChannelType == CT_STEREO) ? 2u : 1u};
         hData->mHrirsBase.resize(channels * size_t{hData->mIrCount} * hData->mIrSize, 0.0);
-        const auto hrirs = al::span{hData->mHrirsBase};
+        const auto hrirs = std::span{hData->mHrirsBase};
 
         std::vector<double> restmp;
         std::optional<PPhaseResampler> resampler;
@@ -276,8 +276,8 @@ bool LoadResponses(MYSOFA_HRTF *sofaHrtf, HrirDataT *hData, const DelayType dela
             restmp.resize(sofaHrtf->N);
         }
 
-        const auto srcPosValues = al::span{sofaHrtf->SourcePosition.values, sofaHrtf->M*3_uz};
-        const auto irValues = al::span{sofaHrtf->DataIR.values,
+        const auto srcPosValues = std::span{sofaHrtf->SourcePosition.values, sofaHrtf->M*3_uz};
+        const auto irValues = std::span{sofaHrtf->DataIR.values,
             size_t{sofaHrtf->M}*sofaHrtf->R*sofaHrtf->N};
         for(uint si{0u};si < sofaHrtf->M;++si)
         {
@@ -326,10 +326,10 @@ bool LoadResponses(MYSOFA_HRTF *sofaHrtf, HrirDataT *hData, const DelayType dela
                 const auto ir = irValues.subspan((size_t{si}*sofaHrtf->R + ti)*sofaHrtf->N,
                     sofaHrtf->N);
                 if(!resampler)
-                    std::copy_n(ir.cbegin(), ir.size(), azd.mIrs[ti].begin());
+                    std::copy_n(ir.begin(), ir.size(), azd.mIrs[ti].begin());
                 else
                 {
-                    std::copy_n(ir.cbegin(), ir.size(), restmp.begin());
+                    std::copy_n(ir.begin(), ir.size(), restmp.begin());
                     resampler->process(restmp, azd.mIrs[ti]);
                 }
             }
@@ -337,14 +337,14 @@ bool LoadResponses(MYSOFA_HRTF *sofaHrtf, HrirDataT *hData, const DelayType dela
             /* Include any per-channel or per-HRIR delays. */
             if(delayType == DelayType::I_R)
             {
-                const auto delayValues = al::span{sofaHrtf->DataDelay.values,
+                const auto delayValues = std::span{sofaHrtf->DataDelay.values,
                     size_t{sofaHrtf->I}*sofaHrtf->R};
                 for(uint ti{0u};ti < channels;++ti)
                     azd.mDelays[ti] = delayValues[ti] / static_cast<float>(hData->mIrRate);
             }
             else if(delayType == DelayType::M_R)
             {
-                const auto delayValues = al::span{sofaHrtf->DataDelay.values,
+                const auto delayValues = std::span{sofaHrtf->DataDelay.values,
                     size_t{sofaHrtf->M}*sofaHrtf->R};
                 for(uint ti{0u};ti < channels;++ti)
                     azd.mDelays[ti] = delayValues[si*sofaHrtf->R + ti] /
@@ -381,7 +381,7 @@ bool LoadResponses(MYSOFA_HRTF *sofaHrtf, HrirDataT *hData, const DelayType dela
 struct MagCalculator {
     const uint mFftSize{};
     const uint mIrPoints{};
-    std::vector<al::span<double>> mIrs;
+    std::vector<std::span<double>> mIrs;
     std::atomic<size_t> mCurrent;
     std::atomic<size_t> mDone;
 
@@ -483,7 +483,7 @@ bool LoadSofaFile(const std::string_view filename, const uint numThreads, const 
 
     if(!CheckIrData(sofaHrtf.get()))
         return false;
-    if(!PrepareLayout(al::span{sofaHrtf->SourcePosition.values, sofaHrtf->M*3_uz}, hData))
+    if(!PrepareLayout(std::span{sofaHrtf->SourcePosition.values, sofaHrtf->M*3_uz}, hData))
         return false;
     if(!LoadResponses(sofaHrtf.get(), hData, *delayType, outRate))
         return false;
@@ -526,7 +526,7 @@ bool LoadSofaFile(const std::string_view filename, const uint numThreads, const 
 
     size_t hrir_total{0};
     const uint channels{(hData->mChannelType == CT_STEREO) ? 2u : 1u};
-    const auto hrirs = al::span{hData->mHrirsBase};
+    const auto hrirs = std::span{hData->mHrirsBase};
     for(uint fi{0u};fi < hData->mFds.size();fi++)
     {
         for(uint ei{0u};ei < hData->mFds[fi].mEvStart;ei++)

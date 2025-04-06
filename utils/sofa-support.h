@@ -3,9 +3,8 @@
 
 #include <cstddef>
 #include <memory>
+#include <span>
 #include <vector>
-
-#include "alspan.h"
 
 #include "mysofa.h"
 
@@ -27,6 +26,6 @@ struct SofaField {
 
 const char *SofaErrorStr(int err);
 
-auto GetCompatibleLayout(al::span<const float> xyzs) -> std::vector<SofaField>;
+auto GetCompatibleLayout(std::span<const float> xyzs) -> std::vector<SofaField>;
 
 #endif /* UTILS_SOFA_SUPPORT_H */

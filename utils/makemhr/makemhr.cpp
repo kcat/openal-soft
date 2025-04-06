@@ -80,6 +80,7 @@
 #include <memory>
 #include <numbers>
 #include <numeric>
+#include <span>
 #include <string_view>
 #include <thread>
 #include <vector>
@@ -87,7 +88,6 @@
 #include "alcomplex.h"
 #include "almalloc.h"
 #include "alnumeric.h"
-#include "alspan.h"
 #include "alstring.h"
 #include "filesystem.h"
 #include "fmt/core.h"
@@ -209,7 +209,7 @@ inline uint dither_rng(uint *seed)
 
 // Performs a triangular probability density function dither. The input samples
 // should be normalized (-1 to +1).
-void TpdfDither(const al::span<double> out, const al::span<const double> in, const double scale,
+void TpdfDither(const std::span<double> out, const std::span<const double> in, const double scale,
     const size_t channel, const size_t step, uint *seed)
 {
     static constexpr double PRNG_SCALE = 1.0 / std::numeric_limits<uint>::max();
@@ -228,7 +228,7 @@ void TpdfDither(const al::span<double> out, const al::span<const double> in, con
  * process.
  */
 void LimitMagnitudeResponse(const uint n, const uint m, const double limit,
-    const al::span<double> inout)
+    const std::span<double> inout)
 {
     const double halfLim{limit / 2.0};
     // Convert the response to dB.
@@ -254,7 +254,7 @@ void LimitMagnitudeResponse(const uint n, const uint m, const double limit,
  * residuals (which were discarded).  The mirrored half of the response is
  * reconstructed.
  */
-void MinimumPhase(const al::span<double> mags, const al::span<complex_d> out)
+void MinimumPhase(const std::span<double> mags, const std::span<complex_d> out)
 {
     assert(mags.size() == out.size());
     const size_t m{(mags.size()/2) + 1};
@@ -443,7 +443,7 @@ void BalanceFieldMagnitudes(const HrirDataT *hData, const uint channels, const u
  * on its coverage volume.  All volumes are centered at the spherical HRIR
  * coordinates and measured by extruded solid angle.
  */
-void CalculateDfWeights(const HrirDataT *hData, const al::span<double> weights)
+void CalculateDfWeights(const HrirDataT *hData, const std::span<double> weights)
 {
     double sum, innerRa, outerRa, evs, ev, upperEv, lowerEv;
     double solidAngle, solidVolume;
@@ -500,7 +500,7 @@ void CalculateDfWeights(const HrirDataT *hData, const al::span<double> weights)
  * specified magnitude range (in positive dB; 0.0 to skip).
  */
 void CalculateDiffuseFieldAverage(const HrirDataT *hData, const uint channels, const uint m,
-    const bool weighted, const double limit, const al::span<double> dfa)
+    const bool weighted, const double limit, const std::span<double> dfa)
 {
     std::vector<double> weights(hData->mFds.size() * MAX_EV_COUNT);
     uint count;
@@ -562,7 +562,7 @@ void CalculateDiffuseFieldAverage(const HrirDataT *hData, const uint channels, c
 
 // Perform diffuse-field equalization on the magnitude responses of the HRIR
 // set using the given average response.
-void DiffuseFieldEqualize(const uint channels, const uint m, const al::span<const double> dfa,
+void DiffuseFieldEqualize(const uint channels, const uint m, const std::span<const double> dfa,
     const HrirDataT *hData)
 {
     for(size_t fi{0};fi < hData->mFds.size();++fi)
@@ -840,7 +840,7 @@ void SynthesizeHrirs(HrirDataT *hData)
  * or more threads (sharing the same reconstructor object).
  */
 struct HrirReconstructor {
-    std::vector<al::span<double>> mIrs;
+    std::vector<std::span<double>> mIrs;
     std::atomic<size_t> mCurrent;
     std::atomic<size_t> mDone;
     uint mFftSize{};
@@ -941,11 +941,11 @@ void NormalizeHrirs(HrirDataT *hData)
 
     /* Find the maximum amplitude and RMS out of all the IRs. */
     struct LevelPair { double amp, rms; };
-    auto mesasure_channel = [irSize](const LevelPair levels, al::span<const double> ir)
+    auto mesasure_channel = [irSize](const LevelPair levels, std::span<const double> ir)
     {
         /* Calculate the peak amplitude and RMS of this IR. */
         ir = ir.first(irSize);
-        auto current = std::accumulate(ir.cbegin(), ir.cend(), LevelPair{0.0, 0.0},
+        auto current = std::accumulate(ir.begin(), ir.end(), LevelPair{0.0, 0.0},
             [](const LevelPair cur, const double impulse)
             {
                 return LevelPair{std::max(std::abs(impulse), cur.amp), cur.rms + impulse*impulse};
@@ -958,9 +958,9 @@ void NormalizeHrirs(HrirDataT *hData)
     auto measure_azi = [channels,mesasure_channel](const LevelPair levels, const HrirAzT &azi)
     { return std::accumulate(azi.mIrs.begin(), azi.mIrs.begin()+channels, levels, mesasure_channel); };
     auto measure_elev = [measure_azi](const LevelPair levels, const HrirEvT &elev)
-    { return std::accumulate(elev.mAzs.cbegin(), elev.mAzs.cend(), levels, measure_azi); };
+    { return std::accumulate(elev.mAzs.begin(), elev.mAzs.end(), levels, measure_azi); };
     auto measure_field = [measure_elev](const LevelPair levels, const HrirFdT &field)
-    { return std::accumulate(field.mEvs.cbegin(), field.mEvs.cend(), levels, measure_elev); };
+    { return std::accumulate(field.mEvs.begin(), field.mEvs.end(), levels, measure_elev); };
 
     const auto maxlev = std::accumulate(hData->mFds.begin(), hData->mFds.end(),
         LevelPair{0.0, 0.0}, measure_field);
@@ -980,11 +980,10 @@ void NormalizeHrirs(HrirDataT *hData)
     factor = std::min(factor, 0.99/maxlev.amp);
 
     /* Now scale all IRs by the given factor. */
-    auto proc_channel = [irSize,factor](al::span<double> ir)
+    auto proc_channel = [irSize,factor](std::span<double> ir)
     {
         ir = ir.first(irSize);
-        std::transform(ir.cbegin(), ir.cend(), ir.begin(),
-            [factor](double s) { return s * factor; });
+        std::transform(ir.begin(), ir.end(), ir.begin(), [factor](double s) { return s*factor; });
     };
     auto proc_azi = [channels,proc_channel](HrirAzT &azi)
     { std::for_each(azi.mIrs.begin(), azi.mIrs.begin()+channels, proc_channel); };
@@ -1093,9 +1092,9 @@ void CalculateHrtds(const HeadModelT model, const double radius, HrirDataT *hDat
 } // namespace
 
 // Allocate and configure dynamic HRIR structures.
-bool PrepareHrirData(const al::span<const double> distances,
-    const al::span<const uint,MAX_FD_COUNT> evCounts,
-    const al::span<const std::array<uint,MAX_EV_COUNT>,MAX_FD_COUNT> azCounts, HrirDataT *hData)
+bool PrepareHrirData(const std::span<const double> distances,
+    const std::span<const uint,MAX_FD_COUNT> evCounts,
+    const std::span<const std::array<uint,MAX_EV_COUNT>,MAX_FD_COUNT> azCounts, HrirDataT *hData)
 {
     uint evTotal{0}, azTotal{0};
 
@@ -1118,7 +1117,7 @@ bool PrepareHrirData(const al::span<const double> distances,
     {
         hData->mFds[fi].mDistance = distances[fi];
         hData->mFds[fi].mEvStart = 0;
-        hData->mFds[fi].mEvs = al::span{hData->mEvsBase}.subspan(evTotal, evCounts[fi]);
+        hData->mFds[fi].mEvs = std::span{hData->mEvsBase}.subspan(evTotal, evCounts[fi]);
         evTotal += evCounts[fi];
         for(uint ei{0};ei < evCounts[fi];++ei)
         {
@@ -1126,7 +1125,7 @@ bool PrepareHrirData(const al::span<const double> distances,
 
             hData->mFds[fi].mEvs[ei].mElevation = -std::numbers::pi / 2.0 + std::numbers::pi * ei
                 / (evCounts[fi] - 1);
-            hData->mFds[fi].mEvs[ei].mAzs = al::span{hData->mAzsBase}.subspan(azTotal, azCount);
+            hData->mFds[fi].mEvs[ei].mAzs = std::span{hData->mAzsBase}.subspan(azTotal, azCount);
             for(uint ai{0};ai < azCount;ai++)
             {
                 hData->mFds[fi].mEvs[ei].mAzs[ai].mAzimuth = 2.0 * std::numbers::pi * ai / azCount;
@@ -1272,7 +1271,7 @@ void PrintHelp(const std::string_view argv0, FILE *ofile)
 }
 
 // Standard command line dispatch.
-int main(al::span<std::string_view> args)
+int main(std::span<std::string_view> args)
 {
     if(args.size() < 2)
     {
@@ -1510,5 +1509,5 @@ int main(int argc, char **argv)
     assert(argc >= 0);
     auto args = std::vector<std::string_view>(static_cast<unsigned int>(argc));
     std::copy_n(argv, args.size(), args.begin());
-    return main(al::span{args});
+    return main(std::span{args});
 }

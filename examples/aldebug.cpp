@@ -29,6 +29,7 @@
 #include <cassert>
 #include <cstdio>
 #include <memory>
+#include <span>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -38,7 +39,6 @@
 #include "AL/alext.h"
 
 #include "alnumeric.h"
-#include "alspan.h"
 #include "fmt/core.h"
 
 #include "win_main_utf8.h"
@@ -112,7 +112,7 @@ auto alGetPointerEXT = LPALGETPOINTEREXT{};
 auto alGetPointervEXT = LPALGETPOINTERVEXT{};
 
 
-int main(al::span<std::string_view> args)
+int main(std::span<std::string_view> args)
 {
     /* Print out usage if -h was specified */
     if(args.size() > 1 && (args[1] == "-h" || args[1] == "--help"))
@@ -307,5 +307,5 @@ int main(int argc, char **argv)
     assert(argc >= 0);
     auto args = std::vector<std::string_view>(static_cast<unsigned int>(argc));
     std::copy_n(argv, args.size(), args.begin());
-    return main(al::span{args});
+    return main(std::span{args});
 }

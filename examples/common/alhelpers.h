@@ -36,13 +36,13 @@ void al_nssleep(unsigned long nsec);
 } // extern "C"
 
 #include <cstdio>
+#include <span>
 #include <string>
 #include <string_view>
 
-#include "alspan.h"
 #include "fmt/core.h"
 
-int InitAL(al::span<std::string_view> &args)
+int InitAL(std::span<std::string_view> &args)
 {
     ALCdevice *device{};
 

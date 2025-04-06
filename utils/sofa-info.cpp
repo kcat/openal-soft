@@ -21,14 +21,15 @@
  * Or visit:  http://www.gnu.org/licenses/old-licenses/gpl-2.0.html
  */
 
+#include <cassert>
 #include <cstdio>
 #include <memory>
+#include <span>
 #include <string>
 #include <string_view>
 #include <vector>
 
 #include "alnumeric.h"
-#include "alspan.h"
 #include "fmt/core.h"
 
 #include "sofa-support.h"
@@ -56,7 +57,7 @@ void PrintSofaArray(const std::string_view prefix, MYSOFA_ARRAY *array, bool sho
     PrintSofaAttributes(prefix, array->attributes);
     if(showValues)
     {
-        const auto values = al::span{array->values, array->elements};
+        const auto values = std::span{array->values, array->elements};
         for(size_t i{0u};i < values.size();++i)
             fmt::println("{}[{}]: {:.6f}", prefix, i, values[i]);
     }
@@ -70,7 +71,7 @@ void PrintSofaArray(const std::string_view prefix, MYSOFA_ARRAY *array, bool sho
  * possible.  Those sets that contain purely random measurements or use
  * different major axes will fail.
  */
-void PrintCompatibleLayout(const al::span<const float> xyzs)
+void PrintCompatibleLayout(const std::span<const float> xyzs)
 {
     fmt::println("");
 
@@ -136,10 +137,10 @@ void SofaInfo(const std::string &filename)
     PrintSofaArray("DataDelay"sv, &sofa->DataDelay);
     PrintSofaArray("SourcePosition"sv, &sofa->SourcePosition, false);
 
-    PrintCompatibleLayout(al::span{sofa->SourcePosition.values, sofa->M*3_uz});
+    PrintCompatibleLayout(std::span{sofa->SourcePosition.values, sofa->M*3_uz});
 }
 
-int main(al::span<std::string_view> args)
+int main(std::span<std::string_view> args)
 {
     if(args.size() != 2)
     {
@@ -159,5 +160,5 @@ int main(int argc, char **argv)
     assert(argc >= 0);
     auto args = std::vector<std::string_view>(static_cast<unsigned int>(argc));
     std::copy_n(argv, args.size(), args.begin());
-    return main(al::span{args});
+    return main(std::span{args});
 }

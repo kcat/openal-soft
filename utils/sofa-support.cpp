@@ -29,6 +29,7 @@
 #include <array>
 #include <cmath>
 #include <cstdio>
+#include <span>
 #include <utility>
 #include <vector>
 
@@ -179,7 +180,7 @@ const char *SofaErrorStr(int err)
     return "Unknown";
 }
 
-auto GetCompatibleLayout(const al::span<const float> xyzs) -> std::vector<SofaField>
+auto GetCompatibleLayout(const std::span<const float> xyzs) -> std::vector<SofaField>
 {
     auto aers = std::vector<double3>(xyzs.size()/3, double3{});
     for(size_t i{0u};i < aers.size();++i)

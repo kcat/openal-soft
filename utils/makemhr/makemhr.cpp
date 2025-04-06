@@ -85,6 +85,7 @@
 #include <vector>
 
 #include "alcomplex.h"
+#include "almalloc.h"
 #include "alnumeric.h"
 #include "alspan.h"
 #include "alstring.h"

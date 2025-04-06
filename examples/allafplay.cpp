@@ -75,6 +75,7 @@
 
 #include <algorithm>
 #include <array>
+#include <bit>
 #include <cassert>
 #include <cstdint>
 #include <fstream>
@@ -373,7 +374,7 @@ auto LafStream::readChunk() -> uint32_t
     mInFile.sgetn(reinterpret_cast<char*>(mEnabledTracks.data()), (mNumTracks+7_z)>>3);
     mNumEnabled = std::accumulate(mEnabledTracks.cbegin(), mEnabledTracks.cend(), 0u,
         [](const unsigned int val, const uint8_t in)
-        { return val + unsigned(al::popcount(unsigned(in))); });
+        { return val + unsigned(std::popcount(unsigned(in))); });
 
     /* Make sure enable bits aren't set for non-existent tracks. */
     if(mEnabledTracks[((mNumTracks+7_uz)>>3) - 1] >= (1u<<(mNumTracks&7)))
@@ -475,8 +476,8 @@ auto LafStream::prepareTrack(const size_t trackidx, const size_t count) -> al::s
             const auto bits = al::span{mEnabledTracks}.first(trackidx>>3);
             const auto res = std::accumulate(bits.begin(), bits.end(), 0u,
                 [](const unsigned int val, const uint8_t in)
-                { return val + unsigned(al::popcount(unsigned(in))); });
-            return unsigned(al::popcount(mEnabledTracks[trackidx>>3] & ((1u<<(trackidx&7))-1)))
+                { return val + unsigned(std::popcount(unsigned(in))); });
+            return unsigned(std::popcount(mEnabledTracks[trackidx>>3] & ((1u<<(trackidx&7))-1)))
                 + res;
         });
 

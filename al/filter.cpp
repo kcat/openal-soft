@@ -23,6 +23,7 @@
 #include "filter.h"
 
 #include <algorithm>
+#include <bit>
 #include <cstdarg>
 #include <cstdint>
 #include <cstdio>
@@ -37,7 +38,6 @@
 #include "AL/alc.h"
 #include "AL/efx.h"
 
-#include "albit.h"
 #include "alc/context.h"
 #include "alc/device.h"
 #include "almalloc.h"
@@ -101,7 +101,7 @@ auto EnsureFilters(al::Device *device, size_t needed) noexcept -> bool
 try {
     size_t count{std::accumulate(device->FilterList.cbegin(), device->FilterList.cend(), 0_uz,
         [](size_t cur, const FilterSubList &sublist) noexcept -> size_t
-        { return cur + static_cast<ALuint>(al::popcount(sublist.FreeMask)); })};
+        { return cur + static_cast<ALuint>(std::popcount(sublist.FreeMask)); })};
 
     while(needed > count)
     {
@@ -128,7 +128,7 @@ auto AllocFilter(al::Device *device) noexcept -> ALfilter*
         [](const FilterSubList &entry) noexcept -> bool
         { return entry.FreeMask != 0; });
     auto lidx = static_cast<ALuint>(std::distance(device->FilterList.begin(), sublist));
-    auto slidx = static_cast<ALuint>(al::countr_zero(sublist->FreeMask));
+    auto slidx = static_cast<ALuint>(std::countr_zero(sublist->FreeMask));
     ASSUME(slidx < 64);
 
     ALfilter *filter{al::construct_at(al::to_address(sublist->Filters->begin() + slidx))};
@@ -647,7 +647,7 @@ FilterSubList::~FilterSubList()
     uint64_t usemask{~FreeMask};
     while(usemask)
     {
-        const int idx{al::countr_zero(usemask)};
+        const int idx{std::countr_zero(usemask)};
         std::destroy_at(al::to_address(Filters->begin() + idx));
         usemask &= ~(1_u64 << idx);
     }

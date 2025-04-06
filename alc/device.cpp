@@ -4,13 +4,13 @@
 #include "device.h"
 
 #include <algorithm>
+#include <bit>
 #include <cstddef>
 #include <numeric>
 
 #include "al/buffer.h"
 #include "al/effect.h"
 #include "al/filter.h"
-#include "albit.h"
 #include "alnumeric.h"
 #include "atomic.h"
 #include "backends/base.h"
@@ -40,19 +40,19 @@ Device::~Device()
 
     size_t count{std::accumulate(BufferList.cbegin(), BufferList.cend(), 0_uz,
         [](size_t cur, const BufferSubList &sublist) noexcept -> size_t
-        { return cur + static_cast<uint>(al::popcount(~sublist.FreeMask)); })};
+        { return cur + static_cast<uint>(std::popcount(~sublist.FreeMask)); })};
     if(count > 0)
         WARN("{} Buffer{} not deleted", count, (count==1)?"":"s");
 
     count = std::accumulate(EffectList.cbegin(), EffectList.cend(), 0_uz,
         [](size_t cur, const EffectSubList &sublist) noexcept -> size_t
-        { return cur + static_cast<uint>(al::popcount(~sublist.FreeMask)); });
+        { return cur + static_cast<uint>(std::popcount(~sublist.FreeMask)); });
     if(count > 0)
         WARN("{} Effect{} not deleted", count, (count==1)?"":"s");
 
     count = std::accumulate(FilterList.cbegin(), FilterList.cend(), 0_uz,
         [](size_t cur, const FilterSubList &sublist) noexcept -> size_t
-        { return cur + static_cast<uint>(al::popcount(~sublist.FreeMask)); });
+        { return cur + static_cast<uint>(std::popcount(~sublist.FreeMask)); });
     if(count > 0)
         WARN("{} Filter{} not deleted", count, (count==1)?"":"s");
 }

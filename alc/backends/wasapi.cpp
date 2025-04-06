@@ -48,6 +48,7 @@
 
 #include <algorithm>
 #include <atomic>
+#include <bit>
 #include <chrono>
 #include <condition_variable>
 #include <cstring>
@@ -1426,10 +1427,10 @@ FORCE_ALIGN void WasapiPlayback::mixerProc(SpatialDevice &audio)
             if(channels.empty()) UNLIKELY
             {
                 auto flags = as_unsigned(al::to_underlying(audio.mStaticMask));
-                channels.reserve(as_unsigned(al::popcount(flags)));
+                channels.reserve(as_unsigned(std::popcount(flags)));
                 while(flags)
                 {
-                    auto id = decltype(flags){1} << al::countr_zero(flags);
+                    auto id = decltype(flags){1} << std::countr_zero(flags);
                     flags &= ~id;
 
                     audio.mRender->ActivateSpatialAudioObject(static_cast<AudioObjectType>(id),
@@ -1970,7 +1971,7 @@ auto WasapiPlayback::initSpatial(DeviceHelper &helper, DeviceHandle &mmdev, Spat
     if(mDevice->mSampleRate != mFormat.Format.nSamplesPerSec)
     {
         const auto flags = as_unsigned(al::to_underlying(streamParams.StaticObjectTypeMask));
-        const auto channelCount = as_unsigned(al::popcount(flags));
+        const auto channelCount = as_unsigned(std::popcount(flags));
         mResampler = SampleConverter::Create(mDevice->FmtType, mDevice->FmtType, channelCount,
             mDevice->mSampleRate, mFormat.Format.nSamplesPerSec, Resampler::FastBSinc24);
         mResampleBuffer.resize(size_t{mDevice->mUpdateSize} * channelCount *
@@ -2928,7 +2929,7 @@ auto WasapiCapture::resetProxy(DeviceHelper &helper, DeviceHandle &mmdev,
         if((InputType.dwChannelMask&SPEAKER_LOW_FREQUENCY))
         {
             constexpr auto lfemask = MaskFromTopBits(SPEAKER_LOW_FREQUENCY);
-            const int lfeidx{al::popcount(InputType.dwChannelMask&lfemask) - 1};
+            const int lfeidx{std::popcount(InputType.dwChannelMask&lfemask) - 1};
             chanmask &= ~(1u << lfeidx);
         }
 

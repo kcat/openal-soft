@@ -23,6 +23,7 @@
 #include "effect.h"
 
 #include <algorithm>
+#include <bit>
 #include <cstdint>
 #include <cstring>
 #include <iterator>
@@ -43,7 +44,6 @@
 #include "AL/efx.h"
 
 #include "al/effects/effects.h"
-#include "albit.h"
 #include "alc/context.h"
 #include "alc/device.h"
 #include "alc/inprogext.h"
@@ -144,7 +144,7 @@ auto EnsureEffects(al::Device *device, size_t needed) noexcept -> bool
 try {
     size_t count{std::accumulate(device->EffectList.cbegin(), device->EffectList.cend(), 0_uz,
         [](size_t cur, const EffectSubList &sublist) noexcept -> size_t
-        { return cur + static_cast<ALuint>(al::popcount(sublist.FreeMask)); })};
+        { return cur + static_cast<ALuint>(std::popcount(sublist.FreeMask)); })};
 
     while(needed > count)
     {
@@ -170,7 +170,7 @@ auto AllocEffect(al::Device *device) noexcept -> ALeffect*
         [](const EffectSubList &entry) noexcept -> bool
         { return entry.FreeMask != 0; });
     auto lidx = static_cast<ALuint>(std::distance(device->EffectList.begin(), sublist));
-    auto slidx = static_cast<ALuint>(al::countr_zero(sublist->FreeMask));
+    auto slidx = static_cast<ALuint>(std::countr_zero(sublist->FreeMask));
     ASSUME(slidx < 64);
 
     ALeffect *effect{al::construct_at(al::to_address(sublist->Effects->begin() + slidx))};
@@ -544,7 +544,7 @@ EffectSubList::~EffectSubList()
     uint64_t usemask{~FreeMask};
     while(usemask)
     {
-        const int idx{al::countr_zero(usemask)};
+        const int idx{std::countr_zero(usemask)};
         std::destroy_at(al::to_address(Effects->begin()+idx));
         usemask &= ~(1_u64 << idx);
     }

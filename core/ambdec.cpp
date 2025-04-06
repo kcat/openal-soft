@@ -4,6 +4,7 @@
 #include "ambdec.h"
 
 #include <algorithm>
+#include <bit>
 #include <cctype>
 #include <cstdarg>
 #include <cstddef>
@@ -13,7 +14,6 @@
 #include <sstream>
 #include <string>
 
-#include "albit.h"
 #include "alspan.h"
 #include "alstring.h"
 #include "filesystem.h"
@@ -138,7 +138,7 @@ std::optional<std::string> AmbDecConf::load(const char *fname) noexcept
                 float value{};
                 while(mask)
                 {
-                    auto idx = static_cast<unsigned>(al::countr_zero(mask));
+                    auto idx = static_cast<unsigned>(std::countr_zero(mask));
                     mask &= ~(1u << idx);
 
                     istr >> value;

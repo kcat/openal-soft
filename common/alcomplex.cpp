@@ -5,13 +5,13 @@
 
 #include <algorithm>
 #include <array>
+#include <bit>
 #include <cassert>
 #include <cstddef>
 #include <functional>
 #include <iterator>
 #include <utility>
 
-#include "albit.h"
 #include "alnumbers.h"
 #include "alnumeric.h"
 #include "opthelpers.h"
@@ -117,7 +117,7 @@ void complex_fft(const al::span<std::complex<double>> buffer, const double sign)
     /* Get the number of bits used for indexing. Simplifies bit-reversal and
      * the main loop count.
      */
-    const std::size_t log2_size{static_cast<std::size_t>(al::countr_zero(fftsize))};
+    const auto log2_size = static_cast<std::size_t>(std::countr_zero(fftsize));
 
     if(log2_size < gBitReverses.size()) LIKELY
     {

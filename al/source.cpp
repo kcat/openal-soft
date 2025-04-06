@@ -25,6 +25,7 @@
 #include <algorithm>
 #include <array>
 #include <atomic>
+#include <bit>
 #include <bitset>
 #include <cassert>
 #include <chrono>
@@ -52,7 +53,6 @@
 #include "AL/alext.h"
 #include "AL/efx.h"
 
-#include "albit.h"
 #include "alc/backends/base.h"
 #include "alc/context.h"
 #include "alc/device.h"
@@ -720,7 +720,7 @@ bool EnsureSources(ALCcontext *context, size_t needed)
 {
     size_t count{std::accumulate(context->mSourceList.cbegin(), context->mSourceList.cend(), 0_uz,
         [](size_t cur, const SourceSubList &sublist) noexcept -> size_t
-        { return cur + static_cast<ALuint>(al::popcount(sublist.FreeMask)); })};
+        { return cur + static_cast<ALuint>(std::popcount(sublist.FreeMask)); })};
 
     try {
         while(needed > count)
@@ -747,7 +747,7 @@ ALsource *AllocSource(ALCcontext *context) noexcept
         [](const SourceSubList &entry) noexcept -> bool
         { return entry.FreeMask != 0; });
     auto lidx = static_cast<ALuint>(std::distance(context->mSourceList.begin(), sublist));
-    auto slidx = static_cast<ALuint>(al::countr_zero(sublist->FreeMask));
+    auto slidx = static_cast<ALuint>(std::countr_zero(sublist->FreeMask));
     ASSUME(slidx < 64);
 
     ALsource *source{al::construct_at(al::to_address(sublist->Sources->begin() + slidx))};
@@ -3786,7 +3786,7 @@ SourceSubList::~SourceSubList()
     uint64_t usemask{~FreeMask};
     while(usemask)
     {
-        const int idx{al::countr_zero(usemask)};
+        const int idx{std::countr_zero(usemask)};
         usemask &= ~(1_u64 << idx);
         std::destroy_at(al::to_address(Sources->begin() + idx));
     }

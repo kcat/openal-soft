@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <array>
+#include <bit>
 #include <cstddef>
 #include <functional>
 #include <iterator>
@@ -22,7 +23,6 @@
 #include "al/effect.h"
 #include "al/event.h"
 #include "al/listener.h"
-#include "albit.h"
 #include "alc/alu.h"
 #include "alc/backends/base.h"
 #include "alnumeric.h"
@@ -136,7 +136,7 @@ ALCcontext::~ALCcontext()
 
     size_t count{std::accumulate(mSourceList.cbegin(), mSourceList.cend(), 0_uz,
         [](size_t cur, const SourceSubList &sublist) noexcept -> size_t
-        { return cur + static_cast<uint>(al::popcount(~sublist.FreeMask)); })};
+        { return cur + static_cast<uint>(std::popcount(~sublist.FreeMask)); })};
     if(count > 0)
         WARN("{} Source{} not deleted", count, (count==1)?"":"s");
     mSourceList.clear();
@@ -149,7 +149,7 @@ ALCcontext::~ALCcontext()
     mDefaultSlot = nullptr;
     count = std::accumulate(mEffectSlotList.cbegin(), mEffectSlotList.cend(), 0_uz,
         [](size_t cur, const EffectSlotSubList &sublist) noexcept -> size_t
-        { return cur + static_cast<uint>(al::popcount(~sublist.FreeMask)); });
+        { return cur + static_cast<uint>(std::popcount(~sublist.FreeMask)); });
     if(count > 0)
         WARN("{} AuxiliaryEffectSlot{} not deleted", count, (count==1)?"":"s");
     mEffectSlotList.clear();
@@ -345,7 +345,7 @@ void ForEachSource(ALCcontext *context, F func)
         uint64_t usemask{~sublist.FreeMask};
         while(usemask)
         {
-            const auto idx = static_cast<uint>(al::countr_zero(usemask));
+            const auto idx = static_cast<uint>(std::countr_zero(usemask));
             usemask &= ~(1_u64 << idx);
 
             func((*sublist.Sources)[idx]);

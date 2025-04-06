@@ -32,6 +32,7 @@
 #include <algorithm>
 #include <array>
 #include <atomic>
+#include <bit>
 #include <bitset>
 #include <cassert>
 #include <cctype>
@@ -70,7 +71,6 @@
 #include "al/filter.h"
 #include "al/source.h"
 #include "alc/events.h"
-#include "albit.h"
 #include "alconfig.h"
 #include "almalloc.h"
 #include "alnumbers.h"
@@ -1782,7 +1782,7 @@ auto UpdateDeviceParams(al::Device *device, const al::span<const int> attrList) 
             uint64_t usemask{~sublist.FreeMask};
             while(usemask)
             {
-                const auto idx = static_cast<uint>(al::countr_zero(usemask));
+                const auto idx = static_cast<uint>(std::countr_zero(usemask));
                 auto &slot = (*sublist.EffectSlots)[idx];
                 usemask &= ~(1_u64 << idx);
 
@@ -1813,7 +1813,7 @@ auto UpdateDeviceParams(al::Device *device, const al::span<const int> attrList) 
             uint64_t usemask{~sublist.FreeMask};
             while(usemask)
             {
-                const auto idx = static_cast<uint>(al::countr_zero(usemask));
+                const auto idx = static_cast<uint>(std::countr_zero(usemask));
                 auto &source = (*sublist.Sources)[idx];
                 usemask &= ~(1_u64 << idx);
 

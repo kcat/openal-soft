@@ -1,12 +1,11 @@
 #ifndef CORE_EVENT_H
 #define CORE_EVENT_H
 
-#include <array>
 #include <cstdint>
+#include <memory>
 #include <string>
 #include <variant>
 
-#include "almalloc.h"
 
 struct EffectState;
 
@@ -57,7 +56,7 @@ using AsyncEvent = std::variant<AsyncKillThread,
 template<typename T, typename ...Args>
 auto &InitAsyncEvent(std::byte *evtbuf, Args&& ...args)
 {
-    auto *evt = al::construct_at(reinterpret_cast<AsyncEvent*>(evtbuf), std::in_place_type<T>,
+    auto *evt = std::construct_at(reinterpret_cast<AsyncEvent*>(evtbuf), std::in_place_type<T>,
         std::forward<Args>(args)...);
     return std::get<T>(*evt);
 }

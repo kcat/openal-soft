@@ -750,7 +750,7 @@ ALsource *AllocSource(ALCcontext *context) noexcept
     auto slidx = static_cast<ALuint>(std::countr_zero(sublist->FreeMask));
     ASSUME(slidx < 64);
 
-    ALsource *source{al::construct_at(std::to_address(sublist->Sources->begin() + slidx))};
+    ALsource *source{std::construct_at(std::to_address(sublist->Sources->begin() + slidx))};
 #if ALSOFT_EAX
     source->eaxInitialize(context);
 #endif // ALSOFT_EAX

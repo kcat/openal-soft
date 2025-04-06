@@ -281,7 +281,7 @@ auto AllocEffectSlot(ALCcontext *context) -> ALeffectslot*
     auto slidx = static_cast<ALuint>(std::countr_zero(sublist->FreeMask));
     ASSUME(slidx < 64);
 
-    ALeffectslot *slot{al::construct_at(std::to_address(sublist->EffectSlots->begin() + slidx),
+    ALeffectslot *slot{std::construct_at(std::to_address(sublist->EffectSlots->begin() + slidx),
         context)};
     aluInitEffectPanning(slot->mSlot, context);
 

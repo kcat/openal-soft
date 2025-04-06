@@ -6,7 +6,6 @@
 #include <limits>
 #include <new>
 #include <type_traits>
-#include <utility>
 #include <variant>
 
 
@@ -86,19 +85,6 @@ constexpr bool operator==(const allocator<T,N>&, const allocator<U,M>&) noexcept
 template<typename T, std::size_t N, typename U, std::size_t M>
 constexpr bool operator!=(const allocator<T,N>&, const allocator<U,M>&) noexcept
 { return allocator<T,N>::Alignment != allocator<U,M>::Alignment; }
-
-
-template<typename T, typename ...Args>
-constexpr T* construct_at(T *ptr, Args&& ...args)
-    noexcept(std::is_nothrow_constructible_v<T, Args...>)
-{
-    /* NOLINTBEGIN(cppcoreguidelines-owning-memory) construct_at doesn't
-     * necessarily handle the address from an owner, while placement new
-     * expects to.
-     */
-    return ::new(static_cast<void*>(ptr)) T{std::forward<Args>(args)...};
-    /* NOLINTEND(cppcoreguidelines-owning-memory) */
-}
 
 
 template<typename SP, typename PT, typename ...Args>

@@ -173,7 +173,7 @@ auto AllocEffect(al::Device *device) noexcept -> ALeffect*
     auto slidx = static_cast<ALuint>(std::countr_zero(sublist->FreeMask));
     ASSUME(slidx < 64);
 
-    ALeffect *effect{al::construct_at(std::to_address(sublist->Effects->begin() + slidx))};
+    ALeffect *effect{std::construct_at(std::to_address(sublist->Effects->begin() + slidx))};
     InitEffectParams(effect, AL_EFFECT_NULL);
 
     /* Add 1 to avoid effect ID 0. */

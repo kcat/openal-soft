@@ -213,7 +213,7 @@ auto AllocBuffer(al::Device *device) noexcept -> ALbuffer*
     auto slidx = static_cast<ALuint>(std::countr_zero(sublist->FreeMask));
     ASSUME(slidx < 64);
 
-    ALbuffer *buffer{al::construct_at(std::to_address(sublist->Buffers->begin() + slidx))};
+    ALbuffer *buffer{std::construct_at(std::to_address(sublist->Buffers->begin() + slidx))};
 
     /* Add 1 to avoid buffer ID 0. */
     buffer->id = ((lidx<<6) | slidx) + 1;

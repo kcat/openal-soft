@@ -43,7 +43,6 @@
 #include <utility>
 #include <variant>
 
-#include "almalloc.h"
 #include "alnumeric.h"
 #include "alsem.h"
 #include "alspan.h"
@@ -2315,7 +2314,7 @@ void DeviceBase::doDisconnect(std::string msg)
             auto evt_data = ring->getWriteVector()[0];
             if(evt_data.len > 0)
             {
-                al::construct_at(reinterpret_cast<AsyncEvent*>(evt_data.buf), evt);
+                std::construct_at(reinterpret_cast<AsyncEvent*>(evt_data.buf), evt);
                 ring->writeAdvance(1);
                 ctx->mEventSem.post();
             }

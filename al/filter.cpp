@@ -131,7 +131,7 @@ auto AllocFilter(al::Device *device) noexcept -> ALfilter*
     auto slidx = static_cast<ALuint>(std::countr_zero(sublist->FreeMask));
     ASSUME(slidx < 64);
 
-    ALfilter *filter{al::construct_at(std::to_address(sublist->Filters->begin() + slidx))};
+    ALfilter *filter{std::construct_at(std::to_address(sublist->Filters->begin() + slidx))};
     InitFilterParams(filter, AL_FILTER_NULL);
 
     /* Add 1 to avoid filter ID 0. */

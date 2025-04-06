@@ -203,17 +203,17 @@ struct SIMDALIGN Voice {
      * Source offset in samples, relative to the currently playing buffer, NOT
      * the whole queue.
      */
-    std::atomic<int> mPosition{};
+    std::atomic<int> mPosition;
     /** Fractional (fixed-point) offset to the next sample. */
-    std::atomic<uint> mPositionFrac{};
+    std::atomic<uint> mPositionFrac;
 
     /* Current buffer queue item being played. */
-    std::atomic<VoiceBufferItem*> mCurrentBuffer{};
+    std::atomic<VoiceBufferItem*> mCurrentBuffer;
 
     /* Buffer queue item to loop to at end of queue (will be NULL for non-
      * looping voices).
      */
-    std::atomic<VoiceBufferItem*> mLoopBuffer{};
+    std::atomic<VoiceBufferItem*> mLoopBuffer;
 
     std::chrono::nanoseconds mStartTime{};
 

@@ -382,8 +382,8 @@ struct MagCalculator {
     const uint mFftSize{};
     const uint mIrPoints{};
     std::vector<al::span<double>> mIrs;
-    std::atomic<size_t> mCurrent{};
-    std::atomic<size_t> mDone{};
+    std::atomic<size_t> mCurrent;
+    std::atomic<size_t> mDone;
 
     MagCalculator(const uint fftsize, const uint irpoints) : mFftSize{fftsize}, mIrPoints{irpoints}
     { }

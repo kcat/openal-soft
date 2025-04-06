@@ -19,7 +19,7 @@
 
 
 struct alignas(16) HrtfStore {
-    std::atomic<uint> mRef{};
+    std::atomic<uint> mRef;
 
     uint mSampleRate : 24;
     uint mIrSize : 8;

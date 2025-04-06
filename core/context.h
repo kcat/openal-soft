@@ -60,7 +60,7 @@ struct ContextProps {
     bool SourceDistanceModel;
     DistanceModel mDistanceModel;
 
-    std::atomic<ContextProps*> next{};
+    std::atomic<ContextProps*> next;
 };
 
 struct ContextParams {
@@ -107,7 +107,7 @@ struct ContextBase {
      * last processed, and any after are pending.
      */
     VoiceChange *mVoiceChangeTail{};
-    std::atomic<VoiceChange*> mCurrentVoiceChange{};
+    std::atomic<VoiceChange*> mCurrentVoiceChange;
 
     void allocVoiceChanges();
     void allocVoiceProps();
@@ -118,7 +118,7 @@ struct ContextBase {
 
     using VoiceArray = al::FlexArray<Voice*>;
     al::atomic_unique_ptr<VoiceArray> mVoices;
-    std::atomic<size_t> mActiveVoiceCount{};
+    std::atomic<size_t> mActiveVoiceCount;
 
     void allocVoices(size_t addcount);
     [[nodiscard]] auto getVoicesSpan() const noexcept -> al::span<Voice*>

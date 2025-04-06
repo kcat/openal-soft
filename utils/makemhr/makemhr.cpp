@@ -841,8 +841,8 @@ void SynthesizeHrirs(HrirDataT *hData)
  */
 struct HrirReconstructor {
     std::vector<al::span<double>> mIrs;
-    std::atomic<size_t> mCurrent{};
-    std::atomic<size_t> mDone{};
+    std::atomic<size_t> mCurrent;
+    std::atomic<size_t> mDone;
     uint mFftSize{};
     uint mIrPoints{};
 

@@ -43,7 +43,7 @@ struct EffectSlotProps {
 
     al::intrusive_ptr<EffectState> State;
 
-    std::atomic<EffectSlotProps*> next{};
+    std::atomic<EffectSlotProps*> next;
 };
 
 

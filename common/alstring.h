@@ -26,14 +26,6 @@ constexpr bool contains(const std::string_view str0, const std::string_view str1
 { return str0.find(str1) != std::string_view::npos; }
 
 [[nodiscard]]
-constexpr bool starts_with(const std::string_view str0, const std::string_view str1) noexcept
-{ return str0.substr(0, std::min(str0.size(), str1.size())) == str1; }
-
-[[nodiscard]]
-constexpr bool ends_with(const std::string_view str0, const std::string_view str1) noexcept
-{ return str0.substr(str0.size() - std::min(str0.size(), str1.size())) == str1; }
-
-[[nodiscard]]
 int case_compare(const std::string_view str0, const std::string_view str1) noexcept;
 
 [[nodiscard]]

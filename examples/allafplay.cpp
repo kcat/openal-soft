@@ -533,14 +533,14 @@ auto LoadLAF(const fs::path &fname) -> std::unique_ptr<LafStream>
              */
             hiter = std::copy(header.begin()+hpos, header.end(), hiter);
         }
-        else if(al::ends_with(headview, "HEA"sv))
+        else if(headview.ends_with("HEA"sv))
         {
             /* Found what might be the HEAD marker at the end. Copy it to the
              * front, refill the header, and check again.
              */
             hiter = std::copy_n(header.end()-3, 3, hiter);
         }
-        else if(al::ends_with(headview, "HE"sv))
+        else if(headview.ends_with("HE"sv))
             hiter = std::copy_n(header.end()-2, 2, hiter);
         else if(headview.back() == 'H')
             hiter = std::copy_n(header.end()-1, 1, hiter);

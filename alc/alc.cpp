@@ -2974,14 +2974,13 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName) noexcep
              * supported by the OpenAL SI. We can't really do anything useful
              * with them, so just ignore.
              */
-            || al::starts_with(devname, "'("sv)
+            || devname.starts_with("'("sv)
             || al::case_compare(devname, "openal-soft"sv) == 0)
             devname = {};
         else
         {
             const auto prefix = GetDevicePrefix();
-            if(!prefix.empty() && devname.size() > prefix.size()
-                && al::starts_with(devname, prefix))
+            if(!prefix.empty() && devname.size() > prefix.size() && devname.starts_with(prefix))
                 devname = devname.substr(prefix.size());
         }
     }
@@ -3144,8 +3143,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, 
         else
         {
             const auto prefix = GetDevicePrefix();
-            if(!prefix.empty() && devname.size() > prefix.size()
-                && al::starts_with(devname, prefix))
+            if(!prefix.empty() && devname.size() > prefix.size() && devname.starts_with(prefix))
                 devname = devname.substr(prefix.size());
         }
     }
@@ -3579,8 +3577,7 @@ FORCE_ALIGN ALCboolean ALC_APIENTRY alcReopenDeviceSOFT(ALCdevice *device,
         else
         {
             const auto prefix = GetDevicePrefix();
-            if(!prefix.empty() && devname.size() > prefix.size()
-                && al::starts_with(devname, prefix))
+            if(!prefix.empty() && devname.size() > prefix.size() && devname.starts_with(prefix))
                 devname = devname.substr(prefix.size());
         }
     }

@@ -170,7 +170,7 @@ auto StrSubst(std::string_view in, const std::string_view pat, const std::string
 
     while(in.size() >= pat.size())
     {
-        if(al::starts_with(in, pat))
+        if(in.starts_with(pat))
         {
             in = in.substr(pat.size());
             ret += rep;

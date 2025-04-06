@@ -1283,7 +1283,7 @@ void EventManager::addCallback(uint32_t id, uint32_t, const char *type, uint32_t
             || al::case_compare(className, GetAudioDuplexClassName()) == 0};
         if(!isGood)
         {
-            if(!al::contains(className, "/Video"sv) && !al::starts_with(className, "Stream/"sv))
+            if(!al::contains(className, "/Video"sv) && !className.starts_with("Stream/"sv))
                 TRACE("Ignoring node class {}", media_class);
             return;
         }
@@ -2012,14 +2012,14 @@ void PipeWireCapture::open(std::string_view name)
         auto match_name = [name](const DeviceNode &n) -> bool
         { return n.mType != NodeType::Sink && n.mName == name; };
         auto match = std::find_if(devlist.cbegin(), devlist.cend(), match_name);
-        if(match == devlist.cend() && al::starts_with(name, prefix))
+        if(match == devlist.cend() && name.starts_with(prefix))
         {
             const std::string_view sinkname{name.substr(prefix.length())};
             auto match_sinkname = [sinkname](const DeviceNode &n) -> bool
             { return n.mType == NodeType::Sink && n.mName == sinkname; };
             match = std::find_if(devlist.cbegin(), devlist.cend(), match_sinkname);
         }
-        else if(match == devlist.cend() && al::ends_with(name, suffix))
+        else if(match == devlist.cend() && name.ends_with(suffix))
         {
             const std::string_view sinkname{name.substr(0, name.size()-suffix.size())};
             auto match_sinkname = [sinkname](const DeviceNode &n) -> bool

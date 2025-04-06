@@ -145,7 +145,7 @@ EffectSlot *ContextBase::getEffectSlot()
         const auto cluster = al::span{*clusterptr};
         auto iter = std::find_if_not(cluster.begin(), cluster.end(),
             std::mem_fn(&EffectSlot::InUse));
-        if(iter != cluster.end()) return al::to_address(iter);
+        if(iter != cluster.end()) return std::to_address(iter);
     }
 
     auto clusterptr = std::make_unique<EffectSlotCluster::element_type>();

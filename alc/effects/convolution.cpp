@@ -21,7 +21,6 @@
 #endif
 
 #include "alcomplex.h"
-#include "almalloc.h"
 #include "alnumeric.h"
 #include "alspan.h"
 #include "base.h"
@@ -359,7 +358,7 @@ void ConvolutionState::deviceUpdate(const DeviceBase *device, const BufferStorag
         auto decoder = std::make_unique<UhjDecoderType>();
         std::array<float*,4> samples{};
         for(size_t c{0};c < numChannels;++c)
-            samples[c] = al::to_address(srcsamples.begin() + ptrdiff_t(srclinelength*c));
+            samples[c] = std::to_address(srcsamples.begin() + ptrdiff_t(srclinelength*c));
         decoder->decode({samples.data(), numChannels}, buffer->mSampleLen, buffer->mSampleLen);
     }
 
@@ -418,7 +417,7 @@ void ConvolutionState::deviceUpdate(const DeviceBase *device, const BufferStorag
             /* Reorder backward to make it suitable for pffft_zconvolve and the
              * subsequent pffft_transform(..., PFFFT_BACKWARD).
              */
-            mFft.zreorder(ffttmp.data(), al::to_address(filteriter), PFFFT_BACKWARD);
+            mFft.zreorder(ffttmp.data(), std::to_address(filteriter), PFFFT_BACKWARD);
             filteriter += ConvolveUpdateSize;
         }
     }
@@ -680,7 +679,7 @@ void ConvolutionState::process(const size_t samplesToDo,
             auto input = mComplexData.cbegin() + ptrdiff_t(curseg*ConvolveUpdateSize);
             for(size_t s{curseg};s < mNumConvolveSegs;++s)
             {
-                mFft.zconvolve_accumulate(al::to_address(input), al::to_address(filter),
+                mFft.zconvolve_accumulate(std::to_address(input), std::to_address(filter),
                     mFftBuffer.data());
                 input += ConvolveUpdateSize;
                 filter += ConvolveUpdateSize;
@@ -688,7 +687,7 @@ void ConvolutionState::process(const size_t samplesToDo,
             input = mComplexData.cbegin();
             for(size_t s{0};s < curseg;++s)
             {
-                mFft.zconvolve_accumulate(al::to_address(input), al::to_address(filter),
+                mFft.zconvolve_accumulate(std::to_address(input), std::to_address(filter),
                     mFftBuffer.data());
                 input += ConvolveUpdateSize;
                 filter += ConvolveUpdateSize;

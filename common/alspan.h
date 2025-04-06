@@ -4,13 +4,13 @@
 #include <cassert>
 #include <cstddef>
 #include <iterator>
+#include <memory>
 #include <stdexcept>
 #include <tuple>
 #include <type_traits>
 #include <utility>
 
 #include "alassert.h"
-#include "almalloc.h"
 
 namespace al {
 
@@ -167,10 +167,10 @@ public:
     template<bool is0=(extent == 0), REQUIRES(is0)>
     constexpr span() noexcept { }
     template<typename U>
-    constexpr explicit span(U iter, size_type size_) : mData{::al::to_address(iter)}
+    constexpr explicit span(U iter, size_type size_) : mData{std::to_address(iter)}
     { alassert(size_ == extent); }
     template<typename U, typename V, REQUIRES(!std::is_convertible<V,std::size_t>::value)>
-    constexpr explicit span(U first, V last) : mData{::al::to_address(first)}
+    constexpr explicit span(U first, V last) : mData{std::to_address(first)}
     { alassert(static_cast<std::size_t>(last-first) == extent); }
 
     template<std::size_t N>
@@ -292,11 +292,11 @@ public:
 
     constexpr span() noexcept = default;
     template<typename U>
-    constexpr span(U iter, size_type count) : mData{::al::to_address(iter)}, mDataLength{count}
+    constexpr span(U iter, size_type count) : mData{std::to_address(iter)}, mDataLength{count}
     { }
     template<typename U, typename V, REQUIRES(!std::is_convertible<V,std::size_t>::value)>
     constexpr span(U first, V last)
-        : span{::al::to_address(first), static_cast<std::size_t>(last-first)}
+        : span{std::to_address(first), static_cast<std::size_t>(last-first)}
     { }
 
     template<std::size_t N>

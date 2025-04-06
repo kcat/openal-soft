@@ -7,11 +7,11 @@
 #include <cmath>
 #include <complex>
 #include <functional>
+#include <memory>
 #include <numbers>
 #include <vector>
 
 #include "alcomplex.h"
-#include "almalloc.h"
 #include "core/bufferline.h"
 #include "opthelpers.h"
 #include "pffft.h"
@@ -103,7 +103,7 @@ struct SegmentedFilter {
                 fftTmp[i*2 + 1] = static_cast<float>((i == 0) ? fftBuffer[sSampleLength].real()
                     : fftBuffer[i].imag()) / float{sFftLength};
             }
-            mFft.zreorder(fftTmp.data(), al::to_address(filter), PFFFT_BACKWARD);
+            mFft.zreorder(fftTmp.data(), std::to_address(filter), PFFFT_BACKWARD);
             filter += sFftLength;
         }
     }
@@ -243,7 +243,7 @@ void UhjEncoder<N>::encode(float *LeftOut, float *RightOut,
         std::copy_n(mWXInOut.begin(), sSegmentSize, input);
         std::fill_n(input+sSegmentSize, sSegmentSize, 0.0f);
 
-        Filter.mFft.transform(al::to_address(input), al::to_address(input), mWorkData.data(),
+        Filter.mFft.transform(std::to_address(input), std::to_address(input), mWorkData.data(),
             PFFFT_FORWARD);
 
         /* Convolve each input segment with its IR filter counterpart (aligned
@@ -253,7 +253,7 @@ void UhjEncoder<N>::encode(float *LeftOut, float *RightOut,
         auto filter = Filter.mFilterData.begin();
         for(size_t s{curseg};s < sNumSegments;++s)
         {
-            Filter.mFft.zconvolve_accumulate(al::to_address(input), al::to_address(filter),
+            Filter.mFft.zconvolve_accumulate(std::to_address(input), std::to_address(filter),
                 mFftBuffer.data());
             input += sFftLength;
             filter += sFftLength;
@@ -261,7 +261,7 @@ void UhjEncoder<N>::encode(float *LeftOut, float *RightOut,
         input = mWXHistory.begin();
         for(size_t s{0};s < curseg;++s)
         {
-            Filter.mFft.zconvolve_accumulate(al::to_address(input), al::to_address(filter),
+            Filter.mFft.zconvolve_accumulate(std::to_address(input), std::to_address(filter),
                 mFftBuffer.data());
             input += sFftLength;
             filter += sFftLength;

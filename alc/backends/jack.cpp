@@ -27,6 +27,7 @@
 #include <cstdio>
 #include <cstring>
 #include <memory.h>
+#include <memory>
 #include <mutex>
 #include <thread>
 #include <vector>
@@ -438,7 +439,7 @@ int JackPlayback::mixerProc()
         {
             std::generate_n(outptrs.begin(), outptrs.size(), [&bufiter,update_size]
             {
-                auto ret = al::to_address(bufiter);
+                auto ret = std::to_address(bufiter);
                 bufiter += ptrdiff_t(update_size);
                 return ret;
             });
@@ -452,7 +453,7 @@ int JackPlayback::mixerProc()
             {
                 std::generate_n(outptrs.begin(), outptrs.size(), [&bufiter,update_size]
                 {
-                    auto ret = al::to_address(bufiter);
+                    auto ret = std::to_address(bufiter);
                     bufiter += ptrdiff_t(update_size);
                     return ret;
                 });

@@ -213,14 +213,14 @@ auto TrLoad(TokenReaderT *tr) -> int
         const auto count = std::streamsize{TRRingSize} - in;
         if(count < toLoad)
         {
-            istream.read(al::to_address(tr->mRing.begin() + in), count);
+            istream.read(std::to_address(tr->mRing.begin() + in), count);
             tr->mIn += istream.gcount();
             istream.read(tr->mRing.data(), toLoad-count);
             tr->mIn += istream.gcount();
         }
         else
         {
-            istream.read(al::to_address(tr->mRing.begin() + in), toLoad);
+            istream.read(std::to_address(tr->mRing.begin() + in), toLoad);
             tr->mIn += istream.gcount();
         }
 

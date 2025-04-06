@@ -36,7 +36,6 @@
 #include "helpers.h"
 #include "logging.h"
 #include "mixer/hrtfdefs.h"
-#include "opthelpers.h"
 #include "polyphase_resampler.h"
 
 
@@ -184,7 +183,7 @@ class databuf final : public std::streambuf {
 public:
     explicit databuf(const al::span<char_type> data) noexcept
     {
-        setg(data.data(), data.data(), al::to_address(data.end()));
+        setg(data.data(), data.data(), std::to_address(data.end()));
     }
 };
 /* NOLINTEND(cppcoreguidelines-pro-bounds-pointer-arithmetic) */
@@ -435,20 +434,20 @@ std::unique_ptr<HrtfStore> CreateHrtfStore(uint rate, uint8_t irSize,
     ptrdiff_t offset{sizeof(HrtfStore)};
 
     offset = RoundUp(offset, alignof(HrtfStore::Field)); /* Align for field infos */
-    auto field_ = al::span{reinterpret_cast<HrtfStore::Field*>(al::to_address(base + offset)),
+    auto field_ = al::span{reinterpret_cast<HrtfStore::Field*>(std::to_address(base + offset)),
         fields.size()};
     offset += ptrdiff_t(sizeof(field_[0])*fields.size());
 
     offset = RoundUp(offset, alignof(HrtfStore::Elevation)); /* Align for elevation infos */
-    auto elev_ = al::span{reinterpret_cast<HrtfStore::Elevation*>(al::to_address(base + offset)),
+    auto elev_ = al::span{reinterpret_cast<HrtfStore::Elevation*>(std::to_address(base + offset)),
         elevs.size()};
     offset += ptrdiff_t(sizeof(elev_[0])*elevs.size());
 
     offset = RoundUp(offset, 16); /* Align for coefficients using SIMD */
-    auto coeffs_ = al::span{reinterpret_cast<HrirArray*>(al::to_address(base + offset)), irCount};
+    auto coeffs_ = al::span{reinterpret_cast<HrirArray*>(std::to_address(base + offset)), irCount};
     offset += ptrdiff_t(sizeof(coeffs_[0])*irCount);
 
-    auto delays_ = al::span{reinterpret_cast<ubyte2*>(al::to_address(base + offset)), irCount};
+    auto delays_ = al::span{reinterpret_cast<ubyte2*>(std::to_address(base + offset)), irCount};
     offset += ptrdiff_t(sizeof(delays_[0])*irCount);
 
     if(size_t(offset) != total)

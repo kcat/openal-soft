@@ -7,6 +7,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <cstdio>
+#include <memory>
 #include <mutex>
 #include <optional>
 #include <string_view>
@@ -362,7 +363,7 @@ auto EnumeratedList::GetDriverIndexForName(const std::string_view name) const ->
 
     while(devnames != Names.cend() && *devnames)
     {
-        const auto devname = std::string_view{al::to_address(devnames)};
+        const auto devname = std::string_view{std::to_address(devnames)};
         if(name == devname) return *index;
 
         devnames += ptrdiff_t(devname.size()+1);

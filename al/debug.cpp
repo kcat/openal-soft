@@ -7,6 +7,7 @@
 #include <atomic>
 #include <cstring>
 #include <deque>
+#include <memory>
 #include <mutex>
 #include <optional>
 #include <stdexcept>
@@ -499,7 +500,7 @@ try {
 
         auto &entry = context->mDebugLog.front();
         const auto tocopy = size_t{entry.mMessage.size() + 1};
-        if(al::to_address(logiter) != nullptr)
+        if(std::to_address(logiter) != nullptr)
         {
             if(static_cast<size_t>(std::distance(logiter, logSpan.end())) < tocopy)
                 return i;
@@ -507,15 +508,15 @@ try {
             *(logiter++) = '\0';
         }
 
-        if(al::to_address(sourceiter) != nullptr)
+        if(std::to_address(sourceiter) != nullptr)
             *(sourceiter++) = GetDebugSourceEnum(entry.mSource);
-        if(al::to_address(typeiter) != nullptr)
+        if(std::to_address(typeiter) != nullptr)
             *(typeiter++) = GetDebugTypeEnum(entry.mType);
-        if(al::to_address(iditer) != nullptr)
+        if(std::to_address(iditer) != nullptr)
             *(iditer++) = entry.mId;
-        if(al::to_address(severityiter) != nullptr)
+        if(std::to_address(severityiter) != nullptr)
             *(severityiter++) = GetDebugSeverityEnum(entry.mSeverity);
-        if(al::to_address(lengthiter) != nullptr)
+        if(std::to_address(lengthiter) != nullptr)
             *(lengthiter++) = static_cast<ALsizei>(tocopy);
 
         context->mDebugLog.pop_front();

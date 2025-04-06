@@ -620,10 +620,10 @@ int AlsaPlayback::mixerNoMMapProc()
         auto WritePtr = mBuffer.begin();
         avail = snd_pcm_bytes_to_frames(mPcmHandle, static_cast<ssize_t>(mBuffer.size()));
         std::lock_guard<std::mutex> dlock{mMutex};
-        mDevice->renderSamples(al::to_address(WritePtr), static_cast<uint>(avail), mFrameStep);
+        mDevice->renderSamples(std::to_address(WritePtr), static_cast<uint>(avail), mFrameStep);
         while(avail > 0)
         {
-            snd_pcm_sframes_t ret{snd_pcm_writei(mPcmHandle, al::to_address(WritePtr),
+            snd_pcm_sframes_t ret{snd_pcm_writei(mPcmHandle, std::to_address(WritePtr),
                 static_cast<snd_pcm_uframes_t>(avail))};
             switch(ret)
             {
@@ -1090,7 +1090,7 @@ void AlsaCapture::captureSamples(std::byte *buffer, uint samples)
             amt = snd_pcm_bytes_to_frames(mPcmHandle, amt);
         }
         else if(mDoCapture)
-            amt = snd_pcm_readi(mPcmHandle, al::to_address(outiter), samples);
+            amt = snd_pcm_readi(mPcmHandle, std::to_address(outiter), samples);
         if(amt < 0)
         {
             ERR("read error: {}", snd_strerror(static_cast<int>(amt)));

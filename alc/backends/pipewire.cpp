@@ -745,7 +745,7 @@ DeviceNode *DeviceNode::Find(uint32_t id)
     { return n.mId == id; };
 
     auto match = std::find_if(sList.begin(), sList.end(), match_id);
-    if(match != sList.end()) return al::to_address(match);
+    if(match != sList.end()) return std::to_address(match);
 
     return nullptr;
 }
@@ -756,7 +756,7 @@ DeviceNode *DeviceNode::FindByDevName(std::string_view devname)
     { return n.mDevName == devname; };
 
     auto match = std::find_if(sList.begin(), sList.end(), match_id);
-    if(match != sList.end()) return al::to_address(match);
+    if(match != sList.end()) return std::to_address(match);
 
     return nullptr;
 }

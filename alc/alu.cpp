@@ -1946,7 +1946,7 @@ void ProcessParamUpdates(ContextBase *ctx, const al::span<EffectSlot*> slots,
     if(!ctx->mHoldUpdates.load(std::memory_order_acquire)) LIKELY
     {
         bool force{CalcContextParams(ctx)};
-        auto sorted_slot_base = al::to_address(sorted_slots.begin());
+        auto sorted_slot_base = std::to_address(sorted_slots.begin());
         for(EffectSlot *slot : slots)
             force |= CalcEffectSlotParams(slot, sorted_slot_base, ctx);
 

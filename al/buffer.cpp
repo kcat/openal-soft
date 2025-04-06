@@ -213,7 +213,7 @@ auto AllocBuffer(al::Device *device) noexcept -> ALbuffer*
     auto slidx = static_cast<ALuint>(std::countr_zero(sublist->FreeMask));
     ASSUME(slidx < 64);
 
-    ALbuffer *buffer{al::construct_at(al::to_address(sublist->Buffers->begin() + slidx))};
+    ALbuffer *buffer{al::construct_at(std::to_address(sublist->Buffers->begin() + slidx))};
 
     /* Add 1 to avoid buffer ID 0. */
     buffer->id = ((lidx<<6) | slidx) + 1;
@@ -251,7 +251,7 @@ auto LookupBuffer(al::Device *device, ALuint id) noexcept -> ALbuffer*
     BufferSubList &sublist = device->BufferList[lidx];
     if(sublist.FreeMask & (1_u64 << slidx)) UNLIKELY
         return nullptr;
-    return al::to_address(sublist.Buffers->begin() + slidx);
+    return std::to_address(sublist.Buffers->begin() + slidx);
 }
 
 [[nodiscard]]
@@ -1581,7 +1581,7 @@ BufferSubList::~BufferSubList()
     while(usemask)
     {
         const int idx{std::countr_zero(usemask)};
-        std::destroy_at(al::to_address(Buffers->begin() + idx));
+        std::destroy_at(std::to_address(Buffers->begin() + idx));
         usemask &= ~(1_u64 << idx);
     }
     FreeMask = ~usemask;

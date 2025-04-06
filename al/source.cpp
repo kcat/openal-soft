@@ -269,7 +269,7 @@ double GetSourceSecOffset(ALsource *Source, ALCcontext *context, nanoseconds *cl
 
     const ALbuffer *BufferFmt{nullptr};
     auto BufferList = Source->mQueue.cbegin();
-    while(BufferList != Source->mQueue.cend() && al::to_address(BufferList) != Current)
+    while(BufferList != Source->mQueue.cend() && std::to_address(BufferList) != Current)
     {
         if(!BufferFmt) BufferFmt = BufferList->mBuffer;
         readPos += int64_t{BufferList->mSampleLen} << MixerFracBits;
@@ -319,7 +319,7 @@ NOINLINE T GetSourceOffset(ALsource *Source, ALenum name, ALCcontext *context)
 
     const ALbuffer *BufferFmt{nullptr};
     auto BufferList = Source->mQueue.cbegin();
-    while(BufferList != Source->mQueue.cend() && al::to_address(BufferList) != Current)
+    while(BufferList != Source->mQueue.cend() && std::to_address(BufferList) != Current)
     {
         if(!BufferFmt) BufferFmt = BufferList->mBuffer;
         readPos += BufferList->mSampleLen;
@@ -750,7 +750,7 @@ ALsource *AllocSource(ALCcontext *context) noexcept
     auto slidx = static_cast<ALuint>(std::countr_zero(sublist->FreeMask));
     ASSUME(slidx < 64);
 
-    ALsource *source{al::construct_at(al::to_address(sublist->Sources->begin() + slidx))};
+    ALsource *source{al::construct_at(std::to_address(sublist->Sources->begin() + slidx))};
 #if ALSOFT_EAX
     source->eaxInitialize(context);
 #endif // ALSOFT_EAX
@@ -801,7 +801,7 @@ inline ALsource *LookupSource(ALCcontext *context, ALuint id) noexcept
     SourceSubList &sublist{context->mSourceList[lidx]};
     if(sublist.FreeMask & (1_u64 << slidx)) UNLIKELY
         return nullptr;
-    return al::to_address(sublist.Sources->begin() + slidx);
+    return std::to_address(sublist.Sources->begin() + slidx);
 }
 
 auto LookupBuffer = [](al::Device *device, auto id) noexcept -> ALbuffer*
@@ -814,7 +814,7 @@ auto LookupBuffer = [](al::Device *device, auto id) noexcept -> ALbuffer*
     BufferSubList &sublist = device->BufferList[static_cast<size_t>(lidx)];
     if(sublist.FreeMask & (1_u64 << slidx)) UNLIKELY
         return nullptr;
-    return al::to_address(sublist.Buffers->begin() + static_cast<size_t>(slidx));
+    return std::to_address(sublist.Buffers->begin() + static_cast<size_t>(slidx));
 };
 
 auto LookupFilter = [](al::Device *device, auto id) noexcept -> ALfilter*
@@ -827,7 +827,7 @@ auto LookupFilter = [](al::Device *device, auto id) noexcept -> ALfilter*
     FilterSubList &sublist = device->FilterList[static_cast<size_t>(lidx)];
     if(sublist.FreeMask & (1_u64 << slidx)) UNLIKELY
         return nullptr;
-    return al::to_address(sublist.Filters->begin() + static_cast<size_t>(slidx));
+    return std::to_address(sublist.Filters->begin() + static_cast<size_t>(slidx));
 };
 
 auto LookupEffectSlot = [](ALCcontext *context, auto id) noexcept -> ALeffectslot*
@@ -840,7 +840,7 @@ auto LookupEffectSlot = [](ALCcontext *context, auto id) noexcept -> ALeffectslo
     EffectSlotSubList &sublist{context->mEffectSlotList[static_cast<size_t>(lidx)]};
     if(sublist.FreeMask & (1_u64 << slidx)) UNLIKELY
         return nullptr;
-    return al::to_address(sublist.EffectSlots->begin() + static_cast<size_t>(slidx));
+    return std::to_address(sublist.EffectSlots->begin() + static_cast<size_t>(slidx));
 };
 
 
@@ -2340,7 +2340,7 @@ NOINLINE void GetProperty(ALsource *const Source, ALCcontext *const Context, con
                 const auto iter = std::find_if(Source->mQueue.cbegin(), Source->mQueue.cend(),
                     [Current](const ALbufferQueueItem &item) noexcept -> bool
                     { return &item == Current; });
-                BufferList = (iter != Source->mQueue.cend()) ? al::to_address(iter) : nullptr;
+                BufferList = (iter != Source->mQueue.cend()) ? std::to_address(iter) : nullptr;
             }
             ALbuffer *buffer{BufferList ? BufferList->mBuffer : nullptr};
             values[0] = buffer ? static_cast<T>(buffer->id) : T{0};
@@ -2645,7 +2645,7 @@ void StartSources(ALCcontext *const context, const al::span<ALsource*> srchandle
                     voice->mFlags.set(VoiceIsFading);
             }
         }
-        InitVoice(voice, source, al::to_address(BufferList), context, device);
+        InitVoice(voice, source, std::to_address(BufferList), context, device);
 
         source->VoiceIdx = vidx;
         source->state = AL_PLAYING;
@@ -3642,7 +3642,7 @@ try {
     if(NewListStart != 0)
     {
         auto iter = source->mQueue.begin() + ptrdiff_t(NewListStart);
-        (iter-1)->mNext.store(al::to_address(iter), std::memory_order_release);
+        (iter-1)->mNext.store(std::to_address(iter), std::memory_order_release);
     }
 }
 catch(al::base_exception&) {
@@ -3788,7 +3788,7 @@ SourceSubList::~SourceSubList()
     {
         const int idx{std::countr_zero(usemask)};
         usemask &= ~(1_u64 << idx);
-        std::destroy_at(al::to_address(Sources->begin() + idx));
+        std::destroy_at(std::to_address(Sources->begin() + idx));
     }
     FreeMask = ~usemask;
     SubListAllocator{}.deallocate(Sources, 1);

@@ -799,7 +799,7 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
         {
             const auto ret = base;
             base += channelStep;
-            return al::to_address(ret);
+            return std::to_address(ret);
         });
     }
 

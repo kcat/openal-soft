@@ -93,7 +93,6 @@
 #include "AL/alext.h"
 
 #include "albit.h"
-#include "almalloc.h"
 #include "alnumeric.h"
 #include "alspan.h"
 #include "alstring.h"
@@ -546,7 +545,7 @@ auto LoadLAF(const fs::path &fname) -> std::unique_ptr<LafStream>
             hiter = std::copy_n(header.end()-1, 1, hiter);
 
         const auto toread = std::distance(hiter, header.end());
-        if(laf->mInFile.sgetn(al::to_address(hiter), toread) != toread)
+        if(laf->mInFile.sgetn(std::to_address(hiter), toread) != toread)
             throw std::runtime_error{"Failed to read header"};
     }
 

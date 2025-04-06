@@ -173,7 +173,7 @@ auto AllocEffect(al::Device *device) noexcept -> ALeffect*
     auto slidx = static_cast<ALuint>(std::countr_zero(sublist->FreeMask));
     ASSUME(slidx < 64);
 
-    ALeffect *effect{al::construct_at(al::to_address(sublist->Effects->begin() + slidx))};
+    ALeffect *effect{al::construct_at(std::to_address(sublist->Effects->begin() + slidx))};
     InitEffectParams(effect, AL_EFFECT_NULL);
 
     /* Add 1 to avoid effect ID 0. */
@@ -208,7 +208,7 @@ auto LookupEffect(al::Device *device, ALuint id) noexcept -> ALeffect*
     EffectSubList &sublist = device->EffectList[lidx];
     if(sublist.FreeMask & (1_u64 << slidx)) UNLIKELY
         return nullptr;
-    return al::to_address(sublist.Effects->begin() + slidx);
+    return std::to_address(sublist.Effects->begin() + slidx);
 }
 
 } // namespace
@@ -545,7 +545,7 @@ EffectSubList::~EffectSubList()
     while(usemask)
     {
         const int idx{std::countr_zero(usemask)};
-        std::destroy_at(al::to_address(Effects->begin()+idx));
+        std::destroy_at(std::to_address(Effects->begin()+idx));
         usemask &= ~(1_u64 << idx);
     }
     FreeMask = ~usemask;

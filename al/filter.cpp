@@ -131,7 +131,7 @@ auto AllocFilter(al::Device *device) noexcept -> ALfilter*
     auto slidx = static_cast<ALuint>(std::countr_zero(sublist->FreeMask));
     ASSUME(slidx < 64);
 
-    ALfilter *filter{al::construct_at(al::to_address(sublist->Filters->begin() + slidx))};
+    ALfilter *filter{al::construct_at(std::to_address(sublist->Filters->begin() + slidx))};
     InitFilterParams(filter, AL_FILTER_NULL);
 
     /* Add 1 to avoid filter ID 0. */
@@ -167,7 +167,7 @@ auto LookupFilter(al::Device *device, ALuint id) noexcept -> ALfilter*
     FilterSubList &sublist = device->FilterList[lidx];
     if(sublist.FreeMask & (1_u64 << slidx)) UNLIKELY
         return nullptr;
-    return al::to_address(sublist.Filters->begin() + slidx);
+    return std::to_address(sublist.Filters->begin() + slidx);
 }
 
 } // namespace
@@ -648,7 +648,7 @@ FilterSubList::~FilterSubList()
     while(usemask)
     {
         const int idx{std::countr_zero(usemask)};
-        std::destroy_at(al::to_address(Filters->begin() + idx));
+        std::destroy_at(std::to_address(Filters->begin() + idx));
         usemask &= ~(1_u64 << idx);
     }
     FreeMask = ~usemask;

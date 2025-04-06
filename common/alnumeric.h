@@ -16,7 +16,7 @@
 #include <intrin.h>
 #endif
 #if HAVE_SSE_INTRINSICS
-#include <xmmintrin.h>
+#include <emmintrin.h>
 #endif
 
 #include "opthelpers.h"

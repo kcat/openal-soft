@@ -24,10 +24,10 @@
 #include <array>
 #include <cmath>
 #include <cstdlib>
+#include <numbers>
 #include <variant>
 
 #include "alc/effects/base.h"
-#include "alnumbers.h"
 #include "alnumeric.h"
 #include "alspan.h"
 #include "core/ambidefs.h"
@@ -165,7 +165,7 @@ void AutowahState::process(const size_t samplesToDo,
 
         /* Calculate the cos and alpha components for this sample's filter. */
         const float w0{std::min(bandwidth*env_delay + freq_min, 0.46f) *
-            (al::numbers::pi_v<float>*2.0f)};
+            (std::numbers::pi_v<float>*2.0f)};
         mEnv[i].cos_w0 = std::cos(w0);
         mEnv[i].alpha = std::sin(w0)/(2.0f * QFactor);
     }

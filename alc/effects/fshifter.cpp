@@ -25,11 +25,11 @@
 #include <cmath>
 #include <complex>
 #include <cstdlib>
+#include <numbers>
 #include <variant>
 
 #include "alc/effects/base.h"
 #include "alcomplex.h"
-#include "alnumbers.h"
 #include "alnumeric.h"
 #include "alspan.h"
 #include "core/ambidefs.h"
@@ -66,8 +66,8 @@ struct Windower {
         /* Create lookup table of the Hann window for the desired size. */
         for(size_t i{0};i < HilHalfSize;i++)
         {
-            constexpr double scale{al::numbers::pi / double{HilSize}};
-            const double val{std::sin((static_cast<double>(i)+0.5) * scale)};
+            static constexpr auto scale = std::numbers::pi / double{HilSize};
+            const auto val = std::sin((static_cast<double>(i)+0.5) * scale);
             mData[i] = mData[HilSize-1-i] = val * val;
         }
     }
@@ -165,7 +165,7 @@ void FshifterState::update(const ContextBase *context, const EffectSlot *slot,
         break;
     }
 
-    static constexpr auto inv_sqrt2 = static_cast<float>(1.0 / al::numbers::sqrt2);
+    static constexpr auto inv_sqrt2 = static_cast<float>(1.0 / std::numbers::sqrt2);
     static constexpr auto lcoeffs_pw = CalcDirectionCoeffs(std::array{-1.0f, 0.0f, 0.0f});
     static constexpr auto rcoeffs_pw = CalcDirectionCoeffs(std::array{ 1.0f, 0.0f, 0.0f});
     static constexpr auto lcoeffs_nrml = CalcDirectionCoeffs(std::array{-inv_sqrt2, 0.0f, inv_sqrt2});
@@ -228,7 +228,7 @@ void FshifterState::process(const size_t samplesToDo, const al::span<const Float
         std::transform(mOutdata.cbegin(), mOutdata.cbegin()+samplesToDo, mBufferOut.begin(),
             [&phase_idx,phase_step,sign](const complex_d &in) -> float
             {
-                const double phase{phase_idx * (al::numbers::pi*2.0 / MixerFracOne)};
+                const double phase{phase_idx * (std::numbers::pi*2.0 / MixerFracOne)};
                 const auto out = static_cast<float>(in.real()*std::cos(phase) +
                     in.imag()*std::sin(phase)*sign);
 

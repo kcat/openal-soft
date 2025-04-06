@@ -66,11 +66,11 @@
 #include <cstdio>
 #include <cstring>
 #include <new>
+#include <numbers>
 #include <utility>
 #include <vector>
 
 #include "almalloc.h"
-#include "alnumbers.h"
 #include "alnumeric.h"
 #include "alspan.h"
 #include "fmt/core.h"
@@ -923,7 +923,7 @@ NOINLINE void radf4_ps(const size_t ido, const size_t l1, const v4sf *RESTRICT c
         if((ido&1) == 1)
             return;
     }
-    const v4sf minus_hsqt2{ld_ps1(al::numbers::sqrt2_v<float> * -0.5f)};
+    const auto minus_hsqt2 = ld_ps1(std::numbers::sqrt2_v<float> * -0.5f);
     for(size_t k{0};k < l1ido;k += ido)
     {
         v4sf a{cc[ido-1 + k + l1ido]}, b{cc[ido-1 + k + 3*l1ido]};
@@ -1388,7 +1388,7 @@ void rffti1_ps(const uint n, float *wa, const al::span<uint,15> ifac)
     static constexpr std::array ntryh{4u,2u,3u,5u};
 
     const uint nf{decompose(n, ifac, ntryh)};
-    const double argh{2.0*al::numbers::pi / n};
+    const auto argh = 2.0*std::numbers::pi / n;
     size_t is{0};
     size_t nfm1{nf - 1};
     size_t l1{1};
@@ -1422,7 +1422,7 @@ void cffti1_ps(const uint n, float *wa, const al::span<uint,15> ifac)
     static constexpr std::array ntryh{5u,3u,4u,2u};
 
     const uint nf{decompose(n, ifac, ntryh)};
-    const double argh{2.0*al::numbers::pi / n};
+    const auto argh = 2.0*std::numbers::pi / n;
     size_t i{1};
     size_t l1{1};
     for(size_t k1{0};k1 < nf;++k1)
@@ -1510,7 +1510,7 @@ PFFFTSetupPtr pffft_new_setup(unsigned int N, pffft_transform_t transform)
             const size_t j{k % SimdSize};
             for(size_t m{0};m < SimdSize-1;++m)
             {
-                const double A{-2.0*al::numbers::pi*static_cast<double>((m+1)*k) / N};
+                const auto A = -2.0*std::numbers::pi*static_cast<double>((m+1)*k) / N;
                 e[((i*3 + m)*2 + 0)*SimdSize + j] = static_cast<float>(std::cos(A));
                 e[((i*3 + m)*2 + 1)*SimdSize + j] = static_cast<float>(std::sin(A));
             }
@@ -1721,7 +1721,7 @@ force_inline void pffft_real_finalize_4x4(const v4sf *in0, const v4sf *in1, cons
 NOINLINE void pffft_real_finalize(const size_t Ncvec, const v4sf *in, v4sf *RESTRICT out,
     const v4sf *e)
 {
-    static constexpr float s{al::numbers::sqrt2_v<float>/2.0f};
+    static constexpr auto s = std::numbers::sqrt2_v<float>/2.0f;
 
     assert(in != out);
     const size_t dk{Ncvec/SimdSize}; // number of 4x4 matrix blocks
@@ -1812,7 +1812,7 @@ force_inline void pffft_real_preprocess_4x4(const v4sf *in, const v4sf *e, v4sf 
 NOINLINE void pffft_real_preprocess(const size_t Ncvec, const v4sf *in, v4sf *RESTRICT out,
     const v4sf *e)
 {
-    static constexpr float sqrt2{al::numbers::sqrt2_v<float>};
+    static constexpr auto sqrt2 = std::numbers::sqrt2_v<float>;
 
     assert(in != out);
     const size_t dk{Ncvec/SimdSize}; // number of 4x4 matrix blocks

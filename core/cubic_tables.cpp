@@ -4,8 +4,8 @@
 #include <array>
 #include <cmath>
 #include <cstddef>
+#include <numbers>
 
-#include "alnumbers.h"
 #include "alnumeric.h"
 #include "cubic_defs.h"
 
@@ -24,11 +24,11 @@ namespace {
 [[nodiscard]]
 auto GetCoeff(double idx) noexcept -> double
 {
-    const double k{0.5 + idx};
+    const auto k = 0.5 + idx;
     if(k > 512.0) return 0.0;
-    const double s{ std::sin(al::numbers::pi*1.280/1024.0 * k)};
-    const double t{(std::cos(al::numbers::pi*2.000/1023.0 * k) - 1.0) * 0.50};
-    const double u{(std::cos(al::numbers::pi*4.000/1023.0 * k) - 1.0) * 0.08};
+    const auto s =  std::sin(std::numbers::pi*1.280/1024.0 * k);
+    const auto t = (std::cos(std::numbers::pi*2.000/1023.0 * k) - 1.0) * 0.50;
+    const auto u = (std::cos(std::numbers::pi*4.000/1023.0 * k) - 1.0) * 0.08;
     return s * (t + u + 1.0) / k;
 }
 

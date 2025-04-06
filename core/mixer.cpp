@@ -5,9 +5,9 @@
 
 #include <algorithm>
 #include <cmath>
+#include <numbers>
 #include <utility>
 
-#include "alnumbers.h"
 #include "core/ambidefs.h"
 #include "device.h"
 #include "mixer/defs.h"
@@ -52,7 +52,7 @@ std::array<float,MaxAmbiChannels> CalcAmbiCoeffs(const float y, const float z, c
          */
         const float ca{std::cos(spread * 0.5f)};
         /* Increase the source volume by up to +3dB for a full spread. */
-        const float scale{std::sqrt(1.0f + al::numbers::inv_pi_v<float>/2.0f*spread)};
+        const float scale{std::sqrt(1.0f + std::numbers::inv_pi_v<float>*0.5f*spread)};
 
         const float ZH0_norm{scale};
         const float ZH1_norm{scale * 0.5f * (ca+1.f)};

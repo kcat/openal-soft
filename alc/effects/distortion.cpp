@@ -24,10 +24,10 @@
 #include <array>
 #include <cmath>
 #include <cstdlib>
+#include <numbers>
 #include <variant>
 
 #include "alc/effects/base.h"
-#include "alnumbers.h"
 #include "alnumeric.h"
 #include "alspan.h"
 #include "core/ambidefs.h"
@@ -78,7 +78,7 @@ void DistortionState::update(const ContextBase *context, const EffectSlot *slot,
     const DeviceBase *device{context->mDevice};
 
     /* Store waveshaper edge settings. */
-    const float edge{std::min(std::sin(al::numbers::pi_v<float>*0.5f * props.Edge), 0.99f)};
+    const float edge{std::min(std::sin(std::numbers::pi_v<float>*0.5f * props.Edge), 0.99f)};
     mEdgeCoeff = 2.0f * edge / (1.0f-edge);
 
     float cutoff{props.LowpassCutoff};

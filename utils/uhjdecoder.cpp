@@ -34,6 +34,7 @@
 #include <cstdio>
 #include <cstring>
 #include <memory>
+#include <numbers>
 #include <string>
 #include <string_view>
 #include <system_error>
@@ -41,7 +42,6 @@
 #include <vector>
 
 #include "almalloc.h"
-#include "alnumbers.h"
 #include "alspan.h"
 #include "fmt/core.h"
 #include "vector.h"
@@ -499,7 +499,7 @@ int main(al::span<std::string_view> args)
             for(std::size_t i{0};i < got;++i)
             {
                 /* Attenuate by -3dB for FuMa output levels. */
-                constexpr auto inv_sqrt2 = static_cast<float>(1.0/al::numbers::sqrt2);
+                static constexpr auto inv_sqrt2 = static_cast<float>(1.0/std::numbers::sqrt2);
                 for(std::size_t j{0};j < outchans;++j)
                     outmem[i*outchans + j] = f32AsLEBytes(decmem[j][LeadIn+i] * inv_sqrt2);
             }

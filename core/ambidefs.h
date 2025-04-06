@@ -4,8 +4,7 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
-
-#include "alnumbers.h"
+#include <numbers>
 
 
 using uint = unsigned int;
@@ -178,9 +177,9 @@ constexpr auto CalcAmbiCoeffs(const float y, const float z, const float x)
         /* Zeroth-order */
         1.0f, /* ACN 0 = 1 */
         /* First-order */
-        al::numbers::sqrt3_v<float> * y, /* ACN 1 = sqrt(3) * Y */
-        al::numbers::sqrt3_v<float> * z, /* ACN 2 = sqrt(3) * Z */
-        al::numbers::sqrt3_v<float> * x, /* ACN 3 = sqrt(3) * X */
+        std::numbers::sqrt3_v<float> * y, /* ACN 1 = sqrt(3) * Y */
+        std::numbers::sqrt3_v<float> * z, /* ACN 2 = sqrt(3) * Z */
+        std::numbers::sqrt3_v<float> * x, /* ACN 3 = sqrt(3) * X */
         /* Second-order */
         3.872983346e+00f * xy,               /* ACN 4 = sqrt(15) * X * Y */
         3.872983346e+00f * yz,               /* ACN 5 = sqrt(15) * Y * Z */

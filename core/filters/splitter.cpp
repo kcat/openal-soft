@@ -7,15 +7,13 @@
 #include <cassert>
 #include <cmath>
 #include <limits>
-
-#include "alnumbers.h"
-#include "opthelpers.h"
+#include <numbers>
 
 
 template<typename Real>
 void BandSplitterR<Real>::init(Real f0norm)
 {
-    const Real w{f0norm * (al::numbers::pi_v<Real>*2)};
+    const Real w{f0norm * (std::numbers::pi_v<Real>*2)};
     const Real cw{std::cos(w)};
     if(cw > std::numeric_limits<float>::epsilon())
         mCoeff = (std::sin(w) - 1.0f) / cw;

@@ -26,10 +26,10 @@
 #include <cstdint>
 #include <cstdlib>
 #include <functional>
+#include <numbers>
 #include <variant>
 
 #include "alc/effects/base.h"
-#include "alnumbers.h"
 #include "alnumeric.h"
 #include "alspan.h"
 #include "core/ambidefs.h"
@@ -136,7 +136,7 @@ void ModulatorState::update(const ContextBase *context, const EffectSlot *slot,
     }
     else if(props.Waveform == ModulatorWaveform::Sinusoid)
     {
-        mIndexScale = al::numbers::pi_v<float>*2.0f / static_cast<float>(mRange);
+        mIndexScale = std::numbers::pi_v<float>*2.0f / static_cast<float>(mRange);
         mSampleGen.emplace<SinFunc>();
     }
     else if(props.Waveform == ModulatorWaveform::Sawtooth)

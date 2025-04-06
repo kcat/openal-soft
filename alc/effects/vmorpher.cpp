@@ -37,10 +37,10 @@
 #include <cmath>
 #include <cstdlib>
 #include <functional>
+#include <numbers>
 #include <variant>
 
 #include "alc/effects/base.h"
-#include "alnumbers.h"
 #include "alnumeric.h"
 #include "alspan.h"
 #include "core/ambidefs.h"
@@ -73,7 +73,7 @@ constexpr size_t WaveformFracMask{WaveformFracOne-1};
 
 inline float Sin(uint index)
 {
-    constexpr float scale{al::numbers::pi_v<float>*2.0f / float{WaveformFracOne}};
+    static constexpr auto scale = std::numbers::pi_v<float>*2.0f / float{WaveformFracOne};
     return std::sin(static_cast<float>(index) * scale)*0.5f + 0.5f;
 }
 
@@ -104,7 +104,7 @@ struct FormantFilter {
 
     FormantFilter() = default;
     FormantFilter(float f0norm, float gain)
-      : mCoeff{std::tan(al::numbers::pi_v<float> * f0norm)}, mGain{gain}
+      : mCoeff{std::tan(std::numbers::pi_v<float> * f0norm)}, mGain{gain}
     { }
 
     void process(const float *samplesIn, float *samplesOut, const size_t numInput) noexcept

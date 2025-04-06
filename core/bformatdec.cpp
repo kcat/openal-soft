@@ -7,9 +7,9 @@
 #include <array>
 #include <cmath>
 #include <functional>
+#include <numbers>
 #include <utility>
 
-#include "alnumbers.h"
 #include "bufferline.h"
 #include "filters/splitter.h"
 #include "flexarray.h"
@@ -146,10 +146,10 @@ void BFormatDec::processStablize(const al::span<FloatBufferLine> OutBuffer,
      * is panned 1/3rd toward center and the high-frequency signal is panned
      * 1/4th toward center. These values can be tweaked.
      */
-    const float cos_lf{std::cos(1.0f/3.0f * (al::numbers::pi_v<float>*0.5f))};
-    const float cos_hf{std::cos(1.0f/4.0f * (al::numbers::pi_v<float>*0.5f))};
-    const float sin_lf{std::sin(1.0f/3.0f * (al::numbers::pi_v<float>*0.5f))};
-    const float sin_hf{std::sin(1.0f/4.0f * (al::numbers::pi_v<float>*0.5f))};
+    const auto cos_lf = std::cos(1.0f/3.0f * (std::numbers::pi_v<float>*0.5f));
+    const auto cos_hf = std::cos(1.0f/4.0f * (std::numbers::pi_v<float>*0.5f));
+    const auto sin_lf = std::sin(1.0f/3.0f * (std::numbers::pi_v<float>*0.5f));
+    const auto sin_hf = std::sin(1.0f/4.0f * (std::numbers::pi_v<float>*0.5f));
     const auto centerout = al::span<float>{OutBuffer[cidx]}.first(SamplesToDo);
     for(size_t i{0};i < SamplesToDo;i++)
     {

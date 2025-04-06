@@ -11,6 +11,7 @@
 #include <cstdint>
 #include <functional>
 #include <memory>
+#include <numbers>
 #include <vector>
 
 #if HAVE_SSE_INTRINSICS
@@ -21,7 +22,6 @@
 
 #include "alcomplex.h"
 #include "almalloc.h"
-#include "alnumbers.h"
 #include "alnumeric.h"
 #include "alspan.h"
 #include "base.h"
@@ -149,12 +149,12 @@ constexpr auto GetAmbi2DLayout(AmbiLayout layouttype) noexcept
 }
 
 
-constexpr float sin30{0.5f};
-constexpr float cos30{0.866025403785f};
-constexpr float sin45{al::numbers::sqrt2_v<float>*0.5f};
-constexpr float cos45{al::numbers::sqrt2_v<float>*0.5f};
-constexpr float sin110{ 0.939692620786f};
-constexpr float cos110{-0.342020143326f};
+constexpr auto sin30 = 0.5f;
+constexpr auto cos30 = 0.866025403785f;
+constexpr auto sin45 = std::numbers::sqrt2_v<float>*0.5f;
+constexpr auto cos45 = std::numbers::sqrt2_v<float>*0.5f;
+constexpr auto sin110 =  0.939692620786f;
+constexpr auto cos110 = -0.342020143326f;
 
 struct ChanPosMap {
     Channel channel;

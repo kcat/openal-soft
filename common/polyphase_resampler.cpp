@@ -4,10 +4,10 @@
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
+#include <numbers>
 #include <numeric>
 #include <tuple>
 
-#include "alnumbers.h"
 #include "opthelpers.h"
 
 
@@ -63,7 +63,7 @@ double Sinc(const double x)
 {
     if(std::abs(x) < Epsilon) UNLIKELY
         return 1.0;
-    return std::sin(al::numbers::pi*x) / (al::numbers::pi*x);
+    return std::sin(std::numbers::pi*x) / (std::numbers::pi*x);
 }
 
 /* Calculate a Kaiser window from the given beta value and a normalized k
@@ -96,7 +96,7 @@ double Kaiser(const double beta, const double k, const double besseli_0_beta)
  */
 constexpr uint CalcKaiserOrder(const double rejection, const double transition)
 {
-    const double w_t{2.0 * al::numbers::pi * transition};
+    const auto w_t = 2.0 * std::numbers::pi * transition;
     if(rejection > 21.0) LIKELY
         return static_cast<uint>(std::ceil((rejection - 7.95) / (2.285 * w_t)));
     return static_cast<uint>(std::ceil(5.79 / w_t));

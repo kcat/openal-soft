@@ -3,10 +3,8 @@
 
 #include <algorithm>
 #include <cmath>
-#include <cstddef>
-#include <utility>
+#include <numbers>
 
-#include "alnumbers.h"
 #include "alspan.h"
 
 
@@ -65,7 +63,7 @@ class BiquadFilterR {
      */
     static Real rcpQFromBandwidth(Real f0norm, Real bandwidth)
     {
-        const Real w0{al::numbers::pi_v<Real>*Real{2} * f0norm};
+        const auto w0 = std::numbers::pi_v<Real>*Real{2} * f0norm;
         return 2.0f*std::sinh(std::log(Real{2})/Real{2}*bandwidth*w0/std::sin(w0));
     }
 

@@ -21,6 +21,7 @@
 #include <future>
 #include <memory>
 #include <mutex>
+#include <numbers>
 #include <ratio>
 #include <string>
 #include <string_view>
@@ -75,7 +76,6 @@ _Pragma("GCC diagnostic pop")
 #include "AL/alext.h"
 
 #include "almalloc.h"
-#include "alnumbers.h"
 #include "alnumeric.h"
 #include "alspan.h"
 #include "common/alhelpers.h"
@@ -1293,8 +1293,8 @@ int AudioState::handler()
         alSourcei(mSource, AL_DIRECT_CHANNELS_SOFT, DirectOutMode);
     if(EnableWideStereo)
     {
-        static constexpr std::array angles{static_cast<float>(al::numbers::pi / 3.0),
-            static_cast<float>(-al::numbers::pi / 3.0)};
+        static constexpr std::array angles{static_cast<float>(std::numbers::pi / 3.0),
+            static_cast<float>(-std::numbers::pi / 3.0)};
         alSourcefv(mSource, AL_STEREO_ANGLES, angles.data());
     }
     if(has_bfmt_ex)

@@ -31,11 +31,11 @@
 #include <cstddef>
 #include <cstdio>
 #include <memory>
+#include <numbers>
 #include <string>
 #include <string_view>
 #include <vector>
 
-#include "alnumbers.h"
 #include "alspan.h"
 #include "fmt/core.h"
 #include "phase_shifter.h"
@@ -239,9 +239,9 @@ constexpr auto GenCoeffs(double x /*+front*/, double y /*+left*/, double z /*+up
     /* Coefficients are +3dB of FuMa. */
     return std::array<float,4>{{
         1.0f,
-        static_cast<float>(al::numbers::sqrt2 * x),
-        static_cast<float>(al::numbers::sqrt2 * y),
-        static_cast<float>(al::numbers::sqrt2 * z)
+        static_cast<float>(std::numbers::sqrt2 * x),
+        static_cast<float>(std::numbers::sqrt2 * y),
+        static_cast<float>(std::numbers::sqrt2 * z)
     }};
 }
 
@@ -505,8 +505,8 @@ int main(al::span<std::string_view> args)
                 /* B-Format is already in the correct order. It just needs a
                  * +3dB boost.
                  */
-                static constexpr float scale{al::numbers::sqrt2_v<float>};
-                const size_t chans{std::min<size_t>(static_cast<uint>(ininfo.channels), 4u)};
+                static constexpr auto scale = std::numbers::sqrt2_v<float>;
+                const auto chans = std::min<size_t>(static_cast<uint>(ininfo.channels), 4u);
                 for(size_t c{0};c < chans;++c)
                 {
                     for(size_t i{0};i < got;++i)
@@ -531,7 +531,7 @@ int main(al::span<std::string_view> args)
                 for(size_t i{0};i < got;++i)
                     srcmem[i] = inmem[i*static_cast<uint>(ininfo.channels) + idx];
 
-                static constexpr auto Deg2Rad = al::numbers::pi / 180.0;
+                static constexpr auto Deg2Rad = std::numbers::pi / 180.0;
                 const auto coeffs = GenCoeffs(
                     std::cos(spkr->mAzimuth*Deg2Rad) * std::cos(spkr->mElevation*Deg2Rad),
                     std::sin(spkr->mAzimuth*Deg2Rad) * std::cos(spkr->mElevation*Deg2Rad),

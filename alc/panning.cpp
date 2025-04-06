@@ -31,6 +31,7 @@
 #include <cstdint>
 #include <functional>
 #include <memory>
+#include <numbers>
 #include <numeric>
 #include <optional>
 #include <string>
@@ -42,7 +43,6 @@
 #include "AL/alext.h"
 
 #include "alc/context.h"
-#include "alnumbers.h"
 #include "alnumeric.h"
 #include "alspan.h"
 #include "alstring.h"
@@ -801,18 +801,18 @@ void InitPanning(al::Device *device, const bool hqdec=false, const bool stablize
 
 void InitHrtfPanning(al::Device *device)
 {
-    static constexpr float Deg180{al::numbers::pi_v<float>};
-    static constexpr float Deg_90{Deg180 / 2.0f /* 90 degrees*/};
-    static constexpr float Deg_45{Deg_90 / 2.0f /* 45 degrees*/};
-    static constexpr float Deg135{Deg_45 * 3.0f /*135 degrees*/};
-    static constexpr float Deg_21{3.648638281e-01f /* 20~ 21 degrees*/};
-    static constexpr float Deg_32{5.535743589e-01f /* 31~ 32 degrees*/};
-    static constexpr float Deg_35{6.154797087e-01f /* 35~ 36 degrees*/};
-    static constexpr float Deg_58{1.017221968e+00f /* 58~ 59 degrees*/};
-    static constexpr float Deg_69{1.205932499e+00f /* 69~ 70 degrees*/};
-    static constexpr float Deg111{1.935660155e+00f /*110~111 degrees*/};
-    static constexpr float Deg122{2.124370686e+00f /*121~122 degrees*/};
-    static constexpr std::array AmbiPoints1O{
+    static constexpr auto Deg180 = std::numbers::pi_v<float>;
+    static constexpr auto Deg_90 = Deg180 / 2.0f /* 90 degrees*/;
+    static constexpr auto Deg_45 = Deg_90 / 2.0f /* 45 degrees*/;
+    static constexpr auto Deg135 = Deg_45 * 3.0f /*135 degrees*/;
+    static constexpr auto Deg_21 = 3.648638281e-01f /* 20~ 21 degrees*/;
+    static constexpr auto Deg_32 = 5.535743589e-01f /* 31~ 32 degrees*/;
+    static constexpr auto Deg_35 = 6.154797087e-01f /* 35~ 36 degrees*/;
+    static constexpr auto Deg_58 = 1.017221968e+00f /* 58~ 59 degrees*/;
+    static constexpr auto Deg_69 = 1.205932499e+00f /* 69~ 70 degrees*/;
+    static constexpr auto Deg111 = 1.935660155e+00f /*110~111 degrees*/;
+    static constexpr auto Deg122 = 2.124370686e+00f /*121~122 degrees*/;
+    static constexpr auto AmbiPoints1O = std::array{
         AngularPoint{EvRadians{ Deg_35}, AzRadians{-Deg_45}},
         AngularPoint{EvRadians{ Deg_35}, AzRadians{-Deg135}},
         AngularPoint{EvRadians{ Deg_35}, AzRadians{ Deg_45}},
@@ -822,7 +822,7 @@ void InitHrtfPanning(al::Device *device)
         AngularPoint{EvRadians{-Deg_35}, AzRadians{ Deg_45}},
         AngularPoint{EvRadians{-Deg_35}, AzRadians{ Deg135}},
     };
-    static constexpr std::array AmbiPoints2O{
+    static constexpr auto AmbiPoints2O = std::array{
         AngularPoint{EvRadians{-Deg_32}, AzRadians{   0.0f}},
         AngularPoint{EvRadians{   0.0f}, AzRadians{ Deg_58}},
         AngularPoint{EvRadians{ Deg_58}, AzRadians{ Deg_90}},
@@ -836,7 +836,7 @@ void InitHrtfPanning(al::Device *device)
         AngularPoint{EvRadians{   0.0f}, AzRadians{-Deg_58}},
         AngularPoint{EvRadians{-Deg_58}, AzRadians{ Deg_90}},
     };
-    static constexpr std::array AmbiPoints3O{
+    static constexpr auto AmbiPoints3O = std::array{
         AngularPoint{EvRadians{ Deg_69}, AzRadians{-Deg_90}},
         AngularPoint{EvRadians{ Deg_69}, AzRadians{ Deg_90}},
         AngularPoint{EvRadians{-Deg_69}, AzRadians{-Deg_90}},
@@ -858,7 +858,7 @@ void InitHrtfPanning(al::Device *device)
         AngularPoint{EvRadians{-Deg_35}, AzRadians{ Deg_45}},
         AngularPoint{EvRadians{-Deg_35}, AzRadians{ Deg135}},
     };
-    static constexpr std::array AmbiMatrix1O{
+    static constexpr auto AmbiMatrix1O = std::array{
         ChannelCoeffs{1.250000000e-01f,  1.250000000e-01f,  1.250000000e-01f,  1.250000000e-01f},
         ChannelCoeffs{1.250000000e-01f,  1.250000000e-01f,  1.250000000e-01f, -1.250000000e-01f},
         ChannelCoeffs{1.250000000e-01f, -1.250000000e-01f,  1.250000000e-01f,  1.250000000e-01f},
@@ -868,7 +868,7 @@ void InitHrtfPanning(al::Device *device)
         ChannelCoeffs{1.250000000e-01f, -1.250000000e-01f, -1.250000000e-01f,  1.250000000e-01f},
         ChannelCoeffs{1.250000000e-01f, -1.250000000e-01f, -1.250000000e-01f, -1.250000000e-01f},
     };
-    static constexpr std::array AmbiMatrix2O{
+    static constexpr auto AmbiMatrix2O = std::array{
         ChannelCoeffs{8.333333333e-02f,  0.000000000e+00f, -7.588274978e-02f,  1.227808683e-01f,  0.000000000e+00f,  0.000000000e+00f, -1.591525047e-02f, -1.443375673e-01f,  1.167715449e-01f},
         ChannelCoeffs{8.333333333e-02f, -1.227808683e-01f,  0.000000000e+00f,  7.588274978e-02f, -1.443375673e-01f,  0.000000000e+00f, -9.316949906e-02f,  0.000000000e+00f, -7.216878365e-02f},
         ChannelCoeffs{8.333333333e-02f, -7.588274978e-02f,  1.227808683e-01f,  0.000000000e+00f,  0.000000000e+00f, -1.443375673e-01f,  1.090847495e-01f,  0.000000000e+00f, -4.460276122e-02f},
@@ -882,7 +882,7 @@ void InitHrtfPanning(al::Device *device)
         ChannelCoeffs{8.333333333e-02f,  1.227808683e-01f,  0.000000000e+00f,  7.588274978e-02f,  1.443375673e-01f,  0.000000000e+00f, -9.316949906e-02f,  0.000000000e+00f, -7.216878365e-02f},
         ChannelCoeffs{8.333333333e-02f, -7.588274978e-02f, -1.227808683e-01f,  0.000000000e+00f,  0.000000000e+00f,  1.443375673e-01f,  1.090847495e-01f,  0.000000000e+00f, -4.460276122e-02f},
     };
-    static constexpr std::array AmbiMatrix3O{
+    static constexpr auto AmbiMatrix3O = std::array{
         ChannelCoeffs{5.000000000e-02f,  3.090169944e-02f,  8.090169944e-02f,  0.000000000e+00f,  0.000000000e+00f,  6.454972244e-02f,  9.045084972e-02f,  0.000000000e+00f, -1.232790000e-02f, -1.256118221e-01f,  0.000000000e+00f,  1.126112056e-01f,  7.944389175e-02f,  0.000000000e+00f,  2.421151497e-02f,  0.000000000e+00f},
         ChannelCoeffs{5.000000000e-02f, -3.090169944e-02f,  8.090169944e-02f,  0.000000000e+00f,  0.000000000e+00f, -6.454972244e-02f,  9.045084972e-02f,  0.000000000e+00f, -1.232790000e-02f,  1.256118221e-01f,  0.000000000e+00f, -1.126112056e-01f,  7.944389175e-02f,  0.000000000e+00f,  2.421151497e-02f,  0.000000000e+00f},
         ChannelCoeffs{5.000000000e-02f,  3.090169944e-02f, -8.090169944e-02f,  0.000000000e+00f,  0.000000000e+00f, -6.454972244e-02f,  9.045084972e-02f,  0.000000000e+00f, -1.232790000e-02f, -1.256118221e-01f,  0.000000000e+00f,  1.126112056e-01f, -7.944389175e-02f,  0.000000000e+00f, -2.421151497e-02f,  0.000000000e+00f},

@@ -7,9 +7,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cmath>
-
-#include "alnumbers.h"
-#include "opthelpers.h"
+#include <numbers>
 
 
 template<typename Real>
@@ -22,7 +20,7 @@ void BiquadFilterR<Real>::setParams(BiquadType type, Real f0norm, Real gain, Rea
      */
     gain = std::max(gain, Real(0.00001));
 
-    const Real w0{al::numbers::pi_v<Real>*2.0f * f0norm};
+    const Real w0{std::numbers::pi_v<Real>*2.0f * f0norm};
     const Real sin_w0{std::sin(w0)};
     const Real cos_w0{std::cos(w0)};
     const Real alpha{sin_w0/2.0f * rcpQ};

@@ -7,11 +7,11 @@
 #include <cmath>
 #include <complex>
 #include <functional>
+#include <numbers>
 #include <vector>
 
 #include "alcomplex.h"
 #include "almalloc.h"
-#include "alnumbers.h"
 #include "core/bufferline.h"
 #include "opthelpers.h"
 #include "pffft.h"
@@ -72,11 +72,11 @@ struct SegmentedFilter {
         {
             const auto k = int{fft_size/2} - static_cast<int>(i*2 + 1);
 
-            const auto w = 2.0*al::numbers::pi/double{fft_size} * static_cast<double>(i*2 + 1);
+            const auto w = 2.0*std::numbers::pi/double{fft_size} * static_cast<double>(i*2 + 1);
             const auto window = 0.3635819 - 0.4891775*std::cos(w) + 0.1365995*std::cos(2.0*w)
                 - 0.0106411*std::cos(3.0*w);
 
-            const auto pk = al::numbers::pi * static_cast<double>(k);
+            const auto pk = std::numbers::pi * static_cast<double>(k);
             tmpBuffer[i*2 + 1] = window * (1.0-std::cos(pk)) / pk;
         }
 

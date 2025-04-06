@@ -17,6 +17,7 @@
 #include <iterator>
 #include <memory>
 #include <mutex>
+#include <numbers>
 #include <numeric>
 #include <optional>
 #include <tuple>
@@ -25,7 +26,6 @@
 #include <vector>
 
 #include "almalloc.h"
-#include "alnumbers.h"
 #include "alnumeric.h"
 #include "alspan.h"
 #include "alstring.h"
@@ -117,7 +117,7 @@ static_assert(GetMarker03Name().size() == HeaderMarkerSize);
 
 /* First value for pass-through coefficients (remaining are 0), used for omni-
  * directional sounds. */
-constexpr auto PassthruCoeff = static_cast<float>(1.0/al::numbers::sqrt2);
+constexpr auto PassthruCoeff = static_cast<float>(1.0/std::numbers::sqrt2);
 
 std::mutex LoadedHrtfLock;
 std::vector<LoadedHrtf> LoadedHrtfs;
@@ -204,7 +204,7 @@ struct IdxBlend { uint idx; float blend; };
  */
 IdxBlend CalcEvIndex(uint evcount, float ev)
 {
-    ev = (al::numbers::inv_pi_v<float>*ev + 0.5f) * static_cast<float>(evcount-1);
+    ev = (std::numbers::inv_pi_v<float>*ev + 0.5f) * static_cast<float>(evcount-1);
 
     const auto idx = float2uint(ev);
     return IdxBlend{std::min(idx, evcount-1u), ev-static_cast<float>(idx)};
@@ -215,7 +215,7 @@ IdxBlend CalcEvIndex(uint evcount, float ev)
  */
 IdxBlend CalcAzIndex(uint azcount, float az)
 {
-    az = (al::numbers::inv_pi_v<float>*0.5f*az + 1.0f) * static_cast<float>(azcount);
+    az = (std::numbers::inv_pi_v<float>*0.5f*az + 1.0f) * static_cast<float>(azcount);
 
     const auto idx = float2uint(az);
     return IdxBlend{idx%azcount, az-static_cast<float>(idx)};
@@ -230,7 +230,7 @@ IdxBlend CalcAzIndex(uint azcount, float az)
 void HrtfStore::getCoeffs(float elevation, float azimuth, float distance, float spread,
     const HrirSpan coeffs, const al::span<uint,2> delays) const
 {
-    const float dirfact{1.0f - (al::numbers::inv_pi_v<float>/2.0f * spread)};
+    const float dirfact{1.0f - (std::numbers::inv_pi_v<float>/2.0f * spread)};
 
     size_t ebase{0};
     auto match_field = [&ebase,distance](const Field &field) noexcept -> bool

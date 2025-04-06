@@ -78,13 +78,13 @@
 #include <iostream>
 #include <limits>
 #include <memory>
+#include <numbers>
 #include <numeric>
 #include <string_view>
 #include <thread>
 #include <vector>
 
 #include "alcomplex.h"
-#include "alnumbers.h"
 #include "alnumeric.h"
 #include "alspan.h"
 #include "alstring.h"
@@ -462,17 +462,17 @@ void CalculateDfWeights(const HrirDataT *hData, const al::span<double> weights)
             outerRa = 10.0f;
 
         const double raPowDiff{std::pow(outerRa, 3.0) - std::pow(innerRa, 3.0)};
-        evs = al::numbers::pi / 2.0 / static_cast<double>(hData->mFds[fi].mEvs.size() - 1);
+        evs = std::numbers::pi / 2.0 / static_cast<double>(hData->mFds[fi].mEvs.size() - 1);
         for(ei = hData->mFds[fi].mEvStart;ei < hData->mFds[fi].mEvs.size();ei++)
         {
             const auto &elev = hData->mFds[fi].mEvs[ei];
             // For each elevation, calculate the upper and lower limits of
             // the patch band.
             ev = elev.mElevation;
-            lowerEv = std::max(-al::numbers::pi / 2.0, ev - evs);
-            upperEv = std::min(al::numbers::pi / 2.0, ev + evs);
+            lowerEv = std::max(-std::numbers::pi / 2.0, ev - evs);
+            upperEv = std::min(std::numbers::pi / 2.0, ev + evs);
             // Calculate the surface area of the patch band.
-            solidAngle = 2.0 * al::numbers::pi * (std::sin(upperEv) - std::sin(lowerEv));
+            solidAngle = 2.0 * std::numbers::pi * (std::sin(upperEv) - std::sin(lowerEv));
             // Then the volume of the extruded patch band.
             solidVolume = solidAngle * raPowDiff / 3.0;
             // Each weight is the volume of one extruded patch.
@@ -586,8 +586,8 @@ void DiffuseFieldEqualize(const uint channels, const uint m, const al::span<cons
  */
 void CalcAzIndices(const HrirFdT &field, const uint ei, const double az, uint *a0, uint *a1, double *af)
 {
-    double f{(2.0*al::numbers::pi + az) * static_cast<double>(field.mEvs[ei].mAzs.size()) /
-        (2.0*al::numbers::pi)};
+    double f{(2.0*std::numbers::pi + az) * static_cast<double>(field.mEvs[ei].mAzs.size()) /
+        (2.0*std::numbers::pi)};
     const uint i{static_cast<uint>(f) % static_cast<uint>(field.mEvs[ei].mAzs.size())};
 
     f -= std::floor(f);
@@ -637,7 +637,7 @@ void SynthesizeOnsets(HrirDataT *hData)
                      * the mirrored elevation to find the indices for the polar
                      * opposite position (may need blending).
                      */
-                    const double az{field.mEvs[ei].mAzs[ai].mAzimuth + al::numbers::pi};
+                    const double az{field.mEvs[ei].mAzs[ai].mAzimuth + std::numbers::pi};
                     CalcAzIndices(field, topElev, az, &a0, &a1, &af);
 
                     /* Blend the delays, and again, swap the ears. */
@@ -669,8 +669,8 @@ void SynthesizeOnsets(HrirDataT *hData)
                      * measurement).
                      */
                     double az{field.mEvs[ei].mAzs[ai].mAzimuth};
-                    if(az <= al::numbers::pi) az = al::numbers::pi - az;
-                    else az = (al::numbers::pi*2.0)-az + al::numbers::pi;
+                    if(az <= std::numbers::pi) az = std::numbers::pi - az;
+                    else az = (std::numbers::pi*2.0)-az + std::numbers::pi;
                     CalcAzIndices(field, topElev, az, &a0, &a1, &af);
 
                     field.mEvs[ei].mAzs[ai].mDelays[0] = Lerp(
@@ -748,7 +748,7 @@ void SynthesizeHrirs(HrirDataT *hData)
              * and vice-versa, this produces a decent phantom-center response
              * underneath the head.
              */
-            CalcAzIndices(field, oi, al::numbers::pi / ((ti==0) ? -2.0 : 2.0), &a0, &a1, &af);
+            CalcAzIndices(field, oi, std::numbers::pi / ((ti==0) ? -2.0 : 2.0), &a0, &a1, &af);
             for(uint i{0u};i < m;i++)
             {
                 field.mEvs[0].mAzs[0].mIrs[ti][i] = Lerp(field.mEvs[oi].mAzs[a0].mIrs[ti][i],
@@ -1003,7 +1003,7 @@ double CalcLTD(const double ev, const double az, const double rad, const double 
     azp = std::asin(std::cos(ev) * std::sin(az));
     dlp = std::sqrt((dist*dist) + (rad*rad) + (2.0*dist*rad*sin(azp)));
     l = std::sqrt((dist*dist) - (rad*rad));
-    al = (0.5 * al::numbers::pi) + azp;
+    al = (0.5 * std::numbers::pi) + azp;
     if(dlp > l)
         dlp = l + (rad * (al - std::acos(rad / dist)));
     return dlp / 343.3;
@@ -1123,12 +1123,12 @@ bool PrepareHrirData(const al::span<const double> distances,
         {
             uint azCount = azCounts[fi][ei];
 
-            hData->mFds[fi].mEvs[ei].mElevation = -al::numbers::pi / 2.0 + al::numbers::pi * ei /
-                (evCounts[fi] - 1);
+            hData->mFds[fi].mEvs[ei].mElevation = -std::numbers::pi / 2.0 + std::numbers::pi * ei
+                / (evCounts[fi] - 1);
             hData->mFds[fi].mEvs[ei].mAzs = al::span{hData->mAzsBase}.subspan(azTotal, azCount);
             for(uint ai{0};ai < azCount;ai++)
             {
-                hData->mFds[fi].mEvs[ei].mAzs[ai].mAzimuth = 2.0 * al::numbers::pi * ai / azCount;
+                hData->mFds[fi].mEvs[ei].mAzs[ai].mAzimuth = 2.0 * std::numbers::pi * ai / azCount;
                 hData->mFds[fi].mEvs[ei].mAzs[ai].mIndex = azTotal + ai;
                 hData->mFds[fi].mEvs[ei].mAzs[ai].mDelays[0] = 0.0;
                 hData->mFds[fi].mEvs[ei].mAzs[ai].mDelays[1] = 0.0;

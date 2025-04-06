@@ -36,6 +36,7 @@
 #include <iterator>
 #include <limits>
 #include <memory>
+#include <numbers>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -43,7 +44,6 @@
 #include <variant>
 
 #include "almalloc.h"
-#include "alnumbers.h"
 #include "alnumeric.h"
 #include "alsem.h"
 #include "alspan.h"
@@ -731,7 +731,7 @@ void AmbiRotator(AmbiRotateMatrix &matrix, const int order)
     static constexpr auto V = [](const int l, const int m, const int n, const size_t last_band,
         const AmbiRotateMatrix &R)
     {
-        using namespace al::numbers;
+        using namespace std::numbers;
         if(m > 0)
         {
             const bool d{m == 1};
@@ -791,12 +791,12 @@ void AmbiRotator(AmbiRotateMatrix &matrix, const int order)
 /* End ambisonic rotation helpers. */
 
 
-constexpr float sin30{0.5f};
-constexpr float cos30{0.866025403785f};
-constexpr float sin45{al::numbers::sqrt2_v<float>*0.5f};
-constexpr float cos45{al::numbers::sqrt2_v<float>*0.5f};
-constexpr float sin110{ 0.939692620786f};
-constexpr float cos110{-0.342020143326f};
+constexpr auto sin30 = 0.5f;
+constexpr auto cos30 = 0.866025403785f;
+constexpr auto sin45 = std::numbers::sqrt2_v<float>*0.5f;
+constexpr auto cos45 = std::numbers::sqrt2_v<float>*0.5f;
+constexpr auto sin110 =  0.939692620786f;
+constexpr auto cos110 = -0.342020143326f;
 
 struct ChanPosMap {
     Channel channel;
@@ -987,7 +987,7 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
          * panning.
          */
         const float coverage{!(Distance > std::numeric_limits<float>::epsilon()) ? 1.0f :
-            (al::numbers::inv_pi_v<float>/2.0f * Spread)};
+            (std::numbers::inv_pi_v<float>*0.5f * Spread)};
 
         auto calc_coeffs = [xpos,ypos,zpos](RenderMode mode)
         {
@@ -1214,7 +1214,7 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
                  * the source position, at full spread (pi*2), each channel is
                  * left unchanged.
                  */
-                const float a{1.0f - (al::numbers::inv_pi_v<float>/2.0f)*Spread};
+                const auto a = 1.0f - (std::numbers::inv_pi_v<float>*0.5f)*Spread;
                 std::array pos{
                     lerpf(chans[c].pos[0], xpos, a),
                     lerpf(chans[c].pos[1], ypos, a),
@@ -1351,7 +1351,7 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
                  * source position, at full spread (pi*2), each channel
                  * position is left unchanged.
                  */
-                const auto a = 1.0f - (al::numbers::inv_pi_v<float>/2.0f)*Spread;
+                const auto a = 1.0f - (std::numbers::inv_pi_v<float>*0.5f)*Spread;
                 auto pos = std::array{
                     lerpf(chans[c].pos[0], xpos, a),
                     lerpf(chans[c].pos[1], ypos, a),
@@ -1640,7 +1640,7 @@ void CalcAttnSourceParams(Voice *voice, const VoiceProps *props, const ContextBa
     float ConeHF{1.0f}, WetCone{1.0f}, WetConeHF{1.0f};
     if(directional && props->InnerAngle < 360.0f)
     {
-        static constexpr float Rad2Deg{static_cast<float>(180.0 / al::numbers::pi)};
+        static constexpr float Rad2Deg{static_cast<float>(180.0 / std::numbers::pi)};
         const float Angle{Rad2Deg*2.0f * std::acos(-Direction.dot_product(ToSource)) * ConeScale};
 
         float ConeGain{1.0f};
@@ -1782,7 +1782,7 @@ void CalcAttnSourceParams(Voice *voice, const VoiceProps *props, const ContextBa
 
     float spread{0.0f};
     if(props->Radius > Distance)
-        spread = al::numbers::pi_v<float>*2.0f - Distance/props->Radius*al::numbers::pi_v<float>;
+        spread = std::numbers::pi_v<float>*2.0f - Distance/props->Radius*std::numbers::pi_v<float>;
     else if(Distance > 0.0f)
         spread = std::asin(props->Radius/Distance) * 2.0f;
 

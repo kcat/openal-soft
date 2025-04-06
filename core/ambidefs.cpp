@@ -3,14 +3,14 @@
 
 #include "ambidefs.h"
 
-#include "alnumbers.h"
+#include <numbers>
 
 
 namespace {
 
 using AmbiChannelFloatArray = std::array<float,MaxAmbiChannels>;
 
-constexpr auto inv_sqrt3f = static_cast<float>(1.0/al::numbers::sqrt3);
+constexpr auto inv_sqrt3f = static_cast<float>(1.0/std::numbers::sqrt3);
 
 
 /* These HF gains are derived from the same 32-point speaker array. The scale

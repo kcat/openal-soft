@@ -51,6 +51,7 @@
 #include <memory>
 #include <mutex>
 #include <new>
+#include <numbers>
 #include <optional>
 #include <stdexcept>
 #include <string>
@@ -73,7 +74,6 @@
 #include "alc/events.h"
 #include "alconfig.h"
 #include "almalloc.h"
-#include "alnumbers.h"
 #include "alnumeric.h"
 #include "alspan.h"
 #include "alstring.h"
@@ -987,7 +987,7 @@ ALCenum EnumFromDevAmbi(DevAmbiScaling scaling)
 /* Downmixing channel arrays, to map a device format's missing channels to
  * existing ones. Based on what PipeWire does, though simplified.
  */
-constexpr float inv_sqrt2f{static_cast<float>(1.0 / al::numbers::sqrt2)};
+constexpr float inv_sqrt2f{static_cast<float>(1.0 / std::numbers::sqrt2)};
 constexpr std::array FrontStereo3dB{
     InputRemixMap::TargetMix{FrontLeft, inv_sqrt2f},
     InputRemixMap::TargetMix{FrontRight, inv_sqrt2f}

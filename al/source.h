@@ -8,6 +8,7 @@
 #include <cstdint>
 #include <deque>
 #include <limits>
+#include <numbers>
 #include <string_view>
 #include <utility>
 
@@ -16,7 +17,6 @@
 #include "AL/alext.h"
 
 #include "almalloc.h"
-#include "alnumbers.h"
 #include "alnumeric.h"
 #include "alspan.h"
 #include "core/context.h"
@@ -102,7 +102,8 @@ struct ALsource {
     /* NOTE: Stereo pan angles are specified in radians, counter-clockwise
      * rather than clockwise.
      */
-    std::array<float,2> StereoPan{{al::numbers::pi_v<float>/6.0f, -al::numbers::pi_v<float>/6.0f}};
+    std::array<float,2> StereoPan{{std::numbers::pi_v<float>/6.0f,
+        -std::numbers::pi_v<float>/6.0f}};
 
     float Radius{0.0f};
     float EnhWidth{0.593f};

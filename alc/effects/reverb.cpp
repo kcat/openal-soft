@@ -27,10 +27,10 @@
 #include <cstdint>
 #include <cstdio>
 #include <functional>
+#include <numbers>
 #include <numeric>
 
 #include "alc/effects/base.h"
-#include "alnumbers.h"
 #include "alnumeric.h"
 #include "alspan.h"
 #include "core/ambidefs.h"
@@ -112,7 +112,7 @@ alignas(16) constexpr std::array<std::array<float,NUM_LINES>,NUM_LINES> EarlyA2B
  * is rotated around Z (ambisonic X) so that the front lines are placed
  * horizontally in front, and the rear lines are placed vertically in back.
  */
-constexpr auto InvSqrt2 = static_cast<float>(1.0/al::numbers::sqrt2);
+constexpr auto InvSqrt2 = static_cast<float>(1.0/std::numbers::sqrt2);
 alignas(16) constexpr std::array<std::array<float,NUM_LINES>,NUM_LINES> LateA2B{{
     /*     A0         A1         A2        A3   */
     {{     0.5f,      0.5f,      0.5f,     0.5f }}, /* W */
@@ -865,8 +865,8 @@ inline float CalcDensityGain(const float a)
 inline void CalcMatrixCoeffs(const float diffusion, float *x, float *y)
 {
     /* The matrix is of order 4, so n is sqrt(4 - 1). */
-    constexpr float n{al::numbers::sqrt3_v<float>};
-    const float t{diffusion * std::atan(n)};
+    static constexpr auto n = std::numbers::sqrt3_v<float>;
+    const auto t = diffusion * std::atan(n);
 
     /* Calculate the first mixing matrix coefficient. */
     *x = std::cos(t);
@@ -1087,7 +1087,7 @@ std::array<std::array<float,4>,4> GetTransformFromVector(const al::span<const fl
     float mag{std::sqrt(vec[0]*vec[0] + vec[1]*vec[1] + vec[2]*vec[2])};
     if(mag > 1.0f)
     {
-        const float scale{al::numbers::sqrt3_v<float> / mag};
+        const auto scale = std::numbers::sqrt3_v<float> / mag;
         norm[0] *= -scale;
         norm[1] *= scale;
         norm[2] *= scale;
@@ -1099,9 +1099,9 @@ std::array<std::array<float,4>,4> GetTransformFromVector(const al::span<const fl
          * term. There's no need to renormalize the magnitude since it would
          * just be reapplied in the matrix.
          */
-        norm[0] *= -al::numbers::sqrt3_v<float>;
-        norm[1] *= al::numbers::sqrt3_v<float>;
-        norm[2] *= al::numbers::sqrt3_v<float>;
+        norm[0] *= -std::numbers::sqrt3_v<float>;
+        norm[1] *= std::numbers::sqrt3_v<float>;
+        norm[2] *= std::numbers::sqrt3_v<float>;
     }
 
     return std::array<std::array<float,4>,4>{{

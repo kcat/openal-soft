@@ -25,11 +25,11 @@
 #include <cmath>
 #include <cstdlib>
 #include <limits>
+#include <numbers>
 #include <variant>
 #include <vector>
 
 #include "alc/effects/base.h"
-#include "alnumbers.h"
 #include "alnumeric.h"
 #include "alspan.h"
 #include "core/ambidefs.h"
@@ -51,7 +51,7 @@ namespace {
 
 using uint = unsigned int;
 
-constexpr auto inv_sqrt2 = static_cast<float>(1.0 / al::numbers::sqrt2);
+constexpr auto inv_sqrt2 = static_cast<float>(1.0 / std::numbers::sqrt2);
 constexpr auto lcoeffs_pw = CalcDirectionCoeffs(std::array{-1.0f, 0.0f, 0.0f});
 constexpr auto rcoeffs_pw = CalcDirectionCoeffs(std::array{ 1.0f, 0.0f, 0.0f});
 constexpr auto lcoeffs_nrml = CalcDirectionCoeffs(std::array{-inv_sqrt2, 0.0f, inv_sqrt2});
@@ -147,7 +147,7 @@ void ChorusState::update(const ContextBase *context, const EffectSlot *slot,
     /* Attenuate the outputs by -3dB, since we duplicate a single mono input to
      * separate left/right outputs.
      */
-    const auto gain = slot->Gain * (1.0f/al::numbers::sqrt2_v<float>);
+    const auto gain = slot->Gain * (1.0f/std::numbers::sqrt2_v<float>);
     mOutTarget = target.Main->Buffer;
     ComputePanGains(target.Main, lcoeffs, gain, mGains[0].Target);
     ComputePanGains(target.Main, rcoeffs, gain, mGains[1].Target);
@@ -176,7 +176,7 @@ void ChorusState::update(const ContextBase *context, const EffectSlot *slot,
             mLfoScale = 4.0f / static_cast<float>(mLfoRange);
             break;
         case ChorusWaveform::Sinusoid:
-            mLfoScale = al::numbers::pi_v<float>*2.0f / static_cast<float>(mLfoRange);
+            mLfoScale = std::numbers::pi_v<float>*2.0f / static_cast<float>(mLfoRange);
             break;
         }
 

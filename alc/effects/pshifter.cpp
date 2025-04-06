@@ -25,10 +25,10 @@
 #include <cmath>
 #include <complex>
 #include <cstdlib>
+#include <numbers>
 #include <variant>
 
 #include "alc/effects/base.h"
-#include "alnumbers.h"
 #include "alnumeric.h"
 #include "alspan.h"
 #include "core/ambidefs.h"
@@ -66,8 +66,8 @@ struct Windower {
         /* Create lookup table of the Hann window for the desired size. */
         for(size_t i{0};i < StftHalfSize;i++)
         {
-            constexpr double scale{al::numbers::pi / double{StftSize}};
-            const double val{std::sin((static_cast<double>(i)+0.5) * scale)};
+            static constexpr auto scale = std::numbers::pi / double{StftSize};
+            const auto val = std::sin((static_cast<double>(i)+0.5) * scale);
             mData[i] = mData[StftSize-1-i] = static_cast<float>(val * val);
         }
     }
@@ -164,7 +164,7 @@ void PshifterState::process(const size_t samplesToDo,
     /* Cycle offset per update expected of each frequency bin (bin 0 is none,
      * bin 1 is x1, bin 2 is x2, etc).
      */
-    constexpr float expected_cycles{al::numbers::pi_v<float>*2.0f / OversampleFactor};
+    static constexpr auto expected_cycles = std::numbers::pi_v<float>*2.0f / OversampleFactor;
 
     for(size_t base{0u};base < samplesToDo;)
     {
@@ -219,7 +219,7 @@ void PshifterState::process(const size_t samplesToDo,
             mLastPhase[k] = phase;
 
             /* Normalize from pi, and wrap the delta between -1 and +1. */
-            tmp *= al::numbers::inv_pi_v<float>;
+            tmp *= std::numbers::inv_pi_v<float>;
             int qpd{float2int(tmp)};
             tmp -= static_cast<float>(qpd + (qpd%2));
 
@@ -271,10 +271,10 @@ void PshifterState::process(const size_t samplesToDo,
              * grow indefinitely, it will lose precision and produce less exact
              * phase over time.
              */
-            tmp *= al::numbers::inv_pi_v<float>;
+            tmp *= std::numbers::inv_pi_v<float>;
             int qpd{float2int(tmp)};
             tmp -= static_cast<float>(qpd + (qpd%2));
-            mSumPhase[k] = tmp * al::numbers::pi_v<float>;
+            mSumPhase[k] = tmp * std::numbers::pi_v<float>;
 
             const complex_f cplx{std::polar(mSynthesisBuffer[k].Magnitude, mSumPhase[k])};
             if(k == 0)

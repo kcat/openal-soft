@@ -10,9 +10,9 @@
 #include <cstddef>
 #include <functional>
 #include <iterator>
+#include <numbers>
 #include <utility>
 
-#include "alnumbers.h"
 #include "alnumeric.h"
 #include "opthelpers.h"
 
@@ -171,7 +171,7 @@ void complex_fft(const al::span<std::complex<double>> buffer, const double sign)
                 std::swap(buffer[idx], buffer[revidx]);
         }
 
-        const double pi{al::numbers::pi * sign};
+        const auto pi = std::numbers::pi * sign;
         for(std::size_t i{0};i < log2_size;++i)
         {
             const std::size_t step2{1_uz << i};

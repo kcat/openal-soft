@@ -269,7 +269,7 @@ double GetSourceSecOffset(ALsource *Source, ALCcontext *context, nanoseconds *cl
 
     const ALbuffer *BufferFmt{nullptr};
     auto BufferList = Source->mQueue.cbegin();
-    while(BufferList != Source->mQueue.cend() && std::to_address(BufferList) != Current)
+    while(BufferList != Source->mQueue.cend() && &*BufferList != Current)
     {
         if(!BufferFmt) BufferFmt = BufferList->mBuffer;
         readPos += int64_t{BufferList->mSampleLen} << MixerFracBits;
@@ -319,7 +319,7 @@ NOINLINE T GetSourceOffset(ALsource *Source, ALenum name, ALCcontext *context)
 
     const ALbuffer *BufferFmt{nullptr};
     auto BufferList = Source->mQueue.cbegin();
-    while(BufferList != Source->mQueue.cend() && std::to_address(BufferList) != Current)
+    while(BufferList != Source->mQueue.cend() && &*BufferList != Current)
     {
         if(!BufferFmt) BufferFmt = BufferList->mBuffer;
         readPos += BufferList->mSampleLen;
@@ -3642,7 +3642,7 @@ try {
     if(NewListStart != 0)
     {
         auto iter = source->mQueue.begin() + ptrdiff_t(NewListStart);
-        (iter-1)->mNext.store(std::to_address(iter), std::memory_order_release);
+        (iter-1)->mNext.store(&*iter, std::memory_order_release);
     }
 }
 catch(al::base_exception&) {

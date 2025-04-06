@@ -9,6 +9,7 @@
 #include <arm_neon.h>
 #endif
 
+#include <algorithm>
 #include <array>
 #include <cmath>
 #include <cstddef>

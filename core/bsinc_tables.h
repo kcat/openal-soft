@@ -14,8 +14,8 @@ struct BSincTable {
     al::span<const float> Tab;
 };
 
-DECL_HIDDEN extern const BSincTable gBSinc12;
-DECL_HIDDEN extern const BSincTable gBSinc24;
-DECL_HIDDEN extern const BSincTable gBSinc48;
+DECL_HIDDEN extern constinit const BSincTable gBSinc12;
+DECL_HIDDEN extern constinit const BSincTable gBSinc24;
+DECL_HIDDEN extern constinit const BSincTable gBSinc48;
 
 #endif /* CORE_BSINC_TABLES_H */

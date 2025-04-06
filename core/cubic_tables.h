@@ -15,8 +15,8 @@ struct SIMDALIGN CubicTable {
 struct GaussianTable : CubicTable { GaussianTable(); };
 inline const GaussianTable gGaussianFilter;
 
-struct SplineTable : CubicTable { SplineTable(); };
-inline const SplineTable gSplineFilter;
+struct SplineTable : CubicTable { consteval SplineTable(); };
+DECL_HIDDEN extern constinit const SplineTable gSplineFilter;
 
 
 struct CubicFilter {

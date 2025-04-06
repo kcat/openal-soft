@@ -245,7 +245,7 @@ struct SampleReader<Quality::s16> {
     [[nodiscard]] static
     auto read(const src_t &in) noexcept -> dst_t
     {
-        if constexpr(al::endian::native == al::endian::little)
+        if constexpr(std::endian::native == std::endian::little)
             return in;
         else
             return al::byteswap(in);
@@ -257,13 +257,13 @@ struct SampleReader<Quality::f32> {
     /* 32-bit float samples are read as 32-bit integer on big-endian systems,
      * so that they can be byteswapped before being reinterpreted as float.
      */
-    using src_t = std::conditional_t<al::endian::native==al::endian::little, float,uint32_t>;
+    using src_t = std::conditional_t<std::endian::native==std::endian::little, float,uint32_t>;
     using dst_t = float;
 
     [[nodiscard]] static
     auto read(const src_t &in) noexcept -> dst_t
     {
-        if constexpr(al::endian::native == al::endian::little)
+        if constexpr(std::endian::native == std::endian::little)
             return in;
         else
             return al::bit_cast<dst_t>(al::byteswap(static_cast<uint32_t>(in)));

@@ -26,6 +26,7 @@
 
 #include <algorithm>
 #include <array>
+#include <bit>
 #include <cassert>
 #include <cerrno>
 #include <complex>
@@ -39,7 +40,6 @@
 #include <utility>
 #include <vector>
 
-#include "albit.h"
 #include "almalloc.h"
 #include "alnumbers.h"
 #include "alspan.h"
@@ -94,8 +94,8 @@ void fwrite32le(uint val, FILE *f)
 
 byte4 f32AsLEBytes(const float value)
 {
-    auto ret = al::bit_cast<byte4>(value);
-    if constexpr(al::endian::native == al::endian::big)
+    auto ret = std::bit_cast<byte4>(value);
+    if constexpr(std::endian::native == std::endian::big)
     {
         std::swap(ret[0], ret[3]);
         std::swap(ret[1], ret[2]);

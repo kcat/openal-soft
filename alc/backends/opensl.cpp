@@ -26,6 +26,7 @@
 #include <jni.h>
 
 #include <array>
+#include <bit>
 #include <cstdlib>
 #include <cstring>
 #include <mutex>
@@ -33,7 +34,6 @@
 #include <thread>
 #include <functional>
 
-#include "albit.h"
 #include "alnumeric.h"
 #include "alsem.h"
 #include "alstring.h"
@@ -141,7 +141,7 @@ constexpr SLuint32 GetTypeRepresentation(DevFmtType type) noexcept
 
 constexpr SLuint32 GetByteOrderEndianness() noexcept
 {
-    if(al::endian::native == al::endian::little)
+    if constexpr(std::endian::native == std::endian::little)
         return SL_BYTEORDER_LITTLEENDIAN;
     return SL_BYTEORDER_BIGENDIAN;
 }

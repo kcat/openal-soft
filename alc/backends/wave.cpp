@@ -24,6 +24,7 @@
 
 #include <algorithm>
 #include <atomic>
+#include <bit>
 #include <cerrno>
 #include <chrono>
 #include <cstdint>
@@ -34,7 +35,6 @@
 #include <thread>
 #include <vector>
 
-#include "albit.h"
 #include "alc/alconfig.h"
 #include "almalloc.h"
 #include "alnumeric.h"
@@ -145,7 +145,7 @@ int WaveBackend::mixerProc()
             mDevice->renderSamples(mBuffer.data(), mDevice->mUpdateSize, frameStep);
             done += mDevice->mUpdateSize;
 
-            if(al::endian::native != al::endian::little)
+            if constexpr(std::endian::native != std::endian::little)
             {
                 const uint bytesize{mDevice->bytesFromFmt()};
 

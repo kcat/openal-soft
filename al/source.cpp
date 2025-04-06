@@ -2340,7 +2340,7 @@ NOINLINE void GetProperty(ALsource *const Source, ALCcontext *const Context, con
                 const auto iter = std::find_if(Source->mQueue.cbegin(), Source->mQueue.cend(),
                     [Current](const ALbufferQueueItem &item) noexcept -> bool
                     { return &item == Current; });
-                BufferList = (iter != Source->mQueue.cend()) ? std::to_address(iter) : nullptr;
+                BufferList = (iter != Source->mQueue.cend()) ? &*iter : nullptr;
             }
             ALbuffer *buffer{BufferList ? BufferList->mBuffer : nullptr};
             values[0] = buffer ? static_cast<T>(buffer->id) : T{0};
@@ -2645,7 +2645,7 @@ void StartSources(ALCcontext *const context, const al::span<ALsource*> srchandle
                     voice->mFlags.set(VoiceIsFading);
             }
         }
-        InitVoice(voice, source, std::to_address(BufferList), context, device);
+        InitVoice(voice, source, &*BufferList, context, device);
 
         source->VoiceIdx = vidx;
         source->state = AL_PLAYING;

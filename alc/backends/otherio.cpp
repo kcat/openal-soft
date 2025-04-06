@@ -44,6 +44,7 @@
 
 #include <algorithm>
 #include <atomic>
+#include <bit>
 #include <chrono>
 #include <condition_variable>
 #include <cstring>
@@ -55,7 +56,6 @@
 #include <thread>
 #include <vector>
 
-#include "albit.h"
 #include "alnumeric.h"
 #include "althrd_setname.h"
 #include "comptr.h"
@@ -95,7 +95,7 @@ auto ORIO64Bit::as() const -> uint64_t { return (uint64_t{hi}<<32) | lo; }
 template<> [[nodiscard]]
 auto ORIO64Bit::as() const -> int64_t { return static_cast<int64_t>(as<uint64_t>()); }
 template<> [[nodiscard]]
-auto ORIO64Bit::as() const -> double { return al::bit_cast<double>(as<uint64_t>()); }
+auto ORIO64Bit::as() const -> double { return std::bit_cast<double>(as<uint64_t>()); }
 
 
 enum class ORIOSampleType : LONG {

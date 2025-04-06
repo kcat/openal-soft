@@ -24,7 +24,6 @@
 #include <utility>
 #include <vector>
 
-#include "albit.h"
 #include "almalloc.h"
 #include "alnumbers.h"
 #include "alnumeric.h"
@@ -515,7 +514,7 @@ inline auto readle(std::istream &data) -> T
     if constexpr(std::endian::native == std::endian::big)
         std::reverse(ret.begin(), ret.end());
 
-    return fixsign<num_bits>(al::bit_cast<T>(ret));
+    return fixsign<num_bits>(std::bit_cast<T>(ret));
 }
 
 template<>

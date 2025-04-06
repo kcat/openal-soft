@@ -59,6 +59,7 @@
 
 #include <algorithm>
 #include <array>
+#include <bit>
 #include <cassert>
 #include <cmath>
 #include <cstdint>
@@ -68,7 +69,6 @@
 #include <utility>
 #include <vector>
 
-#include "albit.h"
 #include "almalloc.h"
 #include "alnumbers.h"
 #include "alnumeric.h"
@@ -371,55 +371,55 @@ constexpr auto make_float_array(std::integer_sequence<T,N...>)
     auto a3_v = vset4(f[12], f[13], f[14], f[15]);
 
     auto t_v = vzero();
-    auto t_f = al::bit_cast<float4>(t_v);
+    auto t_f = std::bit_cast<float4>(t_v);
     fmt::println("VZERO={}", t_f);
     assertv4(t_f, 0, 0, 0, 0);
 
     t_v = vadd(a1_v, a2_v);
-    t_f = al::bit_cast<float4>(t_v);
+    t_f = std::bit_cast<float4>(t_v);
     fmt::println("VADD(4:7,8:11)={}", t_f);
     assertv4(t_f, 12, 14, 16, 18);
 
     t_v = vmul(a1_v, a2_v);
-    t_f = al::bit_cast<float4>(t_v);
+    t_f = std::bit_cast<float4>(t_v);
     fmt::println("VMUL(4:7,8:11)={}", t_f);
     assertv4(t_f, 32, 45, 60, 77);
 
     t_v = vmadd(a1_v, a2_v, a0_v);
-    t_f = al::bit_cast<float4>(t_v);
+    t_f = std::bit_cast<float4>(t_v);
     fmt::println("VMADD(4:7,8:11,0:3)={}", t_f);
     assertv4(t_f, 32, 46, 62, 80);
 
     auto u_v = v4sf{};
     interleave2(a1_v, a2_v, t_v, u_v);
-    t_f = al::bit_cast<float4>(t_v);
-    auto u_f = al::bit_cast<float4>(u_v);
+    t_f = std::bit_cast<float4>(t_v);
+    auto u_f = std::bit_cast<float4>(u_v);
     fmt::println("INTERLEAVE2(4:7,8:11)={} {}", t_f, u_f);
     assertv4(t_f, 4, 8, 5, 9);
     assertv4(u_f, 6, 10, 7, 11);
 
     uninterleave2(a1_v, a2_v, t_v, u_v);
-    t_f = al::bit_cast<float4>(t_v);
-    u_f = al::bit_cast<float4>(u_v);
+    t_f = std::bit_cast<float4>(t_v);
+    u_f = std::bit_cast<float4>(u_v);
     fmt::println("UNINTERLEAVE2(4:7,8:11)={} {}", t_f, u_f);
     assertv4(t_f, 4, 6, 8, 10);
     assertv4(u_f, 5, 7, 9, 11);
 
     t_v = ld_ps1(f[15]);
-    t_f = al::bit_cast<float4>(t_v);
+    t_f = std::bit_cast<float4>(t_v);
     fmt::println("LD_PS1(15)={}", t_f);
     assertv4(t_f, 15, 15, 15, 15);
 
     t_v = vswaphl(a1_v, a2_v);
-    t_f = al::bit_cast<float4>(t_v);
+    t_f = std::bit_cast<float4>(t_v);
     fmt::println("VSWAPHL(4:7,8:11)={}", t_f);
     assertv4(t_f, 8, 9, 6, 7);
 
     vtranspose4(a0_v, a1_v, a2_v, a3_v);
-    auto a0_f = al::bit_cast<float4>(a0_v);
-    auto a1_f = al::bit_cast<float4>(a1_v);
-    auto a2_f = al::bit_cast<float4>(a2_v);
-    auto a3_f = al::bit_cast<float4>(a3_v);
+    auto a0_f = std::bit_cast<float4>(a0_v);
+    auto a1_f = std::bit_cast<float4>(a1_v);
+    auto a2_f = std::bit_cast<float4>(a2_v);
+    auto a3_f = std::bit_cast<float4>(a3_v);
     fmt::println("VTRANSPOSE4(0:3,4:7,8:11,12:15)={} {} {} {}", a0_f, a1_f, a2_f, a3_f);
     assertv4(a0_f, 0, 4, 8, 12);
     assertv4(a1_f, 1, 5, 9, 13);
@@ -1727,9 +1727,9 @@ NOINLINE void pffft_real_finalize(const size_t Ncvec, const v4sf *in, v4sf *REST
     const size_t dk{Ncvec/SimdSize}; // number of 4x4 matrix blocks
     /* fftpack order is f0r f1r f1i f2r f2i ... f(n-1)r f(n-1)i f(n)r */
 
-    const v4sf zero{vzero()};
-    const auto cr = al::bit_cast<std::array<float,SimdSize>>(in[0]);
-    const auto ci = al::bit_cast<std::array<float,SimdSize>>(in[Ncvec*2-1]);
+    const auto zero = vzero();
+    const auto cr = std::bit_cast<std::array<float,SimdSize>>(in[0]);
+    const auto ci = std::bit_cast<std::array<float,SimdSize>>(in[Ncvec*2-1]);
     pffft_real_finalize_4x4(&zero, &zero, in+1, e, out);
 
     /* [cr0 cr1 cr2 cr3 ci0 ci1 ci2 ci3]

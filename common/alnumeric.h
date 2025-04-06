@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <array>
+#include <bit>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
@@ -17,7 +18,6 @@
 #include <xmmintrin.h>
 #endif
 
-#include "albit.h"
 #include "opthelpers.h"
 
 
@@ -127,7 +127,7 @@ inline int float2int(float f) noexcept
 #elif (defined(_MSC_VER) && defined(_M_IX86_FP) && _M_IX86_FP == 0) \
     || ((defined(__GNUC__) || defined(__clang__)) && (defined(__i386__) || defined(__x86_64__)) \
         && !defined(__SSE_MATH__))
-    const int conv_i{al::bit_cast<int>(f)};
+    const auto conv_i = std::bit_cast<int>(f);
 
     const int sign{(conv_i>>31) | 1};
     const int shift{((conv_i>>23)&0xff) - (127+23)};
@@ -158,7 +158,7 @@ inline int double2int(double d) noexcept
 #elif (defined(_MSC_VER) && defined(_M_IX86_FP) && _M_IX86_FP < 2) \
     || ((defined(__GNUC__) || defined(__clang__)) && (defined(__i386__) || defined(__x86_64__)) \
         && !defined(__SSE2_MATH__))
-    const int64_t conv_i64{al::bit_cast<int64_t>(d)};
+    const auto conv_i64 = std::bit_cast<int64_t>(d);
 
     const int sign{static_cast<int>(conv_i64 >> 63) | 1};
     const int shift{(static_cast<int>(conv_i64 >> 52) & 0x7ff) - (1023 + 52)};
@@ -207,7 +207,7 @@ inline float fast_roundf(float f) noexcept
          8388608.0f /*  0x1.0p+23 */,
         -8388608.0f /* -0x1.0p+23 */
     };
-    const unsigned int conv_i{al::bit_cast<unsigned int>(f)};
+    const auto conv_i = std::bit_cast<unsigned int>(f);
 
     const unsigned int sign{(conv_i>>31)&0x01};
     const unsigned int expo{(conv_i>>23)&0xff};

@@ -266,7 +266,7 @@ struct SampleReader<Quality::f32> {
         if constexpr(std::endian::native == std::endian::little)
             return in;
         else
-            return al::bit_cast<dst_t>(al::byteswap(static_cast<uint32_t>(in)));
+            return std::bit_cast<dst_t>(al::byteswap(static_cast<uint32_t>(in)));
     }
 };
 
@@ -611,7 +611,7 @@ auto LoadLAF(const fs::path &fname) -> std::unique_ptr<LafStream>
         {
             const auto value = uint32_t{uint8_t(input[0])} | (uint32_t{uint8_t(input[1])}<<8u)
                 | (uint32_t{uint8_t(input[2])}<<16u) | (uint32_t{uint8_t(input[3])}<<24u);
-            return al::bit_cast<float>(value);
+            return std::bit_cast<float>(value);
         };
 
         auto chan = al::span{chandata}.subspan(i*9_uz, 9);

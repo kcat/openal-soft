@@ -24,6 +24,7 @@
 #include "loaddef.h"
 
 #include <algorithm>
+#include <bit>
 #include <cctype>
 #include <cmath>
 #include <cstdarg>
@@ -39,7 +40,6 @@
 #include <string_view>
 #include <vector>
 
-#include "albit.h"
 #include "almalloc.h"
 #include "alnumeric.h"
 #include "alspan.h"
@@ -665,7 +665,7 @@ auto ReadBinAsDouble(std::istream &istream, const std::string_view filename,
         if(!ReadBin8(istream, filename, order, &val))
             return 0;
         if(type == ET_FP)
-            *out = al::bit_cast<double>(val);
+            *out = std::bit_cast<double>(val);
     }
     else
     {
@@ -673,7 +673,7 @@ auto ReadBinAsDouble(std::istream &istream, const std::string_view filename,
         if(!ReadBin4(istream, filename, order, bytes, &val))
             return 0;
         if(type == ET_FP)
-            *out = al::bit_cast<float>(val);
+            *out = std::bit_cast<float>(val);
         else
         {
             if(bits > 0)

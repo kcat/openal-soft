@@ -310,8 +310,7 @@ try {
     /* Call the appropriate handler */
     std::visit([context,aleffect,param,value](auto &arg)
     {
-        using Type = std::remove_cv_t<std::remove_reference_t<decltype(arg)>>;
-        using PropType = typename Type::prop_type;
+        using PropType = typename std::remove_cvref_t<decltype(arg)>::prop_type;
         return arg.SetParami(context, std::get<PropType>(aleffect->Props), param, value);
     }, aleffect->PropsVariant);
 }
@@ -342,8 +341,7 @@ try {
     /* Call the appropriate handler */
     std::visit([context,aleffect,param,values](auto &arg)
     {
-        using Type = std::remove_cv_t<std::remove_reference_t<decltype(arg)>>;
-        using PropType = typename Type::prop_type;
+        using PropType = typename std::remove_cvref_t<decltype(arg)>::prop_type;
         return arg.SetParamiv(context, std::get<PropType>(aleffect->Props), param, values);
     }, aleffect->PropsVariant);
 }
@@ -367,8 +365,7 @@ try {
     /* Call the appropriate handler */
     std::visit([context,aleffect,param,value](auto &arg)
     {
-        using Type = std::remove_cv_t<std::remove_reference_t<decltype(arg)>>;
-        using PropType = typename Type::prop_type;
+        using PropType = typename std::remove_cvref_t<decltype(arg)>::prop_type;
         return arg.SetParamf(context, std::get<PropType>(aleffect->Props), param, value);
     }, aleffect->PropsVariant);
 }
@@ -392,8 +389,7 @@ try {
     /* Call the appropriate handler */
     std::visit([context,aleffect,param,values](auto &arg)
     {
-        using Type = std::remove_cv_t<std::remove_reference_t<decltype(arg)>>;
-        using PropType = typename Type::prop_type;
+        using PropType = typename std::remove_cvref_t<decltype(arg)>::prop_type;
         return arg.SetParamfv(context, std::get<PropType>(aleffect->Props), param, values);
     }, aleffect->PropsVariant);
 }
@@ -424,8 +420,7 @@ try {
     /* Call the appropriate handler */
     std::visit([context,aleffect,param,value](auto &arg)
     {
-        using Type = std::remove_cv_t<std::remove_reference_t<decltype(arg)>>;
-        using PropType = typename Type::prop_type;
+        using PropType = typename std::remove_cvref_t<decltype(arg)>::prop_type;
         return arg.GetParami(context, std::get<PropType>(aleffect->Props), param, value);
     }, aleffect->PropsVariant);
 }
@@ -456,8 +451,7 @@ try {
     /* Call the appropriate handler */
     std::visit([context,aleffect,param,values](auto &arg)
     {
-        using Type = std::remove_cv_t<std::remove_reference_t<decltype(arg)>>;
-        using PropType = typename Type::prop_type;
+        using PropType = typename std::remove_cvref_t<decltype(arg)>::prop_type;
         return arg.GetParamiv(context, std::get<PropType>(aleffect->Props), param, values);
     }, aleffect->PropsVariant);
 }
@@ -481,8 +475,7 @@ try {
     /* Call the appropriate handler */
     std::visit([context,aleffect,param,value](auto &arg)
     {
-        using Type = std::remove_cv_t<std::remove_reference_t<decltype(arg)>>;
-        using PropType = typename Type::prop_type;
+        using PropType = typename std::remove_cvref_t<decltype(arg)>::prop_type;
         return arg.GetParamf(context, std::get<PropType>(aleffect->Props), param, value);
     }, aleffect->PropsVariant);
 }
@@ -506,8 +499,7 @@ try {
     /* Call the appropriate handler */
     std::visit([context,aleffect,param,values](auto &arg)
     {
-        using Type = std::remove_cv_t<std::remove_reference_t<decltype(arg)>>;
-        using PropType = typename Type::prop_type;
+        using PropType = typename std::remove_cvref_t<decltype(arg)>::prop_type;
         return arg.GetParamfv(context, std::get<PropType>(aleffect->Props), param, values);
     }, aleffect->PropsVariant);
 }

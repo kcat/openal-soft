@@ -52,7 +52,7 @@ struct allocator {
     static constexpr auto Alignment = std::max(AlignV, alignof(T));
     static constexpr auto AlignVal = std::align_val_t{Alignment};
 
-    using value_type = std::remove_cv_t<std::remove_reference_t<T>>;
+    using value_type = std::remove_cvref_t<T>;
     using reference = value_type&;
     using const_reference = const value_type&;
     using pointer = value_type*;
@@ -61,7 +61,7 @@ struct allocator {
     using difference_type = std::ptrdiff_t;
     using is_always_equal = std::true_type;
 
-    template<typename U, std::enable_if_t<alignof(U) <= Alignment,bool> = true>
+    template<typename U> requires(alignof(U) <= Alignment)
     struct rebind {
         using other = allocator<U,Alignment>;
     };

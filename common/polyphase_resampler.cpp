@@ -6,6 +6,7 @@
 #include <cstddef>
 #include <numbers>
 #include <numeric>
+#include <stdexcept>
 #include <tuple>
 
 #include "opthelpers.h"

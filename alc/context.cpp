@@ -11,6 +11,7 @@
 #include <iterator>
 #include <numeric>
 #include <optional>
+#include <span>
 #include <string_view>
 #include <tuple>
 #include <utility>
@@ -26,7 +27,6 @@
 #include "alc/alu.h"
 #include "alc/backends/base.h"
 #include "alnumeric.h"
-#include "alspan.h"
 #include "atomic.h"
 #include "core/async_event.h"
 #include "core/devformat.h"
@@ -212,7 +212,7 @@ void ALCcontext::init()
         std::string extensions;
         extensions.reserve(len);
         extensions += mExtensions.front();
-        for(std::string_view ext : al::span{mExtensions}.subspan<1>())
+        for(std::string_view ext : std::span{mExtensions}.subspan<1>())
         {
             extensions += ' ';
             extensions += ext;
@@ -274,7 +274,7 @@ void ALCcontext::deinit()
 
     bool stopPlayback{};
     /* First make sure this context exists in the device's list. */
-    auto oldarray = al::span{*mDevice->mContexts.load(std::memory_order_acquire)};
+    auto oldarray = std::span{*mDevice->mContexts.load(std::memory_order_acquire)};
     if(auto toremove = static_cast<size_t>(std::count(oldarray.begin(), oldarray.end(), this)))
     {
         using ContextArray = al::FlexArray<ContextBase*>;

@@ -3,8 +3,9 @@
 
 #include "events.h"
 
+#include <span>
+
 #include "alnumeric.h"
-#include "alspan.h"
 #include "core/logging.h"
 #include "device.h"
 #include "fmt/core.h"
@@ -71,7 +72,7 @@ FORCE_ALIGN ALCboolean ALC_APIENTRY alcEventControlSOFT(ALCsizei count, const AL
     }
 
     alc::EventBitSet eventSet{0};
-    for(ALCenum type : al::span{events, static_cast<ALCuint>(count)})
+    for(ALCenum type : std::span{events, static_cast<ALCuint>(count)})
     {
         auto etype = alc::GetEventType(type);
         if(!etype)

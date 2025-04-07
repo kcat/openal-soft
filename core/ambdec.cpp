@@ -11,10 +11,10 @@
 #include <cstdio>
 #include <fstream>
 #include <iterator>
+#include <span>
 #include <sstream>
 #include <string>
 
-#include "alspan.h"
 #include "alstring.h"
 #include "filesystem.h"
 #include "fmt/core.h"
@@ -240,8 +240,8 @@ std::optional<std::string> AmbDecConf::load(const char *fname) noexcept
             if(Matrix.empty())
             {
                 Matrix.resize(Speakers.size() * FreqBands);
-                LFMatrix = al::span{Matrix}.first(Speakers.size());
-                HFMatrix = al::span{Matrix}.subspan(Speakers.size()*(FreqBands-1));
+                LFMatrix = std::span{Matrix}.first(Speakers.size());
+                HFMatrix = std::span{Matrix}.subspan(Speakers.size()*(FreqBands-1));
             }
 
             if(FreqBands == 1)

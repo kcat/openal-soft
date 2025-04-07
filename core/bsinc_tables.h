@@ -2,8 +2,8 @@
 #define CORE_BSINC_TABLES_H
 
 #include <array>
+#include <span>
 
-#include "alspan.h"
 #include "bsinc_defs.h"
 #include "opthelpers.h"
 
@@ -11,7 +11,7 @@ struct BSincTable {
     float scaleBase, scaleRange;
     std::array<unsigned int,BSincScaleCount> m;
     std::array<unsigned int,BSincScaleCount> filterOffset;
-    al::span<const float> Tab;
+    std::span<const float> Tab;
 };
 
 DECL_HIDDEN extern constinit const BSincTable gBSinc12;

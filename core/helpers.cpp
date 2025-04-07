@@ -14,13 +14,13 @@
 #include <limits>
 #include <mutex>
 #include <optional>
+#include <span>
 #include <string>
 #include <string_view>
 #include <system_error>
 
 #include "almalloc.h"
 #include "alnumeric.h"
-#include "alspan.h"
 #include "alstring.h"
 #include "filesystem.h"
 #include "logging.h"
@@ -61,7 +61,7 @@ void DirectorySearch(const fs::path &path, const std::string_view ext,
         ERR("Exception enumerating files: {}", e.what());
     }
 
-    const auto newlist = al::span{*results}.subspan(base);
+    const auto newlist = std::span{*results}.subspan(base);
     std::sort(newlist.begin(), newlist.end());
     for(const auto &name : newlist)
         TRACE(" got {}", name);

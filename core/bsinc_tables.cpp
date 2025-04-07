@@ -8,11 +8,11 @@
 #include <cstddef>
 #include <limits>
 #include <numbers>
+#include <span>
 #include <stdexcept>
 #include <vector>
 
 #include "alnumeric.h"
-#include "alspan.h"
 #include "bsinc_defs.h"
 #include "opthelpers.h"
 #include "resampler_limits.h"
@@ -341,7 +341,7 @@ struct SIMDALIGN BSincFilterArray {
     }
 
     [[nodiscard]] constexpr auto getHeader() const noexcept -> const BSincHeader& { return hdr; }
-    [[nodiscard]] constexpr auto getTable() const noexcept { return al::span{mTable}; }
+    [[nodiscard]] constexpr auto getTable() const noexcept { return std::span{mTable}; }
 };
 
 const auto bsinc12_filter = BSincFilterArray<bsinc12_hdr>{};

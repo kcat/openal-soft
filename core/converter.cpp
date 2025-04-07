@@ -6,11 +6,11 @@
 #include <algorithm>
 #include <bit>
 #include <cassert>
+#include <climits>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
-#include <iterator>
-#include <climits>
+#include <span>
 
 #include "alnumeric.h"
 #include "fpu_ctrl.h"
@@ -45,21 +45,21 @@ template<> constexpr float LoadSample<DevFmtUInt>(DevFmtType_t<DevFmtUInt> val) 
 
 
 template<DevFmtType T>
-inline void LoadSampleArray(const al::span<float> dst, const void *src, const size_t channel,
+inline void LoadSampleArray(const std::span<float> dst, const void *src, const size_t channel,
     const size_t srcstep) noexcept
 {
     assert(channel < srcstep);
-    const auto srcspan = al::span{static_cast<const DevFmtType_t<T>*>(src), dst.size()*srcstep};
-    auto ssrc = srcspan.cbegin();
-    std::generate(dst.begin(), dst.end(), [&ssrc,channel,srcstep]
+    const auto srcspan = std::span{static_cast<const DevFmtType_t<T>*>(src), dst.size()*srcstep};
+    auto ssrc = srcspan.begin() + ptrdiff_t(channel);
+    dst.front() = LoadSample<T>(*ssrc);
+    std::generate(dst.begin()+1, dst.end(), [&ssrc,srcstep]
     {
-        const float ret{LoadSample<T>(ssrc[channel])};
         ssrc += ptrdiff_t(srcstep);
-        return ret;
+        return LoadSample<T>(*ssrc);
     });
 }
 
-void LoadSamples(const al::span<float> dst, const void *src, const size_t channel,
+void LoadSamples(const std::span<float> dst, const void *src, const size_t channel,
     const size_t srcstep, const DevFmtType srctype) noexcept
 {
 #define HANDLE_FMT(T)                                                         \
@@ -99,21 +99,22 @@ template<> inline uint8_t StoreSample<DevFmtUByte>(float val) noexcept
 { return static_cast<uint8_t>(StoreSample<DevFmtByte>(val) + 128); }
 
 template<DevFmtType T>
-inline void StoreSampleArray(void *dst, const al::span<const float> src, const size_t channel,
+inline void StoreSampleArray(void *dst, const std::span<const float> src, const size_t channel,
     const size_t dststep) noexcept
 {
     assert(channel < dststep);
-    const auto dstspan = al::span{static_cast<DevFmtType_t<T>*>(dst), src.size()*dststep};
-    auto sdst = dstspan.begin();
-    std::for_each(src.cbegin(), src.cend(), [&sdst,channel,dststep](const float in)
+    const auto dstspan = std::span{static_cast<DevFmtType_t<T>*>(dst), src.size()*dststep};
+    auto sdst = dstspan.begin() + ptrdiff_t(channel);
+    *sdst = StoreSample<T>(src.front());
+    std::for_each(src.begin()+1, src.end(), [&sdst,dststep](const float in)
     {
-        sdst[channel] = StoreSample<T>(in);
         sdst += ptrdiff_t(dststep);
+        *sdst = StoreSample<T>(in);
     });
 }
 
 
-void StoreSamples(void *dst, const al::span<const float> src, const size_t channel,
+void StoreSamples(void *dst, const std::span<const float> src, const size_t channel,
     const size_t dststep, const DevFmtType dsttype) noexcept
 {
 #define HANDLE_FMT(T)                                                         \
@@ -133,33 +134,33 @@ void StoreSamples(void *dst, const al::span<const float> src, const size_t chann
 
 
 template<DevFmtType T>
-void Mono2Stereo(const al::span<float> dst, const void *src) noexcept
+void Mono2Stereo(const std::span<float> dst, const void *src) noexcept
 {
-    const auto srcspan = al::span{static_cast<const DevFmtType_t<T>*>(src), dst.size()>>1};
+    const auto srcspan = std::span{static_cast<const DevFmtType_t<T>*>(src), dst.size()>>1};
     auto sdst = dst.begin();
-    std::for_each(srcspan.cbegin(), srcspan.cend(), [&sdst](const auto in)
+    std::for_each(srcspan.begin(), srcspan.end(), [&sdst](const auto in)
     { sdst = std::fill_n(sdst, 2, LoadSample<T>(in)*0.707106781187f); });
 }
 
 template<DevFmtType T>
-void Multi2Mono(uint chanmask, const size_t step, const float scale, const al::span<float> dst,
-    const void *src) noexcept
+void Multi2Mono(uint chanmask, const size_t step, const std::span<float> dst, const void *src)
+    noexcept
 {
-    const auto srcspan = al::span{static_cast<const DevFmtType_t<T>*>(src), step*dst.size()};
+    const auto scale = std::sqrt(1.0f / static_cast<float>(std::popcount(chanmask)));
+    const auto srcspan = std::span{static_cast<const DevFmtType_t<T>*>(src), step*dst.size()};
     std::fill_n(dst.begin(), dst.size(), 0.0f);
-    for(size_t c{0};chanmask;++c)
+    while(chanmask)
     {
-        if((chanmask&1)) LIKELY
+        const auto c = std::countr_zero(chanmask);
+        chanmask ^= 1 << c;
+
+        auto ssrc = srcspan.begin() + c;
+        dst.front() += LoadSample<T>(*ssrc);
+        std::for_each(dst.begin(), dst.end(), [&ssrc,step](float &sample)
         {
-            auto ssrc = srcspan.cbegin();
-            std::for_each(dst.begin(), dst.end(), [&ssrc,step,c](float &sample)
-            {
-                const float s{LoadSample<T>(ssrc[c])};
-                ssrc += ptrdiff_t(step);
-                sample += s;
-            });
-        }
-        chanmask >>= 1;
+            ssrc += ptrdiff_t(step);
+            sample += LoadSample<T>(*ssrc);
+        });
     }
     std::for_each(dst.begin(), dst.end(), [scale](float &sample) noexcept { sample *= scale; });
 }
@@ -234,8 +235,8 @@ uint SampleConverter::convert(const void **src, uint *srcframes, void *dst, uint
     const size_t DstFrameSize{mChan.size() * mDstTypeSize};
     const uint increment{mIncrement};
     uint NumSrcSamples{*srcframes};
-    auto SamplesIn = al::span{static_cast<const std::byte*>(*src), NumSrcSamples*SrcFrameSize};
-    auto SamplesOut = al::span{static_cast<std::byte*>(dst), dstframes*DstFrameSize};
+    auto SamplesIn = std::span{static_cast<const std::byte*>(*src), NumSrcSamples*SrcFrameSize};
+    auto SamplesOut = std::span{static_cast<std::byte*>(dst), dstframes*DstFrameSize};
 
     FPUCtl mixer_mode{};
     uint pos{0};
@@ -250,7 +251,7 @@ uint SampleConverter::convert(const void **src, uint *srcframes, void *dst, uint
              * what we're given for later.
              */
             for(size_t chan{0u};chan < mChan.size();chan++)
-                LoadSamples(al::span{mChan[chan].PrevSamples}.subspan(prepcount, readable),
+                LoadSamples(std::span{mChan[chan].PrevSamples}.subspan(prepcount, readable),
                     SamplesIn.data(), chan, mChan.size(), mSrcType);
 
             mSrcPrepCount = prepcount + readable;
@@ -258,8 +259,8 @@ uint SampleConverter::convert(const void **src, uint *srcframes, void *dst, uint
             break;
         }
 
-        const auto SrcData = al::span<float>{mSrcSamples};
-        const auto DstData = al::span<float>{mDstSamples};
+        const auto SrcData = std::span<float>{mSrcSamples};
+        const auto DstData = std::span<float>{mDstSamples};
         uint DataPosFrac{mFracOffset};
         uint64_t DataSize64{prepcount};
         DataSize64 += readable;
@@ -323,8 +324,8 @@ uint SampleConverter::convert(const void **src, uint *srcframes, void *dst, uint
 
 uint SampleConverter::convertPlanar(const void **src, uint *srcframes, void *const*dst, uint dstframes)
 {
-    const auto srcs = al::span{src, mChan.size()};
-    const auto dsts = al::span{dst, mChan.size()};
+    const auto srcs = std::span{src, mChan.size()};
+    const auto dsts = std::span{dst, mChan.size()};
     const uint increment{mIncrement};
     uint NumSrcSamples{*srcframes};
 
@@ -342,9 +343,9 @@ uint SampleConverter::convertPlanar(const void **src, uint *srcframes, void *con
              */
             for(size_t chan{0u};chan < mChan.size();chan++)
             {
-                auto samples = al::span{static_cast<const std::byte*>(srcs[chan]),
+                auto samples = std::span{static_cast<const std::byte*>(srcs[chan]),
                     NumSrcSamples*size_t{mSrcTypeSize}};
-                LoadSamples(al::span{mChan[chan].PrevSamples}.subspan(prepcount, readable),
+                LoadSamples(std::span{mChan[chan].PrevSamples}.subspan(prepcount, readable),
                     samples.data(), 0, 1, mSrcType);
                 srcs[chan] = samples.subspan(size_t{mSrcTypeSize}*readable).data();
             }
@@ -354,8 +355,8 @@ uint SampleConverter::convertPlanar(const void **src, uint *srcframes, void *con
             break;
         }
 
-        const auto SrcData = al::span{mSrcSamples};
-        const auto DstData = al::span{mDstSamples};
+        const auto SrcData = std::span{mSrcSamples};
+        const auto DstData = std::span{mDstSamples};
         uint DataPosFrac{mFracOffset};
         uint64_t DataSize64{prepcount};
         DataSize64 += readable;
@@ -392,7 +393,7 @@ uint SampleConverter::convertPlanar(const void **src, uint *srcframes, void *con
             /* Now resample, and store the result in the output buffer. */
             mResample(&mState, SrcData, DataPosFrac, increment, DstData.first(DstSize));
 
-            auto DstSamples = al::span{static_cast<std::byte*>(dsts[chan]),
+            auto DstSamples = std::span{static_cast<std::byte*>(dsts[chan]),
                 size_t{mDstTypeSize}*dstframes}.subspan(pos*size_t{mDstTypeSize});
             StoreSamples(DstSamples.data(), DstData.first(DstSize), 0, 1, mDstType);
         }
@@ -407,7 +408,7 @@ uint SampleConverter::convertPlanar(const void **src, uint *srcframes, void *con
         const uint srcread{std::min(NumSrcSamples, SrcDataEnd + mSrcPrepCount - prepcount)};
         std::for_each(srcs.begin(), srcs.end(), [this,NumSrcSamples,srcread](const void *&srcref)
         {
-            auto srcspan = al::span{static_cast<const std::byte*>(srcref),
+            auto srcspan = std::span{static_cast<const std::byte*>(srcref),
                 size_t{mSrcTypeSize}*NumSrcSamples};
             srcref = srcspan.subspan(size_t{mSrcTypeSize}*srcread).data();
         });
@@ -424,12 +425,13 @@ uint SampleConverter::convertPlanar(const void **src, uint *srcframes, void *con
 
 void ChannelConverter::convert(const void *src, float *dst, uint frames) const
 {
+    if(!frames)
+        return;
     if(mDstChans == DevFmtMono)
     {
-        const float scale{std::sqrt(1.0f / static_cast<float>(std::popcount(mChanMask)))};
         switch(mSrcType)
         {
-#define HANDLE_FMT(T) case T: Multi2Mono<T>(mChanMask, mSrcStep, scale, {dst, frames}, src); break
+#define HANDLE_FMT(T) case T: Multi2Mono<T>(mChanMask, mSrcStep, {dst, frames}, src); break
         HANDLE_FMT(DevFmtByte);
         HANDLE_FMT(DevFmtUByte);
         HANDLE_FMT(DevFmtShort);

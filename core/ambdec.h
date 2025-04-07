@@ -2,12 +2,11 @@
 #define CORE_AMBDEC_H
 
 #include <array>
-#include <memory>
 #include <optional>
+#include <span>
 #include <string>
 #include <vector>
 
-#include "alspan.h"
 #include "core/ambidefs.h"
 
 /* Helpers to read .ambdec configuration files. */
@@ -43,10 +42,10 @@ struct AmbDecConf {
 
     /* Unused when FreqBands == 1 */
     std::array<float,MaxAmbiOrder+1> LFOrderGain{};
-    al::span<CoeffArray> LFMatrix;
+    std::span<CoeffArray> LFMatrix;
 
     std::array<float,MaxAmbiOrder+1> HFOrderGain{};
-    al::span<CoeffArray> HFMatrix;
+    std::span<CoeffArray> HFMatrix;
 
     ~AmbDecConf();
 

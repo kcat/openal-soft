@@ -34,8 +34,9 @@ public:
     using difference_type = std::ptrdiff_t;
     using pointer = value_type*;
     using reference = value_type&;
-    using iterator_category = std::random_access_iterator_tag;
+    using iterator_category = std::contiguous_iterator_tag;
 
+    constexpr ptr_wrapper() = default;
     explicit constexpr ptr_wrapper(T ptr) : mPointer{ptr} { }
 
     /* NOLINTBEGIN(cppcoreguidelines-pro-bounds-pointer-arithmetic) */

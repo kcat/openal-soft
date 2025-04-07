@@ -26,6 +26,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <functional>
+#include <span>
 #include <string>
 #include <string_view>
 
@@ -77,7 +78,7 @@ void EnumeratePlaybackDevices()
         return;
     }
 
-    auto devids = al::span{devicelist.get(), static_cast<uint>(numdevs)};
+    auto devids = std::span{devicelist.get(), static_cast<uint>(numdevs)};
     auto newlist = std::vector<DeviceEntry>{};
 
     newlist.reserve(devids.size());

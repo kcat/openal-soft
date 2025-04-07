@@ -53,6 +53,7 @@
 #include <new>
 #include <numbers>
 #include <optional>
+#include <span>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -75,7 +76,6 @@
 #include "alconfig.h"
 #include "almalloc.h"
 #include "alnumeric.h"
-#include "alspan.h"
 #include "alstring.h"
 #include "alu.h"
 #include "atomic.h"
@@ -423,7 +423,7 @@ void alc_initconfig()
             names = "(none)";
         else
         {
-            const al::span<const BackendInfo> infos{BackendList};
+            const auto infos = std::span{BackendList};
             names = infos[0].name;
             for(const auto &backend : infos.subspan<1>())
             {
@@ -808,9 +808,9 @@ void ProbeCaptureDeviceList()
 }
 
 
-al::span<const ALCint> SpanFromAttributeList(const ALCint *attribs) noexcept
+auto SpanFromAttributeList(const ALCint *attribs) noexcept -> std::span<const ALCint>
 {
-    al::span<const ALCint> attrSpan;
+    auto attrSpan = std::span<const ALCint>{};
     if(attribs)
     {
         const ALCint *attrEnd{attribs};
@@ -1090,7 +1090,7 @@ inline void UpdateClockBase(al::Device *device)
  * Updates device parameters according to the attribute list (caller is
  * responsible for holding the list lock).
  */
-auto UpdateDeviceParams(al::Device *device, const al::span<const int> attrList) -> ALCenum
+auto UpdateDeviceParams(al::Device *device, const std::span<const int> attrList) -> ALCenum
 {
     if(attrList.empty() && device->Type == DeviceType::Loopback)
     {
@@ -1828,7 +1828,7 @@ auto UpdateDeviceParams(al::Device *device, const al::span<const int> attrList) 
                     send.GainLF = 1.0f;
                     send.LFReference = HighPassFreqRef;
                 };
-                const auto sends = al::span{source.Send}.subspan(num_sends);
+                const auto sends = std::span{source.Send}.subspan(num_sends);
                 std::for_each(sends.begin(), sends.end(), clear_send);
 
                 source.mPropsDirty = true;
@@ -1839,13 +1839,13 @@ auto UpdateDeviceParams(al::Device *device, const al::span<const int> attrList) 
         auto reset_voice = [device,num_sends,context](Voice *voice)
         {
             /* Clear extraneous property set sends. */
-            const auto sendparams = al::span{voice->mProps.Send}.subspan(num_sends);
+            const auto sendparams = std::span{voice->mProps.Send}.subspan(num_sends);
             std::fill(sendparams.begin(), sendparams.end(), VoiceProps::SendData{});
 
             std::fill(voice->mSend.begin()+num_sends, voice->mSend.end(), Voice::TargetData{});
             auto clear_wetparams = [num_sends](Voice::ChannelData &chandata)
             {
-                const auto wetparams = al::span{chandata.mWetParams}.subspan(num_sends);
+                const auto wetparams = std::span{chandata.mWetParams}.subspan(num_sends);
                 std::fill(wetparams.begin(), wetparams.end(), SendParams{});
             };
             std::for_each(voice->mChans.begin(), voice->mChans.end(), clear_wetparams);
@@ -1875,7 +1875,7 @@ auto UpdateDeviceParams(al::Device *device, const al::span<const int> attrList) 
         UpdateAllEffectSlotProps(context);
         UpdateAllSourceProps(context);
     };
-    auto ctxspan = al::span{*device->mContexts.load()};
+    auto ctxspan = std::span{*device->mContexts.load()};
     std::for_each(ctxspan.begin(), ctxspan.end(), reset_context);
     mixer_mode.leave();
 
@@ -1904,7 +1904,7 @@ auto UpdateDeviceParams(al::Device *device, const al::span<const int> attrList) 
  * Updates device parameters as above, and also first clears the disconnected
  * status, if set.
  */
-auto ResetDeviceParams(al::Device *device, const al::span<const int> attrList) -> bool
+auto ResetDeviceParams(al::Device *device, const std::span<const int> attrList) -> bool
 {
     /* If the device was disconnected, reset it since we're opened anew. */
     if(!device->Connected.load(std::memory_order_relaxed)) UNLIKELY
@@ -2179,7 +2179,7 @@ ALC_API auto ALC_APIENTRY alcGetString(ALCdevice *Device, ALCenum param) noexcep
 }
 
 namespace {
-auto GetIntegerv(al::Device *device, ALCenum param, const al::span<int> values) -> size_t
+auto GetIntegerv(al::Device *device, ALCenum param, const std::span<int> values) -> size_t
 {
     if(values.empty())
     {
@@ -2517,7 +2517,7 @@ ALC_API void ALC_APIENTRY alcGetInteger64vSOFT(ALCdevice *device, ALCenum pname,
         alcSetError(dev.get(), ALC_INVALID_VALUE);
         return;
     }
-    const auto valuespan = al::span{values, static_cast<uint>(size)};
+    const auto valuespan = std::span{values, static_cast<uint>(size)};
     if(!dev || dev->Type == DeviceType::Capture)
     {
         auto ivals = std::vector<int>(valuespan.size());

@@ -26,6 +26,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <poll.h>
+#include <span>
 #include <system_error>
 #include <thread>
 #include <vector>
@@ -89,7 +90,7 @@ int SndioPlayback::mixerProc()
     while(!mKillNow.load(std::memory_order_acquire)
         && mDevice->Connected.load(std::memory_order_acquire))
     {
-        al::span<std::byte> buffer{mBuffer};
+        auto buffer = std::span{mBuffer};
 
         mDevice->renderSamples(buffer.data(), static_cast<uint>(buffer.size() / frameSize),
             frameStep);
@@ -348,7 +349,7 @@ int SndioCapture::recordProc()
             continue;
 
         auto data = mRing->getWriteVector();
-        al::span<std::byte> buffer{data[0].buf, data[0].len*frameSize};
+        auto buffer = std::span{data[0].buf, data[0].len*frameSize};
         while(!buffer.empty())
         {
             size_t got{sio_read(mSndHandle, buffer.data(), buffer.size())};

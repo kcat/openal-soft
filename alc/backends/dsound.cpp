@@ -38,12 +38,12 @@
 #include <cstdio>
 #include <cstdlib>
 #include <memory.h>
+#include <span>
 #include <string>
 #include <thread>
 #include <vector>
 
 #include "alnumeric.h"
-#include "alspan.h"
 #include "althrd_setname.h"
 #include "comptr.h"
 #include "core/device.h"
@@ -129,11 +129,11 @@ struct DevMap {
 std::vector<DevMap> PlaybackDevices;
 std::vector<DevMap> CaptureDevices;
 
-bool checkName(const al::span<DevMap> list, const std::string &name)
+bool checkName(const std::span<DevMap> list, const std::string &name)
 {
     auto match_name = [&name](const DevMap &entry) -> bool
     { return entry.name == name; };
-    return std::find_if(list.cbegin(), list.cend(), match_name) != list.cend();
+    return std::find_if(list.begin(), list.end(), match_name) != list.end();
 }
 
 BOOL CALLBACK DSoundEnumDevices(GUID *guid, const WCHAR *desc, const WCHAR*, void *data) noexcept

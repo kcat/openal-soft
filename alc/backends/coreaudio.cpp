@@ -27,6 +27,7 @@
 #include <functional>
 #include <memory>
 #include <optional>
+#include <span>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -526,7 +527,7 @@ bool CoreAudioPlayback::reset()
 
     struct ChannelMap {
         DevFmtChannels fmt;
-        al::span<const AudioChannelLabel> map;
+        std::span<const AudioChannelLabel> map;
         bool is_51rear;
     };
 
@@ -556,7 +557,7 @@ bool CoreAudioPlayback::reset()
                 kAudioUnitScope_Output, OutputElement, layout, &propSize);
             if(err == noErr)
             {
-                auto descs = al::span{std::data(layout->mChannelDescriptions),
+                auto descs = std::span{std::data(layout->mChannelDescriptions),
                     layout->mNumberChannelDescriptions};
                 auto labels = std::vector<AudioChannelLayoutTag>(descs.size());
 

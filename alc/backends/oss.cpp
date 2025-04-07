@@ -34,6 +34,7 @@
 #include <cstring>
 #include <exception>
 #include <memory>
+#include <span>
 #include <string>
 #include <string_view>
 #include <system_error>
@@ -304,7 +305,7 @@ int OSSPlayback::mixerProc()
             continue;
         }
 
-        al::span write_buf{mMixData};
+        auto write_buf = std::span{mMixData};
         mDevice->renderSamples(write_buf.data(), static_cast<uint>(write_buf.size()/frame_size),
             frame_step);
         while(!write_buf.empty() && !mKillNow.load(std::memory_order_acquire))

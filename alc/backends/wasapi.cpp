@@ -56,6 +56,7 @@
 #include <future>
 #include <memory>
 #include <mutex>
+#include <span>
 #include <string>
 #include <string_view>
 #include <thread>
@@ -63,7 +64,6 @@
 
 #include "alc/alconfig.h"
 #include "alnumeric.h"
-#include "alspan.h"
 #include "alstring.h"
 #include "althrd_setname.h"
 #include "comptr.h"
@@ -259,7 +259,7 @@ public:
         }
     }
 
-    void setBlob(const al::span<BYTE> data)
+    void setBlob(const std::span<BYTE> data)
     {
         if constexpr(sizeof(size_t) > sizeof(ULONG))
             alassert(data.size() <= std::numeric_limits<ULONG>::max());
@@ -286,10 +286,10 @@ struct DevMap {
 };
 DevMap::~DevMap() = default;
 
-bool checkName(const al::span<DevMap> list, const std::string_view name)
+bool checkName(const std::span<DevMap> list, const std::string_view name)
 {
     auto match_name = [name](const DevMap &entry) -> bool { return entry.name == name; };
-    return std::find_if(list.cbegin(), list.cend(), match_name) != list.cend();
+    return std::find_if(list.begin(), list.end(), match_name) != list.end();
 }
 
 
@@ -1119,9 +1119,9 @@ void TraceFormat(const std::string_view msg, const WAVEFORMATEX *format)
  * half volume. Essentially converting mono to stereo.
  */
 template<typename T>
-void DuplicateSamples(al::span<BYTE> insamples, size_t step)
+void DuplicateSamples(std::span<BYTE> insamples, size_t step)
 {
-    auto samples = al::span{reinterpret_cast<T*>(insamples.data()), insamples.size()/sizeof(T)};
+    auto samples = std::span{reinterpret_cast<T*>(insamples.data()), insamples.size()/sizeof(T)};
     if constexpr(std::is_floating_point_v<T>)
     {
         for(size_t i{0};i < samples.size();i+=step)
@@ -1150,7 +1150,7 @@ void DuplicateSamples(al::span<BYTE> insamples, size_t step)
     }
 }
 
-void DuplicateSamples(al::span<BYTE> insamples, DevFmtType sampletype, size_t step)
+void DuplicateSamples(std::span<BYTE> insamples, DevFmtType sampletype, size_t step)
 {
     switch(sampletype)
     {
@@ -1323,7 +1323,7 @@ FORCE_ALIGN void WasapiPlayback::mixerProc(PlainDevice &audio)
                 if(mResampler)
                 {
                     auto dlock = std::lock_guard{mMutex};
-                    auto dst = al::span{buffer, size_t{len}*frame_size};
+                    auto dst = std::span{buffer, size_t{len}*frame_size};
                     for(UINT32 done{0};done < len;)
                     {
                         if(mBufferFilled == 0)
@@ -1350,7 +1350,7 @@ FORCE_ALIGN void WasapiPlayback::mixerProc(PlainDevice &audio)
 
                 if(mMonoUpsample)
                 {
-                    DuplicateSamples(al::span{buffer, size_t{len}*frame_size}, mDevice->FmtType,
+                    DuplicateSamples(std::span{buffer, size_t{len}*frame_size}, mDevice->FmtType,
                         mFormat.Format.nChannels);
                 }
 
@@ -1656,18 +1656,17 @@ auto WasapiPlayback::openProxy(const std::string_view name, DeviceHelper &helper
     if(!name.empty())
     {
         auto devlock = DeviceListLock{gDeviceList};
-        auto list = al::span{devlock.getPlaybackList()};
-        auto iter = std::find_if(list.cbegin(), list.cend(),
-            [name](const DevMap &entry) -> bool
-            { return entry.name == name || al::case_compare(entry.endpoint_guid, name) == 0; });
-        if(iter == list.cend())
+        const auto list = std::span{devlock.getPlaybackList()};
+        auto iter = std::find_if(list.begin(), list.end(), [name](const DevMap &entry) -> bool
+        { return entry.name == name || al::case_compare(entry.endpoint_guid, name) == 0; });
+
+        if(iter == list.end())
         {
             const std::wstring wname{utf8_to_wstr(name)};
-            iter = std::find_if(list.cbegin(), list.cend(),
-                [&wname](const DevMap &entry) -> bool
-                { return al::case_compare(entry.devid, wname) == 0; });
+            iter = std::find_if(list.begin(), list.end(), [&wname](const DevMap &entry) -> bool
+            { return al::case_compare(entry.devid, wname) == 0; });
         }
-        if(iter == list.cend())
+        if(iter == list.end())
         {
             WARN("Failed to find device name matching \"{}\"", name);
             return E_NOTFOUND;
@@ -2515,7 +2514,7 @@ FORCE_ALIGN void WasapiCapture::recordProc(IAudioClient *client, IAudioCaptureCl
                 else
                 {
                     const uint framesize{mDevice->frameSizeFromFmt()};
-                    auto dst = al::span{rdata, size_t{numsamples}*framesize};
+                    auto dst = std::span{rdata, size_t{numsamples}*framesize};
                     size_t len1{std::min(data[0].len, size_t{numsamples})};
                     size_t len2{std::min(data[1].len, numsamples-len1)};
 
@@ -2684,18 +2683,18 @@ auto WasapiCapture::openProxy(const std::string_view name, DeviceHelper &helper,
     if(!name.empty())
     {
         auto devlock = DeviceListLock{gDeviceList};
-        auto devlist = al::span{devlock.getCaptureList()};
-        auto iter = std::find_if(devlist.cbegin(), devlist.cend(),
-            [name](const DevMap &entry) -> bool
-            { return entry.name == name || al::case_compare(entry.endpoint_guid, name) == 0; });
-        if(iter == devlist.cend())
+        const auto devlist = std::span{devlock.getCaptureList()};
+        auto iter = std::find_if(devlist.begin(), devlist.end(), [name](const DevMap &entry) -> bool
+        { return entry.name == name || al::case_compare(entry.endpoint_guid, name) == 0; });
+
+        if(iter == devlist.end())
         {
             const std::wstring wname{utf8_to_wstr(name)};
-            iter = std::find_if(devlist.cbegin(), devlist.cend(),
+            iter = std::find_if(devlist.begin(), devlist.end(),
                 [&wname](const DevMap &entry) -> bool
                 { return al::case_compare(entry.devid, wname) == 0; });
         }
-        if(iter == devlist.cend())
+        if(iter == devlist.end())
         {
             WARN("Failed to find device name matching \"{}\"", name);
             return E_NOTFOUND;

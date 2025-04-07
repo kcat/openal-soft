@@ -51,6 +51,7 @@
 #include <deque>
 #include <future>
 #include <mutex>
+#include <span>
 #include <string>
 #include <string_view>
 #include <thread>
@@ -195,9 +196,9 @@ struct ORIOiface : public IUnknown {
     /* A fixed-length span should be passed exactly the same as one pointer.
      * This ensures an appropriately-sized buffer for the driver.
      */
-    STDMETHOD_(void, GetDriverName)(al::span<char,32> name) = 0;
+    STDMETHOD_(void, GetDriverName)(std::span<char,32> name) = 0;
     STDMETHOD_(LONG, GetDriverVersion)() = 0;
-    STDMETHOD_(void, GetErrorMessage)(al::span<char,124> message) = 0;
+    STDMETHOD_(void, GetErrorMessage)(std::span<char,124> message) = 0;
     STDMETHOD_(ORIOError, Start)() = 0;
     STDMETHOD_(ORIOError, Stop)() = 0;
     STDMETHOD_(ORIOError, GetChannels)(LONG *numInput, LONG *numOutput) = 0;

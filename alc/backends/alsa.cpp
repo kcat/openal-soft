@@ -31,6 +31,7 @@
 #include <exception>
 #include <memory>
 #include <mutex>
+#include <span>
 #include <string>
 #include <string_view>
 #include <thread>
@@ -1069,7 +1070,7 @@ void AlsaCapture::captureSamples(std::byte *buffer, uint samples)
         return;
     }
 
-    const auto outspan = al::span{buffer,
+    const auto outspan = std::span{buffer,
         static_cast<size_t>(snd_pcm_frames_to_bytes(mPcmHandle, samples))};
     auto outiter = outspan.begin();
     mLastAvail -= samples;

@@ -35,6 +35,7 @@
 #include <limits>
 #include <mutex>
 #include <optional>
+#include <span>
 #include <string>
 #include <string_view>
 #include <sys/types.h>
@@ -43,7 +44,6 @@
 
 #include "alc/alconfig.h"
 #include "alnumeric.h"
-#include "alspan.h"
 #include "base.h"
 #include "core/devformat.h"
 #include "core/device.h"
@@ -292,10 +292,10 @@ struct DevMap {
     uint32_t index{};
 };
 
-bool checkName(const al::span<const DevMap> list, const std::string &name)
+bool checkName(const std::span<const DevMap> list, const std::string_view name)
 {
-    auto match_name = [&name](const DevMap &entry) -> bool { return entry.name == name; };
-    return std::find_if(list.cbegin(), list.cend(), match_name) != list.cend();
+    auto match_name = [name](const DevMap &entry) -> bool { return entry.name == name; };
+    return std::find_if(list.begin(), list.end(), match_name) != list.end();
 }
 
 std::vector<DevMap> PlaybackDevices;
@@ -1146,7 +1146,7 @@ struct PulseCapture final : public BackendBase {
 
     std::optional<std::string> mDeviceId{std::nullopt};
 
-    al::span<const std::byte> mCapBuffer;
+    std::span<const std::byte> mCapBuffer;
     size_t mHoleLength{0};
     size_t mPacketLength{0};
 
@@ -1319,7 +1319,7 @@ void PulseCapture::stop()
 
 void PulseCapture::captureSamples(std::byte *buffer, uint samples)
 {
-    al::span<std::byte> dstbuf{buffer, samples * pa_frame_size(&mSpec)};
+    auto dstbuf = std::span{buffer, samples * pa_frame_size(&mSpec)};
 
     /* Capture is done in fragment-sized chunks, so we loop until we get all
      * that's available.

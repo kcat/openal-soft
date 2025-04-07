@@ -1,13 +1,11 @@
 #ifndef COMMON_VECMAT_H
 #define COMMON_VECMAT_H
 
-#include <algorithm>
 #include <array>
 #include <cmath>
 #include <cstddef>
 #include <limits>
-
-#include "alspan.h"
+#include <span>
 
 
 namespace alu {
@@ -93,9 +91,9 @@ public:
     constexpr auto operator=(Matrix&&) noexcept -> Matrix& = default;
 
     [[nodiscard]] constexpr auto operator[](std::size_t idx) noexcept
-    { return al::span<float,4>{&mVals[idx*4], 4}; }
+    { return std::span<float,4>{&mVals[idx*4], 4}; }
     [[nodiscard]] constexpr auto operator[](std::size_t idx) const noexcept
-    { return al::span<const float,4>{&mVals[idx*4], 4}; }
+    { return std::span<const float,4>{&mVals[idx*4], 4}; }
 
     [[nodiscard]] static constexpr auto Identity() noexcept -> Matrix
     {

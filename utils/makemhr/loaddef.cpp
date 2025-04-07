@@ -25,6 +25,7 @@
 
 #include <algorithm>
 #include <bit>
+#include <cassert>
 #include <cctype>
 #include <cmath>
 #include <cstdarg>

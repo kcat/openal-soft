@@ -79,7 +79,7 @@ constexpr BitReverser<8> BitReverser8{};
 constexpr BitReverser<9> BitReverser9{};
 constexpr BitReverser<10> BitReverser10{};
 constexpr BitReverser<11> BitReverser11{};
-constexpr std::array<al::span<const ushort2>,12> gBitReverses{{
+constexpr std::array<std::span<const ushort2>,12> gBitReverses{{
     {}, {},
     BitReverser2.mData,
     BitReverser3.mData,
@@ -111,7 +111,7 @@ constexpr std::array<std::complex<T>,gBitReverses.size()-1> gArgAngle{{
 
 } // namespace
 
-void complex_fft(const al::span<std::complex<double>> buffer, const double sign)
+void complex_fft(const std::span<std::complex<double>> buffer, const double sign)
 {
     const std::size_t fftsize{buffer.size()};
     /* Get the number of bits used for indexing. Simplifies bit-reversal and
@@ -200,7 +200,7 @@ void complex_fft(const al::span<std::complex<double>> buffer, const double sign)
     }
 }
 
-void complex_hilbert(const al::span<std::complex<double>> buffer)
+void complex_hilbert(const std::span<std::complex<double>> buffer)
 {
     inverse_fft(buffer);
 

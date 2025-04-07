@@ -26,10 +26,10 @@
 #include <array>
 #include <cstdint>
 #include <limits>
+#include <span>
 #include <stdexcept>
 
 #include "alnumeric.h"
-#include "alspan.h"
 
 
 auto RingBuffer::Create(std::size_t sz, std::size_t elem_sz, bool limit_writes) -> RingBufferPtr
@@ -80,7 +80,7 @@ auto RingBuffer::read(void *dest, std::size_t count) noexcept -> std::size_t
     const auto [n1, n2] = (rdend <= mSizeMask+1) ? std::array{to_read, 0_uz}
         : std::array{mSizeMask+1 - read_idx, rdend&mSizeMask};
 
-    auto dstbytes = al::span{static_cast<std::byte*>(dest), count*mElemSize};
+    auto dstbytes = std::span{static_cast<std::byte*>(dest), count*mElemSize};
     auto outiter = std::copy_n(mBuffer.begin() + ptrdiff_t(read_idx*mElemSize), n1*mElemSize,
         dstbytes.begin());
     if(n2 > 0)
@@ -103,7 +103,7 @@ auto RingBuffer::peek(void *dest, std::size_t count) const noexcept -> std::size
     const auto [n1, n2] = (rdend <= mSizeMask+1) ? std::array{to_read, 0_uz}
         : std::array{mSizeMask+1 - read_idx, rdend&mSizeMask};
 
-    auto dstbytes = al::span{static_cast<std::byte*>(dest), count*mElemSize};
+    auto dstbytes = std::span{static_cast<std::byte*>(dest), count*mElemSize};
     auto outiter = std::copy_n(mBuffer.begin() + ptrdiff_t(read_idx*mElemSize), n1*mElemSize,
         dstbytes.begin());
     if(n2 > 0)
@@ -125,10 +125,10 @@ auto RingBuffer::write(const void *src, std::size_t count) noexcept -> std::size
     const auto [n1, n2] = (wrend <= mSizeMask+1) ? std::array{to_write, 0_uz}
         : std::array{mSizeMask+1 - write_idx, wrend&mSizeMask};
 
-    auto srcbytes = al::span{static_cast<const std::byte*>(src), count*mElemSize};
-    std::copy_n(srcbytes.cbegin(), n1*mElemSize, mBuffer.begin() + ptrdiff_t(write_idx*mElemSize));
+    auto srcbytes = std::span{static_cast<const std::byte*>(src), count*mElemSize};
+    std::copy_n(srcbytes.begin(), n1*mElemSize, mBuffer.begin() + ptrdiff_t(write_idx*mElemSize));
     if(n2 > 0)
-        std::copy_n(srcbytes.cbegin() + ptrdiff_t(n1*mElemSize), n2*mElemSize, mBuffer.begin());
+        std::copy_n(srcbytes.begin() + ptrdiff_t(n1*mElemSize), n2*mElemSize, mBuffer.begin());
     mWriteCount.store(w+n1+n2, std::memory_order_release);
     return to_write;
 }

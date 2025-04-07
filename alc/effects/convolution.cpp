@@ -375,7 +375,7 @@ void ConvolutionState::deviceUpdate(const DeviceBase *device, const BufferStorag
         {
             auto restmp = al::span{ressamples}.subspan(resampledCount, buffer->mSampleLen);
             std::copy(bufsamples.cbegin(), bufsamples.cend(), restmp.begin());
-            resampler.process(restmp, al::span{ressamples}.first(resampledCount));
+            resampler.process(restmp, std::span{ressamples}.first(resampledCount));
         }
         else
             std::copy(bufsamples.cbegin(), bufsamples.cend(), ressamples.begin());
@@ -400,7 +400,7 @@ void ConvolutionState::deviceUpdate(const DeviceBase *device, const BufferStorag
             auto iter = std::copy(sampleseg.cbegin(), sampleseg.cend(), fftbuffer.begin());
             done += todo;
             std::fill(iter, fftbuffer.end(), std::complex<double>{});
-            forward_fft(al::span{fftbuffer});
+            forward_fft(std::span{fftbuffer});
 
             /* Convert to, and pack in, a float buffer for PFFFT. Note that the
              * first bin stores the real component of the half-frequency bin in

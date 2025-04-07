@@ -163,21 +163,21 @@ void PPhaseResampler::init(const uint srcRate, const uint dstRate)
 
 // Perform the upsample-filter-downsample resampling operation using a
 // polyphase filter implementation.
-void PPhaseResampler::process(const al::span<const double> in, const al::span<double> out) const
+void PPhaseResampler::process(const std::span<const double> in, const std::span<double> out) const
 {
     if(out.empty()) UNLIKELY
         return;
 
     // Handle in-place operation.
     auto workspace = std::vector<double>{};
-    auto work = al::span{out};
+    auto work = std::span{out};
     if(work.data() == in.data()) UNLIKELY
     {
         workspace.resize(out.size());
         work = workspace;
     }
 
-    const auto f = al::span<const double>{mF};
+    const auto f = std::span<const double>{mF};
     const auto p = size_t{mP};
     const auto q = size_t{mQ};
     const auto m = size_t{mM};
@@ -217,5 +217,5 @@ void PPhaseResampler::process(const al::span<const double> in, const al::span<do
     });
     // Clean up after in-place operation.
     if(work.data() != out.data())
-        std::copy(work.cbegin(), work.cend(), out.begin());
+        std::copy(work.begin(), work.end(), out.begin());
 }

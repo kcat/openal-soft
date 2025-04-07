@@ -66,6 +66,7 @@
 
 #include <algorithm>
 #include <atomic>
+#include <cassert>
 #include <chrono>
 #include <cmath>
 #include <complex>
@@ -74,7 +75,6 @@
 #include <cstdlib>
 #include <cstring>
 #include <fstream>
-#include <functional>
 #include <iostream>
 #include <limits>
 #include <memory>

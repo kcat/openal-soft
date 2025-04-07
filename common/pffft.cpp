@@ -67,12 +67,12 @@
 #include <cstring>
 #include <new>
 #include <numbers>
+#include <span>
 #include <utility>
 #include <vector>
 
 #include "almalloc.h"
 #include "alnumeric.h"
-#include "alspan.h"
 #include "fmt/core.h"
 #include "fmt/ranges.h"
 #include "opthelpers.h"
@@ -350,7 +350,7 @@ force_inline void vcplxmulconj(v4sf &ar, v4sf &ai, v4sf br, v4sf bi) noexcept
 
 #if !defined(PFFFT_SIMD_DISABLE)
 
-inline void assertv4(const al::span<const float,4> v_f [[maybe_unused]],
+inline void assertv4(const std::span<const float,4> v_f [[maybe_unused]],
     const float f0 [[maybe_unused]], const float f1 [[maybe_unused]],
     const float f2 [[maybe_unused]], const float f3 [[maybe_unused]])
 { assert(v_f[0] == f0 && v_f[1] == f1 && v_f[2] == f2 && v_f[3] == f3); }
@@ -1199,7 +1199,7 @@ void radb5_ps(const size_t ido, const size_t l1, const v4sf *RESTRICT cc, v4sf *
 } /* radb5 */
 
 NOINLINE v4sf *rfftf1_ps(const size_t n, const v4sf *input_readonly, v4sf *work1, v4sf *work2,
-    const float *wa, const al::span<const uint,15> ifac)
+    const float *wa, const std::span<const uint,15> ifac)
 {
     assert(work1 != work2);
 
@@ -1251,7 +1251,7 @@ NOINLINE v4sf *rfftf1_ps(const size_t n, const v4sf *input_readonly, v4sf *work1
 } /* rfftf1 */
 
 NOINLINE v4sf *rfftb1_ps(const size_t n, const v4sf *input_readonly, v4sf *work1, v4sf *work2,
-    const float *wa, const al::span<const uint,15> ifac)
+    const float *wa, const std::span<const uint,15> ifac)
 {
     assert(work1 != work2);
 
@@ -1303,7 +1303,7 @@ NOINLINE v4sf *rfftb1_ps(const size_t n, const v4sf *input_readonly, v4sf *work1
 }
 
 v4sf *cfftf1_ps(const size_t n, const v4sf *input_readonly, v4sf *work1, v4sf *work2,
-    const float *wa, const al::span<const uint,15> ifac, const float fsign)
+    const float *wa, const std::span<const uint,15> ifac, const float fsign)
 {
     assert(work1 != work2);
 
@@ -1354,7 +1354,7 @@ v4sf *cfftf1_ps(const size_t n, const v4sf *input_readonly, v4sf *work1, v4sf *w
 }
 
 
-uint decompose(const uint n, const al::span<uint,15> ifac, const al::span<const uint,4> ntryh)
+uint decompose(const uint n, const std::span<uint,15> ifac, const std::span<const uint,4> ntryh)
 {
     uint nl{n}, nf{0};
     for(const uint ntry : ntryh)
@@ -1383,7 +1383,7 @@ uint decompose(const uint n, const al::span<uint,15> ifac, const al::span<const 
     return nf;
 }
 
-void rffti1_ps(const uint n, float *wa, const al::span<uint,15> ifac)
+void rffti1_ps(const uint n, float *wa, const std::span<uint,15> ifac)
 {
     static constexpr std::array ntryh{4u,2u,3u,5u};
 
@@ -1417,7 +1417,7 @@ void rffti1_ps(const uint n, float *wa, const al::span<uint,15> ifac)
     }
 } /* rffti1 */
 
-void cffti1_ps(const uint n, float *wa, const al::span<uint,15> ifac)
+void cffti1_ps(const uint n, float *wa, const std::span<uint,15> ifac)
 {
     static constexpr std::array ntryh{5u,3u,4u,2u};
 
@@ -1467,7 +1467,7 @@ struct PFFFT_Setup {
     pffft_transform_t transform{};
 
     float *twiddle{}; /* N/4 elements */
-    al::span<v4sf> e; /* N/4*3 elements */
+    std::span<v4sf> e; /* N/4*3 elements */
 
     alignas(V4sfAlignment) std::byte end;
 };
@@ -1490,7 +1490,7 @@ PFFFTSetupPtr pffft_new_setup(unsigned int N, pffft_transform_t transform)
     const size_t storelen{std::max(offsetof(PFFFT_Setup, end) + 2_zu*Ncvec*sizeof(v4sf),
         sizeof(PFFFT_Setup))};
     auto storage = static_cast<gsl::owner<std::byte*>>(::operator new[](storelen, V4sfAlignVal));
-    al::span extrastore{&storage[offsetof(PFFFT_Setup, end)], 2_zu*Ncvec*sizeof(v4sf)};
+    auto extrastore = std::span{&storage[offsetof(PFFFT_Setup, end)], 2_zu*Ncvec*sizeof(v4sf)};
 
     PFFFTSetupPtr s{::new(storage) PFFFT_Setup{}};
     s->N = N;

@@ -3,13 +3,13 @@
 
 #include <algorithm>
 #include <cstddef>
-#include <iterator>
 #include <memory>
 #include <new>
+#include <span>
 #include <type_traits>
 
 #include "almalloc.h"
-#include "alspan.h"
+
 
 namespace al {
 
@@ -17,7 +17,7 @@ namespace al {
  * trivially destructible.
  */
 template<typename T, size_t alignment, bool = std::is_trivially_destructible<T>::value>
-struct alignas(alignment) FlexArrayStorage : al::span<T> {
+struct alignas(alignment) FlexArrayStorage : std::span<T> {
     /* NOLINTBEGIN(bugprone-sizeof-expression) clang-tidy warns about the
      * sizeof(T) being suspicious when T is a pointer type, which it will be
      * for flexible arrays of pointers.
@@ -31,7 +31,7 @@ struct alignas(alignment) FlexArrayStorage : al::span<T> {
      * the last in the whole parent chain.
      */
     explicit FlexArrayStorage(size_t size) noexcept(std::is_nothrow_constructible_v<T>)
-        : al::span<T>{::new(static_cast<void*>(this+1)) T[size], size}
+        : std::span<T>{::new(static_cast<void*>(this+1)) T[size], size}
     { }
     /* NOLINTEND(cppcoreguidelines-pro-bounds-pointer-arithmetic) */
     ~FlexArrayStorage() = default;
@@ -41,13 +41,13 @@ struct alignas(alignment) FlexArrayStorage : al::span<T> {
 };
 
 template<typename T, size_t alignment>
-struct alignas(alignment) FlexArrayStorage<T,alignment,false> : al::span<T> {
+struct alignas(alignment) FlexArrayStorage<T,alignment,false> : std::span<T> {
     static constexpr size_t Sizeof(size_t count, size_t base=0u) noexcept
     { return sizeof(FlexArrayStorage) + sizeof(T)*count + base; }
 
     /* NOLINTBEGIN(cppcoreguidelines-pro-bounds-pointer-arithmetic) */
     explicit FlexArrayStorage(size_t size) noexcept(std::is_nothrow_constructible_v<T>)
-        : al::span<T>{::new(static_cast<void*>(this+1)) T[size], size}
+        : std::span<T>{::new(static_cast<void*>(this+1)) T[size], size}
     { }
     /* NOLINTEND(cppcoreguidelines-pro-bounds-pointer-arithmetic) */
     ~FlexArrayStorage() { std::destroy(this->begin(), this->end()); }
@@ -74,12 +74,10 @@ struct FlexArray {
     using const_reference = const T&;
 
     static constexpr std::size_t StorageAlign{std::max(alignof(T), Align)};
-    using Storage_t_ = FlexArrayStorage<element_type,std::max(alignof(al::span<T>), StorageAlign)>;
+    using Storage_t_ = FlexArrayStorage<element_type,std::max(alignof(std::span<T>),StorageAlign)>;
 
     using iterator = typename Storage_t_::iterator;
-    using const_iterator = typename Storage_t_::const_iterator;
     using reverse_iterator = typename Storage_t_::reverse_iterator;
-    using const_reverse_iterator = typename Storage_t_::const_reverse_iterator;
 
     const Storage_t_ mStore;
 
@@ -109,6 +107,11 @@ struct FlexArray {
     [[nodiscard]] auto back() noexcept -> reference { return mStore.back(); }
     [[nodiscard]] auto back() const noexcept -> const_reference { return mStore.back(); }
 
+    /* FIXME: We want to act like a container here, rather than a container
+     * view. A const FlexArray should return const iterators, but std::span
+     * doesn't have those until C++23. So for now, don't bother with them.
+     */
+#if 0
     [[nodiscard]] auto begin() noexcept -> iterator { return mStore.begin(); }
     [[nodiscard]] auto begin() const noexcept -> const_iterator { return mStore.cbegin(); }
     [[nodiscard]] auto cbegin() const noexcept -> const_iterator { return mStore.cbegin(); }
@@ -122,6 +125,13 @@ struct FlexArray {
     [[nodiscard]] auto rend() noexcept -> reverse_iterator { return mStore.rend(); }
     [[nodiscard]] auto rend() const noexcept -> const_reverse_iterator { return mStore.crend(); }
     [[nodiscard]] auto crend() const noexcept -> const_reverse_iterator { return mStore.crend(); }
+#else
+    [[nodiscard]] auto begin() const noexcept -> iterator { return mStore.begin(); }
+    [[nodiscard]] auto end() const noexcept -> iterator { return mStore.end(); }
+
+    [[nodiscard]] auto rbegin() const noexcept -> reverse_iterator { return mStore.rbegin(); }
+    [[nodiscard]] auto rend() const noexcept -> reverse_iterator { return mStore.rend(); }
+#endif
 
     gsl::owner<void*> operator new(size_t, FamCount count)
     { return ::operator new[](Sizeof(count), std::align_val_t{alignof(FlexArray)}); }

@@ -14,8 +14,8 @@
 #include <cmath>
 #include <cstddef>
 #include <numbers>
+#include <span>
 
-#include "alspan.h"
 #include "opthelpers.h"
 
 
@@ -51,7 +51,7 @@ struct SIMDALIGN PhaseShifterT {
         }
     }
 
-    void process(const al::span<float> dst, al::span<const float> src) const;
+    void process(const std::span<float> dst, std::span<const float> src) const;
 
 private:
 #if HAVE_NEON
@@ -79,12 +79,12 @@ private:
 
 template<std::size_t S>
 NOINLINE inline
-void PhaseShifterT<S>::process(const al::span<float> dst, al::span<const float> src) const
+void PhaseShifterT<S>::process(const std::span<float> dst, std::span<const float> src) const
 {
 #if HAVE_SSE_INTRINSICS
     if(const std::size_t todo{dst.size()>>2})
     {
-        auto out = al::span{reinterpret_cast<__m128*>(dst.data()), todo};
+        auto out = std::span{reinterpret_cast<__m128*>(dst.data()), todo};
         std::generate(out.begin(), out.end(), [&src,this]
         {
             auto r0 = _mm_setzero_ps();
@@ -142,7 +142,7 @@ void PhaseShifterT<S>::process(const al::span<float> dst, al::span<const float> 
 
     if(const std::size_t todo{dst.size()>>2})
     {
-        auto out = al::span{reinterpret_cast<float32x4_t*>(dst.data()), todo};
+        auto out = std::span{reinterpret_cast<float32x4_t*>(dst.data()), todo};
         std::generate(out.begin(), out.end(), [&src,this]
         {
             auto r0 = vdupq_n_f32(0.0f);

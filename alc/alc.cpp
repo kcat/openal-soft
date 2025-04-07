@@ -102,6 +102,7 @@
 #include "export_list.h"
 #include "flexarray.h"
 #include "fmt/core.h"
+#include "fmt/ranges.h"
 #include "inprogext.h"
 #include "intrusive_ptr.h"
 #include "opthelpers.h"
@@ -418,20 +419,10 @@ void alc_initconfig()
     TRACE("Initializing library v{}-{} {}", ALSOFT_VERSION, ALSOFT_GIT_COMMIT_HASH,
         ALSOFT_GIT_BRANCH);
     {
-        std::string names;
-        if(std::size(BackendList) < 1)
-            names = "(none)";
-        else
-        {
-            const auto infos = std::span{BackendList};
-            names = infos[0].name;
-            for(const auto &backend : infos.subspan<1>())
-            {
-                names += ", ";
-                names += backend.name;
-            }
-        }
-        TRACE("Supported backends: {}", names);
+        auto names = std::array<std::string_view,BackendList.size()>{};
+        std::transform(BackendList.begin(), BackendList.end(), names.begin(),
+            std::mem_fn(&BackendInfo::name));
+        TRACE("Supported backends: {}", fmt::join(names, ", "));
     }
     ReadALConfig();
 

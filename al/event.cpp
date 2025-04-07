@@ -10,6 +10,7 @@
 #include <mutex>
 #include <new>
 #include <optional>
+#include <span>
 #include <string>
 #include <thread>
 #include <tuple>
@@ -22,7 +23,6 @@
 #include "alc/context.h"
 #include "alnumeric.h"
 #include "alsem.h"
-#include "alspan.h"
 #include "alstring.h"
 #include "core/async_event.h"
 #include "core/context.h"
@@ -59,7 +59,7 @@ int EventThread(ALCcontext *context)
 
         auto eventlock = std::lock_guard{context->mEventCbLock};
         const auto enabledevts = context->mEnabledEvts.load(std::memory_order_acquire);
-        auto evt_span = al::span{std::launder(reinterpret_cast<AsyncEvent*>(evt_data.buf)),
+        auto evt_span = std::span{std::launder(reinterpret_cast<AsyncEvent*>(evt_data.buf)),
             evt_data.len};
         for(auto &event : evt_span)
         {
@@ -191,7 +191,7 @@ try {
         context->throw_error(AL_INVALID_VALUE, "NULL pointer");
 
     ContextBase::AsyncEventBitset flags{};
-    for(ALenum evttype : al::span{types, static_cast<uint>(count)})
+    for(const ALenum evttype : std::span{types, static_cast<uint>(count)})
     {
         auto etype = GetEventType(evttype);
         if(!etype)

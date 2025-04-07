@@ -9,6 +9,7 @@
 #include <deque>
 #include <limits>
 #include <numbers>
+#include <span>
 #include <string_view>
 #include <utility>
 
@@ -18,7 +19,6 @@
 
 #include "almalloc.h"
 #include "alnumeric.h"
-#include "alspan.h"
 #include "core/context.h"
 #include "core/voice.h"
 
@@ -904,7 +904,7 @@ private:
         }
     }
 
-    static void eax_get_active_fx_slot_id(const EaxCall& call, const al::span<const GUID> src_ids);
+    static void eax_get_active_fx_slot_id(const EaxCall& call, const std::span<const GUID> srcids);
     static void eax1_get(const EaxCall& call, const EAXBUFFER_REVERBPROPERTIES& props);
     static void eax2_get(const EaxCall& call, const EAX20BUFFERPROPERTIES& props);
     static void eax3_get_obstruction(const EaxCall& call, const EAX30SOURCEPROPERTIES& props);
@@ -961,11 +961,12 @@ private:
     void eax_defer_sends(const EaxCall& call, EaxSends& dst_sends)
     {
         const auto src_sends = call.get_values<const TSrcSend>(EAX_MAX_FXSLOTS);
-        std::for_each(src_sends.cbegin(), src_sends.cend(), TValidator{});
+        std::for_each(src_sends.begin(), src_sends.end(), TValidator{});
         const auto count = src_sends.size();
         const auto index_getter = TIndexGetter{};
 
-        for (auto i = decltype(count){}; i < count; ++i) {
+        for(auto i = decltype(count){};i < count;++i)
+        {
             const auto& src_send = src_sends[i];
             const auto dst_index = index_getter(src_send.guidReceivingFXSlotID);
             auto& dst_send = dst_sends[dst_index];
@@ -986,21 +987,21 @@ private:
     }
 
     template<typename TValidator, size_t TIdCount>
-    void eax_defer_active_fx_slot_id(const EaxCall& call, const al::span<GUID,TIdCount> dst_ids)
+    void eax_defer_active_fx_slot_id(const EaxCall& call, const std::span<GUID,TIdCount> dst_ids)
     {
         const auto src_ids = call.get_values<const GUID>(TIdCount);
-        std::for_each(src_ids.cbegin(), src_ids.cend(), TValidator{});
-        std::uninitialized_copy(src_ids.cbegin(), src_ids.cend(), dst_ids.begin());
+        std::for_each(src_ids.begin(), src_ids.end(), TValidator{});
+        std::uninitialized_copy(src_ids.begin(), src_ids.end(), dst_ids.begin());
     }
 
     template<size_t TIdCount>
-    void eax4_defer_active_fx_slot_id(const EaxCall& call, const al::span<GUID,TIdCount> dst_ids)
+    void eax4_defer_active_fx_slot_id(const EaxCall& call, const std::span<GUID,TIdCount> dst_ids)
     {
         eax_defer_active_fx_slot_id<Eax4ActiveFxSlotIdValidator>(call, dst_ids);
     }
 
     template<size_t TIdCount>
-    void eax5_defer_active_fx_slot_id(const EaxCall& call, const al::span<GUID,TIdCount> dst_ids)
+    void eax5_defer_active_fx_slot_id(const EaxCall& call, const std::span<GUID,TIdCount> dst_ids)
     {
         eax_defer_active_fx_slot_id<Eax5ActiveFxSlotIdValidator>(call, dst_ids);
     }

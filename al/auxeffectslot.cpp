@@ -31,6 +31,7 @@
 #include <memory>
 #include <mutex>
 #include <numeric>
+#include <span>
 #include <stdexcept>
 #include <tuple>
 #include <unordered_map>
@@ -48,7 +49,6 @@
 #include "alc/inprogext.h"
 #include "almalloc.h"
 #include "alnumeric.h"
-#include "alspan.h"
 #include "atomic.h"
 #include "buffer.h"
 #include "core/buffer_storage.h"
@@ -140,7 +140,7 @@ inline auto LookupBuffer(al::Device *device, ALuint id) noexcept -> ALbuffer*
 }
 
 
-void AddActiveEffectSlots(const al::span<ALeffectslot*> auxslots, ALCcontext *context)
+void AddActiveEffectSlots(const std::span<ALeffectslot*> auxslots, ALCcontext *context)
 {
     if(auxslots.empty()) return;
     EffectSlotArray *curarray{context->mActiveAuxSlots.load(std::memory_order_acquire)};
@@ -184,7 +184,7 @@ void AddActiveEffectSlots(const al::span<ALeffectslot*> auxslots, ALCcontext *co
     std::ignore = context->mDevice->waitForMix();
 }
 
-void RemoveActiveEffectSlots(const al::span<ALeffectslot*> auxslots, ALCcontext *context)
+void RemoveActiveEffectSlots(const std::span<ALeffectslot*> auxslots, ALCcontext *context)
 {
     if(auxslots.empty()) return;
     EffectSlotArray *curarray{context->mActiveAuxSlots.load(std::memory_order_acquire)};
@@ -333,7 +333,7 @@ try {
     auto slotlock = std::lock_guard{context->mEffectSlotLock};
     auto *device = context->mALDevice.get();
 
-    const al::span eids{effectslots, static_cast<ALuint>(n)};
+    const auto eids = std::span{effectslots, static_cast<ALuint>(n)};
     if(context->mNumEffectSlots > device->AuxiliaryEffectSlotMax
         || eids.size() > device->AuxiliaryEffectSlotMax-context->mNumEffectSlots)
         context->throw_error(AL_OUT_OF_MEMORY, "Exceeding {} effect slot limit ({} + {})",
@@ -398,7 +398,7 @@ try {
     }
     else
     {
-        const al::span eids{effectslots, static_cast<ALuint>(n)};
+        const auto eids = std::span{effectslots, static_cast<ALuint>(n)};
         std::vector<ALeffectslot*> slots;
         slots.reserve(eids.size());
 
@@ -411,7 +411,7 @@ try {
                 context->throw_error(AL_INVALID_OPERATION, "Deleting in-use effect slot {}", eid);
             return slot;
         };
-        std::transform(eids.cbegin(), eids.cend(), std::back_inserter(slots), lookupslot);
+        std::transform(eids.begin(), eids.end(), std::back_inserter(slots), lookupslot);
 
         /* All effectslots are valid, remove and delete them */
         RemoveActiveEffectSlots(slots, context);

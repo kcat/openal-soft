@@ -1,9 +1,10 @@
 #ifndef EAX_EAX_CALL_INCLUDED
 #define EAX_EAX_CALL_INCLUDED
 
+#include <span>
+
 #include "AL/al.h"
 #include "alnumeric.h"
-#include "alspan.h"
 #include "api.h"
 #include "fx_slot_index.h"
 
@@ -49,7 +50,7 @@ public:
     }
 
     template<typename TValue>
-    [[nodiscard]] auto get_values(size_t max_count) const -> al::span<TValue>
+    [[nodiscard]] auto get_values(size_t max_count) const -> std::span<TValue>
     {
         if(max_count == 0 || mPropertyBufferSize < sizeof(TValue))
             fail_too_small();
@@ -59,7 +60,7 @@ public:
     }
 
     template<typename TValue>
-    [[nodiscard]] auto get_values() const -> al::span<TValue>
+    [[nodiscard]] auto get_values() const -> std::span<TValue>
     {
         return get_values<TValue>(~0_uz);
     }

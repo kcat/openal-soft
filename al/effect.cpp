@@ -30,6 +30,7 @@
 #include <memory>
 #include <mutex>
 #include <numeric>
+#include <span>
 #include <string>
 #include <type_traits>
 #include <unordered_map>
@@ -49,7 +50,6 @@
 #include "alc/inprogext.h"
 #include "almalloc.h"
 #include "alnumeric.h"
-#include "alspan.h"
 #include "alstring.h"
 #include "core/except.h"
 #include "core/logging.h"
@@ -223,7 +223,7 @@ try {
     auto *device = context->mALDevice.get();
     auto effectlock = std::lock_guard{device->EffectLock};
 
-    const al::span eids{effects, static_cast<ALuint>(n)};
+    const auto eids = std::span{effects, static_cast<ALuint>(n)};
     if(!EnsureEffects(device, eids.size()))
         context->throw_error(AL_OUT_OF_MEMORY, "Failed to allocate {} effect{}", n,
             (n==1) ? "" : "s");
@@ -251,7 +251,7 @@ try {
     auto validate_effect = [device](const ALuint eid) -> bool
     { return !eid || LookupEffect(device, eid) != nullptr; };
 
-    const al::span eids{effects, static_cast<ALuint>(n)};
+    const auto eids = std::span{effects, static_cast<ALuint>(n)};
     auto inveffect = std::find_if_not(eids.begin(), eids.end(), validate_effect);
     if(inveffect != eids.end())
         context->throw_error(AL_INVALID_NAME, "Invalid effect ID {}", *inveffect);

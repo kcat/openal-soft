@@ -36,6 +36,7 @@
 #include <mutex>
 #include <numeric>
 #include <optional>
+#include <span>
 #include <stdexcept>
 #include <unordered_map>
 #include <utility>
@@ -50,7 +51,6 @@
 #include "alc/inprogext.h"
 #include "almalloc.h"
 #include "alnumeric.h"
-#include "alspan.h"
 #include "core/device.h"
 #include "core/except.h"
 #include "core/logging.h"
@@ -291,7 +291,7 @@ constexpr auto SanitizeAlignment(FmtType type, ALuint align) noexcept -> ALuint
 
 /** Loads the specified data into the buffer, using the specified format. */
 void LoadData(ALCcontext *context, ALbuffer *ALBuf, ALsizei freq, ALuint size,
-    const FmtChannels DstChannels, const FmtType DstType, const al::span<const std::byte> SrcData,
+    const FmtChannels DstChannels, const FmtType DstType, const std::span<const std::byte> SrcData,
     ALbitfieldSOFT access)
 {
     if(ALBuf->ref.load(std::memory_order_relaxed) != 0 || ALBuf->MappedAccess != 0)
@@ -535,7 +535,7 @@ void PrepareUserPtr(ALCcontext *context [[maybe_unused]], ALbuffer *ALBuf, ALsiz
 #endif
 
     decltype(ALBuf->mDataStorage){}.swap(ALBuf->mDataStorage);
-    ALBuf->mData = al::span{sdata, sdatalen};
+    ALBuf->mData = {sdata, sdatalen};
 
 #if ALSOFT_EAX
     eax_x_ram_clear(*context->mALDevice, *ALBuf);
@@ -686,7 +686,7 @@ try {
     auto *device = context->mALDevice.get();
     auto buflock = std::lock_guard{device->BufferLock};
 
-    const al::span bids{buffers, static_cast<ALuint>(n)};
+    const auto bids = std::span{buffers, static_cast<ALuint>(n)};
     if(!EnsureBuffers(device, bids.size()))
         context->throw_error(AL_OUT_OF_MEMORY, "Failed to allocate {} buffer{}", n,
             (n==1) ? "" : "s");
@@ -721,7 +721,7 @@ try {
             context->throw_error(AL_INVALID_OPERATION, "Deleting in-use buffer {}", bid);
     };
 
-    const al::span bids{buffers, static_cast<ALuint>(n)};
+    const auto bids = std::span{buffers, static_cast<ALuint>(n)};
     std::for_each(bids.begin(), bids.end(), validate_buffer);
 
     /* All good. Delete non-0 buffer IDs. */
@@ -786,7 +786,7 @@ try {
 
     auto bdata = static_cast<const std::byte*>(data);
     LoadData(context, albuf, freq, static_cast<ALuint>(size), usrfmt->channels, usrfmt->type,
-        al::span{bdata, bdata ? static_cast<ALuint>(size) : 0u}, flags);
+        std::span{bdata, bdata ? static_cast<ALuint>(size) : 0u}, flags);
 }
 catch(al::base_exception&) {
 }
@@ -1166,7 +1166,7 @@ try {
     switch(param)
     {
     case AL_LOOP_POINTS_SOFT:
-        auto vals = al::span{values, 2_uz};
+        const auto vals = std::span{values, 2_uz};
         if(albuf->ref.load(std::memory_order_relaxed) != 0)
             context->throw_error(AL_INVALID_OPERATION, "Modifying in-use buffer {}'s loop points",
                 buffer);
@@ -1395,7 +1395,7 @@ try {
     switch(param)
     {
     case AL_LOOP_POINTS_SOFT:
-        auto vals = al::span{values, 2_uz};
+        const auto vals = std::span{values, 2_uz};
         vals[0] = static_cast<ALint>(albuf->mLoopStart);
         vals[1] = static_cast<ALint>(albuf->mLoopEnd);
         return;
@@ -1646,7 +1646,7 @@ try {
 
     /* Validate the buffers. */
     std::unordered_set<ALbuffer*> buflist;
-    for(const ALuint bufid : al::span{buffers, static_cast<ALuint>(n)})
+    for(const ALuint bufid : std::span{buffers, static_cast<ALuint>(n)})
     {
         if(bufid == AL_NONE)
             continue;

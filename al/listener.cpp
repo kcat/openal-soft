@@ -25,6 +25,7 @@
 #include <algorithm>
 #include <cmath>
 #include <mutex>
+#include <span>
 
 #include "AL/al.h"
 #include "AL/alc.h"
@@ -32,7 +33,6 @@
 
 #include "alc/context.h"
 #include "alnumeric.h"
-#include "alspan.h"
 #include "core/except.h"
 #include "core/logging.h"
 #include "direct_defs.h"
@@ -152,7 +152,7 @@ try {
 
     case AL_POSITION:
     case AL_VELOCITY:
-        auto vals = al::span<const float,3>{values, 3_uz};
+        const auto vals = std::span<const float,3>{values, 3_uz};
         alListener3fDirect(context, param, vals[0], vals[1], vals[2]);
         return;
     }
@@ -162,12 +162,12 @@ try {
     switch(param)
     {
     case AL_ORIENTATION:
-        auto vals = al::span<const float,6>{values, 6_uz};
-        if(!std::all_of(vals.cbegin(), vals.cend(), [](float f) { return std::isfinite(f); }))
+        const auto vals = std::span<const float,6>{values, 6_uz};
+        if(!std::all_of(vals.begin(), vals.end(), [](float f) { return std::isfinite(f); }))
             context->throw_error(AL_INVALID_VALUE, "Listener orientation out of range");
         /* AT then UP */
-        std::copy_n(vals.cbegin(), 3, listener.OrientAt.begin());
-        std::copy_n(vals.cbegin()+3, 3, listener.OrientUp.begin());
+        std::copy_n(vals.begin(), 3, listener.OrientAt.begin());
+        std::copy_n(vals.begin()+3, 3, listener.OrientUp.begin());
         CommitAndUpdateProps(context);
         return;
     }
@@ -224,7 +224,7 @@ try {
     if(!values)
         context->throw_error(AL_INVALID_VALUE, "NULL pointer");
 
-    al::span<const ALint> vals;
+    auto vals = std::span<const ALint>{};
     switch(param)
     {
     case AL_POSITION:
@@ -326,7 +326,7 @@ try {
 
     case AL_POSITION:
     case AL_VELOCITY:
-        auto vals = al::span<ALfloat,3>{values, 3_uz};
+        const auto vals = std::span{values, 3_uz};
         alGetListener3fDirect(context, param, &vals[0], &vals[1], &vals[2]);
         return;
     }
@@ -336,10 +336,10 @@ try {
     switch(param)
     {
     case AL_ORIENTATION:
-        al::span<ALfloat,6> vals{values, 6_uz};
+        const auto vals = std::span{values, 6_uz};
         // AT then UP
-        std::copy_n(listener.OrientAt.cbegin(), 3, vals.begin());
-        std::copy_n(listener.OrientUp.cbegin(), 3, vals.begin()+3);
+        auto oiter = std::copy_n(listener.OrientAt.cbegin(), 3, vals.begin());
+        std::copy_n(listener.OrientUp.cbegin(), 3, oiter);
         return;
     }
     context->throw_error(AL_INVALID_ENUM, "Invalid listener float-vector property {:#04x}",
@@ -409,7 +409,7 @@ try {
     {
     case AL_POSITION:
     case AL_VELOCITY:
-        auto vals = al::span<ALint,3>{values, 3_uz};
+        const auto vals = std::span{values, 3_uz};
         alGetListener3iDirect(context, param, &vals[0], &vals[1], &vals[2]);
         return;
     }
@@ -421,10 +421,11 @@ try {
     switch(param)
     {
     case AL_ORIENTATION:
-        auto vals = al::span<ALint,6>{values, 6_uz};
+        const auto vals = std::span{values, 6_uz};
         // AT then UP
-        std::transform(listener.OrientAt.cbegin(), listener.OrientAt.cend(), vals.begin(), f2i);
-        std::transform(listener.OrientUp.cbegin(), listener.OrientUp.cend(), vals.begin()+3, f2i);
+        auto oiter = std::transform(listener.OrientAt.cbegin(), listener.OrientAt.cend(),
+            vals.begin(), f2i);
+        std::transform(listener.OrientUp.cbegin(), listener.OrientUp.cend(), oiter, f2i);
         return;
     }
     context->throw_error(AL_INVALID_ENUM, "Invalid listener integer-vector property {:#04x}",

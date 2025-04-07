@@ -31,6 +31,7 @@
 #include <memory>
 #include <mutex>
 #include <numeric>
+#include <span>
 #include <unordered_map>
 #include <vector>
 
@@ -42,7 +43,6 @@
 #include "alc/device.h"
 #include "almalloc.h"
 #include "alnumeric.h"
-#include "alspan.h"
 #include "core/except.h"
 #include "core/logging.h"
 #include "direct_defs.h"
@@ -369,7 +369,7 @@ try {
     auto *device = context->mALDevice.get();
     auto filterlock = std::lock_guard{device->FilterLock};
 
-    const al::span fids{filters, static_cast<ALuint>(n)};
+    const auto fids = std::span{filters, static_cast<ALuint>(n)};
     if(!EnsureFilters(device, fids.size()))
         context->throw_error(AL_OUT_OF_MEMORY, "Failed to allocate {} filter{}", n,
             (n==1) ? "" : "s");
@@ -397,7 +397,7 @@ try {
     auto validate_filter = [device](const ALuint fid) -> bool
     { return !fid || LookupFilter(device, fid) != nullptr; };
 
-    const al::span fids{filters, static_cast<ALuint>(n)};
+    const auto fids = std::span{filters, static_cast<ALuint>(n)};
     auto invflt = std::find_if_not(fids.begin(), fids.end(), validate_filter);
     if(invflt != fids.end())
         context->throw_error(AL_INVALID_NAME, "Invalid filter ID {}", *invflt);

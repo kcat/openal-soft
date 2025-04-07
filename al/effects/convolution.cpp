@@ -4,13 +4,13 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <span>
 
 #include "AL/al.h"
 
 #include "alc/context.h"
 #include "alc/inprogext.h"
 #include "alnumeric.h"
-#include "alspan.h"
 #include "effects.h"
 
 
@@ -42,12 +42,12 @@ void ConvolutionEffectHandler::SetParamfv(ALCcontext *context, ConvolutionProps 
     switch(param)
     {
     case AL_CONVOLUTION_ORIENTATION_SOFT:
-        auto vals = al::span{values, 6_uz};
-        if(!std::all_of(vals.cbegin(), vals.cend(), finite_checker))
+        const auto vals = std::span{values, 6_uz};
+        if(!std::all_of(vals.begin(), vals.end(), finite_checker))
             context->throw_error(AL_INVALID_VALUE, "Convolution orientation out of range", param);
 
-        std::copy_n(vals.cbegin(), props.OrientAt.size(), props.OrientAt.begin());
-        std::copy_n(vals.cbegin()+3, props.OrientUp.size(), props.OrientUp.begin());
+        std::copy_n(vals.begin(), props.OrientAt.size(), props.OrientAt.begin());
+        std::copy_n(vals.begin()+3, props.OrientUp.size(), props.OrientUp.begin());
         return;
     }
 
@@ -66,9 +66,9 @@ void ConvolutionEffectHandler::GetParamfv(ALCcontext *context, const Convolution
     switch(param)
     {
     case AL_CONVOLUTION_ORIENTATION_SOFT:
-        auto vals = al::span{values, 6_uz};
-        std::copy(props.OrientAt.cbegin(), props.OrientAt.cend(), vals.begin());
-        std::copy(props.OrientUp.cbegin(), props.OrientUp.cend(), vals.begin()+3);
+        const auto vals = std::span{values, 6_uz};
+        const auto oiter = std::copy(props.OrientAt.cbegin(), props.OrientAt.cend(), vals.begin());
+        std::copy(props.OrientUp.cbegin(), props.OrientUp.cend(), oiter);
         return;
     }
 

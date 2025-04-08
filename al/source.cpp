@@ -30,6 +30,7 @@
 #include <cassert>
 #include <chrono>
 #include <cmath>
+#include <concepts>
 #include <cstdint>
 #include <cstdio>
 #include <iterator>
@@ -804,7 +805,7 @@ inline ALsource *LookupSource(ALCcontext *context, ALuint id) noexcept
     return std::to_address(sublist.Sources->begin() + slidx);
 }
 
-auto LookupBuffer = [](al::Device *device, auto id) noexcept -> ALbuffer*
+inline auto LookupBuffer(al::Device *device, std::unsigned_integral auto id) noexcept -> ALbuffer*
 {
     const auto lidx{(id-1) >> 6};
     const auto slidx{(id-1) & 0x3f};
@@ -817,7 +818,7 @@ auto LookupBuffer = [](al::Device *device, auto id) noexcept -> ALbuffer*
     return std::to_address(sublist.Buffers->begin() + static_cast<size_t>(slidx));
 };
 
-auto LookupFilter = [](al::Device *device, auto id) noexcept -> ALfilter*
+inline auto LookupFilter(al::Device *device, std::unsigned_integral auto id) noexcept -> ALfilter*
 {
     const auto lidx{(id-1) >> 6};
     const auto slidx{(id-1) & 0x3f};
@@ -830,7 +831,8 @@ auto LookupFilter = [](al::Device *device, auto id) noexcept -> ALfilter*
     return std::to_address(sublist.Filters->begin() + static_cast<size_t>(slidx));
 };
 
-auto LookupEffectSlot = [](ALCcontext *context, auto id) noexcept -> ALeffectslot*
+inline auto LookupEffectSlot(ALCcontext *context, std::unsigned_integral auto id) noexcept
+    -> ALeffectslot*
 {
     const auto lidx{(id-1) >> 6};
     const auto slidx{(id-1) & 0x3f};
@@ -844,7 +846,8 @@ auto LookupEffectSlot = [](ALCcontext *context, auto id) noexcept -> ALeffectslo
 };
 
 
-auto StereoModeFromEnum = [](auto mode) noexcept -> std::optional<SourceStereo>
+inline auto StereoModeFromEnum(std::signed_integral auto mode) noexcept
+    -> std::optional<SourceStereo>
 {
     switch(mode)
     {
@@ -863,7 +866,8 @@ ALenum EnumFromStereoMode(SourceStereo mode)
     throw std::runtime_error{"Invalid SourceStereo: "+std::to_string(int(mode))};
 }
 
-auto SpatializeModeFromEnum = [](auto mode) noexcept -> std::optional<SpatializeMode>
+inline auto SpatializeModeFromEnum(std::signed_integral auto mode) noexcept
+    -> std::optional<SpatializeMode>
 {
     switch(mode)
     {
@@ -885,7 +889,8 @@ ALenum EnumFromSpatializeMode(SpatializeMode mode)
         int{al::to_underlying(mode)})};
 }
 
-auto DirectModeFromEnum = [](auto mode) noexcept -> std::optional<DirectMode>
+inline auto DirectModeFromEnum(std::signed_integral auto mode) noexcept
+    -> std::optional<DirectMode>
 {
     switch(mode)
     {
@@ -906,7 +911,8 @@ ALenum EnumFromDirectMode(DirectMode mode)
     throw std::runtime_error{fmt::format("Invalid DirectMode: {}", int{al::to_underlying(mode)})};
 }
 
-auto DistanceModelFromALenum = [](auto model) noexcept -> std::optional<DistanceModel>
+inline auto DistanceModelFromALenum(std::signed_integral auto model) noexcept
+    -> std::optional<DistanceModel>
 {
     switch(model)
     {

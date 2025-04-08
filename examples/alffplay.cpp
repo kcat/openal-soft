@@ -1029,7 +1029,9 @@ int AudioState::handler()
     const auto has_bfmt_ex = bool{alIsExtensionPresent("AL_SOFT_bformat_ex") != AL_FALSE};
     const auto has_bfmt_hoa = bool{has_bfmt_ex
         && alIsExtensionPresent("AL_SOFT_bformat_hoa") != AL_FALSE};
-    /* AL_SOFT_bformat_hoa supports up to 14th order (225 channels). */
+    /* AL_SOFT_bformat_hoa supports up to 14th order (225 channels), otherwise
+     * only 1st order is supported with AL_EXT_BFORMAT.
+     */
     const auto max_ambi_order = has_bfmt_hoa ? 14 : 1;
     auto ambi_order = 0;
 
@@ -1091,10 +1093,6 @@ int AudioState::handler()
             if(channels == ALuint(mCodecCtx->ch_layout.nb_channels)
                 || channels+2 == ALuint(mCodecCtx->ch_layout.nb_channels))
             {
-                /* OpenAL only supports first-order with AL_EXT_BFORMAT, which
-                 * is 4 channels for 3D buffers, unless AL_SOFT_bformat_hoa is
-                 * also supported.
-                 */
                 ambi_order = std::min(order, max_ambi_order);
                 mFrameSize *= ALuint(ambi_order+1) * ALuint(ambi_order+1);
                 mFormat = alGetEnumValue("AL_FORMAT_BFORMAT3D_FLOAT32");
@@ -1871,7 +1869,9 @@ int VideoState::handler()
             /* Wait until we have space for a new pic */
             auto lock = std::unique_lock{mPictQMutex};
             mPictQCond.wait(lock, [write_idx,this]() noexcept
-                { return write_idx != mPictQRead.load(std::memory_order_acquire); });
+            {
+                return write_idx != mPictQRead.load(std::memory_order_acquire);
+            });
         }
     }
 

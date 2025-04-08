@@ -275,12 +275,6 @@ struct DevMap {
     std::string endpoint_guid; // obtained from PKEY_AudioEndpoint_GUID , set to "Unknown device GUID" if absent.
     std::wstring devid;
 
-    template<typename T0, typename T1, typename T2>
-    DevMap(T0&& name_, T1&& guid_, T2&& devid_)
-      : name{std::forward<T0>(name_)}
-      , endpoint_guid{std::forward<T1>(guid_)}
-      , devid{std::forward<T2>(devid_)}
-    { }
     /* To prevent GCC from complaining it doesn't want to inline this. */
     ~DevMap();
 };

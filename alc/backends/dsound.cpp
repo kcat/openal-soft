@@ -119,11 +119,6 @@ HRESULT (WINAPI *pDirectSoundCaptureEnumerateW)(LPDSENUMCALLBACKW pDSEnumCallbac
 struct DevMap {
     std::string name;
     GUID guid;
-
-    template<typename T0, typename T1>
-    DevMap(T0&& name_, T1&& guid_)
-      : name{std::forward<T0>(name_)}, guid{std::forward<T1>(guid_)}
-    { }
 };
 
 std::vector<DevMap> PlaybackDevices;

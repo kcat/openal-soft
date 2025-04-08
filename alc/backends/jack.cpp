@@ -50,6 +50,7 @@
 
 namespace {
 
+using namespace std::string_literals;
 using namespace std::string_view_literals;
 
 #if HAVE_DYNLOAD
@@ -161,17 +162,7 @@ struct DeviceEntry {
     std::string mName;
     std::string mPattern;
 
-    DeviceEntry() = default;
-    DeviceEntry(const DeviceEntry&) = default;
-    DeviceEntry(DeviceEntry&&) = default;
-    template<typename T, typename U>
-    DeviceEntry(T&& name, U&& pattern)
-        : mName{std::forward<T>(name)}, mPattern{std::forward<U>(pattern)}
-    { }
     ~DeviceEntry();
-
-    DeviceEntry& operator=(const DeviceEntry&) = default;
-    DeviceEntry& operator=(DeviceEntry&&) = default;
 };
 DeviceEntry::~DeviceEntry() = default;
 
@@ -197,7 +188,8 @@ void EnumerateDevices(jack_client_t *client, std::vector<DeviceEntry> &list)
             if(std::find_if(list.cbegin(), list.cend(), check_name) != list.cend())
                 continue;
 
-            const auto &entry = list.emplace_back(portdev, fmt::format("{}:", portdev));
+            const auto &entry = list.emplace_back(std::string{portdev},
+                fmt::format("{}:", portdev));
             TRACE("Got device: {} = {}", entry.mName, entry.mPattern);
         }
         /* There are ports but couldn't get device names from them. Add a
@@ -206,7 +198,7 @@ void EnumerateDevices(jack_client_t *client, std::vector<DeviceEntry> &list)
         if(ports[0] && list.empty())
         {
             WARN("No device names found in available ports, adding a generic name.");
-            list.emplace_back("JACK"sv, ""sv);
+            list.emplace_back("JACK"s, ""s);
         }
     }
 
@@ -242,7 +234,7 @@ void EnumerateDevices(jack_client_t *client, std::vector<DeviceEntry> &list)
             else
             {
                 /* Otherwise, add a new device entry. */
-                const auto &entry = list.emplace_back(name, pattern);
+                const auto &entry = list.emplace_back(std::string{name}, std::string{pattern});
                 TRACE("Got custom device: {} = {}", entry.mName, entry.mPattern);
             }
 

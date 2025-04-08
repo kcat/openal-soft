@@ -39,7 +39,6 @@
 #include <vector>
 
 #include "alc/alconfig.h"
-#include "almalloc.h"
 #include "alnumeric.h"
 #include "althrd_setname.h"
 #include "core/device.h"
@@ -54,6 +53,7 @@
 
 namespace {
 
+using namespace std::string_literals;
 using namespace std::string_view_literals;
 
 [[nodiscard]] constexpr auto GetDefaultName() noexcept { return "ALSA Default"sv; }
@@ -244,11 +244,6 @@ SwParamsPtr CreateSwParams()
 struct DevMap {
     std::string name;
     std::string device_name;
-
-    template<typename T, typename U>
-    DevMap(T&& name_, U&& devname)
-        : name{std::forward<T>(name_)}, device_name{std::forward<U>(devname)}
-    { }
 };
 
 std::vector<DevMap> PlaybackDevices;
@@ -311,7 +306,7 @@ std::vector<DevMap> probe_devices(snd_pcm_stream_t stream)
 
     auto defname = ConfigValueStr({}, "alsa"sv,
         (stream == SND_PCM_STREAM_PLAYBACK) ? "device"sv : "capture"sv);
-    devlist.emplace_back(GetDefaultName(), defname ? std::string_view{*defname} : "default"sv);
+    devlist.emplace_back(std::string{GetDefaultName()}, defname ? *defname : "default"s);
 
     if(auto customdevs = ConfigValueStr({}, "alsa"sv,
         (stream == SND_PCM_STREAM_PLAYBACK) ? "custom-devices"sv : "custom-captures"sv))
@@ -328,9 +323,8 @@ std::vector<DevMap> probe_devices(snd_pcm_stream_t stream)
             }
             else
             {
-                const std::string_view strview{*customdevs};
-                const auto &entry = devlist.emplace_back(strview.substr(curpos, seppos-curpos),
-                    strview.substr(seppos+1, nextpos-seppos-1));
+                const auto &entry = devlist.emplace_back(customdevs->substr(curpos, seppos-curpos),
+                    customdevs->substr(seppos+1, nextpos-seppos-1));
                 TRACE("Got device \"{}\", \"{}\"", entry.name, entry.device_name);
             }
 

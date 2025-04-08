@@ -551,7 +551,7 @@ int AlsaPlayback::mixerProc()
             mDevice->renderSamples(WritePtr, static_cast<uint>(frames), mFrameStep);
 
             snd_pcm_sframes_t commitres{snd_pcm_mmap_commit(mPcmHandle, offset, frames)};
-            if(commitres < 0 || static_cast<snd_pcm_uframes_t>(commitres) != frames)
+            if(std::cmp_not_equal(commitres, frames))
             {
                 ERR("mmap commit error: {}",
                     snd_strerror(commitres >= 0 ? -EPIPE : static_cast<int>(commitres)));

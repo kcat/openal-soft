@@ -750,7 +750,7 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
      */
     if(mFlags.test(VoiceIsStatic) && BufferLoopItem)
     {
-        if(DataPosInt >= 0 && static_cast<uint>(DataPosInt) >= BufferListItem->mLoopEnd)
+        if(std::cmp_greater_equal(DataPosInt, BufferListItem->mLoopEnd))
             BufferLoopItem = nullptr;
     }
 

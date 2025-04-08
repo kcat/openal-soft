@@ -29,6 +29,7 @@
 #include <span>
 #include <string>
 #include <string_view>
+#include <utility>
 
 #include "almalloc.h"
 #include "core/device.h"
@@ -286,7 +287,7 @@ auto Sdl3Backend::reset() -> bool
             "Failed to get stream format: {}", SDL_GetError()};
 
     if(!mDevice->Flags.test(ChannelsRequest)
-        || (static_cast<uint>(have.channels) != mDevice->channelsFromFmt()
+        || (std::cmp_not_equal(have.channels, mDevice->channelsFromFmt())
             && !(mDevice->FmtChans == DevFmtStereo && have.channels >= 2)))
     {
         /* SDL guarantees these layouts for the given channel count. */

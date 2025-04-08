@@ -988,10 +988,10 @@ void UpdateAllEffectSlotProps(ALCcontext *context)
         uint64_t usemask{~sublist.FreeMask};
         while(usemask)
         {
-            const auto idx = static_cast<uint>(std::countr_zero(usemask));
-            usemask &= ~(1_u64 << idx);
-            auto &slot = (*sublist.EffectSlots)[idx];
+            const auto idx = as_unsigned(std::countr_zero(usemask));
+            usemask ^= 1_u64 << idx;
 
+            auto &slot = (*sublist.EffectSlots)[idx];
             if(std::exchange(slot.mPropsDirty, false))
                 slot.updateProps(context);
         }

@@ -337,16 +337,15 @@ void ALCcontext::applyAllUpdates()
 #if ALSOFT_EAX
 namespace {
 
-template<typename F>
-void ForEachSource(ALCcontext *context, F func)
+void ForEachSource(ALCcontext *context, auto&& func)
 {
     for(auto &sublist : context->mSourceList)
     {
         uint64_t usemask{~sublist.FreeMask};
         while(usemask)
         {
-            const auto idx = static_cast<uint>(std::countr_zero(usemask));
-            usemask &= ~(1_u64 << idx);
+            const auto idx = as_unsigned(std::countr_zero(usemask));
+            usemask ^= 1_u64 << idx;
 
             func((*sublist.Sources)[idx]);
         }

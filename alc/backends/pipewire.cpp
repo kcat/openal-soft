@@ -73,6 +73,7 @@ _Pragma("GCC diagnostic ignored \"-Wold-style-cast\"")
 _Pragma("GCC diagnostic ignored \"-Wsign-compare\"")
 _Pragma("GCC diagnostic ignored \"-Winline\"")
 _Pragma("GCC diagnostic ignored \"-Wpragmas\"")
+_Pragma("GCC diagnostic ignored \"-Wvla\"")
 _Pragma("GCC diagnostic ignored \"-Weverything\"")
 #include "pipewire/pipewire.h"
 #include "pipewire/extensions/metadata.h"

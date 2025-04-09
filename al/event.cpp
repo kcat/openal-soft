@@ -12,6 +12,7 @@
 #include <optional>
 #include <span>
 #include <string>
+#include <string_view>
 #include <thread>
 #include <tuple>
 #include <variant>
@@ -30,12 +31,15 @@
 #include "core/logging.h"
 #include "debug.h"
 #include "direct_defs.h"
+#include "fmt/core.h"
 #include "intrusive_ptr.h"
 #include "opthelpers.h"
 #include "ringbuffer.h"
 
 
 namespace {
+
+using namespace std::string_view_literals;
 
 template<typename... Ts>
 struct overloaded : Ts... { using Ts::operator()...; };
@@ -66,66 +70,66 @@ int EventThread(ALCcontext *context)
             quitnow = std::holds_alternative<AsyncKillThread>(event);
             if(quitnow) [[unlikely]] break;
 
-            auto proc_killthread = [](AsyncKillThread&) { };
-            auto proc_release = [](AsyncEffectReleaseEvent &evt)
-            {
-                al::intrusive_ptr<EffectState>{evt.mEffectState};
-            };
-            auto proc_srcstate = [context,enabledevts](AsyncSourceStateEvent &evt)
-            {
-                if(!context->mEventCb
-                    || !enabledevts.test(al::to_underlying(AsyncEnableBits::SourceState)))
-                    return;
-
-                ALuint state{};
-                std::string msg{"Source ID " + std::to_string(evt.mId)};
-                msg += " state has changed to ";
-                switch(evt.mState)
+            std::visit(overloaded {
+                [](AsyncKillThread&) { },
+                [](AsyncEffectReleaseEvent &evt)
                 {
-                case AsyncSrcState::Reset:
-                    msg += "AL_INITIAL";
-                    state = AL_INITIAL;
-                    break;
-                case AsyncSrcState::Stop:
-                    msg += "AL_STOPPED";
-                    state = AL_STOPPED;
-                    break;
-                case AsyncSrcState::Play:
-                    msg += "AL_PLAYING";
-                    state = AL_PLAYING;
-                    break;
-                case AsyncSrcState::Pause:
-                    msg += "AL_PAUSED";
-                    state = AL_PAUSED;
-                    break;
+                    al::intrusive_ptr<EffectState>{evt.mEffectState};
+                },
+                [context,enabledevts](AsyncSourceStateEvent &evt)
+                {
+                    if(!context->mEventCb
+                        || !enabledevts.test(al::to_underlying(AsyncEnableBits::SourceState)))
+                        return;
+
+                    auto state = ALuint{};
+                    auto state_sv = std::string_view{};
+                    switch(evt.mState)
+                    {
+                    case AsyncSrcState::Reset:
+                        state_sv = "AL_INITIAL"sv;
+                        state = AL_INITIAL;
+                        break;
+                    case AsyncSrcState::Stop:
+                        state_sv = "AL_STOPPED"sv;
+                        state = AL_STOPPED;
+                        break;
+                    case AsyncSrcState::Play:
+                        state_sv = "AL_PLAYING"sv;
+                        state = AL_PLAYING;
+                        break;
+                    case AsyncSrcState::Pause:
+                        state_sv = "AL_PAUSED"sv;
+                        state = AL_PAUSED;
+                        break;
+                    }
+
+                    const auto msg = fmt::format("Source ID {} state has changed to {}", evt.mId,
+                        state_sv);
+                    context->mEventCb(AL_EVENT_TYPE_SOURCE_STATE_CHANGED_SOFT, evt.mId, state,
+                        al::sizei(msg), msg.c_str(), context->mEventParam);
+                },
+                [context,enabledevts](AsyncBufferCompleteEvent &evt)
+                {
+                    if(!context->mEventCb
+                        || !enabledevts.test(al::to_underlying(AsyncEnableBits::BufferCompleted)))
+                        return;
+
+                    const auto msg = fmt::format("{} buffer{} completed", evt.mCount,
+                        (evt.mCount == 1) ? "" : "s");
+                    context->mEventCb(AL_EVENT_TYPE_BUFFER_COMPLETED_SOFT, evt.mId, evt.mCount,
+                        al::sizei(msg), msg.c_str(), context->mEventParam);
+                },
+                [context,enabledevts](AsyncDisconnectEvent &evt)
+                {
+                    if(!context->mEventCb
+                        || !enabledevts.test(al::to_underlying(AsyncEnableBits::Disconnected)))
+                        return;
+
+                    context->mEventCb(AL_EVENT_TYPE_DISCONNECTED_SOFT, 0, 0, al::sizei(evt.msg),
+                        evt.msg.c_str(), context->mEventParam);
                 }
-                context->mEventCb(AL_EVENT_TYPE_SOURCE_STATE_CHANGED_SOFT, evt.mId, state,
-                    al::sizei(msg), msg.c_str(), context->mEventParam);
-            };
-            auto proc_buffercomp = [context,enabledevts](AsyncBufferCompleteEvent &evt)
-            {
-                if(!context->mEventCb
-                    || !enabledevts.test(al::to_underlying(AsyncEnableBits::BufferCompleted)))
-                    return;
-
-                std::string msg{std::to_string(evt.mCount)};
-                if(evt.mCount == 1) msg += " buffer completed";
-                else msg += " buffers completed";
-                context->mEventCb(AL_EVENT_TYPE_BUFFER_COMPLETED_SOFT, evt.mId, evt.mCount,
-                    al::sizei(msg), msg.c_str(), context->mEventParam);
-            };
-            auto proc_disconnect = [context,enabledevts](AsyncDisconnectEvent &evt)
-            {
-                if(!context->mEventCb
-                    || !enabledevts.test(al::to_underlying(AsyncEnableBits::Disconnected)))
-                    return;
-
-                context->mEventCb(AL_EVENT_TYPE_DISCONNECTED_SOFT, 0, 0, al::sizei(evt.msg),
-                    evt.msg.c_str(), context->mEventParam);
-            };
-
-            std::visit(overloaded{proc_srcstate, proc_buffercomp, proc_release, proc_disconnect,
-                proc_killthread}, event);
+            }, event);
         }
         std::destroy(evt_span.begin(), evt_span.end());
         ring->readAdvance(evt_span.size());

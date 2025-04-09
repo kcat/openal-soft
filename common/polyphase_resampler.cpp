@@ -9,8 +9,6 @@
 #include <stdexcept>
 #include <tuple>
 
-#include "opthelpers.h"
-
 
 using uint = unsigned int;
 
@@ -62,7 +60,7 @@ constexpr auto cyl_bessel_i(T nu, U x) -> U
  */
 double Sinc(const double x)
 {
-    if(std::abs(x) < Epsilon) UNLIKELY
+    if(std::abs(x) < Epsilon) [[unlikely]]
         return 1.0;
     return std::sin(std::numbers::pi*x) / (std::numbers::pi*x);
 }
@@ -98,7 +96,7 @@ double Kaiser(const double beta, const double k, const double besseli_0_beta)
 constexpr uint CalcKaiserOrder(const double rejection, const double transition)
 {
     const auto w_t = 2.0 * std::numbers::pi * transition;
-    if(rejection > 21.0) LIKELY
+    if(rejection > 21.0) [[likely]]
         return static_cast<uint>(std::ceil((rejection - 7.95) / (2.285 * w_t)));
     return static_cast<uint>(std::ceil(5.79 / w_t));
 }
@@ -106,7 +104,7 @@ constexpr uint CalcKaiserOrder(const double rejection, const double transition)
 // Calculates the beta value of the Kaiser window.  Rejection is in dB.
 constexpr double CalcKaiserBeta(const double rejection)
 {
-    if(rejection > 50.0) LIKELY
+    if(rejection > 50.0) [[likely]]
         return 0.1102 * (rejection - 8.7);
     if(rejection >= 21.0)
         return (0.5842 * std::pow(rejection - 21.0, 0.4)) +
@@ -166,13 +164,13 @@ void PPhaseResampler::init(const uint srcRate, const uint dstRate)
 // polyphase filter implementation.
 void PPhaseResampler::process(const std::span<const double> in, const std::span<double> out) const
 {
-    if(out.empty()) UNLIKELY
+    if(out.empty()) [[unlikely]]
         return;
 
     // Handle in-place operation.
     auto workspace = std::vector<double>{};
     auto work = std::span{out};
-    if(work.data() == in.data()) UNLIKELY
+    if(work.data() == in.data()) [[unlikely]]
     {
         workspace.resize(out.size());
         work = workspace;
@@ -193,11 +191,11 @@ void PPhaseResampler::process(const std::span<const double> in, const std::span<
         l += q;
 
         // Only take input when 0 <= j_s < in.size().
-        if(j_f >= m) UNLIKELY
+        if(j_f >= m) [[unlikely]]
             return 0.0;
 
         auto filt_len = (m - j_f - 1)/p + 1;
-        if(j_s+1 > in.size()) LIKELY
+        if(j_s+1 > in.size()) [[likely]]
         {
             const auto skip = std::min(j_s+1-in.size(), filt_len);
             j_f += p*skip;

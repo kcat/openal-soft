@@ -37,7 +37,6 @@
 #include "core/mixer.h"
 #include "core/uhjfilter.h"
 #include "intrusive_ptr.h"
-#include "opthelpers.h"
 #include "pffft.h"
 #include "polyphase_resampler.h"
 #include "vecmat.h"
@@ -476,7 +475,7 @@ void ConvolutionState::update(const ContextBase *context, const EffectSlot *slot
         ChanPosMap{SideRight,   std::array{  1.0f, 0.0f,  0.0f}},
     };
 
-    if(mNumConvolveSegs < 1) UNLIKELY
+    if(mNumConvolveSegs < 1) [[unlikely]]
         return;
 
     auto &props = std::get<ConvolutionProps>(*props_);
@@ -627,7 +626,7 @@ void ConvolutionState::update(const ContextBase *context, const EffectSlot *slot
 void ConvolutionState::process(const size_t samplesToDo,
     const al::span<const FloatBufferLine> samplesIn, const al::span<FloatBufferLine> samplesOut)
 {
-    if(mNumConvolveSegs < 1) UNLIKELY
+    if(mNumConvolveSegs < 1) [[unlikely]]
         return;
 
     size_t curseg{mCurrentSegment};

@@ -160,7 +160,7 @@ void do_assert(const char *message, int linenum, const char *filename, const cha
 }
 
 #define MyAssert(cond) do {                                                   \
-    if(!(cond)) UNLIKELY                                                      \
+    if(!(cond)) [[unlikely]]                                                  \
         do_assert("Assertion '" #cond "' failed", __LINE__, __FILE__,         \
             std::data(__func__));                                             \
 } while(0)

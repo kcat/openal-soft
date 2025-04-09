@@ -603,7 +603,7 @@ struct EventManager {
      */
     void waitForInit()
     {
-        if(!initIsDone(std::memory_order_acquire)) UNLIKELY
+        if(!initIsDone(std::memory_order_acquire)) [[unlikely]]
         {
             MainloopUniqueLock plock{mLoop};
             plock.wait([this](){ return initIsDone(std::memory_order_acquire); });
@@ -994,7 +994,7 @@ void NodeProxy::infoCallback(void*, const pw_node_info *info) noexcept
     {
         /* Can this actually change? */
         const char *media_class{spa_dict_lookup(info->props, PW_KEY_MEDIA_CLASS)};
-        if(!media_class) UNLIKELY return;
+        if(!media_class) [[unlikely]] return;
         const std::string_view className{media_class};
 
         NodeType ntype{};
@@ -1090,7 +1090,7 @@ void NodeProxy::paramCallback(int, uint32_t id, uint32_t, uint32_t, const spa_po
     if(id == SPA_PARAM_EnumFormat || id == SPA_PARAM_Format)
     {
         DeviceNode *node{DeviceNode::Find(mId)};
-        if(!node) UNLIKELY return;
+        if(!node) [[unlikely]] return;
 
         TRACE("Device ID {} {} format{}:", node->mSerial,
             (id == SPA_PARAM_EnumFormat) ? "available" : "current",
@@ -1481,7 +1481,7 @@ void PipeWirePlayback::ioChangedCallback(uint32_t id, void *area, uint32_t size)
 void PipeWirePlayback::outputCallback() noexcept
 {
     pw_buffer *pw_buf{pw_stream_dequeue_buffer(mStream.get())};
-    if(!pw_buf) UNLIKELY return;
+    if(!pw_buf) [[unlikely]] return;
 
     const auto datas = std::span{pw_buf->buffer->datas,
         std::min(mChannelPtrs.size(), size_t{pw_buf->buffer->n_datas})};
@@ -1497,7 +1497,7 @@ void PipeWirePlayback::outputCallback() noexcept
     uint length{mRateMatch ? mRateMatch->size : 0u};
 #endif
     /* If no length is specified, use the device's update size as a fallback. */
-    if(!length) UNLIKELY length = mDevice->mUpdateSize;
+    if(!length) [[unlikely]] length = mDevice->mUpdateSize;
 
     /* For planar formats, each datas[] seems to contain one channel, so store
      * the pointers in an array. Limit the render length in case the available
@@ -1860,7 +1860,7 @@ ClockLatency PipeWirePlayback::getClockLatency()
      */
     nanoseconds monoclock{seconds{tspec.tv_sec} + nanoseconds{tspec.tv_nsec}};
     nanoseconds curtic{}, delay{};
-    if(ptime.rate.denom < 1) UNLIKELY
+    if(ptime.rate.denom < 1) [[unlikely]]
     {
         /* If there's no stream rate, the stream hasn't had a chance to get
          * going and return time info yet. Just use dummy values.
@@ -1952,7 +1952,7 @@ void PipeWireCapture::stateChangedCallback(pw_stream_state, pw_stream_state, con
 void PipeWireCapture::inputCallback() noexcept
 {
     pw_buffer *pw_buf{pw_stream_dequeue_buffer(mStream.get())};
-    if(!pw_buf) UNLIKELY return;
+    if(!pw_buf) [[unlikely]] return;
 
     spa_data *bufdata{pw_buf->buffer->datas};
     const uint offset{bufdata->chunk->offset % bufdata->maxsize};

@@ -24,7 +24,6 @@
 #include "core/context.h"
 #include "fmt/core.h"
 #include "intrusive_ptr.h"
-#include "opthelpers.h"
 
 #if ALSOFT_EAX
 #include "al/eax/api.h"
@@ -182,7 +181,7 @@ struct ALCcontext final : public al::intrusive_ref<ALCcontext>, ContextBase {
     void debugMessage(DebugSource source, DebugType type, ALuint id, DebugSeverity severity,
         std::string_view message)
     {
-        if(!mDebugEnabled.load(std::memory_order_relaxed)) LIKELY
+        if(!mDebugEnabled.load(std::memory_order_relaxed)) [[likely]]
             return;
         std::unique_lock<std::mutex> debuglock{mDebugCbLock};
         sendDebugMessage(debuglock, source, type, id, severity, message);

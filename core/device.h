@@ -350,7 +350,7 @@ struct SIMDALIGN DeviceBase {
     void ProcessBs2b(const std::size_t SamplesToDo);
 
     void postProcess(const std::size_t SamplesToDo)
-    { if(PostProcess) LIKELY (this->*PostProcess)(SamplesToDo); }
+    { if(PostProcess) [[likely]] (this->*PostProcess)(SamplesToDo); }
 
     void renderSamples(const al::span<void*> outBuffers, const uint numSamples);
     void renderSamples(void *outBuffer, const uint numSamples, const std::size_t frameStep);

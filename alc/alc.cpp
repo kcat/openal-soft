@@ -1898,7 +1898,7 @@ auto UpdateDeviceParams(al::Device *device, const std::span<const int> attrList)
 auto ResetDeviceParams(al::Device *device, const std::span<const int> attrList) -> bool
 {
     /* If the device was disconnected, reset it since we're opened anew. */
-    if(!device->Connected.load(std::memory_order_relaxed)) UNLIKELY
+    if(!device->Connected.load(std::memory_order_relaxed))
     {
         /* Make sure disconnection is finished before continuing on. */
         std::ignore = device->waitForMix();
@@ -1931,7 +1931,7 @@ auto ResetDeviceParams(al::Device *device, const std::span<const int> attrList) 
     }
 
     ALCenum err{UpdateDeviceParams(device, attrList)};
-    if(err == ALC_NO_ERROR) LIKELY return ALC_TRUE;
+    if(err == ALC_NO_ERROR) [[likely]] return ALC_TRUE;
 
     alcSetError(device, err);
     return ALC_FALSE;
@@ -1988,7 +1988,7 @@ ContextRef GetContextRef() noexcept
              */
         }
         context = ALCcontext::sGlobalContext.load(std::memory_order_acquire);
-        if(context) LIKELY context->add_ref();
+        if(context) [[likely]] context->add_ref();
         ALCcontext::sGlobalContextLock.store(false, std::memory_order_release);
     }
     return ContextRef{context};
@@ -2038,7 +2038,7 @@ ALC_API void ALC_APIENTRY alcSuspendContext(ALCcontext *context) noexcept
         return;
     }
 
-    if(ctx->mContextFlags.test(ContextFlags::DebugBit)) UNLIKELY
+    if(ctx->mContextFlags.test(ContextFlags::DebugBit)) [[unlikely]]
         ctx->debugMessage(DebugSource::API, DebugType::Portability, 0, DebugSeverity::Medium,
             "alcSuspendContext behavior is not portable -- some implementations suspend all "
             "rendering, some only defer property changes, and some are completely no-op; consider "
@@ -2061,7 +2061,7 @@ ALC_API void ALC_APIENTRY alcProcessContext(ALCcontext *context) noexcept
         return;
     }
 
-    if(ctx->mContextFlags.test(ContextFlags::DebugBit)) UNLIKELY
+    if(ctx->mContextFlags.test(ContextFlags::DebugBit)) [[unlikely]]
         ctx->debugMessage(DebugSource::API, DebugType::Portability, 1, DebugSeverity::Medium,
             "alcProcessContext behavior is not portable -- some implementations resume rendering, "
             "some apply deferred property changes, and some are completely no-op; consider using "
@@ -3405,9 +3405,9 @@ ALC_API ALCboolean ALC_APIENTRY alcIsRenderFormatSupportedSOFT(ALCdevice *device
 ALC_API void ALC_APIENTRY alcRenderSamplesSOFT(ALCdevice *device, ALCvoid *buffer, ALCsizei samples) noexcept
 {
     auto aldev = dynamic_cast<al::Device*>(device);
-    if(!aldev || aldev->Type != DeviceType::Loopback) UNLIKELY
+    if(!aldev || aldev->Type != DeviceType::Loopback) [[unlikely]]
         alcSetError(aldev, ALC_INVALID_DEVICE);
-    else if(samples < 0 || (samples > 0 && buffer == nullptr)) UNLIKELY
+    else if(samples < 0 || (samples > 0 && buffer == nullptr)) [[unlikely]]
         alcSetError(aldev, ALC_INVALID_VALUE);
     else
         aldev->renderSamples(buffer, static_cast<uint>(samples), aldev->channelsFromFmt());

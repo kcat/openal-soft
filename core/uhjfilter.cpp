@@ -161,7 +161,7 @@ void process(UhjAllPassFilter &self, const al::span<const float,4> coeffs,
         return x;
     };
     std::transform(src.begin(), src.end(), dst.begin(), proc_sample);
-    if(updateState) LIKELY self.mState = state;
+    if(updateState) [[likely]] self.mState = state;
 }
 
 } // namespace
@@ -438,7 +438,7 @@ void UhjDecoder<N>::decode(const al::span<float*> samples, const size_t samplesT
     auto tmpiter = std::copy(mDTHistory.cbegin(), mDTHistory.cend(), mTemp.begin());
     std::transform(mD.cbegin(), mD.cbegin()+samplesToDo+sInputPadding, mT.cbegin(), tmpiter,
         [](const float d, const float t) noexcept { return 0.828331f*d + 0.767820f*t; });
-    if(updateState) LIKELY
+    if(updateState) [[likely]]
         std::copy_n(mTemp.cbegin()+samplesToDo, mDTHistory.size(), mDTHistory.begin());
     PShift.process(xoutput, mTemp);
 
@@ -453,7 +453,7 @@ void UhjDecoder<N>::decode(const al::span<float*> samples, const size_t samplesT
     /* Precompute j*S and store in youtput. */
     tmpiter = std::copy(mSHistory.cbegin(), mSHistory.cend(), mTemp.begin());
     std::copy_n(mS.cbegin(), samplesToDo+sInputPadding, tmpiter);
-    if(updateState) LIKELY
+    if(updateState) [[likely]]
         std::copy_n(mTemp.cbegin()+samplesToDo, mSHistory.size(), mSHistory.begin());
     PShift.process(youtput, mTemp);
 
@@ -612,7 +612,7 @@ void UhjStereoDecoder<N>::decode(const al::span<float*> samples, const size_t sa
     /* Precompute j*D and store in xoutput. */
     auto tmpiter = std::copy(mDTHistory.cbegin(), mDTHistory.cend(), mTemp.begin());
     std::copy_n(mD.cbegin(), samplesToDo+sInputPadding, tmpiter);
-    if(updateState) LIKELY
+    if(updateState) [[likely]]
         std::copy_n(mTemp.cbegin()+samplesToDo, mDTHistory.size(), mDTHistory.begin());
     PShift.process(xoutput, mTemp);
 
@@ -626,7 +626,7 @@ void UhjStereoDecoder<N>::decode(const al::span<float*> samples, const size_t sa
     /* Precompute j*S and store in youtput. */
     tmpiter = std::copy(mSHistory.cbegin(), mSHistory.cend(), mTemp.begin());
     std::copy_n(mS.cbegin(), samplesToDo+sInputPadding, tmpiter);
-    if(updateState) LIKELY
+    if(updateState) [[likely]]
         std::copy_n(mTemp.cbegin()+samplesToDo, mSHistory.size(), mSHistory.begin());
     PShift.process(youtput, mTemp);
 

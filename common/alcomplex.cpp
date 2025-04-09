@@ -8,13 +8,10 @@
 #include <bit>
 #include <cassert>
 #include <cstddef>
-#include <functional>
-#include <iterator>
 #include <numbers>
 #include <utility>
 
 #include "alnumeric.h"
-#include "opthelpers.h"
 
 
 namespace {
@@ -119,7 +116,7 @@ void complex_fft(const std::span<std::complex<double>> buffer, const double sign
      */
     const auto log2_size = static_cast<std::size_t>(std::countr_zero(fftsize));
 
-    if(log2_size < gBitReverses.size()) LIKELY
+    if(log2_size < gBitReverses.size()) [[likely]]
     {
         for(auto &rev : gBitReverses[log2_size])
             std::swap(buffer[rev[0]], buffer[rev[1]]);

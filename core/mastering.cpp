@@ -306,7 +306,7 @@ void Compressor::signalDelay(const uint SamplesToDo, const al::span<FloatBufferL
         const auto inout = al::span{buffer}.first(SamplesToDo);
         const auto delaybuf = al::span{*(delays++)}.first(lookAhead);
 
-        if(SamplesToDo >= delaybuf.size()) LIKELY
+        if(SamplesToDo >= delaybuf.size()) [[likely]]
         {
             const auto inout_start = inout.end() - ptrdiff_t(delaybuf.size());
             const auto delay_end = std::rotate(inout.begin(), inout_start, inout.end());

@@ -333,7 +333,7 @@ int JackPlayback::processRt(jack_nframes_t numframes) noexcept
     }
 
     const auto dst = std::span{outptrs}.first(numchans);
-    if(mPlaying.load(std::memory_order_acquire)) LIKELY
+    if(mPlaying.load(std::memory_order_acquire)) [[likely]]
         mDevice->renderSamples(dst, static_cast<uint>(numframes));
     else
     {
@@ -356,7 +356,7 @@ int JackPlayback::process(jack_nframes_t numframes) noexcept
     }
 
     size_t total{0};
-    if(mPlaying.load(std::memory_order_acquire)) LIKELY
+    if(mPlaying.load(std::memory_order_acquire)) [[likely]]
     {
         auto data = mRing->getReadVector();
         const auto update_size = size_t{mDevice->mUpdateSize};

@@ -364,7 +364,7 @@ void Mix_<SSETag>(const al::span<const float> InSamples, const al::span<FloatBuf
     const al::span<float> CurrentGains, const al::span<const float> TargetGains,
     const size_t Counter, const size_t OutPos)
 {
-    if((OutPos&3) != 0) UNLIKELY
+    if((OutPos&3) != 0) [[unlikely]]
         return Mix_<CTag>(InSamples, OutBuffer, CurrentGains, TargetGains, Counter, OutPos);
 
     const float delta{(Counter > 0) ? 1.0f / static_cast<float>(Counter) : 0.0f};
@@ -382,7 +382,7 @@ template<>
 void Mix_<SSETag>(const al::span<const float> InSamples, const al::span<float> OutBuffer,
     float &CurrentGain, const float TargetGain, const size_t Counter)
 {
-    if((reinterpret_cast<uintptr_t>(OutBuffer.data())&15) != 0) UNLIKELY
+    if((reinterpret_cast<uintptr_t>(OutBuffer.data())&15) != 0) [[unlikely]]
         return Mix_<CTag>(InSamples, OutBuffer, CurrentGain, TargetGain, Counter);
 
     const float delta{(Counter > 0) ? 1.0f / static_cast<float>(Counter) : 0.0f};

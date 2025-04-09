@@ -449,7 +449,7 @@ std::optional<VoicePos> GetSampleOffset(std::deque<ALbufferQueueItem> &BufferLis
         BufferFmt = item.mBuffer;
         if(BufferFmt) break;
     }
-    if(!BufferFmt) UNLIKELY
+    if(!BufferFmt) [[unlikely]]
         return std::nullopt;
 
     /* Get sample frame offset */
@@ -556,7 +556,7 @@ void InitVoice(Voice *voice, ALsource *source, ALbufferQueueItem *BufferList, AL
 VoiceChange *GetVoiceChanger(ALCcontext *ctx)
 {
     VoiceChange *vchg{ctx->mVoiceChangeTail};
-    if(vchg == ctx->mCurrentVoiceChange.load(std::memory_order_acquire)) UNLIKELY
+    if(vchg == ctx->mCurrentVoiceChange.load(std::memory_order_acquire)) [[unlikely]]
     {
         ctx->allocVoiceChanges();
         vchg = ctx->mVoiceChangeTail;
@@ -578,7 +578,7 @@ void SendVoiceChanges(ALCcontext *ctx, VoiceChange *tail)
 
     const bool connected{device->Connected.load(std::memory_order_acquire)};
     std::ignore = device->waitForMix();
-    if(!connected) UNLIKELY
+    if(!connected) [[unlikely]]
     {
         if(ctx->mStopVoicesOnDisconnect.load(std::memory_order_acquire))
         {
@@ -616,7 +616,7 @@ auto SetVoiceOffset(Voice *oldvoice, const VoicePos &vpos, ALsource *source, ALC
         }
         ++vidx;
     }
-    if(!newvoice) UNLIKELY
+    if(!newvoice) [[unlikely]]
     {
         auto &allvoices = *context->mVoices.load(std::memory_order_relaxed);
         if(allvoices.size() == voicelist.size())
@@ -673,7 +673,7 @@ auto SetVoiceOffset(Voice *oldvoice, const VoicePos &vpos, ALsource *source, ALC
     /* If the old voice still has a sourceID, it's still active and the change-
      * over will work on the next update.
      */
-    if(oldvoice->mSourceID.load(std::memory_order_acquire) != 0u) LIKELY
+    if(oldvoice->mSourceID.load(std::memory_order_acquire) != 0u) [[likely]]
         return true;
 
     /* Otherwise, if the new voice's state is not pending, the change-over
@@ -726,7 +726,7 @@ bool EnsureSources(ALCcontext *context, size_t needed)
     try {
         while(needed > count)
         {
-            if(context->mSourceList.size() >= 1<<25) UNLIKELY
+            if(context->mSourceList.size() >= 1<<25) [[unlikely]]
                 return false;
 
             SourceSubList sublist{};
@@ -797,10 +797,10 @@ inline ALsource *LookupSource(ALCcontext *context, ALuint id) noexcept
     const size_t lidx{(id-1) >> 6};
     const ALuint slidx{(id-1) & 0x3f};
 
-    if(lidx >= context->mSourceList.size()) UNLIKELY
+    if(lidx >= context->mSourceList.size()) [[unlikely]]
         return nullptr;
     SourceSubList &sublist{context->mSourceList[lidx]};
-    if(sublist.FreeMask & (1_u64 << slidx)) UNLIKELY
+    if(sublist.FreeMask & (1_u64 << slidx)) [[unlikely]]
         return nullptr;
     return std::to_address(sublist.Sources->begin() + slidx);
 }
@@ -810,10 +810,10 @@ inline auto LookupBuffer(al::Device *device, std::unsigned_integral auto id) noe
     const auto lidx{(id-1) >> 6};
     const auto slidx{(id-1) & 0x3f};
 
-    if(lidx >= device->BufferList.size()) UNLIKELY
+    if(lidx >= device->BufferList.size()) [[unlikely]]
         return nullptr;
     BufferSubList &sublist = device->BufferList[static_cast<size_t>(lidx)];
-    if(sublist.FreeMask & (1_u64 << slidx)) UNLIKELY
+    if(sublist.FreeMask & (1_u64 << slidx)) [[unlikely]]
         return nullptr;
     return std::to_address(sublist.Buffers->begin() + static_cast<size_t>(slidx));
 };
@@ -823,10 +823,10 @@ inline auto LookupFilter(al::Device *device, std::unsigned_integral auto id) noe
     const auto lidx{(id-1) >> 6};
     const auto slidx{(id-1) & 0x3f};
 
-    if(lidx >= device->FilterList.size()) UNLIKELY
+    if(lidx >= device->FilterList.size()) [[unlikely]]
         return nullptr;
     FilterSubList &sublist = device->FilterList[static_cast<size_t>(lidx)];
-    if(sublist.FreeMask & (1_u64 << slidx)) UNLIKELY
+    if(sublist.FreeMask & (1_u64 << slidx)) [[unlikely]]
         return nullptr;
     return std::to_address(sublist.Filters->begin() + static_cast<size_t>(slidx));
 };
@@ -837,10 +837,10 @@ inline auto LookupEffectSlot(ALCcontext *context, std::unsigned_integral auto id
     const auto lidx{(id-1) >> 6};
     const auto slidx{(id-1) & 0x3f};
 
-    if(lidx >= context->mEffectSlotList.size()) UNLIKELY
+    if(lidx >= context->mEffectSlotList.size()) [[unlikely]]
         return nullptr;
     EffectSlotSubList &sublist{context->mEffectSlotList[static_cast<size_t>(lidx)]};
-    if(sublist.FreeMask & (1_u64 << slidx)) UNLIKELY
+    if(sublist.FreeMask & (1_u64 << slidx)) [[unlikely]]
         return nullptr;
     return std::to_address(sublist.EffectSlots->begin() + static_cast<size_t>(slidx));
 };
@@ -2028,7 +2028,7 @@ auto GetSizeChecker(ALCcontext *context, const SourceProp prop, const std::span<
 {
     return [=](size_t expect) -> void
     {
-        if(values.size() == expect) LIKELY return;
+        if(values.size() == expect) [[likely]] return;
         context->throw_error(AL_INVALID_ENUM, "Property {:#04x} expects {} value{}, got {}",
             as_unsigned(al::to_underlying(prop)), expect, (expect==1) ? "" : "s", values.size());
     };
@@ -2502,7 +2502,7 @@ void StartSources(ALCcontext *const context, const std::span<ALsource*> srchandl
     /* If the device is disconnected, and voices stop on disconnect, go right
      * to stopped.
      */
-    if(!device->Connected.load(std::memory_order_acquire)) UNLIKELY
+    if(!device->Connected.load(std::memory_order_acquire)) [[unlikely]]
     {
         if(context->mStopVoicesOnDisconnect.load(std::memory_order_acquire))
         {
@@ -2528,7 +2528,7 @@ void StartSources(ALCcontext *const context, const std::span<ALsource*> srchandl
         if(free_voices == srchandles.size())
             break;
     }
-    if(srchandles.size() != free_voices) UNLIKELY
+    if(srchandles.size() != free_voices) [[unlikely]]
     {
         const size_t inc_amount{srchandles.size() - free_voices};
         auto &allvoices = *context->mVoices.load(std::memory_order_relaxed);
@@ -2554,7 +2554,7 @@ void StartSources(ALCcontext *const context, const std::span<ALsource*> srchandl
         auto BufferList = std::find_if(source->mQueue.begin(), source->mQueue.end(), find_buffer);
 
         /* If there's nothing to play, go right to stopped. */
-        if(BufferList == source->mQueue.end()) UNLIKELY
+        if(BufferList == source->mQueue.end()) [[unlikely]]
         {
             /* NOTE: A source without any playable buffers should not have a
              * Voice since it shouldn't be in a playing or paused state. So
@@ -2660,7 +2660,7 @@ void StartSources(ALCcontext *const context, const std::span<ALsource*> srchandl
         cur->mSourceID = source->id;
         cur->mState = VChangeState::Play;
     }
-    if(tail) LIKELY
+    if(tail) [[likely]]
         SendVoiceChanges(context, tail);
 }
 
@@ -2671,7 +2671,7 @@ FORCE_ALIGN void AL_APIENTRY alGenSourcesDirect(ALCcontext *context, ALsizei n, 
 try {
     if(n < 0)
         context->throw_error(AL_INVALID_VALUE, "Generating {} sources", n);
-    if(n <= 0) UNLIKELY return;
+    if(n <= 0) [[unlikely]] return;
 
     auto srclock = std::unique_lock{context->mSourceLock};
     auto *device = context->mALDevice.get();
@@ -2699,7 +2699,7 @@ FORCE_ALIGN void AL_APIENTRY alDeleteSourcesDirect(ALCcontext *context, ALsizei 
 try {
     if(n < 0)
         context->throw_error(AL_INVALID_VALUE, "Deleting {} sources", n);
-    if(n <= 0) UNLIKELY return;
+    if(n <= 0) [[unlikely]] return;
 
     std::lock_guard<std::mutex> srclock{context->mSourceLock};
 
@@ -3265,7 +3265,7 @@ FORCE_ALIGN void AL_APIENTRY alSourcePlayvDirect(ALCcontext *context, ALsizei n,
 try {
     if(n < 0)
         context->throw_error(AL_INVALID_VALUE, "Playing {} sources", n);
-    if(n <= 0) UNLIKELY return;
+    if(n <= 0) [[unlikely]] return;
 
     const auto sids = std::span{sources, static_cast<ALuint>(n)};
     source_store_variant source_store;
@@ -3299,7 +3299,7 @@ FORCE_ALIGN void AL_APIENTRY alSourcePlayAtTimevDirectSOFT(ALCcontext *context, 
 try {
     if(n < 0)
         context->throw_error(AL_INVALID_VALUE, "Playing {} sources", n);
-    if(n <= 0) UNLIKELY return;
+    if(n <= 0) [[unlikely]] return;
 
     if(start_time < 0)
         context->throw_error(AL_INVALID_VALUE, "Invalid time point {}", start_time);
@@ -3341,7 +3341,7 @@ FORCE_ALIGN void AL_APIENTRY alSourcePausevDirect(ALCcontext *context, ALsizei n
 try {
     if(n < 0)
         context->throw_error(AL_INVALID_VALUE, "Pausing {} sources", n);
-    if(n <= 0) UNLIKELY return;
+    if(n <= 0) [[unlikely]] return;
 
     const auto sids = std::span{sources, static_cast<ALuint>(n)};
     source_store_variant source_store;
@@ -3383,7 +3383,7 @@ try {
             cur->mState = VChangeState::Pause;
         }
     }
-    if(tail) LIKELY
+    if(tail) [[likely]]
     {
         SendVoiceChanges(context, tail);
         /* Second, now that the voice changes have been sent, because it's
@@ -3416,7 +3416,7 @@ FORCE_ALIGN void AL_APIENTRY alSourceStopvDirect(ALCcontext *context, ALsizei n,
 try {
     if(n < 0)
         context->throw_error(AL_INVALID_VALUE, "Stopping {} sources", n);
-    if(n <= 0) UNLIKELY return;
+    if(n <= 0) [[unlikely]] return;
 
     const auto sids = std::span{sources, static_cast<ALuint>(n)};
     source_store_variant source_store;
@@ -3458,7 +3458,7 @@ try {
         source->OffsetType = AL_NONE;
         source->VoiceIdx = InvalidVoiceIndex;
     }
-    if(tail) LIKELY
+    if(tail) [[likely]]
         SendVoiceChanges(context, tail);
 }
 catch(al::base_exception&) {
@@ -3478,7 +3478,7 @@ FORCE_ALIGN void AL_APIENTRY alSourceRewindvDirect(ALCcontext *context, ALsizei 
 try {
     if(n < 0)
         context->throw_error(AL_INVALID_VALUE, "Rewinding {} sources", n);
-    if(n <= 0) UNLIKELY return;
+    if(n <= 0) [[unlikely]] return;
 
     const auto sids = std::span{sources, static_cast<ALuint>(n)};
     source_store_variant source_store;
@@ -3522,7 +3522,7 @@ try {
         source->OffsetType = AL_NONE;
         source->VoiceIdx = InvalidVoiceIndex;
     }
-    if(tail) LIKELY
+    if(tail) [[likely]]
         SendVoiceChanges(context, tail);
 }
 catch(al::base_exception&) {
@@ -3538,7 +3538,7 @@ FORCE_ALIGN void AL_APIENTRY alSourceQueueBuffersDirect(ALCcontext *context, ALu
 try {
     if(nb < 0)
         context->throw_error(AL_INVALID_VALUE, "Queueing {} buffers", nb);
-    if(nb <= 0) UNLIKELY return;
+    if(nb <= 0) [[unlikely]] return;
 
     std::lock_guard<std::mutex> sourcelock{context->mSourceLock};
     ALsource *source{LookupSource(context,src)};
@@ -3663,7 +3663,7 @@ FORCE_ALIGN void AL_APIENTRY alSourceUnqueueBuffersDirect(ALCcontext *context, A
 try {
     if(nb < 0)
         context->throw_error(AL_INVALID_VALUE, "Unqueueing {} buffers", nb);
-    if(nb <= 0) UNLIKELY return;
+    if(nb <= 0) [[unlikely]] return;
 
     std::lock_guard<std::mutex> sourcelock{context->mSourceLock};
     ALsource *source{LookupSource(context,src)};
@@ -3678,7 +3678,7 @@ try {
     /* Make sure enough buffers have been processed to unqueue. */
     const auto bids = std::span{buffers, static_cast<ALuint>(nb)};
     size_t processed{0};
-    if(source->state != AL_INITIAL) LIKELY
+    if(source->state != AL_INITIAL) [[likely]]
     {
         VoiceBufferItem *Current{nullptr};
         if(Voice *voice{GetSourceVoice(source, context)})
@@ -3717,7 +3717,7 @@ catch(std::exception &e) {
 AL_API void AL_APIENTRY alSourceQueueBufferLayersSOFT(ALuint, ALsizei, const ALuint*) noexcept
 {
     ContextRef context{GetContextRef()};
-    if(!context) UNLIKELY return;
+    if(!context) [[unlikely]] return;
 
     context->setError(AL_INVALID_OPERATION, "alSourceQueueBufferLayersSOFT not supported");
 }
@@ -4085,7 +4085,7 @@ void ALsource::eax4_translate(const Eax4Props& src, Eax5Props& dst) noexcept
         if(src_id == EAXPROPERTYID_EAX40_FXSlot3)
             return EAXPROPERTYID_EAX50_FXSlot3;
 
-        UNLIKELY
+        [[unlikely]]
         ERR("Unexpected active FX slot ID");
         return EAX_NULL_GUID;
     };

@@ -199,7 +199,7 @@ void GetValue(ALCcontext *context, ALenum pname, T *values)
         return;
 
     case AL_DOPPLER_VELOCITY:
-        if(context->mContextFlags.test(ContextFlags::DebugBit)) UNLIKELY
+        if(context->mContextFlags.test(ContextFlags::DebugBit)) [[unlikely]]
             context->debugMessage(DebugSource::API, DebugType::DeprecatedBehavior, 0,
                 DebugSeverity::Medium,
                 "AL_DOPPLER_VELOCITY is deprecated in AL 1.1, use AL_SPEED_OF_SOUND; "
@@ -388,7 +388,7 @@ auto AL_APIENTRY Name##Ext(ALenum pname) noexcept -> R                        \
 {                                                                             \
     auto value = R{};                                                         \
     auto context = GetContextRef();                                           \
-    if(context) LIKELY Name##vDirect##Ext(context.get(), pname, &value);      \
+    if(context) [[likely]] Name##vDirect##Ext(context.get(), pname, &value);  \
     return value;                                                             \
 }                                                                             \
 FORCE_ALIGN auto AL_APIENTRY Name##Direct##Ext(ALCcontext *context,           \
@@ -414,7 +414,7 @@ AL_API DECL_GETFUNC(ALvoidptr, alGetPointer,SOFT)
 AL_API DECL_FUNC2(void, alGetBooleanv, ALenum,pname, ALboolean*,values)
 FORCE_ALIGN void AL_APIENTRY alGetBooleanvDirect(ALCcontext *context, ALenum pname, ALboolean *values) noexcept
 {
-    if(!values) UNLIKELY
+    if(!values) [[unlikely]]
         return context->setError(AL_INVALID_VALUE, "NULL pointer");
     GetValue(context, pname, values);
 }
@@ -422,7 +422,7 @@ FORCE_ALIGN void AL_APIENTRY alGetBooleanvDirect(ALCcontext *context, ALenum pna
 AL_API DECL_FUNC2(void, alGetDoublev, ALenum,pname, ALdouble*,values)
 FORCE_ALIGN void AL_APIENTRY alGetDoublevDirect(ALCcontext *context, ALenum pname, ALdouble *values) noexcept
 {
-    if(!values) UNLIKELY
+    if(!values) [[unlikely]]
         return context->setError(AL_INVALID_VALUE, "NULL pointer");
     GetValue(context, pname, values);
 }
@@ -430,7 +430,7 @@ FORCE_ALIGN void AL_APIENTRY alGetDoublevDirect(ALCcontext *context, ALenum pnam
 AL_API DECL_FUNC2(void, alGetFloatv, ALenum,pname, ALfloat*,values)
 FORCE_ALIGN void AL_APIENTRY alGetFloatvDirect(ALCcontext *context, ALenum pname, ALfloat *values) noexcept
 {
-    if(!values) UNLIKELY
+    if(!values) [[unlikely]]
         return context->setError(AL_INVALID_VALUE, "NULL pointer");
     GetValue(context, pname, values);
 }
@@ -438,7 +438,7 @@ FORCE_ALIGN void AL_APIENTRY alGetFloatvDirect(ALCcontext *context, ALenum pname
 AL_API DECL_FUNC2(void, alGetIntegerv, ALenum,pname, ALint*,values)
 FORCE_ALIGN void AL_APIENTRY alGetIntegervDirect(ALCcontext *context, ALenum pname, ALint *values) noexcept
 {
-    if(!values) UNLIKELY
+    if(!values) [[unlikely]]
         return context->setError(AL_INVALID_VALUE, "NULL pointer");
     GetValue(context, pname, values);
 }
@@ -446,7 +446,7 @@ FORCE_ALIGN void AL_APIENTRY alGetIntegervDirect(ALCcontext *context, ALenum pna
 AL_API DECL_FUNCEXT2(void, alGetInteger64v,SOFT, ALenum,pname, ALint64SOFT*,values)
 FORCE_ALIGN void AL_APIENTRY alGetInteger64vDirectSOFT(ALCcontext *context, ALenum pname, ALint64SOFT *values) noexcept
 {
-    if(!values) UNLIKELY
+    if(!values) [[unlikely]]
         return context->setError(AL_INVALID_VALUE, "NULL pointer");
     GetValue(context, pname, values);
 }
@@ -458,7 +458,7 @@ FORCE_ALIGN void AL_APIENTRY alGetPointervDirectSOFT(ALCcontext *context, ALenum
 FORCE_ALIGN DECL_FUNCEXT2(void, alGetPointerv,EXT, ALenum,pname, ALvoid**,values)
 FORCE_ALIGN void AL_APIENTRY alGetPointervDirectEXT(ALCcontext *context, ALenum pname, ALvoid **values) noexcept
 {
-    if(!values) UNLIKELY
+    if(!values) [[unlikely]]
         return context->setError(AL_INVALID_VALUE, "NULL pointer");
 
     switch(pname)
@@ -591,9 +591,9 @@ FORCE_ALIGN const ALchar* AL_APIENTRY alGetStringiDirectSOFT(ALCcontext *context
 AL_API void AL_APIENTRY alDopplerVelocity(ALfloat value) noexcept
 {
     ContextRef context{GetContextRef()};
-    if(!context) UNLIKELY return;
+    if(!context) [[unlikely]] return;
 
-    if(context->mContextFlags.test(ContextFlags::DebugBit)) UNLIKELY
+    if(context->mContextFlags.test(ContextFlags::DebugBit)) [[unlikely]]
         context->debugMessage(DebugSource::API, DebugType::DeprecatedBehavior, 1,
             DebugSeverity::Medium,
             "alDopplerVelocity is deprecated in AL 1.1, use alSpeedOfSound; "

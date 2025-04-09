@@ -182,7 +182,7 @@ constexpr const char *res_str(SLresult result) noexcept
 
 inline void PrintErr(SLresult res, const char *str)
 {
-    if(res != SL_RESULT_SUCCESS) UNLIKELY
+    if(res != SL_RESULT_SUCCESS) [[unlikely]]
         ERR("{}: {}", str, res_str(res));
 }
 
@@ -878,12 +878,12 @@ void OpenSLCapture::captureSamples(std::byte *buffer, uint samples)
     }
 
     SLAndroidSimpleBufferQueueItf bufferQueue{};
-    if(mDevice->Connected.load(std::memory_order_acquire)) LIKELY
+    if(mDevice->Connected.load(std::memory_order_acquire)) [[likely]]
     {
         const SLresult result{VCALL(mRecordObj,GetInterface)(SL_IID_ANDROIDSIMPLEBUFFERQUEUE,
             &bufferQueue)};
         PrintErr(result, "recordObj->GetInterface");
-        if(SL_RESULT_SUCCESS != result) UNLIKELY
+        if(SL_RESULT_SUCCESS != result) [[unlikely]]
         {
             mDevice->handleDisconnect("Failed to get capture buffer queue: {:#08x}", result);
             bufferQueue = nullptr;
@@ -904,7 +904,7 @@ void OpenSLCapture::captureSamples(std::byte *buffer, uint samples)
 
     SLresult result{SL_RESULT_SUCCESS};
     auto wdata = mRing->getWriteVector();
-    if(adv_count > wdata[1].len) LIKELY
+    if(adv_count > wdata[1].len) [[likely]]
     {
         auto len1 = std::min(wdata[0].len, adv_count-wdata[1].len);
         auto buf1 = wdata[0].buf + chunk_size*(wdata[0].len-len1);

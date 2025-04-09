@@ -6,7 +6,6 @@
 #include <utility>
 
 #include "atomic.h"
-#include "opthelpers.h"
 
 
 namespace al {
@@ -23,7 +22,7 @@ public:
     unsigned int dec_ref() noexcept
     {
         auto ref = DecrementRef(mRef);
-        if(ref == 0) UNLIKELY
+        if(ref == 0) [[unlikely]]
             delete static_cast<T*>(this);
         return ref;
     }
@@ -80,7 +79,7 @@ public:
     /* NOLINTEND(bugprone-unhandled-self-assignment) */
     intrusive_ptr& operator=(intrusive_ptr&& rhs) noexcept
     {
-        if(&rhs != this) LIKELY
+        if(&rhs != this) [[likely]]
         {
             if(mPtr) mPtr->dec_ref();
             mPtr = std::exchange(rhs.mPtr, nullptr);

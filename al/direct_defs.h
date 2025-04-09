@@ -15,7 +15,7 @@ constexpr void DefaultVal() noexcept { }
 auto AL_APIENTRY Name() noexcept -> R                                         \
 {                                                                             \
     auto context = GetContextRef();                                           \
-    if(!context) UNLIKELY return detail_::DefaultVal<R>();                    \
+    if(!context) [[unlikely]] return detail_::DefaultVal<R>();                \
     return Name##Direct(context.get());                                       \
 }
 
@@ -23,7 +23,7 @@ auto AL_APIENTRY Name() noexcept -> R                                         \
 auto AL_APIENTRY Name(T1 n1) noexcept -> R                                    \
 {                                                                             \
     auto context = GetContextRef();                                           \
-    if(!context) UNLIKELY return detail_::DefaultVal<R>();                    \
+    if(!context) [[unlikely]] return detail_::DefaultVal<R>();                \
     return Name##Direct(context.get(), n1);                                   \
 }
 
@@ -31,7 +31,7 @@ auto AL_APIENTRY Name(T1 n1) noexcept -> R                                    \
 auto AL_APIENTRY Name(T1 n1, T2 n2) noexcept -> R                             \
 {                                                                             \
     auto context = GetContextRef();                                           \
-    if(!context) UNLIKELY return detail_::DefaultVal<R>();                    \
+    if(!context) [[unlikely]] return detail_::DefaultVal<R>();                \
     return Name##Direct(context.get(), n1, n2);                               \
 }
 
@@ -39,7 +39,7 @@ auto AL_APIENTRY Name(T1 n1, T2 n2) noexcept -> R                             \
 auto AL_APIENTRY Name(T1 n1, T2 n2, T3 n3) noexcept -> R                      \
 {                                                                             \
     auto context = GetContextRef();                                           \
-    if(!context) UNLIKELY return detail_::DefaultVal<R>();                    \
+    if(!context) [[unlikely]] return detail_::DefaultVal<R>();                \
     return Name##Direct(context.get(), n1, n2, n3);                           \
 }
 
@@ -47,7 +47,7 @@ auto AL_APIENTRY Name(T1 n1, T2 n2, T3 n3) noexcept -> R                      \
 auto AL_APIENTRY Name(T1 n1, T2 n2, T3 n3, T4 n4) noexcept -> R               \
 {                                                                             \
     auto context = GetContextRef();                                           \
-    if(!context) UNLIKELY return detail_::DefaultVal<R>();                    \
+    if(!context) [[unlikely]] return detail_::DefaultVal<R>();                \
     return Name##Direct(context.get(), n1, n2, n3, n4);                       \
 }
 
@@ -55,7 +55,7 @@ auto AL_APIENTRY Name(T1 n1, T2 n2, T3 n3, T4 n4) noexcept -> R               \
 auto AL_APIENTRY Name(T1 n1, T2 n2, T3 n3, T4 n4, T5 n5) noexcept -> R        \
 {                                                                             \
     auto context = GetContextRef();                                           \
-    if(!context) UNLIKELY return detail_::DefaultVal<R>();                    \
+    if(!context) [[unlikely]] return detail_::DefaultVal<R>();                \
     return Name##Direct(context.get(), n1, n2, n3, n4, n5);                   \
 }
 
@@ -64,7 +64,7 @@ auto AL_APIENTRY Name(T1 n1, T2 n2, T3 n3, T4 n4, T5 n5) noexcept -> R        \
 auto AL_APIENTRY Name##Ext() noexcept -> R                                    \
 {                                                                             \
     auto context = GetContextRef();                                           \
-    if(!context) UNLIKELY return detail_::DefaultVal<R>();                    \
+    if(!context) [[unlikely]] return detail_::DefaultVal<R>();                \
     return Name##Direct##Ext(context.get());                                  \
 }
 
@@ -72,7 +72,7 @@ auto AL_APIENTRY Name##Ext() noexcept -> R                                    \
 auto AL_APIENTRY Name##Ext(T1 n1) noexcept -> R                               \
 {                                                                             \
     auto context = GetContextRef();                                           \
-    if(!context) UNLIKELY return detail_::DefaultVal<R>();                    \
+    if(!context) [[unlikely]] return detail_::DefaultVal<R>();                \
     return Name##Direct##Ext(context.get(), n1);                              \
 }
 
@@ -80,7 +80,7 @@ auto AL_APIENTRY Name##Ext(T1 n1) noexcept -> R                               \
 auto AL_APIENTRY Name##Ext(T1 n1, T2 n2) noexcept -> R                        \
 {                                                                             \
     auto context = GetContextRef();                                           \
-    if(!context) UNLIKELY return detail_::DefaultVal<R>();                    \
+    if(!context) [[unlikely]] return detail_::DefaultVal<R>();                \
     return Name##Direct##Ext(context.get(), n1, n2);                          \
 }
 
@@ -88,7 +88,7 @@ auto AL_APIENTRY Name##Ext(T1 n1, T2 n2) noexcept -> R                        \
 auto AL_APIENTRY Name##Ext(T1 n1, T2 n2, T3 n3) noexcept -> R                 \
 {                                                                             \
     auto context = GetContextRef();                                           \
-    if(!context) UNLIKELY return detail_::DefaultVal<R>();                    \
+    if(!context) [[unlikely]] return detail_::DefaultVal<R>();                \
     return Name##Direct##Ext(context.get(), n1, n2, n3);                      \
 }
 
@@ -96,7 +96,7 @@ auto AL_APIENTRY Name##Ext(T1 n1, T2 n2, T3 n3) noexcept -> R                 \
 auto AL_APIENTRY Name##Ext(T1 n1, T2 n2, T3 n3, T4 n4) noexcept -> R          \
 {                                                                             \
     auto context = GetContextRef();                                           \
-    if(!context) UNLIKELY return detail_::DefaultVal<R>();                    \
+    if(!context) [[unlikely]] return detail_::DefaultVal<R>();                \
     return Name##Direct##Ext(context.get(), n1, n2, n3, n4);                  \
 }
 
@@ -104,7 +104,7 @@ auto AL_APIENTRY Name##Ext(T1 n1, T2 n2, T3 n3, T4 n4) noexcept -> R          \
 auto AL_APIENTRY Name##Ext(T1 n1, T2 n2, T3 n3, T4 n4, T5 n5) noexcept -> R   \
 {                                                                             \
     auto context = GetContextRef();                                           \
-    if(!context) UNLIKELY return detail_::DefaultVal<R>();                    \
+    if(!context) [[unlikely]] return detail_::DefaultVal<R>();                \
     return Name##Direct##Ext(context.get(), n1, n2, n3, n4, n5);              \
 }
 
@@ -112,7 +112,7 @@ auto AL_APIENTRY Name##Ext(T1 n1, T2 n2, T3 n3, T4 n4, T5 n5) noexcept -> R   \
 auto AL_APIENTRY Name##Ext(T1 n1, T2 n2, T3 n3, T4 n4, T5 n5, T6 n6) noexcept -> R \
 {                                                                             \
     auto context = GetContextRef();                                           \
-    if(!context) UNLIKELY return detail_::DefaultVal<R>();                    \
+    if(!context) [[unlikely]] return detail_::DefaultVal<R>();                \
     return Name##Direct##Ext(context.get(), n1, n2, n3, n4, n5, n6);          \
 }
 
@@ -120,7 +120,7 @@ auto AL_APIENTRY Name##Ext(T1 n1, T2 n2, T3 n3, T4 n4, T5 n5, T6 n6) noexcept ->
 auto AL_APIENTRY Name##Ext(T1 n1, T2 n2, T3 n3, T4 n4, T5 n5, T6 n6, T7 n7, T8 n8) noexcept -> R \
 {                                                                             \
     auto context = GetContextRef();                                           \
-    if(!context) UNLIKELY return detail_::DefaultVal<R>();                    \
+    if(!context) [[unlikely]] return detail_::DefaultVal<R>();                \
     return Name##Direct##Ext(context.get(), n1, n2, n3, n4, n5, n6, n7, n8);  \
 }
 

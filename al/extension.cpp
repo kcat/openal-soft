@@ -28,13 +28,12 @@
 #include "alc/context.h"
 #include "alstring.h"
 #include "direct_defs.h"
-#include "opthelpers.h"
 
 
 AL_API DECL_FUNC1(ALboolean, alIsExtensionPresent, const ALchar*,extName)
 FORCE_ALIGN ALboolean AL_APIENTRY alIsExtensionPresentDirect(ALCcontext *context, const ALchar *extName) noexcept
 {
-    if(!extName) UNLIKELY
+    if(!extName) [[unlikely]]
     {
         context->setError(AL_INVALID_VALUE, "NULL pointer");
         return AL_FALSE;

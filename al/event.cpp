@@ -64,7 +64,7 @@ int EventThread(ALCcontext *context)
         for(auto &event : evt_span)
         {
             quitnow = std::holds_alternative<AsyncKillThread>(event);
-            if(quitnow) UNLIKELY break;
+            if(quitnow) [[unlikely]] break;
 
             auto proc_killthread = [](AsyncKillThread&) { };
             auto proc_release = [](AsyncEffectReleaseEvent &evt)
@@ -185,7 +185,7 @@ FORCE_ALIGN void AL_APIENTRY alEventControlDirectSOFT(ALCcontext *context, ALsiz
 try {
     if(count < 0)
         context->throw_error(AL_INVALID_VALUE, "Controlling {} events", count);
-    if(count <= 0) UNLIKELY return;
+    if(count <= 0) [[unlikely]] return;
 
     if(!types)
         context->throw_error(AL_INVALID_VALUE, "NULL pointer");

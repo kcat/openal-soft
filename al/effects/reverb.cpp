@@ -15,7 +15,6 @@
 #include "core/logging.h"
 #include "effects.h"
 #include "fmt/ranges.h"
-#include "opthelpers.h"
 
 #if ALSOFT_EAX
 #include <cassert>
@@ -1057,7 +1056,7 @@ bool EaxReverbCommitter::commit(const EAXREVERBPROPERTIES &props)
         ret.LFReference = props.flLFReference;
         ret.RoomRolloffFactor = props.flRoomRolloffFactor;
         ret.DecayHFLimit = ((props.ulFlags & EAXREVERBFLAGS_DECAYHFLIMIT) != 0);
-        if(EaxTraceCommits) UNLIKELY
+        if(EaxTraceCommits) [[unlikely]]
         {
             TRACE("Reverb commit:\n"
                 "  Density: {:f}\n"

@@ -195,10 +195,10 @@ constexpr auto GetDebugSeverityName(DebugSeverity severity) noexcept -> std::str
 void ALCcontext::sendDebugMessage(std::unique_lock<std::mutex> &debuglock, DebugSource source,
     DebugType type, ALuint id, DebugSeverity severity, std::string_view message)
 {
-    if(!mDebugEnabled.load(std::memory_order_relaxed)) UNLIKELY
+    if(!mDebugEnabled.load(std::memory_order_relaxed)) [[unlikely]]
         return;
 
-    if(message.length() >= MaxDebugMessageLength) UNLIKELY
+    if(message.length() >= MaxDebugMessageLength) [[unlikely]]
     {
         ERR("Debug message too long ({} >= {}):\n-> {}", message.length(),
             MaxDebugMessageLength, message);
@@ -234,7 +234,7 @@ void ALCcontext::sendDebugMessage(std::unique_lock<std::mutex> &debuglock, Debug
     {
         if(mDebugLog.size() < MaxDebugLoggedMessages)
             mDebugLog.emplace_back(source, type, id, severity, message);
-        else UNLIKELY
+        else [[unlikely]]
             ERR("Debug message log overflow. Lost message:\n"
                 "  Source: {}\n"
                 "  Type: {}\n"

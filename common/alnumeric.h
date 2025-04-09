@@ -134,11 +134,11 @@ inline int float2int(float f) noexcept
     const int shift{((conv_i>>23)&0xff) - (127+23)};
 
     /* Over/underflow */
-    if(shift >= 31 || shift < -23) UNLIKELY
+    if(shift >= 31 || shift < -23) [[unlikely]]
         return 0;
 
     const int mant{(conv_i&0x7fffff) | 0x800000};
-    if(shift < 0) LIKELY
+    if(shift < 0) [[likely]]
         return (mant >> -shift) * sign;
     return (mant << shift) * sign;
 
@@ -165,11 +165,11 @@ inline int double2int(double d) noexcept
     const int shift{(static_cast<int>(conv_i64 >> 52) & 0x7ff) - (1023 + 52)};
 
     /* Over/underflow */
-    if(shift >= 63 || shift < -52) UNLIKELY
+    if(shift >= 63 || shift < -52) [[unlikely]]
         return 0;
 
     const int64_t mant{(conv_i64 & 0xfffffffffffff_i64) | 0x10000000000000_i64};
-    if(shift < 0) LIKELY
+    if(shift < 0) [[likely]]
         return static_cast<int>(mant >> -shift) * sign;
     return static_cast<int>(mant << shift) * sign;
 
@@ -213,7 +213,7 @@ inline float fast_roundf(float f) noexcept
     const unsigned int sign{(conv_i>>31)&0x01};
     const unsigned int expo{(conv_i>>23)&0xff};
 
-    if(expo >= 150/*+23*/) UNLIKELY
+    if(expo >= 150/*+23*/) [[unlikely]]
     {
         /* An exponent (base-2) of 23 or higher is incapable of sub-integral
          * precision, so it's already an integral value. We don't need to worry

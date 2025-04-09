@@ -105,7 +105,7 @@ try {
 
     while(needed > count)
     {
-        if(device->FilterList.size() >= 1<<25) UNLIKELY
+        if(device->FilterList.size() >= 1<<25) [[unlikely]]
             return false;
 
         FilterSubList sublist{};
@@ -162,10 +162,10 @@ auto LookupFilter(al::Device *device, ALuint id) noexcept -> ALfilter*
     const size_t lidx{(id-1) >> 6};
     const ALuint slidx{(id-1) & 0x3f};
 
-    if(lidx >= device->FilterList.size()) UNLIKELY
+    if(lidx >= device->FilterList.size()) [[unlikely]]
         return nullptr;
     FilterSubList &sublist = device->FilterList[lidx];
-    if(sublist.FreeMask & (1_u64 << slidx)) UNLIKELY
+    if(sublist.FreeMask & (1_u64 << slidx)) [[unlikely]]
         return nullptr;
     return std::to_address(sublist.Filters->begin() + slidx);
 }
@@ -364,7 +364,7 @@ FORCE_ALIGN void AL_APIENTRY alGenFiltersDirect(ALCcontext *context, ALsizei n, 
 try {
     if(n < 0)
         context->throw_error(AL_INVALID_VALUE, "Generating {} filters", n);
-    if(n <= 0) UNLIKELY return;
+    if(n <= 0) [[unlikely]] return;
 
     auto *device = context->mALDevice.get();
     auto filterlock = std::lock_guard{device->FilterLock};
@@ -388,7 +388,7 @@ FORCE_ALIGN void AL_APIENTRY alDeleteFiltersDirect(ALCcontext *context, ALsizei 
 try {
     if(n < 0)
         context->throw_error(AL_INVALID_VALUE, "Deleting {} filters", n);
-    if(n <= 0) UNLIKELY return;
+    if(n <= 0) [[unlikely]] return;
 
     auto *device = context->mALDevice.get();
     auto filterlock = std::lock_guard{device->FilterLock};

@@ -1033,7 +1033,7 @@ FORCE_ALIGN auto AL_APIENTRY EAXSet(const GUID *property_set_id, ALuint property
     ALuint source_id, ALvoid *value, ALuint value_size) noexcept -> ALenum
 {
     auto context = GetContextRef();
-    if(!context) UNLIKELY return AL_INVALID_OPERATION;
+    if(!context) [[unlikely]] return AL_INVALID_OPERATION;
     return EAXSetDirect(context.get(), property_set_id, property_id, source_id, value, value_size);
 }
 
@@ -1056,7 +1056,7 @@ FORCE_ALIGN auto AL_APIENTRY EAXGet(const GUID *property_set_id, ALuint property
     ALuint source_id, ALvoid *value, ALuint value_size) noexcept -> ALenum
 {
     auto context = GetContextRef();
-    if(!context) UNLIKELY return AL_INVALID_OPERATION;
+    if(!context) [[unlikely]] return AL_INVALID_OPERATION;
     return EAXGetDirect(context.get(), property_set_id, property_id, source_id, value, value_size);
 }
 

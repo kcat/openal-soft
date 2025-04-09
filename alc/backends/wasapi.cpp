@@ -1418,7 +1418,7 @@ FORCE_ALIGN void WasapiPlayback::mixerProc(SpatialDevice &audio)
         HRESULT hr{audio.mRender->BeginUpdatingAudioObjects(&dynamicCount, &framesToDo)};
         if(SUCCEEDED(hr))
         {
-            if(channels.empty()) UNLIKELY
+            if(channels.empty()) [[unlikely]]
             {
                 auto flags = as_unsigned(al::to_underlying(audio.mStaticMask));
                 channels.reserve(as_unsigned(std::popcount(flags)));

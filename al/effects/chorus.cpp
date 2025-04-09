@@ -564,7 +564,7 @@ public:
         al_props_.Depth = props.flDepth;
         al_props_.Feedback = props.flFeedback;
         al_props_.Delay = props.flDelay;
-        if(EaxTraceCommits) UNLIKELY
+        if(EaxTraceCommits) [[unlikely]]
         {
             TRACE("Chorus/flanger commit:\n"
                 "  Waveform: {}\n"

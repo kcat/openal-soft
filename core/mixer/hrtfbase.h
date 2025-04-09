@@ -55,7 +55,7 @@ inline void MixHrtfBlendBase(const al::span<const float> InSamples,
     const ConstHrirSpan NewCoeffs{newparams->Coeffs};
     const float newGainStep{newparams->GainStep};
 
-    if(oldparams->Gain > GainSilenceThreshold) LIKELY
+    if(oldparams->Gain > GainSilenceThreshold) [[likely]]
     {
         size_t ldelay{HrtfHistoryLength - oldparams->Delay[0]};
         size_t rdelay{HrtfHistoryLength - oldparams->Delay[1]};
@@ -71,7 +71,7 @@ inline void MixHrtfBlendBase(const al::span<const float> InSamples,
         }
     }
 
-    if(newGainStep*static_cast<float>(SamplesToDo) > GainSilenceThreshold) LIKELY
+    if(newGainStep*static_cast<float>(SamplesToDo) > GainSilenceThreshold) [[likely]]
     {
         size_t ldelay{HrtfHistoryLength+1 - newparams->Delay[0]};
         size_t rdelay{HrtfHistoryLength+1 - newparams->Delay[1]};

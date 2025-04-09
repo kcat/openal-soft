@@ -1,9 +1,7 @@
 #ifndef OPTHELPERS_H
 #define OPTHELPERS_H
 
-#include <cstdint>
-#include <utility>
-#include <memory>
+#include <type_traits>
 
 #ifdef __has_builtin
 #define HAS_BUILTIN __has_builtin
@@ -61,17 +59,6 @@
 #define ASSUME(x) do { if(x) break; __builtin_unreachable(); } while(0)
 #else
 #define ASSUME(x) (static_cast<void>(0))
-#endif
-
-/* This shouldn't be needed since unknown attributes are ignored, but older
- * versions of GCC choke on the attribute syntax in certain situations.
- */
-#if HAS_ATTRIBUTE(likely)
-#define LIKELY [[likely]]
-#define UNLIKELY [[unlikely]]
-#else
-#define LIKELY
-#define UNLIKELY
 #endif
 
 #if !defined(_WIN32) && HAS_ATTRIBUTE(gnu::visibility)

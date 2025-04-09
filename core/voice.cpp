@@ -13,7 +13,6 @@
 #include <cstdlib>
 #include <iterator>
 #include <memory>
-#include <new>
 #include <optional>
 #include <utility>
 #include <vector>
@@ -520,7 +519,7 @@ void LoadBufferStatic(VoiceBufferItem *buffer, VoiceBufferItem *bufferLoopItem,
     {
         float lastSample{0.0f};
         /* Load what's left to play from the buffer */
-        if(buffer->mSampleLen > dataPosInt) LIKELY
+        if(buffer->mSampleLen > dataPosInt) [[likely]]
         {
             const size_t buffer_remaining{buffer->mSampleLen - dataPosInt};
             const size_t remaining{std::min(voiceSamples.size(), buffer_remaining)};
@@ -564,7 +563,7 @@ void LoadBufferCallback(VoiceBufferItem *buffer, const size_t dataPosInt,
     const size_t srcStep, al::span<float> voiceSamples)
 {
     float lastSample{0.0f};
-    if(numCallbackSamples > dataPosInt) LIKELY
+    if(numCallbackSamples > dataPosInt) [[likely]]
     {
         const size_t remaining{std::min(voiceSamples.size(), numCallbackSamples-dataPosInt)};
         LoadSamples(voiceSamples.first(remaining), buffer->mSamples, srcChannel, dataPosInt,
@@ -623,7 +622,7 @@ void DoHrtfMix(const al::span<const float> samples, DirectParams &parms, const f
         HrtfSamples.begin());
     std::copy_n(samples.begin(), samples.size(), src_iter);
     /* Copy the last used samples back into the history buffer for later. */
-    if(IsPlaying) LIKELY
+    if(IsPlaying) [[likely]]
     {
         const auto endsamples = HrtfSamples.subspan(samples.size(), parms.Hrtf.History.size());
         std::copy_n(endsamples.cbegin(), endsamples.size(), parms.Hrtf.History.begin());
@@ -735,7 +734,7 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
     VoiceBufferItem *BufferListItem{mCurrentBuffer.load(std::memory_order_relaxed)};
     VoiceBufferItem *BufferLoopItem{mLoopBuffer.load(std::memory_order_relaxed)};
     const uint increment{mStep};
-    if(increment < 1) UNLIKELY
+    if(increment < 1) [[unlikely]]
     {
         /* If the voice is supposed to be stopping but can't be mixed, just
          * stop it before bailing.
@@ -757,7 +756,7 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
     uint OutPos{0u};
 
     /* Check if we're doing a delayed start, and we start in this update. */
-    if(mStartTime > deviceTime) UNLIKELY
+    if(mStartTime > deviceTime) [[unlikely]]
     {
         /* If the voice is supposed to be stopping but hasn't actually started
          * yet, make sure its stopped.
@@ -870,7 +869,7 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
                 samplesToLoad - samplesLoaded);
 
             size_t srcSampleDelay{0};
-            if(intPos < 0) UNLIKELY
+            if(intPos < 0) [[unlikely]]
             {
                 /* If the current position is negative, there's that many
                  * silent samples to load before using the buffer.
@@ -890,7 +889,7 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
             }
 
             /* Load the necessary samples from the given buffer(s). */
-            if(!BufferListItem) UNLIKELY
+            if(!BufferListItem) [[unlikely]]
             {
                 const uint avail{std::min(srcBufferSize, MaxResamplerEdge)};
                 const uint tofill{std::max(srcBufferSize, MaxResamplerEdge)};
@@ -963,13 +962,13 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
                     {MixingSamples[chan]+samplesLoaded, dstBufferSize});
 
             /* Store the last source samples used for next time. */
-            if(vstate == Playing) LIKELY
+            if(vstate == Playing) [[likely]]
             {
                 /* Only store samples for the end of the mix, excluding what
                  * gets loaded for decoder padding.
                  */
                 const uint loadEnd{samplesLoaded + dstBufferSize};
-                if(samplesToMix > samplesLoaded && samplesToMix <= loadEnd) LIKELY
+                if(samplesToMix > samplesLoaded && samplesToMix <= loadEnd) [[likely]]
                 {
                     const size_t dstOffset{samplesToMix - samplesLoaded};
                     const size_t srcOffset{(dstOffset*increment + fracPos) >> MixerFracBits};
@@ -1094,7 +1093,7 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
     mFlags.set(VoiceIsFading);
 
     /* Don't update positions and buffers if we were stopping. */
-    if(vstate == Stopping) UNLIKELY
+    if(vstate == Stopping) [[unlikely]]
     {
         mPlayState.store(Stopped, std::memory_order_release);
         return;
@@ -1106,7 +1105,7 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
     DataPosFrac &= MixerFracMask;
 
     uint buffers_done{0u};
-    if(BufferListItem && DataPosInt > 0) LIKELY
+    if(BufferListItem && DataPosInt > 0) [[likely]]
     {
         if(mFlags.test(VoiceIsStatic))
         {
@@ -1216,7 +1215,7 @@ void Voice::prepare(DeviceBase *device)
     uint num_channels{(mFmtChannels == FmtMonoDup) ? 2
         : (mFmtChannels == FmtUHJ2 || mFmtChannels == FmtSuperStereo) ? 3
         : ChannelsFromFmt(mFmtChannels, std::min(mAmbiOrder, device->mAmbiOrder))};
-    if(num_channels > device->MixerChannelsMax) UNLIKELY
+    if(num_channels > device->MixerChannelsMax) [[unlikely]]
     {
         ERR("Unexpected channel count: {} (limit: {}, {} : {})", num_channels,
             device->MixerChannelsMax, NameFromFormat(mFmtChannels), mAmbiOrder);

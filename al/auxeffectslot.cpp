@@ -103,10 +103,10 @@ auto LookupEffectSlot(ALCcontext *context, ALuint id) noexcept -> ALeffectslot*
     const size_t lidx{(id-1) >> 6};
     const ALuint slidx{(id-1) & 0x3f};
 
-    if(lidx >= context->mEffectSlotList.size()) UNLIKELY
+    if(lidx >= context->mEffectSlotList.size()) [[unlikely]]
         return nullptr;
     EffectSlotSubList &sublist{context->mEffectSlotList[lidx]};
-    if(sublist.FreeMask & (1_u64 << slidx)) UNLIKELY
+    if(sublist.FreeMask & (1_u64 << slidx)) [[unlikely]]
         return nullptr;
     return std::to_address(sublist.EffectSlots->begin() + slidx);
 }
@@ -117,10 +117,10 @@ inline auto LookupEffect(al::Device *device, ALuint id) noexcept -> ALeffect*
     const size_t lidx{(id-1) >> 6};
     const ALuint slidx{(id-1) & 0x3f};
 
-    if(lidx >= device->EffectList.size()) UNLIKELY
+    if(lidx >= device->EffectList.size()) [[unlikely]]
         return nullptr;
     EffectSubList &sublist = device->EffectList[lidx];
-    if(sublist.FreeMask & (1_u64 << slidx)) UNLIKELY
+    if(sublist.FreeMask & (1_u64 << slidx)) [[unlikely]]
         return nullptr;
     return std::to_address(sublist.Effects->begin() + slidx);
 }
@@ -131,10 +131,10 @@ inline auto LookupBuffer(al::Device *device, ALuint id) noexcept -> ALbuffer*
     const size_t lidx{(id-1) >> 6};
     const ALuint slidx{(id-1) & 0x3f};
 
-    if(lidx >= device->BufferList.size()) UNLIKELY
+    if(lidx >= device->BufferList.size()) [[unlikely]]
         return nullptr;
     BufferSubList &sublist = device->BufferList[lidx];
-    if(sublist.FreeMask & (1_u64 << slidx)) UNLIKELY
+    if(sublist.FreeMask & (1_u64 << slidx)) [[unlikely]]
         return nullptr;
     return std::to_address(sublist.Buffers->begin() + slidx);
 }
@@ -171,7 +171,7 @@ void AddActiveEffectSlots(const std::span<ALeffectslot*> auxslots, ALCcontext *c
     /* Reallocate newarray if the new size ended up smaller from duplicate
      * removal.
      */
-    if(newcount < newarray->size()>>1) UNLIKELY
+    if(newcount < newarray->size()>>1) [[unlikely]]
     {
         auto oldarray = std::move(newarray);
         newarray = EffectSlot::CreatePtrArray(newcount<<1);
@@ -205,7 +205,7 @@ void RemoveActiveEffectSlots(const std::span<ALeffectslot*> auxslots, ALCcontext
 
     /* Reallocate with the new size. */
     auto newsize = static_cast<size_t>(std::distance(newarray->begin(), new_end));
-    if(newsize < newarray->size()>>1) LIKELY
+    if(newsize < newarray->size()>>1) [[likely]]
     {
         auto oldarray = std::move(newarray);
         newarray = EffectSlot::CreatePtrArray(newsize<<1);
@@ -256,7 +256,7 @@ try {
 
     while(needed > count)
     {
-        if(context->mEffectSlotList.size() >= 1<<25) UNLIKELY
+        if(context->mEffectSlotList.size() >= 1<<25) [[unlikely]]
             return false;
 
         EffectSlotSubList sublist{};
@@ -328,7 +328,7 @@ FORCE_ALIGN void AL_APIENTRY alGenAuxiliaryEffectSlotsDirect(ALCcontext *context
 try {
     if(n < 0)
         context->throw_error(AL_INVALID_VALUE, "Generating {} effect slots", n);
-    if(n <= 0) UNLIKELY return;
+    if(n <= 0) [[unlikely]] return;
 
     auto slotlock = std::lock_guard{context->mEffectSlotLock};
     auto *device = context->mALDevice.get();
@@ -379,9 +379,9 @@ AL_API DECL_FUNC2(void, alDeleteAuxiliaryEffectSlots, ALsizei,n, const ALuint*,e
 FORCE_ALIGN void AL_APIENTRY alDeleteAuxiliaryEffectSlotsDirect(ALCcontext *context, ALsizei n,
     const ALuint *effectslots) noexcept
 try {
-    if(n < 0) UNLIKELY
+    if(n < 0) [[unlikely]]
         context->throw_error(AL_INVALID_VALUE, "Deleting {} effect slots", n);
-    if(n <= 0) UNLIKELY return;
+    if(n <= 0) [[unlikely]] return;
 
     std::lock_guard<std::mutex> slotlock{context->mEffectSlotLock};
     if(n == 1)
@@ -444,28 +444,28 @@ FORCE_ALIGN ALboolean AL_APIENTRY alIsAuxiliaryEffectSlotDirect(ALCcontext *cont
 AL_API void AL_APIENTRY alAuxiliaryEffectSlotPlaySOFT(ALuint) noexcept
 {
     ContextRef context{GetContextRef()};
-    if(!context) UNLIKELY return;
+    if(!context) [[unlikely]] return;
     context->setError(AL_INVALID_OPERATION, "alAuxiliaryEffectSlotPlaySOFT not supported");
 }
 
 AL_API void AL_APIENTRY alAuxiliaryEffectSlotPlayvSOFT(ALsizei, const ALuint*) noexcept
 {
     ContextRef context{GetContextRef()};
-    if(!context) UNLIKELY return;
+    if(!context) [[unlikely]] return;
     context->setError(AL_INVALID_OPERATION, "alAuxiliaryEffectSlotPlayvSOFT not supported");
 }
 
 AL_API void AL_APIENTRY alAuxiliaryEffectSlotStopSOFT(ALuint) noexcept
 {
     ContextRef context{GetContextRef()};
-    if(!context) UNLIKELY return;
+    if(!context) [[unlikely]] return;
     context->setError(AL_INVALID_OPERATION, "alAuxiliaryEffectSlotStopSOFT not supported");
 }
 
 AL_API void AL_APIENTRY alAuxiliaryEffectSlotStopvSOFT(ALsizei, const ALuint*) noexcept
 {
     ContextRef context{GetContextRef()};
-    if(!context) UNLIKELY return;
+    if(!context) [[unlikely]] return;
     context->setError(AL_INVALID_OPERATION, "alAuxiliaryEffectSlotStopvSOFT not supported");
 }
 
@@ -478,7 +478,7 @@ try {
     std::lock_guard<std::mutex> slotlock{context->mEffectSlotLock};
 
     ALeffectslot *slot{LookupEffectSlot(context, effectslot)};
-    if(!slot) UNLIKELY
+    if(!slot) [[unlikely]]
         context->throw_error(AL_INVALID_NAME, "Invalid effect slot ID {}", effectslot);
 
     ALeffectslot *target{};
@@ -502,7 +502,7 @@ try {
         if(err != AL_NO_ERROR)
             context->throw_error(err, "Effect initialization failed");
 
-        if(slot->mState == SlotState::Initial) UNLIKELY
+        if(slot->mState == SlotState::Initial) [[unlikely]]
         {
             slot->mPropsDirty = false;
             slot->updateProps(context);
@@ -517,7 +517,7 @@ try {
     case AL_EFFECTSLOT_AUXILIARY_SEND_AUTO:
         if(!(value == AL_TRUE || value == AL_FALSE))
             context->throw_error(AL_INVALID_VALUE, "Effect slot auxiliary send auto out of range");
-        if(!(slot->AuxSendAuto == !!value)) LIKELY
+        if(!(slot->AuxSendAuto == !!value)) [[likely]]
         {
             slot->AuxSendAuto = !!value;
             UpdateProps(slot, context);
@@ -528,7 +528,7 @@ try {
         target = LookupEffectSlot(context, static_cast<ALuint>(value));
         if(value && !target)
             context->throw_error(AL_INVALID_VALUE, "Invalid effect slot target ID {}", value);
-        if(slot->Target == target) UNLIKELY
+        if(slot->Target == target) [[unlikely]]
             return;
         if(target)
         {
@@ -694,7 +694,7 @@ try {
     case AL_EFFECTSLOT_GAIN:
         if(!(value >= 0.0f && value <= 1.0f))
             context->throw_error(AL_INVALID_VALUE, "Effect slot gain {} out of range", value);
-        if(!(slot->Gain == value)) LIKELY
+        if(!(slot->Gain == value)) [[likely]]
         {
             slot->Gain = value;
             UpdateProps(slot, context);

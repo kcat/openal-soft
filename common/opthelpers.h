@@ -95,26 +95,6 @@ constexpr std::underlying_type_t<T> to_underlying(T e) noexcept
 #endif
 }
 
-template<std::size_t alignment, typename T>
-force_inline constexpr auto assume_aligned(T *ptr) noexcept
-{
-#ifdef __cpp_lib_assume_aligned
-    return std::assume_aligned<alignment,T>(ptr);
-#elif HAS_BUILTIN(__builtin_assume_aligned)
-    return static_cast<T*>(__builtin_assume_aligned(ptr, alignment));
-#elif defined(_MSC_VER)
-    constexpr std::size_t alignment_mask{(1<<alignment) - 1};
-    if((reinterpret_cast<std::uintptr_t>(ptr)&alignment_mask) == 0)
-        return ptr;
-    __assume(0);
-#elif defined(__ICC)
-    __assume_aligned(ptr, alignment);
-    return ptr;
-#else
-    return ptr;
-#endif
-}
-
 } // namespace al
 
 #endif /* OPTHELPERS_H */

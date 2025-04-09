@@ -2062,14 +2062,14 @@ void ApplyDistanceComp(const al::span<FloatBufferLine> Samples, const size_t Sam
     for(auto &chanbuffer : Samples)
     {
         const float gain{distcomp->Gain};
-        auto distbuf = al::span{al::assume_aligned<16>(distcomp->Buffer.data()),
+        auto distbuf = al::span{std::assume_aligned<16>(distcomp->Buffer.data()),
             distcomp->Buffer.size()};
         ++distcomp;
 
         const size_t base{distbuf.size()};
         if(base < 1) continue;
 
-        const auto inout = al::span{al::assume_aligned<16>(chanbuffer.data()), SamplesToDo};
+        const auto inout = al::span{std::assume_aligned<16>(chanbuffer.data()), SamplesToDo};
         if(SamplesToDo >= base) LIKELY
         {
             auto delay_end = std::rotate(inout.begin(), inout.end()-ptrdiff_t(base), inout.end());

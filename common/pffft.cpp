@@ -65,6 +65,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
+#include <memory>
 #include <new>
 #include <numbers>
 #include <span>
@@ -2144,18 +2145,18 @@ void pffft_transform(const PFFFT_Setup *setup, const float *input, float *output
     pffft_direction_t direction)
 {
     assert(valigned(input) && valigned(output) && valigned(work));
-    pffft_transform_internal(setup, reinterpret_cast<const v4sf*>(al::assume_aligned<16>(input)),
-        reinterpret_cast<v4sf*>(al::assume_aligned<16>(output)),
-        reinterpret_cast<v4sf*>(al::assume_aligned<16>(work)), direction, false);
+    pffft_transform_internal(setup, reinterpret_cast<const v4sf*>(std::assume_aligned<16>(input)),
+        reinterpret_cast<v4sf*>(std::assume_aligned<16>(output)),
+        reinterpret_cast<v4sf*>(std::assume_aligned<16>(work)), direction, false);
 }
 
 void pffft_transform_ordered(const PFFFT_Setup *setup, const float *input, float *output,
     float *work, pffft_direction_t direction)
 {
     assert(valigned(input) && valigned(output) && valigned(work));
-    pffft_transform_internal(setup, reinterpret_cast<const v4sf*>(al::assume_aligned<16>(input)),
-        reinterpret_cast<v4sf*>(al::assume_aligned<16>(output)),
-        reinterpret_cast<v4sf*>(al::assume_aligned<16>(work)), direction, true);
+    pffft_transform_internal(setup, reinterpret_cast<const v4sf*>(std::assume_aligned<16>(input)),
+        reinterpret_cast<v4sf*>(std::assume_aligned<16>(output)),
+        reinterpret_cast<v4sf*>(std::assume_aligned<16>(work)), direction, true);
 }
 
 #else // defined(PFFFT_SIMD_DISABLE)

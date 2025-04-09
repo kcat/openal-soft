@@ -1752,8 +1752,8 @@ void ReverbState::process(const size_t samplesToDo, const al::span<const FloatBu
     auto &pipeline = mPipelines[mCurrentPipeline];
 
     /* Convert B-Format to A-Format for processing. */
-    const size_t numInput{std::min(samplesIn.size(), NUM_LINES)};
-    const al::span<float> tmpspan{al::assume_aligned<16>(mTempLine.data()), samplesToDo};
+    const auto numInput = std::min(samplesIn.size(), NUM_LINES);
+    const auto tmpspan = std::span{std::assume_aligned<16>(mTempLine.data()), samplesToDo};
     for(size_t c{0u};c < NUM_LINES;++c)
     {
         std::fill(tmpspan.begin(), tmpspan.end(), 0.0f);

@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <memory>
 
 #include "defs.h"
 #include "hrtfdefs.h"
@@ -120,11 +121,11 @@ inline void MixDirectHrtfBase(const FloatBufferSpan LeftOut, const FloatBufferSp
     }
 
     /* Add the HRTF signal to the existing "direct" signal. */
-    const auto left = al::span{al::assume_aligned<16>(LeftOut.data()), SamplesToDo};
+    const auto left = al::span{std::assume_aligned<16>(LeftOut.data()), SamplesToDo};
     std::transform(left.cbegin(), left.cend(), AccumSamples.cbegin(), left.begin(),
         [](const float sample, const float2 &accum) noexcept -> float
         { return sample + accum[0]; });
-    const auto right = al::span{al::assume_aligned<16>(RightOut.data()), SamplesToDo};
+    const auto right = al::span{std::assume_aligned<16>(RightOut.data()), SamplesToDo};
     std::transform(right.cbegin(), right.cend(), AccumSamples.cbegin(), right.begin(),
         [](const float sample, const float2 &accum) noexcept -> float
         { return sample + accum[1]; });

@@ -23,7 +23,7 @@ namespace {
 
 template<std::size_t A, typename T, std::size_t N>
 constexpr auto assume_aligned_span(const al::span<T,N> s) noexcept -> al::span<T,N>
-{ return al::span<T,N>{al::assume_aligned<A>(s.data()), s.size()}; }
+{ return al::span<T,N>{std::assume_aligned<A>(s.data()), s.size()}; }
 
 /* Convolution is implemented using a segmented overlap-add method. The filter
  * response is broken up into multiple segments of 128 samples, and each
@@ -195,9 +195,9 @@ void UhjEncoder<N>::encode(float *LeftOut, float *RightOut,
     ASSUME(SamplesToDo > 0);
     ASSUME(SamplesToDo <= BufferLineSize);
 
-    const auto winput = al::span{al::assume_aligned<16>(InSamples[0]), SamplesToDo};
-    const auto xinput = al::span{al::assume_aligned<16>(InSamples[1]), SamplesToDo};
-    const auto yinput = al::span{al::assume_aligned<16>(InSamples[2]), SamplesToDo};
+    const auto winput = al::span{std::assume_aligned<16>(InSamples[0]), SamplesToDo};
+    const auto xinput = al::span{std::assume_aligned<16>(InSamples[1]), SamplesToDo};
+    const auto yinput = al::span{std::assume_aligned<16>(InSamples[2]), SamplesToDo};
 
     std::copy_n(winput.begin(), SamplesToDo, mW.begin()+sFilterDelay);
     std::copy_n(xinput.begin(), SamplesToDo, mX.begin()+sFilterDelay);
@@ -298,7 +298,7 @@ void UhjEncoder<N>::encode(float *LeftOut, float *RightOut,
         const auto distbuf = assume_aligned_span<16>(al::span{*delayBuffer});
         ++delayBuffer;
 
-        const auto inout = al::span{al::assume_aligned<16>(buffer), SamplesToDo};
+        const auto inout = al::span{std::assume_aligned<16>(buffer), SamplesToDo};
         if(SamplesToDo >= sFilterDelay)
         {
             auto delay_end = std::rotate(inout.begin(), inout.end() - sFilterDelay, inout.end());
@@ -314,12 +314,12 @@ void UhjEncoder<N>::encode(float *LeftOut, float *RightOut,
     /* Combine the direct signal with the produced output. */
 
     /* Left = (S + D)/2.0 */
-    const auto left = al::span{al::assume_aligned<16>(LeftOut), SamplesToDo};
+    const auto left = al::span{std::assume_aligned<16>(LeftOut), SamplesToDo};
     for(size_t i{0};i < SamplesToDo;++i)
         left[i] += (mS[i] + mD[i]) * 0.5f;
 
     /* Right = (S - D)/2.0 */
-    const auto right = al::span{al::assume_aligned<16>(RightOut), SamplesToDo};
+    const auto right = al::span{std::assume_aligned<16>(RightOut), SamplesToDo};
     for(size_t i{0};i < SamplesToDo;++i)
         right[i] += (mS[i] - mD[i]) * 0.5f;
 }
@@ -345,9 +345,9 @@ void UhjEncoderIIR::encode(float *LeftOut, float *RightOut,
     ASSUME(SamplesToDo > 0);
     ASSUME(SamplesToDo <= BufferLineSize);
 
-    const auto winput = al::span{al::assume_aligned<16>(InSamples[0]), SamplesToDo};
-    const auto xinput = al::span{al::assume_aligned<16>(InSamples[1]), SamplesToDo};
-    const auto yinput = al::span{al::assume_aligned<16>(InSamples[2]), SamplesToDo};
+    const auto winput = al::span{std::assume_aligned<16>(InSamples[0]), SamplesToDo};
+    const auto xinput = al::span{std::assume_aligned<16>(InSamples[1]), SamplesToDo};
+    const auto yinput = al::span{std::assume_aligned<16>(InSamples[2]), SamplesToDo};
 
     /* S = 0.9396926*W + 0.1855740*X */
     std::transform(winput.begin(), winput.end(), xinput.begin(), mTemp.begin(),
@@ -372,7 +372,7 @@ void UhjEncoderIIR::encode(float *LeftOut, float *RightOut,
     /* Apply the base filter to the existing output to align with the processed
      * signal.
      */
-    const auto left = al::span{al::assume_aligned<16>(LeftOut), SamplesToDo};
+    const auto left = al::span{std::assume_aligned<16>(LeftOut), SamplesToDo};
     process(mFilter1Direct[0], Filter1Coeff, left, true, al::span{mTemp}.subspan(1));
     mTemp[0] = mDirectDelay[0]; mDirectDelay[0] = mTemp[SamplesToDo];
 
@@ -380,7 +380,7 @@ void UhjEncoderIIR::encode(float *LeftOut, float *RightOut,
     for(size_t i{0};i < SamplesToDo;++i)
         left[i] = (mS[i] + mD[i])*0.5f + mTemp[i];
 
-    const auto right = al::span{al::assume_aligned<16>(RightOut), SamplesToDo};
+    const auto right = al::span{std::assume_aligned<16>(RightOut), SamplesToDo};
     process(mFilter1Direct[1], Filter1Coeff, right, true, al::span{mTemp}.subspan(1));
     mTemp[0] = mDirectDelay[1]; mDirectDelay[1] = mTemp[SamplesToDo];
 
@@ -415,9 +415,10 @@ void UhjDecoder<N>::decode(const al::span<float*> samples, const size_t samplesT
     ASSUME(samplesToDo <= BufferLineSize);
 
     {
-        const auto left = al::span{al::assume_aligned<16>(samples[0]), samplesToDo+sInputPadding};
-        const auto right = al::span{al::assume_aligned<16>(samples[1]), samplesToDo+sInputPadding};
-        const auto t = al::span{al::assume_aligned<16>(samples[2]), samplesToDo+sInputPadding};
+        const auto left = al::span{std::assume_aligned<16>(samples[0]), samplesToDo+sInputPadding};
+        const auto right = al::span{std::assume_aligned<16>(samples[1]),
+            samplesToDo+sInputPadding};
+        const auto t = al::span{std::assume_aligned<16>(samples[2]), samplesToDo+sInputPadding};
 
         /* S = Left + Right */
         std::transform(left.begin(), left.end(), right.begin(), mS.begin(), std::plus{});
@@ -429,9 +430,9 @@ void UhjDecoder<N>::decode(const al::span<float*> samples, const size_t samplesT
         std::copy(t.begin(), t.end(), mT.begin());
     }
 
-    const auto woutput = al::span{al::assume_aligned<16>(samples[0]), samplesToDo};
-    const auto xoutput = al::span{al::assume_aligned<16>(samples[1]), samplesToDo};
-    const auto youtput = al::span{al::assume_aligned<16>(samples[2]), samplesToDo};
+    const auto woutput = al::span{std::assume_aligned<16>(samples[0]), samplesToDo};
+    const auto xoutput = al::span{std::assume_aligned<16>(samples[1]), samplesToDo};
+    const auto youtput = al::span{std::assume_aligned<16>(samples[2]), samplesToDo};
 
     /* Precompute j(0.828331*D + 0.767820*T) and store in xoutput. */
     auto tmpiter = std::copy(mDTHistory.cbegin(), mDTHistory.cend(), mTemp.begin());
@@ -462,7 +463,7 @@ void UhjDecoder<N>::decode(const al::span<float*> samples, const size_t samplesT
 
     if(samples.size() > 3)
     {
-        const auto zoutput = al::span{al::assume_aligned<16>(samples[3]), samplesToDo};
+        const auto zoutput = al::span{std::assume_aligned<16>(samples[3]), samplesToDo};
         /* Z = 1.023332*Q */
         std::transform(zoutput.begin(), zoutput.end(), zoutput.begin(),
             [](const float q) noexcept { return 1.023332f*q; });
@@ -478,8 +479,9 @@ void UhjDecoderIIR::decode(const al::span<float*> samples, const size_t samplesT
     ASSUME(samplesToDo <= BufferLineSize);
 
     {
-        const auto left = al::span{al::assume_aligned<16>(samples[0]), samplesToDo+sInputPadding};
-        const auto right = al::span{al::assume_aligned<16>(samples[1]), samplesToDo+sInputPadding};
+        const auto left = al::span{std::assume_aligned<16>(samples[0]), samplesToDo+sInputPadding};
+        const auto right = al::span{std::assume_aligned<16>(samples[1]),
+            samplesToDo+sInputPadding};
 
         /* S = Left + Right */
         std::transform(left.begin(), left.end(), right.begin(), mS.begin(), std::plus{});
@@ -488,9 +490,9 @@ void UhjDecoderIIR::decode(const al::span<float*> samples, const size_t samplesT
         std::transform(left.begin(), left.end(), right.begin(), mD.begin(), std::minus{});
     }
 
-    const auto woutput = al::span{al::assume_aligned<16>(samples[0]), samplesToDo};
-    const auto xoutput = al::span{al::assume_aligned<16>(samples[1]), samplesToDo};
-    const auto youtput = al::span{al::assume_aligned<16>(samples[2]), samplesToDo+sInputPadding};
+    const auto woutput = al::span{std::assume_aligned<16>(samples[0]), samplesToDo};
+    const auto xoutput = al::span{std::assume_aligned<16>(samples[1]), samplesToDo};
+    const auto youtput = al::span{std::assume_aligned<16>(samples[2]), samplesToDo+sInputPadding};
 
     /* Precompute j(0.828331*D + 0.767820*T) and store in xoutput. */
     std::transform(mD.cbegin(), mD.cbegin()+sInputPadding+samplesToDo, youtput.begin(),
@@ -526,7 +528,7 @@ void UhjDecoderIIR::decode(const al::span<float*> samples, const size_t samplesT
 
     if(samples.size() > 3)
     {
-        const auto zoutput = al::span{al::assume_aligned<16>(samples[3]), samplesToDo};
+        const auto zoutput = al::span{std::assume_aligned<16>(samples[3]), samplesToDo};
 
         /* Apply filter1 to Q and store in mTemp. */
         process(mFilter1Q, Filter1Coeff, zoutput, updateState, mTemp);
@@ -564,8 +566,9 @@ void UhjStereoDecoder<N>::decode(const al::span<float*> samples, const size_t sa
     ASSUME(samplesToDo <= BufferLineSize);
 
     {
-        const auto left = al::span{al::assume_aligned<16>(samples[0]), samplesToDo+sInputPadding};
-        const auto right = al::span{al::assume_aligned<16>(samples[1]), samplesToDo+sInputPadding};
+        const auto left = al::span{std::assume_aligned<16>(samples[0]), samplesToDo+sInputPadding};
+        const auto right = al::span{std::assume_aligned<16>(samples[1]),
+            samplesToDo+sInputPadding};
 
         std::transform(left.begin(), left.end(), right.begin(), mS.begin(), std::plus{});
 
@@ -602,9 +605,9 @@ void UhjStereoDecoder<N>::decode(const al::span<float*> samples, const size_t sa
         }
     }
 
-    const auto woutput = al::span{al::assume_aligned<16>(samples[0]), samplesToDo};
-    const auto xoutput = al::span{al::assume_aligned<16>(samples[1]), samplesToDo};
-    const auto youtput = al::span{al::assume_aligned<16>(samples[2]), samplesToDo};
+    const auto woutput = al::span{std::assume_aligned<16>(samples[0]), samplesToDo};
+    const auto xoutput = al::span{std::assume_aligned<16>(samples[1]), samplesToDo};
+    const auto youtput = al::span{std::assume_aligned<16>(samples[2]), samplesToDo};
 
     /* Precompute j*D and store in xoutput. */
     auto tmpiter = std::copy(mDTHistory.cbegin(), mDTHistory.cend(), mTemp.begin());
@@ -641,8 +644,9 @@ void UhjStereoDecoderIIR::decode(const al::span<float*> samples, const size_t sa
     ASSUME(samplesToDo <= BufferLineSize);
 
     {
-        const auto left = al::span{al::assume_aligned<16>(samples[0]), samplesToDo+sInputPadding};
-        const auto right = al::span{al::assume_aligned<16>(samples[1]), samplesToDo+sInputPadding};
+        const auto left = al::span{std::assume_aligned<16>(samples[0]), samplesToDo+sInputPadding};
+        const auto right = al::span{std::assume_aligned<16>(samples[1]),
+            samplesToDo+sInputPadding};
 
         std::transform(left.begin(), left.end(), right.begin(), mS.begin(), std::plus{});
 
@@ -680,9 +684,9 @@ void UhjStereoDecoderIIR::decode(const al::span<float*> samples, const size_t sa
         }
     }
 
-    const auto woutput = al::span{al::assume_aligned<16>(samples[0]), samplesToDo};
-    const auto xoutput = al::span{al::assume_aligned<16>(samples[1]), samplesToDo};
-    const auto youtput = al::span{al::assume_aligned<16>(samples[2]), samplesToDo};
+    const auto woutput = al::span{std::assume_aligned<16>(samples[0]), samplesToDo};
+    const auto xoutput = al::span{std::assume_aligned<16>(samples[1]), samplesToDo};
+    const auto youtput = al::span{std::assume_aligned<16>(samples[2]), samplesToDo};
 
     /* Apply filter1 to S and store in mTemp. */
     process(mFilter1S, Filter1Coeff, al::span{mS}.first(samplesToDo), updateState, mTemp);

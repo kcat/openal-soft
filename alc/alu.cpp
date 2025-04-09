@@ -44,7 +44,6 @@
 #include <variant>
 
 #include "alnumeric.h"
-#include "alsem.h"
 #include "alspan.h"
 #include "alstring.h"
 #include "atomic.h"
@@ -2046,7 +2045,10 @@ void ProcessContexts(DeviceBase *device, const uint SamplesToDo)
 
         /* Signal the event handler if there are any events to read. */
         if(RingBuffer *ring{ctx->mAsyncEvents.get()}; ring->readSpace() > 0)
-            ctx->mEventSem.post();
+        {
+            ctx->mEventsPending.store(true, std::memory_order_release);
+            ctx->mEventsPending.notify_all();
+        }
     };
     const auto contexts = al::span{*device->mContexts.load(std::memory_order_acquire)};
     std::for_each(contexts.begin(), contexts.end(), proc_context);
@@ -2316,7 +2318,9 @@ void DeviceBase::doDisconnect(std::string msg)
             {
                 std::construct_at(reinterpret_cast<AsyncEvent*>(evt_data.buf), evt);
                 ring->writeAdvance(1);
-                ctx->mEventSem.post();
+
+                ctx->mEventsPending.store(true, std::memory_order_release);
+                ctx->mEventsPending.notify_all();
             }
 
             if(!ctx->mStopVoicesOnDisconnect.load())

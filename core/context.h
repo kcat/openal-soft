@@ -11,7 +11,6 @@
 #include <thread>
 #include <vector>
 
-#include "alsem.h"
 #include "alspan.h"
 #include "async_event.h"
 #include "atomic.h"
@@ -141,8 +140,8 @@ struct ContextBase {
     al::atomic_unique_ptr<EffectSlotArray> mActiveAuxSlots;
 
     std::thread mEventThread;
-    al::semaphore mEventSem;
     std::unique_ptr<RingBuffer> mAsyncEvents;
+    std::atomic<bool> mEventsPending;
     using AsyncEventBitset = std::bitset<al::to_underlying(AsyncEnableBits::Count)>;
     std::atomic<AsyncEventBitset> mEnabledEvts{0u};
 

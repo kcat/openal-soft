@@ -22,7 +22,6 @@
 
 #include "alc/context.h"
 #include "alnumeric.h"
-#include "alsem.h"
 #include "alstring.h"
 #include "core/async_event.h"
 #include "core/context.h"
@@ -46,14 +45,15 @@ overloaded(Ts...) -> overloaded<Ts...>;
 
 int EventThread(ALCcontext *context)
 {
-    RingBuffer *ring{context->mAsyncEvents.get()};
-    bool quitnow{false};
+    auto *ring = context->mAsyncEvents.get();
+    auto quitnow = false;
     while(!quitnow)
     {
         auto evt_data = ring->getReadVector()[0];
         if(evt_data.len == 0)
         {
-            context->mEventSem.wait();
+            context->mEventsPending.wait(false, std::memory_order_acquire);
+            context->mEventsPending.store(false, std::memory_order_release);
             continue;
         }
 
@@ -174,9 +174,12 @@ void StopEventThrd(ALCcontext *ctx)
     std::ignore = InitAsyncEvent<AsyncKillThread>(evt_data.buf);
     ring->writeAdvance(1);
 
-    ctx->mEventSem.post();
     if(ctx->mEventThread.joinable())
+    {
+        ctx->mEventsPending.store(true, std::memory_order_release);
+        ctx->mEventsPending.notify_all();
         ctx->mEventThread.join();
+    }
 }
 
 AL_API DECL_FUNCEXT3(void, alEventControl,SOFT, ALsizei,count, const ALenum*,types, ALboolean,enable)

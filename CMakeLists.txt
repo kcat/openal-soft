@@ -604,8 +604,6 @@ set(COMMON_OBJS
     common/alcomplex.h
     common/almalloc.h
     common/alnumeric.h
-    common/alsem.cpp
-    common/alsem.h
     common/alspan.h
     common/alstring.cpp
     common/alstring.h

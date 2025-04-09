@@ -35,7 +35,6 @@
 #include <functional>
 
 #include "alnumeric.h"
-#include "alsem.h"
 #include "alstring.h"
 #include "althrd_setname.h"
 #include "core/device.h"
@@ -212,7 +211,7 @@ struct OpenSLPlayback final : public BackendBase {
     SLObjectItf mBufferQueueObj{nullptr};
 
     RingBufferPtr mRing{nullptr};
-    al::semaphore mSem;
+    std::atomic<bool> mSignal;
 
     std::mutex mMutex;
 
@@ -252,7 +251,8 @@ void OpenSLPlayback::process(SLAndroidSimpleBufferQueueItf) noexcept
      */
     mRing->readAdvance(1);
 
-    mSem.post();
+    mSignal.store(true, std::memory_order_release);
+    mSignal.notify_all();
 }
 
 int OpenSLPlayback::mixerProc()
@@ -298,7 +298,8 @@ int OpenSLPlayback::mixerProc()
 
             if(mRing->writeSpace() == 0)
             {
-                mSem.wait();
+                mSignal.wait(false, std::memory_order_acquire);
+                mSignal.store(false, std::memory_order_release);
                 continue;
             }
         }
@@ -549,7 +550,8 @@ void OpenSLPlayback::stop()
     if(mKillNow.exchange(true, std::memory_order_acq_rel) || !mThread.joinable())
         return;
 
-    mSem.post();
+    mSignal.store(true, std::memory_order_release);
+    mSignal.notify_all();
     mThread.join();
 
     SLPlayItf player;

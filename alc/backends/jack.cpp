@@ -35,7 +35,6 @@
 
 #include "alc/alconfig.h"
 #include "alnumeric.h"
-#include "alsem.h"
 #include "althrd_setname.h"
 #include "core/device.h"
 #include "core/helpers.h"
@@ -300,7 +299,7 @@ struct JackPlayback final : public BackendBase {
     std::atomic<bool> mPlaying{false};
     bool mRTMixing{false};
     RingBufferPtr mRing;
-    al::semaphore mSem;
+    std::atomic<bool> mSignal;
 
     std::atomic<bool> mKillNow{true};
     std::thread mThread;
@@ -390,7 +389,8 @@ int JackPlayback::process(jack_nframes_t numframes) noexcept
         }
 
         mRing->readAdvance(total);
-        mSem.post();
+        mSignal.store(true, std::memory_order_release);
+        mSignal.notify_all();
     }
 
     if(numframes > total)
@@ -417,7 +417,8 @@ int JackPlayback::mixerProc()
     {
         if(mRing->writeSpace() < update_size)
         {
-            mSem.wait();
+            mSignal.wait(false, std::memory_order_acquire);
+            mSignal.store(false, std::memory_order_release);
             continue;
         }
 
@@ -645,7 +646,8 @@ void JackPlayback::stop()
         mKillNow.store(true, std::memory_order_release);
         if(mThread.joinable())
         {
-            mSem.post();
+            mSignal.store(true, std::memory_order_release);
+            mSignal.notify_all();
             mThread.join();
         }
 

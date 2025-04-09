@@ -71,12 +71,12 @@ struct allocator {
     constexpr explicit allocator(const allocator<U,N>&) noexcept
     { static_assert(Alignment == allocator<U,N>::Alignment); }
 
-    gsl::owner<T*> allocate(std::size_t n)
+    constexpr auto allocate(std::size_t n) -> gsl::owner<T*>
     {
         if(n > std::numeric_limits<std::size_t>::max()/sizeof(T)) throw std::bad_alloc();
         return static_cast<gsl::owner<T*>>(::operator new[](n*sizeof(T), AlignVal));
     }
-    void deallocate(gsl::owner<T*> p, std::size_t) noexcept
+    constexpr void deallocate(gsl::owner<T*> p, std::size_t) noexcept
     { ::operator delete[](gsl::owner<void*>{p}, AlignVal); }
 };
 template<typename T, std::size_t N, typename U, std::size_t M>

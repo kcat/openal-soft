@@ -98,33 +98,35 @@ using seconds_d64 = std::chrono::duration<double>;
 using std::chrono::duration_cast;
 
 
-const std::string AppName{"alffplay"};
+const auto AppName = std::string{"alffplay"};
 
-ALenum DirectOutMode{AL_FALSE};
-bool EnableWideStereo{false};
-bool EnableUhj{false};
-bool EnableSuperStereo{false};
-bool DisableVideo{false};
-LPALGETSOURCEI64VSOFT alGetSourcei64vSOFT;
-LPALEVENTCONTROLSOFT alEventControlSOFT;
-LPALEVENTCALLBACKSOFT alEventCallbackSOFT;
+auto DirectOutMode = ALenum{AL_FALSE};
+auto EnableWideStereo = false;
+auto EnableUhj = false;
+auto EnableSuperStereo = false;
+auto DisableVideo = false;
+auto alGetSourcei64vSOFT = LPALGETSOURCEI64VSOFT{};
+auto alEventControlSOFT = LPALEVENTCONTROLSOFT{};
+auto alEventCallbackSOFT = LPALEVENTCALLBACKSOFT{};
 
-LPALBUFFERCALLBACKSOFT alBufferCallbackSOFT;
+auto alBufferCallbackSOFT = LPALBUFFERCALLBACKSOFT{};
 
-const seconds AVNoSyncThreshold{10};
+constexpr auto AVNoSyncThreshold = seconds{10};
 
-#define VIDEO_PICTURE_QUEUE_SIZE 24
+constexpr auto VideoPictureQueueSize = 24;
 
-const seconds_d64 AudioSyncThreshold{0.03};
-const milliseconds AudioSampleCorrectionMax{50};
+constexpr auto AudioSyncThreshold = seconds_d64{0.03};
+constexpr auto AudioSampleCorrectionMax = milliseconds{50};
 /* Averaging filter coefficient for audio sync. */
-#define AUDIO_DIFF_AVG_NB 20
-const double AudioAvgFilterCoeff{std::pow(0.01, 1.0/AUDIO_DIFF_AVG_NB)};
+constexpr auto AudioDiffAvgNB = 20.0;
+const auto AudioAvgFilterCoeff = std::pow(0.01, 1.0/AudioDiffAvgNB);
+
 /* Per-buffer size, in time */
-constexpr milliseconds AudioBufferTime{20};
+constexpr auto AudioBufferTime = milliseconds{20};
 /* Buffer total size, in time (should be divisible by the buffer time) */
-constexpr milliseconds AudioBufferTotalTime{800};
+constexpr auto AudioBufferTotalTime = milliseconds{800};
 constexpr auto AudioBufferCount = AudioBufferTotalTime / AudioBufferTime;
+
 
 enum {
     FF_MOVIE_DONE_EVENT = SDL_EVENT_USER
@@ -462,7 +464,7 @@ struct VideoState {
         AVFramePtr mFrame;
         nanoseconds mPts{nanoseconds::min()};
     };
-    std::array<Picture,VIDEO_PICTURE_QUEUE_SIZE> mPictQ;
+    std::array<Picture,VideoPictureQueueSize> mPictQ;
     std::atomic<size_t> mPictQRead{0u}, mPictQWrite{1u};
     std::mutex mPictQMutex;
     std::condition_variable mPictQCond;

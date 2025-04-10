@@ -313,7 +313,6 @@ struct DeviceListLock : public std::unique_lock<DeviceList> {
 };
 
 DeviceList gDeviceList;
-std::condition_variable_any gInitCV;
 std::atomic<bool> gInitDone{false};
 
 
@@ -839,18 +838,16 @@ void DeviceEnumHelper::messageHandler(std::promise<HRESULT> *promise)
 
         defaultId = helper->probeDevices(eCapture, devlock.getCaptureList());
         if(!defaultId.empty()) devlock.setCaptureDefaultId(defaultId);
-
-        gInitDone.store(true, std::memory_order_relaxed);
     }
     catch(std::exception &e) {
         ERR("Exception probing devices: {}", e.what());
         if(promise)
             promise->set_value(E_FAIL);
-        return;
     }
 
     TRACE("Watcher thread started");
-    gInitCV.notify_all();
+    gInitDone.store(true, std::memory_order_release);
+    gInitDone.notify_all();
 
     while(!quit()) {
         /* Do nothing. */
@@ -1534,11 +1531,7 @@ try {
         return;
     }
 
-    if(!gInitDone.load(std::memory_order_relaxed))
-    {
-        auto devlock = DeviceListLock{gDeviceList};
-        gInitCV.wait(devlock, []() -> bool { return gInitDone; });
-    }
+    gInitDone.wait(false, std::memory_order_acquire);
 
     auto helper = DeviceHelper{};
     if(HRESULT hr{helper.init()}; FAILED(hr))
@@ -2559,11 +2552,7 @@ try {
         return;
     }
 
-    if(!gInitDone.load(std::memory_order_relaxed))
-    {
-        auto devlock = DeviceListLock{gDeviceList};
-        gInitCV.wait(devlock, []() -> bool { return gInitDone; });
-    }
+    gInitDone.wait(false, std::memory_order_acquire);
 
     auto helper = DeviceHelper{};
     if(HRESULT hr{helper.init()}; FAILED(hr))

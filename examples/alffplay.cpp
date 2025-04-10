@@ -506,9 +506,7 @@ struct MovieState {
     AudioState mAudio;
     VideoState mVideo;
 
-    std::mutex mStartupMutex;
-    std::condition_variable mStartupCond;
-    bool mStartupDone{false};
+    std::atomic<bool> mStartupDone{false};
 
     std::thread mParseThread;
     std::thread mAudioThread;
@@ -1860,8 +1858,7 @@ bool MovieState::prepare()
 
     mParseThread = std::thread{&MovieState::parse_handler, this};
 
-    std::unique_lock<std::mutex> slock{mStartupMutex};
-    while(!mStartupDone) mStartupCond.wait(slock);
+    mStartupDone.wait(false, std::memory_order_acquire);
     return true;
 }
 
@@ -1954,11 +1951,8 @@ int MovieState::parse_handler()
             audio_index = static_cast<int>(i);
     }
 
-    {
-        std::unique_lock<std::mutex> slock{mStartupMutex};
-        mStartupDone = true;
-    }
-    mStartupCond.notify_all();
+    mStartupDone.store(true, std::memory_order_release);
+    mStartupDone.notify_all();
 
     if(video_index < 0 && audio_index < 0)
     {

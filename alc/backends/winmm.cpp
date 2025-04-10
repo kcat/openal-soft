@@ -252,6 +252,7 @@ bool WinMMPlayback::reset()
     mDevice->mUpdateSize = mDevice->mBufferSize / 4;
     mDevice->mSampleRate = mFormat.nSamplesPerSec;
 
+    auto clearval = char{0};
     if(mFormat.wFormatTag == WAVE_FORMAT_IEEE_FLOAT)
     {
         if(mFormat.wBitsPerSample == 32)
@@ -267,7 +268,10 @@ bool WinMMPlayback::reset()
         if(mFormat.wBitsPerSample == 16)
             mDevice->FmtType = DevFmtShort;
         else if(mFormat.wBitsPerSample == 8)
+        {
             mDevice->FmtType = DevFmtUByte;
+            clearval = char{-0x80};
+        }
         else
         {
             ERR("Unhandled PCM sample depth: {}", mFormat.wBitsPerSample);
@@ -294,13 +298,18 @@ bool WinMMPlayback::reset()
     const uint BufferSize{mDevice->mUpdateSize * mFormat.nChannels * mDevice->bytesFromFmt()};
 
     decltype(mBuffer)(BufferSize*mWaveBuffer.size()).swap(mBuffer);
+    auto bufferiter = mBuffer.begin();
+    std::fill(bufferiter, mBuffer.end(), clearval);
+
     mWaveBuffer[0] = WAVEHDR{};
-    mWaveBuffer[0].lpData = mBuffer.data();
+    mWaveBuffer[0].lpData = std::to_address(bufferiter);
     mWaveBuffer[0].dwBufferLength = BufferSize;
     for(size_t i{1};i < mWaveBuffer.size();i++)
     {
+        bufferiter += mWaveBuffer[i-1].dwBufferLength;
+
         mWaveBuffer[i] = WAVEHDR{};
-        mWaveBuffer[i].lpData = mWaveBuffer[i-1].lpData + mWaveBuffer[i-1].dwBufferLength;
+        mWaveBuffer[i].lpData = std::to_address(bufferiter);
         mWaveBuffer[i].dwBufferLength = BufferSize;
     }
     mIdx = 0;
@@ -454,9 +463,12 @@ void WinMMCapture::open(std::string_view name)
             DevFmtChannelsString(mDevice->FmtChans)};
     }
 
+    auto clearval = char{0};
     switch(mDevice->FmtType)
     {
     case DevFmtUByte:
+        clearval = char{-0x80};
+        [[fallthrough]];
     case DevFmtShort:
     case DevFmtInt:
     case DevFmtFloat:
@@ -471,7 +483,7 @@ void WinMMCapture::open(std::string_view name)
 
     mFormat = WAVEFORMATEX{};
     mFormat.wFormatTag = (mDevice->FmtType == DevFmtFloat) ?
-                         WAVE_FORMAT_IEEE_FLOAT : WAVE_FORMAT_PCM;
+        WAVE_FORMAT_IEEE_FLOAT : WAVE_FORMAT_PCM;
     mFormat.nChannels = static_cast<WORD>(mDevice->channelsFromFmt());
     mFormat.wBitsPerSample = static_cast<WORD>(mDevice->bytesFromFmt() * 8);
     mFormat.nBlockAlign = static_cast<WORD>(mFormat.wBitsPerSample * mFormat.nChannels / 8);
@@ -497,13 +509,18 @@ void WinMMCapture::open(std::string_view name)
     mRing = RingBuffer::Create(CapturedDataSize, mFormat.nBlockAlign, false);
 
     decltype(mBuffer)(BufferSize*mWaveBuffer.size()).swap(mBuffer);
+    auto bufferiter = mBuffer.begin();
+    std::fill(bufferiter, mBuffer.end(), clearval);
+
     mWaveBuffer[0] = WAVEHDR{};
-    mWaveBuffer[0].lpData = mBuffer.data();
+    mWaveBuffer[0].lpData = std::to_address(bufferiter);
     mWaveBuffer[0].dwBufferLength = BufferSize;
     for(size_t i{1};i < mWaveBuffer.size();++i)
     {
+        bufferiter += mWaveBuffer[i-1].dwBufferLength;
+
         mWaveBuffer[i] = WAVEHDR{};
-        mWaveBuffer[i].lpData = mWaveBuffer[i-1].lpData + mWaveBuffer[i-1].dwBufferLength;
+        mWaveBuffer[i].lpData = std::to_address(bufferiter);
         mWaveBuffer[i].dwBufferLength = mWaveBuffer[i-1].dwBufferLength;
     }
 

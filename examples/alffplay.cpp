@@ -59,12 +59,17 @@ struct SwsContext;
 #include "SDL3/SDL_video.h"
 
 namespace {
+
 constexpr auto DefineSDLColorspace(SDL_ColorType type, SDL_ColorRange range,
     SDL_ColorPrimaries primaries, SDL_TransferCharacteristics transfer,
     SDL_MatrixCoefficients matrix, SDL_ChromaLocation chromaloc) noexcept
 {
     return SDL_DEFINE_COLORSPACE(type, range, primaries, transfer, matrix, chromaloc);
 }
+
+constexpr auto AVNoPtsValue = AV_NOPTS_VALUE;
+constexpr auto AVErrorEOF = AVERROR_EOF;
+
 } // namespace
 #ifdef __GNUC__
 _Pragma("GCC diagnostic pop")
@@ -92,15 +97,6 @@ using seconds = std::chrono::seconds;
 using seconds_d64 = std::chrono::duration<double>;
 using std::chrono::duration_cast;
 
-#ifdef __GNUC__
-_Pragma("GCC diagnostic push")
-_Pragma("GCC diagnostic ignored \"-Wold-style-cast\"")
-#endif
-constexpr auto AVNoPtsValue = AV_NOPTS_VALUE;
-constexpr auto AVErrorEOF = AVERROR_EOF;
-#ifdef __GNUC__
-_Pragma("GCC diagnostic pop")
-#endif
 
 const std::string AppName{"alffplay"};
 

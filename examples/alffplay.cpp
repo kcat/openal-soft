@@ -733,17 +733,18 @@ template<typename T>
 void sample_dup(std::span<uint8_t> out, std::span<const uint8_t> in, size_t count,
     size_t frame_size)
 {
-    auto sample = std::span{reinterpret_cast<const T*>(in.data()), in.size()/sizeof(T)};
-    auto dst = std::span{reinterpret_cast<T*>(out.data()), out.size()/sizeof(T)};
-
     /* NOTE: frame_size is a multiple of sizeof(T). */
-    const size_t type_mult{frame_size / sizeof(T)};
-    if(type_mult == 1)
+    const auto sample = std::span{reinterpret_cast<const T*>(in.data()), in.size()/sizeof(T)}
+        .first(frame_size / sizeof(T));
+    const auto dst = std::span{reinterpret_cast<T*>(out.data()), out.size()/sizeof(T)};
+
+    if(sample.size() == 1)
         std::fill_n(dst.begin(), count, sample.front());
-    else for(size_t i{0};i < count;++i)
+    else
     {
-        for(size_t j{0};j < type_mult;++j)
-            dst[i*type_mult + j] = sample[j];
+        auto dstiter = dst.begin();
+        for(size_t i{0};i < count;++i)
+            dstiter = std::copy(sample.begin(), sample.end(), dstiter);
     }
 }
 
@@ -773,7 +774,8 @@ bool AudioState::readAudio(std::span<uint8_t> samples, unsigned int length, int 
         if(mSamplesPos >= 0)
         {
             rem = std::min(rem, static_cast<unsigned int>(mSamplesLen - mSamplesPos));
-            const size_t boffset{static_cast<ALuint>(mSamplesPos) * size_t{mFrameSize}};
+
+            const auto boffset = static_cast<ALuint>(mSamplesPos) * size_t{mFrameSize};
             std::copy_n(mSamplesSpan.begin()+ptrdiff_t(boffset), rem*size_t{mFrameSize},
                 samples.begin());
         }
@@ -833,7 +835,7 @@ bool AudioState::readAudio(int sample_skip)
 
         if(mSamplesPos < 0)
         {
-            const size_t rem{std::min<size_t>(nsamples, static_cast<ALuint>(-mSamplesPos))};
+            const auto rem = std::min<size_t>(nsamples, static_cast<ALuint>(-mSamplesPos));
 
             sample_dup(std::span{mBufferData}.subspan(woffset), mSamplesSpan, rem, mFrameSize);
             woffset += rem * mFrameSize;

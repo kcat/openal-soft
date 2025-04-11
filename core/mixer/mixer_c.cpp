@@ -1,13 +1,12 @@
 #include "config.h"
 
 #include <algorithm>
-#include <array>
 #include <cstddef>
 #include <limits>
+#include <span>
 #include <variant>
 
 #include "alnumeric.h"
-#include "alspan.h"
 #include "core/bsinc_defs.h"
 #include "core/bufferline.h"
 #include "core/cubic_defs.h"
@@ -35,34 +34,34 @@ constexpr uint CubicPhaseDiffBits{MixerFracBits - CubicPhaseBits};
 constexpr uint CubicPhaseDiffOne{1 << CubicPhaseDiffBits};
 constexpr uint CubicPhaseDiffMask{CubicPhaseDiffOne - 1u};
 
-using SamplerNST = float(const al::span<const float>, const size_t, const uint) noexcept;
+using SamplerNST = float(const std::span<const float>, const size_t, const uint) noexcept;
 
 template<typename T>
-using SamplerT = float(const T&,const al::span<const float>,const size_t,const uint) noexcept;
+using SamplerT = float(const T&,const std::span<const float>,const size_t,const uint) noexcept;
 
 [[nodiscard]] constexpr
-auto do_point(const al::span<const float> vals, const size_t pos, const uint) noexcept -> float
+auto do_point(const std::span<const float> vals, const size_t pos, const uint) noexcept -> float
 { return vals[pos]; }
 [[nodiscard]] constexpr
-auto do_lerp(const al::span<const float> vals, const size_t pos, const uint frac) noexcept -> float
+auto do_lerp(const std::span<const float> vals, const size_t pos, const uint frac) noexcept -> float
 { return lerpf(vals[pos+0], vals[pos+1], static_cast<float>(frac)*(1.0f/MixerFracOne)); }
 [[nodiscard]] constexpr
-auto do_cubic(const CubicState &istate, const al::span<const float> vals, const size_t pos,
+auto do_cubic(const CubicState &istate, const std::span<const float> vals, const size_t pos,
     const uint frac) noexcept -> float
 {
     /* Calculate the phase index and factor. */
     const uint pi{frac >> CubicPhaseDiffBits}; ASSUME(pi < CubicPhaseCount);
     const float pf{static_cast<float>(frac&CubicPhaseDiffMask) * (1.0f/CubicPhaseDiffOne)};
 
-    const auto fil = al::span{istate.filter[pi].mCoeffs};
-    const auto phd = al::span{istate.filter[pi].mDeltas};
+    const auto fil = std::span{istate.filter[pi].mCoeffs};
+    const auto phd = std::span{istate.filter[pi].mDeltas};
 
     /* Apply the phase interpolated filter. */
     return (fil[0] + pf*phd[0])*vals[pos+0] + (fil[1] + pf*phd[1])*vals[pos+1]
         + (fil[2] + pf*phd[2])*vals[pos+2] + (fil[3] + pf*phd[3])*vals[pos+3];
 }
 [[nodiscard]] constexpr
-auto do_fastbsinc(const BsincState &bsinc, const al::span<const float> vals, const size_t pos,
+auto do_fastbsinc(const BsincState &bsinc, const std::span<const float> vals, const size_t pos,
     const uint frac) noexcept -> float
 {
     const size_t m{bsinc.m};
@@ -83,7 +82,7 @@ auto do_fastbsinc(const BsincState &bsinc, const al::span<const float> vals, con
     return r;
 }
 [[nodiscard]] constexpr
-auto do_bsinc(const BsincState &bsinc, const al::span<const float> vals, const size_t pos,
+auto do_bsinc(const BsincState &bsinc, const std::span<const float> vals, const size_t pos,
     const uint frac) noexcept -> float
 {
     const size_t m{bsinc.m};
@@ -107,8 +106,8 @@ auto do_bsinc(const BsincState &bsinc, const al::span<const float> vals, const s
 }
 
 template<SamplerNST Sampler>
-void DoResample(const al::span<const float> src, uint frac, const uint increment,
-    const al::span<float> dst)
+void DoResample(const std::span<const float> src, uint frac, const uint increment,
+    const std::span<float> dst)
 {
     ASSUME(frac < MixerFracOne);
     size_t pos{0};
@@ -123,8 +122,8 @@ void DoResample(const al::span<const float> src, uint frac, const uint increment
 }
 
 template<typename U, SamplerT<U> Sampler>
-void DoResample(const U istate, const al::span<const float> src, uint frac, const uint increment,
-    const al::span<float> dst)
+void DoResample(const U istate, const std::span<const float> src, uint frac, const uint increment,
+    const std::span<float> dst)
 {
     ASSUME(frac < MixerFracOne);
     size_t pos{0};
@@ -138,7 +137,7 @@ void DoResample(const U istate, const al::span<const float> src, uint frac, cons
     });
 }
 
-inline void ApplyCoeffs(const al::span<float2> Values, const size_t IrSize,
+inline void ApplyCoeffs(const std::span<float2> Values, const size_t IrSize,
     const ConstHrirSpan Coeffs, const float left, const float right) noexcept
 {
     ASSUME(IrSize >= MinIrLength);
@@ -146,11 +145,11 @@ inline void ApplyCoeffs(const al::span<float2> Values, const size_t IrSize,
 
     auto mix_impulse = [left,right](const float2 &value, const float2 &coeff) noexcept -> float2
     { return float2{{value[0] + coeff[0]*left, value[1] + coeff[1]*right}}; };
-    std::transform(Values.cbegin(), Values.cbegin()+ptrdiff_t(IrSize), Coeffs.cbegin(),
+    std::transform(Values.begin(), Values.begin()+ptrdiff_t(IrSize), Coeffs.begin(),
         Values.begin(), mix_impulse);
 }
 
-force_inline void MixLine(al::span<const float> InSamples, const al::span<float> dst,
+force_inline void MixLine(std::span<const float> InSamples, const std::span<float> dst,
     float &CurrentGain, const float TargetGain, const float delta, const size_t fade_len,
     size_t Counter)
 {
@@ -191,26 +190,26 @@ force_inline void MixLine(al::span<const float> InSamples, const al::span<float>
 } // namespace
 
 template<>
-void Resample_<PointTag,CTag>(const InterpState*, const al::span<const float> src, uint frac,
-    const uint increment, const al::span<float> dst)
+void Resample_<PointTag,CTag>(const InterpState*, const std::span<const float> src, uint frac,
+    const uint increment, const std::span<float> dst)
 { DoResample<do_point>(src.subspan(MaxResamplerEdge), frac, increment, dst); }
 
 template<>
-void Resample_<LerpTag,CTag>(const InterpState*, const al::span<const float> src, uint frac,
-    const uint increment, const al::span<float> dst)
+void Resample_<LerpTag,CTag>(const InterpState*, const std::span<const float> src, uint frac,
+    const uint increment, const std::span<float> dst)
 { DoResample<do_lerp>(src.subspan(MaxResamplerEdge), frac, increment, dst); }
 
 template<>
-void Resample_<CubicTag,CTag>(const InterpState *state, const al::span<const float> src, uint frac,
-    const uint increment, const al::span<float> dst)
+void Resample_<CubicTag,CTag>(const InterpState *state, const std::span<const float> src,
+    uint frac, const uint increment, const std::span<float> dst)
 {
     DoResample<CubicState,do_cubic>(std::get<CubicState>(*state), src.subspan(MaxResamplerEdge-1),
         frac, increment, dst);
 }
 
 template<>
-void Resample_<FastBSincTag,CTag>(const InterpState *state, const al::span<const float> src,
-    uint frac, const uint increment, const al::span<float> dst)
+void Resample_<FastBSincTag,CTag>(const InterpState *state, const std::span<const float> src,
+    uint frac, const uint increment, const std::span<float> dst)
 {
     const auto istate = std::get<BsincState>(*state);
     ASSUME(istate.l <= MaxResamplerEdge);
@@ -219,8 +218,8 @@ void Resample_<FastBSincTag,CTag>(const InterpState *state, const al::span<const
 }
 
 template<>
-void Resample_<BSincTag,CTag>(const InterpState *state, const al::span<const float> src, uint frac,
-    const uint increment, const al::span<float> dst)
+void Resample_<BSincTag,CTag>(const InterpState *state, const std::span<const float> src,
+    uint frac, const uint increment, const std::span<float> dst)
 {
     const auto istate = std::get<BsincState>(*state);
     ASSUME(istate.l <= MaxResamplerEdge);
@@ -230,14 +229,14 @@ void Resample_<BSincTag,CTag>(const InterpState *state, const al::span<const flo
 
 
 template<>
-void MixHrtf_<CTag>(const al::span<const float> InSamples, const al::span<float2> AccumSamples,
+void MixHrtf_<CTag>(const std::span<const float> InSamples, const std::span<float2> AccumSamples,
     const uint IrSize, const MixHrtfFilter *hrtfparams, const size_t SamplesToDo)
 { MixHrtfBase<ApplyCoeffs>(InSamples, AccumSamples, IrSize, hrtfparams, SamplesToDo); }
 
 template<>
-void MixHrtfBlend_<CTag>(const al::span<const float> InSamples,const al::span<float2> AccumSamples,
-    const uint IrSize, const HrtfFilter *oldparams, const MixHrtfFilter *newparams,
-    const size_t SamplesToDo)
+void MixHrtfBlend_<CTag>(const std::span<const float> InSamples,
+    const std::span<float2> AccumSamples, const uint IrSize, const HrtfFilter *oldparams,
+    const MixHrtfFilter *newparams, const size_t SamplesToDo)
 {
     MixHrtfBlendBase<ApplyCoeffs>(InSamples, AccumSamples, IrSize, oldparams, newparams,
         SamplesToDo);
@@ -245,8 +244,8 @@ void MixHrtfBlend_<CTag>(const al::span<const float> InSamples,const al::span<fl
 
 template<>
 void MixDirectHrtf_<CTag>(const FloatBufferSpan LeftOut, const FloatBufferSpan RightOut,
-    const al::span<const FloatBufferLine> InSamples, const al::span<float2> AccumSamples,
-    const al::span<float,BufferLineSize> TempBuf, const al::span<HrtfChannelState> ChanState,
+    const std::span<const FloatBufferLine> InSamples, const std::span<float2> AccumSamples,
+    const std::span<float,BufferLineSize> TempBuf, const std::span<HrtfChannelState> ChanState,
     const size_t IrSize, const size_t SamplesToDo)
 {
     MixDirectHrtfBase<ApplyCoeffs>(LeftOut, RightOut, InSamples, AccumSamples, TempBuf, ChanState,
@@ -255,22 +254,22 @@ void MixDirectHrtf_<CTag>(const FloatBufferSpan LeftOut, const FloatBufferSpan R
 
 
 template<>
-void Mix_<CTag>(const al::span<const float> InSamples, const al::span<FloatBufferLine> OutBuffer,
-    const al::span<float> CurrentGains, const al::span<const float> TargetGains,
+void Mix_<CTag>(const std::span<const float> InSamples, const std::span<FloatBufferLine> OutBuffer,
+    const std::span<float> CurrentGains, const std::span<const float> TargetGains,
     const size_t Counter, const size_t OutPos)
 {
     const float delta{(Counter > 0) ? 1.0f / static_cast<float>(Counter) : 0.0f};
     const auto fade_len = std::min(Counter, InSamples.size());
 
     auto curgains = CurrentGains.begin();
-    auto targetgains = TargetGains.cbegin();
+    auto targetgains = TargetGains.begin();
     for(FloatBufferLine &output : OutBuffer)
-        MixLine(InSamples, al::span{output}.subspan(OutPos), *curgains++, *targetgains++, delta,
+        MixLine(InSamples, std::span{output}.subspan(OutPos), *curgains++, *targetgains++, delta,
             fade_len, Counter);
 }
 
 template<>
-void Mix_<CTag>(const al::span<const float> InSamples, const al::span<float> OutBuffer,
+void Mix_<CTag>(const std::span<const float> InSamples, const std::span<float> OutBuffer,
     float &CurrentGain, const float TargetGain, const size_t Counter)
 {
     const float delta{(Counter > 0) ? 1.0f / static_cast<float>(Counter) : 0.0f};

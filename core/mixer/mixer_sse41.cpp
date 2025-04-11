@@ -27,10 +27,10 @@
 #include <algorithm>
 #include <array>
 #include <cstddef>
+#include <span>
 #include <variant>
 
 #include "alnumeric.h"
-#include "alspan.h"
 #include "core/cubic_defs.h"
 #include "core/resampler_limits.h"
 #include "defs.h"
@@ -59,8 +59,8 @@ force_inline __m128 vmadd(const __m128 x, const __m128 y, const __m128 z) noexce
 } // namespace
 
 template<>
-void Resample_<LerpTag,SSE4Tag>(const InterpState*, const al::span<const float> src, uint frac,
-    const uint increment, const al::span<float> dst)
+void Resample_<LerpTag,SSE4Tag>(const InterpState*, const std::span<const float> src, uint frac,
+    const uint increment, const std::span<float> dst)
 {
     ASSUME(frac < MixerFracOne);
 
@@ -69,13 +69,13 @@ void Resample_<LerpTag,SSE4Tag>(const InterpState*, const al::span<const float> 
     const __m128i fracMask4{_mm_set1_epi32(MixerFracMask)};
 
     std::array<uint,4> pos_{}, frac_{};
-    InitPosArrays(MaxResamplerEdge, frac, increment, al::span{frac_}, al::span{pos_});
+    InitPosArrays(MaxResamplerEdge, frac, increment, std::span{frac_}, std::span{pos_});
     __m128i frac4{_mm_setr_epi32(static_cast<int>(frac_[0]), static_cast<int>(frac_[1]),
         static_cast<int>(frac_[2]), static_cast<int>(frac_[3]))};
     __m128i pos4{_mm_setr_epi32(static_cast<int>(pos_[0]), static_cast<int>(pos_[1]),
         static_cast<int>(pos_[2]), static_cast<int>(pos_[3]))};
 
-    auto vecout = al::span{reinterpret_cast<__m128*>(dst.data()), dst.size()/4};
+    auto vecout = std::span{reinterpret_cast<__m128*>(dst.data()), dst.size()/4};
     std::generate(vecout.begin(), vecout.end(), [=,&pos4,&frac4]
     {
         const auto pos0 = static_cast<uint>(_mm_extract_epi32(pos4, 0));
@@ -121,8 +121,8 @@ void Resample_<LerpTag,SSE4Tag>(const InterpState*, const al::span<const float> 
 }
 
 template<>
-void Resample_<CubicTag,SSE4Tag>(const InterpState *state, const al::span<const float> src,
-    uint frac, const uint increment, const al::span<float> dst)
+void Resample_<CubicTag,SSE4Tag>(const InterpState *state, const std::span<const float> src,
+    uint frac, const uint increment, const std::span<float> dst)
 {
     ASSUME(frac < MixerFracOne);
 
@@ -134,13 +134,13 @@ void Resample_<CubicTag,SSE4Tag>(const InterpState *state, const al::span<const 
     const __m128i fracDiffMask4{_mm_set1_epi32(CubicPhaseDiffMask)};
 
     std::array<uint,4> pos_{}, frac_{};
-    InitPosArrays(MaxResamplerEdge-1, frac, increment, al::span{frac_}, al::span{pos_});
+    InitPosArrays(MaxResamplerEdge-1, frac, increment, std::span{frac_}, std::span{pos_});
     __m128i frac4{_mm_setr_epi32(static_cast<int>(frac_[0]), static_cast<int>(frac_[1]),
         static_cast<int>(frac_[2]), static_cast<int>(frac_[3]))};
     __m128i pos4{_mm_setr_epi32(static_cast<int>(pos_[0]), static_cast<int>(pos_[1]),
         static_cast<int>(pos_[2]), static_cast<int>(pos_[3]))};
 
-    auto vecout = al::span{reinterpret_cast<__m128*>(dst.data()), dst.size()/4};
+    auto vecout = std::span{reinterpret_cast<__m128*>(dst.data()), dst.size()/4};
     std::generate(vecout.begin(), vecout.end(), [=,&pos4,&frac4]
     {
         const auto pos0 = static_cast<uint>(_mm_extract_epi32(pos4, 0));

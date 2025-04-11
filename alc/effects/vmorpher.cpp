@@ -38,11 +38,11 @@
 #include <cstdlib>
 #include <functional>
 #include <numbers>
+#include <span>
 #include <variant>
 
 #include "alc/effects/base.h"
 #include "alnumeric.h"
-#include "alspan.h"
 #include "core/ambidefs.h"
 #include "core/bufferline.h"
 #include "core/context.h"
@@ -86,7 +86,7 @@ inline float Triangle(uint index)
 inline float Half(uint) { return 0.5f; }
 
 template<float (&func)(uint)>
-void Oscillate(const al::span<float> dst, uint index, const uint step)
+void Oscillate(const std::span<float> dst, uint index, const uint step)
 {
     std::generate(dst.begin(), dst.end(), [&index,step]
     {
@@ -119,9 +119,9 @@ struct FormantFilter {
         float s1{mS1};
         float s2{mS2};
 
-        const auto input = al::span{samplesIn, numInput};
-        const auto output = al::span{samplesOut, numInput};
-        std::transform(input.cbegin(), input.cend(), output.cbegin(), output.begin(),
+        const auto input = std::span{samplesIn, numInput};
+        const auto output = std::span{samplesOut, numInput};
+        std::transform(input.begin(), input.end(), output.begin(), output.begin(),
             [g,gain,h,coeff,&s1,&s2](const float in, const float out) noexcept -> float
             {
                 const float H{(in - coeff*s1 - s2)*h};
@@ -159,7 +159,7 @@ struct VmorpherState final : public EffectState {
     };
     std::array<OutParams,MaxAmbiChannels> mChans;
 
-    void (*mGetSamples)(const al::span<float> dst, uint index, const uint step){};
+    void (*mGetSamples)(const std::span<float> dst, uint index, const uint step){};
 
     uint mIndex{0};
     uint mStep{1};
@@ -172,8 +172,8 @@ struct VmorpherState final : public EffectState {
     void deviceUpdate(const DeviceBase *device, const BufferStorage *buffer) override;
     void update(const ContextBase *context, const EffectSlot *slot, const EffectProps *props,
         const EffectTarget target) override;
-    void process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn,
-        const al::span<FloatBufferLine> samplesOut) override;
+    void process(const size_t samplesToDo, const std::span<const FloatBufferLine> samplesIn,
+        const std::span<FloatBufferLine> samplesOut) override;
 
     static std::array<FormantFilter,NumFormants> getFiltersByPhoneme(VMorpherPhenome phoneme,
         float frequency, float pitch) noexcept;
@@ -284,7 +284,8 @@ void VmorpherState::update(const ContextBase *context, const EffectSlot *slot,
     target.Main->setAmbiMixParams(slot->Wet, slot->Gain, set_channel);
 }
 
-void VmorpherState::process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn, const al::span<FloatBufferLine> samplesOut)
+void VmorpherState::process(const size_t samplesToDo,
+    const std::span<const FloatBufferLine> samplesIn, const std::span<FloatBufferLine> samplesOut)
 {
     alignas(16) std::array<float,MaxUpdateSamples> blended{};
 
@@ -295,7 +296,7 @@ void VmorpherState::process(const size_t samplesToDo, const al::span<const Float
     {
         const size_t td{std::min(MaxUpdateSamples, samplesToDo-base)};
 
-        mGetSamples(al::span{mLfo}.first(td), mIndex, mStep);
+        mGetSamples(std::span{mLfo}.first(td), mIndex, mStep);
         mIndex += static_cast<uint>(mStep * td);
         mIndex &= WaveformFracMask;
 
@@ -309,8 +310,8 @@ void VmorpherState::process(const size_t samplesToDo, const al::span<const Float
                 continue;
             }
 
-            const auto vowelA = al::span{chandata->mFormants[VowelAIndex]};
-            const auto vowelB = al::span{chandata->mFormants[VowelBIndex]};
+            const auto vowelA = std::span{chandata->mFormants[VowelAIndex]};
+            const auto vowelB = std::span{chandata->mFormants[VowelBIndex]};
 
             /* Process first vowel. */
             std::fill_n(mSampleBufferA.begin(), td, 0.0f);
@@ -330,7 +331,7 @@ void VmorpherState::process(const size_t samplesToDo, const al::span<const Float
                 blended[i] = lerpf(mSampleBufferA[i], mSampleBufferB[i], mLfo[i]);
 
             /* Now, mix the processed sound data to the output. */
-            MixSamples(al::span{blended}.first(td), al::span{samplesOut[outidx]}.subspan(base),
+            MixSamples(std::span{blended}.first(td), std::span{samplesOut[outidx]}.subspan(base),
                 chandata->mCurrentGain, chandata->mTargetGain, samplesToDo-base);
             ++chandata;
         }

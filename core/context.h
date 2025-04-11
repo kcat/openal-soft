@@ -8,10 +8,10 @@
 #include <bitset>
 #include <cstddef>
 #include <memory>
+#include <span>
 #include <thread>
 #include <vector>
 
-#include "alspan.h"
 #include "async_event.h"
 #include "atomic.h"
 #include "flexarray.h"
@@ -120,12 +120,12 @@ struct ContextBase {
     std::atomic<size_t> mActiveVoiceCount;
 
     void allocVoices(size_t addcount);
-    [[nodiscard]] auto getVoicesSpan() const noexcept -> al::span<Voice*>
+    [[nodiscard]] auto getVoicesSpan() const noexcept -> std::span<Voice*>
     {
         return {mVoices.load(std::memory_order_relaxed)->data(),
             mActiveVoiceCount.load(std::memory_order_relaxed)};
     }
-    [[nodiscard]] auto getVoicesSpanAcquired() const noexcept -> al::span<Voice*>
+    [[nodiscard]] auto getVoicesSpanAcquired() const noexcept -> std::span<Voice*>
     {
         return {mVoices.load(std::memory_order_acquire)->data(),
             mActiveVoiceCount.load(std::memory_order_acquire)};

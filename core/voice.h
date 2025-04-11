@@ -8,9 +8,9 @@
 #include <cstddef>
 #include <memory>
 #include <optional>
+#include <span>
 #include <string>
 
-#include "alspan.h"
 #include "bufferline.h"
 #include "buffer_storage.h"
 #include "devformat.h"
@@ -102,7 +102,7 @@ struct VoiceBufferItem {
     uint mLoopStart{0u};
     uint mLoopEnd{0u};
 
-    al::span<std::byte> mSamples;
+    std::span<std::byte> mSamples;
 
 protected:
     ~VoiceBufferItem() = default;
@@ -244,7 +244,7 @@ struct SIMDALIGN Voice {
 
     struct TargetData {
         int FilterType{};
-        al::span<FloatBufferLine> Buffer;
+        std::span<FloatBufferLine> Buffer;
     };
     TargetData mDirect;
     std::array<TargetData,MaxSendCount> mSend;

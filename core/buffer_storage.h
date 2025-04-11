@@ -2,8 +2,8 @@
 #define CORE_BUFFER_STORAGE_H
 
 #include <cstddef>
+#include <span>
 
-#include "alspan.h"
 #include "ambidefs.h"
 #include "storage_formats.h"
 
@@ -38,7 +38,7 @@ struct BufferStorage {
     CallbackType mCallback{nullptr};
     void *mUserData{nullptr};
 
-    al::span<std::byte> mData;
+    std::span<std::byte> mData;
 
     uint mSampleRate{0u};
     FmtChannels mChannels{FmtMono};

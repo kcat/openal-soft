@@ -2,6 +2,7 @@
 #define CORE_MIXER_HRTFBASE_H
 
 #include <algorithm>
+#include <cassert>
 #include <cmath>
 #include <memory>
 
@@ -12,24 +13,25 @@
 
 using uint = unsigned int;
 
-using ApplyCoeffsT = void(const al::span<float2> Values, const size_t irSize,
+using ApplyCoeffsT = void(const std::span<float2> Values, const size_t irSize,
     const ConstHrirSpan Coeffs, const float left, const float right);
 
 template<ApplyCoeffsT ApplyCoeffs>
-inline void MixHrtfBase(const al::span<const float> InSamples, const al::span<float2> AccumSamples,
-    const size_t IrSize, const MixHrtfFilter *hrtfparams, const size_t SamplesToDo)
+inline void MixHrtfBase(const std::span<const float> InSamples,
+    const std::span<float2> AccumSamples, const size_t IrSize, const MixHrtfFilter *hrtfparams,
+    const size_t SamplesToDo)
 {
     ASSUME(SamplesToDo > 0);
     ASSUME(SamplesToDo <= BufferLineSize);
     ASSUME(IrSize <= HrirLength);
 
-    const ConstHrirSpan Coeffs{hrtfparams->Coeffs};
-    const float gainstep{hrtfparams->GainStep};
-    const float gain{hrtfparams->Gain};
+    const auto Coeffs = std::span{hrtfparams->Coeffs};
+    const auto gainstep = hrtfparams->GainStep;
+    const auto gain = hrtfparams->Gain;
 
-    size_t ldelay{HrtfHistoryLength - hrtfparams->Delay[0]};
-    size_t rdelay{HrtfHistoryLength - hrtfparams->Delay[1]};
-    float stepcount{0.0f};
+    auto ldelay = size_t{HrtfHistoryLength} - hrtfparams->Delay[0];
+    auto rdelay = size_t{HrtfHistoryLength} - hrtfparams->Delay[1];
+    auto stepcount = 0.0f;
     for(size_t i{0u};i < SamplesToDo;++i)
     {
         const float g{gain + gainstep*stepcount};
@@ -42,8 +44,8 @@ inline void MixHrtfBase(const al::span<const float> InSamples, const al::span<fl
 }
 
 template<ApplyCoeffsT ApplyCoeffs>
-inline void MixHrtfBlendBase(const al::span<const float> InSamples,
-    const al::span<float2> AccumSamples, const size_t IrSize, const HrtfFilter *oldparams,
+inline void MixHrtfBlendBase(const std::span<const float> InSamples,
+    const std::span<float2> AccumSamples, const size_t IrSize, const HrtfFilter *oldparams,
     const MixHrtfFilter *newparams, const size_t SamplesToDo)
 {
     ASSUME(SamplesToDo > 0);
@@ -90,8 +92,8 @@ inline void MixHrtfBlendBase(const al::span<const float> InSamples,
 
 template<ApplyCoeffsT ApplyCoeffs>
 inline void MixDirectHrtfBase(const FloatBufferSpan LeftOut, const FloatBufferSpan RightOut,
-    const al::span<const FloatBufferLine> InSamples, const al::span<float2> AccumSamples,
-    const al::span<float,BufferLineSize> TempBuf, const al::span<HrtfChannelState> ChannelState,
+    const std::span<const FloatBufferLine> InSamples, const std::span<float2> AccumSamples,
+    const std::span<float,BufferLineSize> TempBuf, const std::span<HrtfChannelState> ChannelState,
     const size_t IrSize, const size_t SamplesToDo)
 {
     ASSUME(SamplesToDo > 0);
@@ -106,7 +108,7 @@ inline void MixDirectHrtfBase(const FloatBufferSpan LeftOut, const FloatBufferSp
          * the high frequency response. The band-splitter applies this scaling
          * with a consistent phase shift regardless of the scale amount.
          */
-        ChanState->mSplitter.processHfScale(al::span{input}.first(SamplesToDo), TempBuf,
+        ChanState->mSplitter.processHfScale(std::span{input}.first(SamplesToDo), TempBuf,
             ChanState->mHfScale);
 
         /* Now apply the HRIR coefficients to this channel. */
@@ -121,12 +123,12 @@ inline void MixDirectHrtfBase(const FloatBufferSpan LeftOut, const FloatBufferSp
     }
 
     /* Add the HRTF signal to the existing "direct" signal. */
-    const auto left = al::span{std::assume_aligned<16>(LeftOut.data()), SamplesToDo};
-    std::transform(left.cbegin(), left.cend(), AccumSamples.cbegin(), left.begin(),
+    const auto left = std::span{std::assume_aligned<16>(LeftOut.data()), SamplesToDo};
+    std::transform(left.begin(), left.end(), AccumSamples.begin(), left.begin(),
         [](const float sample, const float2 &accum) noexcept -> float
         { return sample + accum[0]; });
-    const auto right = al::span{std::assume_aligned<16>(RightOut.data()), SamplesToDo};
-    std::transform(right.cbegin(), right.cend(), AccumSamples.cbegin(), right.begin(),
+    const auto right = std::span{std::assume_aligned<16>(RightOut.data()), SamplesToDo};
+    std::transform(right.begin(), right.end(), AccumSamples.begin(), right.begin(),
         [](const float sample, const float2 &accum) noexcept -> float
         { return sample + accum[1]; });
 
@@ -134,7 +136,7 @@ inline void MixDirectHrtfBase(const FloatBufferSpan LeftOut, const FloatBufferSp
      * following samples for the next mix.
      */
     const auto accum_inprog = AccumSamples.subspan(SamplesToDo, HrirLength);
-    auto accum_iter = std::copy(accum_inprog.cbegin(), accum_inprog.cend(), AccumSamples.begin());
+    auto accum_iter = std::copy(accum_inprog.begin(), accum_inprog.end(), AccumSamples.begin());
     std::fill_n(accum_iter, SamplesToDo, float2{});
 }
 

@@ -7,7 +7,6 @@
 #include <span>
 #include <variant>
 
-#include "alspan.h"
 #include "core/bufferline.h"
 #include "core/cubic_defs.h"
 
@@ -54,7 +53,7 @@ struct BsincState {
      * delta coefficients. Starting at phase index 0, each subsequent phase
      * index follows contiguously.
      */
-    al::span<const float> filter;
+    std::span<const float> filter;
 };
 
 struct CubicState {
@@ -66,41 +65,41 @@ struct CubicState {
 
 using InterpState = std::variant<std::monostate,CubicState,BsincState>;
 
-using ResamplerFunc = void(*)(const InterpState *state, const al::span<const float> src, uint frac,
-    const uint increment, const al::span<float> dst);
+using ResamplerFunc = void(*)(const InterpState *state, const std::span<const float> src,
+    uint frac, const uint increment, const std::span<float> dst);
 
 ResamplerFunc PrepareResampler(Resampler resampler, uint increment, InterpState *state);
 
 
 template<typename TypeTag, typename InstTag>
-void Resample_(const InterpState *state, const al::span<const float> src, uint frac,
-    const uint increment, const al::span<float> dst);
+void Resample_(const InterpState *state, const std::span<const float> src, uint frac,
+    const uint increment, const std::span<float> dst);
 
 template<typename InstTag>
-void Mix_(const al::span<const float> InSamples, const al::span<FloatBufferLine> OutBuffer,
-    const al::span<float> CurrentGains, const al::span<const float> TargetGains,
+void Mix_(const std::span<const float> InSamples, const std::span<FloatBufferLine> OutBuffer,
+    const std::span<float> CurrentGains, const std::span<const float> TargetGains,
     const size_t Counter, const size_t OutPos);
 template<typename InstTag>
-void Mix_(const al::span<const float> InSamples, const al::span<float> OutBuffer,
+void Mix_(const std::span<const float> InSamples, const std::span<float> OutBuffer,
     float &CurrentGain, const float TargetGain, const size_t Counter);
 
 template<typename InstTag>
-void MixHrtf_(const al::span<const float> InSamples, const al::span<float2> AccumSamples,
+void MixHrtf_(const std::span<const float> InSamples, const std::span<float2> AccumSamples,
     const uint IrSize, const MixHrtfFilter *hrtfparams, const size_t SamplesToDo);
 template<typename InstTag>
-void MixHrtfBlend_(const al::span<const float> InSamples, const al::span<float2> AccumSamples,
+void MixHrtfBlend_(const std::span<const float> InSamples, const std::span<float2> AccumSamples,
     const uint IrSize, const HrtfFilter *oldparams, const MixHrtfFilter *newparams,
     const size_t SamplesToDo);
 template<typename InstTag>
 void MixDirectHrtf_(const FloatBufferSpan LeftOut, const FloatBufferSpan RightOut,
-    const al::span<const FloatBufferLine> InSamples, const al::span<float2> AccumSamples,
-    const al::span<float,BufferLineSize> TempBuf, const al::span<HrtfChannelState> ChanState,
+    const std::span<const FloatBufferLine> InSamples, const std::span<float2> AccumSamples,
+    const std::span<float,BufferLineSize> TempBuf, const std::span<HrtfChannelState> ChanState,
     const size_t IrSize, const size_t SamplesToDo);
 
 /* Vectorized resampler helpers */
 template<size_t N>
 constexpr void InitPosArrays(uint pos, uint frac, const uint increment,
-    const al::span<uint,N> frac_arr, const al::span<uint,N> pos_arr)
+    const std::span<uint,N> frac_arr, const std::span<uint,N> pos_arr)
 {
     static_assert(pos_arr.size() == frac_arr.size());
     pos_arr[0] = pos;

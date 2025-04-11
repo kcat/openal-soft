@@ -45,7 +45,6 @@
 #include <variant>
 
 #include "alnumeric.h"
-#include "alspan.h"
 #include "alstring.h"
 #include "atomic.h"
 #include "core/ambidefs.h"
@@ -137,13 +136,14 @@ float NfcScale{1.0f};
 
 
 using HrtfDirectMixerFunc = void(*)(const FloatBufferSpan LeftOut, const FloatBufferSpan RightOut,
-    const al::span<const FloatBufferLine> InSamples, const al::span<float2> AccumSamples,
-    const al::span<float,BufferLineSize> TempBuf, const al::span<HrtfChannelState> ChanState,
+    const std::span<const FloatBufferLine> InSamples, const std::span<float2> AccumSamples,
+    const std::span<float,BufferLineSize> TempBuf, const std::span<HrtfChannelState> ChanState,
     const size_t IrSize, const size_t SamplesToDo);
 
-HrtfDirectMixerFunc MixDirectHrtf{MixDirectHrtf_<CTag>};
+auto MixDirectHrtf = HrtfDirectMixerFunc{MixDirectHrtf_<CTag>};
 
-inline HrtfDirectMixerFunc SelectHrtfMixer()
+[[nodiscard]] inline
+auto SelectHrtfMixer() -> HrtfDirectMixerFunc
 {
 #if HAVE_NEON
     if((CPUCapFlags&CPU_CAP_NEON))
@@ -1141,9 +1141,9 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
             {
                 auto match_channel = [channel=chans[c].channel](const InputRemixMap &map) noexcept
                 { return channel == map.channel; };
-                auto remap = std::find_if(Device->RealOut.RemixMap.cbegin(),
-                    Device->RealOut.RemixMap.cend(), match_channel);
-                if(remap != Device->RealOut.RemixMap.cend())
+                auto remap = std::find_if(Device->RealOut.RemixMap.begin(),
+                    Device->RealOut.RemixMap.end(), match_channel);
+                if(remap != Device->RealOut.RemixMap.end())
                 {
                     for(const auto &target : remap->targets)
                     {

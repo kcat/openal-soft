@@ -30,7 +30,6 @@
 #include <span>
 #include <stdexcept>
 
-#include "alspan.h"
 #include "bs2b.h"
 
 namespace {

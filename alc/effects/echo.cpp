@@ -24,12 +24,12 @@
 #include <array>
 #include <cmath>
 #include <cstdlib>
+#include <span>
 #include <variant>
 #include <vector>
 
 #include "alc/effects/base.h"
 #include "alnumeric.h"
-#include "alspan.h"
 #include "core/ambidefs.h"
 #include "core/bufferline.h"
 #include "core/context.h"
@@ -72,8 +72,8 @@ struct EchoState final : public EffectState {
     void deviceUpdate(const DeviceBase *device, const BufferStorage *buffer) override;
     void update(const ContextBase *context, const EffectSlot *slot, const EffectProps *props,
         const EffectTarget target) override;
-    void process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn,
-        const al::span<FloatBufferLine> samplesOut) override;
+    void process(const size_t samplesToDo, const std::span<const FloatBufferLine> samplesIn,
+        const std::span<FloatBufferLine> samplesOut) override;
 };
 
 void EchoState::deviceUpdate(const DeviceBase *Device, const BufferStorage*)
@@ -122,9 +122,10 @@ void EchoState::update(const ContextBase *context, const EffectSlot *slot,
     ComputePanGains(target.Main, coeffs1, slot->Gain, mGains[1].Target);
 }
 
-void EchoState::process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn, const al::span<FloatBufferLine> samplesOut)
+void EchoState::process(const size_t samplesToDo, const std::span<const FloatBufferLine> samplesIn,
+    const std::span<FloatBufferLine> samplesOut)
 {
-    const auto delaybuf = al::span{mSampleBuffer};
+    const auto delaybuf = std::span{mSampleBuffer};
     const size_t mask{delaybuf.size()-1};
     size_t offset{mOffset};
     size_t tap1{offset - mDelayTap[0]};
@@ -160,7 +161,7 @@ void EchoState::process(const size_t samplesToDo, const al::span<const FloatBuff
     mOffset = offset;
 
     for(size_t c{0};c < 2;c++)
-        MixSamples(al::span{mTempBuffer[c]}.first(samplesToDo), samplesOut, mGains[c].Current,
+        MixSamples(std::span{mTempBuffer[c]}.first(samplesToDo), samplesOut, mGains[c].Current,
             mGains[c].Target, samplesToDo, 0);
 }
 

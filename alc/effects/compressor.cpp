@@ -36,10 +36,10 @@
 #include <array>
 #include <cmath>
 #include <cstdlib>
+#include <span>
 #include <variant>
 
 #include "alc/effects/base.h"
-#include "alspan.h"
 #include "core/ambidefs.h"
 #include "core/bufferline.h"
 #include "core/device.h"
@@ -80,8 +80,8 @@ struct CompressorState final : public EffectState {
     void deviceUpdate(const DeviceBase *device, const BufferStorage *buffer) override;
     void update(const ContextBase *context, const EffectSlot *slot, const EffectProps *props,
         const EffectTarget target) override;
-    void process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn,
-        const al::span<FloatBufferLine> samplesOut) override;
+    void process(const size_t samplesToDo, const std::span<const FloatBufferLine> samplesIn,
+        const std::span<FloatBufferLine> samplesOut) override;
 };
 
 void CompressorState::deviceUpdate(const DeviceBase *device, const BufferStorage*)
@@ -114,7 +114,7 @@ void CompressorState::update(const ContextBase*, const EffectSlot *slot,
 }
 
 void CompressorState::process(const size_t samplesToDo,
-    const al::span<const FloatBufferLine> samplesIn, const al::span<FloatBufferLine> samplesOut)
+    const std::span<const FloatBufferLine> samplesIn, const std::span<FloatBufferLine> samplesOut)
 {
     /* Generate the per-sample gains from the signal envelope. */
     float env{mEnvFollower};
@@ -163,8 +163,8 @@ void CompressorState::process(const size_t samplesToDo,
         const size_t outidx{chan->mTarget};
         if(outidx != InvalidChannelIndex)
         {
-            const auto dst = al::span{samplesOut[outidx]};
-            const float gain{chan->mGain};
+            const auto dst = std::span{samplesOut[outidx]};
+            const auto gain = chan->mGain;
             if(!(std::fabs(gain) > GainSilenceThreshold))
             {
                 for(size_t i{0u};i < samplesToDo;++i)

@@ -26,11 +26,11 @@
 #include <complex>
 #include <cstdlib>
 #include <numbers>
+#include <span>
 #include <variant>
 
 #include "alc/effects/base.h"
 #include "alnumeric.h"
-#include "alspan.h"
 #include "core/ambidefs.h"
 #include "core/bufferline.h"
 #include "core/device.h"
@@ -111,8 +111,8 @@ struct PshifterState final : public EffectState {
     void deviceUpdate(const DeviceBase *device, const BufferStorage *buffer) override;
     void update(const ContextBase *context, const EffectSlot *slot, const EffectProps *props,
         const EffectTarget target) override;
-    void process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn,
-        const al::span<FloatBufferLine> samplesOut) override;
+    void process(const size_t samplesToDo, const std::span<const FloatBufferLine> samplesIn,
+        const std::span<FloatBufferLine> samplesOut) override;
 };
 
 void PshifterState::deviceUpdate(const DeviceBase*, const BufferStorage*)
@@ -155,7 +155,7 @@ void PshifterState::update(const ContextBase*, const EffectSlot *slot,
 }
 
 void PshifterState::process(const size_t samplesToDo,
-    const al::span<const FloatBufferLine> samplesIn, const al::span<FloatBufferLine> samplesOut)
+    const std::span<const FloatBufferLine> samplesIn, const std::span<FloatBufferLine> samplesOut)
 {
     /* Pitch shifter engine based on the work of Stephan Bernsee.
      * http://blogs.zynaptiq.com/bernsee/pitch-shifting-using-the-ft/
@@ -306,7 +306,7 @@ void PshifterState::process(const size_t samplesToDo,
     }
 
     /* Now, mix the processed sound data to the output. */
-    MixSamples(al::span{mBufferOut}.first(samplesToDo), samplesOut, mCurrentGains, mTargetGains,
+    MixSamples(std::span{mBufferOut}.first(samplesToDo), samplesOut, mCurrentGains, mTargetGains,
         std::max(samplesToDo, 512_uz), 0);
 }
 

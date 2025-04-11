@@ -32,7 +32,6 @@
 
 #include "alc/effects/base.h"
 #include "alnumeric.h"
-#include "alspan.h"
 #include "core/ambidefs.h"
 #include "core/bufferline.h"
 #include "core/context.h"
@@ -98,8 +97,8 @@ struct ChorusState final : public EffectState {
     void deviceUpdate(const DeviceBase *device, const BufferStorage*) final;
     void update(const ContextBase *context, const EffectSlot *slot, const EffectProps *props_,
         const EffectTarget target) final;
-    void process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn,
-        const al::span<FloatBufferLine> samplesOut) final;
+    void process(const size_t samplesToDo, const std::span<const FloatBufferLine> samplesIn,
+        const std::span<FloatBufferLine> samplesOut) final;
 };
 
 
@@ -263,7 +262,8 @@ void ChorusState::calcSinusoidDelays(const size_t todo)
     mLfoOffset = static_cast<uint>(mLfoOffset+todo) % lfo_range;
 }
 
-void ChorusState::process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn, const al::span<FloatBufferLine> samplesOut)
+void ChorusState::process(const size_t samplesToDo,
+    const std::span<const FloatBufferLine> samplesIn, const std::span<FloatBufferLine> samplesOut)
 {
     const auto delaybuf = std::span{mDelayBuffer};
     const size_t bufmask{delaybuf.size()-1};

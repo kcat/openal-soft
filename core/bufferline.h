@@ -2,8 +2,7 @@
 #define CORE_BUFFERLINE_H
 
 #include <array>
-
-#include "alspan.h"
+#include <span>
 
 /* Size for temporary storage of buffer data, in floats. Larger values need
  * more memory and are harder on cache, while smaller values may need more
@@ -12,6 +11,6 @@
 inline constexpr size_t BufferLineSize{1024};
 
 using FloatBufferLine = std::array<float,BufferLineSize>;
-using FloatBufferSpan = al::span<float,BufferLineSize>;
+using FloatBufferSpan = std::span<float,BufferLineSize>;
 
 #endif /* CORE_BUFFERLINE_H */

@@ -62,6 +62,7 @@
 #include <thread>
 #include <vector>
 
+#include "alassert.h"
 #include "alc/alconfig.h"
 #include "alnumeric.h"
 #include "alstring.h"

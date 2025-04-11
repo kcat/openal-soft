@@ -23,10 +23,10 @@
 #include <algorithm>
 #include <array>
 #include <cstdlib>
+#include <span>
 #include <variant>
 
 #include "alc/effects/base.h"
-#include "alspan.h"
 #include "core/bufferline.h"
 #include "core/devformat.h"
 #include "core/device.h"
@@ -55,8 +55,8 @@ struct DedicatedState final : public EffectState {
     void deviceUpdate(const DeviceBase *device, const BufferStorage *buffer) final;
     void update(const ContextBase *context, const EffectSlot *slot, const EffectProps *props_,
         const EffectTarget target) final;
-    void process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn,
-        const al::span<FloatBufferLine> samplesOut) final;
+    void process(const size_t samplesToDo, const std::span<const FloatBufferLine> samplesIn,
+        const std::span<FloatBufferLine> samplesOut) final;
 };
 
 void DedicatedState::deviceUpdate(const DeviceBase*, const BufferStorage*)
@@ -103,9 +103,10 @@ void DedicatedState::update(const ContextBase*, const EffectSlot *slot,
     }
 }
 
-void DedicatedState::process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn, const al::span<FloatBufferLine> samplesOut)
+void DedicatedState::process(const size_t samplesToDo,
+    const std::span<const FloatBufferLine> samplesIn, const std::span<FloatBufferLine> samplesOut)
 {
-    MixSamples(al::span{samplesIn[0]}.first(samplesToDo), samplesOut, mCurrentGains, mTargetGains,
+    MixSamples(std::span{samplesIn[0]}.first(samplesToDo), samplesOut, mCurrentGains, mTargetGains,
         samplesToDo, 0);
 }
 

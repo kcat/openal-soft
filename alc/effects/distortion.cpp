@@ -25,11 +25,11 @@
 #include <cmath>
 #include <cstdlib>
 #include <numbers>
+#include <span>
 #include <variant>
 
 #include "alc/effects/base.h"
 #include "alnumeric.h"
-#include "alspan.h"
 #include "core/ambidefs.h"
 #include "core/bufferline.h"
 #include "core/context.h"
@@ -61,8 +61,8 @@ struct DistortionState final : public EffectState {
     void deviceUpdate(const DeviceBase *device, const BufferStorage *buffer) override;
     void update(const ContextBase *context, const EffectSlot *slot, const EffectProps *props,
         const EffectTarget target) override;
-    void process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn,
-        const al::span<FloatBufferLine> samplesOut) override;
+    void process(const size_t samplesToDo, const std::span<const FloatBufferLine> samplesIn,
+        const std::span<FloatBufferLine> samplesOut) override;
 };
 
 void DistortionState::deviceUpdate(const DeviceBase*, const BufferStorage*)
@@ -101,7 +101,8 @@ void DistortionState::update(const ContextBase *context, const EffectSlot *slot,
     ComputePanGains(target.Main, coeffs, slot->Gain*props.Gain, mGain);
 }
 
-void DistortionState::process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn, const al::span<FloatBufferLine> samplesOut)
+void DistortionState::process(const size_t samplesToDo,
+    const std::span<const FloatBufferLine> samplesIn, const std::span<FloatBufferLine> samplesOut)
 {
     const float fc{mEdgeCoeff};
     for(size_t base{0u};base < samplesToDo;)
@@ -124,7 +125,7 @@ void DistortionState::process(const size_t samplesToDo, const al::span<const Flo
          * (which is fortunately first step of distortion). So combine three
          * operations into the one.
          */
-        mLowpass.process(al::span{mBuffer[0]}.first(todo), mBuffer[1]);
+        mLowpass.process(std::span{mBuffer[0]}.first(todo), mBuffer[1]);
 
         /* Second step, do distortion using waveshaper function to emulate
          * signal processing during tube overdriving. Three steps of
@@ -142,7 +143,7 @@ void DistortionState::process(const size_t samplesToDo, const al::span<const Flo
             proc_sample);
 
         /* Third step, do bandpass filtering of distorted signal. */
-        mBandpass.process(al::span{mBuffer[0]}.first(todo), mBuffer[1]);
+        mBandpass.process(std::span{mBuffer[0]}.first(todo), mBuffer[1]);
 
         todo >>= 2;
         auto outgains = mGain.cbegin();
@@ -156,7 +157,7 @@ void DistortionState::process(const size_t samplesToDo, const al::span<const Flo
                 return;
 
             auto src = mBuffer[1].cbegin();
-            const auto dst = al::span{output}.subspan(base, todo);
+            const auto dst = std::span{output}.subspan(base, todo);
             auto dec_sample = [gain,&src](float sample) noexcept -> float
             {
                 sample += *src * gain;

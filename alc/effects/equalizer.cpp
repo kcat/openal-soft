@@ -25,10 +25,10 @@
 #include <cmath>
 #include <cstdlib>
 #include <functional>
+#include <span>
 #include <variant>
 
 #include "alc/effects/base.h"
-#include "alspan.h"
 #include "core/ambidefs.h"
 #include "core/bufferline.h"
 #include "core/context.h"
@@ -104,8 +104,8 @@ struct EqualizerState final : public EffectState {
     void deviceUpdate(const DeviceBase *device, const BufferStorage *buffer) override;
     void update(const ContextBase *context, const EffectSlot *slot, const EffectProps *props,
         const EffectTarget target) override;
-    void process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn,
-        const al::span<FloatBufferLine> samplesOut) override;
+    void process(const size_t samplesToDo, const std::span<const FloatBufferLine> samplesIn,
+        const std::span<FloatBufferLine> samplesOut) override;
 };
 
 void EqualizerState::deviceUpdate(const DeviceBase*, const BufferStorage*)
@@ -167,15 +167,16 @@ void EqualizerState::update(const ContextBase *context, const EffectSlot *slot,
     target.Main->setAmbiMixParams(slot->Wet, slot->Gain, set_channel);
 }
 
-void EqualizerState::process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn, const al::span<FloatBufferLine> samplesOut)
+void EqualizerState::process(const size_t samplesToDo,
+    const std::span<const FloatBufferLine> samplesIn, const std::span<FloatBufferLine> samplesOut)
 {
-    const auto buffer = al::span{mSampleBuffer}.first(samplesToDo);
+    const auto buffer = std::span{mSampleBuffer}.first(samplesToDo);
     auto chan = mChans.begin();
     for(const auto &input : samplesIn)
     {
         if(const size_t outidx{chan->mTargetChannel}; outidx != InvalidChannelIndex)
         {
-            const auto inbuf = al::span{input}.first(samplesToDo);
+            const auto inbuf = std::span{input}.first(samplesToDo);
             DualBiquad{chan->mFilter[0], chan->mFilter[1]}.process(inbuf, buffer);
             DualBiquad{chan->mFilter[2], chan->mFilter[3]}.process(buffer, buffer);
 

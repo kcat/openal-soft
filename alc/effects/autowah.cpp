@@ -25,11 +25,11 @@
 #include <cmath>
 #include <cstdlib>
 #include <numbers>
+#include <span>
 #include <variant>
 
 #include "alc/effects/base.h"
 #include "alnumeric.h"
-#include "alspan.h"
 #include "core/ambidefs.h"
 #include "core/bufferline.h"
 #include "core/context.h"
@@ -86,8 +86,8 @@ struct AutowahState final : public EffectState {
     void deviceUpdate(const DeviceBase *device, const BufferStorage *buffer) override;
     void update(const ContextBase *context, const EffectSlot *slot, const EffectProps *props,
         const EffectTarget target) override;
-    void process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn,
-        const al::span<FloatBufferLine> samplesOut) override;
+    void process(const size_t samplesToDo, const std::span<const FloatBufferLine> samplesIn,
+        const std::span<FloatBufferLine> samplesOut) override;
 };
 
 void AutowahState::deviceUpdate(const DeviceBase*, const BufferStorage*)
@@ -144,7 +144,7 @@ void AutowahState::update(const ContextBase *context, const EffectSlot *slot,
 }
 
 void AutowahState::process(const size_t samplesToDo,
-    const al::span<const FloatBufferLine> samplesIn, const al::span<FloatBufferLine> samplesOut)
+    const std::span<const FloatBufferLine> samplesIn, const std::span<FloatBufferLine> samplesOut)
 {
     const float attack_rate{mAttackRate};
     const float release_rate{mReleaseRate};
@@ -214,7 +214,7 @@ void AutowahState::process(const size_t samplesToDo,
         chandata->mFilter.z2 = z2;
 
         /* Now, mix the processed sound data to the output. */
-        MixSamples(al::span{mBufferOut}.first(samplesToDo), samplesOut[outidx],
+        MixSamples(std::span{mBufferOut}.first(samplesToDo), samplesOut[outidx],
             chandata->mCurrentGain, chandata->mTargetGain, samplesToDo);
         ++chandata;
     }

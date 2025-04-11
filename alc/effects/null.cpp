@@ -2,8 +2,8 @@
 #include "config.h"
 
 #include <cstddef>
+#include <span>
 
-#include "alspan.h"
 #include "base.h"
 #include "core/bufferline.h"
 #include "core/effects/base.h"
@@ -24,8 +24,8 @@ struct NullState final : public EffectState {
     void deviceUpdate(const DeviceBase *device, const BufferStorage *buffer) override;
     void update(const ContextBase *context, const EffectSlot *slot, const EffectProps *props,
         const EffectTarget target) override;
-    void process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn,
-        const al::span<FloatBufferLine> samplesOut) override;
+    void process(const size_t samplesToDo, const std::span<const FloatBufferLine> samplesIn,
+        const std::span<FloatBufferLine> samplesOut) override;
 };
 
 /* This constructs the effect state. It's called when the object is first
@@ -60,8 +60,8 @@ void NullState::update(const ContextBase* /*context*/, const EffectSlot* /*slot*
  * not replace it.
  */
 void NullState::process(const size_t/*samplesToDo*/,
-    const al::span<const FloatBufferLine> /*samplesIn*/,
-    const al::span<FloatBufferLine> /*samplesOut*/)
+    const std::span<const FloatBufferLine> /*samplesIn*/,
+    const std::span<FloatBufferLine> /*samplesOut*/)
 {
 }
 

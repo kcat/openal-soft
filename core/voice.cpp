@@ -14,11 +14,11 @@
 #include <iterator>
 #include <memory>
 #include <optional>
+#include <span>
 #include <utility>
 #include <vector>
 
 #include "alnumeric.h"
-#include "alspan.h"
 #include "alstring.h"
 #include "ambidefs.h"
 #include "async_event.h"
@@ -63,15 +63,15 @@ using uint = unsigned int;
 using namespace std::chrono;
 using namespace std::string_view_literals;
 
-using HrtfMixerFunc = void(*)(const al::span<const float> InSamples,
-    const al::span<float2> AccumSamples, const uint IrSize, const MixHrtfFilter *hrtfparams,
+using HrtfMixerFunc = void(*)(const std::span<const float> InSamples,
+    const std::span<float2> AccumSamples, const uint IrSize, const MixHrtfFilter *hrtfparams,
     const size_t SamplesToDo);
-using HrtfMixerBlendFunc = void(*)(const al::span<const float> InSamples,
-    const al::span<float2> AccumSamples, const uint IrSize, const HrtfFilter *oldparams,
+using HrtfMixerBlendFunc = void(*)(const std::span<const float> InSamples,
+    const std::span<float2> AccumSamples, const uint IrSize, const HrtfFilter *oldparams,
     const MixHrtfFilter *newparams, const size_t SamplesToDo);
 
-HrtfMixerFunc MixHrtfSamples{MixHrtf_<CTag>};
-HrtfMixerBlendFunc MixHrtfBlendSamples{MixHrtfBlend_<CTag>};
+auto MixHrtfSamples = HrtfMixerFunc{MixHrtf_<CTag>};
+auto MixHrtfBlendSamples = HrtfMixerBlendFunc{MixHrtfBlend_<CTag>};
 
 inline MixerOutFunc SelectMixer()
 {
@@ -243,8 +243,9 @@ void SendSourceStoppedEvent(ContextBase *context, uint id)
 }
 
 
-al::span<const float> DoFilters(BiquadFilter &lpfilter, BiquadFilter &hpfilter,
-    const al::span<float,BufferLineSize> dst, const al::span<const float> src, int type)
+auto DoFilters(BiquadFilter &lpfilter, BiquadFilter &hpfilter,
+    const std::span<float,BufferLineSize> dst, const std::span<const float> src, int type)
+    -> std::span<const float>
 {
     switch(type)
     {
@@ -271,18 +272,18 @@ al::span<const float> DoFilters(BiquadFilter &lpfilter, BiquadFilter &hpfilter,
 
 
 template<FmtType Type>
-inline void LoadSamples(const al::span<float> dstSamples, const al::span<const std::byte> srcData,
-    const size_t srcChan, const size_t srcOffset, const size_t srcStep,
-    const size_t samplesPerBlock [[maybe_unused]]) noexcept
+inline void LoadSamples(const std::span<float> dstSamples,
+    const std::span<const std::byte> srcData, const size_t srcChan, const size_t srcOffset,
+    const size_t srcStep, const size_t samplesPerBlock [[maybe_unused]]) noexcept
 {
     using TypeTraits = al::FmtTypeTraits<Type>;
     using SampleType = typename TypeTraits::Type;
     assert(srcChan < srcStep);
     auto converter = TypeTraits{};
 
-    al::span<const SampleType> src{reinterpret_cast<const SampleType*>(srcData.data()),
+    auto src = std::span{reinterpret_cast<const SampleType*>(srcData.data()),
         srcData.size()/sizeof(SampleType)};
-    auto ssrc = src.cbegin() + ptrdiff_t(srcOffset*srcStep + srcChan);
+    auto ssrc = src.begin() + ptrdiff_t(srcOffset*srcStep + srcChan);
     dstSamples.front() = converter(*ssrc);
     std::generate(dstSamples.begin()+1, dstSamples.end(), [&ssrc,srcStep,converter]
     {
@@ -292,7 +293,7 @@ inline void LoadSamples(const al::span<float> dstSamples, const al::span<const s
 }
 
 template<>
-inline void LoadSamples<FmtIMA4>(al::span<float> dstSamples, al::span<const std::byte> src,
+inline void LoadSamples<FmtIMA4>(std::span<float> dstSamples, std::span<const std::byte> src,
     const size_t srcChan, const size_t srcOffset, const size_t srcStep,
     const size_t samplesPerBlock) noexcept
 {
@@ -383,7 +384,7 @@ inline void LoadSamples<FmtIMA4>(al::span<float> dstSamples, al::span<const std:
 }
 
 template<>
-inline void LoadSamples<FmtMSADPCM>(al::span<float> dstSamples, al::span<const std::byte> src,
+inline void LoadSamples<FmtMSADPCM>(std::span<float> dstSamples, std::span<const std::byte> src,
     const size_t srcChan, const size_t srcOffset, const size_t srcStep,
     const size_t samplesPerBlock) noexcept
 {
@@ -414,7 +415,7 @@ inline void LoadSamples<FmtMSADPCM>(al::span<float> dstSamples, al::span<const s
         const auto nibbleData = src.subspan(7*srcStep);
         src = src.subspan(blockBytes);
 
-        const auto coeffs = al::span{MSADPCMAdaptionCoeff[blockpred]};
+        const auto coeffs = std::span{MSADPCMAdaptionCoeff[blockpred]};
         scale = (scale^0x8000) - 32768;
         sampleHistory[0] = (sampleHistory[0]^0x8000) - 32768;
         sampleHistory[1] = (sampleHistory[1]^0x8000) - 32768;
@@ -487,7 +488,7 @@ inline void LoadSamples<FmtMSADPCM>(al::span<float> dstSamples, al::span<const s
     }
 }
 
-void LoadSamples(const al::span<float> dstSamples, const al::span<const std::byte> src,
+void LoadSamples(const std::span<float> dstSamples, const std::span<const std::byte> src,
     const size_t srcChan, const size_t srcOffset, const FmtType srcType, const size_t srcStep,
     const size_t samplesPerBlock) noexcept
 {
@@ -513,7 +514,7 @@ void LoadSamples(const al::span<float> dstSamples, const al::span<const std::byt
 
 void LoadBufferStatic(VoiceBufferItem *buffer, VoiceBufferItem *bufferLoopItem,
     const size_t dataPosInt, const FmtType sampleType, const size_t srcChannel,
-    const size_t srcStep, al::span<float> voiceSamples)
+    const size_t srcStep, std::span<float> voiceSamples)
 {
     if(!bufferLoopItem)
     {
@@ -560,7 +561,7 @@ void LoadBufferStatic(VoiceBufferItem *buffer, VoiceBufferItem *bufferLoopItem,
 
 void LoadBufferCallback(VoiceBufferItem *buffer, const size_t dataPosInt,
     const size_t numCallbackSamples, const FmtType sampleType, const size_t srcChannel,
-    const size_t srcStep, al::span<float> voiceSamples)
+    const size_t srcStep, std::span<float> voiceSamples)
 {
     float lastSample{0.0f};
     if(numCallbackSamples > dataPosInt) [[likely]]
@@ -578,7 +579,7 @@ void LoadBufferCallback(VoiceBufferItem *buffer, const size_t dataPosInt,
 
 void LoadBufferQueue(VoiceBufferItem *buffer, VoiceBufferItem *bufferLoopItem,
     size_t dataPosInt, const FmtType sampleType, const size_t srcChannel,
-    const size_t srcStep, al::span<float> voiceSamples)
+    const size_t srcStep, std::span<float> voiceSamples)
 {
     float lastSample{0.0f};
     /* Crawl the buffer queue to fill in the temp buffer */
@@ -610,12 +611,12 @@ void LoadBufferQueue(VoiceBufferItem *buffer, VoiceBufferItem *bufferLoopItem,
 }
 
 
-void DoHrtfMix(const al::span<const float> samples, DirectParams &parms, const float TargetGain,
+void DoHrtfMix(const std::span<const float> samples, DirectParams &parms, const float TargetGain,
     const size_t Counter, size_t OutPos, const bool IsPlaying, DeviceBase *Device)
 {
     const uint IrSize{Device->mIrSize};
-    const auto HrtfSamples = al::span{Device->ExtraSampleData};
-    const auto AccumSamples = al::span{Device->HrtfAccumData};
+    const auto HrtfSamples = std::span{Device->ExtraSampleData};
+    const auto AccumSamples = std::span{Device->HrtfAccumData};
 
     /* Copy the HRTF history and new input samples into a temp buffer. */
     auto src_iter = std::copy(parms.Hrtf.History.begin(), parms.Hrtf.History.end(),
@@ -625,7 +626,7 @@ void DoHrtfMix(const al::span<const float> samples, DirectParams &parms, const f
     if(IsPlaying) [[likely]]
     {
         const auto endsamples = HrtfSamples.subspan(samples.size(), parms.Hrtf.History.size());
-        std::copy_n(endsamples.cbegin(), endsamples.size(), parms.Hrtf.History.begin());
+        std::copy_n(endsamples.begin(), endsamples.size(), parms.Hrtf.History.begin());
     }
 
     /* If fading and this is the first mixing pass, fade between the IRs. */
@@ -687,21 +688,21 @@ void DoHrtfMix(const al::span<const float> samples, DirectParams &parms, const f
     }
 }
 
-void DoNfcMix(const al::span<const float> samples, al::span<FloatBufferLine> OutBuffer,
-    DirectParams &parms, const al::span<const float,MaxOutputChannels> OutGains,
+void DoNfcMix(const std::span<const float> samples, std::span<FloatBufferLine> OutBuffer,
+    DirectParams &parms, const std::span<const float,MaxOutputChannels> OutGains,
     const uint Counter, const uint OutPos, DeviceBase *Device)
 {
     using FilterProc = void (NfcFilter::*)(const std::span<const float>, const std::span<float>);
     static constexpr std::array<FilterProc,MaxAmbiOrder+1> NfcProcess{{
         nullptr, &NfcFilter::process1, &NfcFilter::process2, &NfcFilter::process3}};
 
-    MixSamples(samples, al::span{OutBuffer[0]}.subspan(OutPos), parms.Gains.Current[0],
+    MixSamples(samples, std::span{OutBuffer[0]}.subspan(OutPos), parms.Gains.Current[0],
         OutGains[0], Counter);
     OutBuffer = OutBuffer.subspan(1);
-    auto CurrentGains = al::span{parms.Gains.Current}.subspan(1);
+    auto CurrentGains = std::span{parms.Gains.Current}.subspan(1);
     auto TargetGains = OutGains.subspan(1);
 
-    const auto nfcsamples = al::span{Device->ExtraSampleData}.first(samples.size());
+    const auto nfcsamples = std::span{Device->ExtraSampleData}.first(samples.size());
     size_t order{1};
     while(const size_t chancount{Device->NumChannelsPerOrder[order]})
     {
@@ -790,7 +791,7 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
      * resampled buffer data to be mixed.
      */
     auto SamplePointers = std::array<float*,DeviceBase::MixerChannelsMax>{};
-    const auto MixingSamples = al::span{SamplePointers}.first(mChans.size());
+    const auto MixingSamples = std::span{SamplePointers}.first(mChans.size());
     {
         const uint channelStep{(samplesToLoad+3u)&~3u};
         auto base = Device->mSampleData.end() - MixingSamples.size()*channelStep;
@@ -814,11 +815,11 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
         static constexpr uint ResBufSize{std::tuple_size_v<decltype(DeviceBase::mResampleData)>};
         static constexpr uint srcSizeMax{ResBufSize - MaxResamplerEdge};
 
-        const al::span prevSamples{mPrevSamples[chan]};
-        std::copy(prevSamples.cbegin(), prevSamples.cend(), Device->mResampleData.begin());
-        const auto resampleBuffer = al::span{Device->mResampleData}.subspan<MaxResamplerEdge>();
-        int intPos{DataPosInt};
-        uint fracPos{DataPosFrac};
+        const auto prevSamples = std::span{mPrevSamples[chan]};
+        std::copy(prevSamples.begin(), prevSamples.end(), Device->mResampleData.begin());
+        const auto resampleBuffer = std::span{Device->mResampleData}.subspan<MaxResamplerEdge>();
+        auto intPos = DataPosInt;
+        auto fracPos = DataPosFrac;
 
         /* Load samples for this channel from the available buffer(s), with
          * resampling.
@@ -955,7 +956,7 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
              * simple copy for resampling.
              */
             if(increment == MixerFracOne && fracPos == 0)
-                std::copy_n(resampleBuffer.cbegin(), dstBufferSize,
+                std::copy_n(resampleBuffer.begin(), dstBufferSize,
                     MixingSamples[chan]+samplesLoaded);
             else
                 mResampler(&mResampleState, Device->mResampleData, fracPos, increment,
@@ -1048,7 +1049,7 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
     for(auto &chandata : mChans)
     {
         /* Now filter and mix to the appropriate outputs. */
-        const al::span<float,BufferLineSize> FilterBuf{Device->FilteredData};
+        const auto FilterBuf = std::span{Device->FilteredData};
         {
             DirectParams &parms = chandata.mDryParams;
             const auto samples = DoFilters(parms.LowPass, parms.HighPass, FilterBuf,
@@ -1062,8 +1063,8 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
             }
             else
             {
-                const auto TargetGains = (vstate == Playing) ? al::span{parms.Gains.Target}
-                    : al::span{SilentTarget};
+                const auto TargetGains = (vstate == Playing) ? std::span{parms.Gains.Target}
+                    : std::span{SilentTarget};
                 if(mFlags.test(VoiceHasNfc))
                     DoNfcMix(samples, mDirect.Buffer, parms, TargetGains, Counter, OutPos, Device);
                 else
@@ -1081,8 +1082,8 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
             const auto samples = DoFilters(parms.LowPass, parms.HighPass, FilterBuf,
                 {*voiceSamples, samplesToMix}, mSend[send].FilterType);
 
-            const auto TargetGains = (vstate == Playing) ? al::span{parms.Gains.Target}
-                : al::span{SilentTarget};
+            const auto TargetGains = (vstate == Playing) ? std::span{parms.Gains.Target}
+                : std::span{SilentTarget};
             MixSamples(samples, mSend[send].Buffer, parms.Gains.Current, TargetGains, Counter,
                 OutPos);
         }
@@ -1136,10 +1137,10 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
             const uint blocksDone{currentBlock - mCallbackBlockBase};
             if(blocksDone < mNumCallbackBlocks)
             {
-                const size_t byteOffset{blocksDone*size_t{mBytesPerBlock}};
-                const size_t byteEnd{mNumCallbackBlocks*size_t{mBytesPerBlock}};
-                const al::span data{BufferListItem->mSamples};
-                std::copy(data.cbegin()+ptrdiff_t(byteOffset), data.cbegin()+ptrdiff_t(byteEnd),
+                const auto byteOffset = blocksDone*size_t{mBytesPerBlock};
+                const auto byteEnd = mNumCallbackBlocks*size_t{mBytesPerBlock};
+                const auto data = std::span{BufferListItem->mSamples};
+                std::copy(data.begin()+ptrdiff_t(byteOffset), data.begin()+ptrdiff_t(byteEnd),
                     data.begin());
                 mNumCallbackBlocks -= blocksDone;
                 mCallbackBlockBase += blocksDone;
@@ -1313,9 +1314,9 @@ void Voice::prepare(DeviceBase *device)
     else if(mAmbiOrder && device->mAmbiOrder > mAmbiOrder)
     {
         auto OrdersSpan = Is2DAmbisonic(mFmtChannels)
-            ? al::span<const uint8_t>{AmbiIndex::OrderFrom2DChannel}
-            : al::span<const uint8_t>{AmbiIndex::OrderFromChannel};
-        auto OrderFromChan = OrdersSpan.cbegin();
+            ? std::span<const uint8_t>{AmbiIndex::OrderFrom2DChannel}
+            : std::span<const uint8_t>{AmbiIndex::OrderFromChannel};
+        auto OrderFromChan = OrdersSpan.begin();
         const auto scales = AmbiScale::GetHFOrderScales(mAmbiOrder, device->mAmbiOrder,
             device->m2DMixing);
 

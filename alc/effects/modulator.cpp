@@ -27,11 +27,11 @@
 #include <cstdlib>
 #include <functional>
 #include <numbers>
+#include <span>
 #include <variant>
 
 #include "alc/effects/base.h"
 #include "alnumeric.h"
-#include "alspan.h"
 #include "core/ambidefs.h"
 #include "core/bufferline.h"
 #include "core/context.h"
@@ -94,8 +94,8 @@ struct ModulatorState final : public EffectState {
     void deviceUpdate(const DeviceBase *device, const BufferStorage *buffer) override;
     void update(const ContextBase *context, const EffectSlot *slot, const EffectProps *props,
         const EffectTarget target) override;
-    void process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn,
-        const al::span<FloatBufferLine> samplesOut) override;
+    void process(const size_t samplesToDo, const std::span<const FloatBufferLine> samplesIn,
+        const std::span<FloatBufferLine> samplesOut) override;
 };
 
 void ModulatorState::deviceUpdate(const DeviceBase*, const BufferStorage*)
@@ -171,7 +171,8 @@ void ModulatorState::update(const ContextBase *context, const EffectSlot *slot,
     target.Main->setAmbiMixParams(slot->Wet, slot->Gain, set_channel);
 }
 
-void ModulatorState::process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn, const al::span<FloatBufferLine> samplesOut)
+void ModulatorState::process(const size_t samplesToDo,
+    const std::span<const FloatBufferLine> samplesIn, const std::span<FloatBufferLine> samplesOut)
 {
     ASSUME(samplesToDo > 0);
 
@@ -200,11 +201,11 @@ void ModulatorState::process(const size_t samplesToDo, const al::span<const Floa
     {
         if(const size_t outidx{chandata->mTargetChannel}; outidx != InvalidChannelIndex)
         {
-            chandata->mFilter.process(al::span{input}.first(samplesToDo), mBuffer);
+            chandata->mFilter.process(std::span{input}.first(samplesToDo), mBuffer);
             std::transform(mBuffer.cbegin(), mBuffer.cbegin()+samplesToDo, mModSamples.cbegin(),
                 mBuffer.begin(), std::multiplies<>{});
 
-            MixSamples(al::span{mBuffer}.first(samplesToDo), samplesOut[outidx],
+            MixSamples(std::span{mBuffer}.first(samplesToDo), samplesOut[outidx],
                 chandata->mCurrentGain, chandata->mTargetGain, std::min(samplesToDo, 64_uz));
         }
         ++chandata;

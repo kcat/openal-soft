@@ -192,8 +192,8 @@ SampleConverterPtr SampleConverter::Create(DevFmtType srcType, DevFmtType dstTyp
     converter->mIncrement = std::max(static_cast<uint>(step), 1u);
     if(converter->mIncrement == MixerFracOne)
     {
-        converter->mResample = [](const InterpState*, const al::span<const float> src, uint,
-            const uint, const al::span<float> dst)
+        converter->mResample = [](const InterpState*, const std::span<const float> src, uint,
+            const uint, const std::span<float> dst)
         { std::copy_n(src.begin()+MaxResamplerEdge, dst.size(), dst.begin()); };
     }
     else

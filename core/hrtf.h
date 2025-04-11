@@ -11,7 +11,6 @@
 #include <vector>
 
 #include "almalloc.h"
-#include "alspan.h"
 #include "ambidefs.h"
 #include "bufferline.h"
 #include "flexarray.h"
@@ -32,18 +31,18 @@ struct alignas(16) HrtfStore {
     /* NOTE: Fields are stored *backwards*. field[0] is the farthest field, and
      * field[fdCount-1] is the nearest.
      */
-    al::span<const Field> mFields;
+    std::span<const Field> mFields;
 
     struct Elevation {
         ushort azCount;
         ushort irOffset;
     };
-    al::span<Elevation> mElev;
-    al::span<const HrirArray> mCoeffs;
-    al::span<const ubyte2> mDelays;
+    std::span<Elevation> mElev;
+    std::span<const HrirArray> mCoeffs;
+    std::span<const ubyte2> mDelays;
 
     void getCoeffs(float elevation, float azimuth, float distance, float spread,
-        const HrirSpan coeffs, const al::span<uint,2> delays) const;
+        const HrirSpan coeffs, const std::span<uint,2> delays) const;
 
     void add_ref();
     void dec_ref();

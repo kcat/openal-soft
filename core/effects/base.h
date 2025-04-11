@@ -3,9 +3,9 @@
 
 #include <array>
 #include <cstddef>
+#include <span>
 #include <variant>
 
-#include "alspan.h"
 #include "core/bufferline.h"
 #include "intrusive_ptr.h"
 #include "opthelpers.h"
@@ -195,7 +195,7 @@ struct EffectTarget {
 };
 
 struct SIMDALIGN EffectState : public al::intrusive_ref<EffectState> {
-    al::span<FloatBufferLine> mOutTarget;
+    std::span<FloatBufferLine> mOutTarget;
 
 
     virtual ~EffectState() = default;
@@ -203,8 +203,9 @@ struct SIMDALIGN EffectState : public al::intrusive_ref<EffectState> {
     virtual void deviceUpdate(const DeviceBase *device, const BufferStorage *buffer) = 0;
     virtual void update(const ContextBase *context, const EffectSlot *slot,
         const EffectProps *props, const EffectTarget target) = 0;
-    virtual void process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn,
-        const al::span<FloatBufferLine> samplesOut) = 0;
+    virtual void process(const size_t samplesToDo,
+        const std::span<const FloatBufferLine> samplesIn,
+        const std::span<FloatBufferLine> samplesOut) = 0;
 };
 
 

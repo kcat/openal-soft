@@ -23,7 +23,6 @@
 
 #include "alcomplex.h"
 #include "alnumeric.h"
-#include "alspan.h"
 #include "base.h"
 #include "core/ambidefs.h"
 #include "core/bufferline.h"
@@ -255,8 +254,8 @@ struct ConvolutionState final : public EffectState {
     void deviceUpdate(const DeviceBase *device, const BufferStorage *buffer) override;
     void update(const ContextBase *context, const EffectSlot *slot, const EffectProps *props,
         const EffectTarget target) override;
-    void process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn,
-        const al::span<FloatBufferLine> samplesOut) override;
+    void process(const size_t samplesToDo, const std::span<const FloatBufferLine> samplesIn,
+        const std::span<FloatBufferLine> samplesOut) override;
 };
 
 void ConvolutionState::NormalMix(const std::span<FloatBufferLine> samplesOut,
@@ -625,7 +624,7 @@ void ConvolutionState::update(const ContextBase *context, const EffectSlot *slot
 }
 
 void ConvolutionState::process(const size_t samplesToDo,
-    const al::span<const FloatBufferLine> samplesIn, const al::span<FloatBufferLine> samplesOut)
+    const std::span<const FloatBufferLine> samplesIn, const std::span<FloatBufferLine> samplesOut)
 {
     if(mNumConvolveSegs < 1) [[unlikely]]
         return;

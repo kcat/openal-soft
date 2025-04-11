@@ -26,12 +26,12 @@
 #include <complex>
 #include <cstdlib>
 #include <numbers>
+#include <span>
 #include <variant>
 
 #include "alc/effects/base.h"
 #include "alcomplex.h"
 #include "alnumeric.h"
-#include "alspan.h"
 #include "core/ambidefs.h"
 #include "core/bufferline.h"
 #include "core/context.h"
@@ -41,7 +41,7 @@
 #include "core/mixer.h"
 #include "core/mixer/defs.h"
 #include "intrusive_ptr.h"
-#include "opthelpers.h"
+
 
 struct BufferStorage;
 
@@ -103,8 +103,8 @@ struct FshifterState final : public EffectState {
     void deviceUpdate(const DeviceBase *device, const BufferStorage *buffer) override;
     void update(const ContextBase *context, const EffectSlot *slot, const EffectProps *props,
         const EffectTarget target) override;
-    void process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn,
-        const al::span<FloatBufferLine> samplesOut) override;
+    void process(const size_t samplesToDo, const std::span<const FloatBufferLine> samplesIn,
+        const std::span<FloatBufferLine> samplesOut) override;
 };
 
 void FshifterState::deviceUpdate(const DeviceBase*, const BufferStorage*)
@@ -178,7 +178,8 @@ void FshifterState::update(const ContextBase *context, const EffectSlot *slot,
     ComputePanGains(target.Main, rcoeffs, slot->Gain, mGains[1].Target);
 }
 
-void FshifterState::process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn, const al::span<FloatBufferLine> samplesOut)
+void FshifterState::process(const size_t samplesToDo,
+    const std::span<const FloatBufferLine> samplesIn, const std::span<FloatBufferLine> samplesOut)
 {
     for(size_t base{0u};base < samplesToDo;)
     {
@@ -239,7 +240,7 @@ void FshifterState::process(const size_t samplesToDo, const al::span<const Float
         mPhase[c] = phase_idx;
 
         /* Now, mix the processed sound data to the output. */
-        MixSamples(al::span{mBufferOut}.first(samplesToDo), samplesOut, mGains[c].Current,
+        MixSamples(std::span{mBufferOut}.first(samplesToDo), samplesOut, mGains[c].Current,
             mGains[c].Target, std::max(samplesToDo, 512_uz), 0);
     }
 }

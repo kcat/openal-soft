@@ -12,7 +12,6 @@
 #include <string>
 
 #include "almalloc.h"
-#include "alspan.h"
 #include "ambidefs.h"
 #include "atomic.h"
 #include "bufferline.h"
@@ -73,7 +72,7 @@ struct InputRemixMap {
     struct TargetMix { Channel channel; float mix; };
 
     Channel channel;
-    al::span<const TargetMix> targets;
+    std::span<const TargetMix> targets;
 };
 
 
@@ -109,7 +108,7 @@ struct MixParams {
     /* Coefficient channel mapping for mixing to the buffer. */
     std::array<BFChannelConfig,MaxAmbiChannels> AmbiMap{};
 
-    al::span<FloatBufferLine> Buffer;
+    std::span<FloatBufferLine> Buffer;
 
     /**
      * Helper to set an identity/pass-through panning for ambisonic mixing. The
@@ -144,10 +143,10 @@ struct MixParams {
 };
 
 struct RealMixParams {
-    al::span<const InputRemixMap> RemixMap;
+    std::span<const InputRemixMap> RemixMap;
     std::array<std::uint8_t,MaxChannels> ChannelIndex{};
 
-    al::span<FloatBufferLine> Buffer;
+    std::span<FloatBufferLine> Buffer;
 };
 
 using AmbiRotateMatrix = std::array<std::array<float,MaxAmbiChannels>,MaxAmbiChannels>;

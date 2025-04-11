@@ -2,10 +2,9 @@
 #define CORE_MIXER_HRTFDEFS_H
 
 #include <array>
+#include <span>
 
-#include "alspan.h"
 #include "core/ambidefs.h"
-#include "core/bufferline.h"
 #include "core/filters/splitter.h"
 
 
@@ -27,8 +26,8 @@ constexpr uint HrirMask{HrirLength - 1};
 constexpr uint MinIrLength{8};
 
 using HrirArray = std::array<float2,HrirLength>;
-using HrirSpan = al::span<float2,HrirLength>;
-using ConstHrirSpan = al::span<const float2,HrirLength>;
+using HrirSpan = std::span<float2,HrirLength>;
+using ConstHrirSpan = std::span<const float2,HrirLength>;
 
 struct MixHrtfFilter {
     const ConstHrirSpan Coeffs;

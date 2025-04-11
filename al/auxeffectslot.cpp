@@ -24,6 +24,7 @@
 
 #include <algorithm>
 #include <bit>
+#include <cassert>
 #include <cstddef>
 #include <cstdint>
 #include <functional>
@@ -51,7 +52,6 @@
 #include "alnumeric.h"
 #include "atomic.h"
 #include "buffer.h"
-#include "core/buffer_storage.h"
 #include "core/device.h"
 #include "core/except.h"
 #include "core/fpu_ctrl.h"

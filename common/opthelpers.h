@@ -73,15 +73,6 @@ template<typename T>
 constexpr std::underlying_type_t<T> to_underlying(T e) noexcept
 { return static_cast<std::underlying_type_t<T>>(e); }
 
-[[noreturn]] inline void unreachable()
-{
-#if HAS_BUILTIN(__builtin_unreachable)
-    __builtin_unreachable();
-#else
-    ASSUME(false);
-#endif
-}
-
 } // namespace al
 
 #endif /* OPTHELPERS_H */

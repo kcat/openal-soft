@@ -1079,8 +1079,6 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
                     const auto upsampler = std::span{AmbiScale::FourthOrder2DUp};
                     UpsampleBFormatTransform(mixmatrix, upsampler, shrot, Device->mAmbiOrder);
                 }
-                else
-                    al::unreachable();
             }
             else
                 mixmatrix = shrot;
@@ -1836,7 +1834,7 @@ void SendSourceStateEvent(ContextBase *context, uint id, VChangeState state)
         break;
     /* Shouldn't happen. */
     case VChangeState::Restart:
-        al::unreachable();
+        break;
     }
 
     ring->writeAdvance(1);

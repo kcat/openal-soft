@@ -84,10 +84,10 @@ std::array<float,MaxAmbiChannels> CalcAmbiCoeffs(const float y, const float z, c
     return coeffs;
 }
 
-void ComputePanGains(const MixParams *mix, const al::span<const float,MaxAmbiChannels> coeffs,
-    const float ingain, const al::span<float,MaxAmbiChannels> gains)
+void ComputePanGains(const MixParams *mix, const std::span<const float,MaxAmbiChannels> coeffs,
+    const float ingain, const std::span<float,MaxAmbiChannels> gains)
 {
-    auto ambimap = al::span{std::as_const(mix->AmbiMap)}.first(mix->Buffer.size());
+    auto ambimap = std::span{std::as_const(mix->AmbiMap)}.first(mix->Buffer.size());
 
     auto iter = std::transform(ambimap.begin(), ambimap.end(), gains.begin(),
         [coeffs,ingain](const BFChannelConfig &chanmap) noexcept -> float

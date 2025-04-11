@@ -8,6 +8,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <memory>
+#include <span>
 #include <string>
 
 #include "almalloc.h"
@@ -81,7 +82,7 @@ struct DistanceComp {
     static constexpr uint MaxDelay{1024};
 
     struct ChanData {
-        al::span<float> Buffer; /* Valid size is [0...MaxDelay). */
+        std::span<float> Buffer; /* Valid size is [0...MaxDelay). */
         float Gain{1.0f};
     };
 
@@ -352,7 +353,7 @@ struct SIMDALIGN DeviceBase {
     void postProcess(const std::size_t SamplesToDo)
     { if(PostProcess) [[likely]] (this->*PostProcess)(SamplesToDo); }
 
-    void renderSamples(const al::span<void*> outBuffers, const uint numSamples);
+    void renderSamples(const std::span<void*> outBuffers, const uint numSamples);
     void renderSamples(void *outBuffer, const uint numSamples, const std::size_t frameStep);
 
     /* Caller must lock the device state, and the mixer must not be running. */

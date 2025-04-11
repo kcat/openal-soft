@@ -25,9 +25,8 @@
 #define CORE_BS2B_H
 
 #include <array>
-#include <cstddef>
+#include <span>
 
-#include "alspan.h"
 
 namespace Bs2b {
 
@@ -83,7 +82,7 @@ struct bs2b {
     /* Clear buffer */
     void clear();
 
-    void cross_feed(const al::span<float> Left, const al::span<float> Right);
+    void cross_feed(const std::span<float> Left, const std::span<float> Right);
 };
 
 } // namespace Bs2b

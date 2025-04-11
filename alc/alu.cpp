@@ -38,6 +38,7 @@
 #include <memory>
 #include <numbers>
 #include <optional>
+#include <span>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -273,10 +274,10 @@ ResamplerFunc PrepareResampler(Resampler resampler, uint increment, InterpState 
     case Resampler::Linear:
         break;
     case Resampler::Spline:
-        state->emplace<CubicState>(al::span{gSplineFilter.mTable});
+        state->emplace<CubicState>(std::span{gSplineFilter.mTable});
         break;
     case Resampler::Gaussian:
-        state->emplace<CubicState>(al::span{gGaussianFilter.mTable});
+        state->emplace<CubicState>(std::span{gGaussianFilter.mTable});
         break;
     case Resampler::FastBSinc12:
     case Resampler::BSinc12:
@@ -337,12 +338,12 @@ void DeviceBase::ProcessBs2b(const size_t SamplesToDo)
     AmbiDecoder->process(RealOut.Buffer, Dry.Buffer, SamplesToDo);
 
     /* BS2B is stereo output only. */
-    const size_t lidx{RealOut.ChannelIndex[FrontLeft]};
-    const size_t ridx{RealOut.ChannelIndex[FrontRight]};
+    const auto lidx = size_t{RealOut.ChannelIndex[FrontLeft]};
+    const auto ridx = size_t{RealOut.ChannelIndex[FrontRight]};
 
     /* Now apply the BS2B binaural/crossfeed filter. */
-    Bs2b->cross_feed(al::span{RealOut.Buffer[lidx]}.first(SamplesToDo),
-        al::span{RealOut.Buffer[ridx]}.first(SamplesToDo));
+    Bs2b->cross_feed(std::span{RealOut.Buffer[lidx]}.first(SamplesToDo),
+        std::span{RealOut.Buffer[ridx]}.first(SamplesToDo));
 }
 
 
@@ -366,9 +367,9 @@ inline uint dither_rng(uint *seed) noexcept
  * rotated.
  */
 void UpsampleBFormatTransform(
-    const al::span<std::array<float,MaxAmbiChannels>,MaxAmbiChannels> output,
-    const al::span<const std::array<float,MaxAmbiChannels>> upsampler,
-    const al::span<const std::array<float,MaxAmbiChannels>,MaxAmbiChannels> rotator,
+    const std::span<std::array<float,MaxAmbiChannels>,MaxAmbiChannels> output,
+    const std::span<const std::array<float,MaxAmbiChannels>> upsampler,
+    const std::span<const std::array<float,MaxAmbiChannels>,MaxAmbiChannels> rotator,
     size_t ambi_order)
 {
     const size_t num_chans{AmbiChannelsFromOrder(ambi_order)};
@@ -393,24 +394,24 @@ constexpr auto GetAmbiScales(AmbiScaling scaletype) noexcept
 {
     switch(scaletype)
     {
-    case AmbiScaling::FuMa: return al::span{AmbiScale::FromFuMa};
-    case AmbiScaling::SN3D: return al::span{AmbiScale::FromSN3D};
-    case AmbiScaling::UHJ: return al::span{AmbiScale::FromUHJ};
+    case AmbiScaling::FuMa: return std::span{AmbiScale::FromFuMa};
+    case AmbiScaling::SN3D: return std::span{AmbiScale::FromSN3D};
+    case AmbiScaling::UHJ: return std::span{AmbiScale::FromUHJ};
     case AmbiScaling::N3D: break;
     }
-    return al::span{AmbiScale::FromN3D};
+    return std::span{AmbiScale::FromN3D};
 }
 
 constexpr auto GetAmbiLayout(AmbiLayout layouttype) noexcept
 {
-    if(layouttype == AmbiLayout::FuMa) return al::span{AmbiIndex::FromFuMa};
-    return al::span{AmbiIndex::FromACN};
+    if(layouttype == AmbiLayout::FuMa) return std::span{AmbiIndex::FromFuMa};
+    return std::span{AmbiIndex::FromACN};
 }
 
 constexpr auto GetAmbi2DLayout(AmbiLayout layouttype) noexcept
 {
-    if(layouttype == AmbiLayout::FuMa) return al::span{AmbiIndex::FromFuMa2D};
-    return al::span{AmbiIndex::FromACN2D};
+    if(layouttype == AmbiLayout::FuMa) return std::span{AmbiIndex::FromFuMa2D};
+    return std::span{AmbiIndex::FromACN2D};
 }
 
 
@@ -806,8 +807,8 @@ struct GainTriplet { float Base, HF, LF; };
 
 void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, const float zpos,
     const float Distance, const float Spread, const GainTriplet &DryGain,
-    const al::span<const GainTriplet,MaxSendCount> WetGain,
-    const al::span<EffectSlot*,MaxSendCount> SendSlots, const VoiceProps *props,
+    const std::span<const GainTriplet,MaxSendCount> WetGain,
+    const std::span<EffectSlot*,MaxSendCount> SendSlots, const VoiceProps *props,
     const ContextParams &Context, DeviceBase *Device)
 {
     static constexpr std::array MonoMap{
@@ -871,13 +872,13 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
     }
 
     const auto getChans = [props,&StereoMap](FmtChannels chanfmt) noexcept
-        -> std::pair<DirectMode,al::span<const ChanPosMap>>
+        -> std::pair<DirectMode,std::span<const ChanPosMap>>
     {
         switch(chanfmt)
         {
         case FmtMono:
             /* Mono buffers are never played direct. */
-            return {DirectMode::Off, al::span{MonoMap}};
+            return {DirectMode::Off, std::span{MonoMap}};
 
         case FmtStereo:
         case FmtMonoDup:
@@ -891,13 +892,13 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
                     StereoMap[i].pos[2] = -std::cos(a);
                 }
             }
-            return {props->DirectChannels, al::span{StereoMap}};
+            return {props->DirectChannels, std::span{StereoMap}};
 
-        case FmtRear: return {props->DirectChannels, al::span{RearMap}};
-        case FmtQuad: return {props->DirectChannels, al::span{QuadMap}};
-        case FmtX51: return {props->DirectChannels, al::span{X51Map}};
-        case FmtX61: return {props->DirectChannels, al::span{X61Map}};
-        case FmtX71: return {props->DirectChannels, al::span{X71Map}};
+        case FmtRear: return {props->DirectChannels, std::span{RearMap}};
+        case FmtQuad: return {props->DirectChannels, std::span{QuadMap}};
+        case FmtX51: return {props->DirectChannels, std::span{X51Map}};
+        case FmtX61: return {props->DirectChannels, std::span{X61Map}};
+        case FmtX71: return {props->DirectChannels, std::span{X71Map}};
 
         case FmtBFormat2D:
         case FmtBFormat3D:
@@ -1057,24 +1058,25 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
                 if(voice->mAmbiOrder == 1)
                 {
                     const auto upsampler = Is2DAmbisonic(voice->mFmtChannels) ?
-                        al::span{AmbiScale::FirstOrder2DUp} : al::span{AmbiScale::FirstOrderUp};
+                        std::span{AmbiScale::FirstOrder2DUp} : std::span{AmbiScale::FirstOrderUp};
                     UpsampleBFormatTransform(mixmatrix, upsampler, shrot, Device->mAmbiOrder);
                 }
                 else if(voice->mAmbiOrder == 2)
                 {
-                    const auto upsampler = Is2DAmbisonic(voice->mFmtChannels) ?
-                        al::span{AmbiScale::SecondOrder2DUp} : al::span{AmbiScale::SecondOrderUp};
+                    const auto upsampler = Is2DAmbisonic(voice->mFmtChannels)
+                        ? std::span{AmbiScale::SecondOrder2DUp}
+                        : std::span{AmbiScale::SecondOrderUp};
                     UpsampleBFormatTransform(mixmatrix, upsampler, shrot, Device->mAmbiOrder);
                 }
                 else if(voice->mAmbiOrder == 3)
                 {
                     const auto upsampler = Is2DAmbisonic(voice->mFmtChannels) ?
-                        al::span{AmbiScale::ThirdOrder2DUp} : al::span{AmbiScale::ThirdOrderUp};
+                        std::span{AmbiScale::ThirdOrder2DUp} : std::span{AmbiScale::ThirdOrderUp};
                     UpsampleBFormatTransform(mixmatrix, upsampler, shrot, Device->mAmbiOrder);
                 }
                 else if(voice->mAmbiOrder == 4)
                 {
-                    const auto upsampler = al::span{AmbiScale::FourthOrder2DUp};
+                    const auto upsampler = std::span{AmbiScale::FourthOrder2DUp};
                     UpsampleBFormatTransform(mixmatrix, upsampler, shrot, Device->mAmbiOrder);
                 }
                 else
@@ -1935,8 +1937,8 @@ void ProcessVoiceChanges(ContextBase *ctx)
     ctx->mCurrentVoiceChange.store(cur, std::memory_order_release);
 }
 
-void ProcessParamUpdates(ContextBase *ctx, const al::span<EffectSlot*> slots,
-    const al::span<EffectSlot*> sorted_slots, const al::span<Voice*> voices)
+void ProcessParamUpdates(ContextBase *ctx, const std::span<EffectSlot*> slots,
+    const std::span<EffectSlot*> sorted_slots, const std::span<Voice*> voices)
 {
     ProcessVoiceChanges(ctx);
 
@@ -1966,7 +1968,7 @@ void ProcessContexts(DeviceBase *device, const uint SamplesToDo)
 
     auto proc_context = [SamplesToDo,curtime](ContextBase *ctx)
     {
-        const auto auxslotspan = al::span{*ctx->mActiveAuxSlots.load(std::memory_order_acquire)};
+        const auto auxslotspan = std::span{*ctx->mActiveAuxSlots.load(std::memory_order_acquire)};
         const auto auxslots = auxslotspan.first(auxslotspan.size()>>1);
         const auto sorted_slots = auxslotspan.last(auxslotspan.size()>>1);
         const auto voices = ctx->getVoicesSpanAcquired();
@@ -2050,13 +2052,13 @@ void ProcessContexts(DeviceBase *device, const uint SamplesToDo)
             ctx->mEventsPending.notify_all();
         }
     };
-    const auto contexts = al::span{*device->mContexts.load(std::memory_order_acquire)};
+    const auto contexts = std::span{*device->mContexts.load(std::memory_order_acquire)};
     std::for_each(contexts.begin(), contexts.end(), proc_context);
 }
 
 
-void ApplyDistanceComp(const al::span<FloatBufferLine> Samples, const size_t SamplesToDo,
-    const al::span<const DistanceComp::ChanData,MaxOutputChannels> chandata)
+void ApplyDistanceComp(const std::span<FloatBufferLine> Samples, const size_t SamplesToDo,
+    const std::span<const DistanceComp::ChanData,MaxOutputChannels> chandata)
 {
     ASSUME(SamplesToDo > 0);
 
@@ -2064,14 +2066,14 @@ void ApplyDistanceComp(const al::span<FloatBufferLine> Samples, const size_t Sam
     for(auto &chanbuffer : Samples)
     {
         const float gain{distcomp->Gain};
-        auto distbuf = al::span{std::assume_aligned<16>(distcomp->Buffer.data()),
+        auto distbuf = std::span{std::assume_aligned<16>(distcomp->Buffer.data()),
             distcomp->Buffer.size()};
         ++distcomp;
 
         const size_t base{distbuf.size()};
         if(base < 1) continue;
 
-        const auto inout = al::span{std::assume_aligned<16>(chanbuffer.data()), SamplesToDo};
+        const auto inout = std::span{std::assume_aligned<16>(chanbuffer.data()), SamplesToDo};
         if(SamplesToDo >= base) [[likely]]
         {
             auto delay_end = std::rotate(inout.begin(), inout.end()-ptrdiff_t(base), inout.end());
@@ -2083,11 +2085,11 @@ void ApplyDistanceComp(const al::span<FloatBufferLine> Samples, const size_t Sam
             std::rotate(distbuf.begin(), delay_start, distbuf.begin()+ptrdiff_t(base));
         }
         std::transform(inout.begin(), inout.end(), inout.begin(),
-            [gain](float s) { return s*gain; });
+            [gain](const float s) noexcept -> float { return s*gain; });
     }
 }
 
-void ApplyDither(const al::span<FloatBufferLine> Samples, uint *dither_seed,
+void ApplyDither(const std::span<FloatBufferLine> Samples, uint *dither_seed,
     const float quant_scale, const size_t SamplesToDo)
 {
     static constexpr double invRNGRange{1.0 / std::numeric_limits<uint>::max()};
@@ -2144,15 +2146,14 @@ template<> inline uint8_t SampleConv(float val) noexcept
 { return static_cast<uint8_t>(SampleConv<int8_t>(val) + 128); }
 
 template<typename T>
-void Write(const al::span<const FloatBufferLine> InBuffer, void *OutBuffer, const size_t Offset,
+void Write(const std::span<const FloatBufferLine> InBuffer, void *OutBuffer, const size_t Offset,
     const size_t SamplesToDo, const size_t FrameStep)
 {
     ASSUME(FrameStep > 0);
     ASSUME(SamplesToDo > 0);
 
-    /* Some Clang versions don't like calling subspan on an rvalue here. */
-    const auto output_ = al::span{static_cast<T*>(OutBuffer), (Offset+SamplesToDo)*FrameStep};
-    const auto output = output_.subspan(Offset*FrameStep);
+    const auto output = std::span{static_cast<T*>(OutBuffer), (Offset+SamplesToDo)*FrameStep}
+        .subspan(Offset*FrameStep);
 
     /* If there's extra channels in the interleaved output buffer to skip,
      * clear the whole output buffer. This is simpler to ensure the extra
@@ -2164,7 +2165,7 @@ void Write(const al::span<const FloatBufferLine> InBuffer, void *OutBuffer, cons
     auto outbase = output.begin();
     for(const auto &srcbuf : InBuffer)
     {
-        const auto src = al::span{srcbuf}.first(SamplesToDo);
+        const auto src = std::span{srcbuf}.first(SamplesToDo);
         auto out = outbase++;
 
         *out = SampleConv<T>(src.front());
@@ -2177,18 +2178,16 @@ void Write(const al::span<const FloatBufferLine> InBuffer, void *OutBuffer, cons
 }
 
 template<typename T>
-void Write(const al::span<const FloatBufferLine> InBuffer, al::span<void*> OutBuffers,
+void Write(const std::span<const FloatBufferLine> InBuffer, std::span<void*> OutBuffers,
     const size_t Offset, const size_t SamplesToDo)
 {
     ASSUME(SamplesToDo > 0);
 
-    auto srcbuf = InBuffer.cbegin();
+    auto srcbuf = InBuffer.begin();
     for(auto *dstbuf : OutBuffers)
     {
-        const auto src = al::span{*srcbuf}.first(SamplesToDo);
-        /* Some Clang versions don't like calling subspan on an rvalue here. */
-        const auto dst_ = al::span{static_cast<T*>(dstbuf), Offset+SamplesToDo};
-        const auto dst = dst_.subspan(Offset);
+        const auto src = std::span{*srcbuf}.first(SamplesToDo);
+        const auto dst = std::span{static_cast<T*>(dstbuf), Offset+SamplesToDo}.subspan(Offset);
         std::transform(src.begin(), src.end(), dst.begin(), SampleConv<T>);
         ++srcbuf;
     }
@@ -2242,7 +2241,7 @@ uint DeviceBase::renderSamples(const uint numSamples)
     return samplesToDo;
 }
 
-void DeviceBase::renderSamples(const al::span<void*> outBuffers, const uint numSamples)
+void DeviceBase::renderSamples(const std::span<void*> outBuffers, const uint numSamples)
 {
     FPUCtl mixer_mode{};
     uint total{0};

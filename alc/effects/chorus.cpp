@@ -26,6 +26,7 @@
 #include <cstdlib>
 #include <limits>
 #include <numbers>
+#include <span>
 #include <variant>
 #include <vector>
 
@@ -141,8 +142,8 @@ void ChorusState::update(const ContextBase *context, const EffectSlot *slot,
 
     /* Gains for left and right sides */
     const bool ispairwise{device->mRenderMode == RenderMode::Pairwise};
-    const auto lcoeffs = (!ispairwise) ? al::span{lcoeffs_nrml} : al::span{lcoeffs_pw};
-    const auto rcoeffs = (!ispairwise) ? al::span{rcoeffs_nrml} : al::span{rcoeffs_pw};
+    const auto lcoeffs = (!ispairwise) ? std::span{lcoeffs_nrml} : std::span{lcoeffs_pw};
+    const auto rcoeffs = (!ispairwise) ? std::span{rcoeffs_nrml} : std::span{rcoeffs_pw};
 
     /* Attenuate the outputs by -3dB, since we duplicate a single mono input to
      * separate left/right outputs.
@@ -264,7 +265,7 @@ void ChorusState::calcSinusoidDelays(const size_t todo)
 
 void ChorusState::process(const size_t samplesToDo, const al::span<const FloatBufferLine> samplesIn, const al::span<FloatBufferLine> samplesOut)
 {
-    const auto delaybuf = al::span{mDelayBuffer};
+    const auto delaybuf = std::span{mDelayBuffer};
     const size_t bufmask{delaybuf.size()-1};
     const float feedback{mFeedback};
     const uint avgdelay{(static_cast<uint>(mDelay) + MixerFracHalf) >> MixerFracBits};
@@ -275,10 +276,10 @@ void ChorusState::process(const size_t samplesToDo, const al::span<const FloatBu
     else /*if(mWaveform == ChorusWaveform::Triangle)*/
         calcTriangleDelays(samplesToDo);
 
-    const auto ldelays = al::span{mModDelays[0]};
-    const auto rdelays = al::span{mModDelays[1]};
-    const auto lbuffer = al::span{mBuffer[0]};
-    const auto rbuffer = al::span{mBuffer[1]};
+    const auto ldelays = std::span{mModDelays[0]};
+    const auto rdelays = std::span{mModDelays[1]};
+    const auto lbuffer = std::span{mBuffer[0]};
+    const auto rbuffer = std::span{mBuffer[1]};
     for(size_t i{0u};i < samplesToDo;++i)
     {
         // Feed the buffer's input first (necessary for delays < 1).

@@ -45,13 +45,11 @@
 
 #include "alc/context.h"
 #include "alnumeric.h"
-#include "alspan.h"
 #include "alstring.h"
 #include "alu.h"
 #include "core/ambdec.h"
 #include "core/ambidefs.h"
 #include "core/bformatdec.h"
-#include "core/bufferline.h"
 #include "core/bs2b.h"
 #include "core/context.h"
 #include "core/devformat.h"
@@ -345,7 +343,7 @@ void InitDistanceComp(al::Device *device, const std::span<const Channel> channel
         auto set_bufptr = [&chanbuffer](const DistCoeffs &data)
         {
             DistanceComp::ChanData ret{};
-            ret.Buffer = al::span{chanbuffer, data.Length};
+            ret.Buffer = std::span{chanbuffer, data.Length};
             ret.Gain = data.Gain;
             chanbuffer += ptrdiff_t(RoundUp(data.Length, 4));
             return ret;

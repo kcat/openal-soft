@@ -4,7 +4,7 @@
 #include <array>
 #include <cstdint>
 #include <cstdlib>
-#include <utility>
+#include <span>
 #include <variant>
 
 #include "alspan.h"
@@ -61,8 +61,7 @@ struct CubicState {
     /* Filter coefficients, and coefficient deltas. Starting at phase index 0,
      * each subsequent phase index follows contiguously.
      */
-    al::span<const CubicCoefficients,CubicPhaseCount> filter;
-    explicit CubicState(al::span<const CubicCoefficients,CubicPhaseCount> f) : filter{f} { }
+    std::span<const CubicCoefficients,CubicPhaseCount> filter;
 };
 
 using InterpState = std::variant<std::monostate,CubicState,BsincState>;

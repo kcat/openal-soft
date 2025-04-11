@@ -9,9 +9,9 @@
 #include <functional>
 #include <limits>
 #include <memory>
+#include <span>
 
 #include "alnumeric.h"
-#include "alspan.h"
 #include "opthelpers.h"
 
 
@@ -30,8 +30,8 @@ struct SIMDALIGN SlidingHold {
 namespace {
 
 template<std::size_t A, typename T, std::size_t N>
-constexpr auto assume_aligned_span(const al::span<T,N> s) noexcept -> al::span<T,N>
-{ return al::span<T,N>{std::assume_aligned<A>(s.data()), s.size()}; }
+constexpr auto assume_aligned_span(const std::span<T,N> s) noexcept -> std::span<T,N>
+{ return std::span<T,N>{std::assume_aligned<A>(s.data()), s.size()}; }
 
 /* This sliding hold follows the input level with an instant attack and a
  * fixed duration hold before an instant release to the next highest level.
@@ -42,12 +42,12 @@ constexpr auto assume_aligned_span(const al::span<T,N> s) noexcept -> al::span<T
  */
 float UpdateSlidingHold(SlidingHold *Hold, const uint i, const float in)
 {
-    static constexpr uint mask{BufferLineSize - 1};
-    const uint length{Hold->mLength};
-    const al::span values{Hold->mValues};
-    const al::span expiries{Hold->mExpiries};
-    uint lowerIndex{Hold->mLowerIndex};
-    uint upperIndex{Hold->mUpperIndex};
+    static constexpr auto mask = uint{BufferLineSize - 1};
+    const auto length = Hold->mLength;
+    const auto values = std::span{Hold->mValues};
+    const auto expiries = std::span{Hold->mExpiries};
+    auto lowerIndex = Hold->mLowerIndex;
+    auto upperIndex = Hold->mUpperIndex;
 
     if(i >= expiries[upperIndex])
         upperIndex = (upperIndex + 1) & mask;
@@ -102,17 +102,17 @@ void ShiftSlidingHold(SlidingHold *Hold, const uint n)
  * channels.
  */
 void Compressor::linkChannels(const uint SamplesToDo,
-    const al::span<const FloatBufferLine> OutBuffer)
+    const std::span<const FloatBufferLine> OutBuffer)
 {
     ASSUME(SamplesToDo > 0);
     ASSUME(SamplesToDo <= BufferLineSize);
 
-    const auto sideChain = al::span{mSideChain}.subspan(mLookAhead, SamplesToDo);
+    const auto sideChain = std::span{mSideChain}.subspan(mLookAhead, SamplesToDo);
     std::fill_n(sideChain.begin(), sideChain.size(), 0.0f);
 
     auto fill_max = [sideChain](const FloatBufferLine &input) -> void
     {
-        const auto buffer = assume_aligned_span<16>(al::span{input});
+        const auto buffer = assume_aligned_span<16>(std::span{input});
         auto max_abs = [](const float s0, const float s1) noexcept -> float
         { return std::max(s0, std::fabs(s1)); };
         std::transform(sideChain.begin(), sideChain.end(), buffer.begin(), sideChain.begin(),
@@ -144,8 +144,8 @@ void Compressor::crestDetector(const uint SamplesToDo)
         y2_rms = lerpf(x2, y2_rms, a_crest);
         return y2_peak / y2_rms;
     };
-    const auto sideChain = al::span{mSideChain}.subspan(mLookAhead, SamplesToDo);
-    std::transform(sideChain.cbegin(), sideChain.cend(), mCrestFactor.begin(), calc_crest);
+    const auto sideChain = std::span{mSideChain}.subspan(mLookAhead, SamplesToDo);
+    std::transform(sideChain.begin(), sideChain.end(), mCrestFactor.begin(), calc_crest);
 
     mLastPeakSq = y2_peak;
     mLastRmsSq = y2_rms;
@@ -161,8 +161,8 @@ void Compressor::peakDetector(const uint SamplesToDo)
     ASSUME(SamplesToDo <= BufferLineSize);
 
     /* Clamp the minimum amplitude to near-zero and convert to logarithmic. */
-    const auto sideChain = al::span{mSideChain}.subspan(mLookAhead, SamplesToDo);
-    std::transform(sideChain.cbegin(), sideChain.cend(), sideChain.begin(),
+    const auto sideChain = std::span{mSideChain}.subspan(mLookAhead, SamplesToDo);
+    std::transform(sideChain.begin(), sideChain.end(), sideChain.begin(),
         [](float s) { return std::log(std::max(0.000001f, s)); });
 }
 
@@ -182,8 +182,8 @@ void Compressor::peakHoldDetector(const uint SamplesToDo)
         const float x_G{std::log(std::max(0.000001f, x_abs))};
         return UpdateSlidingHold(hold, i++, x_G);
     };
-    auto sideChain = al::span{mSideChain}.subspan(mLookAhead, SamplesToDo);
-    std::transform(sideChain.cbegin(), sideChain.cend(), sideChain.begin(), detect_peak);
+    auto sideChain = std::span{mSideChain}.subspan(mLookAhead, SamplesToDo);
+    std::transform(sideChain.begin(), sideChain.end(), sideChain.begin(), detect_peak);
 
     ShiftSlidingHold(hold, SamplesToDo);
 }
@@ -220,7 +220,9 @@ void Compressor::gainCompressor(const uint SamplesToDo)
 
     ASSUME(SamplesToDo > 0);
 
-    auto process = [&](const float input) -> float
+    auto sideChain = std::span{mSideChain}.first(SamplesToDo);
+    std::transform(sideChain.begin(), sideChain.end(), sideChain.begin(),
+        [&](const float input) -> float
     {
         if(autoKnee)
             knee = std::max(0.0f, 2.5f * (c_dev + c_est));
@@ -277,9 +279,7 @@ void Compressor::gainCompressor(const uint SamplesToDo)
         }
 
         return std::exp(postGain - y_L);
-    };
-    auto sideChain = al::span{mSideChain}.first(SamplesToDo);
-    std::transform(sideChain.begin(), sideChain.end(), sideChain.begin(), process);
+    });
 
     mLastRelease = y_1;
     mLastAttack = y_L;
@@ -291,7 +291,7 @@ void Compressor::gainCompressor(const uint SamplesToDo)
  * reaching the offending impulse.  This is best used when operating as a
  * limiter.
  */
-void Compressor::signalDelay(const uint SamplesToDo, const al::span<FloatBufferLine> OutBuffer)
+void Compressor::signalDelay(const uint SamplesToDo, const std::span<FloatBufferLine> OutBuffer)
 {
     const auto lookAhead = mLookAhead;
 
@@ -303,8 +303,8 @@ void Compressor::signalDelay(const uint SamplesToDo, const al::span<FloatBufferL
     auto delays = mDelay.begin();
     for(auto &buffer : OutBuffer)
     {
-        const auto inout = al::span{buffer}.first(SamplesToDo);
-        const auto delaybuf = al::span{*(delays++)}.first(lookAhead);
+        const auto inout = std::span{buffer}.first(SamplesToDo);
+        const auto delaybuf = std::span{*(delays++)}.first(lookAhead);
 
         if(SamplesToDo >= delaybuf.size()) [[likely]]
         {
@@ -379,7 +379,7 @@ std::unique_ptr<Compressor> Compressor::Create(const size_t NumChans, const floa
 Compressor::~Compressor() = default;
 
 
-void Compressor::process(const uint SamplesToDo, const al::span<FloatBufferLine> InOut)
+void Compressor::process(const uint SamplesToDo, const std::span<FloatBufferLine> InOut)
 {
     ASSUME(SamplesToDo > 0);
     ASSUME(SamplesToDo <= BufferLineSize);
@@ -389,8 +389,8 @@ void Compressor::process(const uint SamplesToDo, const al::span<FloatBufferLine>
     {
         auto apply_gain = [SamplesToDo,preGain](FloatBufferLine &input) noexcept -> void
         {
-            const auto buffer = assume_aligned_span<16>(al::span{input}.first(SamplesToDo));
-            std::transform(buffer.cbegin(), buffer.cend(), buffer.begin(),
+            const auto buffer = assume_aligned_span<16>(std::span{input}.first(SamplesToDo));
+            std::transform(buffer.begin(), buffer.end(), buffer.begin(),
                 [preGain](const float s) noexcept { return s * preGain; });
         };
         std::for_each(InOut.begin(), InOut.end(), apply_gain);
@@ -411,16 +411,16 @@ void Compressor::process(const uint SamplesToDo, const al::span<FloatBufferLine>
     if(!mDelay.empty())
         signalDelay(SamplesToDo, InOut);
 
-    const auto gains = assume_aligned_span<16>(al::span{mSideChain}.first(SamplesToDo));
+    const auto gains = assume_aligned_span<16>(std::span{mSideChain}.first(SamplesToDo));
     auto apply_comp = [gains](const FloatBufferSpan inout) noexcept -> void
     {
-        const auto buffer = assume_aligned_span<16>(inout);
-        std::transform(gains.cbegin(), gains.cend(), buffer.cbegin(), buffer.begin(),
+        const auto buffer = assume_aligned_span<16>(std::span{inout});
+        std::transform(gains.begin(), gains.end(), buffer.begin(), buffer.begin(),
             std::multiplies{});
     };
     for(const FloatBufferSpan inout : InOut)
         apply_comp(inout);
 
-    const auto delayedGains = al::span{mSideChain}.subspan(SamplesToDo, mLookAhead);
+    const auto delayedGains = std::span{mSideChain}.subspan(SamplesToDo, mLookAhead);
     std::copy(delayedGains.begin(), delayedGains.end(), mSideChain.begin());
 }

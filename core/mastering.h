@@ -4,9 +4,9 @@
 #include <array>
 #include <bitset>
 #include <memory>
+#include <span>
 
 #include "alnumeric.h"
-#include "alspan.h"
 #include "bufferline.h"
 #include "opthelpers.h"
 #include "vector.h"
@@ -66,12 +66,12 @@ class SIMDALIGN Compressor {
 
     Compressor() = default;
 
-    void linkChannels(const uint SamplesToDo, const al::span<const FloatBufferLine> OutBuffer);
+    void linkChannels(const uint SamplesToDo, const std::span<const FloatBufferLine> OutBuffer);
     void crestDetector(const uint SamplesToDo);
     void peakDetector(const uint SamplesToDo);
     void peakHoldDetector(const uint SamplesToDo);
     void gainCompressor(const uint SamplesToDo);
-    void signalDelay(const uint SamplesToDo, const al::span<FloatBufferLine> OutBuffer);
+    void signalDelay(const uint SamplesToDo, const std::span<FloatBufferLine> OutBuffer);
 
 public:
     enum {
@@ -80,7 +80,7 @@ public:
     using FlagBits = std::bitset<FlagsCount>;
 
     ~Compressor();
-    void process(const uint SamplesToDo, al::span<FloatBufferLine> InOut);
+    void process(const uint SamplesToDo, std::span<FloatBufferLine> InOut);
     [[nodiscard]] auto getLookAhead() const noexcept -> uint { return mLookAhead; }
 
     /**

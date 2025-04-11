@@ -2,9 +2,7 @@
 #define CORE_FILTERS_NFC_H
 
 #include <array>
-#include <cstddef>
-
-#include "alspan.h"
+#include <span>
 
 
 struct NfcFilter1 {
@@ -49,16 +47,16 @@ public:
     void adjust(const float w0) noexcept;
 
     /* Near-field control filter for first-order ambisonic channels (1-3). */
-    void process1(const al::span<const float> src, const al::span<float> dst);
+    void process1(const std::span<const float> src, const std::span<float> dst);
 
     /* Near-field control filter for second-order ambisonic channels (4-8). */
-    void process2(const al::span<const float> src, const al::span<float> dst);
+    void process2(const std::span<const float> src, const std::span<float> dst);
 
     /* Near-field control filter for third-order ambisonic channels (9-15). */
-    void process3(const al::span<const float> src, const al::span<float> dst);
+    void process3(const std::span<const float> src, const std::span<float> dst);
 
     /* Near-field control filter for fourth-order ambisonic channels (16-24). */
-    void process4(const al::span<const float> src, const al::span<float> dst);
+    void process4(const std::span<const float> src, const std::span<float> dst);
 };
 
 #endif /* CORE_FILTERS_NFC_H */

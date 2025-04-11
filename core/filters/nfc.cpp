@@ -247,7 +247,7 @@ void NfcFilter::adjust(const float w0) noexcept
 }
 
 
-void NfcFilter::process1(const al::span<const float> src, const al::span<float> dst)
+void NfcFilter::process1(const std::span<const float> src, const std::span<float> dst)
 {
     const float gain{first.gain};
     const float b1{first.b1};
@@ -260,11 +260,11 @@ void NfcFilter::process1(const al::span<const float> src, const al::span<float> 
         z1 += y;
         return out;
     };
-    std::transform(src.cbegin(), src.cend(), dst.begin(), proc_sample);
+    std::transform(src.begin(), src.end(), dst.begin(), proc_sample);
     first.z[0] = z1;
 }
 
-void NfcFilter::process2(const al::span<const float> src, const al::span<float> dst)
+void NfcFilter::process2(const std::span<const float> src, const std::span<float> dst)
 {
     const float gain{second.gain};
     const float b1{second.b1};
@@ -281,12 +281,12 @@ void NfcFilter::process2(const al::span<const float> src, const al::span<float> 
         z1 += y;
         return out;
     };
-    std::transform(src.cbegin(), src.cend(), dst.begin(), proc_sample);
+    std::transform(src.begin(), src.end(), dst.begin(), proc_sample);
     second.z[0] = z1;
     second.z[1] = z2;
 }
 
-void NfcFilter::process3(const al::span<const float> src, const al::span<float> dst)
+void NfcFilter::process3(const std::span<const float> src, const std::span<float> dst)
 {
     const float gain{third.gain};
     const float b1{third.b1};
@@ -310,13 +310,13 @@ void NfcFilter::process3(const al::span<const float> src, const al::span<float> 
         z3 += y;
         return out;
     };
-    std::transform(src.cbegin(), src.cend(), dst.begin(), proc_sample);
+    std::transform(src.begin(), src.end(), dst.begin(), proc_sample);
     third.z[0] = z1;
     third.z[1] = z2;
     third.z[2] = z3;
 }
 
-void NfcFilter::process4(const al::span<const float> src, const al::span<float> dst)
+void NfcFilter::process4(const std::span<const float> src, const std::span<float> dst)
 {
     const float gain{fourth.gain};
     const float b1{fourth.b1};
@@ -344,7 +344,7 @@ void NfcFilter::process4(const al::span<const float> src, const al::span<float> 
         z3 += y;
         return out;
     };
-    std::transform(src.cbegin(), src.cend(), dst.begin(), proc_sample);
+    std::transform(src.begin(), src.end(), dst.begin(), proc_sample);
     fourth.z[0] = z1;
     fourth.z[1] = z2;
     fourth.z[2] = z3;

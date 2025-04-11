@@ -61,6 +61,7 @@ struct CubicState {
      * each subsequent phase index follows contiguously.
      */
     std::span<const CubicCoefficients,CubicPhaseCount> filter;
+    explicit CubicState(std::span<const CubicCoefficients,CubicPhaseCount> f) : filter{f} { }
 };
 
 using InterpState = std::variant<std::monostate,CubicState,BsincState>;

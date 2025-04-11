@@ -2651,17 +2651,18 @@ ALC_API ALCboolean ALC_APIENTRY alcIsExtensionPresent(ALCdevice *device, const A
         return ALC_FALSE;
     }
 
-    const std::string_view tofind{extName};
-    const auto extlist = dev ? std::string_view{GetExtensionList()}
+    const auto tofind = std::string_view{extName};
+    auto extlist = dev ? std::string_view{GetExtensionList()}
         : std::string_view{GetNoDeviceExtList()};
-    auto matchpos = extlist.find(tofind);
-    while(matchpos != std::string_view::npos)
+
+    while(extlist.size() >= tofind.size())
     {
-        const auto endpos = matchpos + tofind.size();
-        if((matchpos == 0 || std::isspace(extlist[matchpos-1]))
-            && (endpos == extlist.size() || std::isspace(extlist[endpos])))
+        const auto endpos = std::min(extlist.find_first_of(' '), extlist.size());
+        if(endpos == tofind.size() && al::case_compare(tofind, extlist.substr(0, endpos)) == 0)
             return ALC_TRUE;
-        matchpos = extlist.find(tofind, matchpos+1);
+
+        const auto nextpos = std::min(extlist.find_first_not_of(' ', endpos), extlist.size());
+        extlist = extlist.substr(nextpos);
     }
     return ALC_FALSE;
 }

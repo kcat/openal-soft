@@ -9,6 +9,7 @@
 #include <functional>
 #include <memory>
 #include <numbers>
+#include <span>
 #include <vector>
 
 #include "alcomplex.h"
@@ -22,8 +23,8 @@
 namespace {
 
 template<std::size_t A, typename T, std::size_t N>
-constexpr auto assume_aligned_span(const al::span<T,N> s) noexcept -> al::span<T,N>
-{ return al::span<T,N>{std::assume_aligned<A>(s.data()), s.size()}; }
+constexpr auto assume_aligned_span(const std::span<T,N> s) noexcept -> std::span<T,N>
+{ return std::span<T,N>{std::assume_aligned<A>(s.data()), s.size()}; }
 
 /* Convolution is implemented using a segmented overlap-add method. The filter
  * response is broken up into multiple segments of 128 samples, and each
@@ -89,8 +90,8 @@ struct SegmentedFilter {
         auto filter = mFilterData.begin();
         for(size_t s{0};s < sNumSegments;++s)
         {
-            const auto tmpspan = al::span{tmpBuffer}.subspan(sSampleLength*s, sSampleLength);
-            auto iter = std::copy_n(tmpspan.cbegin(), tmpspan.size(), fftBuffer.begin());
+            const auto tmpspan = std::span{tmpBuffer}.subspan(sSampleLength*s, sSampleLength);
+            auto iter = std::copy_n(tmpspan.begin(), tmpspan.size(), fftBuffer.begin());
             std::fill(iter, fftBuffer.end(), complex_d{});
             forward_fft(fftBuffer);
 
@@ -131,7 +132,7 @@ constexpr std::array<float,4> Filter2Coeff{{
 }};
 
 
-void processOne(UhjAllPassFilter &self, const al::span<const float, 4> coeffs, float x)
+void processOne(UhjAllPassFilter &self, const std::span<const float, 4> coeffs, float x)
 {
     auto state = self.mState;
     for(size_t i{0};i < 4;++i)
@@ -144,8 +145,8 @@ void processOne(UhjAllPassFilter &self, const al::span<const float, 4> coeffs, f
     self.mState = state;
 }
 
-void process(UhjAllPassFilter &self, const al::span<const float,4> coeffs,
-    const al::span<const float> src, const bool updateState, const al::span<float> dst)
+void process(UhjAllPassFilter &self, const std::span<const float,4> coeffs,
+    const std::span<const float> src, const bool updateState, const std::span<float> dst)
 {
     auto state = self.mState;
 
@@ -185,7 +186,7 @@ void process(UhjAllPassFilter &self, const al::span<const float,4> coeffs,
 
 template<size_t N>
 void UhjEncoder<N>::encode(float *LeftOut, float *RightOut,
-    const al::span<const float*const,3> InSamples, const size_t SamplesToDo)
+    const std::span<const float*const,3> InSamples, const size_t SamplesToDo)
 {
     static constexpr auto &Filter = gSegmentedFilter<N>;
     static_assert(sFftLength == Filter.sFftLength);
@@ -195,9 +196,9 @@ void UhjEncoder<N>::encode(float *LeftOut, float *RightOut,
     ASSUME(SamplesToDo > 0);
     ASSUME(SamplesToDo <= BufferLineSize);
 
-    const auto winput = al::span{std::assume_aligned<16>(InSamples[0]), SamplesToDo};
-    const auto xinput = al::span{std::assume_aligned<16>(InSamples[1]), SamplesToDo};
-    const auto yinput = al::span{std::assume_aligned<16>(InSamples[2]), SamplesToDo};
+    const auto winput = std::span{std::assume_aligned<16>(InSamples[0]), SamplesToDo};
+    const auto xinput = std::span{std::assume_aligned<16>(InSamples[1]), SamplesToDo};
+    const auto yinput = std::span{std::assume_aligned<16>(InSamples[2]), SamplesToDo};
 
     std::copy_n(winput.begin(), SamplesToDo, mW.begin()+sFilterDelay);
     std::copy_n(xinput.begin(), SamplesToDo, mX.begin()+sFilterDelay);
@@ -212,12 +213,10 @@ void UhjEncoder<N>::encode(float *LeftOut, float *RightOut,
     size_t curseg{mCurrentSegment};
     for(size_t base{0};base < SamplesToDo;)
     {
-        const size_t todo{std::min(sSegmentSize-mFifoPos, SamplesToDo-base)};
+        const auto todo = std::min(sSegmentSize-mFifoPos, SamplesToDo-base);
         auto wseg = winput.subspan(base, todo);
         auto xseg = xinput.subspan(base, todo);
-        /* Some Clang versions don't like calling subspan on an rvalue here. */
-        const auto wxio_ = al::span{mWXInOut};
-        auto wxio = wxio_.subspan(mFifoPos, todo);
+        const auto wxio = std::span{mWXInOut}.subspan(mFifoPos, todo);
 
         /* Copy out the samples that were previously processed by the FFT. */
         dstore = std::copy_n(wxio.begin(), todo, dstore);
@@ -295,10 +294,10 @@ void UhjEncoder<N>::encode(float *LeftOut, float *RightOut,
     auto delayBuffer = mDirectDelay.begin();
     for(float *buffer : {LeftOut, RightOut})
     {
-        const auto distbuf = assume_aligned_span<16>(al::span{*delayBuffer});
+        const auto distbuf = assume_aligned_span<16>(std::span{*delayBuffer});
         ++delayBuffer;
 
-        const auto inout = al::span{std::assume_aligned<16>(buffer), SamplesToDo};
+        const auto inout = std::span{std::assume_aligned<16>(buffer), SamplesToDo};
         if(SamplesToDo >= sFilterDelay)
         {
             auto delay_end = std::rotate(inout.begin(), inout.end() - sFilterDelay, inout.end());
@@ -314,12 +313,12 @@ void UhjEncoder<N>::encode(float *LeftOut, float *RightOut,
     /* Combine the direct signal with the produced output. */
 
     /* Left = (S + D)/2.0 */
-    const auto left = al::span{std::assume_aligned<16>(LeftOut), SamplesToDo};
+    const auto left = std::span{std::assume_aligned<16>(LeftOut), SamplesToDo};
     for(size_t i{0};i < SamplesToDo;++i)
         left[i] += (mS[i] + mD[i]) * 0.5f;
 
     /* Right = (S - D)/2.0 */
-    const auto right = al::span{std::assume_aligned<16>(RightOut), SamplesToDo};
+    const auto right = std::span{std::assume_aligned<16>(RightOut), SamplesToDo};
     for(size_t i{0};i < SamplesToDo;++i)
         right[i] += (mS[i] - mD[i]) * 0.5f;
 }
@@ -340,29 +339,29 @@ void UhjEncoder<N>::encode(float *LeftOut, float *RightOut,
  * inputs.
  */
 void UhjEncoderIIR::encode(float *LeftOut, float *RightOut,
-    const al::span<const float *const, 3> InSamples, const size_t SamplesToDo)
+    const std::span<const float *const, 3> InSamples, const size_t SamplesToDo)
 {
     ASSUME(SamplesToDo > 0);
     ASSUME(SamplesToDo <= BufferLineSize);
 
-    const auto winput = al::span{std::assume_aligned<16>(InSamples[0]), SamplesToDo};
-    const auto xinput = al::span{std::assume_aligned<16>(InSamples[1]), SamplesToDo};
-    const auto yinput = al::span{std::assume_aligned<16>(InSamples[2]), SamplesToDo};
+    const auto winput = std::span{std::assume_aligned<16>(InSamples[0]), SamplesToDo};
+    const auto xinput = std::span{std::assume_aligned<16>(InSamples[1]), SamplesToDo};
+    const auto yinput = std::span{std::assume_aligned<16>(InSamples[2]), SamplesToDo};
 
     /* S = 0.9396926*W + 0.1855740*X */
     std::transform(winput.begin(), winput.end(), xinput.begin(), mTemp.begin(),
         [](const float w, const float x) noexcept { return 0.9396926f*w + 0.1855740f*x; });
-    process(mFilter1WX, Filter1Coeff, al::span{mTemp}.first(SamplesToDo), true,
-        al::span{mS}.subspan(1));
+    process(mFilter1WX, Filter1Coeff, std::span{mTemp}.first(SamplesToDo), true,
+        std::span{mS}.subspan(1));
     mS[0] = mDelayWX; mDelayWX = mS[SamplesToDo];
 
     /* Precompute j(-0.3420201*W + 0.5098604*X) and store in mWX. */
     std::transform(winput.begin(), winput.end(), xinput.begin(), mTemp.begin(),
         [](const float w, const float x) noexcept { return -0.3420201f*w + 0.5098604f*x; });
-    process(mFilter2WX, Filter2Coeff, al::span{mTemp}.first(SamplesToDo), true, mWX);
+    process(mFilter2WX, Filter2Coeff, std::span{mTemp}.first(SamplesToDo), true, mWX);
 
     /* Apply filter1 to Y and store in mD. */
-    process(mFilter1Y, Filter1Coeff, yinput, true, al::span{mD}.subspan(1));
+    process(mFilter1Y, Filter1Coeff, yinput, true, std::span{mD}.subspan(1));
     mD[0] = mDelayY; mDelayY = mD[SamplesToDo];
 
     /* D = j(-0.3420201*W + 0.5098604*X) + 0.6554516*Y */
@@ -372,16 +371,16 @@ void UhjEncoderIIR::encode(float *LeftOut, float *RightOut,
     /* Apply the base filter to the existing output to align with the processed
      * signal.
      */
-    const auto left = al::span{std::assume_aligned<16>(LeftOut), SamplesToDo};
-    process(mFilter1Direct[0], Filter1Coeff, left, true, al::span{mTemp}.subspan(1));
+    const auto left = std::span{std::assume_aligned<16>(LeftOut), SamplesToDo};
+    process(mFilter1Direct[0], Filter1Coeff, left, true, std::span{mTemp}.subspan(1));
     mTemp[0] = mDirectDelay[0]; mDirectDelay[0] = mTemp[SamplesToDo];
 
     /* Left = (S + D)/2.0 */
     for(size_t i{0};i < SamplesToDo;++i)
         left[i] = (mS[i] + mD[i])*0.5f + mTemp[i];
 
-    const auto right = al::span{std::assume_aligned<16>(RightOut), SamplesToDo};
-    process(mFilter1Direct[1], Filter1Coeff, right, true, al::span{mTemp}.subspan(1));
+    const auto right = std::span{std::assume_aligned<16>(RightOut), SamplesToDo};
+    process(mFilter1Direct[1], Filter1Coeff, right, true, std::span{mTemp}.subspan(1));
     mTemp[0] = mDirectDelay[1]; mDirectDelay[1] = mTemp[SamplesToDo];
 
     /* Right = (S - D)/2.0 */
@@ -404,7 +403,7 @@ void UhjEncoderIIR::encode(float *LeftOut, float *RightOut,
  * channel excludes Q and T.
  */
 template<size_t N>
-void UhjDecoder<N>::decode(const al::span<float*> samples, const size_t samplesToDo,
+void UhjDecoder<N>::decode(const std::span<float*> samples, const size_t samplesToDo,
     const bool updateState)
 {
     static_assert(sInputPadding <= sMaxPadding, "Filter padding is too large");
@@ -415,10 +414,11 @@ void UhjDecoder<N>::decode(const al::span<float*> samples, const size_t samplesT
     ASSUME(samplesToDo <= BufferLineSize);
 
     {
-        const auto left = al::span{std::assume_aligned<16>(samples[0]), samplesToDo+sInputPadding};
-        const auto right = al::span{std::assume_aligned<16>(samples[1]),
+        const auto left = std::span{std::assume_aligned<16>(samples[0]),
             samplesToDo+sInputPadding};
-        const auto t = al::span{std::assume_aligned<16>(samples[2]), samplesToDo+sInputPadding};
+        const auto right = std::span{std::assume_aligned<16>(samples[1]),
+            samplesToDo+sInputPadding};
+        const auto t = std::span{std::assume_aligned<16>(samples[2]), samplesToDo+sInputPadding};
 
         /* S = Left + Right */
         std::transform(left.begin(), left.end(), right.begin(), mS.begin(), std::plus{});
@@ -430,9 +430,9 @@ void UhjDecoder<N>::decode(const al::span<float*> samples, const size_t samplesT
         std::copy(t.begin(), t.end(), mT.begin());
     }
 
-    const auto woutput = al::span{std::assume_aligned<16>(samples[0]), samplesToDo};
-    const auto xoutput = al::span{std::assume_aligned<16>(samples[1]), samplesToDo};
-    const auto youtput = al::span{std::assume_aligned<16>(samples[2]), samplesToDo};
+    const auto woutput = std::span{std::assume_aligned<16>(samples[0]), samplesToDo};
+    const auto xoutput = std::span{std::assume_aligned<16>(samples[1]), samplesToDo};
+    const auto youtput = std::span{std::assume_aligned<16>(samples[2]), samplesToDo};
 
     /* Precompute j(0.828331*D + 0.767820*T) and store in xoutput. */
     auto tmpiter = std::copy(mDTHistory.cbegin(), mDTHistory.cend(), mTemp.begin());
@@ -463,14 +463,14 @@ void UhjDecoder<N>::decode(const al::span<float*> samples, const size_t samplesT
 
     if(samples.size() > 3)
     {
-        const auto zoutput = al::span{std::assume_aligned<16>(samples[3]), samplesToDo};
+        const auto zoutput = std::span{std::assume_aligned<16>(samples[3]), samplesToDo};
         /* Z = 1.023332*Q */
         std::transform(zoutput.begin(), zoutput.end(), zoutput.begin(),
             [](const float q) noexcept { return 1.023332f*q; });
     }
 }
 
-void UhjDecoderIIR::decode(const al::span<float*> samples, const size_t samplesToDo,
+void UhjDecoderIIR::decode(const std::span<float*> samples, const size_t samplesToDo,
     const bool updateState)
 {
     static_assert(sInputPadding <= sMaxPadding, "Filter padding is too large");
@@ -479,8 +479,9 @@ void UhjDecoderIIR::decode(const al::span<float*> samples, const size_t samplesT
     ASSUME(samplesToDo <= BufferLineSize);
 
     {
-        const auto left = al::span{std::assume_aligned<16>(samples[0]), samplesToDo+sInputPadding};
-        const auto right = al::span{std::assume_aligned<16>(samples[1]),
+        const auto left = std::span{std::assume_aligned<16>(samples[0]),
+            samplesToDo+sInputPadding};
+        const auto right = std::span{std::assume_aligned<16>(samples[1]),
             samplesToDo+sInputPadding};
 
         /* S = Left + Right */
@@ -490,20 +491,20 @@ void UhjDecoderIIR::decode(const al::span<float*> samples, const size_t samplesT
         std::transform(left.begin(), left.end(), right.begin(), mD.begin(), std::minus{});
     }
 
-    const auto woutput = al::span{std::assume_aligned<16>(samples[0]), samplesToDo};
-    const auto xoutput = al::span{std::assume_aligned<16>(samples[1]), samplesToDo};
-    const auto youtput = al::span{std::assume_aligned<16>(samples[2]), samplesToDo+sInputPadding};
+    const auto woutput = std::span{std::assume_aligned<16>(samples[0]), samplesToDo};
+    const auto xoutput = std::span{std::assume_aligned<16>(samples[1]), samplesToDo};
+    const auto youtput = std::span{std::assume_aligned<16>(samples[2]), samplesToDo+sInputPadding};
 
     /* Precompute j(0.828331*D + 0.767820*T) and store in xoutput. */
     std::transform(mD.cbegin(), mD.cbegin()+sInputPadding+samplesToDo, youtput.begin(),
         mTemp.begin(),
         [](const float d, const float t) noexcept { return 0.828331f*d + 0.767820f*t; });
     if(mFirstRun) processOne(mFilter2DT, Filter2Coeff, mTemp[0]);
-    process(mFilter2DT, Filter2Coeff, al::span{mTemp}.subspan(1, samplesToDo), updateState,
+    process(mFilter2DT, Filter2Coeff, std::span{mTemp}.subspan(1, samplesToDo), updateState,
         xoutput);
 
     /* Apply filter1 to S and store in mTemp. */
-    process(mFilter1S, Filter1Coeff, al::span{mS}.first(samplesToDo), updateState, mTemp);
+    process(mFilter1S, Filter1Coeff, std::span{mS}.first(samplesToDo), updateState, mTemp);
 
     /* W = 0.981532*S + 0.197484*j(0.828331*D + 0.767820*T) */
     std::transform(mTemp.begin(), mTemp.begin()+samplesToDo, xoutput.begin(), woutput.begin(),
@@ -520,7 +521,7 @@ void UhjDecoderIIR::decode(const al::span<float*> samples, const size_t samplesT
 
     /* Precompute j*S and store in youtput. */
     if(mFirstRun) processOne(mFilter2S, Filter2Coeff, mS[0]);
-    process(mFilter2S, Filter2Coeff, al::span{mS}.subspan(1, samplesToDo), updateState, youtput);
+    process(mFilter2S, Filter2Coeff, std::span{mS}.subspan(1, samplesToDo), updateState, youtput);
 
     /* Y = 0.795968*D - 0.676392*T + j(0.186633*S) */
     std::transform(mTemp.begin(), mTemp.begin()+samplesToDo, youtput.begin(), youtput.begin(),
@@ -528,7 +529,7 @@ void UhjDecoderIIR::decode(const al::span<float*> samples, const size_t samplesT
 
     if(samples.size() > 3)
     {
-        const auto zoutput = al::span{std::assume_aligned<16>(samples[3]), samplesToDo};
+        const auto zoutput = std::span{std::assume_aligned<16>(samples[3]), samplesToDo};
 
         /* Apply filter1 to Q and store in mTemp. */
         process(mFilter1Q, Filter1Coeff, zoutput, updateState, mTemp);
@@ -555,7 +556,7 @@ void UhjDecoderIIR::decode(const al::span<float*> samples, const size_t samplesT
  * resulting stereo width, with the range 0 <= w <= 0.7.
  */
 template<size_t N>
-void UhjStereoDecoder<N>::decode(const al::span<float*> samples, const size_t samplesToDo,
+void UhjStereoDecoder<N>::decode(const std::span<float*> samples, const size_t samplesToDo,
     const bool updateState)
 {
     static_assert(sInputPadding <= sMaxPadding, "Filter padding is too large");
@@ -566,8 +567,9 @@ void UhjStereoDecoder<N>::decode(const al::span<float*> samples, const size_t sa
     ASSUME(samplesToDo <= BufferLineSize);
 
     {
-        const auto left = al::span{std::assume_aligned<16>(samples[0]), samplesToDo+sInputPadding};
-        const auto right = al::span{std::assume_aligned<16>(samples[1]),
+        const auto left = std::span{std::assume_aligned<16>(samples[0]),
+            samplesToDo+sInputPadding};
+        const auto right = std::span{std::assume_aligned<16>(samples[1]),
             samplesToDo+sInputPadding};
 
         std::transform(left.begin(), left.end(), right.begin(), mS.begin(), std::plus{});
@@ -605,9 +607,9 @@ void UhjStereoDecoder<N>::decode(const al::span<float*> samples, const size_t sa
         }
     }
 
-    const auto woutput = al::span{std::assume_aligned<16>(samples[0]), samplesToDo};
-    const auto xoutput = al::span{std::assume_aligned<16>(samples[1]), samplesToDo};
-    const auto youtput = al::span{std::assume_aligned<16>(samples[2]), samplesToDo};
+    const auto woutput = std::span{std::assume_aligned<16>(samples[0]), samplesToDo};
+    const auto xoutput = std::span{std::assume_aligned<16>(samples[1]), samplesToDo};
+    const auto youtput = std::span{std::assume_aligned<16>(samples[2]), samplesToDo};
 
     /* Precompute j*D and store in xoutput. */
     auto tmpiter = std::copy(mDTHistory.cbegin(), mDTHistory.cend(), mTemp.begin());
@@ -635,7 +637,7 @@ void UhjStereoDecoder<N>::decode(const al::span<float*> samples, const size_t sa
         [](const float d, const float js) noexcept { return 1.6822415f*d + 0.2156194f*js; });
 }
 
-void UhjStereoDecoderIIR::decode(const al::span<float*> samples, const size_t samplesToDo,
+void UhjStereoDecoderIIR::decode(const std::span<float*> samples, const size_t samplesToDo,
     const bool updateState)
 {
     static_assert(sInputPadding <= sMaxPadding, "Filter padding is too large");
@@ -644,8 +646,9 @@ void UhjStereoDecoderIIR::decode(const al::span<float*> samples, const size_t sa
     ASSUME(samplesToDo <= BufferLineSize);
 
     {
-        const auto left = al::span{std::assume_aligned<16>(samples[0]), samplesToDo+sInputPadding};
-        const auto right = al::span{std::assume_aligned<16>(samples[1]),
+        const auto left = std::span{std::assume_aligned<16>(samples[0]),
+            samplesToDo+sInputPadding};
+        const auto right = std::span{std::assume_aligned<16>(samples[1]),
             samplesToDo+sInputPadding};
 
         std::transform(left.begin(), left.end(), right.begin(), mS.begin(), std::plus{});
@@ -684,16 +687,16 @@ void UhjStereoDecoderIIR::decode(const al::span<float*> samples, const size_t sa
         }
     }
 
-    const auto woutput = al::span{std::assume_aligned<16>(samples[0]), samplesToDo};
-    const auto xoutput = al::span{std::assume_aligned<16>(samples[1]), samplesToDo};
-    const auto youtput = al::span{std::assume_aligned<16>(samples[2]), samplesToDo};
+    const auto woutput = std::span{std::assume_aligned<16>(samples[0]), samplesToDo};
+    const auto xoutput = std::span{std::assume_aligned<16>(samples[1]), samplesToDo};
+    const auto youtput = std::span{std::assume_aligned<16>(samples[2]), samplesToDo};
 
     /* Apply filter1 to S and store in mTemp. */
-    process(mFilter1S, Filter1Coeff, al::span{mS}.first(samplesToDo), updateState, mTemp);
+    process(mFilter1S, Filter1Coeff, std::span{mS}.first(samplesToDo), updateState, mTemp);
 
     /* Precompute j*D and store in xoutput. */
     if(mFirstRun) processOne(mFilter2D, Filter2Coeff, mD[0]);
-    process(mFilter2D, Filter2Coeff, al::span{mD}.subspan(1, samplesToDo), updateState, xoutput);
+    process(mFilter2D, Filter2Coeff, std::span{mD}.subspan(1, samplesToDo), updateState, xoutput);
 
     /* W = 0.6098637*S + 0.6896511*j*w*D */
     std::transform(mTemp.begin(), mTemp.begin()+samplesToDo, xoutput.begin(), woutput.begin(),
@@ -704,10 +707,10 @@ void UhjStereoDecoderIIR::decode(const al::span<float*> samples, const size_t sa
 
     /* Precompute j*S and store in youtput. */
     if(mFirstRun) processOne(mFilter2S, Filter2Coeff, mS[0]);
-    process(mFilter2S, Filter2Coeff, al::span{mS}.subspan(1, samplesToDo), updateState, youtput);
+    process(mFilter2S, Filter2Coeff, std::span{mS}.subspan(1, samplesToDo), updateState, youtput);
 
     /* Apply filter1 to D and store in mTemp. */
-    process(mFilter1D, Filter1Coeff, al::span{mD}.first(samplesToDo), updateState, mTemp);
+    process(mFilter1D, Filter1Coeff, std::span{mD}.first(samplesToDo), updateState, mTemp);
 
     /* Y = 1.6822415*w*D + 0.2156194*j*S */
     std::transform(mTemp.begin(), mTemp.begin()+samplesToDo, youtput.begin(), youtput.begin(),

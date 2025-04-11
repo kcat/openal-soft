@@ -4,8 +4,8 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <span>
 
-#include "alspan.h"
 #include "bufferline.h"
 #include "opthelpers.h"
 
@@ -50,7 +50,7 @@ struct SIMDALIGN UhjEncoderBase {
      * with an additional +3dB boost).
      */
     virtual void encode(float *LeftOut, float *RightOut,
-        const al::span<const float*const,3> InSamples, const std::size_t SamplesToDo) = 0;
+        const std::span<const float*const,3> InSamples, const std::size_t SamplesToDo) = 0;
 };
 
 template<std::size_t N>
@@ -84,7 +84,7 @@ struct UhjEncoder final : public UhjEncoderBase {
      * signal. The input must use FuMa channel ordering and UHJ scaling (FuMa
      * with an additional +3dB boost).
      */
-    void encode(float *LeftOut, float *RightOut, const al::span<const float*const,3> InSamples,
+    void encode(float *LeftOut, float *RightOut, const std::span<const float*const,3> InSamples,
         const std::size_t SamplesToDo) final;
 };
 
@@ -112,7 +112,7 @@ struct UhjEncoderIIR final : public UhjEncoderBase {
      * signal. The input must use FuMa channel ordering and UHJ scaling (FuMa
      * with an additional +3dB boost).
      */
-    void encode(float *LeftOut, float *RightOut, const al::span<const float*const,3> InSamples,
+    void encode(float *LeftOut, float *RightOut, const std::span<const float*const,3> InSamples,
         const std::size_t SamplesToDo) final;
 };
 
@@ -132,7 +132,7 @@ struct SIMDALIGN DecoderBase {
     void operator=(const DecoderBase&) = delete;
     void operator=(DecoderBase&&) = delete;
 
-    virtual void decode(const al::span<float*> samples, const std::size_t samplesToDo,
+    virtual void decode(const std::span<float*> samples, const std::size_t samplesToDo,
         const bool updateState) = 0;
 
     /**
@@ -164,7 +164,7 @@ struct UhjDecoder final : public DecoderBase {
      * reconstructed from 2-channel UHJ should not be run through a normal
      * B-Format decoder, as it needs different shelf filters.
      */
-    void decode(const al::span<float*> samples, const std::size_t samplesToDo,
+    void decode(const std::span<float*> samples, const std::size_t samplesToDo,
         const bool updateState) final;
 };
 
@@ -188,7 +188,7 @@ struct UhjDecoderIIR final : public DecoderBase {
     UhjAllPassFilter mFilter2S;
     UhjAllPassFilter mFilter1Q;
 
-    void decode(const al::span<float*> samples, const std::size_t samplesToDo,
+    void decode(const std::span<float*> samples, const std::size_t samplesToDo,
         const bool updateState) final;
 };
 
@@ -212,7 +212,7 @@ struct UhjStereoDecoder final : public DecoderBase {
      * should contain 3 channels, the first two being the left and right stereo
      * channels, and the third left empty.
      */
-    void decode(const al::span<float*> samples, const std::size_t samplesToDo,
+    void decode(const std::span<float*> samples, const std::size_t samplesToDo,
         const bool updateState) final;
 };
 
@@ -231,7 +231,7 @@ struct UhjStereoDecoderIIR final : public DecoderBase {
     UhjAllPassFilter mFilter1D;
     UhjAllPassFilter mFilter2S;
 
-    void decode(const al::span<float*> samples, const std::size_t samplesToDo,
+    void decode(const std::span<float*> samples, const std::size_t samplesToDo,
         const bool updateState) final;
 };
 

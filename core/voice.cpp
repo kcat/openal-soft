@@ -791,7 +791,8 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
      * resampled buffer data to be mixed.
      */
     auto SamplePointers = std::array<float*,DeviceBase::MixerChannelsMax>{};
-    const auto MixingSamples = std::span{SamplePointers}.first(mChans.size());
+    const auto MixingSamples = std::span{SamplePointers}
+        .first((mFmtChannels == FmtMono && !mDuplicateMono) ? 1_uz : mChans.size());
     {
         const uint channelStep{(samplesToLoad+3u)&~3u};
         auto base = Device->mSampleData.end() - MixingSamples.size()*channelStep;
@@ -804,11 +805,10 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
     }
 
     /* UHJ2 and SuperStereo only have 2 buffer channels, but 3 mixing channels
-     * (3rd channel is generated from decoding). MonoDup only has 1 buffer
-     * channel, but 2 mixing channels (2nd channel is just duplicated).
+     * (3rd channel is generated from decoding).
      */
-    const size_t realChannels{(mFmtChannels == FmtMonoDup) ? 1u
-        : (mFmtChannels == FmtUHJ2 || mFmtChannels == FmtSuperStereo) ? 2u
+    const size_t realChannels{(mFmtChannels == FmtMono) ? 1_uz
+        : (mFmtChannels == FmtUHJ2 || mFmtChannels == FmtSuperStereo) ? 2_uz
         : MixingSamples.size()};
     for(size_t chan{0};chan < realChannels;++chan)
     {
@@ -996,7 +996,7 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
             }
         }
     }
-    if(mFmtChannels == FmtMonoDup)
+    if(mDuplicateMono)
     {
         /* NOTE: a mono source shouldn't have a decoder or the VoiceIsAmbisonic
          * flag, so aliasing instead of copying to the second channel shouldn't
@@ -1012,12 +1012,12 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
 
     if(mFlags.test(VoiceIsAmbisonic))
     {
-        auto voiceSamples = MixingSamples.begin();
-        for(auto &chandata : mChans)
+        auto chandata = mChans.begin();
+        for(const auto &voiceSamples : MixingSamples)
         {
-            chandata.mAmbiSplitter.processScale({*voiceSamples, samplesToMix},
-                chandata.mAmbiHFScale, chandata.mAmbiLFScale);
-            ++voiceSamples;
+            chandata->mAmbiSplitter.processScale({voiceSamples, samplesToMix},
+                chandata->mAmbiHFScale, chandata->mAmbiLFScale);
+            ++chandata;
         }
     }
 
@@ -1045,15 +1045,15 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
         }
     }
 
-    auto voiceSamples = MixingSamples.begin();
-    for(auto &chandata : mChans)
+    auto chandata = mChans.begin();
+    for(const auto &voiceSamples : MixingSamples)
     {
         /* Now filter and mix to the appropriate outputs. */
         const auto FilterBuf = std::span{Device->FilteredData};
         {
-            DirectParams &parms = chandata.mDryParams;
+            DirectParams &parms = chandata->mDryParams;
             const auto samples = DoFilters(parms.LowPass, parms.HighPass, FilterBuf,
-                {*voiceSamples, samplesToMix}, mDirect.FilterType);
+                {voiceSamples, samplesToMix}, mDirect.FilterType);
 
             if(mFlags.test(VoiceHasHrtf))
             {
@@ -1078,9 +1078,9 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
             if(mSend[send].Buffer.empty())
                 continue;
 
-            SendParams &parms = chandata.mWetParams[send];
+            SendParams &parms = chandata->mWetParams[send];
             const auto samples = DoFilters(parms.LowPass, parms.HighPass, FilterBuf,
-                {*voiceSamples, samplesToMix}, mSend[send].FilterType);
+                {voiceSamples, samplesToMix}, mSend[send].FilterType);
 
             const auto TargetGains = (vstate == Playing) ? std::span{parms.Gains.Target}
                 : std::span{SilentTarget};
@@ -1088,7 +1088,7 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
                 OutPos);
         }
 
-        ++voiceSamples;
+        ++chandata;
     }
 
     mFlags.set(VoiceIsFading);
@@ -1213,8 +1213,7 @@ void Voice::prepare(DeviceBase *device)
     /* Even if storing really high order ambisonics, we only mix channels for
      * orders up to the device order. The rest are simply dropped.
      */
-    uint num_channels{(mFmtChannels == FmtMonoDup) ? 2
-        : (mFmtChannels == FmtUHJ2 || mFmtChannels == FmtSuperStereo) ? 3
+    uint num_channels{(mFmtChannels == FmtUHJ2 || mFmtChannels == FmtSuperStereo) ? 3u
         : ChannelsFromFmt(mFmtChannels, std::min(mAmbiOrder, device->mAmbiOrder))};
     if(num_channels > device->MixerChannelsMax) [[unlikely]]
     {
@@ -1227,10 +1226,11 @@ void Voice::prepare(DeviceBase *device)
         decltype(mChans){}.swap(mChans);
         decltype(mPrevSamples){}.swap(mPrevSamples);
     }
-    mChans.reserve(std::max(2u, num_channels));
-    mChans.resize(num_channels);
-    mPrevSamples.reserve(std::max(2u, num_channels));
-    mPrevSamples.resize(num_channels);
+    /* Make sure there's enough for 2 channels. Mono may use both when panning
+     * is enabled, which can be done dynamically.
+     */
+    mChans.resize(std::max(2u, num_channels));
+    mPrevSamples.resize(std::max(2u, num_channels));
 
     mDecoder = nullptr;
     mDecoderPadding = 0;

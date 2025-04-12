@@ -44,7 +44,6 @@ auto NameFromFormat(FmtChannels channels) noexcept -> std::string_view
     case FmtUHJ3: return "UHJ3"sv;
     case FmtUHJ4: return "UHJ4"sv;
     case FmtSuperStereo: return "Super Stereo"sv;
-    case FmtMonoDup: return "Mono (dup)"sv;
     }
     return "<internal error>"sv;
 }
@@ -83,7 +82,6 @@ uint ChannelsFromFmt(FmtChannels chans, uint ambiorder) noexcept
     case FmtUHJ3: return 3;
     case FmtUHJ4: return 4;
     case FmtSuperStereo: return 2;
-    case FmtMonoDup: return 1;
     }
     return 0;
 }

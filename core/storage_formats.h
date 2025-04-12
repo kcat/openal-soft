@@ -31,7 +31,6 @@ enum FmtChannels : unsigned char {
     FmtUHJ3, /* 3-channel UHJ, aka "THJ" */
     FmtUHJ4, /* 4-channel UHJ, aka "PHJ" */
     FmtSuperStereo, /* Stereo processed with Super Stereo. */
-    FmtMonoDup, /* Mono duplicated for left/right separation */
 };
 
 enum class AmbiLayout : unsigned char {

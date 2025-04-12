@@ -130,6 +130,7 @@ struct VoiceProps {
     Resampler mResampler;
     DirectMode DirectChannels;
     SpatializeMode mSpatializeMode;
+    bool mPanningEnabled;
 
     bool DryGainHFAuto;
     bool WetGainAuto;
@@ -224,6 +225,7 @@ struct SIMDALIGN Voice {
     uint mFrameStep{}; /**< In steps of the sample type size. */
     uint mBytesPerBlock{}; /**< Or for PCM formats, BytesPerFrame. */
     uint mSamplesPerBlock{}; /**< Always 1 for PCM formats. */
+    bool mDuplicateMono{};
     AmbiLayout mAmbiLayout{};
     AmbiScaling mAmbiScaling{};
     uint mAmbiOrder{};

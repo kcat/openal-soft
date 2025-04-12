@@ -149,6 +149,7 @@ void UpdateSourceProps(const ALsource *source, Voice *voice, ALCcontext *context
     props->mResampler = source->mResampler;
     props->DirectChannels = source->DirectChannels;
     props->mSpatializeMode = source->mSpatialize;
+    props->mPanningEnabled = source->mPanningEnabled;
 
     props->DryGainHFAuto = source->DryGainHFAuto;
     props->WetGainAuto = source->WetGainAuto;
@@ -525,9 +526,7 @@ void InitVoice(Voice *voice, ALsource *source, ALbufferQueueItem *BufferList, AL
 
     ALbuffer *buffer{BufferList->mBuffer};
     voice->mFrequency = buffer->mSampleRate;
-    if(buffer->mChannels == FmtMono && source->mPanningEnabled)
-        voice->mFmtChannels = FmtMonoDup;
-    else if(buffer->mChannels == FmtStereo && source->mStereoMode == SourceStereo::Enhanced)
+    if(buffer->mChannels == FmtStereo && source->mStereoMode == SourceStereo::Enhanced)
         voice->mFmtChannels = FmtSuperStereo;
     else
         voice->mFmtChannels = buffer->mChannels;

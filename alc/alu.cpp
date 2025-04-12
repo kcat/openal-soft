@@ -860,8 +860,7 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
     const auto Frequency = static_cast<float>(Device->mSampleRate);
     const uint NumSends{Device->NumAuxSends};
 
-    const size_t num_channels{voice->mChans.size()};
-    ASSUME(num_channels > 0);
+    const auto is_mono3d = voice->mFmtChannels == FmtMono && !props->mPanningEnabled;
 
     for(auto &chandata : voice->mChans)
     {
@@ -877,11 +876,18 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
         switch(chanfmt)
         {
         case FmtMono:
-            /* Mono buffers are never played direct. */
-            return {DirectMode::Off, std::span{MonoMap}};
-
+            if(!props->mPanningEnabled)
+            {
+                /* 3D mono buffers are never played direct. */
+                return {DirectMode::Off, std::span{MonoMap}};
+            }
+            /* Mono buffers with panning enabled are basically treated as
+             * stereo, each channel being a copy of the buffer samples, using
+             * the stereo channel positions and the left/right panning
+             * affecting each channel appropriately.
+             */
+            [[fallthrough]];
         case FmtStereo:
-        case FmtMonoDup:
             if(props->DirectChannels == DirectMode::Off)
             {
                 for(size_t i{0};i < 2;++i)
@@ -1087,8 +1093,8 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
              * whether input is 2D or 3D.
              */
             const auto index_map = Is2DAmbisonic(voice->mFmtChannels) ?
-                GetAmbi2DLayout(voice->mAmbiLayout).subspan(0) :
-                GetAmbiLayout(voice->mAmbiLayout).subspan(0);
+                GetAmbi2DLayout(voice->mAmbiLayout).first(voice->mChans.size()) :
+                GetAmbiLayout(voice->mAmbiLayout).first(voice->mChans.size());
 
             /* Scale the panned W signal inversely to coverage (full coverage
              * means no panned signal), and according to the channel scaling.
@@ -1096,7 +1102,7 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
             std::for_each(coeffs.begin(), coeffs.end(),
                 [scale=(1.0f-coverage)*scales[0]](float &coeff) noexcept { coeff *= scale; });
 
-            for(size_t c{0};c < num_channels;c++)
+            for(size_t c{0};c < index_map.size();++c)
             {
                 const size_t acn{index_map[c]};
                 const float scale{scales[acn] * coverage};
@@ -1130,7 +1136,7 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
          */
         voice->mDirect.Buffer = Device->RealOut.Buffer;
 
-        for(size_t c{0};c < num_channels;c++)
+        for(size_t c{0};c < chans.size();++c)
         {
             const float pangain{SelectChannelGain(chans[c].channel)};
             if(uint idx{Device->channelIdxByName(chans[c].channel)}; idx != InvalidChannelIndex)
@@ -1157,7 +1163,7 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
         /* Auxiliary sends still use normal channel panning since they mix to
          * B-Format, which can't channel-match.
          */
-        for(size_t c{0};c < num_channels;c++)
+        for(size_t c{0};c < chans.size();++c)
         {
             /* Skip LFE */
             if(chans[c].channel == LFE)
@@ -1173,6 +1179,28 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
                         voice->mChans[c].mWetParams[i].Gains.Target);
             }
         }
+
+        /* With non-HRTF mixing, we can cheat for mono-as-stereo by combining
+         * the left and right output gains and mix only one channel to output.
+         */
+        if(voice->mFmtChannels == FmtMono && props->mPanningEnabled)
+        {
+            const auto drytarget0 = std::span{voice->mChans[0].mDryParams.Gains.Target};
+            const auto drytarget1 = std::span{voice->mChans[1].mDryParams.Gains.Target};
+            std::transform(drytarget0.begin(), drytarget0.end(), drytarget1.begin(),
+                drytarget0.begin(), std::plus{});
+
+            for(uint i{0};i < NumSends;i++)
+            {
+                if(!SendSlots[i])
+                    continue;
+
+                const auto wettarget0 = std::span{voice->mChans[0].mWetParams[i].Gains.Target};
+                const auto wettarget1 = std::span{voice->mChans[1].mWetParams[i].Gains.Target};
+                std::transform(wettarget0.begin(), wettarget0.end(), wettarget1.begin(),
+                    wettarget0.begin(), std::plus{});
+            }
+        }
     }
     else if(Device->mRenderMode == RenderMode::Hrtf)
     {
@@ -1183,7 +1211,7 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
 
         if(Distance > std::numeric_limits<float>::epsilon())
         {
-            if(voice->mFmtChannels == FmtMono)
+            if(is_mono3d)
             {
                 const float src_ev{std::asin(std::clamp(ypos, -1.0f, 1.0f))};
                 const float src_az{std::atan2(xpos, -zpos)};
@@ -1201,7 +1229,7 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
                             voice->mChans[0].mWetParams[i].Gains.Target);
                 }
             }
-            else for(size_t c{0};c < num_channels;c++)
+            else for(size_t c{0};c < chans.size();++c)
             {
                 /* Skip LFE */
                 if(chans[c].channel == LFE) continue;
@@ -1248,13 +1276,13 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
              * where it can be 0 or full (non-mono sources are always full
              * spread here).
              */
-            const float spread{Spread * float(voice->mFmtChannels == FmtMono)};
+            const float spread{Spread * float(is_mono3d)};
 
             /* Local sources on HRTF play with each channel panned to its
              * relative location around the listener, providing "virtual
              * speaker" responses.
              */
-            for(size_t c{0};c < num_channels;c++)
+            for(size_t c{0};c < chans.size();++c)
             {
                 /* Skip LFE */
                 if(chans[c].channel == LFE)
@@ -1284,6 +1312,7 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
             }
         }
 
+        voice->mDuplicateMono = voice->mFmtChannels == FmtMono && props->mPanningEnabled;
         voice->mFlags.set(VoiceHasHrtf);
     }
     else
@@ -1302,13 +1331,13 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
                 const float w0{SpeedOfSoundMetersPerSec / (mdist * Frequency)};
 
                 /* Adjust NFC filters. */
-                for(size_t c{0};c < num_channels;c++)
+                for(size_t c{0};c < chans.size();++c)
                     voice->mChans[c].mDryParams.NFCtrlFilter.adjust(w0);
 
                 voice->mFlags.set(VoiceHasNfc);
             }
 
-            if(voice->mFmtChannels == FmtMono)
+            if(is_mono3d)
             {
                 auto calc_coeffs = [xpos,ypos,zpos,Spread](RenderMode mode)
                 {
@@ -1328,7 +1357,7 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
                             voice->mChans[0].mWetParams[i].Gains.Target);
                 }
             }
-            else for(size_t c{0};c < num_channels;c++)
+            else for(size_t c{0};c < chans.size();++c)
             {
                 const auto pangain = SelectChannelGain(chans[c].channel);
 
@@ -1384,7 +1413,7 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
                  * infinite distance, which results in a w0 of 0.
                  */
                 static constexpr float w0{0.0f};
-                for(size_t c{0};c < num_channels;c++)
+                for(size_t c{0};c < chans.size();++c)
                     voice->mChans[c].mDryParams.NFCtrlFilter.adjust(w0);
 
                 voice->mFlags.set(VoiceHasNfc);
@@ -1394,8 +1423,8 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
              * where it can be 0 or full (non-mono sources are always full
              * spread here).
              */
-            const float spread{Spread * float(voice->mFmtChannels == FmtMono)};
-            for(size_t c{0};c < num_channels;c++)
+            const float spread{Spread * float(is_mono3d)};
+            for(size_t c{0};c < chans.size();++c)
             {
                 const float pangain{SelectChannelGain(chans[c].channel)};
 
@@ -1424,6 +1453,25 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
                 }
             }
         }
+
+        if(voice->mFmtChannels == FmtMono && props->mPanningEnabled)
+        {
+            const auto drytarget0 = std::span{voice->mChans[0].mDryParams.Gains.Target};
+            const auto drytarget1 = std::span{voice->mChans[1].mDryParams.Gains.Target};
+            std::transform(drytarget0.begin(), drytarget0.end(), drytarget1.begin(),
+                drytarget0.begin(), std::plus{});
+
+            for(uint i{0};i < NumSends;i++)
+            {
+                if(!SendSlots[i])
+                    continue;
+
+                const auto wettarget0 = std::span{voice->mChans[0].mWetParams[i].Gains.Target};
+                const auto wettarget1 = std::span{voice->mChans[1].mWetParams[i].Gains.Target};
+                std::transform(wettarget0.begin(), wettarget0.end(), wettarget1.begin(),
+                    wettarget0.begin(), std::plus{});
+            }
+        }
     }
 
     {
@@ -1438,7 +1486,7 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
         auto &highpass = voice->mChans[0].mDryParams.HighPass;
         lowpass.setParamsFromSlope(BiquadType::HighShelf, hfNorm, DryGain.HF, 1.0f);
         highpass.setParamsFromSlope(BiquadType::LowShelf, lfNorm, DryGain.LF, 1.0f);
-        for(size_t c{1};c < num_channels;c++)
+        for(size_t c{1};c < chans.size();++c)
         {
             voice->mChans[c].mDryParams.LowPass.copyParamsFrom(lowpass);
             voice->mChans[c].mDryParams.HighPass.copyParamsFrom(highpass);
@@ -1457,7 +1505,7 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
         auto &highpass = voice->mChans[0].mWetParams[i].HighPass;
         lowpass.setParamsFromSlope(BiquadType::HighShelf, hfNorm, WetGain[i].HF, 1.0f);
         highpass.setParamsFromSlope(BiquadType::LowShelf, lfNorm, WetGain[i].LF, 1.0f);
-        for(size_t c{1};c < num_channels;c++)
+        for(size_t c{1};c < chans.size();++c)
         {
             voice->mChans[c].mWetParams[i].LowPass.copyParamsFrom(lowpass);
             voice->mChans[c].mWetParams[i].HighPass.copyParamsFrom(highpass);
@@ -1800,10 +1848,11 @@ void CalcSourceParams(Voice *voice, ContextBase *context, bool force)
         AtomicReplaceHead(context->mFreeVoiceProps, props);
     }
 
-    if((voice->mProps.DirectChannels != DirectMode::Off && voice->mFmtChannels != FmtMono
+    const auto is_mono3d = voice->mFmtChannels == FmtMono && !voice->mProps.mPanningEnabled;
+    if((voice->mProps.DirectChannels != DirectMode::Off && !is_mono3d
             && !IsAmbisonic(voice->mFmtChannels))
         || voice->mProps.mSpatializeMode == SpatializeMode::Off
-        || (voice->mProps.mSpatializeMode==SpatializeMode::Auto && voice->mFmtChannels != FmtMono))
+        || (voice->mProps.mSpatializeMode==SpatializeMode::Auto && !is_mono3d))
         CalcNonAttnSourceParams(voice, &voice->mProps, context);
     else
         CalcAttnSourceParams(voice, &voice->mProps, context);

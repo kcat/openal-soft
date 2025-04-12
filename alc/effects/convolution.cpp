@@ -551,7 +551,6 @@ void ConvolutionState::update(const ContextBase *context, const EffectSlot *slot
         switch(mChannels)
         {
         case FmtMono: chanmap = MonoMap; break;
-        case FmtMonoDup: chanmap = MonoMap; break;
         case FmtSuperStereo:
         case FmtStereo: chanmap = StereoMap; break;
         case FmtRear: chanmap = RearMap; break;

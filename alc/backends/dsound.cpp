@@ -358,7 +358,7 @@ bool DSoundPlayback::reset()
     case DevFmtFloat:
         if(mDevice->Flags.test(SampleTypeRequest))
             break;
-        /* fall-through */
+        [[fallthrough]];
     case DevFmtUShort:
         mDevice->FmtType = DevFmtShort;
         break;
@@ -401,14 +401,14 @@ bool DSoundPlayback::reset()
     {
     case DevFmtMono: OutputType.dwChannelMask = MONO; break;
     case DevFmtAmbi3D: mDevice->FmtChans = DevFmtStereo;
-        /* fall-through */
+        [[fallthrough]];
     case DevFmtStereo: OutputType.dwChannelMask = STEREO; break;
     case DevFmtQuad: OutputType.dwChannelMask = QUAD; break;
     case DevFmtX51: OutputType.dwChannelMask = isRear51 ? X5DOT1REAR : X5DOT1; break;
     case DevFmtX61: OutputType.dwChannelMask = X6DOT1; break;
     case DevFmtX71: OutputType.dwChannelMask = X7DOT1; break;
     case DevFmtX7144: mDevice->FmtChans = DevFmtX714;
-        /* fall-through */
+        [[fallthrough]];
     case DevFmtX714: OutputType.dwChannelMask = X7DOT1DOT4; break;
     case DevFmtX3D71: OutputType.dwChannelMask = X7DOT1; break;
     }

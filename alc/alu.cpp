@@ -1623,7 +1623,7 @@ void CalcAttnSourceParams(Voice *voice, const VoiceProps *props, const ContextBa
     case DistanceModel::InverseClamped:
         if(props->MaxDistance < props->RefDistance) break;
         ClampedDist = std::clamp(ClampedDist, props->RefDistance, props->MaxDistance);
-        /*fall-through*/
+        [[fallthrough]];
     case DistanceModel::Inverse:
         if(props->RefDistance > 0.0f)
         {
@@ -1645,7 +1645,7 @@ void CalcAttnSourceParams(Voice *voice, const VoiceProps *props, const ContextBa
     case DistanceModel::LinearClamped:
         if(props->MaxDistance < props->RefDistance) break;
         ClampedDist = std::clamp(ClampedDist, props->RefDistance, props->MaxDistance);
-        /*fall-through*/
+        [[fallthrough]];
     case DistanceModel::Linear:
         if(props->MaxDistance != props->RefDistance)
         {
@@ -1666,7 +1666,7 @@ void CalcAttnSourceParams(Voice *voice, const VoiceProps *props, const ContextBa
     case DistanceModel::ExponentClamped:
         if(props->MaxDistance < props->RefDistance) break;
         ClampedDist = std::clamp(ClampedDist, props->RefDistance, props->MaxDistance);
-        /*fall-through*/
+        [[fallthrough]];
     case DistanceModel::Exponent:
         if(ClampedDist > 0.0f && props->RefDistance > 0.0f)
         {

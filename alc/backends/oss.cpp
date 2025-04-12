@@ -373,7 +373,7 @@ bool OSSPlayback::reset()
         case DevFmtUInt:
         case DevFmtFloat:
             mDevice->FmtType = DevFmtShort;
-            /* fall-through */
+            [[fallthrough]];
         case DevFmtShort:
             ossFormat = AFMT_S16_NE;
             break;

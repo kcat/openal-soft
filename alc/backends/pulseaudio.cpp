@@ -952,7 +952,7 @@ bool PulsePlayback::reset()
         break;
     case DevFmtAmbi3D:
         mDevice->FmtChans = DevFmtStereo;
-        /*fall-through*/
+        [[fallthrough]];
     case DevFmtStereo:
         chanmap = StereoChanMap;
         break;
@@ -971,7 +971,7 @@ bool PulsePlayback::reset()
         break;
     case DevFmtX7144:
         mDevice->FmtChans = DevFmtX714;
-        /*fall-through*/
+        [[fallthrough]];
     case DevFmtX714:
         chanmap = X714ChanMap;
         break;
@@ -982,19 +982,19 @@ bool PulsePlayback::reset()
     {
     case DevFmtByte:
         mDevice->FmtType = DevFmtUByte;
-        /* fall-through */
+        [[fallthrough]];
     case DevFmtUByte:
         mSpec.format = PA_SAMPLE_U8;
         break;
     case DevFmtUShort:
         mDevice->FmtType = DevFmtShort;
-        /* fall-through */
+        [[fallthrough]];
     case DevFmtShort:
         mSpec.format = PA_SAMPLE_S16NE;
         break;
     case DevFmtUInt:
         mDevice->FmtType = DevFmtInt;
-        /* fall-through */
+        [[fallthrough]];
     case DevFmtInt:
         mSpec.format = PA_SAMPLE_S32NE;
         break;

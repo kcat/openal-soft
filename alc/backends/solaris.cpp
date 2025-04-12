@@ -182,7 +182,7 @@ bool SolarisBackend::reset()
     case DevFmtUInt:
     case DevFmtFloat:
         mDevice->FmtType = DevFmtShort;
-        /* fall-through */
+        [[fallthrough]];
     case DevFmtShort:
         info.play.precision = 16;
         info.play.encoding = AUDIO_ENCODING_LINEAR;

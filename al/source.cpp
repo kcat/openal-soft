@@ -1058,7 +1058,7 @@ constexpr ALuint IntValsByProp(ALenum prop)
     case AL_SOURCE_RADIUS: /*AL_BYTE_RW_OFFSETS_SOFT:*/
         if(sBufferSubDataCompat)
             return 2;
-        /*fall-through*/
+        [[fallthrough]];
     case AL_CONE_INNER_ANGLE:
     case AL_CONE_OUTER_ANGLE:
     case AL_PITCH:
@@ -1137,7 +1137,7 @@ constexpr ALuint Int64ValsByProp(ALenum prop)
     case AL_SOURCE_RADIUS: /*AL_BYTE_RW_OFFSETS_SOFT:*/
         if(sBufferSubDataCompat)
             return 2;
-        /*fall-through*/
+        [[fallthrough]];
     case AL_CONE_INNER_ANGLE:
     case AL_CONE_OUTER_ANGLE:
     case AL_PITCH:
@@ -1232,7 +1232,7 @@ constexpr ALuint FloatValsByProp(ALenum prop)
     case AL_SOURCE_RADIUS: /*AL_BYTE_RW_OFFSETS_SOFT:*/
         if(!sBufferSubDataCompat)
             return 1;
-        /*fall-through*/
+        [[fallthrough]];
     case AL_SAMPLE_RW_OFFSETS_SOFT:
         break;
 
@@ -1307,7 +1307,7 @@ constexpr ALuint DoubleValsByProp(ALenum prop)
     case AL_SOURCE_RADIUS: /*AL_BYTE_RW_OFFSETS_SOFT:*/
         if(!sBufferSubDataCompat)
             return 1;
-        /*fall-through*/
+        [[fallthrough]];
     case AL_SAMPLE_RW_OFFSETS_SOFT:
         break;
 

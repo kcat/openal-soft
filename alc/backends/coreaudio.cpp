@@ -589,21 +589,21 @@ bool CoreAudioPlayback::reset()
     {
         case DevFmtUByte:
             mDevice->FmtType = DevFmtByte;
-            /* fall-through */
+            [[fallthrough]];
         case DevFmtByte:
             streamFormat.mFormatFlags |= kLinearPCMFormatFlagIsSignedInteger;
             streamFormat.mBitsPerChannel = 8;
             break;
         case DevFmtUShort:
             mDevice->FmtType = DevFmtShort;
-            /* fall-through */
+            [[fallthrough]];
         case DevFmtShort:
             streamFormat.mFormatFlags |= kLinearPCMFormatFlagIsSignedInteger;
             streamFormat.mBitsPerChannel = 16;
             break;
         case DevFmtUInt:
             mDevice->FmtType = DevFmtInt;
-            /* fall-through */
+            [[fallthrough]];
         case DevFmtInt:
             streamFormat.mFormatFlags |= kLinearPCMFormatFlagIsSignedInteger;
             streamFormat.mBitsPerChannel = 32;

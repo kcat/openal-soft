@@ -808,8 +808,8 @@ struct GainTriplet { float Base, HF, LF; };
 void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, const float zpos,
     const float Distance, const float Spread, const GainTriplet &DryGain,
     const std::span<const GainTriplet,MaxSendCount> WetGain,
-    const std::span<EffectSlot*,MaxSendCount> SendSlots, const VoiceProps *props,
-    const ContextParams &Context, DeviceBase *Device)
+    const std::span<EffectSlot*,MaxSendCount> SendSlots, const ContextParams &Context,
+    DeviceBase *Device)
 {
     static constexpr std::array MonoMap{
         ChanPosMap{FrontCenter, std::array{0.0f, 0.0f, -1.0f}}
@@ -860,7 +860,8 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
     const auto Frequency = static_cast<float>(Device->mSampleRate);
     const uint NumSends{Device->NumAuxSends};
 
-    const auto is_mono3d = voice->mFmtChannels == FmtMono && !props->mPanningEnabled;
+    const auto &props = voice->mProps;
+    const auto ismono3d = voice->mFmtChannels == FmtMono && !props.mPanningEnabled;
 
     for(auto &chandata : voice->mChans)
     {
@@ -870,13 +871,13 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
             [](SendParams &params) -> void { params.Gains.Target.fill(0.0f); });
     }
 
-    const auto getChans = [props,&StereoMap](FmtChannels chanfmt) noexcept
+    const auto getChans = [&props,&StereoMap](FmtChannels chanfmt) noexcept
         -> std::pair<DirectMode,std::span<const ChanPosMap>>
     {
         switch(chanfmt)
         {
         case FmtMono:
-            if(!props->mPanningEnabled)
+            if(!props.mPanningEnabled)
             {
                 /* 3D mono buffers are never played direct. */
                 return {DirectMode::Off, std::span{MonoMap}};
@@ -888,23 +889,23 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
              */
             [[fallthrough]];
         case FmtStereo:
-            if(props->DirectChannels == DirectMode::Off)
+            if(props.DirectChannels == DirectMode::Off)
             {
                 for(size_t i{0};i < 2;++i)
                 {
                     /* StereoPan is counter-clockwise in radians. */
-                    const float a{props->StereoPan[i]};
+                    const auto a = props.StereoPan[i];
                     StereoMap[i].pos[0] = -std::sin(a);
                     StereoMap[i].pos[2] = -std::cos(a);
                 }
             }
-            return {props->DirectChannels, std::span{StereoMap}};
+            return {props.DirectChannels, std::span{StereoMap}};
 
-        case FmtRear: return {props->DirectChannels, std::span{RearMap}};
-        case FmtQuad: return {props->DirectChannels, std::span{QuadMap}};
-        case FmtX51: return {props->DirectChannels, std::span{X51Map}};
-        case FmtX61: return {props->DirectChannels, std::span{X61Map}};
-        case FmtX71: return {props->DirectChannels, std::span{X71Map}};
+        case FmtRear: return {props.DirectChannels, std::span{RearMap}};
+        case FmtQuad: return {props.DirectChannels, std::span{QuadMap}};
+        case FmtX51: return {props.DirectChannels, std::span{X51Map}};
+        case FmtX61: return {props.DirectChannels, std::span{X61Map}};
+        case FmtX71: return {props.DirectChannels, std::span{X71Map}};
 
         case FmtBFormat2D:
         case FmtBFormat3D:
@@ -914,17 +915,17 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
         case FmtSuperStereo:
             return {DirectMode::Off, {}};
         }
-        return {props->DirectChannels, {}};
+        return {props.DirectChannels, {}};
     };
     const auto [DirectChannels,chans] = getChans(voice->mFmtChannels);
 
     voice->mFlags.reset(VoiceHasHrtf).reset(VoiceHasNfc);
     if(auto *decoder{voice->mDecoder.get()})
-        decoder->mWidthControl = std::min(props->EnhWidth, 0.7f);
+        decoder->mWidthControl = std::min(props.EnhWidth, 0.7f);
 
-    const float lgain{std::min(1.0f-props->Panning, 1.0f)};
-    const float rgain{std::min(1.0f+props->Panning, 1.0f)};
-    const float mingain{std::min(lgain, rgain)};
+    const auto lgain = std::min(1.0f - props.Panning, 1.0f);
+    const auto rgain = std::min(1.0f + props.Panning, 1.0f);
+    const auto mingain = std::min(lgain, rgain);
     auto SelectChannelGain = [lgain,rgain,mingain](const Channel chan) noexcept
     {
         switch(chan)
@@ -1021,24 +1022,24 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
              * to the orientation.
              */
             /* AT then UP */
-            alu::Vector N{props->OrientAt[0], props->OrientAt[1], props->OrientAt[2], 0.0f};
+            auto N = alu::Vector{props.OrientAt[0], props.OrientAt[1], props.OrientAt[2], 0.0f};
             N.normalize();
-            alu::Vector V{props->OrientUp[0], props->OrientUp[1], props->OrientUp[2], 0.0f};
+            auto V = alu::Vector{props.OrientUp[0], props.OrientUp[1], props.OrientUp[2], 0.0f};
             V.normalize();
-            if(!props->HeadRelative)
+            if(!props.HeadRelative)
             {
                 N = Context.Matrix * N;
                 V = Context.Matrix * V;
             }
             /* Build and normalize right-vector */
-            alu::Vector U{N.cross_product(V)};
+            auto U = alu::Vector{N.cross_product(V)};
             U.normalize();
 
             /* Build a rotation matrix. Manually fill the zeroth- and first-
              * order elements, then construct the rotation for the higher
              * orders.
              */
-            AmbiRotateMatrix &shrot = Device->mAmbiRotateMatrix;
+            auto &shrot = Device->mAmbiRotateMatrix;
             shrot.fill(AmbiRotateMatrix::value_type{});
 
             shrot[0][0] = 1.0f;
@@ -1056,7 +1057,7 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
              * on various channels (i.e. when elevation=0, those height-related
              * channels should be non-0).
              */
-            AmbiRotateMatrix &mixmatrix = Device->mAmbiRotateMatrix2;
+            auto &mixmatrix = Device->mAmbiRotateMatrix2;
             if(Device->mAmbiOrder > voice->mAmbiOrder
                 || (Device->mAmbiOrder >= 2 && !Device->m2DMixing
                     && Is2DAmbisonic(voice->mFmtChannels)))
@@ -1183,7 +1184,7 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
         /* With non-HRTF mixing, we can cheat for mono-as-stereo by combining
          * the left and right output gains and mix only one channel to output.
          */
-        if(voice->mFmtChannels == FmtMono && props->mPanningEnabled)
+        if(voice->mFmtChannels == FmtMono && props.mPanningEnabled)
         {
             const auto drytarget0 = std::span{voice->mChans[0].mDryParams.Gains.Target};
             const auto drytarget1 = std::span{voice->mChans[1].mDryParams.Gains.Target};
@@ -1211,7 +1212,7 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
 
         if(Distance > std::numeric_limits<float>::epsilon())
         {
-            if(is_mono3d)
+            if(ismono3d)
             {
                 const float src_ev{std::asin(std::clamp(ypos, -1.0f, 1.0f))};
                 const float src_az{std::atan2(xpos, -zpos)};
@@ -1276,7 +1277,7 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
              * where it can be 0 or full (non-mono sources are always full
              * spread here).
              */
-            const float spread{Spread * float(is_mono3d)};
+            const auto spread = Spread * float(ismono3d);
 
             /* Local sources on HRTF play with each channel panned to its
              * relative location around the listener, providing "virtual
@@ -1312,7 +1313,7 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
             }
         }
 
-        voice->mDuplicateMono = voice->mFmtChannels == FmtMono && props->mPanningEnabled;
+        voice->mDuplicateMono = voice->mFmtChannels == FmtMono && props.mPanningEnabled;
         voice->mFlags.set(VoiceHasHrtf);
     }
     else
@@ -1337,7 +1338,7 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
                 voice->mFlags.set(VoiceHasNfc);
             }
 
-            if(is_mono3d)
+            if(ismono3d)
             {
                 auto calc_coeffs = [xpos,ypos,zpos,Spread](RenderMode mode)
                 {
@@ -1419,11 +1420,11 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
                 voice->mFlags.set(VoiceHasNfc);
             }
 
-            /* With no distance, spread is only meaningful for mono sources
+            /* With no distance, spread is only meaningful for 3D mono sources
              * where it can be 0 or full (non-mono sources are always full
              * spread here).
              */
-            const float spread{Spread * float(is_mono3d)};
+            const auto spread = Spread * float(ismono3d);
             for(size_t c{0};c < chans.size();++c)
             {
                 const float pangain{SelectChannelGain(chans[c].channel)};
@@ -1454,7 +1455,7 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
             }
         }
 
-        if(voice->mFmtChannels == FmtMono && props->mPanningEnabled)
+        if(voice->mFmtChannels == FmtMono && props.mPanningEnabled)
         {
             const auto drytarget0 = std::span{voice->mChans[0].mDryParams.Gains.Target};
             const auto drytarget1 = std::span{voice->mChans[1].mDryParams.Gains.Target};
@@ -1475,8 +1476,8 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
     }
 
     {
-        const float hfNorm{props->Direct.HFReference / Frequency};
-        const float lfNorm{props->Direct.LFReference / Frequency};
+        const auto hfNorm = props.Direct.HFReference / Frequency;
+        const auto lfNorm = props.Direct.LFReference / Frequency;
 
         voice->mDirect.FilterType = AF_None;
         if(DryGain.HF != 1.0f) voice->mDirect.FilterType |= AF_LowPass;
@@ -1494,8 +1495,8 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
     }
     for(uint i{0};i < NumSends;i++)
     {
-        const float hfNorm{props->Send[i].HFReference / Frequency};
-        const float lfNorm{props->Send[i].LFReference / Frequency};
+        const auto hfNorm = props.Send[i].HFReference / Frequency;
+        const auto lfNorm = props.Send[i].LFReference / Frequency;
 
         voice->mSend[i].FilterType = AF_None;
         if(WetGain[i].HF != 1.0f) voice->mSend[i].FilterType |= AF_LowPass;
@@ -1513,15 +1514,16 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
     }
 }
 
-void CalcNonAttnSourceParams(Voice *voice, const VoiceProps *props, const ContextBase *context)
+void CalcNonAttnSourceParams(Voice *voice, const ContextBase *context)
 {
-    DeviceBase *Device{context->mDevice};
-    std::array<EffectSlot*,MaxSendCount> SendSlots{};
+    const auto &props = voice->mProps;
+    auto *Device = context->mDevice;
+    auto SendSlots = std::array<EffectSlot*,MaxSendCount>{};
 
     voice->mDirect.Buffer = Device->Dry.Buffer;
     for(uint i{0};i < Device->NumAuxSends;i++)
     {
-        SendSlots[i] = props->Send[i].Slot;
+        SendSlots[i] = props.Send[i].Slot;
         if(!SendSlots[i] || SendSlots[i]->EffectType == EffectSlotType::None)
         {
             SendSlots[i] = nullptr;
@@ -1533,45 +1535,50 @@ void CalcNonAttnSourceParams(Voice *voice, const VoiceProps *props, const Contex
 
     /* Calculate the stepping value */
     const auto Pitch = static_cast<float>(voice->mFrequency) /
-        static_cast<float>(Device->mSampleRate) * props->Pitch;
+        static_cast<float>(Device->mSampleRate) * props.Pitch;
     if(Pitch > float{MaxPitch})
         voice->mStep = MaxPitch<<MixerFracBits;
     else
         voice->mStep = std::max(fastf2u(Pitch * MixerFracOne), 1u);
-    voice->mResampler = PrepareResampler(props->mResampler, voice->mStep, &voice->mResampleState);
+    voice->mResampler = PrepareResampler(props.mResampler, voice->mStep, &voice->mResampleState);
 
     /* Calculate gains */
-    GainTriplet DryGain{};
-    DryGain.Base = std::min(std::clamp(props->Gain, props->MinGain, props->MaxGain) *
-        props->Direct.Gain * context->mParams.Gain, GainMixMax);
-    DryGain.HF = props->Direct.GainHF;
-    DryGain.LF = props->Direct.GainLF;
+    const auto srcgain = std::clamp(props.Gain, props.MinGain, props.MaxGain);
+    const auto DryGain = GainTriplet{
+        .Base = std::min(GainMixMax, srcgain * props.Direct.Gain * context->mParams.Gain),
+        .HF = props.Direct.GainHF,
+        .LF = props.Direct.GainLF
+    };
 
-    std::array<GainTriplet,MaxSendCount> WetGain{};
-    for(uint i{0};i < Device->NumAuxSends;i++)
+    const auto sendprops = std::span{props.Send}.first(Device->NumAuxSends);
+    auto WetGain = std::array<GainTriplet,MaxSendCount>{};
+    std::transform(sendprops.begin(), sendprops.end(), WetGain.begin(),
+        [context,srcgain](const VoiceProps::SendData &send) noexcept
     {
-        WetGain[i].Base = std::min(std::clamp(props->Gain, props->MinGain, props->MaxGain) *
-            props->Send[i].Gain * context->mParams.Gain, GainMixMax);
-        WetGain[i].HF = props->Send[i].GainHF;
-        WetGain[i].LF = props->Send[i].GainLF;
-    }
+        return GainTriplet {
+            .Base = std::min(GainMixMax, srcgain * send.Gain * context->mParams.Gain),
+            .HF = send.GainHF,
+            .LF = send.GainLF
+        };
+    });
 
-    CalcPanningAndFilters(voice, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, DryGain, WetGain, SendSlots, props,
+    CalcPanningAndFilters(voice, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, DryGain, WetGain, SendSlots,
         context->mParams, Device);
 }
 
-void CalcAttnSourceParams(Voice *voice, const VoiceProps *props, const ContextBase *context)
+void CalcAttnSourceParams(Voice *voice, const ContextBase *context)
 {
-    DeviceBase *Device{context->mDevice};
-    const uint NumSends{Device->NumAuxSends};
+    const auto &props = voice->mProps;
+    auto *Device = context->mDevice;
+    const auto NumSends = Device->NumAuxSends;
 
     /* Set mixing buffers and get send parameters. */
     voice->mDirect.Buffer = Device->Dry.Buffer;
-    std::array<EffectSlot*,MaxSendCount> SendSlots{};
-    std::array<float,MaxSendCount> RoomRolloff{};
+    auto SendSlots = std::array<EffectSlot*,MaxSendCount>{};
+    auto RoomRolloff = std::array<float,MaxSendCount>{};
     for(uint i{0};i < NumSends;i++)
     {
-        SendSlots[i] = props->Send[i].Slot;
+        SendSlots[i] = props.Send[i].Slot;
         if(!SendSlots[i] || SendSlots[i]->EffectType == EffectSlotType::None)
         {
             SendSlots[i] = nullptr;
@@ -1583,17 +1590,17 @@ void CalcAttnSourceParams(Voice *voice, const VoiceProps *props, const ContextBa
              * applies to the selected distance model along with the source's
              * room rolloff factor, not necessarily the inverse distance model.
              */
-            RoomRolloff[i] = props->RoomRolloffFactor + SendSlots[i]->RoomRolloff;
+            RoomRolloff[i] = props.RoomRolloffFactor + SendSlots[i]->RoomRolloff;
 
             voice->mSend[i].Buffer = SendSlots[i]->Wet.Buffer;
         }
     }
 
     /* Transform source to listener space (convert to head relative) */
-    alu::Vector Position{props->Position[0], props->Position[1], props->Position[2], 1.0f};
-    alu::Vector Velocity{props->Velocity[0], props->Velocity[1], props->Velocity[2], 0.0f};
-    alu::Vector Direction{props->Direction[0], props->Direction[1], props->Direction[2], 0.0f};
-    if(!props->HeadRelative)
+    auto Position = alu::Vector{props.Position[0], props.Position[1], props.Position[2], 1.0f};
+    auto Velocity = alu::Vector{props.Velocity[0], props.Velocity[1], props.Velocity[2], 0.0f};
+    auto Direction = alu::Vector{props.Direction[0], props.Direction[1], props.Direction[2], 0.0f};
+    if(!props.HeadRelative)
     {
         /* Transform source vectors */
         Position = context->mParams.Matrix * (Position - context->mParams.Position);
@@ -1611,67 +1618,67 @@ void CalcAttnSourceParams(Voice *voice, const VoiceProps *props, const ContextBa
     const float Distance{ToSource.normalize()};
 
     /* Calculate distance attenuation */
-    float ClampedDist{Distance};
-    float DryGainBase{props->Gain};
-    std::array<float,MaxSendCount> WetGainBase{};
-    WetGainBase.fill(props->Gain);
+    auto ClampedDist = Distance;
+    auto DryGainBase = props.Gain;
+    auto WetGainBase = std::array<float,MaxSendCount>{};
+    WetGainBase.fill(props.Gain);
 
-    float DryAttnBase{1.0f};
-    switch(context->mParams.SourceDistanceModel ? props->mDistanceModel
+    auto DryAttnBase = 1.0f;
+    switch(context->mParams.SourceDistanceModel ? props.mDistanceModel
         : context->mParams.mDistanceModel)
     {
     case DistanceModel::InverseClamped:
-        if(props->MaxDistance < props->RefDistance) break;
-        ClampedDist = std::clamp(ClampedDist, props->RefDistance, props->MaxDistance);
+        if(props.MaxDistance < props.RefDistance) break;
+        ClampedDist = std::clamp(ClampedDist, props.RefDistance, props.MaxDistance);
         [[fallthrough]];
     case DistanceModel::Inverse:
-        if(props->RefDistance > 0.0f)
+        if(props.RefDistance > 0.0f)
         {
-            float dist{lerpf(props->RefDistance, ClampedDist, props->RolloffFactor)};
+            auto dist = lerpf(props.RefDistance, ClampedDist, props.RolloffFactor);
             if(dist > 0.0f)
             {
-                DryAttnBase = props->RefDistance / dist;
+                DryAttnBase = props.RefDistance / dist;
                 DryGainBase *= DryAttnBase;
             }
 
             for(size_t i{0};i < NumSends;++i)
             {
-                dist = lerpf(props->RefDistance, ClampedDist, RoomRolloff[i]);
-                if(dist > 0.0f) WetGainBase[i] *= props->RefDistance / dist;
+                dist = lerpf(props.RefDistance, ClampedDist, RoomRolloff[i]);
+                if(dist > 0.0f) WetGainBase[i] *= props.RefDistance / dist;
             }
         }
         break;
 
     case DistanceModel::LinearClamped:
-        if(props->MaxDistance < props->RefDistance) break;
-        ClampedDist = std::clamp(ClampedDist, props->RefDistance, props->MaxDistance);
+        if(props.MaxDistance < props.RefDistance) break;
+        ClampedDist = std::clamp(ClampedDist, props.RefDistance, props.MaxDistance);
         [[fallthrough]];
     case DistanceModel::Linear:
-        if(props->MaxDistance != props->RefDistance)
+        if(props.MaxDistance != props.RefDistance)
         {
-            float attn{(ClampedDist-props->RefDistance) /
-                (props->MaxDistance-props->RefDistance) * props->RolloffFactor};
+            auto attn = (ClampedDist-props.RefDistance) /
+                (props.MaxDistance-props.RefDistance) * props.RolloffFactor;
             DryAttnBase = std::max(1.0f - attn, 0.0f);
             DryGainBase *= DryAttnBase;
 
             for(size_t i{0};i < NumSends;++i)
             {
-                attn = (ClampedDist-props->RefDistance) /
-                    (props->MaxDistance-props->RefDistance) * RoomRolloff[i];
+                attn = (ClampedDist-props.RefDistance) /
+                    (props.MaxDistance-props.RefDistance) * RoomRolloff[i];
                 WetGainBase[i] *= std::max(1.0f - attn, 0.0f);
             }
         }
         break;
 
     case DistanceModel::ExponentClamped:
-        if(props->MaxDistance < props->RefDistance) break;
-        ClampedDist = std::clamp(ClampedDist, props->RefDistance, props->MaxDistance);
+        if(props.MaxDistance < props.RefDistance) break;
+        ClampedDist = std::clamp(ClampedDist, props.RefDistance, props.MaxDistance);
         [[fallthrough]];
     case DistanceModel::Exponent:
-        if(ClampedDist > 0.0f && props->RefDistance > 0.0f)
+        if(ClampedDist > 0.0f && props.RefDistance > 0.0f)
         {
-            const float dist_ratio{ClampedDist/props->RefDistance};
-            DryAttnBase = std::pow(dist_ratio, -props->RolloffFactor);
+            const auto dist_ratio = ClampedDist/props.RefDistance;
+            DryAttnBase = std::pow(dist_ratio, -props.RolloffFactor);
             DryGainBase *= DryAttnBase;
             for(size_t i{0};i < NumSends;++i)
                 WetGainBase[i] *= std::pow(dist_ratio, -RoomRolloff[i]);
@@ -1684,52 +1691,56 @@ void CalcAttnSourceParams(Voice *voice, const VoiceProps *props, const ContextBa
 
     /* Calculate directional soundcones */
     float ConeHF{1.0f}, WetCone{1.0f}, WetConeHF{1.0f};
-    if(directional && props->InnerAngle < 360.0f)
+    if(directional && props.InnerAngle < 360.0f)
     {
-        static constexpr float Rad2Deg{static_cast<float>(180.0 / std::numbers::pi)};
-        const float Angle{Rad2Deg*2.0f * std::acos(-Direction.dot_product(ToSource)) * ConeScale};
+        static constexpr auto Rad2Deg = static_cast<float>(180.0 / std::numbers::pi);
+        const auto Angle = Rad2Deg*2.0f * std::acos(-Direction.dot_product(ToSource)) * ConeScale;
 
-        float ConeGain{1.0f};
-        if(Angle >= props->OuterAngle)
+        auto ConeGain = 1.0f;
+        if(Angle >= props.OuterAngle)
         {
-            ConeGain = props->OuterGain;
-            if(props->DryGainHFAuto)
-                ConeHF = props->OuterGainHF;
+            ConeGain = props.OuterGain;
+            if(props.DryGainHFAuto)
+                ConeHF = props.OuterGainHF;
         }
-        else if(Angle >= props->InnerAngle)
+        else if(Angle >= props.InnerAngle)
         {
-            const float scale{(Angle-props->InnerAngle) / (props->OuterAngle-props->InnerAngle)};
-            ConeGain = lerpf(1.0f, props->OuterGain, scale);
-            if(props->DryGainHFAuto)
-                ConeHF = lerpf(1.0f, props->OuterGainHF, scale);
+            const auto scale = (Angle-props.InnerAngle) / (props.OuterAngle-props.InnerAngle);
+            ConeGain = lerpf(1.0f, props.OuterGain, scale);
+            if(props.DryGainHFAuto)
+                ConeHF = lerpf(1.0f, props.OuterGainHF, scale);
         }
 
         DryGainBase *= ConeGain;
-        if(props->WetGainAuto)
+        if(props.WetGainAuto)
             WetCone = ConeGain;
-        if(props->WetGainHFAuto)
+        if(props.WetGainHFAuto)
             WetConeHF = ConeHF;
     }
 
     /* Apply gain and frequency filters */
-    GainTriplet DryGain{};
-    DryGainBase = std::clamp(DryGainBase, props->MinGain, props->MaxGain) * context->mParams.Gain;
-    DryGain.Base = std::min(DryGainBase * props->Direct.Gain, GainMixMax);
-    DryGain.HF = ConeHF * props->Direct.GainHF;
-    DryGain.LF = props->Direct.GainLF;
+    DryGainBase = std::clamp(DryGainBase, props.MinGain, props.MaxGain) * context->mParams.Gain;
+    auto DryGain = GainTriplet {
+        .Base = std::min(DryGainBase * props.Direct.Gain, GainMixMax),
+        .HF = ConeHF * props.Direct.GainHF,
+        .LF = props.Direct.GainLF
+    };
 
-    std::array<GainTriplet,MaxSendCount> WetGain{};
-    for(uint i{0};i < NumSends;i++)
+    const auto sendprops = std::span{props.Send}.first(NumSends);
+    auto WetGain = std::array<GainTriplet,MaxSendCount>{};
+    std::transform(sendprops.begin(), sendprops.end(), WetGainBase.begin(), WetGain.begin(),
+        [context,&props,WetCone,WetConeHF](const VoiceProps::SendData &send, float wetgain)
     {
-        const auto gain = std::clamp(WetGainBase[i]*WetCone, props->MinGain, props->MaxGain) *
-            context->mParams.Gain;
-        WetGain[i].Base = std::min(gain * props->Send[i].Gain, GainMixMax);
-        WetGain[i].HF = WetConeHF * props->Send[i].GainHF;
-        WetGain[i].LF = props->Send[i].GainLF;
-    }
+        wetgain = std::clamp(wetgain*WetCone, props.MinGain, props.MaxGain);
+        return GainTriplet {
+            .Base = std::min(GainMixMax, wetgain * send.Gain * context->mParams.Gain),
+            .HF = WetConeHF * send.GainHF,
+            .LF = send.GainLF
+        };
+    });
 
     /* Distance-based air absorption and initial send decay. */
-    if(Distance > props->RefDistance) [[likely]]
+    if(Distance > props.RefDistance) [[likely]]
     {
         /* FIXME: In keeping with EAX, the base air absorption gain should be
          * taken from the reverb property in the "primary fx slot" when it has
@@ -1744,16 +1755,16 @@ void CalcAttnSourceParams(Voice *voice, const VoiceProps *props, const ContextBa
          * again, there's no concept of a "primary fx slot" here and no way to
          * know which effect slot to look at for the reference frequency.
          */
-        const auto distance_units = float{(Distance-props->RefDistance) * props->RolloffFactor};
+        const auto distance_units = float{(Distance-props.RefDistance) * props.RolloffFactor};
         const auto distance_meters = float{distance_units * context->mParams.MetersPerUnit};
-        const auto absorb = float{distance_meters * props->AirAbsorptionFactor};
+        const auto absorb = float{distance_meters * props.AirAbsorptionFactor};
         if(absorb > std::numeric_limits<float>::epsilon())
             DryGain.HF *= std::pow(context->mParams.AirAbsorptionGainHF, absorb);
 
         /* If the source's Auxiliary Send Filter Gain Auto is off, no extra
          * adjustment is applied to the send gains.
          */
-        for(uint i{props->WetGainAuto ? 0u : NumSends};i < NumSends;++i)
+        for(uint i{props.WetGainAuto ? 0u : NumSends};i < NumSends;++i)
         {
             if(!SendSlots[i] || !(SendSlots[i]->DecayTime > 0.0f))
                 continue;
@@ -1782,11 +1793,11 @@ void CalcAttnSourceParams(Voice *voice, const VoiceProps *props, const ContextBa
 
 
     /* Initial source pitch */
-    float Pitch{props->Pitch};
+    auto Pitch = props.Pitch;
 
     /* Calculate velocity-based doppler effect */
-    float DopplerFactor{props->DopplerFactor * context->mParams.DopplerFactor};
-    if(DopplerFactor > 0.0f)
+    if(const auto DopplerFactor = props.DopplerFactor * context->mParams.DopplerFactor;
+        DopplerFactor > 0.0f)
     {
         const alu::Vector &lvelocity = context->mParams.Velocity;
         float vss{Velocity.dot_product(ToSource) * -DopplerFactor};
@@ -1824,38 +1835,36 @@ void CalcAttnSourceParams(Voice *voice, const VoiceProps *props, const ContextBa
         voice->mStep = MaxPitch<<MixerFracBits;
     else
         voice->mStep = std::max(fastf2u(Pitch * MixerFracOne), 1u);
-    voice->mResampler = PrepareResampler(props->mResampler, voice->mStep, &voice->mResampleState);
+    voice->mResampler = PrepareResampler(props.mResampler, voice->mStep, &voice->mResampleState);
 
     float spread{0.0f};
-    if(props->Radius > Distance)
-        spread = std::numbers::pi_v<float>*2.0f - Distance/props->Radius*std::numbers::pi_v<float>;
+    if(props.Radius > Distance)
+        spread = std::numbers::pi_v<float>*2.0f - Distance/props.Radius*std::numbers::pi_v<float>;
     else if(Distance > 0.0f)
-        spread = std::asin(props->Radius/Distance) * 2.0f;
+        spread = std::asin(props.Radius/Distance) * 2.0f;
 
     CalcPanningAndFilters(voice, ToSource[0]*XScale, ToSource[1]*YScale, ToSource[2]*ZScale,
-        Distance, spread, DryGain, WetGain, SendSlots, props, context->mParams, Device);
+        Distance, spread, DryGain, WetGain, SendSlots, context->mParams, Device);
 }
 
 void CalcSourceParams(Voice *voice, ContextBase *context, bool force)
 {
-    VoicePropsItem *props{voice->mUpdate.exchange(nullptr, std::memory_order_acq_rel)};
-    if(!props && !force) return;
-
-    if(props)
+    if(auto *props = voice->mUpdate.exchange(nullptr, std::memory_order_acq_rel))
     {
         voice->mProps = static_cast<VoiceProps&>(*props);
-
         AtomicReplaceHead(context->mFreeVoiceProps, props);
     }
+    else if(!force)
+        return;
 
-    const auto is_mono3d = voice->mFmtChannels == FmtMono && !voice->mProps.mPanningEnabled;
-    if((voice->mProps.DirectChannels != DirectMode::Off && !is_mono3d
-            && !IsAmbisonic(voice->mFmtChannels))
-        || voice->mProps.mSpatializeMode == SpatializeMode::Off
-        || (voice->mProps.mSpatializeMode==SpatializeMode::Auto && !is_mono3d))
-        CalcNonAttnSourceParams(voice, &voice->mProps, context);
+    const auto &props = voice->mProps;
+    const auto ismono3d = voice->mFmtChannels == FmtMono && !voice->mProps.mPanningEnabled;
+    if((props.DirectChannels != DirectMode::Off && !ismono3d && !IsAmbisonic(voice->mFmtChannels))
+        || props.mSpatializeMode == SpatializeMode::Off
+        || (props.mSpatializeMode==SpatializeMode::Auto && !ismono3d))
+        CalcNonAttnSourceParams(voice, context);
     else
-        CalcAttnSourceParams(voice, &voice->mProps, context);
+        CalcAttnSourceParams(voice, context);
 }
 
 

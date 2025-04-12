@@ -1725,11 +1725,6 @@ NOINLINE void SetProperty(ALsource *const Source, ALCcontext *const Context, con
 
     case AL_PANNING_ENABLED_SOFT:
         CheckSize(1);
-        if(const ALenum state{GetSourceState(Source, GetSourceVoice(Source, Context))};
-            state == AL_PLAYING || state == AL_PAUSED)
-            Context->throw_error(AL_INVALID_OPERATION,
-                "Modifying panning enabled on playing or paused source {}", Source->id);
-
         CheckValue(values[0] == AL_FALSE || values[0] == AL_TRUE);
 
         Source->mPanningEnabled = values[0] != AL_FALSE;

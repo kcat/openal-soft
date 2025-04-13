@@ -307,6 +307,7 @@ void DeviceBase::ProcessHrtf(const size_t SamplesToDo)
         mHrtfState->mTemp, mHrtfState->mChannels, mHrtfState->mIrSize, SamplesToDo);
 }
 
+/* NOLINTNEXTLINE(readability-make-member-function-const) */
 void DeviceBase::ProcessAmbiDec(const size_t SamplesToDo)
 {
     AmbiDecoder->process(RealOut.Buffer, Dry.Buffer, SamplesToDo);

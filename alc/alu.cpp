@@ -33,6 +33,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
+#include <functional>
 #include <iterator>
 #include <limits>
 #include <memory>
@@ -1543,7 +1544,8 @@ void CalcNonAttnSourceParams(Voice *voice, const ContextBase *context)
     voice->mResampler = PrepareResampler(props.mResampler, voice->mStep, &voice->mResampleState);
 
     /* Calculate gains */
-    const auto srcgain = std::clamp(props.Gain, props.MinGain, props.MaxGain);
+    const auto MinGain = std::min(props.MinGain, props.MaxGain);
+    const auto srcgain = std::clamp(props.Gain, MinGain, props.MaxGain);
     const auto DryGain = GainTriplet{
         .Base = std::min(GainMixMax, srcgain * props.Direct.Gain * context->mParams.Gain),
         .HF = props.Direct.GainHF,
@@ -1574,6 +1576,7 @@ void CalcAttnSourceParams(Voice *voice, const ContextBase *context)
 
     /* Set mixing buffers and get send parameters. */
     voice->mDirect.Buffer = Device->Dry.Buffer;
+
     auto SendSlots = std::array<EffectSlot*,MaxSendCount>{};
     auto RoomRolloff = std::array<float,MaxSendCount>{};
     for(uint i{0};i < NumSends;i++)
@@ -1613,75 +1616,83 @@ void CalcAttnSourceParams(Voice *voice, const ContextBase *context)
         Velocity += context->mParams.Velocity;
     }
 
-    const bool directional{Direction.normalize() > 0.0f};
-    alu::Vector ToSource{Position[0], Position[1], Position[2], 0.0f};
-    const float Distance{ToSource.normalize()};
+    auto ToSource = alu::Vector{Position[0], Position[1], Position[2], 0.0f};
+    const auto Distance = ToSource.normalize();
+    const auto directional = bool{Direction.normalize() > 0.0f};
 
     /* Calculate distance attenuation */
-    auto ClampedDist = Distance;
-    auto DryGainBase = props.Gain;
-    auto WetGainBase = std::array<float,MaxSendCount>{};
-    WetGainBase.fill(props.Gain);
+    const auto DistanceModel = context->mParams.SourceDistanceModel ? props.mDistanceModel
+        : context->mParams.mDistanceModel;
+
+    const auto AttenDistance = std::invoke([Distance,DistanceModel,&props]
+    {
+        switch(DistanceModel)
+        {
+        case DistanceModel::InverseClamped:
+        case DistanceModel::LinearClamped:
+        case DistanceModel::ExponentClamped:
+            if(!(props.RefDistance <= props.MaxDistance))
+                return props.RefDistance;
+            return std::clamp(Distance, props.RefDistance, props.MaxDistance);
+
+        case DistanceModel::Inverse:
+        case DistanceModel::Linear:
+        case DistanceModel::Exponent:
+        case DistanceModel::Disable:
+            break;
+        }
+        return Distance;
+    });
+
+
+    auto DryGain = GainTriplet{ .Base = props.Gain, .HF = 1.0f, .LF = 1.0f };
+    auto WetGain = std::array<GainTriplet,MaxSendCount>{};
+    WetGain.fill(DryGain);
 
     auto DryAttnBase = 1.0f;
-    switch(context->mParams.SourceDistanceModel ? props.mDistanceModel
-        : context->mParams.mDistanceModel)
+    switch(DistanceModel)
     {
-    case DistanceModel::InverseClamped:
-        if(props.MaxDistance < props.RefDistance) break;
-        ClampedDist = std::clamp(ClampedDist, props.RefDistance, props.MaxDistance);
-        [[fallthrough]];
     case DistanceModel::Inverse:
+    case DistanceModel::InverseClamped:
         if(props.RefDistance > 0.0f)
         {
-            auto dist = lerpf(props.RefDistance, ClampedDist, props.RolloffFactor);
+            auto dist = lerpf(props.RefDistance, AttenDistance, props.RolloffFactor);
             if(dist > 0.0f)
             {
                 DryAttnBase = props.RefDistance / dist;
-                DryGainBase *= DryAttnBase;
+                DryGain.Base *= DryAttnBase;
             }
 
             for(size_t i{0};i < NumSends;++i)
             {
-                dist = lerpf(props.RefDistance, ClampedDist, RoomRolloff[i]);
-                if(dist > 0.0f) WetGainBase[i] *= props.RefDistance / dist;
+                dist = lerpf(props.RefDistance, AttenDistance, RoomRolloff[i]);
+                if(dist > 0.0f) WetGain[i].Base *= props.RefDistance / dist;
             }
         }
         break;
 
-    case DistanceModel::LinearClamped:
-        if(props.MaxDistance < props.RefDistance) break;
-        ClampedDist = std::clamp(ClampedDist, props.RefDistance, props.MaxDistance);
-        [[fallthrough]];
     case DistanceModel::Linear:
+    case DistanceModel::LinearClamped:
         if(props.MaxDistance != props.RefDistance)
         {
-            auto attn = (ClampedDist-props.RefDistance) /
-                (props.MaxDistance-props.RefDistance) * props.RolloffFactor;
-            DryAttnBase = std::max(1.0f - attn, 0.0f);
-            DryGainBase *= DryAttnBase;
+            auto scale = (AttenDistance-props.RefDistance) / (props.MaxDistance-props.RefDistance);
+            DryAttnBase = std::max(1.0f - scale*props.RolloffFactor, 0.0f);
+            DryGain.Base *= DryAttnBase;
 
             for(size_t i{0};i < NumSends;++i)
-            {
-                attn = (ClampedDist-props.RefDistance) /
-                    (props.MaxDistance-props.RefDistance) * RoomRolloff[i];
-                WetGainBase[i] *= std::max(1.0f - attn, 0.0f);
-            }
+                WetGain[i].Base *= std::max(1.0f - scale*RoomRolloff[i], 0.0f);
         }
         break;
 
-    case DistanceModel::ExponentClamped:
-        if(props.MaxDistance < props.RefDistance) break;
-        ClampedDist = std::clamp(ClampedDist, props.RefDistance, props.MaxDistance);
-        [[fallthrough]];
     case DistanceModel::Exponent:
-        if(ClampedDist > 0.0f && props.RefDistance > 0.0f)
+    case DistanceModel::ExponentClamped:
+        if(AttenDistance > 0.0f && props.RefDistance > 0.0f)
         {
-            const auto dist_ratio = ClampedDist/props.RefDistance;
+            const auto dist_ratio = AttenDistance / props.RefDistance;
             DryAttnBase = std::pow(dist_ratio, -props.RolloffFactor);
-            DryGainBase *= DryAttnBase;
+            DryGain.Base *= DryAttnBase;
             for(size_t i{0};i < NumSends;++i)
-                WetGainBase[i] *= std::pow(dist_ratio, -RoomRolloff[i]);
+                WetGain[i].Base *= std::pow(dist_ratio, -RoomRolloff[i]);
         }
         break;
 
@@ -1690,28 +1701,30 @@ void CalcAttnSourceParams(Voice *voice, const ContextBase *context)
     }
 
     /* Calculate directional soundcones */
-    float ConeHF{1.0f}, WetCone{1.0f}, WetConeHF{1.0f};
+    auto WetCone = 1.0f;
+    auto WetConeHF = 1.0f;
     if(directional && props.InnerAngle < 360.0f)
     {
         static constexpr auto Rad2Deg = static_cast<float>(180.0 / std::numbers::pi);
         const auto Angle = Rad2Deg*2.0f * std::acos(-Direction.dot_product(ToSource)) * ConeScale;
 
         auto ConeGain = 1.0f;
+        auto ConeHF = 1.0f;
         if(Angle >= props.OuterAngle)
         {
             ConeGain = props.OuterGain;
-            if(props.DryGainHFAuto)
-                ConeHF = props.OuterGainHF;
+            ConeHF = props.OuterGainHF;
         }
         else if(Angle >= props.InnerAngle)
         {
             const auto scale = (Angle-props.InnerAngle) / (props.OuterAngle-props.InnerAngle);
             ConeGain = lerpf(1.0f, props.OuterGain, scale);
-            if(props.DryGainHFAuto)
-                ConeHF = lerpf(1.0f, props.OuterGainHF, scale);
+            ConeHF = lerpf(1.0f, props.OuterGainHF, scale);
         }
 
-        DryGainBase *= ConeGain;
+        DryGain.Base *= ConeGain;
+        if(props.DryGainHFAuto)
+            DryGain.HF *= ConeHF;
         if(props.WetGainAuto)
             WetCone = ConeGain;
         if(props.WetGainHFAuto)
@@ -1719,22 +1732,23 @@ void CalcAttnSourceParams(Voice *voice, const ContextBase *context)
     }
 
     /* Apply gain and frequency filters */
-    DryGainBase = std::clamp(DryGainBase, props.MinGain, props.MaxGain) * context->mParams.Gain;
-    auto DryGain = GainTriplet {
-        .Base = std::min(DryGainBase * props.Direct.Gain, GainMixMax),
-        .HF = ConeHF * props.Direct.GainHF,
-        .LF = props.Direct.GainLF
-    };
+    const auto MinGain = std::min(props.MinGain, props.MaxGain);
+    const auto MaxGain = props.MaxGain;
+
+    DryGain.Base = std::clamp(DryGain.Base, MinGain, MaxGain) * props.Direct.Gain;
+    DryGain.Base = std::min(GainMixMax, DryGain.Base * context->mParams.Gain);
+    DryGain.HF = DryGain.HF * props.Direct.GainHF;
+    DryGain.LF = props.Direct.GainLF;
 
     const auto sendprops = std::span{props.Send}.first(NumSends);
-    auto WetGain = std::array<GainTriplet,MaxSendCount>{};
-    std::transform(sendprops.begin(), sendprops.end(), WetGainBase.begin(), WetGain.begin(),
-        [context,&props,WetCone,WetConeHF](const VoiceProps::SendData &send, float wetgain)
+    std::transform(sendprops.begin(), sendprops.end(), WetGain.begin(), WetGain.begin(),
+        [context,WetCone,WetConeHF,MinGain,MaxGain](const VoiceProps::SendData &send,
+            const GainTriplet &wetgain)
     {
-        wetgain = std::clamp(wetgain*WetCone, props.MinGain, props.MaxGain);
-        return GainTriplet {
-            .Base = std::min(GainMixMax, wetgain * send.Gain * context->mParams.Gain),
-            .HF = WetConeHF * send.GainHF,
+        const auto gain = std::clamp(wetgain.Base*WetCone, MinGain, MaxGain) * send.Gain;
+        return GainTriplet{
+            .Base = std::min(GainMixMax, gain * context->mParams.Gain),
+            .HF = send.GainHF * WetConeHF,
             .LF = send.GainLF
         };
     });

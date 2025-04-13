@@ -10,24 +10,23 @@
 #include <numbers>
 
 
-template<typename Real>
-void BiquadFilterR<Real>::setParams(BiquadType type, Real f0norm, Real gain, Real rcpQ)
+void BiquadFilter::setParams(BiquadType type, float f0norm, float gain, float rcpQ)
 {
     /* HACK: Limit gain to -100dB. This shouldn't ever happen, all callers
      * already clamp to minimum of 0.001, or have a limited range of values
      * that don't go below 0.126. But it seems to with some callers. This needs
      * to be investigated.
      */
-    gain = std::max(gain, Real(0.00001));
+    gain = std::max(gain, 0.00001f);
 
-    const Real w0{std::numbers::pi_v<Real>*2.0f * f0norm};
-    const Real sin_w0{std::sin(w0)};
-    const Real cos_w0{std::cos(w0)};
-    const Real alpha{sin_w0/2.0f * rcpQ};
+    const auto w0 = std::numbers::pi_v<float>*2.0f * f0norm;
+    const auto sin_w0 = std::sin(w0);
+    const auto cos_w0 = std::cos(w0);
+    const auto alpha = sin_w0/2.0f * rcpQ;
 
-    Real sqrtgain_alpha_2;
-    std::array<Real,3> a{{1.0f, 0.0f, 0.0f}};
-    std::array<Real,3> b{{1.0f, 0.0f, 0.0f}};
+    auto sqrtgain_alpha_2 = float{};
+    auto a = std::array<float,3>{{1.0f, 0.0f, 0.0f}};
+    auto b = std::array<float,3>{{1.0f, 0.0f, 0.0f}};
 
     /* Calculate filter coefficients depending on filter type */
     switch(type)
@@ -92,16 +91,15 @@ void BiquadFilterR<Real>::setParams(BiquadType type, Real f0norm, Real gain, Rea
     mB2 = b[2] / a[0];
 }
 
-template<typename Real>
-void BiquadFilterR<Real>::process(const std::span<const Real> src, const std::span<Real> dst)
+void BiquadFilter::process(const std::span<const float> src, const std::span<float> dst)
 {
-    const Real b0{mB0};
-    const Real b1{mB1};
-    const Real b2{mB2};
-    const Real a1{mA1};
-    const Real a2{mA2};
-    Real z1{mZ1};
-    Real z2{mZ2};
+    const auto b0 = mB0;
+    const auto b1 = mB1;
+    const auto b2 = mB2;
+    const auto a1 = mA1;
+    const auto a2 = mA2;
+    auto z1 = mZ1;
+    auto z2 = mZ2;
 
     /* Processing loop is Transposed Direct Form II. This requires less storage
      * compared to Direct Form I (only two delay components, instead of a four-
@@ -111,57 +109,54 @@ void BiquadFilterR<Real>::process(const std::span<const Real> src, const std::sp
      *
      * See: http://www.earlevel.com/main/2003/02/28/biquads/
      */
-    auto proc_sample = [b0,b1,b2,a1,a2,&z1,&z2](Real input) noexcept -> Real
+    std::transform(src.begin(), src.end(), dst.begin(),
+        [b0,b1,b2,a1,a2,&z1,&z2](float input) noexcept -> float
     {
-        const Real output{input*b0 + z1};
+        const auto output = input*b0 + z1;
         z1 = input*b1 - output*a1 + z2;
         z2 = input*b2 - output*a2;
         return output;
-    };
-    std::transform(src.begin(), src.end(), dst.begin(), proc_sample);
+    });
 
     mZ1 = z1;
     mZ2 = z2;
 }
 
-template<typename Real>
-void BiquadFilterR<Real>::dualProcess(BiquadFilterR &other, const std::span<const Real> src,
-    const std::span<Real> dst)
+void BiquadFilter::dualProcess(BiquadFilter &other, const std::span<const float> src,
+    const std::span<float> dst)
 {
-    const Real b00{mB0};
-    const Real b01{mB1};
-    const Real b02{mB2};
-    const Real a01{mA1};
-    const Real a02{mA2};
-    const Real b10{other.mB0};
-    const Real b11{other.mB1};
-    const Real b12{other.mB2};
-    const Real a11{other.mA1};
-    const Real a12{other.mA2};
-    Real z01{mZ1};
-    Real z02{mZ2};
-    Real z11{other.mZ1};
-    Real z12{other.mZ2};
+    const auto b00 = mB0;
+    const auto b01 = mB1;
+    const auto b02 = mB2;
+    const auto a01 = mA1;
+    const auto a02 = mA2;
+    const auto b10 = other.mB0;
+    const auto b11 = other.mB1;
+    const auto b12 = other.mB2;
+    const auto a11 = other.mA1;
+    const auto a12 = other.mA2;
+    auto z01 = mZ1;
+    auto z02 = mZ2;
+    auto z11 = other.mZ1;
+    auto z12 = other.mZ2;
 
-    auto proc_sample = [b00,b01,b02,a01,a02,b10,b11,b12,a11,a12,&z01,&z02,&z11,&z12](Real input) noexcept -> Real
+    std::transform(src.begin(), src.end(), dst.begin(),
+        [b00,b01,b02,a01,a02,b10,b11,b12,a11,a12,&z01,&z02,&z11,&z12](float input) noexcept
+        -> float
     {
-        const Real tmpout{input*b00 + z01};
+        const auto tmpout = input*b00 + z01;
         z01 = input*b01 - tmpout*a01 + z02;
         z02 = input*b02 - tmpout*a02;
         input = tmpout;
 
-        const Real output{input*b10 + z11};
+        const auto output = input*b10 + z11;
         z11 = input*b11 - output*a11 + z12;
         z12 = input*b12 - output*a12;
         return output;
-    };
-    std::transform(src.begin(), src.end(), dst.begin(), proc_sample);
+    });
 
     mZ1 = z01;
     mZ2 = z02;
     other.mZ1 = z11;
     other.mZ2 = z12;
 }
-
-template class BiquadFilterR<float>;
-template class BiquadFilterR<double>;

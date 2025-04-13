@@ -100,13 +100,13 @@ struct AmbiScale {
     static std::array<float,MaxAmbiOrder+1> GetHFOrderScales(const uint src_order,
         const uint dev_order, const bool horizontalOnly) noexcept;
 
-    static const std::array<std::array<float,MaxAmbiChannels>,4> FirstOrderUp;
-    static const std::array<std::array<float,MaxAmbiChannels>,4> FirstOrder2DUp;
-    static const std::array<std::array<float,MaxAmbiChannels>,9> SecondOrderUp;
-    static const std::array<std::array<float,MaxAmbiChannels>,9> SecondOrder2DUp;
-    static const std::array<std::array<float,MaxAmbiChannels>,16> ThirdOrderUp;
-    static const std::array<std::array<float,MaxAmbiChannels>,16> ThirdOrder2DUp;
-    static const std::array<std::array<float,MaxAmbiChannels>,25> FourthOrder2DUp;
+    static constinit const std::array<std::array<float,MaxAmbiChannels>,4> FirstOrderUp;
+    static constinit const std::array<std::array<float,MaxAmbiChannels>,4> FirstOrder2DUp;
+    static constinit const std::array<std::array<float,MaxAmbiChannels>,9> SecondOrderUp;
+    static constinit const std::array<std::array<float,MaxAmbiChannels>,9> SecondOrder2DUp;
+    static constinit const std::array<std::array<float,MaxAmbiChannels>,16> ThirdOrderUp;
+    static constinit const std::array<std::array<float,MaxAmbiChannels>,16> ThirdOrder2DUp;
+    static constinit const std::array<std::array<float,MaxAmbiChannels>,25> FourthOrder2DUp;
 };
 
 struct AmbiIndex {

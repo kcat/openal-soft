@@ -173,7 +173,8 @@ inline void BsincPrepare(const uint increment, BsincState *state, const BSincTab
          * to reduce the transition ripple caused by interpolating different
          * scales of the sinc function.
          */
-        sf = 1.0f - std::cos(std::asin(sf - static_cast<float>(si)));
+        sf -= static_cast<float>(si);
+        sf = 1.0f - std::sqrt(1.0f - sf*sf);
     }
 
     state->sf = sf;

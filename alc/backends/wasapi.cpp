@@ -49,6 +49,7 @@
 #include <algorithm>
 #include <atomic>
 #include <bit>
+#include <cassert>
 #include <chrono>
 #include <condition_variable>
 #include <cstring>
@@ -62,7 +63,6 @@
 #include <thread>
 #include <vector>
 
-#include "alassert.h"
 #include "alc/alconfig.h"
 #include "alnumeric.h"
 #include "alstring.h"
@@ -249,13 +249,13 @@ public:
     {
         if constexpr(std::is_same_v<T,uint>)
         {
-            alassert(mProp.vt == VT_UI4 || mProp.vt == VT_UINT);
+            assert(mProp.vt == VT_UI4 || mProp.vt == VT_UINT);
             return mProp.uintVal;
         }
         else if constexpr(std::is_same_v<T,std::wstring_view> || std::is_same_v<T,std::wstring>
             || std::is_same_v<T,LPWSTR> || std::is_same_v<T,LPCWSTR>)
         {
-            alassert(mProp.vt == VT_LPWSTR);
+            assert(mProp.vt == VT_LPWSTR);
             return mProp.pwszVal;
         }
     }
@@ -263,7 +263,7 @@ public:
     void setBlob(const std::span<BYTE> data)
     {
         if constexpr(sizeof(size_t) > sizeof(ULONG))
-            alassert(data.size() <= std::numeric_limits<ULONG>::max());
+            assert(data.size() <= std::numeric_limits<ULONG>::max());
         mProp.vt = VT_BLOB;
         mProp.blob.cbSize = static_cast<ULONG>(data.size());
         mProp.blob.pBlobData = data.data();

@@ -35,7 +35,7 @@ BFormatDec::BFormatDec(const size_t inchans, const std::span<const ChannelDec> c
 {
     if(coeffslf.empty())
     {
-        auto &decoder = mChannelDec.emplace<std::vector<ChannelDecoderSingle>>(inchans);
+        auto &decoder = mChannelDec.emplace<SBandDecoderVector>(inchans);
         for(size_t j{0};j < decoder.size();++j)
         {
             std::transform(coeffs.begin(), coeffs.end(), decoder[j].mGains.begin(),
@@ -44,7 +44,7 @@ BFormatDec::BFormatDec(const size_t inchans, const std::span<const ChannelDec> c
     }
     else
     {
-        auto &decoder = mChannelDec.emplace<std::vector<ChannelDecoderDual>>(inchans);
+        auto &decoder = mChannelDec.emplace<DBandDecoderVector>(inchans);
         decoder[0].mXOver.init(xover_f0norm);
         for(size_t j{1};j < decoder.size();++j)
             decoder[j].mXOver = decoder[0].mXOver;
@@ -67,25 +67,29 @@ void BFormatDec::process(const std::span<FloatBufferLine> OutBuffer,
     ASSUME(SamplesToDo > 0);
 
     std::visit(overloaded {
-        [=,this](std::vector<ChannelDecoderDual> &decoder)
+        [=,this](DBandDecoderVector &decoder)
         {
             auto input = InSamples.begin();
             const auto hfSamples = std::span<float>{mSamples[sHFBand]}.first(SamplesToDo);
             const auto lfSamples = std::span<float>{mSamples[sLFBand]}.first(SamplesToDo);
             for(auto &chandec : decoder)
             {
-                chandec.mXOver.process(std::span{*input++}.first(SamplesToDo), hfSamples, lfSamples);
-                MixSamples(hfSamples, OutBuffer, chandec.mGains[sHFBand], chandec.mGains[sHFBand],0,0);
-                MixSamples(lfSamples, OutBuffer, chandec.mGains[sLFBand], chandec.mGains[sLFBand],0,0);
+                chandec.mXOver.process(std::span{*input}.first(SamplesToDo), hfSamples, lfSamples);
+                MixSamples(hfSamples, OutBuffer, chandec.mGains[sHFBand], chandec.mGains[sHFBand],
+                    0, 0);
+                MixSamples(lfSamples, OutBuffer, chandec.mGains[sLFBand], chandec.mGains[sLFBand],
+                    0, 0);
+                ++input;
             }
         },
-        [=](std::vector<ChannelDecoderSingle> &decoder)
+        [=](SBandDecoderVector &decoder)
         {
             auto input = InSamples.begin();
             for(auto &chandec : decoder)
             {
-                MixSamples(std::span{*input++}.first(SamplesToDo), OutBuffer, chandec.mGains,
+                MixSamples(std::span{*input}.first(SamplesToDo), OutBuffer, chandec.mGains,
                     chandec.mGains, 0, 0);
+                ++input;
             }
         },
     }, mChannelDec);
@@ -104,12 +108,12 @@ void BFormatDec::processStablize(const std::span<FloatBufferLine> OutBuffer,
     const auto rightout = std::span{OutBuffer[ridx]}.first(SamplesToDo);
     const auto mid = std::span{mStablizer->MidDirect}.first(SamplesToDo);
     const auto side = std::span{mStablizer->Side}.first(SamplesToDo);
-    std::transform(leftout.begin(), leftout.end(), rightout.begin(), mid.begin(),std::plus{});
-    std::transform(leftout.begin(), leftout.end(), rightout.begin(), side.begin(),std::minus{});
+    std::transform(leftout.begin(), leftout.end(), rightout.begin(), mid.begin(), std::plus{});
+    std::transform(leftout.begin(), leftout.end(), rightout.begin(), side.begin(), std::minus{});
     std::fill_n(leftout.begin(), leftout.size(), 0.0f);
     std::fill_n(rightout.begin(), rightout.size(), 0.0f);
 
-    /* Decode the B-Format input to OutBuffer. */
+    /* Decode the B-Format mix to OutBuffer. */
     process(OutBuffer, InSamples, SamplesToDo);
 
     /* Include the decoded side signal with the direct side signal. */
@@ -146,19 +150,19 @@ void BFormatDec::processStablize(const std::span<FloatBufferLine> OutBuffer,
      * is panned 1/3rd toward center and the high-frequency signal is panned
      * 1/4th toward center. These values can be tweaked.
      */
-    const auto cos_lf = std::cos(1.0f/3.0f * (std::numbers::pi_v<float>*0.5f));
-    const auto cos_hf = std::cos(1.0f/4.0f * (std::numbers::pi_v<float>*0.5f));
-    const auto sin_lf = std::sin(1.0f/3.0f * (std::numbers::pi_v<float>*0.5f));
-    const auto sin_hf = std::sin(1.0f/4.0f * (std::numbers::pi_v<float>*0.5f));
+    const auto mid_lf = std::cos(1.0f/3.0f * (std::numbers::pi_v<float>*0.5f));
+    const auto mid_hf = std::cos(1.0f/4.0f * (std::numbers::pi_v<float>*0.5f));
+    const auto center_lf = std::sin(1.0f/3.0f * (std::numbers::pi_v<float>*0.5f));
+    const auto center_hf = std::sin(1.0f/4.0f * (std::numbers::pi_v<float>*0.5f));
     const auto centerout = std::span{OutBuffer[cidx]}.first(SamplesToDo);
     for(size_t i{0};i < SamplesToDo;i++)
     {
         /* Add the direct mid signal to the processed mid signal so it can be
          * properly combined with the direct+decoded side signal.
          */
-        const float m{mStablizer->MidLF[i]*cos_lf + mStablizer->MidHF[i]*cos_hf + mid[i]};
-        const float c{mStablizer->MidLF[i]*sin_lf + mStablizer->MidHF[i]*sin_hf};
-        const float s{side[i]};
+        const auto m = mStablizer->MidLF[i]*mid_lf + mStablizer->MidHF[i]*mid_hf + mid[i];
+        const auto c = mStablizer->MidLF[i]*center_lf + mStablizer->MidHF[i]*center_hf;
+        const auto s = side[i];
 
         /* The generated center channel signal adds to the existing signal,
          * while the modified left and right channels replace.

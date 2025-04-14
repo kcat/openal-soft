@@ -26,17 +26,19 @@ class SIMDALIGN BFormatDec {
     struct ChannelDecoderSingle {
         std::array<float,MaxOutputChannels> mGains{};
     };
+    using SBandDecoderVector = std::vector<ChannelDecoderSingle>;
 
     struct ChannelDecoderDual {
         BandSplitter mXOver;
         std::array<std::array<float,MaxOutputChannels>,sNumBands> mGains{};
     };
+    using DBandDecoderVector = std::vector<ChannelDecoderDual>;
 
     alignas(16) std::array<FloatBufferLine,2> mSamples{};
 
     const std::unique_ptr<FrontStablizer> mStablizer;
 
-    std::variant<std::vector<ChannelDecoderSingle>,std::vector<ChannelDecoderDual>> mChannelDec;
+    std::variant<SBandDecoderVector,DBandDecoderVector> mChannelDec;
 
 public:
     BFormatDec(const size_t inchans, const std::span<const ChannelDec> coeffs,

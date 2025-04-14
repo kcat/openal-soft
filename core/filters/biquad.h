@@ -2,6 +2,7 @@
 #define CORE_FILTERS_BIQUAD_H
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <numbers>
 #include <span>

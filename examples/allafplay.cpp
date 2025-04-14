@@ -299,7 +299,7 @@ struct Channel {
 
     Channel() = default;
     Channel(const Channel&) = delete;
-    Channel(Channel&& rhs)
+    Channel(Channel&& rhs) noexcept
         : mSource{rhs.mSource}, mBuffers{rhs.mBuffers}, mAzimuth{rhs.mAzimuth}
         , mElevation{rhs.mElevation}, mIsLfe{rhs.mIsLfe}
     {
@@ -313,7 +313,7 @@ struct Channel {
     }
 
     auto operator=(const Channel&) -> Channel& = delete;
-    auto operator=(Channel&& rhs) -> Channel&
+    auto operator=(Channel&& rhs) noexcept -> Channel&
     {
         std::swap(mSource, rhs.mSource);
         std::swap(mBuffers, rhs.mBuffers);

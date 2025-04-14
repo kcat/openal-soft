@@ -82,6 +82,7 @@
 #include <functional>
 #include <memory>
 #include <numeric>
+#include <source_location>
 #include <span>
 #include <string>
 #include <string_view>
@@ -153,16 +154,16 @@ auto LfeSlotID = ALuint{};
 using namespace std::string_view_literals;
 
 [[noreturn]]
-void do_assert(const char *message, int linenum, const char *filename, const char *funcname)
+void do_assert(const char *message, const char *funcname,
+    const std::source_location loc = std::source_location::current())
 {
-    auto errstr = fmt::format("{}:{}: {}: {}", filename, linenum, funcname, message);
+    auto errstr = fmt::format("{}:{}: {}: {}", loc.file_name(), loc.line(), funcname, message);
     throw std::runtime_error{errstr};
 }
 
 #define MyAssert(cond) do {                                                   \
     if(!(cond)) [[unlikely]]                                                  \
-        do_assert("Assertion '" #cond "' failed", __LINE__, __FILE__,         \
-            std::data(__func__));                                             \
+        do_assert("Assertion '" #cond "' failed", std::data(__func__));       \
 } while(0)
 
 

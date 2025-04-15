@@ -28,11 +28,20 @@
 #include <utility>
 #include <vector>
 
-#ifdef __GNUC__
-_Pragma("GCC diagnostic push")
-_Pragma("GCC diagnostic ignored \"-Wconversion\"")
-_Pragma("GCC diagnostic ignored \"-Wold-style-cast\"")
-#endif
+#include "AL/alc.h"
+#include "AL/al.h"
+#include "AL/alext.h"
+
+#include "almalloc.h"
+#include "alnumeric.h"
+#include "common/alhelpers.h"
+#include "fmt/core.h"
+#include "fmt/format.h"
+#include "pragmadefs.h"
+
+DIAGNOSTIC_PUSH
+std_pragma("GCC diagnostic ignored \"-Wconversion\"")
+std_pragma("GCC diagnostic ignored \"-Wold-style-cast\"")
 extern "C" {
 #include "libavcodec/avcodec.h"
 #include "libavformat/avformat.h"
@@ -50,7 +59,7 @@ extern "C" {
 #include "libswresample/swresample.h"
 
 struct SwsContext;
-}
+} /* extern "C" */
 
 #define SDL_MAIN_HANDLED
 #include "SDL3/SDL_events.h"
@@ -60,6 +69,7 @@ struct SwsContext;
 
 namespace {
 
+[[nodiscard]]
 constexpr auto DefineSDLColorspace(SDL_ColorType type, SDL_ColorRange range,
     SDL_ColorPrimaries primaries, SDL_TransferCharacteristics transfer,
     SDL_MatrixCoefficients matrix, SDL_ChromaLocation chromaloc) noexcept
@@ -70,21 +80,8 @@ constexpr auto DefineSDLColorspace(SDL_ColorType type, SDL_ColorRange range,
 constexpr auto AVNoPtsValue = AV_NOPTS_VALUE;
 constexpr auto AVErrorEOF = AVERROR_EOF;
 
-} // namespace
-#ifdef __GNUC__
-_Pragma("GCC diagnostic pop")
-#endif
-
-#include "AL/alc.h"
-#include "AL/al.h"
-#include "AL/alext.h"
-
-#include "almalloc.h"
-#include "alnumeric.h"
-#include "common/alhelpers.h"
-#include "fmt/core.h"
-#include "fmt/format.h"
-
+} /* namespace */
+DIAGNOSTIC_POP
 
 namespace {
 

@@ -34,24 +34,23 @@
 #include "almalloc.h"
 #include "core/device.h"
 #include "core/logging.h"
+#include "pragmadefs.h"
 
-_Pragma("GCC diagnostic push")
-_Pragma("GCC diagnostic ignored \"-Wold-style-cast\"")
+DIAGNOSTIC_PUSH
+std_pragma("GCC diagnostic ignored \"-Wold-style-cast\"")
 #include "SDL3/SDL_audio.h"
 #include "SDL3/SDL_init.h"
 #include "SDL3/SDL_stdinc.h"
-_Pragma("GCC diagnostic pop")
+
+namespace {
+constexpr auto DefaultPlaybackDeviceID = SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK;
+} /* namespace */
+DIAGNOSTIC_POP
 
 
 namespace {
 
 using namespace std::string_view_literals;
-
-_Pragma("GCC diagnostic push")
-_Pragma("GCC diagnostic ignored \"-Wold-style-cast\"")
-constexpr auto DefaultPlaybackDeviceID = SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK;
-_Pragma("GCC diagnostic pop")
-
 
 template<typename T>
 struct SdlDeleter {

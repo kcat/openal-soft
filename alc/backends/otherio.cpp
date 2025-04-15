@@ -64,6 +64,7 @@
 #include "core/device.h"
 #include "core/helpers.h"
 #include "core/logging.h"
+#include "pragmadefs.h"
 #include "strutils.h"
 
 
@@ -186,10 +187,8 @@ struct ORIOCallbacks {
 /* COM interfaces don't include a virtual destructor in their pure-virtual
  * classes, and we can't add one without breaking ABI.
  */
-#ifdef __GNUC__
-_Pragma("GCC diagnostic push")
-_Pragma("GCC diagnostic ignored \"-Wnon-virtual-dtor\"")
-#endif
+DIAGNOSTIC_PUSH
+std_pragma("GCC diagnostic ignored \"-Wnon-virtual-dtor\"")
 /* NOLINTNEXTLINE(cppcoreguidelines-virtual-class-destructor) */
 struct ORIOiface : public IUnknown {
     STDMETHOD_(LONG, Init)(void *sysHandle) = 0;
@@ -222,9 +221,7 @@ struct ORIOiface : public IUnknown {
     auto operator=(const ORIOiface&) -> ORIOiface& = delete;
     ~ORIOiface() = delete;
 };
-#ifdef __GNUC__
-_Pragma("GCC diagnostic pop")
-#endif
+DIAGNOSTIC_POP
 
 namespace {
 

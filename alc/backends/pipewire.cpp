@@ -57,24 +57,25 @@
 #include "fmt/core.h"
 #include "fmt/ranges.h"
 #include "opthelpers.h"
+#include "pragmadefs.h"
 #include "ringbuffer.h"
 
 /* Ignore warnings caused by PipeWire headers (lots in standard C++ mode). GCC
  * doesn't support ignoring -Weverything, so we have the list the individual
  * warnings to ignore (and ignoring -Winline doesn't seem to work).
  */
-_Pragma("GCC diagnostic push")
-_Pragma("GCC diagnostic ignored \"-Wpedantic\"")
-_Pragma("GCC diagnostic ignored \"-Wconversion\"")
-_Pragma("GCC diagnostic ignored \"-Wfloat-conversion\"")
-_Pragma("GCC diagnostic ignored \"-Wmissing-field-initializers\"")
-_Pragma("GCC diagnostic ignored \"-Wunused-parameter\"")
-_Pragma("GCC diagnostic ignored \"-Wold-style-cast\"")
-_Pragma("GCC diagnostic ignored \"-Wsign-compare\"")
-_Pragma("GCC diagnostic ignored \"-Winline\"")
-_Pragma("GCC diagnostic ignored \"-Wpragmas\"")
-_Pragma("GCC diagnostic ignored \"-Wvla\"")
-_Pragma("GCC diagnostic ignored \"-Weverything\"")
+DIAGNOSTIC_PUSH
+std_pragma("GCC diagnostic ignored \"-Wpedantic\"")
+std_pragma("GCC diagnostic ignored \"-Wconversion\"")
+std_pragma("GCC diagnostic ignored \"-Wfloat-conversion\"")
+std_pragma("GCC diagnostic ignored \"-Wmissing-field-initializers\"")
+std_pragma("GCC diagnostic ignored \"-Wunused-parameter\"")
+std_pragma("GCC diagnostic ignored \"-Wold-style-cast\"")
+std_pragma("GCC diagnostic ignored \"-Wsign-compare\"")
+std_pragma("GCC diagnostic ignored \"-Winline\"")
+std_pragma("GCC diagnostic ignored \"-Wpragmas\"")
+std_pragma("GCC diagnostic ignored \"-Wvla\"")
+std_pragma("GCC diagnostic ignored \"-Weverything\"")
 #include "pipewire/pipewire.h"
 #include "pipewire/extensions/metadata.h"
 #include "spa/buffer/buffer.h"
@@ -131,7 +132,7 @@ constexpr auto PwIdAny = PW_ID_ANY;
 
 } // namespace
 /* NOLINTEND */
-_Pragma("GCC diagnostic pop")
+DIAGNOSTIC_POP
 
 namespace {
 

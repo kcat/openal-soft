@@ -30,11 +30,12 @@
 
 #include "alnumeric.h"
 #include "core/device.h"
+#include "pragmadefs.h"
 
-_Pragma("GCC diagnostic push")
-_Pragma("GCC diagnostic ignored \"-Wold-style-cast\"")
+DIAGNOSTIC_PUSH
+std_pragma("GCC diagnostic ignored \"-Wold-style-cast\"")
 #include "SDL.h"
-_Pragma("GCC diagnostic pop")
+DIAGNOSTIC_POP
 
 
 namespace {

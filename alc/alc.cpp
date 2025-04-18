@@ -416,8 +416,9 @@ void alc_initconfig()
     }
 #endif
 
-    TRACE("Initializing library v{}-{} {}", ALSOFT_VERSION, ALSOFT_GIT_COMMIT_HASH,
-        ALSOFT_GIT_BRANCH);
+    TRACE("Initializing library v{}-{} {}", ALSOFT_VERSION,
+        std::string_view{ALSOFT_GIT_COMMIT_HASH}.empty() ? "unknown" : ALSOFT_GIT_COMMIT_HASH,
+        std::string_view{ALSOFT_GIT_BRANCH}.empty() ? "unknown" : ALSOFT_GIT_BRANCH);
     {
         auto names = std::array<std::string_view,BackendList.size()>{};
         std::transform(BackendList.begin(), BackendList.end(), names.begin(),

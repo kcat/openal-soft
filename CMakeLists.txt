@@ -1278,8 +1278,8 @@ if(ALSOFT_UPDATE_BUILD_VERSION AND GIT_FOUND AND EXISTS "${OpenAL_SOURCE_DIR}/.g
 
     add_custom_target(alsoft.build_version DEPENDS "${OpenAL_BINARY_DIR}/version_witness.txt")
 else()
-    set(GIT_BRANCH "UNKNOWN")
-    set(GIT_COMMIT_HASH "unknown")
+    set(GIT_BRANCH "")
+    set(GIT_COMMIT_HASH "")
     configure_file(
         "${OpenAL_SOURCE_DIR}/version.h.in"
         "${OpenAL_BINARY_DIR}/version.h")

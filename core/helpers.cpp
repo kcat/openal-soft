@@ -11,6 +11,7 @@
 #include <algorithm>
 #include <cstdlib>
 #include <cstring>
+#include <functional>
 #include <limits>
 #include <mutex>
 #include <optional>
@@ -76,7 +77,7 @@ void DirectorySearch(const fs::path &path, const std::string_view ext,
 
 const PathNamePair &GetProcBinary()
 {
-    auto get_procbin = []
+    static const auto procbin = std::invoke([]() -> PathNamePair
     {
 #if !ALSOFT_UWP
         DWORD pathlen{256};
@@ -129,8 +130,7 @@ const PathNamePair &GetProcBinary()
 
         TRACE("Got binary: {}, {}", res.path, res.fname);
         return res;
-    };
-    static const PathNamePair procbin{get_procbin()};
+    });
     return procbin;
 }
 
@@ -230,7 +230,7 @@ void SetRTPriority()
 
 const PathNamePair &GetProcBinary()
 {
-    auto get_procbin = []
+    static const auto procbin = std::invoke([]() -> PathNamePair
     {
         std::string pathname;
 #ifdef __FreeBSD__
@@ -305,8 +305,7 @@ const PathNamePair &GetProcBinary()
 
         TRACE("Got binary: \"{}\", \"{}\"", res.path, res.fname);
         return res;
-    };
-    static const PathNamePair procbin{get_procbin()};
+    });
     return procbin;
 }
 

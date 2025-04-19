@@ -36,6 +36,8 @@
 #include "core/voice_change.h"
 #include "device.h"
 #include "flexarray.h"
+#include "fmt/core.h"
+#include "fmt/ranges.h"
 #include "ringbuffer.h"
 #include "vecmat.h"
 
@@ -202,24 +204,7 @@ void ALCcontext::init()
     eax_initialize_extensions();
 #endif // ALSOFT_EAX
 
-    if(!mExtensions.empty())
-    {
-        const size_t len{std::accumulate(mExtensions.cbegin()+1, mExtensions.cend(),
-            mExtensions.front().length(),
-            [](size_t current, std::string_view ext) noexcept
-            { return current + ext.length() + 1; })};
-
-        std::string extensions;
-        extensions.reserve(len);
-        extensions += mExtensions.front();
-        for(std::string_view ext : std::span{mExtensions}.subspan<1>())
-        {
-            extensions += ' ';
-            extensions += ext;
-        }
-
-        mExtensionsString = std::move(extensions);
-    }
+    mExtensionsString = fmt::format("{}", fmt::join(mExtensions, " "));
 
 #if ALSOFT_EAX
     eax_set_defaults();

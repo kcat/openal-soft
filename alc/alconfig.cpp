@@ -67,6 +67,8 @@ struct CoTaskMemDeleter {
 };
 #endif
 
+constexpr auto EmptyString = std::string{};
+
 struct ConfigEntry {
     std::string key;
     std::string value;
@@ -93,7 +95,7 @@ bool readline(std::istream &f, std::string &output)
 
 std::string expdup(std::string_view str)
 {
-    std::string output;
+    auto output = std::string{};
 
     while(!str.empty())
     {
@@ -119,17 +121,18 @@ std::string expdup(std::string_view str)
             continue;
         }
 
-        const bool hasbraces{str.front() == '{'};
+        const auto hasbraces = bool{str.front() == '{'};
         if(hasbraces) str.remove_prefix(1);
 
-        size_t envend{0};
-        while(envend < str.size() && (std::isalnum(str[envend]) || str[envend] == '_'))
-            ++envend;
-        if(hasbraces && (envend == str.size() || str[envend] != '}'))
+        const auto envenditer = std::find_if_not(str.cbegin(), str.cend(),
+            [](const char c) { return c == '_' || std::isalnum(c); });
+
+        if(hasbraces && (envenditer == str.end() || *envenditer != '}'))
             continue;
-        const std::string envname{str.substr(0, envend)};
-        if(hasbraces) ++envend;
-        str.remove_prefix(envend);
+
+        const auto envend = size_t(std::distance(str.begin(), envenditer));
+        const auto envname = std::string{str.substr(0, envend)};
+        str.remove_prefix(envend + hasbraces);
 
         if(auto envval = al::getenv(envname.c_str()))
             output += *envval;
@@ -140,8 +143,10 @@ std::string expdup(std::string_view str)
 
 void LoadConfigFromFile(std::istream &f)
 {
-    std::string curSection;
-    std::string buffer;
+    constexpr auto whitespace_chars = " \t\n\f\r\v"sv;
+
+    auto curSection = std::string{};
+    auto buffer = std::string{};
 
     while(readline(f, buffer))
     {
@@ -150,85 +155,80 @@ void LoadConfigFromFile(std::istream &f)
 
         if(buffer[0] == '[')
         {
-            auto endpos = buffer.find(']', 1);
+            const auto endpos = buffer.find(']', 1);
             if(endpos == 1 || endpos == std::string::npos)
             {
                 ERR(" config parse error: bad line \"{}\"", buffer);
                 continue;
             }
-            if(buffer[endpos+1] != '\0')
+            if(const auto last = buffer.find_first_not_of(whitespace_chars, endpos+1);
+                last < buffer.size() && buffer[last] != '#')
             {
-                size_t last{endpos+1};
-                while(last < buffer.size() && std::isspace(buffer[last]))
-                    ++last;
-
-                if(last < buffer.size() && buffer[last] != '#')
-                {
-                    ERR(" config parse error: bad line \"{}\"", buffer);
-                    continue;
-                }
+                ERR(" config parse error: bad line \"{}\"", buffer);
+                continue;
             }
 
             auto section = std::string_view{buffer}.substr(1, endpos-1);
 
             curSection.clear();
-            if(al::case_compare(section, "general"sv) != 0)
+            if(al::case_compare(section, "general"sv) == 0)
+                continue;
+
+            while(!section.empty())
             {
-                do {
-                    auto nextp = section.find('%');
-                    if(nextp == std::string_view::npos)
-                    {
-                        curSection += section;
-                        break;
-                    }
+                const auto nextp = section.find('%');
+                if(nextp == std::string_view::npos)
+                {
+                    curSection += section;
+                    break;
+                }
 
-                    curSection += section.substr(0, nextp);
-                    section.remove_prefix(nextp);
+                curSection += section.substr(0, nextp);
+                section.remove_prefix(nextp);
 
-                    if(section.size() > 2 &&
-                       ((section[1] >= '0' && section[1] <= '9') ||
-                        (section[1] >= 'a' && section[1] <= 'f') ||
-                        (section[1] >= 'A' && section[1] <= 'F')) &&
-                       ((section[2] >= '0' && section[2] <= '9') ||
-                        (section[2] >= 'a' && section[2] <= 'f') ||
-                        (section[2] >= 'A' && section[2] <= 'F')))
-                    {
-                        int b{0};
-                        if(section[1] >= '0' && section[1] <= '9')
-                            b = (section[1]-'0') << 4;
-                        else if(section[1] >= 'a' && section[1] <= 'f')
-                            b = (section[1]-'a'+0xa) << 4;
-                        else if(section[1] >= 'A' && section[1] <= 'F')
-                            b = (section[1]-'A'+0x0a) << 4;
-                        if(section[2] >= '0' && section[2] <= '9')
-                            b |= (section[2]-'0');
-                        else if(section[2] >= 'a' && section[2] <= 'f')
-                            b |= (section[2]-'a'+0xa);
-                        else if(section[2] >= 'A' && section[2] <= 'F')
-                            b |= (section[2]-'A'+0x0a);
-                        curSection += static_cast<char>(b);
-                        section.remove_prefix(3);
-                    }
-                    else if(section.size() > 1 && section[1] == '%')
-                    {
-                        curSection += '%';
-                        section.remove_prefix(2);
-                    }
-                    else
-                    {
-                        curSection += '%';
-                        section.remove_prefix(1);
-                    }
-                } while(!section.empty());
+                if(section.size() > 2
+                    && ((section[1] >= '0' && section[1] <= '9')
+                        || (section[1] >= 'a' && section[1] <= 'f')
+                        || (section[1] >= 'A' && section[1] <= 'F'))
+                    && ((section[2] >= '0' && section[2] <= '9')
+                        || (section[2] >= 'a' && section[2] <= 'f')
+                        || (section[2] >= 'A' && section[2] <= 'F')))
+                {
+                    auto b = 0;
+                    if(section[1] >= '0' && section[1] <= '9')
+                        b = (section[1]-'0') << 4;
+                    else if(section[1] >= 'a' && section[1] <= 'f')
+                        b = (section[1]-'a'+0xa) << 4;
+                    else if(section[1] >= 'A' && section[1] <= 'F')
+                        b = (section[1]-'A'+0x0a) << 4;
+                    if(section[2] >= '0' && section[2] <= '9')
+                        b |= (section[2]-'0');
+                    else if(section[2] >= 'a' && section[2] <= 'f')
+                        b |= (section[2]-'a'+0xa);
+                    else if(section[2] >= 'A' && section[2] <= 'F')
+                        b |= (section[2]-'A'+0x0a);
+                    curSection += static_cast<char>(b);
+                    section.remove_prefix(3);
+                }
+                else if(section.size() > 1 && section[1] == '%')
+                {
+                    curSection += '%';
+                    section.remove_prefix(2);
+                }
+                else
+                {
+                    curSection += '%';
+                    section.remove_prefix(1);
+                }
             }
 
             continue;
         }
 
         auto cmtpos = std::min(buffer.find('#'), buffer.size());
-        while(cmtpos > 0 && std::isspace(buffer[cmtpos-1]))
-            --cmtpos;
-        if(!cmtpos) continue;
+        if(cmtpos != 0)
+            cmtpos = buffer.find_last_not_of(whitespace_chars, cmtpos-1)+1;
+        if(cmtpos == 0) continue;
         buffer.erase(cmtpos);
 
         auto sep = buffer.find('=');
@@ -238,23 +238,19 @@ void LoadConfigFromFile(std::istream &f)
             continue;
         }
         auto keypart = std::string_view{buffer}.substr(0, sep++);
-        while(!keypart.empty() && std::isspace(keypart.back()))
-            keypart.remove_suffix(1);
+        keypart.remove_suffix(keypart.size() - (keypart.find_last_not_of(whitespace_chars)+1));
         if(keypart.empty())
         {
             ERR(" config parse error: malformed option line: \"{}\"", buffer);
             continue;
         }
         auto valpart = std::string_view{buffer}.substr(sep);
-        while(!valpart.empty() && std::isspace(valpart.front()))
-            valpart.remove_prefix(1);
+        valpart.remove_prefix(std::min(valpart.find_first_not_of(whitespace_chars),
+            valpart.size()));
 
-        std::string fullKey;
-        if(!curSection.empty())
-        {
-            fullKey += curSection;
+        auto fullKey = curSection;
+        if(!fullKey.empty())
             fullKey += '/';
-        }
         fullKey += keypart;
 
         if(valpart.size() > size_t{std::numeric_limits<int>::max()})
@@ -277,7 +273,7 @@ void LoadConfigFromFile(std::istream &f)
         /* Check if we already have this option set */
         auto find_key = [&fullKey](const ConfigEntry &entry) -> bool
         { return entry.key == fullKey; };
-        auto ent = std::find_if(ConfOpts.begin(), ConfOpts.end(), find_key);
+        const auto ent = std::find_if(ConfOpts.begin(), ConfOpts.end(), find_key);
         if(ent != ConfOpts.end())
         {
             if(!valpart.empty())
@@ -286,7 +282,7 @@ void LoadConfigFromFile(std::istream &f)
                 ConfOpts.erase(ent);
         }
         else if(!valpart.empty())
-            ConfOpts.emplace_back(ConfigEntry{std::move(fullKey), expdup(valpart)});
+            ConfOpts.emplace_back(std::move(fullKey), expdup(valpart));
     }
     ConfOpts.shrink_to_fit();
 }
@@ -294,11 +290,10 @@ void LoadConfigFromFile(std::istream &f)
 auto GetConfigValue(const std::string_view devName, const std::string_view blockName,
     const std::string_view keyName) -> const std::string&
 {
-    static const auto emptyString = std::string{};
     if(keyName.empty())
-        return emptyString;
+        return EmptyString;
 
-    std::string key;
+    auto key = std::string{};
     if(!blockName.empty() && al::case_compare(blockName, "general"sv) != 0)
     {
         key = blockName;
@@ -311,18 +306,18 @@ auto GetConfigValue(const std::string_view devName, const std::string_view block
     }
     key += keyName;
 
-    auto iter = std::find_if(ConfOpts.cbegin(), ConfOpts.cend(),
+    const auto iter = std::find_if(ConfOpts.cbegin(), ConfOpts.cend(),
         [&key](const ConfigEntry &entry) -> bool { return entry.key == key; });
     if(iter != ConfOpts.cend())
     {
         TRACE("Found option {} = \"{}\"", key, iter->value);
         if(!iter->value.empty())
             return iter->value;
-        return emptyString;
+        return EmptyString;
     }
 
     if(devName.empty())
-        return emptyString;
+        return EmptyString;
     return GetConfigValue({}, blockName, keyName);
 }
 

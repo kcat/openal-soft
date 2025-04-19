@@ -461,14 +461,12 @@ void alc_initconfig()
             auto nextpos = std::min(cpulist.find(','), cpulist.size());
             auto entry = cpulist.substr(0, nextpos);
 
-            while(nextpos < cpulist.size() && cpulist[nextpos] == ',')
-                ++nextpos;
+            nextpos = std::min(cpulist.find_first_not_of(',', nextpos), cpulist.size());
             cpulist.remove_prefix(nextpos);
 
-            while(!entry.empty() && std::isspace(entry.front()))
-                entry.remove_prefix(1);
-            while(!entry.empty() && std::isspace(entry.back()))
-                entry.remove_suffix(1);
+            constexpr auto whitespace_chars = " \t\n\f\r\v"sv;
+            entry.remove_prefix(std::min(entry.find_first_not_of(whitespace_chars), entry.size()));
+            entry.remove_suffix(entry.size() - (entry.find_last_not_of(whitespace_chars)+1));
             if(entry.empty())
                 continue;
 
@@ -605,13 +603,13 @@ void alc_initconfig()
             }
             drvlist.remove_prefix(nextpos);
 
-            while(!entry.empty() && std::isspace(entry.front()))
-                entry.remove_prefix(1);
-            const bool delitem{!entry.empty() && entry.front() == '-'};
+            constexpr auto whitespace_chars = " \t\n\f\r\v"sv;
+            entry.remove_prefix(entry.find_first_not_of(whitespace_chars));
+
+            const auto delitem = (!entry.empty() && entry.front() == '-');
             if(delitem) entry.remove_prefix(1);
 
-            while(!entry.empty() && std::isspace(entry.back()))
-                entry.remove_suffix(1);
+            entry.remove_suffix(entry.size() - (entry.find_last_not_of(whitespace_chars)+1));
             if(entry.empty())
                 continue;
 

@@ -72,6 +72,11 @@ const auto EmptyString = std::string{};
 struct ConfigEntry {
     std::string key;
     std::string value;
+
+    ConfigEntry(auto&& key_, auto&& value_)
+        : key{std::forward<std::remove_cvref_t<decltype(key_)>>(key_)}
+        , value{std::forward<std::remove_cvref_t<decltype(value_)>>(value_)}
+    { }
 };
 std::vector<ConfigEntry> ConfOpts;
 

@@ -67,7 +67,7 @@ struct CoTaskMemDeleter {
 };
 #endif
 
-constexpr auto EmptyString = std::string{};
+const auto EmptyString = std::string{};
 
 struct ConfigEntry {
     std::string key;

@@ -31,6 +31,7 @@
  * generators, and have the ability to hook up EFX filters and effects.
  */
 
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -291,9 +292,23 @@ int main(int argc, char *argv[])
         else if(i+1 < argc && (strcmp(argv[i], "--position") == 0 || strcmp(argv[i], "-p") == 0))
         {
             i++;
-            int scanned;
-            if (sscanf(argv[i], "%f,%f,%f%n", &source_x, &source_y, &source_z, &scanned) != 3 ||
-                scanned != (int)strlen(argv[i]))
+            const char *argptr = argv[i];
+            char *nextptr = NULL;
+            bool okay = false;
+
+            source_x = strtof(argptr, &nextptr);
+            if(nextptr != argptr && *nextptr == ',')
+            {
+                argptr = nextptr+1;
+                source_y = strtof(argptr, &nextptr);
+                if(nextptr != argptr && *nextptr == ',')
+                {
+                    argptr = nextptr+1;
+                    source_z = strtof(argptr, &nextptr);
+                    okay = (nextptr != argptr && *nextptr == '\0');
+                }
+            }
+            if(!okay || !isfinite(source_x) || !isfinite(source_y) || !isfinite(source_z))
             {
                 fprintf(stderr, "Invalid position: %s\n", argv[i]);
                 source_x = 0.0f;

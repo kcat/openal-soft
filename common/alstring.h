@@ -4,20 +4,17 @@
 #include <algorithm>
 #include <cstddef>
 #include <limits>
-#include <string>
 #include <string_view>
 
 
 namespace al {
 
-template<typename ...Ts>
 [[nodiscard]] constexpr
-auto sizei(const std::basic_string_view<Ts...> str) noexcept -> int
+auto sizei(const std::string_view str) noexcept -> int
 { return static_cast<int>(std::min<std::size_t>(str.size(), std::numeric_limits<int>::max())); }
 
-template<typename ...Ts>
 [[nodiscard]] constexpr
-auto sizei(const std::basic_string<Ts...> &str) noexcept -> int
+auto sizei(const std::wstring_view str) noexcept -> int
 { return static_cast<int>(std::min<std::size_t>(str.size(), std::numeric_limits<int>::max())); }
 
 

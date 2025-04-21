@@ -257,39 +257,7 @@ void ALCcontext::deinit()
         }
     }
 
-    bool stopPlayback{};
-    /* First make sure this context exists in the device's list. */
-    auto oldarray = std::span{*mDevice->mContexts.load(std::memory_order_acquire)};
-    if(auto toremove = static_cast<size_t>(std::count(oldarray.begin(), oldarray.end(), this)))
-    {
-        using ContextArray = al::FlexArray<ContextBase*>;
-        const auto newsize = size_t{oldarray.size() - toremove};
-        auto newarray = ContextArray::Create(newsize);
-
-        /* Copy the current/old context handles to the new array, excluding the
-         * given context.
-         */
-        std::copy_if(oldarray.begin(), oldarray.end(), newarray->begin(),
-            [this](ContextBase *ctx) { return ctx != this; });
-
-        /* Store the new context array in the device. Wait for any current mix
-         * to finish before deleting the old array.
-         */
-        auto prevarray = mDevice->mContexts.exchange(std::move(newarray));
-        std::ignore = mDevice->waitForMix();
-
-        stopPlayback = (newsize == 0);
-    }
-    else
-        stopPlayback = oldarray.empty();
-
     StopEventThrd(this);
-
-    if(stopPlayback && mALDevice->mDeviceState == DeviceState::Playing)
-    {
-        mALDevice->Backend->stop();
-        mALDevice->mDeviceState = DeviceState::Configured;
-    }
 }
 
 void ALCcontext::applyAllUpdates()

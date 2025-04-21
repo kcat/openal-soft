@@ -292,8 +292,11 @@ struct SIMDALIGN DeviceBase {
     std::atomic<uint> mMixCount{0u};
 
     // Contexts created on this device
-    al::atomic_unique_ptr<al::FlexArray<ContextBase*>> mContexts;
+    using ContextArray = al::FlexArray<ContextBase*>;
+    al::atomic_unique_ptr<ContextArray> mContexts;
 
+    /** Returns the number of contexts remaining on the device. */
+    [[nodiscard]] auto removeContext(ContextBase *context) -> size_t;
 
     [[nodiscard]] auto bytesFromFmt() const noexcept -> uint { return BytesFromDevFmt(FmtType); }
     [[nodiscard]] auto channelsFromFmt() const noexcept -> uint { return ChannelsFromDevFmt(FmtChans, mAmbiOrder); }

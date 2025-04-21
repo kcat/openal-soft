@@ -26,10 +26,10 @@ constexpr bool contains(const std::string_view str0, const std::string_view str1
 { return str0.find(str1) != std::string_view::npos; }
 
 [[nodiscard]]
-int case_compare(const std::string_view str0, const std::string_view str1) noexcept;
+auto case_compare(const std::string_view str0, const std::string_view str1) noexcept -> std::weak_ordering;
 
 [[nodiscard]]
-int case_compare(const std::wstring_view str0, const std::wstring_view str1) noexcept;
+auto case_compare(const std::wstring_view str0, const std::wstring_view str1) noexcept -> std::weak_ordering;
 
 /* C++20 changes path::u8string() to return a string using a new/distinct
  * char8_t type for UTF-8 strings. However, support for this with standard

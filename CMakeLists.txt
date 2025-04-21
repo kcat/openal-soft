@@ -60,6 +60,9 @@ if(COMMAND CMAKE_POLICY)
     if(POLICY CMP0117)
         cmake_policy(SET CMP0117 NEW)
     endif(POLICY CMP0117)
+    if(POLICY CMP0155)
+        cmake_policy(SET CMP0155 NEW)
+    endif(POLICY CMP0155)
 endif(COMMAND CMAKE_POLICY)
 
 project(OpenAL)
@@ -159,7 +162,7 @@ if(MSVC)
     endif()
 endif()
 
-add_subdirectory(fmt-11.1.1 EXCLUDE_FROM_ALL)
+add_subdirectory(fmt-11.1.4 EXCLUDE_FROM_ALL)
 
 
 set(CPP_DEFS ) # C pre-processor, not C++

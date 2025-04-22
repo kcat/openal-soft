@@ -24,6 +24,7 @@
 #include <array>
 #include <bitset>
 #include <cassert>
+#include <charconv>
 #include <chrono>
 #include <cmath>
 #include <cstddef>
@@ -463,11 +464,16 @@ auto MakeDecoderView(al::Device *device, const AmbDecConf *conf,
             ch = BottomBackRight;
         else
         {
-            int idx{};
-            char c{};
-            /* NOLINTNEXTLINE(cert-err34-c,cppcoreguidelines-pro-type-vararg) */
-            if(sscanf(speaker.Name.c_str(), "AUX%d%c", &idx, &c) != 1 || idx < 0
-                || idx >= MaxChannels-Aux0)
+            auto idx = std::numeric_limits<uint>::max();
+            if(speaker.Name.size() > 3 && speaker.Name.starts_with("AUX"sv))
+            {
+                const auto res = std::from_chars(std::to_address(speaker.Name.begin()+3),
+                    std::to_address(speaker.Name.end()), idx);
+                if(res.ptr != std::to_address(speaker.Name.end()))
+                    idx = std::numeric_limits<uint>::max();
+            }
+
+            if(idx >= uint{MaxChannels-Aux0})
             {
                 ERR("AmbDec speaker label \"{}\" not recognized", speaker.Name);
                 continue;

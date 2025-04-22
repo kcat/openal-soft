@@ -195,12 +195,6 @@ auto StrSubst(std::string_view in, const std::string_view pat, const std::string
  *** Math routines ***
  *********************/
 
-// Simple clamp routine.
-double Clamp(const double val, const double lower, const double upper)
-{
-    return std::min(std::max(val, lower), upper);
-}
-
 inline uint dither_rng(uint *seed)
 {
     *seed = *seed * 96314165 + 907633515;
@@ -243,7 +237,7 @@ void LimitMagnitudeResponse(const uint n, const uint m, const double limit,
     ave /= upper - lower + 1;
     // Keep the response within range of the average magnitude.
     for(uint i{0};i < m;++i)
-        inout[i] = Clamp(inout[i], ave - halfLim, ave + halfLim);
+        inout[i] = std::clamp(inout[i], ave - halfLim, ave + halfLim);
     // Convert the response back to linear magnitude.
     for(uint i{0};i < m;++i)
         inout[i] = std::pow(10.0, inout[i] / 20.0);
@@ -362,7 +356,7 @@ auto StoreMhr(const HrirDataT *hData, const std::string_view filename) -> bool
                 const size_t numsamples{size_t{channels} * n};
                 for(size_t i{0};i < numsamples;i++)
                 {
-                    const auto v = static_cast<int>(Clamp(out[i], -scale-1.0, scale));
+                    const auto v = static_cast<int>(std::clamp(out[i], -scale-1.0, scale));
                     if(!WriteBin4(bps, static_cast<uint32_t>(v), ostream, filename))
                         return false;
                 }

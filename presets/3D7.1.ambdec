@@ -19,7 +19,7 @@
 
 /dec/chan_mask   	f
 /dec/freq_bands  	2
-/dec/speakers    	6
+/dec/speakers    	7
 /dec/coeff_scale 	n3d
 
 /opt/input_scale  	n3d

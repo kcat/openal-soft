@@ -579,16 +579,15 @@ void DiffuseFieldEqualize(const uint channels, const uint m, const std::span<con
  * the two HRIRs that bound the coordinate along with a factor for
  * calculating the continuous HRIR using interpolation.
  */
-void CalcAzIndices(const HrirFdT &field, const uint ei, const double az, uint *a0, uint *a1, double *af)
+void CalcAzIndices(const HrirEvT &elev, const double az, uint *a0, uint *a1, double *af)
 {
-    double f{(2.0*std::numbers::pi + az) * static_cast<double>(field.mEvs[ei].mAzs.size()) /
-        (2.0*std::numbers::pi)};
-    const uint i{static_cast<uint>(f) % static_cast<uint>(field.mEvs[ei].mAzs.size())};
+    auto f = (std::numbers::inv_pi*0.5*az + 1.0) * static_cast<double>(elev.mAzs.size());
+    const auto fact = std::modf(f, &f);
 
-    f -= std::floor(f);
+    const auto i = static_cast<uint>(f) % static_cast<uint>(elev.mAzs.size());
     *a0 = i;
-    *a1 = (i + 1) % static_cast<uint>(field.mEvs[ei].mAzs.size());
-    *af = f;
+    *a1 = (i+1) % static_cast<uint>(elev.mAzs.size());
+    *af = fact;
 }
 
 /* Synthesize any missing onset timings at the bottom elevations of each field.
@@ -633,7 +632,7 @@ void SynthesizeOnsets(HrirDataT *hData)
                      * opposite position (may need blending).
                      */
                     const double az{field.mEvs[ei].mAzs[ai].mAzimuth + std::numbers::pi};
-                    CalcAzIndices(field, topElev, az, &a0, &a1, &af);
+                    CalcAzIndices(field.mEvs[topElev], az, &a0, &a1, &af);
 
                     /* Blend the delays, and again, swap the ears. */
                     field.mEvs[ei].mAzs[ai].mDelays[0] = Lerp(
@@ -666,7 +665,7 @@ void SynthesizeOnsets(HrirDataT *hData)
                     double az{field.mEvs[ei].mAzs[ai].mAzimuth};
                     if(az <= std::numbers::pi) az = std::numbers::pi - az;
                     else az = (std::numbers::pi*2.0)-az + std::numbers::pi;
-                    CalcAzIndices(field, topElev, az, &a0, &a1, &af);
+                    CalcAzIndices(field.mEvs[topElev], az, &a0, &a1, &af);
 
                     field.mEvs[ei].mAzs[ai].mDelays[0] = Lerp(
                         field.mEvs[topElev].mAzs[a0].mDelays[0],
@@ -691,8 +690,8 @@ void SynthesizeOnsets(HrirDataT *hData)
                 double af0, af1;
 
                 double az{field.mEvs[ei].mAzs[ai].mAzimuth};
-                CalcAzIndices(field, upperElevReal, az, &a0, &a1, &af0);
-                CalcAzIndices(field, lowerElevFake, az, &a2, &a3, &af1);
+                CalcAzIndices(field.mEvs[upperElevReal], az, &a0, &a1, &af0);
+                CalcAzIndices(field.mEvs[lowerElevFake], az, &a2, &a3, &af1);
                 std::array<double,4> blend{{
                     (1.0-ef) * (1.0-af0),
                     (1.0-ef) * (    af0),
@@ -743,7 +742,7 @@ void SynthesizeHrirs(HrirDataT *hData)
              * and vice-versa, this produces a decent phantom-center response
              * underneath the head.
              */
-            CalcAzIndices(field, oi, std::numbers::pi / ((ti==0) ? -2.0 : 2.0), &a0, &a1, &af);
+            CalcAzIndices(field.mEvs[oi], std::numbers::pi/((ti==0) ? -2.0 : 2.0), &a0, &a1, &af);
             for(uint i{0u};i < m;i++)
             {
                 field.mEvs[0].mAzs[0].mIrs[ti][i] = Lerp(field.mEvs[oi].mAzs[a0].mIrs[ti][i],
@@ -783,7 +782,7 @@ void SynthesizeHrirs(HrirDataT *hData)
                 uint a0, a1;
                 double af;
 
-                CalcAzIndices(field, oi, field.mEvs[ei].mAzs[ai].mAzimuth, &a0, &a1, &af);
+                CalcAzIndices(field.mEvs[oi], field.mEvs[ei].mAzs[ai].mAzimuth, &a0, &a1, &af);
                 for(uint ti{0u};ti < channels;ti++)
                 {
                     for(uint i{0u};i < m;i++)

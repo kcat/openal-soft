@@ -266,8 +266,11 @@ using DecoderView = DecoderConfig<DualBand, 0>;
 void InitNearFieldCtrl(al::Device *device, const float ctrl_dist, const uint order,
     const bool is3d)
 {
-    static const std::array<uint,MaxAmbiOrder+1> chans_per_order2d{{1, 2, 2, 2}};
-    static const std::array<uint,MaxAmbiOrder+1> chans_per_order3d{{1, 3, 5, 7}};
+    static const auto chans_per_order2d = std::array{1u, 2u, 2u, 2u, 2u};
+    static const auto chans_per_order3d = std::array{1u, 3u, 5u, 7u, 9u};
+
+    static_assert(chans_per_order2d.size() == MaxAmbiOrder+1);
+    static_assert(chans_per_order3d.size() == MaxAmbiOrder+1);
 
     /* NFC is only used when AvgSpeakerDist is greater than 0. */
     if(!device->getConfigValueBool("decoder", "nfc", false) || !(ctrl_dist > 0.0f))
@@ -1041,6 +1044,48 @@ void InitUhjPanning(al::Device *device)
     InitNearFieldCtrl(device, spkr_dist, device->mAmbiOrder, !device->m2DMixing);
 }
 
+auto LoadAmbDecConfig(const char *config, al::Device *device,
+    std::unique_ptr<DecoderConfig<DualBand,MaxOutputChannels>> &decoder_store,
+    DecoderView &decoder, std::span<float,MaxOutputChannels> speakerdists) -> bool
+{
+    auto conf = AmbDecConf{};
+    if(auto err = conf.load(config))
+    {
+        ERR("Failed to load layout file {}", config);
+        ERR("  {}", *err);
+        return false;
+    }
+    if(conf.Speakers.size() > MaxOutputChannels)
+    {
+        ERR("Unsupported decoder speaker count {} (max {})", conf.Speakers.size(),
+            MaxOutputChannels);
+        return false;
+    }
+    if(conf.ChanMask > Ambi4OrderMask)
+    {
+        ERR("Unsupported decoder channel mask {:#x} (max {:#x})", conf.ChanMask, Ambi4OrderMask);
+        return false;
+    }
+    if(conf.ChanMask > Ambi3OrderMask && conf.CoeffScale == AmbDecScale::FuMa)
+    {
+        ERR("FuMa decoder scaling unsupported with channel mask {:#x} (max {:#x})", conf.ChanMask,
+            Ambi3OrderMask);
+        return false;
+    }
+
+    TRACE("Using {} decoder: \"{}\"", DevFmtChannelsString(device->FmtChans), conf.Description);
+    device->mXOverFreq = std::clamp(conf.XOverFreq, 100.0f, 1000.0f);
+
+    decoder_store = std::make_unique<DecoderConfig<DualBand,MaxOutputChannels>>();
+    decoder = MakeDecoderView(device, &conf, *decoder_store);
+
+    const auto confspeakers = std::span{std::as_const(conf.Speakers)}
+        .first(decoder.mChannels.size());
+    std::transform(confspeakers.begin(), confspeakers.end(), speakerdists.begin(),
+        std::mem_fn(&AmbDecConf::SpeakerConf::Distance));
+    return true;
+}
+
 } // namespace
 
 void aluInitRenderer(al::Device *device, int hrtf_id, std::optional<StereoEncoding> stereomode)
@@ -1079,49 +1124,15 @@ void aluInitRenderer(al::Device *device, int hrtf_id, std::optional<StereoEncodi
             break;
         }
 
-        std::unique_ptr<DecoderConfig<DualBand,MaxOutputChannels>> decoder_store;
-        DecoderView decoder{};
-        std::array<float,MaxOutputChannels> speakerdists{};
-        auto load_config = [device,&decoder_store,&decoder,&speakerdists](const char *config)
-        {
-            AmbDecConf conf{};
-            if(auto err = conf.load(config))
-            {
-                ERR("Failed to load layout file {}", config);
-                ERR("  {}", *err);
-                return false;
-            }
-            if(conf.Speakers.size() > MaxOutputChannels)
-            {
-                ERR("Unsupported decoder speaker count {} (max {})", conf.Speakers.size(),
-                    MaxOutputChannels);
-                return false;
-            }
-            if(conf.ChanMask > Ambi3OrderMask)
-            {
-                ERR("Unsupported decoder channel mask {:#x} (max {:#x})", conf.ChanMask,
-                    Ambi3OrderMask);
-                return false;
-            }
-
-            TRACE("Using {} decoder: \"{}\"", DevFmtChannelsString(device->FmtChans),
-                conf.Description);
-            device->mXOverFreq = std::clamp(conf.XOverFreq, 100.0f, 1000.0f);
-
-            decoder_store = std::make_unique<DecoderConfig<DualBand,MaxOutputChannels>>();
-            decoder = MakeDecoderView(device, &conf, *decoder_store);
-
-            const auto confspeakers = std::span{std::as_const(conf.Speakers)}
-                .first(decoder.mChannels.size());
-            std::transform(confspeakers.begin(), confspeakers.end(), speakerdists.begin(),
-                std::mem_fn(&AmbDecConf::SpeakerConf::Distance));
-            return true;
-        };
-        bool usingCustom{false};
+        auto decoder_store = std::unique_ptr<DecoderConfig<DualBand,MaxOutputChannels>>{};
+        auto decoder = DecoderView{};
+        auto speakerdists = std::array<float,MaxOutputChannels>{};
+        auto usingCustom = false;
         if(layout)
         {
             if(auto decopt = device->configValue<std::string>("decoder", layout))
-                usingCustom = load_config(decopt->c_str());
+                usingCustom = LoadAmbDecConfig(decopt->c_str(), device, decoder_store, decoder,
+                    speakerdists);
         }
         if(!usingCustom && device->FmtChans != DevFmtAmbi3D)
             TRACE("Using built-in {} decoder", DevFmtChannelsString(device->FmtChans));

@@ -79,7 +79,7 @@ enum DevFmtChannels : unsigned char {
 
     DevFmtChannelsDefault = DevFmtStereo
 };
-inline constexpr std::size_t MaxOutputChannels{16};
+inline constexpr std::size_t MaxOutputChannels{32};
 
 /* DevFmtType traits, providing the type, etc given a DevFmtType. */
 template<DevFmtType T>

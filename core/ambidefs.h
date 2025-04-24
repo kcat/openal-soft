@@ -15,7 +15,8 @@ using uint = unsigned int;
  */
 constexpr auto AmbiChannelsFromOrder(std::size_t order) noexcept -> std::size_t
 { return (order+1) * (order+1); }
-inline constexpr auto MaxAmbiOrder = std::uint8_t{3};
+
+inline constexpr auto MaxAmbiOrder = std::uint8_t{4};
 inline constexpr auto MaxAmbiChannels = size_t{AmbiChannelsFromOrder(MaxAmbiOrder)};
 
 /* A bitmask of ambisonic channels for 0 to 4th order. This only specifies up
@@ -47,11 +48,14 @@ inline constexpr auto MaxAmbi2DChannels = Ambi2DChannelsFromOrder(MaxAmbiOrder);
  * coefficients should be divided by these values to get proper scalings.
  */
 struct AmbiScale {
-    static constexpr auto FromN3D = std::array<float,MaxAmbiChannels>{
-        1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f,
-        1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f
+    static constexpr auto FromN3D = std::array{
+        1.0f,
+        1.0f, 1.0f, 1.0f,
+        1.0f, 1.0f, 1.0f, 1.0f, 1.0f,
+        1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f,
+        1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f,
     };
-    static constexpr auto FromSN3D = std::array<float,MaxAmbiChannels>{
+    static constexpr auto FromSN3D = std::array{
         1.000000000f, /* ACN  0, sqrt(1) */
         1.732050808f, /* ACN  1, sqrt(3) */
         1.732050808f, /* ACN  2, sqrt(3) */
@@ -68,8 +72,17 @@ struct AmbiScale {
         2.645751311f, /* ACN 13, sqrt(7) */
         2.645751311f, /* ACN 14, sqrt(7) */
         2.645751311f, /* ACN 15, sqrt(7) */
+        3.000000000f, /* ACN 16, sqrt(9) */
+        3.000000000f, /* ACN 17, sqrt(9) */
+        3.000000000f, /* ACN 18, sqrt(9) */
+        3.000000000f, /* ACN 19, sqrt(9) */
+        3.000000000f, /* ACN 20, sqrt(9) */
+        3.000000000f, /* ACN 21, sqrt(9) */
+        3.000000000f, /* ACN 22, sqrt(9) */
+        3.000000000f, /* ACN 23, sqrt(9) */
+        3.000000000f, /* ACN 24, sqrt(9) */
     };
-    static constexpr auto FromFuMa =  std::array<float,MaxAmbiChannels>{
+    static constexpr auto FromFuMa =  std::array{
         1.414213562f, /* ACN  0 (W), sqrt(2) */
         1.732050808f, /* ACN  1 (Y), sqrt(3) */
         1.732050808f, /* ACN  2 (Z), sqrt(3) */
@@ -86,14 +99,18 @@ struct AmbiScale {
         2.231093404f, /* ACN 13 (L), sqrt(224/45) */
         1.972026594f, /* ACN 14 (N), sqrt(35)/3 */
         2.091650066f, /* ACN 15 (P), sqrt(35/8) */
+        /* Higher orders not relevant for FuMa */
+        1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f,
     };
-    static constexpr auto FromUHJ =  std::array<float,MaxAmbiChannels>{
+    static constexpr auto FromUHJ =  std::array{
         1.000000000f, /* ACN  0 (W), sqrt(1) */
         1.224744871f, /* ACN  1 (Y), sqrt(3/2) */
         1.224744871f, /* ACN  2 (Z), sqrt(3/2) */
         1.224744871f, /* ACN  3 (X), sqrt(3/2) */
         /* Higher orders not relevant for UHJ. */
-        1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f,
+        1.0f, 1.0f, 1.0f, 1.0f, 1.0f,
+        1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f,
+        1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f,
     };
 
     /* Retrieves per-order HF scaling factors for "upsampling" ambisonic data. */
@@ -110,48 +127,55 @@ struct AmbiScale {
 };
 
 struct AmbiIndex {
-    static constexpr auto FromFuMa =  std::array<std::uint8_t,MaxAmbiChannels>{
-        0,  /* W */
-        3,  /* X */
-        1,  /* Y */
-        2,  /* Z */
-        6,  /* R */
-        7,  /* S */
-        5,  /* T */
-        8,  /* U */
-        4,  /* V */
-        12, /* K */
-        13, /* L */
-        11, /* M */
-        14, /* N */
-        10, /* O */
-        15, /* P */
-        9,  /* Q */
+    static constexpr auto FromFuMa = std::array{
+        uint8_t{0},  /* W */
+        uint8_t{3},  /* X */
+        uint8_t{1},  /* Y */
+        uint8_t{2},  /* Z */
+        uint8_t{6},  /* R */
+        uint8_t{7},  /* S */
+        uint8_t{5},  /* T */
+        uint8_t{8},  /* U */
+        uint8_t{4},  /* V */
+        uint8_t{12}, /* K */
+        uint8_t{13}, /* L */
+        uint8_t{11}, /* M */
+        uint8_t{14}, /* N */
+        uint8_t{10}, /* O */
+        uint8_t{15}, /* P */
+        uint8_t{9},  /* Q */
+        /* Higher orders not relevant for FuMa. */
+        uint8_t{0}, uint8_t{0}, uint8_t{0}, uint8_t{0}, uint8_t{0}, uint8_t{0}, uint8_t{0}, uint8_t{0}, uint8_t{0},
     };
-    static constexpr auto FromFuMa2D =  std::array<std::uint8_t,MaxAmbi2DChannels>{
-        0,  /* W */
-        3,  /* X */
-        1,  /* Y */
-        8,  /* U */
-        4,  /* V */
-        15, /* P */
-        9,  /* Q */
+    static constexpr auto FromFuMa2D = std::array{
+        uint8_t{0},  /* W */
+        uint8_t{3},  /* X */
+        uint8_t{1},  /* Y */
+        uint8_t{8},  /* U */
+        uint8_t{4},  /* V */
+        uint8_t{15}, /* P */
+        uint8_t{9},  /* Q */
+        /* Higher orders not relevant for FuMa. */
+        uint8_t{0}, uint8_t{0},
     };
 
-    static constexpr auto FromACN =  std::array<std::uint8_t,MaxAmbiChannels>{
-        0,  1,  2,  3,  4,  5,  6,  7,
-        8,  9, 10, 11, 12, 13, 14, 15
+    static constexpr auto FromACN = std::array<std::uint8_t,MaxAmbiChannels>{
+        0,
+        1, 2, 3,
+        4, 5, 6, 7, 8,
+        9, 10, 11, 12, 13, 14, 15,
+        16, 17, 18, 19, 20, 21, 22, 23, 24,
     };
-    static constexpr auto FromACN2D =  std::array<std::uint8_t,MaxAmbi2DChannels>{
-        0, 1,3, 4,8, 9,15
+    static constexpr auto FromACN2D = std::array<std::uint8_t,MaxAmbi2DChannels>{
+        0, 1,3, 4,8, 9,15, 16,24,
     };
 
 
     static constexpr auto OrderFromChannel = std::array<std::uint8_t,MaxAmbiChannels>{
-        0, 1,1,1, 2,2,2,2,2, 3,3,3,3,3,3,3,
+        0, 1,1,1, 2,2,2,2,2, 3,3,3,3,3,3,3, 4,4,4,4,4,4,4,4,4,
     };
     static constexpr auto OrderFrom2DChannel =  std::array<std::uint8_t,MaxAmbi2DChannels>{
-        0, 1,1, 2,2, 3,3,
+        0, 1,1, 2,2, 3,3, 4,4,
     };
 };
 
@@ -172,6 +196,7 @@ struct AmbiIndex {
 constexpr auto CalcAmbiCoeffs(const float y, const float z, const float x)
 {
     const float xx{x*x}, yy{y*y}, zz{z*z}, xy{x*y}, yz{y*z}, xz{x*z};
+    const float xxxx{xx*xx}, yyyy{yy*yy}, xxyy{xx*yy}, zzzz{zz*zz};
 
     return std::array<float,MaxAmbiChannels>{{
         /* Zeroth-order */
@@ -195,15 +220,15 @@ constexpr auto CalcAmbiCoeffs(const float y, const float z, const float x)
         5.123475383e+00f * (z*(xx - yy)),        /* ACN 14 = sqrt(105)/2 * Z * (X*X - Y*Y) */
         2.091650066e+00f * (x*(xx - 3.0f*yy)),   /* ACN 15 = sqrt(35/8) * X * (X*X - 3*Y*Y) */
         /* Fourth-order */
-        /* ACN 16 = sqrt(35)*3/2 * X * Y * (X*X - Y*Y) */
-        /* ACN 17 = sqrt(35/2)*3/2 * (3*X*X - Y*Y) * Y * Z */
-        /* ACN 18 = sqrt(5)*3/2 * X * Y * (7*Z*Z - 1) */
-        /* ACN 19 = sqrt(5/2)*3/2 * Y * Z * (7*Z*Z - 3) */
-        /* ACN 20 = 3/8 * (35*Z*Z*Z*Z - 30*Z*Z + 3) */
-        /* ACN 21 = sqrt(5/2)*3/2 * X * Z * (7*Z*Z - 3) */
-        /* ACN 22 = sqrt(5)*3/4 * (X*X - Y*Y) * (7*Z*Z - 1) */
-        /* ACN 23 = sqrt(35/2)*3/2 * (X*X - 3*Y*Y) * X * Z */
-        /* ACN 24 = sqrt(35)*3/8 * (X*X*X*X - 6*X*X*Y*Y + Y*Y*Y*Y) */
+        8.874119675e+00f * (xy*(xx - yy)),                 /* ACN 16 = sqrt(35)*3/2 * X * Y * (X*X - Y*Y) */
+        6.274950199e+00f * ((3.0f*xx - yy) * yz),          /* ACN 17 = sqrt(35/2)*3/2 * (3*X*X - Y*Y) * Y * Z */
+        3.354101966e+00f * (xy * (7.0f*zz - 1.0f)),        /* ACN 18 = sqrt(5)*3/2 * X * Y * (7*Z*Z - 1) */
+        2.371708245e+00f * (yz * (7.0f*zz - 3.0f)),        /* ACN 19 = sqrt(5/2)*3/2 * Y * Z * (7*Z*Z - 3) */
+        3.750000000e-01f * (35.0f*zzzz - 30.0f*zz + 3.0f), /* ACN 20 = 3/8 * (35*Z*Z*Z*Z - 30*Z*Z + 3) */
+        2.371708245e+00f * (xz * (7.0f*zz - 3.0f)),        /* ACN 21 = sqrt(5/2)*3/2 * X * Z * (7*Z*Z - 3) */
+        1.677050983e+00f * ((xx - yy) * (7.0f*zz - 1.0f)), /* ACN 22 = sqrt(5)*3/4 * (X*X - Y*Y) * (7*Z*Z - 1) */
+        6.274950199e+00f * (xx - 3.0f*yy) * xz,            /* ACN 23 = sqrt(35/2)*3/2 * (X*X - 3*Y*Y) * X * Z */
+        2.218529919e+00f * (xxxx - 6.0f*xxyy + yyyy),      /* ACN 24 = sqrt(35)*3/8 * (X*X*X*X - 6*X*X*Y*Y + Y*Y*Y*Y) */
     }};
 }
 

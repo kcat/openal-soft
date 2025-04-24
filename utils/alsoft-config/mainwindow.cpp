@@ -99,6 +99,7 @@ constexpr std::array speakerModeList{
     NameValuePair{ "Ambisonic, 1st Order", "ambi1" },
     NameValuePair{ "Ambisonic, 2nd Order", "ambi2" },
     NameValuePair{ "Ambisonic, 3rd Order", "ambi3" },
+    NameValuePair{ "Ambisonic, 4th Order", "ambi4" },
 };
 constexpr std::array sampleTypeList{
     NameValuePair{ "Autodetect", "" },

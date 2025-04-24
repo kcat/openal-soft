@@ -1151,7 +1151,7 @@ auto UpdateDeviceParams(al::Device *device, const std::span<const int> attrList)
                 DevFmtChannels chans;
                 uint8_t order;
             };
-            constexpr std::array chanlist{
+            constexpr auto chanlist = std::array{
                 ChannelMap{"mono"sv,       DevFmtMono,   0},
                 ChannelMap{"stereo"sv,     DevFmtStereo, 0},
                 ChannelMap{"quad"sv,       DevFmtQuad,   0},
@@ -1165,6 +1165,7 @@ auto UpdateDeviceParams(al::Device *device, const std::span<const int> attrList)
                 ChannelMap{"ambi1"sv, DevFmtAmbi3D, 1},
                 ChannelMap{"ambi2"sv, DevFmtAmbi3D, 2},
                 ChannelMap{"ambi3"sv, DevFmtAmbi3D, 3},
+                ChannelMap{"ambi4"sv, DevFmtAmbi3D, 4},
             };
 
             auto iter = std::find_if(chanlist.begin(), chanlist.end(),
@@ -1203,6 +1204,13 @@ auto UpdateDeviceParams(al::Device *device, const std::span<const int> attrList)
             }
             else
                 ERR("Unsupported ambi-format: {}", *ambiopt);
+        }
+
+        if(aorder > 3 && (optlayout == DevAmbiLayout::FuMa || optscale == DevAmbiScaling::FuMa))
+        {
+            ERR("FuMa unsupported with {}{} order ambisonics", aorder, GetCounterSuffix(aorder));
+            optlayout = DevAmbiLayout::Default;
+            optscale = DevAmbiScaling::Default;
         }
 
         if(auto hrtfopt = device->configValue<std::string>({}, "hrtf"sv))

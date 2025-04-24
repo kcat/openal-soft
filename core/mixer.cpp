@@ -19,10 +19,10 @@ MixerOutFunc MixSamplesOut{Mix_<CTag>};
 MixerOneFunc MixSamplesOne{Mix_<CTag>};
 
 
-std::array<float,MaxAmbiChannels> CalcAmbiCoeffs(const float y, const float z, const float x,
-    const float spread)
+auto CalcAmbiCoeffs(const float y, const float z, const float x, const float spread)
+    -> std::array<float,MaxAmbiChannels>
 {
-    std::array<float,MaxAmbiChannels> coeffs{CalcAmbiCoeffs(y, z, x)};
+    auto coeffs = CalcAmbiCoeffs(y, z, x);
 
     if(spread > 0.0f)
     {
@@ -50,14 +50,16 @@ std::array<float,MaxAmbiChannels> CalcAmbiCoeffs(const float y, const float z, c
          * ZH4 = 0.125f * (ca+1.0f)*(7.0f*ca*ca - 3.0f)*ca;
          * ZH5 = 0.0625f * (ca+1.0f)*(21.0f*ca*ca*ca*ca - 14.0f*ca*ca + 1.0f);
          */
-        const float ca{std::cos(spread * 0.5f)};
+        const auto ca = std::cos(spread * 0.5f);
         /* Increase the source volume by up to +3dB for a full spread. */
-        const float scale{std::sqrt(1.0f + std::numbers::inv_pi_v<float>*0.5f*spread)};
+        const auto scale = std::sqrt(1.0f + std::numbers::inv_pi_v<float>*0.5f*spread);
+        const auto caca = ca*ca;
 
-        const float ZH0_norm{scale};
-        const float ZH1_norm{scale * 0.5f * (ca+1.f)};
-        const float ZH2_norm{scale * 0.5f * (ca+1.f)*ca};
-        const float ZH3_norm{scale * 0.125f * (ca+1.f)*(5.f*ca*ca-1.f)};
+        const auto ZH0_norm = scale;
+        const auto ZH1_norm = scale * 0.5f * (ca+1.0f);
+        const auto ZH2_norm = scale * 0.5f * ((ca+1.0f)*ca);
+        const auto ZH3_norm = scale * 0.125f * ((ca+1.0f)*(5.0f*caca - 1.0f));
+        const auto ZH4_norm = scale * 0.125f * ((ca+1.0f)*(7.0f*caca - 3.0f)*ca);
 
         /* Zeroth-order */
         coeffs[0]  *= ZH0_norm;
@@ -79,6 +81,16 @@ std::array<float,MaxAmbiChannels> CalcAmbiCoeffs(const float y, const float z, c
         coeffs[13] *= ZH3_norm;
         coeffs[14] *= ZH3_norm;
         coeffs[15] *= ZH3_norm;
+        /* Fourth-order */
+        coeffs[16] *= ZH4_norm;
+        coeffs[17] *= ZH4_norm;
+        coeffs[18] *= ZH4_norm;
+        coeffs[19] *= ZH4_norm;
+        coeffs[20] *= ZH4_norm;
+        coeffs[21] *= ZH4_norm;
+        coeffs[22] *= ZH4_norm;
+        coeffs[23] *= ZH4_norm;
+        coeffs[24] *= ZH4_norm;
     }
 
     return coeffs;

@@ -236,8 +236,8 @@ struct ConvolutionState final : public EffectState {
         alignas(16) FloatBufferLine mBuffer{};
         float mHfScale{}, mLfScale{};
         BandSplitter mFilter;
-        std::array<float,MaxOutputChannels> Current{};
-        std::array<float,MaxOutputChannels> Target{};
+        std::array<float,MaxAmbiChannels> Current{};
+        std::array<float,MaxAmbiChannels> Target{};
     };
     std::vector<ChannelData> mChans;
     al::vector<float,16> mComplexData;

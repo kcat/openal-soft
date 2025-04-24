@@ -1011,7 +1011,7 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
         if(!(coverage > 0.0f))
         {
             ComputePanGains(&Device->Dry, coeffs, DryGain.Base*scales[0],
-                voice->mChans[0].mDryParams.Gains.Target);
+                std::span{voice->mChans[0].mDryParams.Gains.Target}.first<MaxAmbiChannels>());
             for(uint i{0};i < NumSends;i++)
             {
                 if(const EffectSlot *Slot{SendSlots[i]})
@@ -1120,7 +1120,7 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
                     { return in*scale + coeff; });
 
                 ComputePanGains(&Device->Dry, coeffs, DryGain.Base,
-                    voice->mChans[c].mDryParams.Gains.Target);
+                    std::span{voice->mChans[c].mDryParams.Gains.Target}.first<MaxAmbiChannels>());
 
                 for(uint i{0};i < NumSends;i++)
                 {
@@ -1353,7 +1353,7 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
                 const auto coeffs = calc_coeffs(Device->mRenderMode);
 
                 ComputePanGains(&Device->Dry, coeffs, DryGain.Base,
-                    voice->mChans[0].mDryParams.Gains.Target);
+                    std::span{voice->mChans[0].mDryParams.Gains.Target}.first<MaxAmbiChannels>());
                 for(uint i{0};i < NumSends;i++)
                 {
                     if(const EffectSlot *Slot{SendSlots[i]})
@@ -1400,7 +1400,7 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
                 const auto coeffs = CalcDirectionCoeffs(pos, 0.0f);
 
                 ComputePanGains(&Device->Dry, coeffs, DryGain.Base * pangain,
-                    voice->mChans[c].mDryParams.Gains.Target);
+                    std::span{voice->mChans[c].mDryParams.Gains.Target}.first<MaxAmbiChannels>());
                 for(uint i{0};i < NumSends;i++)
                 {
                     if(const EffectSlot *Slot{SendSlots[i]})
@@ -1448,7 +1448,7 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
                     ? ScaleAzimuthFront3(chans[c].pos) : chans[c].pos, spread);
 
                 ComputePanGains(&Device->Dry, coeffs, DryGain.Base * pangain,
-                    voice->mChans[c].mDryParams.Gains.Target);
+                    std::span{voice->mChans[c].mDryParams.Gains.Target}.first<MaxAmbiChannels>());
                 for(uint i{0};i < NumSends;i++)
                 {
                     if(const EffectSlot *Slot{SendSlots[i]})

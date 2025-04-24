@@ -3,10 +3,21 @@
 
 #include "ambidefs.h"
 
+#include <algorithm>
+#include <functional>
 #include <numbers>
 
 
 namespace {
+
+static_assert(AmbiScale::FromN3D.size() == MaxAmbiChannels);
+static_assert(AmbiScale::FromSN3D.size() == MaxAmbiChannels);
+static_assert(AmbiScale::FromFuMa.size() == MaxAmbiChannels);
+static_assert(AmbiScale::FromUHJ.size() == MaxAmbiChannels);
+
+static_assert(AmbiIndex::FromFuMa.size() == MaxAmbiChannels);
+static_assert(AmbiIndex::FromFuMa2D.size() == MaxAmbi2DChannels);
+
 
 using AmbiChannelFloatArray = std::array<float,MaxAmbiChannels>;
 
@@ -21,11 +32,11 @@ constexpr auto inv_sqrt3f = static_cast<float>(1.0/std::numbers::sqrt3);
  * if it was a first-order decoder for that same speaker array.
  */
 constexpr std::array HFScales{
-    std::array{4.000000000e+00f, 2.309401077e+00f, 1.192569588e+00f, 7.189495850e-01f},
-    std::array{4.000000000e+00f, 2.309401077e+00f, 1.192569588e+00f, 7.189495850e-01f},
-    std::array{2.981423970e+00f, 2.309401077e+00f, 1.192569588e+00f, 7.189495850e-01f},
-    std::array{2.359168820e+00f, 2.031565936e+00f, 1.444598386e+00f, 7.189495850e-01f},
-    /*std::array{1.947005434e+00f, 1.764337084e+00f, 1.424707344e+00f, 9.755104127e-01f, 4.784482742e-01f}, */
+    std::array{4.000000000e+00f, 2.309401077e+00f, 1.192569588e+00f, 7.189495850e-01f, 4.784482742e-01f},
+    std::array{4.000000000e+00f, 2.309401077e+00f, 1.192569588e+00f, 7.189495850e-01f, 4.784482742e-01f},
+    std::array{2.981423970e+00f, 2.309401077e+00f, 1.192569588e+00f, 7.189495850e-01f, 4.784482742e-01f},
+    std::array{2.359168820e+00f, 2.031565936e+00f, 1.444598386e+00f, 7.189495850e-01f, 4.784482742e-01f},
+    std::array{1.947005434e+00f, 1.764337084e+00f, 1.424707344e+00f, 9.755104127e-01f, 4.784482742e-01f},
 };
 
 /* Same as above, but using a 10-point horizontal-only speaker array. Should
@@ -33,11 +44,11 @@ constexpr std::array HFScales{
  * output.
  */
 constexpr std::array HFScales2D{
-    std::array{2.236067977e+00f, 1.581138830e+00f, 9.128709292e-01f, 6.050756345e-01f},
-    std::array{2.236067977e+00f, 1.581138830e+00f, 9.128709292e-01f, 6.050756345e-01f},
-    std::array{1.825741858e+00f, 1.581138830e+00f, 9.128709292e-01f, 6.050756345e-01f},
-    std::array{1.581138830e+00f, 1.460781803e+00f, 1.118033989e+00f, 6.050756345e-01f},
-    /*std::array{1.414213562e+00f, 1.344997024e+00f, 1.144122806e+00f, 8.312538756e-01f, 4.370160244e-01f}, */
+    std::array{2.236067977e+00f, 1.581138830e+00f, 9.128709292e-01f, 6.050756345e-01f, 4.370160244e-01f},
+    std::array{2.236067977e+00f, 1.581138830e+00f, 9.128709292e-01f, 6.050756345e-01f, 4.370160244e-01f},
+    std::array{1.825741858e+00f, 1.581138830e+00f, 9.128709292e-01f, 6.050756345e-01f, 4.370160244e-01f},
+    std::array{1.581138830e+00f, 1.460781803e+00f, 1.118033989e+00f, 6.050756345e-01f, 4.370160244e-01f},
+    std::array{1.414213562e+00f, 1.344997024e+00f, 1.144122806e+00f, 8.312538756e-01f, 4.370160244e-01f},
 };
 
 
@@ -298,13 +309,13 @@ auto AmbiScale::GetHFOrderScales(const uint src_order, const uint dev_order,
 
     if(!horizontalOnly)
     {
-        for(size_t i{0};i < MaxAmbiOrder+1;++i)
-            res[i] = HFScales[src_order][i] / HFScales[dev_order][i];
+        std::transform(HFScales[src_order].begin(), HFScales[src_order].end(),
+            HFScales[dev_order].begin(), res.begin(), std::divides{});
     }
     else
     {
-        for(size_t i{0};i < MaxAmbiOrder+1;++i)
-            res[i] = HFScales2D[src_order][i] / HFScales2D[dev_order][i];
+        std::transform(HFScales2D[src_order].begin(), HFScales2D[src_order].end(),
+            HFScales2D[dev_order].begin(), res.begin(), std::divides{});
     }
 
     return res;

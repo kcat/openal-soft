@@ -692,9 +692,10 @@ void DoNfcMix(const std::span<const float> samples, std::span<FloatBufferLine> O
     DirectParams &parms, const std::span<const float,MaxOutputChannels> OutGains,
     const uint Counter, const uint OutPos, DeviceBase *Device)
 {
-    using FilterProc = void (NfcFilter::*)(const std::span<const float>, const std::span<float>);
-    static constexpr std::array<FilterProc,MaxAmbiOrder+1> NfcProcess{{
-        nullptr, &NfcFilter::process1, &NfcFilter::process2, &NfcFilter::process3}};
+    using FilterProc = void(NfcFilter::*)(const std::span<const float>, const std::span<float>);
+    static constexpr auto NfcProcess = std::array{FilterProc{nullptr}, &NfcFilter::process1,
+        &NfcFilter::process2, &NfcFilter::process3, &NfcFilter::process4};
+    static_assert(NfcProcess.size() == MaxAmbiOrder+1);
 
     MixSamples(samples, std::span{OutBuffer[0]}.subspan(OutPos), parms.Gains.Current[0],
         OutGains[0], Counter);
@@ -1083,7 +1084,7 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
                 {voiceSamples, samplesToMix}, mSend[send].FilterType);
 
             const auto TargetGains = (vstate == Playing) ? std::span{parms.Gains.Target}
-                : std::span{SilentTarget};
+                : std::span{SilentTarget}.first<MaxAmbiChannels>();
             MixSamples(samples, mSend[send].Buffer, parms.Gains.Current, TargetGains, Counter,
                 OutPos);
         }

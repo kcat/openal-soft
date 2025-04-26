@@ -82,7 +82,7 @@ struct AmbiScale {
         3.000000000f, /* ACN 23, sqrt(9) */
         3.000000000f, /* ACN 24, sqrt(9) */
     };
-    static constexpr auto FromFuMa =  std::array{
+    static constexpr auto FromFuMa = std::array{
         1.414213562f, /* ACN  0 (W), sqrt(2) */
         1.732050808f, /* ACN  1 (Y), sqrt(3) */
         1.732050808f, /* ACN  2 (Z), sqrt(3) */
@@ -99,10 +99,33 @@ struct AmbiScale {
         2.231093404f, /* ACN 13 (L), sqrt(224/45) */
         1.972026594f, /* ACN 14 (N), sqrt(35)/3 */
         2.091650066f, /* ACN 15 (P), sqrt(35/8) */
-        /* Higher orders not relevant for FuMa */
-        1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f,
+        /* Higher orders not relevant for FuMa. Although maxN (which is what
+         * FuMa uses aside from an extra -3dB factor on W) is defined such that
+         * any one component never exceeds a gain of 1.0 for a panned mono
+         * source, allowing scaling factors to be calculated. But unless and
+         * until I hear of software using FuMa in fourth-order and above, or
+         * otherwise get confirmation on its accuracy, I don't want to make
+         * that assumption.
+         *
+         * These ratios were calculated by brute-forcing the maximum N3D value
+         * (testing various directions to find the largest absolute result),
+         * which will be the maxN/FuMa->N3D scaling factor, and then searching
+         * for a fraction fitting the square of that factor. There may be more
+         * accurate or formal methods to find these values, but that aside,
+         * these scalings have less than 1e-8 error from the calculated scaling
+         * factor.
+         */
+        1.0f, /* 2.218529919f, ACN 16, sqrt(315)/8 */
+        1.0f, /* 2.037849855f, ACN 17, sqrt(8505/2048) */
+        1.0f, /* 2.156208407f, ACN 18, sqrt(3645)/28 */
+        1.0f, /* 2.504586102f, ACN 19, sqrt(35599/5675) */
+        1.0f, /* 3.000000000f, ACN 20, sqrt(9) */
+        1.0f, /* 2.504586102f, ACN 21, sqrt(35599/5675) */
+        1.0f, /* 2.156208407f, ACN 22, sqrt(3645)/28 */
+        1.0f, /* 2.037849855f, ACN 23, sqrt(8505/2048) */
+        1.0f, /* 2.218529919f, ACN 24, sqrt(315)/8 */
     };
-    static constexpr auto FromUHJ =  std::array{
+    static constexpr auto FromUHJ = std::array{
         1.000000000f, /* ACN  0 (W), sqrt(1) */
         1.224744871f, /* ACN  1 (Y), sqrt(3/2) */
         1.224744871f, /* ACN  2 (Z), sqrt(3/2) */
@@ -144,7 +167,10 @@ struct AmbiIndex {
         uint8_t{10}, /* O */
         uint8_t{15}, /* P */
         uint8_t{9},  /* Q */
-        /* Higher orders not relevant for FuMa. */
+        /* Higher orders not relevant for FuMa. The previous orders form a
+         * pattern suggesting 20,21,19,22,18,23,17,24,16, but as above, unless
+         * I hear otherwise, I don't want to make assumptions here.
+         */
         uint8_t{0}, uint8_t{0}, uint8_t{0}, uint8_t{0}, uint8_t{0}, uint8_t{0}, uint8_t{0}, uint8_t{0}, uint8_t{0},
     };
     static constexpr auto FromFuMa2D = std::array{
@@ -155,7 +181,9 @@ struct AmbiIndex {
         uint8_t{4},  /* V */
         uint8_t{15}, /* P */
         uint8_t{9},  /* Q */
-        /* Higher orders not relevant for FuMa. */
+        /* Higher orders not relevant for FuMa. Though the previous orders form
+         * a pattern suggesting 24,16.
+         */
         uint8_t{0}, uint8_t{0},
     };
 
@@ -174,7 +202,7 @@ struct AmbiIndex {
     static constexpr auto OrderFromChannel = std::array<std::uint8_t,MaxAmbiChannels>{
         0, 1,1,1, 2,2,2,2,2, 3,3,3,3,3,3,3, 4,4,4,4,4,4,4,4,4,
     };
-    static constexpr auto OrderFrom2DChannel =  std::array<std::uint8_t,MaxAmbi2DChannels>{
+    static constexpr auto OrderFrom2DChannel = std::array<std::uint8_t,MaxAmbi2DChannels>{
         0, 1,1, 2,2, 3,3, 4,4,
     };
 };

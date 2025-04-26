@@ -619,7 +619,8 @@ struct ReverbState final : public EffectState {
     void MixOutAmbiUp(ReverbPipeline &pipeline, const std::span<FloatBufferLine> samplesOut,
         const size_t todo)
     {
-        auto DoMixRow = [](const std::span<float> OutBuffer, const std::span<const float,4> Gains,
+        static constexpr auto DoMixRow = [](const std::span<float> OutBuffer,
+            const std::span<const float,4> Gains,
             const std::span<const FloatBufferLine,4> InSamples)
         {
             auto inBuffer = InSamples.begin();
@@ -628,10 +629,9 @@ struct ReverbState final : public EffectState {
             {
                 if(std::fabs(gain) > GainSilenceThreshold)
                 {
-                    auto mix_sample = [gain](const float sample, const float in) noexcept -> float
-                    { return sample + in*gain; };
                     std::transform(OutBuffer.begin(), OutBuffer.end(), inBuffer->cbegin(),
-                        OutBuffer.begin(), mix_sample);
+                        OutBuffer.begin(), [gain](const float sample, const float in) noexcept
+                        { return sample + in*gain; });
                 }
                 ++inBuffer;
             }
@@ -813,13 +813,12 @@ void ReverbState::deviceUpdate(const DeviceBase *device, const BufferStorage*)
         mOrderScales.fill(1.0f);
     }
 
-    auto splitter = BandSplitter{device->mXOverFreq / frequency};
-    auto set_splitters = [&splitter](ReverbPipeline &pipeline)
+    std::for_each(mPipelines.begin(), mPipelines.end(),
+        [splitter=BandSplitter{device->mXOverFreq / frequency}](ReverbPipeline &pipeline)
     {
         std::fill(pipeline.mAmbiSplitter[0].begin(), pipeline.mAmbiSplitter[0].end(), splitter);
         std::fill(pipeline.mAmbiSplitter[1].begin(), pipeline.mAmbiSplitter[1].end(), splitter);
-    };
-    std::for_each(mPipelines.begin(), mPipelines.end(), set_splitters);
+    });
 }
 
 /**************************************
@@ -985,9 +984,9 @@ void LateReverb::updateLines(const float density_mult, const float diffusion,
     constexpr float MaxHFReference{20000.0f};
     const float norm_weight_factor{frequency / MaxHFReference};
 
-    const float late_allpass_avg{
-        std::accumulate(LATE_ALLPASS_LENGTHS.begin(), LATE_ALLPASS_LENGTHS.end(), 0.0f) /
-        float{NUM_LINES}};
+    const auto late_allpass_avg =
+        std::reduce(LATE_ALLPASS_LENGTHS.begin(), LATE_ALLPASS_LENGTHS.end(), 0.0f) /
+        float{NUM_LINES};
 
     /* To compensate for changes in modal density and decay time of the late
      * reverb signal, the input is attenuated based on the maximal energy of
@@ -997,8 +996,8 @@ void LateReverb::updateLines(const float density_mult, const float diffusion,
      * The average length of the delay lines is used to calculate the
      * attenuation coefficient.
      */
-    float length{std::accumulate(LATE_LINE_LENGTHS.begin(), LATE_LINE_LENGTHS.end(), 0.0f) /
-        float{NUM_LINES} + late_allpass_avg};
+    auto length = std::reduce(LATE_LINE_LENGTHS.begin(), LATE_LINE_LENGTHS.end(), 0.0f) /
+        float{NUM_LINES} + late_allpass_avg;
     length *= density_mult;
     /* The density gain calculation uses an average decay time weighted by
      * approximate bandwidth. This attempts to compensate for losses of energy
@@ -1075,7 +1074,8 @@ void ReverbPipeline::updateDelayLine(const float gain, const float earlyDelay,
  * focal strength. This function results in a B-Format transformation matrix
  * that spatially focuses the signal in the desired direction.
  */
-std::array<std::array<float,4>,4> GetTransformFromVector(const std::span<const float,3> vec)
+using Array4x4 = std::array<std::array<float,4>,4>;
+auto GetTransformFromVector(const std::span<const float,3> vec) -> Array4x4
 {
     /* Normalize the panning vector according to the N3D scale, which has an
      * extra sqrt(3) term on the directional components. Converting from OpenAL
@@ -1084,8 +1084,8 @@ std::array<std::array<float,4>,4> GetTransformFromVector(const std::span<const f
      * rest of OpenAL which use right-handed. This is fixed by negating Z,
      * which cancels out with the B-Format Z negation.
      */
-    std::array<float,3> norm{{vec[0], vec[1], vec[2]}};
-    float mag{std::sqrt(vec[0]*vec[0] + vec[1]*vec[1] + vec[2]*vec[2])};
+    auto norm = std::array{vec[0], vec[1], vec[2]};
+    auto mag = std::sqrt(vec[0]*vec[0] + vec[1]*vec[1] + vec[2]*vec[2]);
     if(mag > 1.0f)
     {
         const auto scale = std::numbers::sqrt3_v<float> / mag;
@@ -1105,7 +1105,7 @@ std::array<std::array<float,4>,4> GetTransformFromVector(const std::span<const f
         norm[2] *= std::numbers::sqrt3_v<float>;
     }
 
-    return std::array<std::array<float,4>,4>{{
+    return Array4x4{{
         {{1.0f,   0.0f,    0.0f,   0.0f}},
         {{norm[0], 1.0f-mag, 0.0f, 0.0f}},
         {{norm[1], 0.0f, 1.0f-mag, 0.0f}},
@@ -1124,7 +1124,7 @@ void ReverbPipeline::update3DPanning(const std::span<const float,3> ReflectionsP
     const auto earlymat = GetTransformFromVector(ReflectionsPan);
     const auto latemat = GetTransformFromVector(LateReverbPan);
 
-    const auto get_coeffs = [&]
+    const auto [earlycoeffs, latecoeffs] = std::invoke([&]
     {
         if(doUpmix)
         {
@@ -1133,9 +1133,9 @@ void ReverbPipeline::update3DPanning(const std::span<const float,3> ReflectionsP
              * apply the panning transform to first-order B-Format, which is
              * then upsampled.
              */
-            auto mult_matrix = [](const std::span<const std::array<float,4>,4> mtx1)
+            constexpr auto mult_matrix = [](const std::span<const std::array<float,4>,4> mtx1)
             {
-                std::array<std::array<float,MaxAmbiChannels>,NUM_LINES> res{};
+                auto res = std::array<std::array<float,MaxAmbiChannels>,NUM_LINES>{};
                 const auto mtx2 = std::span{AmbiScale::FirstOrderUp};
 
                 for(size_t i{0};i < mtx1[0].size();++i)
@@ -1144,9 +1144,8 @@ void ReverbPipeline::update3DPanning(const std::span<const float,3> ReflectionsP
                     static_assert(dst.size() >= std::tuple_size_v<decltype(mtx2)::element_type>);
                     for(size_t k{0};k < mtx1.size();++k)
                     {
-                        const float a{mtx1[k][i]};
                         std::transform(mtx2[k].begin(), mtx2[k].end(), dst.begin(), dst.begin(),
-                            [a](const float in, const float out) noexcept -> float
+                            [a=mtx1[k][i]](const float in, const float out) noexcept -> float
                             { return a*in + out; });
                     }
                 }
@@ -1160,10 +1159,10 @@ void ReverbPipeline::update3DPanning(const std::span<const float,3> ReflectionsP
          * conversions with their respective transform. This results panning
          * gains that convert A-Format to B-Format, which is then panned.
          */
-        auto mult_matrix = [](const std::span<const std::array<float,NUM_LINES>,4> mtx1,
+        constexpr auto mult_matrix = [](const std::span<const std::array<float,NUM_LINES>,4> mtx1,
             const std::span<const std::array<float,4>,4> mtx2)
         {
-            std::array<std::array<float,MaxAmbiChannels>,NUM_LINES> res{};
+            auto res = std::array<std::array<float,MaxAmbiChannels>,NUM_LINES>{};
 
             for(size_t i{0};i < mtx1[0].size();++i)
             {
@@ -1171,9 +1170,8 @@ void ReverbPipeline::update3DPanning(const std::span<const float,3> ReflectionsP
                 static_assert(dst.size() >= std::tuple_size_v<decltype(mtx2)::element_type>);
                 for(size_t k{0};k < mtx1.size();++k)
                 {
-                    const float a{mtx1[k][i]};
                     std::transform(mtx2[k].begin(), mtx2[k].end(), dst.begin(), dst.begin(),
-                        [a](const float in, const float out) noexcept -> float
+                        [a=mtx1[k][i]](const float in, const float out) noexcept -> float
                         { return a*in + out; });
                 }
             }
@@ -1181,8 +1179,7 @@ void ReverbPipeline::update3DPanning(const std::span<const float,3> ReflectionsP
             return res;
         };
         return std::array{mult_matrix(EarlyA2B, earlymat), mult_matrix(LateA2B, latemat)};
-    };
-    const auto [earlycoeffs, latecoeffs] = get_coeffs();
+    });
 
     auto earlygains = mEarly.Gains.begin();
     for(auto &coeffs : earlycoeffs)
@@ -1534,14 +1531,14 @@ void ReverbPipeline::processEarly(const DelayLineU &main_delay, size_t offset,
                 const auto intap0 = input.subspan(early_delay_tap0, td);
                 const auto intap1 = input.subspan(early_delay_tap1, td);
 
-                auto do_blend = [earlycoeff0,earlycoeff1,fadeStep,&fadeCount](const float in0,
-                    const float in1) noexcept -> float
+                tmp = std::transform(intap0.begin(), intap0.end(), intap1.begin(), tmp,
+                    [earlycoeff0,earlycoeff1,fadeStep,&fadeCount](const float in0, const float in1)
+                    noexcept -> float
                 {
                     const auto ret = lerpf(in0*earlycoeff0, in1*earlycoeff1, fadeStep*fadeCount);
                     fadeCount += 1.0f;
                     return ret;
-                };
-                tmp = std::transform(intap0.begin(), intap0.end(), intap1.begin(), tmp, do_blend);
+                });
                 early_delay_tap0 += td;
                 early_delay_tap1 += td;
                 i += td;
@@ -1663,7 +1660,8 @@ void ReverbPipeline::processLate(size_t offset, const size_t samplesToDo,
             const auto midGain = mLate.T60[j].MidGain;
             auto late_feedb_tap = size_t{offset - mLate.Offset[j]};
 
-            auto proc_sample = [input,midGain,&late_feedb_tap](const size_t idelay) -> float
+            std::transform(delays.begin(), delays.end(), tempSamples[j].begin(),
+                [input,midGain,&late_feedb_tap](const size_t idelay) -> float
             {
                 /* Calculate the read sample offset and sub-sample offset
                  * between it and the next sample.
@@ -1685,8 +1683,7 @@ void ReverbPipeline::processLate(size_t offset, const size_t samplesToDo,
                     + out2*gCubicTable.getCoeff2(delayoffset)
                     + out3*gCubicTable.getCoeff3(delayoffset);
                 return out * midGain;
-            };
-            std::transform(delays.begin(), delays.end(), tempSamples[j].begin(), proc_sample);
+            });
 
             mLate.T60[j].process(std::span{tempSamples[j]}.first(todo));
         }
@@ -1712,16 +1709,16 @@ void ReverbPipeline::processLate(size_t offset, const size_t samplesToDo,
                 const auto td = size_t{std::min(todo - i,
                     input.size() - std::max(late_delay_tap0, late_delay_tap1))};
 
-                auto proc_sample = [input,densityGain,densityStep,&late_delay_tap0,
-                    &late_delay_tap1,&fadeCount](const float sample) noexcept -> float
+                samples = std::transform(samples, samples+ptrdiff_t(td), samples,
+                    [input,densityGain,densityStep,&late_delay_tap0,&late_delay_tap1,&fadeCount]
+                    (const float sample) noexcept -> float
                 {
                     const auto fade0 = float{densityGain - densityStep*fadeCount};
                     const auto fade1 = float{densityStep*fadeCount};
                     fadeCount += 1.0f;
                     return input[late_delay_tap0++]*fade0 + input[late_delay_tap1++]*fade1
                         + sample;
-                };
-                samples = std::transform(samples, samples+ptrdiff_t(td), samples, proc_sample);
+                });
                 i += td;
             }
         }
@@ -1761,12 +1758,9 @@ void ReverbState::process(const size_t samplesToDo,
         std::fill(tmpspan.begin(), tmpspan.end(), 0.0f);
         for(size_t i{0};i < numInput;++i)
         {
-            const float gain{B2A[c][i]};
-
-            auto mix_sample = [gain](const float sample, const float in) noexcept -> float
-            { return sample + in*gain; };
             std::transform(tmpspan.begin(), tmpspan.end(), samplesIn[i].begin(), tmpspan.begin(),
-                mix_sample);
+                [gain=B2A[c][i]](const float sample, const float in) noexcept -> float
+                { return sample + in*gain; });
         }
 
         mMainDelay.write(offset, c, tmpspan);

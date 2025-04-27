@@ -31,6 +31,7 @@
 #include <cstdio>
 #include <cstring>
 #include <exception>
+#include <functional>
 #include <system_error>
 #include <thread>
 #include <vector>
@@ -38,6 +39,7 @@
 #include "alc/alconfig.h"
 #include "almalloc.h"
 #include "alnumeric.h"
+#include "alstring.h"
 #include "althrd_setname.h"
 #include "core/device.h"
 #include "core/logging.h"
@@ -80,6 +82,15 @@ constexpr std::array<ubyte,16> SUBTYPE_BFORMAT_FLOAT{{
     0xca, 0x00, 0x00, 0x00
 }};
 
+constexpr auto MonoChannels = 0x04u;
+constexpr auto StereoChannels = 0x01u | 0x02u;
+constexpr auto QuadChannels = 0x01u | 0x02u | 0x10u | 0x20u;
+constexpr auto X51Channels = 0x01u | 0x02u | 0x04u | 0x08u | 0x200u | 0x400u;
+constexpr auto X61Channels = 0x01u | 0x02u | 0x04u | 0x08u | 0x100u | 0x200u | 0x400u;
+constexpr auto X71Channels = 0x01u | 0x02u | 0x04u | 0x08u | 0x010u | 0x020u | 0x200u | 0x400u;
+constexpr auto X714Channels = 0x01u | 0x02u | 0x04u | 0x08u | 0x010u | 0x020u | 0x200u | 0x400u | 0x1000u | 0x4000u | 0x8000u | 0x20000u;
+
+
 void fwrite16le(ushort val, FILE *f)
 {
     std::array data{static_cast<ubyte>(val&0xff), static_cast<ubyte>((val>>8)&0xff)};
@@ -90,6 +101,30 @@ void fwrite32le(uint val, FILE *f)
 {
     std::array data{static_cast<ubyte>(val&0xff), static_cast<ubyte>((val>>8)&0xff),
         static_cast<ubyte>((val>>16)&0xff), static_cast<ubyte>((val>>24)&0xff)};
+    fwrite(data.data(), 1, data.size(), f);
+}
+
+void fwrite16be(ushort val, FILE *f)
+{
+    const auto data = std::array{static_cast<ubyte>((val>>8)&0xff), static_cast<ubyte>(val&0xff)};
+    fwrite(data.data(), 1, data.size(), f);
+}
+
+void fwrite32be(uint val, FILE *f)
+{
+    const auto data = std::array{static_cast<ubyte>((val>>24)&0xff),
+        static_cast<ubyte>((val>>16)&0xff), static_cast<ubyte>((val>>8)&0xff),
+        static_cast<ubyte>(val&0xff)};
+    fwrite(data.data(), 1, data.size(), f);
+}
+
+void fwrite64be(uint64_t val, FILE *f)
+{
+    const auto data = std::array{static_cast<ubyte>((val>>56)&0xff),
+        static_cast<ubyte>((val>>48)&0xff), static_cast<ubyte>((val>>40)&0xff),
+        static_cast<ubyte>((val>>32)&0xff), static_cast<ubyte>((val>>24)&0xff),
+        static_cast<ubyte>((val>>16)&0xff), static_cast<ubyte>((val>>8)&0xff),
+        static_cast<ubyte>(val&0xff)};
     fwrite(data.data(), 1, data.size(), f);
 }
 
@@ -109,6 +144,7 @@ struct WaveBackend final : public BackendBase {
     long mDataStart{-1};
 
     std::vector<std::byte> mBuffer;
+    bool mCAFOutput{};
 
     std::atomic<bool> mKillNow{true};
     std::thread mThread;
@@ -145,7 +181,7 @@ int WaveBackend::mixerProc()
             mDevice->renderSamples(mBuffer.data(), mDevice->mUpdateSize, frameStep);
             done += mDevice->mUpdateSize;
 
-            if constexpr(std::endian::native != std::endian::little)
+            if(std::endian::native != std::endian::little && !mCAFOutput)
             {
                 const uint bytesize{mDevice->bytesFromFmt()};
 
@@ -223,16 +259,29 @@ void WaveBackend::open(std::string_view name)
 
 bool WaveBackend::reset()
 {
+    mCAFOutput = false;
+    if(const auto formatopt = ConfigValueStr({}, "wave"sv, "format"sv))
+    {
+        if(al::case_compare(*formatopt, "caf"sv) == 0)
+            mCAFOutput = true;
+        else if(al::case_compare(*formatopt, "wav"sv) != 0)
+            WARN("Unsupported wave file format: \"{}\"", *formatopt);
+    }
+
     if(GetConfigValueBool({}, "wave", "bformat", false))
     {
         mDevice->FmtChans = DevFmtAmbi3D;
-        mDevice->mAmbiOrder = 1;
+        mDevice->mAmbiOrder = std::max(mDevice->mAmbiOrder, 1u);
     }
 
     switch(mDevice->FmtType)
     {
     case DevFmtByte:
-        mDevice->FmtType = DevFmtUByte;
+    case DevFmtUByte:
+        if(!mCAFOutput)
+            mDevice->FmtType = DevFmtUByte;
+        else
+            mDevice->FmtType = DevFmtByte;
         break;
     case DevFmtUShort:
         mDevice->FmtType = DevFmtShort;
@@ -240,7 +289,6 @@ bool WaveBackend::reset()
     case DevFmtUInt:
         mDevice->FmtType = DevFmtInt;
         break;
-    case DevFmtUByte:
     case DevFmtShort:
     case DevFmtInt:
     case DevFmtFloat:
@@ -250,28 +298,38 @@ bool WaveBackend::reset()
     auto isbformat = false;
     switch(mDevice->FmtChans)
     {
-    case DevFmtMono:   chanmask = 0x04; break;
-    case DevFmtStereo: chanmask = 0x01 | 0x02; break;
-    case DevFmtQuad:   chanmask = 0x01 | 0x02 | 0x10 | 0x20; break;
-    case DevFmtX51: chanmask = 0x01 | 0x02 | 0x04 | 0x08 | 0x200 | 0x400; break;
-    case DevFmtX61: chanmask = 0x01 | 0x02 | 0x04 | 0x08 | 0x100 | 0x200 | 0x400; break;
-    case DevFmtX71: chanmask = 0x01 | 0x02 | 0x04 | 0x08 | 0x010 | 0x020 | 0x200 | 0x400; break;
+    case DevFmtMono:   chanmask = MonoChannels; break;
+    case DevFmtStereo: chanmask = StereoChannels; break;
+    case DevFmtQuad:   chanmask = QuadChannels; break;
+    case DevFmtX51: chanmask = X51Channels; break;
+    case DevFmtX61: chanmask = X61Channels; break;
+    case DevFmtX71: chanmask = X71Channels; break;
     case DevFmtX7144:
         mDevice->FmtChans = DevFmtX714;
         [[fallthrough]];
     case DevFmtX714:
-        chanmask = 0x01 | 0x02 | 0x04 | 0x08 | 0x010 | 0x020 | 0x200 | 0x400 | 0x1000 | 0x4000
-            | 0x8000 | 0x20000;
+        chanmask = X714Channels;
         break;
     /* NOTE: Same as 7.1. */
-    case DevFmtX3D71: chanmask = 0x01 | 0x02 | 0x04 | 0x08 | 0x010 | 0x020 | 0x200 | 0x400; break;
+    case DevFmtX3D71:
+        chanmask = X71Channels;
+        break;
     case DevFmtAmbi3D:
-        /* .amb output requires FuMa */
-        mDevice->mAmbiOrder = std::min(mDevice->mAmbiOrder, 3u);
-        mDevice->mAmbiLayout = DevAmbiLayout::FuMa;
-        mDevice->mAmbiScale = DevAmbiScaling::FuMa;
+        if(!mCAFOutput)
+        {
+            /* .amb output requires FuMa */
+            mDevice->mAmbiOrder = std::min(mDevice->mAmbiOrder, 3u);
+            mDevice->mAmbiLayout = DevAmbiLayout::FuMa;
+            mDevice->mAmbiScale = DevAmbiScaling::FuMa;
+        }
+        else
+        {
+            /* .ambix output requires ACN+SN3D */
+            mDevice->mAmbiOrder = std::min(mDevice->mAmbiOrder, uint{MaxAmbiOrder});
+            mDevice->mAmbiLayout = DevAmbiLayout::ACN;
+            mDevice->mAmbiScale = DevAmbiScaling::SN3D;
+        }
         isbformat = true;
-        chanmask = 0;
         break;
     }
     const auto bytes = mDevice->bytesFromFmt();
@@ -290,39 +348,111 @@ bool WaveBackend::reset()
     }
     clearerr(mFile.get());
 
-    fputs("RIFF", mFile.get());
-    fwrite32le(0xFFFFFFFF, mFile.get()); // 'RIFF' header len; filled in at stop
+    if(!mCAFOutput)
+    {
+        fputs("RIFF", mFile.get());
+        fwrite32le(0xFFFFFFFF, mFile.get()); // 'RIFF' header len; filled in at stop
 
-    fputs("WAVE", mFile.get());
+        fputs("WAVE", mFile.get());
 
-    fputs("fmt ", mFile.get());
-    fwrite32le(40, mFile.get()); // 'fmt ' header len; 40 bytes for EXTENSIBLE
+        fputs("fmt ", mFile.get());
+        fwrite32le(40, mFile.get()); // 'fmt ' header len; 40 bytes for EXTENSIBLE
 
-    // 16-bit val, format type id (extensible: 0xFFFE)
-    fwrite16le(0xFFFE, mFile.get());
-    // 16-bit val, channel count
-    fwrite16le(static_cast<ushort>(channels), mFile.get());
-    // 32-bit val, frequency
-    fwrite32le(mDevice->mSampleRate, mFile.get());
-    // 32-bit val, bytes per second
-    fwrite32le(mDevice->mSampleRate * channels * bytes, mFile.get());
-    // 16-bit val, frame size
-    fwrite16le(static_cast<ushort>(channels * bytes), mFile.get());
-    // 16-bit val, bits per sample
-    fwrite16le(static_cast<ushort>(bytes * 8), mFile.get());
-    // 16-bit val, extra byte count
-    fwrite16le(22, mFile.get());
-    // 16-bit val, valid bits per sample
-    fwrite16le(static_cast<ushort>(bytes * 8), mFile.get());
-    // 32-bit val, channel mask
-    fwrite32le(chanmask, mFile.get());
-    // 16 byte GUID, sub-type format
-    std::ignore = fwrite((mDevice->FmtType == DevFmtFloat) ?
-        (isbformat ? SUBTYPE_BFORMAT_FLOAT.data() : SUBTYPE_FLOAT.data()) :
-        (isbformat ? SUBTYPE_BFORMAT_PCM.data() : SUBTYPE_PCM.data()), 1, 16, mFile.get());
+        // 16-bit val, format type id (extensible: 0xFFFE)
+        fwrite16le(0xFFFE, mFile.get());
+        // 16-bit val, channel count
+        fwrite16le(static_cast<ushort>(channels), mFile.get());
+        // 32-bit val, frequency
+        fwrite32le(mDevice->mSampleRate, mFile.get());
+        // 32-bit val, bytes per second
+        fwrite32le(mDevice->mSampleRate * channels * bytes, mFile.get());
+        // 16-bit val, frame size
+        fwrite16le(static_cast<ushort>(channels * bytes), mFile.get());
+        // 16-bit val, bits per sample
+        fwrite16le(static_cast<ushort>(bytes * 8), mFile.get());
+        // 16-bit val, extra byte count
+        fwrite16le(22, mFile.get());
+        // 16-bit val, valid bits per sample
+        fwrite16le(static_cast<ushort>(bytes * 8), mFile.get());
+        // 32-bit val, channel mask
+        fwrite32le(chanmask, mFile.get());
+        // 16 byte GUID, sub-type format
+        std::ignore = fwrite((mDevice->FmtType == DevFmtFloat) ?
+            (isbformat ? SUBTYPE_BFORMAT_FLOAT.data() : SUBTYPE_FLOAT.data()) :
+            (isbformat ? SUBTYPE_BFORMAT_PCM.data() : SUBTYPE_PCM.data()), 1, 16, mFile.get());
 
-    fputs("data", mFile.get());
-    fwrite32le(0xFFFFFFFF, mFile.get()); // 'data' header len; filled in at stop
+        fputs("data", mFile.get());
+        fwrite32le(0xFFFFFFFF, mFile.get()); // 'data' header len; filled in at stop
+    }
+    else
+    {
+        /* 32-bit uint, mFileType */
+        fputs("caff", mFile.get());
+        /* 16-bit uint, mFileVersion */
+        fwrite16be(1, mFile.get());
+        /* 16-bit uint, mFileFlags */
+        fwrite16be(0, mFile.get());
+
+        /* Audio Description chunk */
+        fputs("desc", mFile.get());
+        fwrite64be(32, mFile.get());
+        /* 64-bit double, mSampleRate */
+        fwrite64be(std::bit_cast<uint64_t>(static_cast<double>(mDevice->mSampleRate)),
+            mFile.get());
+        /* 32-bit uint, mFormatID */
+        fputs("lpcm", mFile.get());
+
+        const auto flags = std::invoke([this]
+        {
+            switch(mDevice->FmtType)
+            {
+            case DevFmtByte:
+            case DevFmtUByte:
+                break;
+            case DevFmtShort:
+            case DevFmtUShort:
+            case DevFmtInt:
+            case DevFmtUInt:
+                if constexpr(std::endian::native == std::endian::little)
+                    return 2u; /* kCAFLinearPCMFormatFlagIsLittleEndian */
+                break;
+            case DevFmtFloat:
+                if constexpr(std::endian::native == std::endian::little)
+                    return 3u; /* kCAFLinearPCMFormatFlagIsFloat | kCAFLinearPCMFormatFlagIsLittleEndian */
+                return 1u; /* kCAFLinearPCMFormatFlagIsFloat */
+            }
+            return 0u;
+        });
+
+        /* 32-bit uint, mFormatFlags */
+        fwrite32be(flags, mFile.get());
+        /* 32-bit uint, mBytesPerPacket */
+        fwrite32be(bytes*channels, mFile.get());
+        /* 32-bit uint, mFramesPerPacket */
+        fwrite32be(1, mFile.get());
+        /* 32-bit uint, mChannelsPerFrame */
+        fwrite32be(channels, mFile.get());
+        /* 32-bit uint, mBitsPerChannel */
+        fwrite32be(bytes*8, mFile.get());
+
+        if(chanmask != 0)
+        {
+            /* Channel Layout chunk */
+            fputs("chan", mFile.get());
+            fwrite64be(12, mFile.get());
+
+            /* 32-bit uint, mChannelLayoutTag */
+            fwrite32be(0x10000, mFile.get()); /* kCAFChannelLayoutTag_UseChannelBitmap */
+            /* 32-bit uint, mChannelBitmap */
+            fwrite32be(chanmask, mFile.get()); /* Same as WFX, thankfully. */
+            /* 32-bit uint, mNumberChannelDescriptions */
+            fwrite32be(0, mFile.get());
+        }
+
+        /* Audio Data chunk */
+        fputs("data", mFile.get());
+        fwrite64be(static_cast<uint64_t>(-1), mFile.get()); /* filled in at stop */
+    }
 
     if(ferror(mFile.get()))
     {
@@ -341,8 +471,6 @@ bool WaveBackend::reset()
 
 void WaveBackend::start()
 {
-    if(mDataStart > 0 && fseek(mFile.get(), 0, SEEK_END) != 0)
-        WARN("Failed to seek on output file");
     try {
         mKillNow.store(false, std::memory_order_release);
         mThread = std::thread{&WaveBackend::mixerProc, this};
@@ -361,14 +489,23 @@ void WaveBackend::stop()
 
     if(mDataStart > 0)
     {
-        long size{ftell(mFile.get())};
+        const auto size = ftell(mFile.get());
         if(size > 0)
         {
-            long dataLen{size - mDataStart};
-            if(fseek(mFile.get(), 4, SEEK_SET) == 0)
-                fwrite32le(static_cast<uint>(size-8), mFile.get()); // 'WAVE' header len
-            if(fseek(mFile.get(), mDataStart-4, SEEK_SET) == 0)
-                fwrite32le(static_cast<uint>(dataLen), mFile.get()); // 'data' header len
+            const auto dataLen = size - mDataStart;
+            if(!mCAFOutput)
+            {
+                if(fseek(mFile.get(), 4, SEEK_SET) == 0)
+                    fwrite32le(static_cast<uint>(size-8), mFile.get()); // 'WAVE' header len
+                if(fseek(mFile.get(), mDataStart-4, SEEK_SET) == 0)
+                    fwrite32le(static_cast<uint>(dataLen), mFile.get()); // 'data' header len
+            }
+            else
+            {
+                if(fseek(mFile.get(), mDataStart-8, SEEK_SET) == 0)
+                    fwrite64be(static_cast<uint64_t>(dataLen), mFile.get()); // 'data' header len
+            }
+            fseek(mFile.get(), 0, SEEK_END);
         }
     }
 }

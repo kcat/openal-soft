@@ -642,9 +642,17 @@
 #  THIS WILL OVERWRITE EXISTING FILES WITHOUT QUESTION!
 #file =
 
+## format: (global)
+#  Specifies the output file format. Available options:
+#  wav - Microsoft RIFF WAVE with WAVE_FORMAT_EXTENSIBLE format.
+#  caf - Apple Core Audio Format
+#  When outputing ambisonic format (one of the ambi* channel configurations),
+#  wav will be .amb format and caf will be .ambix format.
+#format = wav
+
 ## bformat: (global)
-#  Creates AMB format files using first-order ambisonics instead of a standard
-#  single- or multi-channel .wav file.
+#  Creates .amb (for wav) or .ambix (for caf) format files using B-Format
+#  instead of a standard single- or multi-channel .wav file.
 #bformat = false
 
 ##

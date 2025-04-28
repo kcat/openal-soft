@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <functional>
 #include <numbers>
+#include <span>
 
 
 namespace {
@@ -307,16 +308,9 @@ auto AmbiScale::GetHFOrderScales(const uint src_order, const uint dev_order,
 {
     auto res = std::array<float,MaxAmbiOrder+1>{};
 
-    if(!horizontalOnly)
-    {
-        std::transform(HFScales[src_order].begin(), HFScales[src_order].end(),
-            HFScales[dev_order].begin(), res.begin(), std::divides{});
-    }
-    else
-    {
-        std::transform(HFScales2D[src_order].begin(), HFScales2D[src_order].end(),
-            HFScales2D[dev_order].begin(), res.begin(), std::divides{});
-    }
+    const auto scales = horizontalOnly ? std::span{HFScales2D} : std::span{HFScales};
+    std::transform(scales[src_order].begin(), scales[src_order].end(), scales[dev_order].begin(),
+        res.begin(), std::divides{});
 
     return res;
 }

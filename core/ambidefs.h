@@ -255,7 +255,7 @@ constexpr auto CalcAmbiCoeffs(const float y, const float z, const float x)
         3.750000000e-01f * (35.0f*zzzz - 30.0f*zz + 3.0f), /* ACN 20 = 3/8 * (35*Z*Z*Z*Z - 30*Z*Z + 3) */
         2.371708245e+00f * (xz * (7.0f*zz - 3.0f)),        /* ACN 21 = sqrt(5/2)*3/2 * X * Z * (7*Z*Z - 3) */
         1.677050983e+00f * ((xx - yy) * (7.0f*zz - 1.0f)), /* ACN 22 = sqrt(5)*3/4 * (X*X - Y*Y) * (7*Z*Z - 1) */
-        6.274950199e+00f * (xx - 3.0f*yy) * xz,            /* ACN 23 = sqrt(35/2)*3/2 * (X*X - 3*Y*Y) * X * Z */
+        6.274950199e+00f * ((xx - 3.0f*yy) * xz),          /* ACN 23 = sqrt(35/2)*3/2 * (X*X - 3*Y*Y) * X * Z */
         2.218529919e+00f * (xxxx - 6.0f*xxyy + yyyy),      /* ACN 24 = sqrt(35)*3/8 * (X*X*X*X - 6*X*X*Y*Y + Y*Y*Y*Y) */
     }};
 }

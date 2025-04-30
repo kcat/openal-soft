@@ -80,6 +80,7 @@
 #define PFFFT_H
 
 #include <cstddef>
+#include <iterator>
 #include <memory>
 
 #include "almalloc.h"
@@ -190,22 +191,41 @@ struct PFFFTSetup {
 
     [[nodiscard]] explicit operator bool() const noexcept { return mSetup != nullptr; }
 
-    void transform(const float *input, float *output, float *work, pffft_direction_t direction) const
-    { pffft_transform(mSetup.get(), input, output, work, direction); }
+    void transform(std::contiguous_iterator auto input, std::contiguous_iterator auto output,
+        std::contiguous_iterator auto work, pffft_direction_t direction) const
+    {
+        pffft_transform(mSetup.get(), std::to_address(input), std::to_address(output),
+            std::to_address(work), direction);
+    }
 
-    void transform_ordered(const float *input, float *output, float *work,
+    void transform_ordered(std::contiguous_iterator auto input,
+        std::contiguous_iterator auto output, std::contiguous_iterator auto work,
         pffft_direction_t direction) const
-    { pffft_transform_ordered(mSetup.get(), input, output, work, direction); }
+    {
+        pffft_transform_ordered(mSetup.get(), std::to_address(input), std::to_address(output),
+            std::to_address(work), direction);
+    }
 
-    void zreorder(const float *input, float *output, pffft_direction_t direction) const
-    { pffft_zreorder(mSetup.get(), input, output, direction); }
+    void zreorder(std::contiguous_iterator auto input, std::contiguous_iterator auto output,
+        pffft_direction_t direction) const
+    {
+        pffft_zreorder(mSetup.get(), std::to_address(input), std::to_address(output), direction);
+    }
 
-    void zconvolve_scale_accumulate(const float *dft_a, const float *dft_b, float *dft_ab,
-        float scaling) const
-    { pffft_zconvolve_scale_accumulate(mSetup.get(), dft_a, dft_b, dft_ab, scaling); }
+    void zconvolve_scale_accumulate(std::contiguous_iterator auto dft_a,
+        std::contiguous_iterator auto dft_b, std::contiguous_iterator auto dft_ab,
+        std::floating_point auto scaling) const
+    {
+        pffft_zconvolve_scale_accumulate(mSetup.get(), std::to_address(dft_a),
+            std::to_address(dft_b), std::to_address(dft_ab), scaling);
+    }
 
-    void zconvolve_accumulate(const float *dft_a, const float *dft_b, float *dft_ab) const
-    { pffft_zconvolve_accumulate(mSetup.get(), dft_a, dft_b, dft_ab); }
+    void zconvolve_accumulate(std::contiguous_iterator auto dft_a,
+        std::contiguous_iterator auto dft_b, std::contiguous_iterator auto dft_ab) const
+    {
+        pffft_zconvolve_accumulate(mSetup.get(), std::to_address(dft_a), std::to_address(dft_b),
+            std::to_address(dft_ab));
+    }
 };
 
 #endif // PFFFT_H

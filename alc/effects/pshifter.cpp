@@ -192,7 +192,7 @@ void PshifterState::process(const size_t samplesToDo,
             mFftBuffer[k] = mFIFO[src] * gWindow.mData[k];
         for(size_t src{0u}, k{StftSize-mPos};src < mPos;++src,++k)
             mFftBuffer[k] = mFIFO[src] * gWindow.mData[k];
-        mFft.transform_ordered(mFftBuffer.data(), mFftBuffer.data(), mFftWorkBuffer.data(),
+        mFft.transform_ordered(mFftBuffer.begin(), mFftBuffer.begin(), mFftWorkBuffer.begin(),
             PFFFT_FORWARD);
 
         /* Analyze the obtained data. Since the real FFT is symmetric, only
@@ -291,7 +291,7 @@ void PshifterState::process(const size_t samplesToDo,
         /* Apply an inverse FFT to get the time-domain signal, and accumulate
          * for the output with windowing.
          */
-        mFft.transform_ordered(mFftBuffer.data(), mFftBuffer.data(), mFftWorkBuffer.data(),
+        mFft.transform_ordered(mFftBuffer.begin(), mFftBuffer.begin(), mFftWorkBuffer.begin(),
             PFFFT_BACKWARD);
 
         static constexpr float scale{3.0f / OversampleFactor / StftSize};

@@ -104,7 +104,7 @@ struct SegmentedFilter {
                 fftTmp[i*2 + 1] = static_cast<float>((i == 0) ? fftBuffer[sSampleLength].real()
                     : fftBuffer[i].imag()) / float{sFftLength};
             }
-            mFft.zreorder(fftTmp.data(), std::to_address(filter), PFFFT_BACKWARD);
+            mFft.zreorder(fftTmp.begin(), filter, PFFFT_BACKWARD);
             filter += sFftLength;
         }
     }
@@ -242,8 +242,7 @@ void UhjEncoder<N>::encode(float *LeftOut, float *RightOut,
         std::copy_n(mWXInOut.begin(), sSegmentSize, input);
         std::fill_n(input+sSegmentSize, sSegmentSize, 0.0f);
 
-        Filter.mFft.transform(std::to_address(input), std::to_address(input), mWorkData.data(),
-            PFFFT_FORWARD);
+        Filter.mFft.transform(input, input, mWorkData.begin(), PFFFT_FORWARD);
 
         /* Convolve each input segment with its IR filter counterpart (aligned
          * in time, from newest to oldest).
@@ -252,16 +251,14 @@ void UhjEncoder<N>::encode(float *LeftOut, float *RightOut,
         auto filter = Filter.mFilterData.begin();
         for(size_t s{curseg};s < sNumSegments;++s)
         {
-            Filter.mFft.zconvolve_accumulate(std::to_address(input), std::to_address(filter),
-                mFftBuffer.data());
+            Filter.mFft.zconvolve_accumulate(input, filter, mFftBuffer.begin());
             input += sFftLength;
             filter += sFftLength;
         }
         input = mWXHistory.begin();
         for(size_t s{0};s < curseg;++s)
         {
-            Filter.mFft.zconvolve_accumulate(std::to_address(input), std::to_address(filter),
-                mFftBuffer.data());
+            Filter.mFft.zconvolve_accumulate(input, filter, mFftBuffer.begin());
             input += sFftLength;
             filter += sFftLength;
         }
@@ -269,7 +266,7 @@ void UhjEncoder<N>::encode(float *LeftOut, float *RightOut,
         /* Convert back to samples, writing to the output and storing the extra
          * for next time.
          */
-        Filter.mFft.transform(mFftBuffer.data(), mFftBuffer.data(), mWorkData.data(),
+        Filter.mFft.transform(mFftBuffer.begin(), mFftBuffer.begin(), mWorkData.begin(),
             PFFFT_BACKWARD);
 
         std::transform(mFftBuffer.begin(), mFftBuffer.begin()+sSegmentSize,

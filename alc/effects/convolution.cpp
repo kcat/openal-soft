@@ -416,7 +416,7 @@ void ConvolutionState::deviceUpdate(const DeviceBase *device, const BufferStorag
             /* Reorder backward to make it suitable for pffft_zconvolve and the
              * subsequent pffft_transform(..., PFFFT_BACKWARD).
              */
-            mFft.zreorder(ffttmp.data(), std::to_address(filteriter), PFFFT_BACKWARD);
+            mFft.zreorder(ffttmp.begin(), filteriter, PFFFT_BACKWARD);
             filteriter += ConvolveUpdateSize;
         }
     }
@@ -664,8 +664,8 @@ void ConvolutionState::process(const size_t samplesToDo,
         /* Calculate the frequency-domain response and add the relevant
          * frequency bins to the FFT history.
          */
-        mFft.transform(mInput.data(), &mComplexData[curseg*ConvolveUpdateSize],
-            mFftWorkBuffer.data(), PFFFT_FORWARD);
+        mFft.transform(mInput.begin(), &mComplexData[curseg*ConvolveUpdateSize],
+            mFftWorkBuffer.begin(), PFFFT_FORWARD);
 
         auto filter = mComplexData.cbegin() + ptrdiff_t(mNumConvolveSegs*ConvolveUpdateSize);
         for(size_t c{0};c < mChans.size();++c)
@@ -677,16 +677,14 @@ void ConvolutionState::process(const size_t samplesToDo,
             auto input = mComplexData.cbegin() + ptrdiff_t(curseg*ConvolveUpdateSize);
             for(size_t s{curseg};s < mNumConvolveSegs;++s)
             {
-                mFft.zconvolve_accumulate(std::to_address(input), std::to_address(filter),
-                    mFftBuffer.data());
+                mFft.zconvolve_accumulate(input, filter, mFftBuffer.begin());
                 input += ConvolveUpdateSize;
                 filter += ConvolveUpdateSize;
             }
             input = mComplexData.cbegin();
             for(size_t s{0};s < curseg;++s)
             {
-                mFft.zconvolve_accumulate(std::to_address(input), std::to_address(filter),
-                    mFftBuffer.data());
+                mFft.zconvolve_accumulate(input, filter, mFftBuffer.begin());
                 input += ConvolveUpdateSize;
                 filter += ConvolveUpdateSize;
             }
@@ -696,7 +694,7 @@ void ConvolutionState::process(const size_t samplesToDo,
              * second-half samples (and this output's second half is
              * subsequently saved for next time).
              */
-            mFft.transform(mFftBuffer.data(), mFftBuffer.data(), mFftWorkBuffer.data(),
+            mFft.transform(mFftBuffer.begin(), mFftBuffer.begin(), mFftWorkBuffer.begin(),
                 PFFFT_BACKWARD);
 
             /* The filter was attenuated, so the response is already scaled. */

@@ -1460,16 +1460,17 @@ void Allpass4::process(const std::span<ReverbUpdateLine,NUM_LINES> samples, cons
             vap_offset &= buffer.size()-1;
             dstoffset &= buffer.size()-1;
 
-            const size_t maxoff{std::max(dstoffset, vap_offset)};
-            const size_t td{std::min(buffer.size() - maxoff, todo - i)};
+            const auto maxoff = std::max(dstoffset, vap_offset);
+            const auto td = std::min(todo-i, buffer.size()-maxoff);
 
-            auto proc_sample = [buffer,feedCoeff,&vap_offset,&dstoffset](const float x) -> float
+            const auto samplespan = std::span{smpiter, td};
+            smpiter = std::transform(samplespan.begin(), samplespan.end(), smpiter,
+                [buffer,feedCoeff,&vap_offset,&dstoffset](const float x) -> float
             {
                 const float y{buffer[vap_offset++] - feedCoeff*x};
                 buffer[dstoffset++] = x + feedCoeff*y;
                 return y;
-            };
-            smpiter = std::transform(smpiter, smpiter+td, smpiter, proc_sample);
+            });
             i += td;
         }
     }
@@ -1706,10 +1707,11 @@ void ReverbPipeline::processLate(size_t offset, const size_t samplesToDo,
             {
                 late_delay_tap0 &= input.size()-1;
                 late_delay_tap1 &= input.size()-1;
-                const auto td = size_t{std::min(todo - i,
-                    input.size() - std::max(late_delay_tap0, late_delay_tap1))};
+                const auto max_delay_tap = std::max(late_delay_tap0, late_delay_tap1);
+                const auto td = std::min(todo-i, input.size()-max_delay_tap);
 
-                samples = std::transform(samples, samples+ptrdiff_t(td), samples,
+                const auto samplespan = std::span{samples, td};
+                samples = std::transform(samplespan.begin(), samplespan.end(), samples,
                     [input,densityGain,densityStep,&late_delay_tap0,&late_delay_tap1,&fadeCount]
                     (const float sample) noexcept -> float
                 {

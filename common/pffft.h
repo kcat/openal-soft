@@ -92,10 +92,10 @@
 struct PFFFT_Setup;
 
 /* direction of the transform */
-enum pffft_direction_t { PFFFT_FORWARD, PFFFT_BACKWARD };
+enum pffft_direction_t : bool { PFFFT_FORWARD, PFFFT_BACKWARD };
 
 /* type of transform */
-enum pffft_transform_t { PFFFT_REAL, PFFFT_COMPLEX };
+enum pffft_transform_t : bool { PFFFT_REAL, PFFFT_COMPLEX };
 
 struct PFFFTSetupDeleter {
     void operator()(gsl::owner<PFFFT_Setup*> setup) const noexcept;

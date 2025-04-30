@@ -1460,8 +1460,8 @@ void cffti1_ps(const uint n, float *wa, const std::span<uint,15> ifac)
 
 } // namespace
 
-/* NOLINTNEXTLINE(clang-analyzer-optin.performance.Padding) */
-struct PFFFT_Setup {
+
+struct alignas(V4sfAlignment) PFFFT_Setup {
     uint N{};
     uint Ncvec{}; /* nb of complex simd vectors (N/4 if PFFFT_COMPLEX, N/8 if PFFFT_REAL) */
     std::array<uint,15> ifac{};
@@ -1469,8 +1469,6 @@ struct PFFFT_Setup {
 
     float *twiddle{}; /* N/4 elements */
     std::span<v4sf> e; /* N/4*3 elements */
-
-    alignas(V4sfAlignment) std::byte end;
 };
 
 PFFFTSetupPtr pffft_new_setup(unsigned int N, pffft_transform_t transform)
@@ -1486,19 +1484,18 @@ PFFFTSetupPtr pffft_new_setup(unsigned int N, pffft_transform_t transform)
     else
         assert((N%(SimdSize*SimdSize)) == 0);
 
-    const uint Ncvec{(transform == PFFFT_REAL ? N/2 : N) / SimdSize};
+    const auto Ncvec = uint{(transform == PFFFT_REAL ? N/2 : N) / SimdSize};
 
-    const size_t storelen{std::max(offsetof(PFFFT_Setup, end) + 2_zu*Ncvec*sizeof(v4sf),
-        sizeof(PFFFT_Setup))};
-    auto storage = static_cast<gsl::owner<std::byte*>>(::operator new[](storelen, V4sfAlignVal));
-    auto extrastore = std::span{&storage[offsetof(PFFFT_Setup, end)], 2_zu*Ncvec*sizeof(v4sf)};
+    const auto storelen = sizeof(PFFFT_Setup) + 2_zu*Ncvec*sizeof(v4sf);
+    auto storage = static_cast<gsl::owner<std::byte*>>(::operator new(storelen, V4sfAlignVal));
+    auto extrastore = std::span{&storage[sizeof(PFFFT_Setup)], 2_zu*Ncvec*sizeof(v4sf)};
 
-    PFFFTSetupPtr s{::new(storage) PFFFT_Setup{}};
+    auto s = PFFFTSetupPtr{::new(storage) PFFFT_Setup{}};
     s->N = N;
     s->transform = transform;
     s->Ncvec = Ncvec;
 
-    const size_t ecount{2_zu*Ncvec*(SimdSize-1)/SimdSize};
+    const auto ecount = 2_zu*Ncvec*(SimdSize-1)/SimdSize;
     s->e = {std::launder(reinterpret_cast<v4sf*>(extrastore.data())), ecount};
     s->twiddle = std::launder(reinterpret_cast<float*>(&extrastore[ecount*sizeof(v4sf)]));
 
@@ -1538,7 +1535,7 @@ PFFFTSetupPtr pffft_new_setup(unsigned int N, pffft_transform_t transform)
 void PFFFTSetupDeleter::operator()(gsl::owner<PFFFT_Setup*> setup) const noexcept
 {
     std::destroy_at(setup);
-    ::operator delete[](gsl::owner<void*>{setup}, V4sfAlignVal);
+    ::operator delete(gsl::owner<void*>{setup}, V4sfAlignVal);
 }
 
 #if !defined(PFFFT_SIMD_DISABLE)

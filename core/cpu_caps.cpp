@@ -5,9 +5,6 @@
 #include "cpu_caps.h"
 
 #if defined(_WIN32) && (defined(_M_ARM) || defined(_M_ARM64))
-#ifndef WIN32_LEAN_AND_MEAN
-#define WIN32_LEAN_AND_MEAN
-#endif
 #include <windows.h>
 #ifndef PF_ARM_NEON_INSTRUCTIONS_AVAILABLE
 #define PF_ARM_NEON_INSTRUCTIONS_AVAILABLE 19

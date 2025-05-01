@@ -1499,6 +1499,7 @@ PFFFTSetupPtr pffft_new_setup(unsigned int N, pffft_transform_t transform)
     s->e = {std::launder(reinterpret_cast<v4sf*>(extrastore.data())), ecount};
     s->twiddle = std::launder(reinterpret_cast<float*>(&extrastore[ecount*sizeof(v4sf)]));
 
+#ifndef PFFFT_SIMD_DISABLE
     if constexpr(SimdSize > 1)
     {
         auto e = std::vector<float>(s->e.size()*SimdSize, 0.0f);
@@ -1513,8 +1514,17 @@ PFFFTSetupPtr pffft_new_setup(unsigned int N, pffft_transform_t transform)
                 e[((i*3 + m)*2 + 1)*SimdSize + j] = static_cast<float>(std::sin(A));
             }
         }
-        std::memcpy(s->e.data(), e.data(), e.size()*sizeof(float));
+        auto eiter = e.begin();
+        std::generate(s->e.begin(), s->e.end(), [&eiter]
+        {
+            const auto a = *(eiter++);
+            const auto b = *(eiter++);
+            const auto c = *(eiter++);
+            const auto d = *(eiter++);
+            return vset4(a, b, c, d);
+        });
     }
+#endif
     if(transform == PFFFT_REAL)
         rffti1_ps(N/SimdSize, s->twiddle, s->ifac);
     else

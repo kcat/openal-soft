@@ -1,7 +1,6 @@
 #ifndef ROUTER_ROUTER_H
 #define ROUTER_ROUTER_H
 
-#define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <winnt.h>
 

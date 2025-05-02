@@ -1,9 +1,9 @@
 project(alsoft-config)
 
-if(Qt5Widgets_FOUND)
-    qt5_wrap_ui(UIS  mainwindow.ui)
+if(Qt6Widgets_FOUND)
+    qt6_wrap_ui(UIS  mainwindow.ui)
 
-    qt5_wrap_cpp(MOCS  mainwindow.h)
+    qt6_wrap_cpp(MOCS  mainwindow.h)
 
     add_executable(alsoft-config
         main.cpp
@@ -12,7 +12,7 @@ if(Qt5Widgets_FOUND)
         verstr.cpp
         verstr.h
         ${UIS} ${RSCS} ${TRS} ${MOCS})
-    target_link_libraries(alsoft-config PUBLIC Qt5::Widgets PRIVATE alsoft.common)
+    target_link_libraries(alsoft-config PUBLIC Qt6::Widgets PRIVATE alsoft.common)
     target_include_directories(alsoft-config PRIVATE "${alsoft-config_BINARY_DIR}"
         "${OpenAL_BINARY_DIR}")
     target_compile_definitions(alsoft-config PRIVATE QT_NO_KEYWORDS)

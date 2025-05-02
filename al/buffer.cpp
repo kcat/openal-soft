@@ -36,6 +36,7 @@
 #include <mutex>
 #include <numeric>
 #include <optional>
+#include <ranges>
 #include <span>
 #include <stdexcept>
 #include <unordered_map>
@@ -206,14 +207,12 @@ catch(...) {
 [[nodiscard]]
 auto AllocBuffer(al::Device *device) noexcept -> ALbuffer*
 {
-    auto sublist = std::find_if(device->BufferList.begin(), device->BufferList.end(),
-        [](const BufferSubList &entry) noexcept -> bool
-        { return entry.FreeMask != 0; });
+    auto sublist = std::ranges::find_if(device->BufferList, &BufferSubList::FreeMask);
     auto lidx = static_cast<ALuint>(std::distance(device->BufferList.begin(), sublist));
     auto slidx = static_cast<ALuint>(std::countr_zero(sublist->FreeMask));
     ASSUME(slidx < 64);
 
-    ALbuffer *buffer{std::construct_at(std::to_address(sublist->Buffers->begin() + slidx))};
+    auto *buffer = std::construct_at(std::to_address(sublist->Buffers->begin() + slidx));
 
     /* Add 1 to avoid buffer ID 0. */
     buffer->id = ((lidx<<6) | slidx) + 1;
@@ -666,10 +665,9 @@ auto DecomposeUserFormat(ALenum format) noexcept -> std::optional<DecompResult>
         FormatMap{AL_FORMAT_UHJ4CHN_ALAW_SOFT,    {FmtUHJ4, FmtAlaw} },
     };
 
-    auto iter = std::find_if(UserFmtList.cbegin(), UserFmtList.cend(),
-        [format](const FormatMap &fmt) noexcept { return fmt.format == format; });
-    if(iter != UserFmtList.cend())
-        return iter->result;
+    const auto fmtrange = UserFmtList | std::views::transform(&FormatMap::format);
+    if(const auto iter = std::ranges::find(fmtrange, format); iter != fmtrange.end())
+        return iter.base()->result;
     return std::nullopt;
 }
 
@@ -691,7 +689,7 @@ try {
         context->throw_error(AL_OUT_OF_MEMORY, "Failed to allocate {} buffer{}", n,
             (n==1) ? "" : "s");
 
-    std::generate(bids.begin(), bids.end(), [device]{ return AllocBuffer(device)->id; });
+    std::ranges::generate(bids, [device]{ return AllocBuffer(device)->id; });
 }
 catch(al::base_exception&) {
 }
@@ -711,7 +709,8 @@ try {
     auto buflock = std::lock_guard{device->BufferLock};
 
     /* First try to find any buffers that are invalid or in-use. */
-    auto validate_buffer = [context,device](const ALuint bid)
+    const auto bids = std::span{buffers, static_cast<ALuint>(n)};
+    std::ranges::for_each(bids, [context,device](const ALuint bid)
     {
         if(!bid) return;
         ALbuffer *ALBuf{LookupBuffer(device, bid)};
@@ -719,18 +718,14 @@ try {
             context->throw_error(AL_INVALID_NAME, "Invalid buffer ID {}", bid);
         if(ALBuf->ref.load(std::memory_order_relaxed) != 0)
             context->throw_error(AL_INVALID_OPERATION, "Deleting in-use buffer {}", bid);
-    };
-
-    const auto bids = std::span{buffers, static_cast<ALuint>(n)};
-    std::for_each(bids.begin(), bids.end(), validate_buffer);
+    });
 
     /* All good. Delete non-0 buffer IDs. */
-    auto delete_buffer = [device](const ALuint bid) -> void
+    std::ranges::for_each(bids, [device](const ALuint bid) -> void
     {
         if(ALbuffer *buffer{bid ? LookupBuffer(device, bid) : nullptr})
             FreeBuffer(device, buffer);
-    };
-    std::for_each(bids.begin(), bids.end(), delete_buffer);
+    });
 }
 catch(al::base_exception&) {
 }

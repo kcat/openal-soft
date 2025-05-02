@@ -163,7 +163,7 @@ try {
     {
     case AL_ORIENTATION:
         const auto vals = std::span<const float,6>{values, 6_uz};
-        if(!std::all_of(vals.begin(), vals.end(), [](float f) { return std::isfinite(f); }))
+        if(!std::ranges::all_of(vals, [](float f){ return std::isfinite(f); }))
             context->throw_error(AL_INVALID_VALUE, "Listener orientation out of range");
         /* AT then UP */
         std::copy_n(vals.begin(), 3, listener.OrientAt.begin());
@@ -338,8 +338,8 @@ try {
     case AL_ORIENTATION:
         const auto vals = std::span{values, 6_uz};
         // AT then UP
-        auto oiter = std::copy_n(listener.OrientAt.cbegin(), 3, vals.begin());
-        std::copy_n(listener.OrientUp.cbegin(), 3, oiter);
+        auto oiter = std::ranges::copy(listener.OrientAt, vals.begin()).out;
+        std::ranges::copy(listener.OrientUp, oiter);
         return;
     }
     context->throw_error(AL_INVALID_ENUM, "Invalid listener float-vector property {:#04x}",
@@ -423,9 +423,8 @@ try {
     case AL_ORIENTATION:
         const auto vals = std::span{values, 6_uz};
         // AT then UP
-        auto oiter = std::transform(listener.OrientAt.cbegin(), listener.OrientAt.cend(),
-            vals.begin(), f2i);
-        std::transform(listener.OrientUp.cbegin(), listener.OrientUp.cend(), oiter, f2i);
+        auto oiter = std::ranges::transform(listener.OrientAt, vals.begin(), f2i).out;
+        std::ranges::transform(listener.OrientUp, oiter, f2i);
         return;
     }
     context->throw_error(AL_INVALID_ENUM, "Invalid listener integer-vector property {:#04x}",

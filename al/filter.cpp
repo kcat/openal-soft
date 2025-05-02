@@ -124,14 +124,12 @@ catch(...) {
 [[nodiscard]]
 auto AllocFilter(al::Device *device) noexcept -> ALfilter*
 {
-    auto sublist = std::find_if(device->FilterList.begin(), device->FilterList.end(),
-        [](const FilterSubList &entry) noexcept -> bool
-        { return entry.FreeMask != 0; });
+    auto sublist = std::ranges::find_if(device->FilterList, &FilterSubList::FreeMask);
     auto lidx = static_cast<ALuint>(std::distance(device->FilterList.begin(), sublist));
     auto slidx = static_cast<ALuint>(std::countr_zero(sublist->FreeMask));
     ASSUME(slidx < 64);
 
-    ALfilter *filter{std::construct_at(std::to_address(sublist->Filters->begin() + slidx))};
+    auto *filter = std::construct_at(std::to_address(sublist->Filters->begin() + slidx));
     InitFilterParams(filter, AL_FILTER_NULL);
 
     /* Add 1 to avoid filter ID 0. */
@@ -374,7 +372,7 @@ try {
         context->throw_error(AL_OUT_OF_MEMORY, "Failed to allocate {} filter{}", n,
             (n==1) ? "" : "s");
 
-    std::generate(fids.begin(), fids.end(), [device]{ return AllocFilter(device)->id; });
+    std::ranges::generate(fids, [device]{ return AllocFilter(device)->id; });
 }
 catch(al::base_exception&) {
 }
@@ -394,21 +392,18 @@ try {
     auto filterlock = std::lock_guard{device->FilterLock};
 
     /* First try to find any filters that are invalid. */
-    auto validate_filter = [device](const ALuint fid) -> bool
-    { return !fid || LookupFilter(device, fid) != nullptr; };
-
     const auto fids = std::span{filters, static_cast<ALuint>(n)};
-    auto invflt = std::find_if_not(fids.begin(), fids.end(), validate_filter);
+    const auto invflt = std::ranges::find_if_not(fids, [device](const ALuint fid) -> bool
+    { return !fid || LookupFilter(device, fid) != nullptr; });
     if(invflt != fids.end())
         context->throw_error(AL_INVALID_NAME, "Invalid filter ID {}", *invflt);
 
     /* All good. Delete non-0 filter IDs. */
-    auto delete_filter = [device](const ALuint fid) -> void
+    std::ranges::for_each(fids, [device](const ALuint fid)
     {
         if(ALfilter *filter{fid ? LookupFilter(device, fid) : nullptr})
             FreeFilter(device, filter);
-    };
-    std::for_each(fids.begin(), fids.end(), delete_filter);
+    });
 }
 catch(al::base_exception&) {
 }
@@ -451,7 +446,7 @@ try {
 
     /* Call the appropriate handler */
     std::visit([context,alfilt,param,value](auto&& thunk)
-        { thunk.setParami(context, alfilt, param, value); }, alfilt->mTypeVariant);
+    { thunk.setParami(context, alfilt, param, value); }, alfilt->mTypeVariant);
 }
 catch(al::base_exception&) {
 }
@@ -479,7 +474,7 @@ try {
 
     /* Call the appropriate handler */
     std::visit([context,alfilt,param,values](auto&& thunk)
-        { thunk.setParamiv(context, alfilt, param, values); }, alfilt->mTypeVariant);
+    { thunk.setParamiv(context, alfilt, param, values); }, alfilt->mTypeVariant);
 }
 catch(al::base_exception&) {
 }
@@ -500,7 +495,7 @@ try {
 
     /* Call the appropriate handler */
     std::visit([context,alfilt,param,value](auto&& thunk)
-        { thunk.setParamf(context, alfilt, param, value); }, alfilt->mTypeVariant);
+    { thunk.setParamf(context, alfilt, param, value); }, alfilt->mTypeVariant);
 }
 catch(al::base_exception&) {
 }
@@ -521,7 +516,7 @@ try {
 
     /* Call the appropriate handler */
     std::visit([context,alfilt,param,values](auto&& thunk)
-        { thunk.setParamfv(context, alfilt, param, values); }, alfilt->mTypeVariant);
+    { thunk.setParamfv(context, alfilt, param, values); }, alfilt->mTypeVariant);
 }
 catch(al::base_exception&) {
 }
@@ -547,7 +542,7 @@ try {
 
     /* Call the appropriate handler */
     std::visit([context,alfilt,param,value](auto&& thunk)
-        { thunk.getParami(context, alfilt, param, value); }, alfilt->mTypeVariant);
+    { thunk.getParami(context, alfilt, param, value); }, alfilt->mTypeVariant);
 }
 catch(al::base_exception&) {
 }
@@ -575,7 +570,7 @@ try {
 
     /* Call the appropriate handler */
     std::visit([context,alfilt,param,values](auto&& thunk)
-        { thunk.getParamiv(context, alfilt, param, values); }, alfilt->mTypeVariant);
+    { thunk.getParamiv(context, alfilt, param, values); }, alfilt->mTypeVariant);
 }
 catch(al::base_exception&) {
 }
@@ -596,7 +591,7 @@ try {
 
     /* Call the appropriate handler */
     std::visit([context,alfilt,param,value](auto&& thunk)
-        { thunk.getParamf(context, alfilt, param, value); }, alfilt->mTypeVariant);
+    { thunk.getParamf(context, alfilt, param, value); }, alfilt->mTypeVariant);
 }
 catch(al::base_exception&) {
 }
@@ -617,7 +612,7 @@ try {
 
     /* Call the appropriate handler */
     std::visit([context,alfilt,param,values](auto&& thunk)
-        { thunk.getParamfv(context, alfilt, param, values); }, alfilt->mTypeVariant);
+    { thunk.getParamfv(context, alfilt, param, values); }, alfilt->mTypeVariant);
 }
 catch(al::base_exception&) {
 }

@@ -27,11 +27,11 @@
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
-#include <functional>
 #include <iterator>
 #include <memory>
 #include <mutex>
 #include <numeric>
+#include <ranges>
 #include <span>
 #include <stdexcept>
 #include <tuple>
@@ -142,42 +142,38 @@ inline auto LookupBuffer(al::Device *device, ALuint id) noexcept -> ALbuffer*
 
 void AddActiveEffectSlots(const std::span<ALeffectslot*> auxslots, ALCcontext *context)
 {
-    if(auxslots.empty()) return;
-    EffectSlotArray *curarray{context->mActiveAuxSlots.load(std::memory_order_acquire)};
-    if((curarray->size()>>1) > std::numeric_limits<size_t>::max()-auxslots.size())
+    if(auxslots.empty())
+        return;
+
+    auto *curarray = context->mActiveAuxSlots.load(std::memory_order_acquire);
+    if((curarray->size()>>1) > (std::numeric_limits<size_t>::max()>>1)-auxslots.size())
         throw std::runtime_error{"Too many active effect slots"};
 
-    size_t newcount{(curarray->size()>>1) + auxslots.size()};
-    if(newcount > std::numeric_limits<size_t>::max()>>1)
-        throw std::runtime_error{"Too many active effect slots"};
+    auto newcount = (curarray->size()>>1) + auxslots.size();
 
     /* Insert the new effect slots into the head of the new array, followed by
      * the existing ones.
      */
     auto newarray = EffectSlot::CreatePtrArray(newcount<<1);
-    auto new_end = std::transform(auxslots.begin(), auxslots.end(), newarray->begin(),
-        std::mem_fn(&ALeffectslot::mSlot));
-    new_end = std::copy_n(curarray->begin(), curarray->size()>>1, new_end);
-
-    /* Remove any duplicates (first instance of each will be kept). */
-    for(auto start=newarray->begin()+1;;)
     {
-        new_end = std::remove(start, new_end, *(start-1));
-        if(start == new_end) break;
-        ++start;
+        const auto new_end = std::ranges::transform(auxslots, newarray->begin(),
+            &ALeffectslot::mSlot).out;
+        std::ranges::copy(*curarray | std::views::take(curarray->size()>>1), new_end);
     }
-    newcount = static_cast<size_t>(std::distance(newarray->begin(), new_end));
 
-    /* Reallocate newarray if the new size ended up smaller from duplicate
-     * removal.
+    /* Sort and remove duplicates. Reallocate newarray if any duplicates were
+     * removed.
      */
-    if(newcount < newarray->size()>>1) [[unlikely]]
+    std::ranges::sort(*newarray | std::views::take(newcount));
+    if(const auto removed = std::ranges::unique(*newarray | std::views::take(newcount)).size())
+        [[unlikely]]
     {
+        newcount -= removed;
         auto oldarray = std::move(newarray);
         newarray = EffectSlot::CreatePtrArray(newcount<<1);
-        new_end = std::copy_n(oldarray->begin(), newcount, newarray->begin());
+        std::ranges::copy(*oldarray | std::views::take(newcount), newarray->begin());
     }
-    std::fill(new_end, newarray->end(), nullptr);
+    std::ranges::fill(*newarray | std::views::drop(newcount), nullptr);
 
     auto oldarray = context->mActiveAuxSlots.exchange(std::move(newarray),
         std::memory_order_acq_rel);
@@ -186,32 +182,25 @@ void AddActiveEffectSlots(const std::span<ALeffectslot*> auxslots, ALCcontext *c
 
 void RemoveActiveEffectSlots(const std::span<ALeffectslot*> auxslots, ALCcontext *context)
 {
-    if(auxslots.empty()) return;
-    EffectSlotArray *curarray{context->mActiveAuxSlots.load(std::memory_order_acquire)};
+    if(auxslots.empty())
+        return;
 
-    /* Don't shrink the allocated array size since we don't know how many (if
-     * any) of the effect slots to remove are in the array.
-     */
-    auto newarray = EffectSlot::CreatePtrArray(curarray->size());
-
-    auto new_end = std::copy_n(curarray->begin(), curarray->size()>>1, newarray->begin());
-    /* Remove elements from newarray that match any ID in slotids. */
-    for(const ALeffectslot *auxslot : auxslots)
+    /* Copy the existing slots, excluding those specified in auxslots. */
+    auto *curarray = context->mActiveAuxSlots.load(std::memory_order_acquire);
+    auto tmparray = std::vector<EffectSlot*>{};
+    tmparray.reserve(curarray->size()>>1);
+    auto not_in_auxslots = [slotrange = auxslots | std::views::transform(&ALeffectslot::mSlot)]
+        (const EffectSlot *slot) -> bool
     {
-        auto slot_match = [auxslot](EffectSlot *slot) noexcept -> bool
-        { return (slot == auxslot->mSlot); };
-        new_end = std::remove_if(newarray->begin(), new_end, slot_match);
-    }
+        return std::ranges::find(slotrange, slot) == slotrange.end();
+    };
+    std::ranges::copy(*curarray | std::views::take(tmparray.size())
+        | std::views::filter(not_in_auxslots), std::back_inserter(tmparray));
 
     /* Reallocate with the new size. */
-    auto newsize = static_cast<size_t>(std::distance(newarray->begin(), new_end));
-    if(newsize < newarray->size()>>1) [[likely]]
-    {
-        auto oldarray = std::move(newarray);
-        newarray = EffectSlot::CreatePtrArray(newsize<<1);
-        new_end = std::copy_n(oldarray->begin(), newsize, newarray->begin());
-    }
-    std::fill(new_end, newarray->end(), nullptr);
+    auto newarray = EffectSlot::CreatePtrArray(tmparray.size()<<1);
+    auto new_end = std::ranges::copy(tmparray, newarray->begin()).out;
+    std::ranges::fill(new_end, newarray->end(), nullptr);
 
     auto oldarray = context->mActiveAuxSlots.exchange(std::move(newarray),
         std::memory_order_acq_rel);
@@ -274,15 +263,12 @@ catch(...) {
 [[nodiscard]]
 auto AllocEffectSlot(ALCcontext *context) -> ALeffectslot*
 {
-    auto sublist = std::find_if(context->mEffectSlotList.begin(), context->mEffectSlotList.end(),
-        [](const EffectSlotSubList &entry) noexcept -> bool
-        { return entry.FreeMask != 0; });
+    auto sublist = std::ranges::find_if(context->mEffectSlotList, &EffectSlotSubList::FreeMask);
     auto lidx = static_cast<ALuint>(std::distance(context->mEffectSlotList.begin(), sublist));
     auto slidx = static_cast<ALuint>(std::countr_zero(sublist->FreeMask));
     ASSUME(slidx < 64);
 
-    ALeffectslot *slot{std::construct_at(std::to_address(sublist->EffectSlots->begin() + slidx),
-        context)};
+    auto *slot = std::construct_at(std::to_address(sublist->EffectSlots->begin()+slidx), context);
     aluInitEffectPanning(slot->mSlot, context);
 
     /* Add 1 to avoid ID 0. */
@@ -356,15 +342,13 @@ try {
             std::generate_n(std::back_inserter(slots), eids.size(),
                 [context]{ return AllocEffectSlot(context); });
 
-            std::transform(slots.cbegin(), slots.cend(), eids.begin(),
-                [](ALeffectslot *slot) -> ALuint { return slot->id; });
+            std::ranges::transform(slots, eids.begin(), &ALeffectslot::id);
         }
     }
     catch(std::exception& e) {
         ERR("Exception allocating effectslot {} of {}: {}", slots.size()+1, n, e.what());
-        auto delete_effectslot = [context](ALeffectslot *slot) -> void
-        { FreeEffectSlot(context, slot); };
-        std::for_each(slots.begin(), slots.end(), delete_effectslot);
+        std::ranges::for_each(slots, [context](ALeffectslot *slot) -> void
+        { FreeEffectSlot(context, slot); });
         context->throw_error(AL_INVALID_OPERATION, "Exception allocating {} effectslots: {}", n,
             e.what());
     }
@@ -383,10 +367,10 @@ try {
         context->throw_error(AL_INVALID_VALUE, "Deleting {} effect slots", n);
     if(n <= 0) [[unlikely]] return;
 
-    std::lock_guard<std::mutex> slotlock{context->mEffectSlotLock};
+    auto slotlock = std::lock_guard{context->mEffectSlotLock};
     if(n == 1)
     {
-        ALeffectslot *slot{LookupEffectSlot(context, *effectslots)};
+        auto *slot = LookupEffectSlot(context, *effectslots);
         if(!slot)
             context->throw_error(AL_INVALID_NAME, "Invalid effect slot ID {}", *effectslots);
         if(slot->ref.load(std::memory_order_relaxed) != 0)
@@ -399,29 +383,28 @@ try {
     else
     {
         const auto eids = std::span{effectslots, static_cast<ALuint>(n)};
-        std::vector<ALeffectslot*> slots;
+        auto slots = std::vector<ALeffectslot*>{};
         slots.reserve(eids.size());
 
-        auto lookupslot = [context](const ALuint eid) -> ALeffectslot*
+        std::ranges::transform(eids, std::back_inserter(slots),
+            [context](const ALuint eid) -> ALeffectslot*
         {
-            ALeffectslot *slot{LookupEffectSlot(context, eid)};
+            auto *slot = LookupEffectSlot(context, eid);
             if(!slot)
                 context->throw_error(AL_INVALID_NAME, "Invalid effect slot ID {}", eid);
             if(slot->ref.load(std::memory_order_relaxed) != 0)
                 context->throw_error(AL_INVALID_OPERATION, "Deleting in-use effect slot {}", eid);
             return slot;
-        };
-        std::transform(eids.begin(), eids.end(), std::back_inserter(slots), lookupslot);
+        });
 
         /* All effectslots are valid, remove and delete them */
         RemoveActiveEffectSlots(slots, context);
 
-        auto delete_effectslot = [context](const ALuint eid) -> void
+        std::ranges::for_each(eids, [context](const ALuint eid) -> void
         {
             if(ALeffectslot *slot{LookupEffectSlot(context, eid)})
                 FreeEffectSlot(context, slot);
-        };
-        std::for_each(eids.begin(), eids.end(), delete_effectslot);
+        });
     }
 }
 catch(al::base_exception&) {

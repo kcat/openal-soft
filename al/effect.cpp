@@ -166,14 +166,12 @@ catch(...) {
 [[nodiscard]]
 auto AllocEffect(al::Device *device) noexcept -> ALeffect*
 {
-    auto sublist = std::find_if(device->EffectList.begin(), device->EffectList.end(),
-        [](const EffectSubList &entry) noexcept -> bool
-        { return entry.FreeMask != 0; });
+    auto sublist = std::ranges::find_if(device->EffectList, &EffectSubList::FreeMask);
     auto lidx = static_cast<ALuint>(std::distance(device->EffectList.begin(), sublist));
     auto slidx = static_cast<ALuint>(std::countr_zero(sublist->FreeMask));
     ASSUME(slidx < 64);
 
-    ALeffect *effect{std::construct_at(std::to_address(sublist->Effects->begin() + slidx))};
+    auto *effect = std::construct_at(std::to_address(sublist->Effects->begin() + slidx));
     InitEffectParams(effect, AL_EFFECT_NULL);
 
     /* Add 1 to avoid effect ID 0. */
@@ -228,7 +226,7 @@ try {
         context->throw_error(AL_OUT_OF_MEMORY, "Failed to allocate {} effect{}", n,
             (n==1) ? "" : "s");
 
-    std::generate(eids.begin(), eids.end(), [device]{ return AllocEffect(device)->id; });
+    std::ranges::generate(eids, [device]{ return AllocEffect(device)->id; });
 }
 catch(al::base_exception&) {
 }
@@ -248,21 +246,18 @@ try {
     auto effectlock = std::lock_guard{device->EffectLock};
 
     /* First try to find any effects that are invalid. */
-    auto validate_effect = [device](const ALuint eid) -> bool
-    { return !eid || LookupEffect(device, eid) != nullptr; };
-
     const auto eids = std::span{effects, static_cast<ALuint>(n)};
-    auto inveffect = std::find_if_not(eids.begin(), eids.end(), validate_effect);
+    auto inveffect = std::ranges::find_if_not(eids, [device](const ALuint eid) -> bool
+    { return !eid || LookupEffect(device, eid) != nullptr; });
     if(inveffect != eids.end())
         context->throw_error(AL_INVALID_NAME, "Invalid effect ID {}", *inveffect);
 
     /* All good. Delete non-0 effect IDs. */
-    auto delete_effect = [device](ALuint eid) -> void
+    std::ranges::for_each(eids, [device](ALuint eid)
     {
         if(ALeffect *effect{eid ? LookupEffect(device, eid) : nullptr})
             FreeEffect(device, effect);
-    };
-    std::for_each(eids.begin(), eids.end(), delete_effect);
+    });
 }
 catch(al::base_exception&) {
 }
@@ -298,7 +293,7 @@ try {
         {
             auto check_effect = [value](const EffectList &item) -> bool
             { return value == item.val && !DisabledEffects.test(item.type); };
-            if(!std::any_of(gEffectList.cbegin(), gEffectList.cend(), check_effect))
+            if(!std::ranges::any_of(gEffectList, check_effect))
                 context->throw_error(AL_INVALID_VALUE, "Effect type {:#04x} not supported",
                     as_unsigned(value));
         }

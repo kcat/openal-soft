@@ -44,9 +44,6 @@ using namespace std::string_view_literals;
 template<typename... Ts>
 struct overloaded : Ts... { using Ts::operator()...; };
 
-template<typename... Ts>
-overloaded(Ts...) -> overloaded<Ts...>;
-
 int EventThread(ALCcontext *context)
 {
     auto *ring = context->mAsyncEvents.get();
@@ -131,7 +128,7 @@ int EventThread(ALCcontext *context)
                 }
             }, event);
         }
-        std::destroy(evt_span.begin(), evt_span.end());
+        std::ranges::destroy(evt_span);
         ring->readAdvance(evt_span.size());
     }
     return 0;
@@ -166,7 +163,7 @@ void StartEventThrd(ALCcontext *ctx)
 
 void StopEventThrd(ALCcontext *ctx)
 {
-    RingBuffer *ring{ctx->mAsyncEvents.get()};
+    auto *ring = ctx->mAsyncEvents.get();
     auto evt_data = ring->getWriteVector()[0];
     if(evt_data.len == 0)
     {
@@ -197,15 +194,16 @@ try {
     if(!types)
         context->throw_error(AL_INVALID_VALUE, "NULL pointer");
 
-    ContextBase::AsyncEventBitset flags{};
-    for(const ALenum evttype : std::span{types, static_cast<uint>(count)})
+    auto flags = ContextBase::AsyncEventBitset{};
+    std::ranges::for_each(std::span{types, static_cast<uint>(count)},
+        [context,&flags](const ALenum evttype)
     {
-        auto etype = GetEventType(evttype);
+        const auto etype = GetEventType(evttype);
         if(!etype)
             context->throw_error(AL_INVALID_ENUM, "Invalid event type {:#04x}",
                 as_unsigned(evttype));
         flags.set(al::to_underlying(*etype));
-    }
+    });
 
     if(enable)
     {
@@ -228,7 +226,7 @@ try {
         /* Wait to ensure the event handler sees the changed flags before
          * returning.
          */
-        std::lock_guard<std::mutex> eventlock{context->mEventCbLock};
+        std::ignore = std::lock_guard{context->mEventCbLock};
     }
 }
 catch(al::base_exception&) {
@@ -241,7 +239,7 @@ AL_API DECL_FUNCEXT2(void, alEventCallback,SOFT, ALEVENTPROCSOFT,callback, void*
 FORCE_ALIGN void AL_APIENTRY alEventCallbackDirectSOFT(ALCcontext *context,
     ALEVENTPROCSOFT callback, void *userParam) noexcept
 try {
-    std::lock_guard<std::mutex> eventlock{context->mEventCbLock};
+    auto eventlock = std::lock_guard{context->mEventCbLock};
     context->mEventCb = callback;
     context->mEventParam = userParam;
 }

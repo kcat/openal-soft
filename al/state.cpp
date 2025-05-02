@@ -190,7 +190,7 @@ struct PropertyCastType<ALboolean> {
 template<typename T>
 void GetValue(ALCcontext *context, ALenum pname, T *values)
 {
-    auto cast_value = PropertyCastType<T>{};
+    static constexpr auto cast_value = PropertyCastType<T>{};
 
     switch(static_cast<PropertyValue>(pname))
     {
@@ -233,14 +233,14 @@ void GetValue(ALCcontext *context, ALenum pname, T *values)
 
     case AL_DEBUG_LOGGED_MESSAGES_EXT:
     {
-        std::lock_guard<std::mutex> debuglock{context->mDebugCbLock};
+        auto debuglock = std::lock_guard{context->mDebugCbLock};
         *values = cast_value(context->mDebugLog.size());
         return;
     }
 
     case AL_DEBUG_NEXT_LOGGED_MESSAGE_LENGTH_EXT:
     {
-        std::lock_guard<std::mutex> debuglock{context->mDebugCbLock};
+        auto debuglock = std::lock_guard{context->mDebugCbLock};
         *values = cast_value(context->mDebugLog.empty() ? 0_uz
             : (context->mDebugLog.front().mMessage.size()+1));
         return;
@@ -281,8 +281,8 @@ void GetValue(ALCcontext *context, ALenum pname, T *values)
     case AL_EAX_RAM_FREE:
         if(eax_g_is_enabled)
         {
-            auto device = context->mALDevice.get();
-            std::lock_guard<std::mutex> device_lock{device->BufferLock};
+            auto *device = context->mALDevice.get();
+            auto devlock = std::lock_guard{device->BufferLock};
             *values = cast_value(device->eax_x_ram_free_size);
             return;
         }
@@ -324,7 +324,7 @@ FORCE_ALIGN void AL_APIENTRY alEnableDirect(ALCcontext *context, ALenum capabili
     {
     case AL_SOURCE_DISTANCE_MODEL:
         {
-            std::lock_guard<std::mutex> proplock{context->mPropLock};
+            auto proplock = std::lock_guard{context->mPropLock};
             context->mSourceDistanceModel = true;
             UpdateProps(context);
         }
@@ -349,7 +349,7 @@ FORCE_ALIGN void AL_APIENTRY alDisableDirect(ALCcontext *context, ALenum capabil
     {
     case AL_SOURCE_DISTANCE_MODEL:
         {
-            std::lock_guard<std::mutex> proplock{context->mPropLock};
+            auto proplock = std::lock_guard{context->mPropLock};
             context->mSourceDistanceModel = false;
             UpdateProps(context);
         }
@@ -521,7 +521,7 @@ FORCE_ALIGN void AL_APIENTRY alDopplerFactorDirect(ALCcontext *context, ALfloat 
         context->setError(AL_INVALID_VALUE, "Doppler factor {:f} out of range", value);
     else
     {
-        std::lock_guard<std::mutex> proplock{context->mPropLock};
+        auto proplock = std::lock_guard{context->mPropLock};
         context->mDopplerFactor = value;
         UpdateProps(context);
     }
@@ -534,7 +534,7 @@ FORCE_ALIGN void AL_APIENTRY alSpeedOfSoundDirect(ALCcontext *context, ALfloat v
         context->setError(AL_INVALID_VALUE, "Speed of sound {:f} out of range", value);
     else
     {
-        std::lock_guard<std::mutex> proplock{context->mPropLock};
+        auto proplock = std::lock_guard{context->mPropLock};
         context->mSpeedOfSound = value;
         UpdateProps(context);
     }
@@ -545,7 +545,7 @@ FORCE_ALIGN void AL_APIENTRY alDistanceModelDirect(ALCcontext *context, ALenum v
 {
     if(auto model = DistanceModelFromALenum(value))
     {
-        std::lock_guard<std::mutex> proplock{context->mPropLock};
+        auto proplock = std::lock_guard{context->mPropLock};
         context->mDistanceModel = *model;
         if(!context->mSourceDistanceModel)
             UpdateProps(context);
@@ -559,14 +559,14 @@ FORCE_ALIGN void AL_APIENTRY alDistanceModelDirect(ALCcontext *context, ALenum v
 AL_API DECL_FUNCEXT(void, alDeferUpdates,SOFT)
 FORCE_ALIGN void AL_APIENTRY alDeferUpdatesDirectSOFT(ALCcontext *context) noexcept
 {
-    std::lock_guard<std::mutex> proplock{context->mPropLock};
+    auto proplock = std::lock_guard{context->mPropLock};
     context->deferUpdates();
 }
 
 AL_API DECL_FUNCEXT(void, alProcessUpdates,SOFT)
 FORCE_ALIGN void AL_APIENTRY alProcessUpdatesDirectSOFT(ALCcontext *context) noexcept
 {
-    std::lock_guard<std::mutex> proplock{context->mPropLock};
+    auto proplock = std::lock_guard{context->mPropLock};
     context->processUpdates();
 }
 
@@ -603,7 +603,7 @@ AL_API void AL_APIENTRY alDopplerVelocity(ALfloat value) noexcept
         context->setError(AL_INVALID_VALUE, "Doppler velocity {:f} out of range", value);
     else
     {
-        std::lock_guard<std::mutex> proplock{context->mPropLock};
+        auto proplock = std::lock_guard{context->mPropLock};
         context->mDopplerVelocity = value;
         UpdateProps(context.get());
     }

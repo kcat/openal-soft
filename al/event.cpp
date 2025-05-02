@@ -44,6 +44,9 @@ using namespace std::string_view_literals;
 template<typename... Ts>
 struct overloaded : Ts... { using Ts::operator()...; };
 
+template<typename... Ts>
+overloaded(Ts...) -> overloaded<Ts...>;
+
 int EventThread(ALCcontext *context)
 {
     auto *ring = context->mAsyncEvents.get();

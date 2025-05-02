@@ -230,7 +230,8 @@ int64_t GetSourceSampleOffset(ALsource *Source, ALCcontext *context, nanoseconds
     if(!voice)
         return 0;
 
-    std::ranges::find_if(Source->mQueue, [Current,&readPos](const VoiceBufferItem &item) -> bool
+    std::ignore = std::ranges::find_if(Source->mQueue,
+        [Current,&readPos](const VoiceBufferItem &item)
     {
         if(&item == Current)
             return true;
@@ -279,7 +280,8 @@ double GetSourceSecOffset(ALsource *Source, ALCcontext *context, nanoseconds *cl
             return iter->mBuffer;
         return nullptr;
     });
-    std::ranges::find_if(Source->mQueue, [Current,&readPos](const ALbufferQueueItem &item)
+    std::ignore = std::ranges::find_if(Source->mQueue,
+        [Current,&readPos](const ALbufferQueueItem &item)
     {
         if(&item == Current)
             return true;
@@ -328,7 +330,8 @@ NOINLINE T GetSourceOffset(ALsource *Source, ALenum name, ALCcontext *context)
             return iter->mBuffer;
         return nullptr;
     });
-    std::ranges::find_if(Source->mQueue, [Current,&readPos](const ALbufferQueueItem &item)
+    std::ignore = std::ranges::find_if(Source->mQueue,
+        [Current,&readPos](const ALbufferQueueItem &item)
     {
         if(&item == Current)
             return true;
@@ -2386,7 +2389,7 @@ NOINLINE void GetProperty(ALsource *const Source, ALCcontext *const Context, con
                             return voice->mCurrentBuffer.load(std::memory_order_relaxed);
                         return nullptr;
                     });
-                    std::ranges::find_if(Source->mQueue,
+                    std::ignore = std::ranges::find_if(Source->mQueue,
                         [Current,&played](const ALbufferQueueItem &item) noexcept -> bool
                     {
                         if(&item == Current)
@@ -2517,7 +2520,7 @@ void StartSources(ALCcontext *const context, const std::span<ALsource*> srchandl
     /* Count the number of reusable voices. */
     auto voicelist = context->getVoicesSpan();
     auto free_voices = 0_uz;
-    std::ranges::find_if(voicelist, [srchandles,&free_voices](const Voice *voice)
+    std::ignore = std::ranges::find_if(voicelist, [srchandles,&free_voices](const Voice *voice)
     {
         free_voices += (voice->mPlayState.load(std::memory_order_acquire) == Voice::Stopped
             && voice->mSourceID.load(std::memory_order_relaxed) == 0u
@@ -3674,7 +3677,7 @@ try {
                 return voice->mCurrentBuffer.load(std::memory_order_relaxed);
             return nullptr;
         });
-        std::ranges::find_if(source->mQueue,
+        std::ignore = std::ranges::find_if(source->mQueue,
             [Current,&processed](const ALbufferQueueItem &item) noexcept -> bool
         {
             if(&item == Current)

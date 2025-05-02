@@ -491,7 +491,7 @@ try {
             const auto logSpan = std::span{logBuf, static_cast<ALuint>(logBufSize)};
             auto counter = 0_uz;
             auto todo = 0u;
-            std::ranges::find_if(context->mDebugLog | std::views::take(count),
+            std::ignore = std::ranges::find_if(context->mDebugLog | std::views::take(count),
                 [logSpan,&counter,&todo](const DebugLogEntry &entry)
             {
                 const auto tocopy = size_t{entry.mMessage.size() + 1};

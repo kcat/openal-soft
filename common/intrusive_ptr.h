@@ -55,19 +55,19 @@ class intrusive_ptr {
     T *mPtr{nullptr};
 
 public:
-    intrusive_ptr() noexcept = default;
-    intrusive_ptr(const intrusive_ptr &rhs) noexcept : mPtr{rhs.mPtr}
+    constexpr intrusive_ptr() noexcept = default;
+    constexpr intrusive_ptr(const intrusive_ptr &rhs) noexcept : mPtr{rhs.mPtr}
     { if(mPtr) mPtr->add_ref(); }
-    intrusive_ptr(intrusive_ptr&& rhs) noexcept : mPtr{rhs.mPtr}
+    constexpr intrusive_ptr(intrusive_ptr&& rhs) noexcept : mPtr{rhs.mPtr}
     { rhs.mPtr = nullptr; }
-    intrusive_ptr(std::nullptr_t) noexcept { } /* NOLINT(google-explicit-constructor) */
-    explicit intrusive_ptr(T *ptr) noexcept : mPtr{ptr} { }
-    ~intrusive_ptr() { if(mPtr) mPtr->dec_ref(); }
+    constexpr intrusive_ptr(std::nullptr_t) noexcept { } /* NOLINT(google-explicit-constructor) */
+    explicit constexpr intrusive_ptr(T *ptr) noexcept : mPtr{ptr} { }
+    constexpr ~intrusive_ptr() { if(mPtr) mPtr->dec_ref(); }
 
     /* NOLINTBEGIN(bugprone-unhandled-self-assignment)
      * Self-assignment is handled properly here.
      */
-    intrusive_ptr& operator=(const intrusive_ptr &rhs) noexcept
+    constexpr intrusive_ptr& operator=(const intrusive_ptr &rhs) noexcept
     {
         static_assert(noexcept(std::declval<T*>()->dec_ref()), "dec_ref must be noexcept");
 
@@ -77,7 +77,7 @@ public:
         return *this;
     }
     /* NOLINTEND(bugprone-unhandled-self-assignment) */
-    intrusive_ptr& operator=(intrusive_ptr&& rhs) noexcept
+    constexpr intrusive_ptr& operator=(intrusive_ptr&& rhs) noexcept
     {
         if(&rhs != this) [[likely]]
         {
@@ -87,23 +87,23 @@ public:
         return *this;
     }
 
-    explicit operator bool() const noexcept { return mPtr != nullptr; }
+    explicit constexpr operator bool() const noexcept { return mPtr != nullptr; }
 
-    [[nodiscard]] auto operator*() const noexcept -> T& { return *mPtr; }
-    [[nodiscard]] auto operator->() const noexcept -> T* { return mPtr; }
-    [[nodiscard]] auto get() const noexcept -> T* { return mPtr; }
+    [[nodiscard]] constexpr auto operator*() const noexcept -> T& { return *mPtr; }
+    [[nodiscard]] constexpr auto operator->() const noexcept -> T* { return mPtr; }
+    [[nodiscard]] constexpr auto get() const noexcept -> T* { return mPtr; }
 
-    void reset(T *ptr=nullptr) noexcept
+    constexpr void reset(T *ptr=nullptr) noexcept
     {
         if(mPtr)
             mPtr->dec_ref();
         mPtr = ptr;
     }
 
-    T* release() noexcept { return std::exchange(mPtr, nullptr); }
+    constexpr T* release() noexcept { return std::exchange(mPtr, nullptr); }
 
-    void swap(intrusive_ptr &rhs) noexcept { std::swap(mPtr, rhs.mPtr); }
-    void swap(intrusive_ptr&& rhs) noexcept { std::swap(mPtr, rhs.mPtr); }
+    constexpr void swap(intrusive_ptr &rhs) noexcept { std::swap(mPtr, rhs.mPtr); }
+    constexpr void swap(intrusive_ptr&& rhs) noexcept { std::swap(mPtr, rhs.mPtr); }
 };
 
 } // namespace al

@@ -523,7 +523,7 @@ std::optional<VoicePos> GetSampleOffset(std::deque<ALbufferQueueItem> &BufferLis
     if(iter != BufferList.end())
     {
         /* Offset is in this buffer */
-        return VoicePos{static_cast<int>(offset), frac, std::to_address(iter)};
+        return VoicePos{static_cast<int>(offset), frac, &*iter};
     }
 
     /* Offset is out of range of the queue */
@@ -1407,6 +1407,8 @@ auto PropTypeName<ALdouble>() -> std::string_view { return "double"sv; }
  */
 template<typename T, typename U>
 struct PairStruct { T First; U Second; };
+template<typename T, typename U>
+PairStruct(T,U) -> PairStruct<T,U>;
 
 template<typename T, size_t N>
 auto GetCheckers(ALCcontext *context, const SourceProp prop, const std::span<T,N> values)

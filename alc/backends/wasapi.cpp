@@ -1388,6 +1388,9 @@ FORCE_ALIGN void WasapiPlayback::mixerProc(SpatialDevice &audio)
         }
         ~PriorityControl()
         { SetThreadPriority(GetCurrentThread(), mOldPriority); }
+
+        PriorityControl(const PriorityControl&) = delete;
+        auto operator=(const PriorityControl&) -> PriorityControl& = delete;
     };
     auto prioctrl = PriorityControl{};
 

@@ -882,7 +882,7 @@ void MainWindow::loadConfig(const QString &fname)
             }
             else if(backend.size() > 1)
             {
-                QStringRef backendref{backend.rightRef(backend.size()-1)};
+                auto backendref = QStringView{backend}.right(backend.size()-1);
                 for(size_t j{0};j < backendList.size();++j)
                 {
                     if(backendref == std::data(backendList[j].backend_name))

@@ -102,7 +102,7 @@ jobs:
               libasound2-dev \
               libjack-dev \
               libpipewire-0.3-dev \
-              qtbase5-dev \
+              qt6-base-dev \
               libdbus-1-dev",
             build_type: "Release"
           }

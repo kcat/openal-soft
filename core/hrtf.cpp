@@ -1414,13 +1414,13 @@ catch(std::exception& e) {
 }
 
 
-void HrtfStore::inc_ref()
+void HrtfStore::inc_ref() noexcept
 {
     auto ref = mRef.fetch_add(1, std::memory_order_acq_rel)+1;
     TRACE("HrtfStore {} increasing refcount to {}", decltype(std::declval<void*>()){this}, ref);
 }
 
-void HrtfStore::dec_ref()
+void HrtfStore::dec_ref() noexcept
 {
     auto ref = mRef.fetch_sub(1, std::memory_order_acq_rel)-1;
     TRACE("HrtfStore {} decreasing refcount to {}", decltype(std::declval<void*>()){this}, ref);

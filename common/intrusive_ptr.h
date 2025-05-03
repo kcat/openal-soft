@@ -63,21 +63,20 @@ public:
     explicit constexpr intrusive_ptr(T *ptr) noexcept : mPtr{ptr} { }
     constexpr ~intrusive_ptr() { if(mPtr) mPtr->dec_ref(); }
 
-    /* NOLINTBEGIN(bugprone-unhandled-self-assignment)
-     * Self-assignment is handled properly here.
-     */
-    constexpr intrusive_ptr& operator=(const intrusive_ptr &rhs) noexcept
+    constexpr auto operator=(const intrusive_ptr &rhs) noexcept -> intrusive_ptr&
     {
         static_assert(noexcept(std::declval<T*>()->dec_ref()), "dec_ref must be noexcept");
-
-        if(rhs.mPtr) rhs.mPtr->inc_ref();
-        if(mPtr) mPtr->dec_ref();
-        mPtr = rhs.mPtr;
+        if(&rhs != this) [[likely]]
+        {
+            if(rhs.mPtr) rhs.mPtr->inc_ref();
+            if(mPtr) mPtr->dec_ref();
+            mPtr = rhs.mPtr;
+        }
         return *this;
     }
-    /* NOLINTEND(bugprone-unhandled-self-assignment) */
-    constexpr intrusive_ptr& operator=(intrusive_ptr&& rhs) noexcept
+    constexpr auto operator=(intrusive_ptr&& rhs) noexcept -> intrusive_ptr&
     {
+        static_assert(noexcept(std::declval<T*>()->dec_ref()), "dec_ref must be noexcept");
         if(&rhs != this) [[likely]]
         {
             if(mPtr) mPtr->dec_ref();
@@ -88,7 +87,7 @@ public:
 
     explicit constexpr operator bool() const noexcept { return mPtr != nullptr; }
 
-    template<typename U> requires std::equality_comparable_with<T*,U*>
+    template<typename U=T> requires std::equality_comparable_with<T*,U*>
     constexpr auto operator==(const intrusive_ptr<U> &rhs) const noexcept -> bool
     { return mPtr == rhs.mPtr; }
 
@@ -98,12 +97,13 @@ public:
 
     constexpr void reset(T *ptr=nullptr) noexcept
     {
+        static_assert(noexcept(std::declval<T*>()->dec_ref()), "dec_ref must be noexcept");
         if(mPtr)
             mPtr->dec_ref();
         mPtr = ptr;
     }
 
-    constexpr T* release() noexcept { return std::exchange(mPtr, nullptr); }
+    constexpr auto release() noexcept -> T* { return std::exchange(mPtr, nullptr); }
 
     constexpr void swap(intrusive_ptr &rhs) noexcept { std::swap(mPtr, rhs.mPtr); }
     constexpr void swap(intrusive_ptr&& rhs) noexcept { std::swap(mPtr, rhs.mPtr); }

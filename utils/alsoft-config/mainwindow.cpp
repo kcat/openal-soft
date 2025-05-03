@@ -403,12 +403,12 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow{parent}
 
     connect(ui->stereoEncodingComboBox, qcb_cicint, this, &MainWindow::enableApplyButton);
     connect(ui->ambiFormatComboBox, qcb_cicint, this, &MainWindow::enableApplyButton);
-    connect(ui->outputLimiterCheckBox, &QCheckBox::stateChanged, this, &MainWindow::enableApplyButton);
-    connect(ui->outputDitherCheckBox, &QCheckBox::stateChanged, this, &MainWindow::enableApplyButton);
+    connect(ui->outputLimiterCheckBox, &QCheckBox::checkStateChanged, this, &MainWindow::enableApplyButton);
+    connect(ui->outputDitherCheckBox, &QCheckBox::checkStateChanged, this, &MainWindow::enableApplyButton);
 
-    connect(ui->decoderHQModeCheckBox, &QCheckBox::stateChanged, this, &MainWindow::enableApplyButton);
-    connect(ui->decoderDistCompCheckBox, &QCheckBox::stateChanged, this, &MainWindow::enableApplyButton);
-    connect(ui->decoderNFEffectsCheckBox, &QCheckBox::stateChanged, this, &MainWindow::enableApplyButton);
+    connect(ui->decoderHQModeCheckBox, &QCheckBox::checkStateChanged, this, &MainWindow::enableApplyButton);
+    connect(ui->decoderDistCompCheckBox, &QCheckBox::checkStateChanged, this, &MainWindow::enableApplyButton);
+    connect(ui->decoderNFEffectsCheckBox, &QCheckBox::checkStateChanged, this, &MainWindow::enableApplyButton);
     auto qdsb_vcd = static_cast<void(QDoubleSpinBox::*)(double)>(&QDoubleSpinBox::valueChanged);
     connect(ui->decoderSpeakerDistSpinBox, qdsb_vcd, this, &MainWindow::enableApplyButton);
     connect(ui->decoderQuadLineEdit, &QLineEdit::textChanged, this, &MainWindow::enableApplyButton);
@@ -428,62 +428,62 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow{parent}
     connect(ui->hrtfAddButton, &QPushButton::clicked, this, &MainWindow::addHrtfFile);
     connect(ui->hrtfRemoveButton, &QPushButton::clicked, this, &MainWindow::removeHrtfFile);
     connect(ui->hrtfFileList, &QListWidget::itemSelectionChanged, this, &MainWindow::updateHrtfRemoveButton);
-    connect(ui->defaultHrtfPathsCheckBox, &QCheckBox::stateChanged, this, &MainWindow::enableApplyButton);
+    connect(ui->defaultHrtfPathsCheckBox, &QCheckBox::checkStateChanged, this, &MainWindow::enableApplyButton);
 
     connect(ui->srcCountLineEdit, &QLineEdit::editingFinished, this, &MainWindow::enableApplyButton);
     connect(ui->srcSendLineEdit, &QLineEdit::editingFinished, this, &MainWindow::enableApplyButton);
     connect(ui->effectSlotLineEdit, &QLineEdit::editingFinished, this, &MainWindow::enableApplyButton);
 
-    connect(ui->enableSSECheckBox, &QCheckBox::stateChanged, this, &MainWindow::enableApplyButton);
-    connect(ui->enableSSE2CheckBox, &QCheckBox::stateChanged, this, &MainWindow::enableApplyButton);
-    connect(ui->enableSSE3CheckBox, &QCheckBox::stateChanged, this, &MainWindow::enableApplyButton);
-    connect(ui->enableSSE41CheckBox, &QCheckBox::stateChanged, this, &MainWindow::enableApplyButton);
-    connect(ui->enableNeonCheckBox, &QCheckBox::stateChanged, this, &MainWindow::enableApplyButton);
+    connect(ui->enableSSECheckBox, &QCheckBox::checkStateChanged, this, &MainWindow::enableApplyButton);
+    connect(ui->enableSSE2CheckBox, &QCheckBox::checkStateChanged, this, &MainWindow::enableApplyButton);
+    connect(ui->enableSSE3CheckBox, &QCheckBox::checkStateChanged, this, &MainWindow::enableApplyButton);
+    connect(ui->enableSSE41CheckBox, &QCheckBox::checkStateChanged, this, &MainWindow::enableApplyButton);
+    connect(ui->enableNeonCheckBox, &QCheckBox::checkStateChanged, this, &MainWindow::enableApplyButton);
 
     ui->enabledBackendList->setContextMenuPolicy(Qt::CustomContextMenu);
     connect(ui->enabledBackendList, &QListWidget::customContextMenuRequested, this, &MainWindow::showEnabledBackendMenu);
 
     ui->disabledBackendList->setContextMenuPolicy(Qt::CustomContextMenu);
     connect(ui->disabledBackendList, &QListWidget::customContextMenuRequested, this, &MainWindow::showDisabledBackendMenu);
-    connect(ui->backendCheckBox, &QCheckBox::stateChanged, this, &MainWindow::enableApplyButton);
+    connect(ui->backendCheckBox, &QCheckBox::checkStateChanged, this, &MainWindow::enableApplyButton);
 
     connect(ui->defaultReverbComboBox, qcb_cicint, this, &MainWindow::enableApplyButton);
-    connect(ui->enableEaxReverbCheck, &QCheckBox::stateChanged, this, &MainWindow::enableApplyButton);
-    connect(ui->enableStdReverbCheck, &QCheckBox::stateChanged, this, &MainWindow::enableApplyButton);
-    connect(ui->enableAutowahCheck, &QCheckBox::stateChanged, this, &MainWindow::enableApplyButton);
-    connect(ui->enableChorusCheck, &QCheckBox::stateChanged, this, &MainWindow::enableApplyButton);
-    connect(ui->enableCompressorCheck, &QCheckBox::stateChanged, this, &MainWindow::enableApplyButton);
-    connect(ui->enableDistortionCheck, &QCheckBox::stateChanged, this, &MainWindow::enableApplyButton);
-    connect(ui->enableEchoCheck, &QCheckBox::stateChanged, this, &MainWindow::enableApplyButton);
-    connect(ui->enableEqualizerCheck, &QCheckBox::stateChanged, this, &MainWindow::enableApplyButton);
-    connect(ui->enableFlangerCheck, &QCheckBox::stateChanged, this, &MainWindow::enableApplyButton);
-    connect(ui->enableFrequencyShifterCheck, &QCheckBox::stateChanged, this, &MainWindow::enableApplyButton);
-    connect(ui->enableModulatorCheck, &QCheckBox::stateChanged, this, &MainWindow::enableApplyButton);
-    connect(ui->enableDedicatedCheck, &QCheckBox::stateChanged, this, &MainWindow::enableApplyButton);
-    connect(ui->enablePitchShifterCheck, &QCheckBox::stateChanged, this, &MainWindow::enableApplyButton);
-    connect(ui->enableVocalMorpherCheck, &QCheckBox::stateChanged, this, &MainWindow::enableApplyButton);
-    connect(ui->enableEaxCheck, &QCheckBox::stateChanged, this, &MainWindow::enableApplyButton);
+    connect(ui->enableEaxReverbCheck, &QCheckBox::checkStateChanged, this, &MainWindow::enableApplyButton);
+    connect(ui->enableStdReverbCheck, &QCheckBox::checkStateChanged, this, &MainWindow::enableApplyButton);
+    connect(ui->enableAutowahCheck, &QCheckBox::checkStateChanged, this, &MainWindow::enableApplyButton);
+    connect(ui->enableChorusCheck, &QCheckBox::checkStateChanged, this, &MainWindow::enableApplyButton);
+    connect(ui->enableCompressorCheck, &QCheckBox::checkStateChanged, this, &MainWindow::enableApplyButton);
+    connect(ui->enableDistortionCheck, &QCheckBox::checkStateChanged, this, &MainWindow::enableApplyButton);
+    connect(ui->enableEchoCheck, &QCheckBox::checkStateChanged, this, &MainWindow::enableApplyButton);
+    connect(ui->enableEqualizerCheck, &QCheckBox::checkStateChanged, this, &MainWindow::enableApplyButton);
+    connect(ui->enableFlangerCheck, &QCheckBox::checkStateChanged, this, &MainWindow::enableApplyButton);
+    connect(ui->enableFrequencyShifterCheck, &QCheckBox::checkStateChanged, this, &MainWindow::enableApplyButton);
+    connect(ui->enableModulatorCheck, &QCheckBox::checkStateChanged, this, &MainWindow::enableApplyButton);
+    connect(ui->enableDedicatedCheck, &QCheckBox::checkStateChanged, this, &MainWindow::enableApplyButton);
+    connect(ui->enablePitchShifterCheck, &QCheckBox::checkStateChanged, this, &MainWindow::enableApplyButton);
+    connect(ui->enableVocalMorpherCheck, &QCheckBox::checkStateChanged, this, &MainWindow::enableApplyButton);
+    connect(ui->enableEaxCheck, &QCheckBox::checkStateChanged, this, &MainWindow::enableApplyButton);
 
-    connect(ui->pulseAutospawnCheckBox, &QCheckBox::stateChanged, this, &MainWindow::enableApplyButton);
-    connect(ui->pulseAllowMovesCheckBox, &QCheckBox::stateChanged, this, &MainWindow::enableApplyButton);
-    connect(ui->pulseFixRateCheckBox, &QCheckBox::stateChanged, this, &MainWindow::enableApplyButton);
-    connect(ui->pulseAdjLatencyCheckBox, &QCheckBox::stateChanged, this, &MainWindow::enableApplyButton);
+    connect(ui->pulseAutospawnCheckBox, &QCheckBox::checkStateChanged, this, &MainWindow::enableApplyButton);
+    connect(ui->pulseAllowMovesCheckBox, &QCheckBox::checkStateChanged, this, &MainWindow::enableApplyButton);
+    connect(ui->pulseFixRateCheckBox, &QCheckBox::checkStateChanged, this, &MainWindow::enableApplyButton);
+    connect(ui->pulseAdjLatencyCheckBox, &QCheckBox::checkStateChanged, this, &MainWindow::enableApplyButton);
 
-    connect(ui->pwireAssumeAudioCheckBox, &QCheckBox::stateChanged, this, &MainWindow::enableApplyButton);
-    connect(ui->pwireRtMixCheckBox, &QCheckBox::stateChanged, this, &MainWindow::enableApplyButton);
+    connect(ui->pwireAssumeAudioCheckBox, &QCheckBox::checkStateChanged, this, &MainWindow::enableApplyButton);
+    connect(ui->pwireRtMixCheckBox, &QCheckBox::checkStateChanged, this, &MainWindow::enableApplyButton);
 
-    connect(ui->wasapiResamplerCheckBox, &QCheckBox::stateChanged, this, &MainWindow::enableApplyButton);
+    connect(ui->wasapiResamplerCheckBox, &QCheckBox::checkStateChanged, this, &MainWindow::enableApplyButton);
 
-    connect(ui->jackAutospawnCheckBox, &QCheckBox::stateChanged, this, &MainWindow::enableApplyButton);
-    connect(ui->jackConnectPortsCheckBox, &QCheckBox::stateChanged, this, &MainWindow::enableApplyButton);
-    connect(ui->jackRtMixCheckBox, &QCheckBox::stateChanged, this, &MainWindow::enableApplyButton);
+    connect(ui->jackAutospawnCheckBox, &QCheckBox::checkStateChanged, this, &MainWindow::enableApplyButton);
+    connect(ui->jackConnectPortsCheckBox, &QCheckBox::checkStateChanged, this, &MainWindow::enableApplyButton);
+    connect(ui->jackRtMixCheckBox, &QCheckBox::checkStateChanged, this, &MainWindow::enableApplyButton);
     connect(ui->jackBufferSizeSlider, &QSlider::valueChanged, this, &MainWindow::updateJackBufferSizeEdit);
     connect(ui->jackBufferSizeLine, &QLineEdit::editingFinished, this, &MainWindow::updateJackBufferSizeSlider);
 
     connect(ui->alsaDefaultDeviceLine, &QLineEdit::textChanged, this, &MainWindow::enableApplyButton);
     connect(ui->alsaDefaultCaptureLine, &QLineEdit::textChanged, this, &MainWindow::enableApplyButton);
-    connect(ui->alsaResamplerCheckBox, &QCheckBox::stateChanged, this, &MainWindow::enableApplyButton);
-    connect(ui->alsaMmapCheckBox, &QCheckBox::stateChanged, this, &MainWindow::enableApplyButton);
+    connect(ui->alsaResamplerCheckBox, &QCheckBox::checkStateChanged, this, &MainWindow::enableApplyButton);
+    connect(ui->alsaMmapCheckBox, &QCheckBox::checkStateChanged, this, &MainWindow::enableApplyButton);
 
     connect(ui->ossDefaultDeviceLine, &QLineEdit::textChanged, this, &MainWindow::enableApplyButton);
     connect(ui->ossPlaybackPushButton, &QPushButton::clicked, this, &MainWindow::selectOSSPlayback);
@@ -495,7 +495,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow{parent}
 
     connect(ui->waveOutputLine, &QLineEdit::textChanged, this, &MainWindow::enableApplyButton);
     connect(ui->waveOutputButton, &QPushButton::clicked, this, &MainWindow::selectWaveOutput);
-    connect(ui->waveBFormatCheckBox, &QCheckBox::stateChanged, this, &MainWindow::enableApplyButton);
+    connect(ui->waveBFormatCheckBox, &QCheckBox::checkStateChanged, this, &MainWindow::enableApplyButton);
 
     ui->backendListWidget->setCurrentRow(0);
     ui->tabWidget->setCurrentIndex(0);

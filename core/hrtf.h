@@ -44,7 +44,7 @@ struct alignas(16) HrtfStore {
     void getCoeffs(float elevation, float azimuth, float distance, float spread,
         const HrirSpan coeffs, const std::span<uint,2> delays) const;
 
-    void add_ref();
+    void inc_ref();
     void dec_ref();
 
     void *operator new(size_t) = delete;

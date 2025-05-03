@@ -75,7 +75,7 @@ struct ALeffectslot {
     ALeffectslot& operator=(const ALeffectslot&) = delete;
     ~ALeffectslot();
 
-    auto add_ref() noexcept { return mRef.fetch_add(1, std::memory_order_acq_rel)+1; }
+    auto inc_ref() noexcept { return mRef.fetch_add(1, std::memory_order_acq_rel)+1; }
     auto dec_ref() noexcept { return mRef.fetch_sub(1, std::memory_order_acq_rel)-1; }
     auto newReference() noexcept
     {

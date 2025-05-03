@@ -1263,7 +1263,7 @@ try {
         if(HrtfStore *hrtf{handle->mEntry.get()})
         {
             assert(hrtf->mSampleRate == devrate);
-            hrtf->add_ref();
+            hrtf->inc_ref();
             return HrtfStorePtr{hrtf};
         }
     }
@@ -1414,15 +1414,15 @@ catch(std::exception& e) {
 }
 
 
-void HrtfStore::add_ref()
+void HrtfStore::inc_ref()
 {
-    auto ref = IncrementRef(mRef);
+    auto ref = mRef.fetch_add(1, std::memory_order_acq_rel)+1;
     TRACE("HrtfStore {} increasing refcount to {}", decltype(std::declval<void*>()){this}, ref);
 }
 
 void HrtfStore::dec_ref()
 {
-    auto ref = DecrementRef(mRef);
+    auto ref = mRef.fetch_sub(1, std::memory_order_acq_rel)-1;
     TRACE("HrtfStore {} decreasing refcount to {}", decltype(std::declval<void*>()){this}, ref);
     if(ref == 0)
     {

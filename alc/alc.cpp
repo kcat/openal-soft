@@ -1941,7 +1941,7 @@ DeviceRef VerifyDevice(ALCdevice *device)
     auto iter = std::lower_bound(DeviceList.begin(), DeviceList.end(), device);
     if(iter != DeviceList.end() && *iter == device)
     {
-        (*iter)->add_ref();
+        (*iter)->inc_ref();
         return DeviceRef{*iter};
     }
     return nullptr;
@@ -1957,7 +1957,7 @@ ContextRef VerifyContext(ALCcontext *context)
     auto iter = std::lower_bound(ContextList.begin(), ContextList.end(), context);
     if(iter != ContextList.end() && *iter == context)
     {
-        (*iter)->add_ref();
+        (*iter)->inc_ref();
         return ContextRef{*iter};
     }
     return nullptr;
@@ -1975,7 +1975,7 @@ ContextRef GetContextRef() noexcept
 {
     ALCcontext *context{ALCcontext::getThreadContext()};
     if(context)
-        context->add_ref();
+        context->inc_ref();
     else
     {
         while(ALCcontext::sGlobalContextLock.exchange(true, std::memory_order_acquire)) {
@@ -1984,7 +1984,7 @@ ContextRef GetContextRef() noexcept
              */
         }
         context = ALCcontext::sGlobalContext.load(std::memory_order_acquire);
-        if(context) [[likely]] context->add_ref();
+        if(context) [[likely]] context->inc_ref();
         ALCcontext::sGlobalContextLock.store(false, std::memory_order_release);
     }
     return ContextRef{context};

@@ -6,8 +6,6 @@
 #include <cstddef>
 #include <utility>
 
-#include "atomic.h"
-
 
 namespace al {
 
@@ -19,10 +17,10 @@ protected:
     ~intrusive_ref() = default;
 
 public:
-    unsigned int add_ref() noexcept { return IncrementRef(mRef); }
+    unsigned int inc_ref() noexcept { return mRef.fetch_add(1, std::memory_order_acq_rel)+1; }
     unsigned int dec_ref() noexcept
     {
-        auto ref = DecrementRef(mRef);
+        auto ref = mRef.fetch_sub(1, std::memory_order_acq_rel)-1;
         if(ref == 0) [[unlikely]]
             delete static_cast<T*>(this);
         return ref;
@@ -58,7 +56,7 @@ class intrusive_ptr {
 public:
     constexpr intrusive_ptr() noexcept = default;
     constexpr intrusive_ptr(const intrusive_ptr &rhs) noexcept : mPtr{rhs.mPtr}
-    { if(mPtr) mPtr->add_ref(); }
+    { if(mPtr) mPtr->inc_ref(); }
     constexpr intrusive_ptr(intrusive_ptr&& rhs) noexcept : mPtr{rhs.mPtr}
     { rhs.mPtr = nullptr; }
     constexpr intrusive_ptr(std::nullptr_t) noexcept { } /* NOLINT(google-explicit-constructor) */
@@ -72,7 +70,7 @@ public:
     {
         static_assert(noexcept(std::declval<T*>()->dec_ref()), "dec_ref must be noexcept");
 
-        if(rhs.mPtr) rhs.mPtr->add_ref();
+        if(rhs.mPtr) rhs.mPtr->inc_ref();
         if(mPtr) mPtr->dec_ref();
         mPtr = rhs.mPtr;
         return *this;

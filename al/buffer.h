@@ -17,6 +17,7 @@
 #include "almalloc.h"
 #include "alnumeric.h"
 #include "core/buffer_storage.h"
+#include "intrusive_ptr.h"
 #include "vector.h"
 
 #if ALSOFT_EAX
@@ -47,10 +48,18 @@ struct ALbuffer : public BufferStorage {
     ALuint mLoopEnd{0u};
 
     /* Number of times buffer was attached to a source (deletion can only occur when 0) */
-    std::atomic<ALuint> ref{0u};
+    std::atomic<ALuint> mRef{0u};
 
     /* Self ID */
     ALuint id{0};
+
+    auto add_ref() noexcept { return mRef.fetch_add(1, std::memory_order_acq_rel)+1; }
+    auto dec_ref() noexcept { return mRef.fetch_sub(1, std::memory_order_acq_rel)-1; }
+    auto newReference() noexcept
+    {
+        mRef.fetch_add(1, std::memory_order_acq_rel);
+        return al::intrusive_ptr{this};
+    }
 
     static void SetName(ALCcontext *context, ALuint id, std::string_view name);
 

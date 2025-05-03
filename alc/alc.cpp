@@ -52,6 +52,7 @@
 #include <new>
 #include <numbers>
 #include <optional>
+#include <ranges>
 #include <span>
 #include <stdexcept>
 #include <string>
@@ -1766,7 +1767,7 @@ auto UpdateDeviceParams(al::Device *device, const std::span<const int> attrList)
 
             EffectState *state{slot->Effect.State.get()};
             state->mOutTarget = device->Dry.Buffer;
-            state->deviceUpdate(device, slot->Buffer);
+            state->deviceUpdate(device, slot->mBuffer.get());
             slot->mPropsDirty = true;
         }
 
@@ -1789,7 +1790,7 @@ auto UpdateDeviceParams(al::Device *device, const std::span<const int> attrList)
 
                 EffectState *state{slot.Effect.State.get()};
                 state->mOutTarget = device->Dry.Buffer;
-                state->deviceUpdate(device, slot.Buffer);
+                state->deviceUpdate(device, slot.mBuffer.get());
                 slot.mPropsDirty = true;
             }
         };
@@ -1812,19 +1813,10 @@ auto UpdateDeviceParams(al::Device *device, const std::span<const int> attrList)
                 auto &source = (*sublist.Sources)[idx];
                 usemask &= ~(1_u64 << idx);
 
-                auto clear_send = [](ALsource::SendData &send) -> void
-                {
-                    if(send.Slot)
-                        DecrementRef(send.Slot->ref);
-                    send.Slot = nullptr;
-                    send.Gain = 1.0f;
-                    send.GainHF = 1.0f;
-                    send.HFReference = LowPassFreqRef;
-                    send.GainLF = 1.0f;
-                    send.LFReference = HighPassFreqRef;
-                };
-                const auto sends = std::span{source.Send}.subspan(num_sends);
-                std::for_each(sends.begin(), sends.end(), clear_send);
+                const auto sendrange = source.Send | std::views::drop(num_sends);
+                std::ranges::fill(sendrange, ALsource::SendData{.mSlot={}, .mGain=1.0f,
+                    .mGainHF=1.0f, .mHFReference=LowPassFreqRef,
+                    .mGainLF=1.0f, .mLFReference=HighPassFreqRef});
 
                 source.mPropsDirty = true;
             }

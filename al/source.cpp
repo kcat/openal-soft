@@ -40,7 +40,6 @@
 #include <mutex>
 #include <numeric>
 #include <optional>
-#include <ranges>
 #include <span>
 #include <stdexcept>
 #include <string>
@@ -94,6 +93,8 @@ using source_store_variant = std::variant<std::monostate,source_store_array,sour
 
 using namespace std::string_view_literals;
 
+constexpr auto HasBuffer(const ALbufferQueueItem &item) noexcept -> bool
+{ return bool{item.mBuffer}; }
 
 Voice *GetSourceVoice(ALsource *source, ALCcontext *context)
 {
@@ -177,12 +178,12 @@ void UpdateSourceProps(const ALsource *source, Voice *voice, ALCcontext *context
         [](const ALsource::SendData &srcsend) noexcept
     {
         auto ret = VoiceProps::SendData{};
-        ret.Slot = srcsend.Slot ? srcsend.Slot->mSlot : nullptr;
-        ret.Gain = srcsend.Gain;
-        ret.GainHF = srcsend.GainHF;
-        ret.HFReference = srcsend.HFReference;
-        ret.GainLF = srcsend.GainLF;
-        ret.LFReference = srcsend.LFReference;
+        ret.Slot = srcsend.mSlot ? srcsend.mSlot->mSlot : nullptr;
+        ret.Gain = srcsend.mGain;
+        ret.GainHF = srcsend.mGainHF;
+        ret.HFReference = srcsend.mHFReference;
+        ret.GainLF = srcsend.mGainLF;
+        ret.LFReference = srcsend.mLFReference;
         return ret;
     });
     if(!props->Send[0].Slot && context->mDefaultSlot)
@@ -275,9 +276,9 @@ double GetSourceSecOffset(ALsource *Source, ALCcontext *context, nanoseconds *cl
 
     const auto BufferFmt = std::invoke([Source]() -> ALbuffer*
     {
-        const auto iter = std::ranges::find_if(Source->mQueue, &ALbufferQueueItem::mBuffer);
+        const auto iter = std::ranges::find_if(Source->mQueue, HasBuffer);
         if(iter != Source->mQueue.end())
-            return iter->mBuffer;
+            return iter->mBuffer.get();
         return nullptr;
     });
     std::ignore = std::ranges::find_if(Source->mQueue,
@@ -325,9 +326,9 @@ NOINLINE T GetSourceOffset(ALsource *Source, ALenum name, ALCcontext *context)
 
     const auto BufferFmt = std::invoke([Source]() -> ALbuffer*
     {
-        const auto iter = std::ranges::find_if(Source->mQueue, &ALbufferQueueItem::mBuffer);
+        const auto iter = std::ranges::find_if(Source->mQueue, HasBuffer);
         if(iter != Source->mQueue.end())
-            return iter->mBuffer;
+            return iter->mBuffer.get();
         return nullptr;
     });
     std::ignore = std::ranges::find_if(Source->mQueue,
@@ -390,9 +391,9 @@ NOINLINE T GetSourceLength(const ALsource *source, ALenum name)
 {
     const auto BufferFmt = std::invoke([source]() -> ALbuffer*
     {
-        const auto iter = std::ranges::find_if(source->mQueue, &ALbufferQueueItem::mBuffer);
+        const auto iter = std::ranges::find_if(source->mQueue, HasBuffer);
         if(iter != source->mQueue.end())
-            return iter->mBuffer;
+            return iter->mBuffer.get();
         return nullptr;
     });
     if(!BufferFmt)
@@ -455,9 +456,9 @@ std::optional<VoicePos> GetSampleOffset(std::deque<ALbufferQueueItem> &BufferLis
     /* Find the first valid Buffer in the Queue */
     const auto BufferFmt = std::invoke([&BufferList]() -> ALbuffer*
     {
-        const auto iter = std::ranges::find_if(BufferList, &ALbufferQueueItem::mBuffer);
+        const auto iter = std::ranges::find_if(BufferList, HasBuffer);
         if(iter != BufferList.end())
-            return iter->mBuffer;
+            return iter->mBuffer.get();
         return nullptr;
     });
     if(!BufferFmt) [[unlikely]]
@@ -537,7 +538,7 @@ void InitVoice(Voice *voice, ALsource *source, ALbufferQueueItem *BufferList, AL
     voice->mLoopBuffer.store(source->Looping ? &source->mQueue.front() : nullptr,
         std::memory_order_relaxed);
 
-    ALbuffer *buffer{BufferList->mBuffer};
+    auto *buffer = BufferList->mBuffer.get();
     voice->mFrequency = buffer->mSampleRate;
     if(buffer->mChannels == FmtStereo && source->mStereoMode == SourceStereo::Enhanced)
         voice->mFmtChannels = FmtSuperStereo;
@@ -1627,7 +1628,6 @@ NOINLINE void SetProperty(ALsource *const Source, ALCcontext *const Context, con
                 Context->throw_error(AL_INVALID_OPERATION,
                     "Setting buffer on playing or paused source {}", Source->id);
 
-            std::deque<ALbufferQueueItem> oldlist;
             if(values[0])
             {
                 using UT = std::make_unsigned_t<T>;
@@ -1638,40 +1638,31 @@ NOINLINE void SetProperty(ALsource *const Source, ALCcontext *const Context, con
                 if(buffer->MappedAccess && !(buffer->MappedAccess&AL_MAP_PERSISTENT_BIT_SOFT))
                     Context->throw_error(AL_INVALID_OPERATION,
                         "Setting non-persistently mapped buffer {}", buffer->id);
-                if(buffer->mCallback && buffer->ref.load(std::memory_order_relaxed) != 0)
+                if(buffer->mCallback && buffer->mRef.load(std::memory_order_relaxed) != 0)
                     Context->throw_error(AL_INVALID_OPERATION,
                         "Setting already-set callback buffer {}", buffer->id);
 
                 /* Add the selected buffer to a one-item queue */
                 auto newlist = std::deque<ALbufferQueueItem>{};
-                newlist.emplace_back();
-                newlist.back().mCallback = buffer->mCallback;
-                newlist.back().mUserData = buffer->mUserData;
-                newlist.back().mBlockAlign = buffer->mBlockAlign;
-                newlist.back().mSampleLen = buffer->mSampleLen;
-                newlist.back().mLoopStart = buffer->mLoopStart;
-                newlist.back().mLoopEnd = buffer->mLoopEnd;
-                newlist.back().mSamples = buffer->mData;
-                newlist.back().mBuffer = buffer;
-                IncrementRef(buffer->ref);
+                auto &item = newlist.emplace_back();
+                item.mBuffer = buffer->newReference();
+                item.mCallback = buffer->mCallback;
+                item.mUserData = buffer->mUserData;
+                item.mBlockAlign = buffer->mBlockAlign;
+                item.mSampleLen = buffer->mSampleLen;
+                item.mLoopStart = buffer->mLoopStart;
+                item.mLoopEnd = buffer->mLoopEnd;
+                item.mSamples = buffer->mData;
 
                 /* Source is now Static */
                 Source->SourceType = AL_STATIC;
-                Source->mQueue.swap(oldlist);
-                Source->mQueue.swap(newlist);
+                Source->mQueue = std::move(newlist);
             }
             else
             {
                 /* Source is now Undetermined */
                 Source->SourceType = AL_UNDETERMINED;
-                Source->mQueue.swap(oldlist);
-            }
-
-            /* Delete all elements in the previous queue */
-            for(auto &item : oldlist)
-            {
-                if(ALbuffer *buffer{item.mBuffer})
-                    DecrementRef(buffer->ref);
+                std::deque<ALbufferQueueItem>{}.swap(Source->mQueue);
             }
             return;
         }
@@ -1951,12 +1942,13 @@ NOINLINE void SetProperty(ALsource *const Source, ALCcontext *const Context, con
             const auto filterid = static_cast<std::make_unsigned_t<T>>(values[2]);
 
             std::unique_lock slotlock{Context->mEffectSlotLock};
-            ALeffectslot *slot{};
+            auto slot = al::intrusive_ptr<ALeffectslot>{};
             if(slotid)
             {
-                slot = LookupEffectSlot(Context, slotid);
-                if(!slot)
+                auto auxslot = LookupEffectSlot(Context, slotid);
+                if(!auxslot)
                     Context->throw_error(AL_INVALID_VALUE, "Invalid effect ID {}", slotid);
+                slot = auxslot->newReference();
             }
 
             if(sendidx >= device->NumAuxSends)
@@ -1970,33 +1962,29 @@ NOINLINE void SetProperty(ALsource *const Source, ALCcontext *const Context, con
                 if(!filter)
                     Context->throw_error(AL_INVALID_VALUE, "Invalid filter ID {}", filterid);
 
-                send.Gain = filter->Gain;
-                send.GainHF = filter->GainHF;
-                send.HFReference = filter->HFReference;
-                send.GainLF = filter->GainLF;
-                send.LFReference = filter->LFReference;
+                send.mGain = filter->Gain;
+                send.mGainHF = filter->GainHF;
+                send.mHFReference = filter->HFReference;
+                send.mGainLF = filter->GainLF;
+                send.mLFReference = filter->LFReference;
             }
             else
             {
                 /* Disable filter */
-                send.Gain = 1.0f;
-                send.GainHF = 1.0f;
-                send.HFReference = LowPassFreqRef;
-                send.GainLF = 1.0f;
-                send.LFReference = HighPassFreqRef;
+                send.mGain = 1.0f;
+                send.mGainHF = 1.0f;
+                send.mHFReference = LowPassFreqRef;
+                send.mGainLF = 1.0f;
+                send.mLFReference = HighPassFreqRef;
             }
 
             /* We must force an update if the current auxiliary slot is valid
              * and about to be changed on an active source, in case the old
              * slot is about to be deleted.
              */
-            if(send.Slot && slot != send.Slot && IsPlayingOrPaused(Source))
+            if(send.mSlot && slot != send.mSlot && IsPlayingOrPaused(Source))
             {
-                /* Add refcount on the new slot, and release the previous slot */
-                if(slot) IncrementRef(slot->ref);
-                if(auto *oldslot = send.Slot)
-                    DecrementRef(oldslot->ref);
-                send.Slot = slot;
+                send.mSlot = std::move(slot);
 
                 Voice *voice{GetSourceVoice(Source, Context)};
                 if(voice) UpdateSourceProps(Source, voice, Context);
@@ -2004,10 +1992,7 @@ NOINLINE void SetProperty(ALsource *const Source, ALCcontext *const Context, con
             }
             else
             {
-                if(slot) IncrementRef(slot->ref);
-                if(auto *oldslot = send.Slot)
-                    DecrementRef(oldslot->ref);
-                send.Slot = slot;
+                send.mSlot = std::move(slot);
                 UpdateSourceProps(Source, Context);
             }
             return;
@@ -2345,7 +2330,7 @@ NOINLINE void GetProperty(ALsource *const Source, ALCcontext *const Context, con
                     { return &item == Current; });
                 BufferList = (iter != Source->mQueue.end()) ? &*iter : nullptr;
             }
-            auto *buffer = BufferList ? BufferList->mBuffer : nullptr;
+            auto *buffer = BufferList ? BufferList->mBuffer.get() : nullptr;
             values[0] = buffer ? static_cast<T>(buffer->id) : T{0};
             return;
         }
@@ -3546,9 +3531,9 @@ try {
     auto *device = context->mALDevice.get();
     auto BufferFmt = std::invoke([source]() -> ALbuffer*
     {
-        const auto iter = std::ranges::find_if(source->mQueue, &ALbufferQueueItem::mBuffer);
+        const auto iter = std::ranges::find_if(source->mQueue, HasBuffer);
         if(iter != source->mQueue.end())
-            return iter->mBuffer;
+            return iter->mBuffer.get();
         return nullptr;
     });
 
@@ -3588,12 +3573,11 @@ try {
                 BufferList = &item;
             }
             if(!buffer) return;
+            BufferList->mBuffer = buffer->newReference();
             BufferList->mBlockAlign = buffer->mBlockAlign;
             BufferList->mSampleLen = buffer->mSampleLen;
             BufferList->mLoopEnd = buffer->mSampleLen;
             BufferList->mSamples = buffer->mData;
-            BufferList->mBuffer = buffer;
-            IncrementRef(buffer->ref);
 
             if(BufferFmt == nullptr)
                 BufferFmt = buffer;
@@ -3621,14 +3605,8 @@ try {
     }
     catch(...) {
         /* A buffer failed (invalid ID or format), or there was some other
-         * unexpected error, so unlock and release each buffer we had.
+         * unexpected error, so release the buffers we had.
          */
-        std::ranges::for_each(source->mQueue | std::views::drop(NewListStart),
-            [](ALbufferQueueItem &item)
-        {
-            if(auto *buf = item.mBuffer)
-                DecrementRef(buf->ref);
-        });
         source->mQueue.resize(static_cast<size_t>(NewListStart));
         throw;
     }
@@ -3694,13 +3672,9 @@ try {
 
     std::ranges::generate(bids, [source]() noexcept -> ALuint
     {
-        auto &head = source->mQueue.front();
         auto bid = 0u;
-        if(auto *buffer = head.mBuffer)
-        {
+        if(auto *buffer = source->mQueue.front().mBuffer.get())
             bid = buffer->id;
-            DecrementRef(buffer->ref);
-        }
         source->mQueue.pop_front();
         return bid;
     });
@@ -3728,19 +3702,13 @@ ALsource::ALsource() noexcept
     Direct.HFReference = LowPassFreqRef;
     Direct.GainLF = 1.0f;
     Direct.LFReference = HighPassFreqRef;
-    Send.fill(ALsource::SendData{.Slot=nullptr, .Gain=1.0f,
-        .GainHF=1.0f, .HFReference=LowPassFreqRef,
-        .GainLF=1.0f, .LFReference=HighPassFreqRef});
+    Send.fill(SendData{.mSlot={}, .mGain=1.0f,
+        .mGainHF=1.0f, .mHFReference=LowPassFreqRef,
+        .mGainLF=1.0f, .mLFReference=HighPassFreqRef});
 }
 
-ALsource::~ALsource()
-{
-    std::ranges::for_each(mQueue, [](const ALbufferQueueItem &item)
-    { if(item.mBuffer) DecrementRef(item.mBuffer->ref); });
+ALsource::~ALsource() = default;
 
-    std::ranges::for_each(Send.begin(), Send.end(), [](ALsource::SendData &send)
-    { if(send.Slot) DecrementRef(send.Slot->ref); });
-}
 
 void UpdateAllSourceProps(ALCcontext *context)
 {
@@ -4972,18 +4940,13 @@ void ALsource::eax_set_al_source_send(ALeffectslot *slot, size_t sendidx, const 
         return;
 
     auto &send = Send[sendidx];
-    send.Gain = filter.gain;
-    send.GainHF = filter.gain_hf;
-    send.HFReference = LowPassFreqRef;
-    send.GainLF = 1.0f;
-    send.LFReference = HighPassFreqRef;
+    send.mSlot = slot ? slot->newReference() : al::intrusive_ptr<ALeffectslot>{};
+    send.mGain = filter.gain;
+    send.mGainHF = filter.gain_hf;
+    send.mHFReference = LowPassFreqRef;
+    send.mGainLF = 1.0f;
+    send.mLFReference = HighPassFreqRef;
 
-    if(slot != nullptr)
-        IncrementRef(slot->ref);
-    if(auto *oldslot = send.Slot)
-        DecrementRef(oldslot->ref);
-
-    send.Slot = slot;
     mPropsDirty = true;
 }
 

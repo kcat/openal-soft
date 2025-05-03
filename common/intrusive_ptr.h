@@ -2,6 +2,7 @@
 #define INTRUSIVE_PTR_H
 
 #include <atomic>
+#include <concepts>
 #include <cstddef>
 #include <utility>
 
@@ -88,6 +89,10 @@ public:
     }
 
     explicit constexpr operator bool() const noexcept { return mPtr != nullptr; }
+
+    template<typename U> requires std::equality_comparable_with<T*,U*>
+    constexpr auto operator==(const intrusive_ptr<U> &rhs) const noexcept -> bool
+    { return mPtr == rhs.mPtr; }
 
     [[nodiscard]] constexpr auto operator*() const noexcept -> T& { return *mPtr; }
     [[nodiscard]] constexpr auto operator->() const noexcept -> T* { return mPtr; }

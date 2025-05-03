@@ -48,8 +48,8 @@ struct ALeffectslot {
     ALuint EffectId{};
     float Gain{1.0f};
     bool  AuxSendAuto{true};
-    ALeffectslot *Target{nullptr};
-    ALbuffer *Buffer{nullptr};
+    al::intrusive_ptr<ALeffectslot> mTarget;
+    al::intrusive_ptr<ALbuffer> mBuffer;
 
     struct EffectData {
         EffectSlotType Type{EffectSlotType::None};
@@ -63,7 +63,7 @@ struct ALeffectslot {
 
     SlotState mState{SlotState::Initial};
 
-    std::atomic<ALuint> ref{0u};
+    std::atomic<ALuint> mRef{0u};
 
     EffectSlot *mSlot{nullptr};
 
@@ -74,6 +74,14 @@ struct ALeffectslot {
     ALeffectslot(const ALeffectslot&) = delete;
     ALeffectslot& operator=(const ALeffectslot&) = delete;
     ~ALeffectslot();
+
+    auto add_ref() noexcept { return mRef.fetch_add(1, std::memory_order_acq_rel)+1; }
+    auto dec_ref() noexcept { return mRef.fetch_sub(1, std::memory_order_acq_rel)-1; }
+    auto newReference() noexcept
+    {
+        mRef.fetch_add(1, std::memory_order_acq_rel);
+        return al::intrusive_ptr{this};
+    }
 
     ALenum initEffect(ALuint effectId, ALenum effectType, const EffectProps &effectProps,
         ALCcontext *context);

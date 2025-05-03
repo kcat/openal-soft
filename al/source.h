@@ -21,6 +21,7 @@
 #include "alnumeric.h"
 #include "core/context.h"
 #include "core/voice.h"
+#include "intrusive_ptr.h"
 
 #if ALSOFT_EAX
 #include "eax/api.h"
@@ -46,7 +47,7 @@ inline constexpr ALuint InvalidVoiceIndex{std::numeric_limits<ALuint>::max()};
 inline bool sBufferSubDataCompat{false};
 
 struct ALbufferQueueItem : public VoiceBufferItem {
-    ALbuffer *mBuffer{nullptr};
+    al::intrusive_ptr<ALbuffer> mBuffer;
 };
 
 
@@ -120,12 +121,12 @@ struct ALsource {
     DirectData Direct;
 
     struct SendData {
-        ALeffectslot *Slot{};
-        float Gain{};
-        float GainHF{};
-        float HFReference{};
-        float GainLF{};
-        float LFReference{};
+        al::intrusive_ptr<ALeffectslot> mSlot;
+        float mGain{};
+        float mGainHF{};
+        float mHFReference{};
+        float mGainLF{};
+        float mLFReference{};
     };
     std::array<SendData,MaxSendCount> Send;
 

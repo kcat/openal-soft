@@ -9,6 +9,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <ranges>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -28,50 +29,64 @@ gsl::owner<std::FILE*> LogFile;
 
 namespace {
 
+/* C++23 has this... */
+struct contains_fn_ {
+    template<std::input_iterator I, std::sentinel_for<I> S, typename T,
+        typename Proj=std::identity>
+        requires std::indirect_binary_predicate<std::ranges::equal_to, std::projected<I, Proj>,
+            const T*>
+    constexpr bool operator()(I first, S last, const T& value, Proj proj={}) const
+    {
+        return std::ranges::find(std::move(first), last, value, proj) != last;
+    }
+
+    template<std::ranges::input_range R, typename T, typename Proj=std::identity>
+        requires std::indirect_binary_predicate<std::ranges::equal_to,
+            std::projected<std::ranges::iterator_t<R>, Proj>, const T*>
+    constexpr bool operator()(R&& r, const T& value, Proj proj={}) const
+    {
+        const auto last = std::ranges::end(r);
+        return std::ranges::find(std::ranges::begin(r), last, value, proj) != last;
+    }
+};
+inline constexpr contains_fn_ contains{};
+
+
 std::vector<std::wstring> gAcceptList;
 std::vector<std::wstring> gRejectList;
 
 
 void AddModule(HMODULE module, const std::wstring_view name)
 {
-    for(auto &drv : DriverList)
+    if(contains(DriverList | std::views::transform(&DriverIface::Module), module))
     {
-        if(drv->Module == module)
-        {
-            TRACE("Skipping already-loaded module {}", decltype(std::declval<void*>()){module});
-            FreeLibrary(module);
-            return;
-        }
-        if(drv->Name == name)
-        {
-            TRACE("Skipping similarly-named module {}", wstr_to_utf8(name));
-            FreeLibrary(module);
-            return;
-        }
+        TRACE("Skipping already-loaded module {}", decltype(std::declval<void*>()){module});
+        FreeLibrary(module);
+        return;
     }
+    if(contains(DriverList | std::views::transform(&DriverIface::Name), name))
+    {
+        TRACE("Skipping similarly-named module {}", wstr_to_utf8(name));
+        FreeLibrary(module);
+        return;
+    }
+
     if(!gAcceptList.empty())
     {
-        auto iter = std::find_if(gAcceptList.cbegin(), gAcceptList.cend(),
-            [name](const std::wstring_view accept)
-            { return al::case_compare(name, accept) == 0; });
-        if(iter == gAcceptList.cend())
+        if(std::ranges::none_of(gAcceptList, [name](const std::wstring_view accept)
+            { return al::case_compare(name, accept) == 0; }))
         {
             TRACE("{} not found in ALROUTER_ACCEPT, skipping", wstr_to_utf8(name));
             FreeLibrary(module);
             return;
         }
     }
-    if(!gRejectList.empty())
+    if(std::ranges::any_of(gRejectList, [name](const std::wstring_view reject)
+        { return al::case_compare(name, reject) == 0; }))
     {
-        auto iter = std::find_if(gRejectList.cbegin(), gRejectList.cend(),
-            [name](const std::wstring_view accept)
-            { return al::case_compare(name, accept) == 0; });
-        if(iter != gRejectList.cend())
-        {
-            TRACE("{} found in ALROUTER_REJECT, skipping", wstr_to_utf8(name));
-            FreeLibrary(module);
-            return;
-        }
+        TRACE("{} found in ALROUTER_REJECT, skipping", wstr_to_utf8(name));
+        FreeLibrary(module);
+        return;
     }
 
     DriverIface &newdrv = *DriverList.emplace_back(std::make_unique<DriverIface>(name, module));
@@ -312,38 +327,26 @@ void LoadDriverList()
 
     if(auto list = al::getenv(L"ALROUTER_ACCEPT"))
     {
-        std::wstring_view namelist{*list};
-        while(!namelist.empty())
+        std::ranges::for_each(*list | std::views::split(','), [](auto&& subrange)
         {
-            auto seppos = namelist.find(',');
-            if(seppos > 0)
-                gAcceptList.emplace_back(namelist.substr(0, seppos));
-            if(seppos < namelist.size())
-                namelist.remove_prefix(seppos+1);
-            else
-                namelist.remove_prefix(namelist.size());
-        }
+            if(!subrange.empty())
+                gAcceptList.emplace_back(std::wstring_view{subrange.begin(), subrange.end()});
+        });
     }
     if(auto list = al::getenv(L"ALROUTER_REJECT"))
     {
-        std::wstring_view namelist{*list};
-        while(!namelist.empty())
+        std::ranges::for_each(*list | std::views::split(','), [](auto&& subrange)
         {
-            auto seppos = namelist.find(',');
-            if(seppos > 0)
-                gRejectList.emplace_back(namelist.substr(0, seppos));
-            if(seppos < namelist.size())
-                namelist.remove_prefix(seppos+1);
-            else
-                namelist.remove_prefix(namelist.size());
-        }
+            if(!subrange.empty())
+                gRejectList.emplace_back(std::wstring_view{subrange.begin(), subrange.end()});
+        });
     }
 
-    std::wstring dll_path;
+    auto dll_path = std::wstring{};
     if(GetLoadedModuleDirectory(L"OpenAL32.dll", &dll_path))
         TRACE("Got DLL path {}", wstr_to_utf8(dll_path));
 
-    std::wstring cwd_path;
+    auto cwd_path = std::wstring{};
     if(DWORD pathlen{GetCurrentDirectoryW(0, nullptr)})
     {
         do {
@@ -357,11 +360,11 @@ void LoadDriverList()
     if(!cwd_path.empty())
         TRACE("Got current working directory {}", wstr_to_utf8(cwd_path));
 
-    std::wstring proc_path;
+    auto proc_path = std::wstring{};
     if(GetLoadedModuleDirectory(nullptr, &proc_path))
         TRACE("Got proc path {}", wstr_to_utf8(proc_path));
 
-    std::wstring sys_path;
+    auto sys_path = std::wstring{};
     if(UINT pathlen{GetSystemDirectoryW(nullptr, 0)})
     {
         do {
@@ -392,13 +395,12 @@ void LoadDriverList()
         SearchDrivers(sys_path);
 
     /* Sort drivers that can enumerate device names to the front. */
-    static constexpr auto is_enumerable = [](DriverIfacePtr &drv)
+    std::ranges::stable_partition(DriverList, [](DriverIfacePtr &drv)
     {
         return drv->ALCVer >= MakeALCVer(1, 1)
             || drv->alcIsExtensionPresent(nullptr, "ALC_ENUMERATE_ALL_EXT")
             || drv->alcIsExtensionPresent(nullptr, "ALC_ENUMERATION_EXT");
-    };
-    std::stable_partition(DriverList.begin(), DriverList.end(), is_enumerable);
+    });
 
     /* HACK: rapture3d_oal.dll isn't likely to work if it's one distributed for
      * specific games licensed to use it. It will enumerate a Rapture3D device

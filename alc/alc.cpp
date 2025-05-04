@@ -600,37 +600,32 @@ void alc_initconfig()
         ReverbBoost *= std::pow(10.0f, valf / 20.0f);
     }
 
-    auto BackendListEnd = BackendList.end();
-    auto devopt = al::getenv("ALSOFT_DRIVERS");
-    if(!devopt) devopt = ConfigValueStr({}, {}, "drivers"sv);
-    if(devopt)
+    auto backends = std::span{BackendList}.subspan(0);
+    auto drvopt = al::getenv("ALSOFT_DRIVERS");
+    if(!drvopt) drvopt = ConfigValueStr({}, {}, "drivers"sv);
+    if(drvopt)
     {
-        auto backendlist_cur = BackendList.begin();
+        auto BackendListEnd = backends.end();
+        auto backendlist_cur = backends.begin();
+        auto endlist = true;
 
-        bool endlist{true};
-        std::string_view drvlist{*devopt};
-        while(!drvlist.empty())
+        std::ranges::for_each(*drvopt | std::views::split(','),
+            [backends,&BackendListEnd,&backendlist_cur,&endlist](auto&& namerange)
         {
-            auto nextpos = std::min(drvlist.find(','), drvlist.size());
-            auto entry = drvlist.substr(0, nextpos);
-
-            endlist = true;
-            if(nextpos < drvlist.size())
-            {
-                endlist = false;
-                nextpos = std::min(drvlist.find_first_not_of(',', nextpos), drvlist.size());
-            }
-            drvlist.remove_prefix(nextpos);
+            auto entry = std::string_view{namerange.begin(), namerange.end()};
 
             constexpr auto whitespace_chars = " \t\n\f\r\v"sv;
             entry.remove_prefix(entry.find_first_not_of(whitespace_chars));
             entry.remove_suffix(entry.size() - (entry.find_last_not_of(whitespace_chars)+1));
+            if(entry.empty())
+            {
+                endlist = false;
+                return;
+            }
+            endlist = true;
 
             const auto delitem = (!entry.empty() && entry.front() == '-');
             if(delitem) entry.remove_prefix(1);
-
-            if(entry.empty())
-                continue;
 
 #ifdef HAVE_WASAPI
             /* HACK: For backwards compatibility, convert backend references of
@@ -642,19 +637,20 @@ void alc_initconfig()
 
             auto find_backend = [entry](const BackendInfo &backend) -> bool
             { return entry == backend.name; };
-            auto this_backend = std::find_if(BackendList.begin(), BackendListEnd, find_backend);
+            auto this_backend = std::find_if(backends.begin(), BackendListEnd, find_backend);
 
             if(this_backend == BackendListEnd)
-                continue;
+                return;
 
             if(delitem)
                 BackendListEnd = std::move(this_backend+1, BackendListEnd, this_backend);
             else
                 backendlist_cur = std::rotate(backendlist_cur, this_backend, this_backend+1);
-        }
+        });
 
         if(endlist)
             BackendListEnd = backendlist_cur;
+        backends = std::span{backends.begin(), BackendListEnd};
     }
     else
     {
@@ -663,24 +659,19 @@ void alc_initconfig()
          * the normal backends are usable, rather than pretending there is a
          * device but outputs nowhere.
          */
-        while(BackendListEnd != BackendList.begin())
-        {
-            --BackendListEnd;
-            if(BackendListEnd->name == "null"sv)
-                break;
-        }
+        const auto reversenamerange = backends | std::views::reverse
+            | std::views::transform(&BackendInfo::name);
+        const auto iter = std::ranges::find(reversenamerange, "null"sv);
+        backends = std::span{backends.begin(), iter.base().base()};
     }
 
-    std::for_each(BackendList.begin(), BackendListEnd, [](BackendInfo &backend) -> void
+    std::ranges::any_of(backends, [](BackendInfo &backend)
     {
-        if(PlaybackFactory && CaptureFactory)
-            return;
-
         BackendFactory &factory = backend.getFactory();
         if(!factory.init())
         {
             WARN("Failed to initialize backend \"{}\"", backend.name);
-            return;
+            return false;
         }
 
         TRACE("Initialized backend \"{}\"", backend.name);
@@ -694,6 +685,8 @@ void alc_initconfig()
             CaptureFactory = &factory;
             TRACE("Added \"{}\" for capture", backend.name);
         }
+
+        return (PlaybackFactory && CaptureFactory);
     });
 
     LoopbackBackendFactory::getFactory().init();
@@ -705,20 +698,15 @@ void alc_initconfig()
 
     if(auto exclopt = ConfigValueStr({}, {}, "excludefx"sv))
     {
-        std::string_view exclude{*exclopt};
-        while(!exclude.empty())
+        std::ranges::for_each(*exclopt | std::views::split(','), [](auto&& namerange) noexcept
         {
-            const auto nextpos = exclude.find(',');
-            const auto entry = exclude.substr(0, nextpos);
-            exclude.remove_prefix((nextpos < exclude.size()) ? nextpos+1 : exclude.size());
-
-            std::for_each(gEffectList.cbegin(), gEffectList.cend(),
-                [entry](const EffectList &effectitem) noexcept
-                {
-                    if(entry == std::data(effectitem.name))
-                        DisabledEffects.set(effectitem.type);
-                });
-        }
+            const auto entry = std::string_view{namerange.begin(), namerange.end()};
+            std::ranges::for_each(gEffectList, [entry](const EffectList &effectitem) noexcept
+            {
+                if(entry == std::data(effectitem.name))
+                    DisabledEffects.set(effectitem.type);
+            });
+        });
     }
 
     InitEffect(&ALCcontext::sDefaultEffect);
@@ -770,7 +758,7 @@ void ProbeAllDevicesList()
 {
     InitConfig();
 
-    std::lock_guard<std::recursive_mutex> listlock{ListLock};
+    auto listlock = std::lock_guard{ListLock};
     if(!PlaybackFactory)
     {
         decltype(alcAllDevicesArray){}.swap(alcAllDevicesArray);
@@ -780,21 +768,24 @@ void ProbeAllDevicesList()
     {
         alcAllDevicesArray = PlaybackFactory->enumerate(BackendType::Playback);
         if(const auto prefix = GetDevicePrefix(); !prefix.empty())
-            std::for_each(alcAllDevicesArray.begin(), alcAllDevicesArray.end(),
+            std::ranges::for_each(alcAllDevicesArray,
                 [prefix](std::string &name) { name.insert(0, prefix); });
 
         decltype(alcAllDevicesList){}.swap(alcAllDevicesList);
         if(alcAllDevicesArray.empty())
             alcAllDevicesList += '\0';
-        else for(auto &devname : alcAllDevicesArray)
-            alcAllDevicesList.append(devname) += '\0';
+        else
+        {
+            std::ranges::for_each(alcAllDevicesArray, [](const std::string_view devname)
+            { alcAllDevicesList.append(devname) += '\0'; });
+        }
     }
 }
 void ProbeCaptureDeviceList()
 {
     InitConfig();
 
-    std::lock_guard<std::recursive_mutex> listlock{ListLock};
+    auto listlock = std::lock_guard{ListLock};
     if(!CaptureFactory)
     {
         decltype(alcCaptureDeviceArray){}.swap(alcCaptureDeviceArray);
@@ -804,14 +795,17 @@ void ProbeCaptureDeviceList()
     {
         alcCaptureDeviceArray = CaptureFactory->enumerate(BackendType::Capture);
         if(const auto prefix = GetDevicePrefix(); !prefix.empty())
-            std::for_each(alcCaptureDeviceArray.begin(), alcCaptureDeviceArray.end(),
+            std::ranges::for_each(alcCaptureDeviceArray,
                 [prefix](std::string &name) { name.insert(0, prefix); });
 
         decltype(alcCaptureDeviceList){}.swap(alcCaptureDeviceList);
         if(alcCaptureDeviceArray.empty())
             alcCaptureDeviceList += '\0';
-        else for(auto &devname : alcCaptureDeviceArray)
-            alcCaptureDeviceList.append(devname) += '\0';
+        else
+        {
+            std::ranges::for_each(alcCaptureDeviceArray, [](const std::string_view devname)
+            { alcCaptureDeviceList.append(devname) += '\0'; });
+        }
     }
 }
 
@@ -833,52 +827,49 @@ struct DevFmtPair { DevFmtChannels chans; DevFmtType type; };
 std::optional<DevFmtPair> DecomposeDevFormat(ALenum format)
 {
     struct FormatType {
-        ALenum format;
-        DevFmtChannels channels;
-        DevFmtType type;
+        ALenum alformat;
+        DevFmtPair formatpair;
     };
-    static constexpr std::array list{
-        FormatType{AL_FORMAT_MONO8,    DevFmtMono, DevFmtUByte},
-        FormatType{AL_FORMAT_MONO16,   DevFmtMono, DevFmtShort},
-        FormatType{AL_FORMAT_MONO_I32, DevFmtMono, DevFmtInt},
-        FormatType{AL_FORMAT_MONO_FLOAT32, DevFmtMono, DevFmtFloat},
+    static constexpr auto list = std::array{
+        FormatType{AL_FORMAT_MONO8,    {DevFmtMono, DevFmtUByte}},
+        FormatType{AL_FORMAT_MONO16,   {DevFmtMono, DevFmtShort}},
+        FormatType{AL_FORMAT_MONO_I32, {DevFmtMono, DevFmtInt}},
+        FormatType{AL_FORMAT_MONO_FLOAT32, {DevFmtMono, DevFmtFloat}},
 
-        FormatType{AL_FORMAT_STEREO8,    DevFmtStereo, DevFmtUByte},
-        FormatType{AL_FORMAT_STEREO16,   DevFmtStereo, DevFmtShort},
-        FormatType{AL_FORMAT_STEREO_I32, DevFmtStereo, DevFmtInt},
-        FormatType{AL_FORMAT_STEREO_FLOAT32, DevFmtStereo, DevFmtFloat},
+        FormatType{AL_FORMAT_STEREO8,    {DevFmtStereo, DevFmtUByte}},
+        FormatType{AL_FORMAT_STEREO16,   {DevFmtStereo, DevFmtShort}},
+        FormatType{AL_FORMAT_STEREO_I32, {DevFmtStereo, DevFmtInt}},
+        FormatType{AL_FORMAT_STEREO_FLOAT32, {DevFmtStereo, DevFmtFloat}},
 
-        FormatType{AL_FORMAT_QUAD8,    DevFmtQuad, DevFmtUByte},
-        FormatType{AL_FORMAT_QUAD16,   DevFmtQuad, DevFmtShort},
-        FormatType{AL_FORMAT_QUAD32,   DevFmtQuad, DevFmtFloat},
-        FormatType{AL_FORMAT_QUAD_I32, DevFmtQuad, DevFmtInt},
-        FormatType{AL_FORMAT_QUAD_FLOAT32, DevFmtQuad, DevFmtFloat},
+        FormatType{AL_FORMAT_QUAD8,    {DevFmtQuad, DevFmtUByte}},
+        FormatType{AL_FORMAT_QUAD16,   {DevFmtQuad, DevFmtShort}},
+        FormatType{AL_FORMAT_QUAD32,   {DevFmtQuad, DevFmtFloat}},
+        FormatType{AL_FORMAT_QUAD_I32, {DevFmtQuad, DevFmtInt}},
+        FormatType{AL_FORMAT_QUAD_FLOAT32, {DevFmtQuad, DevFmtFloat}},
 
-        FormatType{AL_FORMAT_51CHN8,    DevFmtX51, DevFmtUByte},
-        FormatType{AL_FORMAT_51CHN16,   DevFmtX51, DevFmtShort},
-        FormatType{AL_FORMAT_51CHN32,   DevFmtX51, DevFmtFloat},
-        FormatType{AL_FORMAT_51CHN_I32, DevFmtX51, DevFmtInt},
-        FormatType{AL_FORMAT_51CHN_FLOAT32, DevFmtX51, DevFmtFloat},
+        FormatType{AL_FORMAT_51CHN8,    {DevFmtX51, DevFmtUByte}},
+        FormatType{AL_FORMAT_51CHN16,   {DevFmtX51, DevFmtShort}},
+        FormatType{AL_FORMAT_51CHN32,   {DevFmtX51, DevFmtFloat}},
+        FormatType{AL_FORMAT_51CHN_I32, {DevFmtX51, DevFmtInt}},
+        FormatType{AL_FORMAT_51CHN_FLOAT32, {DevFmtX51, DevFmtFloat}},
 
-        FormatType{AL_FORMAT_61CHN8,    DevFmtX61, DevFmtUByte},
-        FormatType{AL_FORMAT_61CHN16,   DevFmtX61, DevFmtShort},
-        FormatType{AL_FORMAT_61CHN32,   DevFmtX61, DevFmtFloat},
-        FormatType{AL_FORMAT_61CHN_I32, DevFmtX61, DevFmtInt},
-        FormatType{AL_FORMAT_61CHN_FLOAT32, DevFmtX61, DevFmtFloat},
+        FormatType{AL_FORMAT_61CHN8,    {DevFmtX61, DevFmtUByte}},
+        FormatType{AL_FORMAT_61CHN16,   {DevFmtX61, DevFmtShort}},
+        FormatType{AL_FORMAT_61CHN32,   {DevFmtX61, DevFmtFloat}},
+        FormatType{AL_FORMAT_61CHN_I32, {DevFmtX61, DevFmtInt}},
+        FormatType{AL_FORMAT_61CHN_FLOAT32, {DevFmtX61, DevFmtFloat}},
 
-        FormatType{AL_FORMAT_71CHN8,    DevFmtX71, DevFmtUByte},
-        FormatType{AL_FORMAT_71CHN16,   DevFmtX71, DevFmtShort},
-        FormatType{AL_FORMAT_71CHN32,   DevFmtX71, DevFmtFloat},
-        FormatType{AL_FORMAT_71CHN_I32, DevFmtX71, DevFmtInt},
-        FormatType{AL_FORMAT_71CHN_FLOAT32, DevFmtX71, DevFmtFloat},
+        FormatType{AL_FORMAT_71CHN8,    {DevFmtX71, DevFmtUByte}},
+        FormatType{AL_FORMAT_71CHN16,   {DevFmtX71, DevFmtShort}},
+        FormatType{AL_FORMAT_71CHN32,   {DevFmtX71, DevFmtFloat}},
+        FormatType{AL_FORMAT_71CHN_I32, {DevFmtX71, DevFmtInt}},
+        FormatType{AL_FORMAT_71CHN_FLOAT32, {DevFmtX71, DevFmtFloat}},
     };
 
-    for(const auto &item : list)
-    {
-        if(item.format == format)
-            return DevFmtPair{item.channels, item.type};
-    }
-
+    const auto formatrange = list | std::views::transform(&FormatType::alformat);
+    const auto item = std::ranges::find(formatrange, format);
+    if(item != formatrange.end())
+        return item.base()->formatpair;
     return std::nullopt;
 }
 
@@ -941,7 +932,8 @@ ALCenum EnumFromDevFmt(DevFmtChannels channels)
     /* FIXME: Shouldn't happen. */
     case DevFmtX714:
     case DevFmtX7144:
-    case DevFmtX3D71: break;
+    case DevFmtX3D71:
+        break;
     }
     throw std::runtime_error{fmt::format("Invalid DevFmtChannels: {}",
         int{al::to_underlying(channels)})};
@@ -995,32 +987,32 @@ ALCenum EnumFromDevAmbi(DevAmbiScaling scaling)
 /* Downmixing channel arrays, to map a device format's missing channels to
  * existing ones. Based on what PipeWire does, though simplified.
  */
-constexpr float inv_sqrt2f{static_cast<float>(1.0 / std::numbers::sqrt2)};
-constexpr std::array FrontStereo3dB{
+constexpr auto inv_sqrt2f = static_cast<float>(1.0 / std::numbers::sqrt2);
+constexpr auto FrontStereo3dB = std::array{
     InputRemixMap::TargetMix{FrontLeft, inv_sqrt2f},
     InputRemixMap::TargetMix{FrontRight, inv_sqrt2f}
 };
-constexpr std::array FrontStereo6dB{
+constexpr auto FrontStereo6dB = std::array{
     InputRemixMap::TargetMix{FrontLeft, 0.5f},
     InputRemixMap::TargetMix{FrontRight, 0.5f}
 };
-constexpr std::array SideStereo3dB{
+constexpr auto SideStereo3dB = std::array{
     InputRemixMap::TargetMix{SideLeft, inv_sqrt2f},
     InputRemixMap::TargetMix{SideRight, inv_sqrt2f}
 };
-constexpr std::array BackStereo3dB{
+constexpr auto BackStereo3dB = std::array{
     InputRemixMap::TargetMix{BackLeft, inv_sqrt2f},
     InputRemixMap::TargetMix{BackRight, inv_sqrt2f}
 };
-constexpr std::array FrontLeft3dB{InputRemixMap::TargetMix{FrontLeft, inv_sqrt2f}};
-constexpr std::array FrontRight3dB{InputRemixMap::TargetMix{FrontRight, inv_sqrt2f}};
-constexpr std::array SideLeft0dB{InputRemixMap::TargetMix{SideLeft, 1.0f}};
-constexpr std::array SideRight0dB{InputRemixMap::TargetMix{SideRight, 1.0f}};
-constexpr std::array BackLeft0dB{InputRemixMap::TargetMix{BackLeft, 1.0f}};
-constexpr std::array BackRight0dB{InputRemixMap::TargetMix{BackRight, 1.0f}};
-constexpr std::array BackCenter3dB{InputRemixMap::TargetMix{BackCenter, inv_sqrt2f}};
+constexpr auto FrontLeft3dB = std::array{InputRemixMap::TargetMix{FrontLeft, inv_sqrt2f}};
+constexpr auto FrontRight3dB = std::array{InputRemixMap::TargetMix{FrontRight, inv_sqrt2f}};
+constexpr auto SideLeft0dB = std::array{InputRemixMap::TargetMix{SideLeft, 1.0f}};
+constexpr auto SideRight0dB = std::array{InputRemixMap::TargetMix{SideRight, 1.0f}};
+constexpr auto BackLeft0dB = std::array{InputRemixMap::TargetMix{BackLeft, 1.0f}};
+constexpr auto BackRight0dB = std::array{InputRemixMap::TargetMix{BackRight, 1.0f}};
+constexpr auto BackCenter3dB = std::array{InputRemixMap::TargetMix{BackCenter, inv_sqrt2f}};
 
-constexpr std::array StereoDownmix{
+constexpr auto StereoDownmix = std::array{
     InputRemixMap{FrontCenter, FrontStereo3dB},
     InputRemixMap{SideLeft,    FrontLeft3dB},
     InputRemixMap{SideRight,   FrontRight3dB},
@@ -1028,22 +1020,22 @@ constexpr std::array StereoDownmix{
     InputRemixMap{BackRight,   FrontRight3dB},
     InputRemixMap{BackCenter,  FrontStereo6dB},
 };
-constexpr std::array QuadDownmix{
+constexpr auto QuadDownmix = std::array{
     InputRemixMap{FrontCenter, FrontStereo3dB},
     InputRemixMap{SideLeft,    BackLeft0dB},
     InputRemixMap{SideRight,   BackRight0dB},
     InputRemixMap{BackCenter,  BackStereo3dB},
 };
-constexpr std::array X51Downmix{
+constexpr auto X51Downmix = std::array{
     InputRemixMap{BackLeft,   SideLeft0dB},
     InputRemixMap{BackRight,  SideRight0dB},
     InputRemixMap{BackCenter, SideStereo3dB},
 };
-constexpr std::array X61Downmix{
+constexpr auto X61Downmix = std::array{
     InputRemixMap{BackLeft,  BackCenter3dB},
     InputRemixMap{BackRight, BackCenter3dB},
 };
-constexpr std::array X71Downmix{
+constexpr auto X71Downmix = std::array{
     InputRemixMap{BackCenter, BackStereo3dB},
 };
 
@@ -1156,7 +1148,7 @@ auto UpdateDeviceParams(al::Device *device, const std::span<const int> attrList)
                 TypeMap{"float32"sv, DevFmtFloat },
             };
 
-            auto iter = std::find_if(typelist.begin(), typelist.end(),
+            const auto iter = std::ranges::find_if(typelist,
                 [svfmt=std::string_view{*typeopt}](const TypeMap &entry) -> bool
                 { return al::case_compare(entry.name, svfmt) == 0; });
             if(iter == typelist.end())
@@ -1188,7 +1180,7 @@ auto UpdateDeviceParams(al::Device *device, const std::span<const int> attrList)
                 ChannelMap{"ambi4"sv, DevFmtAmbi3D, 4},
             };
 
-            auto iter = std::find_if(chanlist.begin(), chanlist.end(),
+            const auto iter = std::ranges::find_if(chanlist,
                 [svfmt=std::string_view{*chanopt}](const ChannelMap &entry) -> bool
                 { return al::case_compare(entry.name, svfmt) == 0; });
             if(iter == chanlist.end())
@@ -1479,11 +1471,11 @@ auto UpdateDeviceParams(al::Device *device, const std::span<const int> attrList)
     device->Limiter = nullptr;
     device->ChannelDelays = nullptr;
 
-    std::fill(std::begin(device->HrtfAccumData), std::end(device->HrtfAccumData), float2{});
+    device->HrtfAccumData.fill(float2{});
 
     device->Dry.AmbiMap.fill(BFChannelConfig{});
     device->Dry.Buffer = {};
-    std::fill(std::begin(device->NumChannelsPerOrder), std::end(device->NumChannelsPerOrder), 0u);
+    device->NumChannelsPerOrder.fill(0u);
     device->RealOut.RemixMap = {};
     device->RealOut.ChannelIndex.fill(InvalidChannelIndex);
     device->RealOut.Buffer = {};
@@ -1742,14 +1734,14 @@ auto UpdateDeviceParams(al::Device *device, const std::span<const int> attrList)
     TRACE("Fixed device latency: {}ns", device->FixedLatency.count());
 
     FPUCtl mixer_mode{};
-    auto reset_context = [device](ContextBase *ctxbase)
+    std::ranges::for_each(*device->mContexts.load(), [device](ContextBase *ctxbase)
     {
         auto *context = dynamic_cast<ALCcontext*>(ctxbase);
         assert(context != nullptr);
         if(!context) return;
 
-        std::unique_lock<std::mutex> proplock{context->mPropLock};
-        std::unique_lock<std::mutex> slotlock{context->mEffectSlotLock};
+        auto proplock = std::unique_lock{context->mPropLock};
+        auto slotlock = std::unique_lock{context->mEffectSlotLock};
 
         /* Clear out unused effect slot clusters. */
         auto slot_cluster_not_in_use = [](ContextBase::EffectSlotCluster &clusterptr) -> bool
@@ -1764,18 +1756,17 @@ auto UpdateDeviceParams(al::Device *device, const std::span<const int> attrList)
         /* Free all wet buffers. Any in use will be reallocated with an updated
          * configuration in aluInitEffectPanning.
          */
-        auto clear_wetbuffers = [](ContextBase::EffectSlotCluster &clusterptr)
+        std::ranges::for_each(context->mEffectSlotClusters
+            | std::views::transform(&ContextBase::EffectSlotCluster::operator*),
+            [](const std::span<EffectSlot,4> clusterarray)
         {
-            auto clear_buffer = [](EffectSlot &slot)
+            std::ranges::for_each(clusterarray, [](EffectSlot &slot)
             {
                 slot.mWetBuffer.clear();
                 slot.mWetBuffer.shrink_to_fit();
                 slot.Wet.Buffer = {};
-            };
-            std::for_each(clusterptr->begin(), clusterptr->end(), clear_buffer);
-        };
-        std::for_each(context->mEffectSlotClusters.begin(), context->mEffectSlotClusters.end(),
-            clear_wetbuffers);
+            });
+        });
 
         if(ALeffectslot *slot{context->mDefaultSlot.get()})
         {
@@ -1792,10 +1783,10 @@ auto UpdateDeviceParams(al::Device *device, const std::span<const int> attrList)
         }
 
         if(EffectSlotArray *curarray{context->mActiveAuxSlots.load(std::memory_order_relaxed)})
-            std::fill(curarray->begin()+ptrdiff_t(curarray->size()>>1), curarray->end(), nullptr);
-        auto reset_slots = [device,context](EffectSlotSubList &sublist)
+            std::ranges::fill(*curarray | std::views::drop(curarray->size()>>1), nullptr);
+        std::ranges::for_each(context->mEffectSlotList,[device,context](EffectSlotSubList &sublist)
         {
-            uint64_t usemask{~sublist.FreeMask};
+            auto usemask = ~sublist.FreeMask;
             while(usemask)
             {
                 const auto idx = static_cast<uint>(std::countr_zero(usemask));
@@ -1808,25 +1799,23 @@ auto UpdateDeviceParams(al::Device *device, const std::span<const int> attrList)
                 if(auto *props = slotbase->Update.exchange(nullptr, std::memory_order_relaxed))
                     AtomicReplaceHead(context->mFreeEffectSlotProps, props);
 
-                EffectState *state{slot.Effect.State.get()};
-                state->mOutTarget = device->Dry.Buffer;
-                state->deviceUpdate(device, slot.mBuffer.get());
+                auto &state = *slot.Effect.State;
+                state.mOutTarget = device->Dry.Buffer;
+                state.deviceUpdate(device, slot.mBuffer.get());
                 slot.mPropsDirty = true;
             }
-        };
-        std::for_each(context->mEffectSlotList.begin(), context->mEffectSlotList.end(),
-            reset_slots);
+        });
 
         /* Clear all effect slot props to let them get allocated again. */
         context->mEffectSlotPropClusters.clear();
         context->mFreeEffectSlotProps.store(nullptr, std::memory_order_relaxed);
         slotlock.unlock();
 
-        std::unique_lock<std::mutex> srclock{context->mSourceLock};
-        const uint num_sends{device->NumAuxSends};
-        auto reset_sources = [num_sends](SourceSubList &sublist)
+        auto srclock = std::unique_lock{context->mSourceLock};
+        const auto num_sends = device->NumAuxSends;
+        std::ranges::for_each(context->mSourceList, [num_sends](SourceSubList &sublist)
         {
-            uint64_t usemask{~sublist.FreeMask};
+            auto usemask = ~sublist.FreeMask;
             while(usemask)
             {
                 const auto idx = static_cast<uint>(std::countr_zero(usemask));
@@ -1840,37 +1829,32 @@ auto UpdateDeviceParams(al::Device *device, const std::span<const int> attrList)
 
                 source.mPropsDirty = true;
             }
-        };
-        std::for_each(context->mSourceList.begin(), context->mSourceList.end(), reset_sources);
+        });
 
-        auto reset_voice = [device,num_sends,context](Voice *voice)
+        std::ranges::for_each(context->getVoicesSpan(), [device,num_sends,context](Voice *voice)
         {
             /* Clear extraneous property set sends. */
-            const auto sendparams = std::span{voice->mProps.Send}.subspan(num_sends);
-            std::fill(sendparams.begin(), sendparams.end(), VoiceProps::SendData{});
+            std::ranges::fill(voice->mProps.Send | std::views::drop(num_sends),
+                VoiceProps::SendData{});
 
-            std::fill(voice->mSend.begin()+num_sends, voice->mSend.end(), Voice::TargetData{});
-            auto clear_wetparams = [num_sends](Voice::ChannelData &chandata)
+            std::ranges::fill(voice->mSend | std::views::drop(num_sends), Voice::TargetData{});
+            std::ranges::for_each(voice->mChans, [num_sends](Voice::ChannelData &chandata)
             {
-                const auto wetparams = std::span{chandata.mWetParams}.subspan(num_sends);
-                std::fill(wetparams.begin(), wetparams.end(), SendParams{});
-            };
-            std::for_each(voice->mChans.begin(), voice->mChans.end(), clear_wetparams);
+                std::ranges::fill(chandata.mWetParams | std::views::drop(num_sends), SendParams{});
+            });
 
-            if(VoicePropsItem *props{voice->mUpdate.exchange(nullptr, std::memory_order_relaxed)})
+            if(auto *props = voice->mUpdate.exchange(nullptr, std::memory_order_relaxed))
                 AtomicReplaceHead(context->mFreeVoiceProps, props);
 
             /* Force the voice to stopped if it was stopping. */
-            Voice::State vstate{Voice::Stopping};
+            auto vstate = Voice::Stopping;
             voice->mPlayState.compare_exchange_strong(vstate, Voice::Stopped,
                 std::memory_order_acquire, std::memory_order_acquire);
             if(voice->mSourceID.load(std::memory_order_relaxed) == 0u)
                 return;
 
             voice->prepare(device);
-        };
-        const auto voicespan = context->getVoicesSpan();
-        std::for_each(voicespan.begin(), voicespan.end(), reset_voice);
+        });
 
         /* Clear all voice props to let them get allocated again. */
         context->mVoicePropClusters.clear();
@@ -1881,9 +1865,7 @@ auto UpdateDeviceParams(al::Device *device, const std::span<const int> attrList)
         UpdateContextProps(context);
         UpdateAllEffectSlotProps(context);
         UpdateAllSourceProps(context);
-    };
-    auto ctxspan = std::span{*device->mContexts.load()};
-    std::for_each(ctxspan.begin(), ctxspan.end(), reset_context);
+    });
     mixer_mode.leave();
 
     device->mDeviceState = DeviceState::Configured;
@@ -1919,17 +1901,18 @@ auto ResetDeviceParams(al::Device *device, const std::span<const int> attrList) 
         /* Make sure disconnection is finished before continuing on. */
         std::ignore = device->waitForMix();
 
-        for(ContextBase *ctxbase : *device->mContexts.load(std::memory_order_acquire))
+        std::ranges::for_each(*device->mContexts.load(std::memory_order_acquire),
+            [](ContextBase *ctxbase)
         {
             auto *ctx = dynamic_cast<ALCcontext*>(ctxbase);
             assert(ctx != nullptr);
             if(!ctx || !ctx->mStopVoicesOnDisconnect.load(std::memory_order_acquire))
-                continue;
+                return;
 
             /* Clear any pending voice changes and reallocate voices to get a
              * clean restart.
              */
-            std::lock_guard<std::mutex> sourcelock{ctx->mSourceLock};
+            auto srclock = std::lock_guard{ctx->mSourceLock};
             auto *vchg = ctx->mCurrentVoiceChange.load(std::memory_order_acquire);
             while(auto *next = vchg->mNext.load(std::memory_order_acquire))
                 vchg = next;
@@ -1941,13 +1924,14 @@ auto ResetDeviceParams(al::Device *device, const std::span<const int> attrList) 
             ctx->mVoiceClusters.clear();
             ctx->allocVoices(std::max<size_t>(256,
                 ctx->mActiveVoiceCount.load(std::memory_order_relaxed)));
-        }
+        });
 
         device->Connected.store(true);
     }
 
-    ALCenum err{UpdateDeviceParams(device, attrList)};
-    if(err == ALC_NO_ERROR) [[likely]] return ALC_TRUE;
+    auto err = UpdateDeviceParams(device, attrList);
+    if(err == ALC_NO_ERROR) [[likely]]
+        return ALC_TRUE;
 
     alcSetError(device, err);
     return ALC_FALSE;
@@ -1957,8 +1941,8 @@ auto ResetDeviceParams(al::Device *device, const std::span<const int> attrList) 
 /** Checks if the device handle is valid, and returns a new reference if so. */
 DeviceRef VerifyDevice(ALCdevice *device)
 {
-    std::lock_guard<std::recursive_mutex> listlock{ListLock};
-    auto iter = std::lower_bound(DeviceList.begin(), DeviceList.end(), device);
+    auto listlock = std::lock_guard{ListLock};
+    const auto iter = std::ranges::lower_bound(DeviceList, device);
     if(iter != DeviceList.end() && *iter == device)
     {
         (*iter)->inc_ref();

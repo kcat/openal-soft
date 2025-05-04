@@ -79,14 +79,14 @@ try {
     {
     case AL_GAIN:
         if(!(value >= 0.0f && std::isfinite(value)))
-            context->throw_error(AL_INVALID_VALUE, "Listener gain {:f} out of range", value);
+            context->throw_error(AL_INVALID_VALUE, "Listener gain {} out of range", value);
         listener.Gain = value;
         UpdateProps(context);
         return;
 
     case AL_METERS_PER_UNIT:
         if(!(value >= AL_MIN_METERS_PER_UNIT && value <= AL_MAX_METERS_PER_UNIT))
-            context->throw_error(AL_INVALID_VALUE, "Listener meters per unit {:f} out of range",
+            context->throw_error(AL_INVALID_VALUE, "Listener meters per unit {} out of range",
                 value);
         listener.mMetersPerUnit = value;
         UpdateProps(context);

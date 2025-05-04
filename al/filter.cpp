@@ -210,13 +210,13 @@ void FilterTable<LowpassFilterTable>::setParamf(ALCcontext *context, ALfilter *f
     {
     case AL_LOWPASS_GAIN:
         if(!(val >= AL_LOWPASS_MIN_GAIN && val <= AL_LOWPASS_MAX_GAIN))
-            context->throw_error(AL_INVALID_VALUE, "Low-pass gain {:f} out of range", val);
+            context->throw_error(AL_INVALID_VALUE, "Low-pass gain {} out of range", val);
         filter->Gain = val;
         return;
 
     case AL_LOWPASS_GAINHF:
         if(!(val >= AL_LOWPASS_MIN_GAINHF && val <= AL_LOWPASS_MAX_GAINHF))
-            context->throw_error(AL_INVALID_VALUE, "Low-pass gainhf {:f} out of range", val);
+            context->throw_error(AL_INVALID_VALUE, "Low-pass gainhf {} out of range", val);
         filter->GainHF = val;
         return;
     }
@@ -261,13 +261,13 @@ void FilterTable<HighpassFilterTable>::setParamf(ALCcontext *context, ALfilter *
     {
     case AL_HIGHPASS_GAIN:
         if(!(val >= AL_HIGHPASS_MIN_GAIN && val <= AL_HIGHPASS_MAX_GAIN))
-            context->throw_error(AL_INVALID_VALUE, "High-pass gain {:f} out of range", val);
+            context->throw_error(AL_INVALID_VALUE, "High-pass gain {} out of range", val);
         filter->Gain = val;
         return;
 
     case AL_HIGHPASS_GAINLF:
         if(!(val >= AL_HIGHPASS_MIN_GAINLF && val <= AL_HIGHPASS_MAX_GAINLF))
-            context->throw_error(AL_INVALID_VALUE, "High-pass gainlf {:f} out of range", val);
+            context->throw_error(AL_INVALID_VALUE, "High-pass gainlf {} out of range", val);
         filter->GainLF = val;
         return;
     }
@@ -312,19 +312,19 @@ void FilterTable<BandpassFilterTable>::setParamf(ALCcontext *context, ALfilter *
     {
     case AL_BANDPASS_GAIN:
         if(!(val >= AL_BANDPASS_MIN_GAIN && val <= AL_BANDPASS_MAX_GAIN))
-            context->throw_error(AL_INVALID_VALUE, "Band-pass gain {:f} out of range", val);
+            context->throw_error(AL_INVALID_VALUE, "Band-pass gain {} out of range", val);
         filter->Gain = val;
         return;
 
     case AL_BANDPASS_GAINHF:
         if(!(val >= AL_BANDPASS_MIN_GAINHF && val <= AL_BANDPASS_MAX_GAINHF))
-            context->throw_error(AL_INVALID_VALUE, "Band-pass gainhf {:f} out of range", val);
+            context->throw_error(AL_INVALID_VALUE, "Band-pass gainhf {} out of range", val);
         filter->GainHF = val;
         return;
 
     case AL_BANDPASS_GAINLF:
         if(!(val >= AL_BANDPASS_MIN_GAINLF && val <= AL_BANDPASS_MAX_GAINLF))
-            context->throw_error(AL_INVALID_VALUE, "Band-pass gainlf {:f} out of range", val);
+            context->throw_error(AL_INVALID_VALUE, "Band-pass gainlf {} out of range", val);
         filter->GainLF = val;
         return;
     }

@@ -518,7 +518,7 @@ AL_API DECL_FUNC1(void, alDopplerFactor, ALfloat,value)
 FORCE_ALIGN void AL_APIENTRY alDopplerFactorDirect(ALCcontext *context, ALfloat value) noexcept
 {
     if(!(value >= 0.0f && std::isfinite(value)))
-        context->setError(AL_INVALID_VALUE, "Doppler factor {:f} out of range", value);
+        context->setError(AL_INVALID_VALUE, "Doppler factor {} out of range", value);
     else
     {
         auto proplock = std::lock_guard{context->mPropLock};
@@ -531,7 +531,7 @@ AL_API DECL_FUNC1(void, alSpeedOfSound, ALfloat,value)
 FORCE_ALIGN void AL_APIENTRY alSpeedOfSoundDirect(ALCcontext *context, ALfloat value) noexcept
 {
     if(!(value > 0.0f && std::isfinite(value)))
-        context->setError(AL_INVALID_VALUE, "Speed of sound {:f} out of range", value);
+        context->setError(AL_INVALID_VALUE, "Speed of sound {} out of range", value);
     else
     {
         auto proplock = std::lock_guard{context->mPropLock};
@@ -600,7 +600,7 @@ AL_API void AL_APIENTRY alDopplerVelocity(ALfloat value) noexcept
             "alDopplerVelocity(x) -> alSpeedOfSound(343.3f * x)");
 
     if(!(value >= 0.0f && std::isfinite(value)))
-        context->setError(AL_INVALID_VALUE, "Doppler velocity {:f} out of range", value);
+        context->setError(AL_INVALID_VALUE, "Doppler velocity {} out of range", value);
     else
     {
         auto proplock = std::lock_guard{context->mPropLock};

@@ -106,25 +106,25 @@ void ChorusEffectHandler::SetParamf(ALCcontext *context, ChorusProps &props, ALe
     {
     case AL_CHORUS_RATE:
         if(!(val >= AL_CHORUS_MIN_RATE && val <= AL_CHORUS_MAX_RATE))
-            context->throw_error(AL_INVALID_VALUE, "Chorus rate out of range: {:f}", val);
+            context->throw_error(AL_INVALID_VALUE, "Chorus rate out of range: {}", val);
         props.Rate = val;
         return;
 
     case AL_CHORUS_DEPTH:
         if(!(val >= AL_CHORUS_MIN_DEPTH && val <= AL_CHORUS_MAX_DEPTH))
-            context->throw_error(AL_INVALID_VALUE, "Chorus depth out of range: {:f}", val);
+            context->throw_error(AL_INVALID_VALUE, "Chorus depth out of range: {}", val);
         props.Depth = val;
         return;
 
     case AL_CHORUS_FEEDBACK:
         if(!(val >= AL_CHORUS_MIN_FEEDBACK && val <= AL_CHORUS_MAX_FEEDBACK))
-            context->throw_error(AL_INVALID_VALUE, "Chorus feedback out of range: {:f}", val);
+            context->throw_error(AL_INVALID_VALUE, "Chorus feedback out of range: {}", val);
         props.Feedback = val;
         return;
 
     case AL_CHORUS_DELAY:
         if(!(val >= AL_CHORUS_MIN_DELAY && val <= AL_CHORUS_MAX_DELAY))
-            context->throw_error(AL_INVALID_VALUE, "Chorus delay out of range: {:f}", val);
+            context->throw_error(AL_INVALID_VALUE, "Chorus delay out of range: {}", val);
         props.Delay = val;
         return;
     }
@@ -197,25 +197,25 @@ void FlangerEffectHandler::SetParamf(ALCcontext *context, ChorusProps &props, AL
     {
     case AL_FLANGER_RATE:
         if(!(val >= AL_FLANGER_MIN_RATE && val <= AL_FLANGER_MAX_RATE))
-            context->throw_error(AL_INVALID_VALUE, "Flanger rate out of range: {:f}", val);
+            context->throw_error(AL_INVALID_VALUE, "Flanger rate out of range: {}", val);
         props.Rate = val;
         return;
 
     case AL_FLANGER_DEPTH:
         if(!(val >= AL_FLANGER_MIN_DEPTH && val <= AL_FLANGER_MAX_DEPTH))
-            context->throw_error(AL_INVALID_VALUE, "Flanger depth out of range: {:f}", val);
+            context->throw_error(AL_INVALID_VALUE, "Flanger depth out of range: {}", val);
         props.Depth = val;
         return;
 
     case AL_FLANGER_FEEDBACK:
         if(!(val >= AL_FLANGER_MIN_FEEDBACK && val <= AL_FLANGER_MAX_FEEDBACK))
-            context->throw_error(AL_INVALID_VALUE, "Flanger feedback out of range: {:f}", val);
+            context->throw_error(AL_INVALID_VALUE, "Flanger feedback out of range: {}", val);
         props.Feedback = val;
         return;
 
     case AL_FLANGER_DELAY:
         if(!(val >= AL_FLANGER_MIN_DELAY && val <= AL_FLANGER_MAX_DELAY))
-            context->throw_error(AL_INVALID_VALUE, "Flanger delay out of range: {:f}", val);
+            context->throw_error(AL_INVALID_VALUE, "Flanger delay out of range: {}", val);
         props.Delay = val;
         return;
     }

@@ -3,6 +3,8 @@
 
 #include "config.h"
 
+#include <string_view>
+
 #include "AL/alc.h"
 #include "AL/al.h"
 #include "AL/alext.h"
@@ -15,7 +17,7 @@
 
 
 struct FuncExport {
-    const char *funcName;
+    std::string_view funcName;
     void *address;
 };
 #define DECL(x) FuncExport{#x, reinterpret_cast<void*>(x)}
@@ -395,12 +397,12 @@ inline const std::array eaxFunctions{
 #undef DECL
 
 struct EnumExport {
-    const char *enumName;
+    std::string_view enumName;
     int value;
 };
 #define DECL(x) EnumExport{#x, (x)}
 /* NOLINTNEXTLINE(*-avoid-c-arrays) Too large for std::array auto-deduction :( */
-inline const EnumExport alcEnumerations[]{
+inline constexpr EnumExport alcEnumerations[]{
     DECL(ALC_INVALID),
     DECL(ALC_FALSE),
     DECL(ALC_TRUE),
@@ -912,7 +914,7 @@ inline const EnumExport alcEnumerations[]{
     DECL(AL_STOP_SOURCES_ON_DISCONNECT_SOFT),
 };
 #if ALSOFT_EAX
-inline const std::array eaxEnumerations{
+inline constexpr std::array eaxEnumerations{
     DECL(AL_EAX_RAM_SIZE),
     DECL(AL_EAX_RAM_FREE),
     DECL(AL_STORAGE_AUTOMATIC),

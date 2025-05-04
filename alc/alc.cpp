@@ -213,66 +213,66 @@ ProcessWatcher gProcessWatcher;
  * Backends
  ************************************************/
 struct BackendInfo {
-    const char *name;
+    std::string_view name;
     BackendFactory& (*getFactory)();
 };
 
 std::array BackendList{
 #if HAVE_PIPEWIRE
-    BackendInfo{"pipewire", PipeWireBackendFactory::getFactory},
+    BackendInfo{"pipewire"sv, PipeWireBackendFactory::getFactory},
 #endif
 #if HAVE_PULSEAUDIO
-    BackendInfo{"pulse", PulseBackendFactory::getFactory},
+    BackendInfo{"pulse"sv, PulseBackendFactory::getFactory},
 #endif
 #if HAVE_WASAPI
-    BackendInfo{"wasapi", WasapiBackendFactory::getFactory},
+    BackendInfo{"wasapi"sv, WasapiBackendFactory::getFactory},
 #endif
 #if HAVE_COREAUDIO
-    BackendInfo{"core", CoreAudioBackendFactory::getFactory},
+    BackendInfo{"core"sv, CoreAudioBackendFactory::getFactory},
 #endif
 #if HAVE_OBOE
-    BackendInfo{"oboe", OboeBackendFactory::getFactory},
+    BackendInfo{"oboe"sv, OboeBackendFactory::getFactory},
 #endif
 #if HAVE_OPENSL
-    BackendInfo{"opensl", OSLBackendFactory::getFactory},
+    BackendInfo{"opensl"sv, OSLBackendFactory::getFactory},
 #endif
 #if HAVE_ALSA
-    BackendInfo{"alsa", AlsaBackendFactory::getFactory},
+    BackendInfo{"alsa"sv, AlsaBackendFactory::getFactory},
 #endif
 #if HAVE_SOLARIS
-    BackendInfo{"solaris", SolarisBackendFactory::getFactory},
+    BackendInfo{"solaris"sv, SolarisBackendFactory::getFactory},
 #endif
 #if HAVE_SNDIO
-    BackendInfo{"sndio", SndIOBackendFactory::getFactory},
+    BackendInfo{"sndio"sv, SndIOBackendFactory::getFactory},
 #endif
 #if HAVE_OSS
-    BackendInfo{"oss", OSSBackendFactory::getFactory},
+    BackendInfo{"oss"sv, OSSBackendFactory::getFactory},
 #endif
 #if HAVE_DSOUND
-    BackendInfo{"dsound", DSoundBackendFactory::getFactory},
+    BackendInfo{"dsound"sv, DSoundBackendFactory::getFactory},
 #endif
 #if HAVE_WINMM
-    BackendInfo{"winmm", WinMMBackendFactory::getFactory},
+    BackendInfo{"winmm"sv, WinMMBackendFactory::getFactory},
 #endif
 #if HAVE_PORTAUDIO
-    BackendInfo{"port", PortBackendFactory::getFactory},
+    BackendInfo{"port"sv, PortBackendFactory::getFactory},
 #endif
 #if HAVE_SDL3
-    BackendInfo{"sdl3", SDL3BackendFactory::getFactory},
+    BackendInfo{"sdl3"sv, SDL3BackendFactory::getFactory},
 #endif
 #if HAVE_SDL2
-    BackendInfo{"sdl2", SDL2BackendFactory::getFactory},
+    BackendInfo{"sdl2"sv, SDL2BackendFactory::getFactory},
 #endif
 #if HAVE_JACK
-    BackendInfo{"jack", JackBackendFactory::getFactory},
+    BackendInfo{"jack"sv, JackBackendFactory::getFactory},
 #endif
 #if HAVE_OTHERIO
-    BackendInfo{"otherio", OtherIOBackendFactory::getFactory},
+    BackendInfo{"otherio"sv, OtherIOBackendFactory::getFactory},
 #endif
 
-    BackendInfo{"null", NullBackendFactory::getFactory},
+    BackendInfo{"null"sv, NullBackendFactory::getFactory},
 #if HAVE_WAVE
-    BackendInfo{"wave", WaveBackendFactory::getFactory},
+    BackendInfo{"wave"sv, WaveBackendFactory::getFactory},
 #endif
 };
 
@@ -329,7 +329,7 @@ constexpr uint DitherRNGSeed{22222u};
 /************************************************
  * ALC information
  ************************************************/
-[[nodiscard]] constexpr auto GetNoDeviceExtList() noexcept -> const char*
+[[nodiscard]] constexpr auto GetNoDeviceExtString() noexcept -> const char*
 {
     return "ALC_ENUMERATE_ALL_EXT "
         "ALC_ENUMERATION_EXT "
@@ -342,7 +342,7 @@ constexpr uint DitherRNGSeed{22222u};
         "ALC_SOFT_reopen_device "
         "ALC_SOFT_system_events";
 }
-[[nodiscard]] constexpr auto GetExtensionList() noexcept -> const char*
+[[nodiscard]] constexpr auto GetExtensionString() noexcept -> const char*
 {
     return "ALC_ENUMERATE_ALL_EXT "
         "ALC_ENUMERATION_EXT "
@@ -363,6 +363,26 @@ constexpr uint DitherRNGSeed{22222u};
         "ALC_SOFT_reopen_device "
         "ALC_SOFT_system_events";
 }
+
+/* Returns the above NoDeviceExt string as an array of string_views. */
+[[nodiscard]] consteval auto GetNoDeviceExtArray() noexcept
+{
+    constexpr auto extlist = std::string_view{GetNoDeviceExtString()};
+    auto ret = std::array<std::string_view, std::ranges::count(extlist, ' ')+1>{};
+    std::ranges::transform(extlist | std::views::split(' '), ret.begin(),
+        [](auto&& namerange) { return std::string_view{namerange.begin(), namerange.end()}; });
+    return ret;
+}
+/* Returns the above Extension string as an array of string_views. */
+[[nodiscard]] consteval auto GetExtensionArray() noexcept
+{
+    constexpr auto extlist = std::string_view{GetExtensionString()};
+    auto ret = std::array<std::string_view, std::ranges::count(extlist, ' ')+1>{};
+    std::ranges::transform(extlist | std::views::split(' '), ret.begin(),
+        [](auto&& namerange) { return std::string_view{namerange.begin(), namerange.end()}; });
+    return ret;
+}
+
 
 constexpr int alcMajorVersion{1};
 constexpr int alcMinorVersion{1};
@@ -2146,8 +2166,8 @@ ALC_API auto ALC_APIENTRY alcGetString(ALCdevice *Device, ALCenum param) noexcep
 
     case ALC_EXTENSIONS:
         if(VerifyDevice(Device))
-            return GetExtensionList();
-        return GetNoDeviceExtList();
+            return GetExtensionString();
+        return GetNoDeviceExtString();
 
     case ALC_HRTF_SPECIFIER_SOFT:
         if(DeviceRef dev{VerifyDevice(Device)})
@@ -2647,19 +2667,14 @@ ALC_API ALCboolean ALC_APIENTRY alcIsExtensionPresent(ALCdevice *device, const A
         return ALC_FALSE;
     }
 
-    const auto tofind = std::string_view{extName};
-    auto extlist = dev ? std::string_view{GetExtensionList()}
-        : std::string_view{GetNoDeviceExtList()};
+    static constexpr auto extarray = GetExtensionArray();
+    static constexpr auto nodevextarray = GetNoDeviceExtArray();
 
-    while(extlist.size() >= tofind.size())
-    {
-        const auto endpos = std::min(extlist.find_first_of(' '), extlist.size());
-        if(endpos == tofind.size() && al::case_compare(tofind, extlist.substr(0, endpos)) == 0)
-            return ALC_TRUE;
-
-        const auto nextpos = std::min(extlist.find_first_not_of(' ', endpos), extlist.size());
-        extlist = extlist.substr(nextpos);
-    }
+    const auto extlist = dev ? std::span{extarray}.subspan(0) : std::span{nodevextarray};
+    const auto matchext = [tofind = std::string_view{extName}](const std::string_view entry)
+    { return tofind.size() == entry.size() && al::case_compare(tofind, entry) == 0; };
+    if(std::ranges::any_of(extlist, matchext))
+        return ALC_TRUE;
     return ALC_FALSE;
 }
 
@@ -2679,19 +2694,14 @@ ALC_API ALCvoid* ALC_APIENTRY alcGetProcAddress(ALCdevice *device, const ALCchar
 #if ALSOFT_EAX
     if(eax_g_is_enabled)
     {
-        for(const auto &func : eaxFunctions)
-        {
-            if(strcmp(func.funcName, funcName) == 0)
-                return func.address;
-        }
+        const auto eaxfuncnames = eaxFunctions | std::views::transform(&FuncExport::funcName);
+        const auto iter = std::ranges::find(eaxfuncnames, std::string_view{funcName});
+        if(iter != eaxfuncnames.end()) return iter.base()->address;
     }
 #endif
-    for(const auto &func : alcFunctions)
-    {
-        if(strcmp(func.funcName, funcName) == 0)
-            return func.address;
-    }
-    return nullptr;
+    const auto funcnames = alcFunctions | std::views::transform(&FuncExport::funcName);
+    const auto iter = std::ranges::find(funcnames, std::string_view{funcName});
+    return (iter != funcnames.end()) ? iter.base()->address : nullptr;
 }
 
 
@@ -2707,20 +2717,14 @@ ALC_API ALCenum ALC_APIENTRY alcGetEnumValue(ALCdevice *device, const ALCchar *e
 #if ALSOFT_EAX
     if(eax_g_is_enabled)
     {
-        for(const auto &enm : eaxEnumerations)
-        {
-            if(strcmp(enm.enumName, enumName) == 0)
-                return enm.value;
-        }
+        const auto eaxenumnames = eaxEnumerations | std::views::transform(&EnumExport::enumName);
+        const auto iter = std::ranges::find(eaxenumnames, std::string_view{enumName});
+        if(iter != eaxenumnames.end()) return iter.base()->value;
     }
 #endif
-    for(const auto &enm : alcEnumerations)
-    {
-        if(strcmp(enm.enumName, enumName) == 0)
-            return enm.value;
-    }
-
-    return 0;
+    const auto enumnames = alcEnumerations | std::views::transform(&EnumExport::enumName);
+    const auto iter = std::ranges::find(enumnames, std::string_view{enumName});
+    return (iter != enumnames.end()) ? iter.base()->value : 0;
 }
 
 

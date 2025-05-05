@@ -403,7 +403,8 @@ auto EnumeratedList::getDriverIndexForName(const std::string_view name) const
     -> std::optional<ALCuint>
 {
     auto idx = 0u;
-    std::ranges::any_of(mEnumeratedDevices | std::views::transform(&DeviceList::mNames),
+    std::ignore = std::ranges::any_of(mEnumeratedDevices
+        | std::views::transform(&DeviceList::mNames),
         [name,&idx](const std::span<const std::string_view> names) -> bool
     {
         if(std::ranges::find(names, name) != names.end())
@@ -508,7 +509,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *devicename) noexcep
     else
     {
         auto drvidx = 0u;
-        std::ranges::any_of(DriverList | std::views::transform(&DriverIfacePtr::get),
+        std::ignore = std::ranges::any_of(DriverList | std::views::transform(&DriverIfacePtr::get),
             [&device,&idx,&drvidx](const DriverIface *drv) -> bool
         {
             if(drv->ALCVer >= MakeALCVer(1, 1)
@@ -686,11 +687,9 @@ ALC_API ALCboolean ALC_APIENTRY alcIsExtensionPresent(ALCdevice *device, const A
         return ALC_FALSE;
     }
 
-    const auto matchext = [tofind = std::string_view{extname}](const std::string_view entry)
+    auto matchext = [tofind = std::string_view{extname}](const std::string_view entry)
     { return tofind.size() == entry.size() && al::case_compare(tofind, entry) == 0; };
-    if(std::ranges::any_of(GetExtensionArray(), matchext))
-        return ALC_TRUE;
-    return ALC_FALSE;
+    return std::ranges::any_of(GetExtensionArray(), matchext) ? ALC_TRUE : ALC_FALSE;
 }
 
 ALC_API void* ALC_APIENTRY alcGetProcAddress(ALCdevice *device, const ALCchar *funcname) noexcept
@@ -934,7 +933,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *devicename, 
     else
     {
         auto drvidx = 0u;
-        std::ranges::any_of(DriverList | std::views::transform(&DriverIfacePtr::get),
+        std::ignore = std::ranges::any_of(DriverList | std::views::transform(&DriverIfacePtr::get),
             [frequency,format,buffersize,&device,&idx,&drvidx](const DriverIface *drv) -> bool
         {
             if(drv->ALCVer >= MakeALCVer(1, 1)

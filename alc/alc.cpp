@@ -662,7 +662,7 @@ void alc_initconfig()
         backends = std::span{backends.begin(), iter.base().base()};
     }
 
-    std::ranges::any_of(backends, [](BackendInfo &backend)
+    std::ignore = std::ranges::any_of(backends, [](BackendInfo &backend)
     {
         auto &factory = backend.getFactory();
         if(!factory.init())

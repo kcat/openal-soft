@@ -55,7 +55,7 @@
 
 /* MinGW-w64 needs this for some unknown reason now. */
 using LPCWAVEFORMATEX = const WAVEFORMATEX*;
-#include <dsound.h>
+#include <dsound.h> /* NOLINT(readability-duplicate-include) Not the same */
 
 
 #ifndef DSSPEAKER_5POINT1

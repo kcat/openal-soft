@@ -1740,28 +1740,24 @@ auto UpdateDeviceParams(al::Device *device, const std::span<const int> attrList)
         auto proplock = std::unique_lock{context->mPropLock};
         auto slotlock = std::unique_lock{context->mEffectSlotLock};
 
-        /* Clear out unused effect slot clusters. */
-        auto slotcluster_end = std::ranges::remove_if(context->mEffectSlotClusters,
+        /* Remove unused effect slot clusters. */
+        auto slotcluster_rem = std::ranges::remove_if(context->mEffectSlotClusters,
             [](ContextBase::EffectSlotCluster &clusterptr) -> bool
         {
-            return std::none_of(clusterptr->begin(), clusterptr->end(),
-                std::mem_fn(&EffectSlot::InUse));
+            return std::ranges::none_of(*clusterptr, std::mem_fn(&EffectSlot::InUse));
         });
-        context->mEffectSlotClusters.erase(slotcluster_end.begin(), slotcluster_end.end());
+        context->mEffectSlotClusters.erase(slotcluster_rem.begin(), slotcluster_rem.end());
 
         /* Free all wet buffers. Any in use will be reallocated with an updated
          * configuration in aluInitEffectPanning.
          */
         std::ranges::for_each(context->mEffectSlotClusters
-            | std::views::transform(&ContextBase::EffectSlotCluster::operator*),
-            [](const std::span<EffectSlot,4> clusterarray)
+            | std::views::transform(&ContextBase::EffectSlotCluster::operator*)
+            | std::views::join, [](EffectSlot &slot)
         {
-            std::ranges::for_each(clusterarray, [](EffectSlot &slot)
-            {
-                slot.mWetBuffer.clear();
-                slot.mWetBuffer.shrink_to_fit();
-                slot.Wet.Buffer = {};
-            });
+            slot.mWetBuffer.clear();
+            slot.mWetBuffer.shrink_to_fit();
+            slot.Wet.Buffer = {};
         });
 
         if(auto *slot = context->mDefaultSlot.get())
@@ -1857,8 +1853,8 @@ auto UpdateDeviceParams(al::Device *device, const std::span<const int> attrList)
         });
 
         /* Clear all voice props to let them get allocated again. */
-        context->mVoicePropClusters.clear();
         context->mFreeVoiceProps.store(nullptr, std::memory_order_relaxed);
+        context->mVoicePropClusters.clear();
         srclock.unlock();
 
         context->mPropsDirty = false;

@@ -64,22 +64,21 @@ class SIMDALIGN Compressor {
     float mLastAttack{0.0f};
     float mLastGainDev{0.0f};
 
-    Compressor() = default;
-
-    void linkChannels(const uint SamplesToDo, const std::span<const FloatBufferLine> OutBuffer);
-    void crestDetector(const uint SamplesToDo);
-    void peakDetector(const uint SamplesToDo);
-    void peakHoldDetector(const uint SamplesToDo);
     void gainCompressor(const uint SamplesToDo);
-    void signalDelay(const uint SamplesToDo, const std::span<FloatBufferLine> OutBuffer);
 
+    struct PrivateToken { };
 public:
     enum {
         AutoKnee, AutoAttack, AutoRelease, AutoPostGain, AutoDeclip, FlagsCount
     };
     using FlagBits = std::bitset<FlagsCount>;
 
+    Compressor() = delete;
+    Compressor(const Compressor&) = delete;
+    explicit Compressor(PrivateToken);
     ~Compressor();
+    auto operator=(const Compressor&) -> Compressor& = delete;
+
     void process(const uint SamplesToDo, std::span<FloatBufferLine> InOut);
     [[nodiscard]] auto getLookAhead() const noexcept -> uint { return mLookAhead; }
 
@@ -109,10 +108,10 @@ public:
      * \param ReleaseTime   Release time (in seconds). Acts as a maximum when
      *        automating release time.
      */
-    static std::unique_ptr<Compressor> Create(const size_t NumChans, const float SampleRate,
-        const FlagBits autoflags, const float LookAheadTime, const float HoldTime,
-        const float PreGainDb, const float PostGainDb, const float ThresholdDb, const float Ratio,
-        const float KneeDb, const float AttackTime, const float ReleaseTime);
+    static auto Create(const size_t NumChans, const float SampleRate, const FlagBits AutoFlags,
+        const float LookAheadTime, const float HoldTime, const float PreGainDb,
+        const float PostGainDb, const float ThresholdDb, const float Ratio, const float KneeDb,
+        const float AttackTime, const float ReleaseTime) -> std::unique_ptr<Compressor>;
 };
 using CompressorPtr = std::unique_ptr<Compressor>;
 

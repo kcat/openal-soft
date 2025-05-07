@@ -1834,9 +1834,8 @@ auto UpdateDeviceParams(al::Device *device, const std::span<const int> attrList)
              * while this does?
              */
             std::ranges::for_each(voice->mChans
-                | std::views::transform(&Voice::ChannelData::mWetParams)
-                | std::views::transform([num_sends](auto&& r)
-                { return r | std::views::drop(num_sends); })
+                | std::views::transform([num_sends](Voice::ChannelData &chandata)
+                { return chandata.mWetParams | std::views::drop(num_sends); })
                 | std::views::join, [](SendParams &params) { params = SendParams{}; });
 
             if(auto *props = voice->mUpdate.exchange(nullptr, std::memory_order_relaxed))

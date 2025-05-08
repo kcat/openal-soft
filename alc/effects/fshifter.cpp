@@ -26,6 +26,7 @@
 #include <complex>
 #include <cstdlib>
 #include <numbers>
+#include <ranges>
 #include <span>
 #include <variant>
 
@@ -50,12 +51,12 @@ namespace {
 using uint = unsigned int;
 using complex_d = std::complex<double>;
 
-constexpr size_t HilSize{1024};
-constexpr size_t HilHalfSize{HilSize >> 1};
-constexpr size_t OversampleFactor{4};
+constexpr auto HilSize = 1024_uz;
+constexpr auto HilHalfSize = HilSize >> 1;
+constexpr auto OversampleFactor = 4_uz;
 
 static_assert(HilSize%OversampleFactor == 0, "Factor must be a clean divisor of the size");
-constexpr size_t HilStep{HilSize / OversampleFactor};
+constexpr auto HilStep{HilSize / OversampleFactor};
 
 /* Define a Hann window, used to filter the HIL input and output. */
 struct Windower {
@@ -63,13 +64,15 @@ struct Windower {
 
     Windower()
     {
+        static constexpr auto scale = std::numbers::pi / double{HilSize};
         /* Create lookup table of the Hann window for the desired size. */
-        for(size_t i{0};i < HilHalfSize;i++)
+        std::ranges::transform(std::views::iota(0u, uint{HilHalfSize}), mData.begin(),
+            [](const uint i) -> float
         {
-            static constexpr auto scale = std::numbers::pi / double{HilSize};
-            const auto val = std::sin((static_cast<double>(i)+0.5) * scale);
-            mData[i] = mData[HilSize-1-i] = val * val;
-        }
+            const auto val = std::sin((i+0.5) * scale);
+            return static_cast<float>(val * val);
+        });
+        std::ranges::copy(mData | std::views::take(HilHalfSize), mData.rbegin());
     }
 };
 const Windower gWindow{};
@@ -79,9 +82,6 @@ struct FshifterState final : public EffectState {
     /* Effect parameters */
     size_t mCount{};
     size_t mPos{};
-    std::array<uint,2> mPhaseStep{};
-    std::array<uint,2> mPhase{};
-    std::array<double,2> mSign{};
 
     /* Effects buffers */
     std::array<double,HilSize> mInFIFO{};
@@ -93,11 +93,14 @@ struct FshifterState final : public EffectState {
     alignas(16) FloatBufferLine mBufferOut{};
 
     /* Effect gains for each output channel */
-    struct OutGains {
+    struct OutParams {
+        uint mPhaseStep{};
+        uint mPhase{};
+        double mSign{};
         std::array<float,MaxAmbiChannels> Current{};
         std::array<float,MaxAmbiChannels> Target{};
     };
-    std::array<OutGains,2> mGains;
+    std::array<OutParams,2> mChans;
 
 
     void deviceUpdate(const DeviceBase *device, const BufferStorage *buffer) override;
@@ -113,55 +116,42 @@ void FshifterState::deviceUpdate(const DeviceBase*, const BufferStorage*)
     mCount = 0;
     mPos = HilSize - HilStep;
 
-    mPhaseStep.fill(0u);
-    mPhase.fill(0u);
-    mSign.fill(1.0);
     mInFIFO.fill(0.0);
     mOutFIFO.fill(complex_d{});
     mOutputAccum.fill(complex_d{});
     mAnalytic.fill(complex_d{});
 
-    for(auto &gain : mGains)
-    {
-        gain.Current.fill(0.0f);
-        gain.Target.fill(0.0f);
-    }
+    mBufferOut.fill(0.0f);
+    mChans.fill(OutParams{});
 }
 
 void FshifterState::update(const ContextBase *context, const EffectSlot *slot,
     const EffectProps *props_, const EffectTarget target)
 {
     auto &props = std::get<FshifterProps>(*props_);
-    const DeviceBase *device{context->mDevice};
+    const auto *device = context->mDevice;
 
-    const float step{props.Frequency / static_cast<float>(device->mSampleRate)};
-    mPhaseStep[0] = mPhaseStep[1] = fastf2u(std::min(step, 1.0f) * MixerFracOne);
+    const auto step = props.Frequency / static_cast<float>(device->mSampleRate);
+    std::ranges::fill(mChans | std::views::transform(&OutParams::mPhaseStep),
+        fastf2u(std::min(step, 1.0f) * MixerFracOne));
 
     switch(props.LeftDirection)
     {
-    case FShifterDirection::Down:
-        mSign[0] = -1.0;
-        break;
-    case FShifterDirection::Up:
-        mSign[0] = 1.0;
-        break;
+    case FShifterDirection::Down: mChans[0].mSign = -1.0; break;
+    case FShifterDirection::Up: mChans[0].mSign = 1.0; break;
     case FShifterDirection::Off:
-        mPhase[0]     = 0;
-        mPhaseStep[0] = 0;
+        mChans[0].mPhase     = 0;
+        mChans[0].mPhaseStep = 0;
         break;
     }
 
     switch(props.RightDirection)
     {
-    case FShifterDirection::Down:
-        mSign[1] = -1.0;
-        break;
-    case FShifterDirection::Up:
-        mSign[1] = 1.0;
-        break;
+    case FShifterDirection::Down: mChans[1].mSign = -1.0; break;
+    case FShifterDirection::Up: mChans[1].mSign = 1.0; break;
     case FShifterDirection::Off:
-        mPhase[1]     = 0;
-        mPhaseStep[1] = 0;
+        mChans[1].mPhase     = 0;
+        mChans[1].mPhaseStep = 0;
         break;
     }
 
@@ -174,26 +164,24 @@ void FshifterState::update(const ContextBase *context, const EffectSlot *slot,
     auto &rcoeffs = (device->mRenderMode != RenderMode::Pairwise) ? rcoeffs_nrml : rcoeffs_pw;
 
     mOutTarget = target.Main->Buffer;
-    ComputePanGains(target.Main, lcoeffs, slot->Gain, mGains[0].Target);
-    ComputePanGains(target.Main, rcoeffs, slot->Gain, mGains[1].Target);
+    ComputePanGains(target.Main, lcoeffs, slot->Gain, mChans[0].Target);
+    ComputePanGains(target.Main, rcoeffs, slot->Gain, mChans[1].Target);
 }
 
 void FshifterState::process(const size_t samplesToDo,
     const std::span<const FloatBufferLine> samplesIn, const std::span<FloatBufferLine> samplesOut)
 {
-    for(size_t base{0u};base < samplesToDo;)
+    for(auto base=0_uz;base < samplesToDo;)
     {
-        size_t todo{std::min(HilStep-mCount, samplesToDo-base)};
+        const auto todo = std::min(HilStep-mCount, samplesToDo-base);
 
         /* Fill FIFO buffer with samples data */
-        const size_t pos{mPos};
-        size_t count{mCount};
-        do {
-            mInFIFO[pos+count] = samplesIn[0][base];
-            mOutdata[base] = mOutFIFO[count];
-            ++base; ++count;
-        } while(--todo);
-        mCount = count;
+        std::ranges::copy(samplesIn[0] | std::views::drop(base) | std::views::take(todo),
+            (mInFIFO | std::views::drop(mPos+mCount)).begin());
+        std::ranges::copy(mOutFIFO | std::views::drop(mCount) | std::views::take(todo),
+            (mOutdata | std::views::drop(base)).begin());
+        mCount += todo;
+        base += todo;
 
         /* Check whether FIFO buffer is filled */
         if(mCount < HilStep) break;
@@ -201,48 +189,52 @@ void FshifterState::process(const size_t samplesToDo,
         mPos = (mPos+HilStep) & (HilSize-1);
 
         /* Real signal windowing and store in Analytic buffer */
-        for(size_t src{mPos}, k{0u};src < HilSize;++src,++k)
-            mAnalytic[k] = mInFIFO[src]*gWindow.mData[k];
-        for(size_t src{0u}, k{HilSize-mPos};src < mPos;++src,++k)
-            mAnalytic[k] = mInFIFO[src]*gWindow.mData[k];
+        const auto [_, windowiter, analyticiter] = std::ranges::transform(
+            mInFIFO | std::views::drop(mPos), gWindow.mData, mAnalytic.begin(), std::multiplies{});
+        std::ranges::transform(mInFIFO.begin(), mInFIFO.end(), windowiter, gWindow.mData.end(),
+            analyticiter, std::multiplies{});
 
         /* Processing signal by Discrete Hilbert Transform (analytical signal). */
         complex_hilbert(mAnalytic);
 
         /* Windowing and add to output accumulator */
-        for(size_t dst{mPos}, k{0u};dst < HilSize;++dst,++k)
-            mOutputAccum[dst] += 2.0/OversampleFactor*gWindow.mData[k]*mAnalytic[k];
-        for(size_t dst{0u}, k{HilSize-mPos};dst < mPos;++dst,++k)
-            mOutputAccum[dst] += 2.0/OversampleFactor*gWindow.mData[k]*mAnalytic[k];
+        std::ranges::transform(mAnalytic, gWindow.mData, mAnalytic.begin(),
+            [](const complex_d &a, const double w) noexcept { return 2.0/OversampleFactor*w*a; });
+
+        const auto accumrange = mOutputAccum | std::views::drop(mPos);
+        std::ranges::transform(accumrange, mAnalytic, accumrange.begin(), std::plus{});
+        std::ranges::transform(mOutputAccum, mAnalytic | std::views::drop(HilSize-mPos),
+            mOutputAccum.begin(), std::plus{});
 
         /* Copy out the accumulated result, then clear for the next iteration. */
-        std::copy_n(mOutputAccum.cbegin() + mPos, HilStep, mOutFIFO.begin());
-        std::fill_n(mOutputAccum.begin() + mPos, HilStep, complex_d{});
+        const auto outrange = accumrange | std::views::take(HilStep);
+        std::ranges::copy(outrange, mOutFIFO.begin());
+        std::ranges::fill(outrange, 0.0f);
     }
 
     /* Process frequency shifter using the analytic signal obtained. */
-    for(size_t c{0};c < 2;++c)
+    std::ranges::for_each(mChans, [&,this](OutParams &params)
     {
-        const double sign{mSign[c]};
-        const uint phase_step{mPhaseStep[c]};
-        uint phase_idx{mPhase[c]};
-        std::transform(mOutdata.cbegin(), mOutdata.cbegin()+samplesToDo, mBufferOut.begin(),
+        const auto sign = params.mSign;
+        const auto phase_step = params.mPhaseStep;
+        auto phase_idx = params.mPhase;
+        std::ranges::transform(mOutdata | std::views::take(samplesToDo), mBufferOut.begin(),
             [&phase_idx,phase_step,sign](const complex_d &in) -> float
-            {
-                const double phase{phase_idx * (std::numbers::pi*2.0 / MixerFracOne)};
-                const auto out = static_cast<float>(in.real()*std::cos(phase) +
-                    in.imag()*std::sin(phase)*sign);
+        {
+            const auto phase = phase_idx * (std::numbers::pi*2.0 / MixerFracOne);
+            const auto out = static_cast<float>(in.real()*std::cos(phase) +
+                in.imag()*std::sin(phase)*sign);
 
-                phase_idx += phase_step;
-                phase_idx &= MixerFracMask;
-                return out;
-            });
-        mPhase[c] = phase_idx;
+            phase_idx += phase_step;
+            phase_idx &= MixerFracMask;
+            return out;
+        });
+        params.mPhase = phase_idx;
 
         /* Now, mix the processed sound data to the output. */
-        MixSamples(std::span{mBufferOut}.first(samplesToDo), samplesOut, mGains[c].Current,
-            mGains[c].Target, std::max(samplesToDo, 512_uz), 0);
-    }
+        MixSamples(std::span{mBufferOut}.first(samplesToDo), samplesOut, params.Current,
+            params.Target, std::max(samplesToDo, 512_uz), 0);
+    });
 }
 
 

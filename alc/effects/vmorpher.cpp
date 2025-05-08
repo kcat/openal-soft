@@ -38,6 +38,7 @@
 #include <cstdlib>
 #include <functional>
 #include <numbers>
+#include <ranges>
 #include <span>
 #include <variant>
 
@@ -58,37 +59,37 @@ namespace {
 
 using uint = unsigned int;
 
-constexpr size_t MaxUpdateSamples{256};
-constexpr size_t NumFormants{4};
-constexpr float RcpQFactor{1.0f / 5.0f};
+constexpr auto MaxUpdateSamples = 256_uz;
+constexpr auto NumFormants = 4_uz;
+constexpr auto RcpQFactor = 1.0f / 5.0f;
 enum : size_t {
     VowelAIndex,
     VowelBIndex,
     NumFilters
 };
 
-constexpr size_t WaveformFracBits{24};
-constexpr size_t WaveformFracOne{1<<WaveformFracBits};
-constexpr size_t WaveformFracMask{WaveformFracOne-1};
+constexpr auto WaveformFracBits{24_uz};
+constexpr auto WaveformFracOne{1_uz<<WaveformFracBits};
+constexpr auto WaveformFracMask{WaveformFracOne-1};
 
-inline float Sin(uint index)
+inline auto Sin(uint index) -> float
 {
     static constexpr auto scale = std::numbers::pi_v<float>*2.0f / float{WaveformFracOne};
     return std::sin(static_cast<float>(index) * scale)*0.5f + 0.5f;
 }
 
-inline float Saw(uint index)
+inline auto Saw(uint index) -> float
 { return static_cast<float>(index) / float{WaveformFracOne}; }
 
-inline float Triangle(uint index)
+inline auto Triangle(uint index) -> float
 { return std::fabs(static_cast<float>(index)*(2.0f/WaveformFracOne) - 1.0f); }
 
-inline float Half(uint) { return 0.5f; }
+inline auto Half(uint) -> float { return 0.5f; }
 
-template<float (&func)(uint)>
+template<float(&func)(uint)>
 void Oscillate(const std::span<float> dst, uint index, const uint step)
 {
-    std::generate(dst.begin(), dst.end(), [&index,step]
+    std::ranges::generate(dst, [&index,step]
     {
         index += step;
         index &= WaveformFracMask;
@@ -112,28 +113,28 @@ struct FormantFilter {
         /* A state variable filter from a topology-preserving transform.
          * Based on a talk given by Ivan Cohen: https://www.youtube.com/watch?v=esjHXGPyrhg
          */
-        const float g{mCoeff};
-        const float gain{mGain};
-        const float h{1.0f / (1.0f + (g*RcpQFactor) + (g*g))};
-        const float coeff{RcpQFactor + g};
-        float s1{mS1};
-        float s2{mS2};
+        const auto g = mCoeff;
+        const auto gain = mGain;
+        const auto h = 1.0f / (1.0f + (g*RcpQFactor) + (g*g));
+        const auto coeff = RcpQFactor + g;
+        auto s1 = mS1;
+        auto s2 = mS2;
 
         const auto input = std::span{samplesIn, numInput};
         const auto output = std::span{samplesOut, numInput};
-        std::transform(input.begin(), input.end(), output.begin(), output.begin(),
+        std::ranges::transform(input, output, output.begin(),
             [g,gain,h,coeff,&s1,&s2](const float in, const float out) noexcept -> float
-            {
-                const float H{(in - coeff*s1 - s2)*h};
-                const float B{g*H + s1};
-                const float L{g*B + s2};
+        {
+            const auto H = (in - coeff*s1 - s2)*h;
+            const auto B = g*H + s1;
+            const auto L = g*B + s2;
 
-                s1 = g*H + B;
-                s2 = g*B + L;
+            s1 = g*H + B;
+            s2 = g*B + L;
 
-                // Apply peak and accumulate samples.
-                return out + B*gain;
-            });
+            /* Apply peak and accumulate samples. */
+            return out + B*gain;
+        });
         mS1 = s1;
         mS2 = s2;
     }
@@ -233,24 +234,16 @@ std::array<FormantFilter,NumFormants> VmorpherState::getFiltersByPhoneme(VMorphe
 
 void VmorpherState::deviceUpdate(const DeviceBase*, const BufferStorage*)
 {
-    for(auto &e : mChans)
-    {
-        e.mTargetChannel = InvalidChannelIndex;
-        std::for_each(e.mFormants[VowelAIndex].begin(), e.mFormants[VowelAIndex].end(),
-            std::mem_fn(&FormantFilter::clear));
-        std::for_each(e.mFormants[VowelBIndex].begin(), e.mFormants[VowelBIndex].end(),
-            std::mem_fn(&FormantFilter::clear));
-        e.mCurrentGain = 0.0f;
-    }
+    mChans.fill(OutParams{});
 }
 
 void VmorpherState::update(const ContextBase *context, const EffectSlot *slot,
     const EffectProps *props_, const EffectTarget target)
 {
     auto &props = std::get<VmorpherProps>(*props_);
-    const DeviceBase *device{context->mDevice};
-    const float frequency{static_cast<float>(device->mSampleRate)};
-    const float step{props.Rate / frequency};
+    const auto *device = context->mDevice;
+    const auto frequency = static_cast<float>(device->mSampleRate);
+    const auto step = props.Rate / frequency;
     mStep = fastf2u(std::clamp(step*WaveformFracOne, 0.0f, WaveformFracOne-1.0f));
 
     if(mStep == 0)
@@ -262,79 +255,79 @@ void VmorpherState::update(const ContextBase *context, const EffectSlot *slot,
     else /*if(props.Waveform == VMorpherWaveform::Sawtooth)*/
         mGetSamples = Oscillate<Saw>;
 
-    const float pitchA{std::pow(2.0f, static_cast<float>(props.PhonemeACoarseTuning) / 12.0f)};
-    const float pitchB{std::pow(2.0f, static_cast<float>(props.PhonemeBCoarseTuning) / 12.0f)};
+    const auto pitchA = std::pow(2.0f, static_cast<float>(props.PhonemeACoarseTuning) / 12.0f);
+    const auto pitchB = std::pow(2.0f, static_cast<float>(props.PhonemeBCoarseTuning) / 12.0f);
 
     auto vowelA = getFiltersByPhoneme(props.PhonemeA, frequency, pitchA);
     auto vowelB = getFiltersByPhoneme(props.PhonemeB, frequency, pitchB);
 
     /* Copy the filter coefficients to the input channels. */
-    for(size_t i{0u};i < slot->Wet.Buffer.size();++i)
+    for(auto i=0_uz;i < slot->Wet.Buffer.size();++i)
     {
-        std::copy(vowelA.begin(), vowelA.end(), mChans[i].mFormants[VowelAIndex].begin());
-        std::copy(vowelB.begin(), vowelB.end(), mChans[i].mFormants[VowelBIndex].begin());
+        std::ranges::copy(vowelA, mChans[i].mFormants[VowelAIndex].begin());
+        std::ranges::copy(vowelB, mChans[i].mFormants[VowelBIndex].begin());
     }
 
     mOutTarget = target.Main->Buffer;
-    auto set_channel = [this](size_t idx, uint outchan, float outgain)
+    target.Main->setAmbiMixParams(slot->Wet, slot->Gain,
+        [this](const size_t idx, const uint outchan, const float outgain)
     {
         mChans[idx].mTargetChannel = outchan;
         mChans[idx].mTargetGain = outgain;
-    };
-    target.Main->setAmbiMixParams(slot->Wet, slot->Gain, set_channel);
+    });
 }
 
 void VmorpherState::process(const size_t samplesToDo,
     const std::span<const FloatBufferLine> samplesIn, const std::span<FloatBufferLine> samplesOut)
 {
-    alignas(16) std::array<float,MaxUpdateSamples> blended{};
+    alignas(16) auto blended = std::array<float,MaxUpdateSamples>{};
 
     /* Following the EFX specification for a conformant implementation which describes
      * the effect as a pair of 4-band formant filters blended together using an LFO.
      */
-    for(size_t base{0u};base < samplesToDo;)
+    for(auto base=0_uz;base < samplesToDo;)
     {
-        const size_t td{std::min(MaxUpdateSamples, samplesToDo-base)};
+        const auto td = std::min(MaxUpdateSamples, samplesToDo-base);
 
         mGetSamples(std::span{mLfo}.first(td), mIndex, mStep);
         mIndex += static_cast<uint>(mStep * td);
         mIndex &= WaveformFracMask;
 
         auto chandata = mChans.begin();
-        for(const auto &input : samplesIn)
+        std::ranges::for_each(samplesIn, [&,this](const FloatConstBufferSpan input)
         {
-            const size_t outidx{chandata->mTargetChannel};
+            const auto outidx = chandata->mTargetChannel;
             if(outidx == InvalidChannelIndex)
             {
                 ++chandata;
-                continue;
+                return;
             }
 
             const auto vowelA = std::span{chandata->mFormants[VowelAIndex]};
             const auto vowelB = std::span{chandata->mFormants[VowelBIndex]};
 
             /* Process first vowel. */
-            std::fill_n(mSampleBufferA.begin(), td, 0.0f);
+            std::ranges::fill(mSampleBufferA | std::views::take(td), 0.0f);
             vowelA[0].process(&input[base], mSampleBufferA.data(), td);
             vowelA[1].process(&input[base], mSampleBufferA.data(), td);
             vowelA[2].process(&input[base], mSampleBufferA.data(), td);
             vowelA[3].process(&input[base], mSampleBufferA.data(), td);
 
             /* Process second vowel. */
-            std::fill_n(mSampleBufferB.begin(), td, 0.0f);
+            std::ranges::fill(mSampleBufferB | std::views::take(td), 0.0f);
             vowelB[0].process(&input[base], mSampleBufferB.data(), td);
             vowelB[1].process(&input[base], mSampleBufferB.data(), td);
             vowelB[2].process(&input[base], mSampleBufferB.data(), td);
             vowelB[3].process(&input[base], mSampleBufferB.data(), td);
 
-            for(size_t i{0u};i < td;i++)
+            for(auto i=0_uz;i < td;++i)
                 blended[i] = lerpf(mSampleBufferA[i], mSampleBufferB[i], mLfo[i]);
 
             /* Now, mix the processed sound data to the output. */
             MixSamples(std::span{blended}.first(td), std::span{samplesOut[outidx]}.subspan(base),
                 chandata->mCurrentGain, chandata->mTargetGain, samplesToDo-base);
             ++chandata;
-        }
+        });
 
         base += td;
     }

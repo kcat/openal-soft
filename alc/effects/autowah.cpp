@@ -25,6 +25,7 @@
 #include <cmath>
 #include <cstdlib>
 #include <numbers>
+#include <ranges>
 #include <span>
 #include <variant>
 
@@ -43,10 +44,10 @@ struct BufferStorage;
 
 namespace {
 
-constexpr float GainScale{31621.0f};
-constexpr float MinFreq{20.0f};
-constexpr float MaxFreq{2500.0f};
-constexpr float QFactor{5.0f};
+constexpr auto GainScale = 31621.0f;
+constexpr auto MinFreq = 20.0f;
+constexpr auto MaxFreq = 2500.0f;
+constexpr auto QFactor = 5.0f;
 
 struct AutowahState final : public EffectState {
     /* Effect parameters */
@@ -93,7 +94,6 @@ struct AutowahState final : public EffectState {
 void AutowahState::deviceUpdate(const DeviceBase*, const BufferStorage*)
 {
     /* (Re-)initializing parameters and clear the buffers. */
-
     mAttackRate    = 1.0f;
     mReleaseRate   = 1.0f;
     mResonanceGain = 10.0f;
@@ -102,29 +102,18 @@ void AutowahState::deviceUpdate(const DeviceBase*, const BufferStorage*)
     mBandwidthNorm = 0.05f;
     mEnvDelay      = 0.0f;
 
-    for(auto &e : mEnv)
-    {
-        e.cos_w0 = 0.0f;
-        e.alpha = 0.0f;
-    }
-
-    for(auto &chan : mChans)
-    {
-        chan.mTargetChannel = InvalidChannelIndex;
-        chan.mFilter.z1 = 0.0f;
-        chan.mFilter.z2 = 0.0f;
-        chan.mCurrentGain = 0.0f;
-    }
+    mEnv.fill(FilterParam{});
+    mChans.fill(ChannelData{});
 }
 
 void AutowahState::update(const ContextBase *context, const EffectSlot *slot,
     const EffectProps *props_, const EffectTarget target)
 {
     auto &props = std::get<AutowahProps>(*props_);
-    const DeviceBase *device{context->mDevice};
+    const auto *device = context->mDevice;
     const auto frequency = static_cast<float>(device->mSampleRate);
 
-    const float ReleaseTime{std::clamp(props.ReleaseTime, 0.001f, 1.0f)};
+    const auto ReleaseTime = std::clamp(props.ReleaseTime, 0.001f, 1.0f);
 
     mAttackRate    = std::exp(-1.0f / (props.AttackTime*frequency));
     mReleaseRate   = std::exp(-1.0f / (ReleaseTime*frequency));
@@ -135,81 +124,71 @@ void AutowahState::update(const ContextBase *context, const EffectSlot *slot,
     mBandwidthNorm = (MaxFreq-MinFreq) / frequency;
 
     mOutTarget = target.Main->Buffer;
-    auto set_channel = [this](size_t idx, uint outchan, float outgain)
+    target.Main->setAmbiMixParams(slot->Wet, slot->Gain,
+        [this](const size_t idx, const uint outchan, const float outgain)
     {
         mChans[idx].mTargetChannel = outchan;
         mChans[idx].mTargetGain = outgain;
-    };
-    target.Main->setAmbiMixParams(slot->Wet, slot->Gain, set_channel);
+    });
 }
 
 void AutowahState::process(const size_t samplesToDo,
     const std::span<const FloatBufferLine> samplesIn, const std::span<FloatBufferLine> samplesOut)
 {
-    const float attack_rate{mAttackRate};
-    const float release_rate{mReleaseRate};
-    const float res_gain{mResonanceGain};
-    const float peak_gain{mPeakGain};
-    const float freq_min{mFreqMinNorm};
-    const float bandwidth{mBandwidthNorm};
-
-    float env_delay{mEnvDelay};
-    for(size_t i{0u};i < samplesToDo;i++)
+    auto env_delay = mEnvDelay;
+    std::ranges::transform(samplesIn[0] | std::views::take(samplesToDo), mEnv.begin(),
+        [attack_rate=mAttackRate,release_rate=mReleaseRate,peak_gain=mPeakGain,
+        freq_min=mFreqMinNorm,bandwidth=mBandwidthNorm,&env_delay](const float x) -> FilterParam
     {
         /* Envelope follower described on the book: Audio Effects, Theory,
          * Implementation and Application.
          */
-        const float sample{peak_gain * std::fabs(samplesIn[0][i])};
-        const float a{(sample > env_delay) ? attack_rate : release_rate};
+        const auto sample = peak_gain * std::fabs(x);
+        const auto a = (sample > env_delay) ? attack_rate : release_rate;
         env_delay = lerpf(sample, env_delay, a);
 
         /* Calculate the cos and alpha components for this sample's filter. */
-        const float w0{std::min(bandwidth*env_delay + freq_min, 0.46f) *
-            (std::numbers::pi_v<float>*2.0f)};
-        mEnv[i].cos_w0 = std::cos(w0);
-        mEnv[i].alpha = std::sin(w0)/(2.0f * QFactor);
-    }
+        const auto w0 = std::min(bandwidth*env_delay + freq_min, 0.46f) *
+            (std::numbers::pi_v<float>*2.0f);
+        return FilterParam{.cos_w0=std::cos(w0), .alpha=std::sin(w0)*(0.5f/QFactor)};
+    });
     mEnvDelay = env_delay;
 
     auto chandata = mChans.begin();
-    for(const auto &insamples : samplesIn)
+    std::ranges::for_each(samplesIn, [&,this](const FloatConstBufferSpan insamples)
     {
-        const size_t outidx{chandata->mTargetChannel};
+        const auto outidx = chandata->mTargetChannel;
         if(outidx == InvalidChannelIndex)
         {
             ++chandata;
-            continue;
+            return;
         }
 
-        /* This effectively inlines BiquadFilter_setParams for a peaking
-         * filter and BiquadFilter_processC. The alpha and cosine components
+        /* This effectively inlines BiquadFilter::setParams for a peaking
+         * filter and BiquadFilter::process. The alpha and cosine components
          * for the filter coefficients were previously calculated with the
          * envelope. Because the filter changes for each sample, the
          * coefficients are transient and don't need to be held.
          */
-        float z1{chandata->mFilter.z1};
-        float z2{chandata->mFilter.z2};
-
-        for(size_t i{0u};i < samplesToDo;i++)
+        auto z1 = chandata->mFilter.z1;
+        auto z2 = chandata->mFilter.z2;
+        std::ranges::transform(insamples | std::views::take(samplesToDo), mEnv, mBufferOut.begin(),
+            [res_gain=mResonanceGain,&z1,&z2](const float input, const FilterParam env) -> float
         {
-            const float alpha{mEnv[i].alpha};
-            const float cos_w0{mEnv[i].cos_w0};
+            const auto b = std::array{
+                1.0f + env.alpha*res_gain,
+                -2.0f * env.cos_w0,
+                1.0f - env.alpha*res_gain};
+            const auto a = std::array{
+                1.0f / (1.0f + env.alpha/res_gain),
+                -2.0f * env.cos_w0,
+                1.0f - env.alpha/res_gain};
 
-            const std::array b{
-                1.0f + alpha*res_gain,
-                -2.0f * cos_w0,
-                1.0f - alpha*res_gain};
-            const std::array a{
-                1.0f + alpha/res_gain,
-                -2.0f * cos_w0,
-                1.0f - alpha/res_gain};
-
-            const float input{insamples[i]};
-            const float output{input*(b[0]/a[0]) + z1};
-            z1 = input*(b[1]/a[0]) - output*(a[1]/a[0]) + z2;
-            z2 = input*(b[2]/a[0]) - output*(a[2]/a[0]);
-            mBufferOut[i] = output;
-        }
+            const auto output = input*(b[0]*a[0]) + z1;
+            z1 = input*(b[1]*a[0]) - output*(a[1]*a[0]) + z2;
+            z2 = input*(b[2]*a[0]) - output*(a[2]*a[0]);
+            return output;
+        });
         chandata->mFilter.z1 = z1;
         chandata->mFilter.z2 = z2;
 
@@ -217,7 +196,7 @@ void AutowahState::process(const size_t samplesToDo,
         MixSamples(std::span{mBufferOut}.first(samplesToDo), samplesOut[outidx],
             chandata->mCurrentGain, chandata->mTargetGain, samplesToDo);
         ++chandata;
-    }
+    });
 }
 
 

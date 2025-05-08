@@ -61,16 +61,16 @@ struct DedicatedState final : public EffectState {
 
 void DedicatedState::deviceUpdate(const DeviceBase*, const BufferStorage*)
 {
-    std::fill(mCurrentGains.begin(), mCurrentGains.end(), 0.0f);
+    mCurrentGains.fill(0.0f);
 }
 
 void DedicatedState::update(const ContextBase*, const EffectSlot *slot,
     const EffectProps *props_, const EffectTarget target)
 {
-    std::fill(mTargetGains.begin(), mTargetGains.end(), 0.0f);
+    mTargetGains.fill(0.0f);
 
     auto &props = std::get<DedicatedProps>(*props_);
-    const float Gain{slot->Gain * props.Gain};
+    const auto Gain = slot->Gain * props.Gain;
 
     if(props.Target == DedicatedProps::Dialog)
     {
@@ -95,7 +95,8 @@ void DedicatedState::update(const ContextBase*, const EffectSlot *slot,
     }
     else if(props.Target == DedicatedProps::Lfe)
     {
-        const size_t idx{target.RealOut ? target.RealOut->ChannelIndex[LFE] : InvalidChannelIndex};
+        const auto idx = size_t{target.RealOut ? target.RealOut->ChannelIndex[LFE]
+            : InvalidChannelIndex};
         if(idx != InvalidChannelIndex)
         {
             mOutTarget = target.RealOut->Buffer;

@@ -87,32 +87,28 @@ void EchoState::deviceUpdate(const DeviceBase *Device, const BufferStorage*)
     if(maxlen != mSampleBuffer.size())
         decltype(mSampleBuffer)(maxlen).swap(mSampleBuffer);
 
-    std::fill(mSampleBuffer.begin(), mSampleBuffer.end(), 0.0f);
-    for(auto &e : mGains)
-    {
-        std::fill(e.Current.begin(), e.Current.end(), 0.0f);
-        std::fill(e.Target.begin(), e.Target.end(), 0.0f);
-    }
+    std::ranges::fill(mSampleBuffer, 0.0f);
+    mGains.fill(OutGains{});
 }
 
 void EchoState::update(const ContextBase *context, const EffectSlot *slot,
     const EffectProps *props_, const EffectTarget target)
 {
     auto &props = std::get<EchoProps>(*props_);
-    const DeviceBase *device{context->mDevice};
+    const auto *device = context->mDevice;
     const auto frequency = static_cast<float>(device->mSampleRate);
 
     mDelayTap[0] = std::max(float2uint(std::round(props.Delay*frequency)), 1u);
     mDelayTap[1] = float2uint(std::round(props.LRDelay*frequency)) + mDelayTap[0];
 
-    const float gainhf{std::max(1.0f - props.Damping, 0.0625f)}; /* Limit -24dB */
+    const auto gainhf = std::max(1.0f - props.Damping, 0.0625f); /* Limit -24dB */
     mFilter.setParamsFromSlope(BiquadType::HighShelf, LowpassFreqRef/frequency, gainhf, 1.0f);
 
     mFeedGain = props.Feedback;
 
     /* Convert echo spread (where 0 = center, +/-1 = sides) to a 2D vector. */
-    const float x{props.Spread}; /* +x = left */
-    const float z{std::sqrt(1.0f - x*x)};
+    const auto x = props.Spread; /* +x = left */
+    const auto z = std::sqrt(1.0f - x*x);
 
     const auto coeffs0 = CalcAmbiCoeffs( x, 0.0f, z, 0.0f);
     const auto coeffs1 = CalcAmbiCoeffs(-x, 0.0f, z, 0.0f);
@@ -126,22 +122,23 @@ void EchoState::process(const size_t samplesToDo, const std::span<const FloatBuf
     const std::span<FloatBufferLine> samplesOut)
 {
     const auto delaybuf = std::span{mSampleBuffer};
-    const size_t mask{delaybuf.size()-1};
-    size_t offset{mOffset};
-    size_t tap1{offset - mDelayTap[0]};
-    size_t tap2{offset - mDelayTap[1]};
+    const auto mask = delaybuf.size()-1;
+    auto offset = mOffset;
+    auto tap1 = offset - mDelayTap[0];
+    auto tap2 = offset - mDelayTap[1];
 
     ASSUME(samplesToDo > 0);
 
-    const BiquadFilter filter{mFilter};
+    const auto filter = mFilter;
     auto [z1, z2] = mFilter.getComponents();
-    for(size_t i{0u};i < samplesToDo;)
+    for(auto i=0_uz;i < samplesToDo;)
     {
         offset &= mask;
         tap1 &= mask;
         tap2 &= mask;
 
-        size_t td{std::min(mask+1 - std::max(offset, std::max(tap1, tap2)), samplesToDo-i)};
+        const auto max_offset = std::max(offset, std::max(tap1, tap2));
+        auto td = std::min(mask+1 - max_offset, samplesToDo-i);
         do {
             /* Feed the delay buffer's input first. */
             delaybuf[offset] = samplesIn[0][i];
@@ -151,7 +148,7 @@ void EchoState::process(const size_t samplesToDo, const std::span<const FloatBuf
              */
             mTempBuffer[0][i] = delaybuf[tap1++];
             mTempBuffer[1][i] = delaybuf[tap2++];
-            const float feedb{mTempBuffer[1][i++]};
+            const auto feedb = mTempBuffer[1][i++];
 
             /* Add feedback to the delay buffer with damping and attenuation. */
             delaybuf[offset++] += filter.processOne(feedb, z1, z2) * mFeedGain;

@@ -8,9 +8,10 @@
  * more memory and are harder on cache, while smaller values may need more
  * iterations for mixing.
  */
-inline constexpr size_t BufferLineSize{1024};
+inline constexpr auto BufferLineSize = size_t{1024};
 
 using FloatBufferLine = std::array<float,BufferLineSize>;
 using FloatBufferSpan = std::span<float,BufferLineSize>;
+using FloatConstBufferSpan = std::span<const float,BufferLineSize>;
 
 #endif /* CORE_BUFFERLINE_H */

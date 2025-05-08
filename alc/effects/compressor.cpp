@@ -36,10 +36,12 @@
 #include <array>
 #include <cmath>
 #include <cstdlib>
+#include <ranges>
 #include <span>
 #include <variant>
 
 #include "alc/effects/base.h"
+#include "alnumeric.h"
 #include "core/ambidefs.h"
 #include "core/bufferline.h"
 #include "core/device.h"
@@ -54,18 +56,18 @@ struct ContextBase;
 
 namespace {
 
-constexpr float AmpEnvelopeMin{0.5f};
-constexpr float AmpEnvelopeMax{2.0f};
+constexpr auto AmpEnvelopeMin = 0.5f;
+constexpr auto AmpEnvelopeMax = 2.0f;
 
-constexpr float AttackTime{0.1f}; /* 100ms to rise from min to max */
-constexpr float ReleaseTime{0.2f}; /* 200ms to drop from max to min */
+constexpr auto AttackTime = 0.1f; /* 100ms to rise from min to max */
+constexpr auto ReleaseTime = 0.2f; /* 200ms to drop from max to min */
 
 
 struct CompressorState final : public EffectState {
     /* Effect gains for each channel */
     struct TargetGain {
         uint mTarget{InvalidChannelIndex};
-        float mGain{1.0f};
+        float mGain{0.0f};
     };
     std::array<TargetGain,MaxAmbiChannels> mChans;
 
@@ -89,14 +91,15 @@ void CompressorState::deviceUpdate(const DeviceBase *device, const BufferStorage
     /* Number of samples to do a full attack and release (non-integer sample
      * counts are okay).
      */
-    const float attackCount{static_cast<float>(device->mSampleRate) * AttackTime};
-    const float releaseCount{static_cast<float>(device->mSampleRate) * ReleaseTime};
+    const auto attackCount = static_cast<float>(device->mSampleRate) * AttackTime;
+    const auto releaseCount = static_cast<float>(device->mSampleRate) * ReleaseTime;
 
     /* Calculate per-sample multipliers to attack and release at the desired
      * rates.
      */
     mAttackMult  = std::pow(AmpEnvelopeMax/AmpEnvelopeMin, 1.0f/attackCount);
     mReleaseMult = std::pow(AmpEnvelopeMin/AmpEnvelopeMax, 1.0f/releaseCount);
+    mChans.fill(TargetGain{});
 }
 
 void CompressorState::update(const ContextBase*, const EffectSlot *slot,
@@ -105,74 +108,76 @@ void CompressorState::update(const ContextBase*, const EffectSlot *slot,
     mEnabled = std::get<CompressorProps>(*props).OnOff;
 
     mOutTarget = target.Main->Buffer;
-    auto set_channel = [this](size_t idx, uint outchan, float outgain)
+    target.Main->setAmbiMixParams(slot->Wet, slot->Gain,
+        [this](const size_t idx, const uint outchan, const float outgain)
     {
         mChans[idx].mTarget = outchan;
         mChans[idx].mGain = outgain;
-    };
-    target.Main->setAmbiMixParams(slot->Wet, slot->Gain, set_channel);
+    });
 }
 
 void CompressorState::process(const size_t samplesToDo,
     const std::span<const FloatBufferLine> samplesIn, const std::span<FloatBufferLine> samplesOut)
 {
     /* Generate the per-sample gains from the signal envelope. */
-    float env{mEnvFollower};
+    auto env = mEnvFollower;
     if(mEnabled)
     {
-        for(size_t i{0u};i < samplesToDo;++i)
+        std::ranges::transform(samplesIn[0] | std::views::take(samplesToDo), mGains.begin(),
+            [attackmult=mAttackMult,releasemult=mReleaseMult,&env](const float sample) -> float
         {
             /* Clamp the absolute amplitude to the defined envelope limits,
              * then attack or release the envelope to reach it.
              */
-            const float amplitude{std::clamp(std::fabs(samplesIn[0][i]), AmpEnvelopeMin,
-                AmpEnvelopeMax)};
+            const auto amplitude = std::clamp(std::fabs(sample), AmpEnvelopeMin, AmpEnvelopeMax);
             if(amplitude > env)
-                env = std::min(env*mAttackMult, amplitude);
+                env = std::min(env*attackmult, amplitude);
             else if(amplitude < env)
-                env = std::max(env*mReleaseMult, amplitude);
+                env = std::max(env*releasemult, amplitude);
 
             /* Apply the reciprocal of the envelope to normalize the volume
              * (compress the dynamic range).
              */
-            mGains[i] = 1.0f / env;
-        }
+            return 1.0f / env;
+        });
     }
     else
     {
         /* Same as above, except the amplitude is forced to 1. This helps
          * ensure smooth gain changes when the compressor is turned on and off.
          */
-        for(size_t i{0u};i < samplesToDo;++i)
+        std::ranges::generate(mGains | std::views::take(samplesToDo),
+            [attackmult=mAttackMult,releasemult=mReleaseMult,&env]() -> float
         {
-            const float amplitude{1.0f};
+            static constexpr auto amplitude = 1.0f;
             if(amplitude > env)
-                env = std::min(env*mAttackMult, amplitude);
+                env = std::min(env*attackmult, amplitude);
             else if(amplitude < env)
-                env = std::max(env*mReleaseMult, amplitude);
+                env = std::max(env*releasemult, amplitude);
 
-            mGains[i] = 1.0f / env;
-        }
+            return 1.0f / env;
+        });
     }
     mEnvFollower = env;
 
     /* Now compress the signal amplitude to output. */
     auto chan = mChans.cbegin();
-    for(const auto &input : samplesIn)
+    std::ranges::for_each(samplesIn,
+        [this,samplesOut,samplesToDo,&chan](const FloatConstBufferSpan input)
     {
-        const size_t outidx{chan->mTarget};
+        const auto outidx = chan->mTarget;
         if(outidx != InvalidChannelIndex)
         {
             const auto dst = std::span{samplesOut[outidx]};
             const auto gain = chan->mGain;
             if(!(std::fabs(gain) > GainSilenceThreshold))
             {
-                for(size_t i{0u};i < samplesToDo;++i)
+                for(auto i = 0_uz;i < samplesToDo;++i)
                     dst[i] += input[i] * mGains[i] * gain;
             }
         }
         ++chan;
-    }
+    });
 }
 
 

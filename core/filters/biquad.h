@@ -102,7 +102,7 @@ public:
     void setParamsFromBandwidth(BiquadType type, float f0norm, float gain, float bandwidth)
     { setParams(type, f0norm, gain, rcpQFromBandwidth(f0norm, bandwidth)); }
 
-    void copyParamsFrom(const BiquadFilter &other)
+    void copyParamsFrom(const BiquadFilter &other) noexcept
     {
         mB0 = other.mB0;
         mB1 = other.mB1;

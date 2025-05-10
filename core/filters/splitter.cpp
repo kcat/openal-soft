@@ -35,7 +35,7 @@ void BandSplitter::process(const std::span<const float> input, const std::span<f
 
     assert(lpout.size() <= input.size());
     auto lpiter = lpout.begin();
-    std::transform(input.begin(), input.end(), hpout.begin(),
+    std::ranges::transform(input, hpout.begin(),
         [ap_coeff,lp_coeff,&lp_z1,&lp_z2,&ap_z1,&lpiter](const float in) noexcept -> float
     {
         /* Low-pass sample processing. */
@@ -69,7 +69,7 @@ void BandSplitter::processHfScale(const std::span<const float> input,
     auto lp_z1 = mLpZ1;
     auto lp_z2 = mLpZ2;
     auto ap_z1 = mApZ1;
-    std::transform(input.begin(), input.end(), output.begin(),
+    std::ranges::transform(input, output.begin(),
         [hfscale,ap_coeff,lp_coeff,&lp_z1,&lp_z2,&ap_z1](const float in) noexcept -> float
     {
         /* Low-pass sample processing. */
@@ -102,7 +102,7 @@ void BandSplitter::processHfScale(const std::span<float> samples, const float hf
     auto lp_z1 = mLpZ1;
     auto lp_z2 = mLpZ2;
     auto ap_z1 = mApZ1;
-    std::transform(samples.begin(), samples.end(), samples.begin(),
+    std::ranges::transform(samples, samples.begin(),
         [hfscale,ap_coeff,lp_coeff,&lp_z1,&lp_z2,&ap_z1](const float in) noexcept -> float
     {
         /* Low-pass sample processing. */
@@ -136,7 +136,7 @@ void BandSplitter::processScale(const std::span<float> samples, const float hfsc
     auto lp_z1 = mLpZ1;
     auto lp_z2 = mLpZ2;
     auto ap_z1 = mApZ1;
-    std::transform(samples.begin(), samples.end(), samples.begin(),
+    std::ranges::transform(samples, samples.begin(),
         [hfscale,lfscale,ap_coeff,lp_coeff,&lp_z1,&lp_z2,&ap_z1](const float in) noexcept -> float
     {
         auto d = (in - lp_z1) * lp_coeff;
@@ -162,12 +162,11 @@ void BandSplitter::processAllPass(const std::span<float> samples)
 {
     const auto coeff = mCoeff;
     auto z1 = mApZ1;
-    std::transform(samples.begin(), samples.end(), samples.begin(),
-        [coeff,&z1](const float in) noexcept -> float
+    std::ranges::transform(samples, samples.begin(), [coeff,&z1](const float x) noexcept -> float
     {
-        const auto out = in*coeff + z1;
-        z1 = in - out*coeff;
-        return out;
+        const auto y = x*coeff + z1;
+        z1 = x - y*coeff;
+        return y;
     });
     mApZ1 = z1;
 }

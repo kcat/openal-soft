@@ -803,7 +803,7 @@ void InitPanning(al::Device *device, const bool hqdec=false, const bool stablize
         (decoder.mOrder > 2) ? "third" :
         (decoder.mOrder > 1) ? "second" : "first",
         decoder.mIs3D ? " periphonic" : "");
-    device->AmbiDecoder = BFormatDec::Create(ambicount, chancoeffs, chancoeffslf,
+    device->AmbiDecoder = std::make_unique<BFormatDec>(ambicount, chancoeffs, chancoeffslf,
         device->mXOverFreq/static_cast<float>(device->mSampleRate), std::move(stablizer));
 }
 

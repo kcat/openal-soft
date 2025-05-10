@@ -55,10 +55,6 @@ public:
     void processStablize(const std::span<FloatBufferLine> OutBuffer,
         const std::span<const FloatBufferLine> InSamples, const size_t lidx, const size_t ridx,
         const size_t cidx, const size_t SamplesToDo);
-
-    static std::unique_ptr<BFormatDec> Create(const size_t inchans,
-        const std::span<const ChannelDec> coeffs, const std::span<const ChannelDec> coeffslf,
-        const float xover_f0norm, std::unique_ptr<FrontStablizer> stablizer);
 };
 
 #endif /* CORE_BFORMATDEC_H */

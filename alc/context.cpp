@@ -13,7 +13,6 @@
 #include <optional>
 #include <span>
 #include <string_view>
-#include <tuple>
 #include <utility>
 
 #include "AL/efx.h"
@@ -52,7 +51,7 @@ using namespace std::string_view_literals;
 using voidp = void*;
 
 /* Default context extensions */
-std::vector<std::string_view> getContextExtensions() noexcept
+auto getContextExtensions() noexcept -> std::vector<std::string_view>
 {
     return std::vector<std::string_view>{
         "AL_EXT_ALAW"sv,
@@ -136,9 +135,9 @@ ALCcontext::~ALCcontext()
 {
     TRACE("Freeing context {}", voidp{this});
 
-    size_t count{std::accumulate(mSourceList.cbegin(), mSourceList.cend(), 0_uz,
+    auto count = std::accumulate(mSourceList.cbegin(), mSourceList.cend(), 0_uz,
         [](size_t cur, const SourceSubList &sublist) noexcept -> size_t
-        { return cur + static_cast<uint>(std::popcount(~sublist.FreeMask)); })};
+        { return cur + static_cast<uint>(std::popcount(~sublist.FreeMask)); });
     if(count > 0)
         WARN("{} Source{} not deleted", count, (count==1)?"":"s");
     mSourceList.clear();
@@ -166,7 +165,7 @@ void ALCcontext::init()
         aluInitEffectPanning(mDefaultSlot->mSlot, this);
     }
 
-    std::unique_ptr<EffectSlotArray> auxslots;
+    auto auxslots = std::unique_ptr<EffectSlotArray>{};
     if(!mDefaultSlot)
         auxslots = EffectSlot::CreatePtrArray(0);
     else
@@ -180,8 +179,8 @@ void ALCcontext::init()
 
     allocVoiceChanges();
     {
-        VoiceChange *cur{mVoiceChangeTail};
-        while(VoiceChange *next{cur->mNext.load(std::memory_order_relaxed)})
+        auto *cur = mVoiceChangeTail;
+        while(auto *next = cur->mNext.load(std::memory_order_relaxed))
             cur = next;
         mCurrentVoiceChange.store(cur, std::memory_order_relaxed);
     }
@@ -190,13 +189,13 @@ void ALCcontext::init()
 
     if(sBufferSubDataCompat)
     {
-        auto iter = std::find(mExtensions.begin(), mExtensions.end(), "AL_EXT_SOURCE_RADIUS"sv);
+        auto iter = std::ranges::find(mExtensions, "AL_EXT_SOURCE_RADIUS"sv);
         if(iter != mExtensions.end()) mExtensions.erase(iter);
 
         /* Insert the AL_SOFT_buffer_sub_data extension string between
          * AL_SOFT_buffer_length_query and AL_SOFT_callback_buffer.
          */
-        iter = std::find(mExtensions.begin(), mExtensions.end(), "AL_SOFT_callback_buffer"sv);
+        iter = std::ranges::find(mExtensions, "AL_SOFT_callback_buffer"sv);
         mExtensions.emplace(iter, "AL_SOFT_buffer_sub_data"sv);
     }
 
@@ -247,7 +246,7 @@ void ALCcontext::deinit()
         sThreadContext.set(nullptr);
     }
 
-    if(ALCcontext *origctx{this}; sGlobalContext.compare_exchange_strong(origctx, nullptr))
+    if(auto *origctx = this; sGlobalContext.compare_exchange_strong(origctx, nullptr))
     {
         auto _ = ContextRef{origctx};
         while(sGlobalContextLock.load()) {
@@ -292,9 +291,9 @@ namespace {
 
 void ForEachSource(ALCcontext *context, auto&& func)
 {
-    for(auto &sublist : context->mSourceList)
+    std::ranges::for_each(context->mSourceList, [&func](SourceSubList &sublist)
     {
-        uint64_t usemask{~sublist.FreeMask};
+        auto usemask = ~sublist.FreeMask;
         while(usemask)
         {
             const auto idx = as_unsigned(std::countr_zero(usemask));
@@ -302,13 +301,13 @@ void ForEachSource(ALCcontext *context, auto&& func)
 
             func((*sublist.Sources)[idx]);
         }
-    }
+    });
 }
 
 } // namespace
 
 
-bool ALCcontext::eaxIsCapable() const noexcept
+auto ALCcontext::eaxIsCapable() const noexcept -> bool
 {
     return eax_has_enough_aux_sends();
 }
@@ -323,20 +322,11 @@ void ALCcontext::eaxUninitialize() noexcept
     mEaxFxSlots.uninitialize();
 }
 
-ALenum ALCcontext::eax_eax_set(
-    const GUID* property_set_id,
-    ALuint property_id,
-    ALuint property_source_id,
-    ALvoid* property_value,
-    ALuint property_value_size)
+auto ALCcontext::eax_eax_set(const GUID *property_set_id, ALuint property_id,
+    ALuint property_source_id, ALvoid *property_value, ALuint property_value_size) -> ALenum
 {
-    const auto call = create_eax_call(
-        EaxCallType::set,
-        property_set_id,
-        property_id,
-        property_source_id,
-        property_value,
-        property_value_size);
+    const auto call = create_eax_call(EaxCallType::set, property_set_id, property_id,
+        property_source_id, property_value, property_value_size);
 
     eax_initialize();
 
@@ -367,20 +357,11 @@ ALenum ALCcontext::eax_eax_set(
     return AL_NO_ERROR;
 }
 
-ALenum ALCcontext::eax_eax_get(
-    const GUID* property_set_id,
-    ALuint property_id,
-    ALuint property_source_id,
-    ALvoid* property_value,
-    ALuint property_value_size)
+auto ALCcontext::eax_eax_get(const GUID* property_set_id, ALuint property_id,
+    ALuint property_source_id, ALvoid *property_value, ALuint property_value_size) -> ALenum
 {
-    const auto call = create_eax_call(
-        EaxCallType::get,
-        property_set_id,
-        property_id,
-        property_source_id,
-        property_value,
-        property_value_size);
+    const auto call = create_eax_call(EaxCallType::get, property_set_id, property_id,
+        property_source_id, property_value, property_value_size);
 
     eax_initialize();
 
@@ -471,7 +452,7 @@ void ALCcontext::eax_initialize()
     mEaxIsInitialized = true;
 }
 
-bool ALCcontext::eax_has_no_default_effect_slot() const noexcept
+auto ALCcontext::eax_has_no_default_effect_slot() const noexcept -> bool
 {
     return mDefaultSlot == nullptr;
 }
@@ -482,7 +463,7 @@ void ALCcontext::eax_ensure_no_default_effect_slot() const
         eax_fail("There is a default effect slot in the context.");
 }
 
-bool ALCcontext::eax_has_enough_aux_sends() const noexcept
+auto ALCcontext::eax_has_enough_aux_sends() const noexcept -> bool
 {
     return mALDevice->NumAuxSends >= EAX_MAX_FXSLOTS;
 }
@@ -498,7 +479,7 @@ void ALCcontext::eax_ensure_compatibility()
     eax_ensure_enough_aux_sends();
 }
 
-unsigned long ALCcontext::eax_detect_speaker_configuration() const
+auto ALCcontext::eax_detect_speaker_configuration() const -> unsigned long
 {
 #define EAX_PREFIX "[EAX_DETECT_SPEAKER_CONFIG]"
 
@@ -992,13 +973,11 @@ FORCE_ALIGN auto AL_APIENTRY EAXSet(const GUID *property_set_id, ALuint property
 
 FORCE_ALIGN auto AL_APIENTRY EAXSetDirect(ALCcontext *context, const GUID *property_set_id,
     ALuint property_id, ALuint source_id, ALvoid *value, ALuint value_size) noexcept -> ALenum
-try
-{
+try {
     std::lock_guard<std::mutex> prop_lock{context->mPropLock};
     return context->eax_eax_set(property_set_id, property_id, source_id, value, value_size);
 }
-catch(...)
-{
+catch(...) {
     context->eaxSetLastError();
     eax_log_exception(std::data(__func__));
     return AL_INVALID_OPERATION;
@@ -1015,13 +994,11 @@ FORCE_ALIGN auto AL_APIENTRY EAXGet(const GUID *property_set_id, ALuint property
 
 FORCE_ALIGN auto AL_APIENTRY EAXGetDirect(ALCcontext *context, const GUID *property_set_id,
     ALuint property_id, ALuint source_id, ALvoid *value, ALuint value_size) noexcept -> ALenum
-try
-{
+try {
     std::lock_guard<std::mutex> prop_lock{context->mPropLock};
     return context->eax_eax_get(property_set_id, property_id, source_id, value, value_size);
 }
-catch(...)
-{
+catch(...) {
     context->eaxSetLastError();
     eax_log_exception(std::data(__func__));
     return AL_INVALID_OPERATION;

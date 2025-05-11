@@ -43,6 +43,7 @@
 #include <vector>
 
 #include "almalloc.h"
+#include "alnumeric.h"
 #include "alstring.h"
 #include "core/helpers.h"
 #include "core/logging.h"
@@ -81,16 +82,14 @@ struct ConfigEntry {
 std::vector<ConfigEntry> ConfOpts;
 
 
-std::string &lstrip(std::string &line)
+auto lstrip(std::string &line) -> std::string&
 {
-    size_t pos{0};
-    while(pos < line.length() && std::isspace(line[pos]))
-        ++pos;
-    line.erase(0, pos);
+    auto iter = std::ranges::find_if_not(line, [](const char c) { return std::isspace(c); });
+    line.erase(line.begin(), iter);
     return line;
 }
 
-bool readline(std::istream &f, std::string &output)
+auto readline(std::istream &f, std::string &output) -> bool
 {
     while(f.good() && f.peek() == '\n')
         f.ignore();
@@ -98,7 +97,7 @@ bool readline(std::istream &f, std::string &output)
     return std::getline(f, output) && !output.empty();
 }
 
-std::string expdup(std::string_view str)
+auto expdup(std::string_view str) -> std::string
 {
     auto output = std::string{};
 
@@ -129,7 +128,7 @@ std::string expdup(std::string_view str)
         const auto hasbraces = bool{str.front() == '{'};
         if(hasbraces) str.remove_prefix(1);
 
-        const auto envenditer = std::find_if_not(str.cbegin(), str.cend(),
+        const auto envenditer = std::ranges::find_if_not(str,
             [](const char c) { return c == '_' || std::isalnum(c); });
 
         if(hasbraces && (envenditer == str.end() || *envenditer != '}'))
@@ -139,7 +138,7 @@ std::string expdup(std::string_view str)
         const auto envname = std::string{str.substr(0, envend)};
         str.remove_prefix(envend + hasbraces);
 
-        if(auto envval = al::getenv(envname.c_str()))
+        if(const auto envval = al::getenv(envname.c_str()))
             output += *envval;
     }
 
@@ -276,9 +275,8 @@ void LoadConfigFromFile(std::istream &f)
         TRACE(" setting '{}' = '{}'", fullKey, valpart);
 
         /* Check if we already have this option set */
-        auto find_key = [&fullKey](const ConfigEntry &entry) -> bool
-        { return entry.key == fullKey; };
-        const auto ent = std::find_if(ConfOpts.begin(), ConfOpts.end(), find_key);
+        const auto ent = std::ranges::find_if(ConfOpts, [&fullKey](const ConfigEntry &entry) ->bool
+        { return entry.key == fullKey; });
         if(ent != ConfOpts.end())
         {
             if(!valpart.empty())
@@ -311,8 +309,8 @@ auto GetConfigValue(const std::string_view devName, const std::string_view block
     }
     key += keyName;
 
-    const auto iter = std::find_if(ConfOpts.cbegin(), ConfOpts.cend(),
-        [&key](const ConfigEntry &entry) -> bool { return entry.key == key; });
+    const auto iter = std::ranges::find_if(ConfOpts, [&key](const ConfigEntry &entry) -> bool
+    { return entry.key == key; });
     if(iter != ConfOpts.cend())
     {
         TRACE("Found option {} = \"{}\"", key, iter->value);
@@ -337,16 +335,17 @@ void ReadALConfig()
 #if !defined(_GAMING_XBOX)
     {
 #if !ALSOFT_UWP
-        std::unique_ptr<WCHAR,CoTaskMemDeleter> bufstore;
-        const HRESULT hr{SHGetKnownFolderPath(FOLDERID_RoamingAppData, KF_FLAG_DONT_UNEXPAND,
-            nullptr, al::out_ptr(bufstore))};
+        auto bufstore = std::unique_ptr<WCHAR,CoTaskMemDeleter>{};
+        const auto hr = SHGetKnownFolderPath(FOLDERID_RoamingAppData, KF_FLAG_DONT_UNEXPAND,
+            nullptr, al::out_ptr(bufstore));
         if(SUCCEEDED(hr))
         {
-            const std::wstring_view buffer{bufstore.get()};
+            const auto buffer = std::wstring_view{bufstore.get()};
 #else
-        winrt::Windows::Storage::ApplicationDataContainer localSettings = winrt::Windows::Storage::ApplicationData::Current().LocalSettings();
+        auto localSettings = winrt::Windows::Storage::ApplicationDataContainer{
+            winrt::Windows::Storage::ApplicationData::Current().LocalSettings()};
         auto bufstore = Windows::Storage::ApplicationData::Current().RoamingFolder().Path();
-        std::wstring_view buffer{bufstore};
+        auto buffer = std::wstring_view{bufstore};
         {
 #endif
             path = fs::path{buffer};
@@ -364,7 +363,7 @@ void ReadALConfig()
     {
         path /= L"alsoft.ini";
         TRACE("Loading config {}...", al::u8_as_char(path.u8string()));
-        if(fs::ifstream f{path}; f.is_open())
+        if(auto f = fs::ifstream{path}; f.is_open())
             LoadConfigFromFile(f);
     }
 
@@ -372,7 +371,7 @@ void ReadALConfig()
     {
         path = *confpath;
         TRACE("Loading config {}...", al::u8_as_char(path.u8string()));
-        if(fs::ifstream f{path}; f.is_open())
+        if(auto f = fs::ifstream{path}; f.is_open())
             LoadConfigFromFile(f);
     }
 }
@@ -381,13 +380,13 @@ void ReadALConfig()
 
 void ReadALConfig()
 {
-    fs::path path{"/etc/openal/alsoft.conf"};
+    auto path = fs::path{"/etc/openal/alsoft.conf"};
 
     TRACE("Loading config {}...", al::u8_as_char(path.u8string()));
-    if(fs::ifstream f{path}; f.is_open())
+    if(auto f = fs::ifstream{path}; f.is_open())
         LoadConfigFromFile(f);
 
-    std::string confpaths{al::getenv("XDG_CONFIG_DIRS").value_or("/etc/xdg")};
+    auto confpaths = al::getenv("XDG_CONFIG_DIRS").value_or("/etc/xdg");
     /* Go through the list in reverse, since "the order of base directories
      * denotes their importance; the first directory listed is the most
      * important". Ergo, we need to load the settings from the later dirs
@@ -414,22 +413,22 @@ void ReadALConfig()
             path /= "alsoft.conf";
 
             TRACE("Loading config {}...", al::u8_as_char(path.u8string()));
-            if(fs::ifstream f{path}; f.is_open())
+            if(auto f = fs::ifstream{path}; f.is_open())
                 LoadConfigFromFile(f);
         }
     }
 
 #ifdef __APPLE__
-    CFBundleRef mainBundle = CFBundleGetMainBundle();
+    auto mainBundle = CFBundleRef{CFBundleGetMainBundle()};
     if(mainBundle)
     {
-        CFURLRef configURL{CFBundleCopyResourceURL(mainBundle, CFSTR(".alsoftrc"), CFSTR(""),
-            nullptr)};
+        auto configURL = CFURLRef{CFBundleCopyResourceURL(mainBundle, CFSTR(".alsoftrc"),
+            CFSTR(""), nullptr)};
 
-        std::array<unsigned char,PATH_MAX> fileName{};
+        auto fileName = std::array<unsigned char,PATH_MAX>{};
         if(configURL && CFURLGetFileSystemRepresentation(configURL, true, fileName.data(), fileName.size()))
         {
-            if(std::ifstream f{reinterpret_cast<char*>(fileName.data())}; f.is_open())
+            if(auto f = std::ifstream{reinterpret_cast<char*>(fileName.data())}; f.is_open())
                 LoadConfigFromFile(f);
         }
     }
@@ -441,7 +440,7 @@ void ReadALConfig()
         path /= ".alsoftrc";
 
         TRACE("Loading config {}...", al::u8_as_char(path.u8string()));
-        if(std::ifstream f{path}; f.is_open())
+        if(auto f = std::ifstream{path}; f.is_open())
             LoadConfigFromFile(f);
     }
 
@@ -462,7 +461,7 @@ void ReadALConfig()
     if(!path.empty())
     {
         TRACE("Loading config {}...", al::u8_as_char(path.u8string()));
-        if(std::ifstream f{path}; f.is_open())
+        if(auto f = std::ifstream{path}; f.is_open())
             LoadConfigFromFile(f);
     }
 
@@ -472,14 +471,14 @@ void ReadALConfig()
         path /= "alsoft.conf";
 
         TRACE("Loading config {}...", al::u8_as_char(path.u8string()));
-        if(std::ifstream f{path}; f.is_open())
+        if(auto f = std::ifstream{path}; f.is_open())
             LoadConfigFromFile(f);
     }
 
     if(auto confname = al::getenv("ALSOFT_CONF"))
     {
         TRACE("Loading config {}...", *confname);
-        if(std::ifstream f{*confname}; f.is_open())
+        if(auto f = std::ifstream{*confname}; f.is_open())
             LoadConfigFromFile(f);
     }
 }

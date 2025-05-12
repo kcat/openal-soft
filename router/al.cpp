@@ -1,8 +1,6 @@
 
 #include "config.h"
 
-#include <cstddef>
-
 #include "AL/al.h"
 #include "router.h"
 
@@ -10,35 +8,35 @@
 #define DECL_THUNK1(R,n,T1)                                                   \
 AL_API auto AL_APIENTRY n(T1 a) noexcept -> R                                 \
 {                                                                             \
-    DriverIface *iface = GetThreadDriver();                                   \
+    auto *iface = GetThreadDriver();                                          \
     if(!iface) iface = CurrentCtxDriver.load(std::memory_order_acquire);      \
     return iface->n(a);                                                       \
 }
 #define DECL_THUNK2(R,n,T1,T2)                                                \
 AL_API auto AL_APIENTRY n(T1 a, T2 b) noexcept -> R                           \
 {                                                                             \
-    DriverIface *iface = GetThreadDriver();                                   \
+    auto *iface = GetThreadDriver();                                          \
     if(!iface) iface = CurrentCtxDriver.load(std::memory_order_acquire);      \
     return iface->n(a, b);                                                    \
 }
 #define DECL_THUNK3(R,n,T1,T2,T3)                                             \
 AL_API auto AL_APIENTRY n(T1 a, T2 b, T3 c) noexcept -> R                     \
 {                                                                             \
-    DriverIface *iface = GetThreadDriver();                                   \
+    auto *iface = GetThreadDriver();                                          \
     if(!iface) iface = CurrentCtxDriver.load(std::memory_order_acquire);      \
     return iface->n(a, b, c);                                                 \
 }
 #define DECL_THUNK4(R,n,T1,T2,T3,T4)                                          \
 AL_API auto AL_APIENTRY n(T1 a, T2 b, T3 c, T4 d) noexcept -> R               \
 {                                                                             \
-    DriverIface *iface = GetThreadDriver();                                   \
+    auto *iface = GetThreadDriver();                                          \
     if(!iface) iface = CurrentCtxDriver.load(std::memory_order_acquire);      \
     return iface->n(a, b, c, d);                                              \
 }
 #define DECL_THUNK5(R,n,T1,T2,T3,T4,T5)                                       \
 AL_API auto AL_APIENTRY n(T1 a, T2 b, T3 c, T4 d, T5 e) noexcept -> R         \
 {                                                                             \
-    DriverIface *iface = GetThreadDriver();                                   \
+    auto *iface = GetThreadDriver();                                          \
     if(!iface) iface = CurrentCtxDriver.load(std::memory_order_acquire);      \
     return iface->n(a, b, c, d, e);                                           \
 }
@@ -49,7 +47,7 @@ AL_API auto AL_APIENTRY n(T1 a, T2 b, T3 c, T4 d, T5 e) noexcept -> R         \
  */
 AL_API auto AL_APIENTRY alGetError() noexcept -> ALenum
 {
-    DriverIface *iface = GetThreadDriver();
+    auto *iface = GetThreadDriver();
     if(!iface) iface = CurrentCtxDriver.load(std::memory_order_acquire);
     return iface ? iface->alGetError() : AL_NO_ERROR;
 }

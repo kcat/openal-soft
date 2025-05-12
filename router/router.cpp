@@ -9,6 +9,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <filesystem>
 #include <ranges>
 #include <string>
 #include <string_view>
@@ -35,7 +36,7 @@ struct contains_fn_ {
         typename Proj=std::identity>
         requires std::indirect_binary_predicate<std::ranges::equal_to, std::projected<I, Proj>,
             const T*>
-    constexpr bool operator()(I first, S last, const T& value, Proj proj={}) const
+    constexpr auto operator()(I first, S last, const T& value, Proj proj={}) const -> bool
     {
         return std::ranges::find(std::move(first), last, value, proj) != last;
     }
@@ -43,17 +44,17 @@ struct contains_fn_ {
     template<std::ranges::input_range R, typename T, typename Proj=std::identity>
         requires std::indirect_binary_predicate<std::ranges::equal_to,
             std::projected<std::ranges::iterator_t<R>, Proj>, const T*>
-    constexpr bool operator()(R&& r, const T& value, Proj proj={}) const
+    constexpr auto operator()(R&& r, const T& value, Proj proj={}) const -> bool
     {
         const auto last = std::ranges::end(r);
         return std::ranges::find(std::ranges::begin(r), last, value, proj) != last;
     }
 };
-inline constexpr contains_fn_ contains{};
+inline constexpr auto contains =  contains_fn_{};
 
 
-std::vector<std::wstring> gAcceptList;
-std::vector<std::wstring> gRejectList;
+auto gAcceptList = std::vector<std::wstring>{};
+auto gRejectList = std::vector<std::wstring>{};
 
 
 void AddModule(HMODULE module, const std::wstring_view name)
@@ -89,10 +90,10 @@ void AddModule(HMODULE module, const std::wstring_view name)
         return;
     }
 
-    DriverIface &newdrv = *DriverList.emplace_back(std::make_unique<DriverIface>(name, module));
+    auto &newdrv = *DriverList.emplace_back(std::make_unique<DriverIface>(name, module));
 
     /* Load required functions. */
-    bool loadok{true};
+    auto loadok = true;
     auto do_load = [module,name](auto &func, const char *fname) -> bool
     {
         using func_t = std::remove_reference_t<decltype(func)>;
@@ -192,7 +193,7 @@ void AddModule(HMODULE module, const std::wstring_view name)
 #undef LOAD_PROC
     if(loadok)
     {
-        std::array<ALCint,2> alc_ver{0, 0};
+        auto alc_ver = std::array{0, 0};
         newdrv.alcGetIntegerv(nullptr, ALC_MAJOR_VERSION, 1, &alc_ver[0]);
         newdrv.alcGetIntegerv(nullptr, ALC_MINOR_VERSION, 1, &alc_ver[1]);
         if(newdrv.alcGetError(nullptr) == ALC_NO_ERROR)
@@ -262,11 +263,11 @@ void AddModule(HMODULE module, const std::wstring_view name)
 void SearchDrivers(const std::wstring_view path)
 {
     TRACE("Searching for drivers in {}...", wstr_to_utf8(path));
-    std::wstring srchPath{path};
+    auto srchPath = std::wstring{path};
     srchPath += L"\\*oal.dll";
 
-    WIN32_FIND_DATAW fdata{};
-    HANDLE srchHdl{FindFirstFileW(srchPath.c_str(), &fdata)};
+    auto fdata = WIN32_FIND_DATAW{};
+    auto srchHdl = FindFirstFileW(srchPath.c_str(), &fdata);
     if(srchHdl == INVALID_HANDLE_VALUE) return;
 
     do {
@@ -275,7 +276,7 @@ void SearchDrivers(const std::wstring_view path)
         srchPath += std::data(fdata.cFileName);
         TRACE("Found {}", wstr_to_utf8(srchPath));
 
-        HMODULE mod{LoadLibraryW(srchPath.c_str())};
+        auto mod = LoadLibraryW(srchPath.c_str());
         if(!mod)
             WARN("Could not load {}", wstr_to_utf8(srchPath));
         else
@@ -284,9 +285,9 @@ void SearchDrivers(const std::wstring_view path)
     FindClose(srchHdl);
 }
 
-bool GetLoadedModuleDirectory(const WCHAR *name, std::wstring *moddir)
+auto GetLoadedModuleDirectory(const WCHAR *name, std::wstring *moddir) -> bool
 {
-    HMODULE module{nullptr};
+    auto module = HMODULE{nullptr};
 
     if(name)
     {
@@ -295,7 +296,7 @@ bool GetLoadedModuleDirectory(const WCHAR *name, std::wstring *moddir)
     }
 
     moddir->assign(256, '\0');
-    DWORD res{GetModuleFileNameW(module, moddir->data(), static_cast<DWORD>(moddir->size()))};
+    auto res = GetModuleFileNameW(module, moddir->data(), static_cast<DWORD>(moddir->size()));
     if(res >= moddir->size())
     {
         do {
@@ -305,8 +306,8 @@ bool GetLoadedModuleDirectory(const WCHAR *name, std::wstring *moddir)
     }
     moddir->resize(res);
 
-    auto sep0 = moddir->rfind('/');
-    auto sep1 = moddir->rfind('\\');
+    const auto sep0 = moddir->rfind('/');
+    const auto sep1 = moddir->rfind('\\');
     if(sep0 < moddir->size() && sep1 < moddir->size())
         moddir->resize(std::max(sep0, sep1));
     else if(sep0 < moddir->size())
@@ -347,13 +348,12 @@ void LoadDriverList()
         TRACE("Got DLL path {}", wstr_to_utf8(dll_path));
 
     auto cwd_path = std::wstring{};
-    if(DWORD pathlen{GetCurrentDirectoryW(0, nullptr)})
+    if(auto curpath = std::filesystem::current_path(); !curpath.empty())
     {
-        do {
-            cwd_path.resize(pathlen);
-            pathlen = GetCurrentDirectoryW(pathlen, cwd_path.data());
-        } while(pathlen >= cwd_path.size());
-        cwd_path.resize(pathlen);
+        if constexpr(std::same_as<decltype(curpath)::string_type,std::wstring>)
+            cwd_path = curpath.wstring();
+        else
+            cwd_path = utf8_to_wstr(al::u8_as_char(curpath.u8string()));
     }
     if(!cwd_path.empty() && (cwd_path.back() == '\\' || cwd_path.back() == '/'))
         cwd_path.pop_back();
@@ -365,7 +365,7 @@ void LoadDriverList()
         TRACE("Got proc path {}", wstr_to_utf8(proc_path));
 
     auto sys_path = std::wstring{};
-    if(UINT pathlen{GetSystemDirectoryW(nullptr, 0)})
+    if(auto pathlen = GetSystemDirectoryW(nullptr, 0))
     {
         do {
             sys_path.resize(pathlen);
@@ -414,7 +414,7 @@ void LoadDriverList()
         std::swap(*DriverList.begin(), *(DriverList.begin()+1));
 }
 
-BOOL APIENTRY DllMain(HINSTANCE, DWORD reason, void*)
+auto APIENTRY DllMain(HINSTANCE, DWORD reason, void*) -> BOOL
 {
     switch(reason)
     {
@@ -429,8 +429,8 @@ BOOL APIENTRY DllMain(HINSTANCE, DWORD reason, void*)
         }
         if(auto loglev = al::getenv("ALROUTER_LOGLEVEL"))
         {
-            char *end = nullptr;
-            long l{strtol(loglev->c_str(), &end, 0)};
+            char *end{};
+            auto l = strtol(loglev->c_str(), &end, 0);
             if(!end || *end != '\0')
                 ERR("Invalid log level value: {}", *loglev);
             else if(l < al::to_underlying(eLogLevel::None)

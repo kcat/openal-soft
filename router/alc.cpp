@@ -1019,7 +1019,8 @@ ALC_API auto ALC_APIENTRY alcSetThreadContext(ALCcontext *context) noexcept -> A
     }
 
     auto err = ALCenum{ALC_INVALID_CONTEXT};
-    if(const auto idx = maybe_get(ContextIfaceMap, context))
+    if(const auto idx = maybe_get(ContextIfaceMap, context); idx
+        && DriverList[*idx]->alcSetThreadContext)
     {
         if(DriverList[*idx]->alcSetThreadContext(context))
         {

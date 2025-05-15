@@ -1532,9 +1532,8 @@ void VideoState::updateVideo(SDL_Window *screen, SDL_Renderer *renderer, bool re
             mImage = nullptr;
             mSwscaleCtx = nullptr;
 
-            const auto TextureAVFormats = TextureFormatMap
-                | std::views::transform(&TextureFormatEntry::avformat);
-            const auto fmtiter = std::ranges::find(TextureAVFormats, frame->format).base();
+            const auto fmtiter = std::ranges::find(TextureFormatMap, frame->format,
+                &TextureFormatEntry::avformat);
             if(fmtiter != TextureFormatMap.end())
             {
                 auto props = SDLProps{};

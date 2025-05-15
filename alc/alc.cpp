@@ -441,8 +441,7 @@ void alc_initconfig()
         std::string_view{ALSOFT_GIT_BRANCH}.empty() ? "unknown" : ALSOFT_GIT_BRANCH);
     {
         auto names = std::array<std::string_view,BackendList.size()>{};
-        std::transform(BackendList.begin(), BackendList.end(), names.begin(),
-            std::mem_fn(&BackendInfo::name));
+        std::ranges::transform(BackendList, names.begin(), &BackendInfo::name);
         TRACE("Supported backends: {}", fmt::join(names, ", "));
     }
     ReadALConfig();
@@ -656,10 +655,9 @@ void alc_initconfig()
          * the normal backends are usable, rather than pretending there is a
          * device but outputs nowhere.
          */
-        const auto reversenamerange = backends | std::views::reverse
-            | std::views::transform(&BackendInfo::name);
-        const auto iter = std::ranges::find(reversenamerange, "null"sv);
-        backends = std::span{backends.begin(), iter.base().base()};
+        const auto reversenamerange = backends | std::views::reverse;
+        const auto iter = std::ranges::find(reversenamerange, "null"sv, &BackendInfo::name);
+        backends = std::span{backends.begin(), iter.base()};
     }
 
     std::ignore = std::ranges::any_of(backends, [](BackendInfo &backend)
@@ -863,10 +861,8 @@ std::optional<DevFmtPair> DecomposeDevFormat(ALenum format)
         FormatType{AL_FORMAT_71CHN_FLOAT32, {DevFmtX71, DevFmtFloat}},
     };
 
-    const auto formatrange = list | std::views::transform(&FormatType::alformat);
-    const auto item = std::ranges::find(formatrange, format);
-    if(item != formatrange.end())
-        return item.base()->formatpair;
+    const auto item = std::ranges::find(list, format, &FormatType::alformat);
+    if(item != list.end()) return item->formatpair;
     return std::nullopt;
 }
 
@@ -2673,14 +2669,15 @@ ALC_API ALCvoid* ALC_APIENTRY alcGetProcAddress(ALCdevice *device, const ALCchar
 #if ALSOFT_EAX
     if(eax_g_is_enabled)
     {
-        const auto eaxfuncnames = eaxFunctions | std::views::transform(&FuncExport::funcName);
-        const auto iter = std::ranges::find(eaxfuncnames, std::string_view{funcName});
-        if(iter != eaxfuncnames.end()) return iter.base()->address;
+        const auto iter = std::ranges::find(eaxFunctions, std::string_view{funcName},
+            &FuncExport::funcName);
+        if(iter != eaxFunctions.end())
+            return iter->address;
     }
 #endif
-    const auto funcnames = alcFunctions | std::views::transform(&FuncExport::funcName);
-    const auto iter = std::ranges::find(funcnames, std::string_view{funcName});
-    return (iter != funcnames.end()) ? iter.base()->address : nullptr;
+    const auto iter = std::ranges::find(alcFunctions, std::string_view{funcName},
+        &FuncExport::funcName);
+    return (iter != std::end(alcFunctions)) ? iter->address : nullptr;
 }
 
 
@@ -2696,14 +2693,14 @@ ALC_API ALCenum ALC_APIENTRY alcGetEnumValue(ALCdevice *device, const ALCchar *e
 #if ALSOFT_EAX
     if(eax_g_is_enabled)
     {
-        const auto eaxenumnames = eaxEnumerations | std::views::transform(&EnumExport::enumName);
-        const auto iter = std::ranges::find(eaxenumnames, std::string_view{enumName});
-        if(iter != eaxenumnames.end()) return iter.base()->value;
+        const auto iter = std::ranges::find(eaxEnumerations, std::string_view{enumName},
+            &EnumExport::enumName);
+        if(iter != eaxEnumerations.end()) return iter->value;
     }
 #endif
-    const auto enumnames = alcEnumerations | std::views::transform(&EnumExport::enumName);
-    const auto iter = std::ranges::find(enumnames, std::string_view{enumName});
-    return (iter != enumnames.end()) ? iter.base()->value : 0;
+    const auto iter = std::ranges::find(alcEnumerations, std::string_view{enumName},
+        &EnumExport::enumName);
+    return (iter != std::end(alcEnumerations)) ? iter->value : 0;
 }
 
 
@@ -3084,12 +3081,11 @@ ALC_API ALCboolean ALC_APIENTRY alcCloseDevice(ALCdevice *device) noexcept
     listlock.unlock();
     prevarray.reset();
 
-    std::ranges::for_each(orphanctxs | std::views::transform(&ContextRef::get),
-        [](ALCcontext *context)
+    std::ranges::for_each(orphanctxs, [](ALCcontext *context)
     {
         WARN("Releasing orphaned context {}", voidp{context});
         context->deinit();
-    });
+    }, &ContextRef::get);
 
     return ALC_TRUE;
 }

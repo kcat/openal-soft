@@ -492,7 +492,7 @@ try {
             auto counter = 0_uz;
             auto todo = 0u;
             std::ignore = std::ranges::find_if(context->mDebugLog | std::views::take(count),
-                [logSpan,&counter,&todo](const DebugLogEntry &entry)
+                [logSpan,&counter,&todo](const DebugLogEntry &entry) noexcept -> bool
             {
                 const auto tocopy = size_t{entry.mMessage.size() + 1};
                 if(tocopy > logSpan.size()-counter)
@@ -510,23 +510,20 @@ try {
 
     auto logrange = context->mDebugLog | std::views::take(toget);
     if(sources)
-        std::ranges::copy(logrange | std::views::transform(&DebugLogEntry::mSource)
-            | std::views::transform(GetDebugSourceEnum), std::span{sources, toget}.begin());
+        std::ranges::transform(logrange | std::views::transform(&DebugLogEntry::mSource),
+            std::span{sources, toget}.begin(), GetDebugSourceEnum);
     if(types)
-        std::ranges::copy(logrange | std::views::transform(&DebugLogEntry::mType)
-            | std::views::transform(GetDebugTypeEnum), std::span{types, toget}.begin());
+        std::ranges::transform(logrange | std::views::transform(&DebugLogEntry::mType),
+            std::span{types, toget}.begin(), GetDebugTypeEnum);
     if(ids)
-        std::ranges::copy(logrange | std::views::transform(&DebugLogEntry::mId),
-            std::span{ids, toget}.begin());
+        std::ranges::transform(logrange, std::span{ids, toget}.begin(), &DebugLogEntry::mId);
     if(severities)
-        std::ranges::copy(logrange | std::views::transform(&DebugLogEntry::mSeverity)
-            | std::views::transform(GetDebugSeverityEnum), std::span{severities, toget}.begin());
+        std::ranges::transform(logrange | std::views::transform(&DebugLogEntry::mSeverity),
+            std::span{severities, toget}.begin(), GetDebugSeverityEnum);
     if(lengths)
     {
-        static constexpr auto getMessageLength = [](const DebugLogEntry &entry) noexcept
-        { return static_cast<ALsizei>(entry.mMessage.size()+1); };
-        std::ranges::copy(logrange | std::views::transform(getMessageLength),
-            std::span{lengths, toget}.begin());
+        std::ranges::transform(logrange, std::span{lengths, toget}.begin(),
+            [](const DebugLogEntry &entry){return static_cast<ALsizei>(entry.mMessage.size()+1);});
     }
 
     if(logBuf)
@@ -537,12 +534,11 @@ try {
             | std::views::join_with('\0'), logSpan.begin());
         */
         auto logiter = logSpan.begin();
-        std::ranges::for_each(logrange | std::views::transform(&DebugLogEntry::mMessage),
-            [&logiter](const std::string_view msg)
+        std::ranges::for_each(logrange, [&logiter](const std::string_view msg)
         {
             logiter = std::ranges::copy(msg, logiter).out;
             *(logiter++) = '\0';
-        });
+        }, &DebugLogEntry::mMessage);
     }
 
     /* FIXME: Ugh. Calling erase(begin(), begin()+toget) causes an error since
@@ -609,27 +605,28 @@ try {
     const auto labelOut = std::span{label, label ? static_cast<ALuint>(bufSize) : 0u};
     auto copy_name = [name,length,labelOut](std::unordered_map<ALuint,std::string> &names)
     {
-        std::string_view objname;
-
-        auto iter = names.find(name);
-        if(iter != names.end())
-            objname = iter->second;
+        const auto objname = std::invoke([name,&names]
+        {
+            if(auto iter = names.find(name); iter != names.end())
+                return std::string_view{iter->second};
+            return std::string_view{};
+        });
 
         if(labelOut.empty())
             *length = static_cast<ALsizei>(objname.size());
         else
         {
-            const size_t tocopy{std::min(objname.size(), labelOut.size()-1)};
-            auto oiter = std::copy_n(objname.cbegin(), tocopy, labelOut.begin());
+            const auto namerange = objname | std::views::take(labelOut.size()-1);
+            auto oiter = std::ranges::copy(namerange, labelOut.begin()).out;
             *oiter = '\0';
             if(length)
-                *length = static_cast<ALsizei>(tocopy);
+                *length = static_cast<ALsizei>(namerange.size());
         }
     };
 
     if(identifier == AL_SOURCE_EXT)
     {
-        std::lock_guard srclock{context->mSourceLock};
+        auto srclock = std::lock_guard{context->mSourceLock};
         copy_name(context->mSourceNames);
     }
     else if(identifier == AL_BUFFER)
@@ -652,7 +649,7 @@ try {
     }
     else if(identifier == AL_AUXILIARY_EFFECT_SLOT_EXT)
     {
-        std::lock_guard slotlock{context->mEffectSlotLock};
+        auto slotlock = std::lock_guard{context->mEffectSlotLock};
         copy_name(context->mEffectSlotNames);
     }
     else

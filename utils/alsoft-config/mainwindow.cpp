@@ -149,10 +149,9 @@ const std::array hrtfModeList{
 
 auto GetDefaultIndex(const std::span<const NameValuePair> list) -> uint8_t
 {
-    const auto listvalues = list | std::views::transform(&NameValuePair::value);
-    auto iter = std::ranges::find(listvalues, QStringLiteral(""));
-    if(iter != listvalues.end())
-        return static_cast<uint8_t>(std::distance(listvalues.begin(), iter));
+    auto iter = std::ranges::find(list, QStringLiteral(""), &NameValuePair::value);
+    if(iter != list.end())
+        return static_cast<uint8_t>(std::distance(list.begin(), iter));
     throw std::runtime_error{"Failed to find default entry"};
 }
 
@@ -244,19 +243,17 @@ QStringList getAllDataPaths(const QString &append)
 
 auto getValueFromName(const std::span<const NameValuePair> list, const QString &str) -> QString
 {
-    const auto listvalues = list | std::views::transform(&NameValuePair::name);
-    auto iter = std::ranges::find(listvalues, str);
-    if(iter != listvalues.end())
-        return iter.base()->value;
+    auto iter = std::ranges::find(list, str, &NameValuePair::name);
+    if(iter != list.end())
+        return iter->value;
     return QString{};
 }
 
 auto getNameFromValue(const std::span<const NameValuePair> list, const QString &str) -> QString
 {
-    const auto listvalues = list | std::views::transform(&NameValuePair::value);
-    auto iter = std::ranges::find(listvalues, str);
-    if(iter != listvalues.end())
-        return iter.base()->name;
+    auto iter = std::ranges::find(list, str, &NameValuePair::value);
+    if(iter != list.end())
+        return iter->name;
     return QString{};
 }
 

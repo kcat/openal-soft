@@ -153,10 +153,9 @@ void ModulatorState::update(const ContextBase *context, const EffectSlot *slot,
     const auto f0norm = std::clamp(props.HighPassCutoff / samplerate, 1.0f/512.0f, 0.49f);
     /* Bandwidth value is constant in octaves. */
     mChans[0].mFilter.setParamsFromBandwidth(BiquadType::HighPass, f0norm, 1.0f, 0.75f);
-    std::ranges::for_each(mChans | std::views::take(slot->Wet.Buffer.size()) | std::views::drop(1)
-        | std::views::transform(&OutParams::mFilter),
+    std::ranges::for_each(mChans | std::views::take(slot->Wet.Buffer.size()) | std::views::drop(1),
         [&other=mChans[0].mFilter](BiquadFilter &filter)
-    { filter.copyParamsFrom(other); });
+    { filter.copyParamsFrom(other); }, &OutParams::mFilter);
 
     mOutTarget = target.Main->Buffer;
     target.Main->setAmbiMixParams(slot->Wet, slot->Gain,

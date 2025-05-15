@@ -665,9 +665,9 @@ auto DecomposeUserFormat(ALenum format) noexcept -> std::optional<DecompResult>
         FormatMap{AL_FORMAT_UHJ4CHN_ALAW_SOFT,    {FmtUHJ4, FmtAlaw} },
     };
 
-    const auto fmtrange = UserFmtList | std::views::transform(&FormatMap::format);
-    if(const auto iter = std::ranges::find(fmtrange, format); iter != fmtrange.end())
-        return iter.base()->result;
+    if(const auto iter = std::ranges::find(UserFmtList, format, &FormatMap::format);
+        iter != UserFmtList.end())
+        return iter->result;
     return std::nullopt;
 }
 

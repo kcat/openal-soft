@@ -59,13 +59,13 @@ auto gRejectList = std::vector<std::wstring>{};
 
 void AddModule(HMODULE module, const std::wstring_view name)
 {
-    if(contains(DriverList | std::views::transform(&DriverIface::Module), module))
+    if(contains(DriverList, module, &DriverIface::Module))
     {
         TRACE("Skipping already-loaded module {}", decltype(std::declval<void*>()){module});
         FreeLibrary(module);
         return;
     }
-    if(contains(DriverList | std::views::transform(&DriverIface::Name), name))
+    if(contains(DriverList, name, &DriverIface::Name))
     {
         TRACE("Skipping similarly-named module {}", wstr_to_utf8(name));
         FreeLibrary(module);

@@ -146,15 +146,14 @@ void EqualizerState::update(const ContextBase *context, const EffectSlot *slot,
     mChans[0].mFilter[3].setParamsFromSlope(BiquadType::HighShelf, f0norm, gain, 0.75f);
 
     /* Copy the filter coefficients for the other input channels. */
-    std::ranges::for_each(mChans | std::views::take(slot->Wet.Buffer.size()) | std::views::drop(1)
-        | std::views::transform(&OutParams::mFilter),
+    std::ranges::for_each(mChans | std::views::take(slot->Wet.Buffer.size()) | std::views::drop(1),
         [filters=std::span{mChans[0].mFilter}](const std::span<BiquadFilter,4> targets)
     {
         targets[0].copyParamsFrom(filters[0]);
         targets[1].copyParamsFrom(filters[1]);
         targets[2].copyParamsFrom(filters[2]);
         targets[3].copyParamsFrom(filters[3]);
-    });
+    }, &OutParams::mFilter);
 
     mOutTarget = target.Main->Buffer;
     target.Main->setAmbiMixParams(slot->Wet, slot->Gain,

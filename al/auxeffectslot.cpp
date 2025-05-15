@@ -189,13 +189,9 @@ void RemoveActiveEffectSlots(const std::span<ALeffectslot*> auxslots, ALCcontext
     auto *curarray = context->mActiveAuxSlots.load(std::memory_order_acquire);
     auto tmparray = std::vector<EffectSlot*>{};
     tmparray.reserve(curarray->size()>>1);
-    auto not_in_auxslots = [slotrange = auxslots | std::views::transform(&ALeffectslot::mSlot)]
-        (const EffectSlot *slot) -> bool
-    {
-        return std::ranges::find(slotrange, slot) == slotrange.end();
-    };
-    std::ranges::copy(*curarray | std::views::take(tmparray.size())
-        | std::views::filter(not_in_auxslots), std::back_inserter(tmparray));
+    std::ranges::copy_if(*curarray | std::views::take(curarray->size()>>1),
+        std::back_inserter(tmparray), [auxslots](const EffectSlot *slot) -> bool
+        { return std::ranges::find(auxslots, slot, &ALeffectslot::mSlot) == auxslots.end(); });
 
     /* Reallocate with the new size. */
     auto newarray = EffectSlot::CreatePtrArray(tmparray.size()<<1);

@@ -34,6 +34,7 @@
 #include <cstdio>
 #include <cstring>
 #include <memory>
+#include <ranges>
 #include <span>
 #include <stdexcept>
 #include <string>
@@ -107,6 +108,8 @@ struct StreamPlayer {
         if(mSndfile)
             sf_close(mSndfile);
     }
+    StreamPlayer(const StreamPlayer&) = delete;
+    auto operator=(const StreamPlayer&) -> StreamPlayer& = delete;
 
     void close()
     {
@@ -122,7 +125,7 @@ struct StreamPlayer {
         }
     }
 
-    bool open(const std::string &filename)
+    auto open(const std::string &filename) -> bool
     {
         close();
 
@@ -166,11 +169,12 @@ struct StreamPlayer {
             break;
         }
 
-        int splblocksize{}, byteblocksize{};
+        auto splblocksize = int{};
+        auto byteblocksize = int{};
         if(mSampleFormat == SampleType::IMA4 || mSampleFormat == SampleType::MSADPCM)
         {
-            SF_CHUNK_INFO inf{ "fmt ", 4, 0, nullptr };
-            SF_CHUNK_ITERATOR *iter = sf_get_chunk_iterator(mSndfile, &inf);
+            auto inf = SF_CHUNK_INFO{ "fmt ", 4, 0, nullptr };
+            auto *iter = sf_get_chunk_iterator(mSndfile, &inf);
             if(!iter || sf_get_chunk_size(iter, &inf) != SF_ERR_NO_ERROR || inf.datalen < 14)
                 mSampleFormat = SampleType::Int16;
             else
@@ -219,44 +223,50 @@ struct StreamPlayer {
         mFormat = AL_NONE;
         if(mSfInfo.channels == 1)
         {
-            if(mSampleFormat == SampleType::Int16)
-                mFormat = AL_FORMAT_MONO16;
-            else if(mSampleFormat == SampleType::Float)
-                mFormat = AL_FORMAT_MONO_FLOAT32;
-            else if(mSampleFormat == SampleType::IMA4)
-                mFormat = AL_FORMAT_MONO_IMA4;
-            else if(mSampleFormat == SampleType::MSADPCM)
-                mFormat = AL_FORMAT_MONO_MSADPCM_SOFT;
+            switch(mSampleFormat)
+            {
+            case SampleType::Int16: mFormat = AL_FORMAT_MONO16; break;
+            case SampleType::Float: mFormat = AL_FORMAT_MONO_FLOAT32; break;
+            case SampleType::IMA4: mFormat = AL_FORMAT_MONO_IMA4; break;
+            case SampleType::MSADPCM: mFormat = AL_FORMAT_MONO_MSADPCM_SOFT; break;
+            }
         }
         else if(mSfInfo.channels == 2)
         {
-            if(mSampleFormat == SampleType::Int16)
-                mFormat = AL_FORMAT_STEREO16;
-            else if(mSampleFormat == SampleType::Float)
-                mFormat = AL_FORMAT_STEREO_FLOAT32;
-            else if(mSampleFormat == SampleType::IMA4)
-                mFormat = AL_FORMAT_STEREO_IMA4;
-            else if(mSampleFormat == SampleType::MSADPCM)
-                mFormat = AL_FORMAT_STEREO_MSADPCM_SOFT;
+            switch(mSampleFormat)
+            {
+            case SampleType::Int16: mFormat = AL_FORMAT_STEREO16; break;
+            case SampleType::Float: mFormat = AL_FORMAT_STEREO_FLOAT32; break;
+            case SampleType::IMA4: mFormat = AL_FORMAT_STEREO_IMA4; break;
+            case SampleType::MSADPCM: mFormat = AL_FORMAT_STEREO_MSADPCM_SOFT; break;
+            }
         }
         else if(mSfInfo.channels == 3)
         {
             if(sf_command(mSndfile, SFC_WAVEX_GET_AMBISONIC, nullptr, 0) == SF_AMBISONIC_B_FORMAT)
             {
-                if(mSampleFormat == SampleType::Int16)
-                    mFormat = AL_FORMAT_BFORMAT2D_16;
-                else if(mSampleFormat == SampleType::Float)
-                    mFormat = AL_FORMAT_BFORMAT2D_FLOAT32;
+                switch(mSampleFormat)
+                {
+                case SampleType::Int16: mFormat = AL_FORMAT_BFORMAT2D_16; break;
+                case SampleType::Float: mFormat = AL_FORMAT_BFORMAT2D_FLOAT32; break;
+                case SampleType::IMA4:
+                case SampleType::MSADPCM:
+                    break;
+                }
             }
         }
         else if(mSfInfo.channels == 4)
         {
             if(sf_command(mSndfile, SFC_WAVEX_GET_AMBISONIC, nullptr, 0) == SF_AMBISONIC_B_FORMAT)
             {
-                if(mSampleFormat == SampleType::Int16)
-                    mFormat = AL_FORMAT_BFORMAT3D_16;
-                else if(mSampleFormat == SampleType::Float)
-                    mFormat = AL_FORMAT_BFORMAT3D_FLOAT32;
+                switch(mSampleFormat)
+                {
+                case SampleType::Int16: mFormat = AL_FORMAT_BFORMAT3D_16; break;
+                case SampleType::Float: mFormat = AL_FORMAT_BFORMAT3D_FLOAT32; break;
+                case SampleType::IMA4:
+                case SampleType::MSADPCM:
+                    break;
+                }
             }
         }
         if(!mFormat)
@@ -269,9 +279,9 @@ struct StreamPlayer {
         }
 
         /* Set a 1s ring buffer size. */
-        size_t numblocks{(static_cast<ALuint>(mSfInfo.samplerate) + mSamplesPerBlock-1)
-            / mSamplesPerBlock};
-        mBufferData.resize(static_cast<ALuint>(numblocks * mBytesPerBlock));
+        auto numblocks = (static_cast<ALuint>(mSfInfo.samplerate) + mSamplesPerBlock-1)
+            / mSamplesPerBlock;
+        mBufferData.resize(numblocks * mBytesPerBlock);
         mReadPos.store(0, std::memory_order_relaxed);
         mWritePos.store(0, std::memory_order_relaxed);
         mDecoderOffset = 0;
@@ -284,9 +294,10 @@ struct StreamPlayer {
      * but it allows the callback implementation to have a nice 'this' pointer
      * with normal member access.
      */
-    static ALsizei AL_APIENTRY bufferCallbackC(void *userptr, void *data, ALsizei size) noexcept
+    static auto AL_APIENTRY bufferCallbackC(void *userptr, void *data, ALsizei size) noexcept
+        -> ALsizei
     { return static_cast<StreamPlayer*>(userptr)->bufferCallback(data, size); }
-    ALsizei bufferCallback(void *data, ALsizei size) noexcept
+    auto bufferCallback(void *data, ALsizei size) noexcept -> ALsizei
     {
         const auto output = std::span{static_cast<std::byte*>(data), static_cast<ALuint>(size)};
         auto dst = output.begin();
@@ -299,13 +310,13 @@ struct StreamPlayer {
          * device on time.
          */
 
-        size_t roffset{mReadPos.load(std::memory_order_acquire)};
+        auto roffset = mReadPos.load(std::memory_order_acquire);
         while(const auto remaining = static_cast<size_t>(std::distance(dst, output.end())))
         {
             /* If the write offset == read offset, there's nothing left in the
              * ring-buffer. Break from the loop and give what has been written.
              */
-            const size_t woffset{mWritePos.load(std::memory_order_relaxed)};
+            const auto woffset = mWritePos.load(std::memory_order_relaxed);
             if(woffset == roffset) break;
 
             /* If the write offset is behind the read offset, the readable
@@ -313,7 +324,7 @@ struct StreamPlayer {
              * that case, otherwise read up to the write offset. Also limit the
              * amount to copy given how much is remaining to write.
              */
-            size_t todo{((woffset < roffset) ? mBufferData.size() : woffset) - roffset};
+            auto todo = ((woffset < roffset) ? mBufferData.size() : woffset) - roffset;
             todo = std::min(todo, remaining);
 
             /* Copy from the ring buffer to the provided output buffer. Wrap
@@ -321,7 +332,7 @@ struct StreamPlayer {
              * buffer.
              */
             const auto input = std::span{mBufferData}.subspan(roffset, todo);
-            dst = std::copy_n(input.begin(), input.size(), dst);
+            dst = std::ranges::copy(input, dst).out;
 
             roffset += todo;
             if(roffset == mBufferData.size())
@@ -335,13 +346,13 @@ struct StreamPlayer {
         return static_cast<ALsizei>(std::distance(output.begin(), dst));
     }
 
-    bool prepare()
+    auto prepare() -> bool
     {
         if(mSamplesPerBlock > 1)
             alBufferi(mBuffer, AL_UNPACK_BLOCK_ALIGNMENT_SOFT, static_cast<int>(mSamplesPerBlock));
         alBufferCallbackSOFT(mBuffer, mFormat, mSfInfo.samplerate, bufferCallbackC, this);
         alSourcei(mSource, AL_BUFFER, static_cast<ALint>(mBuffer));
-        if(ALenum err{alGetError()})
+        if(const auto err = alGetError())
         {
             fmt::println(stderr, "Failed to set callback: {} ({:#x})", alGetString(err),
                 as_unsigned(err));
@@ -350,19 +361,19 @@ struct StreamPlayer {
         return true;
     }
 
-    bool update()
+    auto update() -> bool
     {
-        ALenum state;
-        ALint pos;
+        auto state = ALenum{};
+        auto pos = ALint{};
         alGetSourcei(mSource, AL_SAMPLE_OFFSET, &pos);
         alGetSourcei(mSource, AL_SOURCE_STATE, &state);
 
-        size_t woffset{mWritePos.load(std::memory_order_acquire)};
+        auto woffset = mWritePos.load(std::memory_order_acquire);
         if(state != AL_INITIAL)
         {
-            const size_t roffset{mReadPos.load(std::memory_order_relaxed)};
-            const size_t readable{((woffset >= roffset) ? woffset : (mBufferData.size()+woffset)) -
-                roffset};
+            const auto roffset = mReadPos.load(std::memory_order_relaxed);
+            const auto readable = ((woffset >= roffset) ? woffset : (mBufferData.size()+woffset)) -
+                roffset;
             /* For a stopped (underrun) source, the current playback offset is
              * the current decoder offset excluding the readable buffered data.
              * For a playing/paused source, it's the source's offset including
@@ -463,7 +474,7 @@ struct StreamPlayer {
     }
 };
 
-int main(std::span<std::string_view> args)
+auto main(std::span<std::string_view> args) -> int
 {
     /* Print out usage if no arguments were specified */
     if(args.size() < 2)
@@ -482,7 +493,7 @@ int main(std::span<std::string_view> args)
         auto operator=(const AudioManager&) -> AudioManager& = delete;
         ~AudioManager() { CloseAL(); }
     };
-    AudioManager almgr;
+    auto almgr = AudioManager{};
 
     if(!alIsExtensionPresent("AL_SOFT_callback_buffer"))
     {
@@ -493,20 +504,20 @@ int main(std::span<std::string_view> args)
     alBufferCallbackSOFT = reinterpret_cast<LPALBUFFERCALLBACKSOFT>(
         alGetProcAddress("alBufferCallbackSOFT"));
 
-    ALCint refresh{25};
+    auto refresh = ALCint{25};
     alcGetIntegerv(alcGetContextsDevice(alcGetCurrentContext()), ALC_REFRESH, 1, &refresh);
 
     auto player = std::make_unique<StreamPlayer>();
 
     /* Play each file listed on the command line */
-    for(size_t i{0};i < args.size();++i)
+    std::ranges::for_each(args, [refresh,&player](const std::string_view fname)
     {
-        if(!player->open(std::string{args[i]}))
-            continue;
+        if(!player->open(std::string{fname}))
+            return;
 
         /* Get the name portion, without the path, for display. */
-        const auto fpos = std::max(args[i].rfind('/')+1, args[i].rfind('\\')+1);
-        const auto namepart = args[i].substr(fpos);
+        const auto fpos = std::max(fname.rfind('/')+1, fname.rfind('\\')+1);
+        const auto namepart = fname.substr(fpos);
 
         fmt::println("Playing: {} ({}, {}hz)", namepart, FormatName(player->mFormat),
             player->mSfInfo.samplerate);
@@ -515,7 +526,7 @@ int main(std::span<std::string_view> args)
         if(!player->prepare())
         {
             player->close();
-            continue;
+            return;
         }
 
         while(player->update())
@@ -524,7 +535,7 @@ int main(std::span<std::string_view> args)
 
         /* All done with this file. Close it and go to the next */
         player->close();
-    }
+    });
     /* All done. */
     fmt::println("Done.");
 
@@ -537,6 +548,6 @@ int main(int argc, char **argv)
 {
     assert(argc >= 0);
     auto args = std::vector<std::string_view>(static_cast<unsigned int>(argc));
-    std::copy_n(argv, args.size(), args.begin());
+    std::ranges::copy(std::views::counted(argv, argc), args.begin());
     return main(std::span{args});
 }

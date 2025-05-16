@@ -75,7 +75,8 @@ auto PrepareLayout(const std::span<const float> xyzs, HrirDataT *hData) -> bool
     auto azCounts = std::vector<std::array<uint,MAX_EV_COUNT>>(MAX_FD_COUNT);
     for(auto &azs : azCounts) azs.fill(0u);
 
-    uint fi{0u}, ir_total{0u};
+    auto fi = 0u;
+    auto ir_total = 0u;
     for(const auto &field : fds)
     {
         distances[fi] = field.mDistance;

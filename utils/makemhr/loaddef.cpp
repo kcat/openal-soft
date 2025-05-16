@@ -734,8 +734,15 @@ auto ReadAsciiAsDouble(TokenReaderT *tr, const std::string_view filename, const 
 auto ReadWaveFormat(std::istream &istream, const ByteOrderT order, const uint hrirRate,
     SourceRefT *src) -> int
 {
-    uint32_t fourCC, chunkSize;
-    uint32_t format, channels, rate, dummy, block, size, bits;
+    uint32_t fourCC;
+    uint32_t chunkSize;
+    uint32_t format;
+    uint32_t channels;
+    uint32_t rate;
+    uint32_t dummy;
+    uint32_t block;
+    uint32_t size;
+    uint32_t bits;
 
     chunkSize = 0;
     do {
@@ -855,8 +862,14 @@ auto ReadWaveData(std::istream &istream, const SourceRefT *src, const ByteOrderT
 auto ReadWaveList(std::istream &istream, const SourceRefT *src, const ByteOrderT order,
     const std::span<double> hrir) -> int
 {
-    uint32_t fourCC, chunkSize, listSize, count;
-    uint block, skip, offset, i;
+    uint32_t fourCC;
+    uint32_t chunkSize;
+    uint32_t listSize;
+    uint32_t count;
+    uint block;
+    uint skip;
+    uint offset;
+    uint i;
     double lastSample;
 
     for(;;)
@@ -1008,7 +1021,8 @@ auto LoadBinarySource(std::istream &istream, const SourceRefT *src, const ByteOr
 auto LoadWaveSource(std::istream &istream, SourceRefT *src, const uint hrirRate,
     const std::span<double> hrir) -> int
 {
-    uint32_t fourCC, dummy;
+    uint32_t fourCC;
+    uint32_t dummy;
     ByteOrderT order;
 
     if(!ReadBin4(istream, src->mPath, BO_LITTLE, 4, &fourCC)
@@ -1210,9 +1224,14 @@ auto MatchChannelType(const std::string_view ident) -> ChannelTypeT
 auto ProcessMetrics(TokenReaderT *tr, const uint fftSize, const uint truncSize,
     const ChannelModeT chanMode, HrirDataT *hData) -> int
 {
-    int hasRate = 0, hasType = 0, hasPoints = 0, hasRadius = 0;
-    int hasDistance = 0, hasAzimuths = 0;
-    uint line, col;
+    auto hasRate = 0;
+    auto hasType = 0;
+    auto hasPoints = 0;
+    auto hasRadius = 0;
+    auto hasDistance = 0;
+    auto hasAzimuths = 0;
+    uint line;
+    uint col;
     double fpVal;
     uint points;
     int intVal;
@@ -1496,7 +1515,8 @@ auto MatchElementType(const std::string_view ident) -> ElementTypeT
 // Parse and validate a source reference from the data set definition.
 auto ReadSourceRef(TokenReaderT *tr, SourceRefT *src) -> int
 {
-    uint line, col;
+    uint line;
+    uint col;
     double fpVal;
     int intVal;
 
@@ -1647,7 +1667,8 @@ auto ReadSourceRef(TokenReaderT *tr, SourceRefT *src) -> int
 // Parse and validate a SOFA source reference from the data set definition.
 auto ReadSofaRef(TokenReaderT *tr, SourceRefT *src) -> int
 {
-    uint line, col;
+    uint line;
+    uint col;
     int intVal;
 
     TrIndication(tr, &line, &col);
@@ -1734,7 +1755,11 @@ auto ProcessSources(TokenReaderT *tr, HrirDataT *hData, const uint outRate) -> i
     hData->mHrirsBase.resize(size_t{channels} * hData->mIrCount * hData->mIrSize);
     const auto hrirs = std::span<double>{hData->mHrirsBase};
     auto hrir = std::vector<double>(hData->mIrSize);
-    uint line, col, fi, ei, ai;
+    uint line;
+    uint col;
+    uint fi;
+    uint ei;
+    uint ai;
 
     std::vector<double> onsetSamples(size_t{OnsetRateMultiple} * hData->mIrPoints);
     PPhaseResampler onsetResampler;

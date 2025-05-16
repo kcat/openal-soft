@@ -439,15 +439,12 @@ void BalanceFieldMagnitudes(const HrirDataT *hData, const uint channels, const u
  */
 void CalculateDfWeights(const HrirDataT *hData, const std::span<double> weights)
 {
-    double sum, innerRa, outerRa, evs, ev, upperEv, lowerEv;
-    double solidAngle, solidVolume;
-    uint fi, ei;
-
-    sum = 0.0;
+    auto sum = 0.0;
     // The head radius acts as the limit for the inner radius.
-    innerRa = hData->mRadius;
-    for(fi = 0;fi < hData->mFds.size();fi++)
+    auto innerRa = hData->mRadius;
+    for(auto fi = 0u;fi < hData->mFds.size();++fi)
     {
+        auto outerRa = 10.0;
         // Each volume ends half way between progressive field measurements.
         if((fi + 1) < hData->mFds.size())
             outerRa = 0.5f * (hData->mFds[fi].mDistance + hData->mFds[fi + 1].mDistance);
@@ -457,19 +454,19 @@ void CalculateDfWeights(const HrirDataT *hData, const std::span<double> weights)
             outerRa = 10.0f;
 
         const double raPowDiff{std::pow(outerRa, 3.0) - std::pow(innerRa, 3.0)};
-        evs = std::numbers::pi / 2.0 / static_cast<double>(hData->mFds[fi].mEvs.size() - 1);
-        for(ei = hData->mFds[fi].mEvStart;ei < hData->mFds[fi].mEvs.size();ei++)
+        const auto evs = std::numbers::pi/2.0/static_cast<double>(hData->mFds[fi].mEvs.size() - 1);
+        for(auto ei = hData->mFds[fi].mEvStart;ei < hData->mFds[fi].mEvs.size();++ei)
         {
             const auto &elev = hData->mFds[fi].mEvs[ei];
             // For each elevation, calculate the upper and lower limits of
             // the patch band.
-            ev = elev.mElevation;
-            lowerEv = std::max(-std::numbers::pi / 2.0, ev - evs);
-            upperEv = std::min(std::numbers::pi / 2.0, ev + evs);
+            auto ev = elev.mElevation;
+            auto lowerEv = std::max(-std::numbers::pi / 2.0, ev - evs);
+            auto upperEv = std::min(std::numbers::pi / 2.0, ev + evs);
             // Calculate the surface area of the patch band.
-            solidAngle = 2.0 * std::numbers::pi * (std::sin(upperEv) - std::sin(lowerEv));
+            auto solidAngle = 2.0 * std::numbers::pi * (std::sin(upperEv) - std::sin(lowerEv));
             // Then the volume of the extruded patch band.
-            solidVolume = solidAngle * raPowDiff / 3.0;
+            auto solidVolume = solidAngle * raPowDiff / 3.0;
             // Each weight is the volume of one extruded patch.
             weights[(fi*MAX_EV_COUNT) + ei] = solidVolume / static_cast<double>(elev.mAzs.size());
             // Sum the total coverage volume of the HRIRs for all fields.
@@ -479,11 +476,11 @@ void CalculateDfWeights(const HrirDataT *hData, const std::span<double> weights)
         innerRa = outerRa;
     }
 
-    for(fi = 0;fi < hData->mFds.size();fi++)
+    for(auto fi = 0u;fi < hData->mFds.size();++fi)
     {
         // Normalize the weights given the total surface coverage for all
         // fields.
-        for(ei = hData->mFds[fi].mEvStart;ei < hData->mFds[fi].mEvs.size();ei++)
+        for(auto ei = hData->mFds[fi].mEvStart;ei < hData->mFds[fi].mEvs.size();++ei)
             weights[(fi * MAX_EV_COUNT) + ei] /= sum;
     }
 }
@@ -624,7 +621,8 @@ void SynthesizeOnsets(HrirDataT *hData)
 
                 for(uint ai{0u};ai < field.mEvs[ei].mAzs.size();ai++)
                 {
-                    uint a0, a1;
+                    uint a0;
+                    uint a1;
                     double af;
 
                     /* Rotate this current azimuth by a half-circle, and lookup
@@ -653,7 +651,8 @@ void SynthesizeOnsets(HrirDataT *hData)
 
                 for(uint ai{0u};ai < field.mEvs[ei].mAzs.size();ai++)
                 {
-                    uint a0, a1;
+                    uint a0;
+                    uint a1;
                     double af;
 
                     /* For mono data sets, mirror the azimuth front<->back
@@ -686,8 +685,12 @@ void SynthesizeOnsets(HrirDataT *hData)
 
             for(uint ai{0u};ai < field.mEvs[ei].mAzs.size();ai++)
             {
-                uint a0, a1, a2, a3;
-                double af0, af1;
+                uint a0;
+                uint a1;
+                uint a2;
+                uint a3;
+                double af0;
+                double af1;
 
                 double az{field.mEvs[ei].mAzs[ai].mAzimuth};
                 CalcAzIndices(field.mEvs[upperElevReal], az, &a0, &a1, &af0);
@@ -733,7 +736,8 @@ void SynthesizeHrirs(HrirDataT *hData)
 
         for(uint ti{0u};ti < channels;ti++)
         {
-            uint a0, a1;
+            uint a0;
+            uint a1;
             double af;
 
             /* Use the lowest immediate-left response for the left ear and
@@ -779,7 +783,8 @@ void SynthesizeHrirs(HrirDataT *hData)
 
             for(uint ai{0u};ai < field.mEvs[ei].mAzs.size();ai++)
             {
-                uint a0, a1;
+                uint a0;
+                uint a1;
                 double af;
 
                 CalcAzIndices(field.mEvs[oi], field.mEvs[ei].mAzs[ai].mAzimuth, &a0, &a1, &af);
@@ -991,12 +996,10 @@ void NormalizeHrirs(HrirDataT *hData)
 // Calculate the left-ear time delay using a spherical head model.
 double CalcLTD(const double ev, const double az, const double rad, const double dist)
 {
-    double azp, dlp, l, al;
-
-    azp = std::asin(std::cos(ev) * std::sin(az));
-    dlp = std::sqrt((dist*dist) + (rad*rad) + (2.0*dist*rad*sin(azp)));
-    l = std::sqrt((dist*dist) - (rad*rad));
-    al = (0.5 * std::numbers::pi) + azp;
+    auto azp = std::asin(std::cos(ev) * std::sin(az));
+    auto dlp = std::sqrt((dist*dist) + (rad*rad) + (2.0*dist*rad*sin(azp)));
+    auto l = std::sqrt((dist*dist) - (rad*rad));
+    auto al = (0.5 * std::numbers::pi) + azp;
     if(dlp > l)
         dlp = l + (rad * (al - std::acos(rad / dist)));
     return dlp / 343.3;
@@ -1089,7 +1092,8 @@ bool PrepareHrirData(const std::span<const double> distances,
     const std::span<const uint,MAX_FD_COUNT> evCounts,
     const std::span<const std::array<uint,MAX_EV_COUNT>,MAX_FD_COUNT> azCounts, HrirDataT *hData)
 {
-    uint evTotal{0}, azTotal{0};
+    auto evTotal = 0u;
+    auto azTotal = 0u;
 
     for(size_t fi{0};fi < distances.size();++fi)
     {

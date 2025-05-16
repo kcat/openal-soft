@@ -530,7 +530,7 @@ try {
     {
         const auto logSpan = std::span{logBuf, static_cast<ALuint>(logBufSize)};
         /* C++23...
-        std::ranges::for_each(logrange | std::views::transform(&DebugLogEntry::mMessage)
+        std::ranges::copy(logrange | std::views::transform(&DebugLogEntry::mMessage)
             | std::views::join_with('\0'), logSpan.begin());
         */
         auto logiter = logSpan.begin();

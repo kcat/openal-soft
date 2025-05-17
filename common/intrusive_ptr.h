@@ -106,8 +106,10 @@ public:
     constexpr auto release() noexcept -> T* { return std::exchange(mPtr, nullptr); }
 
     constexpr void swap(intrusive_ptr &rhs) noexcept { std::swap(mPtr, rhs.mPtr); }
-    constexpr void swap(intrusive_ptr&& rhs) noexcept { std::swap(mPtr, rhs.mPtr); }
 };
+
+template<typename T>
+void swap(intrusive_ptr<T> &lhs, intrusive_ptr<T> &rhs) noexcept { lhs.swap(rhs); }
 
 } // namespace al
 

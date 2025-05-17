@@ -43,7 +43,7 @@ public:
     atomic_unique_ptr(const atomic_unique_ptr&) = delete;
     explicit atomic_unique_ptr(std::nullptr_t) noexcept { }
     explicit atomic_unique_ptr(gsl::owner<T*> ptr) noexcept : mPointer{ptr} { }
-    explicit atomic_unique_ptr(unique_ptr_t&& rhs) noexcept : mPointer{rhs.release()} { }
+    explicit atomic_unique_ptr(unique_ptr_t&& rhs) noexcept : mPointer{std::move(rhs).release()} {}
     ~atomic_unique_ptr()
     {
         if(auto ptr = mPointer.exchange(nullptr, std::memory_order_relaxed))
@@ -59,7 +59,7 @@ public:
     }
     auto operator=(unique_ptr_t&& rhs) noexcept -> atomic_unique_ptr&
     {
-        if(auto ptr = mPointer.exchange(rhs.release()))
+        if(auto ptr = mPointer.exchange(std::move(rhs).release()))
             D{}(ptr);
         return *this;
     }
@@ -79,19 +79,24 @@ public:
     }
     void store(unique_ptr_t&& ptr, std::memory_order m=std::memory_order_seq_cst) noexcept
     {
-        if(auto oldptr = mPointer.exchange(ptr.release(), m))
+        if(auto oldptr = mPointer.exchange(std::move(ptr).release(), m))
             D{}(oldptr);
     }
 
     [[nodiscard]]
-    auto exchange(std::nullptr_t, std::memory_order m=std::memory_order_seq_cst) noexcept -> unique_ptr_t
+    auto exchange(std::nullptr_t, std::memory_order m=std::memory_order_seq_cst) noexcept
+        -> unique_ptr_t
     { return unique_ptr_t{mPointer.exchange(nullptr, m)}; }
+
     [[nodiscard]]
-    auto exchange(gsl::owner<T*> ptr, std::memory_order m=std::memory_order_seq_cst) noexcept -> unique_ptr_t
+    auto exchange(gsl::owner<T*> ptr, std::memory_order m=std::memory_order_seq_cst) noexcept
+        -> unique_ptr_t
     { return unique_ptr_t{mPointer.exchange(ptr, m)}; }
+
     [[nodiscard]]
-    auto exchange(std::unique_ptr<T>&& ptr, std::memory_order m=std::memory_order_seq_cst) noexcept -> unique_ptr_t
-    { return unique_ptr_t{mPointer.exchange(ptr.release(), m)}; }
+    auto exchange(std::unique_ptr<T>&& ptr, std::memory_order m=std::memory_order_seq_cst) noexcept
+        -> unique_ptr_t
+    { return unique_ptr_t{mPointer.exchange(std::move(ptr).release(), m)}; }
 
     [[nodiscard]]
     auto is_lock_free() const noexcept -> bool { return mPointer.is_lock_free(); }

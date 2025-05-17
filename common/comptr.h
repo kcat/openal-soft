@@ -101,11 +101,13 @@ struct ComPtr {
     T* release() noexcept { return std::exchange(mPtr, nullptr); }
 
     void swap(ComPtr &rhs) noexcept { std::swap(mPtr, rhs.mPtr); }
-    void swap(ComPtr&& rhs) noexcept { std::swap(mPtr, rhs.mPtr); }
 
 private:
     T *mPtr{nullptr};
 };
+
+template<typename T>
+void swap(ComPtr<T> &lhs, ComPtr<T> &rhs) noexcept { lhs.swap(rhs); }
 #endif /* _WIN32 */
 
 #endif

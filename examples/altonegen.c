@@ -184,7 +184,8 @@ int main(int argc, char *argv[])
 {
     enum WaveType wavetype = WT_Sine;
     const char *appname = argv[0];
-    ALuint source, buffer;
+    ALuint source;
+    ALuint buffer;
     ALint last_pos;
     ALuint seconds = 4;
     ALint srate = -1;
@@ -192,7 +193,9 @@ int main(int argc, char *argv[])
     ALCint dev_rate;
     ALenum state;
     ALfloat gain = 1.0f;
-    ALfloat source_x = 0.0f, source_y = 0.0f, source_z = 0.0f;
+    ALfloat source_x = 0.0f;
+    ALfloat source_y = 0.0f;
+    ALfloat source_z = 0.0f;
     int i;
 
     argv++; argc--;

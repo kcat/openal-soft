@@ -56,7 +56,8 @@ static ALuint LoadSound(const char *filename)
     ALint byteblockalign = 0;
     ALint splblockalign = 0;
     sf_count_t num_frames;
-    ALenum err, format;
+    ALenum err;
+    ALenum format;
     ALsizei num_bytes;
     SNDFILE *sndfile;
     SF_INFO sfinfo;
@@ -284,7 +285,8 @@ static ALuint LoadSound(const char *filename)
 
 int main(int argc, char **argv)
 {
-    ALuint source, buffer;
+    ALuint source;
+    ALuint buffer;
     ALfloat offset;
     ALenum state;
 

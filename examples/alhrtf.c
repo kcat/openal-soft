@@ -55,7 +55,8 @@ static LPALCRESETDEVICESOFT alcResetDeviceSOFT;
  */
 static ALuint LoadSound(const char *filename)
 {
-    ALenum err, format;
+    ALenum err;
+    ALenum format;
     ALuint buffer;
     SNDFILE *sndfile;
     SF_INFO sfinfo;
@@ -142,7 +143,8 @@ int main(int argc, char **argv)
     ALCdevice *device;
     ALCcontext *context;
     ALboolean has_angle_ext;
-    ALuint source, buffer;
+    ALuint source;
+    ALuint buffer;
     const char *soundname;
     const char *hrtfname;
     ALCint hrtf_state;

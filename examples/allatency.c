@@ -58,7 +58,8 @@ static LPALGETSOURCEI64VSOFT alGetSourcei64vSOFT;
  */
 static ALuint LoadSound(const char *filename)
 {
-    ALenum err, format;
+    ALenum err;
+    ALenum format;
     ALuint buffer;
     SNDFILE *sndfile;
     SF_INFO sfinfo;
@@ -142,7 +143,8 @@ static ALuint LoadSound(const char *filename)
 
 int main(int argc, char **argv)
 {
-    ALuint source, buffer;
+    ALuint source;
+    ALuint buffer;
     ALdouble offsets[2];
     ALenum state;
 

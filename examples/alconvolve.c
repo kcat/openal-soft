@@ -227,7 +227,8 @@ static int StartPlayer(StreamPlayer *player)
 
 static int UpdatePlayer(StreamPlayer *player)
 {
-    ALint processed, state;
+    ALint processed;
+    ALint state;
 
     alGetSourcei(player->source, AL_SOURCE_STATE, &state);
     alGetSourcei(player->source, AL_BUFFERS_PROCESSED, &processed);
@@ -313,7 +314,8 @@ static ALuint CreateEffect(void)
 static ALuint LoadSound(const char *filename)
 {
     const char *namepart;
-    ALenum err, format;
+    ALenum err;
+    ALenum format;
     ALuint buffer;
     SNDFILE *sndfile;
     SF_INFO sfinfo;
@@ -409,8 +411,11 @@ static ALuint LoadSound(const char *filename)
 
 int main(int argc, char **argv)
 {
-    ALuint ir_buffer, filter, effect, slot;
     StreamPlayer *player;
+    ALuint ir_buffer;
+    ALuint filter;
+    ALuint effect;
+    ALuint slot;
     int i;
 
     /* Print out usage if no arguments were specified */

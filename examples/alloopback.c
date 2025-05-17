@@ -150,7 +150,8 @@ int main(int argc, char *argv[])
     PlaybackInfo playback = { NULL, NULL, 0, NULL, 0 };
     SDL_AudioStream *stream = NULL;
     SDL_AudioSpec obtained;
-    ALuint source, buffer;
+    ALuint source;
+    ALuint buffer;
     ALCint attrs[16];
     ALenum state;
     (void)argc;

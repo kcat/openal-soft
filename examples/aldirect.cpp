@@ -152,7 +152,8 @@ ALuint LoadSound(ALCcontext *context, const std::string_view filename)
         break;
     }
 
-    ALint byteblockalign{0}, splblockalign{0};
+    auto byteblockalign = 0;
+    auto splblockalign = 0;
     if(sample_format == FormatType::IMA4 || sample_format == FormatType::MSADPCM)
     {
         /* For ADPCM, lookup the wave file's "fmt " chunk, which is a

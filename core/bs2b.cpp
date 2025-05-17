@@ -25,8 +25,10 @@
 
 #include <algorithm>
 #include <cmath>
+#include <functional>
 #include <iterator>
 #include <numbers>
+#include <ranges>
 #include <span>
 #include <stdexcept>
 
@@ -37,68 +39,43 @@ namespace {
 /* Set up all data. */
 void init(Bs2b::bs2b *bs2b)
 {
-    float Fc_lo, Fc_hi;
-    float G_lo, G_hi;
-
-    switch(bs2b->level)
+    const auto [Fc_lo, Fc_hi, G_lo, G_hi] = std::invoke([bs2b]
     {
-    case Bs2b::LowCLevel: /* Low crossfeed level */
-        Fc_lo = 360.0f;
-        Fc_hi = 501.0f;
-        G_lo  = 0.398107170553497f;
-        G_hi  = 0.205671765275719f;
-        break;
+        switch(bs2b->level)
+        {
+        case Bs2b::LowCLevel: /* Low crossfeed level */
+            return std::array{360.0f,  501.0f, 0.398107170553497f, 0.205671765275719f};
 
-    case Bs2b::MiddleCLevel: /* Middle crossfeed level */
-        Fc_lo = 500.0f;
-        Fc_hi = 711.0f;
-        G_lo  = 0.459726988530872f;
-        G_hi  = 0.228208484414988f;
-        break;
+        case Bs2b::MiddleCLevel: /* Middle crossfeed level */
+            return std::array{500.0f,  711.0f, 0.459726988530872f, 0.228208484414988f};
 
-    case Bs2b::HighCLevel: /* High crossfeed level (virtual speakers are closer to itself) */
-        Fc_lo = 700.0f;
-        Fc_hi = 1021.0f;
-        G_lo  = 0.530884444230988f;
-        G_hi  = 0.250105790667544f;
-        break;
+        case Bs2b::HighCLevel: /* High crossfeed level (virtual speakers are closer to itself) */
+            return std::array{700.0f, 1021.0f, 0.530884444230988f, 0.250105790667544f};
 
-    case Bs2b::LowECLevel: /* Low easy crossfeed level */
-        Fc_lo = 360.0f;
-        Fc_hi = 494.0f;
-        G_lo  = 0.316227766016838f;
-        G_hi  = 0.168236228897329f;
-        break;
+        case Bs2b::LowECLevel: /* Low easy crossfeed level */
+            return std::array{360.0f,  494.0f, 0.316227766016838f, 0.168236228897329f};
 
-    case Bs2b::MiddleECLevel: /* Middle easy crossfeed level */
-        Fc_lo = 500.0f;
-        Fc_hi = 689.0f;
-        G_lo  = 0.354813389233575f;
-        G_hi  = 0.187169483835901f;
-        break;
+        case Bs2b::MiddleECLevel: /* Middle easy crossfeed level */
+            return std::array{500.0f,  689.0f, 0.354813389233575f, 0.187169483835901f};
 
-    case Bs2b::HighECLevel: /* High easy crossfeed level */
-    default:
-        bs2b->level = Bs2b::HighECLevel;
+        case Bs2b::HighECLevel: /* High easy crossfeed level */
+        default:
+            bs2b->level = Bs2b::HighECLevel;
+            return std::array{700.0f,  975.0f, 0.398107170553497f, 0.205671765275719f};
+        }
+    });
 
-        Fc_lo = 700.0f;
-        Fc_hi = 975.0f;
-        G_lo  = 0.398107170553497f;
-        G_hi  = 0.205671765275719f;
-        break;
-    }
-
-    float g{1.0f / (1.0f - G_hi + G_lo)};
+    const auto g = 1.0f / (1.0f - G_hi + G_lo);
 
     /* $fc = $Fc / $s;
      * $d  = 1 / 2 / pi / $fc;
      * $x  = exp(-1 / $d);
      */
-    float x{      std::exp(-std::numbers::pi_v<float>*2.0f*Fc_lo/static_cast<float>(bs2b->srate))};
+    auto x = std::exp(-std::numbers::pi_v<float>*2.0f*Fc_lo/static_cast<float>(bs2b->srate));
     bs2b->b1_lo = x;
     bs2b->a0_lo = G_lo * (1.0f - x) * g;
 
-    x           = std::exp(-std::numbers::pi_v<float>*2.0f*Fc_hi/static_cast<float>(bs2b->srate));
+    x = std::exp(-std::numbers::pi_v<float>*2.0f*Fc_hi/static_cast<float>(bs2b->srate));
     bs2b->b1_hi = x;
     bs2b->a0_hi = (1.0f - G_hi * (1.0f - x)) * g;
     bs2b->a1_hi = -x * g;
@@ -141,46 +118,45 @@ void bs2b::cross_feed(const std::span<float> Left, const std::span<float> Right)
     auto rightio = rsamples.begin();
     while(auto rem = std::distance(leftio, lsamples.end()))
     {
-        const auto todo = std::min<ptrdiff_t>(samples.size(), rem);
+        const auto todo = std::min<ptrdiff_t>(std::ssize(samples), rem);
 
         /* Process left input */
         auto z_lo = history[0].lo;
         auto z_hi = history[0].hi;
-        std::transform(leftio, leftio+todo, samples.begin(),
+        std::ranges::transform(std::views::counted(leftio, todo), samples.begin(),
             [a0hi,a1hi,b1hi,a0lo,b1lo,&z_lo,&z_hi](const float x) noexcept
-            {
-                const auto y0 = a0hi*x + z_hi;
-                z_hi = a1hi*x + b1hi*y0;
+        {
+            const auto y0 = a0hi*x + z_hi;
+            z_hi = a1hi*x + b1hi*y0;
 
-                const auto y1 = a0lo*x + z_lo;
-                z_lo = b1lo*y1;
+            const auto y1 = a0lo*x + z_lo;
+            z_lo = b1lo*y1;
 
-                return std::array{y0, y1};
-            });
+            return std::array{y0, y1};
+        });
         history[0].lo = z_lo;
         history[0].hi = z_hi;
 
         /* Process right input */
         z_lo = history[1].lo;
         z_hi = history[1].hi;
-        std::transform(rightio, rightio+todo, samples.cbegin(), samples.begin(),
-            [a0hi,a1hi,b1hi,a0lo,b1lo,&z_lo,&z_hi](const float x, const std::array<float,2> &out) noexcept
-            {
-                const auto y0 = a0lo*x + z_lo;
-                z_lo = b1lo*y0;
+        std::ranges::transform(std::views::counted(rightio, todo), samples, samples.begin(),
+            [a0hi,a1hi,b1hi,a0lo,b1lo,&z_lo,&z_hi](const float x, const std::span<float,2> cur)
+        {
+            const auto y0 = a0lo*x + z_lo;
+            z_lo = b1lo*y0;
 
-                const auto y1 = a0hi*x + z_hi;
-                z_hi = a1hi*x + b1hi*y1;
+            const auto y1 = a0hi*x + z_hi;
+            z_hi = a1hi*x + b1hi*y1;
 
-                return std::array{out[0]+y0, out[1]+y1};
-            });
+            return std::array{cur[0]+y0, cur[1]+y1};
+        });
         history[1].lo = z_lo;
         history[1].hi = z_hi;
 
-        leftio = std::transform(samples.cbegin(), samples.cbegin()+todo, leftio,
-            [](const std::array<float,2> &in) { return in[0]; });
-        rightio = std::transform(samples.cbegin(), samples.cbegin()+todo, rightio,
-            [](const std::array<float,2> &in) { return in[1]; });
+        const auto samples_todo = samples | std::views::take(todo);
+        leftio = std::ranges::copy(samples_todo | std::views::elements<0>, leftio).out;
+        rightio = std::ranges::copy(samples_todo | std::views::elements<1>, rightio).out;
     }
 }
 

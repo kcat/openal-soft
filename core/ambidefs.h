@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <numbers>
 
+#include "opthelpers.h"
 
 using uint = unsigned int;
 
@@ -47,15 +48,15 @@ inline constexpr auto MaxAmbi2DChannels = Ambi2DChannelsFromOrder(MaxAmbiOrder);
 /* NOTE: These are scale factors as applied to Ambisonics content. Decoder
  * coefficients should be divided by these values to get proper scalings.
  */
-struct AmbiScale {
-    static constexpr auto FromN3D = std::array{
+namespace AmbiScale {
+    constexpr inline auto FromN3D = std::array{
         1.0f,
         1.0f, 1.0f, 1.0f,
         1.0f, 1.0f, 1.0f, 1.0f, 1.0f,
         1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f,
         1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f,
     };
-    static constexpr auto FromSN3D = std::array{
+    constexpr inline auto FromSN3D = std::array{
         1.000000000f, /* ACN  0, sqrt(1) */
         1.732050808f, /* ACN  1, sqrt(3) */
         1.732050808f, /* ACN  2, sqrt(3) */
@@ -82,7 +83,7 @@ struct AmbiScale {
         3.000000000f, /* ACN 23, sqrt(9) */
         3.000000000f, /* ACN 24, sqrt(9) */
     };
-    static constexpr auto FromFuMa = std::array{
+    constexpr inline auto FromFuMa = std::array{
         1.414213562f, /* ACN  0 (W), sqrt(2) */
         1.732050808f, /* ACN  1 (Y), sqrt(3) */
         1.732050808f, /* ACN  2 (Z), sqrt(3) */
@@ -125,7 +126,7 @@ struct AmbiScale {
         1.0f, /* 2.037849855f, ACN 23, sqrt(8505/2048) */
         1.0f, /* 2.218529919f, ACN 24, sqrt(315)/8 */
     };
-    static constexpr auto FromUHJ = std::array{
+    constexpr inline auto FromUHJ = std::array{
         1.000000000f, /* ACN  0 (W), sqrt(1) */
         1.224744871f, /* ACN  1 (Y), sqrt(3/2) */
         1.224744871f, /* ACN  2 (Z), sqrt(3/2) */
@@ -136,21 +137,23 @@ struct AmbiScale {
         1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f,
     };
 
+    template<size_t N>
+    using UpsamplerArrays = std::array<std::array<float,MaxAmbiChannels>,N>;
+    DECL_HIDDEN extern constinit const UpsamplerArrays<4> FirstOrderUp;
+    DECL_HIDDEN extern constinit const UpsamplerArrays<4> FirstOrder2DUp;
+    DECL_HIDDEN extern constinit const UpsamplerArrays<9> SecondOrderUp;
+    DECL_HIDDEN extern constinit const UpsamplerArrays<9> SecondOrder2DUp;
+    DECL_HIDDEN extern constinit const UpsamplerArrays<16> ThirdOrderUp;
+    DECL_HIDDEN extern constinit const UpsamplerArrays<16> ThirdOrder2DUp;
+    DECL_HIDDEN extern constinit const UpsamplerArrays<25> FourthOrder2DUp;
+
     /* Retrieves per-order HF scaling factors for "upsampling" ambisonic data. */
-    static std::array<float,MaxAmbiOrder+1> GetHFOrderScales(const uint src_order,
-        const uint dev_order, const bool horizontalOnly) noexcept;
+    auto GetHFOrderScales(const uint src_order, const uint dev_order, const bool horizontalOnly)
+        noexcept -> std::array<float,MaxAmbiOrder+1>;
+} /* namespace AmbiScale */
 
-    static constinit const std::array<std::array<float,MaxAmbiChannels>,4> FirstOrderUp;
-    static constinit const std::array<std::array<float,MaxAmbiChannels>,4> FirstOrder2DUp;
-    static constinit const std::array<std::array<float,MaxAmbiChannels>,9> SecondOrderUp;
-    static constinit const std::array<std::array<float,MaxAmbiChannels>,9> SecondOrder2DUp;
-    static constinit const std::array<std::array<float,MaxAmbiChannels>,16> ThirdOrderUp;
-    static constinit const std::array<std::array<float,MaxAmbiChannels>,16> ThirdOrder2DUp;
-    static constinit const std::array<std::array<float,MaxAmbiChannels>,25> FourthOrder2DUp;
-};
-
-struct AmbiIndex {
-    static constexpr auto FromFuMa = std::array{
+namespace AmbiIndex {
+    constexpr inline auto FromFuMa = std::array{
         uint8_t{0},  /* W */
         uint8_t{3},  /* X */
         uint8_t{1},  /* Y */
@@ -173,7 +176,7 @@ struct AmbiIndex {
          */
         uint8_t{0}, uint8_t{0}, uint8_t{0}, uint8_t{0}, uint8_t{0}, uint8_t{0}, uint8_t{0}, uint8_t{0}, uint8_t{0},
     };
-    static constexpr auto FromFuMa2D = std::array{
+    constexpr inline auto FromFuMa2D = std::array{
         uint8_t{0},  /* W */
         uint8_t{3},  /* X */
         uint8_t{1},  /* Y */
@@ -187,25 +190,25 @@ struct AmbiIndex {
         uint8_t{0}, uint8_t{0},
     };
 
-    static constexpr auto FromACN = std::array<std::uint8_t,MaxAmbiChannels>{
+    constexpr inline auto FromACN = std::array<std::uint8_t,MaxAmbiChannels>{
         0,
         1, 2, 3,
         4, 5, 6, 7, 8,
         9, 10, 11, 12, 13, 14, 15,
         16, 17, 18, 19, 20, 21, 22, 23, 24,
     };
-    static constexpr auto FromACN2D = std::array<std::uint8_t,MaxAmbi2DChannels>{
+    constexpr inline auto FromACN2D = std::array<std::uint8_t,MaxAmbi2DChannels>{
         0, 1,3, 4,8, 9,15, 16,24,
     };
 
 
-    static constexpr auto OrderFromChannel = std::array<std::uint8_t,MaxAmbiChannels>{
+    constexpr inline auto OrderFromChannel = std::array<std::uint8_t,MaxAmbiChannels>{
         0, 1,1,1, 2,2,2,2,2, 3,3,3,3,3,3,3, 4,4,4,4,4,4,4,4,4,
     };
-    static constexpr auto OrderFrom2DChannel = std::array<std::uint8_t,MaxAmbi2DChannels>{
+    constexpr inline auto OrderFrom2DChannel = std::array<std::uint8_t,MaxAmbi2DChannels>{
         0, 1,1, 2,2, 3,3, 4,4,
     };
-};
+} /* namespace AmbiIndex */
 
 
 /**
@@ -222,9 +225,18 @@ struct AmbiIndex {
  * second, and third parameters respectively -- simply negate X and Z.
  */
 constexpr auto CalcAmbiCoeffs(const float y, const float z, const float x)
+    -> std::array<float,MaxAmbiChannels>
 {
-    const float xx{x*x}, yy{y*y}, zz{z*z}, xy{x*y}, yz{y*z}, xz{x*z};
-    const float xxxx{xx*xx}, yyyy{yy*yy}, xxyy{xx*yy}, zzzz{zz*zz};
+    const auto xx = x*x;
+    const auto yy = y*y;
+    const auto zz = z*z;
+    const auto xy = x*y;
+    const auto yz = y*z;
+    const auto xz = x*z;
+    const auto xxxx = xx*xx;
+    const auto yyyy = yy*yy;
+    const auto xxyy = xx*yy;
+    const auto zzzz = zz*zz;
 
     return std::array<float,MaxAmbiChannels>{{
         /* Zeroth-order */

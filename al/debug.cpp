@@ -206,19 +206,19 @@ void ALCcontext::sendDebugMessage(std::unique_lock<std::mutex> &debuglock, Debug
         return;
     }
 
-    DebugGroup &debug = mDebugGroups.back();
+    auto &debug = mDebugGroups.back();
 
-    const uint64_t idfilter{(1_u64 << (DebugSourceBase+al::to_underlying(source)))
+    const auto idfilter = (1_u64 << (DebugSourceBase+al::to_underlying(source)))
         | (1_u64 << (DebugTypeBase+al::to_underlying(type)))
-        | (uint64_t{id} << 32)};
-    auto iditer = std::lower_bound(debug.mIdFilters.cbegin(), debug.mIdFilters.cend(), idfilter);
+        | (uint64_t{id} << 32);
+    const auto iditer = std::ranges::lower_bound(debug.mIdFilters, idfilter);
     if(iditer != debug.mIdFilters.cend() && *iditer == idfilter)
         return;
 
-    const uint filter{(1u << (DebugSourceBase+al::to_underlying(source)))
+    const auto filter = (1u << (DebugSourceBase+al::to_underlying(source)))
         | (1u << (DebugTypeBase+al::to_underlying(type)))
-        | (1u << (DebugSeverityBase+al::to_underlying(severity)))};
-    auto iter = std::lower_bound(debug.mFilters.cbegin(), debug.mFilters.cend(), filter);
+        | (1u << (DebugSeverityBase+al::to_underlying(severity)));
+    const auto iter = std::ranges::lower_bound(debug.mFilters, filter);
     if(iter != debug.mFilters.cend() && *iter == filter)
         return;
 
@@ -252,7 +252,7 @@ FORCE_ALIGN DECL_FUNCEXT2(void, alDebugMessageCallback,EXT, ALDEBUGPROCEXT,callb
 FORCE_ALIGN void AL_APIENTRY alDebugMessageCallbackDirectEXT(ALCcontext *context,
     ALDEBUGPROCEXT callback, void *userParam) noexcept
 {
-    std::lock_guard<std::mutex> debuglock{context->mDebugCbLock};
+    auto debuglock = std::lock_guard{context->mDebugCbLock};
     context->mDebugCb = callback;
     context->mDebugParam = userParam;
 }
@@ -321,7 +321,7 @@ try {
     if(enable != AL_TRUE && enable != AL_FALSE)
         context->throw_error(AL_INVALID_ENUM, "Invalid debug enable {}", enable);
 
-    static constexpr size_t ElemCount{DebugSourceCount + DebugTypeCount + DebugSeverityCount};
+    static constexpr auto ElemCount = DebugSourceCount + DebugTypeCount + DebugSeverityCount;
     static constexpr auto Values = make_array_sequence<uint8_t,ElemCount>();
 
     auto srcIdxs = std::span{Values}.subspan(DebugSourceBase,DebugSourceCount);
@@ -359,7 +359,7 @@ try {
     {
         const auto filterbase = (1u<<srcIdxs[0]) | (1u<<typeIdxs[0]);
 
-        std::ranges::for_each(std::span{ids, static_cast<uint>(count)},
+        std::ranges::for_each(std::views::counted(ids, count),
             [enable,filterbase,&debug](const uint id)
         {
             const auto filter = uint64_t{filterbase} | (uint64_t{id} << 32);
@@ -373,6 +373,9 @@ try {
     }
     else
     {
+        /* C++23 has std::views::cartesian(srcIdxs, typeIdxs, svrIdxs) for a
+         * range that gives all value combinations of the given ranges.
+         */
         std::ranges::for_each(srcIdxs, [enable,typeIdxs,svrIdxs,&debug](const uint srcidx)
         {
             const auto srcfilt = 1u<<srcidx;
@@ -381,7 +384,7 @@ try {
                 const auto srctype = srcfilt | (1u<<typeidx);
                 std::ranges::for_each(svrIdxs, [enable,srctype,&debug](const uint svridx)
                 {
-                    const uint filter = srctype | (1u<<svridx);
+                    const auto filter = srctype | (1u<<svridx);
                     auto iter = std::ranges::lower_bound(debug.mFilters, filter);
                     if(!enable && (iter == debug.mFilters.cend() || *iter != filter))
                         debug.mFilters.insert(iter, filter);
@@ -405,7 +408,7 @@ FORCE_ALIGN void AL_APIENTRY alPushDebugGroupDirectEXT(ALCcontext *context, ALen
 try {
     if(length < 0)
     {
-        size_t newlen{std::strlen(message)};
+        auto newlen = std::strlen(message);
         if(newlen >= MaxDebugMessageLength)
             context->throw_error(AL_INVALID_VALUE, "Debug message too long ({} >= {})", newlen,
                 MaxDebugMessageLength);
@@ -447,7 +450,7 @@ catch(std::exception &e) {
 FORCE_ALIGN DECL_FUNCEXT(void, alPopDebugGroup,EXT)
 FORCE_ALIGN void AL_APIENTRY alPopDebugGroupDirectEXT(ALCcontext *context) noexcept
 try {
-    std::unique_lock<std::mutex> debuglock{context->mDebugCbLock};
+    auto debuglock = std::unique_lock{context->mDebugCbLock};
     if(context->mDebugGroups.size() <= 1)
         context->throw_error(AL_STACK_UNDERFLOW_EXT, "Attempting to pop the default debug group");
 

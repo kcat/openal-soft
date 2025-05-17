@@ -100,7 +100,7 @@ template<> struct ResamplerName<Resampler::FastBSinc48>
 template<> struct ResamplerName<Resampler::BSinc48>
 { static constexpr const ALchar *Get() noexcept { return "47th order Sinc"; } };
 
-const ALchar *GetResamplerName(const Resampler rtype)
+constexpr auto GetResamplerName(const Resampler rtype) -> const ALchar*
 {
 #define HANDLE_RESAMPLER(r) case r: return ResamplerName<r>::Get()
     switch(rtype)
@@ -147,7 +147,7 @@ constexpr auto ALenumFromDistanceModel(DistanceModel model) -> ALenum
     case DistanceModel::Exponent: return AL_EXPONENT_DISTANCE;
     case DistanceModel::ExponentClamped: return AL_EXPONENT_DISTANCE_CLAMPED;
     }
-    throw std::runtime_error{"Unexpected distance model "+std::to_string(static_cast<int>(model))};
+    throw std::runtime_error{fmt::format("Unexpected distance model {}", static_cast<int>(model))};
 }
 
 enum PropertyValue : ALenum {
@@ -370,7 +370,7 @@ FORCE_ALIGN void AL_APIENTRY alDisableDirect(ALCcontext *context, ALenum capabil
 AL_API DECL_FUNC1(ALboolean, alIsEnabled, ALenum,capability)
 FORCE_ALIGN ALboolean AL_APIENTRY alIsEnabledDirect(ALCcontext *context, ALenum capability) noexcept
 {
-    std::lock_guard<std::mutex> proplock{context->mPropLock};
+    auto proplock = std::lock_guard{context->mPropLock};
     switch(capability)
     {
     case AL_SOURCE_DISTANCE_MODEL: return context->mSourceDistanceModel ? AL_TRUE : AL_FALSE;
@@ -590,7 +590,7 @@ FORCE_ALIGN const ALchar* AL_APIENTRY alGetStringiDirectSOFT(ALCcontext *context
 
 AL_API void AL_APIENTRY alDopplerVelocity(ALfloat value) noexcept
 {
-    ContextRef context{GetContextRef()};
+    auto context = GetContextRef();
     if(!context) [[unlikely]] return;
 
     if(context->mContextFlags.test(ContextFlags::DebugBit)) [[unlikely]]
@@ -613,7 +613,7 @@ AL_API void AL_APIENTRY alDopplerVelocity(ALfloat value) noexcept
 void UpdateContextProps(ALCcontext *context)
 {
     /* Get an unused property container, or allocate a new one as needed. */
-    ContextProps *props{context->mFreeContextProps.load(std::memory_order_acquire)};
+    auto *props = context->mFreeContextProps.load(std::memory_order_acquire);
     if(!props)
     {
         context->allocContextProps();

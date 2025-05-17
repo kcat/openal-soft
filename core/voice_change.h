@@ -23,5 +23,6 @@ struct VoiceChange {
 
     std::atomic<VoiceChange*> mNext{nullptr};
 };
+using LPVoiceChange = VoiceChange*;
 
 #endif /* VOICE_CHANGE_H */

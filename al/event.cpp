@@ -10,6 +10,7 @@
 #include <mutex>
 #include <new>
 #include <optional>
+#include <ranges>
 #include <span>
 #include <string>
 #include <string_view>
@@ -47,7 +48,7 @@ struct overloaded : Ts... { using Ts::operator()...; };
 template<typename... Ts>
 overloaded(Ts...) -> overloaded<Ts...>;
 
-int EventThread(ALCcontext *context)
+auto EventThread(ALCcontext *context) -> void
 {
     auto *ring = context->mAsyncEvents.get();
     auto quitnow = false;
@@ -134,10 +135,9 @@ int EventThread(ALCcontext *context)
         std::ranges::destroy(evt_span);
         ring->readAdvance(evt_span.size());
     }
-    return 0;
 }
 
-constexpr std::optional<AsyncEnableBits> GetEventType(ALenum etype) noexcept
+constexpr auto GetEventType(ALenum etype) noexcept -> std::optional<AsyncEnableBits>
 {
     switch(etype)
     {
@@ -198,8 +198,7 @@ try {
         context->throw_error(AL_INVALID_VALUE, "NULL pointer");
 
     auto flags = ContextBase::AsyncEventBitset{};
-    std::ranges::for_each(std::span{types, static_cast<uint>(count)},
-        [context,&flags](const ALenum evttype)
+    std::ranges::for_each(std::views::counted(types, count), [context,&flags](const ALenum evttype)
     {
         const auto etype = GetEventType(evttype);
         if(!etype)

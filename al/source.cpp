@@ -2529,7 +2529,8 @@ void StartSources(ALCcontext *const context, const std::span<ALsource*> srchandl
 
     auto voiceiter = voicelist.begin();
     auto vidx = 0u;
-    VoiceChange *tail{}, *cur{};
+    auto tail = LPVoiceChange{};
+    auto cur = LPVoiceChange{};
     std::ranges::for_each(srchandles, [&](ALsource *source)
     {
         /* Check that there is a queue containing at least one valid, non zero
@@ -3345,7 +3346,8 @@ try {
      * detected to be playing, change the voice (asynchronously) to
      * stopping/paused.
      */
-    VoiceChange *tail{}, *cur{};
+    auto tail = LPVoiceChange{};
+    auto cur = LPVoiceChange{};
     std::ranges::for_each(srchandles, [context,&tail,&cur](ALsource *source)
     {
         Voice *voice{GetSourceVoice(source, context)};
@@ -3415,7 +3417,8 @@ try {
         context->throw_error(AL_INVALID_NAME, "Invalid source ID {}", sid);
     });
 
-    VoiceChange *tail{}, *cur{};
+    auto tail = LPVoiceChange{};
+    auto cur = LPVoiceChange{};
     std::ranges::for_each(srchandles, [context,&tail,&cur](ALsource *source)
     {
         if(Voice *voice{GetSourceVoice(source, context)})
@@ -3476,10 +3479,11 @@ try {
         context->throw_error(AL_INVALID_NAME, "Invalid source ID {}", sid);
     });
 
-    VoiceChange *tail{}, *cur{};
+    auto tail = LPVoiceChange{};
+    auto cur = LPVoiceChange{};
     std::ranges::for_each(srchandles, [context,&tail,&cur](ALsource *source)
     {
-        Voice *voice{GetSourceVoice(source, context)};
+        auto *voice = GetSourceVoice(source, context);
         if(source->state != AL_INITIAL)
         {
             if(!cur)

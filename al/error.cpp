@@ -103,7 +103,7 @@ AL_API auto AL_APIENTRY alGetError() noexcept -> ALenum
         }
         return AL_INVALID_OPERATION;
     };
-    static const ALenum deferror{get_value("__ALSOFT_DEFAULT_ERROR", "default-error")};
+    static const auto deferror = get_value("__ALSOFT_DEFAULT_ERROR", "default-error");
 
     WARN("Querying error state on null context (implicitly {:#04x})", as_unsigned(deferror));
     if(TrapALError)
@@ -118,9 +118,9 @@ AL_API auto AL_APIENTRY alGetError() noexcept -> ALenum
     return deferror;
 }
 
-FORCE_ALIGN ALenum AL_APIENTRY alGetErrorDirect(ALCcontext *context) noexcept
+FORCE_ALIGN auto AL_APIENTRY alGetErrorDirect(ALCcontext *context) noexcept -> ALenum
 {
-    ALenum ret{context->mLastThreadError.get()};
+    auto ret = context->mLastThreadError.get();
     if(ret != AL_NO_ERROR) [[unlikely]]
         context->mLastThreadError.set(AL_NO_ERROR);
     return ret;

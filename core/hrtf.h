@@ -16,10 +16,11 @@
 #include "flexarray.h"
 #include "intrusive_ptr.h"
 #include "mixer/hrtfdefs.h"
+#include "opthelpers.h"
 
 
-struct alignas(16) HrtfStore {
-    std::atomic<uint> mRef;
+struct SIMDALIGN HrtfStore {
+    alignas(16) std::atomic<uint> mRef;
 
     uint mSampleRate : 24;
     uint mIrSize : 8;
@@ -47,8 +48,8 @@ struct alignas(16) HrtfStore {
     void inc_ref() noexcept;
     void dec_ref() noexcept;
 
-    void *operator new(size_t) = delete;
-    void *operator new[](size_t) = delete;
+    auto operator new(size_t) -> void* = delete;
+    auto operator new[](size_t) -> void* = delete;
     void operator delete[](void*) noexcept = delete;
 
     void operator delete(gsl::owner<void*> block, void*) noexcept
@@ -71,7 +72,7 @@ struct DirectHrtfState {
     std::array<float,BufferLineSize> mTemp{};
 
     /* HRTF filter state for dry buffer content */
-    uint mIrSize{0};
+    uint mIrSize{0u};
     al::FlexArray<HrtfChannelState> mChannels;
 
     explicit DirectHrtfState(size_t numchans) : mChannels{numchans} { }
@@ -86,13 +87,13 @@ struct DirectHrtfState {
         const std::span<const std::array<float,MaxAmbiChannels>> AmbiMatrix,
         const float XOverFreq, const std::span<const float,MaxAmbiOrder+1> AmbiOrderHFGain);
 
-    static std::unique_ptr<DirectHrtfState> Create(size_t num_chans);
+    static auto Create(size_t num_chans) -> std::unique_ptr<DirectHrtfState>;
 
     DEF_FAM_NEWDEL(DirectHrtfState, mChannels)
 };
 
 
-std::vector<std::string> EnumerateHrtf(std::optional<std::string> pathopt);
-HrtfStorePtr GetLoadedHrtf(const std::string_view name, const uint devrate);
+auto EnumerateHrtf(std::optional<std::string> pathopt) -> std::vector<std::string>;
+auto GetLoadedHrtf(const std::string_view name, const uint devrate) -> HrtfStorePtr;
 
 #endif /* CORE_HRTF_H */

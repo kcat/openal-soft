@@ -34,6 +34,7 @@
 #include <vector>
 
 #include "fmt/core.h"
+#include "fmt/ranges.h"
 #include "mysofa.h"
 
 
@@ -218,11 +219,8 @@ auto GetCompatibleLayout(const std::span<const float> xyzs) -> std::vector<SofaF
                 fmt::println("No usable elevations on field distance {:f}.", dist);
             else
             {
-                fmt::print("Non-uniform elevations on field distance {:.3f}.\nGot: {:+.2f}", dist,
-                    elevs[0]);
-                for(size_t ei{1u};ei < elevs.size();++ei)
-                    fmt::print(", {:+.2f}", elevs[ei]);
-                fmt::println("");
+                fmt::println("Non-uniform elevations on field distance {:.3f}.\nGot: {:+.2f}",
+                    dist, fmt::join(elevs, ", "));
             }
             continue;
         }

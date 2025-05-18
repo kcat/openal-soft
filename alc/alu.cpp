@@ -418,29 +418,29 @@ constexpr auto GetAmbi2DLayout(AmbiLayout layouttype) noexcept
 }
 
 
-bool CalcContextParams(ContextBase *ctx)
+auto CalcContextParams(ContextBase *ctx) -> bool
 {
-    ContextProps *props{ctx->mParams.ContextUpdate.exchange(nullptr, std::memory_order_acq_rel)};
+    auto *props = ctx->mParams.ContextUpdate.exchange(nullptr, std::memory_order_acq_rel);
     if(!props) return false;
 
-    const alu::Vector pos{props->Position[0], props->Position[1], props->Position[2], 1.0f};
+    const auto pos = alu::Vector{props->Position[0], props->Position[1], props->Position[2], 1.0f};
     ctx->mParams.Position = pos;
 
     /* AT then UP */
-    alu::Vector N{props->OrientAt[0], props->OrientAt[1], props->OrientAt[2], 0.0f};
+    auto N = alu::Vector{props->OrientAt[0], props->OrientAt[1], props->OrientAt[2], 0.0f};
     N.normalize();
-    alu::Vector V{props->OrientUp[0], props->OrientUp[1], props->OrientUp[2], 0.0f};
+    auto V = alu::Vector{props->OrientUp[0], props->OrientUp[1], props->OrientUp[2], 0.0f};
     V.normalize();
     /* Build and normalize right-vector */
-    alu::Vector U{N.cross_product(V)};
+    auto U = alu::Vector{N.cross_product(V)};
     U.normalize();
 
-    const alu::Matrix rot{
-        U[0], V[0], -N[0], 0.0,
-        U[1], V[1], -N[1], 0.0,
-        U[2], V[2], -N[2], 0.0,
-         0.0,  0.0,   0.0, 1.0};
-    const alu::Vector vel{props->Velocity[0], props->Velocity[1], props->Velocity[2], 0.0};
+    const auto rot = alu::Matrix{
+        U[0],  V[0], -N[0],  0.0f,
+        U[1],  V[1], -N[1],  0.0f,
+        U[2],  V[2], -N[2],  0.0f,
+        0.0f,  0.0f,  0.0f,  1.0f};
+    const auto vel = alu::Vector{props->Velocity[0], props->Velocity[1], props->Velocity[2], 0.0};
 
     ctx->mParams.Matrix = rot;
     ctx->mParams.Velocity = rot * vel;
@@ -467,9 +467,9 @@ bool CalcContextParams(ContextBase *ctx)
     return true;
 }
 
-bool CalcEffectSlotParams(EffectSlot *slot, EffectSlot **sorted_slots, ContextBase *context)
+auto CalcEffectSlotParams(EffectSlot *slot, EffectSlot **sorted_slots, ContextBase *context) ->bool
 {
-    EffectSlotProps *props{slot->Update.exchange(nullptr, std::memory_order_acq_rel)};
+    auto *props = slot->Update.exchange(nullptr, std::memory_order_acq_rel);
     if(!props) return false;
 
     /* If the effect slot target changed, clear the first sorted entry to force
@@ -505,8 +505,8 @@ bool CalcEffectSlotParams(EffectSlot *slot, EffectSlot **sorted_slots, ContextBa
         }
     }
 
-    EffectState *state{props->State.release()};
-    EffectState *oldstate{slot->mEffectState.release()};
+    auto *state = props->State.release();
+    auto *oldstate = slot->mEffectState.release();
     slot->mEffectState.reset(state);
 
     /* Only release the old state if it won't get deleted, since we can't be
@@ -515,7 +515,7 @@ bool CalcEffectSlotParams(EffectSlot *slot, EffectSlot **sorted_slots, ContextBa
     if(!oldstate->releaseIfNoDelete())
     {
         /* Otherwise, if it would be deleted send it off with a release event. */
-        RingBuffer *ring{context->mAsyncEvents.get()};
+        auto *ring = context->mAsyncEvents.get();
         auto evt_vec = ring->getWriteVector();
         if(evt_vec[0].len > 0) [[likely]]
         {
@@ -536,13 +536,13 @@ bool CalcEffectSlotParams(EffectSlot *slot, EffectSlot **sorted_slots, ContextBa
 
     AtomicReplaceHead(context->mFreeEffectSlotProps, props);
 
-    const auto output = [slot,context]() -> EffectTarget
+    const auto output = std::invoke([slot,context]() -> EffectTarget
     {
-        if(EffectSlot *target{slot->Target})
+        if(auto *target = slot->Target)
             return EffectTarget{&target->Wet, nullptr};
-        DeviceBase *device{context->mDevice};
+        auto *device = context->mDevice;
         return EffectTarget{&device->Dry, &device->RealOut};
-    }();
+    });
     state->update(context, slot, &slot->mEffectProps, output);
     return true;
 }
@@ -551,16 +551,16 @@ bool CalcEffectSlotParams(EffectSlot *slot, EffectSlot **sorted_slots, ContextBa
 /* Scales the azimuth of the given vector by 3 if it's in front. Effectively
  * scales +/-30 degrees to +/-90 degrees, leaving > +90 and < -90 alone.
  */
-inline std::array<float,3> ScaleAzimuthFront3(std::array<float,3> pos)
+inline auto ScaleAzimuthFront3(std::array<float,3> pos) -> std::array<float,3>
 {
     if(pos[2] < 0.0f)
     {
         /* Normalize the length of the x,z components for a 2D vector of the
          * azimuth angle. Negate Z since {0,0,-1} is angle 0.
          */
-        const float len2d{std::sqrt(pos[0]*pos[0] + pos[2]*pos[2])};
-        float x{pos[0] / len2d};
-        float z{-pos[2] / len2d};
+        const auto len2d = std::sqrt(pos[0]*pos[0] + pos[2]*pos[2]);
+        auto x = pos[0] / len2d;
+        auto z = -pos[2] / len2d;
 
         /* Z > cos(pi/6) = -30 < azimuth < 30 degrees. */
         if(z > 0.866025403785f)
@@ -584,13 +584,13 @@ inline std::array<float,3> ScaleAzimuthFront3(std::array<float,3> pos)
 }
 
 /* Scales the azimuth of the given vector by 1.5 (3/2) if it's in front. */
-inline std::array<float,3> ScaleAzimuthFront3_2(std::array<float,3> pos)
+inline auto ScaleAzimuthFront3_2(std::array<float,3> pos) -> std::array<float,3>
 {
     if(pos[2] < 0.0f)
     {
-        const float len2d{std::sqrt(pos[0]*pos[0] + pos[2]*pos[2])};
-        float x{pos[0] / len2d};
-        float z{-pos[2] / len2d};
+        const auto len2d = std::sqrt(pos[0]*pos[0] + pos[2]*pos[2]);
+        float x = pos[0] / len2d;
+        float z = -pos[2] / len2d;
 
         /* Z > cos(pi/3) = -60 < azimuth < 60 degrees. */
         if(z > 0.5f)
@@ -637,7 +637,7 @@ inline std::array<float,3> ScaleAzimuthFront3_2(std::array<float,3> pos)
  * precomputed since they're constant. The second-order coefficients are
  * followed by the third-order coefficients, etc.
  */
-constexpr size_t CalcRotatorSize(size_t l) noexcept
+constexpr auto CalcRotatorSize(size_t l) noexcept -> size_t
 {
     if(l >= 2)
         return (l*2 + 1)*(l*2 + 1) + CalcRotatorSize(l-1);
@@ -654,11 +654,11 @@ struct RotatorCoeffs {
     {
         auto coeffs = mCoeffs.begin();
 
-        for(int l=2;l <= MaxAmbiOrder;++l)
+        for(int l = 2;l <= MaxAmbiOrder;++l)
         {
-            for(int n{-l};n <= l;++n)
+            for(auto n = -l;n <= l;++n)
             {
-                for(int m{-l};m <= l;++m)
+                for(auto m = -l;m <= l;++m)
                 {
                     /* compute u,v,w terms of Eq.8.1 (Table I)
                      *
@@ -674,8 +674,8 @@ struct RotatorCoeffs {
                      *     (1.0-d) * -0.5;
                      */
 
-                    const double denom{static_cast<double>((std::abs(n) == l) ?
-                          (2*l) * (2*l - 1) : (l*l - n*n))};
+                    const auto denom = static_cast<double>((std::abs(n) == l) ?
+                          (2*l) * (2*l - 1) : (l*l - n*n));
 
                     if(m == 0)
                     {
@@ -685,7 +685,7 @@ struct RotatorCoeffs {
                     }
                     else
                     {
-                        const int abs_m{std::abs(m)};
+                        const auto abs_m = std::abs(m);
                         coeffs->u = static_cast<float>(std::sqrt((l*l - m*m) / denom));
                         coeffs->v = static_cast<float>(std::sqrt((l+abs_m-1) * (l+abs_m) / denom) *
                             0.5);
@@ -713,11 +713,11 @@ void AmbiRotator(AmbiRotateMatrix &matrix, const int order)
     static constexpr auto P = [](const int i, const int l, const int a, const int n,
         const size_t last_band, const AmbiRotateMatrix &R)
     {
-        const float ri1{ R[ 1+2][static_cast<size_t>(i+2_z)]};
-        const float rim1{R[-1+2][static_cast<size_t>(i+2_z)]};
-        const float ri0{ R[ 0+2][static_cast<size_t>(i+2_z)]};
+        const auto ri1 =  R[ 1+2][static_cast<size_t>(i+2_z)];
+        const auto rim1 = R[-1+2][static_cast<size_t>(i+2_z)];
+        const auto ri0 =  R[ 0+2][static_cast<size_t>(i+2_z)];
 
-        const size_t y{last_band + static_cast<size_t>(a+l-1)};
+        const auto y = last_band + static_cast<size_t>(a+l-1);
         if(n == -l)
             return ri1*R[last_band][y] + rim1*R[last_band + static_cast<size_t>(l-1_z)*2][y];
         if(n == l)
@@ -736,14 +736,14 @@ void AmbiRotator(AmbiRotateMatrix &matrix, const int order)
         using namespace std::numbers;
         if(m > 0)
         {
-            const bool d{m == 1};
-            const float p0{P( 1, l,  m-1, n, last_band, R)};
-            const float p1{P(-1, l, -m+1, n, last_band, R)};
+            const auto d = (m == 1);
+            const auto p0 = P( 1, l,  m-1, n, last_band, R);
+            const auto p1 = P(-1, l, -m+1, n, last_band, R);
             return d ? p0*sqrt2_v<float> : (p0 - p1);
         }
-        const bool d{m == -1};
-        const float p0{P( 1, l,  m+1, n, last_band, R)};
-        const float p1{P(-1, l, -m-1, n, last_band, R)};
+        const auto d = (m == -1);
+        const auto p0 = P( 1, l,  m+1, n, last_band, R);
+        const auto p1 = P(-1, l, -m-1, n, last_band, R);
         return d ? p1*sqrt2_v<float> : (p0 + p1);
     };
     static constexpr auto W = [](const int l, const int m, const int n, const size_t last_band,
@@ -752,27 +752,28 @@ void AmbiRotator(AmbiRotateMatrix &matrix, const int order)
         assert(m != 0);
         if(m > 0)
         {
-            const float p0{P( 1, l,  m+1, n, last_band, R)};
-            const float p1{P(-1, l, -m-1, n, last_band, R)};
+            const auto p0 = P( 1, l,  m+1, n, last_band, R);
+            const auto p1 = P(-1, l, -m-1, n, last_band, R);
             return p0 + p1;
         }
-        const float p0{P( 1, l,  m-1, n, last_band, R)};
-        const float p1{P(-1, l, -m+1, n, last_band, R)};
+        const auto p0 = P( 1, l,  m-1, n, last_band, R);
+        const auto p1 = P(-1, l, -m+1, n, last_band, R);
         return p0 - p1;
     };
 
     // compute rotation matrix of each subsequent band recursively
     auto coeffs = RotatorCoeffArray.mCoeffs.cbegin();
-    size_t band_idx{4}, last_band{1};
-    for(int l{2};l <= order;++l)
+    auto band_idx = 4_uz;
+    auto last_band = 1_uz;
+    for(auto l = 2;l <= order;++l)
     {
-        size_t y{band_idx};
-        for(int n{-l};n <= l;++n,++y)
+        auto y = band_idx;
+        for(auto n = -l;n <= l;++n,++y)
         {
-            size_t x{band_idx};
-            for(int m{-l};m <= l;++m,++x)
+            auto x = band_idx;
+            for(auto m = -l;m <= l;++m,++x)
             {
-                float r{0.0f};
+                auto r = 0.0f;
 
                 // computes Eq.8.1
                 if(const float u{coeffs->u}; u != 0.0f)

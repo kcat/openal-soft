@@ -985,7 +985,7 @@ FORCE_ALIGN void AL_APIENTRY alBufferfDirect(ALCcontext *context, ALuint buffer,
     ALfloat value [[maybe_unused]]) noexcept
 try {
     auto *device = context->mALDevice.get();
-    auto buflock = std::lock_guard{device->BufferLock};
+    auto buflock [[maybe_unused]] = std::lock_guard{device->BufferLock};
 
     if(LookupBuffer(device, buffer) == nullptr)
         context->throw_error(AL_INVALID_NAME, "Invalid buffer ID {}", buffer);
@@ -1005,7 +1005,7 @@ FORCE_ALIGN void AL_APIENTRY alBuffer3fDirect(ALCcontext *context, ALuint buffer
     ALfloat value3 [[maybe_unused]]) noexcept
 try {
     auto *device = context->mALDevice.get();
-    auto buflock = std::lock_guard{device->BufferLock};
+    auto buflock [[maybe_unused]] = std::lock_guard{device->BufferLock};
 
     if(LookupBuffer(device, buffer) == nullptr)
         context->throw_error(AL_INVALID_NAME, "Invalid buffer ID {}", buffer);
@@ -1024,7 +1024,7 @@ FORCE_ALIGN void AL_APIENTRY alBufferfvDirect(ALCcontext *context, ALuint buffer
     const ALfloat *values) noexcept
 try {
     auto *device = context->mALDevice.get();
-    auto buflock = std::lock_guard{device->BufferLock};
+    auto buflock [[maybe_unused]] = std::lock_guard{device->BufferLock};
 
     if(LookupBuffer(device, buffer) == nullptr)
         context->throw_error(AL_INVALID_NAME, "Invalid buffer ID {}", buffer);
@@ -1119,7 +1119,7 @@ FORCE_ALIGN void AL_APIENTRY alBuffer3iDirect(ALCcontext *context, ALuint buffer
     ALint value1 [[maybe_unused]], ALint value2 [[maybe_unused]], ALint value3 [[maybe_unused]]) noexcept
 try {
     auto *device = context->mALDevice.get();
-    auto buflock = std::lock_guard{device->BufferLock};
+    auto buflock [[maybe_unused]] = std::lock_guard{device->BufferLock};
 
     if(LookupBuffer(device, buffer) == nullptr)
         context->throw_error(AL_INVALID_NAME, "Invalid buffer ID {}", buffer);
@@ -1219,7 +1219,7 @@ FORCE_ALIGN void AL_APIENTRY alGetBuffer3fDirect(ALCcontext *context, ALuint buf
     ALfloat *value1, ALfloat *value2, ALfloat *value3) noexcept
 try {
     auto *device = context->mALDevice.get();
-    auto buflock = std::lock_guard{device->BufferLock};
+    auto buflock [[maybe_unused]] = std::lock_guard{device->BufferLock};
 
     if(LookupBuffer(device, buffer) == nullptr)
         context->throw_error(AL_INVALID_NAME, "Invalid buffer ID {}", buffer);
@@ -1247,7 +1247,7 @@ try {
     }
 
     auto *device = context->mALDevice.get();
-    auto buflock = std::lock_guard{device->BufferLock};
+    auto buflock [[maybe_unused]] = std::lock_guard{device->BufferLock};
 
     if(LookupBuffer(device, buffer) == nullptr)
         context->throw_error(AL_INVALID_NAME, "Invalid buffer ID {}", buffer);
@@ -1340,7 +1340,7 @@ FORCE_ALIGN void AL_APIENTRY alGetBuffer3iDirect(ALCcontext *context, ALuint buf
     ALint *value1, ALint *value2, ALint *value3) noexcept
 try {
     auto *device = context->mALDevice.get();
-    auto buflock = std::lock_guard{device->BufferLock};
+    auto buflock [[maybe_unused]] = std::lock_guard{device->BufferLock};
 
     if(LookupBuffer(device, buffer) == nullptr)
         context->throw_error(AL_INVALID_NAME, "Invalid buffer ID {}", buffer);
@@ -1470,7 +1470,7 @@ FORCE_ALIGN void AL_APIENTRY alGetBuffer3PtrDirectSOFT(ALCcontext *context, ALui
     ALenum param, ALvoid **value1, ALvoid **value2, ALvoid **value3) noexcept
 try {
     auto *device = context->mALDevice.get();
-    auto buflock = std::lock_guard{device->BufferLock};
+    auto buflock [[maybe_unused]] = std::lock_guard{device->BufferLock};
 
     if(LookupBuffer(device, buffer) == nullptr)
         context->throw_error(AL_INVALID_NAME, "Invalid buffer ID {}", buffer);
@@ -1499,7 +1499,7 @@ try {
     }
 
     auto *device = context->mALDevice.get();
-    auto buflock = std::lock_guard{device->BufferLock};
+    auto buflock [[maybe_unused]] = std::lock_guard{device->BufferLock};
 
     if(LookupBuffer(device, buffer) == nullptr)
         context->throw_error(AL_INVALID_NAME, "Invalid buffer ID {}", buffer);

@@ -24,6 +24,7 @@
 #include <cassert>
 #include <cstdio>
 #include <memory>
+#include <ranges>
 #include <span>
 #include <string>
 #include <string_view>
@@ -47,7 +48,8 @@ void PrintSofaAttributes(const std::string_view prefix, MYSOFA_ATTRIBUTE *attrib
 {
     while(attribute)
     {
-        fmt::println("{}.{}: {}", prefix, attribute->name, attribute->value);
+        fmt::println("{}.{}: {}", prefix, attribute->name ? attribute->name : "<null>",
+            attribute->value ? attribute->value : "<null>");
         attribute = attribute->next;
     }
 }
@@ -159,6 +161,6 @@ int main(int argc, char **argv)
 {
     assert(argc >= 0);
     auto args = std::vector<std::string_view>(static_cast<unsigned int>(argc));
-    std::copy_n(argv, args.size(), args.begin());
+    std::ranges::copy(std::views::counted(argv, argc), args.begin());
     return main(std::span{args});
 }

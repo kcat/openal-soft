@@ -149,6 +149,7 @@ auto main(std::span<std::string_view> args) -> int
 
     /* Load the Debug API functions we're using. */
 #define LOAD_PROC(N) N = reinterpret_cast<decltype(N)>(alcGetProcAddress(device.get(), #N))
+    /* NOLINTBEGIN(cppcoreguidelines-pro-type-reinterpret-cast) */
     LOAD_PROC(alDebugMessageCallbackEXT);
     LOAD_PROC(alDebugMessageInsertEXT);
     LOAD_PROC(alDebugMessageControlEXT);
@@ -159,6 +160,7 @@ auto main(std::span<std::string_view> args) -> int
     LOAD_PROC(alGetObjectLabelEXT);
     LOAD_PROC(alGetPointerEXT);
     LOAD_PROC(alGetPointervEXT);
+    /* NOLINTEND(cppcoreguidelines-pro-type-reinterpret-cast) */
 #undef LOAD_PROC
 
     /* Create a debug context and set it as current. If -nodebug was specified,

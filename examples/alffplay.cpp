@@ -647,7 +647,7 @@ nanoseconds AudioState::getClockNoLock()
             pts -= nanoseconds{offset[1]};
     }
 
-    return std::max(pts, nanoseconds::zero());
+    return pts;
 }
 
 auto AudioState::startPlayback() -> bool
@@ -741,39 +741,14 @@ int AudioState::decodeFrame()
     return data_size;
 }
 
-/* Duplicates the sample at in to out, count times. The frame size is a
- * multiple of the template type size.
- */
-template<typename T>
-void sample_dup(std::span<uint8_t> out, std::span<const uint8_t> in, size_t count,
-    size_t frame_size)
+/* Duplicates the sample at in to out, count times. */
+void sample_dup(std::span<uint8_t> out, std::span<const uint8_t> in, size_t count)
 {
-    /* NOTE: frame_size is a multiple of sizeof(T). */
-    const auto sample = std::span{reinterpret_cast<const T*>(in.data()), in.size()/sizeof(T)}
-        .first(frame_size / sizeof(T));
-    const auto dst = std::span{reinterpret_cast<T*>(out.data()), out.size()/sizeof(T)};
-
-    if(sample.size() == 1)
-        std::ranges::fill(dst | std::views::take(count), sample.front());
-    else
+    auto dstiter = out.begin();
+    std::ranges::for_each(std::views::iota(0_uz, count), [in,&dstiter](size_t)
     {
-        auto dstiter = dst.begin();
-        std::ranges::for_each(std::views::iota(0_uz, count), [sample,&dstiter](size_t)
-        { dstiter = std::ranges::copy(sample, dstiter).out; });
-    }
-}
-
-void sample_dup(std::span<uint8_t> out, std::span<const uint8_t> in, size_t count,
-    size_t frame_size)
-{
-    if((frame_size&7) == 0)
-        sample_dup<uint64_t>(out, in, count, frame_size);
-    else if((frame_size&3) == 0)
-        sample_dup<uint32_t>(out, in, count, frame_size);
-    else if((frame_size&1) == 0)
-        sample_dup<uint16_t>(out, in, count, frame_size);
-    else
-        sample_dup<uint8_t>(out, in, count, frame_size);
+        dstiter = std::ranges::copy(in, dstiter).out;
+    });
 }
 
 auto AudioState::readAudio(std::span<uint8_t> samples, unsigned int length, int &sample_skip)
@@ -800,7 +775,7 @@ auto AudioState::readAudio(std::span<uint8_t> samples, unsigned int length, int 
             rem = std::min(rem, static_cast<unsigned int>(-mSamplesPos));
 
             /* Add samples by copying the first sample */
-            sample_dup(samples, mSamplesSpan, rem, mFrameSize);
+            sample_dup(samples, mSamplesSpan.first(mFrameSize), rem);
         }
 
         mSamplesPos += static_cast<int>(rem);
@@ -854,7 +829,7 @@ auto AudioState::readAudio(int sample_skip) -> bool
         {
             const auto rem = std::min<size_t>(nsamples, static_cast<ALuint>(-mSamplesPos));
 
-            sample_dup(std::span{mBufferData}.subspan(woffset), mSamplesSpan, rem, mFrameSize);
+            sample_dup(mBufferData|std::views::drop(woffset), mSamplesSpan.first(mFrameSize), rem);
             woffset += rem * mFrameSize;
             if(woffset == mBufferData.size()) woffset = 0;
             mWritePos.store(woffset, std::memory_order_release);
@@ -864,18 +839,20 @@ auto AudioState::readAudio(int sample_skip) -> bool
             continue;
         }
 
-        const auto rem = std::min<size_t>(nsamples, static_cast<ALuint>(mSamplesLen-mSamplesPos));
-        const auto boffset = static_cast<ALuint>(mSamplesPos) * size_t{mFrameSize};
-        const auto nbytes = rem * mFrameSize;
+        if(const auto rem = std::min(nsamples, static_cast<size_t>(mSamplesLen-mSamplesPos)))
+        {
+            const auto boffset = static_cast<ALuint>(mSamplesPos) * size_t{mFrameSize};
+            const auto nbytes = rem * mFrameSize;
 
-        std::ranges::copy(mSamplesSpan | std::views::drop(boffset) | std::views::take(nbytes),
-            (mBufferData | std::views::drop(woffset)).begin());
-        woffset += nbytes;
-        if(woffset == mBufferData.size()) woffset = 0;
-        mWritePos.store(woffset, std::memory_order_release);
+            std::ranges::copy(mSamplesSpan | std::views::drop(boffset) | std::views::take(nbytes),
+                (mBufferData | std::views::drop(woffset)).begin());
+            woffset += nbytes;
+            if(woffset == mBufferData.size()) woffset = 0;
+            mWritePos.store(woffset, std::memory_order_release);
 
-        mCurrentPts += nanoseconds{seconds{rem}} / mCodecCtx->sample_rate;
-        mSamplesPos += static_cast<int>(rem);
+            mCurrentPts += nanoseconds{seconds{rem}} / mCodecCtx->sample_rate;
+            mSamplesPos += static_cast<int>(rem);
+        }
 
         while(mSamplesPos >= mSamplesLen)
         {
@@ -885,7 +862,7 @@ auto AudioState::readAudio(int sample_skip) -> bool
 
             sample_skip -= mSamplesPos;
 
-            auto skip = nanoseconds{seconds{mSamplesPos}} / mCodecCtx->sample_rate;
+            const auto skip = nanoseconds{seconds{mSamplesPos}} / mCodecCtx->sample_rate;
             mStartPts -= skip;
             mCurrentPts += skip;
         }
@@ -937,16 +914,16 @@ auto AudioState::bufferCallback(const std::span<ALubyte> data) noexcept -> ALsiz
     auto output = data.begin();
 
     auto roffset = mReadPos.load(std::memory_order_acquire);
-    while(output != data.end())
+    while(const auto rem = static_cast<size_t>(std::distance(output, data.end())))
     {
-        const auto woffset{mWritePos.load(std::memory_order_relaxed)};
+        const auto woffset = mWritePos.load(std::memory_order_relaxed);
         if(woffset == roffset) break;
 
         auto todo = ((woffset < roffset) ? mBufferData.size() : woffset) - roffset;
-        todo = std::min(todo, static_cast<size_t>(std::distance(output, data.end())));
+        todo = std::min(todo, rem);
 
-        output = std::ranges::copy(mBufferData|std::views::drop(roffset)|std::views::take(todo),
-            output).out;
+        output = std::ranges::copy(mBufferData | std::views::drop(roffset)
+            | std::views::take(todo), output).out;
 
         roffset += todo;
         if(roffset == mBufferData.size())
@@ -959,14 +936,13 @@ auto AudioState::bufferCallback(const std::span<ALubyte> data) noexcept -> ALsiz
 
 void AudioState::handler()
 {
+    static constexpr std::array<ALenum,3> evt_types{{
+        AL_EVENT_TYPE_BUFFER_COMPLETED_SOFT, AL_EVENT_TYPE_SOURCE_STATE_CHANGED_SOFT,
+        AL_EVENT_TYPE_DISCONNECTED_SOFT}};
     auto srclock = std::unique_lock{mSrcMutex, std::defer_lock};
     auto sleep_time = milliseconds{AudioBufferTime / 2};
 
     struct EventControlManager {
-        const std::array<ALenum,3> evt_types{{
-            AL_EVENT_TYPE_BUFFER_COMPLETED_SOFT, AL_EVENT_TYPE_SOURCE_STATE_CHANGED_SOFT,
-            AL_EVENT_TYPE_DISCONNECTED_SOFT}};
-
         explicit EventControlManager(milliseconds &sleep_time)
         {
             if(alEventControlSOFT)
@@ -978,8 +954,7 @@ void AudioState::handler()
                         std::string_view{message, static_cast<ALuint>(length)});
                 };
 
-                alEventControlSOFT(static_cast<ALsizei>(evt_types.size()), evt_types.data(),
-                    AL_TRUE);
+                alEventControlSOFT(evt_types.size(), evt_types.data(), AL_TRUE);
                 alEventCallbackSOFT(callback, this);
                 sleep_time = AudioBufferTotalTime;
             }
@@ -988,11 +963,12 @@ void AudioState::handler()
         {
             if(alEventControlSOFT)
             {
-                alEventControlSOFT(static_cast<ALsizei>(evt_types.size()), evt_types.data(),
-                    AL_FALSE);
+                alEventControlSOFT(evt_types.size(), evt_types.data(), AL_FALSE);
                 alEventCallbackSOFT(nullptr, nullptr);
             }
         }
+        EventControlManager(const EventControlManager&) = delete;
+        auto operator=(const EventControlManager&) -> EventControlManager& = delete;
     };
     auto event_controller = EventControlManager{sleep_time};
 
@@ -1238,7 +1214,7 @@ void AudioState::handler()
              * ordering and normalization, so a custom matrix is needed to
              * scale and reorder the source from AmbiX.
              */
-            std::vector<double> mtx(64_uz*64_uz, 0.0);
+            auto mtx = std::vector<double>(64_uz*64_uz, 0.0);
             mtx[0 + 0*64] = std::sqrt(0.5);
             mtx[3 + 1*64] = 1.0;
             mtx[1 + 2*64] = 1.0;
@@ -1251,7 +1227,7 @@ void AudioState::handler()
         auto layout = ChannelLayout{};
         av_channel_layout_from_mask(&layout, mDstChanLayout);
 
-        auto err = swr_alloc_set_opts2(al::out_ptr(mSwresCtx), &layout, mDstSampleFmt,
+        const auto err = swr_alloc_set_opts2(al::out_ptr(mSwresCtx), &layout, mDstSampleFmt,
             mCodecCtx->sample_rate, &mCodecCtx->ch_layout, mCodecCtx->sample_fmt,
             mCodecCtx->sample_rate, 0, nullptr);
         if(err != 0)
@@ -1309,7 +1285,7 @@ void AudioState::handler()
             -> ALsizei
         {
             return static_cast<AudioState*>(userptr)->bufferCallback(
-                std::span{static_cast<ALubyte*>(data), static_cast<ALuint>(size)});
+                std::views::counted(static_cast<ALubyte*>(data), size));
         };
         alBufferCallbackSOFT(mBuffers[0], mFormat, mCodecCtx->sample_rate, callback, this);
 
@@ -2111,6 +2087,7 @@ auto main(std::span<std::string_view> args) -> int
     if(InitAL(args) != 0)
         return 1;
 
+    /* NOLINTBEGIN(cppcoreguidelines-pro-type-reinterpret-cast) */
     if(alIsExtensionPresent("AL_SOFT_source_latency"))
     {
         fmt::println("Found AL_SOFT_source_latency");
@@ -2131,6 +2108,7 @@ auto main(std::span<std::string_view> args) -> int
         alBufferCallbackSOFT = reinterpret_cast<LPALBUFFERCALLBACKSOFT>(
             alGetProcAddress("alBufferCallbackSOFT"));
     }
+    /* NOLINTEND(cppcoreguidelines-pro-type-reinterpret-cast) */
 
     auto curarg = std::ranges::find_if(args, [](const std::string_view argval)
     {

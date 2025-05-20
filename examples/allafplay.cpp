@@ -88,18 +88,19 @@
 #include <string>
 #include <string_view>
 #include <thread>
+#include <variant>
 #include <vector>
 
 #include "AL/alc.h"
 #include "AL/al.h"
 #include "AL/alext.h"
 
-#include "albit.h"
 #include "alnumeric.h"
 #include "alstring.h"
 #include "common/alhelpers.h"
 #include "filesystem.h"
 #include "fmt/core.h"
+#include "fmt/ranges.h"
 #include "fmt/std.h"
 
 #include "win_main_utf8.h"
@@ -166,6 +167,13 @@ void do_assert(const char *message, const std::source_location loc=std::source_l
 } while(0)
 
 
+template<typename... Ts>
+struct overloaded : Ts... { using Ts::operator()...; };
+
+template<typename... Ts>
+overloaded(Ts...) -> overloaded<Ts...>;
+
+
 enum class Quality : std::uint8_t {
     s8, s16, f32, s24
 };
@@ -207,80 +215,67 @@ auto BytesFromQuality(Quality quality) noexcept -> size_t
     return 4;
 }
 
-auto BufferBytesFromQuality(Quality quality) noexcept -> size_t
-{
-    switch(quality)
-    {
-    case Quality::s8: return 1;
-    case Quality::s16: return 2;
-    case Quality::f32: return 4;
-    /* 24-bit samples are converted to 32-bit for OpenAL. */
-    case Quality::s24: return 4;
-    }
-    return 4;
-}
 
-
-/* Helper class for reading little-endian samples on big-endian targets, or
+/* Helper class for reading little-endian samples on big-endian targets, and
  * convert 24-bit samples.
  */
-template<Quality Q>
-struct SampleReader;
+template<typename T>
+struct SampleInfo;
 
 template<>
-struct SampleReader<Quality::s8> {
-    using src_t = int8_t;
-    using dst_t = int8_t;
+struct SampleInfo<float> {
+    static constexpr auto SrcSize = 4_uz;
 
-    [[nodiscard]] static
-    auto read(const src_t &in) noexcept -> dst_t { return in; }
-};
-
-template<>
-struct SampleReader<Quality::s16> {
-    using src_t = int16_t;
-    using dst_t = int16_t;
-
-    [[nodiscard]] static
-    auto read(const src_t &in) noexcept -> dst_t
+    [[nodiscard]]
+    static auto read(std::input_iterator auto input) -> float
     {
+        auto src = std::array<char,4>{};
         if constexpr(std::endian::native == std::endian::little)
-            return in;
+            std::ranges::copy(std::views::counted(input, 4), src.begin());
         else
-            return al::byteswap(in);
+            std::ranges::copy(std::views::counted(input, 4), src.rbegin());
+        return std::bit_cast<float>(src);
     }
 };
 
 template<>
-struct SampleReader<Quality::f32> {
-    /* 32-bit float samples are read as 32-bit integer so that they can be
-     * byteswapped on big-endian systems before being reinterpreted as float.
-     */
-    using src_t = uint32_t;
-    using dst_t = float;
+struct SampleInfo<int32_t> {
+    static constexpr auto SrcSize = 3_uz;
 
-    [[nodiscard]] static
-    auto read(const src_t &in) noexcept -> dst_t
+    [[nodiscard]]
+    static auto read(std::input_iterator auto input) -> int32_t
     {
+        auto src = std::array<char,4>{};
         if constexpr(std::endian::native == std::endian::little)
-            return std::bit_cast<dst_t>(in);
+            std::ranges::copy(std::views::counted(input, 3), src.begin()+1);
         else
-            return std::bit_cast<dst_t>(al::byteswap(in));
+            std::ranges::copy(std::views::counted(input, 3), src.rbegin()+1);
+        return std::bit_cast<int32_t>(src);
     }
 };
 
 template<>
-struct SampleReader<Quality::s24> {
-    /* 24-bit samples are converted to 32-bit integer. */
-    using src_t = std::array<uint8_t,3>;
-    using dst_t = int32_t;
+struct SampleInfo<int16_t> {
+    static constexpr auto SrcSize = 2_uz;
 
-    [[nodiscard]] static
-    auto read(const src_t &in) noexcept -> dst_t
+    [[nodiscard]]
+    static auto read(std::input_iterator auto input) -> int16_t
     {
-        return static_cast<int32_t>((uint32_t{in[0]}<<8) | (uint32_t{in[1]}<<16)
-            | (uint32_t{in[2]}<<24));
+        auto src = std::array<char,2>{};
+        if constexpr(std::endian::native == std::endian::little)
+            std::ranges::copy(std::views::counted(input, 2), src.begin());
+        else
+            std::ranges::copy(std::views::counted(input, 2), src.rbegin());
+        return std::bit_cast<int16_t>(src);
     }
+};
+
+template<>
+struct SampleInfo<int8_t> {
+    static constexpr auto SrcSize = 1_uz;
+
+    [[nodiscard]]
+    static auto read(std::input_iterator auto input) -> int8_t { return *input; }
 };
 
 
@@ -339,7 +334,8 @@ struct LafStream {
     std::array<uint8_t,32> mEnabledTracks{};
     uint32_t mNumEnabled{};
     std::vector<char> mSampleChunk;
-    std::span<char> mSampleLine;
+    template<typename T> using vector = std::vector<T>;
+    std::variant<vector<int8_t>,vector<int16_t>,vector<float>,vector<int32_t>> mSampleLine;
 
     std::vector<Channel> mChannels;
     std::vector<std::vector<float>> mPosTracks;
@@ -350,29 +346,27 @@ struct LafStream {
     auto operator=(const LafStream&) -> LafStream& = delete;
 
     [[nodiscard]]
+    auto isAtEnd() const noexcept -> bool { return mCurrentSample >= mSampleCount; }
+
+    [[nodiscard]]
     auto readChunk() -> uint32_t;
 
-    void convertSamples(const std::span<char> samples) const;
-
-    void convertPositions(const std::span<float> dst, const std::span<const char> src) const;
-
-    template<Quality Q>
-    void copySamples(char *dst, const char *src, size_t idx, size_t count) const;
-
     [[nodiscard]]
-    auto prepareTrack(size_t trackidx, size_t count) -> std::span<char>;
+    auto prepareTrack(size_t trackidx, size_t count) -> std::span<std::byte>;
 
-    [[nodiscard]]
-    auto isAtEnd() const noexcept -> bool { return mCurrentSample >= mSampleCount; }
+    void convertSamples(const std::span<std::byte> samples) const;
+
+    void convertPositions(const std::span<float> dst) const;
 };
 
 auto LafStream::readChunk() -> uint32_t
 {
-    mEnabledTracks.fill(0);
+    auto enableTrackBits = std::array<char,std::tuple_size_v<decltype(mEnabledTracks)>>{};
+    mInFile.sgetn(enableTrackBits.data(), (mNumTracks+7_z)>>3);
 
-    mInFile.sgetn(reinterpret_cast<char*>(mEnabledTracks.data()), (mNumTracks+7_z)>>3);
+    mEnabledTracks = std::bit_cast<decltype(mEnabledTracks)>(enableTrackBits);
     mNumEnabled = std::accumulate(mEnabledTracks.cbegin(), mEnabledTracks.cend(), 0u,
-        [](const unsigned int val, const uint8_t in)
+        [](const unsigned int val, const uint8_t in) -> unsigned int
         { return val + unsigned(std::popcount(in)); });
 
     /* Make sure enable bits aren't set for non-existent tracks. */
@@ -395,76 +389,7 @@ auto LafStream::readChunk() -> uint32_t
     return static_cast<uint32_t>(numsamples);
 }
 
-void LafStream::convertSamples(const std::span<char> samples) const
-{
-    /* OpenAL uses unsigned 8-bit samples (0...255), so signed 8-bit samples
-     * (-128...+127) need conversion. The other formats are fine.
-     */
-    if(mQuality == Quality::s8)
-    {
-        std::ranges::transform(samples, samples.begin(), [](const char sample) noexcept -> char
-        { return char(sample^0x80); });
-    }
-}
-
-void LafStream::convertPositions(const std::span<float> dst, const std::span<const char> src) const
-{
-    switch(mQuality)
-    {
-    case Quality::s8:
-        std::ranges::transform(src, dst.begin(), [](const int8_t in) noexcept -> float
-        { return float(in) / 127.0f; });
-        break;
-    case Quality::s16:
-        {
-            auto i16src = std::span{reinterpret_cast<const int16_t*>(src.data()),
-                src.size()/sizeof(int16_t)};
-            std::ranges::transform(i16src, dst.begin(), [](const int16_t in) noexcept -> float
-            { return float(in) / 32767.0f; });
-        }
-        break;
-    case Quality::f32:
-        {
-            auto f32src = std::span{reinterpret_cast<const float*>(src.data()),
-                src.size()/sizeof(float)};
-            std::ranges::copy(f32src, dst.begin());
-        }
-        break;
-    case Quality::s24:
-        {
-            /* 24-bit samples are converted to 32-bit in copySamples. */
-            auto i32src = std::span{reinterpret_cast<const int32_t*>(src.data()),
-                src.size()/sizeof(int32_t)};
-            std::ranges::transform(i32src, dst.begin(), [](const int32_t in) noexcept -> float
-            { return float(in>>8) / 8388607.0f; });
-        }
-        break;
-    }
-}
-
-template<Quality Q>
-void LafStream::copySamples(char *dst, const char *src, const size_t idx, const size_t count) const
-{
-    using reader_t = SampleReader<Q>;
-    using src_t = typename reader_t::src_t;
-    using dst_t = typename reader_t::dst_t;
-
-    const auto step = size_t{mNumEnabled};
-    assert(idx < step);
-
-    auto input = std::span{reinterpret_cast<const src_t*>(src), count*step};
-    auto output = std::span{reinterpret_cast<dst_t*>(dst), count};
-
-    auto inptr = input.begin() + ptrdiff_t(idx);
-    output.front() = reader_t::read(*inptr);
-    std::ranges::generate(output | std::views::drop(1), [&inptr,step]
-    {
-        inptr += ptrdiff_t(step);
-        return reader_t::read(*inptr);
-    });
-}
-
-auto LafStream::prepareTrack(const size_t trackidx, const size_t count) -> std::span<char>
+auto LafStream::prepareTrack(const size_t trackidx, const size_t count) -> std::span<std::byte>
 {
     const auto todo = std::min(size_t{mSampleRate}, count);
     if((mEnabledTracks[trackidx>>3] & (1_uz<<(trackidx&7))))
@@ -482,31 +407,69 @@ auto LafStream::prepareTrack(const size_t trackidx, const size_t count) -> std::
                 + res;
         });
 
-        switch(mQuality)
+        const auto step = size_t{mNumEnabled};
+        assert(idx < step);
+        return std::visit([=,src=std::span{mSampleChunk}](auto &dst)
         {
-        case Quality::s8:
-            copySamples<Quality::s8>(mSampleLine.data(), mSampleChunk.data(), idx, todo);
-            break;
-        case Quality::s16:
-            copySamples<Quality::s16>(mSampleLine.data(), mSampleChunk.data(), idx, todo);
-            break;
-        case Quality::f32:
-            copySamples<Quality::f32>(mSampleLine.data(), mSampleChunk.data(), idx, todo);
-            break;
-        case Quality::s24:
-            copySamples<Quality::s24>(mSampleLine.data(), mSampleChunk.data(), idx, todo);
-            break;
-        }
-    }
-    else
-    {
-        /* If the track is disabled, provide silence. */
-        std::ranges::fill(mSampleLine, char{});
+            using sample_t = typename std::remove_cvref_t<decltype(dst)>::value_type;
+            auto inptr = src.begin() + ptrdiff_t(idx*SampleInfo<sample_t>::SrcSize);
+            auto output = std::span{dst}.first(count);
+            output.front() = SampleInfo<sample_t>::read(inptr);
+            std::ranges::generate(output | std::views::drop(1), [&inptr,step]
+            {
+                inptr += ptrdiff_t(step*SampleInfo<sample_t>::SrcSize);
+                return SampleInfo<sample_t>::read(inptr);
+            });
+            return std::as_writable_bytes(output);
+        }, mSampleLine);
     }
 
-    return mSampleLine.first(todo * BufferBytesFromQuality(mQuality));
+    /* If the track is disabled, provide silence. */
+    return std::visit([todo](auto &dst)
+    {
+        using sample_t = typename std::remove_cvref_t<decltype(dst)>::value_type;
+        std::ranges::fill(dst, sample_t{});
+        return std::as_writable_bytes(std::span{dst}.first(todo));
+    }, mSampleLine);
 }
 
+void LafStream::convertSamples(const std::span<std::byte> samples) const
+{
+    /* OpenAL uses unsigned 8-bit samples (0...255), so signed 8-bit samples
+     * (-128...+127) need conversion. The other formats are fine.
+     */
+    if(mQuality == Quality::s8)
+    {
+        std::ranges::transform(samples, samples.begin(),
+            [](const std::byte sample) noexcept -> std::byte
+        {
+            return sample^std::byte{0x80};
+        });
+    }
+}
+
+void LafStream::convertPositions(const std::span<float> dst) const
+{
+    std::visit(overloaded {
+        [dst](const vector<int8_t> &src)
+        {
+            std::ranges::transform(src, dst.begin(), [](const int8_t in) noexcept -> float
+            { return float(in) / 127.0f; });
+        },
+        [dst](const vector<int16_t> &src)
+        {
+            std::ranges::transform(src, dst.begin(), [](const int16_t in) noexcept -> float
+            { return float(in) / 32767.0f; });
+        },
+        [dst](const vector<float> &src) { std::ranges::copy(src, dst.begin()); },
+        [dst](const vector<int32_t> &src)
+        {
+            /* 24-bit samples are converted to 32-bit in copySamples. */
+            std::ranges::transform(src, dst.begin(), [](const int32_t in) noexcept -> float
+            { return float(in>>8) / 8388607.0f; });
+        },
+    }, mSampleLine);
+}
 
 auto LoadLAF(const fs::path &fname) -> std::unique_ptr<LafStream>
 {
@@ -685,10 +648,14 @@ auto LoadLAF(const fs::path &fname) -> std::unique_ptr<LafStream>
     std::ranges::generate(laf->mPosTracks, [length=laf->mSampleRate*2_uz]
     { return std::vector<float>(length, 0.0f); });
 
-    laf->mSampleChunk.resize(laf->mSampleRate*BytesFromQuality(laf->mQuality)*laf->mNumTracks
-        + laf->mSampleRate*BufferBytesFromQuality(laf->mQuality));
-    laf->mSampleLine = std::span{laf->mSampleChunk}.last(laf->mSampleRate
-        * BufferBytesFromQuality(laf->mQuality));
+    laf->mSampleChunk.resize(laf->mSampleRate*BytesFromQuality(laf->mQuality)*laf->mNumTracks);
+    switch(laf->mQuality)
+    {
+    case Quality::s8: laf->mSampleLine.emplace<std::vector<int8_t>>(laf->mSampleRate); break;
+    case Quality::s16: laf->mSampleLine.emplace<std::vector<int16_t>>(laf->mSampleRate); break;
+    case Quality::f32: laf->mSampleLine.emplace<std::vector<float>>(laf->mSampleRate); break;
+    case Quality::s24: laf->mSampleLine.emplace<std::vector<int32_t>>(laf->mSampleRate); break;
+    }
 
     return laf;
 }
@@ -820,9 +787,8 @@ try {
                     std::ranges::copy(laf->mPosTracks[i] | std::views::drop(laf->mSampleRate),
                         laf->mPosTracks[i].begin());
 
-                    const auto positions = laf->prepareTrack(laf->mChannels.size()+i, numsamples);
-                    laf->convertPositions(std::span{laf->mPosTracks[i]}.last(laf->mSampleRate),
-                        positions);
+                    std::ignore = laf->prepareTrack(laf->mChannels.size()+i, numsamples);
+                    laf->convertPositions(std::span{laf->mPosTracks[i]}.last(laf->mSampleRate));
                 }
             }
             else
@@ -848,9 +814,8 @@ try {
             }
             for(auto i = 0_uz;i < laf->mPosTracks.size();++i)
             {
-                const auto positions = laf->prepareTrack(laf->mChannels.size()+i, numsamples);
-                laf->convertPositions(std::span{laf->mPosTracks[i]}.first(laf->mSampleRate),
-                    positions);
+                std::ignore = laf->prepareTrack(laf->mChannels.size()+i, numsamples);
+                laf->convertPositions(std::span{laf->mPosTracks[i]}.first(laf->mSampleRate));
             }
 
             numsamples = laf->readChunk();
@@ -866,9 +831,8 @@ try {
             }
             for(auto i = 0_uz;i < laf->mPosTracks.size();++i)
             {
-                const auto positions = laf->prepareTrack(laf->mChannels.size()+i, numsamples);
-                laf->convertPositions(std::span{laf->mPosTracks[i]}.last(laf->mSampleRate),
-                    positions);
+                std::ignore = laf->prepareTrack(laf->mChannels.size()+i, numsamples);
+                laf->convertPositions(std::span{laf->mPosTracks[i]}.last(laf->mSampleRate));
             }
 
             if(!laf->mPosTracks.empty())
@@ -960,6 +924,7 @@ auto main(std::span<std::string_view> args) -> int
         x = reinterpret_cast<decltype(x)>(alGetProcAddress(#x));              \
         if(!x) fmt::println(stderr, "Failed to find function '{}'", #x##sv);  \
     } while(0)
+        /* NOLINTBEGIN(cppcoreguidelines-pro-type-reinterpret-cast) */
         LOAD_PROC(alGenFilters);
         LOAD_PROC(alDeleteFilters);
         LOAD_PROC(alIsFilter);
@@ -993,6 +958,7 @@ auto main(std::span<std::string_view> args) -> int
         LOAD_PROC(alGetAuxiliaryEffectSlotfv);
         LOAD_PROC(alGetAuxiliaryEffectSloti);
         LOAD_PROC(alGetAuxiliaryEffectSlotiv);
+        /* NOLINTEND(cppcoreguidelines-pro-type-reinterpret-cast) */
 #undef LOAD_PROC
 
         alGenFilters(1, &MuteFilterID);

@@ -20,9 +20,10 @@ struct FuncExport {
     std::string_view funcName;
     void *address;
 };
-#define DECL(x) FuncExport{#x, reinterpret_cast<void*>(x)}
+#define DECL(x) FuncExport{#x, reinterpret_cast<void*>(&x)}
 /* NOLINTNEXTLINE(*-avoid-c-arrays) Too large for std::array auto-deduction :( */
 inline const FuncExport alcFunctions[]{
+    /* NOLINTBEGIN(cppcoreguidelines-pro-type-reinterpret-cast) */
     DECL(alcCreateContext),
     DECL(alcMakeContextCurrent),
     DECL(alcProcessContext),
@@ -392,6 +393,7 @@ inline const std::array eaxFunctions{
     DECL(EAXSetDirect),
     DECL(EAXGetBufferModeDirect),
     DECL(EAXSetBufferModeDirect),
+    /* NOLINTEND(cppcoreguidelines-pro-type-reinterpret-cast) */
 };
 #endif
 #undef DECL

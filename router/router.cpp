@@ -239,6 +239,7 @@ void AddModule(HMODULE module, const std::wstring_view name)
                 return false;
             }
 
+            /* NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast) */
             func = reinterpret_cast<func_t>(ptr);
             return true;
         };

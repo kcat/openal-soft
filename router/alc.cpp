@@ -36,8 +36,9 @@ struct FuncExportEntry {
     std::string_view funcName;
     void *address;
 };
-#define DECL(x) FuncExportEntry{ #x##sv, reinterpret_cast<void*>(x) }
+#define DECL(x) FuncExportEntry{ #x##sv, reinterpret_cast<void*>(&x) }
 const auto alcFunctions = std::array{
+    /* NOLINTBEGIN(cppcoreguidelines-pro-type-reinterpret-cast) */
     DECL(alcCreateContext),
     DECL(alcMakeContextCurrent),
     DECL(alcProcessContext),
@@ -170,6 +171,7 @@ const auto alcFunctions = std::array{
     DECL(alGetAuxiliaryEffectSlotfv),
     DECL(alGetAuxiliaryEffectSloti),
     DECL(alGetAuxiliaryEffectSlotiv),
+    /* NOLINTEND(cppcoreguidelines-pro-type-reinterpret-cast) */
 };
 #undef DECL
 
@@ -178,7 +180,7 @@ struct EnumExportEntry {
     ALCenum value;
 };
 #define DECL(x) EnumExportEntry{ #x##sv, (x) }
-const auto alcEnumerations = std::array{
+constexpr auto alcEnumerations = std::array{
     DECL(ALC_INVALID),
     DECL(ALC_FALSE),
     DECL(ALC_TRUE),
@@ -431,6 +433,7 @@ void InitCtxFuncs(DriverIface &iface)
 } while(0)
     if(iface.alcIsExtensionPresent(device, "ALC_EXT_EFX"))
     {
+        /* NOLINTBEGIN(cppcoreguidelines-pro-type-reinterpret-cast) */
         LOAD_PROC(alGenFilters);
         LOAD_PROC(alDeleteFilters);
         LOAD_PROC(alIsFilter);
@@ -464,6 +467,7 @@ void InitCtxFuncs(DriverIface &iface)
         LOAD_PROC(alGetAuxiliaryEffectSlotfv);
         LOAD_PROC(alGetAuxiliaryEffectSloti);
         LOAD_PROC(alGetAuxiliaryEffectSlotiv);
+        /* NOLINTEND(cppcoreguidelines-pro-type-reinterpret-cast) */
     }
 #undef LOAD_PROC
 }

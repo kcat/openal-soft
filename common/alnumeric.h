@@ -51,8 +51,6 @@ constexpr auto GetCounterSuffix(size_t count) noexcept -> std::string_view
 
 constexpr auto lerpf(float val1, float val2, float mu) noexcept -> float
 { return val1 + (val2-val1)*mu; }
-constexpr auto lerpd(double val1, double val2, double mu) noexcept -> double
-{ return val1 + (val2-val1)*mu; }
 
 
 /** Find the next power-of-2 for non-power-of-2 numbers. */

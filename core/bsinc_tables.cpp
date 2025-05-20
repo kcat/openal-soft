@@ -129,9 +129,9 @@ struct BSincHeader {
         , scaleLimit{1.0 / maxScale}
     {
         const auto base_a = (order+1.0) / 2.0;
-        for(uint si{0};si < BSincScaleCount;++si)
+        for(auto si = 0u;si < BSincScaleCount;++si)
         {
-            const auto scale = lerpd(scaleBase, 1.0, (si+1u) / double{BSincScaleCount});
+            const auto scale = std::lerp(scaleBase, 1.0, (si+1u) / double{BSincScaleCount});
             a[si] = std::min(base_a/scale, base_a*maxScale);
             /* std::ceil() isn't constexpr until C++23, this should behave the
              * same.
@@ -174,13 +174,13 @@ struct SIMDALIGN BSincFilterArray {
         /* Calculate the Kaiser-windowed Sinc filter coefficients for each
          * scale and phase index.
          */
-        for(uint si{0};si < BSincScaleCount;++si)
+        for(auto si = 0u;si < BSincScaleCount;++si)
         {
             const auto a = hdr.a[si];
             const auto m = hdr.m[si];
             const auto l = std::floor(m*0.5) - 1.0;
             const auto o = size_t{BSincPointsMax-m} / 2u;
-            const auto scale = lerpd(hdr.scaleBase, 1.0, (si+1u) / double{BSincScaleCount});
+            const auto scale = std::lerp(hdr.scaleBase, 1.0, (si+1u) / double{BSincScaleCount});
 
             /* Calculate an appropriate cutoff frequency. An explanation may be
              * in order here.

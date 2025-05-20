@@ -604,42 +604,50 @@ constexpr auto EAX50SOURCE_DEFAULTFLAGS =
     EAXSOURCEFLAGS_ROOMHFAUTO |
     EAXSOURCEFLAGS_UPMIX;
 
+struct EAXSENDPROPERTIES {
+    long lSend; // send level (at low and mid frequencies)
+    long lSendHF; // relative send level at high frequencies
+};
+
+// Use this structure for EAXSOURCE_OBSTRUCTIONPARAMETERS property.
+struct EAXOBSTRUCTIONPROPERTIES {
+    long lObstruction; // main obstruction control (attenuation at high frequencies)
+    float flObstructionLFRatio; // obstruction low-frequency level re. main control
+};
+
+// Use this structure for EAXSOURCE_OCCLUSIONPARAMETERS property.
+struct EAXOCCLUSIONPROPERTIES {
+    long lOcclusion; // main occlusion control (attenuation at high frequencies)
+    float flOcclusionLFRatio; // occlusion low-frequency level re. main control
+    float flOcclusionRoomRatio; // relative occlusion control for room effect
+    float flOcclusionDirectRatio; // relative occlusion control for direct path
+};
+
+// Use this structure for EAXSOURCE_EXCLUSIONPARAMETERS property.
+struct EAXEXCLUSIONPROPERTIES {
+    long lExclusion; // main exclusion control (attenuation at high frequencies)
+    float flExclusionLFRatio; // exclusion low-frequency level re. main control
+};
+
 struct EAX30SOURCEPROPERTIES {
     long lDirect; // direct path level (at low and mid frequencies)
     long lDirectHF; // relative direct path level at high frequencies
     long lRoom; // room effect level (at low and mid frequencies)
     long lRoomHF; // relative room effect level at high frequencies
-    long lObstruction; // main obstruction control (attenuation at high frequencies) 
-    float flObstructionLFRatio; // obstruction low-frequency level re. main control
-    long lOcclusion; // main occlusion control (attenuation at high frequencies)
-    float flOcclusionLFRatio; // occlusion low-frequency level re. main control
-    float flOcclusionRoomRatio; // relative occlusion control for room effect
-    float flOcclusionDirectRatio; // relative occlusion control for direct path
-    long lExclusion; // main exclusion control (attenuation at high frequencies)
-    float flExclusionLFRatio; // exclusion low-frequency level re. main control
+    EAXOBSTRUCTIONPROPERTIES mObstruction;
+    EAXOCCLUSIONPROPERTIES mOcclusion;
+    EAXEXCLUSIONPROPERTIES mExclusion;
     long lOutsideVolumeHF; // outside sound cone level at high frequencies
     float flDopplerFactor; // like DS3D flDopplerFactor but per source
     float flRolloffFactor; // like DS3D flRolloffFactor but per source
     float flRoomRolloffFactor; // like DS3D flRolloffFactor but for room effect
     float flAirAbsorptionFactor; // multiplies EAXREVERB_AIRABSORPTIONHF
     unsigned long ulFlags; // modifies the behavior of properties
-}; // EAX30SOURCEPROPERTIES
+};
 
 struct EAX50SOURCEPROPERTIES : public EAX30SOURCEPROPERTIES {
     float flMacroFXFactor;
-}; // EAX50SOURCEPROPERTIES
-
-struct EAXSOURCEALLSENDPROPERTIES {
-    GUID guidReceivingFXSlotID;
-    long lSend; // send level (at low and mid frequencies)
-    long lSendHF; // relative send level at high frequencies
-    long lOcclusion;
-    float flOcclusionLFRatio;
-    float flOcclusionRoomRatio;
-    float flOcclusionDirectRatio;
-    long lExclusion;
-    float flExclusionLFRatio;
-}; // EAXSOURCEALLSENDPROPERTIES
+};
 
 struct EAXSOURCE2DPROPERTIES {
     long lDirect; // direct path level (at low and mid frequencies)
@@ -647,63 +655,45 @@ struct EAXSOURCE2DPROPERTIES {
     long lRoom; // room effect level (at low and mid frequencies)
     long lRoomHF; // relative room effect level at high frequencies
     unsigned long ulFlags; // modifies the behavior of properties
-}; // EAXSOURCE2DPROPERTIES
+};
 
 struct EAXSPEAKERLEVELPROPERTIES {
     long lSpeakerID;
     long lLevel;
-}; // EAXSPEAKERLEVELPROPERTIES
+};
 
 struct EAX40ACTIVEFXSLOTS {
     std::array<GUID,EAX40_MAX_ACTIVE_FXSLOTS> guidActiveFXSlots;
-}; // EAX40ACTIVEFXSLOTS
+};
 
 struct EAX50ACTIVEFXSLOTS {
     std::array<GUID,EAX50_MAX_ACTIVE_FXSLOTS> guidActiveFXSlots;
-}; // EAX50ACTIVEFXSLOTS
-
-// Use this structure for EAXSOURCE_OBSTRUCTIONPARAMETERS property.
-struct EAXOBSTRUCTIONPROPERTIES {
-    long lObstruction;
-    float flObstructionLFRatio;
-}; // EAXOBSTRUCTIONPROPERTIES
-
-// Use this structure for EAXSOURCE_OCCLUSIONPARAMETERS property.
-struct EAXOCCLUSIONPROPERTIES {
-    long lOcclusion;
-    float flOcclusionLFRatio;
-    float flOcclusionRoomRatio;
-    float flOcclusionDirectRatio;
-}; // EAXOCCLUSIONPROPERTIES
-
-// Use this structure for EAXSOURCE_EXCLUSIONPARAMETERS property.
-struct EAXEXCLUSIONPROPERTIES {
-    long lExclusion;
-    float flExclusionLFRatio;
-}; // EAXEXCLUSIONPROPERTIES
+};
 
 // Use this structure for EAXSOURCE_SENDPARAMETERS properties.
 struct EAXSOURCESENDPROPERTIES {
     GUID guidReceivingFXSlotID;
-    long lSend;
-    long lSendHF;
-}; // EAXSOURCESENDPROPERTIES
+    EAXSENDPROPERTIES mSend;
+};
 
 // Use this structure for EAXSOURCE_OCCLUSIONSENDPARAMETERS 
 struct EAXSOURCEOCCLUSIONSENDPROPERTIES {
     GUID guidReceivingFXSlotID;
-    long lOcclusion;
-    float flOcclusionLFRatio;
-    float flOcclusionRoomRatio;
-    float flOcclusionDirectRatio;
-}; // EAXSOURCEOCCLUSIONSENDPROPERTIES
+    EAXOCCLUSIONPROPERTIES mOcclusion;
+};
 
 // Use this structure for EAXSOURCE_EXCLUSIONSENDPARAMETERS
 struct EAXSOURCEEXCLUSIONSENDPROPERTIES {
     GUID guidReceivingFXSlotID;
-    long lExclusion;
-    float flExclusionLFRatio;
-}; // EAXSOURCEEXCLUSIONSENDPROPERTIES
+    EAXEXCLUSIONPROPERTIES mExclusion;
+};
+
+struct EAXSOURCEALLSENDPROPERTIES {
+    GUID guidReceivingFXSlotID;
+    EAXSENDPROPERTIES mSend;
+    EAXOCCLUSIONPROPERTIES mOcclusion;
+    EAXEXCLUSIONPROPERTIES mExclusion;
+};
 
 DECL_HIDDEN extern const EAX40ACTIVEFXSLOTS EAX40SOURCE_DEFAULTACTIVEFXSLOTID;
 

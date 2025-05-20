@@ -7,10 +7,19 @@
 
 #include "config.h"
 
-#include <algorithm>
-
 #include "api.h"
 
+#ifdef _WIN32
+/* On non-Windows systems, these use 'long' which throw off the expected size.
+ * Since EAX isn't intended for use outside of Windows, this discrepency isn't
+ * important.
+ */
+static_assert(sizeof(EAX30SOURCEPROPERTIES) == 72);
+static_assert(sizeof(EAXSOURCESENDPROPERTIES) == 24);
+static_assert(sizeof(EAXSOURCEOCCLUSIONSENDPROPERTIES) == 32);
+static_assert(sizeof(EAXSOURCEEXCLUSIONSENDPROPERTIES) == 24);
+static_assert(sizeof(EAXSOURCEALLSENDPROPERTIES) == 48);
+#endif
 
 const GUID DSPROPSETID_EAX_ReverbProperties =
 {

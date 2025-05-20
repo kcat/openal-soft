@@ -3811,14 +3811,14 @@ void ALsource::eax_set_sends_defaults(EaxSends& sends, const EaxFxSlotIds& ids) 
     {
         auto& send = sends[i];
         send.guidReceivingFXSlotID = *(ids[i]);
-        send.lSend = EAXSOURCE_DEFAULTSEND;
-        send.lSendHF = EAXSOURCE_DEFAULTSENDHF;
-        send.lOcclusion = EAXSOURCE_DEFAULTOCCLUSION;
-        send.flOcclusionLFRatio = EAXSOURCE_DEFAULTOCCLUSIONLFRATIO;
-        send.flOcclusionRoomRatio = EAXSOURCE_DEFAULTOCCLUSIONROOMRATIO;
-        send.flOcclusionDirectRatio = EAXSOURCE_DEFAULTOCCLUSIONDIRECTRATIO;
-        send.lExclusion = EAXSOURCE_DEFAULTEXCLUSION;
-        send.flExclusionLFRatio = EAXSOURCE_DEFAULTEXCLUSIONLFRATIO;
+        send.mSend.lSend = EAXSOURCE_DEFAULTSEND;
+        send.mSend.lSendHF = EAXSOURCE_DEFAULTSENDHF;
+        send.mOcclusion.lOcclusion = EAXSOURCE_DEFAULTOCCLUSION;
+        send.mOcclusion.flOcclusionLFRatio = EAXSOURCE_DEFAULTOCCLUSIONLFRATIO;
+        send.mOcclusion.flOcclusionRoomRatio = EAXSOURCE_DEFAULTOCCLUSIONROOMRATIO;
+        send.mOcclusion.flOcclusionDirectRatio = EAXSOURCE_DEFAULTOCCLUSIONDIRECTRATIO;
+        send.mExclusion.lExclusion = EAXSOURCE_DEFAULTEXCLUSION;
+        send.mExclusion.flExclusionLFRatio = EAXSOURCE_DEFAULTEXCLUSIONLFRATIO;
     }
 }
 
@@ -3862,14 +3862,14 @@ void ALsource::eax3_set_defaults(EAX30SOURCEPROPERTIES& props) noexcept
     props.lDirectHF = EAXSOURCE_DEFAULTDIRECTHF;
     props.lRoom = EAXSOURCE_DEFAULTROOM;
     props.lRoomHF = EAXSOURCE_DEFAULTROOMHF;
-    props.lObstruction = EAXSOURCE_DEFAULTOBSTRUCTION;
-    props.flObstructionLFRatio = EAXSOURCE_DEFAULTOBSTRUCTIONLFRATIO;
-    props.lOcclusion = EAXSOURCE_DEFAULTOCCLUSION;
-    props.flOcclusionLFRatio = EAXSOURCE_DEFAULTOCCLUSIONLFRATIO;
-    props.flOcclusionRoomRatio = EAXSOURCE_DEFAULTOCCLUSIONROOMRATIO;
-    props.flOcclusionDirectRatio = EAXSOURCE_DEFAULTOCCLUSIONDIRECTRATIO;
-    props.lExclusion = EAXSOURCE_DEFAULTEXCLUSION;
-    props.flExclusionLFRatio = EAXSOURCE_DEFAULTEXCLUSIONLFRATIO;
+    props.mObstruction.lObstruction = EAXSOURCE_DEFAULTOBSTRUCTION;
+    props.mObstruction.flObstructionLFRatio = EAXSOURCE_DEFAULTOBSTRUCTIONLFRATIO;
+    props.mOcclusion.lOcclusion = EAXSOURCE_DEFAULTOCCLUSION;
+    props.mOcclusion.flOcclusionLFRatio = EAXSOURCE_DEFAULTOCCLUSIONLFRATIO;
+    props.mOcclusion.flOcclusionRoomRatio = EAXSOURCE_DEFAULTOCCLUSIONROOMRATIO;
+    props.mOcclusion.flOcclusionDirectRatio = EAXSOURCE_DEFAULTOCCLUSIONDIRECTRATIO;
+    props.mExclusion.lExclusion = EAXSOURCE_DEFAULTEXCLUSION;
+    props.mExclusion.flExclusionLFRatio = EAXSOURCE_DEFAULTEXCLUSIONLFRATIO;
     props.lOutsideVolumeHF = EAXSOURCE_DEFAULTOUTSIDEVOLUMEHF;
     props.flDopplerFactor = EAXSOURCE_DEFAULTDOPPLERFACTOR;
     props.flRolloffFactor = EAXSOURCE_DEFAULTROLLOFFFACTOR;
@@ -3958,12 +3958,12 @@ void ALsource::eax1_translate(const EAXBUFFER_REVERBPROPERTIES& src, Eax5Props& 
     if (src.fMix == EAX_REVERBMIX_USEDISTANCE)
     {
         dst.source.ulFlags |= EAXSOURCEFLAGS_ROOMAUTO;
-        dst.sends[0].lSend = 0;
+        dst.sends[0].mSend.lSend = 0;
     }
     else
     {
         dst.source.ulFlags &= ~EAXSOURCEFLAGS_ROOMAUTO;
-        dst.sends[0].lSend = std::clamp(static_cast<long>(gain_to_level_mb(src.fMix)),
+        dst.sends[0].mSend.lSend = std::clamp(static_cast<long>(gain_to_level_mb(src.fMix)),
             EAXSOURCE_MINSEND, EAXSOURCE_MAXSEND);
     }
 }
@@ -3976,14 +3976,14 @@ void ALsource::eax2_translate(const EAX20BUFFERPROPERTIES& src, Eax5Props& dst) 
     dst.source.lDirectHF = src.lDirectHF;
     dst.source.lRoom = src.lRoom;
     dst.source.lRoomHF = src.lRoomHF;
-    dst.source.lObstruction = src.lObstruction;
-    dst.source.flObstructionLFRatio = src.flObstructionLFRatio;
-    dst.source.lOcclusion = src.lOcclusion;
-    dst.source.flOcclusionLFRatio = src.flOcclusionLFRatio;
-    dst.source.flOcclusionRoomRatio = src.flOcclusionRoomRatio;
-    dst.source.flOcclusionDirectRatio = EAXSOURCE_DEFAULTOCCLUSIONDIRECTRATIO;
-    dst.source.lExclusion = EAXSOURCE_DEFAULTEXCLUSION;
-    dst.source.flExclusionLFRatio = EAXSOURCE_DEFAULTEXCLUSIONLFRATIO;
+    dst.source.mObstruction.lObstruction = src.lObstruction;
+    dst.source.mObstruction.flObstructionLFRatio = src.flObstructionLFRatio;
+    dst.source.mOcclusion.lOcclusion = src.lOcclusion;
+    dst.source.mOcclusion.flOcclusionLFRatio = src.flOcclusionLFRatio;
+    dst.source.mOcclusion.flOcclusionRoomRatio = src.flOcclusionRoomRatio;
+    dst.source.mOcclusion.flOcclusionDirectRatio = EAXSOURCE_DEFAULTOCCLUSIONDIRECTRATIO;
+    dst.source.mExclusion.lExclusion = EAXSOURCE_DEFAULTEXCLUSION;
+    dst.source.mExclusion.flExclusionLFRatio = EAXSOURCE_DEFAULTEXCLUSIONLFRATIO;
     dst.source.lOutsideVolumeHF = src.lOutsideVolumeHF;
     dst.source.flDopplerFactor = EAXSOURCE_DEFAULTDOPPLERFACTOR;
     dst.source.flRolloffFactor = EAXSOURCE_DEFAULTROLLOFFFACTOR;
@@ -4029,7 +4029,10 @@ void ALsource::eax4_translate(const Eax4Props& src, Eax5Props& dst) noexcept
 
     // Active FX slots.
     //
-    auto translate_slotid = [](const GUID &src_id) -> GUID
+    const auto src_slots = std::span{src.active_fx_slots.guidActiveFXSlots};
+    const auto dst_slots = std::span{dst.active_fx_slots.guidActiveFXSlots};
+    auto dstiter = std::ranges::transform(src_slots, dst_slots.begin(), [](const GUID &src_id)
+        -> GUID
     {
         if(src_id == EAX_NULL_GUID)
             return EAX_NULL_GUID;
@@ -4047,12 +4050,8 @@ void ALsource::eax4_translate(const Eax4Props& src, Eax5Props& dst) noexcept
         [[unlikely]]
         ERR("Unexpected active FX slot ID");
         return EAX_NULL_GUID;
-    };
-    const auto src_slots = std::span{src.active_fx_slots.guidActiveFXSlots};
-    const auto dst_slots = std::span{dst.active_fx_slots.guidActiveFXSlots};
-    auto dstiter = std::transform(src_slots.begin(), src_slots.end(), dst_slots.begin(),
-        translate_slotid);
-    std::fill(dstiter, dst_slots.end(), EAX_NULL_GUID);
+    }).out;
+    std::ranges::fill(dstiter, dst_slots.end(), EAX_NULL_GUID);
 
     // Speaker levels.
     //
@@ -4075,15 +4074,16 @@ EaxAlLowPassParam ALsource::eax_create_direct_filter_param() const noexcept
 {
     const auto &source = mEax.source;
 
-    auto gain_mb = static_cast<float>(source.lObstruction) * source.flObstructionLFRatio;
-    auto gainhf_mb = static_cast<float>(source.lObstruction);
+    auto gain_mb = static_cast<float>(source.mObstruction.lObstruction)
+        * source.mObstruction.flObstructionLFRatio;
+    auto gainhf_mb = static_cast<float>(source.mObstruction.lObstruction);
 
     for(size_t i{0};i < EAX_MAX_FXSLOTS;++i)
     {
         if(!mEaxActiveFxSlots[i])
             continue;
 
-        if(source.lOcclusion != 0)
+        if(source.mOcclusion.lOcclusion != 0)
         {
             const auto& fx_slot = mEaxAlContext->eaxGetFxSlot(i);
             const auto& fx_slot_eax = fx_slot.eax_get_eax_fx_slot();
@@ -4092,20 +4092,23 @@ EaxAlLowPassParam ALsource::eax_create_direct_filter_param() const noexcept
 
             if(is_environmental_fx && is_primary)
             {
-                gain_mb += eax_calculate_dst_occlusion_mb(source.lOcclusion,
-                    source.flOcclusionDirectRatio, source.flOcclusionLFRatio);
+                gain_mb += eax_calculate_dst_occlusion_mb(source.mOcclusion.lOcclusion,
+                    source.mOcclusion.flOcclusionDirectRatio,
+                    source.mOcclusion.flOcclusionLFRatio);
 
-                gainhf_mb += static_cast<float>(source.lOcclusion) * source.flOcclusionDirectRatio;
+                gainhf_mb += static_cast<float>(source.mOcclusion.lOcclusion)
+                    * source.mOcclusion.flOcclusionDirectRatio;
             }
         }
 
         const auto& send = mEax.sends[i];
-        if(send.lOcclusion != 0)
+        if(send.mOcclusion.lOcclusion != 0)
         {
-            gain_mb += eax_calculate_dst_occlusion_mb(send.lOcclusion, send.flOcclusionDirectRatio,
-                send.flOcclusionLFRatio);
+            gain_mb += eax_calculate_dst_occlusion_mb(send.mOcclusion.lOcclusion,
+                send.mOcclusion.flOcclusionDirectRatio, send.mOcclusion.flOcclusionLFRatio);
 
-            gainhf_mb += static_cast<float>(send.lOcclusion) * send.flOcclusionDirectRatio;
+            gainhf_mb += static_cast<float>(send.mOcclusion.lOcclusion)
+                * send.mOcclusion.flOcclusionDirectRatio;
         }
     }
 
@@ -4133,27 +4136,29 @@ EaxAlLowPassParam ALsource::eax_create_room_filter_param(
     const auto is_primary = bool{mEaxPrimaryFxSlotId.value_or(-1) == fx_slot.eax_get_index()};
 
     auto gain_mb = (static_cast<float>(fx_slot_eax.lOcclusion) * fx_slot_eax.flOcclusionLFRatio)
-        + eax_calculate_dst_occlusion_mb(send.lOcclusion, send.flOcclusionRoomRatio,
-            send.flOcclusionLFRatio)
-        + (static_cast<float>(send.lExclusion) * send.flExclusionLFRatio);
+        + eax_calculate_dst_occlusion_mb(send.mOcclusion.lOcclusion,
+            send.mOcclusion.flOcclusionRoomRatio, send.mOcclusion.flOcclusionLFRatio)
+        + (static_cast<float>(send.mExclusion.lExclusion) * send.mExclusion.flExclusionLFRatio);
 
     auto gainhf_mb = static_cast<float>(fx_slot_eax.lOcclusion)
-        + (static_cast<float>(send.lOcclusion) * send.flOcclusionRoomRatio);
+        + (static_cast<float>(send.mOcclusion.lOcclusion) * send.mOcclusion.flOcclusionRoomRatio);
 
     if(is_environmental_fx && is_primary)
     {
         const auto &source = mEax.source;
 
-        gain_mb += eax_calculate_dst_occlusion_mb(source.lOcclusion, source.flOcclusionRoomRatio,
-            source.flOcclusionLFRatio);
-        gain_mb += static_cast<float>(source.lExclusion) * source.flExclusionLFRatio;
+        gain_mb += eax_calculate_dst_occlusion_mb(source.mOcclusion.lOcclusion,
+            source.mOcclusion.flOcclusionRoomRatio, source.mOcclusion.flOcclusionLFRatio);
+        gain_mb += static_cast<float>(source.mExclusion.lExclusion)
+            * source.mExclusion.flExclusionLFRatio;
 
-        gainhf_mb += static_cast<float>(source.lOcclusion) * source.flOcclusionRoomRatio;
-        gainhf_mb += static_cast<float>(source.lExclusion + send.lExclusion);
+        gainhf_mb += static_cast<float>(source.mOcclusion.lOcclusion)
+            * source.mOcclusion.flOcclusionRoomRatio;
+        gainhf_mb += static_cast<float>(source.mExclusion.lExclusion + send.mExclusion.lExclusion);
     }
 
-    gainhf_mb -= gain_mb - static_cast<float>(send.lSendHF);
-    gain_mb += static_cast<float>(send.lSend);
+    gainhf_mb -= gain_mb - static_cast<float>(send.mSend.lSendHF);
+    gain_mb += static_cast<float>(send.mSend.lSend);
     if(is_environmental_fx)
     {
         const auto &source = mEax.source;
@@ -4318,7 +4323,8 @@ void ALsource::eax2_set(const EaxCall& call, EAX20BUFFERPROPERTIES& props)
 
 void ALsource::eax3_set(const EaxCall& call, EAX30SOURCEPROPERTIES& props)
 {
-    switch (call.get_property_id()) {
+    switch(call.get_property_id())
+    {
         case EAXSOURCE_NONE:
             break;
 
@@ -4327,15 +4333,16 @@ void ALsource::eax3_set(const EaxCall& call, EAX30SOURCEPROPERTIES& props)
             break;
 
         case EAXSOURCE_OBSTRUCTIONPARAMETERS:
-            eax_defer_sub<Eax4ObstructionValidator, EAXOBSTRUCTIONPROPERTIES>(call, props.lObstruction);
+            eax_defer<Eax4ObstructionValidator, EAXOBSTRUCTIONPROPERTIES>(call,
+                props.mObstruction);
             break;
 
         case EAXSOURCE_OCCLUSIONPARAMETERS:
-            eax_defer_sub<Eax4OcclusionValidator, EAXOCCLUSIONPROPERTIES>(call, props.lOcclusion);
+            eax_defer<Eax4OcclusionValidator, EAXOCCLUSIONPROPERTIES>(call, props.mOcclusion);
             break;
 
         case EAXSOURCE_EXCLUSIONPARAMETERS:
-            eax_defer_sub<Eax4ExclusionValidator, EAXEXCLUSIONPROPERTIES>(call, props.lExclusion);
+            eax_defer<Eax4ExclusionValidator, EAXEXCLUSIONPROPERTIES>(call, props.mExclusion);
             break;
 
         case EAXSOURCE_DIRECT:
@@ -4355,35 +4362,40 @@ void ALsource::eax3_set(const EaxCall& call, EAX30SOURCEPROPERTIES& props)
             break;
 
         case EAXSOURCE_OBSTRUCTION:
-            eax_defer<Eax2SourceObstructionValidator>(call, props.lObstruction);
+            eax_defer<Eax2SourceObstructionValidator>(call, props.mObstruction.lObstruction);
             break;
 
         case EAXSOURCE_OBSTRUCTIONLFRATIO:
-            eax_defer<Eax2SourceObstructionLfRatioValidator>(call, props.flObstructionLFRatio);
+            eax_defer<Eax2SourceObstructionLfRatioValidator>(call,
+                props.mObstruction.flObstructionLFRatio);
             break;
 
         case EAXSOURCE_OCCLUSION:
-            eax_defer<Eax2SourceOcclusionValidator>(call, props.lOcclusion);
+            eax_defer<Eax2SourceOcclusionValidator>(call, props.mOcclusion.lOcclusion);
             break;
 
         case EAXSOURCE_OCCLUSIONLFRATIO:
-            eax_defer<Eax2SourceOcclusionLfRatioValidator>(call, props.flOcclusionLFRatio);
+            eax_defer<Eax2SourceOcclusionLfRatioValidator>(call,
+                props.mOcclusion.flOcclusionLFRatio);
             break;
 
         case EAXSOURCE_OCCLUSIONROOMRATIO:
-            eax_defer<Eax2SourceOcclusionRoomRatioValidator>(call, props.flOcclusionRoomRatio);
+            eax_defer<Eax2SourceOcclusionRoomRatioValidator>(call,
+                props.mOcclusion.flOcclusionRoomRatio);
             break;
 
         case EAXSOURCE_OCCLUSIONDIRECTRATIO:
-            eax_defer<Eax3SourceOcclusionDirectRatioValidator>(call, props.flOcclusionDirectRatio);
+            eax_defer<Eax3SourceOcclusionDirectRatioValidator>(call,
+                props.mOcclusion.flOcclusionDirectRatio);
             break;
 
         case EAXSOURCE_EXCLUSION:
-            eax_defer<Eax3SourceExclusionValidator>(call, props.lExclusion);
+            eax_defer<Eax3SourceExclusionValidator>(call, props.mExclusion.lExclusion);
             break;
 
         case EAXSOURCE_EXCLUSIONLFRATIO:
-            eax_defer<Eax3SourceExclusionLfRatioValidator>(call, props.flExclusionLFRatio);
+            eax_defer<Eax3SourceExclusionLfRatioValidator>(call,
+                props.mExclusion.flExclusionLFRatio);
             break;
 
         case EAXSOURCE_OUTSIDEVOLUMEHF:
@@ -4671,20 +4683,17 @@ void ALsource::eax2_get(const EaxCall& call, const EAX20BUFFERPROPERTIES& props)
 
 void ALsource::eax3_get_obstruction(const EaxCall& call, const EAX30SOURCEPROPERTIES& props)
 {
-    const auto& subprops = reinterpret_cast<const EAXOBSTRUCTIONPROPERTIES&>(props.lObstruction);
-    call.set_value<Exception>(subprops);
+    call.set_value<Exception>(props.mObstruction);
 }
 
 void ALsource::eax3_get_occlusion(const EaxCall& call, const EAX30SOURCEPROPERTIES& props)
 {
-    const auto& subprops = reinterpret_cast<const EAXOCCLUSIONPROPERTIES&>(props.lOcclusion);
-    call.set_value<Exception>(subprops);
+    call.set_value<Exception>(props.mOcclusion);
 }
 
 void ALsource::eax3_get_exclusion(const EaxCall& call, const EAX30SOURCEPROPERTIES& props)
 {
-    const auto& subprops = reinterpret_cast<const EAXEXCLUSIONPROPERTIES&>(props.lExclusion);
-    call.set_value<Exception>(subprops);
+    call.set_value<Exception>(props.mExclusion);
 }
 
 void ALsource::eax3_get(const EaxCall& call, const EAX30SOURCEPROPERTIES& props)
@@ -4726,35 +4735,35 @@ void ALsource::eax3_get(const EaxCall& call, const EAX30SOURCEPROPERTIES& props)
             break;
 
         case EAXSOURCE_OBSTRUCTION:
-            call.set_value<Exception>(props.lObstruction);
+            call.set_value<Exception>(props.mObstruction.lObstruction);
             break;
 
         case EAXSOURCE_OBSTRUCTIONLFRATIO:
-            call.set_value<Exception>(props.flObstructionLFRatio);
+            call.set_value<Exception>(props.mObstruction.flObstructionLFRatio);
             break;
 
         case EAXSOURCE_OCCLUSION:
-            call.set_value<Exception>(props.lOcclusion);
+            call.set_value<Exception>(props.mOcclusion.lOcclusion);
             break;
 
         case EAXSOURCE_OCCLUSIONLFRATIO:
-            call.set_value<Exception>(props.flOcclusionLFRatio);
+            call.set_value<Exception>(props.mOcclusion.flOcclusionLFRatio);
             break;
 
         case EAXSOURCE_OCCLUSIONROOMRATIO:
-            call.set_value<Exception>(props.flOcclusionRoomRatio);
+            call.set_value<Exception>(props.mOcclusion.flOcclusionRoomRatio);
             break;
 
         case EAXSOURCE_OCCLUSIONDIRECTRATIO:
-            call.set_value<Exception>(props.flOcclusionDirectRatio);
+            call.set_value<Exception>(props.mOcclusion.flOcclusionDirectRatio);
             break;
 
         case EAXSOURCE_EXCLUSION:
-            call.set_value<Exception>(props.lExclusion);
+            call.set_value<Exception>(props.mExclusion.lExclusion);
             break;
 
         case EAXSOURCE_EXCLUSIONLFRATIO:
-            call.set_value<Exception>(props.flExclusionLFRatio);
+            call.set_value<Exception>(props.mExclusion.flExclusionLFRatio);
             break;
 
         case EAXSOURCE_OUTSIDEVOLUMEHF:

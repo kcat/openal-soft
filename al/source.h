@@ -521,14 +521,14 @@ private:
             Eax2SourceDirectHfValidator{}(props.lDirectHF);
             Eax2SourceRoomValidator{}(props.lRoom);
             Eax2SourceRoomHfValidator{}(props.lRoomHF);
-            Eax2SourceObstructionValidator{}(props.lObstruction);
-            Eax2SourceObstructionLfRatioValidator{}(props.flObstructionLFRatio);
-            Eax2SourceOcclusionValidator{}(props.lOcclusion);
-            Eax2SourceOcclusionLfRatioValidator{}(props.flOcclusionLFRatio);
-            Eax2SourceOcclusionRoomRatioValidator{}(props.flOcclusionRoomRatio);
-            Eax3SourceOcclusionDirectRatioValidator{}(props.flOcclusionDirectRatio);
-            Eax3SourceExclusionValidator{}(props.lExclusion);
-            Eax3SourceExclusionLfRatioValidator{}(props.flExclusionLFRatio);
+            Eax2SourceObstructionValidator{}(props.mObstruction.lObstruction);
+            Eax2SourceObstructionLfRatioValidator{}(props.mObstruction.flObstructionLFRatio);
+            Eax2SourceOcclusionValidator{}(props.mOcclusion.lOcclusion);
+            Eax2SourceOcclusionLfRatioValidator{}(props.mOcclusion.flOcclusionLFRatio);
+            Eax2SourceOcclusionRoomRatioValidator{}(props.mOcclusion.flOcclusionRoomRatio);
+            Eax3SourceOcclusionDirectRatioValidator{}(props.mOcclusion.flOcclusionDirectRatio);
+            Eax3SourceExclusionValidator{}(props.mExclusion.lExclusion);
+            Eax3SourceExclusionLfRatioValidator{}(props.mExclusion.flExclusionLFRatio);
             Eax2SourceOutsideVolumeHfValidator{}(props.lOutsideVolumeHF);
             Eax3SourceDopplerFactorValidator{}(props.flDopplerFactor);
             Eax3SourceRolloffFactorValidator{}(props.flRolloffFactor);
@@ -545,14 +545,14 @@ private:
             Eax2SourceDirectHfValidator{}(props.lDirectHF);
             Eax2SourceRoomValidator{}(props.lRoom);
             Eax2SourceRoomHfValidator{}(props.lRoomHF);
-            Eax2SourceObstructionValidator{}(props.lObstruction);
-            Eax2SourceObstructionLfRatioValidator{}(props.flObstructionLFRatio);
-            Eax2SourceOcclusionValidator{}(props.lOcclusion);
-            Eax2SourceOcclusionLfRatioValidator{}(props.flOcclusionLFRatio);
-            Eax2SourceOcclusionRoomRatioValidator{}(props.flOcclusionRoomRatio);
-            Eax3SourceOcclusionDirectRatioValidator{}(props.flOcclusionDirectRatio);
-            Eax3SourceExclusionValidator{}(props.lExclusion);
-            Eax3SourceExclusionLfRatioValidator{}(props.flExclusionLFRatio);
+            Eax2SourceObstructionValidator{}(props.mObstruction.lObstruction);
+            Eax2SourceObstructionLfRatioValidator{}(props.mObstruction.flObstructionLFRatio);
+            Eax2SourceOcclusionValidator{}(props.mOcclusion.lOcclusion);
+            Eax2SourceOcclusionLfRatioValidator{}(props.mOcclusion.flOcclusionLFRatio);
+            Eax2SourceOcclusionRoomRatioValidator{}(props.mOcclusion.flOcclusionRoomRatio);
+            Eax3SourceOcclusionDirectRatioValidator{}(props.mOcclusion.flOcclusionDirectRatio);
+            Eax3SourceExclusionValidator{}(props.mExclusion.lExclusion);
+            Eax3SourceExclusionLfRatioValidator{}(props.mExclusion.flExclusionLFRatio);
             Eax2SourceOutsideVolumeHfValidator{}(props.lOutsideVolumeHF);
             Eax3SourceDopplerFactorValidator{}(props.flDopplerFactor);
             Eax3SourceRolloffFactorValidator{}(props.flRolloffFactor);
@@ -657,8 +657,8 @@ private:
         void operator()(const EAXSOURCESENDPROPERTIES& props) const
         {
             TIdValidator{}(props.guidReceivingFXSlotID);
-            Eax4SendSendValidator{}(props.lSend);
-            Eax4SendSendHfValidator{}(props.lSendHF);
+            Eax4SendSendValidator{}(props.mSend.lSend);
+            Eax4SendSendHfValidator{}(props.mSend.lSendHF);
         }
     };
 
@@ -670,10 +670,10 @@ private:
         void operator()(const EAXSOURCEOCCLUSIONSENDPROPERTIES& props) const
         {
             TIdValidator{}(props.guidReceivingFXSlotID);
-            Eax2SourceOcclusionValidator{}(props.lOcclusion);
-            Eax2SourceOcclusionLfRatioValidator{}(props.flOcclusionLFRatio);
-            Eax2SourceOcclusionRoomRatioValidator{}(props.flOcclusionRoomRatio);
-            Eax3SourceOcclusionDirectRatioValidator{}(props.flOcclusionDirectRatio);
+            Eax2SourceOcclusionValidator{}(props.mOcclusion.lOcclusion);
+            Eax2SourceOcclusionLfRatioValidator{}(props.mOcclusion.flOcclusionLFRatio);
+            Eax2SourceOcclusionRoomRatioValidator{}(props.mOcclusion.flOcclusionRoomRatio);
+            Eax3SourceOcclusionDirectRatioValidator{}(props.mOcclusion.flOcclusionDirectRatio);
         }
     };
 
@@ -685,8 +685,8 @@ private:
         void operator()(const EAXSOURCEEXCLUSIONSENDPROPERTIES& props) const
         {
             TIdValidator{}(props.guidReceivingFXSlotID);
-            Eax3SourceExclusionValidator{}(props.lExclusion);
-            Eax3SourceExclusionLfRatioValidator{}(props.flExclusionLFRatio);
+            Eax3SourceExclusionValidator{}(props.mExclusion.lExclusion);
+            Eax3SourceExclusionLfRatioValidator{}(props.mExclusion.flExclusionLFRatio);
         }
     };
 
@@ -698,14 +698,14 @@ private:
         void operator()(const EAXSOURCEALLSENDPROPERTIES& props) const
         {
             TIdValidator{}(props.guidReceivingFXSlotID);
-            Eax4SendSendValidator{}(props.lSend);
-            Eax4SendSendHfValidator{}(props.lSendHF);
-            Eax2SourceOcclusionValidator{}(props.lOcclusion);
-            Eax2SourceOcclusionLfRatioValidator{}(props.flOcclusionLFRatio);
-            Eax2SourceOcclusionRoomRatioValidator{}(props.flOcclusionRoomRatio);
-            Eax3SourceOcclusionDirectRatioValidator{}(props.flOcclusionDirectRatio);
-            Eax3SourceExclusionValidator{}(props.lExclusion);
-            Eax3SourceExclusionLfRatioValidator{}(props.flExclusionLFRatio);
+            Eax4SendSendValidator{}(props.mSend.lSend);
+            Eax4SendSendHfValidator{}(props.mSend.lSendHF);
+            Eax2SourceOcclusionValidator{}(props.mOcclusion.lOcclusion);
+            Eax2SourceOcclusionLfRatioValidator{}(props.mOcclusion.flOcclusionLFRatio);
+            Eax2SourceOcclusionRoomRatioValidator{}(props.mOcclusion.flOcclusionRoomRatio);
+            Eax3SourceOcclusionDirectRatioValidator{}(props.mOcclusion.flOcclusionDirectRatio);
+            Eax3SourceExclusionValidator{}(props.mExclusion.lExclusion);
+            Eax3SourceExclusionLfRatioValidator{}(props.mExclusion.flExclusionLFRatio);
         }
     };
 
@@ -862,7 +862,8 @@ private:
         const EAXSOURCEALLSENDPROPERTIES& src,
         EAXSOURCESENDPROPERTIES& dst) noexcept
     {
-        dst = reinterpret_cast<const EAXSOURCESENDPROPERTIES&>(src);
+        dst.guidReceivingFXSlotID = src.guidReceivingFXSlotID;
+        dst.mSend = src.mSend;
     }
 
     static void eax_copy_send_for_get(
@@ -877,10 +878,7 @@ private:
         EAXSOURCEOCCLUSIONSENDPROPERTIES& dst) noexcept
     {
         dst.guidReceivingFXSlotID = src.guidReceivingFXSlotID;
-        dst.lOcclusion = src.lOcclusion;
-        dst.flOcclusionLFRatio = src.flOcclusionLFRatio;
-        dst.flOcclusionRoomRatio = src.flOcclusionRoomRatio;
-        dst.flOcclusionDirectRatio = src.flOcclusionDirectRatio;
+        dst.mOcclusion = src.mOcclusion;
     }
 
     static void eax_copy_send_for_get(
@@ -888,8 +886,7 @@ private:
         EAXSOURCEEXCLUSIONSENDPROPERTIES& dst) noexcept
     {
         dst.guidReceivingFXSlotID = src.guidReceivingFXSlotID;
-        dst.lExclusion = src.lExclusion;
-        dst.flExclusionLFRatio = src.flExclusionLFRatio;
+        dst.mExclusion = src.mExclusion;
     }
 
     template<typename TDstSend>
@@ -898,7 +895,8 @@ private:
         const auto dst_sends = call.get_values<TDstSend>(EAX_MAX_FXSLOTS);
         const auto count = dst_sends.size();
 
-        for (auto i = decltype(count){}; i < count; ++i) {
+        for(auto i = decltype(count){}; i < count; ++i)
+        {
             const auto& src_send = src_sends[i];
             auto& dst_send = dst_sends[i];
             eax_copy_send_for_get(src_send, dst_send);
@@ -919,60 +917,47 @@ private:
     void eax_get(const EaxCall& call);
 
     static void eax_copy_send_for_set(
-        const EAXSOURCESENDPROPERTIES& src,
-        EAXSOURCEALLSENDPROPERTIES& dst) noexcept
-    {
-        dst.lSend = src.lSend;
-        dst.lSendHF = src.lSendHF;
-    }
-
-    static void eax_copy_send_for_set(
         const EAXSOURCEALLSENDPROPERTIES& src,
         EAXSOURCEALLSENDPROPERTIES& dst) noexcept
     {
-        dst.lSend = src.lSend;
-        dst.lSendHF = src.lSendHF;
-        dst.lOcclusion = src.lOcclusion;
-        dst.flOcclusionLFRatio = src.flOcclusionLFRatio;
-        dst.flOcclusionRoomRatio = src.flOcclusionRoomRatio;
-        dst.flOcclusionDirectRatio = src.flOcclusionDirectRatio;
-        dst.lExclusion = src.lExclusion;
-        dst.flExclusionLFRatio = src.flExclusionLFRatio;
+        dst.mSend = src.mSend;
+        dst.mOcclusion = src.mOcclusion;
+        dst.mExclusion = src.mExclusion;
+    }
+
+    static void eax_copy_send_for_set(
+        const EAXSOURCESENDPROPERTIES& src,
+        EAXSOURCEALLSENDPROPERTIES& dst) noexcept
+    {
+        dst.mSend = src.mSend;
     }
 
     static void eax_copy_send_for_set(
         const EAXSOURCEOCCLUSIONSENDPROPERTIES& src,
         EAXSOURCEALLSENDPROPERTIES& dst) noexcept
     {
-        dst.lOcclusion = src.lOcclusion;
-        dst.flOcclusionLFRatio = src.flOcclusionLFRatio;
-        dst.flOcclusionRoomRatio = src.flOcclusionRoomRatio;
-        dst.flOcclusionDirectRatio = src.flOcclusionDirectRatio;
+        dst.mOcclusion = src.mOcclusion;
     }
 
     static void eax_copy_send_for_set(
         const EAXSOURCEEXCLUSIONSENDPROPERTIES& src,
         EAXSOURCEALLSENDPROPERTIES& dst) noexcept
     {
-        dst.lExclusion = src.lExclusion;
-        dst.flExclusionLFRatio = src.flExclusionLFRatio;
+        dst.mExclusion = src.mExclusion;
     }
 
     template<typename TValidator, typename TIndexGetter, typename TSrcSend>
     void eax_defer_sends(const EaxCall& call, EaxSends& dst_sends)
     {
+        static constexpr auto index_getter = TIndexGetter{};
         const auto src_sends = call.get_values<const TSrcSend>(EAX_MAX_FXSLOTS);
-        std::for_each(src_sends.begin(), src_sends.end(), TValidator{});
-        const auto count = src_sends.size();
-        const auto index_getter = TIndexGetter{};
+        std::ranges::for_each(src_sends, TValidator{});
 
-        for(auto i = decltype(count){};i < count;++i)
+        std::ranges::for_each(src_sends, [&dst_sends](const TSrcSend &src_send)
         {
-            const auto& src_send = src_sends[i];
             const auto dst_index = index_getter(src_send.guidReceivingFXSlotID);
-            auto& dst_send = dst_sends[dst_index];
-            eax_copy_send_for_set(src_send, dst_send);
-        }
+            eax_copy_send_for_set(src_send, dst_sends[dst_index]);
+        });
     }
 
     template<typename TValidator, typename TSrcSend>
@@ -991,8 +976,8 @@ private:
     void eax_defer_active_fx_slot_id(const EaxCall& call, const std::span<GUID,TIdCount> dst_ids)
     {
         const auto src_ids = call.get_values<const GUID>(TIdCount);
-        std::for_each(src_ids.begin(), src_ids.end(), TValidator{});
-        std::uninitialized_copy(src_ids.begin(), src_ids.end(), dst_ids.begin());
+        std::ranges::for_each(src_ids, TValidator{});
+        std::ranges::uninitialized_copy(src_ids, dst_ids);
     }
 
     template<size_t TIdCount>
@@ -1015,16 +1000,6 @@ private:
         property = value;
     }
 
-    // Defers source's sub-properties (obstruction, occlusion, exclusion).
-    template<typename TValidator, typename TSubproperty, typename TProperty>
-    void eax_defer_sub(const EaxCall& call, TProperty& property)
-    {
-        const auto& src_props = call.get_value<Exception, const TSubproperty>();
-        TValidator{}(src_props);
-        auto& dst_props = reinterpret_cast<TSubproperty&>(property);
-        dst_props = src_props;
-    }
-
     void eax_set_efx_outer_gain_hf();
     void eax_set_efx_doppler_factor();
     void eax_set_efx_rolloff_factor();
@@ -1036,7 +1011,7 @@ private:
 
     static void eax1_set(const EaxCall& call, EAXBUFFER_REVERBPROPERTIES& props);
     static void eax2_set(const EaxCall& call, EAX20BUFFERPROPERTIES& props);
-    void eax3_set(const EaxCall& call, EAX30SOURCEPROPERTIES& props);
+    static void eax3_set(const EaxCall& call, EAX30SOURCEPROPERTIES& props);
     void eax4_set(const EaxCall& call, Eax4Props& props);
     static void eax5_defer_all_2d(const EaxCall& call, EAX50SOURCEPROPERTIES& props);
     static void eax5_defer_speaker_levels(const EaxCall& call, EaxSpeakerLevels& props);

@@ -5,6 +5,7 @@
 #include <array>
 #include <bit>
 #include <concepts>
+#include <cstddef>
 #include <cstring>
 #include <type_traits>
 
@@ -15,7 +16,7 @@ constexpr auto byteswap(T value) noexcept -> T
 {
     static_assert(std::has_unique_object_representations_v<T>);
     auto bytes = std::bit_cast<std::array<std::byte,sizeof(T)>>(value);
-    std::reverse(bytes.begin(), bytes.end());
+    std::ranges::reverse(bytes);
     return std::bit_cast<T>(bytes);
 }
 

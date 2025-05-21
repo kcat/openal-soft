@@ -126,16 +126,16 @@ bool jack_load()
             return false;
         }
 
-        std::string missing_funcs;
+        auto missing_funcs = std::string{};
 #define LOAD_FUNC(f) do {                                                     \
     p##f = reinterpret_cast<decltype(p##f)>(GetSymbol(jack_handle, #f));      \
     if(p##f == nullptr) missing_funcs += "\n" #f;                             \
 } while(0)
-        JACK_FUNCS(LOAD_FUNC);
+        JACK_FUNCS(LOAD_FUNC); /* NOLINT(cppcoreguidelines-pro-type-reinterpret-cast) */
 #undef LOAD_FUNC
         /* Optional symbols. These don't exist in all versions of JACK. */
 #define LOAD_SYM(f) p##f = reinterpret_cast<decltype(p##f)>(GetSymbol(jack_handle, #f))
-        LOAD_SYM(jack_error_callback);
+        LOAD_SYM(jack_error_callback); /* NOLINT(cppcoreguidelines-pro-type-reinterpret-cast) */
 #undef LOAD_SYM
 
         if(!missing_funcs.empty())

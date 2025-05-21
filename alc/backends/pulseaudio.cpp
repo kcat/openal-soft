@@ -1453,7 +1453,9 @@ auto PulseBackendFactory::init() -> bool
     p##x = reinterpret_cast<decltype(p##x)>(GetSymbol(pulse_handle, #x));     \
     if(!(p##x)) missing_funcs += "\n" #x;                                     \
 } while(0)
+        /* NOLINTBEGIN(cppcoreguidelines-pro-type-reinterpret-cast) */
         PULSE_FUNCS(LOAD_FUNC)
+        /* NOLINTEND(cppcoreguidelines-pro-type-reinterpret-cast) */
 #undef LOAD_FUNC
 
         if(!missing_funcs.empty())

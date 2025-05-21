@@ -258,13 +258,14 @@ public:
         }
     }
 
-    void setBlob(const std::span<BYTE> data)
+    void setBlob(const std::span<std::byte> data)
     {
         if constexpr(sizeof(size_t) > sizeof(ULONG))
             assert(data.size() <= std::numeric_limits<ULONG>::max());
         mProp.vt = VT_BLOB;
         mProp.blob.cbSize = static_cast<ULONG>(data.size());
-        mProp.blob.pBlobData = data.data();
+        /* NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast) */
+        mProp.blob.pBlobData = reinterpret_cast<BYTE*>(data.data());
     }
     /* NOLINTEND(cppcoreguidelines-pro-type-union-access) */
 };
@@ -1910,7 +1911,7 @@ auto WasapiPlayback::initSpatial(DeviceHelper &helper, DeviceHandle &mmdev, Spat
     streamParams.EventHandle = mNotifyEvent;
 
     auto paramProp = PropVariant{};
-    paramProp.setBlob({reinterpret_cast<BYTE*>(&streamParams), sizeof(streamParams)});
+    paramProp.setBlob(std::as_writable_bytes(std::span{&streamParams, 1_uz}));
 
     hr = audio.mClient->ActivateSpatialAudioStream(paramProp.get(),
         __uuidof(ISpatialAudioObjectRenderStream), al::out_ptr(audio.mRender));

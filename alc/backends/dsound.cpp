@@ -762,10 +762,12 @@ bool DSoundBackendFactory::init()
         return false;                                                         \
     }                                                                         \
 } while(0)
+        /* NOLINTBEGIN(cppcoreguidelines-pro-type-reinterpret-cast) */
         LOAD_FUNC(DirectSoundCreate);
         LOAD_FUNC(DirectSoundEnumerateW);
         LOAD_FUNC(DirectSoundCaptureCreate);
         LOAD_FUNC(DirectSoundCaptureEnumerateW);
+        /* NOLINTEND(cppcoreguidelines-pro-type-reinterpret-cast) */
 #undef LOAD_FUNC
     }
 #endif

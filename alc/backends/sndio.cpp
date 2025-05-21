@@ -232,14 +232,6 @@ bool SndioPlayback::reset()
     mDevice->mBufferSize = par.bufsz + par.round;
 
     mBuffer.resize(size_t{mDevice->mUpdateSize} * par.pchan*par.bps);
-    if(par.sig == 1)
-        std::fill(mBuffer.begin(), mBuffer.end(), std::byte{});
-    else if(par.bits == 8)
-        std::fill_n(mBuffer.data(), mBuffer.size(), std::byte(0x80));
-    else if(par.bits == 16)
-        std::fill_n(reinterpret_cast<uint16_t*>(mBuffer.data()), mBuffer.size()/2, 0x8000);
-    else if(par.bits == 32)
-        std::fill_n(reinterpret_cast<uint32_t*>(mBuffer.data()), mBuffer.size()/4, 0x80000000u);
 
     return true;
 }

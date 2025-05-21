@@ -453,6 +453,7 @@ bool PortBackendFactory::init()
         return false;                                                         \
     }                                                                         \
 } while(0)
+        /* NOLINTBEGIN(cppcoreguidelines-pro-type-reinterpret-cast) */
         LOAD_FUNC(Pa_Initialize);
         LOAD_FUNC(Pa_Terminate);
         LOAD_FUNC(Pa_GetErrorText);
@@ -465,6 +466,7 @@ bool PortBackendFactory::init()
         LOAD_FUNC(Pa_GetDefaultOutputDevice);
         LOAD_FUNC(Pa_GetDefaultInputDevice);
         LOAD_FUNC(Pa_GetStreamInfo);
+        /* NOLINTEND(cppcoreguidelines-pro-type-reinterpret-cast) */
 #undef LOAD_FUNC
 
         const PaError err{Pa_Initialize()};

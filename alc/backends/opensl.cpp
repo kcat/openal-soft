@@ -951,7 +951,9 @@ bool OSLBackendFactory::init()
     p##f = reinterpret_cast<decltype(p##f)>(GetSymbol(sles_handle, #f));      \
     if(p##f == nullptr) missing_syms += "\n" #f;                              \
 } while(0)
+        /* NOLINTBEGIN(cppcoreguidelines-pro-type-reinterpret-cast) */
         SLES_SYMBOLS(LOAD_SYMBOL);
+        /* NOLINTEND(cppcoreguidelines-pro-type-reinterpret-cast) */
 #undef LOAD_SYMBOL
 
         if(!missing_syms.empty())

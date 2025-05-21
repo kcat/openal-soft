@@ -1230,7 +1230,9 @@ bool AlsaBackendFactory::init()
     p##f = reinterpret_cast<decltype(p##f)>(GetSymbol(alsa_handle, #f));      \
     if(p##f == nullptr) missing_funcs += "\n" #f;                             \
 } while(0)
+        /* NOLINTBEGIN(cppcoreguidelines-pro-type-reinterpret-cast) */
         ALSA_FUNCS(LOAD_FUNC);
+        /* NOLINTEND(cppcoreguidelines-pro-type-reinterpret-cast) */
 #undef LOAD_FUNC
 
         if(!missing_funcs.empty())

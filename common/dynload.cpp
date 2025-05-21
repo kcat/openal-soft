@@ -10,13 +10,16 @@
 
 void *LoadLib(const char *name)
 {
-    std::wstring wname{utf8_to_wstr(name)};
+    auto wname = utf8_to_wstr(name);
     return LoadLibraryW(wname.c_str());
 }
 void CloseLib(void *handle)
 { FreeLibrary(static_cast<HMODULE>(handle)); }
 void *GetSymbol(void *handle, const char *name)
-{ return reinterpret_cast<void*>(GetProcAddress(static_cast<HMODULE>(handle), name)); }
+{
+    /* NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast) */
+    return reinterpret_cast<void*>(GetProcAddress(static_cast<HMODULE>(handle), name));
+}
 
 #elif defined(HAVE_DLFCN_H)
 
@@ -25,9 +28,9 @@ void *GetSymbol(void *handle, const char *name)
 void *LoadLib(const char *name)
 {
     dlerror();
-    void *handle{dlopen(name, RTLD_NOW)};
-    const char *err{dlerror()};
-    if(err) handle = nullptr;
+    auto *handle = dlopen(name, RTLD_NOW);
+    if(auto *err = dlerror(); err != nullptr)
+        handle = nullptr;
     return handle;
 }
 void CloseLib(void *handle)
@@ -35,9 +38,9 @@ void CloseLib(void *handle)
 void *GetSymbol(void *handle, const char *name)
 {
     dlerror();
-    void *sym{dlsym(handle, name)};
-    const char *err{dlerror()};
-    if(err) sym = nullptr;
+    auto *sym = dlsym(handle, name);
+    if(auto *err = dlerror(); err != nullptr)
+        sym = nullptr;
     return sym;
 }
 #endif

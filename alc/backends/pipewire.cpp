@@ -269,8 +269,10 @@ bool pwire_load()
     p##f = reinterpret_cast<decltype(p##f)>(GetSymbol(pwire_handle, #f));     \
     if(p##f == nullptr) missing_funcs += "\n" #f;                             \
 } while(0);
+    /* NOLINTBEGIN(cppcoreguidelines-pro-type-reinterpret-cast) */
     PWIRE_FUNCS(LOAD_FUNC)
     PWIRE_FUNCS2(LOAD_FUNC)
+    /* NOLINTEND(cppcoreguidelines-pro-type-reinterpret-cast) */
 #undef LOAD_FUNC
 
     if(!missing_funcs.empty())
@@ -368,7 +370,8 @@ auto get_value(const spa_pod *value) -> std::optional<Pod_t<T>>
     return std::nullopt;
 }
 
-/* Internally, PipeWire types "inherit" from each other, but this is hidden
+/* NOLINTBEGIN(cppcoreguidelines-pro-type-reinterpret-cast)
+ * Internally, PipeWire types "inherit" from each other, but this is hidden
  * from the API and the caller is expected to C-style cast to inherited types
  * as needed. It's also not made very clear what types a given type can be
  * casted to. To make it a bit safer, this as() method allows casting pw_*
@@ -389,6 +392,7 @@ template<>
 pw_proxy* as(pw_node *node) noexcept { return reinterpret_cast<pw_proxy*>(node); }
 template<>
 pw_proxy* as(pw_metadata *mdata) noexcept { return reinterpret_cast<pw_proxy*>(mdata); }
+/* NOLINTEND(cppcoreguidelines-pro-type-reinterpret-cast) */
 
 
 struct PwContextDeleter {

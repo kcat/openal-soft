@@ -23,7 +23,10 @@ void PrepareDBus()
     }
 
     auto load_func = [](auto &f, const char *name) -> void
-    { f = reinterpret_cast<std::remove_reference_t<decltype(f)>>(GetSymbol(dbus_handle, name)); };
+    {
+        /* NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast) */
+        f = reinterpret_cast<std::remove_reference_t<decltype(f)>>(GetSymbol(dbus_handle, name));
+    };
 #define LOAD_FUNC(x) do {                         \
     load_func(p##x, #x);                          \
     if(!p##x)                                     \

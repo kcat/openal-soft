@@ -120,7 +120,7 @@ struct WinMMPlayback final : public BackendBase {
 
     void CALLBACK waveOutProc(HWAVEOUT device, UINT msg, DWORD_PTR param1, DWORD_PTR param2) noexcept;
     static void CALLBACK waveOutProcC(HWAVEOUT device, UINT msg, DWORD_PTR instance, DWORD_PTR param1, DWORD_PTR param2) noexcept
-    { reinterpret_cast<WinMMPlayback*>(instance)->waveOutProc(device, msg, param1, param2); }
+    { std::bit_cast<WinMMPlayback*>(instance)->waveOutProc(device, msg, param1, param2); }
 
     int mixerProc();
 
@@ -228,8 +228,8 @@ void WinMMPlayback::open(std::string_view name)
         format.cbSize = 0;
 
         MMRESULT res{waveOutOpen(&mOutHdl, DeviceID, &format,
-            reinterpret_cast<DWORD_PTR>(&WinMMPlayback::waveOutProcC),
-            reinterpret_cast<DWORD_PTR>(this), CALLBACK_FUNCTION)};
+            std::bit_cast<DWORD_PTR>(&WinMMPlayback::waveOutProcC),
+            std::bit_cast<DWORD_PTR>(this), CALLBACK_FUNCTION)};
         if(res == MMSYSERR_NOERROR) break;
 
         if(fmttype != DevFmtFloat)
@@ -357,7 +357,7 @@ struct WinMMCapture final : public BackendBase {
 
     void CALLBACK waveInProc(HWAVEIN device, UINT msg, DWORD_PTR param1, DWORD_PTR param2) noexcept;
     static void CALLBACK waveInProcC(HWAVEIN device, UINT msg, DWORD_PTR instance, DWORD_PTR param1, DWORD_PTR param2) noexcept
-    { reinterpret_cast<WinMMCapture*>(instance)->waveInProc(device, msg, param1, param2); }
+    { std::bit_cast<WinMMCapture*>(instance)->waveInProc(device, msg, param1, param2); }
 
     int captureProc();
 
@@ -492,8 +492,8 @@ void WinMMCapture::open(std::string_view name)
     mFormat.cbSize = 0;
 
     MMRESULT res{waveInOpen(&mInHdl, DeviceID, &mFormat,
-        reinterpret_cast<DWORD_PTR>(&WinMMCapture::waveInProcC),
-        reinterpret_cast<DWORD_PTR>(this), CALLBACK_FUNCTION)};
+        std::bit_cast<DWORD_PTR>(&WinMMCapture::waveInProcC),
+        std::bit_cast<DWORD_PTR>(this), CALLBACK_FUNCTION)};
     if(res != MMSYSERR_NOERROR)
         throw al::backend_exception{al::backend_error::DeviceError, "waveInOpen failed: {}", res};
 

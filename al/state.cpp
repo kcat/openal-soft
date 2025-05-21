@@ -464,6 +464,7 @@ FORCE_ALIGN void AL_APIENTRY alGetPointervDirectEXT(ALCcontext *context, ALenum 
     switch(pname)
     {
     case AL_EVENT_CALLBACK_FUNCTION_SOFT:
+        /* NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast) */
         *values = reinterpret_cast<void*>(context->mEventCb);
         return;
 
@@ -472,6 +473,7 @@ FORCE_ALIGN void AL_APIENTRY alGetPointervDirectEXT(ALCcontext *context, ALenum 
         return;
 
     case AL_DEBUG_CALLBACK_FUNCTION_EXT:
+        /* NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast) */
         *values = reinterpret_cast<void*>(context->mDebugCb);
         return;
 

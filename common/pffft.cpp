@@ -331,7 +331,7 @@ force_inline constexpr auto ld_ps1(float a) noexcept -> v4sf { return a; }
 auto valigned(const float *ptr) noexcept -> bool
 {
     static constexpr auto alignmask = uintptr_t{SimdSize*sizeof(float) - 1};
-    return (reinterpret_cast<uintptr_t>(ptr) & alignmask) == 0;
+    return (std::bit_cast<uintptr_t>(ptr) & alignmask) == 0;
 }
 #endif
 
@@ -1504,8 +1504,10 @@ auto pffft_new_setup(const unsigned int N, const pffft_transform_t transform) ->
     s->Ncvec = Ncvec;
 
     const auto ecount = 2_zu*Ncvec*(SimdSize-1)/SimdSize;
+    /* NOLINTBEGIN(cppcoreguidelines-pro-type-reinterpret-cast) */
     s->e = {std::launder(reinterpret_cast<v4sf*>(extrastore.data())), ecount};
     s->twiddle = std::launder(reinterpret_cast<float*>(&extrastore[ecount*sizeof(v4sf)]));
+    /* NOLINTEND(cppcoreguidelines-pro-type-reinterpret-cast) */
 
 #ifndef PFFFT_SIMD_DISABLE
     if constexpr(SimdSize > 1)
@@ -1931,6 +1933,58 @@ NOINLINE void pffft_real_preprocess(const size_t Ncvec, const v4sf *in, v4sf *RE
 }
 
 
+void pffft_zreorder_internal(const PFFFT_Setup *setup, const v4sf *vin, v4sf *RESTRICT vout,
+    pffft_direction_t direction)
+{
+    assert(in != out);
+
+    const auto N = size_t{setup->N};
+    const auto Ncvec = size_t{setup->Ncvec};
+    if(setup->transform == PFFFT_REAL)
+    {
+        const auto dk = N/32;
+        if(direction == PFFFT_FORWARD)
+        {
+            for(auto k = 0_uz;k < dk;++k)
+            {
+                interleave2(vin[k*8 + 0],vin[k*8 + 1], vout[2*(0*dk + k)],vout[2*(0*dk + k) + 1]);
+                interleave2(vin[k*8 + 4],vin[k*8 + 5], vout[2*(2*dk + k)],vout[2*(2*dk + k) + 1]);
+            }
+            reversed_copy(dk, vin+2, 8, vout + N/SimdSize/2);
+            reversed_copy(dk, vin+6, 8, vout + N/SimdSize);
+        }
+        else
+        {
+            for(auto k = 0_uz;k < dk;++k)
+            {
+                uninterleave2(vin[2*(0*dk + k)],vin[2*(0*dk + k) + 1],vout[k*8 + 0],vout[k*8 + 1]);
+                uninterleave2(vin[2*(2*dk + k)],vin[2*(2*dk + k) + 1],vout[k*8 + 4],vout[k*8 + 5]);
+            }
+            unreversed_copy(dk, vin + N/SimdSize/4, vout + N/SimdSize - 6, -8);
+            unreversed_copy(dk, vin + 3_uz*N/SimdSize/4, vout + N/SimdSize - 2, -8);
+        }
+    }
+    else
+    {
+        if(direction == PFFFT_FORWARD)
+        {
+            for(auto k = 0_uz;k < Ncvec;++k)
+            {
+                const auto kk = (k/4) + (k%4)*(Ncvec/4);
+                interleave2(vin[k*2], vin[k*2+1], vout[kk*2], vout[kk*2+1]);
+            }
+        }
+        else
+        {
+            for(auto k = 0_uz;k < Ncvec;++k)
+            {
+                const auto kk = (k/4) + (k%4)*(Ncvec/4);
+                uninterleave2(vin[kk*2], vin[kk*2+1], vout[k*2], vout[k*2+1]);
+            }
+        }
+    }
+}
+
 void pffft_transform_internal(const PFFFT_Setup *setup, const v4sf *vinput, v4sf *voutput,
     v4sf *scratch, const pffft_direction_t direction, const bool ordered)
 {
@@ -1963,8 +2017,7 @@ void pffft_transform_internal(const PFFFT_Setup *setup, const v4sf *vinput, v4sf
             pffft_cplx_finalize(Ncvec, buff[ib], buff[!ib], setup->e.data());
         }
         if(ordered)
-            pffft_zreorder(setup, reinterpret_cast<float*>(buff[!ib]),
-                reinterpret_cast<float*>(buff[ib]), PFFFT_FORWARD);
+            pffft_zreorder_internal(setup, buff[!ib], buff[ib], PFFFT_FORWARD);
         else
             ib = !ib;
     }
@@ -1975,8 +2028,7 @@ void pffft_transform_internal(const PFFFT_Setup *setup, const v4sf *vinput, v4sf
 
         if(ordered)
         {
-            pffft_zreorder(setup, reinterpret_cast<const float*>(vinput),
-                reinterpret_cast<float*>(buff[ib]), PFFFT_BACKWARD);
+            pffft_zreorder_internal(setup, vinput, buff[ib], PFFFT_BACKWARD);
             vinput = buff[ib];
             ib = !ib;
         }
@@ -2008,69 +2060,10 @@ void pffft_transform_internal(const PFFFT_Setup *setup, const v4sf *vinput, v4sf
     }
 }
 
-} // namespace
-
-void pffft_zreorder(const PFFFT_Setup *setup, const float *in, float *out,
-    pffft_direction_t direction)
-{
-    assert(in != out);
-
-    const auto N = size_t{setup->N};
-    const auto Ncvec = size_t{setup->Ncvec};
-    const auto *vin = reinterpret_cast<const v4sf*>(in);
-    auto *RESTRICT vout = reinterpret_cast<v4sf*>(out);
-    if(setup->transform == PFFFT_REAL)
-    {
-        const auto dk = N/32;
-        if(direction == PFFFT_FORWARD)
-        {
-            for(auto k = 0_uz;k < dk;++k)
-            {
-                interleave2(vin[k*8 + 0], vin[k*8 + 1], vout[2*(0*dk + k) + 0], vout[2*(0*dk + k) + 1]);
-                interleave2(vin[k*8 + 4], vin[k*8 + 5], vout[2*(2*dk + k) + 0], vout[2*(2*dk + k) + 1]);
-            }
-            reversed_copy(dk, vin+2, 8, vout + N/SimdSize/2);
-            reversed_copy(dk, vin+6, 8, vout + N/SimdSize);
-        }
-        else
-        {
-            for(auto k = 0_uz;k < dk;++k)
-            {
-                uninterleave2(vin[2*(0*dk + k) + 0], vin[2*(0*dk + k) + 1], vout[k*8 + 0], vout[k*8 + 1]);
-                uninterleave2(vin[2*(2*dk + k) + 0], vin[2*(2*dk + k) + 1], vout[k*8 + 4], vout[k*8 + 5]);
-            }
-            unreversed_copy(dk, vin + N/SimdSize/4, vout + N/SimdSize - 6, -8);
-            unreversed_copy(dk, vin + 3_uz*N/SimdSize/4, vout + N/SimdSize - 2, -8);
-        }
-    }
-    else
-    {
-        if(direction == PFFFT_FORWARD)
-        {
-            for(auto k = 0_uz;k < Ncvec;++k)
-            {
-                const auto kk = (k/4) + (k%4)*(Ncvec/4);
-                interleave2(vin[k*2], vin[k*2+1], vout[kk*2], vout[kk*2+1]);
-            }
-        }
-        else
-        {
-            for(auto k = 0_uz;k < Ncvec;++k)
-            {
-                const auto kk = (k/4) + (k%4)*(Ncvec/4);
-                uninterleave2(vin[kk*2], vin[kk*2+1], vout[k*2], vout[k*2+1]);
-            }
-        }
-    }
-}
-
-void pffft_zconvolve_scale_accumulate(const PFFFT_Setup *s, const float *a, const float *b,
-    float *ab, float scaling)
+void pffft_zconvolve_scale_accumulate_internal(const PFFFT_Setup *s, const v4sf *RESTRICT va,
+    const v4sf *RESTRICT vb, v4sf *RESTRICT vab, float scaling)
 {
     const auto Ncvec = size_t{s->Ncvec};
-    const auto *RESTRICT va = reinterpret_cast<const v4sf*>(a);
-    const auto *RESTRICT vb = reinterpret_cast<const v4sf*>(b);
-    auto *RESTRICT vab = reinterpret_cast<v4sf*>(ab);
 
 #ifdef __arm__
     __builtin_prefetch(va);
@@ -2173,12 +2166,10 @@ void pffft_zconvolve_scale_accumulate(const PFFFT_Setup *s, const float *a, cons
     }
 }
 
-void pffft_zconvolve_accumulate(const PFFFT_Setup *s, const float *a, const float *b, float *ab)
+void pffft_zconvolve_accumulate_internal(const PFFFT_Setup *s, const v4sf *RESTRICT va,
+    const v4sf *RESTRICT vb, v4sf *RESTRICT vab)
 {
     const auto Ncvec = size_t{s->Ncvec};
-    const auto *RESTRICT va = reinterpret_cast<const v4sf*>(a);
-    const auto *RESTRICT vb = reinterpret_cast<const v4sf*>(b);
-    auto *RESTRICT vab = reinterpret_cast<v4sf*>(ab);
 
 #ifdef __arm__
     __builtin_prefetch(va);
@@ -2230,6 +2221,35 @@ void pffft_zconvolve_accumulate(const PFFFT_Setup *s, const float *a, const floa
     }
 }
 
+} // namespace
+
+/* NOLINTBEGIN(cppcoreguidelines-pro-type-reinterpret-cast)
+ * Without some way to "safely" reinterpret float buffers as SIMD float
+ * vectors, these casts are needed.
+ */
+void pffft_zreorder(const PFFFT_Setup *setup, const float *in, float *out,
+    pffft_direction_t direction)
+{
+    assert(in != out);
+    assert(valigned(in) && valigned(out));
+    pffft_zreorder_internal(setup, reinterpret_cast<const v4sf*>(in), reinterpret_cast<v4sf*>(out),
+        direction);
+}
+
+void pffft_zconvolve_scale_accumulate(const PFFFT_Setup *s, const float *a, const float *b,
+    float *ab, float scaling)
+{
+    assert(valigned(a) && valigned(b) && valigned(ab));
+    pffft_zconvolve_scale_accumulate_internal(s, reinterpret_cast<const v4sf*>(a),
+        reinterpret_cast<const v4sf*>(b), reinterpret_cast<v4sf*>(ab), scaling);
+}
+
+void pffft_zconvolve_accumulate(const PFFFT_Setup *s, const float *a, const float *b, float *ab)
+{
+    assert(valigned(a) && valigned(b) && valigned(ab));
+    pffft_zconvolve_accumulate_internal(s, reinterpret_cast<const v4sf*>(a),
+        reinterpret_cast<const v4sf*>(b), reinterpret_cast<v4sf*>(ab));
+}
 
 void pffft_transform(const PFFFT_Setup *setup, const float *input, float *output, float *work,
     pffft_direction_t direction)
@@ -2248,6 +2268,7 @@ void pffft_transform_ordered(const PFFFT_Setup *setup, const float *input, float
         reinterpret_cast<v4sf*>(std::assume_aligned<16>(output)),
         reinterpret_cast<v4sf*>(std::assume_aligned<16>(work)), direction, true);
 }
+/* NOLINTEND(cppcoreguidelines-pro-type-reinterpret-cast) */
 
 #else // defined(PFFFT_SIMD_DISABLE)
 

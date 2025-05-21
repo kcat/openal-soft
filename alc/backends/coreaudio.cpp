@@ -210,6 +210,7 @@ auto GetDeviceChannelCount(AudioDeviceID devId, bool isCapture) -> UInt32
     }
 
     auto buflist_data = std::make_unique<char[]>(propSize);
+    /* NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast) */
     auto *buflist = reinterpret_cast<AudioBufferList*>(buflist_data.get());
 
     err = GetDevProperty(devId, kAudioDevicePropertyStreamConfiguration, isCapture, 0, propSize,
@@ -551,6 +552,7 @@ bool CoreAudioPlayback::reset()
         if(err == noErr)
         {
             auto layout_data = std::make_unique<char[]>(propSize);
+            /* NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast) */
             auto *layout = reinterpret_cast<AudioChannelLayout*>(layout_data.get());
 
             err = AudioUnitGetProperty(mAudioUnit, kAudioUnitProperty_AudioChannelLayout,

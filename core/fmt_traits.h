@@ -2,12 +2,11 @@
 #define CORE_FMT_TRAITS_H
 
 #include <array>
+#include <cstddef>
 #include <cstdint>
 
 #include "storage_formats.h"
 
-
-namespace al {
 
 inline constexpr auto muLawDecompressionTable = std::array<int16_t,256>{{
     -32124,-31100,-30076,-29052,-28028,-27004,-25980,-24956,
@@ -80,57 +79,98 @@ inline constexpr auto aLawDecompressionTable = std::array<int16_t,256>{{
 }};
 
 
-template<FmtType T>
-struct FmtTypeTraits { };
+struct MulawSample { uint8_t value; };
+struct AlawSample { uint8_t value; };
+struct IMA4Data { std::byte value; };
+struct MSADPCMData { std::byte value; };
+
+template<typename T>
+struct SampleInfo;
 
 template<>
-struct FmtTypeTraits<FmtUByte> {
-    using Type = std::uint8_t;
+struct SampleInfo<uint8_t> {
+    static constexpr auto format() noexcept { return FmtUByte; }
 
-    constexpr float operator()(const Type val) const noexcept
-    { return float(val)*(1.0f/128.0f) - 1.0f; }
+    static constexpr auto silence() noexcept { return uint8_t{128}; }
+
+    static constexpr auto to_float(const uint8_t sample) noexcept -> float
+    { return float(sample-128) * (1.0f/128.0f); }
 };
+
 template<>
-struct FmtTypeTraits<FmtShort> {
-    using Type = std::int16_t;
+struct SampleInfo<int16_t> {
+    static constexpr auto format() noexcept { return FmtShort; }
 
-    constexpr float operator()(const Type val) const noexcept
-    { return float(val) * (1.0f/32768.0f); }
+    static constexpr auto silence() noexcept { return int16_t{}; }
+
+    static constexpr auto to_float(const int16_t sample) noexcept -> float
+    { return float(sample) * (1.0f/32768.0f); }
 };
+
 template<>
-struct FmtTypeTraits<FmtInt> {
-    using Type = std::int32_t;
+struct SampleInfo<int32_t> {
+    static constexpr auto format() noexcept { return FmtInt; }
 
-    constexpr float operator()(const Type val) const noexcept
-    { return static_cast<float>(val)*(1.0f/2147483648.0f); }
+    static constexpr auto silence() noexcept { return int32_t{}; }
+
+    static constexpr auto to_float(const int32_t sample) noexcept -> float
+    { return static_cast<float>(sample)*(1.0f/2147483648.0f); }
 };
+
 template<>
-struct FmtTypeTraits<FmtFloat> {
-    using Type = float;
+struct SampleInfo<float> {
+    static constexpr auto format() noexcept { return FmtFloat; }
 
-    constexpr float operator()(const Type val) const noexcept { return val; }
+    static constexpr auto silence() noexcept { return float{}; }
+
+    static constexpr auto to_float(const float sample) noexcept -> float { return sample; }
 };
+
 template<>
-struct FmtTypeTraits<FmtDouble> {
-    using Type = double;
+struct SampleInfo<double> {
+    static constexpr auto format() noexcept { return FmtDouble; }
 
-    constexpr float operator()(const Type val) const noexcept { return static_cast<float>(val); }
+    static constexpr auto silence() noexcept { return double{}; }
+
+    static constexpr auto to_float(const double sample) noexcept -> float
+    { return static_cast<float>(sample); }
 };
+
 template<>
-struct FmtTypeTraits<FmtMulaw> {
-    using Type = std::uint8_t;
+struct SampleInfo<MulawSample> {
+    static constexpr auto format() noexcept { return FmtMulaw; }
 
-    constexpr float operator()(const Type val) const noexcept
-    { return float(muLawDecompressionTable[val]) * (1.0f/32768.0f); }
+    static constexpr auto silence() noexcept { return MulawSample{uint8_t{127}}; }
+
+    static constexpr auto to_float(const MulawSample sample) noexcept -> float
+    { return float(muLawDecompressionTable[sample.value]) * (1.0f/32768.0f); }
 };
+
 template<>
-struct FmtTypeTraits<FmtAlaw> {
-    using Type = std::uint8_t;
+struct SampleInfo<AlawSample> {
+    static constexpr auto format() noexcept { return FmtAlaw; }
 
-    constexpr float operator()(const Type val) const noexcept
-    { return float(aLawDecompressionTable[val]) * (1.0f/32768.0f); }
+    /* Technically not "silence", it's a value of +8 as int16, but +/-8 is the
+     * closest to 0.
+     */
+    static constexpr auto silence() noexcept { return AlawSample{uint8_t{213}}; }
+
+    static constexpr auto to_float(const AlawSample sample) noexcept -> float
+    { return float(aLawDecompressionTable[sample.value]) * (1.0f/32768.0f); }
 };
 
-} // namespace al
+template<>
+struct SampleInfo<IMA4Data> {
+    static constexpr auto format() noexcept { return FmtIMA4; }
+
+    static constexpr auto silence() noexcept { return IMA4Data{std::byte{}}; }
+};
+
+template<>
+struct SampleInfo<MSADPCMData> {
+    static constexpr auto format() noexcept { return FmtMSADPCM; }
+
+    static constexpr auto silence() noexcept { return MSADPCMData{std::byte{}}; }
+};
 
 #endif /* CORE_FMT_TRAITS_H */

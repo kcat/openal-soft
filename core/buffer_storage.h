@@ -1,10 +1,11 @@
 #ifndef CORE_BUFFER_STORAGE_H
 #define CORE_BUFFER_STORAGE_H
 
-#include <cstddef>
 #include <span>
+#include <variant>
 
 #include "ambidefs.h"
+#include "fmt_traits.h"
 #include "storage_formats.h"
 
 
@@ -34,11 +35,21 @@ constexpr bool Is2DAmbisonic(FmtChannels chans) noexcept
 
 using CallbackType = int(*)(void*, void*, int) noexcept;
 
+using SampleVariant = std::variant<std::span<uint8_t>,
+    std::span<int16_t>,
+    std::span<int32_t>,
+    std::span<float>,
+    std::span<double>,
+    std::span<MulawSample>,
+    std::span<AlawSample>,
+    std::span<IMA4Data>,
+    std::span<MSADPCMData>>;
+
 struct BufferStorage {
     CallbackType mCallback{nullptr};
     void *mUserData{nullptr};
 
-    std::span<std::byte> mData;
+    SampleVariant mData;
 
     uint mSampleRate{0u};
     FmtChannels mChannels{FmtMono};

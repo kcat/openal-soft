@@ -102,7 +102,7 @@ struct VoiceBufferItem {
     uint mLoopStart{0u};
     uint mLoopEnd{0u};
 
-    std::span<std::byte> mSamples;
+    SampleVariant mSamples;
 
 protected:
     ~VoiceBufferItem() = default;
@@ -220,7 +220,6 @@ struct SIMDALIGN Voice {
 
     /* Properties for the attached buffer(s). */
     FmtChannels mFmtChannels{};
-    FmtType mFmtType{};
     uint mFrequency{};
     uint mFrameStep{}; /**< In steps of the sample type size. */
     uint mBytesPerBlock{}; /**< Or for PCM formats, BytesPerFrame. */

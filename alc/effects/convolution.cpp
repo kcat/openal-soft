@@ -12,6 +12,7 @@
 #include <functional>
 #include <memory>
 #include <numbers>
+#include <ranges>
 #include <span>
 #include <vector>
 
@@ -80,45 +81,34 @@ namespace {
  */
 
 
-template<FmtType SrcType>
-inline void LoadSampleArray(const std::span<float> dst, const std::byte *src,
-    const std::size_t channel, const std::size_t srcstep) noexcept
+template<typename T>
+inline void LoadSampleArray(const std::span<float> dstSamples,
+    const std::span<const T> srcData, const size_t channel, const size_t srcstep) noexcept
 {
-    using TypeTraits = al::FmtTypeTraits<SrcType>;
-    using SampleType = typename TypeTraits::Type;
-    const auto converter = TypeTraits{};
-    assert(channel < srcstep);
+    using TypeTraits = SampleInfo<T>;
+    assert(srcChan < srcStep);
 
-    const auto srcspan = std::span{reinterpret_cast<const SampleType*>(src), dst.size()*srcstep};
-    auto ssrc = srcspan.begin() + ptrdiff_t(channel);
-    dst.front() = converter(*ssrc);
-    std::generate(dst.begin()+1, dst.end(), [converter,srcstep,&ssrc]
+    auto ssrc = srcData.begin() + ptrdiff_t(channel);
+    dstSamples.front() = TypeTraits::to_float(*ssrc);
+    std::ranges::generate(dstSamples | std::views::drop(1), [&ssrc,srcstep]
     {
         ssrc += ptrdiff_t(srcstep);
-        return converter(*ssrc);
+        return TypeTraits::to_float(*ssrc);
     });
 }
 
-void LoadSamples(const std::span<float> dst, const std::byte *src, const size_t channel,
-    const size_t srcstep, const FmtType srctype) noexcept
+void LoadSamples(const std::span<float> dstSamples, const SampleVariant &src, const size_t channel,
+    const size_t srcstep) noexcept
 {
-#define HANDLE_FMT(T)  case T: LoadSampleArray<T>(dst, src, channel, srcstep); break
-    switch(srctype)
+    std::visit([&](auto&& splvec)
     {
-    HANDLE_FMT(FmtUByte);
-    HANDLE_FMT(FmtShort);
-    HANDLE_FMT(FmtInt);
-    HANDLE_FMT(FmtFloat);
-    HANDLE_FMT(FmtDouble);
-    HANDLE_FMT(FmtMulaw);
-    HANDLE_FMT(FmtAlaw);
-    /* FIXME: Handle ADPCM decoding here. */
-    case FmtIMA4:
-    case FmtMSADPCM:
-        std::fill(dst.begin(), dst.end(), 0.0f);
-        break;
-    }
-#undef HANDLE_FMT
+        using span_t = std::remove_cvref_t<decltype(splvec)>;
+        using sample_t = span_t::value_type;
+        if constexpr(!std::is_same_v<sample_t,IMA4Data> && !std::is_same_v<sample_t,MSADPCMData>)
+            LoadSampleArray<sample_t>(dstSamples, splvec, channel, srcstep);
+        else
+            std::ranges::fill(splvec, SampleInfo<sample_t>::silence());
+    }, src);
 }
 
 
@@ -350,7 +340,7 @@ void ConvolutionState::deviceUpdate(const DeviceBase *device, const BufferStorag
     std::fill(srcsamples.begin(), srcsamples.end(), 0.0f);
     for(size_t c{0};c < numChannels && c < realChannels;++c)
         LoadSamples(std::span{srcsamples}.subspan(srclinelength*c, buffer->mSampleLen),
-            buffer->mData.data(), c, realChannels, buffer->mType);
+            buffer->mData, c, realChannels);
 
     if(IsUHJ(mChannels))
     {

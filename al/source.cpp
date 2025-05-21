@@ -544,7 +544,6 @@ void InitVoice(Voice *voice, ALsource *source, ALbufferQueueItem *BufferList, AL
         voice->mFmtChannels = FmtSuperStereo;
     else
         voice->mFmtChannels = buffer->mChannels;
-    voice->mFmtType = buffer->mType;
     voice->mFrameStep = buffer->channelsFromFmt();
     voice->mBytesPerBlock = buffer->blockSizeFromFmt();
     voice->mSamplesPerBlock = buffer->mBlockAlign;

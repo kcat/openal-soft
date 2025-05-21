@@ -9,6 +9,7 @@
 #include <cstdint>
 #include <string_view>
 #include <utility>
+#include <variant>
 
 #include "AL/al.h"
 #include "AL/alc.h"
@@ -32,7 +33,15 @@ enum class EaxStorage : uint8_t {
 struct ALbuffer : public BufferStorage {
     ALbitfieldSOFT Access{0u};
 
-    al::vector<std::byte,16> mDataStorage;
+    std::variant<al::vector<uint8_t,16>,
+        al::vector<int16_t,16>,
+        al::vector<int32_t,16>,
+        al::vector<float,16>,
+        al::vector<double,16>,
+        al::vector<MulawSample,16>,
+        al::vector<AlawSample,16>,
+        al::vector<IMA4Data,16>,
+        al::vector<MSADPCMData,16>> mDataStorage;
 
     ALuint OriginalSize{0};
 

@@ -9,7 +9,6 @@
 #include <stdexcept>
 #include <utility>
 
-#include "async_event.h"
 #include "context.h"
 #include "device.h"
 #include "effectslot.h"
@@ -33,18 +32,9 @@ ContextBase::~ContextBase()
 
     if(mAsyncEvents)
     {
-        size_t count{0};
-        for(auto &evt : mAsyncEvents->getReadVector())
-        {
-            if(evt.len > 0)
-            {
-                std::destroy_n(std::launder(reinterpret_cast<AsyncEvent*>(evt.buf)), evt.len);
-                count += evt.len;
-            }
-        }
-        if(count > 0)
-            TRACE("Destructed {} orphaned event{}", count, (count==1)?"":"s");
-        mAsyncEvents->readAdvance(count);
+        if(const auto count = mAsyncEvents->readSpace(); count > 0)
+            TRACE("Destructing {} orphaned event{}", count, (count==1)?"":"s");
+        mAsyncEvents = nullptr;
     }
 }
 

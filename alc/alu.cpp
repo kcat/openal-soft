@@ -517,9 +517,9 @@ auto CalcEffectSlotParams(EffectSlot *slot, EffectSlot **sorted_slots, ContextBa
         /* Otherwise, if it would be deleted send it off with a release event. */
         auto *ring = context->mAsyncEvents.get();
         auto evt_vec = ring->getWriteVector();
-        if(evt_vec[0].len > 0) [[likely]]
+        if(!evt_vec[0].empty()) [[likely]]
         {
-            auto &evt = InitAsyncEvent<AsyncEffectReleaseEvent>(evt_vec[0].buf);
+            auto &evt = InitAsyncEvent<AsyncEffectReleaseEvent>(evt_vec[0].front());
             evt.mEffectState = oldstate;
             ring->writeAdvance(1);
         }
@@ -1887,26 +1887,18 @@ void CalcSourceParams(Voice *voice, ContextBase *context, bool force)
 
 void SendSourceStateEvent(ContextBase *context, uint id, VChangeState state)
 {
-    RingBuffer *ring{context->mAsyncEvents.get()};
+    auto *ring = context->mAsyncEvents.get();
     auto evt_vec = ring->getWriteVector();
-    if(evt_vec[0].len < 1) return;
+    if(evt_vec[0].empty()) return;
 
-    auto &evt = InitAsyncEvent<AsyncSourceStateEvent>(evt_vec[0].buf);
+    auto &evt = InitAsyncEvent<AsyncSourceStateEvent>(evt_vec[0].front());
     evt.mId = id;
     switch(state)
     {
-    case VChangeState::Reset:
-        evt.mState = AsyncSrcState::Reset;
-        break;
-    case VChangeState::Stop:
-        evt.mState = AsyncSrcState::Stop;
-        break;
-    case VChangeState::Play:
-        evt.mState = AsyncSrcState::Play;
-        break;
-    case VChangeState::Pause:
-        evt.mState = AsyncSrcState::Pause;
-        break;
+    case VChangeState::Reset: evt.mState = AsyncSrcState::Reset; break;
+    case VChangeState::Stop: evt.mState = AsyncSrcState::Stop; break;
+    case VChangeState::Play: evt.mState = AsyncSrcState::Play; break;
+    case VChangeState::Pause: evt.mState = AsyncSrcState::Pause; break;
     /* Shouldn't happen. */
     case VChangeState::Restart:
         break;
@@ -2119,14 +2111,14 @@ void ProcessContexts(DeviceBase *device, const uint SamplesToDo)
         }
 
         /* Signal the event handler if there are any events to read. */
-        if(RingBuffer *ring{ctx->mAsyncEvents.get()}; ring->readSpace() > 0)
+        if(auto *ring = ctx->mAsyncEvents.get(); ring->readSpace() > 0)
         {
             ctx->mEventsPending.store(true, std::memory_order_release);
             ctx->mEventsPending.notify_all();
         }
     };
     const auto contexts = std::span{*device->mContexts.load(std::memory_order_acquire)};
-    std::for_each(contexts.begin(), contexts.end(), proc_context);
+    std::ranges::for_each(contexts, proc_context);
 }
 
 
@@ -2378,19 +2370,15 @@ void DeviceBase::doDisconnect(std::string msg)
 
     if(Connected.exchange(false, std::memory_order_acq_rel))
     {
-        AsyncEvent evt{std::in_place_type<AsyncDisconnectEvent>};
-        auto &disconnect = std::get<AsyncDisconnectEvent>(evt);
+        auto evt = std::array{AsyncEvent{std::in_place_type<AsyncDisconnectEvent>}};
+        auto &disconnect = std::get<AsyncDisconnectEvent>(evt.front());
         disconnect.msg = std::move(msg);
 
         for(ContextBase *ctx : *mContexts.load())
         {
-            RingBuffer *ring{ctx->mAsyncEvents.get()};
-            auto evt_data = ring->getWriteVector()[0];
-            if(evt_data.len > 0)
+            auto *ring = ctx->mAsyncEvents.get();
+            if(ring->write(evt) > 0)
             {
-                std::construct_at(reinterpret_cast<AsyncEvent*>(evt_data.buf), evt);
-                ring->writeAdvance(1);
-
                 ctx->mEventsPending.store(true, std::memory_order_release);
                 ctx->mEventsPending.notify_all();
             }
@@ -2401,15 +2389,13 @@ void DeviceBase::doDisconnect(std::string msg)
                 continue;
             }
 
-            auto voicelist = ctx->getVoicesSpanAcquired();
-            auto stop_voice = [](Voice *voice) -> void
+            std::ranges::for_each(ctx->getVoicesSpanAcquired(), [](Voice *voice) -> void
             {
                 voice->mCurrentBuffer.store(nullptr, std::memory_order_relaxed);
                 voice->mLoopBuffer.store(nullptr, std::memory_order_relaxed);
                 voice->mSourceID.store(0u, std::memory_order_relaxed);
                 voice->mPlayState.store(Voice::Stopped, std::memory_order_release);
-            };
-            std::for_each(voicelist.begin(), voicelist.end(), stop_voice);
+            });
         }
     }
 }

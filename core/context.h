@@ -16,12 +16,12 @@
 #include "atomic.h"
 #include "flexarray.h"
 #include "opthelpers.h"
+#include "ringbuffer.h"
 #include "vecmat.h"
 
 struct DeviceBase;
 struct EffectSlot;
 struct EffectSlotProps;
-struct RingBuffer;
 struct Voice;
 struct VoiceChange;
 struct VoicePropsItem;
@@ -140,7 +140,7 @@ struct ContextBase {
     al::atomic_unique_ptr<EffectSlotArray> mActiveAuxSlots;
 
     std::thread mEventThread;
-    std::unique_ptr<RingBuffer> mAsyncEvents;
+    FifoBufferPtr<AsyncEvent> mAsyncEvents;
     std::atomic<bool> mEventsPending;
     using AsyncEventBitset = std::bitset<al::to_underlying(AsyncEnableBits::Count)>;
     std::atomic<AsyncEventBitset> mEnabledEvts{0u};

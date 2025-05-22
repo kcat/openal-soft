@@ -6,9 +6,7 @@
 #include <atomic>
 #include <bitset>
 #include <exception>
-#include <memory>
 #include <mutex>
-#include <new>
 #include <optional>
 #include <ranges>
 #include <span>
@@ -30,7 +28,6 @@
 #include "core/effects/base.h"
 #include "core/except.h"
 #include "core/logging.h"
-#include "debug.h"
 #include "direct_defs.h"
 #include "fmt/core.h"
 #include "intrusive_ptr.h"
@@ -54,8 +51,8 @@ auto EventThread(ALCcontext *context) -> void
     auto quitnow = false;
     while(!quitnow)
     {
-        auto evt_data = ring->getReadVector()[0];
-        if(evt_data.len == 0)
+        auto evt_span = ring->getReadVector()[0];
+        if(evt_span.empty())
         {
             context->mEventsPending.wait(false, std::memory_order_acquire);
             context->mEventsPending.store(false, std::memory_order_release);
@@ -64,8 +61,6 @@ auto EventThread(ALCcontext *context) -> void
 
         auto eventlock = std::lock_guard{context->mEventCbLock};
         const auto enabledevts = context->mEnabledEvts.load(std::memory_order_acquire);
-        auto evt_span = std::span{std::launder(reinterpret_cast<AsyncEvent*>(evt_data.buf)),
-            evt_data.len};
         for(auto &event : evt_span)
         {
             quitnow = std::holds_alternative<AsyncKillThread>(event);
@@ -132,7 +127,6 @@ auto EventThread(ALCcontext *context) -> void
                 }
             }, event);
         }
-        std::ranges::destroy(evt_span);
         ring->readAdvance(evt_span.size());
     }
 }
@@ -167,15 +161,15 @@ void StartEventThrd(ALCcontext *ctx)
 void StopEventThrd(ALCcontext *ctx)
 {
     auto *ring = ctx->mAsyncEvents.get();
-    auto evt_data = ring->getWriteVector()[0];
-    if(evt_data.len == 0)
+    auto evt_span = ring->getWriteVector()[0];
+    if(evt_span.empty())
     {
         do {
             std::this_thread::yield();
-            evt_data = ring->getWriteVector()[0];
-        } while(evt_data.len == 0);
+            evt_span = ring->getWriteVector()[0];
+        } while(evt_span.empty());
     }
-    std::ignore = InitAsyncEvent<AsyncKillThread>(evt_data.buf);
+    std::ignore = InitAsyncEvent<AsyncKillThread>(evt_span[0]);
     ring->writeAdvance(1);
 
     if(ctx->mEventThread.joinable())

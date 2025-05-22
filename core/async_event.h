@@ -54,10 +54,9 @@ using AsyncEvent = std::variant<AsyncKillThread,
         AsyncDisconnectEvent>;
 
 template<typename T, typename ...Args>
-auto &InitAsyncEvent(std::byte *evtbuf, Args&& ...args)
+auto &InitAsyncEvent(AsyncEvent &event, Args&& ...args)
 {
-    auto *evt = std::construct_at(reinterpret_cast<AsyncEvent*>(evtbuf), std::in_place_type<T>,
-        std::forward<Args>(args)...);
+    auto *evt = std::construct_at(&event, std::in_place_type<T>, std::forward<Args>(args)...);
     return std::get<T>(*evt);
 }
 

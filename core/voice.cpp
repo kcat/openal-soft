@@ -232,11 +232,11 @@ constexpr std::array MSADPCMAdaptionCoeff{
 
 void SendSourceStoppedEvent(ContextBase *context, uint id)
 {
-    RingBuffer *ring{context->mAsyncEvents.get()};
+    auto *ring = context->mAsyncEvents.get();
     auto evt_vec = ring->getWriteVector();
-    if(evt_vec[0].len < 1) return;
+    if(evt_vec[0].empty()) return;
 
-    auto &evt = InitAsyncEvent<AsyncSourceStateEvent>(evt_vec[0].buf);
+    auto &evt = InitAsyncEvent<AsyncSourceStateEvent>(evt_vec[0].front());
     evt.mId = id;
     evt.mState = AsyncSrcState::Stop;
 
@@ -1184,11 +1184,11 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
     const auto enabledevt = Context->mEnabledEvts.load(std::memory_order_acquire);
     if(buffers_done > 0 && enabledevt.test(al::to_underlying(AsyncEnableBits::BufferCompleted)))
     {
-        RingBuffer *ring{Context->mAsyncEvents.get()};
+        auto *ring = Context->mAsyncEvents.get();
         auto evt_vec = ring->getWriteVector();
-        if(evt_vec[0].len > 0)
+        if(!evt_vec[0].empty())
         {
-            auto &evt = InitAsyncEvent<AsyncBufferCompleteEvent>(evt_vec[0].buf);
+            auto &evt = InitAsyncEvent<AsyncBufferCompleteEvent>(evt_vec[0].front());
             evt.mId = SourceID;
             evt.mCount = buffers_done;
             ring->writeAdvance(1);

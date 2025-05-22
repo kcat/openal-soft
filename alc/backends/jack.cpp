@@ -294,7 +294,7 @@ struct JackPlayback final : public BackendBase {
     std::string mPortPattern;
 
     jack_client_t *mClient{nullptr};
-    std::array<jack_port_t*,MaxOutputChannels> mPort{};
+    std::vector<jack_port_t*> mPort;
 
     std::mutex mMutex;
 
@@ -312,10 +312,8 @@ JackPlayback::~JackPlayback()
     if(!mClient)
         return;
 
-    auto unregister_port = [this](jack_port_t *port) -> void
-    { if(port) jack_port_unregister(mClient, port); };
-    std::for_each(mPort.begin(), mPort.end(), unregister_port);
-    mPort.fill(nullptr);
+    std::ranges::for_each(mPort, [this](jack_port_t *port) -> void
+    { jack_port_unregister(mClient, port); });
 
     jack_client_close(mClient);
     mClient = nullptr;
@@ -325,15 +323,10 @@ JackPlayback::~JackPlayback()
 int JackPlayback::processRt(jack_nframes_t numframes) noexcept
 {
     auto outptrs = std::array<void*,MaxOutputChannels>{};
-    auto numchans = size_t{0};
-    for(auto *port : mPort)
-    {
-        if(!port || numchans == mDevice->RealOut.Buffer.size())
-            break;
-        outptrs[numchans++] = jack_port_get_buffer(port, numframes);
-    }
+    std::ranges::transform(mPort, outptrs.begin(), [numframes](jack_port_t *port)
+    { return jack_port_get_buffer(port, numframes); });
 
-    const auto dst = std::span{outptrs}.first(numchans);
+    const auto dst = std::span{outptrs}.first(mPort.size());
     if(mPlaying.load(std::memory_order_acquire)) [[likely]]
         mDevice->renderSamples(dst, static_cast<uint>(numframes));
     else
@@ -349,14 +342,12 @@ int JackPlayback::processRt(jack_nframes_t numframes) noexcept
 int JackPlayback::process(jack_nframes_t numframes) noexcept
 {
     auto out = std::array<std::span<float>,MaxOutputChannels>{};
-    const auto out_end = std::ranges::transform(mPort
-        | std::views::take_while([](jack_port_t *port) { return port != nullptr; }),
-        out.begin(), [numframes](jack_port_t *port)
+    std::ranges::transform(mPort, out.begin(), [numframes](jack_port_t *port)
     {
         auto *ptr = static_cast<float*>(jack_port_get_buffer(port, numframes));
         return std::span{ptr, numframes};
-    }).out;
-    const auto numchans = static_cast<size_t>(std::distance(out.begin(), out_end));
+    });
+    const auto numchans = mPort.size();
 
     if(mPlaying.load(std::memory_order_acquire)) [[likely]]
     {
@@ -403,7 +394,7 @@ int JackPlayback::mixerProc()
     althrd_setname(GetMixerThreadName());
 
     const auto update_size = mDevice->mUpdateSize;
-    auto outptrs = std::vector<void*>(mDevice->channelsFromFmt());
+    auto outptrs = std::vector<void*>(mPort.size());
 
     while(!mKillNow.load(std::memory_order_acquire)
         && mDevice->Connected.load(std::memory_order_acquire))
@@ -484,8 +475,8 @@ void JackPlayback::open(std::string_view name)
 bool JackPlayback::reset()
 {
     std::ranges::for_each(mPort, [this](jack_port_t *port) -> void
-    { if(port) jack_port_unregister(mClient, port); });
-    mPort.fill(nullptr);
+    { jack_port_unregister(mClient, port); });
+    decltype(mPort){}.swap(mPort);
 
     mRTMixing = GetConfigValueBool(mDevice->mDeviceName, "jack", "rt-mix", true);
     jack_set_process_callback(mClient,
@@ -515,35 +506,37 @@ bool JackPlayback::reset()
     /* Force 32-bit float output. */
     mDevice->FmtType = DevFmtFloat;
 
-    int port_num{0};
-    auto ports = std::span{mPort}.first(mDevice->channelsFromFmt());
-    auto bad_port = ports.begin();
-    while(bad_port != ports.end())
-    {
-        std::string name{"channel_" + std::to_string(++port_num)};
-        *bad_port = jack_port_register(mClient, name.c_str(), JACK_DEFAULT_AUDIO_TYPE,
-            JackPortIsOutput | JackPortIsTerminal, 0);
-        if(!*bad_port) break;
-        ++bad_port;
-    }
-    if(bad_port != ports.end())
-    {
-        ERR("Failed to register enough JACK ports for {} output",
-            DevFmtChannelsString(mDevice->FmtChans));
-        if(bad_port == ports.begin()) return false;
-
-        if(bad_port == ports.begin()+1)
-            mDevice->FmtChans = DevFmtMono;
-        else
+    try {
+        const auto numchans = size_t{mDevice->channelsFromFmt()};
+        std::ranges::for_each(std::views::iota(0_uz, numchans), [this](const size_t idx)
         {
-            const auto ports_end = ports.begin()+2;
-            while(bad_port != ports_end)
+            auto name = fmt::format("channel_{}", idx);
+            auto &newport = mPort.emplace_back();
+            newport = jack_port_register(mClient, name.c_str(), JACK_DEFAULT_AUDIO_TYPE,
+                JackPortIsOutput | JackPortIsTerminal, 0);
+            if(!newport)
             {
-                jack_port_unregister(mClient, *(--bad_port));
-                *bad_port = nullptr;
+                mPort.pop_back();
+                throw std::runtime_error{fmt::format(
+                    "Failed to register enough JACK ports for {} output",
+                    DevFmtChannelsString(mDevice->FmtChans))};
             }
+        });
+    }
+    catch(std::exception& e) {
+        ERR("Exception: {}", e.what());
+        if(mPort.size() >= 2)
+        {
+            std::ranges::for_each(mPort | std::views::drop(2), [this](jack_port_t *port)
+            { jack_port_unregister(mClient, port); });
+            mPort.resize(2_uz);
+            mPort.shrink_to_fit();
             mDevice->FmtChans = DevFmtStereo;
         }
+        else if(mPort.size() == 1)
+            mDevice->FmtChans = DevFmtMono;
+        else
+            throw;
     }
 
     setDefaultChannelOrder();
@@ -572,13 +565,11 @@ void JackPlayback::start()
         while(*pnames_end) ++pnames_end;
         const auto pnames = std::span{pnamesptr.get(), pnames_end};
 
-        std::ranges::mismatch(pnames, mPort
-            | std::views::take_while([](jack_port_t *port) { return port != nullptr; }),
-            [this](const char *portname, jack_port_t *port)
+        std::ranges::mismatch(mPort, pnames, [this](jack_port_t *port, const char *portname)
         {
             if(!portname)
             {
-                ERR("No physical playback port for \"{}\"", jack_port_name(port));
+                ERR("No playback port for \"{}\"", jack_port_name(port));
                 return false;
             }
             if(jack_connect(mClient, jack_port_name(port), portname))

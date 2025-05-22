@@ -1936,8 +1936,6 @@ NOINLINE void pffft_real_preprocess(const size_t Ncvec, const v4sf *in, v4sf *RE
 void pffft_zreorder_internal(const PFFFT_Setup *setup, const v4sf *vin, v4sf *RESTRICT vout,
     pffft_direction_t direction)
 {
-    assert(in != out);
-
     const auto N = size_t{setup->N};
     const auto Ncvec = size_t{setup->Ncvec};
     if(setup->transform == PFFFT_REAL)

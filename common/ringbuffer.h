@@ -7,7 +7,9 @@
 #include <cassert>
 #include <cstddef>
 #include <memory>
+#include <new>
 #include <span>
+#include <stdexcept>
 
 #include "almalloc.h"
 #include "alnumeric.h"

@@ -86,7 +86,7 @@ inline void LoadSampleArray(const std::span<float> dstSamples,
     const std::span<const T> srcData, const size_t channel, const size_t srcstep) noexcept
 {
     using TypeTraits = SampleInfo<T>;
-    assert(srcChan < srcStep);
+    assert(channel < srcstep);
 
     auto ssrc = srcData.begin() + ptrdiff_t(channel);
     dstSamples.front() = TypeTraits::to_float(*ssrc);

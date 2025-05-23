@@ -104,9 +104,12 @@ force_inline void MixLine(const std::span<const float> InSamples, const std::spa
             const auto gain4 = vdupq_n_f32(gain);
             auto step_count4 = set_f4(0.0f, 1.0f, 2.0f, 3.0f);
 
+            /* NOLINTBEGIN(cppcoreguidelines-pro-type-reinterpret-cast) */
             const auto in4 = std::span{reinterpret_cast<const float32x4_t*>(InSamples.data()),
                 InSamples.size()/4}.first(todo);
             const auto out4 = std::span{reinterpret_cast<float32x4_t*>(dst.data()), dst.size()/4};
+            /* NOLINTEND(cppcoreguidelines-pro-type-reinterpret-cast) */
+
             std::transform(in4.begin(), in4.end(), out4.begin(), out4.begin(),
                 [gain4,step4,four4,&step_count4](const float32x4_t val4, float32x4_t dry4)
             {
@@ -162,10 +165,12 @@ force_inline void MixLine(const std::span<const float> InSamples, const std::spa
         return;
     if(const auto todo = (InSamples.size()-pos) >> 2)
     {
+        /* NOLINTBEGIN(cppcoreguidelines-pro-type-reinterpret-cast) */
         const auto in4 = std::span{reinterpret_cast<const float32x4_t*>(InSamples.data()),
             InSamples.size()/4}.last(todo);
         const auto out = dst.subspan(pos);
         const auto out4 = std::span{reinterpret_cast<float32x4_t*>(out.data()), out.size()/4};
+        /* NOLINTEND(cppcoreguidelines-pro-type-reinterpret-cast) */
 
         const auto gain4 = vdupq_n_f32(TargetGain);
         std::transform(in4.begin(), in4.end(), out4.begin(), out4.begin(),
@@ -202,6 +207,7 @@ void Resample_<LerpTag,NEONTag>(const InterpState*, const std::span<const float>
     auto frac4 = vld1q_u32(frac_.data());
     auto pos4 = vld1q_u32(pos_.data());
 
+    /* NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast) */
     auto vecout = std::span{reinterpret_cast<float32x4_t*>(dst.data()), dst.size()/4};
     std::ranges::generate(vecout, [src,increment4,fracMask4,fracOne4,&pos4,&frac4]
     {
@@ -261,6 +267,7 @@ void Resample_<CubicTag,NEONTag>(const InterpState *state, const std::span<const
     auto frac4 = vld1q_u32(frac_.data());
     auto pos4 = vld1q_u32(pos_.data());
 
+    /* NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast) */
     auto vecout = std::span{reinterpret_cast<float32x4_t*>(dst.data()), dst.size()/4};
     std::ranges::generate(vecout, [src,filter,increment4,fracMask4,fracDiffOne4,fracDiffMask4,
         &pos4,&frac4]
@@ -481,6 +488,7 @@ template<>
 void Mix_<NEONTag>(const std::span<const float> InSamples, const std::span<float> OutBuffer,
     float &CurrentGain, const float TargetGain, const size_t Counter)
 {
+    /* NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast) */
     if((reinterpret_cast<uintptr_t>(OutBuffer.data())&15) != 0) [[unlikely]]
         return Mix_<CTag>(InSamples, OutBuffer, CurrentGain, TargetGain, Counter);
 

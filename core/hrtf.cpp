@@ -406,9 +406,9 @@ auto CreateHrtfStore(uint rate, uint8_t irSize, const std::span<const HrtfStore:
     const std::span<const HrtfStore::Elevation> elevs, const std::span<const HrirArray> coeffs,
     const std::span<const ubyte2> delays) -> std::unique_ptr<HrtfStore>
 {
-    static_assert(alignof(HrtfStore::Field) <= alignof(HrtfStore));
-    static_assert(alignof(HrtfStore::Elevation) <= alignof(HrtfStore));
     static_assert(16 <= alignof(HrtfStore));
+    static_assert(alignof(HrtfStore::Field) <= alignof(HrtfStore));
+    static_assert(alignof(HrtfStore::Elevation) <= alignof(HrtfStore::Field));
 
     if(rate > MaxSampleRate)
         throw std::runtime_error{fmt::format("Sample rate is too large (max: {}hz)",
@@ -430,29 +430,32 @@ auto CreateHrtfStore(uint rate, uint8_t irSize, const std::span<const HrtfStore:
     Hrtf->mSampleRate = rate & 0xff'ff'ff;
     Hrtf->mIrSize = irSize;
 
-    /* Set up pointers to storage following the main HRTF struct. */
-    auto storage = std::span{reinterpret_cast<char*>(Hrtf.get()), total};
-    auto base = storage.begin();
-    auto offset = ptrdiff_t{sizeof(HrtfStore)};
+    /* NOLINTBEGIN(cppcoreguidelines-pro-type-reinterpret-cast)
+     * Set up pointers to storage following the main HRTF struct.
+     */
+    const auto storage = std::span{reinterpret_cast<char*>(Hrtf.get()), total};
+    const auto base = storage.begin();
+    auto storeiter = base;
+    std::advance(storeiter, sizeof(HrtfStore));
 
-    offset = RoundUp(offset, alignof(HrtfStore::Field)); /* Align for field infos */
-    auto field_ = std::span{reinterpret_cast<HrtfStore::Field*>(std::to_address(base + offset)),
+    auto field_ = std::span{reinterpret_cast<HrtfStore::Field*>(std::to_address(storeiter)),
         fields.size()};
-    offset += std::ssize(std::as_bytes(fields));
+    std::advance(storeiter, fields.size_bytes());
 
-    offset = RoundUp(offset, alignof(HrtfStore::Elevation)); /* Align for elevation infos */
-    auto elev_ = std::span{reinterpret_cast<HrtfStore::Elevation*>(std::to_address(base + offset)),
+    static_assert(alignof(HrtfStore::Field) >= alignof(HrtfStore::Elevation));
+    auto elev_ = std::span{reinterpret_cast<HrtfStore::Elevation*>(std::to_address(storeiter)),
         elevs.size()};
-    offset += std::ssize(std::as_bytes(elevs));
+    std::advance(storeiter, elevs.size_bytes());
 
-    offset = RoundUp(offset, 16); /* Align for coefficients using SIMD */
-    auto coeffs_ = std::span{reinterpret_cast<HrirArray*>(std::to_address(base+offset)), irCount};
-    offset += std::ssize(std::as_bytes(coeffs));
+    storeiter = RoundUp(storeiter-base, 16)+base; /* Align for coefficients using SIMD */
+    auto coeffs_ = std::span{reinterpret_cast<HrirArray*>(std::to_address(storeiter)), irCount};
+    std::advance(storeiter, coeffs.size_bytes());
 
-    auto delays_ = std::span{reinterpret_cast<ubyte2*>(std::to_address(base + offset)), irCount};
-    offset += std::ssize(std::as_bytes(delays));
+    auto delays_ = std::span{reinterpret_cast<ubyte2*>(std::to_address(storeiter)), irCount};
+    std::advance(storeiter, delays.size_bytes());
+    /* NOLINTEND(cppcoreguidelines-pro-type-reinterpret-cast) */
 
-    if(size_t(offset) != total)
+    if(size_t(std::distance(base, storeiter)) != total)
         throw std::runtime_error{"HrtfStore allocation size mismatch"};
 
     /* Copy input data to storage. */
@@ -1143,14 +1146,14 @@ auto GetResource(int /*name*/) noexcept -> std::span<const char>
 #else
 
 /* NOLINTNEXTLINE(*-avoid-c-arrays) */
-constexpr unsigned char hrtf_default[]{
+constexpr char hrtf_default[]{
 #include "default_hrtf.txt"
 };
 
 auto GetResource(int name) noexcept -> std::span<const char>
 {
     if(name == IDR_DEFAULT_HRTF_MHR)
-        return {reinterpret_cast<const char*>(hrtf_default), sizeof(hrtf_default)};
+        return hrtf_default;
     return {};
 }
 #endif

@@ -82,6 +82,9 @@ NOINLINE inline
 void PhaseShifterT<S>::process(const std::span<float> dst, std::span<const float> src) const
 {
 #if HAVE_SSE_INTRINSICS
+    /* NOLINTBEGIN(cppcoreguidelines-pro-type-reinterpret-cast)
+     * Need to be able to cast floats to SIMD float types.
+     */
     if(const std::size_t todo{dst.size()>>2})
     {
         auto out = std::span{reinterpret_cast<__m128*>(dst.data()), todo};
@@ -187,6 +190,7 @@ void PhaseShifterT<S>::process(const std::span<float> dst, std::span<const float
             return vget_lane_f32(vadd_f32(vget_low_f32(r4), vget_high_f32(r4)), 0);
         });
     }
+    /* NOLINTEND(cppcoreguidelines-pro-type-reinterpret-cast) */
 
 #else
 

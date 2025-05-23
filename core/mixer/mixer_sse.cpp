@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <array>
+#include <bit>
 #include <cstddef>
 #include <cstdint>
 #include <limits>
@@ -62,7 +63,7 @@ inline void ApplyCoeffs(const std::span<float2> Values, const size_t IrSize,
      * systems that support SSE, which is the only one that needs to know the
      * alignment of Values (which alternates between 8- and 16-byte aligned).
      */
-    if(!(reinterpret_cast<uintptr_t>(Values.data())&15))
+    if(!(std::bit_cast<uintptr_t>(Values.data())&15))
     {
         const auto vals4 = std::span{reinterpret_cast<__m128*>(Values[0].data()), count4};
         const auto coeffs4 = std::span{reinterpret_cast<const __m128*>(Coeffs[0].data()), count4};

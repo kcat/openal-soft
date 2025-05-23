@@ -5,7 +5,6 @@
 
 #include <algorithm>
 #include <array>
-#include <bit>
 #include <cstddef>
 #include <cstdint>
 #include <limits>
@@ -59,16 +58,17 @@ inline void ApplyCoeffs(const std::span<float2> Values, const size_t IrSize,
      */
     const auto count4 = size_t{(IrSize+1) >> 1};
 
-    /* This isn't technically correct to test alignment, but it's true for
+    /* NOLINTBEGIN(cppcoreguidelines-pro-type-reinterpret-cast)
+     * This isn't technically correct to test alignment, but it's true for
      * systems that support SSE, which is the only one that needs to know the
      * alignment of Values (which alternates between 8- and 16-byte aligned).
      */
-    if(!(std::bit_cast<uintptr_t>(Values.data())&15))
+    if(!(reinterpret_cast<uintptr_t>(Values.data())&15))
     {
         const auto vals4 = std::span{reinterpret_cast<__m128*>(Values[0].data()), count4};
         const auto coeffs4 = std::span{reinterpret_cast<const __m128*>(Coeffs[0].data()), count4};
 
-        std::transform(vals4.begin(), vals4.end(), coeffs4.begin(), vals4.begin(),
+        std::ranges::transform(vals4, coeffs4, vals4.begin(),
             [lrlr](const __m128 &val, const __m128 &coeff) -> __m128
             { return vmadd(val, coeff, lrlr); });
     }
@@ -96,6 +96,7 @@ inline void ApplyCoeffs(const std::span<float2> Values, const size_t IrSize,
         vals = _mm_add_ps(imp0, vals);
         _mm_storel_pi(reinterpret_cast<__m64*>(Values[i].data()), vals);
     }
+    /* NOLINTEND(cppcoreguidelines-pro-type-reinterpret-cast) */
 }
 
 force_inline void MixLine(const std::span<const float> InSamples, const std::span<float> dst,
@@ -117,10 +118,12 @@ force_inline void MixLine(const std::span<const float> InSamples, const std::spa
             const auto gain4 = _mm_set1_ps(gain);
             auto step_count4 = _mm_setr_ps(0.0f, 1.0f, 2.0f, 3.0f);
 
+            /* NOLINTBEGIN(cppcoreguidelines-pro-type-reinterpret-cast) */
             const auto in4 = std::span{reinterpret_cast<const __m128*>(InSamples.data()),
                 InSamples.size()/4}.first(todo);
             const auto out4 = std::span{reinterpret_cast<__m128*>(dst.data()), dst.size()/4};
-            std::transform(in4.begin(), in4.end(), out4.begin(), out4.begin(),
+            /* NOLINTEND(cppcoreguidelines-pro-type-reinterpret-cast) */
+            std::ranges::transform(in4, out4, out4.begin(),
                 [gain4,step4,four4,&step_count4](const __m128 val4, __m128 dry4) -> __m128
             {
                 /* dry += val * (gain + step*step_count) */
@@ -142,7 +145,7 @@ force_inline void MixLine(const std::span<const float> InSamples, const std::spa
             const auto in = InSamples.subspan(pos, leftover);
             const auto out = dst.subspan(pos);
 
-            std::transform(in.begin(), in.end(), out.begin(), out.begin(),
+            std::ranges::transform(in, out, out.begin(),
                 [gain,step,&step_count](const float val, float dry) noexcept -> float
             {
                 dry += val * (gain + step*step_count);
@@ -163,7 +166,7 @@ force_inline void MixLine(const std::span<const float> InSamples, const std::spa
             const auto in = InSamples.subspan(pos, leftover);
             const auto out = dst.subspan(pos);
 
-            std::transform(in.begin(), in.end(), out.begin(), out.begin(),
+            std::ranges::transform(in, out, out.begin(),
                 [TargetGain](const float val, const float dry) noexcept -> float
                 { return dry + val*TargetGain; });
             pos += leftover;
@@ -175,13 +178,15 @@ force_inline void MixLine(const std::span<const float> InSamples, const std::spa
         return;
     if(const auto todo = (InSamples.size()-pos) >> 2)
     {
+        /* NOLINTBEGIN(cppcoreguidelines-pro-type-reinterpret-cast) */
         const auto in4 = std::span{reinterpret_cast<const __m128*>(InSamples.data()),
             InSamples.size()/4}.last(todo);
         const auto out = dst.subspan(pos);
         const auto out4 = std::span{reinterpret_cast<__m128*>(out.data()), out.size()/4};
+        /* NOLINTEND(cppcoreguidelines-pro-type-reinterpret-cast) */
 
         const auto gain4 = _mm_set1_ps(TargetGain);
-        std::transform(in4.begin(), in4.end(), out4.begin(), out4.begin(),
+        std::ranges::transform(in4, out4, out4.begin(),
             [gain4](const __m128 val4, const __m128 dry4) -> __m128
             { return vmadd(dry4, val4, gain4); });
         pos += in4.size()*4;
@@ -191,7 +196,7 @@ force_inline void MixLine(const std::span<const float> InSamples, const std::spa
         const auto in = InSamples.last(leftover);
         const auto out = dst.subspan(pos);
 
-        std::transform(in.begin(), in.end(), out.begin(), out.begin(),
+        std::ranges::transform(in, out, out.begin(),
             [TargetGain](const float val, const float dry) noexcept -> float
             { return dry + val*TargetGain; });
     }
@@ -383,6 +388,7 @@ template<>
 void Mix_<SSETag>(const std::span<const float> InSamples, const std::span<float> OutBuffer,
     float &CurrentGain, const float TargetGain, const size_t Counter)
 {
+    /* NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast) */
     if((reinterpret_cast<uintptr_t>(OutBuffer.data())&15) != 0) [[unlikely]]
         return Mix_<CTag>(InSamples, OutBuffer, CurrentGain, TargetGain, Counter);
 

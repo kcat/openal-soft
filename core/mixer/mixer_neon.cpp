@@ -110,7 +110,7 @@ force_inline void MixLine(const std::span<const float> InSamples, const std::spa
             const auto out4 = std::span{reinterpret_cast<float32x4_t*>(dst.data()), dst.size()/4};
             /* NOLINTEND(cppcoreguidelines-pro-type-reinterpret-cast) */
 
-            std::transform(in4.begin(), in4.end(), out4.begin(), out4.begin(),
+            std::ranges::transform(in4, out4, out4.begin(),
                 [gain4,step4,four4,&step_count4](const float32x4_t val4, float32x4_t dry4)
             {
                 /* dry += val * (gain + step*step_count) */
@@ -132,7 +132,7 @@ force_inline void MixLine(const std::span<const float> InSamples, const std::spa
             const auto in = InSamples.subspan(pos, leftover);
             const auto out = dst.subspan(pos);
 
-            std::transform(in.begin(), in.end(), out.begin(), out.begin(),
+            std::ranges::transform(in, out, out.begin(),
                 [gain,step,&step_count](const float val, float dry) noexcept -> float
             {
                 dry += val * (gain + step*step_count);
@@ -153,7 +153,7 @@ force_inline void MixLine(const std::span<const float> InSamples, const std::spa
             const auto in = InSamples.subspan(pos, leftover);
             const auto out = dst.subspan(pos);
 
-            std::transform(in.begin(), in.end(), out.begin(), out.begin(),
+            std::ranges::transform(in, out, out.begin(),
                 [TargetGain](const float val, const float dry) noexcept -> float
                 { return dry + val*TargetGain; });
             pos += leftover;
@@ -173,7 +173,7 @@ force_inline void MixLine(const std::span<const float> InSamples, const std::spa
         /* NOLINTEND(cppcoreguidelines-pro-type-reinterpret-cast) */
 
         const auto gain4 = vdupq_n_f32(TargetGain);
-        std::transform(in4.begin(), in4.end(), out4.begin(), out4.begin(),
+        std::ranges::transform(in4, out4, out4.begin(),
             [gain4](const float32x4_t val4, const float32x4_t dry4) -> float32x4_t
             { return vmlaq_f32(dry4, val4, gain4); });
         pos += in4.size()*4;
@@ -183,7 +183,7 @@ force_inline void MixLine(const std::span<const float> InSamples, const std::spa
         const auto in = InSamples.last(leftover);
         const auto out = dst.subspan(pos);
 
-        std::transform(in.begin(), in.end(), out.begin(), out.begin(),
+        std::ranges::transform(in, out, out.begin(),
             [TargetGain](const float val, const float dry) noexcept -> float
             { return dry + val*TargetGain; });
     }
@@ -208,8 +208,8 @@ void Resample_<LerpTag,NEONTag>(const InterpState*, const std::span<const float>
     auto pos4 = vld1q_u32(pos_.data());
 
     /* NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast) */
-    auto vecout = std::span{reinterpret_cast<float32x4_t*>(dst.data()), dst.size()/4};
-    std::ranges::generate(vecout, [src,increment4,fracMask4,fracOne4,&pos4,&frac4]
+    std::ranges::generate(std::span{reinterpret_cast<float32x4_t*>(dst.data()), dst.size()/4},
+        [src,increment4,fracMask4,fracOne4,&pos4,&frac4]
     {
         const auto pos0 = vgetq_lane_u32(pos4, 0);
         const auto pos1 = vgetq_lane_u32(pos4, 1);
@@ -268,9 +268,8 @@ void Resample_<CubicTag,NEONTag>(const InterpState *state, const std::span<const
     auto pos4 = vld1q_u32(pos_.data());
 
     /* NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast) */
-    auto vecout = std::span{reinterpret_cast<float32x4_t*>(dst.data()), dst.size()/4};
-    std::ranges::generate(vecout, [src,filter,increment4,fracMask4,fracDiffOne4,fracDiffMask4,
-        &pos4,&frac4]
+    std::ranges::generate(std::span{reinterpret_cast<float32x4_t*>(dst.data()), dst.size()/4},
+        [src,filter,increment4,fracMask4,fracDiffOne4,fracDiffMask4,&pos4,&frac4]
     {
         const auto pos0 = vgetq_lane_u32(pos4, 0);
         const auto pos1 = vgetq_lane_u32(pos4, 1);

@@ -77,8 +77,8 @@ void Resample_<LerpTag,SSE4Tag>(const InterpState*, const std::span<const float>
         static_cast<int>(frac_[2]), static_cast<int>(frac_[3]));
 
     /* NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast) */
-    auto vecout = std::span{reinterpret_cast<__m128*>(dst.data()), dst.size()/4};
-    std::ranges::generate(vecout, [src,increment4,fracMask4,fracOne4,&pos4,&frac4]
+    std::ranges::generate(std::span{reinterpret_cast<__m128*>(dst.data()), dst.size()/4},
+        [src,increment4,fracMask4,fracOne4,&pos4,&frac4]
     {
         const auto pos0 = static_cast<uint>(_mm_extract_epi32(pos4, 0));
         const auto pos1 = static_cast<uint>(_mm_extract_epi32(pos4, 1));
@@ -143,9 +143,8 @@ void Resample_<CubicTag,SSE4Tag>(const InterpState *state, const std::span<const
         static_cast<int>(frac_[2]), static_cast<int>(frac_[3]));
 
     /* NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast) */
-    auto vecout = std::span{reinterpret_cast<__m128*>(dst.data()), dst.size()/4};
-    std::ranges::generate(vecout, [src,filter,increment4,fracMask4,fracDiffOne4,fracDiffMask4,
-        &pos4,&frac4]
+    std::ranges::generate(std::span{reinterpret_cast<__m128*>(dst.data()), dst.size()/4},
+        [src,filter,increment4,fracMask4,fracDiffOne4,fracDiffMask4,&pos4,&frac4]
     {
         const auto pos0 = static_cast<uint>(_mm_extract_epi32(pos4, 0));
         const auto pos1 = static_cast<uint>(_mm_extract_epi32(pos4, 1));

@@ -1103,37 +1103,47 @@ void TraceFormat(const std::string_view msg, const WAVEFORMATEX *format)
 }
 
 
-/* Duplicates the first sample of each sample frame to the second sample, at
- * half volume. Essentially converting mono to stereo.
+template<typename T, size_t N, size_t ...I>
+constexpr auto span_to_array(const std::span<T,N> span, std::index_sequence<I...>)
+{ return std::array<T,N>{{span[I]...}}; }
+
+template<typename T, size_t N> requires(N != std::dynamic_extent)
+constexpr auto span_to_array(const std::span<T,N> span) -> std::array<T,N>
+{ return span_to_array(span, std::make_index_sequence<N>{}); }
+
+/* Duplicates the first sample of each sample frame to the second sample,
+ * halving the volume. Essentially converting mono to stereo.
  */
 template<typename T>
 void DuplicateSamples(std::span<BYTE> insamples, size_t step)
 {
-    auto samples = std::span{reinterpret_cast<T*>(insamples.data()), insamples.size()/sizeof(T)};
-    if constexpr(std::is_floating_point_v<T>)
+    if constexpr(std::is_floating_point_v<T> || std::is_signed_v<T>)
     {
-        for(size_t i{0};i < samples.size();i+=step)
+        step *= sizeof(T);
+        while(!insamples.empty())
         {
-            const auto s = samples[i] * T{0.5};
-            samples[i+1] = samples[i] = s;
-        }
-    }
-    else if constexpr(std::is_signed_v<T>)
-    {
-        for(size_t i{0};i < samples.size();i+=step)
-        {
-            const auto s = samples[i] / 2;
-            samples[i+1] = samples[i] = T(s);
+            /* This may look ugly, but it avoids type-punning with
+             * reinterpret_cast and optimizes equally well.
+             */
+            const auto sbytes = span_to_array(insamples.first<sizeof(T)>());
+            const auto s = std::bit_cast<T>(sbytes) / T{2};
+            const auto result = std::bit_cast<std::array<BYTE,sizeof(T)>>(T(s));
+            std::ranges::copy(result, std::ranges::copy(result, insamples.begin()).out);
+            insamples = insamples.subspan(step);
         }
     }
     else
     {
         using ST = std::make_signed_t<T>;
         static constexpr auto SignBit = T{1u << (sizeof(T)*8 - 1)};
-        for(size_t i{0};i < samples.size();i+=step)
+        step *= sizeof(T);
+        while(!insamples.empty())
         {
-            const auto s = static_cast<ST>(samples[i]^SignBit) / 2;
-            samples[i+1] = samples[i] = T(s)^SignBit;
+            const auto sbytes = span_to_array(insamples.first<sizeof(T)>());
+            const auto s = static_cast<ST>(std::bit_cast<T>(sbytes)^SignBit) / ST{2};
+            const auto result = std::bit_cast<std::array<BYTE,sizeof(T)>>(T(T(s)^SignBit));
+            std::ranges::copy(result, std::ranges::copy(result, insamples.begin()).out);
+            insamples = insamples.subspan(step);
         }
     }
 }
@@ -2214,12 +2224,11 @@ auto WasapiPlayback::resetProxy(DeviceHelper &helper, DeviceHandle &mmdev,
     if(sharemode == AUDCLNT_SHAREMODE_EXCLUSIVE)
     {
         auto period_time = per_time;
-        auto min_period = ReferenceTime{};
-        hr = audio.mClient->GetDevicePeriod(nullptr,
-            &reinterpret_cast<REFERENCE_TIME&>(min_period));
+        auto min_period_val = REFERENCE_TIME{};
+        hr = audio.mClient->GetDevicePeriod(nullptr, &min_period_val);
         if(FAILED(hr))
             ERR("Failed to get minimum period time: {:#x}", as_unsigned(hr));
-        else if(min_period > period_time)
+        else if(const auto min_period = ReferenceTime{min_period_val}; min_period > period_time)
         {
             period_time = min_period;
             WARN("Clamping to minimum period time, {}", nanoseconds{min_period});
@@ -2261,9 +2270,13 @@ auto WasapiPlayback::resetProxy(DeviceHelper &helper, DeviceHandle &mmdev,
 
     auto buffer_len = UINT32{};
     auto period_time = ReferenceTime{};
-    hr = audio.mClient->GetDevicePeriod(&reinterpret_cast<REFERENCE_TIME&>(period_time), nullptr);
+    auto period_time_val = REFERENCE_TIME{};
+    hr = audio.mClient->GetDevicePeriod(&period_time_val, nullptr);
     if(SUCCEEDED(hr))
+    {
+        period_time = ReferenceTime{period_time_val};
         hr = audio.mClient->GetBufferSize(&buffer_len);
+    }
     if(FAILED(hr))
     {
         ERR("Failed to get audio buffer info: {:#x}", as_unsigned(hr));
@@ -2474,6 +2487,7 @@ FORCE_ALIGN void WasapiCapture::recordProc(IAudioClient *client, IAudioCaptureCl
                 {
                     samples.resize(numsamples*2_uz);
                     mChannelConv.convert(rdata, samples.data(), numsamples);
+                    /* NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast) */
                     rdata = reinterpret_cast<BYTE*>(samples.data());
                 }
 
@@ -2962,9 +2976,13 @@ auto WasapiCapture::resetProxy(DeviceHelper &helper, DeviceHandle &mmdev,
 
     auto buffer_len = UINT32{};
     auto min_per = ReferenceTime{};
-    hr = client->GetDevicePeriod(&reinterpret_cast<REFERENCE_TIME&>(min_per), nullptr);
+    auto min_per_val = REFERENCE_TIME{};
+    hr = client->GetDevicePeriod(&min_per_val, nullptr);
     if(SUCCEEDED(hr))
+    {
+        min_per = ReferenceTime{min_per_val};
         hr = client->GetBufferSize(&buffer_len);
+    }
     if(FAILED(hr))
     {
         ERR("Failed to get buffer size: {:#x}", as_unsigned(hr));

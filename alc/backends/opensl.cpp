@@ -210,7 +210,7 @@ struct OpenSLPlayback final : public BackendBase {
     /* buffer queue player interfaces */
     SLObjectItf mBufferQueueObj{nullptr};
 
-    RingBufferPtr mRing{nullptr};
+    RingBuffer2Ptr<std::byte> mRing;
     std::atomic<bool> mSignal;
 
     std::mutex mMutex;
@@ -306,26 +306,26 @@ void OpenSLPlayback::mixerProc()
 
         auto dlock = std::unique_lock{mMutex};
         auto data = mRing->getWriteVector();
-        mDevice->renderSamples(data[0].buf,
-            static_cast<uint>(data[0].len)*mDevice->mUpdateSize, frame_step);
-        if(data[1].len > 0)
-            mDevice->renderSamples(data[1].buf,
-                static_cast<uint>(data[1].len)*mDevice->mUpdateSize, frame_step);
+        mDevice->renderSamples(data[0].data(), static_cast<uint>(data[0].size()/mFrameSize),
+            frame_step);
+        if(!data[1].empty())
+            mDevice->renderSamples(data[1].data(), static_cast<uint>(data[1].size()/mFrameSize),
+                frame_step);
 
-        const auto todo = size_t{data[0].len + data[1].len};
+        const auto todo = size_t{data[0].size() + data[1].size()} / mRing->getElemSize();
         mRing->writeAdvance(todo);
         dlock.unlock();
 
-        for(size_t i{0};i < todo;i++)
+        for(size_t i{0};i < todo;++i)
         {
-            if(!data[0].len)
+            if(data[0].empty())
             {
                 data[0] = data[1];
-                data[1].buf = nullptr;
-                data[1].len = 0;
+                data[1] = {};
             }
 
-            result = VCALL(bufferQueue,Enqueue)(data[0].buf, mDevice->mUpdateSize*mFrameSize);
+            const auto updatebytes = mDevice->mUpdateSize*mFrameSize;
+            result = VCALL(bufferQueue,Enqueue)(data[0].data(), updatebytes);
             PrintErr(result, "bufferQueue->Enqueue");
             if(SL_RESULT_SUCCESS != result)
             {
@@ -333,8 +333,7 @@ void OpenSLPlayback::mixerProc()
                 break;
             }
 
-            data[0].len--;
-            data[0].buf += mDevice->mUpdateSize*mFrameSize;
+            data[0] = data[0].subspan(updatebytes);
         }
     }
 }
@@ -500,7 +499,7 @@ bool OpenSLPlayback::reset()
     if(SL_RESULT_SUCCESS == result)
     {
         const auto num_updates = mDevice->mBufferSize / mDevice->mUpdateSize;
-        mRing = RingBuffer::Create(num_updates, mFrameSize*mDevice->mUpdateSize, true);
+        mRing = RingBuffer2<std::byte>::Create(num_updates, mFrameSize*mDevice->mUpdateSize, true);
     }
 
     if(SL_RESULT_SUCCESS != result)
@@ -621,8 +620,8 @@ struct OpenSLCapture final : public BackendBase {
     /* recording interfaces */
     SLObjectItf mRecordObj{nullptr};
 
-    RingBufferPtr mRing{nullptr};
-    uint mSplOffset{0u};
+    RingBuffer2Ptr<std::byte> mRing;
+    uint mByteOffset{0u};
 
     uint mFrameSize{0};
 };
@@ -677,7 +676,7 @@ void OpenSLCapture::open(std::string_view name)
             mDevice->mSampleRate/100u*5u);
         auto num_updates = (length+update_len-1) / update_len;
 
-        mRing = RingBuffer::Create(num_updates, update_len*mFrameSize, false);
+        mRing = RingBuffer2<std::byte>::Create(num_updates, update_len*mFrameSize, false);
 
         mDevice->mUpdateSize = update_len;
         mDevice->mBufferSize = static_cast<uint>(mRing->writeSpace() * update_len);
@@ -787,16 +786,16 @@ void OpenSLCapture::open(std::string_view name)
         const auto silence = (mDevice->FmtType == DevFmtUByte) ? std::byte{0x80} : std::byte{0};
 
         auto data = mRing->getWriteVector();
-        std::fill_n(data[0].buf, data[0].len*chunk_size, silence);
-        std::fill_n(data[1].buf, data[1].len*chunk_size, silence);
-        for(size_t i{0u};i < data[0].len && SL_RESULT_SUCCESS == result;i++)
+        std::ranges::fill(data[0], silence);
+        std::ranges::fill(data[1], silence);
+        for(size_t i{0u};i < data[0].size() && SL_RESULT_SUCCESS == result;i+=chunk_size)
         {
-            result = VCALL(bufferQueue,Enqueue)(data[0].buf + chunk_size*i, chunk_size);
+            result = VCALL(bufferQueue,Enqueue)(data[0].data() + i, chunk_size);
             PrintErr(result, "bufferQueue->Enqueue");
         }
-        for(size_t i{0u};i < data[1].len && SL_RESULT_SUCCESS == result;i++)
+        for(size_t i{0u};i < data[1].size() && SL_RESULT_SUCCESS == result;i+=chunk_size)
         {
-            result = VCALL(bufferQueue,Enqueue)(data[1].buf + chunk_size*i, chunk_size);
+            result = VCALL(bufferQueue,Enqueue)(data[1].data() + i, chunk_size);
             PrintErr(result, "bufferQueue->Enqueue");
         }
     }
@@ -852,33 +851,31 @@ void OpenSLCapture::captureSamples(std::byte *buffer, uint samples)
 {
     const auto update_size = mDevice->mUpdateSize;
     const auto chunk_size = update_size * mFrameSize;
+    auto output = std::span{buffer, samples*size_t{mFrameSize}};
 
     /* Read the desired samples from the ring buffer then advance its read
      * pointer.
      */
     auto adv_count = 0_uz;
     auto rdata = mRing->getReadVector();
-    for(uint i{0};i < samples;)
+    while(!output.empty())
     {
-        const auto rem = std::min(samples - i, update_size - mSplOffset);
-        std::copy_n(rdata[0].buf + mSplOffset*size_t{mFrameSize}, rem*size_t{mFrameSize},
-            buffer + i*size_t{mFrameSize});
+        const auto rem = std::min(output.size(), size_t{chunk_size}-mByteOffset);
+        std::ranges::copy(rdata[0].subspan(mByteOffset, rem), output.begin());
 
-        mSplOffset += rem;
-        if(mSplOffset == update_size)
+        mByteOffset += rem;
+        if(mByteOffset == chunk_size)
         {
             /* Finished a chunk, reset the offset and advance the read pointer. */
-            mSplOffset = 0;
+            mByteOffset = 0;
 
             ++adv_count;
-            rdata[0].len -= 1;
-            if(!rdata[0].len)
+            rdata[0] = rdata[0].subspan(chunk_size);
+            if(rdata[0].empty())
                 rdata[0] = rdata[1];
-            else
-                rdata[0].buf += chunk_size;
         }
 
-        i += rem;
+        output = output.subspan(rem);
     }
 
     auto bufferQueue = SLAndroidSimpleBufferQueueItf{};
@@ -908,30 +905,30 @@ void OpenSLCapture::captureSamples(std::byte *buffer, uint samples)
 
     auto result = SLresult{SL_RESULT_SUCCESS};
     auto wdata = mRing->getWriteVector();
-    if(adv_count > wdata[1].len) [[likely]]
+    if(chunk_size*adv_count > wdata[1].size()) [[likely]]
     {
-        auto len1 = std::min(wdata[0].len, adv_count-wdata[1].len);
-        auto buf1 = wdata[0].buf + chunk_size*(wdata[0].len-len1);
-        for(auto i = 0_uz;i < len1 && SL_RESULT_SUCCESS == result;++i)
+        auto len1 = std::min(wdata[0].size(), chunk_size*adv_count - wdata[1].size());
+        auto buf1 = wdata[0].data() + (wdata[0].size() - len1);
+        for(auto i = 0_uz;i < len1 && SL_RESULT_SUCCESS == result;i+=chunk_size)
         {
-            result = VCALL(bufferQueue,Enqueue)(buf1 + chunk_size*i, chunk_size);
+            result = VCALL(bufferQueue,Enqueue)(buf1 + i, chunk_size);
             PrintErr(result, "bufferQueue->Enqueue");
         }
     }
-    if(wdata[1].len > 0)
+    if(!wdata[1].empty())
     {
-        auto len2 = std::min(wdata[1].len, adv_count);
-        auto buf2 = wdata[1].buf + chunk_size*(wdata[1].len-len2);
-        for(auto i = 0_uz;i < len2 && SL_RESULT_SUCCESS == result;++i)
+        auto len2 = std::min(wdata[1].size(), chunk_size*adv_count);
+        auto buf2 = wdata[1].data() + (wdata[1].size() - len2);
+        for(auto i = 0_uz;i < len2 && SL_RESULT_SUCCESS == result;i+=chunk_size)
         {
-            result = VCALL(bufferQueue,Enqueue)(buf2 + chunk_size*i, chunk_size);
+            result = VCALL(bufferQueue,Enqueue)(buf2 + i, chunk_size);
             PrintErr(result, "bufferQueue->Enqueue");
         }
     }
 }
 
 uint OpenSLCapture::availableSamples()
-{ return static_cast<uint>(mRing->readSpace()*mDevice->mUpdateSize - mSplOffset); }
+{ return static_cast<uint>(mRing->readSpace()*mDevice->mUpdateSize - mByteOffset/mFrameSize); }
 
 } // namespace
 

@@ -2430,7 +2430,7 @@ struct WasapiCapture final : public BackendBase {
 
     ChannelConverter mChannelConv{};
     SampleConverterPtr mSampleConv;
-    RingBufferPtr mRing;
+    RingBuffer2Ptr<std::byte> mRing;
 
     std::atomic<bool> mKillNow{true};
     std::thread mThread;
@@ -2500,30 +2500,34 @@ FORCE_ALIGN void WasapiCapture::recordProc(IAudioClient *client, IAudioCaptureCl
                     auto *srcdata = LPCVOID{rdata};
                     auto srcframes = uint{numsamples};
 
-                    dstframes = mSampleConv->convert(&srcdata, &srcframes, data[0].buf,
-                        static_cast<uint>(std::min(data[0].len, lenlimit)));
-                    if(srcframes > 0 && dstframes == data[0].len && data[1].len > 0)
+                    const auto len1 = data[0].size() / mRing->getElemSize();
+                    dstframes = mSampleConv->convert(&srcdata, &srcframes, data[0].data(),
+                        static_cast<uint>(std::min(len1, lenlimit)));
+                    if(srcframes > 0 && dstframes == len1 && !data[1].empty())
                     {
                         /* If some source samples remain, all of the first dest
                          * block was filled, and there's space in the second
                          * dest block, do another run for the second block.
                          */
-                        dstframes += mSampleConv->convert(&srcdata, &srcframes, data[1].buf,
-                            static_cast<uint>(std::min(data[1].len, lenlimit)));
+                        const auto len2 = data[1].size() / mRing->getElemSize();
+                        dstframes += mSampleConv->convert(&srcdata, &srcframes, data[1].data(),
+                            static_cast<uint>(std::min(len2, lenlimit)));
                     }
                 }
                 else
                 {
                     const auto framesize = mDevice->frameSizeFromFmt();
                     auto dst = std::span{rdata, size_t{numsamples}*framesize};
-                    auto len1 = std::min(data[0].len, size_t{numsamples});
-                    auto len2 = std::min(data[1].len, numsamples-len1);
+                    auto len1 = data[0].size() / mRing->getElemSize();
+                    auto len2 = data[1].size() / mRing->getElemSize();
+                    len1 = std::min(len1, size_t{numsamples});
+                    len2 = std::min(len2, numsamples-len1);
 
-                    memcpy(data[0].buf, dst.data(), len1*framesize);
-                    if(len2 > 0)
+                    memcpy(data[0].data(), dst.data(), std::min(data[0].size(), dst.size()));
+                    if(dst.size() > data[0].size())
                     {
-                        dst = dst.subspan(len1*framesize);
-                        memcpy(data[1].buf, dst.data(), len2*framesize);
+                        dst = dst.subspan(data[0].size());
+                        memcpy(data[1].data(), dst.data(), std::min(data[1].size(), dst.size()));
                     }
                     dstframes = len1 + len2;
                 }
@@ -2991,7 +2995,7 @@ auto WasapiCapture::resetProxy(DeviceHelper &helper, DeviceHandle &mmdev,
     mDevice->mUpdateSize = RefTime2Samples(min_per, mDevice->mSampleRate);
     mDevice->mBufferSize = buffer_len;
 
-    mRing = RingBuffer::Create(buffer_len, mDevice->frameSizeFromFmt(), false);
+    mRing = RingBuffer2<std::byte>::Create(buffer_len, mDevice->frameSizeFromFmt(), false);
 
     hr = client->SetEventHandle(mNotifyEvent);
     if(FAILED(hr))
@@ -3032,7 +3036,7 @@ void WasapiCapture::stop()
 
 
 void WasapiCapture::captureSamples(std::byte *buffer, uint samples)
-{ std::ignore = mRing->read(buffer, samples); }
+{ std::ignore = mRing->read(std::span{buffer, samples*mRing->getElemSize()}); }
 
 auto WasapiCapture::availableSamples() -> uint
 { return static_cast<uint>(mRing->readSpace()); }

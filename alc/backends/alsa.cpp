@@ -908,7 +908,7 @@ struct AlsaCapture final : public BackendBase {
     std::vector<std::byte> mBuffer;
 
     bool mDoCapture{false};
-    RingBufferPtr mRing{nullptr};
+    RingBuffer2Ptr<std::byte> mRing;
 
     snd_pcm_sframes_t mLastAvail{0};
 };
@@ -1015,7 +1015,8 @@ void AlsaCapture::open(std::string_view name)
     hp = nullptr;
 
     if(needring)
-        mRing = RingBuffer::Create(mDevice->mBufferSize, mDevice->frameSizeFromFmt(), false);
+        mRing = RingBuffer2<std::byte>::Create(mDevice->mBufferSize, mDevice->frameSizeFromFmt(),
+            false);
 
     mDeviceName = name;
 }
@@ -1040,7 +1041,7 @@ void AlsaCapture::stop()
      * snd_pcm_drain is unreliable and snd_pcm_drop drops it. Capture what's
      * available now so it'll be available later after the drop.
      */
-    uint avail{availableSamples()};
+    const auto avail = availableSamples();
     if(!mRing && avail > 0)
     {
         /* The ring buffer implicitly captures when checking availability.
@@ -1051,31 +1052,32 @@ void AlsaCapture::stop()
         captureSamples(temp.data(), avail);
         mBuffer = std::move(temp);
     }
-    if(int err{snd_pcm_drop(mPcmHandle)}; err < 0)
+    if(const auto err = snd_pcm_drop(mPcmHandle); err < 0)
         ERR("snd_pcm_drop failed: {}", snd_strerror(err));
     mDoCapture = false;
 }
 
 void AlsaCapture::captureSamples(std::byte *buffer, uint samples)
 {
+    const auto outspan = std::span{buffer,
+        static_cast<size_t>(snd_pcm_frames_to_bytes(mPcmHandle, samples))};
+
     if(mRing)
     {
-        std::ignore = mRing->read(buffer, samples);
+        std::ignore = mRing->read(outspan);
         return;
     }
 
-    const auto outspan = std::span{buffer,
-        static_cast<size_t>(snd_pcm_frames_to_bytes(mPcmHandle, samples))};
     auto outiter = outspan.begin();
     mLastAvail -= samples;
     while(mDevice->Connected.load(std::memory_order_acquire) && samples > 0)
     {
-        snd_pcm_sframes_t amt{0};
+        auto amt = snd_pcm_sframes_t{0};
 
         if(!mBuffer.empty())
         {
             /* First get any data stored from the last stop */
-            amt = snd_pcm_bytes_to_frames(mPcmHandle, static_cast<ssize_t>(mBuffer.size()));
+            amt = snd_pcm_bytes_to_frames(mPcmHandle, std::ssize(mBuffer));
             if(static_cast<snd_pcm_uframes_t>(amt) > samples) amt = samples;
 
             amt = snd_pcm_frames_to_bytes(mPcmHandle, amt);
@@ -1123,7 +1125,7 @@ void AlsaCapture::captureSamples(std::byte *buffer, uint samples)
 
 uint AlsaCapture::availableSamples()
 {
-    snd_pcm_sframes_t avail{0};
+    auto avail = snd_pcm_sframes_t{0};
     if(mDevice->Connected.load(std::memory_order_acquire) && mDoCapture)
         avail = snd_pcm_avail_update(mPcmHandle);
     if(avail < 0)
@@ -1140,7 +1142,7 @@ uint AlsaCapture::availableSamples()
         }
         if(avail < 0)
         {
-            const char *err{snd_strerror(static_cast<int>(avail))};
+            auto *err = snd_strerror(static_cast<int>(avail));
             ERR("restore error: {}", err);
             mDevice->handleDisconnect("Capture recovery failure: {}", err);
         }
@@ -1157,10 +1159,11 @@ uint AlsaCapture::availableSamples()
     while(avail > 0)
     {
         auto vec = mRing->getWriteVector();
-        if(vec[0].len == 0) break;
+        if(vec[0].empty()) break;
 
-        snd_pcm_sframes_t amt{std::min(static_cast<snd_pcm_sframes_t>(vec[0].len), avail)};
-        amt = snd_pcm_readi(mPcmHandle, vec[0].buf, static_cast<snd_pcm_uframes_t>(amt));
+        auto amt = snd_pcm_bytes_to_frames(mPcmHandle, std::ssize(vec[0]));
+        amt = std::min(amt, avail);
+        amt = snd_pcm_readi(mPcmHandle, vec[0].data(), static_cast<snd_pcm_uframes_t>(amt));
         if(amt < 0)
         {
             ERR("read error: {}", snd_strerror(static_cast<int>(amt)));

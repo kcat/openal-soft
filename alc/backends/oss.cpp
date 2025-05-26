@@ -467,7 +467,7 @@ struct OSScapture final : public BackendBase {
 
     int mFd{-1};
 
-    RingBufferPtr mRing{nullptr};
+    RingBuffer2Ptr<std::byte> mRing;
 
     std::atomic<bool> mKillNow{true};
     std::thread mThread;
@@ -486,10 +486,10 @@ int OSScapture::recordProc()
     SetRTPriority();
     althrd_setname(GetRecordThreadName());
 
-    const size_t frame_size{mDevice->frameSizeFromFmt()};
+    const auto frame_size = size_t{mDevice->frameSizeFromFmt()};
     while(!mKillNow.load(std::memory_order_acquire))
     {
-        pollfd pollitem{};
+        auto pollitem = pollfd{};
         pollitem.fd = mFd;
         pollitem.events = POLLIN;
 
@@ -509,9 +509,9 @@ int OSScapture::recordProc()
         }
 
         auto vec = mRing->getWriteVector();
-        if(vec[0].len > 0)
+        if(!vec[0].empty())
         {
-            ssize_t amt{read(mFd, vec[0].buf, vec[0].len*frame_size)};
+            auto amt = read(mFd, vec[0].data(), vec[0].size());
             if(amt < 0)
             {
                 const auto errstr = std::generic_category().message(errno);
@@ -529,7 +529,7 @@ int OSScapture::recordProc()
 
 void OSScapture::open(std::string_view name)
 {
-    const char *devname{DefaultCapture.c_str()};
+    auto *devname = DefaultCapture.c_str();
     if(name.empty())
         name = GetDefaultName();
     else
@@ -537,11 +537,8 @@ void OSScapture::open(std::string_view name)
         if(CaptureDevices.empty())
             ALCossListPopulate(CaptureDevices, DSP_CAP_INPUT);
 
-        auto iter = std::find_if(CaptureDevices.cbegin(), CaptureDevices.cend(),
-            [&name](const DevMap &entry) -> bool
-            { return entry.name == name; }
-        );
-        if(iter == CaptureDevices.cend())
+        auto iter = std::ranges::find(CaptureDevices, name, &DevMap::name);
+        if(iter == CaptureDevices.end())
             throw al::backend_exception{al::backend_error::NoDevice,
                 "Device name \"{}\" not found", name};
         devname = iter->device_name.c_str();
@@ -552,7 +549,7 @@ void OSScapture::open(std::string_view name)
         throw al::backend_exception{al::backend_error::NoDevice, "Could not open {}: {}", devname,
             std::generic_category().message(errno)};
 
-    int ossFormat{};
+    auto ossFormat = int{};
     switch(mDevice->FmtType)
     {
     case DevFmtByte:
@@ -572,7 +569,7 @@ void OSScapture::open(std::string_view name)
             "{} capture samples not supported", DevFmtTypeString(mDevice->FmtType)};
     }
 
-    uint periods{4};
+    uint periods{4u};
     uint numChannels{mDevice->channelsFromFmt()};
     uint frameSize{numChannels * mDevice->bytesFromFmt()};
     uint ossSpeed{mDevice->mSampleRate};
@@ -606,7 +603,7 @@ void OSScapture::open(std::string_view name)
             "Failed to set {} samples, got OSS format {:#x}", DevFmtTypeString(mDevice->FmtType),
             as_unsigned(ossFormat)};
 
-    mRing = RingBuffer::Create(mDevice->mBufferSize, frameSize, false);
+    mRing = RingBuffer2<std::byte>::Create(mDevice->mBufferSize, frameSize, false);
 
     mDeviceName = name;
 }
@@ -634,7 +631,7 @@ void OSScapture::stop()
 }
 
 void OSScapture::captureSamples(std::byte *buffer, uint samples)
-{ std::ignore = mRing->read(buffer, samples); }
+{ std::ignore = mRing->read(std::span{buffer, samples*mRing->getElemSize()}); }
 
 uint OSScapture::availableSamples()
 { return static_cast<uint>(mRing->readSpace()); }

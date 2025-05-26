@@ -307,7 +307,7 @@ struct PortCapture final : public BackendBase {
     PaStream *mStream{nullptr};
     PaStreamParameters mParams{};
 
-    RingBufferPtr mRing{nullptr};
+    RingBuffer2Ptr<std::byte> mRing;
 };
 
 PortCapture::~PortCapture()
@@ -322,7 +322,8 @@ PortCapture::~PortCapture()
 int PortCapture::readCallback(const void *inputBuffer, void*, unsigned long framesPerBuffer,
     const PaStreamCallbackTimeInfo*, const PaStreamCallbackFlags) const noexcept
 {
-    std::ignore = mRing->write(inputBuffer, framesPerBuffer);
+    std::ignore = mRing->write(std::span{static_cast<const std::byte*>(inputBuffer),
+        framesPerBuffer*mRing->getElemSize()});
     return 0;
 }
 
@@ -343,19 +344,18 @@ void PortCapture::open(std::string_view name)
     }
     else
     {
-        auto iter = std::find_if(DeviceNames.cbegin(), DeviceNames.cend(),
-            [name](const DeviceEntry &entry)
-            { return entry.mCaptureChannels > 0 && name == entry.mName; });
-        if(iter == DeviceNames.cend())
+        auto iter = std::ranges::find_if(DeviceNames, [name](const DeviceEntry &entry)
+        { return entry.mCaptureChannels > 0 && name == entry.mName; });
+        if(iter == DeviceNames.end())
             throw al::backend_exception{al::backend_error::NoDevice,
                 "Device name \"{}\" not found", name};
-        deviceid = static_cast<int>(std::distance(DeviceNames.cbegin(), iter));
+        deviceid = static_cast<int>(std::distance(DeviceNames.begin(), iter));
     }
 
     const uint samples{std::max(mDevice->mBufferSize, mDevice->mSampleRate/10u)};
     const uint frame_size{mDevice->frameSizeFromFmt()};
 
-    mRing = RingBuffer::Create(samples, frame_size, false);
+    mRing = RingBuffer2<std::byte>::Create(samples, frame_size, false);
 
     mParams.device = deviceid;
     mParams.suggestedLatency = 0.0f;
@@ -420,7 +420,7 @@ uint PortCapture::availableSamples()
 { return static_cast<uint>(mRing->readSpace()); }
 
 void PortCapture::captureSamples(std::byte *buffer, uint samples)
-{ std::ignore = mRing->read(buffer, samples); }
+{ std::ignore = mRing->read(std::span{buffer, samples*mRing->getElemSize()}); }
 
 } // namespace
 

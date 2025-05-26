@@ -1905,7 +1905,7 @@ class PipeWireCapture final : public BackendBase {
     PwStreamPtr mStream;
     spa_hook mStreamListener{};
 
-    RingBufferPtr mRing;
+    RingBuffer2Ptr<std::byte> mRing;
 
     static constexpr pw_stream_events CreateEvents()
     {
@@ -1934,10 +1934,10 @@ void PipeWireCapture::inputCallback() noexcept
 
     spa_data *bufdata{pw_buf->buffer->datas};
     const uint offset{bufdata->chunk->offset % bufdata->maxsize};
-    const auto input = std::span{static_cast<const char*>(bufdata->data), bufdata->maxsize}
+    const auto input = std::span{static_cast<const std::byte*>(bufdata->data), bufdata->maxsize}
         .subspan(offset, std::min(bufdata->chunk->size, bufdata->maxsize - offset));
 
-    std::ignore = mRing->write(input.data(), input.size() / mRing->getElemSize());
+    std::ignore = mRing->write(input);
 
     pw_stream_queue_buffer(mStream.get(), pw_buf);
 }
@@ -2128,8 +2128,9 @@ void PipeWireCapture::open(std::string_view name)
     setDefaultWFXChannelOrder();
 
     /* Ensure at least a 100ms capture buffer. */
-    mRing = RingBuffer::Create(std::max(mDevice->mSampleRate/10u, mDevice->mBufferSize),
-        mDevice->frameSizeFromFmt(), false);
+    mRing = RingBuffer2<std::byte>::Create(
+        std::max(mDevice->mSampleRate/10u, mDevice->mBufferSize), mDevice->frameSizeFromFmt(),
+        false);
 }
 
 
@@ -2165,7 +2166,7 @@ uint PipeWireCapture::availableSamples()
 { return static_cast<uint>(mRing->readSpace()); }
 
 void PipeWireCapture::captureSamples(std::byte *buffer, uint samples)
-{ std::ignore = mRing->read(buffer, samples); }
+{ std::ignore = mRing->read(std::span{buffer, samples*mRing->getElemSize()}); }
 
 } // namespace
 

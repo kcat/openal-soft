@@ -532,14 +532,14 @@ struct DSoundCapture final : public BackendBase {
     void start() override;
     void stop() override;
     void captureSamples(std::byte *buffer, uint samples) override;
-    uint availableSamples() override;
+    auto availableSamples() -> uint override;
 
     ComPtr<IDirectSoundCapture> mDSC;
     ComPtr<IDirectSoundCaptureBuffer> mDSCbuffer;
     DWORD mBufferBytes{0u};
     DWORD mCursor{0u};
 
-    RingBufferPtr mRing;
+    RingBuffer2Ptr<std::byte> mRing;
 };
 
 DSoundCapture::~DSoundCapture()
@@ -656,7 +656,8 @@ void DSoundCapture::open(std::string_view name)
     if(SUCCEEDED(hr))
         mDSC->CreateCaptureBuffer(&DSCBDescription, al::out_ptr(mDSCbuffer), nullptr);
     if(SUCCEEDED(hr))
-         mRing = RingBuffer::Create(mDevice->mBufferSize, InputType.Format.nBlockAlign, false);
+         mRing = RingBuffer2<std::byte>::Create(mDevice->mBufferSize, InputType.Format.nBlockAlign,
+            false);
 
     if(FAILED(hr))
     {
@@ -691,42 +692,42 @@ void DSoundCapture::stop()
 }
 
 void DSoundCapture::captureSamples(std::byte *buffer, uint samples)
-{ std::ignore = mRing->read(buffer, samples); }
+{ std::ignore = mRing->read(std::span{buffer, samples*mRing->getElemSize()}); }
 
 uint DSoundCapture::availableSamples()
 {
-    if(!mDevice->Connected.load(std::memory_order_acquire))
-        return static_cast<uint>(mRing->readSpace());
-
-    const auto FrameSize = mDevice->frameSizeFromFmt();
-    const auto BufferBytes = mBufferBytes;
-    const auto LastCursor = mCursor;
-
-    auto ReadCursor = DWORD{};
-    auto *ReadPtr1 = LPVOID{};
-    auto *ReadPtr2 = LPVOID{};
-    auto ReadCnt1 = DWORD{};
-    auto ReadCnt2 = DWORD{};
-    auto hr = mDSCbuffer->GetCurrentPosition(nullptr, &ReadCursor);
-    if(SUCCEEDED(hr))
+    if(mDevice->Connected.load(std::memory_order_acquire))
     {
-        const auto NumBytes = (BufferBytes+ReadCursor-LastCursor) % BufferBytes;
-        if(!NumBytes) return static_cast<uint>(mRing->readSpace());
-        hr = mDSCbuffer->Lock(LastCursor, NumBytes, &ReadPtr1, &ReadCnt1, &ReadPtr2, &ReadCnt2, 0);
-    }
-    if(SUCCEEDED(hr))
-    {
-        std::ignore = mRing->write(ReadPtr1, ReadCnt1/FrameSize);
-        if(ReadPtr2 != nullptr && ReadCnt2 > 0)
-            std::ignore = mRing->write(ReadPtr2, ReadCnt2/FrameSize);
-        hr = mDSCbuffer->Unlock(ReadPtr1, ReadCnt1, ReadPtr2, ReadCnt2);
-        mCursor = ReadCursor;
-    }
+        const auto BufferBytes = mBufferBytes;
+        const auto LastCursor = mCursor;
 
-    if(FAILED(hr))
-    {
-        ERR("update failed: {:#x}", as_unsigned(hr));
-        mDevice->handleDisconnect("Failure retrieving capture data: {:#x}", as_unsigned(hr));
+        auto ReadCursor = DWORD{};
+        auto *ReadPtr1 = LPVOID{};
+        auto *ReadPtr2 = LPVOID{};
+        auto ReadCnt1 = DWORD{};
+        auto ReadCnt2 = DWORD{};
+        auto hr = mDSCbuffer->GetCurrentPosition(nullptr, &ReadCursor);
+        if(SUCCEEDED(hr))
+        {
+            const auto NumBytes = (BufferBytes+ReadCursor-LastCursor) % BufferBytes;
+            if(!NumBytes) return static_cast<uint>(mRing->readSpace());
+            hr = mDSCbuffer->Lock(LastCursor, NumBytes, &ReadPtr1, &ReadCnt1, &ReadPtr2, &ReadCnt2,
+                0);
+        }
+        if(SUCCEEDED(hr))
+        {
+            std::ignore = mRing->write(std::span{static_cast<std::byte*>(ReadPtr1), ReadCnt1});
+            if(ReadPtr2 != nullptr && ReadCnt2 > 0)
+                std::ignore = mRing->write(std::span{static_cast<std::byte*>(ReadPtr2), ReadCnt2});
+            hr = mDSCbuffer->Unlock(ReadPtr1, ReadCnt1, ReadPtr2, ReadCnt2);
+            mCursor = ReadCursor;
+        }
+
+        if(FAILED(hr))
+        {
+            ERR("update failed: {:#x}", as_unsigned(hr));
+            mDevice->handleDisconnect("Failure retrieving capture data: {:#x}", as_unsigned(hr));
+        }
     }
 
     return static_cast<uint>(mRing->readSpace());

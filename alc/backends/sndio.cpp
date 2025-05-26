@@ -282,7 +282,7 @@ struct SndioCapture final : public BackendBase {
 
     sio_hdl *mSndHandle{nullptr};
 
-    RingBufferPtr mRing;
+    RingBuffer2Ptr<std::byte> mRing;
 
     std::atomic<bool> mKillNow{true};
     std::thread mThread;
@@ -340,11 +340,10 @@ int SndioCapture::recordProc()
         if(!(revents&POLLIN))
             continue;
 
-        auto data = mRing->getWriteVector();
-        auto buffer = std::span{data[0].buf, data[0].len*frameSize};
+        auto buffer = mRing->getWriteVector()[0];
         while(!buffer.empty())
         {
-            size_t got{sio_read(mSndHandle, buffer.data(), buffer.size())};
+            auto got = sio_read(mSndHandle, buffer.data(), buffer.size());
             if(got == 0)
                 break;
             if(got > buffer.size())
@@ -357,10 +356,7 @@ int SndioCapture::recordProc()
             mRing->writeAdvance(got / frameSize);
             buffer = buffer.subspan(got);
             if(buffer.empty())
-            {
-                data = mRing->getWriteVector();
-                buffer = {data[0].buf, data[0].len*frameSize};
-            }
+                buffer = mRing->getWriteVector()[0];
         }
         if(buffer.empty())
         {
@@ -453,7 +449,7 @@ void SndioCapture::open(std::string_view name)
             DevFmtTypeString(mDevice->FmtType), DevFmtChannelsString(mDevice->FmtChans),
             mDevice->mSampleRate, par.sig?'s':'u', par.bps*8, par.rchan, par.rate};
 
-    mRing = RingBuffer::Create(mDevice->mBufferSize, size_t{par.bps}*par.rchan, false);
+    mRing = RingBuffer2<std::byte>::Create(mDevice->mBufferSize, size_t{par.bps}*par.rchan, false);
     mDevice->mBufferSize = static_cast<uint>(mRing->writeSpace());
     mDevice->mUpdateSize = par.round;
 
@@ -489,7 +485,7 @@ void SndioCapture::stop()
 }
 
 void SndioCapture::captureSamples(std::byte *buffer, uint samples)
-{ std::ignore = mRing->read(buffer, samples); }
+{ std::ignore = mRing->read(std::span{buffer, samples*mRing->getElemSize()}); }
 
 uint SndioCapture::availableSamples()
 { return static_cast<uint>(mRing->readSpace()); }

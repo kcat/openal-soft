@@ -577,7 +577,9 @@ auto LoadLAF(const fs::path &fname) -> std::unique_ptr<LafStream>
         return std::bit_cast<float>(value);
     };
 
-    /* C++23 can use chandata | std::views::chunk(9). */
+    /* C++23 can use chandata | std::views::chunk(9) | std::views::enumerate to
+     * get a range of ~std::pair<size_t index, std::span<char> chunk>.
+     */
     auto chanspan = std::span{chandata}.first(laf->mChannels.size()*9_uz);
     std::ranges::generate(laf->mChannels, [&chandata,&chanspan]
     {
@@ -749,6 +751,9 @@ try {
 
         if(state == AL_PLAYING || state == AL_PAUSED)
         {
+            /* Playing normally. Update the source positions for the current
+             * playback offset, for dynamic objects.
+             */
             if(!laf->mPosTracks.empty())
             {
                 alcSuspendContext(alcGetCurrentContext());
@@ -769,6 +774,9 @@ try {
                 alcProcessContext(alcGetCurrentContext());
             }
 
+            /* Unqueue processed buffers and refill with the next chunk, or
+             * sleep for ~10ms before updating again.
+             */
             if(processed > 0)
             {
                 const auto numsamples = laf->readChunk();
@@ -797,14 +805,21 @@ try {
         }
         else if(state == AL_STOPPED)
         {
+            /* Underrun. Restart all sources in sync from the beginning of the
+             * currently buffered chunks. This will cause some old audio to
+             * replay, but all the channels will agree on where they are in the
+             * stream and ensure nothing is skipped.
+             */
             auto sources = std::array<ALuint,256_uz>{};
-            for(size_t i{0};i < laf->mChannels.size();++i)
-                sources[i] = laf->mChannels[i].mSource;
+            std::ranges::transform(laf->mChannels, sources.begin(), &Channel::mSource);
             alSourcePlayv(ALsizei(laf->mChannels.size()), sources.data());
         }
         else if(state == AL_INITIAL)
         {
-            auto sources = std::array<ALuint,256_uz>{};
+            /* Starting playback. Read and prepare the two second-long chunks
+             * per track (buffering audio samples to OpenAL, and storing the
+             * position vectors).
+             */
             auto numsamples = laf->readChunk();
             for(auto i = 0_uz;i < laf->mChannels.size();++i)
             {
@@ -828,7 +843,6 @@ try {
                     ALsizei(samples.size()), ALsizei(laf->mSampleRate));
                 alSourceQueueBuffers(laf->mChannels[i].mSource,
                     ALsizei(laf->mChannels[i].mBuffers.size()), laf->mChannels[i].mBuffers.data());
-                sources[i] = laf->mChannels[i].mSource;
             }
             for(auto i = 0_uz;i < laf->mPosTracks.size();++i)
             {
@@ -836,6 +850,9 @@ try {
                 laf->convertPositions(std::span{laf->mPosTracks[i]}.last(laf->mSampleRate));
             }
 
+            /* Set the initial source positions for dynamic objects, then start
+             * all sources in sync.
+             */
             if(!laf->mPosTracks.empty())
             {
                 for(size_t i{0};i < laf->mChannels.size();++i)
@@ -850,6 +867,8 @@ try {
                 }
             }
 
+            auto sources = std::array<ALuint,256_uz>{};
+            std::ranges::transform(laf->mChannels, sources.begin(), &Channel::mSource);
             alSourcePlayv(ALsizei(laf->mChannels.size()), sources.data());
         }
         else

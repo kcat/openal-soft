@@ -275,7 +275,8 @@ struct SampleInfo<int8_t> {
     static constexpr auto SrcSize = 1_uz;
 
     [[nodiscard]]
-    static auto read(std::input_iterator auto input) -> int8_t { return *input; }
+    static auto read(std::input_iterator auto input) -> int8_t
+    { return std::bit_cast<int8_t>(*input); }
 };
 
 

@@ -453,7 +453,7 @@ auto main(std::span<std::string_view> args) -> int
         outinfo.samplerate = ininfo.samplerate;
         outinfo.channels = static_cast<int>(uhjchans);
         outinfo.format = SF_FORMAT_PCM_24 | SF_FORMAT_FLAC;
-        SndFilePtr outfile{sf_open(outname.c_str(), SFM_WRITE, &outinfo)};
+        auto outfile = SndFilePtr{sf_open(outname.c_str(), SFM_WRITE, &outinfo)};
         if(!outfile)
         {
             fmt::println(stderr, " ... failed to create {}", outname);
@@ -485,9 +485,8 @@ auto main(std::span<std::string_view> args) -> int
             if(sgot < BufferLineSize)
             {
                 sgot = std::max(sgot, sf_count_t{0});
-                const auto remaining = sf_count_t{std::min(BufferLineSize - sgot, LeadOut)};
-                std::ranges::fill(inmem | std::views::drop(sgot*ininfo.channels)
-                    | std::views::take(remaining*ininfo.channels), 0.0f);
+                const auto remaining = std::min(BufferLineSize - sgot, LeadOut);
+                std::ranges::fill(inmem | std::views::drop(sgot*ininfo.channels), 0.0f);
                 sgot += remaining;
                 LeadOut -= remaining;
             }
@@ -515,8 +514,7 @@ auto main(std::span<std::string_view> args) -> int
                 if(chanid == SF_CHANNEL_MAP_LFE)
                     continue;
 
-                const auto spkr = std::ranges::find_if(spkrs, [chanid](const SpeakerPos pos)
-                { return pos.mChannelID == chanid; });
+                const auto spkr = std::ranges::find(spkrs, chanid, &SpeakerPos::mChannelID);
                 if(spkr == spkrs.end())
                 {
                     fmt::println(stderr, " ... failed to find channel ID {}", chanid);
@@ -531,14 +529,16 @@ auto main(std::span<std::string_view> args) -> int
                     std::cos(spkr->mAzimuth*Deg2Rad) * std::cos(spkr->mElevation*Deg2Rad),
                     std::sin(spkr->mAzimuth*Deg2Rad) * std::cos(spkr->mElevation*Deg2Rad),
                     std::sin(spkr->mElevation*Deg2Rad));
-                for(auto c = 0_uz;c < 4;++c)
+                std::ignore = std::ranges::mismatch(ambmem, coeffs,
+                    [srcmem,got](const FloatBufferSpan output, const float gain)
                 {
-                    for(auto i = 0_uz;i < got;++i)
-                        ambmem[c][i] += srcmem[i] * coeffs[c];
-                }
+                    std::ranges::transform(srcmem | std::views::take(got), output, output.begin(),
+                        [gain](const float s, const float o) noexcept { return s*gain + o; });
+                    return true;
+                });
             }
 
-            encoder->encode(encmem.subspan(0, uhjchans), ambmem, got);
+            encoder->encode(encmem.first(uhjchans), ambmem, got);
             if(LeadIn >= got)
             {
                 LeadIn -= got;

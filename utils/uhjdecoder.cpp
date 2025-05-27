@@ -100,10 +100,7 @@ auto f32AsLEBytes(const float value) -> byte4
 {
     auto ret = std::bit_cast<byte4>(value);
     if constexpr(std::endian::native == std::endian::big)
-    {
-        std::swap(ret[0], ret[3]);
-        std::swap(ret[1], ret[2]);
-    }
+        std::ranges::reverse(ret);
     return ret;
 }
 
@@ -492,8 +489,7 @@ auto main(std::span<std::string_view> args) -> int
             {
                 sgot = std::max(sgot, sf_count_t{0});
                 const auto remaining = std::min(BufferLineSize - sgot, LeadOut);
-                std::ranges::fill(inmem | std::views::drop(sgot*ininfo.channels)
-                    | std::views::take(remaining*ininfo.channels), 0.0f);
+                std::ranges::fill(inmem | std::views::drop(sgot*ininfo.channels), 0.0f);
                 sgot += remaining;
                 LeadOut -= remaining;
             }

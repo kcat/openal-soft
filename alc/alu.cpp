@@ -337,16 +337,31 @@ void DeviceBase::ProcessUhj(const size_t SamplesToDo)
 
 void DeviceBase::ProcessBs2b(const size_t SamplesToDo)
 {
-    /* First, decode the ambisonic mix to the "real" output. */
-    AmbiDecoder->process(RealOut.Buffer, Dry.Buffer, SamplesToDo);
-
     /* BS2B is stereo output only. */
     const auto lidx = size_t{RealOut.ChannelIndex[FrontLeft]};
     const auto ridx = size_t{RealOut.ChannelIndex[FrontRight]};
 
-    /* Now apply the BS2B binaural/crossfeed filter. */
-    Bs2b->cross_feed(std::span{RealOut.Buffer[lidx]}.first(SamplesToDo),
-        std::span{RealOut.Buffer[ridx]}.first(SamplesToDo));
+    /* First, copy out the existing direct stereo signal so it doesn't get
+     * processed by the BS2B filter.
+     */
+    const auto leftout = std::span{RealOut.Buffer[lidx]}.first(SamplesToDo);
+    const auto rightout = std::span{RealOut.Buffer[ridx]}.first(SamplesToDo);
+    const auto ldirect = std::span{Bs2b->mStorage[0]}.first(SamplesToDo);
+    const auto rdirect = std::span{Bs2b->mStorage[1]}.first(SamplesToDo);
+    std::ranges::copy(leftout, ldirect.begin());
+    std::ranges::copy(rightout, rdirect.begin());
+    std::ranges::fill(leftout, 0.0f);
+    std::ranges::fill(rightout, 0.0f);
+
+    /* Now, decode the ambisonic mix to the "real" output, and apply the BS2B
+     * binaural/crossfeed filter.
+     */
+    AmbiDecoder->process(RealOut.Buffer, Dry.Buffer, SamplesToDo);
+    Bs2b->cross_feed(leftout, rightout);
+
+    /* Finally, copy the direct signal back to the filtered output. */
+    std::ranges::transform(leftout, ldirect, leftout.begin(), std::plus{});
+    std::ranges::transform(rightout, rdirect, rightout.begin(), std::plus{});
 }
 
 

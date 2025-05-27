@@ -147,7 +147,8 @@ void BFormatDec::processStablize(const std::span<FloatBufferLine> OutBuffer,
         else if(i == ridx)
             mStablizer->ChannelFilters[i].processAllPass(side);
         else
-            mStablizer->ChannelFilters[i].processAllPass({OutBuffer[i].data(), SamplesToDo});
+            mStablizer->ChannelFilters[i].processAllPass(
+                std::span{OutBuffer[i]}.first(SamplesToDo));
     }
 
     /* This pans the separate low- and high-frequency signals between being on

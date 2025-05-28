@@ -695,7 +695,7 @@ struct CoreAudioCapture final : public BackendBase {
 
     std::vector<std::byte> mCaptureData;
 
-    RingBuffer2Ptr<std::byte> mRing;
+    RingBufferPtr<std::byte> mRing;
 };
 
 CoreAudioCapture::~CoreAudioCapture()
@@ -947,7 +947,7 @@ void CoreAudioCapture::open(std::string_view name)
     mCaptureData.resize(outputFrameCount * mFrameSize);
 
     outputFrameCount = static_cast<UInt32>(std::max(uint64_t{outputFrameCount}, FrameCount64));
-    mRing = RingBuffer2<std::byte>::Create(outputFrameCount, mFrameSize, false);
+    mRing = RingBuffer<std::byte>::Create(outputFrameCount, mFrameSize, false);
 
     /* Set up sample converter if needed */
     if(outputFormat.mSampleRate != mDevice->mSampleRate)

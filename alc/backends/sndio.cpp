@@ -282,7 +282,7 @@ struct SndioCapture final : public BackendBase {
 
     sio_hdl *mSndHandle{nullptr};
 
-    RingBuffer2Ptr<std::byte> mRing;
+    RingBufferPtr<std::byte> mRing;
 
     std::atomic<bool> mKillNow{true};
     std::thread mThread;
@@ -449,7 +449,7 @@ void SndioCapture::open(std::string_view name)
             DevFmtTypeString(mDevice->FmtType), DevFmtChannelsString(mDevice->FmtChans),
             mDevice->mSampleRate, par.sig?'s':'u', par.bps*8, par.rchan, par.rate};
 
-    mRing = RingBuffer2<std::byte>::Create(mDevice->mBufferSize, size_t{par.bps}*par.rchan, false);
+    mRing = RingBuffer<std::byte>::Create(mDevice->mBufferSize, size_t{par.bps}*par.rchan, false);
     mDevice->mBufferSize = static_cast<uint>(mRing->writeSpace());
     mDevice->mUpdateSize = par.round;
 

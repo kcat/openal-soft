@@ -625,7 +625,6 @@ set(COMMON_OBJS
     common/polyphase_resampler.cpp
     common/polyphase_resampler.h
     common/pragmadefs.h
-    common/ringbuffer.cpp
     common/ringbuffer.h
     common/strutils.cpp
     common/strutils.h

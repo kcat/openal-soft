@@ -300,7 +300,7 @@ struct JackPlayback final : public BackendBase {
 
     std::atomic<bool> mPlaying{false};
     bool mRTMixing{false};
-    RingBuffer2Ptr<float> mRing;
+    RingBufferPtr<float> mRing;
     std::atomic<bool> mSignal;
 
     std::atomic<bool> mKillNow{true};
@@ -597,7 +597,7 @@ void JackPlayback::start()
         bufsize = std::max(NextPowerOf2(bufsize), mDevice->mUpdateSize) / mDevice->mUpdateSize;
         mDevice->mBufferSize = (bufsize+1) * mDevice->mUpdateSize;
 
-        mRing = RingBuffer2<float>::Create(bufsize,
+        mRing = RingBuffer<float>::Create(bufsize,
             size_t{mDevice->mUpdateSize} * mDevice->channelsFromFmt(), true);
 
         try {

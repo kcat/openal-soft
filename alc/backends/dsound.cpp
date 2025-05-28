@@ -539,7 +539,7 @@ struct DSoundCapture final : public BackendBase {
     DWORD mBufferBytes{0u};
     DWORD mCursor{0u};
 
-    RingBuffer2Ptr<std::byte> mRing;
+    RingBufferPtr<std::byte> mRing;
 };
 
 DSoundCapture::~DSoundCapture()
@@ -656,7 +656,7 @@ void DSoundCapture::open(std::string_view name)
     if(SUCCEEDED(hr))
         mDSC->CreateCaptureBuffer(&DSCBDescription, al::out_ptr(mDSCbuffer), nullptr);
     if(SUCCEEDED(hr))
-         mRing = RingBuffer2<std::byte>::Create(mDevice->mBufferSize, InputType.Format.nBlockAlign,
+         mRing = RingBuffer<std::byte>::Create(mDevice->mBufferSize, InputType.Format.nBlockAlign,
             false);
 
     if(FAILED(hr))

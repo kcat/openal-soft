@@ -467,7 +467,7 @@ struct OSScapture final : public BackendBase {
 
     int mFd{-1};
 
-    RingBuffer2Ptr<std::byte> mRing;
+    RingBufferPtr<std::byte> mRing;
 
     std::atomic<bool> mKillNow{true};
     std::thread mThread;
@@ -603,7 +603,7 @@ void OSScapture::open(std::string_view name)
             "Failed to set {} samples, got OSS format {:#x}", DevFmtTypeString(mDevice->FmtType),
             as_unsigned(ossFormat)};
 
-    mRing = RingBuffer2<std::byte>::Create(mDevice->mBufferSize, frameSize, false);
+    mRing = RingBuffer<std::byte>::Create(mDevice->mBufferSize, frameSize, false);
 
     mDeviceName = name;
 }

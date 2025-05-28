@@ -908,7 +908,7 @@ struct AlsaCapture final : public BackendBase {
     std::vector<std::byte> mBuffer;
 
     bool mDoCapture{false};
-    RingBuffer2Ptr<std::byte> mRing;
+    RingBufferPtr<std::byte> mRing;
 
     snd_pcm_sframes_t mLastAvail{0};
 };
@@ -1015,7 +1015,7 @@ void AlsaCapture::open(std::string_view name)
     hp = nullptr;
 
     if(needring)
-        mRing = RingBuffer2<std::byte>::Create(mDevice->mBufferSize, mDevice->frameSizeFromFmt(),
+        mRing = RingBuffer<std::byte>::Create(mDevice->mBufferSize, mDevice->frameSizeFromFmt(),
             false);
 
     mDeviceName = name;

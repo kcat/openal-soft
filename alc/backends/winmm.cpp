@@ -374,7 +374,7 @@ struct WinMMCapture final : public BackendBase {
 
     HWAVEIN mInHdl{nullptr};
 
-    RingBuffer2Ptr<std::byte> mRing;
+    RingBufferPtr<std::byte> mRing;
 
     WAVEFORMATEX mFormat{};
 
@@ -502,7 +502,7 @@ void WinMMCapture::open(std::string_view name)
     const auto CapturedDataSize = std::max<size_t>(mDevice->mBufferSize,
         BufferSize*mWaveBuffer.size());
 
-    mRing = RingBuffer2<std::byte>::Create(CapturedDataSize, mFormat.nBlockAlign, false);
+    mRing = RingBuffer<std::byte>::Create(CapturedDataSize, mFormat.nBlockAlign, false);
 
     decltype(mBuffer)(BufferSize*mWaveBuffer.size()).swap(mBuffer);
     std::ranges::fill(mBuffer, clearval);

@@ -222,7 +222,7 @@ struct OboeCapture final : public BackendBase, public oboe::AudioStreamCallback 
 
     oboe::ManagedStream mStream;
 
-    RingBuffer2Ptr<std::byte> mRing;
+    RingBufferPtr<std::byte> mRing;
 
     oboe::DataCallbackResult onAudioReady(oboe::AudioStream *oboeStream, void *audioData,
         int32_t numFrames) override;
@@ -314,7 +314,7 @@ void OboeCapture::open(std::string_view name)
     TRACE("Got stream with properties:\n{}", oboe::convertToText(mStream.get()));
 
     /* Ensure a minimum ringbuffer size of 100ms. */
-    mRing = RingBuffer2<std::byte>::Create(
+    mRing = RingBuffer<std::byte>::Create(
         std::max(mDevice->mBufferSize, mDevice->mSampleRate/10u),
         static_cast<uint32_t>(mStream->getBytesPerFrame()), false);
 

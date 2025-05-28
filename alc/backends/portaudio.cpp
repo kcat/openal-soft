@@ -307,7 +307,7 @@ struct PortCapture final : public BackendBase {
     PaStream *mStream{nullptr};
     PaStreamParameters mParams{};
 
-    RingBuffer2Ptr<std::byte> mRing;
+    RingBufferPtr<std::byte> mRing;
 };
 
 PortCapture::~PortCapture()
@@ -355,7 +355,7 @@ void PortCapture::open(std::string_view name)
     const uint samples{std::max(mDevice->mBufferSize, mDevice->mSampleRate/10u)};
     const uint frame_size{mDevice->frameSizeFromFmt()};
 
-    mRing = RingBuffer2<std::byte>::Create(samples, frame_size, false);
+    mRing = RingBuffer<std::byte>::Create(samples, frame_size, false);
 
     mParams.device = deviceid;
     mParams.suggestedLatency = 0.0f;

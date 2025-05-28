@@ -1905,7 +1905,7 @@ class PipeWireCapture final : public BackendBase {
     PwStreamPtr mStream;
     spa_hook mStreamListener{};
 
-    RingBuffer2Ptr<std::byte> mRing;
+    RingBufferPtr<std::byte> mRing;
 
     static constexpr pw_stream_events CreateEvents()
     {
@@ -2128,7 +2128,7 @@ void PipeWireCapture::open(std::string_view name)
     setDefaultWFXChannelOrder();
 
     /* Ensure at least a 100ms capture buffer. */
-    mRing = RingBuffer2<std::byte>::Create(
+    mRing = RingBuffer<std::byte>::Create(
         std::max(mDevice->mSampleRate/10u, mDevice->mBufferSize), mDevice->frameSizeFromFmt(),
         false);
 }

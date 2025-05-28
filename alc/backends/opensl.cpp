@@ -210,7 +210,7 @@ struct OpenSLPlayback final : public BackendBase {
     /* buffer queue player interfaces */
     SLObjectItf mBufferQueueObj{nullptr};
 
-    RingBuffer2Ptr<std::byte> mRing;
+    RingBufferPtr<std::byte> mRing;
     std::atomic<bool> mSignal;
 
     std::mutex mMutex;
@@ -499,7 +499,7 @@ bool OpenSLPlayback::reset()
     if(SL_RESULT_SUCCESS == result)
     {
         const auto num_updates = mDevice->mBufferSize / mDevice->mUpdateSize;
-        mRing = RingBuffer2<std::byte>::Create(num_updates, mFrameSize*mDevice->mUpdateSize, true);
+        mRing = RingBuffer<std::byte>::Create(num_updates, mFrameSize*mDevice->mUpdateSize, true);
     }
 
     if(SL_RESULT_SUCCESS != result)
@@ -620,7 +620,7 @@ struct OpenSLCapture final : public BackendBase {
     /* recording interfaces */
     SLObjectItf mRecordObj{nullptr};
 
-    RingBuffer2Ptr<std::byte> mRing;
+    RingBufferPtr<std::byte> mRing;
     uint mByteOffset{0u};
 
     uint mFrameSize{0};
@@ -676,7 +676,7 @@ void OpenSLCapture::open(std::string_view name)
             mDevice->mSampleRate/100u*5u);
         auto num_updates = (length+update_len-1) / update_len;
 
-        mRing = RingBuffer2<std::byte>::Create(num_updates, update_len*mFrameSize, false);
+        mRing = RingBuffer<std::byte>::Create(num_updates, update_len*mFrameSize, false);
 
         mDevice->mUpdateSize = update_len;
         mDevice->mBufferSize = static_cast<uint>(mRing->writeSpace() * update_len);

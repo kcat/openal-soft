@@ -2430,7 +2430,7 @@ struct WasapiCapture final : public BackendBase {
 
     ChannelConverter mChannelConv{};
     SampleConverterPtr mSampleConv;
-    RingBuffer2Ptr<std::byte> mRing;
+    RingBufferPtr<std::byte> mRing;
 
     std::atomic<bool> mKillNow{true};
     std::thread mThread;
@@ -2995,7 +2995,7 @@ auto WasapiCapture::resetProxy(DeviceHelper &helper, DeviceHandle &mmdev,
     mDevice->mUpdateSize = RefTime2Samples(min_per, mDevice->mSampleRate);
     mDevice->mBufferSize = buffer_len;
 
-    mRing = RingBuffer2<std::byte>::Create(buffer_len, mDevice->frameSizeFromFmt(), false);
+    mRing = RingBuffer<std::byte>::Create(buffer_len, mDevice->frameSizeFromFmt(), false);
 
     hr = client->SetEventHandle(mNotifyEvent);
     if(FAILED(hr))

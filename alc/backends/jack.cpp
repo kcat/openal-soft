@@ -109,7 +109,7 @@ decltype(jack_error_callback) * pjack_error_callback;
 
 jack_options_t ClientOptions = JackNullOption;
 
-bool jack_load()
+auto jack_load() -> bool
 {
 #if HAVE_DYNLOAD
     if(!jack_handle)
@@ -121,32 +121,42 @@ bool jack_load()
 #else
 #define JACKLIB "libjack.so.0"
 #endif
-        jack_handle = LoadLib(JACKLIB);
-        if(!jack_handle)
+        if(auto libresult = LoadLib(JACKLIB))
+            jack_handle = libresult.value();
+        else
         {
-            WARN("Failed to load {}", JACKLIB);
+            WARN("Failed to load {}: {}", JACKLIB, libresult.error());
             return false;
         }
 
-        auto missing_funcs = std::string{};
-#define LOAD_FUNC(f) do {                                                     \
-    p##f = reinterpret_cast<decltype(p##f)>(GetSymbol(jack_handle, #f));      \
-    if(p##f == nullptr) missing_funcs += "\n" #f;                             \
-} while(0)
-        JACK_FUNCS(LOAD_FUNC); /* NOLINT(cppcoreguidelines-pro-type-reinterpret-cast) */
-#undef LOAD_FUNC
-        /* Optional symbols. These don't exist in all versions of JACK. */
-#define LOAD_SYM(f) p##f = reinterpret_cast<decltype(p##f)>(GetSymbol(jack_handle, #f))
-        LOAD_SYM(jack_error_callback); /* NOLINT(cppcoreguidelines-pro-type-reinterpret-cast) */
-#undef LOAD_SYM
-
-        if(!missing_funcs.empty())
+        static constexpr auto load_func = [](auto *&func, const char *name) -> bool
         {
-            WARN("Missing expected functions:{}", missing_funcs);
+            using func_t = std::remove_reference_t<decltype(func)>;
+            auto funcresult = GetSymbol(jack_handle, name);
+            if(!funcresult)
+            {
+                WARN("Failed to load function {}: {}", name, funcresult.error());
+                return false;
+            }
+            /* NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast) */
+            func = reinterpret_cast<func_t>(funcresult.value());
+            return true;
+        };
+        auto ok = true;
+#define LOAD_FUNC(f) ok &= load_func(p##f, #f)
+        JACK_FUNCS(LOAD_FUNC)
+#undef LOAD_FUNC
+        if(!ok)
+        {
             CloseLib(jack_handle);
             jack_handle = nullptr;
             return false;
         }
+
+        /* Optional symbols. These don't exist in all versions of JACK. */
+#define LOAD_SYM(f) std::ignore = load_func(p##f, #f)
+        LOAD_SYM(jack_error_callback);
+#undef LOAD_SYM
     }
 #endif
 

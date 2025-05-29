@@ -1216,31 +1216,38 @@ ClockLatency AlsaCapture::getClockLatency()
 } // namespace
 
 
-bool AlsaBackendFactory::init()
+auto AlsaBackendFactory::init() -> bool
 {
 #if HAVE_DYNLOAD
     if(!alsa_handle)
     {
-        alsa_handle = LoadLib("libasound.so.2");
-        if(!alsa_handle)
+        if(auto libresult = LoadLib("libasound.so.2"))
+            alsa_handle = libresult.value();
+        else
         {
-            WARN("Failed to load {}", "libasound.so.2");
+            WARN("Failed to load {}: {}", "libasound.so.2", libresult.error());
             return false;
         }
 
-        std::string missing_funcs;
-#define LOAD_FUNC(f) do {                                                     \
-    p##f = reinterpret_cast<decltype(p##f)>(GetSymbol(alsa_handle, #f));      \
-    if(p##f == nullptr) missing_funcs += "\n" #f;                             \
-} while(0)
-        /* NOLINTBEGIN(cppcoreguidelines-pro-type-reinterpret-cast) */
-        ALSA_FUNCS(LOAD_FUNC);
-        /* NOLINTEND(cppcoreguidelines-pro-type-reinterpret-cast) */
-#undef LOAD_FUNC
-
-        if(!missing_funcs.empty())
+        static constexpr auto load_func = [](auto *&func, const char *name) -> bool
         {
-            WARN("Missing expected functions:{}", missing_funcs);
+            using func_t = std::remove_reference_t<decltype(func)>;
+            auto funcresult = GetSymbol(alsa_handle, name);
+            if(!funcresult)
+            {
+                WARN("Failed to load function {}: {}", name, funcresult.error());
+                return false;
+            }
+            /* NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast) */
+            func = reinterpret_cast<func_t>(funcresult.value());
+            return true;
+        };
+        auto ok = true;
+#define LOAD_FUNC(f) ok &= load_func(p##f, #f)
+        ALSA_FUNCS(LOAD_FUNC);
+#undef LOAD_FUNC
+        if(!ok)
+        {
             CloseLib(alsa_handle);
             alsa_handle = nullptr;
             return false;

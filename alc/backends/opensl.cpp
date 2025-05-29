@@ -938,26 +938,33 @@ bool OSLBackendFactory::init()
     if(!sles_handle)
     {
 #define SLES_LIBNAME "libOpenSLES.so"
-        sles_handle = LoadLib(SLES_LIBNAME);
-        if(!sles_handle)
+        if(auto libresult = LoadLib(SLES_LIBNAME))
+            sles_handle = libresult.value();
+        else
         {
-            WARN("Failed to load {}", SLES_LIBNAME);
+            WARN("Failed to load {}: {}", SLES_LIBNAME, libresult.error());
             return false;
         }
 
-        auto missing_syms = std::string{};
-#define LOAD_SYMBOL(f) do {                                                   \
-    p##f = reinterpret_cast<decltype(p##f)>(GetSymbol(sles_handle, #f));      \
-    if(p##f == nullptr) missing_syms += "\n" #f;                              \
-} while(0)
-        /* NOLINTBEGIN(cppcoreguidelines-pro-type-reinterpret-cast) */
-        SLES_SYMBOLS(LOAD_SYMBOL);
-        /* NOLINTEND(cppcoreguidelines-pro-type-reinterpret-cast) */
-#undef LOAD_SYMBOL
-
-        if(!missing_syms.empty())
+        static constexpr auto load_func = [](auto *&func, const char *name) -> bool
         {
-            WARN("Missing expected symbols:{}", missing_syms);
+            using func_t = std::remove_reference_t<decltype(func)>;
+            auto funcresult = GetSymbol(sles_handle, name);
+            if(!funcresult)
+            {
+                WARN("Failed to load function {}: {}", name, funcresult.error());
+                return false;
+            }
+            /* NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast) */
+            func = reinterpret_cast<func_t>(funcresult.value());
+            return true;
+        };
+        auto ok = true;
+#define LOAD_FUNC(f) ok &= load_func(p##f, #f)
+        SLES_SYMBOLS(LOAD_FUNC)
+#undef LOAD_FUNC
+        if(!ok)
+        {
             CloseLib(sles_handle);
             sles_handle = nullptr;
             return false;

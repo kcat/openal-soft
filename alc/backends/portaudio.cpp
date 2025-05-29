@@ -440,20 +440,29 @@ bool PortBackendFactory::init()
 # define PALIB "libportaudio.so.2"
 #endif
 
-        pa_handle = LoadLib(PALIB);
-        if(!pa_handle)
+        if(auto libresult = LoadLib(PALIB))
+            pa_handle = libresult.value();
+        else
+        {
+            WARN("Failed to load {}: {}", PALIB, libresult.error());
             return false;
+        }
 
-#define LOAD_FUNC(f) do {                                                     \
-    p##f = reinterpret_cast<decltype(p##f)>(GetSymbol(pa_handle, #f));        \
-    if(p##f == nullptr)                                                       \
-    {                                                                         \
-        CloseLib(pa_handle);                                                  \
-        pa_handle = nullptr;                                                  \
-        return false;                                                         \
-    }                                                                         \
-} while(0)
-        /* NOLINTBEGIN(cppcoreguidelines-pro-type-reinterpret-cast) */
+        static constexpr auto load_func = [](auto *&func, const char *name) -> bool
+        {
+            using func_t = std::remove_reference_t<decltype(func)>;
+            auto funcresult = GetSymbol(pa_handle, name);
+            if(!funcresult)
+            {
+                WARN("Failed to load function {}: {}", name, funcresult.error());
+                return false;
+            }
+            /* NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast) */
+            func = reinterpret_cast<func_t>(funcresult.value());
+            return true;
+        };
+        auto ok = true;
+#define LOAD_FUNC(f) ok &= load_func(p##f, #f)
         LOAD_FUNC(Pa_Initialize);
         LOAD_FUNC(Pa_Terminate);
         LOAD_FUNC(Pa_GetErrorText);
@@ -466,11 +475,15 @@ bool PortBackendFactory::init()
         LOAD_FUNC(Pa_GetDefaultOutputDevice);
         LOAD_FUNC(Pa_GetDefaultInputDevice);
         LOAD_FUNC(Pa_GetStreamInfo);
-        /* NOLINTEND(cppcoreguidelines-pro-type-reinterpret-cast) */
 #undef LOAD_FUNC
+        if(!ok)
+        {
+            CloseLib(pa_handle);
+            pa_handle = nullptr;
+            return false;
+        }
 
-        const PaError err{Pa_Initialize()};
-        if(err != paNoError)
+        if(const auto err = Pa_Initialize(); err != paNoError)
         {
             ERR("Pa_Initialize() returned an error: {}", Pa_GetErrorText(err));
             CloseLib(pa_handle);
@@ -478,9 +491,10 @@ bool PortBackendFactory::init()
             return false;
         }
     }
+
 #else
-    const PaError err{Pa_Initialize()};
-    if(err != paNoError)
+
+    if(const auto err = Pa_Initialize(); err != paNoError)
     {
         ERR("Pa_Initialize() returned an error: {}", Pa_GetErrorText(err));
         return false;

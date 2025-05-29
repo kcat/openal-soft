@@ -1441,26 +1441,33 @@ auto PulseBackendFactory::init() -> bool
 #else
         auto *libname = "libpulse.so.0";
 #endif
-        pulse_handle = LoadLib(libname);
-        if(!pulse_handle)
+        if(auto libresult = LoadLib(libname))
+            pulse_handle = libresult.value();
+        else
         {
-            WARN("Failed to load {}", libname);
+            WARN("Failed to load {}: {}", libname, libresult.error());
             return false;
         }
 
-        auto missing_funcs = std::string{};
-#define LOAD_FUNC(x) do {                                                     \
-    p##x = reinterpret_cast<decltype(p##x)>(GetSymbol(pulse_handle, #x));     \
-    if(!(p##x)) missing_funcs += "\n" #x;                                     \
-} while(0)
-        /* NOLINTBEGIN(cppcoreguidelines-pro-type-reinterpret-cast) */
-        PULSE_FUNCS(LOAD_FUNC)
-        /* NOLINTEND(cppcoreguidelines-pro-type-reinterpret-cast) */
-#undef LOAD_FUNC
-
-        if(!missing_funcs.empty())
+        static constexpr auto load_func = [](auto *&func, const char *name) -> bool
         {
-            WARN("Missing expected functions:{}", missing_funcs);
+            using func_t = std::remove_reference_t<decltype(func)>;
+            auto funcresult = GetSymbol(pulse_handle, name);
+            if(!funcresult)
+            {
+                WARN("Failed to load function {}: {}", name, funcresult.error());
+                return false;
+            }
+            /* NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast) */
+            func = reinterpret_cast<func_t>(funcresult.value());
+            return true;
+        };
+        auto ok = true;
+#define LOAD_FUNC(f) ok &= load_func(p##f, #f)
+        PULSE_FUNCS(LOAD_FUNC)
+#undef LOAD_FUNC
+        if(!ok)
+        {
             CloseLib(pulse_handle);
             pulse_handle = nullptr;
             return false;

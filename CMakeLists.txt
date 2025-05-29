@@ -614,6 +614,7 @@ set(COMMON_OBJS
     common/comptr.h
     common/dynload.cpp
     common/dynload.h
+    common/expected.hpp
     common/filesystem.cpp
     common/filesystem.h
     common/flexarray.h

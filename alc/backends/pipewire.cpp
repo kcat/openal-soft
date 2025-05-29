@@ -250,7 +250,7 @@ PWIRE_FUNCS(MAKE_FUNC)
 PWIRE_FUNCS2(MAKE_FUNC)
 #undef MAKE_FUNC
 
-bool pwire_load()
+auto pwire_load() -> bool
 {
     if(pwire_handle)
         return true;
@@ -258,26 +258,34 @@ bool pwire_load()
     auto *pwire_library = "libpipewire-0.3.so.0";
     auto missing_funcs = std::string{};
 
-    pwire_handle = LoadLib(pwire_library);
-    if(!pwire_handle)
+    if(auto libresult = LoadLib(pwire_library))
+        pwire_handle = libresult.value();
+    else
     {
-        WARN("Failed to load {}", pwire_library);
+        WARN("Failed to load {}: {}", pwire_library, libresult.error());
         return false;
     }
 
-#define LOAD_FUNC(f) do {                                                     \
-    p##f = reinterpret_cast<decltype(p##f)>(GetSymbol(pwire_handle, #f));     \
-    if(p##f == nullptr) missing_funcs += "\n" #f;                             \
-} while(0);
-    /* NOLINTBEGIN(cppcoreguidelines-pro-type-reinterpret-cast) */
+    static constexpr auto load_func = [](auto *&func, const char *name) -> bool
+    {
+        using func_t = std::remove_reference_t<decltype(func)>;
+        auto funcresult = GetSymbol(pwire_handle, name);
+        if(!funcresult)
+        {
+            WARN("Failed to load function {}: {}", name, funcresult.error());
+            return false;
+        }
+        /* NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast) */
+        func = reinterpret_cast<func_t>(funcresult.value());
+        return true;
+    };
+    auto ok = true;
+#define LOAD_FUNC(f) ok &= load_func(p##f, #f);
     PWIRE_FUNCS(LOAD_FUNC)
     PWIRE_FUNCS2(LOAD_FUNC)
-    /* NOLINTEND(cppcoreguidelines-pro-type-reinterpret-cast) */
 #undef LOAD_FUNC
-
-    if(!missing_funcs.empty())
+    if(!ok)
     {
-        WARN("Missing expected functions:{}", missing_funcs);
         CloseLib(pwire_handle);
         pwire_handle = nullptr;
         return false;

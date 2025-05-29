@@ -742,34 +742,45 @@ BackendFactory &DSoundBackendFactory::getFactory()
     return factory;
 }
 
-bool DSoundBackendFactory::init()
+auto DSoundBackendFactory::init() -> bool
 {
 #if HAVE_DYNLOAD
     if(!ds_handle)
     {
-        ds_handle = LoadLib("dsound.dll");
-        if(!ds_handle)
+        if(auto libresult = LoadLib("dsound.dll"))
+            ds_handle = libresult.value();
+        else
         {
-            ERR("Failed to load dsound.dll");
+            WARN("Failed to load dsound.dll: {}", libresult.error());
             return false;
         }
 
-#define LOAD_FUNC(f) do {                                                     \
-    p##f = reinterpret_cast<decltype(p##f)>(GetSymbol(ds_handle, #f));        \
-    if(!p##f)                                                                 \
-    {                                                                         \
-        CloseLib(ds_handle);                                                  \
-        ds_handle = nullptr;                                                  \
-        return false;                                                         \
-    }                                                                         \
-} while(0)
-        /* NOLINTBEGIN(cppcoreguidelines-pro-type-reinterpret-cast) */
+        static constexpr auto load_func = [](auto *&func, const char *name) -> bool
+        {
+            using func_t = std::remove_reference_t<decltype(func)>;
+            auto funcresult = GetSymbol(ds_handle, name);
+            if(!funcresult)
+            {
+                WARN("Failed to load function {}: {}", name, funcresult.error());
+                return false;
+            }
+            /* NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast) */
+            func = reinterpret_cast<func_t>(funcresult.value());
+            return true;
+        };
+        auto ok = true;
+#define LOAD_FUNC(f) ok &= load_func(p##f, #f)
         LOAD_FUNC(DirectSoundCreate);
         LOAD_FUNC(DirectSoundEnumerateW);
         LOAD_FUNC(DirectSoundCaptureCreate);
         LOAD_FUNC(DirectSoundCaptureEnumerateW);
-        /* NOLINTEND(cppcoreguidelines-pro-type-reinterpret-cast) */
 #undef LOAD_FUNC
+        if(!ok)
+        {
+            CloseLib(ds_handle);
+            ds_handle = nullptr;
+            return false;
+        }
     }
 #endif
     return true;

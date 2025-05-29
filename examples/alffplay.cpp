@@ -296,11 +296,11 @@ public:
             {
                 ret = avcodec_send_packet(codecctx, pkt);
                 if(ret != AVERROR(EAGAIN)) return true;
-                mOutFrameCond.notify_one();
+                mOutFrameCond.notify_all();
                 return false;
             });
         }
-        mOutFrameCond.notify_one();
+        mOutFrameCond.notify_all();
 
         if(!packet)
         {
@@ -322,11 +322,11 @@ public:
             {
                 ret = avcodec_receive_frame(codecctx, frame);
                 if(ret != AVERROR(EAGAIN)) return true;
-                mInFrameCond.notify_one();
+                mInFrameCond.notify_all();
                 return false;
             });
         }
-        mInFrameCond.notify_one();
+        mInFrameCond.notify_all();
         return ret;
     }
 
@@ -336,7 +336,7 @@ public:
             auto plock = std::lock_guard{mPacketMutex};
             mFinished = true;
         }
-        mPacketCond.notify_one();
+        mPacketCond.notify_all();
     }
 
     void flush()
@@ -348,7 +348,7 @@ public:
             mPackets.clear();
             mTotalSize = 0;
         }
-        mPacketCond.notify_one();
+        mPacketCond.notify_all();
     }
 
     auto put(const AVPacket *pkt) -> bool
@@ -364,7 +364,7 @@ public:
             else
                 mPackets.pop_back();
         }
-        mPacketCond.notify_one();
+        mPacketCond.notify_all();
         return true;
     }
 };
@@ -881,7 +881,7 @@ auto AL_APIENTRY AudioState::eventCallback(ALenum eventType, ALuint object, ALui
          * checking the processed count and going to sleep.
          */
         std::unique_lock{mSrcMutex}.unlock();
-        mSrcCond.notify_one();
+        mSrcCond.notify_all();
         return;
     }
 
@@ -905,7 +905,7 @@ auto AL_APIENTRY AudioState::eventCallback(ALenum eventType, ALuint object, ALui
             auto lock = std::lock_guard{mSrcMutex};
             mConnected.clear(std::memory_order_release);
         }
-        mSrcCond.notify_one();
+        mSrcCond.notify_all();
     }
 }
 
@@ -1488,7 +1488,7 @@ void VideoState::updateVideo(SDL_Window *screen, SDL_Renderer *renderer, bool re
             mFinalUpdate = true;
         mPictQRead.store(read_idx, std::memory_order_release);
         std::unique_lock{mPictQMutex}.unlock();
-        mPictQCond.notify_one();
+        mPictQCond.notify_all();
         return;
     }
 
@@ -1497,7 +1497,7 @@ void VideoState::updateVideo(SDL_Window *screen, SDL_Renderer *renderer, bool re
     {
         mPictQRead.store(read_idx, std::memory_order_release);
         std::unique_lock{mPictQMutex}.unlock();
-        mPictQCond.notify_one();
+        mPictQCond.notify_all();
 
         /* allocate or resize the buffer! */
         if(!mImage || mWidth != frame->width || mHeight != frame->height
@@ -1748,7 +1748,7 @@ void VideoState::updateVideo(SDL_Window *screen, SDL_Renderer *renderer, bool re
         {
             mFinalUpdate = true;
             std::unique_lock{mPictQMutex}.unlock();
-            mPictQCond.notify_one();
+            mPictQCond.notify_all();
         }
     }
 }

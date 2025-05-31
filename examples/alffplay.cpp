@@ -389,6 +389,9 @@ struct AudioState {
     /* The PTS of the start of the source playback. */
     nanoseconds mStartPts{nanoseconds::min()};
 
+    /* The steady_clock time point the audio stream stopped at. */
+    nanoseconds mEndTime{nanoseconds::min()};
+
     /* Decompressed sample frame, and swresample context for conversion */
     AVFramePtr    mDecodedFrame;
     SwrContextPtr mSwresCtx;
@@ -548,14 +551,20 @@ struct MovieState {
 };
 
 
-nanoseconds AudioState::getClockNoLock()
+auto AudioState::getClockNoLock() -> nanoseconds
 {
     /* The audio clock is the timestamp of the sample currently being heard. */
+    if(mStartPts == nanoseconds::min())
+        return nanoseconds::zero();
+
+    /* If the stream ended, count from the ending time to ensure any video can
+     * keep going.
+     */
+    if(mEndTime > nanoseconds::min())
+        return std::chrono::steady_clock::now().time_since_epoch() - mEndTime + mCurrentPts;
+
     if(!mBufferData.empty())
     {
-        if(mStartPts == nanoseconds::min())
-            return nanoseconds::zero();
-
         /* With a callback buffer, mStartPts is the timestamp of the first
          * sample frame played. The audio clock, then, is that plus the current
          * source offset.
@@ -679,7 +688,7 @@ auto AudioState::startPlayback() -> bool
     return true;
 }
 
-int AudioState::getSync()
+auto AudioState::getSync() -> int
 {
     if(mMovie.mAVSyncType == SyncMaster::Audio)
         return 0;
@@ -705,7 +714,7 @@ int AudioState::getSync()
     return static_cast<int>(duration_cast<seconds>(diff*mCodecCtx->sample_rate).count());
 }
 
-int AudioState::decodeFrame()
+auto AudioState::decodeFrame() -> int
 {
     do {
         while(const auto ret = mQueue.receiveFrame(mCodecCtx.get(), mDecodedFrame.get()))
@@ -1329,15 +1338,7 @@ void AudioState::handler()
 
     srclock.lock();
     mSamplesLen = decodeFrame();
-    if(mSamplesLen > 0)
-    {
-        mSamplesPos = std::min(mSamplesLen, getSync());
-
-        auto skip = nanoseconds{seconds{mSamplesPos}} / mCodecCtx->sample_rate;
-        mStartPts -= skip;
-        mCurrentPts += skip;
-    }
-
+    mSamplesPos = 0;
     while(true)
     {
         if(mMovie.mQuit.load(std::memory_order_relaxed))
@@ -1388,8 +1389,8 @@ void AudioState::handler()
                 if(!readAudio(samples, static_cast<ALuint>(buffer_len), sync_skip))
                     break;
 
-                const ALuint bufid{mBuffers[mBufferIdx]};
-                mBufferIdx = static_cast<ALuint>((mBufferIdx+1) % mBuffers.size());
+                const auto bufid = mBuffers[mBufferIdx];
+                mBufferIdx = static_cast<ALuint>((mBufferIdx+1_uz) % mBuffers.size());
 
                 alBufferData(bufid, mFormat, samples.data(), buffer_len, mCodecCtx->sample_rate);
                 alSourceQueueBuffers(mSource, 1, &bufid);
@@ -1421,6 +1422,8 @@ void AudioState::handler()
 
         mSrcCond.wait_for(srclock, sleep_time);
     }
+
+    mEndTime = std::chrono::steady_clock::now().time_since_epoch();
 
     alSourceRewind(mSource);
     alSourcei(mSource, AL_BUFFER, 0);

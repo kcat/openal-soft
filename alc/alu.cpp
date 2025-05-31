@@ -2240,7 +2240,7 @@ void Write(const std::span<const FloatBufferLine> InBuffer, void *OutBuffer, con
         std::ranges::for_each(srcbuf | std::views::take(SamplesToDo) | std::views::drop(1),
             [FrameStep,&out](const float s) noexcept
         {
-            out += ptrdiff_t(FrameStep);
+            std::advance(out, FrameStep);
             *out = SampleConv<T>(s);
         });
     }

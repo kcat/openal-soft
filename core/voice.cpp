@@ -280,11 +280,12 @@ inline void LoadSamples(const std::span<float> dstSamples,
     using TypeTraits = SampleInfo<T>;
     assert(srcChan < srcStep);
 
-    auto ssrc = srcData.begin() + ptrdiff_t(srcOffset*srcStep + srcChan);
+    auto ssrc = srcData.begin();
+    std::advance(ssrc, srcOffset*srcStep + srcChan);
     dstSamples.front() = TypeTraits::to_float(*ssrc);
     std::ranges::generate(dstSamples | std::views::drop(1), [&ssrc,srcStep]
     {
-        ssrc += ptrdiff_t(srcStep);
+        std::advance(ssrc, srcStep);
         return TypeTraits::to_float(*ssrc);
     });
 }
@@ -788,12 +789,12 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
     const auto MixingSamples = std::span{SamplePointers}
         .first((mFmtChannels == FmtMono && !mDuplicateMono) ? 1_uz : mChans.size());
     {
-        const uint channelStep{(samplesToLoad+3u)&~3u};
+        const auto channelStep = (samplesToLoad+3u)&~3u;
         auto base = Device->mSampleData.end() - MixingSamples.size()*channelStep;
-        std::generate(MixingSamples.begin(), MixingSamples.end(), [&base,channelStep]
+        std::ranges::generate(MixingSamples, [&base,channelStep]
         {
             const auto ret = base;
-            base += channelStep;
+            std::advance(base, channelStep);
             return std::to_address(ret);
         });
     }
@@ -886,15 +887,15 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
             /* Load the necessary samples from the given buffer(s). */
             if(!BufferListItem) [[unlikely]]
             {
-                const uint avail{std::min(srcBufferSize, MaxResamplerEdge)};
-                const uint tofill{std::max(srcBufferSize, MaxResamplerEdge)};
+                const auto avail = std::min(srcBufferSize, MaxResamplerEdge);
+                const auto tofill = std::max(srcBufferSize, MaxResamplerEdge);
                 const auto srcbuf = resampleBuffer.first(tofill);
 
                 /* When loading from a voice that ended prematurely, only take
                  * the samples that get closest to 0 amplitude. This helps
                  * certain sounds fade out better.
                  */
-                auto srciter = std::min_element(srcbuf.begin(), srcbuf.begin()+ptrdiff_t(avail),
+                auto srciter = std::ranges::min_element(srcbuf | std::views::take(avail),
                     [](const float l, const float r) { return std::abs(l) < std::abs(r); });
 
                 std::fill(srciter+1, srcbuf.end(), *srciter);

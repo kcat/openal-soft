@@ -54,6 +54,7 @@
 #include <cstring>
 #include <functional>
 #include <future>
+#include <iterator>
 #include <memory>
 #include <mutex>
 #include <span>
@@ -1447,7 +1448,7 @@ FORCE_ALIGN void WasapiPlayback::mixerProc(SpatialDevice &audio)
                     for(size_t i{0};i < tmpbuffers.size();++i)
                     {
                         resbuffers[i] = std::to_address(bufptr);
-                        bufptr += ptrdiff_t(mDevice->mUpdateSize*sizeof(float));
+                        std::advance(bufptr, mDevice->mUpdateSize*sizeof(float));
                     }
                 }
             }

@@ -80,6 +80,7 @@
 #include <cstdint>
 #include <fstream>
 #include <functional>
+#include <iterator>
 #include <memory>
 #include <numeric>
 #include <ranges>
@@ -413,12 +414,13 @@ auto LafStream::prepareTrack(const size_t trackidx, const size_t count) -> std::
         return std::visit([=,src=std::span{mSampleChunk}](auto &dst)
         {
             using sample_t = typename std::remove_cvref_t<decltype(dst)>::value_type;
-            auto inptr = src.begin() + ptrdiff_t(idx*SampleInfo<sample_t>::SrcSize);
+            auto inptr = src.begin();
+            std::advance(inptr, idx*SampleInfo<sample_t>::SrcSize);
             auto output = std::span{dst}.first(count);
             output.front() = SampleInfo<sample_t>::read(inptr);
             std::ranges::generate(output | std::views::drop(1), [&inptr,step]
             {
-                inptr += ptrdiff_t(step*SampleInfo<sample_t>::SrcSize);
+                std::advance(inptr, step*SampleInfo<sample_t>::SrcSize);
                 return SampleInfo<sample_t>::read(inptr);
             });
             return std::as_writable_bytes(output);

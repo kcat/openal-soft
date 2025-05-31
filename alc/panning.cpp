@@ -30,6 +30,7 @@
 #include <cstddef>
 #include <cstdio>
 #include <cstdint>
+#include <iterator>
 #include <memory>
 #include <numbers>
 #include <numeric>
@@ -350,7 +351,7 @@ void InitDistanceComp(al::Device *device, const std::span<const Channel> channel
             auto ret = DistanceComp::ChanData{};
             ret.Buffer = std::span{chanbuffer, data.Length};
             ret.Gain = data.Gain;
-            chanbuffer += ptrdiff_t(RoundUp(data.Length, 4));
+            std::advance(chanbuffer, RoundUp(data.Length, 4));
             return ret;
         });
         device->ChannelDelays = std::move(chandelays);

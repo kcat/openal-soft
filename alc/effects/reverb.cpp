@@ -26,6 +26,7 @@
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
+#include <iterator>
 #include <numbers>
 #include <numeric>
 #include <ranges>
@@ -1423,7 +1424,8 @@ void VecAllpass::process(const std::span<ReverbUpdateLine,NUM_LINES> samples, si
         const auto maxoff = std::max(std::ranges::max(vap_offset), main_offset);
         auto td = std::min(delaymask+1_uz - maxoff, todo - i);
 
-        auto delayOut = Delay.mLine.begin() + ptrdiff_t(main_offset*NUM_LINES);
+        auto delayOut = Delay.mLine.begin();
+        std::advance(delayOut, main_offset*NUM_LINES);
         main_offset += td;
 
         do {

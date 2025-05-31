@@ -10,6 +10,8 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <iterator>
+#include <ranges>
 #include <span>
 
 #include "alnumeric.h"
@@ -18,7 +20,7 @@
 
 namespace {
 
-constexpr uint MaxPitch{10};
+constexpr auto MaxPitch = 10u;
 
 static_assert((BufferLineSize-1)/MaxPitch > 0, "MaxPitch is too large for BufferLineSize!");
 static_assert((INT_MAX>>MixerFracBits)/MaxPitch > BufferLineSize,
@@ -50,11 +52,12 @@ inline void LoadSampleArray(const std::span<float> dst, const void *src, const s
 {
     assert(channel < srcstep);
     const auto srcspan = std::span{static_cast<const DevFmtType_t<T>*>(src), dst.size()*srcstep};
-    auto ssrc = srcspan.begin() + ptrdiff_t(channel);
+    auto ssrc = srcspan.begin();
+    std::advance(ssrc, channel);
     dst.front() = LoadSample<T>(*ssrc);
-    std::generate(dst.begin()+1, dst.end(), [&ssrc,srcstep]
+    std::ranges::generate(dst | std::views::drop(1), [&ssrc,srcstep]
     {
-        ssrc += ptrdiff_t(srcstep);
+        std::advance(ssrc, srcstep);
         return LoadSample<T>(*ssrc);
     });
 }
@@ -104,11 +107,12 @@ inline void StoreSampleArray(void *dst, const std::span<const float> src, const 
 {
     assert(channel < dststep);
     const auto dstspan = std::span{static_cast<DevFmtType_t<T>*>(dst), src.size()*dststep};
-    auto sdst = dstspan.begin() + ptrdiff_t(channel);
+    auto sdst = dstspan.begin();
+    std::advance(sdst, channel);
     *sdst = StoreSample<T>(src.front());
-    std::for_each(src.begin()+1, src.end(), [&sdst,dststep](const float in)
+    std::ranges::for_each(src | std::views::drop(1), [&sdst,dststep](const float in)
     {
-        sdst += ptrdiff_t(dststep);
+        std::advance(sdst, dststep);
         *sdst = StoreSample<T>(in);
     });
 }
@@ -138,8 +142,8 @@ void Mono2Stereo(const std::span<float> dst, const void *src) noexcept
 {
     const auto srcspan = std::span{static_cast<const DevFmtType_t<T>*>(src), dst.size()>>1};
     auto sdst = dst.begin();
-    std::for_each(srcspan.begin(), srcspan.end(), [&sdst](const auto in)
-    { sdst = std::fill_n(sdst, 2, LoadSample<T>(in)*0.707106781187f); });
+    std::ranges::for_each(srcspan, [&sdst](const float in)
+    { sdst = std::fill_n(sdst, 2, in*0.707106781187f); }, &LoadSample<T>);
 }
 
 template<DevFmtType T>
@@ -148,21 +152,23 @@ void Multi2Mono(uint chanmask, const size_t step, const std::span<float> dst, co
 {
     const auto scale = std::sqrt(1.0f / static_cast<float>(std::popcount(chanmask)));
     const auto srcspan = std::span{static_cast<const DevFmtType_t<T>*>(src), step*dst.size()};
-    std::fill_n(dst.begin(), dst.size(), 0.0f);
+    std::ranges::fill(dst, 0.0f);
     while(chanmask)
     {
         const auto c = std::countr_zero(chanmask);
         chanmask ^= 1 << c;
 
-        auto ssrc = srcspan.begin() + c;
+        auto ssrc = srcspan.begin();
+        std::advance(ssrc, c);
         dst.front() += LoadSample<T>(*ssrc);
-        std::for_each(dst.begin(), dst.end(), [&ssrc,step](float &sample)
+        std::ranges::for_each(dst, [&ssrc,step](float &sample)
         {
-            ssrc += ptrdiff_t(step);
+            std::advance(ssrc, step);
             sample += LoadSample<T>(*ssrc);
         });
     }
-    std::for_each(dst.begin(), dst.end(), [scale](float &sample) noexcept { sample *= scale; });
+    std::ranges::transform(dst, dst.begin(), [scale](const float sample) noexcept -> float
+    { return sample * scale; });
 }
 
 } // namespace
@@ -170,7 +176,7 @@ void Multi2Mono(uint chanmask, const size_t step, const std::span<float> dst, co
 SampleConverterPtr SampleConverter::Create(DevFmtType srcType, DevFmtType dstType, size_t numchans,
     uint srcRate, uint dstRate, Resampler resampler)
 {
-    SampleConverterPtr converter;
+    auto converter = SampleConverterPtr{};
     if(numchans < 1 || srcRate < 1 || dstRate < 1)
         return converter;
 
@@ -182,11 +188,11 @@ SampleConverterPtr SampleConverter::Create(DevFmtType srcType, DevFmtType dstTyp
 
     converter->mSrcPrepCount = MaxResamplerPadding;
     converter->mFracOffset = 0;
-    for(auto &chan : converter->mChan)
-        chan.PrevSamples.fill(0.0f);
+    std::ranges::fill(converter->mChan | std::views::transform(&ChanSamples::PrevSamples)
+        | std::views::join, 0.0f);
 
     /* Have to set the mixer FPU mode since that's what the resampler code expects. */
-    FPUCtl mixer_mode{};
+    auto mixer_mode = FPUCtl{};
     const auto step = std::min(std::round(srcRate*double{MixerFracOne}/dstRate),
         MaxPitch*double{MixerFracOne});
     converter->mIncrement = std::max(static_cast<uint>(step), 1u);
@@ -194,7 +200,10 @@ SampleConverterPtr SampleConverter::Create(DevFmtType srcType, DevFmtType dstTyp
     {
         converter->mResample = [](const InterpState*, const std::span<const float> src, uint,
             const uint, const std::span<float> dst)
-        { std::copy_n(src.begin()+MaxResamplerEdge, dst.size(), dst.begin()); };
+        {
+            std::ranges::copy(src | std::views::drop(MaxResamplerEdge)
+                | std::views::take(dst.size()), dst.begin());
+        };
     }
     else
         converter->mResample = PrepareResampler(resampler, converter->mIncrement,
@@ -291,8 +300,8 @@ uint SampleConverter::convert(const void **src, uint *srcframes, void *dst, uint
             /* Store as many prep samples for next time as possible, given the
              * number of output samples being generated.
              */
-            auto previter = std::copy_n(SrcData.begin()+ptrdiff_t(SrcDataEnd), nextprep,
-                mChan[chan].PrevSamples.begin());
+            auto previter = std::ranges::copy(SrcData | std::views::drop(SrcDataEnd)
+                | std::views::take(nextprep), mChan[chan].PrevSamples.begin()).out;
             std::fill(previter, mChan[chan].PrevSamples.end(), 0.0f);
 
             /* Now resample, and store the result in the output buffer. */
@@ -386,8 +395,8 @@ uint SampleConverter::convertPlanar(const void **src, uint *srcframes, void *con
             /* Store as many prep samples for next time as possible, given the
              * number of output samples being generated.
              */
-            auto previter = std::copy_n(SrcData.begin()+ptrdiff_t(SrcDataEnd), nextprep,
-                mChan[chan].PrevSamples.begin());
+            auto previter = std::ranges::copy(SrcData | std::views::drop(SrcDataEnd)
+                | std::views::take(nextprep), mChan[chan].PrevSamples.begin()).out;
             std::fill(previter, mChan[chan].PrevSamples.end(), 0.0f);
 
             /* Now resample, and store the result in the output buffer. */
@@ -406,7 +415,7 @@ uint SampleConverter::convertPlanar(const void **src, uint *srcframes, void *con
 
         /* Update the src and dst pointers in case there's still more to do. */
         const uint srcread{std::min(NumSrcSamples, SrcDataEnd + mSrcPrepCount - prepcount)};
-        std::for_each(srcs.begin(), srcs.end(), [this,NumSrcSamples,srcread](const void *&srcref)
+        std::ranges::for_each(srcs, [this,NumSrcSamples,srcread](const void *&srcref)
         {
             auto srcspan = std::span{static_cast<const std::byte*>(srcref),
                 size_t{mSrcTypeSize}*NumSrcSamples};

@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cstddef>
 #include <limits>
+#include <ranges>
 #include <span>
 #include <variant>
 
@@ -143,10 +144,9 @@ inline void ApplyCoeffs(const std::span<float2> Values, const size_t IrSize,
     ASSUME(IrSize >= MinIrLength);
     ASSUME(IrSize <= HrirLength);
 
-    auto mix_impulse = [left,right](const float2 &value, const float2 &coeff) noexcept -> float2
-    { return float2{{value[0] + coeff[0]*left, value[1] + coeff[1]*right}}; };
-    std::transform(Values.begin(), Values.begin()+ptrdiff_t(IrSize), Coeffs.begin(),
-        Values.begin(), mix_impulse);
+    std::ranges::transform(Values | std::views::take(IrSize), Coeffs, Values.begin(),
+        [left,right](const float2 &value, const float2 &coeff) noexcept -> float2
+    { return float2{{value[0] + coeff[0]*left, value[1] + coeff[1]*right}}; });
 }
 
 force_inline void MixLine(std::span<const float> InSamples, const std::span<float> dst,

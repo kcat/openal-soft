@@ -126,18 +126,18 @@ alignas(16) constexpr std::array<std::array<float,NUM_LINES>,NUM_LINES> LateA2B{
  * effect's density parameter, which helps alter the perceived environment
  * size. The size-to-density conversion is a cubed scale:
  *
- * density = min(1.0, pow(size, 3.0) / DENSITY_SCALE);
+ * density = min(1.0, pow(size, 3.0) / DensityScale);
  *
  * The line lengths scale linearly with room size, so the inverse density
  * conversion is needed, taking the cube root of the re-scaled density to
  * calculate the line length multiplier:
  *
- *     length_mult = max(5.0, cbrt(density*DENSITY_SCALE));
+ *     length_mult = max(1.0, cbrt(density*DensityScale));
  *
- * The density scale below will result in a max line multiplier of 50, for an
- * effective size range of 5m to 50m.
+ * The density scale below will result in a max line multiplier of 10, for an
+ * effective average size range of 5 to 50 meters.
  */
-constexpr auto DENSITY_SCALE = 125000.0f;
+constexpr auto DensityScale = 1'000.0f;
 
 /* All delay line lengths are specified in seconds.
  *
@@ -155,7 +155,7 @@ constexpr auto DENSITY_SCALE = 125000.0f;
  *     r_a = d_a / c
  *     c   = 343.3
  *
- * This can extended to finding the average difference (r_d) between the
+ * This can be extended to find the average difference (r_d) between the
  * maximum (r_1) and minimum (r_0) reflection delays:
  *
  *     r_0 = 2 / 3 r_a
@@ -181,10 +181,10 @@ constexpr auto DENSITY_SCALE = 125000.0f;
  *     T_i = R_i - r_0
  *         = (2^(i / (2 N - 1)) - 1) r_d
  *
- * Assuming an average of 1m, we get the following taps:
+ * Assuming an average of 5 meters, we get the following taps:
  */
 constexpr std::array<float,NUM_LINES> EARLY_TAP_LENGTHS{{
-    0.0000000e+0f, 2.0213520e-4f, 4.2531060e-4f, 6.7171600e-4f
+    0.000000e+0f, 1.010676e-3f, 2.126553e-3f, 3.358580e-3f
 }};
 
 /* The early all-pass filter lengths are based on the early tap lengths:
@@ -194,7 +194,7 @@ constexpr std::array<float,NUM_LINES> EARLY_TAP_LENGTHS{{
  * Where a is the approximate maximum all-pass cycle limit (20).
  */
 constexpr std::array<float,NUM_LINES> EARLY_ALLPASS_LENGTHS{{
-    9.7096800e-5f, 1.0720356e-4f, 1.1836234e-4f, 1.3068260e-4f
+    4.854840e-4f, 5.360178e-4f, 5.918117e-4f, 6.534130e-4f
 }};
 
 /* The early delay lines are used to transform the primary reflections into
@@ -217,10 +217,10 @@ constexpr std::array<float,NUM_LINES> EARLY_ALLPASS_LENGTHS{{
  *         = 2 (r_a - T_(N-i-1) - r_0)
  *         = 2 r_a (1 - (2 / 3) 2^((N - i - 1) / (2 N - 1)))
  *
- * Using an average dimension of 1m, we get:
+ * Using an average dimension of 5 meters, we get:
  */
 constexpr std::array<float,NUM_LINES> EARLY_LINE_LENGTHS{{
-    0.0000000e+0f, 4.9281100e-4f, 9.3916180e-4f, 1.3434322e-3f
+    2.992520e-3f, 5.456575e-3f, 7.688329e-3f, 9.709681e-3f
 }};
 
 /* The late all-pass filter lengths are based on the late line lengths:
@@ -228,7 +228,7 @@ constexpr std::array<float,NUM_LINES> EARLY_LINE_LENGTHS{{
  *     A_i = (5 / 3) L_i / r_1
  */
 constexpr std::array<float,NUM_LINES> LATE_ALLPASS_LENGTHS{{
-    1.6182800e-4f, 2.0389060e-4f, 2.8159360e-4f, 3.2365600e-4f
+    8.091400e-4f, 1.019453e-3f, 1.407968e-3f, 1.618280e-3f
 }};
 
 /* The late lines are used to approximate the decaying cycle of recursive
@@ -244,14 +244,15 @@ constexpr std::array<float,NUM_LINES> LATE_ALLPASS_LENGTHS{{
  *     L_i = 2 r_a - L_(i-N/2)
  *         = 2 r_a - 2^((i - N / 2) / (N - 1)) r_d
  *
- * For our 1m average room, we get:
+ * For our 5 meter average room, we get:
  */
 constexpr std::array<float,NUM_LINES> LATE_LINE_LENGTHS{{
-    1.9419362e-3f, 2.4466860e-3f, 3.3791220e-3f, 3.8838720e-3f
+    9.709681e-3f, 1.223343e-2f, 1.689561e-2f, 1.941936e-2f
 }};
 
 
 using ReverbUpdateLine = std::array<float,MAX_UPDATE_SAMPLES>;
+using ReverbUpdateSpan = std::span<float,MAX_UPDATE_SAMPLES>;
 
 struct DelayLineI {
     /* The delay lines use interleaved samples, with the lengths being powers
@@ -699,7 +700,7 @@ struct ReverbState final : public EffectState {
  **************************************/
 
 inline auto CalcDelayLengthMult(float density) -> float
-{ return std::max(5.0f, std::cbrt(density*DENSITY_SCALE)); }
+{ return std::max(1.0f, std::cbrt(density*DensityScale)); }
 
 /* Calculates the delay line metrics and allocates the shared sample buffer
  * for all lines given the sample rate (frequency).
@@ -1378,7 +1379,25 @@ inline auto VectorPartialScatter(const std::array<float,NUM_LINES> &in, const fl
     };
 }
 
-/* Utilizes the above, but also applies a line-based reflection on the input
+/* Applies the above to the given number of samples. */
+void VectorScatter(const float xCoeff, const float yCoeff,
+    const std::span<ReverbUpdateLine,NUM_LINES> samples, const size_t count) noexcept
+{
+    ASSUME(count > 0);
+
+    for(auto i = 0_uz;i < count;++i)
+    {
+        auto src = std::array{samples[0][i], samples[1][i], samples[2][i], samples[3][i]};
+
+        src = VectorPartialScatter(src, xCoeff, yCoeff);
+        samples[0][i] = src[0];
+        samples[1][i] = src[1];
+        samples[2][i] = src[2];
+        samples[3][i] = src[3];
+    }
+}
+
+/* Same as the above, but also applies a line-based reflection on the input
  * channels (swapping 0<->3 and 1<->2).
  */
 void VectorScatterRev(const float xCoeff, const float yCoeff,
@@ -1460,26 +1479,26 @@ void Allpass4::process(const std::span<ReverbUpdateLine,NUM_LINES> samples, cons
 
     for(auto j = 0_uz;j < NUM_LINES;j++)
     {
-        auto smpiter = samples[j].begin();
-        const auto buffer = delay.get(j);
+        auto lineio = std::span{samples[j]}.first(todo);
+        const auto delaybuf = delay.get(j);
         auto dstoffset = offset;
         auto vap_offset = offset - Offset[j];
-        for(auto i = 0_uz;i < todo;)
+        while(!lineio.empty())
         {
-            vap_offset &= buffer.size()-1;
-            dstoffset &= buffer.size()-1;
+            vap_offset &= delaybuf.size()-1;
+            dstoffset &= delaybuf.size()-1;
 
             const auto maxoff = std::max(dstoffset, vap_offset);
-            const auto td = std::min(todo-i, buffer.size()-maxoff);
+            const auto td = std::min(lineio.size(), delaybuf.size()-maxoff);
 
-            smpiter = std::ranges::transform(std::span{smpiter, td}, smpiter,
-                [buffer,feedCoeff,&vap_offset,&dstoffset](const float x) -> float
+            std::ranges::transform(lineio.first(td), lineio.begin(),
+                [delaybuf,feedCoeff,&vap_offset,&dstoffset](const float x) -> float
             {
-                const float y{buffer[vap_offset++] - feedCoeff*x};
-                buffer[dstoffset++] = x + feedCoeff*y;
+                const auto y = delaybuf[vap_offset++] - feedCoeff*x;
+                delaybuf[dstoffset++] = x + feedCoeff*y;
                 return y;
-            }).out;
-            i += td;
+            });
+            lineio = lineio.subspan(td);
         }
     }
 }
@@ -1516,7 +1535,7 @@ void ReverbPipeline::processEarly(const DelayLineU &main_delay, size_t offset,
         const auto todo = std::min(samplesToDo-base, MAX_UPDATE_SAMPLES);
 
         /* First, load decorrelated samples from the main delay line as the
-         * primary reflections.
+         * primary reflections, applying the main room/hf/lf gains.
          */
         const auto fadeStep = 1.0f / static_cast<float>(todo);
         const auto earlycoeff0 = float{mEarlyDelayCoeff[0]};
@@ -1561,45 +1580,41 @@ void ReverbPipeline::processEarly(const DelayLineU &main_delay, size_t offset,
 
         /* Apply a delay and bounce to generate secondary reflections. */
         early_delay.writeReflected(offset, tempSamples, todo);
-        const auto feedb_coeff = mEarly.Coeff;
+        const auto delay_coeff = mEarly.Coeff;
         for(auto j = 0_uz;j < NUM_LINES;++j)
         {
-            const auto input = early_delay.get(j);
-            auto feedb_tap = size_t{offset - mEarly.Offset[j]};
+            const auto delaybuf = early_delay.get(j);
+            auto delay_tap = size_t{offset - mEarly.Offset[j]};
             auto out = outSamples[j].begin() + base;
-            auto tmp = tempSamples[j].begin();
-
-            for(auto i = 0_uz;i < todo;)
+            auto tmp = std::span{tempSamples[j]}.first(todo);
+            while(!tmp.empty())
             {
-                feedb_tap &= input.size()-1;
+                delay_tap &= delaybuf.size()-1;
 
-                const auto td = std::min(input.size() - feedb_tap, todo - i);
-                const auto delaySrc = input.subspan(feedb_tap, td);
+                const auto delaySrc = delaybuf | std::views::drop(delay_tap)
+                    | std::views::take(tmp.size());
 
                 /* Combine the main input with the attenuated delayed echo for
                  * the early output.
                  */
-                out = std::transform(delaySrc.begin(), delaySrc.end(), tmp, out,
-                    [feedb_coeff](const float delayspl, const float mainspl) noexcept -> float
-                { return delayspl*feedb_coeff + mainspl; });
+                out = std::ranges::transform(delaySrc, tmp, out,
+                    [delay_coeff](const float delayspl, const float mainspl) noexcept -> float
+                { return delayspl*delay_coeff + mainspl; }).out;
 
-                /* Move the (non-attenuated) delayed echo to the temp buffer
-                 * for feeding the late reverb.
-                 */
-                tmp = std::ranges::copy(delaySrc, tmp).out;
-                feedb_tap += td;
-                i += td;
+                tmp = tmp.subspan(delaySrc.size());
+                delay_tap += delaySrc.size();
             }
         }
 
-        /* Finally, apply a scatter and bounce to improve the initial diffusion
-         * in the late reverb, writing the result to the late delay line input.
+        /* Finally, apply a scatter to the main input to improve the initial
+         * diffusion in the late reverb, writing the result to the late delay
+         * line input.
          */
-        VectorScatterRev(mixX, mixY, tempSamples, todo);
+        VectorScatter(mixX, mixY, tempSamples, todo);
         std::ignore = std::ranges::mismatch(std::views::iota(0_uz, NUM_LINES), tempSamples,
-            [in_delay=mLateDelayIn,offset,todo](const size_t idx, const ReverbUpdateLine &tmpline)
+            [late_in=mLateDelayIn,offset,todo](const size_t idx, const ReverbUpdateSpan tmpline)
         {
-            in_delay.write(offset, idx, std::span{tmpline}.first(todo));
+            late_in.write(offset, idx, tmpline.first(todo));
             return true;
         });
 
@@ -1711,15 +1726,15 @@ void ReverbPipeline::processLate(size_t offset, const size_t samplesToDo,
                 ? densityGain*fadeStep : 0.0f;
             auto fadeCount = 0.0f;
 
-            auto samples = tempSamples[j].begin();
-            for(auto i = 0_uz;i < todo;)
+            auto samples = std::span{tempSamples[j]}.first(todo);
+            while(!samples.empty())
             {
                 late_delay_tap0 &= input.size()-1;
                 late_delay_tap1 &= input.size()-1;
                 const auto max_delay_tap = std::max(late_delay_tap0, late_delay_tap1);
-                const auto td = std::min(todo-i, input.size()-max_delay_tap);
+                const auto td = std::min(samples.size(), input.size()-max_delay_tap);
 
-                samples = std::ranges::transform(std::span{samples, td}, samples,
+                std::ranges::transform(samples.first(td), samples.begin(),
                     [input,densityGain,densityStep,&late_delay_tap0,&late_delay_tap1,&fadeCount]
                     (const float sample) noexcept -> float
                 {
@@ -1728,8 +1743,8 @@ void ReverbPipeline::processLate(size_t offset, const size_t samplesToDo,
                     fadeCount += 1.0f;
                     return input[late_delay_tap0++]*fade0 + input[late_delay_tap1++]*fade1
                         + sample;
-                }).out;
-                i += td;
+                });
+                samples = samples.subspan(td);
             }
         }
 
@@ -1771,9 +1786,9 @@ void ReverbState::process(const size_t samplesToDo,
 
     /* Convert B-Format to A-Format for processing. */
     const auto numInput = std::min(samplesIn.size(), NUM_LINES);
-    const auto tmpspan = std::span{std::assume_aligned<16>(mTempLine.data()), samplesToDo};
     for(auto c = 0_uz;c < NUM_LINES;++c)
     {
+        const auto tmpspan = std::span{std::assume_aligned<16>(mTempLine.data()), samplesToDo};
         std::ranges::fill(tmpspan, 0.0f);
         for(auto i = 0_uz;i < numInput;++i)
         {

@@ -2131,21 +2131,19 @@ void ApplyDistanceComp(const std::span<FloatBufferLine> Samples, const size_t Sa
 {
     ASSUME(SamplesToDo > 0);
 
-    auto distcomp = chandata.begin();
-    for(auto &chanbuffer : Samples)
+    std::ignore = std::ranges::mismatch(chandata, Samples,
+        [SamplesToDo](const DistanceComp::ChanData &distcomp, FloatBufferSpan chanbuffer)
     {
-        const auto gain = distcomp->Gain;
-        auto distbuf = std::span{std::assume_aligned<16>(distcomp->Buffer.data()),
-            distcomp->Buffer.size()};
-        ++distcomp;
+        const auto gain = distcomp.Gain;
+        const auto distbuf = distcomp.Buffer;
 
         const auto base = distbuf.size();
-        if(base < 1) continue;
+        if(base < 1) return true;
 
-        const auto inout = std::span{std::assume_aligned<16>(chanbuffer.data()), SamplesToDo};
+        const auto inout = chanbuffer.first(SamplesToDo);
         if(SamplesToDo >= base) [[likely]]
         {
-            const auto inout_start = inout.end() - ptrdiff_t(base);
+            const auto inout_start = std::prev(inout.end(), ptrdiff_t(base));
             const auto delay_end = std::ranges::rotate(inout, inout_start).begin();
             std::ranges::swap_ranges(std::span{inout.begin(), delay_end}, distbuf);
         }
@@ -2156,7 +2154,9 @@ void ApplyDistanceComp(const std::span<FloatBufferLine> Samples, const size_t Sa
         }
         std::ranges::transform(inout, inout.begin(), [gain](const float s) noexcept -> float
         { return s*gain; });
-    }
+
+        return true;
+    });
 }
 
 void ApplyDither(const std::span<FloatBufferLine> Samples, uint *dither_seed,

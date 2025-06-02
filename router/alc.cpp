@@ -345,7 +345,7 @@ public:
         mNamesStore.clear();
     }
 
-    explicit operator bool() const noexcept { return mEnumeratedDevices.empty(); }
+    explicit operator bool() const noexcept { return !mEnumeratedDevices.empty(); }
 
     void reserveDeviceCount(const size_t count) { mEnumeratedDevices.reserve(count); }
     void appendDeviceList(const ALCchar *names, ALCuint idx);

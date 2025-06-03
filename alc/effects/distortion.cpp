@@ -160,7 +160,7 @@ void DistortionState::process(const size_t samplesToDo,
             std::ranges::transform(dst, dst.begin(), [gain,&src](float sample) noexcept -> float
             {
                 sample += *src * gain;
-                src += 4;
+                std::advance(src, 4);
                 return sample;
             });
         });

@@ -256,8 +256,6 @@ auto pwire_load() -> bool
         return true;
 
     auto *pwire_library = "libpipewire-0.3.so.0";
-    auto missing_funcs = std::string{};
-
     if(auto libresult = LoadLib(pwire_library))
         pwire_handle = libresult.value();
     else

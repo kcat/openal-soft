@@ -1310,8 +1310,8 @@ void ReverbState::update(const ContextBase *Context, const EffectSlot *Slot,
     /* Calculate the gain at the start of the late reverb stage, and the gain
      * difference from the decay target (0.001, or -60dB).
      */
-    const auto decayBase = props.ReflectionsGain * props.LateReverbGain;
-    const auto decayDiff = ReverbDecayGain / decayBase;
+    const auto decayBase = Slot->Gain * props.Gain * props.LateReverbGain;
+    const auto decayDiff = ReverbDecayGain / std::max(decayBase, ReverbDecayGain);
 
     /* Given the DecayTime (the amount of time for the late reverb to decay by
      * -60dB), calculate the time to decay to -60dB from the start of the late

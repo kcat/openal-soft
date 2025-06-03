@@ -1334,6 +1334,10 @@ auto UpdateDeviceParams(al::Device *device, const std::span<const int> attrList)
                 /* Handled in alcCreateContext */
                 break;
 
+            case ATTRIBUTE(ALC_REFRESH)
+                /* Ignored attribute */
+                break;
+
             case ATTRIBUTE(ALC_SYNC)
                 /* Ignored attribute */
                 break;

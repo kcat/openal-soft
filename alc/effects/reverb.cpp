@@ -992,9 +992,8 @@ void LateReverb::updateLines(const float density_mult, const float diffusion,
     static constexpr auto MaxHFReference = 20000.0f;
     const auto norm_weight_factor = frequency / MaxHFReference;
 
-    const auto late_allpass_avg =
-        std::reduce(LATE_ALLPASS_LENGTHS.begin(), LATE_ALLPASS_LENGTHS.end(), 0.0f) /
-        float{NUM_LINES};
+    static constexpr auto allpass_avg = std::reduce(LATE_ALLPASS_LENGTHS.begin(),
+        LATE_ALLPASS_LENGTHS.end(), 0.0f) / float{NUM_LINES};
 
     /* To compensate for changes in modal density and decay time of the late
      * reverb signal, the input is attenuated based on the maximal energy of
@@ -1004,8 +1003,9 @@ void LateReverb::updateLines(const float density_mult, const float diffusion,
      * The average length of the delay lines is used to calculate the
      * attenuation coefficient.
      */
-    const auto avglength = (std::reduce(LATE_LINE_LENGTHS.begin(), LATE_LINE_LENGTHS.end(), 0.0f) /
-        float{NUM_LINES} + late_allpass_avg) * density_mult;
+    static constexpr auto delay_avg = std::reduce(LATE_LINE_LENGTHS.begin(),
+        LATE_LINE_LENGTHS.end(), 0.0f) / float{NUM_LINES} + allpass_avg;
+
     /* The density gain calculation uses an average decay time weighted by
      * approximate bandwidth. This attempts to compensate for losses of energy
      * that reduce decay time due to scattering into highly attenuated bands.
@@ -1014,7 +1014,7 @@ void LateReverb::updateLines(const float density_mult, const float diffusion,
         lf0norm*norm_weight_factor*lfDecayTime +
         (hf0norm - lf0norm)*norm_weight_factor*mfDecayTime +
         (1.0f - hf0norm*norm_weight_factor)*hfDecayTime;
-    DensityGain = CalcDensityGain(CalcDecayCoeff(avglength, decayTimeWeighted));
+    DensityGain = CalcDensityGain(CalcDecayCoeff(delay_avg*density_mult, decayTimeWeighted));
 
     /* Calculate the all-pass feed-back/forward coefficient. */
     VecAp.Coeff = diffusion*diffusion * InvSqrt2;
@@ -1041,9 +1041,9 @@ void LateReverb::updateLines(const float density_mult, const float diffusion,
      * is half the max delay in samples).
      */
     std::ranges::transform(LATE_ALLPASS_LENGTHS, lengths, lengths.begin(),
-        [density_mult,late_allpass_avg,diffusion,moddepth=Mod.Depth/frequency](const float length,
+        [density_mult,diffusion,moddepth=Mod.Depth/frequency](const float length,
         const float curlength) -> float
-    { return lerpf(length, late_allpass_avg, diffusion)*density_mult + moddepth + curlength; });
+    { return lerpf(length, allpass_avg, diffusion)*density_mult + moddepth + curlength; });
 
     /* Calculate the T60 damping coefficients for each line. */
     std::ignore = std::ranges::mismatch(T60, lengths,
@@ -1155,11 +1155,11 @@ void ReverbPipeline::update3DPanning(const std::span<const float,3> ReflectionsP
              */
             const auto mtx2 = std::span{AmbiScale::FirstOrderUp};
 
-            for(auto i = 0_uz;i < matrix[0].size();++i)
+            for(const auto i : std::views::iota(0_uz, matrix[0].size()))
             {
                 const auto dst = std::span{res[i]};
                 static_assert(dst.size() >= std::tuple_size_v<decltype(mtx2)::element_type>);
-                for(auto k = 0_uz;k < matrix.size();++k)
+                for(const auto k : std::views::iota(0_uz, matrix.size()))
                 {
                     std::ranges::transform(mtx2[k], dst, dst.begin(),
                         [a=matrix[k][i]](const float in, const float out) noexcept -> float
@@ -1174,11 +1174,11 @@ void ReverbPipeline::update3DPanning(const std::span<const float,3> ReflectionsP
          * respective transform. This results panning gains that convert A-
          * Format to B-Format, which is then panned.
          */
-        for(auto i = 0_uz;i < a2bmatrix[0].size();++i)
+        for(const auto i : std::views::iota(0_uz, a2bmatrix[0].size()))
         {
             const auto dst = std::span{res[i]};
             static_assert(dst.size() >= std::tuple_size_v<decltype(matrix)::element_type>);
-            for(auto k = 0_uz;k < a2bmatrix.size();++k)
+            for(const auto k : std::views::iota(0_uz, a2bmatrix.size()))
             {
                 std::ranges::transform(matrix[k], dst, dst.begin(),
                     [a=a2bmatrix[k][i]](const float in, const float out) noexcept -> float
@@ -1494,7 +1494,7 @@ void Allpass4::process(const std::span<ReverbUpdateLine,NUM_LINES> samples, cons
 
     ASSUME(todo > 0);
 
-    for(auto j = 0_uz;j < NUM_LINES;j++)
+    for(const auto j : std::views::iota(0_uz, NUM_LINES))
     {
         auto lineio = std::span{samples[j]}.first(todo);
         const auto delaybuf = delay.get(j);
@@ -1558,7 +1558,7 @@ void ReverbPipeline::processEarly(const DelayLineU &main_delay, size_t offset,
         const auto earlycoeff0 = float{mEarlyDelayCoeff[0]};
         const auto earlycoeff1 = float{mEarlyDelayCoeff[1]};
         mEarlyDelayCoeff[0] = mEarlyDelayCoeff[1];
-        for(auto j = 0_uz;j < NUM_LINES;++j)
+        for(const auto j : std::views::iota(0_uz, NUM_LINES))
         {
             const auto input = in_delay.get(j);
             auto early_delay_tap0 = offset - mEarlyDelayTap[j][0];
@@ -1598,7 +1598,7 @@ void ReverbPipeline::processEarly(const DelayLineU &main_delay, size_t offset,
         /* Apply a reflection and delay to generate secondary reflections.*/
         early_delay.writeReflected(offset, tempSamples, todo);
         const auto delay_coeff = mEarly.Coeff;
-        for(auto j = 0_uz;j < NUM_LINES;++j)
+        for(const auto j : std::views::iota(0_uz, NUM_LINES))
         {
             const auto delaybuf = early_delay.get(j);
             auto delay_tap = size_t{offset - mEarly.Offset[j]};
@@ -1696,7 +1696,7 @@ void ReverbPipeline::processLate(size_t offset, const size_t samplesToDo,
         /* Now load samples from the feedback delay lines. Filter the signal to
          * apply its frequency-dependent decay.
          */
-        for(auto j = 0_uz;j < NUM_LINES;++j)
+        for(const auto j : std::views::iota(0_uz, NUM_LINES))
         {
             const auto input = late_delay.get(j);
             const auto midGain = mLate.T60[j].mMidGain;
@@ -1732,7 +1732,7 @@ void ReverbPipeline::processLate(size_t offset, const size_t samplesToDo,
 
         /* Next load decorrelated samples from the main delay lines. */
         const auto fadeStep = 1.0f / static_cast<float>(todo);
-        for(auto j = 0_uz;j < NUM_LINES;++j)
+        for(const auto j : std::views::iota(0_uz, NUM_LINES))
         {
             const auto input = in_delay.get(j);
             auto late_delay_tap0 = size_t{offset - mLateDelayTap[j][0]};
@@ -1803,11 +1803,11 @@ void ReverbState::process(const size_t samplesToDo,
 
     /* Convert B-Format to A-Format for processing. */
     const auto numInput = std::min(samplesIn.size(), NUM_LINES);
-    for(auto c = 0_uz;c < NUM_LINES;++c)
+    for(const auto c : std::views::iota(0_uz, NUM_LINES))
     {
         const auto tmpspan = std::span{std::assume_aligned<16>(mTempLine.data()), samplesToDo};
         std::ranges::fill(tmpspan, 0.0f);
-        for(auto i = 0_uz;i < numInput;++i)
+        for(const auto i : std::views::iota(0_uz, numInput))
         {
             std::ranges::transform(tmpspan, samplesIn[i], tmpspan.begin(),
                 [gain=B2A[c][i]](const float sample, const float in) noexcept -> float

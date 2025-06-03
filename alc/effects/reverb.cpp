@@ -398,7 +398,7 @@ struct T60Filter {
 };
 
 struct EarlyReflections {
-    Allpass4 VecAp;
+    Allpass4 Allpass;
 
     /* An echo line is used to complete the second half of the early
      * reflections.
@@ -745,13 +745,13 @@ void ReverbState::allocLines(const float frequency)
         linelengths[oidx++] = count;
         totalSamples += count;
 
-        /* The early vector all-pass line. */
+        /* The early reflection all-pass line. */
         length = EARLY_ALLPASS_LENGTHS.back() * multiplier;
-        count = pipeline.mEarly.VecAp.Delay.calcLineLength(length, frequency, 0);
+        count = pipeline.mEarly.Allpass.Delay.calcLineLength(length, frequency, 0);
         linelengths[oidx++] = count;
         totalSamples += count;
 
-        /* The early reflection line. */
+        /* The early reflection delay line. */
         length = EARLY_LINE_LENGTHS.back() * multiplier;
         count = pipeline.mEarly.Delay.calcLineLength(length, frequency, MAX_UPDATE_SAMPLES);
         linelengths[oidx++] = count;
@@ -787,7 +787,7 @@ void ReverbState::allocLines(const float frequency)
     {
         pipeline.mLateDelayIn.realizeLineOffset(bufferspan.first(linelengths[oidx]));
         bufferspan = bufferspan.subspan(linelengths[oidx++]);
-        pipeline.mEarly.VecAp.Delay.realizeLineOffset(bufferspan.first(linelengths[oidx]));
+        pipeline.mEarly.Allpass.Delay.realizeLineOffset(bufferspan.first(linelengths[oidx]));
         bufferspan = bufferspan.subspan(linelengths[oidx++]);
         pipeline.mEarly.Delay.realizeLineOffset(bufferspan.first(linelengths[oidx]));
         bufferspan = bufferspan.subspan(linelengths[oidx++]);
@@ -925,10 +925,10 @@ void EarlyReflections::updateLines(const float density_mult, const float diffusi
     const float decayTime, const float frequency)
 {
     /* Calculate the all-pass feed-back/forward coefficient. */
-    VecAp.Coeff = diffusion*diffusion * InvSqrt2;
+    Allpass.Coeff = diffusion*diffusion * InvSqrt2;
 
     /* Calculate the delay length of each all-pass line. */
-    std::ranges::transform(EARLY_ALLPASS_LENGTHS, VecAp.Offset.begin(),
+    std::ranges::transform(EARLY_ALLPASS_LENGTHS, Allpass.Offset.begin(),
         [density_mult,frequency](const float length) -> uint
     { return float2uint(length * density_mult * frequency); });
 
@@ -1593,7 +1593,7 @@ void ReverbPipeline::processEarly(const DelayLineU &main_delay, size_t offset,
         }
 
         /* Apply an all-pass, to help color the initial reflections. */
-        mEarly.VecAp.process(tempSamples, offset, todo);
+        mEarly.Allpass.process(tempSamples, offset, todo);
 
         /* Apply a reflection and delay to generate secondary reflections.*/
         early_delay.writeReflected(offset, tempSamples, todo);

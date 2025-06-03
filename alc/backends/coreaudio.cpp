@@ -683,7 +683,7 @@ struct CoreAudioCapture final : public BackendBase {
     void open(std::string_view name) override;
     void start() override;
     void stop() override;
-    void captureSamples(std::byte *buffer, uint samples) override;
+    void captureSamples(std::span<std::byte> outbuffer) override;
     uint availableSamples() override;
 
     AudioUnit mAudioUnit{0};
@@ -990,24 +990,27 @@ void CoreAudioCapture::stop()
         ERR("AudioOutputUnitStop failed: '{}' ({})", FourCCPrinter{err}.c_str(), err);
 }
 
-void CoreAudioCapture::captureSamples(std::byte *buffer, uint samples)
+void CoreAudioCapture::captureSamples(std::span<std::byte> outbuffer)
 {
     if(!mConverter)
     {
-        std::ignore = mRing->read(std::span{buffer, samples*size_t{mFrameSize}});
+        std::ignore = mRing->read(outbuffer);
         return;
     }
 
     auto rec_vec = mRing->getReadVector();
     const void *src0 = rec_vec[0].data();
     auto src0len = static_cast<uint>(rec_vec[0].size() / mFrameSize);
-    auto got = mConverter->convert(&src0, &src0len, buffer, samples);
+    auto got = mConverter->convert(&src0, &src0len, outbuffer.data(),
+        static_cast<uint>(outbuffer.size()/mFrameSize));
     auto total_read = rec_vec[0].size()/mFrameSize - src0len;
-    if(got < samples && !src0len && !rec_vec[1].empty())
+    if(got < outbuffer.size()/mFrameSize && !src0len && !rec_vec[1].empty())
     {
+        outbuffer = outbuffer.subspan(got*mFrameSize);
         const void *src1 = rec_vec[1].data();
         auto src1len = static_cast<uint>(rec_vec[1].size()/mFrameSize);
-        std::ignore = mConverter->convert(&src1, &src1len, buffer + got*mFrameSize, samples-got);
+        std::ignore = mConverter->convert(&src1, &src1len, outbuffer.data(),
+            static_cast<uint>(outbuffer.size()/mFrameSize));
         total_read += rec_vec[1].size()/mFrameSize - src1len;
     }
 

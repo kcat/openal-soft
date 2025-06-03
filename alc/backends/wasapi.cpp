@@ -2402,7 +2402,7 @@ struct WasapiCapture final : public BackendBase {
     void open(std::string_view name) override;
     void start() override;
     void stop() override;
-    void captureSamples(std::byte *buffer, uint samples) override;
+    void captureSamples(std::span<std::byte> outbuffer) override;
     auto availableSamples() -> uint override;
 
 
@@ -3036,8 +3036,8 @@ void WasapiCapture::stop()
 }
 
 
-void WasapiCapture::captureSamples(std::byte *buffer, uint samples)
-{ std::ignore = mRing->read(std::span{buffer, samples*mRing->getElemSize()}); }
+void WasapiCapture::captureSamples(std::span<std::byte> outbuffer)
+{ std::ignore = mRing->read(outbuffer); }
 
 auto WasapiCapture::availableSamples() -> uint
 { return static_cast<uint>(mRing->readSpace()); }

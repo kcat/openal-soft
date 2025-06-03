@@ -1123,7 +1123,7 @@ struct PulseCapture final : public BackendBase {
     void open(std::string_view name) override;
     void start() override;
     void stop() override;
-    void captureSamples(std::byte *buffer, uint samples) override;
+    void captureSamples(std::span<std::byte> outbuffer) override;
     auto availableSamples() -> uint override;
     auto getClockLatency() -> ClockLatency override;
 
@@ -1300,30 +1300,28 @@ void PulseCapture::stop()
     plock.waitForOperation(op);
 }
 
-void PulseCapture::captureSamples(std::byte *buffer, uint samples)
+void PulseCapture::captureSamples(std::span<std::byte> outbuffer)
 {
-    auto dstbuf = std::span{buffer, samples * pa_frame_size(&mSpec)};
-
     /* Capture is done in fragment-sized chunks, so we loop until we get all
      * that's available.
      */
-    mLastReadable -= static_cast<uint>(dstbuf.size());
-    while(!dstbuf.empty())
+    mLastReadable -= static_cast<uint>(outbuffer.size());
+    while(!outbuffer.empty())
     {
         if(mHoleLength > 0) [[unlikely]]
         {
-            const auto rem = std::min(dstbuf.size(), mHoleLength);
-            std::ranges::fill(dstbuf | std::views::take(rem), mSilentVal);
-            dstbuf = dstbuf.subspan(rem);
+            const auto rem = std::min(outbuffer.size(), mHoleLength);
+            std::ranges::fill(outbuffer | std::views::take(rem), mSilentVal);
+            outbuffer = outbuffer.subspan(rem);
             mHoleLength -= rem;
 
             continue;
         }
         if(!mCapBuffer.empty())
         {
-            const auto rem = std::min(dstbuf.size(), mCapBuffer.size());
-            std::ranges::copy(mCapBuffer | std::views::take(rem), dstbuf.begin());
-            dstbuf = dstbuf.subspan(rem);
+            const auto rem = std::min(outbuffer.size(), mCapBuffer.size());
+            std::ranges::copy(mCapBuffer | std::views::take(rem), outbuffer.begin());
+            outbuffer = outbuffer.subspan(rem);
             mCapBuffer = mCapBuffer.subspan(rem);
 
             continue;
@@ -1363,8 +1361,8 @@ void PulseCapture::captureSamples(std::byte *buffer, uint samples)
             mCapBuffer = {static_cast<const std::byte*>(capbuf), caplen};
         mPacketLength = caplen;
     }
-    if(!dstbuf.empty())
-        std::ranges::fill(dstbuf, mSilentVal);
+    if(!outbuffer.empty())
+        std::ranges::fill(outbuffer, mSilentVal);
 }
 
 auto PulseCapture::availableSamples() -> uint

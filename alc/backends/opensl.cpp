@@ -610,7 +610,7 @@ struct OpenSLCapture final : public BackendBase {
     void open(std::string_view name) override;
     void start() override;
     void stop() override;
-    void captureSamples(std::byte *buffer, uint samples) override;
+    void captureSamples(std::span<std::byte> outbuffer) override;
     auto availableSamples() -> uint override;
 
     /* engine interfaces */
@@ -847,21 +847,20 @@ void OpenSLCapture::stop()
     }
 }
 
-void OpenSLCapture::captureSamples(std::byte *buffer, uint samples)
+void OpenSLCapture::captureSamples(std::span<std::byte> outbuffer)
 {
     const auto update_size = mDevice->mUpdateSize;
     const auto chunk_size = update_size * mFrameSize;
-    auto output = std::span{buffer, samples*size_t{mFrameSize}};
 
     /* Read the desired samples from the ring buffer then advance its read
      * pointer.
      */
     auto adv_count = 0_uz;
     auto rdata = mRing->getReadVector();
-    while(!output.empty())
+    while(!outbuffer.empty())
     {
-        const auto rem = std::min(output.size(), size_t{chunk_size}-mByteOffset);
-        std::ranges::copy(rdata[0].subspan(mByteOffset, rem), output.begin());
+        const auto rem = std::min(outbuffer.size(), size_t{chunk_size}-mByteOffset);
+        std::ranges::copy(rdata[0].subspan(mByteOffset, rem), outbuffer.begin());
 
         mByteOffset += rem;
         if(mByteOffset == chunk_size)
@@ -875,7 +874,7 @@ void OpenSLCapture::captureSamples(std::byte *buffer, uint samples)
                 rdata[0] = rdata[1];
         }
 
-        output = output.subspan(rem);
+        outbuffer = outbuffer.subspan(rem);
     }
 
     auto bufferQueue = SLAndroidSimpleBufferQueueItf{};

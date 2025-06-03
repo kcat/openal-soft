@@ -364,7 +364,7 @@ struct WinMMCapture final : public BackendBase {
     void open(std::string_view name) override;
     void start() override;
     void stop() override;
-    void captureSamples(std::byte *buffer, uint samples) override;
+    void captureSamples(std::span<std::byte> outbuffer) override;
     auto availableSamples() -> uint override;
 
     std::atomic<uint> mReadable{0u};
@@ -558,8 +558,8 @@ void WinMMCapture::stop()
     mIdx = 0;
 }
 
-void WinMMCapture::captureSamples(std::byte *buffer, uint samples)
-{ std::ignore = mRing->read(std::span{buffer, samples*mRing->getElemSize()}); }
+void WinMMCapture::captureSamples(std::span<std::byte> outbuffer)
+{ std::ignore = mRing->read(outbuffer); }
 
 auto WinMMCapture::availableSamples() -> uint
 { return static_cast<uint>(mRing->readSpace()); }

@@ -462,7 +462,7 @@ struct OSScapture final : public BackendBase {
     void open(std::string_view name) override;
     void start() override;
     void stop() override;
-    void captureSamples(std::byte *buffer, uint samples) override;
+    void captureSamples(std::span<std::byte> outbuffer) override;
     uint availableSamples() override;
 
     int mFd{-1};
@@ -630,8 +630,8 @@ void OSScapture::stop()
         ERR("Error resetting device: {}", std::generic_category().message(errno));
 }
 
-void OSScapture::captureSamples(std::byte *buffer, uint samples)
-{ std::ignore = mRing->read(std::span{buffer, samples*mRing->getElemSize()}); }
+void OSScapture::captureSamples(std::span<std::byte> outbuffer)
+{ std::ignore = mRing->read(outbuffer); }
 
 uint OSScapture::availableSamples()
 { return static_cast<uint>(mRing->readSpace()); }

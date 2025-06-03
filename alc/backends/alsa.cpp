@@ -899,7 +899,7 @@ struct AlsaCapture final : public BackendBase {
     void open(std::string_view name) override;
     void start() override;
     void stop() override;
-    void captureSamples(std::byte *buffer, uint samples) override;
+    void captureSamples(std::span<std::byte> outbuffer) override;
     uint availableSamples() override;
     ClockLatency getClockLatency() override;
 
@@ -1048,8 +1048,8 @@ void AlsaCapture::stop()
          * Direct access needs to explicitly capture it into temp storage.
          */
         auto temp = std::vector<std::byte>(
-            static_cast<size_t>(snd_pcm_frames_to_bytes(mPcmHandle, avail)));
-        captureSamples(temp.data(), avail);
+            as_unsigned(snd_pcm_frames_to_bytes(mPcmHandle, avail)));
+        captureSamples(temp);
         mBuffer = std::move(temp);
     }
     if(const auto err = snd_pcm_drop(mPcmHandle); err < 0)
@@ -1057,37 +1057,35 @@ void AlsaCapture::stop()
     mDoCapture = false;
 }
 
-void AlsaCapture::captureSamples(std::byte *buffer, uint samples)
+void AlsaCapture::captureSamples(std::span<std::byte> outbuffer)
 {
-    const auto outspan = std::span{buffer,
-        static_cast<size_t>(snd_pcm_frames_to_bytes(mPcmHandle, samples))};
-
     if(mRing)
     {
-        std::ignore = mRing->read(outspan);
+        std::ignore = mRing->read(outbuffer);
         return;
     }
 
-    auto outiter = outspan.begin();
-    mLastAvail -= samples;
-    while(mDevice->Connected.load(std::memory_order_acquire) && samples > 0)
+    const auto bpf = snd_pcm_frames_to_bytes(mPcmHandle, 1);
+    mLastAvail -= std::ssize(outbuffer) / bpf;
+    while(mDevice->Connected.load(std::memory_order_acquire) && !outbuffer.empty())
     {
-        auto amt = snd_pcm_sframes_t{0};
-
         if(!mBuffer.empty())
         {
             /* First get any data stored from the last stop */
-            amt = snd_pcm_bytes_to_frames(mPcmHandle, std::ssize(mBuffer));
-            if(static_cast<snd_pcm_uframes_t>(amt) > samples) amt = samples;
+            std::ranges::copy(mBuffer | std::views::take(outbuffer.size()), outbuffer.begin());
 
-            amt = snd_pcm_frames_to_bytes(mPcmHandle, amt);
-            std::copy_n(mBuffer.begin(), amt, outiter);
-
+            const auto amt = std::min(std::ssize(outbuffer), std::ssize(mBuffer));
             mBuffer.erase(mBuffer.begin(), mBuffer.begin()+amt);
-            amt = snd_pcm_bytes_to_frames(mPcmHandle, amt);
+            outbuffer = outbuffer.subspan(as_unsigned(amt));
+            continue;
         }
-        else if(mDoCapture)
-            amt = snd_pcm_readi(mPcmHandle, std::to_address(outiter), samples);
+
+        auto amt = snd_pcm_sframes_t{0};
+        if(mDoCapture)
+        {
+            amt = std::ssize(outbuffer) / bpf;
+            amt = snd_pcm_readi(mPcmHandle, outbuffer.data(), as_unsigned(amt));
+        }
         if(amt < 0)
         {
             ERR("read error: {}", snd_strerror(static_cast<int>(amt)));
@@ -1103,24 +1101,22 @@ void AlsaCapture::captureSamples(std::byte *buffer, uint samples)
             }
             if(amt < 0)
             {
-                const char *err{snd_strerror(static_cast<int>(amt))};
+                auto *err = snd_strerror(static_cast<int>(amt));
                 ERR("restore error: {}", err);
                 mDevice->handleDisconnect("Capture recovery failure: {}", err);
                 break;
             }
             /* If the amount available is less than what's asked, we lost it
-             * during recovery. So just give silence instead. */
-            if(static_cast<snd_pcm_uframes_t>(amt) < samples)
+             * during recovery. So just give silence instead.
+             */
+            if(amt*bpf < std::ssize(outbuffer))
                 break;
             continue;
         }
-
-        outiter += amt;
-        samples -= static_cast<uint>(amt);
+        outbuffer = outbuffer.subspan(as_unsigned(amt*bpf));
     }
-    if(samples > 0)
-        std::fill_n(outiter, snd_pcm_frames_to_bytes(mPcmHandle, samples),
-            std::byte((mDevice->FmtType == DevFmtUByte) ? 0x80 : 0));
+    if(!outbuffer.empty())
+        std::ranges::fill(outbuffer, std::byte((mDevice->FmtType == DevFmtUByte) ? 0x80 : 0));
 }
 
 uint AlsaCapture::availableSamples()
@@ -1151,7 +1147,7 @@ uint AlsaCapture::availableSamples()
     if(!mRing)
     {
         avail = std::max<snd_pcm_sframes_t>(avail, 0);
-        avail += snd_pcm_bytes_to_frames(mPcmHandle, static_cast<ssize_t>(mBuffer.size()));
+        avail += snd_pcm_bytes_to_frames(mPcmHandle, std::ssize(mBuffer));
         mLastAvail = std::max(mLastAvail, avail);
         return static_cast<uint>(mLastAvail);
     }
@@ -1180,7 +1176,7 @@ uint AlsaCapture::availableSamples()
             }
             if(amt < 0)
             {
-                const char *err{snd_strerror(static_cast<int>(amt))};
+                auto *err = snd_strerror(static_cast<int>(amt));
                 ERR("restore error: {}", err);
                 mDevice->handleDisconnect("Capture recovery failure: {}", err);
                 break;

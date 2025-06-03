@@ -5,6 +5,7 @@
 #include <cstdarg>
 #include <cstddef>
 #include <memory>
+#include <span>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -25,14 +26,14 @@ struct ClockLatency {
 struct BackendBase {
     virtual void open(std::string_view name) = 0;
 
-    virtual bool reset();
+    virtual auto reset() -> bool;
     virtual void start() = 0;
     virtual void stop() = 0;
 
-    virtual void captureSamples(std::byte *buffer, uint samples);
-    virtual uint availableSamples();
+    virtual void captureSamples(std::span<std::byte> outbuffer);
+    virtual auto availableSamples() -> uint;
 
-    virtual ClockLatency getClockLatency();
+    virtual auto getClockLatency() -> ClockLatency;
 
     DeviceBase *const mDevice;
     std::string mDeviceName;

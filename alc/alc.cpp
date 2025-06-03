@@ -3285,7 +3285,8 @@ ALC_API void ALC_APIENTRY alcCaptureSamples(ALCdevice *device, ALCvoid *buffer, 
         return;
     }
 
-    backend->captureSamples(static_cast<std::byte*>(buffer), usamples);
+    backend->captureSamples(std::span{static_cast<std::byte*>(buffer),
+        size_t{usamples}*dev->frameSizeFromFmt()});
 }
 
 

@@ -273,7 +273,7 @@ struct DelayLineI {
         /* All line lengths are powers of 2, calculated from their lengths in
          * seconds, rounded up.
          */
-        uint samples{float2uint(std::ceil(length*frequency))};
+        auto samples = float2uint(std::ceil(length*frequency));
         samples = NextPowerOf2(samples + extra);
 
         /* Return the sample count for accumulation. */
@@ -718,6 +718,12 @@ void ReverbState::allocLines(const float frequency)
      */
     static constexpr auto max_mod_delay = MaxModulationTime*MODULATION_DEPTH_COEFF / 2.0f;
 
+    /* The max number of samples done per iteration of the late reverb's vector
+     * all-pass.
+     */
+    const auto late_vecap_extra = float2uint(std::ceil(LATE_ALLPASS_LENGTHS.front() * multiplier
+        * frequency));
+
     auto linelengths = std::array<size_t,11>{};
     auto oidx = 0_uz;
 
@@ -753,7 +759,7 @@ void ReverbState::allocLines(const float frequency)
 
         /* The late vector all-pass line. */
         length = LATE_ALLPASS_LENGTHS.back() * multiplier;
-        count = pipeline.mLate.VecAp.Delay.calcLineLength(length, frequency, 0);
+        count = pipeline.mLate.VecAp.Delay.calcLineLength(length, frequency, late_vecap_extra);
         linelengths[oidx++] = count;
         totalSamples += count;
 
@@ -1428,11 +1434,12 @@ void VecAllpass::process(const std::span<ReverbUpdateLine,NUM_LINES> samples, si
     const float xCoeff, const float yCoeff, const size_t todo) const noexcept
 {
     const auto delaymask = size_t{Delay.mLine.size()/NUM_LINES - 1_uz};
+    const auto delaybuf = Delay.mLine;
     const auto feedCoeff = Coeff;
 
     ASSUME(todo > 0);
 
-    for(auto i = 0_uz;i < todo;)
+    for(auto base = 0_uz;base < todo;)
     {
         auto vap_offset = std::array<size_t,NUM_LINES>{};
         std::ranges::transform(Offset, vap_offset.begin(),
@@ -1441,28 +1448,38 @@ void VecAllpass::process(const std::span<ReverbUpdateLine,NUM_LINES> samples, si
         main_offset &= delaymask;
 
         const auto maxoff = std::max(std::ranges::max(vap_offset), main_offset);
-        auto td = std::min(delaymask+1_uz - maxoff, todo - i);
+        /* Limit the number of samples to the minimum line delay, so that each
+         * line's all-pass can be processed individually before scattering for
+         * the feedback.
+         */
+        const auto td = std::min(Offset.front(), std::min(delaymask+1_uz - maxoff, todo - base));
 
-        auto delayOut = Delay.mLine.begin();
-        std::advance(delayOut, main_offset*NUM_LINES);
-        main_offset += td;
-
-        do {
-            auto f = std::array<float,NUM_LINES>{};
-            for(auto j = 0_uz;j < NUM_LINES;j++)
+        for(const auto c : std::views::iota(0_uz, NUM_LINES))
+        {
+            const auto sampleline = std::span{samples[c]}.subspan(base, td);
+            auto out_offset = vap_offset[c];
+            auto in_offset = main_offset;
+            std::ranges::transform(sampleline, sampleline.begin(),
+                [delaybuf,feedCoeff,c,&out_offset,&in_offset](const float input)
             {
-                const auto input = samples[j][i];
-                const auto out = Delay.mLine[vap_offset[j]*NUM_LINES + j] - feedCoeff*input;
-                f[j] = input + feedCoeff*out;
-                vap_offset[j] += 1;
+                const auto out = delaybuf[(out_offset++)*NUM_LINES + c] - feedCoeff*input;
+                delaybuf[(in_offset++)*NUM_LINES + c] = input + feedCoeff*out;
+                return out;
+            });
+            vap_offset[c] = out_offset;
+        }
 
-                samples[j][i] = out;
-            }
-            ++i;
+        auto delayIn = delaybuf.begin();
+        std::advance(delayIn, main_offset*NUM_LINES);
+        for(const auto j [[maybe_unused]] : std::views::iota(0_uz, td))
+        {
+            const auto f = VectorPartialScatter({delayIn[0], delayIn[1], delayIn[2], delayIn[3]},
+                xCoeff, yCoeff);
+            delayIn = std::ranges::copy(f, delayIn).out;
+        }
 
-            f = VectorPartialScatter(f, xCoeff, yCoeff);
-            delayOut = std::ranges::copy(f, delayOut).out;
-        } while(--td);
+        main_offset += td;
+        base += td;
     }
 }
 
@@ -1578,7 +1595,7 @@ void ReverbPipeline::processEarly(const DelayLineU &main_delay, size_t offset,
         /* Apply an all-pass, to help color the initial reflections. */
         mEarly.VecAp.process(tempSamples, offset, todo);
 
-        /* Apply a delay and bounce to generate secondary reflections. */
+        /* Apply a reflection and delay to generate secondary reflections.*/
         early_delay.writeReflected(offset, tempSamples, todo);
         const auto delay_coeff = mEarly.Coeff;
         for(auto j = 0_uz;j < NUM_LINES;++j)

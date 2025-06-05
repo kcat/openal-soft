@@ -5,13 +5,17 @@
 #include <atomic>
 #include <bitset>
 #include <chrono>
+#include <concepts>
 #include <cstddef>
 #include <cstdint>
+#include <functional>
 #include <memory>
+#include <ranges>
 #include <span>
 #include <string>
 
 #include "almalloc.h"
+#include "alnumeric.h"
 #include "ambidefs.h"
 #include "atomic.h"
 #include "bufferline.h"
@@ -118,17 +122,17 @@ struct MixParams {
      * destination channel is InvalidChannelIndex, the given source channel is
      * not used for output.
      */
-    template<typename F>
+    template<std::invocable<std::size_t,std::uint8_t,float> F>
     void setAmbiMixParams(const MixParams &inmix, const float gainbase, F func) const
     {
-        const std::size_t numIn{inmix.Buffer.size()};
-        const std::size_t numOut{Buffer.size()};
-        for(std::size_t i{0};i < numIn;++i)
+        const auto numIn = inmix.Buffer.size();
+        const auto numOut = Buffer.size();
+        for(const auto i : std::views::iota(0_uz, numIn))
         {
-            std::uint8_t idx{InvalidChannelIndex};
-            float gain{0.0f};
+            auto idx = InvalidChannelIndex;
+            auto gain = 0.0f;
 
-            for(std::size_t j{0};j < numOut;++j)
+            for(const auto j : std::views::iota(0_uz, numOut))
             {
                 if(AmbiMap[j].Index == inmix.AmbiMap[i].Index)
                 {
@@ -137,7 +141,7 @@ struct MixParams {
                     break;
                 }
             }
-            func(i, idx, gain);
+            std::invoke(func, i, idx, gain);
         }
     }
 };

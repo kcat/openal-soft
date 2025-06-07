@@ -162,14 +162,11 @@ public:
     explicit PodDynamicBuilder(uint32_t initSize=1024)
         : mStorage(initSize), mPod{make_pod_builder(mStorage.data(), initSize)}
     {
-        static constexpr auto callbacks = std::invoke([]() -> spa_pod_builder_callbacks
-        {
-            auto cb = spa_pod_builder_callbacks{};
-            cb.version = SPA_VERSION_POD_BUILDER_CALLBACKS;
-            cb.overflow = [](void *data, uint32_t size) noexcept
-            { return static_cast<PodDynamicBuilder*>(data)->overflow(size); };
-            return cb;
-        });
+        static constexpr auto callbacks = spa_pod_builder_callbacks{
+            .version = SPA_VERSION_POD_BUILDER_CALLBACKS,
+            .overflow = [](void *data, uint32_t size) noexcept
+            { return static_cast<PodDynamicBuilder*>(data)->overflow(size); }
+        };
 
         spa_pod_builder_set_callbacks(&mPod, &callbacks, this);
     }
@@ -385,7 +382,7 @@ auto get_value(const spa_pod *value) -> std::optional<Pod_t<T>>
  * unexpected/invalid casts.
  */
 template<typename To, typename From>
-To as(From) noexcept = delete;
+auto as(From) noexcept -> To = delete;
 
 /* pw_proxy
  * - pw_registry
@@ -393,43 +390,31 @@ To as(From) noexcept = delete;
  * - pw_metadata
  */
 template<>
-pw_proxy* as(pw_registry *reg) noexcept { return reinterpret_cast<pw_proxy*>(reg); }
+auto as(pw_registry *reg) noexcept -> pw_proxy* { return reinterpret_cast<pw_proxy*>(reg); }
 template<>
-pw_proxy* as(pw_node *node) noexcept { return reinterpret_cast<pw_proxy*>(node); }
+auto as(pw_node *node) noexcept -> pw_proxy* { return reinterpret_cast<pw_proxy*>(node); }
 template<>
-pw_proxy* as(pw_metadata *mdata) noexcept { return reinterpret_cast<pw_proxy*>(mdata); }
+auto as(pw_metadata *mdata) noexcept -> pw_proxy* { return reinterpret_cast<pw_proxy*>(mdata); }
 /* NOLINTEND(cppcoreguidelines-pro-type-reinterpret-cast) */
 
 
-struct PwContextDeleter {
-    void operator()(pw_context *context) const { pw_context_destroy(context); }
-};
-using PwContextPtr = std::unique_ptr<pw_context,PwContextDeleter>;
+using PwContextPtr = std::unique_ptr<pw_context, decltype([](pw_context *context)
+    { pw_context_destroy(context); })>;
 
-struct PwCoreDeleter {
-    void operator()(pw_core *core) const { pw_core_disconnect(core); }
-};
-using PwCorePtr = std::unique_ptr<pw_core,PwCoreDeleter>;
+using PwCorePtr = std::unique_ptr<pw_core, decltype([](pw_core *core)
+    { pw_core_disconnect(core); })>;
 
-struct PwRegistryDeleter {
-    void operator()(pw_registry *reg) const { pw_proxy_destroy(as<pw_proxy*>(reg)); }
-};
-using PwRegistryPtr = std::unique_ptr<pw_registry,PwRegistryDeleter>;
+using PwRegistryPtr = std::unique_ptr<pw_registry, decltype([](pw_registry *reg)
+    { pw_proxy_destroy(as<pw_proxy*>(reg)); })>;
 
-struct PwNodeDeleter {
-    void operator()(pw_node *node) const { pw_proxy_destroy(as<pw_proxy*>(node)); }
-};
-using PwNodePtr = std::unique_ptr<pw_node,PwNodeDeleter>;
+using PwNodePtr = std::unique_ptr<pw_node, decltype([](pw_node *node)
+    { pw_proxy_destroy(as<pw_proxy*>(node)); })>;
 
-struct PwMetadataDeleter {
-    void operator()(pw_metadata *mdata) const { pw_proxy_destroy(as<pw_proxy*>(mdata)); }
-};
-using PwMetadataPtr = std::unique_ptr<pw_metadata,PwMetadataDeleter>;
+using PwMetadataPtr = std::unique_ptr<pw_metadata, decltype([](pw_metadata *mdata)
+    { pw_proxy_destroy(as<pw_proxy*>(mdata)); })>;
 
-struct PwStreamDeleter {
-    void operator()(pw_stream *stream) const { pw_stream_destroy(stream); }
-};
-using PwStreamPtr = std::unique_ptr<pw_stream,PwStreamDeleter>;
+using PwStreamPtr = std::unique_ptr<pw_stream, decltype([](pw_stream *stream)
+    { pw_stream_destroy(stream); })>;
 
 /* NOLINTBEGIN(*EnumCastOutOfRange) Enums for bitflags... again... *sigh* */
 constexpr pw_stream_flags operator|(pw_stream_flags lhs, pw_stream_flags rhs) noexcept
@@ -510,19 +495,18 @@ struct NodeProxy {
     PwNodePtr mNode;
     spa_hook mListener{};
 
-    static constexpr auto CreateNodeEvents() -> pw_node_events
-    {
-        auto ret = pw_node_events{};
-        ret.version = PW_VERSION_NODE_EVENTS;
-        ret.info = infoCallback;
-        ret.param = [](void *object, int seq, uint32_t id, uint32_t index, uint32_t next, const spa_pod *param) noexcept
-        { static_cast<NodeProxy*>(object)->paramCallback(seq, id, index, next, param); };
-        return ret;
-    }
-
     NodeProxy(uint32_t id, PwNodePtr&& node) : mId{id}, mNode{std::move(node)}
     {
-        static constexpr auto nodeEvents = CreateNodeEvents();
+        static constexpr auto nodeEvents = std::invoke([]() -> pw_node_events
+        {
+            auto ret = pw_node_events{};
+            ret.version = PW_VERSION_NODE_EVENTS;
+            ret.info = infoCallback;
+            ret.param = [](void *object_, int seq_, uint32_t id_, uint32_t index_, uint32_t next_,
+                const spa_pod *param_) noexcept -> void
+            { static_cast<NodeProxy*>(object_)->paramCallback(seq_, id_, index_, next_, param_); };
+            return ret;
+        });
         ppw_node_add_listener(mNode.get(), &mListener, &nodeEvents, this);
 
         /* Track changes to the enumerable and current formats (indicates the
@@ -544,17 +528,15 @@ struct MetadataProxy {
     PwMetadataPtr mMetadata;
     spa_hook mListener{};
 
-    static constexpr auto CreateMetadataEvents() -> pw_metadata_events
-    {
-        auto ret = pw_metadata_events{};
-        ret.version = PW_VERSION_METADATA_EVENTS;
-        ret.property = propertyCallback;
-        return ret;
-    }
-
     MetadataProxy(uint32_t id, PwMetadataPtr&& mdata) : mId{id}, mMetadata{std::move(mdata)}
     {
-        static constexpr auto metadataEvents = CreateMetadataEvents();
+        static constexpr auto metadataEvents = std::invoke([]() -> pw_metadata_events
+        {
+            auto ret = pw_metadata_events{};
+            ret.version = PW_VERSION_METADATA_EVENTS;
+            ret.property = propertyCallback;
+            return ret;
+        });
         ppw_metadata_add_listener(mMetadata.get(), &mListener, &metadataEvents, this);
     }
     ~MetadataProxy()
@@ -649,27 +631,7 @@ struct EventManager {
 
     void removeCallback(uint32_t id) noexcept;
 
-    static constexpr auto CreateRegistryEvents() -> pw_registry_events
-    {
-        auto ret = pw_registry_events{};
-        ret.version = PW_VERSION_REGISTRY_EVENTS;
-        ret.global = [](void *object, uint32_t id, uint32_t permissions, const char *type, uint32_t version, const spa_dict *props) noexcept
-        { static_cast<EventManager*>(object)->addCallback(id, permissions, type, version, props); };
-        ret.global_remove = [](void *object, uint32_t id) noexcept
-        { static_cast<EventManager*>(object)->removeCallback(id); };
-        return ret;
-    }
-
     void coreCallback(uint32_t id, int seq) noexcept;
-
-    static constexpr auto CreateCoreEvents() -> pw_core_events
-    {
-        auto ret = pw_core_events{};
-        ret.version = PW_VERSION_CORE_EVENTS;
-        ret.done = [](void *object, uint32_t id, int seq) noexcept
-        { static_cast<EventManager*>(object)->coreCallback(id, seq); };
-        return ret;
-    }
 };
 using EventWatcherUniqueLock = std::unique_lock<EventManager>;
 using EventWatcherLockGuard = std::lock_guard<EventManager>;
@@ -722,17 +684,6 @@ std::vector<DeviceNode> DeviceNode::sList;
 auto DefaultSinkDevice = std::string{};
 auto DefaultSourceDevice = std::string{};
 
-auto AsString(NodeType type) noexcept -> std::string_view
-{
-    switch(type)
-    {
-    case NodeType::Sink: return "sink"sv;
-    case NodeType::Source: return "source"sv;
-    case NodeType::Duplex: return "duplex"sv;
-    }
-    return "<unknown>"sv;
-}
-
 auto DeviceNode::Add(uint32_t id) -> DeviceNode&
 {
     /* If the node is already in the list, return the existing entry. */
@@ -770,6 +721,18 @@ void DeviceNode::Remove(uint32_t id)
         return true;
     });
     sList.erase(end.begin(), end.end());
+}
+
+
+auto AsString(NodeType type) noexcept -> std::string_view
+{
+    switch(type)
+    {
+    case NodeType::Sink: return "sink"sv;
+    case NodeType::Source: return "source"sv;
+    case NodeType::Duplex: return "duplex"sv;
+    }
+    return "<unknown>"sv;
 }
 
 
@@ -1227,8 +1190,25 @@ auto EventManager::init() -> bool
         return false;
     }
 
-    static constexpr auto coreEvents = CreateCoreEvents();
-    static constexpr auto registryEvents = CreateRegistryEvents();
+    static constexpr auto coreEvents = std::invoke([]() -> pw_core_events
+    {
+        auto ret = pw_core_events{};
+        ret.version = PW_VERSION_CORE_EVENTS;
+        ret.done = [](void *object, uint32_t id, int seq) noexcept -> void
+        { static_cast<EventManager*>(object)->coreCallback(id, seq); };
+        return ret;
+    });
+    static constexpr auto registryEvents = std::invoke([]() -> pw_registry_events
+    {
+        auto ret = pw_registry_events{};
+        ret.version = PW_VERSION_REGISTRY_EVENTS;
+        ret.global = [](void *object, uint32_t id, uint32_t permissions, const char *type,
+            uint32_t version, const spa_dict *props) noexcept -> void
+        { static_cast<EventManager*>(object)->addCallback(id, permissions, type, version, props); };
+        ret.global_remove = [](void *object, uint32_t id) noexcept -> void
+        { static_cast<EventManager*>(object)->removeCallback(id); };
+        return ret;
+    });
 
     ppw_core_add_listener(mCore.get(), &mCoreListener, &coreEvents, this);
     ppw_registry_add_listener(mRegistry.get(), &mRegistryListener, &registryEvents, this);
@@ -1432,19 +1412,6 @@ class PipeWirePlayback final : public BackendBase {
     spa_io_rate_match *mRateMatch{};
     std::vector<void*> mChannelPtrs;
 
-    static constexpr auto CreateEvents() -> pw_stream_events
-    {
-        auto ret = pw_stream_events{};
-        ret.version = PW_VERSION_STREAM_EVENTS;
-        ret.state_changed = [](void *data, pw_stream_state old, pw_stream_state state, const char *error) noexcept
-        { static_cast<PipeWirePlayback*>(data)->stateChangedCallback(old, state, error); };
-        ret.io_changed = [](void *data, uint32_t id, void *area, uint32_t size) noexcept
-        { static_cast<PipeWirePlayback*>(data)->ioChangedCallback(id, area, size); };
-        ret.process = [](void *data) noexcept
-        { static_cast<PipeWirePlayback*>(data)->outputCallback(); };
-        return ret;
-    }
-
 public:
     explicit PipeWirePlayback(DeviceBase *device) noexcept : BackendBase{device} { }
     ~PipeWirePlayback() final
@@ -1623,13 +1590,26 @@ auto PipeWirePlayback::reset() -> bool
             if(!mDevice->Flags.test(FrequencyRequest) && match->mSampleRate > 0)
             {
                 /* Scale the update size if the sample rate changes. */
-                const double scale{static_cast<double>(match->mSampleRate) / mDevice->mSampleRate};
-                const double updatesize{std::round(mDevice->mUpdateSize * scale)};
-                const double buffersize{std::round(mDevice->mBufferSize * scale)};
+                const auto scale = static_cast<double>(match->mSampleRate) / mDevice->mSampleRate;
 
+                /* Don't scale down power-of-two sizes unless it would be more
+                 * than halfway to the next lower power-of-two. PipeWire uses
+                 * powers of two updates at the graph sample rate, but seems to
+                 * always round down streams' non-power-of-two update sizes. So
+                 * for instance, with the default 48khz playback rate and 512
+                 * update size, if the device is 44.1khz the update size would
+                 * be scaled to 470 samples, which gets rounded down to 256
+                 * when 512 would be closer to the requested size.
+                 */
+                if(scale < 0.75 && std::popcount(mDevice->mUpdateSize) == 1)
+                {
+                    const auto updatesize = std::round(mDevice->mUpdateSize * scale);
+                    const auto buffersize = std::round(mDevice->mBufferSize * scale);
+
+                    mDevice->mUpdateSize = static_cast<uint>(std::clamp(updatesize, 64.0, 8192.0));
+                    mDevice->mBufferSize = static_cast<uint>(std::max(buffersize, 128.0));
+                }
                 mDevice->mSampleRate = match->mSampleRate;
-                mDevice->mUpdateSize = static_cast<uint>(std::clamp(updatesize, 64.0, 8192.0));
-                mDevice->mBufferSize = static_cast<uint>(std::max(buffersize, 128.0));
             }
             if(!mDevice->Flags.test(ChannelsRequest) && match->mChannels != InvalidChannelConfig)
                 mDevice->FmtChans = match->mChannels;
@@ -1680,7 +1660,20 @@ auto PipeWirePlayback::reset() -> bool
     if(!mStream)
         throw al::backend_exception{al::backend_error::NoDevice,
             "Failed to create PipeWire stream (errno: {})", errno};
-    static constexpr pw_stream_events streamEvents{CreateEvents()};
+
+    static constexpr auto streamEvents = std::invoke([]() -> pw_stream_events
+    {
+        auto ret = pw_stream_events{};
+        ret.version = PW_VERSION_STREAM_EVENTS;
+        ret.state_changed = [](void *data, pw_stream_state old, pw_stream_state state,
+            const char *error) noexcept -> void
+        { static_cast<PipeWirePlayback*>(data)->stateChangedCallback(old, state, error); };
+        ret.io_changed = [](void *data, uint32_t id, void *area, uint32_t size) noexcept -> void
+        { static_cast<PipeWirePlayback*>(data)->ioChangedCallback(id, area, size); };
+        ret.process = [](void *data) noexcept -> void
+        { static_cast<PipeWirePlayback*>(data)->outputCallback(); };
+        return ret;
+    });
     pw_stream_add_listener(mStream.get(), &mStreamListener, &streamEvents, this);
 
     auto flags = PW_STREAM_FLAG_AUTOCONNECT | PW_STREAM_FLAG_INACTIVE | PW_STREAM_FLAG_MAP_BUFFERS;
@@ -1913,17 +1906,6 @@ class PipeWireCapture final : public BackendBase {
 
     RingBufferPtr<std::byte> mRing;
 
-    static constexpr pw_stream_events CreateEvents()
-    {
-        pw_stream_events ret{};
-        ret.version = PW_VERSION_STREAM_EVENTS;
-        ret.state_changed = [](void *data, pw_stream_state old, pw_stream_state state, const char *error) noexcept
-        { static_cast<PipeWireCapture*>(data)->stateChangedCallback(old, state, error); };
-        ret.process = [](void *data) noexcept
-        { static_cast<PipeWireCapture*>(data)->inputCallback(); };
-        return ret;
-    }
-
 public:
     explicit PipeWireCapture(DeviceBase *device) noexcept : BackendBase{device} { }
     ~PipeWireCapture() final { if(mLoop) mLoop.stop(); }
@@ -2110,7 +2092,18 @@ void PipeWireCapture::open(std::string_view name)
     if(!mStream)
         throw al::backend_exception{al::backend_error::NoDevice,
             "Failed to create PipeWire stream (errno: {})", errno};
-    static constexpr pw_stream_events streamEvents{CreateEvents()};
+
+    static constexpr auto streamEvents = std::invoke([]() -> pw_stream_events
+    {
+        auto ret = pw_stream_events{};
+        ret.version = PW_VERSION_STREAM_EVENTS;
+        ret.state_changed = [](void *data, pw_stream_state old, pw_stream_state state,
+            const char *error) noexcept -> void
+        { static_cast<PipeWireCapture*>(data)->stateChangedCallback(old, state, error); };
+        ret.process = [](void *data) noexcept -> void
+        { static_cast<PipeWireCapture*>(data)->inputCallback(); };
+        return ret;
+    });
     pw_stream_add_listener(mStream.get(), &mStreamListener, &streamEvents, this);
 
     constexpr pw_stream_flags Flags{PW_STREAM_FLAG_AUTOCONNECT | PW_STREAM_FLAG_INACTIVE

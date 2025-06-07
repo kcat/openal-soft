@@ -29,19 +29,20 @@ namespace {
 [[gnu::target("sse")]]
 #endif
 [[maybe_unused]]
-void disable_denormals(unsigned int *state [[maybe_unused]])
+auto disable_denormals() -> unsigned int
 {
 #if HAVE_SSE_INTRINSICS
-    *state = _mm_getcsr();
-    unsigned int sseState{*state};
+    const auto state = _mm_getcsr();
+    auto sseState = state;
     sseState &= ~(_MM_FLUSH_ZERO_MASK | _MM_DENORMALS_ZERO_MASK);
     sseState |= _MM_FLUSH_ZERO_ON | _MM_DENORMALS_ZERO_ON;
     _mm_setcsr(sseState);
+    return state;
 
 #elif HAVE_SSE
 
-    *state = _mm_getcsr();
-    unsigned int sseState{*state};
+    const auto state = _mm_getcsr();
+    auto sseState = state;
     sseState &= ~_MM_FLUSH_ZERO_MASK;
     sseState |= _MM_FLUSH_ZERO_ON;
     if((CPUCapFlags&CPU_CAP_SSE2))
@@ -50,6 +51,11 @@ void disable_denormals(unsigned int *state [[maybe_unused]])
         sseState |= _MM_DENORMALS_ZERO_ON;
     }
     _mm_setcsr(sseState);
+    return state;
+
+#else
+
+    return 0u;
 #endif
 }
 
@@ -67,16 +73,19 @@ void reset_fpu(unsigned int state [[maybe_unused]])
 } // namespace
 
 
-unsigned int FPUCtl::Set() noexcept
+auto FPUCtl::Set() noexcept -> unsigned int
 {
-    unsigned int state{};
 #if HAVE_SSE_INTRINSICS
-    disable_denormals(&state);
-#elif HAVE_SSE
+    return disable_denormals();
+
+#else
+
+#if HAVE_SSE
     if((CPUCapFlags&CPU_CAP_SSE))
-        disable_denormals(&state);
+        return disable_denormals();
 #endif
-    return state;
+    return 0u;
+#endif
 }
 
 void FPUCtl::Reset(unsigned int state [[maybe_unused]]) noexcept

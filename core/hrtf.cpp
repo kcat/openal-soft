@@ -1380,31 +1380,29 @@ catch(std::exception& e) {
 
 void HrtfStore::inc_ref() noexcept
 {
-    auto ref = mRef.fetch_add(1, std::memory_order_acq_rel)+1;
+    const auto ref = mRef.fetch_add(1, std::memory_order_acq_rel)+1;
     TRACE("HrtfStore {} increasing refcount to {}", decltype(std::declval<void*>()){this}, ref);
 }
 
 void HrtfStore::dec_ref() noexcept
 {
-    auto ref = mRef.fetch_sub(1, std::memory_order_acq_rel)-1;
+    const auto ref = mRef.fetch_sub(1, std::memory_order_acq_rel)-1;
     TRACE("HrtfStore {} decreasing refcount to {}", decltype(std::declval<void*>()){this}, ref);
     if(ref == 0)
     {
-        std::lock_guard<std::mutex> loadlock{LoadedHrtfLock};
+        const auto loadlock = std::lock_guard{LoadedHrtfLock};
 
         /* Go through and remove all unused HRTFs. */
-        auto remove_unused = [](LoadedHrtf &hrtf) -> bool
+        auto iter = std::ranges::remove_if(LoadedHrtfs, [](LoadedHrtf &hrtf) -> bool
         {
-            HrtfStore *entry{hrtf.mEntry.get()};
-            if(entry && entry->mRef.load() == 0)
+            if(auto *entry = hrtf.mEntry.get(); entry && entry->mRef.load() == 0)
             {
                 TRACE("Unloading unused HRTF {}", hrtf.mFilename);
                 hrtf.mEntry = nullptr;
                 return true;
             }
             return false;
-        };
-        auto iter = std::remove_if(LoadedHrtfs.begin(), LoadedHrtfs.end(), remove_unused);
-        LoadedHrtfs.erase(iter, LoadedHrtfs.end());
+        });
+        LoadedHrtfs.erase(iter.begin(), iter.end());
     }
 }

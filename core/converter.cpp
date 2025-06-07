@@ -227,7 +227,7 @@ uint SampleConverter::availableOut(uint srcframes) const
         return 0;
     }
 
-    uint64_t DataSize64{prepcount};
+    auto DataSize64 = uint64_t{prepcount};
     DataSize64 += srcframes;
     DataSize64 -= MaxResamplerPadding;
     DataSize64 <<= MixerFracBits;
@@ -240,26 +240,26 @@ uint SampleConverter::availableOut(uint srcframes) const
 
 uint SampleConverter::convert(const void **src, uint *srcframes, void *dst, uint dstframes)
 {
-    const size_t SrcFrameSize{mChan.size() * mSrcTypeSize};
-    const size_t DstFrameSize{mChan.size() * mDstTypeSize};
-    const uint increment{mIncrement};
-    uint NumSrcSamples{*srcframes};
+    const auto SrcFrameSize{mChan.size() * mSrcTypeSize};
+    const auto DstFrameSize{mChan.size() * mDstTypeSize};
+    const auto increment = mIncrement;
+    auto NumSrcSamples = *srcframes;
     auto SamplesIn = std::span{static_cast<const std::byte*>(*src), NumSrcSamples*SrcFrameSize};
     auto SamplesOut = std::span{static_cast<std::byte*>(dst), dstframes*DstFrameSize};
 
-    FPUCtl mixer_mode{};
-    uint pos{0};
+    const auto mixer_mode = FPUCtl{};
+    auto pos = 0u;
     while(pos < dstframes && NumSrcSamples > 0)
     {
-        const uint prepcount{mSrcPrepCount};
-        const uint readable{std::min(NumSrcSamples, uint{BufferLineSize} - prepcount)};
+        const auto prepcount = mSrcPrepCount;
+        const auto readable = std::min(NumSrcSamples, uint{BufferLineSize} - prepcount);
 
         if(prepcount < MaxResamplerPadding && MaxResamplerPadding-prepcount >= readable)
         {
             /* Not enough input samples to generate an output sample. Store
              * what we're given for later.
              */
-            for(size_t chan{0u};chan < mChan.size();chan++)
+            for(const auto chan : std::views::iota(0_uz, mChan.size()))
                 LoadSamples(std::span{mChan[chan].PrevSamples}.subspan(prepcount, readable),
                     SamplesIn.data(), chan, mChan.size(), mSrcType);
 
@@ -270,8 +270,8 @@ uint SampleConverter::convert(const void **src, uint *srcframes, void *dst, uint
 
         const auto SrcData = std::span<float>{mSrcSamples};
         const auto DstData = std::span<float>{mDstSamples};
-        uint DataPosFrac{mFracOffset};
-        uint64_t DataSize64{prepcount};
+        const auto DataPosFrac = mFracOffset;
+        auto DataSize64 = uint64_t{prepcount};
         DataSize64 += readable;
         DataSize64 -= MaxResamplerPadding;
         DataSize64 <<= MixerFracBits;
@@ -282,13 +282,13 @@ uint SampleConverter::convert(const void **src, uint *srcframes, void *dst, uint
             uint64_t{BufferLineSize}));
         DstSize = std::min(DstSize, dstframes-pos);
 
-        const uint DataPosEnd{DstSize*increment + DataPosFrac};
-        const uint SrcDataEnd{DataPosEnd>>MixerFracBits};
+        const auto DataPosEnd = DstSize*increment + DataPosFrac;
+        const auto SrcDataEnd = DataPosEnd>>MixerFracBits;
 
         assert(prepcount+readable >= SrcDataEnd);
-        const uint nextprep{std::min(prepcount+readable-SrcDataEnd, MaxResamplerPadding)};
+        const auto nextprep = std::min(prepcount+readable-SrcDataEnd, MaxResamplerPadding);
 
-        for(size_t chan{0u};chan < mChan.size();chan++)
+        for(const auto chan : std::views::iota(0_uz, mChan.size()))
         {
             /* Load the previous samples into the source data first, then the
              * new samples from the input buffer.
@@ -335,22 +335,22 @@ uint SampleConverter::convertPlanar(const void **src, uint *srcframes, void *con
 {
     const auto srcs = std::span{src, mChan.size()};
     const auto dsts = std::span{dst, mChan.size()};
-    const uint increment{mIncrement};
-    uint NumSrcSamples{*srcframes};
+    const auto increment = mIncrement;
+    auto NumSrcSamples = *srcframes;
 
-    FPUCtl mixer_mode{};
-    uint pos{0};
+    const auto mixer_mode = FPUCtl{};
+    auto pos = 0u;
     while(pos < dstframes && NumSrcSamples > 0)
     {
-        const uint prepcount{mSrcPrepCount};
-        const uint readable{std::min(NumSrcSamples, uint{BufferLineSize} - prepcount)};
+        const auto prepcount = mSrcPrepCount;
+        const auto readable = std::min(NumSrcSamples, uint{BufferLineSize} - prepcount);
 
         if(prepcount < MaxResamplerPadding && MaxResamplerPadding-prepcount >= readable)
         {
             /* Not enough input samples to generate an output sample. Store
              * what we're given for later.
              */
-            for(size_t chan{0u};chan < mChan.size();chan++)
+            for(const auto chan : std::views::iota(0_uz, mChan.size()))
             {
                 auto samples = std::span{static_cast<const std::byte*>(srcs[chan]),
                     NumSrcSamples*size_t{mSrcTypeSize}};
@@ -366,8 +366,8 @@ uint SampleConverter::convertPlanar(const void **src, uint *srcframes, void *con
 
         const auto SrcData = std::span{mSrcSamples};
         const auto DstData = std::span{mDstSamples};
-        uint DataPosFrac{mFracOffset};
-        uint64_t DataSize64{prepcount};
+        const auto DataPosFrac = mFracOffset;
+        auto DataSize64 = uint64_t{prepcount};
         DataSize64 += readable;
         DataSize64 -= MaxResamplerPadding;
         DataSize64 <<= MixerFracBits;
@@ -378,13 +378,13 @@ uint SampleConverter::convertPlanar(const void **src, uint *srcframes, void *con
             uint64_t{BufferLineSize}));
         DstSize = std::min(DstSize, dstframes-pos);
 
-        const uint DataPosEnd{DstSize*increment + DataPosFrac};
-        const uint SrcDataEnd{DataPosEnd>>MixerFracBits};
+        const auto DataPosEnd = DstSize*increment + DataPosFrac;
+        const auto SrcDataEnd = DataPosEnd>>MixerFracBits;
 
         assert(prepcount+readable >= SrcDataEnd);
-        const uint nextprep{std::min(prepcount+readable-SrcDataEnd, MaxResamplerPadding)};
+        const auto nextprep = std::min(prepcount+readable-SrcDataEnd, MaxResamplerPadding);
 
-        for(size_t chan{0u};chan < mChan.size();chan++)
+        for(const auto chan : std::views::iota(0_uz, mChan.size()))
         {
             /* Load the previous samples into the source data first, then the
              * new samples from the input buffer.

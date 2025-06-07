@@ -379,7 +379,7 @@ void Mix_<SSETag>(const std::span<const float> InSamples,
 
     auto curgains = CurrentGains.begin();
     auto targetgains = TargetGains.begin();
-    for(FloatBufferSpan output : OutBuffer)
+    for(const FloatBufferSpan output : OutBuffer)
         MixLine(InSamples, output.subspan(OutPos), *curgains++, *targetgains++, delta, fade_len,
             realign_len, Counter);
 }

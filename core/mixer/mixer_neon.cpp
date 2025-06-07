@@ -478,9 +478,9 @@ void Mix_<NEONTag>(const std::span<const float> InSamples,
 
     auto curgains = CurrentGains.begin();
     auto targetgains = TargetGains.begin();
-    for(FloatBufferLine &output : OutBuffer)
-        MixLine(InSamples, std::span{output}.subspan(OutPos), *curgains++, *targetgains++, delta,
-            fade_len, realign_len, Counter);
+    for(const FloatBufferSpan output : OutBuffer)
+        MixLine(InSamples, output.subspan(OutPos), *curgains++, *targetgains++, delta, fade_len,
+            realign_len, Counter);
 }
 
 template<>

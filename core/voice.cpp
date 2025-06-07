@@ -608,28 +608,27 @@ void LoadBufferQueue(VoiceBufferItem *buffer, VoiceBufferItem *bufferLoopItem,
 void DoHrtfMix(const std::span<const float> samples, DirectParams &parms, const float TargetGain,
     const size_t Counter, size_t OutPos, const bool IsPlaying, DeviceBase *Device)
 {
-    const uint IrSize{Device->mIrSize};
+    const auto IrSize = Device->mIrSize;
     const auto HrtfSamples = std::span{Device->ExtraSampleData};
     const auto AccumSamples = std::span{Device->HrtfAccumData};
 
     /* Copy the HRTF history and new input samples into a temp buffer. */
-    auto src_iter = std::copy(parms.Hrtf.History.begin(), parms.Hrtf.History.end(),
-        HrtfSamples.begin());
-    std::copy_n(samples.begin(), samples.size(), src_iter);
+    auto src_iter = std::ranges::copy(parms.Hrtf.History, HrtfSamples.begin()).out;
+    std::ranges::copy(samples, src_iter);
     /* Copy the last used samples back into the history buffer for later. */
     if(IsPlaying) [[likely]]
     {
         const auto endsamples = HrtfSamples.subspan(samples.size(), parms.Hrtf.History.size());
-        std::copy_n(endsamples.begin(), endsamples.size(), parms.Hrtf.History.begin());
+        std::ranges::copy(endsamples, parms.Hrtf.History.begin());
     }
 
     /* If fading and this is the first mixing pass, fade between the IRs. */
-    size_t fademix{0};
+    auto fademix = 0_uz;
     if(Counter && OutPos == 0)
     {
         fademix = std::min(samples.size(), Counter);
 
-        float gain{TargetGain};
+        auto gain = TargetGain;
 
         /* The new coefficients need to fade in completely since they're
          * replacing the old ones. To keep the gain fading consistent,
@@ -638,11 +637,11 @@ void DoHrtfMix(const std::span<const float> samples, DirectParams &parms, const 
          */
         if(Counter > fademix)
         {
-            const float a{static_cast<float>(fademix) / static_cast<float>(Counter)};
+            const auto a = static_cast<float>(fademix) / static_cast<float>(Counter);
             gain = lerpf(parms.Hrtf.Old.Gain, TargetGain, a);
         }
 
-        MixHrtfFilter hrtfparams{
+        const auto hrtfparams = MixHrtfFilter{
             parms.Hrtf.Target.Coeffs,
             parms.Hrtf.Target.Delay,
             0.0f, gain / static_cast<float>(fademix)};
@@ -657,19 +656,19 @@ void DoHrtfMix(const std::span<const float> samples, DirectParams &parms, const 
 
     if(fademix < samples.size())
     {
-        const size_t todo{samples.size() - fademix};
-        float gain{TargetGain};
+        const auto todo = samples.size() - fademix;
+        auto gain{TargetGain};
 
         /* Interpolate the target gain if the gain fading lasts longer than
          * this mix.
          */
         if(Counter > samples.size())
         {
-            const float a{static_cast<float>(todo) / static_cast<float>(Counter-fademix)};
+            const auto a = static_cast<float>(todo) / static_cast<float>(Counter-fademix);
             gain = lerpf(parms.Hrtf.Old.Gain, TargetGain, a);
         }
 
-        MixHrtfFilter hrtfparams{
+        const auto hrtfparams = MixHrtfFilter{
             parms.Hrtf.Target.Coeffs,
             parms.Hrtf.Target.Delay,
             parms.Hrtf.Old.Gain,

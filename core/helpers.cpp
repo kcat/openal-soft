@@ -31,7 +31,7 @@ namespace {
 
 using namespace std::string_view_literals;
 
-std::mutex gSearchLock;
+auto gSearchLock = std::mutex{};
 
 void DirectorySearch(const fs::path &path, const std::string_view ext,
     std::vector<std::string> *const results)
@@ -74,14 +74,14 @@ void DirectorySearch(const fs::path &path, const std::string_view ext,
 #include <cctype>
 #include <shlobj.h>
 
-const PathNamePair &GetProcBinary()
+auto GetProcBinary() -> const PathNamePair&
 {
     static const auto procbin = std::invoke([]() -> PathNamePair
     {
 #if !ALSOFT_UWP
-        DWORD pathlen{256};
+        auto pathlen = DWORD{256};
         auto fullpath = std::wstring(pathlen, L'\0');
-        DWORD len{GetModuleFileNameW(nullptr, fullpath.data(), pathlen)};
+        auto len = GetModuleFileNameW(nullptr, fullpath.data(), pathlen);
         while(len == fullpath.size())
         {
             pathlen <<= 1;
@@ -108,17 +108,17 @@ const PathNamePair &GetProcBinary()
                 static_cast<void*>(__wargv));
             return PathNamePair{};
         }
-        const WCHAR *exePath{__wargv[0]};
+        const auto *exePath = __wargv[0];
         if(!exePath)
         {
             ERR("Failed to get process name: __wargv[0] == nullptr");
             return PathNamePair{};
         }
-        std::wstring fullpath{exePath};
+        auto fullpath = std::wstring{exePath};
 #endif
-        std::replace(fullpath.begin(), fullpath.end(), L'/', L'\\');
+        std::ranges::replace(fullpath, L'/', L'\\');
 
-        PathNamePair res{};
+        auto res = PathNamePair{};
         if(auto seppos = fullpath.rfind(L'\\'); seppos < fullpath.size())
         {
             res.path = wstr_to_utf8(std::wstring_view{fullpath}.substr(0, seppos));
@@ -145,7 +145,7 @@ struct CoTaskMemDeleter {
 
 auto SearchDataFiles(const std::string_view ext) -> std::vector<std::string>
 {
-    auto srchlock = std::lock_guard{gSearchLock};
+    const auto srchlock = std::lock_guard{gSearchLock};
 
     /* Search the app-local directory. */
     auto results = std::vector<std::string>{};
@@ -160,11 +160,11 @@ auto SearchDataFiles(const std::string_view ext) -> std::vector<std::string>
 auto SearchDataFiles(const std::string_view ext, const std::string_view subdir)
     -> std::vector<std::string>
 {
-    std::lock_guard<std::mutex> srchlock{gSearchLock};
+    const auto srchlock = std::lock_guard{gSearchLock};
 
     /* If the path is absolute, use it directly. */
-    std::vector<std::string> results;
-    auto path = fs::path(al::char_as_u8(subdir));
+    auto results = std::vector<std::string>{};
+    const auto path = fs::path(al::char_as_u8(subdir));
     if(path.is_absolute())
     {
         DirectorySearch(path, ext, &results);
@@ -175,7 +175,7 @@ auto SearchDataFiles(const std::string_view ext, const std::string_view subdir)
     /* Search the local and global data dirs. */
     for(const auto &folderid : std::array{FOLDERID_RoamingAppData, FOLDERID_ProgramData})
     {
-        std::unique_ptr<WCHAR,CoTaskMemDeleter> buffer;
+        auto buffer = std::unique_ptr<WCHAR,CoTaskMemDeleter>{};
         const HRESULT hr{SHGetKnownFolderPath(folderid, KF_FLAG_DONT_UNEXPAND, nullptr,
             al::out_ptr(buffer))};
         if(FAILED(hr) || !buffer || !*buffer)
@@ -227,14 +227,14 @@ void SetRTPriority()
 #endif
 #endif
 
-const PathNamePair &GetProcBinary()
+auto GetProcBinary() -> const PathNamePair&
 {
     static const auto procbin = std::invoke([]() -> PathNamePair
     {
-        std::string pathname;
+        auto pathname = std::string{};
 #ifdef __FreeBSD__
-        size_t pathlen{};
-        std::array<int,4> mib{{CTL_KERN, KERN_PROC, KERN_PROC_PATHNAME, -1}};
+        auto pathlen = size_t{};
+        auto mib = std::array<int,4>{{CTL_KERN, KERN_PROC, KERN_PROC_PATHNAME, -1}};
         if(sysctl(mib.data(), mib.size(), nullptr, &pathlen, nullptr, 0) == -1)
             WARN("Failed to sysctl kern.proc.pathname: {}",
                 std::generic_category().message(errno));
@@ -248,8 +248,8 @@ const PathNamePair &GetProcBinary()
 #ifdef HAVE_PROC_PIDPATH
         if(pathname.empty())
         {
-            std::array<char,PROC_PIDPATHINFO_MAXSIZE> procpath{};
-            const pid_t pid{getpid()};
+            auto procpath = std::array<char,PROC_PIDPATHINFO_MAXSIZE>{};
+            const auto pid = getpid();
             if(proc_pidpath(pid, procpath.data(), procpath.size()) < 1)
                 ERR("proc_pidpath({}, ...) failed: {}", pid,
                     std::generic_category().message(errno));
@@ -260,7 +260,7 @@ const PathNamePair &GetProcBinary()
 #ifdef __HAIKU__
         if(pathname.empty())
         {
-            std::array<char,PATH_MAX> procpath{};
+            auto procpath = std::array<char,PATH_MAX>{};
             if(find_path(B_APP_IMAGE_SYMBOL, B_FIND_PATH_IMAGE_PATH, NULL, procpath.data(), procpath.size()) == B_OK)
                 pathname = procpath.data();
         }
@@ -268,7 +268,7 @@ const PathNamePair &GetProcBinary()
 #ifndef __SWITCH__
         if(pathname.empty())
         {
-            const std::array SelfLinkNames{
+            const auto SelfLinkNames = std::array{
                 "/proc/self/exe"sv,
                 "/proc/self/file"sv,
                 "/proc/curproc/exe"sv,
@@ -293,8 +293,8 @@ const PathNamePair &GetProcBinary()
         }
 #endif
 
-        PathNamePair res{};
-        if(auto seppos = pathname.rfind('/'); seppos < pathname.size())
+        auto res = PathNamePair{};
+        if(const auto seppos = pathname.rfind('/'); seppos < pathname.size())
         {
             res.path = std::string_view{pathname}.substr(0, seppos);
             res.fname = std::string_view{pathname}.substr(seppos+1);
@@ -310,7 +310,7 @@ const PathNamePair &GetProcBinary()
 
 auto SearchDataFiles(const std::string_view ext) -> std::vector<std::string>
 {
-    auto srchlock = std::lock_guard{gSearchLock};
+    const auto srchlock = std::lock_guard{gSearchLock};
 
     /* Search the app-local directory. */
     auto results = std::vector<std::string>{};
@@ -325,9 +325,9 @@ auto SearchDataFiles(const std::string_view ext) -> std::vector<std::string>
 auto SearchDataFiles(const std::string_view ext, const std::string_view subdir)
     -> std::vector<std::string>
 {
-    std::lock_guard<std::mutex> srchlock{gSearchLock};
+    const auto srchlock = std::lock_guard{gSearchLock};
 
-    std::vector<std::string> results;
+    auto results = std::vector<std::string>{};
     auto path = fs::path(al::char_as_u8(subdir));
     if(path.is_absolute())
     {
@@ -342,14 +342,15 @@ auto SearchDataFiles(const std::string_view ext, const std::string_view subdir)
         DirectorySearch(fs::path{*homepath}/".local/share"/path, ext, &results);
 
     /* Search global data dirs */
-    std::string datadirs{al::getenv("XDG_DATA_DIRS").value_or("/usr/local/share/:/usr/share/")};
+    const auto datadirs = std::string{al::getenv("XDG_DATA_DIRS")
+        .value_or("/usr/local/share/:/usr/share/")};
 
-    size_t curpos{0u};
+    auto curpos = 0_uz;
     while(curpos < datadirs.size())
     {
-        size_t nextpos{datadirs.find(':', curpos)};
+        auto nextpos = datadirs.find(':', curpos);
 
-        std::string_view pathname{(nextpos != std::string::npos)
+        const auto pathname{(nextpos != std::string::npos)
             ? std::string_view{datadirs}.substr(curpos, nextpos++ - curpos)
             : std::string_view{datadirs}.substr(curpos)};
         curpos = nextpos;
@@ -371,17 +372,17 @@ namespace {
 
 bool SetRTPriorityPthread(int prio [[maybe_unused]])
 {
-    int err{ENOTSUP};
+    auto err = ENOTSUP;
 #if defined(HAVE_PTHREAD_SETSCHEDPARAM) && !defined(__OpenBSD__)
     /* Get the min and max priority for SCHED_RR. Limit the max priority to
      * half, for now, to ensure the thread can't take the highest priority and
      * go rogue.
      */
-    int rtmin{sched_get_priority_min(SCHED_RR)};
-    int rtmax{sched_get_priority_max(SCHED_RR)};
+    const auto rtmin = sched_get_priority_min(SCHED_RR);
+    auto rtmax = sched_get_priority_max(SCHED_RR);
     rtmax = (rtmax-rtmin)/2 + rtmin;
 
-    struct sched_param param{};
+    auto param = sched_param{};
     param.sched_priority = std::clamp(prio, rtmin, rtmax);
 #ifdef SCHED_RESET_ON_FORK
     err = pthread_setschedparam(pthread_self(), SCHED_RR|SCHED_RESET_ON_FORK, &param);
@@ -402,8 +403,8 @@ bool SetRTPriorityRTKit(int prio [[maybe_unused]])
         WARN("D-Bus not available");
         return false;
     }
-    dbus::Error error;
-    dbus::ConnectionPtr conn{dbus_bus_get(DBUS_BUS_SYSTEM, &error.get())};
+    auto error = dbus::Error{};
+    const auto conn = dbus::ConnectionPtr{dbus_bus_get(DBUS_BUS_SYSTEM, &error.get())};
     if(!conn)
     {
         WARN("D-Bus connection failed with {}: {}", error->name, error->message);
@@ -413,25 +414,25 @@ bool SetRTPriorityRTKit(int prio [[maybe_unused]])
     /* Don't stupidly exit if the connection dies while doing this. */
     dbus_connection_set_exit_on_disconnect(conn.get(), false);
 
-    int nicemin{};
-    int err{rtkit_get_min_nice_level(conn.get(), &nicemin)};
+    auto nicemin = int{};
+    auto err = rtkit_get_min_nice_level(conn.get(), &nicemin);
     if(err == -ENOENT)
     {
         err = std::abs(err);
         ERR("Could not query RTKit: {} ({})", std::generic_category().message(err), err);
         return false;
     }
-    int rtmax{rtkit_get_max_realtime_priority(conn.get())};
+    auto rtmax = rtkit_get_max_realtime_priority(conn.get());
     TRACE("Maximum real-time priority: {}, minimum niceness: {}", rtmax, nicemin);
 
-    auto limit_rttime = [](DBusConnection *c) -> int
+    static constexpr auto limit_rttime = [](DBusConnection *c) -> int
     {
         using ulonglong = unsigned long long;
-        long long maxrttime{rtkit_get_rttime_usec_max(c)};
+        const auto maxrttime = rtkit_get_rttime_usec_max(c);
         if(maxrttime <= 0) return static_cast<int>(std::abs(maxrttime));
-        const ulonglong umaxtime{static_cast<ulonglong>(maxrttime)};
+        const auto umaxtime = static_cast<ulonglong>(maxrttime);
 
-        struct rlimit rlim{};
+        auto rlim = rlimit{};
         if(getrlimit(RLIMIT_RTTIME, &rlim) != 0)
             return errno;
 

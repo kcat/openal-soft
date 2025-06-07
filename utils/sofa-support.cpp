@@ -234,8 +234,8 @@ auto GetCompatibleLayout(const std::span<const float> xyzs) -> std::vector<SofaF
                 return fds;
             }
 
-            double eif{(90.0+elevs[ei]) / step};
-            const double ev_start{std::round(eif)};
+            const auto eif = (90.0+elevs[ei]) / step;
+            const auto ev_start = std::round(eif);
 
             if(std::abs(eif - ev_start) < (0.1/step))
             {

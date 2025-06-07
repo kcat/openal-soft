@@ -125,6 +125,7 @@
                     google-explicit-constructor,
                     hicpp-exception-baseclass,
                     misc-confusable-identifiers,
+                    misc-const-correctness,
                     misc-coroutine-hostile-raii,
                     misc-misleading-*,
                     misc-non-copyable-objects,

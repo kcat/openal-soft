@@ -211,8 +211,8 @@ void TpdfDither(const std::span<double> out, const std::span<const double> in, c
 
     for(size_t i{0};i < in.size();++i)
     {
-        uint prn0{dither_rng(seed)};
-        uint prn1{dither_rng(seed)};
+        const auto prn0 = dither_rng(seed);
+        const auto prn1 = dither_rng(seed);
         out[i*step + channel] = std::round(in[i]*scale + (prn0*PRNG_SCALE - prn1*PRNG_SCALE));
     }
 }
@@ -533,7 +533,7 @@ void CalculateDiffuseFieldAverage(const HrirDataT *hData, const uint channels, c
                 {
                     HrirAzT *azd = &hData->mFds[fi].mEvs[ei].mAzs[ai];
                     // Get the weight for this HRIR's contribution.
-                    double weight = weights[(fi * MAX_EV_COUNT) + ei];
+                    const auto weight = weights[(fi * MAX_EV_COUNT) + ei];
 
                     // Add this HRIR's weighted power average to the total.
                     for(size_t i{0};i < m;++i)
@@ -692,7 +692,7 @@ void SynthesizeOnsets(HrirDataT *hData)
                 double af0;
                 double af1;
 
-                double az{field.mEvs[ei].mAzs[ai].mAzimuth};
+                const auto az = field.mEvs[ei].mAzs[ai].mAzimuth;
                 CalcAzIndices(field.mEvs[upperElevReal], az, &a0, &a1, &af0);
                 CalcAzIndices(field.mEvs[lowerElevFake], az, &a2, &a3, &af1);
                 std::array<double,4> blend{{
@@ -848,7 +848,7 @@ struct HrirReconstructor {
     {
         auto h = std::vector<complex_d>(mFftSize);
         auto mags = std::vector<double>(mFftSize);
-        size_t m{(mFftSize/2) + 1};
+        const auto m = (mFftSize/2_uz) + 1_uz;
 
         while(true)
         {
@@ -1009,8 +1009,8 @@ double CalcLTD(const double ev, const double az, const double rad, const double 
 // HRIR. This is done per-field since distance delay is ignored.
 void CalculateHrtds(const HeadModelT model, const double radius, HrirDataT *hData)
 {
-    uint channels = (hData->mChannelType == CT_STEREO) ? 2 : 1;
-    double customRatio{radius / hData->mRadius};
+    const auto channels = (hData->mChannelType == CT_STEREO) ? 2u : 1u;
+    const auto customRatio = radius / hData->mRadius;
     uint ti;
 
     if(model == HM_Sphere)
@@ -1118,7 +1118,7 @@ bool PrepareHrirData(const std::span<const double> distances,
         evTotal += evCounts[fi];
         for(uint ei{0};ei < evCounts[fi];++ei)
         {
-            uint azCount = azCounts[fi][ei];
+            const auto azCount = azCounts[fi][ei];
 
             hData->mFds[fi].mEvs[ei].mElevation = -std::numbers::pi / 2.0 + std::numbers::pi * ei
                 / (evCounts[fi] - 1);
@@ -1196,8 +1196,8 @@ bool ProcessDefinition(std::string_view inName, const uint outRate, const Channe
 
     if(equalize)
     {
-        uint c{(hData.mChannelType == CT_STEREO) ? 2u : 1u};
-        uint m{hData.mFftSize/2u + 1u};
+        const auto c = (hData.mChannelType == CT_STEREO) ? 2u : 1u;
+        const auto m = hData.mFftSize/2u + 1u;
         auto dfa = std::vector<double>(size_t{c} * m);
 
         if(hData.mFds.size() > 1)

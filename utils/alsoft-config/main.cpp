@@ -3,8 +3,8 @@
 
 int main(int argc, char *argv[])
 {
-    QApplication a(argc, argv);
-    MainWindow w;
+    const auto a = QApplication(argc, argv);
+    auto w = MainWindow{};
     w.show();
 
     return a.exec();

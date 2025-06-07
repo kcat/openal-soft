@@ -260,7 +260,7 @@ auto TrSkipWhitespace(TokenReaderT *tr) -> bool
 {
     while(TrLoad(tr))
     {
-        char ch{tr->mRing[tr->mOut&TRRingMask]};
+        const auto ch = tr->mRing[tr->mOut&TRRingMask];
         if(isspace(ch))
         {
             tr->mOut++;
@@ -294,7 +294,7 @@ auto TrIsIdent(TokenReaderT *tr) -> bool
 {
     if(!TrSkipWhitespace(tr))
         return false;
-    char ch{tr->mRing[tr->mOut&TRRingMask]};
+    const auto ch = tr->mRing[tr->mOut&TRRingMask];
     return ch == '_' || isalpha(ch);
 }
 

@@ -442,7 +442,7 @@ struct AudioState {
     auto getClockNoLock() -> nanoseconds;
     auto getClock() -> nanoseconds
     {
-        std::lock_guard<std::mutex> lock{mSrcMutex};
+        const auto lock = std::lock_guard{mSrcMutex};
         return getClockNoLock();
     }
 

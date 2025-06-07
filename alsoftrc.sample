@@ -83,8 +83,7 @@
 ## period_size:
 #  Sets the update period size, in sample frames. This is the number of frames
 #  needed for each mixing update. Acceptable values range between 64 and 8192.
-#  If left unspecified it will default to 1/50th of the frequency (20ms, or 882
-#  for 44100, 960 for 48000, etc).
+#  If left unspecified it will default to 512 sample frames (~10.7ms).
 #period_size =
 
 ## periods:

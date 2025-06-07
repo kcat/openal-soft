@@ -42,12 +42,12 @@ struct HrtfStore;
 using uint = unsigned int;
 
 
-inline constexpr std::size_t MinOutputRate{8000};
-inline constexpr std::size_t MaxOutputRate{192000};
-inline constexpr std::size_t DefaultOutputRate{48000};
+inline constexpr auto MinOutputRate = 8000_uz;
+inline constexpr auto MaxOutputRate = 192000_uz;
+inline constexpr auto DefaultOutputRate = 48000_uz;
 
-inline constexpr std::size_t DefaultUpdateSize{960}; /* 20ms */
-inline constexpr std::size_t DefaultNumUpdates{3};
+inline constexpr auto DefaultUpdateSize = 512_uz; /* ~10.7ms */
+inline constexpr auto DefaultNumUpdates = 3_uz;
 
 
 enum class DeviceType : std::uint8_t {

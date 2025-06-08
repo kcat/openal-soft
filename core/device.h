@@ -80,7 +80,10 @@ struct InputRemixMap {
 };
 
 
-struct DistanceComp {
+class DistanceComp {
+    explicit DistanceComp(std::size_t count) : mSamples{count} { }
+
+public:
     /* Maximum delay in samples for speaker distance compensation. */
     static constexpr uint MaxDelay{1024};
 
@@ -92,9 +95,7 @@ struct DistanceComp {
     std::array<ChanData,MaxOutputChannels> mChannels;
     al::FlexArray<float,16> mSamples;
 
-    explicit DistanceComp(std::size_t count) : mSamples{count} { }
-
-    static std::unique_ptr<DistanceComp> Create(std::size_t numsamples)
+    static auto Create(std::size_t numsamples) -> std::unique_ptr<DistanceComp>
     { return std::unique_ptr<DistanceComp>{new(FamCount(numsamples)) DistanceComp{numsamples}}; }
 
     DEF_FAM_NEWDEL(DistanceComp, mSamples)

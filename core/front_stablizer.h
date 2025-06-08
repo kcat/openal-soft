@@ -10,9 +10,10 @@
 #include "flexarray.h"
 
 
-struct FrontStablizer {
+class FrontStablizer {
     explicit FrontStablizer(size_t numchans) : ChannelFilters{numchans} { }
 
+public:
     alignas(16) std::array<float,BufferLineSize> MidDirect{};
     alignas(16) std::array<float,BufferLineSize> Side{};
     alignas(16) std::array<float,BufferLineSize> Temp{};
@@ -23,7 +24,7 @@ struct FrontStablizer {
 
     al::FlexArray<BandSplitter,16> ChannelFilters;
 
-    static std::unique_ptr<FrontStablizer> Create(size_t numchans)
+    static auto Create(size_t numchans) -> std::unique_ptr<FrontStablizer>
     { return std::unique_ptr<FrontStablizer>{new(FamCount(numchans)) FrontStablizer{numchans}}; }
 
     DEF_FAM_NEWDEL(FrontStablizer, ChannelFilters)

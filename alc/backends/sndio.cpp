@@ -315,13 +315,13 @@ int SndioCapture::recordProc()
         && mDevice->Connected.load(std::memory_order_acquire))
     {
         /* Wait until there's some samples to read. */
-        const int nfds{sio_pollfd(mSndHandle, fds.data(), POLLIN)};
+        const auto nfds = sio_pollfd(mSndHandle, fds.data(), POLLIN);
         if(nfds <= 0)
         {
             mDevice->handleDisconnect("Failed to get polling fds: {}", nfds);
             break;
         }
-        int pollres{::poll(fds.data(), fds.size(), 2000)};
+        const auto pollres = ::poll(fds.data(), fds.size(), 2000);
         if(pollres < 0)
         {
             if(errno == EINTR) continue;
@@ -331,7 +331,7 @@ int SndioCapture::recordProc()
         if(pollres == 0)
             continue;
 
-        const int revents{sio_revents(mSndHandle, fds.data())};
+        const auto revents = sio_revents(mSndHandle, fds.data());
         if((revents&POLLHUP))
         {
             mDevice->handleDisconnect("Got POLLHUP from poll events");
@@ -343,7 +343,7 @@ int SndioCapture::recordProc()
         auto buffer = mRing->getWriteVector()[0];
         while(!buffer.empty())
         {
-            auto got = sio_read(mSndHandle, buffer.data(), buffer.size());
+            const auto got = sio_read(mSndHandle, buffer.data(), buffer.size());
             if(got == 0)
                 break;
             if(got > buffer.size())
@@ -361,7 +361,7 @@ int SndioCapture::recordProc()
         if(buffer.empty())
         {
             /* Got samples to read, but no place to store it. Drop it. */
-            static std::array<char,4096> junk;
+            static auto junk = std::array<char,4096>{};
             sio_read(mSndHandle, junk.data(), junk.size() - (junk.size()%frameSize));
         }
     }

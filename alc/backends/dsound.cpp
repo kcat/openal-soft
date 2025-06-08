@@ -282,17 +282,17 @@ FORCE_ALIGN int DSoundPlayback::mixerProc()
 
 void DSoundPlayback::open(std::string_view name)
 {
-    HRESULT hr;
+    auto hr = HRESULT{};
     if(PlaybackDevices.empty())
     {
         /* Initialize COM to prevent name truncation */
-        ComWrapper com{};
+        const auto com = ComWrapper{};
         hr = DirectSoundEnumerateW(DSoundEnumDevices, &PlaybackDevices);
         if(FAILED(hr))
             ERR("Error enumerating DirectSound devices: {:#x}", as_unsigned(hr));
     }
 
-    const GUID *guid{nullptr};
+    auto *guid = LPCGUID{nullptr};
     if(name.empty() && !PlaybackDevices.empty())
     {
         name = PlaybackDevices[0].name;
@@ -300,16 +300,14 @@ void DSoundPlayback::open(std::string_view name)
     }
     else
     {
-        auto iter = std::find_if(PlaybackDevices.cbegin(), PlaybackDevices.cend(),
-            [name](const DevMap &entry) -> bool { return entry.name == name; });
-        if(iter == PlaybackDevices.cend())
+        auto iter = std::ranges::find(PlaybackDevices, name, &DevMap::name);
+        if(iter == PlaybackDevices.end())
         {
-            GUID id{};
+            auto id = GUID{};
             hr = CLSIDFromString(utf8_to_wstr(name).c_str(), &id);
             if(SUCCEEDED(hr))
-                iter = std::find_if(PlaybackDevices.cbegin(), PlaybackDevices.cend(),
-                    [&id](const DevMap &entry) -> bool { return entry.guid == id; });
-            if(iter == PlaybackDevices.cend())
+                iter = std::ranges::find(PlaybackDevices, id, &DevMap::guid);
+            if(iter == PlaybackDevices.end())
                 throw al::backend_exception{al::backend_error::NoDevice,
                     "Device name \"{}\" not found", name};
         }
@@ -324,7 +322,7 @@ void DSoundPlayback::open(std::string_view name)
     }
 
     //DirectSound Init code
-    ComPtr<IDirectSound> ds;
+    auto ds = ComPtr<IDirectSound>{};
     if(SUCCEEDED(hr))
         hr = DirectSoundCreate(guid, al::out_ptr(ds), nullptr);
     if(SUCCEEDED(hr))
@@ -796,23 +794,24 @@ auto DSoundBackendFactory::enumerate(BackendType type) -> std::vector<std::strin
     { outnames.emplace_back(entry.name); };
 
     /* Initialize COM to prevent name truncation */
-    ComWrapper com{};
+    const auto com = ComWrapper{};
     switch(type)
     {
     case BackendType::Playback:
         PlaybackDevices.clear();
-        if(HRESULT hr{DirectSoundEnumerateW(DSoundEnumDevices, &PlaybackDevices)}; FAILED(hr))
+        if(const auto hr = DirectSoundEnumerateW(DSoundEnumDevices, &PlaybackDevices); FAILED(hr))
             ERR("Error enumerating DirectSound playback devices: {:#x}", as_unsigned(hr));
         outnames.reserve(PlaybackDevices.size());
-        std::for_each(PlaybackDevices.cbegin(), PlaybackDevices.cend(), add_device);
+        std::ranges::for_each(PlaybackDevices, add_device);
         break;
 
     case BackendType::Capture:
         CaptureDevices.clear();
-        if(HRESULT hr{DirectSoundCaptureEnumerateW(DSoundEnumDevices, &CaptureDevices)};FAILED(hr))
+        if(const auto hr = DirectSoundCaptureEnumerateW(DSoundEnumDevices, &CaptureDevices);
+            FAILED(hr))
             ERR("Error enumerating DirectSound capture devices: {:#x}", as_unsigned(hr));
         outnames.reserve(CaptureDevices.size());
-        std::for_each(CaptureDevices.cbegin(), CaptureDevices.cend(), add_device);
+        std::ranges::for_each(CaptureDevices, add_device);
         break;
     }
 

@@ -30,12 +30,13 @@
 #include <mmsystem.h>
 #include <mmreg.h>
 
+#include <algorithm>
 #include <array>
 #include <atomic>
+#include <ranges>
+#include <string>
 #include <thread>
 #include <vector>
-#include <string>
-#include <algorithm>
 
 #include "alnumeric.h"
 #include "althrd_setname.h"
@@ -63,13 +64,13 @@ void ProbePlaybackDevices()
 {
     PlaybackDevices.clear();
 
-    UINT numdevs{waveOutGetNumDevs()};
+    const auto numdevs = waveOutGetNumDevs();
     PlaybackDevices.reserve(numdevs);
-    for(UINT i{0};i < numdevs;++i)
+    for(const auto i : std::views::iota(0u, numdevs))
     {
-        std::string dname;
+        auto dname = std::string{};
 
-        WAVEOUTCAPSW WaveCaps{};
+        auto WaveCaps = WAVEOUTCAPSW{};
         if(waveOutGetDevCapsW(i, &WaveCaps, sizeof(WaveCaps)) == MMSYSERR_NOERROR)
         {
             const auto basename = wstr_to_utf8(std::data(WaveCaps.szPname));
@@ -90,13 +91,13 @@ void ProbeCaptureDevices()
 {
     CaptureDevices.clear();
 
-    UINT numdevs{waveInGetNumDevs()};
+    const auto numdevs = waveInGetNumDevs();
     CaptureDevices.reserve(numdevs);
-    for(UINT i{0};i < numdevs;++i)
+    for(const auto i : std::views::iota(0u, numdevs))
     {
-        std::string dname;
+        auto dname = std::string{};
 
-        WAVEINCAPSW WaveCaps{};
+        auto WaveCaps = WAVEINCAPSW{};
         if(waveInGetDevCapsW(i, &WaveCaps, sizeof(WaveCaps)) == MMSYSERR_NOERROR)
         {
             const auto basename = wstr_to_utf8(std::data(WaveCaps.szPname));

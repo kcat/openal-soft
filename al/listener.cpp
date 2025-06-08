@@ -25,6 +25,7 @@
 #include <algorithm>
 #include <cmath>
 #include <mutex>
+#include <ranges>
 #include <span>
 
 #include "AL/al.h"
@@ -73,8 +74,8 @@ inline void CommitAndUpdateProps(ALCcontext *context)
 AL_API DECL_FUNC2(void, alListenerf, ALenum,param, ALfloat,value)
 FORCE_ALIGN void AL_APIENTRY alListenerfDirect(ALCcontext *context, ALenum param, ALfloat value) noexcept
 try {
-    ALlistener &listener = context->mListener;
-    std::lock_guard<std::mutex> proplock{context->mPropLock};
+    const auto proplock = std::lock_guard{context->mPropLock};
+    auto &listener = context->mListener;
     switch(param)
     {
     case AL_GAIN:
@@ -105,8 +106,8 @@ AL_API DECL_FUNC4(void, alListener3f, ALenum,param, ALfloat,value1, ALfloat,valu
 FORCE_ALIGN void AL_APIENTRY alListener3fDirect(ALCcontext *context, ALenum param, ALfloat value1,
     ALfloat value2, ALfloat value3) noexcept
 try {
-    ALlistener &listener = context->mListener;
-    std::lock_guard<std::mutex> proplock{context->mPropLock};
+    auto &listener = context->mListener;
+    const auto proplock = std::lock_guard{context->mPropLock};
     switch(param)
     {
     case AL_POSITION:
@@ -157,8 +158,8 @@ try {
         return;
     }
 
-    ALlistener &listener = context->mListener;
-    std::lock_guard<std::mutex> proplock{context->mPropLock};
+    const auto proplock = std::lock_guard{context->mPropLock};
+    auto &listener = context->mListener;
     switch(param)
     {
     case AL_ORIENTATION:
@@ -166,8 +167,8 @@ try {
         if(!std::ranges::all_of(vals, [](float f){ return std::isfinite(f); }))
             context->throw_error(AL_INVALID_VALUE, "Listener orientation out of range");
         /* AT then UP */
-        std::copy_n(vals.begin(), 3, listener.OrientAt.begin());
-        std::copy_n(vals.begin()+3, 3, listener.OrientUp.begin());
+        std::ranges::copy(vals | std::views::take(3), listener.OrientAt.begin());
+        std::ranges::copy(vals | std::views::drop(3), listener.OrientUp.begin());
         CommitAndUpdateProps(context);
         return;
     }
@@ -184,7 +185,7 @@ catch(std::exception &e) {
 AL_API DECL_FUNC2(void, alListeneri, ALenum,param, ALint,value)
 FORCE_ALIGN void AL_APIENTRY alListeneriDirect(ALCcontext *context, ALenum param, ALint /*value*/) noexcept
 try {
-    std::lock_guard<std::mutex> proplock{context->mPropLock};
+    const auto proplock [[maybe_unused]] = std::lock_guard{context->mPropLock};
     context->throw_error(AL_INVALID_ENUM, "Invalid listener integer property {:#04x}",
         as_unsigned(param));
 }
@@ -207,7 +208,7 @@ try {
         return;
     }
 
-    std::lock_guard<std::mutex> proplock{context->mPropLock};
+    const auto proplock [[maybe_unused]] = std::lock_guard{context->mPropLock};
     context->throw_error(AL_INVALID_ENUM, "Invalid listener 3-integer property {:#04x}",
         as_unsigned(param));
 }
@@ -244,7 +245,7 @@ try {
         return;
     }
 
-    std::lock_guard<std::mutex> proplock{context->mPropLock};
+    const auto proplock [[maybe_unused]] = std::lock_guard{context->mPropLock};
     context->throw_error(AL_INVALID_ENUM, "Invalid listener integer-vector property {:#04x}",
         as_unsigned(param));
 }
@@ -262,8 +263,8 @@ try {
     if(!value)
         context->throw_error(AL_INVALID_VALUE, "NULL pointer");
 
-    ALlistener &listener = context->mListener;
-    std::lock_guard<std::mutex> proplock{context->mPropLock};
+    const auto proplock = std::lock_guard{context->mPropLock};
+    const auto &listener = context->mListener;
     switch(param)
     {
     case AL_GAIN: *value = listener.Gain; return;
@@ -285,8 +286,8 @@ try {
     if(!value1 || !value2 || !value3)
         context->throw_error(AL_INVALID_VALUE, "NULL pointer");
 
-    ALlistener &listener = context->mListener;
-    std::lock_guard<std::mutex> proplock{context->mPropLock};
+    const auto proplock = std::lock_guard{context->mPropLock};
+    const auto &listener = context->mListener;
     switch(param)
     {
     case AL_POSITION:
@@ -331,8 +332,8 @@ try {
         return;
     }
 
-    ALlistener &listener = context->mListener;
-    std::lock_guard<std::mutex> proplock{context->mPropLock};
+    const auto proplock = std::lock_guard{context->mPropLock};
+    const auto &listener = context->mListener;
     switch(param)
     {
     case AL_ORIENTATION:
@@ -356,7 +357,7 @@ AL_API DECL_FUNC2(void, alGetListeneri, ALenum,param, ALint*,value)
 FORCE_ALIGN void AL_APIENTRY alGetListeneriDirect(ALCcontext *context, ALenum param, ALint *value) noexcept
 try {
     if(!value) context->throw_error(AL_INVALID_VALUE, "NULL pointer");
-    std::lock_guard<std::mutex> proplock{context->mPropLock};
+    const auto proplock [[maybe_unused]] = std::lock_guard{context->mPropLock};
     context->throw_error(AL_INVALID_ENUM, "Invalid listener integer property {:#04x}",
         as_unsigned(param));
 }
@@ -373,8 +374,8 @@ try {
     if(!value1 || !value2 || !value3)
         context->throw_error(AL_INVALID_VALUE, "NULL pointer");
 
-    ALlistener &listener = context->mListener;
-    std::lock_guard<std::mutex> proplock{context->mPropLock};
+    const auto proplock = std::lock_guard{context->mPropLock};
+    const auto &listener = context->mListener;
     switch(param)
     {
     case AL_POSITION:
@@ -414,8 +415,8 @@ try {
         return;
     }
 
-    ALlistener &listener = context->mListener;
-    std::lock_guard<std::mutex> proplock{context->mPropLock};
+    const auto proplock = std::lock_guard{context->mPropLock};
+    const auto &listener = context->mListener;
 
     static constexpr auto f2i = [](const float val) noexcept { return static_cast<ALint>(val); };
     switch(param)

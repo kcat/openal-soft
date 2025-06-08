@@ -1803,8 +1803,8 @@ NOINLINE void SetProperty(ALsource *const Source, ALCcontext *const Context, con
             const auto filterid = static_cast<std::make_unsigned_t<T>>(values[0]);
             if(values[0])
             {
-                std::lock_guard<std::mutex> filterlock{device->FilterLock};
-                ALfilter *filter{LookupFilter(device, filterid)};
+                const auto filterlock = std::lock_guard{device->FilterLock};
+                const auto *filter = LookupFilter(device, filterid);
                 if(!filter)
                     Context->throw_error(AL_INVALID_VALUE, "Invalid filter ID {}", filterid);
                 Source->Direct.Gain = filter->Gain;
@@ -1940,7 +1940,7 @@ NOINLINE void SetProperty(ALsource *const Source, ALCcontext *const Context, con
             const auto sendidx = static_cast<std::make_unsigned_t<T>>(values[1]);
             const auto filterid = static_cast<std::make_unsigned_t<T>>(values[2]);
 
-            std::unique_lock slotlock{Context->mEffectSlotLock};
+            const auto slotlock = std::unique_lock{Context->mEffectSlotLock};
             auto slot = al::intrusive_ptr<ALeffectslot>{};
             if(slotid)
             {
@@ -1956,8 +1956,8 @@ NOINLINE void SetProperty(ALsource *const Source, ALCcontext *const Context, con
 
             if(filterid)
             {
-                std::lock_guard<std::mutex> filterlock{device->FilterLock};
-                ALfilter *filter{LookupFilter(device, filterid)};
+                const auto filterlock = std::lock_guard{device->FilterLock};
+                const auto *filter = LookupFilter(device, filterid);
                 if(!filter)
                     Context->throw_error(AL_INVALID_VALUE, "Invalid filter ID {}", filterid);
 
@@ -2183,11 +2183,11 @@ NOINLINE void GetProperty(ALsource *const Source, ALCcontext *const Context, con
             /* Get the source offset with the clock time first. Then get the
              * clock time with the device latency. Order is important.
              */
-            ClockLatency clocktime{};
-            nanoseconds srcclock{};
+            auto clocktime = ClockLatency{};
+            auto srcclock = nanoseconds{};
             values[0] = GetSourceSampleOffset(Source, Context, &srcclock);
             {
-                std::lock_guard<std::mutex> statelock{device->StateLock};
+                const auto statelock = std::lock_guard{device->StateLock};
                 clocktime = GetClockLatency(device, device->Backend.get());
             }
             if(srcclock == clocktime.ClockTime)
@@ -3294,14 +3294,13 @@ try {
         return std::span{source_store.emplace<source_store_array>()}.first(count);
     }, sids.size());
 
-    std::lock_guard<std::mutex> sourcelock{context->mSourceLock};
-    auto lookup_src = [context](const ALuint sid) -> ALsource*
+    const auto srclock = std::lock_guard{context->mSourceLock};
+    std::ranges::transform(sids, srchandles.begin(), [context](const ALuint sid) -> ALsource*
     {
         if(ALsource *src{LookupSource(context, sid)})
             return src;
         context->throw_error(AL_INVALID_NAME, "Invalid source ID {}", sid);
-    };
-    std::transform(sids.begin(), sids.end(), srchandles.begin(), lookup_src);
+    });
 
     StartSources(context, srchandles, nanoseconds{start_time});
 }
@@ -3691,7 +3690,7 @@ catch(std::exception &e) {
 
 AL_API void AL_APIENTRY alSourceQueueBufferLayersSOFT(ALuint, ALsizei, const ALuint*) noexcept
 {
-    ContextRef context{GetContextRef()};
+    const auto context = GetContextRef();
     if(!context) [[unlikely]] return;
 
     context->setError(AL_INVALID_OPERATION, "alSourceQueueBufferLayersSOFT not supported");

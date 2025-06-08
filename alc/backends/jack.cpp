@@ -164,10 +164,8 @@ auto jack_load() -> bool
 }
 
 
-struct JackDeleter {
-    void operator()(void *ptr) { jack_free(ptr); }
-};
-using JackPortsPtr = std::unique_ptr<const char*[],JackDeleter>; /* NOLINT(*-avoid-c-arrays) */
+/* NOLINTNEXTLINE(*-avoid-c-arrays) */
+using JackPortsPtr = std::unique_ptr<const char*[], decltype([](void *ptr) { jack_free(ptr); })>;
 
 struct DeviceEntry {
     std::string mName;
@@ -184,19 +182,18 @@ void EnumerateDevices(jack_client_t *client, std::vector<DeviceEntry> &list)
 {
     std::remove_reference_t<decltype(list)>{}.swap(list);
 
-    if(JackPortsPtr ports{jack_get_ports(client, nullptr, JACK_DEFAULT_AUDIO_TYPE, JackPortIsInput)})
+    if(const auto ports = JackPortsPtr{jack_get_ports(client, nullptr, JACK_DEFAULT_AUDIO_TYPE,
+        JackPortIsInput)})
     {
-        for(size_t i{0};ports[i];++i)
+        for(auto i = 0_uz;ports[i];++i)
         {
-            const std::string_view portname{ports[i]};
-            const size_t seppos{portname.find(':')};
+            const auto portname = std::string_view{ports[i]};
+            const auto seppos = portname.find(':');
             if(seppos == 0 || seppos >= portname.size())
                 continue;
 
             const auto portdev = portname.substr(0, seppos);
-            auto check_name = [portdev](const DeviceEntry &entry) -> bool
-            { return entry.mName == portdev; };
-            if(std::find_if(list.cbegin(), list.cend(), check_name) != list.cend())
+            if(std::ranges::find(list, portdev, &DeviceEntry::mName) != list.end())
                 continue;
 
             const auto &entry = list.emplace_back(std::string{portdev},
@@ -215,10 +212,10 @@ void EnumerateDevices(jack_client_t *client, std::vector<DeviceEntry> &list)
 
     if(auto listopt = ConfigValueStr({}, "jack", "custom-devices"))
     {
-        for(size_t strpos{0};strpos < listopt->size();)
+        for(auto strpos = 0_uz;strpos < listopt->size();)
         {
-            size_t nextpos{listopt->find(';', strpos)};
-            size_t seppos{listopt->find('=', strpos)};
+            auto nextpos = listopt->find(';', strpos);
+            const auto seppos = listopt->find('=', strpos);
             if(seppos >= nextpos || seppos == strpos)
             {
                 const auto entry = std::string_view{*listopt}.substr(strpos, nextpos-strpos);
@@ -233,9 +230,7 @@ void EnumerateDevices(jack_client_t *client, std::vector<DeviceEntry> &list)
                 std::min(nextpos, listopt->size())-(seppos+1));
 
             /* Check if this custom pattern already exists in the list. */
-            auto check_pattern = [pattern](const DeviceEntry &entry) -> bool
-            { return entry.mPattern == pattern; };
-            auto itemmatch = std::find_if(list.begin(), list.end(), check_pattern);
+            auto itemmatch = std::ranges::find(list, pattern, &DeviceEntry::mPattern);
             if(itemmatch != list.end())
             {
                 /* If so, replace the name with this custom one. */

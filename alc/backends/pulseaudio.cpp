@@ -547,14 +547,14 @@ struct MainloopUniqueLock : public std::unique_lock<PulseMainloop> {
 
     void contextStateCallback(pa_context *context) noexcept
     {
-        pa_context_state_t state{pa_context_get_state(context)};
+        const auto state = pa_context_get_state(context);
         if(state == PA_CONTEXT_READY || !PA_CONTEXT_IS_GOOD(state))
             mutex()->signal();
     }
 
     void streamStateCallback(pa_stream *stream) noexcept
     {
-        pa_stream_state_t state{pa_stream_get_state(stream)};
+        const auto state = pa_stream_get_state(stream);
         if(state == PA_STREAM_READY || !PA_STREAM_IS_GOOD(state))
             mutex()->signal();
     }

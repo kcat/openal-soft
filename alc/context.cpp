@@ -289,7 +289,7 @@ void ALCcontext::applyAllUpdates()
 #if ALSOFT_EAX
 namespace {
 
-void ForEachSource(ALCcontext *context, auto&& func)
+void ForEachSource(ALCcontext *context, std::invocable<ALsource&> auto&& func)
 {
     std::ranges::for_each(context->mSourceList, [&func](SourceSubList &sublist)
     {
@@ -299,7 +299,7 @@ void ForEachSource(ALCcontext *context, auto&& func)
             const auto idx = as_unsigned(std::countr_zero(usemask));
             usemask ^= 1_u64 << idx;
 
-            func((*sublist.Sources)[idx]);
+            std::invoke(func, (*sublist.Sources)[idx]);
         }
     });
 }
@@ -592,18 +592,18 @@ void ALCcontext::eax_dispatch_fx_slot(const EaxCall& call)
     auto& fx_slot = eaxGetFxSlot(*fx_slot_index);
     if(fx_slot.eax_dispatch(call))
     {
-        std::lock_guard<std::mutex> source_lock{mSourceLock};
-        ForEachSource(this, std::mem_fn(&ALsource::eaxMarkAsChanged));
+        const auto srclock = std::lock_guard{mSourceLock};
+        ForEachSource(this, &ALsource::eaxMarkAsChanged);
     }
 }
 
 void ALCcontext::eax_dispatch_source(const EaxCall& call)
 {
     const auto source_id = call.get_property_al_name();
-    std::lock_guard<std::mutex> source_lock{mSourceLock};
-    const auto source = ALsource::EaxLookupSource(*this, source_id);
+    const auto srclock = std::lock_guard{mSourceLock};
 
-    if (source == nullptr)
+    const auto source = ALsource::EaxLookupSource(*this, source_id);
+    if(source == nullptr)
         eax_fail("Source not found.");
 
     source->eaxDispatch(call);
@@ -733,10 +733,8 @@ void ALCcontext::eax_initialize_fx_slots()
 
 void ALCcontext::eax_update_sources()
 {
-    std::unique_lock<std::mutex> source_lock{mSourceLock};
-    auto update_source = [](ALsource &source)
-    { source.eaxCommit(); };
-    ForEachSource(this, update_source);
+    const auto srclock = std::lock_guard{mSourceLock};
+    ForEachSource(this, &ALsource::eaxCommit);
 }
 
 void ALCcontext::eax_set_misc(const EaxCall& call)
@@ -974,7 +972,7 @@ FORCE_ALIGN auto AL_APIENTRY EAXSet(const GUID *property_set_id, ALuint property
 FORCE_ALIGN auto AL_APIENTRY EAXSetDirect(ALCcontext *context, const GUID *property_set_id,
     ALuint property_id, ALuint source_id, ALvoid *value, ALuint value_size) noexcept -> ALenum
 try {
-    std::lock_guard<std::mutex> prop_lock{context->mPropLock};
+    const auto proplock = std::lock_guard{context->mPropLock};
     return context->eax_eax_set(property_set_id, property_id, source_id, value, value_size);
 }
 catch(...) {
@@ -995,7 +993,7 @@ FORCE_ALIGN auto AL_APIENTRY EAXGet(const GUID *property_set_id, ALuint property
 FORCE_ALIGN auto AL_APIENTRY EAXGetDirect(ALCcontext *context, const GUID *property_set_id,
     ALuint property_id, ALuint source_id, ALvoid *value, ALuint value_size) noexcept -> ALenum
 try {
-    std::lock_guard<std::mutex> prop_lock{context->mPropLock};
+    const auto proplock = std::lock_guard{context->mPropLock};
     return context->eax_eax_get(property_set_id, property_id, source_id, value, value_size);
 }
 catch(...) {

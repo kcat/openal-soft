@@ -590,11 +590,11 @@ struct DeviceEnumHelper final : private IMMNotificationClient {
 #endif
 
     /** ------------------------ DeviceEnumHelper -------------------------- */
-    HRESULT init()
+    auto init() -> HRESULT
     {
 #if !ALSOFT_UWP
-        HRESULT hr{CoCreateInstance(CLSID_MMDeviceEnumerator, nullptr, CLSCTX_INPROC_SERVER,
-            __uuidof(IMMDeviceEnumerator), al::out_ptr(mEnumerator))};
+        const auto hr = CoCreateInstance(CLSID_MMDeviceEnumerator, nullptr, CLSCTX_INPROC_SERVER,
+            __uuidof(IMMDeviceEnumerator), al::out_ptr(mEnumerator));
         if(SUCCEEDED(hr))
             mEnumerator->RegisterEndpointNotificationCallback(this);
         else
@@ -767,14 +767,13 @@ private:
             auto devtype = (flowdir==eRender)?alc::DeviceType::Playback : alc::DeviceType::Capture;
 
             /* Find the ID in the list to remove. */
-            auto iter = std::find_if(list.begin(), list.end(),
-                [deviceId](const DevMap &entry) noexcept { return deviceId == entry.devid; });
+            auto iter = std::ranges::find(list, deviceId, &DevMap::devid);
             if(iter == list.end()) continue;
 
             TRACE("Removing device \"{}\", \"{}\", \"{}\"", iter->name, iter->endpoint_guid,
                 wstr_to_utf8(iter->devid));
 
-            std::string msg{"Device removed: "+std::move(iter->name)};
+            const auto msg = "Device removed: "+std::move(iter->name);
             list.erase(iter);
 
             alc::Event(alc::EventType::DeviceRemoved, devtype, msg);
@@ -813,7 +812,7 @@ void DeviceEnumHelper::messageHandler(std::promise<HRESULT> *promise)
 {
     TRACE("Starting watcher thread");
 
-    ComWrapper com{COINIT_MULTITHREADED};
+    const auto com = ComWrapper{COINIT_MULTITHREADED};
     if(!com)
     {
         WARN("Failed to initialize COM: {:#x}", as_unsigned(com.status()));
@@ -977,8 +976,8 @@ struct DeviceHelper {
     [[nodiscard]]
     auto init() -> HRESULT
     {
-        HRESULT hr{CoCreateInstance(CLSID_MMDeviceEnumerator, nullptr, CLSCTX_INPROC_SERVER,
-            __uuidof(IMMDeviceEnumerator), al::out_ptr(mEnumerator))};
+        const auto hr = CoCreateInstance(CLSID_MMDeviceEnumerator, nullptr, CLSCTX_INPROC_SERVER,
+            __uuidof(IMMDeviceEnumerator), al::out_ptr(mEnumerator));
         if(FAILED(hr))
             WARN("Failed to create IMMDeviceEnumerator instance: {:#x}", as_unsigned(hr));
         return hr;
@@ -988,7 +987,7 @@ struct DeviceHelper {
     auto openDevice(const std::wstring &devid, EDataFlow flow, DeviceHandle &device) const
         -> HRESULT
     {
-        HRESULT hr{E_FAIL};
+        auto hr = E_FAIL;
         if(mEnumerator)
         {
             if(devid.empty())

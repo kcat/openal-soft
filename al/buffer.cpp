@@ -1586,7 +1586,7 @@ AL_API void AL_APIENTRY alBufferSamplesSOFT(ALuint /*buffer*/, ALuint /*samplera
     ALenum /*internalformat*/, ALsizei /*samples*/, ALenum /*channels*/, ALenum /*type*/,
     const ALvoid* /*data*/) noexcept
 {
-    ContextRef context{GetContextRef()};
+    const auto context = GetContextRef();
     if(!context) [[unlikely]] return;
 
     context->setError(AL_INVALID_OPERATION, "alBufferSamplesSOFT not supported");
@@ -1595,7 +1595,7 @@ AL_API void AL_APIENTRY alBufferSamplesSOFT(ALuint /*buffer*/, ALuint /*samplera
 AL_API void AL_APIENTRY alBufferSubSamplesSOFT(ALuint /*buffer*/, ALsizei /*offset*/,
     ALsizei /*samples*/, ALenum /*channels*/, ALenum /*type*/, const ALvoid* /*data*/) noexcept
 {
-    ContextRef context{GetContextRef()};
+    const auto context = GetContextRef();
     if(!context) [[unlikely]] return;
 
     context->setError(AL_INVALID_OPERATION, "alBufferSubSamplesSOFT not supported");
@@ -1604,7 +1604,7 @@ AL_API void AL_APIENTRY alBufferSubSamplesSOFT(ALuint /*buffer*/, ALsizei /*offs
 AL_API void AL_APIENTRY alGetBufferSamplesSOFT(ALuint /*buffer*/, ALsizei /*offset*/,
     ALsizei /*samples*/, ALenum /*channels*/, ALenum /*type*/, ALvoid* /*data*/) noexcept
 {
-    ContextRef context{GetContextRef()};
+    const auto context = GetContextRef();
     if(!context) [[unlikely]] return;
 
     context->setError(AL_INVALID_OPERATION, "alGetBufferSamplesSOFT not supported");
@@ -1612,7 +1612,7 @@ AL_API void AL_APIENTRY alGetBufferSamplesSOFT(ALuint /*buffer*/, ALsizei /*offs
 
 AL_API ALboolean AL_APIENTRY alIsBufferFormatSupportedSOFT(ALenum /*format*/) noexcept
 {
-    ContextRef context{GetContextRef()};
+    const auto context = GetContextRef();
     if(!context) [[unlikely]] return AL_FALSE;
 
     context->setError(AL_INVALID_OPERATION, "alIsBufferFormatSupportedSOFT not supported");
@@ -1671,8 +1671,8 @@ try {
     if(!buffers)
         context->throw_error(AL_INVALID_VALUE, "Null AL buffers");
 
-    auto device = context->mALDevice.get();
-    std::lock_guard<std::mutex> devlock{device->BufferLock};
+    auto *device = context->mALDevice.get();
+    const auto devlock = std::lock_guard{device->BufferLock};
 
     /* Special-case setting a single buffer, to avoid extraneous allocations. */
     if(n == 1)
@@ -1772,8 +1772,8 @@ try {
     if(pReserved)
         context->throw_error(AL_INVALID_VALUE, "Non-null reserved parameter");
 
-    auto device = context->mALDevice.get();
-    std::lock_guard<std::mutex> devlock{device->BufferLock};
+    auto *device = context->mALDevice.get();
+    const auto devlock = std::lock_guard{device->BufferLock};
 
     const auto al_buffer = LookupBuffer(device, buffer);
     if(!al_buffer)

@@ -133,7 +133,7 @@ struct WaveBackend final : public BackendBase {
     explicit WaveBackend(DeviceBase *device) noexcept : BackendBase{device} { }
     ~WaveBackend() override;
 
-    int mixerProc();
+    void mixerProc();
 
     void open(std::string_view name) override;
     bool reset() override;
@@ -152,7 +152,7 @@ struct WaveBackend final : public BackendBase {
 
 WaveBackend::~WaveBackend() = default;
 
-int WaveBackend::mixerProc()
+void WaveBackend::mixerProc()
 {
     const milliseconds restTime{mDevice->mUpdateSize*1000/mDevice->mSampleRate / 2};
 
@@ -161,7 +161,7 @@ int WaveBackend::mixerProc()
     const size_t frameStep{mDevice->channelsFromFmt()};
     const size_t frameSize{mDevice->frameSizeFromFmt()};
 
-    int64_t done{0};
+    auto done = int64_t{0};
     auto start = std::chrono::steady_clock::now();
     while(!mKillNow.load(std::memory_order_acquire)
         && mDevice->Connected.load(std::memory_order_acquire))
@@ -218,13 +218,11 @@ int WaveBackend::mixerProc()
          */
         if(done >= mDevice->mSampleRate)
         {
-            seconds s{done/mDevice->mSampleRate};
+            const auto s = seconds{done/mDevice->mSampleRate};
             done %= mDevice->mSampleRate;
             start += s;
         }
     }
-
-    return 0;
 }
 
 void WaveBackend::open(std::string_view name)
@@ -243,10 +241,7 @@ void WaveBackend::open(std::string_view name)
     if(mFile) return;
 
 #ifdef _WIN32
-    {
-        std::wstring wname{utf8_to_wstr(fname.value())};
-        mFile = FilePtr{_wfopen(wname.c_str(), L"wb")};
-    }
+    mFile = FilePtr{_wfopen(utf8_to_wstr(fname.value()).c_str(), L"wb")};
 #else
     mFile = FilePtr{fopen(fname->c_str(), "wb")};
 #endif
@@ -463,8 +458,7 @@ bool WaveBackend::reset()
 
     setDefaultWFXChannelOrder();
 
-    const uint bufsize{mDevice->frameSizeFromFmt() * mDevice->mUpdateSize};
-    mBuffer.resize(bufsize);
+    mBuffer.resize(size_t{mDevice->frameSizeFromFmt()} * mDevice->mUpdateSize);
 
     return true;
 }

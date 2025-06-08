@@ -93,7 +93,7 @@ int NullBackend::mixerProc()
          */
         if(done >= mDevice->mSampleRate)
         {
-            seconds s{done/mDevice->mSampleRate};
+            const auto s = seconds{done/mDevice->mSampleRate};
             start += s;
             done -= mDevice->mSampleRate*s.count();
         }

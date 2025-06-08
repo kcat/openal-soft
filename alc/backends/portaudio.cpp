@@ -128,15 +128,14 @@ struct PortPlayback final : public BackendBase {
 
 PortPlayback::~PortPlayback()
 {
-    PaError err{mStream ? Pa_CloseStream(mStream) : paNoError};
-    if(err != paNoError)
+    if(const auto err = mStream ? Pa_CloseStream(mStream) : paNoError; err != paNoError)
         ERR("Error closing stream: {}", Pa_GetErrorText(err));
     mStream = nullptr;
 }
 
 
-int PortPlayback::writeCallback(const void*, void *outputBuffer, unsigned long framesPerBuffer,
-    const PaStreamCallbackTimeInfo*, const PaStreamCallbackFlags) noexcept
+auto PortPlayback::writeCallback(const void*, void *outputBuffer, unsigned long framesPerBuffer,
+    const PaStreamCallbackTimeInfo*, const PaStreamCallbackFlags) noexcept -> int
 {
     mDevice->renderSamples(outputBuffer, static_cast<uint>(framesPerBuffer),
         static_cast<uint>(mParams.channelCount));
@@ -170,13 +169,13 @@ void PortPlayback::createStream(PaDeviceIndex deviceid)
 
     static constexpr auto writeCallback = [](const void *inputBuffer, void *outputBuffer,
         unsigned long framesPerBuffer, const PaStreamCallbackTimeInfo *timeInfo,
-        const PaStreamCallbackFlags statusFlags, void *userData) noexcept
+        const PaStreamCallbackFlags statusFlags, void *userData) noexcept -> int
     {
         return static_cast<PortPlayback*>(userData)->writeCallback(inputBuffer, outputBuffer,
             framesPerBuffer, timeInfo, statusFlags);
     };
-    while(PaError err{Pa_OpenStream(&mStream, nullptr, &params, srate, params.updateSize, paNoFlag,
-        writeCallback, this)})
+    while(const auto err = Pa_OpenStream(&mStream, nullptr, &params, srate, params.updateSize,
+        paNoFlag, writeCallback, this))
     {
         if(params.updateSize != DefaultUpdateSize)
             params.updateSize = DefaultUpdateSize;
@@ -199,10 +198,10 @@ void PortPlayback::open(std::string_view name)
     if(DeviceNames.empty())
         EnumerateDevices();
 
-    PaDeviceIndex deviceid{-1};
+    auto deviceid = PaDeviceIndex{-1};
     if(name.empty())
     {
-        if(auto devidopt = ConfigValueInt({}, "port", "device"))
+        if(const auto devidopt = ConfigValueInt({}, "port", "device"))
             deviceid = *devidopt;
         if(deviceid < 0 || static_cast<uint>(deviceid) >= DeviceNames.size())
             deviceid = Pa_GetDefaultOutputDevice();
@@ -210,13 +209,12 @@ void PortPlayback::open(std::string_view name)
     }
     else
     {
-        auto iter = std::find_if(DeviceNames.cbegin(), DeviceNames.cend(),
-            [name](const DeviceEntry &entry)
-            { return entry.mPlaybackChannels > 0 && name == entry.mName; });
-        if(iter == DeviceNames.cend())
+        const auto iter = std::ranges::find_if(DeviceNames, [name](const DeviceEntry &entry)
+        { return entry.mPlaybackChannels > 0 && name == entry.mName; });
+        if(iter == DeviceNames.end())
             throw al::backend_exception{al::backend_error::NoDevice,
                 "Device name \"{}\" not found", name};
-        deviceid = static_cast<int>(std::distance(DeviceNames.cbegin(), iter));
+        deviceid = static_cast<PaDeviceIndex>(std::distance(DeviceNames.begin(), iter));
     }
 
     createStream(deviceid);
@@ -229,8 +227,7 @@ bool PortPlayback::reset()
 {
     if(mStream)
     {
-        auto err = Pa_CloseStream(mStream);
-        if(err != paNoError)
+        if(const auto err = Pa_CloseStream(mStream); err != paNoError)
             ERR("Error closing stream: {}", Pa_GetErrorText(err));
         mStream = nullptr;
     }
@@ -259,13 +256,13 @@ bool PortPlayback::reset()
         mDevice->mAmbiOrder = 0;
     }
 
-    const PaStreamInfo *streamInfo{Pa_GetStreamInfo(mStream)};
+    const auto *streamInfo = Pa_GetStreamInfo(mStream);
     mDevice->mSampleRate = static_cast<uint>(std::lround(streamInfo->sampleRate));
     mDevice->mUpdateSize = mParams.updateSize;
-    mDevice->mBufferSize = mDevice->mUpdateSize * 2;
+    mDevice->mBufferSize = mDevice->mUpdateSize * 2u;
     if(streamInfo->outputLatency > 0.0f)
     {
-        const double sampleLatency{streamInfo->outputLatency * streamInfo->sampleRate};
+        const auto sampleLatency = streamInfo->outputLatency * streamInfo->sampleRate;
         TRACE("Reported stream latency: {:f} sec ({:f} samples)", streamInfo->outputLatency,
             sampleLatency);
         mDevice->mBufferSize = static_cast<uint>(std::clamp(sampleLatency,
@@ -279,14 +276,14 @@ bool PortPlayback::reset()
 
 void PortPlayback::start()
 {
-    if(const PaError err{Pa_StartStream(mStream)}; err != paNoError)
+    if(const auto err = Pa_StartStream(mStream); err != paNoError)
         throw al::backend_exception{al::backend_error::DeviceError, "Failed to start playback: {}",
             Pa_GetErrorText(err)};
 }
 
 void PortPlayback::stop()
 {
-    if(PaError err{Pa_StopStream(mStream)}; err != paNoError)
+    if(const auto err = Pa_StopStream(mStream); err != paNoError)
         ERR("Error stopping stream: {}", Pa_GetErrorText(err));
 }
 
@@ -295,8 +292,9 @@ struct PortCapture final : public BackendBase {
     explicit PortCapture(DeviceBase *device) noexcept : BackendBase{device} { }
     ~PortCapture() override;
 
-    int readCallback(const void *inputBuffer, void *outputBuffer, unsigned long framesPerBuffer,
-        const PaStreamCallbackTimeInfo *timeInfo, const PaStreamCallbackFlags statusFlags) const noexcept;
+    auto readCallback(const void *inputBuffer, void *outputBuffer, unsigned long framesPerBuffer,
+        const PaStreamCallbackTimeInfo *timeInfo, const PaStreamCallbackFlags statusFlags) const
+        noexcept -> int;
 
     void open(std::string_view name) override;
     void start() override;
@@ -312,8 +310,7 @@ struct PortCapture final : public BackendBase {
 
 PortCapture::~PortCapture()
 {
-    PaError err{mStream ? Pa_CloseStream(mStream) : paNoError};
-    if(err != paNoError)
+    if(const auto err = mStream ? Pa_CloseStream(mStream) : paNoError; err != paNoError)
         ERR("Error closing stream: {}", Pa_GetErrorText(err));
     mStream = nullptr;
 }
@@ -333,7 +330,7 @@ void PortCapture::open(std::string_view name)
     if(DeviceNames.empty())
         EnumerateDevices();
 
-    int deviceid{};
+    auto deviceid = int{};
     if(name.empty())
     {
         if(auto devidopt = ConfigValueInt({}, "port", "capture"))
@@ -352,8 +349,8 @@ void PortCapture::open(std::string_view name)
         deviceid = static_cast<int>(std::distance(DeviceNames.begin(), iter));
     }
 
-    const uint samples{std::max(mDevice->mBufferSize, mDevice->mSampleRate/10u)};
-    const uint frame_size{mDevice->frameSizeFromFmt()};
+    const auto samples = std::max(mDevice->mBufferSize, mDevice->mSampleRate/10u);
+    const auto frame_size = mDevice->frameSizeFromFmt();
 
     mRing = RingBuffer<std::byte>::Create(samples, frame_size, false);
 
@@ -387,13 +384,13 @@ void PortCapture::open(std::string_view name)
 
     static constexpr auto readCallback = [](const void *inputBuffer, void *outputBuffer,
         unsigned long framesPerBuffer, const PaStreamCallbackTimeInfo *timeInfo,
-        const PaStreamCallbackFlags statusFlags, void *userData) noexcept
+        const PaStreamCallbackFlags statusFlags, void *userData) noexcept -> int
     {
         return static_cast<PortCapture*>(userData)->readCallback(inputBuffer, outputBuffer,
             framesPerBuffer, timeInfo, statusFlags);
     };
-    PaError err{Pa_OpenStream(&mStream, &mParams, nullptr, mDevice->mSampleRate,
-        paFramesPerBufferUnspecified, paNoFlag, readCallback, this)};
+    const auto err = Pa_OpenStream(&mStream, &mParams, nullptr, mDevice->mSampleRate,
+        paFramesPerBufferUnspecified, paNoFlag, readCallback, this);
     if(err != paNoError)
         throw al::backend_exception{al::backend_error::NoDevice, "Failed to open stream: {}",
             Pa_GetErrorText(err)};
@@ -404,14 +401,14 @@ void PortCapture::open(std::string_view name)
 
 void PortCapture::start()
 {
-    if(const PaError err{Pa_StartStream(mStream)}; err != paNoError)
+    if(const auto err = Pa_StartStream(mStream); err != paNoError)
         throw al::backend_exception{al::backend_error::DeviceError,
             "Failed to start recording: {}", Pa_GetErrorText(err)};
 }
 
 void PortCapture::stop()
 {
-    if(PaError err{Pa_StopStream(mStream)}; err != paNoError)
+    if(const auto err = Pa_StopStream(mStream); err != paNoError)
         ERR("Error stopping stream: {}", Pa_GetErrorText(err));
 }
 

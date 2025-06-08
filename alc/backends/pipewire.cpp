@@ -1492,7 +1492,7 @@ void PipeWirePlayback::open(std::string_view name)
     gEventHandler.waitForInit();
     if(name.empty())
     {
-        auto evtlock = EventWatcherLockGuard{gEventHandler};
+        const auto evtlock = EventWatcherLockGuard{gEventHandler};
         auto&& devlist = DeviceNode::GetList();
 
         auto match = devlist.end();
@@ -1511,7 +1511,7 @@ void PipeWirePlayback::open(std::string_view name)
     }
     else
     {
-        auto evtlock = EventWatcherLockGuard{gEventHandler};
+        const auto evtlock = EventWatcherLockGuard{gEventHandler};
         auto&& devlist = DeviceNode::GetList();
 
         auto match = std::ranges::find_if(devlist, [name](const DeviceNode &n) -> bool
@@ -1581,7 +1581,7 @@ auto PipeWirePlayback::reset() -> bool
     mDevice->Flags.reset(DirectEar);
     if(mTargetId != PwIdAny)
     {
-        auto evtlock = EventWatcherLockGuard{gEventHandler};
+        const auto evtlock = EventWatcherLockGuard{gEventHandler};
         auto&& devlist = DeviceNode::GetList();
 
         const auto match = std::ranges::find(devlist, mTargetId, &DeviceNode::mSerial);
@@ -1679,7 +1679,8 @@ auto PipeWirePlayback::reset() -> bool
     auto flags = PW_STREAM_FLAG_AUTOCONNECT | PW_STREAM_FLAG_INACTIVE | PW_STREAM_FLAG_MAP_BUFFERS;
     if(GetConfigValueBool(mDevice->mDeviceName, "pipewire", "rt-mix", false))
         flags |= PW_STREAM_FLAG_RT_PROCESS;
-    if(int res{pw_stream_connect(mStream.get(), PW_DIRECTION_OUTPUT, PwIdAny, flags, &params, 1)})
+    if(const auto res = pw_stream_connect(mStream.get(), PW_DIRECTION_OUTPUT, PwIdAny, flags,
+        &params, 1))
         throw al::backend_exception{al::backend_error::DeviceError,
             "Error connecting PipeWire stream (res: {})", res};
 
@@ -1687,7 +1688,7 @@ auto PipeWirePlayback::reset() -> bool
     plock.wait([stream=mStream.get()]()
     {
         const char *error{};
-        pw_stream_state state{pw_stream_get_state(stream, &error)};
+        const auto state = pw_stream_get_state(stream, &error);
         if(state == PW_STREAM_STATE_ERROR)
             throw al::backend_exception{al::backend_error::DeviceError,
                 "Error connecting PipeWire stream: \"{}\"", error};
@@ -1722,7 +1723,7 @@ void PipeWirePlayback::start()
     plock.wait([stream=mStream.get()]()
     {
         const char *error{};
-        pw_stream_state state{pw_stream_get_state(stream, &error)};
+        const auto state = pw_stream_get_state(stream, &error);
         if(state == PW_STREAM_STATE_ERROR)
             throw al::backend_exception{al::backend_error::DeviceError,
                 "PipeWire stream error: {}", error ? error : "(unknown)"};
@@ -1940,7 +1941,7 @@ void PipeWireCapture::open(std::string_view name)
     gEventHandler.waitForInit();
     if(name.empty())
     {
-        EventWatcherLockGuard evtlock{gEventHandler};
+        const auto evtlock = EventWatcherLockGuard{gEventHandler};
         auto&& devlist = DeviceNode::GetList();
 
         auto match = devlist.end();
@@ -1970,7 +1971,7 @@ void PipeWireCapture::open(std::string_view name)
     }
     else
     {
-        EventWatcherLockGuard evtlock{gEventHandler};
+        const auto evtlock = EventWatcherLockGuard{gEventHandler};
         auto&& devlist = DeviceNode::GetList();
         const std::string_view prefix{GetMonitorPrefix()};
         const std::string_view suffix{GetMonitorSuffix()};
@@ -2043,7 +2044,7 @@ void PipeWireCapture::open(std::string_view name)
     bool is51rear{false};
     if(mTargetId != PwIdAny)
     {
-        EventWatcherLockGuard evtlock{gEventHandler};
+        const auto evtlock = EventWatcherLockGuard{gEventHandler};
         auto&& devlist = DeviceNode::GetList();
 
         auto match_id = [targetid=mTargetId](const DeviceNode &n) -> bool
@@ -2106,9 +2107,10 @@ void PipeWireCapture::open(std::string_view name)
     });
     pw_stream_add_listener(mStream.get(), &mStreamListener, &streamEvents, this);
 
-    constexpr pw_stream_flags Flags{PW_STREAM_FLAG_AUTOCONNECT | PW_STREAM_FLAG_INACTIVE
-        | PW_STREAM_FLAG_MAP_BUFFERS | PW_STREAM_FLAG_RT_PROCESS};
-    if(int res{pw_stream_connect(mStream.get(), PW_DIRECTION_INPUT, PwIdAny, Flags, &params, 1)})
+    static constexpr auto Flags = PW_STREAM_FLAG_AUTOCONNECT | PW_STREAM_FLAG_INACTIVE
+        | PW_STREAM_FLAG_MAP_BUFFERS | PW_STREAM_FLAG_RT_PROCESS;
+    if(const auto res = pw_stream_connect(mStream.get(), PW_DIRECTION_INPUT, PwIdAny, Flags,
+        &params, 1))
         throw al::backend_exception{al::backend_error::DeviceError,
             "Error connecting PipeWire stream (res: {})", res};
 
@@ -2116,7 +2118,7 @@ void PipeWireCapture::open(std::string_view name)
     plock.wait([stream=mStream.get()]()
     {
         const char *error{};
-        pw_stream_state state{pw_stream_get_state(stream, &error)};
+        const auto state = pw_stream_get_state(stream, &error);
         if(state == PW_STREAM_STATE_ERROR)
             throw al::backend_exception{al::backend_error::DeviceError,
                 "Error connecting PipeWire stream: \"{}\"", error};
@@ -2135,15 +2137,15 @@ void PipeWireCapture::open(std::string_view name)
 
 void PipeWireCapture::start()
 {
-    MainloopUniqueLock plock{mLoop};
-    if(int res{pw_stream_set_active(mStream.get(), true)})
+    const auto plock = MainloopUniqueLock{mLoop};
+    if(const auto res = pw_stream_set_active(mStream.get(), true))
         throw al::backend_exception{al::backend_error::DeviceError,
             "Failed to start PipeWire stream (res: {})", res};
 
     plock.wait([stream=mStream.get()]()
     {
         const char *error{};
-        pw_stream_state state{pw_stream_get_state(stream, &error)};
+        const auto state = pw_stream_get_state(stream, &error);
         if(state == PW_STREAM_STATE_ERROR)
             throw al::backend_exception{al::backend_error::DeviceError,
                 "PipeWire stream error: {}", error ? error : "(unknown)"};
@@ -2153,8 +2155,8 @@ void PipeWireCapture::start()
 
 void PipeWireCapture::stop()
 {
-    MainloopUniqueLock plock{mLoop};
-    if(int res{pw_stream_set_active(mStream.get(), false)})
+    const auto plock = MainloopUniqueLock{mLoop};
+    if(const auto res = pw_stream_set_active(mStream.get(), false))
         ERR("Failed to stop PipeWire stream (res: {})", res);
 
     plock.wait([stream=mStream.get()]()
@@ -2209,17 +2211,17 @@ auto PipeWireBackendFactory::enumerate(BackendType type) -> std::vector<std::str
     std::vector<std::string> outnames;
 
     gEventHandler.waitForInit();
-    EventWatcherLockGuard evtlock{gEventHandler};
+    const auto evtlock = EventWatcherLockGuard{gEventHandler};
     auto&& devlist = DeviceNode::GetList();
 
-    auto match_defsink = [](const DeviceNode &n) -> bool
+    static constexpr auto match_defsink = [](const DeviceNode &n) -> bool
     { return n.mDevName == DefaultSinkDevice; };
-    auto match_defsource = [](const DeviceNode &n) -> bool
+    static constexpr auto match_defsource = [](const DeviceNode &n) -> bool
     { return n.mDevName == DefaultSourceDevice; };
 
-    auto sort_devnode = [](DeviceNode &lhs, DeviceNode &rhs) noexcept -> bool
+    static constexpr auto sort_devnode = [](DeviceNode &lhs, DeviceNode &rhs) noexcept -> bool
     { return lhs.mId < rhs.mId; };
-    std::sort(devlist.begin(), devlist.end(), sort_devnode);
+    std::ranges::sort(devlist, sort_devnode);
 
     auto defmatch = devlist.begin();
     switch(type)

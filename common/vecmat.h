@@ -7,6 +7,8 @@
 #include <limits>
 #include <span>
 
+#include "opthelpers.h"
+
 
 namespace alu {
 
@@ -19,15 +21,15 @@ public:
     constexpr Vector(Vector&&) noexcept = default;
     constexpr explicit Vector(float a, float b, float c, float d) noexcept : mVals{{a,b,c,d}} { }
 
-    constexpr auto operator=(const Vector&) noexcept -> Vector& = default;
-    constexpr auto operator=(Vector&&) noexcept -> Vector& = default;
+    constexpr auto operator=(const Vector&) & noexcept LIFETIMEBOUND -> Vector& = default;
+    constexpr auto operator=(Vector&&) & noexcept LIFETIMEBOUND -> Vector& = default;
 
     [[nodiscard]] constexpr
-    auto operator[](std::size_t idx) noexcept -> float& { return mVals[idx]; }
+    auto operator[](std::size_t idx) noexcept LIFETIMEBOUND -> float& { return mVals[idx]; }
     [[nodiscard]] constexpr
-    auto operator[](std::size_t idx) const noexcept -> const float& { return mVals[idx]; }
+    auto operator[](std::size_t idx) const noexcept LIFETIMEBOUND -> const float& { return mVals[idx]; }
 
-    constexpr auto operator+=(const Vector &rhs) noexcept -> Vector&
+    constexpr auto operator+=(const Vector &rhs) & noexcept -> Vector&
     {
         mVals[0] += rhs.mVals[0];
         mVals[1] += rhs.mVals[1];
@@ -87,12 +89,12 @@ public:
         : mVals{{aa,ab,ac,ad, ba,bb,bc,bd, ca,cb,cc,cd, da,db,dc,dd}}
     { }
 
-    constexpr auto operator=(const Matrix&) noexcept -> Matrix& = default;
-    constexpr auto operator=(Matrix&&) noexcept -> Matrix& = default;
+    constexpr auto operator=(const Matrix&) & noexcept LIFETIMEBOUND -> Matrix& = default;
+    constexpr auto operator=(Matrix&&) & noexcept LIFETIMEBOUND -> Matrix& = default;
 
-    [[nodiscard]] constexpr auto operator[](std::size_t idx) noexcept
+    [[nodiscard]] constexpr auto operator[](std::size_t idx) noexcept LIFETIMEBOUND
     { return std::span<float,4>{&mVals[idx*4], 4}; }
-    [[nodiscard]] constexpr auto operator[](std::size_t idx) const noexcept
+    [[nodiscard]] constexpr auto operator[](std::size_t idx) const noexcept LIFETIMEBOUND
     { return std::span<const float,4>{&mVals[idx*4], 4}; }
 
     [[nodiscard]] static constexpr auto Identity() noexcept -> Matrix

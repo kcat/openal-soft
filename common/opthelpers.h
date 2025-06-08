@@ -67,6 +67,16 @@
 #define DECL_HIDDEN
 #endif
 
+#if HAS_ATTRIBUTE(clang::lifetimebound)
+#define LIFETIMEBOUND [[clang::lifetimebound]]
+#elif HAS_ATTRIBUTE(msvc::lifetimebound)
+#define LIFETIMEBOUND [[msvc::lifetimebound]]
+#elif HAS_ATTRIBUTE(lifetimebound)
+#define LIFETIMEBOUND [[lifetimebound]]
+#else
+#define LIFETIMEBOUND
+#endif
+
 namespace al {
 
 template<typename T>

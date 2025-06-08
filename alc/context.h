@@ -24,6 +24,7 @@
 #include "core/context.h"
 #include "fmt/core.h"
 #include "intrusive_ptr.h"
+#include "opthelpers.h"
 
 #if ALSOFT_EAX
 #include "al/eax/api.h"
@@ -252,9 +253,9 @@ public:
     auto eaxGetPrimaryFxSlotIndex() const noexcept -> EaxFxSlotIndex
     { return mEaxPrimaryFxSlotIndex; }
 
-    const ALeffectslot& eaxGetFxSlot(EaxFxSlotIndexValue fx_slot_index) const
+    const ALeffectslot& eaxGetFxSlot(EaxFxSlotIndexValue fx_slot_index) const LIFETIMEBOUND
     { return mEaxFxSlots.get(fx_slot_index); }
-    ALeffectslot& eaxGetFxSlot(EaxFxSlotIndexValue fx_slot_index)
+    ALeffectslot& eaxGetFxSlot(EaxFxSlotIndexValue fx_slot_index) LIFETIMEBOUND
     { return mEaxFxSlots.get(fx_slot_index); }
 
     bool eaxNeedsCommit() const noexcept { return mEaxNeedsCommit; }

@@ -120,12 +120,12 @@ struct ContextBase {
     std::atomic<size_t> mActiveVoiceCount;
 
     void allocVoices(size_t addcount);
-    [[nodiscard]] auto getVoicesSpan() const noexcept -> std::span<Voice*>
+    [[nodiscard]] auto getVoicesSpan() const noexcept LIFETIMEBOUND -> std::span<Voice*>
     {
         return {mVoices.load(std::memory_order_relaxed)->data(),
             mActiveVoiceCount.load(std::memory_order_relaxed)};
     }
-    [[nodiscard]] auto getVoicesSpanAcquired() const noexcept -> std::span<Voice*>
+    [[nodiscard]] auto getVoicesSpanAcquired() const noexcept LIFETIMEBOUND -> std::span<Voice*>
     {
         return {mVoices.load(std::memory_order_acquire)->data(),
             mActiveVoiceCount.load(std::memory_order_acquire)};
@@ -160,7 +160,7 @@ struct ContextBase {
     std::vector<VoicePropsCluster> mVoicePropClusters;
 
 
-    EffectSlot *getEffectSlot();
+    EffectSlot *getEffectSlot() LIFETIMEBOUND;
 
     using EffectSlotCluster = std::unique_ptr<std::array<EffectSlot,4>>;
     std::vector<EffectSlotCluster> mEffectSlotClusters;
@@ -175,7 +175,7 @@ struct ContextBase {
     std::vector<ContextPropsCluster> mContextPropClusters;
 
 
-    explicit ContextBase(DeviceBase *device);
+    explicit ContextBase(DeviceBase *device LIFETIMEBOUND);
     ContextBase(const ContextBase&) = delete;
     ContextBase& operator=(const ContextBase&) = delete;
     virtual ~ContextBase();

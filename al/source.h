@@ -174,7 +174,8 @@ public:
     void eaxCommit();
     void eaxMarkAsChanged() noexcept { mEaxChanged = true; }
 
-    static ALsource* EaxLookupSource(ALCcontext& al_context, ALuint source_id) noexcept;
+    static auto EaxLookupSource(ALCcontext& al_context LIFETIMEBOUND, ALuint source_id) noexcept
+        -> ALsource*;
 
 private:
     using Exception = EaxSourceException;
@@ -1039,7 +1040,7 @@ struct SourceSubList {
     ~SourceSubList();
 
     SourceSubList& operator=(const SourceSubList&) = delete;
-    SourceSubList& operator=(SourceSubList&& rhs) noexcept
+    SourceSubList& operator=(SourceSubList&& rhs) & noexcept
     { std::swap(FreeMask, rhs.FreeMask); std::swap(Sources, rhs.Sources); return *this; }
 };
 

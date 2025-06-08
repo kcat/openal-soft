@@ -38,6 +38,7 @@
 #include "common/alhelpers.h"
 #include "fmt/core.h"
 #include "fmt/format.h"
+#include "opthelpers.h"
 #include "pragmadefs.h"
 
 DIAGNOSTIC_PUSH
@@ -223,11 +224,11 @@ struct ChannelLayout : public AVChannelLayout {
     { av_channel_layout_copy(this, &rhs); }
     ~ChannelLayout() { av_channel_layout_uninit(this); }
 
-    auto operator=(const ChannelLayout &rhs) -> ChannelLayout&
+    auto operator=(const ChannelLayout &rhs) & -> ChannelLayout&
     { av_channel_layout_copy(this, &rhs); return *this; }
 
     [[nodiscard]]
-    auto getChannels() const noexcept -> ChannelData
+    auto getChannels() const noexcept LIFETIMEBOUND -> ChannelData
     {
         /* NOLINTBEGIN(*-union-access) */
         if(this->order == AV_CHANNEL_ORDER_CUSTOM)
@@ -405,7 +406,7 @@ struct AudioState {
     std::array<ALuint,AudioBufferCount> mBuffers{};
     ALuint mBufferIdx{0};
 
-    explicit AudioState(MovieState &movie) : mMovie(movie)
+    explicit AudioState(MovieState &movie LIFETIMEBOUND) : mMovie(movie)
     { mConnected.test_and_set(std::memory_order_relaxed); }
     ~AudioState()
     {
@@ -475,7 +476,7 @@ struct VideoState {
     std::atomic<bool> mEOS{false};
     std::atomic<bool> mFinalUpdate{false};
 
-    explicit VideoState(MovieState &movie) : mMovie(movie) { }
+    explicit VideoState(MovieState &movie LIFETIMEBOUND) : mMovie(movie) { }
     ~VideoState()
     {
         if(mImage)

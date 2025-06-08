@@ -143,40 +143,23 @@ inline auto get_avtime() -> microseconds
 { return microseconds{av_gettime()}; }
 
 /* Define unique_ptrs to auto-cleanup associated ffmpeg objects. */
-struct AVIOContextDeleter {
-    void operator()(AVIOContext *ptr) { avio_closep(&ptr); }
-};
-using AVIOContextPtr = std::unique_ptr<AVIOContext,AVIOContextDeleter>;
+using AVIOContextPtr = std::unique_ptr<AVIOContext, decltype([](AVIOContext *ptr)
+    { avio_closep(&ptr); })>;
 
-struct AVFormatCtxDeleter {
-    void operator()(AVFormatContext *ptr) { avformat_close_input(&ptr); }
-};
-using AVFormatCtxPtr = std::unique_ptr<AVFormatContext,AVFormatCtxDeleter>;
+using AVFormatCtxPtr = std::unique_ptr<AVFormatContext, decltype([](AVFormatContext *ptr)
+    { avformat_close_input(&ptr); })>;
 
-struct AVCodecCtxDeleter {
-    void operator()(AVCodecContext *ptr) { avcodec_free_context(&ptr); }
-};
-using AVCodecCtxPtr = std::unique_ptr<AVCodecContext,AVCodecCtxDeleter>;
+using AVCodecCtxPtr = std::unique_ptr<AVCodecContext, decltype([](AVCodecContext *ptr)
+    { avcodec_free_context(&ptr); })>;
 
-struct AVPacketDeleter {
-    void operator()(AVPacket *pkt) { av_packet_free(&pkt); }
-};
-using AVPacketPtr = std::unique_ptr<AVPacket,AVPacketDeleter>;
+using AVPacketPtr = std::unique_ptr<AVPacket,decltype([](AVPacket *pkt){ av_packet_free(&pkt); })>;
 
-struct AVFrameDeleter {
-    void operator()(AVFrame *ptr) { av_frame_free(&ptr); }
-};
-using AVFramePtr = std::unique_ptr<AVFrame,AVFrameDeleter>;
+using AVFramePtr = std::unique_ptr<AVFrame, decltype([](AVFrame *ptr) { av_frame_free(&ptr); })>;
 
-struct SwrContextDeleter {
-    void operator()(SwrContext *ptr) { swr_free(&ptr); }
-};
-using SwrContextPtr = std::unique_ptr<SwrContext,SwrContextDeleter>;
+using SwrContextPtr = std::unique_ptr<SwrContext,decltype([](SwrContext *ptr){ swr_free(&ptr); })>;
 
-struct SwsContextDeleter {
-    void operator()(SwsContext *ptr) { sws_freeContext(ptr); }
-};
-using SwsContextPtr = std::unique_ptr<SwsContext,SwsContextDeleter>;
+using SwsContextPtr = std::unique_ptr<SwsContext, decltype([](SwsContext *ptr)
+    { sws_freeContext(ptr); })>;
 
 
 struct SDLProps {

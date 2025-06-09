@@ -17,16 +17,14 @@
 
 namespace {
 
-constexpr EffectProps genDefaultProps() noexcept
+consteval auto genDefaultProps() noexcept -> EffectProps
 {
-    CompressorProps props{};
-    props.OnOff = AL_COMPRESSOR_DEFAULT_ONOFF;
-    return props;
+    return CompressorProps{.OnOff = AL_COMPRESSOR_DEFAULT_ONOFF};
 }
 
 } // namespace
 
-const EffectProps CompressorEffectProps{genDefaultProps()};
+constinit const EffectProps CompressorEffectProps{genDefaultProps()};
 
 void CompressorEffectHandler::SetParami(ALCcontext *context, CompressorProps &props, ALenum param, int val)
 {

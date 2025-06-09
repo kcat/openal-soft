@@ -415,6 +415,7 @@ void LoadDriverList()
         std::swap(*DriverList.begin(), *(DriverList.begin()+1));
 }
 
+/* NOLINTNEXTLINE(misc-use-internal-linkage) Needs external linkage for Windows. */
 auto APIENTRY DllMain(HINSTANCE, DWORD reason, void*) -> BOOL
 {
     switch(reason)

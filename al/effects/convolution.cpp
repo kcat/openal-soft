@@ -16,17 +16,16 @@
 
 namespace {
 
-constexpr EffectProps genDefaultProps() noexcept
+consteval auto genDefaultProps() noexcept -> EffectProps
 {
-    ConvolutionProps props{};
-    props.OrientAt = {0.0f,  0.0f, -1.0f};
-    props.OrientUp = {0.0f,  1.0f,  0.0f};
-    return props;
+    return ConvolutionProps{
+        .OrientAt = {0.0f,  0.0f, -1.0f},
+        .OrientUp = {0.0f,  1.0f,  0.0f}};
 }
 
 } // namespace
 
-const EffectProps ConvolutionEffectProps{genDefaultProps()};
+constinit const EffectProps ConvolutionEffectProps{genDefaultProps()};
 
 void ConvolutionEffectHandler::SetParami(ALCcontext *context, ConvolutionProps& /*props*/, ALenum param, int /*val*/)
 { context->throw_error(AL_INVALID_ENUM, "Invalid convolution effect integer property {:#04x}", as_unsigned(param)); }

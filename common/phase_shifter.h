@@ -30,7 +30,7 @@ struct SIMDALIGN PhaseShifterT {
 
     alignas(16) std::array<float,FilterSize/2> mCoeffs{};
 
-    PhaseShifterT()
+    PhaseShifterT() noexcept
     {
         /* Every other coefficient is 0, so we only need to calculate and store
          * the non-0 terms and double-step over the input to apply it. The

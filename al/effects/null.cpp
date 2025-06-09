@@ -16,14 +16,14 @@
 
 namespace {
 
-constexpr EffectProps genDefaultProps() noexcept
+consteval auto genDefaultProps() noexcept -> EffectProps
 {
     return std::monostate{};
 }
 
 } // namespace
 
-const EffectProps NullEffectProps{genDefaultProps()};
+constinit const EffectProps NullEffectProps{genDefaultProps()};
 
 void NullEffectHandler::SetParami(ALCcontext *context, std::monostate& /*props*/, ALenum param, int /*val*/)
 {

@@ -404,7 +404,7 @@ struct OtherIOProxy {
 
         explicit operator bool() const noexcept { return mType != MsgType::QuitThread; }
     };
-    static inline std::deque<Msg> mMsgQueue;
+    static inline std::deque<Msg> mMsgQueue; /* NOLINT(cert-err58-cpp) */
     static inline std::mutex mMsgQueueLock;
     static inline std::condition_variable mMsgQueueCond;
 

@@ -19,19 +19,18 @@
 
 namespace {
 
-constexpr EffectProps genDefaultProps() noexcept
+consteval auto genDefaultProps() noexcept -> EffectProps
 {
-    AutowahProps props{};
-    props.AttackTime = AL_AUTOWAH_DEFAULT_ATTACK_TIME;
-    props.ReleaseTime = AL_AUTOWAH_DEFAULT_RELEASE_TIME;
-    props.Resonance = AL_AUTOWAH_DEFAULT_RESONANCE;
-    props.PeakGain = AL_AUTOWAH_DEFAULT_PEAK_GAIN;
-    return props;
+    return AutowahProps{
+        .AttackTime = AL_AUTOWAH_DEFAULT_ATTACK_TIME,
+        .ReleaseTime = AL_AUTOWAH_DEFAULT_RELEASE_TIME,
+        .Resonance = AL_AUTOWAH_DEFAULT_RESONANCE,
+        .PeakGain = AL_AUTOWAH_DEFAULT_PEAK_GAIN};
 }
 
 } // namespace
 
-const EffectProps AutowahEffectProps{genDefaultProps()};
+constinit const EffectProps AutowahEffectProps{genDefaultProps()};
 
 void AutowahEffectHandler::SetParami(ALCcontext *context, AutowahProps&, ALenum param, int)
 { context->throw_error(AL_INVALID_ENUM, "Invalid autowah integer property {:#04x}", as_unsigned(param)); }

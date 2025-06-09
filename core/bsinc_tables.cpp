@@ -161,7 +161,7 @@ template<const BSincHeader &hdr>
 struct SIMDALIGN BSincFilterArray {
     alignas(16) std::array<float, hdr.total_size> mTable{};
 
-    BSincFilterArray()
+    BSincFilterArray() noexcept
     {
         static constexpr auto BSincPointsMax = (hdr.m[0]+3u) & ~3u;
         static_assert(BSincPointsMax <= MaxResamplerPadding, "MaxResamplerPadding is too small");
@@ -349,9 +349,9 @@ const auto bsinc24_filter = BSincFilterArray<bsinc24_hdr>{};
 const auto bsinc48_filter = BSincFilterArray<bsinc48_hdr>{};
 
 template<typename T>
-constexpr BSincTable GenerateBSincTable(const T &filter)
+constexpr auto GenerateBSincTable(const T &filter) noexcept -> BSincTable
 {
-    BSincTable ret{};
+    auto ret = BSincTable{};
     const BSincHeader &hdr = filter.getHeader();
     ret.scaleBase = static_cast<float>(hdr.scaleBase);
     ret.scaleRange = static_cast<float>(1.0 / (1.0 - hdr.scaleBase));

@@ -44,18 +44,20 @@ constexpr ALenum EnumFromWaveform(ModulatorWaveform type)
         int{al::to_underlying(type)})};
 }
 
-constexpr EffectProps genDefaultProps() noexcept
+consteval EffectProps genDefaultProps() noexcept
 {
+    /* NOLINTBEGIN(bugprone-unchecked-optional-access) */
     ModulatorProps props{};
     props.Frequency      = AL_RING_MODULATOR_DEFAULT_FREQUENCY;
     props.HighPassCutoff = AL_RING_MODULATOR_DEFAULT_HIGHPASS_CUTOFF;
     props.Waveform       = WaveformFromEmum(AL_RING_MODULATOR_DEFAULT_WAVEFORM).value();
     return props;
+    /* NOLINTEND(bugprone-unchecked-optional-access) */
 }
 
 } // namespace
 
-const EffectProps ModulatorEffectProps{genDefaultProps()};
+constinit const EffectProps ModulatorEffectProps{genDefaultProps()};
 
 void ModulatorEffectHandler::SetParami(ALCcontext *context, ModulatorProps &props, ALenum param, int val)
 {

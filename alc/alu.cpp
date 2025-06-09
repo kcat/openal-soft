@@ -111,9 +111,9 @@ using uint = unsigned int;
 using namespace std::chrono;
 using namespace std::string_view_literals;
 
-float InitConeScale()
+auto InitConeScale() noexcept -> float
 {
-    float ret{1.0f};
+    auto ret = 1.0f;
     if(auto optval = al::getenv("__ALSOFT_HALF_ANGLE_CONES"))
     {
         if(al::case_compare(*optval, "true"sv) == 0
@@ -123,7 +123,7 @@ float InitConeScale()
     return ret;
 }
 /* Cone scalar */
-const float ConeScale{InitConeScale()};
+const auto ConeScale = InitConeScale();
 
 /* Localized scalars for mono sources (initialized in aluInit, after
  * configuration is loaded).
@@ -664,7 +664,7 @@ struct RotatorCoeffs {
     };
     std::array<CoeffValues,CalcRotatorSize(MaxAmbiOrder)> mCoeffs{};
 
-    RotatorCoeffs()
+    RotatorCoeffs() noexcept
     {
         auto coeffs = mCoeffs.begin();
 

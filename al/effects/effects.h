@@ -43,22 +43,22 @@ DECL_HANDLER(ConvolutionEffectHandler, ConvolutionProps)
 
 
 /* Default properties for the given effect types. */
-DECL_HIDDEN extern const EffectProps NullEffectProps;
-DECL_HIDDEN extern const EffectProps ReverbEffectProps;
-DECL_HIDDEN extern const EffectProps StdReverbEffectProps;
-DECL_HIDDEN extern const EffectProps AutowahEffectProps;
-DECL_HIDDEN extern const EffectProps ChorusEffectProps;
-DECL_HIDDEN extern const EffectProps CompressorEffectProps;
-DECL_HIDDEN extern const EffectProps DistortionEffectProps;
-DECL_HIDDEN extern const EffectProps EchoEffectProps;
-DECL_HIDDEN extern const EffectProps EqualizerEffectProps;
-DECL_HIDDEN extern const EffectProps FlangerEffectProps;
-DECL_HIDDEN extern const EffectProps FshifterEffectProps;
-DECL_HIDDEN extern const EffectProps ModulatorEffectProps;
-DECL_HIDDEN extern const EffectProps PshifterEffectProps;
-DECL_HIDDEN extern const EffectProps VmorpherEffectProps;
-DECL_HIDDEN extern const EffectProps DedicatedDialogEffectProps;
-DECL_HIDDEN extern const EffectProps DedicatedLfeEffectProps;
-DECL_HIDDEN extern const EffectProps ConvolutionEffectProps;
+DECL_HIDDEN extern constinit const EffectProps NullEffectProps;
+DECL_HIDDEN extern constinit const EffectProps ReverbEffectProps;
+DECL_HIDDEN extern constinit const EffectProps StdReverbEffectProps;
+DECL_HIDDEN extern constinit const EffectProps AutowahEffectProps;
+DECL_HIDDEN extern constinit const EffectProps ChorusEffectProps;
+DECL_HIDDEN extern constinit const EffectProps CompressorEffectProps;
+DECL_HIDDEN extern constinit const EffectProps DistortionEffectProps;
+DECL_HIDDEN extern constinit const EffectProps EchoEffectProps;
+DECL_HIDDEN extern constinit const EffectProps EqualizerEffectProps;
+DECL_HIDDEN extern constinit const EffectProps FlangerEffectProps;
+DECL_HIDDEN extern constinit const EffectProps FshifterEffectProps;
+DECL_HIDDEN extern constinit const EffectProps ModulatorEffectProps;
+DECL_HIDDEN extern constinit const EffectProps PshifterEffectProps;
+DECL_HIDDEN extern constinit const EffectProps VmorpherEffectProps;
+DECL_HIDDEN extern constinit const EffectProps DedicatedDialogEffectProps;
+DECL_HIDDEN extern constinit const EffectProps DedicatedLfeEffectProps;
+DECL_HIDDEN extern constinit const EffectProps ConvolutionEffectProps;
 
 #endif /* AL_EFFECTS_EFFECTS_H */

@@ -62,7 +62,7 @@ constexpr auto HilStep{HilSize / OversampleFactor};
 struct Windower {
     alignas(16) std::array<double,HilSize> mData{};
 
-    Windower()
+    Windower() noexcept
     {
         static constexpr auto scale = std::numbers::pi / double{HilSize};
         /* Create lookup table of the Hann window for the desired size. */

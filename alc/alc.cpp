@@ -176,7 +176,8 @@
  * Library initialization
  ************************************************/
 #if defined(_WIN32) && !defined(AL_LIBTYPE_STATIC)
-BOOL APIENTRY DllMain(HINSTANCE module, DWORD reason, LPVOID /*reserved*/)
+/* NOLINTNEXTLINE(misc-use-internal-linkage) Needs external linkage for Windows. */
+auto APIENTRY DllMain(HINSTANCE module, DWORD reason, LPVOID /*reserved*/) -> BOOL
 {
     switch(reason)
     {
@@ -400,7 +401,7 @@ using DeviceRef = al::intrusive_ptr<al::Device>;
 std::vector<al::Device*> DeviceList;
 std::vector<ALCcontext*> ContextList;
 
-std::recursive_mutex ListLock;
+auto ListLock = std::recursive_mutex{}; /* NOLINT(cert-err58-cpp) May throw on construction? */
 
 
 void alc_initconfig()

@@ -17,20 +17,19 @@
 
 namespace {
 
-constexpr EffectProps genDefaultProps() noexcept
+consteval auto genDefaultProps() noexcept -> EffectProps
 {
-    DistortionProps props{};
-    props.Edge = AL_DISTORTION_DEFAULT_EDGE;
-    props.Gain = AL_DISTORTION_DEFAULT_GAIN;
-    props.LowpassCutoff = AL_DISTORTION_DEFAULT_LOWPASS_CUTOFF;
-    props.EQCenter = AL_DISTORTION_DEFAULT_EQCENTER;
-    props.EQBandwidth = AL_DISTORTION_DEFAULT_EQBANDWIDTH;
-    return props;
+    return DistortionProps{
+        .Edge = AL_DISTORTION_DEFAULT_EDGE,
+        .Gain = AL_DISTORTION_DEFAULT_GAIN,
+        .LowpassCutoff = AL_DISTORTION_DEFAULT_LOWPASS_CUTOFF,
+        .EQCenter = AL_DISTORTION_DEFAULT_EQCENTER,
+        .EQBandwidth = AL_DISTORTION_DEFAULT_EQBANDWIDTH};
 }
 
 } // namespace
 
-const EffectProps DistortionEffectProps{genDefaultProps()};
+constinit const EffectProps DistortionEffectProps{genDefaultProps()};
 
 void DistortionEffectHandler::SetParami(ALCcontext *context, DistortionProps&, ALenum param, int)
 { context->throw_error(AL_INVALID_ENUM, "Invalid distortion integer property {:#04x}", as_unsigned(param)); }

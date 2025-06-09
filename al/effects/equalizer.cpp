@@ -17,25 +17,24 @@
 
 namespace {
 
-constexpr EffectProps genDefaultProps() noexcept
+consteval auto genDefaultProps() noexcept -> EffectProps
 {
-    EqualizerProps props{};
-    props.LowCutoff = AL_EQUALIZER_DEFAULT_LOW_CUTOFF;
-    props.LowGain = AL_EQUALIZER_DEFAULT_LOW_GAIN;
-    props.Mid1Center = AL_EQUALIZER_DEFAULT_MID1_CENTER;
-    props.Mid1Gain = AL_EQUALIZER_DEFAULT_MID1_GAIN;
-    props.Mid1Width = AL_EQUALIZER_DEFAULT_MID1_WIDTH;
-    props.Mid2Center = AL_EQUALIZER_DEFAULT_MID2_CENTER;
-    props.Mid2Gain = AL_EQUALIZER_DEFAULT_MID2_GAIN;
-    props.Mid2Width = AL_EQUALIZER_DEFAULT_MID2_WIDTH;
-    props.HighCutoff = AL_EQUALIZER_DEFAULT_HIGH_CUTOFF;
-    props.HighGain = AL_EQUALIZER_DEFAULT_HIGH_GAIN;
-    return props;
+    return EqualizerProps{
+        .LowCutoff = AL_EQUALIZER_DEFAULT_LOW_CUTOFF,
+        .LowGain = AL_EQUALIZER_DEFAULT_LOW_GAIN,
+        .Mid1Center = AL_EQUALIZER_DEFAULT_MID1_CENTER,
+        .Mid1Gain = AL_EQUALIZER_DEFAULT_MID1_GAIN,
+        .Mid1Width = AL_EQUALIZER_DEFAULT_MID1_WIDTH,
+        .Mid2Center = AL_EQUALIZER_DEFAULT_MID2_CENTER,
+        .Mid2Gain = AL_EQUALIZER_DEFAULT_MID2_GAIN,
+        .Mid2Width = AL_EQUALIZER_DEFAULT_MID2_WIDTH,
+        .HighCutoff = AL_EQUALIZER_DEFAULT_HIGH_CUTOFF,
+        .HighGain = AL_EQUALIZER_DEFAULT_HIGH_GAIN};
 }
 
 } // namespace
 
-const EffectProps EqualizerEffectProps{genDefaultProps()};
+constinit const EffectProps EqualizerEffectProps{genDefaultProps()};
 
 void EqualizerEffectHandler::SetParami(ALCcontext *context, EqualizerProps&, ALenum param, int)
 { context->throw_error(AL_INVALID_ENUM, "Invalid equalizer integer property {:#04x}", as_unsigned(param)); }

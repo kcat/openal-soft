@@ -29,71 +29,67 @@
 
 namespace {
 
-constexpr EffectProps genDefaultProps() noexcept
+consteval auto genDefaultProps() noexcept -> EffectProps
 {
-    ReverbProps props{};
-    props.Density   = AL_EAXREVERB_DEFAULT_DENSITY;
-    props.Diffusion = AL_EAXREVERB_DEFAULT_DIFFUSION;
-    props.Gain   = AL_EAXREVERB_DEFAULT_GAIN;
-    props.GainHF = AL_EAXREVERB_DEFAULT_GAINHF;
-    props.GainLF = AL_EAXREVERB_DEFAULT_GAINLF;
-    props.DecayTime    = AL_EAXREVERB_DEFAULT_DECAY_TIME;
-    props.DecayHFRatio = AL_EAXREVERB_DEFAULT_DECAY_HFRATIO;
-    props.DecayLFRatio = AL_EAXREVERB_DEFAULT_DECAY_LFRATIO;
-    props.ReflectionsGain   = AL_EAXREVERB_DEFAULT_REFLECTIONS_GAIN;
-    props.ReflectionsDelay  = AL_EAXREVERB_DEFAULT_REFLECTIONS_DELAY;
-    props.ReflectionsPan[0] = AL_EAXREVERB_DEFAULT_REFLECTIONS_PAN_XYZ;
-    props.ReflectionsPan[1] = AL_EAXREVERB_DEFAULT_REFLECTIONS_PAN_XYZ;
-    props.ReflectionsPan[2] = AL_EAXREVERB_DEFAULT_REFLECTIONS_PAN_XYZ;
-    props.LateReverbGain   = AL_EAXREVERB_DEFAULT_LATE_REVERB_GAIN;
-    props.LateReverbDelay  = AL_EAXREVERB_DEFAULT_LATE_REVERB_DELAY;
-    props.LateReverbPan[0] = AL_EAXREVERB_DEFAULT_LATE_REVERB_PAN_XYZ;
-    props.LateReverbPan[1] = AL_EAXREVERB_DEFAULT_LATE_REVERB_PAN_XYZ;
-    props.LateReverbPan[2] = AL_EAXREVERB_DEFAULT_LATE_REVERB_PAN_XYZ;
-    props.EchoTime  = AL_EAXREVERB_DEFAULT_ECHO_TIME;
-    props.EchoDepth = AL_EAXREVERB_DEFAULT_ECHO_DEPTH;
-    props.ModulationTime  = AL_EAXREVERB_DEFAULT_MODULATION_TIME;
-    props.ModulationDepth = AL_EAXREVERB_DEFAULT_MODULATION_DEPTH;
-    props.AirAbsorptionGainHF = AL_EAXREVERB_DEFAULT_AIR_ABSORPTION_GAINHF;
-    props.HFReference = AL_EAXREVERB_DEFAULT_HFREFERENCE;
-    props.LFReference = AL_EAXREVERB_DEFAULT_LFREFERENCE;
-    props.RoomRolloffFactor = AL_EAXREVERB_DEFAULT_ROOM_ROLLOFF_FACTOR;
-    props.DecayHFLimit = AL_EAXREVERB_DEFAULT_DECAY_HFLIMIT;
-    return props;
+    return ReverbProps{
+        .Density   = AL_EAXREVERB_DEFAULT_DENSITY,
+        .Diffusion = AL_EAXREVERB_DEFAULT_DIFFUSION,
+        .Gain   = AL_EAXREVERB_DEFAULT_GAIN,
+        .GainHF = AL_EAXREVERB_DEFAULT_GAINHF,
+        .GainLF = AL_EAXREVERB_DEFAULT_GAINLF,
+        .DecayTime    = AL_EAXREVERB_DEFAULT_DECAY_TIME,
+        .DecayHFRatio = AL_EAXREVERB_DEFAULT_DECAY_HFRATIO,
+        .DecayLFRatio = AL_EAXREVERB_DEFAULT_DECAY_LFRATIO,
+        .ReflectionsGain   = AL_EAXREVERB_DEFAULT_REFLECTIONS_GAIN,
+        .ReflectionsDelay  = AL_EAXREVERB_DEFAULT_REFLECTIONS_DELAY,
+        .ReflectionsPan    = {AL_EAXREVERB_DEFAULT_REFLECTIONS_PAN_XYZ,
+            AL_EAXREVERB_DEFAULT_REFLECTIONS_PAN_XYZ, AL_EAXREVERB_DEFAULT_REFLECTIONS_PAN_XYZ},
+        .LateReverbGain   = AL_EAXREVERB_DEFAULT_LATE_REVERB_GAIN,
+        .LateReverbDelay  = AL_EAXREVERB_DEFAULT_LATE_REVERB_DELAY,
+        .LateReverbPan    = {AL_EAXREVERB_DEFAULT_LATE_REVERB_PAN_XYZ,
+            AL_EAXREVERB_DEFAULT_LATE_REVERB_PAN_XYZ, AL_EAXREVERB_DEFAULT_LATE_REVERB_PAN_XYZ},
+        .EchoTime  = AL_EAXREVERB_DEFAULT_ECHO_TIME,
+        .EchoDepth = AL_EAXREVERB_DEFAULT_ECHO_DEPTH,
+        .ModulationTime  = AL_EAXREVERB_DEFAULT_MODULATION_TIME,
+        .ModulationDepth = AL_EAXREVERB_DEFAULT_MODULATION_DEPTH,
+        .AirAbsorptionGainHF = AL_EAXREVERB_DEFAULT_AIR_ABSORPTION_GAINHF,
+        .HFReference = AL_EAXREVERB_DEFAULT_HFREFERENCE,
+        .LFReference = AL_EAXREVERB_DEFAULT_LFREFERENCE,
+        .RoomRolloffFactor = AL_EAXREVERB_DEFAULT_ROOM_ROLLOFF_FACTOR,
+        .DecayHFLimit = AL_EAXREVERB_DEFAULT_DECAY_HFLIMIT};
 }
 
-constexpr EffectProps genDefaultStdProps() noexcept
+consteval auto genDefaultStdProps() noexcept -> EffectProps
 {
-    ReverbProps props{};
-    props.Density   = AL_REVERB_DEFAULT_DENSITY;
-    props.Diffusion = AL_REVERB_DEFAULT_DIFFUSION;
-    props.Gain   = AL_REVERB_DEFAULT_GAIN;
-    props.GainHF = AL_REVERB_DEFAULT_GAINHF;
-    props.GainLF = 1.0f;
-    props.DecayTime    = AL_REVERB_DEFAULT_DECAY_TIME;
-    props.DecayHFRatio = AL_REVERB_DEFAULT_DECAY_HFRATIO;
-    props.DecayLFRatio = 1.0f;
-    props.ReflectionsGain  = AL_REVERB_DEFAULT_REFLECTIONS_GAIN;
-    props.ReflectionsDelay = AL_REVERB_DEFAULT_REFLECTIONS_DELAY;
-    props.ReflectionsPan   = {0.0f, 0.0f, 0.0f};
-    props.LateReverbGain  = AL_REVERB_DEFAULT_LATE_REVERB_GAIN;
-    props.LateReverbDelay = AL_REVERB_DEFAULT_LATE_REVERB_DELAY;
-    props.LateReverbPan   = {0.0f, 0.0f, 0.0f};
-    props.EchoTime  = 0.25f;
-    props.EchoDepth = 0.0f;
-    props.ModulationTime  = 0.25f;
-    props.ModulationDepth = 0.0f;
-    props.AirAbsorptionGainHF = AL_REVERB_DEFAULT_AIR_ABSORPTION_GAINHF;
-    props.HFReference = 5000.0f;
-    props.LFReference = 250.0f;
-    props.RoomRolloffFactor = AL_REVERB_DEFAULT_ROOM_ROLLOFF_FACTOR;
-    props.DecayHFLimit = AL_REVERB_DEFAULT_DECAY_HFLIMIT;
-    return props;
+    return ReverbProps{
+        .Density   = AL_REVERB_DEFAULT_DENSITY,
+        .Diffusion = AL_REVERB_DEFAULT_DIFFUSION,
+        .Gain   = AL_REVERB_DEFAULT_GAIN,
+        .GainHF = AL_REVERB_DEFAULT_GAINHF,
+        .GainLF = 1.0f,
+        .DecayTime    = AL_REVERB_DEFAULT_DECAY_TIME,
+        .DecayHFRatio = AL_REVERB_DEFAULT_DECAY_HFRATIO,
+        .DecayLFRatio = 1.0f,
+        .ReflectionsGain   = AL_REVERB_DEFAULT_REFLECTIONS_GAIN,
+        .ReflectionsDelay  = AL_REVERB_DEFAULT_REFLECTIONS_DELAY,
+        .ReflectionsPan    = {0.0f, 0.0f, 0.0f},
+        .LateReverbGain   = AL_REVERB_DEFAULT_LATE_REVERB_GAIN,
+        .LateReverbDelay  = AL_REVERB_DEFAULT_LATE_REVERB_DELAY,
+        .LateReverbPan    = {0.0f, 0.0f, 0.0f},
+        .EchoTime  = 0.25f,
+        .EchoDepth = 0.0f,
+        .ModulationTime  = 0.25f,
+        .ModulationDepth = 0.0f,
+        .AirAbsorptionGainHF = AL_REVERB_DEFAULT_AIR_ABSORPTION_GAINHF,
+        .HFReference = 5'000.0f,
+        .LFReference = 250.0f,
+        .RoomRolloffFactor = AL_REVERB_DEFAULT_ROOM_ROLLOFF_FACTOR,
+        .DecayHFLimit = AL_REVERB_DEFAULT_DECAY_HFLIMIT};
 }
 
 } // namespace
 
-const EffectProps ReverbEffectProps{genDefaultProps()};
+constinit const EffectProps ReverbEffectProps{genDefaultProps()};
 
 void ReverbEffectHandler::SetParami(ALCcontext *context, ReverbProps &props, ALenum param, int val)
 {
@@ -306,11 +302,11 @@ void ReverbEffectHandler::GetParamfv(ALCcontext *context, const ReverbProps &pro
     {
     case AL_EAXREVERB_REFLECTIONS_PAN:
         values = {vals, 3_uz};
-        std::copy(props.ReflectionsPan.cbegin(), props.ReflectionsPan.cend(), values.begin());
+        std::ranges::copy(props.ReflectionsPan, values.begin());
         return;
     case AL_EAXREVERB_LATE_REVERB_PAN:
         values = {vals, 3_uz};
-        std::copy(props.LateReverbPan.cbegin(), props.LateReverbPan.cend(), values.begin());
+        std::ranges::copy(props.LateReverbPan, values.begin());
         return;
     }
 
@@ -318,7 +314,7 @@ void ReverbEffectHandler::GetParamfv(ALCcontext *context, const ReverbProps &pro
 }
 
 
-const EffectProps StdReverbEffectProps{genDefaultStdProps()};
+constinit const EffectProps StdReverbEffectProps{genDefaultStdProps()};
 
 void StdReverbEffectHandler::SetParami(ALCcontext *context, ReverbProps &props, ALenum param, int val)
 {

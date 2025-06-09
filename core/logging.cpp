@@ -24,7 +24,10 @@
 #endif
 
 
-FILE *gLogFile{stderr};
+FILE *gLogFile{stderr}; /* NOLINT(cert-err58-cpp)
+ * stderr is a non-noexcept function call on some systems, but as a "C global",
+ * it should be safe to invoke during initialization.
+ */
 #ifdef _DEBUG
 LogLevel gLogLevel{LogLevel::Warning};
 #else

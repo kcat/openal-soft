@@ -13,25 +13,23 @@
 
 namespace {
 
-constexpr EffectProps genDefaultDialogProps() noexcept
+consteval auto genDefaultDialogProps() noexcept -> EffectProps
 {
-    DedicatedProps props{};
-    props.Target = DedicatedProps::Dialog;
-    props.Gain = 1.0f;
-    return props;
+    return DedicatedProps{
+        .Target = DedicatedProps::Dialog,
+        .Gain = 1.0f};
 }
 
-constexpr EffectProps genDefaultLfeProps() noexcept
+consteval auto genDefaultLfeProps() noexcept -> EffectProps
 {
-    DedicatedProps props{};
-    props.Target = DedicatedProps::Lfe;
-    props.Gain = 1.0f;
-    return props;
+    return DedicatedProps{
+        .Target = DedicatedProps::Lfe,
+        .Gain = 1.0f};
 }
 
 } // namespace
 
-const EffectProps DedicatedDialogEffectProps{genDefaultDialogProps()};
+constinit const EffectProps DedicatedDialogEffectProps{genDefaultDialogProps()};
 
 void DedicatedDialogEffectHandler::SetParami(ALCcontext *context, DedicatedProps&, ALenum param, int)
 { context->throw_error(AL_INVALID_ENUM, "Invalid dedicated integer property {:#04x}", as_unsigned(param)); }
@@ -72,7 +70,7 @@ void DedicatedDialogEffectHandler::GetParamfv(ALCcontext *context, const Dedicat
 { GetParamf(context, props, param, vals); }
 
 
-const EffectProps DedicatedLfeEffectProps{genDefaultLfeProps()};
+constinit const EffectProps DedicatedLfeEffectProps{genDefaultLfeProps()};
 
 void DedicatedLfeEffectHandler::SetParami(ALCcontext *context, DedicatedProps&, ALenum param, int)
 { context->throw_error(AL_INVALID_ENUM, "Invalid dedicated integer property {:#04x}", as_unsigned(param)); }

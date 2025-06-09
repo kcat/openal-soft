@@ -97,7 +97,7 @@ using seconds_d64 = std::chrono::duration<double>;
 using std::chrono::duration_cast;
 
 
-const auto AppName = std::string{"alffplay"};
+constexpr auto AppName = std::to_array("alffplay");
 
 auto DirectOutMode = ALenum{AL_FALSE};
 auto EnableWideStereo = false;
@@ -118,7 +118,7 @@ constexpr auto AudioSyncThreshold = seconds_d64{0.03};
 constexpr auto AudioSampleCorrectionMax = milliseconds{50};
 /* Averaging filter coefficient for audio sync. */
 constexpr auto AudioDiffAvgNB = 20.0;
-const auto AudioAvgFilterCoeff = std::pow(0.01, 1.0/AudioDiffAvgNB);
+const auto AudioAvgFilterCoeff = std::pow(0.01, 1.0/AudioDiffAvgNB); /* NOLINT(cert-err58-cpp) */
 
 /* Per-buffer size, in time */
 constexpr auto AudioBufferTime = milliseconds{20};
@@ -1862,7 +1862,8 @@ void MovieState::setTitle(SDL_Window *window) const
      * give the desired result for finding the filename portion.
      */
     const auto fpos = std::max(mFilename.rfind('/')+1, mFilename.rfind('\\')+1);
-    const auto title = fmt::format("{} - {}", std::string_view{mFilename}.substr(fpos), AppName);
+    const auto title = fmt::format("{} - {}", std::string_view{mFilename}.substr(fpos),
+        AppName.data());
     SDL_SetWindowTitle(window, title.c_str());
 }
 
@@ -2049,7 +2050,7 @@ auto main(std::span<std::string_view> args) -> int
     }
 
     /* Make a window to put our video */
-    auto *screen = SDL_CreateWindow(AppName.c_str(), 640, 480, SDL_WINDOW_RESIZABLE);
+    auto *screen = SDL_CreateWindow(AppName.data(), 640, 480, SDL_WINDOW_RESIZABLE);
     if(!screen)
     {
         fmt::println(stderr, "SDL: could not set video mode - exiting");

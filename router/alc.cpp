@@ -314,7 +314,7 @@ constexpr auto alcMajorVersion = 1;
 constexpr auto alcMinorVersion = 1;
 
 
-auto EnumerationLock = std::recursive_mutex{};
+auto EnumerationLock = std::recursive_mutex{}; /* NOLINT(cert-err58-cpp) May throw on construction */
 auto ContextSwitchLock = std::mutex{};
 
 auto LastError = std::atomic<ALCenum>{ALC_NO_ERROR};
@@ -524,11 +524,17 @@ ALC_API auto ALC_APIENTRY alcOpenDevice(const ALCchar *devicename) noexcept -> A
             }
             return false;
         }, &DriverIfacePtr::operator*);
-        if(iter != DriverList.end())
-            idx = static_cast<ALCuint>(std::distance(DriverList.begin(), iter));
+        if(iter == DriverList.end())
+        {
+            LastError.store(ALC_INVALID_DEVICE);
+            return nullptr;
+        }
+        idx = static_cast<ALCuint>(std::distance(DriverList.begin(), iter));
     }
 
-    if(device)
+    if(!device)
+        LastError.store(DriverList[idx.value()]->alcGetError(nullptr));
+    else
     {
         try {
             DeviceIfaceMap.emplace(device, idx.value());
@@ -951,11 +957,17 @@ ALC_API auto ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *devicename, ALCuin
             }
             return false;
         }, &DriverIfacePtr::operator*);
-        if(iter != DriverList.end())
-            idx = static_cast<ALCuint>(std::distance(DriverList.begin(), iter));
+        if(iter == DriverList.end())
+        {
+            LastError.store(ALC_INVALID_DEVICE);
+            return nullptr;
+        }
+        idx = static_cast<ALCuint>(std::distance(DriverList.begin(), iter));
     }
 
-    if(device)
+    if(!device)
+        LastError.store(DriverList[idx.value()]->alcGetError(nullptr));
+    else
     {
         try {
             DeviceIfaceMap.emplace(device, idx.value());

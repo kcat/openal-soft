@@ -86,8 +86,8 @@ using namespace std::string_view_literals;
 
 [[nodiscard]] constexpr auto GetDefaultName() noexcept { return "OSS Default"sv; }
 
-std::string DefaultPlayback{"/dev/dsp"s};
-std::string DefaultCapture{"/dev/dsp"s};
+auto DefaultPlayback = "/dev/dsp"s; /* NOLINT(cert-err58-cpp) */
+auto DefaultCapture = "/dev/dsp"s; /* NOLINT(cert-err58-cpp) */
 
 struct DevMap {
     std::string name;

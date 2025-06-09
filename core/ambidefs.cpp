@@ -273,7 +273,7 @@ static_assert(Order4Dec2D.size() == Order4Enc2D.size(), "Fourth-order 2D mismatc
 
 template<size_t N, size_t M>
 constexpr auto CalcAmbiUpsampler(const std::array<std::array<float,N>,M> &decoder,
-    const std::array<AmbiChannelFloatArray,M> &encoder)
+    const std::array<AmbiChannelFloatArray,M> &encoder) noexcept
 {
     auto res = std::array<AmbiChannelFloatArray,N>{};
 

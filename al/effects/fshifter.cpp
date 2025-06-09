@@ -43,18 +43,20 @@ constexpr ALenum EnumFromDirection(FShifterDirection dir)
     throw std::runtime_error{fmt::format("Invalid direction: {}", int{al::to_underlying(dir)})};
 }
 
-constexpr EffectProps genDefaultProps() noexcept
+consteval EffectProps genDefaultProps() noexcept
 {
+    /* NOLINTBEGIN(bugprone-unchecked-optional-access) */
     FshifterProps props{};
     props.Frequency      = AL_FREQUENCY_SHIFTER_DEFAULT_FREQUENCY;
     props.LeftDirection  = DirectionFromEmum(AL_FREQUENCY_SHIFTER_DEFAULT_LEFT_DIRECTION).value();
     props.RightDirection = DirectionFromEmum(AL_FREQUENCY_SHIFTER_DEFAULT_RIGHT_DIRECTION).value();
     return props;
+    /* NOLINTEND(bugprone-unchecked-optional-access) */
 }
 
 } // namespace
 
-const EffectProps FshifterEffectProps{genDefaultProps()};
+constinit const EffectProps FshifterEffectProps{genDefaultProps()};
 
 void FshifterEffectHandler::SetParami(ALCcontext *context, FshifterProps &props, ALenum param, int val)
 {

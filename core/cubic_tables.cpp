@@ -34,7 +34,7 @@ auto GetCoeff(double idx) noexcept -> double
 
 } // namespace
 
-GaussianTable::GaussianTable()
+GaussianTable::GaussianTable() noexcept
 {
     static constexpr double IndexScale{512.0 / double{CubicPhaseCount*2}};
     /* Fill in the main coefficients. */
@@ -68,7 +68,7 @@ GaussianTable::GaussianTable()
     mTable[pi].mDeltas[3] = mTable[0].mCoeffs[2] - mTable[pi].mCoeffs[3];
 }
 
-consteval SplineTable::SplineTable()
+consteval SplineTable::SplineTable() noexcept
 {
     constexpr auto third = 1.0/3.0;
     constexpr auto sixth = 1.0/6.0;
@@ -103,7 +103,7 @@ consteval SplineTable::SplineTable()
 constinit const SplineTable gSplineFilter;
 
 
-CubicFilter::CubicFilter()
+CubicFilter::CubicFilter() noexcept
 {
     static constexpr double IndexScale{512.0 / double{sTableSteps*2}};
     /* Only half the coefficients need to be iterated here, since Coeff2 and

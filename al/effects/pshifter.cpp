@@ -17,17 +17,16 @@
 
 namespace {
 
-constexpr EffectProps genDefaultProps() noexcept
+consteval auto genDefaultProps() noexcept -> EffectProps
 {
-    PshifterProps props{};
-    props.CoarseTune = AL_PITCH_SHIFTER_DEFAULT_COARSE_TUNE;
-    props.FineTune = AL_PITCH_SHIFTER_DEFAULT_FINE_TUNE;
-    return props;
+    return PshifterProps{
+        .CoarseTune = AL_PITCH_SHIFTER_DEFAULT_COARSE_TUNE,
+        .FineTune = AL_PITCH_SHIFTER_DEFAULT_FINE_TUNE};
 }
 
 } // namespace
 
-const EffectProps PshifterEffectProps{genDefaultProps()};
+constinit const EffectProps PshifterEffectProps{genDefaultProps()};
 
 void PshifterEffectHandler::SetParami(ALCcontext *context, PshifterProps &props, ALenum param, int val)
 {

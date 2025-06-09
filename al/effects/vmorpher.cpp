@@ -123,21 +123,22 @@ constexpr ALenum EnumFromWaveform(VMorpherWaveform type)
         int{al::to_underlying(type)})};
 }
 
-constexpr EffectProps genDefaultProps() noexcept
+consteval auto genDefaultProps() noexcept -> EffectProps
 {
-    VmorpherProps props{};
-    props.Rate                 = AL_VOCAL_MORPHER_DEFAULT_RATE;
-    props.PhonemeA             = PhenomeFromEnum(AL_VOCAL_MORPHER_DEFAULT_PHONEMEA).value();
-    props.PhonemeB             = PhenomeFromEnum(AL_VOCAL_MORPHER_DEFAULT_PHONEMEB).value();
-    props.PhonemeACoarseTuning = AL_VOCAL_MORPHER_DEFAULT_PHONEMEA_COARSE_TUNING;
-    props.PhonemeBCoarseTuning = AL_VOCAL_MORPHER_DEFAULT_PHONEMEB_COARSE_TUNING;
-    props.Waveform             = WaveformFromEmum(AL_VOCAL_MORPHER_DEFAULT_WAVEFORM).value();
-    return props;
+    /* NOLINTBEGIN(bugprone-unchecked-optional-access) */
+    return VmorpherProps{
+        .Rate                 = AL_VOCAL_MORPHER_DEFAULT_RATE,
+        .PhonemeA             = PhenomeFromEnum(AL_VOCAL_MORPHER_DEFAULT_PHONEMEA).value(),
+        .PhonemeB             = PhenomeFromEnum(AL_VOCAL_MORPHER_DEFAULT_PHONEMEB).value(),
+        .PhonemeACoarseTuning = AL_VOCAL_MORPHER_DEFAULT_PHONEMEA_COARSE_TUNING,
+        .PhonemeBCoarseTuning = AL_VOCAL_MORPHER_DEFAULT_PHONEMEB_COARSE_TUNING,
+        .Waveform             = WaveformFromEmum(AL_VOCAL_MORPHER_DEFAULT_WAVEFORM).value()};
+    /* NOLINTEND(bugprone-unchecked-optional-access) */
 }
 
 } // namespace
 
-const EffectProps VmorpherEffectProps{genDefaultProps()};
+constinit const EffectProps VmorpherEffectProps{genDefaultProps()};
 
 void VmorpherEffectHandler::SetParami(ALCcontext *context, VmorpherProps &props, ALenum param, int val)
 {

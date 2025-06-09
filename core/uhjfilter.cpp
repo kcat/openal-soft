@@ -64,7 +64,7 @@ struct SegmentedFilter {
     PFFFTSetup mFft;
     alignas(16) std::array<float,sFftLength*sNumSegments> mFilterData;
 
-    SegmentedFilter() : mFft{sFftLength, PFFFT_REAL}
+    SegmentedFilter() noexcept : mFft{sFftLength, PFFFT_REAL}
     {
         static constexpr size_t fft_size{N};
 

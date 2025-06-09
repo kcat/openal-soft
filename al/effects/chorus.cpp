@@ -48,33 +48,33 @@ constexpr ALenum EnumFromWaveform(ChorusWaveform type)
         int{al::to_underlying(type)})};
 }
 
-constexpr EffectProps genDefaultChorusProps() noexcept
+consteval auto genDefaultChorusProps() noexcept -> EffectProps
 {
-    ChorusProps props{};
-    props.Waveform = WaveformFromEnum(AL_CHORUS_DEFAULT_WAVEFORM).value();
-    props.Phase = AL_CHORUS_DEFAULT_PHASE;
-    props.Rate = AL_CHORUS_DEFAULT_RATE;
-    props.Depth = AL_CHORUS_DEFAULT_DEPTH;
-    props.Feedback = AL_CHORUS_DEFAULT_FEEDBACK;
-    props.Delay = AL_CHORUS_DEFAULT_DELAY;
-    return props;
+    return ChorusProps{
+        /* NOLINTNEXTLINE(bugprone-unchecked-optional-access) */
+        .Waveform = WaveformFromEnum(AL_CHORUS_DEFAULT_WAVEFORM).value(),
+        .Phase = AL_CHORUS_DEFAULT_PHASE,
+        .Rate = AL_CHORUS_DEFAULT_RATE,
+        .Depth = AL_CHORUS_DEFAULT_DEPTH,
+        .Feedback = AL_CHORUS_DEFAULT_FEEDBACK,
+        .Delay = AL_CHORUS_DEFAULT_DELAY};
 }
 
-constexpr EffectProps genDefaultFlangerProps() noexcept
+consteval auto genDefaultFlangerProps() noexcept -> EffectProps
 {
-    ChorusProps props{};
-    props.Waveform = WaveformFromEnum(AL_FLANGER_DEFAULT_WAVEFORM).value();
-    props.Phase = AL_FLANGER_DEFAULT_PHASE;
-    props.Rate = AL_FLANGER_DEFAULT_RATE;
-    props.Depth = AL_FLANGER_DEFAULT_DEPTH;
-    props.Feedback = AL_FLANGER_DEFAULT_FEEDBACK;
-    props.Delay = AL_FLANGER_DEFAULT_DELAY;
-    return props;
+    return ChorusProps{
+        /* NOLINTNEXTLINE(bugprone-unchecked-optional-access) */
+        .Waveform = WaveformFromEnum(AL_FLANGER_DEFAULT_WAVEFORM).value(),
+        .Phase = AL_FLANGER_DEFAULT_PHASE,
+        .Rate = AL_FLANGER_DEFAULT_RATE,
+        .Depth = AL_FLANGER_DEFAULT_DEPTH,
+        .Feedback = AL_FLANGER_DEFAULT_FEEDBACK,
+        .Delay = AL_FLANGER_DEFAULT_DELAY};
 }
 
 } // namespace
 
-const EffectProps ChorusEffectProps{genDefaultChorusProps()};
+constinit const EffectProps ChorusEffectProps{genDefaultChorusProps()};
 
 void ChorusEffectHandler::SetParami(ALCcontext *context, ChorusProps &props, ALenum param, int val)
 {
@@ -165,7 +165,7 @@ void ChorusEffectHandler::GetParamfv(ALCcontext *context, const ChorusProps &pro
 { GetParamf(context, props, param, vals); }
 
 
-const EffectProps FlangerEffectProps{genDefaultFlangerProps()};
+constinit const EffectProps FlangerEffectProps{genDefaultFlangerProps()};
 
 void FlangerEffectHandler::SetParami(ALCcontext *context, ChorusProps &props, ALenum param, int val)
 {

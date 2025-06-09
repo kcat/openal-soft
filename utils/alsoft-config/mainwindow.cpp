@@ -28,6 +28,7 @@
 
 namespace {
 
+/* NOLINTBEGIN(cert-err58-cpp) */
 struct BackendNamePair {
     QString backend_name;
     QString full_string;
@@ -146,6 +147,7 @@ const std::array hrtfModeList{
     NameValuePair{ QStringLiteral("Default (Full)"), QStringLiteral("") },
     NameValuePair{ QStringLiteral("Full"), QStringLiteral("full") },
 };
+/* NOLINTEND(cert-err58-cpp) */
 
 auto GetDefaultIndex(const std::span<const NameValuePair> list) -> uint8_t
 {

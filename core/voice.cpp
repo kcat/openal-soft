@@ -894,10 +894,11 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
                  * the samples that get closest to 0 amplitude. This helps
                  * certain sounds fade out better.
                  */
-                auto srciter = std::ranges::min_element(srcbuf | std::views::take(avail),
-                    [](const float l, const float r) { return std::abs(l) < std::abs(r); });
+                const auto srciter = std::ranges::min_element(srcbuf.begin(),
+                    std::next(srcbuf.begin(), ptrdiff_t(avail)), {},
+                    [](const float s) { return std::abs(s); });
 
-                std::fill(srciter+1, srcbuf.end(), *srciter);
+                std::ranges::fill(std::next(srciter), srcbuf.end(), *srciter);
             }
             else if(mFlags.test(VoiceIsStatic))
             {

@@ -74,7 +74,7 @@ consteval auto genDefaultFlangerProps() noexcept -> EffectProps
 
 } // namespace
 
-constinit const EffectProps ChorusEffectProps = genDefaultChorusProps();
+constinit const EffectProps ChorusEffectProps(genDefaultChorusProps());
 
 void ChorusEffectHandler::SetParami(ALCcontext *context, ChorusProps &props, ALenum param, int val)
 {
@@ -165,7 +165,7 @@ void ChorusEffectHandler::GetParamfv(ALCcontext *context, const ChorusProps &pro
 { GetParamf(context, props, param, vals); }
 
 
-constinit const EffectProps FlangerEffectProps = genDefaultFlangerProps();
+constinit const EffectProps FlangerEffectProps(genDefaultFlangerProps());
 
 void FlangerEffectHandler::SetParami(ALCcontext *context, ChorusProps &props, ALenum param, int val)
 {

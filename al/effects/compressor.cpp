@@ -24,7 +24,7 @@ consteval auto genDefaultProps() noexcept -> EffectProps
 
 } // namespace
 
-constinit const EffectProps CompressorEffectProps = genDefaultProps();
+constinit const EffectProps CompressorEffectProps(genDefaultProps());
 
 void CompressorEffectHandler::SetParami(ALCcontext *context, CompressorProps &props, ALenum param, int val)
 {

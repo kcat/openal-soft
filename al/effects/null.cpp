@@ -23,7 +23,7 @@ consteval auto genDefaultProps() noexcept -> EffectProps
 
 } // namespace
 
-constinit const EffectProps NullEffectProps = genDefaultProps();
+constinit const EffectProps NullEffectProps(genDefaultProps());
 
 void NullEffectHandler::SetParami(ALCcontext *context, std::monostate& /*props*/, ALenum param, int /*val*/)
 {

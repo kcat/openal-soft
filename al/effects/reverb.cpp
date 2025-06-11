@@ -89,7 +89,7 @@ consteval auto genDefaultStdProps() noexcept -> EffectProps
 
 } // namespace
 
-constinit const EffectProps ReverbEffectProps = genDefaultProps();
+constinit const EffectProps ReverbEffectProps(genDefaultProps());
 
 void ReverbEffectHandler::SetParami(ALCcontext *context, ReverbProps &props, ALenum param, int val)
 {
@@ -314,7 +314,7 @@ void ReverbEffectHandler::GetParamfv(ALCcontext *context, const ReverbProps &pro
 }
 
 
-constinit const EffectProps StdReverbEffectProps = genDefaultStdProps();
+constinit const EffectProps StdReverbEffectProps(genDefaultStdProps());
 
 void StdReverbEffectHandler::SetParami(ALCcontext *context, ReverbProps &props, ALenum param, int val)
 {

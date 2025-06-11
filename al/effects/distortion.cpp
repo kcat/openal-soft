@@ -29,7 +29,7 @@ consteval auto genDefaultProps() noexcept -> EffectProps
 
 } // namespace
 
-constinit const EffectProps DistortionEffectProps = genDefaultProps();
+constinit const EffectProps DistortionEffectProps(genDefaultProps());
 
 void DistortionEffectHandler::SetParami(ALCcontext *context, DistortionProps&, ALenum param, int)
 { context->throw_error(AL_INVALID_ENUM, "Invalid distortion integer property {:#04x}", as_unsigned(param)); }

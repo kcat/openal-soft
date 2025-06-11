@@ -32,7 +32,7 @@ consteval auto genDefaultProps() noexcept -> EffectProps
 
 } // namespace
 
-constinit const EffectProps EchoEffectProps = genDefaultProps();
+constinit const EffectProps EchoEffectProps(genDefaultProps());
 
 void EchoEffectHandler::SetParami(ALCcontext *context, EchoProps&, ALenum param, int)
 { context->throw_error(AL_INVALID_ENUM, "Invalid echo integer property {:#04x}", as_unsigned(param)); }

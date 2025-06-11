@@ -741,7 +741,7 @@ void InitPanning(al::Device *device, const bool hqdec=false, const bool stablize
     const auto dual_band = hqdec && !decoder.mCoeffsLF.empty();
     auto chancoeffs = std::vector<ChannelDec>{};
     auto chancoeffslf = std::vector<ChannelDec>{};
-    for(auto i = 0_uz;i < decoder.mChannels.size();++i)
+    for(const auto i : std::views::iota(0_uz, decoder.mChannels.size()))
     {
         const auto idx = size_t{device->channelIdxByName(decoder.mChannels[i])};
         if(idx == InvalidChannelIndex)
@@ -811,7 +811,8 @@ void InitPanning(al::Device *device, const bool hqdec=false, const bool stablize
         (decoder.mOrder > 1) ? "second" : "first",
         decoder.mIs3D ? " periphonic" : "");
     device->AmbiDecoder = std::make_unique<BFormatDec>(ambicount, chancoeffs, chancoeffslf,
-        device->mXOverFreq/static_cast<float>(device->mSampleRate), std::move(stablizer));
+        device->mXOverFreq/static_cast<float>(device->mSampleRate));
+    device->mStablizer = std::move(stablizer);
 }
 
 void InitHrtfPanning(al::Device *device)
@@ -1165,11 +1166,10 @@ void aluInitRenderer(al::Device *device, int hrtf_id, std::optional<StereoEncodi
             if(spkr_count > 0)
                 InitDistanceComp(device, decoder.mChannels, speakerdists);
         }
-        if(auto *ambidec{device->AmbiDecoder.get()})
-        {
-            device->PostProcess = ambidec->hasStablizer() ? &al::Device::ProcessAmbiDecStablized
-                : &al::Device::ProcessAmbiDec;
-        }
+        if(device->mStablizer)
+            device->PostProcess = &al::Device::ProcessAmbiDecStablized;
+        else if(device->AmbiDecoder)
+            device->PostProcess = &al::Device::ProcessAmbiDec;
         return;
     }
 
@@ -1255,18 +1255,16 @@ void aluInitRenderer(al::Device *device, int hrtf_id, std::optional<StereoEncodi
     device->mRenderMode = RenderMode::Pairwise;
     if(device->Type != DeviceType::Loopback)
     {
-        if(auto cflevopt = device->configValue<int>({}, "cf_level"))
+        if(auto cflevopt = device->configValue<int>({}, "cf_level");
+            cflevopt && *cflevopt > 0 && *cflevopt <= 6)
         {
-            if(*cflevopt > 0 && *cflevopt <= 6)
-            {
-                auto bs2b = std::make_unique<Bs2b::bs2b>();
-                bs2b->set_params(*cflevopt, static_cast<int>(device->mSampleRate));
-                device->Bs2b = std::move(bs2b);
-                TRACE("BS2B enabled");
-                InitPanning(device);
-                device->PostProcess = &al::Device::ProcessBs2b;
-                return;
-            }
+            auto bs2b = std::make_unique<Bs2b::bs2b>();
+            bs2b->set_params(*cflevopt, static_cast<int>(device->mSampleRate));
+            device->Bs2b = std::move(bs2b);
+            TRACE("BS2B enabled");
+            InitPanning(device);
+            device->PostProcess = &al::Device::ProcessBs2b;
+            return;
         }
     }
 

@@ -37,6 +37,7 @@ struct bs2b;
 class Compressor;
 struct ContextBase;
 struct DirectHrtfState;
+class FrontStablizer;
 struct HrtfStore;
 
 using uint = unsigned int;
@@ -273,6 +274,9 @@ struct SIMDALIGN DeviceBase {
 
     /* Ambisonic decoder for speakers */
     std::unique_ptr<BFormatDec> AmbiDecoder;
+
+    /* Stablizer that generates a front-center channel from the left+right. */
+    std::unique_ptr<FrontStablizer> mStablizer;
 
     /* Stereo-to-binaural filter */
     std::unique_ptr<Bs2b::bs2b> Bs2b;

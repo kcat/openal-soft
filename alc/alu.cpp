@@ -76,6 +76,7 @@
 #include "core/uhjfilter.h"
 #include "core/voice.h"
 #include "core/voice_change.h"
+#include "core/front_stablizer.h"
 #include "intrusive_ptr.h"
 #include "opthelpers.h"
 #include "ringbuffer.h"
@@ -317,18 +318,86 @@ void DeviceBase::ProcessAmbiDec(const size_t SamplesToDo)
 void DeviceBase::ProcessAmbiDecStablized(const size_t SamplesToDo)
 {
     /* Decode with front image stablization. */
-    const size_t lidx{RealOut.ChannelIndex[FrontLeft]};
-    const size_t ridx{RealOut.ChannelIndex[FrontRight]};
-    const size_t cidx{RealOut.ChannelIndex[FrontCenter]};
+    const auto lidx = size_t{RealOut.ChannelIndex[FrontLeft]};
+    const auto ridx = size_t{RealOut.ChannelIndex[FrontRight]};
+    const auto cidx = size_t{RealOut.ChannelIndex[FrontCenter]};
 
-    AmbiDecoder->processStablize(RealOut.Buffer, Dry.Buffer, lidx, ridx, cidx, SamplesToDo);
+    /* Move the existing direct L/R signal out so it doesn't get processed by
+     * the stablizer.
+     */
+    const auto leftout = std::span{RealOut.Buffer[lidx]}.first(SamplesToDo);
+    const auto rightout = std::span{RealOut.Buffer[ridx]}.first(SamplesToDo);
+    const auto mid = std::span{mStablizer->MidDirect}.first(SamplesToDo);
+    const auto side = std::span{mStablizer->Side}.first(SamplesToDo);
+    std::ranges::transform(leftout, rightout, mid.begin(), std::plus{});
+    std::ranges::transform(leftout, rightout, side.begin(), std::minus{});
+    std::ranges::fill(leftout, 0.0f);
+    std::ranges::fill(rightout, 0.0f);
+
+    /* Decode the B-Format mix to OutBuffer. */
+    AmbiDecoder->process(RealOut.Buffer, Dry.Buffer, SamplesToDo);
+
+    /* Include the decoded side signal with the direct side signal. */
+    for(auto i = 0_uz;i < SamplesToDo;++i)
+        side[i] += leftout[i] - rightout[i];
+
+    /* Get the decoded mid signal and band-split it. */
+    const auto tmpsamples = std::span{mStablizer->Temp}.first(SamplesToDo);
+    std::ranges::transform(leftout, rightout, tmpsamples.begin(), std::plus{});
+
+    mStablizer->MidFilter.process(tmpsamples, mStablizer->MidHF, mStablizer->MidLF);
+
+    /* Apply an all-pass to all channels to match the band-splitter's phase
+     * shift. This is to keep the phase synchronized between the existing
+     * signal and the split mid signal.
+     */
+    for(const auto i : std::views::iota(0_uz, RealOut.Buffer.size()))
+    {
+        /* Skip the left and right channels, which are going to get overwritten,
+         * and substitute the direct mid signal and direct+decoded side signal.
+         */
+        if(i == lidx)
+            mStablizer->ChannelFilters[i].processAllPass(mid);
+        else if(i == ridx)
+            mStablizer->ChannelFilters[i].processAllPass(side);
+        else
+            mStablizer->ChannelFilters[i].processAllPass(
+                std::span{RealOut.Buffer[i]}.first(SamplesToDo));
+    }
+
+    /* This pans the separate low- and high-frequency signals between being on
+     * the center channel and the left+right channels. The low-frequency signal
+     * is panned 1/3rd toward center and the high-frequency signal is panned
+     * 1/4th toward center. These values can be tweaked.
+     */
+    const auto mid_lf = std::cos(1.0f/3.0f * (std::numbers::pi_v<float>*0.5f));
+    const auto mid_hf = std::cos(1.0f/4.0f * (std::numbers::pi_v<float>*0.5f));
+    const auto center_lf = std::sin(1.0f/3.0f * (std::numbers::pi_v<float>*0.5f));
+    const auto center_hf = std::sin(1.0f/4.0f * (std::numbers::pi_v<float>*0.5f));
+    const auto centerout = std::span{RealOut.Buffer[cidx]}.first(SamplesToDo);
+    for(auto i = 0_uz;i < SamplesToDo;++i)
+    {
+        /* Add the direct mid signal to the processed mid signal so it can be
+         * properly combined with the direct+decoded side signal.
+         */
+        const auto m = mStablizer->MidLF[i]*mid_lf + mStablizer->MidHF[i]*mid_hf + mid[i];
+        const auto c = mStablizer->MidLF[i]*center_lf + mStablizer->MidHF[i]*center_hf;
+        const auto s = side[i];
+
+        /* The generated center channel signal adds to the existing signal,
+         * while the modified left and right channels replace.
+         */
+        leftout[i] = (m + s) * 0.5f;
+        rightout[i] = (m - s) * 0.5f;
+        centerout[i] += c * 0.5f;
+    }
 }
 
 void DeviceBase::ProcessUhj(const size_t SamplesToDo)
 {
     /* UHJ is stereo output only. */
-    const size_t lidx{RealOut.ChannelIndex[FrontLeft]};
-    const size_t ridx{RealOut.ChannelIndex[FrontRight]};
+    const auto lidx = size_t{RealOut.ChannelIndex[FrontLeft]};
+    const auto ridx = size_t{RealOut.ChannelIndex[FrontRight]};
 
     /* Encode to stereo-compatible 2-channel UHJ output. */
     mUhjEncoder->encode(RealOut.Buffer[lidx].data(), RealOut.Buffer[ridx].data(),

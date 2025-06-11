@@ -3,7 +3,6 @@
 
 #include <array>
 #include <cstddef>
-#include <memory>
 #include <span>
 #include <variant>
 #include <vector>
@@ -12,7 +11,6 @@
 #include "bufferline.h"
 #include "devformat.h"
 #include "filters/splitter.h"
-#include "front_stablizer.h"
 #include "opthelpers.h"
 
 
@@ -36,25 +34,15 @@ class SIMDALIGN BFormatDec {
 
     alignas(16) std::array<FloatBufferLine,2> mSamples{};
 
-    const std::unique_ptr<FrontStablizer> mStablizer;
-
     std::variant<SBandDecoderVector,DBandDecoderVector> mChannelDec;
 
 public:
     BFormatDec(const size_t inchans, const std::span<const ChannelDec> coeffs,
-        const std::span<const ChannelDec> coeffslf, const float xover_f0norm,
-        std::unique_ptr<FrontStablizer> stablizer);
-
-    [[nodiscard]] auto hasStablizer() const noexcept -> bool { return mStablizer != nullptr; }
+        const std::span<const ChannelDec> coeffslf, const float xover_f0norm);
 
     /* Decodes the ambisonic input to the given output channels. */
     void process(const std::span<FloatBufferLine> OutBuffer,
         const std::span<const FloatBufferLine> InSamples, const size_t SamplesToDo);
-
-    /* Decodes the ambisonic input to the given output channels with stablization. */
-    void processStablize(const std::span<FloatBufferLine> OutBuffer,
-        const std::span<const FloatBufferLine> InSamples, const size_t lidx, const size_t ridx,
-        const size_t cidx, const size_t SamplesToDo);
 };
 
 #endif /* CORE_BFORMATDEC_H */

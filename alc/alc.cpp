@@ -90,10 +90,11 @@
 #include "core/effects/base.h"
 #include "core/effectslot.h"
 #include "core/filters/nfc.h"
-#include "core/helpers.h"
-#include "core/mastering.h"
 #include "core/fpu_ctrl.h"
+#include "core/front_stablizer.h"
+#include "core/helpers.h"
 #include "core/logging.h"
+#include "core/mastering.h"
 #include "core/uhjfilter.h"
 #include "core/voice.h"
 #include "core/voice_change.h"
@@ -1463,6 +1464,7 @@ auto UpdateDeviceParams(al::Device *device, const std::span<const int> attrList)
     device->mNFCtrlFilter = NfcFilter{};
     device->mUhjEncoder = nullptr;
     device->AmbiDecoder = nullptr;
+    device->mStablizer = nullptr;
     device->Bs2b = nullptr;
     device->PostProcess = nullptr;
 

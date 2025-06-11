@@ -668,11 +668,11 @@ struct RotatorCoeffs {
     {
         auto coeffs = mCoeffs.begin();
 
-        for(int l = 2;l <= MaxAmbiOrder;++l)
+        for(const auto l : std::views::iota(2, MaxAmbiOrder+1))
         {
-            for(auto n = -l;n <= l;++n)
+            for(const auto n : std::views::iota(-l, l+1))
             {
-                for(auto m = -l;m <= l;++m)
+                for(const auto m : std::views::iota(-l, l+1))
                 {
                     /* compute u,v,w terms of Eq.8.1 (Table I)
                      *
@@ -712,7 +712,7 @@ struct RotatorCoeffs {
         }
     }
 };
-const RotatorCoeffs RotatorCoeffArray{};
+const auto RotatorCoeffArray = RotatorCoeffs{};
 
 /**
  * Given the matrix, pre-filled with the (zeroth- and) first-order rotation
@@ -779,22 +779,22 @@ void AmbiRotator(AmbiRotateMatrix &matrix, const int order)
     auto coeffs = RotatorCoeffArray.mCoeffs.cbegin();
     auto band_idx = 4_uz;
     auto last_band = 1_uz;
-    for(auto l = 2;l <= order;++l)
+    for(const auto l : std::views::iota(2, order+1))
     {
         auto y = band_idx;
-        for(auto n = -l;n <= l;++n,++y)
+        for(const auto n : std::views::iota(-l, l+1))
         {
             auto x = band_idx;
-            for(auto m = -l;m <= l;++m,++x)
+            for(const auto m : std::views::iota(-l, l+1))
             {
                 auto r = 0.0f;
 
                 // computes Eq.8.1
-                if(const float u{coeffs->u}; u != 0.0f)
+                if(const auto u = coeffs->u; u != 0.0f)
                     r += u * U(l, m, n, last_band, matrix);
-                if(const float v{coeffs->v}; v != 0.0f)
+                if(const auto v = coeffs->v; v != 0.0f)
                     r += v * V(l, m, n, last_band, matrix);
-                if(const float w{coeffs->w}; w != 0.0f)
+                if(const auto w = coeffs->w; w != 0.0f)
                     r += w * W(l, m, n, last_band, matrix);
 
                 matrix[y][x] = r;
@@ -889,10 +889,10 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
             [](SendParams &params) -> void { params.Gains.Target.fill(0.0f); });
     });
 
-    const auto [DirectChannels, chans] = std::invoke([&props,&StereoMap](FmtChannels chanfmt)
+    const auto [DirectChannels, chans] = std::invoke([voice,&props,&StereoMap]()
         -> std::pair<DirectMode,std::span<const ChanPosMap>>
     {
-        switch(chanfmt)
+        switch(voice->mFmtChannels)
         {
         case FmtMono:
             if(!props.mPanningEnabled)
@@ -934,7 +934,7 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
             return {DirectMode::Off, {}};
         }
         return {props.DirectChannels, {}};
-    }, voice->mFmtChannels);
+    });
 
     voice->mFlags.reset(VoiceHasHrtf).reset(VoiceHasNfc);
     if(auto *decoder = voice->mDecoder.get())
@@ -994,8 +994,8 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
                 /* Clamp the distance for really close sources, to prevent
                  * excessive bass.
                  */
-                const float mdist{std::max(Distance*NfcScale, Device->AvgSpeakerDist/4.0f)};
-                const float w0{SpeedOfSoundMetersPerSec / (mdist * Frequency)};
+                const auto mdist = std::max(Distance*NfcScale, Device->AvgSpeakerDist/4.0f);
+                const auto w0 = SpeedOfSoundMetersPerSec / (mdist * Frequency);
 
                 /* Only need to adjust the first channel of a B-Format source. */
                 voice->mChans[0].mDryParams.NFCtrlFilter.adjust(w0);
@@ -1009,25 +1009,25 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
          * as a directional scalar to blend between full coverage and full
          * panning.
          */
-        const float coverage{!(Distance > std::numeric_limits<float>::epsilon()) ? 1.0f :
-            (std::numbers::inv_pi_v<float>*0.5f * Spread)};
+        const auto coverage = !(Distance > std::numeric_limits<float>::epsilon()) ? 1.0f :
+            (std::numbers::inv_pi_v<float>*0.5f * Spread);
 
         const auto scales = GetAmbiScales(voice->mAmbiScaling);
-        auto coeffs = std::invoke([xpos,ypos,zpos](RenderMode mode)
+        auto coeffs = std::invoke([xpos,ypos,zpos,Device]
         {
-            if(mode != RenderMode::Pairwise)
+            if(Device->mRenderMode != RenderMode::Pairwise)
                 return CalcDirectionCoeffs(std::array{xpos, ypos, zpos}, 0.0f);
             const auto pos = ScaleAzimuthFront3_2(std::array{xpos, ypos, zpos});
             return CalcDirectionCoeffs(pos, 0.0f);
-        }, Device->mRenderMode);
+        });
 
         if(!(coverage > 0.0f))
         {
             ComputePanGains(&Device->Dry, coeffs, DryGain.Base*scales[0],
                 std::span{voice->mChans[0].mDryParams.Gains.Target}.first<MaxAmbiChannels>());
-            for(uint i{0};i < NumSends;i++)
+            for(const auto i : std::views::iota(0_uz, NumSends))
             {
-                if(const EffectSlot *Slot{SendSlots[i]})
+                if(const auto *Slot = SendSlots[i])
                     ComputePanGains(&Slot->Wet, coeffs, WetGain[i].Base*scales[0],
                         voice->mChans[0].mWetParams[i].Gains.Target);
             }
@@ -1116,10 +1116,11 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
             /* Scale the panned W signal inversely to coverage (full coverage
              * means no panned signal), and according to the channel scaling.
              */
-            std::ranges::for_each(coeffs, [scale=(1.0f-coverage)*scales[0]](float &coeff) noexcept
-            { coeff *= scale; });
+            std::ranges::transform(coeffs, coeffs.begin(),
+                [scale=(1.0f-coverage)*scales[0]](const float coeff) noexcept
+                { return coeff * scale; });
 
-            for(size_t c{0};c < index_map.size();++c)
+            for(const auto c : std::views::iota(0_uz, index_map.size()))
             {
                 const auto acn = size_t{index_map[c]};
                 const auto scale = scales[acn] * coverage;
@@ -1135,9 +1136,9 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
                 ComputePanGains(&Device->Dry, coeffs, DryGain.Base,
                     std::span{voice->mChans[c].mDryParams.Gains.Target}.first<MaxAmbiChannels>());
 
-                for(uint i{0};i < NumSends;i++)
+                for(const auto i : std::views::iota(0_uz, NumSends))
                 {
-                    if(const EffectSlot *Slot{SendSlots[i]})
+                    if(const auto *Slot = SendSlots[i])
                         ComputePanGains(&Slot->Wet, coeffs, WetGain[i].Base,
                             voice->mChans[c].mWetParams[i].Gains.Target);
                 }
@@ -1153,7 +1154,7 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
          */
         voice->mDirect.Buffer = Device->RealOut.Buffer;
 
-        for(size_t c{0};c < chans.size();++c)
+        for(const auto c : std::views::iota(0_uz, chans.size()))
         {
             const auto pangain = SelectChannelGain(chans[c].channel);
             if(auto idx = Device->channelIdxByName(chans[c].channel); idx != InvalidChannelIndex)
@@ -1178,7 +1179,7 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
         /* Auxiliary sends still use normal channel panning since they mix to
          * B-Format, which can't channel-match.
          */
-        for(size_t c{0};c < chans.size();++c)
+        for(const auto c : std::views::iota(0_uz, chans.size()))
         {
             /* Skip LFE */
             if(chans[c].channel == LFE)
@@ -1187,7 +1188,7 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
             const auto pangain = SelectChannelGain(chans[c].channel);
             const auto coeffs = CalcDirectionCoeffs(chans[c].pos, 0.0f);
 
-            for(uint i{0};i < NumSends;i++)
+            for(const auto i : std::views::iota(0_uz, NumSends))
             {
                 if(const auto *Slot = SendSlots[i])
                     ComputePanGains(&Slot->Wet, coeffs, WetGain[i].Base * pangain,
@@ -1204,7 +1205,7 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
             const auto drytarget1 = std::span{voice->mChans[1].mDryParams.Gains.Target};
             std::ranges::transform(drytarget0, drytarget1, drytarget0.begin(), std::plus{});
 
-            for(uint i{0};i < NumSends;i++)
+            for(const auto i : std::views::iota(0_uz, NumSends))
             {
                 if(!SendSlots[i])
                     continue;
@@ -1226,8 +1227,8 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
         {
             if(ismono3d)
             {
-                const float src_ev{std::asin(std::clamp(ypos, -1.0f, 1.0f))};
-                const float src_az{std::atan2(xpos, -zpos)};
+                const auto src_ev = std::asin(std::clamp(ypos, -1.0f, 1.0f));
+                const auto src_az = std::atan2(xpos, -zpos);
 
                 Device->mHrtf->getCoeffs(src_ev, src_az, Distance*NfcScale, Spread,
                     voice->mChans[0].mDryParams.Hrtf.Target.Coeffs,
@@ -1235,18 +1236,18 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
                 voice->mChans[0].mDryParams.Hrtf.Target.Gain = DryGain.Base;
 
                 const auto coeffs = CalcDirectionCoeffs(std::array{xpos, ypos, zpos}, Spread);
-                for(uint i{0};i < NumSends;i++)
+                for(const auto i : std::views::iota(0_uz, NumSends))
                 {
-                    if(const EffectSlot *Slot{SendSlots[i]})
+                    if(const auto *Slot = SendSlots[i])
                         ComputePanGains(&Slot->Wet, coeffs, WetGain[i].Base,
                             voice->mChans[0].mWetParams[i].Gains.Target);
                 }
             }
-            else for(size_t c{0};c < chans.size();++c)
+            else for(const auto c : std::views::iota(0_uz, chans.size()))
             {
                 /* Skip LFE */
                 if(chans[c].channel == LFE) continue;
-                const float pangain{SelectChannelGain(chans[c].channel)};
+                const auto pangain = SelectChannelGain(chans[c].channel);
 
                 /* Warp the channel position toward the source position as the
                  * source spread decreases. With no spread, all channels are at
@@ -1254,11 +1255,11 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
                  * left unchanged.
                  */
                 const auto a = 1.0f - (std::numbers::inv_pi_v<float>*0.5f)*Spread;
-                std::array pos{
+                auto pos = std::array{
                     lerpf(chans[c].pos[0], xpos, a),
                     lerpf(chans[c].pos[1], ypos, a),
                     lerpf(chans[c].pos[2], zpos, a)};
-                const float len{std::sqrt(pos[0]*pos[0] + pos[1]*pos[1] + pos[2]*pos[2])};
+                const auto len = std::sqrt(pos[0]*pos[0] + pos[1]*pos[1] + pos[2]*pos[2]);
                 if(len < 1.0f)
                 {
                     pos[0] /= len;
@@ -1266,8 +1267,8 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
                     pos[2] /= len;
                 }
 
-                const float ev{std::asin(std::clamp(pos[1], -1.0f, 1.0f))};
-                const float az{std::atan2(pos[0], -pos[2])};
+                const auto ev = std::asin(std::clamp(pos[1], -1.0f, 1.0f));
+                const auto az = std::atan2(pos[0], -pos[2]);
 
                 Device->mHrtf->getCoeffs(ev, az, Distance*NfcScale, 0.0f,
                     voice->mChans[c].mDryParams.Hrtf.Target.Coeffs,
@@ -1275,9 +1276,9 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
                 voice->mChans[c].mDryParams.Hrtf.Target.Gain = DryGain.Base * pangain;
 
                 const auto coeffs = CalcDirectionCoeffs(pos, 0.0f);
-                for(uint i{0};i < NumSends;i++)
+                for(const auto i : std::views::iota(0_uz, NumSends))
                 {
-                    if(const EffectSlot *Slot{SendSlots[i]})
+                    if(const auto *Slot = SendSlots[i])
                         ComputePanGains(&Slot->Wet, coeffs, WetGain[i].Base * pangain,
                             voice->mChans[c].mWetParams[i].Gains.Target);
                 }
@@ -1295,18 +1296,18 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
              * relative location around the listener, providing "virtual
              * speaker" responses.
              */
-            for(size_t c{0};c < chans.size();++c)
+            for(const auto c : std::views::iota(0_uz, chans.size()))
             {
                 /* Skip LFE */
                 if(chans[c].channel == LFE)
                     continue;
-                const float pangain{SelectChannelGain(chans[c].channel)};
+                const auto pangain = SelectChannelGain(chans[c].channel);
 
                 /* Get the HRIR coefficients and delays for this channel
                  * position.
                  */
-                const float ev{std::asin(chans[c].pos[1])};
-                const float az{std::atan2(chans[c].pos[0], -chans[c].pos[2])};
+                const auto ev = std::asin(chans[c].pos[1]);
+                const auto az = std::atan2(chans[c].pos[0], -chans[c].pos[2]);
 
                 Device->mHrtf->getCoeffs(ev, az, std::numeric_limits<float>::infinity(), spread,
                     voice->mChans[c].mDryParams.Hrtf.Target.Coeffs,
@@ -1316,9 +1317,9 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
                 /* Normal panning for auxiliary sends. */
                 const auto coeffs = CalcDirectionCoeffs(chans[c].pos, spread);
 
-                for(uint i{0};i < NumSends;i++)
+                for(const auto i : std::views::iota(0_uz, NumSends))
                 {
-                    if(const EffectSlot *Slot{SendSlots[i]})
+                    if(const auto *Slot = SendSlots[i])
                         ComputePanGains(&Slot->Wet, coeffs, WetGain[i].Base * pangain,
                             voice->mChans[c].mWetParams[i].Gains.Target);
                 }
@@ -1340,11 +1341,11 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
                 /* Clamp the distance for really close sources, to prevent
                  * excessive bass.
                  */
-                const float mdist{std::max(Distance*NfcScale, Device->AvgSpeakerDist/4.0f)};
-                const float w0{SpeedOfSoundMetersPerSec / (mdist * Frequency)};
+                const auto mdist = std::max(Distance*NfcScale, Device->AvgSpeakerDist/4.0f);
+                const auto w0 = SpeedOfSoundMetersPerSec / (mdist * Frequency);
 
                 /* Adjust NFC filters. */
-                for(size_t c{0};c < chans.size();++c)
+                for(const auto c : std::views::iota(0_uz, chans.size()))
                     voice->mChans[c].mDryParams.NFCtrlFilter.adjust(w0);
 
                 voice->mFlags.set(VoiceHasNfc);
@@ -1352,25 +1353,24 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
 
             if(ismono3d)
             {
-                auto calc_coeffs = [xpos,ypos,zpos,Spread](RenderMode mode)
+                const auto coeffs = std::invoke([xpos,ypos,zpos,Spread,Device]()
                 {
-                    if(mode != RenderMode::Pairwise)
+                    if(Device->mRenderMode != RenderMode::Pairwise)
                         return CalcDirectionCoeffs(std::array{xpos, ypos, zpos}, Spread);
                     const auto pos = ScaleAzimuthFront3_2(std::array{xpos, ypos, zpos});
                     return CalcDirectionCoeffs(pos, Spread);
-                };
-                const auto coeffs = calc_coeffs(Device->mRenderMode);
+                });
 
                 ComputePanGains(&Device->Dry, coeffs, DryGain.Base,
                     std::span{voice->mChans[0].mDryParams.Gains.Target}.first<MaxAmbiChannels>());
-                for(uint i{0};i < NumSends;i++)
+                for(const auto i : std::views::iota(0_uz, NumSends))
                 {
                     if(const EffectSlot *Slot{SendSlots[i]})
                         ComputePanGains(&Slot->Wet, coeffs, WetGain[i].Base,
                             voice->mChans[0].mWetParams[i].Gains.Target);
                 }
             }
-            else for(size_t c{0};c < chans.size();++c)
+            else for(const auto c : std::views::iota(0_uz, chans.size()))
             {
                 const auto pangain = SelectChannelGain(chans[c].channel);
 
@@ -1410,9 +1410,9 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
 
                 ComputePanGains(&Device->Dry, coeffs, DryGain.Base * pangain,
                     std::span{voice->mChans[c].mDryParams.Gains.Target}.first<MaxAmbiChannels>());
-                for(uint i{0};i < NumSends;i++)
+                for(const auto i : std::views::iota(0_uz, NumSends))
                 {
-                    if(const EffectSlot *Slot{SendSlots[i]})
+                    if(const auto *Slot = SendSlots[i])
                         ComputePanGains(&Slot->Wet, coeffs, WetGain[i].Base * pangain,
                             voice->mChans[c].mWetParams[i].Gains.Target);
                 }
@@ -1425,8 +1425,8 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
                 /* If the source distance is 0, simulate a plane-wave by using
                  * infinite distance, which results in a w0 of 0.
                  */
-                static constexpr float w0{0.0f};
-                for(size_t c{0};c < chans.size();++c)
+                static constexpr auto w0 = 0.0f;
+                for(const auto c : std::views::iota(0_uz, chans.size()))
                     voice->mChans[c].mDryParams.NFCtrlFilter.adjust(w0);
 
                 voice->mFlags.set(VoiceHasNfc);
@@ -1437,9 +1437,9 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
              * spread here).
              */
             const auto spread = Spread * float(ismono3d);
-            for(size_t c{0};c < chans.size();++c)
+            for(const auto c : std::views::iota(0_uz, chans.size()))
             {
-                const float pangain{SelectChannelGain(chans[c].channel)};
+                const auto pangain = SelectChannelGain(chans[c].channel);
 
                 /* Special-case LFE */
                 if(chans[c].channel == LFE)
@@ -1458,9 +1458,9 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
 
                 ComputePanGains(&Device->Dry, coeffs, DryGain.Base * pangain,
                     std::span{voice->mChans[c].mDryParams.Gains.Target}.first<MaxAmbiChannels>());
-                for(uint i{0};i < NumSends;i++)
+                for(const auto i : std::views::iota(0_uz, NumSends))
                 {
-                    if(const EffectSlot *Slot{SendSlots[i]})
+                    if(const auto *Slot = SendSlots[i])
                         ComputePanGains(&Slot->Wet, coeffs, WetGain[i].Base * pangain,
                             voice->mChans[c].mWetParams[i].Gains.Target);
                 }
@@ -1473,7 +1473,7 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
             const auto drytarget1 = std::span{voice->mChans[1].mDryParams.Gains.Target};
             std::ranges::transform(drytarget0, drytarget1, drytarget0.begin(), std::plus{});
 
-            for(uint i{0};i < NumSends;i++)
+            for(const auto i : std::views::iota(0_uz, NumSends))
             {
                 if(!SendSlots[i])
                     continue;
@@ -1497,13 +1497,13 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
         auto &highpass = voice->mChans[0].mDryParams.HighPass;
         lowpass.setParamsFromSlope(BiquadType::HighShelf, hfNorm, DryGain.HF, 1.0f);
         highpass.setParamsFromSlope(BiquadType::LowShelf, lfNorm, DryGain.LF, 1.0f);
-        for(size_t c{1};c < chans.size();++c)
+        for(Voice::ChannelData &chandata : voice->mChans | std::views::drop(1))
         {
-            voice->mChans[c].mDryParams.LowPass.copyParamsFrom(lowpass);
-            voice->mChans[c].mDryParams.HighPass.copyParamsFrom(highpass);
+            chandata.mDryParams.LowPass.copyParamsFrom(lowpass);
+            chandata.mDryParams.HighPass.copyParamsFrom(highpass);
         }
     }
-    for(uint i{0};i < NumSends;i++)
+    for(const auto i : std::views::iota(0_uz, NumSends))
     {
         const auto hfNorm = props.Send[i].HFReference / Frequency;
         const auto lfNorm = props.Send[i].LFReference / Frequency;
@@ -1516,10 +1516,10 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
         auto &highpass = voice->mChans[0].mWetParams[i].HighPass;
         lowpass.setParamsFromSlope(BiquadType::HighShelf, hfNorm, WetGain[i].HF, 1.0f);
         highpass.setParamsFromSlope(BiquadType::LowShelf, lfNorm, WetGain[i].LF, 1.0f);
-        for(size_t c{1};c < chans.size();++c)
+        for(Voice::ChannelData &chandata : voice->mChans | std::views::drop(1))
         {
-            voice->mChans[c].mWetParams[i].LowPass.copyParamsFrom(lowpass);
-            voice->mChans[c].mWetParams[i].HighPass.copyParamsFrom(highpass);
+            chandata.mWetParams[i].LowPass.copyParamsFrom(lowpass);
+            chandata.mWetParams[i].HighPass.copyParamsFrom(highpass);
         }
     }
 }
@@ -1531,7 +1531,7 @@ void CalcNonAttnSourceParams(Voice *voice, const ContextBase *context)
     auto SendSlots = std::array<EffectSlot*,MaxSendCount>{};
 
     voice->mDirect.Buffer = Device->Dry.Buffer;
-    for(uint i{0};i < Device->NumAuxSends;i++)
+    for(const auto i : std::views::iota(0_uz, Device->NumAuxSends))
     {
         SendSlots[i] = props.Send[i].Slot;
         if(!SendSlots[i] || SendSlots[i]->EffectType == EffectSlotType::None)
@@ -1587,7 +1587,7 @@ void CalcAttnSourceParams(Voice *voice, const ContextBase *context)
 
     auto SendSlots = std::array<EffectSlot*,MaxSendCount>{};
     auto RoomRolloff = std::array<float,MaxSendCount>{};
-    for(uint i{0};i < NumSends;i++)
+    for(const auto i : std::views::iota(0_uz, NumSends))
     {
         SendSlots[i] = props.Send[i].Slot;
         if(!SendSlots[i] || SendSlots[i]->EffectType == EffectSlotType::None)
@@ -1791,7 +1791,7 @@ void CalcAttnSourceParams(Voice *voice, const ContextBase *context)
         /* If the source's Auxiliary Send Filter Gain Auto is off, no extra
          * adjustment is applied to the send gains.
          */
-        for(uint i{props.WetGainAuto ? 0u : NumSends};i < NumSends;++i)
+        for(const auto i : std::views::iota(props.WetGainAuto ? 0_uz : NumSends, NumSends))
         {
             if(!SendSlots[i] || !(SendSlots[i]->DecayTime > 0.0f))
                 continue;
@@ -1800,7 +1800,7 @@ void CalcAttnSourceParams(Voice *voice, const ContextBase *context)
                 && absorb > std::numeric_limits<float>::epsilon())
                 WetGain[i].HF *= std::pow(SendSlots[i]->AirAbsorptionGainHF, absorb);
 
-            const float DecayDistance{SendSlots[i]->DecayTime * SpeedOfSoundMetersPerSec};
+            const auto DecayDistance = SendSlots[i]->DecayTime * SpeedOfSoundMetersPerSec;
 
             /* Apply a decay-time transformation to the wet path, based on the
              * source distance. The initial decay of the reverb effect is
@@ -1811,9 +1811,9 @@ void CalcAttnSourceParams(Voice *voice, const ContextBase *context)
              * parameters (and source distance?) and add it to the room rolloff
              * with the reverb and source rolloff parameters.
              */
-            const float baseAttn{DryAttnBase};
-            const float fact{distance_meters / DecayDistance};
-            const float gain{std::pow(ReverbDecayGain, fact)*(1.0f-baseAttn) + baseAttn};
+            const auto baseAttn = DryAttnBase;
+            const auto fact = distance_meters / DecayDistance;
+            const auto gain = std::pow(ReverbDecayGain, fact)*(1.0f-baseAttn) + baseAttn;
             WetGain[i].Base *= gain;
         }
     }
@@ -2021,7 +2021,7 @@ void ProcessParamUpdates(ContextBase *ctx, const std::span<EffectSlot*> slots,
     IncrementRef(ctx->mUpdateCount);
     if(!ctx->mHoldUpdates.load(std::memory_order_acquire)) [[likely]]
     {
-        bool force{CalcContextParams(ctx)};
+        auto force = CalcContextParams(ctx);
         auto sorted_slot_base = std::to_address(sorted_slots.begin());
         for(auto *slot : slots)
             force |= CalcEffectSlotParams(slot, sorted_slot_base, ctx);
@@ -2280,8 +2280,8 @@ auto DeviceBase::renderSamples(const uint numSamples) -> uint
          * so that large sample counts don't overflow during conversion. This
          * also guarantees a stable conversion.
          */
-        auto samplesDone = mSamplesDone.load(std::memory_order_relaxed) + samplesToDo;
-        auto clockBaseSec = mClockBaseSec.load(std::memory_order_relaxed) +
+        const auto samplesDone = mSamplesDone.load(std::memory_order_relaxed) + samplesToDo;
+        const auto clockBaseSec = mClockBaseSec.load(std::memory_order_relaxed) +
             seconds32{samplesDone/mSampleRate};
         mSamplesDone.store(samplesDone%mSampleRate, std::memory_order_relaxed);
         mClockBaseSec.store(clockBaseSec, std::memory_order_relaxed);

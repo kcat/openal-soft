@@ -34,7 +34,7 @@ consteval auto genDefaultProps() noexcept -> EffectProps
 
 } // namespace
 
-constinit const EffectProps EqualizerEffectProps{genDefaultProps()};
+constinit const EffectProps EqualizerEffectProps = genDefaultProps();
 
 void EqualizerEffectHandler::SetParami(ALCcontext *context, EqualizerProps&, ALenum param, int)
 { context->throw_error(AL_INVALID_ENUM, "Invalid equalizer integer property {:#04x}", as_unsigned(param)); }

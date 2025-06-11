@@ -57,7 +57,7 @@ consteval EffectProps genDefaultProps() noexcept
 
 } // namespace
 
-constinit const EffectProps ModulatorEffectProps{genDefaultProps()};
+constinit const EffectProps ModulatorEffectProps = genDefaultProps();
 
 void ModulatorEffectHandler::SetParami(ALCcontext *context, ModulatorProps &props, ALenum param, int val)
 {

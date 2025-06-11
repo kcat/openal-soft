@@ -26,7 +26,7 @@ consteval auto genDefaultProps() noexcept -> EffectProps
 
 } // namespace
 
-constinit const EffectProps PshifterEffectProps{genDefaultProps()};
+constinit const EffectProps PshifterEffectProps = genDefaultProps();
 
 void PshifterEffectHandler::SetParami(ALCcontext *context, PshifterProps &props, ALenum param, int val)
 {

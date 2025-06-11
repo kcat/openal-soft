@@ -30,7 +30,7 @@ consteval auto genDefaultProps() noexcept -> EffectProps
 
 } // namespace
 
-constinit const EffectProps AutowahEffectProps{genDefaultProps()};
+constinit const EffectProps AutowahEffectProps = genDefaultProps();
 
 void AutowahEffectHandler::SetParami(ALCcontext *context, AutowahProps&, ALenum param, int)
 { context->throw_error(AL_INVALID_ENUM, "Invalid autowah integer property {:#04x}", as_unsigned(param)); }

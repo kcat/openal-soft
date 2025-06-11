@@ -25,7 +25,7 @@ consteval auto genDefaultProps() noexcept -> EffectProps
 
 } // namespace
 
-constinit const EffectProps ConvolutionEffectProps{genDefaultProps()};
+constinit const EffectProps ConvolutionEffectProps = genDefaultProps();
 
 void ConvolutionEffectHandler::SetParami(ALCcontext *context, ConvolutionProps& /*props*/, ALenum param, int /*val*/)
 { context->throw_error(AL_INVALID_ENUM, "Invalid convolution effect integer property {:#04x}", as_unsigned(param)); }

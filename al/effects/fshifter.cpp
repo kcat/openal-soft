@@ -56,7 +56,7 @@ consteval EffectProps genDefaultProps() noexcept
 
 } // namespace
 
-constinit const EffectProps FshifterEffectProps{genDefaultProps()};
+constinit const EffectProps FshifterEffectProps = genDefaultProps();
 
 void FshifterEffectHandler::SetParami(ALCcontext *context, FshifterProps &props, ALenum param, int val)
 {

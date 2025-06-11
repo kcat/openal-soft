@@ -138,7 +138,7 @@ consteval auto genDefaultProps() noexcept -> EffectProps
 
 } // namespace
 
-constinit const EffectProps VmorpherEffectProps{genDefaultProps()};
+constinit const EffectProps VmorpherEffectProps = genDefaultProps();
 
 void VmorpherEffectHandler::SetParami(ALCcontext *context, VmorpherProps &props, ALenum param, int val)
 {

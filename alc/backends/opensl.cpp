@@ -29,8 +29,11 @@
 #include <bit>
 #include <cstdlib>
 #include <cstring>
+#include <iterator>
+#include <memory>
 #include <mutex>
 #include <new>
+#include <ranges>
 #include <thread>
 #include <functional>
 
@@ -623,7 +626,7 @@ struct OpenSLCapture final : public BackendBase {
     RingBufferPtr<std::byte> mRing;
     uint mByteOffset{0u};
 
-    uint mFrameSize{0};
+    uint mFrameSize{0u};
 };
 
 OpenSLCapture::~OpenSLCapture()
@@ -907,26 +910,32 @@ void OpenSLCapture::captureSamples(std::span<std::byte> outbuffer)
     if(chunk_size*adv_count > wdata[1].size()) [[likely]]
     {
         auto len1 = std::min(wdata[0].size(), chunk_size*adv_count - wdata[1].size());
-        auto buf1 = wdata[0].data() + (wdata[0].size() - len1);
-        for(auto i = 0_uz;i < len1 && SL_RESULT_SUCCESS == result;i+=chunk_size)
+        auto buf1 = wdata[0].begin();
+        std::advance(buf1, wdata[0].size() - len1);
+        for(const auto i [[maybe_unused]] : std::views::iota(0_uz, len1/chunk_size))
         {
-            result = VCALL(bufferQueue,Enqueue)(buf1 + i, chunk_size);
+            result = VCALL(bufferQueue,Enqueue)(std::to_address(buf1), chunk_size);
             PrintErr(result, "bufferQueue->Enqueue");
+            if(result != SL_RESULT_SUCCESS) break;
+            std::advance(buf1, chunk_size);
         }
     }
-    if(!wdata[1].empty())
+    if(!wdata[1].empty() && result == SL_RESULT_SUCCESS)
     {
         auto len2 = std::min(wdata[1].size(), chunk_size*adv_count);
-        auto buf2 = wdata[1].data() + (wdata[1].size() - len2);
-        for(auto i = 0_uz;i < len2 && SL_RESULT_SUCCESS == result;i+=chunk_size)
+        auto buf2 = wdata[1].begin();
+        std::advance(buf2, wdata[1].size() - len2);
+        for(const auto i [[maybe_unused]] : std::views::iota(0_uz, len2/chunk_size))
         {
-            result = VCALL(bufferQueue,Enqueue)(buf2 + i, chunk_size);
+            result = VCALL(bufferQueue,Enqueue)(std::to_address(buf2), chunk_size);
             PrintErr(result, "bufferQueue->Enqueue");
+            if(result != SL_RESULT_SUCCESS) break;
+            std::advance(buf2, chunk_size);
         }
     }
 }
 
-uint OpenSLCapture::availableSamples()
+auto OpenSLCapture::availableSamples() -> uint
 { return static_cast<uint>(mRing->readSpace()*mDevice->mUpdateSize - mByteOffset/mFrameSize); }
 
 } // namespace
@@ -974,7 +983,7 @@ bool OSLBackendFactory::init()
     return true;
 }
 
-bool OSLBackendFactory::querySupport(BackendType type)
+auto OSLBackendFactory::querySupport(BackendType type) -> bool
 { return (type == BackendType::Playback || type == BackendType::Capture); }
 
 auto OSLBackendFactory::enumerate(BackendType type) -> std::vector<std::string>

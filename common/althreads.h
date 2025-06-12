@@ -85,19 +85,19 @@ public:
 public:
     tss()
     {
-        if(int res{pthread_key_create(&mTss, nullptr)}; res != 0)
+        if(const auto res = pthread_key_create(&mTss, nullptr); res != 0)
             throw std::runtime_error{"al::tss::tss()"};
     }
     explicit tss(const T &init) : tss{}
     {
-        if(int res{pthread_setspecific(mTss, to_ptr(init))}; res != 0)
+        if(const auto res = pthread_setspecific(mTss, to_ptr(init)); res != 0)
             throw std::runtime_error{"al::tss::tss(T)"};
     }
     ~tss() { pthread_key_delete(mTss); }
 
     void set(const T &value) const
     {
-        if(int res{pthread_setspecific(mTss, to_ptr(value))}; res != 0)
+        if(const auto res = pthread_setspecific(mTss, to_ptr(value)); res != 0)
             throw std::runtime_error{"al::tss::set(T)"};
     }
 
@@ -111,19 +111,19 @@ public:
 public:
     tss()
     {
-        if(int res{tss_create(&mTss, nullptr)}; res != thrd_success)
+        if(const auto res = tss_create(&mTss, nullptr); res != thrd_success)
             throw std::runtime_error{"al::tss::tss()"};
     }
     explicit tss(const T &init) : tss{}
     {
-        if(int res{tss_set(mTss, to_ptr(init))}; res != thrd_success)
+        if(const auto res = tss_set(mTss, to_ptr(init)); res != thrd_success)
             throw std::runtime_error{"al::tss::tss(T)"};
     }
     ~tss() { tss_delete(mTss); }
 
     void set(const T &value) const
     {
-        if(int res{tss_set(mTss, to_ptr(value))}; res != thrd_success)
+        if(const auto res = tss_set(mTss, to_ptr(value)); res != thrd_success)
             throw std::runtime_error{"al::tss::set(T)"};
     }
 

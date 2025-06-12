@@ -663,8 +663,8 @@ private:
         }
     };
 
-    struct Eax4SendValidator : EaxSendValidator<Eax4SendReceivingFxSlotIdValidator> {};
-    struct Eax5SendValidator : EaxSendValidator<Eax5SendReceivingFxSlotIdValidator> {};
+    using Eax4SendValidator = EaxSendValidator<Eax4SendReceivingFxSlotIdValidator>;
+    using Eax5SendValidator = EaxSendValidator<Eax5SendReceivingFxSlotIdValidator>;
 
     template<typename TIdValidator>
     struct EaxOcclusionSendValidator {
@@ -678,8 +678,8 @@ private:
         }
     };
 
-    struct Eax4OcclusionSendValidator : EaxOcclusionSendValidator<Eax4SendReceivingFxSlotIdValidator> {};
-    struct Eax5OcclusionSendValidator : EaxOcclusionSendValidator<Eax5SendReceivingFxSlotIdValidator> {};
+    using Eax4OcclusionSendValidator = EaxOcclusionSendValidator<Eax4SendReceivingFxSlotIdValidator>;
+    using Eax5OcclusionSendValidator = EaxOcclusionSendValidator<Eax5SendReceivingFxSlotIdValidator>;
 
     template<typename TIdValidator>
     struct EaxExclusionSendValidator {
@@ -691,8 +691,8 @@ private:
         }
     };
 
-    struct Eax4ExclusionSendValidator : EaxExclusionSendValidator<Eax4SendReceivingFxSlotIdValidator> {};
-    struct Eax5ExclusionSendValidator : EaxExclusionSendValidator<Eax5SendReceivingFxSlotIdValidator> {};
+    using Eax4ExclusionSendValidator = EaxExclusionSendValidator<Eax4SendReceivingFxSlotIdValidator>;
+    using Eax5ExclusionSendValidator = EaxExclusionSendValidator<Eax5SendReceivingFxSlotIdValidator>;
 
     template<typename TIdValidator>
     struct EaxAllSendValidator {
@@ -710,8 +710,8 @@ private:
         }
     };
 
-    struct Eax4AllSendValidator : EaxAllSendValidator<Eax4SendReceivingFxSlotIdValidator> {};
-    struct Eax5AllSendValidator : EaxAllSendValidator<Eax5SendReceivingFxSlotIdValidator> {};
+    using Eax4AllSendValidator = EaxAllSendValidator<Eax4SendReceivingFxSlotIdValidator>;
+    using Eax5AllSendValidator = EaxAllSendValidator<Eax5SendReceivingFxSlotIdValidator>;
 
     // Send validators
     // ----------------------------------------------------------------------

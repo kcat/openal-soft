@@ -1026,8 +1026,8 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
             else
                 parms.Hrtf.Old = parms.Hrtf.Target;
 
-            std::ranges::mismatch(mSend | std::views::take(NumSends), chandata.mWetParams,
-                [](TargetData &send, SendParams &parms)
+            std::ignore = std::ranges::mismatch(mSend | std::views::take(NumSends),
+                chandata.mWetParams, [](TargetData &send, SendParams &parms)
             {
                 if(!send.Buffer.empty())
                     parms.Gains.Current = parms.Gains.Target;
@@ -1314,7 +1314,7 @@ void Voice::prepare(DeviceBase *device)
 
         const auto splitter = BandSplitter{device->mXOverFreq
             / static_cast<float>(device->mSampleRate)};
-        std::ranges::mismatch(mChans, OrdersSpan,
+        std::ignore = std::ranges::mismatch(mChans, OrdersSpan,
             [&scales,splitter,device](Voice::ChannelData &chandata, const size_t scaleidx)
         {
             chandata.mAmbiHFScale = scales[scaleidx];

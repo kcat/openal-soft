@@ -364,7 +364,7 @@ struct LafStream {
 auto LafStream::readChunk() -> uint32_t
 {
     auto enableTrackBits = std::array<char,std::tuple_size_v<decltype(mEnabledTracks)>>{};
-    mInFile.sgetn(enableTrackBits.data(), (mNumTracks+7_z)>>3);
+    mInFile.sgetn(enableTrackBits.data(), std::streamsize(mNumTracks+7)>>3);
 
     mEnabledTracks = std::bit_cast<decltype(mEnabledTracks)>(enableTrackBits);
     mNumEnabled = std::accumulate(mEnabledTracks.cbegin(), mEnabledTracks.cend(), 0u,

@@ -56,10 +56,7 @@ using std::chrono::nanoseconds;
 using ubyte = unsigned char;
 using ushort = unsigned short;
 
-struct FileDeleter {
-    void operator()(gsl::owner<FILE*> f) { fclose(f); }
-};
-using FilePtr = std::unique_ptr<FILE,FileDeleter>;
+using FilePtr = std::unique_ptr<FILE, decltype([](gsl::owner<FILE*> f) { fclose(f); })>;
 
 [[nodiscard]] constexpr auto GetDeviceName() noexcept { return "Wave File Writer"sv; }
 

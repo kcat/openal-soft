@@ -1291,19 +1291,24 @@ auto UpdateDeviceParams(al::Device *device, const std::span<const int> attrList)
                 break;
 
             case ATTRIBUTE(ALC_MONO_SOURCES)
-                numMono = static_cast<uint>(attrList[attrIdx + 1]);
-                if(numMono > INT_MAX) numMono = 0;
+                if(const auto val = attrList[attrIdx + 1]; val >= 0)
+                    numMono = static_cast<uint>(val);
+                else
+                    numMono = 0;
                 break;
 
             case ATTRIBUTE(ALC_STEREO_SOURCES)
-                numStereo = static_cast<uint>(attrList[attrIdx + 1]);
-                if(numStereo > INT_MAX) numStereo = 0;
+                if(const auto val = attrList[attrIdx + 1]; val >= 0)
+                    numStereo = static_cast<uint>(val);
+                else
+                    numStereo = 0;
                 break;
 
             case ATTRIBUTE(ALC_MAX_AUXILIARY_SENDS)
-                numSends = static_cast<uint>(attrList[attrIdx + 1]);
-                if(numSends > uint{std::numeric_limits<int>::max()}) numSends = 0;
-                else numSends = std::min(numSends, uint{MaxSendCount});
+                if(const auto val = attrList[attrIdx + 1]; val >= 0)
+                    numSends = std::min(static_cast<uint>(val), uint{MaxSendCount});
+                else
+                    numSends = 0;
                 break;
 
             case ATTRIBUTE(ALC_HRTF_SOFT)

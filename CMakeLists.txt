@@ -3,6 +3,12 @@
 cmake_minimum_required(VERSION 3.13)
 enable_testing()
 
+find_program(CCACHE ccache)
+if(CCACHE)
+    set(CMAKE_CXX_COMPILER_LAUNCHER ${CCACHE})
+    set(CMAKE_C_COMPILER_LAUNCHER ${CCACHE})
+endif()
+
 if(APPLE)
     # The workaround for try_compile failing with code signing
     # since cmake-3.18.2, not required
@@ -174,15 +180,9 @@ set(LINKER_FLAGS_RELEASE )
 set(EXTRA_LIBS )
 
 if(WIN32)
-    set(CPP_DEFS ${CPP_DEFS} _WIN32 NOMINMAX WIN32_LEAN_AND_MEAN)
-    if(MINGW)
-        set(CPP_DEFS ${CPP_DEFS} __USE_MINGW_ANSI_STDIO)
-    endif()
+    set(CPP_DEFS ${CPP_DEFS} NOMINMAX WIN32_LEAN_AND_MEAN)
 
     option(ALSOFT_BUILD_ROUTER  "Build the router (EXPERIMENTAL; creates OpenAL32.dll and soft_oal.dll)"  OFF)
-    if(MINGW)
-        option(ALSOFT_BUILD_IMPORT_LIB "Build an import .lib using dlltool (requires sed)" ON)
-    endif()
 
     if(NOT ALSOFT_UWP)
         # Some systems may need NTDDI_VERSION defined to NTDDI_VISTA or later
@@ -783,7 +783,8 @@ set(OPENAL_OBJS
     al/listener.h
     al/source.cpp
     al/source.h
-    al/state.cpp)
+    al/state.cpp
+    "${OpenAL_BINARY_DIR}/version.h")
 
 # ALC and related routines
 set(ALC_OBJS
@@ -1267,19 +1268,15 @@ if(ALSOFT_UPDATE_BUILD_VERSION AND GIT_FOUND AND EXISTS "${OpenAL_SOURCE_DIR}/.g
     endif()
 
     # Get the current working branch and its latest abbreviated commit hash
-    add_custom_command(OUTPUT "${OpenAL_BINARY_DIR}/version_witness.txt"
-        BYPRODUCTS "${OpenAL_BINARY_DIR}/version.h"
-        COMMAND ${CMAKE_COMMAND} -D GIT_EXECUTABLE=${GIT_EXECUTABLE} -D LIB_VERSION=${LIB_VERSION}
-            -D LIB_VERSION_NUM=${LIB_VERSION_NUM} -D SRC=${OpenAL_SOURCE_DIR}/version.h.in
-            -D DST=${OpenAL_BINARY_DIR}/version.h -P ${OpenAL_SOURCE_DIR}/version.cmake
+    add_custom_command(OUTPUT "${OpenAL_BINARY_DIR}/version_witness.txt" "${OpenAL_BINARY_DIR}/version.h"
+        COMMAND ${CMAKE_COMMAND} -DGIT_EXECUTABLE=${GIT_EXECUTABLE} -DLIB_VERSION=${LIB_VERSION}
+            -DLIB_VERSION_NUM=${LIB_VERSION_NUM} -DSRC=${OpenAL_SOURCE_DIR}/version.h.in
+            -DDST=${OpenAL_BINARY_DIR}/version.h -P ${OpenAL_SOURCE_DIR}/version.cmake
         COMMAND ${CMAKE_COMMAND} -E touch "${OpenAL_BINARY_DIR}/version_witness.txt"
-        WORKING_DIRECTORY "${OpenAL_SOURCE_DIR}"
         MAIN_DEPENDENCY "${OpenAL_SOURCE_DIR}/version.h.in"
         DEPENDS "${GIT_DIR}/index" "${OpenAL_SOURCE_DIR}/version.cmake"
         VERBATIM
     )
-
-    add_custom_target(alsoft.build_version DEPENDS "${OpenAL_BINARY_DIR}/version_witness.txt")
 else()
     set(GIT_BRANCH "")
     set(GIT_COMMIT_HASH "")
@@ -1445,11 +1442,10 @@ else()
             ${OpenAL_SOURCE_DIR}/common
             ${OpenAL_BINARY_DIR}
         )
-        set_target_properties(OpenAL PROPERTIES ${ALSOFT_STD_VERSION_PROPS} PREFIX ""
+        set_target_properties(OpenAL PROPERTIES ${ALSOFT_STD_VERSION_PROPS}
+            PREFIX ""
+            IMPORT_PREFIX ""
             OUTPUT_NAME ${LIBNAME})
-        if(TARGET alsoft.build_version)
-            add_dependencies(OpenAL alsoft.build_version)
-        endif()
         set(HAS_ROUTER 1)
 
         set(LIBNAME "soft_oal")
@@ -1465,7 +1461,7 @@ else()
     add_library(${IMPL_TARGET} SHARED ${OPENAL_OBJS} ${ALC_OBJS} ${CORE_OBJS} ${RC_CONFIG}
         ${TARGET_PUBLIC_HEADERS})
     if(WIN32)
-        set_target_properties(${IMPL_TARGET} PROPERTIES PREFIX "")
+        set_target_properties(${IMPL_TARGET} PROPERTIES PREFIX "" IMPORT_PREFIX "")
     endif()
     target_link_libraries(${IMPL_TARGET} PRIVATE alsoft.common ${LINKER_FLAGS} ${EXTRA_LIBS}
         ${MATH_LIB} alsoft::fmt)
@@ -1558,36 +1554,6 @@ target_compile_definitions(${IMPL_TARGET}
     PRIVATE AL_BUILD_LIBRARY AL_ALEXT_PROTOTYPES  "ALC_API=${EXPORT_DECL}" "AL_API=${EXPORT_DECL}"
     ${CPP_DEFS})
 target_compile_options(${IMPL_TARGET} PRIVATE ${C_FLAGS})
-
-if(TARGET alsoft.build_version)
-    add_dependencies(${IMPL_TARGET} alsoft.build_version)
-endif()
-
-if(WIN32 AND MINGW AND ALSOFT_BUILD_IMPORT_LIB AND NOT LIBTYPE STREQUAL "STATIC")
-    find_program(SED_EXECUTABLE NAMES sed DOC "sed executable")
-    if(NOT SED_EXECUTABLE OR NOT CMAKE_DLLTOOL)
-        message(STATUS "")
-        if(NOT SED_EXECUTABLE)
-            message(STATUS "WARNING: Cannot find sed, disabling .def/.lib generation")
-        endif()
-        if(NOT CMAKE_DLLTOOL)
-            message(STATUS "WARNING: Cannot find dlltool, disabling .def/.lib generation")
-        endif()
-    else()
-        target_link_options(OpenAL PRIVATE "-Wl,--output-def,${PROJECT_BINARY_DIR}/OpenAL32.def")
-        add_custom_command(TARGET OpenAL POST_BUILD
-            COMMAND "${SED_EXECUTABLE}" -i -e "s/ @[^ ]*//" OpenAL32.def
-            COMMAND "${CMAKE_DLLTOOL}" -d OpenAL32.def -l OpenAL32.lib -D OpenAL32.dll
-            # Technically OpenAL32.def was created by the build, but cmake
-            # doesn't recognize it due to -Wl,--output-def,OpenAL32.def being
-            # manually specified. But declaring the file here allows it to be
-            # properly cleaned, e.g. during make clean.
-            BYPRODUCTS OpenAL32.def OpenAL32.lib
-            COMMENT "Stripping ordinals from OpenAL32.def and generating OpenAL32.lib..."
-            VERBATIM
-        )
-    endif()
-endif()
 
 if(HAS_ROUTER)
     message(STATUS "")

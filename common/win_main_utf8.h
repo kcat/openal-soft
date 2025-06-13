@@ -53,7 +53,7 @@ MAYBE_UNUSED static FILE *my_fopen(const char *fname, const char *mode)
         static_cast<size_t>(modelen));
     wname = strbuf.get();
 #else
-    wname = (wchar_t*)calloc(sizeof(wchar_t), (size_t)namelen + (size_t)modelen);
+    wname = (wchar_t*)calloc((size_t)namelen + (size_t)modelen, sizeof(wchar_t));
 #endif
     wmode = wname + namelen;
     MultiByteToWideChar(CP_UTF8, 0, fname, -1, wname, namelen);

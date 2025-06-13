@@ -2,9 +2,13 @@ build*/
 winbuild
 win64build
 .vs/
+.cache/
 
 ## kdevelop
 *.kdev4
 
 ## qt-creator
 CMakeLists.txt.user*
+
+/compile_commands.json
+.vscode/

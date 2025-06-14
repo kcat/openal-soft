@@ -130,9 +130,10 @@
 #  mix to a first-, second-, or third-order ambisonic buffer respectively, then
 #  decode that buffer with HRTF filters. Ambi1 has the lowest CPU usage,
 #  replacing the per-source HRIR filter for a simple 4-channel panning mix, but
-#  retains full 3D placement at the cost of a more diffuse response. Ambi2 and
-#  ambi3 increasingly improve the directional clarity, at the cost of more CPU
-#  usage (still less than "full", given some number of active sources).
+#  retains full 3D placement at the cost of a more diffuse response. Ambi2,
+#  ambi3, and ambi4 increasingly improve the directional clarity, at the cost
+#  of more CPU usage (still less than "full", given some number of active
+#  sources).
 #hrtf-mode = full
 
 ## hrtf-size:

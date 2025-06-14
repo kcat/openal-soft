@@ -144,6 +144,7 @@ const std::array hrtfModeList{
     NameValuePair{ QStringLiteral("1st Order Ambisonic"), QStringLiteral("ambi1") },
     NameValuePair{ QStringLiteral("2nd Order Ambisonic"), QStringLiteral("ambi2") },
     NameValuePair{ QStringLiteral("3rd Order Ambisonic"), QStringLiteral("ambi3") },
+    NameValuePair{ QStringLiteral("4th Order Ambisonic"), QStringLiteral("ambi4") },
     NameValuePair{ QStringLiteral("Default (Full)"), QStringLiteral("") },
     NameValuePair{ QStringLiteral("Full"), QStringLiteral("full") },
 };

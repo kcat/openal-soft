@@ -284,8 +284,13 @@ if(MSVC)
         message(STATUS "Using DirectX SDK directory: ${DXSDK_DIR}")
     endif()
 else()
-    set(C_FLAGS ${C_FLAGS} -Winline -Wunused -Wall -Wextra -Wshadow -Wconversion -Wcast-align
-        -Wpedantic
+    # FIXME: Should include -Winline, but GCC tries inlining too much with
+    # fmtlib due to all the constexpr functions and template classes, spamming
+    # a bunch of warnings that we can't do anything about. Until something like
+    # feeble_inline gets implemented and used, or inline is ignored by default,
+    # we'll have to ignore inline warning.
+    # https://gcc.gnu.org/bugzilla/show_bug.cgi?id=93008
+    set(C_FLAGS ${C_FLAGS} -Wunused -Wall -Wextra -Wshadow -Wconversion -Wcast-align -Wpedantic
         $<$<COMPILE_LANGUAGE:CXX>:-Wold-style-cast -Wnon-virtual-dtor -Woverloaded-virtual>)
 
     check_cxx_compiler_flag(-Wno-interference-size HAVE_WNO_INTERFERENCE_SIZE)

@@ -93,6 +93,7 @@
 #include "core/fpu_ctrl.h"
 #include "core/front_stablizer.h"
 #include "core/helpers.h"
+#include "core/hrtf.h"
 #include "core/logging.h"
 #include "core/mastering.h"
 #include "core/uhjfilter.h"
@@ -1467,11 +1468,7 @@ auto UpdateDeviceParams(al::Device *device, const std::span<const int> attrList)
     device->mDeviceState = DeviceState::Unprepared;
     device->AvgSpeakerDist = 0.0f;
     device->mNFCtrlFilter = NfcFilter{};
-    device->mUhjEncoder = nullptr;
-    device->AmbiDecoder = nullptr;
-    device->mStablizer = nullptr;
-    device->Bs2b = nullptr;
-    device->PostProcess = nullptr;
+    device->mPostProcess.emplace<std::monostate>();
 
     device->Limiter = nullptr;
     device->ChannelDelays = nullptr;
@@ -1628,7 +1625,7 @@ auto UpdateDeviceParams(al::Device *device, const std::span<const int> attrList)
     {
     case DevFmtMono: break;
     case DevFmtStereo:
-        if(!device->mUhjEncoder)
+        if(!std::holds_alternative<UhjPostProcess>(device->mPostProcess))
             device->RealOut.RemixMap = StereoDownmix;
         break;
     case DevFmtQuad: device->RealOut.RemixMap = QuadDownmix; break;
@@ -1642,8 +1639,8 @@ auto UpdateDeviceParams(al::Device *device, const std::span<const int> attrList)
     }
 
     auto sample_delay = 0_uz;
-    if(auto *encoder = device->mUhjEncoder.get())
-        sample_delay += encoder->getDelay();
+    if(auto *uhjenc = std::get_if<UhjPostProcess>(&device->mPostProcess))
+        sample_delay += uhjenc->mUhjEncoder->getDelay();
 
     if(device->getConfigValueBool({}, "dither"sv, true))
     {

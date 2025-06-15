@@ -81,7 +81,7 @@ auto Device::getOutputMode1() const noexcept -> OutputMode1
     case DevFmtStereo:
         if(mHrtf)
             return OutputMode1::Hrtf;
-        else if(mUhjEncoder)
+        else if(std::holds_alternative<UhjPostProcess>(mPostProcess))
             return OutputMode1::Uhj2;
         return OutputMode1::StereoBasic;
     case DevFmtQuad: return OutputMode1::Quad;

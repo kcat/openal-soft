@@ -490,7 +490,7 @@ auto ALCcontext::eax_detect_speaker_configuration() const -> unsigned long
         /* Pretend 7.1 if using UHJ output, since they both provide full
          * horizontal surround.
          */
-        if(mDevice->mUhjEncoder)
+        if(std::holds_alternative<UhjPostProcess>(mDevice->mPostProcess))
             return SPEAKERS_7;
         if(mDevice->Flags.test(DirectEar))
             return HEADPHONES;

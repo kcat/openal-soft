@@ -691,8 +691,15 @@ constexpr auto X7144Config = DecoderConfig<DualBand, 14>{
     }}
 };
 
-void InitPanning(al::Device *device, const bool hqdec=false, const bool stablize=false,
-    DecoderView decoder={})
+
+struct PanningProc {
+    std::unique_ptr<BFormatDec> decoder;
+    std::unique_ptr<FrontStablizer> stablizer;
+};
+
+[[nodiscard]]
+auto InitPanning(al::Device *device, const bool hqdec=false, const bool stablize=false,
+    DecoderView decoder={}) -> PanningProc
 {
     if(!decoder)
     {
@@ -732,7 +739,7 @@ void InitPanning(al::Device *device, const bool hqdec=false, const bool stablize
                 GetCounterSuffix(device->mAmbiOrder), GetLayoutName(device->mAmbiLayout),
                 GetScalingName(device->mAmbiScale));
             InitNearFieldCtrl(device, avg_dist, device->mAmbiOrder, true);
-            return;
+            return {};
         }
     }
 
@@ -810,12 +817,13 @@ void InitPanning(al::Device *device, const bool hqdec=false, const bool stablize
         (decoder.mOrder > 2) ? "third" :
         (decoder.mOrder > 1) ? "second" : "first",
         decoder.mIs3D ? " periphonic" : "");
-    device->AmbiDecoder = std::make_unique<BFormatDec>(ambicount, chancoeffs, chancoeffslf,
+    auto bformatdec = std::make_unique<BFormatDec>(ambicount, chancoeffs, chancoeffslf,
         device->mXOverFreq/static_cast<float>(device->mSampleRate));
-    device->mStablizer = std::move(stablizer);
+    return {std::move(bformatdec), std::move(stablizer)};
 }
 
-void InitHrtfPanning(al::Device *device)
+[[nodiscard]]
+auto InitHrtfPanning(al::Device *device) -> std::unique_ptr<DirectHrtfState>
 {
     static constexpr auto Deg180 = std::numbers::pi_v<float>;
     static constexpr auto Deg_90 = Deg180 / 2.0f /* 90 degrees*/;
@@ -1103,9 +1111,9 @@ void InitHrtfPanning(al::Device *device)
     auto hrtfstate = DirectHrtfState::Create(count);
     hrtfstate->build(Hrtf, device->mIrSize, perHrirMin, AmbiPoints, AmbiMatrix, device->mXOverFreq,
         AmbiOrderHFGain);
-    device->mHrtfState = std::move(hrtfstate);
 
     InitNearFieldCtrl(device, Hrtf->mFields[0].distance, ambi_order, true);
+    return hrtfstate;
 }
 
 void InitUhjPanning(al::Device *device)
@@ -1178,9 +1186,6 @@ void aluInitRenderer(al::Device *device, int hrtf_id, std::optional<StereoEncodi
 {
     /* Hold the HRTF the device last used, in case it's used again. */
     auto old_hrtf = std::move(device->mHrtf);
-
-    device->mHrtfState = nullptr;
-    device->mHrtf = nullptr;
     device->mIrSize = 0;
     device->mHrtfName.clear();
     device->mXOverFreq = 400.0f;
@@ -1231,7 +1236,7 @@ void aluInitRenderer(al::Device *device, int hrtf_id, std::optional<StereoEncodi
             && device->RealOut.ChannelIndex[FrontRight] != InvalidChannelIndex
             && device->getConfigValueBool({}, "front-stablizer", false);
         const auto hqdec = device->getConfigValueBool("decoder", "hq-mode", true);
-        InitPanning(device, hqdec, stablize, decoder);
+        auto postproc = InitPanning(device, hqdec, stablize, decoder);
         if(decoder)
         {
             const auto spkr_count = std::accumulate(speakerdists.begin(), speakerdists.end(), 0.0f,
@@ -1249,10 +1254,11 @@ void aluInitRenderer(al::Device *device, int hrtf_id, std::optional<StereoEncodi
             if(spkr_count > 0)
                 InitDistanceComp(device, decoder.mChannels, speakerdists);
         }
-        if(device->mStablizer)
-            device->PostProcess = &al::Device::ProcessAmbiDecStablized;
-        else if(device->AmbiDecoder)
-            device->PostProcess = &al::Device::ProcessAmbiDec;
+        if(postproc.stablizer)
+            device->mPostProcess.emplace<StablizerPostProcess>(std::move(postproc.decoder),
+                std::move(postproc.stablizer));
+        else if(postproc.decoder)
+            device->mPostProcess.emplace<AmbiDecPostProcess>(std::move(postproc.decoder));
         return;
     }
 
@@ -1301,8 +1307,8 @@ void aluInitRenderer(al::Device *device, int hrtf_id, std::optional<StereoEncodi
                     device->mIrSize = std::max(*hrtfsizeopt, MinIrLength);
             }
 
-            InitHrtfPanning(device);
-            device->PostProcess = &al::Device::ProcessHrtf;
+            auto proc = InitHrtfPanning(device);
+            device->mPostProcess.emplace<HrtfPostProcess>(std::move(proc));
             device->mHrtfStatus = ALC_HRTF_ENABLED_SOFT;
             return;
         }
@@ -1311,27 +1317,28 @@ void aluInitRenderer(al::Device *device, int hrtf_id, std::optional<StereoEncodi
 
     if(stereomode.value_or(StereoEncoding::Default) == StereoEncoding::Uhj)
     {
+        auto proc = std::unique_ptr<UhjEncoderBase>{};
         auto ftype = std::string_view{};
         switch(UhjEncodeQuality)
         {
         case UhjQualityType::IIR:
-            device->mUhjEncoder = std::make_unique<UhjEncoderIIR>();
+            proc = std::make_unique<UhjEncoderIIR>();
             ftype = "IIR"sv;
             break;
         case UhjQualityType::FIR256:
-            device->mUhjEncoder = std::make_unique<UhjEncoder<UhjLength256>>();
+            proc = std::make_unique<UhjEncoder<UhjLength256>>();
             ftype = "FIR-256"sv;
             break;
         case UhjQualityType::FIR512:
-            device->mUhjEncoder = std::make_unique<UhjEncoder<UhjLength512>>();
+            proc = std::make_unique<UhjEncoder<UhjLength512>>();
             ftype = "FIR-512"sv;
             break;
         }
-        assert(device->mUhjEncoder != nullptr);
+        assert(proc != nullptr);
 
         TRACE("UHJ enabled ({} encoder)", ftype);
         InitUhjPanning(device);
-        device->PostProcess = &al::Device::ProcessUhj;
+        device->mPostProcess.emplace<UhjPostProcess>(std::move(proc));
         return;
     }
 
@@ -1343,17 +1350,16 @@ void aluInitRenderer(al::Device *device, int hrtf_id, std::optional<StereoEncodi
         {
             auto bs2b = std::make_unique<Bs2b::bs2b>();
             bs2b->set_params(*cflevopt, static_cast<int>(device->mSampleRate));
-            device->Bs2b = std::move(bs2b);
             TRACE("BS2B enabled");
-            InitPanning(device);
-            device->PostProcess = &al::Device::ProcessBs2b;
+            auto proc = InitPanning(device);
+            device->mPostProcess.emplace<Bs2bPostProcess>(std::move(proc.decoder),std::move(bs2b));
             return;
         }
     }
 
     TRACE("Stereo rendering");
-    InitPanning(device);
-    device->PostProcess = &al::Device::ProcessAmbiDec;
+    auto proc = InitPanning(device);
+    device->mPostProcess.emplace<AmbiDecPostProcess>(std::move(proc.decoder));
 }
 
 

@@ -485,7 +485,7 @@ void ConvolutionState::update(const ContextBase *context, const EffectSlot *slot
     if(IsAmbisonic(mChannels))
     {
         DeviceBase *device{context->mDevice};
-        if(mChannels == FmtUHJ2 && !device->mUhjEncoder)
+        if(mChannels == FmtUHJ2 && !std::holds_alternative<UhjPostProcess>(device->mPostProcess))
         {
             mMix = &ConvolutionState::UpsampleMix;
             mChans[0].mHfScale = 1.0f;

@@ -13,6 +13,7 @@
 #include <ranges>
 #include <span>
 #include <string>
+#include <variant>
 
 #include "almalloc.h"
 #include "alnumeric.h"
@@ -157,6 +158,37 @@ struct RealMixParams {
 
 using AmbiRotateMatrix = std::array<std::array<float,MaxAmbiChannels>,MaxAmbiChannels>;
 
+
+struct AmbiDecPostProcess {
+    std::unique_ptr<BFormatDec> mAmbiDecoder;
+};
+
+struct HrtfPostProcess {
+    std::unique_ptr<DirectHrtfState> mHrtfState;
+};
+
+struct UhjPostProcess {
+    std::unique_ptr<UhjEncoderBase> mUhjEncoder;
+};
+
+struct StablizerPostProcess {
+    std::unique_ptr<BFormatDec> mAmbiDecoder;
+    std::unique_ptr<FrontStablizer> mStablizer;
+};
+
+struct Bs2bPostProcess {
+    std::unique_ptr<BFormatDec> mAmbiDecoder;
+    std::unique_ptr<Bs2b::bs2b> mBs2b;
+};
+
+using PostProcess = std::variant<std::monostate,
+    AmbiDecPostProcess,
+    HrtfPostProcess,
+    UhjPostProcess,
+    StablizerPostProcess,
+    Bs2bPostProcess>;
+
+
 enum {
     // Frequency was requested by the app or config file
     FrequencyRequest,
@@ -199,7 +231,7 @@ struct SIMDALIGN DeviceBase {
 
     DevFmtChannels FmtChans{};
     DevFmtType FmtType{};
-    uint mAmbiOrder{0};
+    uint mAmbiOrder{0u};
     float mXOverFreq{400.0f};
     /* If the main device mix is horizontal/2D only. */
     bool m2DMixing{false};
@@ -265,24 +297,10 @@ struct SIMDALIGN DeviceBase {
     RealMixParams RealOut;
 
     /* HRTF state and info */
-    std::unique_ptr<DirectHrtfState> mHrtfState;
     al::intrusive_ptr<HrtfStore> mHrtf;
-    uint mIrSize{0};
+    uint mIrSize{0u};
 
-    /* Ambisonic-to-UHJ encoder */
-    std::unique_ptr<UhjEncoderBase> mUhjEncoder;
-
-    /* Ambisonic decoder for speakers */
-    std::unique_ptr<BFormatDec> AmbiDecoder;
-
-    /* Stablizer that generates a front-center channel from the left+right. */
-    std::unique_ptr<FrontStablizer> mStablizer;
-
-    /* Stereo-to-binaural filter */
-    std::unique_ptr<Bs2b::bs2b> Bs2b;
-
-    using PostProc = void(DeviceBase::*)(const size_t SamplesToDo);
-    PostProc PostProcess{nullptr};
+    PostProcess mPostProcess;
 
     std::unique_ptr<Compressor> Limiter;
 
@@ -355,14 +373,12 @@ struct SIMDALIGN DeviceBase {
             + mClockBaseSec.load(std::memory_order_relaxed) + ns;
     }
 
-    void ProcessHrtf(const std::size_t SamplesToDo);
-    void ProcessAmbiDec(const std::size_t SamplesToDo);
-    void ProcessAmbiDecStablized(const std::size_t SamplesToDo);
-    void ProcessUhj(const std::size_t SamplesToDo);
-    void ProcessBs2b(const std::size_t SamplesToDo);
-
-    void postProcess(const std::size_t SamplesToDo)
-    { if(PostProcess) [[likely]] (this->*PostProcess)(SamplesToDo); }
+    void Process(std::monostate&, const std::size_t) { }
+    void Process(AmbiDecPostProcess &proc, const std::size_t SamplesToDo) const;
+    void Process(HrtfPostProcess &proc, const std::size_t SamplesToDo);
+    void Process(UhjPostProcess &proc, const std::size_t SamplesToDo);
+    void Process(StablizerPostProcess &proc, const std::size_t SamplesToDo);
+    void Process(Bs2bPostProcess &proc, const std::size_t SamplesToDo);
 
     void renderSamples(const std::span<void*> outBuffers, const uint numSamples);
     void renderSamples(void *outBuffer, const uint numSamples, const std::size_t frameStep);

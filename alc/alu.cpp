@@ -299,23 +299,33 @@ ResamplerFunc PrepareResampler(Resampler resampler, uint increment, InterpState 
 }
 
 
-void DeviceBase::ProcessHrtf(const size_t SamplesToDo)
+void DeviceBase::Process(AmbiDecPostProcess &proc, const size_t SamplesToDo) const
+{
+    proc.mAmbiDecoder->process(RealOut.Buffer, Dry.Buffer, SamplesToDo);
+}
+
+void DeviceBase::Process(HrtfPostProcess &proc, const size_t SamplesToDo)
 {
     /* HRTF is stereo output only. */
-    const size_t lidx{RealOut.ChannelIndex[FrontLeft]};
-    const size_t ridx{RealOut.ChannelIndex[FrontRight]};
+    const auto lidx = size_t{RealOut.ChannelIndex[FrontLeft]};
+    const auto ridx = size_t{RealOut.ChannelIndex[FrontRight]};
 
     MixDirectHrtf(RealOut.Buffer[lidx], RealOut.Buffer[ridx], Dry.Buffer, HrtfAccumData,
-        mHrtfState->mTemp, mHrtfState->mChannels, mHrtfState->mIrSize, SamplesToDo);
+        proc.mHrtfState->mTemp, proc.mHrtfState->mChannels, proc.mHrtfState->mIrSize, SamplesToDo);
 }
 
-/* NOLINTNEXTLINE(readability-make-member-function-const) */
-void DeviceBase::ProcessAmbiDec(const size_t SamplesToDo)
+void DeviceBase::Process(UhjPostProcess &proc, const size_t SamplesToDo)
 {
-    AmbiDecoder->process(RealOut.Buffer, Dry.Buffer, SamplesToDo);
+    /* UHJ is stereo output only. */
+    const auto lidx = size_t{RealOut.ChannelIndex[FrontLeft]};
+    const auto ridx = size_t{RealOut.ChannelIndex[FrontRight]};
+
+    /* Encode to stereo-compatible 2-channel UHJ output. */
+    proc.mUhjEncoder->encode(RealOut.Buffer[lidx].data(), RealOut.Buffer[ridx].data(),
+        {{Dry.Buffer[0].data(), Dry.Buffer[1].data(), Dry.Buffer[2].data()}}, SamplesToDo);
 }
 
-void DeviceBase::ProcessAmbiDecStablized(const size_t SamplesToDo)
+void DeviceBase::Process(StablizerPostProcess &proc, const size_t SamplesToDo)
 {
     /* Decode with front image stablization. */
     const auto lidx = size_t{RealOut.ChannelIndex[FrontLeft]};
@@ -327,25 +337,25 @@ void DeviceBase::ProcessAmbiDecStablized(const size_t SamplesToDo)
      */
     const auto leftout = std::span{RealOut.Buffer[lidx]}.first(SamplesToDo);
     const auto rightout = std::span{RealOut.Buffer[ridx]}.first(SamplesToDo);
-    const auto mid = std::span{mStablizer->MidDirect}.first(SamplesToDo);
-    const auto side = std::span{mStablizer->Side}.first(SamplesToDo);
+    const auto mid = std::span{proc.mStablizer->MidDirect}.first(SamplesToDo);
+    const auto side = std::span{proc.mStablizer->Side}.first(SamplesToDo);
     std::ranges::transform(leftout, rightout, mid.begin(), std::plus{});
     std::ranges::transform(leftout, rightout, side.begin(), std::minus{});
     std::ranges::fill(leftout, 0.0f);
     std::ranges::fill(rightout, 0.0f);
 
     /* Decode the B-Format mix to OutBuffer. */
-    AmbiDecoder->process(RealOut.Buffer, Dry.Buffer, SamplesToDo);
+    proc.mAmbiDecoder->process(RealOut.Buffer, Dry.Buffer, SamplesToDo);
 
     /* Include the decoded side signal with the direct side signal. */
     for(auto i = 0_uz;i < SamplesToDo;++i)
         side[i] += leftout[i] - rightout[i];
 
     /* Get the decoded mid signal and band-split it. */
-    const auto tmpsamples = std::span{mStablizer->Temp}.first(SamplesToDo);
+    const auto tmpsamples = std::span{proc.mStablizer->Temp}.first(SamplesToDo);
     std::ranges::transform(leftout, rightout, tmpsamples.begin(), std::plus{});
 
-    mStablizer->MidFilter.process(tmpsamples, mStablizer->MidHF, mStablizer->MidLF);
+    proc.mStablizer->MidFilter.process(tmpsamples, proc.mStablizer->MidHF, proc.mStablizer->MidLF);
 
     /* Apply an all-pass to all channels to match the band-splitter's phase
      * shift. This is to keep the phase synchronized between the existing
@@ -357,11 +367,11 @@ void DeviceBase::ProcessAmbiDecStablized(const size_t SamplesToDo)
          * and substitute the direct mid signal and direct+decoded side signal.
          */
         if(i == lidx)
-            mStablizer->ChannelFilters[i].processAllPass(mid);
+            proc.mStablizer->ChannelFilters[i].processAllPass(mid);
         else if(i == ridx)
-            mStablizer->ChannelFilters[i].processAllPass(side);
+            proc.mStablizer->ChannelFilters[i].processAllPass(side);
         else
-            mStablizer->ChannelFilters[i].processAllPass(
+            proc.mStablizer->ChannelFilters[i].processAllPass(
                 std::span{RealOut.Buffer[i]}.first(SamplesToDo));
     }
 
@@ -380,8 +390,8 @@ void DeviceBase::ProcessAmbiDecStablized(const size_t SamplesToDo)
         /* Add the direct mid signal to the processed mid signal so it can be
          * properly combined with the direct+decoded side signal.
          */
-        const auto m = mStablizer->MidLF[i]*mid_lf + mStablizer->MidHF[i]*mid_hf + mid[i];
-        const auto c = mStablizer->MidLF[i]*center_lf + mStablizer->MidHF[i]*center_hf;
+        const auto m = proc.mStablizer->MidLF[i]*mid_lf+proc.mStablizer->MidHF[i]*mid_hf + mid[i];
+        const auto c = proc.mStablizer->MidLF[i]*center_lf + proc.mStablizer->MidHF[i]*center_hf;
         const auto s = side[i];
 
         /* The generated center channel signal adds to the existing signal,
@@ -393,18 +403,7 @@ void DeviceBase::ProcessAmbiDecStablized(const size_t SamplesToDo)
     }
 }
 
-void DeviceBase::ProcessUhj(const size_t SamplesToDo)
-{
-    /* UHJ is stereo output only. */
-    const auto lidx = size_t{RealOut.ChannelIndex[FrontLeft]};
-    const auto ridx = size_t{RealOut.ChannelIndex[FrontRight]};
-
-    /* Encode to stereo-compatible 2-channel UHJ output. */
-    mUhjEncoder->encode(RealOut.Buffer[lidx].data(), RealOut.Buffer[ridx].data(),
-        {{Dry.Buffer[0].data(), Dry.Buffer[1].data(), Dry.Buffer[2].data()}}, SamplesToDo);
-}
-
-void DeviceBase::ProcessBs2b(const size_t SamplesToDo)
+void DeviceBase::Process(Bs2bPostProcess &proc, const size_t SamplesToDo)
 {
     /* BS2B is stereo output only. */
     const auto lidx = size_t{RealOut.ChannelIndex[FrontLeft]};
@@ -415,8 +414,8 @@ void DeviceBase::ProcessBs2b(const size_t SamplesToDo)
      */
     const auto leftout = std::span{RealOut.Buffer[lidx]}.first(SamplesToDo);
     const auto rightout = std::span{RealOut.Buffer[ridx]}.first(SamplesToDo);
-    const auto ldirect = std::span{Bs2b->mStorage[0]}.first(SamplesToDo);
-    const auto rdirect = std::span{Bs2b->mStorage[1]}.first(SamplesToDo);
+    const auto ldirect = std::span{proc.mBs2b->mStorage[0]}.first(SamplesToDo);
+    const auto rdirect = std::span{proc.mBs2b->mStorage[1]}.first(SamplesToDo);
     std::ranges::copy(leftout, ldirect.begin());
     std::ranges::copy(rightout, rdirect.begin());
     std::ranges::fill(leftout, 0.0f);
@@ -425,8 +424,8 @@ void DeviceBase::ProcessBs2b(const size_t SamplesToDo)
     /* Now, decode the ambisonic mix to the "real" output, and apply the BS2B
      * binaural/crossfeed filter.
      */
-    AmbiDecoder->process(RealOut.Buffer, Dry.Buffer, SamplesToDo);
-    Bs2b->cross_feed(leftout, rightout);
+    proc.mAmbiDecoder->process(RealOut.Buffer, Dry.Buffer, SamplesToDo);
+    proc.mBs2b->cross_feed(leftout, rightout);
 
     /* Finally, copy the direct signal back to the filtered output. */
     std::ranges::transform(leftout, ldirect, leftout.begin(), std::plus{});
@@ -2403,7 +2402,7 @@ auto DeviceBase::renderSamples(const uint numSamples) -> uint
     /* Apply any needed post-process for finalizing the Dry mix to the RealOut
      * (Ambisonic decode, UHJ encode, etc).
      */
-    postProcess(samplesToDo);
+    std::visit([this,samplesToDo](auto &arg) { Process(arg, samplesToDo); }, mPostProcess);
 
     /* Apply compression, limiting sample amplitude if needed or desired. */
     if(Limiter) Limiter->process(samplesToDo, RealOut.Buffer);

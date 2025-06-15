@@ -1270,7 +1270,7 @@ void Voice::prepare(DeviceBase *device)
     /* Make sure the sample history is cleared. */
     std::ranges::fill(mPrevSamples | std::views::join, 0.0f);
 
-    if(mFmtChannels == FmtUHJ2 && !device->mUhjEncoder)
+    if(mFmtChannels == FmtUHJ2 && !std::holds_alternative<UhjPostProcess>(device->mPostProcess))
     {
         /* 2-channel UHJ needs different shelf filters. However, we can't just
          * use different shelf filters after mixing it, given any old speaker

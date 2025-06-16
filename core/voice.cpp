@@ -1202,10 +1202,17 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
 
 void Voice::prepare(DeviceBase *device)
 {
-    /* Even if storing really high order ambisonics, we only mix channels for
+    /* Mono can need 2 mixing channels when panning is enabled, which can be
+     * done dynamically.
+     *
+     * UHJ2 and SuperStereo need 3 mixing channels, despite having only 2
+     * buffer channels.
+     *
+     * Even if storing really high order ambisonics, we only mix channels for
      * orders up to the device order. The rest are simply dropped.
      */
-    auto num_channels = (mFmtChannels == FmtUHJ2 || mFmtChannels == FmtSuperStereo) ? 3u
+    auto num_channels = (mFmtChannels == FmtMono) ? 2u
+        : (mFmtChannels == FmtUHJ2 || mFmtChannels == FmtSuperStereo) ? 3u
         : ChannelsFromFmt(mFmtChannels, std::min(mAmbiOrder, device->mAmbiOrder));
     if(num_channels > device->MixerChannelsMax) [[unlikely]]
     {
@@ -1218,11 +1225,8 @@ void Voice::prepare(DeviceBase *device)
         decltype(mChans){}.swap(mChans);
         decltype(mPrevSamples){}.swap(mPrevSamples);
     }
-    /* Make sure there's enough for 2 channels. Mono may use both when panning
-     * is enabled, which can be done dynamically.
-     */
-    mChans.resize(std::max(2u, num_channels));
-    mPrevSamples.resize(std::max(2u, num_channels));
+    mChans.resize(num_channels);
+    mPrevSamples.resize(num_channels);
 
     mDecoder = nullptr;
     mDecoderPadding = 0;

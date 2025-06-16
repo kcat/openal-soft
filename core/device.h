@@ -274,7 +274,7 @@ struct SIMDALIGN DeviceBase {
 
     /* Temp storage used for mixer processing. */
     static constexpr std::size_t MixerLineSize{BufferLineSize + DecoderBase::sMaxPadding};
-    static constexpr std::size_t MixerChannelsMax{16};
+    static constexpr std::size_t MixerChannelsMax{25};
     alignas(16) std::array<float,MixerLineSize*MixerChannelsMax> mSampleData{};
     alignas(16) std::array<float,MixerLineSize+MaxResamplerPadding> mResampleData{};
 

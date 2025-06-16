@@ -384,7 +384,7 @@ struct SIMDALIGN DeviceBase {
     void renderSamples(void *outBuffer, const uint numSamples, const std::size_t frameStep);
 
     /* Caller must lock the device state, and the mixer must not be running. */
-    void doDisconnect(std::string msg);
+    void doDisconnect(std::string&& msg);
 
     template<typename ...Args>
     void handleDisconnect(fmt::format_string<Args...> fmt, Args&& ...args)

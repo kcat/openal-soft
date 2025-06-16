@@ -2478,7 +2478,7 @@ void DeviceBase::renderSamples(void *outBuffer, const uint numSamples, const siz
     }
 }
 
-void DeviceBase::doDisconnect(std::string msg)
+void DeviceBase::doDisconnect(std::string&& msg)
 {
     const auto mixLock = getWriteMixLock();
 

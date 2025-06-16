@@ -37,7 +37,7 @@ struct bs2b;
 } // namespace Bs2b
 class Compressor;
 struct ContextBase;
-struct DirectHrtfState;
+class DirectHrtfState;
 class FrontStablizer;
 struct HrtfStore;
 

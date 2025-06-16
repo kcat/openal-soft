@@ -14,7 +14,10 @@
 using uint = unsigned int;
 
 
-struct SampleConverter {
+class SampleConverter {
+    explicit SampleConverter(size_t numchans) : mChan{numchans} { }
+
+public:
     DevFmtType mSrcType{};
     DevFmtType mDstType{};
     uint mSrcTypeSize{};
@@ -35,8 +38,6 @@ struct SampleConverter {
     };
     al::FlexArray<ChanSamples> mChan;
 
-    explicit SampleConverter(size_t numchans) : mChan{numchans} { }
-
     [[nodiscard]] auto convert(const void **src, uint *srcframes, void *dst, uint dstframes) -> uint;
     [[nodiscard]] auto convertPlanar(const void **src, uint *srcframes, void *const*dst, uint dstframes) -> uint;
     [[nodiscard]] auto availableOut(uint srcframes) const -> uint;
@@ -48,8 +49,8 @@ struct SampleConverter {
         return SampleOffset{(prep<<MixerFracBits) + mFracOffset};
     }
 
-    static std::unique_ptr<SampleConverter> Create(DevFmtType srcType, DevFmtType dstType,
-        size_t numchans, uint srcRate, uint dstRate, Resampler resampler);
+    static auto Create(DevFmtType srcType, DevFmtType dstType, size_t numchans, uint srcRate,
+        uint dstRate, Resampler resampler) -> std::unique_ptr<SampleConverter>;
 
     DEF_FAM_NEWDEL(SampleConverter, mChan)
 };

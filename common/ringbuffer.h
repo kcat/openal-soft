@@ -44,13 +44,13 @@ class RingBuffer {
 
     al::FlexArray<T, 16> mBuffer;
 
-public:
-    using DataPair = std::array<std::span<T>,2>;
-
     RingBuffer(const std::size_t writesize, const std::size_t mask, const std::size_t elemsize,
         const std::size_t numvals)
         : mWriteSize{writesize}, mSizeMask{mask}, mElemSize{elemsize}, mBuffer{numvals}
     { }
+
+public:
+    using DataPair = std::array<std::span<T>,2>;
 
     /** Reset the read and write pointers to zero. This is not thread safe. */
     auto reset() noexcept -> void

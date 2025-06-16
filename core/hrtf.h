@@ -68,14 +68,16 @@ struct AngularPoint {
 };
 
 
-struct DirectHrtfState {
+class DirectHrtfState {
+    explicit DirectHrtfState(size_t numchans) : mChannels{numchans} { }
+
+public:
     std::array<float,BufferLineSize> mTemp{};
 
     /* HRTF filter state for dry buffer content */
     uint mIrSize{0u};
     al::FlexArray<HrtfChannelState> mChannels;
 
-    explicit DirectHrtfState(size_t numchans) : mChannels{numchans} { }
     /**
      * Produces HRTF filter coefficients for decoding B-Format, given a set of
      * virtual speaker positions, a matching decoding matrix, and per-order

@@ -66,17 +66,17 @@ struct SegmentedFilter {
 
     SegmentedFilter() noexcept : mFft{sFftLength, PFFFT_REAL}
     {
-        static constexpr size_t fft_size{N};
+        static constexpr size_t filter_size{N};
 
         /* To set up the filter, we first need to generate the desired
          * response (not reversed).
          */
-        auto tmpBuffer = std::vector<double>(fft_size, 0.0);
-        for(std::size_t i{0};i < fft_size/2;++i)
+        auto tmpBuffer = std::vector<double>(filter_size, 0.0);
+        for(const auto i : std::views::iota(0_uz, filter_size/2))
         {
-            const auto k = int{fft_size/2} - static_cast<int>(i*2 + 1);
+            const auto k = int{filter_size/2} - static_cast<int>(i*2 + 1);
 
-            const auto w = 2.0*std::numbers::pi/double{fft_size} * static_cast<double>(i*2 + 1);
+            const auto w = 2.0*std::numbers::pi/double{filter_size} * static_cast<double>(i*2 + 1);
             const auto window = 0.3635819 - 0.4891775*std::cos(w) + 0.1365995*std::cos(2.0*w)
                 - 0.0106411*std::cos(3.0*w);
 
@@ -91,7 +91,7 @@ struct SegmentedFilter {
         auto fftBuffer = std::vector<complex_d>(sFftLength);
         auto fftTmp = al::vector<float,16>(sFftLength);
         auto filter = mFilterData.begin();
-        for(auto s = 0_uz;s < sNumSegments;++s)
+        for(const auto s : std::views::iota(0_uz, sNumSegments))
         {
             const auto tmpspan = std::span{tmpBuffer}.subspan(sSampleLength*s, sSampleLength);
             auto iter = std::ranges::copy(tmpspan, fftBuffer.begin()).out;
@@ -101,7 +101,7 @@ struct SegmentedFilter {
             /* Convert to zdomain data for PFFFT, scaled by the FFT length so
              * the iFFT result will be normalized.
              */
-            for(auto i = 0_uz;i < sSampleLength;++i)
+            for(const auto i : std::views::iota(0_uz, sSampleLength))
             {
                 fftTmp[i*2 + 0] = static_cast<float>(fftBuffer[i].real()) / float{sFftLength};
                 fftTmp[i*2 + 1] = static_cast<float>((i == 0) ? fftBuffer[sSampleLength].real()
@@ -250,14 +250,14 @@ void UhjEncoder<N>::encode(float *LeftOut, float *RightOut,
          */
         mFftBuffer.fill(0.0f);
         auto filter = Filter.mFilterData.begin();
-        for(auto s = curseg;s < sNumSegments;++s)
+        for(const auto s [[maybe_unused]] : std::views::iota(curseg, sNumSegments))
         {
             Filter.mFft.zconvolve_accumulate(input, filter, mFftBuffer.begin());
             std::advance(input, sFftLength);
             std::advance(filter, sFftLength);
         }
         input = mWXHistory.begin();
-        for(auto s = 0_uz;s < curseg;++s)
+        for(const auto s [[maybe_unused]] : std::views::iota(0_uz, curseg))
         {
             Filter.mFft.zconvolve_accumulate(input, filter, mFftBuffer.begin());
             std::advance(input, sFftLength);

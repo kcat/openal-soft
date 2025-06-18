@@ -35,7 +35,7 @@
 
 #include "almalloc.h"
 #include "alnumeric.h"
-#include "common/alhelpers.h"
+#include "common/alhelpers.hpp"
 #include "fmt/core.h"
 #include "fmt/format.h"
 #include "opthelpers.h"
@@ -2072,8 +2072,7 @@ auto main(std::span<std::string_view> args) -> int
 
     /* Open an audio device */
     args = args.subspan(1);
-    if(InitAL(args) != 0)
-        return 1;
+    auto almgr = InitAL(args);
 
     /* NOLINTBEGIN(cppcoreguidelines-pro-type-reinterpret-cast) */
     if(alIsExtensionPresent("AL_SOFT_source_latency"))
@@ -2258,7 +2257,7 @@ auto main(std::span<std::string_view> args) -> int
                 /* Nothing more to play. Shut everything down and quit. */
                 movState = nullptr;
 
-                CloseAL();
+                almgr.close();
 
                 SDL_DestroyRenderer(renderer);
                 renderer = nullptr;

@@ -98,7 +98,7 @@
 
 #include "alnumeric.h"
 #include "alstring.h"
-#include "common/alhelpers.h"
+#include "common/alhelpers.hpp"
 #include "filesystem.h"
 #include "fmt/core.h"
 #include "fmt/ranges.h"
@@ -918,14 +918,14 @@ auto main(std::span<std::string_view> args) -> int
     }
     args = args.subspan(1);
 
-    if(InitAL(args) != 0)
-        throw std::runtime_error{"Failed to initialize OpenAL"};
-    /* A simple RAII container for automating OpenAL shutdown. */
-    struct AudioManager {
-        AudioManager() = default;
-        AudioManager(const AudioManager&) = delete;
-        auto operator=(const AudioManager&) -> AudioManager& = delete;
-        ~AudioManager()
+    auto almgr = InitAL(args);
+
+    /* A simple RAII container for automating OpenAL cleanup. */
+    struct Cleaner {
+        Cleaner() = default;
+        Cleaner(const Cleaner&) = delete;
+        auto operator=(const Cleaner&) -> Cleaner& = delete;
+        ~Cleaner()
         {
             if(LfeSlotID)
             {
@@ -933,14 +933,12 @@ auto main(std::span<std::string_view> args) -> int
                 alDeleteEffects(1, &LowFrequencyEffectID);
                 alDeleteFilters(1, &MuteFilterID);
             }
-            CloseAL();
         }
     };
-    auto almgr = AudioManager{};
+    auto cleaner = Cleaner{};
 
-    if(auto *device = alcGetContextsDevice(alcGetCurrentContext());
-        alcIsExtensionPresent(device, "ALC_EXT_EFX")
-        && alcIsExtensionPresent(device, "ALC_EXT_DEDICATED"))
+    if(alcIsExtensionPresent(almgr.device, "ALC_EXT_EFX")
+        && alcIsExtensionPresent(almgr.device, "ALC_EXT_DEDICATED"))
     {
 #define LOAD_PROC(x) do {                                                     \
         x = reinterpret_cast<decltype(x)>(alGetProcAddress(#x));              \

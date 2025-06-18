@@ -1777,7 +1777,8 @@ endif()
 # Add a static library with common functions used by multiple example targets
 add_library(alsoft.excommon STATIC EXCLUDE_FROM_ALL
     examples/common/alhelpers.c
-    examples/common/alhelpers.h)
+    examples/common/alhelpers.h
+    examples/common/alhelpers.hpp)
 target_compile_definitions(alsoft.excommon PUBLIC ${CPP_DEFS})
 target_include_directories(alsoft.excommon PUBLIC ${OpenAL_BINARY_DIR} ${OpenAL_SOURCE_DIR}/common)
 target_compile_options(alsoft.excommon PUBLIC ${C_FLAGS})

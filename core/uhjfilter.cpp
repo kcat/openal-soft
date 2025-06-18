@@ -187,35 +187,33 @@ void process(UhjAllPassFilter &self, const std::span<const float,4> coeffs,
  */
 
 template<size_t N>
-void UhjEncoder<N>::encode(float *LeftOut, float *RightOut,
-    const std::span<const float*const,3> InSamples, const size_t SamplesToDo)
+void UhjEncoder<N>::encode(const std::span<float> LeftOut, const std::span<float> RightOut,
+    const std::span<const std::span<const float>,3> InSamples)
 {
     static constexpr auto &Filter = gSegmentedFilter<N>;
     static_assert(sFftLength == Filter.sFftLength);
     static_assert(sSegmentSize == Filter.sSampleLength);
     static_assert(sNumSegments == Filter.sNumSegments);
 
-    ASSUME(SamplesToDo > 0);
-    ASSUME(SamplesToDo <= BufferLineSize);
-
-    const auto winput = std::span{std::assume_aligned<16>(InSamples[0]), SamplesToDo};
-    const auto xinput = std::span{std::assume_aligned<16>(InSamples[1]), SamplesToDo};
-    const auto yinput = std::span{std::assume_aligned<16>(InSamples[2]), SamplesToDo};
+    const auto samplesToDo = InSamples[0].size();
+    const auto winput = assume_aligned_span<16>(InSamples[0]);
+    const auto xinput = assume_aligned_span<16>(InSamples[1].first(samplesToDo));
+    const auto yinput = assume_aligned_span<16>(InSamples[2].first(samplesToDo));
 
     std::ranges::copy(winput, std::next(mW.begin(), sFilterDelay));
     std::ranges::copy(xinput, std::next(mX.begin(), sFilterDelay));
     std::ranges::copy(yinput, std::next(mY.begin(), sFilterDelay));
 
     /* S = 0.9396926*W + 0.1855740*X */
-    std::ranges::transform(mW | std::views::take(SamplesToDo), mX, mS.begin(),
+    std::ranges::transform(mW | std::views::take(samplesToDo), mX, mS.begin(),
         [](const float w, const float x) noexcept { return 0.9396926f*w + 0.1855740f*x; });
 
     /* Precompute j(-0.3420201*W + 0.5098604*X) and store in mD. */
     auto dstore = mD.begin();
     auto curseg = mCurrentSegment;
-    for(auto base = 0_uz;base < SamplesToDo;)
+    for(auto base = 0_uz;base < samplesToDo;)
     {
-        const auto todo = std::min(sSegmentSize-mFifoPos, SamplesToDo-base);
+        const auto todo = std::min(sSegmentSize-mFifoPos, samplesToDo-base);
         const auto wseg = winput.subspan(base, todo);
         const auto xseg = xinput.subspan(base, todo);
         const auto wxio = std::span{mWXInOut}.subspan(mFifoPos, todo);
@@ -280,23 +278,23 @@ void UhjEncoder<N>::encode(float *LeftOut, float *RightOut,
     mCurrentSegment = curseg;
 
     /* D = j(-0.3420201*W + 0.5098604*X) + 0.6554516*Y */
-    std::ranges::transform(mD | std::views::take(SamplesToDo), mY, mD.begin(),
+    std::ranges::transform(mD | std::views::take(samplesToDo), mY, mD.begin(),
         [](const float jwx, const float y) noexcept { return jwx + 0.6554516f*y; });
 
     /* Copy the future samples to the front for next time. */
-    const auto take_end = std::views::drop(SamplesToDo) | std::views::take(sFilterDelay);
+    const auto take_end = std::views::drop(samplesToDo) | std::views::take(sFilterDelay);
     std::ranges::copy(mW | take_end, mW.begin());
     std::ranges::copy(mX | take_end, mX.begin());
     std::ranges::copy(mY | take_end, mY.begin());
 
     /* Apply a delay to the existing output to align with the input delay. */
     std::ignore = std::ranges::mismatch(mDirectDelay, std::array{LeftOut, RightOut},
-        [SamplesToDo](std::span<float,sFilterDelay> delayBuffer, float *buffer)
+        [](std::span<float,sFilterDelay> delayBuffer, const std::span<float> buffer)
     {
         const auto distbuf = assume_aligned_span<16>(delayBuffer);
 
-        const auto inout = std::span{std::assume_aligned<16>(buffer), SamplesToDo};
-        if(SamplesToDo >= sFilterDelay)
+        const auto inout = assume_aligned_span<16>(buffer);
+        if(inout.size() >= sFilterDelay)
         {
             const auto inout_start = std::prev(inout.end(), sFilterDelay);
             const auto delay_end = std::ranges::rotate(inout, inout_start).begin();
@@ -313,13 +311,13 @@ void UhjEncoder<N>::encode(float *LeftOut, float *RightOut,
     /* Combine the direct signal with the produced output. */
 
     /* Left = (S + D)/2.0 */
-    const auto left = std::span{std::assume_aligned<16>(LeftOut), SamplesToDo};
-    for(size_t i{0};i < SamplesToDo;++i)
+    const auto left = assume_aligned_span<16>(LeftOut);
+    for(auto i = 0_uz;i < samplesToDo;++i)
         left[i] += (mS[i] + mD[i]) * 0.5f;
 
     /* Right = (S - D)/2.0 */
-    const auto right = std::span{std::assume_aligned<16>(RightOut), SamplesToDo};
-    for(size_t i{0};i < SamplesToDo;++i)
+    const auto right = assume_aligned_span<16>(RightOut);
+    for(auto i = 0_uz;i < samplesToDo;++i)
         right[i] += (mS[i] - mD[i]) * 0.5f;
 }
 
@@ -338,53 +336,51 @@ void UhjEncoder<N>::encode(float *LeftOut, float *RightOut,
  * output having the required +90 degree phase shift relative to the other
  * inputs.
  */
-void UhjEncoderIIR::encode(float *LeftOut, float *RightOut,
-    const std::span<const float *const, 3> InSamples, const size_t SamplesToDo)
+void UhjEncoderIIR::encode(const std::span<float> LeftOut, const std::span<float> RightOut,
+    const std::span<const std::span<const float>,3> InSamples)
 {
-    ASSUME(SamplesToDo > 0);
-    ASSUME(SamplesToDo <= BufferLineSize);
-
-    const auto winput = std::span{std::assume_aligned<16>(InSamples[0]), SamplesToDo};
-    const auto xinput = std::span{std::assume_aligned<16>(InSamples[1]), SamplesToDo};
-    const auto yinput = std::span{std::assume_aligned<16>(InSamples[2]), SamplesToDo};
+    const auto samplesToDo = InSamples[0].size();
+    const auto winput = assume_aligned_span<16>(InSamples[0]);
+    const auto xinput = assume_aligned_span<16>(InSamples[1].first(samplesToDo));
+    const auto yinput = assume_aligned_span<16>(InSamples[2].first(samplesToDo));
 
     /* S = 0.9396926*W + 0.1855740*X */
     std::ranges::transform(winput, xinput, mTemp.begin(),
         [](const float w, const float x) noexcept { return 0.9396926f*w + 0.1855740f*x; });
-    process(mFilter1WX, Filter1Coeff, std::span{mTemp}.first(SamplesToDo), true,
+    process(mFilter1WX, Filter1Coeff, std::span{mTemp}.first(samplesToDo), true,
         std::span{mS}.subspan(1));
-    mS[0] = mDelayWX; mDelayWX = mS[SamplesToDo];
+    mS[0] = mDelayWX; mDelayWX = mS[samplesToDo];
 
     /* Precompute j(-0.3420201*W + 0.5098604*X) and store in mWX. */
     std::ranges::transform(winput, xinput, mTemp.begin(),
         [](const float w, const float x) noexcept { return -0.3420201f*w + 0.5098604f*x; });
-    process(mFilter2WX, Filter2Coeff, std::span{mTemp}.first(SamplesToDo), true, mWX);
+    process(mFilter2WX, Filter2Coeff, std::span{mTemp}.first(samplesToDo), true, mWX);
 
     /* Apply filter1 to Y and store in mD. */
     process(mFilter1Y, Filter1Coeff, yinput, true, std::span{mD}.subspan(1));
-    mD[0] = mDelayY; mDelayY = mD[SamplesToDo];
+    mD[0] = mDelayY; mDelayY = mD[samplesToDo];
 
     /* D = j(-0.3420201*W + 0.5098604*X) + 0.6554516*Y */
-    std::ranges::transform(mWX | std::views::take(SamplesToDo), mD, mD.begin(),
+    std::ranges::transform(mWX | std::views::take(samplesToDo), mD, mD.begin(),
         [](const float jwx, const float y) noexcept { return jwx + 0.6554516f*y; });
 
     /* Apply the base filter to the existing output to align with the processed
      * signal.
      */
-    const auto left = std::span{std::assume_aligned<16>(LeftOut), SamplesToDo};
+    const auto left = assume_aligned_span<16>(LeftOut.first(samplesToDo));
     process(mFilter1Direct[0], Filter1Coeff, left, true, std::span{mTemp}.subspan(1));
-    mTemp[0] = mDirectDelay[0]; mDirectDelay[0] = mTemp[SamplesToDo];
+    mTemp[0] = mDirectDelay[0]; mDirectDelay[0] = mTemp[samplesToDo];
 
     /* Left = (S + D)/2.0 */
-    for(auto i = 0_uz;i < SamplesToDo;++i)
+    for(auto i = 0_uz;i < samplesToDo;++i)
         left[i] = (mS[i] + mD[i])*0.5f + mTemp[i];
 
-    const auto right = std::span{std::assume_aligned<16>(RightOut), SamplesToDo};
+    const auto right = assume_aligned_span<16>(RightOut.first(samplesToDo));
     process(mFilter1Direct[1], Filter1Coeff, right, true, std::span{mTemp}.subspan(1));
-    mTemp[0] = mDirectDelay[1]; mDirectDelay[1] = mTemp[SamplesToDo];
+    mTemp[0] = mDirectDelay[1]; mDirectDelay[1] = mTemp[samplesToDo];
 
     /* Right = (S - D)/2.0 */
-    for(auto i = 0_uz;i < SamplesToDo;++i)
+    for(auto i = 0_uz;i < samplesToDo;++i)
         right[i] = (mS[i] - mD[i])*0.5f + mTemp[i];
 }
 

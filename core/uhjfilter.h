@@ -49,8 +49,8 @@ struct SIMDALIGN UhjEncoderBase {
      * signal. The input must use FuMa channel ordering and UHJ scaling (FuMa
      * with an additional +3dB boost).
      */
-    virtual void encode(float *LeftOut, float *RightOut,
-        const std::span<const float*const,3> InSamples, const std::size_t SamplesToDo) = 0;
+    virtual void encode(const std::span<float> LeftOut, const std::span<float> RightOut,
+        const std::span<const std::span<const float>,3> InSamples) = 0;
 };
 
 template<std::size_t N>
@@ -84,8 +84,8 @@ struct UhjEncoder final : public UhjEncoderBase {
      * signal. The input must use FuMa channel ordering and UHJ scaling (FuMa
      * with an additional +3dB boost).
      */
-    void encode(float *LeftOut, float *RightOut, const std::span<const float*const,3> InSamples,
-        const std::size_t SamplesToDo) final;
+    void encode(const std::span<float> LeftOut, const std::span<float> RightOut,
+        const std::span<const std::span<const float>,3> InSamples) final;
 };
 
 struct UhjEncoderIIR final : public UhjEncoderBase {
@@ -112,8 +112,8 @@ struct UhjEncoderIIR final : public UhjEncoderBase {
      * signal. The input must use FuMa channel ordering and UHJ scaling (FuMa
      * with an additional +3dB boost).
      */
-    void encode(float *LeftOut, float *RightOut, const std::span<const float*const,3> InSamples,
-        const std::size_t SamplesToDo) final;
+    void encode(const std::span<float> LeftOut, const std::span<float> RightOut,
+        const std::span<const std::span<const float>,3> InSamples) final;
 };
 
 

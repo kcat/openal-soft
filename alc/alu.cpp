@@ -321,8 +321,11 @@ void DeviceBase::Process(UhjPostProcess &proc, const size_t SamplesToDo)
     const auto ridx = size_t{RealOut.ChannelIndex[FrontRight]};
 
     /* Encode to stereo-compatible 2-channel UHJ output. */
-    proc.mUhjEncoder->encode(RealOut.Buffer[lidx].data(), RealOut.Buffer[ridx].data(),
-        {{Dry.Buffer[0].data(), Dry.Buffer[1].data(), Dry.Buffer[2].data()}}, SamplesToDo);
+    proc.mUhjEncoder->encode(std::span{RealOut.Buffer[lidx]}.first(SamplesToDo),
+        std::span{RealOut.Buffer[ridx]}.first(SamplesToDo),
+        {{std::span{Dry.Buffer[0]}.first(SamplesToDo),
+            std::span{Dry.Buffer[1]}.first(SamplesToDo),
+            std::span{Dry.Buffer[2]}.first(SamplesToDo)}});
 }
 
 void DeviceBase::Process(StablizerPostProcess &proc, const size_t SamplesToDo)

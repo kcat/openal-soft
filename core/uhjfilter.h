@@ -132,8 +132,7 @@ struct SIMDALIGN DecoderBase {
     void operator=(const DecoderBase&) = delete;
     void operator=(DecoderBase&&) = delete;
 
-    virtual void decode(const std::span<float*> samples, const std::size_t samplesToDo,
-        const bool updateState) = 0;
+    virtual void decode(const std::span<std::span<float>> samples, const bool updateState) = 0;
 
     /**
      * The width factor for Super Stereo processing. Can be changed in between
@@ -170,8 +169,7 @@ struct UhjDecoder final : public DecoderBase {
      * reconstructed from 2-channel UHJ should not be run through a normal
      * B-Format decoder, as it needs different shelf filters.
      */
-    void decode(const std::span<float*> samples, const std::size_t samplesToDo,
-        const bool updateState) final;
+    void decode(const std::span<std::span<float>> samples, const bool updateState) final;
 };
 
 struct UhjDecoderIIR final : public DecoderBase {
@@ -194,8 +192,7 @@ struct UhjDecoderIIR final : public DecoderBase {
     UhjAllPassFilter mFilter2S;
     UhjAllPassFilter mFilter1Q;
 
-    void decode(const std::span<float*> samples, const std::size_t samplesToDo,
-        const bool updateState) final;
+    void decode(const std::span<std::span<float>> samples, const bool updateState) final;
 };
 
 template<std::size_t N>
@@ -218,8 +215,7 @@ struct UhjStereoDecoder final : public DecoderBase {
      * should contain 3 channels, the first two being the left and right stereo
      * channels, and the third left empty.
      */
-    void decode(const std::span<float*> samples, const std::size_t samplesToDo,
-        const bool updateState) final;
+    void decode(const std::span<std::span<float>> samples, const bool updateState) final;
 };
 
 struct UhjStereoDecoderIIR final : public DecoderBase {
@@ -237,8 +233,7 @@ struct UhjStereoDecoderIIR final : public DecoderBase {
     UhjAllPassFilter mFilter1D;
     UhjAllPassFilter mFilter2S;
 
-    void decode(const std::span<float*> samples, const std::size_t samplesToDo,
-        const bool updateState) final;
+    void decode(const std::span<std::span<float>> samples, const bool updateState) final;
 };
 
 #endif /* CORE_UHJFILTER_H */

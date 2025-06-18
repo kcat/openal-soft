@@ -311,16 +311,15 @@ void ConvolutionState::deviceUpdate(const DeviceBase *device, const BufferStorag
      * attenuation that some people may be able to pick up on. Since this is
      * called very infrequently, go ahead and use the polyphase resampler.
      */
-    PPhaseResampler resampler;
+    auto resampler = PPhaseResampler{};
     if(device->mSampleRate != buffer->mSampleRate)
         resampler.init(buffer->mSampleRate, device->mSampleRate);
     const auto resampledCount = static_cast<uint>(
         (uint64_t{buffer->mSampleLen}*device->mSampleRate+(buffer->mSampleRate-1)) /
         buffer->mSampleRate);
 
-    const BandSplitter splitter{device->mXOverFreq / static_cast<float>(device->mSampleRate)};
-    for(auto &e : mChans)
-        e.mFilter = splitter;
+    const auto splitter = BandSplitter{device->mXOverFreq/static_cast<float>(device->mSampleRate)};
+    std::ranges::fill(mChans | std::views::transform(&ChannelData::mFilter), splitter);
 
     mFilter.resize(numChannels, {});
     mOutput.resize(numChannels, {});
@@ -337,25 +336,31 @@ void ConvolutionState::deviceUpdate(const DeviceBase *device, const BufferStorag
     mComplexData.resize(complex_length, 0.0f);
 
     /* Load the samples from the buffer. */
-    const size_t srclinelength{RoundUp(buffer->mSampleLen+DecoderPadding, 16)};
+    const auto srclinelength = size_t{RoundUp(buffer->mSampleLen+DecoderPadding, 16_uz)};
     auto srcsamples = std::vector<float>(srclinelength * numChannels);
-    std::fill(srcsamples.begin(), srcsamples.end(), 0.0f);
-    for(size_t c{0};c < numChannels && c < realChannels;++c)
+    std::ranges::fill(srcsamples, 0.0f);
+    for(const auto c : std::views::iota(0_uz, std::min<size_t>(numChannels, realChannels)))
         LoadSamples(std::span{srcsamples}.subspan(srclinelength*c, buffer->mSampleLen),
             buffer->mData, c, realChannels);
 
     if(IsUHJ(mChannels))
     {
-        auto samples = std::array<float*,4>{};
-        auto srciter = srcsamples.begin();
-        std::ranges::generate(samples | std::views::take(numChannels), [&srciter,srclinelength]
+        auto samples = std::array<std::span<float>,4>{};
+        auto decoder = std::make_unique<UhjDecoderType>();
+        for(auto base = 0_uz;base < buffer->mSampleLen;)
         {
-            const auto ret = srciter;
-            std::advance(srciter, srclinelength);
-            return std::to_address(ret);
-        });
-        std::make_unique<UhjDecoderType>()->decode(std::span{samples}.first(numChannels),
-            buffer->mSampleLen, buffer->mSampleLen);
+            const auto todo = std::min(buffer->mSampleLen-base, BufferLineSize);
+            auto srciter = std::next(srcsamples.begin(), ptrdiff_t(base));
+            std::ranges::generate(samples | std::views::take(numChannels),
+                [&srciter,srclinelength,todo]
+            {
+                const auto ret = srciter;
+                std::advance(srciter, srclinelength);
+                return std::span{ret, todo+DecoderPadding};
+            });
+            decoder->decode(std::span{samples}.first(numChannels), true);
+            base += todo;
+        }
     }
 
     auto ressamples = std::vector<double>(buffer->mSampleLen + (resampler ? resampledCount : 0));
@@ -364,14 +369,14 @@ void ConvolutionState::deviceUpdate(const DeviceBase *device, const BufferStorag
 
     auto filteriter = mComplexData.begin();
     std::advance(filteriter, mNumConvolveSegs*ConvolveUpdateSize);
-    for(size_t c{0};c < numChannels;++c)
+    for(const auto c : std::views::iota(0_uz, size_t{numChannels}))
     {
         auto bufsamples = std::span{srcsamples}.subspan(srclinelength*c, buffer->mSampleLen);
         /* Resample to match the device. */
         if(resampler)
         {
             auto restmp = std::span{ressamples}.subspan(resampledCount, buffer->mSampleLen);
-            std::copy(bufsamples.begin(), bufsamples.end(), restmp.begin());
+            std::ranges::copy(bufsamples, restmp.begin());
             resampler.process(restmp, std::span{ressamples}.first(resampledCount));
         }
         else
@@ -380,23 +385,23 @@ void ConvolutionState::deviceUpdate(const DeviceBase *device, const BufferStorag
         /* Store the first segment's samples in reverse in the time-domain, to
          * apply as a FIR filter.
          */
-        const size_t first_size{std::min(size_t{resampledCount}, ConvolveUpdateSamples)};
+        const auto first_size = std::min(size_t{resampledCount}, ConvolveUpdateSamples);
         auto sampleseg = std::span{ressamples.cbegin(), first_size};
         std::transform(sampleseg.begin(), sampleseg.end(), mFilter[c].rbegin(),
             [](const double d) noexcept -> float { return static_cast<float>(d); });
 
-        size_t done{first_size};
-        for(size_t s{0};s < mNumConvolveSegs;++s)
+        auto done = first_size;
+        for(const auto s [[maybe_unused]] : std::views::iota(0_uz, mNumConvolveSegs))
         {
-            const size_t todo{std::min(resampledCount-done, ConvolveUpdateSamples)};
+            const auto todo = std::min(resampledCount-done, ConvolveUpdateSamples);
             sampleseg = std::span{ressamples}.subspan(done, todo);
 
             /* Apply a double-precision forward FFT for more precise frequency
              * measurements.
              */
-            auto iter = std::copy(sampleseg.begin(), sampleseg.end(), fftbuffer.begin());
+            auto iter = std::ranges::copy(sampleseg, fftbuffer.begin()).out;
             done += todo;
-            std::fill(iter, fftbuffer.end(), std::complex<double>{});
+            std::ranges::fill(iter, fftbuffer.end(), std::complex<double>{});
             forward_fft(std::span{fftbuffer});
 
             /* Convert to, and pack in, a float buffer for PFFFT. Note that the
@@ -404,8 +409,8 @@ void ConvolutionState::deviceUpdate(const DeviceBase *device, const BufferStorag
              * the imaginary component. Also scale the FFT by its length so the
              * iFFT'd output will be normalized.
              */
-            static constexpr float fftscale{1.0f / float{ConvolveUpdateSize}};
-            for(size_t i{0};i < ConvolveUpdateSamples;++i)
+            static constexpr auto fftscale = 1.0f / float{ConvolveUpdateSize};
+            for(const auto i : std::views::iota(0_uz, ConvolveUpdateSamples))
             {
                 ffttmp[i*2    ] = static_cast<float>(fftbuffer[i].real()) * fftscale;
                 ffttmp[i*2 + 1] = static_cast<float>((i == 0) ?

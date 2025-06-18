@@ -16,8 +16,6 @@
 
 #include "alcomplex.h"
 #include "alnumeric.h"
-#include "core/bufferline.h"
-#include "opthelpers.h"
 #include "pffft.h"
 #include "phase_shifter.h"
 #include "vector.h"
@@ -190,10 +188,9 @@ template<size_t N>
 void UhjEncoder<N>::encode(const std::span<float> LeftOut, const std::span<float> RightOut,
     const std::span<const std::span<const float>,3> InSamples)
 {
-    static constexpr auto &Filter = gSegmentedFilter<N>;
-    static_assert(sFftLength == Filter.sFftLength);
-    static_assert(sSegmentSize == Filter.sSampleLength);
-    static_assert(sNumSegments == Filter.sNumSegments);
+    static_assert(sFftLength == gSegmentedFilter<N>.sFftLength);
+    static_assert(sSegmentSize == gSegmentedFilter<N>.sSampleLength);
+    static_assert(sNumSegments == gSegmentedFilter<N>.sNumSegments);
 
     const auto samplesToDo = InSamples[0].size();
     const auto winput = assume_aligned_span<16>(InSamples[0]);
@@ -241,23 +238,23 @@ void UhjEncoder<N>::encode(const std::span<float> LeftOut, const std::span<float
         auto initer = std::ranges::copy(mWXInOut | std::views::take(sSegmentSize), input).out;
         std::ranges::fill(std::views::counted(initer, sSegmentSize), 0.0f);
 
-        Filter.mFft.transform(input, input, mWorkData.begin(), PFFFT_FORWARD);
+        gSegmentedFilter<N>.mFft.transform(input, input, mWorkData.begin(), PFFFT_FORWARD);
 
         /* Convolve each input segment with its IR filter counterpart (aligned
          * in time, from newest to oldest).
          */
         mFftBuffer.fill(0.0f);
-        auto filter = Filter.mFilterData.begin();
+        auto filter = gSegmentedFilter<N>.mFilterData.begin();
         for(const auto s [[maybe_unused]] : std::views::iota(curseg, sNumSegments))
         {
-            Filter.mFft.zconvolve_accumulate(input, filter, mFftBuffer.begin());
+            gSegmentedFilter<N>.mFft.zconvolve_accumulate(input, filter, mFftBuffer.begin());
             std::advance(input, sFftLength);
             std::advance(filter, sFftLength);
         }
         input = mWXHistory.begin();
         for(const auto s [[maybe_unused]] : std::views::iota(0_uz, curseg))
         {
-            Filter.mFft.zconvolve_accumulate(input, filter, mFftBuffer.begin());
+            gSegmentedFilter<N>.mFft.zconvolve_accumulate(input, filter, mFftBuffer.begin());
             std::advance(input, sFftLength);
             std::advance(filter, sFftLength);
         }
@@ -265,8 +262,8 @@ void UhjEncoder<N>::encode(const std::span<float> LeftOut, const std::span<float
         /* Convert back to samples, writing to the output and storing the extra
          * for next time.
          */
-        Filter.mFft.transform(mFftBuffer.begin(), mFftBuffer.begin(), mWorkData.begin(),
-            PFFFT_BACKWARD);
+        gSegmentedFilter<N>.mFft.transform(mFftBuffer.begin(), mFftBuffer.begin(),
+            mWorkData.begin(), PFFFT_BACKWARD);
 
         const auto wxiter = std::ranges::transform(mFftBuffer | std::views::take(sSegmentSize),
             mWXInOut | std::views::drop(sSegmentSize), mWXInOut.begin(), std::plus{}).out;
@@ -399,22 +396,14 @@ void UhjEncoderIIR::encode(const std::span<float> LeftOut, const std::span<float
  * channel excludes Q and T.
  */
 template<size_t N>
-void UhjDecoder<N>::decode(const std::span<float*> samples, const size_t samplesToDo,
-    const bool updateState)
+void UhjDecoder<N>::decode(const std::span<std::span<float>> samples, const bool updateState)
 {
     static_assert(sInputPadding <= sMaxPadding, "Filter padding is too large");
 
-    constexpr auto &PShift = PShifter<N>;
-
-    ASSUME(samplesToDo > 0);
-    ASSUME(samplesToDo <= BufferLineSize);
-
     {
-        const auto left = std::span{std::assume_aligned<16>(samples[0]),
-            samplesToDo+sInputPadding};
-        const auto right = std::span{std::assume_aligned<16>(samples[1]),
-            samplesToDo+sInputPadding};
-        const auto t = std::span{std::assume_aligned<16>(samples[2]), samplesToDo+sInputPadding};
+        const auto left = assume_aligned_span<16>(samples[0]);
+        const auto right = assume_aligned_span<16>(samples[1]);
+        const auto t = assume_aligned_span<16>(samples[2]);
 
         /* S = Left + Right */
         std::ranges::transform(left, right, mS.begin(), std::plus{});
@@ -426,9 +415,10 @@ void UhjDecoder<N>::decode(const std::span<float*> samples, const size_t samples
         std::ranges::copy(t, mT.begin());
     }
 
-    const auto woutput = std::span{std::assume_aligned<16>(samples[0]), samplesToDo};
-    const auto xoutput = std::span{std::assume_aligned<16>(samples[1]), samplesToDo};
-    const auto youtput = std::span{std::assume_aligned<16>(samples[2]), samplesToDo};
+    const auto samplesToDo = samples[0].size() - sInputPadding;
+    const auto woutput = assume_aligned_span<16>(samples[0].first(samplesToDo));
+    const auto xoutput = assume_aligned_span<16>(samples[1].first(samplesToDo));
+    const auto youtput = assume_aligned_span<16>(samples[2].first(samplesToDo));
 
     /* Precompute j(0.828331*D + 0.767820*T) and store in xoutput. */
     auto tmpiter = std::ranges::copy(mDTHistory, mTemp.begin()).out;
@@ -437,7 +427,7 @@ void UhjDecoder<N>::decode(const std::span<float*> samples, const size_t samples
     if(updateState) [[likely]]
         std::ranges::copy(mTemp|std::views::drop(samplesToDo)|std::views::take(mDTHistory.size()),
             mDTHistory.begin());
-    PShift.process(xoutput, mTemp);
+    PShifter<N>.process(xoutput, mTemp);
 
     /* W = 0.981532*S + 0.197484*j(0.828331*D + 0.767820*T) */
     std::ranges::transform(mS | std::views::take(samplesToDo), xoutput, woutput.begin(),
@@ -453,7 +443,7 @@ void UhjDecoder<N>::decode(const std::span<float*> samples, const size_t samples
     if(updateState) [[likely]]
         std::ranges::copy(mTemp|std::views::drop(samplesToDo)|std::views::take(mSHistory.size()),
             mSHistory.begin());
-    PShift.process(youtput, mTemp);
+    PShifter<N>.process(youtput, mTemp);
 
     /* Y = 0.795968*D - 0.676392*T + j(0.186633*S) */
     for(auto i = 0_uz;i < samplesToDo;++i)
@@ -461,25 +451,19 @@ void UhjDecoder<N>::decode(const std::span<float*> samples, const size_t samples
 
     if(samples.size() > 3)
     {
-        const auto zoutput = std::span{std::assume_aligned<16>(samples[3]), samplesToDo};
+        const auto zoutput = assume_aligned_span<16>(samples[3].first(samplesToDo));
         /* Z = 1.023332*Q */
         std::ranges::transform(zoutput, zoutput.begin(), [](float q) { return 1.023332f*q; });
     }
 }
 
-void UhjDecoderIIR::decode(const std::span<float*> samples, const size_t samplesToDo,
-    const bool updateState)
+void UhjDecoderIIR::decode(const std::span<std::span<float>> samples, const bool updateState)
 {
     static_assert(sInputPadding <= sMaxPadding, "Filter padding is too large");
 
-    ASSUME(samplesToDo > 0);
-    ASSUME(samplesToDo <= BufferLineSize);
-
     {
-        const auto left = std::span{std::assume_aligned<16>(samples[0]),
-            samplesToDo+sInputPadding};
-        const auto right = std::span{std::assume_aligned<16>(samples[1]),
-            samplesToDo+sInputPadding};
+        const auto left = assume_aligned_span<16>(samples[0]);
+        const auto right = assume_aligned_span<16>(samples[1]);
 
         /* S = Left + Right */
         std::ranges::transform(left, right, mS.begin(), std::plus{});
@@ -488,12 +472,14 @@ void UhjDecoderIIR::decode(const std::span<float*> samples, const size_t samples
         std::ranges::transform(left, right, mD.begin(), std::minus{});
     }
 
-    const auto woutput = std::span{std::assume_aligned<16>(samples[0]), samplesToDo};
-    const auto xoutput = std::span{std::assume_aligned<16>(samples[1]), samplesToDo};
-    const auto youtput = std::span{std::assume_aligned<16>(samples[2]), samplesToDo+sInputPadding};
+    const auto samplesToDo = samples[0].size() - sInputPadding;
+    const auto woutput = assume_aligned_span<16>(samples[0].first(samplesToDo));
+    const auto xoutput = assume_aligned_span<16>(samples[1].first(samplesToDo));
+    const auto youtput = assume_aligned_span<16>(samples[2].first(samplesToDo));
 
     /* Precompute j(0.828331*D + 0.767820*T) and store in xoutput. */
-    std::ranges::transform(mD, youtput, mTemp.begin(), [](const float d, const float t) noexcept
+    std::ranges::transform(mD, assume_aligned_span<16>(samples[2]), mTemp.begin(),
+        [](const float d, const float t) noexcept
     { return 0.828331f*d + 0.767820f*t; });
     if(mFirstRun) processOne(mFilter2DT, Filter2Coeff, mTemp[0]);
     process(mFilter2DT, Filter2Coeff, std::span{mTemp}.subspan(1, samplesToDo), updateState,
@@ -512,7 +498,7 @@ void UhjDecoderIIR::decode(const std::span<float*> samples, const size_t samples
     /* Apply filter1 to (0.795968*D - 0.676392*T) and store in mTemp. */
     std::ranges::transform(mD | std::views::take(samplesToDo), youtput, youtput.begin(),
         [](const float d, const float t) noexcept { return 0.795968f*d - 0.676392f*t; });
-    process(mFilter1DT, Filter1Coeff, youtput.first(samplesToDo), updateState, mTemp);
+    process(mFilter1DT, Filter1Coeff, youtput, updateState, mTemp);
 
     /* Precompute j*S and store in youtput. */
     if(mFirstRun) processOne(mFilter2S, Filter2Coeff, mS[0]);
@@ -524,7 +510,7 @@ void UhjDecoderIIR::decode(const std::span<float*> samples, const size_t samples
 
     if(samples.size() > 3)
     {
-        const auto zoutput = std::span{std::assume_aligned<16>(samples[3]), samplesToDo};
+        const auto zoutput = assume_aligned_span<16>(samples[3].first(samplesToDo));
 
         /* Apply filter1 to Q and store in mTemp. */
         process(mFilter1Q, Filter1Coeff, zoutput, updateState, mTemp);
@@ -551,21 +537,15 @@ void UhjDecoderIIR::decode(const std::span<float*> samples, const size_t samples
  * resulting stereo width, with the range 0 <= w <= 0.7.
  */
 template<size_t N>
-void UhjStereoDecoder<N>::decode(const std::span<float*> samples, const size_t samplesToDo,
-    const bool updateState)
+void UhjStereoDecoder<N>::decode(const std::span<std::span<float>> samples, const bool updateState)
 {
     static_assert(sInputPadding <= sMaxPadding, "Filter padding is too large");
 
-    constexpr auto &PShift = PShifter<N>;
-
-    ASSUME(samplesToDo > 0);
-    ASSUME(samplesToDo <= BufferLineSize);
+    const auto samplesToDo = samples[0].size() - sInputPadding;
 
     {
-        const auto left = std::span{std::assume_aligned<16>(samples[0]),
-            samplesToDo+sInputPadding};
-        const auto right = std::span{std::assume_aligned<16>(samples[1]),
-            samplesToDo+sInputPadding};
+        const auto left = assume_aligned_span<16>(samples[0]);
+        const auto right = assume_aligned_span<16>(samples[1]);
 
         std::ranges::transform(left, right, mS.begin(), std::plus{});
 
@@ -594,17 +574,17 @@ void UhjStereoDecoder<N>::decode(const std::span<float*> samples, const size_t s
                 return ret;
             }).out;
 
-            const auto lend = left.subspan(samplesToDo);
-            const auto rend = right.subspan(samplesToDo);
+            const auto lend = left.last(sInputPadding);
+            const auto rend = right.last(sInputPadding);
             std::ranges::transform(lend, rend, dstore, [wtarget](float l, float r) noexcept
             { return (l-r) * wtarget; });
             mCurrentWidth = wtarget;
         }
     }
 
-    const auto woutput = std::span{std::assume_aligned<16>(samples[0]), samplesToDo};
-    const auto xoutput = std::span{std::assume_aligned<16>(samples[1]), samplesToDo};
-    const auto youtput = std::span{std::assume_aligned<16>(samples[2]), samplesToDo};
+    const auto woutput = assume_aligned_span<16>(samples[0].first(samplesToDo));
+    const auto xoutput = assume_aligned_span<16>(samples[1].first(samplesToDo));
+    const auto youtput = assume_aligned_span<16>(samples[2].first(samplesToDo));
 
     /* Precompute j*D and store in xoutput. */
     auto tmpiter = std::ranges::copy(mDTHistory, mTemp.begin()).out;
@@ -612,7 +592,7 @@ void UhjStereoDecoder<N>::decode(const std::span<float*> samples, const size_t s
     if(updateState) [[likely]]
         std::ranges::copy(mTemp|std::views::drop(samplesToDo)|std::views::take(mDTHistory.size()),
             mDTHistory.begin());
-    PShift.process(xoutput, mTemp);
+    PShifter<N>.process(xoutput, mTemp);
 
     /* W = 0.6098637*S + 0.6896511*j*w*D */
     std::ranges::transform(mS, xoutput, woutput.begin(), [](const float s, const float jd) noexcept
@@ -627,26 +607,22 @@ void UhjStereoDecoder<N>::decode(const std::span<float*> samples, const size_t s
     if(updateState) [[likely]]
         std::ranges::copy(mTemp|std::views::drop(samplesToDo)|std::views::take(mSHistory.size()),
             mSHistory.begin());
-    PShift.process(youtput, mTemp);
+    PShifter<N>.process(youtput, mTemp);
 
     /* Y = 1.6822415*w*D + 0.2156194*j*S */
     std::ranges::transform(mD, youtput, youtput.begin(), [](const float d, const float js) noexcept
     { return 1.6822415f*d + 0.2156194f*js; });
 }
 
-void UhjStereoDecoderIIR::decode(const std::span<float*> samples, const size_t samplesToDo,
-    const bool updateState)
+void UhjStereoDecoderIIR::decode(const std::span<std::span<float>> samples, const bool updateState)
 {
     static_assert(sInputPadding <= sMaxPadding, "Filter padding is too large");
 
-    ASSUME(samplesToDo > 0);
-    ASSUME(samplesToDo <= BufferLineSize);
+    const auto samplesToDo = samples[0].size() - sInputPadding;
 
     {
-        const auto left = std::span{std::assume_aligned<16>(samples[0]),
-            samplesToDo+sInputPadding};
-        const auto right = std::span{std::assume_aligned<16>(samples[1]),
-            samplesToDo+sInputPadding};
+        const auto left = assume_aligned_span<16>(samples[0]);
+        const auto right = assume_aligned_span<16>(samples[1]);
 
         std::ranges::transform(left, right, mS.begin(), std::plus{});
 
@@ -675,17 +651,17 @@ void UhjStereoDecoderIIR::decode(const std::span<float*> samples, const size_t s
                 return ret;
             }).out;
 
-            const auto lend = left.subspan(samplesToDo);
-            const auto rend = right.subspan(samplesToDo);
+            const auto lend = left.last(sInputPadding);
+            const auto rend = right.last(sInputPadding);
             std::ranges::transform(lend, rend, dstore, [wtarget](float l, float r) noexcept
             { return (l-r) * wtarget; });
             mCurrentWidth = wtarget;
         }
     }
 
-    const auto woutput = std::span{std::assume_aligned<16>(samples[0]), samplesToDo};
-    const auto xoutput = std::span{std::assume_aligned<16>(samples[1]), samplesToDo};
-    const auto youtput = std::span{std::assume_aligned<16>(samples[2]), samplesToDo};
+    const auto woutput = assume_aligned_span<16>(samples[0].first(samplesToDo));
+    const auto xoutput = assume_aligned_span<16>(samples[1].first(samplesToDo));
+    const auto youtput = assume_aligned_span<16>(samples[2].first(samplesToDo));
 
     /* Apply filter1 to S and store in mTemp. */
     process(mFilter1S, Filter1Coeff, std::span{mS}.first(samplesToDo), updateState, mTemp);

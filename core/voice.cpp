@@ -781,17 +781,17 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
     /* Get a span of pointers to hold the floating point, deinterlaced,
      * resampled buffer data to be mixed.
      */
-    auto SamplePointers = std::array<float*,DeviceBase::MixerChannelsMax>{};
+    auto SamplePointers = std::array<std::span<float>,DeviceBase::MixerChannelsMax>{};
     const auto MixingSamples = std::span{SamplePointers}
         .first((mFmtChannels == FmtMono && !mDuplicateMono) ? 1_uz : mChans.size());
     {
         const auto channelStep = (samplesToLoad+3u)&~3u;
         auto base = Device->mSampleData.end() - MixingSamples.size()*channelStep;
-        std::ranges::generate(MixingSamples, [&base,channelStep]
+        std::ranges::generate(MixingSamples, [&base,samplesToLoad,channelStep]
         {
             const auto ret = base;
             std::advance(base, channelStep);
-            return std::to_address(ret);
+            return std::span{ret, samplesToLoad};
         });
     }
 
@@ -871,8 +871,9 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
                     /* If the number of silent source samples exceeds the
                      * number to load, the output will be silent.
                      */
-                    std::fill_n(MixingSamples[chan]+samplesLoaded, dstBufferSize, 0.0f);
-                    std::fill_n(resampleBuffer.begin(), srcBufferSize, 0.0f);
+                    std::ranges::fill(MixingSamples[chan].subspan(samplesLoaded, dstBufferSize),
+                        0.0f);
+                    std::ranges::fill(resampleBuffer.first(srcBufferSize), 0.0f);
                     goto skip_resample;
                 }
 
@@ -950,11 +951,11 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
              * simple copy for resampling.
              */
             if(increment == MixerFracOne && fracPos == 0)
-                std::ranges::copy(resampleBuffer | std::views::take(dstBufferSize),
-                    MixingSamples[chan]+samplesLoaded);
+                std::ranges::copy(resampleBuffer.first(dstBufferSize),
+                    MixingSamples[chan].subspan(samplesLoaded).begin());
             else
                 mResampler(&mResampleState, Device->mResampleData, fracPos, increment,
-                    {MixingSamples[chan]+samplesLoaded, dstBufferSize});
+                    MixingSamples[chan].subspan(samplesLoaded, dstBufferSize));
 
             /* Store the last source samples used for next time. */
             if(vstate == Playing) [[likely]]
@@ -967,8 +968,8 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
                 {
                     const size_t dstOffset{samplesToMix - samplesLoaded};
                     const size_t srcOffset{(dstOffset*increment + fracPos) >> MixerFracBits};
-                    std::copy_n(Device->mResampleData.cbegin()+srcOffset, prevSamples.size(),
-                        prevSamples.begin());
+                    std::ranges::copy(Device->mResampleData | std::views::drop(srcOffset)
+                        | std::views::take(prevSamples.size()), prevSamples.begin());
                 }
             }
 
@@ -999,18 +1000,23 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
         MixingSamples[1] = MixingSamples[0];
     }
     else for(auto &samples : MixingSamples.subspan(realChannels))
-        std::fill_n(samples, samplesToLoad, 0.0f);
+        std::ranges::fill(samples, 0.0f);
 
     if(mDecoder)
-        mDecoder->decode(MixingSamples, samplesToMix, (vstate==Playing));
+    {
+        mDecoder->decode(MixingSamples, (vstate==Playing));
+        std::ranges::transform(MixingSamples, MixingSamples.begin(),
+            [samplesToMix](const std::span<float> samples)
+        { return samples.first(samplesToMix); });
+    }
 
     if(mFlags.test(VoiceIsAmbisonic))
     {
         auto chandata = mChans.begin();
-        for(const auto &voiceSamples : MixingSamples)
+        for(const auto samplespan : MixingSamples)
         {
-            chandata->mAmbiSplitter.processScale({voiceSamples, samplesToMix},
-                chandata->mAmbiHFScale, chandata->mAmbiLFScale);
+            chandata->mAmbiSplitter.processScale(samplespan, chandata->mAmbiHFScale,
+                chandata->mAmbiLFScale);
             ++chandata;
         }
     }
@@ -1037,14 +1043,14 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
     }
 
     auto chandata = mChans.begin();
-    for(const auto &voiceSamples : MixingSamples)
+    for(const auto samplespan : MixingSamples)
     {
         /* Now filter and mix to the appropriate outputs. */
         const auto FilterBuf = std::span{Device->FilteredData};
         {
             auto &parms = chandata->mDryParams;
-            const auto samples = DoFilters(parms.LowPass, parms.HighPass, FilterBuf,
-                {voiceSamples, samplesToMix}, mDirect.FilterType);
+            const auto samples = DoFilters(parms.LowPass, parms.HighPass, FilterBuf, samplespan,
+                mDirect.FilterType);
 
             if(mFlags.test(VoiceHasHrtf))
             {
@@ -1064,14 +1070,14 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
             }
         }
 
-        for(uint send{0};send < NumSends;++send)
+        for(const auto send : std::views::iota(0u, NumSends))
         {
             if(mSend[send].Buffer.empty())
                 continue;
 
             SendParams &parms = chandata->mWetParams[send];
-            const auto samples = DoFilters(parms.LowPass, parms.HighPass, FilterBuf,
-                {voiceSamples, samplesToMix}, mSend[send].FilterType);
+            const auto samples = DoFilters(parms.LowPass, parms.HighPass, FilterBuf, samplespan,
+                mSend[send].FilterType);
 
             const auto TargetGains = (vstate == Playing) ? std::span{parms.Gains.Target}
                 : std::span{SilentTarget}.first<MaxAmbiChannels>();

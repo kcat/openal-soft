@@ -133,10 +133,11 @@ constexpr auto Filter2Coeff = std::array{
 };
 
 
-void processOne(UhjAllPassFilter &self, const std::span<const float, 4> coeffs, float x)
+void processOne(UhjAllPassFilter &self, const std::span<const float,4> coeffs, float x)
 {
     auto state = self.mState;
-    for(auto i = 0_uz;i < 4;++i)
+    static_assert(state.size() == coeffs.size());
+    for(const auto i : std::views::iota(0_uz, coeffs.size()))
     {
         const auto y = x*coeffs[i] + state[i].z[0];
         state[i].z[0] = state[i].z[1];
@@ -150,9 +151,11 @@ void process(UhjAllPassFilter &self, const std::span<const float,4> coeffs,
     const std::span<const float> src, const bool updateState, const std::span<float> dst)
 {
     auto state = self.mState;
-    std::ranges::transform(src, dst.begin(), [&state,coeffs](float x) noexcept -> float
+    static_assert(state.size() == coeffs.size());
+    std::ranges::transform(src | std::views::take(dst.size()), dst.begin(),
+        [&state,coeffs](float x) noexcept -> float
     {
-        for(auto i = 0_uz;i < 4;++i)
+        for(const auto i : std::views::iota(0_uz, coeffs.size()))
         {
             const auto y = x*coeffs[i] + state[i].z[0];
             state[i].z[0] = state[i].z[1];

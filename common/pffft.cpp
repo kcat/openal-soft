@@ -1814,10 +1814,10 @@ NOINLINE void pffft_real_finalize(const size_t Ncvec, const v4sf *in, v4sf *REST
 
     out[0] = vinsert0(out[0], (cr[0]+cr[2]) +   (cr[1]+cr[3]));
     out[1] = vinsert0(out[1], (cr[0]+cr[2]) -   (cr[1]+cr[3]));
-    out[2] = vinsert0(out[2], (cr[0]-cr[2]));
-    out[3] = vinsert0(out[3], (cr[3]-cr[1]));
-    out[4] = vinsert0(out[4],  ci[0]        + s*(ci[1]-ci[3]));
-    out[5] = vinsert0(out[5],       -ci[2]  - s*(ci[1]+ci[3]));
+    out[4] = vinsert0(out[4], (cr[0]-cr[2]));
+    out[5] = vinsert0(out[5], (cr[3]-cr[1]));
+    out[2] = vinsert0(out[2],  ci[0]        + s*(ci[1]-ci[3]));
+    out[3] = vinsert0(out[3],       -ci[2]  - s*(ci[1]+ci[3]));
     out[6] = vinsert0(out[6],  ci[0]        - s*(ci[1]-ci[3]));
     out[7] = vinsert0(out[7],        ci[2]  - s*(ci[1]+ci[3]));
 

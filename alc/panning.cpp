@@ -1317,21 +1317,25 @@ void aluInitRenderer(al::Device *device, int hrtf_id, std::optional<StereoEncodi
 
     if(stereomode.value_or(StereoEncoding::Default) == StereoEncoding::Uhj)
     {
+        static constexpr auto init_encoder = [](auto arg)
+            -> std::pair<std::unique_ptr<UhjEncoderBase>, std::string_view>
+        {
+            using encoder_t = typename decltype(arg)::encoder_t;
+            return {std::make_unique<encoder_t>(), encoder_t::TypeName()};
+        };
+
         auto proc = std::unique_ptr<UhjEncoderBase>{};
         auto ftype = std::string_view{};
         switch(UhjEncodeQuality)
         {
         case UhjQualityType::IIR:
-            proc = std::make_unique<UhjEncoderIIR>();
-            ftype = "IIR"sv;
+            std::tie(proc, ftype) = init_encoder(UhjEncoderIIR::Tag{});
             break;
         case UhjQualityType::FIR256:
-            proc = std::make_unique<UhjEncoder<UhjLength256>>();
-            ftype = "FIR-256"sv;
+            std::tie(proc, ftype) = init_encoder(UhjEncoder<UhjLength256>::Tag{});
             break;
         case UhjQualityType::FIR512:
-            proc = std::make_unique<UhjEncoder<UhjLength512>>();
-            ftype = "FIR-512"sv;
+            std::tie(proc, ftype) = init_encoder(UhjEncoder<UhjLength512>::Tag{});
             break;
         }
         assert(proc != nullptr);

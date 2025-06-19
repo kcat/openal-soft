@@ -1236,22 +1236,24 @@ void Voice::prepare(DeviceBase *device)
 
     mDecoder = nullptr;
     mDecoderPadding = 0;
-    static constexpr auto init_decoder = []<typename T>()
+    static constexpr auto init_decoder = [](auto arg)
         -> std::pair<std::unique_ptr<DecoderBase>, uint>
-    { return {std::make_unique<T>(), T::sInputPadding}; };
-#define INIT_DECODER(T) init_decoder.operator()<T>()
+    {
+        using decoder_t = typename decltype(arg)::decoder_t;
+        return {std::make_unique<decoder_t>(), decoder_t::sInputPadding};
+    };
     if(mFmtChannels == FmtSuperStereo)
     {
         switch(UhjDecodeQuality)
         {
         case UhjQualityType::IIR:
-            std::tie(mDecoder, mDecoderPadding) = INIT_DECODER(UhjStereoDecoderIIR);
+            std::tie(mDecoder, mDecoderPadding) = init_decoder(UhjStereoDecoderIIR::Tag{});
             break;
         case UhjQualityType::FIR256:
-            std::tie(mDecoder, mDecoderPadding) = INIT_DECODER(UhjStereoDecoder<UhjLength256>);
+            std::tie(mDecoder,mDecoderPadding)=init_decoder(UhjStereoDecoder<UhjLength256>::Tag{});
             break;
         case UhjQualityType::FIR512:
-            std::tie(mDecoder, mDecoderPadding) = INIT_DECODER(UhjStereoDecoder<UhjLength512>);
+            std::tie(mDecoder,mDecoderPadding)=init_decoder(UhjStereoDecoder<UhjLength512>::Tag{});
             break;
         }
     }
@@ -1260,17 +1262,16 @@ void Voice::prepare(DeviceBase *device)
         switch(UhjDecodeQuality)
         {
         case UhjQualityType::IIR:
-            std::tie(mDecoder, mDecoderPadding) = INIT_DECODER(UhjDecoderIIR);
+            std::tie(mDecoder, mDecoderPadding) = init_decoder(UhjDecoderIIR::Tag{});
             break;
         case UhjQualityType::FIR256:
-            std::tie(mDecoder, mDecoderPadding) = INIT_DECODER(UhjDecoder<UhjLength256>);
+            std::tie(mDecoder, mDecoderPadding) = init_decoder(UhjDecoder<UhjLength256>::Tag{});
             break;
         case UhjQualityType::FIR512:
-            std::tie(mDecoder, mDecoderPadding) = INIT_DECODER(UhjDecoder<UhjLength512>);
+            std::tie(mDecoder, mDecoderPadding) = init_decoder(UhjDecoder<UhjLength512>::Tag{});
             break;
         }
     }
-#undef INIT_DECODER
 
     /* Clear the stepping value explicitly so the mixer knows not to mix this
      * until the update gets applied.

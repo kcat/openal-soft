@@ -380,23 +380,24 @@ void LoadData(ALCcontext *context, ALbuffer *ALBuf, ALsizei freq, ALuint size,
     }, ALBuf->mDataStorage);
     if(needRealloc)
     {
-        auto do_realloc = [ALBuf,newsize]<typename T>()
+        auto do_realloc = [ALBuf,newsize](auto value)
         {
-            using vector_t = al::vector<T,16>;
-            auto newdata = vector_t(newsize / sizeof(T), SampleInfo<T>::silence());
+            using sample_t = decltype(value);
+            using vector_t = al::vector<sample_t,16>;
+            auto newdata = vector_t(newsize / sizeof(sample_t), value);
             ALBuf->mData = ALBuf->mDataStorage.emplace<vector_t>(std::move(newdata));
         };
         switch(DstType)
         {
-        case FmtUByte: do_realloc.operator()<uint8_t>(); break;
-        case FmtShort: do_realloc.operator()<int16_t>(); break;
-        case FmtInt: do_realloc.operator()<int32_t>(); break;
-        case FmtFloat: do_realloc.operator()<float>(); break;
-        case FmtDouble: do_realloc.operator()<double>(); break;
-        case FmtMulaw: do_realloc.operator()<MulawSample>(); break;
-        case FmtAlaw: do_realloc.operator()<AlawSample>(); break;
-        case FmtIMA4: do_realloc.operator()<IMA4Data>(); break;
-        case FmtMSADPCM: do_realloc.operator()<MSADPCMData>(); break;
+        case FmtUByte: do_realloc(SampleInfo<uint8_t>::silence()); break;
+        case FmtShort: do_realloc(SampleInfo<int16_t>::silence()); break;
+        case FmtInt: do_realloc(SampleInfo<int32_t>::silence()); break;
+        case FmtFloat: do_realloc(SampleInfo<float>::silence()); break;
+        case FmtDouble: do_realloc(SampleInfo<double>::silence()); break;
+        case FmtMulaw: do_realloc(SampleInfo<MulawSample>::silence()); break;
+        case FmtAlaw: do_realloc(SampleInfo<AlawSample>::silence()); break;
+        case FmtIMA4: do_realloc(SampleInfo<IMA4Data>::silence()); break;
+        case FmtMSADPCM: do_realloc(SampleInfo<MSADPCMData>::silence()); break;
         }
     }
 

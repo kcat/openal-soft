@@ -5,6 +5,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <span>
+#include <string_view>
 
 #include "bufferline.h"
 #include "opthelpers.h"
@@ -55,10 +56,20 @@ struct SIMDALIGN UhjEncoderBase {
 
 template<std::size_t N>
 struct UhjEncoder final : public UhjEncoderBase {
+    struct Tag { using encoder_t = UhjEncoder<N>; };
+
     static constexpr std::size_t sFftLength{256};
     static constexpr std::size_t sSegmentSize{sFftLength/2};
     static constexpr std::size_t sNumSegments{N/sSegmentSize};
     static constexpr std::size_t sFilterDelay{N/2 + sSegmentSize};
+
+    static consteval auto TypeName() noexcept -> std::string_view
+    {
+        if constexpr(N == 256)
+            return "FIR-256";
+        else if constexpr(N == 512)
+            return "FIR-512";
+    }
 
     /* Delays and processing storage for the input signal. */
     alignas(16) std::array<float,BufferLineSize+sFilterDelay> mW{};
@@ -89,7 +100,12 @@ struct UhjEncoder final : public UhjEncoderBase {
 };
 
 struct UhjEncoderIIR final : public UhjEncoderBase {
+    struct Tag { using encoder_t = UhjEncoderIIR; };
+
     static constexpr std::size_t sFilterDelay{1};
+
+    static consteval auto TypeName() noexcept -> std::string_view
+    { return "IIR"; }
 
     /* Processing storage for the input signal. */
     alignas(16) std::array<float,BufferLineSize+1> mS{};
@@ -149,6 +165,8 @@ struct SIMDALIGN DecoderBase {
 
 template<std::size_t N>
 struct UhjDecoder final : public DecoderBase {
+    struct Tag { using decoder_t = UhjDecoder<N>; };
+
     /* The number of extra sample frames needed for input. */
     static constexpr std::size_t sInputPadding{N/2};
 
@@ -173,6 +191,8 @@ struct UhjDecoder final : public DecoderBase {
 };
 
 struct UhjDecoderIIR final : public DecoderBase {
+    struct Tag { using decoder_t = UhjDecoderIIR; };
+
     /* These IIR decoder filters normally have a 1-sample delay on the non-
      * filtered components. However, the filtered components are made to skip
      * the first output sample and take one future sample, which puts it ahead
@@ -197,6 +217,8 @@ struct UhjDecoderIIR final : public DecoderBase {
 
 template<std::size_t N>
 struct UhjStereoDecoder final : public DecoderBase {
+    struct Tag { using decoder_t = UhjStereoDecoder<N>; };
+
     static constexpr std::size_t sInputPadding{N/2};
 
     float mCurrentWidth{-1.0f};
@@ -219,6 +241,8 @@ struct UhjStereoDecoder final : public DecoderBase {
 };
 
 struct UhjStereoDecoderIIR final : public DecoderBase {
+    struct Tag { using decoder_t = UhjStereoDecoderIIR; };
+
     static constexpr std::size_t sInputPadding{1};
 
     bool mFirstRun{true};

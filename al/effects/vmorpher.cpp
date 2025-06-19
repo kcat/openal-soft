@@ -339,9 +339,9 @@ bool EaxVocalMorpherCommitter::commit(const EAXVOCALMORPHERPROPERTIES &props)
 
     mEaxProps = props;
 
-    auto get_phoneme = [](unsigned long phoneme) noexcept
+    static constexpr auto get_phoneme = [](unsigned long phoneme) noexcept
     {
-#define HANDLE_PHENOME(x) case x: return VMorpherPhenome::x
+#define HANDLE_PHENOME(x) case EAX_VOCALMORPHER_PHONEME_##x: return VMorpherPhenome::x
         switch(phoneme)
         {
         HANDLE_PHENOME(A);
@@ -378,7 +378,7 @@ bool EaxVocalMorpherCommitter::commit(const EAXVOCALMORPHERPROPERTIES &props)
         return VMorpherPhenome::A;
 #undef HANDLE_PHENOME
     };
-    auto get_waveform = [](unsigned long form) noexcept
+    static constexpr auto get_waveform = [](unsigned long form) noexcept
     {
         if(form == EAX_VOCALMORPHER_SINUSOID) return VMorpherWaveform::Sinusoid;
         if(form == EAX_VOCALMORPHER_TRIANGLE) return VMorpherWaveform::Triangle;
@@ -386,16 +386,13 @@ bool EaxVocalMorpherCommitter::commit(const EAXVOCALMORPHERPROPERTIES &props)
         return VMorpherWaveform::Sinusoid;
     };
 
-    mAlProps = [&]{
-        VmorpherProps ret{};
-        ret.PhonemeA = get_phoneme(props.ulPhonemeA);
-        ret.PhonemeACoarseTuning = static_cast<int>(props.lPhonemeACoarseTuning);
-        ret.PhonemeB = get_phoneme(props.ulPhonemeB);
-        ret.PhonemeBCoarseTuning = static_cast<int>(props.lPhonemeBCoarseTuning);
-        ret.Waveform = get_waveform(props.ulWaveform);
-        ret.Rate = props.flRate;
-        return ret;
-    }();
+    mAlProps = VmorpherProps{
+        .Rate = props.flRate,
+        .PhonemeA = get_phoneme(props.ulPhonemeA),
+        .PhonemeB = get_phoneme(props.ulPhonemeB),
+        .PhonemeACoarseTuning = static_cast<int>(props.lPhonemeACoarseTuning),
+        .PhonemeBCoarseTuning = static_cast<int>(props.lPhonemeBCoarseTuning),
+        .Waveform = get_waveform(props.ulWaveform)};
 
     return true;
 }

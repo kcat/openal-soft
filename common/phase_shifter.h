@@ -14,8 +14,10 @@
 #include <cmath>
 #include <cstddef>
 #include <numbers>
+#include <ranges>
 #include <span>
 
+#include "alnumeric.h"
 #include "opthelpers.h"
 
 
@@ -37,7 +39,7 @@ struct SIMDALIGN PhaseShifterT {
          * calculated coefficients are in reverse to make applying in the time-
          * domain more efficient.
          */
-        for(std::size_t i{0};i < FilterSize/2;++i)
+        for(const auto i : std::views::iota(0_uz, FilterSize/2))
         {
             const auto k = static_cast<int>(i*2 + 1) - int{FilterSize/2};
 
@@ -77,24 +79,23 @@ private:
 #endif
 };
 
-template<std::size_t S>
-NOINLINE inline
+template<std::size_t S> NOINLINE inline
 void PhaseShifterT<S>::process(const std::span<float> dst, std::span<const float> src) const
 {
 #if HAVE_SSE_INTRINSICS
     /* NOLINTBEGIN(cppcoreguidelines-pro-type-reinterpret-cast)
      * Need to be able to cast floats to SIMD float types.
      */
-    if(const std::size_t todo{dst.size()>>2})
+    if(const auto todo = dst.size()>>2_uz)
     {
         auto out = std::span{reinterpret_cast<__m128*>(dst.data()), todo};
-        std::generate(out.begin(), out.end(), [&src,this]
+        std::ranges::generate(out, [&src,this]
         {
             auto r0 = _mm_setzero_ps();
             auto r1 = _mm_setzero_ps();
             auto r2 = _mm_setzero_ps();
             auto r3 = _mm_setzero_ps();
-            for(std::size_t j{0};j < mCoeffs.size();j+=4)
+            for(auto j = 0_uz;j < mCoeffs.size();j+=4)
             {
                 const auto coeffs = _mm_load_ps(&mCoeffs[j]);
                 const auto s0 = _mm_loadu_ps(&src[j*2]);
@@ -121,13 +122,12 @@ void PhaseShifterT<S>::process(const std::span<float> dst, std::span<const float
             return _mm_add_ps(_mm_add_ps(r0, r1), _mm_add_ps(r2, r3));
         });
     }
-    if(const std::size_t todo{dst.size()&3})
+    if(const auto todo = dst.size()&3)
     {
-        auto out = dst.last(todo);
-        std::generate(out.begin(), out.end(), [&src,this]
+        std::ranges::generate(dst.last(todo), [&src,this]
         {
             auto r4 = _mm_setzero_ps();
-            for(std::size_t j{0};j < mCoeffs.size();j+=4)
+            for(auto j = 0_uz;j < mCoeffs.size();j+=4)
             {
                 const auto coeffs = _mm_load_ps(&mCoeffs[j]);
                 const auto s = _mm_setr_ps(src[j*2], src[j*2 + 2], src[j*2 + 4], src[j*2 + 6]);
@@ -152,7 +152,7 @@ void PhaseShifterT<S>::process(const std::span<float> dst, std::span<const float
             auto r1 = vdupq_n_f32(0.0f);
             auto r2 = vdupq_n_f32(0.0f);
             auto r3 = vdupq_n_f32(0.0f);
-            for(std::size_t j{0};j < mCoeffs.size();j+=4)
+            for(auto j = 0_uz;j < mCoeffs.size();j+=4)
             {
                 const auto coeffs = vld1q_f32(&mCoeffs[j]);
                 const auto s0 = vld1q_f32(&src[j*2]);
@@ -173,13 +173,12 @@ void PhaseShifterT<S>::process(const std::span<float> dst, std::span<const float
             return vaddq_f32(vaddq_f32(r0, r1), vaddq_f32(r2, r3));
         });
     }
-    if(const std::size_t todo{dst.size()&3})
+    if(const auto todo = dst.size()&3)
     {
-        auto out = dst.last(todo);
-        std::generate(out.begin(), out.end(), [&src,this]
+        std::ranges::generate(dst.last(todo), [&src,this]
         {
             auto r4 = vdupq_n_f32(0.0f);
-            for(std::size_t j{0};j < mCoeffs.size();j+=4)
+            for(auto j = 0_uz;j < mCoeffs.size();j+=4)
             {
                 const auto coeffs = vld1q_f32(&mCoeffs[j]);
                 const auto s = load4(src[j*2], src[j*2 + 2], src[j*2 + 4], src[j*2 + 6]);
@@ -194,10 +193,10 @@ void PhaseShifterT<S>::process(const std::span<float> dst, std::span<const float
 
 #else
 
-    std::generate(dst.begin(), dst.end(), [&src,this]
+    std::ranges::generate(dst, [&src,this]
     {
         auto ret = 0.0f;
-        for(std::size_t j{0};j < mCoeffs.size();++j)
+        for(auto j = 0_uz;j < mCoeffs.size();++j)
             ret += src[j*2] * mCoeffs[j];
         src = src.subspan(1);
         return ret;

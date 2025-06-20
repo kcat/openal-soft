@@ -4180,10 +4180,10 @@ void ALsource::eax_update_room_filters()
         if(!mEaxActiveFxSlots.test(i))
             continue;
 
-        auto& fx_slot = mEaxAlContext->eaxGetFxSlot(i);
-        const auto& send = mEax.sends[i];
-        const auto& room_param = eax_create_room_filter_param(fx_slot, send);
-        eax_set_al_source_send(&fx_slot, i, room_param);
+        auto &fx_slot = mEaxAlContext->eaxGetFxSlot(i);
+        const auto &send = mEax.sends[i];
+        const auto &room_param = eax_create_room_filter_param(fx_slot, send);
+        eax_set_al_source_send(fx_slot.newReference(), i, room_param);
     }
 }
 
@@ -4939,13 +4939,14 @@ void ALsource::eax_get(const EaxCall& call)
     }
 }
 
-void ALsource::eax_set_al_source_send(ALeffectslot *slot, size_t sendidx, const EaxAlLowPassParam &filter)
+void ALsource::eax_set_al_source_send(al::intrusive_ptr<ALeffectslot> slot, size_t sendidx,
+    const EaxAlLowPassParam &filter)
 {
     if(sendidx >= EAX_MAX_FXSLOTS)
         return;
 
     auto &send = Send[sendidx];
-    send.mSlot = slot ? slot->newReference() : al::intrusive_ptr<ALeffectslot>{};
+    send.mSlot = std::move(slot);
     send.mGain = filter.gain;
     send.mGainHF = filter.gain_hf;
     send.mHFReference = LowPassFreqRef;
@@ -4987,7 +4988,7 @@ void ALsource::eax_commit_active_fx_slots()
     for(const auto i : std::views::iota(0_uz, size_t{EAX_MAX_FXSLOTS}))
     {
         if(!mEaxActiveFxSlots.test(i))
-            eax_set_al_source_send(nullptr, i, EaxAlLowPassParam{1.0f, 1.0f});
+            eax_set_al_source_send({}, i, EaxAlLowPassParam{1.0f, 1.0f});
     }
 }
 

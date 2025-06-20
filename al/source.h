@@ -1021,7 +1021,7 @@ private:
     void eax_set(const EaxCall& call);
 
     // `alSource3i(source, AL_AUXILIARY_SEND_FILTER, ...)`
-    void eax_set_al_source_send(ALeffectslot *slot, size_t sendidx,
+    void eax_set_al_source_send(al::intrusive_ptr<ALeffectslot> slot, size_t sendidx,
         const EaxAlLowPassParam &filter);
 
     void eax_commit_active_fx_slots();

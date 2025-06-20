@@ -4074,7 +4074,7 @@ auto ALsource::eax_create_direct_filter_param() const noexcept -> EaxAlLowPassPa
 
     for(const auto i : std::views::iota(0_uz, size_t{EAX_MAX_FXSLOTS}))
     {
-        if(!mEaxActiveFxSlots[i])
+        if(!mEaxActiveFxSlots.test(i))
             continue;
 
         const auto &fx_slot = mEaxAlContext->eaxGetFxSlot(i);
@@ -4177,7 +4177,7 @@ void ALsource::eax_update_room_filters()
 {
     for(const auto i : std::views::iota(0_uz, size_t{EAX_MAX_FXSLOTS}))
     {
-        if(!mEaxActiveFxSlots[i])
+        if(!mEaxActiveFxSlots.test(i))
             continue;
 
         auto& fx_slot = mEaxAlContext->eaxGetFxSlot(i);
@@ -4958,7 +4958,7 @@ void ALsource::eax_set_al_source_send(ALeffectslot *slot, size_t sendidx, const 
 void ALsource::eax_commit_active_fx_slots()
 {
     // Clear all slots to an inactive state.
-    mEaxActiveFxSlots.fill(false);
+    mEaxActiveFxSlots.reset();
 
     // Mark the set slots as active.
     for(const auto& slot_id : mEax.active_fx_slots.guidActiveFXSlots)
@@ -4970,23 +4970,23 @@ void ALsource::eax_commit_active_fx_slots()
         {
             // Mark primary FX slot as active.
             if(mEaxPrimaryFxSlotId.has_value())
-                mEaxActiveFxSlots[*mEaxPrimaryFxSlotId] = true;
+                mEaxActiveFxSlots.set(*mEaxPrimaryFxSlotId);
         }
         else if(slot_id == EAXPROPERTYID_EAX50_FXSlot0)
-            mEaxActiveFxSlots[0] = true;
+            mEaxActiveFxSlots.set(0);
         else if(slot_id == EAXPROPERTYID_EAX50_FXSlot1)
-            mEaxActiveFxSlots[1] = true;
+            mEaxActiveFxSlots.set(1);
         else if(slot_id == EAXPROPERTYID_EAX50_FXSlot2)
-            mEaxActiveFxSlots[2] = true;
+            mEaxActiveFxSlots.set(2);
         else if(slot_id == EAXPROPERTYID_EAX50_FXSlot3)
-            mEaxActiveFxSlots[3] = true;
+            mEaxActiveFxSlots.set(3);
     }
 
     // Deactivate EFX auxiliary effect slots for inactive slots. Active slots
     // will be updated with the room filters.
-    for(size_t i{0};i < EAX_MAX_FXSLOTS;++i)
+    for(const auto i : std::views::iota(0_uz, size_t{EAX_MAX_FXSLOTS}))
     {
-        if(!mEaxActiveFxSlots[i])
+        if(!mEaxActiveFxSlots.test(i))
             eax_set_al_source_send(nullptr, i, EaxAlLowPassParam{1.0f, 1.0f});
     }
 }

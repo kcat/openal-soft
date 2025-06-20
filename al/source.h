@@ -4,6 +4,7 @@
 #include "config.h"
 
 #include <array>
+#include <bitset>
 #include <cstddef>
 #include <cstdint>
 #include <deque>
@@ -198,7 +199,7 @@ private:
         &EAXPROPERTYID_EAX50_FXSlot3,
     };
 
-    using EaxActiveFxSlots = std::array<bool, EAX_MAX_FXSLOTS>;
+    using EaxActiveFxSlots = std::bitset<EAX_MAX_FXSLOTS>;
     using EaxSpeakerLevels = std::array<EAXSPEAKERLEVELPROPERTIES, eax_max_speakers>;
     using EaxSends = std::array<EAXSOURCEALLSENDPROPERTIES, EAX_MAX_FXSLOTS>;
 
@@ -242,7 +243,7 @@ private:
 
     ALCcontext* mEaxAlContext{};
     EaxFxSlotIndex mEaxPrimaryFxSlotId{};
-    EaxActiveFxSlots mEaxActiveFxSlots{};
+    EaxActiveFxSlots mEaxActiveFxSlots;
     int mEaxVersion{};
     bool mEaxChanged{};
     Eax1State mEax1{};

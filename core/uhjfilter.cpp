@@ -51,30 +51,28 @@ constexpr auto assume_aligned_span(const std::span<T,N> s) noexcept -> std::span
  * being applied in the frequency domain, so these "overflow" samples need to
  * be accounted for.
  */
-template<size_t N>
+template<size_t FilterSize>
 struct SegmentedFilter {
     static constexpr size_t sFftLength{256};
     static constexpr size_t sSampleLength{sFftLength / 2};
-    static constexpr size_t sNumSegments{N/sSampleLength};
-    static_assert(N >= sFftLength);
-    static_assert((N % sSampleLength) == 0);
+    static constexpr size_t sNumSegments{FilterSize/sSampleLength};
+    static_assert(FilterSize >= sFftLength);
+    static_assert((FilterSize % sSampleLength) == 0);
 
     PFFFTSetup mFft;
     alignas(16) std::array<float,sFftLength*sNumSegments> mFilterData;
 
     SegmentedFilter() noexcept : mFft{sFftLength, PFFFT_REAL}
     {
-        static constexpr size_t filter_size{N};
-
         /* To set up the filter, we first need to generate the desired
          * response (not reversed).
          */
-        auto tmpBuffer = std::vector<double>(filter_size, 0.0);
-        for(const auto i : std::views::iota(0_uz, filter_size/2))
+        auto tmpBuffer = std::vector<double>(FilterSize, 0.0);
+        for(const auto i : std::views::iota(0_uz, FilterSize/2))
         {
-            const auto k = int{filter_size/2} - static_cast<int>(i*2 + 1);
+            const auto k = int{FilterSize/2} - static_cast<int>(i*2 + 1);
 
-            const auto w = 2.0*std::numbers::pi/double{filter_size} * static_cast<double>(i*2 + 1);
+            const auto w = 2.0*std::numbers::pi/double{FilterSize} * static_cast<double>(i*2 + 1);
             const auto window = 0.3635819 - 0.4891775*std::cos(w) + 0.1365995*std::cos(2.0*w)
                 - 0.0106411*std::cos(3.0*w);
 
@@ -82,8 +80,8 @@ struct SegmentedFilter {
             tmpBuffer[i*2 + 1] = window * (1.0-std::cos(pk)) / pk;
         }
 
-        /* The segments of the filter are converted back to the frequency
-         * domain, each on their own (0 stuffed).
+        /* The response is split into segments that are converted to the
+         * frequency domain, each on their own (0 stuffed).
          */
         using complex_d = std::complex<double>;
         auto fftBuffer = std::vector<complex_d>(sFftLength);
@@ -183,8 +181,8 @@ void process(UhjAllPassFilter &self, const std::span<const float,4> coeffs,
  * where j is a wide-band +90 degree phase shift. 3-channel UHJ excludes Q,
  * while 2-channel excludes Q and T.
  *
- * The phase shift is done using a linear FIR filter derived from an FFT'd
- * impulse with the desired shift.
+ * The phase shift is done using a linear FIR filter implemented from a
+ * segmented FFT'd response for the desired shift.
  */
 
 template<size_t N>

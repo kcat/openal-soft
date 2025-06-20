@@ -4116,8 +4116,7 @@ auto ALsource::eax_create_direct_filter_param() const noexcept -> EaxAlLowPassPa
     gain_mb += static_cast<float>(source.lDirect);
     gainhf_mb += static_cast<float>(source.lDirectHF);
 
-    return EaxAlLowPassParam{level_mb_to_gain(gain_mb),
-        (gainhf_mb >= 0.0f) ? 1.0f : level_mb_to_gain(gainhf_mb)};
+    return EaxAlLowPassParam{level_mb_to_gain(gain_mb), level_mb_to_gain(gainhf_mb)};
 }
 
 auto ALsource::eax_create_room_filter_param(const ALeffectslot &fx_slot,
@@ -4160,8 +4159,7 @@ auto ALsource::eax_create_room_filter_param(const ALeffectslot &fx_slot,
     gain_mb += static_cast<float>(send.mSend.lSend);
     gainhf_mb += static_cast<float>(send.mSend.lSendHF);
 
-    return EaxAlLowPassParam{level_mb_to_gain(gain_mb),
-        (gainhf_mb >= 0.0f) ? 1.0f : level_mb_to_gain(gainhf_mb)};
+    return EaxAlLowPassParam{level_mb_to_gain(gain_mb), level_mb_to_gain(gainhf_mb)};
 }
 
 void ALsource::eax_update_direct_filter()

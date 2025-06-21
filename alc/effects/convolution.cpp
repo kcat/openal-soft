@@ -108,8 +108,6 @@ void LoadSamples(const std::span<float> dstSamples, const SampleVariant &src, co
         using sample_t = span_t::value_type;
         if constexpr(!std::is_same_v<sample_t,IMA4Data> && !std::is_same_v<sample_t,MSADPCMData>)
             LoadSampleArray<sample_t>(dstSamples, splvec, channel, srcstep);
-        else
-            std::ranges::fill(splvec, SampleInfo<sample_t>::silence());
     }, src);
 }
 

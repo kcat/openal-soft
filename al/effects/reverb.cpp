@@ -1026,66 +1026,64 @@ bool EaxReverbCommitter::commit(const EAXREVERBPROPERTIES &props)
 
     const auto size = props.flEnvironmentSize;
     const auto density = (size * size * size) / 16.0f;
-    mAlProps = [&]{
-        ReverbProps ret{};
-        ret.Density = std::min(density, AL_EAXREVERB_MAX_DENSITY);
-        ret.Diffusion = props.flEnvironmentDiffusion;
-        ret.Gain = level_mb_to_gain(static_cast<float>(props.lRoom));
-        ret.GainHF = level_mb_to_gain(static_cast<float>(props.lRoomHF));
-        ret.GainLF = level_mb_to_gain(static_cast<float>(props.lRoomLF));
-        ret.DecayTime = props.flDecayTime;
-        ret.DecayHFRatio = props.flDecayHFRatio;
-        ret.DecayLFRatio = props.flDecayLFRatio;
-        ret.ReflectionsGain = level_mb_to_gain(static_cast<float>(props.lReflections));
-        ret.ReflectionsDelay = props.flReflectionsDelay;
-        ret.ReflectionsPan = {props.vReflectionsPan.x, props.vReflectionsPan.y,
-            props.vReflectionsPan.z};
-        ret.LateReverbGain = level_mb_to_gain(static_cast<float>(props.lReverb));
-        ret.LateReverbDelay = props.flReverbDelay;
-        ret.LateReverbPan = {props.vReverbPan.x, props.vReverbPan.y, props.vReverbPan.z};
-        ret.EchoTime = props.flEchoTime;
-        ret.EchoDepth = props.flEchoDepth;
-        ret.ModulationTime = props.flModulationTime;
-        ret.ModulationDepth = props.flModulationDepth;
-        ret.AirAbsorptionGainHF = level_mb_to_gain(props.flAirAbsorptionHF);
-        ret.HFReference = props.flHFReference;
-        ret.LFReference = props.flLFReference;
-        ret.RoomRolloffFactor = props.flRoomRolloffFactor;
-        ret.DecayHFLimit = ((props.ulFlags & EAXREVERBFLAGS_DECAYHFLIMIT) != 0);
-        if(EaxTraceCommits) [[unlikely]]
-        {
-            TRACE("Reverb commit:\n"
-                "  Density: {:f}\n"
-                "  Diffusion: {:f}\n"
-                "  Gain: {:f}\n"
-                "  GainHF: {:f}\n"
-                "  GainLF: {:f}\n"
-                "  DecayTime: {:f}\n"
-                "  DecayHFRatio: {:f}\n"
-                "  DecayLFRatio: {:f}\n"
-                "  ReflectionsGain: {:f}\n"
-                "  ReflectionsDelay: {:f}\n"
-                "  ReflectionsPan: {}\n"
-                "  LateReverbGain: {:f}\n"
-                "  LateReverbDelay: {:f}\n"
-                "  LateRevernPan: {}\n"
-                "  EchoTime: {:f}\n"
-                "  EchoDepth: {:f}\n"
-                "  ModulationTime: {:f}\n"
-                "  ModulationDepth: {:f}\n"
-                "  AirAbsorptionGainHF: {:f}\n"
-                "  HFReference: {:f}\n"
-                "  LFReference: {:f}\n"
-                "  RoomRolloffFactor: {:f}\n"
-                "  DecayHFLimit: {}", ret.Density, ret.Diffusion, ret.Gain, ret.GainHF, ret.GainLF,
-                ret.DecayTime, ret.DecayHFRatio, ret.DecayLFRatio, ret.ReflectionsGain,
-                ret.ReflectionsDelay, ret.ReflectionsPan, ret.LateReverbGain, ret.LateReverbDelay,
-                ret.LateReverbPan, ret.EchoTime, ret.EchoDepth, ret.ModulationTime,
-                ret.ModulationDepth, ret.AirAbsorptionGainHF, ret.HFReference, ret.LFReference,
-                ret.RoomRolloffFactor, ret.DecayHFLimit ? "true" : "false");
-        }
-        return ret;
-    }();
+    mAlProps = ReverbProps{
+        .Density = std::min(density, AL_EAXREVERB_MAX_DENSITY),
+        .Diffusion = props.flEnvironmentDiffusion,
+        .Gain = level_mb_to_gain(static_cast<float>(props.lRoom)),
+        .GainHF = level_mb_to_gain(static_cast<float>(props.lRoomHF)),
+        .GainLF = level_mb_to_gain(static_cast<float>(props.lRoomLF)),
+        .DecayTime = props.flDecayTime,
+        .DecayHFRatio = props.flDecayHFRatio,
+        .DecayLFRatio = props.flDecayLFRatio,
+        .ReflectionsGain = level_mb_to_gain(static_cast<float>(props.lReflections)),
+        .ReflectionsDelay = props.flReflectionsDelay,
+        .ReflectionsPan = {props.vReflectionsPan.x, props.vReflectionsPan.y,
+            props.vReflectionsPan.z},
+        .LateReverbGain = level_mb_to_gain(static_cast<float>(props.lReverb)),
+        .LateReverbDelay = props.flReverbDelay,
+        .LateReverbPan = {props.vReverbPan.x, props.vReverbPan.y, props.vReverbPan.z},
+        .EchoTime = props.flEchoTime,
+        .EchoDepth = props.flEchoDepth,
+        .ModulationTime = props.flModulationTime,
+        .ModulationDepth = props.flModulationDepth,
+        .AirAbsorptionGainHF = level_mb_to_gain(props.flAirAbsorptionHF),
+        .HFReference = props.flHFReference,
+        .LFReference = props.flLFReference,
+        .RoomRolloffFactor = props.flRoomRolloffFactor,
+        .DecayHFLimit = ((props.ulFlags & EAXREVERBFLAGS_DECAYHFLIMIT) != 0)};
+    if(EaxTraceCommits) [[unlikely]]
+    {
+        const auto &ret = std::get<ReverbProps>(mAlProps);
+        TRACE("Reverb commit:\n"
+            "  Density: {:f}\n"
+            "  Diffusion: {:f}\n"
+            "  Gain: {:f}\n"
+            "  GainHF: {:f}\n"
+            "  GainLF: {:f}\n"
+            "  DecayTime: {:f}\n"
+            "  DecayHFRatio: {:f}\n"
+            "  DecayLFRatio: {:f}\n"
+            "  ReflectionsGain: {:f}\n"
+            "  ReflectionsDelay: {:f}\n"
+            "  ReflectionsPan: {}\n"
+            "  LateReverbGain: {:f}\n"
+            "  LateReverbDelay: {:f}\n"
+            "  LateRevernPan: {}\n"
+            "  EchoTime: {:f}\n"
+            "  EchoDepth: {:f}\n"
+            "  ModulationTime: {:f}\n"
+            "  ModulationDepth: {:f}\n"
+            "  AirAbsorptionGainHF: {:f}\n"
+            "  HFReference: {:f}\n"
+            "  LFReference: {:f}\n"
+            "  RoomRolloffFactor: {:f}\n"
+            "  DecayHFLimit: {}", ret.Density, ret.Diffusion, ret.Gain, ret.GainHF, ret.GainLF,
+            ret.DecayTime, ret.DecayHFRatio, ret.DecayLFRatio, ret.ReflectionsGain,
+            ret.ReflectionsDelay, ret.ReflectionsPan, ret.LateReverbGain, ret.LateReverbDelay,
+            ret.LateReverbPan, ret.EchoTime, ret.EchoDepth, ret.ModulationTime,
+            ret.ModulationDepth, ret.AirAbsorptionGainHF, ret.HFReference, ret.LFReference,
+            ret.RoomRolloffFactor, ret.DecayHFLimit ? "true" : "false");
+    }
 
     return true;
 }

@@ -5,12 +5,15 @@
 
 #include <atomic>
 #include <bitset>
+#include <concepts>
 #include <cstdint>
 #include <deque>
+#include <functional>
 #include <memory>
 #include <mutex>
 #include <string>
 #include <string_view>
+#include <type_traits>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -230,19 +233,11 @@ public:
 
     void eaxUninitialize() noexcept;
 
-    ALenum eax_eax_set(
-        const GUID* property_set_id,
-        ALuint property_id,
-        ALuint property_source_id,
-        ALvoid* property_value,
-        ALuint property_value_size);
+    ALenum eax_eax_set(const GUID *property_set_id, ALuint property_id, ALuint property_source_id,
+        ALvoid *property_value, ALuint property_value_size);
 
-    ALenum eax_eax_get(
-        const GUID* property_set_id,
-        ALuint property_id,
-        ALuint property_source_id,
-        ALvoid* property_value,
-        ALuint property_value_size);
+    ALenum eax_eax_get(const GUID *property_set_id, ALuint property_id, ALuint property_source_id,
+        ALvoid *property_value, ALuint property_value_size);
 
     void eaxSetLastError() noexcept;
 
@@ -453,53 +448,42 @@ private:
     [[noreturn]] static void eax_fail_unknown_property_id();
     [[noreturn]] static void eax_fail_unknown_version();
 
-    // Gets a value from EAX call,
-    // validates it,
-    // and updates the current value.
-    template<typename TValidator, typename TProperty>
-    static void eax_set(const EaxCall& call, TProperty& property)
+    /* Gets a value from EAX call, validates it, and updates the current value. */
+    template<typename TValidator>
+    static void eax_set(const EaxCall &call, auto &property)
     {
-        const auto &value = call.load<const TProperty>();
+        const auto &value = call.load<const std::remove_cvref_t<decltype(property)>>();
         TValidator{}(value);
         property = value;
     }
 
-    // Gets a new value from EAX call,
-    // validates it,
-    // updates the deferred value,
-    // updates a dirty flag.
-    template<
-        typename TValidator,
-        size_t DirtyBit,
-        typename TMemberResult,
-        typename TProps,
-        typename TState>
-    void eax_defer(const EaxCall& call, TState& state, TMemberResult TProps::*member)
+    /* Gets a new value from EAX call, validates it, updates the deferred
+     * value, and updates a dirty flag.
+     */
+    template<typename TValidator>
+    void eax_defer(const EaxCall &call, auto &state, size_t dirty_bit,
+        std::invocable<decltype(state.i)> auto member)
     {
-        const auto &src = call.load<const TMemberResult>();
+        using TMemberResult = std::invoke_result_t<decltype(member), decltype(state.i)>;
+        const auto &src = call.load<const std::remove_cvref_t<TMemberResult>>();
         TValidator{}(src);
-        const auto& dst_i = state.i.*member;
-        auto& dst_d = state.d.*member;
+        const auto &dst_i = std::invoke(member, state.i);
+        auto &dst_d = std::invoke(member, state.d);
         dst_d = src;
 
         if(dst_i != dst_d)
-            mEaxDf.set(DirtyBit);
+            mEaxDf.set(dirty_bit);
     }
 
-    template<
-        size_t DirtyBit,
-        typename TMemberResult,
-        typename TProps,
-        typename TState>
-    void eax_context_commit_property(TState& state, std::bitset<eax_dirty_bit_count>& dst_df,
-        TMemberResult TProps::*member) noexcept
+    void eax_context_commit_property(auto &state, std::bitset<eax_dirty_bit_count> &dst_df,
+        size_t dirty_bit, std::invocable<decltype(mEax)> auto member) noexcept
     {
-        if(mEaxDf.test(DirtyBit))
+        if(mEaxDf.test(dirty_bit))
         {
-            dst_df.set(DirtyBit);
-            const auto& src_d = state.d.*member;
-            state.i.*member = src_d;
-            mEax.*member = src_d;
+            dst_df.set(dirty_bit);
+            const auto &src_d = std::invoke(member, state.d);
+            std::invoke(member, state.i) = src_d;
+            std::invoke(member, mEax) = src_d;
         }
     }
 

@@ -131,20 +131,18 @@ bool EaxPitchShifterCommitter::commit(const EAXPITCHSHIFTERPROPERTIES &props)
         return false;
 
     mEaxProps = props;
-    mAlProps = [&]{
-        PshifterProps ret{};
-        ret.CoarseTune = static_cast<int>(props.lCoarseTune);
-        ret.FineTune = static_cast<int>(props.lFineTune);
-        return ret;
-    }();
+    mAlProps = PshifterProps{
+        .CoarseTune = static_cast<int>(props.lCoarseTune),
+        .FineTune = static_cast<int>(props.lFineTune)};
 
     return true;
 }
 
 void EaxPitchShifterCommitter::SetDefaults(EaxEffectProps &props)
 {
-    props = EAXPITCHSHIFTERPROPERTIES{EAXPITCHSHIFTER_DEFAULTCOARSETUNE,
-        EAXPITCHSHIFTER_DEFAULTFINETUNE};
+    props = EAXPITCHSHIFTERPROPERTIES{
+        .lCoarseTune = EAXPITCHSHIFTER_DEFAULTCOARSETUNE,
+        .lFineTune = EAXPITCHSHIFTER_DEFAULTFINETUNE};
 }
 
 void EaxPitchShifterCommitter::Get(const EaxCall &call, const EAXPITCHSHIFTERPROPERTIES &props)

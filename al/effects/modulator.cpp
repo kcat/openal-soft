@@ -200,41 +200,33 @@ bool EaxModulatorCommitter::commit(const EAXRINGMODULATORPROPERTIES &props)
     if(auto *cur = std::get_if<EAXRINGMODULATORPROPERTIES>(&mEaxProps); cur && *cur == props)
         return false;
 
-    mEaxProps = props;
-
-    auto get_waveform = [](unsigned long form)
+    static constexpr auto get_waveform = [](unsigned long form)
     {
-        if(form == EAX_RINGMODULATOR_SINUSOID)
-            return ModulatorWaveform::Sinusoid;
-        if(form == EAX_RINGMODULATOR_SAWTOOTH)
-            return ModulatorWaveform::Sawtooth;
-        if(form == EAX_RINGMODULATOR_SQUARE)
-            return ModulatorWaveform::Square;
+        switch(form)
+        {
+        case EAX_RINGMODULATOR_SINUSOID: return ModulatorWaveform::Sinusoid;
+        case EAX_RINGMODULATOR_SAWTOOTH: return ModulatorWaveform::Sawtooth;
+        case EAX_RINGMODULATOR_SQUARE: return ModulatorWaveform::Square;
+        default: break;
+        }
         return ModulatorWaveform::Sinusoid;
     };
 
-    mAlProps = [&]{
-        ModulatorProps ret{};
-        ret.Frequency = props.flFrequency;
-        ret.HighPassCutoff = props.flHighPassCutOff;
-        ret.Waveform = get_waveform(props.ulWaveform);
-        return ret;
-    }();
+    mEaxProps = props;
+    mAlProps = ModulatorProps{
+        .Frequency = props.flFrequency,
+        .HighPassCutoff = props.flHighPassCutOff,
+        .Waveform = get_waveform(props.ulWaveform)};
 
     return true;
 }
 
 void EaxModulatorCommitter::SetDefaults(EaxEffectProps &props)
 {
-    static constexpr EAXRINGMODULATORPROPERTIES defprops{[]
-    {
-        EAXRINGMODULATORPROPERTIES ret{};
-        ret.flFrequency = EAXRINGMODULATOR_DEFAULTFREQUENCY;
-        ret.flHighPassCutOff = EAXRINGMODULATOR_DEFAULTHIGHPASSCUTOFF;
-        ret.ulWaveform = EAXRINGMODULATOR_DEFAULTWAVEFORM;
-        return ret;
-    }()};
-    props = defprops;
+    props = EAXRINGMODULATORPROPERTIES{
+        .flFrequency = EAXRINGMODULATOR_DEFAULTFREQUENCY,
+        .flHighPassCutOff = EAXRINGMODULATOR_DEFAULTHIGHPASSCUTOFF,
+        .ulWaveform = EAXRINGMODULATOR_DEFAULTWAVEFORM};
 }
 
 void EaxModulatorCommitter::Get(const EaxCall &call, const EAXRINGMODULATORPROPERTIES &props)

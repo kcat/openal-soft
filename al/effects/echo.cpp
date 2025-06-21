@@ -192,32 +192,24 @@ bool EaxEchoCommitter::commit(const EAXECHOPROPERTIES &props)
         return false;
 
     mEaxProps = props;
-    mAlProps = [&]{
-        EchoProps ret{};
-        ret.Delay = props.flDelay;
-        ret.LRDelay = props.flLRDelay;
-        ret.Damping = props.flDamping;
-        ret.Feedback = props.flFeedback;
-        ret.Spread = props.flSpread;
-        return ret;
-    }();
+    mAlProps = EchoProps{
+        .Delay = props.flDelay,
+        .LRDelay = props.flLRDelay,
+        .Damping = props.flDamping,
+        .Feedback = props.flFeedback,
+        .Spread = props.flSpread};
 
     return true;
 }
 
 void EaxEchoCommitter::SetDefaults(EaxEffectProps &props)
 {
-    static constexpr EAXECHOPROPERTIES defprops{[]
-    {
-        EAXECHOPROPERTIES ret{};
-        ret.flDelay = EAXECHO_DEFAULTDELAY;
-        ret.flLRDelay = EAXECHO_DEFAULTLRDELAY;
-        ret.flDamping = EAXECHO_DEFAULTDAMPING;
-        ret.flFeedback = EAXECHO_DEFAULTFEEDBACK;
-        ret.flSpread = EAXECHO_DEFAULTSPREAD;
-        return ret;
-    }()};
-    props = defprops;
+    props = EAXECHOPROPERTIES{
+        .flDelay = EAXECHO_DEFAULTDELAY,
+        .flLRDelay = EAXECHO_DEFAULTLRDELAY,
+        .flDamping = EAXECHO_DEFAULTDAMPING,
+        .flFeedback = EAXECHO_DEFAULTFEEDBACK,
+        .flSpread = EAXECHO_DEFAULTSPREAD};
 }
 
 void EaxEchoCommitter::Get(const EaxCall &call, const EAXECHOPROPERTIES &props)

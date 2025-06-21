@@ -191,32 +191,24 @@ bool EaxDistortionCommitter::commit(const EAXDISTORTIONPROPERTIES &props)
         return false;
 
     mEaxProps = props;
-    mAlProps = [&]{
-        DistortionProps ret{};
-        ret.Edge = props.flEdge;
-        ret.Gain = level_mb_to_gain(static_cast<float>(props.lGain));
-        ret.LowpassCutoff = props.flLowPassCutOff;
-        ret.EQCenter = props.flEQCenter;
-        ret.EQBandwidth = props.flEdge;
-        return ret;
-    }();
+    mAlProps = DistortionProps{
+        .Edge = props.flEdge,
+        .Gain = level_mb_to_gain(static_cast<float>(props.lGain)),
+        .LowpassCutoff = props.flLowPassCutOff,
+        .EQCenter = props.flEQCenter,
+        .EQBandwidth = props.flEdge};
 
     return true;
 }
 
 void EaxDistortionCommitter::SetDefaults(EaxEffectProps &props)
 {
-    static constexpr EAXDISTORTIONPROPERTIES defprops{[]
-    {
-        EAXDISTORTIONPROPERTIES ret{};
-        ret.flEdge = EAXDISTORTION_DEFAULTEDGE;
-        ret.lGain = EAXDISTORTION_DEFAULTGAIN;
-        ret.flLowPassCutOff = EAXDISTORTION_DEFAULTLOWPASSCUTOFF;
-        ret.flEQCenter = EAXDISTORTION_DEFAULTEQCENTER;
-        ret.flEQBandwidth = EAXDISTORTION_DEFAULTEQBANDWIDTH;
-        return ret;
-    }()};
-    props = defprops;
+    props = EAXDISTORTIONPROPERTIES{
+        .flEdge = EAXDISTORTION_DEFAULTEDGE,
+        .lGain = EAXDISTORTION_DEFAULTGAIN,
+        .flLowPassCutOff = EAXDISTORTION_DEFAULTLOWPASSCUTOFF,
+        .flEQCenter = EAXDISTORTION_DEFAULTEQCENTER,
+        .flEQBandwidth = EAXDISTORTION_DEFAULTEQBANDWIDTH};
 }
 
 void EaxDistortionCommitter::Get(const EaxCall &call, const EAXDISTORTIONPROPERTIES &props)

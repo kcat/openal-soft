@@ -263,32 +263,30 @@ private:
     [[noreturn]] static void eax_fail_unknown_property_id();
     [[noreturn]] static void eax_fail_unknown_version();
 
-    // Gets a new value from EAX call,
-    // validates it,
-    // sets a dirty flag only if the new value differs form the old one,
-    // and assigns the new value.
-    template<typename TValidator, size_t DirtyBit, typename TProperties>
-    static void eax_fx_slot_set(const EaxCall& call, TProperties& dst,
-        std::bitset<eax_dirty_bit_count>& dirty_flags)
+    /* Gets a new value from EAX call, validates it, sets a dirty flag only if
+     * the new value differs form the old one, and assigns the new value.
+     */
+    template<typename TValidator>
+    void eax_fx_slot_set(const EaxCall &call, auto &dst, size_t dirty_bit)
     {
-        const auto &src = call.load<const TProperties>();
+        const auto &src = call.load<const std::remove_cvref_t<decltype(dst)>>();
         TValidator{}(src);
         if(dst != src)
-            dirty_flags.set(DirtyBit);
-        dst = src;
+        {
+            mEaxDf.set(dirty_bit);
+            dst = src;
+        }
     }
 
-    // Gets a new value from EAX call,
-    // validates it,
-    // sets a dirty flag without comparing the values,
-    // and assigns the new value.
-    template<typename TValidator, size_t DirtyBit, typename TProperties>
-    static void eax_fx_slot_set_dirty(const EaxCall& call, TProperties& dst,
-        std::bitset<eax_dirty_bit_count>& dirty_flags)
+    /* Gets a new value from EAX call, validates it, sets a dirty flag without
+     * comparing the values, and assigns the new value.
+     */
+    template<typename TValidator>
+    void eax_fx_slot_set_dirty(const EaxCall &call, auto &dst, size_t dirty_bit)
     {
-        const auto &src = call.load<const TProperties>();
+        const auto &src = call.load<const std::remove_cvref_t<decltype(dst)>>();
         TValidator{}(src);
-        dirty_flags.set(DirtyBit);
+        mEaxDf.set(dirty_bit);
         dst = src;
     }
 

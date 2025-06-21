@@ -9,6 +9,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <deque>
+#include <functional>
 #include <limits>
 #include <numbers>
 #include <span>
@@ -847,10 +848,8 @@ private:
     static void eax3_translate(const EAX30SOURCEPROPERTIES& src, Eax5Props& dst) noexcept;
     static void eax4_translate(const Eax4Props& src, Eax5Props& dst) noexcept;
 
-    static float eax_calculate_dst_occlusion_mb(
-        long src_occlusion_mb,
-        float path_ratio,
-        float lf_ratio) noexcept;
+    static auto eax_calculate_dst_occlusion_mb(long src_occlusion_mb, float path_ratio,
+        float lf_ratio) noexcept -> float;
 
     [[nodiscard]] auto eax_create_direct_filter_param() const noexcept -> EaxAlLowPassParam;
 
@@ -861,31 +860,27 @@ private:
     void eax_update_room_filters();
     void eax_commit_filters();
 
-    static void eax_copy_send_for_get(
-        const EAXSOURCEALLSENDPROPERTIES& src,
+    static void eax_copy_send_for_get(const EAXSOURCEALLSENDPROPERTIES& src,
         EAXSOURCESENDPROPERTIES& dst) noexcept
     {
         dst.guidReceivingFXSlotID = src.guidReceivingFXSlotID;
         dst.mSend = src.mSend;
     }
 
-    static void eax_copy_send_for_get(
-        const EAXSOURCEALLSENDPROPERTIES& src,
+    static void eax_copy_send_for_get(const EAXSOURCEALLSENDPROPERTIES& src,
         EAXSOURCEALLSENDPROPERTIES& dst) noexcept
     {
         dst = src;
     }
 
-    static void eax_copy_send_for_get(
-        const EAXSOURCEALLSENDPROPERTIES& src,
+    static void eax_copy_send_for_get(const EAXSOURCEALLSENDPROPERTIES& src,
         EAXSOURCEOCCLUSIONSENDPROPERTIES& dst) noexcept
     {
         dst.guidReceivingFXSlotID = src.guidReceivingFXSlotID;
         dst.mOcclusion = src.mOcclusion;
     }
 
-    static void eax_copy_send_for_get(
-        const EAXSOURCEALLSENDPROPERTIES& src,
+    static void eax_copy_send_for_get(const EAXSOURCEALLSENDPROPERTIES& src,
         EAXSOURCEEXCLUSIONSENDPROPERTIES& dst) noexcept
     {
         dst.guidReceivingFXSlotID = src.guidReceivingFXSlotID;
@@ -893,15 +888,13 @@ private:
     }
 
     template<typename TDstSend>
-    void eax_get_sends(const EaxCall& call, const EaxSends& src_sends)
+    void eax_get_sends(const EaxCall &call, const EaxSends &src_sends)
     {
         const auto dst_sends = call.as_span<TDstSend>(EAX_MAX_FXSLOTS);
-        const auto count = dst_sends.size();
-
-        for(auto i = decltype(count){}; i < count; ++i)
+        for(const auto i : std::views::iota(0_uz, dst_sends.size()))
         {
-            const auto& src_send = src_sends[i];
-            auto& dst_send = dst_sends[i];
+            const auto &src_send = src_sends[i];
+            auto &dst_send = dst_sends[i];
             eax_copy_send_for_get(src_send, dst_send);
         }
     }
@@ -942,31 +935,29 @@ private:
         dst.mExclusion = src.mExclusion;
     }
 
-    template<typename TIndexGetter, typename TSrcSend, std::invocable<TSrcSend> TValidator>
-    void eax_defer_sends(const EaxCall &call, EaxSends &dst_sends, TValidator&& validator)
+    template<std::invocable<const GUID&> TIndexGetter, typename TSrcSend>
+    void eax_defer_sends(const EaxCall &call, EaxSends &dst_sends,
+        std::invocable<TSrcSend> auto&& validator)
     {
-        static constexpr auto index_getter = TIndexGetter{};
         const auto src_sends = call.as_span<const TSrcSend>(EAX_MAX_FXSLOTS);
-        std::ranges::for_each(src_sends, std::forward<TValidator>(validator));
+        std::ranges::for_each(src_sends, std::forward<decltype(validator)>(validator));
 
         std::ranges::for_each(src_sends, [&dst_sends](const TSrcSend &src_send)
         {
-            const auto dst_index = index_getter(src_send.guidReceivingFXSlotID);
+            const auto dst_index = std::invoke(TIndexGetter{}, src_send.guidReceivingFXSlotID);
             eax_copy_send_for_set(src_send, dst_sends[dst_index]);
         });
     }
 
-    template<typename TSrcSend, std::invocable<TSrcSend> TValidator>
-    void eax4_defer_sends(const EaxCall &call, EaxSends &dst_sends, TValidator validator)
-    {
-        eax_defer_sends<Eax4SendIndexGetter, TSrcSend>(call, dst_sends, std::move(validator));
-    }
+    template<typename TSrcSend>
+    void eax4_defer_sends(const EaxCall &call, EaxSends &dst_sends,
+        std::invocable<TSrcSend> auto validator)
+    { eax_defer_sends<Eax4SendIndexGetter, TSrcSend>(call, dst_sends, std::move(validator)); }
 
-    template<typename TSrcSend, std::invocable<TSrcSend> TValidator>
-    void eax5_defer_sends(const EaxCall &call, EaxSends &dst_sends, TValidator validator)
-    {
-        eax_defer_sends<Eax5SendIndexGetter, TSrcSend>(call, dst_sends, std::move(validator));
-    }
+    template<typename TSrcSend>
+    void eax5_defer_sends(const EaxCall &call, EaxSends &dst_sends,
+        std::invocable<TSrcSend> auto validator)
+    { eax_defer_sends<Eax5SendIndexGetter, TSrcSend>(call, dst_sends, std::move(validator)); }
 
     template<std::invocable<const GUID&> TValidator>
     void eax_defer_active_fx_slot_id(const EaxCall &call, const std::span<GUID> dst_ids)
@@ -986,11 +977,12 @@ private:
         eax_defer_active_fx_slot_id<Eax5ActiveFxSlotIdValidator>(call, dst_ids);
     }
 
-    template<typename TProperty, std::invocable<TProperty> TValidator>
-    static void eax_defer(const EaxCall &call, TProperty &property, TValidator validator)
+    template<typename TProperty>
+    static void eax_defer(const EaxCall &call, TProperty &property,
+        std::invocable<TProperty> auto&& validator)
     {
         const auto& value = call.load<const TProperty>();
-        std::move(validator)(value);
+        std::forward<decltype(validator)>(validator)(value);
         property = value;
     }
 

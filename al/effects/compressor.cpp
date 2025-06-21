@@ -109,14 +109,14 @@ bool EaxCompressorCommitter::commit(const EAXAGCCOMPRESSORPROPERTIES &props)
         return false;
 
     mEaxProps = props;
-    mAlProps = CompressorProps{props.ulOnOff != 0};
+    mAlProps = CompressorProps{.OnOff = props.ulOnOff != 0};
 
     return true;
 }
 
 void EaxCompressorCommitter::SetDefaults(EaxEffectProps &props)
 {
-    props = EAXAGCCOMPRESSORPROPERTIES{EAXAGCCOMPRESSOR_DEFAULTONOFF};
+    props = EAXAGCCOMPRESSORPROPERTIES{.ulOnOff = EAXAGCCOMPRESSOR_DEFAULTONOFF};
 }
 
 void EaxCompressorCommitter::Get(const EaxCall &call, const EAXAGCCOMPRESSORPROPERTIES &props)

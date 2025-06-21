@@ -316,7 +316,7 @@ struct EaxChorusTraits {
     static constexpr auto efx_default_feedback() { return AL_CHORUS_DEFAULT_FEEDBACK; }
     static constexpr auto efx_default_delay() { return AL_CHORUS_DEFAULT_DELAY; }
 
-    static ChorusWaveform eax_waveform(unsigned long type)
+    static constexpr auto eax_waveform(unsigned long type) -> ChorusWaveform
     {
         if(type == EAX_CHORUS_SINUSOID) return ChorusWaveform::Sinusoid;
         if(type == EAX_CHORUS_TRIANGLE) return ChorusWaveform::Triangle;
@@ -381,7 +381,7 @@ struct EaxFlangerTraits {
     static constexpr auto efx_default_feedback() { return AL_FLANGER_DEFAULT_FEEDBACK; }
     static constexpr auto efx_default_delay() { return AL_FLANGER_DEFAULT_DELAY; }
 
-    static ChorusWaveform eax_waveform(unsigned long type)
+    static constexpr auto eax_waveform(unsigned long type) -> ChorusWaveform
     {
         if(type == EAX_FLANGER_SINUSOID) return ChorusWaveform::Sinusoid;
         if(type == EAX_FLANGER_TRIANGLE) return ChorusWaveform::Triangle;
@@ -477,13 +477,13 @@ struct ChorusFlangerEffect {
 public:
     static void SetDefaults(EaxEffectProps &props)
     {
-        auto&& all = props.emplace<EaxProps>();
-        all.ulWaveform = Traits::eax_default_waveform();
-        all.lPhase = Traits::eax_default_phase();
-        all.flRate = Traits::eax_default_rate();
-        all.flDepth = Traits::eax_default_depth();
-        all.flFeedback = Traits::eax_default_feedback();
-        all.flDelay = Traits::eax_default_delay();
+        props = EaxProps{
+            .ulWaveform = Traits::eax_default_waveform(),
+            .lPhase = Traits::eax_default_phase(),
+            .flRate = Traits::eax_default_rate(),
+            .flDepth = Traits::eax_default_depth(),
+            .flFeedback = Traits::eax_default_feedback(),
+            .flDelay = Traits::eax_default_delay()};
     }
 
 

@@ -1264,20 +1264,20 @@ bool ALeffectslot::eax4_fx_slot_set(const EaxCall& call)
         break;
     case EAXFXSLOT_LOADEFFECT:
         eax4_fx_slot_ensure_unlocked();
-        eax_fx_slot_set_dirty<Eax4GuidLoadEffectValidator, eax_load_effect_dirty_bit>(call,
-            dst.guidLoadEffect, mEaxDf);
+        eax_fx_slot_set_dirty<Eax4GuidLoadEffectValidator>(call, dst.guidLoadEffect,
+            eax_load_effect_dirty_bit);
         if(mEaxDf.test(eax_load_effect_dirty_bit))
             eax_fx_slot_load_effect(4, eax_get_efx_effect_type(dst.guidLoadEffect));
         break;
     case EAXFXSLOT_VOLUME:
-        eax_fx_slot_set<Eax4VolumeValidator, eax_volume_dirty_bit>(call, dst.lVolume, mEaxDf);
+        eax_fx_slot_set<Eax4VolumeValidator>(call, dst.lVolume, eax_volume_dirty_bit);
         break;
     case EAXFXSLOT_LOCK:
         eax4_fx_slot_ensure_unlocked();
-        eax_fx_slot_set<Eax4LockValidator, eax_lock_dirty_bit>(call, dst.lLock, mEaxDf);
+        eax_fx_slot_set<Eax4LockValidator>(call, dst.lLock, eax_lock_dirty_bit);
         break;
     case EAXFXSLOT_FLAGS:
-        eax_fx_slot_set<Eax4FlagsValidator, eax_flags_dirty_bit>(call, dst.ulFlags, mEaxDf);
+        eax_fx_slot_set<Eax4FlagsValidator>(call, dst.ulFlags, eax_flags_dirty_bit);
         break;
     default:
         eax_fail_unknown_property_id();
@@ -1301,27 +1301,26 @@ bool ALeffectslot::eax5_fx_slot_set(const EaxCall& call)
             eax_fx_slot_load_effect(5, eax_get_efx_effect_type(dst.guidLoadEffect));
         break;
     case EAXFXSLOT_LOADEFFECT:
-        eax_fx_slot_set_dirty<Eax4GuidLoadEffectValidator, eax_load_effect_dirty_bit>(call,
-            dst.guidLoadEffect, mEaxDf);
+        eax_fx_slot_set_dirty<Eax4GuidLoadEffectValidator>(call, dst.guidLoadEffect,
+            eax_load_effect_dirty_bit);
         if(mEaxDf.test(eax_load_effect_dirty_bit))
             eax_fx_slot_load_effect(5, eax_get_efx_effect_type(dst.guidLoadEffect));
         break;
     case EAXFXSLOT_VOLUME:
-        eax_fx_slot_set<Eax4VolumeValidator, eax_volume_dirty_bit>(call, dst.lVolume, mEaxDf);
+        eax_fx_slot_set<Eax4VolumeValidator>(call, dst.lVolume, eax_volume_dirty_bit);
         break;
     case EAXFXSLOT_LOCK:
-        eax_fx_slot_set<Eax4LockValidator, eax_lock_dirty_bit>(call, dst.lLock, mEaxDf);
+        eax_fx_slot_set<Eax4LockValidator>(call, dst.lLock, eax_lock_dirty_bit);
         break;
     case EAXFXSLOT_FLAGS:
-        eax_fx_slot_set<Eax5FlagsValidator, eax_flags_dirty_bit>(call, dst.ulFlags, mEaxDf);
+        eax_fx_slot_set<Eax5FlagsValidator>(call, dst.ulFlags, eax_flags_dirty_bit);
         break;
     case EAXFXSLOT_OCCLUSION:
-        eax_fx_slot_set<Eax5OcclusionValidator, eax_occlusion_dirty_bit>(call, dst.lOcclusion,
-            mEaxDf);
+        eax_fx_slot_set<Eax5OcclusionValidator>(call, dst.lOcclusion, eax_occlusion_dirty_bit);
         break;
     case EAXFXSLOT_OCCLUSIONLFRATIO:
-        eax_fx_slot_set<Eax5OcclusionLfRatioValidator, eax_occlusion_lf_ratio_dirty_bit>(call,
-            dst.flOcclusionLFRatio, mEaxDf);
+        eax_fx_slot_set<Eax5OcclusionLfRatioValidator>(call, dst.flOcclusionLFRatio,
+            eax_occlusion_lf_ratio_dirty_bit);
         break;
     default:
         eax_fail_unknown_property_id();

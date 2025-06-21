@@ -173,30 +173,22 @@ bool EaxAutowahCommitter::commit(const EAXAUTOWAHPROPERTIES &props)
         return false;
 
     mEaxProps = props;
-    mAlProps = [&]{
-        AutowahProps ret{};
-        ret.AttackTime = props.flAttackTime;
-        ret.ReleaseTime = props.flReleaseTime;
-        ret.Resonance = level_mb_to_gain(static_cast<float>(props.lResonance));
-        ret.PeakGain = level_mb_to_gain(static_cast<float>(props.lPeakLevel));
-        return ret;
-    }();
+    mAlProps = AutowahProps{
+        .AttackTime = props.flAttackTime,
+        .ReleaseTime = props.flReleaseTime,
+        .Resonance = level_mb_to_gain(static_cast<float>(props.lResonance)),
+        .PeakGain = level_mb_to_gain(static_cast<float>(props.lPeakLevel))};
 
     return true;
 }
 
 void EaxAutowahCommitter::SetDefaults(EaxEffectProps &props)
 {
-    static constexpr EAXAUTOWAHPROPERTIES defprops{[]
-    {
-        EAXAUTOWAHPROPERTIES ret{};
-        ret.flAttackTime = EAXAUTOWAH_DEFAULTATTACKTIME;
-        ret.flReleaseTime = EAXAUTOWAH_DEFAULTRELEASETIME;
-        ret.lResonance = EAXAUTOWAH_DEFAULTRESONANCE;
-        ret.lPeakLevel = EAXAUTOWAH_DEFAULTPEAKLEVEL;
-        return ret;
-    }()};
-    props = defprops;
+    props = EAXAUTOWAHPROPERTIES{
+        .flAttackTime = EAXAUTOWAH_DEFAULTATTACKTIME,
+        .flReleaseTime = EAXAUTOWAH_DEFAULTRELEASETIME,
+        .lResonance = EAXAUTOWAH_DEFAULTRESONANCE,
+        .lPeakLevel = EAXAUTOWAH_DEFAULTPEAKLEVEL};
 }
 
 void EaxAutowahCommitter::Get(const EaxCall &call, const EAXAUTOWAHPROPERTIES &props)

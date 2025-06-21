@@ -289,42 +289,34 @@ bool EaxEqualizerCommitter::commit(const EAXEQUALIZERPROPERTIES &props)
         return false;
 
     mEaxProps = props;
-    mAlProps = [&]{
-        EqualizerProps ret{};
-        ret.LowGain = level_mb_to_gain(static_cast<float>(props.lLowGain));
-        ret.LowCutoff = props.flLowCutOff;
-        ret.Mid1Gain = level_mb_to_gain(static_cast<float>(props.lMid1Gain));
-        ret.Mid1Center = props.flMid1Center;
-        ret.Mid1Width = props.flMid1Width;
-        ret.Mid2Gain = level_mb_to_gain(static_cast<float>(props.lMid2Gain));
-        ret.Mid2Center = props.flMid2Center;
-        ret.Mid2Width = props.flMid2Width;
-        ret.HighGain = level_mb_to_gain(static_cast<float>(props.lHighGain));
-        ret.HighCutoff = props.flHighCutOff;
-        return ret;
-    }();
+    mAlProps = EqualizerProps{
+        .LowCutoff = props.flLowCutOff,
+        .LowGain = level_mb_to_gain(static_cast<float>(props.lLowGain)),
+        .Mid1Center = props.flMid1Center,
+        .Mid1Gain = level_mb_to_gain(static_cast<float>(props.lMid1Gain)),
+        .Mid1Width = props.flMid1Width,
+        .Mid2Center = props.flMid2Center,
+        .Mid2Gain = level_mb_to_gain(static_cast<float>(props.lMid2Gain)),
+        .Mid2Width = props.flMid2Width,
+        .HighCutoff = props.flHighCutOff,
+        .HighGain = level_mb_to_gain(static_cast<float>(props.lHighGain))};
 
     return true;
 }
 
 void EaxEqualizerCommitter::SetDefaults(EaxEffectProps &props)
 {
-    static constexpr EAXEQUALIZERPROPERTIES defprops{[]
-    {
-        EAXEQUALIZERPROPERTIES ret{};
-        ret.lLowGain = EAXEQUALIZER_DEFAULTLOWGAIN;
-        ret.flLowCutOff = EAXEQUALIZER_DEFAULTLOWCUTOFF;
-        ret.lMid1Gain = EAXEQUALIZER_DEFAULTMID1GAIN;
-        ret.flMid1Center = EAXEQUALIZER_DEFAULTMID1CENTER;
-        ret.flMid1Width = EAXEQUALIZER_DEFAULTMID1WIDTH;
-        ret.lMid2Gain = EAXEQUALIZER_DEFAULTMID2GAIN;
-        ret.flMid2Center = EAXEQUALIZER_DEFAULTMID2CENTER;
-        ret.flMid2Width = EAXEQUALIZER_DEFAULTMID2WIDTH;
-        ret.lHighGain = EAXEQUALIZER_DEFAULTHIGHGAIN;
-        ret.flHighCutOff = EAXEQUALIZER_DEFAULTHIGHCUTOFF;
-        return ret;
-    }()};
-    props = defprops;
+    props = EAXEQUALIZERPROPERTIES{
+        .lLowGain = EAXEQUALIZER_DEFAULTLOWGAIN,
+        .flLowCutOff = EAXEQUALIZER_DEFAULTLOWCUTOFF,
+        .lMid1Gain = EAXEQUALIZER_DEFAULTMID1GAIN,
+        .flMid1Center = EAXEQUALIZER_DEFAULTMID1CENTER,
+        .flMid1Width = EAXEQUALIZER_DEFAULTMID1WIDTH,
+        .lMid2Gain = EAXEQUALIZER_DEFAULTMID2GAIN,
+        .flMid2Center = EAXEQUALIZER_DEFAULTMID2CENTER,
+        .flMid2Width = EAXEQUALIZER_DEFAULTMID2WIDTH,
+        .lHighGain = EAXEQUALIZER_DEFAULTHIGHGAIN,
+        .flHighCutOff = EAXEQUALIZER_DEFAULTHIGHCUTOFF};
 }
 
 void EaxEqualizerCommitter::Get(const EaxCall &call, const EAXEQUALIZERPROPERTIES &props)

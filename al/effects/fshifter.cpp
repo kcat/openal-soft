@@ -200,39 +200,32 @@ bool EaxFrequencyShifterCommitter::commit(const EAXFREQUENCYSHIFTERPROPERTIES &p
     if(auto *cur = std::get_if<EAXFREQUENCYSHIFTERPROPERTIES>(&mEaxProps); cur && *cur == props)
         return false;
 
-    mEaxProps = props;
-
-    auto get_direction = [](unsigned long dir) noexcept
+    static constexpr auto get_direction = [](unsigned long dir) noexcept
     {
-        if(dir == EAX_FREQUENCYSHIFTER_DOWN)
-            return FShifterDirection::Down;
-        if(dir == EAX_FREQUENCYSHIFTER_UP)
-            return FShifterDirection::Up;
+        switch(dir)
+        {
+        case EAX_FREQUENCYSHIFTER_DOWN: return FShifterDirection::Down;
+        case EAX_FREQUENCYSHIFTER_UP: return FShifterDirection::Up;
+        default: break;
+        }
         return FShifterDirection::Off;
     };
 
-    mAlProps = [&]{
-        FshifterProps ret{};
-        ret.Frequency = props.flFrequency;
-        ret.LeftDirection = get_direction(props.ulLeftDirection);
-        ret.RightDirection = get_direction(props.ulRightDirection);
-        return ret;
-    }();
+    mEaxProps = props;
+    mAlProps = FshifterProps{
+        .Frequency = props.flFrequency,
+        .LeftDirection = get_direction(props.ulLeftDirection),
+        .RightDirection = get_direction(props.ulRightDirection)};
 
     return true;
 }
 
 void EaxFrequencyShifterCommitter::SetDefaults(EaxEffectProps &props)
 {
-    static constexpr EAXFREQUENCYSHIFTERPROPERTIES defprops{[]
-    {
-        EAXFREQUENCYSHIFTERPROPERTIES ret{};
-        ret.flFrequency = EAXFREQUENCYSHIFTER_DEFAULTFREQUENCY;
-        ret.ulLeftDirection = EAXFREQUENCYSHIFTER_DEFAULTLEFTDIRECTION;
-        ret.ulRightDirection = EAXFREQUENCYSHIFTER_DEFAULTRIGHTDIRECTION;
-        return ret;
-    }()};
-    props = defprops;
+    props = EAXFREQUENCYSHIFTERPROPERTIES{
+        .flFrequency = EAXFREQUENCYSHIFTER_DEFAULTFREQUENCY,
+        .ulLeftDirection = EAXFREQUENCYSHIFTER_DEFAULTLEFTDIRECTION,
+        .ulRightDirection = EAXFREQUENCYSHIFTER_DEFAULTRIGHTDIRECTION};
 }
 
 void EaxFrequencyShifterCommitter::Get(const EaxCall &call, const EAXFREQUENCYSHIFTERPROPERTIES &props)

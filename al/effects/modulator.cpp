@@ -242,10 +242,10 @@ void EaxModulatorCommitter::Get(const EaxCall &call, const EAXRINGMODULATORPROPE
     switch(call.get_property_id())
     {
     case EAXRINGMODULATOR_NONE: break;
-    case EAXRINGMODULATOR_ALLPARAMETERS: call.set_value<Exception>(props); break;
-    case EAXRINGMODULATOR_FREQUENCY: call.set_value<Exception>(props.flFrequency); break;
-    case EAXRINGMODULATOR_HIGHPASSCUTOFF: call.set_value<Exception>(props.flHighPassCutOff); break;
-    case EAXRINGMODULATOR_WAVEFORM: call.set_value<Exception>(props.ulWaveform); break;
+    case EAXRINGMODULATOR_ALLPARAMETERS: call.store(props); break;
+    case EAXRINGMODULATOR_FREQUENCY: call.store(props.flFrequency); break;
+    case EAXRINGMODULATOR_HIGHPASSCUTOFF: call.store(props.flHighPassCutOff); break;
+    case EAXRINGMODULATOR_WAVEFORM: call.store(props.ulWaveform); break;
     default: fail_unknown_property_id();
     }
 }

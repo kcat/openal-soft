@@ -332,17 +332,17 @@ void EaxEqualizerCommitter::Get(const EaxCall &call, const EAXEQUALIZERPROPERTIE
     switch(call.get_property_id())
     {
     case EAXEQUALIZER_NONE: break;
-    case EAXEQUALIZER_ALLPARAMETERS: call.set_value<Exception>(props); break;
-    case EAXEQUALIZER_LOWGAIN: call.set_value<Exception>(props.lLowGain); break;
-    case EAXEQUALIZER_LOWCUTOFF: call.set_value<Exception>(props.flLowCutOff); break;
-    case EAXEQUALIZER_MID1GAIN: call.set_value<Exception>(props.lMid1Gain); break;
-    case EAXEQUALIZER_MID1CENTER: call.set_value<Exception>(props.flMid1Center); break;
-    case EAXEQUALIZER_MID1WIDTH: call.set_value<Exception>(props.flMid1Width); break;
-    case EAXEQUALIZER_MID2GAIN: call.set_value<Exception>(props.lMid2Gain); break;
-    case EAXEQUALIZER_MID2CENTER: call.set_value<Exception>(props.flMid2Center); break;
-    case EAXEQUALIZER_MID2WIDTH: call.set_value<Exception>(props.flMid2Width); break;
-    case EAXEQUALIZER_HIGHGAIN: call.set_value<Exception>(props.lHighGain); break;
-    case EAXEQUALIZER_HIGHCUTOFF: call.set_value<Exception>(props.flHighCutOff); break;
+    case EAXEQUALIZER_ALLPARAMETERS: call.store(props); break;
+    case EAXEQUALIZER_LOWGAIN: call.store(props.lLowGain); break;
+    case EAXEQUALIZER_LOWCUTOFF: call.store(props.flLowCutOff); break;
+    case EAXEQUALIZER_MID1GAIN: call.store(props.lMid1Gain); break;
+    case EAXEQUALIZER_MID1CENTER: call.store(props.flMid1Center); break;
+    case EAXEQUALIZER_MID1WIDTH: call.store(props.flMid1Width); break;
+    case EAXEQUALIZER_MID2GAIN: call.store(props.lMid2Gain); break;
+    case EAXEQUALIZER_MID2CENTER: call.store(props.flMid2Center); break;
+    case EAXEQUALIZER_MID2WIDTH: call.store(props.flMid2Width); break;
+    case EAXEQUALIZER_HIGHGAIN: call.store(props.lHighGain); break;
+    case EAXEQUALIZER_HIGHCUTOFF: call.store(props.flHighCutOff); break;
     default: fail_unknown_property_id();
     }
 }

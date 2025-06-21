@@ -271,7 +271,7 @@ private:
     static void eax_fx_slot_set(const EaxCall& call, TProperties& dst,
         std::bitset<eax_dirty_bit_count>& dirty_flags)
     {
-        const auto& src = call.get_value<Exception, const TProperties>();
+        const auto &src = call.load<const TProperties>();
         TValidator{}(src);
         if(dst != src)
             dirty_flags.set(DirtyBit);
@@ -286,7 +286,7 @@ private:
     static void eax_fx_slot_set_dirty(const EaxCall& call, TProperties& dst,
         std::bitset<eax_dirty_bit_count>& dirty_flags)
     {
-        const auto& src = call.get_value<Exception, const TProperties>();
+        const auto &src = call.load<const TProperties>();
         TValidator{}(src);
         dirty_flags.set(DirtyBit);
         dst = src;

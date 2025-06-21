@@ -491,31 +491,15 @@ public:
     {
         switch(call.get_property_id())
         {
-        case Traits::eax_none_param_id():
-            break;
-        case Traits::eax_allparameters_param_id():
-            call.template set_value<Exception>(all);
-            break;
-        case Traits::eax_waveform_param_id():
-            call.template set_value<Exception>(all.ulWaveform);
-            break;
-        case Traits::eax_phase_param_id():
-            call.template set_value<Exception>(all.lPhase);
-            break;
-        case Traits::eax_rate_param_id():
-            call.template set_value<Exception>(all.flRate);
-            break;
-        case Traits::eax_depth_param_id():
-            call.template set_value<Exception>(all.flDepth);
-            break;
-        case Traits::eax_feedback_param_id():
-            call.template set_value<Exception>(all.flFeedback);
-            break;
-        case Traits::eax_delay_param_id():
-            call.template set_value<Exception>(all.flDelay);
-            break;
-        default:
-            Committer::fail_unknown_property_id();
+        case Traits::eax_none_param_id(): break;
+        case Traits::eax_allparameters_param_id(): call.store(all); break;
+        case Traits::eax_waveform_param_id(): call.store(all.ulWaveform); break;
+        case Traits::eax_phase_param_id(): call.store(all.lPhase); break;
+        case Traits::eax_rate_param_id(): call.store(all.flRate); break;
+        case Traits::eax_depth_param_id(): call.store(all.flDepth); break;
+        case Traits::eax_feedback_param_id(): call.store(all.flFeedback); break;
+        case Traits::eax_delay_param_id(): call.store(all.flDelay); break;
+        default: Committer::fail_unknown_property_id();
         }
     }
 

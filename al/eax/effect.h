@@ -73,7 +73,7 @@ struct EaxReverbCommitter {
     template<typename TValidator, typename TProperty>
     static void defer(const EaxCall& call, TProperty& property)
     {
-        const auto& value = call.get_value<Exception, const TProperty>();
+        const auto &value = call.load<const TProperty>();
         TValidator{}(value);
         property = value;
     }
@@ -81,7 +81,7 @@ struct EaxReverbCommitter {
     template<typename TValidator, typename TDeferrer, typename TProperties, typename TProperty>
     static void defer(const EaxCall& call, TProperties& properties, TProperty&)
     {
-        const auto& value = call.get_value<Exception, const TProperty>();
+        const auto &value = call.load<const TProperty>();
         TValidator{}(value);
         TDeferrer{}(properties, value);
     }
@@ -89,9 +89,9 @@ struct EaxReverbCommitter {
     template<typename TValidator, typename TProperty>
     static void defer3(const EaxCall& call, EAXREVERBPROPERTIES& properties, TProperty& property)
     {
-        const auto& value = call.get_value<Exception, const TProperty>();
+        const auto& value = call.load<const TProperty>();
         TValidator{}(value);
-        if (value == property)
+        if(value == property)
             return;
         property = value;
         properties.ulEnvironment = EAX_ENVIRONMENT_UNDEFINED;
@@ -129,7 +129,7 @@ struct EaxCommitter {
     template<typename TValidator, typename TProperty>
     static void defer(const EaxCall& call, TProperty& property)
     {
-        const auto& value = call.get_value<Exception, const TProperty>();
+        const auto &value = call.load<const TProperty>();
         TValidator{}(value);
         property = value;
     }

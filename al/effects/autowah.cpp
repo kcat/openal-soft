@@ -204,11 +204,11 @@ void EaxAutowahCommitter::Get(const EaxCall &call, const EAXAUTOWAHPROPERTIES &p
     switch(call.get_property_id())
     {
     case EAXAUTOWAH_NONE: break;
-    case EAXAUTOWAH_ALLPARAMETERS: call.set_value<Exception>(props); break;
-    case EAXAUTOWAH_ATTACKTIME: call.set_value<Exception>(props.flAttackTime); break;
-    case EAXAUTOWAH_RELEASETIME: call.set_value<Exception>(props.flReleaseTime); break;
-    case EAXAUTOWAH_RESONANCE: call.set_value<Exception>(props.lResonance); break;
-    case EAXAUTOWAH_PEAKLEVEL: call.set_value<Exception>(props.lPeakLevel); break;
+    case EAXAUTOWAH_ALLPARAMETERS: call.store(props); break;
+    case EAXAUTOWAH_ATTACKTIME: call.store(props.flAttackTime); break;
+    case EAXAUTOWAH_RELEASETIME: call.store(props.flReleaseTime); break;
+    case EAXAUTOWAH_RESONANCE: call.store(props.lResonance); break;
+    case EAXAUTOWAH_PEAKLEVEL: call.store(props.lPeakLevel); break;
     default: fail_unknown_property_id();
     }
 }

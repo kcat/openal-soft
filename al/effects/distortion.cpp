@@ -224,12 +224,12 @@ void EaxDistortionCommitter::Get(const EaxCall &call, const EAXDISTORTIONPROPERT
     switch(call.get_property_id())
     {
     case EAXDISTORTION_NONE: break;
-    case EAXDISTORTION_ALLPARAMETERS: call.set_value<Exception>(props); break;
-    case EAXDISTORTION_EDGE: call.set_value<Exception>(props.flEdge); break;
-    case EAXDISTORTION_GAIN: call.set_value<Exception>(props.lGain); break;
-    case EAXDISTORTION_LOWPASSCUTOFF: call.set_value<Exception>(props.flLowPassCutOff); break;
-    case EAXDISTORTION_EQCENTER: call.set_value<Exception>(props.flEQCenter); break;
-    case EAXDISTORTION_EQBANDWIDTH: call.set_value<Exception>(props.flEQBandwidth); break;
+    case EAXDISTORTION_ALLPARAMETERS: call.store(props); break;
+    case EAXDISTORTION_EDGE: call.store(props.flEdge); break;
+    case EAXDISTORTION_GAIN: call.store(props.lGain); break;
+    case EAXDISTORTION_LOWPASSCUTOFF: call.store(props.flLowPassCutOff); break;
+    case EAXDISTORTION_EQCENTER: call.store(props.flEQCenter); break;
+    case EAXDISTORTION_EQBANDWIDTH: call.store(props.flEQBandwidth); break;
     default: fail_unknown_property_id();
     }
 }

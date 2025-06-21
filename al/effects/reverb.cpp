@@ -1116,11 +1116,11 @@ void EaxReverbCommitter::Get(const EaxCall &call, const EAX_REVERBPROPERTIES &pr
 {
     switch(call.get_property_id())
     {
-    case DSPROPERTY_EAX_ALL: call.set_value<Exception>(props); break;
-    case DSPROPERTY_EAX_ENVIRONMENT: call.set_value<Exception>(props.environment); break;
-    case DSPROPERTY_EAX_VOLUME: call.set_value<Exception>(props.fVolume); break;
-    case DSPROPERTY_EAX_DECAYTIME: call.set_value<Exception>(props.fDecayTime_sec); break;
-    case DSPROPERTY_EAX_DAMPING: call.set_value<Exception>(props.fDamping); break;
+    case DSPROPERTY_EAX_ALL: call.store(props); break;
+    case DSPROPERTY_EAX_ENVIRONMENT: call.store(props.environment); break;
+    case DSPROPERTY_EAX_VOLUME: call.store(props.fVolume); break;
+    case DSPROPERTY_EAX_DECAYTIME: call.store(props.fDecayTime_sec); break;
+    case DSPROPERTY_EAX_DAMPING: call.store(props.fDamping); break;
     default: fail_unknown_property_id();
     }
 }
@@ -1130,21 +1130,21 @@ void EaxReverbCommitter::Get(const EaxCall &call, const EAX20LISTENERPROPERTIES 
     switch(call.get_property_id())
     {
     case DSPROPERTY_EAX20LISTENER_NONE: break;
-    case DSPROPERTY_EAX20LISTENER_ALLPARAMETERS: call.set_value<Exception>(props); break;
-    case DSPROPERTY_EAX20LISTENER_ROOM: call.set_value<Exception>(props.lRoom); break;
-    case DSPROPERTY_EAX20LISTENER_ROOMHF: call.set_value<Exception>(props.lRoomHF); break;
-    case DSPROPERTY_EAX20LISTENER_ROOMROLLOFFFACTOR: call.set_value<Exception>(props.flRoomRolloffFactor); break;
-    case DSPROPERTY_EAX20LISTENER_DECAYTIME: call.set_value<Exception>(props.flDecayTime); break;
-    case DSPROPERTY_EAX20LISTENER_DECAYHFRATIO: call.set_value<Exception>(props.flDecayHFRatio); break;
-    case DSPROPERTY_EAX20LISTENER_REFLECTIONS: call.set_value<Exception>(props.lReflections); break;
-    case DSPROPERTY_EAX20LISTENER_REFLECTIONSDELAY: call.set_value<Exception>(props.flReflectionsDelay); break;
-    case DSPROPERTY_EAX20LISTENER_REVERB: call.set_value<Exception>(props.lReverb); break;
-    case DSPROPERTY_EAX20LISTENER_REVERBDELAY: call.set_value<Exception>(props.flReverbDelay); break;
-    case DSPROPERTY_EAX20LISTENER_ENVIRONMENT: call.set_value<Exception>(props.dwEnvironment); break;
-    case DSPROPERTY_EAX20LISTENER_ENVIRONMENTSIZE: call.set_value<Exception>(props.flEnvironmentSize); break;
-    case DSPROPERTY_EAX20LISTENER_ENVIRONMENTDIFFUSION: call.set_value<Exception>(props.flEnvironmentDiffusion); break;
-    case DSPROPERTY_EAX20LISTENER_AIRABSORPTIONHF: call.set_value<Exception>(props.flAirAbsorptionHF); break;
-    case DSPROPERTY_EAX20LISTENER_FLAGS: call.set_value<Exception>(props.dwFlags); break;
+    case DSPROPERTY_EAX20LISTENER_ALLPARAMETERS: call.store(props); break;
+    case DSPROPERTY_EAX20LISTENER_ROOM: call.store(props.lRoom); break;
+    case DSPROPERTY_EAX20LISTENER_ROOMHF: call.store(props.lRoomHF); break;
+    case DSPROPERTY_EAX20LISTENER_ROOMROLLOFFFACTOR: call.store(props.flRoomRolloffFactor); break;
+    case DSPROPERTY_EAX20LISTENER_DECAYTIME: call.store(props.flDecayTime); break;
+    case DSPROPERTY_EAX20LISTENER_DECAYHFRATIO: call.store(props.flDecayHFRatio); break;
+    case DSPROPERTY_EAX20LISTENER_REFLECTIONS: call.store(props.lReflections); break;
+    case DSPROPERTY_EAX20LISTENER_REFLECTIONSDELAY: call.store(props.flReflectionsDelay); break;
+    case DSPROPERTY_EAX20LISTENER_REVERB: call.store(props.lReverb); break;
+    case DSPROPERTY_EAX20LISTENER_REVERBDELAY: call.store(props.flReverbDelay); break;
+    case DSPROPERTY_EAX20LISTENER_ENVIRONMENT: call.store(props.dwEnvironment); break;
+    case DSPROPERTY_EAX20LISTENER_ENVIRONMENTSIZE: call.store(props.flEnvironmentSize); break;
+    case DSPROPERTY_EAX20LISTENER_ENVIRONMENTDIFFUSION: call.store(props.flEnvironmentDiffusion); break;
+    case DSPROPERTY_EAX20LISTENER_AIRABSORPTIONHF: call.store(props.flAirAbsorptionHF); break;
+    case DSPROPERTY_EAX20LISTENER_FLAGS: call.store(props.dwFlags); break;
     default: fail_unknown_property_id();
     }
 }
@@ -1154,31 +1154,31 @@ void EaxReverbCommitter::Get(const EaxCall &call, const EAXREVERBPROPERTIES &pro
     switch(call.get_property_id())
     {
     case EAXREVERB_NONE: break;
-    case EAXREVERB_ALLPARAMETERS: call.set_value<Exception>(props); break;
-    case EAXREVERB_ENVIRONMENT: call.set_value<Exception>(props.ulEnvironment); break;
-    case EAXREVERB_ENVIRONMENTSIZE: call.set_value<Exception>(props.flEnvironmentSize); break;
-    case EAXREVERB_ENVIRONMENTDIFFUSION: call.set_value<Exception>(props.flEnvironmentDiffusion); break;
-    case EAXREVERB_ROOM: call.set_value<Exception>(props.lRoom); break;
-    case EAXREVERB_ROOMHF: call.set_value<Exception>(props.lRoomHF); break;
-    case EAXREVERB_ROOMLF: call.set_value<Exception>(props.lRoomLF); break;
-    case EAXREVERB_DECAYTIME: call.set_value<Exception>(props.flDecayTime); break;
-    case EAXREVERB_DECAYHFRATIO: call.set_value<Exception>(props.flDecayHFRatio); break;
-    case EAXREVERB_DECAYLFRATIO: call.set_value<Exception>(props.flDecayLFRatio); break;
-    case EAXREVERB_REFLECTIONS: call.set_value<Exception>(props.lReflections); break;
-    case EAXREVERB_REFLECTIONSDELAY: call.set_value<Exception>(props.flReflectionsDelay); break;
-    case EAXREVERB_REFLECTIONSPAN: call.set_value<Exception>(props.vReflectionsPan); break;
-    case EAXREVERB_REVERB: call.set_value<Exception>(props.lReverb); break;
-    case EAXREVERB_REVERBDELAY: call.set_value<Exception>(props.flReverbDelay); break;
-    case EAXREVERB_REVERBPAN: call.set_value<Exception>(props.vReverbPan); break;
-    case EAXREVERB_ECHOTIME: call.set_value<Exception>(props.flEchoTime); break;
-    case EAXREVERB_ECHODEPTH: call.set_value<Exception>(props.flEchoDepth); break;
-    case EAXREVERB_MODULATIONTIME: call.set_value<Exception>(props.flModulationTime); break;
-    case EAXREVERB_MODULATIONDEPTH: call.set_value<Exception>(props.flModulationDepth); break;
-    case EAXREVERB_AIRABSORPTIONHF: call.set_value<Exception>(props.flAirAbsorptionHF); break;
-    case EAXREVERB_HFREFERENCE: call.set_value<Exception>(props.flHFReference); break;
-    case EAXREVERB_LFREFERENCE: call.set_value<Exception>(props.flLFReference); break;
-    case EAXREVERB_ROOMROLLOFFFACTOR: call.set_value<Exception>(props.flRoomRolloffFactor); break;
-    case EAXREVERB_FLAGS: call.set_value<Exception>(props.ulFlags); break;
+    case EAXREVERB_ALLPARAMETERS: call.store(props); break;
+    case EAXREVERB_ENVIRONMENT: call.store(props.ulEnvironment); break;
+    case EAXREVERB_ENVIRONMENTSIZE: call.store(props.flEnvironmentSize); break;
+    case EAXREVERB_ENVIRONMENTDIFFUSION: call.store(props.flEnvironmentDiffusion); break;
+    case EAXREVERB_ROOM: call.store(props.lRoom); break;
+    case EAXREVERB_ROOMHF: call.store(props.lRoomHF); break;
+    case EAXREVERB_ROOMLF: call.store(props.lRoomLF); break;
+    case EAXREVERB_DECAYTIME: call.store(props.flDecayTime); break;
+    case EAXREVERB_DECAYHFRATIO: call.store(props.flDecayHFRatio); break;
+    case EAXREVERB_DECAYLFRATIO: call.store(props.flDecayLFRatio); break;
+    case EAXREVERB_REFLECTIONS: call.store(props.lReflections); break;
+    case EAXREVERB_REFLECTIONSDELAY: call.store(props.flReflectionsDelay); break;
+    case EAXREVERB_REFLECTIONSPAN: call.store(props.vReflectionsPan); break;
+    case EAXREVERB_REVERB: call.store(props.lReverb); break;
+    case EAXREVERB_REVERBDELAY: call.store(props.flReverbDelay); break;
+    case EAXREVERB_REVERBPAN: call.store(props.vReverbPan); break;
+    case EAXREVERB_ECHOTIME: call.store(props.flEchoTime); break;
+    case EAXREVERB_ECHODEPTH: call.store(props.flEchoDepth); break;
+    case EAXREVERB_MODULATIONTIME: call.store(props.flModulationTime); break;
+    case EAXREVERB_MODULATIONDEPTH: call.store(props.flModulationDepth); break;
+    case EAXREVERB_AIRABSORPTIONHF: call.store(props.flAirAbsorptionHF); break;
+    case EAXREVERB_HFREFERENCE: call.store(props.flHFReference); break;
+    case EAXREVERB_LFREFERENCE: call.store(props.flLFReference); break;
+    case EAXREVERB_ROOMROLLOFFFACTOR: call.store(props.flRoomRolloffFactor); break;
+    case EAXREVERB_FLAGS: call.store(props.ulFlags); break;
     default: fail_unknown_property_id();
     }
 }

@@ -152,9 +152,9 @@ void EaxPitchShifterCommitter::Get(const EaxCall &call, const EAXPITCHSHIFTERPRO
     switch(call.get_property_id())
     {
     case EAXPITCHSHIFTER_NONE: break;
-    case EAXPITCHSHIFTER_ALLPARAMETERS: call.set_value<Exception>(props); break;
-    case EAXPITCHSHIFTER_COARSETUNE: call.set_value<Exception>(props.lCoarseTune); break;
-    case EAXPITCHSHIFTER_FINETUNE: call.set_value<Exception>(props.lFineTune); break;
+    case EAXPITCHSHIFTER_ALLPARAMETERS: call.store(props); break;
+    case EAXPITCHSHIFTER_COARSETUNE: call.store(props.lCoarseTune); break;
+    case EAXPITCHSHIFTER_FINETUNE: call.store(props.lFineTune); break;
     default: fail_unknown_property_id();
     }
 }

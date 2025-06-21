@@ -225,12 +225,12 @@ void EaxEchoCommitter::Get(const EaxCall &call, const EAXECHOPROPERTIES &props)
     switch(call.get_property_id())
     {
     case EAXECHO_NONE: break;
-    case EAXECHO_ALLPARAMETERS: call.set_value<Exception>(props); break;
-    case EAXECHO_DELAY: call.set_value<Exception>(props.flDelay); break;
-    case EAXECHO_LRDELAY: call.set_value<Exception>(props.flLRDelay); break;
-    case EAXECHO_DAMPING: call.set_value<Exception>(props.flDamping); break;
-    case EAXECHO_FEEDBACK: call.set_value<Exception>(props.flFeedback); break;
-    case EAXECHO_SPREAD: call.set_value<Exception>(props.flSpread); break;
+    case EAXECHO_ALLPARAMETERS: call.store(props); break;
+    case EAXECHO_DELAY: call.store(props.flDelay); break;
+    case EAXECHO_LRDELAY: call.store(props.flLRDelay); break;
+    case EAXECHO_DAMPING: call.store(props.flDamping); break;
+    case EAXECHO_FEEDBACK: call.store(props.flFeedback); break;
+    case EAXECHO_SPREAD: call.store(props.flSpread); break;
     default: fail_unknown_property_id();
     }
 }

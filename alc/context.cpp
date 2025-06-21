@@ -613,20 +613,11 @@ void ALCcontext::eax_get_misc(const EaxCall& call)
 {
     switch(call.get_property_id())
     {
-    case EAXCONTEXT_NONE:
-        break;
-    case EAXCONTEXT_LASTERROR:
-        call.set_value<ContextException>(mEaxLastError);
-        mEaxLastError = EAX_OK;
-        break;
-    case EAXCONTEXT_SPEAKERCONFIG:
-        call.set_value<ContextException>(mEaxSpeakerConfig);
-        break;
-    case EAXCONTEXT_EAXSESSION:
-        call.set_value<ContextException>(mEaxSession);
-        break;
-    default:
-        eax_fail_unknown_property_id();
+    case EAXCONTEXT_NONE: break;
+    case EAXCONTEXT_LASTERROR: call.store(std::exchange(mEaxLastError, EAX_OK)); break;
+    case EAXCONTEXT_SPEAKERCONFIG: call.store(mEaxSpeakerConfig); break;
+    case EAXCONTEXT_EAXSESSION: call.store(mEaxSession); break;
+    default: eax_fail_unknown_property_id();
     }
 }
 
@@ -634,24 +625,12 @@ void ALCcontext::eax4_get(const EaxCall& call, const Eax4Props& props)
 {
     switch(call.get_property_id())
     {
-    case EAXCONTEXT_ALLPARAMETERS:
-        call.set_value<ContextException>(props);
-        break;
-    case EAXCONTEXT_PRIMARYFXSLOTID:
-        call.set_value<ContextException>(props.guidPrimaryFXSlotID);
-        break;
-    case EAXCONTEXT_DISTANCEFACTOR:
-        call.set_value<ContextException>(props.flDistanceFactor);
-        break;
-    case EAXCONTEXT_AIRABSORPTIONHF:
-        call.set_value<ContextException>(props.flAirAbsorptionHF);
-        break;
-    case EAXCONTEXT_HFREFERENCE:
-        call.set_value<ContextException>(props.flHFReference);
-        break;
-    default:
-        eax_get_misc(call);
-        break;
+    case EAXCONTEXT_ALLPARAMETERS: call.store(props); break;
+    case EAXCONTEXT_PRIMARYFXSLOTID: call.store(props.guidPrimaryFXSlotID); break;
+    case EAXCONTEXT_DISTANCEFACTOR: call.store(props.flDistanceFactor); break;
+    case EAXCONTEXT_AIRABSORPTIONHF: call.store(props.flAirAbsorptionHF); break;
+    case EAXCONTEXT_HFREFERENCE: call.store(props.flHFReference); break;
+    default: eax_get_misc(call); break;
     }
 }
 
@@ -659,27 +638,13 @@ void ALCcontext::eax5_get(const EaxCall& call, const Eax5Props& props)
 {
     switch(call.get_property_id())
     {
-    case EAXCONTEXT_ALLPARAMETERS:
-        call.set_value<ContextException>(props);
-        break;
-    case EAXCONTEXT_PRIMARYFXSLOTID:
-        call.set_value<ContextException>(props.guidPrimaryFXSlotID);
-        break;
-    case EAXCONTEXT_DISTANCEFACTOR:
-        call.set_value<ContextException>(props.flDistanceFactor);
-        break;
-    case EAXCONTEXT_AIRABSORPTIONHF:
-        call.set_value<ContextException>(props.flAirAbsorptionHF);
-        break;
-    case EAXCONTEXT_HFREFERENCE:
-        call.set_value<ContextException>(props.flHFReference);
-        break;
-    case EAXCONTEXT_MACROFXFACTOR:
-        call.set_value<ContextException>(props.flMacroFXFactor);
-        break;
-    default:
-        eax_get_misc(call);
-        break;
+    case EAXCONTEXT_ALLPARAMETERS: call.store(props); break;
+    case EAXCONTEXT_PRIMARYFXSLOTID: call.store(props.guidPrimaryFXSlotID); break;
+    case EAXCONTEXT_DISTANCEFACTOR: call.store(props.flDistanceFactor); break;
+    case EAXCONTEXT_AIRABSORPTIONHF: call.store(props.flAirAbsorptionHF); break;
+    case EAXCONTEXT_HFREFERENCE: call.store(props.flHFReference); break;
+    case EAXCONTEXT_MACROFXFACTOR: call.store(props.flMacroFXFactor); break;
+    default: eax_get_misc(call); break;
     }
 }
 
@@ -756,10 +721,10 @@ void ALCcontext::eax_set_misc(const EaxCall& call)
 
 void ALCcontext::eax4_defer_all(const EaxCall& call, Eax4State& state)
 {
-    const auto& src = call.get_value<ContextException, const EAX40CONTEXTPROPERTIES>();
+    const auto &src = call.load<const EAX40CONTEXTPROPERTIES>();
     Eax4AllValidator{}(src);
-    const auto& dst_i = state.i;
-    auto& dst_d = state.d;
+    const auto &dst_i = state.i;
+    auto &dst_d = state.d;
     dst_d = src;
 
     if(dst_i.guidPrimaryFXSlotID != dst_d.guidPrimaryFXSlotID)
@@ -806,10 +771,10 @@ void ALCcontext::eax4_defer(const EaxCall& call, Eax4State& state)
 
 void ALCcontext::eax5_defer_all(const EaxCall& call, Eax5State& state)
 {
-    const auto& src = call.get_value<ContextException, const EAX50CONTEXTPROPERTIES>();
+    const auto &src = call.load<const EAX50CONTEXTPROPERTIES>();
     Eax4AllValidator{}(src);
-    const auto& dst_i = state.i;
-    auto& dst_d = state.d;
+    const auto &dst_i = state.i;
+    auto &dst_d = state.d;
     dst_d = src;
 
     if(dst_i.guidPrimaryFXSlotID != dst_d.guidPrimaryFXSlotID)

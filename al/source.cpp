@@ -4480,7 +4480,7 @@ void ALsource::eax4_set(const EaxCall& call, Eax4Props& props)
 
 void ALsource::eax5_defer_all_2d(const EaxCall& call, EAX50SOURCEPROPERTIES& props)
 {
-    const auto& src_props = call.get_value<Exception, const EAXSOURCE2DPROPERTIES>();
+    const auto &src_props = call.load<const EAXSOURCE2DPROPERTIES>();
     Eax5SourceAll2dValidator{}(src_props);
     props.lDirect = src_props.lDirect;
     props.lDirectHF = src_props.lDirectHF;
@@ -4491,7 +4491,7 @@ void ALsource::eax5_defer_all_2d(const EaxCall& call, EAX50SOURCEPROPERTIES& pro
 
 void ALsource::eax5_defer_speaker_levels(const EaxCall& call, EaxSpeakerLevels& props)
 {
-    const auto values = call.get_values<const EAXSPEAKERLEVELPROPERTIES>(eax_max_speakers);
+    const auto values = call.as_span<const EAXSPEAKERLEVELPROPERTIES>(eax_max_speakers);
     std::ranges::for_each(values, Eax5SpeakerAllValidator{});
 
     for(const auto &value : values)
@@ -4598,263 +4598,138 @@ void ALsource::eax_set(const EaxCall& call)
 void ALsource::eax_get_active_fx_slot_id(const EaxCall& call, const std::span<const GUID> srcids)
 {
     assert(srcids.size()==EAX40_MAX_ACTIVE_FXSLOTS || srcids.size()==EAX50_MAX_ACTIVE_FXSLOTS);
-    const auto dst_ids = call.get_values<GUID>(srcids.size());
+    const auto dst_ids = call.as_span<GUID>(srcids.size());
     std::uninitialized_copy_n(srcids.begin(), dst_ids.size(), dst_ids.begin());
 }
 
 void ALsource::eax1_get(const EaxCall& call, const EAXBUFFER_REVERBPROPERTIES& props)
 {
-    switch (call.get_property_id()) {
-        case DSPROPERTY_EAXBUFFER_ALL:
-        case DSPROPERTY_EAXBUFFER_REVERBMIX:
-            call.set_value<Exception>(props.fMix);
-            break;
+    switch(call.get_property_id())
+    {
+    case DSPROPERTY_EAXBUFFER_ALL:
+    case DSPROPERTY_EAXBUFFER_REVERBMIX:
+        call.store(props.fMix);
+        break;
 
-        default:
-            eax_fail_unknown_property_id();
+    default:
+        eax_fail_unknown_property_id();
     }
 }
 
 void ALsource::eax2_get(const EaxCall& call, const EAX20BUFFERPROPERTIES& props)
 {
-    switch (call.get_property_id()) {
-        case DSPROPERTY_EAX20BUFFER_NONE:
-            break;
-
-        case DSPROPERTY_EAX20BUFFER_ALLPARAMETERS:
-            call.set_value<Exception>(props);
-            break;
-
-        case DSPROPERTY_EAX20BUFFER_DIRECT:
-            call.set_value<Exception>(props.lDirect);
-            break;
-
-        case DSPROPERTY_EAX20BUFFER_DIRECTHF:
-            call.set_value<Exception>(props.lDirectHF);
-            break;
-
-        case DSPROPERTY_EAX20BUFFER_ROOM:
-            call.set_value<Exception>(props.lRoom);
-            break;
-
-        case DSPROPERTY_EAX20BUFFER_ROOMHF:
-            call.set_value<Exception>(props.lRoomHF);
-            break;
-
-        case DSPROPERTY_EAX20BUFFER_ROOMROLLOFFFACTOR:
-            call.set_value<Exception>(props.flRoomRolloffFactor);
-            break;
-
-        case DSPROPERTY_EAX20BUFFER_OBSTRUCTION:
-            call.set_value<Exception>(props.lObstruction);
-            break;
-
-        case DSPROPERTY_EAX20BUFFER_OBSTRUCTIONLFRATIO:
-            call.set_value<Exception>(props.flObstructionLFRatio);
-            break;
-
-        case DSPROPERTY_EAX20BUFFER_OCCLUSION:
-            call.set_value<Exception>(props.lOcclusion);
-            break;
-
-        case DSPROPERTY_EAX20BUFFER_OCCLUSIONLFRATIO:
-            call.set_value<Exception>(props.flOcclusionLFRatio);
-            break;
-
-        case DSPROPERTY_EAX20BUFFER_OCCLUSIONROOMRATIO:
-            call.set_value<Exception>(props.flOcclusionRoomRatio);
-            break;
-
-        case DSPROPERTY_EAX20BUFFER_OUTSIDEVOLUMEHF:
-            call.set_value<Exception>(props.lOutsideVolumeHF);
-            break;
-
-        case DSPROPERTY_EAX20BUFFER_AIRABSORPTIONFACTOR:
-            call.set_value<Exception>(props.flAirAbsorptionFactor);
-            break;
-
-        case DSPROPERTY_EAX20BUFFER_FLAGS:
-            call.set_value<Exception>(props.dwFlags);
-            break;
-
-        default:
-            eax_fail_unknown_property_id();
+    switch(call.get_property_id())
+    {
+    case DSPROPERTY_EAX20BUFFER_NONE: break;
+    case DSPROPERTY_EAX20BUFFER_ALLPARAMETERS: call.store(props); break;
+    case DSPROPERTY_EAX20BUFFER_DIRECT: call.store(props.lDirect); break;
+    case DSPROPERTY_EAX20BUFFER_DIRECTHF: call.store(props.lDirectHF); break;
+    case DSPROPERTY_EAX20BUFFER_ROOM: call.store(props.lRoom); break;
+    case DSPROPERTY_EAX20BUFFER_ROOMHF: call.store(props.lRoomHF); break;
+    case DSPROPERTY_EAX20BUFFER_ROOMROLLOFFFACTOR: call.store(props.flRoomRolloffFactor); break;
+    case DSPROPERTY_EAX20BUFFER_OBSTRUCTION: call.store(props.lObstruction); break;
+    case DSPROPERTY_EAX20BUFFER_OBSTRUCTIONLFRATIO: call.store(props.flObstructionLFRatio); break;
+    case DSPROPERTY_EAX20BUFFER_OCCLUSION: call.store(props.lOcclusion); break;
+    case DSPROPERTY_EAX20BUFFER_OCCLUSIONLFRATIO: call.store(props.flOcclusionLFRatio); break;
+    case DSPROPERTY_EAX20BUFFER_OCCLUSIONROOMRATIO: call.store(props.flOcclusionRoomRatio); break;
+    case DSPROPERTY_EAX20BUFFER_OUTSIDEVOLUMEHF: call.store(props.lOutsideVolumeHF); break;
+    case DSPROPERTY_EAX20BUFFER_AIRABSORPTIONFACTOR: call.store(props.flAirAbsorptionFactor);break;
+    case DSPROPERTY_EAX20BUFFER_FLAGS: call.store(props.dwFlags); break;
+    default: eax_fail_unknown_property_id();
     }
 }
 
-void ALsource::eax3_get_obstruction(const EaxCall& call, const EAX30SOURCEPROPERTIES& props)
+void ALsource::eax3_get(const EaxCall &call, const EAX30SOURCEPROPERTIES &props)
 {
-    call.set_value<Exception>(props.mObstruction);
-}
-
-void ALsource::eax3_get_occlusion(const EaxCall& call, const EAX30SOURCEPROPERTIES& props)
-{
-    call.set_value<Exception>(props.mOcclusion);
-}
-
-void ALsource::eax3_get_exclusion(const EaxCall& call, const EAX30SOURCEPROPERTIES& props)
-{
-    call.set_value<Exception>(props.mExclusion);
-}
-
-void ALsource::eax3_get(const EaxCall& call, const EAX30SOURCEPROPERTIES& props)
-{
-    switch (call.get_property_id()) {
-        case EAXSOURCE_NONE:
-            break;
-
-        case EAXSOURCE_ALLPARAMETERS:
-            call.set_value<Exception>(props);
-            break;
-
-        case EAXSOURCE_OBSTRUCTIONPARAMETERS:
-            eax3_get_obstruction(call, props);
-            break;
-
-        case EAXSOURCE_OCCLUSIONPARAMETERS:
-            eax3_get_occlusion(call, props);
-            break;
-
-        case EAXSOURCE_EXCLUSIONPARAMETERS:
-            eax3_get_exclusion(call, props);
-            break;
-
-        case EAXSOURCE_DIRECT:
-            call.set_value<Exception>(props.lDirect);
-            break;
-
-        case EAXSOURCE_DIRECTHF:
-            call.set_value<Exception>(props.lDirectHF);
-            break;
-
-        case EAXSOURCE_ROOM:
-            call.set_value<Exception>(props.lRoom);
-            break;
-
-        case EAXSOURCE_ROOMHF:
-            call.set_value<Exception>(props.lRoomHF);
-            break;
-
-        case EAXSOURCE_OBSTRUCTION:
-            call.set_value<Exception>(props.mObstruction.lObstruction);
-            break;
-
-        case EAXSOURCE_OBSTRUCTIONLFRATIO:
-            call.set_value<Exception>(props.mObstruction.flObstructionLFRatio);
-            break;
-
-        case EAXSOURCE_OCCLUSION:
-            call.set_value<Exception>(props.mOcclusion.lOcclusion);
-            break;
-
-        case EAXSOURCE_OCCLUSIONLFRATIO:
-            call.set_value<Exception>(props.mOcclusion.flOcclusionLFRatio);
-            break;
-
-        case EAXSOURCE_OCCLUSIONROOMRATIO:
-            call.set_value<Exception>(props.mOcclusion.flOcclusionRoomRatio);
-            break;
-
-        case EAXSOURCE_OCCLUSIONDIRECTRATIO:
-            call.set_value<Exception>(props.mOcclusion.flOcclusionDirectRatio);
-            break;
-
-        case EAXSOURCE_EXCLUSION:
-            call.set_value<Exception>(props.mExclusion.lExclusion);
-            break;
-
-        case EAXSOURCE_EXCLUSIONLFRATIO:
-            call.set_value<Exception>(props.mExclusion.flExclusionLFRatio);
-            break;
-
-        case EAXSOURCE_OUTSIDEVOLUMEHF:
-            call.set_value<Exception>(props.lOutsideVolumeHF);
-            break;
-
-        case EAXSOURCE_DOPPLERFACTOR:
-            call.set_value<Exception>(props.flDopplerFactor);
-            break;
-
-        case EAXSOURCE_ROLLOFFFACTOR:
-            call.set_value<Exception>(props.flRolloffFactor);
-            break;
-
-        case EAXSOURCE_ROOMROLLOFFFACTOR:
-            call.set_value<Exception>(props.flRoomRolloffFactor);
-            break;
-
-        case EAXSOURCE_AIRABSORPTIONFACTOR:
-            call.set_value<Exception>(props.flAirAbsorptionFactor);
-            break;
-
-        case EAXSOURCE_FLAGS:
-            call.set_value<Exception>(props.ulFlags);
-            break;
-
-        default:
-            eax_fail_unknown_property_id();
+    switch(call.get_property_id())
+    {
+    case EAXSOURCE_NONE: break;
+    case EAXSOURCE_ALLPARAMETERS: call.store(props); break;
+    case EAXSOURCE_OBSTRUCTIONPARAMETERS: call.store(props.mObstruction); break;
+    case EAXSOURCE_OCCLUSIONPARAMETERS: call.store(props.mOcclusion); break;
+    case EAXSOURCE_EXCLUSIONPARAMETERS: call.store(props.mExclusion); break;
+    case EAXSOURCE_DIRECT: call.store(props.lDirect); break;
+    case EAXSOURCE_DIRECTHF: call.store(props.lDirectHF); break;
+    case EAXSOURCE_ROOM: call.store(props.lRoom); break;
+    case EAXSOURCE_ROOMHF: call.store(props.lRoomHF); break;
+    case EAXSOURCE_OBSTRUCTION: call.store(props.mObstruction.lObstruction); break;
+    case EAXSOURCE_OBSTRUCTIONLFRATIO: call.store(props.mObstruction.flObstructionLFRatio); break;
+    case EAXSOURCE_OCCLUSION: call.store(props.mOcclusion.lOcclusion); break;
+    case EAXSOURCE_OCCLUSIONLFRATIO: call.store(props.mOcclusion.flOcclusionLFRatio); break;
+    case EAXSOURCE_OCCLUSIONROOMRATIO: call.store(props.mOcclusion.flOcclusionRoomRatio); break;
+    case EAXSOURCE_OCCLUSIONDIRECTRATIO: call.store(props.mOcclusion.flOcclusionDirectRatio);break;
+    case EAXSOURCE_EXCLUSION: call.store(props.mExclusion.lExclusion); break;
+    case EAXSOURCE_EXCLUSIONLFRATIO: call.store(props.mExclusion.flExclusionLFRatio); break;
+    case EAXSOURCE_OUTSIDEVOLUMEHF: call.store(props.lOutsideVolumeHF); break;
+    case EAXSOURCE_DOPPLERFACTOR: call.store(props.flDopplerFactor); break;
+    case EAXSOURCE_ROLLOFFFACTOR: call.store(props.flRolloffFactor); break;
+    case EAXSOURCE_ROOMROLLOFFFACTOR: call.store(props.flRoomRolloffFactor); break;
+    case EAXSOURCE_AIRABSORPTIONFACTOR: call.store(props.flAirAbsorptionFactor); break;
+    case EAXSOURCE_FLAGS: call.store(props.ulFlags); break;
+    default: eax_fail_unknown_property_id();
     }
 }
 
-void ALsource::eax4_get(const EaxCall& call, const Eax4Props& props)
+void ALsource::eax4_get(const EaxCall &call, const Eax4Props &props)
 {
-    switch (call.get_property_id()) {
-        case EAXSOURCE_NONE:
-            break;
+    switch(call.get_property_id())
+    {
+    case EAXSOURCE_NONE:
+        break;
 
-        case EAXSOURCE_ALLPARAMETERS:
-        case EAXSOURCE_OBSTRUCTIONPARAMETERS:
-        case EAXSOURCE_OCCLUSIONPARAMETERS:
-        case EAXSOURCE_EXCLUSIONPARAMETERS:
-        case EAXSOURCE_DIRECT:
-        case EAXSOURCE_DIRECTHF:
-        case EAXSOURCE_ROOM:
-        case EAXSOURCE_ROOMHF:
-        case EAXSOURCE_OBSTRUCTION:
-        case EAXSOURCE_OBSTRUCTIONLFRATIO:
-        case EAXSOURCE_OCCLUSION:
-        case EAXSOURCE_OCCLUSIONLFRATIO:
-        case EAXSOURCE_OCCLUSIONROOMRATIO:
-        case EAXSOURCE_OCCLUSIONDIRECTRATIO:
-        case EAXSOURCE_EXCLUSION:
-        case EAXSOURCE_EXCLUSIONLFRATIO:
-        case EAXSOURCE_OUTSIDEVOLUMEHF:
-        case EAXSOURCE_DOPPLERFACTOR:
-        case EAXSOURCE_ROLLOFFFACTOR:
-        case EAXSOURCE_ROOMROLLOFFFACTOR:
-        case EAXSOURCE_AIRABSORPTIONFACTOR:
-        case EAXSOURCE_FLAGS:
-            eax3_get(call, props.source);
-            break;
+    case EAXSOURCE_ALLPARAMETERS:
+    case EAXSOURCE_OBSTRUCTIONPARAMETERS:
+    case EAXSOURCE_OCCLUSIONPARAMETERS:
+    case EAXSOURCE_EXCLUSIONPARAMETERS:
+    case EAXSOURCE_DIRECT:
+    case EAXSOURCE_DIRECTHF:
+    case EAXSOURCE_ROOM:
+    case EAXSOURCE_ROOMHF:
+    case EAXSOURCE_OBSTRUCTION:
+    case EAXSOURCE_OBSTRUCTIONLFRATIO:
+    case EAXSOURCE_OCCLUSION:
+    case EAXSOURCE_OCCLUSIONLFRATIO:
+    case EAXSOURCE_OCCLUSIONROOMRATIO:
+    case EAXSOURCE_OCCLUSIONDIRECTRATIO:
+    case EAXSOURCE_EXCLUSION:
+    case EAXSOURCE_EXCLUSIONLFRATIO:
+    case EAXSOURCE_OUTSIDEVOLUMEHF:
+    case EAXSOURCE_DOPPLERFACTOR:
+    case EAXSOURCE_ROLLOFFFACTOR:
+    case EAXSOURCE_ROOMROLLOFFFACTOR:
+    case EAXSOURCE_AIRABSORPTIONFACTOR:
+    case EAXSOURCE_FLAGS:
+        eax3_get(call, props.source);
+        break;
 
-        case EAXSOURCE_SENDPARAMETERS:
-            eax_get_sends<EAXSOURCESENDPROPERTIES>(call, props.sends);
-            break;
+    case EAXSOURCE_SENDPARAMETERS:
+        eax_get_sends<EAXSOURCESENDPROPERTIES>(call, props.sends);
+        break;
 
-        case EAXSOURCE_ALLSENDPARAMETERS:
-            eax_get_sends<EAXSOURCEALLSENDPROPERTIES>(call, props.sends);
-            break;
+    case EAXSOURCE_ALLSENDPARAMETERS:
+        eax_get_sends<EAXSOURCEALLSENDPROPERTIES>(call, props.sends);
+        break;
 
-        case EAXSOURCE_OCCLUSIONSENDPARAMETERS:
-            eax_get_sends<EAXSOURCEOCCLUSIONSENDPROPERTIES>(call, props.sends);
-            break;
+    case EAXSOURCE_OCCLUSIONSENDPARAMETERS:
+        eax_get_sends<EAXSOURCEOCCLUSIONSENDPROPERTIES>(call, props.sends);
+        break;
 
-        case EAXSOURCE_EXCLUSIONSENDPARAMETERS:
-            eax_get_sends<EAXSOURCEEXCLUSIONSENDPROPERTIES>(call, props.sends);
-            break;
+    case EAXSOURCE_EXCLUSIONSENDPARAMETERS:
+        eax_get_sends<EAXSOURCEEXCLUSIONSENDPROPERTIES>(call, props.sends);
+        break;
 
-        case EAXSOURCE_ACTIVEFXSLOTID:
-            eax_get_active_fx_slot_id(call, props.active_fx_slots.guidActiveFXSlots);
-            break;
+    case EAXSOURCE_ACTIVEFXSLOTID:
+        eax_get_active_fx_slot_id(call, props.active_fx_slots.guidActiveFXSlots);
+        break;
 
-        default:
-            eax_fail_unknown_property_id();
+    default:
+        eax_fail_unknown_property_id();
     }
 }
 
-void ALsource::eax5_get_all_2d(const EaxCall& call, const EAX50SOURCEPROPERTIES& props)
+void ALsource::eax5_get_all_2d(const EaxCall &call, const EAX50SOURCEPROPERTIES &props)
 {
-    auto& subprops = call.get_value<Exception, EAXSOURCE2DPROPERTIES>();
+    auto &subprops = call.load<EAXSOURCE2DPROPERTIES>();
     subprops.lDirect = props.lDirect;
     subprops.lDirectHF = props.lDirectHF;
     subprops.lRoom = props.lRoom;
@@ -4862,89 +4737,91 @@ void ALsource::eax5_get_all_2d(const EaxCall& call, const EAX50SOURCEPROPERTIES&
     subprops.ulFlags = props.ulFlags;
 }
 
-void ALsource::eax5_get_speaker_levels(const EaxCall& call, const EaxSpeakerLevels& props)
+void ALsource::eax5_get_speaker_levels(const EaxCall &call, const EaxSpeakerLevels &props)
 {
-    const auto subprops = call.get_values<EAXSPEAKERLEVELPROPERTIES>(eax_max_speakers);
+    const auto subprops = call.as_span<EAXSPEAKERLEVELPROPERTIES>(eax_max_speakers);
     std::uninitialized_copy_n(props.cbegin(), subprops.size(), subprops.begin());
 }
 
-void ALsource::eax5_get(const EaxCall& call, const Eax5Props& props)
+void ALsource::eax5_get(const EaxCall &call, const Eax5Props &props)
 {
-    switch (call.get_property_id()) {
-        case EAXSOURCE_NONE:
-            break;
+    switch(call.get_property_id())
+    {
+    case EAXSOURCE_NONE:
+        break;
 
-        case EAXSOURCE_ALLPARAMETERS:
-        case EAXSOURCE_OBSTRUCTIONPARAMETERS:
-        case EAXSOURCE_OCCLUSIONPARAMETERS:
-        case EAXSOURCE_EXCLUSIONPARAMETERS:
-        case EAXSOURCE_DIRECT:
-        case EAXSOURCE_DIRECTHF:
-        case EAXSOURCE_ROOM:
-        case EAXSOURCE_ROOMHF:
-        case EAXSOURCE_OBSTRUCTION:
-        case EAXSOURCE_OBSTRUCTIONLFRATIO:
-        case EAXSOURCE_OCCLUSION:
-        case EAXSOURCE_OCCLUSIONLFRATIO:
-        case EAXSOURCE_OCCLUSIONROOMRATIO:
-        case EAXSOURCE_OCCLUSIONDIRECTRATIO:
-        case EAXSOURCE_EXCLUSION:
-        case EAXSOURCE_EXCLUSIONLFRATIO:
-        case EAXSOURCE_OUTSIDEVOLUMEHF:
-        case EAXSOURCE_DOPPLERFACTOR:
-        case EAXSOURCE_ROLLOFFFACTOR:
-        case EAXSOURCE_ROOMROLLOFFFACTOR:
-        case EAXSOURCE_AIRABSORPTIONFACTOR:
-        case EAXSOURCE_FLAGS:
-            eax3_get(call, props.source);
-            break;
+    case EAXSOURCE_ALLPARAMETERS:
+    case EAXSOURCE_OBSTRUCTIONPARAMETERS:
+    case EAXSOURCE_OCCLUSIONPARAMETERS:
+    case EAXSOURCE_EXCLUSIONPARAMETERS:
+    case EAXSOURCE_DIRECT:
+    case EAXSOURCE_DIRECTHF:
+    case EAXSOURCE_ROOM:
+    case EAXSOURCE_ROOMHF:
+    case EAXSOURCE_OBSTRUCTION:
+    case EAXSOURCE_OBSTRUCTIONLFRATIO:
+    case EAXSOURCE_OCCLUSION:
+    case EAXSOURCE_OCCLUSIONLFRATIO:
+    case EAXSOURCE_OCCLUSIONROOMRATIO:
+    case EAXSOURCE_OCCLUSIONDIRECTRATIO:
+    case EAXSOURCE_EXCLUSION:
+    case EAXSOURCE_EXCLUSIONLFRATIO:
+    case EAXSOURCE_OUTSIDEVOLUMEHF:
+    case EAXSOURCE_DOPPLERFACTOR:
+    case EAXSOURCE_ROLLOFFFACTOR:
+    case EAXSOURCE_ROOMROLLOFFFACTOR:
+    case EAXSOURCE_AIRABSORPTIONFACTOR:
+    case EAXSOURCE_FLAGS:
+        eax3_get(call, props.source);
+        break;
 
-        case EAXSOURCE_SENDPARAMETERS:
-            eax_get_sends<EAXSOURCESENDPROPERTIES>(call, props.sends);
-            break;
+    case EAXSOURCE_SENDPARAMETERS:
+        eax_get_sends<EAXSOURCESENDPROPERTIES>(call, props.sends);
+        break;
 
-        case EAXSOURCE_ALLSENDPARAMETERS:
-            eax_get_sends<EAXSOURCEALLSENDPROPERTIES>(call, props.sends);
-            break;
+    case EAXSOURCE_ALLSENDPARAMETERS:
+        eax_get_sends<EAXSOURCEALLSENDPROPERTIES>(call, props.sends);
+        break;
 
-        case EAXSOURCE_OCCLUSIONSENDPARAMETERS:
-            eax_get_sends<EAXSOURCEOCCLUSIONSENDPROPERTIES>(call, props.sends);
-            break;
+    case EAXSOURCE_OCCLUSIONSENDPARAMETERS:
+        eax_get_sends<EAXSOURCEOCCLUSIONSENDPROPERTIES>(call, props.sends);
+        break;
 
-        case EAXSOURCE_EXCLUSIONSENDPARAMETERS:
-            eax_get_sends<EAXSOURCEEXCLUSIONSENDPROPERTIES>(call, props.sends);
-            break;
+    case EAXSOURCE_EXCLUSIONSENDPARAMETERS:
+        eax_get_sends<EAXSOURCEEXCLUSIONSENDPROPERTIES>(call, props.sends);
+        break;
 
-        case EAXSOURCE_ACTIVEFXSLOTID:
-            eax_get_active_fx_slot_id(call, props.active_fx_slots.guidActiveFXSlots);
-            break;
+    case EAXSOURCE_ACTIVEFXSLOTID:
+        eax_get_active_fx_slot_id(call, props.active_fx_slots.guidActiveFXSlots);
+        break;
 
-        case EAXSOURCE_MACROFXFACTOR:
-            call.set_value<Exception>(props.source.flMacroFXFactor);
-            break;
+    case EAXSOURCE_MACROFXFACTOR:
+        call.store(props.source.flMacroFXFactor);
+        break;
 
-        case EAXSOURCE_SPEAKERLEVELS:
-            call.set_value<Exception>(props.speaker_levels);
-            break;
+    case EAXSOURCE_SPEAKERLEVELS:
+        call.store(props.speaker_levels);
+        break;
 
-        case EAXSOURCE_ALL2DPARAMETERS:
-            eax5_get_all_2d(call, props.source);
-            break;
+    case EAXSOURCE_ALL2DPARAMETERS:
+        eax5_get_all_2d(call, props.source);
+        break;
 
-        default:
-            eax_fail_unknown_property_id();
+    default:
+        eax_fail_unknown_property_id();
     }
 }
 
-void ALsource::eax_get(const EaxCall& call)
+void ALsource::eax_get(const EaxCall &call)
 {
-    switch (call.get_version()) {
-        case 1: eax1_get(call, mEax1.i); break;
-        case 2: eax2_get(call, mEax2.i); break;
-        case 3: eax3_get(call, mEax3.i); break;
-        case 4: eax4_get(call, mEax4.i); break;
-        case 5: eax5_get(call, mEax5.i); break;
-        default: eax_fail_unknown_version();
+    switch(call.get_version())
+    {
+    case 1: eax1_get(call, mEax1.i); break;
+    case 2: eax2_get(call, mEax2.i); break;
+    case 3: eax3_get(call, mEax3.i); break;
+    case 4: eax4_get(call, mEax4.i); break;
+    case 5: eax5_get(call, mEax5.i); break;
+    default: eax_fail_unknown_version();
     }
 }
 

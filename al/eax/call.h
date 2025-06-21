@@ -40,8 +40,8 @@ public:
     [[nodiscard]] auto get_property_al_name() const noexcept -> ALuint { return mPropertySourceId; }
     [[nodiscard]] auto get_fx_slot_index() const noexcept -> EaxFxSlotIndex { return mFxSlotIndex; }
 
-    template<typename TException, typename TValue>
-    [[nodiscard]] auto get_value() const -> TValue&
+    template<typename TValue>
+    [[nodiscard]] auto load() const -> TValue&
     {
         if(mPropertyBufferSize < sizeof(TValue))
             fail_too_small();
@@ -50,7 +50,7 @@ public:
     }
 
     template<typename TValue>
-    [[nodiscard]] auto get_values(size_t max_count) const -> std::span<TValue>
+    [[nodiscard]] auto as_span(size_t max_count=~0_uz) const -> std::span<TValue>
     {
         if(max_count == 0 || mPropertyBufferSize < sizeof(TValue))
             fail_too_small();
@@ -60,15 +60,9 @@ public:
     }
 
     template<typename TValue>
-    [[nodiscard]] auto get_values() const -> std::span<TValue>
+    auto store(const TValue &value) const -> void
     {
-        return get_values<TValue>(~0_uz);
-    }
-
-    template<typename TException, typename TValue>
-    auto set_value(const TValue& value) const -> void
-    {
-        get_value<TException, TValue>() = value;
+        load<TValue>() = value;
     }
 
 private:

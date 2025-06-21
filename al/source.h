@@ -895,7 +895,7 @@ private:
     template<typename TDstSend>
     void eax_get_sends(const EaxCall& call, const EaxSends& src_sends)
     {
-        const auto dst_sends = call.get_values<TDstSend>(EAX_MAX_FXSLOTS);
+        const auto dst_sends = call.as_span<TDstSend>(EAX_MAX_FXSLOTS);
         const auto count = dst_sends.size();
 
         for(auto i = decltype(count){}; i < count; ++i)
@@ -909,9 +909,6 @@ private:
     static void eax_get_active_fx_slot_id(const EaxCall& call, const std::span<const GUID> srcids);
     static void eax1_get(const EaxCall& call, const EAXBUFFER_REVERBPROPERTIES& props);
     static void eax2_get(const EaxCall& call, const EAX20BUFFERPROPERTIES& props);
-    static void eax3_get_obstruction(const EaxCall& call, const EAX30SOURCEPROPERTIES& props);
-    static void eax3_get_occlusion(const EaxCall& call, const EAX30SOURCEPROPERTIES& props);
-    static void eax3_get_exclusion(const EaxCall& call, const EAX30SOURCEPROPERTIES& props);
     static void eax3_get(const EaxCall& call, const EAX30SOURCEPROPERTIES& props);
     void eax4_get(const EaxCall& call, const Eax4Props& props);
     static void eax5_get_all_2d(const EaxCall& call, const EAX50SOURCEPROPERTIES& props);
@@ -949,7 +946,7 @@ private:
     void eax_defer_sends(const EaxCall &call, EaxSends &dst_sends, TValidator&& validator)
     {
         static constexpr auto index_getter = TIndexGetter{};
-        const auto src_sends = call.get_values<const TSrcSend>(EAX_MAX_FXSLOTS);
+        const auto src_sends = call.as_span<const TSrcSend>(EAX_MAX_FXSLOTS);
         std::ranges::for_each(src_sends, std::forward<TValidator>(validator));
 
         std::ranges::for_each(src_sends, [&dst_sends](const TSrcSend &src_send)
@@ -974,7 +971,7 @@ private:
     template<std::invocable<const GUID&> TValidator>
     void eax_defer_active_fx_slot_id(const EaxCall &call, const std::span<GUID> dst_ids)
     {
-        const auto src_ids = call.get_values<const GUID>(dst_ids.size());
+        const auto src_ids = call.as_span<const GUID>(dst_ids.size());
         std::ranges::for_each(src_ids, TValidator{});
         std::ranges::uninitialized_copy(src_ids, dst_ids);
     }
@@ -992,7 +989,7 @@ private:
     template<typename TProperty, std::invocable<TProperty> TValidator>
     static void eax_defer(const EaxCall &call, TProperty &property, TValidator validator)
     {
-        const auto& value = call.get_value<Exception, const TProperty>();
+        const auto& value = call.load<const TProperty>();
         std::move(validator)(value);
         property = value;
     }

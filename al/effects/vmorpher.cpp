@@ -418,13 +418,13 @@ void EaxVocalMorpherCommitter::Get(const EaxCall &call, const EAXVOCALMORPHERPRO
     switch(call.get_property_id())
     {
     case EAXVOCALMORPHER_NONE: break;
-    case EAXVOCALMORPHER_ALLPARAMETERS: call.set_value<Exception>(props); break;
-    case EAXVOCALMORPHER_PHONEMEA: call.set_value<Exception>(props.ulPhonemeA); break;
-    case EAXVOCALMORPHER_PHONEMEACOARSETUNING: call.set_value<Exception>(props.lPhonemeACoarseTuning); break;
-    case EAXVOCALMORPHER_PHONEMEB: call.set_value<Exception>(props.ulPhonemeB); break;
-    case EAXVOCALMORPHER_PHONEMEBCOARSETUNING: call.set_value<Exception>(props.lPhonemeBCoarseTuning); break;
-    case EAXVOCALMORPHER_WAVEFORM: call.set_value<Exception>(props.ulWaveform); break;
-    case EAXVOCALMORPHER_RATE: call.set_value<Exception>(props.flRate); break;
+    case EAXVOCALMORPHER_ALLPARAMETERS: call.store(props); break;
+    case EAXVOCALMORPHER_PHONEMEA: call.store(props.ulPhonemeA); break;
+    case EAXVOCALMORPHER_PHONEMEACOARSETUNING: call.store(props.lPhonemeACoarseTuning); break;
+    case EAXVOCALMORPHER_PHONEMEB: call.store(props.ulPhonemeB); break;
+    case EAXVOCALMORPHER_PHONEMEBCOARSETUNING: call.store(props.lPhonemeBCoarseTuning); break;
+    case EAXVOCALMORPHER_WAVEFORM: call.store(props.ulWaveform); break;
+    case EAXVOCALMORPHER_RATE: call.store(props.flRate); break;
     default: fail_unknown_property_id();
     }
 }

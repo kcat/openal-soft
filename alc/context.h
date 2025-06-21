@@ -459,7 +459,7 @@ private:
     template<typename TValidator, typename TProperty>
     static void eax_set(const EaxCall& call, TProperty& property)
     {
-        const auto& value = call.get_value<ContextException, const TProperty>();
+        const auto &value = call.load<const TProperty>();
         TValidator{}(value);
         property = value;
     }
@@ -476,7 +476,7 @@ private:
         typename TState>
     void eax_defer(const EaxCall& call, TState& state, TMemberResult TProps::*member)
     {
-        const auto& src = call.get_value<ContextException, const TMemberResult>();
+        const auto &src = call.load<const TMemberResult>();
         TValidator{}(src);
         const auto& dst_i = state.i.*member;
         auto& dst_d = state.d.*member;

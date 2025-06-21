@@ -1136,23 +1136,12 @@ void ALeffectslot::eax4_fx_slot_get(const EaxCall& call, const EAX40FXSLOTPROPER
 {
     switch(call.get_property_id())
     {
-    case EAXFXSLOT_ALLPARAMETERS:
-        call.set_value<Exception>(props);
-        break;
-    case EAXFXSLOT_LOADEFFECT:
-        call.set_value<Exception>(props.guidLoadEffect);
-        break;
-    case EAXFXSLOT_VOLUME:
-        call.set_value<Exception>(props.lVolume);
-        break;
-    case EAXFXSLOT_LOCK:
-        call.set_value<Exception>(props.lLock);
-        break;
-    case EAXFXSLOT_FLAGS:
-        call.set_value<Exception>(props.ulFlags);
-        break;
-    default:
-        eax_fail_unknown_property_id();
+    case EAXFXSLOT_ALLPARAMETERS: call.store(props); break;
+    case EAXFXSLOT_LOADEFFECT: call.store(props.guidLoadEffect); break;
+    case EAXFXSLOT_VOLUME: call.store(props.lVolume); break;
+    case EAXFXSLOT_LOCK: call.store(props.lLock); break;
+    case EAXFXSLOT_FLAGS: call.store(props.ulFlags); break;
+    default: eax_fail_unknown_property_id();
     }
 }
 
@@ -1160,29 +1149,14 @@ void ALeffectslot::eax5_fx_slot_get(const EaxCall& call, const EAX50FXSLOTPROPER
 {
     switch(call.get_property_id())
     {
-    case EAXFXSLOT_ALLPARAMETERS:
-        call.set_value<Exception>(props);
-        break;
-    case EAXFXSLOT_LOADEFFECT:
-        call.set_value<Exception>(props.guidLoadEffect);
-        break;
-    case EAXFXSLOT_VOLUME:
-        call.set_value<Exception>(props.lVolume);
-        break;
-    case EAXFXSLOT_LOCK:
-        call.set_value<Exception>(props.lLock);
-        break;
-    case EAXFXSLOT_FLAGS:
-        call.set_value<Exception>(props.ulFlags);
-        break;
-    case EAXFXSLOT_OCCLUSION:
-        call.set_value<Exception>(props.lOcclusion);
-        break;
-    case EAXFXSLOT_OCCLUSIONLFRATIO:
-        call.set_value<Exception>(props.flOcclusionLFRatio);
-        break;
-    default:
-        eax_fail_unknown_property_id();
+    case EAXFXSLOT_ALLPARAMETERS: call.store(props); break;
+    case EAXFXSLOT_LOADEFFECT: call.store(props.guidLoadEffect); break;
+    case EAXFXSLOT_VOLUME: call.store(props.lVolume); break;
+    case EAXFXSLOT_LOCK: call.store(props.lLock); break;
+    case EAXFXSLOT_FLAGS: call.store(props.ulFlags); break;
+    case EAXFXSLOT_OCCLUSION: call.store(props.lOcclusion); break;
+    case EAXFXSLOT_OCCLUSIONLFRATIO: call.store(props.flOcclusionLFRatio); break;
+    default: eax_fail_unknown_property_id();
     }
 }
 
@@ -1240,9 +1214,9 @@ void ALeffectslot::eax_fx_slot_set_flags()
 void ALeffectslot::eax4_fx_slot_set_all(const EaxCall& call)
 {
     eax4_fx_slot_ensure_unlocked();
-    const auto& src = call.get_value<Exception, const EAX40FXSLOTPROPERTIES>();
+    const auto &src = call.load<const EAX40FXSLOTPROPERTIES>();
     Eax4AllValidator{}(src);
-    auto& dst = mEax4.i;
+    auto &dst = mEax4.i;
     mEaxDf.set(eax_load_effect_dirty_bit); // Always reset the effect.
     if(dst.lVolume != src.lVolume) mEaxDf.set(eax_volume_dirty_bit);
     if(dst.lLock != src.lLock) mEaxDf.set(eax_lock_dirty_bit);
@@ -1252,9 +1226,9 @@ void ALeffectslot::eax4_fx_slot_set_all(const EaxCall& call)
 
 void ALeffectslot::eax5_fx_slot_set_all(const EaxCall& call)
 {
-    const auto& src = call.get_value<Exception, const EAX50FXSLOTPROPERTIES>();
+    const auto &src = call.load<const EAX50FXSLOTPROPERTIES>();
     Eax5AllValidator{}(src);
-    auto& dst = mEax5.i;
+    auto &dst = mEax5.i;
     mEaxDf.set(eax_load_effect_dirty_bit); // Always reset the effect.
     if(dst.lVolume != src.lVolume) mEaxDf.set(eax_volume_dirty_bit);
     if(dst.lLock != src.lLock) mEaxDf.set(eax_lock_dirty_bit);

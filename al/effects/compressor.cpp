@@ -124,8 +124,8 @@ void EaxCompressorCommitter::Get(const EaxCall &call, const EAXAGCCOMPRESSORPROP
     switch(call.get_property_id())
     {
     case EAXAGCCOMPRESSOR_NONE: break;
-    case EAXAGCCOMPRESSOR_ALLPARAMETERS: call.set_value<Exception>(props); break;
-    case EAXAGCCOMPRESSOR_ONOFF: call.set_value<Exception>(props.ulOnOff); break;
+    case EAXAGCCOMPRESSOR_ALLPARAMETERS: call.store(props); break;
+    case EAXAGCCOMPRESSOR_ONOFF: call.store(props.ulOnOff); break;
     default: fail_unknown_property_id();
     }
 }

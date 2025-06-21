@@ -1362,10 +1362,13 @@ bool ALeffectslot::eax_set(const EaxCall& call)
 
 void ALeffectslot::eax4_fx_slot_commit(std::bitset<eax_dirty_bit_count>& dst_df)
 {
-    eax_fx_slot_commit_property<eax_load_effect_dirty_bit>(mEax4, dst_df, &EAX40FXSLOTPROPERTIES::guidLoadEffect);
-    eax_fx_slot_commit_property<eax_volume_dirty_bit>(mEax4, dst_df, &EAX40FXSLOTPROPERTIES::lVolume);
-    eax_fx_slot_commit_property<eax_lock_dirty_bit>(mEax4, dst_df, &EAX40FXSLOTPROPERTIES::lLock);
-    eax_fx_slot_commit_property<eax_flags_dirty_bit>(mEax4, dst_df, &EAX40FXSLOTPROPERTIES::ulFlags);
+    eax_fx_slot_commit_property(mEax4, dst_df, eax_load_effect_dirty_bit,
+        &EAX40FXSLOTPROPERTIES::guidLoadEffect);
+    eax_fx_slot_commit_property(mEax4, dst_df, eax_volume_dirty_bit,
+        &EAX40FXSLOTPROPERTIES::lVolume);
+    eax_fx_slot_commit_property(mEax4, dst_df, eax_lock_dirty_bit, &EAX40FXSLOTPROPERTIES::lLock);
+    eax_fx_slot_commit_property(mEax4, dst_df, eax_flags_dirty_bit,
+        &EAX40FXSLOTPROPERTIES::ulFlags);
 
     auto& dst_i = mEax;
 
@@ -1382,14 +1385,19 @@ void ALeffectslot::eax4_fx_slot_commit(std::bitset<eax_dirty_bit_count>& dst_df)
     }
 }
 
-void ALeffectslot::eax5_fx_slot_commit(Eax5State& state, std::bitset<eax_dirty_bit_count>& dst_df)
+void ALeffectslot::eax5_fx_slot_commit(Eax5State &state, std::bitset<eax_dirty_bit_count> &dst_df)
 {
-    eax_fx_slot_commit_property<eax_load_effect_dirty_bit>(state, dst_df, &EAX50FXSLOTPROPERTIES::guidLoadEffect);
-    eax_fx_slot_commit_property<eax_volume_dirty_bit>(state, dst_df, &EAX50FXSLOTPROPERTIES::lVolume);
-    eax_fx_slot_commit_property<eax_lock_dirty_bit>(state, dst_df, &EAX50FXSLOTPROPERTIES::lLock);
-    eax_fx_slot_commit_property<eax_flags_dirty_bit>(state, dst_df, &EAX50FXSLOTPROPERTIES::ulFlags);
-    eax_fx_slot_commit_property<eax_occlusion_dirty_bit>(state, dst_df, &EAX50FXSLOTPROPERTIES::lOcclusion);
-    eax_fx_slot_commit_property<eax_occlusion_lf_ratio_dirty_bit>(state, dst_df, &EAX50FXSLOTPROPERTIES::flOcclusionLFRatio);
+    eax_fx_slot_commit_property(state, dst_df, eax_load_effect_dirty_bit,
+        &EAX50FXSLOTPROPERTIES::guidLoadEffect);
+    eax_fx_slot_commit_property(state, dst_df, eax_volume_dirty_bit,
+        &EAX50FXSLOTPROPERTIES::lVolume);
+    eax_fx_slot_commit_property(state, dst_df, eax_lock_dirty_bit, &EAX50FXSLOTPROPERTIES::lLock);
+    eax_fx_slot_commit_property(state, dst_df, eax_flags_dirty_bit,
+        &EAX50FXSLOTPROPERTIES::ulFlags);
+    eax_fx_slot_commit_property(state, dst_df, eax_occlusion_dirty_bit,
+        &EAX50FXSLOTPROPERTIES::lOcclusion);
+    eax_fx_slot_commit_property(state, dst_df, eax_occlusion_lf_ratio_dirty_bit,
+        &EAX50FXSLOTPROPERTIES::flOcclusionLFRatio);
 }
 
 void ALeffectslot::eax_set_efx_slot_effect(EaxEffect &effect)

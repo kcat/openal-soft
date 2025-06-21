@@ -6,7 +6,9 @@
 #include <array>
 #include <atomic>
 #include <bitset>
+#include <concepts>
 #include <cstdint>
+#include <functional>
 #include <string_view>
 #include <utility>
 
@@ -331,21 +333,13 @@ private:
     // Returns `true` if all sources should be updated, or `false` otherwise.
     bool eax_set(const EaxCall& call);
 
-    template<
-        size_t DirtyBit,
-        typename TMemberResult,
-        typename TProps,
-        typename TState>
-    void eax_fx_slot_commit_property(TState& state, std::bitset<eax_dirty_bit_count>& dst_df,
-        TMemberResult TProps::*member) noexcept
+    void eax_fx_slot_commit_property(auto &state, std::bitset<eax_dirty_bit_count> &dst_df,
+        size_t dirty_bit, std::invocable<decltype(state.i)> auto member) noexcept
     {
-        auto& src_i = state.i;
-        auto& dst_i = mEax;
-
-        if(mEaxDf.test(DirtyBit))
+        if(mEaxDf.test(dirty_bit))
         {
-            dst_df.set(DirtyBit);
-            dst_i.*member = src_i.*member;
+            dst_df.set(dirty_bit);
+            std::invoke(member, mEax) = std::invoke(member, state.i);
         }
     }
 

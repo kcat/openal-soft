@@ -4812,7 +4812,7 @@ void ALsource::eax5_get(const EaxCall &call, const Eax5Props &props)
     }
 }
 
-void ALsource::eax_get(const EaxCall &call)
+void ALsource::eax_get(const EaxCall &call) const
 {
     switch(call.get_version())
     {

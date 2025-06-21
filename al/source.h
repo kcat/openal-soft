@@ -888,7 +888,7 @@ private:
     }
 
     template<typename TDstSend>
-    void eax_get_sends(const EaxCall &call, const EaxSends &src_sends)
+    static void eax_get_sends(const EaxCall &call, const EaxSends &src_sends)
     {
         const auto dst_sends = call.as_span<TDstSend>(EAX_MAX_FXSLOTS);
         for(const auto i : std::views::iota(0_uz, dst_sends.size()))
@@ -899,15 +899,15 @@ private:
         }
     }
 
-    static void eax_get_active_fx_slot_id(const EaxCall& call, const std::span<const GUID> srcids);
-    static void eax1_get(const EaxCall& call, const EAXBUFFER_REVERBPROPERTIES& props);
-    static void eax2_get(const EaxCall& call, const EAX20BUFFERPROPERTIES& props);
-    static void eax3_get(const EaxCall& call, const EAX30SOURCEPROPERTIES& props);
-    void eax4_get(const EaxCall& call, const Eax4Props& props);
-    static void eax5_get_all_2d(const EaxCall& call, const EAX50SOURCEPROPERTIES& props);
-    static void eax5_get_speaker_levels(const EaxCall& call, const EaxSpeakerLevels& props);
-    void eax5_get(const EaxCall& call, const Eax5Props& props);
-    void eax_get(const EaxCall& call);
+    static void eax_get_active_fx_slot_id(const EaxCall &call, const std::span<const GUID> srcids);
+    static void eax1_get(const EaxCall &call, const EAXBUFFER_REVERBPROPERTIES &props);
+    static void eax2_get(const EaxCall &call, const EAX20BUFFERPROPERTIES &props);
+    static void eax3_get(const EaxCall &call, const EAX30SOURCEPROPERTIES &props);
+    static void eax4_get(const EaxCall &call, const Eax4Props &props);
+    static void eax5_get_all_2d(const EaxCall &call, const EAX50SOURCEPROPERTIES &props);
+    static void eax5_get_speaker_levels(const EaxCall &call, const EaxSpeakerLevels &props);
+    static void eax5_get(const EaxCall &call, const Eax5Props &props);
+    void eax_get(const EaxCall &call) const;
 
     static void eax_copy_send_for_set(const EAXSOURCEALLSENDPROPERTIES &src,
         EAXSOURCEALLSENDPROPERTIES &dst) noexcept
@@ -936,7 +936,7 @@ private:
     }
 
     template<std::invocable<const GUID&> TIndexGetter, typename TSrcSend>
-    void eax_defer_sends(const EaxCall &call, EaxSends &dst_sends,
+    static void eax_defer_sends(const EaxCall &call, EaxSends &dst_sends,
         std::invocable<TSrcSend> auto&& validator)
     {
         const auto src_sends = call.as_span<const TSrcSend>(EAX_MAX_FXSLOTS);
@@ -950,29 +950,29 @@ private:
     }
 
     template<typename TSrcSend>
-    void eax4_defer_sends(const EaxCall &call, EaxSends &dst_sends,
+    static void eax4_defer_sends(const EaxCall &call, EaxSends &dst_sends,
         std::invocable<TSrcSend> auto validator)
     { eax_defer_sends<Eax4SendIndexGetter, TSrcSend>(call, dst_sends, std::move(validator)); }
 
     template<typename TSrcSend>
-    void eax5_defer_sends(const EaxCall &call, EaxSends &dst_sends,
+    static void eax5_defer_sends(const EaxCall &call, EaxSends &dst_sends,
         std::invocable<TSrcSend> auto validator)
     { eax_defer_sends<Eax5SendIndexGetter, TSrcSend>(call, dst_sends, std::move(validator)); }
 
     template<std::invocable<const GUID&> TValidator>
-    void eax_defer_active_fx_slot_id(const EaxCall &call, const std::span<GUID> dst_ids)
+    static void eax_defer_active_fx_slot_id(const EaxCall &call, const std::span<GUID> dst_ids)
     {
         const auto src_ids = call.as_span<const GUID>(dst_ids.size());
         std::ranges::for_each(src_ids, TValidator{});
         std::ranges::uninitialized_copy(src_ids, dst_ids);
     }
 
-    void eax4_defer_active_fx_slot_id(const EaxCall &call, const std::span<GUID> dst_ids)
+    static void eax4_defer_active_fx_slot_id(const EaxCall &call, const std::span<GUID> dst_ids)
     {
         eax_defer_active_fx_slot_id<Eax4ActiveFxSlotIdValidator>(call, dst_ids);
     }
 
-    void eax5_defer_active_fx_slot_id(const EaxCall &call, const std::span<GUID> dst_ids)
+    static void eax5_defer_active_fx_slot_id(const EaxCall &call, const std::span<GUID> dst_ids)
     {
         eax_defer_active_fx_slot_id<Eax5ActiveFxSlotIdValidator>(call, dst_ids);
     }
@@ -998,10 +998,10 @@ private:
     static void eax1_set(const EaxCall& call, EAXBUFFER_REVERBPROPERTIES& props);
     static void eax2_set(const EaxCall& call, EAX20BUFFERPROPERTIES& props);
     static void eax3_set(const EaxCall& call, EAX30SOURCEPROPERTIES& props);
-    void eax4_set(const EaxCall& call, Eax4Props& props);
+    static void eax4_set(const EaxCall& call, Eax4Props& props);
     static void eax5_defer_all_2d(const EaxCall& call, EAX50SOURCEPROPERTIES& props);
     static void eax5_defer_speaker_levels(const EaxCall& call, EaxSpeakerLevels& props);
-    void eax5_set(const EaxCall& call, Eax5Props& props);
+    static void eax5_set(const EaxCall& call, Eax5Props& props);
     void eax_set(const EaxCall& call);
 
     // `alSource3i(source, AL_AUXILIARY_SEND_FILTER, ...)`

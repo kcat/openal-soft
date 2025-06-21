@@ -461,9 +461,9 @@ private:
      * value, and updates a dirty flag.
      */
     template<typename TValidator>
-    void eax_defer(const EaxCall &call, auto &state, size_t dirty_bit,
-        std::invocable<decltype(state.i)> auto member)
+    void eax_defer(const EaxCall &call, auto &state, size_t dirty_bit, auto member)
     {
+        static_assert(std::invocable<decltype(member), decltype(state.i)>);
         using TMemberResult = std::invoke_result_t<decltype(member), decltype(state.i)>;
         const auto &src = call.load<const std::remove_cvref_t<TMemberResult>>();
         TValidator{}(src);

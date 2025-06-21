@@ -334,7 +334,7 @@ private:
     bool eax_set(const EaxCall& call);
 
     void eax_fx_slot_commit_property(auto &state, std::bitset<eax_dirty_bit_count> &dst_df,
-        size_t dirty_bit, std::invocable<decltype(state.i)> auto member) noexcept
+        size_t dirty_bit, std::invocable<decltype(mEax)> auto member) noexcept
     {
         if(mEaxDf.test(dirty_bit))
         {

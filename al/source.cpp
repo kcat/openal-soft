@@ -4232,13 +4232,14 @@ void ALsource::eax_set_efx_wet_gain_hf_auto()
 
 void ALsource::eax1_set(const EaxCall& call, EAXBUFFER_REVERBPROPERTIES& props)
 {
-    switch (call.get_property_id()) {
+    switch(call.get_property_id())
+    {
         case DSPROPERTY_EAXBUFFER_ALL:
-            eax_defer<Eax1SourceAllValidator>(call, props);
+            eax_defer(call, props, Eax1SourceAllValidator{});
             break;
 
         case DSPROPERTY_EAXBUFFER_REVERBMIX:
-            eax_defer<Eax1SourceReverbMixValidator>(call, props.fMix);
+            eax_defer(call, props.fMix, Eax1SourceReverbMixValidator{});
             break;
 
         default:
@@ -4248,64 +4249,65 @@ void ALsource::eax1_set(const EaxCall& call, EAXBUFFER_REVERBPROPERTIES& props)
 
 void ALsource::eax2_set(const EaxCall& call, EAX20BUFFERPROPERTIES& props)
 {
-    switch (call.get_property_id()) {
+    switch(call.get_property_id())
+    {
         case DSPROPERTY_EAX20BUFFER_NONE:
             break;
 
         case DSPROPERTY_EAX20BUFFER_ALLPARAMETERS:
-            eax_defer<Eax2SourceAllValidator>(call, props);
+            eax_defer(call, props, Eax2SourceAllValidator{});
             break;
 
         case DSPROPERTY_EAX20BUFFER_DIRECT:
-            eax_defer<Eax2SourceDirectValidator>(call, props.lDirect);
+            eax_defer(call, props.lDirect, Eax2SourceDirectValidator{});
             break;
 
         case DSPROPERTY_EAX20BUFFER_DIRECTHF:
-            eax_defer<Eax2SourceDirectHfValidator>(call, props.lDirectHF);
+            eax_defer(call, props.lDirectHF, Eax2SourceDirectHfValidator{});
             break;
 
         case DSPROPERTY_EAX20BUFFER_ROOM:
-            eax_defer<Eax2SourceRoomValidator>(call, props.lRoom);
+            eax_defer(call, props.lRoom, Eax2SourceRoomValidator{});
             break;
 
         case DSPROPERTY_EAX20BUFFER_ROOMHF:
-            eax_defer<Eax2SourceRoomHfValidator>(call, props.lRoomHF);
+            eax_defer(call, props.lRoomHF, Eax2SourceRoomHfValidator{});
             break;
 
         case DSPROPERTY_EAX20BUFFER_ROOMROLLOFFFACTOR:
-            eax_defer<Eax2SourceRoomRolloffFactorValidator>(call, props.flRoomRolloffFactor);
+            eax_defer(call, props.flRoomRolloffFactor, Eax2SourceRoomRolloffFactorValidator{});
             break;
 
         case DSPROPERTY_EAX20BUFFER_OBSTRUCTION:
-            eax_defer<Eax2SourceObstructionValidator>(call, props.lObstruction);
+            eax_defer(call, props.lObstruction, Eax2SourceObstructionValidator{});
             break;
 
         case DSPROPERTY_EAX20BUFFER_OBSTRUCTIONLFRATIO:
-            eax_defer<Eax2SourceObstructionLfRatioValidator>(call, props.flObstructionLFRatio);
+            eax_defer(call, props.flObstructionLFRatio, Eax2SourceObstructionLfRatioValidator{});
             break;
 
         case DSPROPERTY_EAX20BUFFER_OCCLUSION:
-            eax_defer<Eax2SourceOcclusionValidator>(call, props.lOcclusion);
+            eax_defer(call, props.lOcclusion, Eax2SourceOcclusionValidator{});
             break;
 
         case DSPROPERTY_EAX20BUFFER_OCCLUSIONLFRATIO:
-            eax_defer<Eax2SourceOcclusionLfRatioValidator>(call, props.flOcclusionLFRatio);
+            eax_defer(call, props.flOcclusionLFRatio, Eax2SourceOcclusionLfRatioValidator{});
             break;
 
         case DSPROPERTY_EAX20BUFFER_OCCLUSIONROOMRATIO:
-            eax_defer<Eax2SourceOcclusionRoomRatioValidator>(call, props.flOcclusionRoomRatio);
+            eax_defer(call, props.flOcclusionRoomRatio, Eax2SourceOcclusionRoomRatioValidator{});
             break;
 
         case DSPROPERTY_EAX20BUFFER_OUTSIDEVOLUMEHF:
-            eax_defer<Eax2SourceOutsideVolumeHfValidator>(call, props.lOutsideVolumeHF);
+            eax_defer(call, props.lOutsideVolumeHF, Eax2SourceOutsideVolumeHfValidator{});
             break;
 
         case DSPROPERTY_EAX20BUFFER_AIRABSORPTIONFACTOR:
-            eax_defer<Eax2SourceAirAbsorptionFactorValidator>(call, props.flAirAbsorptionFactor);
+            eax_defer(call, props.flAirAbsorptionFactor, Eax2SourceAirAbsorptionFactorValidator{});
             break;
 
         case DSPROPERTY_EAX20BUFFER_FLAGS:
-            eax_defer<Eax2SourceFlagsValidator>(call, props.dwFlags);
+            eax_defer(call, props.dwFlags, Eax2SourceFlagsValidator{});
             break;
 
         default:
@@ -4321,97 +4323,96 @@ void ALsource::eax3_set(const EaxCall& call, EAX30SOURCEPROPERTIES& props)
             break;
 
         case EAXSOURCE_ALLPARAMETERS:
-            eax_defer<Eax3SourceAllValidator>(call, props);
+            eax_defer(call, props, Eax3SourceAllValidator{});
             break;
 
         case EAXSOURCE_OBSTRUCTIONPARAMETERS:
-            eax_defer<Eax4ObstructionValidator, EAXOBSTRUCTIONPROPERTIES>(call,
-                props.mObstruction);
+            eax_defer(call, props.mObstruction, Eax4ObstructionValidator{});
             break;
 
         case EAXSOURCE_OCCLUSIONPARAMETERS:
-            eax_defer<Eax4OcclusionValidator, EAXOCCLUSIONPROPERTIES>(call, props.mOcclusion);
+            eax_defer(call, props.mOcclusion, Eax4OcclusionValidator{});
             break;
 
         case EAXSOURCE_EXCLUSIONPARAMETERS:
-            eax_defer<Eax4ExclusionValidator, EAXEXCLUSIONPROPERTIES>(call, props.mExclusion);
+            eax_defer(call, props.mExclusion, Eax4ExclusionValidator{});
             break;
 
         case EAXSOURCE_DIRECT:
-            eax_defer<Eax2SourceDirectValidator>(call, props.lDirect);
+            eax_defer(call, props.lDirect, Eax2SourceDirectValidator{});
             break;
 
         case EAXSOURCE_DIRECTHF:
-            eax_defer<Eax2SourceDirectHfValidator>(call, props.lDirectHF);
+            eax_defer(call, props.lDirectHF, Eax2SourceDirectHfValidator{});
             break;
 
         case EAXSOURCE_ROOM:
-            eax_defer<Eax2SourceRoomValidator>(call, props.lRoom);
+            eax_defer(call, props.lRoom, Eax2SourceRoomValidator{});
             break;
 
         case EAXSOURCE_ROOMHF:
-            eax_defer<Eax2SourceRoomHfValidator>(call, props.lRoomHF);
+            eax_defer(call, props.lRoomHF, Eax2SourceRoomHfValidator{});
             break;
 
         case EAXSOURCE_OBSTRUCTION:
-            eax_defer<Eax2SourceObstructionValidator>(call, props.mObstruction.lObstruction);
+            eax_defer(call, props.mObstruction.lObstruction, Eax2SourceObstructionValidator{});
             break;
 
         case EAXSOURCE_OBSTRUCTIONLFRATIO:
-            eax_defer<Eax2SourceObstructionLfRatioValidator>(call,
-                props.mObstruction.flObstructionLFRatio);
+            eax_defer(call, props.mObstruction.flObstructionLFRatio,
+                Eax2SourceObstructionLfRatioValidator{});
             break;
 
         case EAXSOURCE_OCCLUSION:
-            eax_defer<Eax2SourceOcclusionValidator>(call, props.mOcclusion.lOcclusion);
+            eax_defer(call, props.mOcclusion.lOcclusion, Eax2SourceOcclusionValidator{});
             break;
 
         case EAXSOURCE_OCCLUSIONLFRATIO:
-            eax_defer<Eax2SourceOcclusionLfRatioValidator>(call,
-                props.mOcclusion.flOcclusionLFRatio);
+            eax_defer(call, props.mOcclusion.flOcclusionLFRatio,
+                Eax2SourceOcclusionLfRatioValidator{});
             break;
 
         case EAXSOURCE_OCCLUSIONROOMRATIO:
-            eax_defer<Eax2SourceOcclusionRoomRatioValidator>(call,
-                props.mOcclusion.flOcclusionRoomRatio);
+            eax_defer(call, props.mOcclusion.flOcclusionRoomRatio,
+                Eax2SourceOcclusionRoomRatioValidator{});
             break;
 
         case EAXSOURCE_OCCLUSIONDIRECTRATIO:
-            eax_defer<Eax3SourceOcclusionDirectRatioValidator>(call,
-                props.mOcclusion.flOcclusionDirectRatio);
+            eax_defer(call, props.mOcclusion.flOcclusionDirectRatio,
+                Eax3SourceOcclusionDirectRatioValidator{});
             break;
 
         case EAXSOURCE_EXCLUSION:
-            eax_defer<Eax3SourceExclusionValidator>(call, props.mExclusion.lExclusion);
+            eax_defer(call, props.mExclusion.lExclusion, Eax3SourceExclusionValidator{});
             break;
 
         case EAXSOURCE_EXCLUSIONLFRATIO:
-            eax_defer<Eax3SourceExclusionLfRatioValidator>(call,
-                props.mExclusion.flExclusionLFRatio);
+            eax_defer(call, props.mExclusion.flExclusionLFRatio,
+                Eax3SourceExclusionLfRatioValidator{});
             break;
 
         case EAXSOURCE_OUTSIDEVOLUMEHF:
-            eax_defer<Eax2SourceOutsideVolumeHfValidator>(call, props.lOutsideVolumeHF);
+            eax_defer(call, props.lOutsideVolumeHF, Eax2SourceOutsideVolumeHfValidator{});
             break;
 
         case EAXSOURCE_DOPPLERFACTOR:
-            eax_defer<Eax3SourceDopplerFactorValidator>(call, props.flDopplerFactor);
+            eax_defer(call, props.flDopplerFactor, Eax3SourceDopplerFactorValidator{});
             break;
 
         case EAXSOURCE_ROLLOFFFACTOR:
-            eax_defer<Eax3SourceRolloffFactorValidator>(call, props.flRolloffFactor);
+            eax_defer(call, props.flRolloffFactor, Eax3SourceRolloffFactorValidator{});
             break;
 
         case EAXSOURCE_ROOMROLLOFFFACTOR:
-            eax_defer<Eax2SourceRoomRolloffFactorValidator>(call, props.flRoomRolloffFactor);
+            eax_defer(call, props.flRoomRolloffFactor, Eax2SourceRoomRolloffFactorValidator{});
             break;
 
         case EAXSOURCE_AIRABSORPTIONFACTOR:
-            eax_defer<Eax2SourceAirAbsorptionFactorValidator>(call, props.flAirAbsorptionFactor);
+            eax_defer(call, props.flAirAbsorptionFactor, Eax2SourceAirAbsorptionFactorValidator{});
             break;
 
         case EAXSOURCE_FLAGS:
-            eax_defer<Eax2SourceFlagsValidator>(call, props.ulFlags);
+            eax_defer(call, props.ulFlags, Eax2SourceFlagsValidator{});
             break;
 
         default:
@@ -4421,7 +4422,8 @@ void ALsource::eax3_set(const EaxCall& call, EAX30SOURCEPROPERTIES& props)
 
 void ALsource::eax4_set(const EaxCall& call, Eax4Props& props)
 {
-    switch (call.get_property_id()) {
+    switch(call.get_property_id())
+    {
         case EAXSOURCE_NONE:
         case EAXSOURCE_ALLPARAMETERS:
         case EAXSOURCE_OBSTRUCTIONPARAMETERS:
@@ -4449,23 +4451,26 @@ void ALsource::eax4_set(const EaxCall& call, Eax4Props& props)
             break;
 
         case EAXSOURCE_SENDPARAMETERS:
-            eax4_defer_sends<Eax4SendValidator, EAXSOURCESENDPROPERTIES>(call, props.sends);
+            eax4_defer_sends<EAXSOURCESENDPROPERTIES>(call, props.sends, Eax4SendValidator{});
             break;
 
         case EAXSOURCE_ALLSENDPARAMETERS:
-            eax4_defer_sends<Eax4AllSendValidator, EAXSOURCEALLSENDPROPERTIES>(call, props.sends);
+            eax4_defer_sends<EAXSOURCEALLSENDPROPERTIES>(call, props.sends,
+                Eax4AllSendValidator{});
             break;
 
         case EAXSOURCE_OCCLUSIONSENDPARAMETERS:
-            eax4_defer_sends<Eax4OcclusionSendValidator, EAXSOURCEOCCLUSIONSENDPROPERTIES>(call, props.sends);
+            eax4_defer_sends<EAXSOURCEOCCLUSIONSENDPROPERTIES>(call, props.sends,
+                Eax4OcclusionSendValidator{});
             break;
 
         case EAXSOURCE_EXCLUSIONSENDPARAMETERS:
-            eax4_defer_sends<Eax4ExclusionSendValidator, EAXSOURCEEXCLUSIONSENDPROPERTIES>(call, props.sends);
+            eax4_defer_sends<EAXSOURCEEXCLUSIONSENDPROPERTIES>(call, props.sends,
+                Eax4ExclusionSendValidator{});
             break;
 
         case EAXSOURCE_ACTIVEFXSLOTID:
-            eax4_defer_active_fx_slot_id(call, std::span{props.active_fx_slots.guidActiveFXSlots});
+            eax4_defer_active_fx_slot_id(call, props.active_fx_slots.guidActiveFXSlots);
             break;
 
         default:
@@ -4487,7 +4492,7 @@ void ALsource::eax5_defer_all_2d(const EaxCall& call, EAX50SOURCEPROPERTIES& pro
 void ALsource::eax5_defer_speaker_levels(const EaxCall& call, EaxSpeakerLevels& props)
 {
     const auto values = call.get_values<const EAXSPEAKERLEVELPROPERTIES>(eax_max_speakers);
-    std::for_each(values.begin(), values.end(), Eax5SpeakerAllValidator{});
+    std::ranges::for_each(values, Eax5SpeakerAllValidator{});
 
     for(const auto &value : values)
     {
@@ -4498,12 +4503,13 @@ void ALsource::eax5_defer_speaker_levels(const EaxCall& call, EaxSpeakerLevels& 
 
 void ALsource::eax5_set(const EaxCall& call, Eax5Props& props)
 {
-    switch (call.get_property_id()) {
+    switch(call.get_property_id())
+    {
         case EAXSOURCE_NONE:
             break;
 
         case EAXSOURCE_ALLPARAMETERS:
-            eax_defer<Eax5SourceAllValidator>(call, props.source);
+            eax_defer(call, props.source, Eax5SourceAllValidator{});
             break;
 
         case EAXSOURCE_OBSTRUCTIONPARAMETERS:
@@ -4530,31 +4536,34 @@ void ALsource::eax5_set(const EaxCall& call, Eax5Props& props)
             break;
 
         case EAXSOURCE_FLAGS:
-            eax_defer<Eax5SourceFlagsValidator>(call, props.source.ulFlags);
+            eax_defer(call, props.source.ulFlags, Eax5SourceFlagsValidator{});
             break;
 
         case EAXSOURCE_SENDPARAMETERS:
-            eax5_defer_sends<Eax5SendValidator, EAXSOURCESENDPROPERTIES>(call, props.sends);
+            eax5_defer_sends<EAXSOURCESENDPROPERTIES>(call, props.sends, Eax5SendValidator{});
             break;
 
         case EAXSOURCE_ALLSENDPARAMETERS:
-            eax5_defer_sends<Eax5AllSendValidator, EAXSOURCEALLSENDPROPERTIES>(call, props.sends);
+            eax5_defer_sends<EAXSOURCEALLSENDPROPERTIES>(call, props.sends,
+                Eax5AllSendValidator{});
             break;
 
         case EAXSOURCE_OCCLUSIONSENDPARAMETERS:
-            eax5_defer_sends<Eax5OcclusionSendValidator, EAXSOURCEOCCLUSIONSENDPROPERTIES>(call, props.sends);
+            eax5_defer_sends<EAXSOURCEOCCLUSIONSENDPROPERTIES>(call, props.sends,
+                Eax5OcclusionSendValidator{});
             break;
 
         case EAXSOURCE_EXCLUSIONSENDPARAMETERS:
-            eax5_defer_sends<Eax5ExclusionSendValidator, EAXSOURCEEXCLUSIONSENDPROPERTIES>(call, props.sends);
+            eax5_defer_sends<EAXSOURCEEXCLUSIONSENDPROPERTIES>(call, props.sends,
+                Eax5ExclusionSendValidator{});
             break;
 
         case EAXSOURCE_ACTIVEFXSLOTID:
-            eax5_defer_active_fx_slot_id(call, std::span{props.active_fx_slots.guidActiveFXSlots});
+            eax5_defer_active_fx_slot_id(call, props.active_fx_slots.guidActiveFXSlots);
             break;
 
         case EAXSOURCE_MACROFXFACTOR:
-            eax_defer<Eax5SourceMacroFXFactorValidator>(call, props.source.flMacroFXFactor);
+            eax_defer(call, props.source.flMacroFXFactor, Eax5SourceMacroFXFactorValidator{});
             break;
 
         case EAXSOURCE_SPEAKERLEVELS:

@@ -547,6 +547,15 @@ auto AudioState::getClockNoLock() -> nanoseconds
     if(mEndTime > nanoseconds::min())
         return std::chrono::steady_clock::now().time_since_epoch() - mEndTime + mCurrentPts;
 
+    /* This more safely converts fixed32 to nanoseconds, avoiding overflow
+     * unlike a normal duration_cast call.
+     */
+    static constexpr auto sec32_to_nanoseconds = [](const fixed32 s) -> nanoseconds
+    {
+        static constexpr auto one32 = fixed32{seconds{1}};
+        return seconds{s/one32} + duration_cast<nanoseconds>(s%one32);
+    };
+
     if(!mBufferData.empty())
     {
         /* With a callback buffer, mStartPts is the timestamp of the first
@@ -574,7 +583,7 @@ auto AudioState::getClockNoLock() -> nanoseconds
         if(status == AL_PLAYING || status == AL_PAUSED)
         {
             const auto sec_fixed32 = fixed32{offset[0] / mCodecCtx->sample_rate};
-            pts = mStartPts + duration_cast<nanoseconds>(sec_fixed32) - nanoseconds{offset[1]};
+            pts = mStartPts + sec32_to_nanoseconds(sec_fixed32) - nanoseconds{offset[1]};
         }
         else
         {
@@ -633,7 +642,7 @@ auto AudioState::getClockNoLock() -> nanoseconds
         if(status != AL_STOPPED)
         {
             pts -= AudioBufferTime*queued;
-            pts += duration_cast<nanoseconds>(fixed32{offset[0] / mCodecCtx->sample_rate});
+            pts += sec32_to_nanoseconds(fixed32{offset[0] / mCodecCtx->sample_rate});
         }
         /* Don't offset by the latency if the source isn't playing. */
         if(status == AL_PLAYING)

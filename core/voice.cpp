@@ -822,7 +822,8 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
              * number of src samples that are needed to load it.
              */
             const auto [dstBufferSize, srcBufferSize] = std::invoke(
-                [fracPos,increment](uint dstRemaining) noexcept -> std::array<uint,2>
+                [fracPos,increment,dstRemaining = samplesToLoad-samplesLoaded]() noexcept
+                -> std::array<uint,2>
             {
                 /* If ext=true, calculate the last written dst pos from the dst
                  * count, convert to the last read src pos, then add one to get
@@ -854,10 +855,10 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
                      * aligned, so limit to a multiple of 4 samples to maintain
                      * alignment if we need to do another iteration after this.
                      */
-                    dstRemaining = static_cast<uint>(dataSize64) & ~3u;
+                    return std::array{static_cast<uint>(dataSize64)&~3u, SrcSizeMax};
                 }
                 return std::array{dstRemaining, SrcSizeMax};
-            }, samplesToLoad - samplesLoaded);
+            });
 
             auto srcSampleDelay = 0_uz;
             if(intPos < 0) [[unlikely]]

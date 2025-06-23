@@ -983,7 +983,7 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
                 fracPos += dstBufferSize*increment;
                 const auto srcOffset = fracPos >> MixerFracBits;
                 fracPos &= MixerFracMask;
-                intPos += static_cast<int>(srcOffset);
+                intPos = al::add_sat(intPos, static_cast<int>(srcOffset));
 
                 /* If more samples need to be loaded, copy the back of the
                  * resampleBuffer to the front to reuse it. prevSamples isn't

@@ -32,11 +32,13 @@
 
 #include <algorithm>
 #include <array>
+#include <bit>
 #include <cctype>
 #include <cstdlib>
 #include <fstream>
 #include <istream>
 #include <limits>
+#include <ranges>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -48,6 +50,7 @@
 #include "core/helpers.h"
 #include "core/logging.h"
 #include "filesystem.h"
+#include "fmt/ranges.h"
 #include "strutils.h"
 
 #if ALSOFT_UWP
@@ -82,19 +85,59 @@ struct ConfigEntry {
 std::vector<ConfigEntry> ConfOpts;
 
 
+/* True UTF-8 validation is way beyond me. However, this should weed out any
+ * obviously non-UTF-8 text.
+ *
+ * The general form of the byte stream is relatively simple. The first byte of
+ * a codepoint either has a 0 bit for the msb, indicating a single-byte ASCII-
+ * compatible codepoint, or the number of bytes that make up the codepoint
+ * (including itself) indicated by the number of successive 1 bits, and each
+ * successive byte of the codepoint has '10' for the top bits. That is:
+ *
+ * 0xxxxxxx - single-byte ASCII-compatible codepoint
+ * 110xxxxx 10xxxxxx - two-byte codepoint
+ * 1110xxxx 10xxxxxx 10xxxxxx - three-byte codepoint
+ * 11110xxx 10xxxxxx 10xxxxxx 10xxxxxx - four-byte codepoint
+ * ... etc ...
+ *
+ * Where the 'x' bits are concatenated together to form a 32-bit Unicode
+ * codepoint. This doesn't check whether the codepoints themselves are valid,
+ * it just validates the correct number of bytes for multi-byte sequences.
+ */
+auto validate_utf8(const std::string_view str) -> bool
+{
+    auto const end = str.end();
+    /* Look for the first multi-byte/non-ASCII codepoint. */
+    auto current = std::ranges::find_if(str.begin(), end,
+        [](const char ch) -> bool { return (ch&0x80) != 0; });
+    while(const auto remaining = std::distance(current, end))
+    {
+        /* Get the number of bytes that make up this codepoint (must be at
+         * least 2). This includes the current byte.
+         */
+        const auto tocheck = std::countl_one(as_unsigned(*current));
+        if(tocheck < 2 || tocheck > remaining)
+            return false;
+
+        const auto next = std::next(current, tocheck);
+
+        /* Check that the following bytes are a proper continuation. */
+        const auto valid = std::ranges::all_of(std::next(current), next,
+            [](const char ch) -> bool { return (ch&0xc0) == 0x80; });
+        if(not valid)
+            return false;
+
+        /* Seems okay. Look for the next multi-byte/non-ASCII codepoint. */
+        current = std::ranges::find_if(next, end, [](const char ch) -> bool { return ch&0x80; });
+    }
+    return true;
+}
+
 auto lstrip(std::string &line) -> std::string&
 {
     auto iter = std::ranges::find_if_not(line, [](const char c) { return std::isspace(c); });
     line.erase(line.begin(), iter);
     return line;
-}
-
-auto readline(std::istream &f, std::string &output) -> bool
-{
-    while(f.good() && f.peek() == '\n')
-        f.ignore();
-
-    return std::getline(f, output) && !output.empty();
 }
 
 auto expdup(std::string_view str) -> std::string
@@ -151,24 +194,40 @@ void LoadConfigFromFile(std::istream &f)
 
     auto curSection = std::string{};
     auto buffer = std::string{};
+    auto linenum = 0_uz;
 
-    while(readline(f, buffer))
+    while(std::getline(f, buffer))
     {
+        ++linenum;
         if(lstrip(buffer).empty())
             continue;
+
+        auto cmtpos = std::min(buffer.find('#'), buffer.size());
+        if(cmtpos != 0)
+            cmtpos = buffer.find_last_not_of(whitespace_chars, cmtpos-1)+1;
+        if(cmtpos == 0) continue;
+        buffer.erase(cmtpos);
+
+        if(not validate_utf8(buffer))
+        {
+            ERR(" config parse error: non-UTF-8 characters on line {}:", linenum);
+            ERR("  {::#04x}", buffer|std::views::transform([](auto c) { return as_unsigned(c); }));
+            continue;
+        }
 
         if(buffer[0] == '[')
         {
             const auto endpos = buffer.find(']', 1);
             if(endpos == 1 || endpos == std::string::npos)
             {
-                ERR(" config parse error: bad line \"{}\"", buffer);
+                ERR(" config parse error on line {}: bad section \"{}\"", linenum, buffer);
                 continue;
             }
             if(const auto last = buffer.find_first_not_of(whitespace_chars, endpos+1);
                 last < buffer.size() && buffer[last] != '#')
             {
-                ERR(" config parse error: bad line \"{}\"", buffer);
+                ERR(" config parse error on line {}: extraneous characters after section \"{}\"",
+                    linenum, buffer);
                 continue;
             }
 
@@ -229,23 +288,17 @@ void LoadConfigFromFile(std::istream &f)
             continue;
         }
 
-        auto cmtpos = std::min(buffer.find('#'), buffer.size());
-        if(cmtpos != 0)
-            cmtpos = buffer.find_last_not_of(whitespace_chars, cmtpos-1)+1;
-        if(cmtpos == 0) continue;
-        buffer.erase(cmtpos);
-
         auto sep = buffer.find('=');
         if(sep == std::string::npos)
         {
-            ERR(" config parse error: malformed option line: \"{}\"", buffer);
+            ERR(" config parse error on line {}: malformed option \"{}\"", linenum, buffer);
             continue;
         }
         auto keypart = std::string_view{buffer}.substr(0, sep++);
         keypart.remove_suffix(keypart.size() - (keypart.find_last_not_of(whitespace_chars)+1));
         if(keypart.empty())
         {
-            ERR(" config parse error: malformed option line: \"{}\"", buffer);
+            ERR(" config parse error on line {}: malformed option \"{}\"", linenum, buffer);
             continue;
         }
         auto valpart = std::string_view{buffer}.substr(sep);
@@ -259,7 +312,7 @@ void LoadConfigFromFile(std::istream &f)
 
         if(valpart.size() > size_t{std::numeric_limits<int>::max()})
         {
-            ERR(" config parse error: value too long in line \"{}\"", buffer);
+            ERR(" config parse error on line {}: value too long \"{}\"", linenum, buffer);
             continue;
         }
         if(valpart.size() > 1)

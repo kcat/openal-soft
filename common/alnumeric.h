@@ -10,6 +10,7 @@
 #include <concepts>
 #include <cstddef>
 #include <cstdint>
+#include <limits>
 #include <string_view>
 #include <type_traits>
 #ifdef HAVE_INTRIN_H
@@ -30,6 +31,52 @@ constexpr auto operator "" _z(unsigned long long n) noexcept
 constexpr auto operator "" _uz(unsigned long long n) noexcept { return static_cast<std::size_t>(n); }
 constexpr auto operator "" _zu(unsigned long long n) noexcept { return static_cast<std::size_t>(n); }
 
+
+namespace al {
+
+#if HAS_BUILTIN(__builtin_add_overflow)
+template<std::integral T>
+constexpr auto add_sat(T a, T b) -> T
+{
+    T c;
+    if(!__builtin_add_overflow(a, b, &c))
+        return c;
+    if constexpr(std::is_signed_v<T>)
+    {
+        if(b < 0)
+            return std::numeric_limits<T>::min();
+    }
+    return std::numeric_limits<T>::max();
+}
+
+#else
+
+template<std::integral T>
+constexpr auto add_sat(T a, T b) -> T
+{
+    if constexpr(std::is_signed_v<T>)
+    {
+        if(b < 0)
+        {
+            if(a < std::numeric_limits<T>::min()-b)
+                return std::numeric_limits<T>::min();
+            return a + b;
+        }
+        if(a > std::numeric_limits<T>::max()-b)
+            return std::numeric_limits<T>::max();
+        return a + b;
+    }
+    else
+    {
+        const auto c = a + b;
+        if(c < a)
+            return std::numeric_limits<T>::max();
+        return c;
+    }
+}
+#endif
+
+} /* namespace al */
 
 template<std::integral T>
 constexpr auto as_unsigned(T value) noexcept

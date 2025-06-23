@@ -107,6 +107,7 @@ struct VoiceBufferItem {
 protected:
     ~VoiceBufferItem() = default;
 };
+using LPVoiceBufferItem = VoiceBufferItem*;
 
 
 struct VoiceProps {

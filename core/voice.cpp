@@ -8,10 +8,10 @@
 #include <array>
 #include <atomic>
 #include <cassert>
-#include <climits>
 #include <cstdint>
 #include <cstdlib>
 #include <iterator>
+#include <limits>
 #include <memory>
 #include <optional>
 #include <ranges>
@@ -51,14 +51,16 @@ struct NEONTag;
 #endif
 
 
+namespace {
+
 static_assert(!(DeviceBase::MixerLineSize&3), "MixerLineSize must be a multiple of 4");
 static_assert(!(MaxResamplerEdge&3), "MaxResamplerEdge is not a multiple of 4");
 
-static_assert((BufferLineSize-1)/MaxPitch > 0, "MaxPitch is too large for BufferLineSize!");
-static_assert((INT_MAX>>MixerFracBits)/MaxPitch > BufferLineSize,
-    "MaxPitch and/or BufferLineSize are too large for MixerFracBits!");
+constexpr auto PitchLimit = (std::numeric_limits<int>::max()-MixerFracMask) / MixerFracOne
+    / BufferLineSize;
+static_assert(MaxPitch <= PitchLimit, "MaxPitch, BufferLineSize, or MixerFracBits is too large");
+static_assert(BufferLineSize > MaxPitch, "MaxPitch must be less then BufferLineSize");
 
-namespace {
 
 using uint = unsigned int;
 using namespace std::chrono;
@@ -1100,7 +1102,7 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
 
     /* Update voice positions and buffers as needed. */
     DataPosFrac += increment*samplesToMix;
-    DataPosInt  += static_cast<int>(DataPosFrac>>MixerFracBits);
+    DataPosInt = al::add_sat(DataPosInt, static_cast<int>(DataPosFrac>>MixerFracBits));
     DataPosFrac &= MixerFracMask;
 
     auto buffers_done = 0u;
@@ -1173,13 +1175,12 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
     /* Update voice info */
     mPosition.store(DataPosInt, std::memory_order_relaxed);
     mPositionFrac.store(DataPosFrac, std::memory_order_relaxed);
-    mCurrentBuffer.store(BufferListItem, std::memory_order_relaxed);
+    mCurrentBuffer.store(BufferListItem, std::memory_order_release);
     if(!BufferListItem)
     {
         mLoopBuffer.store(nullptr, std::memory_order_relaxed);
-        mSourceID.store(0u, std::memory_order_relaxed);
+        mSourceID.store(0u, std::memory_order_release);
     }
-    std::atomic_thread_fence(std::memory_order_release);
 
     /* Send any events now, after the position/buffer info was updated. */
     const auto enabledevt = Context->mEnabledEvts.load(std::memory_order_acquire);

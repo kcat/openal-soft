@@ -206,42 +206,43 @@ void UpdateSourceProps(const ALsource *source, Voice *voice, ALCcontext *context
  * samples. The offset is relative to the start of the queue (not the start of
  * the current buffer).
  */
-int64_t GetSourceSampleOffset(ALsource *Source, ALCcontext *context, nanoseconds *clocktime)
+auto GetSourceSampleOffset(ALsource *Source, ALCcontext *context, nanoseconds *clocktime)
+    -> int64_t
 {
     auto *device = context->mALDevice.get();
-    const VoiceBufferItem *Current{};
-    int64_t readPos{};
-    uint refcount{};
-    Voice *voice{};
+    auto const *Current = LPVoiceBufferItem{};
+    auto readPos = int64_t{};
+    auto readPosFrac = uint{};
+    auto refcount = uint{};
 
     do {
         refcount = device->waitForMix();
         *clocktime = device->getClockTime();
-        voice = GetSourceVoice(Source, context);
-        if(voice)
-        {
-            Current = voice->mCurrentBuffer.load(std::memory_order_relaxed);
+        auto *voice = GetSourceVoice(Source, context);
+        if(not voice) return 0;
 
-            readPos  = int64_t{voice->mPosition.load(std::memory_order_relaxed)} << MixerFracBits;
-            readPos += voice->mPositionFrac.load(std::memory_order_relaxed);
-        }
+        Current = voice->mCurrentBuffer.load(std::memory_order_relaxed);
+        readPos = voice->mPosition.load(std::memory_order_relaxed);
+        readPosFrac = voice->mPositionFrac.load(std::memory_order_relaxed);
+
         std::atomic_thread_fence(std::memory_order_acquire);
     } while(refcount != device->mMixCount.load(std::memory_order_relaxed));
 
-    if(!voice)
-        return 0;
+    if(readPos < 0)
+        return (readPos * (std::numeric_limits<uint>::max()+1_i64))
+            + (int64_t{readPosFrac} << (32-MixerFracBits));
 
     std::ignore = std::ranges::find_if(Source->mQueue,
         [Current,&readPos](const VoiceBufferItem &item)
     {
         if(&item == Current)
             return true;
-        readPos += int64_t{item.mSampleLen} << MixerFracBits;
+        readPos += item.mSampleLen;
         return false;
     });
-    if(readPos > std::numeric_limits<int64_t>::max() >> (32-MixerFracBits))
+    if(readPos >= std::numeric_limits<int64_t>::max()>>32)
         return std::numeric_limits<int64_t>::max();
-    return readPos << (32-MixerFracBits);
+    return (readPos<<32) + (int64_t{readPosFrac} << (32-MixerFracBits));
 }
 
 /* GetSourceSecOffset
@@ -249,30 +250,26 @@ int64_t GetSourceSampleOffset(ALsource *Source, ALCcontext *context, nanoseconds
  * Gets the current read offset for the given Source, in seconds. The offset is
  * relative to the start of the queue (not the start of the current buffer).
  */
-double GetSourceSecOffset(ALsource *Source, ALCcontext *context, nanoseconds *clocktime)
+auto GetSourceSecOffset(ALsource *Source, ALCcontext *context, nanoseconds *clocktime) -> double
 {
     auto *device = context->mALDevice.get();
-    const VoiceBufferItem *Current{};
-    int64_t readPos{};
-    uint refcount{};
-    Voice *voice{};
+    auto const *Current = LPVoiceBufferItem{};
+    auto readPos = int64_t{};
+    auto readPosFrac = uint{};
+    auto refcount = uint{};
 
     do {
         refcount = device->waitForMix();
         *clocktime = device->getClockTime();
-        voice = GetSourceVoice(Source, context);
-        if(voice)
-        {
-            Current = voice->mCurrentBuffer.load(std::memory_order_relaxed);
+        auto *voice = GetSourceVoice(Source, context);
+        if(not voice) return 0.0;
 
-            readPos  = int64_t{voice->mPosition.load(std::memory_order_relaxed)} << MixerFracBits;
-            readPos += voice->mPositionFrac.load(std::memory_order_relaxed);
-        }
+        Current = voice->mCurrentBuffer.load(std::memory_order_relaxed);
+        readPos = voice->mPosition.load(std::memory_order_relaxed);
+        readPosFrac = voice->mPositionFrac.load(std::memory_order_relaxed);
+
         std::atomic_thread_fence(std::memory_order_acquire);
     } while(refcount != device->mMixCount.load(std::memory_order_relaxed));
-
-    if(!voice)
-        return 0.0f;
 
     const auto BufferFmt = std::invoke([Source]() -> ALbuffer*
     {
@@ -281,15 +278,18 @@ double GetSourceSecOffset(ALsource *Source, ALCcontext *context, nanoseconds *cl
             return iter->mBuffer.get();
         return nullptr;
     });
+    assert(BufferFmt != nullptr);
+
     std::ignore = std::ranges::find_if(Source->mQueue,
         [Current,&readPos](const ALbufferQueueItem &item)
     {
         if(&item == Current)
             return true;
-        readPos += int64_t{item.mSampleLen} << MixerFracBits;
+        readPos += item.mSampleLen;
         return false;
     });
-    return static_cast<double>(readPos) / double{MixerFracOne} / BufferFmt->mSampleRate;
+    return (static_cast<double>(readPos) + static_cast<double>(readPosFrac)/double{MixerFracOne})
+        / BufferFmt->mSampleRate;
 }
 
 /* GetSourceOffset
@@ -299,30 +299,25 @@ double GetSourceSecOffset(ALsource *Source, ALCcontext *context, nanoseconds *cl
  * queue (not the start of the current buffer).
  */
 template<typename T>
-NOINLINE T GetSourceOffset(ALsource *Source, ALenum name, ALCcontext *context)
+NOINLINE auto GetSourceOffset(ALsource *Source, ALenum name, ALCcontext *context) -> T
 {
     auto *device = context->mALDevice.get();
-    const VoiceBufferItem *Current{};
-    int64_t readPos{};
-    uint readPosFrac{};
-    uint refcount;
-    Voice *voice;
+    auto const *Current = LPVoiceBufferItem{};
+    auto readPos = int64_t{};
+    auto readPosFrac = uint{};
+    auto refcount = uint{};
 
     do {
         refcount = device->waitForMix();
-        voice = GetSourceVoice(Source, context);
-        if(voice)
-        {
-            Current = voice->mCurrentBuffer.load(std::memory_order_relaxed);
+        auto *voice = GetSourceVoice(Source, context);
+        if(not voice) return T{0};
 
-            readPos = voice->mPosition.load(std::memory_order_relaxed);
-            readPosFrac = voice->mPositionFrac.load(std::memory_order_relaxed);
-        }
+        Current = voice->mCurrentBuffer.load(std::memory_order_relaxed);
+        readPos = voice->mPosition.load(std::memory_order_relaxed);
+        readPosFrac = voice->mPositionFrac.load(std::memory_order_relaxed);
+
         std::atomic_thread_fence(std::memory_order_acquire);
     } while(refcount != device->mMixCount.load(std::memory_order_relaxed));
-
-    if(!voice)
-        return T{0};
 
     const auto BufferFmt = std::invoke([Source]() -> ALbuffer*
     {
@@ -364,7 +359,7 @@ NOINLINE T GetSourceOffset(ALsource *Source, ALenum name, ALCcontext *context)
 
     case AL_BYTE_OFFSET:
         /* Round down to the block boundary. */
-        const auto BlockSize = ALuint{BufferFmt->blockSizeFromFmt()};
+        const auto BlockSize = uint{BufferFmt->blockSizeFromFmt()};
         readPos = readPos / BufferFmt->mBlockAlign * BlockSize;
 
         if constexpr(std::is_floating_point_v<T>)
@@ -2183,13 +2178,13 @@ NOINLINE void GetProperty(ALsource *const Source, ALCcontext *const Context, con
             /* Get the source offset with the clock time first. Then get the
              * clock time with the device latency. Order is important.
              */
-            auto clocktime = ClockLatency{};
             auto srcclock = nanoseconds{};
             values[0] = GetSourceSampleOffset(Source, Context, &srcclock);
+            const auto clocktime = std::invoke([device]() -> ClockLatency
             {
-                const auto statelock = std::lock_guard{device->StateLock};
-                clocktime = GetClockLatency(device, device->Backend.get());
-            }
+                auto statelock = std::lock_guard{device->StateLock};
+                return GetClockLatency(device, device->Backend.get());
+            });
             if(srcclock == clocktime.ClockTime)
                 values[1] = nanoseconds{clocktime.Latency}.count();
             else
@@ -2209,7 +2204,7 @@ NOINLINE void GetProperty(ALsource *const Source, ALCcontext *const Context, con
         if constexpr(std::is_same_v<T,int64_t>)
         {
             CheckSize(2);
-            nanoseconds srcclock{};
+            auto srcclock = nanoseconds{};
             values[0] = GetSourceSampleOffset(Source, Context, &srcclock);
             values[1] = srcclock.count();
             return;

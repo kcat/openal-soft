@@ -7,7 +7,7 @@
 #include <windows.h>
 
 #include "fmt/core.h"
-#include "strutils.h"
+#include "strutils.hpp"
 
 auto LoadLib(const char *name) -> al::expected<void*, std::string>
 {

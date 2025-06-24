@@ -1,7 +1,7 @@
 
 #include "config.h"
 
-#include "strutils.h"
+#include "strutils.hpp"
 
 #include <cstdlib>
 
@@ -11,12 +11,12 @@
 #include "alstring.h"
 
 /* NOLINTBEGIN(bugprone-suspicious-stringview-data-usage) */
-std::string wstr_to_utf8(std::wstring_view wstr)
+auto wstr_to_utf8(std::wstring_view wstr) -> std::string
 {
-    std::string ret;
+    auto ret = std::string{};
 
-    const int len{WideCharToMultiByte(CP_UTF8, 0, wstr.data(), al::sizei(wstr), nullptr, 0,
-        nullptr, nullptr)};
+    const auto len = WideCharToMultiByte(CP_UTF8, 0, wstr.data(), al::sizei(wstr), nullptr, 0,
+        nullptr, nullptr);
     if(len > 0)
     {
         ret.resize(static_cast<size_t>(len));
@@ -27,11 +27,11 @@ std::string wstr_to_utf8(std::wstring_view wstr)
     return ret;
 }
 
-std::wstring utf8_to_wstr(std::string_view str)
+auto utf8_to_wstr(std::string_view str) -> std::wstring
 {
-    std::wstring ret;
+    auto ret = std::wstring{};
 
-    const int len{MultiByteToWideChar(CP_UTF8, 0, str.data(), al::sizei(str), nullptr, 0)};
+    const auto len = MultiByteToWideChar(CP_UTF8, 0, str.data(), al::sizei(str), nullptr, 0);
     if(len > 0)
     {
         ret.resize(static_cast<size_t>(len));
@@ -41,30 +41,38 @@ std::wstring utf8_to_wstr(std::string_view str)
     return ret;
 }
 /* NOLINTEND(bugprone-suspicious-stringview-data-usage) */
-#endif
 
 namespace al {
 
-std::optional<std::string> getenv(const char *envname)
+auto getenv(const char *envname) -> std::optional<std::string>
 {
-#ifdef _GAMING_XBOX
-    const char *str{::getenv(envname)};
+    auto *str = _wgetenv(utf8_to_wstr(envname).c_str());
+    if(str && *str != L'\0')
+        return wstr_to_utf8(str);
+    return std::nullopt;
+}
+
+auto getenv(const WCHAR *envname) -> std::optional<std::wstring>
+{
+    auto *str = _wgetenv(envname);
+    if(str && *str != L'\0')
+        return str;
+    return std::nullopt;
+}
+
+} /* namespace al */
+
 #else
-    const char *str{std::getenv(envname)};
-#endif
+
+namespace al {
+
+auto getenv(const char *envname) -> std::optional<std::string>
+{
+    auto *str = std::getenv(envname);
     if(str && *str != '\0')
         return str;
     return std::nullopt;
 }
 
-#ifdef _WIN32
-std::optional<std::wstring> getenv(const WCHAR *envname)
-{
-    const WCHAR *str{_wgetenv(envname)};
-    if(str && *str != L'\0')
-        return str;
-    return std::nullopt;
-}
+} /* namespace al */
 #endif
-
-} // namespace al

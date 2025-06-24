@@ -45,7 +45,7 @@
 #include "core/logging.h"
 #include "fmt/core.h"
 #include "ringbuffer.h"
-#include "strutils.h"
+#include "strutils.hpp"
 #include "vector.h"
 
 #ifndef WAVE_FORMAT_IEEE_FLOAT

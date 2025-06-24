@@ -43,7 +43,7 @@
 #include "althrd_setname.h"
 #include "core/device.h"
 #include "core/logging.h"
-#include "strutils.h"
+#include "strutils.hpp"
 
 
 namespace {

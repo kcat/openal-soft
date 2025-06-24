@@ -51,7 +51,7 @@
 #include "direct_defs.h"
 #include "intrusive_ptr.h"
 #include "opthelpers.h"
-#include "strutils.h"
+#include "strutils.hpp"
 
 #if ALSOFT_EAX
 #include "eax/globals.h"

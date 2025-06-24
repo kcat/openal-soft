@@ -64,7 +64,7 @@
 #include "core/helpers.h"
 #include "core/logging.h"
 #include "pragmadefs.h"
-#include "strutils.h"
+#include "strutils.hpp"
 
 
 /* A custom C++ interface that should be capable of interoperating with ASIO

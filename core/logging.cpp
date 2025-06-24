@@ -14,7 +14,7 @@
 #include <utility>
 
 #include "alstring.h"
-#include "strutils.h"
+#include "strutils.hpp"
 
 
 #if defined(_WIN32)

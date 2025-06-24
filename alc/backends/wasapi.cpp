@@ -74,7 +74,7 @@
 #include "fmt/core.h"
 #include "fmt/chrono.h"
 #include "ringbuffer.h"
-#include "strutils.h"
+#include "strutils.hpp"
 
 #if ALSOFT_UWP
 #include <winrt/Windows.Media.Core.h> // !!This is important!!

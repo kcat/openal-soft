@@ -20,7 +20,7 @@
 
 #include "alstring.h"
 #include "opthelpers.h"
-#include "strutils.h"
+#include "strutils.hpp"
 
 #include "version.h"
 

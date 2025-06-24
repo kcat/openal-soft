@@ -51,7 +51,7 @@
 #include "core/logging.h"
 #include "filesystem.h"
 #include "fmt/ranges.h"
-#include "strutils.h"
+#include "strutils.hpp"
 
 #if ALSOFT_UWP
 #include <winrt/Windows.Media.Core.h> // !!This is important!!

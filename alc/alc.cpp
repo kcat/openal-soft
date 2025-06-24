@@ -108,7 +108,7 @@
 #include "inprogext.h"
 #include "intrusive_ptr.h"
 #include "opthelpers.h"
-#include "strutils.h"
+#include "strutils.hpp"
 
 #include "backends/base.h"
 #include "backends/null.h"

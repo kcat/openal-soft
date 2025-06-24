@@ -633,7 +633,7 @@ set(COMMON_OBJS
     common/pragmadefs.h
     common/ringbuffer.h
     common/strutils.cpp
-    common/strutils.h
+    common/strutils.hpp
     common/vecmat.h
     common/vector.h)
 

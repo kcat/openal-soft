@@ -20,7 +20,7 @@
 #include "alnumeric.h"
 #include "alstring.h"
 #include "router.h"
-#include "strutils.h"
+#include "strutils.hpp"
 
 
 namespace {

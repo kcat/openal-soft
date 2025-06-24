@@ -52,7 +52,7 @@
 #include "dynload.h"
 #include "fmt/core.h"
 #include "opthelpers.h"
-#include "strutils.h"
+#include "strutils.hpp"
 
 #include <pulse/pulseaudio.h>
 

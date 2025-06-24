@@ -42,7 +42,7 @@
 #include "alnumeric.h"
 #include "core/except.h"
 #include "core/logging.h"
-#include "strutils.h"
+#include "strutils.hpp"
 
 
 void ALCcontext::setErrorImpl(ALenum errorCode, const fmt::string_view fmt, fmt::format_args args)

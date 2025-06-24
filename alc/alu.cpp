@@ -80,7 +80,7 @@
 #include "intrusive_ptr.h"
 #include "opthelpers.h"
 #include "ringbuffer.h"
-#include "strutils.h"
+#include "strutils.hpp"
 #include "vecmat.h"
 
 struct CTag;

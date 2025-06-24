@@ -24,7 +24,7 @@
 #include "alstring.h"
 #include "filesystem.h"
 #include "logging.h"
-#include "strutils.h"
+#include "strutils.hpp"
 
 
 namespace {

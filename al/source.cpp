@@ -549,7 +549,7 @@ void InitVoice(Voice *voice, ALsource *source, ALbufferQueueItem *BufferList, AL
     if(buffer->mCallback) voice->mFlags.set(VoiceIsCallback);
     else if(source->SourceType == AL_STATIC) voice->mFlags.set(VoiceIsStatic);
     voice->mNumCallbackBlocks = 0;
-    voice->mCallbackBlockBase = 0;
+    voice->mCallbackBlockOffset = 0;
 
     voice->prepare(device);
 

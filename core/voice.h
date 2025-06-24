@@ -241,8 +241,8 @@ struct SIMDALIGN Voice {
     InterpState mResampleState;
 
     std::bitset<VoiceFlagCount> mFlags;
-    uint mNumCallbackBlocks{0};
-    uint mCallbackBlockBase{0};
+    uint mNumCallbackBlocks{0u};
+    uint mCallbackBlockOffset{0u};
 
     struct TargetData {
         int FilterType{};

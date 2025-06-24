@@ -811,6 +811,7 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
         const auto prevSamples = std::span{mPrevSamples[chan]};
         std::ranges::copy(prevSamples, Device->mResampleData.begin());
         const auto resampleBuffer = std::span{Device->mResampleData}.subspan<MaxResamplerEdge>();
+        auto cbOffset = mCallbackBlockOffset;
         auto intPos = DataPosInt;
         auto fracPos = DataPosFrac;
 
@@ -880,7 +881,7 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
                     goto skip_resample;
                 }
 
-                std::fill_n(resampleBuffer.begin(), srcSampleDelay, 0.0f);
+                std::ranges::fill(resampleBuffer | std::views::take(srcSampleDelay), 0.0f);
             }
 
             /* Load the necessary samples from the given buffer(s). */
@@ -903,16 +904,14 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
             else if(mFlags.test(VoiceIsStatic))
             {
                 const auto uintPos = static_cast<uint>(std::max(intPos, 0));
-                const auto bufferSamples = resampleBuffer.subspan(srcSampleDelay,
-                    srcBufferSize-srcSampleDelay);
+                const auto bufferSamples = resampleBuffer.first(srcBufferSize)
+                    .subspan(srcSampleDelay);
                 LoadBufferStatic(BufferListItem, BufferLoopItem, uintPos, chan, mFrameStep,
                     bufferSamples);
             }
             else if(mFlags.test(VoiceIsCallback))
             {
-                const auto uintPos = static_cast<uint>(std::max(intPos, 0));
-                const auto callbackBase = mCallbackBlockBase * mSamplesPerBlock;
-                const auto bufferOffset = size_t{uintPos - callbackBase};
+                const auto bufferOffset = size_t{cbOffset};
                 const auto needSamples = bufferOffset + srcBufferSize - srcSampleDelay;
                 const auto needBlocks = (needSamples + mSamplesPerBlock-1) / mSamplesPerBlock;
                 if(!mFlags.test(VoiceCallbackStopped) && needBlocks > mNumCallbackBlocks)
@@ -920,7 +919,7 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
                     const auto byteOffset = mNumCallbackBlocks*size_t{mBytesPerBlock};
                     const auto needBytes = (needBlocks-mNumCallbackBlocks)*size_t{mBytesPerBlock};
 
-                    const auto samples = std::visit([](auto&& splspan)
+                    const auto samples = std::visit([](auto &splspan)
                     { return std::as_writable_bytes(splspan); }, BufferListItem->mSamples);
 
                     const auto gotBytes = BufferListItem->mCallback(BufferListItem->mUserData,
@@ -936,16 +935,16 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
                         mNumCallbackBlocks = static_cast<uint>(needBlocks);
                 }
                 const auto numSamples = size_t{mNumCallbackBlocks} * mSamplesPerBlock;
-                const auto bufferSamples = resampleBuffer.subspan(srcSampleDelay,
-                    srcBufferSize-srcSampleDelay);
+                const auto bufferSamples = resampleBuffer.first(srcBufferSize)
+                    .subspan(srcSampleDelay);
                 LoadBufferCallback(BufferListItem, bufferOffset, numSamples, chan, mFrameStep,
                     bufferSamples);
             }
             else
             {
                 const auto uintPos = static_cast<uint>(std::max(intPos, 0));
-                const auto bufferSamples = resampleBuffer.subspan(srcSampleDelay,
-                    srcBufferSize-srcSampleDelay);
+                const auto bufferSamples = resampleBuffer.first(srcBufferSize)
+                    .subspan(srcSampleDelay);
                 LoadBufferQueue(BufferListItem, BufferLoopItem, uintPos, chan, mFrameStep,
                     bufferSamples);
             }
@@ -984,6 +983,7 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
                 const auto srcOffset = fracPos >> MixerFracBits;
                 fracPos &= MixerFracMask;
                 intPos = al::add_sat(intPos, static_cast<int>(srcOffset));
+                cbOffset += srcOffset;
 
                 /* If more samples need to be loaded, copy the back of the
                  * resampleBuffer to the front to reuse it. prevSamples isn't
@@ -1102,7 +1102,8 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
 
     /* Update voice positions and buffers as needed. */
     DataPosFrac += increment*samplesToMix;
-    DataPosInt = al::add_sat(DataPosInt, static_cast<int>(DataPosFrac>>MixerFracBits));
+    auto const samplesDone = DataPosFrac >> MixerFracBits;
+    DataPosInt = al::add_sat(DataPosInt, static_cast<int>(samplesDone));
     DataPosFrac &= MixerFracMask;
 
     auto buffers_done = 0u;
@@ -1133,24 +1134,26 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
         else if(mFlags.test(VoiceIsCallback))
         {
             /* Handle callback buffer source */
-            const auto currentBlock = static_cast<uint>(DataPosInt) / mSamplesPerBlock;
-            const auto blocksDone = currentBlock - mCallbackBlockBase;
-            if(blocksDone < mNumCallbackBlocks)
+            const auto endOffset = mCallbackBlockOffset + samplesDone;
+            const auto blocksDone = endOffset / mSamplesPerBlock;
+            if(blocksDone == 0)
+                mCallbackBlockOffset = endOffset;
+            else if(blocksDone < mNumCallbackBlocks)
             {
                 const auto byteOffset = blocksDone*size_t{mBytesPerBlock};
                 const auto byteEnd = mNumCallbackBlocks*size_t{mBytesPerBlock};
-                const auto data = std::visit([](auto&& splspan)
+                const auto data = std::visit([](auto &splspan)
                 { return std::as_writable_bytes(splspan); }, BufferListItem->mSamples);
                 std::ranges::copy(data | std::views::take(byteEnd) | std::views::drop(byteOffset),
                     data.begin());
                 mNumCallbackBlocks -= blocksDone;
-                mCallbackBlockBase += blocksDone;
+                mCallbackBlockOffset = endOffset - blocksDone*mSamplesPerBlock;
             }
             else
             {
                 BufferListItem = nullptr;
                 mNumCallbackBlocks = 0;
-                mCallbackBlockBase += blocksDone;
+                mCallbackBlockOffset = 0;
             }
         }
         else

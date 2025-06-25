@@ -2076,9 +2076,6 @@ void pffft_zconvolve_scale_accumulate_internal(const PFFFT_Setup *s, const v4sf 
     __builtin_prefetch(va+6);
     __builtin_prefetch(vb+6);
     __builtin_prefetch(vab+6);
-#ifndef __clang__
-#define ZCONVOLVE_USING_INLINE_NEON_ASM
-#endif
 #endif
 
     const auto ar1 = vextract0(va[0]);
@@ -2088,54 +2085,6 @@ void pffft_zconvolve_scale_accumulate_internal(const PFFFT_Setup *s, const v4sf 
     const auto abr1 = vextract0(vab[0]);
     const auto abi1 = vextract0(vab[1]);
 
-#ifdef ZCONVOLVE_USING_INLINE_ASM
-    /* Inline asm version, unfortunately miscompiled by clang 3.2, at least on
-     * Ubuntu. So this will be restricted to GCC.
-     *
-     * Does it still miscompile with Clang? Is it even needed with today's
-     * optimizers?
-     */
-    const auto *a_ = a;
-    const auto *b_ = b;
-    auto *ab_ = ab;
-    auto N = size_t{Ncvec};
-    asm volatile("mov         r8, %2                  \n"
-                "vdup.f32    q15, %4                 \n"
-                "1:                                  \n"
-                "pld         [%0,#64]                \n"
-                "pld         [%1,#64]                \n"
-                "pld         [%2,#64]                \n"
-                "pld         [%0,#96]                \n"
-                "pld         [%1,#96]                \n"
-                "pld         [%2,#96]                \n"
-                "vld1.f32    {q0,q1},   [%0,:128]!         \n"
-                "vld1.f32    {q4,q5},   [%1,:128]!         \n"
-                "vld1.f32    {q2,q3},   [%0,:128]!         \n"
-                "vld1.f32    {q6,q7},   [%1,:128]!         \n"
-                "vld1.f32    {q8,q9},   [r8,:128]!          \n"
-
-                "vmul.f32    q10, q0, q4             \n"
-                "vmul.f32    q11, q0, q5             \n"
-                "vmul.f32    q12, q2, q6             \n"
-                "vmul.f32    q13, q2, q7             \n"
-                "vmls.f32    q10, q1, q5             \n"
-                "vmla.f32    q11, q1, q4             \n"
-                "vld1.f32    {q0,q1}, [r8,:128]!     \n"
-                "vmls.f32    q12, q3, q7             \n"
-                "vmla.f32    q13, q3, q6             \n"
-                "vmla.f32    q8, q10, q15            \n"
-                "vmla.f32    q9, q11, q15            \n"
-                "vmla.f32    q0, q12, q15            \n"
-                "vmla.f32    q1, q13, q15            \n"
-                "vst1.f32    {q8,q9},[%2,:128]!    \n"
-                "vst1.f32    {q0,q1},[%2,:128]!    \n"
-                "subs        %3, #2                  \n"
-                "bne         1b                      \n"
-                : "+r"(a_), "+r"(b_), "+r"(ab_), "+r"(N) : "r"(scaling) : "r8", "q0","q1","q2","q3","q4","q5","q6","q7","q8","q9", "q10","q11","q12","q13","q15","memory");
-
-#else
-
-    /* Default routine, works fine for non-arm cpus with current compilers. */
     const auto vscale = ld_ps1(scaling);
     for(auto i = 0_uz;i < Ncvec;i += 2)
     {
@@ -2155,7 +2104,6 @@ void pffft_zconvolve_scale_accumulate_internal(const PFFFT_Setup *s, const v4sf 
         vab[2*i + 2] = vmadd(ar4, vscale, vab[2*i + 2]);
         vab[2*i + 3] = vmadd(ai4, vscale, vab[2*i + 3]);
     }
-#endif
 
     if(s->transform == PFFFT_REAL)
     {
@@ -2191,25 +2139,23 @@ void pffft_zconvolve_accumulate_internal(const PFFFT_Setup *s, const v4sf *RESTR
     const auto abr1 = vextract0(vab[0]);
     const auto abi1 = vextract0(vab[1]);
 
-    /* No inline assembly for this version. I'm not familiar enough with NEON
-     * assembly, and I don't know that it's needed with today's optimizers.
-     */
     for(auto i = 0_uz;i < Ncvec;i += 2)
     {
-        auto ar4 = va[2*i+0];
-        auto ai4 = va[2*i+1];
-        auto br4 = vb[2*i+0];
-        auto bi4 = vb[2*i+1];
+        auto ar4 = va[2*i + 0];
+        auto ai4 = va[2*i + 1];
+        auto br4 = vb[2*i + 0];
+        auto bi4 = vb[2*i + 1];
         vcplxmul(ar4, ai4, br4, bi4);
-        vab[2*i+0] = vadd(ar4, vab[2*i+0]);
-        vab[2*i+1] = vadd(ai4, vab[2*i+1]);
-        ar4 = va[2*i+2];
-        ai4 = va[2*i+3];
-        br4 = vb[2*i+2];
-        bi4 = vb[2*i+3];
+        vab[2*i + 0] = vadd(ar4, vab[2*i + 0]);
+        vab[2*i + 1] = vadd(ai4, vab[2*i + 1]);
+
+        ar4 = va[2*i + 2];
+        ai4 = va[2*i + 3];
+        br4 = vb[2*i + 2];
+        bi4 = vb[2*i + 3];
         vcplxmul(ar4, ai4, br4, bi4);
-        vab[2*i+2] = vadd(ar4, vab[2*i+2]);
-        vab[2*i+3] = vadd(ai4, vab[2*i+3]);
+        vab[2*i + 2] = vadd(ar4, vab[2*i + 2]);
+        vab[2*i + 3] = vadd(ai4, vab[2*i + 3]);
     }
 
     if(s->transform == PFFFT_REAL)

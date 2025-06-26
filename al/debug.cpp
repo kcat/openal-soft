@@ -229,8 +229,8 @@ void ALCcontext::sendDebugMessage(std::unique_lock<std::mutex> &debuglock, Debug
         auto param = mDebugParam;
         debuglock.unlock();
         callback(GetDebugSourceEnum(source), GetDebugTypeEnum(type), id,
-            GetDebugSeverityEnum(severity), gsl::narrow_cast<ALsizei>(std::ssize(message)),
-            message.data(), param);
+            GetDebugSeverityEnum(severity), gsl::narrow_cast<ALsizei>(message.size()),
+            message.data(), param); /* NOLINT(bugprone-suspicious-stringview-data-usage) */
     }
     else
     {

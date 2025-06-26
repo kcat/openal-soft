@@ -42,15 +42,16 @@
 #include "alnumeric.h"
 #include "core/except.h"
 #include "core/logging.h"
+#include "gsl/gsl"
 #include "strutils.hpp"
 
 
 void ALCcontext::setErrorImpl(ALenum errorCode, const fmt::string_view fmt, fmt::format_args args)
 {
-    const auto msg = fmt::vformat(fmt, std::move(args));
+    const auto message = fmt::vformat(fmt, std::move(args));
 
     WARN("Error generated on context {}, code {:#04x}, \"{}\"",
-        decltype(std::declval<void*>()){this}, as_unsigned(errorCode), msg);
+        decltype(std::declval<void*>()){this}, as_unsigned(errorCode), message);
     if(TrapALError)
     {
 #ifdef _WIN32
@@ -65,8 +66,8 @@ void ALCcontext::setErrorImpl(ALenum errorCode, const fmt::string_view fmt, fmt:
     if(mLastThreadError.get() == AL_NO_ERROR)
         mLastThreadError.set(errorCode);
 
-    debugMessage(DebugSource::API, DebugType::Error, static_cast<ALuint>(errorCode),
-        DebugSeverity::High, msg);
+    debugMessage(DebugSource::API, DebugType::Error, as_unsigned(errorCode), DebugSeverity::High,
+        message);
 }
 
 void ALCcontext::throw_error_impl(ALenum errorCode, const fmt::string_view fmt,
@@ -85,7 +86,7 @@ AL_API auto AL_APIENTRY alGetError() noexcept -> ALenum
     if(auto context = GetContextRef()) [[likely]]
         return alGetErrorDirect(context.get());
 
-    auto get_value = [](const char *envname, const char *optname) -> ALenum
+    static constexpr auto get_value = [](const char *envname, const char *optname) -> ALenum
     {
         auto optstr = al::getenv(envname);
         if(!optstr)
@@ -96,7 +97,7 @@ AL_API auto AL_APIENTRY alGetError() noexcept -> ALenum
                 auto idx = 0_uz;
                 auto value = std::stoi(*optstr, &idx, 0);
                 if(idx >= optstr->size() || std::isspace(optstr->at(idx)))
-                    return static_cast<ALenum>(value);
+                    return value;
             } catch(...) {
             }
             ERR("Invalid default error value: \"{}\"", *optstr);

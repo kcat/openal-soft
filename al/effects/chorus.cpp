@@ -11,6 +11,7 @@
 #include "alnumeric.h"
 #include "core/logging.h"
 #include "effects.h"
+#include "gsl/gsl"
 
 #if ALSOFT_EAX
 #include <cassert>
@@ -543,7 +544,7 @@ public:
         props_ = props;
 
         al_props_.Waveform = Traits::eax_waveform(props.ulWaveform);
-        al_props_.Phase = static_cast<int>(props.lPhase);
+        al_props_.Phase = gsl::narrow_cast<int>(props.lPhase);
         al_props_.Rate = props.flRate;
         al_props_.Depth = props.flDepth;
         al_props_.Feedback = props.flFeedback;

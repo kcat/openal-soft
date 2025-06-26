@@ -7,6 +7,7 @@
 #include "alc/context.h"
 #include "alnumeric.h"
 #include "effects.h"
+#include "gsl/gsl"
 
 #if ALSOFT_EAX
 #include "al/eax/effect.h"
@@ -193,7 +194,7 @@ bool EaxDistortionCommitter::commit(const EAXDISTORTIONPROPERTIES &props)
     mEaxProps = props;
     mAlProps = DistortionProps{
         .Edge = props.flEdge,
-        .Gain = level_mb_to_gain(static_cast<float>(props.lGain)),
+        .Gain = level_mb_to_gain(gsl::narrow_cast<float>(props.lGain)),
         .LowpassCutoff = props.flLowPassCutOff,
         .EQCenter = props.flEQCenter,
         .EQBandwidth = props.flEdge};

@@ -49,6 +49,7 @@
 #include "core/mixer/defs.h"
 #include "core/voice.h"
 #include "direct_defs.h"
+#include "gsl/gsl"
 #include "intrusive_ptr.h"
 #include "opthelpers.h"
 #include "strutils.hpp"
@@ -147,7 +148,8 @@ constexpr auto ALenumFromDistanceModel(DistanceModel model) -> ALenum
     case DistanceModel::Exponent: return AL_EXPONENT_DISTANCE;
     case DistanceModel::ExponentClamped: return AL_EXPONENT_DISTANCE_CLAMPED;
     }
-    throw std::runtime_error{fmt::format("Unexpected distance model {}", static_cast<int>(model))};
+    throw std::runtime_error{fmt::format("Unexpected distance model {:#x}",
+        al::to_underlying(model))};
 }
 
 enum PropertyValue : ALenum {
@@ -174,16 +176,16 @@ enum PropertyValue : ALenum {
 
 template<typename T>
 struct PropertyCastType {
-    template<typename U>
-    constexpr auto operator()(U&& value) const noexcept
-    { return static_cast<T>(std::forward<U>(value)); }
+    template<typename U> [[nodiscard]]
+    constexpr auto operator()(U&& value) const noexcept -> T
+    { return gsl::narrow_cast<T>(std::forward<U>(value)); }
 };
 /* Special-case ALboolean to be an actual bool instead of a char type. */
 template<>
 struct PropertyCastType<ALboolean> {
-    template<typename U>
-    constexpr ALboolean operator()(U&& value) const noexcept
-    { return static_cast<bool>(std::forward<U>(value)) ? AL_TRUE : AL_FALSE; }
+    template<typename U> [[nodiscard]]
+    constexpr auto operator()(U&& value) const noexcept -> ALboolean
+    { return gsl::narrow_cast<bool>(std::forward<U>(value)) ? AL_TRUE : AL_FALSE; }
 };
 
 
@@ -192,7 +194,7 @@ void GetValue(ALCcontext *context, ALenum pname, T *values)
 {
     static constexpr auto cast_value = PropertyCastType<T>{};
 
-    switch(static_cast<PropertyValue>(pname))
+    switch(PropertyValue{pname})
     {
     case AL_DOPPLER_FACTOR:
         *values = cast_value(context->mDopplerFactor);
@@ -580,7 +582,7 @@ FORCE_ALIGN const ALchar* AL_APIENTRY alGetStringiDirectSOFT(ALCcontext *context
     {
     case AL_RESAMPLER_NAME_SOFT:
         if(index >= 0 && index <= al::to_underlying(Resampler::Max))
-            return GetResamplerName(static_cast<Resampler>(index));
+            return GetResamplerName(gsl::narrow_cast<Resampler>(index));
         context->setError(AL_INVALID_VALUE, "Resampler name index {} out of range", index);
         return nullptr;
     }

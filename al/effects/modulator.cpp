@@ -10,6 +10,7 @@
 #include "alc/context.h"
 #include "alnumeric.h"
 #include "effects.h"
+#include "gsl/gsl"
 
 #if ALSOFT_EAX
 #include <cassert>
@@ -63,7 +64,7 @@ void ModulatorEffectHandler::SetParami(ALCcontext *context, ModulatorProps &prop
     {
     case AL_RING_MODULATOR_FREQUENCY:
     case AL_RING_MODULATOR_HIGHPASS_CUTOFF:
-        SetParamf(context, props, param, static_cast<float>(val));
+        SetParamf(context, props, param, gsl::narrow_cast<float>(val));
         return;
 
     case AL_RING_MODULATOR_WAVEFORM:
@@ -109,8 +110,8 @@ void ModulatorEffectHandler::GetParami(ALCcontext *context, const ModulatorProps
 {
     switch(param)
     {
-    case AL_RING_MODULATOR_FREQUENCY: *val = static_cast<int>(props.Frequency); return;
-    case AL_RING_MODULATOR_HIGHPASS_CUTOFF: *val = static_cast<int>(props.HighPassCutoff); return;
+    case AL_RING_MODULATOR_FREQUENCY: *val = gsl::narrow_cast<int>(props.Frequency); return;
+    case AL_RING_MODULATOR_HIGHPASS_CUTOFF: *val = gsl::narrow_cast<int>(props.HighPassCutoff); return;
     case AL_RING_MODULATOR_WAVEFORM: *val = EnumFromWaveform(props.Waveform); return;
     }
 

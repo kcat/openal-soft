@@ -10,6 +10,7 @@
 #include "alc/context.h"
 #include "alnumeric.h"
 #include "effects.h"
+#include "gsl/gsl"
 
 #if ALSOFT_EAX
 #include <cassert>
@@ -394,8 +395,8 @@ bool EaxVocalMorpherCommitter::commit(const EAXVOCALMORPHERPROPERTIES &props)
         .Rate = props.flRate,
         .PhonemeA = get_phoneme(props.ulPhonemeA),
         .PhonemeB = get_phoneme(props.ulPhonemeB),
-        .PhonemeACoarseTuning = static_cast<int>(props.lPhonemeACoarseTuning),
-        .PhonemeBCoarseTuning = static_cast<int>(props.lPhonemeBCoarseTuning),
+        .PhonemeACoarseTuning = gsl::narrow_cast<int>(props.lPhonemeACoarseTuning),
+        .PhonemeBCoarseTuning = gsl::narrow_cast<int>(props.lPhonemeBCoarseTuning),
         .Waveform = get_waveform(props.ulWaveform)};
 
     return true;

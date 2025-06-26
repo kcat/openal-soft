@@ -54,8 +54,11 @@
 #include "core/except.h"
 #include "core/logging.h"
 #include "direct_defs.h"
+#include "gsl/gsl"
 #include "intrusive_ptr.h"
 #include "opthelpers.h"
+
+using uint = unsigned int;
 
 
 const std::array<EffectList,16> gEffectList{{
@@ -144,7 +147,7 @@ auto EnsureEffects(al::Device *device, size_t needed) noexcept -> bool
 try {
     size_t count{std::accumulate(device->EffectList.cbegin(), device->EffectList.cend(), 0_uz,
         [](size_t cur, const EffectSubList &sublist) noexcept -> size_t
-        { return cur + static_cast<ALuint>(std::popcount(sublist.FreeMask)); })};
+        { return cur + gsl::narrow_cast<uint>(std::popcount(sublist.FreeMask)); })};
 
     while(needed > count)
     {
@@ -167,8 +170,8 @@ catch(...) {
 auto AllocEffect(al::Device *device) noexcept -> ALeffect*
 {
     auto sublist = std::ranges::find_if(device->EffectList, &EffectSubList::FreeMask);
-    auto lidx = static_cast<ALuint>(std::distance(device->EffectList.begin(), sublist));
-    auto slidx = static_cast<ALuint>(std::countr_zero(sublist->FreeMask));
+    auto lidx = gsl::narrow_cast<uint>(std::distance(device->EffectList.begin(), sublist));
+    auto slidx = gsl::narrow_cast<uint>(std::countr_zero(sublist->FreeMask));
     ASSUME(slidx < 64);
 
     auto *effect = std::construct_at(std::to_address(sublist->Effects->begin() + slidx));
@@ -221,7 +224,7 @@ try {
     auto *device = context->mALDevice.get();
     auto effectlock = std::lock_guard{device->EffectLock};
 
-    const auto eids = std::span{effects, static_cast<ALuint>(n)};
+    const auto eids = std::span{effects, gsl::narrow_cast<uint>(n)};
     if(!EnsureEffects(device, eids.size()))
         context->throw_error(AL_OUT_OF_MEMORY, "Failed to allocate {} effect{}", n,
             (n==1) ? "" : "s");
@@ -246,7 +249,7 @@ try {
     auto effectlock = std::lock_guard{device->EffectLock};
 
     /* First try to find any effects that are invalid. */
-    const auto eids = std::span{effects, static_cast<ALuint>(n)};
+    const auto eids = std::span{effects, gsl::narrow_cast<uint>(n)};
     auto inveffect = std::ranges::find_if_not(eids, [device](const ALuint eid) -> bool
     { return !eid || LookupEffect(device, eid) != nullptr; });
     if(inveffect != eids.end())

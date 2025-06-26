@@ -635,7 +635,18 @@ set(COMMON_OBJS
     common/strutils.cpp
     common/strutils.hpp
     common/vecmat.h
-    common/vector.h)
+    common/vector.h
+    gsl/include/gsl/algorithm
+    gsl/include/gsl/assert
+    gsl/include/gsl/byte
+    gsl/include/gsl/gsl
+    gsl/include/gsl/narrow
+    gsl/include/gsl/pointers
+    gsl/include/gsl/span
+    gsl/include/gsl/span_ext
+    gsl/include/gsl/util
+    gsl/include/gsl/zstring
+)
 
 # Core library routines
 set(CORE_OBJS
@@ -1390,7 +1401,7 @@ configure_file(
 
 add_library(alsoft.common STATIC EXCLUDE_FROM_ALL ${COMMON_OBJS})
 target_include_directories(alsoft.common PRIVATE ${OpenAL_SOURCE_DIR}/include
-    PUBLIC ${OpenAL_BINARY_DIR} ${OpenAL_SOURCE_DIR}/common)
+    PUBLIC ${OpenAL_BINARY_DIR} ${OpenAL_SOURCE_DIR}/common ${OpenAL_SOURCE_DIR}/gsl/include)
 target_compile_definitions(alsoft.common PRIVATE ${CPP_DEFS})
 target_compile_options(alsoft.common PRIVATE ${C_FLAGS})
 target_link_libraries(alsoft.common PRIVATE alsoft::fmt)
@@ -1923,7 +1934,8 @@ if(ALSOFT_EXAMPLES)
             add_executable(alffplay examples/alffplay.cpp)
             target_include_directories(alffplay PRIVATE ${FFMPEG_INCLUDE_DIRS})
             target_link_libraries(alffplay
-                PRIVATE ${LINKER_FLAGS} SDL3::SDL3 ${FFMPEG_LIBRARIES} alsoft.excommon alsoft::fmt)
+                PRIVATE ${LINKER_FLAGS} SDL3::SDL3 ${FFMPEG_LIBRARIES} alsoft.common
+                alsoft.excommon alsoft::fmt)
             set_target_properties(alffplay PROPERTIES ${ALSOFT_STD_VERSION_PROPS})
             list(APPEND NEED_ANALYZE_SOURCE_FILES "${CMAKE_SOURCE_DIR}/examples/alffplay.cpp")
 

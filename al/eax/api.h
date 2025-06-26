@@ -24,6 +24,8 @@
 
 #include "opthelpers.h"
 
+using ulong = unsigned long;
+
 
 #ifndef _WIN32
 using GUID = struct _GUID { /* NOLINT(*-reserved-identifier) */
@@ -835,10 +837,10 @@ struct EAXREVERBPROPERTIES {
 }; // EAXREVERBPROPERTIES
 
 
-constexpr auto EAXREVERB_MINENVIRONMENT = static_cast<unsigned long>(EAX_ENVIRONMENT_GENERIC);
-constexpr auto EAX1REVERB_MAXENVIRONMENT = static_cast<unsigned long>(EAX_ENVIRONMENT_PSYCHOTIC);
-constexpr auto EAX30REVERB_MAXENVIRONMENT = static_cast<unsigned long>(EAX_ENVIRONMENT_UNDEFINED);
-constexpr auto EAXREVERB_DEFAULTENVIRONMENT = static_cast<unsigned long>(EAX_ENVIRONMENT_GENERIC);
+constexpr auto EAXREVERB_MINENVIRONMENT = ulong{EAX_ENVIRONMENT_GENERIC};
+constexpr auto EAX1REVERB_MAXENVIRONMENT = ulong{EAX_ENVIRONMENT_PSYCHOTIC};
+constexpr auto EAX30REVERB_MAXENVIRONMENT = ulong{EAX_ENVIRONMENT_UNDEFINED};
+constexpr auto EAXREVERB_DEFAULTENVIRONMENT = ulong{EAX_ENVIRONMENT_GENERIC};
 
 constexpr auto EAXREVERB_MINENVIRONMENTSIZE = 1.0F;
 constexpr auto EAXREVERB_MAXENVIRONMENTSIZE = 100.0F;

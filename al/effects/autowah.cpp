@@ -9,6 +9,7 @@
 #include "alc/context.h"
 #include "alnumeric.h"
 #include "effects.h"
+#include "gsl/gsl"
 
 #if ALSOFT_EAX
 #include "al/eax/effect.h"
@@ -176,8 +177,8 @@ bool EaxAutowahCommitter::commit(const EAXAUTOWAHPROPERTIES &props)
     mAlProps = AutowahProps{
         .AttackTime = props.flAttackTime,
         .ReleaseTime = props.flReleaseTime,
-        .Resonance = level_mb_to_gain(static_cast<float>(props.lResonance)),
-        .PeakGain = level_mb_to_gain(static_cast<float>(props.lPeakLevel))};
+        .Resonance = level_mb_to_gain(gsl::narrow_cast<float>(props.lResonance)),
+        .PeakGain = level_mb_to_gain(gsl::narrow_cast<float>(props.lPeakLevel))};
 
     return true;
 }

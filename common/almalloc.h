@@ -8,10 +8,7 @@
 #include <type_traits>
 #include <variant>
 
-
-namespace gsl {
-template<typename T> using owner = T;
-}
+#include "gsl/gsl"
 
 
 #define DISABLE_ALLOC                                                         \

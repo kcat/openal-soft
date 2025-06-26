@@ -37,6 +37,9 @@
 #include "core/except.h"
 #include "core/logging.h"
 #include "direct_defs.h"
+#include "gsl/gsl"
+
+using uint = unsigned int;
 
 
 namespace {
@@ -203,8 +206,8 @@ try {
     {
     case AL_POSITION:
     case AL_VELOCITY:
-        alListener3fDirect(context, param, static_cast<ALfloat>(value1),
-            static_cast<ALfloat>(value2), static_cast<ALfloat>(value3));
+        alListener3fDirect(context, param, gsl::narrow_cast<float>(value1),
+            gsl::narrow_cast<float>(value2), gsl::narrow_cast<float>(value3));
         return;
     }
 
@@ -231,15 +234,16 @@ try {
     case AL_POSITION:
     case AL_VELOCITY:
         vals = {values, 3_uz};
-        alListener3fDirect(context, param, static_cast<ALfloat>(vals[0]),
-            static_cast<ALfloat>(vals[1]), static_cast<ALfloat>(vals[2]));
+        alListener3fDirect(context, param, gsl::narrow_cast<float>(vals[0]),
+            gsl::narrow_cast<float>(vals[1]), gsl::narrow_cast<float>(vals[2]));
         return;
 
     case AL_ORIENTATION:
         vals = {values, 6_uz};
-        const std::array fvals{static_cast<ALfloat>(vals[0]), static_cast<ALfloat>(vals[1]),
-            static_cast<ALfloat>(vals[2]), static_cast<ALfloat>(vals[3]),
-            static_cast<ALfloat>(vals[4]), static_cast<ALfloat>(vals[5]),
+        const auto fvals = std::array{gsl::narrow_cast<float>(vals[0]),
+            gsl::narrow_cast<float>(vals[1]), gsl::narrow_cast<float>(vals[2]),
+            gsl::narrow_cast<float>(vals[3]), gsl::narrow_cast<float>(vals[4]),
+            gsl::narrow_cast<float>(vals[5]),
         };
         alListenerfvDirect(context, param, fvals.data());
         return;
@@ -379,15 +383,15 @@ try {
     switch(param)
     {
     case AL_POSITION:
-        *value1 = static_cast<ALint>(listener.Position[0]);
-        *value2 = static_cast<ALint>(listener.Position[1]);
-        *value3 = static_cast<ALint>(listener.Position[2]);
+        *value1 = gsl::narrow_cast<int>(listener.Position[0]);
+        *value2 = gsl::narrow_cast<int>(listener.Position[1]);
+        *value3 = gsl::narrow_cast<int>(listener.Position[2]);
         return;
 
     case AL_VELOCITY:
-        *value1 = static_cast<ALint>(listener.Velocity[0]);
-        *value2 = static_cast<ALint>(listener.Velocity[1]);
-        *value3 = static_cast<ALint>(listener.Velocity[2]);
+        *value1 = gsl::narrow_cast<int>(listener.Velocity[0]);
+        *value2 = gsl::narrow_cast<int>(listener.Velocity[1]);
+        *value3 = gsl::narrow_cast<int>(listener.Velocity[2]);
         return;
     }
     context->throw_error(AL_INVALID_ENUM, "Invalid listener 3-integer property {:#04x}",
@@ -418,7 +422,7 @@ try {
     const auto proplock = std::lock_guard{context->mPropLock};
     const auto &listener = context->mListener;
 
-    static constexpr auto f2i = [](const float val) noexcept { return static_cast<ALint>(val); };
+    static constexpr auto f2i = [](const float val) { return gsl::narrow_cast<int>(val); };
     switch(param)
     {
     case AL_ORIENTATION:

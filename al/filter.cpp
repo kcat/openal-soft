@@ -46,8 +46,11 @@
 #include "core/except.h"
 #include "core/logging.h"
 #include "direct_defs.h"
+#include "gsl/gsl"
 #include "intrusive_ptr.h"
 #include "opthelpers.h"
+
+using uint = unsigned int;
 
 
 namespace {
@@ -101,7 +104,7 @@ auto EnsureFilters(al::Device *device, size_t needed) noexcept -> bool
 try {
     size_t count{std::accumulate(device->FilterList.cbegin(), device->FilterList.cend(), 0_uz,
         [](size_t cur, const FilterSubList &sublist) noexcept -> size_t
-        { return cur + static_cast<ALuint>(std::popcount(sublist.FreeMask)); })};
+        { return cur + gsl::narrow_cast<uint>(std::popcount(sublist.FreeMask)); })};
 
     while(needed > count)
     {
@@ -125,8 +128,8 @@ catch(...) {
 auto AllocFilter(al::Device *device) noexcept -> ALfilter*
 {
     auto sublist = std::ranges::find_if(device->FilterList, &FilterSubList::FreeMask);
-    auto lidx = static_cast<ALuint>(std::distance(device->FilterList.begin(), sublist));
-    auto slidx = static_cast<ALuint>(std::countr_zero(sublist->FreeMask));
+    auto lidx = gsl::narrow_cast<uint>(std::distance(device->FilterList.begin(), sublist));
+    auto slidx = gsl::narrow_cast<uint>(std::countr_zero(sublist->FreeMask));
     ASSUME(slidx < 64);
 
     auto *filter = std::construct_at(std::to_address(sublist->Filters->begin() + slidx));
@@ -367,7 +370,7 @@ try {
     auto *device = context->mALDevice.get();
     auto filterlock = std::lock_guard{device->FilterLock};
 
-    const auto fids = std::span{filters, static_cast<ALuint>(n)};
+    const auto fids = std::span{filters, gsl::narrow_cast<uint>(n)};
     if(!EnsureFilters(device, fids.size()))
         context->throw_error(AL_OUT_OF_MEMORY, "Failed to allocate {} filter{}", n,
             (n==1) ? "" : "s");
@@ -392,7 +395,7 @@ try {
     auto filterlock = std::lock_guard{device->FilterLock};
 
     /* First try to find any filters that are invalid. */
-    const auto fids = std::span{filters, static_cast<ALuint>(n)};
+    const auto fids = std::span{filters, gsl::narrow_cast<uint>(n)};
     const auto invflt = std::ranges::find_if_not(fids, [device](const ALuint fid) -> bool
     { return !fid || LookupFilter(device, fid) != nullptr; });
     if(invflt != fids.end())

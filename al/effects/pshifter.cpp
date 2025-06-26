@@ -7,6 +7,7 @@
 #include "alc/context.h"
 #include "alnumeric.h"
 #include "effects.h"
+#include "gsl/gsl"
 
 #if ALSOFT_EAX
 #include "al/eax/effect.h"
@@ -132,8 +133,8 @@ bool EaxPitchShifterCommitter::commit(const EAXPITCHSHIFTERPROPERTIES &props)
 
     mEaxProps = props;
     mAlProps = PshifterProps{
-        .CoarseTune = static_cast<int>(props.lCoarseTune),
-        .FineTune = static_cast<int>(props.lFineTune)};
+        .CoarseTune = gsl::narrow_cast<int>(props.lCoarseTune),
+        .FineTune = gsl::narrow_cast<int>(props.lFineTune)};
 
     return true;
 }

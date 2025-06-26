@@ -34,6 +34,7 @@
 #include "effect.h"
 #include "filter.h"
 #include "fmt/core.h"
+#include "gsl/gsl"
 #include "intrusive_ptr.h"
 #include "opthelpers.h"
 #include "source.h"
@@ -228,8 +229,8 @@ void ALCcontext::sendDebugMessage(std::unique_lock<std::mutex> &debuglock, Debug
         auto param = mDebugParam;
         debuglock.unlock();
         callback(GetDebugSourceEnum(source), GetDebugTypeEnum(type), id,
-            GetDebugSeverityEnum(severity), static_cast<ALsizei>(message.length()), message.data(),
-            param);
+            GetDebugSeverityEnum(severity), gsl::narrow_cast<ALsizei>(std::ssize(message)),
+            message.data(), param);
     }
     else
     {
@@ -269,7 +270,7 @@ try {
         context->throw_error(AL_INVALID_VALUE, "Null message pointer");
 
     const auto msgview = (length < 0) ? std::string_view{message}
-        : std::string_view{message, static_cast<uint>(length)};
+        : std::string_view{message, gsl::narrow_cast<uint>(length)};
     if(msgview.size() >= MaxDebugMessageLength)
         context->throw_error(AL_INVALID_VALUE, "Debug message too long ({} >= {})", msgview.size(),
             MaxDebugMessageLength);
@@ -408,11 +409,11 @@ FORCE_ALIGN void AL_APIENTRY alPushDebugGroupDirectEXT(ALCcontext *context, ALen
 try {
     if(length < 0)
     {
-        auto newlen = std::strlen(message);
+        const auto newlen = std::strlen(message);
         if(newlen >= MaxDebugMessageLength)
             context->throw_error(AL_INVALID_VALUE, "Debug message too long ({} >= {})", newlen,
                 MaxDebugMessageLength);
-        length = static_cast<ALsizei>(newlen);
+        length = gsl::narrow_cast<ALsizei>(newlen);
     }
     else if(length >= MaxDebugMessageLength)
         context->throw_error(AL_INVALID_VALUE, "Debug message too long ({} >= {})", length,
@@ -430,7 +431,7 @@ try {
         context->throw_error(AL_STACK_OVERFLOW_EXT, "Pushing too many debug groups");
 
     context->mDebugGroups.emplace_back(*dsource, id,
-        std::string_view{message, static_cast<uint>(length)});
+        std::string_view{message, gsl::narrow_cast<uint>(length)});
     auto &oldback = *(context->mDebugGroups.end()-2);
     auto &newback = context->mDebugGroups.back();
 
@@ -491,7 +492,7 @@ try {
          */
         if(logBuf)
         {
-            const auto logSpan = std::span{logBuf, static_cast<ALuint>(logBufSize)};
+            const auto logSpan = std::span{logBuf, gsl::narrow_cast<ALuint>(logBufSize)};
             auto counter = 0_uz;
             auto todo = 0u;
             std::ignore = std::ranges::find_if(context->mDebugLog | std::views::take(count),
@@ -506,7 +507,7 @@ try {
             });
             return todo;
         }
-        return static_cast<ALuint>(std::min(context->mDebugLog.size(), size_t{count}));
+        return gsl::narrow_cast<ALuint>(std::min(context->mDebugLog.size(), size_t{count}));
     });
     if(toget < 1)
         return 0;
@@ -526,12 +527,13 @@ try {
     if(lengths)
     {
         std::ranges::transform(logrange, std::span{lengths, toget}.begin(),
-            [](const DebugLogEntry &entry){return static_cast<ALsizei>(entry.mMessage.size()+1);});
+            [](const DebugLogEntry &entry)
+        { return gsl::narrow_cast<ALsizei>(entry.mMessage.size()+1); });
     }
 
     if(logBuf)
     {
-        const auto logSpan = std::span{logBuf, static_cast<ALuint>(logBufSize)};
+        const auto logSpan = std::span{logBuf, gsl::narrow_cast<ALuint>(logBufSize)};
         /* C++23...
         std::ranges::copy(logrange | std::views::transform(&DebugLogEntry::mMessage)
             | std::views::join_with('\0'), logSpan.begin());
@@ -570,7 +572,7 @@ try {
         context->throw_error(AL_INVALID_VALUE, "Null label pointer");
 
     auto objname = (length < 0) ? std::string_view{label}
-        : std::string_view{label, static_cast<uint>(length)};
+        : std::string_view{label, gsl::narrow_cast<uint>(length)};
     if(objname.size() >= MaxObjectLabelLength)
         context->throw_error(AL_INVALID_VALUE, "Object label length too long ({} >= {})",
             objname.size(), MaxObjectLabelLength);
@@ -605,7 +607,7 @@ try {
     if(label && bufSize == 0)
         context->throw_error(AL_INVALID_VALUE, "Zero label bufSize");
 
-    const auto labelOut = std::span{label, label ? static_cast<ALuint>(bufSize) : 0u};
+    const auto labelOut = std::span{label, label ? gsl::narrow_cast<ALuint>(bufSize) : 0u};
     auto copy_name = [name,length,labelOut](std::unordered_map<ALuint,std::string> &names)
     {
         const auto objname = std::invoke([name,&names]
@@ -616,14 +618,14 @@ try {
         });
 
         if(labelOut.empty())
-            *length = static_cast<ALsizei>(objname.size());
+            *length = gsl::narrow_cast<ALsizei>(objname.size());
         else
         {
             const auto namerange = objname | std::views::take(labelOut.size()-1);
             auto oiter = std::ranges::copy(namerange, labelOut.begin()).out;
             *oiter = '\0';
             if(length)
-                *length = static_cast<ALsizei>(namerange.size());
+                *length = gsl::narrow_cast<ALsizei>(namerange.size());
         }
     };
 

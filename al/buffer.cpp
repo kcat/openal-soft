@@ -59,6 +59,7 @@
 #include "core/resampler_limits.h"
 #include "core/voice.h"
 #include "direct_defs.h"
+#include "gsl/gsl"
 #include "intrusive_ptr.h"
 #include "opthelpers.h"
 
@@ -68,6 +69,8 @@
 #include "eax/globals.h"
 #include "eax/x_ram.h"
 #endif // ALSOFT_EAX
+
+using uint = unsigned int;
 
 
 namespace {
@@ -186,7 +189,7 @@ auto EnsureBuffers(al::Device *device, size_t needed) noexcept -> bool
 try {
     size_t count{std::accumulate(device->BufferList.cbegin(), device->BufferList.cend(), 0_uz,
         [](size_t cur, const BufferSubList &sublist) noexcept -> size_t
-        { return cur + static_cast<ALuint>(std::popcount(sublist.FreeMask)); })};
+        { return cur + gsl::narrow_cast<ALuint>(std::popcount(sublist.FreeMask)); })};
 
     while(needed > count)
     {
@@ -209,8 +212,8 @@ catch(...) {
 auto AllocBuffer(al::Device *device) noexcept -> ALbuffer*
 {
     auto sublist = std::ranges::find_if(device->BufferList, &BufferSubList::FreeMask);
-    auto lidx = static_cast<ALuint>(std::distance(device->BufferList.begin(), sublist));
-    auto slidx = static_cast<ALuint>(std::countr_zero(sublist->FreeMask));
+    auto lidx = gsl::narrow_cast<ALuint>(std::distance(device->BufferList.begin(), sublist));
+    auto slidx = gsl::narrow_cast<ALuint>(std::countr_zero(sublist->FreeMask));
     ASSUME(slidx < 64);
 
     auto *buffer = std::construct_at(std::to_address(sublist->Buffers->begin() + slidx));
@@ -357,7 +360,7 @@ void LoadData(ALCcontext *context, ALbuffer *ALBuf, ALsizei freq, ALuint size,
     }
 #endif
 
-    const auto newsize = static_cast<size_t>(blocks) * BlockSize;
+    const auto newsize = size_t{blocks} * BlockSize;
     const auto needRealloc = std::visit([ALBuf,DstType,newsize,access](auto &datavec) -> bool
     {
         using vector_t = std::remove_cvref_t<decltype(datavec)>;
@@ -415,7 +418,7 @@ void LoadData(ALCcontext *context, ALbuffer *ALBuf, ALsizei freq, ALuint size,
 
     ALBuf->Access = access;
 
-    ALBuf->mSampleRate = static_cast<ALuint>(freq);
+    ALBuf->mSampleRate = gsl::narrow_cast<ALuint>(freq);
     ALBuf->mChannels = DstChannels;
     ALBuf->mType = DstType;
     ALBuf->mAmbiOrder = ambiorder;
@@ -465,23 +468,24 @@ void PrepareCallback(ALCcontext *context, ALbuffer *ALBuf, ALsizei freq,
     const auto line_blocks = (line_size + align-1) / align;
 
     const auto newsize = line_blocks * BlockSize;
-    auto do_realloc = [ALBuf,newsize]<typename T>()
+    auto do_realloc = [ALBuf,newsize](auto value)
     {
-        using vector_t = al::vector<T,16>;
-        auto newdata = vector_t(newsize / sizeof(T), SampleInfo<T>::silence());
+        using sample_t = decltype(value);
+        using vector_t = al::vector<sample_t,16>;
+        auto newdata = vector_t(newsize / sizeof(sample_t), value);
         ALBuf->mData = ALBuf->mDataStorage.emplace<vector_t>(std::move(newdata));
     };
     switch(DstType)
     {
-    case FmtUByte: do_realloc.operator()<uint8_t>(); break;
-    case FmtShort: do_realloc.operator()<int16_t>(); break;
-    case FmtInt: do_realloc.operator()<int32_t>(); break;
-    case FmtFloat: do_realloc.operator()<float>(); break;
-    case FmtDouble: do_realloc.operator()<double>(); break;
-    case FmtMulaw: do_realloc.operator()<MulawSample>(); break;
-    case FmtAlaw: do_realloc.operator()<AlawSample>(); break;
-    case FmtIMA4: do_realloc.operator()<IMA4Data>(); break;
-    case FmtMSADPCM: do_realloc.operator()<MSADPCMData>(); break;
+    case FmtUByte: do_realloc(SampleInfo<uint8_t>::silence()); break;
+    case FmtShort: do_realloc(SampleInfo<int16_t>::silence()); break;
+    case FmtInt: do_realloc(SampleInfo<int32_t>::silence()); break;
+    case FmtFloat: do_realloc(SampleInfo<float>::silence()); break;
+    case FmtDouble: do_realloc(SampleInfo<double>::silence()); break;
+    case FmtMulaw: do_realloc(SampleInfo<MulawSample>::silence()); break;
+    case FmtAlaw: do_realloc(SampleInfo<AlawSample>::silence()); break;
+    case FmtIMA4: do_realloc(SampleInfo<IMA4Data>::silence()); break;
+    case FmtMSADPCM: do_realloc(SampleInfo<MSADPCMData>::silence()); break;
     }
 
 #if ALSOFT_EAX
@@ -495,7 +499,7 @@ void PrepareCallback(ALCcontext *context, ALbuffer *ALBuf, ALsizei freq,
     ALBuf->Access = 0;
 
     ALBuf->mBlockAlign = (DstType == FmtIMA4 || DstType == FmtMSADPCM) ? align : 1;
-    ALBuf->mSampleRate = static_cast<ALuint>(freq);
+    ALBuf->mSampleRate = gsl::narrow_cast<ALuint>(freq);
     ALBuf->mChannels = DstChannels;
     ALBuf->mType = DstType;
     ALBuf->mAmbiOrder = ambiorder;
@@ -574,22 +578,23 @@ void PrepareUserPtr(ALCcontext *context [[maybe_unused]], ALbuffer *ALBuf, ALsiz
     }
 #endif
 
-    auto do_realloc = [ALBuf,usrdata,usrdatalen]<typename T>()
+    auto do_realloc = [ALBuf,usrdata,usrdatalen](auto value)
     {
-        ALBuf->mDataStorage.emplace<al::vector<T,16>>();
-        ALBuf->mData = std::span{static_cast<T*>(usrdata), usrdatalen/sizeof(T)};
+        using sample_t = decltype(value);
+        ALBuf->mDataStorage.emplace<al::vector<sample_t,16>>();
+        ALBuf->mData = std::span{static_cast<sample_t*>(usrdata), usrdatalen/sizeof(sample_t)};
     };
     switch(DstType)
     {
-    case FmtUByte: do_realloc.operator()<uint8_t>(); break;
-    case FmtShort: do_realloc.operator()<int16_t>(); break;
-    case FmtInt: do_realloc.operator()<int32_t>(); break;
-    case FmtFloat: do_realloc.operator()<float>(); break;
-    case FmtDouble: do_realloc.operator()<double>(); break;
-    case FmtMulaw: do_realloc.operator()<MulawSample>(); break;
-    case FmtAlaw: do_realloc.operator()<AlawSample>(); break;
-    case FmtIMA4: do_realloc.operator()<IMA4Data>(); break;
-    case FmtMSADPCM: do_realloc.operator()<MSADPCMData>(); break;
+    case FmtUByte: do_realloc(SampleInfo<uint8_t>::silence()); break;
+    case FmtShort: do_realloc(SampleInfo<int16_t>::silence()); break;
+    case FmtInt: do_realloc(SampleInfo<int32_t>::silence()); break;
+    case FmtFloat: do_realloc(SampleInfo<float>::silence()); break;
+    case FmtDouble: do_realloc(SampleInfo<double>::silence()); break;
+    case FmtMulaw: do_realloc(SampleInfo<MulawSample>::silence()); break;
+    case FmtAlaw: do_realloc(SampleInfo<AlawSample>::silence()); break;
+    case FmtIMA4: do_realloc(SampleInfo<IMA4Data>::silence()); break;
+    case FmtMSADPCM: do_realloc(SampleInfo<MSADPCMData>::silence()); break;
     }
 
 #if ALSOFT_EAX
@@ -603,7 +608,7 @@ void PrepareUserPtr(ALCcontext *context [[maybe_unused]], ALbuffer *ALBuf, ALsiz
     ALBuf->Access = 0;
 
     ALBuf->mBlockAlign = (DstType == FmtIMA4 || DstType == FmtMSADPCM) ? align : 1;
-    ALBuf->mSampleRate = static_cast<ALuint>(freq);
+    ALBuf->mSampleRate = gsl::narrow_cast<ALuint>(freq);
     ALBuf->mChannels = DstChannels;
     ALBuf->mType = DstType;
     ALBuf->mAmbiOrder = ambiorder;
@@ -740,7 +745,7 @@ try {
     auto *device = context->mALDevice.get();
     auto buflock = std::lock_guard{device->BufferLock};
 
-    const auto bids = std::span{buffers, static_cast<ALuint>(n)};
+    const auto bids = std::span{buffers, gsl::narrow_cast<ALuint>(n)};
     if(!EnsureBuffers(device, bids.size()))
         context->throw_error(AL_OUT_OF_MEMORY, "Failed to allocate {} buffer{}", n,
             (n==1) ? "" : "s");
@@ -765,7 +770,7 @@ try {
     auto buflock = std::lock_guard{device->BufferLock};
 
     /* First try to find any buffers that are invalid or in-use. */
-    const auto bids = std::span{buffers, static_cast<ALuint>(n)};
+    const auto bids = std::span{buffers, gsl::narrow_cast<ALuint>(n)};
     std::ranges::for_each(bids, [context,device](const ALuint bid)
     {
         if(!bid) return;
@@ -836,8 +841,8 @@ try {
         context->throw_error(AL_INVALID_ENUM, "Invalid format {:#04x}", as_unsigned(format));
 
     auto *bdata = static_cast<const std::byte*>(data);
-    LoadData(context, albuf, freq, static_cast<ALuint>(size), usrfmt->channels, usrfmt->type,
-        std::span{bdata, bdata ? static_cast<ALuint>(size) : 0u}, flags);
+    LoadData(context, albuf, freq, gsl::narrow_cast<ALuint>(size), usrfmt->channels, usrfmt->type,
+        std::span{bdata, bdata ? gsl::narrow_cast<ALuint>(size) : 0u}, flags);
 }
 catch(al::base_exception&) {
 }
@@ -865,7 +870,7 @@ try {
         context->throw_error(AL_INVALID_ENUM, "Invalid format {:#04x}", as_unsigned(format));
 
     PrepareUserPtr(context, albuf, freq, usrfmt->channels, usrfmt->type, data,
-        static_cast<ALuint>(size));
+        gsl::narrow_cast<ALuint>(size));
 }
 catch(al::base_exception&) {
 }
@@ -905,12 +910,12 @@ try {
     if((unavailable&AL_MAP_PERSISTENT_BIT_SOFT))
         context->throw_error(AL_INVALID_VALUE,
             "Mapping buffer {} persistently without persistent access", buffer);
-    if(offset < 0 || length <= 0 || static_cast<ALuint>(offset) >= albuf->OriginalSize
-        || static_cast<ALuint>(length) > albuf->OriginalSize - static_cast<ALuint>(offset))
+    if(offset < 0 || length <= 0 || gsl::narrow_cast<uint>(offset) >= albuf->OriginalSize
+        || gsl::narrow_cast<uint>(length) > albuf->OriginalSize - gsl::narrow_cast<uint>(offset))
         context->throw_error(AL_INVALID_VALUE, "Mapping invalid range {}+{} for buffer {}", offset,
             length, buffer);
 
-    auto *retval = std::visit([ptroff=static_cast<ALuint>(offset)](auto&& datavec)
+    auto *retval = std::visit([ptroff=gsl::narrow_cast<uint>(offset)](auto &datavec)
     { return &std::as_writable_bytes(datavec)[ptroff]; }, albuf->mData);
     albuf->MappedAccess = access;
     albuf->MappedOffset = offset;
@@ -1015,20 +1020,20 @@ try {
         (albuf->mType == FmtMSADPCM) ? ((align-2)/2 + 7) * num_chans :
         (align * albuf->bytesFromFmt() * num_chans)};
 
-    if(offset < 0 || length < 0 || static_cast<ALuint>(offset) > albuf->OriginalSize
-        || static_cast<ALuint>(length) > albuf->OriginalSize-static_cast<ALuint>(offset))
+    if(offset < 0 || length < 0 || gsl::narrow_cast<uint>(offset) > albuf->OriginalSize
+        || gsl::narrow_cast<uint>(length) > albuf->OriginalSize-gsl::narrow_cast<uint>(offset))
         context->throw_error(AL_INVALID_VALUE, "Invalid data sub-range {}+{} on buffer {}", offset,
             length, buffer);
-    if((static_cast<ALuint>(offset)%byte_align) != 0)
+    if((gsl::narrow_cast<uint>(offset)%byte_align) != 0)
         context->throw_error(AL_INVALID_VALUE,
             "Sub-range offset {} is not a multiple of frame size {} ({} unpack alignment)",
             offset, byte_align, align);
-    if((static_cast<ALuint>(length)%byte_align) != 0)
+    if((gsl::narrow_cast<uint>(length)%byte_align) != 0)
         context->throw_error(AL_INVALID_VALUE,
             "Sub-range length {} is not a multiple of frame size {} ({} unpack alignment)",
             length, byte_align, align);
 
-    auto bufferbytes = std::visit([](auto&& datavec)
+    auto bufferbytes = std::visit([](auto &datavec)
     { return std::as_writable_bytes(datavec); }, albuf->mData);
     std::ranges::copy(std::views::counted(static_cast<const std::byte*>(data), length),
         (bufferbytes | std::views::drop(offset)).begin());
@@ -1117,13 +1122,13 @@ try {
     case AL_UNPACK_BLOCK_ALIGNMENT_SOFT:
         if(value < 0)
             context->throw_error(AL_INVALID_VALUE, "Invalid unpack block alignment {}", value);
-        albuf->UnpackAlign = static_cast<ALuint>(value);
+        albuf->UnpackAlign = gsl::narrow_cast<uint>(value);
         return;
 
     case AL_PACK_BLOCK_ALIGNMENT_SOFT:
         if(value < 0)
             context->throw_error(AL_INVALID_VALUE, "Invalid pack block alignment {}", value);
-        albuf->PackAlign = static_cast<ALuint>(value);
+        albuf->PackAlign = gsl::narrow_cast<uint>(value);
         return;
 
     case AL_AMBISONIC_LAYOUT_SOFT:
@@ -1161,7 +1166,7 @@ try {
     case AL_UNPACK_AMBISONIC_ORDER_SOFT:
         if(value < 1 || value > 14)
             context->throw_error(AL_INVALID_VALUE, "Invalid unpack ambisonic order {}", value);
-        albuf->UnpackAmbiOrder = static_cast<ALuint>(value);
+        albuf->UnpackAmbiOrder = gsl::narrow_cast<uint>(value);
         return;
     }
 
@@ -1225,12 +1230,13 @@ try {
         if(albuf->mRef.load(std::memory_order_relaxed) != 0)
             context->throw_error(AL_INVALID_OPERATION, "Modifying in-use buffer {}'s loop points",
                 buffer);
-        if(vals[0] < 0 || vals[0] >= vals[1] || static_cast<ALuint>(vals[1]) > albuf->mSampleLen)
+        if(vals[0] < 0 || vals[0] >= vals[1]
+            || gsl::narrow_cast<uint>(vals[1]) > albuf->mSampleLen)
             context->throw_error(AL_INVALID_VALUE,
                 "Invalid loop point range {} -> {} on buffer {}", vals[0], vals[1], buffer);
 
-        albuf->mLoopStart = static_cast<ALuint>(vals[0]);
-        albuf->mLoopEnd = static_cast<ALuint>(vals[1]);
+        albuf->mLoopStart = gsl::narrow_cast<uint>(vals[0]);
+        albuf->mLoopEnd = gsl::narrow_cast<uint>(vals[1]);
         return;
     }
 
@@ -1261,7 +1267,8 @@ try {
     {
     case AL_SEC_LENGTH_SOFT:
         *value = (albuf->mSampleRate < 1) ? 0.0f :
-            (static_cast<float>(albuf->mSampleLen) / static_cast<float>(albuf->mSampleRate));
+            (gsl::narrow_cast<float>(albuf->mSampleLen)
+                / gsl::narrow_cast<float>(albuf->mSampleRate));
         return;
     }
 
@@ -1340,43 +1347,43 @@ try {
     switch(param)
     {
     case AL_FREQUENCY:
-        *value = static_cast<ALint>(albuf->mSampleRate);
+        *value = gsl::narrow_cast<int>(albuf->mSampleRate);
         return;
 
     case AL_BITS:
         *value = (albuf->mType == FmtIMA4 || albuf->mType == FmtMSADPCM) ? 4
-            : static_cast<ALint>(albuf->bytesFromFmt() * 8);
+            : gsl::narrow_cast<int>(albuf->bytesFromFmt() * 8u);
         return;
 
     case AL_CHANNELS:
-        *value = static_cast<ALint>(albuf->channelsFromFmt());
+        *value = gsl::narrow_cast<int>(albuf->channelsFromFmt());
         return;
 
     case AL_SIZE:
         if(albuf->mCallback)
             *value = 0;
         else
-            *value = std::visit([](auto&& dataspan) -> ALint
+            *value = std::visit([](auto&& dataspan) -> int
             {
-                return static_cast<ALint>(dataspan.size_bytes());
+                return gsl::narrow_cast<int>(dataspan.size_bytes());
             }, albuf->mData);
         return;
 
     case AL_BYTE_LENGTH_SOFT:
-        *value = static_cast<ALint>(albuf->mSampleLen / albuf->mBlockAlign
+        *value = gsl::narrow_cast<int>(albuf->mSampleLen / albuf->mBlockAlign
             * albuf->blockSizeFromFmt());
         return;
 
     case AL_SAMPLE_LENGTH_SOFT:
-        *value = static_cast<ALint>(albuf->mSampleLen);
+        *value = gsl::narrow_cast<int>(albuf->mSampleLen);
         return;
 
     case AL_UNPACK_BLOCK_ALIGNMENT_SOFT:
-        *value = static_cast<ALint>(albuf->UnpackAlign);
+        *value = gsl::narrow_cast<int>(albuf->UnpackAlign);
         return;
 
     case AL_PACK_BLOCK_ALIGNMENT_SOFT:
-        *value = static_cast<ALint>(albuf->PackAlign);
+        *value = gsl::narrow_cast<int>(albuf->PackAlign);
         return;
 
     case AL_AMBISONIC_LAYOUT_SOFT:
@@ -1388,7 +1395,7 @@ try {
         return;
 
     case AL_UNPACK_AMBISONIC_ORDER_SOFT:
-        *value = static_cast<int>(albuf->UnpackAmbiOrder);
+        *value = gsl::narrow_cast<int>(albuf->UnpackAmbiOrder);
         return;
     }
 
@@ -1457,8 +1464,8 @@ try {
     {
     case AL_LOOP_POINTS_SOFT:
         const auto vals = std::span{values, 2_uz};
-        vals[0] = static_cast<ALint>(albuf->mLoopStart);
-        vals[1] = static_cast<ALint>(albuf->mLoopEnd);
+        vals[0] = gsl::narrow_cast<int>(albuf->mLoopStart);
+        vals[1] = gsl::narrow_cast<int>(albuf->mLoopEnd);
         return;
     }
 
@@ -1707,8 +1714,8 @@ try {
     }
 
     /* Validate the buffers. */
-    std::unordered_set<ALbuffer*> buflist;
-    for(const ALuint bufid : std::span{buffers, static_cast<ALuint>(n)})
+    auto buflist = std::unordered_set<ALbuffer*>{};
+    for(const ALuint bufid : std::span{buffers, gsl::narrow_cast<uint>(n)})
     {
         if(bufid == AL_NONE)
             continue;

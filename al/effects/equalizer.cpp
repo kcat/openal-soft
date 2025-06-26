@@ -7,6 +7,7 @@
 #include "alc/context.h"
 #include "alnumeric.h"
 #include "effects.h"
+#include "gsl/gsl"
 
 #if ALSOFT_EAX
 #include "al/eax/effect.h"
@@ -291,15 +292,15 @@ bool EaxEqualizerCommitter::commit(const EAXEQUALIZERPROPERTIES &props)
     mEaxProps = props;
     mAlProps = EqualizerProps{
         .LowCutoff = props.flLowCutOff,
-        .LowGain = level_mb_to_gain(static_cast<float>(props.lLowGain)),
+        .LowGain = level_mb_to_gain(gsl::narrow_cast<float>(props.lLowGain)),
         .Mid1Center = props.flMid1Center,
-        .Mid1Gain = level_mb_to_gain(static_cast<float>(props.lMid1Gain)),
+        .Mid1Gain = level_mb_to_gain(gsl::narrow_cast<float>(props.lMid1Gain)),
         .Mid1Width = props.flMid1Width,
         .Mid2Center = props.flMid2Center,
-        .Mid2Gain = level_mb_to_gain(static_cast<float>(props.lMid2Gain)),
+        .Mid2Gain = level_mb_to_gain(gsl::narrow_cast<float>(props.lMid2Gain)),
         .Mid2Width = props.flMid2Width,
         .HighCutoff = props.flHighCutOff,
-        .HighGain = level_mb_to_gain(static_cast<float>(props.lHighGain))};
+        .HighGain = level_mb_to_gain(gsl::narrow_cast<float>(props.lHighGain))};
 
     return true;
 }

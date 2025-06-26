@@ -15,6 +15,7 @@
 #include "core/logging.h"
 #include "effects.h"
 #include "fmt/ranges.h"
+#include "gsl/gsl"
 
 #if ALSOFT_EAX
 #include <cassert>
@@ -843,7 +844,7 @@ struct EnvironmentSizeDeferrer2 {
             (props.dwFlags & EAX2LISTENERFLAGS_REFLECTIONSDELAYSCALE) != 0)
         {
             props.lReflections = std::clamp(
-                props.lReflections - static_cast<long>(gain_to_level_mb(scale)),
+                props.lReflections - gsl::narrow_cast<long>(gain_to_level_mb(scale)),
                 EAXREVERB_MINREFLECTIONS,
                 EAXREVERB_MAXREFLECTIONS);
         }
@@ -861,7 +862,7 @@ struct EnvironmentSizeDeferrer2 {
             const auto log_scalar = ((props.dwFlags & EAXREVERBFLAGS_DECAYTIMESCALE) != 0) ? 2'000.0F : 3'000.0F;
 
             props.lReverb = std::clamp(
-                props.lReverb - static_cast<long>(std::log10(scale) * log_scalar),
+                props.lReverb - gsl::narrow_cast<long>(std::log10(scale) * log_scalar),
                 EAXREVERB_MINREVERB,
                 EAXREVERB_MAXREVERB);
         }
@@ -913,7 +914,7 @@ struct EnvironmentSizeDeferrer3 {
             (props.ulFlags & EAXREVERBFLAGS_REFLECTIONSDELAYSCALE) != 0)
         {
             props.lReflections = std::clamp(
-                props.lReflections - static_cast<long>(gain_to_level_mb(scale)),
+                props.lReflections - gsl::narrow_cast<long>(gain_to_level_mb(scale)),
                 EAXREVERB_MINREFLECTIONS,
                 EAXREVERB_MAXREFLECTIONS);
         }
@@ -930,7 +931,7 @@ struct EnvironmentSizeDeferrer3 {
         {
             const auto log_scalar = ((props.ulFlags & EAXREVERBFLAGS_DECAYTIMESCALE) != 0) ? 2'000.0F : 3'000.0F;
             props.lReverb = std::clamp(
-                props.lReverb - static_cast<long>(std::log10(scale) * log_scalar),
+                props.lReverb - gsl::narrow_cast<long>(std::log10(scale) * log_scalar),
                 EAXREVERB_MINREVERB,
                 EAXREVERB_MAXREVERB);
         }
@@ -980,7 +981,7 @@ void EaxReverbCommitter::translate(const EAX_REVERBPROPERTIES& src, EAXREVERBPRO
     dst = EAXREVERB_PRESETS[src.environment];
     dst.flDecayTime = src.fDecayTime_sec;
     dst.flDecayHFRatio = src.fDamping;
-    dst.lReverb = static_cast<int>(std::min(gain_to_level_mb(src.fVolume), 0.0f));
+    dst.lReverb = gsl::narrow_cast<int>(std::min(gain_to_level_mb(src.fVolume), 0.0f));
 }
 
 void EaxReverbCommitter::translate(const EAX20LISTENERPROPERTIES& src, EAXREVERBPROPERTIES& dst) noexcept
@@ -1029,17 +1030,17 @@ bool EaxReverbCommitter::commit(const EAXREVERBPROPERTIES &props)
     mAlProps = ReverbProps{
         .Density = std::min(density, AL_EAXREVERB_MAX_DENSITY),
         .Diffusion = props.flEnvironmentDiffusion,
-        .Gain = level_mb_to_gain(static_cast<float>(props.lRoom)),
-        .GainHF = level_mb_to_gain(static_cast<float>(props.lRoomHF)),
-        .GainLF = level_mb_to_gain(static_cast<float>(props.lRoomLF)),
+        .Gain = level_mb_to_gain(gsl::narrow_cast<float>(props.lRoom)),
+        .GainHF = level_mb_to_gain(gsl::narrow_cast<float>(props.lRoomHF)),
+        .GainLF = level_mb_to_gain(gsl::narrow_cast<float>(props.lRoomLF)),
         .DecayTime = props.flDecayTime,
         .DecayHFRatio = props.flDecayHFRatio,
         .DecayLFRatio = props.flDecayLFRatio,
-        .ReflectionsGain = level_mb_to_gain(static_cast<float>(props.lReflections)),
+        .ReflectionsGain = level_mb_to_gain(gsl::narrow_cast<float>(props.lReflections)),
         .ReflectionsDelay = props.flReflectionsDelay,
         .ReflectionsPan = {props.vReflectionsPan.x, props.vReflectionsPan.y,
             props.vReflectionsPan.z},
-        .LateReverbGain = level_mb_to_gain(static_cast<float>(props.lReverb)),
+        .LateReverbGain = level_mb_to_gain(gsl::narrow_cast<float>(props.lReverb)),
         .LateReverbDelay = props.flReverbDelay,
         .LateReverbPan = {props.vReverbPan.x, props.vReverbPan.y, props.vReverbPan.z},
         .EchoTime = props.flEchoTime,

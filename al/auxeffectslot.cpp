@@ -59,6 +59,7 @@
 #include "direct_defs.h"
 #include "effect.h"
 #include "flexarray.h"
+#include "gsl/gsl"
 #include "opthelpers.h"
 
 #if ALSOFT_EAX
@@ -237,7 +238,7 @@ try {
     size_t count{std::accumulate(context->mEffectSlotList.cbegin(),
         context->mEffectSlotList.cend(), 0_uz,
         [](size_t cur, const EffectSlotSubList &sublist) noexcept -> size_t
-        { return cur + static_cast<ALuint>(std::popcount(sublist.FreeMask)); })};
+        { return cur + gsl::narrow_cast<ALuint>(std::popcount(sublist.FreeMask)); })};
 
     while(needed > count)
     {
@@ -260,8 +261,8 @@ catch(...) {
 auto AllocEffectSlot(ALCcontext *context) -> ALeffectslot*
 {
     auto sublist = std::ranges::find_if(context->mEffectSlotList, &EffectSlotSubList::FreeMask);
-    auto lidx = static_cast<ALuint>(std::distance(context->mEffectSlotList.begin(), sublist));
-    auto slidx = static_cast<ALuint>(std::countr_zero(sublist->FreeMask));
+    auto lidx = gsl::narrow_cast<ALuint>(std::distance(context->mEffectSlotList.begin(), sublist));
+    auto slidx = gsl::narrow_cast<ALuint>(std::countr_zero(sublist->FreeMask));
     ASSUME(slidx < 64);
 
     auto *slot = std::construct_at(std::to_address(sublist->EffectSlots->begin()+slidx), context);
@@ -315,7 +316,7 @@ try {
     auto slotlock = std::lock_guard{context->mEffectSlotLock};
     auto *device = context->mALDevice.get();
 
-    const auto eids = std::span{effectslots, static_cast<ALuint>(n)};
+    const auto eids = std::span{effectslots, gsl::narrow_cast<ALuint>(n)};
     if(context->mNumEffectSlots > device->AuxiliaryEffectSlotMax
         || eids.size() > device->AuxiliaryEffectSlotMax-context->mNumEffectSlots)
         context->throw_error(AL_OUT_OF_MEMORY, "Exceeding {} effect slot limit ({} + {})",
@@ -378,7 +379,7 @@ try {
     }
     else
     {
-        const auto eids = std::span{effectslots, static_cast<ALuint>(n)};
+        const auto eids = std::span{effectslots, gsl::narrow_cast<ALuint>(n)};
         auto slots = std::vector<ALeffectslot*>{};
         slots.reserve(eids.size());
 
@@ -468,7 +469,7 @@ try {
         {
             auto *device = context->mALDevice.get();
             const auto effectlock = std::lock_guard{device->EffectLock};
-            auto *effect = value ? LookupEffect(device, static_cast<ALuint>(value)) : nullptr;
+            auto *effect = value ? LookupEffect(device, as_unsigned(value)) : nullptr;
             if(effect)
                 err = slot->initEffect(effect->id, effect->type, effect->Props, context);
             else
@@ -506,7 +507,7 @@ try {
     case AL_EFFECTSLOT_TARGET_SOFT:
         if(value != 0)
         {
-            auto *target = LookupEffectSlot(context, static_cast<ALuint>(value));
+            auto *target = LookupEffectSlot(context, as_unsigned(value));
             if(!target)
                 context->throw_error(AL_INVALID_VALUE, "Invalid effect slot target ID {}", value);
             if(slot->mTarget.get() == target)
@@ -543,7 +544,7 @@ try {
     case AL_BUFFER:
         if(auto *buffer = slot->mBuffer.get())
         {
-            if(buffer->id == static_cast<ALuint>(value))
+            if(buffer->id == as_unsigned(value))
                 return;
         }
         else if(value == 0)
@@ -560,7 +561,7 @@ try {
             auto buffer = al::intrusive_ptr<ALbuffer>{};
             if(value)
             {
-                auto *buf = LookupBuffer(device, static_cast<ALuint>(value));
+                auto *buf = LookupBuffer(device, as_unsigned(value));
                 if(!buf)
                     context->throw_error(AL_INVALID_VALUE, "Invalid buffer ID {}", value);
                 if(buf->mCallback)
@@ -593,7 +594,7 @@ try {
             auto bufferlock = std::unique_lock{device->BufferLock};
             if(value)
             {
-                auto *buffer = LookupBuffer(device, static_cast<ALuint>(value));
+                auto *buffer = LookupBuffer(device, as_unsigned(value));
                 if(!buffer)
                     context->throw_error(AL_INVALID_VALUE, "Invalid buffer ID {}", value);
                 if(buffer->mCallback)
@@ -1197,7 +1198,7 @@ void ALeffectslot::eax_fx_slot_load_effect(int version, ALenum altype)
 void ALeffectslot::eax_fx_slot_set_volume()
 {
     const auto volume = std::clamp(mEax.lVolume, EAXFXSLOT_MINVOLUME, EAXFXSLOT_MAXVOLUME);
-    const auto gain = level_mb_to_gain(static_cast<float>(volume));
+    const auto gain = level_mb_to_gain(gsl::narrow_cast<float>(volume));
     eax_set_efx_slot_gain(gain);
 }
 

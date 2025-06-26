@@ -41,7 +41,6 @@ void AL_APIENTRY alFlushMappedBufferDirectSOFT(ALCcontext *context, ALuint buffe
 #define AL_SOFT_convolution_effect
 #define AL_EFFECT_CONVOLUTION_SOFT               0xA000
 #define AL_CONVOLUTION_ORIENTATION_SOFT          0x100F /* same as AL_ORIENTATION */
-#define AL_EFFECTSLOT_STATE_SOFT                 0x199E
 #endif
 
 #ifndef AL_SOFT_hold_on_disconnect

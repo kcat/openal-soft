@@ -613,9 +613,6 @@ try {
             slot->mPropsDirty = true;
         }
         return;
-
-    case AL_EFFECTSLOT_STATE_SOFT:
-        context->throw_error(AL_INVALID_OPERATION, "AL_EFFECTSLOT_STATE_SOFT is read-only");
     }
 
     context->throw_error(AL_INVALID_ENUM, "Invalid effect slot integer property {:#04x}",
@@ -636,7 +633,6 @@ try {
     case AL_EFFECTSLOT_EFFECT:
     case AL_EFFECTSLOT_AUXILIARY_SEND_AUTO:
     case AL_EFFECTSLOT_TARGET_SOFT:
-    case AL_EFFECTSLOT_STATE_SOFT:
     case AL_BUFFER:
         alAuxiliaryEffectSlotiDirect(context, effectslot, param, *values);
         return;
@@ -741,10 +737,6 @@ try {
             *value = 0;
         return;
 
-    case AL_EFFECTSLOT_STATE_SOFT:
-        *value = static_cast<int>(slot->mState);
-        return;
-
     case AL_BUFFER:
         if(auto *buffer = slot->mBuffer.get())
             *value = static_cast<ALint>(buffer->id);
@@ -771,7 +763,6 @@ try {
     case AL_EFFECTSLOT_EFFECT:
     case AL_EFFECTSLOT_AUXILIARY_SEND_AUTO:
     case AL_EFFECTSLOT_TARGET_SOFT:
-    case AL_EFFECTSLOT_STATE_SOFT:
     case AL_BUFFER:
         alGetAuxiliaryEffectSlotiDirect(context, effectslot, param, values);
         return;

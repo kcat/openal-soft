@@ -103,6 +103,7 @@
 #include "fmt/core.h"
 #include "fmt/ranges.h"
 #include "fmt/std.h"
+#include "gsl/gsl"
 
 #include "win_main_utf8.h"
 
@@ -920,22 +921,16 @@ auto main(std::span<std::string_view> args) -> int
 
     auto almgr = InitAL(args);
 
-    /* A simple RAII container for automating OpenAL cleanup. */
-    struct Cleaner {
-        Cleaner() = default;
-        Cleaner(const Cleaner&) = delete;
-        auto operator=(const Cleaner&) -> Cleaner& = delete;
-        ~Cleaner()
+    /* Automate effect cleanup at end of scope (before almgr destructs). */
+    const auto _ = gsl::finally([]
+    {
+        if(LfeSlotID)
         {
-            if(LfeSlotID)
-            {
-                alDeleteAuxiliaryEffectSlots(1, &LfeSlotID);
-                alDeleteEffects(1, &LowFrequencyEffectID);
-                alDeleteFilters(1, &MuteFilterID);
-            }
+            alDeleteAuxiliaryEffectSlots(1, &LfeSlotID);
+            alDeleteEffects(1, &LowFrequencyEffectID);
+            alDeleteFilters(1, &MuteFilterID);
         }
-    };
-    auto cleaner = Cleaner{};
+    });
 
     if(alcIsExtensionPresent(almgr.device, "ALC_EXT_EFX")
         && alcIsExtensionPresent(almgr.device, "ALC_EXT_DEDICATED"))

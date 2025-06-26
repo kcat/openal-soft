@@ -38,6 +38,7 @@
 #include "common/alhelpers.hpp"
 #include "fmt/core.h"
 #include "fmt/format.h"
+#include "gsl/gsl"
 #include "opthelpers.h"
 #include "pragmadefs.h"
 
@@ -938,41 +939,33 @@ auto AudioState::bufferCallback(const std::span<ALubyte> data) noexcept -> ALsiz
 
 void AudioState::handler()
 {
-    static constexpr std::array<ALenum,3> evt_types{{
+    static constexpr auto evt_types = std::array<ALenum,3>{{
         AL_EVENT_TYPE_BUFFER_COMPLETED_SOFT, AL_EVENT_TYPE_SOURCE_STATE_CHANGED_SOFT,
         AL_EVENT_TYPE_DISCONNECTED_SOFT}};
     auto srclock = std::unique_lock{mSrcMutex, std::defer_lock};
     auto sleep_time = milliseconds{AudioBufferTime / 2};
 
-    struct EventControlManager {
-        explicit EventControlManager(milliseconds &sleep_time)
+    if(alEventControlSOFT)
+    {
+        static constexpr auto callback = [](ALenum eventType, ALuint object, ALuint param,
+            ALsizei length, const ALchar *message, void *userParam) noexcept -> void
         {
-            if(alEventControlSOFT)
-            {
-                static constexpr auto callback = [](ALenum eventType, ALuint object, ALuint param,
-                    ALsizei length, const ALchar *message, void *userParam) noexcept -> void
-                {
-                    static_cast<AudioState*>(userParam)->eventCallback(eventType, object, param,
-                        std::string_view{message, static_cast<ALuint>(length)});
-                };
+            static_cast<AudioState*>(userParam)->eventCallback(eventType, object, param,
+                std::string_view{message, static_cast<ALuint>(length)});
+        };
 
-                alEventControlSOFT(evt_types.size(), evt_types.data(), AL_TRUE);
-                alEventCallbackSOFT(callback, this);
-                sleep_time = AudioBufferTotalTime;
-            }
-        }
-        ~EventControlManager()
+        alEventControlSOFT(evt_types.size(), evt_types.data(), AL_TRUE);
+        alEventCallbackSOFT(callback, this);
+        sleep_time = AudioBufferTotalTime;
+    }
+    const auto _ = gsl::finally([]
+    {
+        if(alEventControlSOFT)
         {
-            if(alEventControlSOFT)
-            {
-                alEventControlSOFT(evt_types.size(), evt_types.data(), AL_FALSE);
-                alEventCallbackSOFT(nullptr, nullptr);
-            }
+            alEventControlSOFT(evt_types.size(), evt_types.data(), AL_FALSE);
+            alEventCallbackSOFT(nullptr, nullptr);
         }
-        EventControlManager(const EventControlManager&) = delete;
-        auto operator=(const EventControlManager&) -> EventControlManager& = delete;
-    };
-    auto event_controller = EventControlManager{sleep_time};
+    });
 
     auto samples = std::vector<uint8_t>{};
     auto buffer_len = 0;

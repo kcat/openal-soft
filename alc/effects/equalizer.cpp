@@ -192,7 +192,7 @@ struct EqualizerStateFactory final : public EffectStateFactory {
 
 } // namespace
 
-EffectStateFactory *EqualizerStateFactory_getFactory()
+auto EqualizerStateFactory_getFactory() -> gsl::not_null<EffectStateFactory*>
 {
     static EqualizerStateFactory EqualizerFactory{};
     return &EqualizerFactory;

@@ -1599,7 +1599,7 @@ AL_API ALboolean AL_APIENTRY alIsBufferFormatSupportedSOFT(ALenum /*format*/) no
 }
 
 
-void ALbuffer::SetName(ALCcontext *context, ALuint id, std::string_view name)
+void ALbuffer::SetName(gsl::not_null<ALCcontext*> context, ALuint id, std::string_view name)
 {
     auto *device = context->mALDevice.get();
     auto buflock = std::lock_guard{device->BufferLock};

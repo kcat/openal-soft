@@ -167,7 +167,7 @@ catch(...) {
 }
 
 [[nodiscard]]
-auto AllocEffect(al::Device *device) noexcept -> ALeffect*
+auto AllocEffect(al::Device *device) noexcept -> gsl::not_null<ALeffect*>
 {
     auto sublist = std::ranges::find_if(device->EffectList, &EffectSubList::FreeMask);
     auto lidx = gsl::narrow_cast<uint>(std::distance(device->EffectList.begin(), sublist));

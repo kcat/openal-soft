@@ -19,6 +19,7 @@
 #include "alnumeric.h"
 #include "core/effects/base.h"
 #include "core/effectslot.h"
+#include "gsl/gsl"
 #include "intrusive_ptr.h"
 
 #if ALSOFT_EAX
@@ -67,7 +68,7 @@ struct ALeffectslot {
 
     std::atomic<ALuint> mRef{0u};
 
-    EffectSlot *mSlot{nullptr};
+    gsl::not_null<EffectSlot*> mSlot;
 
     /* Self ID */
     ALuint id{};
@@ -89,7 +90,7 @@ struct ALeffectslot {
         ALCcontext *context);
     void updateProps(ALCcontext *context) const;
 
-    static void SetName(ALCcontext *context, ALuint id, std::string_view name);
+    static void SetName(gsl::not_null<ALCcontext*> context, ALuint id, std::string_view name);
 
 
 #if ALSOFT_EAX

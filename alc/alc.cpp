@@ -1767,7 +1767,7 @@ auto UpdateDeviceParams(al::Device *device, const std::span<const int> attrList)
 
         if(auto *slot = context->mDefaultSlot.get())
         {
-            auto *slotbase = slot->mSlot;
+            const auto slotbase = slot->mSlot;
             aluInitEffectPanning(slotbase, context);
 
             if(auto *props = slotbase->Update.exchange(nullptr, std::memory_order_relaxed))
@@ -1790,7 +1790,7 @@ auto UpdateDeviceParams(al::Device *device, const std::span<const int> attrList)
                 auto &slot = (*sublist.EffectSlots)[idx];
                 usemask &= ~(1_u64 << idx);
 
-                auto *slotbase = slot.mSlot;
+                const auto slotbase = slot.mSlot;
                 aluInitEffectPanning(slotbase, context);
 
                 if(auto *props = slotbase->Update.exchange(nullptr, std::memory_order_relaxed))

@@ -341,7 +341,7 @@ struct VmorpherStateFactory final : public EffectStateFactory {
 
 } // namespace
 
-EffectStateFactory *VmorpherStateFactory_getFactory()
+auto VmorpherStateFactory_getFactory() -> gsl::not_null<EffectStateFactory*>
 {
     static VmorpherStateFactory VmorpherFactory{};
     return &VmorpherFactory;

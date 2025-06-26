@@ -166,7 +166,7 @@ struct ALsource {
     ALsource(const ALsource&) = delete;
     ALsource& operator=(const ALsource&) = delete;
 
-    static void SetName(ALCcontext *context, ALuint id, std::string_view name);
+    static void SetName(gsl::not_null<ALCcontext*> context, ALuint id, std::string_view name);
 
     DISABLE_ALLOC
 

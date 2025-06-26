@@ -125,14 +125,14 @@ catch(...) {
 
 
 [[nodiscard]]
-auto AllocFilter(al::Device *device) noexcept -> ALfilter*
+auto AllocFilter(al::Device *device) noexcept -> gsl::not_null<ALfilter*>
 {
     auto sublist = std::ranges::find_if(device->FilterList, &FilterSubList::FreeMask);
     auto lidx = gsl::narrow_cast<uint>(std::distance(device->FilterList.begin(), sublist));
     auto slidx = gsl::narrow_cast<uint>(std::countr_zero(sublist->FreeMask));
     ASSUME(slidx < 64);
 
-    auto *filter = std::construct_at(std::to_address(sublist->Filters->begin() + slidx));
+    auto *filter = std::construct_at(std::to_address(std::next(sublist->Filters->begin(), slidx)));
     InitFilterParams(filter, AL_FILTER_NULL);
 
     /* Add 1 to avoid filter ID 0. */

@@ -76,7 +76,7 @@ al::intrusive_ptr<EffectState> NullStateFactory::create()
 
 } // namespace
 
-EffectStateFactory *NullStateFactory_getFactory()
+auto NullStateFactory_getFactory() -> gsl::not_null<EffectStateFactory*>
 {
     static NullStateFactory NullFactory{};
     return &NullFactory;

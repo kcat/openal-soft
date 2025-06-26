@@ -38,6 +38,7 @@
 #include <limits>
 #include <memory>
 #include <mutex>
+#include <new>
 #include <numeric>
 #include <optional>
 #include <span>
@@ -99,15 +100,22 @@ using namespace std::string_view_literals;
 constexpr auto HasBuffer(const ALbufferQueueItem &item) noexcept -> bool
 { return bool{item.mBuffer}; }
 
-Voice *GetSourceVoice(ALsource *source, ALCcontext *context)
+
+constexpr auto get_srchandles(source_store_variant &source_store, size_t count)
+{
+    if(count > std::tuple_size_v<source_store_array>)
+        return std::span{source_store.emplace<source_store_vector>(count)};
+    return std::span{source_store.emplace<source_store_array>()}.first(count);
+}
+
+auto GetSourceVoice(ALsource *source, ALCcontext *context) -> Voice*
 {
     auto voicelist = context->getVoicesSpan();
     auto idx = source->VoiceIdx;
     if(idx < voicelist.size())
     {
-        auto sid = source->id;
         auto *voice = voicelist[idx];
-        if(voice->mSourceID.load(std::memory_order_acquire) == sid)
+        if(voice->mSourceID.load(std::memory_order_acquire) == source->id)
             return voice;
     }
     source->VoiceIdx = InvalidVoiceIndex;
@@ -118,7 +126,7 @@ Voice *GetSourceVoice(ALsource *source, ALCcontext *context)
 void UpdateSourceProps(const ALsource *source, Voice *voice, ALCcontext *context)
 {
     /* Get an unused property container, or allocate a new one as needed. */
-    VoicePropsItem *props{context->mFreeVoiceProps.load(std::memory_order_acquire)};
+    auto *props = context->mFreeVoiceProps.load(std::memory_order_acquire);
     if(!props)
     {
         context->allocVoiceProps();
@@ -181,7 +189,7 @@ void UpdateSourceProps(const ALsource *source, Voice *voice, ALCcontext *context
         [](const ALsource::SendData &srcsend) noexcept
     {
         auto ret = VoiceProps::SendData{};
-        ret.Slot = srcsend.mSlot ? srcsend.mSlot->mSlot : nullptr;
+        ret.Slot = srcsend.mSlot ? srcsend.mSlot->mSlot.get() : nullptr;
         ret.Gain = srcsend.mGain;
         ret.GainHF = srcsend.mGainHF;
         ret.HFReference = srcsend.mHFReference;
@@ -753,16 +761,15 @@ bool EnsureSources(ALCcontext *context, size_t needed)
     return true;
 }
 
-ALsource *AllocSource(ALCcontext *context) noexcept
+[[nodiscard]]
+auto AllocSource(ALCcontext *context) noexcept -> gsl::not_null<ALsource*>
 {
-    auto sublist = std::find_if(context->mSourceList.begin(), context->mSourceList.end(),
-        [](const SourceSubList &entry) noexcept -> bool
-        { return entry.FreeMask != 0; });
+    auto sublist = std::ranges::find_if(context->mSourceList, &SourceSubList::FreeMask);
     auto lidx = gsl::narrow_cast<uint>(std::distance(context->mSourceList.begin(), sublist));
     auto slidx = gsl::narrow_cast<uint>(std::countr_zero(sublist->FreeMask));
     ASSUME(slidx < 64);
 
-    ALsource *source{std::construct_at(std::to_address(sublist->Sources->begin() + slidx))};
+    auto *source = std::construct_at(std::to_address(std::next(sublist->Sources->begin(), slidx)));
 #if ALSOFT_EAX
     source->eaxInitialize(context);
 #endif // ALSOFT_EAX
@@ -803,20 +810,32 @@ void FreeSource(ALCcontext *context, ALsource *source)
 }
 
 
-inline ALsource *LookupSource(ALCcontext *context, ALuint id) noexcept
+[[nodiscard]]
+inline auto LookupSource(std::nothrow_t, gsl::not_null<ALCcontext*> context, ALuint id) noexcept
+    -> ALsource*
 {
-    const size_t lidx{(id-1) >> 6};
-    const ALuint slidx{(id-1) & 0x3f};
+    const auto lidx = (id-1) >> 6;
+    const auto slidx = (id-1) & 0x3f;
 
     if(lidx >= context->mSourceList.size()) [[unlikely]]
         return nullptr;
-    SourceSubList &sublist{context->mSourceList[lidx]};
+    auto &sublist = context->mSourceList[lidx];
     if(sublist.FreeMask & (1_u64 << slidx)) [[unlikely]]
         return nullptr;
     return std::to_address(sublist.Sources->begin() + slidx);
 }
 
-inline auto LookupBuffer(al::Device *device, std::unsigned_integral auto id) noexcept -> ALbuffer*
+[[nodiscard]]
+auto LookupSource(gsl::not_null<ALCcontext*> context, ALuint id) -> gsl::not_null<ALsource*>
+{
+    if(auto *source = LookupSource(std::nothrow, context, id)) [[likely]]
+        return source;
+    context->throw_error(AL_INVALID_NAME, "Invalid source ID {}", id);
+}
+
+[[nodiscard]]
+inline auto LookupBuffer(std::nothrow_t, al::Device *device, std::unsigned_integral auto id)
+    noexcept -> ALbuffer*
 {
     const auto lidx = (id-1) >> 6;
     const auto slidx = (id-1) & 0x3f;
@@ -828,6 +847,15 @@ inline auto LookupBuffer(al::Device *device, std::unsigned_integral auto id) noe
         return nullptr;
     return std::to_address(sublist.Buffers->begin() + gsl::narrow_cast<size_t>(slidx));
 };
+
+[[nodiscard]]
+auto LookupBuffer(gsl::not_null<ALCcontext*> context, std::unsigned_integral auto id)
+    -> gsl::not_null<ALbuffer*>
+{
+    if(auto *buffer = LookupBuffer(std::nothrow, context->mALDevice.get(), id)) [[likely]]
+        return buffer;
+    context->throw_error(AL_INVALID_NAME, "Invalid buffer ID {}", id);
+}
 
 inline auto LookupFilter(al::Device *device, std::unsigned_integral auto id) noexcept -> ALfilter*
 {
@@ -842,8 +870,8 @@ inline auto LookupFilter(al::Device *device, std::unsigned_integral auto id) noe
     return std::to_address(sublist.Filters->begin() + gsl::narrow_cast<size_t>(slidx));
 };
 
-inline auto LookupEffectSlot(ALCcontext *context, std::unsigned_integral auto id) noexcept
-    -> ALeffectslot*
+inline auto LookupEffectSlot(gsl::not_null<ALCcontext*> context, std::unsigned_integral auto id)
+    noexcept -> ALeffectslot*
 {
     const auto lidx = (id-1) >> 6;
     const auto slidx = (id-1) & 0x3f;
@@ -1348,11 +1376,11 @@ constexpr auto DoubleValsByProp(ALenum prop) -> ALuint
 }
 
 
-void UpdateSourceProps(ALsource *source, ALCcontext *context)
+void UpdateSourceProps(gsl::not_null<ALsource*> source, gsl::not_null<ALCcontext*> context)
 {
     if(!context->mDeferUpdates)
     {
-        if(Voice *voice{GetSourceVoice(source, context)})
+        if(auto *voice = GetSourceVoice(source, context))
         {
             UpdateSourceProps(source, voice, context);
             return;
@@ -1361,13 +1389,14 @@ void UpdateSourceProps(ALsource *source, ALCcontext *context)
     source->mPropsDirty = true;
 }
 #if ALSOFT_EAX
-void CommitAndUpdateSourceProps(ALsource *source, ALCcontext *context)
+void CommitAndUpdateSourceProps(gsl::not_null<ALsource*> source,
+    gsl::not_null<ALCcontext*> context)
 {
     if(!context->mDeferUpdates)
     {
         if(context->hasEax())
             source->eaxCommit();
-        if(Voice *voice{GetSourceVoice(source, context)})
+        if(auto *voice = GetSourceVoice(source, context))
         {
             UpdateSourceProps(source, voice, context);
             return;
@@ -1378,7 +1407,8 @@ void CommitAndUpdateSourceProps(ALsource *source, ALCcontext *context)
 
 #else
 
-inline void CommitAndUpdateSourceProps(ALsource *source, ALCcontext *context)
+inline void CommitAndUpdateSourceProps(gsl::not_null<ALsource*> source,
+    gsl::not_null<ALCcontext*> context)
 { UpdateSourceProps(source, context); }
 #endif
 
@@ -1410,7 +1440,7 @@ template<typename T, typename U>
 PairStruct(T,U) -> PairStruct<T,U>;
 
 template<typename T, size_t N>
-auto GetCheckers(ALCcontext *context, const SourceProp prop, const std::span<T,N> values)
+auto GetCheckers(gsl::not_null<ALCcontext*> context, const SourceProp prop, const std::span<T,N> values)
 {
     return PairStruct{
         [=](size_t expect) -> void
@@ -1429,7 +1459,8 @@ auto GetCheckers(ALCcontext *context, const SourceProp prop, const std::span<T,N
 }
 
 template<typename T>
-NOINLINE void SetProperty(ALsource *const Source, ALCcontext *const Context, const SourceProp prop,
+NOINLINE void SetProperty(const gsl::not_null<ALsource*> Source,
+    const gsl::not_null<ALCcontext*> Context, const SourceProp prop,
     const std::span<const T> values)
 {
     static constexpr auto is_finite = [](auto&& v) -> bool
@@ -1621,7 +1652,7 @@ NOINLINE void SetProperty(ALsource *const Source, ALCcontext *const Context, con
         if constexpr(std::is_integral_v<T>)
         {
             CheckSize(1);
-            if(const ALenum state{GetSourceState(Source, GetSourceVoice(Source, Context))};
+            if(const auto state = GetSourceState(Source, GetSourceVoice(Source, Context));
                 state == AL_PLAYING || state == AL_PAUSED)
                 Context->throw_error(AL_INVALID_OPERATION,
                     "Setting buffer on playing or paused source {}", Source->id);
@@ -1629,9 +1660,7 @@ NOINLINE void SetProperty(ALsource *const Source, ALCcontext *const Context, con
             if(values[0])
             {
                 auto buflock = std::lock_guard{device->BufferLock};
-                auto *buffer = LookupBuffer(device, as_unsigned(values[0]));
-                if(!buffer)
-                    Context->throw_error(AL_INVALID_VALUE, "Invalid buffer ID {}", values[0]);
+                auto buffer = LookupBuffer(Context, as_unsigned(values[0]));
                 if(buffer->MappedAccess && !(buffer->MappedAccess&AL_MAP_PERSISTENT_BIT_SOFT))
                     Context->throw_error(AL_INVALID_OPERATION,
                         "Setting non-persistently mapped buffer {}", buffer->id);
@@ -2003,7 +2032,8 @@ NOINLINE void SetProperty(ALsource *const Source, ALCcontext *const Context, con
 
 
 template<typename T, size_t N>
-auto GetSizeChecker(ALCcontext *context, const SourceProp prop, const std::span<T,N> values)
+auto GetSizeChecker(gsl::not_null<ALCcontext*> context, const SourceProp prop,
+    const std::span<T,N> values)
 {
     return [=](size_t expect) -> void
     {
@@ -2014,7 +2044,8 @@ auto GetSizeChecker(ALCcontext *context, const SourceProp prop, const std::span<
 }
 
 template<typename T>
-NOINLINE void GetProperty(ALsource *const Source, ALCcontext *const Context, const SourceProp prop,
+NOINLINE void GetProperty(const gsl::not_null<ALsource*> Source,
+    const gsl::not_null<ALCcontext*> Context, const SourceProp prop,
     const std::span<T> values)
 {
     using std::chrono::duration_cast;
@@ -2479,8 +2510,8 @@ NOINLINE void GetProperty(ALsource *const Source, ALCcontext *const Context, con
 }
 
 
-void StartSources(ALCcontext *const context, const std::span<ALsource*> srchandles,
-    const nanoseconds start_time=nanoseconds::min())
+void StartSources(const gsl::not_null<ALCcontext*> context,
+    const std::span<ALsource*> srchandles, const nanoseconds start_time=nanoseconds::min())
 {
     auto *device = context->mALDevice.get();
     /* If the device is disconnected, and voices stop on disconnect, go right
@@ -2688,15 +2719,13 @@ try {
 
     /* Check that all Sources are valid */
     const auto sids = std::span{sources, gsl::narrow_cast<ALuint>(n)};
-    const auto invsrc = std::ranges::find_if_not(sids, [context](const ALuint sid) -> bool
-    { return LookupSource(context, sid) != nullptr; });
-    if(invsrc != sids.end())
-        context->throw_error(AL_INVALID_NAME, "Invalid source ID {}", *invsrc);
+    std::ranges::for_each(sids, [context](const ALuint sid)
+    { std::ignore = LookupSource(context, sid); });
 
     /* All good. Delete source IDs. */
     std::ranges::for_each(sids, [context](const ALuint sid) -> void
     {
-        if(ALsource *src{LookupSource(context, sid)})
+        if(auto *src = LookupSource(std::nothrow, context, sid))
             FreeSource(context, src);
     });
 }
@@ -2710,7 +2739,7 @@ AL_API DECL_FUNC1(ALboolean, alIsSource, ALuint,source)
 FORCE_ALIGN ALboolean AL_APIENTRY alIsSourceDirect(ALCcontext *context, ALuint source) noexcept
 {
     auto srclock = std::lock_guard{context->mSourceLock};
-    if(LookupSource(context, source) != nullptr)
+    if(LookupSource(std::nothrow, context, source) != nullptr)
         return AL_TRUE;
     return AL_FALSE;
 }
@@ -2722,11 +2751,8 @@ FORCE_ALIGN void AL_APIENTRY alSourcefDirect(ALCcontext *context, ALuint source,
 try {
     auto proplock = std::lock_guard{context->mPropLock};
     auto srclock = std::lock_guard{context->mSourceLock};
-    auto *Source = LookupSource(context, source);
-    if(!Source)
-        context->throw_error(AL_INVALID_NAME, "Invalid source ID {}", source);
 
-    SetProperty<float>(Source, context, SourceProp{param}, {&value, 1u});
+    SetProperty<float>(LookupSource(context, source), context, SourceProp{param}, {&value, 1u});
 }
 catch(al::base_exception&) {
 }
@@ -2740,12 +2766,9 @@ FORCE_ALIGN void AL_APIENTRY alSource3fDirect(ALCcontext *context, ALuint source
 try {
     auto proplock = std::lock_guard{context->mPropLock};
     auto srclock = std::lock_guard{context->mSourceLock};
-    auto *Source = LookupSource(context, source);
-    if(!Source)
-        context->throw_error(AL_INVALID_NAME, "Invalid source ID {}", source);
 
     const auto fvals = std::array{value1, value2, value3};
-    SetProperty<float>(Source, context, SourceProp{param}, fvals);
+    SetProperty<float>(LookupSource(context, source), context, SourceProp{param}, fvals);
 }
 catch(al::base_exception&) {
 }
@@ -2759,9 +2782,8 @@ FORCE_ALIGN void AL_APIENTRY alSourcefvDirect(ALCcontext *context, ALuint source
 try {
     auto proplock = std::lock_guard{context->mPropLock};
     auto srclock = std::lock_guard{context->mSourceLock};
-    auto *Source = LookupSource(context, source);
-    if(!Source)
-        context->throw_error(AL_INVALID_NAME, "Invalid source ID {}", source);
+
+    auto const Source = LookupSource(context, source);
     if(!values)
         context->throw_error(AL_INVALID_VALUE, "NULL pointer");
 
@@ -2781,11 +2803,8 @@ FORCE_ALIGN void AL_APIENTRY alSourcedDirectSOFT(ALCcontext *context, ALuint sou
 try {
     auto proplock = std::lock_guard{context->mPropLock};
     auto srclock = std::lock_guard{context->mSourceLock};
-    auto *Source = LookupSource(context, source);
-    if(!Source)
-        context->throw_error(AL_INVALID_NAME, "Invalid source ID {}", source);
 
-    SetProperty<double>(Source, context, SourceProp{param}, {&value, 1});
+    SetProperty<double>(LookupSource(context, source), context, SourceProp{param}, {&value, 1});
 }
 catch(al::base_exception&) {
 }
@@ -2799,12 +2818,9 @@ FORCE_ALIGN void AL_APIENTRY alSource3dDirectSOFT(ALCcontext *context, ALuint so
 try {
     auto proplock = std::lock_guard{context->mPropLock};
     auto srclock = std::lock_guard{context->mSourceLock};
-    auto *Source = LookupSource(context, source);
-    if(!Source)
-        context->throw_error(AL_INVALID_NAME, "Invalid source ID {}", source);
 
     const auto dvals = std::array{value1, value2, value3};
-    SetProperty<double>(Source, context, SourceProp{param}, dvals);
+    SetProperty<double>(LookupSource(context, source), context, SourceProp{param}, dvals);
 }
 catch(al::base_exception&) {
 }
@@ -2818,9 +2834,8 @@ FORCE_ALIGN void AL_APIENTRY alSourcedvDirectSOFT(ALCcontext *context, ALuint so
 try {
     auto proplock = std::lock_guard{context->mPropLock};
     auto srclock = std::lock_guard{context->mSourceLock};
-    auto *Source = LookupSource(context, source);
-    if(!Source)
-        context->throw_error(AL_INVALID_NAME, "Invalid source ID {}", source);
+
+    auto const Source = LookupSource(context, source);
     if(!values)
         context->throw_error(AL_INVALID_VALUE, "NULL pointer");
 
@@ -2840,11 +2855,8 @@ FORCE_ALIGN void AL_APIENTRY alSourceiDirect(ALCcontext *context, ALuint source,
 try {
     auto proplock = std::lock_guard{context->mPropLock};
     auto srclock = std::lock_guard{context->mSourceLock};
-    auto *Source = LookupSource(context, source);
-    if(!Source)
-        context->throw_error(AL_INVALID_NAME, "Invalid source ID {}", source);
 
-    SetProperty<int>(Source, context, SourceProp{param}, {&value, 1u});
+    SetProperty<int>(LookupSource(context, source), context, SourceProp{param}, {&value, 1u});
 }
 catch(al::base_exception&) {
 }
@@ -2858,12 +2870,9 @@ FORCE_ALIGN void AL_APIENTRY alSource3iDirect(ALCcontext *context, ALuint source
 try {
     auto proplock = std::lock_guard{context->mPropLock};
     auto srclock = std::lock_guard{context->mSourceLock};
-    auto *Source = LookupSource(context, source);
-    if(!Source)
-        context->throw_error(AL_INVALID_NAME, "Invalid source ID {}", source);
 
     const auto ivals = std::array{value1, value2, value3};
-    SetProperty<int>(Source, context, SourceProp{param}, ivals);
+    SetProperty<int>(LookupSource(context, source), context, SourceProp{param}, ivals);
 }
 catch(al::base_exception&) {
 }
@@ -2877,9 +2886,8 @@ FORCE_ALIGN void AL_APIENTRY alSourceivDirect(ALCcontext *context, ALuint source
 try {
     auto proplock = std::lock_guard{context->mPropLock};
     auto srclock = std::lock_guard{context->mSourceLock};
-    auto *Source = LookupSource(context, source);
-    if(!Source)
-        context->throw_error(AL_INVALID_NAME, "Invalid source ID {}", source);
+
+    auto const Source = LookupSource(context, source);
     if(!values)
         context->throw_error(AL_INVALID_VALUE, "NULL pointer");
 
@@ -2899,11 +2907,8 @@ FORCE_ALIGN void AL_APIENTRY alSourcei64DirectSOFT(ALCcontext *context, ALuint s
 try {
     auto proplock = std::lock_guard{context->mPropLock};
     auto srclock = std::lock_guard{context->mSourceLock};
-    auto *Source = LookupSource(context, source);
-    if(!Source)
-        context->throw_error(AL_INVALID_NAME, "Invalid source ID {}", source);
 
-    SetProperty<int64_t>(Source, context, SourceProp{param}, {&value, 1u});
+    SetProperty<int64_t>(LookupSource(context, source), context, SourceProp{param}, {&value, 1u});
 }
 catch(al::base_exception&) {
 }
@@ -2917,12 +2922,9 @@ FORCE_ALIGN void AL_APIENTRY alSource3i64DirectSOFT(ALCcontext *context, ALuint 
 try {
     auto proplock = std::lock_guard{context->mPropLock};
     auto srclock = std::lock_guard{context->mSourceLock};
-    auto *Source = LookupSource(context, source);
-    if(!Source)
-        context->throw_error(AL_INVALID_NAME, "Invalid source ID {}", source);
 
     const auto i64vals = std::array{value1, value2, value3};
-    SetProperty<int64_t>(Source, context, SourceProp{param}, i64vals);
+    SetProperty<int64_t>(LookupSource(context, source), context, SourceProp{param}, i64vals);
 }
 catch(al::base_exception&) {
 }
@@ -2936,9 +2938,8 @@ FORCE_ALIGN void AL_APIENTRY alSourcei64vDirectSOFT(ALCcontext *context, ALuint 
 try {
     auto proplock = std::lock_guard{context->mPropLock};
     auto srclock = std::lock_guard{context->mSourceLock};
-    auto *Source = LookupSource(context, source);
-    if(!Source)
-        context->throw_error(AL_INVALID_NAME, "Invalid source ID {}", source);
+
+    auto const Source = LookupSource(context, source);
     if(!values)
         context->throw_error(AL_INVALID_VALUE, "NULL pointer");
 
@@ -2957,9 +2958,8 @@ FORCE_ALIGN void AL_APIENTRY alGetSourcefDirect(ALCcontext *context, ALuint sour
     ALfloat *value) noexcept
 try {
     auto srclock = std::lock_guard{context->mSourceLock};
-    auto *Source = LookupSource(context, source);
-    if(!Source)
-        context->throw_error(AL_INVALID_NAME, "Invalid source ID {}", source);
+
+    auto const Source = LookupSource(context, source);
     if(!value)
         context->throw_error(AL_INVALID_VALUE, "NULL pointer");
 
@@ -2976,9 +2976,8 @@ FORCE_ALIGN void AL_APIENTRY alGetSource3fDirect(ALCcontext *context, ALuint sou
     ALfloat *value1, ALfloat *value2, ALfloat *value3) noexcept
 try {
     auto srclock = std::lock_guard{context->mSourceLock};
-    auto *Source = LookupSource(context, source);
-    if(!Source)
-        context->throw_error(AL_INVALID_NAME, "Invalid source ID {}", source);
+
+    auto const Source = LookupSource(context, source);
     if(!(value1 && value2 && value3))
         context->throw_error(AL_INVALID_VALUE, "NULL pointer");
 
@@ -2999,9 +2998,8 @@ FORCE_ALIGN void AL_APIENTRY alGetSourcefvDirect(ALCcontext *context, ALuint sou
     ALfloat *values) noexcept
 try {
     auto srclock = std::lock_guard{context->mSourceLock};
-    auto *Source = LookupSource(context, source);
-    if(!Source)
-        context->throw_error(AL_INVALID_NAME, "Invalid source ID {}", source);
+
+    auto const Source = LookupSource(context, source);
     if(!values)
         context->throw_error(AL_INVALID_VALUE, "NULL pointer");
 
@@ -3020,9 +3018,8 @@ FORCE_ALIGN void AL_APIENTRY alGetSourcedDirectSOFT(ALCcontext *context, ALuint 
     ALenum param, ALdouble *value) noexcept
 try {
     auto srclock = std::lock_guard{context->mSourceLock};
-    auto *Source = LookupSource(context, source);
-    if(!Source)
-        context->throw_error(AL_INVALID_NAME, "Invalid source ID {}", source);
+
+    auto const Source = LookupSource(context, source);
     if(!value)
         context->throw_error(AL_INVALID_VALUE, "NULL pointer");
 
@@ -3039,9 +3036,8 @@ FORCE_ALIGN void AL_APIENTRY alGetSource3dDirectSOFT(ALCcontext *context, ALuint
     ALenum param, ALdouble *value1, ALdouble *value2, ALdouble *value3) noexcept
 try {
     auto srclock = std::lock_guard{context->mSourceLock};
-    auto *Source = LookupSource(context, source);
-    if(!Source)
-        context->throw_error(AL_INVALID_NAME, "Invalid source ID {}", source);
+
+    auto const Source = LookupSource(context, source);
     if(!(value1 && value2 && value3))
         context->throw_error(AL_INVALID_VALUE, "NULL pointer");
 
@@ -3062,9 +3058,8 @@ FORCE_ALIGN void AL_APIENTRY alGetSourcedvDirectSOFT(ALCcontext *context, ALuint
     ALenum param, ALdouble *values) noexcept
 try {
     auto srclock = std::lock_guard{context->mSourceLock};
-    auto *Source = LookupSource(context, source);
-    if(!Source)
-        context->throw_error(AL_INVALID_NAME, "Invalid source ID {}", source);
+
+    auto const Source = LookupSource(context, source);
     if(!values)
         context->throw_error(AL_INVALID_VALUE, "NULL pointer");
 
@@ -3083,9 +3078,8 @@ FORCE_ALIGN void AL_APIENTRY alGetSourceiDirect(ALCcontext *context, ALuint sour
     ALint *value) noexcept
 try {
     auto srclock = std::lock_guard{context->mSourceLock};
-    auto *Source = LookupSource(context, source);
-    if(!Source)
-        context->throw_error(AL_INVALID_NAME, "Invalid source ID {}", source);
+
+    auto const Source = LookupSource(context, source);
     if(!value)
         context->throw_error(AL_INVALID_VALUE, "NULL pointer");
 
@@ -3102,9 +3096,8 @@ FORCE_ALIGN void AL_APIENTRY alGetSource3iDirect(ALCcontext *context, ALuint sou
     ALint *value1, ALint *value2, ALint *value3) noexcept
 try {
     auto srclock = std::lock_guard{context->mSourceLock};
-    auto *Source = LookupSource(context, source);
-    if(!Source)
-        context->throw_error(AL_INVALID_NAME, "Invalid source ID {}", source);
+
+    auto const Source = LookupSource(context, source);
     if(!(value1 && value2 && value3))
         context->throw_error(AL_INVALID_VALUE, "NULL pointer");
 
@@ -3125,9 +3118,8 @@ FORCE_ALIGN void AL_APIENTRY alGetSourceivDirect(ALCcontext *context, ALuint sou
     ALint *values) noexcept
 try {
     auto srclock = std::lock_guard{context->mSourceLock};
-    auto *Source = LookupSource(context, source);
-    if(!Source)
-        context->throw_error(AL_INVALID_NAME, "Invalid source ID {}", source);
+
+    auto const Source = LookupSource(context, source);
     if(!values)
         context->throw_error(AL_INVALID_VALUE, "NULL pointer");
 
@@ -3145,9 +3137,8 @@ AL_API DECL_FUNCEXT3(void, alGetSourcei64,SOFT, ALuint,source, ALenum,param, ALi
 FORCE_ALIGN void AL_APIENTRY alGetSourcei64DirectSOFT(ALCcontext *context, ALuint source, ALenum param, ALint64SOFT *value) noexcept
 try {
     auto srclock = std::lock_guard{context->mSourceLock};
-    auto *Source = LookupSource(context, source);
-    if(!Source)
-        context->throw_error(AL_INVALID_NAME, "Invalid source ID {}", source);
+
+    auto const Source = LookupSource(context, source);
     if(!value)
         context->throw_error(AL_INVALID_VALUE, "NULL pointer");
 
@@ -3164,9 +3155,8 @@ FORCE_ALIGN void AL_APIENTRY alGetSource3i64DirectSOFT(ALCcontext *context, ALui
     ALenum param, ALint64SOFT *value1, ALint64SOFT *value2, ALint64SOFT *value3) noexcept
 try {
     auto srclock = std::lock_guard{context->mSourceLock};
-    auto *Source = LookupSource(context, source);
-    if(!Source)
-        context->throw_error(AL_INVALID_NAME, "Invalid source ID {}", source);
+
+    auto const Source = LookupSource(context, source);
     if(!(value1 && value2 && value3))
         context->throw_error(AL_INVALID_VALUE, "NULL pointer");
 
@@ -3187,9 +3177,8 @@ FORCE_ALIGN void AL_APIENTRY alGetSourcei64vDirectSOFT(ALCcontext *context, ALui
     ALenum param, ALint64SOFT *values) noexcept
 try {
     auto srclock = std::lock_guard{context->mSourceLock};
-    auto *Source = LookupSource(context, source);
-    if(!Source)
-        context->throw_error(AL_INVALID_NAME, "Invalid source ID {}", source);
+
+    auto const Source = LookupSource(context, source);
     if(!values)
         context->throw_error(AL_INVALID_VALUE, "NULL pointer");
 
@@ -3207,10 +3196,8 @@ AL_API DECL_FUNC1(void, alSourcePlay, ALuint,source)
 FORCE_ALIGN void AL_APIENTRY alSourcePlayDirect(ALCcontext *context, ALuint source) noexcept
 try {
     auto srclock = std::lock_guard{context->mSourceLock};
-    auto *Source = LookupSource(context, source);
-    if(!Source)
-        context->throw_error(AL_INVALID_NAME, "Invalid source ID {}", source);
 
+    auto *Source = LookupSource(context, source).get();
     StartSources(context, {&Source, 1});
 }
 catch(al::base_exception&) {
@@ -3227,10 +3214,8 @@ try {
         context->throw_error(AL_INVALID_VALUE, "Invalid time point {}", start_time);
 
     auto srclock = std::lock_guard{context->mSourceLock};
-    auto *Source = LookupSource(context, source);
-    if(!Source)
-        context->throw_error(AL_INVALID_NAME, "Invalid source ID {}", source);
 
+    auto *Source = LookupSource(context, source).get();
     StartSources(context, {&Source, 1}, nanoseconds{start_time});
 }
 catch(al::base_exception&) {
@@ -3249,20 +3234,11 @@ try {
 
     const auto sids = std::span{sources, gsl::narrow_cast<ALuint>(n)};
     auto source_store = source_store_variant{};
-    const auto srchandles = std::invoke([&source_store](size_t count) -> std::span<ALsource*>
-    {
-        if(count > std::tuple_size_v<source_store_array>)
-            return std::span{source_store.emplace<source_store_vector>(count)};
-        return std::span{source_store.emplace<source_store_array>()}.first(count);
-    }, sids.size());
+    const auto srchandles = get_srchandles(source_store, sids.size());
 
     auto srclock = std::lock_guard{context->mSourceLock};
     std::ranges::transform(sids, srchandles.begin(), [context](const ALuint sid) -> ALsource*
-    {
-        if(ALsource *src{LookupSource(context, sid)})
-            return src;
-        context->throw_error(AL_INVALID_NAME, "Invalid source ID {}", sid);
-    });
+    { return LookupSource(context, sid); });
 
     StartSources(context, srchandles);
 }
@@ -3285,20 +3261,11 @@ try {
 
     const auto sids = std::span{sources, gsl::narrow_cast<ALuint>(n)};
     auto source_store = source_store_variant{};
-    const auto srchandles = std::invoke([&source_store](size_t count) -> std::span<ALsource*>
-    {
-        if(count > std::tuple_size_v<source_store_array>)
-            return std::span{source_store.emplace<source_store_vector>(count)};
-        return std::span{source_store.emplace<source_store_array>()}.first(count);
-    }, sids.size());
+    const auto srchandles = get_srchandles(source_store, sids.size());
 
     const auto srclock = std::lock_guard{context->mSourceLock};
     std::ranges::transform(sids, srchandles.begin(), [context](const ALuint sid) -> ALsource*
-    {
-        if(ALsource *src{LookupSource(context, sid)})
-            return src;
-        context->throw_error(AL_INVALID_NAME, "Invalid source ID {}", sid);
-    });
+    { return LookupSource(context, sid); });
 
     StartSources(context, srchandles, nanoseconds{start_time});
 }
@@ -3323,20 +3290,11 @@ try {
 
     const auto sids = std::span{sources, gsl::narrow_cast<ALuint>(n)};
     auto source_store = source_store_variant{};
-    const auto srchandles = std::invoke([&source_store](size_t count) -> std::span<ALsource*>
-    {
-        if(count > std::tuple_size_v<source_store_array>)
-            return std::span{source_store.emplace<source_store_vector>(count)};
-        return std::span{source_store.emplace<source_store_array>()}.first(count);
-    }, sids.size());
+    const auto srchandles = get_srchandles(source_store, sids.size());
 
     auto srclock = std::lock_guard{context->mSourceLock};
     std::ranges::transform(sids, srchandles.begin(), [context](const ALuint sid) -> ALsource*
-    {
-        if(ALsource *src{LookupSource(context, sid)})
-            return src;
-        context->throw_error(AL_INVALID_NAME, "Invalid source ID {}", sid);
-    });
+    { return LookupSource(context, sid); });
 
     /* Pausing has to be done in two steps. First, for each source that's
      * detected to be playing, change the voice (asynchronously) to
@@ -3346,7 +3304,7 @@ try {
     auto cur = LPVoiceChange{};
     std::ranges::for_each(srchandles, [context,&tail,&cur](ALsource *source)
     {
-        Voice *voice{GetSourceVoice(source, context)};
+        auto *voice = GetSourceVoice(source, context);
         if(GetSourceState(source, voice) == AL_PLAYING)
         {
             if(!cur)
@@ -3398,26 +3356,17 @@ try {
 
     const auto sids = std::span{sources, gsl::narrow_cast<ALuint>(n)};
     auto source_store = source_store_variant{};
-    const auto srchandles = std::invoke([&source_store](size_t count) -> std::span<ALsource*>
-    {
-        if(count > std::tuple_size_v<source_store_array>)
-            return std::span{source_store.emplace<source_store_vector>(count)};
-        return std::span{source_store.emplace<source_store_array>()}.first(count);
-    }, sids.size());
+    const auto srchandles = get_srchandles(source_store, sids.size());
 
     auto srclock = std::lock_guard{context->mSourceLock};
     std::ranges::transform(sids, srchandles.begin(), [context](const ALuint sid) -> ALsource*
-    {
-        if(ALsource *src{LookupSource(context, sid)})
-            return src;
-        context->throw_error(AL_INVALID_NAME, "Invalid source ID {}", sid);
-    });
+    { return LookupSource(context, sid); });
 
     auto tail = LPVoiceChange{};
     auto cur = LPVoiceChange{};
     std::ranges::for_each(srchandles, [context,&tail,&cur](ALsource *source)
     {
-        if(Voice *voice{GetSourceVoice(source, context)})
+        if(auto *voice = GetSourceVoice(source, context))
         {
             if(!cur)
                 cur = tail = GetVoiceChanger(context);
@@ -3460,20 +3409,11 @@ try {
 
     const auto sids = std::span{sources, gsl::narrow_cast<ALuint>(n)};
     auto source_store = source_store_variant{};
-    const auto srchandles = std::invoke([&source_store](size_t count) -> std::span<ALsource*>
-    {
-        if(count > std::tuple_size_v<source_store_array>)
-            return std::span{source_store.emplace<source_store_vector>(count)};
-        return std::span{source_store.emplace<source_store_array>()}.first(count);
-    }, sids.size());
+    const auto srchandles = get_srchandles(source_store, sids.size());
 
     auto srclock = std::lock_guard{context->mSourceLock};
     std::ranges::transform(sids, srchandles.begin(), [context](const ALuint sid) -> ALsource*
-    {
-        if(ALsource *src{LookupSource(context, sid)})
-            return src;
-        context->throw_error(AL_INVALID_NAME, "Invalid source ID {}", sid);
-    });
+    { return LookupSource(context, sid); });
 
     auto tail = LPVoiceChange{};
     auto cur = LPVoiceChange{};
@@ -3519,9 +3459,7 @@ try {
     if(nb <= 0) [[unlikely]] return;
 
     auto srclock = std::lock_guard{context->mSourceLock};
-    auto *source = LookupSource(context,src);
-    if(!source)
-        context->throw_error(AL_INVALID_NAME, "Invalid source ID {}", src);
+    auto const source = LookupSource(context, src);
 
     /* Can't queue on a Static Source */
     if(source->SourceType == AL_STATIC)
@@ -3542,12 +3480,9 @@ try {
     const auto NewListStart = std::ssize(source->mQueue);
     try {
         ALbufferQueueItem *BufferList{nullptr};
-        std::ranges::for_each(bids,[context,source,device,&BufferFmt,&BufferList](const ALuint bid)
+        std::ranges::for_each(bids,[context,source,&BufferFmt,&BufferList](const ALuint bid)
         {
-            auto *buffer = bid ? LookupBuffer(device, bid) : nullptr;
-            if(bid && !buffer)
-                context->throw_error(AL_INVALID_NAME, "Queueing invalid buffer ID {}", bid);
-
+            auto *buffer = bid ? LookupBuffer(context, bid).get() : nullptr;
             if(buffer)
             {
                 if(buffer->mSampleRate < 1)
@@ -3637,10 +3572,8 @@ try {
     if(nb <= 0) [[unlikely]] return;
 
     auto srclock = std::lock_guard{context->mSourceLock};
-    auto *source = LookupSource(context,src);
-    if(!source)
-        context->throw_error(AL_INVALID_NAME, "Invalid source ID {}", src);
 
+    auto const source = LookupSource(context, src);
     if(source->SourceType != AL_STREAMING)
         context->throw_error(AL_INVALID_VALUE, "Unqueueing from a non-streaming source {}", src);
     if(source->Looping)
@@ -3653,7 +3586,7 @@ try {
     {
         const auto Current = std::invoke([source,context]() -> const VoiceBufferItem*
         {
-            if(Voice *voice{GetSourceVoice(source, context)})
+            if(auto *voice = GetSourceVoice(source, context))
                 return voice->mCurrentBuffer.load(std::memory_order_relaxed);
             return nullptr;
         });
@@ -3718,7 +3651,7 @@ void UpdateAllSourceProps(ALCcontext *context)
     for(Voice *voice : voicelist)
     {
         auto sid = voice->mSourceID.load(std::memory_order_acquire);
-        auto *source = sid ? LookupSource(context, sid) : nullptr;
+        auto *source = sid ? LookupSource(std::nothrow, context, sid) : nullptr;
         if(source && source->VoiceIdx == vidx)
         {
             if(std::exchange(source->mPropsDirty, false))
@@ -3728,13 +3661,11 @@ void UpdateAllSourceProps(ALCcontext *context)
     }
 }
 
-void ALsource::SetName(ALCcontext *context, ALuint id, std::string_view name)
+void ALsource::SetName(gsl::not_null<ALCcontext*> context, ALuint id, std::string_view name)
 {
     auto srclock = std::lock_guard{context->mSourceLock};
-    auto *source = LookupSource(context, id);
-    if(!source)
-        context->throw_error(AL_INVALID_NAME, "Invalid source ID {}", id);
 
+    std::ignore = LookupSource(context, id);
     context->mSourceNames.insert_or_assign(id, name);
 }
 
@@ -3744,10 +3675,10 @@ SourceSubList::~SourceSubList()
     if(!Sources)
         return;
 
-    uint64_t usemask{~FreeMask};
+    auto usemask = ~FreeMask;
     while(usemask)
     {
-        const int idx{std::countr_zero(usemask)};
+        const auto idx = std::countr_zero(usemask);
         usemask &= ~(1_u64 << idx);
         std::destroy_at(std::to_address(Sources->begin() + idx));
     }
@@ -3773,7 +3704,7 @@ void ALsource::eaxInitialize(ALCcontext *context) noexcept
 
 ALsource* ALsource::EaxLookupSource(ALCcontext& al_context, ALuint source_id) noexcept
 {
-    return LookupSource(&al_context, source_id);
+    return LookupSource(std::nothrow, &al_context, source_id);
 }
 
 [[noreturn]] void ALsource::eax_fail(const char* message)

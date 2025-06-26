@@ -219,7 +219,7 @@ struct ModulatorStateFactory final : public EffectStateFactory {
 
 } // namespace
 
-EffectStateFactory *ModulatorStateFactory_getFactory()
+auto ModulatorStateFactory_getFactory() -> gsl::not_null<EffectStateFactory*>
 {
     static ModulatorStateFactory ModulatorFactory{};
     return &ModulatorFactory;

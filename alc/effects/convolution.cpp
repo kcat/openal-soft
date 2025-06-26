@@ -725,7 +725,7 @@ struct ConvolutionStateFactory final : public EffectStateFactory {
 
 } // namespace
 
-EffectStateFactory *ConvolutionStateFactory_getFactory()
+auto ConvolutionStateFactory_getFactory() -> gsl::not_null<EffectStateFactory*>
 {
     static ConvolutionStateFactory ConvolutionFactory{};
     return &ConvolutionFactory;

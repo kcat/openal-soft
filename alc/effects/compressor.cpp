@@ -188,7 +188,7 @@ struct CompressorStateFactory final : public EffectStateFactory {
 
 } // namespace
 
-EffectStateFactory *CompressorStateFactory_getFactory()
+auto CompressorStateFactory_getFactory() -> gsl::not_null<EffectStateFactory*>
 {
     static CompressorStateFactory CompressorFactory{};
     return &CompressorFactory;

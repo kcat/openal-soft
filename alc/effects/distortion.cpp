@@ -177,7 +177,7 @@ struct DistortionStateFactory final : public EffectStateFactory {
 
 } // namespace
 
-EffectStateFactory *DistortionStateFactory_getFactory()
+auto DistortionStateFactory_getFactory() -> gsl::not_null<EffectStateFactory*>
 {
     static DistortionStateFactory DistortionFactory{};
     return &DistortionFactory;

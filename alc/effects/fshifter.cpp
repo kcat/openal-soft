@@ -245,7 +245,7 @@ struct FshifterStateFactory final : public EffectStateFactory {
 
 } // namespace
 
-EffectStateFactory *FshifterStateFactory_getFactory()
+auto FshifterStateFactory_getFactory() -> gsl::not_null<EffectStateFactory*>
 {
     static FshifterStateFactory FshifterFactory{};
     return &FshifterFactory;

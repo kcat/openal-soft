@@ -13,6 +13,7 @@
 
 #include "almalloc.h"
 #include "alnumeric.h"
+#include "gsl/gsl"
 
 struct ALfilter;
 
@@ -59,7 +60,7 @@ struct ALfilter {
     /* Self ID */
     ALuint id{0};
 
-    static void SetName(ALCcontext *context, ALuint id, std::string_view name);
+    static void SetName(gsl::not_null<ALCcontext*> context, ALuint id, std::string_view name);
 
     DISABLE_ALLOC
 };

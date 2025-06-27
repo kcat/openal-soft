@@ -16,6 +16,7 @@
 #include "alnumeric.h"
 #include "core/effects/base.h"
 #include "effects/effects.h"
+#include "gsl/gsl"
 
 
 enum {
@@ -62,7 +63,7 @@ struct ALeffect {
     /* Self ID */
     ALuint id{0u};
 
-    static void SetName(ALCcontext *context, ALuint id, std::string_view name);
+    static void SetName(gsl::not_null<ALCcontext*> context, ALuint id, std::string_view name);
 
     DISABLE_ALLOC
 };

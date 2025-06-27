@@ -24,11 +24,11 @@
 
 #include <algorithm>
 #include <bit>
-#include <cstdint>
 #include <cstring>
 #include <iterator>
 #include <memory>
 #include <mutex>
+#include <new>
 #include <numeric>
 #include <span>
 #include <string>
@@ -145,16 +145,16 @@ void InitEffectParams(ALeffect *effect, ALenum type) noexcept
 [[nodiscard]]
 auto EnsureEffects(al::Device *device, size_t needed) noexcept -> bool
 try {
-    size_t count{std::accumulate(device->EffectList.cbegin(), device->EffectList.cend(), 0_uz,
+    auto count = std::accumulate(device->EffectList.cbegin(), device->EffectList.cend(), 0_uz,
         [](size_t cur, const EffectSubList &sublist) noexcept -> size_t
-        { return cur + gsl::narrow_cast<uint>(std::popcount(sublist.FreeMask)); })};
+        { return cur + gsl::narrow_cast<uint>(std::popcount(sublist.FreeMask)); });
 
     while(needed > count)
     {
         if(device->EffectList.size() >= 1<<25) [[unlikely]]
             return false;
 
-        EffectSubList sublist{};
+        auto sublist = EffectSubList{};
         sublist.FreeMask = ~0_u64;
         sublist.Effects = SubListAllocator{}.allocate(1);
         device->EffectList.emplace_back(std::move(sublist));
@@ -174,7 +174,7 @@ auto AllocEffect(al::Device *device) noexcept -> gsl::not_null<ALeffect*>
     auto slidx = gsl::narrow_cast<uint>(std::countr_zero(sublist->FreeMask));
     ASSUME(slidx < 64);
 
-    auto *effect = std::construct_at(std::to_address(sublist->Effects->begin() + slidx));
+    auto *effect = std::construct_at(std::to_address(std::next(sublist->Effects->begin(), slidx)));
     InitEffectParams(effect, AL_EFFECT_NULL);
 
     /* Add 1 to avoid effect ID 0. */
@@ -185,31 +185,39 @@ auto AllocEffect(al::Device *device) noexcept -> gsl::not_null<ALeffect*>
     return effect;
 }
 
-void FreeEffect(al::Device *device, ALeffect *effect)
+void FreeEffect(al::Device *device, gsl::not_null<ALeffect*> effect)
 {
     device->mEffectNames.erase(effect->id);
 
-    const ALuint id{effect->id - 1};
-    const size_t lidx{id >> 6};
-    const ALuint slidx{id & 0x3f};
+    const auto id = effect->id - 1;
+    const auto lidx = id >> 6;
+    const auto slidx = id & 0x3f;
 
-    std::destroy_at(effect);
+    std::destroy_at(effect.get());
 
     device->EffectList[lidx].FreeMask |= 1_u64 << slidx;
 }
 
-[[nodiscard]] inline
-auto LookupEffect(al::Device *device, ALuint id) noexcept -> ALeffect*
+[[nodiscard]]
+inline auto LookupEffect(std::nothrow_t, al::Device *device, ALuint id) noexcept -> ALeffect*
 {
-    const size_t lidx{(id-1) >> 6};
-    const ALuint slidx{(id-1) & 0x3f};
+    const auto lidx = (id-1) >> 6;
+    const auto slidx = (id-1) & 0x3f;
 
     if(lidx >= device->EffectList.size()) [[unlikely]]
         return nullptr;
-    EffectSubList &sublist = device->EffectList[lidx];
+    auto &sublist = device->EffectList[lidx];
     if(sublist.FreeMask & (1_u64 << slidx)) [[unlikely]]
         return nullptr;
-    return std::to_address(sublist.Effects->begin() + slidx);
+    return std::to_address(std::next(sublist.Effects->begin(), slidx));
+}
+
+[[nodiscard]]
+auto LookupEffect(gsl::not_null<ALCcontext*> context, ALuint id) -> gsl::not_null<ALeffect*>
+{
+    if(auto *effect = LookupEffect(std::nothrow, context->mALDevice.get(), id)) [[likely]]
+        return effect;
+    context->throw_error(AL_INVALID_NAME, "Invalid effect ID {}", id);
 }
 
 } // namespace
@@ -250,15 +258,13 @@ try {
 
     /* First try to find any effects that are invalid. */
     const auto eids = std::span{effects, gsl::narrow_cast<uint>(n)};
-    auto inveffect = std::ranges::find_if_not(eids, [device](const ALuint eid) -> bool
-    { return !eid || LookupEffect(device, eid) != nullptr; });
-    if(inveffect != eids.end())
-        context->throw_error(AL_INVALID_NAME, "Invalid effect ID {}", *inveffect);
+    std::ranges::for_each(eids, [context](const ALuint eid)
+    { if(eid != 0) std::ignore = LookupEffect(context, eid); });
 
     /* All good. Delete non-0 effect IDs. */
     std::ranges::for_each(eids, [device](ALuint eid)
     {
-        if(ALeffect *effect{eid ? LookupEffect(device, eid) : nullptr})
+        if(auto *effect = LookupEffect(std::nothrow, device, eid))
             FreeEffect(device, effect);
     });
 }
@@ -273,7 +279,7 @@ FORCE_ALIGN ALboolean AL_APIENTRY alIsEffectDirect(ALCcontext *context, ALuint e
 {
     auto *device = context->mALDevice.get();
     auto effectlock = std::lock_guard{device->EffectLock};
-    if(!effect || LookupEffect(device, effect))
+    if(effect == 0 || LookupEffect(std::nothrow, device, effect) != nullptr)
         return AL_TRUE;
     return AL_FALSE;
 }
@@ -285,10 +291,7 @@ try {
     auto *device = context->mALDevice.get();
     auto effectlock = std::lock_guard{device->EffectLock};
 
-    ALeffect *aleffect{LookupEffect(device, effect)};
-    if(!aleffect)
-        context->throw_error(AL_INVALID_NAME, "Invalid effect ID {}", effect);
-
+    auto const aleffect = LookupEffect(context, effect);
     switch(param)
     {
     case AL_EFFECT_TYPE:
@@ -332,9 +335,7 @@ try {
     auto *device = context->mALDevice.get();
     auto effectlock = std::lock_guard{device->EffectLock};
 
-    ALeffect *aleffect{LookupEffect(device, effect)};
-    if(!aleffect)
-        context->throw_error(AL_INVALID_NAME, "Invalid effect ID {}", effect);
+    auto const aleffect = LookupEffect(context, effect);
 
     /* Call the appropriate handler */
     std::visit([context,aleffect,param,values](auto &arg)
@@ -356,9 +357,7 @@ try {
     auto *device = context->mALDevice.get();
     auto effectlock = std::lock_guard{device->EffectLock};
 
-    ALeffect *aleffect{LookupEffect(device, effect)};
-    if(!aleffect)
-        context->throw_error(AL_INVALID_NAME, "Invalid effect ID {}", effect);
+    auto const aleffect = LookupEffect(context, effect);
 
     /* Call the appropriate handler */
     std::visit([context,aleffect,param,value](auto &arg)
@@ -380,9 +379,7 @@ try {
     auto *device = context->mALDevice.get();
     auto effectlock = std::lock_guard{device->EffectLock};
 
-    ALeffect *aleffect{LookupEffect(device, effect)};
-    if(!aleffect)
-        context->throw_error(AL_INVALID_NAME, "Invalid effect ID {}", effect);
+    auto const aleffect = LookupEffect(context, effect);
 
     /* Call the appropriate handler */
     std::visit([context,aleffect,param,values](auto &arg)
@@ -404,15 +401,10 @@ try {
     auto *device = context->mALDevice.get();
     auto effectlock = std::lock_guard{device->EffectLock};
 
-    const ALeffect *aleffect{LookupEffect(device, effect)};
-    if(!aleffect)
-        context->throw_error(AL_INVALID_NAME, "Invalid effect ID {}", effect);
-
+    auto const aleffect = LookupEffect(context, effect);
     switch(param)
     {
-    case AL_EFFECT_TYPE:
-        *value = aleffect->type;
-        return;
+    case AL_EFFECT_TYPE: *value = aleffect->type; return;
     }
 
     /* Call the appropriate handler */
@@ -442,9 +434,7 @@ try {
     auto *device = context->mALDevice.get();
     auto effectlock = std::lock_guard{device->EffectLock};
 
-    const ALeffect *aleffect{LookupEffect(device, effect)};
-    if(!aleffect)
-        context->throw_error(AL_INVALID_NAME, "Invalid effect ID {}", effect);
+    auto const aleffect = LookupEffect(context, effect);
 
     /* Call the appropriate handler */
     std::visit([context,aleffect,param,values](auto &arg)
@@ -466,9 +456,7 @@ try {
     auto *device = context->mALDevice.get();
     auto effectlock = std::lock_guard{device->EffectLock};
 
-    const ALeffect *aleffect{LookupEffect(device, effect)};
-    if(!aleffect)
-        context->throw_error(AL_INVALID_NAME, "Invalid effect ID {}", effect);
+    auto const aleffect = LookupEffect(context, effect);
 
     /* Call the appropriate handler */
     std::visit([context,aleffect,param,value](auto &arg)
@@ -490,9 +478,7 @@ try {
     auto *device = context->mALDevice.get();
     auto effectlock = std::lock_guard{device->EffectLock};
 
-    const ALeffect *aleffect{LookupEffect(device, effect)};
-    if(!aleffect)
-        context->throw_error(AL_INVALID_NAME, "Invalid effect ID {}", effect);
+    auto const aleffect = LookupEffect(context, effect);
 
     /* Call the appropriate handler */
     std::visit([context,aleffect,param,values](auto &arg)
@@ -513,14 +499,12 @@ void InitEffect(ALeffect *effect)
     InitEffectParams(effect, AL_EFFECT_NULL);
 }
 
-void ALeffect::SetName(ALCcontext* context, ALuint id, std::string_view name)
+void ALeffect::SetName(gsl::not_null<ALCcontext*>  context, ALuint id, std::string_view name)
 {
     auto *device = context->mALDevice.get();
     auto effectlock = std::lock_guard{device->EffectLock};
 
-    auto effect = LookupEffect(device, id);
-    if(!effect)
-        context->throw_error(AL_INVALID_NAME, "Invalid effect ID {}", id);
+    std::ignore = LookupEffect(context, id);
 
     device->mEffectNames.insert_or_assign(id, name);
 }
@@ -531,11 +515,11 @@ EffectSubList::~EffectSubList()
     if(!Effects)
         return;
 
-    uint64_t usemask{~FreeMask};
+    auto usemask = ~FreeMask;
     while(usemask)
     {
-        const int idx{std::countr_zero(usemask)};
-        std::destroy_at(std::to_address(Effects->begin()+idx));
+        const auto idx = std::countr_zero(usemask);
+        std::destroy_at(std::to_address(std::next(Effects->begin(), idx)));
         usemask &= ~(1_u64 << idx);
     }
     FreeMask = ~usemask;
@@ -549,7 +533,7 @@ struct EffectPreset {
     EFXEAXREVERBPROPERTIES props;
 };
 #define DECL(x) EffectPreset{#x, EFX_REVERB_PRESET_##x}
-static constexpr std::array reverblist{
+static constexpr auto reverblist = std::array{
     DECL(GENERIC),
     DECL(PADDEDCELL),
     DECL(ROOM),
@@ -742,7 +726,6 @@ bool IsValidEffectType(ALenum type) noexcept
     if(type == AL_EFFECT_NULL)
         return true;
 
-    auto check_effect = [type](const EffectList &item) noexcept -> bool
-    { return type == item.val && !DisabledEffects.test(item.type); };
-    return std::any_of(gEffectList.cbegin(), gEffectList.cend(), check_effect);
+    return std::ranges::any_of(gEffectList, [type](const EffectList &item) noexcept -> bool
+    { return type == item.val && !DisabledEffects.test(item.type); });
 }

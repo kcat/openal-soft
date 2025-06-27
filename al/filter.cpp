@@ -25,11 +25,11 @@
 #include <algorithm>
 #include <bit>
 #include <cstdarg>
-#include <cstdint>
 #include <cstdio>
 #include <iterator>
 #include <memory>
 #include <mutex>
+#include <new>
 #include <numeric>
 #include <span>
 #include <unordered_map>
@@ -58,7 +58,7 @@ namespace {
 using SubListAllocator = al::allocator<std::array<ALfilter,64>>;
 
 
-void InitFilterParams(ALfilter *filter, ALenum type)
+void InitFilterParams(gsl::not_null<ALfilter*> filter, ALenum type)
 {
     if(type == AL_FILTER_LOWPASS)
     {
@@ -102,16 +102,16 @@ void InitFilterParams(ALfilter *filter, ALenum type)
 [[nodiscard]]
 auto EnsureFilters(al::Device *device, size_t needed) noexcept -> bool
 try {
-    size_t count{std::accumulate(device->FilterList.cbegin(), device->FilterList.cend(), 0_uz,
+    auto count = std::accumulate(device->FilterList.cbegin(), device->FilterList.cend(), 0_uz,
         [](size_t cur, const FilterSubList &sublist) noexcept -> size_t
-        { return cur + gsl::narrow_cast<uint>(std::popcount(sublist.FreeMask)); })};
+        { return cur + gsl::narrow_cast<uint>(std::popcount(sublist.FreeMask)); });
 
     while(needed > count)
     {
         if(device->FilterList.size() >= 1<<25) [[unlikely]]
             return false;
 
-        FilterSubList sublist{};
+        auto sublist = FilterSubList{};
         sublist.FreeMask = ~0_u64;
         sublist.Filters = SubListAllocator{}.allocate(1);
         device->FilterList.emplace_back(std::move(sublist));
@@ -143,32 +143,39 @@ auto AllocFilter(al::Device *device) noexcept -> gsl::not_null<ALfilter*>
     return filter;
 }
 
-void FreeFilter(al::Device *device, ALfilter *filter)
+void FreeFilter(al::Device *device, gsl::not_null<ALfilter*> filter)
 {
     device->mFilterNames.erase(filter->id);
 
-    const ALuint id{filter->id - 1};
-    const size_t lidx{id >> 6};
-    const ALuint slidx{id & 0x3f};
+    const auto id = filter->id - 1;
+    const auto lidx = id >> 6;
+    const auto slidx = id & 0x3f;
 
-    std::destroy_at(filter);
+    std::destroy_at(filter.get());
 
     device->FilterList[lidx].FreeMask |= 1_u64 << slidx;
 }
 
-
 [[nodiscard]]
-auto LookupFilter(al::Device *device, ALuint id) noexcept -> ALfilter*
+inline auto LookupFilter(std::nothrow_t, al::Device *device, ALuint id) noexcept -> ALfilter*
 {
-    const size_t lidx{(id-1) >> 6};
-    const ALuint slidx{(id-1) & 0x3f};
+    const auto lidx = (id-1) >> 6;
+    const auto slidx = (id-1) & 0x3f;
 
     if(lidx >= device->FilterList.size()) [[unlikely]]
         return nullptr;
-    FilterSubList &sublist = device->FilterList[lidx];
+    auto &sublist = device->FilterList[lidx];
     if(sublist.FreeMask & (1_u64 << slidx)) [[unlikely]]
         return nullptr;
-    return std::to_address(sublist.Filters->begin() + slidx);
+    return std::to_address(std::next(sublist.Filters->begin(), slidx));
+}
+
+[[nodiscard]]
+auto LookupFilter(gsl::not_null<ALCcontext*> context, ALuint id) -> gsl::not_null<ALfilter*>
+{
+    if(auto *filter = LookupFilter(std::nothrow, context->mALDevice.get(), id)) [[likely]]
+        return filter;
+    context->throw_error(AL_INVALID_NAME, "Invalid filter ID {}", id);
 }
 
 } // namespace
@@ -396,15 +403,13 @@ try {
 
     /* First try to find any filters that are invalid. */
     const auto fids = std::span{filters, gsl::narrow_cast<uint>(n)};
-    const auto invflt = std::ranges::find_if_not(fids, [device](const ALuint fid) -> bool
-    { return !fid || LookupFilter(device, fid) != nullptr; });
-    if(invflt != fids.end())
-        context->throw_error(AL_INVALID_NAME, "Invalid filter ID {}", *invflt);
+    std::ranges::for_each(fids, [context](const ALuint fid)
+    { if(fid != 0) std::ignore = LookupFilter(context, fid); });
 
     /* All good. Delete non-0 filter IDs. */
     std::ranges::for_each(fids, [device](const ALuint fid)
     {
-        if(ALfilter *filter{fid ? LookupFilter(device, fid) : nullptr})
+        if(auto *filter = LookupFilter(std::nothrow, device, fid))
             FreeFilter(device, filter);
     });
 }
@@ -419,7 +424,7 @@ FORCE_ALIGN ALboolean AL_APIENTRY alIsFilterDirect(ALCcontext *context, ALuint f
 {
     auto *device = context->mALDevice.get();
     auto filterlock = std::lock_guard{device->FilterLock};
-    if(!filter || LookupFilter(device, filter))
+    if(filter == 0 || LookupFilter(std::nothrow, device, filter) != nullptr)
         return AL_TRUE;
     return AL_FALSE;
 }
@@ -432,10 +437,7 @@ try {
     auto *device = context->mALDevice.get();
     auto filterlock = std::lock_guard{device->FilterLock};
 
-    ALfilter *alfilt{LookupFilter(device, filter)};
-    if(!alfilt)
-        context->throw_error(AL_INVALID_NAME, "Invalid filter ID {}", filter);
-
+    auto const alfilt = LookupFilter(context, filter);
     switch(param)
     {
     case AL_FILTER_TYPE:
@@ -471,9 +473,7 @@ try {
     auto *device = context->mALDevice.get();
     auto filterlock = std::lock_guard{device->FilterLock};
 
-    ALfilter *alfilt{LookupFilter(device, filter)};
-    if(!alfilt)
-        context->throw_error(AL_INVALID_NAME, "Invalid filter ID {}", filter);
+    auto const alfilt = LookupFilter(context, filter);
 
     /* Call the appropriate handler */
     std::visit([context,alfilt,param,values](auto&& thunk)
@@ -492,9 +492,7 @@ try {
     auto *device = context->mALDevice.get();
     auto filterlock = std::lock_guard{device->FilterLock};
 
-    ALfilter *alfilt{LookupFilter(device, filter)};
-    if(!alfilt)
-        context->throw_error(AL_INVALID_NAME, "Invalid filter ID {}", filter);
+    auto const alfilt = LookupFilter(context, filter);
 
     /* Call the appropriate handler */
     std::visit([context,alfilt,param,value](auto&& thunk)
@@ -513,9 +511,7 @@ try {
     auto *device = context->mALDevice.get();
     auto filterlock = std::lock_guard{device->FilterLock};
 
-    ALfilter *alfilt{LookupFilter(device, filter)};
-    if(!alfilt)
-        context->throw_error(AL_INVALID_NAME, "Invalid filter ID {}", filter);
+    auto const alfilt = LookupFilter(context, filter);
 
     /* Call the appropriate handler */
     std::visit([context,alfilt,param,values](auto&& thunk)
@@ -534,9 +530,7 @@ try {
     auto *device = context->mALDevice.get();
     auto filterlock = std::lock_guard{device->FilterLock};
 
-    const ALfilter *alfilt{LookupFilter(device, filter)};
-    if(!alfilt)
-        context->throw_error(AL_INVALID_NAME, "Invalid filter ID {}", filter);
+    auto const alfilt = LookupFilter(context, filter);
 
     switch(param)
     {
@@ -567,9 +561,7 @@ try {
     auto *device = context->mALDevice.get();
     auto filterlock = std::lock_guard{device->FilterLock};
 
-    const ALfilter *alfilt{LookupFilter(device, filter)};
-    if(!alfilt)
-        context->throw_error(AL_INVALID_NAME, "Invalid filter ID {}", filter);
+    auto const alfilt = LookupFilter(context, filter);
 
     /* Call the appropriate handler */
     std::visit([context,alfilt,param,values](auto&& thunk)
@@ -588,9 +580,7 @@ try {
     auto *device = context->mALDevice.get();
     auto filterlock = std::lock_guard{device->FilterLock};
 
-    const ALfilter *alfilt{LookupFilter(device, filter)};
-    if(!alfilt)
-        context->throw_error(AL_INVALID_NAME, "Invalid filter ID {}", filter);
+    auto const alfilt = LookupFilter(context, filter);
 
     /* Call the appropriate handler */
     std::visit([context,alfilt,param,value](auto&& thunk)
@@ -609,9 +599,7 @@ try {
     auto *device = context->mALDevice.get();
     auto filterlock = std::lock_guard{device->FilterLock};
 
-    const ALfilter *alfilt{LookupFilter(device, filter)};
-    if(!alfilt)
-        context->throw_error(AL_INVALID_NAME, "Invalid filter ID {}", filter);
+    auto const alfilt = LookupFilter(context, filter);
 
     /* Call the appropriate handler */
     std::visit([context,alfilt,param,values](auto&& thunk)
@@ -624,14 +612,12 @@ catch(std::exception &e) {
 }
 
 
-void ALfilter::SetName(ALCcontext *context, ALuint id, std::string_view name)
+void ALfilter::SetName(gsl::not_null<ALCcontext*> context, ALuint id, std::string_view name)
 {
     auto *device = context->mALDevice.get();
     auto filterlock = std::lock_guard{device->FilterLock};
 
-    auto filter = LookupFilter(device, id);
-    if(!filter)
-        context->throw_error(AL_INVALID_NAME, "Invalid filter ID {}", id);
+    std::ignore = LookupFilter(context, id);
 
     device->mFilterNames.insert_or_assign(id, name);
 }
@@ -642,11 +628,11 @@ FilterSubList::~FilterSubList()
     if(!Filters)
         return;
 
-    uint64_t usemask{~FreeMask};
+    auto usemask = ~FreeMask;
     while(usemask)
     {
-        const int idx{std::countr_zero(usemask)};
-        std::destroy_at(std::to_address(Filters->begin() + idx));
+        auto const idx = std::countr_zero(usemask);
+        std::destroy_at(std::to_address(std::next(Filters->begin(), idx)));
         usemask &= ~(1_u64 << idx);
     }
     FreeMask = ~usemask;

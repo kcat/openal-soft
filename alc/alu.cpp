@@ -77,6 +77,7 @@
 #include "core/voice.h"
 #include "core/voice_change.h"
 #include "core/front_stablizer.h"
+#include "gsl/gsl"
 #include "intrusive_ptr.h"
 #include "opthelpers.h"
 #include "ringbuffer.h"
@@ -167,14 +168,14 @@ inline void BsincPrepare(const uint increment, BsincState *state, const BSincTab
 
     if(increment > MixerFracOne)
     {
-        sf = MixerFracOne/static_cast<float>(increment) - table->scaleBase;
+        sf = MixerFracOne/gsl::narrow_cast<float>(increment) - table->scaleBase;
         sf = std::max(0.0f, BSincScaleCount*sf*table->scaleRange - 1.0f);
         si = float2uint(sf);
         /* The interpolation factor is fit to this diagonally-symmetric curve
          * to reduce the transition ripple caused by interpolating different
          * scales of the sinc function.
          */
-        sf -= static_cast<float>(si);
+        sf -= gsl::narrow_cast<float>(si);
         sf = 1.0f - std::sqrt(1.0f - sf*sf);
     }
 
@@ -759,7 +760,7 @@ struct RotatorCoeffs {
                      *     (1.0-d) * -0.5;
                      */
 
-                    const auto denom = static_cast<double>((std::abs(n) == l) ?
+                    const auto denom = gsl::narrow_cast<double>((std::abs(n) == l) ?
                           (2*l) * (2*l - 1) : (l*l - n*n));
 
                     if(m == 0)
@@ -796,84 +797,86 @@ void AmbiRotator(AmbiRotateMatrix &matrix, const int order)
     if(order < 2) return;
 
     static constexpr auto P = [](const int i, const int l, const int a, const int n,
-        const size_t last_band, const AmbiRotateMatrix &R)
+        const size_t last_base, const AmbiRotateMatrix &R)
     {
-        const auto ri1 =  R[ 1+2][static_cast<size_t>(i+2_z)];
-        const auto rim1 = R[-1+2][static_cast<size_t>(i+2_z)];
-        const auto ri0 =  R[ 0+2][static_cast<size_t>(i+2_z)];
+        const auto ri1 =  R[ 1+2][gsl::narrow_cast<size_t>(i+2_z)];
+        const auto rim1 = R[-1+2][gsl::narrow_cast<size_t>(i+2_z)];
+        const auto ri0 =  R[ 0+2][gsl::narrow_cast<size_t>(i+2_z)];
 
-        const auto y = last_band + static_cast<size_t>(a+l-1);
+        const auto x = last_base + gsl::narrow_cast<size_t>(a+l-1);
         if(n == -l)
-            return ri1*R[last_band][y] + rim1*R[last_band + static_cast<size_t>(l-1_z)*2][y];
+            return ri1*R[last_base][x] + rim1*R[last_base + gsl::narrow_cast<size_t>(l-1_z)*2][x];
         if(n == l)
-            return ri1*R[last_band + static_cast<size_t>(l-1_z)*2][y] - rim1*R[last_band][y];
-        return ri0*R[last_band + static_cast<size_t>(l-1_z+n)][y];
+            return ri1*R[last_base + gsl::narrow_cast<size_t>(l-1_z)*2][x] - rim1*R[last_base][x];
+        return ri0*R[last_base + gsl::narrow_cast<size_t>(l-1_z+n)][x];
     };
 
-    static constexpr auto U = [](const int l, const int m, const int n, const size_t last_band,
+    static constexpr auto U = [](const int l, const int m, const int n, const size_t last_base,
         const AmbiRotateMatrix &R)
     {
-        return P(0, l, m, n, last_band, R);
+        return P(0, l, m, n, last_base, R);
     };
-    static constexpr auto V = [](const int l, const int m, const int n, const size_t last_band,
+    static constexpr auto V = [](const int l, const int m, const int n, const size_t last_base,
         const AmbiRotateMatrix &R)
     {
         using namespace std::numbers;
         if(m > 0)
         {
             const auto d = (m == 1);
-            const auto p0 = P( 1, l,  m-1, n, last_band, R);
-            const auto p1 = P(-1, l, -m+1, n, last_band, R);
+            const auto p0 = P( 1, l,  m-1, n, last_base, R);
+            const auto p1 = P(-1, l, -m+1, n, last_base, R);
             return d ? p0*sqrt2_v<float> : (p0 - p1);
         }
         const auto d = (m == -1);
-        const auto p0 = P( 1, l,  m+1, n, last_band, R);
-        const auto p1 = P(-1, l, -m-1, n, last_band, R);
+        const auto p0 = P( 1, l,  m+1, n, last_base, R);
+        const auto p1 = P(-1, l, -m-1, n, last_base, R);
         return d ? p1*sqrt2_v<float> : (p0 + p1);
     };
-    static constexpr auto W = [](const int l, const int m, const int n, const size_t last_band,
+    static constexpr auto W = [](const int l, const int m, const int n, const size_t last_base,
         const AmbiRotateMatrix &R)
     {
         assert(m != 0);
         if(m > 0)
         {
-            const auto p0 = P( 1, l,  m+1, n, last_band, R);
-            const auto p1 = P(-1, l, -m-1, n, last_band, R);
+            const auto p0 = P( 1, l,  m+1, n, last_base, R);
+            const auto p1 = P(-1, l, -m-1, n, last_base, R);
             return p0 + p1;
         }
-        const auto p0 = P( 1, l,  m-1, n, last_band, R);
-        const auto p1 = P(-1, l, -m+1, n, last_band, R);
+        const auto p0 = P( 1, l,  m-1, n, last_base, R);
+        const auto p1 = P(-1, l, -m+1, n, last_base, R);
         return p0 - p1;
     };
 
     // compute rotation matrix of each subsequent band recursively
     auto coeffs = RotatorCoeffArray.mCoeffs.cbegin();
-    auto band_idx = 4_uz;
-    auto last_band = 1_uz;
+    auto base_idx = 4_uz;
+    auto last_base = 1_uz;
     for(const auto l : std::views::iota(2, order+1))
     {
-        auto y = band_idx;
+        auto y = base_idx;
         for(const auto n : std::views::iota(-l, l+1))
         {
-            auto x = band_idx;
+            auto x = base_idx;
             for(const auto m : std::views::iota(-l, l+1))
             {
                 auto r = 0.0f;
 
                 // computes Eq.8.1
                 if(const auto u = coeffs->u; u != 0.0f)
-                    r += u * U(l, m, n, last_band, matrix);
+                    r += u * U(l, m, n, last_base, matrix);
                 if(const auto v = coeffs->v; v != 0.0f)
-                    r += v * V(l, m, n, last_band, matrix);
+                    r += v * V(l, m, n, last_base, matrix);
                 if(const auto w = coeffs->w; w != 0.0f)
-                    r += w * W(l, m, n, last_band, matrix);
+                    r += w * W(l, m, n, last_base, matrix);
 
                 matrix[y][x] = r;
                 ++coeffs;
+                ++x;
             }
+            ++y;
         }
-        last_band = band_idx;
-        band_idx += static_cast<uint>(l)*2_uz + 1;
+        last_base = base_idx;
+        base_idx += static_cast<uint>(l)*2_uz + 1;
     }
 }
 /* End ambisonic rotation helpers. */

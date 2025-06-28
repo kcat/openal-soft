@@ -9,6 +9,7 @@
 #include <windows.h>
 
 #include "alstring.h"
+#include "gsl/gsl"
 
 /* NOLINTBEGIN(bugprone-suspicious-stringview-data-usage) */
 auto wstr_to_utf8(std::wstring_view wstr) -> std::string
@@ -19,7 +20,7 @@ auto wstr_to_utf8(std::wstring_view wstr) -> std::string
         nullptr, nullptr);
     if(len > 0)
     {
-        ret.resize(static_cast<size_t>(len));
+        ret.resize(gsl::narrow_cast<size_t>(len));
         WideCharToMultiByte(CP_UTF8, 0, wstr.data(), al::sizei(wstr), ret.data(), len,
             nullptr, nullptr);
     }
@@ -34,7 +35,7 @@ auto utf8_to_wstr(std::string_view str) -> std::wstring
     const auto len = MultiByteToWideChar(CP_UTF8, 0, str.data(), al::sizei(str), nullptr, 0);
     if(len > 0)
     {
-        ret.resize(static_cast<size_t>(len));
+        ret.resize(gsl::narrow_cast<size_t>(len));
         MultiByteToWideChar(CP_UTF8, 0, str.data(), al::sizei(str), ret.data(), len);
     }
 

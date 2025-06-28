@@ -765,18 +765,18 @@ struct RotatorCoeffs {
 
                     if(m == 0)
                     {
-                        coeffs->u = static_cast<float>(std::sqrt(l * l / denom));
-                        coeffs->v = static_cast<float>(std::sqrt((l-1) * l / denom) * -1.0);
+                        coeffs->u = gsl::narrow_cast<float>(std::sqrt(l * l / denom));
+                        coeffs->v = gsl::narrow_cast<float>(std::sqrt((l-1) * l / denom) * -1.0);
                         coeffs->w = 0.0f;
                     }
                     else
                     {
                         const auto abs_m = std::abs(m);
-                        coeffs->u = static_cast<float>(std::sqrt((l*l - m*m) / denom));
-                        coeffs->v = static_cast<float>(std::sqrt((l+abs_m-1) * (l+abs_m) / denom) *
-                            0.5);
-                        coeffs->w = static_cast<float>(std::sqrt((l-abs_m-1) * (l-abs_m) / denom) *
-                            -0.5);
+                        coeffs->u = gsl::narrow_cast<float>(std::sqrt((l*l - m*m) / denom));
+                        coeffs->v = gsl::narrow_cast<float>(std::sqrt((l+abs_m-1) * (l+abs_m)
+                            / denom) * 0.5);
+                        coeffs->w = gsl::narrow_cast<float>(std::sqrt((l-abs_m-1) * (l-abs_m)
+                            / denom) * -0.5);
                     }
                     ++coeffs;
                 }
@@ -876,7 +876,7 @@ void AmbiRotator(AmbiRotateMatrix &matrix, const int order)
             ++y;
         }
         last_base = base_idx;
-        base_idx += static_cast<uint>(l)*2_uz + 1;
+        base_idx += gsl::narrow_cast<uint>(l)*2_uz + 1;
     }
 }
 /* End ambisonic rotation helpers. */
@@ -907,7 +907,7 @@ void CalcAmbisonicPanning(Voice *voice, const float xpos, const float ypos, cons
     const std::span<EffectSlot*,MaxSendCount> sendslots, const ContextParams &ctxparams,
     DeviceBase *device)
 {
-    const auto samplerate = static_cast<float>(device->mSampleRate);
+    const auto samplerate = gsl::narrow_cast<float>(device->mSampleRate);
 
     if(device->AvgSpeakerDist > 0.0f && voice->mFmtChannels != FmtUHJ2
         && voice->mFmtChannels != FmtSuperStereo)
@@ -991,7 +991,7 @@ void CalcAmbisonicPanning(Voice *voice, const float xpos, const float ypos, cons
     shrot[1][1] =  U[0]; shrot[1][2] = -U[1]; shrot[1][3] =  U[2];
     shrot[2][1] = -V[0]; shrot[2][2] =  V[1]; shrot[2][3] = -V[2];
     shrot[3][1] = -N[0]; shrot[3][2] =  N[1]; shrot[3][3] = -N[2];
-    AmbiRotator(shrot, static_cast<int>(device->mAmbiOrder));
+    AmbiRotator(shrot, gsl::narrow_cast<int>(device->mAmbiOrder));
 
     /* If the device is higher order than the voice, "upsample" the matrix.
      *
@@ -1310,7 +1310,7 @@ void CalcNormalPanning(Voice *voice, const float xpos, const float ypos, const f
     const auto &props = voice->mProps;
     auto ChannelPanGain = GetPanGainSelector(props);
 
-    const auto samplerate = static_cast<float>(device->mSampleRate);
+    const auto samplerate = gsl::narrow_cast<float>(device->mSampleRate);
 
     if(distance > std::numeric_limits<float>::epsilon())
     {
@@ -1603,7 +1603,7 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
             sendslots, device);
     }
 
-    const auto inv_samplerate = 1.0f / static_cast<float>(device->mSampleRate);
+    const auto inv_samplerate = 1.0f / gsl::narrow_cast<float>(device->mSampleRate);
     {
         const auto hfNorm = props.Direct.HFReference * inv_samplerate;
         const auto lfNorm = props.Direct.LFReference * inv_samplerate;
@@ -1663,8 +1663,8 @@ void CalcNonAttnSourceParams(Voice *voice, const ContextBase *context)
     }
 
     /* Calculate the stepping value */
-    const auto pitch = static_cast<float>(voice->mFrequency) /
-        static_cast<float>(device->mSampleRate) * props.Pitch;
+    const auto pitch = gsl::narrow_cast<float>(voice->mFrequency) /
+        gsl::narrow_cast<float>(device->mSampleRate) * props.Pitch;
     if(pitch > float{MaxPitch})
         voice->mStep = MaxPitch<<MixerFracBits;
     else
@@ -1838,7 +1838,7 @@ void CalcAttnSourceParams(Voice *voice, const ContextBase *context)
     auto wetconehf = 1.0f;
     if(directional && props.InnerAngle < 360.0f)
     {
-        static constexpr auto Rad2Deg = static_cast<float>(180.0 / std::numbers::pi);
+        static constexpr auto Rad2Deg = gsl::narrow_cast<float>(180.0 / std::numbers::pi);
         const auto angle = Rad2Deg*2.0f * std::acos(-direction.dot_product(tosource)) * ConeScale;
 
         auto conegain = 1.0f;
@@ -1975,7 +1975,8 @@ void CalcAttnSourceParams(Voice *voice, const ContextBase *context)
     /* Adjust pitch based on the buffer and output frequencies, and calculate
      * fixed-point stepping value.
      */
-    pitch *= static_cast<float>(voice->mFrequency) / static_cast<float>(device->mSampleRate);
+    pitch *= gsl::narrow_cast<float>(voice->mFrequency)
+        / gsl::narrow_cast<float>(device->mSampleRate);
     if(pitch > float{MaxPitch})
         voice->mStep = MaxPitch<<MixerFracBits;
     else
@@ -2294,7 +2295,7 @@ void ApplyDither(const std::span<FloatBufferLine> Samples, uint *dither_seed,
         auto val = sample * quant_scale;
         const auto rng0 = dither_rng(&seed);
         const auto rng1 = dither_rng(&seed);
-        val += static_cast<float>(rng0*invRNGRange - rng1*invRNGRange);
+        val += gsl::narrow_cast<float>(rng0*invRNGRange - rng1*invRNGRange);
         return fast_roundf(val) * invscale;
     };
     for(const FloatBufferSpan inout : Samples)
@@ -2307,11 +2308,11 @@ void ApplyDither(const std::span<FloatBufferLine> Samples, uint *dither_seed,
  * chokes on that given the inline specializations.
  */
 template<typename T>
-inline T SampleConv(float) noexcept;
+inline auto SampleConv(float) noexcept -> T;
 
-template<> inline float SampleConv(float val) noexcept
+template<> inline auto SampleConv(float val) noexcept -> float
 { return val; }
-template<> inline int32_t SampleConv(float val) noexcept
+template<> inline auto SampleConv(float val) noexcept -> int32_t
 {
     /* Floats have a 23-bit mantissa, plus an implied 1 bit and a sign bit.
      * This means a normalized float has at most 25 bits of signed precision.
@@ -2320,18 +2321,18 @@ template<> inline int32_t SampleConv(float val) noexcept
      */
     return fastf2i(std::clamp(val*2147483648.0f, -2147483648.0f, 2147483520.0f));
 }
-template<> inline int16_t SampleConv(float val) noexcept
-{ return static_cast<int16_t>(fastf2i(std::clamp(val*32768.0f, -32768.0f, 32767.0f))); }
-template<> inline int8_t SampleConv(float val) noexcept
-{ return static_cast<int8_t>(fastf2i(std::clamp(val*128.0f, -128.0f, 127.0f))); }
+template<> inline auto SampleConv(float val) noexcept -> int16_t
+{ return gsl::narrow_cast<int16_t>(fastf2i(std::clamp(val*32768.0f, -32768.0f, 32767.0f))); }
+template<> inline auto SampleConv(float val) noexcept -> int8_t
+{ return gsl::narrow_cast<int8_t>(fastf2i(std::clamp(val*128.0f, -128.0f, 127.0f))); }
 
 /* Define unsigned output variations. */
-template<> inline uint32_t SampleConv(float val) noexcept
-{ return static_cast<uint32_t>(SampleConv<int32_t>(val)) + 2147483648u; }
-template<> inline uint16_t SampleConv(float val) noexcept
-{ return static_cast<uint16_t>(SampleConv<int16_t>(val) + 32768); }
-template<> inline uint8_t SampleConv(float val) noexcept
-{ return static_cast<uint8_t>(SampleConv<int8_t>(val) + 128); }
+template<> inline auto SampleConv(float val) noexcept -> uint32_t
+{ return as_unsigned(SampleConv<int32_t>(val)) + 2147483648u; }
+template<> inline auto SampleConv(float val) noexcept -> uint16_t
+{ return gsl::narrow_cast<uint16_t>(SampleConv<int16_t>(val) + 32768); }
+template<> inline auto SampleConv(float val) noexcept -> uint8_t
+{ return gsl::narrow_cast<uint8_t>(SampleConv<int8_t>(val) + 128); }
 
 template<typename T>
 void Write(const std::span<const FloatBufferLine> InBuffer, void *OutBuffer, const size_t Offset,

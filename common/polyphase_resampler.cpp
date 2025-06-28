@@ -9,12 +9,14 @@
 #include <stdexcept>
 #include <tuple>
 
+#include "gsl/gsl"
+
 
 using uint = unsigned int;
 
 namespace {
 
-constexpr double Epsilon{1e-9};
+constexpr auto Epsilon = 1e-9;
 
 
 /* The zero-order modified Bessel function of the first kind, used for the
@@ -34,23 +36,23 @@ constexpr auto cyl_bessel_i(T nu, U x) -> U
         throw std::runtime_error{"cyl_bessel_i: nu != 0"};
 
     /* Start at k=1 since k=0 is trivial. */
-    const double x2{x/2.0};
-    double term{1.0};
-    double sum{1.0};
-    int k{1};
+    const auto x2 = x/2.0;
+    auto term = 1.0;
+    auto sum = 1.0;
+    auto k = 1;
 
     /* Let the integration converge until the term of the sum is no longer
      * significant.
      */
-    double last_sum{};
+    auto last_sum = 0.0;
     do {
-        const double y{x2 / k};
+        const auto y = x2 / k;
         ++k;
         last_sum = sum;
         term *= y * y;
         sum += term;
     } while(sum != last_sum);
-    return static_cast<U>(sum);
+    return gsl::narrow_cast<U>(sum);
 }
 
 /* This is the normalized cardinal sine (sinc) function.
@@ -58,7 +60,7 @@ constexpr auto cyl_bessel_i(T nu, U x) -> U
  *   sinc(x) = { 1,                   x = 0
  *             { sin(pi x) / (pi x),  otherwise.
  */
-double Sinc(const double x)
+auto Sinc(const double x) -> double
 {
     if(std::abs(x) < Epsilon) [[unlikely]]
         return 1.0;
@@ -79,7 +81,7 @@ double Sinc(const double x)
  *
  *   k = 2 i / M - 1,   where 0 <= i <= M.
  */
-double Kaiser(const double beta, const double k, const double besseli_0_beta)
+auto Kaiser(const double beta, const double k, const double besseli_0_beta) -> double
 {
     if(!(k >= -1.0 && k <= 1.0))
         return 0.0;
@@ -93,22 +95,22 @@ double Kaiser(const double beta, const double k, const double besseli_0_beta)
  *       { ceil(5.79 / 2 pi f_t),                r <= 21.
  *
  */
-constexpr uint CalcKaiserOrder(const double rejection, const double transition)
+constexpr auto CalcKaiserOrder(const double rejection, const double transition) -> uint
 {
     const auto w_t = 2.0 * std::numbers::pi * transition;
     if(rejection > 21.0) [[likely]]
-        return static_cast<uint>(std::ceil((rejection - 7.95) / (2.285 * w_t)));
-    return static_cast<uint>(std::ceil(5.79 / w_t));
+        return gsl::narrow_cast<uint>(std::ceil((rejection - 7.95) / (2.285 * w_t)));
+    return gsl::narrow_cast<uint>(std::ceil(5.79 / w_t));
 }
 
 // Calculates the beta value of the Kaiser window.  Rejection is in dB.
-constexpr double CalcKaiserBeta(const double rejection)
+constexpr auto CalcKaiserBeta(const double rejection) -> double
 {
     if(rejection > 50.0) [[likely]]
         return 0.1102 * (rejection - 8.7);
     if(rejection >= 21.0)
         return (0.5842 * std::pow(rejection - 21.0, 0.4)) +
-               (0.07886 * (rejection - 21.0));
+            (0.07886 * (rejection - 21.0));
     return 0.0;
 }
 
@@ -127,7 +129,7 @@ constexpr double CalcKaiserBeta(const double rejection)
 auto SincFilter(const uint l, const double beta, const double besseli_0_beta, const double gain,
     const double cutoff, const uint i) -> double
 {
-    const auto x = static_cast<double>(i) - l;
+    const auto x = gsl::narrow_cast<double>(i) - l;
     return Kaiser(beta, x/l, besseli_0_beta) * 2.0 * gain * cutoff * Sinc(2.0 * cutoff * x);
 }
 

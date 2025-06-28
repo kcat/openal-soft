@@ -18,6 +18,7 @@
 #include <span>
 
 #include "alnumeric.h"
+#include "gsl/gsl"
 #include "opthelpers.h"
 
 
@@ -41,15 +42,16 @@ struct SIMDALIGN PhaseShifterT {
          */
         for(const auto i : std::views::iota(0_uz, FilterSize/2))
         {
-            const auto k = static_cast<int>(i*2 + 1) - int{FilterSize/2};
+            const auto k = gsl::narrow_cast<int>(i*2 + 1) - int{FilterSize/2};
 
             /* Calculate the Blackman window value for this coefficient. */
-            const auto w = 2.0*std::numbers::pi/double{FilterSize} * static_cast<double>(i*2 + 1);
+            const auto w = 2.0*std::numbers::pi/double{FilterSize}
+                * gsl::narrow_cast<double>(i*2 + 1);
             const auto window = 0.3635819 - 0.4891775*std::cos(w) + 0.1365995*std::cos(2.0*w)
                 - 0.0106411*std::cos(3.0*w);
 
-            const auto pk = std::numbers::pi * static_cast<double>(k);
-            mCoeffs[i] = static_cast<float>(window * (1.0-std::cos(pk)) / pk);
+            const auto pk = std::numbers::pi * gsl::narrow_cast<double>(k);
+            mCoeffs[i] = gsl::narrow_cast<float>(window * (1.0-std::cos(pk)) / pk);
         }
     }
 

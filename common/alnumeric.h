@@ -20,16 +20,17 @@
 #include <emmintrin.h>
 #endif
 
+#include "gsl/gsl"
 #include "opthelpers.h"
 
 
-constexpr auto operator "" _i64(unsigned long long n) noexcept { return static_cast<std::int64_t>(n); }
-constexpr auto operator "" _u64(unsigned long long n) noexcept { return static_cast<std::uint64_t>(n); }
+consteval auto operator "" _i64(unsigned long long n) noexcept { return gsl::narrow<std::int64_t>(n); }
+consteval auto operator "" _u64(unsigned long long n) noexcept { return gsl::narrow<std::uint64_t>(n); }
 
-constexpr auto operator "" _z(unsigned long long n) noexcept
-{ return static_cast<std::make_signed_t<std::size_t>>(n); }
-constexpr auto operator "" _uz(unsigned long long n) noexcept { return static_cast<std::size_t>(n); }
-constexpr auto operator "" _zu(unsigned long long n) noexcept { return static_cast<std::size_t>(n); }
+consteval auto operator "" _z(unsigned long long n) noexcept
+{ return gsl::narrow<std::make_signed_t<std::size_t>>(n); }
+consteval auto operator "" _uz(unsigned long long n) noexcept { return gsl::narrow<std::size_t>(n); }
+consteval auto operator "" _zu(unsigned long long n) noexcept { return gsl::narrow<std::size_t>(n); }
 
 
 namespace al {
@@ -158,11 +159,11 @@ inline int fastf2i(float f) noexcept
 
 #else
 
-    return static_cast<int>(f);
+    return gsl::narrow_cast<int>(f);
 #endif
 }
 inline unsigned int fastf2u(float f) noexcept
-{ return static_cast<unsigned int>(fastf2i(f)); }
+{ return gsl::narrow_cast<unsigned int>(fastf2i(f)); }
 
 /** Converts float-to-int using standard behavior (truncation). */
 inline int float2int(float f) noexcept
@@ -175,25 +176,25 @@ inline int float2int(float f) noexcept
         && !defined(__SSE_MATH__))
     const auto conv_i = std::bit_cast<int>(f);
 
-    const int sign{(conv_i>>31) | 1};
-    const int shift{((conv_i>>23)&0xff) - (127+23)};
+    const auto sign = (conv_i>>31) | 1;
+    const auto shift = ((conv_i>>23)&0xff) - (127+23);
 
     /* Over/underflow */
     if(shift >= 31 || shift < -23) [[unlikely]]
         return 0;
 
-    const int mant{(conv_i&0x7fffff) | 0x800000};
+    const auto mant = (conv_i&0x7fffff) | 0x800000;
     if(shift < 0) [[likely]]
         return (mant >> -shift) * sign;
     return (mant << shift) * sign;
 
 #else
 
-    return static_cast<int>(f);
+    return gsl::narrow_cast<int>(f);
 #endif
 }
 inline unsigned int float2uint(float f) noexcept
-{ return static_cast<unsigned int>(float2int(f)); }
+{ return gsl::narrow_cast<unsigned int>(float2int(f)); }
 
 /** Converts double-to-int using standard behavior (truncation). */
 inline int double2int(double d) noexcept
@@ -206,21 +207,21 @@ inline int double2int(double d) noexcept
         && !defined(__SSE2_MATH__))
     const auto conv_i64 = std::bit_cast<int64_t>(d);
 
-    const int sign{static_cast<int>(conv_i64 >> 63) | 1};
-    const int shift{(static_cast<int>(conv_i64 >> 52) & 0x7ff) - (1023 + 52)};
+    const auto sign = gsl::narrow_cast<int>(conv_i64 >> 63) | 1;
+    const auto shift = (gsl::narrow_cast<int>(conv_i64 >> 52) & 0x7ff) - (1023 + 52);
 
     /* Over/underflow */
     if(shift >= 63 || shift < -52) [[unlikely]]
         return 0;
 
-    const int64_t mant{(conv_i64 & 0xfffffffffffff_i64) | 0x10000000000000_i64};
+    const auto mant = (conv_i64 & 0xfffffffffffff_i64) | 0x10000000000000_i64;
     if(shift < 0) [[likely]]
-        return static_cast<int>(mant >> -shift) * sign;
-    return static_cast<int>(mant << shift) * sign;
+        return gsl::narrow_cast<int>(mant >> -shift) * sign;
+    return gsl::narrow_cast<int>(mant << shift) * sign;
 
 #else
 
-    return static_cast<int>(d);
+    return gsl::narrow_cast<int>(d);
 #endif
 }
 
@@ -249,14 +250,14 @@ inline float fast_roundf(float f) noexcept
     /* Integral limit, where sub-integral precision is not available for
      * floats.
      */
-    static constexpr std::array ilim{
+    static constexpr auto ilim = std::array{
          8388608.0f /*  0x1.0p+23 */,
         -8388608.0f /* -0x1.0p+23 */
     };
-    const auto conv_i = std::bit_cast<unsigned int>(f);
+    const auto conv_u = std::bit_cast<unsigned int>(f);
 
-    const unsigned int sign{(conv_i>>31)&0x01};
-    const unsigned int expo{(conv_i>>23)&0xff};
+    const auto sign = (conv_u>>31u)&0x01u;
+    const auto expo = (conv_u>>23u)&0xffu;
 
     if(expo >= 150/*+23*/) [[unlikely]]
     {

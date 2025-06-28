@@ -19,6 +19,7 @@
 #include "AL/al.h"
 
 #include "alstring.h"
+#include "gsl/gsl"
 #include "opthelpers.h"
 #include "strutils.hpp"
 
@@ -297,12 +298,13 @@ auto GetLoadedModuleDirectory(const WCHAR *name, std::wstring *moddir) -> bool
     }
 
     moddir->assign(256, '\0');
-    auto res = GetModuleFileNameW(module, moddir->data(), static_cast<DWORD>(moddir->size()));
+    auto res = GetModuleFileNameW(module, moddir->data(), gsl::narrow_cast<DWORD>(moddir->size()));
     if(res >= moddir->size())
     {
         do {
             moddir->append(256, '\0');
-            res = GetModuleFileNameW(module, moddir->data(), static_cast<DWORD>(moddir->size()));
+            res = GetModuleFileNameW(module, moddir->data(),
+                gsl::narrow_cast<DWORD>(moddir->size()));
         } while(res >= moddir->size());
     }
     moddir->resize(res);

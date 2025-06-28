@@ -19,6 +19,7 @@
 #include "core/logging.h"
 #include "core/mastering.h"
 #include "flexarray.h"
+#include "gsl/gsl"
 
 
 namespace {
@@ -38,21 +39,21 @@ Device::~Device()
 
     Backend = nullptr;
 
-    size_t count{std::accumulate(BufferList.cbegin(), BufferList.cend(), 0_uz,
+    auto count = std::accumulate(BufferList.cbegin(), BufferList.cend(), 0_uz,
         [](size_t cur, const BufferSubList &sublist) noexcept -> size_t
-        { return cur + static_cast<uint>(std::popcount(~sublist.FreeMask)); })};
+        { return cur + gsl::narrow_cast<uint>(std::popcount(~sublist.FreeMask)); });
     if(count > 0)
         WARN("{} Buffer{} not deleted", count, (count==1)?"":"s");
 
     count = std::accumulate(EffectList.cbegin(), EffectList.cend(), 0_uz,
         [](size_t cur, const EffectSubList &sublist) noexcept -> size_t
-        { return cur + static_cast<uint>(std::popcount(~sublist.FreeMask)); });
+        { return cur + gsl::narrow_cast<uint>(std::popcount(~sublist.FreeMask)); });
     if(count > 0)
         WARN("{} Effect{} not deleted", count, (count==1)?"":"s");
 
     count = std::accumulate(FilterList.cbegin(), FilterList.cend(), 0_uz,
         [](size_t cur, const FilterSubList &sublist) noexcept -> size_t
-        { return cur + static_cast<uint>(std::popcount(~sublist.FreeMask)); });
+        { return cur + gsl::narrow_cast<uint>(std::popcount(~sublist.FreeMask)); });
     if(count > 0)
         WARN("{} Filter{} not deleted", count, (count==1)?"":"s");
 }

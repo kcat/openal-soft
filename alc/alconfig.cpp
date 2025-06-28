@@ -51,6 +51,7 @@
 #include "core/logging.h"
 #include "filesystem.h"
 #include "fmt/ranges.h"
+#include "gsl/gsl"
 #include "strutils.hpp"
 
 #if ALSOFT_UWP
@@ -64,12 +65,6 @@ using namespace winrt;
 namespace {
 
 using namespace std::string_view_literals;
-
-#if defined(_WIN32) && !defined(_GAMING_XBOX) && !ALSOFT_UWP
-struct CoTaskMemDeleter {
-    void operator()(void *mem) const { CoTaskMemFree(mem); }
-};
-#endif
 
 const auto EmptyString = std::string{};
 
@@ -270,7 +265,7 @@ void LoadConfigFromFile(std::istream &f)
                         b |= (section[2]-'a'+0xa);
                     else if(section[2] >= 'A' && section[2] <= 'F')
                         b |= (section[2]-'A'+0x0a);
-                    curSection += static_cast<char>(b);
+                    curSection += gsl::narrow_cast<char>(b);
                     section.remove_prefix(3);
                 }
                 else if(section.size() > 1 && section[1] == '%')
@@ -388,7 +383,7 @@ void ReadALConfig()
 #if !defined(_GAMING_XBOX)
     {
 #if !ALSOFT_UWP
-        auto bufstore = std::unique_ptr<WCHAR,CoTaskMemDeleter>{};
+        auto bufstore = std::unique_ptr<WCHAR, decltype([](WCHAR *mem){ CoTaskMemFree(mem); })>{};
         const auto hr = SHGetKnownFolderPath(FOLDERID_RoamingAppData, KF_FLAG_DONT_UNEXPAND,
             nullptr, al::out_ptr(bufstore));
         if(SUCCEEDED(hr))
@@ -549,7 +544,10 @@ auto ConfigValueInt(const std::string_view devName, const std::string_view block
     const std::string_view keyName) -> std::optional<int>
 {
     if(auto&& val = GetConfigValue(devName, blockName, keyName); !val.empty()) try {
-        return static_cast<int>(std::stol(val, nullptr, 0));
+        return std::stoi(val, nullptr, 0);
+    }
+    catch(std::out_of_range&) {
+        WARN("Option is out of range of int: {} = {}", keyName, val);
     }
     catch(std::exception&) {
         WARN("Option is not an int: {} = {}", keyName, val);
@@ -562,7 +560,13 @@ auto ConfigValueUInt(const std::string_view devName, const std::string_view bloc
     const std::string_view keyName) -> std::optional<unsigned int>
 {
     if(auto&& val = GetConfigValue(devName, blockName, keyName); !val.empty()) try {
-        return static_cast<unsigned int>(std::stoul(val, nullptr, 0));
+        return gsl::narrow<unsigned int>(std::stoul(val, nullptr, 0));
+    }
+    catch(std::out_of_range&) {
+        WARN("Option is out of range of unsigned int: {} = {}", keyName, val);
+    }
+    catch(gsl::narrowing_error&) {
+        WARN("Option is out of range of unsigned int: {} = {}", keyName, val);
     }
     catch(std::exception&) {
         WARN("Option is not an unsigned int: {} = {}", keyName, val);

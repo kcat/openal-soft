@@ -19,6 +19,7 @@
 
 #include "alnumeric.h"
 #include "alstring.h"
+#include "gsl/gsl"
 #include "router.h"
 #include "strutils.hpp"
 
@@ -529,7 +530,7 @@ ALC_API auto ALC_APIENTRY alcOpenDevice(const ALCchar *devicename) noexcept -> A
             LastError.store(ALC_INVALID_DEVICE);
             return nullptr;
         }
-        idx = static_cast<ALCuint>(std::distance(DriverList.begin(), iter));
+        idx = gsl::narrow_cast<ALCuint>(std::distance(DriverList.begin(), iter));
     }
 
     if(!device)
@@ -962,7 +963,7 @@ ALC_API auto ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *devicename, ALCuin
             LastError.store(ALC_INVALID_DEVICE);
             return nullptr;
         }
-        idx = static_cast<ALCuint>(std::distance(DriverList.begin(), iter));
+        idx = gsl::narrow_cast<ALCuint>(std::distance(DriverList.begin(), iter));
     }
 
     if(!device)

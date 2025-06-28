@@ -1,13 +1,14 @@
 #ifndef CORE_LOGGING_H
 #define CORE_LOGGING_H
 
+#include <cstdint>
 #include <cstdio>
 
 #include "fmt/core.h"
 #include "opthelpers.h"
 
 
-enum class LogLevel {
+enum class LogLevel : uint8_t {
     Disable,
     Error,
     Warning,

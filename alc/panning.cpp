@@ -66,6 +66,7 @@
 #include "core/uhjfilter.h"
 #include "device.h"
 #include "flexarray.h"
+#include "gsl/gsl"
 #include "intrusive_ptr.h"
 #include "opthelpers.h"
 #include "vector.h"
@@ -151,14 +152,15 @@ auto GetScalingName(DevAmbiScaling scaling) noexcept -> std::string_view
 }
 
 
-std::unique_ptr<FrontStablizer> CreateStablizer(const size_t outchans, const uint srate)
+[[nodiscard]]
+auto CreateStablizer(const size_t outchans, const uint srate) -> std::unique_ptr<FrontStablizer>
 {
     auto stablizer = FrontStablizer::Create(outchans);
 
     /* Initialize band-splitting filter for the mid signal, with a crossover at
      * 5khz (could be higher).
      */
-    stablizer->MidFilter.init(5000.0f / static_cast<float>(srate));
+    stablizer->MidFilter.init(5000.0f / gsl::narrow_cast<float>(srate));
     std::ranges::fill(stablizer->ChannelFilters, stablizer->MidFilter);
 
     return stablizer;
@@ -279,7 +281,7 @@ void InitNearFieldCtrl(al::Device *device, const float ctrl_dist, const uint ord
     TRACE("Using near-field reference distance: {:.2f} meters", device->AvgSpeakerDist);
 
     const auto w1 = SpeedOfSoundMetersPerSec / device->AvgSpeakerDist
-        / static_cast<float>(device->mSampleRate);
+        / gsl::narrow_cast<float>(device->mSampleRate);
     device->mNFCtrlFilter.init(w1);
 
     std::ranges::fill(device->NumChannelsPerOrder, 0u);
@@ -295,7 +297,8 @@ void InitDistanceComp(al::Device *device, const std::span<const Channel> channel
     if(!device->getConfigValueBool("decoder", "distance-comp", true) || !(maxdist > 0.0f))
         return;
 
-    const auto distSampleScale = static_cast<float>(device->mSampleRate)/SpeedOfSoundMetersPerSec;
+    const auto distSampleScale = gsl::narrow_cast<float>(device->mSampleRate)
+        / SpeedOfSoundMetersPerSec;
 
     struct DistCoeffs { uint Length{0u}; float Gain{1.0f}; };
     auto ChanDelay = std::vector<DistCoeffs>{};
@@ -328,7 +331,7 @@ void InitDistanceComp(al::Device *device, const std::span<const Channel> channel
         ChanDelay.resize(std::max(ChanDelay.size(), idx+1_uz));
         if(distance > 0.0f)
         {
-            ChanDelay[idx].Length = static_cast<uint>(delay);
+            ChanDelay[idx].Length = gsl::narrow_cast<uint>(delay);
             ChanDelay[idx].Gain = distance / maxdist;
         }
         TRACE("Channel {} distance comp: {} samples, {:f} gain", GetLabelFromChannel(ch),
@@ -489,7 +492,7 @@ auto MakeDecoderView(al::Device *device, const AmbDecConf *conf,
                 ERR("AmbDec speaker label \"{}\" not recognized", speaker.Name);
                 return;
             }
-            ch = static_cast<Channel>(Aux0+idx);
+            ch = gsl::narrow_cast<Channel>(Aux0+idx);
         }
 
         decoder.mChannels[chan_count] = ch;
@@ -818,7 +821,7 @@ auto InitPanning(al::Device *device, const bool hqdec=false, const bool stablize
         (decoder.mOrder > 1) ? "second" : "first",
         decoder.mIs3D ? " periphonic" : "");
     auto bformatdec = std::make_unique<BFormatDec>(ambicount, chancoeffs, chancoeffslf,
-        device->mXOverFreq/static_cast<float>(device->mSampleRate));
+        device->mXOverFreq/gsl::narrow_cast<float>(device->mSampleRate));
     return {std::move(bformatdec), std::move(stablizer)};
 }
 
@@ -1272,9 +1275,10 @@ void aluInitRenderer(al::Device *device, int hrtf_id, std::optional<StereoEncodi
         if(device->mHrtfList.empty())
             device->enumerateHrtfs();
 
-        if(hrtf_id >= 0 && static_cast<uint>(hrtf_id) < device->mHrtfList.size())
+        if(hrtf_id >= 0 && std::cmp_less(hrtf_id, device->mHrtfList.size()))
         {
-            const auto hrtfname = std::string_view{device->mHrtfList[static_cast<uint>(hrtf_id)]};
+            const auto hrtfname = std::string_view{
+                device->mHrtfList[gsl::narrow_cast<uint>(hrtf_id)]};
             if(auto hrtf = GetLoadedHrtf(hrtfname, device->mSampleRate))
             {
                 device->mHrtf = std::move(hrtf);
@@ -1353,7 +1357,7 @@ void aluInitRenderer(al::Device *device, int hrtf_id, std::optional<StereoEncodi
             cflevopt && *cflevopt > 0 && *cflevopt <= 6)
         {
             auto bs2b = std::make_unique<Bs2b::bs2b>();
-            bs2b->set_params(*cflevopt, static_cast<int>(device->mSampleRate));
+            bs2b->set_params(*cflevopt, gsl::narrow_cast<int>(device->mSampleRate));
             TRACE("BS2B enabled");
             auto proc = InitPanning(device);
             device->mPostProcess.emplace<Bs2bPostProcess>(std::move(proc.decoder),std::move(bs2b));

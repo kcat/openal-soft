@@ -37,6 +37,7 @@
 #include "flexarray.h"
 #include "fmt/core.h"
 #include "fmt/ranges.h"
+#include "gsl/gsl"
 #include "ringbuffer.h"
 #include "vecmat.h"
 
@@ -137,7 +138,7 @@ ALCcontext::~ALCcontext()
 
     auto count = std::accumulate(mSourceList.cbegin(), mSourceList.cend(), 0_uz,
         [](size_t cur, const SourceSubList &sublist) noexcept -> size_t
-        { return cur + static_cast<uint>(std::popcount(~sublist.FreeMask)); });
+        { return cur + gsl::narrow_cast<uint>(std::popcount(~sublist.FreeMask)); });
     if(count > 0)
         WARN("{} Source{} not deleted", count, (count==1)?"":"s");
     mSourceList.clear();
@@ -150,7 +151,7 @@ ALCcontext::~ALCcontext()
     mDefaultSlot = nullptr;
     count = std::accumulate(mEffectSlotList.cbegin(), mEffectSlotList.cend(), 0_uz,
         [](size_t cur, const EffectSlotSubList &sublist) noexcept -> size_t
-        { return cur + static_cast<uint>(std::popcount(~sublist.FreeMask)); });
+        { return cur + gsl::narrow_cast<uint>(std::popcount(~sublist.FreeMask)); });
     if(count > 0)
         WARN("{} AuxiliaryEffectSlot{} not deleted", count, (count==1)?"":"s");
     mEffectSlotList.clear();

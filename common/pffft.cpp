@@ -76,6 +76,7 @@
 #include "alnumeric.h"
 #include "fmt/core.h"
 #include "fmt/ranges.h"
+#include "gsl/gsl"
 #include "opthelpers.h"
 
 
@@ -358,7 +359,7 @@ inline void assertv4(const std::span<const float,4> v_f [[maybe_unused]],
 
 template<typename T, T ...N>
 constexpr auto make_float_array(std::integer_sequence<T,N...>)
-{ return std::array{static_cast<float>(N)...}; }
+{ return std::array{gsl::narrow<float>(N)...}; }
 
 /* detect bugs with the vector support macros */
 [[maybe_unused]] auto validate_pffft_simd() -> bool
@@ -1406,13 +1407,13 @@ void rffti1_ps(const uint n, float *wa, const std::span<uint,15> ifac)
         {
             auto i = is;
             ld += l1;
-            const auto argld = static_cast<double>(ld)*argh;
+            const auto argld = gsl::narrow_cast<double>(ld)*argh;
             auto fi = 0.0;
             for(auto ii = 2_uz;ii < ido;ii += 2)
             {
                 fi += 1.0;
-                wa[i++] = static_cast<float>(std::cos(fi*argld));
-                wa[i++] = static_cast<float>(std::sin(fi*argld));
+                wa[i++] = gsl::narrow_cast<float>(std::cos(fi*argld));
+                wa[i++] = gsl::narrow_cast<float>(std::sin(fi*argld));
             }
             is += ido;
         }
@@ -1442,13 +1443,13 @@ void cffti1_ps(const uint n, float *wa, const std::span<uint,15> ifac)
             wa[i-1] = 1.0f;
             wa[i] = 0.0f;
             ld += l1;
-            const auto argld = static_cast<double>(ld)*argh;
+            const auto argld = gsl::narrow_cast<double>(ld)*argh;
             auto fi = 0.0;
             for(auto ii = 3_uz;ii < idot;ii += 2)
             {
                 fi += 1.0;
-                wa[++i] = static_cast<float>(std::cos(fi*argld));
-                wa[++i] = static_cast<float>(std::sin(fi*argld));
+                wa[++i] = gsl::narrow_cast<float>(std::cos(fi*argld));
+                wa[++i] = gsl::narrow_cast<float>(std::sin(fi*argld));
             }
             if(ip > 5)
             {
@@ -1519,9 +1520,9 @@ auto pffft_new_setup(const unsigned int N, const pffft_transform_t transform) ->
             const auto j = k % SimdSize;
             for(auto m = 0_uz;m < SimdSize-1;++m)
             {
-                const auto A = -2.0*std::numbers::pi*static_cast<double>((m+1)*k) / N;
-                e[((i*3 + m)*2 + 0)*SimdSize + j] = static_cast<float>(std::cos(A));
-                e[((i*3 + m)*2 + 1)*SimdSize + j] = static_cast<float>(std::sin(A));
+                const auto A = -2.0*std::numbers::pi*gsl::narrow_cast<double>((m+1)*k) / N;
+                e[((i*3 + m)*2 + 0)*SimdSize + j] = gsl::narrow_cast<float>(std::cos(A));
+                e[((i*3 + m)*2 + 1)*SimdSize + j] = gsl::narrow_cast<float>(std::sin(A));
             }
         }
         auto eiter = e.begin();

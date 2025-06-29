@@ -725,7 +725,7 @@ try {
     switch(param)
     {
     case AL_EFFECTSLOT_EFFECT:
-        *value = static_cast<ALint>(slot->EffectId);
+        *value = as_signed(slot->EffectId);
         return;
 
     case AL_EFFECTSLOT_AUXILIARY_SEND_AUTO:
@@ -734,14 +734,14 @@ try {
 
     case AL_EFFECTSLOT_TARGET_SOFT:
         if(auto *target = slot->mTarget.get())
-            *value = static_cast<ALint>(target->id);
+            *value = as_signed(target->id);
         else
             *value = 0;
         return;
 
     case AL_BUFFER:
         if(auto *buffer = slot->mBuffer.get())
-            *value = static_cast<ALint>(buffer->id);
+            *value = as_signed(buffer->id);
         else
             *value = 0;
         return;

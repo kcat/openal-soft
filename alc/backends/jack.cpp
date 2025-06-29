@@ -29,6 +29,7 @@
 #include <memory.h>
 #include <memory>
 #include <mutex>
+#include <ranges>
 #include <span>
 #include <thread>
 #include <vector>
@@ -41,6 +42,7 @@
 #include "core/logging.h"
 #include "dynload.h"
 #include "fmt/format.h"
+#include "gsl/gsl"
 #include "ringbuffer.h"
 
 #include <jack/jack.h>
@@ -328,11 +330,11 @@ int JackPlayback::processRt(jack_nframes_t numframes) noexcept
 
     const auto dst = std::span{outptrs}.first(mPort.size());
     if(mPlaying.load(std::memory_order_acquire)) [[likely]]
-        mDevice->renderSamples(dst, static_cast<uint>(numframes));
+        mDevice->renderSamples(dst, gsl::narrow_cast<uint>(numframes));
     else
     {
         std::ranges::for_each(dst, [numframes](void *outbuf) -> void
-        { std::fill_n(static_cast<float*>(outbuf), numframes, 0.0f); });
+        { std::ranges::fill(std::views::counted(static_cast<float*>(outbuf), numframes), 0.0f); });
     }
 
     return 0;
@@ -658,15 +660,15 @@ bool JackBackendFactory::init()
         return false;
 
     if(!GetConfigValueBool({}, "jack", "spawn-server", false))
-        ClientOptions = static_cast<jack_options_t>(ClientOptions | JackNoStartServer);
+        ClientOptions = gsl::narrow_cast<jack_options_t>(ClientOptions | JackNoStartServer);
 
-    const PathNamePair &binname = GetProcBinary();
-    const char *client_name{binname.fname.empty() ? "alsoft" : binname.fname.c_str()};
+    auto&& binname = GetProcBinary();
+    auto *client_name = binname.fname.empty() ? "alsoft" : binname.fname.c_str();
 
     void (*old_error_cb)(const char*){&jack_error_callback ? jack_error_callback : nullptr};
     jack_set_error_function(jack_msg_handler);
-    jack_status_t status{};
-    jack_client_t *client{jack_client_open(client_name, ClientOptions, &status, nullptr)};
+    auto status = jack_status_t{};
+    auto *client = jack_client_open(client_name, ClientOptions, &status, nullptr);
     jack_set_error_function(old_error_cb);
     if(!client)
     {
@@ -688,7 +690,7 @@ auto JackBackendFactory::enumerate(BackendType type) -> std::vector<std::string>
     auto outnames = std::vector<std::string>{};
 
     auto&& binname = GetProcBinary();
-    auto *client_name{binname.fname.empty() ? "alsoft" : binname.fname.c_str()};
+    auto *client_name = binname.fname.empty() ? "alsoft" : binname.fname.c_str();
     auto status = jack_status_t{};
     switch(type)
     {

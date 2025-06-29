@@ -44,6 +44,7 @@
 #include "core/helpers.h"
 #include "core/logging.h"
 #include "dynload.h"
+#include "gsl/gsl"
 #include "opthelpers.h"
 #include "ringbuffer.h"
 
@@ -265,7 +266,7 @@ void OpenSLPlayback::mixerProc()
 
     auto player = SLPlayItf{};
     auto bufferQueue = SLAndroidSimpleBufferQueueItf{};
-    SLresult result = VCALL(mBufferQueueObj,GetInterface)(SL_IID_ANDROIDSIMPLEBUFFERQUEUE,
+    auto result = VCALL(mBufferQueueObj,GetInterface)(SL_IID_ANDROIDSIMPLEBUFFERQUEUE,
         static_cast<void*>(&bufferQueue));
     PrintErr(result, "bufferQueue->GetInterface SL_IID_ANDROIDSIMPLEBUFFERQUEUE");
     if(SL_RESULT_SUCCESS == result)
@@ -309,11 +310,11 @@ void OpenSLPlayback::mixerProc()
 
         auto dlock = std::unique_lock{mMutex};
         auto data = mRing->getWriteVector();
-        mDevice->renderSamples(data[0].data(), static_cast<uint>(data[0].size()/mFrameSize),
+        mDevice->renderSamples(data[0].data(), gsl::narrow_cast<uint>(data[0].size()/mFrameSize),
             frame_step);
         if(!data[1].empty())
-            mDevice->renderSamples(data[1].data(), static_cast<uint>(data[1].size()/mFrameSize),
-                frame_step);
+            mDevice->renderSamples(data[1].data(),
+                gsl::narrow_cast<uint>(data[1].size()/mFrameSize), frame_step);
 
         const auto todo = size_t{data[0].size() + data[1].size()} / mRing->getElemSize();
         mRing->writeAdvance(todo);
@@ -682,7 +683,7 @@ void OpenSLCapture::open(std::string_view name)
         mRing = RingBuffer<std::byte>::Create(num_updates, update_len*mFrameSize, false);
 
         mDevice->mUpdateSize = update_len;
-        mDevice->mBufferSize = static_cast<uint>(mRing->writeSpace() * update_len);
+        mDevice->mBufferSize = gsl::narrow_cast<uint>(mRing->writeSpace() * update_len);
     }
     if(SL_RESULT_SUCCESS == result)
     {
@@ -936,7 +937,10 @@ void OpenSLCapture::captureSamples(std::span<std::byte> outbuffer)
 }
 
 auto OpenSLCapture::availableSamples() -> uint
-{ return static_cast<uint>(mRing->readSpace()*mDevice->mUpdateSize - mByteOffset/mFrameSize); }
+{
+    return gsl::narrow_cast<uint>(mRing->readSpace()*mDevice->mUpdateSize
+        - mByteOffset/mFrameSize);
+}
 
 } // namespace
 

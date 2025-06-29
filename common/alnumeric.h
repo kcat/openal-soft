@@ -86,6 +86,13 @@ constexpr auto as_unsigned(T value) noexcept
     return static_cast<UT>(value);
 }
 
+template<std::integral T>
+constexpr auto as_signed(T value) noexcept
+{
+    using ST = std::make_signed_t<T>;
+    return static_cast<ST>(value);
+}
+
 
 constexpr auto GetCounterSuffix(size_t count) noexcept -> std::string_view
 {

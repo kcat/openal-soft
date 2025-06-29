@@ -47,6 +47,7 @@
 #include "core/device.h"
 #include "core/helpers.h"
 #include "core/logging.h"
+#include "gsl/gsl"
 
 #include <sys/audioio.h>
 
@@ -118,7 +119,7 @@ int SolarisBackend::mixerProc()
         }
 
         auto buffer = std::span{mBuffer};
-        mDevice->renderSamples(buffer.data(), static_cast<uint>(buffer.size()/frame_size),
+        mDevice->renderSamples(buffer.data(), gsl::narrow_cast<uint>(buffer.size()/frame_size),
             frame_step);
         while(!buffer.empty() && !mKillNow.load(std::memory_order_acquire))
         {
@@ -132,7 +133,7 @@ int SolarisBackend::mixerProc()
                 break;
             }
 
-            buffer = buffer.subspan(static_cast<size_t>(wrote));
+            buffer = buffer.subspan(gsl::narrow_cast<size_t>(wrote));
         }
     }
 

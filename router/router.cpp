@@ -425,7 +425,7 @@ auto APIENTRY DllMain(HINSTANCE, DWORD reason, void*) -> BOOL
     case DLL_PROCESS_ATTACH:
         if(auto logfname = al::getenv(L"ALROUTER_LOGFILE"))
         {
-            gsl::owner<std::FILE*> f{_wfopen(logfname->c_str(), L"w")};
+            auto f = gsl::owner<std::FILE*>{_wfopen(logfname->c_str(), L"w")};
             if(f == nullptr)
                 ERR("Could not open log file: {}", wstr_to_utf8(*logfname));
             else
@@ -433,7 +433,7 @@ auto APIENTRY DllMain(HINSTANCE, DWORD reason, void*) -> BOOL
         }
         if(auto loglev = al::getenv("ALROUTER_LOGLEVEL"))
         {
-            char *end{};
+            auto end = gsl::zstring{};
             auto l = strtol(loglev->c_str(), &end, 0);
             if(!end || *end != '\0')
                 ERR("Invalid log level value: {}", *loglev);
@@ -441,7 +441,7 @@ auto APIENTRY DllMain(HINSTANCE, DWORD reason, void*) -> BOOL
                 || l > al::to_underlying(eLogLevel::Trace))
                 ERR("Log level out of range: {}", *loglev);
             else
-                LogLevel = static_cast<eLogLevel>(l);
+                LogLevel = gsl::narrow_cast<eLogLevel>(l);
         }
         break;
 

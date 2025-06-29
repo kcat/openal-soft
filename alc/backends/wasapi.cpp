@@ -73,6 +73,7 @@
 #include "core/logging.h"
 #include "fmt/core.h"
 #include "fmt/chrono.h"
+#include "gsl/gsl"
 #include "ringbuffer.h"
 #include "strutils.hpp"
 
@@ -203,7 +204,8 @@ using unique_coptr = std::unique_ptr<T,CoTaskMemDeleter<T>>;
 constexpr auto RefTime2Samples(const ReferenceTime &val, DWORD srate) noexcept -> uint
 {
     const auto retval = (val*srate + ReferenceTime{seconds{1}}/2) / seconds{1};
-    return static_cast<uint>(std::min<decltype(retval)>(retval, std::numeric_limits<uint>::max()));
+    return gsl::narrow_cast<uint>(std::min<decltype(retval)>(retval,
+        std::numeric_limits<uint>::max()));
 }
 
 
@@ -262,9 +264,9 @@ public:
     void setBlob(const std::span<std::byte> data)
     {
         if constexpr(sizeof(size_t) > sizeof(ULONG))
-            assert(data.size() <= std::numeric_limits<ULONG>::max());
+            Expects(data.size() <= std::numeric_limits<ULONG>::max());
         mProp.vt = VT_BLOB;
-        mProp.blob.cbSize = static_cast<ULONG>(data.size());
+        mProp.blob.cbSize = gsl::narrow_cast<ULONG>(data.size());
         /* NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast) */
         mProp.blob.pBlobData = reinterpret_cast<BYTE*>(data.data());
     }
@@ -382,9 +384,9 @@ auto GetDeviceNameAndGuid(const DeviceHandle &device) -> NameGUIDPair
         if(auto devIdStartEnd = wcschr(devIdStart, L'#'))
         {
             ret.mGuid = wstr_to_utf8(std::wstring_view{devIdStart,
-                static_cast<size_t>(devIdStartEnd - devIdStart)});
+                gsl::narrow_cast<size_t>(devIdStartEnd - devIdStart)});
             std::transform(ret.mGuid.begin(), ret.mGuid.end(), ret.mGuid.begin(),
-                [](char ch) { return static_cast<char>(std::toupper(ch)); });
+                [](char ch) { return gsl::narrow_cast<char>(std::toupper(ch)); });
         }
     }
 #endif
@@ -1883,7 +1885,7 @@ auto WasapiPlayback::initSpatial(DeviceHelper &helper, DeviceHandle &mmdev, Spat
     {
         OutputType.Format.nAvgBytesPerSec = OutputType.Format.nAvgBytesPerSec * 32u
             / OutputType.Format.wBitsPerSample;
-        OutputType.Format.nBlockAlign = static_cast<WORD>(OutputType.Format.nBlockAlign * 32
+        OutputType.Format.nBlockAlign = gsl::narrow_cast<WORD>(OutputType.Format.nBlockAlign * 32
             / OutputType.Format.wBitsPerSample);
         OutputType.Format.wBitsPerSample = 32;
     }
@@ -1956,7 +1958,7 @@ auto WasapiPlayback::initSpatial(DeviceHelper &helper, DeviceHandle &mmdev, Spat
     mOutUpdateSize = maxFrames;
     mOutBufferSize = mOutUpdateSize*2;
 
-    mDevice->mUpdateSize = static_cast<uint>((uint64_t{mOutUpdateSize}*mDevice->mSampleRate
+    mDevice->mUpdateSize = gsl::narrow_cast<uint>((uint64_t{mOutUpdateSize}*mDevice->mSampleRate
         + (mFormat.Format.nSamplesPerSec-1)) / mFormat.Format.nSamplesPerSec);
     mDevice->mBufferSize = mDevice->mUpdateSize*2;
 
@@ -2153,7 +2155,7 @@ auto WasapiPlayback::resetProxy(DeviceHelper &helper, DeviceHandle &mmdev,
     /* NOLINTNEXTLINE(cppcoreguidelines-pro-type-union-access) */
     OutputType.Samples.wValidBitsPerSample = OutputType.Format.wBitsPerSample;
     OutputType.Format.nSamplesPerSec = mDevice->mSampleRate;
-    OutputType.Format.nBlockAlign = static_cast<WORD>(OutputType.Format.nChannels
+    OutputType.Format.nBlockAlign = gsl::narrow_cast<WORD>(OutputType.Format.nChannels
         * OutputType.Format.wBitsPerSample / 8);
     OutputType.Format.nAvgBytesPerSec = OutputType.Format.nSamplesPerSec
         * OutputType.Format.nBlockAlign;
@@ -2181,7 +2183,7 @@ auto WasapiPlayback::resetProxy(DeviceHelper &helper, DeviceHandle &mmdev,
                 OutputType.SubFormat = KSDATAFORMAT_SUBTYPE_PCM;
                 /* NOLINTNEXTLINE(cppcoreguidelines-pro-type-union-access) */
                 OutputType.Samples.wValidBitsPerSample = OutputType.Format.wBitsPerSample;
-                OutputType.Format.nBlockAlign = static_cast<WORD>(OutputType.Format.nChannels
+                OutputType.Format.nBlockAlign = gsl::narrow_cast<WORD>(OutputType.Format.nChannels
                     * OutputType.Format.wBitsPerSample / 8);
                 OutputType.Format.nAvgBytesPerSec = OutputType.Format.nSamplesPerSec
                     * OutputType.Format.nBlockAlign;
@@ -2304,7 +2306,7 @@ auto WasapiPlayback::resetProxy(DeviceHelper &helper, DeviceHandle &mmdev,
          * implicitly two update periods on the device.
          */
         mOutUpdateSize = buffer_len;
-        mDevice->mUpdateSize = static_cast<uint>(uint64_t{buffer_len} * mDevice->mSampleRate /
+        mDevice->mUpdateSize = gsl::narrow_cast<uint>(uint64_t{buffer_len} * mDevice->mSampleRate /
             mFormat.Format.nSamplesPerSec);
         mDevice->mBufferSize = mDevice->mUpdateSize * 2;
     }
@@ -2312,7 +2314,7 @@ auto WasapiPlayback::resetProxy(DeviceHelper &helper, DeviceHandle &mmdev,
     {
         mOutUpdateSize = RefTime2Samples(period_time, mFormat.Format.nSamplesPerSec);
 
-        mDevice->mBufferSize = static_cast<uint>(uint64_t{buffer_len} * mDevice->mSampleRate /
+        mDevice->mBufferSize = gsl::narrow_cast<uint>(uint64_t{buffer_len} * mDevice->mSampleRate /
             mFormat.Format.nSamplesPerSec);
         mDevice->mUpdateSize = std::min(RefTime2Samples(period_time, mDevice->mSampleRate),
             mDevice->mBufferSize/2u);
@@ -2502,7 +2504,7 @@ FORCE_ALIGN void WasapiCapture::recordProc(IAudioClient *client, IAudioCaptureCl
 
                     const auto len1 = data[0].size() / mRing->getElemSize();
                     dstframes = mSampleConv->convert(&srcdata, &srcframes, data[0].data(),
-                        static_cast<uint>(std::min(len1, lenlimit)));
+                        gsl::narrow_cast<uint>(std::min(len1, lenlimit)));
                     if(srcframes > 0 && dstframes == len1 && !data[1].empty())
                     {
                         /* If some source samples remain, all of the first dest
@@ -2511,7 +2513,7 @@ FORCE_ALIGN void WasapiCapture::recordProc(IAudioClient *client, IAudioCaptureCl
                          */
                         const auto len2 = data[1].size() / mRing->getElemSize();
                         dstframes += mSampleConv->convert(&srcdata, &srcframes, data[1].data(),
-                            static_cast<uint>(std::min(len2, lenlimit)));
+                            gsl::narrow_cast<uint>(std::min(len2, lenlimit)));
                     }
                 }
                 else
@@ -2816,7 +2818,7 @@ auto WasapiCapture::resetProxy(DeviceHelper &helper, DeviceHandle &mmdev,
     InputType.Samples.wValidBitsPerSample = InputType.Format.wBitsPerSample;
     InputType.Format.nSamplesPerSec = mDevice->mSampleRate;
 
-    InputType.Format.nBlockAlign = static_cast<WORD>(InputType.Format.nChannels *
+    InputType.Format.nBlockAlign = gsl::narrow_cast<WORD>(InputType.Format.nChannels *
         InputType.Format.wBitsPerSample / 8);
     InputType.Format.nAvgBytesPerSec = InputType.Format.nSamplesPerSec *
         InputType.Format.nBlockAlign;
@@ -3039,7 +3041,7 @@ void WasapiCapture::captureSamples(std::span<std::byte> outbuffer)
 { std::ignore = mRing->read(outbuffer); }
 
 auto WasapiCapture::availableSamples() -> uint
-{ return static_cast<uint>(mRing->readSpace()); }
+{ return gsl::narrow_cast<uint>(mRing->readSpace()); }
 
 } // namespace
 

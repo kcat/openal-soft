@@ -56,6 +56,7 @@
 #include "dynload.h"
 #include "fmt/core.h"
 #include "fmt/ranges.h"
+#include "gsl/gsl"
 #include "opthelpers.h"
 #include "pragmadefs.h"
 #include "ringbuffer.h"
@@ -808,7 +809,7 @@ void DeviceNode::parseSampleRate(const spa_pod *value, bool force_update) noexce
         /* [0] is the default, [1] is the min, and [2] is the max. */
         TRACE("  sample rate: {} ({} -> {})", srates[0], srates[1], srates[2]);
         if(!mSampleRate || force_update)
-            mSampleRate = static_cast<uint>(std::clamp<int>(srates[0], MinOutputRate,
+            mSampleRate = gsl::narrow_cast<uint>(std::clamp<int>(srates[0], MinOutputRate,
                 MaxOutputRate));
         return;
     }
@@ -832,7 +833,7 @@ void DeviceNode::parseSampleRate(const spa_pod *value, bool force_update) noexce
             if(rate >= int{MinOutputRate} && rate <= int{MaxOutputRate})
             {
                 if(!mSampleRate || force_update)
-                    mSampleRate = static_cast<uint>(rate);
+                    mSampleRate = gsl::narrow_cast<uint>(rate);
                 break;
             }
         }
@@ -850,7 +851,7 @@ void DeviceNode::parseSampleRate(const spa_pod *value, bool force_update) noexce
 
         TRACE("  sample rate: {}", srates[0]);
         if(!mSampleRate || force_update)
-            mSampleRate = static_cast<uint>(std::clamp<int>(srates[0], MinOutputRate,
+            mSampleRate = gsl::narrow_cast<uint>(std::clamp<int>(srates[0], MinOutputRate,
                 MaxOutputRate));
         return;
     }
@@ -1109,7 +1110,7 @@ auto MetadataProxy::propertyCallback(void*, uint32_t id, const char *key, const 
         const auto len = spa_json_next(iter, &val);
         if(len <= 0) return str;
 
-        str.emplace(static_cast<uint>(len), '\0');
+        str.emplace(gsl::narrow_cast<uint>(len), '\0');
         if(spa_json_parse_string(val, len, str->data()) <= 0)
             str.reset();
         else while(!str->empty() && str->back() == '\0')
@@ -1385,7 +1386,7 @@ auto make_spa_info(DeviceBase *device, bool is51rear, use_f32p_e use_f32p) -> sp
     }
     if(!map.empty())
     {
-        info.channels = static_cast<uint32_t>(map.size());
+        info.channels = gsl::narrow_cast<uint32_t>(map.size());
         std::ranges::copy(map, std::begin(info.position));
     }
 
@@ -1450,12 +1451,12 @@ void PipeWirePlayback::outputCallback() noexcept
     /* In 0.3.49, pw_buffer::requested specifies the number of samples needed
      * by the resampler/graph for this audio update.
      */
-    auto length = static_cast<uint>(pw_buf->requested);
+    auto length = gsl::narrow_cast<uint>(pw_buf->requested);
 #else
     /* In 0.3.48 and earlier, spa_io_rate_match::size apparently has the number
      * of samples per update.
      */
-    uint length{mRateMatch ? mRateMatch->size : 0u};
+    auto length = uint{mRateMatch ? mRateMatch->size : 0u};
 #endif
     /* If no length is specified, use the device's update size as a fallback. */
     if(!length) [[unlikely]] length = mDevice->mUpdateSize;
@@ -1592,7 +1593,8 @@ auto PipeWirePlayback::reset() -> bool
             if(!mDevice->Flags.test(FrequencyRequest) && match->mSampleRate > 0)
             {
                 /* Scale the update size if the sample rate changes. */
-                const auto scale = static_cast<double>(match->mSampleRate) / mDevice->mSampleRate;
+                const auto scale = gsl::narrow_cast<double>(match->mSampleRate)
+                    / mDevice->mSampleRate;
 
                 /* Don't scale down power-of-two sizes unless it would be more
                  * than halfway to the next lower power-of-two. PipeWire uses
@@ -1608,8 +1610,9 @@ auto PipeWirePlayback::reset() -> bool
                     const auto updatesize = std::round(mDevice->mUpdateSize * scale);
                     const auto buffersize = std::round(mDevice->mBufferSize * scale);
 
-                    mDevice->mUpdateSize = static_cast<uint>(std::clamp(updatesize, 64.0, 8192.0));
-                    mDevice->mBufferSize = static_cast<uint>(std::max(buffersize, 128.0));
+                    mDevice->mUpdateSize = gsl::narrow_cast<uint>(std::clamp(updatesize, 64.0,
+                        8192.0));
+                    mDevice->mBufferSize = gsl::narrow_cast<uint>(std::max(buffersize, 128.0));
                 }
                 mDevice->mSampleRate = match->mSampleRate;
             }
@@ -1758,11 +1761,11 @@ void PipeWirePlayback::start()
             const auto totalbuffers = ptime.avail_buffers + ptime.queued_buffers;
 
             /* Ensure the delay is in sample frames. */
-            const auto delay = static_cast<uint64_t>(ptime.delay) * mDevice->mSampleRate *
+            const auto delay = gsl::narrow_cast<uint64_t>(ptime.delay) * mDevice->mSampleRate *
                 ptime.rate.num / ptime.rate.denom;
 
             mDevice->mUpdateSize = updatesize;
-            mDevice->mBufferSize = static_cast<uint>(ptime.buffered + delay +
+            mDevice->mBufferSize = gsl::narrow_cast<uint>(ptime.buffered + delay +
                 uint64_t{totalbuffers}*updatesize);
             break;
         }
@@ -1773,11 +1776,11 @@ void PipeWirePlayback::start()
         if(ptime.rate.denom > 0 && updatesize > 0)
         {
             /* Ensure the delay is in sample frames. */
-            const auto delay = static_cast<uint64_t>(ptime.delay) * mDevice->mSampleRate *
+            const auto delay = gsl::narrow_cast<uint64_t>(ptime.delay) * mDevice->mSampleRate *
                 ptime.rate.num / ptime.rate.denom;
 
             mDevice->mUpdateSize = updatesize;
-            mDevice->mBufferSize = static_cast<uint>(delay + updatesize);
+            mDevice->mBufferSize = gsl::narrow_cast<uint>(delay + updatesize);
             break;
         }
 #endif
@@ -2155,8 +2158,8 @@ void PipeWireCapture::stop()
     { return pw_stream_get_state(stream, nullptr) != PW_STREAM_STATE_STREAMING; });
 }
 
-uint PipeWireCapture::availableSamples()
-{ return static_cast<uint>(mRing->readSpace()); }
+auto PipeWireCapture::availableSamples() -> uint
+{ return gsl::narrow_cast<uint>(mRing->readSpace()); }
 
 void PipeWireCapture::captureSamples(std::span<std::byte> outbuffer)
 { std::ignore = mRing->read(outbuffer); }

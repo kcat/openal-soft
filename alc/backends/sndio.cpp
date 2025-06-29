@@ -35,6 +35,7 @@
 #include "core/device.h"
 #include "core/helpers.h"
 #include "core/logging.h"
+#include "gsl/gsl"
 #include "ringbuffer.h"
 
 #include <sndio.h>
@@ -92,11 +93,11 @@ int SndioPlayback::mixerProc()
     {
         auto buffer = std::span{mBuffer};
 
-        mDevice->renderSamples(buffer.data(), static_cast<uint>(buffer.size() / frameSize),
+        mDevice->renderSamples(buffer.data(), gsl::narrow_cast<uint>(buffer.size() / frameSize),
             frameStep);
         while(!buffer.empty() && !mKillNow.load(std::memory_order_acquire))
         {
-            size_t wrote{sio_write(mSndHandle, buffer.data(), buffer.size())};
+            const auto wrote = sio_write(mSndHandle, buffer.data(), buffer.size());
             if(wrote > buffer.size() || wrote == 0)
             {
                 ERR("sio_write failed: {:#x}", wrote);
@@ -272,7 +273,7 @@ struct SndioCapture final : public BackendBase {
     explicit SndioCapture(DeviceBase *device) noexcept : BackendBase{device} { }
     ~SndioCapture() override;
 
-    int recordProc();
+    void recordProc();
 
     void open(std::string_view name) override;
     void start() override;
@@ -295,21 +296,21 @@ SndioCapture::~SndioCapture()
     mSndHandle = nullptr;
 }
 
-int SndioCapture::recordProc()
+void SndioCapture::recordProc()
 {
     SetRTPriority();
     althrd_setname(GetRecordThreadName());
 
     const uint frameSize{mDevice->frameSizeFromFmt()};
 
-    int nfds_pre{sio_nfds(mSndHandle)};
+    const auto nfds_pre = sio_nfds(mSndHandle);
     if(nfds_pre <= 0)
     {
         mDevice->handleDisconnect("Incorrect return value from sio_nfds(): {}", nfds_pre);
-        return 1;
+        return;
     }
 
-    auto fds = std::vector<pollfd>(static_cast<uint>(nfds_pre));
+    auto fds = std::vector<pollfd>(gsl::narrow_cast<uint>(nfds_pre));
 
     while(!mKillNow.load(std::memory_order_acquire)
         && mDevice->Connected.load(std::memory_order_acquire))
@@ -365,8 +366,6 @@ int SndioCapture::recordProc()
             sio_read(mSndHandle, junk.data(), junk.size() - (junk.size()%frameSize));
         }
     }
-
-    return 0;
 }
 
 
@@ -450,7 +449,7 @@ void SndioCapture::open(std::string_view name)
             mDevice->mSampleRate, par.sig?'s':'u', par.bps*8, par.rchan, par.rate};
 
     mRing = RingBuffer<std::byte>::Create(mDevice->mBufferSize, size_t{par.bps}*par.rchan, false);
-    mDevice->mBufferSize = static_cast<uint>(mRing->writeSpace());
+    mDevice->mBufferSize = gsl::narrow_cast<uint>(mRing->writeSpace());
     mDevice->mUpdateSize = par.round;
 
     setDefaultChannelOrder();
@@ -487,8 +486,8 @@ void SndioCapture::stop()
 void SndioCapture::captureSamples(std::span<std::byte> outbuffer)
 { std::ignore = mRing->read(outbuffer); }
 
-uint SndioCapture::availableSamples()
-{ return static_cast<uint>(mRing->readSpace()); }
+auto SndioCapture::availableSamples() -> uint
+{ return gsl::narrow_cast<uint>(mRing->readSpace()); }
 
 } // namespace
 

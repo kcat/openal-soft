@@ -46,6 +46,7 @@
 #include "core/logging.h"
 #include "dynload.h"
 #include "fmt/core.h"
+#include "gsl/gsl"
 #include "ringbuffer.h"
 
 #include <alsa/asoundlib.h>
@@ -345,7 +346,7 @@ auto probe_devices(snd_pcm_stream_t stream) -> std::vector<DevMap>
                 ERR("snd_ctl_pcm_next_device failed");
             if(dev < 0) break;
 
-            snd_pcm_info_set_device(pcminfo.get(), static_cast<uint>(dev));
+            snd_pcm_info_set_device(pcminfo.get(), gsl::narrow_cast<uint>(dev));
             snd_pcm_info_set_subdevice(pcminfo.get(), 0);
             snd_pcm_info_set_stream(pcminfo.get(), stream);
             err = snd_ctl_pcm_info(handle.get(), pcminfo.get());
@@ -474,10 +475,10 @@ void AlsaPlayback::mixerProc()
         const auto avails = snd_pcm_avail_update(mPcmHandle);
         if(avails < 0)
         {
-            ERR("available update failed: {}", snd_strerror(static_cast<int>(avails)));
+            ERR("available update failed: {}", snd_strerror(gsl::narrow_cast<int>(avails)));
             continue;
         }
-        auto avail = static_cast<snd_pcm_uframes_t>(avails);
+        auto avail = gsl::narrow_cast<snd_pcm_uframes_t>(avails);
 
         if(avail > buffer_size)
         {
@@ -517,13 +518,13 @@ void AlsaPlayback::mixerProc()
 
             /* NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic) */
             auto *WritePtr = static_cast<char*>(areas->addr) + (offset * areas->step / 8);
-            mDevice->renderSamples(WritePtr, static_cast<uint>(frames), mFrameStep);
+            mDevice->renderSamples(WritePtr, gsl::narrow_cast<uint>(frames), mFrameStep);
 
             const auto commitres = snd_pcm_mmap_commit(mPcmHandle, offset, frames);
             if(std::cmp_not_equal(commitres, frames))
             {
                 ERR("mmap commit error: {}",
-                    snd_strerror(commitres >= 0 ? -EPIPE : static_cast<int>(commitres)));
+                    snd_strerror(commitres >= 0 ? -EPIPE : gsl::narrow_cast<int>(commitres)));
                 break;
             }
 
@@ -552,18 +553,18 @@ void AlsaPlayback::mixerNoMMapProc()
         auto avail = snd_pcm_avail_update(mPcmHandle);
         if(avail < 0)
         {
-            ERR("available update failed: {}", snd_strerror(static_cast<int>(avail)));
+            ERR("available update failed: {}", snd_strerror(gsl::narrow_cast<int>(avail)));
             continue;
         }
 
-        if(static_cast<snd_pcm_uframes_t>(avail) > buffer_size)
+        if(std::cmp_greater(avail, buffer_size))
         {
             WARN("available samples exceeds the buffer size");
             snd_pcm_reset(mPcmHandle);
             continue;
         }
 
-        if(static_cast<snd_pcm_uframes_t>(avail) < update_size)
+        if(std::cmp_less(avail, update_size))
         {
             if(state != SND_PCM_STATE_RUNNING)
             {
@@ -581,11 +582,12 @@ void AlsaPlayback::mixerNoMMapProc()
         auto WritePtr = mBuffer.begin();
         avail = snd_pcm_bytes_to_frames(mPcmHandle, std::ssize(mBuffer));
         const auto dlock = std::lock_guard{mMutex};
-        mDevice->renderSamples(std::to_address(WritePtr), static_cast<uint>(avail), mFrameStep);
+        mDevice->renderSamples(std::to_address(WritePtr), gsl::narrow_cast<uint>(avail),
+            mFrameStep);
         while(avail > 0)
         {
             auto ret = snd_pcm_writei(mPcmHandle, std::to_address(WritePtr),
-                static_cast<snd_pcm_uframes_t>(avail));
+                gsl::narrow_cast<snd_pcm_uframes_t>(avail));
             switch(ret)
             {
             case -EAGAIN:
@@ -595,7 +597,7 @@ void AlsaPlayback::mixerNoMMapProc()
 #endif
             case -EPIPE:
             case -EINTR:
-                ret = snd_pcm_recover(mPcmHandle, static_cast<int>(ret), 1);
+                ret = snd_pcm_recover(mPcmHandle, gsl::narrow_cast<int>(ret), 1);
                 if(ret < 0)
                     avail = 0;
                 break;
@@ -668,8 +670,10 @@ auto AlsaPlayback::reset() -> bool
     }
 
     auto allowmmap = GetConfigValueBool(mDevice->mDeviceName, "alsa"sv, "mmap"sv, true);
-    auto periodLen = static_cast<uint>(mDevice->mUpdateSize * 1000000_u64 / mDevice->mSampleRate);
-    auto bufferLen = static_cast<uint>(mDevice->mBufferSize * 1000000_u64 / mDevice->mSampleRate);
+    auto periodLen = gsl::narrow_cast<uint>(mDevice->mUpdateSize * 1000000_u64
+        / mDevice->mSampleRate);
+    auto bufferLen = gsl::narrow_cast<uint>(mDevice->mBufferSize * 1000000_u64
+        / mDevice->mSampleRate);
     auto rate = mDevice->mSampleRate;
 
     auto hp = CreateHwParams();
@@ -762,8 +766,8 @@ auto AlsaPlayback::reset() -> bool
 #undef CHECK
     sp = nullptr;
 
-    mDevice->mBufferSize = static_cast<uint>(bufferSizeInFrames);
-    mDevice->mUpdateSize = static_cast<uint>(periodSizeInFrames);
+    mDevice->mBufferSize = gsl::narrow_cast<uint>(bufferSizeInFrames);
+    mDevice->mUpdateSize = gsl::narrow_cast<uint>(periodSizeInFrames);
     mDevice->mSampleRate = rate;
 
     setDefaultChannelOrder();
@@ -789,7 +793,7 @@ void AlsaPlayback::start()
     if(access == SND_PCM_ACCESS_RW_INTERLEAVED)
     {
         auto datalen = snd_pcm_frames_to_bytes(mPcmHandle, mDevice->mUpdateSize);
-        mBuffer.resize(static_cast<size_t>(datalen));
+        mBuffer.resize(gsl::narrow_cast<size_t>(datalen));
         thread_func = &AlsaPlayback::mixerNoMMapProc;
     }
     else
@@ -1020,11 +1024,11 @@ void AlsaCapture::captureSamples(std::span<std::byte> outbuffer)
         }
         if(amt < 0)
         {
-            ERR("read error: {}", snd_strerror(static_cast<int>(amt)));
+            ERR("read error: {}", snd_strerror(gsl::narrow_cast<int>(amt)));
 
             if(amt == -EAGAIN)
                 continue;
-            amt = snd_pcm_recover(mPcmHandle, static_cast<int>(amt), 1);
+            amt = snd_pcm_recover(mPcmHandle, gsl::narrow_cast<int>(amt), 1);
             if(amt >= 0)
             {
                 amt = snd_pcm_start(mPcmHandle);
@@ -1033,7 +1037,7 @@ void AlsaCapture::captureSamples(std::span<std::byte> outbuffer)
             }
             if(amt < 0)
             {
-                auto *err = snd_strerror(static_cast<int>(amt));
+                auto *err = snd_strerror(gsl::narrow_cast<int>(amt));
                 ERR("restore error: {}", err);
                 mDevice->handleDisconnect("Capture recovery failure: {}", err);
                 break;
@@ -1058,9 +1062,9 @@ auto AlsaCapture::availableSamples() -> uint
         avail = snd_pcm_avail_update(mPcmHandle);
     if(avail < 0)
     {
-        ERR("snd_pcm_avail_update failed: {}", snd_strerror(static_cast<int>(avail)));
+        ERR("snd_pcm_avail_update failed: {}", snd_strerror(gsl::narrow_cast<int>(avail)));
 
-        avail = snd_pcm_recover(mPcmHandle, static_cast<int>(avail), 1);
+        avail = snd_pcm_recover(mPcmHandle, gsl::narrow_cast<int>(avail), 1);
         if(avail >= 0)
         {
             if(mDoCapture)
@@ -1070,7 +1074,7 @@ auto AlsaCapture::availableSamples() -> uint
         }
         if(avail < 0)
         {
-            auto *err = snd_strerror(static_cast<int>(avail));
+            auto *err = snd_strerror(gsl::narrow_cast<int>(avail));
             ERR("restore error: {}", err);
             mDevice->handleDisconnect("Capture recovery failure: {}", err);
         }
@@ -1081,7 +1085,7 @@ auto AlsaCapture::availableSamples() -> uint
         avail = std::max<snd_pcm_sframes_t>(avail, 0);
         avail += snd_pcm_bytes_to_frames(mPcmHandle, std::ssize(mBuffer));
         mLastAvail = std::max(mLastAvail, avail);
-        return static_cast<uint>(mLastAvail);
+        return gsl::narrow_cast<uint>(mLastAvail);
     }
 
     while(avail > 0)
@@ -1091,14 +1095,14 @@ auto AlsaCapture::availableSamples() -> uint
 
         auto amt = snd_pcm_bytes_to_frames(mPcmHandle, std::ssize(vec[0]));
         amt = std::min(amt, avail);
-        amt = snd_pcm_readi(mPcmHandle, vec[0].data(), static_cast<snd_pcm_uframes_t>(amt));
+        amt = snd_pcm_readi(mPcmHandle, vec[0].data(), gsl::narrow_cast<snd_pcm_uframes_t>(amt));
         if(amt < 0)
         {
-            ERR("read error: {}", snd_strerror(static_cast<int>(amt)));
+            ERR("read error: {}", snd_strerror(gsl::narrow_cast<int>(amt)));
 
             if(amt == -EAGAIN)
                 continue;
-            amt = snd_pcm_recover(mPcmHandle, static_cast<int>(amt), 1);
+            amt = snd_pcm_recover(mPcmHandle, gsl::narrow_cast<int>(amt), 1);
             if(amt >= 0)
             {
                 if(mDoCapture)
@@ -1108,7 +1112,7 @@ auto AlsaCapture::availableSamples() -> uint
             }
             if(amt < 0)
             {
-                auto *err = snd_strerror(static_cast<int>(amt));
+                auto *err = snd_strerror(gsl::narrow_cast<int>(amt));
                 ERR("restore error: {}", err);
                 mDevice->handleDisconnect("Capture recovery failure: {}", err);
                 break;
@@ -1117,11 +1121,11 @@ auto AlsaCapture::availableSamples() -> uint
             continue;
         }
 
-        mRing->writeAdvance(static_cast<snd_pcm_uframes_t>(amt));
+        mRing->writeAdvance(gsl::narrow_cast<snd_pcm_uframes_t>(amt));
         avail -= amt;
     }
 
-    return static_cast<uint>(mRing->readSpace());
+    return gsl::narrow_cast<uint>(mRing->readSpace());
 }
 
 auto AlsaCapture::getClockLatency() -> ClockLatency

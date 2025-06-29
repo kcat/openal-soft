@@ -24,10 +24,7 @@
 #endif
 
 
-FILE *gLogFile{stderr}; /* NOLINT(cert-err58-cpp)
- * stderr is a non-noexcept function call on some systems, but as a "C global",
- * it should be safe to invoke during initialization.
- */
+gsl::owner<FILE*> gLogFile{};
 #ifdef _DEBUG
 LogLevel gLogLevel{LogLevel::Warning};
 #else
@@ -95,7 +92,7 @@ void al_print_impl(LogLevel level, const fmt::string_view fmt, fmt::format_args 
 
     if(gLogLevel >= level)
     {
-        auto logfile = gLogFile;
+        auto *logfile = gLogFile ? gLogFile : stderr;
         fmt::println(logfile, "{}{}", prefix, msg);
         fflush(logfile);
     }

@@ -32,6 +32,7 @@
 
 #include "core/device.h"
 #include "core/logging.h"
+#include "gsl/gsl"
 #include "pragmadefs.h"
 
 DIAGNOSTIC_PUSH
@@ -59,7 +60,7 @@ struct DeviceEntry {
     SDL_AudioDeviceID mPhysDeviceID{};
 };
 
-std::vector<DeviceEntry> gPlaybackDevices;
+auto gPlaybackDevices = std::vector<DeviceEntry>{};
 
 void EnumeratePlaybackDevices()
 {
@@ -71,7 +72,7 @@ void EnumeratePlaybackDevices()
         return;
     }
 
-    auto devids = std::span{devicelist.get(), static_cast<uint>(numdevs)};
+    auto devids = std::span{devicelist.get(), gsl::narrow_cast<uint>(numdevs)};
     auto newlist = std::vector<DeviceEntry>{};
 
     newlist.reserve(devids.size());
@@ -123,7 +124,7 @@ void Sdl3Backend::audioCallback(SDL_AudioStream *stream, int additional_amount, 
     if(additional_amount <= 0)
         return;
 
-    const auto ulen = static_cast<unsigned int>(additional_amount);
+    const auto ulen = gsl::narrow_cast<unsigned int>(additional_amount);
     assert((ulen % mFrameSize) == 0);
 
     if(ulen > mBuffer.size())
@@ -177,7 +178,7 @@ void Sdl3Backend::open(std::string_view name)
         mDevice->FmtType = devtype;
 
         if(have.freq >= int{MinOutputRate} && have.freq <= int{MaxOutputRate})
-            mDevice->mSampleRate = static_cast<uint>(have.freq);
+            mDevice->mSampleRate = gsl::narrow_cast<uint>(have.freq);
 
         /* SDL guarantees these layouts for the given channel count. */
         if(have.channels == 8)
@@ -194,7 +195,7 @@ void Sdl3Backend::open(std::string_view name)
             mDevice->FmtChans = DevFmtMono;
         mDevice->mAmbiOrder = 0;
 
-        mNumChannels = static_cast<uint>(have.channels);
+        mNumChannels = gsl::narrow_cast<uint>(have.channels);
         mFrameSize = mDevice->bytesFromFmt() * mNumChannels;
 
         if(update_size >= 64)
@@ -202,7 +203,7 @@ void Sdl3Backend::open(std::string_view name)
             /* We have to assume the total buffer size is just twice the update
              * size. SDL doesn't tell us the full end-to-end buffer latency.
              */
-            mDevice->mUpdateSize = static_cast<uint>(update_size);
+            mDevice->mUpdateSize = gsl::narrow_cast<uint>(update_size);
             mDevice->mBufferSize = mDevice->mUpdateSize*2u;
         }
         else
@@ -235,7 +236,7 @@ auto Sdl3Backend::reset() -> bool
         ERR("Failed to get device format: {}", SDL_GetError());
 
     if(mDevice->Flags.test(FrequencyRequest) || want.freq < int{MinOutputRate})
-        want.freq = static_cast<int>(mDevice->mSampleRate);
+        want.freq = gsl::narrow_cast<int>(mDevice->mSampleRate);
     if(mDevice->Flags.test(SampleTypeRequest)
         || !(want.format == SDL_AUDIO_U8 || want.format == SDL_AUDIO_S8
              || want.format == SDL_AUDIO_S16 || want.format == SDL_AUDIO_S32
@@ -253,7 +254,7 @@ auto Sdl3Backend::reset() -> bool
         }
     }
     if(mDevice->Flags.test(ChannelsRequest) || want.channels < 1)
-        want.channels = static_cast<int>(std::min<uint>(mDevice->channelsFromFmt(),
+        want.channels = gsl::narrow_cast<int>(std::min<uint>(mDevice->channelsFromFmt(),
             std::numeric_limits<int>::max()));
 
     mStream = SDL_OpenAudioDeviceStream(mDeviceID, &want, callback, this);
@@ -297,7 +298,7 @@ auto Sdl3Backend::reset() -> bool
                 "Unhandled SDL channel count: {}", have.channels};
         mDevice->mAmbiOrder = 0;
     }
-    mNumChannels = static_cast<uint>(have.channels);
+    mNumChannels = gsl::narrow_cast<uint>(have.channels);
 
     switch(have.format)
     {
@@ -316,11 +317,11 @@ auto Sdl3Backend::reset() -> bool
     if(have.freq < int{MinOutputRate})
         throw al::backend_exception{al::backend_error::DeviceError,
             "Unhandled SDL sample rate: {}", have.freq};
-    mDevice->mSampleRate = static_cast<uint>(have.freq);
+    mDevice->mSampleRate = gsl::narrow_cast<uint>(have.freq);
 
     if(update_size >= 64)
     {
-        mDevice->mUpdateSize = static_cast<uint>(update_size);
+        mDevice->mUpdateSize = gsl::narrow_cast<uint>(update_size);
         mDevice->mBufferSize = mDevice->mUpdateSize*2u;
 
         mBuffer.resize(size_t{mDevice->mUpdateSize} * mFrameSize);

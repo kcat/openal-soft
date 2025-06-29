@@ -50,6 +50,7 @@
 #include "core/logging.h"
 #include "dynload.h"
 #include "fmt/core.h"
+#include "gsl/gsl"
 #include "ringbuffer.h"
 #include "strutils.hpp"
 
@@ -411,10 +412,10 @@ bool DSoundPlayback::reset()
     do {
         hr = S_OK;
         OutputType.Format.wFormatTag = WAVE_FORMAT_PCM;
-        OutputType.Format.nChannels = static_cast<WORD>(mDevice->channelsFromFmt());
-        OutputType.Format.wBitsPerSample = static_cast<WORD>(mDevice->bytesFromFmt() * 8);
-        OutputType.Format.nBlockAlign = static_cast<WORD>(OutputType.Format.nChannels *
-            OutputType.Format.wBitsPerSample / 8);
+        OutputType.Format.nChannels = gsl::narrow_cast<WORD>(mDevice->channelsFromFmt());
+        OutputType.Format.wBitsPerSample = gsl::narrow_cast<WORD>(mDevice->bytesFromFmt() * 8);
+        OutputType.Format.nBlockAlign = gsl::narrow_cast<WORD>(OutputType.Format.nChannels
+            * OutputType.Format.wBitsPerSample / 8);
         OutputType.Format.nSamplesPerSec = mDevice->mSampleRate;
         OutputType.Format.nAvgBytesPerSec = OutputType.Format.nSamplesPerSec *
             OutputType.Format.nBlockAlign;
@@ -620,10 +621,10 @@ void DSoundCapture::open(std::string_view name)
     }
 
     InputType.Format.wFormatTag = WAVE_FORMAT_PCM;
-    InputType.Format.nChannels = static_cast<WORD>(mDevice->channelsFromFmt());
-    InputType.Format.wBitsPerSample = static_cast<WORD>(mDevice->bytesFromFmt() * 8);
-    InputType.Format.nBlockAlign = static_cast<WORD>(InputType.Format.nChannels *
-        InputType.Format.wBitsPerSample / 8);
+    InputType.Format.nChannels = gsl::narrow_cast<WORD>(mDevice->channelsFromFmt());
+    InputType.Format.wBitsPerSample = gsl::narrow_cast<WORD>(mDevice->bytesFromFmt() * 8);
+    InputType.Format.nBlockAlign = gsl::narrow_cast<WORD>(InputType.Format.nChannels
+        * InputType.Format.wBitsPerSample / 8);
     InputType.Format.nSamplesPerSec = mDevice->mSampleRate;
     InputType.Format.nAvgBytesPerSec = InputType.Format.nSamplesPerSec *
         InputType.Format.nBlockAlign;
@@ -708,7 +709,7 @@ uint DSoundCapture::availableSamples()
         if(SUCCEEDED(hr))
         {
             const auto NumBytes = (BufferBytes+ReadCursor-LastCursor) % BufferBytes;
-            if(!NumBytes) return static_cast<uint>(mRing->readSpace());
+            if(!NumBytes) return gsl::narrow_cast<uint>(mRing->readSpace());
             hr = mDSCbuffer->Lock(LastCursor, NumBytes, &ReadPtr1, &ReadCnt1, &ReadPtr2, &ReadCnt2,
                 0);
         }
@@ -728,7 +729,7 @@ uint DSoundCapture::availableSamples()
         }
     }
 
-    return static_cast<uint>(mRing->readSpace());
+    return gsl::narrow_cast<uint>(mRing->readSpace());
 }
 
 } // namespace

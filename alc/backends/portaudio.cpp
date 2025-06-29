@@ -89,15 +89,15 @@ void EnumerateDevices()
         return;
     }
 
-    std::vector<DeviceEntry>(static_cast<uint>(devcount)).swap(DeviceNames);
-    PaDeviceIndex idx{0};
+    std::vector<DeviceEntry>(gsl::narrow_cast<uint>(devcount)).swap(DeviceNames);
+    auto idx = PaDeviceIndex{0};
     for(auto &entry : DeviceNames)
     {
         if(auto info = Pa_GetDeviceInfo(idx); info && info->name)
         {
             entry.mName = info->name;
-            entry.mPlaybackChannels = static_cast<uint>(std::max(info->maxOutputChannels, 0));
-            entry.mCaptureChannels = static_cast<uint>(std::max(info->maxInputChannels, 0));
+            entry.mPlaybackChannels = gsl::narrow_cast<uint>(std::max(info->maxOutputChannels, 0));
+            entry.mCaptureChannels = gsl::narrow_cast<uint>(std::max(info->maxInputChannels, 0));
             TRACE("Device {} \"{}\": {} playback, {} capture channels", idx, entry.mName,
                 info->maxOutputChannels, info->maxInputChannels);
         }
@@ -137,21 +137,21 @@ PortPlayback::~PortPlayback()
 auto PortPlayback::writeCallback(const void*, void *outputBuffer, unsigned long framesPerBuffer,
     const PaStreamCallbackTimeInfo*, const PaStreamCallbackFlags) noexcept -> int
 {
-    mDevice->renderSamples(outputBuffer, static_cast<uint>(framesPerBuffer),
-        static_cast<uint>(mParams.channelCount));
+    mDevice->renderSamples(outputBuffer, gsl::narrow_cast<uint>(framesPerBuffer),
+        gsl::narrow_cast<uint>(mParams.channelCount));
     return 0;
 }
 
 
 void PortPlayback::createStream(PaDeviceIndex deviceid)
 {
-    auto &devinfo = DeviceNames.at(static_cast<uint>(deviceid));
+    auto &devinfo = DeviceNames.at(gsl::narrow_cast<uint>(deviceid));
 
     auto params = StreamParamsExt{};
     params.device = deviceid;
-    params.suggestedLatency = mDevice->mBufferSize / static_cast<double>(mDevice->mSampleRate);
+    params.suggestedLatency = mDevice->mBufferSize/gsl::narrow_cast<double>(mDevice->mSampleRate);
     params.hostApiSpecificStreamInfo = nullptr;
-    params.channelCount = static_cast<int>(std::min(devinfo.mPlaybackChannels,
+    params.channelCount = gsl::narrow_cast<int>(std::min(devinfo.mPlaybackChannels,
         mDevice->channelsFromFmt()));
     switch(mDevice->FmtType)
     {
@@ -203,9 +203,9 @@ void PortPlayback::open(std::string_view name)
     {
         if(const auto devidopt = ConfigValueInt({}, "port", "device"))
             deviceid = *devidopt;
-        if(deviceid < 0 || static_cast<uint>(deviceid) >= DeviceNames.size())
+        if(deviceid < 0 || std::cmp_greater_equal(deviceid, DeviceNames.size()))
             deviceid = Pa_GetDefaultOutputDevice();
-        name = DeviceNames.at(static_cast<uint>(deviceid)).mName;
+        name = gsl::at(DeviceNames, deviceid).mName;
     }
     else
     {
@@ -214,7 +214,7 @@ void PortPlayback::open(std::string_view name)
         if(iter == DeviceNames.end())
             throw al::backend_exception{al::backend_error::NoDevice,
                 "Device name \"{}\" not found", name};
-        deviceid = static_cast<PaDeviceIndex>(std::distance(DeviceNames.begin(), iter));
+        deviceid = gsl::narrow_cast<PaDeviceIndex>(std::distance(DeviceNames.begin(), iter));
     }
 
     createStream(deviceid);
@@ -247,7 +247,7 @@ bool PortPlayback::reset()
             mParams.sampleFormat};
     }
 
-    if(mParams.channelCount != static_cast<int>(mDevice->channelsFromFmt()))
+    if(mParams.channelCount != gsl::narrow_cast<int>(mDevice->channelsFromFmt()))
     {
         if(mParams.channelCount >= 2)
             mDevice->FmtChans = DevFmtStereo;
@@ -257,7 +257,7 @@ bool PortPlayback::reset()
     }
 
     const auto *streamInfo = Pa_GetStreamInfo(mStream);
-    mDevice->mSampleRate = static_cast<uint>(std::lround(streamInfo->sampleRate));
+    mDevice->mSampleRate = gsl::narrow_cast<uint>(std::lround(streamInfo->sampleRate));
     mDevice->mUpdateSize = mParams.updateSize;
     mDevice->mBufferSize = mDevice->mUpdateSize * 2u;
     if(streamInfo->outputLatency > 0.0f)
@@ -265,8 +265,9 @@ bool PortPlayback::reset()
         const auto sampleLatency = streamInfo->outputLatency * streamInfo->sampleRate;
         TRACE("Reported stream latency: {:f} sec ({:f} samples)", streamInfo->outputLatency,
             sampleLatency);
-        mDevice->mBufferSize = static_cast<uint>(std::clamp(sampleLatency,
-            double(mDevice->mBufferSize), double{std::numeric_limits<int>::max()}));
+        mDevice->mBufferSize = gsl::narrow_cast<uint>(std::clamp(sampleLatency,
+            gsl::narrow_cast<double>(mDevice->mBufferSize),
+            double{std::numeric_limits<int>::max()}));
     }
 
     setDefaultChannelOrder();
@@ -330,14 +331,14 @@ void PortCapture::open(std::string_view name)
     if(DeviceNames.empty())
         EnumerateDevices();
 
-    auto deviceid = int{};
+    auto deviceid = PaDeviceIndex{};
     if(name.empty())
     {
         if(auto devidopt = ConfigValueInt({}, "port", "capture"))
             deviceid = *devidopt;
-        if(deviceid < 0 || static_cast<uint>(deviceid) >= DeviceNames.size())
+        if(deviceid < 0 || std::cmp_greater_equal(deviceid, DeviceNames.size()))
             deviceid = Pa_GetDefaultInputDevice();
-        name = DeviceNames.at(static_cast<uint>(deviceid)).mName;
+        name = gsl::at(DeviceNames, deviceid).mName;
     }
     else
     {
@@ -346,7 +347,7 @@ void PortCapture::open(std::string_view name)
         if(iter == DeviceNames.end())
             throw al::backend_exception{al::backend_error::NoDevice,
                 "Device name \"{}\" not found", name};
-        deviceid = static_cast<int>(std::distance(DeviceNames.begin(), iter));
+        deviceid = gsl::narrow_cast<PaDeviceIndex>(std::distance(DeviceNames.begin(), iter));
     }
 
     const auto samples = std::max(mDevice->mBufferSize, mDevice->mSampleRate/10u);
@@ -360,27 +361,17 @@ void PortCapture::open(std::string_view name)
 
     switch(mDevice->FmtType)
     {
-    case DevFmtByte:
-        mParams.sampleFormat = paInt8;
-        break;
-    case DevFmtUByte:
-        mParams.sampleFormat = paUInt8;
-        break;
-    case DevFmtShort:
-        mParams.sampleFormat = paInt16;
-        break;
-    case DevFmtInt:
-        mParams.sampleFormat = paInt32;
-        break;
-    case DevFmtFloat:
-        mParams.sampleFormat = paFloat32;
-        break;
+    case DevFmtByte: mParams.sampleFormat = paInt8; break;
+    case DevFmtUByte: mParams.sampleFormat = paUInt8; break;
+    case DevFmtShort: mParams.sampleFormat = paInt16; break;
+    case DevFmtInt: mParams.sampleFormat = paInt32; break;
+    case DevFmtFloat: mParams.sampleFormat = paFloat32; break;
     case DevFmtUInt:
     case DevFmtUShort:
         throw al::backend_exception{al::backend_error::DeviceError, "{} samples not supported",
             DevFmtTypeString(mDevice->FmtType)};
     }
-    mParams.channelCount = static_cast<int>(mDevice->channelsFromFmt());
+    mParams.channelCount = gsl::narrow_cast<int>(mDevice->channelsFromFmt());
 
     static constexpr auto readCallback = [](const void *inputBuffer, void *outputBuffer,
         unsigned long framesPerBuffer, const PaStreamCallbackTimeInfo *timeInfo,
@@ -414,7 +405,7 @@ void PortCapture::stop()
 
 
 uint PortCapture::availableSamples()
-{ return static_cast<uint>(mRing->readSpace()); }
+{ return gsl::narrow_cast<uint>(mRing->readSpace()); }
 
 void PortCapture::captureSamples(std::span<std::byte> outbuffer)
 { std::ignore = mRing->read(outbuffer); }
@@ -508,13 +499,13 @@ auto PortBackendFactory::enumerate(BackendType type) -> std::vector<std::string>
     std::vector<std::string> devices;
 
     EnumerateDevices();
-    int defaultid{-1};
+    auto defaultid = PaDeviceIndex{-1};
     switch(type)
     {
     case BackendType::Playback:
         defaultid = Pa_GetDefaultOutputDevice();
         if(auto devidopt = ConfigValueInt({}, "port", "device"); devidopt && *devidopt >= 0
-            && static_cast<uint>(*devidopt) < DeviceNames.size())
+            && std::cmp_less(*devidopt, DeviceNames.size()))
             defaultid = *devidopt;
 
         for(size_t i{0};i < DeviceNames.size();++i)
@@ -532,7 +523,7 @@ auto PortBackendFactory::enumerate(BackendType type) -> std::vector<std::string>
     case BackendType::Capture:
         defaultid = Pa_GetDefaultInputDevice();
         if(auto devidopt = ConfigValueInt({}, "port", "capture"); devidopt && *devidopt >= 0
-            && static_cast<uint>(*devidopt) < DeviceNames.size())
+            && std::cmp_less(*devidopt, DeviceNames.size()))
             defaultid = *devidopt;
 
         for(size_t i{0};i < DeviceNames.size();++i)

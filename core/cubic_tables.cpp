@@ -5,9 +5,11 @@
 #include <cmath>
 #include <cstddef>
 #include <numbers>
+#include <ranges>
 
 #include "alnumeric.h"
 #include "cubic_defs.h"
+#include "gsl/gsl"
 
 /* These gaussian filter tables are inspired by the gaussian-like filter found
  * in the SNES. This is based on the public domain code developed by Near, with
@@ -36,24 +38,25 @@ auto GetCoeff(double idx) noexcept -> double
 
 GaussianTable::GaussianTable() noexcept
 {
-    static constexpr double IndexScale{512.0 / double{CubicPhaseCount*2}};
+    static constexpr auto IndexScale = 512.0 / double{CubicPhaseCount*2};
     /* Fill in the main coefficients. */
-    for(std::size_t pi{0};pi < CubicPhaseCount;++pi)
+    for(const auto pi : std::views::iota(0_uz, std::size_t{CubicPhaseCount}))
     {
-        const double coeff0{GetCoeff(static_cast<double>(CubicPhaseCount + pi)*IndexScale)};
-        const double coeff1{GetCoeff(static_cast<double>(pi)*IndexScale)};
-        const double coeff2{GetCoeff(static_cast<double>(CubicPhaseCount - pi)*IndexScale)};
-        const double coeff3{GetCoeff(static_cast<double>(CubicPhaseCount*2_uz-pi)*IndexScale)};
+        const auto coeff0 = GetCoeff(gsl::narrow_cast<double>(CubicPhaseCount + pi)*IndexScale);
+        const auto coeff1 = GetCoeff(gsl::narrow_cast<double>(pi)*IndexScale);
+        const auto coeff2 = GetCoeff(gsl::narrow_cast<double>(CubicPhaseCount - pi)*IndexScale);
+        const auto coeff3 = GetCoeff(gsl::narrow_cast<double>(CubicPhaseCount*2_uz - pi)
+            *IndexScale);
 
-        const double scale{1.0 / (coeff0 + coeff1 + coeff2 + coeff3)};
-        mTable[pi].mCoeffs[0] = static_cast<float>(coeff0 * scale);
-        mTable[pi].mCoeffs[1] = static_cast<float>(coeff1 * scale);
-        mTable[pi].mCoeffs[2] = static_cast<float>(coeff2 * scale);
-        mTable[pi].mCoeffs[3] = static_cast<float>(coeff3 * scale);
+        const auto scale = 1.0 / (coeff0 + coeff1 + coeff2 + coeff3);
+        mTable[pi].mCoeffs[0] = gsl::narrow_cast<float>(coeff0 * scale);
+        mTable[pi].mCoeffs[1] = gsl::narrow_cast<float>(coeff1 * scale);
+        mTable[pi].mCoeffs[2] = gsl::narrow_cast<float>(coeff2 * scale);
+        mTable[pi].mCoeffs[3] = gsl::narrow_cast<float>(coeff3 * scale);
     }
 
     /* Fill in the coefficient deltas. */
-    for(std::size_t pi{0};pi < CubicPhaseCount-1;++pi)
+    for(const auto pi : std::views::iota(0_uz, CubicPhaseCount-1_uz))
     {
         mTable[pi].mDeltas[0] = mTable[pi+1].mCoeffs[0] - mTable[pi].mCoeffs[0];
         mTable[pi].mDeltas[1] = mTable[pi+1].mCoeffs[1] - mTable[pi].mCoeffs[1];
@@ -61,7 +64,7 @@ GaussianTable::GaussianTable() noexcept
         mTable[pi].mDeltas[3] = mTable[pi+1].mCoeffs[3] - mTable[pi].mCoeffs[3];
     }
 
-    const std::size_t pi{CubicPhaseCount - 1};
+    const auto pi = CubicPhaseCount - 1_uz;
     mTable[pi].mDeltas[0] =                 0.0f - mTable[pi].mCoeffs[0];
     mTable[pi].mDeltas[1] = mTable[0].mCoeffs[0] - mTable[pi].mCoeffs[1];
     mTable[pi].mDeltas[2] = mTable[0].mCoeffs[1] - mTable[pi].mCoeffs[2];
@@ -75,18 +78,18 @@ consteval SplineTable::SplineTable() noexcept
     /* This filter table is based on a Catmull-Rom spline. It retains more of
      * the original high-frequency content, at the cost of increased harmonics.
      */
-    for(std::size_t pi{0};pi < CubicPhaseCount;++pi)
+    for(const auto pi : std::views::iota(0_uz, std::size_t{CubicPhaseCount}))
     {
-        const auto mu = static_cast<double>(pi) / double{CubicPhaseCount};
+        const auto mu = gsl::narrow_cast<double>(pi) / double{CubicPhaseCount};
         const auto mu2 = mu*mu;
         const auto mu3 = mu*mu2;
-        mTable[pi].mCoeffs[0] = static_cast<float>(      -third*mu + 0.5*mu2  - sixth*mu3);
-        mTable[pi].mCoeffs[1] = static_cast<float>(1.0 -    0.5*mu -     mu2  +   0.5*mu3);
-        mTable[pi].mCoeffs[2] = static_cast<float>(             mu + 0.5*mu2  -   0.5*mu3);
-        mTable[pi].mCoeffs[3] = static_cast<float>(      -sixth*mu            + sixth*mu3);
+        mTable[pi].mCoeffs[0] = gsl::narrow_cast<float>(      -third*mu + 0.5*mu2  - sixth*mu3);
+        mTable[pi].mCoeffs[1] = gsl::narrow_cast<float>(1.0 -    0.5*mu -     mu2  +   0.5*mu3);
+        mTable[pi].mCoeffs[2] = gsl::narrow_cast<float>(             mu + 0.5*mu2  -   0.5*mu3);
+        mTable[pi].mCoeffs[3] = gsl::narrow_cast<float>(      -sixth*mu            + sixth*mu3);
     }
 
-    for(std::size_t pi{0};pi < CubicPhaseCount-1;++pi)
+    for(const auto pi : std::views::iota(0_uz, CubicPhaseCount-1_uz))
     {
         mTable[pi].mDeltas[0] = mTable[pi+1].mCoeffs[0] - mTable[pi].mCoeffs[0];
         mTable[pi].mDeltas[1] = mTable[pi+1].mCoeffs[1] - mTable[pi].mCoeffs[1];
@@ -94,7 +97,7 @@ consteval SplineTable::SplineTable() noexcept
         mTable[pi].mDeltas[3] = mTable[pi+1].mCoeffs[3] - mTable[pi].mCoeffs[3];
     }
 
-    constexpr auto pi = std::size_t{CubicPhaseCount - 1};
+    constexpr auto pi = CubicPhaseCount - 1_uz;
     mTable[pi].mDeltas[0] =                 0.0f - mTable[pi].mCoeffs[0];
     mTable[pi].mDeltas[1] = mTable[0].mCoeffs[0] - mTable[pi].mCoeffs[1];
     mTable[pi].mDeltas[2] = mTable[0].mCoeffs[1] - mTable[pi].mCoeffs[2];
@@ -105,21 +108,21 @@ constinit const SplineTable gSplineFilter;
 
 CubicFilter::CubicFilter() noexcept
 {
-    static constexpr double IndexScale{512.0 / double{sTableSteps*2}};
+    static constexpr auto IndexScale = 512.0 / double{sTableSteps*2};
     /* Only half the coefficients need to be iterated here, since Coeff2 and
      * Coeff3 are just Coeff1 and Coeff0 in reverse respectively.
      */
-    for(size_t i{0};i < sTableSteps/2 + 1;++i)
+    for(const auto i : std::views::iota(0_uz, sTableSteps/2_uz + 1_uz))
     {
-        const double coeff0{GetCoeff(static_cast<double>(sTableSteps + i)*IndexScale)};
-        const double coeff1{GetCoeff(static_cast<double>(i)*IndexScale)};
-        const double coeff2{GetCoeff(static_cast<double>(sTableSteps - i)*IndexScale)};
-        const double coeff3{GetCoeff(static_cast<double>(sTableSteps*2_uz - i)*IndexScale)};
+        const auto coeff0 = GetCoeff(gsl::narrow_cast<double>(sTableSteps + i)*IndexScale);
+        const auto coeff1 = GetCoeff(gsl::narrow_cast<double>(i)*IndexScale);
+        const auto coeff2 = GetCoeff(gsl::narrow_cast<double>(sTableSteps - i)*IndexScale);
+        const auto coeff3 = GetCoeff(gsl::narrow_cast<double>(sTableSteps*2_uz - i)*IndexScale);
 
-        const double scale{1.0 / (coeff0 + coeff1 + coeff2 + coeff3)};
-        mFilter[sTableSteps + i] = static_cast<float>(coeff0 * scale);
-        mFilter[i] = static_cast<float>(coeff1 * scale);
-        mFilter[sTableSteps - i] = static_cast<float>(coeff2 * scale);
-        mFilter[sTableSteps*2 - i] = static_cast<float>(coeff3 * scale);
+        const auto scale = 1.0 / (coeff0 + coeff1 + coeff2 + coeff3);
+        mFilter[sTableSteps + i] = gsl::narrow_cast<float>(coeff0 * scale);
+        mFilter[i] = gsl::narrow_cast<float>(coeff1 * scale);
+        mFilter[sTableSteps - i] = gsl::narrow_cast<float>(coeff2 * scale);
+        mFilter[sTableSteps*2 - i] = gsl::narrow_cast<float>(coeff3 * scale);
     }
 }

@@ -49,6 +49,7 @@
 #include "core/helpers.h"
 #include "core/logging.h"
 #include "fmt/core.h"
+#include "gsl/gsl"
 #include "ringbuffer.h"
 
 #include <sys/soundcard.h>
@@ -292,8 +293,8 @@ void OSSPlayback::mixerProc()
         }
 
         auto write_buf = std::span{mMixData};
-        mDevice->renderSamples(write_buf.data(), static_cast<uint>(write_buf.size()/frame_size),
-            frame_step);
+        mDevice->renderSamples(write_buf.data(),
+            gsl::narrow_cast<uint>(write_buf.size()/frame_size), frame_step);
         while(!write_buf.empty() && !mKillNow.load(std::memory_order_acquire))
         {
             const auto wrote = write(mFd, write_buf.data(), write_buf.size());
@@ -307,7 +308,7 @@ void OSSPlayback::mixerProc()
                 break;
             }
 
-            write_buf = write_buf.subspan(static_cast<size_t>(wrote));
+            write_buf = write_buf.subspan(gsl::narrow_cast<size_t>(wrote));
         }
     }
 }
@@ -406,8 +407,8 @@ auto OSSPlayback::reset() -> bool
     }
 
     mDevice->mSampleRate = ossSpeed;
-    mDevice->mUpdateSize = static_cast<uint>(info.fragsize) / frameSize;
-    mDevice->mBufferSize = static_cast<uint>(info.fragments) * mDevice->mUpdateSize;
+    mDevice->mUpdateSize = gsl::narrow_cast<uint>(info.fragsize) / frameSize;
+    mDevice->mBufferSize = gsl::narrow_cast<uint>(info.fragments) * mDevice->mUpdateSize;
 
     setDefaultChannelOrder();
 
@@ -505,7 +506,7 @@ void OSScapture::recordProc()
                 mDevice->handleDisconnect("Failed reading capture samples: {}", errstr);
                 break;
             }
-            mRing->writeAdvance(static_cast<size_t>(amt)/frame_size);
+            mRing->writeAdvance(gsl::narrow_cast<size_t>(amt)/frame_size);
         }
     }
 }
@@ -618,7 +619,7 @@ void OSScapture::captureSamples(std::span<std::byte> outbuffer)
 { std::ignore = mRing->read(outbuffer); }
 
 auto OSScapture::availableSamples() -> uint
-{ return static_cast<uint>(mRing->readSpace()); }
+{ return gsl::narrow_cast<uint>(mRing->readSpace()); }
 
 } // namespace
 

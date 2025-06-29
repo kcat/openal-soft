@@ -23,6 +23,7 @@
 #include "alnumeric.h"
 #include "alstring.h"
 #include "filesystem.h"
+#include "gsl/gsl"
 #include "logging.h"
 #include "strutils.hpp"
 
@@ -429,8 +430,8 @@ bool SetRTPriorityRTKit(int prio [[maybe_unused]])
     {
         using ulonglong = unsigned long long;
         const auto maxrttime = rtkit_get_rttime_usec_max(c);
-        if(maxrttime <= 0) return static_cast<int>(std::abs(maxrttime));
-        const auto umaxtime = static_cast<ulonglong>(maxrttime);
+        if(maxrttime <= 0) return gsl::narrow_cast<int>(std::abs(maxrttime));
+        const auto umaxtime = gsl::narrow_cast<ulonglong>(maxrttime);
 
         auto rlim = rlimit{};
         if(getrlimit(RLIMIT_RTTIME, &rlim) != 0)
@@ -439,7 +440,7 @@ bool SetRTPriorityRTKit(int prio [[maybe_unused]])
         TRACE("RTTime max: {} (hard: {}, soft: {})", umaxtime, rlim.rlim_max, rlim.rlim_cur);
         if(rlim.rlim_max > umaxtime)
         {
-            rlim.rlim_max = static_cast<rlim_t>(std::min<ulonglong>(umaxtime,
+            rlim.rlim_max = gsl::narrow_cast<rlim_t>(std::min<ulonglong>(umaxtime,
                 std::numeric_limits<rlim_t>::max()));
             rlim.rlim_cur = std::min(rlim.rlim_cur, rlim.rlim_max);
             if(setrlimit(RLIMIT_RTTIME, &rlim) != 0)

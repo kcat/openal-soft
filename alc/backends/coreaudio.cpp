@@ -27,6 +27,7 @@
 #include <functional>
 #include <memory>
 #include <optional>
+#include <ranges>
 #include <span>
 #include <stdint.h>
 #include <stdio.h>
@@ -42,6 +43,7 @@
 #include "core/device.h"
 #include "core/logging.h"
 #include "fmt/core.h"
+#include "gsl/gsl"
 #include "ringbuffer.h"
 
 #include <AudioUnit/AudioUnit.h>
@@ -94,9 +96,9 @@ struct FourCCPrinter {
 
     explicit constexpr FourCCPrinter(UInt32 code) noexcept
     {
-        for(size_t i{0};i < sizeof(UInt32);++i)
+        for(const auto i : std::views::iota(0_uz, sizeof(UInt32)))
         {
-            const auto ch = static_cast<char>(code & 0xff);
+            const auto ch = gsl::narrow_cast<char>(code & 0xff);
             /* If this breaks early it'll leave the first byte null, to get
              * read as a 0-length string.
              */
@@ -106,9 +108,11 @@ struct FourCCPrinter {
             code >>= 8;
         }
     }
-    explicit constexpr FourCCPrinter(OSStatus code) noexcept : FourCCPrinter{static_cast<UInt32>(code)} { }
+    explicit constexpr FourCCPrinter(OSStatus code) noexcept
+        : FourCCPrinter{gsl::narrow_cast<UInt32>(code)}
+    { }
 
-    constexpr const char *c_str() const noexcept { return mString; }
+    constexpr auto c_str() const noexcept -> gsl::czstring { return mString; }
 };
 
 #if CAN_ENUMERATE
@@ -167,7 +171,7 @@ std::string GetDeviceName(AudioDeviceID devId)
     {
         const CFIndex propSize{CFStringGetMaximumSizeForEncoding(CFStringGetLength(nameRef),
             kCFStringEncodingUTF8)};
-        devname.resize(static_cast<size_t>(propSize)+1, '\0');
+        devname.resize(gsl::narrow_cast<size_t>(propSize)+1, '\0');
 
         CFStringGetCString(nameRef, &devname[0], propSize+1, kCFStringEncodingUTF8);
         CFRelease(nameRef);
@@ -516,9 +520,9 @@ bool CoreAudioPlayback::reset()
      */
     if(mDevice->mSampleRate != streamFormat.mSampleRate)
     {
-        mDevice->mBufferSize = static_cast<uint>(mDevice->mBufferSize*streamFormat.mSampleRate/
-            mDevice->mSampleRate + 0.5);
-        mDevice->mSampleRate = static_cast<uint>(streamFormat.mSampleRate);
+        mDevice->mBufferSize = gsl::narrow_cast<uint>(mDevice->mBufferSize*streamFormat.mSampleRate
+            /mDevice->mSampleRate + 0.5);
+        mDevice->mSampleRate = gsl::narrow_cast<uint>(streamFormat.mSampleRate);
     }
 
     struct ChannelMap {
@@ -710,7 +714,7 @@ OSStatus CoreAudioCapture::RecordProc(AudioUnitRenderActionFlags *ioActionFlags,
     audiobuf.list.mNumberBuffers = 1;
     audiobuf.list.mBuffers[0].mNumberChannels = mFormat.mChannelsPerFrame;
     audiobuf.list.mBuffers[0].mData = mCaptureData.data();
-    audiobuf.list.mBuffers[0].mDataByteSize = static_cast<UInt32>(mCaptureData.size());
+    audiobuf.list.mBuffers[0].mDataByteSize = gsl::narrow_cast<UInt32>(mCaptureData.size());
 
     OSStatus err{AudioUnitRender(mAudioUnit, ioActionFlags, inTimeStamp, inBusNumber,
         inNumberFrames, &audiobuf.list)};
@@ -921,8 +925,9 @@ void CoreAudioCapture::open(std::string_view name)
      * conversion ring buffer. Ensure at least 100ms for the total buffer.
      */
     double srateScale{outputFormat.mSampleRate / mDevice->mSampleRate};
-    auto FrameCount64 = std::max(static_cast<uint64_t>(std::ceil(mDevice->mBufferSize*srateScale)),
-        static_cast<UInt32>(outputFormat.mSampleRate)/10_u64);
+    auto FrameCount64 = std::max(
+        gsl::narrow_cast<uint64_t>(std::ceil(mDevice->mBufferSize*srateScale)),
+        gsl::narrow_cast<UInt32>(outputFormat.mSampleRate)/10_u64);
     FrameCount64 += MaxResamplerPadding;
     if(FrameCount64 > std::numeric_limits<int32_t>::max())
         throw al::backend_exception{al::backend_error::DeviceError,
@@ -938,13 +943,13 @@ void CoreAudioCapture::open(std::string_view name)
 
     mCaptureData.resize(outputFrameCount * mFrameSize);
 
-    outputFrameCount = static_cast<UInt32>(std::max(uint64_t{outputFrameCount}, FrameCount64));
+    outputFrameCount = gsl::narrow_cast<UInt32>(std::max(uint64_t{outputFrameCount},FrameCount64));
     mRing = RingBuffer<std::byte>::Create(outputFrameCount, mFrameSize, false);
 
     /* Set up sample converter if needed */
     if(outputFormat.mSampleRate != mDevice->mSampleRate)
         mConverter = SampleConverter::Create(mDevice->FmtType, mDevice->FmtType,
-            mFormat.mChannelsPerFrame, static_cast<uint>(hardwareFormat.mSampleRate),
+            mFormat.mChannelsPerFrame, gsl::narrow_cast<uint>(hardwareFormat.mSampleRate),
             mDevice->mSampleRate, Resampler::FastBSinc24);
 
 #if CAN_ENUMERATE
@@ -992,27 +997,27 @@ void CoreAudioCapture::captureSamples(std::span<std::byte> outbuffer)
 
     auto rec_vec = mRing->getReadVector();
     const void *src0 = rec_vec[0].data();
-    auto src0len = static_cast<uint>(rec_vec[0].size() / mFrameSize);
+    auto src0len = gsl::narrow_cast<uint>(rec_vec[0].size() / mFrameSize);
     auto got = mConverter->convert(&src0, &src0len, outbuffer.data(),
-        static_cast<uint>(outbuffer.size()/mFrameSize));
+        gsl::narrow_cast<uint>(outbuffer.size()/mFrameSize));
     auto total_read = rec_vec[0].size()/mFrameSize - src0len;
     if(got < outbuffer.size()/mFrameSize && !src0len && !rec_vec[1].empty())
     {
         outbuffer = outbuffer.subspan(got*mFrameSize);
         const void *src1 = rec_vec[1].data();
-        auto src1len = static_cast<uint>(rec_vec[1].size()/mFrameSize);
+        auto src1len = gsl::narrow_cast<uint>(rec_vec[1].size()/mFrameSize);
         std::ignore = mConverter->convert(&src1, &src1len, outbuffer.data(),
-            static_cast<uint>(outbuffer.size()/mFrameSize));
+            gsl::narrow_cast<uint>(outbuffer.size()/mFrameSize));
         total_read += rec_vec[1].size()/mFrameSize - src1len;
     }
 
     mRing->readAdvance(total_read);
 }
 
-uint CoreAudioCapture::availableSamples()
+auto CoreAudioCapture::availableSamples() -> uint
 {
-    if(!mConverter) return static_cast<uint>(mRing->readSpace());
-    return mConverter->availableOut(static_cast<uint>(mRing->readSpace()));
+    if(!mConverter) return gsl::narrow_cast<uint>(mRing->readSpace());
+    return mConverter->availableOut(gsl::narrow_cast<uint>(mRing->readSpace()));
 }
 
 } // namespace

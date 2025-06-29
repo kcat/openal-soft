@@ -6,6 +6,7 @@
 #include <limits>
 #include <string_view>
 
+#include "gsl/gsl"
 #include "opthelpers.h"
 
 
@@ -13,11 +14,17 @@ namespace al {
 
 [[nodiscard]] constexpr
 auto sizei(const std::string_view str) noexcept -> int
-{ return static_cast<int>(std::min<std::size_t>(str.size(), std::numeric_limits<int>::max())); }
+{
+    return gsl::narrow_cast<int>(std::min<std::size_t>(str.size(),
+        std::numeric_limits<int>::max()));
+}
 
 [[nodiscard]] constexpr
 auto sizei(const std::wstring_view str) noexcept -> int
-{ return static_cast<int>(std::min<std::size_t>(str.size(), std::numeric_limits<int>::max())); }
+{
+    return gsl::narrow_cast<int>(std::min<std::size_t>(str.size(),
+        std::numeric_limits<int>::max()));
+}
 
 
 [[nodiscard]]

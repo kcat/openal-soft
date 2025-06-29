@@ -7,6 +7,7 @@
 #include <windows.h>
 
 #include "fmt/core.h"
+#include "gsl/gsl"
 #include "strutils.hpp"
 
 auto LoadLib(const gsl::czstring name) -> al::expected<void*, std::string>
@@ -18,7 +19,7 @@ auto LoadLib(const gsl::czstring name) -> al::expected<void*, std::string>
     message.resize(1024u);
     const auto res = FormatMessageW(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
         nullptr, err, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), message.data(),
-        static_cast<DWORD>(message.size()), nullptr);
+        gsl::narrow_cast<DWORD>(message.size()), nullptr);
     if(res > 0)
     {
         message.resize(res);
@@ -42,7 +43,7 @@ auto GetSymbol(void *handle, const gsl::czstring name) -> al::expected<void*, st
     message.resize(1024u);
     const auto res = FormatMessageW(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
         nullptr, err, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), message.data(),
-        static_cast<DWORD>(message.size()), nullptr);
+        gsl::narrow_cast<DWORD>(message.size()), nullptr);
     if(res > 0)
     {
         message.resize(res);

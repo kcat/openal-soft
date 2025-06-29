@@ -44,6 +44,7 @@
 #include "core/helpers.h"
 #include "core/logging.h"
 #include "fmt/core.h"
+#include "gsl/gsl"
 #include "ringbuffer.h"
 #include "strutils.hpp"
 #include "vector.h"
@@ -184,7 +185,7 @@ FORCE_ALIGN int WinMMPlayback::mixerProc()
             waveOutWrite(mOutHdl, &waveHdr, sizeof(WAVEHDR));
             --todo;
         }
-        mIdx = static_cast<uint>(widx);
+        mIdx = gsl::narrow_cast<uint>(widx);
     }
 
     return 0;
@@ -203,7 +204,7 @@ void WinMMPlayback::open(std::string_view name)
     if(iter == PlaybackDevices.cend())
         throw al::backend_exception{al::backend_error::NoDevice, "Device name \"{}\" not found",
             name};
-    auto DeviceID = static_cast<UINT>(std::distance(PlaybackDevices.cbegin(), iter));
+    auto DeviceID = gsl::narrow_cast<UINT>(std::distance(PlaybackDevices.cbegin(), iter));
 
     DevFmtType fmttype{mDevice->FmtType};
     WAVEFORMATEX format{};
@@ -223,7 +224,7 @@ void WinMMPlayback::open(std::string_view name)
                 format.wBitsPerSample = 16;
         }
         format.nChannels = ((mDevice->FmtChans == DevFmtMono) ? 1 : 2);
-        format.nBlockAlign = static_cast<WORD>(format.wBitsPerSample * format.nChannels / 8);
+        format.nBlockAlign = gsl::narrow_cast<WORD>(format.wBitsPerSample * format.nChannels / 8);
         format.nSamplesPerSec = mDevice->mSampleRate;
         format.nAvgBytesPerSec = format.nSamplesPerSec * format.nBlockAlign;
         format.cbSize = 0;
@@ -247,7 +248,7 @@ void WinMMPlayback::open(std::string_view name)
 
 bool WinMMPlayback::reset()
 {
-    mDevice->mBufferSize = static_cast<uint>(uint64_t{mDevice->mBufferSize} *
+    mDevice->mBufferSize = gsl::narrow_cast<uint>(uint64_t{mDevice->mBufferSize} *
         mFormat.nSamplesPerSec / mDevice->mSampleRate);
     mDevice->mBufferSize = (mDevice->mBufferSize+3) & ~0x3u;
     mDevice->mUpdateSize = mDevice->mBufferSize / 4;
@@ -323,7 +324,7 @@ void WinMMPlayback::start()
     try {
         for(auto &waveHdr : mWaveBuffer)
             waveOutPrepareHeader(mOutHdl, &waveHdr, sizeof(WAVEHDR));
-        mWritable.store(static_cast<uint>(mWaveBuffer.size()), std::memory_order_release);
+        mWritable.store(gsl::narrow_cast<uint>(mWaveBuffer.size()), std::memory_order_release);
 
         mKillNow.store(false, std::memory_order_release);
         mThread = std::thread{&WinMMPlayback::mixerProc, this};
@@ -425,7 +426,7 @@ void WinMMCapture::captureProc()
             waveInAddBuffer(mInHdl, &waveHdr, sizeof(WAVEHDR));
             --todo;
         }
-        mIdx = static_cast<uint>(widx);
+        mIdx = gsl::narrow_cast<uint>(widx);
     }
 }
 
@@ -440,7 +441,7 @@ void WinMMCapture::open(std::string_view name)
     if(iter == CaptureDevices.cend())
         throw al::backend_exception{al::backend_error::NoDevice, "Device name \"{}\" not found",
             name};
-    auto DeviceID = static_cast<UINT>(std::distance(CaptureDevices.begin(), iter));
+    auto DeviceID = gsl::narrow_cast<UINT>(std::distance(CaptureDevices.begin(), iter));
 
     switch(mDevice->FmtChans)
     {
@@ -481,9 +482,9 @@ void WinMMCapture::open(std::string_view name)
     mFormat = WAVEFORMATEX{};
     mFormat.wFormatTag = (mDevice->FmtType == DevFmtFloat) ?
         WAVE_FORMAT_IEEE_FLOAT : WAVE_FORMAT_PCM;
-    mFormat.nChannels = static_cast<WORD>(mDevice->channelsFromFmt());
-    mFormat.wBitsPerSample = static_cast<WORD>(mDevice->bytesFromFmt() * 8);
-    mFormat.nBlockAlign = static_cast<WORD>(mFormat.wBitsPerSample * mFormat.nChannels / 8);
+    mFormat.nChannels = gsl::narrow_cast<WORD>(mDevice->channelsFromFmt());
+    mFormat.wBitsPerSample = gsl::narrow_cast<WORD>(mDevice->bytesFromFmt() * 8);
+    mFormat.nBlockAlign = gsl::narrow_cast<WORD>(mFormat.wBitsPerSample * mFormat.nChannels / 8);
     mFormat.nSamplesPerSec = mDevice->mSampleRate;
     mFormat.nAvgBytesPerSec = mFormat.nSamplesPerSec * mFormat.nBlockAlign;
     mFormat.cbSize = 0;
@@ -563,7 +564,7 @@ void WinMMCapture::captureSamples(std::span<std::byte> outbuffer)
 { std::ignore = mRing->read(outbuffer); }
 
 auto WinMMCapture::availableSamples() -> uint
-{ return static_cast<uint>(mRing->readSpace()); }
+{ return gsl::narrow_cast<uint>(mRing->readSpace()); }
 
 } // namespace
 

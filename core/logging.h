@@ -5,6 +5,7 @@
 #include <cstdio>
 
 #include "fmt/core.h"
+#include "gsl/gsl"
 #include "opthelpers.h"
 
 
@@ -16,7 +17,7 @@ enum class LogLevel : uint8_t {
 };
 DECL_HIDDEN extern LogLevel gLogLevel;
 
-DECL_HIDDEN extern FILE *gLogFile;
+DECL_HIDDEN extern gsl::owner<FILE*> gLogFile;
 
 
 using LogCallbackFunc = void(*)(void *userptr, char level, const char *message, int length) noexcept;

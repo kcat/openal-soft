@@ -25,13 +25,11 @@
 #include <cassert>
 #include <cstdlib>
 #include <cstring>
-#include <functional>
 #include <span>
 #include <string>
 #include <string_view>
 #include <utility>
 
-#include "almalloc.h"
 #include "core/device.h"
 #include "core/logging.h"
 #include "pragmadefs.h"
@@ -53,12 +51,7 @@ namespace {
 using namespace std::string_view_literals;
 
 template<typename T>
-struct SdlDeleter {
-    /* NOLINTNEXTLINE(cppcoreguidelines-no-malloc) */
-    void operator()(gsl::owner<T*> ptr) const { SDL_free(ptr); }
-};
-template<typename T>
-using unique_sdl_ptr = std::unique_ptr<T,SdlDeleter<T>>;
+using unique_sdl_ptr = std::unique_ptr<T, decltype([](gsl::owner<T*> ptr) { SDL_free(ptr); })>;
 
 
 struct DeviceEntry {
@@ -82,14 +75,13 @@ void EnumeratePlaybackDevices()
     auto newlist = std::vector<DeviceEntry>{};
 
     newlist.reserve(devids.size());
-    std::transform(devids.begin(), devids.end(), std::back_inserter(newlist),
-        [](SDL_AudioDeviceID id)
-        {
-            auto *name = SDL_GetAudioDeviceName(id);
-            if(!name) return DeviceEntry{};
-            TRACE("Got device \"{}\", ID {}", name, id);
-            return DeviceEntry{name, id};
-        });
+    std::ranges::transform(devids, std::back_inserter(newlist), [](SDL_AudioDeviceID id)
+    {
+        auto *name = SDL_GetAudioDeviceName(id);
+        if(!name) return DeviceEntry{};
+        TRACE("Got device \"{}\", ID {}", name, id);
+        return DeviceEntry{name, id};
+    });
 
     gPlaybackDevices.swap(newlist);
 }
@@ -137,8 +129,7 @@ void Sdl3Backend::audioCallback(SDL_AudioStream *stream, int additional_amount, 
     if(ulen > mBuffer.size())
     {
         mBuffer.resize(ulen);
-        std::fill(mBuffer.begin(), mBuffer.end(), (mDevice->FmtType == DevFmtUByte)
-            ? std::byte{0x80} : std::byte{});
+        std::ranges::fill(mBuffer, (mDevice->FmtType==DevFmtUByte) ? std::byte{0x80}:std::byte{});
     }
 
     mDevice->renderSamples(mBuffer.data(), ulen / mFrameSize, mNumChannels);
@@ -158,9 +149,8 @@ void Sdl3Backend::open(std::string_view name)
         if(gPlaybackDevices.empty())
             EnumeratePlaybackDevices();
 
-        const auto iter = std::find_if(gPlaybackDevices.cbegin(), gPlaybackDevices.cend(),
-            [name](const DeviceEntry &entry) { return name == entry.mName; });
-        if(iter == gPlaybackDevices.cend())
+        const auto iter = std::ranges::find(gPlaybackDevices, name, &DeviceEntry::mName);
+        if(iter == gPlaybackDevices.end())
             throw al::backend_exception{al::backend_error::NoDevice, "No device named {}", name};
 
         mDeviceID = iter->mPhysDeviceID;
@@ -380,8 +370,7 @@ auto SDL3BackendFactory::enumerate(BackendType type) -> std::vector<std::string>
     EnumeratePlaybackDevices();
     outnames.reserve(gPlaybackDevices.size()+1);
     outnames.emplace_back(getDefaultDeviceName());
-    std::transform(gPlaybackDevices.begin(), gPlaybackDevices.end(), std::back_inserter(outnames),
-        std::mem_fn(&DeviceEntry::mName));
+    std::ranges::transform(gPlaybackDevices, std::back_inserter(outnames), &DeviceEntry::mName);
 
     return outnames;
 }

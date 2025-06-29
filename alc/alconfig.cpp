@@ -323,8 +323,7 @@ void LoadConfigFromFile(std::istream &f)
         TRACE(" setting '{}' = '{}'", fullKey, valpart);
 
         /* Check if we already have this option set */
-        const auto ent = std::ranges::find_if(ConfOpts, [&fullKey](const ConfigEntry &entry) ->bool
-        { return entry.key == fullKey; });
+        const auto ent = std::ranges::find(ConfOpts, fullKey, &ConfigEntry::key);
         if(ent != ConfOpts.end())
         {
             if(!valpart.empty())
@@ -357,8 +356,7 @@ auto GetConfigValue(const std::string_view devName, const std::string_view block
     }
     key += keyName;
 
-    const auto iter = std::ranges::find_if(ConfOpts, [&key](const ConfigEntry &entry) -> bool
-    { return entry.key == key; });
+    const auto iter = std::ranges::find(ConfOpts, key, &ConfigEntry::key);
     if(iter != ConfOpts.cend())
     {
         TRACE("Found option {} = \"{}\"", key, iter->value);

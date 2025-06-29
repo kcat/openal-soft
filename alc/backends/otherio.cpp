@@ -570,9 +570,8 @@ void OtherIOPlayback::open(std::string_view name)
         name = gDeviceList[0].mDrvName;
     else
     {
-        auto iter = std::find_if(gDeviceList.cbegin(), gDeviceList.cend(),
-            [name](const DeviceEntry &entry) { return entry.mDrvName == name; });
-        if(iter == gDeviceList.cend())
+        auto iter = std::ranges::find(gDeviceList, name, &DeviceEntry::mDrvName);
+        if(iter == gDeviceList.end())
             throw al::backend_exception{al::backend_error::NoDevice,
                 "Device name \"{}\" not found", name};
     }

@@ -256,19 +256,14 @@ void EnumerateDevices(jack_client_t *client, std::vector<DeviceEntry> &list)
          */
         for(auto curitem = list.begin()+1;curitem != list.end();++curitem)
         {
-            auto check_match = [curitem](const DeviceEntry &entry) -> bool
-            { return entry.mName == curitem->mName; };
-            if(std::find_if(list.begin(), curitem, check_match) != curitem)
+            const auto subrange = std::span{list.begin(), curitem};
+            if(std::ranges::find(subrange, curitem->mName, &DeviceEntry::mName) != subrange.end())
             {
-                std::string name{curitem->mName};
-                size_t count{1};
-                auto check_name = [&name](const DeviceEntry &entry) -> bool
-                { return entry.mName == name; };
+                auto name = std::string{};
+                auto count = 1_uz;
                 do {
-                    name = curitem->mName;
-                    name += " #";
-                    name += std::to_string(++count);
-                } while(std::find_if(list.begin(), curitem, check_name) != curitem);
+                    name = fmt::format("{} #{}", curitem->mName, ++count);
+                } while(std::ranges::find(subrange, name, &DeviceEntry::mName) != subrange.end());
                 curitem->mName = std::move(name);
             }
         }

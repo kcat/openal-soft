@@ -838,9 +838,9 @@ void PulsePlayback::open(std::string_view name)
     {
         auto plock = MainloopUniqueLock{gGlobalMainloop};
 
-        auto match_name = [name](const DevMap &entry) -> bool
-        { return entry.name == name || entry.device_name == name; };
-        auto iter = std::ranges::find_if(PlaybackDevices, match_name);
+        auto iter = std::ranges::find(PlaybackDevices, name, &DevMap::name);
+        if(iter == PlaybackDevices.end())
+            iter = std::ranges::find(PlaybackDevices, name, &DevMap::device_name);
         if(iter == PlaybackDevices.end())
             throw al::backend_exception{al::backend_error::NoDevice,
                 "Device name \"{}\" not found", name};
@@ -1190,9 +1190,9 @@ void PulseCapture::open(std::string_view name)
     {
         auto plock = MainloopUniqueLock{gGlobalMainloop};
 
-        auto match_name = [name](const DevMap &entry) -> bool
-        { return entry.name == name || entry.device_name == name; };
-        auto iter = std::ranges::find_if(CaptureDevices, match_name);
+        auto iter = std::ranges::find(CaptureDevices, name, &DevMap::name);
+        if(iter == CaptureDevices.end())
+            iter = std::ranges::find(CaptureDevices, name, &DevMap::device_name);
         if(iter == CaptureDevices.end())
             throw al::backend_exception{al::backend_error::NoDevice,
                 "Device name \"{}\" not found", name};

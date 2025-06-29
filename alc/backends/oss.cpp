@@ -154,19 +154,12 @@ void ALCossListAppend(std::vector<DevMap> &list, std::string_view handle, std::s
     if(handle.empty())
         handle = path;
 
-    auto match_devname = [path](const DevMap &entry) -> bool
-    { return entry.device_name == path; };
-    if(std::find_if(list.cbegin(), list.cend(), match_devname) != list.cend())
+    if(std::ranges::find(list, path, &DevMap::device_name) != list.end())
         return;
 
-    auto checkName = [&list](const std::string_view name) -> bool
-    {
-        auto match_name = [name](const DevMap &entry) -> bool { return entry.name == name; };
-        return std::find_if(list.cbegin(), list.cend(), match_name) != list.cend();
-    };
     auto count = 1;
     auto newname = std::string{handle};
-    while(checkName(newname))
+    while(std::ranges::find(list, newname, &DevMap::name) != list.end())
         newname = fmt::format("{} #{}", handle, ++count);
 
     const auto &entry = list.emplace_back(std::move(newname), path);

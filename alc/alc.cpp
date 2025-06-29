@@ -633,9 +633,8 @@ void alc_initconfig()
                 entry = "wasapi"sv;
 #endif
 
-            const auto this_backend = std::ranges::find_if(backends.begin(), BackendListEnd,
-                [entry](const BackendInfo &backend) -> bool
-            { return entry == backend.name; });
+            const auto this_backend = std::ranges::find(backends.begin(), BackendListEnd, entry,
+                &BackendInfo::name);
             if(this_backend == BackendListEnd)
                 return;
 

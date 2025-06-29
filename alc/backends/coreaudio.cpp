@@ -263,10 +263,8 @@ void EnumerateDevices(std::vector<DeviceEntry> &list, bool isCapture)
         if(devId == kAudioDeviceUnknown)
             continue;
 
-        auto match_devid = [devId](const DeviceEntry &entry) noexcept -> bool
-        { return entry.mId == devId; };
-        auto match = std::find_if(newdevs.cbegin(), newdevs.cend(), match_devid);
-        if(match != newdevs.cend()) continue;
+        auto match = std::ranges::find(newdevs, devId, &DeviceEntry::mId);
+        if(match != newdevs.end()) continue;
 
         auto numChannels = GetDeviceChannelCount(devId, isCapture);
         if(numChannels > 0)
@@ -284,17 +282,16 @@ void EnumerateDevices(std::vector<DeviceEntry> &list, bool isCapture)
          */
         for(auto curitem = newdevs.begin()+1;curitem != newdevs.end();++curitem)
         {
+            const auto subrange = std::span{newdevs.begin(), curitem};
             auto check_match = [curitem](const DeviceEntry &entry) -> bool
             { return entry.mName == curitem->mName; };
-            if(std::find_if(newdevs.begin(), curitem, check_match) != curitem)
+            if(std::ranges::find(subrange, curitem->mName, &DeviceEntry::mName) != subrange.end())
             {
-                auto name = std::string{curitem->mName};
+                auto name = std::string{};
                 auto count = 1_uz;
-                auto check_name = [&name](const DeviceEntry &entry) -> bool
-                { return entry.mName == name; };
                 do {
                     name = fmt::format("{} #{}", curitem->mName, ++count);
-                } while(std::find_if(newdevs.begin(), curitem, check_name) != curitem);
+                } while(std::ranges::find(subrange, name, &DeviceEntry::mName) != subrange.end());
                 curitem->mName = std::move(name);
             }
         }
@@ -403,10 +400,8 @@ void CoreAudioPlayback::open(std::string_view name)
         if(PlaybackList.empty())
             EnumerateDevices(PlaybackList, false);
 
-        auto find_name = [name](const DeviceEntry &entry) -> bool
-        { return entry.mName == name; };
-        auto devmatch = std::find_if(PlaybackList.cbegin(), PlaybackList.cend(), find_name);
-        if(devmatch == PlaybackList.cend())
+        auto devmatch = std::ranges::find(PlaybackList, name, &DeviceEntry::mName);
+        if(devmatch == PlaybackList.end())
             throw al::backend_exception{al::backend_error::NoDevice,
                 "Device name \"{}\" not found", name};
 
@@ -563,17 +558,14 @@ bool CoreAudioPlayback::reset()
                     layout->mNumberChannelDescriptions};
                 auto labels = std::vector<AudioChannelLayoutTag>(descs.size());
 
-                std::transform(descs.begin(), descs.end(), labels.begin(),
-                    std::mem_fn(&AudioChannelDescription::mChannelLabel));
-                sort(labels.begin(), labels.end());
+                std::ranges::transform(descs, labels.begin(),
+                    &AudioChannelDescription::mChannelLabel);
+                std::ranges::sort(labels);
 
                 auto check_labels = [&labels](const ChannelMap &chanmap) -> bool
-                {
-                    return std::includes(labels.begin(), labels.end(), chanmap.map.begin(),
-                        chanmap.map.end());
-                };
-                auto chaniter = std::find_if(chanmaps.cbegin(), chanmaps.cend(), check_labels);
-                if(chaniter != chanmaps.cend())
+                { return std::ranges::includes(labels, chanmap.map); };
+                auto chaniter = std::ranges::find_if(chanmaps, check_labels);
+                if(chaniter != chanmaps.end())
                     mDevice->FmtChans = chaniter->fmt;
             }
         }

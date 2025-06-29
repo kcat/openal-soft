@@ -687,10 +687,11 @@ auto DefaultSourceDevice = std::string{};
 auto DeviceNode::Add(uint32_t id) -> DeviceNode&
 {
     /* If the node is already in the list, return the existing entry. */
-    const auto match = std::ranges::find(sList, id, &DeviceNode::mId);
-    if(match != sList.end()) return *match;
+    const auto match = std::ranges::lower_bound(sList, id, std::less{}, &DeviceNode::mId);
+    if(match != sList.end() && match->mId == id)
+        return *match;
 
-    auto &n = sList.emplace_back();
+    auto &n = *sList.emplace(match);
     n.mId = id;
     return n;
 }
@@ -1500,11 +1501,12 @@ void PipeWirePlayback::open(std::string_view name)
             match = std::ranges::find(devlist, DefaultSinkDevice, &DeviceNode::mDevName);
         if(match == devlist.end())
         {
-            match = std::ranges::find(devlist, NodeType::Source, &DeviceNode::mType);
-            if(match == devlist.end())
-                throw al::backend_exception{al::backend_error::NoDevice,
-                    "No PipeWire playback device found"};
+            match = std::ranges::find_if(devlist, [](const DeviceNode &n) noexcept -> bool
+            { return n.mType != NodeType::Source; });
         }
+        if(match == devlist.end())
+            throw al::backend_exception{al::backend_error::NoDevice,
+                "No PipeWire playback device found"};
 
         targetid = match->mSerial;
         devname = match->mName;
@@ -1934,10 +1936,10 @@ void PipeWireCapture::inputCallback() noexcept
 
 void PipeWireCapture::open(std::string_view name)
 {
-    static std::atomic<uint> OpenCount{0};
+    static auto OpenCount = std::atomic<uint>{0u};
 
-    uint64_t targetid{PwIdAny};
-    std::string devname{};
+    auto targetid = uint64_t{PwIdAny};
+    auto devname = std::string{};
     gEventHandler.waitForInit();
     if(name.empty())
     {
@@ -1946,16 +1948,11 @@ void PipeWireCapture::open(std::string_view name)
 
         auto match = devlist.end();
         if(!DefaultSourceDevice.empty())
-        {
-            auto match_default = [](const DeviceNode &n) -> bool
-            { return n.mDevName == DefaultSourceDevice; };
-            match = std::find_if(devlist.begin(), devlist.end(), match_default);
-        }
+            match = std::ranges::find(devlist, DefaultSourceDevice, &DeviceNode::mDevName);
         if(match == devlist.end())
         {
-            auto match_capture = [](const DeviceNode &n) -> bool
-            { return n.mType != NodeType::Sink; };
-            match = std::find_if(devlist.begin(), devlist.end(), match_capture);
+            match = std::ranges::find_if(devlist, [](const DeviceNode &n) noexcept -> bool
+            { return n.mType != NodeType::Sink; });
         }
         if(match == devlist.end())
         {
@@ -1973,25 +1970,22 @@ void PipeWireCapture::open(std::string_view name)
     {
         const auto evtlock = EventWatcherLockGuard{gEventHandler};
         auto&& devlist = DeviceNode::GetList();
-        const std::string_view prefix{GetMonitorPrefix()};
-        const std::string_view suffix{GetMonitorSuffix()};
+        const auto prefix = GetMonitorPrefix();
+        const auto suffix = GetMonitorSuffix();
 
-        auto match_name = [name](const DeviceNode &n) -> bool
-        { return n.mType != NodeType::Sink && n.mName == name; };
-        auto match = std::find_if(devlist.begin(), devlist.end(), match_name);
+        auto match = std::ranges::find_if(devlist, [name](const DeviceNode &n) -> bool
+        { return n.mType != NodeType::Sink && n.mName == name; });
         if(match == devlist.end() && name.starts_with(prefix))
         {
-            const std::string_view sinkname{name.substr(prefix.length())};
-            auto match_sinkname = [sinkname](const DeviceNode &n) -> bool
-            { return n.mType == NodeType::Sink && n.mName == sinkname; };
-            match = std::find_if(devlist.begin(), devlist.end(), match_sinkname);
+            const auto sinkname = name.substr(prefix.length());
+            match = std::ranges::find_if(devlist, [sinkname](const DeviceNode &n) -> bool
+            { return n.mType == NodeType::Sink && n.mName == sinkname; });
         }
         else if(match == devlist.end() && name.ends_with(suffix))
         {
-            const std::string_view sinkname{name.substr(0, name.size()-suffix.size())};
-            auto match_sinkname = [sinkname](const DeviceNode &n) -> bool
-            { return n.mType == NodeType::Sink && n.mDevName == sinkname; };
-            match = std::find_if(devlist.begin(), devlist.end(), match_sinkname);
+            const auto sinkname = name.substr(0, name.size()-suffix.size());
+            match = std::ranges::find_if(devlist, [sinkname](const DeviceNode &n) -> bool
+            { return n.mType == NodeType::Sink && n.mDevName == sinkname; });
         }
         if(match == devlist.end())
             throw al::backend_exception{al::backend_error::NoDevice,
@@ -2047,9 +2041,7 @@ void PipeWireCapture::open(std::string_view name)
         const auto evtlock = EventWatcherLockGuard{gEventHandler};
         auto&& devlist = DeviceNode::GetList();
 
-        auto match_id = [targetid=mTargetId](const DeviceNode &n) -> bool
-        { return targetid == n.mSerial; };
-        auto match = std::find_if(devlist.begin(), devlist.end(), match_id);
+        auto match = std::ranges::find(devlist, mTargetId, &DeviceNode::mSerial);
         if(match != devlist.end())
             is51rear = match->mIs51Rear;
     }
@@ -2214,20 +2206,11 @@ auto PipeWireBackendFactory::enumerate(BackendType type) -> std::vector<std::str
     const auto evtlock = EventWatcherLockGuard{gEventHandler};
     auto&& devlist = DeviceNode::GetList();
 
-    static constexpr auto match_defsink = [](const DeviceNode &n) -> bool
-    { return n.mDevName == DefaultSinkDevice; };
-    static constexpr auto match_defsource = [](const DeviceNode &n) -> bool
-    { return n.mDevName == DefaultSourceDevice; };
-
-    static constexpr auto sort_devnode = [](DeviceNode &lhs, DeviceNode &rhs) noexcept -> bool
-    { return lhs.mId < rhs.mId; };
-    std::ranges::sort(devlist, sort_devnode);
-
     auto defmatch = devlist.begin();
     switch(type)
     {
     case BackendType::Playback:
-        defmatch = std::find_if(defmatch, devlist.end(), match_defsink);
+        defmatch = std::ranges::find(devlist, DefaultSinkDevice, &DeviceNode::mDevName);
         if(defmatch != devlist.end())
             outnames.emplace_back(defmatch->mName);
         for(auto iter = devlist.begin();iter != devlist.end();++iter)
@@ -2238,7 +2221,7 @@ auto PipeWireBackendFactory::enumerate(BackendType type) -> std::vector<std::str
         break;
     case BackendType::Capture:
         outnames.reserve(devlist.size());
-        defmatch = std::find_if(defmatch, devlist.end(), match_defsource);
+        defmatch = std::ranges::find(devlist, DefaultSourceDevice, &DeviceNode::mDevName);
         if(defmatch != devlist.end())
         {
             if(defmatch->mType == NodeType::Sink)

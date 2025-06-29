@@ -290,13 +290,13 @@ constexpr auto alcEnumerations = std::array{
 };
 #undef DECL
 
-[[nodiscard]] constexpr auto GetNoErrorString() noexcept { return "No Error"; }
-[[nodiscard]] constexpr auto GetInvalidDeviceString() noexcept { return "Invalid Device"; }
-[[nodiscard]] constexpr auto GetInvalidContextString() noexcept { return "Invalid Context"; }
-[[nodiscard]] constexpr auto GetInvalidEnumString() noexcept { return "Invalid Enum"; }
-[[nodiscard]] constexpr auto GetInvalidValueString() noexcept { return "Invalid Value"; }
-[[nodiscard]] constexpr auto GetOutOfMemoryString() noexcept { return "Out of Memory"; }
-[[nodiscard]] constexpr auto GetExtensionString() noexcept -> const char*
+[[nodiscard]] constexpr auto GetNoErrorString() noexcept -> gsl::czstring { return "No Error"; }
+[[nodiscard]] constexpr auto GetInvalidDeviceString() noexcept -> gsl::czstring { return "Invalid Device"; }
+[[nodiscard]] constexpr auto GetInvalidContextString() noexcept -> gsl::czstring { return "Invalid Context"; }
+[[nodiscard]] constexpr auto GetInvalidEnumString() noexcept -> gsl::czstring { return "Invalid Enum"; }
+[[nodiscard]] constexpr auto GetInvalidValueString() noexcept -> gsl::czstring { return "Invalid Value"; }
+[[nodiscard]] constexpr auto GetOutOfMemoryString() noexcept -> gsl::czstring { return "Out of Memory"; }
+[[nodiscard]] constexpr auto GetExtensionString() noexcept -> gsl::czstring
 {
     return "ALC_ENUMERATE_ALL_EXT ALC_ENUMERATION_EXT ALC_EXT_CAPTURE "
         "ALC_EXT_thread_local_context";
@@ -349,20 +349,20 @@ public:
     explicit operator bool() const noexcept { return !mEnumeratedDevices.empty(); }
 
     void reserveDeviceCount(const size_t count) { mEnumeratedDevices.reserve(count); }
-    void appendDeviceList(const ALCchar *names, ALCuint idx);
+    void appendDeviceList(const gsl::czstring names, ALCuint idx);
     void finishEnumeration();
 
     [[nodiscard]]
     auto getDriverIndexForName(const std::string_view name) const -> std::optional<ALCuint>;
 
     [[nodiscard]]
-    auto getNameData() const noexcept -> const char* { return mNamesStore.data(); }
+    auto getNameData() const noexcept -> gsl::czstring { return mNamesStore.data(); }
 };
 auto DevicesList = EnumeratedList{};
 auto AllDevicesList = EnumeratedList{};
 auto CaptureDevicesList = EnumeratedList{};
 
-void EnumeratedList::appendDeviceList(const ALCchar *names, ALCuint idx)
+void EnumeratedList::appendDeviceList(const gsl::czstring names, ALCuint idx)
 {
     auto *name_end = names;
     if(!name_end) return;
@@ -426,15 +426,18 @@ void InitCtxFuncs(DriverIface &iface)
 {
     auto *device = iface.alcGetContextsDevice(iface.alcGetCurrentContext());
 
-#define LOAD_PROC(x) do {                                                     \
-    iface.x = reinterpret_cast<decltype(iface.x)>(iface.alGetProcAddress(#x));\
-    if(!iface.x)                                                              \
-        ERR("Failed to find entry point for {} in {}", #x,                    \
-            wstr_to_utf8(iface.Name));                                        \
-} while(0)
+    auto load_proc = [&iface](auto &func, const gsl::czstring name)
+    {
+        using func_t = std::remove_reference_t<decltype(func)>;
+        /* NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast) */
+        func = reinterpret_cast<func_t>(iface.alGetProcAddress(name));
+        if(!func)
+            ERR("Failed to find entry point for {} in {}", name,
+                wstr_to_utf8(iface.Name));
+    };
+#define LOAD_PROC(x) load_proc(iface.x, #x)
     if(iface.alcIsExtensionPresent(device, "ALC_EXT_EFX"))
     {
-        /* NOLINTBEGIN(cppcoreguidelines-pro-type-reinterpret-cast) */
         LOAD_PROC(alGenFilters);
         LOAD_PROC(alDeleteFilters);
         LOAD_PROC(alIsFilter);
@@ -468,7 +471,6 @@ void InitCtxFuncs(DriverIface &iface)
         LOAD_PROC(alGetAuxiliaryEffectSlotfv);
         LOAD_PROC(alGetAuxiliaryEffectSloti);
         LOAD_PROC(alGetAuxiliaryEffectSlotiv);
-        /* NOLINTEND(cppcoreguidelines-pro-type-reinterpret-cast) */
     }
 #undef LOAD_PROC
 }

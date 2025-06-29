@@ -86,7 +86,7 @@ AL_API auto AL_APIENTRY alGetError() noexcept -> ALenum
     if(auto context = GetContextRef()) [[likely]]
         return alGetErrorDirect(context.get());
 
-    static constexpr auto get_value = [](const char *envname, const char *optname) -> ALenum
+    static constexpr auto get_value = [](gsl::czstring envname, std::string_view optname) -> ALenum
     {
         auto optstr = al::getenv(envname);
         if(!optstr)

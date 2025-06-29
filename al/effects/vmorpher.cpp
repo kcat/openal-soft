@@ -323,15 +323,14 @@ struct AllValidator {
 
 template<>
 struct VocalMorpherCommitter::Exception : public EaxException {
-    explicit Exception(const char *message) : EaxException{"EAX_VOCAL_MORPHER_EFFECT", message}
+    explicit Exception(const std::string_view message)
+        : EaxException{"EAX_VOCAL_MORPHER_EFFECT", message}
     { }
 };
 
-template<>
-[[noreturn]] void VocalMorpherCommitter::fail(const char *message)
-{
-    throw Exception{message};
-}
+template<> [[noreturn]]
+void VocalMorpherCommitter::fail(const std::string_view message)
+{ throw Exception{message}; }
 
 bool EaxVocalMorpherCommitter::commit(const EAXVOCALMORPHERPROPERTIES &props)
 {

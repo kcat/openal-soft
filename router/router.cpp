@@ -95,7 +95,7 @@ void AddModule(HMODULE module, const std::wstring_view name)
 
     /* Load required functions. */
     auto loadok = true;
-    auto do_load = [module,name](auto &func, const char *fname) -> bool
+    auto do_load = [module,name](auto &func, const gsl::czstring fname) -> bool
     {
         using func_t = std::remove_reference_t<decltype(func)>;
         auto ptr = GetProcAddress(module, fname);
@@ -205,7 +205,7 @@ void AddModule(HMODULE module, const std::wstring_view name)
             newdrv.ALCVer = MakeALCVer(1, 0);
         }
 
-        auto do_load2 = [module,name](auto &func, const char *fname) -> void
+        auto do_load2 = [module,name](auto &func, const gsl::czstring fname) -> void
         {
             using func_t = std::remove_reference_t<decltype(func)>;
             auto ptr = GetProcAddress(module, fname);
@@ -230,7 +230,7 @@ void AddModule(HMODULE module, const std::wstring_view name)
         LOAD_PROC(alGetBufferiv);
 #undef LOAD_PROC
 
-        auto do_load3 = [name,&newdrv](auto &func, const char *fname) -> bool
+        auto do_load3 = [name,&newdrv](auto &func, const gsl::czstring fname) -> bool
         {
             using func_t = std::remove_reference_t<decltype(func)>;
             auto ptr = newdrv.alcGetProcAddress(nullptr, fname);

@@ -186,15 +186,14 @@ struct AllValidator {
 
 template<>
 struct ModulatorCommitter::Exception : public EaxException {
-    explicit Exception(const char *message) : EaxException{"EAX_RING_MODULATOR_EFFECT", message}
+    explicit Exception(const std::string_view message)
+        : EaxException{"EAX_RING_MODULATOR_EFFECT", message}
     { }
 };
 
-template<>
-[[noreturn]] void ModulatorCommitter::fail(const char *message)
-{
-    throw Exception{message};
-}
+template<> [[noreturn]]
+void ModulatorCommitter::fail(const std::string_view message)
+{ throw Exception{message}; }
 
 bool EaxModulatorCommitter::commit(const EAXRINGMODULATORPROPERTIES &props)
 {

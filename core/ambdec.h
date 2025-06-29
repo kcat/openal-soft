@@ -5,8 +5,10 @@
 #include <optional>
 #include <span>
 #include <string>
+#include <string_view>
 #include <vector>
 
+#include "expected.hpp"
 #include "core/ambidefs.h"
 
 /* Helpers to read .ambdec configuration files. */
@@ -49,7 +51,7 @@ struct AmbDecConf {
 
     ~AmbDecConf();
 
-    std::optional<std::string> load(const char *fname) noexcept;
+    auto load(const std::string_view fname) noexcept -> al::expected<std::monostate,std::string>;
 };
 
 #endif /* CORE_AMBDEC_H */

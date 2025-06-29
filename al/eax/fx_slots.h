@@ -3,6 +3,7 @@
 
 
 #include <array>
+#include <string_view>
 
 #include "al/auxeffectslot.h"
 
@@ -34,7 +35,7 @@ private:
 
 
     [[noreturn]]
-    static void fail(const char* message);
+    static void fail(const std::string_view message);
 
     void initialize_fx_slots(ALCcontext& al_context);
 }; // EaxFxSlots

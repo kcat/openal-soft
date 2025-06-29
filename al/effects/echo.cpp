@@ -176,15 +176,13 @@ struct AllValidator {
 
 template<>
 struct EchoCommitter::Exception : public EaxException {
-    explicit Exception(const char* message) : EaxException{"EAX_ECHO_EFFECT", message}
+    explicit Exception(const std::string_view message) : EaxException{"EAX_ECHO_EFFECT", message}
     { }
 };
 
-template<>
-[[noreturn]] void EchoCommitter::fail(const char *message)
-{
-    throw Exception{message};
-}
+template<> [[noreturn]]
+void EchoCommitter::fail(const std::string_view message)
+{ throw Exception{message}; }
 
 bool EaxEchoCommitter::commit(const EAXECHOPROPERTIES &props)
 {

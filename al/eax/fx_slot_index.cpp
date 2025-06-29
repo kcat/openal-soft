@@ -9,16 +9,11 @@ namespace
 {
 
 
-class EaxFxSlotIndexException :
-    public EaxException
-{
+class EaxFxSlotIndexException : public EaxException {
 public:
-    explicit EaxFxSlotIndexException(
-        const char* message)
-        :
-        EaxException{"EAX_FX_SLOT_INDEX", message}
-    {
-    }
+    explicit EaxFxSlotIndexException(const std::string_view message)
+        : EaxException{"EAX_FX_SLOT_INDEX", message}
+    { }
 }; // EaxFxSlotIndexException
 
 
@@ -65,7 +60,7 @@ void EaxFxSlotIndex::set(const GUID &guid)
 }
 
 [[noreturn]]
-void EaxFxSlotIndex::fail(const char* message)
+void EaxFxSlotIndex::fail(const std::string_view message)
 {
     throw EaxFxSlotIndexException{message};
 }

@@ -8,12 +8,13 @@
 #include <string>
 
 #include "expected.hpp"
+#include "gsl/gsl"
 
 #define HAVE_DYNLOAD 1
 
-auto LoadLib(const char *name) -> al::expected<void*, std::string>;
+auto LoadLib(const gsl::czstring name) -> al::expected<void*, std::string>;
 void CloseLib(void *handle);
-auto GetSymbol(void *handle, const char *name) -> al::expected<void*, std::string>;
+auto GetSymbol(void *handle, const gsl::czstring name) -> al::expected<void*, std::string>;
 
 #else
 

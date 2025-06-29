@@ -176,15 +176,14 @@ struct AllValidator {
 
 template<>
 struct DistortionCommitter::Exception : public EaxException {
-    explicit Exception(const char *message) : EaxException{"EAX_DISTORTION_EFFECT", message}
+    explicit Exception(const std::string_view message)
+        : EaxException{"EAX_DISTORTION_EFFECT", message}
     { }
 };
 
-template<>
-[[noreturn]] void DistortionCommitter::fail(const char *message)
-{
-    throw Exception{message};
-}
+template<> [[noreturn]]
+void DistortionCommitter::fail(const std::string_view message)
+{ throw Exception{message}; }
 
 bool EaxDistortionCommitter::commit(const EAXDISTORTIONPROPERTIES &props)
 {

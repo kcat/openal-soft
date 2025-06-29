@@ -116,15 +116,14 @@ struct AllValidator {
 
 template<>
 struct PitchShifterCommitter::Exception : public EaxException {
-    explicit Exception(const char *message) : EaxException{"EAX_PITCH_SHIFTER_EFFECT", message}
+    explicit Exception(const std::string_view message)
+        : EaxException{"EAX_PITCH_SHIFTER_EFFECT", message}
     { }
 };
 
-template<>
-[[noreturn]] void PitchShifterCommitter::fail(const char *message)
-{
-    throw Exception{message};
-}
+template<> [[noreturn]]
+void PitchShifterCommitter::fail(const std::string_view message)
+{ throw Exception{message}; }
 
 bool EaxPitchShifterCommitter::commit(const EAXPITCHSHIFTERPROPERTIES &props)
 {

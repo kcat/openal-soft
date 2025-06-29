@@ -333,7 +333,7 @@ constexpr uint DitherRNGSeed{22222u};
 /************************************************
  * ALC information
  ************************************************/
-[[nodiscard]] constexpr auto GetNoDeviceExtString() noexcept -> const char*
+[[nodiscard]] constexpr auto GetNoDeviceExtString() noexcept -> gsl::czstring
 {
     return "ALC_ENUMERATE_ALL_EXT "
         "ALC_ENUMERATION_EXT "
@@ -346,7 +346,7 @@ constexpr uint DitherRNGSeed{22222u};
         "ALC_SOFT_reopen_device "
         "ALC_SOFT_system_events";
 }
-[[nodiscard]] constexpr auto GetExtensionString() noexcept -> const char*
+[[nodiscard]] constexpr auto GetExtensionString() noexcept -> gsl::czstring
 {
     return "ALC_ENUMERATE_ALL_EXT "
         "ALC_ENUMERATION_EXT "
@@ -526,7 +526,8 @@ void alc_initconfig()
 
     {
         auto compatflags = CompatFlagBitset{};
-        auto checkflag = [](const char *envname, const std::string_view optname) -> bool
+        static constexpr auto checkflag = [](const gsl::czstring envname,
+            const std::string_view optname) -> bool
         {
             if(auto optval = al::getenv(envname))
             {
@@ -3008,7 +3009,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName) noexcep
         return nullptr;
     }
 
-    auto checkopt = [&device](const char *envname, const std::string_view optname)
+    auto checkopt = [&device](const gsl::czstring envname, const std::string_view optname)
     {
         if(auto optval = al::getenv(envname)) return optval;
         return device->configValue<std::string>("game_compat", optname);
@@ -3612,7 +3613,7 @@ FORCE_ALIGN ALCboolean ALC_APIENTRY alcReopenDeviceSOFT(ALCdevice *device,
     std::string{}.swap(dev->mVendorOverride);
     std::string{}.swap(dev->mVersionOverride);
     std::string{}.swap(dev->mRendererOverride);
-    auto checkopt = [&dev](const char *envname, const std::string_view optname)
+    auto checkopt = [&dev](const gsl::czstring envname, const std::string_view optname)
     {
         if(auto optval = al::getenv(envname)) return optval;
         return dev->configValue<std::string>("game_compat", optname);

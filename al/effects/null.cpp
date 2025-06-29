@@ -72,17 +72,14 @@ using NullCommitter = EaxCommitter<EaxNullCommitter>;
 } // namespace
 
 template<>
-struct NullCommitter::Exception : public EaxException
-{
-    explicit Exception(const char *message) : EaxException{"EAX_NULL_EFFECT", message}
+struct NullCommitter::Exception : public EaxException {
+    explicit Exception(const std::string_view message) : EaxException{"EAX_NULL_EFFECT", message}
     { }
 };
 
-template<>
-[[noreturn]] void NullCommitter::fail(const char *message)
-{
-    throw Exception{message};
-}
+template<> [[noreturn]]
+void NullCommitter::fail(const std::string_view message)
+{ throw Exception{message}; }
 
 bool EaxNullCommitter::commit(const std::monostate &props)
 {

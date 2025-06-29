@@ -390,30 +390,18 @@ void ALCcontext::eaxSetLastError() noexcept
     mEaxLastError = EAXERR_INVALID_OPERATION;
 }
 
-[[noreturn]] void ALCcontext::eax_fail(const char* message)
-{
-    throw ContextException{message};
-}
+[[noreturn]]
+void ALCcontext::eax_fail(const std::string_view message) { throw ContextException{message}; }
 
-[[noreturn]] void ALCcontext::eax_fail_unknown_property_set_id()
-{
-    eax_fail("Unknown property ID.");
-}
+[[noreturn]]
+void ALCcontext::eax_fail_unknown_property_set_id() { eax_fail("Unknown property ID."); }
 
-[[noreturn]] void ALCcontext::eax_fail_unknown_primary_fx_slot_id()
-{
-    eax_fail("Unknown primary FX Slot ID.");
-}
+[[noreturn]]
+void ALCcontext::eax_fail_unknown_primary_fx_slot_id() { eax_fail("Unknown primary FX Slot ID."); }
 
-[[noreturn]] void ALCcontext::eax_fail_unknown_property_id()
-{
-    eax_fail("Unknown property ID.");
-}
+[[noreturn]] void ALCcontext::eax_fail_unknown_property_id() { eax_fail("Unknown property ID."); }
 
-[[noreturn]] void ALCcontext::eax_fail_unknown_version()
-{
-    eax_fail("Unknown version.");
-}
+[[noreturn]] void ALCcontext::eax_fail_unknown_version() { eax_fail("Unknown version."); }
 
 void ALCcontext::eax_initialize_extensions()
 {

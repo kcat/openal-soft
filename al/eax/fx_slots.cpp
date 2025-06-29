@@ -12,16 +12,11 @@ namespace
 {
 
 
-class EaxFxSlotsException :
-    public EaxException
-{
+class EaxFxSlotsException : public EaxException {
 public:
-    explicit EaxFxSlotsException(
-        const char* message)
-        :
-        EaxException{"EAX_FX_SLOTS", message}
-    {
-    }
+    explicit EaxFxSlotsException(const std::string_view message)
+        : EaxException{"EAX_FX_SLOTS", message}
+    { }
 }; // EaxFxSlotsException
 
 
@@ -56,17 +51,14 @@ ALeffectslot& EaxFxSlots::get(EaxFxSlotIndex index)
 }
 
 [[noreturn]]
-void EaxFxSlots::fail(
-    const char* message)
-{
-    throw EaxFxSlotsException{message};
-}
+void EaxFxSlots::fail(const std::string_view message)
+{ throw EaxFxSlotsException{message}; }
 
 void EaxFxSlots::initialize_fx_slots(ALCcontext& al_context)
 {
     auto fx_slot_index = EaxFxSlotIndexValue{};
 
-    for (auto& fx_slot : fx_slots_)
+    for(auto& fx_slot : fx_slots_)
     {
         fx_slot = eax_create_al_effect_slot(al_context);
         fx_slot->eax_initialize(al_context, fx_slot_index);

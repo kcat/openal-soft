@@ -572,17 +572,14 @@ using FlangerCommitter = EaxCommitter<EaxFlangerCommitter>;
 } // namespace
 
 template<>
-struct ChorusCommitter::Exception : public EaxException
-{
-    explicit Exception(const char *message) : EaxException{"EAX_CHORUS_EFFECT", message}
+struct ChorusCommitter::Exception : public EaxException {
+    explicit Exception(const std::string_view message) : EaxException{"EAX_CHORUS_EFFECT", message}
     { }
 };
 
-template<>
-[[noreturn]] void ChorusCommitter::fail(const char *message)
-{
-    throw Exception{message};
-}
+template<> [[noreturn]]
+void ChorusCommitter::fail(const std::string_view message)
+{ throw Exception{message}; }
 
 bool EaxChorusCommitter::commit(const EAXCHORUSPROPERTIES &props)
 {
@@ -609,17 +606,14 @@ void EaxChorusCommitter::Set(const EaxCall &call, EAXCHORUSPROPERTIES &props)
 }
 
 template<>
-struct FlangerCommitter::Exception : public EaxException
-{
-    explicit Exception(const char *message) : EaxException{"EAX_FLANGER_EFFECT", message}
+struct FlangerCommitter::Exception : public EaxException {
+    explicit Exception(const std::string_view message) : EaxException{"EAX_FLANGER_EFFECT",message}
     { }
 };
 
-template<>
-[[noreturn]] void FlangerCommitter::fail(const char *message)
-{
-    throw Exception{message};
-}
+template<> [[noreturn]]
+void FlangerCommitter::fail(const std::string_view message)
+{ throw Exception{message}; }
 
 bool EaxFlangerCommitter::commit(const EAXFLANGERPROPERTIES &props)
 {

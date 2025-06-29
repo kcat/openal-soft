@@ -285,7 +285,7 @@ private:
 
     class ContextException final : public EaxException {
     public:
-        explicit ContextException(const char *message)
+        explicit ContextException(const std::string_view message)
             : EaxException{"EAX_CONTEXT", message}
         { }
     };
@@ -442,7 +442,7 @@ private:
     Eax5Props mEax{}; // Current EAX state.
     EAXSESSIONPROPERTIES mEaxSession{};
 
-    [[noreturn]] static void eax_fail(const char* message);
+    [[noreturn]] static void eax_fail(const std::string_view message);
     [[noreturn]] static void eax_fail_unknown_property_set_id();
     [[noreturn]] static void eax_fail_unknown_primary_fx_slot_id();
     [[noreturn]] static void eax_fail_unknown_property_id();

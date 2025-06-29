@@ -37,9 +37,9 @@ struct ALbuffer;
 #if ALSOFT_EAX
 class EaxFxSlotException : public EaxException {
 public:
-	explicit EaxFxSlotException(const char* message)
+    explicit EaxFxSlotException(const std::string_view message)
 		: EaxException{"EAX_FX_SLOT", message}
-	{}
+    { }
 };
 #endif // ALSOFT_EAX
 
@@ -131,11 +131,8 @@ private:
 
     struct EaxRangeValidator {
         template<typename TValue>
-        void operator()(
-            const char* name,
-            const TValue& value,
-            const TValue& min_value,
-            const TValue& max_value) const
+        void operator()(const std::string_view name, const TValue &value, const TValue &min_value,
+            const TValue &max_value) const
         {
             eax_validate_range<Exception>(name, value, min_value, max_value);
         }
@@ -261,7 +258,7 @@ private:
     Eax5State mEax5{}; // EAX5 state.
     EAX50FXSLOTPROPERTIES mEax{}; // Current EAX state.
 
-    [[noreturn]] static void eax_fail(const char* message);
+    [[noreturn]] static void eax_fail(const std::string_view message);
     [[noreturn]] static void eax_fail_unknown_effect_id();
     [[noreturn]] static void eax_fail_unknown_property_id();
     [[noreturn]] static void eax_fail_unknown_version();

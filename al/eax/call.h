@@ -2,6 +2,7 @@
 #define EAX_EAX_CALL_INCLUDED
 
 #include <span>
+#include <string_view>
 
 #include "AL/al.h"
 #include "alnumeric.h"
@@ -77,7 +78,7 @@ private:
     ALvoid*const mPropertyBuffer;
     const ALuint mPropertyBufferSize;
 
-    [[noreturn]] static void fail(const char* message);
+    [[noreturn]] static void fail(const std::string_view message);
     [[noreturn]] static void fail_too_small();
 }; // EaxCall
 

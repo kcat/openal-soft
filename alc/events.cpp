@@ -48,6 +48,7 @@ void Event(EventType eventType, DeviceType deviceType, ALCdevice *device, std::s
     auto eventlock = std::unique_lock{EventMutex};
     if(EventCallback && EventsEnabled.test(al::to_underlying(eventType)))
         EventCallback(EnumFromEventType(eventType), al::to_underlying(deviceType), device,
+            /* NOLINTNEXTLINE(bugprone-suspicious-stringview-data-usage) */
             gsl::narrow_cast<ALCsizei>(message.size()), message.data(), EventUserPtr);
 }
 

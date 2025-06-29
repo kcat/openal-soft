@@ -3707,30 +3707,20 @@ ALsource* ALsource::EaxLookupSource(ALCcontext& al_context, ALuint source_id) no
     return LookupSource(std::nothrow, &al_context, source_id);
 }
 
-[[noreturn]] void ALsource::eax_fail(const char* message)
-{
-    throw Exception{message};
-}
+[[noreturn]]
+void ALsource::eax_fail(const std::string_view message) { throw Exception{message}; }
 
-[[noreturn]] void ALsource::eax_fail_unknown_property_id()
-{
-    eax_fail("Unknown property id.");
-}
+[[noreturn]]
+void ALsource::eax_fail_unknown_property_id() { eax_fail("Unknown property id."); }
 
-[[noreturn]] void ALsource::eax_fail_unknown_version()
-{
-    eax_fail("Unknown version.");
-}
+[[noreturn]]
+void ALsource::eax_fail_unknown_version() { eax_fail("Unknown version."); }
 
-[[noreturn]] void ALsource::eax_fail_unknown_active_fx_slot_id()
-{
-    eax_fail("Unknown active FX slot ID.");
-}
+[[noreturn]]
+void ALsource::eax_fail_unknown_active_fx_slot_id() { eax_fail("Unknown active FX slot ID."); }
 
-[[noreturn]] void ALsource::eax_fail_unknown_receiving_fx_slot_id()
-{
-    eax_fail("Unknown receiving FX slot ID.");
-}
+[[noreturn]]
+void ALsource::eax_fail_unknown_receiving_fx_slot_id() {eax_fail("Unknown receiving FX slot ID.");}
 
 void ALsource::eax_set_sends_defaults(EaxSends& sends, const EaxFxSlotIds& ids) noexcept
 {

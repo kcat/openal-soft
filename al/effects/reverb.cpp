@@ -455,12 +455,11 @@ void StdReverbEffectHandler::GetParamfv(ALCcontext *context, const ReverbProps &
 #if ALSOFT_EAX
 namespace {
 
-class EaxReverbEffectException : public EaxException
-{
+class EaxReverbEffectException : public EaxException {
 public:
-    explicit EaxReverbEffectException(const char* message)
+    explicit EaxReverbEffectException(const std::string_view message)
         : EaxException{"EAX_REVERB_EFFECT", message}
-    {}
+    { }
 }; // EaxReverbEffectException
 
 struct EnvironmentValidator1 {
@@ -965,15 +964,13 @@ struct EnvironmentSizeDeferrer3 {
 } // namespace
 
 
-struct EaxReverbCommitter::Exception : public EaxReverbEffectException
-{
+struct EaxReverbCommitter::Exception : public EaxReverbEffectException {
     using EaxReverbEffectException::EaxReverbEffectException;
 };
 
-[[noreturn]] void EaxReverbCommitter::fail(const char* message)
-{
-    throw Exception{message};
-}
+[[noreturn]]
+void EaxReverbCommitter::fail(const std::string_view message)
+{ throw Exception{message}; }
 
 void EaxReverbCommitter::translate(const EAX_REVERBPROPERTIES& src, EAXREVERBPROPERTIES& dst) noexcept
 {

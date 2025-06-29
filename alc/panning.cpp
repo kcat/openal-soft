@@ -1143,15 +1143,15 @@ void InitUhjPanning(al::Device *device)
     InitNearFieldCtrl(device, spkr_dist, device->mAmbiOrder, !device->m2DMixing);
 }
 
-auto LoadAmbDecConfig(const char *config, al::Device *device,
+auto LoadAmbDecConfig(const std::string_view config, al::Device *device,
     std::unique_ptr<DecoderConfig<DualBand,MaxOutputChannels>> &decoder_store,
     DecoderView &decoder, std::span<float,MaxOutputChannels> speakerdists) -> bool
 {
     auto conf = AmbDecConf{};
-    if(auto err = conf.load(config))
+    if(auto status = conf.load(config); !status)
     {
         ERR("Failed to load layout file {}", config);
-        ERR("  {}", *err);
+        ERR("  {}", status.error());
         return false;
     }
     if(conf.Speakers.size() > MaxOutputChannels)
@@ -1225,7 +1225,7 @@ void aluInitRenderer(al::Device *device, int hrtf_id, std::optional<StereoEncodi
         if(!layout.empty())
         {
             if(auto decopt = device->configValue<std::string>("decoder", layout))
-                usingCustom = LoadAmbDecConfig(decopt->c_str(), device, decoder_store, decoder,
+                usingCustom = LoadAmbDecConfig(*decopt, device, decoder_store, decoder,
                     speakerdists);
         }
         if(!usingCustom && device->FmtChans != DevFmtAmbi3D)

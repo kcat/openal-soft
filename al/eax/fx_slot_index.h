@@ -4,6 +4,7 @@
 
 #include <cstddef>
 #include <optional>
+#include <string_view>
 
 #include "api.h"
 
@@ -22,7 +23,7 @@ public:
 
 private:
     [[noreturn]]
-    static void fail(const char *message);
+    static void fail(const std::string_view message);
 }; // EaxFxSlotIndex
 
 inline bool operator==(const EaxFxSlotIndex& lhs, const EaxFxSlotIndex& rhs) noexcept

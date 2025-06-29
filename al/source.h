@@ -57,9 +57,9 @@ struct ALbufferQueueItem : public VoiceBufferItem {
 #if ALSOFT_EAX
 class EaxSourceException : public EaxException {
 public:
-    explicit EaxSourceException(const char* message)
+    explicit EaxSourceException(const std::string_view message)
         : EaxException{"EAX_SOURCE", message}
-    {}
+    { }
 };
 #endif // ALSOFT_EAX
 
@@ -819,7 +819,7 @@ private:
         }
     };
 
-    [[noreturn]] static void eax_fail(const char* message);
+    [[noreturn]] static void eax_fail(const std::string_view message);
     [[noreturn]] static void eax_fail_unknown_property_id();
     [[noreturn]] static void eax_fail_unknown_version();
     [[noreturn]] static void eax_fail_unknown_active_fx_slot_id();

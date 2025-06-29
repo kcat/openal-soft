@@ -185,15 +185,14 @@ struct AllValidator {
 
 template<>
 struct FrequencyShifterCommitter::Exception : public EaxException {
-    explicit Exception(const char *message) : EaxException{"EAX_FREQUENCY_SHIFTER_EFFECT", message}
+    explicit Exception(const std::string_view message)
+        : EaxException{"EAX_FREQUENCY_SHIFTER_EFFECT", message}
     { }
 };
 
-template<>
-[[noreturn]] void FrequencyShifterCommitter::fail(const char *message)
-{
-    throw Exception{message};
-}
+template<> [[noreturn]]
+void FrequencyShifterCommitter::fail(const std::string_view message)
+{ throw Exception{message}; }
 
 bool EaxFrequencyShifterCommitter::commit(const EAXFREQUENCYSHIFTERPROPERTIES &props)
 {

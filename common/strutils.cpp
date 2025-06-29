@@ -45,7 +45,7 @@ auto utf8_to_wstr(std::string_view str) -> std::wstring
 
 namespace al {
 
-auto getenv(const char *envname) -> std::optional<std::string>
+auto getenv(const gsl::czstring envname) -> std::optional<std::string>
 {
     auto *str = _wgetenv(utf8_to_wstr(envname).c_str());
     if(str && *str != L'\0')
@@ -53,7 +53,7 @@ auto getenv(const char *envname) -> std::optional<std::string>
     return std::nullopt;
 }
 
-auto getenv(const WCHAR *envname) -> std::optional<std::wstring>
+auto getenv(const gsl::cwzstring envname) -> std::optional<std::wstring>
 {
     auto *str = _wgetenv(envname);
     if(str && *str != L'\0')
@@ -67,7 +67,7 @@ auto getenv(const WCHAR *envname) -> std::optional<std::wstring>
 
 namespace al {
 
-auto getenv(const char *envname) -> std::optional<std::string>
+auto getenv(const gsl::czstring envname) -> std::optional<std::string>
 {
     auto *str = std::getenv(envname);
     if(str && *str != '\0')

@@ -38,6 +38,7 @@
 
 #include <memory>
 #include <cstring>
+#include <string_view>
 #include <unistd.h>
 #include <sys/types.h>
 #ifdef __linux__
@@ -79,20 +80,19 @@ inline auto _gettid() -> pid_t
 #endif
 }
 
-int translate_error(const char *name)
+auto translate_error(const std::string_view name) -> int
 {
-    if(strcmp(name, DBUS_ERROR_NO_MEMORY) == 0)
+    if(name == DBUS_ERROR_NO_MEMORY)
         return -ENOMEM;
-    if(strcmp(name, DBUS_ERROR_SERVICE_UNKNOWN) == 0
-        || strcmp(name, DBUS_ERROR_NAME_HAS_NO_OWNER) == 0)
+    if(name == DBUS_ERROR_SERVICE_UNKNOWN || name == DBUS_ERROR_NAME_HAS_NO_OWNER)
         return -ENOENT;
-    if(strcmp(name, DBUS_ERROR_ACCESS_DENIED) == 0
-        || strcmp(name, DBUS_ERROR_AUTH_FAILED) == 0)
+    if(name == DBUS_ERROR_ACCESS_DENIED || name == DBUS_ERROR_AUTH_FAILED)
         return -EACCES;
     return -EIO;
 }
 
-int rtkit_get_int_property(DBusConnection *connection, const char *propname, long long *propval)
+auto rtkit_get_int_property(DBusConnection *connection, gsl::czstring propname, long long *propval)
+    -> int
 {
     const auto m = dbus::MessagePtr{dbus_message_new_method_call(RTKIT_SERVICE_NAME,
         RTKIT_OBJECT_PATH, "org.freedesktop.DBus.Properties", "Get")};

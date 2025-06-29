@@ -1014,25 +1014,21 @@ void ALeffectslot::eax_commit()
         eax_set_efx_slot_effect(*mEaxEffect);
 }
 
-[[noreturn]] void ALeffectslot::eax_fail(const char* message)
-{
-    throw Exception{message};
-}
+[[noreturn]]
+void ALeffectslot::eax_fail(const std::string_view message)
+{ throw Exception{message}; }
 
-[[noreturn]] void ALeffectslot::eax_fail_unknown_effect_id()
-{
-    eax_fail("Unknown effect ID.");
-}
+[[noreturn]]
+void ALeffectslot::eax_fail_unknown_effect_id()
+{ eax_fail("Unknown effect ID."); }
 
-[[noreturn]] void ALeffectslot::eax_fail_unknown_property_id()
-{
-    eax_fail("Unknown property ID.");
-}
+[[noreturn]]
+void ALeffectslot::eax_fail_unknown_property_id()
+{ eax_fail("Unknown property ID."); }
 
-[[noreturn]] void ALeffectslot::eax_fail_unknown_version()
-{
-    eax_fail("Unknown version.");
-}
+[[noreturn]]
+void ALeffectslot::eax_fail_unknown_version()
+{ eax_fail("Unknown version."); }
 
 void ALeffectslot::eax4_fx_slot_ensure_unlocked() const
 {

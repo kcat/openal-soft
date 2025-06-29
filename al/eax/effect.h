@@ -3,6 +3,7 @@
 
 #include <cassert>
 #include <memory>
+#include <string_view>
 #include <variant>
 
 #include "AL/al.h"
@@ -66,7 +67,7 @@ struct EaxReverbCommitter {
     EaxEffectProps &mEaxProps;
     EffectProps &mAlProps;
 
-    [[noreturn]] static void fail(const char* message);
+    [[noreturn]] static void fail(const std::string_view message);
     [[noreturn]] static void fail_unknown_property_id()
     { fail(EaxEffectErrorMessages::unknown_property_id()); }
 
@@ -134,7 +135,7 @@ struct EaxCommitter {
         property = value;
     }
 
-    [[noreturn]] static void fail(const char *message);
+    [[noreturn]] static void fail(const std::string_view message);
     [[noreturn]] static void fail_unknown_property_id()
     { fail(EaxEffectErrorMessages::unknown_property_id()); }
 

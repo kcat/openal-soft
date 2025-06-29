@@ -24,6 +24,7 @@
 #include "filters/nfc.h"
 #include "flexarray.h"
 #include "fmt/core.h"
+#include "gsl/gsl"
 #include "intrusive_ptr.h"
 #include "mixer/hrtfdefs.h"
 #include "opthelpers.h"
@@ -412,9 +413,9 @@ public:
 /* Must be less than 15 characters (16 including terminating null) for
  * compatibility with pthread_setname_np limitations. */
 [[nodiscard]] constexpr
-auto GetMixerThreadName() noexcept -> const char* { return "alsoft-mixer"; }
+auto GetMixerThreadName() noexcept -> gsl::czstring { return "alsoft-mixer"; }
 
 [[nodiscard]] constexpr
-auto GetRecordThreadName() noexcept -> const char* { return "alsoft-record"; }
+auto GetRecordThreadName() noexcept -> gsl::czstring { return "alsoft-record"; }
 
 #endif /* CORE_DEVICE_H */

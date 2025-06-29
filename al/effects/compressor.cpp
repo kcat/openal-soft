@@ -91,17 +91,14 @@ struct AllValidator {
 } // namespace
 
 template<>
-struct CompressorCommitter::Exception : public EaxException
-{
-    explicit Exception(const char *message) : EaxException{"EAX_CHORUS_EFFECT", message}
+struct CompressorCommitter::Exception : public EaxException {
+    explicit Exception(const std::string_view message) : EaxException{"EAX_CHORUS_EFFECT", message}
     { }
 };
 
-template<>
-[[noreturn]] void CompressorCommitter::fail(const char *message)
-{
-    throw Exception{message};
-}
+template<> [[noreturn]]
+void CompressorCommitter::fail(const std::string_view message)
+{ throw Exception{message}; }
 
 bool EaxCompressorCommitter::commit(const EAXAGCCOMPRESSORPROPERTIES &props)
 {

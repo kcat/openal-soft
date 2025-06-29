@@ -1,5 +1,9 @@
 #include "config.h"
+
 #include "call.h"
+
+#include <string_view>
+
 #include "exception.h"
 
 namespace {
@@ -8,9 +12,8 @@ constexpr auto deferred_flag = 0x80000000U;
 
 class EaxCallException : public EaxException {
 public:
-    explicit EaxCallException(const char* message)
-        : EaxException{"EAX_CALL", message}
-    {}
+    explicit EaxCallException(const std::string_view message) : EaxException{"EAX_CALL", message}
+    { }
 }; // EaxCallException
 
 } // namespace
@@ -192,7 +195,7 @@ EaxCall::EaxCall(EaxCallType type, const GUID &property_set_guid, ALuint propert
     }
 }
 
-[[noreturn]] void EaxCall::fail(const char* message)
+[[noreturn]] void EaxCall::fail(const std::string_view message)
 {
     throw EaxCallException{message};
 }

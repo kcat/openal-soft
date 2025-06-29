@@ -9,7 +9,7 @@
 #include "fmt/core.h"
 #include "strutils.hpp"
 
-auto LoadLib(const char *name) -> al::expected<void*, std::string>
+auto LoadLib(const gsl::czstring name) -> al::expected<void*, std::string>
 {
     if(auto res = LoadLibraryW(utf8_to_wstr(name).c_str()))
         return res;
@@ -30,7 +30,7 @@ auto LoadLib(const char *name) -> al::expected<void*, std::string>
 void CloseLib(void *handle)
 { FreeLibrary(static_cast<HMODULE>(handle)); }
 
-auto GetSymbol(void *handle, const char *name) -> al::expected<void*, std::string>
+auto GetSymbol(void *handle, const gsl::czstring name) -> al::expected<void*, std::string>
 {
     if(auto sym = GetProcAddress(static_cast<HMODULE>(handle), name))
     {
@@ -55,7 +55,7 @@ auto GetSymbol(void *handle, const char *name) -> al::expected<void*, std::strin
 
 #include <dlfcn.h>
 
-auto LoadLib(const char *name) -> al::expected<void*, std::string>
+auto LoadLib(const gsl::czstring name) -> al::expected<void*, std::string>
 {
     dlerror();
     auto *handle = dlopen(name, RTLD_NOW);
@@ -70,7 +70,7 @@ auto LoadLib(const char *name) -> al::expected<void*, std::string>
 void CloseLib(void *handle)
 { dlclose(handle); }
 
-auto GetSymbol(void *handle, const char *name) -> al::expected<void*, std::string>
+auto GetSymbol(void *handle, const gsl::czstring name) -> al::expected<void*, std::string>
 {
     dlerror();
     auto *sym = dlsym(handle, name);

@@ -378,7 +378,7 @@ auto GetConfigValue(const std::string_view devName, const std::string_view block
 #ifdef _WIN32
 void ReadALConfig()
 {
-    fs::path path;
+    auto path = fs::path{};
 
 #if !defined(_GAMING_XBOX)
     {
@@ -400,7 +400,7 @@ void ReadALConfig()
             path /= L"alsoft.ini";
 
             TRACE("Loading config {}...", al::u8_as_char(path.u8string()));
-            if(fs::ifstream f{path}; f.is_open())
+            if(auto f = fs::ifstream{path}; f.is_open())
                 LoadConfigFromFile(f);
         }
     }

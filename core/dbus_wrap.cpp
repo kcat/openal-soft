@@ -7,12 +7,13 @@
 
 #include <type_traits>
 
+#include "gsl/gsl"
 #include "logging.h"
 
 
 void PrepareDBus()
 {
-    const char *libname{"libdbus-1.so.3"};
+    auto *libname = "libdbus-1.so.3";
 
     if(auto libresult = LoadLib(libname))
         dbus_handle = libresult.value();
@@ -22,7 +23,7 @@ void PrepareDBus()
         return;
     }
 
-    static constexpr auto load_func = [](auto *&func, const char *name) -> bool
+    static constexpr auto load_func = [](auto &func, const gsl::czstring name) -> bool
     {
         using func_t = std::remove_reference_t<decltype(func)>;
         auto funcresult = GetSymbol(dbus_handle, name);

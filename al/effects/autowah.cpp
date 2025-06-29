@@ -156,17 +156,13 @@ struct AllValidator {
 } // namespace
 
 template<>
-struct AutowahCommitter::Exception : public EaxException
-{
-    explicit Exception(const char *message) : EaxException{"EAX_AUTOWAH_EFFECT", message}
+struct AutowahCommitter::Exception : public EaxException {
+    explicit Exception(const std::string_view message) : EaxException{"EAX_AUTOWAH_EFFECT", message}
     { }
 };
 
-template<>
-[[noreturn]] void AutowahCommitter::fail(const char *message)
-{
-    throw Exception{message};
-}
+template<> [[noreturn]]
+void AutowahCommitter::fail(const std::string_view message) { throw Exception{message}; }
 
 bool EaxAutowahCommitter::commit(const EAXAUTOWAHPROPERTIES &props)
 {

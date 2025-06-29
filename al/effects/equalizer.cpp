@@ -274,15 +274,14 @@ struct AllValidator {
 
 template<>
 struct EqualizerCommitter::Exception : public EaxException {
-    explicit Exception(const char* message) : EaxException{"EAX_EQUALIZER_EFFECT", message}
+    explicit Exception(const std::string_view message)
+        : EaxException{"EAX_EQUALIZER_EFFECT", message}
     { }
 };
 
-template<>
-[[noreturn]] void EqualizerCommitter::fail(const char *message)
-{
-    throw Exception{message};
-}
+template<> [[noreturn]]
+void EqualizerCommitter::fail(const std::string_view message)
+{ throw Exception{message}; }
 
 bool EaxEqualizerCommitter::commit(const EAXEQUALIZERPROPERTIES &props)
 {

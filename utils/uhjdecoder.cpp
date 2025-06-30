@@ -41,15 +41,14 @@
 #include <string>
 #include <string_view>
 #include <system_error>
-#include <utility>
 #include <vector>
 
-#include "almalloc.h"
 #include "alnumeric.h"
 #include "fmt/core.h"
-#include "vector.h"
+#include "gsl/gsl"
 #include "opthelpers.h"
 #include "phase_shifter.h"
+#include "vector.h"
 
 #include "sndfile.h"
 
@@ -60,15 +59,8 @@ namespace {
 
 using namespace std::string_view_literals;
 
-struct FileDeleter {
-    void operator()(gsl::owner<FILE*> file) { fclose(file); }
-};
-using FilePtr = std::unique_ptr<FILE,FileDeleter>;
-
-struct SndFileDeleter {
-    void operator()(SNDFILE *sndfile) { sf_close(sndfile); }
-};
-using SndFilePtr = std::unique_ptr<SNDFILE,SndFileDeleter>;
+using FilePtr = std::unique_ptr<FILE, decltype([](gsl::owner<FILE*> file) { fclose(file); })>;
+using SndFilePtr = std::unique_ptr<SNDFILE, decltype([](SNDFILE *sndfile) { sf_close(sndfile); })>;
 
 using ubyte = unsigned char;
 using ushort = unsigned short;
@@ -85,14 +77,16 @@ constexpr auto SUBTYPE_BFORMAT_FLOAT = std::array<ubyte,16>{
 
 void fwrite16le(ushort val, FILE *f)
 {
-    auto data = std::array{static_cast<ubyte>(val&0xff), static_cast<ubyte>((val>>8)&0xff)};
+    const auto data = std::array{gsl::narrow_cast<ubyte>(val&0xff),
+        gsl::narrow_cast<ubyte>((val>>8)&0xff)};
     fwrite(data.data(), 1, data.size(), f);
 }
 
 void fwrite32le(uint val, FILE *f)
 {
-    auto data = std::array{static_cast<ubyte>(val&0xff), static_cast<ubyte>((val>>8)&0xff),
-        static_cast<ubyte>((val>>16)&0xff), static_cast<ubyte>((val>>24)&0xff)};
+    const auto data = std::array{gsl::narrow_cast<ubyte>(val&0xff),
+        gsl::narrow_cast<ubyte>((val>>8)&0xff), gsl::narrow_cast<ubyte>((val>>16)&0xff),
+        gsl::narrow_cast<ubyte>((val>>24)&0xff)};
     fwrite(data.data(), 1, data.size(), f);
 }
 
@@ -404,7 +398,7 @@ auto main(std::span<std::string_view> args) -> int
         if(ininfo.channels == 2)
             outchans = 3;
         else if(ininfo.channels == 3 || ininfo.channels == 4)
-            outchans = static_cast<uint>(ininfo.channels);
+            outchans = gsl::narrow_cast<uint>(ininfo.channels);
         else
         {
             fmt::println(stderr, "{} is not a 2-, 3-, or 4-channel file", arg);
@@ -441,19 +435,20 @@ auto main(std::span<std::string_view> args) -> int
         // 16-bit val, format type id (extensible: 0xFFFE)
         fwrite16le(0xFFFE, outfile.get());
         // 16-bit val, channel count
-        fwrite16le(static_cast<ushort>(outchans), outfile.get());
+        fwrite16le(gsl::narrow_cast<ushort>(outchans), outfile.get());
         // 32-bit val, frequency
-        fwrite32le(static_cast<uint>(ininfo.samplerate), outfile.get());
+        fwrite32le(gsl::narrow_cast<uint>(ininfo.samplerate), outfile.get());
         // 32-bit val, bytes per second
-        fwrite32le(static_cast<uint>(ininfo.samplerate)*outchans*uint{sizeof(float)}, outfile.get());
+        fwrite32le(gsl::narrow_cast<uint>(ininfo.samplerate)*outchans*uint{sizeof(float)},
+            outfile.get());
         // 16-bit val, frame size
-        fwrite16le(static_cast<ushort>(sizeof(float)*outchans), outfile.get());
+        fwrite16le(gsl::narrow_cast<ushort>(sizeof(float)*outchans), outfile.get());
         // 16-bit val, bits per sample
-        fwrite16le(static_cast<ushort>(sizeof(float)*8), outfile.get());
+        fwrite16le(gsl::narrow_cast<ushort>(sizeof(float)*8), outfile.get());
         // 16-bit val, extra byte count
         fwrite16le(22, outfile.get());
         // 16-bit val, valid bits per sample
-        fwrite16le(static_cast<ushort>(sizeof(float)*8), outfile.get());
+        fwrite16le(gsl::narrow_cast<ushort>(sizeof(float)*8), outfile.get());
         // 32-bit val, channel mask
         fwrite32le(0, outfile.get());
         // 16 byte GUID, sub-type format
@@ -471,7 +466,8 @@ auto main(std::span<std::string_view> args) -> int
         auto DataStart = ftell(outfile.get());
 
         auto decoder = std::make_unique<UhjDecoder>();
-        auto inmem = std::vector<float>(size_t{BufferLineSize}*static_cast<uint>(ininfo.channels));
+        auto inmem = std::vector<float>(size_t{BufferLineSize}
+            * gsl::narrow_cast<uint>(ininfo.channels));
         auto decmem = al::vector<std::array<float,BufferLineSize>, 16>(outchans);
         auto outmem = std::vector<byte4>(size_t{BufferLineSize}*outchans);
 
@@ -494,9 +490,9 @@ auto main(std::span<std::string_view> args) -> int
                 LeadOut -= remaining;
             }
 
-            auto got = static_cast<size_t>(sgot);
+            auto got = gsl::narrow_cast<size_t>(sgot);
             if(ininfo.channels > 2 || use_general)
-                decoder->decode(inmem, static_cast<uint>(ininfo.channels), decmem, got);
+                decoder->decode(inmem, gsl::narrow_cast<uint>(ininfo.channels), decmem, got);
             else
                 decoder->decode2(inmem, decmem, got);
             if(LeadIn >= got)
@@ -509,7 +505,7 @@ auto main(std::span<std::string_view> args) -> int
             for(auto i = 0_uz;i < got;++i)
             {
                 /* Attenuate by -3dB for FuMa output levels. */
-                static constexpr auto inv_sqrt2 = static_cast<float>(1.0/std::numbers::sqrt2);
+                static constexpr auto inv_sqrt2 = gsl::narrow_cast<float>(1.0/std::numbers::sqrt2);
                 for(auto j = 0_uz;j < outchans;++j)
                     outmem[i*outchans + j] = f32AsLEBytes(decmem[j][LeadIn+i] * inv_sqrt2);
             }
@@ -529,9 +525,9 @@ auto main(std::span<std::string_view> args) -> int
         {
             auto dataLen = DataEnd - DataStart;
             if(fseek(outfile.get(), 4, SEEK_SET) == 0)
-                fwrite32le(static_cast<uint>(DataEnd-8), outfile.get()); // 'WAVE' header len
+                fwrite32le(gsl::narrow_cast<uint>(DataEnd-8), outfile.get()); // 'WAVE' header len
             if(fseek(outfile.get(), DataStart-4, SEEK_SET) == 0)
-                fwrite32le(static_cast<uint>(dataLen), outfile.get()); // 'data' header len
+                fwrite32le(gsl::narrow_cast<uint>(dataLen), outfile.get()); // 'data' header len
         }
         fflush(outfile.get());
         ++num_decoded;
@@ -549,8 +545,7 @@ auto main(std::span<std::string_view> args) -> int
 
 auto main(int argc, char **argv) -> int
 {
-    assert(argc >= 0);
-    auto args = std::vector<std::string_view>(static_cast<unsigned int>(argc));
+    auto args = std::vector<std::string_view>(gsl::narrow<unsigned>(argc));
     std::ranges::copy(std::views::counted(argv, argc), args.begin());
     return main(std::span{args});
 }

@@ -11,8 +11,10 @@
 #include <utility>
 
 #include "fmt/core.h"
+#include "gsl/gsl"
 
 
+[[nodiscard]]
 auto InitAL(std::span<std::string_view> &args, const ALCint *attribs=nullptr)
 {
     struct Handle {
@@ -25,7 +27,6 @@ auto InitAL(std::span<std::string_view> &args, const ALCint *attribs=nullptr)
             : device{std::exchange(rhs.device, nullptr)}
             , context{std::exchange(rhs.context, nullptr)}
         { }
-        auto operator=(const Handle&) -> Handle& = delete;
         ~Handle()
         {
             if(context)
@@ -33,6 +34,8 @@ auto InitAL(std::span<std::string_view> &args, const ALCint *attribs=nullptr)
             if(device)
                 alcCloseDevice(device);
         }
+        auto operator=(const Handle&) -> Handle& = delete;
+        auto operator=(Handle&&) -> Handle& = delete;
 
         auto close() -> void
         {
@@ -58,23 +61,18 @@ auto InitAL(std::span<std::string_view> &args, const ALCint *attribs=nullptr)
         hdl.device = alcOpenDevice(nullptr);
     if(!hdl.device)
     {
-        fmt::println(stderr, "Could not open a device!");
-        throw std::runtime_error{"Failed to initialize OpenAL"};
+        fmt::println(stderr, "Could not open a device");
+        throw std::runtime_error{"Failed to open a device"};
     }
 
     hdl.context = alcCreateContext(hdl.device, attribs);
     if(!hdl.context || alcMakeContextCurrent(hdl.context) == ALC_FALSE)
     {
-        if(hdl.context)
-            alcDestroyContext(hdl.context);
-        hdl.context = nullptr;
-        alcCloseDevice(hdl.device);
-        hdl.device = nullptr;
-        fmt::println(stderr, "Could not set a context!");
-        throw std::runtime_error{"Failed to initialize OpenAL"};
+        fmt::println(stderr, "Could not set a context");
+        throw std::runtime_error{"Failed to initialize an OpenAL context"};
     }
 
-    const ALCchar *name{};
+    auto *name = gsl::czstring{};
     if(alcIsExtensionPresent(hdl.device, "ALC_ENUMERATE_ALL_EXT"))
         name = alcGetString(hdl.device, ALC_ALL_DEVICES_SPECIFIER);
     if(!name || alcGetError(hdl.device) != ALC_NO_ERROR)

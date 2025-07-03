@@ -62,7 +62,7 @@ struct ContextProps {
     std::atomic<ContextProps*> next;
 };
 
-struct ContextParams {
+struct SIMDALIGN ContextParams {
     /* Pointer to the most recent property values that are awaiting an update. */
     std::atomic<ContextProps*> ContextUpdate{nullptr};
 

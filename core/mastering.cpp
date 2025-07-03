@@ -19,7 +19,7 @@
 /* These structures assume BufferLineSize is a power of 2. */
 static_assert((BufferLineSize & (BufferLineSize-1)) == 0, "BufferLineSize is not a power of 2");
 
-struct SIMDALIGN SlidingHold {
+struct SlidingHold {
     alignas(16) FloatBufferLine mValues;
     std::array<uint,BufferLineSize> mExpiries;
     uint mLowerIndex;

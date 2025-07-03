@@ -16,7 +16,6 @@
 #include "alnumeric.h"
 #include "bsinc_defs.h"
 #include "gsl/gsl"
-#include "opthelpers.h"
 #include "resampler_limits.h"
 
 
@@ -160,7 +159,7 @@ constexpr auto bsinc48_hdr = BSincHeader{80, 47, 1};
 
 
 template<const BSincHeader &hdr>
-struct SIMDALIGN BSincFilterArray {
+struct BSincFilterArray {
     alignas(16) std::array<float, hdr.total_size> mTable{};
 
     BSincFilterArray() noexcept

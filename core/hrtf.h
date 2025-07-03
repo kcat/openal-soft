@@ -16,10 +16,9 @@
 #include "flexarray.h"
 #include "intrusive_ptr.h"
 #include "mixer/hrtfdefs.h"
-#include "opthelpers.h"
 
 
-struct SIMDALIGN HrtfStore {
+struct HrtfStore {
     alignas(16) std::atomic<uint> mRef;
 
     uint mSampleRate : 24;

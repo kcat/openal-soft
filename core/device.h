@@ -27,7 +27,6 @@
 #include "gsl/gsl"
 #include "intrusive_ptr.h"
 #include "mixer/hrtfdefs.h"
-#include "opthelpers.h"
 #include "resampler_limits.h"
 #include "uhjfilter.h"
 #include "vector.h"
@@ -220,7 +219,7 @@ enum class DeviceState : std::uint8_t {
 };
 
 /* NOLINTNEXTLINE(clang-analyzer-optin.performance.Padding) */
-struct SIMDALIGN DeviceBase {
+struct DeviceBase {
     std::atomic<bool> Connected{true};
     const DeviceType Type{};
 

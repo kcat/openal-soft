@@ -11,12 +11,11 @@
 #include "bufferline.h"
 #include "devformat.h"
 #include "filters/splitter.h"
-#include "opthelpers.h"
 
 
 using ChannelDec = std::array<float,MaxAmbiChannels>;
 
-class SIMDALIGN BFormatDec {
+class BFormatDec {
     static constexpr size_t sHFBand{0};
     static constexpr size_t sLFBand{1};
     static constexpr size_t sNumBands{2};

@@ -177,6 +177,14 @@ if(WIN32)
     set(CPP_DEFS ${CPP_DEFS} _WIN32 NOMINMAX WIN32_LEAN_AND_MEAN)
     if(MINGW)
         set(CPP_DEFS ${CPP_DEFS} __USE_MINGW_ANSI_STDIO)
+        # HACK: 32-bit MinGW defines __STDCPP_DEFAULT_NEW_ALIGNMENT__ to 16,
+        # while its default operator new relies on the system/Windows malloc
+        # that only guarantees 8-byte alignment, leading to structs that need
+        # 16-byte alignment being misaligned. This switch overrides that to
+        # assume only 8-byte alignment from the default operator new.
+        if(CMAKE_SIZEOF_VOID_P MATCHES "4")
+            set(C_DEFS ${C_DEFS} $<$<COMPILE_LANGUAGE:CXX>:-faligned-new=8>)
+        endif()
     endif()
 
     option(ALSOFT_BUILD_ROUTER  "Build the router (EXPERIMENTAL; creates OpenAL32.dll and soft_oal.dll)"  OFF)

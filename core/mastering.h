@@ -8,7 +8,6 @@
 
 #include "alnumeric.h"
 #include "bufferline.h"
-#include "opthelpers.h"
 #include "vector.h"
 
 struct SlidingHold;
@@ -26,7 +25,7 @@ using uint = unsigned int;
  *
  *   http://c4dm.eecs.qmul.ac.uk/audioengineering/compressors/
  */
-class SIMDALIGN Compressor {
+class Compressor {
     struct AutoFlags {
         bool Knee : 1;
         bool Attack : 1;

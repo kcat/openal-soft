@@ -8,7 +8,7 @@
 #include "opthelpers.h"
 
 
-struct SIMDALIGN CubicTable {
+struct CubicTable {
     std::array<CubicCoefficients,CubicPhaseCount> mTable{};
 };
 

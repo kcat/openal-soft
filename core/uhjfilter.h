@@ -8,7 +8,6 @@
 #include <string_view>
 
 #include "bufferline.h"
-#include "opthelpers.h"
 
 
 inline constexpr std::size_t UhjLength256{256};
@@ -34,7 +33,7 @@ struct UhjAllPassFilter {
 };
 
 
-struct SIMDALIGN UhjEncoderBase {
+struct UhjEncoderBase {
     UhjEncoderBase() = default;
     UhjEncoderBase(const UhjEncoderBase&) = delete;
     UhjEncoderBase(UhjEncoderBase&&) = delete;
@@ -133,7 +132,7 @@ struct UhjEncoderIIR final : public UhjEncoderBase {
 };
 
 
-struct SIMDALIGN DecoderBase {
+struct DecoderBase {
     static constexpr std::size_t sMaxPadding{256};
 
     /* For 2-channel UHJ, shelf filters should use these LF responses. */

@@ -130,12 +130,12 @@ const auto ConeScale = InitConeScale();
 /* Localized scalars for mono sources (initialized in aluInit, after
  * configuration is loaded).
  */
-float XScale{1.0f};
-float YScale{1.0f};
-float ZScale{1.0f};
+auto XScale = 1.0f;
+auto YScale = 1.0f;
+auto ZScale = 1.0f;
 
 /* Source distance scale for NFC filters. */
-float NfcScale{1.0f};
+auto NfcScale = 1.0f;
 
 
 using HrtfDirectMixerFunc = void(*)(const FloatBufferSpan LeftOut, const FloatBufferSpan RightOut,
@@ -163,8 +163,8 @@ auto SelectHrtfMixer() -> HrtfDirectMixerFunc
 
 inline void BsincPrepare(const uint increment, BsincState *state, const BSincTable *table)
 {
-    size_t si{BSincScaleCount - 1};
-    float sf{0.0f};
+    auto si = size_t{BSincScaleCount - 1};
+    auto sf = 0.0f;
 
     if(increment > MixerFracOne)
     {
@@ -185,7 +185,7 @@ inline void BsincPrepare(const uint increment, BsincState *state, const BSincTab
     state->filter = table->Tab.subspan(table->filterOffset[si]);
 }
 
-inline ResamplerFunc SelectResampler(Resampler resampler, uint increment)
+inline auto SelectResampler(Resampler resampler, uint increment) -> ResamplerFunc
 {
     switch(resampler)
     {
@@ -270,7 +270,7 @@ void aluInit(CompatFlagBitset flags, const float nfcscale)
 }
 
 
-ResamplerFunc PrepareResampler(Resampler resampler, uint increment, InterpState *state)
+auto PrepareResampler(Resampler resampler, uint increment, InterpState *state) -> ResamplerFunc
 {
     switch(resampler)
     {
@@ -443,7 +443,7 @@ namespace {
  * and starting with a seed value of 22222, is suitable for generating
  * whitenoise.
  */
-inline uint dither_rng(uint *seed) noexcept
+inline auto dither_rng(uint *seed) noexcept -> uint
 {
     *seed = (*seed * 96314165) + 907633515;
     return *seed;
@@ -675,8 +675,8 @@ inline auto ScaleAzimuthFront3_2(std::array<float,3> pos) -> std::array<float,3>
     if(pos[2] < 0.0f)
     {
         const auto len2d = std::sqrt(pos[0]*pos[0] + pos[2]*pos[2]);
-        float x = pos[0] / len2d;
-        float z = -pos[2] / len2d;
+        auto x = pos[0] / len2d;
+        auto z = -pos[2] / len2d;
 
         /* Z > cos(pi/3) = -60 < azimuth < 60 degrees. */
         if(z > 0.5f)
@@ -1324,8 +1324,8 @@ void CalcNormalPanning(Voice *voice, const float xpos, const float ypos, const f
             const auto w0 = SpeedOfSoundMetersPerSec / (mdist * samplerate);
 
             /* Adjust NFC filters. */
-            for(const auto c : std::views::iota(0_uz, chans.size()))
-                voice->mChans[c].mDryParams.NFCtrlFilter.adjust(w0);
+            for(auto &chanparams : voice->mChans | std::views::take(chans.size()))
+                chanparams.mDryParams.NFCtrlFilter.adjust(w0);
 
             voice->mFlags.set(VoiceHasNfc);
         }
@@ -1404,12 +1404,15 @@ void CalcNormalPanning(Voice *voice, const float xpos, const float ypos, const f
     {
         if(device->AvgSpeakerDist > 0.0f)
         {
-            /* If the source distance is 0, simulate a plane-wave by using
-             * infinite distance, which results in a w0 of 0.
+            /* If the source distance is 0, use an "identity" filter so it
+             * aligns to the average speaker distance. This avoids excessive
+             * high-pass effects on a sound that is at nominal volume, though
+             * it does mean it will simulate the sound being at that distance
+             * with ambisonic output when decoded with near-field compensation.
              */
-            static constexpr auto w0 = 0.0f;
-            for(const auto c : std::views::iota(0_uz, chans.size()))
-                voice->mChans[c].mDryParams.NFCtrlFilter.adjust(w0);
+            const auto w0 = SpeedOfSoundMetersPerSec / (device->AvgSpeakerDist * samplerate);
+            for(auto &chanparams : voice->mChans | std::views::take(chans.size()))
+                chanparams.mDryParams.NFCtrlFilter.adjust(w0);
 
             voice->mFlags.set(VoiceHasNfc);
         }

@@ -183,7 +183,7 @@ if(WIN32)
         # 16-byte alignment being misaligned. This switch overrides that to
         # assume only 8-byte alignment from the default operator new.
         if(CMAKE_SIZEOF_VOID_P MATCHES "4")
-            set(C_DEFS ${C_DEFS} $<$<COMPILE_LANGUAGE:CXX>:-faligned-new=8>)
+            set(C_FLAGS ${C_FLAGS} $<$<COMPILE_LANGUAGE:CXX>:-faligned-new=8>)
         endif()
     endif()
 

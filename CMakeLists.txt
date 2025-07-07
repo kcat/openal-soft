@@ -1509,8 +1509,9 @@ else()
                 message(FATAL_ERROR "Please install this executable, and run CMake again.")
             endif()
 
-            exec_program(${NUGET_EXE}
-                ARGS install "Microsoft.Windows.CppWinRT" -Version ${ALSOFT_CPPWINRT_VERSION} -ExcludeVersion -OutputDirectory "\"${CMAKE_BINARY_DIR}/packages\"")
+            execute_process(COMMAND ${NUGET_EXE} install "Microsoft.Windows.CppWinRT"
+                -Version ${ALSOFT_CPPWINRT_VERSION} -ExcludeVersion
+                -OutputDirectory "${CMAKE_BINARY_DIR}/packages")
 
             set_target_properties(${IMPL_TARGET} PROPERTIES
                 VS_PROJECT_IMPORT ${CMAKE_BINARY_DIR}/packages/Microsoft.Windows.CppWinRT/build/native/Microsoft.Windows.CppWinRT.props

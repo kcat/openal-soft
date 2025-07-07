@@ -435,7 +435,7 @@ constexpr auto make_float_array(std::integer_sequence<T,N...>)
 /* SSE and co like 16-bytes aligned pointers */
 /* with a 64-byte alignment, we are even aligned on L2 cache lines... */
 constexpr auto V4sfAlignment = 64_uz;
-constexpr auto V4sfAlignVal = std::align_val_t(V4sfAlignment);
+constexpr auto V4sfAlignVal = gsl::narrow<std::align_val_t>(V4sfAlignment);
 
 /* NOLINTBEGIN(cppcoreguidelines-pro-bounds-pointer-arithmetic)
  * FIXME: Converting this from raw pointers to spans or something will probably

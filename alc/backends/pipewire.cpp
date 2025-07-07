@@ -645,7 +645,7 @@ auto gEventHandler = EventManager{};
 enum class NodeType : unsigned char {
     Sink, Source, Duplex
 };
-constexpr auto InvalidChannelConfig = DevFmtChannels(255);
+constexpr auto InvalidChannelConfig = gsl::narrow<DevFmtChannels>(255);
 struct DeviceNode {
     uint32_t mId{};
 

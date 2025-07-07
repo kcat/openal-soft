@@ -76,7 +76,6 @@
 #include <algorithm>
 #include <array>
 #include <bit>
-#include <cassert>
 #include <cstdint>
 #include <fstream>
 #include <functional>
@@ -411,7 +410,7 @@ auto LafStream::prepareTrack(const size_t trackidx, const size_t count) -> std::
         });
 
         const auto step = size_t{mNumEnabled};
-        assert(idx < step);
+        Expects(idx < step);
         return std::visit([=,src=std::span{mSampleChunk}](auto &dst)
         {
             using sample_t = typename std::remove_cvref_t<decltype(dst)>::value_type;
@@ -997,10 +996,9 @@ auto main(std::span<std::string_view> args) -> int
 
 } // namespace
 
-int main(int argc, char **argv)
+auto main(int argc, char **argv) -> int
 {
-    MyAssert(argc >= 0);
-    auto args = std::vector<std::string_view>(static_cast<unsigned int>(argc));
+    auto args = std::vector<std::string_view>(gsl::narrow<unsigned int>(argc));
     std::ranges::copy(std::views::counted(argv, argc), args.begin());
     return main(std::span{args});
 }

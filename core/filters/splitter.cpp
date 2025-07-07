@@ -4,10 +4,11 @@
 #include "splitter.h"
 
 #include <algorithm>
-#include <cassert>
 #include <cmath>
 #include <limits>
 #include <numbers>
+
+#include "gsl/gsl"
 
 
 void BandSplitter::init(float f0norm)
@@ -33,7 +34,7 @@ void BandSplitter::process(const std::span<const float> input, const std::span<f
     auto lp_z2 = mLpZ2;
     auto ap_z1 = mApZ1;
 
-    assert(lpout.size() <= input.size());
+    Expects(lpout.size() <= input.size());
     auto lpiter = lpout.begin();
     std::ranges::transform(input, hpout.begin(),
         [ap_coeff,lp_coeff,&lp_z1,&lp_z2,&ap_z1,&lpiter](const float in) noexcept -> float

@@ -27,7 +27,6 @@
 #include <algorithm>
 #include <array>
 #include <bit>
-#include <cassert>
 #include <cerrno>
 #include <complex>
 #include <cstddef>

@@ -27,7 +27,6 @@
  */
 
 #include <algorithm>
-#include <cassert>
 #include <cstddef>
 #include <cstdio>
 #include <limits>
@@ -47,6 +46,7 @@
 
 #include "common/alhelpers.h"
 #include "fmt/core.h"
+#include "gsl/gsl"
 
 #include "win_main_utf8.h"
 
@@ -404,7 +404,7 @@ auto main(std::span<std::string_view> args) -> int
         /* NOLINTEND(cppcoreguidelines-pro-type-reinterpret-cast) */
 #undef LOAD_PROC
         device = p_alcOpenDevice(devname.c_str());
-        assert(device != nullptr);
+        Ensures(device != nullptr);
     }
 
     /* Load the Direct API functions we're using. */
@@ -453,7 +453,7 @@ auto main(std::span<std::string_view> args) -> int
     auto source = ALuint{0u};
     alGenSourcesDirect(context, 1, &source);
     alSourceiDirect(context, source, AL_BUFFER, static_cast<ALint>(buffer));
-    assert(alGetErrorDirect(context)==AL_NO_ERROR && "Failed to setup sound source");
+    Expects(alGetErrorDirect(context)==AL_NO_ERROR && "Failed to setup sound source");
 
     /* Play the sound until it finishes. */
     alSourcePlayDirect(context, source);
@@ -484,8 +484,7 @@ auto main(std::span<std::string_view> args) -> int
 
 auto main(int argc, char **argv) -> int
 {
-    assert(argc >= 0);
-    auto args = std::vector<std::string_view>(static_cast<unsigned int>(argc));
+    auto args = std::vector<std::string_view>(gsl::narrow<unsigned int>(argc));
     std::ranges::copy(std::views::counted(argv, argc), args.begin());
     return main(std::span{args});
 }

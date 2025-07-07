@@ -24,7 +24,6 @@
 
 #include <algorithm>
 #include <atomic>
-#include <cassert>
 #include <cerrno>
 #include <chrono>
 #include <cstring>
@@ -415,7 +414,7 @@ auto verify_state(snd_pcm_t *handle) -> int
          * best we can do.
          */
         case 1024 /*SND_PCM_STATE_PRIVATE1*/:
-            assert(state == 1024);
+            break;
     }
 
     return state;

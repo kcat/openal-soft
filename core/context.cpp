@@ -1,7 +1,6 @@
 
 #include "config.h"
 
-#include <cassert>
 #include <functional>
 #include <limits>
 #include <memory>
@@ -12,6 +11,7 @@
 #include "context.h"
 #include "device.h"
 #include "effectslot.h"
+#include "gsl/gsl"
 #include "logging.h"
 #include "ringbuffer.h"
 #include "voice.h"
@@ -23,7 +23,7 @@ static_assert(std::atomic<ContextBase::AsyncEventBitset>::is_always_lock_free, "
 #endif
 
 ContextBase::ContextBase(DeviceBase *device) : mDevice{device}
-{ assert(mEnabledEvts.is_lock_free()); }
+{ Expects(mEnabledEvts.is_lock_free()); }
 
 ContextBase::~ContextBase()
 {

@@ -27,7 +27,6 @@
 #include <atomic>
 #include <bit>
 #include <bitset>
-#include <cassert>
 #include <chrono>
 #include <cmath>
 #include <concepts>
@@ -289,7 +288,7 @@ auto GetSourceSecOffset(ALsource *Source, ALCcontext *context, nanoseconds *cloc
             return iter->mBuffer.get();
         return nullptr;
     });
-    assert(BufferFmt != nullptr);
+    Ensures(BufferFmt != nullptr);
 
     std::ignore = std::ranges::find_if(Source->mQueue,
         [Current,&readPos](const ALbufferQueueItem &item)
@@ -2619,7 +2618,7 @@ void StartSources(const gsl::not_null<ALCcontext*> context,
             break;
 
         default:
-            assert(voice == nullptr);
+            Expects(voice == nullptr);
             cur->mOldVoice = nullptr;
 #if ALSOFT_EAX
             if(context->hasEax())
@@ -2640,7 +2639,7 @@ void StartSources(const gsl::not_null<ALCcontext*> context,
                 break;
             }
         }
-        ASSUME(voice != nullptr);
+        Ensures(voice != nullptr);
 
         voice->mPosition.store(0, std::memory_order_relaxed);
         voice->mPositionFrac.store(0, std::memory_order_relaxed);
@@ -3689,9 +3688,8 @@ SourceSubList::~SourceSubList()
 
 
 #if ALSOFT_EAX
-void ALsource::eaxInitialize(ALCcontext *context) noexcept
+void ALsource::eaxInitialize(gsl::not_null<ALCcontext*> context) noexcept
 {
-    assert(context != nullptr);
     mEaxAlContext = context;
 
     mEaxPrimaryFxSlotId = context->eaxGetPrimaryFxSlotIndex();
@@ -4518,7 +4516,7 @@ void ALsource::eax_set(const EaxCall& call)
 
 void ALsource::eax_get_active_fx_slot_id(const EaxCall& call, const std::span<const GUID> srcids)
 {
-    assert(srcids.size()==EAX40_MAX_ACTIVE_FXSLOTS || srcids.size()==EAX50_MAX_ACTIVE_FXSLOTS);
+    Expects(srcids.size()==EAX40_MAX_ACTIVE_FXSLOTS || srcids.size()==EAX50_MAX_ACTIVE_FXSLOTS);
     const auto dst_ids = call.as_span<GUID>(srcids.size());
     std::uninitialized_copy_n(srcids.begin(), dst_ids.size(), dst_ids.begin());
 }

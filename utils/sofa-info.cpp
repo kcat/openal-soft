@@ -21,7 +21,6 @@
  * Or visit:  http://www.gnu.org/licenses/old-licenses/gpl-2.0.html
  */
 
-#include <cassert>
 #include <cstdio>
 #include <memory>
 #include <ranges>
@@ -32,6 +31,7 @@
 
 #include "alnumeric.h"
 #include "fmt/core.h"
+#include "gsl/gsl"
 
 #include "sofa-support.h"
 
@@ -159,8 +159,7 @@ int main(std::span<std::string_view> args)
 
 int main(int argc, char **argv)
 {
-    assert(argc >= 0);
-    auto args = std::vector<std::string_view>(static_cast<unsigned int>(argc));
+    auto args = std::vector<std::string_view>(gsl::narrow<unsigned int>(argc));
     std::ranges::copy(std::views::counted(argv, argc), args.begin());
     return main(std::span{args});
 }

@@ -48,7 +48,6 @@
 #include <algorithm>
 #include <atomic>
 #include <bit>
-#include <cassert>
 #include <chrono>
 #include <condition_variable>
 #include <cstring>
@@ -250,13 +249,13 @@ public:
     {
         if constexpr(std::is_same_v<T,uint>)
         {
-            assert(mProp.vt == VT_UI4 || mProp.vt == VT_UINT);
+            Expects(mProp.vt == VT_UI4 || mProp.vt == VT_UINT);
             return mProp.uintVal;
         }
         else if constexpr(std::is_same_v<T,std::wstring_view> || std::is_same_v<T,std::wstring>
             || std::is_same_v<T,LPWSTR> || std::is_same_v<T,LPCWSTR>)
         {
-            assert(mProp.vt == VT_LPWSTR);
+            Expects(mProp.vt == VT_LPWSTR);
             return mProp.pwszVal;
         }
     }
@@ -1279,7 +1278,7 @@ FORCE_ALIGN void WasapiPlayback::mixerProc(PlainDevice &audio)
     const auto buffer_len = mOutBufferSize;
     auto *resbufferptr = LPCVOID{};
 
-    assert(buffer_len > 0);
+    Expects(buffer_len > 0);
 
 #ifdef AVRTAPI
     /* TODO: "Audio" or "Pro Audio"? The suggestion is to use "Pro Audio" for

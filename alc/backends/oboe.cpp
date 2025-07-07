@@ -3,7 +3,6 @@
 
 #include "oboe.h"
 
-#include <cassert>
 #include <cstdint>
 #include <cstring>
 

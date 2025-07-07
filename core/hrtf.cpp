@@ -6,7 +6,6 @@
 #include <algorithm>
 #include <array>
 #include <bit>
-#include <cassert>
 #include <cctype>
 #include <cmath>
 #include <cstddef>
@@ -35,6 +34,7 @@
 #include "filesystem.h"
 #include "filters/splitter.h"
 #include "fmt/core.h"
+#include "gsl/gsl"
 #include "helpers.h"
 #include "logging.h"
 #include "mixer/hrtfdefs.h"
@@ -883,7 +883,7 @@ auto LoadHrtf02(std::istream &data) -> std::unique_ptr<HrtfStore>
                 | std::views::take(field.evCount), elevs_end).out;
             return ebase + field.evCount;
         });
-        assert(elevs_.begin() == elevs_end);
+        Ensures(elevs_.begin() == elevs_end);
 
         /* Reestablish the IR offset for each elevation index, given the new
          * ordering of elevations.
@@ -918,8 +918,8 @@ auto LoadHrtf02(std::istream &data) -> std::unique_ptr<HrtfStore>
 
             return ebase + field.evCount;
         });
-        assert(coeffs_.begin() == coeffs_end);
-        assert(delays_.begin() == delays_end);
+        Ensures(coeffs_.begin() == coeffs_end);
+        Ensures(delays_.begin() == delays_end);
 
         fields = std::move(fields_);
         elevs = std::move(elevs_);
@@ -1229,7 +1229,7 @@ try {
     {
         if(auto *hrtf = handle->mEntry.get())
         {
-            assert(hrtf->mSampleRate == devrate);
+            Expects(hrtf->mSampleRate == devrate);
             hrtf->inc_ref();
             return HrtfStorePtr{hrtf};
         }

@@ -6,7 +6,6 @@
 #include <algorithm>
 #include <array>
 #include <bit>
-#include <cassert>
 #include <cstddef>
 #include <numbers>
 #include <ranges>
@@ -154,7 +153,7 @@ void complex_fft(const std::span<std::complex<double>> buffer, const double sign
     }
     else
     {
-        assert(log2_size < 32);
+        Expects(log2_size < 32);
 
         for(const auto idx : std::views::iota(1_uz, fftsize-1))
         {

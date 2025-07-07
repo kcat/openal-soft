@@ -1,7 +1,6 @@
 #ifndef EAX_EFFECT_INCLUDED
 #define EAX_EFFECT_INCLUDED
 
-#include <cassert>
 #include <memory>
 #include <string_view>
 #include <variant>

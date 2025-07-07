@@ -22,7 +22,6 @@
 
 #include <algorithm>
 #include <array>
-#include <cassert>
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
@@ -45,6 +44,7 @@
 #include "core/filters/splitter.h"
 #include "core/mixer.h"
 #include "core/mixer/defs.h"
+#include "gsl/gsl"
 #include "intrusive_ptr.h"
 #include "opthelpers.h"
 #include "vector.h"
@@ -286,7 +286,7 @@ struct DelayLineU {
 
     void realizeLineOffset(std::span<float> sampleBuffer) noexcept
     {
-        assert(sampleBuffer.size() > 4 && !(sampleBuffer.size() & (sampleBuffer.size()-1)));
+        Expects(sampleBuffer.size() > 4 && !(sampleBuffer.size() & (sampleBuffer.size()-1)));
         mLine = sampleBuffer;
     }
 
@@ -772,7 +772,7 @@ void ReverbState::allocLines(const float frequency)
         linelengths[oidx++] = count;
         totalSamples += count;
     }
-    assert(oidx == linelengths.size());
+    Ensures(oidx == linelengths.size());
 
     if(totalSamples != mSampleBuffer.size())
         decltype(mSampleBuffer)(totalSamples).swap(mSampleBuffer);
@@ -796,7 +796,7 @@ void ReverbState::allocLines(const float frequency)
         pipeline.mLate.Delay.realizeLineOffset(bufferspan.first(linelengths[oidx]));
         bufferspan = bufferspan.subspan(linelengths[oidx++]);
     }
-    assert(oidx == linelengths.size());
+    Ensures(oidx == linelengths.size());
 }
 
 void ReverbState::deviceUpdate(const DeviceBase *device, const BufferStorage*)

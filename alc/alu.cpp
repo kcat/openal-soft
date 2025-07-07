@@ -26,7 +26,6 @@
 #include <algorithm>
 #include <array>
 #include <atomic>
-#include <cassert>
 #include <cmath>
 #include <cstdarg>
 #include <cstddef>
@@ -835,7 +834,7 @@ void AmbiRotator(AmbiRotateMatrix &matrix, const int order)
     static constexpr auto W = [](const int l, const int m, const int n, const size_t last_base,
         const AmbiRotateMatrix &R)
     {
-        assert(m != 0);
+        Expects(m != 0);
         if(m > 0)
         {
             const auto p0 = P( 1, l,  m+1, n, last_base, R);
@@ -2205,7 +2204,7 @@ void ProcessContexts(DeviceBase *device, const uint SamplesToDo)
                 auto split_point = std::partition_copy(auxslots.rbegin(), auxslots.rend(),
                     sorted_slots.begin(), sorted_slots.rbegin(), has_target).first;
                 /* There must be at least one slot without a slot target. */
-                assert(split_point != sorted_slots.end());
+                Ensures(split_point != sorted_slots.end());
 
                 /* Starting from the back of the sorted list, continue
                  * partitioning the front of the list given each target until

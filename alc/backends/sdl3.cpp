@@ -22,7 +22,6 @@
 
 #include "sdl3.h"
 
-#include <cassert>
 #include <cstdlib>
 #include <cstring>
 #include <span>
@@ -125,8 +124,6 @@ void Sdl3Backend::audioCallback(SDL_AudioStream *stream, int additional_amount, 
         return;
 
     const auto ulen = gsl::narrow_cast<unsigned int>(additional_amount);
-    assert((ulen % mFrameSize) == 0);
-
     if(ulen > mBuffer.size())
     {
         mBuffer.resize(ulen);

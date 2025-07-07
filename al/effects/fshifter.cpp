@@ -12,8 +12,6 @@
 #include "effects.h"
 
 #if ALSOFT_EAX
-#include <cassert>
-
 #include "al/eax/effect.h"
 #include "al/eax/exception.h"
 #include "al/eax/utils.h"

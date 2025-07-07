@@ -2,9 +2,7 @@
 #define CORE_MIXER_HRTFBASE_H
 
 #include <algorithm>
-#include <cassert>
 #include <cmath>
-#include <memory>
 #include <ranges>
 
 #include "alnumeric.h"
@@ -101,7 +99,6 @@ inline void MixDirectHrtfBase(const FloatBufferSpan LeftOut, const FloatBufferSp
     ASSUME(SamplesToDo > 0);
     ASSUME(SamplesToDo <= BufferLineSize);
     ASSUME(IrSize <= HrirLength);
-    assert(ChannelState.size() == InSamples.size());
 
     std::ignore = std::ranges::mismatch(InSamples, ChannelState,
         [&](const FloatConstBufferSpan input, HrtfChannelState &ChanState)

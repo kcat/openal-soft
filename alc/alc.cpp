@@ -33,7 +33,6 @@
 #include <atomic>
 #include <bit>
 #include <bitset>
-#include <cassert>
 #include <cctype>
 #include <chrono>
 #include <climits>
@@ -1735,8 +1734,7 @@ auto UpdateDeviceParams(al::Device *device, const std::span<const int> attrList)
     std::ranges::for_each(*device->mContexts.load(), [device](ContextBase *ctxbase)
     {
         auto *context = dynamic_cast<ALCcontext*>(ctxbase);
-        assert(context != nullptr);
-        if(!context) return;
+        Ensures(context != nullptr);
 
         auto proplock = std::unique_lock{context->mPropLock};
         auto slotlock = std::unique_lock{context->mEffectSlotLock};
@@ -1901,8 +1899,8 @@ auto ResetDeviceParams(al::Device *device, const std::span<const int> attrList) 
             [](ContextBase *ctxbase)
         {
             auto *ctx = dynamic_cast<ALCcontext*>(ctxbase);
-            assert(ctx != nullptr);
-            if(!ctx || !ctx->mStopVoicesOnDisconnect.load(std::memory_order_acquire))
+            Ensures(ctx != nullptr);
+            if(!ctx->mStopVoicesOnDisconnect.load(std::memory_order_acquire))
                 return;
 
             /* Clear any pending voice changes and reallocate voices to get a
@@ -2240,7 +2238,7 @@ auto GetIntegerv(al::Device *device, ALCenum param, const std::span<int> values)
                 values[i++] = ALC_CONNECTED;
                 values[i++] = device->Connected.load(std::memory_order_relaxed);
                 values[i++] = 0;
-                assert(i == MaxCaptureAttributes);
+                Ensures(i == MaxCaptureAttributes);
                 return i;
             }
             alcSetError(device, ALC_INVALID_VALUE);
@@ -2349,7 +2347,7 @@ auto GetIntegerv(al::Device *device, ALCenum param, const std::span<int> values)
             values[i++] = al::to_underlying(device->getOutputMode1());
 
             values[i++] = 0;
-            assert(i == NumAttrsForDevice());
+            Ensures(i == NumAttrsForDevice());
             return i;
         }
         alcSetError(device, ALC_INVALID_VALUE);
@@ -2593,7 +2591,7 @@ ALC_API void ALC_APIENTRY alcGetInteger64vSOFT(ALCdevice *device, ALCenum pname,
             valuespan[i++] = al::to_underlying(dev->getOutputMode1());
 
             valuespan[i++] = 0;
-            assert(i == NumAttrsForDevice());
+            Ensures(i == NumAttrsForDevice());
         }
         break;
 

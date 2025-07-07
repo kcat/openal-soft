@@ -33,7 +33,6 @@
 
 #include <algorithm>
 #include <atomic>
-#include <cassert>
 #include <cstdio>
 #include <cstdlib>
 #include <memory.h>
@@ -474,7 +473,7 @@ bool DSoundPlayback::reset()
         if(SUCCEEDED(hr))
         {
             auto num_updates = mDevice->mBufferSize / mDevice->mUpdateSize;
-            assert(num_updates <= MAX_UPDATES);
+            Expects(num_updates <= MAX_UPDATES);
 
             auto nots = std::array<DSBPOSITIONNOTIFY,MAX_UPDATES>{};
             for(auto i = 0u;i < num_updates;++i)

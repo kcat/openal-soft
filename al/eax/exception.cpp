@@ -2,14 +2,13 @@
 
 #include "exception.h"
 
-#include <cassert>
 #include <string>
 
 
 EaxException::EaxException(std::string_view context, std::string_view message)
     : std::runtime_error{make_message(context, message)}
-{
-}
+{ }
+
 EaxException::~EaxException() = default;
 
 

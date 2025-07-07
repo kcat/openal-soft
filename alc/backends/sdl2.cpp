@@ -22,7 +22,6 @@
 
 #include "sdl2.h"
 
-#include <cassert>
 #include <cstdlib>
 #include <cstring>
 #include <string>
@@ -30,6 +29,7 @@
 
 #include "alnumeric.h"
 #include "core/device.h"
+#include "gsl/gsl"
 #include "pragmadefs.h"
 
 DIAGNOSTIC_PUSH
@@ -70,8 +70,7 @@ Sdl2Backend::~Sdl2Backend()
 
 void Sdl2Backend::audioCallback(Uint8 *stream, int len) noexcept
 {
-    const auto ulen = static_cast<unsigned int>(len);
-    assert((ulen % mFrameSize) == 0);
+    const auto ulen = gsl::narrow_cast<unsigned int>(len);
     mDevice->renderSamples(stream, ulen / mFrameSize, mDevice->channelsFromFmt());
 }
 

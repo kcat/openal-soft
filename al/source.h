@@ -24,6 +24,7 @@
 #include "alnumeric.h"
 #include "core/context.h"
 #include "core/voice.h"
+#include "gsl/gsl"
 #include "intrusive_ptr.h"
 
 #if ALSOFT_EAX
@@ -172,7 +173,7 @@ struct ALsource {
 
 #if ALSOFT_EAX
 public:
-    void eaxInitialize(ALCcontext *context) noexcept;
+    void eaxInitialize(gsl::not_null<ALCcontext*> context) noexcept;
     void eaxDispatch(const EaxCall& call) { call.is_get() ? eax_get(call) : eax_set(call); }
     void eaxCommit();
     void eaxMarkAsChanged() noexcept { mEaxChanged = true; }

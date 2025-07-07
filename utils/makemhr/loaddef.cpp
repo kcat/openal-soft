@@ -25,7 +25,6 @@
 
 #include <algorithm>
 #include <bit>
-#include <cassert>
 #include <cctype>
 #include <cmath>
 #include <cstdarg>
@@ -49,6 +48,7 @@
 #include "alstring.h"
 #include "filesystem.h"
 #include "fmt/core.h"
+#include "gsl/gsl"
 #include "makemhr.h"
 #include "polyphase_resampler.h"
 #include "sofa-support.h"
@@ -175,7 +175,7 @@ void TrSetup(const std::span<const char> startbytes, const std::string_view file
 
     if(!startbytes.empty())
     {
-        assert(startbytes.size() <= tr->mRing.size());
+        Expects(startbytes.size() <= tr->mRing.size());
         std::ranges::copy(startbytes, tr->mRing.begin());
         tr->mIn += std::ssize(startbytes);
     }

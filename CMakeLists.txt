@@ -1882,8 +1882,8 @@ if(ALSOFT_EXAMPLES)
         list(APPEND NEED_ANALYZE_SOURCE_FILES "${CMAKE_SOURCE_DIR}/examples/alstreamcb.cpp")
 
         add_executable(aldirect examples/aldirect.cpp)
-        target_link_libraries(aldirect PRIVATE ${LINKER_FLAGS} SndFile::SndFile alsoft.excommon
-            ${UNICODE_FLAG} alsoft::fmt)
+        target_link_libraries(aldirect PRIVATE ${LINKER_FLAGS} SndFile::SndFile alsoft.common
+            alsoft.excommon ${UNICODE_FLAG} alsoft::fmt)
         set_target_properties(aldirect PROPERTIES ${ALSOFT_STD_VERSION_PROPS})
         list(APPEND NEED_ANALYZE_SOURCE_FILES "${CMAKE_SOURCE_DIR}/examples/aldirect.cpp")
 

@@ -7,7 +7,6 @@
 #include <algorithm>
 #include <array>
 #include <atomic>
-#include <cassert>
 #include <cstdint>
 #include <cstdlib>
 #include <iterator>
@@ -32,6 +31,7 @@
 #include "filters/nfc.h"
 #include "filters/splitter.h"
 #include "fmt_traits.h"
+#include "gsl/gsl"
 #include "logging.h"
 #include "mixer.h"
 #include "mixer/defs.h"
@@ -280,7 +280,7 @@ inline void LoadSamples(const std::span<float> dstSamples,
     const size_t srcStep, const size_t samplesPerBlock [[maybe_unused]]) noexcept
 {
     using TypeTraits = SampleInfo<T>;
-    assert(srcChan < srcStep);
+    Expects(srcChan < srcStep);
 
     auto ssrc = srcData.begin();
     std::advance(ssrc, srcOffset*srcStep + srcChan);
@@ -299,10 +299,10 @@ inline void LoadSamples<IMA4Data>(std::span<float> dstSamples, std::span<const I
 {
     static constexpr auto MaxStepIndex = static_cast<int>(IMAStep_size.size()) - 1;
 
-    assert(srcStep > 0 || srcStep <= 2);
-    assert(srcChan < srcStep);
-    assert(samplesPerBlock > 1);
-    const size_t blockBytes{((samplesPerBlock-1)/2 + 4)*srcStep};
+    Expects(srcStep > 0 || srcStep <= 2);
+    Expects(srcChan < srcStep);
+    Expects(samplesPerBlock > 1);
+    const auto blockBytes = ((samplesPerBlock-1_uz)/2_uz + 4_uz)*srcStep;
 
     /* Skip to the ADPCM block containing the srcOffset sample. */
     src = src.subspan(srcOffset/samplesPerBlock*blockBytes);
@@ -391,9 +391,9 @@ inline void LoadSamples<MSADPCMData>(std::span<float> dstSamples, std::span<cons
     const size_t srcChan, const size_t srcOffset, const size_t srcStep,
     const size_t samplesPerBlock) noexcept
 {
-    assert(srcStep > 0 || srcStep <= 2);
-    assert(srcChan < srcStep);
-    assert(samplesPerBlock > 2);
+    Expects(srcStep > 0 || srcStep <= 2);
+    Expects(srcChan < srcStep);
+    Expects(samplesPerBlock > 2);
     const auto blockBytes = ((samplesPerBlock-2_uz)/2_uz + 7_uz)*srcStep;
 
     src = src.subspan(srcOffset/samplesPerBlock*blockBytes);
@@ -1119,7 +1119,7 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
                 auto DataPosUInt = static_cast<uint>(DataPosInt);
                 if(DataPosUInt >= LoopEnd)
                 {
-                    assert(LoopEnd > LoopStart);
+                    Expects(LoopEnd > LoopStart);
                     DataPosUInt = ((DataPosUInt-LoopStart)%(LoopEnd-LoopStart)) + LoopStart;
                     DataPosInt = static_cast<int>(DataPosUInt);
                 }

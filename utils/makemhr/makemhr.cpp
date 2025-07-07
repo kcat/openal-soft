@@ -66,7 +66,6 @@
 
 #include <algorithm>
 #include <atomic>
-#include <cassert>
 #include <chrono>
 #include <cmath>
 #include <complex>
@@ -91,6 +90,7 @@
 #include "alstring.h"
 #include "filesystem.h"
 #include "fmt/core.h"
+#include "gsl/gsl"
 #include "loaddef.h"
 #include "loadsofa.h"
 
@@ -206,8 +206,8 @@ inline uint dither_rng(uint *seed)
 void TpdfDither(const std::span<double> out, const std::span<const double> in, const double scale,
     const size_t channel, const size_t step, uint *seed)
 {
-    static constexpr double PRNG_SCALE = 1.0 / std::numeric_limits<uint>::max();
-    assert(channel < step);
+    static constexpr auto PRNG_SCALE = 1.0 / std::numeric_limits<uint>::max();
+    Expects(channel < step);
 
     for(size_t i{0};i < in.size();++i)
     {
@@ -250,7 +250,7 @@ void LimitMagnitudeResponse(const uint n, const uint m, const double limit,
  */
 void MinimumPhase(const std::span<double> mags, const std::span<complex_d> out)
 {
-    assert(mags.size() == out.size());
+    Expects(mags.size() == out.size());
     const size_t m{(mags.size()/2) + 1};
 
     size_t i;
@@ -1501,10 +1501,9 @@ int main(std::span<std::string_view> args)
 
 } /* namespace */
 
-int main(int argc, char **argv)
+auto main(int argc, char **argv) -> int
 {
-    assert(argc >= 0);
-    auto args = std::vector<std::string_view>(static_cast<unsigned int>(argc));
+    auto args = std::vector<std::string_view>(gsl::narrow<unsigned int>(argc));
     std::copy_n(argv, args.size(), args.begin());
     return main(std::span{args});
 }

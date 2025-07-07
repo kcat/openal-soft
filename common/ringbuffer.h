@@ -4,7 +4,6 @@
 #include <algorithm>
 #include <array>
 #include <atomic>
-#include <cassert>
 #include <cstddef>
 #include <memory>
 #include <new>
@@ -16,6 +15,7 @@
 #include "almalloc.h"
 #include "alnumeric.h"
 #include "flexarray.h"
+#include "gsl/gsl"
 #include "opthelpers.h"
 
 
@@ -150,10 +150,10 @@ public:
     /** Advance the read pointer `count' places. */
     auto readAdvance(std::size_t count) noexcept -> void
     {
-        const std::size_t w = mWriteCount.load(std::memory_order_acquire);
-        const std::size_t r = mReadCount.load(std::memory_order_relaxed);
-        const auto readable [[maybe_unused]] = w - r;
-        assert(readable >= count);
+        const auto w = mWriteCount.load(std::memory_order_acquire);
+        const auto r = mReadCount.load(std::memory_order_relaxed);
+        const auto readable = w - r;
+        Expects(readable >= count);
         mReadCount.store(r+count, std::memory_order_release);
     }
 
@@ -217,10 +217,10 @@ public:
     /** Advance the write pointer `count' places. */
     auto writeAdvance(std::size_t count) noexcept -> void
     {
-        const std::size_t w{mWriteCount.load(std::memory_order_relaxed)};
-        const std::size_t r{mReadCount.load(std::memory_order_acquire)};
-        [[maybe_unused]] const std::size_t writable{mWriteSize - (w - r)};
-        assert(writable >= count);
+        const auto w = mWriteCount.load(std::memory_order_relaxed);
+        const auto r = mReadCount.load(std::memory_order_acquire);
+        const auto writable = mWriteSize - (w - r);
+        Expects(writable >= count);
         mWriteCount.store(w+count, std::memory_order_release);
     }
 
@@ -426,7 +426,7 @@ public:
         const auto w = mWriteCount.load(std::memory_order_acquire);
         const auto r = mReadCount.load(std::memory_order_relaxed);
         const auto readable = w - r;
-        assert(readable >= count);
+        Expects(readable >= count);
 
         const auto to_read = std::min(count, readable);
         const auto read_idx = r & mSizeMask;
@@ -505,8 +505,8 @@ public:
     {
         const auto w = mWriteCount.load(std::memory_order_relaxed);
         const auto r = mReadCount.load(std::memory_order_acquire);
-        const auto writable [[maybe_unused]] = mWriteSize - (w - r);
-        assert(writable >= count);
+        const auto writable = mWriteSize - (w - r);
+        Expects(writable >= count);
         mWriteCount.store(w+count, std::memory_order_release);
     }
 

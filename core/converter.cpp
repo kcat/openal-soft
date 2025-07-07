@@ -5,7 +5,6 @@
 
 #include <algorithm>
 #include <bit>
-#include <cassert>
 #include <climits>
 #include <cmath>
 #include <cstddef>
@@ -16,6 +15,7 @@
 
 #include "alnumeric.h"
 #include "fpu_ctrl.h"
+#include "gsl/gsl"
 
 
 namespace {
@@ -50,7 +50,7 @@ template<DevFmtType T>
 inline void LoadSampleArray(const std::span<float> dst, const void *src, const size_t channel,
     const size_t srcstep) noexcept
 {
-    assert(channel < srcstep);
+    Expects(channel < srcstep);
     const auto srcspan = std::span{static_cast<const DevFmtType_t<T>*>(src), dst.size()*srcstep};
     auto ssrc = srcspan.begin();
     std::advance(ssrc, channel);
@@ -105,7 +105,7 @@ template<DevFmtType T>
 inline void StoreSampleArray(void *dst, const std::span<const float> src, const size_t channel,
     const size_t dststep) noexcept
 {
-    assert(channel < dststep);
+    Expects(channel < dststep);
     const auto dstspan = std::span{static_cast<DevFmtType_t<T>*>(dst), src.size()*dststep};
     auto sdst = dstspan.begin();
     std::advance(sdst, channel);
@@ -285,7 +285,7 @@ uint SampleConverter::convert(const void **src, uint *srcframes, void *dst, uint
         const auto DataPosEnd = DstSize*increment + DataPosFrac;
         const auto SrcDataEnd = DataPosEnd>>MixerFracBits;
 
-        assert(prepcount+readable >= SrcDataEnd);
+        Expects(prepcount+readable >= SrcDataEnd);
         const auto nextprep = std::min(prepcount+readable-SrcDataEnd, MaxResamplerPadding);
 
         for(const auto chan : std::views::iota(0_uz, mChan.size()))
@@ -381,7 +381,7 @@ uint SampleConverter::convertPlanar(const void **src, uint *srcframes, void *con
         const auto DataPosEnd = DstSize*increment + DataPosFrac;
         const auto SrcDataEnd = DataPosEnd>>MixerFracBits;
 
-        assert(prepcount+readable >= SrcDataEnd);
+        Expects(prepcount+readable >= SrcDataEnd);
         const auto nextprep = std::min(prepcount+readable-SrcDataEnd, MaxResamplerPadding);
 
         for(const auto chan : std::views::iota(0_uz, mChan.size()))

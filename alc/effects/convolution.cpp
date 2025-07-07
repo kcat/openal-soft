@@ -4,7 +4,6 @@
 
 #include <algorithm>
 #include <array>
-#include <cassert>
 #include <cmath>
 #include <complex>
 #include <cstddef>
@@ -87,7 +86,7 @@ inline void LoadSampleArray(const std::span<float> dstSamples,
     const std::span<const T> srcData, const size_t channel, const size_t srcstep) noexcept
 {
     using TypeTraits = SampleInfo<T>;
-    assert(channel < srcstep);
+    Expects(channel < srcstep);
 
     auto ssrc = srcData.begin();
     std::advance(ssrc, channel);

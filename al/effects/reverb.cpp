@@ -18,8 +18,6 @@
 #include "gsl/gsl"
 
 #if ALSOFT_EAX
-#include <cassert>
-
 #include "al/eax/api.h"
 #include "al/eax/call.h"
 #include "al/eax/effect.h"
@@ -974,7 +972,7 @@ void EaxReverbCommitter::fail(const std::string_view message)
 
 void EaxReverbCommitter::translate(const EAX_REVERBPROPERTIES& src, EAXREVERBPROPERTIES& dst) noexcept
 {
-    assert(src.environment <= EAX1REVERB_MAXENVIRONMENT);
+    Expects(src.environment <= EAX1REVERB_MAXENVIRONMENT);
     dst = EAXREVERB_PRESETS[src.environment];
     dst.flDecayTime = src.fDecayTime_sec;
     dst.flDecayHFRatio = src.fDamping;
@@ -983,7 +981,7 @@ void EaxReverbCommitter::translate(const EAX_REVERBPROPERTIES& src, EAXREVERBPRO
 
 void EaxReverbCommitter::translate(const EAX20LISTENERPROPERTIES& src, EAXREVERBPROPERTIES& dst) noexcept
 {
-    assert(src.dwEnvironment <= EAX1REVERB_MAXENVIRONMENT);
+    Expects(src.dwEnvironment <= EAX1REVERB_MAXENVIRONMENT);
     dst = EAXREVERB_PRESETS[src.dwEnvironment];
     dst.ulEnvironment = src.dwEnvironment;
     dst.flEnvironmentSize = src.flEnvironmentSize;

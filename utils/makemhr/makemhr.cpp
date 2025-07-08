@@ -104,10 +104,7 @@ namespace {
 
 using namespace std::string_view_literals;
 
-struct FileDeleter {
-    void operator()(gsl::owner<FILE*> f) { fclose(f); }
-};
-using FilePtr = std::unique_ptr<FILE,FileDeleter>;
+using FilePtr = std::unique_ptr<FILE, decltype([](const gsl::owner<FILE*> f) { fclose(f); })>;
 
 // The epsilon used to maintain signal stability.
 constexpr double Epsilon{1e-9};

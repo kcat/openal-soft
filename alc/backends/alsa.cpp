@@ -1193,7 +1193,7 @@ bool AlsaBackendFactory::querySupport(BackendType type)
 
 auto AlsaBackendFactory::enumerate(BackendType type) -> std::vector<std::string>
 {
-    std::vector<std::string> outnames;
+    auto outnames = std::vector<std::string>{};
     auto add_device = [&outnames](const DevMap &entry) -> void
     { outnames.emplace_back(entry.name); };
 
@@ -1202,13 +1202,13 @@ auto AlsaBackendFactory::enumerate(BackendType type) -> std::vector<std::string>
     case BackendType::Playback:
         PlaybackDevices = probe_devices(SND_PCM_STREAM_PLAYBACK);
         outnames.reserve(PlaybackDevices.size());
-        std::for_each(PlaybackDevices.cbegin(), PlaybackDevices.cend(), add_device);
+        std::ranges::for_each(PlaybackDevices, add_device);
         break;
 
     case BackendType::Capture:
         CaptureDevices = probe_devices(SND_PCM_STREAM_CAPTURE);
         outnames.reserve(CaptureDevices.size());
-        std::for_each(CaptureDevices.cbegin(), CaptureDevices.cend(), add_device);
+        std::ranges::for_each(CaptureDevices, add_device);
         break;
     }
 

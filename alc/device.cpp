@@ -63,8 +63,7 @@ void Device::enumerateHrtfs()
     mHrtfList = EnumerateHrtf(configValue<std::string>({}, "hrtf-paths"));
     if(auto defhrtfopt = configValue<std::string>({}, "default-hrtf"))
     {
-        auto iter = std::find(mHrtfList.begin(), mHrtfList.end(), *defhrtfopt);
-        if(iter == mHrtfList.end())
+        if(const auto iter = std::ranges::find(mHrtfList, *defhrtfopt); iter == mHrtfList.end())
             WARN("Failed to find default HRTF \"{}\"", *defhrtfopt);
         else if(iter != mHrtfList.begin())
             std::rotate(mHrtfList.begin(), iter, iter+1);

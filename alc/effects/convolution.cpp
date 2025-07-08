@@ -37,6 +37,7 @@
 #include "core/fmt_traits.h"
 #include "core/mixer.h"
 #include "core/uhjfilter.h"
+#include "gsl/gsl"
 #include "intrusive_ptr.h"
 #include "pffft.h"
 #include "polyphase_resampler.h"
@@ -159,7 +160,7 @@ void apply_fir(std::span<float> dst, std::span<const float> input,
     const std::span<const float,ConvolveUpdateSamples> filter)
 {
 #if HAVE_SSE_INTRINSICS
-    std::generate(dst.begin(), dst.end(), [&input,filter]
+    std::ranges::generate(dst, [&input,filter]
     {
         auto r4 = _mm_setzero_ps();
         for(size_t j{0};j < ConvolveUpdateSamples;j+=4)
@@ -178,7 +179,7 @@ void apply_fir(std::span<float> dst, std::span<const float> input,
 
 #elif HAVE_NEON
 
-    std::generate(dst.begin(), dst.end(), [&input,filter]
+    std::ranges::generate(dst, [&input,filter]
     {
         auto r4 = vdupq_n_f32(0.0f);
         for(size_t j{0};j < ConvolveUpdateSamples;j+=4)
@@ -191,7 +192,7 @@ void apply_fir(std::span<float> dst, std::span<const float> input,
 
 #else
 
-    std::generate(dst.begin(), dst.end(), [&input,filter]
+    std::ranges::generate(dst, [&input,filter]
     {
         auto ret = 0.0f;
         for(size_t j{0};j < ConvolveUpdateSamples;++j)
@@ -377,15 +378,15 @@ void ConvolutionState::deviceUpdate(const DeviceBase *device, const BufferStorag
             resampler.process(restmp, std::span{ressamples}.first(resampledCount));
         }
         else
-            std::copy(bufsamples.begin(), bufsamples.end(), ressamples.begin());
+            std::ranges::copy(bufsamples, ressamples.begin());
 
         /* Store the first segment's samples in reverse in the time-domain, to
          * apply as a FIR filter.
          */
         const auto first_size = std::min(size_t{resampledCount}, ConvolveUpdateSamples);
         auto sampleseg = std::span{ressamples.cbegin(), first_size};
-        std::transform(sampleseg.begin(), sampleseg.end(), mFilter[c].rbegin(),
-            [](const double d) noexcept -> float { return static_cast<float>(d); });
+        std::ranges::transform(sampleseg, mFilter[c].rbegin(), [](const double d) noexcept -> float
+        { return gsl::narrow_cast<float>(d); });
 
         auto done = first_size;
         for(const auto s [[maybe_unused]] : std::views::iota(0_uz, mNumConvolveSegs))
@@ -481,8 +482,7 @@ void ConvolutionState::update(const ContextBase *context, const EffectSlot *slot
     auto &props = std::get<ConvolutionProps>(*props_);
     mMix = &ConvolutionState::NormalMix;
 
-    for(auto &chan : mChans)
-        std::fill(chan.Target.begin(), chan.Target.end(), 0.0f);
+    std::ranges::fill(mChans|std::views::transform(&ChannelData::Target)|std::views::join, 0.0f);
     const float gain{slot->Gain};
     if(IsAmbisonic(mChannels))
     {
@@ -538,8 +538,8 @@ void ConvolutionState::update(const ContextBase *context, const EffectSlot *slot
             const size_t acn{index_map[c]};
             const float scale{scales[acn]};
 
-            std::transform(mixmatrix[acn].cbegin(), mixmatrix[acn].cend(), coeffs.begin(),
-                [scale](const float in) noexcept -> float { return in * scale; });
+            std::ranges::transform(mixmatrix[acn], coeffs.begin(), [scale](const float in) -> float
+            { return in * scale; });
 
             ComputePanGains(target.Main, coeffs, gain, mChans[c].Target);
         }

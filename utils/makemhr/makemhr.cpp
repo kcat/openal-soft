@@ -79,6 +79,7 @@
 #include <memory>
 #include <numbers>
 #include <numeric>
+#include <ranges>
 #include <span>
 #include <string_view>
 #include <thread>
@@ -713,7 +714,7 @@ void SynthesizeOnsets(HrirDataT *hData)
             }
         }
     };
-    std::for_each(hData->mFds.begin(), hData->mFds.end(), proc_field);
+    std::ranges::for_each(hData->mFds, proc_field);
 }
 
 /* Attempt to synthesize any missing HRIRs at the bottom elevations of each
@@ -778,7 +779,7 @@ void SynthesizeHrirs(HrirDataT *hData)
              * frequency magnitudes (phase will be reconstructed later)).
              */
             FftForward(static_cast<uint>(htemp.size()), htemp.data());
-            std::transform(htemp.cbegin(), htemp.cbegin()+m, filter.begin(),
+            std::ranges::transform(htemp | std::views::take(m), filter.begin(),
                 [](const complex_d c) -> double { return std::abs(c); });
 
             for(uint ai{0u};ai < field.mEvs[ei].mAzs.size();ai++)
@@ -819,7 +820,7 @@ void SynthesizeHrirs(HrirDataT *hData)
             htemp[i] = lp[3];
         }
         FftForward(static_cast<uint>(htemp.size()), htemp.data());
-        std::transform(htemp.cbegin(), htemp.cbegin()+m, filter.begin(),
+        std::ranges::transform(htemp | std::views::take(m), filter.begin(),
             [](const complex_d c) -> double { return std::abs(c); });
 
         for(uint ti{0u};ti < channels;ti++)
@@ -828,7 +829,7 @@ void SynthesizeHrirs(HrirDataT *hData)
                 field.mEvs[0].mAzs[0].mIrs[ti][i] *= filter[i];
         }
     };
-    std::for_each(hData->mFds.begin(), hData->mFds.end(), proc_field);
+    std::ranges::for_each(hData->mFds, proc_field);
 }
 
 // The following routines assume a full set of HRIRs for all elevations.
@@ -980,17 +981,17 @@ void NormalizeHrirs(HrirDataT *hData)
     /* Now scale all IRs by the given factor. */
     auto proc_channel = [irSize,factor](std::span<double> ir)
     {
-        ir = ir.first(irSize);
-        std::transform(ir.begin(), ir.end(), ir.begin(), [factor](double s) { return s*factor; });
+        std::ranges::transform(ir.first(irSize), ir.begin(),
+            [factor](const double s) noexcept { return s*factor; });
     };
     auto proc_azi = [channels,proc_channel](HrirAzT &azi)
-    { std::for_each(azi.mIrs.begin(), azi.mIrs.begin()+channels, proc_channel); };
+    { std::ranges::for_each(azi.mIrs | std::views::take(channels), proc_channel); };
     auto proc_elev = [proc_azi](HrirEvT &elev)
-    { std::for_each(elev.mAzs.begin(), elev.mAzs.end(), proc_azi); };
+    { std::ranges::for_each(elev.mAzs, proc_azi); };
     auto proc1_field = [proc_elev](HrirFdT &field)
-    { std::for_each(field.mEvs.begin(), field.mEvs.end(), proc_elev); };
+    { std::ranges::for_each(field.mEvs, proc_elev); };
 
-    std::for_each(hData->mFds.begin(), hData->mFds.end(), proc1_field);
+    std::ranges::for_each(hData->mFds, proc1_field);
 }
 
 // Calculate the left-ear time delay using a spherical head model.
@@ -1213,9 +1214,7 @@ bool ProcessDefinition(std::string_view inName, const uint outRate, const Channe
     if(hData.mFds.size() > 1)
     {
         fmt::println("Sorting {} fields...", hData.mFds.size());
-        std::sort(hData.mFds.begin(), hData.mFds.end(),
-            [](const HrirFdT &lhs, const HrirFdT &rhs) noexcept
-            { return lhs.mDistance < rhs.mDistance; });
+        std::ranges::sort(hData.mFds, std::less{}, &HrirFdT::mDistance);
         if(farfield)
         {
             fmt::println("Clearing {} near field{}...", hData.mFds.size()-1,

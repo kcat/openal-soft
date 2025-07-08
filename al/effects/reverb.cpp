@@ -234,21 +234,21 @@ void ReverbEffectHandler::SetParamf(ALCcontext *context, ReverbProps &props, ALe
 }
 void ReverbEffectHandler::SetParamfv(ALCcontext *context, ReverbProps &props, ALenum param, const float *vals)
 {
-    static constexpr auto finite_checker = [](float f) -> bool { return std::isfinite(f); };
+    static constexpr auto is_finite = [](const float f) -> bool { return std::isfinite(f); };
     auto values = std::span<const float>{};
     switch(param)
     {
     case AL_EAXREVERB_REFLECTIONS_PAN:
         values = {vals, 3_uz};
-        if(!std::all_of(values.begin(), values.end(), finite_checker))
+        if(!std::ranges::all_of(values, is_finite))
             context->throw_error(AL_INVALID_VALUE, "EAX Reverb reflections pan out of range");
-        std::copy(values.begin(), values.end(), props.ReflectionsPan.begin());
+        std::ranges::copy(values, props.ReflectionsPan.begin());
         return;
     case AL_EAXREVERB_LATE_REVERB_PAN:
         values = {vals, 3_uz};
-        if(!std::all_of(values.begin(), values.end(), finite_checker))
+        if(!std::ranges::all_of(values, is_finite))
             context->throw_error(AL_INVALID_VALUE, "EAX Reverb late reverb pan out of range");
-        std::copy(values.begin(), values.end(), props.LateReverbPan.begin());
+        std::ranges::copy(values, props.LateReverbPan.begin());
         return;
     }
     SetParamf(context, props, param, *vals);

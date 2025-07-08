@@ -101,8 +101,8 @@ void ContextBase::allocVoices(size_t addcount)
     auto newarray = VoiceArray::Create(totalcount);
     auto voice_iter = newarray->begin();
     for(VoiceCluster &cluster : mVoiceClusters)
-        voice_iter = std::transform(cluster->begin(), cluster->end(), voice_iter,
-            [](Voice &voice) noexcept -> Voice* { return &voice; });
+        voice_iter = std::ranges::transform(*cluster, voice_iter,
+            [](Voice &voice) noexcept -> Voice* { return std::addressof(voice); }).out;
 
     if(auto oldvoices = mVoices.exchange(std::move(newarray), std::memory_order_acq_rel))
         std::ignore = mDevice->waitForMix();
@@ -131,12 +131,12 @@ void ContextBase::allocEffectSlotProps()
 
 EffectSlot *ContextBase::getEffectSlot()
 {
-    for(auto& clusterptr : mEffectSlotClusters)
+    for(auto &clusterptr : mEffectSlotClusters)
     {
         const auto cluster = std::span{*clusterptr};
-        auto iter = std::find_if_not(cluster.begin(), cluster.end(),
-            std::mem_fn(&EffectSlot::InUse));
-        if(iter != cluster.end()) return std::to_address(iter);
+        if(const auto iter = std::ranges::find_if_not(cluster, &EffectSlot::InUse);
+            iter != cluster.end())
+            return std::to_address(iter);
     }
 
     auto clusterptr = std::make_unique<EffectSlotCluster::element_type>();

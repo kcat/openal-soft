@@ -1694,7 +1694,7 @@ void AverageHrirMagnitude(const uint fftSize, const std::span<const double> hrir
     std::vector<complex_d> h(fftSize);
     std::vector<double> r(m);
 
-    auto hiter = std::copy(hrir.begin(), hrir.end(), h.begin());
+    const auto hiter = std::ranges::copy(hrir, h.begin()).out;
     std::fill(hiter, h.end(), 0.0);
     forward_fft(h);
     MagnitudeResponse(h, r);

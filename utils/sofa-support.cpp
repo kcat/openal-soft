@@ -129,7 +129,7 @@ double GetUniformElevStep(const double epsilon, std::vector<double> &elems)
     /* Reverse the elevations so it increments starting with -90 (flipped from
      * +90). This makes it easier to work out a proper stepping value.
      */
-    std::reverse(elems.begin(), elems.end());
+    std::ranges::reverse(elems);
     for(auto &v : elems) v *= -1.0;
 
     uint count{static_cast<uint>(std::ceil(180.0 / (elems[1]-elems[0])))};
@@ -159,7 +159,7 @@ double GetUniformElevStep(const double epsilon, std::vector<double> &elems)
     }
     /* Re-reverse the elevations to restore the correct order. */
     for(auto &v : elems) v *= -1.0;
-    std::reverse(elems.begin(), elems.end());
+    std::ranges::reverse(elems);
 
     return ret;
 }
@@ -191,8 +191,8 @@ auto GetCompatibleLayout(const std::span<const float> xyzs) -> std::vector<SofaF
         aers[i] = {vals[0], vals[1], vals[2]};
     }
 
-    auto radii = GetUniquelySortedElems(aers, 2, {}, {0.1, 0.1, 0.001});
-    std::vector<SofaField> fds;
+    const auto radii = GetUniquelySortedElems(aers, 2, {}, {0.1, 0.1, 0.001});
+    auto fds = std::vector<SofaField>{};
     fds.reserve(radii.size());
 
     for(const double dist : radii)
@@ -200,17 +200,17 @@ auto GetCompatibleLayout(const std::span<const float> xyzs) -> std::vector<SofaF
         auto elevs = GetUniquelySortedElems(aers, 1, {nullptr, nullptr, &dist}, {0.1, 0.1, 0.001});
 
         /* Remove elevations that don't have a valid set of azimuths. */
-        auto invalid_elev = [&dist,&aers](const double ev) -> bool
+        std::erase_if(elevs, [&dist,&aers](const double ev) -> bool
         {
-            auto azims = GetUniquelySortedElems(aers, 0, {nullptr, &ev, &dist}, {0.1, 0.1, 0.001});
+            const auto azims = GetUniquelySortedElems(aers, 0, {nullptr, &ev, &dist},
+                {0.1, 0.1, 0.001});
 
             if(std::abs(ev) > 89.999)
                 return azims.size() != 1;
             if(azims.empty() || !(std::abs(azims[0]) < 0.1))
                 return true;
             return GetUniformAzimStep(0.1, azims) <= 0.0;
-        };
-        elevs.erase(std::remove_if(elevs.begin(), elevs.end(), invalid_elev), elevs.end());
+        });
 
         double step{GetUniformElevStep(0.1, elevs)};
         if(step <= 0.0)

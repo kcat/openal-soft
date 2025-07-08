@@ -36,13 +36,13 @@ void ConvolutionEffectHandler::SetParamf(ALCcontext *context, ConvolutionProps& 
 { context->throw_error(AL_INVALID_ENUM, "Invalid convolution effect float property {:#04x}", as_unsigned(param)); }
 void ConvolutionEffectHandler::SetParamfv(ALCcontext *context, ConvolutionProps &props, ALenum param, const float *values)
 {
-    static constexpr auto finite_checker = [](float val) -> bool { return std::isfinite(val); };
+    static constexpr auto is_finite = [](float val) -> bool { return std::isfinite(val); };
 
     switch(param)
     {
     case AL_CONVOLUTION_ORIENTATION_SOFT:
         const auto vals = std::span{values, 6_uz};
-        if(!std::all_of(vals.begin(), vals.end(), finite_checker))
+        if(!std::ranges::all_of(vals, is_finite))
             context->throw_error(AL_INVALID_VALUE, "Convolution orientation out of range", param);
 
         std::copy_n(vals.begin(), props.OrientAt.size(), props.OrientAt.begin());
@@ -66,8 +66,8 @@ void ConvolutionEffectHandler::GetParamfv(ALCcontext *context, const Convolution
     {
     case AL_CONVOLUTION_ORIENTATION_SOFT:
         const auto vals = std::span{values, 6_uz};
-        const auto oiter = std::copy(props.OrientAt.cbegin(), props.OrientAt.cend(), vals.begin());
-        std::copy(props.OrientUp.cbegin(), props.OrientUp.cend(), oiter);
+        const auto oiter = std::ranges::copy(props.OrientAt, vals.begin()).out;
+        std::ranges::copy(props.OrientUp, oiter);
         return;
     }
 

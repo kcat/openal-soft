@@ -63,7 +63,7 @@ void DirectorySearch(const fs::path &path, const std::string_view ext,
     }
 
     const auto newlist = std::span{*results}.subspan(base);
-    std::sort(newlist.begin(), newlist.end());
+    std::ranges::sort(newlist);
     for(const auto &name : newlist)
         TRACE(" got {}", name);
 }

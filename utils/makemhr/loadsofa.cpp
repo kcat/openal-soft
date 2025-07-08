@@ -241,9 +241,8 @@ auto CalcHrirOnset(PPhaseResampler &rs, const uint rate, std::span<double> upsam
 {
     rs.process(hrir, upsampled);
 
-    auto abs_lt = [](const double lhs, const double rhs) -> bool
-    { return std::abs(lhs) < std::abs(rhs); };
-    auto iter = std::max_element(upsampled.begin(), upsampled.end(), abs_lt);
+    static constexpr auto make_abs = [](const double value) { return std::abs(value); };
+    const auto iter = std::ranges::max_element(upsampled, std::less{}, make_abs);
     return static_cast<double>(std::distance(upsampled.begin(), iter)) /
         (double{OnsetRateMultiple}*rate);
 }
@@ -293,10 +292,9 @@ bool LoadResponses(MYSOFA_HRTF *sofaHrtf, HrirDataT *hData, const DelayType dela
             else
                 aer[0] = std::fmod(360.0f - aer[0], 360.0f);
 
-            auto field = std::find_if(hData->mFds.cbegin(), hData->mFds.cend(),
-                [&aer](const HrirFdT &fld) -> bool
-                { return (std::abs(aer[2] - fld.mDistance) < 0.001); });
-            if(field == hData->mFds.cend())
+            auto field = std::ranges::find_if(hData->mFds, [&aer](const HrirFdT &fld) -> bool
+            { return (std::abs(aer[2] - fld.mDistance) < 0.001); });
+            if(field == hData->mFds.end())
                 continue;
 
             const double evscale{180.0 / static_cast<double>(field->mEvs.size()-1)};

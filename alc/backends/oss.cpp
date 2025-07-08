@@ -658,14 +658,14 @@ auto OSSBackendFactory::enumerate(BackendType type) -> std::vector<std::string>
         PlaybackDevices.clear();
         ALCossListPopulate(PlaybackDevices, DSP_CAP_OUTPUT);
         outnames.reserve(PlaybackDevices.size());
-        std::for_each(PlaybackDevices.cbegin(), PlaybackDevices.cend(), add_device);
+        std::ranges::for_each(PlaybackDevices, add_device);
         break;
 
     case BackendType::Capture:
         CaptureDevices.clear();
         ALCossListPopulate(CaptureDevices, DSP_CAP_INPUT);
         outnames.reserve(CaptureDevices.size());
-        std::for_each(CaptureDevices.cbegin(), CaptureDevices.cend(), add_device);
+        std::ranges::for_each(CaptureDevices, add_device);
         break;
     }
 

@@ -19,7 +19,7 @@ DeviceBase::~DeviceBase() = default;
 auto DeviceBase::removeContext(ContextBase *context) -> size_t
 {
     auto oldarray = std::span{*mContexts.load(std::memory_order_acquire)};
-    if(const auto toremove = std::count(oldarray.begin(), oldarray.end(), context))
+    if(const auto toremove = std::ranges::count(oldarray, context))
     {
         const auto newsize = size_t{oldarray.size() - static_cast<size_t>(toremove)};
         auto newarray = ContextArray::Create(newsize);
@@ -27,8 +27,8 @@ auto DeviceBase::removeContext(ContextBase *context) -> size_t
         /* Copy the current/old context handles to the new array, excluding the
          * given context.
          */
-        std::copy_if(oldarray.begin(), oldarray.end(), newarray->begin(),
-            [context](ContextBase *ctx) { return ctx != context; });
+        std::ranges::copy_if(oldarray, newarray->begin(), [context](const ContextBase *ctx)
+        { return ctx != context; });
 
         /* Store the new context array in the device. Wait for any current mix
          * to finish before deleting the old array.

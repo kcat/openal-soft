@@ -101,8 +101,8 @@ void ComputePanGains(const MixParams *mix, const std::span<const float,MaxAmbiCh
 {
     auto ambimap = std::span{std::as_const(mix->AmbiMap)}.first(mix->Buffer.size());
 
-    auto iter = std::transform(ambimap.begin(), ambimap.end(), gains.begin(),
+    const auto iter = std::ranges::transform(ambimap, gains.begin(),
         [coeffs,ingain](const BFChannelConfig &chanmap) noexcept -> float
         { return chanmap.Scale * coeffs[chanmap.Index] * ingain; });
-    std::fill(iter, gains.end(), 0.0f);
+    std::fill(iter.out, gains.end(), 0.0f);
 }

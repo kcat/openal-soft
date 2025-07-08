@@ -11,9 +11,6 @@
 #include "polyphase_resampler.h"
 
 
-// The maximum path length used when processing filenames.
-inline constexpr auto MAX_PATH_LEN = 256u;
-
 // The limit to the number of 'distances' listed in the data set definition.
 // Must be less than 256
 inline constexpr auto MAX_FD_COUNT = 16u;
@@ -135,8 +132,8 @@ inline void FftInverse(const uint n, complex_d *inout)
     const auto values = std::span{inout, n};
     inverse_fft(values);
 
-    const double f{1.0 / n};
-    std::for_each(values.begin(), values.end(), [f](complex_d &value) { value *= f; });
+    const auto f = 1.0 / n;
+    std::ranges::for_each(values, [f](complex_d &value) { value *= f; });
 }
 
 // Performs linear interpolation.

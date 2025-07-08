@@ -171,9 +171,8 @@ void Voice::InitMixer(std::optional<std::string> resopt)
             resampler = "bsinc12"sv;
         }
 
-        auto iter = std::find_if(ResamplerList.begin(), ResamplerList.end(),
-            [resampler](const ResamplerEntry &entry) -> bool
-            { return al::case_compare(resampler, entry.name) == 0; });
+        auto iter = std::ranges::find_if(ResamplerList, [resampler](const ResamplerEntry &entry)
+        { return al::case_compare(resampler, entry.name) == 0; });
         if(iter == ResamplerList.end())
             ERR("Invalid resampler: {}", *resopt);
         else

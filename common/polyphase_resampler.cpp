@@ -6,6 +6,7 @@
 #include <cstddef>
 #include <numbers>
 #include <numeric>
+#include <ranges>
 #include <stdexcept>
 #include <tuple>
 
@@ -153,13 +154,13 @@ void PPhaseResampler::init(const uint srcRate, const uint dstRate)
     // calculating the left offset to avoid increasing the transition width.
     static constexpr auto rejection = 180.0;
     const auto l = (CalcKaiserOrder(rejection, width)+1u) / 2u;
-    const auto beta = CalcKaiserBeta(rejection);
-    const auto besseli_0_beta = ::cyl_bessel_i(0, beta);
+    static constexpr auto beta = CalcKaiserBeta(rejection);
+    static constexpr auto besseli_0_beta = ::cyl_bessel_i(0, beta);
     mM = l*2u + 1u;
     mL = l;
     mF.resize(mM);
-    for(uint i{0};i < mM;i++)
-        mF[i] = SincFilter(mL, beta, besseli_0_beta, mP, cutoff, i);
+    std::ranges::transform(std::views::iota(0u, mM), mF.begin(), [this,cutoff](const uint i)
+    { return SincFilter(mL, beta, besseli_0_beta, mP, cutoff, i); });
 }
 
 // Perform the upsample-filter-downsample resampling operation using a
@@ -186,7 +187,7 @@ void PPhaseResampler::process(const std::span<const double> in, const std::span<
      * build-up from the first half of the filter.
      */
     auto l = size_t{mL};
-    std::generate(work.begin(), work.end(), [in,f,p,q,m,&l]
+    std::ranges::generate(work, [in,f,p,q,m,&l]
     {
         auto j_s = l / p;
         auto j_f = l % p;
@@ -218,5 +219,5 @@ void PPhaseResampler::process(const std::span<const double> in, const std::span<
     });
     // Clean up after in-place operation.
     if(work.data() != out.data())
-        std::copy(work.begin(), work.end(), out.begin());
+        std::ranges::copy(work, out.begin());
 }

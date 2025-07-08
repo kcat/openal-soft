@@ -347,7 +347,7 @@ void ConvolutionState::deviceUpdate(const DeviceBase *device, const BufferStorag
         for(auto base = 0_uz;base < buffer->mSampleLen;)
         {
             const auto todo = std::min(buffer->mSampleLen-base, BufferLineSize);
-            auto srciter = std::next(srcsamples.begin(), ptrdiff_t(base));
+            auto srciter = std::next(srcsamples.begin(), gsl::narrow_cast<ptrdiff_t>(base));
             std::ranges::generate(samples | std::views::take(numChannels),
                 [&srciter,srclinelength,todo]
             {

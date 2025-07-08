@@ -270,12 +270,16 @@ void HrtfStore::getCoeffs(float elevation, float azimuth, float distance, float 
         (     elev0.blend) * (     az1.blend) * dirfact};
 
     /* Calculate the blended HRIR delays. */
-    auto d = float(mDelays[idx[0]][0])*blend[0] + float(mDelays[idx[1]][0])*blend[1]
-        + float(mDelays[idx[2]][0])*blend[2] + float(mDelays[idx[3]][0])*blend[3];
+    auto d = gsl::narrow_cast<float>(mDelays[idx[0]][0])*blend[0]
+        + gsl::narrow_cast<float>(mDelays[idx[1]][0])*blend[1]
+        + gsl::narrow_cast<float>(mDelays[idx[2]][0])*blend[2]
+        + gsl::narrow_cast<float>(mDelays[idx[3]][0])*blend[3];
     delays[0] = fastf2u(d * float{1.0f/HrirDelayFracOne});
 
-    d = float(mDelays[idx[0]][1])*blend[0] + float(mDelays[idx[1]][1])*blend[1]
-        + float(mDelays[idx[2]][1])*blend[2] + float(mDelays[idx[3]][1])*blend[3];
+    d = gsl::narrow_cast<float>(mDelays[idx[0]][1])*blend[0]
+        + gsl::narrow_cast<float>(mDelays[idx[1]][1])*blend[1]
+        + gsl::narrow_cast<float>(mDelays[idx[2]][1])*blend[2]
+        + gsl::narrow_cast<float>(mDelays[idx[3]][1])*blend[3];
     delays[1] = fastf2u(d * float{1.0f/HrirDelayFracOne});
 
     /* Calculate the blended HRIR coefficients. */
@@ -295,7 +299,7 @@ void HrtfStore::getCoeffs(float elevation, float azimuth, float distance, float 
 
 
 auto DirectHrtfState::Create(size_t num_chans) -> std::unique_ptr<DirectHrtfState>
-{ return std::unique_ptr<DirectHrtfState>{new(FamCount(num_chans)) DirectHrtfState{num_chans}}; }
+{ return std::unique_ptr<DirectHrtfState>{new(FamCount{num_chans}) DirectHrtfState{num_chans}}; }
 
 void DirectHrtfState::build(const HrtfStore *Hrtf, const uint irSize, const bool perHrirMin,
     const std::span<const AngularPoint> AmbiPoints,
@@ -455,7 +459,7 @@ auto CreateHrtfStore(uint rate, uint8_t irSize, const std::span<const HrtfStore:
     std::advance(storeiter, delays.size_bytes());
     /* NOLINTEND(cppcoreguidelines-pro-type-reinterpret-cast) */
 
-    if(size_t(std::distance(base, storeiter)) != total)
+    if(gsl::narrow_cast<size_t>(std::distance(base, storeiter)) != total)
         throw std::runtime_error{"HrtfStore allocation size mismatch"};
 
     /* Copy input data to storage. */
@@ -592,7 +596,7 @@ auto LoadHrtf00(std::istream &data) -> std::unique_ptr<HrtfStore>
     std::ranges::for_each(coeffs, [&data,irSize](HrirSpan hrir)
     {
         std::ranges::generate(hrir | std::views::take(irSize) | std::views::elements<0>,
-            [&data] { return float(readle<int16_t>(data)) / 32768.0f; });
+            [&data]{ return gsl::narrow_cast<float>(readle<int16_t>(data)) / 32768.0f; });
     });
     std::ranges::generate(delays|std::views::elements<0>, [&data]{return readle<uint8_t>(data);});
     if(!data || data.eof())
@@ -661,7 +665,7 @@ auto LoadHrtf01(std::istream &data) -> std::unique_ptr<HrtfStore>
     std::ranges::for_each(coeffs, [&data,irSize](HrirSpan hrir)
     {
         std::ranges::generate(hrir | std::views::take(irSize) | std::views::elements<0>,
-            [&data] { return float(readle<int16_t>(data)) / 32768.0f; });
+            [&data]{ return gsl::narrow_cast<float>(readle<int16_t>(data)) / 32768.0f; });
     });
     std::ranges::generate(delays|std::views::elements<0>, [&data]{return readle<uint8_t>(data);});
     if(!data || data.eof())
@@ -744,7 +748,7 @@ auto LoadHrtf02(std::istream &data) -> std::unique_ptr<HrtfStore>
             return nullptr;
         }
 
-        fields[f].distance = float(distance) / 1000.0f;
+        fields[f].distance = gsl::narrow_cast<float>(distance) / 1000.0f;
         fields[f].evCount = evCount;
         if(f > 0 && !(fields[f].distance > fields[f-1].distance))
         {
@@ -792,7 +796,7 @@ auto LoadHrtf02(std::istream &data) -> std::unique_ptr<HrtfStore>
             std::ranges::for_each(coeffs, [&data,irSize](HrirSpan hrir)
             {
                 std::ranges::generate(hrir | std::views::take(irSize) | std::views::elements<0>,
-                    [&data] { return float(readle<int16_t>(data)) / 32768.0f; });
+                    [&data]{ return gsl::narrow_cast<float>(readle<int16_t>(data)) / 32768.0f; });
             });
         }
         else if(sampleType == SampleType_S24)
@@ -800,7 +804,7 @@ auto LoadHrtf02(std::istream &data) -> std::unique_ptr<HrtfStore>
             std::ranges::for_each(coeffs, [&data,irSize](HrirSpan hrir)
             {
                 std::ranges::generate(hrir | std::views::take(irSize) | std::views::elements<0>,
-                    [&data] { return static_cast<float>(readle<int,24>(data)) / 8388608.0f; });
+                    [&data]{ return gsl::narrow_cast<float>(readle<int,24>(data)) / 8388608.0f; });
             });
         }
 
@@ -831,7 +835,7 @@ auto LoadHrtf02(std::istream &data) -> std::unique_ptr<HrtfStore>
             std::ranges::for_each(coeffs, [&data,irSize](HrirSpan hrir)
             {
                 std::ranges::generate(hrir | std::views::take(irSize) | std::views::join,
-                    [&data] { return float(readle<int16_t>(data)) / 32768.0f; });
+                    [&data]{ return gsl::narrow_cast<float>(readle<int16_t>(data)) / 32768.0f; });
             });
         }
         else if(sampleType == SampleType_S24)
@@ -839,7 +843,7 @@ auto LoadHrtf02(std::istream &data) -> std::unique_ptr<HrtfStore>
             std::ranges::for_each(coeffs, [&data,irSize](HrirSpan hrir)
             {
                 std::ranges::generate(hrir | std::views::take(irSize) | std::views::join,
-                    [&data] { return static_cast<float>(readle<int,24>(data)) / 8388608.0f; });
+                    [&data]{ return gsl::narrow_cast<float>(readle<int,24>(data)) / 8388608.0f; });
             });
         }
 
@@ -935,10 +939,10 @@ auto LoadHrtf03(std::istream &data) -> std::unique_ptr<HrtfStore>
     static constexpr auto ChanType_LeftOnly = ubyte{0};
     static constexpr auto ChanType_LeftRight = ubyte{1};
 
-    auto rate = readle<uint32_t>(data);
-    auto channelType = readle<uint8_t>(data);
-    auto irSize = readle<uint8_t>(data);
-    auto fdCount = readle<uint8_t>(data);
+    const auto rate = readle<uint32_t>(data);
+    const auto channelType = readle<uint8_t>(data);
+    const auto irSize = readle<uint8_t>(data);
+    const auto fdCount = readle<uint8_t>(data);
     if(!data || data.eof())
         throw std::runtime_error{"Premature end of file"};
 
@@ -982,7 +986,7 @@ auto LoadHrtf03(std::istream &data) -> std::unique_ptr<HrtfStore>
             return nullptr;
         }
 
-        fields[f].distance = float(distance) / 1000.0f;
+        fields[f].distance = gsl::narrow_cast<float>(distance) / 1000.0f;
         fields[f].evCount = evCount;
         if(f > 0 && !(fields[f].distance < fields[f-1].distance))
         {
@@ -1028,7 +1032,7 @@ auto LoadHrtf03(std::istream &data) -> std::unique_ptr<HrtfStore>
         std::ranges::for_each(coeffs, [&data,irSize](HrirSpan hrir)
         {
             std::ranges::generate(hrir | std::views::take(irSize) | std::views::elements<0>,
-                [&data] { return static_cast<float>(readle<int,24>(data)) / 8388608.0f; });
+                [&data]{ return gsl::narrow_cast<float>(readle<int,24>(data)) / 8388608.0f; });
         });
 
         const auto ldelays = delays | std::views::elements<0>;
@@ -1054,7 +1058,7 @@ auto LoadHrtf03(std::istream &data) -> std::unique_ptr<HrtfStore>
         std::ranges::for_each(coeffs, [&data,irSize](HrirSpan hrir)
         {
             std::ranges::generate(hrir | std::views::take(irSize) | std::views::join,
-                [&data] { return static_cast<float>(readle<int,24>(data)) / 8388608.0f; });
+                [&data]{ return gsl::narrow_cast<float>(readle<int,24>(data)) / 8388608.0f; });
         });
 
         const auto joined_delays = delays | std::views::join;
@@ -1334,7 +1338,8 @@ try {
         std::ranges::transform(hrtf->mDelays | std::views::join, new_delays.begin(),
             [&max_delay,rate_scale](const ubyte oldval)
         {
-            const auto ret = std::round(float(oldval) * rate_scale) / float{HrirDelayFracOne};
+            const auto ret = std::round(gsl::narrow_cast<float>(oldval) * rate_scale)
+                / float{HrirDelayFracOne};
             max_delay = std::max(max_delay, ret);
             return ret;
         });

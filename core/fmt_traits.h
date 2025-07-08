@@ -5,6 +5,7 @@
 #include <cstddef>
 #include <cstdint>
 
+#include "gsl/gsl"
 #include "storage_formats.h"
 
 
@@ -94,7 +95,7 @@ struct SampleInfo<uint8_t> {
     static constexpr auto silence() noexcept { return uint8_t{128}; }
 
     static constexpr auto to_float(const uint8_t sample) noexcept -> float
-    { return float(sample-128) * (1.0f/128.0f); }
+    { return gsl::narrow_cast<float>(sample-128) * (1.0f/128.0f); }
 };
 
 template<>
@@ -104,7 +105,7 @@ struct SampleInfo<int16_t> {
     static constexpr auto silence() noexcept { return int16_t{}; }
 
     static constexpr auto to_float(const int16_t sample) noexcept -> float
-    { return float(sample) * (1.0f/32768.0f); }
+    { return gsl::narrow_cast<float>(sample) * (1.0f/32768.0f); }
 };
 
 template<>
@@ -114,7 +115,7 @@ struct SampleInfo<int32_t> {
     static constexpr auto silence() noexcept { return int32_t{}; }
 
     static constexpr auto to_float(const int32_t sample) noexcept -> float
-    { return static_cast<float>(sample)*(1.0f/2147483648.0f); }
+    { return gsl::narrow_cast<float>(sample)*(1.0f/2147483648.0f); }
 };
 
 template<>
@@ -133,7 +134,7 @@ struct SampleInfo<double> {
     static constexpr auto silence() noexcept { return double{}; }
 
     static constexpr auto to_float(const double sample) noexcept -> float
-    { return static_cast<float>(sample); }
+    { return gsl::narrow_cast<float>(sample); }
 };
 
 template<>
@@ -143,7 +144,7 @@ struct SampleInfo<MulawSample> {
     static constexpr auto silence() noexcept { return MulawSample{uint8_t{127}}; }
 
     static constexpr auto to_float(const MulawSample sample) noexcept -> float
-    { return float(muLawDecompressionTable[sample.value]) * (1.0f/32768.0f); }
+    { return gsl::narrow_cast<float>(muLawDecompressionTable[sample.value]) * (1.0f/32768.0f); }
 };
 
 template<>
@@ -156,7 +157,7 @@ struct SampleInfo<AlawSample> {
     static constexpr auto silence() noexcept { return AlawSample{uint8_t{213}}; }
 
     static constexpr auto to_float(const AlawSample sample) noexcept -> float
-    { return float(aLawDecompressionTable[sample.value]) * (1.0f/32768.0f); }
+    { return gsl::narrow_cast<float>(aLawDecompressionTable[sample.value]) * (1.0f/32768.0f); }
 };
 
 template<>

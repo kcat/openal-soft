@@ -11,7 +11,7 @@
 
 
 class FrontStablizer {
-    explicit FrontStablizer(size_t numchans) : ChannelFilters{numchans} { }
+    explicit FrontStablizer(const size_t numchans) : ChannelFilters{numchans} { }
 
 public:
     alignas(16) std::array<float,BufferLineSize> MidDirect{};
@@ -25,7 +25,7 @@ public:
     al::FlexArray<BandSplitter,16> ChannelFilters;
 
     static auto Create(size_t numchans) -> std::unique_ptr<FrontStablizer>
-    { return std::unique_ptr<FrontStablizer>{new(FamCount(numchans)) FrontStablizer{numchans}}; }
+    { return std::unique_ptr<FrontStablizer>{new(FamCount{numchans}) FrontStablizer{numchans}}; }
 
     DEF_FAM_NEWDEL(FrontStablizer, ChannelFilters)
 };

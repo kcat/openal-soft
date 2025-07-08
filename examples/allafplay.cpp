@@ -306,7 +306,7 @@ struct Channel {
     ~Channel()
     {
         if(mSource) alDeleteSources(1, &mSource);
-        if(mBuffers[0]) alDeleteBuffers(ALsizei(mBuffers.size()), mBuffers.data());
+        if(mBuffers[0]) alDeleteBuffers(gsl::narrow<ALsizei>(mBuffers.size()), mBuffers.data());
     }
 
     auto operator=(const Channel&) -> Channel& = delete;
@@ -364,12 +364,12 @@ struct LafStream {
 auto LafStream::readChunk() -> uint32_t
 {
     auto enableTrackBits = std::array<char,std::tuple_size_v<decltype(mEnabledTracks)>>{};
-    mInFile.sgetn(enableTrackBits.data(), std::streamsize(mNumTracks+7)>>3);
+    mInFile.sgetn(enableTrackBits.data(), gsl::narrow<std::streamsize>((mNumTracks+7u)>>3u));
 
     mEnabledTracks = std::bit_cast<decltype(mEnabledTracks)>(enableTrackBits);
-    mNumEnabled = std::accumulate(mEnabledTracks.cbegin(), mEnabledTracks.cend(), 0u,
-        [](const unsigned int val, const uint8_t in) -> unsigned int
-        { return val + unsigned(std::popcount(in)); });
+    mNumEnabled = gsl::narrow<unsigned>(std::accumulate(mEnabledTracks.cbegin(),
+        mEnabledTracks.cend(), 0, [](const int val, const uint8_t in) -> int
+    { return val + std::popcount(in); }));
 
     /* Make sure enable bits aren't set for non-existent tracks. */
     if(mEnabledTracks[((mNumTracks+7_uz)>>3) - 1] >= (1u<<(mNumTracks&7)))
@@ -381,7 +381,8 @@ auto LafStream::readChunk() -> uint32_t
      */
     const auto numsamples = std::min(uint64_t{mSampleRate}, mSampleCount-mCurrentSample);
 
-    const auto toread = std::streamsize(numsamples * BytesFromQuality(mQuality) * mNumEnabled);
+    const auto toread = gsl::narrow<std::streamsize>(numsamples * BytesFromQuality(mQuality)
+        * mNumEnabled);
     if(mInFile.sgetn(mSampleChunk.data(), toread) != toread)
         throw std::runtime_error{"Failed to read sample chunk"};
 
@@ -402,11 +403,10 @@ auto LafStream::prepareTrack(const size_t trackidx, const size_t count) -> std::
         const auto idx = std::invoke([this,trackidx]() -> unsigned int
         {
             const auto bits = std::span{mEnabledTracks}.first(trackidx>>3);
-            const auto res = std::accumulate(bits.begin(), bits.end(), 0u,
-                [](const unsigned int val, const uint8_t in) -> unsigned int
-            { return val + unsigned(std::popcount(in)); });
-            return unsigned(std::popcount(mEnabledTracks[trackidx>>3] & ((1u<<(trackidx&7))-1)))
-                + res;
+            const auto res = std::accumulate(bits.begin(), bits.end(), 0,
+                [](const int val, const uint8_t in) -> int { return val + std::popcount(in); })
+                + std::popcount(mEnabledTracks[trackidx>>3] & ((1u<<(trackidx&7))-1));
+            return gsl::narrow_cast<unsigned>(res);
         });
 
         const auto step = size_t{mNumEnabled};
@@ -457,19 +457,19 @@ void LafStream::convertPositions(const std::span<float> dst) const
         [dst](const vector<int8_t> &src)
         {
             std::ranges::transform(src, dst.begin(), [](const int8_t in) noexcept -> float
-            { return float(in) / 127.0f; });
+            { return gsl::narrow_cast<float>(in) / 127.0f; });
         },
         [dst](const vector<int16_t> &src)
         {
             std::ranges::transform(src, dst.begin(), [](const int16_t in) noexcept -> float
-            { return float(in) / 32767.0f; });
+            { return gsl::narrow_cast<float>(in) / 32767.0f; });
         },
         [dst](const vector<float> &src) { std::ranges::copy(src, dst.begin()); },
         [dst](const vector<int32_t> &src)
         {
             /* 24-bit samples are converted to 32-bit in copySamples. */
             std::ranges::transform(src, dst.begin(), [](const int32_t in) noexcept -> float
-            { return float(in>>8) / 8388607.0f; });
+            { return gsl::narrow_cast<float>(in>>8) / 8388607.0f; });
         },
     }, mSampleLine);
 }
@@ -535,8 +535,8 @@ auto LoadLAF(const fs::path &fname) -> std::unique_ptr<LafStream>
 
     laf->mNumTracks = std::invoke([input=std::span{header}.subspan<6,4>()]
     {
-        return uint32_t{uint8_t(input[0])} | (uint32_t{uint8_t(input[1])}<<8u)
-            | (uint32_t{uint8_t(input[2])}<<16u) | (uint32_t{uint8_t(input[3])}<<24u);
+        return uint32_t{as_unsigned(input[0])} | (uint32_t{as_unsigned(input[1])}<<8u)
+            | (uint32_t{as_unsigned(input[2])}<<16u) | (uint32_t{as_unsigned(input[3])}<<24u);
     });
 
     fmt::println("Filename: {}", fname.string());
@@ -550,7 +550,7 @@ auto LoadLAF(const fs::path &fname) -> std::unique_ptr<LafStream>
         throw std::runtime_error{fmt::format("Too many tracks: {}", laf->mNumTracks)};
 
     auto chandata = std::vector<char>(laf->mNumTracks*9_uz);
-    auto headersize = std::streamsize(chandata.size());
+    auto headersize = std::ssize(chandata);
     if(laf->mInFile.sgetn(chandata.data(), headersize) != headersize)
         throw std::runtime_error{"Failed to read channel header data"};
 
@@ -574,8 +574,8 @@ auto LoadLAF(const fs::path &fname) -> std::unique_ptr<LafStream>
 
     static constexpr auto read_float = [](std::span<char,4> input)
     {
-        const auto value = uint32_t{uint8_t(input[0])} | (uint32_t{uint8_t(input[1])}<<8u)
-            | (uint32_t{uint8_t(input[2])}<<16u) | (uint32_t{uint8_t(input[3])}<<24u);
+        const auto value = uint32_t{as_unsigned(input[0])} | (uint32_t{as_unsigned(input[1])}<<8u)
+            | (uint32_t{as_unsigned(input[2])}<<16u) | (uint32_t{as_unsigned(input[3])}<<24u);
         return std::bit_cast<float>(value);
     };
 
@@ -627,15 +627,15 @@ auto LoadLAF(const fs::path &fname) -> std::unique_ptr<LafStream>
 
     laf->mSampleRate = std::invoke([input=std::span{footer}.first<4>()]
     {
-        return uint32_t{uint8_t(input[0])} | (uint32_t{uint8_t(input[1])}<<8u)
-            | (uint32_t{uint8_t(input[2])}<<16u) | (uint32_t{uint8_t(input[3])}<<24u);
+        return uint32_t{as_unsigned(input[0])} | (uint32_t{as_unsigned(input[1])}<<8u)
+            | (uint32_t{as_unsigned(input[2])}<<16u) | (uint32_t{as_unsigned(input[3])}<<24u);
     });
     laf->mSampleCount = std::invoke([input=std::span{footer}.last<8>()]
     {
-        return uint64_t{uint8_t(input[0])} | (uint64_t{uint8_t(input[1])}<<8)
-            | (uint64_t{uint8_t(input[2])}<<16u) | (uint64_t{uint8_t(input[3])}<<24u)
-            | (uint64_t{uint8_t(input[4])}<<32u) | (uint64_t{uint8_t(input[5])}<<40u)
-            | (uint64_t{uint8_t(input[6])}<<48u) | (uint64_t{uint8_t(input[7])}<<56u);
+        return uint64_t{as_unsigned(input[0])} | (uint64_t{as_unsigned(input[1])}<<8)
+            | (uint64_t{as_unsigned(input[2])}<<16u) | (uint64_t{as_unsigned(input[3])}<<24u)
+            | (uint64_t{as_unsigned(input[4])}<<32u) | (uint64_t{as_unsigned(input[5])}<<40u)
+            | (uint64_t{as_unsigned(input[6])}<<48u) | (uint64_t{as_unsigned(input[7])}<<56u);
     });
     fmt::println("Sample rate: {}", laf->mSampleRate);
     fmt::println("Length: {} samples ({:.2f} sec)", laf->mSampleCount,
@@ -644,7 +644,7 @@ auto LoadLAF(const fs::path &fname) -> std::unique_ptr<LafStream>
     /* Position vectors get split across the PCM chunks if the sample rate
      * isn't a multiple of 48. Each PCM chunk is exactly one second (the sample
      * rate in sample frames). Each track with position data consists of a set
-     * of 3 samples for 16 audio channels, resuling in 48 sample frames for a
+     * of 3 samples for 16 audio channels, resulting in 48 sample frames for a
      * full set of positions. Extra logic will be needed to manage the position
      * frame offset separate from each chunk.
      */
@@ -667,7 +667,7 @@ auto LoadLAF(const fs::path &fname) -> std::unique_ptr<LafStream>
 
 void PlayLAF(std::string_view fname)
 try {
-    auto laf = LoadLAF(fs::path(al::char_as_u8(fname)));
+    const auto laf = LoadLAF(fs::path(al::char_as_u8(fname)));
 
     switch(laf->mQuality)
     {
@@ -694,7 +694,7 @@ try {
     std::ranges::for_each(laf->mChannels, [](Channel &channel)
     {
         alGenSources(1, &channel.mSource);
-        alGenBuffers(ALsizei(channel.mBuffers.size()), channel.mBuffers.data());
+        alGenBuffers(gsl::narrow<ALsizei>(channel.mBuffers.size()), channel.mBuffers.data());
 
         /* Disable distance attenuation, and make sure the source stays locked
          * relative to the listener.
@@ -717,8 +717,8 @@ try {
                 /* For LFE, silence the direct/dry path and connect the LFE aux
                  * slot on send 0.
                  */
-                alSourcei(channel.mSource, AL_DIRECT_FILTER, ALint(MuteFilterID));
-                alSource3i(channel.mSource, AL_AUXILIARY_SEND_FILTER, ALint(LfeSlotID), 0,
+                alSourcei(channel.mSource, AL_DIRECT_FILTER, as_signed(MuteFilterID));
+                alSource3i(channel.mSource, AL_AUXILIARY_SEND_FILTER, as_signed(LfeSlotID), 0,
                     AL_FILTER_NULL);
             }
             else
@@ -759,11 +759,11 @@ try {
             if(!laf->mPosTracks.empty())
             {
                 alcSuspendContext(alcGetCurrentContext());
-                for(auto i = 0_uz;i < laf->mChannels.size();++i)
+                for(const auto i : std::views::iota(0_uz, laf->mChannels.size()))
                 {
                     const auto trackidx = i>>4;
 
-                    const auto posoffset = unsigned(offset)/FramesPerPos*16_uz + (i&15);
+                    const auto posoffset = gsl::narrow<ALuint>(offset)/FramesPerPos*16_uz + (i&15);
                     const auto x = laf->mPosTracks[trackidx][posoffset*3 + 0];
                     const auto y = laf->mPosTracks[trackidx][posoffset*3 + 1];
                     const auto z = laf->mPosTracks[trackidx][posoffset*3 + 2];
@@ -782,18 +782,19 @@ try {
             if(processed > 0)
             {
                 const auto numsamples = laf->readChunk();
-                for(auto i = 0_uz;i < laf->mChannels.size();++i)
+                for(const auto i : std::views::iota(0_uz, laf->mChannels.size()))
                 {
                     const auto samples = laf->prepareTrack(i, numsamples);
                     laf->convertSamples(samples);
 
                     auto bufid = ALuint{};
                     alSourceUnqueueBuffers(laf->mChannels[i].mSource, 1, &bufid);
-                    alBufferData(bufid, laf->mALFormat, samples.data(), ALsizei(samples.size()),
-                        ALsizei(laf->mSampleRate));
+                    alBufferData(bufid, laf->mALFormat, samples.data(),
+                        gsl::narrow<ALsizei>(samples.size()),
+                        gsl::narrow<ALsizei>(laf->mSampleRate));
                     alSourceQueueBuffers(laf->mChannels[i].mSource, 1, &bufid);
                 }
-                for(auto i = 0_uz;i < laf->mPosTracks.size();++i)
+                for(const auto i : std::views::iota(0_uz, laf->mPosTracks.size()))
                 {
                     std::ranges::copy(laf->mPosTracks[i] | std::views::drop(laf->mSampleRate),
                         laf->mPosTracks[i].begin());
@@ -814,7 +815,7 @@ try {
              */
             auto sources = std::array<ALuint,256_uz>{};
             std::ranges::transform(laf->mChannels, sources.begin(), &Channel::mSource);
-            alSourcePlayv(ALsizei(laf->mChannels.size()), sources.data());
+            alSourcePlayv(gsl::narrow<ALsizei>(laf->mChannels.size()), sources.data());
         }
         else if(state == AL_INITIAL)
         {
@@ -823,30 +824,33 @@ try {
              * position vectors).
              */
             auto numsamples = laf->readChunk();
-            for(auto i = 0_uz;i < laf->mChannels.size();++i)
+            for(const auto i : std::views::iota(0_uz, laf->mChannels.size()))
             {
                 const auto samples = laf->prepareTrack(i, numsamples);
                 laf->convertSamples(samples);
                 alBufferData(laf->mChannels[i].mBuffers[0], laf->mALFormat, samples.data(),
-                    ALsizei(samples.size()), ALsizei(laf->mSampleRate));
+                    gsl::narrow<ALsizei>(samples.size()),
+                    gsl::narrow<ALsizei>(laf->mSampleRate));
             }
-            for(auto i = 0_uz;i < laf->mPosTracks.size();++i)
+            for(const auto i : std::views::iota(0_uz, laf->mPosTracks.size()))
             {
                 std::ignore = laf->prepareTrack(laf->mChannels.size()+i, numsamples);
                 laf->convertPositions(std::span{laf->mPosTracks[i]}.first(laf->mSampleRate));
             }
 
             numsamples = laf->readChunk();
-            for(auto i = 0_uz;i < laf->mChannels.size();++i)
+            for(const auto i : std::views::iota(0_uz, laf->mChannels.size()))
             {
                 const auto samples = laf->prepareTrack(i, numsamples);
                 laf->convertSamples(samples);
                 alBufferData(laf->mChannels[i].mBuffers[1], laf->mALFormat, samples.data(),
-                    ALsizei(samples.size()), ALsizei(laf->mSampleRate));
+                    gsl::narrow<ALsizei>(samples.size()),
+                    gsl::narrow<ALsizei>(laf->mSampleRate));
                 alSourceQueueBuffers(laf->mChannels[i].mSource,
-                    ALsizei(laf->mChannels[i].mBuffers.size()), laf->mChannels[i].mBuffers.data());
+                    gsl::narrow<ALsizei>(laf->mChannels[i].mBuffers.size()),
+                    laf->mChannels[i].mBuffers.data());
             }
-            for(auto i = 0_uz;i < laf->mPosTracks.size();++i)
+            for(const auto i : std::views::iota(0_uz, laf->mPosTracks.size()))
             {
                 std::ignore = laf->prepareTrack(laf->mChannels.size()+i, numsamples);
                 laf->convertPositions(std::span{laf->mPosTracks[i]}.last(laf->mSampleRate));
@@ -857,7 +861,7 @@ try {
              */
             if(!laf->mPosTracks.empty())
             {
-                for(size_t i{0};i < laf->mChannels.size();++i)
+                for(const auto i : std::views::iota(0_uz, laf->mChannels.size()))
                 {
                     const auto trackidx = i>>4;
 
@@ -871,7 +875,7 @@ try {
 
             auto sources = std::array<ALuint,256_uz>{};
             std::ranges::transform(laf->mChannels, sources.begin(), &Channel::mSource);
-            alSourcePlayv(ALsizei(laf->mChannels.size()), sources.data());
+            alSourcePlayv(gsl::narrow<ALsizei>(laf->mChannels.size()), sources.data());
         }
         else
             break;
@@ -890,7 +894,7 @@ try {
             {
                 const auto trackidx = i>>4;
 
-                const auto posoffset = unsigned(offset)/FramesPerPos*16_uz + (i&15);
+                const auto posoffset = gsl::narrow<ALuint>(offset)/FramesPerPos*16_uz + (i&15);
                 const auto x = laf->mPosTracks[trackidx][posoffset*3 + 0];
                 const auto y = laf->mPosTracks[trackidx][posoffset*3 + 1];
                 const auto z = laf->mPosTracks[trackidx][posoffset*3 + 2];
@@ -918,7 +922,7 @@ auto main(std::span<std::string_view> args) -> int
     }
     args = args.subspan(1);
 
-    auto almgr = InitAL(args);
+    const auto almgr = InitAL(args);
 
     /* Automate effect cleanup at end of scope (before almgr destructs). */
     const auto _ = gsl::finally([]
@@ -985,7 +989,7 @@ auto main(std::span<std::string_view> args) -> int
         MyAssert(alGetError() == AL_NO_ERROR);
 
         alGenAuxiliaryEffectSlots(1, &LfeSlotID);
-        alAuxiliaryEffectSloti(LfeSlotID, AL_EFFECTSLOT_EFFECT, ALint(LowFrequencyEffectID));
+        alAuxiliaryEffectSloti(LfeSlotID, AL_EFFECTSLOT_EFFECT, as_signed(LowFrequencyEffectID));
         MyAssert(alGetError() == AL_NO_ERROR);
     }
 

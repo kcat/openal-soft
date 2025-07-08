@@ -980,8 +980,8 @@ void AudioState::handler()
     /* AL_SOFT_bformat_hoa supports up to 14th order (225 channels), otherwise
      * only 1st order is supported with AL_EXT_BFORMAT.
      */
-    const auto max_ambi_order = has_bfmt_hoa ? 14 : 1;
-    auto ambi_order = 0;
+    const auto max_ambi_order = has_bfmt_hoa ? 14u : 1u;
+    auto ambi_order = 0u;
 
     /* Find a suitable format for OpenAL. */
     const auto layoutmask = std::invoke([layout=ChannelLayout{mCodecCtx->ch_layout}]
@@ -1042,13 +1042,14 @@ void AudioState::handler()
              * an optional non-diegetic stereo stream with the B-Format stream,
              * which we can ignore, so check for that too.
              */
-            const auto order = static_cast<int>(std::sqrt(mCodecCtx->ch_layout.nb_channels)) - 1;
-            const auto channels = ALuint(order+1) * ALuint(order+1);
-            if(channels == ALuint(mCodecCtx->ch_layout.nb_channels)
-                || channels+2 == ALuint(mCodecCtx->ch_layout.nb_channels))
+            const auto order = gsl::narrow_cast<unsigned>(
+                std::sqrt(mCodecCtx->ch_layout.nb_channels)) - 1u;
+            if(const auto channels = (order+1u) * (order+1u);
+                channels == gsl::narrow_cast<ALuint>(mCodecCtx->ch_layout.nb_channels)
+                || channels+2u == gsl::narrow_cast<ALuint>(mCodecCtx->ch_layout.nb_channels))
             {
                 ambi_order = std::min(order, max_ambi_order);
-                mFrameSize *= ALuint(ambi_order+1) * ALuint(ambi_order+1);
+                mFrameSize *= (ambi_order+1u) * (ambi_order+1u);
                 mFormat = alGetEnumValue("AL_FORMAT_BFORMAT3D_FLOAT32");
             }
         }
@@ -1096,13 +1097,14 @@ void AudioState::handler()
         }
         else if(mCodecCtx->ch_layout.order == AV_CHANNEL_ORDER_AMBISONIC && has_bfmt)
         {
-            const auto order = static_cast<int>(std::sqrt(mCodecCtx->ch_layout.nb_channels)) - 1;
-            const auto channels = (order+1) * (order+1);
-            if(channels == mCodecCtx->ch_layout.nb_channels
-                || channels+2 == mCodecCtx->ch_layout.nb_channels)
+            const auto order = gsl::narrow_cast<unsigned>(
+                std::sqrt(mCodecCtx->ch_layout.nb_channels)) - 1u;
+            if(const auto channels = (order+1u) * (order+1u);
+                channels == gsl::narrow_cast<ALuint>(mCodecCtx->ch_layout.nb_channels)
+                || channels+2u == gsl::narrow_cast<ALuint>(mCodecCtx->ch_layout.nb_channels))
             {
                 ambi_order = std::min(order, max_ambi_order);
-                mFrameSize *= ALuint(ambi_order+1) * ALuint(ambi_order+1);
+                mFrameSize *= (ambi_order+1u) * (ambi_order+1u);
                 mFormat = alGetEnumValue("AL_FORMAT_BFORMAT3D_8");
             }
         }
@@ -1150,13 +1152,14 @@ void AudioState::handler()
         }
         else if(mCodecCtx->ch_layout.order == AV_CHANNEL_ORDER_AMBISONIC && has_bfmt)
         {
-            const auto order = static_cast<int>(std::sqrt(mCodecCtx->ch_layout.nb_channels)) - 1;
-            const auto channels = (order+1) * (order+1);
-            if(channels == mCodecCtx->ch_layout.nb_channels
-                || channels+2 == mCodecCtx->ch_layout.nb_channels)
+            const auto order = gsl::narrow_cast<unsigned>(
+                std::sqrt(mCodecCtx->ch_layout.nb_channels)) - 1u;
+            if(const auto channels = (order+1u) * (order+1u);
+                channels == gsl::narrow_cast<ALuint>(mCodecCtx->ch_layout.nb_channels)
+                || channels+2u == gsl::narrow_cast<ALuint>(mCodecCtx->ch_layout.nb_channels))
             {
                 ambi_order = std::min(order, max_ambi_order);
-                mFrameSize *= ALuint(ambi_order+1) * ALuint(ambi_order+1);
+                mFrameSize *= (ambi_order+1u) * (ambi_order+1u);
                 mFormat = alGetEnumValue("AL_FORMAT_BFORMAT3D_16");
             }
         }
@@ -1262,7 +1265,7 @@ void AudioState::handler()
     if(ambi_order > 1)
     {
         std::ranges::for_each(mBuffers, [ambi_order](const ALuint bufid)
-        { alBufferi(bufid, AL_UNPACK_AMBISONIC_ORDER_SOFT, ambi_order); });
+        { alBufferi(bufid, AL_UNPACK_AMBISONIC_ORDER_SOFT, gsl::narrow_cast<int>(ambi_order)); });
     }
 #ifdef AL_SOFT_UHJ
     if(EnableSuperStereo)

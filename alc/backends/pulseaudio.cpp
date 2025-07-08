@@ -250,22 +250,22 @@ constexpr auto X714ChanMap = pa_channel_map{12, {
 
 /* NOLINTBEGIN(*EnumCastOutOfRange) *grumble* Don't use enums for bitflags. */
 constexpr auto operator|(pa_stream_flags_t lhs, pa_stream_flags_t rhs) -> pa_stream_flags_t
-{ return pa_stream_flags_t(lhs | al::to_underlying(rhs)); }
+{ return gsl::narrow_cast<pa_stream_flags_t>(lhs | al::to_underlying(rhs)); }
 constexpr auto operator|=(pa_stream_flags_t &lhs, pa_stream_flags_t rhs) -> pa_stream_flags_t&
 {
     lhs = lhs | rhs;
     return lhs;
 }
 constexpr auto operator~(pa_stream_flags_t flag) -> pa_stream_flags_t
-{ return pa_stream_flags_t(~al::to_underlying(flag)); }
+{ return gsl::narrow_cast<pa_stream_flags_t>(~al::to_underlying(flag)); }
 constexpr auto operator&=(pa_stream_flags_t &lhs, pa_stream_flags_t rhs) -> pa_stream_flags_t&
 {
-    lhs = pa_stream_flags_t(al::to_underlying(lhs) & rhs);
+    lhs = gsl::narrow_cast<pa_stream_flags_t>(al::to_underlying(lhs) & rhs);
     return lhs;
 }
 
 constexpr auto operator|(pa_context_flags_t lhs, pa_context_flags_t rhs) -> pa_context_flags_t
-{ return pa_context_flags_t(lhs | al::to_underlying(rhs)); }
+{ return gsl::narrow_cast<pa_context_flags_t>(lhs | al::to_underlying(rhs)); }
 constexpr auto operator|=(pa_context_flags_t &lhs, pa_context_flags_t rhs) -> pa_context_flags_t&
 {
     lhs = lhs | rhs;
@@ -274,7 +274,7 @@ constexpr auto operator|=(pa_context_flags_t &lhs, pa_context_flags_t rhs) -> pa
 
 constexpr auto operator|(pa_subscription_mask_t lhs, pa_subscription_mask_t rhs)
     -> pa_subscription_mask_t
-{ return pa_subscription_mask_t(lhs | al::to_underlying(rhs)); }
+{ return gsl::narrow_cast<pa_subscription_mask_t>(lhs | al::to_underlying(rhs)); }
 /* NOLINTEND(*EnumCastOutOfRange) */
 
 
@@ -1226,7 +1226,7 @@ void PulseCapture::open(std::string_view name)
     switch(mDevice->FmtType)
     {
     case DevFmtUByte:
-        mSilentVal = std::byte(0x80);
+        mSilentVal = std::byte{0x80};
         mSpec.format = PA_SAMPLE_U8;
         break;
     case DevFmtShort:

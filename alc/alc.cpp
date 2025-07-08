@@ -1409,7 +1409,7 @@ auto UpdateDeviceParams(al::Device *device, const std::span<const int> attrList)
             if(outmode != ALC_ANY_SOFT)
             {
                 using OutputMode = al::Device::OutputMode;
-                switch(OutputMode(outmode))
+                switch(OutputMode{outmode})
                 {
                 case OutputMode::Any: break;
                 case OutputMode::Mono: optchans = DevFmtMono; break;

@@ -896,7 +896,7 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
                  * certain sounds fade out better.
                  */
                 const auto srciter = std::ranges::min_element(srcbuf.begin(),
-                    std::next(srcbuf.begin(), ptrdiff_t(avail)), {},
+                    std::next(srcbuf.begin(), gsl::narrow_cast<ptrdiff_t>(avail)), {},
                     [](const float s) { return std::abs(s); });
 
                 std::ranges::fill(std::next(srciter), srcbuf.end(), *srciter);
@@ -1057,7 +1057,8 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
 
             if(mFlags.test(VoiceHasHrtf))
             {
-                const auto TargetGain = parms.Hrtf.Target.Gain * float(vstate == Playing);
+                const auto TargetGain = parms.Hrtf.Target.Gain
+                    * gsl::narrow_cast<float>(vstate == Playing);
                 DoHrtfMix(samples, parms, TargetGain, Counter, OutPos, (vstate == Playing),
                     Device);
             }

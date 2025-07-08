@@ -841,14 +841,13 @@ auto ReadWaveList(std::istream &istream, const SourceRefT *src, const std::endia
         if(fourCC == FOURCC_DATA)
         {
             const auto block = src->mSize * src->mSkip;
-            const auto count = chunkSize / block;
-            if(count < (src->mOffset + hrir.size()))
+            if(chunkSize / block < (src->mOffset + hrir.size()))
             {
                 fmt::println(stderr, "\nError: Bad read from file '{}'.", src->mPath);
                 return false;
             }
             using off_type = std::istream::off_type;
-            istream.seekg(off_type(src->mOffset) * off_type(block), std::ios::cur);
+            istream.seekg(gsl::narrow_cast<off_type>(size_t{src->mOffset} * block), std::ios::cur);
             if(!ReadWaveData(istream, src, order, hrir))
                 return false;
             return true;
@@ -882,7 +881,7 @@ auto ReadWaveList(std::istream &istream, const SourceRefT *src, const std::endia
             if(count > skip)
             {
                 using off_type = std::istream::off_type;
-                istream.seekg(off_type(skip) * off_type(block), std::ios::cur);
+                istream.seekg(gsl::narrow_cast<off_type>(size_t{skip} * block), std::ios::cur);
                 chunkSize -= skip * block;
                 count -= skip;
                 skip = 0;

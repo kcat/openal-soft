@@ -300,7 +300,7 @@ struct DelayLineU {
     }
 
     [[nodiscard]]
-    auto get(size_t chan) const noexcept
+    auto get(const size_t chan) const noexcept
     {
         const auto stride = mLine.size() / NUM_LINES;
         return mLine.subspan(chan*stride, stride);
@@ -314,7 +314,7 @@ struct DelayLineU {
         offset &= stride-1;
         while(const auto rem = std::distance(input, in.end()))
         {
-            const auto td = std::min(ptrdiff_t(stride-offset), rem);
+            const auto td = std::min(gsl::narrow_cast<ptrdiff_t>(stride-offset), rem);
             input = std::ranges::copy(std::views::counted(input, td),
                 (output | std::views::drop(offset)).begin()).in;
             /* Either wrapping back to 0 with more input, or it's done. */

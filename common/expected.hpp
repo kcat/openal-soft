@@ -96,10 +96,10 @@ public:
 
     template<typename U>
     constexpr auto value_or(U&& defval) const& -> S
-    { return bool(*this) ? **this : static_cast<S>(std::forward<U>(defval)); }
+    { return bool{*this} ? **this : static_cast<S>(std::forward<U>(defval)); }
     template<typename U>
     constexpr auto value_or(U&& defval) && -> S
-    { return bool(*this) ? std::move(**this) : static_cast<S>(std::forward<U>(defval)); }
+    { return bool{*this} ? std::move(**this) : static_cast<S>(std::forward<U>(defval)); }
 
     constexpr auto error() & -> F& { return std::get<1>(mValues); }
     constexpr auto error() const& -> const F& { return std::get<1>(mValues); }

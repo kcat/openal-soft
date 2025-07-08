@@ -131,7 +131,7 @@ auto Compressor::Create(const size_t NumChans, const float SampleRate, const Fla
      * varying the knee width, it can effectively be seen as applying
      * compression over a wide range of ratios.
      */
-    if(AutoKnee)
+    if(AutoFlags.test(AutoKnee))
         Comp->mSlope = -1.0f;
 
     if(lookAhead > 0)
@@ -354,7 +354,7 @@ void Compressor::process(const uint SamplesToDo, const std::span<FloatBufferLine
 
             if(SamplesToDo >= delaybuf.size()) [[likely]]
             {
-                const auto inout_start = inout.end() - ptrdiff_t(delaybuf.size());
+                const auto inout_start = std::prev(inout.end(), std::ssize(delaybuf));
                 const auto delay_end = std::ranges::rotate(inout, inout_start).begin();
                 std::ranges::swap_ranges(std::span{inout.begin(), delay_end}, delaybuf);
             }

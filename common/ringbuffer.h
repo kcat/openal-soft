@@ -255,7 +255,7 @@ public:
             throw std::overflow_error{"Ring buffer size overflow"};
 
         const auto numvals = power_of_two * elem_sz;
-        return std::unique_ptr<RingBuffer>{new(FamCount(numvals)) RingBuffer{
+        return std::unique_ptr<RingBuffer>{new(FamCount{numvals}) RingBuffer{
             limit_writes ? sz : power_of_two, power_of_two-1, elem_sz, numvals}};
     }
 

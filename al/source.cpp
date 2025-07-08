@@ -901,7 +901,7 @@ ALenum EnumFromStereoMode(SourceStereo mode)
     case SourceStereo::Normal: return AL_NORMAL_SOFT;
     case SourceStereo::Enhanced: return AL_SUPER_STEREO_SOFT;
     }
-    throw std::runtime_error{"Invalid SourceStereo: "+std::to_string(int(mode))};
+    throw std::runtime_error{fmt::format("Invalid SourceStereo: {:#x}", al::to_underlying(mode))};
 }
 
 inline auto SpatializeModeFromEnum(std::signed_integral auto mode) noexcept

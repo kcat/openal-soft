@@ -1051,7 +1051,7 @@ void AlsaCapture::captureSamples(std::span<std::byte> outbuffer)
         outbuffer = outbuffer.subspan(as_unsigned(amt*bpf));
     }
     if(!outbuffer.empty())
-        std::ranges::fill(outbuffer, std::byte((mDevice->FmtType == DevFmtUByte) ? 0x80 : 0));
+        std::ranges::fill(outbuffer, (mDevice->FmtType==DevFmtUByte)?std::byte{0x80}:std::byte{0});
 }
 
 auto AlsaCapture::availableSamples() -> uint

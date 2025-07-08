@@ -171,7 +171,7 @@ auto expdup(std::string_view str) -> std::string
         if(hasbraces && (envenditer == str.end() || *envenditer != '}'))
             continue;
 
-        const auto envend = size_t(std::distance(str.begin(), envenditer));
+        const auto envend = gsl::narrow<size_t>(std::distance(str.begin(), envenditer));
         const auto envname = std::string{str.substr(0, envend)};
         str.remove_prefix(envend + hasbraces);
 

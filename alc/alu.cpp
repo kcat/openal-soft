@@ -1262,8 +1262,8 @@ void CalcHrtfPanning(Voice *voice, const float xpos, const float ypos, const flo
     /* With no distance, spread is only meaningful for 3D mono sources where it
      * can be 0 or 1 (non-mono sources are always treated as full spread here).
      */
-    const auto spreadmult = float(voice->mFmtChannels == FmtMono && !props.mPanningEnabled)
-        * spread;
+    const auto spreadmult = gsl::narrow_cast<float>(voice->mFmtChannels == FmtMono
+        && !props.mPanningEnabled) * spread;
 
     /* Local sources on HRTF play with each channel panned to its relative
      * location around the listener, providing "virtual speaker" responses.
@@ -1420,8 +1420,8 @@ void CalcNormalPanning(Voice *voice, const float xpos, const float ypos, const f
          * where it can be 0 or full (non-mono sources are always full spread
          * here).
          */
-        const auto spreadmult = float(voice->mFmtChannels == FmtMono && !props.mPanningEnabled)
-            * spread;
+        const auto spreadmult = gsl::narrow_cast<float>(voice->mFmtChannels == FmtMono
+            && !props.mPanningEnabled) * spread;
 
         for(const auto c : std::views::iota(0_uz, chans.size()))
         {
@@ -2264,7 +2264,7 @@ void ApplyDistanceComp(const std::span<FloatBufferLine> Samples, const size_t Sa
         const auto inout = chanbuffer.first(SamplesToDo);
         if(SamplesToDo >= base) [[likely]]
         {
-            const auto inout_start = std::prev(inout.end(), ptrdiff_t(base));
+            const auto inout_start = std::prev(inout.end(), gsl::narrow_cast<ptrdiff_t>(base));
             const auto delay_end = std::ranges::rotate(inout, inout_start).begin();
             std::ranges::swap_ranges(std::span{inout.begin(), delay_end}, distbuf);
         }

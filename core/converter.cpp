@@ -26,28 +26,28 @@ static_assert((BufferLineSize-1)/MaxPitch > 0, "MaxPitch is too large for Buffer
 static_assert((INT_MAX>>MixerFracBits)/MaxPitch > BufferLineSize,
     "MaxPitch and/or BufferLineSize are too large for MixerFracBits!");
 
-template<DevFmtType T>
-constexpr float LoadSample(DevFmtType_t<T> val) noexcept = delete;
+template<DevFmtType T> constexpr
+auto LoadSample(const DevFmtType_t<T> val) noexcept -> float = delete;
 
-template<> constexpr float LoadSample<DevFmtByte>(DevFmtType_t<DevFmtByte> val) noexcept
-{ return float(val) * (1.0f/128.0f); }
-template<> constexpr float LoadSample<DevFmtShort>(DevFmtType_t<DevFmtShort> val) noexcept
-{ return float(val) * (1.0f/32768.0f); }
-template<> constexpr float LoadSample<DevFmtInt>(DevFmtType_t<DevFmtInt> val) noexcept
-{ return static_cast<float>(val) * (1.0f/2147483648.0f); }
-template<> constexpr float LoadSample<DevFmtFloat>(DevFmtType_t<DevFmtFloat> val) noexcept
+template<> constexpr auto LoadSample<DevFmtByte>(const int8_t val) noexcept -> float
+{ return gsl::narrow_cast<float>(val) * (1.0f/128.0f); }
+template<> constexpr auto LoadSample<DevFmtShort>(const int16_t val) noexcept -> float
+{ return gsl::narrow_cast<float>(val) * (1.0f/32768.0f); }
+template<> constexpr auto LoadSample<DevFmtInt>(const int32_t val) noexcept -> float
+{ return gsl::narrow_cast<float>(val) * (1.0f/2147483648.0f); }
+template<> constexpr auto LoadSample<DevFmtFloat>(const float val) noexcept -> float
 { return val; }
 
-template<> constexpr float LoadSample<DevFmtUByte>(DevFmtType_t<DevFmtUByte> val) noexcept
-{ return LoadSample<DevFmtByte>(static_cast<int8_t>(val - 128)); }
-template<> constexpr float LoadSample<DevFmtUShort>(DevFmtType_t<DevFmtUShort> val) noexcept
-{ return LoadSample<DevFmtShort>(static_cast<int16_t>(val - 32768)); }
-template<> constexpr float LoadSample<DevFmtUInt>(DevFmtType_t<DevFmtUInt> val) noexcept
-{ return LoadSample<DevFmtInt>(static_cast<int32_t>(val - 2147483648u)); }
+template<> constexpr auto LoadSample<DevFmtUByte>(const uint8_t val) noexcept -> float
+{ return LoadSample<DevFmtByte>(gsl::narrow_cast<int8_t>(val - 128)); }
+template<> constexpr auto LoadSample<DevFmtUShort>(const uint16_t val) noexcept -> float
+{ return LoadSample<DevFmtShort>(gsl::narrow_cast<int16_t>(val - 32768)); }
+template<> constexpr auto LoadSample<DevFmtUInt>(const uint32_t val) noexcept -> float
+{ return LoadSample<DevFmtInt>(as_signed(val - 2147483648u)); }
 
 
 template<DevFmtType T>
-inline void LoadSampleArray(const std::span<float> dst, const void *src, const size_t channel,
+void LoadSampleArray(const std::span<float> dst, const void *src, const size_t channel,
     const size_t srcstep) noexcept
 {
     Expects(channel < srcstep);
@@ -82,24 +82,24 @@ void LoadSamples(const std::span<float> dst, const void *src, const size_t chann
 
 
 template<DevFmtType T>
-inline DevFmtType_t<T> StoreSample(float) noexcept;
+auto StoreSample(float) noexcept -> DevFmtType_t<T> = delete;
 
-template<> inline float StoreSample<DevFmtFloat>(float val) noexcept
+template<> auto StoreSample<DevFmtFloat>(const float val) noexcept -> float
 { return val; }
-template<> inline int32_t StoreSample<DevFmtInt>(float val) noexcept
+template<> auto StoreSample<DevFmtInt>(const float val) noexcept -> int32_t
 { return fastf2i(std::clamp(val*2147483648.0f, -2147483648.0f, 2147483520.0f)); }
-template<> inline int16_t StoreSample<DevFmtShort>(float val) noexcept
-{ return static_cast<int16_t>(fastf2i(std::clamp(val*32768.0f, -32768.0f, 32767.0f))); }
-template<> inline int8_t StoreSample<DevFmtByte>(float val) noexcept
-{ return static_cast<int8_t>(fastf2i(std::clamp(val*128.0f, -128.0f, 127.0f))); }
+template<> auto StoreSample<DevFmtShort>(const float val) noexcept -> int16_t
+{ return gsl::narrow_cast<int16_t>(fastf2i(std::clamp(val*32768.0f, -32768.0f, 32767.0f))); }
+template<> auto StoreSample<DevFmtByte>(const float val) noexcept -> int8_t
+{ return gsl::narrow_cast<int8_t>(fastf2i(std::clamp(val*128.0f, -128.0f, 127.0f))); }
 
 /* Define unsigned output variations. */
-template<> inline uint32_t StoreSample<DevFmtUInt>(float val) noexcept
-{ return static_cast<uint32_t>(StoreSample<DevFmtInt>(val)) + 2147483648u; }
-template<> inline uint16_t StoreSample<DevFmtUShort>(float val) noexcept
-{ return static_cast<uint16_t>(StoreSample<DevFmtShort>(val) + 32768); }
-template<> inline uint8_t StoreSample<DevFmtUByte>(float val) noexcept
-{ return static_cast<uint8_t>(StoreSample<DevFmtByte>(val) + 128); }
+template<> auto StoreSample<DevFmtUInt>(const float val) noexcept -> uint32_t
+{ return as_unsigned(StoreSample<DevFmtInt>(val)) + 2147483648u; }
+template<> auto StoreSample<DevFmtUShort>(const float val) noexcept -> uint16_t
+{ return gsl::narrow_cast<uint16_t>(StoreSample<DevFmtShort>(val) + 32768); }
+template<> auto StoreSample<DevFmtUByte>(const float val) noexcept -> uint8_t
+{ return gsl::narrow_cast<uint8_t>(StoreSample<DevFmtByte>(val) + 128); }
 
 template<DevFmtType T>
 inline void StoreSampleArray(void *dst, const std::span<const float> src, const size_t channel,
@@ -180,7 +180,7 @@ SampleConverterPtr SampleConverter::Create(DevFmtType srcType, DevFmtType dstTyp
     if(numchans < 1 || srcRate < 1 || dstRate < 1)
         return converter;
 
-    converter = SampleConverterPtr{new(FamCount(numchans)) SampleConverter{numchans}};
+    converter = SampleConverterPtr{new(FamCount{numchans}) SampleConverter{numchans}};
     converter->mSrcType = srcType;
     converter->mDstType = dstType;
     converter->mSrcTypeSize = BytesFromDevFmt(srcType);
@@ -240,8 +240,8 @@ uint SampleConverter::availableOut(uint srcframes) const
 
 uint SampleConverter::convert(const void **src, uint *srcframes, void *dst, uint dstframes)
 {
-    const auto SrcFrameSize{mChan.size() * mSrcTypeSize};
-    const auto DstFrameSize{mChan.size() * mDstTypeSize};
+    const auto SrcFrameSize = mChan.size() * mSrcTypeSize;
+    const auto DstFrameSize = mChan.size() * mDstTypeSize;
     const auto increment = mIncrement;
     auto NumSrcSamples = *srcframes;
     auto SamplesIn = std::span{static_cast<const std::byte*>(*src), NumSrcSamples*SrcFrameSize};

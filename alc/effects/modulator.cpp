@@ -41,6 +41,7 @@
 #include "core/effectslot.h"
 #include "core/filters/biquad.h"
 #include "core/mixer.h"
+#include "gsl/gsl"
 #include "intrusive_ptr.h"
 #include "opthelpers.h"
 
@@ -51,22 +52,22 @@ namespace {
 using uint = unsigned int;
 
 struct SinFunc {
-    static auto Get(uint index, float scale) noexcept(noexcept(std::sin(0.0f))) -> float
-    { return std::sin(static_cast<float>(index) * scale); }
+    static auto Get(const uint index, float const scale) noexcept(noexcept(std::sin(0.0f))) -> float
+    { return std::sin(gsl::narrow_cast<float>(index) * scale); }
 };
 
 struct SawFunc {
-    static constexpr auto Get(uint index, float scale) noexcept -> float
-    { return static_cast<float>(index)*scale - 1.0f; }
+    static constexpr auto Get(const uint index, const float scale) noexcept -> float
+    { return gsl::narrow_cast<float>(index)*scale - 1.0f; }
 };
 
 struct SquareFunc {
-    static constexpr auto Get(uint index, float scale) noexcept -> float
-    { return float(static_cast<float>(index)*scale < 0.5f)*2.0f - 1.0f; }
+    static constexpr auto Get(const uint index, const float scale) noexcept -> float
+    { return gsl::narrow_cast<float>(gsl::narrow_cast<float>(index)*scale < 0.5f)*2.0f - 1.0f; }
 };
 
 struct OneFunc {
-    static constexpr auto Get(uint, float) noexcept -> float
+    static constexpr auto Get(const uint, const float) noexcept -> float
     { return 1.0f; }
 };
 

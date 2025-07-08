@@ -276,7 +276,7 @@ void MinimumPhase(const std::span<double> mags, const std::span<complex_d> out)
 // Write an ASCII string to a file.
 auto WriteAscii(const std::string_view out, std::ostream &ostream, const std::string_view filename) -> int
 {
-    if(!ostream.write(out.data(), std::streamsize(out.size())) || ostream.bad())
+    if(!ostream.write(out.data(), std::ssize(out)) || ostream.bad())
     {
         fmt::println(stderr, "\nError: Bad write to file '{}'.", filename);
         return 0;
@@ -293,7 +293,7 @@ auto WriteBin4(const uint bytes, const uint32_t in, std::ostream &ostream,
     for(uint i{0};i < bytes;i++)
         out[i] = static_cast<char>((in>>(i*8)) & 0x000000FF);
 
-    if(!ostream.write(out.data(), std::streamsize(bytes)) || ostream.bad())
+    if(!ostream.write(out.data(), gsl::narrow<std::streamsize>(bytes)) || ostream.bad())
     {
         fmt::println(stderr, "\nError: Bad write to file '{}'.", filename);
         return 0;

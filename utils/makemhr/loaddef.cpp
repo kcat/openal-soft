@@ -1680,9 +1680,10 @@ auto AverageHrirOnset(PPhaseResampler &rs, std::span<double> upsampled, const ui
 {
     rs.process(hrir, upsampled);
 
-    auto iter = std::ranges::max_element(upsampled, [](const double lhs, const double rhs) -> bool
-    { return std::abs(lhs) < std::abs(rhs); });
-    return Lerp(onset, static_cast<double>(std::distance(upsampled.begin(), iter)) / (10*rate), f);
+    const auto iter = std::ranges::max_element(upsampled, std::less{},
+        [](const double value) -> double { return std::abs(value); });
+    return std::lerp(onset, gsl::narrow_cast<double>(std::distance(upsampled.begin(), iter))
+        / (10*rate), f);
 }
 
 // Calculate the magnitude response of an HRIR and average it with any
@@ -1699,7 +1700,7 @@ void AverageHrirMagnitude(const uint fftSize, const std::span<const double> hrir
     forward_fft(h);
     MagnitudeResponse(h, r);
     for(uint i{0};i < m;++i)
-        mag[i] = Lerp(mag[i], r[i], f);
+        mag[i] = std::lerp(mag[i], r[i], f);
 }
 
 // Process the list of sources in the data set definition.

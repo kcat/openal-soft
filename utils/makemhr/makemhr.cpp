@@ -631,10 +631,10 @@ void SynthesizeOnsets(HrirDataT *hData)
                     CalcAzIndices(field.mEvs[topElev], az, &a0, &a1, &af);
 
                     /* Blend the delays, and again, swap the ears. */
-                    field.mEvs[ei].mAzs[ai].mDelays[0] = Lerp(
+                    field.mEvs[ei].mAzs[ai].mDelays[0] = std::lerp(
                         field.mEvs[topElev].mAzs[a0].mDelays[1],
                         field.mEvs[topElev].mAzs[a1].mDelays[1], af);
-                    field.mEvs[ei].mAzs[ai].mDelays[1] = Lerp(
+                    field.mEvs[ei].mAzs[ai].mDelays[1] = std::lerp(
                         field.mEvs[topElev].mAzs[a0].mDelays[0],
                         field.mEvs[topElev].mAzs[a1].mDelays[0], af);
                 }
@@ -664,7 +664,7 @@ void SynthesizeOnsets(HrirDataT *hData)
                     else az = (std::numbers::pi*2.0)-az + std::numbers::pi;
                     CalcAzIndices(field.mEvs[topElev], az, &a0, &a1, &af);
 
-                    field.mEvs[ei].mAzs[ai].mDelays[0] = Lerp(
+                    field.mEvs[ei].mAzs[ai].mDelays[0] = std::lerp(
                         field.mEvs[topElev].mAzs[a0].mDelays[0],
                         field.mEvs[topElev].mAzs[a1].mDelays[0], af);
                 }
@@ -741,13 +741,13 @@ void SynthesizeHrirs(HrirDataT *hData)
             /* Use the lowest immediate-left response for the left ear and
              * lowest immediate-right response for the right ear. Given no comb
              * effects as a result of the left response reaching the right ear
-             * and vice-versa, this produces a decent phantom-center response
+             * and vice versa, this produces a decent phantom-center response
              * underneath the head.
              */
             CalcAzIndices(field.mEvs[oi], std::numbers::pi/((ti==0) ? -2.0 : 2.0), &a0, &a1, &af);
             for(uint i{0u};i < m;i++)
             {
-                field.mEvs[0].mAzs[0].mIrs[ti][i] = Lerp(field.mEvs[oi].mAzs[a0].mIrs[ti][i],
+                field.mEvs[0].mAzs[0].mIrs[ti][i] = std::lerp(field.mEvs[oi].mAzs[a0].mIrs[ti][i],
                     field.mEvs[oi].mAzs[a1].mIrs[ti][i], af);
             }
         }
@@ -759,17 +759,17 @@ void SynthesizeHrirs(HrirDataT *hData)
             std::array<double,4> lp{};
 
             /* Calculate a low-pass filter to simulate body occlusion. */
-            lp[0] = Lerp(1.0, lp[0], b);
-            lp[1] = Lerp(lp[0], lp[1], b);
-            lp[2] = Lerp(lp[1], lp[2], b);
-            lp[3] = Lerp(lp[2], lp[3], b);
+            lp[0] = std::lerp(1.0, lp[0], b);
+            lp[1] = std::lerp(lp[0], lp[1], b);
+            lp[2] = std::lerp(lp[1], lp[2], b);
+            lp[3] = std::lerp(lp[2], lp[3], b);
             htemp[0] = lp[3];
             for(size_t i{1u};i < htemp.size();i++)
             {
-                lp[0] = Lerp(0.0, lp[0], b);
-                lp[1] = Lerp(lp[0], lp[1], b);
-                lp[2] = Lerp(lp[1], lp[2], b);
-                lp[3] = Lerp(lp[2], lp[3], b);
+                lp[0] = std::lerp(0.0, lp[0], b);
+                lp[1] = std::lerp(lp[0], lp[1], b);
+                lp[2] = std::lerp(lp[1], lp[2], b);
+                lp[3] = std::lerp(lp[2], lp[3], b);
                 htemp[i] = lp[3];
             }
             /* Get the filter's frequency-domain response and extract the
@@ -793,9 +793,9 @@ void SynthesizeHrirs(HrirDataT *hData)
                         /* Blend the two defined HRIRs closest to this azimuth,
                          * then blend that with the synthesized -90 elevation.
                          */
-                        const double s1{Lerp(field.mEvs[oi].mAzs[a0].mIrs[ti][i],
-                            field.mEvs[oi].mAzs[a1].mIrs[ti][i], af)};
-                        const double s{Lerp(field.mEvs[0].mAzs[0].mIrs[ti][i], s1, of)};
+                        const auto s1 = std::lerp(field.mEvs[oi].mAzs[a0].mIrs[ti][i],
+                            field.mEvs[oi].mAzs[a1].mIrs[ti][i], af);
+                        const auto s = std::lerp(field.mEvs[0].mAzs[0].mIrs[ti][i], s1, of);
                         field.mEvs[ei].mAzs[ai].mIrs[ti][i] = s * filter[i];
                     }
                 }
@@ -803,17 +803,17 @@ void SynthesizeHrirs(HrirDataT *hData)
         }
         const double b{beta};
         std::array<double,4> lp{};
-        lp[0] = Lerp(1.0, lp[0], b);
-        lp[1] = Lerp(lp[0], lp[1], b);
-        lp[2] = Lerp(lp[1], lp[2], b);
-        lp[3] = Lerp(lp[2], lp[3], b);
+        lp[0] = std::lerp(1.0, lp[0], b);
+        lp[1] = std::lerp(lp[0], lp[1], b);
+        lp[2] = std::lerp(lp[1], lp[2], b);
+        lp[3] = std::lerp(lp[2], lp[3], b);
         htemp[0] = lp[3];
         for(size_t i{1u};i < htemp.size();i++)
         {
-            lp[0] = Lerp(0.0, lp[0], b);
-            lp[1] = Lerp(lp[0], lp[1], b);
-            lp[2] = Lerp(lp[1], lp[2], b);
-            lp[3] = Lerp(lp[2], lp[3], b);
+            lp[0] = std::lerp(0.0, lp[0], b);
+            lp[1] = std::lerp(lp[0], lp[1], b);
+            lp[2] = std::lerp(lp[1], lp[2], b);
+            lp[3] = std::lerp(lp[2], lp[3], b);
             htemp[i] = lp[3];
         }
         FftForward(static_cast<uint>(htemp.size()), htemp.data());

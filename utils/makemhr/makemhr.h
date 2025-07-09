@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <array>
 #include <complex>
+#include <ranges>
 #include <span>
 #include <vector>
 
@@ -117,9 +118,9 @@ bool PrepareHrirData(const std::span<const double> distances,
  */
 inline void MagnitudeResponse(const std::span<const complex_d> in, const std::span<double> out)
 {
-    static constexpr double Epsilon{1e-9};
-    for(size_t i{0};i < out.size();++i)
-        out[i] = std::max(std::abs(in[i]), Epsilon);
+    static constexpr auto Epsilon = 1e-9;
+    std::ranges::transform(in | std::views::take(out.size()), out.begin(),
+        [](const complex_d &c) -> double { return std::max(std::abs(c), Epsilon); });
 }
 
 // Performs a forward FFT.
@@ -135,9 +136,5 @@ inline void FftInverse(const uint n, complex_d *inout)
     const auto f = 1.0 / n;
     std::ranges::for_each(values, [f](complex_d &value) { value *= f; });
 }
-
-// Performs linear interpolation.
-inline double Lerp(const double a, const double b, const double f)
-{ return a + f * (b - a); }
 
 #endif /* MAKEMHR_H */

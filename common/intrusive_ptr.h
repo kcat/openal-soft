@@ -13,8 +13,10 @@ template<typename T>
 class intrusive_ref {
     std::atomic<unsigned int> mRef{1u};
 
-protected:
+    intrusive_ref() = default;
     ~intrusive_ref() = default;
+
+    friend T;
 
 public:
     unsigned int inc_ref() noexcept { return mRef.fetch_add(1, std::memory_order_acq_rel)+1; }

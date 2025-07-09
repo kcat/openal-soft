@@ -4,6 +4,7 @@
 #include <functional>
 #include <limits>
 #include <memory>
+#include <ranges>
 #include <span>
 #include <stdexcept>
 #include <utility>
@@ -41,12 +42,12 @@ ContextBase::~ContextBase()
 
 void ContextBase::allocVoiceChanges()
 {
-    static constexpr size_t clustersize{std::tuple_size_v<VoiceChangeCluster::element_type>};
+    static constexpr auto clustersize = std::tuple_size_v<VoiceChangeCluster::element_type>;
 
-    VoiceChangeCluster clusterptr{std::make_unique<VoiceChangeCluster::element_type>()};
+    auto clusterptr = std::make_unique<VoiceChangeCluster::element_type>();
     const auto cluster = std::span{*clusterptr};
 
-    for(size_t i{1};i < clustersize;++i)
+    for(const auto i : std::views::iota(1_uz, clustersize))
         cluster[i-1].mNext.store(std::addressof(cluster[i]), std::memory_order_relaxed);
     cluster[clustersize-1].mNext.store(mVoiceChangeTail, std::memory_order_relaxed);
 

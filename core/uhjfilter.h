@@ -7,11 +7,12 @@
 #include <span>
 #include <string_view>
 
+#include "alnumeric.h"
 #include "bufferline.h"
 
 
-inline constexpr std::size_t UhjLength256{256};
-inline constexpr std::size_t UhjLength512{512};
+inline constexpr auto UhjLength256 = 256_uz;
+inline constexpr auto UhjLength512 = 512_uz;
 
 enum class UhjQualityType : std::uint8_t {
     IIR = 0,
@@ -20,8 +21,8 @@ enum class UhjQualityType : std::uint8_t {
     Default = IIR
 };
 
-inline UhjQualityType UhjDecodeQuality{UhjQualityType::Default};
-inline UhjQualityType UhjEncodeQuality{UhjQualityType::Default};
+inline auto UhjDecodeQuality = UhjQualityType::Default;
+inline auto UhjEncodeQuality = UhjQualityType::Default;
 
 
 struct UhjAllPassFilter {

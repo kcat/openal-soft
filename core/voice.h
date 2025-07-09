@@ -281,6 +281,6 @@ struct Voice {
     static void InitMixer(std::optional<std::string> resopt);
 };
 
-inline Resampler ResamplerDefault{Resampler::Spline};
+inline auto ResamplerDefault = Resampler::Spline;
 
 #endif /* CORE_VOICE_H */

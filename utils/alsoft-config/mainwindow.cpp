@@ -159,29 +159,26 @@ auto GetDefaultIndex(const std::span<const NameValuePair> list) -> uint8_t
 }
 
 #ifdef Q_OS_WIN32
-struct CoTaskMemDeleter {
-    void operator()(void *buffer) { CoTaskMemFree(buffer); }
-};
 /* NOLINTNEXTLINE(*-avoid-c-arrays) */
-using WCharBufferPtr = std::unique_ptr<WCHAR[],CoTaskMemDeleter>;
+using WCharBufferPtr = std::unique_ptr<WCHAR[], decltype([](void *buffer)
+    { CoTaskMemFree(buffer); })>;
 #endif
 
 QString getDefaultConfigName()
 {
 #ifdef Q_OS_WIN32
-    const char *fname{"alsoft.ini"};
-    static constexpr auto get_appdata_path = []() -> QString
+    auto *fname = "alsoft.ini";
+    auto base = std::invoke([]() -> QString
     {
         auto buffer = WCharBufferPtr{};
-        if(const HRESULT hr{SHGetKnownFolderPath(FOLDERID_RoamingAppData, KF_FLAG_DONT_UNEXPAND,
-            nullptr, al::out_ptr(buffer))}; SUCCEEDED(hr))
+        if(const auto hr = SHGetKnownFolderPath(FOLDERID_RoamingAppData, KF_FLAG_DONT_UNEXPAND,
+            nullptr, al::out_ptr(buffer)); SUCCEEDED(hr))
             return QString::fromWCharArray(buffer.get());
         return QString{};
-    };
-    QString base = get_appdata_path();
+    });
 #else
-    const char *fname{"alsoft.conf"};
-    QString base = qgetenv("XDG_CONFIG_HOME");
+    auto *fname = "alsoft.conf";
+    auto base = QString{qgetenv("XDG_CONFIG_HOME")};
     if(base.isEmpty())
     {
         base = qgetenv("HOME");
@@ -197,17 +194,16 @@ QString getDefaultConfigName()
 QString getBaseDataPath()
 {
 #ifdef Q_OS_WIN32
-    static constexpr auto get_appdata_path = []() -> QString
+    auto base = std::invoke([]() -> QString
     {
         auto buffer = WCharBufferPtr{};
-        if(const HRESULT hr{SHGetKnownFolderPath(FOLDERID_RoamingAppData, KF_FLAG_DONT_UNEXPAND,
-            nullptr, al::out_ptr(buffer))}; SUCCEEDED(hr))
+        if(const auto hr = SHGetKnownFolderPath(FOLDERID_RoamingAppData, KF_FLAG_DONT_UNEXPAND,
+            nullptr, al::out_ptr(buffer)); SUCCEEDED(hr))
             return QString::fromWCharArray(buffer.get());
         return QString{};
-    };
-    QString base = get_appdata_path();
+    });
 #else
-    QString base = qgetenv("XDG_DATA_HOME");
+    auto base = QString{qgetenv("XDG_DATA_HOME")};
     if(base.isEmpty())
     {
         base = qgetenv("HOME");
@@ -218,27 +214,26 @@ QString getBaseDataPath()
     return base;
 }
 
-QStringList getAllDataPaths(const QString &append)
+auto getAllDataPaths(const QString &append) -> QStringList
 {
-    QStringList list;
+    auto list = QStringList{};
     list.append(getBaseDataPath());
 #ifdef Q_OS_WIN32
     // TODO: Common AppData path
 #else
-    QString paths = qgetenv("XDG_DATA_DIRS");
+    auto paths = QString{qgetenv("XDG_DATA_DIRS")};
     if(paths.isEmpty())
         paths = "/usr/local/share/:/usr/share/";
     list += paths.split(QChar(':'), Qt::SkipEmptyParts);
 #endif
-    QStringList::iterator iter = list.begin();
-    while(iter != list.end())
+    for(auto iter = list.begin();iter != list.end();)
     {
         if(iter->isEmpty())
             iter = list.erase(iter);
         else
         {
             iter->append(append);
-            iter++;
+            ++iter;
         }
     }
     return list;
@@ -246,22 +241,20 @@ QStringList getAllDataPaths(const QString &append)
 
 auto getValueFromName(const std::span<const NameValuePair> list, const QString &str) -> QString
 {
-    auto iter = std::ranges::find(list, str, &NameValuePair::name);
-    if(iter != list.end())
+    if(const auto iter = std::ranges::find(list, str, &NameValuePair::name); iter != list.end())
         return iter->value;
     return QString{};
 }
 
 auto getNameFromValue(const std::span<const NameValuePair> list, const QString &str) -> QString
 {
-    auto iter = std::ranges::find(list, str, &NameValuePair::value);
-    if(iter != list.end())
+    if(const auto iter = std::ranges::find(list, str, &NameValuePair::value); iter != list.end())
         return iter->name;
     return QString{};
 }
 
 
-Qt::CheckState getCheckState(const QVariant &var)
+auto getCheckState(const QVariant &var) -> Qt::CheckState
 {
     if(var.isNull())
         return Qt::PartiallyChecked;
@@ -270,7 +263,7 @@ Qt::CheckState getCheckState(const QVariant &var)
     return Qt::Unchecked;
 }
 
-QString getCheckValue(const QCheckBox *checkbox)
+auto getCheckValue(const QCheckBox *checkbox) -> QString
 {
     const Qt::CheckState state{checkbox->checkState()};
     if(state == Qt::Checked)

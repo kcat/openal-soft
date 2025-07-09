@@ -17,10 +17,11 @@ enum class LogLevel : uint8_t {
 };
 DECL_HIDDEN extern LogLevel gLogLevel;
 
-DECL_HIDDEN extern gsl::owner<FILE*> gLogFile;
+inline auto gLogFile = gsl::owner<FILE*>{};
 
 
-using LogCallbackFunc = void(*)(void *userptr, char level, const char *message, int length) noexcept;
+using LogCallbackFunc = auto(*)(void *userptr, char level, const char *message, int length)
+    noexcept -> void;
 
 void al_set_log_callback(LogCallbackFunc callback, void *userptr);
 

@@ -1264,7 +1264,7 @@ void PrintHelp(const std::string_view argv0, FILE *ofile)
 }
 
 // Standard command line dispatch.
-int main(std::span<std::string_view> args)
+auto main(std::span<std::string_view> args) -> int
 {
     if(args.size() < 2)
     {
@@ -1273,25 +1273,25 @@ int main(std::span<std::string_view> args)
         exit(EXIT_SUCCESS);
     }
 
-    std::string_view outName{"./oalsoft_hrtf_%r.mhr"sv};
-    uint outRate{0};
-    ChannelModeT chanMode{CM_AllowStereo};
-    uint fftSize{DefaultFftSize};
-    bool equalize{DefaultEqualize};
-    bool surface{DefaultSurface};
-    double limit{DefaultLimit};
-    uint numThreads{2};
-    uint truncSize{DefaultTruncSize};
-    HeadModelT model{HM_Default};
-    double radius{DefaultCustomRadius};
-    bool farfield{false};
-    std::string_view inName;
+    auto outName = "./oalsoft_hrtf_%r.mhr"sv;
+    auto outRate = 0u;
+    auto chanMode = CM_AllowStereo;
+    auto fftSize = DefaultFftSize;
+    auto equalize = DefaultEqualize;
+    auto surface = DefaultSurface;
+    auto limit = DefaultLimit;
+    auto numThreads = 2u;
+    auto truncSize = DefaultTruncSize;
+    auto model = HM_Default;
+    auto radius = DefaultCustomRadius;
+    auto farfield = false;
+    auto inName = std::string_view{};
 
-    const std::string_view optlist{"r:maj:f:e:s:l:w:d:c:e:i:o:h"sv};
+    constexpr auto optlist = "r:maj:f:e:s:l:w:d:c:e:i:o:h"sv;
     const auto arg0 = args[0];
     args = args.subspan(1);
-    std::string_view optarg;
-    size_t argplace{0};
+    auto optarg = std::string_view{};
+    auto argplace = 0_uz;
 
     auto getarg = [&args,&argplace,&optarg,optlist]
     {
@@ -1316,14 +1316,14 @@ int main(std::span<std::string_view> args)
             ++argplace;
         }
 
-        const char nextopt{args[0][argplace]};
+        const auto nextopt = args[0][argplace];
         const auto listidx = optlist.find(nextopt);
         if(listidx >= optlist.size())
         {
             fmt::println(stderr, "Unknown argument: -{:c}", nextopt);
             return -1;
         }
-        const bool needsarg{listidx+1 < optlist.size() && optlist[listidx+1] == ':'};
+        const auto needsarg = listidx+1 < optlist.size() && optlist[listidx+1] == ':';
         if(needsarg && (argplace+1 < args[0].size() || args.size() < 2))
         {
             fmt::println(stderr, "Missing parameter for argument: -{:c}", nextopt);
@@ -1342,7 +1342,7 @@ int main(std::span<std::string_view> args)
 
     while(auto opt = getarg())
     {
-        std::size_t endpos{};
+        auto endpos = std::size_t{};
         switch(opt)
         {
         case 'r':
@@ -1487,8 +1487,8 @@ int main(std::span<std::string_view> args)
         }
     }
 
-    const int ret{ProcessDefinition(inName, outRate, chanMode, farfield, numThreads, fftSize,
-        equalize, surface, limit, truncSize, model, radius, outName)};
+    const auto ret = ProcessDefinition(inName, outRate, chanMode, farfield, numThreads, fftSize,
+        equalize, surface, limit, truncSize, model, radius, outName);
     if(!ret) return -1;
     fmt::println("Operation completed.");
 

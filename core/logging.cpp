@@ -24,13 +24,11 @@
 #endif
 
 
-gsl::owner<FILE*> gLogFile{};
 #ifdef _DEBUG
 LogLevel gLogLevel{LogLevel::Warning};
 #else
 LogLevel gLogLevel{LogLevel::Error};
 #endif
-
 
 namespace {
 
@@ -42,13 +40,13 @@ enum class LogState : uint8_t {
     Disable
 };
 
-std::mutex LogCallbackMutex;
-LogState gLogState{LogState::FirstRun};
+auto LogCallbackMutex = std::mutex{};
+auto gLogState = LogState::FirstRun;
 
-LogCallbackFunc gLogCallback{};
+auto gLogCallback = LogCallbackFunc{};
 void *gLogCallbackPtr{};
 
-constexpr auto GetLevelCode(LogLevel level) noexcept -> std::optional<char>
+constexpr auto GetLevelCode(const LogLevel level) noexcept -> std::optional<char>
 {
     switch(level)
     {

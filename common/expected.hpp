@@ -29,10 +29,10 @@ public:
         : mError{il, std::forward<Args>(args)...}
     { }
 
-    constexpr auto error() const& noexcept -> const E& { return mError; }
-    constexpr auto error() & noexcept -> E& { return mError; }
-    constexpr auto error() const&& noexcept -> const E&& { return std::move(mError); }
-    constexpr auto error() && noexcept -> E&& { return std::move(mError); }
+    [[nodiscard]] constexpr auto error() const& noexcept -> const E& { return mError; }
+    [[nodiscard]] constexpr auto error() & noexcept -> E& { return mError; }
+    [[nodiscard]] constexpr auto error() const&& noexcept -> const E&& { return std::move(mError); }
+    [[nodiscard]] constexpr auto error() && noexcept -> E&& { return std::move(mError); }
 
     constexpr void swap(unexpected& other) noexcept(std::is_nothrow_swappable_v<E>)
     { std::swap(mError, other.mError); }
@@ -79,32 +79,30 @@ public:
         : mValues{std::in_place_index<1>, std::move(rhs).error()}
     { }
 
-    [[nodiscard]]
-    constexpr auto has_value() const noexcept -> bool { return mValues.index() == 0; }
-    [[nodiscard]]
-    constexpr explicit operator bool() const noexcept { return has_value(); }
+    [[nodiscard]] constexpr auto has_value() const noexcept -> bool { return mValues.index() == 0; }
+    [[nodiscard]] constexpr explicit operator bool() const noexcept { return has_value(); }
 
-    constexpr auto value() & -> S& { return std::get<0>(mValues); }
-    constexpr auto value() const& -> const S& { return std::get<0>(mValues); }
-    constexpr auto value() && -> S&& { return std::move(std::get<0>(mValues)); }
-    constexpr auto value() const&& -> const S&& { return std::move(std::get<0>(mValues)); }
+    [[nodiscard]] constexpr auto value() & -> S& { return std::get<0>(mValues); }
+    [[nodiscard]] constexpr auto value() const& -> const S& { return std::get<0>(mValues); }
+    [[nodiscard]] constexpr auto value() && -> S&& { return std::move(std::get<0>(mValues)); }
+    [[nodiscard]] constexpr auto value() const&& -> const S&& { return std::move(std::get<0>(mValues)); }
 
-    constexpr auto operator->() noexcept -> S* { return &std::get<0>(mValues); }
-    constexpr auto operator->() const noexcept -> const S* { return &std::get<0>(mValues); }
-    constexpr auto operator*() noexcept -> S& { return std::get<0>(mValues); }
-    constexpr auto operator*() const noexcept -> const S& { return std::get<0>(mValues); }
+    [[nodiscard]] constexpr auto operator->() noexcept -> S* { return &std::get<0>(mValues); }
+    [[nodiscard]] constexpr auto operator->() const noexcept -> const S* { return &std::get<0>(mValues); }
+    [[nodiscard]] constexpr auto operator*() noexcept -> S& { return std::get<0>(mValues); }
+    [[nodiscard]] constexpr auto operator*() const noexcept -> const S& { return std::get<0>(mValues); }
 
     template<typename U>
-    constexpr auto value_or(U&& defval) const& -> S
+    [[nodiscard]] constexpr auto value_or(U&& defval) const& -> S
     { return bool{*this} ? **this : static_cast<S>(std::forward<U>(defval)); }
     template<typename U>
-    constexpr auto value_or(U&& defval) && -> S
+    [[nodiscard]] constexpr auto value_or(U&& defval) && -> S
     { return bool{*this} ? std::move(**this) : static_cast<S>(std::forward<U>(defval)); }
 
-    constexpr auto error() & -> F& { return std::get<1>(mValues); }
-    constexpr auto error() const& -> const F& { return std::get<1>(mValues); }
-    constexpr auto error() && -> F&& { return std::move(std::get<1>(mValues)); }
-    constexpr auto error() const&& -> const F&& { return std::move(std::get<1>(mValues)); }
+    [[nodiscard]] constexpr auto error() & -> F& { return std::get<1>(mValues); }
+    [[nodiscard]] constexpr auto error() const& -> const F& { return std::get<1>(mValues); }
+    [[nodiscard]] constexpr auto error() && -> F&& { return std::move(std::get<1>(mValues)); }
+    [[nodiscard]] constexpr auto error() const&& -> const F&& { return std::move(std::get<1>(mValues)); }
 };
 
 } /* namespace al */

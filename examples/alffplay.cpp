@@ -1285,10 +1285,8 @@ void AudioState::handler()
         std::ranges::for_each(mBuffers, [ambi_order](const ALuint bufid)
         { alBufferi(bufid, AL_UNPACK_AMBISONIC_ORDER_SOFT, gsl::narrow_cast<int>(ambi_order)); });
     }
-#ifdef AL_SOFT_UHJ
     if(EnableSuperStereo)
         alSourcei(mSource, AL_STEREO_MODE_SOFT, AL_SUPER_STEREO_SOFT);
-#endif
 
     if(alGetError() != AL_NO_ERROR)
         return;

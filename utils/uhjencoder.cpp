@@ -318,7 +318,7 @@ auto main(std::span<std::string_view> args) -> int
         auto chanmap = std::vector<int>(gsl::narrow_cast<uint>(ininfo.channels),
             SF_CHANNEL_MAP_INVALID);
         if(sf_command(infile.get(), SFC_GET_CHANNEL_MAP_INFO, chanmap.data(),
-            ininfo.channels*int{sizeof(int)}) == SF_TRUE)
+            gsl::narrow_cast<int>(std::span{chanmap}.size_bytes())) == SF_TRUE)
         {
             static constexpr auto monomap = std::array{SF_CHANNEL_MAP_CENTER};
             static constexpr auto stereomap = std::array{SF_CHANNEL_MAP_LEFT,SF_CHANNEL_MAP_RIGHT};
@@ -475,6 +475,7 @@ auto main(std::span<std::string_view> args) -> int
          * to ensure none of the original input is lost.
          */
         auto total_wrote = 0_uz;
+        auto clipped_samples = 0_uz;
         auto LeadIn = size_t{UhjEncoder::sFilterDelay};
         auto LeadOut = sf_count_t{UhjEncoder::sFilterDelay};
         while(LeadIn > 0 || LeadOut > 0)
@@ -498,14 +499,14 @@ auto main(std::span<std::string_view> args) -> int
                  * +3dB boost.
                  */
                 static constexpr auto scale = std::numbers::sqrt2_v<float>;
-                const auto chans = std::min<size_t>(gsl::narrow_cast<uint>(ininfo.channels), 4u);
-                for(auto c = 0_uz;c < chans;++c)
+                const auto chans = size_t{std::min(gsl::narrow_cast<uint>(ininfo.channels), 4u)};
+                for(const auto c : std::views::iota(0_uz, chans))
                 {
-                    for(auto i = 0_uz;i < got;++i)
+                    for(const auto i : std::views::iota(0_uz, got))
                         ambmem[c][i] = inmem[i*gsl::narrow_cast<uint>(ininfo.channels) + c]*scale;
                 }
             }
-            else for(auto idx = 0_uz;idx < chanmap.size();++idx)
+            else for(const auto idx : std::views::iota(0_uz, chanmap.size()))
             {
                 const auto chanid = chanmap[idx];
                 /* Skip LFE. Or mix directly into W? Or W+X? */
@@ -519,7 +520,7 @@ auto main(std::span<std::string_view> args) -> int
                     continue;
                 }
 
-                for(auto i = 0_uz;i < got;++i)
+                for(const auto i : std::views::iota(0_uz, got))
                     srcmem[i] = inmem[i*gsl::narrow_cast<uint>(ininfo.channels) + idx];
 
                 static constexpr auto Deg2Rad = std::numbers::pi / 180.0;
@@ -544,11 +545,15 @@ auto main(std::span<std::string_view> args) -> int
             }
 
             got -= LeadIn;
-            for(auto c = 0_uz;c < uhjchans;++c)
+            for(const auto c : std::views::iota(0_uz, uhjchans))
             {
                 static constexpr auto max_val = 8388607.0f / 8388608.0f;
-                for(auto i = 0_uz;i < got;++i)
-                    outmem[i*uhjchans + c] = std::clamp(encmem[c][LeadIn+i], -1.0f, max_val);
+                for(const auto i : std::views::iota(0_uz, got))
+                {
+                    const auto sample = std::clamp(encmem[c][LeadIn+i], -1.0f, max_val);
+                    clipped_samples += sample != encmem[c][LeadIn+i];
+                    outmem[i*uhjchans + c] = sample;
+                }
             }
             LeadIn = 0;
 
@@ -559,7 +564,8 @@ auto main(std::span<std::string_view> args) -> int
             else
                 total_wrote += gsl::narrow_cast<size_t>(wrote);
         }
-        fmt::println(" ... wrote {} samples ({}).", total_wrote, ininfo.frames);
+        fmt::println(" ... wrote {} samples ({} total, {} clipped).", total_wrote, ininfo.frames,
+            clipped_samples);
         ++num_encoded;
     });
 

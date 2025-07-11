@@ -274,6 +274,7 @@ void MinimumPhase(const std::span<double> mags, const std::span<complex_d> out)
 // Write an ASCII string to a file.
 auto WriteAscii(const std::string_view out, std::ostream &ostream, const std::string_view filename) -> int
 {
+    /* NOLINTNEXTLINE(bugprone-suspicious-stringview-data-usage) */
     if(!ostream.write(out.data(), std::ssize(out)) || ostream.bad())
     {
         fmt::println(stderr, "\nError: Bad write to file '{}'.", filename);

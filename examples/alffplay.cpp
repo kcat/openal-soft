@@ -1028,6 +1028,12 @@ void AudioState::handler()
                         : alGetEnumValue("AL_FORMAT_QUAD32");
                 }
             }
+            if(layoutmask == AV_CH_LAYOUT_SURROUND /* a.k.a. 3.0 */ && EnableUhj)
+            {
+                mDstChanLayout = layoutmask;
+                mFrameSize *= 3;
+                mFormat = AL_FORMAT_UHJ3CHN_FLOAT32_SOFT;
+            }
             if(layoutmask == AV_CH_LAYOUT_MONO)
             {
                 mDstChanLayout = layoutmask;
@@ -1088,6 +1094,12 @@ void AudioState::handler()
                         : alGetEnumValue("AL_FORMAT_QUAD8");
                 }
             }
+            if(layoutmask == AV_CH_LAYOUT_SURROUND && EnableUhj)
+            {
+                mDstChanLayout = layoutmask;
+                mFrameSize *= 3;
+                mFormat = AL_FORMAT_UHJ3CHN8_SOFT;
+            }
             if(layoutmask == AV_CH_LAYOUT_MONO)
             {
                 mDstChanLayout = layoutmask;
@@ -1142,6 +1154,12 @@ void AudioState::handler()
                     mFormat = EnableUhj ? AL_FORMAT_UHJ4CHN16_SOFT
                         : alGetEnumValue("AL_FORMAT_QUAD16");
                 }
+            }
+            if(layoutmask == AV_CH_LAYOUT_SURROUND && EnableUhj)
+            {
+                mDstChanLayout = layoutmask;
+                mFrameSize *= 3;
+                mFormat = AL_FORMAT_UHJ3CHN16_SOFT;
             }
             if(layoutmask == AV_CH_LAYOUT_MONO)
             {

@@ -191,6 +191,28 @@ constexpr auto GetDebugSeverityName(DebugSeverity severity) noexcept -> std::str
     return "<invalid severity>"sv;
 }
 
+void AL_APIENTRY alPopDebugGroupImplEXT(gsl::not_null<ALCcontext*> context) noexcept
+try {
+    auto debuglock = std::unique_lock{context->mDebugCbLock};
+    if(context->mDebugGroups.size() <= 1)
+        context->throw_error(AL_STACK_UNDERFLOW_EXT, "Attempting to pop the default debug group");
+
+    auto &debug = context->mDebugGroups.back();
+    const auto source = debug.mSource;
+    const auto id = debug.mId;
+    auto message = std::move(debug.mMessage);
+
+    context->mDebugGroups.pop_back();
+    if(context->mContextFlags.test(ContextFlags::DebugBit))
+        context->sendDebugMessage(debuglock, source, DebugType::PopGroup, id,
+                                  DebugSeverity::Notification, message);
+}
+catch(al::base_exception&) {
+}
+catch(std::exception &e) {
+    ERR("Caught exception: {}", e.what());
+}
+
 } // namespace
 
 
@@ -449,27 +471,6 @@ catch(std::exception &e) {
 }
 
 FORCE_ALIGN DECL_FUNCEXT(void, alPopDebugGroup,EXT)
-FORCE_ALIGN void AL_APIENTRY alPopDebugGroupDirectEXT(ALCcontext *context) noexcept
-try {
-    auto debuglock = std::unique_lock{context->mDebugCbLock};
-    if(context->mDebugGroups.size() <= 1)
-        context->throw_error(AL_STACK_UNDERFLOW_EXT, "Attempting to pop the default debug group");
-
-    auto &debug = context->mDebugGroups.back();
-    const auto source = debug.mSource;
-    const auto id = debug.mId;
-    auto message = std::move(debug.mMessage);
-
-    context->mDebugGroups.pop_back();
-    if(context->mContextFlags.test(ContextFlags::DebugBit))
-        context->sendDebugMessage(debuglock, source, DebugType::PopGroup, id,
-            DebugSeverity::Notification, message);
-}
-catch(al::base_exception&) {
-}
-catch(std::exception &e) {
-    ERR("Caught exception: {}", e.what());
-}
 
 
 FORCE_ALIGN DECL_FUNCEXT8(ALuint, alGetDebugMessageLog,EXT, ALuint,count, ALsizei,logBufSize, ALenum*,sources, ALenum*,types, ALuint*,ids, ALenum*,severities, ALsizei*,lengths, ALchar*,logBuf)

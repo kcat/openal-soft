@@ -306,6 +306,19 @@ inline void UpdateProps(ALCcontext *context)
         context->mPropsDirty = true;
 }
 
+
+void AL_APIENTRY alDeferUpdatesImplSOFT(gsl::not_null<ALCcontext*> context) noexcept
+{
+    auto proplock = std::lock_guard{context->mPropLock};
+    context->deferUpdates();
+}
+
+void AL_APIENTRY alProcessUpdatesImplSOFT(gsl::not_null<ALCcontext*> context) noexcept
+{
+    auto proplock = std::lock_guard{context->mPropLock};
+    context->processUpdates();
+}
+
 } // namespace
 
 /* WARNING: Non-standard export! Not part of any extension, or exposed in the
@@ -561,18 +574,8 @@ FORCE_ALIGN void AL_APIENTRY alDistanceModelDirect(ALCcontext *context, ALenum v
 
 
 AL_API DECL_FUNCEXT(void, alDeferUpdates,SOFT)
-FORCE_ALIGN void AL_APIENTRY alDeferUpdatesDirectSOFT(ALCcontext *context) noexcept
-{
-    auto proplock = std::lock_guard{context->mPropLock};
-    context->deferUpdates();
-}
 
 AL_API DECL_FUNCEXT(void, alProcessUpdates,SOFT)
-FORCE_ALIGN void AL_APIENTRY alProcessUpdatesDirectSOFT(ALCcontext *context) noexcept
-{
-    auto proplock = std::lock_guard{context->mPropLock};
-    context->processUpdates();
-}
 
 
 AL_API DECL_FUNCEXT2(const ALchar*, alGetStringi,SOFT, ALenum,pname, ALsizei,index)

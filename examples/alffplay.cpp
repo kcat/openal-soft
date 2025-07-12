@@ -1046,8 +1046,8 @@ void AudioState::handler()
             const auto order = gsl::narrow_cast<unsigned>(
                 std::sqrt(mCodecCtx->ch_layout.nb_channels)) - 1u;
             if(const auto channels = (order+1u) * (order+1u);
-                channels == gsl::narrow_cast<ALuint>(mCodecCtx->ch_layout.nb_channels)
-                || channels+2u == gsl::narrow_cast<ALuint>(mCodecCtx->ch_layout.nb_channels))
+                std::cmp_equal(channels, mCodecCtx->ch_layout.nb_channels)
+                || std::cmp_equal(channels+2u, mCodecCtx->ch_layout.nb_channels))
             {
                 ambi_order = std::min(order, max_ambi_order);
                 mFrameSize *= (ambi_order+1u) * (ambi_order+1u);
@@ -1107,8 +1107,8 @@ void AudioState::handler()
             const auto order = gsl::narrow_cast<unsigned>(
                 std::sqrt(mCodecCtx->ch_layout.nb_channels)) - 1u;
             if(const auto channels = (order+1u) * (order+1u);
-                channels == gsl::narrow_cast<ALuint>(mCodecCtx->ch_layout.nb_channels)
-                || channels+2u == gsl::narrow_cast<ALuint>(mCodecCtx->ch_layout.nb_channels))
+                std::cmp_equal(channels, mCodecCtx->ch_layout.nb_channels)
+                || std::cmp_equal(channels+2u, mCodecCtx->ch_layout.nb_channels))
             {
                 ambi_order = std::min(order, max_ambi_order);
                 mFrameSize *= (ambi_order+1u) * (ambi_order+1u);
@@ -1168,8 +1168,8 @@ void AudioState::handler()
             const auto order = gsl::narrow_cast<unsigned>(
                 std::sqrt(mCodecCtx->ch_layout.nb_channels)) - 1u;
             if(const auto channels = (order+1u) * (order+1u);
-                channels == gsl::narrow_cast<ALuint>(mCodecCtx->ch_layout.nb_channels)
-                || channels+2u == gsl::narrow_cast<ALuint>(mCodecCtx->ch_layout.nb_channels))
+                std::cmp_equal(channels, mCodecCtx->ch_layout.nb_channels)
+                || std::cmp_equal(channels+2u, mCodecCtx->ch_layout.nb_channels))
             {
                 ambi_order = std::min(order, max_ambi_order);
                 mFrameSize *= (ambi_order+1u) * (ambi_order+1u);

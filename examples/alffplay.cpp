@@ -2058,7 +2058,12 @@ auto main(std::span<std::string_view> args) -> int
 
     if(args.size() < 2)
     {
-        fmt::println(stderr, "Usage: {} [-device <device name>] [-direct] <files...>", args[0]);
+        fmt::println(stderr, "Usage: {} [-device <device name>] [options] <files...>", args[0]);
+        fmt::println(stderr, "\n  Options:\n"
+            "    -novideo      Disable video playback\n"
+            "    -direct       Play audio directly on the output, bypassing virtualization\n"
+            "    -superstereo  Apply Super Stereo processing to stereo tracks\n"
+            "    -uhj          Decode as UHJ (stereo = UHJ2, 3.0 = UHJ3, quad = UHJ4)");
         return 1;
     }
 

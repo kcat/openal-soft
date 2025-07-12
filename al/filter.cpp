@@ -179,6 +179,57 @@ auto LookupFilter(gsl::not_null<ALCcontext*> context, ALuint id) -> gsl::not_nul
 }
 
 
+void AL_APIENTRY alGenFiltersImpl(gsl::not_null<ALCcontext*> context, ALsizei n, ALuint *filters)
+    noexcept
+try {
+    if(n < 0)
+        context->throw_error(AL_INVALID_VALUE, "Generating {} filters", n);
+    if(n <= 0) [[unlikely]] return;
+
+    auto *device = context->mALDevice.get();
+    auto filterlock = std::lock_guard{device->FilterLock};
+
+    const auto fids = std::span{filters, gsl::narrow_cast<uint>(n)};
+    if(!EnsureFilters(device, fids.size()))
+        context->throw_error(AL_OUT_OF_MEMORY, "Failed to allocate {} filter{}", n,
+            (n==1) ? "" : "s");
+
+    std::ranges::generate(fids, [device]{ return AllocFilter(device)->id; });
+}
+catch(al::base_exception&) {
+}
+catch(std::exception &e) {
+    ERR("Caught exception: {}", e.what());
+}
+
+void AL_APIENTRY alDeleteFiltersImpl(gsl::not_null<ALCcontext*> context, ALsizei n,
+    const ALuint *filters) noexcept
+try {
+    if(n < 0)
+        context->throw_error(AL_INVALID_VALUE, "Deleting {} filters", n);
+    if(n <= 0) [[unlikely]] return;
+
+    auto *device = context->mALDevice.get();
+    auto filterlock = std::lock_guard{device->FilterLock};
+
+    /* First try to find any filters that are invalid. */
+    const auto fids = std::span{filters, gsl::narrow_cast<uint>(n)};
+    std::ranges::for_each(fids, [context](const ALuint fid)
+    { if(fid != 0) std::ignore = LookupFilter(context, fid); });
+
+    /* All good. Delete non-0 filter IDs. */
+    std::ranges::for_each(fids, [device](const ALuint fid)
+    {
+        if(auto *filter = LookupFilter(std::nothrow, device, fid))
+            FreeFilter(device, filter);
+    });
+}
+catch(al::base_exception&) {
+}
+catch(std::exception &e) {
+    ERR("Caught exception: {}", e.what());
+}
+
 auto AL_APIENTRY alIsFilterImpl(gsl::not_null<ALCcontext*> context, ALuint filter) noexcept
     -> ALboolean
 {
@@ -379,57 +430,7 @@ void FilterTable<BandpassFilterTable>::getParamfv(ALCcontext *context, const ALf
 
 
 AL_API DECL_FUNC2(void, alGenFilters, ALsizei,n, ALuint*,filters)
-FORCE_ALIGN void AL_APIENTRY alGenFiltersDirect(ALCcontext *context, ALsizei n, ALuint *filters) noexcept
-try {
-    if(n < 0)
-        context->throw_error(AL_INVALID_VALUE, "Generating {} filters", n);
-    if(n <= 0) [[unlikely]] return;
-
-    auto *device = context->mALDevice.get();
-    auto filterlock = std::lock_guard{device->FilterLock};
-
-    const auto fids = std::span{filters, gsl::narrow_cast<uint>(n)};
-    if(!EnsureFilters(device, fids.size()))
-        context->throw_error(AL_OUT_OF_MEMORY, "Failed to allocate {} filter{}", n,
-            (n==1) ? "" : "s");
-
-    std::ranges::generate(fids, [device]{ return AllocFilter(device)->id; });
-}
-catch(al::base_exception&) {
-}
-catch(std::exception &e) {
-    ERR("Caught exception: {}", e.what());
-}
-
 AL_API DECL_FUNC2(void, alDeleteFilters, ALsizei,n, const ALuint*,filters)
-FORCE_ALIGN void AL_APIENTRY alDeleteFiltersDirect(ALCcontext *context, ALsizei n,
-    const ALuint *filters) noexcept
-try {
-    if(n < 0)
-        context->throw_error(AL_INVALID_VALUE, "Deleting {} filters", n);
-    if(n <= 0) [[unlikely]] return;
-
-    auto *device = context->mALDevice.get();
-    auto filterlock = std::lock_guard{device->FilterLock};
-
-    /* First try to find any filters that are invalid. */
-    const auto fids = std::span{filters, gsl::narrow_cast<uint>(n)};
-    std::ranges::for_each(fids, [context](const ALuint fid)
-    { if(fid != 0) std::ignore = LookupFilter(context, fid); });
-
-    /* All good. Delete non-0 filter IDs. */
-    std::ranges::for_each(fids, [device](const ALuint fid)
-    {
-        if(auto *filter = LookupFilter(std::nothrow, device, fid))
-            FreeFilter(device, filter);
-    });
-}
-catch(al::base_exception&) {
-}
-catch(std::exception &e) {
-    ERR("Caught exception: {}", e.what());
-}
-
 AL_API DECL_FUNC1(ALboolean, alIsFilter, ALuint,filter)
 
 

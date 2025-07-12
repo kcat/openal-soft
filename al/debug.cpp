@@ -191,6 +191,15 @@ constexpr auto GetDebugSeverityName(DebugSeverity severity) noexcept -> std::str
     return "<invalid severity>"sv;
 }
 
+
+void AL_APIENTRY alDebugMessageCallbackImplEXT(gsl::not_null<ALCcontext*> context,
+    ALDEBUGPROCEXT callback, void *userParam) noexcept
+{
+    auto debuglock = std::lock_guard{context->mDebugCbLock};
+    context->mDebugCb = callback;
+    context->mDebugParam = userParam;
+}
+
 void AL_APIENTRY alPopDebugGroupImplEXT(gsl::not_null<ALCcontext*> context) noexcept
 try {
     auto debuglock = std::unique_lock{context->mDebugCbLock};
@@ -272,13 +281,6 @@ void ALCcontext::sendDebugMessage(std::unique_lock<std::mutex> &debuglock, Debug
 
 
 FORCE_ALIGN DECL_FUNCEXT2(void, alDebugMessageCallback,EXT, ALDEBUGPROCEXT,callback, void*,userParam)
-FORCE_ALIGN void AL_APIENTRY alDebugMessageCallbackDirectEXT(ALCcontext *context,
-    ALDEBUGPROCEXT callback, void *userParam) noexcept
-{
-    auto debuglock = std::lock_guard{context->mDebugCbLock};
-    context->mDebugCb = callback;
-    context->mDebugParam = userParam;
-}
 
 
 FORCE_ALIGN DECL_FUNCEXT6(void, alDebugMessageInsert,EXT, ALenum,source, ALenum,type, ALuint,id, ALenum,severity, ALsizei,length, const ALchar*,message)

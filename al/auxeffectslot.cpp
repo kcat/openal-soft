@@ -332,20 +332,7 @@ inline void UpdateProps(ALeffectslot *slot, ALCcontext *context)
 }
 
 
-auto AL_APIENTRY alIsAuxiliaryEffectSlotImpl(gsl::not_null<ALCcontext*> context, ALuint effectslot)
-    noexcept -> ALboolean
-{
-    const auto slotlock = std::lock_guard{context->mEffectSlotLock};
-    if(LookupEffectSlot(std::nothrow, context, effectslot) != nullptr)
-        return AL_TRUE;
-    return AL_FALSE;
-}
-
-} // namespace
-
-
-AL_API DECL_FUNC2(void, alGenAuxiliaryEffectSlots, ALsizei,n, ALuint*,effectslots)
-FORCE_ALIGN void AL_APIENTRY alGenAuxiliaryEffectSlotsDirect(ALCcontext *context, ALsizei n,
+void AL_APIENTRY alGenAuxiliaryEffectSlotsImpl(gsl::not_null<ALCcontext*> context, ALsizei n,
     ALuint *effectslots) noexcept
 try {
     if(n < 0)
@@ -395,8 +382,7 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-AL_API DECL_FUNC2(void, alDeleteAuxiliaryEffectSlots, ALsizei,n, const ALuint*,effectslots)
-FORCE_ALIGN void AL_APIENTRY alDeleteAuxiliaryEffectSlotsDirect(ALCcontext *context, ALsizei n,
+void AL_APIENTRY alDeleteAuxiliaryEffectSlotsImpl(gsl::not_null<ALCcontext*> context, ALsizei n,
     const ALuint *effectslots) noexcept
 try {
     if(n < 0) [[unlikely]]
@@ -445,6 +431,20 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
+auto AL_APIENTRY alIsAuxiliaryEffectSlotImpl(gsl::not_null<ALCcontext*> context, ALuint effectslot)
+    noexcept -> ALboolean
+{
+    const auto slotlock = std::lock_guard{context->mEffectSlotLock};
+    if(LookupEffectSlot(std::nothrow, context, effectslot) != nullptr)
+        return AL_TRUE;
+    return AL_FALSE;
+}
+
+} // namespace
+
+
+AL_API DECL_FUNC2(void, alGenAuxiliaryEffectSlots, ALsizei,n, ALuint*,effectslots)
+AL_API DECL_FUNC2(void, alDeleteAuxiliaryEffectSlots, ALsizei,n, const ALuint*,effectslots)
 AL_API DECL_FUNC1(ALboolean, alIsAuxiliaryEffectSlot, ALuint,effectslot)
 
 

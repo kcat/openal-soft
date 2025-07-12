@@ -476,6 +476,23 @@ void AL_APIENTRY alDistanceModelImpl(gsl::not_null<ALCcontext*> context, ALenum 
 }
 
 
+auto AL_APIENTRY alGetStringiImplSOFT(gsl::not_null<ALCcontext*> context, ALenum pname,
+    ALsizei index) noexcept -> const ALchar*
+{
+    switch(pname)
+    {
+    case AL_RESAMPLER_NAME_SOFT:
+        if(index >= 0 && index <= al::to_underlying(Resampler::Max))
+            return GetResamplerName(gsl::narrow_cast<Resampler>(index));
+        context->setError(AL_INVALID_VALUE, "Resampler name index {} out of range", index);
+        return nullptr;
+    }
+    context->setError(AL_INVALID_VALUE, "Invalid string indexed property {:#04x}",
+        as_unsigned(pname));
+    return nullptr;
+}
+
+
 void AL_APIENTRY alDeferUpdatesImplSOFT(gsl::not_null<ALCcontext*> context) noexcept
 {
     auto proplock = std::lock_guard{context->mPropLock};
@@ -552,20 +569,6 @@ AL_API DECL_FUNCEXT(void, alDeferUpdates,SOFT)
 AL_API DECL_FUNCEXT(void, alProcessUpdates,SOFT)
 
 AL_API DECL_FUNCEXT2(const ALchar*, alGetStringi,SOFT, ALenum,pname, ALsizei,index)
-FORCE_ALIGN const ALchar* AL_APIENTRY alGetStringiDirectSOFT(ALCcontext *context, ALenum pname, ALsizei index) noexcept
-{
-    switch(pname)
-    {
-    case AL_RESAMPLER_NAME_SOFT:
-        if(index >= 0 && index <= al::to_underlying(Resampler::Max))
-            return GetResamplerName(gsl::narrow_cast<Resampler>(index));
-        context->setError(AL_INVALID_VALUE, "Resampler name index {} out of range", index);
-        return nullptr;
-    }
-    context->setError(AL_INVALID_VALUE, "Invalid string indexed property {:#04x}",
-        as_unsigned(pname));
-    return nullptr;
-}
 
 
 AL_API void AL_APIENTRY alDopplerVelocity(ALfloat value) noexcept

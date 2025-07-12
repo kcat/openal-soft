@@ -742,40 +742,8 @@ auto DecomposeUserFormat(ALenum format) noexcept -> std::optional<DecompResult>
 }
 
 
-auto AL_APIENTRY alIsBufferImpl(gsl::not_null<ALCcontext*> context, ALuint buffer) noexcept
-    -> ALboolean
-{
-    auto *device = context->mALDevice.get();
-    auto buflock = std::lock_guard{device->BufferLock};
-    if(buffer == 0 || LookupBuffer(std::nothrow, device, buffer) != nullptr)
-        return AL_TRUE;
-    return AL_FALSE;
-}
-
-void AL_APIENTRY alUnmapBufferImplSOFT(gsl::not_null<ALCcontext*> context, ALuint buffer) noexcept
-try {
-    auto *device = context->mALDevice.get();
-    auto buflock = std::lock_guard{device->BufferLock};
-
-    auto const albuf = LookupBuffer(context, buffer);
-    if(albuf->MappedAccess == 0)
-        context->throw_error(AL_INVALID_OPERATION, "Unmapping unmapped buffer {}", buffer);
-
-    albuf->MappedAccess = 0;
-    albuf->MappedOffset = 0;
-    albuf->MappedSize = 0;
-}
-catch(al::base_exception&) {
-}
-catch(std::exception &e) {
-    ERR("Caught exception: {}", e.what());
-}
-
-} // namespace
-
-
-AL_API DECL_FUNC2(void, alGenBuffers, ALsizei,n, ALuint*,buffers)
-FORCE_ALIGN void AL_APIENTRY alGenBuffersDirect(ALCcontext *context, ALsizei n, ALuint *buffers) noexcept
+void AL_APIENTRY alGenBuffersImpl(gsl::not_null<ALCcontext*> context, ALsizei n, ALuint *buffers)
+    noexcept
 try {
     if(n < 0)
         context->throw_error(AL_INVALID_VALUE, "Generating {} buffers", n);
@@ -797,8 +765,7 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-AL_API DECL_FUNC2(void, alDeleteBuffers, ALsizei,n, const ALuint*,buffers)
-FORCE_ALIGN void AL_APIENTRY alDeleteBuffersDirect(ALCcontext *context, ALsizei n,
+void AL_APIENTRY alDeleteBuffersImpl(gsl::not_null<ALCcontext*> context, ALsizei n,
     const ALuint *buffers) noexcept
 try {
     if(n < 0)
@@ -831,6 +798,66 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
+auto AL_APIENTRY alIsBufferImpl(gsl::not_null<ALCcontext*> context, ALuint buffer) noexcept
+    -> ALboolean
+{
+    auto *device = context->mALDevice.get();
+    auto buflock = std::lock_guard{device->BufferLock};
+    if(buffer == 0 || LookupBuffer(std::nothrow, device, buffer) != nullptr)
+        return AL_TRUE;
+    return AL_FALSE;
+}
+
+
+void AL_APIENTRY alUnmapBufferImplSOFT(gsl::not_null<ALCcontext*> context, ALuint buffer) noexcept
+try {
+    auto *device = context->mALDevice.get();
+    auto buflock = std::lock_guard{device->BufferLock};
+
+    auto const albuf = LookupBuffer(context, buffer);
+    if(albuf->MappedAccess == 0)
+        context->throw_error(AL_INVALID_OPERATION, "Unmapping unmapped buffer {}", buffer);
+
+    albuf->MappedAccess = 0;
+    albuf->MappedOffset = 0;
+    albuf->MappedSize = 0;
+}
+catch(al::base_exception&) {
+}
+catch(std::exception &e) {
+    ERR("Caught exception: {}", e.what());
+}
+
+#if ALSOFT_EAX
+auto AL_APIENTRY EAXGetBufferModeImpl(gsl::not_null<ALCcontext*> context, ALuint buffer,
+    ALint *pReserved) noexcept -> ALenum
+try {
+    if(!eax_g_is_enabled)
+        context->throw_error(AL_INVALID_OPERATION, "EAX not enabled.");
+
+    if(pReserved)
+        context->throw_error(AL_INVALID_VALUE, "Non-null reserved parameter");
+
+    auto *device = context->mALDevice.get();
+    const auto devlock = std::lock_guard{device->BufferLock};
+
+    auto const al_buffer = LookupBuffer(context, buffer);
+    return EnumFromEaxStorage(al_buffer->eax_x_ram_mode);
+}
+catch(al::base_exception&) {
+    return AL_NONE;
+}
+catch(std::exception &e) {
+    ERR("Caught exception: {}", e.what());
+    return AL_NONE;
+}
+#endif /* ALSOFT_EAX */
+
+} // namespace
+
+
+AL_API DECL_FUNC2(void, alGenBuffers, ALsizei,n, ALuint*,buffers)
+AL_API DECL_FUNC2(void, alDeleteBuffers, ALsizei,n, const ALuint*,buffers)
 AL_API DECL_FUNC1(ALboolean, alIsBuffer, ALuint,buffer)
 
 
@@ -1738,27 +1765,5 @@ catch(std::exception &e) {
 }
 
 FORCE_ALIGN DECL_FUNC2(ALenum, EAXGetBufferMode, ALuint,buffer, ALint*,pReserved)
-FORCE_ALIGN ALenum AL_APIENTRY EAXGetBufferModeDirect(ALCcontext *context, ALuint buffer,
-    ALint *pReserved) noexcept
-try {
-    if(!eax_g_is_enabled)
-        context->throw_error(AL_INVALID_OPERATION, "EAX not enabled.");
-
-    if(pReserved)
-        context->throw_error(AL_INVALID_VALUE, "Non-null reserved parameter");
-
-    auto *device = context->mALDevice.get();
-    const auto devlock = std::lock_guard{device->BufferLock};
-
-    auto const al_buffer = LookupBuffer(context, buffer);
-    return EnumFromEaxStorage(al_buffer->eax_x_ram_mode);
-}
-catch(al::base_exception&) {
-    return AL_NONE;
-}
-catch(std::exception &e) {
-    ERR("Caught exception: {}", e.what());
-    return AL_NONE;
-}
 
 #endif // ALSOFT_EAX

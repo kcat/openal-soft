@@ -2678,45 +2678,8 @@ void StartSources(const gsl::not_null<ALCcontext*> context,
 }
 
 
-auto AL_APIENTRY alIsSourceImpl(gsl::not_null<ALCcontext*> context, ALuint source) noexcept
-    -> ALboolean
-{
-    auto srclock = std::lock_guard{context->mSourceLock};
-    if(LookupSource(std::nothrow, context, source) != nullptr)
-        return AL_TRUE;
-    return AL_FALSE;
-}
-
-
-void AL_APIENTRY alSourcePlayImpl(gsl::not_null<ALCcontext*> context, ALuint source) noexcept
-try {
-    auto srclock = std::lock_guard{context->mSourceLock};
-
-    auto *Source = LookupSource(context, source).get();
-    StartSources(context, {&Source, 1});
-}
-catch(al::base_exception&) {
-}
-catch(std::exception &e) {
-    ERR("Caught exception: {}", e.what());
-}
-
-
-void AL_APIENTRY alSourcePauseImpl(gsl::not_null<ALCcontext*> context, ALuint source) noexcept
-{ alSourcePausevDirect(context, 1, &source); }
-
-
-void AL_APIENTRY alSourceStopImpl(gsl::not_null<ALCcontext*> context, ALuint source) noexcept
-{ alSourceStopvDirect(context, 1, &source); }
-
-
-void AL_APIENTRY alSourceRewindImpl(gsl::not_null<ALCcontext*> context, ALuint source) noexcept
-{ alSourceRewindvDirect(context, 1, &source); }
-
-} // namespace
-
-AL_API DECL_FUNC2(void, alGenSources, ALsizei,n, ALuint*,sources)
-FORCE_ALIGN void AL_APIENTRY alGenSourcesDirect(ALCcontext *context, ALsizei n, ALuint *sources) noexcept
+void AL_APIENTRY alGenSourcesImpl(gsl::not_null<ALCcontext*> context, ALsizei n, ALuint *sources)
+    noexcept
 try {
     if(n < 0)
         context->throw_error(AL_INVALID_VALUE, "Generating {} sources", n);
@@ -2742,8 +2705,7 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-AL_API DECL_FUNC2(void, alDeleteSources, ALsizei,n, const ALuint*,sources)
-FORCE_ALIGN void AL_APIENTRY alDeleteSourcesDirect(ALCcontext *context, ALsizei n,
+void AL_APIENTRY alDeleteSourcesImpl(gsl::not_null<ALCcontext*> context, ALsizei n,
     const ALuint *sources) noexcept
 try {
     if(n < 0)
@@ -2770,6 +2732,240 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
+auto AL_APIENTRY alIsSourceImpl(gsl::not_null<ALCcontext*> context, ALuint source) noexcept
+    -> ALboolean
+{
+    auto srclock = std::lock_guard{context->mSourceLock};
+    if(LookupSource(std::nothrow, context, source) != nullptr)
+        return AL_TRUE;
+    return AL_FALSE;
+}
+
+
+void AL_APIENTRY alSourcePlayvImpl(gsl::not_null<ALCcontext*> context, ALsizei n,
+    const ALuint *sources) noexcept
+try {
+    if(n < 0)
+        context->throw_error(AL_INVALID_VALUE, "Playing {} sources", n);
+    if(n <= 0) [[unlikely]] return;
+
+    const auto sids = std::span{sources, gsl::narrow_cast<ALuint>(n)};
+    auto source_store = source_store_variant{};
+    const auto srchandles = get_srchandles(source_store, sids.size());
+
+    auto srclock = std::lock_guard{context->mSourceLock};
+    std::ranges::transform(sids, srchandles.begin(), [context](const ALuint sid) -> ALsource*
+    { return LookupSource(context, sid); });
+
+    StartSources(context, srchandles);
+}
+catch(al::base_exception&) {
+}
+catch(std::exception &e) {
+    ERR("Caught exception: {}", e.what());
+}
+
+void AL_APIENTRY alSourcePlayImpl(gsl::not_null<ALCcontext*> context, ALuint source) noexcept
+try {
+    auto srclock = std::lock_guard{context->mSourceLock};
+
+    auto *Source = LookupSource(context, source).get();
+    StartSources(context, {&Source, 1});
+}
+catch(al::base_exception&) {
+}
+catch(std::exception &e) {
+    ERR("Caught exception: {}", e.what());
+}
+
+void AL_APIENTRY alSourcePlayAtTimeImplSOFT(gsl::not_null<ALCcontext*> context, ALuint source,
+    ALint64SOFT start_time) noexcept
+try {
+    if(start_time < 0)
+        context->throw_error(AL_INVALID_VALUE, "Invalid time point {}", start_time);
+
+    auto srclock = std::lock_guard{context->mSourceLock};
+    auto *Source = LookupSource(context, source).get();
+    StartSources(context, {&Source, 1}, nanoseconds{start_time});
+}
+catch(al::base_exception&) {
+}
+catch(std::exception &e) {
+    ERR("Caught exception: {}", e.what());
+}
+
+
+void AL_APIENTRY alSourcePausevImpl(gsl::not_null<ALCcontext*> context, ALsizei n,
+    const ALuint *sources) noexcept
+try {
+    if(n < 0)
+        context->throw_error(AL_INVALID_VALUE, "Pausing {} sources", n);
+    if(n <= 0) [[unlikely]] return;
+
+    const auto sids = std::span{sources, gsl::narrow_cast<ALuint>(n)};
+    auto source_store = source_store_variant{};
+    const auto srchandles = get_srchandles(source_store, sids.size());
+
+    auto srclock = std::lock_guard{context->mSourceLock};
+    std::ranges::transform(sids, srchandles.begin(), [context](const ALuint sid) -> ALsource*
+    { return LookupSource(context, sid); });
+
+    /* Pausing has to be done in two steps. First, for each source that's
+     * detected to be playing, change the voice (asynchronously) to
+     * stopping/paused.
+     */
+    auto tail = LPVoiceChange{};
+    auto cur = LPVoiceChange{};
+    std::ranges::for_each(srchandles, [context,&tail,&cur](ALsource *source)
+    {
+        auto *voice = GetSourceVoice(source, context);
+        if(GetSourceState(source, voice) == AL_PLAYING)
+        {
+            if(!cur)
+                cur = tail = GetVoiceChanger(context);
+            else
+            {
+                cur->mNext.store(GetVoiceChanger(context), std::memory_order_relaxed);
+                cur = cur->mNext.load(std::memory_order_relaxed);
+            }
+            cur->mVoice = voice;
+            cur->mSourceID = source->id;
+            cur->mState = VChangeState::Pause;
+        }
+    });
+    if(tail) [[likely]]
+    {
+        SendVoiceChanges(context, tail);
+        /* Second, now that the voice changes have been sent, because it's
+         * possible that the voice stopped after it was detected playing and
+         * before the voice got paused, recheck that the source is still
+         * considered playing and set it to paused if so.
+         */
+        std::ranges::for_each(srchandles, [context](ALsource *source)
+        {
+            Voice *voice{GetSourceVoice(source, context)};
+            if(GetSourceState(source, voice) == AL_PLAYING)
+                source->state = AL_PAUSED;
+        });
+    }
+}
+catch(al::base_exception&) {
+}
+catch(std::exception &e) {
+    ERR("Caught exception: {}", e.what());
+}
+
+void AL_APIENTRY alSourcePauseImpl(gsl::not_null<ALCcontext*> context, ALuint source) noexcept
+{ alSourcePausevImpl(context, 1, &source); }
+
+
+void AL_APIENTRY alSourceStopvImpl(gsl::not_null<ALCcontext*> context, ALsizei n,
+    const ALuint *sources) noexcept
+try {
+    if(n < 0)
+        context->throw_error(AL_INVALID_VALUE, "Stopping {} sources", n);
+    if(n <= 0) [[unlikely]] return;
+
+    const auto sids = std::span{sources, gsl::narrow_cast<ALuint>(n)};
+    auto source_store = source_store_variant{};
+    const auto srchandles = get_srchandles(source_store, sids.size());
+
+    auto srclock = std::lock_guard{context->mSourceLock};
+    std::ranges::transform(sids, srchandles.begin(), [context](const ALuint sid) -> ALsource*
+    { return LookupSource(context, sid); });
+
+    auto tail = LPVoiceChange{};
+    auto cur = LPVoiceChange{};
+    std::ranges::for_each(srchandles, [context,&tail,&cur](ALsource *source)
+    {
+        if(auto *voice = GetSourceVoice(source, context))
+        {
+            if(!cur)
+                cur = tail = GetVoiceChanger(context);
+            else
+            {
+                cur->mNext.store(GetVoiceChanger(context), std::memory_order_relaxed);
+                cur = cur->mNext.load(std::memory_order_relaxed);
+            }
+            voice->mPendingChange.store(true, std::memory_order_relaxed);
+            cur->mVoice = voice;
+            cur->mSourceID = source->id;
+            cur->mState = VChangeState::Stop;
+            source->state = AL_STOPPED;
+        }
+        source->Offset = 0.0;
+        source->OffsetType = AL_NONE;
+        source->VoiceIdx = InvalidVoiceIndex;
+    });
+    if(tail) [[likely]]
+        SendVoiceChanges(context, tail);
+}
+catch(al::base_exception&) {
+}
+catch(std::exception &e) {
+    ERR("Caught exception: {}", e.what());
+}
+
+void AL_APIENTRY alSourceStopImpl(gsl::not_null<ALCcontext*> context, ALuint source) noexcept
+{ alSourceStopvImpl(context, 1, &source); }
+
+
+void AL_APIENTRY alSourceRewindvImpl(gsl::not_null<ALCcontext*> context, ALsizei n,
+    const ALuint *sources) noexcept
+try {
+    if(n < 0)
+        context->throw_error(AL_INVALID_VALUE, "Rewinding {} sources", n);
+    if(n <= 0) [[unlikely]] return;
+
+    const auto sids = std::span{sources, gsl::narrow_cast<ALuint>(n)};
+    auto source_store = source_store_variant{};
+    const auto srchandles = get_srchandles(source_store, sids.size());
+
+    auto srclock = std::lock_guard{context->mSourceLock};
+    std::ranges::transform(sids, srchandles.begin(), [context](const ALuint sid) -> ALsource*
+    { return LookupSource(context, sid); });
+
+    auto tail = LPVoiceChange{};
+    auto cur = LPVoiceChange{};
+    std::ranges::for_each(srchandles, [context,&tail,&cur](ALsource *source)
+    {
+        auto *voice = GetSourceVoice(source, context);
+        if(source->state != AL_INITIAL)
+        {
+            if(!cur)
+                cur = tail = GetVoiceChanger(context);
+            else
+            {
+                cur->mNext.store(GetVoiceChanger(context), std::memory_order_relaxed);
+                cur = cur->mNext.load(std::memory_order_relaxed);
+            }
+            if(voice)
+                voice->mPendingChange.store(true, std::memory_order_relaxed);
+            cur->mVoice = voice;
+            cur->mSourceID = source->id;
+            cur->mState = VChangeState::Reset;
+            source->state = AL_INITIAL;
+        }
+        source->Offset = 0.0;
+        source->OffsetType = AL_NONE;
+        source->VoiceIdx = InvalidVoiceIndex;
+    });
+    if(tail) [[likely]]
+        SendVoiceChanges(context, tail);
+}
+catch(al::base_exception&) {
+}
+catch(std::exception &e) {
+    ERR("Caught exception: {}", e.what());
+}
+
+void AL_APIENTRY alSourceRewindImpl(gsl::not_null<ALCcontext*> context, ALuint source) noexcept
+{ alSourceRewindvImpl(context, 1, &source); }
+
+} // namespace
+
+AL_API DECL_FUNC2(void, alGenSources, ALsizei,n, ALuint*,sources)
+AL_API DECL_FUNC2(void, alDeleteSources, ALsizei,n, const ALuint*,sources)
 AL_API DECL_FUNC1(ALboolean, alIsSource, ALuint,source)
 
 
@@ -3221,48 +3417,8 @@ catch(std::exception &e) {
 
 
 AL_API DECL_FUNC1(void, alSourcePlay, ALuint,source)
-
 FORCE_ALIGN DECL_FUNCEXT2(void, alSourcePlayAtTime,SOFT, ALuint,source, ALint64SOFT,start_time)
-FORCE_ALIGN void AL_APIENTRY alSourcePlayAtTimeDirectSOFT(ALCcontext *context, ALuint source,
-    ALint64SOFT start_time) noexcept
-try {
-    if(start_time < 0)
-        context->throw_error(AL_INVALID_VALUE, "Invalid time point {}", start_time);
-
-    auto srclock = std::lock_guard{context->mSourceLock};
-
-    auto *Source = LookupSource(context, source).get();
-    StartSources(context, {&Source, 1}, nanoseconds{start_time});
-}
-catch(al::base_exception&) {
-}
-catch(std::exception &e) {
-    ERR("Caught exception: {}", e.what());
-}
-
 AL_API DECL_FUNC2(void, alSourcePlayv, ALsizei,n, const ALuint*,sources)
-FORCE_ALIGN void AL_APIENTRY alSourcePlayvDirect(ALCcontext *context, ALsizei n,
-    const ALuint *sources) noexcept
-try {
-    if(n < 0)
-        context->throw_error(AL_INVALID_VALUE, "Playing {} sources", n);
-    if(n <= 0) [[unlikely]] return;
-
-    const auto sids = std::span{sources, gsl::narrow_cast<ALuint>(n)};
-    auto source_store = source_store_variant{};
-    const auto srchandles = get_srchandles(source_store, sids.size());
-
-    auto srclock = std::lock_guard{context->mSourceLock};
-    std::ranges::transform(sids, srchandles.begin(), [context](const ALuint sid) -> ALsource*
-    { return LookupSource(context, sid); });
-
-    StartSources(context, srchandles);
-}
-catch(al::base_exception&) {
-}
-catch(std::exception &e) {
-    ERR("Caught exception: {}", e.what());
-}
 
 FORCE_ALIGN DECL_FUNCEXT3(void, alSourcePlayAtTimev,SOFT, ALsizei,n, const ALuint*,sources, ALint64SOFT,start_time)
 FORCE_ALIGN void AL_APIENTRY alSourcePlayAtTimevDirectSOFT(ALCcontext *context, ALsizei n,
@@ -3293,171 +3449,14 @@ catch(std::exception &e) {
 
 
 AL_API DECL_FUNC1(void, alSourcePause, ALuint,source)
-
 AL_API DECL_FUNC2(void, alSourcePausev, ALsizei,n, const ALuint*,sources)
-FORCE_ALIGN void AL_APIENTRY alSourcePausevDirect(ALCcontext *context, ALsizei n,
-    const ALuint *sources) noexcept
-try {
-    if(n < 0)
-        context->throw_error(AL_INVALID_VALUE, "Pausing {} sources", n);
-    if(n <= 0) [[unlikely]] return;
-
-    const auto sids = std::span{sources, gsl::narrow_cast<ALuint>(n)};
-    auto source_store = source_store_variant{};
-    const auto srchandles = get_srchandles(source_store, sids.size());
-
-    auto srclock = std::lock_guard{context->mSourceLock};
-    std::ranges::transform(sids, srchandles.begin(), [context](const ALuint sid) -> ALsource*
-    { return LookupSource(context, sid); });
-
-    /* Pausing has to be done in two steps. First, for each source that's
-     * detected to be playing, change the voice (asynchronously) to
-     * stopping/paused.
-     */
-    auto tail = LPVoiceChange{};
-    auto cur = LPVoiceChange{};
-    std::ranges::for_each(srchandles, [context,&tail,&cur](ALsource *source)
-    {
-        auto *voice = GetSourceVoice(source, context);
-        if(GetSourceState(source, voice) == AL_PLAYING)
-        {
-            if(!cur)
-                cur = tail = GetVoiceChanger(context);
-            else
-            {
-                cur->mNext.store(GetVoiceChanger(context), std::memory_order_relaxed);
-                cur = cur->mNext.load(std::memory_order_relaxed);
-            }
-            cur->mVoice = voice;
-            cur->mSourceID = source->id;
-            cur->mState = VChangeState::Pause;
-        }
-    });
-    if(tail) [[likely]]
-    {
-        SendVoiceChanges(context, tail);
-        /* Second, now that the voice changes have been sent, because it's
-         * possible that the voice stopped after it was detected playing and
-         * before the voice got paused, recheck that the source is still
-         * considered playing and set it to paused if so.
-         */
-        std::ranges::for_each(srchandles, [context](ALsource *source)
-        {
-            Voice *voice{GetSourceVoice(source, context)};
-            if(GetSourceState(source, voice) == AL_PLAYING)
-                source->state = AL_PAUSED;
-        });
-    }
-}
-catch(al::base_exception&) {
-}
-catch(std::exception &e) {
-    ERR("Caught exception: {}", e.what());
-}
-
 
 AL_API DECL_FUNC1(void, alSourceStop, ALuint,source)
-
 AL_API DECL_FUNC2(void, alSourceStopv, ALsizei,n, const ALuint*,sources)
-FORCE_ALIGN void AL_APIENTRY alSourceStopvDirect(ALCcontext *context, ALsizei n,
-    const ALuint *sources) noexcept
-try {
-    if(n < 0)
-        context->throw_error(AL_INVALID_VALUE, "Stopping {} sources", n);
-    if(n <= 0) [[unlikely]] return;
-
-    const auto sids = std::span{sources, gsl::narrow_cast<ALuint>(n)};
-    auto source_store = source_store_variant{};
-    const auto srchandles = get_srchandles(source_store, sids.size());
-
-    auto srclock = std::lock_guard{context->mSourceLock};
-    std::ranges::transform(sids, srchandles.begin(), [context](const ALuint sid) -> ALsource*
-    { return LookupSource(context, sid); });
-
-    auto tail = LPVoiceChange{};
-    auto cur = LPVoiceChange{};
-    std::ranges::for_each(srchandles, [context,&tail,&cur](ALsource *source)
-    {
-        if(auto *voice = GetSourceVoice(source, context))
-        {
-            if(!cur)
-                cur = tail = GetVoiceChanger(context);
-            else
-            {
-                cur->mNext.store(GetVoiceChanger(context), std::memory_order_relaxed);
-                cur = cur->mNext.load(std::memory_order_relaxed);
-            }
-            voice->mPendingChange.store(true, std::memory_order_relaxed);
-            cur->mVoice = voice;
-            cur->mSourceID = source->id;
-            cur->mState = VChangeState::Stop;
-            source->state = AL_STOPPED;
-        }
-        source->Offset = 0.0;
-        source->OffsetType = AL_NONE;
-        source->VoiceIdx = InvalidVoiceIndex;
-    });
-    if(tail) [[likely]]
-        SendVoiceChanges(context, tail);
-}
-catch(al::base_exception&) {
-}
-catch(std::exception &e) {
-    ERR("Caught exception: {}", e.what());
-}
 
 
 AL_API DECL_FUNC1(void, alSourceRewind, ALuint,source)
-
 AL_API DECL_FUNC2(void, alSourceRewindv, ALsizei,n, const ALuint*,sources)
-FORCE_ALIGN void AL_APIENTRY alSourceRewindvDirect(ALCcontext *context, ALsizei n,
-    const ALuint *sources) noexcept
-try {
-    if(n < 0)
-        context->throw_error(AL_INVALID_VALUE, "Rewinding {} sources", n);
-    if(n <= 0) [[unlikely]] return;
-
-    const auto sids = std::span{sources, gsl::narrow_cast<ALuint>(n)};
-    auto source_store = source_store_variant{};
-    const auto srchandles = get_srchandles(source_store, sids.size());
-
-    auto srclock = std::lock_guard{context->mSourceLock};
-    std::ranges::transform(sids, srchandles.begin(), [context](const ALuint sid) -> ALsource*
-    { return LookupSource(context, sid); });
-
-    auto tail = LPVoiceChange{};
-    auto cur = LPVoiceChange{};
-    std::ranges::for_each(srchandles, [context,&tail,&cur](ALsource *source)
-    {
-        auto *voice = GetSourceVoice(source, context);
-        if(source->state != AL_INITIAL)
-        {
-            if(!cur)
-                cur = tail = GetVoiceChanger(context);
-            else
-            {
-                cur->mNext.store(GetVoiceChanger(context), std::memory_order_relaxed);
-                cur = cur->mNext.load(std::memory_order_relaxed);
-            }
-            if(voice)
-                voice->mPendingChange.store(true, std::memory_order_relaxed);
-            cur->mVoice = voice;
-            cur->mSourceID = source->id;
-            cur->mState = VChangeState::Reset;
-            source->state = AL_INITIAL;
-        }
-        source->Offset = 0.0;
-        source->OffsetType = AL_NONE;
-        source->VoiceIdx = InvalidVoiceIndex;
-    });
-    if(tail) [[likely]]
-        SendVoiceChanges(context, tail);
-}
-catch(al::base_exception&) {
-}
-catch(std::exception &e) {
-    ERR("Caught exception: {}", e.what());
-}
 
 
 AL_API DECL_FUNC3(void, alSourceQueueBuffers, ALuint,source, ALsizei,nb, const ALuint*,buffers)

@@ -41,6 +41,10 @@ auto AL_APIENTRY Name(T1 n1, T2 n2) noexcept -> R                             \
     auto context = GetContextRef();                                           \
     if(!context) [[unlikely]] return detail_::DefaultVal<R>();                \
     return Name##Direct(context.get(), n1, n2);                               \
+}                                                                             \
+FORCE_ALIGN auto AL_APIENTRY Name##Direct(ALCcontext *context, T1 n1, T2 n2) noexcept -> R \
+{                                                                             \
+    return Name##Impl(context, n1, n2);                                       \
 }
 
 #define DECL_FUNC3(R, Name, T1,n1, T2,n2, T3,n3)                              \
@@ -98,6 +102,10 @@ auto AL_APIENTRY Name##Ext(T1 n1, T2 n2) noexcept -> R                        \
     auto context = GetContextRef();                                           \
     if(!context) [[unlikely]] return detail_::DefaultVal<R>();                \
     return Name##Direct##Ext(context.get(), n1, n2);                          \
+}                                                                             \
+FORCE_ALIGN auto AL_APIENTRY Name##Direct##Ext(ALCcontext *context, T1 n1, T2 n2) noexcept -> R \
+{                                                                             \
+    return Name##Impl##Ext(context, n1, n2);                                  \
 }
 
 #define DECL_FUNCEXT3(R, Name,Ext, T1,n1, T2,n2, T3,n3)                       \

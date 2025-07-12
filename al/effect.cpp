@@ -221,20 +221,8 @@ auto LookupEffect(gsl::not_null<ALCcontext*> context, ALuint id) -> gsl::not_nul
 }
 
 
-auto AL_APIENTRY alIsEffectImpl(gsl::not_null<ALCcontext*> context, ALuint effect) noexcept
-    -> ALboolean
-{
-    auto *device = context->mALDevice.get();
-    auto effectlock = std::lock_guard{device->EffectLock};
-    if(effect == 0 || LookupEffect(std::nothrow, device, effect) != nullptr)
-        return AL_TRUE;
-    return AL_FALSE;
-}
-
-} // namespace
-
-AL_API DECL_FUNC2(void, alGenEffects, ALsizei,n, ALuint*,effects)
-FORCE_ALIGN void AL_APIENTRY alGenEffectsDirect(ALCcontext *context, ALsizei n, ALuint *effects) noexcept
+void AL_APIENTRY alGenEffectsImpl(gsl::not_null<ALCcontext*> context, ALsizei n, ALuint *effects)
+    noexcept
 try {
     if(n < 0)
         context->throw_error(AL_INVALID_VALUE, "Generating {} effects", n);
@@ -256,8 +244,7 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-AL_API DECL_FUNC2(void, alDeleteEffects, ALsizei,n, const ALuint*,effects)
-FORCE_ALIGN void AL_APIENTRY alDeleteEffectsDirect(ALCcontext *context, ALsizei n,
+void AL_APIENTRY alDeleteEffectsImpl(gsl::not_null<ALCcontext*> context, ALsizei n,
     const ALuint *effects) noexcept
 try {
     if(n < 0)
@@ -285,6 +272,20 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
+auto AL_APIENTRY alIsEffectImpl(gsl::not_null<ALCcontext*> context, ALuint effect) noexcept
+    -> ALboolean
+{
+    auto *device = context->mALDevice.get();
+    auto effectlock = std::lock_guard{device->EffectLock};
+    if(effect == 0 || LookupEffect(std::nothrow, device, effect) != nullptr)
+        return AL_TRUE;
+    return AL_FALSE;
+}
+
+} // namespace
+
+AL_API DECL_FUNC2(void, alGenEffects, ALsizei,n, ALuint*,effects)
+AL_API DECL_FUNC2(void, alDeleteEffects, ALsizei,n, const ALuint*,effects)
 AL_API DECL_FUNC1(ALboolean, alIsEffect, ALuint,effect)
 
 

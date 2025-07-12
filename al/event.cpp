@@ -142,6 +142,20 @@ constexpr auto GetEventType(ALenum etype) noexcept -> std::optional<AsyncEnableB
     return std::nullopt;
 }
 
+
+void AL_APIENTRY alEventCallbackImplSOFT(gsl::not_null<ALCcontext*> context,
+    ALEVENTPROCSOFT callback, void *userParam) noexcept
+try {
+    auto eventlock = std::lock_guard{context->mEventCbLock};
+    context->mEventCb = callback;
+    context->mEventParam = userParam;
+}
+catch(al::base_exception&) {
+}
+catch(std::exception &e) {
+    ERR("Caught exception: {}", e.what());
+}
+
 } // namespace
 
 
@@ -232,15 +246,3 @@ catch(std::exception &e) {
 }
 
 AL_API DECL_FUNCEXT2(void, alEventCallback,SOFT, ALEVENTPROCSOFT,callback, void*,userParam)
-FORCE_ALIGN void AL_APIENTRY alEventCallbackDirectSOFT(ALCcontext *context,
-    ALEVENTPROCSOFT callback, void *userParam) noexcept
-try {
-    auto eventlock = std::lock_guard{context->mEventCbLock};
-    context->mEventCb = callback;
-    context->mEventParam = userParam;
-}
-catch(al::base_exception&) {
-}
-catch(std::exception &e) {
-    ERR("Caught exception: {}", e.what());
-}

@@ -16,7 +16,7 @@ auto AL_APIENTRY Name() noexcept -> R                                         \
 {                                                                             \
     auto context = GetContextRef();                                           \
     if(!context) [[unlikely]] return detail_::DefaultVal<R>();                \
-    return Name##Direct(context.get());                                       \
+    return Name##Impl(context.get());                                         \
 }                                                                             \
 FORCE_ALIGN auto AL_APIENTRY Name##Direct(ALCcontext *context) noexcept -> R  \
 {                                                                             \
@@ -28,7 +28,7 @@ auto AL_APIENTRY Name(T1 n1) noexcept -> R                                    \
 {                                                                             \
     auto context = GetContextRef();                                           \
     if(!context) [[unlikely]] return detail_::DefaultVal<R>();                \
-    return Name##Direct(context.get(), n1);                                   \
+    return Name##Impl(context.get(), n1);                                     \
 }                                                                             \
 FORCE_ALIGN auto AL_APIENTRY Name##Direct(ALCcontext *context, T1 n1) noexcept -> R \
 {                                                                             \
@@ -40,7 +40,7 @@ auto AL_APIENTRY Name(T1 n1, T2 n2) noexcept -> R                             \
 {                                                                             \
     auto context = GetContextRef();                                           \
     if(!context) [[unlikely]] return detail_::DefaultVal<R>();                \
-    return Name##Direct(context.get(), n1, n2);                               \
+    return Name##Impl(context.get(), n1, n2);                                 \
 }                                                                             \
 FORCE_ALIGN auto AL_APIENTRY Name##Direct(ALCcontext *context, T1 n1, T2 n2) noexcept -> R \
 {                                                                             \
@@ -77,7 +77,7 @@ auto AL_APIENTRY Name##Ext() noexcept -> R                                    \
 {                                                                             \
     auto context = GetContextRef();                                           \
     if(!context) [[unlikely]] return detail_::DefaultVal<R>();                \
-    return Name##Direct##Ext(context.get());                                  \
+    return Name##Impl##Ext(context.get());                                    \
 }                                                                             \
 FORCE_ALIGN auto AL_APIENTRY Name##Direct##Ext(ALCcontext *context) noexcept -> R \
 {                                                                             \
@@ -89,7 +89,7 @@ auto AL_APIENTRY Name##Ext(T1 n1) noexcept -> R                               \
 {                                                                             \
     auto context = GetContextRef();                                           \
     if(!context) [[unlikely]] return detail_::DefaultVal<R>();                \
-    return Name##Direct##Ext(context.get(), n1);                              \
+    return Name##Impl##Ext(context.get(), n1);                                \
 }                                                                             \
 FORCE_ALIGN auto AL_APIENTRY Name##Direct##Ext(ALCcontext *context, T1 n1) noexcept -> R \
 {                                                                             \
@@ -101,7 +101,7 @@ auto AL_APIENTRY Name##Ext(T1 n1, T2 n2) noexcept -> R                        \
 {                                                                             \
     auto context = GetContextRef();                                           \
     if(!context) [[unlikely]] return detail_::DefaultVal<R>();                \
-    return Name##Direct##Ext(context.get(), n1, n2);                          \
+    return Name##Impl##Ext(context.get(), n1, n2);                            \
 }                                                                             \
 FORCE_ALIGN auto AL_APIENTRY Name##Direct##Ext(ALCcontext *context, T1 n1, T2 n2) noexcept -> R \
 {                                                                             \

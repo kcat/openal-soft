@@ -178,6 +178,17 @@ auto LookupFilter(gsl::not_null<ALCcontext*> context, ALuint id) -> gsl::not_nul
     context->throw_error(AL_INVALID_NAME, "Invalid filter ID {}", id);
 }
 
+
+auto AL_APIENTRY alIsFilterImpl(gsl::not_null<ALCcontext*> context, ALuint filter) noexcept
+    -> ALboolean
+{
+    auto *device = context->mALDevice.get();
+    auto filterlock = std::lock_guard{device->FilterLock};
+    if(filter == 0 || LookupFilter(std::nothrow, device, filter) != nullptr)
+        return AL_TRUE;
+    return AL_FALSE;
+}
+
 } // namespace
 
 /* Null filter parameter handlers */
@@ -420,14 +431,6 @@ catch(std::exception &e) {
 }
 
 AL_API DECL_FUNC1(ALboolean, alIsFilter, ALuint,filter)
-FORCE_ALIGN ALboolean AL_APIENTRY alIsFilterDirect(ALCcontext *context, ALuint filter) noexcept
-{
-    auto *device = context->mALDevice.get();
-    auto filterlock = std::lock_guard{device->FilterLock};
-    if(filter == 0 || LookupFilter(std::nothrow, device, filter) != nullptr)
-        return AL_TRUE;
-    return AL_FALSE;
-}
 
 
 AL_API DECL_FUNC3(void, alFilteri, ALuint,filter, ALenum,param, ALint,value)

@@ -121,6 +121,7 @@ AL_API auto AL_APIENTRY alGetError() noexcept -> ALenum
 
 FORCE_ALIGN auto AL_APIENTRY alGetErrorDirect(ALCcontext *context) noexcept -> ALenum
 {
+    Expects(context != nullptr);
     auto ret = context->mLastThreadError.get();
     if(ret != AL_NO_ERROR) [[unlikely]]
         context->mLastThreadError.set(AL_NO_ERROR);

@@ -741,6 +741,36 @@ auto DecomposeUserFormat(ALenum format) noexcept -> std::optional<DecompResult>
     return std::nullopt;
 }
 
+
+auto AL_APIENTRY alIsBufferImpl(gsl::not_null<ALCcontext*> context, ALuint buffer) noexcept
+    -> ALboolean
+{
+    auto *device = context->mALDevice.get();
+    auto buflock = std::lock_guard{device->BufferLock};
+    if(buffer == 0 || LookupBuffer(std::nothrow, device, buffer) != nullptr)
+        return AL_TRUE;
+    return AL_FALSE;
+}
+
+void AL_APIENTRY alUnmapBufferImplSOFT(gsl::not_null<ALCcontext*> context, ALuint buffer) noexcept
+try {
+    auto *device = context->mALDevice.get();
+    auto buflock = std::lock_guard{device->BufferLock};
+
+    auto const albuf = LookupBuffer(context, buffer);
+    if(albuf->MappedAccess == 0)
+        context->throw_error(AL_INVALID_OPERATION, "Unmapping unmapped buffer {}", buffer);
+
+    albuf->MappedAccess = 0;
+    albuf->MappedOffset = 0;
+    albuf->MappedSize = 0;
+}
+catch(al::base_exception&) {
+}
+catch(std::exception &e) {
+    ERR("Caught exception: {}", e.what());
+}
+
 } // namespace
 
 
@@ -802,14 +832,6 @@ catch(std::exception &e) {
 }
 
 AL_API DECL_FUNC1(ALboolean, alIsBuffer, ALuint,buffer)
-FORCE_ALIGN ALboolean AL_APIENTRY alIsBufferDirect(ALCcontext *context, ALuint buffer) noexcept
-{
-    auto *device = context->mALDevice.get();
-    auto buflock = std::lock_guard{device->BufferLock};
-    if(buffer == 0 || LookupBuffer(std::nothrow, device, buffer) != nullptr)
-        return AL_TRUE;
-    return AL_FALSE;
-}
 
 
 AL_API void AL_APIENTRY alBufferData(ALuint buffer, ALenum format, const ALvoid *data, ALsizei size, ALsizei freq) noexcept
@@ -932,24 +954,6 @@ catch(std::exception &e) {
 }
 
 AL_API DECL_FUNCEXT1(void, alUnmapBuffer,SOFT, ALuint,buffer)
-FORCE_ALIGN void AL_APIENTRY alUnmapBufferDirectSOFT(ALCcontext *context, ALuint buffer) noexcept
-try {
-    auto *device = context->mALDevice.get();
-    auto buflock = std::lock_guard{device->BufferLock};
-
-    auto const albuf = LookupBuffer(context, buffer);
-    if(albuf->MappedAccess == 0)
-        context->throw_error(AL_INVALID_OPERATION, "Unmapping unmapped buffer {}", buffer);
-
-    albuf->MappedAccess = 0;
-    albuf->MappedOffset = 0;
-    albuf->MappedSize = 0;
-}
-catch(al::base_exception&) {
-}
-catch(std::exception &e) {
-    ERR("Caught exception: {}", e.what());
-}
 
 AL_API DECL_FUNCEXT3(void, alFlushMappedBuffer,SOFT, ALuint,buffer, ALsizei,offset, ALsizei,length)
 FORCE_ALIGN void AL_APIENTRY alFlushMappedBufferDirectSOFT(ALCcontext *context, ALuint buffer,

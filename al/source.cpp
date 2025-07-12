@@ -2677,6 +2677,42 @@ void StartSources(const gsl::not_null<ALCcontext*> context,
         SendVoiceChanges(context, tail);
 }
 
+
+auto AL_APIENTRY alIsSourceImpl(gsl::not_null<ALCcontext*> context, ALuint source) noexcept
+    -> ALboolean
+{
+    auto srclock = std::lock_guard{context->mSourceLock};
+    if(LookupSource(std::nothrow, context, source) != nullptr)
+        return AL_TRUE;
+    return AL_FALSE;
+}
+
+
+void AL_APIENTRY alSourcePlayImpl(gsl::not_null<ALCcontext*> context, ALuint source) noexcept
+try {
+    auto srclock = std::lock_guard{context->mSourceLock};
+
+    auto *Source = LookupSource(context, source).get();
+    StartSources(context, {&Source, 1});
+}
+catch(al::base_exception&) {
+}
+catch(std::exception &e) {
+    ERR("Caught exception: {}", e.what());
+}
+
+
+void AL_APIENTRY alSourcePauseImpl(gsl::not_null<ALCcontext*> context, ALuint source) noexcept
+{ alSourcePausevDirect(context, 1, &source); }
+
+
+void AL_APIENTRY alSourceStopImpl(gsl::not_null<ALCcontext*> context, ALuint source) noexcept
+{ alSourceStopvDirect(context, 1, &source); }
+
+
+void AL_APIENTRY alSourceRewindImpl(gsl::not_null<ALCcontext*> context, ALuint source) noexcept
+{ alSourceRewindvDirect(context, 1, &source); }
+
 } // namespace
 
 AL_API DECL_FUNC2(void, alGenSources, ALsizei,n, ALuint*,sources)
@@ -2735,13 +2771,6 @@ catch(std::exception &e) {
 }
 
 AL_API DECL_FUNC1(ALboolean, alIsSource, ALuint,source)
-FORCE_ALIGN ALboolean AL_APIENTRY alIsSourceDirect(ALCcontext *context, ALuint source) noexcept
-{
-    auto srclock = std::lock_guard{context->mSourceLock};
-    if(LookupSource(std::nothrow, context, source) != nullptr)
-        return AL_TRUE;
-    return AL_FALSE;
-}
 
 
 AL_API DECL_FUNC3(void, alSourcef, ALuint,source, ALenum,param, ALfloat,value)
@@ -3192,18 +3221,6 @@ catch(std::exception &e) {
 
 
 AL_API DECL_FUNC1(void, alSourcePlay, ALuint,source)
-FORCE_ALIGN void AL_APIENTRY alSourcePlayDirect(ALCcontext *context, ALuint source) noexcept
-try {
-    auto srclock = std::lock_guard{context->mSourceLock};
-
-    auto *Source = LookupSource(context, source).get();
-    StartSources(context, {&Source, 1});
-}
-catch(al::base_exception&) {
-}
-catch(std::exception &e) {
-    ERR("Caught exception: {}", e.what());
-}
 
 FORCE_ALIGN DECL_FUNCEXT2(void, alSourcePlayAtTime,SOFT, ALuint,source, ALint64SOFT,start_time)
 FORCE_ALIGN void AL_APIENTRY alSourcePlayAtTimeDirectSOFT(ALCcontext *context, ALuint source,
@@ -3276,8 +3293,6 @@ catch(std::exception &e) {
 
 
 AL_API DECL_FUNC1(void, alSourcePause, ALuint,source)
-FORCE_ALIGN void AL_APIENTRY alSourcePauseDirect(ALCcontext *context, ALuint source) noexcept
-{ alSourcePausevDirect(context, 1, &source); }
 
 AL_API DECL_FUNC2(void, alSourcePausev, ALsizei,n, const ALuint*,sources)
 FORCE_ALIGN void AL_APIENTRY alSourcePausevDirect(ALCcontext *context, ALsizei n,
@@ -3342,8 +3357,6 @@ catch(std::exception &e) {
 
 
 AL_API DECL_FUNC1(void, alSourceStop, ALuint,source)
-FORCE_ALIGN void AL_APIENTRY alSourceStopDirect(ALCcontext *context, ALuint source) noexcept
-{ alSourceStopvDirect(context, 1, &source); }
 
 AL_API DECL_FUNC2(void, alSourceStopv, ALsizei,n, const ALuint*,sources)
 FORCE_ALIGN void AL_APIENTRY alSourceStopvDirect(ALCcontext *context, ALsizei n,
@@ -3395,8 +3408,6 @@ catch(std::exception &e) {
 
 
 AL_API DECL_FUNC1(void, alSourceRewind, ALuint,source)
-FORCE_ALIGN void AL_APIENTRY alSourceRewindDirect(ALCcontext *context, ALuint source) noexcept
-{ alSourceRewindvDirect(context, 1, &source); }
 
 AL_API DECL_FUNC2(void, alSourceRewindv, ALsizei,n, const ALuint*,sources)
 FORCE_ALIGN void AL_APIENTRY alSourceRewindvDirect(ALCcontext *context, ALsizei n,

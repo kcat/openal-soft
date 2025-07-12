@@ -30,8 +30,9 @@
 #include "direct_defs.h"
 
 
-AL_API DECL_FUNC1(ALboolean, alIsExtensionPresent, const ALchar*,extName)
-FORCE_ALIGN auto AL_APIENTRY alIsExtensionPresentDirect(ALCcontext *context, const ALchar *extName)
+namespace {
+
+auto AL_APIENTRY alIsExtensionPresentImpl(gsl::not_null<ALCcontext*> context,const ALchar *extName)
     noexcept -> ALboolean
 {
     if(!extName) [[unlikely]]
@@ -46,6 +47,9 @@ FORCE_ALIGN auto AL_APIENTRY alIsExtensionPresentDirect(ALCcontext *context, con
     return found ? AL_TRUE : AL_FALSE;
 }
 
+} // namespace
+
+AL_API DECL_FUNC1(ALboolean, alIsExtensionPresent, const ALchar*,extName)
 
 AL_API auto AL_APIENTRY alGetProcAddress(const ALchar *funcName) noexcept -> ALvoid*
 {

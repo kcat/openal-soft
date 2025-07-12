@@ -220,6 +220,17 @@ auto LookupEffect(gsl::not_null<ALCcontext*> context, ALuint id) -> gsl::not_nul
     context->throw_error(AL_INVALID_NAME, "Invalid effect ID {}", id);
 }
 
+
+auto AL_APIENTRY alIsEffectImpl(gsl::not_null<ALCcontext*> context, ALuint effect) noexcept
+    -> ALboolean
+{
+    auto *device = context->mALDevice.get();
+    auto effectlock = std::lock_guard{device->EffectLock};
+    if(effect == 0 || LookupEffect(std::nothrow, device, effect) != nullptr)
+        return AL_TRUE;
+    return AL_FALSE;
+}
+
 } // namespace
 
 AL_API DECL_FUNC2(void, alGenEffects, ALsizei,n, ALuint*,effects)
@@ -275,14 +286,7 @@ catch(std::exception &e) {
 }
 
 AL_API DECL_FUNC1(ALboolean, alIsEffect, ALuint,effect)
-FORCE_ALIGN ALboolean AL_APIENTRY alIsEffectDirect(ALCcontext *context, ALuint effect) noexcept
-{
-    auto *device = context->mALDevice.get();
-    auto effectlock = std::lock_guard{device->EffectLock};
-    if(effect == 0 || LookupEffect(std::nothrow, device, effect) != nullptr)
-        return AL_TRUE;
-    return AL_FALSE;
-}
+
 
 AL_API DECL_FUNC3(void, alEffecti, ALuint,effect, ALenum,param, ALint,value)
 FORCE_ALIGN void AL_APIENTRY alEffectiDirect(ALCcontext *context, ALuint effect, ALenum param,

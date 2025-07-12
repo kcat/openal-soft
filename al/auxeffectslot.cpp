@@ -331,6 +331,16 @@ inline void UpdateProps(ALeffectslot *slot, ALCcontext *context)
     slot->mPropsDirty = true;
 }
 
+
+auto AL_APIENTRY alIsAuxiliaryEffectSlotImpl(gsl::not_null<ALCcontext*> context, ALuint effectslot)
+    noexcept -> ALboolean
+{
+    const auto slotlock = std::lock_guard{context->mEffectSlotLock};
+    if(LookupEffectSlot(std::nothrow, context, effectslot) != nullptr)
+        return AL_TRUE;
+    return AL_FALSE;
+}
+
 } // namespace
 
 
@@ -436,43 +446,6 @@ catch(std::exception &e) {
 }
 
 AL_API DECL_FUNC1(ALboolean, alIsAuxiliaryEffectSlot, ALuint,effectslot)
-FORCE_ALIGN ALboolean AL_APIENTRY alIsAuxiliaryEffectSlotDirect(ALCcontext *context,
-    ALuint effectslot) noexcept
-{
-    const auto slotlock = std::lock_guard{context->mEffectSlotLock};
-    if(LookupEffectSlot(std::nothrow, context, effectslot) != nullptr)
-        return AL_TRUE;
-    return AL_FALSE;
-}
-
-
-AL_API void AL_APIENTRY alAuxiliaryEffectSlotPlaySOFT(ALuint) noexcept
-{
-    const auto context = GetContextRef();
-    if(!context) [[unlikely]] return;
-    context->setError(AL_INVALID_OPERATION, "alAuxiliaryEffectSlotPlaySOFT not supported");
-}
-
-AL_API void AL_APIENTRY alAuxiliaryEffectSlotPlayvSOFT(ALsizei, const ALuint*) noexcept
-{
-    const auto context = GetContextRef();
-    if(!context) [[unlikely]] return;
-    context->setError(AL_INVALID_OPERATION, "alAuxiliaryEffectSlotPlayvSOFT not supported");
-}
-
-AL_API void AL_APIENTRY alAuxiliaryEffectSlotStopSOFT(ALuint) noexcept
-{
-    const auto context = GetContextRef();
-    if(!context) [[unlikely]] return;
-    context->setError(AL_INVALID_OPERATION, "alAuxiliaryEffectSlotStopSOFT not supported");
-}
-
-AL_API void AL_APIENTRY alAuxiliaryEffectSlotStopvSOFT(ALsizei, const ALuint*) noexcept
-{
-    const auto context = GetContextRef();
-    if(!context) [[unlikely]] return;
-    context->setError(AL_INVALID_OPERATION, "alAuxiliaryEffectSlotStopvSOFT not supported");
-}
 
 
 AL_API DECL_FUNC3(void, alAuxiliaryEffectSloti, ALuint,effectslot, ALenum,param, ALint,value)
@@ -965,6 +938,36 @@ EffectSlotSubList::~EffectSlotSubList()
     SubListAllocator{}.deallocate(EffectSlots, 1);
     EffectSlots = nullptr;
 }
+
+
+AL_API void AL_APIENTRY alAuxiliaryEffectSlotPlaySOFT(ALuint) noexcept
+{
+    const auto context = GetContextRef();
+    if(!context) [[unlikely]] return;
+    context->setError(AL_INVALID_OPERATION, "alAuxiliaryEffectSlotPlaySOFT not supported");
+}
+
+AL_API void AL_APIENTRY alAuxiliaryEffectSlotPlayvSOFT(ALsizei, const ALuint*) noexcept
+{
+    const auto context = GetContextRef();
+    if(!context) [[unlikely]] return;
+    context->setError(AL_INVALID_OPERATION, "alAuxiliaryEffectSlotPlayvSOFT not supported");
+}
+
+AL_API void AL_APIENTRY alAuxiliaryEffectSlotStopSOFT(ALuint) noexcept
+{
+    const auto context = GetContextRef();
+    if(!context) [[unlikely]] return;
+    context->setError(AL_INVALID_OPERATION, "alAuxiliaryEffectSlotStopSOFT not supported");
+}
+
+AL_API void AL_APIENTRY alAuxiliaryEffectSlotStopvSOFT(ALsizei, const ALuint*) noexcept
+{
+    const auto context = GetContextRef();
+    if(!context) [[unlikely]] return;
+    context->setError(AL_INVALID_OPERATION, "alAuxiliaryEffectSlotStopvSOFT not supported");
+}
+
 
 #if ALSOFT_EAX
 void ALeffectslot::eax_initialize(ALCcontext& al_context, EaxFxSlotIndexValue index)

@@ -809,6 +809,44 @@ auto AL_APIENTRY alIsBufferImpl(gsl::not_null<ALCcontext*> context, ALuint buffe
 }
 
 
+void AL_APIENTRY alBufferStorageImplSOFT(gsl::not_null<ALCcontext*>context, ALuint buffer,
+    ALenum format, const ALvoid *data, ALsizei size, ALsizei freq, ALbitfieldSOFT flags) noexcept
+try {
+    auto *device = context->mALDevice.get();
+    auto buflock = std::lock_guard{device->BufferLock};
+
+    auto const albuf = LookupBuffer(context, buffer);
+    if(size < 0)
+        context->throw_error(AL_INVALID_VALUE, "Negative storage size {}", size);
+    if(freq < 1)
+        context->throw_error(AL_INVALID_VALUE, "Invalid sample rate {}", freq);
+    if((flags&INVALID_STORAGE_MASK) != 0)
+        context->throw_error(AL_INVALID_VALUE, "Invalid storage flags {:#x}",
+            flags&INVALID_STORAGE_MASK);
+    if((flags&AL_MAP_PERSISTENT_BIT_SOFT) && !(flags&MAP_READ_WRITE_FLAGS))
+        context->throw_error(AL_INVALID_VALUE,
+            "Declaring persistently mapped storage without read or write access");
+
+    auto usrfmt = DecomposeUserFormat(format);
+    if(!usrfmt)
+        context->throw_error(AL_INVALID_ENUM, "Invalid format {:#04x}", as_unsigned(format));
+
+    auto *bdata = static_cast<const std::byte*>(data);
+    LoadData(context, albuf, freq, gsl::narrow_cast<ALuint>(size), usrfmt->channels, usrfmt->type,
+        std::span{bdata, bdata ? gsl::narrow_cast<ALuint>(size) : 0u}, flags);
+}
+catch(al::base_exception&) {
+}
+catch(std::exception &e) {
+    ERR("Caught exception: {}", e.what());
+}
+
+void AL_APIENTRY alBufferDataImpl(gsl::not_null<ALCcontext*> context, ALuint buffer, ALenum format,
+    const ALvoid *data, ALsizei size, ALsizei freq) noexcept
+{
+    alBufferStorageImplSOFT(context, buffer, format, data, size, freq, 0);
+}
+
 void AL_APIENTRY alBufferDataStaticImpl(gsl::not_null<ALCcontext*> context, const ALuint buffer,
     ALenum format, ALvoid *data, ALsizei size, ALsizei freq) noexcept
 try {
@@ -1628,55 +1666,12 @@ catch(std::exception &e) {
 
 } // namespace
 
-
 AL_API DECL_FUNC2(void, alGenBuffers, ALsizei,n, ALuint*,buffers)
 AL_API DECL_FUNC2(void, alDeleteBuffers, ALsizei,n, const ALuint*,buffers)
 AL_API DECL_FUNC1(ALboolean, alIsBuffer, ALuint,buffer)
 
-
-AL_API void AL_APIENTRY alBufferData(ALuint buffer, ALenum format, const ALvoid *data, ALsizei size, ALsizei freq) noexcept
-{
-    auto context = GetContextRef();
-    if(!context) [[unlikely]] return;
-    alBufferStorageDirectSOFT(context.get(), buffer, format, data, size, freq, 0);
-}
-
-FORCE_ALIGN void AL_APIENTRY alBufferDataDirect(ALCcontext *context, ALuint buffer, ALenum format, const ALvoid *data, ALsizei size, ALsizei freq) noexcept
-{ alBufferStorageDirectSOFT(context, buffer, format, data, size, freq, 0); }
-
+AL_API DECL_FUNC5(void, alBufferData, ALuint,buffer, ALenum,format, const ALvoid*,data, ALsizei,size, ALsizei,freq)
 AL_API DECL_FUNCEXT6(void, alBufferStorage,SOFT, ALuint,buffer, ALenum,format, const ALvoid*,data, ALsizei,size, ALsizei,freq, ALbitfieldSOFT,flags)
-FORCE_ALIGN void AL_APIENTRY alBufferStorageDirectSOFT(ALCcontext *context, ALuint buffer,
-    ALenum format, const ALvoid *data, ALsizei size, ALsizei freq, ALbitfieldSOFT flags) noexcept
-try {
-    auto *device = context->mALDevice.get();
-    auto buflock = std::lock_guard{device->BufferLock};
-
-    auto const albuf = LookupBuffer(context, buffer);
-    if(size < 0)
-        context->throw_error(AL_INVALID_VALUE, "Negative storage size {}", size);
-    if(freq < 1)
-        context->throw_error(AL_INVALID_VALUE, "Invalid sample rate {}", freq);
-    if((flags&INVALID_STORAGE_MASK) != 0)
-        context->throw_error(AL_INVALID_VALUE, "Invalid storage flags {:#x}",
-            flags&INVALID_STORAGE_MASK);
-    if((flags&AL_MAP_PERSISTENT_BIT_SOFT) && !(flags&MAP_READ_WRITE_FLAGS))
-        context->throw_error(AL_INVALID_VALUE,
-            "Declaring persistently mapped storage without read or write access");
-
-    auto usrfmt = DecomposeUserFormat(format);
-    if(!usrfmt)
-        context->throw_error(AL_INVALID_ENUM, "Invalid format {:#04x}", as_unsigned(format));
-
-    auto *bdata = static_cast<const std::byte*>(data);
-    LoadData(context, albuf, freq, gsl::narrow_cast<ALuint>(size), usrfmt->channels, usrfmt->type,
-        std::span{bdata, bdata ? gsl::narrow_cast<ALuint>(size) : 0u}, flags);
-}
-catch(al::base_exception&) {
-}
-catch(std::exception &e) {
-    ERR("Caught exception: {}", e.what());
-}
-
 FORCE_ALIGN DECL_FUNC5(void, alBufferDataStatic, ALuint,buffer, ALenum,format, ALvoid*,data, ALsizei,size, ALsizei,freq)
 AL_API DECL_FUNCEXT5(void, alBufferCallback,SOFT, ALuint,buffer, ALenum,format, ALsizei,freq, ALBUFFERCALLBACKTYPESOFT,callback, ALvoid*,userptr)
 AL_API DECL_FUNCEXT5(void, alBufferSubData,SOFT, ALuint,buffer, ALenum,format, const ALvoid*,data, ALsizei,offset, ALsizei,length)
@@ -1704,6 +1699,11 @@ AL_API DECL_FUNC3(void, alGetBufferiv, ALuint,buffer, ALenum,param, ALint*,value
 AL_API DECL_FUNCEXT3(void, alGetBufferPtr,SOFT, ALuint,buffer, ALenum,param, ALvoid**,value)
 AL_API DECL_FUNCEXT5(void, alGetBuffer3Ptr,SOFT, ALuint,buffer, ALenum,param, ALvoid**,value1, ALvoid**,value2, ALvoid**,value3)
 AL_API DECL_FUNCEXT3(void, alGetBufferPtrv,SOFT, ALuint,buffer, ALenum,param, ALvoid**,values)
+
+#if ALSOFT_EAX
+FORCE_ALIGN DECL_FUNC3(ALboolean, EAXSetBufferMode, ALsizei,n, const ALuint*,buffers, ALint,value)
+FORCE_ALIGN DECL_FUNC2(ALenum, EAXGetBufferMode, ALuint,buffer, ALint*,pReserved)
+#endif // ALSOFT_EAX
 
 
 AL_API void AL_APIENTRY alBufferSamplesSOFT(ALuint /*buffer*/, ALuint /*samplerate*/,
@@ -1770,9 +1770,3 @@ BufferSubList::~BufferSubList()
     SubListAllocator{}.deallocate(Buffers, 1);
     Buffers = nullptr;
 }
-
-
-#if ALSOFT_EAX
-FORCE_ALIGN DECL_FUNC3(ALboolean, EAXSetBufferMode, ALsizei,n, const ALuint*,buffers, ALint,value)
-FORCE_ALIGN DECL_FUNC2(ALenum, EAXGetBufferMode, ALuint,buffer, ALint*,pReserved)
-#endif // ALSOFT_EAX

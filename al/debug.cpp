@@ -201,237 +201,7 @@ void AL_APIENTRY alDebugMessageCallbackImplEXT(gsl::not_null<ALCcontext*> contex
 }
 
 
-void AL_APIENTRY alPushDebugGroupImplEXT(gsl::not_null<ALCcontext*> context, ALenum source,
-    ALuint id, ALsizei length, const ALchar *message) noexcept
-try {
-    if(length < 0)
-    {
-        const auto newlen = std::strlen(message);
-        if(newlen >= MaxDebugMessageLength)
-            context->throw_error(AL_INVALID_VALUE, "Debug message too long ({} >= {})", newlen,
-                MaxDebugMessageLength);
-        length = gsl::narrow_cast<ALsizei>(newlen);
-    }
-    else if(length >= MaxDebugMessageLength)
-        context->throw_error(AL_INVALID_VALUE, "Debug message too long ({} >= {})", length,
-            MaxDebugMessageLength);
-
-    const auto dsource = GetDebugSource(source);
-    if(!dsource)
-        context->throw_error(AL_INVALID_ENUM, "Invalid debug source {:#04x}", as_unsigned(source));
-    if(*dsource != DebugSource::ThirdParty && *dsource != DebugSource::Application)
-        context->throw_error(AL_INVALID_ENUM, "Debug source {:#04x} not allowed",
-            as_unsigned(source));
-
-    auto debuglock = std::unique_lock{context->mDebugCbLock};
-    if(context->mDebugGroups.size() >= MaxDebugGroupDepth)
-        context->throw_error(AL_STACK_OVERFLOW_EXT, "Pushing too many debug groups");
-
-    context->mDebugGroups.emplace_back(*dsource, id,
-        std::string_view{message, gsl::narrow_cast<uint>(length)});
-    auto &oldback = *(context->mDebugGroups.end()-2);
-    auto &newback = context->mDebugGroups.back();
-
-    newback.mFilters = oldback.mFilters;
-    newback.mIdFilters = oldback.mIdFilters;
-
-    if(context->mContextFlags.test(ContextFlags::DebugBit))
-        context->sendDebugMessage(debuglock, newback.mSource, DebugType::PushGroup, newback.mId,
-            DebugSeverity::Notification, newback.mMessage);
-}
-catch(al::base_exception&) {
-}
-catch(std::exception &e) {
-    ERR("Caught exception: {}", e.what());
-}
-
-void AL_APIENTRY alPopDebugGroupImplEXT(gsl::not_null<ALCcontext*> context) noexcept
-try {
-    auto debuglock = std::unique_lock{context->mDebugCbLock};
-    if(context->mDebugGroups.size() <= 1)
-        context->throw_error(AL_STACK_UNDERFLOW_EXT, "Attempting to pop the default debug group");
-
-    auto &debug = context->mDebugGroups.back();
-    const auto source = debug.mSource;
-    const auto id = debug.mId;
-    auto message = std::move(debug.mMessage);
-
-    context->mDebugGroups.pop_back();
-    if(context->mContextFlags.test(ContextFlags::DebugBit))
-        context->sendDebugMessage(debuglock, source, DebugType::PopGroup, id,
-                                  DebugSeverity::Notification, message);
-}
-catch(al::base_exception&) {
-}
-catch(std::exception &e) {
-    ERR("Caught exception: {}", e.what());
-}
-
-
-void AL_APIENTRY alObjectLabelImplEXT(gsl::not_null<ALCcontext*> context, ALenum identifier,
-    ALuint name, ALsizei length, const ALchar *label) noexcept
-try {
-    if(!label && length != 0)
-        context->throw_error(AL_INVALID_VALUE, "Null label pointer");
-
-    auto objname = (length < 0) ? std::string_view{label}
-        : std::string_view{label, gsl::narrow_cast<uint>(length)};
-    if(objname.size() >= MaxObjectLabelLength)
-        context->throw_error(AL_INVALID_VALUE, "Object label length too long ({} >= {})",
-            objname.size(), MaxObjectLabelLength);
-
-    switch(identifier)
-    {
-    case AL_SOURCE_EXT: ALsource::SetName(context, name, objname); return;
-    case AL_BUFFER: ALbuffer::SetName(context, name, objname); return;
-    case AL_FILTER_EXT: ALfilter::SetName(context, name, objname); return;
-    case AL_EFFECT_EXT: ALeffect::SetName(context, name, objname); return;
-    case AL_AUXILIARY_EFFECT_SLOT_EXT: ALeffectslot::SetName(context, name, objname); return;
-    }
-
-    context->throw_error(AL_INVALID_ENUM, "Invalid name identifier {:#04x}",
-        as_unsigned(identifier));
-}
-catch(al::base_exception&) {
-}
-catch(std::exception &e) {
-    ERR("Caught exception: {}", e.what());
-}
-
-void AL_APIENTRY alGetObjectLabelImplEXT(gsl::not_null<ALCcontext*> context, ALenum identifier,
-    ALuint name, ALsizei bufSize, ALsizei *length, ALchar *label) noexcept
-try {
-    if(bufSize < 0)
-        context->throw_error(AL_INVALID_VALUE, "Negative label bufSize");
-
-    if(!label && !length)
-        context->throw_error(AL_INVALID_VALUE, "Null length and label");
-    if(label && bufSize == 0)
-        context->throw_error(AL_INVALID_VALUE, "Zero label bufSize");
-
-    const auto labelOut = std::span{label, label ? gsl::narrow_cast<ALuint>(bufSize) : 0u};
-    auto copy_name = [name,length,labelOut](std::unordered_map<ALuint,std::string> &names)
-    {
-        const auto objname = std::invoke([name,&names]
-        {
-            if(auto iter = names.find(name); iter != names.end())
-                return std::string_view{iter->second};
-            return std::string_view{};
-        });
-
-        if(labelOut.empty())
-            *length = gsl::narrow_cast<ALsizei>(objname.size());
-        else
-        {
-            const auto namerange = objname | std::views::take(labelOut.size()-1);
-            auto oiter = std::ranges::copy(namerange, labelOut.begin()).out;
-            *oiter = '\0';
-            if(length)
-                *length = gsl::narrow_cast<ALsizei>(namerange.size());
-        }
-    };
-
-    if(identifier == AL_SOURCE_EXT)
-    {
-        auto srclock = std::lock_guard{context->mSourceLock};
-        copy_name(context->mSourceNames);
-    }
-    else if(identifier == AL_BUFFER)
-    {
-        auto *device = context->mALDevice.get();
-        auto buflock = std::lock_guard{device->BufferLock};
-        copy_name(device->mBufferNames);
-    }
-    else if(identifier == AL_FILTER_EXT)
-    {
-        auto *device = context->mALDevice.get();
-        auto buflock = std::lock_guard{device->FilterLock};
-        copy_name(device->mFilterNames);
-    }
-    else if(identifier == AL_EFFECT_EXT)
-    {
-        auto *device = context->mALDevice.get();
-        auto buflock = std::lock_guard{device->EffectLock};
-        copy_name(device->mEffectNames);
-    }
-    else if(identifier == AL_AUXILIARY_EFFECT_SLOT_EXT)
-    {
-        auto slotlock = std::lock_guard{context->mEffectSlotLock};
-        copy_name(context->mEffectSlotNames);
-    }
-    else
-        context->throw_error(AL_INVALID_ENUM, "Invalid name identifier {:#04x}",
-                             as_unsigned(identifier));
-}
-catch(al::base_exception&) {
-}
-catch(std::exception &e) {
-    ERR("Caught exception: {}", e.what());
-}
-
-} // namespace
-
-
-void ALCcontext::sendDebugMessage(std::unique_lock<std::mutex> &debuglock, DebugSource source,
-    DebugType type, ALuint id, DebugSeverity severity, std::string_view message)
-{
-    if(!mDebugEnabled.load(std::memory_order_relaxed)) [[unlikely]]
-        return;
-
-    if(message.length() >= MaxDebugMessageLength) [[unlikely]]
-    {
-        ERR("Debug message too long ({} >= {}):\n-> {}", message.length(),
-            MaxDebugMessageLength, message);
-        return;
-    }
-
-    auto &debug = mDebugGroups.back();
-
-    const auto idfilter = (1_u64 << (DebugSourceBase+al::to_underlying(source)))
-        | (1_u64 << (DebugTypeBase+al::to_underlying(type)))
-        | (uint64_t{id} << 32);
-    const auto iditer = std::ranges::lower_bound(debug.mIdFilters, idfilter);
-    if(iditer != debug.mIdFilters.cend() && *iditer == idfilter)
-        return;
-
-    const auto filter = (1u << (DebugSourceBase+al::to_underlying(source)))
-        | (1u << (DebugTypeBase+al::to_underlying(type)))
-        | (1u << (DebugSeverityBase+al::to_underlying(severity)));
-    const auto iter = std::ranges::lower_bound(debug.mFilters, filter);
-    if(iter != debug.mFilters.cend() && *iter == filter)
-        return;
-
-    if(mDebugCb)
-    {
-        auto callback = mDebugCb;
-        auto param = mDebugParam;
-        debuglock.unlock();
-        callback(GetDebugSourceEnum(source), GetDebugTypeEnum(type), id,
-            GetDebugSeverityEnum(severity), gsl::narrow_cast<ALsizei>(message.size()),
-            message.data(), param); /* NOLINT(bugprone-suspicious-stringview-data-usage) */
-    }
-    else
-    {
-        if(mDebugLog.size() < MaxDebugLoggedMessages)
-            mDebugLog.emplace_back(source, type, id, severity, message);
-        else [[unlikely]]
-            ERR("Debug message log overflow. Lost message:\n"
-                "  Source: {}\n"
-                "  Type: {}\n"
-                "  ID: {}\n"
-                "  Severity: {}\n"
-                "  Message: \"{}\"",
-                GetDebugSourceName(source), GetDebugTypeName(type), id,
-                GetDebugSeverityName(severity), message);
-    }
-}
-
-
-FORCE_ALIGN DECL_FUNCEXT2(void, alDebugMessageCallback,EXT, ALDEBUGPROCEXT,callback, void*,userParam)
-
-
-FORCE_ALIGN DECL_FUNCEXT6(void, alDebugMessageInsert,EXT, ALenum,source, ALenum,type, ALuint,id, ALenum,severity, ALsizei,length, const ALchar*,message)
-FORCE_ALIGN void AL_APIENTRY alDebugMessageInsertDirectEXT(ALCcontext *context, ALenum source,
+void AL_APIENTRY alDebugMessageInsertImplEXT(gsl::not_null<ALCcontext*> context, ALenum source,
     ALenum type, ALuint id, ALenum severity, ALsizei length, const ALchar *message) noexcept
 try {
     if(!context->mContextFlags.test(ContextFlags::DebugBit))
@@ -471,8 +241,7 @@ catch(std::exception &e) {
 }
 
 
-FORCE_ALIGN DECL_FUNCEXT6(void, alDebugMessageControl,EXT, ALenum,source, ALenum,type, ALenum,severity, ALsizei,count, const ALuint*,ids, ALboolean,enable)
-FORCE_ALIGN void AL_APIENTRY alDebugMessageControlDirectEXT(ALCcontext *context, ALenum source,
+void AL_APIENTRY alDebugMessageControlImplEXT(gsl::not_null<ALCcontext*> context, ALenum source,
     ALenum type, ALenum severity, ALsizei count, const ALuint *ids, ALboolean enable) noexcept
 try {
     if(count > 0)
@@ -574,14 +343,76 @@ catch(std::exception &e) {
 }
 
 
-FORCE_ALIGN DECL_FUNCEXT4(void, alPushDebugGroup,EXT, ALenum,source, ALuint,id, ALsizei,length, const ALchar*,message)
-FORCE_ALIGN DECL_FUNCEXT(void, alPopDebugGroup,EXT)
+void AL_APIENTRY alPushDebugGroupImplEXT(gsl::not_null<ALCcontext*> context, ALenum source,
+    ALuint id, ALsizei length, const ALchar *message) noexcept
+try {
+    if(length < 0)
+    {
+        const auto newlen = std::strlen(message);
+        if(newlen >= MaxDebugMessageLength)
+            context->throw_error(AL_INVALID_VALUE, "Debug message too long ({} >= {})", newlen,
+                MaxDebugMessageLength);
+        length = gsl::narrow_cast<ALsizei>(newlen);
+    }
+    else if(length >= MaxDebugMessageLength)
+        context->throw_error(AL_INVALID_VALUE, "Debug message too long ({} >= {})", length,
+            MaxDebugMessageLength);
+
+    const auto dsource = GetDebugSource(source);
+    if(!dsource)
+        context->throw_error(AL_INVALID_ENUM, "Invalid debug source {:#04x}", as_unsigned(source));
+    if(*dsource != DebugSource::ThirdParty && *dsource != DebugSource::Application)
+        context->throw_error(AL_INVALID_ENUM, "Debug source {:#04x} not allowed",
+            as_unsigned(source));
+
+    auto debuglock = std::unique_lock{context->mDebugCbLock};
+    if(context->mDebugGroups.size() >= MaxDebugGroupDepth)
+        context->throw_error(AL_STACK_OVERFLOW_EXT, "Pushing too many debug groups");
+
+    context->mDebugGroups.emplace_back(*dsource, id,
+        std::string_view{message, gsl::narrow_cast<uint>(length)});
+    auto &oldback = *(context->mDebugGroups.end()-2);
+    auto &newback = context->mDebugGroups.back();
+
+    newback.mFilters = oldback.mFilters;
+    newback.mIdFilters = oldback.mIdFilters;
+
+    if(context->mContextFlags.test(ContextFlags::DebugBit))
+        context->sendDebugMessage(debuglock, newback.mSource, DebugType::PushGroup, newback.mId,
+            DebugSeverity::Notification, newback.mMessage);
+}
+catch(al::base_exception&) {
+}
+catch(std::exception &e) {
+    ERR("Caught exception: {}", e.what());
+}
+
+void AL_APIENTRY alPopDebugGroupImplEXT(gsl::not_null<ALCcontext*> context) noexcept
+try {
+    auto debuglock = std::unique_lock{context->mDebugCbLock};
+    if(context->mDebugGroups.size() <= 1)
+        context->throw_error(AL_STACK_UNDERFLOW_EXT, "Attempting to pop the default debug group");
+
+    auto &debug = context->mDebugGroups.back();
+    const auto source = debug.mSource;
+    const auto id = debug.mId;
+    auto message = std::move(debug.mMessage);
+
+    context->mDebugGroups.pop_back();
+    if(context->mContextFlags.test(ContextFlags::DebugBit))
+        context->sendDebugMessage(debuglock, source, DebugType::PopGroup, id,
+            DebugSeverity::Notification, message);
+}
+catch(al::base_exception&) {
+}
+catch(std::exception &e) {
+    ERR("Caught exception: {}", e.what());
+}
 
 
-FORCE_ALIGN DECL_FUNCEXT8(ALuint, alGetDebugMessageLog,EXT, ALuint,count, ALsizei,logBufSize, ALenum*,sources, ALenum*,types, ALuint*,ids, ALenum*,severities, ALsizei*,lengths, ALchar*,logBuf)
-FORCE_ALIGN ALuint AL_APIENTRY alGetDebugMessageLogDirectEXT(ALCcontext *context, ALuint count,
+auto AL_APIENTRY alGetDebugMessageLogImplEXT(gsl::not_null<ALCcontext*> context, ALuint count,
     ALsizei logBufSize, ALenum *sources, ALenum *types, ALuint *ids, ALenum *severities,
-    ALsizei *lengths, ALchar *logBuf) noexcept
+    ALsizei *lengths, ALchar *logBuf) noexcept -> ALuint
 try {
     if(logBuf && logBufSize < 0)
         context->throw_error(AL_INVALID_VALUE, "Negative debug log buffer size");
@@ -621,7 +452,7 @@ try {
     auto logrange = context->mDebugLog | std::views::take(toget);
     if(sources)
         std::ranges::transform(logrange | std::views::transform(&DebugLogEntry::mSource),
-            std::span{sources, toget}.begin(), GetDebugSourceEnum);
+                               std::span{sources, toget}.begin(), GetDebugSourceEnum);
     if(types)
         std::ranges::transform(logrange | std::views::transform(&DebugLogEntry::mType),
             std::span{types, toget}.begin(), GetDebugTypeEnum);
@@ -633,8 +464,8 @@ try {
     if(lengths)
     {
         std::ranges::transform(logrange, std::span{lengths, toget}.begin(),
-            [](const DebugLogEntry &entry)
-        { return gsl::narrow_cast<ALsizei>(entry.mMessage.size()+1); });
+            [](const std::string_view msg)
+        { return gsl::narrow_cast<ALsizei>(msg.size()+1); }, &DebugLogEntry::mMessage);
     }
 
     if(logBuf)
@@ -669,6 +500,177 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
     return 0;
 }
+
+
+void AL_APIENTRY alObjectLabelImplEXT(gsl::not_null<ALCcontext*> context, ALenum identifier,
+    ALuint name, ALsizei length, const ALchar *label) noexcept
+try {
+    if(!label && length != 0)
+        context->throw_error(AL_INVALID_VALUE, "Null label pointer");
+
+    auto objname = (length < 0) ? std::string_view{label}
+        : std::string_view{label, gsl::narrow_cast<uint>(length)};
+    if(objname.size() >= MaxObjectLabelLength)
+        context->throw_error(AL_INVALID_VALUE, "Object label length too long ({} >= {})",
+            objname.size(), MaxObjectLabelLength);
+
+    switch(identifier)
+    {
+    case AL_SOURCE_EXT: ALsource::SetName(context, name, objname); return;
+    case AL_BUFFER: ALbuffer::SetName(context, name, objname); return;
+    case AL_FILTER_EXT: ALfilter::SetName(context, name, objname); return;
+    case AL_EFFECT_EXT: ALeffect::SetName(context, name, objname); return;
+    case AL_AUXILIARY_EFFECT_SLOT_EXT: ALeffectslot::SetName(context, name, objname); return;
+    }
+
+    context->throw_error(AL_INVALID_ENUM, "Invalid name identifier {:#04x}",
+        as_unsigned(identifier));
+}
+catch(al::base_exception&) {
+}
+catch(std::exception &e) {
+    ERR("Caught exception: {}", e.what());
+}
+
+void AL_APIENTRY alGetObjectLabelImplEXT(gsl::not_null<ALCcontext*> context, ALenum identifier,
+    ALuint name, ALsizei bufSize, ALsizei *length, ALchar *label) noexcept
+try {
+    if(bufSize < 0)
+        context->throw_error(AL_INVALID_VALUE, "Negative label bufSize");
+
+    if(!label && !length)
+        context->throw_error(AL_INVALID_VALUE, "Null length and label");
+    if(label && bufSize == 0)
+        context->throw_error(AL_INVALID_VALUE, "Zero label bufSize");
+
+    const auto labelOut = std::span{label, label ? gsl::narrow_cast<ALuint>(bufSize) : 0u};
+    auto copy_name = [name,length,labelOut](std::unordered_map<ALuint,std::string> &names)
+    {
+        const auto objname = std::invoke([name,&names]
+        {
+            if(auto iter = names.find(name); iter != names.end())
+                return std::string_view{iter->second};
+            return std::string_view{};
+        });
+
+        if(labelOut.empty())
+            *length = gsl::narrow_cast<ALsizei>(objname.size());
+        else
+        {
+            const auto namerange = objname | std::views::take(labelOut.size()-1);
+            auto oiter = std::ranges::copy(namerange, labelOut.begin()).out;
+            *oiter = '\0';
+            if(length)
+                *length = gsl::narrow_cast<ALsizei>(namerange.size());
+        }
+    };
+
+    if(identifier == AL_SOURCE_EXT)
+    {
+        auto srclock = std::lock_guard{context->mSourceLock};
+        copy_name(context->mSourceNames);
+    }
+    else if(identifier == AL_BUFFER)
+    {
+        auto *device = context->mALDevice.get();
+        auto buflock = std::lock_guard{device->BufferLock};
+        copy_name(device->mBufferNames);
+    }
+    else if(identifier == AL_FILTER_EXT)
+    {
+        auto *device = context->mALDevice.get();
+        auto buflock = std::lock_guard{device->FilterLock};
+        copy_name(device->mFilterNames);
+    }
+    else if(identifier == AL_EFFECT_EXT)
+    {
+        auto *device = context->mALDevice.get();
+        auto buflock = std::lock_guard{device->EffectLock};
+        copy_name(device->mEffectNames);
+    }
+    else if(identifier == AL_AUXILIARY_EFFECT_SLOT_EXT)
+    {
+        auto slotlock = std::lock_guard{context->mEffectSlotLock};
+        copy_name(context->mEffectSlotNames);
+    }
+    else
+        context->throw_error(AL_INVALID_ENUM, "Invalid name identifier {:#04x}",
+            as_unsigned(identifier));
+}
+catch(al::base_exception&) {
+}
+catch(std::exception &e) {
+    ERR("Caught exception: {}", e.what());
+}
+
+} // namespace
+
+
+void ALCcontext::sendDebugMessage(std::unique_lock<std::mutex> &debuglock, DebugSource source,
+    DebugType type, ALuint id, DebugSeverity severity, std::string_view message)
+{
+    if(!mDebugEnabled.load(std::memory_order_relaxed)) [[unlikely]]
+        return;
+
+    if(message.length() >= MaxDebugMessageLength) [[unlikely]]
+    {
+        ERR("Debug message too long ({} >= {}):\n-> {}", message.length(),
+            MaxDebugMessageLength, message);
+        return;
+    }
+
+    auto &debug = mDebugGroups.back();
+
+    const auto idfilter = (1_u64 << (DebugSourceBase+al::to_underlying(source)))
+        | (1_u64 << (DebugTypeBase+al::to_underlying(type)))
+        | (uint64_t{id} << 32);
+    const auto iditer = std::ranges::lower_bound(debug.mIdFilters, idfilter);
+    if(iditer != debug.mIdFilters.cend() && *iditer == idfilter)
+        return;
+
+    const auto filter = (1u << (DebugSourceBase+al::to_underlying(source)))
+        | (1u << (DebugTypeBase+al::to_underlying(type)))
+        | (1u << (DebugSeverityBase+al::to_underlying(severity)));
+    const auto iter = std::ranges::lower_bound(debug.mFilters, filter);
+    if(iter != debug.mFilters.cend() && *iter == filter)
+        return;
+
+    if(mDebugCb)
+    {
+        auto callback = mDebugCb;
+        auto param = mDebugParam;
+        debuglock.unlock();
+        callback(GetDebugSourceEnum(source), GetDebugTypeEnum(type), id,
+            GetDebugSeverityEnum(severity), gsl::narrow_cast<ALsizei>(message.size()),
+            message.data(), param); /* NOLINT(bugprone-suspicious-stringview-data-usage) */
+    }
+    else
+    {
+        if(mDebugLog.size() < MaxDebugLoggedMessages)
+            mDebugLog.emplace_back(source, type, id, severity, message);
+        else [[unlikely]]
+            ERR("Debug message log overflow. Lost message:\n"
+                "  Source: {}\n"
+                "  Type: {}\n"
+                "  ID: {}\n"
+                "  Severity: {}\n"
+                "  Message: \"{}\"",
+                GetDebugSourceName(source), GetDebugTypeName(type), id,
+                GetDebugSeverityName(severity), message);
+    }
+}
+
+
+FORCE_ALIGN DECL_FUNCEXT2(void, alDebugMessageCallback,EXT, ALDEBUGPROCEXT,callback, void*,userParam)
+
+FORCE_ALIGN DECL_FUNCEXT6(void, alDebugMessageInsert,EXT, ALenum,source, ALenum,type, ALuint,id, ALenum,severity, ALsizei,length, const ALchar*,message)
+
+FORCE_ALIGN DECL_FUNCEXT6(void, alDebugMessageControl,EXT, ALenum,source, ALenum,type, ALenum,severity, ALsizei,count, const ALuint*,ids, ALboolean,enable)
+
+FORCE_ALIGN DECL_FUNCEXT4(void, alPushDebugGroup,EXT, ALenum,source, ALuint,id, ALsizei,length, const ALchar*,message)
+FORCE_ALIGN DECL_FUNCEXT(void, alPopDebugGroup,EXT)
+
+FORCE_ALIGN DECL_FUNCEXT8(ALuint, alGetDebugMessageLog,EXT, ALuint,count, ALsizei,logBufSize, ALenum*,sources, ALenum*,types, ALuint*,ids, ALenum*,severities, ALsizei*,lengths, ALchar*,logBuf)
 
 FORCE_ALIGN DECL_FUNCEXT4(void, alObjectLabel,EXT, ALenum,identifier, ALuint,name, ALsizei,length, const ALchar*,label)
 FORCE_ALIGN DECL_FUNCEXT5(void, alGetObjectLabel,EXT, ALenum,identifier, ALuint,name, ALsizei,bufSize, ALsizei*,length, ALchar*,label)

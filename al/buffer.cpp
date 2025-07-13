@@ -809,6 +809,114 @@ auto AL_APIENTRY alIsBufferImpl(gsl::not_null<ALCcontext*> context, ALuint buffe
 }
 
 
+void AL_APIENTRY alBufferDataStaticImpl(gsl::not_null<ALCcontext*> context, const ALuint buffer,
+    ALenum format, ALvoid *data, ALsizei size, ALsizei freq) noexcept
+try {
+    auto *device = context->mALDevice.get();
+    auto buflock = std::lock_guard{device->BufferLock};
+
+    auto const albuf = LookupBuffer(context, buffer);
+    if(size < 0)
+        context->throw_error(AL_INVALID_VALUE, "Negative storage size {}", size);
+    if(freq < 1)
+        context->throw_error(AL_INVALID_VALUE, "Invalid sample rate {}", freq);
+
+    auto usrfmt = DecomposeUserFormat(format);
+    if(!usrfmt)
+        context->throw_error(AL_INVALID_ENUM, "Invalid format {:#04x}", as_unsigned(format));
+
+    PrepareUserPtr(context, albuf, freq, usrfmt->channels, usrfmt->type, data,
+        gsl::narrow_cast<ALuint>(size));
+}
+catch(al::base_exception&) {
+}
+catch(std::exception &e) {
+    ERR("Caught exception: {}", e.what());
+}
+
+
+void AL_APIENTRY alBufferCallbackImplSOFT(gsl::not_null<ALCcontext*> context, ALuint buffer,
+    ALenum format, ALsizei freq, ALBUFFERCALLBACKTYPESOFT callback, ALvoid *userptr) noexcept
+try {
+    auto *device = context->mALDevice.get();
+    auto buflock = std::lock_guard{device->BufferLock};
+
+    auto const albuf = LookupBuffer(context, buffer);
+    if(freq < 1)
+        context->throw_error(AL_INVALID_VALUE, "Invalid sample rate {}", freq);
+    if(callback == nullptr)
+        context->throw_error(AL_INVALID_VALUE, "NULL callback");
+
+    auto usrfmt = DecomposeUserFormat(format);
+    if(!usrfmt)
+        context->throw_error(AL_INVALID_ENUM, "Invalid format {:#04x}", as_unsigned(format));
+
+    PrepareCallback(context, albuf, freq, usrfmt->channels, usrfmt->type, callback, userptr);
+}
+catch(al::base_exception&) {
+}
+catch(std::exception &e) {
+    ERR("Caught exception: {}", e.what());
+}
+
+
+void AL_APIENTRY alBufferSubDataImplSOFT(gsl::not_null<ALCcontext*> context, ALuint buffer,
+    ALenum format, const ALvoid *data, ALsizei offset, ALsizei length) noexcept
+try {
+    auto *device = context->mALDevice.get();
+    auto buflock = std::lock_guard{device->BufferLock};
+
+    auto const albuf = LookupBuffer(context, buffer);
+
+    auto usrfmt = DecomposeUserFormat(format);
+    if(!usrfmt)
+        context->throw_error(AL_INVALID_ENUM, "Invalid format {:#04x}", as_unsigned(format));
+
+    const auto unpack_align = albuf->UnpackAlign;
+    const auto align = SanitizeAlignment(usrfmt->type, unpack_align);
+    if(align < 1)
+        context->throw_error(AL_INVALID_VALUE, "Invalid unpack alignment {}", unpack_align);
+    if(usrfmt->channels != albuf->mChannels || usrfmt->type != albuf->mType)
+        context->throw_error(AL_INVALID_ENUM, "Unpacking data with mismatched format");
+    if(align != albuf->mBlockAlign)
+        context->throw_error(AL_INVALID_VALUE,
+            "Unpacking data with alignment {} does not match original alignment {}", align,
+            albuf->mBlockAlign);
+    if(albuf->isBFormat() && albuf->UnpackAmbiOrder != albuf->mAmbiOrder)
+        context->throw_error(AL_INVALID_VALUE, "Unpacking data with mismatched ambisonic order");
+    if(albuf->MappedAccess != 0)
+        context->throw_error(AL_INVALID_OPERATION, "Unpacking data into mapped buffer {}", buffer);
+
+    const auto num_chans = albuf->channelsFromFmt();
+    const auto byte_align = (albuf->mType == FmtIMA4) ? ((align-1u)/2u + 4u) * num_chans :
+        (albuf->mType == FmtMSADPCM) ? ((align-2u)/2u + 7u) * num_chans :
+        (align * albuf->bytesFromFmt() * num_chans);
+
+    if(offset < 0 || length < 0 || gsl::narrow_cast<uint>(offset) > albuf->OriginalSize
+        || gsl::narrow_cast<uint>(length) > albuf->OriginalSize-gsl::narrow_cast<uint>(offset))
+        context->throw_error(AL_INVALID_VALUE, "Invalid data sub-range {}+{} on buffer {}", offset,
+            length, buffer);
+    if((gsl::narrow_cast<uint>(offset)%byte_align) != 0)
+        context->throw_error(AL_INVALID_VALUE,
+            "Sub-range offset {} is not a multiple of frame size {} ({} unpack alignment)",
+            offset, byte_align, align);
+    if((gsl::narrow_cast<uint>(length)%byte_align) != 0)
+        context->throw_error(AL_INVALID_VALUE,
+            "Sub-range length {} is not a multiple of frame size {} ({} unpack alignment)",
+            length, byte_align, align);
+
+    auto bufferbytes = std::visit([](auto &datavec)
+    { return std::as_writable_bytes(datavec); }, albuf->mData);
+    std::ranges::copy(std::views::counted(static_cast<const std::byte*>(data), length),
+        (bufferbytes | std::views::drop(offset)).begin());
+}
+catch(al::base_exception&) {
+}
+catch(std::exception &e) {
+    ERR("Caught exception: {}", e.what());
+}
+
+
 auto AL_APIENTRY alMapBufferImplSOFT(gsl::not_null<ALCcontext*> context, ALuint buffer,
     ALsizei offset, ALsizei length, ALbitfieldSOFT access) noexcept -> void*
 try {
@@ -924,6 +1032,23 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
+void AL_APIENTRY alBuffer3fImpl(gsl::not_null<ALCcontext*> context, ALuint buffer, ALenum param,
+    ALfloat value1 [[maybe_unused]], ALfloat value2 [[maybe_unused]],
+    ALfloat value3 [[maybe_unused]]) noexcept
+try {
+    auto *device = context->mALDevice.get();
+    auto buflock [[maybe_unused]] = std::lock_guard{device->BufferLock};
+
+    std::ignore = LookupBuffer(context, buffer);
+
+    context->throw_error(AL_INVALID_ENUM, "Invalid buffer 3-float property {:#04x}",
+        as_unsigned(param));
+}
+catch(al::base_exception&) {
+}
+catch(std::exception &e) {
+    ERR("Caught exception: {}", e.what());
+}
 
 void AL_APIENTRY alBufferfvImpl(gsl::not_null<ALCcontext*> context, ALuint buffer, ALenum param,
     const ALfloat *values) noexcept
@@ -1014,6 +1139,23 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
+void AL_APIENTRY alBuffer3iImpl(gsl::not_null<ALCcontext*> context, ALuint buffer, ALenum param,
+    ALint value1 [[maybe_unused]], ALint value2 [[maybe_unused]], ALint value3 [[maybe_unused]])
+    noexcept
+try {
+    auto *device = context->mALDevice.get();
+    auto buflock [[maybe_unused]] = std::lock_guard{device->BufferLock};
+
+    std::ignore = LookupBuffer(context, buffer);
+
+    context->throw_error(AL_INVALID_ENUM, "Invalid buffer 3-integer property {:#04x}",
+        as_unsigned(param));
+}
+catch(al::base_exception&) {
+}
+catch(std::exception &e) {
+    ERR("Caught exception: {}", e.what());
+}
 
 void AL_APIENTRY alBufferivImpl(gsl::not_null<ALCcontext*> context, ALuint buffer, ALenum param,
     const ALint *values) noexcept
@@ -1091,6 +1233,24 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
+void AL_APIENTRY alGetBuffer3fImpl(gsl::not_null<ALCcontext*> context, ALuint buffer, ALenum param,
+    ALfloat *value1, ALfloat *value2, ALfloat *value3) noexcept
+try {
+    auto *device = context->mALDevice.get();
+    auto buflock [[maybe_unused]] = std::lock_guard{device->BufferLock};
+
+    std::ignore = LookupBuffer(context, buffer);
+    if(!value1 || !value2 || !value3)
+        context->throw_error(AL_INVALID_VALUE, "NULL pointer");
+
+    context->throw_error(AL_INVALID_ENUM, "Invalid buffer 3-float property {:#04x}",
+        as_unsigned(param));
+}
+catch(al::base_exception&) {
+}
+catch(std::exception &e) {
+    ERR("Caught exception: {}", e.what());
+}
 
 void AL_APIENTRY alGetBufferfvImpl(gsl::not_null<ALCcontext*> context, ALuint buffer, ALenum param,
     ALfloat *values) noexcept
@@ -1193,6 +1353,24 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
+void AL_APIENTRY alGetBuffer3iImpl(gsl::not_null<ALCcontext*> context, ALuint buffer, ALenum param,
+    ALint *value1, ALint *value2, ALint *value3) noexcept
+try {
+    auto *device = context->mALDevice.get();
+    auto buflock [[maybe_unused]] = std::lock_guard{device->BufferLock};
+
+    std::ignore = LookupBuffer(context, buffer);
+    if(!value1 || !value2 || !value3)
+        context->throw_error(AL_INVALID_VALUE, "NULL pointer");
+
+    context->throw_error(AL_INVALID_ENUM, "Invalid buffer 3-integer property {:#04x}",
+        as_unsigned(param));
+}
+catch(al::base_exception&) {
+}
+catch(std::exception &e) {
+    ERR("Caught exception: {}", e.what());
+}
 
 void AL_APIENTRY alGetBufferivImpl(gsl::not_null<ALCcontext*> context, ALuint buffer, ALenum param,
     ALint *values) noexcept
@@ -1271,6 +1449,24 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
+void AL_APIENTRY alGetBuffer3PtrImplSOFT(gsl::not_null<ALCcontext*> context, ALuint buffer,
+    ALenum param, ALvoid **value1, ALvoid **value2, ALvoid **value3) noexcept
+try {
+    auto *device = context->mALDevice.get();
+    auto buflock [[maybe_unused]] = std::lock_guard{device->BufferLock};
+
+    std::ignore = LookupBuffer(context, buffer);
+    if(!value1 || !value2 || !value3)
+        context->throw_error(AL_INVALID_VALUE, "NULL pointer");
+
+    context->throw_error(AL_INVALID_ENUM, "Invalid buffer 3-pointer property {:#04x}",
+        as_unsigned(param));
+}
+catch(al::base_exception&) {
+}
+catch(std::exception &e) {
+    ERR("Caught exception: {}", e.what());
+}
 
 void AL_APIENTRY alGetBufferPtrvImplSOFT(gsl::not_null<ALCcontext*> context, ALuint buffer,
     ALenum param, ALvoid **values) noexcept
@@ -1482,238 +1678,31 @@ catch(std::exception &e) {
 }
 
 FORCE_ALIGN DECL_FUNC5(void, alBufferDataStatic, ALuint,buffer, ALenum,format, ALvoid*,data, ALsizei,size, ALsizei,freq)
-FORCE_ALIGN void AL_APIENTRY alBufferDataStaticDirect(ALCcontext *context, const ALuint buffer,
-    ALenum format, ALvoid *data, ALsizei size, ALsizei freq) noexcept
-try {
-    auto *device = context->mALDevice.get();
-    auto buflock = std::lock_guard{device->BufferLock};
-
-    auto const albuf = LookupBuffer(context, buffer);
-    if(size < 0)
-        context->throw_error(AL_INVALID_VALUE, "Negative storage size {}", size);
-    if(freq < 1)
-        context->throw_error(AL_INVALID_VALUE, "Invalid sample rate {}", freq);
-
-    auto usrfmt = DecomposeUserFormat(format);
-    if(!usrfmt)
-        context->throw_error(AL_INVALID_ENUM, "Invalid format {:#04x}", as_unsigned(format));
-
-    PrepareUserPtr(context, albuf, freq, usrfmt->channels, usrfmt->type, data,
-        gsl::narrow_cast<ALuint>(size));
-}
-catch(al::base_exception&) {
-}
-catch(std::exception &e) {
-    ERR("Caught exception: {}", e.what());
-}
+AL_API DECL_FUNCEXT5(void, alBufferCallback,SOFT, ALuint,buffer, ALenum,format, ALsizei,freq, ALBUFFERCALLBACKTYPESOFT,callback, ALvoid*,userptr)
+AL_API DECL_FUNCEXT5(void, alBufferSubData,SOFT, ALuint,buffer, ALenum,format, const ALvoid*,data, ALsizei,offset, ALsizei,length)
 
 AL_API DECL_FUNCEXT4(void*, alMapBuffer,SOFT, ALuint,buffer, ALsizei,offset, ALsizei,length, ALbitfieldSOFT,access)
 AL_API DECL_FUNCEXT1(void, alUnmapBuffer,SOFT, ALuint,buffer)
 AL_API DECL_FUNCEXT3(void, alFlushMappedBuffer,SOFT, ALuint,buffer, ALsizei,offset, ALsizei,length)
 
-AL_API DECL_FUNCEXT5(void, alBufferSubData,SOFT, ALuint,buffer, ALenum,format, const ALvoid*,data, ALsizei,offset, ALsizei,length)
-FORCE_ALIGN void AL_APIENTRY alBufferSubDataDirectSOFT(ALCcontext *context, ALuint buffer,
-    ALenum format, const ALvoid *data, ALsizei offset, ALsizei length) noexcept
-try {
-    auto *device = context->mALDevice.get();
-    auto buflock = std::lock_guard{device->BufferLock};
-
-    auto const albuf = LookupBuffer(context, buffer);
-
-    auto usrfmt = DecomposeUserFormat(format);
-    if(!usrfmt)
-        context->throw_error(AL_INVALID_ENUM, "Invalid format {:#04x}", as_unsigned(format));
-
-    const auto unpack_align = albuf->UnpackAlign;
-    const auto align = SanitizeAlignment(usrfmt->type, unpack_align);
-    if(align < 1)
-        context->throw_error(AL_INVALID_VALUE, "Invalid unpack alignment {}", unpack_align);
-    if(usrfmt->channels != albuf->mChannels || usrfmt->type != albuf->mType)
-        context->throw_error(AL_INVALID_ENUM, "Unpacking data with mismatched format");
-    if(align != albuf->mBlockAlign)
-        context->throw_error(AL_INVALID_VALUE,
-            "Unpacking data with alignment {} does not match original alignment {}", align,
-            albuf->mBlockAlign);
-    if(albuf->isBFormat() && albuf->UnpackAmbiOrder != albuf->mAmbiOrder)
-        context->throw_error(AL_INVALID_VALUE, "Unpacking data with mismatched ambisonic order");
-    if(albuf->MappedAccess != 0)
-        context->throw_error(AL_INVALID_OPERATION, "Unpacking data into mapped buffer {}", buffer);
-
-    const ALuint num_chans{albuf->channelsFromFmt()};
-    const ALuint byte_align{
-        (albuf->mType == FmtIMA4) ? ((align-1)/2 + 4) * num_chans :
-        (albuf->mType == FmtMSADPCM) ? ((align-2)/2 + 7) * num_chans :
-        (align * albuf->bytesFromFmt() * num_chans)};
-
-    if(offset < 0 || length < 0 || gsl::narrow_cast<uint>(offset) > albuf->OriginalSize
-        || gsl::narrow_cast<uint>(length) > albuf->OriginalSize-gsl::narrow_cast<uint>(offset))
-        context->throw_error(AL_INVALID_VALUE, "Invalid data sub-range {}+{} on buffer {}", offset,
-            length, buffer);
-    if((gsl::narrow_cast<uint>(offset)%byte_align) != 0)
-        context->throw_error(AL_INVALID_VALUE,
-            "Sub-range offset {} is not a multiple of frame size {} ({} unpack alignment)",
-            offset, byte_align, align);
-    if((gsl::narrow_cast<uint>(length)%byte_align) != 0)
-        context->throw_error(AL_INVALID_VALUE,
-            "Sub-range length {} is not a multiple of frame size {} ({} unpack alignment)",
-            length, byte_align, align);
-
-    auto bufferbytes = std::visit([](auto &datavec)
-    { return std::as_writable_bytes(datavec); }, albuf->mData);
-    std::ranges::copy(std::views::counted(static_cast<const std::byte*>(data), length),
-        (bufferbytes | std::views::drop(offset)).begin());
-}
-catch(al::base_exception&) {
-}
-catch(std::exception &e) {
-    ERR("Caught exception: {}", e.what());
-}
-
-
 AL_API DECL_FUNC3(void, alBufferf, ALuint,buffer, ALenum,param, ALfloat,value)
-
 AL_API DECL_FUNC5(void, alBuffer3f, ALuint,buffer, ALenum,param, ALfloat,value1, ALfloat,value2, ALfloat,value3)
-FORCE_ALIGN void AL_APIENTRY alBuffer3fDirect(ALCcontext *context, ALuint buffer, ALenum param,
-    ALfloat value1 [[maybe_unused]], ALfloat value2 [[maybe_unused]],
-    ALfloat value3 [[maybe_unused]]) noexcept
-try {
-    auto *device = context->mALDevice.get();
-    auto buflock [[maybe_unused]] = std::lock_guard{device->BufferLock};
-
-    std::ignore = LookupBuffer(context, buffer);
-
-    context->throw_error(AL_INVALID_ENUM, "Invalid buffer 3-float property {:#04x}",
-        as_unsigned(param));
-}
-catch(al::base_exception&) {
-}
-catch(std::exception &e) {
-    ERR("Caught exception: {}", e.what());
-}
-
 AL_API DECL_FUNC3(void, alBufferfv, ALuint,buffer, ALenum,param, const ALfloat*,values)
 
-
 AL_API DECL_FUNC3(void, alBufferi, ALuint,buffer, ALenum,param, ALint,value)
-
 AL_API DECL_FUNC5(void, alBuffer3i, ALuint,buffer, ALenum,param, ALint,value1, ALint,value2, ALint,value3)
-FORCE_ALIGN void AL_APIENTRY alBuffer3iDirect(ALCcontext *context, ALuint buffer, ALenum param,
-    ALint value1 [[maybe_unused]], ALint value2 [[maybe_unused]], ALint value3 [[maybe_unused]]) noexcept
-try {
-    auto *device = context->mALDevice.get();
-    auto buflock [[maybe_unused]] = std::lock_guard{device->BufferLock};
-
-    std::ignore = LookupBuffer(context, buffer);
-
-    context->throw_error(AL_INVALID_ENUM, "Invalid buffer 3-integer property {:#04x}",
-        as_unsigned(param));
-}
-catch(al::base_exception&) {
-}
-catch(std::exception &e) {
-    ERR("Caught exception: {}", e.what());
-}
-
 AL_API DECL_FUNC3(void, alBufferiv, ALuint,buffer, ALenum,param, const ALint*,values)
 
-
 AL_API DECL_FUNC3(void, alGetBufferf, ALuint,buffer, ALenum,param, ALfloat*,value)
-
 AL_API DECL_FUNC5(void, alGetBuffer3f, ALuint,buffer, ALenum,param, ALfloat*,value1, ALfloat*,value2, ALfloat*,value3)
-FORCE_ALIGN void AL_APIENTRY alGetBuffer3fDirect(ALCcontext *context, ALuint buffer, ALenum param,
-    ALfloat *value1, ALfloat *value2, ALfloat *value3) noexcept
-try {
-    auto *device = context->mALDevice.get();
-    auto buflock [[maybe_unused]] = std::lock_guard{device->BufferLock};
-
-    std::ignore = LookupBuffer(context, buffer);
-    if(!value1 || !value2 || !value3)
-        context->throw_error(AL_INVALID_VALUE, "NULL pointer");
-
-    context->throw_error(AL_INVALID_ENUM, "Invalid buffer 3-float property {:#04x}",
-        as_unsigned(param));
-}
-catch(al::base_exception&) {
-}
-catch(std::exception &e) {
-    ERR("Caught exception: {}", e.what());
-}
-
 AL_API DECL_FUNC3(void, alGetBufferfv, ALuint,buffer, ALenum,param, ALfloat*,values)
 
-
 AL_API DECL_FUNC3(void, alGetBufferi, ALuint,buffer, ALenum,param, ALint*,value)
-
 AL_API DECL_FUNC5(void, alGetBuffer3i, ALuint,buffer, ALenum,param, ALint*,value1, ALint*,value2, ALint*,value3)
-FORCE_ALIGN void AL_APIENTRY alGetBuffer3iDirect(ALCcontext *context, ALuint buffer, ALenum param,
-    ALint *value1, ALint *value2, ALint *value3) noexcept
-try {
-    auto *device = context->mALDevice.get();
-    auto buflock [[maybe_unused]] = std::lock_guard{device->BufferLock};
-
-    std::ignore = LookupBuffer(context, buffer);
-    if(!value1 || !value2 || !value3)
-        context->throw_error(AL_INVALID_VALUE, "NULL pointer");
-
-    context->throw_error(AL_INVALID_ENUM, "Invalid buffer 3-integer property {:#04x}",
-        as_unsigned(param));
-}
-catch(al::base_exception&) {
-}
-catch(std::exception &e) {
-    ERR("Caught exception: {}", e.what());
-}
-
 AL_API DECL_FUNC3(void, alGetBufferiv, ALuint,buffer, ALenum,param, ALint*,values)
 
-
-AL_API DECL_FUNCEXT5(void, alBufferCallback,SOFT, ALuint,buffer, ALenum,format, ALsizei,freq, ALBUFFERCALLBACKTYPESOFT,callback, ALvoid*,userptr)
-FORCE_ALIGN void AL_APIENTRY alBufferCallbackDirectSOFT(ALCcontext *context, ALuint buffer,
-    ALenum format, ALsizei freq, ALBUFFERCALLBACKTYPESOFT callback, ALvoid *userptr) noexcept
-try {
-    auto *device = context->mALDevice.get();
-    auto buflock = std::lock_guard{device->BufferLock};
-
-    auto const albuf = LookupBuffer(context, buffer);
-    if(freq < 1)
-        context->throw_error(AL_INVALID_VALUE, "Invalid sample rate {}", freq);
-    if(callback == nullptr)
-        context->throw_error(AL_INVALID_VALUE, "NULL callback");
-
-    auto usrfmt = DecomposeUserFormat(format);
-    if(!usrfmt)
-        context->throw_error(AL_INVALID_ENUM, "Invalid format {:#04x}", as_unsigned(format));
-
-    PrepareCallback(context, albuf, freq, usrfmt->channels, usrfmt->type, callback, userptr);
-}
-catch(al::base_exception&) {
-}
-catch(std::exception &e) {
-    ERR("Caught exception: {}", e.what());
-}
-
 AL_API DECL_FUNCEXT3(void, alGetBufferPtr,SOFT, ALuint,buffer, ALenum,param, ALvoid**,value)
-
 AL_API DECL_FUNCEXT5(void, alGetBuffer3Ptr,SOFT, ALuint,buffer, ALenum,param, ALvoid**,value1, ALvoid**,value2, ALvoid**,value3)
-FORCE_ALIGN void AL_APIENTRY alGetBuffer3PtrDirectSOFT(ALCcontext *context, ALuint buffer,
-    ALenum param, ALvoid **value1, ALvoid **value2, ALvoid **value3) noexcept
-try {
-    auto *device = context->mALDevice.get();
-    auto buflock [[maybe_unused]] = std::lock_guard{device->BufferLock};
-
-    std::ignore = LookupBuffer(context, buffer);
-    if(!value1 || !value2 || !value3)
-        context->throw_error(AL_INVALID_VALUE, "NULL pointer");
-
-    context->throw_error(AL_INVALID_ENUM, "Invalid buffer 3-pointer property {:#04x}",
-        as_unsigned(param));
-}
-catch(al::base_exception&) {
-}
-catch(std::exception &e) {
-    ERR("Caught exception: {}", e.what());
-}
-
 AL_API DECL_FUNCEXT3(void, alGetBufferPtrv,SOFT, ALuint,buffer, ALenum,param, ALvoid**,values)
 
 

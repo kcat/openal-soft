@@ -298,6 +298,77 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
+void AL_APIENTRY alGetObjectLabelImplEXT(gsl::not_null<ALCcontext*> context, ALenum identifier,
+    ALuint name, ALsizei bufSize, ALsizei *length, ALchar *label) noexcept
+try {
+    if(bufSize < 0)
+        context->throw_error(AL_INVALID_VALUE, "Negative label bufSize");
+
+    if(!label && !length)
+        context->throw_error(AL_INVALID_VALUE, "Null length and label");
+    if(label && bufSize == 0)
+        context->throw_error(AL_INVALID_VALUE, "Zero label bufSize");
+
+    const auto labelOut = std::span{label, label ? gsl::narrow_cast<ALuint>(bufSize) : 0u};
+    auto copy_name = [name,length,labelOut](std::unordered_map<ALuint,std::string> &names)
+    {
+        const auto objname = std::invoke([name,&names]
+        {
+            if(auto iter = names.find(name); iter != names.end())
+                return std::string_view{iter->second};
+            return std::string_view{};
+        });
+
+        if(labelOut.empty())
+            *length = gsl::narrow_cast<ALsizei>(objname.size());
+        else
+        {
+            const auto namerange = objname | std::views::take(labelOut.size()-1);
+            auto oiter = std::ranges::copy(namerange, labelOut.begin()).out;
+            *oiter = '\0';
+            if(length)
+                *length = gsl::narrow_cast<ALsizei>(namerange.size());
+        }
+    };
+
+    if(identifier == AL_SOURCE_EXT)
+    {
+        auto srclock = std::lock_guard{context->mSourceLock};
+        copy_name(context->mSourceNames);
+    }
+    else if(identifier == AL_BUFFER)
+    {
+        auto *device = context->mALDevice.get();
+        auto buflock = std::lock_guard{device->BufferLock};
+        copy_name(device->mBufferNames);
+    }
+    else if(identifier == AL_FILTER_EXT)
+    {
+        auto *device = context->mALDevice.get();
+        auto buflock = std::lock_guard{device->FilterLock};
+        copy_name(device->mFilterNames);
+    }
+    else if(identifier == AL_EFFECT_EXT)
+    {
+        auto *device = context->mALDevice.get();
+        auto buflock = std::lock_guard{device->EffectLock};
+        copy_name(device->mEffectNames);
+    }
+    else if(identifier == AL_AUXILIARY_EFFECT_SLOT_EXT)
+    {
+        auto slotlock = std::lock_guard{context->mEffectSlotLock};
+        copy_name(context->mEffectSlotNames);
+    }
+    else
+        context->throw_error(AL_INVALID_ENUM, "Invalid name identifier {:#04x}",
+                             as_unsigned(identifier));
+}
+catch(al::base_exception&) {
+}
+catch(std::exception &e) {
+    ERR("Caught exception: {}", e.what());
+}
+
 } // namespace
 
 
@@ -600,75 +671,4 @@ catch(std::exception &e) {
 }
 
 FORCE_ALIGN DECL_FUNCEXT4(void, alObjectLabel,EXT, ALenum,identifier, ALuint,name, ALsizei,length, const ALchar*,label)
-
 FORCE_ALIGN DECL_FUNCEXT5(void, alGetObjectLabel,EXT, ALenum,identifier, ALuint,name, ALsizei,bufSize, ALsizei*,length, ALchar*,label)
-FORCE_ALIGN void AL_APIENTRY alGetObjectLabelDirectEXT(ALCcontext *context, ALenum identifier,
-    ALuint name, ALsizei bufSize, ALsizei *length, ALchar *label) noexcept
-try {
-    if(bufSize < 0)
-        context->throw_error(AL_INVALID_VALUE, "Negative label bufSize");
-
-    if(!label && !length)
-        context->throw_error(AL_INVALID_VALUE, "Null length and label");
-    if(label && bufSize == 0)
-        context->throw_error(AL_INVALID_VALUE, "Zero label bufSize");
-
-    const auto labelOut = std::span{label, label ? gsl::narrow_cast<ALuint>(bufSize) : 0u};
-    auto copy_name = [name,length,labelOut](std::unordered_map<ALuint,std::string> &names)
-    {
-        const auto objname = std::invoke([name,&names]
-        {
-            if(auto iter = names.find(name); iter != names.end())
-                return std::string_view{iter->second};
-            return std::string_view{};
-        });
-
-        if(labelOut.empty())
-            *length = gsl::narrow_cast<ALsizei>(objname.size());
-        else
-        {
-            const auto namerange = objname | std::views::take(labelOut.size()-1);
-            auto oiter = std::ranges::copy(namerange, labelOut.begin()).out;
-            *oiter = '\0';
-            if(length)
-                *length = gsl::narrow_cast<ALsizei>(namerange.size());
-        }
-    };
-
-    if(identifier == AL_SOURCE_EXT)
-    {
-        auto srclock = std::lock_guard{context->mSourceLock};
-        copy_name(context->mSourceNames);
-    }
-    else if(identifier == AL_BUFFER)
-    {
-        auto *device = context->mALDevice.get();
-        auto buflock = std::lock_guard{device->BufferLock};
-        copy_name(device->mBufferNames);
-    }
-    else if(identifier == AL_FILTER_EXT)
-    {
-        auto *device = context->mALDevice.get();
-        auto buflock = std::lock_guard{device->FilterLock};
-        copy_name(device->mFilterNames);
-    }
-    else if(identifier == AL_EFFECT_EXT)
-    {
-        auto *device = context->mALDevice.get();
-        auto buflock = std::lock_guard{device->EffectLock};
-        copy_name(device->mEffectNames);
-    }
-    else if(identifier == AL_AUXILIARY_EFFECT_SLOT_EXT)
-    {
-        auto slotlock = std::lock_guard{context->mEffectSlotLock};
-        copy_name(context->mEffectSlotNames);
-    }
-    else
-        context->throw_error(AL_INVALID_ENUM, "Invalid name identifier {:#04x}",
-            as_unsigned(identifier));
-}
-catch(al::base_exception&) {
-}
-catch(std::exception &e) {
-    ERR("Caught exception: {}", e.what());
-}

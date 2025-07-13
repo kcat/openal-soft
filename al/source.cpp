@@ -2756,6 +2756,20 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
+void AL_APIENTRY alSource3fImpl(gsl::not_null<ALCcontext*> context, ALuint source, ALenum param,
+    ALfloat value1, ALfloat value2, ALfloat value3) noexcept
+try {
+    auto proplock = std::lock_guard{context->mPropLock};
+    auto srclock = std::lock_guard{context->mSourceLock};
+
+    const auto fvals = std::array{value1, value2, value3};
+    SetProperty<float>(LookupSource(context, source), context, SourceProp{param}, fvals);
+}
+catch(al::base_exception&) {
+}
+catch(std::exception &e) {
+    ERR("Caught exception: {}", e.what());
+}
 
 void AL_APIENTRY alSourcefvImpl(gsl::not_null<ALCcontext*> context, ALuint source, ALenum param,
     const ALfloat *values) noexcept
@@ -2791,6 +2805,20 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
+void AL_APIENTRY alSource3dImplSOFT(gsl::not_null<ALCcontext*> context, ALuint source,
+    ALenum param, ALdouble value1, ALdouble value2, ALdouble value3) noexcept
+try {
+    auto proplock = std::lock_guard{context->mPropLock};
+    auto srclock = std::lock_guard{context->mSourceLock};
+
+    const auto dvals = std::array{value1, value2, value3};
+    SetProperty<double>(LookupSource(context, source), context, SourceProp{param}, dvals);
+}
+catch(al::base_exception&) {
+}
+catch(std::exception &e) {
+    ERR("Caught exception: {}", e.what());
+}
 
 void AL_APIENTRY alSourcedvImplSOFT(gsl::not_null<ALCcontext*> context, ALuint source,
     ALenum param, const ALdouble *values) noexcept
@@ -2826,6 +2854,20 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
+void AL_APIENTRY alSource3iImpl(gsl::not_null<ALCcontext*> context, ALuint source, ALenum param,
+    ALint value1, ALint value2, ALint value3) noexcept
+try {
+    auto proplock = std::lock_guard{context->mPropLock};
+    auto srclock = std::lock_guard{context->mSourceLock};
+
+    const auto ivals = std::array{value1, value2, value3};
+    SetProperty<int>(LookupSource(context, source), context, SourceProp{param}, ivals);
+}
+catch(al::base_exception&) {
+}
+catch(std::exception &e) {
+    ERR("Caught exception: {}", e.what());
+}
 
 void AL_APIENTRY alSourceivImpl(gsl::not_null<ALCcontext*> context, ALuint source, ALenum param,
     const ALint *values) noexcept
@@ -2861,6 +2903,20 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
+void AL_APIENTRY alSource3i64ImplSOFT(gsl::not_null<ALCcontext*> context, ALuint source,
+    ALenum param, ALint64SOFT value1, ALint64SOFT value2, ALint64SOFT value3) noexcept
+try {
+    auto proplock = std::lock_guard{context->mPropLock};
+    auto srclock = std::lock_guard{context->mSourceLock};
+
+    const auto i64vals = std::array{value1, value2, value3};
+    SetProperty<int64_t>(LookupSource(context, source), context, SourceProp{param}, i64vals);
+}
+catch(al::base_exception&) {
+}
+catch(std::exception &e) {
+    ERR("Caught exception: {}", e.what());
+}
 
 void AL_APIENTRY alSourcei64vImplSOFT(gsl::not_null<ALCcontext*> context, ALuint source,
     ALenum param, const ALint64SOFT *values) noexcept
@@ -2899,6 +2955,26 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
+void AL_APIENTRY alGetSource3fImpl(gsl::not_null<ALCcontext*> context, ALuint source, ALenum param,
+    ALfloat *value1, ALfloat *value2, ALfloat *value3) noexcept
+try {
+    auto srclock = std::lock_guard{context->mSourceLock};
+
+    auto const Source = LookupSource(context, source);
+    if(!(value1 && value2 && value3))
+        context->throw_error(AL_INVALID_VALUE, "NULL pointer");
+
+    auto fvals = std::array<float,3>{};
+    GetProperty<float>(Source, context, SourceProp{param}, fvals);
+    *value1 = fvals[0];
+    *value2 = fvals[1];
+    *value3 = fvals[2];
+}
+catch(al::base_exception&) {
+}
+catch(std::exception &e) {
+    ERR("Caught exception: {}", e.what());
+}
 
 void AL_APIENTRY alGetSourcefvImpl(gsl::not_null<ALCcontext*> context, ALuint source, ALenum param,
     ALfloat *values) noexcept
@@ -2936,6 +3012,26 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
+void AL_APIENTRY alGetSource3dImplSOFT(gsl::not_null<ALCcontext*> context, ALuint source,
+    ALenum param, ALdouble *value1, ALdouble *value2, ALdouble *value3) noexcept
+try {
+    auto srclock = std::lock_guard{context->mSourceLock};
+
+    auto const Source = LookupSource(context, source);
+    if(!(value1 && value2 && value3))
+        context->throw_error(AL_INVALID_VALUE, "NULL pointer");
+
+    auto dvals = std::array<double,3>{};
+    GetProperty<double>(Source, context, SourceProp{param}, dvals);
+    *value1 = dvals[0];
+    *value2 = dvals[1];
+    *value3 = dvals[2];
+}
+catch(al::base_exception&) {
+}
+catch(std::exception &e) {
+    ERR("Caught exception: {}", e.what());
+}
 
 void AL_APIENTRY alGetSourcedvImplSOFT(gsl::not_null<ALCcontext*> context, ALuint source,
     ALenum param, ALdouble *values) noexcept
@@ -2973,6 +3069,26 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
+void AL_APIENTRY alGetSource3iImpl(gsl::not_null<ALCcontext*> context, ALuint source, ALenum param,
+    ALint *value1, ALint *value2, ALint *value3) noexcept
+try {
+    auto srclock = std::lock_guard{context->mSourceLock};
+
+    auto const Source = LookupSource(context, source);
+    if(!(value1 && value2 && value3))
+        context->throw_error(AL_INVALID_VALUE, "NULL pointer");
+
+    auto ivals = std::array<int,3>{};
+    GetProperty<int>(Source, context, SourceProp{param}, ivals);
+    *value1 = ivals[0];
+    *value2 = ivals[1];
+    *value3 = ivals[2];
+}
+catch(al::base_exception&) {
+}
+catch(std::exception &e) {
+    ERR("Caught exception: {}", e.what());
+}
 
 void AL_APIENTRY alGetSourceivImpl(gsl::not_null<ALCcontext*> context, ALuint source, ALenum param,
     ALint *values) noexcept
@@ -3010,6 +3126,26 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
+void AL_APIENTRY alGetSource3i64ImplSOFT(gsl::not_null<ALCcontext*> context, ALuint source,
+    ALenum param, ALint64SOFT *value1, ALint64SOFT *value2, ALint64SOFT *value3) noexcept
+try {
+    auto srclock = std::lock_guard{context->mSourceLock};
+
+    auto const Source = LookupSource(context, source);
+    if(!(value1 && value2 && value3))
+        context->throw_error(AL_INVALID_VALUE, "NULL pointer");
+
+    auto i64vals = std::array<int64_t,3>{};
+    GetProperty<int64_t>(Source, context, SourceProp{param}, i64vals);
+    *value1 = i64vals[0];
+    *value2 = i64vals[1];
+    *value3 = i64vals[2];
+}
+catch(al::base_exception&) {
+}
+catch(std::exception &e) {
+    ERR("Caught exception: {}", e.what());
+}
 
 void AL_APIENTRY alGetSourcei64vImplSOFT(gsl::not_null<ALCcontext*> context, ALuint source,
     ALenum param, ALint64SOFT *values) noexcept
@@ -3449,198 +3585,37 @@ AL_API DECL_FUNC2(void, alGenSources, ALsizei,n, ALuint*,sources)
 AL_API DECL_FUNC2(void, alDeleteSources, ALsizei,n, const ALuint*,sources)
 AL_API DECL_FUNC1(ALboolean, alIsSource, ALuint,source)
 
-
 AL_API DECL_FUNC3(void, alSourcef, ALuint,source, ALenum,param, ALfloat,value)
-
 AL_API DECL_FUNC5(void, alSource3f, ALuint,source, ALenum,param, ALfloat,value1, ALfloat,value2, ALfloat,value3)
-FORCE_ALIGN void AL_APIENTRY alSource3fDirect(ALCcontext *context, ALuint source, ALenum param,
-    ALfloat value1, ALfloat value2, ALfloat value3) noexcept
-try {
-    auto proplock = std::lock_guard{context->mPropLock};
-    auto srclock = std::lock_guard{context->mSourceLock};
-
-    const auto fvals = std::array{value1, value2, value3};
-    SetProperty<float>(LookupSource(context, source), context, SourceProp{param}, fvals);
-}
-catch(al::base_exception&) {
-}
-catch(std::exception &e) {
-    ERR("Caught exception: {}", e.what());
-}
-
 AL_API DECL_FUNC3(void, alSourcefv, ALuint,source, ALenum,param, const ALfloat*,values)
 
-
 AL_API DECL_FUNCEXT3(void, alSourced,SOFT, ALuint,source, ALenum,param, ALdouble,value)
-
 AL_API DECL_FUNCEXT5(void, alSource3d,SOFT, ALuint,source, ALenum,param, ALdouble,value1, ALdouble,value2, ALdouble,value3)
-FORCE_ALIGN void AL_APIENTRY alSource3dDirectSOFT(ALCcontext *context, ALuint source, ALenum param,
-    ALdouble value1, ALdouble value2, ALdouble value3) noexcept
-try {
-    auto proplock = std::lock_guard{context->mPropLock};
-    auto srclock = std::lock_guard{context->mSourceLock};
-
-    const auto dvals = std::array{value1, value2, value3};
-    SetProperty<double>(LookupSource(context, source), context, SourceProp{param}, dvals);
-}
-catch(al::base_exception&) {
-}
-catch(std::exception &e) {
-    ERR("Caught exception: {}", e.what());
-}
-
 AL_API DECL_FUNCEXT3(void, alSourcedv,SOFT, ALuint,source, ALenum,param, const ALdouble*,values)
 
-
 AL_API DECL_FUNC3(void, alSourcei, ALuint,source, ALenum,param, ALint,value)
-
 AL_API DECL_FUNC5(void, alSource3i, ALuint,buffer, ALenum,param, ALint,value1, ALint,value2, ALint,value3)
-FORCE_ALIGN void AL_APIENTRY alSource3iDirect(ALCcontext *context, ALuint source, ALenum param,
-    ALint value1, ALint value2, ALint value3) noexcept
-try {
-    auto proplock = std::lock_guard{context->mPropLock};
-    auto srclock = std::lock_guard{context->mSourceLock};
-
-    const auto ivals = std::array{value1, value2, value3};
-    SetProperty<int>(LookupSource(context, source), context, SourceProp{param}, ivals);
-}
-catch(al::base_exception&) {
-}
-catch(std::exception &e) {
-    ERR("Caught exception: {}", e.what());
-}
-
 AL_API DECL_FUNC3(void, alSourceiv, ALuint,source, ALenum,param, const ALint*,values)
 
-
 AL_API DECL_FUNCEXT3(void, alSourcei64,SOFT, ALuint,source, ALenum,param, ALint64SOFT,value)
-
 AL_API DECL_FUNCEXT5(void, alSource3i64,SOFT, ALuint,source, ALenum,param, ALint64SOFT,value1, ALint64SOFT,value2, ALint64SOFT,value3)
-FORCE_ALIGN void AL_APIENTRY alSource3i64DirectSOFT(ALCcontext *context, ALuint source,
-    ALenum param, ALint64SOFT value1, ALint64SOFT value2, ALint64SOFT value3) noexcept
-try {
-    auto proplock = std::lock_guard{context->mPropLock};
-    auto srclock = std::lock_guard{context->mSourceLock};
-
-    const auto i64vals = std::array{value1, value2, value3};
-    SetProperty<int64_t>(LookupSource(context, source), context, SourceProp{param}, i64vals);
-}
-catch(al::base_exception&) {
-}
-catch(std::exception &e) {
-    ERR("Caught exception: {}", e.what());
-}
-
 AL_API DECL_FUNCEXT3(void, alSourcei64v,SOFT, ALuint,source, ALenum,param, const ALint64SOFT*,values)
 
-
 AL_API DECL_FUNC3(void, alGetSourcef, ALuint,source, ALenum,param, ALfloat*,value)
-
 AL_API DECL_FUNC5(void, alGetSource3f, ALuint,source, ALenum,param, ALfloat*,value1, ALfloat*,value2, ALfloat*,value3)
-FORCE_ALIGN void AL_APIENTRY alGetSource3fDirect(ALCcontext *context, ALuint source, ALenum param,
-    ALfloat *value1, ALfloat *value2, ALfloat *value3) noexcept
-try {
-    auto srclock = std::lock_guard{context->mSourceLock};
-
-    auto const Source = LookupSource(context, source);
-    if(!(value1 && value2 && value3))
-        context->throw_error(AL_INVALID_VALUE, "NULL pointer");
-
-    auto fvals = std::array<float,3>{};
-    GetProperty<float>(Source, context, SourceProp{param}, fvals);
-    *value1 = fvals[0];
-    *value2 = fvals[1];
-    *value3 = fvals[2];
-}
-catch(al::base_exception&) {
-}
-catch(std::exception &e) {
-    ERR("Caught exception: {}", e.what());
-}
-
 AL_API DECL_FUNC3(void, alGetSourcefv, ALuint,source, ALenum,param, ALfloat*,values)
 
-
 AL_API DECL_FUNCEXT3(void, alGetSourced,SOFT, ALuint,source, ALenum,param, ALdouble*,value)
-
 AL_API DECL_FUNCEXT5(void, alGetSource3d,SOFT, ALuint,source, ALenum,param, ALdouble*,value1, ALdouble*,value2, ALdouble*,value3)
-FORCE_ALIGN void AL_APIENTRY alGetSource3dDirectSOFT(ALCcontext *context, ALuint source,
-    ALenum param, ALdouble *value1, ALdouble *value2, ALdouble *value3) noexcept
-try {
-    auto srclock = std::lock_guard{context->mSourceLock};
-
-    auto const Source = LookupSource(context, source);
-    if(!(value1 && value2 && value3))
-        context->throw_error(AL_INVALID_VALUE, "NULL pointer");
-
-    auto dvals = std::array<double,3>{};
-    GetProperty<double>(Source, context, SourceProp{param}, dvals);
-    *value1 = dvals[0];
-    *value2 = dvals[1];
-    *value3 = dvals[2];
-}
-catch(al::base_exception&) {
-}
-catch(std::exception &e) {
-    ERR("Caught exception: {}", e.what());
-}
-
 AL_API DECL_FUNCEXT3(void, alGetSourcedv,SOFT, ALuint,source, ALenum,param, ALdouble*,values)
 
-
 AL_API DECL_FUNC3(void, alGetSourcei, ALuint,source, ALenum,param, ALint*,value)
-
 AL_API DECL_FUNC5(void, alGetSource3i, ALuint,source, ALenum,param, ALint*,value1, ALint*,value2, ALint*,value3)
-FORCE_ALIGN void AL_APIENTRY alGetSource3iDirect(ALCcontext *context, ALuint source, ALenum param,
-    ALint *value1, ALint *value2, ALint *value3) noexcept
-try {
-    auto srclock = std::lock_guard{context->mSourceLock};
-
-    auto const Source = LookupSource(context, source);
-    if(!(value1 && value2 && value3))
-        context->throw_error(AL_INVALID_VALUE, "NULL pointer");
-
-    auto ivals = std::array<int,3>{};
-    GetProperty<int>(Source, context, SourceProp{param}, ivals);
-    *value1 = ivals[0];
-    *value2 = ivals[1];
-    *value3 = ivals[2];
-}
-catch(al::base_exception&) {
-}
-catch(std::exception &e) {
-    ERR("Caught exception: {}", e.what());
-}
-
 AL_API DECL_FUNC3(void, alGetSourceiv, ALuint,source, ALenum,param, ALint*,values)
 
-
 AL_API DECL_FUNCEXT3(void, alGetSourcei64,SOFT, ALuint,source, ALenum,param, ALint64SOFT*,value)
-
 AL_API DECL_FUNCEXT5(void, alGetSource3i64,SOFT, ALuint,source, ALenum,param, ALint64SOFT*,value1, ALint64SOFT*,value2, ALint64SOFT*,value3)
-FORCE_ALIGN void AL_APIENTRY alGetSource3i64DirectSOFT(ALCcontext *context, ALuint source,
-    ALenum param, ALint64SOFT *value1, ALint64SOFT *value2, ALint64SOFT *value3) noexcept
-try {
-    auto srclock = std::lock_guard{context->mSourceLock};
-
-    auto const Source = LookupSource(context, source);
-    if(!(value1 && value2 && value3))
-        context->throw_error(AL_INVALID_VALUE, "NULL pointer");
-
-    auto i64vals = std::array<int64_t,3>{};
-    GetProperty<int64_t>(Source, context, SourceProp{param}, i64vals);
-    *value1 = i64vals[0];
-    *value2 = i64vals[1];
-    *value3 = i64vals[2];
-}
-catch(al::base_exception&) {
-}
-catch(std::exception &e) {
-    ERR("Caught exception: {}", e.what());
-}
-
 AL_API DECL_FUNCEXT3(void, alGetSourcei64v,SOFT, ALuint,source, ALenum,param, ALint64SOFT*,values)
-
 
 AL_API DECL_FUNC1(void, alSourcePlay, ALuint,source)
 FORCE_ALIGN DECL_FUNCEXT2(void, alSourcePlayAtTime,SOFT, ALuint,source, ALint64SOFT,start_time)

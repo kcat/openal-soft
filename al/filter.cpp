@@ -366,7 +366,7 @@ auto LookupFilter(gsl::not_null<ALCcontext*> context, ALuint id) -> gsl::not_nul
 }
 
 
-void AL_APIENTRY alGenFiltersImpl(gsl::not_null<ALCcontext*> context, ALsizei n, ALuint *filters)
+void AL_APIENTRY alGenFilters(gsl::not_null<ALCcontext*> context, ALsizei n, ALuint *filters)
     noexcept
 try {
     if(n < 0)
@@ -389,7 +389,7 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void AL_APIENTRY alDeleteFiltersImpl(gsl::not_null<ALCcontext*> context, ALsizei n,
+void AL_APIENTRY alDeleteFilters(gsl::not_null<ALCcontext*> context, ALsizei n,
     const ALuint *filters) noexcept
 try {
     if(n < 0)
@@ -417,7 +417,7 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-auto AL_APIENTRY alIsFilterImpl(gsl::not_null<ALCcontext*> context, ALuint filter) noexcept
+auto AL_APIENTRY alIsFilter(gsl::not_null<ALCcontext*> context, ALuint filter) noexcept
     -> ALboolean
 {
     auto *device = context->mALDevice.get();
@@ -428,7 +428,7 @@ auto AL_APIENTRY alIsFilterImpl(gsl::not_null<ALCcontext*> context, ALuint filte
 }
 
 
-void AL_APIENTRY alFilteriImpl(gsl::not_null<ALCcontext*> context, ALuint filter, ALenum param,
+void AL_APIENTRY alFilteri(gsl::not_null<ALCcontext*> context, ALuint filter, ALenum param,
     ALint value) noexcept
 try {
     auto *device = context->mALDevice.get();
@@ -456,13 +456,13 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void AL_APIENTRY alFilterivImpl(gsl::not_null<ALCcontext*> context, ALuint filter, ALenum param,
+void AL_APIENTRY alFilteriv(gsl::not_null<ALCcontext*> context, ALuint filter, ALenum param,
     const ALint *values) noexcept
 try {
     switch(param)
     {
     case AL_FILTER_TYPE:
-        alFilteriImpl(context, filter, param, *values);
+        alFilteri(context, filter, param, *values);
         return;
     }
 
@@ -481,7 +481,7 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void AL_APIENTRY alFilterfImpl(gsl::not_null<ALCcontext*> context, ALuint filter, ALenum param,
+void AL_APIENTRY alFilterf(gsl::not_null<ALCcontext*> context, ALuint filter, ALenum param,
     ALfloat value) noexcept
 try {
     auto *device = context->mALDevice.get();
@@ -499,7 +499,7 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void AL_APIENTRY alFilterfvImpl(gsl::not_null<ALCcontext*> context, ALuint filter, ALenum param,
+void AL_APIENTRY alFilterfv(gsl::not_null<ALCcontext*> context, ALuint filter, ALenum param,
     const ALfloat *values) noexcept
 try {
     auto *device = context->mALDevice.get();
@@ -517,7 +517,7 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void AL_APIENTRY alGetFilteriImpl(gsl::not_null<ALCcontext*> context, ALuint filter, ALenum param,
+void AL_APIENTRY alGetFilteri(gsl::not_null<ALCcontext*> context, ALuint filter, ALenum param,
     ALint *value) noexcept
 try {
     auto *device = context->mALDevice.get();
@@ -540,13 +540,13 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void AL_APIENTRY alGetFilterivImpl(gsl::not_null<ALCcontext*> context, ALuint filter, ALenum param,
+void AL_APIENTRY alGetFilteriv(gsl::not_null<ALCcontext*> context, ALuint filter, ALenum param,
     ALint *values) noexcept
 try {
     switch(param)
     {
     case AL_FILTER_TYPE:
-        alGetFilteriImpl(context, filter, param, values);
+        alGetFilteri(context, filter, param, values);
         return;
     }
 
@@ -565,7 +565,7 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void AL_APIENTRY alGetFilterfImpl(gsl::not_null<ALCcontext*> context, ALuint filter, ALenum param,
+void AL_APIENTRY alGetFilterf(gsl::not_null<ALCcontext*> context, ALuint filter, ALenum param,
     ALfloat *value) noexcept
 try {
     auto *device = context->mALDevice.get();
@@ -583,7 +583,7 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void AL_APIENTRY alGetFilterfvImpl(gsl::not_null<ALCcontext*> context, ALuint filter, ALenum param,
+void AL_APIENTRY alGetFilterfv(gsl::not_null<ALCcontext*> context, ALuint filter, ALenum param,
     ALfloat *values) noexcept
 try {
     auto *device = context->mALDevice.get();

@@ -221,7 +221,7 @@ auto LookupEffect(gsl::not_null<ALCcontext*> context, ALuint id) -> gsl::not_nul
 }
 
 
-void AL_APIENTRY alGenEffectsImpl(gsl::not_null<ALCcontext*> context, ALsizei n, ALuint *effects)
+void AL_APIENTRY alGenEffects(gsl::not_null<ALCcontext*> context, ALsizei n, ALuint *effects)
     noexcept
 try {
     if(n < 0)
@@ -244,7 +244,7 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void AL_APIENTRY alDeleteEffectsImpl(gsl::not_null<ALCcontext*> context, ALsizei n,
+void AL_APIENTRY alDeleteEffects(gsl::not_null<ALCcontext*> context, ALsizei n,
     const ALuint *effects) noexcept
 try {
     if(n < 0)
@@ -272,7 +272,7 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-auto AL_APIENTRY alIsEffectImpl(gsl::not_null<ALCcontext*> context, ALuint effect) noexcept
+auto AL_APIENTRY alIsEffect(gsl::not_null<ALCcontext*> context, ALuint effect) noexcept
     -> ALboolean
 {
     auto *device = context->mALDevice.get();
@@ -283,7 +283,7 @@ auto AL_APIENTRY alIsEffectImpl(gsl::not_null<ALCcontext*> context, ALuint effec
 }
 
 
-void AL_APIENTRY alEffectiImpl(gsl::not_null<ALCcontext*> context, ALuint effect, ALenum param,
+void AL_APIENTRY alEffecti(gsl::not_null<ALCcontext*> context, ALuint effect, ALenum param,
     ALint value) noexcept
 try {
     auto *device = context->mALDevice.get();
@@ -319,13 +319,13 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void AL_APIENTRY alEffectivImpl(gsl::not_null<ALCcontext*> context, ALuint effect, ALenum param,
+void AL_APIENTRY alEffectiv(gsl::not_null<ALCcontext*> context, ALuint effect, ALenum param,
     const ALint *values) noexcept
 try {
     switch(param)
     {
     case AL_EFFECT_TYPE:
-        alEffectiImpl(context, effect, param, *values);
+        alEffecti(context, effect, param, *values);
         return;
     }
 
@@ -347,7 +347,7 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void AL_APIENTRY alEffectfImpl(gsl::not_null<ALCcontext*> context, ALuint effect, ALenum param,
+void AL_APIENTRY alEffectf(gsl::not_null<ALCcontext*> context, ALuint effect, ALenum param,
     ALfloat value) noexcept
 try {
     auto *device = context->mALDevice.get();
@@ -368,7 +368,7 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void AL_APIENTRY alEffectfvImpl(gsl::not_null<ALCcontext*> context, ALuint effect, ALenum param,
+void AL_APIENTRY alEffectfv(gsl::not_null<ALCcontext*> context, ALuint effect, ALenum param,
     const ALfloat *values) noexcept
 try {
     auto *device = context->mALDevice.get();
@@ -389,7 +389,7 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void AL_APIENTRY alGetEffectiImpl(gsl::not_null<ALCcontext*> context, ALuint effect, ALenum param,
+void AL_APIENTRY alGetEffecti(gsl::not_null<ALCcontext*> context, ALuint effect, ALenum param,
     ALint *value) noexcept
 try {
     auto *device = context->mALDevice.get();
@@ -414,13 +414,13 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void AL_APIENTRY alGetEffectivImpl(gsl::not_null<ALCcontext*> context, ALuint effect, ALenum param,
+void AL_APIENTRY alGetEffectiv(gsl::not_null<ALCcontext*> context, ALuint effect, ALenum param,
     ALint *values) noexcept
 try {
     switch(param)
     {
     case AL_EFFECT_TYPE:
-        alGetEffectiImpl(context, effect, param, values);
+        alGetEffecti(context, effect, param, values);
         return;
     }
 
@@ -442,7 +442,7 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void AL_APIENTRY alGetEffectfImpl(gsl::not_null<ALCcontext*> context, ALuint effect, ALenum param,
+void AL_APIENTRY alGetEffectf(gsl::not_null<ALCcontext*> context, ALuint effect, ALenum param,
     ALfloat *value) noexcept
 try {
     auto *device = context->mALDevice.get();
@@ -463,7 +463,7 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void AL_APIENTRY alGetEffectfvImpl(gsl::not_null<ALCcontext*> context, ALuint effect, ALenum param,
+void AL_APIENTRY alGetEffectfv(gsl::not_null<ALCcontext*> context, ALuint effect, ALenum param,
     ALfloat *values) noexcept
 try {
     auto *device = context->mALDevice.get();

@@ -340,7 +340,7 @@ inline void UpdateProps(ALCcontext *context)
 }
 
 
-void AL_APIENTRY alEnableImpl(gsl::not_null<ALCcontext*> context, ALenum capability) noexcept
+void AL_APIENTRY alEnable(gsl::not_null<ALCcontext*> context, ALenum capability) noexcept
 {
     switch(capability)
     {
@@ -364,7 +364,7 @@ void AL_APIENTRY alEnableImpl(gsl::not_null<ALCcontext*> context, ALenum capabil
         as_unsigned(capability));
 }
 
-void AL_APIENTRY alDisableImpl(gsl::not_null<ALCcontext*> context, ALenum capability) noexcept
+void AL_APIENTRY alDisable(gsl::not_null<ALCcontext*> context, ALenum capability) noexcept
 {
     switch(capability)
     {
@@ -388,7 +388,7 @@ void AL_APIENTRY alDisableImpl(gsl::not_null<ALCcontext*> context, ALenum capabi
         as_unsigned(capability));
 }
 
-auto AL_APIENTRY alIsEnabledImpl(gsl::not_null<ALCcontext*> context, ALenum capability) noexcept
+auto AL_APIENTRY alIsEnabled(gsl::not_null<ALCcontext*> context, ALenum capability) noexcept
     -> ALboolean
 {
     auto proplock = std::lock_guard{context->mPropLock};
@@ -405,7 +405,7 @@ auto AL_APIENTRY alIsEnabledImpl(gsl::not_null<ALCcontext*> context, ALenum capa
 }
 
 
-auto AL_APIENTRY alGetStringImpl(gsl::not_null<ALCcontext*> context, ALenum pname) noexcept
+auto AL_APIENTRY alGetString(gsl::not_null<ALCcontext*> context, ALenum pname) noexcept
     -> const ALchar*
 {
     switch(pname)
@@ -437,7 +437,7 @@ auto AL_APIENTRY alGetStringImpl(gsl::not_null<ALCcontext*> context, ALenum pnam
 }
 
 
-void AL_APIENTRY alDopplerFactorImpl(gsl::not_null<ALCcontext*> context, ALfloat value) noexcept
+void AL_APIENTRY alDopplerFactor(gsl::not_null<ALCcontext*> context, ALfloat value) noexcept
 {
     if(!(value >= 0.0f && std::isfinite(value)))
         context->setError(AL_INVALID_VALUE, "Doppler factor {} out of range", value);
@@ -449,7 +449,7 @@ void AL_APIENTRY alDopplerFactorImpl(gsl::not_null<ALCcontext*> context, ALfloat
     }
 }
 
-void AL_APIENTRY alSpeedOfSoundImpl(gsl::not_null<ALCcontext*> context, ALfloat value) noexcept
+void AL_APIENTRY alSpeedOfSound(gsl::not_null<ALCcontext*> context, ALfloat value) noexcept
 {
     if(!(value > 0.0f && std::isfinite(value)))
         context->setError(AL_INVALID_VALUE, "Speed of sound {} out of range", value);
@@ -461,7 +461,7 @@ void AL_APIENTRY alSpeedOfSoundImpl(gsl::not_null<ALCcontext*> context, ALfloat 
     }
 }
 
-void AL_APIENTRY alDistanceModelImpl(gsl::not_null<ALCcontext*> context, ALenum value) noexcept
+void AL_APIENTRY alDistanceModel(gsl::not_null<ALCcontext*> context, ALenum value) noexcept
 {
     if(auto model = DistanceModelFromALenum(value))
     {
@@ -476,8 +476,8 @@ void AL_APIENTRY alDistanceModelImpl(gsl::not_null<ALCcontext*> context, ALenum 
 }
 
 
-auto AL_APIENTRY alGetStringiImplSOFT(gsl::not_null<ALCcontext*> context, ALenum pname,
-    ALsizei index) noexcept -> const ALchar*
+auto AL_APIENTRY alGetStringiSOFT(gsl::not_null<ALCcontext*> context, ALenum pname, ALsizei index)
+    noexcept -> const ALchar*
 {
     switch(pname)
     {
@@ -493,13 +493,13 @@ auto AL_APIENTRY alGetStringiImplSOFT(gsl::not_null<ALCcontext*> context, ALenum
 }
 
 
-void AL_APIENTRY alDeferUpdatesImplSOFT(gsl::not_null<ALCcontext*> context) noexcept
+void AL_APIENTRY alDeferUpdatesSOFT(gsl::not_null<ALCcontext*> context) noexcept
 {
     auto proplock = std::lock_guard{context->mPropLock};
     context->deferUpdates();
 }
 
-void AL_APIENTRY alProcessUpdatesImplSOFT(gsl::not_null<ALCcontext*> context) noexcept
+void AL_APIENTRY alProcessUpdatesSOFT(gsl::not_null<ALCcontext*> context) noexcept
 {
     auto proplock = std::lock_guard{context->mPropLock};
     context->processUpdates();

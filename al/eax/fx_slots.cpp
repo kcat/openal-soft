@@ -4,28 +4,32 @@
 
 #include <array>
 
-#include "api.h"
 #include "exception.h"
 
 
 namespace
 {
 
-
 class EaxFxSlotsException : public EaxException {
 public:
     explicit EaxFxSlotsException(const std::string_view message)
         : EaxException{"EAX_FX_SLOTS", message}
     { }
-}; // EaxFxSlotsException
-
+};
 
 } // namespace
 
 
-void EaxFxSlots::initialize(ALCcontext& al_context)
+void EaxFxSlots::initialize(gsl::strict_not_null<ALCcontext*> al_context)
 {
-    initialize_fx_slots(al_context);
+    auto fx_slot_index = EaxFxSlotIndexValue{};
+
+    for(auto& fx_slot : fx_slots_)
+    {
+        fx_slot = eax_create_al_effect_slot(al_context);
+        fx_slot->eax_initialize(fx_slot_index);
+        fx_slot_index += 1;
+    }
 }
 
 void EaxFxSlots::uninitialize() noexcept
@@ -53,15 +57,3 @@ ALeffectslot& EaxFxSlots::get(EaxFxSlotIndex index)
 [[noreturn]]
 void EaxFxSlots::fail(const std::string_view message)
 { throw EaxFxSlotsException{message}; }
-
-void EaxFxSlots::initialize_fx_slots(ALCcontext& al_context)
-{
-    auto fx_slot_index = EaxFxSlotIndexValue{};
-
-    for(auto& fx_slot : fx_slots_)
-    {
-        fx_slot = eax_create_al_effect_slot(al_context);
-        fx_slot->eax_initialize(al_context, fx_slot_index);
-        fx_slot_index += 1;
-    }
-}

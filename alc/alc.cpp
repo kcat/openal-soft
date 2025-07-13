@@ -1733,8 +1733,7 @@ auto UpdateDeviceParams(al::Device *device, const std::span<const int> attrList)
     auto mixer_mode = FPUCtl{};
     std::ranges::for_each(*device->mContexts.load(), [device](ContextBase *ctxbase)
     {
-        auto *context = dynamic_cast<ALCcontext*>(ctxbase);
-        Ensures(context != nullptr);
+        auto const context = gsl::make_not_null(dynamic_cast<ALCcontext*>(ctxbase));
 
         auto proplock = std::unique_lock{context->mPropLock};
         auto slotlock = std::unique_lock{context->mEffectSlotLock};
@@ -1743,7 +1742,7 @@ auto UpdateDeviceParams(al::Device *device, const std::span<const int> attrList)
         auto slotcluster_rem = std::ranges::remove_if(context->mEffectSlotClusters,
             [](ContextBase::EffectSlotCluster &clusterptr) -> bool
         {
-            return std::ranges::none_of(*clusterptr, std::mem_fn(&EffectSlot::InUse));
+            return std::ranges::none_of(*clusterptr, &EffectSlot::InUse);
         });
         context->mEffectSlotClusters.erase(slotcluster_rem.begin(), slotcluster_rem.end());
 
@@ -2799,9 +2798,9 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
     if(auto *slot = context->mDefaultSlot.get())
     {
         const auto sloterr = slot->initEffect(0, ALCcontext::sDefaultEffect.type,
-            ALCcontext::sDefaultEffect.Props, context.get());
+            ALCcontext::sDefaultEffect.Props, gsl::make_not_null(context.get()));
         if(sloterr == AL_NO_ERROR)
-            slot->updateProps(context.get());
+            slot->updateProps(gsl::make_not_null(context.get()));
         else
             ERR("Failed to initialize the default effect");
     }

@@ -282,15 +282,8 @@ auto AL_APIENTRY alIsEffectImpl(gsl::not_null<ALCcontext*> context, ALuint effec
     return AL_FALSE;
 }
 
-} // namespace
 
-AL_API DECL_FUNC2(void, alGenEffects, ALsizei,n, ALuint*,effects)
-AL_API DECL_FUNC2(void, alDeleteEffects, ALsizei,n, const ALuint*,effects)
-AL_API DECL_FUNC1(ALboolean, alIsEffect, ALuint,effect)
-
-
-AL_API DECL_FUNC3(void, alEffecti, ALuint,effect, ALenum,param, ALint,value)
-FORCE_ALIGN void AL_APIENTRY alEffectiDirect(ALCcontext *context, ALuint effect, ALenum param,
+void AL_APIENTRY alEffectiImpl(gsl::not_null<ALCcontext*> context, ALuint effect, ALenum param,
     ALint value) noexcept
 try {
     auto *device = context->mALDevice.get();
@@ -326,14 +319,13 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-AL_API DECL_FUNC3(void, alEffectiv, ALuint,effect, ALenum,param, const ALint*,values)
-FORCE_ALIGN void AL_APIENTRY alEffectivDirect(ALCcontext *context, ALuint effect, ALenum param,
+void AL_APIENTRY alEffectivImpl(gsl::not_null<ALCcontext*> context, ALuint effect, ALenum param,
     const ALint *values) noexcept
 try {
     switch(param)
     {
     case AL_EFFECT_TYPE:
-        alEffectiDirect(context, effect, param, *values);
+        alEffectiImpl(context, effect, param, *values);
         return;
     }
 
@@ -355,8 +347,7 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-AL_API DECL_FUNC3(void, alEffectf, ALuint,effect, ALenum,param, ALfloat,value)
-FORCE_ALIGN void AL_APIENTRY alEffectfDirect(ALCcontext *context, ALuint effect, ALenum param,
+void AL_APIENTRY alEffectfImpl(gsl::not_null<ALCcontext*> context, ALuint effect, ALenum param,
     ALfloat value) noexcept
 try {
     auto *device = context->mALDevice.get();
@@ -377,8 +368,7 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-AL_API DECL_FUNC3(void, alEffectfv, ALuint,effect, ALenum,param, const ALfloat*,values)
-FORCE_ALIGN void AL_APIENTRY alEffectfvDirect(ALCcontext *context, ALuint effect, ALenum param,
+void AL_APIENTRY alEffectfvImpl(gsl::not_null<ALCcontext*> context, ALuint effect, ALenum param,
     const ALfloat *values) noexcept
 try {
     auto *device = context->mALDevice.get();
@@ -399,8 +389,7 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-AL_API DECL_FUNC3(void, alGetEffecti, ALuint,effect, ALenum,param, ALint*,value)
-FORCE_ALIGN void AL_APIENTRY alGetEffectiDirect(ALCcontext *context, ALuint effect, ALenum param,
+void AL_APIENTRY alGetEffectiImpl(gsl::not_null<ALCcontext*> context, ALuint effect, ALenum param,
     ALint *value) noexcept
 try {
     auto *device = context->mALDevice.get();
@@ -425,14 +414,13 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-AL_API DECL_FUNC3(void, alGetEffectiv, ALuint,effect, ALenum,param, ALint*,values)
-FORCE_ALIGN void AL_APIENTRY alGetEffectivDirect(ALCcontext *context, ALuint effect, ALenum param,
+void AL_APIENTRY alGetEffectivImpl(gsl::not_null<ALCcontext*> context, ALuint effect, ALenum param,
     ALint *values) noexcept
 try {
     switch(param)
     {
     case AL_EFFECT_TYPE:
-        alGetEffectiDirect(context, effect, param, values);
+        alGetEffectiImpl(context, effect, param, values);
         return;
     }
 
@@ -454,8 +442,7 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-AL_API DECL_FUNC3(void, alGetEffectf, ALuint,effect, ALenum,param, ALfloat*,value)
-FORCE_ALIGN void AL_APIENTRY alGetEffectfDirect(ALCcontext *context, ALuint effect, ALenum param,
+void AL_APIENTRY alGetEffectfImpl(gsl::not_null<ALCcontext*> context, ALuint effect, ALenum param,
     ALfloat *value) noexcept
 try {
     auto *device = context->mALDevice.get();
@@ -476,8 +463,7 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-AL_API DECL_FUNC3(void, alGetEffectfv, ALuint,effect, ALenum,param, ALfloat*,values)
-FORCE_ALIGN void AL_APIENTRY alGetEffectfvDirect(ALCcontext *context, ALuint effect, ALenum param,
+void AL_APIENTRY alGetEffectfvImpl(gsl::not_null<ALCcontext*> context, ALuint effect, ALenum param,
     ALfloat *values) noexcept
 try {
     auto *device = context->mALDevice.get();
@@ -497,6 +483,21 @@ catch(al::base_exception&) {
 catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
+
+} // namespace
+
+AL_API DECL_FUNC2(void, alGenEffects, ALsizei,n, ALuint*,effects)
+AL_API DECL_FUNC2(void, alDeleteEffects, ALsizei,n, const ALuint*,effects)
+AL_API DECL_FUNC1(ALboolean, alIsEffect, ALuint,effect)
+
+AL_API DECL_FUNC3(void, alEffecti, ALuint,effect, ALenum,param, ALint,value)
+AL_API DECL_FUNC3(void, alEffectiv, ALuint,effect, ALenum,param, const ALint*,values)
+AL_API DECL_FUNC3(void, alEffectf, ALuint,effect, ALenum,param, ALfloat,value)
+AL_API DECL_FUNC3(void, alEffectfv, ALuint,effect, ALenum,param, const ALfloat*,values)
+AL_API DECL_FUNC3(void, alGetEffecti, ALuint,effect, ALenum,param, ALint*,value)
+AL_API DECL_FUNC3(void, alGetEffectiv, ALuint,effect, ALenum,param, ALint*,values)
+AL_API DECL_FUNC3(void, alGetEffectf, ALuint,effect, ALenum,param, ALfloat*,value)
+AL_API DECL_FUNC3(void, alGetEffectfv, ALuint,effect, ALenum,param, ALfloat*,values)
 
 
 void InitEffect(ALeffect *effect)

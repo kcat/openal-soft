@@ -143,6 +143,56 @@ constexpr auto GetEventType(ALenum etype) noexcept -> std::optional<AsyncEnableB
 }
 
 
+void AL_APIENTRY alEventControlImplSOFT(gsl::not_null<ALCcontext*> context, ALsizei count,
+    const ALenum *types, ALboolean enable) noexcept
+try {
+    if(count < 0)
+        context->throw_error(AL_INVALID_VALUE, "Controlling {} events", count);
+    if(count <= 0) [[unlikely]] return;
+
+    if(!types)
+        context->throw_error(AL_INVALID_VALUE, "NULL pointer");
+
+    auto flags = ContextBase::AsyncEventBitset{};
+    std::ranges::for_each(std::views::counted(types, count), [context,&flags](const ALenum evttype)
+    {
+        const auto etype = GetEventType(evttype);
+        if(!etype)
+            context->throw_error(AL_INVALID_ENUM, "Invalid event type {:#04x}",
+                as_unsigned(evttype));
+        flags.set(al::to_underlying(*etype));
+    });
+
+    if(enable)
+    {
+        auto enabledevts = context->mEnabledEvts.load(std::memory_order_relaxed);
+        while(context->mEnabledEvts.compare_exchange_weak(enabledevts, enabledevts|flags,
+            std::memory_order_acq_rel, std::memory_order_acquire) == 0)
+        {
+            /* enabledevts is (re-)filled with the current value on failure, so
+             * just try again.
+             */
+        }
+    }
+    else
+    {
+        auto enabledevts = context->mEnabledEvts.load(std::memory_order_relaxed);
+        while(context->mEnabledEvts.compare_exchange_weak(enabledevts, enabledevts&~flags,
+            std::memory_order_acq_rel, std::memory_order_acquire) == 0)
+        {
+        }
+        /* Wait to ensure the event handler sees the changed flags before
+         * returning.
+         */
+        std::ignore = std::lock_guard{context->mEventCbLock};
+    }
+}
+catch(al::base_exception&) {
+}
+catch(std::exception &e) {
+    ERR("Caught exception: {}", e.what());
+}
+
 void AL_APIENTRY alEventCallbackImplSOFT(gsl::not_null<ALCcontext*> context,
     ALEVENTPROCSOFT callback, void *userParam) noexcept
 try {
@@ -195,54 +245,4 @@ void StopEventThrd(ALCcontext *ctx)
 }
 
 AL_API DECL_FUNCEXT3(void, alEventControl,SOFT, ALsizei,count, const ALenum*,types, ALboolean,enable)
-FORCE_ALIGN void AL_APIENTRY alEventControlDirectSOFT(ALCcontext *context, ALsizei count,
-    const ALenum *types, ALboolean enable) noexcept
-try {
-    if(count < 0)
-        context->throw_error(AL_INVALID_VALUE, "Controlling {} events", count);
-    if(count <= 0) [[unlikely]] return;
-
-    if(!types)
-        context->throw_error(AL_INVALID_VALUE, "NULL pointer");
-
-    auto flags = ContextBase::AsyncEventBitset{};
-    std::ranges::for_each(std::views::counted(types, count), [context,&flags](const ALenum evttype)
-    {
-        const auto etype = GetEventType(evttype);
-        if(!etype)
-            context->throw_error(AL_INVALID_ENUM, "Invalid event type {:#04x}",
-                as_unsigned(evttype));
-        flags.set(al::to_underlying(*etype));
-    });
-
-    if(enable)
-    {
-        auto enabledevts = context->mEnabledEvts.load(std::memory_order_relaxed);
-        while(context->mEnabledEvts.compare_exchange_weak(enabledevts, enabledevts|flags,
-            std::memory_order_acq_rel, std::memory_order_acquire) == 0)
-        {
-            /* enabledevts is (re-)filled with the current value on failure, so
-             * just try again.
-             */
-        }
-    }
-    else
-    {
-        auto enabledevts = context->mEnabledEvts.load(std::memory_order_relaxed);
-        while(context->mEnabledEvts.compare_exchange_weak(enabledevts, enabledevts&~flags,
-            std::memory_order_acq_rel, std::memory_order_acquire) == 0)
-        {
-        }
-        /* Wait to ensure the event handler sees the changed flags before
-         * returning.
-         */
-        std::ignore = std::lock_guard{context->mEventCbLock};
-    }
-}
-catch(al::base_exception&) {
-}
-catch(std::exception &e) {
-    ERR("Caught exception: {}", e.what());
-}
-
 AL_API DECL_FUNCEXT2(void, alEventCallback,SOFT, ALEVENTPROCSOFT,callback, void*,userParam)

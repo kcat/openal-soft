@@ -53,195 +53,6 @@
 using uint = unsigned int;
 
 
-namespace {
-
-using SubListAllocator = al::allocator<std::array<ALfilter,64>>;
-
-
-void InitFilterParams(gsl::not_null<ALfilter*> filter, ALenum type)
-{
-    if(type == AL_FILTER_LOWPASS)
-    {
-        filter->Gain = AL_LOWPASS_DEFAULT_GAIN;
-        filter->GainHF = AL_LOWPASS_DEFAULT_GAINHF;
-        filter->HFReference = LowPassFreqRef;
-        filter->GainLF = 1.0f;
-        filter->LFReference = HighPassFreqRef;
-        filter->mTypeVariant.emplace<LowpassFilterTable>();
-    }
-    else if(type == AL_FILTER_HIGHPASS)
-    {
-        filter->Gain = AL_HIGHPASS_DEFAULT_GAIN;
-        filter->GainHF = 1.0f;
-        filter->HFReference = LowPassFreqRef;
-        filter->GainLF = AL_HIGHPASS_DEFAULT_GAINLF;
-        filter->LFReference = HighPassFreqRef;
-        filter->mTypeVariant.emplace<HighpassFilterTable>();
-    }
-    else if(type == AL_FILTER_BANDPASS)
-    {
-        filter->Gain = AL_BANDPASS_DEFAULT_GAIN;
-        filter->GainHF = AL_BANDPASS_DEFAULT_GAINHF;
-        filter->HFReference = LowPassFreqRef;
-        filter->GainLF = AL_BANDPASS_DEFAULT_GAINLF;
-        filter->LFReference = HighPassFreqRef;
-        filter->mTypeVariant.emplace<BandpassFilterTable>();
-    }
-    else
-    {
-        filter->Gain = 1.0f;
-        filter->GainHF = 1.0f;
-        filter->HFReference = LowPassFreqRef;
-        filter->GainLF = 1.0f;
-        filter->LFReference = HighPassFreqRef;
-        filter->mTypeVariant.emplace<NullFilterTable>();
-    }
-    filter->type = type;
-}
-
-[[nodiscard]]
-auto EnsureFilters(al::Device *device, size_t needed) noexcept -> bool
-try {
-    auto count = std::accumulate(device->FilterList.cbegin(), device->FilterList.cend(), 0_uz,
-        [](size_t cur, const FilterSubList &sublist) noexcept -> size_t
-        { return cur + gsl::narrow_cast<uint>(std::popcount(sublist.FreeMask)); });
-
-    while(needed > count)
-    {
-        if(device->FilterList.size() >= 1<<25) [[unlikely]]
-            return false;
-
-        auto sublist = FilterSubList{};
-        sublist.FreeMask = ~0_u64;
-        sublist.Filters = SubListAllocator{}.allocate(1);
-        device->FilterList.emplace_back(std::move(sublist));
-        count += std::tuple_size_v<SubListAllocator::value_type>;
-    }
-    return true;
-}
-catch(...) {
-    return false;
-}
-
-
-[[nodiscard]]
-auto AllocFilter(al::Device *device) noexcept -> gsl::not_null<ALfilter*>
-{
-    auto sublist = std::ranges::find_if(device->FilterList, &FilterSubList::FreeMask);
-    auto lidx = gsl::narrow_cast<uint>(std::distance(device->FilterList.begin(), sublist));
-    auto slidx = gsl::narrow_cast<uint>(std::countr_zero(sublist->FreeMask));
-    ASSUME(slidx < 64);
-
-    auto *filter = std::construct_at(std::to_address(std::next(sublist->Filters->begin(), slidx)));
-    InitFilterParams(filter, AL_FILTER_NULL);
-
-    /* Add 1 to avoid filter ID 0. */
-    filter->id = ((lidx<<6) | slidx) + 1;
-
-    sublist->FreeMask &= ~(1_u64 << slidx);
-
-    return filter;
-}
-
-void FreeFilter(al::Device *device, gsl::not_null<ALfilter*> filter)
-{
-    device->mFilterNames.erase(filter->id);
-
-    const auto id = filter->id - 1;
-    const auto lidx = id >> 6;
-    const auto slidx = id & 0x3f;
-
-    std::destroy_at(filter.get());
-
-    device->FilterList[lidx].FreeMask |= 1_u64 << slidx;
-}
-
-[[nodiscard]]
-inline auto LookupFilter(std::nothrow_t, al::Device *device, ALuint id) noexcept -> ALfilter*
-{
-    const auto lidx = (id-1) >> 6;
-    const auto slidx = (id-1) & 0x3f;
-
-    if(lidx >= device->FilterList.size()) [[unlikely]]
-        return nullptr;
-    auto &sublist = device->FilterList[lidx];
-    if(sublist.FreeMask & (1_u64 << slidx)) [[unlikely]]
-        return nullptr;
-    return std::to_address(std::next(sublist.Filters->begin(), slidx));
-}
-
-[[nodiscard]]
-auto LookupFilter(gsl::not_null<ALCcontext*> context, ALuint id) -> gsl::not_null<ALfilter*>
-{
-    if(auto *filter = LookupFilter(std::nothrow, context->mALDevice.get(), id)) [[likely]]
-        return filter;
-    context->throw_error(AL_INVALID_NAME, "Invalid filter ID {}", id);
-}
-
-
-void AL_APIENTRY alGenFiltersImpl(gsl::not_null<ALCcontext*> context, ALsizei n, ALuint *filters)
-    noexcept
-try {
-    if(n < 0)
-        context->throw_error(AL_INVALID_VALUE, "Generating {} filters", n);
-    if(n <= 0) [[unlikely]] return;
-
-    auto *device = context->mALDevice.get();
-    auto filterlock = std::lock_guard{device->FilterLock};
-
-    const auto fids = std::span{filters, gsl::narrow_cast<uint>(n)};
-    if(!EnsureFilters(device, fids.size()))
-        context->throw_error(AL_OUT_OF_MEMORY, "Failed to allocate {} filter{}", n,
-            (n==1) ? "" : "s");
-
-    std::ranges::generate(fids, [device]{ return AllocFilter(device)->id; });
-}
-catch(al::base_exception&) {
-}
-catch(std::exception &e) {
-    ERR("Caught exception: {}", e.what());
-}
-
-void AL_APIENTRY alDeleteFiltersImpl(gsl::not_null<ALCcontext*> context, ALsizei n,
-    const ALuint *filters) noexcept
-try {
-    if(n < 0)
-        context->throw_error(AL_INVALID_VALUE, "Deleting {} filters", n);
-    if(n <= 0) [[unlikely]] return;
-
-    auto *device = context->mALDevice.get();
-    auto filterlock = std::lock_guard{device->FilterLock};
-
-    /* First try to find any filters that are invalid. */
-    const auto fids = std::span{filters, gsl::narrow_cast<uint>(n)};
-    std::ranges::for_each(fids, [context](const ALuint fid)
-    { if(fid != 0) std::ignore = LookupFilter(context, fid); });
-
-    /* All good. Delete non-0 filter IDs. */
-    std::ranges::for_each(fids, [device](const ALuint fid)
-    {
-        if(auto *filter = LookupFilter(std::nothrow, device, fid))
-            FreeFilter(device, filter);
-    });
-}
-catch(al::base_exception&) {
-}
-catch(std::exception &e) {
-    ERR("Caught exception: {}", e.what());
-}
-
-auto AL_APIENTRY alIsFilterImpl(gsl::not_null<ALCcontext*> context, ALuint filter) noexcept
-    -> ALboolean
-{
-    auto *device = context->mALDevice.get();
-    auto filterlock = std::lock_guard{device->FilterLock};
-    if(filter == 0 || LookupFilter(std::nothrow, device, filter) != nullptr)
-        return AL_TRUE;
-    return AL_FALSE;
-}
-
-} // namespace
-
 /* Null filter parameter handlers */
 template<>
 void FilterTable<NullFilterTable>::setParami(ALCcontext *context, ALfilter*, ALenum param, int)
@@ -429,13 +240,195 @@ void FilterTable<BandpassFilterTable>::getParamfv(ALCcontext *context, const ALf
 { getParamf(context, filter, param, vals); }
 
 
-AL_API DECL_FUNC2(void, alGenFilters, ALsizei,n, ALuint*,filters)
-AL_API DECL_FUNC2(void, alDeleteFilters, ALsizei,n, const ALuint*,filters)
-AL_API DECL_FUNC1(ALboolean, alIsFilter, ALuint,filter)
+namespace {
+
+using SubListAllocator = al::allocator<std::array<ALfilter,64>>;
 
 
-AL_API DECL_FUNC3(void, alFilteri, ALuint,filter, ALenum,param, ALint,value)
-FORCE_ALIGN void AL_APIENTRY alFilteriDirect(ALCcontext *context, ALuint filter, ALenum param,
+void InitFilterParams(gsl::not_null<ALfilter*> filter, ALenum type)
+{
+    if(type == AL_FILTER_LOWPASS)
+    {
+        filter->Gain = AL_LOWPASS_DEFAULT_GAIN;
+        filter->GainHF = AL_LOWPASS_DEFAULT_GAINHF;
+        filter->HFReference = LowPassFreqRef;
+        filter->GainLF = 1.0f;
+        filter->LFReference = HighPassFreqRef;
+        filter->mTypeVariant.emplace<LowpassFilterTable>();
+    }
+    else if(type == AL_FILTER_HIGHPASS)
+    {
+        filter->Gain = AL_HIGHPASS_DEFAULT_GAIN;
+        filter->GainHF = 1.0f;
+        filter->HFReference = LowPassFreqRef;
+        filter->GainLF = AL_HIGHPASS_DEFAULT_GAINLF;
+        filter->LFReference = HighPassFreqRef;
+        filter->mTypeVariant.emplace<HighpassFilterTable>();
+    }
+    else if(type == AL_FILTER_BANDPASS)
+    {
+        filter->Gain = AL_BANDPASS_DEFAULT_GAIN;
+        filter->GainHF = AL_BANDPASS_DEFAULT_GAINHF;
+        filter->HFReference = LowPassFreqRef;
+        filter->GainLF = AL_BANDPASS_DEFAULT_GAINLF;
+        filter->LFReference = HighPassFreqRef;
+        filter->mTypeVariant.emplace<BandpassFilterTable>();
+    }
+    else
+    {
+        filter->Gain = 1.0f;
+        filter->GainHF = 1.0f;
+        filter->HFReference = LowPassFreqRef;
+        filter->GainLF = 1.0f;
+        filter->LFReference = HighPassFreqRef;
+        filter->mTypeVariant.emplace<NullFilterTable>();
+    }
+    filter->type = type;
+}
+
+[[nodiscard]]
+auto EnsureFilters(al::Device *device, size_t needed) noexcept -> bool
+try {
+    auto count = std::accumulate(device->FilterList.cbegin(), device->FilterList.cend(), 0_uz,
+        [](size_t cur, const FilterSubList &sublist) noexcept -> size_t
+        { return cur + gsl::narrow_cast<uint>(std::popcount(sublist.FreeMask)); });
+
+    while(needed > count)
+    {
+        if(device->FilterList.size() >= 1<<25) [[unlikely]]
+            return false;
+
+        auto sublist = FilterSubList{};
+        sublist.FreeMask = ~0_u64;
+        sublist.Filters = SubListAllocator{}.allocate(1);
+        device->FilterList.emplace_back(std::move(sublist));
+        count += std::tuple_size_v<SubListAllocator::value_type>;
+    }
+    return true;
+}
+catch(...) {
+    return false;
+}
+
+
+[[nodiscard]]
+auto AllocFilter(al::Device *device) noexcept -> gsl::not_null<ALfilter*>
+{
+    auto sublist = std::ranges::find_if(device->FilterList, &FilterSubList::FreeMask);
+    auto lidx = gsl::narrow_cast<uint>(std::distance(device->FilterList.begin(), sublist));
+    auto slidx = gsl::narrow_cast<uint>(std::countr_zero(sublist->FreeMask));
+    ASSUME(slidx < 64);
+
+    auto *filter = std::construct_at(std::to_address(std::next(sublist->Filters->begin(), slidx)));
+    InitFilterParams(filter, AL_FILTER_NULL);
+
+    /* Add 1 to avoid filter ID 0. */
+    filter->id = ((lidx<<6) | slidx) + 1;
+
+    sublist->FreeMask &= ~(1_u64 << slidx);
+
+    return filter;
+}
+
+void FreeFilter(al::Device *device, gsl::not_null<ALfilter*> filter)
+{
+    device->mFilterNames.erase(filter->id);
+
+    const auto id = filter->id - 1;
+    const auto lidx = id >> 6;
+    const auto slidx = id & 0x3f;
+
+    std::destroy_at(filter.get());
+
+    device->FilterList[lidx].FreeMask |= 1_u64 << slidx;
+}
+
+[[nodiscard]]
+inline auto LookupFilter(std::nothrow_t, al::Device *device, ALuint id) noexcept -> ALfilter*
+{
+    const auto lidx = (id-1) >> 6;
+    const auto slidx = (id-1) & 0x3f;
+
+    if(lidx >= device->FilterList.size()) [[unlikely]]
+        return nullptr;
+    auto &sublist = device->FilterList[lidx];
+    if(sublist.FreeMask & (1_u64 << slidx)) [[unlikely]]
+        return nullptr;
+    return std::to_address(std::next(sublist.Filters->begin(), slidx));
+}
+
+[[nodiscard]]
+auto LookupFilter(gsl::not_null<ALCcontext*> context, ALuint id) -> gsl::not_null<ALfilter*>
+{
+    if(auto *filter = LookupFilter(std::nothrow, context->mALDevice.get(), id)) [[likely]]
+        return filter;
+    context->throw_error(AL_INVALID_NAME, "Invalid filter ID {}", id);
+}
+
+
+void AL_APIENTRY alGenFiltersImpl(gsl::not_null<ALCcontext*> context, ALsizei n, ALuint *filters)
+    noexcept
+try {
+    if(n < 0)
+        context->throw_error(AL_INVALID_VALUE, "Generating {} filters", n);
+    if(n <= 0) [[unlikely]] return;
+
+    auto *device = context->mALDevice.get();
+    auto filterlock = std::lock_guard{device->FilterLock};
+
+    const auto fids = std::span{filters, gsl::narrow_cast<uint>(n)};
+    if(!EnsureFilters(device, fids.size()))
+        context->throw_error(AL_OUT_OF_MEMORY, "Failed to allocate {} filter{}", n,
+            (n==1) ? "" : "s");
+
+    std::ranges::generate(fids, [device]{ return AllocFilter(device)->id; });
+}
+catch(al::base_exception&) {
+}
+catch(std::exception &e) {
+    ERR("Caught exception: {}", e.what());
+}
+
+void AL_APIENTRY alDeleteFiltersImpl(gsl::not_null<ALCcontext*> context, ALsizei n,
+    const ALuint *filters) noexcept
+try {
+    if(n < 0)
+        context->throw_error(AL_INVALID_VALUE, "Deleting {} filters", n);
+    if(n <= 0) [[unlikely]] return;
+
+    auto *device = context->mALDevice.get();
+    auto filterlock = std::lock_guard{device->FilterLock};
+
+    /* First try to find any filters that are invalid. */
+    const auto fids = std::span{filters, gsl::narrow_cast<uint>(n)};
+    std::ranges::for_each(fids, [context](const ALuint fid)
+    { if(fid != 0) std::ignore = LookupFilter(context, fid); });
+
+    /* All good. Delete non-0 filter IDs. */
+    std::ranges::for_each(fids, [device](const ALuint fid)
+    {
+        if(auto *filter = LookupFilter(std::nothrow, device, fid))
+            FreeFilter(device, filter);
+    });
+}
+catch(al::base_exception&) {
+}
+catch(std::exception &e) {
+    ERR("Caught exception: {}", e.what());
+}
+
+auto AL_APIENTRY alIsFilterImpl(gsl::not_null<ALCcontext*> context, ALuint filter) noexcept
+    -> ALboolean
+{
+    auto *device = context->mALDevice.get();
+    auto filterlock = std::lock_guard{device->FilterLock};
+    if(filter == 0 || LookupFilter(std::nothrow, device, filter) != nullptr)
+        return AL_TRUE;
+    return AL_FALSE;
+}
+
+
+void AL_APIENTRY alFilteriImpl(gsl::not_null<ALCcontext*> context, ALuint filter, ALenum param,
     ALint value) noexcept
 try {
     auto *device = context->mALDevice.get();
@@ -463,14 +456,13 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-AL_API DECL_FUNC3(void, alFilteriv, ALuint,filter, ALenum,param, const ALint*,values)
-FORCE_ALIGN void AL_APIENTRY alFilterivDirect(ALCcontext *context, ALuint filter, ALenum param,
+void AL_APIENTRY alFilterivImpl(gsl::not_null<ALCcontext*> context, ALuint filter, ALenum param,
     const ALint *values) noexcept
 try {
     switch(param)
     {
     case AL_FILTER_TYPE:
-        alFilteriDirect(context, filter, param, *values);
+        alFilteriImpl(context, filter, param, *values);
         return;
     }
 
@@ -489,8 +481,7 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-AL_API DECL_FUNC3(void, alFilterf, ALuint,filter, ALenum,param, ALfloat,value)
-FORCE_ALIGN void AL_APIENTRY alFilterfDirect(ALCcontext *context, ALuint filter, ALenum param,
+void AL_APIENTRY alFilterfImpl(gsl::not_null<ALCcontext*> context, ALuint filter, ALenum param,
     ALfloat value) noexcept
 try {
     auto *device = context->mALDevice.get();
@@ -508,8 +499,7 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-AL_API DECL_FUNC3(void, alFilterfv, ALuint,filter, ALenum,param, const ALfloat*,values)
-FORCE_ALIGN void AL_APIENTRY alFilterfvDirect(ALCcontext *context, ALuint filter, ALenum param,
+void AL_APIENTRY alFilterfvImpl(gsl::not_null<ALCcontext*> context, ALuint filter, ALenum param,
     const ALfloat *values) noexcept
 try {
     auto *device = context->mALDevice.get();
@@ -527,8 +517,7 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-AL_API DECL_FUNC3(void, alGetFilteri, ALuint,filter, ALenum,param, ALint*,value)
-FORCE_ALIGN void AL_APIENTRY alGetFilteriDirect(ALCcontext *context, ALuint filter, ALenum param,
+void AL_APIENTRY alGetFilteriImpl(gsl::not_null<ALCcontext*> context, ALuint filter, ALenum param,
     ALint *value) noexcept
 try {
     auto *device = context->mALDevice.get();
@@ -551,14 +540,13 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-AL_API DECL_FUNC3(void, alGetFilteriv, ALuint,filter, ALenum,param, ALint*,values)
-FORCE_ALIGN void AL_APIENTRY alGetFilterivDirect(ALCcontext *context, ALuint filter, ALenum param,
+void AL_APIENTRY alGetFilterivImpl(gsl::not_null<ALCcontext*> context, ALuint filter, ALenum param,
     ALint *values) noexcept
 try {
     switch(param)
     {
     case AL_FILTER_TYPE:
-        alGetFilteriDirect(context, filter, param, values);
+        alGetFilteriImpl(context, filter, param, values);
         return;
     }
 
@@ -577,8 +565,7 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-AL_API DECL_FUNC3(void, alGetFilterf, ALuint,filter, ALenum,param, ALfloat*,value)
-FORCE_ALIGN void AL_APIENTRY alGetFilterfDirect(ALCcontext *context, ALuint filter, ALenum param,
+void AL_APIENTRY alGetFilterfImpl(gsl::not_null<ALCcontext*> context, ALuint filter, ALenum param,
     ALfloat *value) noexcept
 try {
     auto *device = context->mALDevice.get();
@@ -596,8 +583,7 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-AL_API DECL_FUNC3(void, alGetFilterfv, ALuint,filter, ALenum,param, ALfloat*,values)
-FORCE_ALIGN void AL_APIENTRY alGetFilterfvDirect(ALCcontext *context, ALuint filter, ALenum param,
+void AL_APIENTRY alGetFilterfvImpl(gsl::not_null<ALCcontext*> context, ALuint filter, ALenum param,
     ALfloat *values) noexcept
 try {
     auto *device = context->mALDevice.get();
@@ -614,6 +600,21 @@ catch(al::base_exception&) {
 catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
+
+} // namespace
+
+AL_API DECL_FUNC2(void, alGenFilters, ALsizei,n, ALuint*,filters)
+AL_API DECL_FUNC2(void, alDeleteFilters, ALsizei,n, const ALuint*,filters)
+AL_API DECL_FUNC1(ALboolean, alIsFilter, ALuint,filter)
+
+AL_API DECL_FUNC3(void, alFilteri, ALuint,filter, ALenum,param, ALint,value)
+AL_API DECL_FUNC3(void, alFilteriv, ALuint,filter, ALenum,param, const ALint*,values)
+AL_API DECL_FUNC3(void, alFilterf, ALuint,filter, ALenum,param, ALfloat,value)
+AL_API DECL_FUNC3(void, alFilterfv, ALuint,filter, ALenum,param, const ALfloat*,values)
+AL_API DECL_FUNC3(void, alGetFilteri, ALuint,filter, ALenum,param, ALint*,value)
+AL_API DECL_FUNC3(void, alGetFilteriv, ALuint,filter, ALenum,param, ALint*,values)
+AL_API DECL_FUNC3(void, alGetFilterf, ALuint,filter, ALenum,param, ALfloat*,value)
+AL_API DECL_FUNC3(void, alGetFilterfv, ALuint,filter, ALenum,param, ALfloat*,values)
 
 
 void ALfilter::SetName(gsl::not_null<ALCcontext*> context, ALuint id, std::string_view name)

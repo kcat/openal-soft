@@ -46,6 +46,19 @@
 #include "strutils.hpp"
 
 
+namespace {
+
+auto AL_APIENTRY alGetError(gsl::not_null<ALCcontext*> context) noexcept -> ALenum
+{
+    auto ret = context->mLastThreadError.get();
+    if(ret != AL_NO_ERROR) [[unlikely]]
+        context->mLastThreadError.set(AL_NO_ERROR);
+    return ret;
+}
+
+} // namespace
+
+
 void ALCcontext::setErrorImpl(ALenum errorCode, const fmt::string_view fmt, fmt::format_args args)
 {
     const auto message = fmt::vformat(fmt, std::move(args));
@@ -84,7 +97,7 @@ void ALCcontext::throw_error_impl(ALenum errorCode, const fmt::string_view fmt,
 AL_API auto AL_APIENTRY alGetError() noexcept -> ALenum
 {
     if(auto context = GetContextRef()) [[likely]]
-        return alGetErrorDirect(context.get());
+        return alGetError(context.get());
 
     static constexpr auto get_value = [](gsl::czstring envname, std::string_view optname) -> ALenum
     {
@@ -121,9 +134,5 @@ AL_API auto AL_APIENTRY alGetError() noexcept -> ALenum
 
 FORCE_ALIGN auto AL_APIENTRY alGetErrorDirect(ALCcontext *context) noexcept -> ALenum
 {
-    Expects(context != nullptr);
-    auto ret = context->mLastThreadError.get();
-    if(ret != AL_NO_ERROR) [[unlikely]]
-        context->mLastThreadError.set(AL_NO_ERROR);
-    return ret;
+    return alGetError(context);
 }

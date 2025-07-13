@@ -809,6 +809,55 @@ auto AL_APIENTRY alIsBufferImpl(gsl::not_null<ALCcontext*> context, ALuint buffe
 }
 
 
+auto AL_APIENTRY alMapBufferImplSOFT(gsl::not_null<ALCcontext*> context, ALuint buffer,
+    ALsizei offset, ALsizei length, ALbitfieldSOFT access) noexcept -> void*
+try {
+    auto *device = context->mALDevice.get();
+    auto buflock = std::lock_guard{device->BufferLock};
+
+    auto const albuf = LookupBuffer(context, buffer);
+    if((access&INVALID_MAP_FLAGS) != 0)
+        context->throw_error(AL_INVALID_VALUE, "Invalid map flags {:#x}",
+            access&INVALID_MAP_FLAGS);
+    if(!(access&MAP_READ_WRITE_FLAGS))
+        context->throw_error(AL_INVALID_VALUE, "Mapping buffer {} without read or write access",
+            buffer);
+
+    const auto unavailable = (albuf->Access^access) & access;
+    if(albuf->mRef.load(std::memory_order_relaxed) != 0 && !(access&AL_MAP_PERSISTENT_BIT_SOFT))
+        context->throw_error(AL_INVALID_OPERATION,
+            "Mapping in-use buffer {} without persistent mapping", buffer);
+    if(albuf->MappedAccess != 0)
+        context->throw_error(AL_INVALID_OPERATION, "Mapping already-mapped buffer {}", buffer);
+    if((unavailable&AL_MAP_READ_BIT_SOFT))
+        context->throw_error(AL_INVALID_VALUE, "Mapping buffer {} for reading without read access",
+            buffer);
+    if((unavailable&AL_MAP_WRITE_BIT_SOFT))
+        context->throw_error(AL_INVALID_VALUE,
+            "Mapping buffer {} for writing without write access", buffer);
+    if((unavailable&AL_MAP_PERSISTENT_BIT_SOFT))
+        context->throw_error(AL_INVALID_VALUE,
+            "Mapping buffer {} persistently without persistent access", buffer);
+    if(offset < 0 || length <= 0 || gsl::narrow_cast<uint>(offset) >= albuf->OriginalSize
+        || gsl::narrow_cast<uint>(length) > albuf->OriginalSize - gsl::narrow_cast<uint>(offset))
+        context->throw_error(AL_INVALID_VALUE, "Mapping invalid range {}+{} for buffer {}", offset,
+            length, buffer);
+
+    auto *retval = std::visit([ptroff=gsl::narrow_cast<uint>(offset)](auto &datavec)
+    { return &std::as_writable_bytes(datavec)[ptroff]; }, albuf->mData);
+    albuf->MappedAccess = access;
+    albuf->MappedOffset = offset;
+    albuf->MappedSize = length;
+    return retval;
+}
+catch(al::base_exception&) {
+    return nullptr;
+}
+catch(std::exception &e) {
+    ERR("Caught exception: {}", e.what());
+    return nullptr;
+}
+
 void AL_APIENTRY alUnmapBufferImplSOFT(gsl::not_null<ALCcontext*> context, ALuint buffer) noexcept
 try {
     auto *device = context->mALDevice.get();
@@ -1459,55 +1508,6 @@ catch(std::exception &e) {
 }
 
 AL_API DECL_FUNCEXT4(void*, alMapBuffer,SOFT, ALuint,buffer, ALsizei,offset, ALsizei,length, ALbitfieldSOFT,access)
-FORCE_ALIGN void* AL_APIENTRY alMapBufferDirectSOFT(ALCcontext *context, ALuint buffer,
-    ALsizei offset, ALsizei length, ALbitfieldSOFT access) noexcept
-try {
-    auto *device = context->mALDevice.get();
-    auto buflock = std::lock_guard{device->BufferLock};
-
-    auto const albuf = LookupBuffer(context, buffer);
-    if((access&INVALID_MAP_FLAGS) != 0)
-        context->throw_error(AL_INVALID_VALUE, "Invalid map flags {:#x}",
-            access&INVALID_MAP_FLAGS);
-    if(!(access&MAP_READ_WRITE_FLAGS))
-        context->throw_error(AL_INVALID_VALUE, "Mapping buffer {} without read or write access",
-            buffer);
-
-    const auto unavailable = (albuf->Access^access) & access;
-    if(albuf->mRef.load(std::memory_order_relaxed) != 0 && !(access&AL_MAP_PERSISTENT_BIT_SOFT))
-        context->throw_error(AL_INVALID_OPERATION,
-            "Mapping in-use buffer {} without persistent mapping", buffer);
-    if(albuf->MappedAccess != 0)
-        context->throw_error(AL_INVALID_OPERATION, "Mapping already-mapped buffer {}", buffer);
-    if((unavailable&AL_MAP_READ_BIT_SOFT))
-        context->throw_error(AL_INVALID_VALUE, "Mapping buffer {} for reading without read access",
-            buffer);
-    if((unavailable&AL_MAP_WRITE_BIT_SOFT))
-        context->throw_error(AL_INVALID_VALUE,
-            "Mapping buffer {} for writing without write access", buffer);
-    if((unavailable&AL_MAP_PERSISTENT_BIT_SOFT))
-        context->throw_error(AL_INVALID_VALUE,
-            "Mapping buffer {} persistently without persistent access", buffer);
-    if(offset < 0 || length <= 0 || gsl::narrow_cast<uint>(offset) >= albuf->OriginalSize
-        || gsl::narrow_cast<uint>(length) > albuf->OriginalSize - gsl::narrow_cast<uint>(offset))
-        context->throw_error(AL_INVALID_VALUE, "Mapping invalid range {}+{} for buffer {}", offset,
-            length, buffer);
-
-    auto *retval = std::visit([ptroff=gsl::narrow_cast<uint>(offset)](auto &datavec)
-    { return &std::as_writable_bytes(datavec)[ptroff]; }, albuf->mData);
-    albuf->MappedAccess = access;
-    albuf->MappedOffset = offset;
-    albuf->MappedSize = length;
-    return retval;
-}
-catch(al::base_exception&) {
-    return nullptr;
-}
-catch(std::exception &e) {
-    ERR("Caught exception: {}", e.what());
-    return nullptr;
-}
-
 AL_API DECL_FUNCEXT1(void, alUnmapBuffer,SOFT, ALuint,buffer)
 AL_API DECL_FUNCEXT3(void, alFlushMappedBuffer,SOFT, ALuint,buffer, ALsizei,offset, ALsizei,length)
 

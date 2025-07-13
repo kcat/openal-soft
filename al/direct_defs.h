@@ -64,7 +64,11 @@ auto AL_APIENTRY Name(T1 n1, T2 n2, T3 n3, T4 n4) noexcept -> R               \
 {                                                                             \
     auto context = GetContextRef();                                           \
     if(!context) [[unlikely]] return detail_::DefaultVal<R>();                \
-    return Name##Direct(context.get(), n1, n2, n3, n4);                       \
+    return Name##Impl(context.get(), n1, n2, n3, n4);                         \
+}                                                                             \
+FORCE_ALIGN auto AL_APIENTRY Name##Direct(ALCcontext *context, T1 n1, T2 n2, T3 n3, T4 n4) noexcept -> R \
+{                                                                             \
+    return Name##Impl(context, n1, n2, n3, n4);                               \
 }
 
 #define DECL_FUNC5(R, Name, T1,n1, T2,n2, T3,n3, T4,n4, T5,n5)                \
@@ -129,7 +133,11 @@ auto AL_APIENTRY Name##Ext(T1 n1, T2 n2, T3 n3, T4 n4) noexcept -> R          \
 {                                                                             \
     auto context = GetContextRef();                                           \
     if(!context) [[unlikely]] return detail_::DefaultVal<R>();                \
-    return Name##Direct##Ext(context.get(), n1, n2, n3, n4);                  \
+    return Name##Impl##Ext(context.get(), n1, n2, n3, n4);                    \
+}                                                                             \
+FORCE_ALIGN auto AL_APIENTRY Name##Direct##Ext(ALCcontext *context, T1 n1, T2 n2, T3 n3, T4 n4) noexcept -> R \
+{                                                                             \
+    return Name##Impl##Ext(context, n1, n2, n3, n4);                          \
 }
 
 #define DECL_FUNCEXT5(R, Name,Ext, T1,n1, T2,n2, T3,n3, T4,n4, T5,n5)         \

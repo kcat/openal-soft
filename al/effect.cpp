@@ -167,14 +167,15 @@ catch(...) {
 }
 
 [[nodiscard]]
-auto AllocEffect(al::Device *device) noexcept -> gsl::not_null<ALeffect*>
+auto AllocEffect(al::Device *device) noexcept -> gsl::strict_not_null<ALeffect*>
 {
     auto sublist = std::ranges::find_if(device->EffectList, &EffectSubList::FreeMask);
     auto lidx = gsl::narrow_cast<uint>(std::distance(device->EffectList.begin(), sublist));
     auto slidx = gsl::narrow_cast<uint>(std::countr_zero(sublist->FreeMask));
     ASSUME(slidx < 64);
 
-    auto *effect = std::construct_at(std::to_address(std::next(sublist->Effects->begin(), slidx)));
+    auto effect = gsl::make_not_null(std::construct_at(
+        std::to_address(std::next(sublist->Effects->begin(), slidx))));
     InitEffectParams(effect, AL_EFFECT_NULL);
 
     /* Add 1 to avoid effect ID 0. */
@@ -185,7 +186,7 @@ auto AllocEffect(al::Device *device) noexcept -> gsl::not_null<ALeffect*>
     return effect;
 }
 
-void FreeEffect(al::Device *device, gsl::not_null<ALeffect*> effect)
+void FreeEffect(al::Device *device, gsl::strict_not_null<ALeffect*> effect)
 {
     device->mEffectNames.erase(effect->id);
 
@@ -193,7 +194,7 @@ void FreeEffect(al::Device *device, gsl::not_null<ALeffect*> effect)
     const auto lidx = id >> 6;
     const auto slidx = id & 0x3f;
 
-    std::destroy_at(effect.get());
+    std::destroy_at(std::to_address(effect));
 
     device->EffectList[lidx].FreeMask |= 1_u64 << slidx;
 }
@@ -213,16 +214,17 @@ inline auto LookupEffect(std::nothrow_t, al::Device *device, ALuint id) noexcept
 }
 
 [[nodiscard]]
-auto LookupEffect(gsl::not_null<ALCcontext*> context, ALuint id) -> gsl::not_null<ALeffect*>
+auto LookupEffect(gsl::strict_not_null<ALCcontext*> context, ALuint id)
+    -> gsl::strict_not_null<ALeffect*>
 {
     if(auto *effect = LookupEffect(std::nothrow, context->mALDevice.get(), id)) [[likely]]
-        return effect;
+        return gsl::make_not_null(effect);
     context->throw_error(AL_INVALID_NAME, "Invalid effect ID {}", id);
 }
 
 
-void AL_APIENTRY alGenEffects(gsl::not_null<ALCcontext*> context, ALsizei n, ALuint *effects)
-    noexcept
+void AL_APIENTRY alGenEffects(gsl::strict_not_null<ALCcontext*> context, ALsizei n,
+    ALuint *effects) noexcept
 try {
     if(n < 0)
         context->throw_error(AL_INVALID_VALUE, "Generating {} effects", n);
@@ -244,7 +246,7 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void AL_APIENTRY alDeleteEffects(gsl::not_null<ALCcontext*> context, ALsizei n,
+void AL_APIENTRY alDeleteEffects(gsl::strict_not_null<ALCcontext*> context, ALsizei n,
     const ALuint *effects) noexcept
 try {
     if(n < 0)
@@ -263,7 +265,7 @@ try {
     std::ranges::for_each(eids, [device](ALuint eid)
     {
         if(auto *effect = LookupEffect(std::nothrow, device, eid))
-            FreeEffect(device, effect);
+            FreeEffect(device, gsl::make_not_null(effect));
     });
 }
 catch(al::base_exception&) {
@@ -272,7 +274,7 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-auto AL_APIENTRY alIsEffect(gsl::not_null<ALCcontext*> context, ALuint effect) noexcept
+auto AL_APIENTRY alIsEffect(gsl::strict_not_null<ALCcontext*> context, ALuint effect) noexcept
     -> ALboolean
 {
     auto *device = context->mALDevice.get();
@@ -283,7 +285,7 @@ auto AL_APIENTRY alIsEffect(gsl::not_null<ALCcontext*> context, ALuint effect) n
 }
 
 
-void AL_APIENTRY alEffecti(gsl::not_null<ALCcontext*> context, ALuint effect, ALenum param,
+void AL_APIENTRY alEffecti(gsl::strict_not_null<ALCcontext*> context, ALuint effect, ALenum param,
     ALint value) noexcept
 try {
     auto *device = context->mALDevice.get();
@@ -319,7 +321,7 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void AL_APIENTRY alEffectiv(gsl::not_null<ALCcontext*> context, ALuint effect, ALenum param,
+void AL_APIENTRY alEffectiv(gsl::strict_not_null<ALCcontext*> context, ALuint effect, ALenum param,
     const ALint *values) noexcept
 try {
     switch(param)
@@ -347,7 +349,7 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void AL_APIENTRY alEffectf(gsl::not_null<ALCcontext*> context, ALuint effect, ALenum param,
+void AL_APIENTRY alEffectf(gsl::strict_not_null<ALCcontext*> context, ALuint effect, ALenum param,
     ALfloat value) noexcept
 try {
     auto *device = context->mALDevice.get();
@@ -368,7 +370,7 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void AL_APIENTRY alEffectfv(gsl::not_null<ALCcontext*> context, ALuint effect, ALenum param,
+void AL_APIENTRY alEffectfv(gsl::strict_not_null<ALCcontext*> context, ALuint effect, ALenum param,
     const ALfloat *values) noexcept
 try {
     auto *device = context->mALDevice.get();
@@ -389,8 +391,8 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void AL_APIENTRY alGetEffecti(gsl::not_null<ALCcontext*> context, ALuint effect, ALenum param,
-    ALint *value) noexcept
+void AL_APIENTRY alGetEffecti(gsl::strict_not_null<ALCcontext*> context, ALuint effect,
+    ALenum param, ALint *value) noexcept
 try {
     auto *device = context->mALDevice.get();
     auto effectlock = std::lock_guard{device->EffectLock};
@@ -414,8 +416,8 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void AL_APIENTRY alGetEffectiv(gsl::not_null<ALCcontext*> context, ALuint effect, ALenum param,
-    ALint *values) noexcept
+void AL_APIENTRY alGetEffectiv(gsl::strict_not_null<ALCcontext*> context, ALuint effect,
+    ALenum param, ALint *values) noexcept
 try {
     switch(param)
     {
@@ -442,8 +444,8 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void AL_APIENTRY alGetEffectf(gsl::not_null<ALCcontext*> context, ALuint effect, ALenum param,
-    ALfloat *value) noexcept
+void AL_APIENTRY alGetEffectf(gsl::strict_not_null<ALCcontext*> context, ALuint effect,
+    ALenum param, ALfloat *value) noexcept
 try {
     auto *device = context->mALDevice.get();
     auto effectlock = std::lock_guard{device->EffectLock};
@@ -463,8 +465,8 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void AL_APIENTRY alGetEffectfv(gsl::not_null<ALCcontext*> context, ALuint effect, ALenum param,
-    ALfloat *values) noexcept
+void AL_APIENTRY alGetEffectfv(gsl::strict_not_null<ALCcontext*> context, ALuint effect,
+    ALenum param, ALfloat *values) noexcept
 try {
     auto *device = context->mALDevice.get();
     auto effectlock = std::lock_guard{device->EffectLock};
@@ -505,7 +507,7 @@ void InitEffect(ALeffect *effect)
     InitEffectParams(effect, AL_EFFECT_NULL);
 }
 
-void ALeffect::SetName(gsl::not_null<ALCcontext*>  context, ALuint id, std::string_view name)
+void ALeffect::SetName(gsl::strict_not_null<ALCcontext*> context, ALuint id, std::string_view name)
 {
     auto *device = context->mALDevice.get();
     auto effectlock = std::lock_guard{device->EffectLock};

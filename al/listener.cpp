@@ -44,7 +44,7 @@ using uint = unsigned int;
 
 namespace {
 
-inline void UpdateProps(ALCcontext *context)
+inline void UpdateProps(gsl::strict_not_null<ALCcontext*> context)
 {
     if(!context->mDeferUpdates)
     {
@@ -54,7 +54,7 @@ inline void UpdateProps(ALCcontext *context)
     context->mPropsDirty = true;
 }
 
-inline void CommitAndUpdateProps(ALCcontext *context)
+inline void CommitAndUpdateProps(gsl::strict_not_null<ALCcontext*> context)
 {
     if(!context->mDeferUpdates)
     {
@@ -73,8 +73,8 @@ inline void CommitAndUpdateProps(ALCcontext *context)
 }
 
 
-void AL_APIENTRY alListenerf(gsl::not_null<ALCcontext*> context, ALenum param, ALfloat value)
-    noexcept
+void AL_APIENTRY alListenerf(gsl::strict_not_null<ALCcontext*> context, ALenum param,
+    ALfloat value) noexcept
 try {
     const auto proplock = std::lock_guard{context->mPropLock};
     auto &listener = context->mListener;
@@ -104,8 +104,8 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void AL_APIENTRY alListener3f(gsl::not_null<ALCcontext*> context, ALenum param, ALfloat value1,
-    ALfloat value2, ALfloat value3) noexcept
+void AL_APIENTRY alListener3f(gsl::strict_not_null<ALCcontext*> context, ALenum param,
+    ALfloat value1, ALfloat value2, ALfloat value3) noexcept
 try {
     auto &listener = context->mListener;
     const auto proplock = std::lock_guard{context->mPropLock};
@@ -138,7 +138,7 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void AL_APIENTRY alListenerfv(gsl::not_null<ALCcontext*> context, ALenum param,
+void AL_APIENTRY alListenerfv(gsl::strict_not_null<ALCcontext*> context, ALenum param,
     const ALfloat *values) noexcept
 try {
     if(!values)
@@ -182,8 +182,8 @@ catch(std::exception &e) {
 }
 
 
-void AL_APIENTRY alListeneri(gsl::not_null<ALCcontext*> context, ALenum param, ALint /*value*/)
-    noexcept
+void AL_APIENTRY alListeneri(gsl::strict_not_null<ALCcontext*> context, ALenum param,
+    ALint /*value*/) noexcept
 try {
     const auto proplock [[maybe_unused]] = std::lock_guard{context->mPropLock};
     context->throw_error(AL_INVALID_ENUM, "Invalid listener integer property {:#04x}",
@@ -195,8 +195,8 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void AL_APIENTRY alListener3i(gsl::not_null<ALCcontext*> context, ALenum param, ALint value1,
-    ALint value2, ALint value3) noexcept
+void AL_APIENTRY alListener3i(gsl::strict_not_null<ALCcontext*> context, ALenum param,
+    ALint value1, ALint value2, ALint value3) noexcept
 try {
     switch(param)
     {
@@ -217,7 +217,7 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void AL_APIENTRY alListeneriv(gsl::not_null<ALCcontext*> context, ALenum param,
+void AL_APIENTRY alListeneriv(gsl::strict_not_null<ALCcontext*> context, ALenum param,
     const ALint *values) noexcept
 try {
     if(!values)
@@ -255,8 +255,8 @@ catch(std::exception &e) {
 }
 
 
-void AL_APIENTRY alGetListenerf(gsl::not_null<ALCcontext*> context, ALenum param, ALfloat *value)
-    noexcept
+void AL_APIENTRY alGetListenerf(gsl::strict_not_null<ALCcontext*> context, ALenum param,
+    ALfloat *value) noexcept
 try {
     if(!value)
         context->throw_error(AL_INVALID_VALUE, "NULL pointer");
@@ -277,8 +277,8 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void AL_APIENTRY alGetListener3f(gsl::not_null<ALCcontext*> context, ALenum param, ALfloat *value1,
-    ALfloat *value2, ALfloat *value3) noexcept
+void AL_APIENTRY alGetListener3f(gsl::strict_not_null<ALCcontext*> context, ALenum param,
+    ALfloat *value1, ALfloat *value2, ALfloat *value3) noexcept
 try {
     if(!value1 || !value2 || !value3)
         context->throw_error(AL_INVALID_VALUE, "NULL pointer");
@@ -308,8 +308,8 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void AL_APIENTRY alGetListenerfv(gsl::not_null<ALCcontext*> context, ALenum param, ALfloat *values)
-    noexcept
+void AL_APIENTRY alGetListenerfv(gsl::strict_not_null<ALCcontext*> context, ALenum param,
+    ALfloat *values) noexcept
 try {
     if(!values)
         context->throw_error(AL_INVALID_VALUE, "NULL pointer");
@@ -349,8 +349,8 @@ catch(std::exception &e) {
 }
 
 
-void AL_APIENTRY alGetListeneri(gsl::not_null<ALCcontext*> context, ALenum param, ALint *value)
-    noexcept
+void AL_APIENTRY alGetListeneri(gsl::strict_not_null<ALCcontext*> context, ALenum param,
+    ALint *value) noexcept
 try {
     if(!value) context->throw_error(AL_INVALID_VALUE, "NULL pointer");
     const auto proplock [[maybe_unused]] = std::lock_guard{context->mPropLock};
@@ -363,8 +363,8 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void AL_APIENTRY alGetListener3i(gsl::not_null<ALCcontext*> context, ALenum param, ALint *value1,
-    ALint *value2, ALint *value3) noexcept
+void AL_APIENTRY alGetListener3i(gsl::strict_not_null<ALCcontext*> context, ALenum param,
+    ALint *value1, ALint *value2, ALint *value3) noexcept
 try {
     if(!value1 || !value2 || !value3)
         context->throw_error(AL_INVALID_VALUE, "NULL pointer");
@@ -394,8 +394,8 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void AL_APIENTRY alGetListeneriv(gsl::not_null<ALCcontext*> context, ALenum param, ALint *values)
-    noexcept
+void AL_APIENTRY alGetListeneriv(gsl::strict_not_null<ALCcontext*> context, ALenum param,
+    ALint *values) noexcept
 try {
     if(!values)
         context->throw_error(AL_INVALID_VALUE, "NULL pointer");

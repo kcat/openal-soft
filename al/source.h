@@ -167,19 +167,20 @@ struct ALsource {
     ALsource(const ALsource&) = delete;
     ALsource& operator=(const ALsource&) = delete;
 
-    static void SetName(gsl::not_null<ALCcontext*> context, ALuint id, std::string_view name);
+    static void SetName(gsl::strict_not_null<ALCcontext*> context, ALuint id,
+        std::string_view name);
 
     DISABLE_ALLOC
 
 #if ALSOFT_EAX
 public:
-    void eaxInitialize(gsl::not_null<ALCcontext*> context) noexcept;
+    void eaxInitialize(gsl::strict_not_null<ALCcontext*> context) noexcept;
     void eaxDispatch(const EaxCall& call) { call.is_get() ? eax_get(call) : eax_set(call); }
     void eaxCommit();
     void eaxMarkAsChanged() noexcept { mEaxChanged = true; }
 
-    static auto EaxLookupSource(ALCcontext& al_context LIFETIMEBOUND, ALuint source_id) noexcept
-        -> ALsource*;
+    static auto EaxLookupSource(gsl::strict_not_null<ALCcontext*> al_context LIFETIMEBOUND,
+        ALuint source_id) noexcept -> ALsource*;
 
 private:
     using Exception = EaxSourceException;
@@ -1013,7 +1014,7 @@ private:
 #endif // ALSOFT_EAX
 };
 
-void UpdateAllSourceProps(ALCcontext *context);
+void UpdateAllSourceProps(gsl::strict_not_null<ALCcontext*> context);
 
 struct SourceSubList {
     uint64_t FreeMask{~0_u64};

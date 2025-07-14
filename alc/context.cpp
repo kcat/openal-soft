@@ -278,7 +278,7 @@ void ALCcontext::applyAllUpdates()
     if(std::exchange(mPropsDirty, false))
         UpdateContextProps(this);
     UpdateAllEffectSlotProps(gsl::make_not_null(this));
-    UpdateAllSourceProps(this);
+    UpdateAllSourceProps(gsl::make_not_null(this));
 
     /* Now with all updates declared, let the mixer continue applying them so
      * they all happen at once.
@@ -591,7 +591,7 @@ void ALCcontext::eax_dispatch_source(const EaxCall& call)
     const auto source_id = call.get_property_al_name();
     const auto srclock = std::lock_guard{mSourceLock};
 
-    const auto source = ALsource::EaxLookupSource(*this, source_id);
+    const auto source = ALsource::EaxLookupSource(gsl::make_not_null(this), source_id);
     if(source == nullptr)
         eax_fail("Source not found.");
 

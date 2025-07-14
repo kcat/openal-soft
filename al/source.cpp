@@ -90,24 +90,16 @@ namespace {
 using SubListAllocator = al::allocator<std::array<ALsource,64>>;
 using std::chrono::nanoseconds;
 using seconds_d = std::chrono::duration<double>;
-using source_store_array = std::array<ALsource*,3>;
-using source_store_vector = std::vector<ALsource*>;
-using source_store_variant = std::variant<std::monostate,source_store_array,source_store_vector>;
 
 using namespace std::string_view_literals;
+
 
 constexpr auto HasBuffer(const ALbufferQueueItem &item) noexcept -> bool
 { return bool{item.mBuffer}; }
 
 
-constexpr auto get_srchandles(source_store_variant &source_store, size_t count)
-{
-    if(count > std::tuple_size_v<source_store_array>)
-        return std::span{source_store.emplace<source_store_vector>(count)};
-    return std::span{source_store.emplace<source_store_array>()}.first(count);
-}
-
-auto GetSourceVoice(ALsource *source, gsl::strict_not_null<ALCcontext*> context) -> Voice*
+auto GetSourceVoice(gsl::strict_not_null<ALsource*> source,
+    gsl::strict_not_null<ALCcontext*> context) -> Voice*
 {
     auto voicelist = context->getVoicesSpan();
     auto idx = source->VoiceIdx;
@@ -122,7 +114,7 @@ auto GetSourceVoice(ALsource *source, gsl::strict_not_null<ALCcontext*> context)
 }
 
 
-void UpdateSourceProps(const ALsource *source, Voice *voice,
+void UpdateSourceProps(gsl::strict_not_null<const ALsource*> source, Voice *voice,
     gsl::strict_not_null<ALCcontext*> context)
 {
     /* Get an unused property container, or allocate a new one as needed. */
@@ -541,7 +533,7 @@ std::optional<VoicePos> GetSampleOffset(std::deque<ALbufferQueueItem> &BufferLis
 }
 
 
-void InitVoice(Voice *voice, ALsource *source, ALbufferQueueItem *BufferList,
+void InitVoice(Voice *voice, gsl::strict_not_null<ALsource*> source, ALbufferQueueItem *BufferList,
     gsl::strict_not_null<ALCcontext*> context, gsl::strict_not_null<al::Device*> device)
 {
     voice->mLoopBuffer.store(source->Looping ? &source->mQueue.front() : nullptr,
@@ -723,14 +715,14 @@ auto SetVoiceOffset(Voice *oldvoice, const VoicePos &vpos, gsl::strict_not_null<
  * Returns if the last known state for the source was playing or paused. Does
  * not sync with the mixer voice.
  */
-inline bool IsPlayingOrPaused(ALsource *source)
+inline bool IsPlayingOrPaused(gsl::strict_not_null<ALsource*> source)
 { return source->state == AL_PLAYING || source->state == AL_PAUSED; }
 
 /**
  * Returns an updated source state using the matching voice's status (or lack
  * thereof).
  */
-inline ALenum GetSourceState(ALsource *source, Voice *voice)
+inline ALenum GetSourceState(gsl::strict_not_null<ALsource*> source, Voice *voice)
 {
     if(!voice && source->state == AL_PLAYING)
         source->state = AL_STOPPED;
@@ -2520,8 +2512,29 @@ NOINLINE void GetProperty(const gsl::strict_not_null<ALsource*> Source,
 }
 
 
+using source_store_single = std::array<gsl::strict_not_null<ALsource*>,1>;
+using source_store_vector = std::vector<gsl::strict_not_null<ALsource*>>;
+using source_store_variant = std::variant<std::monostate,source_store_single,source_store_vector>;
+
+constexpr auto get_srchandles(const gsl::strict_not_null<ALCcontext*> context,
+    source_store_variant &source_store, const std::span<const ALuint> sids)
+    -> std::span<gsl::strict_not_null<ALsource*>>
+{
+    if(sids.size() == 1)
+    {
+        auto source = std::array{LookupSource(context, sids[0])};
+        return source_store.emplace<source_store_single>(source);
+    }
+    auto &sources = source_store.emplace<source_store_vector>();
+    sources.reserve(sids.size());
+    std::ranges::transform(sids, std::back_inserter(sources), [context](const ALuint sid)
+    { return LookupSource(context, sid); });
+    return std::span{sources};
+}
+
 void StartSources(const gsl::strict_not_null<ALCcontext*> context,
-    const std::span<ALsource*> srchandles, const nanoseconds start_time=nanoseconds::min())
+    const std::span<gsl::strict_not_null<ALsource*>> srchandles,
+    const nanoseconds start_time=nanoseconds::min())
 {
     auto const device = al::get_not_null(context->mALDevice);
     /* If the device is disconnected, and voices stop on disconnect, go right
@@ -2531,7 +2544,7 @@ void StartSources(const gsl::strict_not_null<ALCcontext*> context,
     {
         if(context->mStopVoicesOnDisconnect.load(std::memory_order_acquire))
         {
-            for(ALsource *source : srchandles)
+            for(const gsl::strict_not_null<ALsource*> source : srchandles)
             {
                 /* TODO: Send state change event? */
                 source->Offset = 0.0;
@@ -2569,7 +2582,7 @@ void StartSources(const gsl::strict_not_null<ALCcontext*> context,
     auto vidx = 0u;
     auto tail = LPVoiceChange{};
     auto cur = LPVoiceChange{};
-    std::ranges::for_each(srchandles, [&](ALsource *source)
+    std::ranges::for_each(srchandles, [&](gsl::strict_not_null<ALsource*> source)
     {
         /* Check that there is a queue containing at least one valid, non zero
          * length buffer.
@@ -3186,11 +3199,9 @@ try {
 
     const auto sids = std::span{sources, gsl::narrow_cast<ALuint>(n)};
     auto source_store = source_store_variant{};
-    const auto srchandles = get_srchandles(source_store, sids.size());
 
     auto srclock = std::lock_guard{context->mSourceLock};
-    std::ranges::transform(sids, srchandles.begin(), [context](const ALuint sid) -> ALsource*
-    { return LookupSource(context, sid); });
+    const auto srchandles = get_srchandles(context, source_store, sids);
 
     StartSources(context, srchandles);
 }
@@ -3203,8 +3214,7 @@ catch(std::exception &e) {
 void AL_APIENTRY alSourcePlay(gsl::strict_not_null<ALCcontext*> context, ALuint source) noexcept
 try {
     auto srclock = std::lock_guard{context->mSourceLock};
-
-    auto *Source = LookupSource(context, source).get();
+    auto Source = LookupSource(context, source);
     StartSources(context, {&Source, 1});
 }
 catch(al::base_exception&) {
@@ -3225,11 +3235,9 @@ try {
 
     const auto sids = std::span{sources, gsl::narrow_cast<ALuint>(n)};
     auto source_store = source_store_variant{};
-    const auto srchandles = get_srchandles(source_store, sids.size());
 
-    const auto srclock = std::lock_guard{context->mSourceLock};
-    std::ranges::transform(sids, srchandles.begin(), [context](const ALuint sid) -> ALsource*
-    { return LookupSource(context, sid); });
+    auto srclock = std::lock_guard{context->mSourceLock};
+    const auto srchandles = get_srchandles(context, source_store, sids);
 
     StartSources(context, srchandles, nanoseconds{start_time});
 }
@@ -3246,7 +3254,7 @@ try {
         context->throw_error(AL_INVALID_VALUE, "Invalid time point {}", start_time);
 
     auto srclock = std::lock_guard{context->mSourceLock};
-    auto *Source = LookupSource(context, source).get();
+    auto Source = LookupSource(context, source);
     StartSources(context, {&Source, 1}, nanoseconds{start_time});
 }
 catch(al::base_exception&) {
@@ -3265,11 +3273,9 @@ try {
 
     const auto sids = std::span{sources, gsl::narrow_cast<ALuint>(n)};
     auto source_store = source_store_variant{};
-    const auto srchandles = get_srchandles(source_store, sids.size());
 
     auto srclock = std::lock_guard{context->mSourceLock};
-    std::ranges::transform(sids, srchandles.begin(), [context](const ALuint sid) -> ALsource*
-    { return LookupSource(context, sid); });
+    const auto srchandles = get_srchandles(context, source_store, sids);
 
     /* Pausing has to be done in two steps. First, for each source that's
      * detected to be playing, change the voice (asynchronously) to
@@ -3277,7 +3283,7 @@ try {
      */
     auto tail = LPVoiceChange{};
     auto cur = LPVoiceChange{};
-    std::ranges::for_each(srchandles, [context,&tail,&cur](ALsource *source)
+    std::ranges::for_each(srchandles, [context,&tail,&cur](gsl::strict_not_null<ALsource*> source)
     {
         auto *voice = GetSourceVoice(source, context);
         if(GetSourceState(source, voice) == AL_PLAYING)
@@ -3302,7 +3308,7 @@ try {
          * before the voice got paused, recheck that the source is still
          * considered playing and set it to paused if so.
          */
-        std::ranges::for_each(srchandles, [context](ALsource *source)
+        std::ranges::for_each(srchandles, [context](gsl::strict_not_null<ALsource*> source)
         {
             auto *voice = GetSourceVoice(source, context);
             if(GetSourceState(source, voice) == AL_PLAYING)
@@ -3329,15 +3335,13 @@ try {
 
     const auto sids = std::span{sources, gsl::narrow_cast<ALuint>(n)};
     auto source_store = source_store_variant{};
-    const auto srchandles = get_srchandles(source_store, sids.size());
 
     auto srclock = std::lock_guard{context->mSourceLock};
-    std::ranges::transform(sids, srchandles.begin(), [context](const ALuint sid) -> ALsource*
-    { return LookupSource(context, sid); });
+    const auto srchandles = get_srchandles(context, source_store, sids);
 
     auto tail = LPVoiceChange{};
     auto cur = LPVoiceChange{};
-    std::ranges::for_each(srchandles, [context,&tail,&cur](ALsource *source)
+    std::ranges::for_each(srchandles, [context,&tail,&cur](gsl::strict_not_null<ALsource*> source)
     {
         if(auto *voice = GetSourceVoice(source, context))
         {
@@ -3380,15 +3384,13 @@ try {
 
     const auto sids = std::span{sources, gsl::narrow_cast<ALuint>(n)};
     auto source_store = source_store_variant{};
-    const auto srchandles = get_srchandles(source_store, sids.size());
 
     auto srclock = std::lock_guard{context->mSourceLock};
-    std::ranges::transform(sids, srchandles.begin(), [context](const ALuint sid) -> ALsource*
-    { return LookupSource(context, sid); });
+    const auto srchandles = get_srchandles(context, source_store, sids);
 
     auto tail = LPVoiceChange{};
     auto cur = LPVoiceChange{};
-    std::ranges::for_each(srchandles, [context,&tail,&cur](ALsource *source)
+    std::ranges::for_each(srchandles, [context,&tail,&cur](gsl::strict_not_null<ALsource*> source)
     {
         auto *voice = GetSourceVoice(source, context);
         if(source->state != AL_INITIAL)
@@ -3678,11 +3680,11 @@ void UpdateAllSourceProps(gsl::strict_not_null<ALCcontext*> context)
     for(Voice *voice : voicelist)
     {
         auto sid = voice->mSourceID.load(std::memory_order_acquire);
-        auto *source = sid ? LookupSource(std::nothrow, context, sid) : nullptr;
+        auto *const source = sid ? LookupSource(std::nothrow, context, sid) : nullptr;
         if(source && source->VoiceIdx == vidx)
         {
             if(std::exchange(source->mPropsDirty, false))
-                UpdateSourceProps(source, voice, context);
+                UpdateSourceProps(gsl::make_not_null(source), voice, context);
         }
         ++vidx;
     }

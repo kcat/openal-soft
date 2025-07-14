@@ -286,7 +286,7 @@ void InitFilterParams(gsl::strict_not_null<ALfilter*> filter, ALenum type)
 }
 
 [[nodiscard]]
-auto EnsureFilters(al::Device *device, size_t needed) noexcept -> bool
+auto EnsureFilters(gsl::strict_not_null<al::Device*> device, size_t needed) noexcept -> bool
 try {
     auto count = std::accumulate(device->FilterList.cbegin(), device->FilterList.cend(), 0_uz,
         [](size_t cur, const FilterSubList &sublist) noexcept -> size_t
@@ -311,7 +311,8 @@ catch(...) {
 
 
 [[nodiscard]]
-auto AllocFilter(al::Device *device) noexcept -> gsl::strict_not_null<ALfilter*>
+auto AllocFilter(gsl::strict_not_null<al::Device*> device) noexcept
+    -> gsl::strict_not_null<ALfilter*>
 {
     auto sublist = std::ranges::find_if(device->FilterList, &FilterSubList::FreeMask);
     auto lidx = gsl::narrow_cast<uint>(std::distance(device->FilterList.begin(), sublist));
@@ -330,7 +331,7 @@ auto AllocFilter(al::Device *device) noexcept -> gsl::strict_not_null<ALfilter*>
     return filter;
 }
 
-void FreeFilter(al::Device *device, gsl::strict_not_null<ALfilter*> filter)
+void FreeFilter(gsl::strict_not_null<al::Device*> device, gsl::strict_not_null<ALfilter*> filter)
 {
     device->mFilterNames.erase(filter->id);
 

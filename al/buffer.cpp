@@ -185,7 +185,7 @@ constexpr auto INVALID_MAP_FLAGS = ~gsl::narrow<ALbitfieldSOFT>(AL_MAP_READ_BIT_
 
 
 [[nodiscard]]
-auto EnsureBuffers(al::Device *device, size_t needed) noexcept -> bool
+auto EnsureBuffers(gsl::strict_not_null<al::Device*> device, size_t needed) noexcept -> bool
 try {
     auto count = std::accumulate(device->BufferList.cbegin(), device->BufferList.cend(), 0_uz,
         [](size_t cur, const BufferSubList &sublist) noexcept -> size_t
@@ -209,7 +209,8 @@ catch(...) {
 }
 
 [[nodiscard]]
-auto AllocBuffer(al::Device *device) noexcept -> gsl::strict_not_null<ALbuffer*>
+auto AllocBuffer(gsl::strict_not_null<al::Device*> device) noexcept
+    -> gsl::strict_not_null<ALbuffer*>
 {
     auto sublist = std::ranges::find_if(device->BufferList, &BufferSubList::FreeMask);
     auto lidx = gsl::narrow_cast<ALuint>(std::distance(device->BufferList.begin(), sublist));
@@ -227,7 +228,7 @@ auto AllocBuffer(al::Device *device) noexcept -> gsl::strict_not_null<ALbuffer*>
     return buffer;
 }
 
-void FreeBuffer(al::Device *device, gsl::strict_not_null<ALbuffer*> buffer)
+void FreeBuffer(gsl::strict_not_null<al::Device*> device, gsl::strict_not_null<ALbuffer*> buffer)
 {
 #if ALSOFT_EAX
     eax_x_ram_clear(*device, *buffer);

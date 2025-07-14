@@ -124,7 +124,8 @@ auto LookupEffectSlot(gsl::strict_not_null<ALCcontext*> context, ALuint id)
 }
 
 [[nodiscard]]
-inline auto LookupEffect(std::nothrow_t, al::Device *device, ALuint id) noexcept -> ALeffect*
+inline auto LookupEffect(std::nothrow_t, gsl::strict_not_null<al::Device*> device, ALuint id)
+    noexcept -> ALeffect*
 {
     const auto lidx = (id-1) >> 6;
     const auto slidx = (id-1) & 0x3f;
@@ -147,7 +148,8 @@ auto LookupEffect(gsl::strict_not_null<ALCcontext*> context, ALuint id)
 }
 
 [[nodiscard]]
-inline auto LookupBuffer(std::nothrow_t, al::Device *device, ALuint id) noexcept -> ALbuffer*
+inline auto LookupBuffer(std::nothrow_t, gsl::strict_not_null<al::Device*> device, ALuint id)
+    noexcept -> ALbuffer*
 {
     const auto lidx = (id-1) >> 6;
     const auto slidx = (id-1) & 0x3f;

@@ -143,7 +143,7 @@ void InitEffectParams(ALeffect *effect, ALenum type) noexcept
 }
 
 [[nodiscard]]
-auto EnsureEffects(al::Device *device, size_t needed) noexcept -> bool
+auto EnsureEffects(gsl::strict_not_null<al::Device*> device, size_t needed) noexcept -> bool
 try {
     auto count = std::accumulate(device->EffectList.cbegin(), device->EffectList.cend(), 0_uz,
         [](size_t cur, const EffectSubList &sublist) noexcept -> size_t
@@ -167,7 +167,8 @@ catch(...) {
 }
 
 [[nodiscard]]
-auto AllocEffect(al::Device *device) noexcept -> gsl::strict_not_null<ALeffect*>
+auto AllocEffect(gsl::strict_not_null<al::Device*> device) noexcept
+    -> gsl::strict_not_null<ALeffect*>
 {
     auto sublist = std::ranges::find_if(device->EffectList, &EffectSubList::FreeMask);
     auto lidx = gsl::narrow_cast<uint>(std::distance(device->EffectList.begin(), sublist));
@@ -186,7 +187,7 @@ auto AllocEffect(al::Device *device) noexcept -> gsl::strict_not_null<ALeffect*>
     return effect;
 }
 
-void FreeEffect(al::Device *device, gsl::strict_not_null<ALeffect*> effect)
+void FreeEffect(gsl::strict_not_null<al::Device*> device, gsl::strict_not_null<ALeffect*> effect)
 {
     device->mEffectNames.erase(effect->id);
 

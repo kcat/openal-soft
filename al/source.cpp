@@ -107,7 +107,7 @@ constexpr auto get_srchandles(source_store_variant &source_store, size_t count)
     return std::span{source_store.emplace<source_store_array>()}.first(count);
 }
 
-auto GetSourceVoice(ALsource *source, ALCcontext *context) -> Voice*
+auto GetSourceVoice(ALsource *source, gsl::strict_not_null<ALCcontext*> context) -> Voice*
 {
     auto voicelist = context->getVoicesSpan();
     auto idx = source->VoiceIdx;
@@ -217,8 +217,8 @@ void UpdateSourceProps(const ALsource *source, Voice *voice,
  * samples. The offset is relative to the start of the queue (not the start of
  * the current buffer).
  */
-auto GetSourceSampleOffset(ALsource *Source, ALCcontext *context, nanoseconds *clocktime)
-    -> int64_t
+auto GetSourceSampleOffset(gsl::strict_not_null<ALsource*> Source,
+    gsl::strict_not_null<ALCcontext*> context, nanoseconds *clocktime) -> int64_t
 {
     auto const device = al::get_not_null(context->mALDevice);
     auto const *Current = LPVoiceBufferItem{};
@@ -261,7 +261,8 @@ auto GetSourceSampleOffset(ALsource *Source, ALCcontext *context, nanoseconds *c
  * Gets the current read offset for the given Source, in seconds. The offset is
  * relative to the start of the queue (not the start of the current buffer).
  */
-auto GetSourceSecOffset(ALsource *Source, ALCcontext *context, nanoseconds *clocktime) -> double
+auto GetSourceSecOffset(gsl::strict_not_null<ALsource*> Source,
+    gsl::strict_not_null<ALCcontext*> context, nanoseconds *clocktime) -> double
 {
     auto const device = al::get_not_null(context->mALDevice);
     auto const *Current = LPVoiceBufferItem{};
@@ -310,7 +311,8 @@ auto GetSourceSecOffset(ALsource *Source, ALCcontext *context, nanoseconds *cloc
  * queue (not the start of the current buffer).
  */
 template<typename T>
-NOINLINE auto GetSourceOffset(ALsource *Source, ALenum name, ALCcontext *context) -> T
+NOINLINE auto GetSourceOffset(gsl::strict_not_null<ALsource*> Source, ALenum name,
+    gsl::strict_not_null<ALCcontext*> context) -> T
 {
     auto const device = al::get_not_null(context->mALDevice);
     auto const *Current = LPVoiceBufferItem{};
@@ -394,7 +396,7 @@ NOINLINE auto GetSourceOffset(ALsource *Source, ALenum name, ALCcontext *context
  * format (Bytes, Samples or Seconds).
  */
 template<typename T>
-NOINLINE auto GetSourceLength(const ALsource *source, ALenum name) -> T
+NOINLINE auto GetSourceLength(gsl::strict_not_null<const ALsource*> source, ALenum name) -> T
 {
     const auto BufferFmt = std::invoke([source]() -> ALbuffer*
     {
@@ -540,7 +542,7 @@ std::optional<VoicePos> GetSampleOffset(std::deque<ALbufferQueueItem> &BufferLis
 
 
 void InitVoice(Voice *voice, ALsource *source, ALbufferQueueItem *BufferList,
-    gsl::strict_not_null<ALCcontext*> context, al::Device *device)
+    gsl::strict_not_null<ALCcontext*> context, gsl::strict_not_null<al::Device*> device)
 {
     voice->mLoopBuffer.store(source->Looping ? &source->mQueue.front() : nullptr,
         std::memory_order_relaxed);
@@ -572,7 +574,7 @@ void InitVoice(Voice *voice, ALsource *source, ALbufferQueueItem *BufferList,
 }
 
 
-VoiceChange *GetVoiceChanger(ALCcontext *ctx)
+VoiceChange *GetVoiceChanger(gsl::strict_not_null<ALCcontext*> ctx)
 {
     VoiceChange *vchg{ctx->mVoiceChangeTail};
     if(vchg == ctx->mCurrentVoiceChange.load(std::memory_order_acquire)) [[unlikely]]
@@ -586,7 +588,7 @@ VoiceChange *GetVoiceChanger(ALCcontext *ctx)
     return vchg;
 }
 
-void SendVoiceChanges(ALCcontext *ctx, VoiceChange *tail)
+void SendVoiceChanges(gsl::strict_not_null<ALCcontext*> ctx, VoiceChange *tail)
 {
     auto const device = al::get_not_null(ctx->mALDevice);
 
@@ -617,8 +619,8 @@ void SendVoiceChanges(ALCcontext *ctx, VoiceChange *tail)
 }
 
 
-auto SetVoiceOffset(Voice *oldvoice, const VoicePos &vpos, ALsource *source,
-    gsl::strict_not_null<ALCcontext*> context, al::Device *device) -> bool
+auto SetVoiceOffset(Voice *oldvoice, const VoicePos &vpos, gsl::strict_not_null<ALsource*> source,
+    gsl::strict_not_null<ALCcontext*> context, gsl::strict_not_null<al::Device*> device) -> bool
 {
     /* First, get a free voice to start at the new offset. */
     auto voicelist = context->getVoicesSpan();
@@ -861,7 +863,8 @@ auto LookupBuffer(gsl::strict_not_null<ALCcontext*> context, std::unsigned_integ
     context->throw_error(AL_INVALID_NAME, "Invalid buffer ID {}", id);
 }
 
-inline auto LookupFilter(al::Device *device, std::unsigned_integral auto id) noexcept -> ALfilter*
+inline auto LookupFilter(gsl::strict_not_null<al::Device*> device, std::unsigned_integral auto id)
+    noexcept -> ALfilter*
 {
     const auto lidx = (id-1) >> 6;
     const auto slidx = (id-1) & 0x3f;
@@ -3301,7 +3304,7 @@ try {
          */
         std::ranges::for_each(srchandles, [context](ALsource *source)
         {
-            Voice *voice{GetSourceVoice(source, context)};
+            auto *voice = GetSourceVoice(source, context);
             if(GetSourceState(source, voice) == AL_PLAYING)
                 source->state = AL_PAUSED;
         });

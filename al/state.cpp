@@ -190,7 +190,7 @@ struct PropertyCastType<ALboolean> {
 
 
 template<typename T>
-void GetValue(gsl::not_null<ALCcontext*> context, ALenum pname, T *values) noexcept
+void GetValue(gsl::strict_not_null<ALCcontext*> context, ALenum pname, T *values) noexcept
 {
     static constexpr auto cast_value = PropertyCastType<T>{};
 
@@ -301,7 +301,7 @@ void GetValue(gsl::not_null<ALCcontext*> context, ALenum pname, T *values) noexc
 }
 
 template<>
-void GetValue(gsl::not_null<ALCcontext*> context, ALenum pname, ALvoid **values) noexcept
+void GetValue(gsl::strict_not_null<ALCcontext*> context, ALenum pname, ALvoid **values) noexcept
 {
     if(!values) [[unlikely]]
         return context->setError(AL_INVALID_VALUE, "NULL pointer");
@@ -340,7 +340,7 @@ inline void UpdateProps(ALCcontext *context)
 }
 
 
-void AL_APIENTRY alEnable(gsl::not_null<ALCcontext*> context, ALenum capability) noexcept
+void AL_APIENTRY alEnable(gsl::strict_not_null<ALCcontext*> context, ALenum capability) noexcept
 {
     switch(capability)
     {
@@ -364,7 +364,7 @@ void AL_APIENTRY alEnable(gsl::not_null<ALCcontext*> context, ALenum capability)
         as_unsigned(capability));
 }
 
-void AL_APIENTRY alDisable(gsl::not_null<ALCcontext*> context, ALenum capability) noexcept
+void AL_APIENTRY alDisable(gsl::strict_not_null<ALCcontext*> context, ALenum capability) noexcept
 {
     switch(capability)
     {
@@ -388,7 +388,7 @@ void AL_APIENTRY alDisable(gsl::not_null<ALCcontext*> context, ALenum capability
         as_unsigned(capability));
 }
 
-auto AL_APIENTRY alIsEnabled(gsl::not_null<ALCcontext*> context, ALenum capability) noexcept
+auto AL_APIENTRY alIsEnabled(gsl::strict_not_null<ALCcontext*> context, ALenum capability) noexcept
     -> ALboolean
 {
     auto proplock = std::lock_guard{context->mPropLock};
@@ -405,7 +405,7 @@ auto AL_APIENTRY alIsEnabled(gsl::not_null<ALCcontext*> context, ALenum capabili
 }
 
 
-auto AL_APIENTRY alGetString(gsl::not_null<ALCcontext*> context, ALenum pname) noexcept
+auto AL_APIENTRY alGetString(gsl::strict_not_null<ALCcontext*> context, ALenum pname) noexcept
     -> const ALchar*
 {
     switch(pname)
@@ -437,7 +437,7 @@ auto AL_APIENTRY alGetString(gsl::not_null<ALCcontext*> context, ALenum pname) n
 }
 
 
-void AL_APIENTRY alDopplerFactor(gsl::not_null<ALCcontext*> context, ALfloat value) noexcept
+void AL_APIENTRY alDopplerFactor(gsl::strict_not_null<ALCcontext*> context, ALfloat value) noexcept
 {
     if(!(value >= 0.0f && std::isfinite(value)))
         context->setError(AL_INVALID_VALUE, "Doppler factor {} out of range", value);
@@ -449,7 +449,7 @@ void AL_APIENTRY alDopplerFactor(gsl::not_null<ALCcontext*> context, ALfloat val
     }
 }
 
-void AL_APIENTRY alSpeedOfSound(gsl::not_null<ALCcontext*> context, ALfloat value) noexcept
+void AL_APIENTRY alSpeedOfSound(gsl::strict_not_null<ALCcontext*> context, ALfloat value) noexcept
 {
     if(!(value > 0.0f && std::isfinite(value)))
         context->setError(AL_INVALID_VALUE, "Speed of sound {} out of range", value);
@@ -461,7 +461,7 @@ void AL_APIENTRY alSpeedOfSound(gsl::not_null<ALCcontext*> context, ALfloat valu
     }
 }
 
-void AL_APIENTRY alDistanceModel(gsl::not_null<ALCcontext*> context, ALenum value) noexcept
+void AL_APIENTRY alDistanceModel(gsl::strict_not_null<ALCcontext*> context, ALenum value) noexcept
 {
     if(auto model = DistanceModelFromALenum(value))
     {
@@ -476,8 +476,8 @@ void AL_APIENTRY alDistanceModel(gsl::not_null<ALCcontext*> context, ALenum valu
 }
 
 
-auto AL_APIENTRY alGetStringiSOFT(gsl::not_null<ALCcontext*> context, ALenum pname, ALsizei index)
-    noexcept -> const ALchar*
+auto AL_APIENTRY alGetStringiSOFT(gsl::strict_not_null<ALCcontext*> context, ALenum pname,
+    ALsizei index) noexcept -> const ALchar*
 {
     switch(pname)
     {
@@ -493,13 +493,13 @@ auto AL_APIENTRY alGetStringiSOFT(gsl::not_null<ALCcontext*> context, ALenum pna
 }
 
 
-void AL_APIENTRY alDeferUpdatesSOFT(gsl::not_null<ALCcontext*> context) noexcept
+void AL_APIENTRY alDeferUpdatesSOFT(gsl::strict_not_null<ALCcontext*> context) noexcept
 {
     auto proplock = std::lock_guard{context->mPropLock};
     context->deferUpdates();
 }
 
-void AL_APIENTRY alProcessUpdatesSOFT(gsl::not_null<ALCcontext*> context) noexcept
+void AL_APIENTRY alProcessUpdatesSOFT(gsl::strict_not_null<ALCcontext*> context) noexcept
 {
     auto proplock = std::lock_guard{context->mPropLock};
     context->processUpdates();
@@ -527,25 +527,27 @@ DECL auto AL_APIENTRY Name##Ext(ALenum pname) noexcept -> R                   \
 {                                                                             \
     auto value = R{};                                                         \
     auto context = GetContextRef();                                           \
-    if(context) [[likely]] GetValue(context.get(), pname, &value);            \
+    if(context) [[likely]]                                                    \
+        GetValue(gsl::make_not_null(context.get()), pname, &value);           \
     return value;                                                             \
 }                                                                             \
 FORCE_ALIGN auto AL_APIENTRY Name##Direct##Ext(ALCcontext *context,           \
     ALenum pname) noexcept -> R                                               \
 {                                                                             \
     auto value = R{};                                                         \
-    GetValue(context, pname, &value);                                         \
+    GetValue(gsl::make_not_null(context), pname, &value);                     \
     return value;                                                             \
 }                                                                             \
 DECL auto AL_APIENTRY Name##v##Ext(ALenum pname, R *values) noexcept -> void  \
 {                                                                             \
     auto context = GetContextRef();                                           \
-    if(context) [[likely]] GetValue(context.get(), pname, values);            \
+    if(context) [[likely]]                                                    \
+        GetValue(gsl::make_not_null(context.get()), pname, values);           \
 }                                                                             \
 FORCE_ALIGN auto AL_APIENTRY Name##v##Direct##Ext(ALCcontext *context,        \
     ALenum pname, R *values) noexcept -> void                                 \
 {                                                                             \
-    GetValue(context, pname, values);                                         \
+    GetValue(gsl::make_not_null(context), pname, values);                     \
 }
 
 DECL_GETFUNC(AL_API, ALboolean, alGetBoolean,)

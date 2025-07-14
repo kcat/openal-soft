@@ -48,7 +48,7 @@
 
 namespace {
 
-auto AL_APIENTRY alGetError(gsl::not_null<ALCcontext*> context) noexcept -> ALenum
+auto AL_APIENTRY alGetError(gsl::strict_not_null<ALCcontext*> context) noexcept -> ALenum
 {
     auto ret = context->mLastThreadError.get();
     if(ret != AL_NO_ERROR) [[unlikely]]
@@ -97,7 +97,7 @@ void ALCcontext::throw_error_impl(ALenum errorCode, const fmt::string_view fmt,
 AL_API auto AL_APIENTRY alGetError() noexcept -> ALenum
 {
     if(auto context = GetContextRef()) [[likely]]
-        return alGetError(context.get());
+        return alGetError(gsl::make_not_null(context.get()));
 
     static constexpr auto get_value = [](gsl::czstring envname, std::string_view optname) -> ALenum
     {
@@ -134,5 +134,5 @@ AL_API auto AL_APIENTRY alGetError() noexcept -> ALenum
 
 FORCE_ALIGN auto AL_APIENTRY alGetErrorDirect(ALCcontext *context) noexcept -> ALenum
 {
-    return alGetError(context);
+    return alGetError(gsl::make_not_null(context));
 }

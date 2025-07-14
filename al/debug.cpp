@@ -192,7 +192,7 @@ constexpr auto GetDebugSeverityName(DebugSeverity severity) noexcept -> std::str
 }
 
 
-void AL_APIENTRY alDebugMessageCallbackEXT(gsl::not_null<ALCcontext*> context,
+void AL_APIENTRY alDebugMessageCallbackEXT(gsl::strict_not_null<ALCcontext*> context,
     ALDEBUGPROCEXT callback, void *userParam) noexcept
 {
     auto debuglock = std::lock_guard{context->mDebugCbLock};
@@ -201,7 +201,7 @@ void AL_APIENTRY alDebugMessageCallbackEXT(gsl::not_null<ALCcontext*> context,
 }
 
 
-void AL_APIENTRY alDebugMessageInsertEXT(gsl::not_null<ALCcontext*> context, ALenum source,
+void AL_APIENTRY alDebugMessageInsertEXT(gsl::strict_not_null<ALCcontext*> context, ALenum source,
     ALenum type, ALuint id, ALenum severity, ALsizei length, const ALchar *message) noexcept
 try {
     if(!context->mContextFlags.test(ContextFlags::DebugBit))
@@ -241,7 +241,7 @@ catch(std::exception &e) {
 }
 
 
-void AL_APIENTRY alDebugMessageControlEXT(gsl::not_null<ALCcontext*> context, ALenum source,
+void AL_APIENTRY alDebugMessageControlEXT(gsl::strict_not_null<ALCcontext*> context, ALenum source,
     ALenum type, ALenum severity, ALsizei count, const ALuint *ids, ALboolean enable) noexcept
 try {
     if(count > 0)
@@ -343,7 +343,7 @@ catch(std::exception &e) {
 }
 
 
-void AL_APIENTRY alPushDebugGroupEXT(gsl::not_null<ALCcontext*> context, ALenum source,
+void AL_APIENTRY alPushDebugGroupEXT(gsl::strict_not_null<ALCcontext*> context, ALenum source,
     ALuint id, ALsizei length, const ALchar *message) noexcept
 try {
     if(length < 0)
@@ -387,7 +387,7 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void AL_APIENTRY alPopDebugGroupEXT(gsl::not_null<ALCcontext*> context) noexcept
+void AL_APIENTRY alPopDebugGroupEXT(gsl::strict_not_null<ALCcontext*> context) noexcept
 try {
     auto debuglock = std::unique_lock{context->mDebugCbLock};
     if(context->mDebugGroups.size() <= 1)
@@ -410,7 +410,7 @@ catch(std::exception &e) {
 }
 
 
-auto AL_APIENTRY alGetDebugMessageLogEXT(gsl::not_null<ALCcontext*> context, ALuint count,
+auto AL_APIENTRY alGetDebugMessageLogEXT(gsl::strict_not_null<ALCcontext*> context, ALuint count,
     ALsizei logBufSize, ALenum *sources, ALenum *types, ALuint *ids, ALenum *severities,
     ALsizei *lengths, ALchar *logBuf) noexcept -> ALuint
 try {
@@ -502,7 +502,7 @@ catch(std::exception &e) {
 }
 
 
-void AL_APIENTRY alObjectLabelEXT(gsl::not_null<ALCcontext*> context, ALenum identifier,
+void AL_APIENTRY alObjectLabelEXT(gsl::strict_not_null<ALCcontext*> context, ALenum identifier,
     ALuint name, ALsizei length, const ALchar *label) noexcept
 try {
     if(!label && length != 0)
@@ -532,7 +532,7 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void AL_APIENTRY alGetObjectLabelEXT(gsl::not_null<ALCcontext*> context, ALenum identifier,
+void AL_APIENTRY alGetObjectLabelEXT(gsl::strict_not_null<ALCcontext*> context, ALenum identifier,
     ALuint name, ALsizei bufSize, ALsizei *length, ALchar *label) noexcept
 try {
     if(bufSize < 0)

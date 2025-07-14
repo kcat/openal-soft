@@ -113,6 +113,43 @@ public:
 template<typename T>
 void swap(intrusive_ptr<T> &lhs, intrusive_ptr<T> &rhs) noexcept { lhs.swap(rhs); }
 
+template<typename T> [[nodiscard]]
+constexpr auto operator<=>(const intrusive_ptr<T> &lhs, std::nullptr_t) noexcept
+{ return std::compare_three_way{}(lhs.get(), nullptr); }
+
+template<typename T> [[nodiscard]]
+constexpr auto operator==(const intrusive_ptr<T> &lhs, std::nullptr_t) noexcept
+{ return !lhs; }
+
+template<typename T> [[nodiscard]]
+constexpr auto operator!=(const intrusive_ptr<T> &lhs, std::nullptr_t) noexcept
+{ return !(lhs == nullptr); }
+
+template<typename T> [[nodiscard]]
+constexpr auto operator<=>(std::nullptr_t, const intrusive_ptr<T> &rhs) noexcept
+{ return std::compare_three_way{}(nullptr, rhs.get()); }
+
+template<typename T> [[nodiscard]]
+constexpr auto operator==(std::nullptr_t, const intrusive_ptr<T> &rhs) noexcept
+{ return !rhs; }
+
+template<typename T> [[nodiscard]]
+constexpr auto operator!=(std::nullptr_t, const intrusive_ptr<T> &rhs) noexcept
+{ return !(rhs == nullptr); }
+
+
+template<typename T, typename U> [[nodiscard]]
+constexpr auto operator<=>(const intrusive_ptr<T> &lhs, const intrusive_ptr<U>& rhs) noexcept
+{ return std::compare_three_way{}(lhs.get(), rhs.get()); }
+
+template<typename T, typename U> [[nodiscard]]
+constexpr auto operator==(const intrusive_ptr<T> &lhs, const intrusive_ptr<U>& rhs) noexcept
+{ return lhs.get() == rhs.get(); }
+
+template<typename T, typename U> [[nodiscard]]
+constexpr auto operator!=(const intrusive_ptr<T> &lhs, const intrusive_ptr<U>& rhs) noexcept
+{ return !(lhs == rhs); }
+
 } // namespace al
 
 #endif /* INTRUSIVE_PTR_H */

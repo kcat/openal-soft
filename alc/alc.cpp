@@ -2742,7 +2742,8 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
         }
     }
 
-    auto context = ContextRef{new(std::nothrow) ALCcontext{dev, ctxflags}};
+    auto context = ContextRef{new(std::nothrow) ALCcontext{
+        gsl::make_strict_not_null(dev), ctxflags}};
     if(!context)
     {
         alcSetError(dev.get(), ALC_OUT_OF_MEMORY);
@@ -2829,16 +2830,16 @@ ALC_API void ALC_APIENTRY alcDestroyContext(ALCcontext *context) noexcept
     auto ctx = ContextRef{*iter};
     ContextList.erase(iter);
 
-    auto *Device = ctx->mALDevice.get();
-    auto statelock = std::lock_guard{Device->StateLock};
+    auto const device = al::get_not_null(ctx->mALDevice);
+    auto statelock = std::lock_guard{device->StateLock};
 
-    const auto stopPlayback = Device->removeContext(ctx.get()) == 0;
+    const auto stopPlayback = device->removeContext(ctx.get()) == 0;
     ctx->deinit();
 
-    if(stopPlayback && Device->mDeviceState == DeviceState::Playing)
+    if(stopPlayback && device->mDeviceState == DeviceState::Playing)
     {
-        Device->Backend->stop();
-        Device->mDeviceState = DeviceState::Configured;
+        device->Backend->stop();
+        device->mDeviceState = DeviceState::Configured;
     }
 }
 
@@ -2919,7 +2920,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcGetContextsDevice(ALCcontext *Context) noexce
         alcSetError(nullptr, ALC_INVALID_CONTEXT);
         return nullptr;
     }
-    return ctx->mALDevice.get();
+    return std::to_address(ctx->mALDevice);
 }
 
 

@@ -35,7 +35,6 @@
 #include "filter.h"
 #include "fmt/core.h"
 #include "gsl/gsl"
-#include "intrusive_ptr.h"
 #include "opthelpers.h"
 #include "source.h"
 
@@ -572,19 +571,19 @@ try {
     }
     else if(identifier == AL_BUFFER)
     {
-        auto *device = context->mALDevice.get();
+        auto const device = al::get_not_null(context->mALDevice);
         auto buflock = std::lock_guard{device->BufferLock};
         copy_name(device->mBufferNames);
     }
     else if(identifier == AL_FILTER_EXT)
     {
-        auto *device = context->mALDevice.get();
+        auto const device = al::get_not_null(context->mALDevice);
         auto buflock = std::lock_guard{device->FilterLock};
         copy_name(device->mFilterNames);
     }
     else if(identifier == AL_EFFECT_EXT)
     {
-        auto *device = context->mALDevice.get();
+        auto const device = al::get_not_null(context->mALDevice);
         auto buflock = std::lock_guard{device->EffectLock};
         copy_name(device->mEffectNames);
     }

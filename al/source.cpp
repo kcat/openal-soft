@@ -220,7 +220,7 @@ void UpdateSourceProps(const ALsource *source, Voice *voice,
 auto GetSourceSampleOffset(ALsource *Source, ALCcontext *context, nanoseconds *clocktime)
     -> int64_t
 {
-    auto *device = context->mALDevice.get();
+    auto const device = al::get_not_null(context->mALDevice);
     auto const *Current = LPVoiceBufferItem{};
     auto readPos = int64_t{};
     auto readPosFrac = uint{};
@@ -263,7 +263,7 @@ auto GetSourceSampleOffset(ALsource *Source, ALCcontext *context, nanoseconds *c
  */
 auto GetSourceSecOffset(ALsource *Source, ALCcontext *context, nanoseconds *clocktime) -> double
 {
-    auto *device = context->mALDevice.get();
+    auto const device = al::get_not_null(context->mALDevice);
     auto const *Current = LPVoiceBufferItem{};
     auto readPos = int64_t{};
     auto readPosFrac = uint{};
@@ -312,7 +312,7 @@ auto GetSourceSecOffset(ALsource *Source, ALCcontext *context, nanoseconds *cloc
 template<typename T>
 NOINLINE auto GetSourceOffset(ALsource *Source, ALenum name, ALCcontext *context) -> T
 {
-    auto *device = context->mALDevice.get();
+    auto const device = al::get_not_null(context->mALDevice);
     auto const *Current = LPVoiceBufferItem{};
     auto readPos = int64_t{};
     auto readPosFrac = uint{};
@@ -588,14 +588,14 @@ VoiceChange *GetVoiceChanger(ALCcontext *ctx)
 
 void SendVoiceChanges(ALCcontext *ctx, VoiceChange *tail)
 {
-    auto *device = ctx->mALDevice.get();
+    auto const device = al::get_not_null(ctx->mALDevice);
 
-    VoiceChange *oldhead{ctx->mCurrentVoiceChange.load(std::memory_order_acquire)};
-    while(VoiceChange *next{oldhead->mNext.load(std::memory_order_relaxed)})
+    auto *oldhead = ctx->mCurrentVoiceChange.load(std::memory_order_acquire);
+    while(auto *next = oldhead->mNext.load(std::memory_order_relaxed))
         oldhead = next;
     oldhead->mNext.store(tail, std::memory_order_release);
 
-    const bool connected{device->Connected.load(std::memory_order_acquire)};
+    const auto connected = device->Connected.load(std::memory_order_acquire);
     std::ignore = device->waitForMix();
     if(!connected) [[unlikely]]
     {
@@ -604,11 +604,11 @@ void SendVoiceChanges(ALCcontext *ctx, VoiceChange *tail)
             /* If the device is disconnected and voices are stopped, just
              * ignore all pending changes.
              */
-            VoiceChange *cur{ctx->mCurrentVoiceChange.load(std::memory_order_acquire)};
-            while(VoiceChange *next{cur->mNext.load(std::memory_order_acquire)})
+            auto *cur = ctx->mCurrentVoiceChange.load(std::memory_order_acquire);
+            while(auto *next = cur->mNext.load(std::memory_order_acquire))
             {
                 cur = next;
-                if(Voice *voice{cur->mVoice})
+                if(auto *voice = cur->mVoice)
                     voice->mSourceID.store(0, std::memory_order_relaxed);
             }
             ctx->mCurrentVoiceChange.store(cur, std::memory_order_release);
@@ -837,8 +837,8 @@ auto LookupSource(gsl::strict_not_null<ALCcontext*> context, ALuint id)
 }
 
 [[nodiscard]]
-inline auto LookupBuffer(std::nothrow_t, al::Device *device, std::unsigned_integral auto id)
-    noexcept -> ALbuffer*
+inline auto LookupBuffer(std::nothrow_t, gsl::strict_not_null<al::Device*> device,
+    std::unsigned_integral auto id) noexcept -> ALbuffer*
 {
     const auto lidx = (id-1) >> 6;
     const auto slidx = (id-1) & 0x3f;
@@ -848,15 +848,16 @@ inline auto LookupBuffer(std::nothrow_t, al::Device *device, std::unsigned_integ
     auto &sublist = device->BufferList[gsl::narrow_cast<size_t>(lidx)];
     if(sublist.FreeMask & (1_u64 << slidx)) [[unlikely]]
         return nullptr;
-    return std::to_address(sublist.Buffers->begin() + gsl::narrow_cast<size_t>(slidx));
+    return std::to_address(std::next(sublist.Buffers->begin(),
+        gsl::narrow_cast<ptrdiff_t>(slidx)));
 };
 
 [[nodiscard]]
 auto LookupBuffer(gsl::strict_not_null<ALCcontext*> context, std::unsigned_integral auto id)
     -> gsl::strict_not_null<ALbuffer*>
 {
-    if(auto *buffer = LookupBuffer(std::nothrow, context->mALDevice.get(), id)) [[likely]]
-        return gsl::make_not_null(buffer);
+    if(auto *buffer = LookupBuffer(std::nothrow, al::get_not_null(context->mALDevice), id))
+        [[likely]] return gsl::make_not_null(buffer);
     context->throw_error(AL_INVALID_NAME, "Invalid buffer ID {}", id);
 }
 
@@ -870,7 +871,8 @@ inline auto LookupFilter(al::Device *device, std::unsigned_integral auto id) noe
     auto &sublist = device->FilterList[gsl::narrow_cast<size_t>(lidx)];
     if(sublist.FreeMask & (1_u64 << slidx)) [[unlikely]]
         return nullptr;
-    return std::to_address(sublist.Filters->begin() + gsl::narrow_cast<size_t>(slidx));
+    return std::to_address(std::next(sublist.Filters->begin(),
+        gsl::narrow_cast<ptrdiff_t>(slidx)));
 };
 
 inline auto LookupEffectSlot(gsl::strict_not_null<ALCcontext*> context,
@@ -1471,7 +1473,7 @@ NOINLINE void SetProperty(const gsl::strict_not_null<ALsource*> Source,
     static constexpr auto is_finite = [](auto&& v) -> bool
     { return std::isfinite(gsl::narrow_cast<float>(std::forward<decltype(v)>(v))); };
     auto [CheckSize, CheckValue] = GetCheckers(Context, prop, values);
-    auto *device = Context->mALDevice.get();
+    auto const device = al::get_not_null(Context->mALDevice);
 
     switch(prop)
     {
@@ -1712,7 +1714,7 @@ NOINLINE void SetProperty(const gsl::strict_not_null<ALsource*> Source,
             auto vpos = GetSampleOffset(Source->mQueue, prop, gsl::narrow_cast<double>(values[0]));
             if(!vpos) Context->throw_error(AL_INVALID_VALUE, "Invalid offset");
 
-            if(SetVoiceOffset(voice, *vpos, Source, Context, Context->mALDevice.get()))
+            if(SetVoiceOffset(voice, *vpos, Source, Context, device))
                 return;
         }
         Source->OffsetType = prop;
@@ -2055,7 +2057,7 @@ NOINLINE void GetProperty(const gsl::strict_not_null<ALsource*> Source,
 {
     using std::chrono::duration_cast;
     auto CheckSize = GetSizeChecker(Context, prop, values);
-    auto *device = Context->mALDevice.get();
+    auto const device = al::get_not_null(Context->mALDevice);
 
     switch(prop)
     {
@@ -2518,7 +2520,7 @@ NOINLINE void GetProperty(const gsl::strict_not_null<ALsource*> Source,
 void StartSources(const gsl::strict_not_null<ALCcontext*> context,
     const std::span<ALsource*> srchandles, const nanoseconds start_time=nanoseconds::min())
 {
-    auto *device = context->mALDevice.get();
+    auto const device = al::get_not_null(context->mALDevice);
     /* If the device is disconnected, and voices stop on disconnect, go right
      * to stopped.
      */
@@ -2692,7 +2694,7 @@ try {
     if(n <= 0) [[unlikely]] return;
 
     auto srclock = std::unique_lock{context->mSourceLock};
-    auto *device = context->mALDevice.get();
+    auto const device = al::get_not_null(context->mALDevice);
 
     const auto sids = std::span{sources, gsl::narrow_cast<ALuint>(n)};
     if(context->mNumSources > device->SourcesMax
@@ -3434,7 +3436,7 @@ try {
         context->throw_error(AL_INVALID_OPERATION, "Queueing onto static source {}", src);
 
     /* Check for a valid Buffer, for its frequency and format */
-    auto *device = context->mALDevice.get();
+    auto const device = al::get_not_null(context->mALDevice);
     auto BufferFmt = std::invoke([source]() -> ALbuffer*
     {
         const auto iter = std::ranges::find_if(source->mQueue, HasBuffer);

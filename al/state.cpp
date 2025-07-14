@@ -286,7 +286,7 @@ void GetValue(gsl::strict_not_null<ALCcontext*> context, ALenum pname, T *values
     case AL_EAX_RAM_FREE:
         if(eax_g_is_enabled)
         {
-            auto *device = context->mALDevice.get();
+            auto *device = std::to_address(context->mALDevice);
             auto devlock = std::lock_guard{device->BufferLock};
             *values = cast_value(device->eax_x_ram_free_size);
             return;
@@ -411,15 +411,15 @@ auto AL_APIENTRY alGetString(gsl::strict_not_null<ALCcontext*> context, ALenum p
     switch(pname)
     {
     case AL_VENDOR:
-        if(auto device = context->mALDevice.get(); !device->mVendorOverride.empty())
+        if(auto &device = context->mALDevice; !device->mVendorOverride.empty())
             return device->mVendorOverride.c_str();
         return GetVendorString();
     case AL_VERSION:
-        if(auto device = context->mALDevice.get(); !device->mVersionOverride.empty())
+        if(auto &device = context->mALDevice; !device->mVersionOverride.empty())
             return device->mVersionOverride.c_str();
         return GetVersionString();
     case AL_RENDERER:
-        if(auto device = context->mALDevice.get(); !device->mRendererOverride.empty())
+        if(auto &device = context->mALDevice; !device->mRendererOverride.empty())
             return device->mRendererOverride.c_str();
         return GetRendererString();
     case AL_EXTENSIONS: return context->mExtensionsString.c_str();

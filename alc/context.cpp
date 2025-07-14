@@ -121,12 +121,12 @@ thread_local ALCcontext::ThreadCtx ALCcontext::sThreadContext;
 ALeffect ALCcontext::sDefaultEffect;
 
 
-ALCcontext::ALCcontext(al::intrusive_ptr<al::Device> device, ContextFlagBitset flags)
-    : ContextBase{device.get()}, mALDevice{std::move(device)}, mContextFlags{flags}
+ALCcontext::ALCcontext(const gsl::strict_not_null<al::intrusive_ptr<al::Device>> &device,
+    ContextFlagBitset flags)
+    : ContextBase{std::to_address(device)}, mALDevice{device}, mContextFlags{flags}
+    , mDebugEnabled{flags.test(ContextFlags::DebugBit)}
+    , mDebugGroups{{DebugSource::Other, 0, std::string{}}}
 {
-    mDebugGroups.emplace_back(DebugSource::Other, 0, std::string{});
-    mDebugEnabled.store(mContextFlags.test(ContextFlags::DebugBit), std::memory_order_relaxed);
-
     /* Low-severity debug messages are disabled by default. */
     alDebugMessageControlDirectEXT(this, AL_DONT_CARE_EXT, AL_DONT_CARE_EXT,
         AL_DEBUG_SEVERITY_LOW_EXT, 0, nullptr, AL_FALSE);

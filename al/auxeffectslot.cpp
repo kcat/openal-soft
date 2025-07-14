@@ -141,8 +141,8 @@ inline auto LookupEffect(std::nothrow_t, al::Device *device, ALuint id) noexcept
 auto LookupEffect(gsl::strict_not_null<ALCcontext*> context, ALuint id)
     -> gsl::strict_not_null<ALeffect*>
 {
-    if(auto *effect = LookupEffect(std::nothrow, context->mALDevice.get(), id)) [[likely]]
-        return gsl::make_not_null(effect);
+    if(auto *effect = LookupEffect(std::nothrow, al::get_not_null(context->mALDevice), id))
+        [[likely]] return gsl::make_not_null(effect);
     context->throw_error(AL_INVALID_NAME, "Invalid effect ID {}", id);
 }
 
@@ -164,8 +164,8 @@ inline auto LookupBuffer(std::nothrow_t, al::Device *device, ALuint id) noexcept
 auto LookupBuffer(gsl::strict_not_null<ALCcontext*> context, ALuint id)
     -> gsl::strict_not_null<ALbuffer*>
 {
-    if(auto *buffer = LookupBuffer(std::nothrow, context->mALDevice.get(), id)) [[likely]]
-        return gsl::make_not_null(buffer);
+    if(auto *buffer = LookupBuffer(std::nothrow, al::get_not_null(context->mALDevice), id))
+        [[likely]] return gsl::make_not_null(buffer);
     context->throw_error(AL_INVALID_NAME, "Invalid buffer ID {}", id);
 }
 
@@ -346,7 +346,7 @@ try {
     if(n <= 0) [[unlikely]] return;
 
     auto slotlock = std::lock_guard{context->mEffectSlotLock};
-    auto *device = context->mALDevice.get();
+    auto const device = al::get_not_null(context->mALDevice);
 
     const auto eids = std::span{effectslots, gsl::narrow_cast<ALuint>(n)};
     if(context->mNumEffectSlots > device->AuxiliaryEffectSlotMax
@@ -460,7 +460,7 @@ try {
     {
     case AL_EFFECTSLOT_EFFECT:
         {
-            auto *device = context->mALDevice.get();
+            auto const device = al::get_not_null(context->mALDevice);
             const auto effectlock = std::lock_guard{device->EffectLock};
             auto *effect = value ? LookupEffect(context, as_unsigned(value)).get() : nullptr;
             if(effect)
@@ -541,7 +541,7 @@ try {
         {
             auto state = getFactoryByType(slot->Effect.Type)->create();
 
-            auto *device = context->mALDevice.get();
+            auto const device = al::get_not_null(context->mALDevice);
             auto bufferlock = std::unique_lock{device->BufferLock};
             auto buffer = al::intrusive_ptr<ALbuffer>{};
             if(value)
@@ -573,7 +573,7 @@ try {
         }
         else
         {
-            auto *device = context->mALDevice.get();
+            auto const device = al::get_not_null(context->mALDevice);
             auto bufferlock = std::unique_lock{device->BufferLock};
             if(value)
             {
@@ -841,7 +841,7 @@ auto ALeffectslot::initEffect(ALuint effectId, ALenum effectType, const EffectPr
     {
         auto state = getFactoryByType(newtype)->create();
 
-        auto *device = context->mALDevice.get();
+        auto const device = al::get_not_null(context->mALDevice);
         state->mOutTarget = device->Dry.Buffer;
         {
             const auto mixer_mode = FPUCtl{};

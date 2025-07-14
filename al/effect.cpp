@@ -200,7 +200,8 @@ void FreeEffect(al::Device *device, gsl::strict_not_null<ALeffect*> effect)
 }
 
 [[nodiscard]]
-inline auto LookupEffect(std::nothrow_t, al::Device *device, ALuint id) noexcept -> ALeffect*
+inline auto LookupEffect(std::nothrow_t, gsl::strict_not_null<al::Device*> device, ALuint id)
+    noexcept -> ALeffect*
 {
     const auto lidx = (id-1) >> 6;
     const auto slidx = (id-1) & 0x3f;
@@ -217,8 +218,8 @@ inline auto LookupEffect(std::nothrow_t, al::Device *device, ALuint id) noexcept
 auto LookupEffect(gsl::strict_not_null<ALCcontext*> context, ALuint id)
     -> gsl::strict_not_null<ALeffect*>
 {
-    if(auto *effect = LookupEffect(std::nothrow, context->mALDevice.get(), id)) [[likely]]
-        return gsl::make_not_null(effect);
+    if(auto *effect = LookupEffect(std::nothrow, al::get_not_null(context->mALDevice), id))
+        [[likely]] return gsl::make_not_null(effect);
     context->throw_error(AL_INVALID_NAME, "Invalid effect ID {}", id);
 }
 
@@ -230,7 +231,7 @@ try {
         context->throw_error(AL_INVALID_VALUE, "Generating {} effects", n);
     if(n <= 0) [[unlikely]] return;
 
-    auto *device = context->mALDevice.get();
+    auto const device = al::get_not_null(context->mALDevice);
     auto effectlock = std::lock_guard{device->EffectLock};
 
     const auto eids = std::span{effects, gsl::narrow_cast<uint>(n)};
@@ -253,7 +254,7 @@ try {
         context->throw_error(AL_INVALID_VALUE, "Deleting {} effects", n);
     if(n <= 0) [[unlikely]] return;
 
-    auto *device = context->mALDevice.get();
+    auto const device = al::get_not_null(context->mALDevice);
     auto effectlock = std::lock_guard{device->EffectLock};
 
     /* First try to find any effects that are invalid. */
@@ -277,7 +278,7 @@ catch(std::exception &e) {
 auto AL_APIENTRY alIsEffect(gsl::strict_not_null<ALCcontext*> context, ALuint effect) noexcept
     -> ALboolean
 {
-    auto *device = context->mALDevice.get();
+    auto const device = al::get_not_null(context->mALDevice);
     auto effectlock = std::lock_guard{device->EffectLock};
     if(effect == 0 || LookupEffect(std::nothrow, device, effect) != nullptr)
         return AL_TRUE;
@@ -288,7 +289,7 @@ auto AL_APIENTRY alIsEffect(gsl::strict_not_null<ALCcontext*> context, ALuint ef
 void AL_APIENTRY alEffecti(gsl::strict_not_null<ALCcontext*> context, ALuint effect, ALenum param,
     ALint value) noexcept
 try {
-    auto *device = context->mALDevice.get();
+    auto const device = al::get_not_null(context->mALDevice);
     auto effectlock = std::lock_guard{device->EffectLock};
 
     auto const aleffect = LookupEffect(context, effect);
@@ -331,7 +332,7 @@ try {
         return;
     }
 
-    auto *device = context->mALDevice.get();
+    auto const device = al::get_not_null(context->mALDevice);
     auto effectlock = std::lock_guard{device->EffectLock};
 
     auto const aleffect = LookupEffect(context, effect);
@@ -352,7 +353,7 @@ catch(std::exception &e) {
 void AL_APIENTRY alEffectf(gsl::strict_not_null<ALCcontext*> context, ALuint effect, ALenum param,
     ALfloat value) noexcept
 try {
-    auto *device = context->mALDevice.get();
+    auto const device = al::get_not_null(context->mALDevice);
     auto effectlock = std::lock_guard{device->EffectLock};
 
     auto const aleffect = LookupEffect(context, effect);
@@ -373,7 +374,7 @@ catch(std::exception &e) {
 void AL_APIENTRY alEffectfv(gsl::strict_not_null<ALCcontext*> context, ALuint effect, ALenum param,
     const ALfloat *values) noexcept
 try {
-    auto *device = context->mALDevice.get();
+    auto const device = al::get_not_null(context->mALDevice);
     auto effectlock = std::lock_guard{device->EffectLock};
 
     auto const aleffect = LookupEffect(context, effect);
@@ -394,7 +395,7 @@ catch(std::exception &e) {
 void AL_APIENTRY alGetEffecti(gsl::strict_not_null<ALCcontext*> context, ALuint effect,
     ALenum param, ALint *value) noexcept
 try {
-    auto *device = context->mALDevice.get();
+    auto const device = al::get_not_null(context->mALDevice);
     auto effectlock = std::lock_guard{device->EffectLock};
 
     auto const aleffect = LookupEffect(context, effect);
@@ -426,7 +427,7 @@ try {
         return;
     }
 
-    auto *device = context->mALDevice.get();
+    auto const device = al::get_not_null(context->mALDevice);
     auto effectlock = std::lock_guard{device->EffectLock};
 
     auto const aleffect = LookupEffect(context, effect);
@@ -447,7 +448,7 @@ catch(std::exception &e) {
 void AL_APIENTRY alGetEffectf(gsl::strict_not_null<ALCcontext*> context, ALuint effect,
     ALenum param, ALfloat *value) noexcept
 try {
-    auto *device = context->mALDevice.get();
+    auto const device = al::get_not_null(context->mALDevice);
     auto effectlock = std::lock_guard{device->EffectLock};
 
     auto const aleffect = LookupEffect(context, effect);
@@ -468,7 +469,7 @@ catch(std::exception &e) {
 void AL_APIENTRY alGetEffectfv(gsl::strict_not_null<ALCcontext*> context, ALuint effect,
     ALenum param, ALfloat *values) noexcept
 try {
-    auto *device = context->mALDevice.get();
+    auto const device = al::get_not_null(context->mALDevice);
     auto effectlock = std::lock_guard{device->EffectLock};
 
     auto const aleffect = LookupEffect(context, effect);
@@ -509,7 +510,7 @@ void InitEffect(ALeffect *effect)
 
 void ALeffect::SetName(gsl::strict_not_null<ALCcontext*> context, ALuint id, std::string_view name)
 {
-    auto *device = context->mALDevice.get();
+    auto const device = al::get_not_null(context->mALDevice);
     auto effectlock = std::lock_guard{device->EffectLock};
 
     std::ignore = LookupEffect(context, id);
